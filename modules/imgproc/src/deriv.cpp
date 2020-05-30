@@ -44,6 +44,7 @@
 #include "opencl_kernels_imgproc.hpp"
 
 #include "opencv2/core/openvx/ovx_defs.hpp"
+#include "filter.hpp"
 
 /****************************************************************************************\
                              Sobel & Scharr Derivative Filters
@@ -184,40 +185,23 @@ cv::Ptr<cv::FilterEngine> cv::createDerivFilter(int srcType, int dstType,
 #ifdef HAVE_OPENVX
 namespace cv
 {
+    namespace ovx {
+        template <> inline bool skipSmallImages<VX_KERNEL_SOBEL_3x3>(int w, int h) { return w*h < 320 * 240; }
+    }
     static bool openvx_sobel(InputArray _src, OutputArray _dst,
                              int dx, int dy, int ksize,
                              double scale, double delta, int borderType)
     {
-        int stype = _src.type();
-        int dtype = _dst.type();
-        if (stype != CV_8UC1 || (dtype != CV_16SC1 && dtype != CV_8UC1) ||
-            ksize < 3 || ksize % 2 != 1 || delta != 0.0)
+        if (_src.type() != CV_8UC1 || _dst.type() != CV_16SC1 ||
+            ksize != 3 || scale != 1.0 || delta != 0.0 ||
+            (dx | dy) != 1 || (dx + dy) != 1 ||
+            _src.cols() < ksize || _src.rows() < ksize ||
+            ovx::skipSmallImages<VX_KERNEL_SOBEL_3x3>(_src.cols(), _src.rows())
+            )
             return false;
 
         Mat src = _src.getMat();
         Mat dst = _dst.getMat();
-
-        if (src.cols < ksize || src.rows < ksize)
-            return false;
-
-        int iscale = 1;
-        vx_uint32 cscale = 1;
-        if(scale != 1.0)
-        {
-            iscale = static_cast<int>(scale);
-            if (std::abs(scale - iscale) >= DBL_EPSILON)
-            {
-                int exp = 0;
-                float significand = frexp(scale, &exp);
-                if ((significand == 0.5f) && (exp <= 0))
-                {
-                    iscale = 1;
-                    cscale = 1 << (exp = -exp + 1);
-                }
-                else
-                    return false;
-            }
-        }
 
         if ((borderType & BORDER_ISOLATED) == 0 && src.isSubmatrix())
             return false; //Process isolated borders only
@@ -228,8 +212,8 @@ namespace cv
             border = VX_BORDER_CONSTANT;
             break;
         case BORDER_REPLICATE:
-            border = VX_BORDER_REPLICATE;
-            break;
+//            border = VX_BORDER_REPLICATE;
+//            break;
         default:
             return false;
         }
@@ -237,8 +221,8 @@ namespace cv
         try
         {
             ivx::Context ctx = ovx::getOpenVXContext();
-            if ((vx_size)ksize > ctx.convolutionMaxDimension())
-                return false;
+            //if ((vx_size)ksize > ctx.convolutionMaxDimension())
+            //    return false;
 
             Mat a;
             if (dst.data != src.data)
@@ -249,47 +233,24 @@ namespace cv
             ivx::Image
                 ia = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
                     ivx::Image::createAddressing(a.cols, a.rows, 1, (vx_int32)(a.step)), a.data),
-                ib = ivx::Image::createFromHandle(ctx, dtype == CV_16SC1 ? VX_DF_IMAGE_S16 : VX_DF_IMAGE_U8,
-                    ivx::Image::createAddressing(dst.cols, dst.rows, dtype == CV_16SC1 ? 2 : 1, (vx_int32)(dst.step)), dst.data);
+                ib = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_S16,
+                    ivx::Image::createAddressing(dst.cols, dst.rows, 2, (vx_int32)(dst.step)), dst.data);
 
             //ATTENTION: VX_CONTEXT_IMMEDIATE_BORDER attribute change could lead to strange issues in multi-threaded environments
-            //since OpenVX standart says nothing about thread-safety for now
+            //since OpenVX standard says nothing about thread-safety for now
             ivx::border_t prevBorder = ctx.immediateBorder();
             ctx.setImmediateBorder(border, (vx_uint8)(0));
-            if (dtype == CV_16SC1 && ksize == 3 && ((dx | dy) == 1) && (dx + dy) == 1)
-            {
-                if(dx)
-                    ivx::IVX_CHECK_STATUS(vxuSobel3x3(ctx, ia, ib, NULL));
-                else
-                    ivx::IVX_CHECK_STATUS(vxuSobel3x3(ctx, ia, NULL, ib));
-            }
+            if(dx)
+                ivx::IVX_CHECK_STATUS(vxuSobel3x3(ctx, ia, ib, NULL));
             else
-            {
-#if VX_VERSION <= VX_VERSION_1_0
-                if (ctx.vendorID() == VX_ID_KHRONOS && ((vx_size)(src.cols) <= ctx.convolutionMaxDimension() || (vx_size)(src.rows) <= ctx.convolutionMaxDimension()))
-                {
-                    ctx.setImmediateBorder(prevBorder);
-                    return false;
-                }
-#endif
-                Mat kx, ky;
-                getDerivKernels(kx, ky, dx, dy, ksize, false);
-                flip(kx, kx, 0);
-                flip(ky, ky, 0);
-                Mat convData;
-                cv::Mat(ky*kx.t()).convertTo(convData, CV_16SC1, iscale);
-                ivx::Convolution cnv = ivx::Convolution::create(ctx, convData.cols, convData.rows);
-                cnv.copyFrom(convData);
-                cnv.setScale(cscale);
-                ivx::IVX_CHECK_STATUS(vxuConvolve(ctx, ia, cnv, ib));
-            }
+                ivx::IVX_CHECK_STATUS(vxuSobel3x3(ctx, ia, NULL, ib));
             ctx.setImmediateBorder(prevBorder);
         }
-        catch (ivx::RuntimeError & e)
+        catch (const ivx::RuntimeError & e)
         {
             VX_DbgThrow(e.what());
         }
-        catch (ivx::WrapperError & e)
+        catch (const ivx::WrapperError & e)
         {
             VX_DbgThrow(e.what());
         }
@@ -299,14 +260,14 @@ namespace cv
 }
 #endif
 
-#ifdef HAVE_IPP
+#if 0 //defined HAVE_IPP
 namespace cv
 {
 
 static bool ipp_Deriv(InputArray _src, OutputArray _dst, int dx, int dy, int ksize, double scale, double delta, int borderType)
 {
 #ifdef HAVE_IPP_IW
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
     ::ipp::IwiSize size(_src.size().width, _src.size().height);
     IppDataType   srcType   = ippiGetDataType(_src.depth());
@@ -328,7 +289,7 @@ static bool ipp_Deriv(InputArray _src, OutputArray _dst, int dx, int dy, int ksi
     }
 
     IppiMaskSize maskSize = ippiGetMaskSize(ksize, ksize);
-    if(maskSize < 0)
+    if((int)maskSize < 0)
         return false;
 
 #if IPP_VERSION_X100 <= 201703
@@ -338,7 +299,7 @@ static bool ipp_Deriv(InputArray _src, OutputArray _dst, int dx, int dy, int ksi
 #endif
 
     IwiDerivativeType derivType = ippiGetDerivType(dx, dy, (useScharr)?false:true);
-    if(derivType < 0)
+    if((int)derivType < 0)
         return false;
 
     // Acquire data and begin processing
@@ -352,7 +313,7 @@ static bool ipp_Deriv(InputArray _src, OutputArray _dst, int dx, int dy, int ksi
         ::ipp::IwiImage iwDstProc  = iwDst;
         ::ipp::IwiBorderSize  borderSize(maskSize);
         ::ipp::IwiBorderType  ippBorder(ippiGetBorder(iwSrc, borderType, borderSize));
-        if(!ippBorder.m_borderType)
+        if(!ippBorder)
             return false;
 
         if(srcType == ipp8u && dstType == ipp8u)
@@ -364,19 +325,19 @@ static bool ipp_Deriv(InputArray _src, OutputArray _dst, int dx, int dy, int ksi
         {
             iwSrc -= borderSize;
             iwSrcProc.Alloc(iwSrc.m_size, ipp32f, channels);
-            CV_INSTRUMENT_FUN_IPP(::ipp::iwiScale, &iwSrc, &iwSrcProc, 1, 0, ippAlgHintFast);
+            CV_INSTRUMENT_FUN_IPP(::ipp::iwiScale, iwSrc, iwSrcProc, 1, 0, ::ipp::IwiScaleParams(ippAlgHintFast));
             iwSrcProc += borderSize;
         }
 
         if(useScharr)
-            CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterScharr, &iwSrcProc, &iwDstProc, derivType, maskSize, ippBorder);
+            CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterScharr, iwSrcProc, iwDstProc, derivType, maskSize, ::ipp::IwDefault(), ippBorder);
         else
-            CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterSobel, &iwSrcProc, &iwDstProc, derivType, maskSize, ippBorder);
+            CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterSobel, iwSrcProc, iwDstProc, derivType, maskSize, ::ipp::IwDefault(), ippBorder);
 
         if(useScale)
-            CV_INSTRUMENT_FUN_IPP(::ipp::iwiScale, &iwDstProc, &iwDst, scale, delta, ippAlgHintFast);
+            CV_INSTRUMENT_FUN_IPP(::ipp::iwiScale, iwDstProc, iwDst, scale, delta, ::ipp::IwiScaleParams(ippAlgHintFast));
     }
-    catch (::ipp::IwException)
+    catch (const ::ipp::IwException &)
     {
         return false;
     }
@@ -453,29 +414,15 @@ static bool ocl_sepFilter3x3_8UC1(InputArray _src, OutputArray _dst, int ddepth,
 void cv::Sobel( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
                 int ksize, double scale, double delta, int borderType )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
+
+    CV_Assert(!_src.empty());
 
     int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype);
     if (ddepth < 0)
         ddepth = sdepth;
     int dtype = CV_MAKE_TYPE(ddepth, cn);
     _dst.create( _src.size(), dtype );
-
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    if (tegra::useTegra() && scale == 1.0 && delta == 0)
-    {
-        Mat src = _src.getMat(), dst = _dst.getMat();
-        if (ksize == 3 && tegra::sobel3x3(src, dst, dx, dy, borderType))
-            return;
-        if (ksize == -1 && tegra::scharr(src, dst, dx, dy, borderType))
-            return;
-    }
-#endif
-
-    CV_OVX_RUN(true,
-               openvx_sobel(_src, _dst, dx, dy, ksize, scale, delta, borderType))
-
-    CV_IPP_RUN(!(ocl::useOpenCL() && _dst.isUMat()), ipp_Deriv(_src, _dst, dx, dy, ksize, scale, delta, borderType));
 
     int ktype = std::max(CV_32F, std::max(ddepth, sdepth));
 
@@ -484,42 +431,52 @@ void cv::Sobel( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
     if( scale != 1 )
     {
         // usually the smoothing part is the slowest to compute,
-        // so try to scale it instead of the faster differenciating part
+        // so try to scale it instead of the faster differentiating part
         if( dx == 0 )
             kx *= scale;
         else
             ky *= scale;
     }
 
-    CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2 && ksize == 3 &&
+    CV_OCL_RUN(ocl::isOpenCLActivated() && _dst.isUMat() && _src.dims() <= 2 && ksize == 3 &&
                (size_t)_src.rows() > ky.total() && (size_t)_src.cols() > kx.total(),
                ocl_sepFilter3x3_8UC1(_src, _dst, ddepth, kx, ky, delta, borderType));
 
-    sepFilter2D( _src, _dst, ddepth, kx, ky, Point(-1, -1), delta, borderType );
+    CV_OCL_RUN(ocl::isOpenCLActivated() && _dst.isUMat() && _src.dims() <= 2 && (size_t)_src.rows() > kx.total() && (size_t)_src.cols() > kx.total(),
+               ocl_sepFilter2D(_src, _dst, ddepth, kx, ky, Point(-1, -1), delta, borderType))
+
+    Mat src = _src.getMat();
+    Mat dst = _dst.getMat();
+
+    Point ofs;
+    Size wsz(src.cols, src.rows);
+    if(!(borderType & BORDER_ISOLATED))
+        src.locateROI( wsz, ofs );
+
+    CALL_HAL(sobel, cv_hal_sobel, src.ptr(), src.step, dst.ptr(), dst.step, src.cols, src.rows, sdepth, ddepth, cn,
+             ofs.x, ofs.y, wsz.width - src.cols - ofs.x, wsz.height - src.rows - ofs.y, dx, dy, ksize, scale, delta, borderType&~BORDER_ISOLATED);
+
+    CV_OVX_RUN(true,
+               openvx_sobel(src, dst, dx, dy, ksize, scale, delta, borderType))
+
+    //CV_IPP_RUN_FAST(ipp_Deriv(src, dst, dx, dy, ksize, scale, delta, borderType));
+
+    sepFilter2D(src, dst, ddepth, kx, ky, Point(-1, -1), delta, borderType );
 }
 
 
 void cv::Scharr( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
                  double scale, double delta, int borderType )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
+
+    CV_Assert(!_src.empty());
 
     int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype);
     if (ddepth < 0)
         ddepth = sdepth;
     int dtype = CV_MAKETYPE(ddepth, cn);
     _dst.create( _src.size(), dtype );
-
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    if (tegra::useTegra() && scale == 1.0 && delta == 0)
-    {
-        Mat src = _src.getMat(), dst = _dst.getMat();
-        if (tegra::scharr(src, dst, dx, dy, borderType))
-            return;
-    }
-#endif
-
-    CV_IPP_RUN(!(ocl::useOpenCL() && _dst.isUMat()), ipp_Deriv(_src, _dst, dx, dy, 0, scale, delta, borderType));
 
     int ktype = std::max(CV_32F, std::max(ddepth, sdepth));
 
@@ -528,18 +485,35 @@ void cv::Scharr( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
     if( scale != 1 )
     {
         // usually the smoothing part is the slowest to compute,
-        // so try to scale it instead of the faster differenciating part
+        // so try to scale it instead of the faster differentiating part
         if( dx == 0 )
             kx *= scale;
         else
             ky *= scale;
     }
 
-    CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2 &&
+    CV_OCL_RUN(ocl::isOpenCLActivated() && _dst.isUMat() && _src.dims() <= 2 &&
                (size_t)_src.rows() > ky.total() && (size_t)_src.cols() > kx.total(),
                ocl_sepFilter3x3_8UC1(_src, _dst, ddepth, kx, ky, delta, borderType));
 
-    sepFilter2D( _src, _dst, ddepth, kx, ky, Point(-1, -1), delta, borderType );
+    CV_OCL_RUN(ocl::isOpenCLActivated() && _dst.isUMat() && _src.dims() <= 2 &&
+               (size_t)_src.rows() > kx.total() && (size_t)_src.cols() > kx.total(),
+               ocl_sepFilter2D(_src, _dst, ddepth, kx, ky, Point(-1, -1), delta, borderType))
+
+    Mat src = _src.getMat();
+    Mat dst = _dst.getMat();
+
+    Point ofs;
+    Size wsz(src.cols, src.rows);
+    if(!(borderType & BORDER_ISOLATED))
+        src.locateROI( wsz, ofs );
+
+    CALL_HAL(scharr, cv_hal_scharr, src.ptr(), src.step, dst.ptr(), dst.step, src.cols, src.rows, sdepth, ddepth, cn,
+             ofs.x, ofs.y, wsz.width - src.cols - ofs.x, wsz.height - src.rows - ofs.y, dx, dy, scale, delta, borderType&~BORDER_ISOLATED);
+
+    //CV_IPP_RUN_FAST(ipp_Deriv(src, dst, dx, dy, 0, scale, delta, borderType));
+
+    sepFilter2D( src, dst, ddepth, kx, ky, Point(-1, -1), delta, borderType );
 }
 
 #ifdef HAVE_OPENCL
@@ -576,10 +550,10 @@ static bool ocl_Laplacian5(InputArray _src, OutputArray _dst,
     size_t lmsz = dev.localMemSize();
     size_t src_step = _src.step(), src_offset = _src.offset();
     const size_t tileSizeYmax = wgs / tileSizeX;
+    CV_Assert(src_step != 0 && esz != 0);
 
-    // workaround for Nvidia: 3 channel vector type takes 4*elem_size in local memory
+    // workaround for NVIDIA: 3 channel vector type takes 4*elem_size in local memory
     int loc_mem_cn = dev.vendorID() == ocl::Device::VENDOR_NVIDIA && cn == 3 ? 4 : cn;
-
     if (((src_offset % src_step) % esz == 0) &&
         (
          (borderType == BORDER_CONSTANT || borderType == BORDER_REPLICATE) ||
@@ -588,6 +562,7 @@ static bool ocl_Laplacian5(InputArray _src, OutputArray _dst,
         ) &&
         (tileSizeX * tileSizeYmin <= wgs) &&
         (LAPLACIAN_LOCAL_MEM(tileSizeX, tileSizeYmin, kernelX.cols, loc_mem_cn * 4) <= lmsz)
+        && OCL_PERFORMANCE_CHECK(!dev.isAMD())  // TODO FIXIT 2018: Problem with AMDGPU on Linux (2482.3)
        )
     {
         Size size = _src.size(), wholeSize;
@@ -743,7 +718,7 @@ namespace cv
 static bool ipp_Laplacian(InputArray _src, OutputArray _dst, int ksize, double scale, double delta, int borderType)
 {
 #ifdef HAVE_IPP_IW
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
     ::ipp::IwiSize size(_src.size().width, _src.size().height);
     IppDataType   srcType   = ippiGetDataType(_src.depth());
@@ -758,7 +733,7 @@ static bool ipp_Laplacian(InputArray _src, OutputArray _dst, int ksize, double s
         useScale = true;
 
     IppiMaskSize maskSize = ippiGetMaskSize(ksize, ksize);
-    if(maskSize < 0)
+    if((int)maskSize < 0)
         return false;
 
     // Acquire data and begin processing
@@ -772,7 +747,7 @@ static bool ipp_Laplacian(InputArray _src, OutputArray _dst, int ksize, double s
         ::ipp::IwiImage iwDstProc  = iwDst;
         ::ipp::IwiBorderSize  borderSize(maskSize);
         ::ipp::IwiBorderType  ippBorder(ippiGetBorder(iwSrc, borderType, borderSize));
-        if(!ippBorder.m_borderType)
+        if(!ippBorder)
             return false;
 
         if(srcType == ipp8u && dstType == ipp8u)
@@ -784,17 +759,17 @@ static bool ipp_Laplacian(InputArray _src, OutputArray _dst, int ksize, double s
         {
             iwSrc -= borderSize;
             iwSrcProc.Alloc(iwSrc.m_size, ipp32f, channels);
-            CV_INSTRUMENT_FUN_IPP(::ipp::iwiScale, &iwSrc, &iwSrcProc, 1, 0);
+            CV_INSTRUMENT_FUN_IPP(::ipp::iwiScale, iwSrc, iwSrcProc, 1, 0);
             iwSrcProc += borderSize;
         }
 
-        CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterLaplacian, &iwSrcProc, &iwDstProc, maskSize, ippBorder);
+        CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterLaplacian, iwSrcProc, iwDstProc, maskSize, ::ipp::IwDefault(), ippBorder);
 
         if(useScale)
-            CV_INSTRUMENT_FUN_IPP(::ipp::iwiScale, &iwDstProc, &iwDst, scale, delta);
+            CV_INSTRUMENT_FUN_IPP(::ipp::iwiScale, iwDstProc, iwDst, scale, delta);
 
     }
-    catch (::ipp::IwException ex)
+    catch (const ::ipp::IwException &)
     {
         return false;
     }
@@ -812,7 +787,9 @@ static bool ipp_Laplacian(InputArray _src, OutputArray _dst, int ksize, double s
 void cv::Laplacian( InputArray _src, OutputArray _dst, int ddepth, int ksize,
                     double scale, double delta, int borderType )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
+
+    CV_Assert(!_src.empty());
 
     int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype);
     if (ddepth < 0)
@@ -835,21 +812,7 @@ void cv::Laplacian( InputArray _src, OutputArray _dst, int ddepth, int ksize,
                    ocl_Laplacian3_8UC1(_src, _dst, ddepth, kernel, delta, borderType));
     }
 
-    CV_IPP_RUN(!(cv::ocl::useOpenCL() && _dst.isUMat()), ipp_Laplacian(_src, _dst, ksize, scale, delta, borderType));
-
-
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    if (tegra::useTegra() && scale == 1.0 && delta == 0)
-    {
-        Mat src = _src.getMat(), dst = _dst.getMat();
-        if (ksize == 1 && tegra::laplace1(src, dst, borderType))
-            return;
-        if (ksize == 3 && tegra::laplace3(src, dst, borderType))
-            return;
-        if (ksize == 5 && tegra::laplace5(src, dst, borderType))
-            return;
-    }
-#endif
+    CV_IPP_RUN(!(cv::ocl::isOpenCLActivated() && _dst.isUMat()), ipp_Laplacian(_src, _dst, ksize, scale, delta, borderType));
 
     if( ksize == 1 || ksize == 3 )
     {

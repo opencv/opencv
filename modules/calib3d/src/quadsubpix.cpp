@@ -61,13 +61,13 @@ static void orderContours(const std::vector<std::vector<Point> >& contours, Poin
     for(i = 0; i < n; i++)
     {
         size_t ni = contours[i].size();
-        double min_dist = std::numeric_limits<double>::max();
+        float min_dist = std::numeric_limits<float>::max();
         for(j = 0; j < ni; j++)
         {
             double dist = norm(Point2f((float)contours[i][j].x, (float)contours[i][j].y) - point);
-            min_dist = MIN(min_dist, dist);
+            min_dist = (float)MIN((double)min_dist, dist);
         }
-        order.push_back(std::pair<int, float>((int)i, (float)min_dist));
+        order.push_back(std::pair<int, float>((int)i, min_dist));
     }
 
     std::sort(order.begin(), order.end(), is_smaller);
@@ -163,7 +163,7 @@ static int segment_hist_max(const Mat& hist, int& low_thresh, int& high_thresh)
 
 bool cv::find4QuadCornerSubpix(InputArray _img, InputOutputArray _corners, Size region_size)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat img = _img.getMat(), cornersM = _corners.getMat();
     int ncorners = cornersM.checkVector(2, CV_32F);
@@ -194,9 +194,8 @@ bool cv::find4QuadCornerSubpix(InputArray _img, InputOutputArray _corners, Size 
         erode(white_comp, white_comp, Mat(), Point(-1, -1), erode_count);
 
         std::vector<std::vector<Point> > white_contours, black_contours;
-        std::vector<Vec4i> white_hierarchy, black_hierarchy;
-        findContours(black_comp, black_contours, black_hierarchy, RETR_LIST, CHAIN_APPROX_SIMPLE);
-        findContours(white_comp, white_contours, white_hierarchy, RETR_LIST, CHAIN_APPROX_SIMPLE);
+        findContours(black_comp, black_contours, RETR_LIST, CHAIN_APPROX_SIMPLE);
+        findContours(white_comp, white_contours, RETR_LIST, CHAIN_APPROX_SIMPLE);
 
         if(black_contours.size() < 5 || white_contours.size() < 5) continue;
 

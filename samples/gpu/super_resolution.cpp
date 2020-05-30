@@ -55,24 +55,24 @@ static Ptr<cv::superres::DenseOpticalFlowExt> createOptFlow(const string& name, 
 int main(int argc, const char* argv[])
 {
     CommandLineParser cmd(argc, argv,
-        "{ v video      |           | Input video }"
+        "{ v video      |           | Input video (mandatory)}"
         "{ o output     |           | Output video }"
         "{ s scale      | 4         | Scale factor }"
         "{ i iterations | 180       | Iteration count }"
         "{ t temporal   | 4         | Radius of the temporal search area }"
-        "{ f flow       | farneback | Optical flow algorithm (farneback, simple, tvl1, brox, pyrlk) }"
+        "{ f flow       | farneback | Optical flow algorithm (farneback, tvl1, brox, pyrlk) }"
         "{ g gpu        | false     | CPU as default device, cuda for CUDA }"
         "{ h help       | false     | Print help message }"
     );
 
-    if (cmd.get<bool>("help"))
+    const string inputVideoName = cmd.get<string>("video");
+    if (cmd.get<bool>("help") || inputVideoName.empty())
     {
         cout << "This sample demonstrates Super Resolution algorithms for video sequence" << endl;
         cmd.printMessage();
         return EXIT_SUCCESS;
     }
 
-    const string inputVideoName = cmd.get<string>("video");
     const string outputVideoName = cmd.get<string>("output");
     const int scale = cmd.get<int>("scale");
     const int iterations = cmd.get<int>("iterations");
@@ -136,7 +136,7 @@ int main(int argc, const char* argv[])
 
     for (int i = 0;; ++i)
     {
-        cout << '[' << setw(3) << i << "] : ";
+        cout << '[' << setw(3) << i << "] : " << flush;
         Mat result;
 
         MEASURE_TIME(superRes->nextFrame(result));

@@ -19,7 +19,7 @@ using namespace std;
 using namespace cv;
 
 // Functions for facial feature detection
-static void help();
+static void help(char** argv);
 static void detectFaces(Mat&, vector<Rect_<int> >&, string);
 static void detectEyes(Mat&, vector<Rect_<int> >&, string);
 static void detectNose(Mat&, vector<Rect_<int> >&, string);
@@ -32,14 +32,14 @@ string face_cascade_path, eye_cascade_path, nose_cascade_path, mouth_cascade_pat
 int main(int argc, char** argv)
 {
     cv::CommandLineParser parser(argc, argv,
-            "{eyes||}{nose||}{mouth||}{help h||}");
+            "{eyes||}{nose||}{mouth||}{help h||}{@image||}{@facexml||}");
     if (parser.has("help"))
     {
-        help();
+        help(argv);
         return 0;
     }
-    input_image_path = parser.get<string>(0);
-    face_cascade_path = parser.get<string>(1);
+    input_image_path = parser.get<string>("@image");
+    face_cascade_path = parser.get<string>("@facexml");
     eye_cascade_path = parser.has("eyes") ? parser.get<string>("eyes") : "";
     nose_cascade_path = parser.has("nose") ? parser.get<string>("nose") : "";
     mouth_cascade_path = parser.has("mouth") ? parser.get<string>("mouth") : "";
@@ -50,7 +50,7 @@ int main(int argc, char** argv)
     }
     // Load image and cascade classifier files
     Mat image;
-    image = imread(input_image_path);
+    image = imread(samples::findFile(input_image_path));
 
     // Detect faces and facial features
     vector<Rect_<int> > faces;
@@ -63,14 +63,14 @@ int main(int argc, char** argv)
     return 0;
 }
 
-static void help()
+static void help(char** argv)
 {
     cout << "\nThis file demonstrates facial feature points detection using Haarcascade classifiers.\n"
         "The program detects a face and eyes, nose and mouth inside the face."
         "The code has been tested on the Japanese Female Facial Expression (JAFFE) database and found"
         "to give reasonably accurate results. \n";
 
-    cout << "\nUSAGE: ./cpp-example-facial_features [IMAGE] [FACE_CASCADE] [OPTIONS]\n"
+    cout << "\nUSAGE: " << argv[0] << " [IMAGE] [FACE_CASCADE] [OPTIONS]\n"
         "IMAGE\n\tPath to the image of a face taken as input.\n"
         "FACE_CASCSDE\n\t Path to a haarcascade classifier for face detection.\n"
         "OPTIONS: \nThere are 3 options available which are described in detail. There must be a "
@@ -81,11 +81,11 @@ static void help()
 
 
     cout << "EXAMPLE:\n"
-        "(1) ./cpp-example-facial_features image.jpg face.xml -eyes=eyes.xml -mouth=mouth.xml\n"
+        "(1) " << argv[0] << " image.jpg face.xml -eyes=eyes.xml -mouth=mouth.xml\n"
         "\tThis will detect the face, eyes and mouth in image.jpg.\n"
-        "(2) ./cpp-example-facial_features image.jpg face.xml -nose=nose.xml\n"
+        "(2) " << argv[0] << " image.jpg face.xml -nose=nose.xml\n"
         "\tThis will detect the face and nose in image.jpg.\n"
-        "(3) ./cpp-example-facial_features image.jpg face.xml\n"
+        "(3) " << argv[0] << " image.jpg face.xml\n"
         "\tThis will detect only the face in image.jpg.\n";
 
     cout << " \n\nThe classifiers for face and eyes can be downloaded from : "
@@ -98,9 +98,10 @@ static void help()
 static void detectFaces(Mat& img, vector<Rect_<int> >& faces, string cascade_path)
 {
     CascadeClassifier face_cascade;
-    face_cascade.load(cascade_path);
+    face_cascade.load(samples::findFile(cascade_path));
 
-    face_cascade.detectMultiScale(img, faces, 1.15, 3, 0|CASCADE_SCALE_IMAGE, Size(30, 30));
+    if (!face_cascade.empty())
+        face_cascade.detectMultiScale(img, faces, 1.15, 3, 0|CASCADE_SCALE_IMAGE, Size(30, 30));
     return;
 }
 
@@ -186,26 +187,29 @@ static void detectFacialFeaures(Mat& img, const vector<Rect_<int> > faces, strin
 static void detectEyes(Mat& img, vector<Rect_<int> >& eyes, string cascade_path)
 {
     CascadeClassifier eyes_cascade;
-    eyes_cascade.load(cascade_path);
+    eyes_cascade.load(samples::findFile(cascade_path, !cascade_path.empty()));
 
-    eyes_cascade.detectMultiScale(img, eyes, 1.20, 5, 0|CASCADE_SCALE_IMAGE, Size(30, 30));
+    if (!eyes_cascade.empty())
+        eyes_cascade.detectMultiScale(img, eyes, 1.20, 5, 0|CASCADE_SCALE_IMAGE, Size(30, 30));
     return;
 }
 
 static void detectNose(Mat& img, vector<Rect_<int> >& nose, string cascade_path)
 {
     CascadeClassifier nose_cascade;
-    nose_cascade.load(cascade_path);
+    nose_cascade.load(samples::findFile(cascade_path, !cascade_path.empty()));
 
-    nose_cascade.detectMultiScale(img, nose, 1.20, 5, 0|CASCADE_SCALE_IMAGE, Size(30, 30));
+    if (!nose_cascade.empty())
+        nose_cascade.detectMultiScale(img, nose, 1.20, 5, 0|CASCADE_SCALE_IMAGE, Size(30, 30));
     return;
 }
 
 static void detectMouth(Mat& img, vector<Rect_<int> >& mouth, string cascade_path)
 {
     CascadeClassifier mouth_cascade;
-    mouth_cascade.load(cascade_path);
+    mouth_cascade.load(samples::findFile(cascade_path, !cascade_path.empty()));
 
-    mouth_cascade.detectMultiScale(img, mouth, 1.20, 5, 0|CASCADE_SCALE_IMAGE, Size(30, 30));
+    if (!mouth_cascade.empty())
+        mouth_cascade.detectMultiScale(img, mouth, 1.20, 5, 0|CASCADE_SCALE_IMAGE, Size(30, 30));
     return;
 }

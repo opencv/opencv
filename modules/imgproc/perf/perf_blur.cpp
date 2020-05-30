@@ -1,12 +1,11 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
 #include "perf_precomp.hpp"
 
-using namespace std;
-using namespace cv;
-using namespace perf;
-using std::tr1::make_tuple;
-using std::tr1::get;
+namespace opencv_test {
 
-typedef std::tr1::tuple<Size, MatType, int> Size_MatType_kSize_t;
+typedef tuple<Size, MatType, int> Size_MatType_kSize_t;
 typedef perf::TestBaseWithParam<Size_MatType_kSize_t> Size_MatType_kSize;
 
 PERF_TEST_P(Size_MatType_kSize, medianBlur,
@@ -37,11 +36,14 @@ PERF_TEST_P(Size_MatType_kSize, medianBlur,
 CV_ENUM(BorderType3x3, BORDER_REPLICATE, BORDER_CONSTANT)
 CV_ENUM(BorderType, BORDER_REPLICATE, BORDER_CONSTANT, BORDER_REFLECT, BORDER_REFLECT101)
 
-typedef std::tr1::tuple<Size, MatType, BorderType3x3> Size_MatType_BorderType3x3_t;
+typedef tuple<Size, MatType, BorderType3x3> Size_MatType_BorderType3x3_t;
 typedef perf::TestBaseWithParam<Size_MatType_BorderType3x3_t> Size_MatType_BorderType3x3;
 
-typedef std::tr1::tuple<Size, MatType, BorderType> Size_MatType_BorderType_t;
+typedef tuple<Size, MatType, BorderType> Size_MatType_BorderType_t;
 typedef perf::TestBaseWithParam<Size_MatType_BorderType_t> Size_MatType_BorderType;
+
+typedef tuple<Size, int, BorderType3x3> Size_ksize_BorderType_t;
+typedef perf::TestBaseWithParam<Size_ksize_BorderType_t> Size_ksize_BorderType;
 
 PERF_TEST_P(Size_MatType_BorderType3x3, gaussianBlur3x3,
             testing::Combine(
@@ -134,6 +136,28 @@ PERF_TEST_P(Size_MatType_BorderType3x3, box3x3,
     SANITY_CHECK(dst, 1e-6, ERROR_RELATIVE);
 }
 
+PERF_TEST_P(Size_ksize_BorderType, box_CV8U_CV16U,
+            testing::Combine(
+                    testing::Values(szODD, szQVGA, szVGA, sz720p),
+                    testing::Values(3, 5, 15),
+                    BorderType3x3::all()
+                    )
+            )
+{
+    Size size = get<0>(GetParam());
+    int ksize = get<1>(GetParam());
+    BorderType3x3 btype = get<2>(GetParam());
+
+    Mat src(size, CV_8UC1);
+    Mat dst(size, CV_16UC1);
+
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    TEST_CYCLE() boxFilter(src, dst, CV_16UC1, Size(ksize, ksize), Point(-1,-1), false, btype);
+
+    SANITY_CHECK(dst, 1e-6, ERROR_RELATIVE);
+}
+
 PERF_TEST_P(Size_MatType_BorderType3x3, box3x3_inplace,
             testing::Combine(
                 testing::Values(szODD, szQVGA, szVGA, sz720p),
@@ -205,3 +229,28 @@ PERF_TEST_P(Size_MatType_BorderType, blur5x5,
 
     SANITY_CHECK(dst, 1);
 }
+
+///////////// BlendLinear ////////////////////////
+PERF_TEST_P(Size_MatType, BlendLinear,
+            testing::Combine(
+                testing::Values(szVGA, sz720p, sz1080p, sz2160p),
+                testing::Values(CV_8UC1, CV_32FC1, CV_8UC3, CV_32FC3, CV_8UC4, CV_32FC4)
+                )
+           )
+{
+    const Size srcSize = get<0>(GetParam());
+    const int srcType = get<1>(GetParam());
+
+    Mat src1(srcSize, srcType), src2(srcSize, srcType), dst(srcSize, srcType);
+    Mat weights1(srcSize, CV_32FC1), weights2(srcSize, CV_32FC1);
+
+    declare.in(src1, src2, WARMUP_RNG).in(weights1, weights2, WARMUP_READ).out(dst);
+    randu(weights1, 0, 1);
+    randu(weights2, 0, 1);
+
+    TEST_CYCLE() blendLinear(src1, src2, weights1, weights2, dst);
+
+    SANITY_CHECK_NOTHING();
+}
+
+} // namespace

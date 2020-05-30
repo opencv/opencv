@@ -10,7 +10,7 @@ Resulting .ply file cam be easily viewed using MeshLab ( http://meshlab.sourcefo
 from __future__ import print_function
 
 import numpy as np
-import cv2
+import cv2 as cv
 
 ply_header = '''ply
 format ascii 1.0
@@ -33,16 +33,16 @@ def write_ply(fn, verts, colors):
         np.savetxt(f, verts, fmt='%f %f %f %d %d %d ')
 
 
-if __name__ == '__main__':
+def main():
     print('loading images...')
-    imgL = cv2.pyrDown( cv2.imread('../data/aloeL.jpg') )  # downscale images for faster processing
-    imgR = cv2.pyrDown( cv2.imread('../data/aloeR.jpg') )
+    imgL = cv.pyrDown(cv.imread(cv.samples.findFile('aloeL.jpg')))  # downscale images for faster processing
+    imgR = cv.pyrDown(cv.imread(cv.samples.findFile('aloeR.jpg')))
 
     # disparity range is tuned for 'aloe' image pair
     window_size = 3
     min_disp = 16
     num_disp = 112-min_disp
-    stereo = cv2.StereoSGBM_create(minDisparity = min_disp,
+    stereo = cv.StereoSGBM_create(minDisparity = min_disp,
         numDisparities = num_disp,
         blockSize = 16,
         P1 = 8*3*window_size**2,
@@ -63,16 +63,23 @@ if __name__ == '__main__':
                     [0,-1, 0,  0.5*h], # turn points 180 deg around x-axis,
                     [0, 0, 0,     -f], # so that y-axis looks up
                     [0, 0, 1,      0]])
-    points = cv2.reprojectImageTo3D(disp, Q)
-    colors = cv2.cvtColor(imgL, cv2.COLOR_BGR2RGB)
+    points = cv.reprojectImageTo3D(disp, Q)
+    colors = cv.cvtColor(imgL, cv.COLOR_BGR2RGB)
     mask = disp > disp.min()
     out_points = points[mask]
     out_colors = colors[mask]
     out_fn = 'out.ply'
-    write_ply('out.ply', out_points, out_colors)
-    print('%s saved' % 'out.ply')
+    write_ply(out_fn, out_points, out_colors)
+    print('%s saved' % out_fn)
 
-    cv2.imshow('left', imgL)
-    cv2.imshow('disparity', (disp-min_disp)/num_disp)
-    cv2.waitKey()
-    cv2.destroyAllWindows()
+    cv.imshow('left', imgL)
+    cv.imshow('disparity', (disp-min_disp)/num_disp)
+    cv.waitKey()
+
+    print('Done')
+
+
+if __name__ == '__main__':
+    print(__doc__)
+    main()
+    cv.destroyAllWindows()

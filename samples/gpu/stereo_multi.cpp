@@ -1,7 +1,7 @@
 // This sample demonstrates working on one piece of data using two GPUs.
 // It splits input into two parts and processes them separately on different GPUs.
 
-#ifdef WIN32
+#ifdef _WIN32
     #define NOMINMAX
     #include <windows.h>
 #else
@@ -25,7 +25,7 @@ using namespace cv::cuda;
 // Thread
 // OS-specific wrappers for multi-threading
 
-#ifdef WIN32
+#ifdef _WIN32
 class Thread
 {
     struct UserData
@@ -355,7 +355,7 @@ int main(int argc, char** argv)
 {
     if (argc != 3)
     {
-        cerr << "Usage: stereo_multi_gpu <left_video> <right_video>" << endl;
+        cerr << "Usage: stereo_multi <left_video> <right_video>" << endl;
         return -1;
     }
 
@@ -371,7 +371,7 @@ int main(int argc, char** argv)
         DeviceInfo devInfo(i);
         if (!devInfo.isCompatible())
         {
-            cerr << "CUDA module was't built for GPU #" << i << " ("
+            cerr << "CUDA module wasn't built for GPU #" << i << " ("
                  << devInfo.name() << ", CC " << devInfo.majorVersion()
                  << devInfo.minorVersion() << endl;
             return -1;

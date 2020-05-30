@@ -76,12 +76,13 @@
 #   CUDA_HOST_COMPILATION_CPP (Default ON)
 #   -- Set to OFF for C compilation of host code.
 #
-#   CUDA_HOST_COMPILER (Default CMAKE_C_COMPILER, $(VCInstallDir)/bin for VS)
+#   CUDA_HOST_COMPILER (Default CMAKE_C_COMPILER)
 #   -- Set the host compiler to be used by nvcc.  Ignored if -ccbin or
 #      --compiler-bindir is already present in the CUDA_NVCC_FLAGS or
-#      CUDA_NVCC_FLAGS_<CONFIG> variables.  For Visual Studio targets
-#      $(VCInstallDir)/bin is a special value that expands out to the path when
-#      the command is run from withing VS.
+#      CUDA_NVCC_FLAGS_<CONFIG> variables.  For Visual Studio targets,
+#      the host compiler is constructed with one or more visual studio macros
+#      such as $(VCInstallDir), that expands out to the path when
+#      the command is run from within VS.
 #
 #   CUDA_NVCC_FLAGS
 #   CUDA_NVCC_FLAGS_<CONFIG>
@@ -140,7 +141,7 @@
 #   -- Same as CUDA_ADD_EXECUTABLE except that a library is created.
 #
 #   CUDA_BUILD_CLEAN_TARGET()
-#   -- Creates a convience target that deletes all the dependency files
+#   -- Creates a convenience target that deletes all the dependency files
 #      generated.  You should make clean after running this target to ensure the
 #      dependency files get regenerated.
 #
@@ -203,7 +204,7 @@
 #      The arguments passed in after OPTIONS are extra command line options to
 #      give to nvcc.  You can also specify per configuration options by
 #      specifying the name of the configuration followed by the options.  General
-#      options must preceed configuration specific options.  Not all
+#      options must precede configuration specific options.  Not all
 #      configurations need to be specified, only the ones provided will be used.
 #
 #         OPTIONS -DFLAG=2 "-DFLAG_OTHER=space in flag"
@@ -270,7 +271,7 @@
 #                            implementation (alternative to:
 #                            CUDA_ADD_CUFFT_TO_TARGET macro)
 #   CUDA_CUBLAS_LIBRARIES -- Device or emulation library for the Cuda BLAS
-#                            implementation (alterative to:
+#                            implementation (alternative to:
 #                            CUDA_ADD_CUBLAS_TO_TARGET macro).
 #   CUDA_cupti_LIBRARY    -- CUDA Profiling Tools Interface library.
 #                            Only available for CUDA version 4.0+.
@@ -450,7 +451,13 @@ option(CUDA_HOST_COMPILATION_CPP "Generated file extension" ON)
 set(CUDA_NVCC_FLAGS "" CACHE STRING "Semi-colon delimit multiple arguments.")
 
 if(CMAKE_GENERATOR MATCHES "Visual Studio")
-  set(CUDA_HOST_COMPILER "$(VCInstallDir)bin" CACHE FILEPATH "Host side compiler used by NVCC")
+  set(_CUDA_MSVC_HOST_COMPILER "$(VCInstallDir)Tools/MSVC/$(VCToolsVersion)/bin/Host$(Platform)/$(PlatformTarget)")
+  if(MSVC_VERSION LESS 1910)
+   set(_CUDA_MSVC_HOST_COMPILER "$(VCInstallDir)bin")
+  endif()
+
+  set(CUDA_HOST_COMPILER "${_CUDA_MSVC_HOST_COMPILER}" CACHE FILEPATH "Host side compiler used by NVCC")
+
 else()
   # Using cc which is symlink to clang may let NVCC think it is GCC and issue
   # unhandled -dumpspecs option to clang. Also in case neither
@@ -466,7 +473,7 @@ else()
 endif()
 
 # Propagate the host flags to the host compiler via -Xcompiler
-option(CUDA_PROPAGATE_HOST_FLAGS "Propage C/CXX_FLAGS and friends to the host compiler via -Xcompile" ON)
+option(CUDA_PROPAGATE_HOST_FLAGS "Propagate C/CXX_FLAGS and friends to the host compiler via -Xcompile" ON)
 
 # Enable CUDA_SEPARABLE_COMPILATION
 option(CUDA_SEPARABLE_COMPILATION "Compile CUDA objects with separable compilation enabled.  Requires CUDA 5.0+" OFF)
@@ -486,7 +493,7 @@ mark_as_advanced(
 # Makefile and similar generators don't define CMAKE_CONFIGURATION_TYPES, so we
 # need to add another entry for the CMAKE_BUILD_TYPE.  We also need to add the
 # standerd set of 4 build types (Debug, MinSizeRel, Release, and RelWithDebInfo)
-# for completeness.  We need run this loop in order to accomodate the addition
+# for completeness.  We need run this loop in order to accommodate the addition
 # of extra configuration types.  Duplicate entries will be removed by
 # REMOVE_DUPLICATES.
 set(CUDA_configuration_types ${CMAKE_CONFIGURATION_TYPES} ${CMAKE_BUILD_TYPE} Debug MinSizeRel Release RelWithDebInfo)
@@ -787,8 +794,24 @@ if(NOT CUDA_VERSION VERSION_LESS "3.2")
     find_cuda_helper_libs(nvcuvid)
   endif()
 endif()
-if(CUDA_VERSION VERSION_GREATER "5.0")
-  # In CUDA 5.5 NPP was splitted onto 3 separate libraries.
+if(CUDA_VERSION VERSION_GREATER "7.5")
+  # In CUDA 8.0 NPPI was split in to many libraries.
+  find_cuda_helper_libs(nppc)
+  find_cuda_helper_libs(nppial)
+  find_cuda_helper_libs(nppicc)
+  find_cuda_helper_libs(nppicom)
+  find_cuda_helper_libs(nppidei)
+  find_cuda_helper_libs(nppif)
+  find_cuda_helper_libs(nppig)
+  find_cuda_helper_libs(nppim)
+  find_cuda_helper_libs(nppist)
+  find_cuda_helper_libs(nppisu)
+  find_cuda_helper_libs(nppitc)
+  find_cuda_helper_libs(npps)
+  set(CUDA_nppi_LIBRARY "${CUDA_nppial_LIBRARY};${CUDA_nppicc_LIBRARY};${CUDA_nppicom_LIBRARY};${CUDA_nppidei_LIBRARY};${CUDA_nppif_LIBRARY};${CUDA_nppig_LIBRARY};${CUDA_nppim_LIBRARY};${CUDA_nppist_LIBRARY};${CUDA_nppisu_LIBRARY};${CUDA_nppitc_LIBRARY}")
+  set(CUDA_npp_LIBRARY "${CUDA_nppc_LIBRARY};${CUDA_nppi_LIBRARY};${CUDA_npps_LIBRARY}")
+elseif(CUDA_VERSION VERSION_GREATER "5.0")
+  # In CUDA 5.5 NPP was split in to 3 separate libraries.
   find_cuda_helper_libs(nppc)
   find_cuda_helper_libs(nppi)
   find_cuda_helper_libs(npps)
@@ -1019,7 +1042,7 @@ function(CUDA_COMPUTE_BUILD_PATH path build_path)
   # Only deal with CMake style paths from here on out
   file(TO_CMAKE_PATH "${path}" bpath)
   if (IS_ABSOLUTE "${bpath}")
-    # Absolute paths are generally unnessary, especially if something like
+    # Absolute paths are generally unnecessary, especially if something like
     # file(GLOB_RECURSE) is used to pick up the files.
 
     string(FIND "${bpath}" "${CMAKE_CURRENT_BINARY_DIR}" _binary_dir_pos)
@@ -1042,7 +1065,7 @@ function(CUDA_COMPUTE_BUILD_PATH path build_path)
   # Avoid spaces
   string(REPLACE " " "_" bpath "${bpath}")
 
-  # Strip off the filename.  I wait until here to do it, since removin the
+  # Strip off the filename.  I wait until here to do it, since removing the
   # basename can make a path that looked like path/../basename turn into
   # path/.. (notice the trailing slash).
   get_filename_component(bpath "${bpath}" PATH)
@@ -1116,11 +1139,11 @@ macro(CUDA_WRAP_SRCS cuda_target format generated_files)
   endif()
 
   # This needs to be passed in at this stage, because VS needs to fill out the
-  # value of VCInstallDir from within VS.  Note that CCBIN is only used if
+  # various macros from within VS.  Note that CCBIN is only used if
   # -ccbin or --compiler-bindir isn't used and CUDA_HOST_COMPILER matches
-  # $(VCInstallDir)/bin.
+  # _CUDA_MSVC_HOST_COMPILER
   if(CMAKE_GENERATOR MATCHES "Visual Studio")
-    set(ccbin_flags -D "\"CCBIN:PATH=$(VCInstallDir)bin\"" )
+    set(ccbin_flags -D "\"CCBIN:PATH=${_CUDA_MSVC_HOST_COMPILER}\"" )
   else()
     set(ccbin_flags)
   endif()
@@ -1339,7 +1362,7 @@ macro(CUDA_WRAP_SRCS cuda_target format generated_files)
       # Bring in the dependencies.  Creates a variable CUDA_NVCC_DEPEND #######
       cuda_include_nvcc_dependencies(${cmake_dependency_file})
 
-      # Convience string for output ###########################################
+      # Convenience string for output ###########################################
       if(CUDA_BUILD_EMULATION)
         set(cuda_build_type "Emulation")
       else()
@@ -1540,7 +1563,7 @@ macro(CUDA_ADD_LIBRARY cuda_target)
     ${_cmake_options} ${_cuda_shared_flag}
     OPTIONS ${_options} )
 
-  # Compute the file name of the intermedate link file used for separable
+  # Compute the file name of the intermediate link file used for separable
   # compilation.
   CUDA_COMPUTE_SEPARABLE_COMPILATION_OBJECT_FILE_NAME(link_file ${cuda_target} "${${cuda_target}_SEPARABLE_COMPILATION_OBJECTS}")
 
@@ -1556,7 +1579,7 @@ macro(CUDA_ADD_LIBRARY cuda_target)
   # variable will have been defined.
   CUDA_LINK_SEPARABLE_COMPILATION_OBJECTS("${link_file}" ${cuda_target} "${_options}" "${${cuda_target}_SEPARABLE_COMPILATION_OBJECTS}")
 
-  target_link_libraries(${cuda_target}
+  target_link_libraries(${cuda_target} LINK_PRIVATE
     ${CUDA_LIBRARIES}
     )
 
@@ -1584,7 +1607,7 @@ macro(CUDA_ADD_EXECUTABLE cuda_target)
   # Create custom commands and targets for each file.
   CUDA_WRAP_SRCS( ${cuda_target} OBJ _generated_files ${_sources} OPTIONS ${_options} )
 
-  # Compute the file name of the intermedate link file used for separable
+  # Compute the file name of the intermediate link file used for separable
   # compilation.
   CUDA_COMPUTE_SEPARABLE_COMPILATION_OBJECT_FILE_NAME(link_file ${cuda_target} "${${cuda_target}_SEPARABLE_COMPILATION_OBJECTS}")
 
@@ -1600,7 +1623,7 @@ macro(CUDA_ADD_EXECUTABLE cuda_target)
   # variable will have been defined.
   CUDA_LINK_SEPARABLE_COMPILATION_OBJECTS("${link_file}" ${cuda_target} "${_options}" "${${cuda_target}_SEPARABLE_COMPILATION_OBJECTS}")
 
-  target_link_libraries(${cuda_target}
+  target_link_libraries(${cuda_target} LINK_PRIVATE
     ${CUDA_LIBRARIES}
     )
 
@@ -1675,9 +1698,9 @@ endmacro()
 ###############################################################################
 macro(CUDA_ADD_CUFFT_TO_TARGET target)
   if (CUDA_BUILD_EMULATION)
-    target_link_libraries(${target} ${CUDA_cufftemu_LIBRARY})
+    target_link_libraries(${target} LINK_PRIVATE ${CUDA_cufftemu_LIBRARY})
   else()
-    target_link_libraries(${target} ${CUDA_cufft_LIBRARY})
+    target_link_libraries(${target} LINK_PRIVATE ${CUDA_cufft_LIBRARY})
   endif()
 endmacro()
 
@@ -1688,9 +1711,9 @@ endmacro()
 ###############################################################################
 macro(CUDA_ADD_CUBLAS_TO_TARGET target)
   if (CUDA_BUILD_EMULATION)
-    target_link_libraries(${target} ${CUDA_cublasemu_LIBRARY})
+    target_link_libraries(${target} LINK_PRIVATE ${CUDA_cublasemu_LIBRARY})
   else()
-    target_link_libraries(${target} ${CUDA_cublas_LIBRARY})
+    target_link_libraries(${target} LINK_PRIVATE ${CUDA_cublas_LIBRARY})
   endif()
 endmacro()
 
@@ -1700,7 +1723,7 @@ endmacro()
 ###############################################################################
 ###############################################################################
 macro(CUDA_BUILD_CLEAN_TARGET)
-  # Call this after you add all your CUDA targets, and you will get a convience
+  # Call this after you add all your CUDA targets, and you will get a convenience
   # target.  You should also make clean after running this target to get the
   # build system to generate all the code again.
 

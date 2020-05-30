@@ -135,7 +135,7 @@ void ConvolveBuf::create(Size image_size, Size templ_size)
     const double blockScale = 4.5;
     const int minBlockSize = 256;
 
-    block_size.width = cvRound(result_size.width*blockScale);
+    block_size.width = cvRound(templ_size.width*blockScale);
     block_size.width = std::max( block_size.width, minBlockSize - templ_size.width + 1 );
     block_size.width = std::min( block_size.width, result_size.width );
     block_size.height = cvRound(templ_size.height*blockScale);
@@ -477,6 +477,7 @@ static bool matchTemplate_CCOEFF_NORMED(InputArray _image, InputArray _templ, Ou
     integral(_image, image_sums, image_sqsums, CV_32F, CV_32F);
 
     int type = image_sums.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    CV_Assert(cn >= 1 && cn <= 4);
 
     ocl::Kernel k("matchTemplate_CCOEFF_NORMED", ocl::imgproc::match_template_oclsrc,
         format("-D CCOEFF_NORMED -D T=%s -D T1=%s -D cn=%d", ocl::typeToStr(type), ocl::typeToStr(depth), cn));
@@ -563,7 +564,6 @@ static bool ocl_matchTemplate( InputArray _img, InputArray _templ, OutputArray _
 #include "opencv2/core/hal/hal.hpp"
 
 void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
-                Size corrsize, int ctype,
                 Point anchor, double delta, int borderType )
 {
     const double blockScale = 4.5;
@@ -573,7 +573,7 @@ void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
     Mat templ = _templ;
     int depth = img.depth(), cn = img.channels();
     int tdepth = templ.depth(), tcn = templ.channels();
-    int cdepth = CV_MAT_DEPTH(ctype), ccn = CV_MAT_CN(ctype);
+    int cdepth = corr.depth(), ccn = corr.channels();
 
     CV_Assert( img.dims <= 2 && templ.dims <= 2 && corr.dims <= 2 );
 
@@ -584,12 +584,10 @@ void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
     }
 
     CV_Assert( depth == tdepth || tdepth == CV_32F);
-    CV_Assert( corrsize.height <= img.rows + templ.rows - 1 &&
-               corrsize.width <= img.cols + templ.cols - 1 );
+    CV_Assert( corr.rows <= img.rows + templ.rows - 1 &&
+               corr.cols <= img.cols + templ.cols - 1 );
 
     CV_Assert( ccn == 1 || delta == 0 );
-
-    corr.create(corrsize, ctype);
 
     int maxDepth = depth > CV_8S ? CV_64F : std::max(std::max(CV_32F, tdepth), cdepth);
     Size blocksize, dftsize;
@@ -763,81 +761,146 @@ void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
 
 static void matchTemplateMask( InputArray _img, InputArray _templ, OutputArray _result, int method, InputArray _mask )
 {
-    int type = _img.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
-    CV_Assert( CV_TM_SQDIFF <= method && method <= CV_TM_CCOEFF_NORMED );
-    CV_Assert( (depth == CV_8U || depth == CV_32F) && type == _templ.type() && _img.dims() <= 2 );
+    CV_Assert(_mask.depth() == CV_8U || _mask.depth() == CV_32F);
+    CV_Assert(_mask.channels() == _templ.channels() || _mask.channels() == 1);
+    CV_Assert(_templ.size() == _mask.size());
+    CV_Assert(_img.size().height >= _templ.size().height &&
+              _img.size().width >= _templ.size().width);
 
     Mat img = _img.getMat(), templ = _templ.getMat(), mask = _mask.getMat();
-    int ttype = templ.type(), tdepth = CV_MAT_DEPTH(ttype), tcn = CV_MAT_CN(ttype);
-    int mtype = img.type(), mdepth = CV_MAT_DEPTH(type), mcn = CV_MAT_CN(mtype);
 
-    if (depth == CV_8U)
+    if (img.depth() == CV_8U)
     {
-        depth = CV_32F;
-        type = CV_MAKETYPE(CV_32F, cn);
-        img.convertTo(img, type, 1.0 / 255);
+        img.convertTo(img, CV_32F);
     }
-
-    if (tdepth == CV_8U)
+    if (templ.depth() == CV_8U)
     {
-        tdepth = CV_32F;
-        ttype = CV_MAKETYPE(CV_32F, tcn);
-        templ.convertTo(templ, ttype, 1.0 / 255);
+        templ.convertTo(templ, CV_32F);
     }
-
-    if (mdepth == CV_8U)
+    if (mask.depth() == CV_8U)
     {
-        mdepth = CV_32F;
-        mtype = CV_MAKETYPE(CV_32F, mcn);
-        compare(mask, Scalar::all(0), mask, CMP_NE);
-        mask.convertTo(mask, mtype, 1.0 / 255);
+        // To keep compatibility to other masks in OpenCV: CV_8U masks are binary masks
+        threshold(mask, mask, 0/*threshold*/, 1.0/*maxVal*/, THRESH_BINARY);
+        mask.convertTo(mask, CV_32F);
     }
 
     Size corrSize(img.cols - templ.cols + 1, img.rows - templ.rows + 1);
     _result.create(corrSize, CV_32F);
     Mat result = _result.getMat();
 
-    Mat img2 = img.mul(img);
-    Mat mask2 = mask.mul(mask);
-    Mat mask_templ = templ.mul(mask);
-    Scalar templMean, templSdv;
-
-    double templSum2 = 0;
-    meanStdDev( mask_templ, templMean, templSdv );
-
-    templSum2 = templSdv[0]*templSdv[0] + templSdv[1]*templSdv[1] + templSdv[2]*templSdv[2] + templSdv[3]*templSdv[3];
-    templSum2 += templMean[0]*templMean[0] + templMean[1]*templMean[1] + templMean[2]*templMean[2] + templMean[3]*templMean[3];
-    templSum2 *= ((double)templ.rows * templ.cols);
-
-    if (method == CV_TM_SQDIFF)
+    // If mask has only one channel, we repeat it for every image/template channel
+    if (templ.type() != mask.type())
     {
-        Mat mask2_templ = templ.mul(mask2);
-
-        Mat corr(corrSize, CV_32F);
-        crossCorr( img, mask2_templ, corr, corr.size(), corr.type(), Point(0,0), 0, 0 );
-        crossCorr( img2, mask, result, result.size(), result.type(), Point(0,0), 0, 0 );
-
-        result -= corr * 2;
-        result += templSum2;
+        // Assertions above ensured, that depth is the same and only number of channel differ
+        std::vector<Mat> maskChannels(templ.channels(), mask);
+        merge(maskChannels.data(), templ.channels(), mask);
     }
-    else if (method == CV_TM_CCORR_NORMED)
+
+    if (method == CV_TM_SQDIFF || method == CV_TM_SQDIFF_NORMED)
     {
-        if (templSum2 < DBL_EPSILON)
+        Mat temp_result(corrSize, CV_32F);
+        Mat img2 = img.mul(img);
+        Mat mask2 = mask.mul(mask);
+        // If the mul() is ever unnested, declare MatExpr, *not* Mat, to be more efficient.
+        // NORM_L2SQR calculates sum of squares
+        double templ2_mask2_sum = norm(templ.mul(mask), NORM_L2SQR);
+        crossCorr(img2, mask2, temp_result, Point(0,0), 0, 0);
+        crossCorr(img, templ.mul(mask2), result, Point(0,0), 0, 0);
+        // result and temp_result should not be switched, because temp_result is potentially needed
+        // for normalization.
+        result = -2 * result + temp_result + templ2_mask2_sum;
+
+        if (method == CV_TM_SQDIFF_NORMED)
         {
-            result = Scalar::all(1);
-            return;
+            sqrt(templ2_mask2_sum * temp_result, temp_result);
+            result /= temp_result;
         }
-
-        Mat corr(corrSize, CV_32F);
-        crossCorr( img2, mask2, corr, corr.size(), corr.type(), Point(0,0), 0, 0 );
-        crossCorr( img, mask_templ, result, result.size(), result.type(), Point(0,0), 0, 0 );
-
-        sqrt(corr, corr);
-        result = result.mul(1/corr);
-        result /= std::sqrt(templSum2);
     }
-    else
-        CV_Error(Error::StsNotImplemented, "");
+    else if (method == CV_TM_CCORR || method == CV_TM_CCORR_NORMED)
+    {
+        // If the mul() is ever unnested, declare MatExpr, *not* Mat, to be more efficient.
+        Mat templ_mask2 = templ.mul(mask.mul(mask));
+        crossCorr(img, templ_mask2, result, Point(0,0), 0, 0);
+
+        if (method == CV_TM_CCORR_NORMED)
+        {
+            Mat temp_result(corrSize, CV_32F);
+            Mat img2 = img.mul(img);
+            Mat mask2 = mask.mul(mask);
+            // NORM_L2SQR calculates sum of squares
+            double templ2_mask2_sum = norm(templ.mul(mask), NORM_L2SQR);
+            crossCorr( img2, mask2, temp_result, Point(0,0), 0, 0 );
+            sqrt(templ2_mask2_sum * temp_result, temp_result);
+            result /= temp_result;
+        }
+    }
+    else if (method == CV_TM_CCOEFF || method == CV_TM_CCOEFF_NORMED)
+    {
+        // Do mul() inline or declare MatExpr where possible, *not* Mat, to be more efficient.
+
+        Scalar mask_sum = sum(mask);
+        // T' * M where T' = M * (T - 1/sum(M)*sum(M*T))
+        Mat templx_mask = mask.mul(mask.mul(templ - sum(mask.mul(templ)).div(mask_sum)));
+        Mat img_mask_corr(corrSize, img.type()); // Needs separate channels
+
+        // CCorr(I, T'*M)
+        crossCorr(img, templx_mask, result, Point(0, 0), 0, 0);
+        // CCorr(I, M)
+        crossCorr(img, mask, img_mask_corr, Point(0, 0), 0, 0);
+
+        // CCorr(I', T') = CCorr(I, T'*M) - sum(T'*M)/sum(M)*CCorr(I, M)
+        // It does not matter what to use Mat/MatExpr, it should be evaluated to perform assign subtraction
+        Mat temp_res = img_mask_corr.mul(sum(templx_mask).div(mask_sum));
+        if (img.channels() == 1)
+        {
+            result -= temp_res;
+        }
+        else
+        {
+            // Sum channels of expression
+            temp_res = temp_res.reshape(1, result.rows * result.cols);
+            // channels are now columns
+            reduce(temp_res, temp_res, 1, REDUCE_SUM);
+            // transform back, but now with only one channel
+            result -= temp_res.reshape(1, result.rows);
+        }
+        if (method == CV_TM_CCOEFF_NORMED)
+        {
+            // norm(T')
+            double norm_templx = norm(mask.mul(templ - sum(mask.mul(templ)).div(mask_sum)),
+                                      NORM_L2);
+            // norm(I') = sqrt{ CCorr(I^2, M^2) - 2*CCorr(I, M^2)/sum(M)*CCorr(I, M)
+            //                  + sum(M^2)*CCorr(I, M)^2/sum(M)^2 }
+            //          = sqrt{ CCorr(I^2, M^2)
+            //                  + CCorr(I, M)/sum(M)*{ sum(M^2) / sum(M) * CCorr(I,M)
+            //                  - 2 * CCorr(I, M^2) } }
+            Mat norm_imgx(corrSize, CV_32F);
+            Mat img2 = img.mul(img);
+            Mat mask2 = mask.mul(mask);
+            Scalar mask2_sum = sum(mask2);
+            Mat img_mask2_corr(corrSize, img.type());
+            crossCorr(img2, mask2, norm_imgx, Point(0,0), 0, 0);
+            crossCorr(img, mask2, img_mask2_corr, Point(0,0), 0, 0);
+            temp_res = img_mask_corr.mul(Scalar(1.0, 1.0, 1.0, 1.0).div(mask_sum))
+                           .mul(img_mask_corr.mul(mask2_sum.div(mask_sum)) - 2 * img_mask2_corr);
+            if (img.channels() == 1)
+            {
+                norm_imgx += temp_res;
+            }
+            else
+            {
+                // Sum channels of expression
+                temp_res = temp_res.reshape(1, result.rows*result.cols);
+                // channels are now columns
+                // reduce sums columns (= channels)
+                reduce(temp_res, temp_res, 1, REDUCE_SUM);
+                // transform back, but now with only one channel
+                norm_imgx += temp_res.reshape(1, result.rows);
+            }
+            sqrt(norm_imgx, norm_imgx);
+            result /= norm_imgx * norm_templx;
+        }
+    }
 }
 
 static void common_matchTemplate( Mat& img, Mat& templ, Mat& result, int method, int cn )
@@ -888,12 +951,14 @@ static void common_matchTemplate( Mat& img, Mat& templ, Mat& result, int method,
         templNorm = std::sqrt(templNorm);
         templNorm /= std::sqrt(invArea); // care of accuracy here
 
+        CV_Assert(sqsum.data != NULL);
         q0 = (double*)sqsum.data;
         q1 = q0 + templ.cols*cn;
         q2 = (double*)(sqsum.data + templ.rows*sqsum.step);
         q3 = q2 + templ.cols*cn;
     }
 
+    CV_Assert(sum.data != NULL);
     double* p0 = (double*)sum.data;
     double* p1 = p0 + templ.cols*cn;
     double* p2 = (double*)(sum.data + templ.rows*sum.step);
@@ -944,7 +1009,12 @@ static void common_matchTemplate( Mat& img, Mat& templ, Mat& result, int method,
 
             if( isNormed )
             {
-                t = std::sqrt(MAX(wndSum2 - wndMean2,0))*templNorm;
+                double diff2 = MAX(wndSum2 - wndMean2, 0);
+                if (diff2 <= std::min(0.5, 10 * FLT_EPSILON * wndSum2))
+                    t = 0; // avoid rounding errors
+                else
+                    t = std::sqrt(diff2)*templNorm;
+
                 if( fabs(num) < t )
                     num /= t;
                 else if( fabs(num) < t*1.125 )
@@ -967,7 +1037,7 @@ typedef IppStatus (CV_STDCALL * ippimatchTemplate)(const void*, int, IppiSize, c
 
 static bool ipp_crossCorr(const Mat& src, const Mat& tpl, Mat& dst, bool normed)
 {
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
     IppStatus status;
 
@@ -1004,7 +1074,7 @@ static bool ipp_crossCorr(const Mat& src, const Mat& tpl, Mat& dst, bool normed)
 
 static bool ipp_sqrDistance(const Mat& src, const Mat& tpl, Mat& dst)
 {
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
     IppStatus status;
 
@@ -1036,7 +1106,7 @@ static bool ipp_sqrDistance(const Mat& src, const Mat& tpl, Mat& dst)
 
 static bool ipp_matchTemplate( Mat& img, Mat& templ, Mat& result, int method)
 {
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
     if(img.channels() != 1)
         return false;
@@ -1086,17 +1156,17 @@ static bool ipp_matchTemplate( Mat& img, Mat& templ, Mat& result, int method)
 
 void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result, int method, InputArray _mask )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
+
+    int type = _img.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    CV_Assert( CV_TM_SQDIFF <= method && method <= CV_TM_CCOEFF_NORMED );
+    CV_Assert( (depth == CV_8U || depth == CV_32F) && type == _templ.type() && _img.dims() <= 2 );
 
     if (!_mask.empty())
     {
         cv::matchTemplateMask(_img, _templ, _result, method, _mask);
         return;
     }
-
-    int type = _img.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
-    CV_Assert( CV_TM_SQDIFF <= method && method <= CV_TM_CCOEFF_NORMED );
-    CV_Assert( (depth == CV_8U || depth == CV_32F) && type == _templ.type() && _img.dims() <= 2 );
 
     bool needswap = _img.size().height < _templ.size().height || _img.size().width < _templ.size().width;
     if (needswap)
@@ -1115,14 +1185,9 @@ void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result,
     _result.create(corrSize, CV_32F);
     Mat result = _result.getMat();
 
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    if (tegra::useTegra() && tegra::matchTemplate(img, templ, result, method))
-        return;
-#endif
-
     CV_IPP_RUN_FAST(ipp_matchTemplate(img, templ, result, method))
 
-    crossCorr( img, templ, result, result.size(), result.type(), Point(0,0), 0, 0);
+    crossCorr( img, templ, result, Point(0,0), 0, 0);
 
     common_matchTemplate(img, templ, result, method, cn);
 }

@@ -1,52 +1,57 @@
 /**
- * @function Watershed_and_Distance_Transform.cpp
  * @brief Sample code showing how to segment overlapping objects using Laplacian filtering, in addition to Watershed and Distance Transformation
  * @author OpenCV Team
  */
 
-#include <opencv2/opencv.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/highgui.hpp>
 #include <iostream>
 
 using namespace std;
 using namespace cv;
 
-int main(int, char** argv)
+int main(int argc, char *argv[])
 {
-//! [load_image]
+    //! [load_image]
     // Load the image
-    Mat src = imread(argv[1]);
-
-    // Check if everything was fine
-    if (!src.data)
+    CommandLineParser parser( argc, argv, "{@input | cards.png | input image}" );
+    Mat src = imread( samples::findFile( parser.get<String>( "@input" ) ) );
+    if( src.empty() )
+    {
+        cout << "Could not open or find the image!\n" << endl;
+        cout << "Usage: " << argv[0] << " <Input image>" << endl;
         return -1;
+    }
 
     // Show source image
     imshow("Source Image", src);
-//! [load_image]
+    //! [load_image]
 
-//! [black_bg]
+    //! [black_bg]
     // Change the background from white to black, since that will help later to extract
     // better results during the use of Distance Transform
-    for( int x = 0; x < src.rows; x++ ) {
-      for( int y = 0; y < src.cols; y++ ) {
-          if ( src.at<Vec3b>(x, y) == Vec3b(255,255,255) ) {
-            src.at<Vec3b>(x, y)[0] = 0;
-            src.at<Vec3b>(x, y)[1] = 0;
-            src.at<Vec3b>(x, y)[2] = 0;
-          }
+    for ( int i = 0; i < src.rows; i++ ) {
+        for ( int j = 0; j < src.cols; j++ ) {
+            if ( src.at<Vec3b>(i, j) == Vec3b(255,255,255) )
+            {
+                src.at<Vec3b>(i, j)[0] = 0;
+                src.at<Vec3b>(i, j)[1] = 0;
+                src.at<Vec3b>(i, j)[2] = 0;
+            }
         }
     }
 
     // Show output image
     imshow("Black Background Image", src);
-//! [black_bg]
+    //! [black_bg]
 
-//! [sharp]
-    // Create a kernel that we will use for accuting/sharpening our image
+    //! [sharp]
+    // Create a kernel that we will use to sharpen our image
     Mat kernel = (Mat_<float>(3,3) <<
-            1,  1, 1,
-            1, -8, 1,
-            1,  1, 1); // an approximation of second derivative, a quite strong kernel
+                  1,  1, 1,
+                  1, -8, 1,
+                  1,  1, 1); // an approximation of second derivative, a quite strong kernel
 
     // do the laplacian filtering as it is
     // well, we need to convert everything in something more deeper then CV_8U
@@ -55,8 +60,8 @@ int main(int, char** argv)
     // BUT a 8bits unsigned int (the one we are working with) can contain values from 0 to 255
     // so the possible negative number will be truncated
     Mat imgLaplacian;
-    Mat sharp = src; // copy source image to another temporary one
-    filter2D(sharp, imgLaplacian, CV_32F, kernel);
+    filter2D(src, imgLaplacian, CV_32F, kernel);
+    Mat sharp;
     src.convertTo(sharp, CV_32F);
     Mat imgResult = sharp - imgLaplacian;
 
@@ -66,41 +71,39 @@ int main(int, char** argv)
 
     // imshow( "Laplace Filtered Image", imgLaplacian );
     imshow( "New Sharped Image", imgResult );
-//! [sharp]
+    //! [sharp]
 
-    src = imgResult; // copy back
-
-//! [bin]
+    //! [bin]
     // Create binary image from source image
     Mat bw;
-    cvtColor(src, bw, CV_BGR2GRAY);
-    threshold(bw, bw, 40, 255, CV_THRESH_BINARY | CV_THRESH_OTSU);
+    cvtColor(imgResult, bw, COLOR_BGR2GRAY);
+    threshold(bw, bw, 40, 255, THRESH_BINARY | THRESH_OTSU);
     imshow("Binary Image", bw);
-//! [bin]
+    //! [bin]
 
-//! [dist]
+    //! [dist]
     // Perform the distance transform algorithm
     Mat dist;
-    distanceTransform(bw, dist, CV_DIST_L2, 3);
+    distanceTransform(bw, dist, DIST_L2, 3);
 
     // Normalize the distance image for range = {0.0, 1.0}
     // so we can visualize and threshold it
-    normalize(dist, dist, 0, 1., NORM_MINMAX);
+    normalize(dist, dist, 0, 1.0, NORM_MINMAX);
     imshow("Distance Transform Image", dist);
-//! [dist]
+    //! [dist]
 
-//! [peaks]
+    //! [peaks]
     // Threshold to obtain the peaks
     // This will be the markers for the foreground objects
-    threshold(dist, dist, .4, 1., CV_THRESH_BINARY);
+    threshold(dist, dist, 0.4, 1.0, THRESH_BINARY);
 
     // Dilate a bit the dist image
-    Mat kernel1 = Mat::ones(3, 3, CV_8UC1);
+    Mat kernel1 = Mat::ones(3, 3, CV_8U);
     dilate(dist, dist, kernel1);
     imshow("Peaks", dist);
-//! [peaks]
+    //! [peaks]
 
-//! [seeds]
+    //! [seeds]
     // Create the CV_8U version of the distance image
     // It is needed for findContours()
     Mat dist_8u;
@@ -108,37 +111,39 @@ int main(int, char** argv)
 
     // Find total markers
     vector<vector<Point> > contours;
-    findContours(dist_8u, contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
+    findContours(dist_8u, contours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
 
     // Create the marker image for the watershed algorithm
-    Mat markers = Mat::zeros(dist.size(), CV_32SC1);
+    Mat markers = Mat::zeros(dist.size(), CV_32S);
 
     // Draw the foreground markers
     for (size_t i = 0; i < contours.size(); i++)
-        drawContours(markers, contours, static_cast<int>(i), Scalar::all(static_cast<int>(i)+1), -1);
+    {
+        drawContours(markers, contours, static_cast<int>(i), Scalar(static_cast<int>(i)+1), -1);
+    }
 
     // Draw the background marker
-    circle(markers, Point(5,5), 3, CV_RGB(255,255,255), -1);
+    circle(markers, Point(5,5), 3, Scalar(255), -1);
     imshow("Markers", markers*10000);
-//! [seeds]
+    //! [seeds]
 
-//! [watershed]
+    //! [watershed]
     // Perform the watershed algorithm
-    watershed(src, markers);
+    watershed(imgResult, markers);
 
-    Mat mark = Mat::zeros(markers.size(), CV_8UC1);
-    markers.convertTo(mark, CV_8UC1);
+    Mat mark;
+    markers.convertTo(mark, CV_8U);
     bitwise_not(mark, mark);
-//    imshow("Markers_v2", mark); // uncomment this if you want to see how the mark
-                                  // image looks like at that point
+    //    imshow("Markers_v2", mark); // uncomment this if you want to see how the mark
+    // image looks like at that point
 
     // Generate random colors
     vector<Vec3b> colors;
     for (size_t i = 0; i < contours.size(); i++)
     {
-        int b = theRNG().uniform(0, 255);
-        int g = theRNG().uniform(0, 255);
-        int r = theRNG().uniform(0, 255);
+        int b = theRNG().uniform(0, 256);
+        int g = theRNG().uniform(0, 256);
+        int r = theRNG().uniform(0, 256);
 
         colors.push_back(Vec3b((uchar)b, (uchar)g, (uchar)r));
     }
@@ -153,16 +158,16 @@ int main(int, char** argv)
         {
             int index = markers.at<int>(i,j);
             if (index > 0 && index <= static_cast<int>(contours.size()))
+            {
                 dst.at<Vec3b>(i,j) = colors[index-1];
-            else
-                dst.at<Vec3b>(i,j) = Vec3b(0,0,0);
+            }
         }
     }
 
     // Visualize the final image
     imshow("Final Result", dst);
-//! [watershed]
+    //! [watershed]
 
-    waitKey(0);
+    waitKey();
     return 0;
 }

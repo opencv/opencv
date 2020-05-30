@@ -11,11 +11,6 @@
 #define meanToFrame(a, b) *b = (float)a;
 #endif
 
-inline float sum(float val)
-{
-    return val;
-}
-
 #else
 
 #define T_MEAN float4
@@ -39,11 +34,6 @@ inline float sum(float val)
     b.y = a[1]; \
     b.z = a[2]; \
     b.w = 0.0f;
-
-inline float sum(const float4 val)
-{
-    return (val.x + val.y + val.z);
-}
 
 #endif
 
@@ -210,9 +200,7 @@ __kernel void mog2_kernel(__global const uchar* frame, int frame_step, int frame
                 int mode_idx = mad24(mode, idx_step, pt_idx);
                 T_MEAN c_mean = _mean[mode_idx];
 
-                T_MEAN pix_mean = pix * c_mean;
-
-                float numerator = sum(pix_mean);
+                float numerator = dot(pix, c_mean);
                 float denominator = dot(c_mean, c_mean);
 
                 if (denominator == 0)

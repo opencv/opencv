@@ -1,6 +1,9 @@
 Affine Transformations {#tutorial_warp_affine}
 ======================
 
+@prev_tutorial{tutorial_remap}
+@next_tutorial{tutorial_histogram_equalization}
+
 Goal
 ----
 
@@ -80,7 +83,7 @@ Theory
 Code
 ----
 
--#  **What does this program do?**
+-   **What does this program do?**
     -   Loads an image
     -   Applies an Affine Transform to the image. This transform is obtained from the relation
         between three points. We use the function @ref cv::warpAffine for that purpose.
@@ -88,57 +91,88 @@ Code
         the image center
     -   Waits until the user exits the program
 
--#  The tutorial's code is shown below. You can also download it here
-    [here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/ImgTrans/Geometric_Transforms_Demo.cpp)
+@add_toggle_cpp
+-   The tutorial's code is shown below. You can also download it
+    [here](https://raw.githubusercontent.com/opencv/opencv/master/samples/cpp/tutorial_code/ImgProc/Smoothing/Smoothing.cpp)
     @include samples/cpp/tutorial_code/ImgTrans/Geometric_Transforms_Demo.cpp
+@end_toggle
+
+@add_toggle_java
+-   The tutorial's code is shown below. You can also download it
+    [here](https://raw.githubusercontent.com/opencv/opencv/master/samples/cpp/tutorial_code/ImgProc/Smoothing/Smoothing.cpp)
+    @include samples/java/tutorial_code/ImgTrans/warp_affine/GeometricTransformsDemo.java
+@end_toggle
+
+@add_toggle_python
+-   The tutorial's code is shown below. You can also download it
+    [here](https://raw.githubusercontent.com/opencv/opencv/master/samples/python/tutorial_code/ImgTrans/warp_affine/Geometric_Transforms_Demo.py)
+    @include samples/python/tutorial_code/ImgTrans/warp_affine/Geometric_Transforms_Demo.py
+@end_toggle
 
 Explanation
 -----------
 
--#  Declare some variables we will use, such as the matrices to store our results and 2 arrays of
-    points to store the 2D points that define our Affine Transform.
-    @code{.cpp}
-    Point2f srcTri[3];
-    Point2f dstTri[3];
+-   Load an image:
 
-    Mat rot_mat( 2, 3, CV_32FC1 );
-    Mat warp_mat( 2, 3, CV_32FC1 );
-    Mat src, warp_dst, warp_rotate_dst;
-    @endcode
--#  Load an image:
-    @code{.cpp}
-    src = imread( argv[1], 1 );
-    @endcode
--#  Initialize the destination image as having the same size and type as the source:
-    @code{.cpp}
-    warp_dst = Mat::zeros( src.rows, src.cols, src.type() );
-    @endcode
--#  **Affine Transform:** As we explained in lines above, we need two sets of 3 points to derive the
+    @add_toggle_cpp
+    @snippet samples/cpp/tutorial_code/ImgTrans/Geometric_Transforms_Demo.cpp Load the image
+    @end_toggle
+
+    @add_toggle_java
+    @snippet samples/java/tutorial_code/ImgTrans/warp_affine/GeometricTransformsDemo.java Load the image
+    @end_toggle
+
+    @add_toggle_python
+    @snippet samples/python/tutorial_code/ImgTrans/warp_affine/Geometric_Transforms_Demo.py Load the image
+    @end_toggle
+
+-   **Affine Transform:** As we explained in lines above, we need two sets of 3 points to derive the
     affine transform relation. Have a look:
-    @code{.cpp}
-    srcTri[0] = Point2f( 0, 0 );
-    srcTri[1] = Point2f( src.cols - 1, 0 );
-    srcTri[2] = Point2f( 0, src.rows - 1 );
 
-    dstTri[0] = Point2f( src.cols*0.0, src.rows*0.33 );
-    dstTri[1] = Point2f( src.cols*0.85, src.rows*0.25 );
-    dstTri[2] = Point2f( src.cols*0.15, src.rows*0.7 );
-    @endcode
+    @add_toggle_cpp
+    @snippet samples/cpp/tutorial_code/ImgTrans/Geometric_Transforms_Demo.cpp Set your 3 points to calculate the  Affine Transform
+    @end_toggle
+
+    @add_toggle_java
+    @snippet samples/java/tutorial_code/ImgTrans/warp_affine/GeometricTransformsDemo.java Set your 3 points to calculate the  Affine Transform
+    @end_toggle
+
+    @add_toggle_python
+    @snippet samples/python/tutorial_code/ImgTrans/warp_affine/Geometric_Transforms_Demo.py Set your 3 points to calculate the  Affine Transform
+    @end_toggle
     You may want to draw these points to get a better idea on how they change. Their locations are
     approximately the same as the ones depicted in the example figure (in the Theory section). You
     may note that the size and orientation of the triangle defined by the 3 points change.
 
--#  Armed with both sets of points, we calculate the Affine Transform by using OpenCV function @ref
+-   Armed with both sets of points, we calculate the Affine Transform by using OpenCV function @ref
     cv::getAffineTransform :
-    @code{.cpp}
-    warp_mat = getAffineTransform( srcTri, dstTri );
-    @endcode
+
+    @add_toggle_cpp
+    @snippet samples/cpp/tutorial_code/ImgTrans/Geometric_Transforms_Demo.cpp Get the Affine Transform
+    @end_toggle
+
+    @add_toggle_java
+    @snippet samples/java/tutorial_code/ImgTrans/warp_affine/GeometricTransformsDemo.java Get the Affine Transform
+    @end_toggle
+
+    @add_toggle_python
+    @snippet samples/python/tutorial_code/ImgTrans/warp_affine/Geometric_Transforms_Demo.py Get the Affine Transform
+    @end_toggle
     We get a \f$2 \times 3\f$ matrix as an output (in this case **warp_mat**)
 
--#  We then apply the Affine Transform just found to the src image
-    @code{.cpp}
-    warpAffine( src, warp_dst, warp_mat, warp_dst.size() );
-    @endcode
+-   We then apply the Affine Transform just found to the src image
+
+    @add_toggle_cpp
+    @snippet samples/cpp/tutorial_code/ImgTrans/Geometric_Transforms_Demo.cpp Apply the Affine Transform just found to the src image
+    @end_toggle
+
+    @add_toggle_java
+    @snippet samples/java/tutorial_code/ImgTrans/warp_affine/GeometricTransformsDemo.java Apply the Affine Transform just found to the src image
+    @end_toggle
+
+    @add_toggle_python
+    @snippet samples/python/tutorial_code/ImgTrans/warp_affine/Geometric_Transforms_Demo.py Apply the Affine Transform just found to the src image
+    @end_toggle
     with the following arguments:
 
     -   **src**: Input image
@@ -149,47 +183,87 @@ Explanation
     We just got our first transformed image! We will display it in one bit. Before that, we also
     want to rotate it...
 
--#  **Rotate:** To rotate an image, we need to know two things:
+-   **Rotate:** To rotate an image, we need to know two things:
 
     -#  The center with respect to which the image will rotate
     -#  The angle to be rotated. In OpenCV a positive angle is counter-clockwise
     -#  *Optional:* A scale factor
 
     We define these parameters with the following snippet:
-    @code{.cpp}
-    Point center = Point( warp_dst.cols/2, warp_dst.rows/2 );
-    double angle = -50.0;
-    double scale = 0.6;
-    @endcode
--#  We generate the rotation matrix with the OpenCV function @ref cv::getRotationMatrix2D , which
+
+    @add_toggle_cpp
+    @snippet samples/cpp/tutorial_code/ImgTrans/Geometric_Transforms_Demo.cpp Compute a rotation matrix with respect to the center of the image
+    @end_toggle
+
+    @add_toggle_java
+    @snippet samples/java/tutorial_code/ImgTrans/warp_affine/GeometricTransformsDemo.java Compute a rotation matrix with respect to the center of the image
+    @end_toggle
+
+    @add_toggle_python
+    @snippet samples/python/tutorial_code/ImgTrans/warp_affine/Geometric_Transforms_Demo.py Compute a rotation matrix with respect to the center of the image
+    @end_toggle
+
+-   We generate the rotation matrix with the OpenCV function @ref cv::getRotationMatrix2D , which
     returns a \f$2 \times 3\f$ matrix (in this case *rot_mat*)
-    @code{.cpp}
-    rot_mat = getRotationMatrix2D( center, angle, scale );
-    @endcode
--#  We now apply the found rotation to the output of our previous Transformation.
-    @code{.cpp}
-    warpAffine( warp_dst, warp_rotate_dst, rot_mat, warp_dst.size() );
-    @endcode
--#  Finally, we display our results in two windows plus the original image for good measure:
-    @code{.cpp}
-    namedWindow( source_window, WINDOW_AUTOSIZE );
-    imshow( source_window, src );
 
-    namedWindow( warp_window, WINDOW_AUTOSIZE );
-    imshow( warp_window, warp_dst );
+    @add_toggle_cpp
+    @snippet samples/cpp/tutorial_code/ImgTrans/Geometric_Transforms_Demo.cpp Get the rotation matrix with the specifications above
+    @end_toggle
 
-    namedWindow( warp_rotate_window, WINDOW_AUTOSIZE );
-    imshow( warp_rotate_window, warp_rotate_dst );
-    @endcode
--#  We just have to wait until the user exits the program
-    @code{.cpp}
-    waitKey(0);
-    @endcode
+    @add_toggle_java
+    @snippet samples/java/tutorial_code/ImgTrans/warp_affine/GeometricTransformsDemo.java Get the rotation matrix with the specifications above
+    @end_toggle
+
+    @add_toggle_python
+    @snippet samples/python/tutorial_code/ImgTrans/warp_affine/Geometric_Transforms_Demo.py Get the rotation matrix with the specifications above
+    @end_toggle
+
+-   We now apply the found rotation to the output of our previous Transformation:
+
+    @add_toggle_cpp
+    @snippet samples/cpp/tutorial_code/ImgTrans/Geometric_Transforms_Demo.cpp Rotate the warped image
+    @end_toggle
+
+    @add_toggle_java
+    @snippet samples/java/tutorial_code/ImgTrans/warp_affine/GeometricTransformsDemo.java Rotate the warped image
+    @end_toggle
+
+    @add_toggle_python
+    @snippet samples/python/tutorial_code/ImgTrans/warp_affine/Geometric_Transforms_Demo.py Rotate the warped image
+    @end_toggle
+
+-   Finally, we display our results in two windows plus the original image for good measure:
+
+    @add_toggle_cpp
+    @snippet samples/cpp/tutorial_code/ImgTrans/Geometric_Transforms_Demo.cpp Show what you got
+    @end_toggle
+
+    @add_toggle_java
+    @snippet samples/java/tutorial_code/ImgTrans/warp_affine/GeometricTransformsDemo.java Show what you got
+    @end_toggle
+
+    @add_toggle_python
+    @snippet samples/python/tutorial_code/ImgTrans/warp_affine/Geometric_Transforms_Demo.py Show what you got
+    @end_toggle
+
+-   We just have to wait until the user exits the program
+
+    @add_toggle_cpp
+    @snippet samples/cpp/tutorial_code/ImgTrans/Geometric_Transforms_Demo.cpp Wait until user exits the program
+    @end_toggle
+
+    @add_toggle_java
+    @snippet samples/java/tutorial_code/ImgTrans/warp_affine/GeometricTransformsDemo.java Wait until user exits the program
+    @end_toggle
+
+    @add_toggle_python
+    @snippet samples/python/tutorial_code/ImgTrans/warp_affine/Geometric_Transforms_Demo.py Wait until user exits the program
+    @end_toggle
 
 Result
 ------
 
--#  After compiling the code above, we can give it the path of an image as argument. For instance,
+-   After compiling the code above, we can give it the path of an image as argument. For instance,
     for a picture like:
 
     ![](images/Warp_Affine_Tutorial_Original_Image.jpg)

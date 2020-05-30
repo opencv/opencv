@@ -52,8 +52,9 @@ public:
         nallvars = 0;
     }
 
-    bool train( const Ptr<TrainData>& trainData, int flags )
+    bool train( const Ptr<TrainData>& trainData, int flags ) CV_OVERRIDE
     {
+        CV_Assert(!trainData.empty());
         const float min_variation = FLT_EPSILON;
         Mat responses = trainData->getNormCatResponses();
         Mat __cls_labels = trainData->getClassLabels();
@@ -203,6 +204,7 @@ public:
             results = &_results;
             results_prob = !_results_prob.empty() ? &_results_prob : 0;
             rawOutput = _rawOutput;
+            value = 0;
         }
 
         const Mat* c;
@@ -218,7 +220,7 @@ public:
         float* value;
         bool rawOutput;
 
-        void operator()( const Range& range ) const
+        void operator()(const Range& range) const CV_OVERRIDE
         {
             int cls = -1;
             int rtype = 0, rptype = 0;
@@ -240,8 +242,8 @@ public:
             }
             // allocate memory and initializing headers for calculating
             cv::AutoBuffer<double> _buffer(nvars*2);
-            double* _diffin = _buffer;
-            double* _diffout = _buffer + nvars;
+            double* _diffin = _buffer.data();
+            double* _diffout = _buffer.data() + nvars;
             Mat diffin( 1, nvars, CV_64FC1, _diffin );
             Mat diffout( 1, nvars, CV_64FC1, _diffout );
 
@@ -297,12 +299,12 @@ public:
         }
     };
 
-    float predict( InputArray _samples, OutputArray _results, int flags ) const
+    float predict( InputArray _samples, OutputArray _results, int flags ) const CV_OVERRIDE
     {
         return predictProb(_samples, _results, noArray(), flags);
     }
 
-    float predictProb( InputArray _samples, OutputArray _results, OutputArray _resultsProb, int flags ) const
+    float predictProb( InputArray _samples, OutputArray _results, OutputArray _resultsProb, int flags ) const CV_OVERRIDE
     {
         int value=0;
         Mat samples = _samples.getMat(), results, resultsProb;
@@ -338,7 +340,7 @@ public:
         return (float)value;
     }
 
-    void write( FileStorage& fs ) const
+    void write( FileStorage& fs ) const CV_OVERRIDE
     {
         int nclasses = (int)cls_labels.total(), i;
 
@@ -379,7 +381,7 @@ public:
         fs << "c" << c;
     }
 
-    void read( const FileNode& fn )
+    void read( const FileNode& fn ) CV_OVERRIDE
     {
         clear();
 
@@ -426,7 +428,7 @@ public:
         fn["c"] >> c;
     }
 
-    void clear()
+    void clear() CV_OVERRIDE
     {
         count.clear();
         sum.clear();
@@ -441,10 +443,10 @@ public:
         nallvars = 0;
     }
 
-    bool isTrained() const { return !avg.empty(); }
-    bool isClassifier() const { return true; }
-    int getVarCount() const { return nallvars; }
-    String getDefaultName() const { return "opencv_ml_nbayes"; }
+    bool isTrained() const CV_OVERRIDE { return !avg.empty(); }
+    bool isClassifier() const CV_OVERRIDE { return true; }
+    int getVarCount() const CV_OVERRIDE { return nallvars; }
+    String getDefaultName() const CV_OVERRIDE { return "opencv_ml_nbayes"; }
 
     int nallvars;
     Mat var_idx, cls_labels, c;

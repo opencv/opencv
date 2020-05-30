@@ -4,7 +4,7 @@ Mask operations on matrices {#tutorial_mat_mask_operations}
 @prev_tutorial{tutorial_how_to_scan_images}
 @next_tutorial{tutorial_mat_operations}
 
-Mask operations on matrices are quite simple. The idea is that we recalculate each pixels value in
+Mask operations on matrices are quite simple. The idea is that we recalculate each pixel's value in
 an image according to a mask matrix (also known as kernel). This mask holds values that will adjust
 how much influence neighboring pixels (and the current pixel) have on the new pixel value. From a
 mathematical point of view we make a weighted average, with our specified values.
@@ -12,7 +12,7 @@ mathematical point of view we make a weighted average, with our specified values
 Our test case
 -------------
 
-Let us consider the issue of an image contrast enhancement method. Basically we want to apply for
+Let's consider the issue of an image contrast enhancement method. Basically we want to apply for
 every pixel of the image the following formula:
 
 \f[I(i,j) = 5*I(i,j) - [ I(i-1,j) + I(i+1,j) + I(i,j-1) + I(i,j+1)]\f]\f[\iff I(i,j)*M, \text{where }
@@ -28,23 +28,38 @@ the zero-zero index) on the pixel you want to calculate and sum up the pixel val
 the overlapped matrix values. It's the same thing, however in case of large matrices the latter
 notation is a lot easier to look over.
 
+Code
+----
+
 @add_toggle_cpp
-Now let us see how we can make this happen by using the basic pixel access method or by using the
-@ref cv::filter2D function.
+You can download this source code from [here
+](https://raw.githubusercontent.com/opencv/opencv/master/samples/cpp/tutorial_code/core/mat_mask_operations/mat_mask_operations.cpp) or look in the
+OpenCV source code libraries sample directory at
+`samples/cpp/tutorial_code/core/mat_mask_operations/mat_mask_operations.cpp`.
+@include samples/cpp/tutorial_code/core/mat_mask_operations/mat_mask_operations.cpp
 @end_toggle
 
 @add_toggle_java
-Now let us see how we can make this happen by using the basic pixel access method or by using the
-**Imgproc.filter2D()** function.
+You can download this source code from [here
+](https://raw.githubusercontent.com/opencv/opencv/master/samples/java/tutorial_code/core/mat_mask_operations/MatMaskOperations.java) or look in the
+OpenCV source code libraries sample directory at
+`samples/java/tutorial_code/core/mat_mask_operations/MatMaskOperations.java`.
+@include samples/java/tutorial_code/core/mat_mask_operations/MatMaskOperations.java
 @end_toggle
 
 @add_toggle_python
-Now let us see how we can make this happen by using the basic pixel access method or by using the
-**cv2.filter2D()** function.
+You can download this source code from [here
+](https://raw.githubusercontent.com/opencv/opencv/master/samples/python/tutorial_code/core/mat_mask_operations/mat_mask_operations.py) or look in the
+OpenCV source code libraries sample directory at
+`samples/python/tutorial_code/core/mat_mask_operations/mat_mask_operations.py`.
+@include samples/python/tutorial_code/core/mat_mask_operations/mat_mask_operations.py
 @end_toggle
 
 The Basic Method
 ----------------
+
+Now let us see how we can make this happen by using the basic pixel access method or by using the
+**filter2D()** function.
 
 Here's a function that will do this:
 @add_toggle_cpp
@@ -67,7 +82,7 @@ At first we make sure that the input images data in unsigned 8 bit format.
 
 At first we make sure that the input images data in unsigned 8 bit format.
 @code{.py}
-my_image = cv2.cvtColor(my_image, cv2.CV_8U)
+my_image = cv.cvtColor(my_image, cv.CV_8U)
 @endcode
 
 @end_toggle
@@ -129,39 +144,40 @@ Then we apply the sum and put the new value in the Result matrix.
 The filter2D function
 ---------------------
 
-Applying such filters are so common in image processing that in OpenCV there exist a function that
+Applying such filters are so common in image processing that in OpenCV there is a function that
 will take care of applying the mask (also called a kernel in some places). For this you first need
 to define an object that holds the mask:
+
 @add_toggle_cpp
 @snippet samples/cpp/tutorial_code/core/mat_mask_operations/mat_mask_operations.cpp kern
-
-Then call the @ref cv::filter2D function specifying the input, the output image and the kernel to
-use:
-@snippet samples/cpp/tutorial_code/core/mat_mask_operations/mat_mask_operations.cpp filter2D
-
-The function even has a fifth optional argument to specify the center of the kernel, a sixth
-for adding an optional value to the filtered pixels before storing them in K and a seventh one
-for determining what to do in the regions where the operation is undefined (borders).
 @end_toggle
 
 @add_toggle_java
 @snippet samples/java/tutorial_code/core/mat_mask_operations/MatMaskOperations.java kern
-
-Then call the **Imgproc.filter2D()** function specifying the input, the output image and the kernel to
-use:
-@snippet samples/java/tutorial_code/core/mat_mask_operations/MatMaskOperations.java filter2D
-The function even has a fifth optional argument to specify the center of the kernel, a sixth
-for adding an optional value to the filtered pixels before storing them in K and a seventh one
-for determining what to do in the regions where the operation is undefined (borders).
 @end_toggle
 
 @add_toggle_python
 @snippet samples/python/tutorial_code/core/mat_mask_operations/mat_mask_operations.py kern
+@end_toggle
 
-Then call the **cv2.filter2D()** function specifying the input, the output image and the kernell to
+Then call the **filter2D()** function specifying the input, the output image and the kernel to
 use:
+
+@add_toggle_cpp
+@snippet samples/cpp/tutorial_code/core/mat_mask_operations/mat_mask_operations.cpp filter2D
+@end_toggle
+
+@add_toggle_java
+@snippet samples/java/tutorial_code/core/mat_mask_operations/MatMaskOperations.java filter2D
+@end_toggle
+
+@add_toggle_python
 @snippet samples/python/tutorial_code/core/mat_mask_operations/mat_mask_operations.py filter2D
 @end_toggle
+
+The function even has a fifth optional argument to specify the center of the kernel, a sixth
+for adding an optional value to the filtered pixels before storing them in K and a seventh one
+for determining what to do in the regions where the operation is undefined (borders).
 
 This function is shorter, less verbose and, because there are some optimizations, it is usually faster
 than the *hand-coded method*. For example in my test while the second one took only 13
@@ -172,22 +188,7 @@ For example:
 ![](images/resultMatMaskFilter2D.png)
 
 @add_toggle_cpp
-You can download this source code from [here
-](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/core/mat_mask_operations/mat_mask_operations.cpp) or look in the
-OpenCV source code libraries sample directory at
-`samples/cpp/tutorial_code/core/mat_mask_operations/mat_mask_operations.cpp`.
-
 Check out an instance of running the program on our [YouTube
 channel](http://www.youtube.com/watch?v=7PF1tAU9se4) .
 @youtube{7PF1tAU9se4}
-@end_toggle
-
-@add_toggle_java
-You can look in the OpenCV source code libraries sample directory at
-`samples/java/tutorial_code/core/mat_mask_operations/MatMaskOperations.java`.
-@end_toggle
-
-@add_toggle_python
-You can look in the OpenCV source code libraries sample directory at
-`samples/python/tutorial_code/core/mat_mask_operations/mat_mask_operations.py`.
 @end_toggle

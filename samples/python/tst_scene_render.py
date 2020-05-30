@@ -5,9 +5,10 @@
 from __future__ import print_function
 
 import numpy as np
+import cv2 as cv
+
 from numpy import pi, sin, cos
 
-import cv2
 
 defaultSize = 512
 
@@ -86,8 +87,8 @@ class TestSceneRender():
         else:
             self.currentRect = self.initialRect + np.int( 30*cos(self.time*self.speed) + 50*sin(self.time*self.speed))
             if self.deformation:
-                self.currentRect[1:3] += self.h/20*cos(self.time)
-            cv2.fillConvexPoly(img, self.currentRect, (0, 0, 255))
+                self.currentRect[1:3] += int(self.h/20*cos(self.time))
+            cv.fillConvexPoly(img, self.currentRect, (0, 0, 255))
 
         self.time += self.timeStep
         return img
@@ -96,21 +97,25 @@ class TestSceneRender():
         self.time = 0.0
 
 
-if __name__ == '__main__':
-
-    backGr = cv2.imread('../data/graf1.png')
-    fgr = cv2.imread('../data/box.png')
+def main():
+    backGr = cv.imread(cv.samples.findFile('graf1.png'))
+    fgr = cv.imread(cv.samples.findFile('box.png'))
 
     render = TestSceneRender(backGr, fgr)
 
     while True:
 
         img = render.getNextFrame()
-        cv2.imshow('img', img)
+        cv.imshow('img', img)
 
-        ch = cv2.waitKey(3)
+        ch = cv.waitKey(3)
         if  ch == 27:
             break
-    #import os
-    #print (os.environ['PYTHONPATH'])
-    cv2.destroyAllWindows()
+
+    print('Done')
+
+
+if __name__ == '__main__':
+    print(__doc__)
+    main()
+    cv.destroyAllWindows()

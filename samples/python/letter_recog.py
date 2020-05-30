@@ -29,7 +29,7 @@ USAGE:
 from __future__ import print_function
 
 import numpy as np
-import cv2
+import cv2 as cv
 
 def load_base(fn):
     a = np.loadtxt(fn, np.float32, delimiter=',', converters={ 0 : lambda ch : ord(ch)-ord('A') })
@@ -41,7 +41,7 @@ class LetterStatModel(object):
     train_ratio = 0.5
 
     def load(self, fn):
-        self.model.load(fn)
+        self.model = self.model.load(fn)
     def save(self, fn):
         self.model.save(fn)
 
@@ -61,96 +61,93 @@ class LetterStatModel(object):
 
 class RTrees(LetterStatModel):
     def __init__(self):
-        self.model = cv2.ml.RTrees_create()
+        self.model = cv.ml.RTrees_create()
 
     def train(self, samples, responses):
-        sample_n, var_n = samples.shape
         self.model.setMaxDepth(20)
-        self.model.train(samples, cv2.ml.ROW_SAMPLE, responses.astype(int))
+        self.model.train(samples, cv.ml.ROW_SAMPLE, responses.astype(int))
 
     def predict(self, samples):
-        ret, resp = self.model.predict(samples)
+        _ret, resp = self.model.predict(samples)
         return resp.ravel()
 
 
 class KNearest(LetterStatModel):
     def __init__(self):
-        self.model = cv2.ml.KNearest_create()
+        self.model = cv.ml.KNearest_create()
 
     def train(self, samples, responses):
-        self.model.train(samples, cv2.ml.ROW_SAMPLE, responses)
+        self.model.train(samples, cv.ml.ROW_SAMPLE, responses)
 
     def predict(self, samples):
-        retval, results, neigh_resp, dists = self.model.findNearest(samples, k = 10)
+        _retval, results, _neigh_resp, _dists = self.model.findNearest(samples, k = 10)
         return results.ravel()
 
 
 class Boost(LetterStatModel):
     def __init__(self):
-        self.model = cv2.ml.Boost_create()
+        self.model = cv.ml.Boost_create()
 
     def train(self, samples, responses):
-        sample_n, var_n = samples.shape
+        _sample_n, var_n = samples.shape
         new_samples = self.unroll_samples(samples)
         new_responses = self.unroll_responses(responses)
-        var_types = np.array([cv2.ml.VAR_NUMERICAL] * var_n + [cv2.ml.VAR_CATEGORICAL, cv2.ml.VAR_CATEGORICAL], np.uint8)
+        var_types = np.array([cv.ml.VAR_NUMERICAL] * var_n + [cv.ml.VAR_CATEGORICAL, cv.ml.VAR_CATEGORICAL], np.uint8)
 
         self.model.setWeakCount(15)
         self.model.setMaxDepth(10)
-        self.model.train(cv2.ml.TrainData_create(new_samples, cv2.ml.ROW_SAMPLE, new_responses.astype(int), varType = var_types))
+        self.model.train(cv.ml.TrainData_create(new_samples, cv.ml.ROW_SAMPLE, new_responses.astype(int), varType = var_types))
 
     def predict(self, samples):
         new_samples = self.unroll_samples(samples)
-        ret, resp = self.model.predict(new_samples)
+        _ret, resp = self.model.predict(new_samples)
 
         return resp.ravel().reshape(-1, self.class_n).argmax(1)
 
 
 class SVM(LetterStatModel):
     def __init__(self):
-        self.model = cv2.ml.SVM_create()
+        self.model = cv.ml.SVM_create()
 
     def train(self, samples, responses):
-        self.model.setType(cv2.ml.SVM_C_SVC)
+        self.model.setType(cv.ml.SVM_C_SVC)
         self.model.setC(1)
-        self.model.setKernel(cv2.ml.SVM_RBF)
+        self.model.setKernel(cv.ml.SVM_RBF)
         self.model.setGamma(.1)
-        self.model.train(samples, cv2.ml.ROW_SAMPLE, responses.astype(int))
+        self.model.train(samples, cv.ml.ROW_SAMPLE, responses.astype(int))
 
     def predict(self, samples):
-        ret, resp = self.model.predict(samples)
+        _ret, resp = self.model.predict(samples)
         return resp.ravel()
 
 
 class MLP(LetterStatModel):
     def __init__(self):
-        self.model = cv2.ml.ANN_MLP_create()
+        self.model = cv.ml.ANN_MLP_create()
 
     def train(self, samples, responses):
-        sample_n, var_n = samples.shape
+        _sample_n, var_n = samples.shape
         new_responses = self.unroll_responses(responses).reshape(-1, self.class_n)
         layer_sizes = np.int32([var_n, 100, 100, self.class_n])
 
         self.model.setLayerSizes(layer_sizes)
-        self.model.setTrainMethod(cv2.ml.ANN_MLP_BACKPROP)
+        self.model.setTrainMethod(cv.ml.ANN_MLP_BACKPROP)
         self.model.setBackpropMomentumScale(0.0)
         self.model.setBackpropWeightScale(0.001)
-        self.model.setTermCriteria((cv2.TERM_CRITERIA_COUNT, 20, 0.01))
-        self.model.setActivationFunction(cv2.ml.ANN_MLP_SIGMOID_SYM, 2, 1)
+        self.model.setTermCriteria((cv.TERM_CRITERIA_COUNT, 20, 0.01))
+        self.model.setActivationFunction(cv.ml.ANN_MLP_SIGMOID_SYM, 2, 1)
 
-        self.model.train(samples, cv2.ml.ROW_SAMPLE, np.float32(new_responses))
+        self.model.train(samples, cv.ml.ROW_SAMPLE, np.float32(new_responses))
 
     def predict(self, samples):
-        ret, resp = self.model.predict(samples)
+        _ret, resp = self.model.predict(samples)
         return resp.argmax(-1)
 
 
 
-if __name__ == '__main__':
+def main():
     import getopt
     import sys
-
-    print(__doc__)
 
     models = [RTrees, KNearest, Boost, SVM, MLP] # NBayes
     models = dict( [(cls.__name__.lower(), cls) for cls in models] )
@@ -159,10 +156,12 @@ if __name__ == '__main__':
     args, dummy = getopt.getopt(sys.argv[1:], '', ['model=', 'data=', 'load=', 'save='])
     args = dict(args)
     args.setdefault('--model', 'svm')
-    args.setdefault('--data', '../data/letter-recognition.data')
+    args.setdefault('--data', 'letter-recognition.data')
 
-    print('loading data %s ...' % args['--data'])
-    samples, responses = load_base(args['--data'])
+    datafile = cv.samples.findFile(args['--data'])
+
+    print('loading data %s ...' % datafile)
+    samples, responses = load_base(datafile)
     Model = models[args['--model']]
     model = Model()
 
@@ -185,4 +184,11 @@ if __name__ == '__main__':
         fn = args['--save']
         print('saving model to %s ...' % fn)
         model.save(fn)
-    cv2.destroyAllWindows()
+
+    print('Done')
+
+
+if __name__ == '__main__':
+    print(__doc__)
+    main()
+    cv.destroyAllWindows()

@@ -42,10 +42,11 @@
 
 #include "precomp.hpp"
 
-#if defined WIN32 || defined _WIN32 || defined WINCE
+#include "opencv2/core/utils/filesystem.hpp"
+
+#if defined _WIN32 || defined WINCE
 # include <windows.h>
 const char dir_separators[] = "/\\";
-const char native_separator = '\\';
 
 namespace
 {
@@ -56,10 +57,10 @@ namespace
 
     struct DIR
     {
-#ifdef WINRT
+#if defined(WINRT) || defined(_WIN32_WCE)
         WIN32_FIND_DATAW data;
 #else
-        WIN32_FIND_DATA data;
+        WIN32_FIND_DATAA data;
 #endif
         HANDLE handle;
         dirent ent;
@@ -77,7 +78,7 @@ namespace
     {
         DIR* dir = new DIR;
         dir->ent.d_name = 0;
-#ifdef WINRT
+#if defined(WINRT) || defined(_WIN32_WCE)
         cv::String full_path = cv::String(path) + "\\*";
         wchar_t wfull_path[MAX_PATH];
         size_t copied = mbstowcs(wfull_path, full_path.c_str(), MAX_PATH);
@@ -99,7 +100,7 @@ namespace
 
     dirent* readdir(DIR* dir)
     {
-#ifdef WINRT
+#if defined(WINRT) || defined(_WIN32_WCE)
         if (dir->ent.d_name != 0)
         {
             if (::FindNextFileW(dir->handle, &dir->data) != TRUE)
@@ -134,12 +135,11 @@ namespace
 # include <dirent.h>
 # include <sys/stat.h>
 const char dir_separators[] = "/";
-const char native_separator = '/';
 #endif
 
 static bool isDir(const cv::String& path, DIR* dir)
 {
-#if defined WIN32 || defined _WIN32 || defined WINCE
+#if defined _WIN32 || defined _WIN32_WCE
     DWORD attributes;
     BOOL status = TRUE;
     if (dir)
@@ -147,7 +147,7 @@ static bool isDir(const cv::String& path, DIR* dir)
     else
     {
         WIN32_FILE_ATTRIBUTE_DATA all_attrs;
-#ifdef WINRT
+#if defined WINRT || defined _WIN32_WCE
         wchar_t wpath[MAX_PATH];
         size_t copied = mbstowcs(wpath, path.c_str(), MAX_PATH);
         CV_Assert((copied != MAX_PATH) && (copied != (size_t)-1));
@@ -160,13 +160,19 @@ static bool isDir(const cv::String& path, DIR* dir)
 
     return status && ((attributes & FILE_ATTRIBUTE_DIRECTORY) != 0);
 #else
-    (void)dir;
+    CV_UNUSED(dir);
     struct stat stat_buf;
     if (0 != stat( path.c_str(), &stat_buf))
         return false;
     int is_dir = S_ISDIR( stat_buf.st_mode);
     return is_dir != 0;
 #endif
+}
+
+bool cv::utils::fs::isDirectory(const cv::String& path)
+{
+    CV_INSTRUMENT_REGION();
+    return isDir(path, NULL);
 }
 
 static bool wildcmp(const char *string, const char *wild)
@@ -217,34 +223,36 @@ static bool wildcmp(const char *string, const char *wild)
     return *wild == 0;
 }
 
-static void glob_rec(const cv::String& directory, const cv::String& wildchart, std::vector<cv::String>& result, bool recursive)
+static void glob_rec(const cv::String& directory, const cv::String& wildchart, std::vector<cv::String>& result,
+        bool recursive, bool includeDirectories, const cv::String& pathPrefix)
 {
     DIR *dir;
-    struct dirent *ent;
 
     if ((dir = opendir (directory.c_str())) != 0)
     {
         /* find all the files and directories within directory */
         try
         {
+            struct dirent *ent;
             while ((ent = readdir (dir)) != 0)
             {
                 const char* name = ent->d_name;
                 if((name[0] == 0) || (name[0] == '.' && name[1] == 0) || (name[0] == '.' && name[1] == '.' && name[2] == 0))
                     continue;
 
-                cv::String path = directory + native_separator + name;
+                cv::String path = cv::utils::fs::join(directory, name);
+                cv::String entry = cv::utils::fs::join(pathPrefix, name);
 
                 if (isDir(path, dir))
                 {
                     if (recursive)
-                        glob_rec(path, wildchart, result, recursive);
+                        glob_rec(path, wildchart, result, recursive, includeDirectories, entry);
+                    if (!includeDirectories)
+                        continue;
                 }
-                else
-                {
-                    if (wildchart.empty() || wildcmp(name, wildchart.c_str()))
-                        result.push_back(path);
-                }
+
+                if (wildchart.empty() || wildcmp(name, wildchart.c_str()))
+                    result.push_back(entry);
             }
         }
         catch (...)
@@ -254,12 +262,15 @@ static void glob_rec(const cv::String& directory, const cv::String& wildchart, s
         }
         closedir(dir);
     }
-    else CV_Error(CV_StsObjectNotFound, cv::format("could not open directory: %s", directory.c_str()));
+    else
+    {
+        CV_Error_(CV_StsObjectNotFound, ("could not open directory: %s", directory.c_str()));
+    }
 }
 
 void cv::glob(String pattern, std::vector<String>& result, bool recursive)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     result.clear();
     String path, wildchart;
@@ -290,6 +301,22 @@ void cv::glob(String pattern, std::vector<String>& result, bool recursive)
         }
     }
 
-    glob_rec(path, wildchart, result, recursive);
+    glob_rec(path, wildchart, result, recursive, false, path);
+    std::sort(result.begin(), result.end());
+}
+
+void cv::utils::fs::glob(const cv::String& directory, const cv::String& pattern,
+        std::vector<cv::String>& result,
+        bool recursive, bool includeDirectories)
+{
+    glob_rec(directory, pattern, result, recursive, includeDirectories, directory);
+    std::sort(result.begin(), result.end());
+}
+
+void cv::utils::fs::glob_relative(const cv::String& directory, const cv::String& pattern,
+        std::vector<cv::String>& result,
+        bool recursive, bool includeDirectories)
+{
+    glob_rec(directory, pattern, result, recursive, includeDirectories, cv::String());
     std::sort(result.begin(), result.end());
 }

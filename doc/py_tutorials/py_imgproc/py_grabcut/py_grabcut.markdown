@@ -37,7 +37,7 @@ So what happens in background ?
     objects). Everything inside rectangle is unknown. Similarly any user input specifying
     foreground and background are considered as hard-labelling which means they won't change in
     the process.
--   Computer does an initial labelling depeding on the data we gave. It labels the foreground and
+-   Computer does an initial labelling depending on the data we gave. It labels the foreground and
     background pixels (or it hard-labels)
 -   Now a Gaussian Mixture Model(GMM) is used to model the foreground and background.
 -   Depending on the data we gave, GMM learns and create new pixel distribution. That is, the
@@ -64,24 +64,24 @@ It is illustrated in below image (Image Courtesy: <http://www.cs.ru.ac.za/resear
 Demo
 ----
 
-Now we go for grabcut algorithm with OpenCV. OpenCV has the function, **cv2.grabCut()** for this. We
+Now we go for grabcut algorithm with OpenCV. OpenCV has the function, **cv.grabCut()** for this. We
 will see its arguments first:
 
 -   *img* - Input image
 -   *mask* - It is a mask image where we specify which areas are background, foreground or
-    probable background/foreground etc. It is done by the following flags, **cv2.GC_BGD,
-    cv2.GC_FGD, cv2.GC_PR_BGD, cv2.GC_PR_FGD**, or simply pass 0,1,2,3 to image.
+    probable background/foreground etc. It is done by the following flags, **cv.GC_BGD,
+    cv.GC_FGD, cv.GC_PR_BGD, cv.GC_PR_FGD**, or simply pass 0,1,2,3 to image.
 -   *rect* - It is the coordinates of a rectangle which includes the foreground object in the
     format (x,y,w,h)
 -   *bdgModel*, *fgdModel* - These are arrays used by the algorithm internally. You just create
     two np.float64 type zero arrays of size (1,65).
 -   *iterCount* - Number of iterations the algorithm should run.
--   *mode* - It should be **cv2.GC_INIT_WITH_RECT** or **cv2.GC_INIT_WITH_MASK** or combined
+-   *mode* - It should be **cv.GC_INIT_WITH_RECT** or **cv.GC_INIT_WITH_MASK** or combined
     which decides whether we are drawing rectangle or final touchup strokes.
 
 First let's see with rectangular mode. We load the image, create a similar mask image. We create
 *fgdModel* and *bgdModel*. We give the rectangle parameters. It's all straight-forward. Let the
-algorithm run for 5 iterations. Mode should be *cv2.GC_INIT_WITH_RECT* since we are using
+algorithm run for 5 iterations. Mode should be *cv.GC_INIT_WITH_RECT* since we are using
 rectangle. Then run the grabcut. It modifies the mask image. In the new mask image, pixels will be
 marked with four flags denoting background/foreground as specified above. So we modify the mask such
 that all 0-pixels and 2-pixels are put to 0 (ie background) and all 1-pixels and 3-pixels are put to
@@ -89,17 +89,17 @@ that all 0-pixels and 2-pixels are put to 0 (ie background) and all 1-pixels and
 segmented image.
 @code{.py}
 import numpy as np
-import cv2
+import cv2 as cv
 from matplotlib import pyplot as plt
 
-img = cv2.imread('messi5.jpg')
+img = cv.imread('messi5.jpg')
 mask = np.zeros(img.shape[:2],np.uint8)
 
 bgdModel = np.zeros((1,65),np.float64)
 fgdModel = np.zeros((1,65),np.float64)
 
 rect = (50,50,450,290)
-cv2.grabCut(img,mask,rect,bgdModel,fgdModel,5,cv2.GC_INIT_WITH_RECT)
+cv.grabCut(img,mask,rect,bgdModel,fgdModel,5,cv.GC_INIT_WITH_RECT)
 
 mask2 = np.where((mask==2)|(mask==0),0,1).astype('uint8')
 img = img*mask2[:,:,np.newaxis]
@@ -122,14 +122,14 @@ remaining background with gray. Then loaded that mask image in OpenCV, edited or
 got with corresponding values in newly added mask image. Check the code below:*
 @code{.py}
 # newmask is the mask image I manually labelled
-newmask = cv2.imread('newmask.png',0)
+newmask = cv.imread('newmask.png',0)
 
-# whereever it is marked white (sure foreground), change mask=1
-# whereever it is marked black (sure background), change mask=0
+# wherever it is marked white (sure foreground), change mask=1
+# wherever it is marked black (sure background), change mask=0
 mask[newmask == 0] = 0
 mask[newmask == 255] = 1
 
-mask, bgdModel, fgdModel = cv2.grabCut(img,mask,None,bgdModel,fgdModel,5,cv2.GC_INIT_WITH_MASK)
+mask, bgdModel, fgdModel = cv.grabCut(img,mask,None,bgdModel,fgdModel,5,cv.GC_INIT_WITH_MASK)
 
 mask = np.where((mask==2)|(mask==0),0,1).astype('uint8')
 img = img*mask[:,:,np.newaxis]

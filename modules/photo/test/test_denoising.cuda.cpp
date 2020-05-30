@@ -50,7 +50,7 @@
 
 #if defined (HAVE_CUDA) && defined(HAVE_OPENCV_CUDAARITHM) && defined(HAVE_OPENCV_CUDAIMGPROC)
 
-using namespace cvtest;
+namespace opencv_test { namespace {
 
 ////////////////////////////////////////////////////////
 // Brute Force Non local means
@@ -82,7 +82,7 @@ TEST(CUDA_BruteForceNonLocalMeans, Regression)
     cv::resize(gray_gold, gray_gold, cv::Size(256, 256));
 
     EXPECT_MAT_NEAR(bgr_gold, dbgr, 1);
-    EXPECT_MAT_NEAR(gray_gold, dgray, 1e-4);
+    EXPECT_MAT_NEAR(gray_gold, dgray, 1);
 }
 
 ////////////////////////////////////////////////////////
@@ -116,4 +116,5 @@ TEST(CUDA_FastNonLocalMeans, Regression)
     EXPECT_MAT_NEAR(gray_gold, dgray, 1);
 }
 
+}} // namespace
 #endif // HAVE_CUDA

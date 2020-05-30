@@ -8,13 +8,12 @@
 using namespace cv;
 using namespace std;
 
-static void help()
+static void help( char** argv )
 {
     cout << "\nCool inpainging demo. Inpainting repairs damage to images by floodfilling the damage \n"
             << "with surrounding image areas.\n"
             "Using OpenCV version %s\n" << CV_VERSION << "\n"
-    "Usage:\n"
-        "./inpaint [image_name -- Default ../data/fruits.jpg]\n" << endl;
+            "Usage:\n" << argv[0] <<" [image_name -- Default fruits.jpg]\n" << endl;
 
     cout << "Hot keys: \n"
         "\tESC - quit the program\n"
@@ -47,27 +46,24 @@ static void onMouse( int event, int x, int y, int flags, void* )
 
 int main( int argc, char** argv )
 {
-    cv::CommandLineParser parser(argc, argv, "{help h||}{@image|../data/fruits.jpg|}");
-    if (parser.has("help"))
-    {
-        help();
-        return 0;
-    }
-    string filename = parser.get<string>("@image");
-    Mat img0 = imread(filename, -1);
+    cv::CommandLineParser parser(argc, argv, "{@image|fruits.jpg|}");
+    help(argv);
+
+    string filename = samples::findFile(parser.get<string>("@image"));
+    Mat img0 = imread(filename, IMREAD_COLOR);
     if(img0.empty())
     {
         cout << "Couldn't open the image " << filename << ". Usage: inpaint <image_name>\n" << endl;
         return 0;
     }
 
-    namedWindow( "image", 1 );
+    namedWindow("image", WINDOW_AUTOSIZE);
 
     img = img0.clone();
     inpaintMask = Mat::zeros(img.size(), CV_8U);
 
     imshow("image", img);
-    setMouseCallback( "image", onMouse, 0 );
+    setMouseCallback( "image", onMouse, NULL);
 
     for(;;)
     {

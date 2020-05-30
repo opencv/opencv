@@ -41,8 +41,7 @@
 
 #include "test_precomp.hpp"
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 class CV_TemplMatchTest : public cvtest::ArrayTest
 {
@@ -50,7 +49,7 @@ public:
     CV_TemplMatchTest();
 
 protected:
-    int read_params( CvFileStorage* fs );
+    int read_params( const cv::FileStorage& fs );
     void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types );
     void get_minmax_bounds( int i, int j, int type, Scalar& low, Scalar& high );
     double get_success_error_level( int test_case_idx, int i, int j );
@@ -76,13 +75,13 @@ CV_TemplMatchTest::CV_TemplMatchTest()
 }
 
 
-int CV_TemplMatchTest::read_params( CvFileStorage* fs )
+int CV_TemplMatchTest::read_params( const cv::FileStorage& fs )
 {
     int code = cvtest::ArrayTest::read_params( fs );
     if( code < 0 )
         return code;
 
-    max_template_size = cvReadInt( find_param( fs, "max_template_size" ), max_template_size );
+    read( find_param( fs, "max_template_size" ), max_template_size, max_template_size );
     max_template_size = cvtest::clipInt( max_template_size, 1, 100 );
 
     return code;
@@ -152,7 +151,7 @@ static void cvTsMatchTemplate( const CvMat* img, const CvMat* templ, CvMat* resu
     int width_n = templ->cols*cn, height = templ->rows;
     int a_step = img->step / CV_ELEM_SIZE(img->type & CV_MAT_DEPTH_MASK);
     int b_step = templ->step / CV_ELEM_SIZE(templ->type & CV_MAT_DEPTH_MASK);
-    CvScalar b_mean, b_sdv;
+    CvScalar b_mean = CV_STRUCT_INITIALIZER, b_sdv = CV_STRUCT_INITIALIZER;
     double b_denom = 1., b_sum2 = 0;
     int area = templ->rows*templ->cols;
 
@@ -192,8 +191,8 @@ static void cvTsMatchTemplate( const CvMat* img, const CvMat* templ, CvMat* resu
     {
         for( j = 0; j < result->cols; j++ )
         {
-            CvScalar a_sum(0), a_sum2(0);
-            CvScalar ccorr(0);
+            Scalar a_sum(0), a_sum2(0);
+            Scalar ccorr(0);
             double value = 0.;
 
             if( depth == CV_8U )
@@ -309,8 +308,8 @@ static void cvTsMatchTemplate( const CvMat* img, const CvMat* templ, CvMat* resu
 
 void CV_TemplMatchTest::prepare_to_validation( int /*test_case_idx*/ )
 {
-    CvMat _input = test_mat[INPUT][0], _templ = test_mat[INPUT][1];
-    CvMat _output = test_mat[REF_OUTPUT][0];
+    CvMat _input = cvMat(test_mat[INPUT][0]), _templ = cvMat(test_mat[INPUT][1]);
+    CvMat _output = cvMat(test_mat[REF_OUTPUT][0]);
     cvTsMatchTemplate( &_input, &_templ, &_output, method );
 
     //if( ts->get_current_test_info()->test_case_idx == 0 )
@@ -334,3 +333,5 @@ void CV_TemplMatchTest::prepare_to_validation( int /*test_case_idx*/ )
 }
 
 TEST(Imgproc_MatchTemplate, accuracy) { CV_TemplMatchTest test; test.safe_run(); }
+
+}} // namespace

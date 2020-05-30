@@ -9,7 +9,7 @@ Interactive Image Segmentation using GrabCut algorithm.
 from __future__ import print_function
 
 import numpy as np
-import cv2
+import cv2 as cv
 import sys
 
 from tests_common import NewOpenCVTests
@@ -26,7 +26,7 @@ class grabcut_test(NewOpenCVTests):
 
     def scaleMask(self, mask):
 
-        return np.where((mask==cv2.GC_FGD) + (mask==cv2.GC_PR_FGD),255,0).astype('uint8')
+        return np.where((mask==cv.GC_FGD) + (mask==cv.GC_PR_FGD),255,0).astype('uint8')
 
     def test_grabcut(self):
 
@@ -42,26 +42,30 @@ class grabcut_test(NewOpenCVTests):
         mask = np.zeros(img.shape[:2], dtype = np.uint8)
         bgdModel = np.zeros((1,65),np.float64)
         fgdModel = np.zeros((1,65),np.float64)
-        cv2.grabCut(img, mask, rect, bgdModel, fgdModel, 0, cv2.GC_INIT_WITH_RECT)
-        cv2.grabCut(img, mask, rect, bgdModel, fgdModel, 2, cv2.GC_EVAL)
+        cv.grabCut(img, mask, rect, bgdModel, fgdModel, 0, cv.GC_INIT_WITH_RECT)
+        cv.grabCut(img, mask, rect, bgdModel, fgdModel, 2, cv.GC_EVAL)
 
         if mask_prob is None:
             mask_prob = mask.copy()
-            cv2.imwrite(self.extraTestDataPath + '/cv/grabcut/mask_probpy.png', mask_prob)
+            cv.imwrite(self.extraTestDataPath + '/cv/grabcut/mask_probpy.png', mask_prob)
         if exp_mask1 is None:
             exp_mask1 = self.scaleMask(mask)
-            cv2.imwrite(self.extraTestDataPath + '/cv/grabcut/exp_mask1py.png', exp_mask1)
+            cv.imwrite(self.extraTestDataPath + '/cv/grabcut/exp_mask1py.png', exp_mask1)
 
         self.assertEqual(self.verify(self.scaleMask(mask), exp_mask1), True)
 
         mask = mask_prob
         bgdModel = np.zeros((1,65),np.float64)
         fgdModel = np.zeros((1,65),np.float64)
-        cv2.grabCut(img, mask, rect, bgdModel, fgdModel, 0, cv2.GC_INIT_WITH_MASK)
-        cv2.grabCut(img, mask, rect, bgdModel, fgdModel, 1, cv2.GC_EVAL)
+        cv.grabCut(img, mask, rect, bgdModel, fgdModel, 0, cv.GC_INIT_WITH_MASK)
+        cv.grabCut(img, mask, rect, bgdModel, fgdModel, 1, cv.GC_EVAL)
 
         if exp_mask2 is None:
             exp_mask2 = self.scaleMask(mask)
-            cv2.imwrite(self.extraTestDataPath + '/cv/grabcut/exp_mask2py.png', exp_mask2)
+            cv.imwrite(self.extraTestDataPath + '/cv/grabcut/exp_mask2py.png', exp_mask2)
 
         self.assertEqual(self.verify(self.scaleMask(mask), exp_mask2), True)
+
+
+if __name__ == '__main__':
+    NewOpenCVTests.bootstrap()

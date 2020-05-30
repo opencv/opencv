@@ -1,6 +1,10 @@
 Using Kinect and other OpenNI compatible depth sensors {#tutorial_kinect_openni}
 ======================================================
 
+@prev_tutorial{tutorial_video_write}
+@next_tutorial{tutorial_intelperc}
+
+
 Depth sensors compatible with OpenNI (Kinect, XtionPRO, ...) are supported through VideoCapture
 class. Depth map, BGR image and some other formats of output can be retrieved by using familiar
 interface of VideoCapture.
@@ -43,7 +47,7 @@ VideoCapture can retrieve the following data:
     -   CAP_OPENNI_POINT_CLOUD_MAP - XYZ in meters (CV_32FC3)
     -   CAP_OPENNI_DISPARITY_MAP - disparity in pixels (CV_8UC1)
     -   CAP_OPENNI_DISPARITY_MAP_32F - disparity in pixels (CV_32FC1)
-    -   CAP_OPENNI_VALID_DEPTH_MASK - mask of valid pixels (not ocluded, not shaded etc.)
+    -   CAP_OPENNI_VALID_DEPTH_MASK - mask of valid pixels (not occluded, not shaded etc.)
         (CV_8UC1)
 
 -#  data given from BGR image generator:
@@ -98,7 +102,7 @@ get CAP_OPENNI_IMAGE_GENERATOR_PRESENT property.
 @code{.cpp}
 bool isImageGeneratorPresent = capture.get( CAP_PROP_OPENNI_IMAGE_GENERATOR_PRESENT ) != 0; // or == 1
 @endcode
-Flags specifing the needed generator type must be used in combination with particular generator
+Flags specifying the needed generator type must be used in combination with particular generator
 property. The following properties of cameras available through OpenNI interfaces are supported:
 
 -   For image generator:
@@ -134,5 +138,5 @@ property. The following properties of cameras available through OpenNI interface
     -   CAP_OPENNI_DEPTH_GENERATOR_REGISTRATION = CAP_OPENNI_DEPTH_GENERATOR + CAP_PROP_OPENNI_REGISTRATION
 
 For more information please refer to the example of usage
-[openni_capture.cpp](https://github.com/opencv/tree/master/samples/cpp/openni_capture.cpp) in
+[videocapture_openni.cpp](https://github.com/opencv/opencv/tree/master/samples/cpp/videocapture_openni.cpp) in
 opencv/samples/cpp folder.

@@ -44,14 +44,10 @@ The references are:
 
 #include "agast_score.hpp"
 
-#ifdef _MSC_VER
-#pragma warning( disable : 4127 )
-#endif
-
 namespace cv
 {
 
-void makeAgastOffsets(int pixel[16], int rowStride, int type)
+void makeAgastOffsets(int pixel[16], int rowStride, AgastFeatureDetector::DetectorType type)
 {
     static const int offsets16[][2] =
     {
@@ -82,10 +78,15 @@ void makeAgastOffsets(int pixel[16], int rowStride, int type)
                               type == AgastFeatureDetector::AGAST_7_12s ? offsets12s :
                               type == AgastFeatureDetector::AGAST_5_8 ? offsets8  : 0;
 
+    const int offsets_len = type == AgastFeatureDetector::OAST_9_16 ? 16 :
+                            type == AgastFeatureDetector::AGAST_7_12d ? 12 :
+                            type == AgastFeatureDetector::AGAST_7_12s ? 12 :
+                            type == AgastFeatureDetector::AGAST_5_8 ? 8 : 0;
+
     CV_Assert(pixel && offsets);
 
     int k = 0;
-    for( ; k < 16; k++ )
+    for( ; k < offsets_len; k++ )
         pixel[k] = offsets[k][0] + offsets[k][1] * rowStride;
 }
 
@@ -9399,7 +9400,7 @@ int agast_tree_search(const uint32_t table_struct32[], int pixel_[], const unsig
 }
 
 // universal pixel mask
-int AGAST_ALL_SCORE(const uchar* ptr, const int pixel[], int threshold, int agasttype)
+int AGAST_ALL_SCORE(const uchar* ptr, const int pixel[], int threshold, AgastFeatureDetector::DetectorType agasttype)
 {
     int bmin = threshold;
     int bmax = 255;

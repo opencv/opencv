@@ -45,455 +45,325 @@
 
 #include "test_precomp.hpp"
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 #define ACCURACY 0.00001
 
-class CV_RotatedRectangleIntersectionTest: public cvtest::ArrayTest
+// See pics/intersection.png for the scenarios we are testing
+
+// Test the following scenarios:
+// 1 - no intersection
+// 2 - partial intersection, rectangle translated
+// 3 - partial intersection, rectangle rotated 45 degree on the corner, forms a triangle intersection
+// 4 - full intersection, rectangles of same size directly on top of each other
+// 5 - partial intersection, rectangle on top rotated 45 degrees
+// 6 - partial intersection, rectangle on top of different size
+// 7 - full intersection, rectangle fully enclosed in the other
+// 8 - partial intersection, rectangle corner just touching. point contact
+// 9 - partial intersection. rectangle side by side, line contact
+
+static void compare(const std::vector<Point2f>& test, const std::vector<Point2f>& target)
 {
-public:
-
-protected:
-    void run (int);
-
-private:
-    void test1();
-    void test2();
-    void test3();
-    void test4();
-    void test5();
-    void test6();
-    void test7();
-    void test8();
-    void test9();
-};
-
-void CV_RotatedRectangleIntersectionTest::run(int)
-{
-    // See pics/intersection.png for the scenarios we are testing
-
-    // Test the following scenarios:
-    // 1 - no intersection
-    // 2 - partial intersection, rectangle translated
-    // 3 - partial intersection, rectangle rotated 45 degree on the corner, forms a triangle intersection
-    // 4 - full intersection, rectangles of same size directly on top of each other
-    // 5 - partial intersection, rectangle on top rotated 45 degrees
-    // 6 - partial intersection, rectangle on top of different size
-    // 7 - full intersection, rectangle fully enclosed in the other
-    // 8 - partial intersection, rectangle corner just touching. point contact
-    // 9 - partial intersetion. rectangle side by side, line contact
-
-    test1();
-    test2();
-    test3();
-    test4();
-    test5();
-    test6();
-    test7();
-    test8();
-    test9();
+    ASSERT_EQ(test.size(), target.size());
+    ASSERT_TRUE(test.size() < 4 || isContourConvex(test));
+    ASSERT_TRUE(target.size() < 4 || isContourConvex(target));
+    for( size_t i = 0; i < test.size(); i++ )
+    {
+        double r = sqrt(normL2Sqr<double>(test[i] - target[i]));
+        ASSERT_LT(r, ACCURACY);
+    }
 }
 
-void CV_RotatedRectangleIntersectionTest::test1()
+TEST(Imgproc_RotatedRectangleIntersection, accuracy_1)
 {
     // no intersection
-
-    RotatedRect rect1, rect2;
-
-    rect1.center.x = 0;
-    rect1.center.y = 0;
-    rect1.size.width = 2;
-    rect1.size.height = 2;
-    rect1.angle = 12.0f;
-
-    rect2.center.x = 10;
-    rect2.center.y = 10;
-    rect2.size.width = 2;
-    rect2.size.height = 2;
-    rect2.angle = 34.0f;
+    RotatedRect rect1(Point2f(0, 0), Size2f(2, 2), 12.0f);
+    RotatedRect rect2(Point2f(10, 10), Size2f(2, 2), 34.0f);
 
     vector<Point2f> vertices;
-
     int ret = rotatedRectangleIntersection(rect1, rect2, vertices);
 
     CV_Assert(ret == INTERSECT_NONE);
     CV_Assert(vertices.empty());
 }
 
-void CV_RotatedRectangleIntersectionTest::test2()
+TEST(Imgproc_RotatedRectangleIntersection, accuracy_2)
 {
     // partial intersection, rectangles translated
-
-    RotatedRect rect1, rect2;
-
-    rect1.center.x = 0;
-    rect1.center.y = 0;
-    rect1.size.width = 2;
-    rect1.size.height = 2;
-    rect1.angle = 0;
-
-    rect2.center.x = 1;
-    rect2.center.y = 1;
-    rect2.size.width = 2;
-    rect2.size.height = 2;
-    rect2.angle = 0;
+    RotatedRect rect1(Point2f(0, 0), Size2f(2, 2), 0.0f);
+    RotatedRect rect2(Point2f(1, 1), Size2f(2, 2), 0.0f);
 
     vector<Point2f> vertices;
-
     int ret = rotatedRectangleIntersection(rect1, rect2, vertices);
 
     CV_Assert(ret == INTERSECT_PARTIAL);
-    CV_Assert(vertices.size() == 4);
 
-    vector<Point2f> possibleVertices(4);
-
-    possibleVertices[0] = Point2f(0.0f, 0.0f);
-    possibleVertices[1] = Point2f(1.0f, 1.0f);
-    possibleVertices[2] = Point2f(0.0f, 1.0f);
-    possibleVertices[3] = Point2f(1.0f, 0.0f);
-
-    for( size_t i = 0; i < vertices.size(); i++ )
-    {
-        double bestR = DBL_MAX;
-
-        for( size_t j = 0; j < possibleVertices.size(); j++ )
-        {
-            double dx = vertices[i].x - possibleVertices[j].x;
-            double dy = vertices[i].y - possibleVertices[j].y;
-            double r = sqrt(dx*dx + dy*dy);
-
-            bestR = std::min(bestR, r);
-        }
-
-        CV_Assert(bestR < ACCURACY);
-    }
+    vector<Point2f> targetVertices(4);
+    targetVertices[0] = Point2f(1.0f, 0.0f);
+    targetVertices[1] = Point2f(1.0f, 1.0f);
+    targetVertices[2] = Point2f(0.0f, 1.0f);
+    targetVertices[3] = Point2f(0.0f, 0.0f);
+    compare(vertices, targetVertices);
 }
 
-void CV_RotatedRectangleIntersectionTest::test3()
+TEST(Imgproc_RotatedRectangleIntersection, accuracy_3)
 {
     // partial intersection, rectangles rotated 45 degree on the corner, forms a triangle intersection
-    RotatedRect rect1, rect2;
-
-    rect1.center.x = 0;
-    rect1.center.y = 0;
-    rect1.size.width = 2;
-    rect1.size.height = 2;
-    rect1.angle = 0;
-
-    rect2.center.x = 1;
-    rect2.center.y = 1;
-    rect2.size.width = sqrt(2.0f);
-    rect2.size.height = 20;
-    rect2.angle = 45.0f;
+    RotatedRect rect1(Point2f(0, 0), Size2f(2, 2), 0.0f);
+    RotatedRect rect2(Point2f(1, 1), Size2f(sqrt(2.0f), 20), 45.0f);
 
     vector<Point2f> vertices;
-
     int ret = rotatedRectangleIntersection(rect1, rect2, vertices);
 
     CV_Assert(ret == INTERSECT_PARTIAL);
-    CV_Assert(vertices.size() == 3);
 
-    vector<Point2f> possibleVertices(3);
-
-    possibleVertices[0] = Point2f(1.0f, 1.0f);
-    possibleVertices[1] = Point2f(0.0f, 1.0f);
-    possibleVertices[2] = Point2f(1.0f, 0.0f);
-
-    for( size_t i = 0; i < vertices.size(); i++ )
-    {
-        double bestR = DBL_MAX;
-
-        for( size_t j = 0; j < possibleVertices.size(); j++ )
-        {
-            double dx = vertices[i].x - possibleVertices[j].x;
-            double dy = vertices[i].y - possibleVertices[j].y;
-            double r = sqrt(dx*dx + dy*dy);
-
-            bestR = std::min(bestR, r);
-        }
-
-        CV_Assert(bestR < ACCURACY);
-    }
+    vector<Point2f> targetVertices(3);
+    targetVertices[0] = Point2f(1.0f, 0.0f);
+    targetVertices[1] = Point2f(1.0f, 1.0f);
+    targetVertices[2] = Point2f(0.0f, 1.0f);
+    compare(vertices, targetVertices);
 }
 
-void CV_RotatedRectangleIntersectionTest::test4()
+TEST(Imgproc_RotatedRectangleIntersection, accuracy_4)
 {
     // full intersection, rectangles of same size directly on top of each other
-
-    RotatedRect rect1, rect2;
-
-    rect1.center.x = 0;
-    rect1.center.y = 0;
-    rect1.size.width = 2;
-    rect1.size.height = 2;
-    rect1.angle = 0;
-
-    rect2.center.x = 0;
-    rect2.center.y = 0;
-    rect2.size.width = 2;
-    rect2.size.height = 2;
-    rect2.angle = 0;
+    RotatedRect rect1(Point2f(0, 0), Size2f(2, 2), 0.0f);
+    RotatedRect rect2(Point2f(0, 0), Size2f(2, 2), 0.0f);
 
     vector<Point2f> vertices;
-
     int ret = rotatedRectangleIntersection(rect1, rect2, vertices);
 
     CV_Assert(ret == INTERSECT_FULL);
-    CV_Assert(vertices.size() == 4);
 
-    vector<Point2f> possibleVertices(4);
-
-    possibleVertices[0] = Point2f(-1.0f, 1.0f);
-    possibleVertices[1] = Point2f(1.0f, -1.0f);
-    possibleVertices[2] = Point2f(-1.0f, -1.0f);
-    possibleVertices[3] = Point2f(1.0f, 1.0f);
-
-    for( size_t i = 0; i < vertices.size(); i++ )
-    {
-        double bestR = DBL_MAX;
-
-        for( size_t j = 0; j < possibleVertices.size(); j++ )
-        {
-            double dx = vertices[i].x - possibleVertices[j].x;
-            double dy = vertices[i].y - possibleVertices[j].y;
-            double r = sqrt(dx*dx + dy*dy);
-
-            bestR = std::min(bestR, r);
-        }
-
-        CV_Assert(bestR < ACCURACY);
-    }
+    vector<Point2f> targetVertices(4);
+    targetVertices[0] = Point2f(-1.0f, 1.0f);
+    targetVertices[1] = Point2f(-1.0f, -1.0f);
+    targetVertices[2] = Point2f(1.0f, -1.0f);
+    targetVertices[3] = Point2f(1.0f, 1.0f);
+    compare(vertices, targetVertices);
 }
 
-void CV_RotatedRectangleIntersectionTest::test5()
+TEST(Imgproc_RotatedRectangleIntersection, accuracy_5)
 {
     // partial intersection, rectangle on top rotated 45 degrees
-
-    RotatedRect rect1, rect2;
-
-    rect1.center.x = 0;
-    rect1.center.y = 0;
-    rect1.size.width = 2;
-    rect1.size.height = 2;
-    rect1.angle = 0;
-
-    rect2.center.x = 0;
-    rect2.center.y = 0;
-    rect2.size.width = 2;
-    rect2.size.height = 2;
-    rect2.angle = 45.0f;
+    RotatedRect rect1(Point2f(0, 0), Size2f(2, 2), 0.0f);
+    RotatedRect rect2(Point2f(0, 0), Size2f(2, 2), 45.0f);
 
     vector<Point2f> vertices;
-
     int ret = rotatedRectangleIntersection(rect1, rect2, vertices);
 
     CV_Assert(ret == INTERSECT_PARTIAL);
-    CV_Assert(vertices.size() == 8);
 
-    vector<Point2f> possibleVertices(8);
-
-    possibleVertices[0] = Point2f(-1.0f, -0.414214f);
-    possibleVertices[1] = Point2f(-1.0f, 0.414214f);
-    possibleVertices[2] = Point2f(-0.414214f, -1.0f);
-    possibleVertices[3] = Point2f(0.414214f, -1.0f);
-    possibleVertices[4] = Point2f(1.0f, -0.414214f);
-    possibleVertices[5] = Point2f(1.0f, 0.414214f);
-    possibleVertices[6] = Point2f(0.414214f, 1.0f);
-    possibleVertices[7] = Point2f(-0.414214f, 1.0f);
-
-    for( size_t i = 0; i < vertices.size(); i++ )
-    {
-        double bestR = DBL_MAX;
-
-        for( size_t j = 0; j < possibleVertices.size(); j++ )
-        {
-            double dx = vertices[i].x - possibleVertices[j].x;
-            double dy = vertices[i].y - possibleVertices[j].y;
-            double r = sqrt(dx*dx + dy*dy);
-
-            bestR = std::min(bestR, r);
-        }
-
-        CV_Assert(bestR < ACCURACY);
-    }
+    vector<Point2f> targetVertices(8);
+    targetVertices[0] = Point2f(-1.0f, -0.414214f);
+    targetVertices[1] = Point2f(-0.414214f, -1.0f);
+    targetVertices[2] = Point2f(0.414214f, -1.0f);
+    targetVertices[3] = Point2f(1.0f, -0.414214f);
+    targetVertices[4] = Point2f(1.0f, 0.414214f);
+    targetVertices[5] = Point2f(0.414214f, 1.0f);
+    targetVertices[6] = Point2f(-0.414214f, 1.0f);
+    targetVertices[7] = Point2f(-1.0f, 0.414214f);
+    compare(vertices, targetVertices);
 }
 
-void CV_RotatedRectangleIntersectionTest::test6()
+TEST(Imgproc_RotatedRectangleIntersection, accuracy_6)
 {
     // 6 - partial intersection, rectangle on top of different size
-
-    RotatedRect rect1, rect2;
-
-    rect1.center.x = 0;
-    rect1.center.y = 0;
-    rect1.size.width = 2;
-    rect1.size.height = 2;
-    rect1.angle = 0;
-
-    rect2.center.x = 0;
-    rect2.center.y = 0;
-    rect2.size.width = 2;
-    rect2.size.height = 10;
-    rect2.angle = 0;
+    RotatedRect rect1(Point2f(0, 0), Size2f(2, 2), 0.0f);
+    RotatedRect rect2(Point2f(0, 0), Size2f(2, 10), 0.0f);
 
     vector<Point2f> vertices;
-
     int ret = rotatedRectangleIntersection(rect1, rect2, vertices);
 
     CV_Assert(ret == INTERSECT_PARTIAL);
-    CV_Assert(vertices.size() == 4);
 
-    vector<Point2f> possibleVertices(4);
-
-    possibleVertices[0] = Point2f(1.0f, 1.0f);
-    possibleVertices[1] = Point2f(1.0f, -1.0f);
-    possibleVertices[2] = Point2f(-1.0f, -1.0f);
-    possibleVertices[3] = Point2f(-1.0f, 1.0f);
-
-    for( size_t i = 0; i < vertices.size(); i++ )
-    {
-        double bestR = DBL_MAX;
-
-        for( size_t j = 0; j < possibleVertices.size(); j++ )
-        {
-            double dx = vertices[i].x - possibleVertices[j].x;
-            double dy = vertices[i].y - possibleVertices[j].y;
-            double r = sqrt(dx*dx + dy*dy);
-
-            bestR = std::min(bestR, r);
-        }
-
-        CV_Assert(bestR < ACCURACY);
-    }
+    vector<Point2f> targetVertices(4);
+    targetVertices[0] = Point2f(-1.0f, -1.0f);
+    targetVertices[1] = Point2f(1.0f, -1.0f);
+    targetVertices[2] = Point2f(1.0f, 1.0f);
+    targetVertices[3] = Point2f(-1.0f, 1.0f);
+    compare(vertices, targetVertices);
 }
 
-void CV_RotatedRectangleIntersectionTest::test7()
+TEST(Imgproc_RotatedRectangleIntersection, accuracy_7)
 {
     // full intersection, rectangle fully enclosed in the other
-
-    RotatedRect rect1, rect2;
-
-    rect1.center.x = 0;
-    rect1.center.y = 0;
-    rect1.size.width = 12.34f;
-    rect1.size.height = 56.78f;
-    rect1.angle = 0;
-
-    rect2.center.x = 0;
-    rect2.center.y = 0;
-    rect2.size.width = 2;
-    rect2.size.height = 2;
-    rect2.angle = 0;
+    RotatedRect rect1(Point2f(0, 0), Size2f(12.34f, 56.78f), 0.0f);
+    RotatedRect rect2(Point2f(0, 0), Size2f(2, 2), 0.0f);
 
     vector<Point2f> vertices;
-
     int ret = rotatedRectangleIntersection(rect1, rect2, vertices);
 
     CV_Assert(ret == INTERSECT_FULL);
-    CV_Assert(vertices.size() == 4);
 
-    vector<Point2f> possibleVertices(4);
-
-    possibleVertices[0] = Point2f(1.0f, 1.0f);
-    possibleVertices[1] = Point2f(1.0f, -1.0f);
-    possibleVertices[2] = Point2f(-1.0f, -1.0f);
-    possibleVertices[3] = Point2f(-1.0f, 1.0f);
-
-    for( size_t i = 0; i < vertices.size(); i++ )
-    {
-        double bestR = DBL_MAX;
-
-        for( size_t j = 0; j < possibleVertices.size(); j++ )
-        {
-            double dx = vertices[i].x - possibleVertices[j].x;
-            double dy = vertices[i].y - possibleVertices[j].y;
-            double r = sqrt(dx*dx + dy*dy);
-
-            bestR = std::min(bestR, r);
-        }
-
-        CV_Assert(bestR < ACCURACY);
-    }
+    vector<Point2f> targetVertices(4);
+    targetVertices[0] = Point2f(-1.0f, 1.0f);
+    targetVertices[1] = Point2f(-1.0f, -1.0f);
+    targetVertices[2] = Point2f(1.0f, -1.0f);
+    targetVertices[3] = Point2f(1.0f, 1.0f);
+    compare(vertices, targetVertices);
 }
 
-void CV_RotatedRectangleIntersectionTest::test8()
+TEST(Imgproc_RotatedRectangleIntersection, accuracy_8)
 {
-    // full intersection, rectangle fully enclosed in the other
-
-    RotatedRect rect1, rect2;
-
-    rect1.center.x = 0;
-    rect1.center.y = 0;
-    rect1.size.width = 2;
-    rect1.size.height = 2;
-    rect1.angle = 0;
-
-    rect2.center.x = 2;
-    rect2.center.y = 2;
-    rect2.size.width = 2;
-    rect2.size.height = 2;
-    rect2.angle = 0;
+    // intersection by a single vertex
+    RotatedRect rect1(Point2f(0, 0), Size2f(2, 2), 0.0f);
+    RotatedRect rect2(Point2f(2, 2), Size2f(2, 2), 0.0f);
 
     vector<Point2f> vertices;
-
     int ret = rotatedRectangleIntersection(rect1, rect2, vertices);
 
     CV_Assert(ret == INTERSECT_PARTIAL);
-    CV_Assert(vertices.size() == 1);
-
-    double dx = vertices[0].x - 1;
-    double dy = vertices[0].y - 1;
-    double r = sqrt(dx*dx + dy*dy);
-
-    CV_Assert(r < ACCURACY);
+    compare(vertices, vector<Point2f>(1, Point2f(1.0f, 1.0f)));
 }
 
-void CV_RotatedRectangleIntersectionTest::test9()
+TEST(Imgproc_RotatedRectangleIntersection, accuracy_9)
 {
     // full intersection, rectangle fully enclosed in the other
-
-    RotatedRect rect1, rect2;
-
-    rect1.center.x = 0;
-    rect1.center.y = 0;
-    rect1.size.width = 2;
-    rect1.size.height = 2;
-    rect1.angle = 0;
-
-    rect2.center.x = 2;
-    rect2.center.y = 0;
-    rect2.size.width = 2;
-    rect2.size.height = 123.45f;
-    rect2.angle = 0;
+    RotatedRect rect1(Point2f(0, 0), Size2f(2, 2), 0.0f);
+    RotatedRect rect2(Point2f(2, 0), Size2f(2, 123.45f), 0.0f);
 
     vector<Point2f> vertices;
-
     int ret = rotatedRectangleIntersection(rect1, rect2, vertices);
 
     CV_Assert(ret == INTERSECT_PARTIAL);
-    CV_Assert(vertices.size() == 2);
 
-    vector<Point2f> possibleVertices(2);
+    vector<Point2f> targetVertices(2);
+    targetVertices[0] = Point2f(1.0f, -1.0f);
+    targetVertices[1] = Point2f(1.0f, 1.0f);
+    compare(vertices, targetVertices);
+}
 
-    possibleVertices[0] = Point2f(1.0f, 1.0f);
-    possibleVertices[1] = Point2f(1.0f, -1.0f);
+TEST(Imgproc_RotatedRectangleIntersection, accuracy_10)
+{
+    // three points of rect2 are inside rect1.
+    RotatedRect rect1(Point2f(0, 0), Size2f(2, 2), 0.0f);
+    RotatedRect rect2(Point2f(0, 0.5), Size2f(1, 1), 45.0f);
 
-    for( size_t i = 0; i < vertices.size(); i++ )
+    vector<Point2f> vertices;
+    int ret = rotatedRectangleIntersection(rect1, rect2, vertices);
+
+    CV_Assert(ret == INTERSECT_PARTIAL);
+
+    vector<Point2f> targetVertices(5);
+    targetVertices[0] = Point2f(0.207107f, 1.0f);
+    targetVertices[1] = Point2f(-0.207107f, 1.0f);
+    targetVertices[2] = Point2f(-0.707107f, 0.5f);
+    targetVertices[3] = Point2f(0.0f, -0.207107f);
+    targetVertices[4] = Point2f(0.707107f, 0.5f);
+    compare(vertices, targetVertices);
+}
+
+TEST(Imgproc_RotatedRectangleIntersection, accuracy_11)
+{
+    RotatedRect rect1(Point2f(0, 0), Size2f(4, 2), 0.0f);
+    RotatedRect rect2(Point2f(0, 0), Size2f(2, 2), -45.0f);
+
+    vector<Point2f> vertices;
+    int ret = rotatedRectangleIntersection(rect1, rect2, vertices);
+
+    CV_Assert(ret == INTERSECT_PARTIAL);
+
+    vector<Point2f> targetVertices(6);
+    targetVertices[0] = Point2f(-0.414214f, -1.0f);
+    targetVertices[1] = Point2f(0.414213f, -1.0f);
+    targetVertices[2] = Point2f(1.41421f, 0.0f);
+    targetVertices[3] = Point2f(0.414214f, 1.0f);
+    targetVertices[4] = Point2f(-0.414213f, 1.0f);
+    targetVertices[5] = Point2f(-1.41421f, 0.0f);
+    compare(vertices, targetVertices);
+}
+
+TEST(Imgproc_RotatedRectangleIntersection, accuracy_12)
+{
+    RotatedRect rect1(Point2f(0, 0), Size2f(2, 2), 0.0f);
+    RotatedRect rect2(Point2f(0, 1), Size2f(1, 1), 0.0f);
+
+    vector<Point2f> vertices;
+    int ret = rotatedRectangleIntersection(rect1, rect2, vertices);
+
+    CV_Assert(ret == INTERSECT_PARTIAL);
+
+    vector<Point2f> targetVertices(4);
+    targetVertices[0] = Point2f(-0.5f, 1.0f);
+    targetVertices[1] = Point2f(-0.5f, 0.5f);
+    targetVertices[2] = Point2f(0.5f, 0.5f);
+    targetVertices[3] = Point2f(0.5f, 1.0f);
+    compare(vertices, targetVertices);
+}
+
+TEST(Imgproc_RotatedRectangleIntersection, accuracy_13)
+{
+    RotatedRect rect1(Point2f(0, 0), Size2f(1, 3), 0.0f);
+    RotatedRect rect2(Point2f(0, 1), Size2f(3, 1), 0.0f);
+
+    vector<Point2f> vertices;
+    int ret = rotatedRectangleIntersection(rect1, rect2, vertices);
+
+    CV_Assert(ret == INTERSECT_PARTIAL);
+
+    vector<Point2f> targetVertices(4);
+    targetVertices[0] = Point2f(-0.5f, 0.5f);
+    targetVertices[1] = Point2f(0.5f, 0.5f);
+    targetVertices[2] = Point2f(0.5f, 1.5f);
+    targetVertices[3] = Point2f(-0.5f, 1.5f);
+    compare(vertices, targetVertices);
+}
+
+TEST(Imgproc_RotatedRectangleIntersection, accuracy_14)
+{
+    const int kNumTests = 100;
+    const float kWidth = 5;
+    const float kHeight = 5;
+    RotatedRect rects[2];
+    std::vector<Point2f> inter;
+    cv::RNG& rng = cv::theRNG();
+    for (int i = 0; i < kNumTests; ++i)
     {
-        double bestR = DBL_MAX;
-
-        for( size_t j = 0; j < possibleVertices.size(); j++ )
+        for (int j = 0; j < 2; ++j)
         {
-            double dx = vertices[i].x - possibleVertices[j].x;
-            double dy = vertices[i].y - possibleVertices[j].y;
-            double r = sqrt(dx*dx + dy*dy);
-
-            bestR = std::min(bestR, r);
+            rects[j].center = Point2f(rng.uniform(0.0f, kWidth), rng.uniform(0.0f, kHeight));
+            rects[j].size = Size2f(rng.uniform(1.0f, kWidth), rng.uniform(1.0f, kHeight));
+            rects[j].angle = rng.uniform(0.0f, 360.0f);
         }
-
-        CV_Assert(bestR < ACCURACY);
+        int res = rotatedRectangleIntersection(rects[0], rects[1], inter);
+        EXPECT_TRUE(res == INTERSECT_NONE || res == INTERSECT_PARTIAL || res == INTERSECT_FULL) << res;
+        ASSERT_TRUE(inter.size() < 4 || isContourConvex(inter)) << inter;
     }
 }
 
-TEST (Imgproc_RotatedRectangleIntersection, accuracy) { CV_RotatedRectangleIntersectionTest test; test.safe_run(); }
+TEST(Imgproc_RotatedRectangleIntersection, regression_12221_1)
+{
+    RotatedRect r1(
+        Point2f(259.65081787109375, 51.58895492553711),
+        Size2f(5487.8779296875, 233.8921661376953),
+        -29.488616943359375);
+    RotatedRect r2(
+        Point2f(293.70465087890625, 112.10154724121094),
+        Size2f(5487.8896484375, 234.87368774414062),
+        -31.27001953125);
+
+    std::vector<Point2f> intersections;
+    int interType = cv::rotatedRectangleIntersection(r1, r2, intersections);
+    EXPECT_EQ(INTERSECT_PARTIAL, interType);
+    EXPECT_LE(intersections.size(), (size_t)8);
+}
+
+TEST(Imgproc_RotatedRectangleIntersection, regression_12221_2)
+{
+    RotatedRect r1(
+        Point2f(239.78500366210938, 515.72021484375),
+        Size2f(70.23420715332031, 39.74684524536133),
+        -42.86162567138672);
+    RotatedRect r2(
+        Point2f(242.4205322265625, 510.1195373535156),
+        Size2f(66.85948944091797, 61.46455383300781),
+        -9.840961456298828);
+
+    std::vector<Point2f> intersections;
+    int interType = cv::rotatedRectangleIntersection(r1, r2, intersections);
+    EXPECT_EQ(INTERSECT_PARTIAL, interType);
+    EXPECT_LE(intersections.size(), (size_t)8);
+}
+
+}} // namespace

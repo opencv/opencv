@@ -1,9 +1,9 @@
 ///////////////////////////////////////////////////////////////////////////
 //
 // Copyright (c) 2007, Weta Digital Ltd
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -15,8 +15,8 @@
 // distribution.
 // *       Neither the name of Weta Digital nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -32,17 +32,19 @@
 ///////////////////////////////////////////////////////////////////////////
 
 
-
 //-----------------------------------------------------------------------------
 //
-//	class StringAttribute
+//	class StringVectorAttribute
 //
 //-----------------------------------------------------------------------------
 
 #include <ImfStringVectorAttribute.h>
 
 
-namespace Imf {
+OPENEXR_IMF_INTERNAL_NAMESPACE_SOURCE_ENTER
+
+
+using namespace OPENEXR_IMF_INTERNAL_NAMESPACE;
 
 
 template <>
@@ -55,7 +57,7 @@ StringVectorAttribute::staticTypeName ()
 
 template <>
 void
-StringVectorAttribute::writeValueTo (OStream &os, int) const
+StringVectorAttribute::writeValueTo (OPENEXR_IMF_INTERNAL_NAMESPACE::OStream &os, int version) const
 {
     int size = _value.size();
 
@@ -63,27 +65,31 @@ StringVectorAttribute::writeValueTo (OStream &os, int) const
     {
         int strSize = _value[i].size();
         Xdr::write <StreamIO> (os, strSize);
-    Xdr::write <StreamIO> (os, &_value[i][0], strSize);
+	Xdr::write <StreamIO> (os, &_value[i][0], strSize);
     }
 }
 
 
 template <>
 void
-StringVectorAttribute::readValueFrom (IStream &is, int size, int)
+StringVectorAttribute::readValueFrom (OPENEXR_IMF_INTERNAL_NAMESPACE::IStream &is, int size, int version)
 {
     int read = 0;
 
     while (read < size)
-    {
+    {   
        int strSize;
        Xdr::read <StreamIO> (is, strSize);
-       read += Xdr::size<int>();
+       read += Xdr::size<int>();       
 
        std::string str;
        str.resize (strSize);
-
-       Xdr::read<StreamIO> (is, &str[0], strSize);
+  
+       if( strSize>0 )
+       {
+           Xdr::read<StreamIO> (is, &str[0], strSize);
+       }
+       
        read += strSize;
 
        _value.push_back (str);
@@ -91,4 +97,4 @@ StringVectorAttribute::readValueFrom (IStream &is, int size, int)
 }
 
 
-} // namespace Imf
+OPENEXR_IMF_INTERNAL_NAMESPACE_SOURCE_EXIT 

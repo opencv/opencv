@@ -6,12 +6,20 @@ In order to use these versions of libraries instead of system ones on UNIX syste
 should use BUILD_<library_name> CMake flags (for example, BUILD_PNG for the libpng library).
 
 ------------------------------------------------------------------------------------
-libjpeg               The Independent JPEG Group's JPEG software.
+libjpeg (deprecated)  The Independent JPEG Group's JPEG software.
                       Copyright (C) 1991-2012, Thomas G. Lane, Guido Vollbeding.
                       See IGJ home page http://www.ijg.org
                       for details and links to the source code
 
-                      WITH_JPEG CMake option must be ON to add libjpeg support to imgcodecs.
+libjpeg-turbo         libjpeg-turbo is covered by three compatible BSD-style open source licenses.
+                      Refer to [LICENSE.md](libjpeg-turbo/LICENSE.md) for a roll-up of license terms.
+
+                      Site: https://github.com/libjpeg-turbo/libjpeg-turbo
+                      API is compatible with original libjpeg.
+
+                      WITH_JPEG CMake option must be ON to add libjpeg or libjpeg-turbo support to imgcodecs.
+                      BUILD_JPEG=ON selects libjpeg-turbo by default (since OpenCV 3.4.2).
+                      Enable BUILD_JPEG_TURBO_DISABLE=ON to force using of libjpeg (this option is removed in OpenCV 4.0).
 ------------------------------------------------------------------------------------
 libpng                Portable Network Graphics library.
                       The license and copyright notes can be found in libpng/LICENSE.

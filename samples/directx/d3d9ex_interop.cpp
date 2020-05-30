@@ -1,11 +1,10 @@
 /*
-// Sample demonstrating interoperability of OpenCV UMat with Direct X surface
-// At first, the data obtained from video file or camera and
-// placed onto Direct X surface,
-// following mapping of this Direct X surface to OpenCV UMat and call cv::Blur
-// function. The result is mapped back to Direct X surface and rendered through
-// Direct X API.
+// A sample program demonstrating interoperability of OpenCV cv::UMat with Direct X surface
+// At first, the data obtained from video file or camera and placed onto Direct X surface,
+// following mapping of this Direct X surface to OpenCV cv::UMat and call cv::Blur function.
+// The result is mapped back to Direct X surface and rendered through Direct X API.
 */
+
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <d3d9.h>
@@ -20,9 +19,6 @@
 
 #pragma comment (lib, "d3d9.lib")
 
-
-using namespace std;
-using namespace cv;
 
 class D3D9ExWinApp : public D3DSample
 {
@@ -43,7 +39,7 @@ public:
         r = ::Direct3DCreate9Ex(D3D_SDK_VERSION, &m_pD3D9Ex);
         if (FAILED(r))
         {
-            return -1;
+            return EXIT_FAILURE;
         }
 
         DWORD flags = D3DCREATE_HARDWARE_VERTEXPROCESSING |
@@ -70,20 +66,20 @@ public:
         r = m_pD3D9Ex->CreateDeviceEx(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, m_hWnd, flags, &d3dpp, NULL, &m_pD3D9DevEx);
         if (FAILED(r))
         {
-            return -1;
+            return EXIT_FAILURE;
         }
 
         r = m_pD3D9DevEx->GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO, &m_pBackBuffer);
         if (FAILED(r))
         {
-            return -1;
+            return EXIT_FAILURE;
         }
 
         r = m_pD3D9DevEx->CreateOffscreenPlainSurface(m_width, m_height, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &m_pSurface, NULL);
         if (FAILED(r))
         {
             std::cerr << "Can't create surface for result" << std::endl;
-            return -1;
+            return EXIT_FAILURE;
         }
 
         // initialize OpenCL context of OpenCV lib from DirectX
@@ -96,7 +92,7 @@ public:
             cv::ocl::Context::getDefault().device(0).name() :
             "No OpenCL device";
 
-        return 0;
+        return EXIT_SUCCESS;
     } // create()
 
 
@@ -106,9 +102,9 @@ public:
         HRESULT r;
 
         if (!m_cap.read(m_frame_bgr))
-            return -1;
+            return EXIT_FAILURE;
 
-        cv::cvtColor(m_frame_bgr, m_frame_rgba, CV_BGR2BGRA);
+        cv::cvtColor(m_frame_bgr, m_frame_rgba, cv::COLOR_BGR2BGRA);
 
         D3DLOCKED_RECT memDesc = { 0, NULL };
         RECT rc = { 0, 0, m_width, m_height };
@@ -131,7 +127,7 @@ public:
 
         *ppSurface = m_pSurface;
 
-        return 0;
+        return EXIT_SUCCESS;
     } // get_surface()
 
 
@@ -141,7 +137,7 @@ public:
         try
         {
             if (m_shutdown)
-                return 0;
+                return EXIT_SUCCESS;
 
             // capture user input once
             MODE mode = m_mode == MODE_GPU_NV12 ? MODE_GPU_RGBA : m_mode;
@@ -152,9 +148,10 @@ public:
             r = get_surface(&pSurface);
             if (FAILED(r))
             {
-                return -1;
+                return EXIT_FAILURE;
             }
 
+            m_timer.reset();
             m_timer.start();
 
             switch (mode)
@@ -168,7 +165,7 @@ public:
                     r = pSurface->LockRect(&memDesc, &rc, 0);
                     if (FAILED(r))
                     {
-                        return -1;
+                        return EXIT_FAILURE;
                     }
 
                     cv::Mat m(m_height, m_width, CV_8UC4, memDesc.pBits, memDesc.Pitch);
@@ -176,13 +173,13 @@ public:
                     if (m_demo_processing)
                     {
                         // blur D3D9 surface with OpenCV on CPU
-                        cv::blur(m, m, cv::Size(15, 15), cv::Point(-7, -7));
+                        cv::blur(m, m, cv::Size(15, 15));
                     }
 
                     r = pSurface->UnlockRect();
                     if (FAILED(r))
                     {
-                        return -1;
+                        return EXIT_FAILURE;
                     }
 
                     break;
@@ -198,7 +195,7 @@ public:
                     if (m_demo_processing)
                     {
                         // blur D3D9 surface with OpenCV on GPU with OpenCL
-                        cv::blur(u, u, cv::Size(15, 15), cv::Point(-7, -7));
+                        cv::blur(u, u, cv::Size(15, 15));
                     }
 
                     cv::directx::convertToDirect3DSurface9(u, pSurface);
@@ -210,36 +207,36 @@ public:
 
             m_timer.stop();
 
-            print_info(pSurface, m_mode, m_timer.time(Timer::UNITS::MSEC), m_oclDevName);
+            print_info(pSurface, m_mode, m_timer.getTimeMilli(), m_oclDevName);
 
             // traditional DX render pipeline:
             //   BitBlt surface to backBuffer and flip backBuffer to frontBuffer
             r = m_pD3D9DevEx->StretchRect(pSurface, NULL, m_pBackBuffer, NULL, D3DTEXF_NONE);
             if (FAILED(r))
             {
-                return -1;
+                return EXIT_FAILURE;
             }
 
             // present the back buffer contents to the display
             r = m_pD3D9DevEx->Present(NULL, NULL, NULL, NULL);
             if (FAILED(r))
             {
-                return -1;
+                return EXIT_FAILURE;
             }
 
         } // try
 
-        catch (cv::Exception& e)
+        catch (const cv::Exception& e)
         {
             std::cerr << "Exception: " << e.what() << std::endl;
             return 10;
         }
 
-        return 0;
+        return EXIT_SUCCESS;
     } // render()
 
 
-    void print_info(LPDIRECT3DSURFACE9 pSurface, int mode, float time, cv::String oclDevName)
+    void print_info(LPDIRECT3DSURFACE9 pSurface, int mode, double time, cv::String oclDevName)
     {
         HDC hDC;
 
@@ -296,7 +293,7 @@ public:
         SAFE_RELEASE(m_pD3D9DevEx);
         SAFE_RELEASE(m_pD3D9Ex);
         D3DSample::cleanup();
-        return 0;
+        return EXIT_SUCCESS;
     } // cleanup()
 
 private:

@@ -34,7 +34,7 @@ int main( int argc, char** argv )
   if (argc < 3)
   {
     cout << "Not enough parameters" << endl;
-    cout << "Usage:\n./MatchTemplate_Demo <image_name> <template_name> [<mask_name>]" << endl;
+    cout << "Usage:\n" << argv[0] << " <image_name> <template_name> [<mask_name>]" << endl;
     return -1;
   }
 
@@ -51,7 +51,7 @@ int main( int argc, char** argv )
   if(img.empty() || templ.empty() || (use_mask && mask.empty()))
   {
     cout << "Can't read one of the images" << endl;
-    return -1;
+    return EXIT_FAILURE;
   }
   //! [load_image]
 
@@ -71,7 +71,7 @@ int main( int argc, char** argv )
 
   //! [wait_key]
   waitKey(0);
-  return 0;
+  return EXIT_SUCCESS;
   //! [wait_key]
 }
 
@@ -97,7 +97,7 @@ void MatchingMethod( int, void* )
 
   //! [match_template]
   /// Do the Matching and Normalize
-  bool method_accepts_mask = (CV_TM_SQDIFF == match_method || match_method == CV_TM_CCORR_NORMED);
+  bool method_accepts_mask = (TM_SQDIFF == match_method || match_method == TM_CCORR_NORMED);
   if (use_mask && method_accepts_mask)
     { matchTemplate( img, templ, result, match_method, mask); }
   else

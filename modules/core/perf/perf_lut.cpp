@@ -1,7 +1,6 @@
 #include "perf_precomp.hpp"
 
-using namespace std;
-using namespace cv;
+namespace opencv_test { namespace {
 using namespace perf;
 
 typedef perf::TestBaseWithParam<Size> SizePrm;
@@ -24,3 +23,5 @@ PERF_TEST_P( SizePrm, LUT,
 
     SANITY_CHECK(dst, 0.1);
 }
+
+}} // namespace

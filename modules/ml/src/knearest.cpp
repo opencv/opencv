@@ -73,6 +73,7 @@ public:
 
     bool train( const Ptr<TrainData>& data, int flags )
     {
+        CV_Assert(!data.empty());
         Mat new_samples = data->getTrainSamples(ROW_SAMPLE);
         Mat new_responses;
         data->getTrainResponses().convertTo(new_responses, CV_32F);
@@ -98,7 +99,7 @@ public:
         return true;
     }
 
-    virtual void doTrain(InputArray points) { (void)points; }
+    virtual void doTrain(InputArray points) { CV_UNUSED(points); }
 
     void clear()
     {
@@ -134,22 +135,21 @@ public:
     Mat responses;
 };
 
-class BruteForceImpl : public Impl
+class BruteForceImpl CV_FINAL : public Impl
 {
 public:
-    String getModelName() const { return NAME_BRUTE_FORCE; }
-    int getType() const { return ml::KNearest::BRUTE_FORCE; }
+    String getModelName() const CV_OVERRIDE { return NAME_BRUTE_FORCE; }
+    int getType() const CV_OVERRIDE { return ml::KNearest::BRUTE_FORCE; }
 
-    void findNearestCore( const Mat& _samples, int k0, const Range& range,
+    void findNearestCore( const Mat& _samples, int k, const Range& range,
                           Mat* results, Mat* neighbor_responses,
                           Mat* dists, float* presult ) const
     {
         int testidx, baseidx, i, j, d = samples.cols, nsamples = samples.rows;
         int testcount = range.end - range.start;
-        int k = std::min(k0, nsamples);
 
         AutoBuffer<float> buf(testcount*k*2);
-        float* dbuf = buf;
+        float* dbuf = buf.data();
         float* rbuf = dbuf + testcount*k;
 
         const float* rptr = responses.ptr<float>();
@@ -215,7 +215,7 @@ public:
                 float* nr = neighbor_responses->ptr<float>(testidx + range.start);
                 for( j = 0; j < k; j++ )
                     nr[j] = rbuf[testidx*k + j];
-                for( ; j < k0; j++ )
+                for( ; j < k; j++ )
                     nr[j] = 0.f;
             }
 
@@ -224,7 +224,7 @@ public:
                 float* dptr = dists->ptr<float>(testidx + range.start);
                 for( j = 0; j < k; j++ )
                     dptr[j] = dbuf[testidx*k + j];
-                for( ; j < k0; j++ )
+                for( ; j < k; j++ )
                     dptr[j] = 0.f;
             }
 
@@ -240,20 +240,7 @@ public:
                 else
                 {
                     float* rp = rbuf + testidx*k;
-                    for( j = k-1; j > 0; j-- )
-                    {
-                        bool swap_fl = false;
-                        for( i = 0; i < j; i++ )
-                        {
-                            if( rp[i] > rp[i+1] )
-                            {
-                                std::swap(rp[i], rp[i+1]);
-                                swap_fl = true;
-                            }
-                        }
-                        if( !swap_fl )
-                            break;
-                    }
+                    std::sort(rp, rp+k);
 
                     result = rp[0];
                     int prev_start = 0;
@@ -294,7 +281,7 @@ public:
             presult = _presult;
         }
 
-        void operator()( const Range& range ) const
+        void operator()(const Range& range) const CV_OVERRIDE
         {
             int delta = std::min(range.end - range.start, 256);
             for( int start = range.start; start < range.end; start += delta )
@@ -316,10 +303,11 @@ public:
     float findNearest( InputArray _samples, int k,
                        OutputArray _results,
                        OutputArray _neighborResponses,
-                       OutputArray _dists ) const
+                       OutputArray _dists ) const CV_OVERRIDE
     {
         float result = 0.f;
         CV_Assert( 0 < k );
+        k = std::min(k, samples.rows);
 
         Mat test_samples = _samples.getMat();
         CV_Assert( test_samples.type() == CV_32F && test_samples.cols == samples.cols );
@@ -358,13 +346,13 @@ public:
 };
 
 
-class KDTreeImpl : public Impl
+class KDTreeImpl CV_FINAL : public Impl
 {
 public:
-    String getModelName() const { return NAME_KDTREE; }
-    int getType() const { return ml::KNearest::KDTREE; }
+    String getModelName() const CV_OVERRIDE { return NAME_KDTREE; }
+    int getType() const CV_OVERRIDE { return ml::KNearest::KDTREE; }
 
-    void doTrain(InputArray points)
+    void doTrain(InputArray points) CV_OVERRIDE
     {
         tr.build(points);
     }
@@ -372,10 +360,11 @@ public:
     float findNearest( InputArray _samples, int k,
                        OutputArray _results,
                        OutputArray _neighborResponses,
-                       OutputArray _dists ) const
+                       OutputArray _dists ) const CV_OVERRIDE
     {
         float result = 0.f;
         CV_Assert( 0 < k );
+        k = std::min(k, samples.rows);
 
         Mat test_samples = _samples.getMat();
         CV_Assert( test_samples.type() == CV_32F && test_samples.cols == samples.cols );
@@ -432,22 +421,34 @@ public:
 
 //================================================================
 
-class KNearestImpl : public KNearest
+class KNearestImpl CV_FINAL : public KNearest
 {
-    CV_IMPL_PROPERTY(int, DefaultK, impl->defaultK)
-    CV_IMPL_PROPERTY(bool, IsClassifier, impl->isclassifier)
-    CV_IMPL_PROPERTY(int, Emax, impl->Emax)
+    inline int getDefaultK() const CV_OVERRIDE { return impl->defaultK; }
+    inline void setDefaultK(int val) CV_OVERRIDE { impl->defaultK = val; }
+    inline bool getIsClassifier() const CV_OVERRIDE { return impl->isclassifier; }
+    inline void setIsClassifier(bool val) CV_OVERRIDE { impl->isclassifier = val; }
+    inline int getEmax() const CV_OVERRIDE { return impl->Emax; }
+    inline void setEmax(int val) CV_OVERRIDE { impl->Emax = val; }
 
 public:
-    int getAlgorithmType() const
+    int getAlgorithmType() const CV_OVERRIDE
     {
         return impl->getType();
     }
-    void setAlgorithmType(int val)
+    void setAlgorithmType(int val) CV_OVERRIDE
     {
         if (val != BRUTE_FORCE && val != KDTREE)
             val = BRUTE_FORCE;
+
+        int k = getDefaultK();
+        int e = getEmax();
+        bool c = getIsClassifier();
+
         initImpl(val);
+
+        setDefaultK(k);
+        setEmax(e);
+        setIsClassifier(c);
     }
 
 public:
@@ -459,18 +460,18 @@ public:
     {
     }
 
-    bool isClassifier() const { return impl->isclassifier; }
-    bool isTrained() const { return !impl->samples.empty(); }
+    bool isClassifier() const CV_OVERRIDE { return impl->isclassifier; }
+    bool isTrained() const CV_OVERRIDE { return !impl->samples.empty(); }
 
-    int getVarCount() const { return impl->samples.cols; }
+    int getVarCount() const CV_OVERRIDE { return impl->samples.cols; }
 
-    void write( FileStorage& fs ) const
+    void write( FileStorage& fs ) const CV_OVERRIDE
     {
         writeFormat(fs);
         impl->write(fs);
     }
 
-    void read( const FileNode& fn )
+    void read( const FileNode& fn ) CV_OVERRIDE
     {
         int algorithmType = BRUTE_FORCE;
         if (fn.name() == NAME_KDTREE)
@@ -482,22 +483,23 @@ public:
     float findNearest( InputArray samples, int k,
                        OutputArray results,
                        OutputArray neighborResponses=noArray(),
-                       OutputArray dist=noArray() ) const
+                       OutputArray dist=noArray() ) const CV_OVERRIDE
     {
         return impl->findNearest(samples, k, results, neighborResponses, dist);
     }
 
-    float predict(InputArray inputs, OutputArray outputs, int) const
+    float predict(InputArray inputs, OutputArray outputs, int) const CV_OVERRIDE
     {
         return impl->findNearest( inputs, impl->defaultK, outputs, noArray(), noArray() );
     }
 
-    bool train( const Ptr<TrainData>& data, int flags )
+    bool train( const Ptr<TrainData>& data, int flags ) CV_OVERRIDE
     {
+        CV_Assert(!data.empty());
         return impl->train(data, flags);
     }
 
-    String getDefaultName() const { return impl->getModelName(); }
+    String getDefaultName() const CV_OVERRIDE { return impl->getModelName(); }
 
 protected:
     void initImpl(int algorithmType)
@@ -513,6 +515,17 @@ protected:
 Ptr<KNearest> KNearest::create()
 {
     return makePtr<KNearestImpl>();
+}
+
+Ptr<KNearest> KNearest::load(const String& filepath)
+{
+    FileStorage fs;
+    fs.open(filepath, FileStorage::READ);
+
+    Ptr<KNearest> knearest = makePtr<KNearestImpl>();
+
+    ((KNearestImpl*)knearest.get())->read(fs.getFirstTopLevelNode());
+    return knearest;
 }
 
 }

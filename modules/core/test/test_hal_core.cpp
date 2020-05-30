@@ -38,10 +38,9 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-
 #include "test_precomp.hpp"
 
-using namespace cv;
+namespace opencv_test { namespace {
 
 enum
 {
@@ -111,7 +110,7 @@ TEST(Core_HAL, mathfuncs)
             t = (double)getTickCount() - t;
             min_ocv_t = std::min(min_ocv_t, t);
         }
-        EXPECT_LE(norm(dst, dst0, NORM_INF | NORM_RELATIVE), eps);
+        EXPECT_LE(cvtest::norm(dst, dst0, NORM_INF | NORM_RELATIVE), eps);
 
         double freq = getTickFrequency();
         printf("%s (N=%d, %s): hal time=%.2fusec, ocv time=%.2fusec\n",
@@ -119,8 +118,6 @@ TEST(Core_HAL, mathfuncs)
                n, (depth == CV_32F ? "f32" : "f64"), min_hal_t*1e6/freq, min_ocv_t*1e6/freq);
     }
 }
-
-namespace {
 
 enum
 {
@@ -188,7 +185,7 @@ TEST_P(HAL, mat_decomp)
         //std::cout << "x: " << Mat(x.t()) << std::endl;
         //std::cout << "x0: " << Mat(x0.t()) << std::endl;
 
-        EXPECT_LE(norm(x, x0, NORM_INF | NORM_RELATIVE), eps)
+        EXPECT_LE(cvtest::norm(x, x0, NORM_INF | NORM_RELATIVE), eps)
             << "x:  " << Mat(x.t())
             << "\nx0: " << Mat(x0.t())
             << "\na0: " << a0
@@ -205,4 +202,4 @@ TEST_P(HAL, mat_decomp)
 
 INSTANTIATE_TEST_CASE_P(Core, HAL, testing::Range(0, 16));
 
-} // namespace
+}} // namespace

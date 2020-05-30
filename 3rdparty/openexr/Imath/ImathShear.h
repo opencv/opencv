@@ -1,10 +1,10 @@
 ///////////////////////////////////////////////////////////////////////////
 //
-// Copyright (c) 2004, Industrial Light & Magic, a division of Lucas
+// Copyright (c) 2004-2012, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -47,14 +47,11 @@
 #include "ImathLimits.h"
 #include "ImathMath.h"
 #include "ImathVec.h"
-
+#include "ImathNamespace.h"
 #include <iostream>
 
 
-namespace Imath {
-
-
-
+IMATH_INTERNAL_NAMESPACE_HEADER_ENTER
 
 template <class T> class Shear6
 {
@@ -78,9 +75,9 @@ template <class T> class Shear6
     Shear6 (T XY, T XZ, T YZ);	   // (XY XZ YZ 0 0 0)
     Shear6 (const Vec3<T> &v);     // (v.x v.y v.z 0 0 0)
     template <class S>             // (v.x v.y v.z 0 0 0)
-    Shear6 (const Vec3<S> &v);
+	Shear6 (const Vec3<S> &v);
     Shear6 (T XY, T XZ, T YZ,      // (XY XZ YZ YX ZX ZY)
-        T YX, T ZX, T ZY);
+	    T YX, T ZX, T ZY);	
 
 
     //---------------------------------
@@ -91,8 +88,8 @@ template <class T> class Shear6
     template <class S> Shear6 (const Shear6<S> &h);
 
     const Shear6 &	operator = (const Shear6 &h);
-    template <class S>
-    const Shear6 &	operator = (const Vec3<S> &v);
+    template <class S> 
+	const Shear6 &	operator = (const Vec3<S> &v);
 
 
     //----------------------
@@ -106,8 +103,8 @@ template <class T> class Shear6
     void		setValue (const Shear6<S> &h);
 
     template <class S>
-    void		getValue (S &XY, S &XZ, S &YZ,
-                  S &YX, S &ZX, S &ZY) const;
+    void		getValue (S &XY, S &XZ, S &YZ, 
+				  S &YX, S &ZX, S &ZY) const;
 
     template <class S>
     void		getValue (Shear6<S> &h) const;
@@ -443,8 +440,8 @@ template <class S>
 inline bool
 Shear6<T>::operator == (const Shear6<S> &h) const
 {
-    return xy == h.xy  &&  xz == h.xz  &&  yz == h.yz  &&
-       yx == h.yx  &&  zx == h.zx  &&  zy == h.zy;
+    return xy == h.xy  &&  xz == h.xz  &&  yz == h.yz  &&  
+	   yx == h.yx  &&  zx == h.zx  &&  zy == h.zy;
 }
 
 template <class T>
@@ -453,7 +450,7 @@ inline bool
 Shear6<T>::operator != (const Shear6<S> &h) const
 {
     return xy != h.xy  ||  xz != h.xz  ||  yz != h.yz  ||
-       yx != h.yx  ||  zx != h.zx  ||  zy != h.zy;
+	   yx != h.yx  ||  zx != h.zx  ||  zy != h.zy;
 }
 
 template <class T>
@@ -461,8 +458,8 @@ bool
 Shear6<T>::equalWithAbsError (const Shear6<T> &h, T e) const
 {
     for (int i = 0; i < 6; i++)
-    if (!Imath::equalWithAbsError ((*this)[i], h[i], e))
-        return false;
+	if (!IMATH_INTERNAL_NAMESPACE::equalWithAbsError ((*this)[i], h[i], e))
+	    return false;
 
     return true;
 }
@@ -472,8 +469,8 @@ bool
 Shear6<T>::equalWithRelError (const Shear6<T> &h, T e) const
 {
     for (int i = 0; i < 6; i++)
-    if (!Imath::equalWithRelError ((*this)[i], h[i], e))
-        return false;
+	if (!IMATH_INTERNAL_NAMESPACE::equalWithRelError ((*this)[i], h[i], e))
+	    return false;
 
     return true;
 }
@@ -497,7 +494,7 @@ inline Shear6<T>
 Shear6<T>::operator + (const Shear6 &h) const
 {
     return Shear6 (xy + h.xy, xz + h.xz, yz + h.yz,
-           yx + h.yx, zx + h.zx, zy + h.zy);
+		   yx + h.yx, zx + h.zx, zy + h.zy);
 }
 
 template <class T>
@@ -518,7 +515,7 @@ inline Shear6<T>
 Shear6<T>::operator - (const Shear6 &h) const
 {
     return Shear6 (xy - h.xy, xz - h.xz, yz - h.yz,
-           yx - h.yx, zx - h.zx, zy - h.zy);
+		   yx - h.yx, zx - h.zx, zy - h.zy);
 }
 
 template <class T>
@@ -571,8 +568,8 @@ template <class T>
 inline Shear6<T>
 Shear6<T>::operator * (const Shear6 &h) const
 {
-    return Shear6 (xy * h.xy, xz * h.xz, yz * h.yz,
-           yx * h.yx, zx * h.zx, zy * h.zy);
+    return Shear6 (xy * h.xy, xz * h.xz, yz * h.yz, 
+		   yx * h.yx, zx * h.zx, zy * h.zy);
 }
 
 template <class T>
@@ -580,7 +577,7 @@ inline Shear6<T>
 Shear6<T>::operator * (T a) const
 {
     return Shear6 (xy * a, xz * a, yz * a,
-           yx * a, zx * a, zy * a);
+		   yx * a, zx * a, zy * a);
 }
 
 template <class T>
@@ -614,7 +611,7 @@ inline Shear6<T>
 Shear6<T>::operator / (const Shear6 &h) const
 {
     return Shear6 (xy / h.xy, xz / h.xz, yz / h.yz,
-           yx / h.yx, zx / h.zx, zy / h.zy);
+		   yx / h.yx, zx / h.zx, zy / h.zy);
 }
 
 template <class T>
@@ -622,7 +619,7 @@ inline Shear6<T>
 Shear6<T>::operator / (T a) const
 {
     return Shear6 (xy / a, xz / a, yz / a,
-           yx / a, zx / a, zy / a);
+		   yx / a, zx / a, zy / a);
 }
 
 
@@ -634,10 +631,10 @@ template <class T>
 std::ostream &
 operator << (std::ostream &s, const Shear6<T> &h)
 {
-    return s << '('
-         << h.xy << ' ' << h.xz << ' ' << h.yz
-         << h.yx << ' ' << h.zx << ' ' << h.zy
-         << ')';
+    return s << '(' 
+	     << h.xy << ' ' << h.xz << ' ' << h.yz 
+	     << h.yx << ' ' << h.zx << ' ' << h.zy 
+	     << ')';
 }
 
 
@@ -650,10 +647,10 @@ inline Shear6<T>
 operator * (S a, const Shear6<T> &h)
 {
     return Shear6<T> (a * h.xy, a * h.xz, a * h.yz,
-              a * h.yx, a * h.zx, a * h.zy);
+		      a * h.yx, a * h.zx, a * h.zy);
 }
 
 
-} // namespace Imath
+IMATH_INTERNAL_NAMESPACE_HEADER_EXIT
 
-#endif
+#endif // INCLUDED_IMATHSHEAR_H

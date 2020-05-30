@@ -3,7 +3,7 @@
 '''
 SVM and KNearest digit recognition.
 
-Sample loads a dataset of handwritten digits from '../data/digits.png'.
+Sample loads a dataset of handwritten digits from 'digits.png'.
 Then it trains a SVM and KNearest classifiers on it and evaluates
 their accuracy.
 
@@ -27,12 +27,12 @@ Usage:
 # Python 2/3 compatibility
 from __future__ import print_function
 
+import numpy as np
+import cv2 as cv
+
 # built-in modules
 from multiprocessing.pool import ThreadPool
 
-import cv2
-
-import numpy as np
 from numpy.linalg import norm
 
 # local modules
@@ -42,7 +42,7 @@ from common import clock, mosaic
 
 SZ = 20 # size of each digit is SZ x SZ
 CLASS_N = 10
-DIGITS_FN = '../data/digits.png'
+DIGITS_FN = 'digits.png'
 
 def split2d(img, cell_size, flatten=True):
     h, w = img.shape[:2]
@@ -54,53 +54,60 @@ def split2d(img, cell_size, flatten=True):
     return cells
 
 def load_digits(fn):
+    fn = cv.samples.findFile(fn)
     print('loading "%s" ...' % fn)
-    digits_img = cv2.imread(fn, 0)
+    digits_img = cv.imread(fn, cv.IMREAD_GRAYSCALE)
     digits = split2d(digits_img, (SZ, SZ))
     labels = np.repeat(np.arange(CLASS_N), len(digits)/CLASS_N)
     return digits, labels
 
 def deskew(img):
-    m = cv2.moments(img)
+    m = cv.moments(img)
     if abs(m['mu02']) < 1e-2:
         return img.copy()
     skew = m['mu11']/m['mu02']
     M = np.float32([[1, skew, -0.5*SZ*skew], [0, 1, 0]])
-    img = cv2.warpAffine(img, M, (SZ, SZ), flags=cv2.WARP_INVERSE_MAP | cv2.INTER_LINEAR)
+    img = cv.warpAffine(img, M, (SZ, SZ), flags=cv.WARP_INVERSE_MAP | cv.INTER_LINEAR)
     return img
 
-class StatModel(object):
+
+class KNearest(object):
+    def __init__(self, k = 3):
+        self.k = k
+        self.model = cv.ml.KNearest_create()
+
+    def train(self, samples, responses):
+        self.model.train(samples, cv.ml.ROW_SAMPLE, responses)
+
+    def predict(self, samples):
+        _retval, results, _neigh_resp, _dists = self.model.findNearest(samples, self.k)
+        return results.ravel()
+
     def load(self, fn):
-        self.model.load(fn)  # Known bug: https://github.com/opencv/opencv/issues/4969
+        self.model = cv.ml.KNearest_load(fn)
+
     def save(self, fn):
         self.model.save(fn)
 
-class KNearest(StatModel):
-    def __init__(self, k = 3):
-        self.k = k
-        self.model = cv2.ml.KNearest_create()
-
-    def train(self, samples, responses):
-        self.model.train(samples, cv2.ml.ROW_SAMPLE, responses)
-
-    def predict(self, samples):
-        retval, results, neigh_resp, dists = self.model.findNearest(samples, self.k)
-        return results.ravel()
-
-class SVM(StatModel):
+class SVM(object):
     def __init__(self, C = 1, gamma = 0.5):
-        self.model = cv2.ml.SVM_create()
+        self.model = cv.ml.SVM_create()
         self.model.setGamma(gamma)
         self.model.setC(C)
-        self.model.setKernel(cv2.ml.SVM_RBF)
-        self.model.setType(cv2.ml.SVM_C_SVC)
+        self.model.setKernel(cv.ml.SVM_RBF)
+        self.model.setType(cv.ml.SVM_C_SVC)
 
     def train(self, samples, responses):
-        self.model.train(samples, cv2.ml.ROW_SAMPLE, responses)
+        self.model.train(samples, cv.ml.ROW_SAMPLE, responses)
 
     def predict(self, samples):
         return self.model.predict(samples)[1].ravel()
 
+    def load(self, fn):
+        self.model = cv.ml.SVM_load(fn)
+
+    def save(self, fn):
+        self.model.save(fn)
 
 def evaluate_model(model, digits, samples, labels):
     resp = model.predict(samples)
@@ -116,7 +123,7 @@ def evaluate_model(model, digits, samples, labels):
 
     vis = []
     for img, flag in zip(digits, resp == labels):
-        img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+        img = cv.cvtColor(img, cv.COLOR_GRAY2BGR)
         if not flag:
             img[...,:2] = 0
         vis.append(img)
@@ -128,9 +135,9 @@ def preprocess_simple(digits):
 def preprocess_hog(digits):
     samples = []
     for img in digits:
-        gx = cv2.Sobel(img, cv2.CV_32F, 1, 0)
-        gy = cv2.Sobel(img, cv2.CV_32F, 0, 1)
-        mag, ang = cv2.cartToPolar(gx, gy)
+        gx = cv.Sobel(img, cv.CV_32F, 1, 0)
+        gy = cv.Sobel(img, cv.CV_32F, 0, 1)
+        mag, ang = cv.cartToPolar(gx, gy)
         bin_n = 16
         bin = np.int32(bin_n*ang/(2*np.pi))
         bin_cells = bin[:10,:10], bin[10:,:10], bin[:10,10:], bin[10:,10:]
@@ -163,7 +170,7 @@ if __name__ == '__main__':
     samples = preprocess_hog(digits2)
 
     train_n = int(0.9*len(samples))
-    cv2.imshow('test set', mosaic(25, digits[train_n:]))
+    cv.imshow('test set', mosaic(25, digits[train_n:]))
     digits_train, digits_test = np.split(digits2, [train_n])
     samples_train, samples_test = np.split(samples, [train_n])
     labels_train, labels_test = np.split(labels, [train_n])
@@ -173,14 +180,14 @@ if __name__ == '__main__':
     model = KNearest(k=4)
     model.train(samples_train, labels_train)
     vis = evaluate_model(model, digits_test, samples_test, labels_test)
-    cv2.imshow('KNearest test', vis)
+    cv.imshow('KNearest test', vis)
 
     print('training SVM...')
     model = SVM(C=2.67, gamma=5.383)
     model.train(samples_train, labels_train)
     vis = evaluate_model(model, digits_test, samples_test, labels_test)
-    cv2.imshow('SVM test', vis)
+    cv.imshow('SVM test', vis)
     print('saving SVM as "digits_svm.dat"...')
     model.save('digits_svm.dat')
 
-    cv2.waitKey(0)
+    cv.waitKey(0)

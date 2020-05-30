@@ -37,6 +37,10 @@ public class Size {
         return width * height;
     }
 
+    public boolean empty() {
+        return width <= 0 || height <= 0;
+    }
+
     public Size clone() {
         return new Size(width, height);
     }

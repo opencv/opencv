@@ -1,7 +1,9 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
 #include "test_precomp.hpp"
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 class Core_RandTest : public cvtest::BaseTest
 {
@@ -166,9 +168,9 @@ void Core_RandTest::run( int )
         {
             tested_rng = saved_rng;
             int sz = 0, dsz = 0, slice;
-            for( slice = 0; slice < maxSlice; slice++, sz += dsz )
+            for( slice = 0; slice < maxSlice && sz < SZ; slice++, sz += dsz )
             {
-                dsz = slice+1 < maxSlice ? (int)(cvtest::randInt(rng) % (SZ - sz + 1)) : SZ - sz;
+                dsz = slice+1 < maxSlice ? (int)(cvtest::randInt(rng) % (SZ - sz) + 1) : SZ - sz;
                 Mat aslice = arr[k].colRange(sz, sz + dsz);
                 tested_rng.fill(aslice, dist_type, A, B);
             }
@@ -372,9 +374,11 @@ TEST(Core_Rand, Regression_Stack_Corruption)
     int bufsz = 128; //enough for 14 doubles
     AutoBuffer<uchar> buffer(bufsz);
     size_t offset = 0;
-    cv::Mat_<cv::Point2d> x(2, 3, (cv::Point2d*)(buffer+offset)); offset += x.total()*x.elemSize();
-    double& param1 = *(double*)(buffer+offset); offset += sizeof(double);
-    double& param2 = *(double*)(buffer+offset); offset += sizeof(double);
+    cv::Mat_<cv::Point2d> x(2, 3, (cv::Point2d*)(buffer.data()+offset));
+    offset += x.total()*x.elemSize();
+    double& param1 = *(double*)(buffer.data()+offset);
+    offset += sizeof(double);
+    double& param2 = *(double*)(buffer.data()+offset);
     param1 = -9; param2 = 2;
 
     cv::theRNG().fill(x, cv::RNG::NORMAL, param1, param2);
@@ -383,7 +387,6 @@ TEST(Core_Rand, Regression_Stack_Corruption)
     ASSERT_EQ(param2,  2);
 }
 
-namespace {
 
 class RandRowFillParallelLoopBody : public cv::ParallelLoopBody
 {
@@ -417,4 +420,4 @@ TEST(Core_Rand, parallel_for_stable_results)
     ASSERT_EQ(0, countNonZero(dst1 != dst2));
 }
 
-} // namespace
+}} // namespace

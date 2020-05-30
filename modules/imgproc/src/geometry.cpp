@@ -46,7 +46,7 @@ cvMaxRect( const CvRect* rect1, const CvRect* rect2 )
 {
     if( rect1 && rect2 )
     {
-        CvRect max_rect;
+        cv::Rect max_rect;
         int a, b;
 
         max_rect.x = a = rect1->x;
@@ -72,7 +72,7 @@ cvMaxRect( const CvRect* rect1, const CvRect* rect2 )
         if( max_rect.height < b )
             max_rect.height = b;
         max_rect.height -= max_rect.y;
-        return max_rect;
+        return cvRect(max_rect);
     }
     else if( rect1 )
         return *rect1;
@@ -94,7 +94,7 @@ cvBoxPoints( CvBox2D box, CvPoint2D32f pt[4] )
 
 double cv::pointPolygonTest( InputArray _contour, Point2f pt, bool measureDist )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     double result = 0;
     Mat contour = _contour.getMat();
@@ -119,7 +119,6 @@ double cv::pointPolygonTest( InputArray _contour, Point2f pt, bool measureDist )
 
         for( i = 0; i < total; i++ )
         {
-            int dist;
             v0 = v;
             v = cnt[i];
 
@@ -133,7 +132,8 @@ double cv::pointPolygonTest( InputArray _contour, Point2f pt, bool measureDist )
                 continue;
             }
 
-            dist = (ip.y - v0.y)*(v.x - v0.x) - (ip.x - v0.x)*(v.y - v0.y);
+            int64 dist = static_cast<int64>(ip.y - v0.y)*(v.x - v0.x)
+                       - static_cast<int64>(ip.x - v0.x)*(v.y - v0.y);
             if( dist == 0 )
                 return 0;
             if( v.y < v0.y )
@@ -279,7 +279,7 @@ static int areaSign( Point2f a, Point2f b, Point2f c )
 }
 
 //---------------------------------------------------------------------
-// Returns true iff point c lies on the closed segement ab.
+// Returns true iff point c lies on the closed segment ab.
 // Assumes it is already known that abc are collinear.
 //---------------------------------------------------------------------
 static bool between( Point2f a, Point2f b, Point2f c )
@@ -295,11 +295,19 @@ static bool between( Point2f a, Point2f b, Point2f c )
         ((a.y >= c.y) && (c.y >= b.y));
 }
 
-static char parallelInt( Point2f a, Point2f b, Point2f c, Point2f d, Point2f& p, Point2f& q )
+enum LineSegmentIntersection
 {
-    char code = 'e';
+    LS_NO_INTERSECTION = 0,
+    LS_SINGLE_INTERSECTION = 1,
+    LS_OVERLAP = 2,
+    LS_ENDPOINT_INTERSECTION = 3
+};
+
+static LineSegmentIntersection parallelInt( Point2f a, Point2f b, Point2f c, Point2f d, Point2f& p, Point2f& q )
+{
+    LineSegmentIntersection code = LS_OVERLAP;
     if( areaSign(a, b, c) != 0 )
-        code = '0';
+        code = LS_NO_INTERSECTION;
     else if( between(a, b, c) && between(a, b, d))
         p = c, q = d;
     else if( between(c, d, a) && between(c, d, b))
@@ -313,60 +321,33 @@ static char parallelInt( Point2f a, Point2f b, Point2f c, Point2f d, Point2f& p,
     else if( between(a, b, d) && between(c, d, a))
         p = d, q = a;
     else
-        code = '0';
+        code = LS_NO_INTERSECTION;
     return code;
 }
 
-//---------------------------------------------------------------------
-// segSegInt: Finds the point of intersection p between two closed
-// segments ab and cd.  Returns p and a char with the following meaning:
-// 'e': The segments collinearly overlap, sharing a point.
-// 'v': An endpoint (vertex) of one segment is on the other segment,
-// but 'e' doesn't hold.
-// '1': The segments intersect properly (i.e., they share a point and
-// neither 'v' nor 'e' holds).
-// '0': The segments do not intersect (i.e., they share no points).
-// Note that two collinear segments that share just one point, an endpoint
-// of each, returns 'e' rather than 'v' as one might expect.
-//---------------------------------------------------------------------
-static char segSegInt( Point2f a, Point2f b, Point2f c, Point2f d, Point2f& p, Point2f& q )
+// Finds intersection of two line segments: (a, b) and (c, d).
+static LineSegmentIntersection intersectLineSegments( Point2f a, Point2f b, Point2f c,
+                                                      Point2f d, Point2f& p, Point2f& q )
 {
-    double  s, t;       // The two parameters of the parametric eqns.
-    double num, denom;  // Numerator and denoninator of equations.
-    char code = '?';    // Return char characterizing intersection.
-
-    denom = a.x * (double)( d.y - c.y ) +
-    b.x * (double)( c.y - d.y ) +
-    d.x * (double)( b.y - a.y ) +
-    c.x * (double)( a.y - b.y );
+    double denom = a.x * (double)(d.y - c.y) + b.x * (double)(c.y - d.y) +
+                   d.x * (double)(b.y - a.y) + c.x * (double)(a.y - b.y);
 
     // If denom is zero, then segments are parallel: handle separately.
-    if (denom == 0.0)
+    if( denom == 0. )
         return parallelInt(a, b, c, d, p, q);
 
-    num =    a.x * (double)( d.y - c.y ) +
-    c.x * (double)( a.y - d.y ) +
-    d.x * (double)( c.y - a.y );
-    if ( (num == 0.0) || (num == denom) ) code = 'v';
-    s = num / denom;
+    double num = a.x * (double)(d.y - c.y) + c.x * (double)(a.y - d.y) + d.x * (double)(c.y - a.y);
+    double s = num / denom;
 
-    num = -( a.x * (double)( c.y - b.y ) +
-            b.x * (double)( a.y - c.y ) +
-            c.x * (double)( b.y - a.y ) );
-    if ( (num == 0.0) || (num == denom) ) code = 'v';
-    t = num / denom;
-
-    if      ( (0.0 < s) && (s < 1.0) &&
-             (0.0 < t) && (t < 1.0) )
-        code = '1';
-    else if ( (0.0 > s) || (s > 1.0) ||
-             (0.0 > t) || (t > 1.0) )
-        code = '0';
+    num = a.x * (double)(b.y - c.y) + b.x * (double)(c.y - a.y) + c.x * (double)(a.y - b.y);
+    double t = num / denom;
 
     p.x = (float)(a.x + s*(b.x - a.x));
     p.y = (float)(a.y + s*(b.y - a.y));
+    q = p;
 
-    return code;
+    return s < 0. || s > 1. || t < 0. || t > 1. ? LS_NO_INTERSECTION :
+           s == 0. || s == 1. || t == 0. || t == 1. ? LS_ENDPOINT_INTERSECTION : LS_SINGLE_INTERSECTION;
 }
 
 static tInFlag inOut( Point2f p, tInFlag inflag, int aHB, int bHA, Point2f*& result )
@@ -424,8 +405,8 @@ static int intersectConvexConvex_( const Point2f* P, int n, const Point2f* Q, in
 
         // If A & B intersect, update inflag.
         Point2f p, q;
-        int code = segSegInt( P[a1], P[a], Q[b1], Q[b], p, q );
-        if( code == '1' || code == 'v' )
+        LineSegmentIntersection code = intersectLineSegments( P[a1], P[a], Q[b1], Q[b], p, q );
+        if( code == LS_SINGLE_INTERSECTION || code == LS_ENDPOINT_INTERSECTION )
         {
             if( inflag == Unknown && FirstPoint )
             {
@@ -440,7 +421,7 @@ static int intersectConvexConvex_( const Point2f* P, int n, const Point2f* Q, in
         //-----Advance rules-----
 
         // Special case: A & B overlap and oppositely oriented.
-        if( code == 'e' && A.ddot(B) < 0 )
+        if( code == LS_OVERLAP && A.ddot(B) < 0 )
         {
             addSharedSeg( p, q, result );
             return (int)(result - result0);
@@ -506,7 +487,7 @@ static int intersectConvexConvex_( const Point2f* P, int n, const Point2f* Q, in
 
 float cv::intersectConvexConvex( InputArray _p1, InputArray _p2, OutputArray _p12, bool handleNested )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat p1 = _p1.getMat(), p2 = _p2.getMat();
     CV_Assert( p1.depth() == CV_32S || p1.depth() == CV_32F );
@@ -524,7 +505,7 @@ float cv::intersectConvexConvex( InputArray _p1, InputArray _p2, OutputArray _p1
     }
 
     AutoBuffer<Point2f> _result(n*2 + m*2 + 1);
-    Point2f *fp1 = _result, *fp2 = fp1 + n;
+    Point2f *fp1 = _result.data(), *fp2 = fp1 + n;
     Point2f* result = fp2 + m;
     int orientation = 0;
 
@@ -563,21 +544,41 @@ float cv::intersectConvexConvex( InputArray _p1, InputArray _p2, OutputArray _p1
             return 0.f;
         }
 
-        if( pointPolygonTest(_InputArray(fp1, n), fp2[0], false) >= 0 )
+        bool intersected = false;
+
+        // check if all of fp2's vertices is inside/on the edge of fp1.
+        int nVertices = 0;
+        for (int i=0; i<m; ++i)
+            nVertices += pointPolygonTest(_InputArray(fp1, n), fp2[i], false) >= 0;
+
+        // if all of fp2's vertices is inside/on the edge of fp1.
+        if (nVertices == m)
         {
+            intersected = true;
             result = fp2;
             nr = m;
         }
-        else if( pointPolygonTest(_InputArray(fp2, n), fp1[0], false) >= 0 )
+        else // otherwise check if fp2 is inside fp1.
         {
-            result = fp1;
-            nr = n;
+            nVertices = 0;
+            for (int i=0; i<n; ++i)
+                nVertices += pointPolygonTest(_InputArray(fp2, m), fp1[i], false) >= 0;
+
+            // // if all of fp1's vertices is inside/on the edge of fp2.
+            if (nVertices == n)
+            {
+                intersected = true;
+                result = fp1;
+                nr = n;
+            }
         }
-        else
+
+        if (!intersected)
         {
             _p12.release();
             return 0.f;
         }
+
         area = (float)contourArea(_InputArray(result, nr), false);
     }
 

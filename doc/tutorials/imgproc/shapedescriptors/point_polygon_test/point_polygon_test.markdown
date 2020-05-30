@@ -1,6 +1,9 @@
 Point Polygon Test {#tutorial_point_polygon_test}
 ==================
 
+@prev_tutorial{tutorial_moments}
+@next_tutorial{tutorial_distance_transform}
+
 Goal
 ----
 
@@ -14,9 +17,23 @@ Theory
 Code
 ----
 
+@add_toggle_cpp
 This tutorial code's is shown lines below. You can also download it from
 [here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/ShapeDescriptors/pointPolygonTest_demo.cpp)
 @include samples/cpp/tutorial_code/ShapeDescriptors/pointPolygonTest_demo.cpp
+@end_toggle
+
+@add_toggle_java
+This tutorial code's is shown lines below. You can also download it from
+[here](https://github.com/opencv/opencv/tree/master/samples/java/tutorial_code/ShapeDescriptors/point_polygon_test/PointPolygonTestDemo.java)
+@include samples/java/tutorial_code/ShapeDescriptors/point_polygon_test/PointPolygonTestDemo.java
+@end_toggle
+
+@add_toggle_python
+This tutorial code's is shown lines below. You can also download it from
+[here](https://github.com/opencv/opencv/tree/master/samples/python/tutorial_code/ShapeDescriptors/point_polygon_test/pointPolygonTest_demo.py)
+@include samples/python/tutorial_code/ShapeDescriptors/point_polygon_test/pointPolygonTest_demo.py
+@end_toggle
 
 Explanation
 -----------

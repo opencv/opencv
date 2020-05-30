@@ -51,6 +51,8 @@ struct AnnParams
         bpDWScale = bpMomentScale = 0.1;
         rpDW0 = 0.1; rpDWPlus = 1.2; rpDWMinus = 0.5;
         rpDWMin = FLT_EPSILON; rpDWMax = 50.;
+        initialT=10;finalT=0.1,coolingRatio=0.95;itePerStep=10;
+        rEnergy = cv::RNG(12345);
     }
 
     TermCriteria termCrit;
@@ -64,6 +66,12 @@ struct AnnParams
     double rpDWMinus;
     double rpDWMin;
     double rpDWMax;
+
+    double initialT;
+    double finalT;
+    double coolingRatio;
+    int itePerStep;
+    RNG rEnergy;
 };
 
 template <typename T>
@@ -72,29 +80,108 @@ inline T inBounds(T val, T min_val, T max_val)
     return std::min(std::max(val, min_val), max_val);
 }
 
-class ANN_MLPImpl : public ANN_MLP
+class SimulatedAnnealingANN_MLP
+{
+protected:
+    ml::ANN_MLP& nn;
+    Ptr<ml::TrainData> data;
+    int nbVariables;
+    vector<double*> adrVariables;
+    RNG rVar;
+    RNG rIndex;
+    double varTmp;
+    int index;
+public:
+    SimulatedAnnealingANN_MLP(ml::ANN_MLP& x, const Ptr<ml::TrainData>& d) : nn(x), data(d), varTmp(0.0), index(0)
+    {
+        initVarMap();
+    }
+    ~SimulatedAnnealingANN_MLP() {}
+
+    void changeState()
+    {
+        index = rIndex.uniform(0, nbVariables);
+        double dv = rVar.uniform(-1.0, 1.0);
+        varTmp = *adrVariables[index];
+        *adrVariables[index] = dv;
+    }
+
+    void reverseState()
+    {
+        *adrVariables[index] = varTmp;
+    }
+
+    double energy() const { return nn.calcError(data, false, noArray()); }
+
+protected:
+    void initVarMap()
+    {
+        Mat l = nn.getLayerSizes();
+        nbVariables = 0;
+        adrVariables.clear();
+        for (int i = 1; i < l.rows-1; i++)
+        {
+            Mat w = nn.getWeights(i);
+            for (int j = 0; j < w.rows; j++)
+            {
+                for (int k = 0; k < w.cols; k++, nbVariables++)
+                {
+                    if (j == w.rows - 1)
+                    {
+                        adrVariables.push_back(&w.at<double>(w.rows - 1, k));
+                    }
+                    else
+                    {
+                        adrVariables.push_back(&w.at<double>(j, k));
+                    }
+                }
+            }
+        }
+    }
+
+};
+
+class ANN_MLPImpl CV_FINAL : public ANN_MLP
 {
 public:
     ANN_MLPImpl()
     {
         clear();
-        setActivationFunction( SIGMOID_SYM, 0, 0 );
+        setActivationFunction( SIGMOID_SYM, 0, 0);
         setLayerSizes(Mat());
         setTrainMethod(ANN_MLP::RPROP, 0.1, FLT_EPSILON);
     }
 
-    virtual ~ANN_MLPImpl() {}
+    virtual ~ANN_MLPImpl() CV_OVERRIDE {}
 
-    CV_IMPL_PROPERTY(TermCriteria, TermCriteria, params.termCrit)
-    CV_IMPL_PROPERTY(double, BackpropWeightScale, params.bpDWScale)
-    CV_IMPL_PROPERTY(double, BackpropMomentumScale, params.bpMomentScale)
-    CV_IMPL_PROPERTY(double, RpropDW0, params.rpDW0)
-    CV_IMPL_PROPERTY(double, RpropDWPlus, params.rpDWPlus)
-    CV_IMPL_PROPERTY(double, RpropDWMinus, params.rpDWMinus)
-    CV_IMPL_PROPERTY(double, RpropDWMin, params.rpDWMin)
-    CV_IMPL_PROPERTY(double, RpropDWMax, params.rpDWMax)
+    inline TermCriteria getTermCriteria() const CV_OVERRIDE { return params.termCrit; }
+    inline void setTermCriteria(TermCriteria val) CV_OVERRIDE { params.termCrit = val; }
+    inline double getBackpropWeightScale() const CV_OVERRIDE { return params.bpDWScale; }
+    inline void setBackpropWeightScale(double val) CV_OVERRIDE { params.bpDWScale = val; }
+    inline double getBackpropMomentumScale() const CV_OVERRIDE { return params.bpMomentScale; }
+    inline void setBackpropMomentumScale(double val) CV_OVERRIDE { params.bpMomentScale = val; }
+    inline double getRpropDW0() const CV_OVERRIDE { return params.rpDW0; }
+    inline void setRpropDW0(double val) CV_OVERRIDE { params.rpDW0 = val; }
+    inline double getRpropDWPlus() const CV_OVERRIDE { return params.rpDWPlus; }
+    inline void setRpropDWPlus(double val) CV_OVERRIDE { params.rpDWPlus = val; }
+    inline double getRpropDWMinus() const CV_OVERRIDE { return params.rpDWMinus; }
+    inline void setRpropDWMinus(double val) CV_OVERRIDE { params.rpDWMinus = val; }
+    inline double getRpropDWMin() const CV_OVERRIDE { return params.rpDWMin; }
+    inline void setRpropDWMin(double val) CV_OVERRIDE { params.rpDWMin = val; }
+    inline double getRpropDWMax() const CV_OVERRIDE { return params.rpDWMax; }
+    inline void setRpropDWMax(double val) CV_OVERRIDE { params.rpDWMax = val; }
+    inline double getAnnealInitialT() const CV_OVERRIDE { return params.initialT; }
+    inline void setAnnealInitialT(double val) CV_OVERRIDE { params.initialT = val; }
+    inline double getAnnealFinalT() const CV_OVERRIDE { return params.finalT; }
+    inline void setAnnealFinalT(double val) CV_OVERRIDE { params.finalT = val; }
+    inline double getAnnealCoolingRatio() const CV_OVERRIDE { return params.coolingRatio; }
+    inline void setAnnealCoolingRatio(double val) CV_OVERRIDE { params.coolingRatio = val; }
+    inline int getAnnealItePerStep() const CV_OVERRIDE { return params.itePerStep; }
+    inline void setAnnealItePerStep(int val) CV_OVERRIDE { params.itePerStep = val; }
+    // disabled getAnnealEnergyRNG()
+    inline void setAnnealEnergyRNG(const RNG& val) CV_OVERRIDE { params.rEnergy = val; }
 
-    void clear()
+    void clear() CV_OVERRIDE
     {
         min_val = max_val = min_val1 = max_val1 = 0.;
         rng = RNG((uint64)-1);
@@ -105,9 +192,9 @@ public:
 
     int layer_count() const { return (int)layer_sizes.size(); }
 
-    void setTrainMethod(int method, double param1, double param2)
+    void setTrainMethod(int method, double param1, double param2) CV_OVERRIDE
     {
-        if (method != ANN_MLP::RPROP && method != ANN_MLP::BACKPROP)
+        if (method != ANN_MLP::RPROP && method != ANN_MLP::BACKPROP && method != ANN_MLP::ANNEAL)
             method = ANN_MLP::RPROP;
         params.trainMethod = method;
         if(method == ANN_MLP::RPROP )
@@ -117,25 +204,25 @@ public:
             params.rpDW0 = param1;
             params.rpDWMin = std::max( param2, 0. );
         }
-        else if(method == ANN_MLP::BACKPROP )
+        else if (method == ANN_MLP::BACKPROP)
         {
-            if( param1 <= 0 )
+            if (param1 <= 0)
                 param1 = 0.1;
             params.bpDWScale = inBounds<double>(param1, 1e-3, 1.);
-            if( param2 < 0 )
+            if (param2 < 0)
                 param2 = 0.1;
-            params.bpMomentScale = std::min( param2, 1. );
+            params.bpMomentScale = std::min(param2, 1.);
         }
     }
 
-    int getTrainMethod() const
+    int getTrainMethod() const CV_OVERRIDE
     {
         return params.trainMethod;
     }
 
-    void setActivationFunction(int _activ_func, double _f_param1, double _f_param2 )
+    void setActivationFunction(int _activ_func, double _f_param1, double _f_param2) CV_OVERRIDE
     {
-        if( _activ_func < 0 || _activ_func > GAUSSIAN )
+        if( _activ_func < 0 || _activ_func > LEAKYRELU)
             CV_Error( CV_StsOutOfRange, "Unknown activation function" );
 
         activ_func = _activ_func;
@@ -153,10 +240,22 @@ public:
         case GAUSSIAN:
             max_val = 1.; min_val = 0.05;
             max_val1 = 1.; min_val1 = 0.02;
-            if( fabs(_f_param1) < FLT_EPSILON )
+            if (fabs(_f_param1) < FLT_EPSILON)
                 _f_param1 = 1.;
-            if( fabs(_f_param2) < FLT_EPSILON )
+            if (fabs(_f_param2) < FLT_EPSILON)
                 _f_param2 = 1.;
+            break;
+        case RELU:
+            if (fabs(_f_param1) < FLT_EPSILON)
+                _f_param1 = 1;
+            min_val = max_val = min_val1 = max_val1 = 0.;
+            _f_param2 = 0.;
+            break;
+        case LEAKYRELU:
+            if (fabs(_f_param1) < FLT_EPSILON)
+                _f_param1 = 0.01;
+            min_val = max_val = min_val1 = max_val1 = 0.;
+            _f_param2 = 0.;
             break;
         default:
             min_val = max_val = min_val1 = max_val1 = 0.;
@@ -202,12 +301,12 @@ public:
         }
     }
 
-    Mat getLayerSizes() const
+    Mat getLayerSizes() const CV_OVERRIDE
     {
         return Mat_<int>(layer_sizes, true);
     }
 
-    void setLayerSizes( InputArray _layer_sizes )
+    void setLayerSizes( InputArray _layer_sizes ) CV_OVERRIDE
     {
         clear();
 
@@ -239,7 +338,7 @@ public:
         }
     }
 
-    float predict( InputArray _inputs, OutputArray _outputs, int ) const
+    float predict( InputArray _inputs, OutputArray _outputs, int ) const CV_OVERRIDE
     {
         if( !trained )
             CV_Error( CV_StsError, "The network has not been trained or loaded" );
@@ -263,7 +362,7 @@ public:
         }
 
         cv::AutoBuffer<double> _buf(buf_sz+noutputs);
-        double* buf = _buf;
+        double* buf = _buf.data();
 
         if( !_outputs.needed() )
         {
@@ -368,47 +467,61 @@ public:
         }
     }
 
-    void calc_activ_func( Mat& sums, const Mat& w ) const
+    void calc_activ_func(Mat& sums, const Mat& w) const
     {
-        const double* bias = w.ptr<double>(w.rows-1);
+        const double* bias = w.ptr<double>(w.rows - 1);
         int i, j, n = sums.rows, cols = sums.cols;
         double scale = 0, scale2 = f_param2;
 
-        switch( activ_func )
+        switch (activ_func)
         {
-            case IDENTITY:
-                scale = 1.;
-                break;
-            case SIGMOID_SYM:
-                scale = -f_param1;
-                break;
-            case GAUSSIAN:
-                scale = -f_param1*f_param1;
-                break;
-            default:
-                ;
+        case IDENTITY:
+            scale = 1.;
+            break;
+        case SIGMOID_SYM:
+            scale = -f_param1;
+            break;
+        case GAUSSIAN:
+            scale = -f_param1*f_param1;
+            break;
+        case RELU:
+            scale = 1;
+            break;
+        case LEAKYRELU:
+            scale = 1;
+            break;
+        default:
+            ;
         }
 
-        CV_Assert( sums.isContinuous() );
+        CV_Assert(sums.isContinuous());
 
-        if( activ_func != GAUSSIAN )
+        if (activ_func != GAUSSIAN)
         {
-            for( i = 0; i < n; i++ )
+            for (i = 0; i < n; i++)
             {
                 double* data = sums.ptr<double>(i);
-                for( j = 0; j < cols; j++ )
+                for (j = 0; j < cols; j++)
+                {
                     data[j] = (data[j] + bias[j])*scale;
+                    if (activ_func == RELU)
+                        if (data[j] < 0)
+                            data[j] = 0;
+                    if (activ_func == LEAKYRELU)
+                        if (data[j] < 0)
+                            data[j] *= f_param1;
+                }
             }
 
-            if( activ_func == IDENTITY )
+            if (activ_func == IDENTITY || activ_func == RELU || activ_func == LEAKYRELU)
                 return;
         }
         else
         {
-            for( i = 0; i < n; i++ )
+            for (i = 0; i < n; i++)
             {
                 double* data = sums.ptr<double>(i);
-                for( j = 0; j < cols; j++ )
+                for (j = 0; j < cols; j++)
                 {
                     double t = data[j] + bias[j];
                     data[j] = t*t*scale;
@@ -416,92 +529,132 @@ public:
             }
         }
 
-        exp( sums, sums );
+        exp(sums, sums);
 
-        if( sums.isContinuous() )
+        if (sums.isContinuous())
         {
             cols *= n;
             n = 1;
         }
 
-        switch( activ_func )
+        switch (activ_func)
         {
-            case SIGMOID_SYM:
-                for( i = 0; i < n; i++ )
+        case SIGMOID_SYM:
+            for (i = 0; i < n; i++)
+            {
+                double* data = sums.ptr<double>(i);
+                for (j = 0; j < cols; j++)
                 {
-                    double* data = sums.ptr<double>(i);
-                    for( j = 0; j < cols; j++ )
+                    if (!cvIsInf(data[j]))
                     {
-                        if(!cvIsInf(data[j]))
-                        {
-                            double t = scale2*(1. - data[j])/(1. + data[j]);
-                            data[j] = t;
-                        }
-                        else
-                        {
-                            data[j] = -scale2;
-                        }
+                        double t = scale2*(1. - data[j]) / (1. + data[j]);
+                        data[j] = t;
+                    }
+                    else
+                    {
+                        data[j] = -scale2;
                     }
                 }
-                break;
+            }
+            break;
 
-            case GAUSSIAN:
-                for( i = 0; i < n; i++ )
-                {
-                    double* data = sums.ptr<double>(i);
-                    for( j = 0; j < cols; j++ )
-                        data[j] = scale2*data[j];
-                }
-                break;
+        case GAUSSIAN:
+            for (i = 0; i < n; i++)
+            {
+                double* data = sums.ptr<double>(i);
+                for (j = 0; j < cols; j++)
+                    data[j] = scale2*data[j];
+            }
+            break;
 
-            default:
-                ;
+        default:
+            ;
         }
     }
 
-    void calc_activ_func_deriv( Mat& _xf, Mat& _df, const Mat& w ) const
+    void calc_activ_func_deriv(Mat& _xf, Mat& _df, const Mat& w) const
     {
-        const double* bias = w.ptr<double>(w.rows-1);
+        const double* bias = w.ptr<double>(w.rows - 1);
         int i, j, n = _xf.rows, cols = _xf.cols;
 
-        if( activ_func == IDENTITY )
+        if (activ_func == IDENTITY)
         {
-            for( i = 0; i < n; i++ )
+            for (i = 0; i < n; i++)
             {
                 double* xf = _xf.ptr<double>(i);
                 double* df = _df.ptr<double>(i);
 
-                for( j = 0; j < cols; j++ )
+                for (j = 0; j < cols; j++)
                 {
                     xf[j] += bias[j];
                     df[j] = 1;
                 }
             }
         }
-        else if( activ_func == GAUSSIAN )
+        else if (activ_func == RELU)
+        {
+            for (i = 0; i < n; i++)
+            {
+                double* xf = _xf.ptr<double>(i);
+                double* df = _df.ptr<double>(i);
+
+                for (j = 0; j < cols; j++)
+                {
+                    xf[j] += bias[j];
+                    if (xf[j] < 0)
+                    {
+                        xf[j] = 0;
+                        df[j] = 0;
+                    }
+                    else
+                        df[j] = 1;
+                }
+            }
+        }
+        else if (activ_func == LEAKYRELU)
+        {
+            for (i = 0; i < n; i++)
+            {
+                double* xf = _xf.ptr<double>(i);
+                double* df = _df.ptr<double>(i);
+
+                for (j = 0; j < cols; j++)
+                {
+                    xf[j] += bias[j];
+                    if (xf[j] < 0)
+                    {
+                        xf[j] = f_param1*xf[j];
+                        df[j] = f_param1;
+                    }
+                    else
+                        df[j] = 1;
+                }
+            }
+        }
+        else if (activ_func == GAUSSIAN)
         {
             double scale = -f_param1*f_param1;
             double scale2 = scale*f_param2;
-            for( i = 0; i < n; i++ )
+            for (i = 0; i < n; i++)
             {
                 double* xf = _xf.ptr<double>(i);
                 double* df = _df.ptr<double>(i);
 
-                for( j = 0; j < cols; j++ )
+                for (j = 0; j < cols; j++)
                 {
                     double t = xf[j] + bias[j];
-                    df[j] = t*2*scale2;
+                    df[j] = t * 2 * scale2;
                     xf[j] = t*t*scale;
                 }
             }
-            exp( _xf, _xf );
+            exp(_xf, _xf);
 
-            for( i = 0; i < n; i++ )
+            for (i = 0; i < n; i++)
             {
                 double* xf = _xf.ptr<double>(i);
                 double* df = _df.ptr<double>(i);
 
-                for( j = 0; j < cols; j++ )
+                for (j = 0; j < cols; j++)
                     df[j] *= xf[j];
             }
         }
@@ -510,34 +663,34 @@ public:
             double scale = f_param1;
             double scale2 = f_param2;
 
-            for( i = 0; i < n; i++ )
+            for (i = 0; i < n; i++)
             {
                 double* xf = _xf.ptr<double>(i);
                 double* df = _df.ptr<double>(i);
 
-                for( j = 0; j < cols; j++ )
+                for (j = 0; j < cols; j++)
                 {
                     xf[j] = (xf[j] + bias[j])*scale;
                     df[j] = -fabs(xf[j]);
                 }
             }
 
-            exp( _df, _df );
+            exp(_df, _df);
 
             // ((1+exp(-ax))^-1)'=a*((1+exp(-ax))^-2)*exp(-ax);
             // ((1-exp(-ax))/(1+exp(-ax)))'=(a*exp(-ax)*(1+exp(-ax)) + a*exp(-ax)*(1-exp(-ax)))/(1+exp(-ax))^2=
             // 2*a*exp(-ax)/(1+exp(-ax))^2
-            scale *= 2*f_param2;
-            for( i = 0; i < n; i++ )
+            scale *= 2 * f_param2;
+            for (i = 0; i < n; i++)
             {
                 double* xf = _xf.ptr<double>(i);
                 double* df = _df.ptr<double>(i);
 
-                for( j = 0; j < cols; j++ )
+                for (j = 0; j < cols; j++)
                 {
                     int s0 = xf[j] > 0 ? 1 : -1;
-                    double t0 = 1./(1. + df[j]);
-                    double t1 = scale*df[j]*t0*t0;
+                    double t0 = 1. / (1. + df[j]);
+                    double t1 = scale*df[j] * t0*t0;
                     t0 *= scale2*(1. - df[j])*s0;
                     df[j] = t1;
                     xf[j] = t0;
@@ -693,8 +846,9 @@ public:
         calc_output_scale( outputs, flags );
     }
 
-    bool train( const Ptr<TrainData>& trainData, int flags )
+    bool train( const Ptr<TrainData>& trainData, int flags ) CV_OVERRIDE
     {
+        CV_Assert(!trainData.empty());
         const int MAX_ITER = 1000;
         const double DEFAULT_EPSILON = FLT_EPSILON;
 
@@ -713,12 +867,29 @@ public:
         termcrit.maxCount = std::max((params.termCrit.type & CV_TERMCRIT_ITER ? params.termCrit.maxCount : MAX_ITER), 1);
         termcrit.epsilon = std::max((params.termCrit.type & CV_TERMCRIT_EPS ? params.termCrit.epsilon : DEFAULT_EPSILON), DBL_EPSILON);
 
-        int iter = params.trainMethod == ANN_MLP::BACKPROP ?
-            train_backprop( inputs, outputs, sw, termcrit ) :
-            train_rprop( inputs, outputs, sw, termcrit );
-
+        int iter = 0;
+        switch(params.trainMethod){
+        case ANN_MLP::BACKPROP:
+            iter = train_backprop(inputs, outputs, sw, termcrit);
+            break;
+        case ANN_MLP::RPROP:
+            iter = train_rprop(inputs, outputs, sw, termcrit);
+            break;
+        case ANN_MLP::ANNEAL:
+            iter = train_anneal(trainData);
+            break;
+        }
         trained = iter > 0;
         return trained;
+    }
+    int train_anneal(const Ptr<TrainData>& trainData)
+    {
+        CV_Assert(!trainData.empty());
+        SimulatedAnnealingANN_MLP s(*this, trainData);
+        trained = true; // Enable call to CalcError
+        int iter = simulatedAnnealingSolver(s, params.initialT, params.finalT, params.coolingRatio, params.itePerStep, NULL, params.rEnergy);
+        trained =false;
+        return iter + 1; // ensure that 'train()' call is always successful
     }
 
     int train_backprop( const Mat& inputs, const Mat& outputs, const Mat& _sw, TermCriteria termCrit )
@@ -730,7 +901,7 @@ public:
         int count = inputs.rows;
 
         int iter = -1, max_iter = termCrit.maxCount*count;
-        double epsilon = termCrit.epsilon*count;
+        double epsilon = (termCrit.type & CV_TERMCRIT_EPS) ? termCrit.epsilon*count : 0;
 
         int l_count = layer_count();
         int ivcount = layer_sizes[0];
@@ -755,7 +926,7 @@ public:
             _idx[i] = i;
 
         AutoBuffer<double> _buf(max_lsize*2);
-        double* buf[] = { _buf, (double*)_buf + max_lsize };
+        double* buf[] = { _buf.data(), _buf.data() + max_lsize };
 
         const double* sw = _sw.empty() ? 0 : _sw.ptr<double>();
 
@@ -783,7 +954,7 @@ public:
                 E = 0;
 
                 // shuffle indices
-                for( i = 0; i < count; i++ )
+                for( i = 0; i <count; i++ )
                 {
                     j = rng.uniform(0, count);
                     k = rng.uniform(0, count);
@@ -878,7 +1049,7 @@ public:
         int dcount0;
         double* pE;
 
-        void operator()( const Range& range ) const
+        void operator()(const Range& range) const CV_OVERRIDE
         {
             double inv_count = 1./inputs.rows;
             int ivcount = ann->layer_sizes.front();
@@ -1018,7 +1189,7 @@ public:
             prev_dEdw_sign[i] = Mat::zeros(weights[i].size(), CV_8S);
             dEdw[i] = Mat::zeros(weights[i].size(), CV_64F);
         }
-
+        CV_Assert(total > 0);
         int dcount0 = max_buf_size/(2*total);
         dcount0 = std::max( dcount0, 1 );
         dcount0 = std::min( dcount0, count );
@@ -1110,7 +1281,9 @@ public:
     {
         const char* activ_func_name = activ_func == IDENTITY ? "IDENTITY" :
                                       activ_func == SIGMOID_SYM ? "SIGMOID_SYM" :
-                                      activ_func == GAUSSIAN ? "GAUSSIAN" : 0;
+                                      activ_func == GAUSSIAN ? "GAUSSIAN" :
+                                      activ_func == RELU ? "RELU" :
+                                      activ_func == LEAKYRELU ? "LEAKYRELU" : 0;
 
         if( activ_func_name )
             fs << "activation_function" << activ_func_name;
@@ -1132,7 +1305,7 @@ public:
             fs << "dw_scale" << params.bpDWScale;
             fs << "moment_scale" << params.bpMomentScale;
         }
-        else if( params.trainMethod == ANN_MLP::RPROP )
+        else if (params.trainMethod == ANN_MLP::RPROP)
         {
             fs << "train_method" << "RPROP";
             fs << "dw0" << params.rpDW0;
@@ -1140,6 +1313,14 @@ public:
             fs << "dw_minus" << params.rpDWMinus;
             fs << "dw_min" << params.rpDWMin;
             fs << "dw_max" << params.rpDWMax;
+        }
+        else if (params.trainMethod == ANN_MLP::ANNEAL)
+        {
+            fs << "train_method" << "ANNEAL";
+            fs << "initialT" << params.initialT;
+            fs << "finalT" << params.finalT;
+            fs << "coolingRatio" << params.coolingRatio;
+            fs << "itePerStep" << params.itePerStep;
         }
         else
             CV_Error(CV_StsError, "Unknown training method");
@@ -1152,7 +1333,7 @@ public:
         fs << "}" << "}";
     }
 
-    void write( FileStorage& fs ) const
+    void write( FileStorage& fs ) const CV_OVERRIDE
     {
         if( layer_sizes.empty() )
             return;
@@ -1191,6 +1372,8 @@ public:
         {
             activ_func = activ_func_name == "SIGMOID_SYM" ? SIGMOID_SYM :
                          activ_func_name == "IDENTITY" ? IDENTITY :
+                         activ_func_name == "RELU" ? RELU :
+                         activ_func_name == "LEAKYRELU" ? LEAKYRELU :
                          activ_func_name == "GAUSSIAN" ? GAUSSIAN : -1;
             CV_Assert( activ_func >= 0 );
         }
@@ -1200,7 +1383,7 @@ public:
         f_param1 = (double)fn["f_param1"];
         f_param2 = (double)fn["f_param2"];
 
-        setActivationFunction( activ_func, f_param1, f_param2 );
+        setActivationFunction( activ_func, f_param1, f_param2);
 
         min_val = (double)fn["min_val"];
         max_val = (double)fn["max_val"];
@@ -1220,7 +1403,7 @@ public:
                 params.bpDWScale = (double)tpn["dw_scale"];
                 params.bpMomentScale = (double)tpn["moment_scale"];
             }
-            else if( tmethod_name == "RPROP" )
+            else if (tmethod_name == "RPROP")
             {
                 params.trainMethod = ANN_MLP::RPROP;
                 params.rpDW0 = (double)tpn["dw0"];
@@ -1228,6 +1411,14 @@ public:
                 params.rpDWMinus = (double)tpn["dw_minus"];
                 params.rpDWMin = (double)tpn["dw_min"];
                 params.rpDWMax = (double)tpn["dw_max"];
+            }
+            else if (tmethod_name == "ANNEAL")
+            {
+                params.trainMethod = ANN_MLP::ANNEAL;
+                params.initialT = (double)tpn["initialT"];
+                params.finalT = (double)tpn["finalT"];
+                params.coolingRatio = (double)tpn["coolingRatio"];
+                params.itePerStep = tpn["itePerStep"];
             }
             else
                 CV_Error(CV_StsParseError, "Unknown training method (should be BACKPROP or RPROP)");
@@ -1252,7 +1443,7 @@ public:
         }
     }
 
-    void read( const FileNode& fn )
+    void read( const FileNode& fn ) CV_OVERRIDE
     {
         clear();
 
@@ -1281,28 +1472,28 @@ public:
         trained = true;
     }
 
-    Mat getWeights(int layerIdx) const
+    Mat getWeights(int layerIdx) const CV_OVERRIDE
     {
         CV_Assert( 0 <= layerIdx && layerIdx < (int)weights.size() );
         return weights[layerIdx];
     }
 
-    bool isTrained() const
+    bool isTrained() const CV_OVERRIDE
     {
         return trained;
     }
 
-    bool isClassifier() const
+    bool isClassifier() const CV_OVERRIDE
     {
         return false;
     }
 
-    int getVarCount() const
+    int getVarCount() const CV_OVERRIDE
     {
         return layer_sizes.empty() ? 0 : layer_sizes[0];
     }
 
-    String getDefaultName() const
+    String getDefaultName() const CV_OVERRIDE
     {
         return "opencv_ml_ann_mlp";
     }
@@ -1320,6 +1511,8 @@ public:
 };
 
 
+
+
 Ptr<ANN_MLP> ANN_MLP::create()
 {
     return makePtr<ANN_MLPImpl>();
@@ -1329,14 +1522,12 @@ Ptr<ANN_MLP> ANN_MLP::load(const String& filepath)
 {
     FileStorage fs;
     fs.open(filepath, FileStorage::READ);
-
+    CV_Assert(fs.isOpened());
     Ptr<ANN_MLP> ann = makePtr<ANN_MLPImpl>();
-
     ((ANN_MLPImpl*)ann.get())->read(fs.getFirstTopLevelNode());
     return ann;
 }
 
-
-    }}
+}}
 
 /* End of file. */

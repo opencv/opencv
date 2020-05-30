@@ -65,12 +65,12 @@ public:
         result = gPhoto2Result;
         method = methodStr;
     }
-    virtual const char * what() const throw ()
+    virtual const char * what() const throw() CV_OVERRIDE
     {
         return gp_result_as_string(result);
     }
     friend std::ostream & operator<<(std::ostream & ostream,
-            GPhoto2Exception & e)
+            const GPhoto2Exception & e)
     {
         return ostream << e.method << ": " << e.what();
     }
@@ -137,17 +137,14 @@ public:
     DigitalCameraCapture();
     DigitalCameraCapture(int index);
     DigitalCameraCapture(const String &deviceName);
-    virtual ~DigitalCameraCapture();
+    virtual ~DigitalCameraCapture() CV_OVERRIDE;
 
-    virtual bool isOpened() const;
-    virtual double getProperty(int) const;
-    virtual bool setProperty(int, double);
-    virtual bool grabFrame();
-    virtual bool retrieveFrame(int, OutputArray);
-    virtual int getCaptureDomain()
-    {
-        return CV_CAP_GPHOTO2;
-    } // Return the type of the capture object: CV_CAP_VFW, etc...
+    virtual bool isOpened() const CV_OVERRIDE;
+    virtual double getProperty(int) const CV_OVERRIDE;
+    virtual bool setProperty(int, double) CV_OVERRIDE;
+    virtual bool grabFrame() CV_OVERRIDE;
+    virtual bool retrieveFrame(int, OutputArray) CV_OVERRIDE;
+    virtual int getCaptureDomain() CV_OVERRIDE { return CV_CAP_GPHOTO2; }
 
     bool open(int index);
     void close();
@@ -184,12 +181,12 @@ protected:
             bool & output) const;
 
     // Widgets
-    void reloadConfig() throw (GPhoto2Exception);
+    void reloadConfig();
     CameraWidget * getWidget(int widgetId) const;
     CameraWidget * findWidgetByName(const char * name) const;
 
     // Loading
-    void readFrameFromFile(CameraFile * file, OutputArray outputFrame) throw (GPhoto2Exception);
+    void readFrameFromFile(CameraFile * file, OutputArray outputFrame);
 
     // Context feedback
     friend void ctxErrorFunc(GPContext *, const char *, void *);
@@ -231,10 +228,8 @@ private:
 
     // Widgets
     int noOfWidgets;
-    int widgetDescription(std::ostream &os, CameraWidget * widget) const
-            throw (GPhoto2Exception);
-    int collectWidgets(std::ostream &os, CameraWidget * widget)
-            throw (GPhoto2Exception);
+    int widgetDescription(std::ostream &os, CameraWidget * widget) const;
+    int collectWidgets(std::ostream &os, CameraWidget * widget);
 
     // Messages / debug
     mutable std::ostringstream msgsBuffer; // CV_CAP_PROP_GPHOTO2_FLUSH_MSGS
@@ -341,7 +336,7 @@ void DigitalCameraCapture::initContext()
         CR(gp_camera_autodetect(allDevices, context));
         CR(numDevices = gp_list_count(allDevices));
     }
-    catch (GPhoto2Exception & e)
+    catch (const GPhoto2Exception & e)
     {
         numDevices = 0;
     }
@@ -394,7 +389,7 @@ DigitalCameraCapture::~DigitalCameraCapture()
         gp_context_unref(context);
         context = NULL;
     }
-    catch (GPhoto2Exception & e)
+    catch (const GPhoto2Exception & e)
     {
         message(ERROR, "destruction error", e);
     }
@@ -447,7 +442,7 @@ bool DigitalCameraCapture::open(int index)
         opened = true;
         return true;
     }
-    catch (GPhoto2Exception & e)
+    catch (const GPhoto2Exception & e)
     {
         message(WARNING, "opening device failed", e);
         return false;
@@ -496,7 +491,7 @@ void DigitalCameraCapture::close()
             rootWidget = NULL;
         }
     }
-    catch (GPhoto2Exception & e)
+    catch (const GPhoto2Exception & e)
     {
         message(ERROR, "cannot close device properly", e);
     }
@@ -669,7 +664,7 @@ double DigitalCameraCapture::getProperty(int propertyId) const
             }
         }
     }
-    catch (GPhoto2Exception & e)
+    catch (const GPhoto2Exception & e)
     {
         char buf[128] = "";
         sprintf(buf, "cannot get property: %d", propertyId);
@@ -812,7 +807,7 @@ bool DigitalCameraCapture::setProperty(int propertyId, double value)
             CR(gp_widget_set_changed(widget, 0));
         }
     }
-    catch (GPhoto2Exception & e)
+    catch (const GPhoto2Exception & e)
     {
         char buf[128] = "";
         sprintf(buf, "cannot set property: %d to %f", propertyId, value);
@@ -854,7 +849,7 @@ bool DigitalCameraCapture::grabFrame()
         capturedFrames++;
         grabbedFrames.push_back(file);
     }
-    catch (GPhoto2Exception & e)
+    catch (const GPhoto2Exception & e)
     {
         if (file)
             gp_file_unref(file);
@@ -878,7 +873,7 @@ bool DigitalCameraCapture::retrieveFrame(int, OutputArray outputFrame)
             readFrameFromFile(file, outputFrame);
             CR(gp_file_unref(file));
         }
-        catch (GPhoto2Exception & e)
+        catch (const GPhoto2Exception & e)
         {
             message(WARNING, "cannot read file grabbed from device", e);
             return false;
@@ -919,7 +914,7 @@ int DigitalCameraCapture::findDevice(const char * deviceName) const
             }
         }
     }
-    catch (GPhoto2Exception & e)
+    catch (const GPhoto2Exception & e)
     {
         ; // pass
     }
@@ -929,7 +924,7 @@ int DigitalCameraCapture::findDevice(const char * deviceName) const
 /**
  * Load device settings.
  */
-void DigitalCameraCapture::reloadConfig() throw (GPhoto2Exception)
+void DigitalCameraCapture::reloadConfig()
 {
     std::ostringstream widgetInfoListStream;
 
@@ -985,7 +980,7 @@ CameraWidget * DigitalCameraCapture::findWidgetByName(
             }
             return (it != end) ? it->second : NULL;
         }
-        catch (GPhoto2Exception & e)
+        catch (const GPhoto2Exception & e)
         {
             message(WARNING, "error while searching for widget", e);
         }
@@ -999,7 +994,7 @@ CameraWidget * DigitalCameraCapture::findWidgetByName(
  * @FUTURE: RAW format reader.
  */
 void DigitalCameraCapture::readFrameFromFile(CameraFile * file, OutputArray outputFrame)
-        throw (GPhoto2Exception)
+
 {
     // FUTURE: OpenCV cannot read RAW files right now.
     const char * data;
@@ -1010,7 +1005,7 @@ void DigitalCameraCapture::readFrameFromFile(CameraFile * file, OutputArray outp
         Mat buf = Mat(1, size, CV_8UC1, (void *) data);
         if(!buf.empty())
         {
-            frame = imdecode(buf, CV_LOAD_IMAGE_UNCHANGED);
+            frame = imdecode(buf, IMREAD_UNCHANGED);
         }
         frame.copyTo(outputFrame);
     }
@@ -1022,7 +1017,7 @@ void DigitalCameraCapture::readFrameFromFile(CameraFile * file, OutputArray outp
  *         then IDs won't be the same)
  */
 int DigitalCameraCapture::widgetDescription(std::ostream &os,
-        CameraWidget * widget) const throw (GPhoto2Exception)
+        CameraWidget * widget) const
 {
     const char * label, *name, *info;
     int id, readonly;
@@ -1137,7 +1132,7 @@ int DigitalCameraCapture::widgetDescription(std::ostream &os,
  * @return maximum of widget ID
  */
 int DigitalCameraCapture::collectWidgets(std::ostream & os,
-        CameraWidget * widget) throw (GPhoto2Exception)
+        CameraWidget * widget)
 {
     int id = widgetDescription(os, widget);
     os << lineDelimiter;
@@ -1161,7 +1156,7 @@ int DigitalCameraCapture::collectWidgets(std::ostream & os,
 /**
  * Write message to @field msgsBuffer if user want to store them
  * (@field collectMsgs).
- * Print debug informations on screen.
+ * Print debug information on screen.
  */
 template<typename OsstreamPrintable>
 void DigitalCameraCapture::message(MsgType msgType, const char * msg,
@@ -1184,7 +1179,7 @@ void DigitalCameraCapture::message(MsgType msgType, const char * msg,
         msgsBuffer << out;
     }
 #if !defined(NDEBUG)
-#if defined(WIN32) || defined(_WIN32)
+#if defined(_WIN32)
     ::OutputDebugString(out.c_str());
 #else
     fputs(out.c_str(), stderr);
@@ -1212,7 +1207,7 @@ Ptr<IVideoCapture> createGPhoto2Capture(int index)
  *
  * @param deviceName is a substring in digital camera model name.
  */
-Ptr<IVideoCapture> createGPhoto2Capture(const String & deviceName)
+Ptr<IVideoCapture> createGPhoto2Capture(const std::string & deviceName)
 {
     Ptr<IVideoCapture> capture = makePtr<gphoto2::DigitalCameraCapture>(deviceName);
 

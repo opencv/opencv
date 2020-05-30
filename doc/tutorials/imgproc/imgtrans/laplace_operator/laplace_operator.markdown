@@ -1,12 +1,15 @@
 Laplace Operator {#tutorial_laplace_operator}
 ================
 
+@prev_tutorial{tutorial_sobel_derivatives}
+@next_tutorial{tutorial_canny_detector}
+
 Goal
 ----
 
 In this tutorial you will learn how to:
 
--   Use the OpenCV function @ref cv::Laplacian to implement a discrete analog of the *Laplacian
+-   Use the OpenCV function **Laplacian()** to implement a discrete analog of the *Laplacian
     operator*.
 
 Theory
@@ -37,7 +40,7 @@ Theory
 
 \f[Laplace(f) = \dfrac{\partial^{2} f}{\partial x^{2}} + \dfrac{\partial^{2} f}{\partial y^{2}}\f]
 
--#  The Laplacian operator is implemented in OpenCV by the function @ref cv::Laplacian . In fact,
+-#  The Laplacian operator is implemented in OpenCV by the function **Laplacian()** . In fact,
     since the Laplacian uses the gradient of images, it calls internally the *Sobel* operator to
     perform its computation.
 
@@ -50,25 +53,98 @@ Code
     -   Applies a Laplacian operator to the grayscale image and stores the output image
     -   Display the result in a window
 
+@add_toggle_cpp
 -#  The tutorial code's is shown lines below. You can also download it from
-    [here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/ImgTrans/Laplace_Demo.cpp)
+    [here](https://raw.githubusercontent.com/opencv/opencv/master/samples/cpp/tutorial_code/ImgTrans/Laplace_Demo.cpp)
     @include samples/cpp/tutorial_code/ImgTrans/Laplace_Demo.cpp
+@end_toggle
+
+@add_toggle_java
+-#  The tutorial code's is shown lines below. You can also download it from
+    [here](https://raw.githubusercontent.com/opencv/opencv/master/samples/java/tutorial_code/ImgTrans/LaPlace/LaplaceDemo.java)
+    @include samples/java/tutorial_code/ImgTrans/LaPlace/LaplaceDemo.java
+@end_toggle
+
+@add_toggle_python
+-#  The tutorial code's is shown lines below. You can also download it from
+    [here](https://raw.githubusercontent.com/opencv/opencv/master/samples/python/tutorial_code/ImgTrans/LaPlace/laplace_demo.py)
+    @include samples/python/tutorial_code/ImgTrans/LaPlace/laplace_demo.py
+@end_toggle
 
 Explanation
 -----------
 
--#  Create some needed variables:
-    @snippet cpp/tutorial_code/ImgTrans/Laplace_Demo.cpp variables
--#  Loads the source image:
-    @snippet cpp/tutorial_code/ImgTrans/Laplace_Demo.cpp load
--#  Apply a Gaussian blur to reduce noise:
-    @snippet cpp/tutorial_code/ImgTrans/Laplace_Demo.cpp reduce_noise
--#  Convert the image to grayscale using @ref cv::cvtColor
-    @snippet cpp/tutorial_code/ImgTrans/Laplace_Demo.cpp convert_to_gray
--#  Apply the Laplacian operator to the grayscale image:
-    @snippet cpp/tutorial_code/ImgTrans/Laplace_Demo.cpp laplacian
-    where the arguments are:
+#### Declare variables
 
+@add_toggle_cpp
+@snippet cpp/tutorial_code/ImgTrans/Laplace_Demo.cpp variables
+@end_toggle
+
+@add_toggle_java
+@snippet samples/java/tutorial_code/ImgTrans/LaPlace/LaplaceDemo.java variables
+@end_toggle
+
+@add_toggle_python
+@snippet samples/python/tutorial_code/ImgTrans/LaPlace/laplace_demo.py variables
+@end_toggle
+
+#### Load source image
+
+@add_toggle_cpp
+@snippet cpp/tutorial_code/ImgTrans/Laplace_Demo.cpp load
+@end_toggle
+
+@add_toggle_java
+@snippet samples/java/tutorial_code/ImgTrans/LaPlace/LaplaceDemo.java load
+@end_toggle
+
+@add_toggle_python
+@snippet samples/python/tutorial_code/ImgTrans/LaPlace/laplace_demo.py load
+@end_toggle
+
+#### Reduce noise
+
+@add_toggle_cpp
+@snippet cpp/tutorial_code/ImgTrans/Laplace_Demo.cpp reduce_noise
+@end_toggle
+
+@add_toggle_java
+@snippet samples/java/tutorial_code/ImgTrans/LaPlace/LaplaceDemo.java reduce_noise
+@end_toggle
+
+@add_toggle_python
+@snippet samples/python/tutorial_code/ImgTrans/LaPlace/laplace_demo.py reduce_noise
+@end_toggle
+
+#### Grayscale
+
+@add_toggle_cpp
+@snippet cpp/tutorial_code/ImgTrans/Laplace_Demo.cpp convert_to_gray
+@end_toggle
+
+@add_toggle_java
+@snippet samples/java/tutorial_code/ImgTrans/LaPlace/LaplaceDemo.java convert_to_gray
+@end_toggle
+
+@add_toggle_python
+@snippet samples/python/tutorial_code/ImgTrans/LaPlace/laplace_demo.py convert_to_gray
+@end_toggle
+
+#### Laplacian operator
+
+@add_toggle_cpp
+@snippet cpp/tutorial_code/ImgTrans/Laplace_Demo.cpp laplacian
+@end_toggle
+
+@add_toggle_java
+@snippet samples/java/tutorial_code/ImgTrans/LaPlace/LaplaceDemo.java laplacian
+@end_toggle
+
+@add_toggle_python
+@snippet samples/python/tutorial_code/ImgTrans/LaPlace/laplace_demo.py laplacian
+@end_toggle
+
+-   The arguments are:
     -   *src_gray*: The input image.
     -   *dst*: Destination (output) image
     -   *ddepth*: Depth of the destination image. Since our input is *CV_8U* we define *ddepth* =
@@ -77,10 +153,33 @@ Explanation
         this example.
     -   *scale*, *delta* and *BORDER_DEFAULT*: We leave them as default values.
 
--#  Convert the output from the Laplacian operator to a *CV_8U* image:
-    @snippet cpp/tutorial_code/ImgTrans/Laplace_Demo.cpp convert
--#  Display the result in a window:
-    @snippet cpp/tutorial_code/ImgTrans/Laplace_Demo.cpp display
+#### Convert output to a *CV_8U* image
+
+@add_toggle_cpp
+@snippet cpp/tutorial_code/ImgTrans/Laplace_Demo.cpp convert
+@end_toggle
+
+@add_toggle_java
+@snippet samples/java/tutorial_code/ImgTrans/LaPlace/LaplaceDemo.java convert
+@end_toggle
+
+@add_toggle_python
+@snippet samples/python/tutorial_code/ImgTrans/LaPlace/laplace_demo.py convert
+@end_toggle
+
+#### Display the result
+
+@add_toggle_cpp
+@snippet cpp/tutorial_code/ImgTrans/Laplace_Demo.cpp display
+@end_toggle
+
+@add_toggle_java
+@snippet samples/java/tutorial_code/ImgTrans/LaPlace/LaplaceDemo.java display
+@end_toggle
+
+@add_toggle_python
+@snippet samples/python/tutorial_code/ImgTrans/LaPlace/laplace_demo.py display
+@end_toggle
 
 Results
 -------

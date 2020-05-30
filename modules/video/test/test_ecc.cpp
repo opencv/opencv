@@ -42,8 +42,7 @@
 
 #include "test_precomp.hpp"
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 class CV_ECC_BaseTest : public cvtest::BaseTest
 {
@@ -96,7 +95,6 @@ double CV_ECC_BaseTest::computeRMS(const Mat& mat1, const Mat& mat2){
     return sqrt(errorMat.dot(errorMat)/(mat1.rows*mat1.cols));
 }
 
-
 class CV_ECC_Test_Translation : public CV_ECC_BaseTest
 {
 public:
@@ -121,7 +119,7 @@ bool CV_ECC_Test_Translation::testTranslation(int from)
         return false;
     }
     Mat testImg;
-    resize(img, testImg, Size(216, 216));
+    resize(img, testImg, Size(216, 216), 0, 0, INTER_LINEAR_EXACT);
 
     cv::RNG rng = ts->get_rng();
 
@@ -196,7 +194,7 @@ bool CV_ECC_Test_Euclidean::testEuclidean(int from)
         return false;
     }
     Mat testImg;
-    resize(img, testImg, Size(216, 216));
+    resize(img, testImg, Size(216, 216), 0, 0, INTER_LINEAR_EXACT);
 
     cv::RNG rng = ts->get_rng();
 
@@ -270,7 +268,7 @@ bool CV_ECC_Test_Affine::testAffine(int from)
         return false;
     }
     Mat testImg;
-    resize(img, testImg, Size(216, 216));
+    resize(img, testImg, Size(216, 216), 0, 0, INTER_LINEAR_EXACT);
 
     cv::RNG rng = ts->get_rng();
 
@@ -346,7 +344,7 @@ bool CV_ECC_Test_Homography::testHomography(int from)
         return false;
     }
     Mat testImg;
-    resize(img, testImg, Size(216, 216));
+    resize(img, testImg, Size(216, 216), 0, 0, INTER_LINEAR_EXACT);
 
     cv::RNG rng = ts->get_rng();
 
@@ -418,7 +416,7 @@ bool CV_ECC_Test_Mask::testMask(int from)
         return false;
     }
     Mat scaledImage;
-    resize(img, scaledImage, Size(216, 216));
+    resize(img, scaledImage, Size(216, 216), 0, 0, INTER_LINEAR_EXACT );
 
     Mat_<float> testImg;
     scaledImage.convertTo(testImg, testImg.type());
@@ -465,6 +463,22 @@ bool CV_ECC_Test_Mask::testMask(int from)
             return false;
         }
 
+        // Test with non-default gaussian blur.
+        findTransformECC(warpedImage, testImg, mapTranslation, 0,
+            TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, ECC_iterations, ECC_epsilon), mask, 1);
+
+        if (!isMapCorrect(mapTranslation)){
+            ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
+            return false;
+        }
+
+        if (computeRMS(mapTranslation, translationGround)>MAX_RMS_ECC){
+            ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
+            ts->printf( ts->LOG, "RMS = %f",
+                computeRMS(mapTranslation, translationGround));
+            return false;
+        }
+
     }
     return true;
 }
@@ -477,8 +491,20 @@ void CV_ECC_Test_Mask::run(int from)
     ts->set_failed_test_info(cvtest::TS::OK);
 }
 
+TEST(Video_ECC_Test_Compute, accuracy)
+{
+    Mat testImg = (Mat_<float>(3, 3) << 1, 0, 0, 1, 0, 0, 1, 0, 0);
+    Mat warpedImage = (Mat_<float>(3, 3) << 0, 1, 0, 0, 1, 0, 0, 1, 0);
+    Mat_<unsigned char> mask = Mat_<unsigned char>::ones(testImg.rows, testImg.cols);
+    double ecc = computeECC(warpedImage, testImg, mask);
+
+    EXPECT_NEAR(ecc, -0.5f, 1e-5f);
+}
+
 TEST(Video_ECC_Translation, accuracy) { CV_ECC_Test_Translation test; test.safe_run();}
 TEST(Video_ECC_Euclidean, accuracy) { CV_ECC_Test_Euclidean test; test.safe_run(); }
 TEST(Video_ECC_Affine, accuracy) { CV_ECC_Test_Affine test; test.safe_run(); }
 TEST(Video_ECC_Homography, accuracy) { CV_ECC_Test_Homography test; test.safe_run(); }
 TEST(Video_ECC_Mask, accuracy) { CV_ECC_Test_Mask test; test.safe_run(); }
+
+}} // namespace

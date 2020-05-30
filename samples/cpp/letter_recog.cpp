@@ -9,7 +9,7 @@ using namespace std;
 using namespace cv;
 using namespace cv::ml;
 
-static void help()
+static void help(char** argv)
 {
     printf("\nThe sample demonstrates how to train Random Trees classifier\n"
     "(or Boosting classifier, or MLP, or Knearest, or Nbayes, or Support Vector Machines - see main()) using the provided dataset.\n"
@@ -28,10 +28,10 @@ static void help()
     "and the remaining 4000 (10000 for boosting) - to test the classifier.\n"
     "======================================================\n");
     printf("\nThis is letter recognition sample.\n"
-            "The usage: letter_recog [-data=<path to letter-recognition.data>] \\\n"
+            "The usage: %s [-data=<path to letter-recognition.data>] \\\n"
             "  [-save=<output XML file for the classifier>] \\\n"
             "  [-load=<XML file with the pre-trained classifier>] \\\n"
-            "  [-boost|-mlp|-knearest|-nbayes|-svm] # to use boost/mlp/knearest/SVM classifier instead of default Random Trees\n" );
+            "  [-boost|-mlp|-knearest|-nbayes|-svm] # to use boost/mlp/knearest/SVM classifier instead of default Random Trees\n", argv[0] );
 }
 
 // This function reads data and responses from the file <filename>
@@ -520,13 +520,13 @@ int main( int argc, char *argv[] )
     string data_filename;
     int method = 0;
 
-    cv::CommandLineParser parser(argc, argv, "{data|../data/letter-recognition.data|}{save||}{load||}{boost||}"
-            "{mlp||}{knn knearest||}{nbayes||}{svm||}{help h||}");
-    data_filename = parser.get<string>("data");
+    cv::CommandLineParser parser(argc, argv, "{data|letter-recognition.data|}{save||}{load||}{boost||}"
+            "{mlp||}{knn knearest||}{nbayes||}{svm||}");
+    data_filename = samples::findFile(parser.get<string>("data"));
     if (parser.has("save"))
         filename_to_save = parser.get<string>("save");
     if (parser.has("load"))
-        filename_to_load = parser.get<string>("load");
+        filename_to_load = samples::findFile(parser.get<string>("load"));
     if (parser.has("boost"))
         method = 1;
     else if (parser.has("mlp"))
@@ -537,11 +537,9 @@ int main( int argc, char *argv[] )
         method = 4;
     else if (parser.has("svm"))
         method = 5;
-    if (parser.has("help"))
-    {
-        help();
-        return 0;
-    }
+
+    help(argv);
+
     if( (method == 0 ?
         build_rtrees_classifier( data_filename, filename_to_save, filename_to_load ) :
         method == 1 ?
@@ -555,8 +553,6 @@ int main( int argc, char *argv[] )
         method == 5 ?
         build_svm_classifier( data_filename, filename_to_save, filename_to_load ):
         -1) < 0)
-    {
-        help();
-    }
+
     return 0;
 }

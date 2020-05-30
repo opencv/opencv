@@ -9,14 +9,14 @@ using namespace cv;
 static void help()
 {
     cout
-    << "\n--------------------------------------------------------------------------" << endl
+    << "\n---------------------------------------------------------------------------" << endl
     << "This program shows how to create matrices(cv::Mat) in OpenCV and its serial"
-    << " out capabilities"                                                            << endl
-    << "That is, cv::Mat M(...); M.create and cout << M. "                            << endl
-    << "Shows how output can be formated to OpenCV, python, numpy, csv and C styles." << endl
-    << "Usage:"                                                                       << endl
-    << "./mat_the_basic_image_container"                                              << endl
-    << "--------------------------------------------------------------------------"   << endl
+    << " out capabilities"                                                             << endl
+    << "That is, cv::Mat M(...); M.create and cout << M. "                             << endl
+    << "Shows how output can be formatted to OpenCV, python, numpy, csv and C styles." << endl
+    << "Usage:"                                                                        << endl
+    << "./mat_the_basic_image_container"                                               << endl
+    << "-----------------------------------------------------------------------------" << endl
     << endl;
 }
 
@@ -58,7 +58,13 @@ int main(int,char**)
     Mat C = (Mat_<double>(3,3) << 0, -1, 0, -1, 5, -1, 0, -1, 0);
     cout << "C = " << endl << " " << C << endl << endl;
     //! [comma]
-
+    // do the same with initializer_list
+#ifdef CV_CXX11
+    //! [list]
+    C = (Mat_<double>({0, -1, 0, -1, 5, -1, 0, -1, 0})).reshape(3);
+    cout << "C = " << endl << " " << C << endl << endl;
+    //! [list]
+#endif
     //! [clone]
     Mat RowClone = C.row(1).clone();
     cout << "RowClone = " << endl << " " << RowClone << endl << endl;
@@ -70,7 +76,7 @@ int main(int,char**)
     randu(R, Scalar::all(0), Scalar::all(255));
     //! [random]
 
-    // Demonstrate the output formating options
+    // Demonstrate the output formatting options
     //! [out-default]
     cout << "R (default) = " << endl <<        R           << endl << endl;
     //! [out-default]

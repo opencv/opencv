@@ -35,7 +35,7 @@ different scale. It is OK with small corner. But to detect larger corners we nee
 For this, scale-space filtering is used. In it, Laplacian of Gaussian is found for the image with
 various \f$\sigma\f$ values. LoG acts as a blob detector which detects blobs in various sizes due to
 change in \f$\sigma\f$. In short, \f$\sigma\f$ acts as a scaling parameter. For eg, in the above image,
-gaussian kernel with low \f$\sigma\f$ gives high value for small corner while guassian kernel with high
+gaussian kernel with low \f$\sigma\f$ gives high value for small corner while gaussian kernel with high
 \f$\sigma\f$ fits well for larger corner. So, we can find the local maxima across the scale and space
 which gives us a list of \f$(x,y,\sigma)\f$ values which means there is a potential keypoint at (x,y) at
 \f$\sigma\f$ scale.
@@ -66,7 +66,7 @@ the intensity at this extrema is less than a threshold value (0.03 as per the pa
 rejected. This threshold is called **contrastThreshold** in OpenCV
 
 DoG has higher response for edges, so edges also need to be removed. For this, a concept similar to
-Harris corner detector is used. They used a 2x2 Hessian matrix (H) to compute the pricipal
+Harris corner detector is used. They used a 2x2 Hessian matrix (H) to compute the principal
 curvature. We know from Harris corner detector that for edges, one eigen value is larger than the
 other. So here they used a simple function,
 
@@ -79,17 +79,17 @@ points.
 ### 3. Orientation Assignment
 
 Now an orientation is assigned to each keypoint to achieve invariance to image rotation. A
-neigbourhood is taken around the keypoint location depending on the scale, and the gradient
+neighbourhood is taken around the keypoint location depending on the scale, and the gradient
 magnitude and direction is calculated in that region. An orientation histogram with 36 bins covering
-360 degrees is created. (It is weighted by gradient magnitude and gaussian-weighted circular window
-with \f$\sigma\f$ equal to 1.5 times the scale of keypoint. The highest peak in the histogram is taken
+360 degrees is created (It is weighted by gradient magnitude and gaussian-weighted circular window
+with \f$\sigma\f$ equal to 1.5 times the scale of keypoint). The highest peak in the histogram is taken
 and any peak above 80% of it is also considered to calculate the orientation. It creates keypoints
 with same location and scale, but different directions. It contribute to stability of matching.
 
 ### 4. Keypoint Descriptor
 
 Now keypoint descriptor is created. A 16x16 neighbourhood around the keypoint is taken. It is
-devided into 16 sub-blocks of 4x4 size. For each sub-block, 8 bin orientation histogram is created.
+divided into 16 sub-blocks of 4x4 size. For each sub-block, 8 bin orientation histogram is created.
 So a total of 128 bin values are available. It is represented as a vector to form keypoint
 descriptor. In addition to this, several measures are taken to achieve robustness against
 illumination changes, rotation etc.
@@ -99,7 +99,7 @@ illumination changes, rotation etc.
 Keypoints between two images are matched by identifying their nearest neighbours. But in some cases,
 the second closest-match may be very near to the first. It may happen due to noise or some other
 reasons. In that case, ratio of closest-distance to second-closest distance is taken. If it is
-greater than 0.8, they are rejected. It eliminaters around 90% of false matches while discards only
+greater than 0.8, they are rejected. It eliminates around 90% of false matches while discards only
 5% correct matches, as per the paper.
 
 So this is a summary of SIFT algorithm. For more details and understanding, reading the original
@@ -113,30 +113,30 @@ So now let's see SIFT functionalities available in OpenCV. Let's start with keyp
 draw them. First we have to construct a SIFT object. We can pass different parameters to it which
 are optional and they are well explained in docs.
 @code{.py}
-import cv2
 import numpy as np
+import cv2 as cv
 
-img = cv2.imread('home.jpg')
-gray= cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+img = cv.imread('home.jpg')
+gray= cv.cvtColor(img,cv.COLOR_BGR2GRAY)
 
-sift = cv2.xfeatures2d.SIFT_create()
+sift = cv.SIFT_create()
 kp = sift.detect(gray,None)
 
-img=cv2.drawKeypoints(gray,kp,img)
+img=cv.drawKeypoints(gray,kp,img)
 
-cv2.imwrite('sift_keypoints.jpg',img)
+cv.imwrite('sift_keypoints.jpg',img)
 @endcode
 **sift.detect()** function finds the keypoint in the images. You can pass a mask if you want to
 search only a part of image. Each keypoint is a special structure which has many attributes like its
 (x,y) coordinates, size of the meaningful neighbourhood, angle which specifies its orientation,
 response that specifies strength of keypoints etc.
 
-OpenCV also provides **cv2.drawKeyPoints()** function which draws the small circles on the locations
-of keypoints. If you pass a flag, **cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS** to it, it will
+OpenCV also provides **cv.drawKeyPoints()** function which draws the small circles on the locations
+of keypoints. If you pass a flag, **cv.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS** to it, it will
 draw a circle with size of keypoint and it will even show its orientation. See below example.
 @code{.py}
-img=cv2.drawKeypoints(gray,kp,img,flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
-cv2.imwrite('sift_keypoints.jpg',img)
+img=cv.drawKeypoints(gray,kp,img,flags=cv.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+cv.imwrite('sift_keypoints.jpg',img)
 @endcode
 See the two results below:
 
@@ -151,7 +151,7 @@ Now to calculate the descriptor, OpenCV provides two methods.
 
 We will see the second method:
 @code{.py}
-sift = cv2.xfeatures2d.SIFT_create()
+sift = cv.SIFT_create()
 kp, des = sift.detectAndCompute(gray,None)
 @endcode
 Here kp will be a list of keypoints and des is a numpy array of shape

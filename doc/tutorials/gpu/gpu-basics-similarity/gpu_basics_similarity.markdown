@@ -1,6 +1,9 @@
+@cond CUDA_MODULES
 Similarity check (PNSR and SSIM) on the GPU {#tutorial_gpu_basics_similarity}
 ===========================================
 @todo update this tutorial
+
+@next_tutorial{tutorial_gpu_thrust_interop}
 
 Goal
 ----
@@ -8,7 +11,7 @@ Goal
 In the @ref tutorial_video_input_psnr_ssim tutorial I already presented the PSNR and SSIM methods for checking
 the similarity between the two images. And as you could see, the execution process takes quite some
 time , especially in the case of the SSIM. However, if the performance numbers of an OpenCV
-implementation for the CPU do not satisfy you and you happen to have an NVidia CUDA GPU device in
+implementation for the CPU do not satisfy you and you happen to have an NVIDIA CUDA GPU device in
 your system, all is not lost. You may try to port or write your owm algorithm for the video card.
 
 This tutorial will give a good grasp on how to approach coding by using the GPU module of OpenCV. As
@@ -96,9 +99,7 @@ I1 = gI1;       // Download, gI1.download(I1) will work too
 @endcode
 Once you have your data up in the GPU memory you may call GPU enabled functions of OpenCV. Most of
 the functions keep the same name just as on the CPU, with the difference that they only accept
-*GpuMat* inputs. A full list of these you will find in the documentation: [online
-here](http://docs.opencv.org/modules/gpu/doc/gpu.html) or the OpenCV reference manual that comes
-with the source code.
+*GpuMat* inputs.
 
 Another thing to keep in mind is that not for all channel numbers you can make efficient algorithms
 on the GPU. Generally, I found that the input images for the GPU images need to be either one or
@@ -187,7 +188,7 @@ introduce asynchronous OpenCV GPU calls too with the help of the @ref cv::cuda::
 Result and conclusion
 ---------------------
 
-On an Intel P8700 laptop CPU paired with a low end NVidia GT220M, here are the performance numbers:
+On an Intel P8700 laptop CPU paired with a low end NVIDIA GT220M, here are the performance numbers:
 @code
 Time of PSNR CPU (averaged for 10 runs): 41.4122 milliseconds. With result of: 19.2506
 Time of PSNR GPU (averaged for 10 runs): 158.977 milliseconds. With result of: 19.2506
@@ -203,8 +204,5 @@ In both cases we managed a performance increase of almost 100% compared to the C
 It may be just the improvement needed for your application to work. You may observe a runtime
 instance of this on the [YouTube here](https://www.youtube.com/watch?v=3_ESXmFlnvY).
 
-\htmlonly
-<div align="center">
-<iframe title="Similarity check (PNSR and SSIM) on the GPU" width="560" height="349" src="http://www.youtube.com/embed/3_ESXmFlnvY?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
-</div>
-\endhtmlonly
+@youtube{3_ESXmFlnvY}
+@endcond

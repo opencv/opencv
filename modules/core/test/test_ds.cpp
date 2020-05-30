@@ -1,7 +1,9 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
 #include "test_precomp.hpp"
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 typedef  struct  CvTsSimpleSeq
 {
@@ -325,7 +327,7 @@ public:
     void clear();
 
 protected:
-    int read_params( CvFileStorage* fs );
+    int read_params( const cv::FileStorage& fs );
     void run_func(void);
     void set_error_context( const char* condition,
                            const char* err_msg,
@@ -383,26 +385,26 @@ void Core_DynStructBaseTest::clear()
 }
 
 
-int Core_DynStructBaseTest::read_params( CvFileStorage* fs )
+int Core_DynStructBaseTest::read_params( const cv::FileStorage& fs )
 {
     int code = cvtest::BaseTest::read_params( fs );
     double sqrt_scale = sqrt(ts->get_test_case_count_scale());
     if( code < 0 )
         return code;
 
-    struct_count = cvReadInt( find_param( fs, "struct_count" ), struct_count );
-    max_struct_size = cvReadInt( find_param( fs, "max_struct_size" ), max_struct_size );
-    generations = cvReadInt( find_param( fs, "generations" ), generations );
-    iterations = cvReadInt( find_param( fs, "iterations" ), iterations );
+    read( find_param( fs, "struct_count" ), struct_count, struct_count );
+    read( find_param( fs, "max_struct_size" ), max_struct_size, max_struct_size );
+    read( find_param( fs, "generations" ), generations, generations );
+    read( find_param( fs, "iterations" ), iterations, iterations );
     generations = cvRound(generations*sqrt_scale);
     iterations = cvRound(iterations*sqrt_scale);
 
-    min_log_storage_block_size = cvReadInt( find_param( fs, "min_log_storage_block_size" ),
-                                           min_log_storage_block_size );
-    max_log_storage_block_size = cvReadInt( find_param( fs, "max_log_storage_block_size" ),
-                                           max_log_storage_block_size );
-    min_log_elem_size = cvReadInt( find_param( fs, "min_log_elem_size" ), min_log_elem_size );
-    max_log_elem_size = cvReadInt( find_param( fs, "max_log_elem_size" ), max_log_elem_size );
+    read( find_param( fs, "min_log_storage_block_size" ),
+              min_log_storage_block_size, min_log_storage_block_size );
+    read( find_param( fs, "max_log_storage_block_size" ),
+              max_log_storage_block_size, max_log_storage_block_size );
+    read( find_param( fs, "min_log_elem_size" ), min_log_elem_size, min_log_elem_size );
+    read( find_param( fs, "max_log_elem_size" ), max_log_elem_size, max_log_elem_size );
 
     struct_count = cvtest::clipInt( struct_count, 1, 100 );
     max_struct_size = cvtest::clipInt( max_struct_size, 1, 1<<20 );
@@ -1030,7 +1032,7 @@ void Core_SeqBaseTest::run( int )
                 cvClearMemStorage( storage );
         }
     }
-    catch(int)
+    catch(const int &)
     {
     }
 }
@@ -1198,7 +1200,7 @@ void Core_SeqSortInvTest::run( int )
             storage.release();
         }
     }
-    catch (int)
+    catch (const int &)
     {
     }
 }
@@ -1414,7 +1416,7 @@ void Core_SetTest::run( int )
             storage.release();
         }
     }
-    catch(int)
+    catch(const int &)
     {
     }
 }
@@ -1857,7 +1859,7 @@ void Core_GraphTest::run( int )
             storage.release();
         }
     }
-    catch(int)
+    catch(const int &)
     {
     }
 }
@@ -2119,7 +2121,7 @@ void Core_GraphScanTest::run( int )
             storage.release();
         }
     }
-    catch(int)
+    catch(const int &)
     {
     }
 }
@@ -2130,3 +2132,5 @@ TEST(Core_DS_Seq, sort_invert) { Core_SeqSortInvTest test; test.safe_run(); }
 TEST(Core_DS_Set, basic_operations) { Core_SetTest test; test.safe_run(); }
 TEST(Core_DS_Graph, basic_operations) { Core_GraphTest test; test.safe_run(); }
 TEST(Core_DS_Graph, scan) { Core_GraphScanTest test; test.safe_run(); }
+
+}} // namespace

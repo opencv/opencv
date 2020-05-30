@@ -11,7 +11,7 @@
  *  Redistribution and use in source and binary forms, with or without modification,
  *  are permitted provided that the following conditions are met :
  *
- *  *Redistributions of source code must retain the above copyright notice,
+ *  * Redistributions of source code must retain the above copyright notice,
  *  this list of conditions and the following disclaimer.
  *
  *  * Redistributions in binary form must reproduce the above copyright notice,
@@ -36,25 +36,23 @@
 
 #include "perf_precomp.hpp"
 
-namespace cvtest
+namespace opencv_test
 {
-
-using std::tr1::tuple;
-using std::tr1::get;
 using namespace perf;
 using namespace testing;
-using namespace cv;
 
-void MakeArtificialExample(RNG rng, Mat& dst_left_view, Mat& dst_view);
+static void MakeArtificialExample(Mat& dst_left_view, Mat& dst_view);
 
-CV_ENUM(SGBMModes, StereoSGBM::MODE_SGBM, StereoSGBM::MODE_SGBM_3WAY);
+CV_ENUM(SGBMModes, StereoSGBM::MODE_SGBM, StereoSGBM::MODE_SGBM_3WAY, StereoSGBM::MODE_HH4);
 typedef tuple<Size, int, SGBMModes> SGBMParams;
-typedef TestBaseWithParam<SGBMParams> TestStereoCorresp;
+typedef TestBaseWithParam<SGBMParams> TestStereoCorrespSGBM;
 
-PERF_TEST_P( TestStereoCorresp, SGBM, Combine(Values(Size(1280,720),Size(640,480)), Values(256,128), SGBMModes::all()) )
+#ifndef _DEBUG
+PERF_TEST_P( TestStereoCorrespSGBM, SGBM, Combine(Values(Size(1280,720),Size(640,480)), Values(256,128), SGBMModes::all()) )
+#else
+PERF_TEST_P( TestStereoCorrespSGBM, DISABLED_TooLongInDebug_SGBM, Combine(Values(Size(1280,720),Size(640,480)), Values(256,128), SGBMModes::all()) )
+#endif
 {
-    RNG rng(0);
-
     SGBMParams params = GetParam();
 
     Size sz              = get<0>(params);
@@ -65,9 +63,8 @@ PERF_TEST_P( TestStereoCorresp, SGBM, Combine(Values(Size(1280,720),Size(640,480
     Mat src_right(sz, CV_8UC3);
     Mat dst(sz, CV_16S);
 
-    MakeArtificialExample(rng,src_left,src_right);
+    MakeArtificialExample(src_left,src_right);
 
-    cv::setNumThreads(cv::getNumberOfCPUs());
     int wsize = 3;
     int P1 = 8*src_left.channels()*wsize*wsize;
     TEST_CYCLE()
@@ -79,8 +76,34 @@ PERF_TEST_P( TestStereoCorresp, SGBM, Combine(Values(Size(1280,720),Size(640,480
     SANITY_CHECK(dst, .01, ERROR_RELATIVE);
 }
 
-void MakeArtificialExample(RNG rng, Mat& dst_left_view, Mat& dst_right_view)
+typedef tuple<Size, int> BMParams;
+typedef TestBaseWithParam<BMParams> TestStereoCorrespBM;
+
+PERF_TEST_P(TestStereoCorrespBM, BM, Combine(Values(Size(1280, 720), Size(640, 480)), Values(256, 128)))
 {
+    BMParams params = GetParam();
+    Size sz = get<0>(params);
+    int num_disparities = get<1>(params);
+
+    Mat src_left(sz, CV_8UC1);
+    Mat src_right(sz, CV_8UC1);
+    Mat dst(sz, CV_16S);
+
+    MakeArtificialExample(src_left, src_right);
+
+    int wsize = 21;
+    TEST_CYCLE()
+    {
+        Ptr<StereoBM> bm = StereoBM::create(num_disparities, wsize);
+        bm->compute(src_left, src_right, dst);
+    }
+
+    SANITY_CHECK(dst, .01, ERROR_RELATIVE);
+}
+
+void MakeArtificialExample(Mat& dst_left_view, Mat& dst_right_view)
+{
+    RNG rng(0);
     int w = dst_left_view.cols;
     int h = dst_left_view.rows;
 

@@ -1,26 +1,24 @@
-/* $Header: /cvs/maptools/cvsroot/libtiff/libtiff/tif_extension.c,v 1.7 2010-03-10 18:56:48 bfriesen Exp $ */
-
 /*
  * Copyright (c) 1988-1997 Sam Leffler
  * Copyright (c) 1991-1997 Silicon Graphics, Inc.
  *
- * Permission to use, copy, modify, distribute, and sell this software and
+ * Permission to use, copy, modify, distribute, and sell this software and 
  * its documentation for any purpose is hereby granted without fee, provided
  * that (i) the above copyright notices and this permission notice appear in
  * all copies of the software and related documentation, and (ii) the names of
  * Sam Leffler and Silicon Graphics may not be used in any advertising or
  * publicity relating to the software without the specific, prior written
  * permission of Sam Leffler and Silicon Graphics.
- *
- * THE SOFTWARE IS PROVIDED "AS-IS" AND WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS, IMPLIED OR OTHERWISE, INCLUDING WITHOUT LIMITATION, ANY
- * WARRANTY OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.
- *
+ * 
+ * THE SOFTWARE IS PROVIDED "AS-IS" AND WITHOUT WARRANTY OF ANY KIND, 
+ * EXPRESS, IMPLIED OR OTHERWISE, INCLUDING WITHOUT LIMITATION, ANY 
+ * WARRANTY OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.  
+ * 
  * IN NO EVENT SHALL SAM LEFFLER OR SILICON GRAPHICS BE LIABLE FOR
  * ANY SPECIAL, INCIDENTAL, INDIRECT OR CONSEQUENTIAL DAMAGES OF ANY KIND,
  * OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
- * WHETHER OR NOT ADVISED OF THE POSSIBILITY OF DAMAGE, AND ON ANY THEORY OF
- * LIABILITY, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE
+ * WHETHER OR NOT ADVISED OF THE POSSIBILITY OF DAMAGE, AND ON ANY THEORY OF 
+ * LIABILITY, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE 
  * OF THIS SOFTWARE.
  */
 
@@ -28,7 +26,7 @@
  * TIFF Library.
  *
  * Various routines support external extension of the tag set, and other
- * application extension capabilities.
+ * application extension capabilities. 
  */
 
 #include "tiffiop.h"
@@ -37,7 +35,7 @@ int TIFFGetTagListCount( TIFF *tif )
 
 {
     TIFFDirectory* td = &tif->tif_dir;
-
+    
     return td->td_customValueCount;
 }
 
@@ -66,13 +64,13 @@ TIFFTagMethods *TIFFAccessTagMethods( TIFF *tif )
 void *TIFFGetClientInfo( TIFF *tif, const char *name )
 
 {
-    TIFFClientInfoLink *link = tif->tif_clientinfo;
+    TIFFClientInfoLink *psLink = tif->tif_clientinfo;
 
-    while( link != NULL && strcmp(link->name,name) != 0 )
-        link = link->next;
+    while( psLink != NULL && strcmp(psLink->name,name) != 0 )
+        psLink = psLink->next;
 
-    if( link != NULL )
-        return link->data;
+    if( psLink != NULL )
+        return psLink->data;
     else
         return NULL;
 }
@@ -80,18 +78,18 @@ void *TIFFGetClientInfo( TIFF *tif, const char *name )
 void TIFFSetClientInfo( TIFF *tif, void *data, const char *name )
 
 {
-    TIFFClientInfoLink *link = tif->tif_clientinfo;
+    TIFFClientInfoLink *psLink = tif->tif_clientinfo;
 
     /*
     ** Do we have an existing link with this name?  If so, just
     ** set it.
     */
-    while( link != NULL && strcmp(link->name,name) != 0 )
-        link = link->next;
+    while( psLink != NULL && strcmp(psLink->name,name) != 0 )
+        psLink = psLink->next;
 
-    if( link != NULL )
+    if( psLink != NULL )
     {
-        link->data = data;
+        psLink->data = data;
         return;
     }
 
@@ -99,15 +97,15 @@ void TIFFSetClientInfo( TIFF *tif, void *data, const char *name )
     ** Create a new link.
     */
 
-    link = (TIFFClientInfoLink *) _TIFFmalloc(sizeof(TIFFClientInfoLink));
-    assert (link != NULL);
-    link->next = tif->tif_clientinfo;
-    link->name = (char *) _TIFFmalloc((tmsize_t)(strlen(name)+1));
-    assert (link->name != NULL);
-    strcpy(link->name, name);
-    link->data = data;
+    psLink = (TIFFClientInfoLink *) _TIFFmalloc(sizeof(TIFFClientInfoLink));
+    assert (psLink != NULL);
+    psLink->next = tif->tif_clientinfo;
+    psLink->name = (char *) _TIFFmalloc((tmsize_t)(strlen(name)+1));
+    assert (psLink->name != NULL);
+    strcpy(psLink->name, name);
+    psLink->data = data;
 
-    tif->tif_clientinfo = link;
+    tif->tif_clientinfo = psLink;
 }
 /*
  * Local Variables:

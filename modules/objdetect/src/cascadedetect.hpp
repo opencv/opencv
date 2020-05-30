@@ -74,22 +74,22 @@ protected:
 };
 
 
-class CascadeClassifierImpl : public BaseCascadeClassifier
+class CascadeClassifierImpl CV_FINAL : public BaseCascadeClassifier
 {
 public:
     CascadeClassifierImpl();
-    virtual ~CascadeClassifierImpl();
+    virtual ~CascadeClassifierImpl() CV_OVERRIDE;
 
-    bool empty() const;
-    bool load( const String& filename );
-    void read( const FileNode& node );
+    bool empty() const CV_OVERRIDE;
+    bool load( const String& filename ) CV_OVERRIDE;
+    void read( const FileNode& node ) CV_OVERRIDE;
     bool read_( const FileNode& node );
     void detectMultiScale( InputArray image,
                           CV_OUT std::vector<Rect>& objects,
                           double scaleFactor = 1.1,
                           int minNeighbors = 3, int flags = 0,
                           Size minSize = Size(),
-                          Size maxSize = Size() );
+                          Size maxSize = Size() ) CV_OVERRIDE;
 
     void detectMultiScale( InputArray image,
                           CV_OUT std::vector<Rect>& objects,
@@ -97,7 +97,7 @@ public:
                           double scaleFactor=1.1,
                           int minNeighbors=3, int flags=0,
                           Size minSize=Size(),
-                          Size maxSize=Size() );
+                          Size maxSize=Size() ) CV_OVERRIDE;
 
     void detectMultiScale( InputArray image,
                           CV_OUT std::vector<Rect>& objects,
@@ -107,16 +107,16 @@ public:
                           int minNeighbors = 3, int flags = 0,
                           Size minSize = Size(),
                           Size maxSize = Size(),
-                          bool outputRejectLevels = false );
+                          bool outputRejectLevels = false ) CV_OVERRIDE;
 
 
-    bool isOldFormatCascade() const;
-    Size getOriginalWindowSize() const;
-    int getFeatureType() const;
-    void* getOldCascade();
+    bool isOldFormatCascade() const CV_OVERRIDE;
+    Size getOriginalWindowSize() const CV_OVERRIDE;
+    int getFeatureType() const CV_OVERRIDE;
+    void* getOldCascade() CV_OVERRIDE;
 
-    void setMaskGenerator(const Ptr<MaskGenerator>& maskGenerator);
-    Ptr<MaskGenerator> getMaskGenerator();
+    void setMaskGenerator(const Ptr<MaskGenerator>& maskGenerator) CV_OVERRIDE;
+    Ptr<MaskGenerator> getMaskGenerator() CV_OVERRIDE;
 
 protected:
     enum { SUM_ALIGN = 64 };
@@ -184,7 +184,7 @@ protected:
 
         struct Stump
         {
-            Stump() { }
+            Stump() : featureIdx(0), threshold(0), left(0), right(0) { }
             Stump(int _featureIdx, float _threshold, float _left, float _right)
             : featureIdx(_featureIdx), threshold(_threshold), left(_left), right(_right) {}
 
@@ -263,7 +263,7 @@ protected:
     (p0) = sum + (rect).x + (step) * (rect).y,                            \
     /* (x + w, y) */                                                      \
     (p1) = sum + (rect).x + (rect).width + (step) * (rect).y,             \
-    /* (x + w, y) */                                                      \
+    /* (x, y + h) */                                                      \
     (p2) = sum + (rect).x + (step) * ((rect).y + (rect).height),          \
     /* (x + w, y + h) */                                                  \
     (p3) = sum + (rect).x + (rect).width + (step) * ((rect).y + (rect).height)
@@ -289,7 +289,7 @@ protected:
 (p0) = sum + (rect).x + (step) * (rect).y,                            \
 /* (x + w, y) */                                                      \
 (p1) = sum + (rect).x + (rect).width + (step) * (rect).y,             \
-/* (x + w, y) */                                                      \
+/* (x, y + h) */                                                      \
 (p2) = sum + (rect).x + (step) * ((rect).y + (rect).height),          \
 /* (x + w, y + h) */                                                  \
 (p3) = sum + (rect).x + (rect).width + (step) * ((rect).y + (rect).height)
@@ -305,29 +305,24 @@ protected:
 (p3) = tilted + (rect).x + (rect).width - (rect).height                         \
 + (step) * ((rect).y + (rect).width + (rect).height)
 
-#define CALC_SUM_(p0, p1, p2, p3, offset) \
-((p0)[offset] - (p1)[offset] - (p2)[offset] + (p3)[offset])
-
-#define CALC_SUM(rect,offset) CALC_SUM_((rect)[0], (rect)[1], (rect)[2], (rect)[3], offset)
-
 #define CALC_SUM_OFS_(p0, p1, p2, p3, ptr) \
 ((ptr)[p0] - (ptr)[p1] - (ptr)[p2] + (ptr)[p3])
 
 #define CALC_SUM_OFS(rect, ptr) CALC_SUM_OFS_((rect)[0], (rect)[1], (rect)[2], (rect)[3], ptr)
 
 //----------------------------------------------  HaarEvaluator ---------------------------------------
-class HaarEvaluator : public FeatureEvaluator
+class HaarEvaluator CV_FINAL : public FeatureEvaluator
 {
 public:
     struct Feature
     {
         Feature();
-        bool read( const FileNode& node );
+        bool read(const FileNode& node, const Size& origWinSize);
 
         bool tilted;
 
         enum { RECT_NUM = 3 };
-        struct
+        struct RectWeigth
         {
             Rect r;
             float weight;
@@ -347,24 +342,24 @@ public:
     };
 
     HaarEvaluator();
-    virtual ~HaarEvaluator();
+    virtual ~HaarEvaluator() CV_OVERRIDE;
 
-    virtual bool read( const FileNode& node, Size origWinSize);
-    virtual Ptr<FeatureEvaluator> clone() const;
-    virtual int getFeatureType() const { return FeatureEvaluator::HAAR; }
+    virtual bool read( const FileNode& node, Size origWinSize) CV_OVERRIDE;
+    virtual Ptr<FeatureEvaluator> clone() const CV_OVERRIDE;
+    virtual int getFeatureType() const CV_OVERRIDE { return FeatureEvaluator::HAAR; }
 
-    virtual bool setWindow(Point p, int scaleIdx);
+    virtual bool setWindow(Point p, int scaleIdx) CV_OVERRIDE;
     Rect getNormRect() const;
     int getSquaresOffset() const;
 
     float operator()(int featureIdx) const
     { return optfeaturesPtr[featureIdx].calc(pwin) * varianceNormFactor; }
-    virtual float calcOrd(int featureIdx) const
+    virtual float calcOrd(int featureIdx) const CV_OVERRIDE
     { return (*this)(featureIdx); }
 
 protected:
-    virtual void computeChannels( int i, InputArray img );
-    virtual void computeOptFeatures();
+    virtual void computeChannels( int i, InputArray img ) CV_OVERRIDE;
+    virtual void computeOptFeatures() CV_OVERRIDE;
 
     Ptr<std::vector<Feature> > features;
     Ptr<std::vector<OptFeature> > optfeatures;
@@ -408,7 +403,7 @@ inline float HaarEvaluator::OptFeature :: calc( const int* ptr ) const
 
 //----------------------------------------------  LBPEvaluator -------------------------------------
 
-class LBPEvaluator : public FeatureEvaluator
+class LBPEvaluator CV_FINAL : public FeatureEvaluator
 {
 public:
     struct Feature
@@ -417,7 +412,7 @@ public:
         Feature( int x, int y, int _block_w, int _block_h  ) :
                  rect(x, y, _block_w, _block_h) {}
 
-        bool read(const FileNode& node );
+        bool read(const FileNode& node, const Size& origWinSize);
 
         Rect rect; // weight and height for block
     };
@@ -432,21 +427,21 @@ public:
     };
 
     LBPEvaluator();
-    virtual ~LBPEvaluator();
+    virtual ~LBPEvaluator() CV_OVERRIDE;
 
-    virtual bool read( const FileNode& node, Size origWinSize );
-    virtual Ptr<FeatureEvaluator> clone() const;
-    virtual int getFeatureType() const { return FeatureEvaluator::LBP; }
+    virtual bool read( const FileNode& node, Size origWinSize ) CV_OVERRIDE;
+    virtual Ptr<FeatureEvaluator> clone() const CV_OVERRIDE;
+    virtual int getFeatureType() const CV_OVERRIDE { return FeatureEvaluator::LBP; }
 
-    virtual bool setWindow(Point p, int scaleIdx);
+    virtual bool setWindow(Point p, int scaleIdx) CV_OVERRIDE;
 
     int operator()(int featureIdx) const
     { return optfeaturesPtr[featureIdx].calc(pwin); }
-    virtual int calcCat(int featureIdx) const
+    virtual int calcCat(int featureIdx) const CV_OVERRIDE
     { return (*this)(featureIdx); }
 protected:
-    virtual void computeChannels( int i, InputArray img );
-    virtual void computeOptFeatures();
+    virtual void computeChannels( int i, InputArray img ) CV_OVERRIDE;
+    virtual void computeOptFeatures() CV_OVERRIDE;
 
     Ptr<std::vector<Feature> > features;
     Ptr<std::vector<OptFeature> > optfeatures;
@@ -489,7 +484,7 @@ template<class FEval>
 inline int predictOrdered( CascadeClassifierImpl& cascade,
                            Ptr<FeatureEvaluator> &_featureEvaluator, double& sum )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     int nstages = (int)cascade.data.stages.size();
     int nodeOfs = 0, leafOfs = 0;
@@ -531,7 +526,7 @@ template<class FEval>
 inline int predictCategorical( CascadeClassifierImpl& cascade,
                                Ptr<FeatureEvaluator> &_featureEvaluator, double& sum )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     int nstages = (int)cascade.data.stages.size();
     int nodeOfs = 0, leafOfs = 0;
@@ -575,7 +570,7 @@ template<class FEval>
 inline int predictOrderedStump( CascadeClassifierImpl& cascade,
                                 Ptr<FeatureEvaluator> &_featureEvaluator, double& sum )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert(!cascade.data.stumps.empty());
     FEval& featureEvaluator = (FEval&)*_featureEvaluator;
@@ -614,7 +609,7 @@ template<class FEval>
 inline int predictCategoricalStump( CascadeClassifierImpl& cascade,
                                     Ptr<FeatureEvaluator> &_featureEvaluator, double& sum )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert(!cascade.data.stumps.empty());
     int nstages = (int)cascade.data.stages.size();
@@ -652,4 +647,10 @@ inline int predictCategoricalStump( CascadeClassifierImpl& cascade,
     sum = (double)tmp;
     return 1;
 }
+
+namespace haar_cvt
+{
+bool convert(const FileNode& oldcascade_root, FileStorage& newfs);
+}
+
 }

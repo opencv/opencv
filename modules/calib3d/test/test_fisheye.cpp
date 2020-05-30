@@ -41,9 +41,11 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include <opencv2/ts/cuda_test.hpp>
+#include <opencv2/ts/cuda_test.hpp> // EXPECT_MAT_NEAR
 #include "../src/fisheye.hpp"
 #include "opencv2/videoio.hpp"
+
+namespace opencv_test { namespace {
 
 class fisheyeTest : public ::testing::Test {
 
@@ -61,7 +63,7 @@ protected:
 
 protected:
     std::string combine(const std::string& _item1, const std::string& _item2);
-    cv::Mat mergeRectification(const cv::Mat& l, const cv::Mat& r);
+    static void merge4(const cv::Mat& tl, const cv::Mat& tr, const cv::Mat& bl, const cv::Mat& br, cv::Mat& merged);
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -99,7 +101,7 @@ TEST_F(fisheyeTest, projectPoints)
     EXPECT_MAT_NEAR(distorted0, distorted2, 1e-10);
 }
 
-TEST_F(fisheyeTest, DISABLED_undistortImage)
+TEST_F(fisheyeTest, undistortImage)
 {
     cv::Matx33d theK = this->K;
     cv::Mat theD = cv::Mat(this->D);
@@ -386,12 +388,7 @@ TEST_F(fisheyeTest, EstimateUncertainties)
     CV_Assert(errors.alpha == 0);
 }
 
-#ifdef HAVE_TEGRA_OPTIMIZATION
-// not passing accuracy constrains
-TEST_F(fisheyeTest, DISABLED_rectify)
-#else
-TEST_F(fisheyeTest, rectify)
-#endif
+TEST_F(fisheyeTest, stereoRectify)
 {
     const std::string folder =combine(datasets_repository_path, "calib-3_stereo_from_JY");
 
@@ -407,20 +404,65 @@ TEST_F(fisheyeTest, rectify)
     cv::fisheye::stereoRectify(K1, D1, K2, D2, calibration_size, theR, theT, R1, R2, P1, P2, Q,
                       cv::CALIB_ZERO_DISPARITY, requested_size, balance, fov_scale);
 
+    // Collected with these CMake flags: -DWITH_IPP=OFF -DCV_ENABLE_INTRINSICS=OFF -DCV_DISABLE_OPTIMIZATION=ON -DCMAKE_BUILD_TYPE=Debug
+    cv::Matx33d R1_ref(
+        0.9992853269091279, 0.03779164101000276, -0.0007920188690205426,
+        -0.03778569762983931, 0.9992646472015868, 0.006511981857667881,
+        0.001037534936357442, -0.006477400933964018, 0.9999784831677112
+    );
+    cv::Matx33d R2_ref(
+        0.9994868963898833, -0.03197579751378937, -0.001868774538573449,
+        0.03196298186616116, 0.9994677442608699, -0.0065265589947392,
+        0.002076471801477729, 0.006463478587068991, 0.9999769555891836
+    );
+    cv::Matx34d P1_ref(
+        420.8551870450913, 0, 586.501617798451, 0,
+        0, 420.8551870450913, 374.7667511986098, 0,
+        0, 0, 1, 0
+    );
+    cv::Matx34d P2_ref(
+        420.8551870450913, 0, 586.501617798451, -41.77758076597302,
+        0, 420.8551870450913, 374.7667511986098, 0,
+        0, 0, 1, 0
+    );
+    cv::Matx44d Q_ref(
+        1, 0, 0, -586.501617798451,
+        0, 1, 0, -374.7667511986098,
+        0, 0, 0, 420.8551870450913,
+        0, 0, 10.07370889670733, -0
+    );
+
+    const double eps = 1e-10;
+    EXPECT_MAT_NEAR(R1_ref, R1, eps);
+    EXPECT_MAT_NEAR(R2_ref, R2, eps);
+    EXPECT_MAT_NEAR(P1_ref, P1, eps);
+    EXPECT_MAT_NEAR(P2_ref, P2, eps);
+    EXPECT_MAT_NEAR(Q_ref, Q, eps);
+
+    if (::testing::Test::HasFailure())
+    {
+        std::cout << "Actual values are:" << std::endl
+            << "R1 =" << std::endl << R1 << std::endl
+            << "R2 =" << std::endl << R2 << std::endl
+            << "P1 =" << std::endl << P1 << std::endl
+            << "P2 =" << std::endl << P2 << std::endl
+            << "Q =" << std::endl << Q << std::endl;
+    }
+
+#if 1 // Debug code
     cv::Mat lmapx, lmapy, rmapx, rmapy;
     //rewrite for fisheye
     cv::fisheye::initUndistortRectifyMap(K1, D1, R1, P1, requested_size, CV_32F, lmapx, lmapy);
     cv::fisheye::initUndistortRectifyMap(K2, D2, R2, P2, requested_size, CV_32F, rmapx, rmapy);
 
     cv::Mat l, r, lundist, rundist;
-    cv::VideoCapture lcap(combine(folder, "left/stereo_pair_%03d.jpg")),
-                     rcap(combine(folder, "right/stereo_pair_%03d.jpg"));
-
-    for(int i = 0;; ++i)
+    for (int i = 0; i < 34; ++i)
     {
-        lcap >> l; rcap >> r;
-        if (l.empty() || r.empty())
-            break;
+        SCOPED_TRACE(cv::format("image %d", i));
+        l = imread(combine(folder, cv::format("left/stereo_pair_%03d.jpg", i)), cv::IMREAD_COLOR);
+        r = imread(combine(folder, cv::format("right/stereo_pair_%03d.jpg", i)), cv::IMREAD_COLOR);
+        ASSERT_FALSE(l.empty());
+        ASSERT_FALSE(r.empty());
 
         int ndisp = 128;
         cv::rectangle(l, cv::Rect(255,       0, 829,       l.rows-1), cv::Scalar(0, 0, 255));
@@ -429,15 +471,18 @@ TEST_F(fisheyeTest, rectify)
         cv::remap(l, lundist, lmapx, lmapy, cv::INTER_LINEAR);
         cv::remap(r, rundist, rmapx, rmapy, cv::INTER_LINEAR);
 
-        cv::Mat rectification = mergeRectification(lundist, rundist);
+        for (int ii = 0; ii < lundist.rows; ii += 20)
+        {
+            cv::line(lundist, cv::Point(0, ii), cv::Point(lundist.cols, ii), cv::Scalar(0, 255, 0));
+            cv::line(rundist, cv::Point(0, ii), cv::Point(lundist.cols, ii), cv::Scalar(0, 255, 0));
+        }
 
-        cv::Mat correct = cv::imread(combine(datasets_repository_path, cv::format("rectification_AB_%03d.png", i)));
+        cv::Mat rectification;
+        merge4(l, r, lundist, rundist, rectification);
 
-        if (correct.empty())
-            cv::imwrite(combine(datasets_repository_path, cv::format("rectification_AB_%03d.png", i)), rectification);
-        else
-            EXPECT_MAT_NEAR(correct, rectification, 1e-10);
+        cv::imwrite(cv::format("fisheye_rectification_AB_%03d.png", i), rectification);
     }
+#endif
 }
 
 TEST_F(fisheyeTest, stereoCalibrate)
@@ -611,6 +656,51 @@ TEST_F(fisheyeTest, CalibrationWithDifferentPointsNumber)
         cv::noArray(), cv::noArray(), flag, cv::TermCriteria(3, 20, 1e-6));
 }
 
+TEST_F(fisheyeTest, estimateNewCameraMatrixForUndistortRectify)
+{
+    cv::Size size(1920, 1080);
+
+    cv::Mat K_fullhd(3, 3, cv::DataType<double>::type);
+    K_fullhd.at<double>(0, 0) = 600.44477382;
+    K_fullhd.at<double>(0, 1) = 0.0;
+    K_fullhd.at<double>(0, 2) = 992.06425788;
+
+    K_fullhd.at<double>(1, 0) = 0.0;
+    K_fullhd.at<double>(1, 1) = 578.99298055;
+    K_fullhd.at<double>(1, 2) = 549.26826242;
+
+    K_fullhd.at<double>(2, 0) = 0.0;
+    K_fullhd.at<double>(2, 1) = 0.0;
+    K_fullhd.at<double>(2, 2) = 1.0;
+
+    cv::Mat K_new_truth(3, 3, cv::DataType<double>::type);
+
+    K_new_truth.at<double>(0, 0) = 387.4809086880343;
+    K_new_truth.at<double>(0, 1) = 0.0;
+    K_new_truth.at<double>(0, 2) = 1036.669802754649;
+
+    K_new_truth.at<double>(1, 0) = 0.0;
+    K_new_truth.at<double>(1, 1) = 373.6375700303157;
+    K_new_truth.at<double>(1, 2) = 538.8373261247601;
+
+    K_new_truth.at<double>(2, 0) = 0.0;
+    K_new_truth.at<double>(2, 1) = 0.0;
+    K_new_truth.at<double>(2, 2) = 1.0;
+
+    cv::Mat D_fullhd(4, 1, cv::DataType<double>::type);
+    D_fullhd.at<double>(0, 0) = -0.05090103223466704;
+    D_fullhd.at<double>(1, 0) = 0.030944413642173308;
+    D_fullhd.at<double>(2, 0) = -0.021509225493198905;
+    D_fullhd.at<double>(3, 0) = 0.0043378096628297145;
+    cv::Mat E = cv::Mat::eye(3, 3, cv::DataType<double>::type);
+
+    cv::Mat K_new(3, 3, cv::DataType<double>::type);
+
+    cv::fisheye::estimateNewCameraMatrixForUndistortRectify(K_fullhd, D_fullhd, size, E, K_new, 0.0, size);
+
+    EXPECT_MAT_NEAR(K_new, K_new_truth, 1e-6);
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///  fisheyeTest::
 
@@ -644,17 +734,19 @@ std::string fisheyeTest::combine(const std::string& _item1, const std::string& _
     return item1 + (last != '/' ? "/" : "") + item2;
 }
 
-cv::Mat fisheyeTest::mergeRectification(const cv::Mat& l, const cv::Mat& r)
+void fisheyeTest::merge4(const cv::Mat& tl, const cv::Mat& tr, const cv::Mat& bl, const cv::Mat& br, cv::Mat& merged)
 {
-    CV_Assert(l.type() == r.type() && l.size() == r.size());
-    cv::Mat merged(l.rows, l.cols * 2, l.type());
-    cv::Mat lpart = merged.colRange(0, l.cols);
-    cv::Mat rpart = merged.colRange(l.cols, merged.cols);
-    l.copyTo(lpart);
-    r.copyTo(rpart);
+    int type = tl.type();
+    cv::Size sz = tl.size();
+    ASSERT_EQ(type, tr.type()); ASSERT_EQ(type, bl.type()); ASSERT_EQ(type, br.type());
+    ASSERT_EQ(sz.width, tr.cols); ASSERT_EQ(sz.width, bl.cols); ASSERT_EQ(sz.width, br.cols);
+    ASSERT_EQ(sz.height, tr.rows); ASSERT_EQ(sz.height, bl.rows); ASSERT_EQ(sz.height, br.rows);
 
-    for(int i = 0; i < l.rows; i+=20)
-        cv::line(merged, cv::Point(0, i), cv::Point(merged.cols, i), cv::Scalar(0, 255, 0));
-
-    return merged;
+    merged.create(cv::Size(sz.width * 2, sz.height * 2), type);
+    tl.copyTo(merged(cv::Rect(0, 0, sz.width, sz.height)));
+    tr.copyTo(merged(cv::Rect(sz.width, 0, sz.width, sz.height)));
+    bl.copyTo(merged(cv::Rect(0, sz.height, sz.width, sz.height)));
+    br.copyTo(merged(cv::Rect(sz.width, sz.height, sz.width, sz.height)));
 }
+
+}} // namespace

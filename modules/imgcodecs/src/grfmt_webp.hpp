@@ -47,41 +47,42 @@
 
 #ifdef HAVE_WEBP
 
-
+#include <fstream>
 
 namespace cv
 {
 
-class WebPDecoder : public BaseImageDecoder
+class WebPDecoder CV_FINAL : public BaseImageDecoder
 {
 public:
 
     WebPDecoder();
-    ~WebPDecoder();
+    ~WebPDecoder() CV_OVERRIDE;
 
-    bool readData( Mat& img );
-    bool readHeader();
-    void close();
+    bool readData( Mat& img ) CV_OVERRIDE;
+    bool readHeader() CV_OVERRIDE;
 
-    size_t signatureLength() const;
-    bool checkSignature( const String& signature) const;
+    size_t signatureLength() const CV_OVERRIDE;
+    bool checkSignature( const String& signature) const CV_OVERRIDE;
 
-    ImageDecoder newDecoder() const;
+    ImageDecoder newDecoder() const CV_OVERRIDE;
 
 protected:
+    std::ifstream fs;
+    size_t fs_size;
     Mat data;
     int channels;
 };
 
-class WebPEncoder : public BaseImageEncoder
+class WebPEncoder CV_FINAL : public BaseImageEncoder
 {
 public:
     WebPEncoder();
-    ~WebPEncoder();
+    ~WebPEncoder() CV_OVERRIDE;
 
-    bool write(const Mat& img, const std::vector<int>& params);
+    bool write(const Mat& img, const std::vector<int>& params) CV_OVERRIDE;
 
-    ImageEncoder newEncoder() const;
+    ImageEncoder newEncoder() const CV_OVERRIDE;
 };
 
 }

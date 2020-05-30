@@ -43,14 +43,9 @@
 #include <algorithm>
 #include <functional>
 
-namespace cvtest
+namespace opencv_test
 {
-
-using std::tr1::tuple;
-using std::tr1::get;
 using namespace perf;
-using namespace testing;
-using namespace cv;
 
 CV_ENUM(Method, RANSAC, LMEDS)
 typedef tuple<int, double, Method, size_t> AffineParams;
@@ -167,4 +162,4 @@ PERF_TEST_P( EstimateAffine, EstimateAffinePartial2D, ESTIMATE_PARAMS )
     SANITY_CHECK_NOTHING();
 }
 
-} // namespace cvtest
+} // namespace opencv_test

@@ -1,13 +1,11 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
 #include "perf_precomp.hpp"
 
-using namespace std;
-using namespace cv;
-using namespace perf;
-using namespace testing;
-using std::tr1::make_tuple;
-using std::tr1::get;
+namespace opencv_test {
 
-typedef std::tr1::tuple<Size, int, int> Size_Ksize_BorderType_t;
+typedef tuple<Size, int, int> Size_Ksize_BorderType_t;
 typedef perf::TestBaseWithParam<Size_Ksize_BorderType_t> Size_Ksize_BorderType;
 
 PERF_TEST_P( Size_Ksize_BorderType, spatialGradient,
@@ -18,9 +16,9 @@ PERF_TEST_P( Size_Ksize_BorderType, spatialGradient,
     )
 )
 {
-    Size size = std::tr1::get<0>(GetParam());
-    int ksize = std::tr1::get<1>(GetParam());
-    int borderType = std::tr1::get<2>(GetParam());
+    Size size = get<0>(GetParam());
+    int ksize = get<1>(GetParam());
+    int borderType = get<2>(GetParam());
 
     Mat src(size, CV_8UC1);
     Mat dx(size, CV_16SC1);
@@ -33,3 +31,5 @@ PERF_TEST_P( Size_Ksize_BorderType, spatialGradient,
     SANITY_CHECK(dx);
     SANITY_CHECK(dy);
 }
+
+} // namespace

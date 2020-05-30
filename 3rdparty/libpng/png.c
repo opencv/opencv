@@ -1,10 +1,10 @@
 
 /* png.c - location for general purpose libpng functions
  *
- * Last changed in libpng 1.6.24 [August 4, 2016]
- * Copyright (c) 1998-2002,2004,2006-2015 Glenn Randers-Pehrson
- * (Version 0.96 Copyright (c) 1996, 1997 Andreas Dilger)
- * (Version 0.88 Copyright (c) 1995, 1996 Guy Eric Schalnat, Group 42, Inc.)
+ * Copyright (c) 2018-2019 Cosmin Truta
+ * Copyright (c) 1998-2002,2004,2006-2018 Glenn Randers-Pehrson
+ * Copyright (c) 1996-1997 Andreas Dilger
+ * Copyright (c) 1995-1996 Guy Eric Schalnat, Group 42, Inc.
  *
  * This code is released under the libpng license.
  * For conditions of distribution and use, see the disclaimer
@@ -14,7 +14,27 @@
 #include "pngpriv.h"
 
 /* Generate a compiler error if there is an old png.h in the search path. */
-typedef png_libpng_version_1_6_24 Your_png_h_is_not_version_1_6_24;
+typedef png_libpng_version_1_6_37 Your_png_h_is_not_version_1_6_37;
+
+#ifdef __GNUC__
+/* The version tests may need to be added to, but the problem warning has
+ * consistently been fixed in GCC versions which obtain wide-spread release.
+ * The problem is that many versions of GCC rearrange comparison expressions in
+ * the optimizer in such a way that the results of the comparison will change
+ * if signed integer overflow occurs.  Such comparisons are not permitted in
+ * ANSI C90, however GCC isn't clever enough to work out that that do not occur
+ * below in png_ascii_from_fp and png_muldiv, so it produces a warning with
+ * -Wextra.  Unfortunately this is highly dependent on the optimizer and the
+ * machine architecture so the warning comes and goes unpredictably and is
+ * impossible to "fix", even were that a good idea.
+ */
+#if __GNUC__ == 7 && __GNUC_MINOR__ == 1
+#define GCC_STRICT_OVERFLOW 1
+#endif /* GNU 7.1.x */
+#endif /* GNU */
+#ifndef GCC_STRICT_OVERFLOW
+#define GCC_STRICT_OVERFLOW 0
+#endif
 
 /* Tells libpng that we have already handled the first "num_bytes" bytes
  * of the PNG file signature.  If the PNG data is embedded into another
@@ -51,7 +71,7 @@ png_set_sig_bytes(png_structrp png_ptr, int num_bytes)
  * PNG signature (this is the same behavior as strcmp, memcmp, etc).
  */
 int PNGAPI
-png_sig_cmp(png_const_bytep sig, png_size_t start, png_size_t num_to_check)
+png_sig_cmp(png_const_bytep sig, size_t start, size_t num_to_check)
 {
    png_byte png_signature[8] = {137, 80, 78, 71, 13, 10, 26, 10};
 
@@ -116,7 +136,7 @@ png_reset_crc(png_structrp png_ptr)
  * trouble of calculating it.
  */
 void /* PRIVATE */
-png_calculate_crc(png_structrp png_ptr, png_const_bytep ptr, png_size_t length)
+png_calculate_crc(png_structrp png_ptr, png_const_bytep ptr, size_t length)
 {
    int need_crc = 1;
 
@@ -401,7 +421,7 @@ png_destroy_info_struct(png_const_structrp png_ptr, png_infopp info_ptr_ptr)
  * those cases where it does anything other than a memset.
  */
 PNG_FUNCTION(void,PNGAPI
-png_info_init_3,(png_infopp ptr_ptr, png_size_t png_info_struct_size),
+png_info_init_3,(png_infopp ptr_ptr, size_t png_info_struct_size),
     PNG_DEPRECATED)
 {
    png_inforp info_ptr = *ptr_ptr;
@@ -458,7 +478,7 @@ png_free_data(png_const_structrp png_ptr, png_inforp info_ptr, png_uint_32 mask,
 
 #ifdef PNG_TEXT_SUPPORTED
    /* Free text item num or (if num == -1) all text items */
-   if (info_ptr->text != 0 &&
+   if (info_ptr->text != NULL &&
        ((mask & PNG_FREE_TEXT) & info_ptr->free_me) != 0)
    {
       if (num != -1)
@@ -477,6 +497,7 @@ png_free_data(png_const_structrp png_ptr, png_inforp info_ptr, png_uint_32 mask,
          png_free(png_ptr, info_ptr->text);
          info_ptr->text = NULL;
          info_ptr->num_text = 0;
+         info_ptr->max_text = 0;
       }
    }
 #endif
@@ -541,7 +562,7 @@ png_free_data(png_const_structrp png_ptr, png_inforp info_ptr, png_uint_32 mask,
 
 #ifdef PNG_sPLT_SUPPORTED
    /* Free a given sPLT entry, or (if num == -1) all sPLT entries */
-   if (info_ptr->splt_palettes != 0 &&
+   if (info_ptr->splt_palettes != NULL &&
        ((mask & PNG_FREE_SPLT) & info_ptr->free_me) != 0)
    {
       if (num != -1)
@@ -571,7 +592,7 @@ png_free_data(png_const_structrp png_ptr, png_inforp info_ptr, png_uint_32 mask,
 #endif
 
 #ifdef PNG_STORE_UNKNOWN_CHUNKS_SUPPORTED
-   if (info_ptr->unknown_chunks != 0 &&
+   if (info_ptr->unknown_chunks != NULL &&
        ((mask & PNG_FREE_UNKN) & info_ptr->free_me) != 0)
    {
       if (num != -1)
@@ -591,6 +612,26 @@ png_free_data(png_const_structrp png_ptr, png_inforp info_ptr, png_uint_32 mask,
          info_ptr->unknown_chunks = NULL;
          info_ptr->unknown_chunks_num = 0;
       }
+   }
+#endif
+
+#ifdef PNG_eXIf_SUPPORTED
+   /* Free any eXIf entry */
+   if (((mask & PNG_FREE_EXIF) & info_ptr->free_me) != 0)
+   {
+# ifdef PNG_READ_eXIf_SUPPORTED
+      if (info_ptr->eXIf_buf)
+      {
+         png_free(png_ptr, info_ptr->eXIf_buf);
+         info_ptr->eXIf_buf = NULL;
+      }
+# endif
+      if (info_ptr->exif)
+      {
+         png_free(png_ptr, info_ptr->exif);
+         info_ptr->exif = NULL;
+      }
+      info_ptr->valid &= ~PNG_INFO_eXIf;
    }
 #endif
 
@@ -617,7 +658,7 @@ png_free_data(png_const_structrp png_ptr, png_inforp info_ptr, png_uint_32 mask,
    /* Free any image bits attached to the info structure */
    if (((mask & PNG_FREE_ROWS) & info_ptr->free_me) != 0)
    {
-      if (info_ptr->row_pointers != 0)
+      if (info_ptr->row_pointers != NULL)
       {
          png_uint_32 row;
          for (row = 0; row < info_ptr->height; row++)
@@ -684,7 +725,7 @@ png_init_io(png_structrp png_ptr, png_FILE_p fp)
 void PNGAPI
 png_save_int_32(png_bytep buf, png_int_32 i)
 {
-   png_save_uint_32(buf, i);
+   png_save_uint_32(buf, (png_uint_32)i);
 }
 #  endif
 
@@ -695,7 +736,7 @@ png_save_int_32(png_bytep buf, png_int_32 i)
 int PNGAPI
 png_convert_to_rfc1123_buffer(char out[29], png_const_timep ptime)
 {
-   static PNG_CONST char short_months[12][4] =
+   static const char short_months[12][4] =
         {"Jan", "Feb", "Mar", "Apr", "May", "Jun",
          "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 
@@ -773,20 +814,14 @@ png_get_copyright(png_const_structrp png_ptr)
 #ifdef PNG_STRING_COPYRIGHT
    return PNG_STRING_COPYRIGHT
 #else
-#  ifdef __STDC__
    return PNG_STRING_NEWLINE \
-      "libpng version 1.6.24 - August 4, 2016" PNG_STRING_NEWLINE \
-      "Copyright (c) 1998-2002,2004,2006-2016 Glenn Randers-Pehrson" \
+      "libpng version 1.6.37" PNG_STRING_NEWLINE \
+      "Copyright (c) 2018-2019 Cosmin Truta" PNG_STRING_NEWLINE \
+      "Copyright (c) 1998-2002,2004,2006-2018 Glenn Randers-Pehrson" \
       PNG_STRING_NEWLINE \
       "Copyright (c) 1996-1997 Andreas Dilger" PNG_STRING_NEWLINE \
       "Copyright (c) 1995-1996 Guy Eric Schalnat, Group 42, Inc." \
       PNG_STRING_NEWLINE;
-#  else
-   return "libpng version 1.6.24 - August 4, 2016\
-      Copyright (c) 1998-2002,2004,2006-2016 Glenn Randers-Pehrson\
-      Copyright (c) 1996-1997 Andreas Dilger\
-      Copyright (c) 1995-1996 Guy Eric Schalnat, Group 42, Inc.";
-#  endif
 #endif
 }
 
@@ -901,7 +936,7 @@ png_handle_as_unknown(png_const_structrp png_ptr, png_const_bytep chunk_name)
 
    /* The code is the fifth byte after each four byte string.  Historically this
     * code was always searched from the end of the list, this is no longer
-    * necessary because the 'set' routine handles duplicate entries correcty.
+    * necessary because the 'set' routine handles duplicate entries correctly.
     */
    do /* num_chunk_list > 0, so at least one */
    {
@@ -1080,7 +1115,7 @@ png_colorspace_set_gamma(png_const_structrp png_ptr,
     png_colorspacerp colorspace, png_fixed_point gAMA)
 {
    /* Changed in libpng-1.5.4 to limit the values to ensure overflow can't
-    * occur.  Since the fixed point representation is asymetrical it is
+    * occur.  Since the fixed point representation is asymmetrical it is
     * possible for 1/gamma to overflow the limit of 21474 and this means the
     * gamma value must be at least 5/100000 and hence at most 20000.0.  For
     * safety the limits here are a little narrower.  The values are 0.00016 to
@@ -1872,12 +1907,12 @@ png_colorspace_set_sRGB(png_const_structrp png_ptr, png_colorspacerp colorspace,
     */
    if (intent < 0 || intent >= PNG_sRGB_INTENT_LAST)
       return png_icc_profile_error(png_ptr, colorspace, "sRGB",
-          (unsigned)intent, "invalid sRGB rendering intent");
+          (png_alloc_size_t)intent, "invalid sRGB rendering intent");
 
    if ((colorspace->flags & PNG_COLORSPACE_HAVE_INTENT) != 0 &&
        colorspace->rendering_intent != intent)
       return png_icc_profile_error(png_ptr, colorspace, "sRGB",
-         (unsigned)intent, "inconsistent rendering intents");
+         (png_alloc_size_t)intent, "inconsistent rendering intents");
 
    if ((colorspace->flags & PNG_COLORSPACE_FROM_sRGB) != 0)
    {
@@ -1931,16 +1966,49 @@ png_colorspace_set_sRGB(png_const_structrp png_ptr, png_colorspacerp colorspace,
 static const png_byte D50_nCIEXYZ[12] =
    { 0x00, 0x00, 0xf6, 0xd6, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0xd3, 0x2d };
 
-int /* PRIVATE */
-png_icc_check_length(png_const_structrp png_ptr, png_colorspacerp colorspace,
+static int /* bool */
+icc_check_length(png_const_structrp png_ptr, png_colorspacerp colorspace,
     png_const_charp name, png_uint_32 profile_length)
 {
    if (profile_length < 132)
       return png_icc_profile_error(png_ptr, colorspace, name, profile_length,
           "too short");
+   return 1;
+}
+
+#ifdef PNG_READ_iCCP_SUPPORTED
+int /* PRIVATE */
+png_icc_check_length(png_const_structrp png_ptr, png_colorspacerp colorspace,
+    png_const_charp name, png_uint_32 profile_length)
+{
+   if (!icc_check_length(png_ptr, colorspace, name, profile_length))
+      return 0;
+
+   /* This needs to be here because the 'normal' check is in
+    * png_decompress_chunk, yet this happens after the attempt to
+    * png_malloc_base the required data.  We only need this on read; on write
+    * the caller supplies the profile buffer so libpng doesn't allocate it.  See
+    * the call to icc_check_length below (the write case).
+    */
+#  ifdef PNG_SET_USER_LIMITS_SUPPORTED
+      else if (png_ptr->user_chunk_malloc_max > 0 &&
+               png_ptr->user_chunk_malloc_max < profile_length)
+         return png_icc_profile_error(png_ptr, colorspace, name, profile_length,
+             "exceeds application limits");
+#  elif PNG_USER_CHUNK_MALLOC_MAX > 0
+      else if (PNG_USER_CHUNK_MALLOC_MAX < profile_length)
+         return png_icc_profile_error(png_ptr, colorspace, name, profile_length,
+             "exceeds libpng limits");
+#  else /* !SET_USER_LIMITS */
+      /* This will get compiled out on all 32-bit and better systems. */
+      else if (PNG_SIZE_MAX < profile_length)
+         return png_icc_profile_error(png_ptr, colorspace, name, profile_length,
+             "exceeds system limits");
+#  endif /* !SET_USER_LIMITS */
 
    return 1;
 }
+#endif /* READ_iCCP */
 
 int /* PRIVATE */
 png_icc_check_header(png_const_structrp png_ptr, png_colorspacerp colorspace,
@@ -1993,7 +2061,7 @@ png_icc_check_header(png_const_structrp png_ptr, png_colorspacerp colorspace,
     */
 
    /* Data checks (could be skipped).  These checks must be independent of the
-    * version number; however, the version number doesn't accomodate changes in
+    * version number; however, the version number doesn't accommodate changes in
     * the header fields (just the known tags and the interpretation of the
     * data.)
     */
@@ -2149,15 +2217,6 @@ png_icc_check_tag_table(png_const_structrp png_ptr, png_colorspacerp colorspace,
        * being in range.  All defined tag types have an 8 byte header - a 4 byte
        * type signature then 0.
        */
-      if ((tag_start & 3) != 0)
-      {
-         /* CNHP730S.icc shipped with Microsoft Windows 64 violates this, it is
-          * only a warning here because libpng does not care about the
-          * alignment.
-          */
-         (void)png_icc_profile_error(png_ptr, NULL, name, tag_id,
-             "ICC profile tag start not a multiple of 4");
-      }
 
       /* This is a hard error; potentially it can cause read outside the
        * profile.
@@ -2165,6 +2224,16 @@ png_icc_check_tag_table(png_const_structrp png_ptr, png_colorspacerp colorspace,
       if (tag_start > profile_length || tag_length > profile_length - tag_start)
          return png_icc_profile_error(png_ptr, colorspace, name, tag_id,
              "ICC profile tag outside profile");
+
+      if ((tag_start & 3) != 0)
+      {
+         /* CNHP730S.icc shipped with Microsoft Windows 64 violates this; it is
+          * only a warning here because libpng does not care about the
+          * alignment.
+          */
+         (void)png_icc_profile_error(png_ptr, NULL, name, tag_id,
+             "ICC profile tag start not a multiple of 4");
+      }
    }
 
    return 1; /* success, maybe with warnings */
@@ -2377,7 +2446,7 @@ png_colorspace_set_ICC(png_const_structrp png_ptr, png_colorspacerp colorspace,
    if ((colorspace->flags & PNG_COLORSPACE_INVALID) != 0)
       return 0;
 
-   if (png_icc_check_length(png_ptr, colorspace, name, profile_length) != 0 &&
+   if (icc_check_length(png_ptr, colorspace, name, profile_length) != 0 &&
        png_icc_check_header(png_ptr, colorspace, name, profile_length, profile,
            color_type) != 0 &&
        png_icc_check_tag_table(png_ptr, colorspace, name, profile_length,
@@ -2495,7 +2564,7 @@ png_check_IHDR(png_const_structrp png_ptr,
       error = 1;
    }
 
-   if (png_gt(((width + 7) & (~7)),
+   if (png_gt(((width + 7) & (~7U)),
        ((PNG_SIZE_MAX
            - 48        /* big_row_buf hack */
            - 1)        /* filter byte */
@@ -2632,7 +2701,7 @@ png_check_IHDR(png_const_structrp png_ptr,
 
 #if defined(PNG_sCAL_SUPPORTED) || defined(PNG_pCAL_SUPPORTED)
 /* ASCII to fp functions */
-/* Check an ASCII formated floating point value, see the more detailed
+/* Check an ASCII formatted floating point value, see the more detailed
  * comments in pngpriv.h
  */
 /* The following is used internally to preserve the sticky flags */
@@ -2640,11 +2709,11 @@ png_check_IHDR(png_const_structrp png_ptr,
 #define png_fp_set(state, value) ((state) = (value) | ((state) & PNG_FP_STICKY))
 
 int /* PRIVATE */
-png_check_fp_number(png_const_charp string, png_size_t size, int *statep,
+png_check_fp_number(png_const_charp string, size_t size, int *statep,
     png_size_tp whereami)
 {
    int state = *statep;
-   png_size_t i = *whereami;
+   size_t i = *whereami;
 
    while (i < size)
    {
@@ -2767,10 +2836,10 @@ PNG_FP_End:
 
 /* The same but for a complete string. */
 int
-png_check_fp_string(png_const_charp string, png_size_t size)
+png_check_fp_string(png_const_charp string, size_t size)
 {
    int        state=0;
-   png_size_t char_index=0;
+   size_t char_index=0;
 
    if (png_check_fp_number(string, size, &state, &char_index) != 0 &&
       (char_index == size || string[char_index] == 0))
@@ -2797,7 +2866,7 @@ png_pow10(int power)
    if (power < 0)
    {
       if (power < DBL_MIN_10_EXP) return 0;
-      recip = 1, power = -power;
+      recip = 1; power = -power;
    }
 
    if (power > 0)
@@ -2822,8 +2891,16 @@ png_pow10(int power)
 /* Function to format a floating point value in ASCII with a given
  * precision.
  */
+#if GCC_STRICT_OVERFLOW
+#pragma GCC diagnostic push
+/* The problem arises below with exp_b10, which can never overflow because it
+ * comes, originally, from frexp and is therefore limited to a range which is
+ * typically +/-710 (log2(DBL_MAX)/log2(DBL_MIN)).
+ */
+#pragma GCC diagnostic warning "-Wstrict-overflow=2"
+#endif /* GCC_STRICT_OVERFLOW */
 void /* PRIVATE */
-png_ascii_from_fp(png_const_structrp png_ptr, png_charp ascii, png_size_t size,
+png_ascii_from_fp(png_const_structrp png_ptr, png_charp ascii, size_t size,
     double fp, unsigned int precision)
 {
    /* We use standard functions from math.h, but not printf because
@@ -2875,7 +2952,9 @@ png_ascii_from_fp(png_const_structrp png_ptr, png_charp ascii, png_size_t size,
             double test = png_pow10(exp_b10+1);
 
             if (test <= DBL_MAX)
-               ++exp_b10, base = test;
+            {
+               ++exp_b10; base = test;
+            }
 
             else
                break;
@@ -2889,7 +2968,10 @@ png_ascii_from_fp(png_const_structrp png_ptr, png_charp ascii, png_size_t size,
           * test on DBL_MAX above.
           */
          fp /= base;
-         while (fp >= 1) fp /= 10, ++exp_b10;
+         while (fp >= 1)
+         {
+            fp /= 10; ++exp_b10;
+         }
 
          /* Because of the code above fp may, at this point, be
           * less than .1, this is ok because the code below can
@@ -2906,7 +2988,7 @@ png_ascii_from_fp(png_const_structrp png_ptr, png_charp ascii, png_size_t size,
              */
             if (exp_b10 < 0 && exp_b10 > -3) /* PLUS 3 TOTAL 4 */
             {
-               czero = -exp_b10; /* PLUS 2 digits: TOTAL 3 */
+               czero = 0U-exp_b10; /* PLUS 2 digits: TOTAL 3 */
                exp_b10 = 0;      /* Dot added below before first output. */
             }
             else
@@ -2940,7 +3022,7 @@ png_ascii_from_fp(png_const_structrp png_ptr, png_charp ascii, png_size_t size,
                      /* Rounding up to 10, handle that here. */
                      if (czero > 0)
                      {
-                        --czero, d = 1;
+                        --czero; d = 1;
                         if (cdigits == 0) --clead;
                      }
                      else
@@ -2954,7 +3036,7 @@ png_ascii_from_fp(png_const_structrp png_ptr, png_charp ascii, png_size_t size,
 
                            else if (ch == 46)
                            {
-                              ch = *--ascii, ++size;
+                              ch = *--ascii; ++size;
                               /* Advance exp_b10 to '1', so that the
                                * decimal point happens after the
                                * previous digit.
@@ -2981,7 +3063,9 @@ png_ascii_from_fp(png_const_structrp png_ptr, png_charp ascii, png_size_t size,
                               int ch = *--ascii;
 
                               if (ch == 46)
-                                 ++size, exp_b10 = 1;
+                              {
+                                 ++size; exp_b10 = 1;
+                              }
 
                               /* Else lost a leading zero, so 'exp_b10' is
                                * still ok at (-1)
@@ -3017,21 +3101,26 @@ png_ascii_from_fp(png_const_structrp png_ptr, png_charp ascii, png_size_t size,
                       */
                      if (exp_b10 != (-1))
                      {
-                        if (exp_b10 == 0) *ascii++ = 46, --size;
+                        if (exp_b10 == 0)
+                        {
+                           *ascii++ = 46; --size;
+                        }
                         /* PLUS 1: TOTAL 4 */
                         --exp_b10;
                      }
-                     *ascii++ = 48, --czero;
+                     *ascii++ = 48; --czero;
                   }
 
                   if (exp_b10 != (-1))
                   {
                      if (exp_b10 == 0)
-                        *ascii++ = 46, --size; /* counted above */
+                     {
+                        *ascii++ = 46; --size; /* counted above */
+                     }
 
                      --exp_b10;
                   }
-                  *ascii++ = (char)(48 + (int)d), ++cdigits;
+                  *ascii++ = (char)(48 + (int)d); ++cdigits;
                }
             }
             while (cdigits+czero < precision+clead && fp > DBL_MIN);
@@ -3039,11 +3128,11 @@ png_ascii_from_fp(png_const_structrp png_ptr, png_charp ascii, png_size_t size,
             /* The total output count (max) is now 4+precision */
 
             /* Check for an exponent, if we don't need one we are
-             * done and just need to terminate the string.  At
-             * this point exp_b10==(-1) is effectively if flag - it got
-             * to '-1' because of the decrement after outputting
-             * the decimal point above (the exponent required is
-             * *not* -1!)
+             * done and just need to terminate the string.  At this
+             * point, exp_b10==(-1) is effectively a flag: it got
+             * to '-1' because of the decrement, after outputting
+             * the decimal point above. (The exponent required is
+             * *not* -1.)
              */
             if (exp_b10 >= (-1) && exp_b10 <= 2)
             {
@@ -3054,7 +3143,7 @@ png_ascii_from_fp(png_const_structrp png_ptr, png_charp ascii, png_size_t size,
                 * zeros were *not* output, so this doesn't increase
                 * the output count.
                 */
-               while (--exp_b10 >= 0) *ascii++ = 48;
+               while (exp_b10-- > 0) *ascii++ = 48;
 
                *ascii = 0;
 
@@ -3072,7 +3161,7 @@ png_ascii_from_fp(png_const_structrp png_ptr, png_charp ascii, png_size_t size,
              */
             size -= cdigits;
 
-            *ascii++ = 69, --size;    /* 'E': PLUS 1 TOTAL 2+precision */
+            *ascii++ = 69; --size;    /* 'E': PLUS 1 TOTAL 2+precision */
 
             /* The following use of an unsigned temporary avoids ambiguities in
              * the signed arithmetic on exp_b10 and permits GCC at least to do
@@ -3083,12 +3172,12 @@ png_ascii_from_fp(png_const_structrp png_ptr, png_charp ascii, png_size_t size,
 
                if (exp_b10 < 0)
                {
-                  *ascii++ = 45, --size; /* '-': PLUS 1 TOTAL 3+precision */
-                  uexp_b10 = -exp_b10;
+                  *ascii++ = 45; --size; /* '-': PLUS 1 TOTAL 3+precision */
+                  uexp_b10 = 0U-exp_b10;
                }
 
                else
-                  uexp_b10 = exp_b10;
+                  uexp_b10 = 0U+exp_b10;
 
                cdigits = 0;
 
@@ -3131,6 +3220,9 @@ png_ascii_from_fp(png_const_structrp png_ptr, png_charp ascii, png_size_t size,
    /* Here on buffer too small. */
    png_error(png_ptr, "ASCII conversion buffer too small");
 }
+#if GCC_STRICT_OVERFLOW
+#pragma GCC diagnostic pop
+#endif /* GCC_STRICT_OVERFLOW */
 
 #  endif /* FLOATING_POINT */
 
@@ -3139,7 +3231,7 @@ png_ascii_from_fp(png_const_structrp png_ptr, png_charp ascii, png_size_t size,
  */
 void /* PRIVATE */
 png_ascii_from_fixed(png_const_structrp png_ptr, png_charp ascii,
-    png_size_t size, png_fixed_point fp)
+    size_t size, png_fixed_point fp)
 {
    /* Require space for 10 decimal digits, a decimal point, a minus sign and a
     * trailing \0, 13 characters:
@@ -3150,9 +3242,11 @@ png_ascii_from_fixed(png_const_structrp png_ptr, png_charp ascii,
 
       /* Avoid overflow here on the minimum integer. */
       if (fp < 0)
-         *ascii++ = 45, num = -fp;
+      {
+         *ascii++ = 45; num = (png_uint_32)(-fp);
+      }
       else
-         num = fp;
+         num = (png_uint_32)fp;
 
       if (num <= 0x80000000) /* else overflowed */
       {
@@ -3188,7 +3282,10 @@ png_ascii_from_fixed(png_const_structrp png_ptr, png_charp ascii,
                 * then ndigits digits to first:
                 */
                i = 5;
-               while (ndigits < i) *ascii++ = 48, --i;
+               while (ndigits < i)
+               {
+                  *ascii++ = 48; --i;
+               }
                while (ndigits >= first) *ascii++ = digits[--ndigits];
                /* Don't output the trailing zeros! */
             }
@@ -3239,6 +3336,15 @@ png_fixed(png_const_structrp png_ptr, double fp, png_const_charp text)
  * the nearest .00001).  Overflow and divide by zero are signalled in
  * the result, a boolean - true on success, false on overflow.
  */
+#if GCC_STRICT_OVERFLOW /* from above */
+/* It is not obvious which comparison below gets optimized in such a way that
+ * signed overflow would change the result; looking through the code does not
+ * reveal any tests which have the form GCC complains about, so presumably the
+ * optimizer is moving an add or subtract into the 'if' somewhere.
+ */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic warning "-Wstrict-overflow=2"
+#endif /* GCC_STRICT_OVERFLOW */
 int
 png_muldiv(png_fixed_point_p res, png_fixed_point a, png_int_32 times,
     png_int_32 divisor)
@@ -3353,6 +3459,9 @@ png_muldiv(png_fixed_point_p res, png_fixed_point a, png_int_32 times,
 
    return 0;
 }
+#if GCC_STRICT_OVERFLOW
+#pragma GCC diagnostic pop
+#endif /* GCC_STRICT_OVERFLOW */
 #endif /* READ_GAMMA || INCH_CONVERSIONS */
 
 #if defined(PNG_READ_GAMMA_SUPPORTED) || defined(PNG_INCH_CONVERSIONS_SUPPORTED)
@@ -3646,7 +3755,7 @@ png_log16bit(png_uint_32 x)
  * of getting this accuracy in practice.
  *
  * To deal with this the following exp() function works out the exponent of the
- * frational part of the logarithm by using an accurate 32-bit value from the
+ * fractional part of the logarithm by using an accurate 32-bit value from the
  * top four fractional bits then multiplying in the remaining bits.
  */
 static const png_uint_32
@@ -3861,18 +3970,18 @@ png_gamma_correct(png_structrp png_ptr, unsigned int value,
  */
 static void
 png_build_16bit_table(png_structrp png_ptr, png_uint_16pp *ptable,
-    PNG_CONST unsigned int shift, PNG_CONST png_fixed_point gamma_val)
+    unsigned int shift, png_fixed_point gamma_val)
 {
    /* Various values derived from 'shift': */
-   PNG_CONST unsigned int num = 1U << (8U - shift);
+   unsigned int num = 1U << (8U - shift);
 #ifdef PNG_FLOATING_ARITHMETIC_SUPPORTED
    /* CSE the division and work round wacky GCC warnings (see the comments
     * in png_gamma_8bit_correct for where these come from.)
     */
-   PNG_CONST double fmax = 1./(((png_int_32)1 << (16U - shift))-1);
+   double fmax = 1.0 / (((png_int_32)1 << (16U - shift)) - 1);
 #endif
-   PNG_CONST unsigned int max = (1U << (16U - shift))-1U;
-   PNG_CONST unsigned int max_by_2 = 1U << (15U-shift);
+   unsigned int max = (1U << (16U - shift)) - 1U;
+   unsigned int max_by_2 = 1U << (15U - shift);
    unsigned int i;
 
    png_uint_16pp table = *ptable =
@@ -3938,10 +4047,10 @@ png_build_16bit_table(png_structrp png_ptr, png_uint_16pp *ptable,
  */
 static void
 png_build_16to8_table(png_structrp png_ptr, png_uint_16pp *ptable,
-    PNG_CONST unsigned int shift, PNG_CONST png_fixed_point gamma_val)
+    unsigned int shift, png_fixed_point gamma_val)
 {
-   PNG_CONST unsigned int num = 1U << (8U - shift);
-   PNG_CONST unsigned int max = (1U << (16U - shift))-1U;
+   unsigned int num = 1U << (8U - shift);
+   unsigned int max = (1U << (16U - shift))-1U;
    unsigned int i;
    png_uint_32 last;
 
@@ -4006,7 +4115,7 @@ png_build_16to8_table(png_structrp png_ptr, png_uint_16pp *ptable,
  */
 static void
 png_build_8bit_table(png_structrp png_ptr, png_bytepp ptable,
-    PNG_CONST png_fixed_point gamma_val)
+    png_fixed_point gamma_val)
 {
    unsigned int i;
    png_bytep table = *ptable = (png_bytep)png_malloc(png_ptr, 256);
@@ -4225,13 +4334,13 @@ png_set_option(png_structrp png_ptr, int option, int onoff)
    if (png_ptr != NULL && option >= 0 && option < PNG_OPTION_NEXT &&
       (option & 1) == 0)
    {
-      int mask = 3 << option;
-      int setting = (2 + (onoff != 0)) << option;
-      int current = png_ptr->options;
+      png_uint_32 mask = 3U << option;
+      png_uint_32 setting = (2U + (onoff != 0)) << option;
+      png_uint_32 current = png_ptr->options;
 
-      png_ptr->options = (png_byte)(((current & ~mask) | setting) & 0xff);
+      png_ptr->options = (png_uint_32)((current & ~mask) | setting);
 
-      return (current & mask) >> option;
+      return (int)(current & mask) >> option;
    }
 
    return PNG_OPTION_INVALID;
@@ -4243,7 +4352,7 @@ png_set_option(png_structrp png_ptr, int option, int onoff)
    defined(PNG_SIMPLIFIED_WRITE_SUPPORTED)
 /* sRGB conversion tables; these are machine generated with the code in
  * contrib/tools/makesRGB.c.  The actual sRGB transfer curve defined in the
- * specification (see the article at http://en.wikipedia.org/wiki/SRGB)
+ * specification (see the article at https://en.wikipedia.org/wiki/SRGB)
  * is used, not the gamma=1/2.2 approximation use elsewhere in libpng.
  * The sRGB to linear table is exact (to the nearest 16-bit linear fraction).
  * The inverse (linear to sRGB) table has accuracies as follows:
@@ -4479,8 +4588,7 @@ png_image_free(png_imagep image)
    if (image != NULL && image->opaque != NULL &&
       image->opaque->error_buf == NULL)
    {
-      /* Ignore errors here: */
-      (void)png_safe_execute(image, png_image_free_function, image);
+      png_image_free_function(image);
       image->opaque = NULL;
    }
 }

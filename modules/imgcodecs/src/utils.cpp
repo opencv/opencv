@@ -42,70 +42,85 @@
 #include "precomp.hpp"
 #include "utils.hpp"
 
+namespace cv {
+
+int validateToInt(size_t sz)
+{
+    int valueInt = (int)sz;
+    CV_Assert((size_t)valueInt == sz);
+    return valueInt;
+}
+
 #define  SCALE  14
 #define  cR  (int)(0.299*(1 << SCALE) + 0.5)
 #define  cG  (int)(0.587*(1 << SCALE) + 0.5)
 #define  cB  ((1 << SCALE) - cR - cG)
 
-void icvCvt_BGR2Gray_8u_C3C1R( const uchar* rgb, int rgb_step,
+void icvCvt_BGR2Gray_8u_C3C1R( const uchar* bgr, int bgr_step,
                                uchar* gray, int gray_step,
-                               CvSize size, int _swap_rb )
+                               Size size, int _swap_rb )
 {
     int i;
-    int swap_rb = _swap_rb ? 2 : 0;
     for( ; size.height--; gray += gray_step )
     {
-        for( i = 0; i < size.width; i++, rgb += 3 )
+        short cBGR0 = cB;
+        short cBGR2 = cR;
+        if (_swap_rb) std::swap(cBGR0, cBGR2);
+        for( i = 0; i < size.width; i++, bgr += 3 )
         {
-            int t = descale( rgb[swap_rb]*cB + rgb[1]*cG + rgb[swap_rb^2]*cR, SCALE );
+            int t = descale( bgr[0]*cBGR0 + bgr[1]*cG + bgr[2]*cBGR2, SCALE );
             gray[i] = (uchar)t;
         }
 
-        rgb += rgb_step - size.width*3;
+        bgr += bgr_step - size.width*3;
     }
 }
 
 
-void icvCvt_BGRA2Gray_16u_CnC1R( const ushort* rgb, int rgb_step,
+void icvCvt_BGRA2Gray_16u_CnC1R( const ushort* bgr, int bgr_step,
                                 ushort* gray, int gray_step,
-                                CvSize size, int ncn, int _swap_rb )
+                                Size size, int ncn, int _swap_rb )
 {
     int i;
-    int swap_rb = _swap_rb ? 2 : 0;
     for( ; size.height--; gray += gray_step )
     {
-        for( i = 0; i < size.width; i++, rgb += ncn )
+        short cBGR0 = cB;
+        short cBGR2 = cR;
+        if (_swap_rb) std::swap(cBGR0, cBGR2);
+        for( i = 0; i < size.width; i++, bgr += ncn )
         {
-            int t = descale( rgb[swap_rb]*cB + rgb[1]*cG + rgb[swap_rb^2]*cR, SCALE );
+            int t = descale( bgr[0]*cBGR0 + bgr[1]*cG + bgr[2]*cBGR2, SCALE );
             gray[i] = (ushort)t;
         }
 
-        rgb += rgb_step - size.width*ncn;
+        bgr += bgr_step - size.width*ncn;
     }
 }
 
 
-void icvCvt_BGRA2Gray_8u_C4C1R( const uchar* rgba, int rgba_step,
+void icvCvt_BGRA2Gray_8u_C4C1R( const uchar* bgra, int rgba_step,
                                 uchar* gray, int gray_step,
-                                CvSize size, int _swap_rb )
+                                Size size, int _swap_rb )
 {
     int i;
-    int swap_rb = _swap_rb ? 2 : 0;
     for( ; size.height--; gray += gray_step )
     {
-        for( i = 0; i < size.width; i++, rgba += 4 )
+        short cBGR0 = cB;
+        short cBGR2 = cR;
+        if (_swap_rb) std::swap(cBGR0, cBGR2);
+        for( i = 0; i < size.width; i++, bgra += 4 )
         {
-            int t = descale( rgba[swap_rb]*cB + rgba[1]*cG + rgba[swap_rb^2]*cR, SCALE );
+            int t = descale( bgra[0]*cBGR0 + bgra[1]*cG + bgra[2]*cBGR2, SCALE );
             gray[i] = (uchar)t;
         }
 
-        rgba += rgba_step - size.width*4;
+        bgra += rgba_step - size.width*4;
     }
 }
 
 
 void icvCvt_Gray2BGR_8u_C1C3R( const uchar* gray, int gray_step,
-                               uchar* bgr, int bgr_step, CvSize size )
+                               uchar* bgr, int bgr_step, Size size )
 {
     int i;
     for( ; size.height--; gray += gray_step )
@@ -120,7 +135,7 @@ void icvCvt_Gray2BGR_8u_C1C3R( const uchar* gray, int gray_step,
 
 
 void icvCvt_Gray2BGR_16u_C1C3R( const ushort* gray, int gray_step,
-                              ushort* bgr, int bgr_step, CvSize size )
+                              ushort* bgr, int bgr_step, Size size )
 {
     int i;
     for( ; size.height--; gray += gray_step/sizeof(gray[0]) )
@@ -136,7 +151,7 @@ void icvCvt_Gray2BGR_16u_C1C3R( const ushort* gray, int gray_step,
 
 void icvCvt_BGRA2BGR_8u_C4C3R( const uchar* bgra, int bgra_step,
                                uchar* bgr, int bgr_step,
-                               CvSize size, int _swap_rb )
+                               Size size, int _swap_rb )
 {
     int i;
     int swap_rb = _swap_rb ? 2 : 0;
@@ -156,7 +171,7 @@ void icvCvt_BGRA2BGR_8u_C4C3R( const uchar* bgra, int bgra_step,
 
 void icvCvt_BGRA2BGR_16u_C4C3R( const ushort* bgra, int bgra_step,
                               ushort* bgr, int bgr_step,
-                              CvSize size, int _swap_rb )
+                              Size size, int _swap_rb )
 {
     int i;
     int swap_rb = _swap_rb ? 2 : 0;
@@ -175,7 +190,7 @@ void icvCvt_BGRA2BGR_16u_C4C3R( const ushort* bgra, int bgra_step,
 
 
 void icvCvt_BGRA2RGBA_8u_C4R( const uchar* bgra, int bgra_step,
-                              uchar* rgba, int rgba_step, CvSize size )
+                              uchar* rgba, int rgba_step, Size size )
 {
     int i;
     for( ; size.height--; )
@@ -193,7 +208,7 @@ void icvCvt_BGRA2RGBA_8u_C4R( const uchar* bgra, int bgra_step,
 }
 
 void icvCvt_BGRA2RGBA_16u_C4R( const ushort* bgra, int bgra_step,
-                               ushort* rgba, int rgba_step, CvSize size )
+                               ushort* rgba, int rgba_step, Size size )
 {
  int i;
  for( ; size.height--; )
@@ -213,7 +228,7 @@ void icvCvt_BGRA2RGBA_16u_C4R( const ushort* bgra, int bgra_step,
 
 
 void icvCvt_BGR2RGB_8u_C3R( const uchar* bgr, int bgr_step,
-                            uchar* rgb, int rgb_step, CvSize size )
+                            uchar* rgb, int rgb_step, Size size )
 {
     int i;
     for( ; size.height--; )
@@ -230,7 +245,7 @@ void icvCvt_BGR2RGB_8u_C3R( const uchar* bgr, int bgr_step,
 
 
 void icvCvt_BGR2RGB_16u_C3R( const ushort* bgr, int bgr_step,
-                             ushort* rgb, int rgb_step, CvSize size )
+                             ushort* rgb, int rgb_step, Size size )
 {
     int i;
     for( ; size.height--; )
@@ -249,7 +264,7 @@ void icvCvt_BGR2RGB_16u_C3R( const ushort* bgr, int bgr_step,
 typedef unsigned short ushort;
 
 void icvCvt_BGR5552Gray_8u_C2C1R( const uchar* bgr555, int bgr555_step,
-                                  uchar* gray, int gray_step, CvSize size )
+                                  uchar* gray, int gray_step, Size size )
 {
     int i;
     for( ; size.height--; gray += gray_step, bgr555 += bgr555_step )
@@ -266,7 +281,7 @@ void icvCvt_BGR5552Gray_8u_C2C1R( const uchar* bgr555, int bgr555_step,
 
 
 void icvCvt_BGR5652Gray_8u_C2C1R( const uchar* bgr565, int bgr565_step,
-                                  uchar* gray, int gray_step, CvSize size )
+                                  uchar* gray, int gray_step, Size size )
 {
     int i;
     for( ; size.height--; gray += gray_step, bgr565 += bgr565_step )
@@ -283,7 +298,7 @@ void icvCvt_BGR5652Gray_8u_C2C1R( const uchar* bgr565, int bgr565_step,
 
 
 void icvCvt_BGR5552BGR_8u_C2C3R( const uchar* bgr555, int bgr555_step,
-                                 uchar* bgr, int bgr_step, CvSize size )
+                                 uchar* bgr, int bgr_step, Size size )
 {
     int i;
     for( ; size.height--; bgr555 += bgr555_step )
@@ -301,7 +316,7 @@ void icvCvt_BGR5552BGR_8u_C2C3R( const uchar* bgr555, int bgr555_step,
 
 
 void icvCvt_BGR5652BGR_8u_C2C3R( const uchar* bgr565, int bgr565_step,
-                                 uchar* bgr, int bgr_step, CvSize size )
+                                 uchar* bgr, int bgr_step, Size size )
 {
     int i;
     for( ; size.height--; bgr565 += bgr565_step )
@@ -319,7 +334,7 @@ void icvCvt_BGR5652BGR_8u_C2C3R( const uchar* bgr565, int bgr565_step,
 
 
 void icvCvt_CMYK2BGR_8u_C4C3R( const uchar* cmyk, int cmyk_step,
-                               uchar* bgr, int bgr_step, CvSize size )
+                               uchar* bgr, int bgr_step, Size size )
 {
     int i;
     for( ; size.height--; )
@@ -339,7 +354,7 @@ void icvCvt_CMYK2BGR_8u_C4C3R( const uchar* cmyk, int cmyk_step,
 
 
 void icvCvt_CMYK2Gray_8u_C4C1R( const uchar* cmyk, int cmyk_step,
-                                uchar* gray, int gray_step, CvSize size )
+                                uchar* gray, int gray_step, Size size )
 {
     int i;
     for( ; size.height--; )
@@ -364,7 +379,7 @@ void CvtPaletteToGray( const PaletteEntry* palette, uchar* grayPalette, int entr
     int i;
     for( i = 0; i < entries; i++ )
     {
-        icvCvt_BGR2Gray_8u_C3C1R( (uchar*)(palette + i), 0, grayPalette + i, 0, cvSize(1,1) );
+        icvCvt_BGR2Gray_8u_C3C1R( (uchar*)(palette + i), 0, grayPalette + i, 0, Size(1,1) );
     }
 }
 
@@ -537,23 +552,25 @@ uchar* FillColorRow1( uchar* data, uchar* indices, int len, PaletteEntry* palett
 {
     uchar* end = data + len*3;
 
+    const PaletteEntry p0 = palette[0], p1 = palette[1];
+
     while( (data += 24) < end )
     {
         int idx = *indices++;
-        *((PaletteEntry*)(data - 24)) = palette[(idx & 128) != 0];
-        *((PaletteEntry*)(data - 21)) = palette[(idx & 64) != 0];
-        *((PaletteEntry*)(data - 18)) = palette[(idx & 32) != 0];
-        *((PaletteEntry*)(data - 15)) = palette[(idx & 16) != 0];
-        *((PaletteEntry*)(data - 12)) = palette[(idx & 8) != 0];
-        *((PaletteEntry*)(data - 9)) = palette[(idx & 4) != 0];
-        *((PaletteEntry*)(data - 6)) = palette[(idx & 2) != 0];
-        *((PaletteEntry*)(data - 3)) = palette[(idx & 1) != 0];
+        *((PaletteEntry*)(data - 24)) = (idx & 128) ? p1 : p0;
+        *((PaletteEntry*)(data - 21)) = (idx & 64) ? p1 : p0;
+        *((PaletteEntry*)(data - 18)) = (idx & 32) ? p1 : p0;
+        *((PaletteEntry*)(data - 15)) = (idx & 16) ? p1 : p0;
+        *((PaletteEntry*)(data - 12)) = (idx & 8) ? p1 : p0;
+        *((PaletteEntry*)(data - 9)) = (idx & 4) ? p1 : p0;
+        *((PaletteEntry*)(data - 6)) = (idx & 2) ? p1 : p0;
+        *((PaletteEntry*)(data - 3)) = (idx & 1) ? p1 : p0;
     }
 
-    int idx = indices[0] << 24;
+    int idx = indices[0];
     for( data -= 24; data < end; data += 3, idx += idx )
     {
-        PaletteEntry clr = palette[idx < 0];
+        const PaletteEntry clr = (idx & 128) ? p1 : p0;
         WRITE_PIX( data, clr );
     }
 
@@ -565,125 +582,28 @@ uchar* FillGrayRow1( uchar* data, uchar* indices, int len, uchar* palette )
 {
     uchar* end = data + len;
 
+    const uchar p0 = palette[0], p1 = palette[1];
+
     while( (data += 8) < end )
     {
         int idx = *indices++;
-        *((uchar*)(data - 8)) = palette[(idx & 128) != 0];
-        *((uchar*)(data - 7)) = palette[(idx & 64) != 0];
-        *((uchar*)(data - 6)) = palette[(idx & 32) != 0];
-        *((uchar*)(data - 5)) = palette[(idx & 16) != 0];
-        *((uchar*)(data - 4)) = palette[(idx & 8) != 0];
-        *((uchar*)(data - 3)) = palette[(idx & 4) != 0];
-        *((uchar*)(data - 2)) = palette[(idx & 2) != 0];
-        *((uchar*)(data - 1)) = palette[(idx & 1) != 0];
+        *((uchar*)(data - 8)) = (idx & 128) ? p1 : p0;
+        *((uchar*)(data - 7)) = (idx & 64) ? p1 : p0;
+        *((uchar*)(data - 6)) = (idx & 32) ? p1 : p0;
+        *((uchar*)(data - 5)) = (idx & 16) ? p1 : p0;
+        *((uchar*)(data - 4)) = (idx & 8) ? p1 : p0;
+        *((uchar*)(data - 3)) = (idx & 4) ? p1 : p0;
+        *((uchar*)(data - 2)) = (idx & 2) ? p1 : p0;
+        *((uchar*)(data - 1)) = (idx & 1) ? p1 : p0;
     }
 
-    int idx = indices[0] << 24;
+    int idx = indices[0];
     for( data -= 8; data < end; data++, idx += idx )
     {
-        data[0] = palette[idx < 0];
+        data[0] = (idx & 128) ? p1 : p0;
     }
 
     return data;
 }
 
-
-CV_IMPL void
-cvConvertImage( const CvArr* srcarr, CvArr* dstarr, int flags )
-{
-    CvMat* temp = 0;
-
-    CV_FUNCNAME( "cvConvertImage" );
-
-    __BEGIN__;
-
-    CvMat srcstub, *src;
-    CvMat dststub, *dst;
-    int src_cn, dst_cn, swap_rb = flags & CV_CVTIMG_SWAP_RB;
-
-    CV_CALL( src = cvGetMat( srcarr, &srcstub ));
-    CV_CALL( dst = cvGetMat( dstarr, &dststub ));
-
-    src_cn = CV_MAT_CN( src->type );
-    dst_cn = CV_MAT_CN( dst->type );
-
-    if( src_cn != 1 && src_cn != 3 && src_cn != 4 )
-        CV_ERROR( CV_BadNumChannels, "Source image must have 1, 3 or 4 channels" );
-
-    if( CV_MAT_DEPTH( dst->type ) != CV_8U )
-        CV_ERROR( CV_BadDepth, "Destination image must be 8u" );
-
-    if( CV_MAT_CN(dst->type) != 1 && CV_MAT_CN(dst->type) != 3 )
-        CV_ERROR( CV_BadNumChannels, "Destination image must have 1 or 3 channels" );
-
-    if( !CV_ARE_DEPTHS_EQ( src, dst ))
-    {
-        int src_depth = CV_MAT_DEPTH(src->type);
-        double scale = src_depth <= CV_8S ? 1 : src_depth <= CV_32S ? 1./256 : 255;
-        double shift = src_depth == CV_8S || src_depth == CV_16S ? 128 : 0;
-
-        if( !CV_ARE_CNS_EQ( src, dst ))
-        {
-            temp = cvCreateMat( src->height, src->width,
-                (src->type & CV_MAT_CN_MASK)|(dst->type & CV_MAT_DEPTH_MASK));
-            cvConvertScale( src, temp, scale, shift );
-            src = temp;
-        }
-        else
-        {
-            cvConvertScale( src, dst, scale, shift );
-            src = dst;
-        }
-    }
-
-    if( src_cn != dst_cn || (src_cn == 3 && swap_rb) )
-    {
-        uchar *s = src->data.ptr, *d = dst->data.ptr;
-        int s_step = src->step, d_step = dst->step;
-        int code = src_cn*10 + dst_cn;
-        CvSize size(src->cols, src->rows);
-
-        if( CV_IS_MAT_CONT(src->type & dst->type) )
-        {
-            size.width *= size.height;
-            size.height = 1;
-            s_step = d_step = /*CV_STUB_STEP*/ (1 << 30);
-        }
-
-        switch( code )
-        {
-        case 13:
-            icvCvt_Gray2BGR_8u_C1C3R( s, s_step, d, d_step, size );
-            break;
-        case 31:
-            icvCvt_BGR2Gray_8u_C3C1R( s, s_step, d, d_step, size, swap_rb );
-            break;
-        case 33:
-            assert( swap_rb );
-            icvCvt_RGB2BGR_8u_C3R( s, s_step, d, d_step, size );
-            break;
-        case 41:
-            icvCvt_BGRA2Gray_8u_C4C1R( s, s_step, d, d_step, size, swap_rb );
-            break;
-        case 43:
-            icvCvt_BGRA2BGR_8u_C4C3R( s, s_step, d, d_step, size, swap_rb );
-            break;
-        default:
-            CV_ERROR( CV_StsUnsupportedFormat, "Unsupported combination of input/output formats" );
-        }
-        src = dst;
-    }
-
-    if( flags & CV_CVTIMG_FLIP )
-    {
-        CV_CALL( cvFlip( src, dst, 0 ));
-    }
-    else if( src != dst )
-    {
-        CV_CALL( cvCopy( src, dst ));
-    }
-
-    __END__;
-
-    cvReleaseMat( &temp );
-}
+}  // namespace

@@ -3,15 +3,13 @@
 #include "opencv2/opencv_modules.hpp"
 #include "opencv2/flann.hpp"
 
-using namespace std;
-using namespace cv;
+namespace opencv_test
+{
 using namespace perf;
-using std::tr1::make_tuple;
-using std::tr1::get;
 
 typedef TestBaseWithParam<size_t> FeaturesFinderVec;
 typedef TestBaseWithParam<string> match;
-typedef std::tr1::tuple<string, int> matchVector_t;
+typedef tuple<string, int> matchVector_t;
 typedef TestBaseWithParam<matchVector_t> matchVector;
 
 #define NUMBER_IMAGES testing::Values(1, 5, 20)
@@ -31,11 +29,11 @@ PERF_TEST_P(FeaturesFinderVec, ParallelFeaturesFinder, NUMBER_IMAGES)
     vector<Mat> imgs(GetParam(), img);
     vector<detail::ImageFeatures> features(imgs.size());
 
-    Ptr<detail::FeaturesFinder> featuresFinder = makePtr<detail::OrbFeaturesFinder>();
+    Ptr<Feature2D> finder = ORB::create();
 
     TEST_CYCLE()
     {
-        (*featuresFinder)(imgs, features);
+        detail::computeImageFeatures(finder, imgs, features);
     }
 
     SANITY_CHECK_NOTHING();
@@ -47,12 +45,12 @@ PERF_TEST_P(FeaturesFinderVec, SerialFeaturesFinder, NUMBER_IMAGES)
     vector<Mat> imgs(GetParam(), img);
     vector<detail::ImageFeatures> features(imgs.size());
 
-    Ptr<detail::FeaturesFinder> featuresFinder = makePtr<detail::OrbFeaturesFinder>();
+    Ptr<Feature2D> finder = ORB::create();
 
     TEST_CYCLE()
     {
         for (size_t i = 0; i < imgs.size(); ++i)
-            (*featuresFinder)(imgs[i], features[i]);
+            detail::computeImageFeatures(finder, imgs[i], features[i]);
     }
 
     SANITY_CHECK_NOTHING();
@@ -64,19 +62,17 @@ PERF_TEST_P( match, bestOf2Nearest, TEST_DETECTORS)
     Mat img2, img2_full = imread( getDataPath("stitching/boat2.jpg") );
     float scale1 = (float)std::min(1.0, sqrt(WORK_MEGAPIX * 1e6 / img1_full.total()));
     float scale2 = (float)std::min(1.0, sqrt(WORK_MEGAPIX * 1e6 / img2_full.total()));
-    resize(img1_full, img1, Size(), scale1, scale1);
-    resize(img2_full, img2, Size(), scale2, scale2);
+    resize(img1_full, img1, Size(), scale1, scale1, INTER_LINEAR_EXACT);
+    resize(img2_full, img2, Size(), scale2, scale2, INTER_LINEAR_EXACT);
 
-    Ptr<detail::FeaturesFinder> finder;
+    Ptr<Feature2D> finder = getFeatureFinder(GetParam());
     Ptr<detail::FeaturesMatcher> matcher;
     if (GetParam() == "surf")
     {
-        finder = makePtr<detail::SurfFeaturesFinder>();
         matcher = makePtr<detail::BestOf2NearestMatcher>(false, SURF_MATCH_CONFIDENCE);
     }
     else if (GetParam() == "orb")
     {
-        finder = makePtr<detail::OrbFeaturesFinder>();
         matcher = makePtr<detail::BestOf2NearestMatcher>(false, ORB_MATCH_CONFIDENCE);
     }
     else
@@ -85,8 +81,8 @@ PERF_TEST_P( match, bestOf2Nearest, TEST_DETECTORS)
     }
 
     detail::ImageFeatures features1, features2;
-    (*finder)(img1, features1);
-    (*finder)(img2, features2);
+    detail::computeImageFeatures(finder, img1, features1);
+    detail::computeImageFeatures(finder, img2, features2);
 
     detail::MatchesInfo pairwise_matches;
 
@@ -104,8 +100,8 @@ PERF_TEST_P( match, bestOf2Nearest, TEST_DETECTORS)
     Mat dist (pairwise_matches.H, Range::all(), Range(2, 3));
     Mat R (pairwise_matches.H, Range::all(), Range(0, 2));
     // separate transform matrix, use lower error on rotations
-    SANITY_CHECK(dist, 1., ERROR_ABSOLUTE);
-    SANITY_CHECK(R, .015, ERROR_ABSOLUTE);
+    SANITY_CHECK(dist, 3., ERROR_ABSOLUTE);
+    SANITY_CHECK(R, .06, ERROR_ABSOLUTE);
 }
 
 PERF_TEST_P( matchVector, bestOf2NearestVectorFeatures, testing::Combine(
@@ -117,21 +113,19 @@ PERF_TEST_P( matchVector, bestOf2NearestVectorFeatures, testing::Combine(
     Mat img2, img2_full = imread( getDataPath("stitching/boat2.jpg") );
     float scale1 = (float)std::min(1.0, sqrt(WORK_MEGAPIX * 1e6 / img1_full.total()));
     float scale2 = (float)std::min(1.0, sqrt(WORK_MEGAPIX * 1e6 / img2_full.total()));
-    resize(img1_full, img1, Size(), scale1, scale1);
-    resize(img2_full, img2, Size(), scale2, scale2);
+    resize(img1_full, img1, Size(), scale1, scale1, INTER_LINEAR_EXACT);
+    resize(img2_full, img2, Size(), scale2, scale2, INTER_LINEAR_EXACT);
 
-    Ptr<detail::FeaturesFinder> finder;
-    Ptr<detail::FeaturesMatcher> matcher;
     string detectorName = get<0>(GetParam());
     int featuresVectorSize = get<1>(GetParam());
+    Ptr<Feature2D> finder = getFeatureFinder(detectorName);
+    Ptr<detail::FeaturesMatcher> matcher;
     if (detectorName == "surf")
     {
-        finder = makePtr<detail::SurfFeaturesFinder>();
         matcher = makePtr<detail::BestOf2NearestMatcher>(false, SURF_MATCH_CONFIDENCE);
     }
     else if (detectorName == "orb")
     {
-        finder = makePtr<detail::OrbFeaturesFinder>();
         matcher = makePtr<detail::BestOf2NearestMatcher>(false, ORB_MATCH_CONFIDENCE);
     }
     else
@@ -140,8 +134,8 @@ PERF_TEST_P( matchVector, bestOf2NearestVectorFeatures, testing::Combine(
     }
 
     detail::ImageFeatures features1, features2;
-    (*finder)(img1, features1);
-    (*finder)(img2, features2);
+    detail::computeImageFeatures(finder, img1, features1);
+    detail::computeImageFeatures(finder, img2, features2);
     vector<detail::ImageFeatures> features;
     vector<detail::MatchesInfo> pairwise_matches;
     for(int i = 0; i < featuresVectorSize/2; i++)
@@ -166,12 +160,12 @@ PERF_TEST_P( matchVector, bestOf2NearestVectorFeatures, testing::Combine(
         if (pairwise_matches[i].src_img_idx < 0)
             continue;
 
-        EXPECT_TRUE(pairwise_matches[i].matches.size() > 100);
+        EXPECT_GT(pairwise_matches[i].matches.size(), 95u);
         EXPECT_FALSE(pairwise_matches[i].H.empty());
         ++matches_count;
     }
 
-    EXPECT_TRUE(matches_count > 0);
+    EXPECT_GT(matches_count, 0u);
 
     SANITY_CHECK_NOTHING();
 }
@@ -182,19 +176,17 @@ PERF_TEST_P( match, affineBestOf2Nearest, TEST_DETECTORS)
     Mat img2, img2_full = imread( getDataPath("stitching/s2.jpg") );
     float scale1 = (float)std::min(1.0, sqrt(WORK_MEGAPIX * 1e6 / img1_full.total()));
     float scale2 = (float)std::min(1.0, sqrt(WORK_MEGAPIX * 1e6 / img2_full.total()));
-    resize(img1_full, img1, Size(), scale1, scale1);
-    resize(img2_full, img2, Size(), scale2, scale2);
+    resize(img1_full, img1, Size(), scale1, scale1, INTER_LINEAR_EXACT);
+    resize(img2_full, img2, Size(), scale2, scale2, INTER_LINEAR_EXACT);
 
-    Ptr<detail::FeaturesFinder> finder;
+    Ptr<Feature2D> finder = getFeatureFinder(GetParam());
     Ptr<detail::FeaturesMatcher> matcher;
     if (GetParam() == "surf")
     {
-        finder = makePtr<detail::SurfFeaturesFinder>();
         matcher = makePtr<detail::AffineBestOf2NearestMatcher>(false, false, SURF_MATCH_CONFIDENCE);
     }
     else if (GetParam() == "orb")
     {
-        finder = makePtr<detail::OrbFeaturesFinder>();
         matcher = makePtr<detail::AffineBestOf2NearestMatcher>(false, false, ORB_MATCH_CONFIDENCE);
     }
     else
@@ -203,8 +195,8 @@ PERF_TEST_P( match, affineBestOf2Nearest, TEST_DETECTORS)
     }
 
     detail::ImageFeatures features1, features2;
-    (*finder)(img1, features1);
-    (*finder)(img2, features2);
+    detail::computeImageFeatures(finder, img1, features1);
+    detail::computeImageFeatures(finder, img2, features2);
 
     detail::MatchesInfo pairwise_matches;
 
@@ -241,21 +233,19 @@ PERF_TEST_P( matchVector, affineBestOf2NearestVectorFeatures, testing::Combine(
     Mat img2, img2_full = imread( getDataPath("stitching/s2.jpg") );
     float scale1 = (float)std::min(1.0, sqrt(WORK_MEGAPIX * 1e6 / img1_full.total()));
     float scale2 = (float)std::min(1.0, sqrt(WORK_MEGAPIX * 1e6 / img2_full.total()));
-    resize(img1_full, img1, Size(), scale1, scale1);
-    resize(img2_full, img2, Size(), scale2, scale2);
+    resize(img1_full, img1, Size(), scale1, scale1, INTER_LINEAR_EXACT);
+    resize(img2_full, img2, Size(), scale2, scale2, INTER_LINEAR_EXACT);
 
-    Ptr<detail::FeaturesFinder> finder;
-    Ptr<detail::FeaturesMatcher> matcher;
     string detectorName = get<0>(GetParam());
     int featuresVectorSize = get<1>(GetParam());
+    Ptr<Feature2D> finder = getFeatureFinder(detectorName);
+    Ptr<detail::FeaturesMatcher> matcher;
     if (detectorName == "surf")
     {
-        finder = makePtr<detail::SurfFeaturesFinder>();
         matcher = makePtr<detail::AffineBestOf2NearestMatcher>(false, false, SURF_MATCH_CONFIDENCE);
     }
     else if (detectorName == "orb")
     {
-        finder = makePtr<detail::OrbFeaturesFinder>();
         matcher = makePtr<detail::AffineBestOf2NearestMatcher>(false, false, ORB_MATCH_CONFIDENCE);
     }
     else
@@ -264,8 +254,8 @@ PERF_TEST_P( matchVector, affineBestOf2NearestVectorFeatures, testing::Combine(
     }
 
     detail::ImageFeatures features1, features2;
-    (*finder)(img1, features1);
-    (*finder)(img2, features2);
+    detail::computeImageFeatures(finder, img1, features1);
+    detail::computeImageFeatures(finder, img2, features2);
     vector<detail::ImageFeatures> features;
     vector<detail::MatchesInfo> pairwise_matches;
     for(int i = 0; i < featuresVectorSize/2; i++)
@@ -290,12 +280,14 @@ PERF_TEST_P( matchVector, affineBestOf2NearestVectorFeatures, testing::Combine(
         if (pairwise_matches[i].src_img_idx < 0)
             continue;
 
-        EXPECT_TRUE(pairwise_matches[i].matches.size() > 400);
+        EXPECT_GT(pairwise_matches[i].matches.size(), 150u);
         EXPECT_FALSE(pairwise_matches[i].H.empty());
         ++matches_count;
     }
 
-    EXPECT_TRUE(matches_count > 0);
+    EXPECT_GT(matches_count, 0u);
 
     SANITY_CHECK_NOTHING();
 }
+
+} // namespace

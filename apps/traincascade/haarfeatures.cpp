@@ -153,14 +153,14 @@ void CvHaarEvaluator::generateFeatures()
                     {
                         features.push_back( Feature( offset, false,
                             x,    y, dx*3, dy, -1,
-                            x+dx, y, dx  , dy, +3 ) );
+                            x+dx, y, dx  , dy, +2 ) );
                     }
                     // haar_y3
                     if ( (x+dx <= winSize.width) && (y+dy*3 <= winSize.height) )
                     {
                         features.push_back( Feature( offset, false,
                             x, y,    dx, dy*3, -1,
-                            x, y+dy, dx, dy,   +3 ) );
+                            x, y+dy, dx, dy,   +2 ) );
                     }
                     if( mode != CvHaarFeatureParams::BASIC )
                     {

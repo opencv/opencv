@@ -119,7 +119,7 @@ my $is_a_corner;
                   }
                   close $in2 or die "Can't close $filein: $!";
                 }
-                #find next else and interprete it
+                #find next else and interpret it
                 open(my $in3,  "<",  $filein)  or die "Can't open $filein: $!";
         $i3=1;
         $ifcount3=0;

@@ -181,7 +181,7 @@ int main(int argc, char** argv)
                             cv::aruco::getPredefinedDictionary(cv::aruco::PREDEFINED_DICTIONARY_NAME(capParams.charucoDictName));
                     cv::Ptr<cv::aruco::CharucoBoard> charucoboard =
                                 cv::aruco::CharucoBoard::create(capParams.boardSize.width, capParams.boardSize.height,
-                                                                capParams.charucoSquareLenght, capParams.charucoMarkerSize, dictionary);
+                                                                capParams.charucoSquareLength, capParams.charucoMarkerSize, dictionary);
                     globalData->totalAvgErr =
                             cv::aruco::calibrateCameraCharuco(globalData->allCharucoCorners, globalData->allCharucoIds,
                                                            charucoboard, globalData->imageSize,
@@ -217,7 +217,7 @@ int main(int argc, char** argv)
                 (*it)->resetState();
         }
     }
-    catch (std::runtime_error exp) {
+    catch (const std::runtime_error& exp) {
         std::cout << exp.what() << std::endl;
     }
 

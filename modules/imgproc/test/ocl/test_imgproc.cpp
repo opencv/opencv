@@ -52,12 +52,11 @@
 //M*/
 
 #include "../test_precomp.hpp"
-#include "cvconfig.h"
 #include "opencv2/ts/ocl_test.hpp"
 
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -492,6 +491,6 @@ OCL_INSTANTIATE_TEST_CASE_P(ImgprocTestBase, CopyMakeBorder, Combine(
                                    (BorderType)BORDER_WRAP, (BorderType)BORDER_REFLECT_101),
                             Bool()));
 
-} } // namespace cvtest::ocl
+} } // namespace opencv_test::ocl
 
 #endif // HAVE_OPENCL

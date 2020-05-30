@@ -1,6 +1,10 @@
 OpenCV4Android SDK {#tutorial_O4A_SDK}
 ==================
 
+@prev_tutorial{tutorial_android_dev_intro}
+@next_tutorial{tutorial_dev_with_OCV_on_Android}
+
+
 This tutorial was designed to help you with installation and configuration of OpenCV4Android SDK.
 
 This guide was written with MS Windows 7 in mind, though it should work with GNU Linux and Apple Mac
@@ -18,18 +22,6 @@ If you need help with anything of the above, you may refer to our @ref tutorial_
 If you encounter any error after thoroughly following these steps, feel free to contact us via
 [OpenCV4Android](https://groups.google.com/group/android-opencv/) discussion group or OpenCV [Q&A
 forum](http://answers.opencv.org). We'll do our best to help you out.
-
-Tegra Android Development Pack users
-------------------------------------
-
-You may have used [Tegra Android Development
-Pack](http://developer.nvidia.com/tegra-android-development-pack) (**TADP**) released by **NVIDIA**
-for Android development environment setup.
-
-Beside Android development tools the TADP 2.0 includes OpenCV4Android SDK, so it can be already
-installed in your system and you can skip to @ref tutorial_O4A_SDK_samples "samples" section of this tutorial.
-
-More details regarding TADP can be found in the @ref tutorial_android_dev_intro guide.
 
 General info
 ------------
@@ -83,7 +75,7 @@ The structure of package contents looks as follows:
 
 -   `doc` folder contains various OpenCV documentation in PDF format. It's also available online at
     <http://docs.opencv.org>.
-    @note The most recent docs (nightly build) are at <http://docs.opencv.org/2.4>. Generally, it's more
+    @note The most recent docs (nightly build) are at <http://docs.opencv.org/master>. Generally, it's more
     up-to-date, but can refer to not-yet-released functionality.
     @todo I'm not sure that this is the best place to talk about OpenCV Manager
 
@@ -97,10 +89,6 @@ applications developers:
 -   Automatic updates and bug fixes;
 -   Trusted OpenCV library source. All packages with OpenCV are published on Google Play;
 
-For additional information on OpenCV Manager see the:
-
--   [Slides](https://docs.google.com/a/itseez.com/presentation/d/1EO_1kijgBg_BsjNp2ymk-aarg-0K279_1VZRcPplSuk/present#slide=id.p)
--   [Reference Manual](http://docs.opencv.org/android/refman.html)
 
 Manual OpenCV4Android SDK setup
 -------------------------------
@@ -108,8 +96,8 @@ Manual OpenCV4Android SDK setup
 ### Get the OpenCV4Android SDK
 
 -#  Go to the [OpenCV download page on
-    SourceForge](http://sourceforge.net/projects/opencvlibrary/files/opencv-android/) and download
-    the latest available version. Currently it's [OpenCV-2.4.9-android-sdk.zip](http://sourceforge.net/projects/opencvlibrary/files/opencv-android/2.4.9/OpenCV-2.4.9-android-sdk.zip/download).
+    SourceForge](http://sourceforge.net/projects/opencvlibrary/files/) and download
+    the latest available version. This tutorial is based on this package: [OpenCV-2.4.9-android-sdk.zip](http://sourceforge.net/projects/opencvlibrary/files/opencv-android/2.4.9/OpenCV-2.4.9-android-sdk.zip/download).
 -#  Create a new folder for Android with OpenCV development. For this tutorial we have unpacked
     OpenCV SDK to the `C:\Work\OpenCV4Android\` directory.
 
@@ -239,7 +227,7 @@ Well, running samples from Eclipse is very simple:
     @code{.sh}
     adb shell getprop ro.product.cpu.abi
     @endcode
-    If you're using an AVD emulator, go Window \> AVD Manager to see the list of availible devices.
+    If you're using an AVD emulator, go Window \> AVD Manager to see the list of available devices.
     Click Edit in the context menu of the selected device. In the window, which then pop-ups, find
     the CPU field.
 

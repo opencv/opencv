@@ -42,8 +42,7 @@
 #include "test_precomp.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 class CV_AccumBaseTest : public cvtest::ArrayTest
 {
@@ -246,3 +245,5 @@ TEST(Video_Acc, accuracy) { CV_AccTest test; test.safe_run(); }
 TEST(Video_AccSquared, accuracy) { CV_SquareAccTest test; test.safe_run(); }
 TEST(Video_AccProduct, accuracy) { CV_MultiplyAccTest test; test.safe_run(); }
 TEST(Video_RunningAvg, accuracy) { CV_RunningAvgTest test; test.safe_run(); }
+
+}} // namespace

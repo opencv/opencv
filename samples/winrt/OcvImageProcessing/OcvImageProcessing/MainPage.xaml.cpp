@@ -47,7 +47,7 @@ MainPage::MainPage()
     // Image loading OpenCV way ... way more simple
     cv::Mat image = cv::imread("Assets/Lena.png");
     Lena = cv::Mat(image.rows, image.cols, CV_8UC4);
-    cvtColor(image, Lena, CV_BGR2BGRA);
+    cvtColor(image, Lena, COLOR_BGR2BGRA);
     UpdateImage(Lena);
 
 #else
@@ -184,8 +184,8 @@ cv::Mat OcvImageProcessing::MainPage::ApplyGrayFilter(const cv::Mat& image)
 {
     cv::Mat result;
     cv::Mat intermediateMat;
-    cv::cvtColor(image, intermediateMat, CV_RGBA2GRAY);
-    cv::cvtColor(intermediateMat, result, CV_GRAY2BGRA);
+    cv::cvtColor(image, intermediateMat, COLOR_RGBA2GRAY);
+    cv::cvtColor(intermediateMat, result, COLOR_GRAY2BGRA);
     return result;
 }
 
@@ -194,7 +194,7 @@ cv::Mat OcvImageProcessing::MainPage::ApplyCannyFilter(const cv::Mat& image)
     cv::Mat result;
     cv::Mat intermediateMat;
     cv::Canny(image, intermediateMat, 80, 90);
-    cv::cvtColor(intermediateMat, result, CV_GRAY2BGRA);
+    cv::cvtColor(intermediateMat, result, COLOR_GRAY2BGRA);
     return result;
 }
 
@@ -213,7 +213,7 @@ cv::Mat OcvImageProcessing::MainPage::ApplyFindFeaturesFilter(const cv::Mat& ima
     std::vector<cv::KeyPoint> features;
 
     image.copyTo(result);
-    cv::cvtColor(image, intermediateMat, CV_RGBA2GRAY);
+    cv::cvtColor(image, intermediateMat, COLOR_RGBA2GRAY);
     detector->detect(intermediateMat, features);
 
     for( unsigned int i = 0; i < std::min(features.size(), (size_t)50); i++ )

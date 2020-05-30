@@ -58,8 +58,8 @@ namespace cv
 
 /** @brief Template function for accurate conversion from one primitive type to another.
 
- The functions saturate_cast resemble the standard C++ cast operations, such as static_cast\<T\>()
- and others. They perform an efficient and accurate conversion from one primitive type to another
+ The function saturate_cast resembles the standard C++ cast operations, such as static_cast\<T\>()
+ and others. It perform an efficient and accurate conversion from one primitive type to another
  (see the introduction chapter). saturate in the name means that when the input value v is out of the
  range of the target type, the result is not formed just by taking low bits of the input, but instead
  the value is clipped. For example:
@@ -73,8 +73,6 @@ namespace cv
  When the parameter is a floating-point value and the target type is an integer (8-, 16- or 32-bit),
  the floating-point value is first rounded to the nearest integer and then clipped if needed (when
  the target type is 8- or 16-bit).
-
- This operation is used in the simplest or most complex image processing functions in OpenCV.
 
  @param v Function parameter.
  @sa add, subtract, multiply, divide, Mat::convertTo
@@ -136,12 +134,43 @@ template<> inline short saturate_cast<short>(double v)       { int iv = cvRound(
 template<> inline short saturate_cast<short>(int64 v)        { return (short)((uint64)((int64)v - SHRT_MIN) <= (uint64)USHRT_MAX ? v : v > 0 ? SHRT_MAX : SHRT_MIN); }
 template<> inline short saturate_cast<short>(uint64 v)       { return (short)std::min(v, (uint64)SHRT_MAX); }
 
+template<> inline int saturate_cast<int>(unsigned v)         { return (int)std::min(v, (unsigned)INT_MAX); }
+template<> inline int saturate_cast<int>(int64 v)            { return (int)((uint64)(v - INT_MIN) <= (uint64)UINT_MAX ? v : v > 0 ? INT_MAX : INT_MIN); }
+template<> inline int saturate_cast<int>(uint64 v)           { return (int)std::min(v, (uint64)INT_MAX); }
 template<> inline int saturate_cast<int>(float v)            { return cvRound(v); }
 template<> inline int saturate_cast<int>(double v)           { return cvRound(v); }
 
+template<> inline unsigned saturate_cast<unsigned>(schar v)  { return (unsigned)std::max(v, (schar)0); }
+template<> inline unsigned saturate_cast<unsigned>(short v)  { return (unsigned)std::max(v, (short)0); }
+template<> inline unsigned saturate_cast<unsigned>(int v)    { return (unsigned)std::max(v, (int)0); }
+template<> inline unsigned saturate_cast<unsigned>(int64 v)  { return (unsigned)((uint64)v <= (uint64)UINT_MAX ? v : v > 0 ? UINT_MAX : 0); }
+template<> inline unsigned saturate_cast<unsigned>(uint64 v) { return (unsigned)std::min(v, (uint64)UINT_MAX); }
 // we intentionally do not clip negative numbers, to make -1 become 0xffffffff etc.
-template<> inline unsigned saturate_cast<unsigned>(float v)  { return cvRound(v); }
-template<> inline unsigned saturate_cast<unsigned>(double v) { return cvRound(v); }
+template<> inline unsigned saturate_cast<unsigned>(float v)  { return static_cast<unsigned>(cvRound(v)); }
+template<> inline unsigned saturate_cast<unsigned>(double v) { return static_cast<unsigned>(cvRound(v)); }
+
+template<> inline uint64 saturate_cast<uint64>(schar v)      { return (uint64)std::max(v, (schar)0); }
+template<> inline uint64 saturate_cast<uint64>(short v)      { return (uint64)std::max(v, (short)0); }
+template<> inline uint64 saturate_cast<uint64>(int v)        { return (uint64)std::max(v, (int)0); }
+template<> inline uint64 saturate_cast<uint64>(int64 v)      { return (uint64)std::max(v, (int64)0); }
+
+template<> inline int64 saturate_cast<int64>(uint64 v)       { return (int64)std::min(v, (uint64)LLONG_MAX); }
+
+/** @overload */
+template<typename _Tp> static inline _Tp saturate_cast(float16_t v) { return saturate_cast<_Tp>((float)v); }
+
+// in theory, we could use a LUT for 8u/8s->16f conversion,
+// but with hardware support for FP32->FP16 conversion the current approach is preferable
+template<> inline float16_t saturate_cast<float16_t>(uchar v)   { return float16_t((float)v); }
+template<> inline float16_t saturate_cast<float16_t>(schar v)   { return float16_t((float)v); }
+template<> inline float16_t saturate_cast<float16_t>(ushort v)  { return float16_t((float)v); }
+template<> inline float16_t saturate_cast<float16_t>(short v)   { return float16_t((float)v); }
+template<> inline float16_t saturate_cast<float16_t>(unsigned v){ return float16_t((float)v); }
+template<> inline float16_t saturate_cast<float16_t>(int v)     { return float16_t((float)v); }
+template<> inline float16_t saturate_cast<float16_t>(uint64 v)  { return float16_t((float)v); }
+template<> inline float16_t saturate_cast<float16_t>(int64 v)   { return float16_t((float)v); }
+template<> inline float16_t saturate_cast<float16_t>(float v)   { return float16_t(v); }
+template<> inline float16_t saturate_cast<float16_t>(double v)  { return float16_t((float)v); }
 
 //! @}
 

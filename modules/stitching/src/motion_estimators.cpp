@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencv2/core/core_c.h"
 #include "opencv2/calib3d/calib3d_c.h"
 #include "opencv2/core/cvdef.h"
 
@@ -89,7 +90,7 @@ struct CalcRotation
 
 
 /**
- * @brief Functor calculating final tranformation by chaining linear transformations
+ * @brief Functor calculating final transformation by chaining linear transformations
  */
 struct CalcAffineTransform
 {
@@ -255,10 +256,10 @@ bool BundleAdjusterBase::estimate(const std::vector<ImageFeatures> &features,
 
     CvLevMarq solver(num_images_ * num_params_per_cam_,
                      total_num_matches_ * num_errs_per_measurement_,
-                     term_criteria_);
+                     cvTermCriteria(term_criteria_));
 
     Mat err, jac;
-    CvMat matParams = cam_params_;
+    CvMat matParams = cvMat(cam_params_);
     cvCopy(&matParams, solver.param);
 
     int iter = 0;
@@ -278,7 +279,7 @@ bool BundleAdjusterBase::estimate(const std::vector<ImageFeatures> &features,
         if (_jac)
         {
             calcJacobian(jac);
-            CvMat tmp = jac;
+            CvMat tmp = cvMat(jac);
             cvCopy(&tmp, _jac);
         }
 
@@ -287,7 +288,7 @@ bool BundleAdjusterBase::estimate(const std::vector<ImageFeatures> &features,
             calcError(err);
             LOG_CHAT(".");
             iter++;
-            CvMat tmp = err;
+            CvMat tmp = cvMat(err);
             cvCopy(&tmp, _err);
         }
     }

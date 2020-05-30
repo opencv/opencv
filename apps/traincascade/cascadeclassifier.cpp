@@ -341,6 +341,7 @@ int CvCascadeClassifier::fillPassedSamples( int first, int count, bool isPositiv
             {
                 getcount++;
                 printf("%s current samples: %d\r", isPositive ? "POS":"NEG", getcount);
+                fflush(stdout);
                 break;
             }
         }
@@ -534,7 +535,7 @@ bool CvCascadeClassifier::load( const string cascadeDirName )
     featureEvaluator->init( featureParams, numPos + numNeg, cascadeParams.winSize );
     fs.release();
 
-    char buf[10];
+    char buf[16] = {0};
     for ( int si = 0; si < numStages; si++ )
     {
         sprintf( buf, "%s%d", "stage", si);

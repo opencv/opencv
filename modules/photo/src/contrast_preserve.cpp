@@ -42,7 +42,7 @@
 
 #include "precomp.hpp"
 #include "opencv2/photo.hpp"
-#include "math.h"
+#include <cmath>
 #include <vector>
 #include <limits>
 #include "contrast_preserve.hpp"
@@ -52,7 +52,7 @@ using namespace cv;
 
 void cv::decolor(InputArray _src, OutputArray _dst, OutputArray _color_boost)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat I = _src.getMat();
     _dst.create(I.size(), CV_8UC1);
@@ -64,33 +64,28 @@ void cv::decolor(InputArray _src, OutputArray _dst, OutputArray _color_boost)
     CV_Assert(!I.empty() && (I.channels()==3));
 
     // Parameter Setting
-    int maxIter = 15;
+    const int maxIter = 15;
+    const double tol = .0001;
     int iterCount = 0;
-    double tol = .0001;
     double E = 0;
     double pre_E = std::numeric_limits<double>::infinity();
 
-    Decolor obj;
-
     Mat img;
-
-    img = Mat(I.size(),CV_32FC3);
-    I.convertTo(img,CV_32FC3,1.0/255.0);
+    I.convertTo(img, CV_32FC3, 1.0/255.0);
 
     // Initialization
-    obj.init();
+    Decolor obj;
 
     vector <double> Cg;
     vector < vector <double> > polyGrad;
-    vector < vector < int > > comb;
-
+    vector <Vec3i> comb;
     vector <double> alf;
 
     obj.grad_system(img,polyGrad,Cg,comb);
     obj.weak_order(img,alf);
 
     // Solver
-    Mat Mt = Mat((int)polyGrad.size(),(int)polyGrad[0].size(), CV_32FC1);
+    Mat Mt = Mat(int(polyGrad.size()),int(polyGrad[0].size()), CV_32FC1);
     obj.wei_update_matrix(polyGrad,Cg,Mt);
 
     vector <double> wei;
@@ -98,85 +93,64 @@ void cv::decolor(InputArray _src, OutputArray _dst, OutputArray _color_boost)
 
     //////////////////////////////// main loop starting ////////////////////////////////////////
 
+    vector <double> G_pos(alf.size());
+    vector <double> G_neg(alf.size());
+    vector <double> EXPsum(G_pos.size());
+    vector <double> EXPterm(G_pos.size());
+    vector <double> temp(polyGrad[0].size());
+    vector <double> temp1(polyGrad[0].size());
+    vector <double> temp2(EXPsum.size());
+    vector <double> wei1(polyGrad.size());
+
     while(sqrt(pow(E-pre_E,2)) > tol)
     {
         iterCount +=1;
         pre_E = E;
 
-        vector <double> G_pos;
-        vector <double> G_neg;
-
-        vector <double> temp;
-        vector <double> temp1;
-
-        double val = 0.0;
-        for(unsigned int i=0;i< polyGrad[0].size();i++)
+        for(size_t i=0; i<polyGrad[0].size(); i++)
         {
-            val = 0.0;
-            for(unsigned int j =0;j<polyGrad.size();j++)
+            double val = 0.0;
+            for(size_t j=0; j<polyGrad.size(); j++)
                 val = val + (polyGrad[j][i] * wei[j]);
-            temp.push_back(val - Cg[i]);
-            temp1.push_back(val + Cg[i]);
+            temp[i] = val - Cg[i];
+            temp1[i] = val + Cg[i];
         }
 
-        double pos = 0.0;
-        double neg = 0.0;
-        for(unsigned int i =0;i<alf.size();i++)
+        for(size_t i=0; i<alf.size(); i++)
         {
-            pos = ((1 + alf[i])/2) * exp((-1.0 * 0.5 * pow(temp[i],2))/pow(obj.sigma,2));
-            neg = ((1 - alf[i])/2) * exp((-1.0 * 0.5 * pow(temp1[i],2))/pow(obj.sigma,2));
-            G_pos.push_back(pos);
-            G_neg.push_back(neg);
+            const double sqSigma = obj.sigma * obj.sigma;
+            const double pos = ((1 + alf[i])/2) * exp(-1.0 * 0.5 * (temp[i] * temp[i]) / sqSigma);
+            const double neg = ((1 - alf[i])/2) * exp(-1.0 * 0.5 * (temp1[i] * temp1[i]) / sqSigma);
+            G_pos[i] = pos;
+            G_neg[i] = neg;
         }
 
-        vector <double> EXPsum;
-        vector <double> EXPterm;
+        for(size_t i=0; i<G_pos.size(); i++)
+            EXPsum[i] = G_pos[i]+G_neg[i];
 
-        for(unsigned int i = 0;i<G_pos.size();i++)
-            EXPsum.push_back(G_pos[i]+G_neg[i]);
+        for(size_t i=0; i<EXPsum.size(); i++)
+            temp2[i] = (EXPsum[i] == 0) ? 1.0 : 0.0;
 
-        vector <double> temp2;
+        for(size_t i=0; i<G_pos.size(); i++)
+            EXPterm[i] = (G_pos[i] - G_neg[i])/(EXPsum[i] + temp2[i]);
 
-        for(unsigned int i=0;i<EXPsum.size();i++)
+        for(int i=0; i<int(polyGrad.size()); i++)
         {
-            if(EXPsum[i] == 0)
-                temp2.push_back(1.0);
-            else
-                temp2.push_back(0.0);
-        }
-
-        for(unsigned int i =0; i < G_pos.size();i++)
-            EXPterm.push_back((G_pos[i] - G_neg[i])/(EXPsum[i] + temp2[i]));
-
-        double val1 = 0.0;
-        vector <double> wei1;
-
-        for(unsigned int i=0;i< polyGrad.size();i++)
-        {
-            val1 = 0.0;
-            for(unsigned int j =0;j<polyGrad[0].size();j++)
+            double val1 = 0.0;
+            for(int j=0; j<int(polyGrad[0].size()); j++)
             {
                 val1 = val1 + (Mt.at<float>(i,j) * EXPterm[j]);
             }
-            wei1.push_back(val1);
+            wei1[i] = val1;
         }
 
-        for(unsigned int i =0;i<wei.size();i++)
+        for(size_t i=0; i<wei.size(); i++)
             wei[i] = wei1[i];
 
-        E = obj.energyCalcu(Cg,polyGrad,wei);
+        E = obj.energyCalcu(Cg, polyGrad, wei);
 
         if(iterCount > maxIter)
             break;
-
-        G_pos.clear();
-        G_neg.clear();
-        temp.clear();
-        temp1.clear();
-        EXPsum.clear();
-        EXPterm.clear();
-        temp2.clear();
-        wei1.clear();
     }
 
     Mat Gray = Mat::zeros(img.size(),CV_32FC1);
@@ -186,9 +160,7 @@ void cv::decolor(InputArray _src, OutputArray _dst, OutputArray _color_boost)
 
     ///////////////////////////////////       Contrast Boosting   /////////////////////////////////
 
-    Mat lab = Mat(img.size(),CV_8UC3);
-    Mat color = Mat(img.size(),CV_8UC3);
-
+    Mat lab;
     cvtColor(I,lab,COLOR_BGR2Lab);
 
     vector <Mat> lab_channel;

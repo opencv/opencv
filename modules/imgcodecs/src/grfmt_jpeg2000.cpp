@@ -43,11 +43,15 @@
 #include "precomp.hpp"
 
 #ifdef HAVE_JASPER
+#include <sstream>
+
+#include <opencv2/core/utils/configuration.private.hpp>
+#include <opencv2/core/utils/logger.hpp>
 
 #include "grfmt_jpeg2000.hpp"
 #include "opencv2/imgproc.hpp"
 
-#ifdef WIN32
+#ifdef _WIN32
 #define JAS_WIN_MSVC_BUILD 1
 #ifdef __GNUC__
 #define HAVE_STDINT_H 1
@@ -70,14 +74,44 @@ struct JasperInitializer
     ~JasperInitializer() { jas_cleanup(); }
 };
 
-static JasperInitializer initialize_jasper;
+static JasperInitializer& _initJasper()
+{
+    static JasperInitializer initialize_jasper;
+    return initialize_jasper;
+}
+
+static bool isJasperEnabled()
+{
+    static const bool PARAM_ENABLE_JASPER = utils::getConfigurationParameterBool("OPENCV_IO_ENABLE_JASPER",
+#ifdef OPENCV_IMGCODECS_FORCE_JASPER
+        true
+#else
+        false
+#endif
+    );
+    return PARAM_ENABLE_JASPER;
+}
+static JasperInitializer& initJasper()
+{
+    if (isJasperEnabled())
+    {
+        return _initJasper();
+    }
+    else
+    {
+        const char* message = "imgcodecs: Jasper (JPEG-2000) codec is disabled. You can enable it via 'OPENCV_IO_ENABLE_JASPER' option. Refer for details and cautions here: https://github.com/opencv/opencv/issues/14058";
+        CV_LOG_WARNING(NULL, message);
+        CV_Error(Error::StsNotImplemented, message);
+    }
+}
 
 
 /////////////////////// Jpeg2KDecoder ///////////////////
 
 Jpeg2KDecoder::Jpeg2KDecoder()
 {
-    m_signature = '\0' + String() + '\0' + String() + '\0' + String("\x0cjP  \r\n\x87\n");
+    static const unsigned char signature_[12] = { 0, 0, 0, 0x0c, 'j', 'P', ' ', ' ', 13, 10, 0x87, 10};
+    m_signature = String((const char*)signature_, (const char*)signature_ + sizeof(signature_));
     m_stream = 0;
     m_image = 0;
 }
@@ -89,6 +123,7 @@ Jpeg2KDecoder::~Jpeg2KDecoder()
 
 ImageDecoder Jpeg2KDecoder::newDecoder() const
 {
+    initJasper();
     return makePtr<Jpeg2KDecoder>();
 }
 
@@ -96,12 +131,14 @@ void  Jpeg2KDecoder::close()
 {
     if( m_stream )
     {
+        CV_Assert(isJasperEnabled());
         jas_stream_close( (jas_stream_t*)m_stream );
         m_stream = 0;
     }
 
     if( m_image )
     {
+        CV_Assert(isJasperEnabled());
         jas_image_destroy( (jas_image_t*)m_image );
         m_image = 0;
     }
@@ -110,6 +147,7 @@ void  Jpeg2KDecoder::close()
 
 bool  Jpeg2KDecoder::readHeader()
 {
+    CV_Assert(isJasperEnabled());
     bool result = false;
 
     close();
@@ -121,6 +159,8 @@ bool  Jpeg2KDecoder::readHeader()
         jas_image_t* image = jas_image_decode( stream, -1, 0 );
         m_image = image;
         if( image ) {
+            CV_Assert(0 == (jas_image_tlx(image)) && "not supported");
+            CV_Assert(0 == (jas_image_tly(image)) && "not supported");
             m_width = jas_image_width( image );
             m_height = jas_image_height( image );
 
@@ -130,14 +170,31 @@ bool  Jpeg2KDecoder::readHeader()
             for( int i = 0; i < numcmpts; i++ )
             {
                 int depth_i = jas_image_cmptprec( image, i );
+                CV_Assert(depth == 0 || depth == depth_i); // component data type mismatch
                 depth = MAX(depth, depth_i);
                 if( jas_image_cmpttype( image, i ) > 2 )
                     continue;
+                int sgnd = jas_image_cmptsgnd(image, i);
+                int xstart = jas_image_cmpttlx(image, i);
+                int xend = jas_image_cmptbrx(image, i);
+                int xstep = jas_image_cmpthstep(image, i);
+                int ystart = jas_image_cmpttly(image, i);
+                int yend = jas_image_cmptbry(image, i);
+                int ystep = jas_image_cmptvstep(image, i);
+                CV_Assert(sgnd == 0 && "not supported");
+                CV_Assert(xstart == 0 && "not supported");
+                CV_Assert(ystart == 0 && "not supported");
+                CV_Assert(xstep == 1 && "not supported");
+                CV_Assert(ystep == 1 && "not supported");
+                CV_Assert(xend == m_width);
+                CV_Assert(yend == m_height);
                 cntcmpts++;
             }
 
             if( cntcmpts )
             {
+                CV_Assert(depth == 8 || depth == 16);
+                CV_Assert(cntcmpts == 1 || cntcmpts == 3);
                 m_type = CV_MAKETYPE(depth <= 8 ? CV_8U : CV_16U, cntcmpts > 1 ? 3 : 1);
                 result = true;
             }
@@ -150,17 +207,24 @@ bool  Jpeg2KDecoder::readHeader()
     return result;
 }
 
+static void Jpeg2KDecoder_close(Jpeg2KDecoder* ptr)
+{
+    ptr->close();
+}
 
 bool  Jpeg2KDecoder::readData( Mat& img )
 {
+    CV_Assert(isJasperEnabled());
+
+    Ptr<Jpeg2KDecoder> close_this(this, Jpeg2KDecoder_close);
     bool result = false;
-    int color = img.channels() > 1;
+    bool color = img.channels() > 1;
     uchar* data = img.ptr();
-    int step = (int)img.step;
+    size_t step = img.step;
     jas_stream_t* stream = (jas_stream_t*)m_stream;
     jas_image_t* image = (jas_image_t*)m_image;
 
-#ifndef WIN32
+#ifndef _WIN32
     // At least on some Linux instances the
     // system libjasper segfaults when
     // converting color to grey.
@@ -204,11 +268,16 @@ bool  Jpeg2KDecoder::readData( Mat& img )
                     result = true;
                 }
                 else
-                    fprintf(stderr, "JPEG 2000 LOADER ERROR: cannot convert colorspace\n");
+                {
+                    jas_cmprof_destroy(clrprof);
+                    CV_Error(Error::StsError, "JPEG 2000 LOADER ERROR: cannot convert colorspace");
+                }
                 jas_cmprof_destroy( clrprof );
             }
             else
-                fprintf(stderr, "JPEG 2000 LOADER ERROR: unable to create colorspace\n");
+            {
+                CV_Error(Error::StsError, "JPEG 2000 LOADER ERROR: unable to create colorspace");
+            }
         }
         else
             result = true;
@@ -252,13 +321,13 @@ bool  Jpeg2KDecoder::readData( Mat& img )
                         if( !jas_image_readcmpt( image, cmptlut[i], 0, 0, xend / xstep, yend / ystep, buffer ))
                         {
                             if( img.depth() == CV_8U )
-                                result = readComponent8u( data + i, buffer, step, cmptlut[i], maxval, offset, ncmpts );
+                                result = readComponent8u( data + i, buffer, validateToInt(step), cmptlut[i], maxval, offset, ncmpts );
                             else
-                                result = readComponent16u( ((unsigned short *)data) + i, buffer, step / 2, cmptlut[i], maxval, offset, ncmpts );
+                                result = readComponent16u( ((unsigned short *)data) + i, buffer, validateToInt(step / 2), cmptlut[i], maxval, offset, ncmpts );
                             if( !result )
                             {
-                                i = ncmpts;
-                                result = false;
+                                jas_matrix_destroy( buffer );
+                                CV_Error(Error::StsError, "JPEG2000 LOADER ERROR: failed to read component");
                             }
                         }
                         jas_matrix_destroy( buffer );
@@ -267,12 +336,14 @@ bool  Jpeg2KDecoder::readData( Mat& img )
             }
         }
         else
-            fprintf(stderr, "JPEG2000 LOADER ERROR: colorspace conversion failed\n" );
+        {
+            CV_Error(Error::StsError, "JPEG2000 LOADER ERROR: colorspace conversion failed");
+        }
     }
 
-    close();
+    CV_Assert(result == true);
 
-#ifndef WIN32
+#ifndef _WIN32
     if (!clr.empty())
     {
         cv::cvtColor(clr, img, COLOR_BGR2GRAY);
@@ -287,6 +358,8 @@ bool  Jpeg2KDecoder::readComponent8u( uchar *data, void *_buffer,
                                       int step, int cmpt,
                                       int maxval, int offset, int ncmpts )
 {
+    CV_Assert(isJasperEnabled());
+
     jas_matrix_t* buffer = (jas_matrix_t*)_buffer;
     jas_image_t* image = (jas_image_t*)m_image;
     int xstart = jas_image_cmpttlx( image, cmpt );
@@ -351,6 +424,8 @@ bool  Jpeg2KDecoder::readComponent16u( unsigned short *data, void *_buffer,
                                        int step, int cmpt,
                                        int maxval, int offset, int ncmpts )
 {
+    CV_Assert(isJasperEnabled());
+
     jas_matrix_t* buffer = (jas_matrix_t*)_buffer;
     jas_image_t* image = (jas_image_t*)m_image;
     int xstart = jas_image_cmpttlx( image, cmpt );
@@ -426,6 +501,7 @@ Jpeg2KEncoder::~Jpeg2KEncoder()
 
 ImageEncoder Jpeg2KEncoder::newEncoder() const
 {
+    initJasper();
     return makePtr<Jpeg2KEncoder>();
 }
 
@@ -435,14 +511,27 @@ bool  Jpeg2KEncoder::isFormatSupported( int depth ) const
 }
 
 
-bool  Jpeg2KEncoder::write( const Mat& _img, const std::vector<int>& )
+bool  Jpeg2KEncoder::write( const Mat& _img, const std::vector<int>& params )
 {
+    CV_Assert(isJasperEnabled());
     int width = _img.cols, height = _img.rows;
     int depth = _img.depth(), channels = _img.channels();
     depth = depth == CV_8U ? 8 : 16;
 
     if( channels > 3 || channels < 1 )
         return false;
+
+    CV_Assert(params.size() % 2 == 0);
+    double target_compression_rate = 1.0;
+    for( size_t i = 0; i < params.size(); i += 2 )
+    {
+        switch(params[i])
+        {
+        case cv::IMWRITE_JPEG2000_COMPRESSION_X1000:
+            target_compression_rate = std::min(std::max(params[i+1], 0), 1000) / 1000.0;
+            break;
+        }
+    }
 
     jas_image_cmptparm_t component_info[3];
     for( int i = 0; i < channels; i++ )
@@ -479,7 +568,10 @@ bool  Jpeg2KEncoder::write( const Mat& _img, const std::vector<int>& )
         jas_stream_t *stream = jas_stream_fopen( m_filename.c_str(), "wb" );
         if( stream )
         {
-            result = !jas_image_encode( img, stream, jas_image_strtofmt( (char*)"jp2" ), (char*)"" );
+            std::stringstream options;
+            options << "rate=" << target_compression_rate;
+
+            result = !jas_image_encode( img, stream, jas_image_strtofmt( (char*)"jp2" ), (char*)options.str().c_str() );
 
             jas_stream_close( stream );
         }
@@ -493,6 +585,8 @@ bool  Jpeg2KEncoder::write( const Mat& _img, const std::vector<int>& )
 
 bool  Jpeg2KEncoder::writeComponent8u( void *__img, const Mat& _img )
 {
+    CV_Assert(isJasperEnabled());
+
     jas_image_t* img = (jas_image_t*)__img;
     int w = _img.cols, h = _img.rows, ncmpts = _img.channels();
     jas_matrix_t *row = jas_matrix_create( 1, w );
@@ -517,6 +611,8 @@ bool  Jpeg2KEncoder::writeComponent8u( void *__img, const Mat& _img )
 
 bool  Jpeg2KEncoder::writeComponent16u( void *__img, const Mat& _img )
 {
+    CV_Assert(isJasperEnabled());
+
     jas_image_t* img = (jas_image_t*)__img;
     int w = _img.cols, h = _img.rows, ncmpts = _img.channels();
     jas_matrix_t *row = jas_matrix_create( 1, w );

@@ -87,17 +87,7 @@
 #  include "opencv2/cudalegacy.hpp"
 #endif
 
-#ifdef HAVE_OPENCV_XFEATURES2D
-#  include "opencv2/xfeatures2d/cuda.hpp"
-#endif
-
-#include "../../imgproc/src/gcgraph.hpp"
-
 #include "opencv2/core/private.hpp"
-
-#ifdef HAVE_TEGRA_OPTIMIZATION
-# include "opencv2/stitching/stitching_tegra.hpp"
-#endif
 
 #include "util_log.hpp"
 

@@ -1,50 +1,51 @@
 /*M///////////////////////////////////////////////////////////////////////////////////////
- //
- // This is a homography decomposition implementation contributed to OpenCV
- // by Samson Yilma. It implements the homography decomposition algorithm
- // descriped in the research report:
- // Malis, E and Vargas, M, "Deeper understanding of the homography decomposition
- // for vision-based control", Research Report 6303, INRIA (2007)
- //
- //  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
- //
- //  By downloading, copying, installing or using the software you agree to this license.
- //  If you do not agree to this license, do not download, install,
- //  copy or use the software.
- //
- //
- //                           License Agreement
- //                For Open Source Computer Vision Library
- //
- // Copyright (C) 2014, Samson Yilma¸ (samson_yilma@yahoo.com), all rights reserved.
- //
- // Third party copyrights are property of their respective owners.
- //
- // Redistribution and use in source and binary forms, with or without modification,
- // are permitted provided that the following conditions are met:
- //
- //   * Redistribution's of source code must retain the above copyright notice,
- //     this list of conditions and the following disclaimer.
- //
- //   * Redistribution's in binary form must reproduce the above copyright notice,
- //     this list of conditions and the following disclaimer in the documentation
- //     and/or other materials provided with the distribution.
- //
- //   * The name of the copyright holders may not be used to endorse or promote products
- //     derived from this software without specific prior written permission.
- //
- // This software is provided by the copyright holders and contributors "as is" and
- // any express or implied warranties, including, but not limited to, the implied
- // warranties of merchantability and fitness for a particular purpose are disclaimed.
- // In no event shall the Intel Corporation or contributors be liable for any direct,
- // indirect, incidental, special, exemplary, or consequential damages
- // (including, but not limited to, procurement of substitute goods or services;
- // loss of use, data, or profits; or business interruption) however caused
- // and on any theory of liability, whether in contract, strict liability,
- // or tort (including negligence or otherwise) arising in any way out of
- // the use of this software, even if advised of the possibility of such damage.
- //
- //M*/
+//
+// This is a homography decomposition implementation contributed to OpenCV
+// by Samson Yilma. It implements the homography decomposition algorithm
+// described in the research report:
+// Malis, E and Vargas, M, "Deeper understanding of the homography decomposition
+// for vision-based control", Research Report 6303, INRIA (2007)
+//
+//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+//
+//  By downloading, copying, installing or using the software you agree to this license.
+//  If you do not agree to this license, do not download, install,
+//  copy or use the software.
+//
+//
+//                           License Agreement
+//                For Open Source Computer Vision Library
+//
+// Copyright (C) 2014, Samson Yilma (samson_yilma@yahoo.com), all rights reserved.
+// Copyright (C) 2018, Intel Corporation, all rights reserved.
+//
+// Third party copyrights are property of their respective owners.
+//
+// Redistribution and use in source and binary forms, with or without modification,
+// are permitted provided that the following conditions are met:
+//
+//   * Redistribution's of source code must retain the above copyright notice,
+//     this list of conditions and the following disclaimer.
+//
+//   * Redistribution's in binary form must reproduce the above copyright notice,
+//     this list of conditions and the following disclaimer in the documentation
+//     and/or other materials provided with the distribution.
+//
+//   * The name of the copyright holders may not be used to endorse or promote products
+//     derived from this software without specific prior written permission.
+//
+// This software is provided by the copyright holders and contributors "as is" and
+// any express or implied warranties, including, but not limited to, the implied
+// warranties of merchantability and fitness for a particular purpose are disclaimed.
+// In no event shall the Intel Corporation or contributors be liable for any direct,
+// indirect, incidental, special, exemplary, or consequential damages
+// (including, but not limited to, procurement of substitute goods or services;
+// loss of use, data, or profits; or business interruption) however caused
+// and on any theory of liability, whether in contract, strict liability,
+// or tort (including negligence or otherwise) arising in any way out of
+// the use of this software, even if advised of the possibility of such damage.
+//
+//M*/
 
 #include "precomp.hpp"
 #include <memory>
@@ -84,30 +85,40 @@ protected:
     }
 
 private:
+    /**
+     * Normalize the homograhpy \f$H\f$.
+     *
+     * @param H Homography matrix.
+     * @param K Intrinsic parameter matrix.
+     * @return It returns
+     * \f[
+     *   K^{-1} * H * K
+     * \f]
+     */
     cv::Matx33d normalize(const cv::Matx33d& H, const cv::Matx33d& K);
     void removeScale();
     cv::Matx33d _Hnorm;
 };
 
-class HomographyDecompZhang : public HomographyDecomp {
+class HomographyDecompZhang CV_FINAL : public HomographyDecomp {
 
 public:
     HomographyDecompZhang():HomographyDecomp() {}
     virtual ~HomographyDecompZhang() {}
 
 private:
-    virtual void decompose(std::vector<CameraMotion>& camMotions);
+    virtual void decompose(std::vector<CameraMotion>& camMotions) CV_OVERRIDE;
     bool findMotionFrom_tstar_n(const cv::Vec3d& tstar, const cv::Vec3d& n, CameraMotion& motion);
 };
 
-class HomographyDecompInria : public HomographyDecomp {
+class HomographyDecompInria CV_FINAL : public HomographyDecomp {
 
 public:
     HomographyDecompInria():HomographyDecomp() {}
     virtual ~HomographyDecompInria() {}
 
 private:
-    virtual void decompose(std::vector<CameraMotion>& camMotions);
+    virtual void decompose(std::vector<CameraMotion>& camMotions) CV_OVERRIDE;
     double oppositeOfMinor(const cv::Matx33d& M, const int row, const int col);
     void findRmatFrom_tstar_n(const cv::Vec3d& tstar, const cv::Vec3d& n, const double v, cv::Matx33d& R);
 };
@@ -174,6 +185,10 @@ bool HomographyDecompZhang::findMotionFrom_tstar_n(const cv::Vec3d& tstar, const
     temp(1, 1) += 1.0;
     temp(2, 2) += 1.0;
     motion.R = getHnorm() * temp.inv();
+    if (cv::determinant(motion.R) < 0)
+    {
+        motion.R *= -1;
+    }
     motion.t = motion.R * tstar;
     motion.n = n;
     return passesSameSideOfPlaneConstraint(motion);
@@ -183,6 +198,7 @@ void HomographyDecompZhang::decompose(std::vector<CameraMotion>& camMotions)
 {
     Mat W, U, Vt;
     SVD::compute(getHnorm(), W, U, Vt);
+    CV_Assert(W.total() > 2 && Vt.total() > 7);
     double lambda1=W.at<double>(0);
     double lambda3=W.at<double>(2);
     double lambda1m3 =  (lambda1-lambda3);
@@ -300,6 +316,10 @@ void HomographyDecompInria::findRmatFrom_tstar_n(const cv::Vec3d& tstar, const c
               0.0, 0.0, 1.0);
 
     R = getHnorm() * (I - (2/v) * tstar_m * n_m.t() );
+    if (cv::determinant(R) < 0)
+    {
+        R *= -1;
+    }
 }
 
 void HomographyDecompInria::decompose(std::vector<CameraMotion>& camMotions)
@@ -477,6 +497,69 @@ int decomposeHomographyMat(InputArray _H,
     }
 
     return nsols;
+}
+
+void filterHomographyDecompByVisibleRefpoints(InputArrayOfArrays _rotations,
+                                              InputArrayOfArrays _normals,
+                                              InputArray _beforeRectifiedPoints,
+                                              InputArray _afterRectifiedPoints,
+                                              OutputArray _possibleSolutions,
+                                              InputArray _pointsMask)
+{
+    CV_Assert(_beforeRectifiedPoints.type() == CV_32FC2 && _afterRectifiedPoints.type() == CV_32FC2);
+    CV_Assert(_pointsMask.empty() || _pointsMask.type() == CV_8U);
+
+    Mat beforeRectifiedPoints = _beforeRectifiedPoints.getMat();
+    Mat afterRectifiedPoints = _afterRectifiedPoints.getMat();
+    Mat pointsMask = _pointsMask.getMat();
+    int nsolutions = (int)_rotations.total();
+    int npoints = (int)beforeRectifiedPoints.total();
+    CV_Assert(pointsMask.empty() || pointsMask.checkVector(1, CV_8U) == npoints);
+    const uchar* pointsMaskPtr = pointsMask.data;
+
+    std::vector<uchar> solutionMask(nsolutions, (uchar)1);
+    std::vector<Mat> normals(nsolutions);
+    std::vector<Mat> rotnorm(nsolutions);
+    Mat R;
+
+    for( int i = 0; i < nsolutions; i++ )
+    {
+        _normals.getMat(i).convertTo(normals[i], CV_64F);
+        CV_Assert(normals[i].total() == 3);
+        _rotations.getMat(i).convertTo(R, CV_64F);
+        rotnorm[i] = R*normals[i];
+        CV_Assert(rotnorm[i].total() == 3);
+    }
+
+    for( int j = 0; j < npoints; j++ )
+    {
+        if( !pointsMaskPtr || pointsMaskPtr[j] )
+        {
+            Point2f prevPoint = beforeRectifiedPoints.at<Point2f>(j);
+            Point2f currPoint = afterRectifiedPoints.at<Point2f>(j);
+
+            for( int i = 0; i < nsolutions; i++ )
+            {
+                if( !solutionMask[i] )
+                    continue;
+
+                const double* normal_i = normals[i].ptr<double>();
+                const double* rotnorm_i = rotnorm[i].ptr<double>();
+                double prevNormDot = normal_i[0]*prevPoint.x + normal_i[1]*prevPoint.y + normal_i[2];
+                double currNormDot = rotnorm_i[0]*currPoint.x + rotnorm_i[1]*currPoint.y + rotnorm_i[2];
+
+                if (prevNormDot <= 0 || currNormDot <= 0)
+                    solutionMask[i] = (uchar)0;
+            }
+        }
+    }
+
+    std::vector<int> possibleSolutions;
+    for( int i = 0; i < nsolutions; i++ )
+        if( solutionMask[i] )
+            possibleSolutions.push_back(i);
+
+    Mat(possibleSolutions).copyTo(_possibleSolutions);
 }
 
 } //namespace cv

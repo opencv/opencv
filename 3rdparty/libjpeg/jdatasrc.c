@@ -2,7 +2,7 @@
  * jdatasrc.c
  *
  * Copyright (C) 1994-1996, Thomas G. Lane.
- * Modified 2009-2011 by Guido Vollbeding.
+ * Modified 2009-2015 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -221,11 +221,11 @@ jpeg_stdio_src (j_decompress_ptr cinfo, FILE * infile)
   if (cinfo->src == NULL) {	/* first time for this JPEG object? */
     cinfo->src = (struct jpeg_source_mgr *)
       (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_PERMANENT,
-                                  SIZEOF(my_source_mgr));
+				  SIZEOF(my_source_mgr));
     src = (my_src_ptr) cinfo->src;
     src->buffer = (JOCTET *)
       (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_PERMANENT,
-                                  INPUT_BUF_SIZE * SIZEOF(JOCTET));
+				  INPUT_BUF_SIZE * SIZEOF(JOCTET));
   }
 
   src = (my_src_ptr) cinfo->src;
@@ -247,7 +247,7 @@ jpeg_stdio_src (j_decompress_ptr cinfo, FILE * infile)
 
 GLOBAL(void)
 jpeg_mem_src (j_decompress_ptr cinfo,
-              unsigned char * inbuffer, unsigned long insize)
+	      const unsigned char * inbuffer, unsigned long insize)
 {
   struct jpeg_source_mgr * src;
 
@@ -261,7 +261,7 @@ jpeg_mem_src (j_decompress_ptr cinfo,
   if (cinfo->src == NULL) {	/* first time for this JPEG object? */
     cinfo->src = (struct jpeg_source_mgr *)
       (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_PERMANENT,
-                                  SIZEOF(struct jpeg_source_mgr));
+				  SIZEOF(struct jpeg_source_mgr));
   }
 
   src = cinfo->src;
@@ -271,5 +271,5 @@ jpeg_mem_src (j_decompress_ptr cinfo,
   src->resync_to_restart = jpeg_resync_to_restart; /* use default method */
   src->term_source = term_source;
   src->bytes_in_buffer = (size_t) insize;
-  src->next_input_byte = (JOCTET *) inbuffer;
+  src->next_input_byte = (const JOCTET *) inbuffer;
 }

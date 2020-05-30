@@ -69,7 +69,7 @@ BoostTreeParams::BoostTreeParams( int _boostType, int _weak_count,
     weightTrimRate = _weightTrimRate;
 }
 
-class DTreesImplForBoost : public DTreesImpl
+class DTreesImplForBoost CV_FINAL : public DTreesImpl
 {
 public:
     DTreesImplForBoost()
@@ -79,15 +79,16 @@ public:
     }
     virtual ~DTreesImplForBoost() {}
 
-    bool isClassifier() const { return true; }
+    bool isClassifier() const CV_OVERRIDE { return true; }
 
-    void clear()
+    void clear() CV_OVERRIDE
     {
         DTreesImpl::clear();
     }
 
-    void startTraining( const Ptr<TrainData>& trainData, int flags )
+    void startTraining( const Ptr<TrainData>& trainData, int flags ) CV_OVERRIDE
     {
+        CV_Assert(!trainData.empty());
         DTreesImpl::startTraining(trainData, flags);
         sumResult.assign(w->sidx.size(), 0.);
 
@@ -132,7 +133,7 @@ public:
         }
     }
 
-    void endTraining()
+    void endTraining() CV_OVERRIDE
     {
         DTreesImpl::endTraining();
         vector<double> e;
@@ -167,7 +168,7 @@ public:
         }
     }
 
-    void calcValue( int nidx, const vector<int>& _sidx )
+    void calcValue( int nidx, const vector<int>& _sidx ) CV_OVERRIDE
     {
         DTreesImpl::calcValue(nidx, _sidx);
         WNode* node = &w->wnodes[nidx];
@@ -182,8 +183,9 @@ public:
         }
     }
 
-    bool train( const Ptr<TrainData>& trainData, int flags )
+    bool train( const Ptr<TrainData>& trainData, int flags ) CV_OVERRIDE
     {
+        CV_Assert(!trainData.empty());
         startTraining(trainData, flags);
         int treeidx, ntrees = bparams.weakCount >= 0 ? bparams.weakCount : 10000;
         vector<int> sidx = w->sidx;
@@ -205,7 +207,7 @@ public:
         int nvars = (int)varIdx.size();
         double sumw = 0., C = 1.;
         cv::AutoBuffer<double> buf(n + nvars);
-        double* result = buf;
+        double* result = buf.data();
         float* sbuf = (float*)(result + n);
         Mat sample(1, nvars, CV_32F, sbuf);
         int predictFlags = bparams.boostType == Boost::DISCRETE ? (PREDICT_MAX_VOTE | RAW_OUTPUT) : PREDICT_SUM;
@@ -356,7 +358,7 @@ public:
         }
     }
 
-    float predictTrees( const Range& range, const Mat& sample, int flags0 ) const
+    float predictTrees( const Range& range, const Mat& sample, int flags0 ) const CV_OVERRIDE
     {
         int flags = (flags0 & ~PREDICT_MASK) | PREDICT_SUM;
         float val = DTreesImpl::predictTrees(range, sample, flags);
@@ -370,7 +372,7 @@ public:
         return val;
     }
 
-    void writeTrainingParams( FileStorage& fs ) const
+    void writeTrainingParams( FileStorage& fs ) const CV_OVERRIDE
     {
         fs << "boosting_type" <<
         (bparams.boostType == Boost::DISCRETE ? "DiscreteAdaboost" :
@@ -382,7 +384,7 @@ public:
         fs << "weight_trimming_rate" << bparams.weightTrimRate;
     }
 
-    void write( FileStorage& fs ) const
+    void write( FileStorage& fs ) const CV_OVERRIDE
     {
         if( roots.empty() )
             CV_Error( CV_StsBadArg, "RTrees have not been trained" );
@@ -405,7 +407,7 @@ public:
         fs << "]";
     }
 
-    void readParams( const FileNode& fn )
+    void readParams( const FileNode& fn ) CV_OVERRIDE
     {
         DTreesImpl::readParams(fn);
 
@@ -423,7 +425,7 @@ public:
                                     tparams_node["weight_trimming_rate"] : fn["weight_trimming_rate"]);
     }
 
-    void read( const FileNode& fn )
+    void read( const FileNode& fn ) CV_OVERRIDE
     {
         clear();
 
@@ -452,51 +454,64 @@ public:
     BoostImpl() {}
     virtual ~BoostImpl() {}
 
-    CV_IMPL_PROPERTY(int, BoostType, impl.bparams.boostType)
-    CV_IMPL_PROPERTY(int, WeakCount, impl.bparams.weakCount)
-    CV_IMPL_PROPERTY(double, WeightTrimRate, impl.bparams.weightTrimRate)
+    inline int getBoostType() const CV_OVERRIDE { return impl.bparams.boostType; }
+    inline void setBoostType(int val) CV_OVERRIDE { impl.bparams.boostType = val; }
+    inline int getWeakCount() const CV_OVERRIDE { return impl.bparams.weakCount; }
+    inline void setWeakCount(int val) CV_OVERRIDE { impl.bparams.weakCount = val; }
+    inline double getWeightTrimRate() const CV_OVERRIDE { return impl.bparams.weightTrimRate; }
+    inline void setWeightTrimRate(double val) CV_OVERRIDE { impl.bparams.weightTrimRate = val; }
 
-    CV_WRAP_SAME_PROPERTY(int, MaxCategories, impl.params)
-    CV_WRAP_SAME_PROPERTY(int, MaxDepth, impl.params)
-    CV_WRAP_SAME_PROPERTY(int, MinSampleCount, impl.params)
-    CV_WRAP_SAME_PROPERTY(int, CVFolds, impl.params)
-    CV_WRAP_SAME_PROPERTY(bool, UseSurrogates, impl.params)
-    CV_WRAP_SAME_PROPERTY(bool, Use1SERule, impl.params)
-    CV_WRAP_SAME_PROPERTY(bool, TruncatePrunedTree, impl.params)
-    CV_WRAP_SAME_PROPERTY(float, RegressionAccuracy, impl.params)
-    CV_WRAP_SAME_PROPERTY_S(cv::Mat, Priors, impl.params)
+    inline int getMaxCategories() const CV_OVERRIDE { return impl.params.getMaxCategories(); }
+    inline void setMaxCategories(int val) CV_OVERRIDE { impl.params.setMaxCategories(val); }
+    inline int getMaxDepth() const CV_OVERRIDE { return impl.params.getMaxDepth(); }
+    inline void setMaxDepth(int val) CV_OVERRIDE { impl.params.setMaxDepth(val); }
+    inline int getMinSampleCount() const CV_OVERRIDE { return impl.params.getMinSampleCount(); }
+    inline void setMinSampleCount(int val) CV_OVERRIDE { impl.params.setMinSampleCount(val); }
+    inline int getCVFolds() const CV_OVERRIDE { return impl.params.getCVFolds(); }
+    inline void setCVFolds(int val) CV_OVERRIDE { impl.params.setCVFolds(val); }
+    inline bool getUseSurrogates() const CV_OVERRIDE { return impl.params.getUseSurrogates(); }
+    inline void setUseSurrogates(bool val) CV_OVERRIDE { impl.params.setUseSurrogates(val); }
+    inline bool getUse1SERule() const CV_OVERRIDE { return impl.params.getUse1SERule(); }
+    inline void setUse1SERule(bool val) CV_OVERRIDE { impl.params.setUse1SERule(val); }
+    inline bool getTruncatePrunedTree() const CV_OVERRIDE { return impl.params.getTruncatePrunedTree(); }
+    inline void setTruncatePrunedTree(bool val) CV_OVERRIDE { impl.params.setTruncatePrunedTree(val); }
+    inline float getRegressionAccuracy() const CV_OVERRIDE { return impl.params.getRegressionAccuracy(); }
+    inline void setRegressionAccuracy(float val) CV_OVERRIDE { impl.params.setRegressionAccuracy(val); }
+    inline cv::Mat getPriors() const CV_OVERRIDE { return impl.params.getPriors(); }
+    inline void setPriors(const cv::Mat& val) CV_OVERRIDE { impl.params.setPriors(val); }
 
-    String getDefaultName() const { return "opencv_ml_boost"; }
+    String getDefaultName() const CV_OVERRIDE { return "opencv_ml_boost"; }
 
-    bool train( const Ptr<TrainData>& trainData, int flags )
+    bool train( const Ptr<TrainData>& trainData, int flags ) CV_OVERRIDE
     {
+        CV_Assert(!trainData.empty());
         return impl.train(trainData, flags);
     }
 
-    float predict( InputArray samples, OutputArray results, int flags ) const
+    float predict( InputArray samples, OutputArray results, int flags ) const CV_OVERRIDE
     {
         return impl.predict(samples, results, flags);
     }
 
-    void write( FileStorage& fs ) const
+    void write( FileStorage& fs ) const CV_OVERRIDE
     {
         impl.write(fs);
     }
 
-    void read( const FileNode& fn )
+    void read( const FileNode& fn ) CV_OVERRIDE
     {
         impl.read(fn);
     }
 
-    int getVarCount() const { return impl.getVarCount(); }
+    int getVarCount() const CV_OVERRIDE { return impl.getVarCount(); }
 
-    bool isTrained() const { return impl.isTrained(); }
-    bool isClassifier() const { return impl.isClassifier(); }
+    bool isTrained() const CV_OVERRIDE { return impl.isTrained(); }
+    bool isClassifier() const CV_OVERRIDE { return impl.isClassifier(); }
 
-    const vector<int>& getRoots() const { return impl.getRoots(); }
-    const vector<Node>& getNodes() const { return impl.getNodes(); }
-    const vector<Split>& getSplits() const { return impl.getSplits(); }
-    const vector<int>& getSubsets() const { return impl.getSubsets(); }
+    const vector<int>& getRoots() const CV_OVERRIDE { return impl.getRoots(); }
+    const vector<Node>& getNodes() const CV_OVERRIDE { return impl.getNodes(); }
+    const vector<Split>& getSplits() const CV_OVERRIDE { return impl.getSplits(); }
+    const vector<int>& getSubsets() const CV_OVERRIDE { return impl.getSubsets(); }
 
     DTreesImplForBoost impl;
 };

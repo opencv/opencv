@@ -49,8 +49,8 @@ private:
   unsigned char __k;
 };
 
-static_assert(sizeof(Guid) == sizeof(::_GUID), "Incorect size for Guid");
-static_assert(sizeof(__rcGUID_t) == sizeof(::_GUID), "Incorect size for __rcGUID_t");
+static_assert(sizeof(Guid) == sizeof(::_GUID), "Incorrect size for Guid");
+static_assert(sizeof(__rcGUID_t) == sizeof(::_GUID), "Incorrect size for __rcGUID_t");
 
 ////////////////////////////////////////////////////////////////////////////////
 inline Guid::Guid() : __a(0), __b(0), __c(0), __d(0), __e(0), __f(0), __g(0), __h(0), __i(0), __j(0), __k(0)

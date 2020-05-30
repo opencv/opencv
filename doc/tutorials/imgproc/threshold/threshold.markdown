@@ -1,6 +1,9 @@
 Basic Thresholding Operations {#tutorial_threshold}
 =============================
 
+@prev_tutorial{tutorial_pyramids}
+@next_tutorial{tutorial_threshold_inRange}
+
 Goal
 ----
 
@@ -96,43 +99,101 @@ Thresholding?
 Code
 ----
 
+@add_toggle_cpp
 The tutorial code's is shown lines below. You can also download it from
 [here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/ImgProc/Threshold.cpp)
 @include samples/cpp/tutorial_code/ImgProc/Threshold.cpp
+@end_toggle
+
+@add_toggle_java
+The tutorial code's is shown lines below. You can also download it from
+[here](https://github.com/opencv/opencv/tree/master/samples/java/tutorial_code/ImgProc/threshold/Threshold.java)
+@include samples/java/tutorial_code/ImgProc/threshold/Threshold.java
+@end_toggle
+
+@add_toggle_python
+The tutorial code's is shown lines below. You can also download it from
+[here](https://github.com/opencv/opencv/tree/master/samples/python/tutorial_code/imgProc/threshold/threshold.py)
+@include samples/python/tutorial_code/imgProc/threshold/threshold.py
+@end_toggle
 
 Explanation
 -----------
 
--#  Let's check the general structure of the program:
-    -   Load an image. If it is BGR we convert it to Grayscale. For this, remember that we can use
+Let's check the general structure of the program:
+-   Load an image. If it is BGR we convert it to Grayscale. For this, remember that we can use
         the function @ref cv::cvtColor :
-        @snippet cpp/tutorial_code/ImgProc/Threshold.cpp load
 
-    -   Create a window to display the result
-        @snippet cpp/tutorial_code/ImgProc/Threshold.cpp window
+@add_toggle_cpp
+@snippet samples/cpp/tutorial_code/ImgProc/Threshold.cpp load
+@end_toggle
 
-    -   Create \f$2\f$ trackbars for the user to enter user input:
+@add_toggle_java
+@snippet samples/java/tutorial_code/ImgProc/threshold/Threshold.java load
+@end_toggle
 
-        -   **Type of thresholding**: Binary, To Zero, etc...
-        -   **Threshold value**
-        @snippet cpp/tutorial_code/ImgProc/Threshold.cpp trackbar
+@add_toggle_python
+@snippet samples/python/tutorial_code/imgProc/threshold/threshold.py load
+@end_toggle
 
-    -   Wait until the user enters the threshold value, the type of thresholding (or until the
-        program exits)
-    -   Whenever the user changes the value of any of the Trackbars, the function *Threshold_Demo*
-        is called:
-        @snippet cpp/tutorial_code/ImgProc/Threshold.cpp Threshold_Demo
+-   Create a window to display the result
 
-        As you can see, the function @ref cv::threshold is invoked. We give \f$5\f$ parameters:
+@add_toggle_cpp
+@snippet samples/cpp/tutorial_code/ImgProc/Threshold.cpp window
+@end_toggle
 
-        -   *src_gray*: Our input image
-        -   *dst*: Destination (output) image
-        -   *threshold_value*: The \f$thresh\f$ value with respect to which the thresholding operation
-            is made
-        -   *max_BINARY_value*: The value used with the Binary thresholding operations (to set the
-            chosen pixels)
-        -   *threshold_type*: One of the \f$5\f$ thresholding operations. They are listed in the
-            comment section of the function above.
+@add_toggle_java
+@snippet samples/java/tutorial_code/ImgProc/threshold/Threshold.java window
+@end_toggle
+
+@add_toggle_python
+@snippet samples/python/tutorial_code/imgProc/threshold/threshold.py window
+@end_toggle
+
+-   Create \f$2\f$ trackbars for the user to enter user input:
+
+    -   **Type of thresholding**: Binary, To Zero, etc...
+    -   **Threshold value**
+
+@add_toggle_cpp
+@snippet samples/cpp/tutorial_code/ImgProc/Threshold.cpp trackbar
+@end_toggle
+
+@add_toggle_java
+@snippet samples/java/tutorial_code/ImgProc/threshold/Threshold.java trackbar
+@end_toggle
+
+@add_toggle_python
+@snippet samples/python/tutorial_code/imgProc/threshold/threshold.py trackbar
+@end_toggle
+
+-   Wait until the user enters the threshold value, the type of thresholding (or until the
+    program exits)
+-   Whenever the user changes the value of any of the Trackbars, the function *Threshold_Demo*
+    (*update* in Java) is called:
+
+@add_toggle_cpp
+@snippet samples/cpp/tutorial_code/ImgProc/Threshold.cpp Threshold_Demo
+@end_toggle
+
+@add_toggle_java
+@snippet samples/java/tutorial_code/ImgProc/threshold/Threshold.java Threshold_Demo
+@end_toggle
+
+@add_toggle_python
+@snippet samples/python/tutorial_code/imgProc/threshold/threshold.py Threshold_Demo
+@end_toggle
+
+As you can see, the function @ref cv::threshold is invoked. We give \f$5\f$ parameters in C++ code:
+
+-   *src_gray*: Our input image
+-   *dst*: Destination (output) image
+-   *threshold_value*: The \f$thresh\f$ value with respect to which the thresholding operation
+    is made
+-   *max_BINARY_value*: The value used with the Binary thresholding operations (to set the
+    chosen pixels)
+-   *threshold_type*: One of the \f$5\f$ thresholding operations. They are listed in the
+    comment section of the function above.
 
 Results
 -------
@@ -142,7 +203,7 @@ Results
 
     ![](images/Threshold_Tutorial_Original_Image.jpg)
 
--#  First, we try to threshold our image with a *binary threhold inverted*. We expect that the
+-#  First, we try to threshold our image with a *binary threshold inverted*. We expect that the
     pixels brighter than the \f$thresh\f$ will turn dark, which is what actually happens, as we can see
     in the snapshot below (notice from the original image, that the doggie's tongue and eyes are
     particularly bright in comparison with the image, this is reflected in the output image).

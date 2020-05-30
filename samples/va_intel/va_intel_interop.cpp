@@ -45,7 +45,6 @@
 #include "opencv2/imgproc.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/core/va_intel.hpp"
-#include "cvconfig.h"
 
 #define CHECK_VASTATUS(_status,_func) \
     if (_status != VA_STATUS_SUCCESS) \
@@ -65,15 +64,9 @@ public:
     void usage()
         {
             fprintf(stderr,
-#if defined(HAVE_VA_INTEL)
                     "Usage: va_intel_interop [-f] infile outfile1 outfile2\n\n"
                     "Interop ON/OFF version\n\n"
                     "where:  -f    option indicates interop is off (fallback mode); interop is on by default\n"
-#elif defined(HAVE_VA)
-                    "Usage: va_intel_interop infile outfile1 outfile2\n\n"
-                    "Interop OFF only version\n\n"
-                    "where:\n"
-#endif //HAVE_VA_INTEL / HAVE_VA
                     "        infile   is to be existing, contains input image data (bmp, jpg, png, tiff, etc)\n"
                     "        outfile1 is to be created, contains original surface data (NV12)\n"
                     "        outfile2 is to be created, contains processed surface data (NV12)\n");
@@ -84,20 +77,14 @@ public:
             int n = 0;
             for (int i = 0; i < _fnNumFiles; ++i)
                 m_files[i] = 0;
-#if defined(HAVE_VA_INTEL)
             m_interop = true;
-#elif defined(HAVE_VA)
-            m_interop = false;
-#endif //HAVE_VA_INTEL / HAVE_VA
             for (int i = 1; i < m_argc; ++i)
             {
                 const char *arg = m_argv[i];
                 if (arg[0] == '-') // option
                 {
-#if defined(HAVE_VA_INTEL)
                     if (!strcmp(arg, "-f"))
                         m_interop = false;
-#endif //HAVE_VA_INTEL
                 }
                 else // parameter
                 {
@@ -269,7 +256,7 @@ int main(int argc, char** argv)
 
         std::cout << "Interop " << (doInterop ? "ON " : "OFF") << ": processing time, msec: " << time << std::endl;
     }
-    catch (std::exception& ex)
+    catch (const std::exception& ex)
     {
         std::cerr << "ERROR: " << ex.what() << std::endl;
     }

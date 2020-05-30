@@ -55,8 +55,7 @@ namespace cv {
         virtual bool grabFrame();
         virtual bool retrieveFrame(int channel, cv::OutputArray outArray);
 
-        // Return the type of the capture object
-        virtual int getCaptureDomain() { return CAP_WINRT; }
+        virtual int getCaptureDomain() CV_OVERRIDE { return CAP_WINRT; }
 
         virtual bool isOpened() const;
 

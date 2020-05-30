@@ -40,9 +40,9 @@
 //M*/
 
 #include "test_precomp.hpp"
+#include <opencv2/highgui.hpp>
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 class CV_FindContourTest : public cvtest::BaseTest
 {
@@ -54,7 +54,7 @@ public:
     void clear();
 
 protected:
-    int read_params( CvFileStorage* fs );
+    int read_params( const cv::FileStorage& fs );
     int prepare_test_case( int test_case_idx );
     int validate_test_results( int test_case_idx );
     void run_func();
@@ -65,7 +65,7 @@ protected:
 
     int min_log_img_width, max_log_img_width;
     int min_log_img_height, max_log_img_height;
-    CvSize img_size;
+    Size img_size;
     int count, count2;
 
     IplImage* img[NUM_IMG];
@@ -125,7 +125,7 @@ void CV_FindContourTest::clear()
 }
 
 
-int CV_FindContourTest::read_params( CvFileStorage* fs )
+int CV_FindContourTest::read_params( const cv::FileStorage& fs )
 {
     int t;
     int code = cvtest::BaseTest::read_params( fs );
@@ -133,13 +133,13 @@ int CV_FindContourTest::read_params( CvFileStorage* fs )
     if( code < 0 )
         return code;
 
-    min_blob_size      = cvReadInt( find_param( fs, "min_blob_size" ), min_blob_size );
-    max_blob_size      = cvReadInt( find_param( fs, "max_blob_size" ), max_blob_size );
-    max_log_blob_count = cvReadInt( find_param( fs, "max_log_blob_count" ), max_log_blob_count );
-    min_log_img_width  = cvReadInt( find_param( fs, "min_log_img_width" ), min_log_img_width );
-    max_log_img_width  = cvReadInt( find_param( fs, "max_log_img_width" ), max_log_img_width );
-    min_log_img_height = cvReadInt( find_param( fs, "min_log_img_height"), min_log_img_height );
-    max_log_img_height = cvReadInt( find_param( fs, "max_log_img_height"), max_log_img_height );
+    read( find_param( fs, "min_blob_size" ), min_blob_size, min_blob_size );
+    read( find_param( fs, "max_blob_size" ), max_blob_size, max_blob_size );
+    read( find_param( fs, "max_log_blob_count" ), max_log_blob_count, max_log_blob_count );
+    read( find_param( fs, "min_log_img_width" ), min_log_img_width, min_log_img_width );
+    read( find_param( fs, "max_log_img_width" ), max_log_img_width, max_log_img_width );
+    read( find_param( fs, "min_log_img_height"), min_log_img_height, min_log_img_height );
+    read( find_param( fs, "max_log_img_height"), max_log_img_height, max_log_img_height );
 
     min_blob_size = cvtest::clipInt( min_blob_size, 1, 100 );
     max_blob_size = cvtest::clipInt( max_blob_size, 1, 100 );
@@ -170,9 +170,9 @@ cvTsGenerateBlobImage( IplImage* img, int min_blob_size, int max_blob_size,
                        RNG& rng )
 {
     int i;
-    CvSize size;
+    Size size;
 
-    assert( img->depth == IPL_DEPTH_8U && img->nChannels == 1 );
+    CV_Assert(img->depth == IPL_DEPTH_8U && img->nChannels == 1);
 
     cvZero( img );
 
@@ -182,8 +182,8 @@ cvTsGenerateBlobImage( IplImage* img, int min_blob_size, int max_blob_size,
 
     for( i = 0; i < blob_count; i++ )
     {
-        CvPoint center;
-        CvSize  axes;
+        Point center;
+        Size  axes;
         int angle = cvtest::randInt(rng) % 180;
         int brightness = cvtest::randInt(rng) %
                          (max_brightness - min_brightness) + min_brightness;
@@ -195,7 +195,7 @@ cvTsGenerateBlobImage( IplImage* img, int min_blob_size, int max_blob_size,
         axes.height = (cvtest::randInt(rng) %
                       (max_blob_size - min_blob_size) + min_blob_size + 1)/2;
 
-        cvEllipse( img, center, axes, angle, 0, 360, cvScalar(brightness), CV_FILLED );
+        cvEllipse( img, cvPoint(center), cvSize(axes), angle, 0, 360, cvScalar(brightness), CV_FILLED );
     }
 
     cvResetImageROI( img );
@@ -246,7 +246,7 @@ int CV_FindContourTest::prepare_test_case( int test_case_idx )
     storage = cvCreateMemStorage( 1 << 10 );
 
     for( i = 0; i < NUM_IMG; i++ )
-        img[i] = cvCreateImage( img_size, 8, 1 );
+        img[i] = cvCreateImage( cvSize(img_size), 8, 1 );
 
     cvTsGenerateBlobImage( img[0], min_blob_size, max_blob_size,
         blob_count, min_brightness, max_brightness, rng );
@@ -376,8 +376,8 @@ int CV_FindContourTest::validate_test_results( int /*test_case_idx*/ )
 
             for(int i = 0; i < seq1->total; i++ )
             {
-                CvPoint pt1;
-                CvPoint pt2;
+                CvPoint pt1 = {0, 0};
+                CvPoint pt2 = {0, 0};
 
                 CV_READ_SEQ_ELEM( pt1, reader1 );
                 CV_READ_SEQ_ELEM( pt2, reader2 );
@@ -471,7 +471,7 @@ TEST(Imgproc_FindContours, hilbert)
 TEST(Imgproc_FindContours, border)
 {
     Mat img;
-    copyMakeBorder(Mat::zeros(8, 10, CV_8U), img, 1, 1, 1, 1, BORDER_CONSTANT, Scalar(1));
+    cv::copyMakeBorder(Mat::zeros(8, 10, CV_8U), img, 1, 1, 1, 1, BORDER_CONSTANT, Scalar(1));
 
     std::vector<std::vector<cv::Point> > contours;
     findContours(img, contours, RETR_LIST, CHAIN_APPROX_NONE);
@@ -479,10 +479,25 @@ TEST(Imgproc_FindContours, border)
     Mat img_draw_contours = Mat::zeros(img.size(), CV_8U);
     for (size_t cpt = 0; cpt < contours.size(); cpt++)
     {
-      drawContours(img_draw_contours, contours, static_cast<int>(cpt), cv::Scalar(255));
+      drawContours(img_draw_contours, contours, static_cast<int>(cpt), cv::Scalar(1));
     }
 
-    ASSERT_TRUE(norm(img - img_draw_contours, NORM_INF) == 0.0);
+    ASSERT_EQ(0, cvtest::norm(img, img_draw_contours, NORM_INF));
 }
 
+TEST(Imgproc_PointPolygonTest, regression_10222)
+{
+    vector<Point> contour;
+    contour.push_back(Point(0, 0));
+    contour.push_back(Point(0, 100000));
+    contour.push_back(Point(100000, 100000));
+    contour.push_back(Point(100000, 50000));
+    contour.push_back(Point(100000, 0));
+
+    const Point2f point(40000, 40000);
+    const double result = cv::pointPolygonTest(contour, point, false);
+    EXPECT_GT(result, 0) << "Desired result: point is inside polygon - actual result: point is not inside polygon";
+}
+
+}} // namespace
 /* End of file. */

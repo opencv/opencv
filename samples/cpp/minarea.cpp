@@ -11,17 +11,14 @@ static void help()
     cout << "This program demonstrates finding the minimum enclosing box, triangle or circle of a set\n"
          << "of points using functions: minAreaRect() minEnclosingTriangle() minEnclosingCircle().\n"
          << "Random points are generated and then enclosed.\n\n"
-         << "Press ESC, 'q' or 'Q' to exit and any other key to regenerate the set of points.\n\n"
-         << "Call:\n"
-         << "./minarea\n"
-         << "Using OpenCV v" << CV_VERSION << "\n" << endl;
+         << "Press ESC, 'q' or 'Q' to exit and any other key to regenerate the set of points.\n\n";
 }
 
 int main( int /*argc*/, char** /*argv*/ )
 {
     help();
 
-    Mat img(500, 500, CV_8UC3);
+    Mat img(500, 500, CV_8UC3, Scalar::all(0));
     RNG& rng = theRNG();
 
     for(;;)
@@ -40,18 +37,18 @@ int main( int /*argc*/, char** /*argv*/ )
         }
 
         // Find the minimum area enclosing bounding box
-        RotatedRect box = minAreaRect(Mat(points));
+        Point2f vtx[4];
+        RotatedRect box = minAreaRect(points);
+        box.points(vtx);
 
         // Find the minimum area enclosing triangle
         vector<Point2f> triangle;
-
         minEnclosingTriangle(points, triangle);
 
         // Find the minimum area enclosing circle
-        Point2f center, vtx[4];
+        Point2f center;
         float radius = 0;
-        minEnclosingCircle(Mat(points), center, radius);
-        box.points(vtx);
+        minEnclosingCircle(points, center, radius);
 
         img = Scalar::all(0);
 

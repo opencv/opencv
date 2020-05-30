@@ -47,6 +47,11 @@
 
 #include "opencv2/core.hpp"
 
+#if EIGEN_WORLD_VERSION == 3 && EIGEN_MAJOR_VERSION >= 3
+#include <unsupported/Eigen/CXX11/Tensor>
+#define OPENCV_EIGEN_TENSOR_SUPPORT
+#endif // EIGEN_WORLD_VERSION == 3 && EIGEN_MAJOR_VERSION >= 3
+
 #if defined _MSC_VER && _MSC_VER >= 1200
 #pragma warning( disable: 4714 ) //__forceinline is not inlined
 #pragma warning( disable: 4127 ) //conditional expression is constant
@@ -59,19 +64,120 @@ namespace cv
 //! @addtogroup core_eigen
 //! @{
 
+#ifdef OPENCV_EIGEN_TENSOR_SUPPORT
+/** @brief Converts an Eigen::Tensor to a cv::Mat.
+
+The method converts an Eigen::Tensor with shape (H x W x C) to a cv::Mat where:
+ H = number of rows
+ W = number of columns
+ C = number of channels
+
+Usage:
+\code
+Eigen::Tensor<float, 3, Eigen::RowMajor> a_tensor(...);
+// populate tensor with values
+Mat a_mat;
+eigen2cv(a_tensor, a_mat);
+\endcode
+*/
+template <typename _Tp, int _layout> static inline
+void eigen2cv( const Eigen::Tensor<_Tp, 3, _layout> &src, OutputArray dst )
+{
+    if( !(_layout & Eigen::RowMajorBit) )
+    {
+        const std::array<int, 3> shuffle{2, 1, 0};
+        Eigen::Tensor<_Tp, 3, !_layout> row_major_tensor = src.swap_layout().shuffle(shuffle);
+        Mat _src(src.dimension(0), src.dimension(1), CV_MAKETYPE(DataType<_Tp>::type, src.dimension(2)), row_major_tensor.data());
+        _src.copyTo(dst);
+    }
+    else
+    {
+        Mat _src(src.dimension(0), src.dimension(1), CV_MAKETYPE(DataType<_Tp>::type, src.dimension(2)), (void *)src.data());
+        _src.copyTo(dst);
+    }
+}
+
+/** @brief Converts a cv::Mat to an Eigen::Tensor.
+
+The method converts a cv::Mat to an Eigen Tensor with shape (H x W x C) where:
+ H = number of rows
+ W = number of columns
+ C = number of channels
+
+Usage:
+\code
+Mat a_mat(...);
+// populate Mat with values
+Eigen::Tensor<float, 3, Eigen::RowMajor> a_tensor(...);
+cv2eigen(a_mat, a_tensor);
+\endcode
+*/
+template <typename _Tp, int _layout> static inline
+void cv2eigen( const Mat &src, Eigen::Tensor<_Tp, 3, _layout> &dst )
+{
+    if( !(_layout & Eigen::RowMajorBit) )
+    {
+        Eigen::Tensor<_Tp, 3, !_layout> row_major_tensor(src.rows, src.cols, src.channels());
+        Mat _dst(src.rows, src.cols, CV_MAKETYPE(DataType<_Tp>::type, src.channels()), row_major_tensor.data());
+        if (src.type() == _dst.type())
+            src.copyTo(_dst);
+        else
+            src.convertTo(_dst, _dst.type());
+        const std::array<int, 3> shuffle{2, 1, 0};
+        dst = row_major_tensor.swap_layout().shuffle(shuffle);
+    }
+    else
+    {
+        dst.resize(src.rows, src.cols, src.channels());
+        Mat _dst(src.rows, src.cols, CV_MAKETYPE(DataType<_Tp>::type, src.channels()), dst.data());
+        if (src.type() == _dst.type())
+            src.copyTo(_dst);
+        else
+            src.convertTo(_dst, _dst.type());
+    }
+}
+
+/** @brief Maps cv::Mat data to an Eigen::TensorMap.
+
+The method wraps an existing Mat data array with an Eigen TensorMap of shape (H x W x C) where:
+ H = number of rows
+ W = number of columns
+ C = number of channels
+
+Explicit instantiation of the return type is required.
+
+@note Caller should be aware of the lifetime of the cv::Mat instance and take appropriate safety measures.
+The cv::Mat instance will retain ownership of the data and the Eigen::TensorMap will lose access when the cv::Mat data is deallocated.
+
+The example below initializes a cv::Mat and produces an Eigen::TensorMap:
+\code
+float arr[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
+Mat a_mat(2, 2, CV_32FC3, arr);
+Eigen::TensorMap<Eigen::Tensor<float, 3, Eigen::RowMajor>> a_tensormap = cv2eigen_tensormap<float>(a_mat);
+\endcode
+*/
+template <typename _Tp> static inline
+Eigen::TensorMap<Eigen::Tensor<_Tp, 3, Eigen::RowMajor>> cv2eigen_tensormap(const cv::InputArray &src)
+{
+    Mat mat = src.getMat();
+    CV_CheckTypeEQ(mat.type(), CV_MAKETYPE(traits::Type<_Tp>::value, mat.channels()), "");
+    return Eigen::TensorMap<Eigen::Tensor<_Tp, 3, Eigen::RowMajor>>((_Tp *)mat.data, mat.rows, mat.cols, mat.channels());
+}
+#endif // OPENCV_EIGEN_TENSOR_SUPPORT
+
 template<typename _Tp, int _rows, int _cols, int _options, int _maxRows, int _maxCols> static inline
-void eigen2cv( const Eigen::Matrix<_Tp, _rows, _cols, _options, _maxRows, _maxCols>& src, Mat& dst )
+void eigen2cv( const Eigen::Matrix<_Tp, _rows, _cols, _options, _maxRows, _maxCols>& src, OutputArray dst )
 {
     if( !(src.Flags & Eigen::RowMajorBit) )
     {
-        Mat _src(src.cols(), src.rows(), DataType<_Tp>::type,
-              (void*)src.data(), src.stride()*sizeof(_Tp));
+        Mat _src(src.cols(), src.rows(), traits::Type<_Tp>::value,
+              (void*)src.data(), src.outerStride()*sizeof(_Tp));
         transpose(_src, dst);
     }
     else
     {
-        Mat _src(src.rows(), src.cols(), DataType<_Tp>::type,
-                 (void*)src.data(), src.stride()*sizeof(_Tp));
+        Mat _src(src.rows(), src.cols(), traits::Type<_Tp>::value,
+                 (void*)src.data(), src.outerStride()*sizeof(_Tp));
         _src.copyTo(dst);
     }
 }
@@ -98,8 +204,8 @@ void cv2eigen( const Mat& src,
     CV_DbgAssert(src.rows == _rows && src.cols == _cols);
     if( !(dst.Flags & Eigen::RowMajorBit) )
     {
-        const Mat _dst(src.cols, src.rows, DataType<_Tp>::type,
-                 dst.data(), (size_t)(dst.stride()*sizeof(_Tp)));
+        const Mat _dst(src.cols, src.rows, traits::Type<_Tp>::value,
+                 dst.data(), (size_t)(dst.outerStride()*sizeof(_Tp)));
         if( src.type() == _dst.type() )
             transpose(src, _dst);
         else if( src.cols == src.rows )
@@ -112,8 +218,8 @@ void cv2eigen( const Mat& src,
     }
     else
     {
-        const Mat _dst(src.rows, src.cols, DataType<_Tp>::type,
-                 dst.data(), (size_t)(dst.stride()*sizeof(_Tp)));
+        const Mat _dst(src.rows, src.cols, traits::Type<_Tp>::value,
+                 dst.data(), (size_t)(dst.outerStride()*sizeof(_Tp)));
         src.convertTo(_dst, _dst.type());
     }
 }
@@ -125,14 +231,14 @@ void cv2eigen( const Matx<_Tp, _rows, _cols>& src,
 {
     if( !(dst.Flags & Eigen::RowMajorBit) )
     {
-        const Mat _dst(_cols, _rows, DataType<_Tp>::type,
-                 dst.data(), (size_t)(dst.stride()*sizeof(_Tp)));
+        const Mat _dst(_cols, _rows, traits::Type<_Tp>::value,
+                 dst.data(), (size_t)(dst.outerStride()*sizeof(_Tp)));
         transpose(src, _dst);
     }
     else
     {
-        const Mat _dst(_rows, _cols, DataType<_Tp>::type,
-                 dst.data(), (size_t)(dst.stride()*sizeof(_Tp)));
+        const Mat _dst(_rows, _cols, traits::Type<_Tp>::value,
+                 dst.data(), (size_t)(dst.outerStride()*sizeof(_Tp)));
         Mat(src).copyTo(_dst);
     }
 }
@@ -144,8 +250,8 @@ void cv2eigen( const Mat& src,
     dst.resize(src.rows, src.cols);
     if( !(dst.Flags & Eigen::RowMajorBit) )
     {
-        const Mat _dst(src.cols, src.rows, DataType<_Tp>::type,
-             dst.data(), (size_t)(dst.stride()*sizeof(_Tp)));
+        const Mat _dst(src.cols, src.rows, traits::Type<_Tp>::value,
+             dst.data(), (size_t)(dst.outerStride()*sizeof(_Tp)));
         if( src.type() == _dst.type() )
             transpose(src, _dst);
         else if( src.cols == src.rows )
@@ -158,8 +264,8 @@ void cv2eigen( const Mat& src,
     }
     else
     {
-        const Mat _dst(src.rows, src.cols, DataType<_Tp>::type,
-                 dst.data(), (size_t)(dst.stride()*sizeof(_Tp)));
+        const Mat _dst(src.rows, src.cols, traits::Type<_Tp>::value,
+                 dst.data(), (size_t)(dst.outerStride()*sizeof(_Tp)));
         src.convertTo(_dst, _dst.type());
     }
 }
@@ -172,14 +278,14 @@ void cv2eigen( const Matx<_Tp, _rows, _cols>& src,
     dst.resize(_rows, _cols);
     if( !(dst.Flags & Eigen::RowMajorBit) )
     {
-        const Mat _dst(_cols, _rows, DataType<_Tp>::type,
-             dst.data(), (size_t)(dst.stride()*sizeof(_Tp)));
+        const Mat _dst(_cols, _rows, traits::Type<_Tp>::value,
+             dst.data(), (size_t)(dst.outerStride()*sizeof(_Tp)));
         transpose(src, _dst);
     }
     else
     {
-        const Mat _dst(_rows, _cols, DataType<_Tp>::type,
-                 dst.data(), (size_t)(dst.stride()*sizeof(_Tp)));
+        const Mat _dst(_rows, _cols, traits::Type<_Tp>::value,
+                 dst.data(), (size_t)(dst.outerStride()*sizeof(_Tp)));
         Mat(src).copyTo(_dst);
     }
 }
@@ -193,8 +299,8 @@ void cv2eigen( const Mat& src,
 
     if( !(dst.Flags & Eigen::RowMajorBit) )
     {
-        const Mat _dst(src.cols, src.rows, DataType<_Tp>::type,
-                 dst.data(), (size_t)(dst.stride()*sizeof(_Tp)));
+        const Mat _dst(src.cols, src.rows, traits::Type<_Tp>::value,
+                 dst.data(), (size_t)(dst.outerStride()*sizeof(_Tp)));
         if( src.type() == _dst.type() )
             transpose(src, _dst);
         else
@@ -202,8 +308,8 @@ void cv2eigen( const Mat& src,
     }
     else
     {
-        const Mat _dst(src.rows, src.cols, DataType<_Tp>::type,
-                 dst.data(), (size_t)(dst.stride()*sizeof(_Tp)));
+        const Mat _dst(src.rows, src.cols, traits::Type<_Tp>::value,
+                 dst.data(), (size_t)(dst.outerStride()*sizeof(_Tp)));
         src.convertTo(_dst, _dst.type());
     }
 }
@@ -217,14 +323,14 @@ void cv2eigen( const Matx<_Tp, _rows, 1>& src,
 
     if( !(dst.Flags & Eigen::RowMajorBit) )
     {
-        const Mat _dst(1, _rows, DataType<_Tp>::type,
-                 dst.data(), (size_t)(dst.stride()*sizeof(_Tp)));
+        const Mat _dst(1, _rows, traits::Type<_Tp>::value,
+                 dst.data(), (size_t)(dst.outerStride()*sizeof(_Tp)));
         transpose(src, _dst);
     }
     else
     {
-        const Mat _dst(_rows, 1, DataType<_Tp>::type,
-                 dst.data(), (size_t)(dst.stride()*sizeof(_Tp)));
+        const Mat _dst(_rows, 1, traits::Type<_Tp>::value,
+                 dst.data(), (size_t)(dst.outerStride()*sizeof(_Tp)));
         src.copyTo(_dst);
     }
 }
@@ -238,8 +344,8 @@ void cv2eigen( const Mat& src,
     dst.resize(src.cols);
     if( !(dst.Flags & Eigen::RowMajorBit) )
     {
-        const Mat _dst(src.cols, src.rows, DataType<_Tp>::type,
-                 dst.data(), (size_t)(dst.stride()*sizeof(_Tp)));
+        const Mat _dst(src.cols, src.rows, traits::Type<_Tp>::value,
+                 dst.data(), (size_t)(dst.outerStride()*sizeof(_Tp)));
         if( src.type() == _dst.type() )
             transpose(src, _dst);
         else
@@ -247,8 +353,8 @@ void cv2eigen( const Mat& src,
     }
     else
     {
-        const Mat _dst(src.rows, src.cols, DataType<_Tp>::type,
-                 dst.data(), (size_t)(dst.stride()*sizeof(_Tp)));
+        const Mat _dst(src.rows, src.cols, traits::Type<_Tp>::value,
+                 dst.data(), (size_t)(dst.outerStride()*sizeof(_Tp)));
         src.convertTo(_dst, _dst.type());
     }
 }
@@ -261,14 +367,14 @@ void cv2eigen( const Matx<_Tp, 1, _cols>& src,
     dst.resize(_cols);
     if( !(dst.Flags & Eigen::RowMajorBit) )
     {
-        const Mat _dst(_cols, 1, DataType<_Tp>::type,
-                 dst.data(), (size_t)(dst.stride()*sizeof(_Tp)));
+        const Mat _dst(_cols, 1, traits::Type<_Tp>::value,
+                 dst.data(), (size_t)(dst.outerStride()*sizeof(_Tp)));
         transpose(src, _dst);
     }
     else
     {
-        const Mat _dst(1, _cols, DataType<_Tp>::type,
-                 dst.data(), (size_t)(dst.stride()*sizeof(_Tp)));
+        const Mat _dst(1, _cols, traits::Type<_Tp>::value,
+                 dst.data(), (size_t)(dst.outerStride()*sizeof(_Tp)));
         Mat(src).copyTo(_dst);
     }
 }

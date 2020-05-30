@@ -45,6 +45,7 @@ namespace cv { namespace ml {
 ParamGrid::ParamGrid() { minVal = maxVal = 0.; logStep = 1; }
 ParamGrid::ParamGrid(double _minVal, double _maxVal, double _logStep)
 {
+    CV_TRACE_FUNCTION();
     minVal = std::min(_minVal, _maxVal);
     maxVal = std::max(_minVal, _maxVal);
     logStep = std::max(_logStep, 1.);
@@ -58,67 +59,124 @@ bool StatModel::empty() const { return !isTrained(); }
 
 int StatModel::getVarCount() const { return 0; }
 
-bool StatModel::train( const Ptr<TrainData>&, int )
+bool StatModel::train(const Ptr<TrainData>& trainData, int )
 {
+    CV_TRACE_FUNCTION();
+    CV_Assert(!trainData.empty());
     CV_Error(CV_StsNotImplemented, "");
     return false;
 }
 
 bool StatModel::train( InputArray samples, int layout, InputArray responses )
 {
+    CV_TRACE_FUNCTION();
+    CV_Assert(!samples.empty());
     return train(TrainData::create(samples, layout, responses));
 }
 
-float StatModel::calcError( const Ptr<TrainData>& data, bool testerr, OutputArray _resp ) const
+class ParallelCalcError : public ParallelLoopBody
 {
+private:
+    const Ptr<TrainData>& data;
+    bool &testerr;
+    Mat &resp;
+    const StatModel &s;
+    vector<double> &errStrip;
+public:
+    ParallelCalcError(const Ptr<TrainData>& d, bool &t, Mat &_r,const StatModel &w, vector<double> &e) :
+        data(d),
+        testerr(t),
+        resp(_r),
+        s(w),
+        errStrip(e)
+    {
+    }
+    virtual void operator()(const Range& range) const CV_OVERRIDE
+    {
+        int idxErr = range.start;
+        CV_TRACE_FUNCTION_SKIP_NESTED();
+        Mat samples = data->getSamples();
+        Mat weights=testerr? data->getTestSampleWeights() : data->getTrainSampleWeights();
+        int layout = data->getLayout();
+        Mat sidx = testerr ? data->getTestSampleIdx() : data->getTrainSampleIdx();
+        const int* sidx_ptr = sidx.ptr<int>();
+        bool isclassifier = s.isClassifier();
+        Mat responses = data->getResponses();
+        int responses_type = responses.type();
+        double err = 0;
+
+
+        const float* sw = weights.empty() ? 0 : weights.ptr<float>();
+        for (int i = range.start; i < range.end; i++)
+        {
+            int si = sidx_ptr ? sidx_ptr[i] : i;
+            double sweight = sw ? static_cast<double>(sw[i]) : 1.;
+            Mat sample = layout == ROW_SAMPLE ? samples.row(si) : samples.col(si);
+            float val = s.predict(sample);
+            float val0 = (responses_type == CV_32S) ? (float)responses.at<int>(si) : responses.at<float>(si);
+
+            if (isclassifier)
+                err += sweight * fabs(val - val0) > FLT_EPSILON;
+            else
+                err += sweight * (val - val0)*(val - val0);
+            if (!resp.empty())
+                resp.at<float>(i) = val;
+        }
+
+
+        errStrip[idxErr]=err ;
+
+    };
+    ParallelCalcError& operator=(const ParallelCalcError &) {
+        return *this;
+    };
+};
+
+
+float StatModel::calcError(const Ptr<TrainData>& data, bool testerr, OutputArray _resp) const
+{
+    CV_TRACE_FUNCTION_SKIP_NESTED();
+    CV_Assert(!data.empty());
     Mat samples = data->getSamples();
-    int layout = data->getLayout();
     Mat sidx = testerr ? data->getTestSampleIdx() : data->getTrainSampleIdx();
-    const int* sidx_ptr = sidx.ptr<int>();
-    int i, n = (int)sidx.total();
+    Mat weights = testerr ? data->getTestSampleWeights() : data->getTrainSampleWeights();
+    int n = (int)sidx.total();
     bool isclassifier = isClassifier();
     Mat responses = data->getResponses();
-    int responses_type = responses.type();
 
-    if( n == 0 )
+    if (n == 0)
+    {
         n = data->getNSamples();
+        weights = data->getTrainSampleWeights();
+        testerr =false;
+    }
 
-    if( n == 0 )
+    if (n == 0)
         return -FLT_MAX;
 
     Mat resp;
-    if( _resp.needed() )
+    if (_resp.needed())
         resp.create(n, 1, CV_32F);
 
     double err = 0;
-    for( i = 0; i < n; i++ )
-    {
-        int si = sidx_ptr ? sidx_ptr[i] : i;
-        Mat sample = layout == ROW_SAMPLE ? samples.row(si) : samples.col(si);
-        float val = predict(sample);
-        float val0 = (responses_type == CV_32S) ? (float)responses.at<int>(si) : responses.at<float>(si);
+    vector<double> errStrip(n,0.0);
+    ParallelCalcError x(data, testerr, resp, *this,errStrip);
 
-        if( isclassifier )
-            err += fabs(val - val0) > FLT_EPSILON;
-        else
-            err += (val - val0)*(val - val0);
-        if( !resp.empty() )
-            resp.at<float>(i) = val;
-        /*if( i < 100 )
-        {
-            printf("%d. ref %.1f vs pred %.1f\n", i, val0, val);
-        }*/
-    }
+    parallel_for_(Range(0,n),x);
 
-    if( _resp.needed() )
+    for (size_t i = 0; i < errStrip.size(); i++)
+        err += errStrip[i];
+    float weightSum= weights.empty() ? n: static_cast<float>(sum(weights)(0));
+    if (_resp.needed())
         resp.copyTo(_resp);
 
-    return (float)(err / n * (isclassifier ? 100 : 1));
+    return (float)(err/ weightSum * (isclassifier ? 100 : 1));
 }
 
 /* Calculates upper triangular matrix S, where A is a symmetrical matrix A=S'*S */
 static void Cholesky( const Mat& A, Mat& S )
 {
+    CV_TRACE_FUNCTION();
     CV_Assert(A.type() == CV_32F);
 
     S = A.clone();
@@ -133,6 +191,7 @@ static void Cholesky( const Mat& A, Mat& S )
    average row vector, <cov> - symmetric covariation matrix */
 void randMVNormal( InputArray _mean, InputArray _cov, int nsamples, OutputArray _samples )
 {
+    CV_TRACE_FUNCTION();
     // check mean vector and covariance matrix
     Mat mean = _mean.getMat(), cov = _cov.getMat();
     int dim = (int)mean.total();  // dimensionality

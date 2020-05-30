@@ -41,107 +41,37 @@
 
 #include "test_precomp.hpp"
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
-class Core_ConcatenationTest : public cvtest::BaseTest
+TEST(Core_Concatenation, empty)
 {
-public:
-    Core_ConcatenationTest(bool horizontal, bool firstEmpty, bool secondEmpty);
-protected:
-    int prepare_test_case( int );
-    void run_func();
-    int validate_test_results( int );
+    const Mat mat0x5(0,5, CV_8U, Scalar::all(1));
+    const Mat mat10x5(10,5, CV_8U, Scalar::all(1));
+    const Mat mat20x5(20,5, CV_8U, Scalar::all(1));
 
-    Mat mat0x5;
-    Mat mat10x5;
-    Mat mat20x5;
-
-    Mat mat5x0;
-    Mat mat5x10;
-    Mat mat5x20;
+    const Mat mat5x0(5,0, CV_8U, Scalar::all(1));
+    const Mat mat5x10(5,10, CV_8U, Scalar::all(1));
+    const Mat mat5x20(5,20, CV_8U, Scalar::all(1));
 
     Mat result;
 
-    bool horizontal;
-    bool firstEmpty;
-    bool secondEmpty;
+    cv::hconcat(mat5x0, mat5x0, result);
+    EXPECT_MAT_N_DIFF(result, mat5x0, 0);
+    cv::hconcat(mat5x0, mat5x10, result);
+    EXPECT_MAT_N_DIFF(result, mat5x10, 0);
+    cv::hconcat(mat5x10, mat5x0, result);
+    EXPECT_MAT_N_DIFF(result, mat5x10, 0);
+    cv::hconcat(mat5x10, mat5x10, result);
+    EXPECT_MAT_N_DIFF(result, mat5x20, 0);
 
-private:
-    static bool areEqual(const Mat& m1, const Mat& m2);
-
-};
-
-Core_ConcatenationTest::Core_ConcatenationTest(bool horizontal_, bool firstEmpty_, bool secondEmpty_)
-    : horizontal(horizontal_)
-    , firstEmpty(firstEmpty_)
-    , secondEmpty(secondEmpty_)
-{
-    test_case_count = 1;
-
-    mat0x5 = Mat::ones(0,5, CV_8U);
-    mat10x5 = Mat::ones(10,5, CV_8U);
-    mat20x5 = Mat::ones(20,5, CV_8U);
-
-    mat5x0 = Mat::ones(5,0, CV_8U);
-    mat5x10 = Mat::ones(5,10, CV_8U);
-    mat5x20 = Mat::ones(5,20, CV_8U);
+    cv::vconcat(mat0x5, mat0x5, result);
+    EXPECT_MAT_N_DIFF(result, mat0x5, 0);
+    cv::vconcat(mat0x5, mat10x5, result);
+    EXPECT_MAT_N_DIFF(result, mat10x5, 0);
+    cv::vconcat(mat10x5, mat0x5, result);
+    EXPECT_MAT_N_DIFF(result, mat10x5, 0);
+    cv::vconcat(mat10x5, mat10x5, result);
+    EXPECT_MAT_N_DIFF(result, mat20x5, 0);
 }
 
-int Core_ConcatenationTest::prepare_test_case( int test_case_idx )
-{
-    cvtest::BaseTest::prepare_test_case( test_case_idx );
-    return 1;
-}
-
-void Core_ConcatenationTest::run_func()
-{
-    if (horizontal)
-    {
-        cv::hconcat((firstEmpty ? mat5x0 : mat5x10),
-                    (secondEmpty ? mat5x0 : mat5x10),
-                    result);
-    } else {
-        cv::vconcat((firstEmpty ? mat0x5 : mat10x5),
-                    (secondEmpty ? mat0x5 : mat10x5),
-                    result);
-    }
-}
-
-int Core_ConcatenationTest::validate_test_results( int )
-{
-    Mat expected;
-
-    if (firstEmpty && secondEmpty)
-        expected = (horizontal ? mat5x0 : mat0x5);
-    else if ((firstEmpty && !secondEmpty) || (!firstEmpty && secondEmpty))
-        expected = (horizontal ? mat5x10 : mat10x5);
-    else
-        expected = (horizontal ? mat5x20 : mat20x5);
-
-    if (areEqual(expected, result))
-    {
-        return cvtest::TS::OK;
-    } else
-    {
-        ts->printf( cvtest::TS::LOG, "Concatenation failed");
-        ts->set_failed_test_info( cvtest::TS::FAIL_MISMATCH );
-    }
-
-    return cvtest::TS::OK;
-}
-
-bool Core_ConcatenationTest::areEqual(const Mat &m1, const Mat &m2)
-{
-    return m1.size() == m2.size()
-            && m1.type() == m2.type()
-            && countNonZero(m1 != m2) == 0;
-}
-
-TEST(Core_Concatenation, hconcat_empty_nonempty) { Core_ConcatenationTest test(true, true, false); test.safe_run(); }
-TEST(Core_Concatenation, hconcat_nonempty_empty) { Core_ConcatenationTest test(true, false, true); test.safe_run(); }
-TEST(Core_Concatenation, hconcat_empty_empty) { Core_ConcatenationTest test(true, true, true); test.safe_run(); }
-
-TEST(Core_Concatenation, vconcat_empty_nonempty) { Core_ConcatenationTest test(false, true, false); test.safe_run(); }
-TEST(Core_Concatenation, vconcat_nonempty_empty) { Core_ConcatenationTest test(false, false, true); test.safe_run(); }
-TEST(Core_Concatenation, vconcat_empty_empty) { Core_ConcatenationTest test(false, true, true); test.safe_run(); }
+}} // namespace

@@ -7,14 +7,9 @@
 
 #include "perf_precomp.hpp"
 
-using namespace std;
-using namespace cv;
-using namespace perf;
-using namespace testing;
-using std::tr1::make_tuple;
-using std::tr1::get;
+namespace opencv_test {
 
-typedef std::tr1::tuple<string, Point, int, int, int, int> Size_Source_Fl_t;
+typedef tuple<string, Point, int, int, int, int> Size_Source_Fl_t;
 typedef perf::TestBaseWithParam<Size_Source_Fl_t> Size_Source_Fl;
 
 PERF_TEST_P(Size_Source_Fl, floodFill1, Combine(
@@ -71,3 +66,5 @@ PERF_TEST_P(Size_Source_Fl, floodFill1, Combine(
     EXPECT_EQ(image0.rows, source.rows);
     SANITY_CHECK_NOTHING();
 }
+
+} // namespace

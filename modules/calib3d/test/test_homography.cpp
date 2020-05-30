@@ -42,7 +42,8 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include <time.h>
+
+namespace opencv_test { namespace {
 
 #define CALIB3D_HOMOGRAPHY_ERROR_MATRIX_SIZE 1
 #define CALIB3D_HOMOGRAPHY_ERROR_MATRIX_DIFF 2
@@ -190,7 +191,7 @@ void CV_HomographyTest::print_information_4(int _method, int j, int N, int k, in
     cout << "Number of point: " << k << endl;
     cout << "Norm type using in criteria: "; if (NORM_TYPE[l] == 1) cout << "INF"; else if (NORM_TYPE[l] == 2) cout << "L1"; else cout << "L2"; cout << endl;
     cout << "Difference with noise of point: " << diff << endl;
-    cout << "Maxumum allowed difference: " << max_2diff << endl; cout << endl;
+    cout << "Maximum allowed difference: " << max_2diff << endl; cout << endl;
 }
 
 void CV_HomographyTest::print_information_5(int _method, int j, int N, int l, double diff)
@@ -203,7 +204,7 @@ void CV_HomographyTest::print_information_5(int _method, int j, int N, int l, do
     cout << "Count of points: " << N << endl;
     cout << "Norm type using in criteria: "; if (NORM_TYPE[l] == 1) cout << "INF"; else if (NORM_TYPE[l] == 2) cout << "L1"; else cout << "L2"; cout << endl;
     cout << "Difference with noise of points: " << diff << endl;
-    cout << "Maxumum allowed difference: " << max_diff << endl; cout << endl;
+    cout << "Maximum allowed difference: " << max_diff << endl; cout << endl;
 }
 
 void CV_HomographyTest::print_information_6(int _method, int j, int N, int k, double diff, bool value)
@@ -243,7 +244,7 @@ void CV_HomographyTest::print_information_8(int _method, int j, int N, int k, in
     cout << "Number of point: " << k << "   " << endl;
     cout << "Norm type using in criteria: "; if (NORM_TYPE[l] == 1) cout << "INF"; else if (NORM_TYPE[l] == 2) cout << "L1"; else cout << "L2"; cout << endl;
     cout << "Difference with noise of point: " << diff << endl;
-    cout << "Maxumum allowed difference: " << max_2diff << endl; cout << endl;
+    cout << "Maximum allowed difference: " << max_2diff << endl; cout << endl;
 }
 
 void CV_HomographyTest::run(int)
@@ -622,7 +623,7 @@ TEST(Calib3d_Homography, EKcase)
     Mat h = findHomography(p1, p2, RANSAC, 0.01, mask);
     ASSERT_TRUE(!h.empty());
 
-    transpose(mask, mask);
+    cv::transpose(mask, mask);
     Mat p3, mask2;
     int ninliers = countNonZero(mask);
     Mat nmask[] = { mask, mask };
@@ -631,7 +632,7 @@ TEST(Calib3d_Homography, EKcase)
     mask2 = mask2.reshape(1);
     p2 = p2.reshape(1);
     p3 = p3.reshape(1);
-    double err = norm(p2, p3, NORM_INF, mask2);
+    double err = cvtest::norm(p2, p3, NORM_INF, mask2);
 
     printf("ninliers: %d, inliers err: %.2g\n", ninliers, err);
     ASSERT_GE(ninliers, 10);
@@ -709,3 +710,5 @@ TEST(Calib3d_Homography, fromImages)
     ASSERT_TRUE(!H1.empty());
     ASSERT_GE(ninliers1, 80);
 }
+
+}} // namespace

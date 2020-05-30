@@ -15,7 +15,7 @@
 * 6- Texture Flattening
 
 * The program takes as input a source and a destination image (for 1-3 methods)
-* and ouputs the cloned image.
+* and outputs the cloned image.
 
 * Step 1:
 * -> In the source image, select the region of interest by left click mouse button. A Polygon ROI will be created by left clicking mouse button.
@@ -30,16 +30,19 @@
 * Result: The cloned image will be displayed.
 */
 
-#include <signal.h>
 #include "opencv2/photo.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/core.hpp"
 #include <iostream>
-#include <stdlib.h>
 
-using namespace std;
+// we're NOT "using namespace std;" here, to avoid collisions between the beta variable and std::beta in c++17
+using std::cin;
+using std::cout;
+using std::endl;
+using std::string;
+
 using namespace cv;
 
 Mat img0, img1, img2, res, res1, final, final1, blend;
@@ -315,9 +318,9 @@ int main()
         cout << "Enter Destination Image: ";
         cin >> dest;
 
-        img0 = imread(src);
+        img0 = imread(samples::findFile(src));
 
-        img2 = imread(dest);
+        img2 = imread(samples::findFile(dest));
 
         if(img0.empty())
         {
@@ -365,7 +368,7 @@ int main()
         cout << "Blue: ";
         cin >> blue;
 
-        img0 = imread(src);
+        img0 = imread(samples::findFile(src));
 
         if(img0.empty())
         {
@@ -395,7 +398,7 @@ int main()
         cout << "beta: ";
         cin >> beta;
 
-        img0 = imread(src);
+        img0 = imread(samples::findFile(src));
 
         if(img0.empty())
         {
@@ -428,7 +431,7 @@ int main()
         cout << "kernel_size: ";
         cin >> kernel_size;
 
-        img0 = imread(src);
+        img0 = imread(samples::findFile(src));
 
         if(img0.empty())
         {
@@ -447,7 +450,7 @@ int main()
     }
     else
     {
-        cout << "Wrong Option Choosen" << endl;
+        cout << "Wrong Option Chosen" << endl;
         exit(1);
     }
 

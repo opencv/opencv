@@ -1,3 +1,4 @@
+@cond CUDA_MODULES
 GPU-Accelerated Computer Vision (cuda module) {#tutorial_table_of_content_gpu}
 =============================================
 
@@ -5,6 +6,8 @@ Squeeze out every little computation power from your system by using the power o
 run the OpenCV algorithms.
 
 -   @subpage tutorial_gpu_basics_similarity
+
+    *Languages:* C++
 
     *Compatibility:* \> OpenCV 2.0
 
@@ -16,7 +19,10 @@ run the OpenCV algorithms.
 
 -   @subpage tutorial_gpu_thrust_interop
 
+    *Languages:* C++
+
     *Compatibility:* \>= OpenCV 3.0
 
     This tutorial will show you how to wrap a GpuMat into a thrust iterator in order to be able to
     use the functions in the thrust library.
+@endcond

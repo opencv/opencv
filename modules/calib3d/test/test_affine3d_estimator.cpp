@@ -42,16 +42,7 @@
 
 #include "test_precomp.hpp"
 
-using namespace cv;
-using namespace std;
-
-#include <string>
-#include <iostream>
-#include <fstream>
-#include <functional>
-#include <iterator>
-#include <limits>
-#include <numeric>
+namespace opencv_test { namespace {
 
 class CV_Affine3D_EstTest : public cvtest::BaseTest
 {
@@ -101,7 +92,7 @@ bool CV_Affine3D_EstTest::test4Points()
     fpts.ptr<Point3f>()[2] = Point3f( rngIn(1,2), rngIn(3,4), rngIn(5, 6) );
     fpts.ptr<Point3f>()[3] = Point3f( rngIn(3,4), rngIn(1,2), rngIn(5, 6) );
 
-    transform(fpts.ptr<Point3f>(), fpts.ptr<Point3f>() + 4, tpts.ptr<Point3f>(), WrapAff(aff));
+    std::transform(fpts.ptr<Point3f>(), fpts.ptr<Point3f>() + 4, tpts.ptr<Point3f>(), WrapAff(aff));
 
     Mat aff_est;
     vector<uchar> outliers;
@@ -144,11 +135,11 @@ bool CV_Affine3D_EstTest::testNPoints()
     Mat tpts(1, n, CV_32FC3);
 
     randu(fpts, Scalar::all(0), Scalar::all(100));
-    transform(fpts.ptr<Point3f>(), fpts.ptr<Point3f>() + n, tpts.ptr<Point3f>(), WrapAff(aff));
+    std::transform(fpts.ptr<Point3f>(), fpts.ptr<Point3f>() + n, tpts.ptr<Point3f>(), WrapAff(aff));
 
     /* adding noise*/
-    transform(tpts.ptr<Point3f>() + m, tpts.ptr<Point3f>() + n, tpts.ptr<Point3f>() + m, bind2nd(plus<Point3f>(), shift_outl));
-    transform(tpts.ptr<Point3f>() + m, tpts.ptr<Point3f>() + n, tpts.ptr<Point3f>() + m, Noise(noise_level));
+    std::transform(tpts.ptr<Point3f>() + m, tpts.ptr<Point3f>() + n, tpts.ptr<Point3f>() + m,
+        [=] (const Point3f& pt) -> Point3f { return Noise(noise_level)(pt + shift_outl); });
 
     Mat aff_est;
     vector<uchar> outl;
@@ -195,3 +186,19 @@ void CV_Affine3D_EstTest::run( int /* start_from */)
 }
 
 TEST(Calib3d_EstimateAffine3D, accuracy) { CV_Affine3D_EstTest test; test.safe_run(); }
+
+TEST(Calib3d_EstimateAffine3D, regression_16007)
+{
+    std::vector<cv::Point3f> m1, m2;
+    m1.push_back(Point3f(1.0f, 0.0f, 0.0f)); m2.push_back(Point3f(1.0f, 1.0f, 0.0f));
+    m1.push_back(Point3f(1.0f, 0.0f, 1.0f)); m2.push_back(Point3f(1.0f, 1.0f, 1.0f));
+    m1.push_back(Point3f(0.5f, 0.0f, 0.5f)); m2.push_back(Point3f(0.5f, 1.0f, 0.5f));
+    m1.push_back(Point3f(2.5f, 0.0f, 2.5f)); m2.push_back(Point3f(2.5f, 1.0f, 2.5f));
+    m1.push_back(Point3f(2.0f, 0.0f, 1.0f)); m2.push_back(Point3f(2.0f, 1.0f, 1.0f));
+
+    cv::Mat m3D, inl;
+    int res = cv::estimateAffine3D(m1, m2, m3D, inl);
+    EXPECT_EQ(1, res);
+}
+
+}} // namespace

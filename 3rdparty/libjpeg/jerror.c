@@ -2,7 +2,7 @@
  * jerror.c
  *
  * Copyright (C) 1991-1998, Thomas G. Lane.
- * Modified 2012 by Guido Vollbeding.
+ * Modified 2012-2015 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -19,15 +19,15 @@
  * These routines are used by both the compression and decompression code.
  */
 
+#ifdef USE_WINDOWS_MESSAGEBOX
+#include <windows.h>
+#endif
+
 /* this is not a core library module, so it doesn't define JPEG_INTERNALS */
 #include "jinclude.h"
 #include "jpeglib.h"
 #include "jversion.h"
 #include "jerror.h"
-
-#ifdef USE_WINDOWS_MESSAGEBOX
-#include <windows.h>
-#endif
 
 #ifndef EXIT_FAILURE		/* define exit() codes if not provided */
 #define EXIT_FAILURE  1
@@ -106,7 +106,7 @@ output_message (j_common_ptr cinfo)
 #ifdef USE_WINDOWS_MESSAGEBOX
   /* Display it in a message dialog box */
   MessageBox(GetActiveWindow(), buffer, "JPEG Library Error",
-             MB_OK | MB_ICONERROR);
+	     MB_OK | MB_ICONERROR);
 #else
   /* Send it to stderr, adding a newline */
   fprintf(stderr, "%s\n", buffer);
@@ -168,8 +168,8 @@ format_message (j_common_ptr cinfo, char * buffer)
   if (msg_code > 0 && msg_code <= err->last_jpeg_message) {
     msgtext = err->jpeg_message_table[msg_code];
   } else if (err->addon_message_table != NULL &&
-             msg_code >= err->first_addon_message &&
-             msg_code <= err->last_addon_message) {
+	     msg_code >= err->first_addon_message &&
+	     msg_code <= err->last_addon_message) {
     msgtext = err->addon_message_table[msg_code - err->first_addon_message];
   }
 
@@ -194,10 +194,10 @@ format_message (j_common_ptr cinfo, char * buffer)
     sprintf(buffer, msgtext, err->msg_parm.s);
   else
     sprintf(buffer, msgtext,
-            err->msg_parm.i[0], err->msg_parm.i[1],
-            err->msg_parm.i[2], err->msg_parm.i[3],
-            err->msg_parm.i[4], err->msg_parm.i[5],
-            err->msg_parm.i[6], err->msg_parm.i[7]);
+	    err->msg_parm.i[0], err->msg_parm.i[1],
+	    err->msg_parm.i[2], err->msg_parm.i[3],
+	    err->msg_parm.i[4], err->msg_parm.i[5],
+	    err->msg_parm.i[6], err->msg_parm.i[7]);
 }
 
 

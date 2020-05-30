@@ -13,7 +13,7 @@ if PY3:
     from functools import reduce
 
 import numpy as np
-import cv2
+import cv2 as cv
 
 # built-in modules
 import os
@@ -71,7 +71,7 @@ def lookat(eye, target, up = (0, 0, 1)):
     return R, tvec
 
 def mtx2rvec(R):
-    w, u, vt = cv2.SVDecomp(R - np.eye(3))
+    w, u, vt = cv.SVDecomp(R - np.eye(3))
     p = vt[0] + u[:,0]*w[0]    # same as np.dot(R, vt[0])
     c = np.dot(vt[0], p)
     s = np.dot(vt[1], p)
@@ -80,8 +80,8 @@ def mtx2rvec(R):
 
 def draw_str(dst, target, s):
     x, y = target
-    cv2.putText(dst, s, (x+1, y+1), cv2.FONT_HERSHEY_PLAIN, 1.0, (0, 0, 0), thickness = 2, lineType=cv2.LINE_AA)
-    cv2.putText(dst, s, (x, y), cv2.FONT_HERSHEY_PLAIN, 1.0, (255, 255, 255), lineType=cv2.LINE_AA)
+    cv.putText(dst, s, (x+1, y+1), cv.FONT_HERSHEY_PLAIN, 1.0, (0, 0, 0), thickness = 2, lineType=cv.LINE_AA)
+    cv.putText(dst, s, (x, y), cv.FONT_HERSHEY_PLAIN, 1.0, (255, 255, 255), lineType=cv.LINE_AA)
 
 class Sketcher:
     def __init__(self, windowname, dests, colors_func):
@@ -91,21 +91,21 @@ class Sketcher:
         self.colors_func = colors_func
         self.dirty = False
         self.show()
-        cv2.setMouseCallback(self.windowname, self.on_mouse)
+        cv.setMouseCallback(self.windowname, self.on_mouse)
 
     def show(self):
-        cv2.imshow(self.windowname, self.dests[0])
+        cv.imshow(self.windowname, self.dests[0])
 
     def on_mouse(self, event, x, y, flags, param):
         pt = (x, y)
-        if event == cv2.EVENT_LBUTTONDOWN:
+        if event == cv.EVENT_LBUTTONDOWN:
             self.prev_pt = pt
-        elif event == cv2.EVENT_LBUTTONUP:
+        elif event == cv.EVENT_LBUTTONUP:
             self.prev_pt = None
 
-        if self.prev_pt and flags & cv2.EVENT_FLAG_LBUTTON:
+        if self.prev_pt and flags & cv.EVENT_FLAG_LBUTTON:
             for dst, color in zip(self.dests, self.colors_func()):
-                cv2.line(dst, self.prev_pt, pt, color, 5)
+                cv.line(dst, self.prev_pt, pt, color, 5)
             self.dirty = True
             self.prev_pt = pt
             self.show()
@@ -140,7 +140,7 @@ def nothing(*arg, **kw):
     pass
 
 def clock():
-    return cv2.getTickCount() / cv2.getTickFrequency()
+    return cv.getTickCount() / cv.getTickFrequency()
 
 @contextmanager
 def Timer(msg):
@@ -166,16 +166,16 @@ class RectSelector:
     def __init__(self, win, callback):
         self.win = win
         self.callback = callback
-        cv2.setMouseCallback(win, self.onmouse)
+        cv.setMouseCallback(win, self.onmouse)
         self.drag_start = None
         self.drag_rect = None
     def onmouse(self, event, x, y, flags, param):
         x, y = np.int16([x, y]) # BUG
-        if event == cv2.EVENT_LBUTTONDOWN:
+        if event == cv.EVENT_LBUTTONDOWN:
             self.drag_start = (x, y)
             return
         if self.drag_start:
-            if flags & cv2.EVENT_FLAG_LBUTTON:
+            if flags & cv.EVENT_FLAG_LBUTTON:
                 xo, yo = self.drag_start
                 x0, y0 = np.minimum([xo, yo], [x, y])
                 x1, y1 = np.maximum([xo, yo], [x, y])
@@ -192,7 +192,7 @@ class RectSelector:
         if not self.drag_rect:
             return False
         x0, y0, x1, y1 = self.drag_rect
-        cv2.rectangle(vis, (x0, y0), (x1, y1), (0, 255, 0), 2)
+        cv.rectangle(vis, (x0, y0), (x1, y1), (0, 255, 0), 2)
         return True
     @property
     def dragging(self):
@@ -233,5 +233,5 @@ def mdot(*args):
 
 def draw_keypoints(vis, keypoints, color = (0, 255, 255)):
     for kp in keypoints:
-            x, y = kp.pt
-            cv2.circle(vis, (int(x), int(y)), 2, color)
+        x, y = kp.pt
+        cv.circle(vis, (int(x), int(y)), 2, color)

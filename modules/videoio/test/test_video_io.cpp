@@ -43,545 +43,540 @@
 #include "test_precomp.hpp"
 #include "opencv2/videoio/videoio_c.h"
 
-using namespace cv;
-using namespace std;
-
-namespace cvtest
+namespace opencv_test
 {
 
-string fourccToString(int fourcc)
-{
-    return format("%c%c%c%c", fourcc & 255, (fourcc >> 8) & 255, (fourcc >> 16) & 255, (fourcc >> 24) & 255);
-}
-
-#ifdef HAVE_MSMF
-const VideoFormat g_specific_fmt_list[] =
-{
-        /*VideoFormat("wmv", CV_FOURCC_MACRO('d', 'v', '2', '5')),
-        VideoFormat("wmv", CV_FOURCC_MACRO('d', 'v', '5', '0')),
-        VideoFormat("wmv", CV_FOURCC_MACRO('d', 'v', 'c', ' ')),
-        VideoFormat("wmv", CV_FOURCC_MACRO('d', 'v', 'h', '1')),
-        VideoFormat("wmv", CV_FOURCC_MACRO('d', 'v', 'h', 'd')),
-        VideoFormat("wmv", CV_FOURCC_MACRO('d', 'v', 's', 'd')),
-        VideoFormat("wmv", CV_FOURCC_MACRO('d', 'v', 's', 'l')),
-        VideoFormat("wmv", CV_FOURCC_MACRO('H', '2', '6', '3')),
-        VideoFormat("wmv", CV_FOURCC_MACRO('M', '4', 'S', '2')),
-        VideoFormat("avi", CV_FOURCC_MACRO('M', 'J', 'P', 'G')),
-        VideoFormat("mp4", CV_FOURCC_MACRO('M', 'P', '4', 'S')),
-        VideoFormat("mp4", CV_FOURCC_MACRO('M', 'P', '4', 'V')),
-        VideoFormat("wmv", CV_FOURCC_MACRO('M', 'P', '4', '3')),
-        VideoFormat("wmv", CV_FOURCC_MACRO('M', 'P', 'G', '1')),
-        VideoFormat("wmv", CV_FOURCC_MACRO('M', 'S', 'S', '1')),
-        VideoFormat("wmv", CV_FOURCC_MACRO('M', 'S', 'S', '2')),*/
-#if !defined(_M_ARM)
-        VideoFormat("wmv", CV_FOURCC_MACRO('W', 'M', 'V', '1')),
-        VideoFormat("wmv", CV_FOURCC_MACRO('W', 'M', 'V', '2')),
-#endif
-        VideoFormat("wmv", CV_FOURCC_MACRO('W', 'M', 'V', '3')),
-        VideoFormat("avi", CV_FOURCC_MACRO('H', '2', '6', '4')),
-        //VideoFormat("wmv", CV_FOURCC_MACRO('W', 'V', 'C', '1')),
-        VideoFormat()
-};
-#else
-const VideoFormat g_specific_fmt_list[] =
-{
-    VideoFormat("avi", VideoWriter::fourcc('X', 'V', 'I', 'D')),
-    VideoFormat("avi", VideoWriter::fourcc('M', 'P', 'E', 'G')),
-    VideoFormat("avi", VideoWriter::fourcc('M', 'J', 'P', 'G')),
-    //VideoFormat("avi", VideoWriter::fourcc('I', 'Y', 'U', 'V')),
-    VideoFormat("mkv", VideoWriter::fourcc('X', 'V', 'I', 'D')),
-    VideoFormat("mkv", VideoWriter::fourcc('M', 'P', 'E', 'G')),
-    VideoFormat("mkv", VideoWriter::fourcc('M', 'J', 'P', 'G')),
-#ifndef HAVE_GSTREAMER
-    VideoFormat("mov", VideoWriter::fourcc('m', 'p', '4', 'v')),
-#endif
-    VideoFormat()
-};
-#endif
-
-}
-
-class CV_VideoIOTest : public cvtest::BaseTest
+class Videoio_Test_Base
 {
 protected:
-    void ImageTest (const string& dir);
-    void VideoTest (const string& dir, const cvtest::VideoFormat& fmt);
-    void SpecificImageTest (const string& dir);
-    void SpecificVideoTest (const string& dir, const cvtest::VideoFormat& fmt);
-
-    CV_VideoIOTest() {}
-    ~CV_VideoIOTest() {}
-    virtual void run(int) = 0;
-};
-
-class CV_ImageTest : public CV_VideoIOTest
-{
-public:
-    CV_ImageTest() {}
-    ~CV_ImageTest() {}
-    void run(int);
-};
-
-class CV_SpecificImageTest : public CV_VideoIOTest
-{
-public:
-    CV_SpecificImageTest() {}
-    ~CV_SpecificImageTest() {}
-    void run(int);
-};
-
-class CV_VideoTest : public CV_VideoIOTest
-{
-public:
-    CV_VideoTest() {}
-    ~CV_VideoTest() {}
-    void run(int);
-};
-
-class CV_SpecificVideoTest : public CV_VideoIOTest
-{
-public:
-    CV_SpecificVideoTest() {}
-    ~CV_SpecificVideoTest() {}
-    void run(int);
-};
-
-
-void CV_VideoIOTest::ImageTest(const string& dir)
-{
-    string _name = dir + string("../cv/shared/baboon.png");
-    ts->printf(ts->LOG, "reading image : %s\n", _name.c_str());
-
-    Mat image = imread(_name);
-    image.convertTo(image, CV_8UC3);
-
-    if (image.empty())
+    string ext;
+    string video_file;
+    VideoCaptureAPIs apiPref;
+protected:
+    Videoio_Test_Base() {}
+    virtual ~Videoio_Test_Base() {}
+    virtual void writeVideo() {}
+    virtual void checkFrameContent(Mat &, int) {}
+    virtual void checkFrameCount(int &) {}
+    void checkFrameRead(int idx, VideoCapture & cap)
     {
-        ts->set_failed_test_info(ts->FAIL_MISSING_TEST_DATA);
-        return;
+        //int frameID = (int)cap.get(CAP_PROP_POS_FRAMES);
+        Mat img;
+        ASSERT_NO_THROW(cap >> img);
+        //std::cout << "idx=" << idx << " img=" << img.size() << " frameID=" << frameID << std::endl;
+        ASSERT_FALSE(img.empty()) << "idx=" << idx;
+        checkFrameContent(img, idx);
     }
-
-    const string exts[] = {
-#ifdef HAVE_PNG
-        "png",
-#endif
-#ifdef HAVE_TIFF
-        "tiff",
-#endif
-#ifdef HAVE_JPEG
-        "jpg",
-#endif
-#ifdef HAVE_JASPER
-        "jp2",
-#endif
-#if 0 /*defined HAVE_OPENEXR && !defined __APPLE__*/
-        "exr",
-#endif
-        "bmp",
-        "ppm",
-        "ras"
-        };
-    const size_t ext_num = sizeof(exts)/sizeof(exts[0]);
-
-    for(size_t i = 0; i < ext_num; ++i)
+    void checkFrameSeek(int idx, VideoCapture & cap)
     {
-        string ext = exts[i];
-        string full_name = cv::tempfile(ext.c_str());
-        ts->printf(ts->LOG, " full_name : %s\n", full_name.c_str());
-
-        imwrite(full_name, image);
-
-        Mat loaded = imread(full_name);
-        if (loaded.empty())
+        bool canSeek = false;
+        ASSERT_NO_THROW(canSeek = cap.set(CAP_PROP_POS_FRAMES, idx));
+        if (!canSeek)
         {
-            ts->printf(ts->LOG, "Reading failed at fmt=%s\n", ext.c_str());
-            ts->set_failed_test_info(ts->FAIL_MISMATCH);
-            continue;
+            std::cout << "Seek to frame '" << idx << "' is not supported. SKIP." << std::endl;
+            return;
         }
-
-        const double thresDbell = 20;
-        double psnr = cvtest::PSNR(loaded, image);
-        if (psnr < thresDbell)
-        {
-            ts->printf(ts->LOG, "Reading image from file: too big difference (=%g) with fmt=%s\n", psnr, ext.c_str());
-            ts->set_failed_test_info(ts->FAIL_BAD_ACCURACY);
-            continue;
-        }
-
-        vector<uchar> from_file;
-
-        FILE *f = fopen(full_name.c_str(), "rb");
-        fseek(f, 0, SEEK_END);
-        long len = ftell(f);
-        from_file.resize((size_t)len);
-        fseek(f, 0, SEEK_SET);
-        from_file.resize(fread(&from_file[0], 1, from_file.size(), f));
-        fclose(f);
-
-        vector<uchar> buf;
-        imencode("." + exts[i], image, buf);
-
-        if (buf != from_file)
-        {
-            ts->printf(ts->LOG, "Encoding failed with fmt=%s\n", ext.c_str());
-            ts->set_failed_test_info(ts->FAIL_MISMATCH);
-            continue;
-        }
-
-        Mat buf_loaded = imdecode(Mat(buf), 1);
-
-        if (buf_loaded.empty())
-        {
-            ts->printf(ts->LOG, "Decoding failed with fmt=%s\n", ext.c_str());
-            ts->set_failed_test_info(ts->FAIL_MISMATCH);
-            continue;
-        }
-
-        psnr = cvtest::PSNR(buf_loaded, image);
-
-        if (psnr < thresDbell)
-        {
-            ts->printf(ts->LOG, "Decoding image from memory: too small PSNR (=%gdb) with fmt=%s\n", psnr, ext.c_str());
-            ts->set_failed_test_info(ts->FAIL_MISMATCH);
-            continue;
-        }
-
+        EXPECT_EQ(idx, (int)cap.get(CAP_PROP_POS_FRAMES));
+        checkFrameRead(idx, cap);
     }
-
-    ts->printf(ts->LOG, "end test function : ImagesTest \n");
-    ts->set_failed_test_info(ts->OK);
-}
-
-
-void CV_VideoIOTest::VideoTest(const string& dir, const cvtest::VideoFormat& fmt)
-{
-    string src_file = dir + "../cv/shared/video_for_test.avi";
-    string tmp_name = cv::tempfile((cvtest::fourccToString(fmt.fourcc) + "."  + fmt.ext).c_str());
-
-    ts->printf(ts->LOG, "reading video : %s and converting it to %s\n", src_file.c_str(), tmp_name.c_str());
-
-    CvCapture* cap = cvCaptureFromFile(src_file.c_str());
-
-    if (!cap)
+public:
+    void doTest()
     {
-        ts->set_failed_test_info(ts->FAIL_MISMATCH);
-        return;
-    }
-
-    CvVideoWriter* writer = 0;
-    vector<Mat> frames;
-
-    for(;;)
-    {
-        IplImage* img = cvQueryFrame( cap );
-
-        if (!img)
-            break;
-
-        frames.push_back(cv::cvarrToMat(img, true));
-
-        if (writer == NULL)
+        if (!videoio_registry::hasBackend(apiPref))
+            throw SkipTestException(cv::String("Backend is not available/disabled: ") + cv::videoio_registry::getBackendName(apiPref));
+        if (cvtest::skipUnstableTests && apiPref == CAP_MSMF && (ext == "h264" || ext == "h265" || ext == "mpg"))
+            throw SkipTestException("Unstable MSMF test");
+        writeVideo();
+        VideoCapture cap;
+        ASSERT_NO_THROW(cap.open(video_file, apiPref));
+        if (!cap.isOpened())
         {
-            writer = cvCreateVideoWriter(tmp_name.c_str(), fmt.fourcc, 24, cvGetSize(img));
-            if (writer == NULL)
+            std::cout << "SKIP test: backend " << apiPref << " can't open the video: " << video_file << std::endl;
+            return;
+        }
+        int n_frames = -1;
+        EXPECT_NO_THROW(n_frames = (int)cap.get(CAP_PROP_FRAME_COUNT));
+        if (n_frames > 0)
+        {
+            ASSERT_GT(n_frames, 0);
+            checkFrameCount(n_frames);
+        }
+        else
+        {
+            std::cout << "CAP_PROP_FRAME_COUNT is not supported by backend. Assume 50 frames." << std::endl;
+            n_frames = 50;
+        }
+
+        {
+            SCOPED_TRACE("consecutive read");
+            if (apiPref == CAP_GSTREAMER)
             {
-                ts->printf(ts->LOG, "can't create writer (with fourcc : %s)\n",
-                           cvtest::fourccToString(fmt.fourcc).c_str());
-                cvReleaseCapture( &cap );
-                ts->set_failed_test_info(ts->FAIL_MISMATCH);
-                return;
+                // This workaround is for GStreamer 1.3.1.1 and older.
+                // Old Gstreamer has a bug which handles the total duration 1 frame shorter
+                // Old Gstreamer are used in Ubuntu 14.04, so the following code could be removed after it's EOL
+                n_frames--;
+            }
+            for (int k = 0; k < n_frames; ++k)
+            {
+                checkFrameRead(k, cap);
+                if (::testing::Test::HasFailure() && k % 10 == 0)
+                    break;
             }
         }
-
-        cvWriteFrame(writer, img);
-    }
-
-    cvReleaseVideoWriter( &writer );
-    cvReleaseCapture( &cap );
-
-    CvCapture *saved = cvCaptureFromFile(tmp_name.c_str());
-    if (!saved)
-    {
-        ts->set_failed_test_info(ts->FAIL_MISMATCH);
-        return;
-    }
-
-    const double thresDbell = 20;
-
-    for(int i = 0;; i++)
-    {
-        IplImage* ipl1 = cvQueryFrame( saved );
-
-        if (!ipl1)
-            break;
-
-        Mat img = frames[i];
-        Mat img1 = cv::cvarrToMat(ipl1);
-
-        double psnr = cvtest::PSNR(img1, img);
-        if (psnr < thresDbell)
+        bool canSeek = false;
+        EXPECT_NO_THROW(canSeek = cap.set(CAP_PROP_POS_FRAMES, 0));
+        if (!canSeek)
         {
-            ts->printf(ts->LOG, "Too low frame %d psnr = %gdb\n", i, psnr);
-            ts->set_failed_test_info(ts->FAIL_MISMATCH);
-
-            //imwrite("original.png", img);
-            //imwrite("after_test.png", img1);
-            //Mat diff;
-            //absdiff(img, img1, diff);
-            //imwrite("diff.png", diff);
-
-            break;
-        }
-    }
-
-    cvReleaseCapture( &saved );
-
-    ts->printf(ts->LOG, "end test function : ImagesVideo \n");
-}
-
-void CV_VideoIOTest::SpecificImageTest(const string& dir)
-{
-    const size_t IMAGE_COUNT = 10;
-
-    for (size_t i = 0; i < IMAGE_COUNT; ++i)
-    {
-        stringstream s; s << i;
-        string file_path = dir+"../python/images/QCIF_0"+s.str()+".bmp";
-        Mat image = imread(file_path);
-
-        if (image.empty())
-        {
-            ts->set_failed_test_info(ts->FAIL_MISSING_TEST_DATA);
+            std::cout << "Seek to frame '0' is not supported. SKIP all 'seek' tests." << std::endl;
             return;
         }
 
-        resize(image, image, Size(968, 757), 0.0, 0.0, INTER_CUBIC);
-
-        stringstream s_digit; s_digit << i;
-
-        string full_name = cv::tempfile((s_digit.str() + ".bmp").c_str());
-        ts->printf(ts->LOG, " full_name : %s\n", full_name.c_str());
-
-        imwrite(full_name, image);
-
-        Mat loaded = imread(full_name);
-        if (loaded.empty())
+        if (ext != "wmv" && ext != "h264" && ext != "h265")
         {
-            ts->printf(ts->LOG, "Reading failed at fmt=bmp\n");
-            ts->set_failed_test_info(ts->FAIL_MISMATCH);
-            continue;
+            SCOPED_TRACE("progressive seek");
+            bool res = false;
+            EXPECT_NO_THROW(res = cap.set(CAP_PROP_POS_FRAMES, 0));
+            ASSERT_TRUE(res);
+            for (int k = 0; k < n_frames; k += 20)
+            {
+                checkFrameSeek(k, cap);
+                if (::testing::Test::HasFailure() && k % 10 == 0)
+                    break;
+            }
         }
 
-        const double thresDbell = 20;
-        double psnr = cvtest::PSNR(loaded, image);
-        if (psnr < thresDbell)
+        if (ext != "mpg" && ext != "wmv" && ext != "h264" && ext != "h265")
         {
-            ts->printf(ts->LOG, "Reading image from file: too big difference (=%g) with fmt=bmp\n", psnr);
-            ts->set_failed_test_info(ts->FAIL_BAD_ACCURACY);
-            continue;
-        }
-
-        vector<uchar> from_file;
-
-        FILE *f = fopen(full_name.c_str(), "rb");
-        fseek(f, 0, SEEK_END);
-        long len = ftell(f);
-        from_file.resize((size_t)len);
-        fseek(f, 0, SEEK_SET);
-        from_file.resize(fread(&from_file[0], 1, from_file.size(), f));
-        fclose(f);
-
-        vector<uchar> buf;
-        imencode(".bmp", image, buf);
-
-        if (buf != from_file)
-        {
-            ts->printf(ts->LOG, "Encoding failed with fmt=bmp\n");
-            ts->set_failed_test_info(ts->FAIL_MISMATCH);
-            continue;
-        }
-
-        Mat buf_loaded = imdecode(Mat(buf), 1);
-
-        if (buf_loaded.empty())
-        {
-            ts->printf(ts->LOG, "Decoding failed with fmt=bmp\n");
-            ts->set_failed_test_info(ts->FAIL_MISMATCH);
-            continue;
-        }
-
-        psnr = cvtest::PSNR(buf_loaded, image);
-
-        if (psnr < thresDbell)
-        {
-            ts->printf(ts->LOG, "Decoding image from memory: too small PSNR (=%gdb) with fmt=bmp\n", psnr);
-            ts->set_failed_test_info(ts->FAIL_MISMATCH);
-            continue;
+            SCOPED_TRACE("random seek");
+            bool res = false;
+            EXPECT_NO_THROW(res = cap.set(CAP_PROP_POS_FRAMES, 0));
+            ASSERT_TRUE(res);
+            for (int k = 0; k < 10; ++k)
+            {
+                checkFrameSeek(cvtest::TS::ptr()->get_rng().uniform(0, n_frames), cap);
+                if (::testing::Test::HasFailure() && k % 10 == 0)
+                    break;
+            }
         }
     }
+};
 
-    ts->printf(ts->LOG, "end test function : SpecificImageTest \n");
-    ts->set_failed_test_info(ts->OK);
-}
+//==================================================================================================
+typedef tuple<string, VideoCaptureAPIs> Backend_Type_Params;
 
-
-void CV_VideoIOTest::SpecificVideoTest(const string& dir, const cvtest::VideoFormat& fmt)
+class videoio_bunny : public Videoio_Test_Base, public testing::TestWithParam<Backend_Type_Params>
 {
-    string ext = fmt.ext;
-    int fourcc = fmt.fourcc;
-
-    string fourcc_str = cvtest::fourccToString(fourcc);
-    const string video_file = cv::tempfile((fourcc_str + "." + ext).c_str());
-
-    Size frame_size(968 & -2, 757 & -2);
-    VideoWriter writer(video_file, fourcc, 25, frame_size, true);
-
-    if (!writer.isOpened())
+    BunnyParameters bunny_param;
+public:
+    videoio_bunny()
     {
-        // call it repeatedly for easier debugging
-        VideoWriter writer2(video_file, fourcc, 25, frame_size, true);
-        ts->printf(ts->LOG, "Creating a video in %s...\n", video_file.c_str());
-        ts->printf(ts->LOG, "Cannot create VideoWriter object with codec %s.\n", fourcc_str.c_str());
-        ts->set_failed_test_info(ts->FAIL_MISMATCH);
-        return;
+        ext = get<0>(GetParam());
+        apiPref = get<1>(GetParam());
+        video_file = BunnyParameters::getFilename(String(".") + ext);
     }
-
-    const size_t IMAGE_COUNT = 30;
-    vector<Mat> images;
-
-    for( size_t i = 0; i < IMAGE_COUNT; ++i )
+    void doFrameCountTest()
     {
-        string file_path = format("%s../python/images/QCIF_%02d.bmp", dir.c_str(), i);
-        Mat img = imread(file_path, IMREAD_COLOR);
-
-        if (img.empty())
+        if (!videoio_registry::hasBackend(apiPref))
+            throw SkipTestException(cv::String("Backend is not available/disabled: ") + cv::videoio_registry::getBackendName(apiPref));
+        if (cvtest::skipUnstableTests && apiPref == CAP_MSMF && (ext == "h264" || ext == "h265" || ext == "mpg"))
+            throw SkipTestException("Unstable MSMF test");
+        VideoCapture cap;
+        EXPECT_NO_THROW(cap.open(video_file, apiPref));
+        if (!cap.isOpened())
         {
-            ts->printf(ts->LOG, "Creating a video in %s...\n", video_file.c_str());
-            ts->printf(ts->LOG, "Error: cannot read frame from %s.\n", file_path.c_str());
-            ts->printf(ts->LOG, "Continue creating the video file...\n");
-            ts->set_failed_test_info(ts->FAIL_INVALID_TEST_DATA);
-            break;
+            std::cout << "SKIP test: backend " << apiPref << " can't open the video: " << video_file << std::endl;
+            return;
         }
 
-        for (int k = 0; k < img.rows; ++k)
-            for (int l = 0; l < img.cols; ++l)
-                if (img.at<Vec3b>(k, l) == Vec3b::all(0))
-                    img.at<Vec3b>(k, l) = Vec3b(0, 255, 0);
-                else img.at<Vec3b>(k, l) = Vec3b(0, 0, 255);
+        Size actual;
+        EXPECT_NO_THROW(actual = Size((int)cap.get(CAP_PROP_FRAME_WIDTH),
+                                      (int)cap.get(CAP_PROP_FRAME_HEIGHT)));
+        EXPECT_EQ(bunny_param.getWidth(), actual.width);
+        EXPECT_EQ(bunny_param.getHeight(), actual.height);
 
-        resize(img, img, frame_size, 0.0, 0.0, INTER_CUBIC);
-
-        images.push_back(img);
-        writer << img;
-    }
-
-    writer.release();
-    VideoCapture cap(video_file);
-
-    size_t FRAME_COUNT = (size_t)cap.get(CAP_PROP_FRAME_COUNT);
-
-    size_t allowed_extra_frames = 0;
-
-    // Hack! Newer FFmpeg versions in this combination produce a file
-    // whose reported duration is one frame longer than needed, and so
-    // the calculated frame count is also off by one. Ideally, we'd want
-    // to fix both writing (to produce the correct duration) and reading
-    // (to correctly report frame count for such files), but I don't know
-    // how to do either, so this is a workaround for now.
-    // See also the same hack in CV_PositioningTest::run.
-    if (fourcc == VideoWriter::fourcc('M', 'P', 'E', 'G') && ext == "mkv")
-        allowed_extra_frames = 1;
-
-    // Hack! Some GStreamer encoding pipelines drop last frame in the video
-    int allowed_frame_frop = 0;
-#ifdef HAVE_GSTREAMER
-    allowed_frame_frop = 1;
-#endif
-
-    if (FRAME_COUNT < IMAGE_COUNT - allowed_frame_frop || FRAME_COUNT > IMAGE_COUNT + allowed_extra_frames)
-    {
-        ts->printf(ts->LOG, "\nFrame count checking for video_%s.%s...\n", fourcc_str.c_str(), ext.c_str());
-        ts->printf(ts->LOG, "Video codec: %s\n", fourcc_str.c_str());
-        if (allowed_extra_frames != 0)
-            ts->printf(ts->LOG, "Required frame count: %d-%d; Returned frame count: %d\n",
-                       IMAGE_COUNT, IMAGE_COUNT + allowed_extra_frames, FRAME_COUNT);
+        double fps_prop = 0;
+        EXPECT_NO_THROW(fps_prop = cap.get(CAP_PROP_FPS));
+        if (fps_prop > 0)
+            EXPECT_NEAR(fps_prop, bunny_param.getFps(), 1);
         else
-            ts->printf(ts->LOG, "Required frame count: %d; Returned frame count: %d\n", IMAGE_COUNT, FRAME_COUNT);
-        ts->printf(ts->LOG, "Error: Incorrect frame count in the video.\n");
-        ts->printf(ts->LOG, "Continue checking...\n");
-        ts->set_failed_test_info(ts->FAIL_BAD_ACCURACY);
-        return;
-    }
+            std::cout << "FPS is not available. SKIP check." << std::endl;
 
-    for (int i = 0; (size_t)i < IMAGE_COUNT-allowed_frame_frop; i++)
-    {
-        Mat frame; cap >> frame;
-        if (frame.empty())
+        int count_prop = 0;
+        EXPECT_NO_THROW(count_prop = (int)cap.get(CAP_PROP_FRAME_COUNT));
+        // mpg file reports 5.08 sec * 24 fps => property returns 122 frames
+        // but actual number of frames returned is 125
+        if (ext != "mpg")
         {
-            ts->printf(ts->LOG, "\nVideo file directory: %s\n", ".");
-            ts->printf(ts->LOG, "File name: video_%s.%s\n", fourcc_str.c_str(), ext.c_str());
-            ts->printf(ts->LOG, "Video codec: %s\n", fourcc_str.c_str());
-            ts->printf(ts->LOG, "Error: cannot read the next frame with index %d.\n", i+1);
-            ts->set_failed_test_info(ts->FAIL_MISSING_TEST_DATA);
-            break;
+            if (count_prop > 0)
+            {
+                EXPECT_EQ(bunny_param.getCount(), count_prop);
+            }
         }
 
-        Mat img = images[i];
-
-        const double thresDbell = 40;
-        double psnr = cvtest::PSNR(img, frame);
-
-        if (psnr > thresDbell)
+        int count_actual = 0;
+        while (cap.isOpened())
         {
-            ts->printf(ts->LOG, "\nReading frame from the file video_%s.%s...\n", fourcc_str.c_str(), ext.c_str());
-            ts->printf(ts->LOG, "Frame index: %d\n", i+1);
-            ts->printf(ts->LOG, "Difference between saved and original images: %g\n", psnr);
-            ts->printf(ts->LOG, "Maximum allowed difference: %g\n", thresDbell);
-            ts->printf(ts->LOG, "Error: too big difference between saved and original images.\n");
-            break;
+            Mat frame;
+            EXPECT_NO_THROW(cap >> frame);
+            if (frame.empty())
+                break;
+            EXPECT_EQ(bunny_param.getWidth(), frame.cols);
+            EXPECT_EQ(bunny_param.getHeight(), frame.rows);
+            count_actual += 1;
+            if (::testing::Test::HasFailure() && count_actual % 10 == 0)
+                break;
         }
+        if (count_prop > 0)
+        {
+            EXPECT_NEAR(bunny_param.getCount(), count_actual, 1);
+        }
+        else
+            std::cout << "Frames counter is not available. Actual frames: " << count_actual << ". SKIP check." << std::endl;
     }
-}
+};
 
-void CV_ImageTest::run(int)
-{
-    ImageTest(ts->get_data_path());
-}
+//==================================================================================================
 
-void CV_SpecificImageTest::run(int)
+struct Ext_Fourcc_PSNR
 {
-    SpecificImageTest(ts->get_data_path());
-}
+    const char* ext;
+    const char* fourcc;
+    float PSNR;
+    VideoCaptureAPIs api;
+};
+typedef tuple<Size, Ext_Fourcc_PSNR> Size_Ext_Fourcc_PSNR;
 
-void CV_VideoTest::run(int)
+class videoio_synthetic : public Videoio_Test_Base, public testing::TestWithParam<Size_Ext_Fourcc_PSNR>
 {
-    for (int i = 0; ; ++i)
+    Size frame_size;
+    int fourcc;
+    float PSNR_GT;
+    int frame_count;
+    double fps;
+public:
+    videoio_synthetic()
     {
-        const cvtest::VideoFormat& fmt = cvtest::g_specific_fmt_list[i];
-        if( fmt.empty() )
-            break;
-        VideoTest(ts->get_data_path(), fmt);
+        frame_size = get<0>(GetParam());
+        const Ext_Fourcc_PSNR p = get<1>(GetParam());
+        ext = p.ext;
+        fourcc = fourccFromString(p.fourcc);
+        PSNR_GT = p.PSNR;
+        video_file = cv::tempfile((fourccToString(fourcc) + "." + ext).c_str());
+        frame_count = 100;
+        fps = 25.;
+        apiPref = p.api;
     }
-}
-
-void CV_SpecificVideoTest::run(int)
-{
-    for (int i = 0; ; ++i)
+    void TearDown()
     {
-        const cvtest::VideoFormat& fmt = cvtest::g_specific_fmt_list[i];
-        if( fmt.empty() )
-            break;
-        SpecificVideoTest(ts->get_data_path(), fmt);
+        remove(video_file.c_str());
     }
-}
+    virtual void writeVideo()
+    {
+        Mat img(frame_size, CV_8UC3);
+        VideoWriter writer;
+        EXPECT_NO_THROW(writer.open(video_file, apiPref, fourcc, fps, frame_size, true));
+        ASSERT_TRUE(writer.isOpened());
+        for(int i = 0; i < frame_count; ++i )
+        {
+            generateFrame(i, frame_count, img);
+            EXPECT_NO_THROW(writer << img);
+            if (::testing::Test::HasFailure() && i % 10 == 0)
+                break;
+        }
+        EXPECT_NO_THROW(writer.release());
+    }
+    virtual void checkFrameContent(Mat & img, int idx)
+    {
+        Mat imgGT(frame_size, CV_8UC3);
+        generateFrame(idx, frame_count, imgGT);
+        double psnr = cvtest::PSNR(img, imgGT);
+        ASSERT_GT(psnr, PSNR_GT) << "frame " << idx;
+    }
+    virtual void checkFrameCount(int &actual)
+    {
+        Range expected_frame_count = Range(frame_count, frame_count);
 
-#ifdef HAVE_JPEG
-TEST(Videoio_Image, regression) { CV_ImageTest test; test.safe_run(); }
+        // Hack! Newer FFmpeg versions in this combination produce a file
+        // whose reported duration is one frame longer than needed, and so
+        // the calculated frame count is also off by one. Ideally, we'd want
+        // to fix both writing (to produce the correct duration) and reading
+        // (to correctly report frame count for such files), but I don't know
+        // how to do either, so this is a workaround for now.
+        if (fourcc == VideoWriter::fourcc('M', 'P', 'E', 'G') && ext == "mkv")
+            expected_frame_count.end += 1;
+
+        // Workaround for some gstreamer pipelines
+        if (apiPref == CAP_GSTREAMER)
+            expected_frame_count.start -= 1;
+
+        ASSERT_LE(expected_frame_count.start, actual);
+        ASSERT_GE(expected_frame_count.end, actual);
+
+        actual = expected_frame_count.start; // adjust actual frame boundary to possible minimum
+    }
+};
+
+//==================================================================================================
+
+static const VideoCaptureAPIs backend_params[] = {
+#ifdef HAVE_AVFOUNDATION
+   CAP_AVFOUNDATION,
 #endif
 
-#if BUILD_WITH_VIDEO_INPUT_SUPPORT && BUILD_WITH_VIDEO_OUTPUT_SUPPORT && !defined(__APPLE__)
-TEST(Videoio_Video, regression) { CV_VideoTest test; test.safe_run(); }
-TEST(Videoio_Video, write_read) { CV_SpecificVideoTest test; test.safe_run(); }
+#ifdef _WIN32
+    CAP_MSMF,
 #endif
 
-TEST(Videoio_Image, write_read) { CV_SpecificImageTest test; test.safe_run(); }
+    CAP_GSTREAMER,
+    CAP_FFMPEG,
+
+#ifdef HAVE_XINE
+    CAP_XINE,
+#endif
+
+    CAP_OPENCV_MJPEG
+    // CAP_INTEL_MFX
+};
+
+static const string bunny_params[] = {
+    string("wmv"),
+    string("mov"),
+    string("mp4"),
+    string("mpg"),
+    string("avi"),
+    string("h264"),
+    string("h265"),
+    string("mjpg.avi")
+};
+
+TEST_P(videoio_bunny, read_position) { doTest(); }
+
+TEST_P(videoio_bunny, frame_count) { doFrameCountTest(); }
+
+INSTANTIATE_TEST_CASE_P(videoio, videoio_bunny,
+                          testing::Combine(
+                              testing::ValuesIn(bunny_params),
+                              testing::ValuesIn(backend_params)));
+
+
+inline static std::ostream &operator<<(std::ostream &out, const Ext_Fourcc_PSNR &p)
+{
+    out << "FOURCC(" << p.fourcc << "), ." << p.ext << ", " << p.api << ", " << p.PSNR << "dB"; return out;
+}
+
+static Ext_Fourcc_PSNR synthetic_params[] = {
+
+#ifdef _WIN32
+#if !defined(_M_ARM)
+    {"wmv", "WMV1", 30.f, CAP_MSMF},
+    {"wmv", "WMV2", 30.f, CAP_MSMF},
+#endif
+    {"wmv", "WMV3", 30.f, CAP_MSMF},
+    {"wmv", "WVC1", 30.f, CAP_MSMF},
+    {"mov", "H264", 30.f, CAP_MSMF},
+#endif
+
+#ifdef HAVE_AVFOUNDATION
+   {"mov", "H264", 30.f, CAP_AVFOUNDATION},
+   {"mov", "MJPG", 30.f, CAP_AVFOUNDATION},
+   {"mp4", "H264", 30.f, CAP_AVFOUNDATION},
+   {"mp4", "MJPG", 30.f, CAP_AVFOUNDATION},
+   {"m4v", "H264", 30.f, CAP_AVFOUNDATION},
+   {"m4v", "MJPG", 30.f, CAP_AVFOUNDATION},
+#endif
+
+    {"avi", "XVID", 30.f, CAP_FFMPEG},
+    {"avi", "MPEG", 30.f, CAP_FFMPEG},
+    {"avi", "IYUV", 30.f, CAP_FFMPEG},
+    {"avi", "MJPG", 30.f, CAP_FFMPEG},
+
+    {"mkv", "XVID", 30.f, CAP_FFMPEG},
+    {"mkv", "MPEG", 30.f, CAP_FFMPEG},
+    {"mkv", "MJPG", 30.f, CAP_FFMPEG},
+
+    {"avi", "MPEG", 30.f, CAP_GSTREAMER},
+    {"avi", "MJPG", 30.f, CAP_GSTREAMER},
+    {"avi", "H264", 30.f, CAP_GSTREAMER},
+
+    {"mkv", "MPEG", 30.f, CAP_GSTREAMER},
+    {"mkv", "MJPG", 30.f, CAP_GSTREAMER},
+    {"mkv", "H264", 30.f, CAP_GSTREAMER},
+
+    {"avi", "MJPG", 30.f, CAP_OPENCV_MJPEG},
+};
+
+
+Size all_sizes[] = {
+    Size(640, 480),
+    Size(976, 768)
+};
+
+TEST_P(videoio_synthetic, write_read_position) { doTest(); }
+
+INSTANTIATE_TEST_CASE_P(videoio, videoio_synthetic,
+                        testing::Combine(
+                            testing::ValuesIn(all_sizes),
+                            testing::ValuesIn(synthetic_params)));
+
+struct Ext_Fourcc_API
+{
+    const char* ext;
+    const char* fourcc;
+    VideoCaptureAPIs api;
+};
+
+inline static std::ostream &operator<<(std::ostream &out, const Ext_Fourcc_API &p)
+{
+    out << "(FOURCC(" << p.fourcc << "), \"" << p.ext << "\", " << p.api << ")"; return out;
+}
+
+
+class Videoio_Writer : public Videoio_Test_Base, public testing::TestWithParam<Ext_Fourcc_API>
+{
+protected:
+    Size frame_size;
+    int fourcc;
+    double fps;
+public:
+    Videoio_Writer()
+    {
+        frame_size = Size(640, 480);
+        const Ext_Fourcc_API p = GetParam();
+        ext = p.ext;
+        fourcc = fourccFromString(p.fourcc);
+        if (ext.size() == 3)
+            video_file = cv::tempfile((fourccToString(fourcc) + "." + ext).c_str());
+        else
+            video_file = ext;
+        fps = 25.;
+        apiPref = p.api;
+    }
+    void SetUp()
+    {
+    }
+    void TearDown()
+    {
+        if (ext.size() == 3)
+            (void)remove(video_file.c_str());
+    }
+};
+
+TEST_P(Videoio_Writer, write_nothing)
+{
+    if (!cv::videoio_registry::hasBackend(apiPref))
+        throw SkipTestException(cv::String("Backend is not available/disabled: ") + cv::videoio_registry::getBackendName(apiPref));
+
+    VideoWriter writer;
+    EXPECT_NO_THROW(writer.open(video_file, apiPref, fourcc, fps, frame_size, true));
+    ASSERT_TRUE(writer.isOpened());
+#if 0  // no frames
+    cv::Mat m(frame_size, CV_8UC3, Scalar::all(127));
+    writer << m;
+#endif
+    EXPECT_NO_THROW(writer.release());
+}
+
+static vector<Ext_Fourcc_API> generate_Ext_Fourcc_API()
+{
+    const size_t N = sizeof(synthetic_params)/sizeof(synthetic_params[0]);
+    vector<Ext_Fourcc_API> result; result.reserve(N);
+    for (size_t i = 0; i < N; i++)
+    {
+        const Ext_Fourcc_PSNR& src = synthetic_params[i];
+        Ext_Fourcc_API e = { src.ext, src.fourcc, src.api };
+        result.push_back(e);
+    }
+
+    {
+        Ext_Fourcc_API e = { "appsrc ! videoconvert ! video/x-raw, format=(string)NV12 ! filesink location=test.nv12", "\0\0\0\0", CAP_GSTREAMER };
+        result.push_back(e);
+    }
+    {
+        Ext_Fourcc_API e = { "appsrc ! videoconvert ! video/x-raw, format=(string)I420 ! matroskamux ! filesink location=test.mkv", "\0\0\0\0", CAP_GSTREAMER };
+        result.push_back(e);
+    }
+    return result;
+}
+
+INSTANTIATE_TEST_CASE_P(videoio, Videoio_Writer, testing::ValuesIn(generate_Ext_Fourcc_API()));
+
+
+TEST(Videoio, exceptions)
+{
+    VideoCapture cap;
+
+    Mat mat;
+
+    EXPECT_FALSE(cap.grab());
+    EXPECT_FALSE(cap.retrieve(mat));
+    EXPECT_FALSE(cap.set(CAP_PROP_POS_FRAMES, 1));
+    EXPECT_FALSE(cap.open("this_does_not_exist.avi", CAP_OPENCV_MJPEG));
+
+    cap.setExceptionMode(true);
+
+    EXPECT_THROW(cap.grab(), Exception);
+    EXPECT_THROW(cap.retrieve(mat), Exception);
+    EXPECT_THROW(cap.set(CAP_PROP_POS_FRAMES, 1), Exception);
+    EXPECT_THROW(cap.open("this_does_not_exist.avi", CAP_OPENCV_MJPEG), Exception);
+}
+
+
+typedef Videoio_Writer Videoio_Writer_bad_fourcc;
+
+TEST_P(Videoio_Writer_bad_fourcc, nocrash)
+{
+    if (!isBackendAvailable(apiPref, cv::videoio_registry::getStreamBackends()))
+        throw SkipTestException(cv::String("Backend is not available/disabled: ") + cv::videoio_registry::getBackendName(apiPref));
+
+    VideoWriter writer;
+    EXPECT_NO_THROW(writer.open(video_file, apiPref, fourcc, fps, frame_size, true));
+    ASSERT_FALSE(writer.isOpened());
+    EXPECT_NO_THROW(writer.release());
+}
+
+static vector<Ext_Fourcc_API> generate_Ext_Fourcc_API_nocrash()
+{
+    static const Ext_Fourcc_API params[] = {
+#ifdef HAVE_MSMF_DISABLED  // MSMF opens writer stream
+    {"wmv", "aaaa", CAP_MSMF},
+    {"mov", "aaaa", CAP_MSMF},
+#endif
+
+#ifdef HAVE_QUICKTIME
+    {"mov", "aaaa", CAP_QT},
+    {"avi", "aaaa", CAP_QT},
+    {"mkv", "aaaa", CAP_QT},
+#endif
+
+#ifdef HAVE_AVFOUNDATION
+   {"mov", "aaaa", CAP_AVFOUNDATION},
+   {"mp4", "aaaa", CAP_AVFOUNDATION},
+   {"m4v", "aaaa", CAP_AVFOUNDATION},
+#endif
+
+#ifdef HAVE_FFMPEG
+    {"avi", "aaaa", CAP_FFMPEG},
+    {"mkv", "aaaa", CAP_FFMPEG},
+#endif
+
+#ifdef HAVE_GSTREAMER
+    {"avi", "aaaa", CAP_GSTREAMER},
+    {"mkv", "aaaa", CAP_GSTREAMER},
+#endif
+    {"avi", "aaaa", CAP_OPENCV_MJPEG},
+};
+
+    const size_t N = sizeof(params)/sizeof(params[0]);
+    vector<Ext_Fourcc_API> result; result.reserve(N);
+    for (size_t i = 0; i < N; i++)
+    {
+        const Ext_Fourcc_API& src = params[i];
+        Ext_Fourcc_API e = { src.ext, src.fourcc, src.api };
+        result.push_back(e);
+    }
+    return result;
+}
+
+INSTANTIATE_TEST_CASE_P(videoio, Videoio_Writer_bad_fourcc, testing::ValuesIn(generate_Ext_Fourcc_API_nocrash()));
+
+} // namespace

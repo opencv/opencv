@@ -1,6 +1,8 @@
 Harris corner detector {#tutorial_harris_detector}
 ======================
 
+@next_tutorial{tutorial_good_features_to_track}
+
 Goal
 ----
 
@@ -43,7 +45,7 @@ In this tutorial we will study the *corner* features, specifically.
 -   Let's look for corners. Since corners represents a variation in the gradient in the image, we
     will look for this "variation".
 -   Consider a grayscale image \f$I\f$. We are going to sweep a window \f$w(x,y)\f$ (with displacements \f$u\f$
-    in the x direction and \f$v\f$ in the right direction) \f$I\f$ and will calculate the variation of
+    in the x direction and \f$v\f$ in the y direction) \f$I\f$ and will calculate the variation of
     intensity.
 
     \f[E(u,v) = \sum _{x,y} w(x,y)[ I(x+u,y+v) - I(x,y)]^{2}\f]
@@ -118,9 +120,23 @@ In this tutorial we will study the *corner* features, specifically.
 Code
 ----
 
+@add_toggle_cpp
 This tutorial code's is shown lines below. You can also download it from
 [here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/TrackingMotion/cornerHarris_Demo.cpp)
 @include samples/cpp/tutorial_code/TrackingMotion/cornerHarris_Demo.cpp
+@end_toggle
+
+@add_toggle_java
+This tutorial code's is shown lines below. You can also download it from
+[here](https://github.com/opencv/opencv/tree/master/samples/java/tutorial_code/TrackingMotion/harris_detector/CornerHarrisDemo.java)
+@include samples/java/tutorial_code/TrackingMotion/harris_detector/CornerHarrisDemo.java
+@end_toggle
+
+@add_toggle_python
+This tutorial code's is shown lines below. You can also download it from
+[here](https://github.com/opencv/opencv/tree/master/samples/python/tutorial_code/TrackingMotion/harris_detector/cornerHarris_Demo.py)
+@include samples/python/tutorial_code/TrackingMotion/harris_detector/cornerHarris_Demo.py
+@end_toggle
 
 Explanation
 -----------

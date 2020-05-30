@@ -10,7 +10,7 @@ import sys
 PY3 = sys.version_info[0] == 3
 
 import numpy as np
-import cv2
+import cv2 as cv
 
 from tests_common import NewOpenCVTests
 
@@ -43,9 +43,12 @@ class morphology_test(NewOpenCVTests):
             str_name = 'MORPH_' + cur_str_mode.upper()
             oper_name = 'MORPH_' + op.upper()
 
-            st = cv2.getStructuringElement(getattr(cv2, str_name), (sz, sz))
-            return cv2.morphologyEx(img, getattr(cv2, oper_name), st, iterations=iters)
+            st = cv.getStructuringElement(getattr(cv, str_name), (sz, sz))
+            return cv.morphologyEx(img, getattr(cv, oper_name), st, iterations=iters)
 
         for mode in modes:
             res = update(mode)
             self.assertEqual(self.hashimg(res), referenceHashes[mode])
+
+if __name__ == '__main__':
+    NewOpenCVTests.bootstrap()

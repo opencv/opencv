@@ -46,7 +46,7 @@
 
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 //////////////////////////// GoodFeaturesToTrack //////////////////////////
@@ -139,6 +139,6 @@ OCL_TEST_P(GoodFeaturesToTrack, EmptyCorners)
 OCL_INSTANTIATE_TEST_CASE_P(Imgproc, GoodFeaturesToTrack,
                             ::testing::Combine(testing::Values(0.0, 3.0), Bool()));
 
-} } // namespace cvtest::ocl
+} } // namespace opencv_test::ocl
 
 #endif

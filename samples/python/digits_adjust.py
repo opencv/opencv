@@ -22,7 +22,8 @@ if PY3:
     xrange = range
 
 import numpy as np
-import cv2
+import cv2 as cv
+
 from multiprocessing.pool import ThreadPool
 
 from digits import *
@@ -66,7 +67,7 @@ class App(object):
         return self._samples, self._labels
 
     def run_jobs(self, f, jobs):
-        pool = ThreadPool(processes=cv2.getNumberOfCPUs())
+        pool = ThreadPool(processes=cv.getNumberOfCPUs())
         ires = pool.imap_unordered(f, jobs)
         return ires
 

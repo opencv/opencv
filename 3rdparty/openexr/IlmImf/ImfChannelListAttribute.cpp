@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2002, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -42,25 +42,25 @@
 
 #include <ImfChannelListAttribute.h>
 
-
-namespace Imf {
+OPENEXR_IMF_INTERNAL_NAMESPACE_SOURCE_ENTER
 
 namespace {
 
 template <size_t N>
 void checkIsNullTerminated (const char (&str)[N], const char *what)
 {
-    for (int i = 0; i < N; ++i) {
+    for (size_t i = 0; i < N; ++i) {
         if (str[i] == '\0')
             return;
    }
     std::stringstream s;
-    s << "Invalid " << what << ": it is more than " << (N - 1)
+    s << "Invalid " << what << ": it is more than " << (N - 1) 
       << " characters long.";
-    throw Iex::InputExc(s);
+    throw IEX_NAMESPACE::InputExc(s);
 }
 
 } // namespace
+
 
 template <>
 const char *
@@ -69,30 +69,31 @@ ChannelListAttribute::staticTypeName ()
     return "chlist";
 }
 
+using namespace OPENEXR_IMF_INTERNAL_NAMESPACE;
 
 template <>
 void
-ChannelListAttribute::writeValueTo (OStream &os, int) const
+ChannelListAttribute::writeValueTo (OStream &os, int version) const
 {
     for (ChannelList::ConstIterator i = _value.begin();
-     i != _value.end();
-     ++i)
+	 i != _value.end();
+	 ++i)
     {
-    //
-    // Write name
-    //
+	//
+	// Write name
+	//
 
-    Xdr::write <StreamIO> (os, i.name());
+	Xdr::write <StreamIO> (os, i.name());
 
-    //
-    // Write Channel struct
-    //
+	//
+	// Write Channel struct
+	//
 
-    Xdr::write <StreamIO> (os, int (i.channel().type));
-    Xdr::write <StreamIO> (os, i.channel().pLinear);
-    Xdr::pad   <StreamIO> (os, 3);
-    Xdr::write <StreamIO> (os, i.channel().xSampling);
-    Xdr::write <StreamIO> (os, i.channel().ySampling);
+	Xdr::write <StreamIO> (os, int (i.channel().type));
+	Xdr::write <StreamIO> (os, i.channel().pLinear);
+	Xdr::pad   <StreamIO> (os, 3);
+	Xdr::write <StreamIO> (os, i.channel().xSampling);
+	Xdr::write <StreamIO> (os, i.channel().ySampling);
     }
 
     //
@@ -105,41 +106,45 @@ ChannelListAttribute::writeValueTo (OStream &os, int) const
 
 template <>
 void
-ChannelListAttribute::readValueFrom (IStream &is, int, int)
+ChannelListAttribute::readValueFrom (IStream &is,
+                                     int size,
+                                     int version)
 {
     while (true)
     {
-    //
-    // Read name; zero length name means end of channel list
-    //
+	//
+	// Read name; zero length name means end of channel list
+	//
 
-    char name[Name::SIZE];
-    Xdr::read <StreamIO> (is, Name::MAX_LENGTH, name);
+	char name[Name::SIZE];
+	Xdr::read <StreamIO> (is,Name::MAX_LENGTH,name);
 
-    if (name[0] == 0)
-        break;
+	if (name[0] == 0)
+	    break;
 
-    checkIsNullTerminated (name, "channel name");
+	checkIsNullTerminated (name, "channel name");
 
-    //
-    // Read Channel struct
-    //
+	//
+	// Read Channel struct
+	//
 
-    int type;
-    bool pLinear;
-    int xSampling;
-    int ySampling;
+	int type;
+	bool pLinear;
+	int xSampling;
+	int ySampling;
 
-    Xdr::read <StreamIO> (is, type);
-    Xdr::read <StreamIO> (is, pLinear);
-    Xdr::skip <StreamIO> (is, 3);
-    Xdr::read <StreamIO> (is, xSampling);
-    Xdr::read <StreamIO> (is, ySampling);
+	Xdr::read <StreamIO> (is, type);
+	Xdr::read <StreamIO> (is, pLinear);
+	Xdr::skip <StreamIO> (is, 3);
+	Xdr::read <StreamIO> (is, xSampling);
+	Xdr::read <StreamIO> (is, ySampling);
 
-    _value.insert
-        (name, Channel (PixelType (type), xSampling, ySampling, pLinear));
+	_value.insert (name, Channel (PixelType (type),
+	                              xSampling,
+	                              ySampling,
+	                              pLinear));
     }
 }
 
 
-} // namespace Imf
+OPENEXR_IMF_INTERNAL_NAMESPACE_SOURCE_EXIT 

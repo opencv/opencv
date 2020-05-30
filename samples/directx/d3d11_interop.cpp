@@ -1,11 +1,10 @@
 /*
-// Sample demonstrating interoperability of OpenCV UMat with Direct X surface
-// At first, the data obtained from video file or camera and
-// placed onto Direct X surface,
-// following mapping of this Direct X surface to OpenCV UMat and call cv::Blur
-// function. The result is mapped back to Direct X surface and rendered through
-// Direct X API.
+// A sample program demonstrating interoperability of OpenCV cv::UMat with Direct X surface
+// At first, the data obtained from video file or camera and placed onto Direct X surface,
+// following mapping of this Direct X surface to OpenCV cv::UMat and call cv::Blur function.
+// The result is mapped back to Direct X surface and rendered through Direct X API.
 */
+
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <d3d11.h>
@@ -19,10 +18,6 @@
 #include "d3dsample.hpp"
 
 #pragma comment (lib, "d3d11.lib")
-
-
-using namespace std;
-using namespace cv;
 
 class D3D11WinApp : public D3DSample
 {
@@ -88,7 +83,7 @@ public:
         r = m_pD3D11SwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&m_pBackBuffer);
         if (FAILED(r))
         {
-            throw std::runtime_error("GetBufer() failed!");
+            throw std::runtime_error("GetBuffer() failed!");
         }
 
         r = m_pD3D11Dev->CreateRenderTargetView(m_pBackBuffer, NULL, &m_pRenderTarget);
@@ -188,7 +183,7 @@ public:
             cv::ocl::Context::getDefault().device(0).name() :
             "No OpenCL device";
 
-        return 0;
+        return EXIT_SUCCESS;
     } // create()
 
 
@@ -198,11 +193,11 @@ public:
         HRESULT r;
 
         if (!m_cap.read(m_frame_bgr))
-            return -1;
+            return EXIT_FAILURE;
 
         if (use_nv12)
         {
-            cv::cvtColor(m_frame_bgr, m_frame_i420, CV_BGR2YUV_I420);
+            cv::cvtColor(m_frame_bgr, m_frame_i420, cv::COLOR_BGR2YUV_I420);
 
             convert_I420_to_NV12(m_frame_i420, m_frame_nv12, m_width, m_height);
 
@@ -210,7 +205,7 @@ public:
         }
         else
         {
-            cv::cvtColor(m_frame_bgr, m_frame_rgba, CV_BGR2RGBA);
+            cv::cvtColor(m_frame_bgr, m_frame_rgba, cv::COLOR_BGR2RGBA);
 
             // process video frame on CPU
             UINT subResource = ::D3D11CalcSubresource(0, 0, 1);
@@ -230,7 +225,7 @@ public:
 
         *ppSurface = use_nv12 ? m_pSurfaceNV12 : m_pSurfaceRGBA;
 
-        return 0;
+        return EXIT_SUCCESS;
     } // get_surface()
 
 
@@ -240,7 +235,7 @@ public:
         try
         {
             if (m_shutdown)
-                return 0;
+                return EXIT_SUCCESS;
 
             // capture user input once
             MODE mode = (m_mode == MODE_GPU_NV12 && !m_nv12_available) ? MODE_GPU_RGBA : m_mode;
@@ -254,6 +249,7 @@ public:
                 throw std::runtime_error("get_surface() failed!");
             }
 
+            m_timer.reset();
             m_timer.start();
 
             switch (mode)
@@ -275,18 +271,20 @@ public:
                 if (m_demo_processing)
                 {
                     // blur data from D3D11 surface with OpenCV on CPU
-                    cv::blur(m, m, cv::Size(15, 15), cv::Point(-7, -7));
+                    cv::blur(m, m, cv::Size(15, 15));
                 }
+
+                m_timer.stop();
 
                 cv::String strMode = cv::format("mode: %s", m_modeStr[MODE_CPU].c_str());
                 cv::String strProcessing = m_demo_processing ? "blur frame" : "copy frame";
-                cv::String strTime = cv::format("time: %4.1f msec", m_timer.time(Timer::UNITS::MSEC));
+                cv::String strTime = cv::format("time: %4.3f msec", m_timer.getTimeMilli());
                 cv::String strDevName = cv::format("OpenCL device: %s", m_oclDevName.c_str());
 
-                cv::putText(m, strMode, cv::Point(0, 16), 1, 0.8, cv::Scalar(0, 0, 0));
-                cv::putText(m, strProcessing, cv::Point(0, 32), 1, 0.8, cv::Scalar(0, 0, 0));
-                cv::putText(m, strTime, cv::Point(0, 48), 1, 0.8, cv::Scalar(0, 0, 0));
-                cv::putText(m, strDevName, cv::Point(0, 64), 1, 0.8, cv::Scalar(0, 0, 0));
+                cv::putText(m, strMode, cv::Point(0, 20), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 200), 2);
+                cv::putText(m, strProcessing, cv::Point(0, 40), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 200), 2);
+                cv::putText(m, strTime, cv::Point(0, 60), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 200), 2);
+                cv::putText(m, strDevName, cv::Point(0, 80), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 200), 2);
 
                 m_pD3D11Ctx->Unmap(pSurface, subResource);
 
@@ -304,18 +302,20 @@ public:
                 if (m_demo_processing)
                 {
                     // blur data from D3D11 surface with OpenCV on GPU with OpenCL
-                    cv::blur(u, u, cv::Size(15, 15), cv::Point(-7, -7));
+                    cv::blur(u, u, cv::Size(15, 15));
                 }
+
+                m_timer.stop();
 
                 cv::String strMode = cv::format("mode: %s", m_modeStr[mode].c_str());
                 cv::String strProcessing = m_demo_processing ? "blur frame" : "copy frame";
-                cv::String strTime = cv::format("time: %4.1f msec", m_timer.time(Timer::UNITS::MSEC));
+                cv::String strTime = cv::format("time: %4.3f msec", m_timer.getTimeMilli());
                 cv::String strDevName = cv::format("OpenCL device: %s", m_oclDevName.c_str());
 
-                cv::putText(u, strMode, cv::Point(0, 16), 1, 0.8, cv::Scalar(0, 0, 0));
-                cv::putText(u, strProcessing, cv::Point(0, 32), 1, 0.8, cv::Scalar(0, 0, 0));
-                cv::putText(u, strTime, cv::Point(0, 48), 1, 0.8, cv::Scalar(0, 0, 0));
-                cv::putText(u, strDevName, cv::Point(0, 64), 1, 0.8, cv::Scalar(0, 0, 0));
+                cv::putText(u, strMode, cv::Point(0, 20), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 200), 2);
+                cv::putText(u, strProcessing, cv::Point(0, 40), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 200), 2);
+                cv::putText(u, strTime, cv::Point(0, 60), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 200), 2);
+                cv::putText(u, strDevName, cv::Point(0, 80), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 200), 2);
 
                 cv::directx::convertToD3D11Texture2D(u, pSurface);
 
@@ -336,7 +336,7 @@ public:
                         }
 
                         cv::Mat frame_nv12(m_height + (m_height / 2), m_width, CV_8UC1, mappedTex.pData, mappedTex.RowPitch);
-                        cv::cvtColor(frame_nv12, m_frame_rgba, CV_YUV2RGBA_NV12);
+                        cv::cvtColor(frame_nv12, m_frame_rgba, cv::COLOR_YUV2RGBA_NV12);
 
                         m_pD3D11Ctx->Unmap(m_pSurfaceNV12_cpu_copy, subResource);
                     }
@@ -365,8 +365,6 @@ public:
 
             } // switch
 
-            m_timer.stop();
-
             // traditional DX render pipeline:
             //   BitBlt surface to backBuffer and flip backBuffer to frontBuffer
             m_pD3D11Ctx->CopyResource(m_pBackBuffer, pSurface);
@@ -380,7 +378,7 @@ public:
             }
         } // try
 
-        catch (cv::Exception& e)
+        catch (const cv::Exception& e)
         {
             std::cerr << "Exception: " << e.what() << std::endl;
             cleanup();
@@ -394,7 +392,7 @@ public:
             return 11;
         }
 
-        return 0;
+        return EXIT_SUCCESS;
     } // render()
 
 
@@ -409,7 +407,7 @@ public:
         SAFE_RELEASE(m_pD3D11Dev);
         SAFE_RELEASE(m_pD3D11Ctx);
         D3DSample::cleanup();
-        return 0;
+        return EXIT_SUCCESS;
     } // cleanup()
 
 protected:

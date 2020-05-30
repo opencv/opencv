@@ -41,8 +41,7 @@
 
 #include "test_precomp.hpp"
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 class CV_CannyTest : public cvtest::ArrayTest
 {
@@ -76,8 +75,6 @@ CV_CannyTest::CV_CannyTest(bool custom_deriv)
     aperture_size = 0;
     use_true_gradient = false;
     threshold1 = threshold2 = 0;
-
-    test_cpp = false;
     test_custom_deriv = custom_deriv;
 
     const char imgPath[] = "shared/fruits.png";
@@ -121,7 +118,7 @@ int CV_CannyTest::prepare_test_case( int test_case_idx )
         Mat& src = test_mat[INPUT][0];
         //GaussianBlur(src, src, Size(11, 11), 5, 5);
         if(src.cols > img.cols || src.rows > img.rows)
-            resize(img, src, src.size());
+            resize(img, src, src.size(), 0, 0, INTER_LINEAR_EXACT);
         else
             img(
                 Rect(
@@ -158,11 +155,6 @@ void CV_CannyTest::run_func()
         cvtest::filter2D(src, dx, CV_16S, dxkernel, anchor, 0, BORDER_REPLICATE);
         cvtest::filter2D(src, dy, CV_16S, dykernel, anchor, 0, BORDER_REPLICATE);
         cv::Canny(dx, dy, _out, threshold1, threshold2, use_true_gradient);
-    }
-    else if(!test_cpp)
-    {
-        cvCanny( test_array[INPUT][0], test_array[OUTPUT][0], threshold1, threshold2,
-                aperture_size + (use_true_gradient ? CV_CANNY_L2_GRADIENT : 0));
     }
     else
     {
@@ -211,15 +203,15 @@ test_Canny( const Mat& src, Mat& dst,
     Mat dxkernel = cvtest::calcSobelKernel2D( 1, 0, m, 0 );
     Mat dykernel = cvtest::calcSobelKernel2D( 0, 1, m, 0 );
     Mat dx, dy, mag(height, width, CV_32F);
-    cvtest::filter2D(src, dx, CV_16S, dxkernel, anchor, 0, BORDER_REPLICATE);
-    cvtest::filter2D(src, dy, CV_16S, dykernel, anchor, 0, BORDER_REPLICATE);
+    cvtest::filter2D(src, dx, CV_32S, dxkernel, anchor, 0, BORDER_REPLICATE);
+    cvtest::filter2D(src, dy, CV_32S, dykernel, anchor, 0, BORDER_REPLICATE);
 
     // calc gradient magnitude
     for( y = 0; y < height; y++ )
     {
         for( x = 0; x < width; x++ )
         {
-            int dxval = dx.at<short>(y, x), dyval = dy.at<short>(y, x);
+            int dxval = dx.at<int>(y, x), dyval = dy.at<int>(y, x);
             mag.at<float>(y, x) = use_true_gradient ?
                 (float)sqrt((double)(dxval*dxval + dyval*dyval)) :
                 (float)(fabs((double)dxval) + fabs((double)dyval));
@@ -238,8 +230,8 @@ test_Canny( const Mat& src, Mat& dst,
             if( a <= lowThreshold )
                 continue;
 
-            int dxval = dx.at<short>(y, x);
-            int dyval = dy.at<short>(y, x);
+            int dxval = dx.at<int>(y, x);
+            int dyval = dy.at<int>(y, x);
 
             double tg = dxval ? (double)dyval/dxval : DBL_MAX*CV_SIGN(dyval);
 
@@ -365,7 +357,7 @@ PARAM_TEST_CASE(CannyVX, ImagePath, ApertureSize, L2gradient)
     void loadImage()
     {
         src = cv::imread(cvtest::TS::ptr()->get_data_path() + imgPath, IMREAD_GRAYSCALE);
-        ASSERT_FALSE(src.empty()) << "cann't load image: " << imgPath;
+        ASSERT_FALSE(src.empty()) << "can't load image: " << imgPath;
     }
 };
 
@@ -426,4 +418,5 @@ TEST_P(CannyVX, Accuracy)
                 )
     );
 
+}} // namespace
 /* End of file. */

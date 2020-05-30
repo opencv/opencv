@@ -38,8 +38,8 @@
 //
 //M*/
 
-#ifndef OPENCV_ML_HPP
-#define OPENCV_ML_HPP
+#ifndef OPENCV_OLD_ML_HPP
+#define OPENCV_OLD_ML_HPP
 
 #ifdef __cplusplus
 #  include "opencv2/core.hpp"
@@ -54,7 +54,7 @@
 #include <iostream>
 
 // Apple defines a check() macro somewhere in the debug headers
-// that interferes with a method definiton in this header
+// that interferes with a method definition in this header
 #undef check
 
 /****************************************************************************************\
@@ -88,7 +88,7 @@ struct CvVectors
 #if 0
 /* A structure, representing the lattice range of statmodel parameters.
    It is used for optimizing statmodel parameters by cross-validation method.
-   The lattice is logarithmic, so <step> must be greater then 1. */
+   The lattice is logarithmic, so <step> must be greater than 1. */
 typedef struct CvParamLattice
 {
     double min_val;
@@ -144,8 +144,8 @@ public:
     CV_WRAP virtual void save( const char* filename, const char* name=0 ) const;
     CV_WRAP virtual void load( const char* filename, const char* name=0 );
 
-    virtual void write( CvFileStorage* storage, const char* name ) const;
-    virtual void read( CvFileStorage* storage, CvFileNode* node );
+    virtual void write( cv::FileStorage& storage, const char* name ) const;
+    virtual void read( const cv::FileNode& node );
 
 protected:
     const char* default_model_name;
@@ -158,7 +158,7 @@ protected:
 /* The structure, representing the grid range of statmodel parameters.
    It is used for optimizing statmodel accuracy by varying model parameters,
    the accuracy estimate being computed by cross-validation.
-   The grid is logarithmic, so <step> must be greater then 1. */
+   The grid is logarithmic, so <step> must be greater than 1. */
 
 class CvMLData;
 
@@ -210,8 +210,8 @@ public:
                        bool update=false );
     CV_WRAP virtual float predict( const cv::Mat& samples, CV_OUT cv::Mat* results=0, CV_OUT cv::Mat* results_prob=0 ) const;
 
-    virtual void write( CvFileStorage* storage, const char* name ) const;
-    virtual void read( CvFileStorage* storage, CvFileNode* node );
+    virtual void write( cv::FileStorage& storage, const char* name ) const;
+    virtual void read( const cv::FileNode& node );
 
 protected:
     int     var_count, var_all;
@@ -521,8 +521,8 @@ public:
 
     static CvParamGrid get_default_grid( int param_id );
 
-    virtual void write( CvFileStorage* storage, const char* name ) const;
-    virtual void read( CvFileStorage* storage, CvFileNode* node );
+    virtual void write( cv::FileStorage& storage, const char* name ) const;
+    virtual void read( const cv::FileNode& node );
     CV_WRAP int get_var_count() const { return var_idx ? var_idx->cols : var_all; }
 
 protected:
@@ -538,8 +538,8 @@ protected:
 
     virtual float predict( const float* row_sample, int row_len, bool returnDFVal=false ) const;
 
-    virtual void write_params( CvFileStorage* fs ) const;
-    virtual void read_params( CvFileStorage* fs, CvFileNode* node );
+    virtual void write_params( cv::FileStorage& fs ) const;
+    virtual void read_params( const cv::FileNode& node );
 
     void optimize_linear_svm();
 
@@ -673,8 +673,8 @@ struct CvDTreeTrainData
 
     virtual CvDTreeNode* subsample_data( const CvMat* _subsample_idx );
 
-    virtual void write_params( CvFileStorage* fs ) const;
-    virtual void read_params( CvFileStorage* fs, CvFileNode* node );
+    virtual void write_params( cv::FileStorage& fs ) const;
+    virtual void read_params( const cv::FileNode& node );
 
     // release all the data
     virtual void clear();
@@ -1243,9 +1243,9 @@ struct CvGBTreesParams : public CvDTreeParams
 // weak             - array[0..(class_count-1)] of CvSeq
 //                    for storing tree ensembles
 // orig_response    - original responses of the training set samples
-// sum_response     - predicitons of the current model on the training dataset.
+// sum_response     - predictions of the current model on the training dataset.
 //                    this matrix is updated on every iteration.
-// sum_response_tmp - predicitons of the model on the training set on the next
+// sum_response_tmp - predictions of the model on the training set on the next
 //                    step. On every iteration values of sum_responses_tmp are
 //                    computed via sum_responses values. When the current
 //                    step is complete sum_response values become equal to
@@ -1270,7 +1270,7 @@ struct CvGBTreesParams : public CvDTreeParams
 //                    matrix has the same size as train_data. 1 - missing
 //                    value, 0 - not a missing value.
 // class_labels     - output class labels map.
-// rng              - random number generator. Used for spliting the
+// rng              - random number generator. Used for splitting the
 //                    training set.
 // class_count      - count of output classes.
 //                    class_count == 1 in the case of regression,
@@ -1536,7 +1536,7 @@ public:
     // type  - defines which error is to compute: train (CV_TRAIN_ERROR) or
     //         test (CV_TEST_ERROR).
     // OUTPUT
-    // resp  - vector of predicitons
+    // resp  - vector of predictions
     // RESULT
     // Error value.
     */
@@ -1738,7 +1738,7 @@ protected:
     // Read parameters of the gtb model and data.
     //
     // API
-    // virtual void read_params( CvFileStorage* fs );
+    // virtual void read_params( const cv::FileStorage& fs );
     //
     // INPUT
     // fs           - file storage to read parameters from.
@@ -1896,32 +1896,6 @@ protected:
 };
 
 /****************************************************************************************\
-*                           Auxilary functions declarations                              *
-\****************************************************************************************/
-
-/* Generates <sample> from multivariate normal distribution, where <mean> - is an
-   average row vector, <cov> - symmetric covariation matrix */
-CVAPI(void) cvRandMVNormal( CvMat* mean, CvMat* cov, CvMat* sample,
-                           CvRNG* rng CV_DEFAULT(0) );
-
-/* Generates sample from gaussian mixture distribution */
-CVAPI(void) cvRandGaussMixture( CvMat* means[],
-                               CvMat* covs[],
-                               float weights[],
-                               int clsnum,
-                               CvMat* sample,
-                               CvMat* sampClasses CV_DEFAULT(0) );
-
-#define CV_TS_CONCENTRIC_SPHERES 0
-
-/* creates test set */
-CVAPI(void) cvCreateTestSet( int type, CvMat** samples,
-                 int num_samples,
-                 int num_features,
-                 CvMat** responses,
-                 int num_classes, ... );
-
-/****************************************************************************************\
 *                                      Data                                             *
 \****************************************************************************************/
 
@@ -2059,10 +2033,11 @@ typedef CvANN_MLP NeuralNet_MLP;
 typedef CvGBTreesParams GradientBoostingTreeParams;
 typedef CvGBTrees GradientBoostingTrees;
 
-template<> void DefaultDeleter<CvDTreeSplit>::operator ()(CvDTreeSplit* obj) const;
+template<> struct DefaultDeleter<CvDTreeSplit>{ void operator ()(CvDTreeSplit* obj) const; };
+
 }
 
 #endif // __cplusplus
-#endif // OPENCV_ML_HPP
+#endif // OPENCV_OLD_ML_HPP
 
 /* End of file. */

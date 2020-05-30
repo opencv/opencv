@@ -1,4 +1,14 @@
-if(ENABLE_CCACHE AND NOT CMAKE_COMPILER_IS_CCACHE)
+if("${CMAKE_CXX_COMPILER};${CMAKE_C_COMPILER};${CMAKE_CXX_COMPILER_LAUNCHER}" MATCHES "ccache")
+  set(CMAKE_COMPILER_IS_CCACHE 1)  # TODO: FIXIT Avoid setting of CMAKE_ variables
+  set(OPENCV_COMPILER_IS_CCACHE 1)
+endif()
+function(access_CMAKE_COMPILER_IS_CCACHE)
+  if(NOT OPENCV_SUPPRESS_DEPRECATIONS)
+    message(WARNING "DEPRECATED: CMAKE_COMPILER_IS_CCACHE is replaced to OPENCV_COMPILER_IS_CCACHE.")
+  endif()
+endfunction()
+variable_watch(CMAKE_COMPILER_IS_CCACHE access_CMAKE_COMPILER_IS_CCACHE)
+if(ENABLE_CCACHE AND NOT OPENCV_COMPILER_IS_CCACHE AND NOT CMAKE_GENERATOR MATCHES "Xcode")
   # This works fine with Unix Makefiles and Ninja generators
   find_host_program(CCACHE_PROGRAM ccache)
   if(CCACHE_PROGRAM)
@@ -13,51 +23,22 @@ if(ENABLE_CCACHE AND NOT CMAKE_COMPILER_IS_CCACHE)
       # ocv_check_compiler_flag(CXX "" IS_CCACHE_WORKS)
       set(IS_CCACHE_WORKS 1)
       if(IS_CCACHE_WORKS)
-        set(CMAKE_COMPILER_IS_CCACHE 1)
+        set(OPENCV_COMPILER_IS_CCACHE 1)
       else()
         message(STATUS "Unable to compile program with enabled ccache, reverting...")
         set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${__OLD_RULE_LAUNCH_COMPILE}")
       endif()
-    else()
-      message(STATUS "Looking for ccache - not found")
     endif()
+  else()
+    message(STATUS "Looking for ccache - not found")
   endif()
 endif()
 
-if((CMAKE_COMPILER_IS_CLANGCXX OR CMAKE_COMPILER_IS_CLANGCC OR CMAKE_COMPILER_IS_CCACHE) AND NOT CMAKE_GENERATOR MATCHES "Xcode")
+if((CV_CLANG AND NOT CMAKE_GENERATOR MATCHES "Xcode")  # PCH has no support for Clang
+    OR OPENCV_COMPILER_IS_CCACHE
+)
   set(ENABLE_PRECOMPILED_HEADERS OFF CACHE BOOL "" FORCE)
 endif()
-
-if(MINGW OR (X86 AND UNIX AND NOT APPLE))
-  # mingw compiler is known to produce unstable SSE code with -O3 hence we are trying to use -O2 instead
-  if(CMAKE_COMPILER_IS_GNUCXX)
-    foreach(flags
-            CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_RELEASE CMAKE_CXX_FLAGS_DEBUG
-            CMAKE_C_FLAGS CMAKE_C_FLAGS_RELEASE CMAKE_C_FLAGS_DEBUG)
-      string(REPLACE "-O3" "-O2" ${flags} "${${flags}}")
-    endforeach()
-  endif()
-endif()
-
-if(MSVC)
-  string(STRIP "${CMAKE_CXX_FLAGS}" CMAKE_CXX_FLAGS)
-  string(STRIP "${CMAKE_CXX_FLAGS_INIT}" CMAKE_CXX_FLAGS_INIT)
-  if(CMAKE_CXX_FLAGS STREQUAL CMAKE_CXX_FLAGS_INIT)
-    # override cmake default exception handling option
-    string(REPLACE "/EHsc" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHa")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}"  CACHE STRING "Flags used by the compiler during all build types." FORCE)
-  endif()
-endif()
-
-set(OPENCV_EXTRA_FLAGS "")
-set(OPENCV_EXTRA_C_FLAGS "")
-set(OPENCV_EXTRA_CXX_FLAGS "")
-set(OPENCV_EXTRA_FLAGS_RELEASE "")
-set(OPENCV_EXTRA_FLAGS_DEBUG "")
-set(OPENCV_EXTRA_EXE_LINKER_FLAGS "")
-set(OPENCV_EXTRA_EXE_LINKER_FLAGS_RELEASE "")
-set(OPENCV_EXTRA_EXE_LINKER_FLAGS_DEBUG "")
 
 macro(add_extra_compiler_option option)
   ocv_check_flag_support(CXX "${option}" _varname "${OPENCV_EXTRA_CXX_FLAGS} ${ARGN}")
@@ -89,30 +70,41 @@ macro(add_env_definitions option)
   add_definitions("-D${option}=\"${value}\"")
 endmacro()
 
-# OpenCV fails some tests when 'char' is 'unsigned' by default
-add_extra_compiler_option(-fsigned-char)
+if(NOT MSVC)
+  # OpenCV fails some tests when 'char' is 'unsigned' by default
+  add_extra_compiler_option(-fsigned-char)
+endif()
 
-if(MINGW)
-  # http://gcc.gnu.org/bugzilla/show_bug.cgi?id=40838
-  # here we are trying to workaround the problem
-  add_extra_compiler_option(-mstackrealign)
-  if(NOT HAVE_CXX_MSTACKREALIGN)
-    add_extra_compiler_option(-mpreferred-stack-boundary=2)
+if(MSVC)
+  if(NOT " ${CMAKE_CXX_FLAGS} ${OPENCV_EXTRA_FLAGS} ${OPENCV_EXTRA_CXX_FLAGS}" MATCHES " /fp:")
+    if(ENABLE_FAST_MATH)
+      add_extra_compiler_option("/fp:fast")
+    else()
+      add_extra_compiler_option("/fp:precise")
+    endif()
+  endif()
+elseif(CV_ICC)
+  if(NOT " ${CMAKE_CXX_FLAGS} ${OPENCV_EXTRA_FLAGS} ${OPENCV_EXTRA_CXX_FLAGS}" MATCHES " /fp:"
+      AND NOT " ${CMAKE_CXX_FLAGS} ${OPENCV_EXTRA_FLAGS} ${OPENCV_EXTRA_CXX_FLAGS}" MATCHES " -fp-model"
+  )
+    if(NOT ENABLE_FAST_MATH)
+      add_extra_compiler_option("-fp-model precise")
+    endif()
+  endif()
+elseif(CV_GCC OR CV_CLANG)
+  if(ENABLE_FAST_MATH)
+    add_extra_compiler_option(-ffast-math)
   endif()
 endif()
 
-if(CV_ICC AND NOT ENABLE_FAST_MATH)
-  if(MSVC)
-    add_extra_compiler_option("/fp:precise")
-  else()
-    add_extra_compiler_option("-fp-model precise")
-  endif()
-endif()
-
-if(CMAKE_COMPILER_IS_GNUCXX)
+if(CV_GCC OR CV_CLANG)
   # High level of warnings.
   add_extra_compiler_option(-W)
-  add_extra_compiler_option(-Wall)
+  if (NOT MSVC)
+    # clang-cl interprets -Wall as MSVC would: -Weverything, which is more than
+    # we want.
+    add_extra_compiler_option(-Wall)
+  endif()
   add_extra_compiler_option(-Werror=return-type)
   add_extra_compiler_option(-Werror=non-virtual-dtor)
   add_extra_compiler_option(-Werror=address)
@@ -125,40 +117,65 @@ if(CMAKE_COMPILER_IS_GNUCXX)
   add_extra_compiler_option(-Wundef)
   add_extra_compiler_option(-Winit-self)
   add_extra_compiler_option(-Wpointer-arith)
-  add_extra_compiler_option(-Wshadow)
+  if(NOT (CV_GCC AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS "5.0"))
+    add_extra_compiler_option(-Wshadow)  # old GCC emits warnings for variables + methods combination
+  endif()
   add_extra_compiler_option(-Wsign-promo)
+  add_extra_compiler_option(-Wuninitialized)
+  add_extra_compiler_option(-Winit-self)
+  if(CV_GCC AND (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 6.0) AND (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 7.0))
+    add_extra_compiler_option(-Wno-psabi)
+  endif()
+  if(HAVE_CXX11)
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND NOT ENABLE_PRECOMPILED_HEADERS)
+      add_extra_compiler_option(-Wsuggest-override)
+    elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+      add_extra_compiler_option(-Winconsistent-missing-override)
+    endif()
+  endif()
 
   if(ENABLE_NOISY_WARNINGS)
     add_extra_compiler_option(-Wcast-align)
     add_extra_compiler_option(-Wstrict-aliasing=2)
   else()
-    add_extra_compiler_option(-Wno-narrowing)
     add_extra_compiler_option(-Wno-delete-non-virtual-dtor)
     add_extra_compiler_option(-Wno-unnamed-type-template-args)
     add_extra_compiler_option(-Wno-comment)
+    if(NOT OPENCV_SKIP_IMPLICIT_FALLTHROUGH
+        AND NOT " ${CMAKE_CXX_FLAGS} ${OPENCV_EXTRA_FLAGS} ${OPENCV_EXTRA_CXX_FLAGS}" MATCHES "implicit-fallthrough"
+        AND (CV_GCC AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS 7.0.0)
+    )
+      add_extra_compiler_option(-Wimplicit-fallthrough=3)
+    endif()
+    if(CV_GCC AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 7.0)
+      add_extra_compiler_option(-Wno-strict-overflow) # Issue appears when compiling surf.cpp from opencv_contrib/modules/xfeatures2d
+    endif()
+    if(CV_GCC AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 5.0)
+      add_extra_compiler_option(-Wno-missing-field-initializers)  # GCC 4.x emits warnings about {}, fixed in GCC 5+
+    endif()
+    if(CV_CLANG AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS 10.0)
+      add_extra_compiler_option(-Wno-deprecated-enum-enum-conversion)
+      add_extra_compiler_option(-Wno-deprecated-anon-enum-enum-conversion)
+    endif()
   endif()
   add_extra_compiler_option(-fdiagnostics-show-option)
 
-  # The -Wno-long-long is required in 64bit systems when including sytem headers.
+  # The -Wno-long-long is required in 64bit systems when including system headers.
   if(X86_64)
     add_extra_compiler_option(-Wno-long-long)
   endif()
 
   # We need pthread's
-  if(UNIX AND NOT ANDROID AND NOT (APPLE AND CMAKE_COMPILER_IS_CLANGCXX)) # TODO
+  if(UNIX AND NOT ANDROID AND NOT (APPLE AND CV_CLANG)) # TODO
     add_extra_compiler_option(-pthread)
   endif()
 
-  if(CMAKE_COMPILER_IS_CLANGCXX)
+  if(CV_CLANG)
     add_extra_compiler_option(-Qunused-arguments)
   endif()
 
   if(OPENCV_WARNINGS_ARE_ERRORS)
     add_extra_compiler_option(-Werror)
-  endif()
-
-  if(X86 AND NOT MINGW64 AND NOT X86_64 AND NOT APPLE)
-    add_extra_compiler_option(-march=i686)
   endif()
 
   if(APPLE)
@@ -168,11 +185,8 @@ if(CMAKE_COMPILER_IS_GNUCXX)
   # Other optimizations
   if(ENABLE_OMIT_FRAME_POINTER)
     add_extra_compiler_option(-fomit-frame-pointer)
-  else()
+  elseif(DEFINED ENABLE_OMIT_FRAME_POINTER)
     add_extra_compiler_option(-fno-omit-frame-pointer)
-  endif()
-  if(ENABLE_FAST_MATH)
-    add_extra_compiler_option(-ffast-math)
   endif()
 
   # Profiling?
@@ -183,10 +197,27 @@ if(CMAKE_COMPILER_IS_GNUCXX)
                   OPENCV_EXTRA_FLAGS_RELEASE OPENCV_EXTRA_FLAGS_DEBUG OPENCV_EXTRA_C_FLAGS OPENCV_EXTRA_CXX_FLAGS)
       string(REPLACE "-fomit-frame-pointer" "" ${flags} "${${flags}}")
       string(REPLACE "-ffunction-sections" "" ${flags} "${${flags}}")
+      string(REPLACE "-fdata-sections" "" ${flags} "${${flags}}")
     endforeach()
-  elseif(NOT ((IOS OR ANDROID) AND NOT BUILD_SHARED_LIBS))
-    # Remove unreferenced functions: function level linking
-    add_extra_compiler_option(-ffunction-sections)
+  else()
+    if(MSVC)
+      # TODO: Clang/C2 is not supported
+    elseif(((IOS OR ANDROID) AND NOT BUILD_SHARED_LIBS) AND NOT OPENCV_FORCE_FUNCTIONS_SECTIONS)
+      # don't create separate sections for functions/data, reduce package size
+    else()
+      # Remove unreferenced functions: function level linking
+      add_extra_compiler_option(-ffunction-sections)
+      add_extra_compiler_option(-fdata-sections)
+      if(NOT OPENCV_SKIP_GC_SECTIONS)
+        if(APPLE)
+          set(OPENCV_EXTRA_EXE_LINKER_FLAGS "${OPENCV_EXTRA_EXE_LINKER_FLAGS} -Wl,-dead_strip")
+          set(OPENCV_EXTRA_SHARED_LINKER_FLAGS "${OPENCV_EXTRA_SHARED_LINKER_FLAGS} -Wl,-dead_strip")
+        else()
+          set(OPENCV_EXTRA_EXE_LINKER_FLAGS "${OPENCV_EXTRA_EXE_LINKER_FLAGS} -Wl,--gc-sections")
+          set(OPENCV_EXTRA_SHARED_LINKER_FLAGS "${OPENCV_EXTRA_SHARED_LINKER_FLAGS} -Wl,--gc-sections")
+        endif()
+      endif()
+    endif()
   endif()
 
   if(ENABLE_COVERAGE)
@@ -196,23 +227,45 @@ if(CMAKE_COMPILER_IS_GNUCXX)
   endif()
 
   if(ENABLE_INSTRUMENTATION)
-    set(OPENCV_EXTRA_CXX_FLAGS "${OPENCV_EXTRA_CXX_FLAGS} --std=c++11")
+    if(NOT HAVE_CXX11)
+      message(WARNING "ENABLE_INSTRUMENTATION requires C++11 support")
+    endif()
     set(WITH_VTK OFF) # There are issues with VTK 6.0
   endif()
 
+  if(ENABLE_LTO)
+    add_extra_compiler_option(-flto)
+  endif()
+  if(ENABLE_THIN_LTO)
+    add_extra_compiler_option(-flto=thin)
+  endif()
+
   set(OPENCV_EXTRA_FLAGS_RELEASE "${OPENCV_EXTRA_FLAGS_RELEASE} -DNDEBUG")
-  set(OPENCV_EXTRA_FLAGS_DEBUG "${OPENCV_EXTRA_FLAGS_DEBUG} -O0 -DDEBUG -D_DEBUG")
+  if(NOT " ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_DEBUG} ${OPENCV_EXTRA_FLAGS_DEBUG} " MATCHES "-O")
+    set(OPENCV_EXTRA_FLAGS_DEBUG "${OPENCV_EXTRA_FLAGS_DEBUG} -O0")
+  endif()
+  set(OPENCV_EXTRA_FLAGS_DEBUG "${OPENCV_EXTRA_FLAGS_DEBUG} -DDEBUG -D_DEBUG")
+
+  if(BUILD_WITH_DEBUG_INFO)
+    # https://gcc.gnu.org/onlinedocs/gcc/Debugging-Options.html
+    # '-g' is equal to '-g2', '-g1' produces minimal information, enough for making backtraces
+    ocv_update(OPENCV_DEBUG_OPTION "-g1")
+    if(NOT " ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_RELEASE} ${OPENCV_EXTRA_CXX_FLAGS} ${OPENCV_EXTRA_FLAGS_RELEASE}" MATCHES " -g")
+      set(OPENCV_EXTRA_FLAGS_RELEASE "${OPENCV_EXTRA_FLAGS_RELEASE} ${OPENCV_DEBUG_OPTION}")
+    endif()
+  endif()
 endif()
 
 if(MSVC)
-  set(OPENCV_EXTRA_FLAGS "${OPENCV_EXTRA_FLAGS} /D _CRT_SECURE_NO_DEPRECATE /D _CRT_NONSTDC_NO_DEPRECATE /D _SCL_SECURE_NO_WARNINGS")
-  # 64-bit portability warnings, in MSVC80
-  if(MSVC80)
-    set(OPENCV_EXTRA_FLAGS "${OPENCV_EXTRA_FLAGS} /Wp64")
-  endif()
+  #TODO Code refactoring is required to resolve security warnings
+  #if(NOT ENABLE_BUILD_HARDENING)
+    set(OPENCV_EXTRA_FLAGS "${OPENCV_EXTRA_FLAGS} /D _CRT_SECURE_NO_DEPRECATE /D _CRT_NONSTDC_NO_DEPRECATE /D _SCL_SECURE_NO_WARNINGS")
+  #endif()
 
   if(BUILD_WITH_DEBUG_INFO)
+    set(OPENCV_EXTRA_FLAGS_RELEASE "${OPENCV_EXTRA_FLAGS_RELEASE} /Zi")
     set(OPENCV_EXTRA_EXE_LINKER_FLAGS_RELEASE "${OPENCV_EXTRA_EXE_LINKER_FLAGS_RELEASE} /debug")
+    set(OPENCV_EXTRA_SHARED_LINKER_FLAGS_RELEASE "${OPENCV_EXTRA_SHARED_LINKER_FLAGS_RELEASE} /debug")
   endif()
 
   # Remove unreferenced functions: function level linking
@@ -220,100 +273,113 @@ if(MSVC)
   if(NOT MSVC_VERSION LESS 1400)
     set(OPENCV_EXTRA_FLAGS "${OPENCV_EXTRA_FLAGS} /bigobj")
   endif()
-  if(BUILD_WITH_DEBUG_INFO)
-    set(OPENCV_EXTRA_FLAGS_RELEASE "${OPENCV_EXTRA_FLAGS_RELEASE} /Zi")
-  endif()
 
   if(OPENCV_WARNINGS_ARE_ERRORS)
     set(OPENCV_EXTRA_FLAGS "${OPENCV_EXTRA_FLAGS} /WX")
   endif()
-endif()
 
-if(MSVC12 AND NOT CMAKE_GENERATOR MATCHES "Visual Studio")
-  set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} /FS")
-  set(OPENCV_EXTRA_CXX_FLAGS "${OPENCV_EXTRA_CXX_FLAGS} /FS")
-endif()
+  if(ENABLE_LTO)
+    set(OPENCV_EXTRA_FLAGS_RELEASE "${OPENCV_EXTRA_FLAGS_RELEASE} /GL")
+    set(OPENCV_EXTRA_EXE_LINKER_FLAGS_RELEASE "${OPENCV_EXTRA_EXE_LINKER_FLAGS_RELEASE} /LTCG")
+  endif()
 
-# Adding additional using directory for WindowsPhone 8.0 to get Windows.winmd properly
-if(WINRT_PHONE AND WINRT_8_0)
-  set(OPENCV_EXTRA_CXX_FLAGS "${OPENCV_EXTRA_CXX_FLAGS} /AI\$(WindowsSDK_MetadataPath)")
-endif()
-
-# Extra link libs if the user selects building static libs:
-if(NOT BUILD_SHARED_LIBS AND CMAKE_COMPILER_IS_GNUCXX AND NOT ANDROID)
-  # Android does not need these settings because they are already set by toolchain file
-  set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} stdc++)
-  set(OPENCV_EXTRA_FLAGS "-fPIC ${OPENCV_EXTRA_FLAGS}")
+  if(NOT MSVC_VERSION LESS 1800 AND NOT CMAKE_GENERATOR MATCHES "Visual Studio")
+    set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} /FS")
+    set(OPENCV_EXTRA_CXX_FLAGS "${OPENCV_EXTRA_CXX_FLAGS} /FS")
+  endif()
 endif()
 
 include(cmake/OpenCVCompilerOptimizations.cmake)
-
 if(COMMAND ocv_compiler_optimization_options)
   ocv_compiler_optimization_options()
 endif()
-
 if(COMMAND ocv_compiler_optimization_options_finalize)
   ocv_compiler_optimization_options_finalize()
 endif()
 
-# Add user supplied extra options (optimization, etc...)
-# ==========================================================
-set(OPENCV_EXTRA_FLAGS         "${OPENCV_EXTRA_FLAGS}"         CACHE INTERNAL "Extra compiler options")
-set(OPENCV_EXTRA_C_FLAGS       "${OPENCV_EXTRA_C_FLAGS}"       CACHE INTERNAL "Extra compiler options for C sources")
-set(OPENCV_EXTRA_CXX_FLAGS     "${OPENCV_EXTRA_CXX_FLAGS}"     CACHE INTERNAL "Extra compiler options for C++ sources")
-set(OPENCV_EXTRA_FLAGS_RELEASE "${OPENCV_EXTRA_FLAGS_RELEASE}" CACHE INTERNAL "Extra compiler options for Release build")
-set(OPENCV_EXTRA_FLAGS_DEBUG   "${OPENCV_EXTRA_FLAGS_DEBUG}"   CACHE INTERNAL "Extra compiler options for Debug build")
-set(OPENCV_EXTRA_EXE_LINKER_FLAGS         "${OPENCV_EXTRA_EXE_LINKER_FLAGS}"         CACHE INTERNAL "Extra linker flags")
-set(OPENCV_EXTRA_EXE_LINKER_FLAGS_RELEASE "${OPENCV_EXTRA_EXE_LINKER_FLAGS_RELEASE}" CACHE INTERNAL "Extra linker flags for Release build")
-set(OPENCV_EXTRA_EXE_LINKER_FLAGS_DEBUG   "${OPENCV_EXTRA_EXE_LINKER_FLAGS_DEBUG}"   CACHE INTERNAL "Extra linker flags for Debug build")
-
 # set default visibility to hidden
-if(CMAKE_COMPILER_IS_GNUCXX AND CMAKE_OPENCV_GCC_VERSION_NUM GREATER 399)
+if((CV_GCC OR CV_CLANG)
+    AND NOT MSVC
+    AND NOT OPENCV_SKIP_VISIBILITY_HIDDEN
+    AND NOT " ${CMAKE_CXX_FLAGS} ${OPENCV_EXTRA_FLAGS} ${OPENCV_EXTRA_CXX_FLAGS}" MATCHES " -fvisibility")
   add_extra_compiler_option(-fvisibility=hidden)
   add_extra_compiler_option(-fvisibility-inlines-hidden)
 endif()
 
-#combine all "extra" options
-set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} ${OPENCV_EXTRA_FLAGS} ${OPENCV_EXTRA_C_FLAGS}")
-set(CMAKE_CXX_FLAGS         "${CMAKE_CXX_FLAGS} ${OPENCV_EXTRA_FLAGS} ${OPENCV_EXTRA_CXX_FLAGS}")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${OPENCV_EXTRA_FLAGS_RELEASE}")
-set(CMAKE_C_FLAGS_RELEASE   "${CMAKE_C_FLAGS_RELEASE} ${OPENCV_EXTRA_FLAGS_RELEASE}")
-set(CMAKE_CXX_FLAGS_DEBUG   "${CMAKE_CXX_FLAGS_DEBUG} ${OPENCV_EXTRA_FLAGS_DEBUG}")
-set(CMAKE_C_FLAGS_DEBUG     "${CMAKE_C_FLAGS_DEBUG} ${OPENCV_EXTRA_FLAGS_DEBUG}")
-set(CMAKE_EXE_LINKER_FLAGS         "${CMAKE_EXE_LINKER_FLAGS} ${OPENCV_EXTRA_EXE_LINKER_FLAGS}")
-set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} ${OPENCV_EXTRA_EXE_LINKER_FLAGS_RELEASE}")
-set(CMAKE_EXE_LINKER_FLAGS_DEBUG   "${CMAKE_EXE_LINKER_FLAGS_DEBUG} ${OPENCV_EXTRA_EXE_LINKER_FLAGS_DEBUG}")
+# workaround gcc bug for aligned ld/st
+# https://github.com/opencv/opencv/issues/13211
+if((PPC64LE AND NOT CMAKE_CROSSCOMPILING) OR OPENCV_FORCE_COMPILER_CHECK_VSX_ALIGNED)
+  ocv_check_runtime_flag("${CPU_BASELINE_FLAGS}" OPENCV_CHECK_VSX_ALIGNED "${OpenCV_SOURCE_DIR}/cmake/checks/runtime/cpu_vsx_aligned.cpp")
+  if(NOT OPENCV_CHECK_VSX_ALIGNED)
+    add_extra_compiler_option_force(-DCV_COMPILER_VSX_BROKEN_ALIGNED)
+  endif()
+endif()
+# validate inline asm with fixes register number and constraints wa, wd, wf
+if(PPC64LE)
+  ocv_check_compiler_flag(CXX "${CPU_BASELINE_FLAGS}" OPENCV_CHECK_VSX_ASM "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_vsx_asm.cpp")
+  if(NOT OPENCV_CHECK_VSX_ASM)
+    add_extra_compiler_option_force(-DCV_COMPILER_VSX_BROKEN_ASM)
+  endif()
+endif()
+
+# Apply "-Wl,--as-needed" linker flags: https://github.com/opencv/opencv/issues/7001
+if(NOT OPENCV_SKIP_LINK_AS_NEEDED)
+  if(UNIX AND (NOT APPLE OR NOT CMAKE_VERSION VERSION_LESS "3.2"))
+    set(_option "-Wl,--as-needed")
+    set(_saved_CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${_option}")  # requires CMake 3.2+ and CMP0056
+    ocv_check_compiler_flag(CXX "" HAVE_LINK_AS_NEEDED)
+    set(CMAKE_EXE_LINKER_FLAGS "${_saved_CMAKE_EXE_LINKER_FLAGS}")
+    if(HAVE_LINK_AS_NEEDED)
+      set(OPENCV_EXTRA_EXE_LINKER_FLAGS "${OPENCV_EXTRA_EXE_LINKER_FLAGS} ${_option}")
+      set(OPENCV_EXTRA_SHARED_LINKER_FLAGS "${OPENCV_EXTRA_SHARED_LINKER_FLAGS} ${_option}")
+    endif()
+  endif()
+endif()
+
+# combine all "extra" options
+if(NOT OPENCV_SKIP_EXTRA_COMPILER_FLAGS)
+  set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} ${OPENCV_EXTRA_FLAGS} ${OPENCV_EXTRA_C_FLAGS}")
+  set(CMAKE_CXX_FLAGS         "${CMAKE_CXX_FLAGS} ${OPENCV_EXTRA_FLAGS} ${OPENCV_EXTRA_CXX_FLAGS}")
+  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${OPENCV_EXTRA_FLAGS_RELEASE}")
+  set(CMAKE_C_FLAGS_RELEASE   "${CMAKE_C_FLAGS_RELEASE} ${OPENCV_EXTRA_FLAGS_RELEASE}")
+  set(CMAKE_CXX_FLAGS_DEBUG   "${CMAKE_CXX_FLAGS_DEBUG} ${OPENCV_EXTRA_FLAGS_DEBUG}")
+  set(CMAKE_C_FLAGS_DEBUG     "${CMAKE_C_FLAGS_DEBUG} ${OPENCV_EXTRA_FLAGS_DEBUG}")
+  set(CMAKE_EXE_LINKER_FLAGS         "${CMAKE_EXE_LINKER_FLAGS} ${OPENCV_EXTRA_EXE_LINKER_FLAGS}")
+  set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} ${OPENCV_EXTRA_EXE_LINKER_FLAGS_RELEASE}")
+  set(CMAKE_EXE_LINKER_FLAGS_DEBUG   "${CMAKE_EXE_LINKER_FLAGS_DEBUG} ${OPENCV_EXTRA_EXE_LINKER_FLAGS_DEBUG}")
+  set(CMAKE_SHARED_LINKER_FLAGS         "${CMAKE_SHARED_LINKER_FLAGS} ${OPENCV_EXTRA_SHARED_LINKER_FLAGS}")
+  set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} ${OPENCV_EXTRA_SHARED_LINKER_FLAGS_RELEASE}")
+  set(CMAKE_SHARED_LINKER_FLAGS_DEBUG   "${CMAKE_SHARED_LINKER_FLAGS_DEBUG} ${OPENCV_EXTRA_SHARED_LINKER_FLAGS_DEBUG}")
+endif()
 
 if(MSVC)
-  # avoid warnings from MSVC about overriding the /W* option
-  # we replace /W3 with /W4 only for C++ files,
-  # since all the 3rd-party libraries OpenCV uses are in C,
-  # and we do not care about their warnings.
-  string(REPLACE "/W3" "/W4" CMAKE_CXX_FLAGS         "${CMAKE_CXX_FLAGS}")
-  string(REPLACE "/W3" "/W4" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
-  string(REPLACE "/W3" "/W4" CMAKE_CXX_FLAGS_DEBUG   "${CMAKE_CXX_FLAGS_DEBUG}")
-
   if(NOT ENABLE_NOISY_WARNINGS)
     if(MSVC_VERSION EQUAL 1400)
       ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4510 /wd4610 /wd4312 /wd4201 /wd4244 /wd4328 /wd4267)
     endif()
-    if(MSVC_VERSION LESS 1900) # MSVS2015
-      ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4127) # warning C4127: conditional expression is constant
-    endif()
   endif()
 
-  # allow extern "C" functions throw exceptions
   foreach(flags CMAKE_C_FLAGS CMAKE_C_FLAGS_RELEASE CMAKE_C_FLAGS_RELEASE CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_RELEASE CMAKE_CXX_FLAGS_DEBUG)
-    string(REPLACE "/EHsc-" "/EHs" ${flags} "${${flags}}")
-    string(REPLACE "/EHsc"  "/EHs" ${flags} "${${flags}}")
-
     string(REPLACE "/Zm1000" "" ${flags} "${${flags}}")
   endforeach()
 
+  # Enable 'extern "C"' and asynchronous (division by zero, access violation) exceptions
+  if(NOT OPENCV_SKIP_MSVC_EXCEPTIONS_FLAG)
+    foreach(flags CMAKE_C_FLAGS CMAKE_C_FLAGS_RELEASE CMAKE_C_FLAGS_RELEASE CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_RELEASE CMAKE_CXX_FLAGS_DEBUG)
+      string(REGEX REPLACE " /EH[^ ]* " " " ${flags} " ${${flags}}")
+    endforeach()
+    if(NOT " ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_RELEASE} ${CMAKE_CXX_FLAGS_DEBUG}" MATCHES " /EH")
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHa")
+    endif()
+  endif()
+
   if(NOT ENABLE_NOISY_WARNINGS)
+    ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4127) # conditional expression is constant
     ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4251) # class 'std::XXX' needs to have dll-interface to be used by clients of YYY
     ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4324) # 'struct_name' : structure was padded due to __declspec(align())
     ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4275) # non dll-interface class 'std::exception' used as base for dll-interface class 'cv::Exception'
+    ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4512) # Assignment operator could not be generated
     ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4589) # Constructor of abstract class 'cv::ORB' ignores initializer for virtual base class 'cv::Algorithm'
   endif()
 
@@ -327,4 +393,93 @@ endif()
 
 if(APPLE AND NOT CMAKE_CROSSCOMPILING AND NOT DEFINED ENV{LDFLAGS} AND EXISTS "/usr/local/lib")
   link_directories("/usr/local/lib")
+endif()
+
+if(ENABLE_BUILD_HARDENING)
+  include(${CMAKE_CURRENT_LIST_DIR}/OpenCVCompilerDefenses.cmake)
+endif()
+
+if(MSVC)
+  include(cmake/OpenCVCRTLinkage.cmake)
+  add_definitions(-D_VARIADIC_MAX=10)
+endif()
+
+if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+  get_directory_property(__DIRECTORY_COMPILE_DEFINITIONS COMPILE_DEFINITIONS)
+  if((NOT " ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_RELEASE} ${OPENCV_EXTRA_CXX_FLAGS} ${OPENCV_EXTRA_FLAGS_RELEASE} ${__DIRECTORY_COMPILE_DEFINITIONS}" MATCHES "_WIN32_WINNT"
+      AND NOT OPENCV_CMAKE_SKIP_MACRO_WIN32_WINNT)
+      OR OPENCV_CMAKE_FORCE_MACRO_WIN32_WINNT
+  )
+    # https://docs.microsoft.com/en-us/cpp/porting/modifying-winver-and-win32-winnt
+    # Target Windows 7 API
+    set(OPENCV_CMAKE_MACRO_WIN32_WINNT "0x0601" CACHE STRING "Value of _WIN32_WINNT macro")
+    add_definitions(-D_WIN32_WINNT=${OPENCV_CMAKE_MACRO_WIN32_WINNT})
+  endif()
+endif()
+
+# Enable compiler options for OpenCV modules/apps/samples only (ignore 3rdparty)
+macro(ocv_add_modules_compiler_options)
+  if(MSVC AND NOT OPENCV_SKIP_MSVC_W4_OPTION)
+    foreach(flags CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_RELEASE CMAKE_CXX_FLAGS_DEBUG)
+      string(REPLACE "/W3" "/W4" ${flags} "${${flags}}")
+    endforeach()
+  endif()
+  if(OPENCV_ENABLE_MEMORY_SANITIZER)
+    add_definitions(-DOPENCV_ENABLE_MEMORY_SANITIZER=1)
+  endif()
+endmacro()
+
+# adjust -Wl,-rpath-link
+if(CMAKE_SKIP_RPATH)
+  if((NOT CMAKE_CROSSCOMPILING OR OPENCV_ENABLE_LINKER_RPATH_LINK_ORIGIN) AND NOT OPENCV_SKIP_LINKER_RPATH_LINK_ORIGIN)
+    if(DEFINED CMAKE_SHARED_LIBRARY_RPATH_ORIGIN_TOKEN)
+      list(APPEND CMAKE_PLATFORM_RUNTIME_PATH "${CMAKE_SHARED_LIBRARY_RPATH_ORIGIN_TOKEN}")
+    else()
+      list(APPEND CMAKE_PLATFORM_RUNTIME_PATH "\$ORIGIN")
+    endif()
+  elseif(NOT OPENCV_SKIP_LINKER_RPATH_LINK_BINARY_LIB)
+    list(APPEND CMAKE_PLATFORM_RUNTIME_PATH "${LIBRARY_OUTPUT_PATH}")
+  endif()
+endif()
+if(OPENCV_EXTRA_RPATH_LINK_PATH)
+  string(REPLACE ":" ";" OPENCV_EXTRA_RPATH_LINK_PATH_ "${OPENCV_EXTRA_RPATH_LINK_PATH}")
+  list(APPEND CMAKE_PLATFORM_RUNTIME_PATH ${OPENCV_EXTRA_RPATH_LINK_PATH_})
+  if(NOT CMAKE_EXECUTABLE_RPATH_LINK_CXX_FLAG)
+    message(WARNING "OPENCV_EXTRA_RPATH_LINK_PATH may not work properly because CMAKE_EXECUTABLE_RPATH_LINK_CXX_FLAG is not defined (not supported)")
+  endif()
+endif()
+
+# Control MSVC /MP flag
+# Input variables: OPENCV_MSVC_PARALLEL (ON,1,2,3,...) + OPENCV_SKIP_MSVC_PARALLEL
+# Details:
+# - https://docs.microsoft.com/en-us/cpp/build/reference/mp-build-with-multiple-processes
+# - https://docs.microsoft.com/en-us/cpp/build/reference/cl-environment-variables
+# - https://gitlab.kitware.com/cmake/cmake/merge_requests/1718/diffs
+if(CMAKE_GENERATOR MATCHES "Visual Studio" AND CMAKE_CXX_COMPILER_ID MATCHES "MSVC|Intel")
+  ocv_check_environment_variables(OPENCV_SKIP_MSVC_PARALLEL)
+  if(OPENCV_SKIP_MSVC_PARALLEL)
+    # nothing
+  elseif(" ${CMAKE_CXX_FLAGS}" MATCHES "/MP")
+    # nothing, already defined in compiler flags
+  elseif(DEFINED ENV{CL} AND " $ENV{CL}" MATCHES "/MP")
+    # nothing, compiler will use CL environment variable
+  elseif(DEFINED ENV{_CL_} AND " $ENV{_CL_}" MATCHES "/MP")
+    # nothing, compiler will use _CL_ environment variable
+  else()
+    ocv_check_environment_variables(OPENCV_MSVC_PARALLEL)
+    set(_mp_value "ON")
+    if(DEFINED OPENCV_MSVC_PARALLEL)
+      set(_mp_value "${OPENCV_MSVC_PARALLEL}")
+    endif()
+    set(OPENCV_MSVC_PARALLEL "${_mp_value}" CACHE STRING "Control MSVC /MP flag")
+    if(_mp_value)
+      if(_mp_value GREATER 0)
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MP${_mp_value}")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP${_mp_value}")
+      else()
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MP")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
+      endif()
+    endif()
+  endif()
 endif()

@@ -1,11 +1,9 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
 #include "perf_precomp.hpp"
 
-using namespace std;
-using namespace cv;
-using namespace perf;
-using namespace testing;
-using std::tr1::make_tuple;
-using std::tr1::get;
+namespace opencv_test {
 
 typedef TestBaseWithParam<Size > CreateHanningWindowFixture;
 
@@ -20,3 +18,5 @@ PERF_TEST_P( CreateHanningWindowFixture, CreateHanningWindow, Values(szVGA, sz10
 
     SANITY_CHECK(dst, 1e-6, ERROR_RELATIVE);
 }
+
+} // namespace

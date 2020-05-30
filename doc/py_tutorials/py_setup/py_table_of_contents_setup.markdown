@@ -15,3 +15,8 @@ Introduction to OpenCV {#tutorial_py_table_of_contents_setup}
 
     Set Up
     OpenCV-Python in Fedora
+
+-   @subpage tutorial_py_setup_in_ubuntu
+
+    Set Up
+    OpenCV-Python in Ubuntu

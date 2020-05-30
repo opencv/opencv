@@ -52,7 +52,7 @@ namespace cv
         double eps = getGradientEps();
         int i, n = getDims();
         AutoBuffer<double> x_buf(n);
-        double* x_ = x_buf;
+        double* x_ = x_buf.data();
         for( i = 0; i < n; i++ )
             x_[i] = x[i];
         for( i = 0; i < n; i++ )
@@ -68,15 +68,15 @@ namespace cv
 
 #define SEC_METHOD_ITERATIONS 4
 #define INITIAL_SEC_METHOD_SIGMA 0.1
-    class ConjGradSolverImpl : public ConjGradSolver
+    class ConjGradSolverImpl CV_FINAL : public ConjGradSolver
     {
     public:
-        Ptr<Function> getFunction() const;
-        void setFunction(const Ptr<Function>& f);
-        TermCriteria getTermCriteria() const;
+        Ptr<Function> getFunction() const CV_OVERRIDE;
+        void setFunction(const Ptr<Function>& f) CV_OVERRIDE;
+        TermCriteria getTermCriteria() const CV_OVERRIDE;
         ConjGradSolverImpl();
-        void setTermCriteria(const TermCriteria& termcrit);
-        double minimize(InputOutputArray x);
+        void setTermCriteria(const TermCriteria& termcrit) CV_OVERRIDE;
+        double minimize(InputOutputArray x) CV_OVERRIDE;
     protected:
         Ptr<MinProblemSolver::Function> _Function;
         TermCriteria _termcrit;
@@ -150,7 +150,7 @@ namespace cv
         d*=-1.0;
         d.copyTo(r);
 
-        //here everything goes. check that everything is setted properly
+        //here everything goes. check that everything is set properly
         dprintf(("proxy_x\n"));print_matrix(proxy_x);
         dprintf(("d first time\n"));print_matrix(d);
         dprintf(("r\n"));print_matrix(r);

@@ -49,9 +49,6 @@
 #elif defined (cl_khr_fp64)
 #pragma OPENCL EXTENSION cl_khr_fp64:enable
 #endif
-#define CT double
-#else
-#define CT float
 #endif
 
 #define INTER_BITS 5

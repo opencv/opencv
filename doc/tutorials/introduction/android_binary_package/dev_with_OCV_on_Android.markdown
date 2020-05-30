@@ -1,6 +1,10 @@
 Android Development with OpenCV {#tutorial_dev_with_OCV_on_Android}
 ===============================
 
+@prev_tutorial{tutorial_O4A_SDK}
+@next_tutorial{tutorial_android_ocl_intro}
+
+
 This tutorial has been created to help you use OpenCV library within your Android project.
 
 This guide was written with Windows 7 in mind, though it should work with any other OS supported by
@@ -307,7 +311,7 @@ application. It will be capable of accessing camera output, processing it and di
     @endcode
 -#  Defines that your activity implements CvCameraViewListener2 interface and fix activity related
     errors by defining missed methods. For this activity define onCreate, onDestroy and onPause and
-    implement them according code snippet bellow. Fix errors by adding required imports.
+    implement them according to the code snippet below. Fix errors by adding required imports.
     @code{.java}
     private CameraBridgeViewBase mOpenCvCameraView;
 

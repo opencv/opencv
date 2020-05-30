@@ -52,7 +52,7 @@ public class Subdiv2DTest extends OpenCVTestCase {
         s2d.insert( new Point(10, 20) );
         MatOfFloat6 triangles = new MatOfFloat6();
         s2d.getTriangleList(triangles);
-        assertEquals(10, triangles.rows());
+        assertEquals(2, triangles.rows());
         /*
         int cnt = triangles.rows();
         float buff[] = new float[cnt*6];

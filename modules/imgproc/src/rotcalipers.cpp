@@ -74,7 +74,7 @@ enum { CALIPERS_MAXHEIGHT=0, CALIPERS_MINAREARECT=1, CALIPERS_MAXDIST=2 };
  //                    In case CV_CALIPERS_MINAREARECT
  //                    ((CvPoint2D32f*)out)[0] - corner
  //                    ((CvPoint2D32f*)out)[1] - vector1
- //                    ((CvPoint2D32f*)out)[0] - corner2
+ //                    ((CvPoint2D32f*)out)[2] - vector2
  //
  //                      ^
  //                      |
@@ -96,7 +96,7 @@ static void rotatingCalipers( const Point2f* points, int n, int mode, float* out
     char buffer[32] = {};
     int i, k;
     AutoBuffer<float> abuf(n*3);
-    float* inv_vect_length = abuf;
+    float* inv_vect_length = abuf.data();
     Point2f* vect = (Point2f*)(inv_vect_length + n);
     int left = 0, bottom = 0, right = 0, top = 0;
     int seq[4] = { -1, -1, -1, -1 };
@@ -104,7 +104,7 @@ static void rotatingCalipers( const Point2f* points, int n, int mode, float* out
     /* rotating calipers sides will always have coordinates
      (a,b) (-b,a) (-a,-b) (b, -a)
      */
-    /* this is a first base bector (a,b) initialized by (1,0) */
+    /* this is a first base vector (a,b) initialized by (1,0) */
     float orientation = 0;
     float base_a;
     float base_b = 0;
@@ -243,7 +243,7 @@ static void rotatingCalipers( const Point2f* points, int n, int mode, float* out
         {
         case CALIPERS_MAXHEIGHT:
             {
-            /* now main element lies on edge alligned to calipers side */
+            /* now main element lies on edge aligned to calipers side */
 
             /* find opposite element i.e. transform  */
             /* 0->2, 1->3, 2->0, 3->1                */
@@ -346,7 +346,7 @@ static void rotatingCalipers( const Point2f* points, int n, int mode, float* out
 
 cv::RotatedRect cv::minAreaRect( InputArray _points )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat hull;
     Point2f out[3];
@@ -401,12 +401,12 @@ cvMinAreaRect2( const CvArr* array, CvMemStorage* /*storage*/ )
     cv::Mat points = cv::cvarrToMat(array, false, false, 0, &abuf);
 
     cv::RotatedRect rr = cv::minAreaRect(points);
-    return (CvBox2D)rr;
+    return cvBox2D(rr);
 }
 
 void cv::boxPoints(cv::RotatedRect box, OutputArray _pts)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     _pts.create(4, 2, CV_32F);
     Mat pts = _pts.getMat();

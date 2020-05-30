@@ -1,59 +1,86 @@
-# Detect if we want to build samples with library binaries or not
 if(NOT CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_LIST_DIR)
+#===================================================================================================
 #
-# BUILD CASE 1: Build samples with library sources
+# Build as part of OpenCV
 #
+#===================================================================================================
 
+include("${CMAKE_CURRENT_LIST_DIR}/samples_utils.cmake")
 
-# ----------------------------------------------------------------------------
-#  CMake file for samples. See root CMakeLists.txt
-#
-# ----------------------------------------------------------------------------
+function(ocv_install_example_src relpath)
+  if(INSTALL_C_EXAMPLES)
+    file(GLOB files ${ARGN})
+    install(FILES ${files}
+            DESTINATION "${OPENCV_SAMPLES_SRC_INSTALL_PATH}/${relpath}"
+            COMPONENT samples)
+  endif()
+endfunction()
+
+if((TARGET Threads::Threads OR HAVE_PTHREAD OR MSVC OR APPLE) AND NOT OPENCV_EXAMPLES_DISABLE_THREADS)
+  add_definitions(-DHAVE_THREADS=1)
+endif()
 
 add_subdirectory(cpp)
+add_subdirectory(java/tutorial_code)
+add_subdirectory(dnn)
 add_subdirectory(gpu)
 add_subdirectory(tapi)
-
+add_subdirectory(opencl)
 if(WIN32 AND HAVE_DIRECTX)
   add_subdirectory(directx)
 endif()
-
 if((NOT ANDROID) AND HAVE_OPENGL)
   add_subdirectory(opengl)
 endif()
-
 if(HAVE_OPENVX)
   add_subdirectory(openvx)
 endif()
-
 if(UNIX AND NOT ANDROID AND (HAVE_VA OR HAVE_VA_INTEL))
   add_subdirectory(va_intel)
 endif()
-
-if(ANDROID AND BUILD_ANDROID_EXAMPLES)
+if(ANDROID AND (BUILD_ANDROID_EXAMPLES OR INSTALL_ANDROID_EXAMPLES))
   add_subdirectory(android)
 endif()
-
 if(INSTALL_PYTHON_EXAMPLES)
   add_subdirectory(python)
 endif()
 
-#
-# END OF BUILD CASE 1: Build samples with library sources
-#
+ocv_install_example_src("." CMakeLists.txt samples_utils.cmake)
+if(INSTALL_C_EXAMPLES)
+  install(DIRECTORY data DESTINATION "${OPENCV_SAMPLES_SRC_INSTALL_PATH}" COMPONENT samples_data)
+endif()
+
 else()
+#===================================================================================================
 #
-# BUILD CASE 2: Build samples with library binaries
+#  Standalone mode
 #
-cmake_minimum_required(VERSION 2.8)
+#===================================================================================================
+cmake_minimum_required(VERSION 3.1)
 
 project(samples C CXX)
 option(BUILD_EXAMPLES "Build samples" ON)
 
-find_package(OpenCV REQUIRED)
+# Assuming following installation folder structure (default for UNIX):
+# <install_root>/share/
+# └── OpenCV/  <-- OPENCV_CONFIG_INSTALL_PATH
+#     ├── OpenCVConfig.cmake  <-- file to be found by find_package
+#     ├── ...
+#     ├── samples/  <-- OPENCV_SAMPLES_SRC_INSTALL_PATH
+#     │   ├── CMakeLists.txt  <-- this file
+#     │   ├── cpp/
+find_package(OpenCV REQUIRED PATHS "..")
+
+include("${CMAKE_CURRENT_LIST_DIR}/samples_utils.cmake")
+
+function(ocv_install_example_src)
+  # not used in this branch
+endfunction()
 
 if(MSVC)
-  add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+  if(NOT ENABLE_BUILD_HARDENING)
+    add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+  endif()
 
   if(NOT OpenCV_SHARED)
     foreach(flag_var
@@ -75,16 +102,29 @@ if(MSVC)
   endif()
 endif()
 
+add_definitions(-DDISABLE_OPENCV_24_COMPATIBILITY=1)  # Avoid C-like legacy API
+
+if(OPENCV_EXAMPLES_DISABLE_THREADS)
+  # nothing
+elseif(MSVC OR APPLE)
+  set(HAVE_THREADS 1)
+else()
+  find_package(Threads)
+endif()
+if((TARGET Threads::Threads OR HAVE_THREADS) AND NOT OPENCV_EXAMPLES_DISABLE_THREADS)
+  add_definitions(-DHAVE_THREADS=1)
+endif()
+
 add_subdirectory(cpp)
-# FIXIT: can't use cvconfig.h in samples: add_subdirectory(gpu)
-
-add_subdirectory(opencl)
-
 if(WIN32)
   add_subdirectory(directx)
 endif()
+add_subdirectory(dnn)
+# add_subdirectory(gpu)
+add_subdirectory(opencl)
+# add_subdirectory(opengl)
+# add_subdirectory(openvx)
+add_subdirectory(tapi)
+# add_subdirectory(va_intel)
 
-#
-# END OF BUILD CASE 2: Build samples with library binaries
-#
 endif()

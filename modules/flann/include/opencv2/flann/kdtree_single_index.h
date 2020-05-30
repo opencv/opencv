@@ -31,6 +31,8 @@
 #ifndef OPENCV_FLANN_KDTREE_SINGLE_INDEX_H_
 #define OPENCV_FLANN_KDTREE_SINGLE_INDEX_H_
 
+//! @cond IGNORED
+
 #include <algorithm>
 #include <map>
 #include <cassert>
@@ -87,6 +89,7 @@ public:
     {
         size_ = dataset_.rows;
         dim_ = dataset_.cols;
+        root_node_ = 0;
         int dim_param = get_param(params,"dim",-1);
         if (dim_param>0) dim_ = dim_param;
         leaf_max_size_ = get_param(params,"leaf_max_size",10);
@@ -113,7 +116,7 @@ public:
     /**
      * Builds the index
      */
-    void buildIndex()
+    void buildIndex() CV_OVERRIDE
     {
         computeBoundingBox(root_bbox_);
         root_node_ = divideTree(0, (int)size_, root_bbox_ );   // construct the tree
@@ -132,13 +135,13 @@ public:
         }
     }
 
-    flann_algorithm_t getType() const
+    flann_algorithm_t getType() const CV_OVERRIDE
     {
         return FLANN_INDEX_KDTREE_SINGLE;
     }
 
 
-    void saveIndex(FILE* stream)
+    void saveIndex(FILE* stream) CV_OVERRIDE
     {
         save_value(stream, size_);
         save_value(stream, dim_);
@@ -153,7 +156,7 @@ public:
     }
 
 
-    void loadIndex(FILE* stream)
+    void loadIndex(FILE* stream) CV_OVERRIDE
     {
         load_value(stream, size_);
         load_value(stream, dim_);
@@ -178,7 +181,7 @@ public:
     /**
      *  Returns size of index.
      */
-    size_t size() const
+    size_t size() const CV_OVERRIDE
     {
         return size_;
     }
@@ -186,7 +189,7 @@ public:
     /**
      * Returns the length of an index feature.
      */
-    size_t veclen() const
+    size_t veclen() const CV_OVERRIDE
     {
         return dim_;
     }
@@ -195,7 +198,7 @@ public:
      * Computes the inde memory usage
      * Returns: memory used by the index
      */
-    int usedMemory() const
+    int usedMemory() const CV_OVERRIDE
     {
         return (int)(pool_.usedMemory+pool_.wastedMemory+dataset_.rows*sizeof(int));  // pool memory and vind array memory
     }
@@ -209,7 +212,7 @@ public:
      * \param[in] knn Number of nearest neighbors to return
      * \param[in] params Search parameters
      */
-    void knnSearch(const Matrix<ElementType>& queries, Matrix<int>& indices, Matrix<DistanceType>& dists, int knn, const SearchParams& params)
+    void knnSearch(const Matrix<ElementType>& queries, Matrix<int>& indices, Matrix<DistanceType>& dists, int knn, const SearchParams& params) CV_OVERRIDE
     {
         assert(queries.cols == veclen());
         assert(indices.rows >= queries.rows);
@@ -224,7 +227,7 @@ public:
         }
     }
 
-    IndexParams getParameters() const
+    IndexParams getParameters() const CV_OVERRIDE
     {
         return index_params_;
     }
@@ -238,7 +241,7 @@ public:
      *     vec = the vector for which to search the nearest neighbors
      *     maxCheck = the maximum number of restarts (in a best-bin-first manner)
      */
-    void findNeighbors(ResultSet<DistanceType>& result, const ElementType* vec, const SearchParams& searchParams)
+    void findNeighbors(ResultSet<DistanceType>& result, const ElementType* vec, const SearchParams& searchParams) CV_OVERRIDE
     {
         float epsError = 1+get_param(searchParams,"eps",0.0f);
 
@@ -630,5 +633,7 @@ private:
 };   // class KDTree
 
 }
+
+//! @endcond
 
 #endif //OPENCV_FLANN_KDTREE_SINGLE_INDEX_H_

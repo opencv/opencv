@@ -11,88 +11,104 @@
 
 using namespace cv;
 
-/// Global variables
-Mat src, dst;
-Mat map_x, map_y;
-const char* remap_window = "Remap demo";
-int ind = 0;
-
 /// Function Headers
-void update_map( void );
+void update_map( int &ind, Mat &map_x, Mat &map_y );
 
 /**
  * @function main
  */
-int main( int, char** argv )
+int main(int argc, const char** argv)
 {
-  /// Load the image
-  src = imread( argv[1], IMREAD_COLOR );
+    CommandLineParser parser(argc, argv, "{@image |chicky_512.png|input image name}");
+    std::string filename = parser.get<std::string>(0);
+    //! [Load]
+    /// Load the image
+    Mat src = imread( samples::findFile( filename ), IMREAD_COLOR );
+    if (src.empty())
+    {
+        std::cout << "Cannot read image: " << filename << std::endl;
+        return -1;
+    }
+    //! [Load]
 
-  /// Create dst, map_x and map_y with the same size as src:
-  dst.create( src.size(), src.type() );
-  map_x.create( src.size(), CV_32FC1 );
-  map_y.create( src.size(), CV_32FC1 );
+    //! [Create]
+    /// Create dst, map_x and map_y with the same size as src:
+    Mat dst(src.size(), src.type());
+    Mat map_x(src.size(), CV_32FC1);
+    Mat map_y(src.size(), CV_32FC1);
+    //! [Create]
 
-  /// Create window
-  namedWindow( remap_window, WINDOW_AUTOSIZE );
+    //! [Window]
+    /// Create window
+    const char* remap_window = "Remap demo";
+    namedWindow( remap_window, WINDOW_AUTOSIZE );
+    //! [Window]
 
-  /// Loop
-  for(;;)
-  {
-    /// Each 1 sec. Press ESC to exit the program
-    char c = (char)waitKey( 1000 );
+    //! [Loop]
+    /// Index to switch between the remap modes
+    int ind = 0;
+    for(;;)
+    {
+        /// Update map_x & map_y. Then apply remap
+        update_map(ind, map_x, map_y);
+        remap( src, dst, map_x, map_y, INTER_LINEAR, BORDER_CONSTANT, Scalar(0, 0, 0) );
 
-    if( c == 27 )
-      { break; }
+        /// Display results
+        imshow( remap_window, dst );
 
-    /// Update map_x & map_y. Then apply remap
-    update_map();
-    remap( src, dst, map_x, map_y, INTER_LINEAR, BORDER_CONSTANT, Scalar(0, 0, 0) );
-
-    // Display results
-    imshow( remap_window, dst );
-  }
-  return 0;
+        /// Each 1 sec. Press ESC to exit the program
+        char c = (char)waitKey( 1000 );
+        if( c == 27 )
+        {
+            break;
+        }
+    }
+    //! [Loop]
+    return 0;
 }
 
 /**
  * @function update_map
  * @brief Fill the map_x and map_y matrices with 4 types of mappings
  */
-void update_map( void )
+//! [Update]
+void update_map( int &ind, Mat &map_x, Mat &map_y )
 {
-  ind = ind%4;
-
-  for( int j = 0; j < src.rows; j++ )
-    { for( int i = 0; i < src.cols; i++ )
-     {
-           switch( ind )
-         {
-         case 0:
-           if( i > src.cols*0.25 && i < src.cols*0.75 && j > src.rows*0.25 && j < src.rows*0.75 )
-                 {
-               map_x.at<float>(j,i) = 2*( i - src.cols*0.25f ) + 0.5f ;
-               map_y.at<float>(j,i) = 2*( j - src.rows*0.25f ) + 0.5f ;
-              }
-           else
-         { map_x.at<float>(j,i) = 0 ;
-               map_y.at<float>(j,i) = 0 ;
-                 }
-                   break;
-         case 1:
-               map_x.at<float>(j,i) = (float)i ;
-               map_y.at<float>(j,i) = (float)(src.rows - j) ;
-           break;
-             case 2:
-               map_x.at<float>(j,i) = (float)(src.cols - i) ;
-               map_y.at<float>(j,i) = (float)j ;
-           break;
-             case 3:
-               map_x.at<float>(j,i) = (float)(src.cols - i) ;
-               map_y.at<float>(j,i) = (float)(src.rows - j) ;
-           break;
-             } // end of switch
-     }
+    for( int i = 0; i < map_x.rows; i++ )
+    {
+        for( int j = 0; j < map_x.cols; j++ )
+        {
+            switch( ind )
+            {
+            case 0:
+                if( j > map_x.cols*0.25 && j < map_x.cols*0.75 && i > map_x.rows*0.25 && i < map_x.rows*0.75 )
+                {
+                    map_x.at<float>(i, j) = 2*( j - map_x.cols*0.25f ) + 0.5f;
+                    map_y.at<float>(i, j) = 2*( i - map_x.rows*0.25f ) + 0.5f;
+                }
+                else
+                {
+                    map_x.at<float>(i, j) = 0;
+                    map_y.at<float>(i, j) = 0;
+                }
+                break;
+            case 1:
+                map_x.at<float>(i, j) = (float)j;
+                map_y.at<float>(i, j) = (float)(map_x.rows - i);
+                break;
+            case 2:
+                map_x.at<float>(i, j) = (float)(map_x.cols - j);
+                map_y.at<float>(i, j) = (float)i;
+                break;
+            case 3:
+                map_x.at<float>(i, j) = (float)(map_x.cols - j);
+                map_y.at<float>(i, j) = (float)(map_x.rows - i);
+                break;
+            default:
+                break;
+            } // end of switch
+        }
     }
-  ind++;
+    ind = (ind+1) % 4;
 }
+//! [Update]

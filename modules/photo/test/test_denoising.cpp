@@ -41,11 +41,8 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/photo.hpp"
-#include <string>
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 //#define DUMP_RESULTS
 
@@ -167,3 +164,5 @@ TEST(Photo_Denoising, speed)
     t = (double)getTickCount() - t;
     printf("execution time: %gms\n", t*1000./getTickFrequency());
 }
+
+}} // namespace

@@ -1,6 +1,8 @@
 How to use the OpenCV parallel_for_ to parallelize your code {#tutorial_how_to_use_OpenCV_parallel_for_}
 ==================================================================
 
+@prev_tutorial{tutorial_file_input_output_with_xml_yml}
+
 Goal
 ----
 
@@ -25,12 +27,12 @@ In OpenCV 3.2, the following parallel frameworks are available in that order:
 7.   Pthreads (if available)
 
 As you can see, several parallel frameworks can be used in the OpenCV library. Some parallel libraries
-are third party libraries and have to be explictly built and enabled in CMake (e.g. TBB, C=), others are
+are third party libraries and have to be explicitly built and enabled in CMake (e.g. TBB, C=), others are
 automatically available with the platform (e.g. APPLE GCD) but chances are that you should be enable to
 have access to a parallel framework either directly or by enabling the option in CMake and rebuild the library.
 
 The second (weak) precondition is more related to the task you want to achieve as not all computations
-are suitable / can be adatapted to be run in a parallel way. To remain simple, tasks that can be splitted
+are suitable / can be adatapted to be run in a parallel way. To remain simple, tasks that can be split
 into multiple elementary operations with no memory dependency (no possible race condition) are easily
 parallelizable. Computer vision processing are often easily parallelizable as most of the time the processing of
 one pixel does not depend to the state of other pixels.
@@ -39,7 +41,7 @@ Simple example: drawing a Mandelbrot set
 ----
 
 We will use the example of drawing a Mandelbrot set to show how from a regular sequential code you can easily adapt
-the code to parallize the computation.
+the code to parallelize the computation.
 
 Theory
 -----------
@@ -153,7 +155,7 @@ The first thing is to declare a custom class that inherits from @ref cv::Paralle
 `virtual void operator ()(const cv::Range& range) const`.
 
 The range in the `operator ()` represents the subset of pixels that will be treated by an individual thread.
-This splitting is done automatically to distribuate equally the computation load. We have to convert the pixel index coordinate
+This splitting is done automatically to distribute equally the computation load. We have to convert the pixel index coordinate
 to a 2D `[row, col]` coordinate. Also note that we have to keep a reference on the mat image to be able to modify in-place
 the image.
 
@@ -166,6 +168,11 @@ To set the number of threads, you can use: @ref cv::setNumThreads. You can also 
 nstripes parameter in @ref cv::parallel_for_. For instance, if your processor has 4 threads, setting `cv::setNumThreads(2)`
 or setting `nstripes=2` should be the same as by default it will use all the processor threads available but will split the
 workload only on two threads.
+
+@note
+C++ 11 standard allows to simplify the parallel implementation by get rid of the `ParallelMandelbrot` class and replacing it with lambda expression:
+
+@snippet how_to_use_OpenCV_parallel_for_.cpp mandelbrot-parallel-call-cxx11
 
 Results
 -----------

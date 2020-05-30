@@ -29,8 +29,8 @@ $ yum install numpy opencv*
 @endcode
 Open Python IDLE (or IPython) and type following codes in Python terminal.
 @code{.py}
->>> import cv2
->>> print cv2.__version__
+>>> import cv2 as cv
+>>> print( cv.__version__ )
 @endcode
 If the results are printed out without any errors, congratulations !!! You have installed
 OpenCV-Python successfully.
@@ -41,7 +41,7 @@ version of OpenCV always. For example, at the time of writing this tutorial, yum
 contain much better support. Also, there may be chance of problems with camera support, video
 playback etc depending upon the drivers, ffmpeg, gstreamer packages present etc.
 
-So my personnel preference is next method, i.e. compiling from source. Also at some point of time,
+So my personal preference is next method, i.e. compiling from source. Also at some point in time,
 if you want to contribute to OpenCV, you will need this.
 
 Installing OpenCV from source
@@ -62,12 +62,11 @@ yum install cmake
 yum install python-devel numpy
 yum install gcc gcc-c++
 @endcode
-Next we need **GTK** support for GUI features, Camera support (libdc1394, libv4l), Media Support
+Next we need **GTK** support for GUI features, Camera support (libdc1394, v4l), Media Support
 (ffmpeg, gstreamer) etc.
 @code{.sh}
 yum install gtk2-devel
 yum install libdc1394-devel
-yum install libv4l-devel
 yum install ffmpeg-devel
 yum install gstreamer-plugins-base-devel
 @endcode
@@ -160,7 +159,7 @@ understanding.)*
     @endcode
 -   Disable all GPU related modules.
     @code{.sh}
-    cmake -D WITH_OPENCL=OFF -D WITH_CUDA=OFF -D BUILD_opencv_gpu=OFF -D BUILD_opencv_gpuarithm=OFF -D BUILD_opencv_gpubgsegm=OFF -D BUILD_opencv_gpucodec=OFF -D BUILD_opencv_gpufeatures2d=OFF -D BUILD_opencv_gpufilters=OFF -D BUILD_opencv_gpuimgproc=OFF -D BUILD_opencv_gpulegacy=OFF -D BUILD_opencv_gpuoptflow=OFF -D BUILD_opencv_gpustereo=OFF -D BUILD_opencv_gpuwarping=OFF ..
+    cmake -D WITH_OPENCL=OFF -D BUILD_opencv_gpu=OFF -D BUILD_opencv_gpuarithm=OFF -D BUILD_opencv_gpubgsegm=OFF -D BUILD_opencv_gpucodec=OFF -D BUILD_opencv_gpufeatures2d=OFF -D BUILD_opencv_gpufilters=OFF -D BUILD_opencv_gpuimgproc=OFF -D BUILD_opencv_gpulegacy=OFF -D BUILD_opencv_gpuoptflow=OFF -D BUILD_opencv_gpustereo=OFF -D BUILD_opencv_gpuwarping=OFF ..
     @endcode
 -   Set installation path and build type
     @code{.sh}
@@ -218,7 +217,7 @@ Installation is over. All files are installed in /usr/local/ folder. But to use 
 should be able to find OpenCV module. You have two options for that.
 
 -#  **Move the module to any folder in Python Path** : Python path can be found out by entering
-    import sys;print sys.path in Python terminal. It will print out many locations. Move
+    `import sys; print(sys.path)` in Python terminal. It will print out many locations. Move
     /usr/local/lib/python2.7/site-packages/cv2.so to any of this folder. For example,
     @code{.sh}
     su mv /usr/local/lib/python2.7/site-packages/cv2.so /usr/lib/python2.7/site-packages
@@ -230,14 +229,13 @@ But you will have to do this every time you install OpenCV.
     @code{.sh}
     export PYTHONPATH=$PYTHONPATH:/usr/local/lib/python2.7/site-packages
     @endcode
-Thus OpenCV installation is finished. Open a terminal and try import cv2.
+Thus OpenCV installation is finished. Open a terminal and try 'import cv2 as cv'.
 
 To build the documentation, just enter following commands:
 @code{.sh}
-make docs
-make html_docs
+make doxygen
 @endcode
-Then open opencv/build/doc/_html/index.html and bookmark it in the browser.
+Then open opencv/build/doc/doxygen/html/index.html and bookmark it in the browser.
 
 Additional Resources
 --------------------

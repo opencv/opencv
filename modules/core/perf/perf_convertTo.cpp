@@ -1,12 +1,10 @@
 #include "perf_precomp.hpp"
 
-using namespace std;
-using namespace cv;
+namespace opencv_test
+{
 using namespace perf;
-using std::tr1::make_tuple;
-using std::tr1::get;
 
-typedef std::tr1::tuple<Size, MatType, MatType, int, double> Size_DepthSrc_DepthDst_Channels_alpha_t;
+typedef tuple<Size, MatType, MatType, int, double> Size_DepthSrc_DepthDst_Channels_alpha_t;
 typedef perf::TestBaseWithParam<Size_DepthSrc_DepthDst_Channels_alpha_t> Size_DepthSrc_DepthDst_Channels_alpha;
 
 PERF_TEST_P( Size_DepthSrc_DepthDst_Channels_alpha, convertTo,
@@ -35,7 +33,9 @@ PERF_TEST_P( Size_DepthSrc_DepthDst_Channels_alpha, convertTo,
     int runs = (sz.width <= 640) ? 8 : 1;
     TEST_CYCLE_MULTIRUN(runs) src.convertTo(dst, depthDst, alpha);
 
-    double eps = depthSrc <= CV_32S ? 1e-12 : (FLT_EPSILON * maxValue);
+    double eps = depthSrc <= CV_32S && (depthDst <= CV_32S || depthDst == CV_64F) ? 1e-12 : (FLT_EPSILON * maxValue);
     eps = eps * std::max(1.0, fabs(alpha));
     SANITY_CHECK(dst, eps);
 }
+
+} // namespace

@@ -41,10 +41,9 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include <string>
 
-using namespace cv;
-using namespace std;
+#if 0
+namespace opencv_test { namespace {
 
 class CV_WatershedTest : public cvtest::BaseTest
 {
@@ -75,16 +74,16 @@ void CV_WatershedTest::run( int /* start_from */)
 
     Mat markers(orig.size(), CV_32SC1);
     markers = Scalar(0);
-    IplImage iplmrks = markers;
+    IplImage iplmrks = cvIplImage(markers);
 
     vector<unsigned char> colors(1);
     for(int i = 0; cnts != 0; cnts = cnts->h_next, ++i )
     {
-        cvDrawContours( &iplmrks, cnts, Scalar::all(i + 1), Scalar::all(i + 1), -1, CV_FILLED);
+        cvDrawContours( &iplmrks, cnts, cvScalar(Scalar::all(i + 1)), cvScalar(Scalar::all(i + 1)), -1, CV_FILLED);
         Point* p = (Point*)cvGetSeqElem(cnts, 0);
 
         //expected image was added with 1 in order to save to png
-        //so now we substract 1 to get real color
+        //so now we subtract 1 to get real color
         if(!exp.empty())
             colors.push_back(exp.ptr(p->y)[p->x] - 1);
     }
@@ -121,12 +120,11 @@ void CV_WatershedTest::run( int /* start_from */)
         exp = markers8U;
     }
 
-    if (0 != norm(markers8U, exp, NORM_INF))
-    {
-        ts->set_failed_test_info( cvtest::TS::FAIL_MISMATCH );
-        return;
-    }
-    ts->set_failed_test_info(cvtest::TS::OK);
+    ASSERT_EQ(0, cvtest::norm(markers8U, exp, NORM_INF));
 }
 
 TEST(Imgproc_Watershed, regression) { CV_WatershedTest test; test.safe_run(); }
+
+}} // namespace
+
+#endif

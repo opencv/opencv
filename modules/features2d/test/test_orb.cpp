@@ -41,8 +41,7 @@
 
 #include "test_precomp.hpp"
 
-using namespace std;
-using namespace cv;
+namespace opencv_test { namespace {
 
 TEST(Features2D_ORB, _1996)
 {
@@ -101,7 +100,7 @@ TEST(Features2D_ORB, crash)
     int edgeThreshold = 4;
     int firstLevel = 0;
     int WTA_K = 2;
-    int scoreType = cv::ORB::HARRIS_SCORE;
+    ORB::ScoreType scoreType = cv::ORB::HARRIS_SCORE;
     int patchSize = 47;
     int fastThreshold = 20;
 
@@ -123,3 +122,5 @@ TEST(Features2D_ORB, crash)
 
     ASSERT_NO_THROW(orb->compute(image, keypoints, descriptors));
 }
+
+}} // namespace

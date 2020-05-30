@@ -1,6 +1,9 @@
 Histogram Equalization {#tutorial_histogram_equalization}
 ======================
 
+@prev_tutorial{tutorial_warp_affine}
+@next_tutorial{tutorial_histogram_calculation}
+
 Goal
 ----
 
@@ -22,7 +25,7 @@ Theory
 ### What is Histogram Equalization?
 
 -   It is a method that improves the contrast in an image, in order to stretch out the intensity
-    range.
+    range (see also the corresponding <a href="https://en.wikipedia.org/wiki/Histogram_equalization">Wikipedia entry</a>).
 -   To make it clearer, from the image above, you can see that the pixels seem clustered around the
     middle of the available range of intensities. What Histogram Equalization does is to *stretch
     out* this range. Take a look at the figure below: The green circles indicate the
@@ -34,7 +37,7 @@ Theory
 ### How does it work?
 
 -   Equalization implies *mapping* one distribution (the given histogram) to another distribution (a
-    wider and more uniform distribution of intensity values) so the intensity values are spreaded
+    wider and more uniform distribution of intensity values) so the intensity values are spread
     over the whole range.
 -   To accomplish the equalization effect, the remapping should be the *cumulative distribution
     function (cdf)* (more details, refer to *Learning OpenCV*). For the histogram \f$H(i)\f$, its
@@ -61,53 +64,105 @@ Code
     -   Convert the original image to grayscale
     -   Equalize the Histogram by using the OpenCV function @ref cv::equalizeHist
     -   Display the source and equalized images in a window.
+
+@add_toggle_cpp
 -   **Downloadable code**: Click
     [here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/Histograms_Matching/EqualizeHist_Demo.cpp)
+
 -   **Code at glance:**
     @include samples/cpp/tutorial_code/Histograms_Matching/EqualizeHist_Demo.cpp
+@end_toggle
+
+@add_toggle_java
+-   **Downloadable code**: Click
+    [here](https://github.com/opencv/opencv/tree/master/samples/java/tutorial_code/Histograms_Matching/histogram_equalization/EqualizeHistDemo.java)
+
+-   **Code at glance:**
+    @include samples/java/tutorial_code/Histograms_Matching/histogram_equalization/EqualizeHistDemo.java
+@end_toggle
+
+@add_toggle_python
+-   **Downloadable code**: Click
+    [here](https://github.com/opencv/opencv/tree/master/samples/python/tutorial_code/Histograms_Matching/histogram_equalization/EqualizeHist_Demo.py)
+
+-   **Code at glance:**
+    @include samples/python/tutorial_code/Histograms_Matching/histogram_equalization/EqualizeHist_Demo.py
+@end_toggle
 
 Explanation
 -----------
 
--#  Declare the source and destination images as well as the windows names:
-    @code{.cpp}
-    Mat src, dst;
+-   Load the source image:
 
-    char* source_window = "Source image";
-    char* equalized_window = "Equalized Image";
-    @endcode
--#  Load the source image:
-    @code{.cpp}
-    src = imread( argv[1], 1 );
+    @add_toggle_cpp
+    @snippet samples/cpp/tutorial_code/Histograms_Matching/EqualizeHist_Demo.cpp Load image
+    @end_toggle
 
-    if( !src.data )
-      { cout<<"Usage: ./Histogram_Demo <path_to_image>"<<endl;
-        return -1;}
-    @endcode
--#  Convert it to grayscale:
-    @code{.cpp}
-    cvtColor( src, src, COLOR_BGR2GRAY );
-    @endcode
--#  Apply histogram equalization with the function @ref cv::equalizeHist :
-    @code{.cpp}
-    equalizeHist( src, dst );
-    @endcode
+    @add_toggle_java
+    @snippet samples/java/tutorial_code/Histograms_Matching/histogram_equalization/EqualizeHistDemo.java Load image
+    @end_toggle
+
+    @add_toggle_python
+    @snippet samples/python/tutorial_code/Histograms_Matching/histogram_equalization/EqualizeHist_Demo.py Load image
+    @end_toggle
+
+-   Convert it to grayscale:
+
+    @add_toggle_cpp
+    @snippet samples/cpp/tutorial_code/Histograms_Matching/EqualizeHist_Demo.cpp Convert to grayscale
+    @end_toggle
+
+    @add_toggle_java
+    @snippet samples/java/tutorial_code/Histograms_Matching/histogram_equalization/EqualizeHistDemo.java Convert to grayscale
+    @end_toggle
+
+    @add_toggle_python
+    @snippet samples/python/tutorial_code/Histograms_Matching/histogram_equalization/EqualizeHist_Demo.py Convert to grayscale
+    @end_toggle
+
+-   Apply histogram equalization with the function @ref cv::equalizeHist :
+
+    @add_toggle_cpp
+    @snippet samples/cpp/tutorial_code/Histograms_Matching/EqualizeHist_Demo.cpp Apply Histogram Equalization
+    @end_toggle
+
+    @add_toggle_java
+    @snippet samples/java/tutorial_code/Histograms_Matching/histogram_equalization/EqualizeHistDemo.java Apply Histogram Equalization
+    @end_toggle
+
+    @add_toggle_python
+    @snippet samples/python/tutorial_code/Histograms_Matching/histogram_equalization/EqualizeHist_Demo.py Apply Histogram Equalization
+    @end_toggle
     As it can be easily seen, the only arguments are the original image and the output (equalized)
     image.
 
--#  Display both images (original and equalized) :
-    @code{.cpp}
-    namedWindow( source_window, WINDOW_AUTOSIZE );
-    namedWindow( equalized_window, WINDOW_AUTOSIZE );
+-   Display both images (original and equalized):
 
-    imshow( source_window, src );
-    imshow( equalized_window, dst );
-    @endcode
--#  Wait until user exists the program
-    @code{.cpp}
-    waitKey(0);
-    return 0;
-    @endcode
+    @add_toggle_cpp
+    @snippet samples/cpp/tutorial_code/Histograms_Matching/EqualizeHist_Demo.cpp Display results
+    @end_toggle
+
+    @add_toggle_java
+    @snippet samples/java/tutorial_code/Histograms_Matching/histogram_equalization/EqualizeHistDemo.java Display results
+    @end_toggle
+
+    @add_toggle_python
+    @snippet samples/python/tutorial_code/Histograms_Matching/histogram_equalization/EqualizeHist_Demo.py Display results
+    @end_toggle
+
+-   Wait until user exists the program
+
+    @add_toggle_cpp
+    @snippet samples/cpp/tutorial_code/Histograms_Matching/EqualizeHist_Demo.cpp Wait until user exits the program
+    @end_toggle
+
+    @add_toggle_java
+    @snippet samples/java/tutorial_code/Histograms_Matching/histogram_equalization/EqualizeHistDemo.java Wait until user exits the program
+    @end_toggle
+
+    @add_toggle_python
+    @snippet samples/python/tutorial_code/Histograms_Matching/histogram_equalization/EqualizeHist_Demo.py Wait until user exits the program
+    @end_toggle
 
 Results
 -------

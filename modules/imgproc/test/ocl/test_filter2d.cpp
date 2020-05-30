@@ -46,7 +46,7 @@
 
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -126,7 +126,7 @@ OCL_INSTANTIATE_TEST_CASE_P(ImageProc, Filter2D,
                                 Values(CV_8U, CV_16U, CV_32F),
                                 OCL_ALL_CHANNELS,
                                 Values(3, 5, 7),  // Kernel size
-                                Values(1, 4, 8),   // Width mutiple
+                                Values(1, 4, 8),   // Width multiple
                                 Values((BorderType)BORDER_CONSTANT,
                                        (BorderType)BORDER_REPLICATE,
                                        (BorderType)BORDER_REFLECT,
@@ -137,6 +137,6 @@ OCL_INSTANTIATE_TEST_CASE_P(ImageProc, Filter2D,
                            );
 
 
-} } // namespace cvtest::ocl
+} } // namespace opencv_test::ocl
 
 #endif // HAVE_OPENCL

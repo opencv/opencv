@@ -1091,7 +1091,7 @@ Style x:Key="SkipBackAppBarButtonStyle" TargetType="ButtonBase" BasedOn="{Static
     </Style>
     <Style x:Key="PermissionsAppBarButtonStyle" TargetType="ButtonBase" BasedOn="{StaticResource AppBarButtonStyle}">
         <Setter Property="AutomationProperties.AutomationId" Value="PermissionsAppBarButton"/>
-        <Setter Property="AutomationProperties.Name" Value="Permisions"/>
+        <Setter Property="AutomationProperties.Name" Value="Permissions"/>
         <Setter Property="Content" Value="&#xE192;"/>
     </Style>
     <Style x:Key="HighlightAppBarButtonStyle" TargetType="ButtonBase" BasedOn="{StaticResource AppBarButtonStyle}">

@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2002, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -43,19 +43,26 @@
 //
 //-----------------------------------------------------------------------------
 
-#include <ImfPixelType.h>
+#include "ImfPixelType.h"
+#include "ImfCompressor.h"
+#include "ImfArray.h"
+#include "ImfNamespace.h"
+#include "ImfExport.h"
+#include "ImfForward.h"
+
+#include <cstddef>
 #include <vector>
-#include <ImfCompressor.h>
 
-namespace Imf {
 
-class Header;
+OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_ENTER
+
 
 //
 // Return the size of a single value of the indicated type,
 // in the machine's native format.
 //
 
+IMF_EXPORT
 int	pixelTypeSize (PixelType type);
 
 
@@ -67,6 +74,7 @@ int	pixelTypeSize (PixelType type);
 // interval [2, 6].
 //
 
+IMF_EXPORT
 int	numSamples (int s, int a, int b);
 
 
@@ -77,22 +85,91 @@ int	numSamples (int s, int a, int b);
 // the pixel data are tightly packed).
 //
 
+IMF_EXPORT
 size_t	bytesPerLineTable (const Header &header,
-                   std::vector<size_t> &bytesPerLine);
+		           std::vector<size_t> &bytesPerLine);
+
+
+//
+// Get the sample count for pixel (x, y) using the array base
+// pointer, xStride and yStride.
+//
+
+inline
+int&
+sampleCount(char* base, int xStride, int yStride, int x, int y)
+{
+    char* ptr = base + y * yStride + x * xStride;
+    int* intPtr = (int*) ptr;
+
+    return *intPtr;
+}
+
+
+inline
+const int&
+sampleCount(const char* base, int xStride, int yStride, int x, int y)
+{
+    const char* ptr = base + y * yStride + x * xStride;
+    int* intPtr = (int*) ptr;
+    
+    return *intPtr;
+}
+
+//
+// Build a table that lists, for each scanline in a DEEP file's
+// data window, how many bytes are required to store all
+// pixels in all channels in scanlines ranged in [minY, maxY]
+// (assuming that the pixel data are tightly packed).
+//
+
+IMF_EXPORT
+size_t bytesPerDeepLineTable (const Header &header,
+                              int minY, int maxY,
+                              const char* base,
+                              int xStride,
+                              int yStride,
+                              std::vector<size_t> &bytesPerLine);
+
+
+//
+// Build a table that lists, for each scanline in a DEEP file's
+// data window, how many bytes are required to store all
+// pixels in all channels in every scanline (assuming that
+// the pixel data are tightly packed).
+//
+
+IMF_EXPORT
+size_t bytesPerDeepLineTable (const Header &header,
+                              char* base,
+                              int xStride,
+                              int yStride,
+                              std::vector<size_t> &bytesPerLine);
+
 
 //
 // For scanline-based files, pixels are read or written in
 // in multi-scanline blocks.  Internally, class OutputFile
 // and class ScanLineInputFile store a block of scan lines
 // in a "line buffer".  Function offsetInLineBufferTable()
-// builds a table that lists, for each scan line in a file's
-// data window, the location of the pixel data for the scanline
-// relative to the beginning of the line buffer.
+// builds a table that lists, scanlines within range
+// [scanline1, scanline2], the location of the pixel data
+// for the scanline relative to the beginning of the line buffer,
+// where scanline1 = 0 represents the first line in the DATA WINDOW.
+// The one without specifying the range will make scanline1 = 0
+// and scanline2 = bytesPerLine.size().
 //
 
+IMF_EXPORT
+void    offsetInLineBufferTable (const std::vector<size_t> &bytesPerLine,
+                                 int scanline1, int scanline2,
+                                 int linesInLineBuffer,
+                                 std::vector<size_t> &offsetInLineBuffer);
+
+IMF_EXPORT
 void	offsetInLineBufferTable (const std::vector<size_t> &bytesPerLine,
-                 int linesInLineBuffer,
-                 std::vector<size_t> &offsetInLineBuffer);
+				 int linesInLineBuffer,
+				 std::vector<size_t> &offsetInLineBuffer);
 
 //
 // For a scanline-based file, compute the range of scanlines
@@ -100,8 +177,8 @@ void	offsetInLineBufferTable (const std::vector<size_t> &bytesPerLine,
 // (minY is the minimum y coordinate of the file's data window.)
 //
 
-int	lineBufferMinY (int y, int minY, int linesInLineBuffer);
-int	lineBufferMaxY (int y, int minY, int linesInLineBuffer);
+IMF_EXPORT int	lineBufferMinY (int y, int minY, int linesInLineBuffer);
+IMF_EXPORT int	lineBufferMaxY (int y, int minY, int linesInLineBuffer);
 
 
 //
@@ -109,6 +186,7 @@ int	lineBufferMaxY (int y, int minY, int linesInLineBuffer);
 // If compressor is 0, return Compressor::XDR.
 //
 
+IMF_EXPORT
 Compressor::Format defaultFormat (Compressor *compressor);
 
 
@@ -117,6 +195,7 @@ Compressor::Format defaultFormat (Compressor *compressor);
 // or uncompress at once.  If compressor is 0, return 1.
 //
 
+IMF_EXPORT
 int     numLinesInBuffer (Compressor *compressor);
 
 
@@ -146,15 +225,78 @@ int     numLinesInBuffer (Compressor *compressor);
 //    typeInFile        the pixel data type in the input file's channel
 //
 
+IMF_EXPORT
 void    copyIntoFrameBuffer (const char *&readPtr,
-                 char *writePtr,
+			     char *writePtr,
                              char *endPtr,
-                 size_t xStride,
-                 bool fill,
+			     size_t xStride,
+			     bool fill,
                              double fillValue,
-                 Compressor::Format format,
+			     Compressor::Format format,
                              PixelType typeInFrameBuffer,
                              PixelType typeInFile);
+
+
+//
+// Copy a single channel of a horizontal row of pixels from an
+// input file's internal line buffer or tile buffer into a
+// frame buffer slice.  If necessary, perform on-the-fly data
+// type conversion.
+//
+//    readPtr             initially points to the beginning of the
+//                        data in the line or tile buffer. readPtr
+//                        is advanced as the pixel data are copied;
+//                        when copyIntoFrameBuffer() returns,
+//                        readPtr points just past the end of the
+//                        copied data.
+//
+//    base                point to each pixel in the framebuffer
+//
+//    sampleCountBase,    provide the number of samples in each pixel
+//    sampleCountXStride,
+//    sampleCountYStride
+//
+//    y                   the scanline to copy. The coordinate is
+//                        relative to the datawindow.min.y.
+//
+//    minX, maxX          used to indicate which pixels in the scanline
+//                        will be copied.
+//
+//    xOffsetForSampleCount,    used to offset the sample count array
+//    yOffsetForSampleCount,    and the base array.
+//    xOffsetForData,
+//    yOffsetForData
+//
+//    xStride             the xStride for the frame buffer slice
+//
+//    format              indicates if the line or tile buffer is
+//                        in NATIVE or XDR format.
+//
+//    typeInFrameBuffer   the pixel data type of the frame buffer slice
+//
+//    typeInFile          the pixel data type in the input file's channel
+//
+
+IMF_EXPORT
+void    copyIntoDeepFrameBuffer (const char *& readPtr,
+                                 char * base,
+                                 const char* sampleCountBase,
+                                 ptrdiff_t sampleCountXStride,
+                                 ptrdiff_t sampleCountYStride,
+                                 int y, int minX, int maxX,
+                                 int xOffsetForSampleCount,
+                                 int yOffsetForSampleCount,
+                                 int xOffsetForData,
+                                 int yOffsetForData,
+                                 ptrdiff_t xStride,
+                                 ptrdiff_t xPointerStride,
+                                 ptrdiff_t yPointerStride,
+                                 bool fill,
+                                 double fillValue,
+                                 Compressor::Format format,
+                                 PixelType typeInFrameBuffer,
+                                 PixelType typeInFile);
+
 
 //
 // Given a pointer into a an input file's line buffer or tile buffer,
@@ -164,9 +306,10 @@ void    copyIntoFrameBuffer (const char *&readPtr,
 // skipped data.
 //
 
+IMF_EXPORT
 void    skipChannel (const char *&readPtr,
-             PixelType typeInFile,
-             size_t xSize);
+		     PixelType typeInFile,
+		     size_t xSize);
 
 //
 // Convert an array of pixel data from the machine's native
@@ -185,11 +328,12 @@ void    skipChannel (const char *&readPtr,
 //    type		the pixel data type
 //
 //    numPixels		number of pixels in the input and output arrays
-//
+// 
 
+IMF_EXPORT
 void    convertInPlace (char *&toPtr,
-            const char *&fromPtr,
-            PixelType type,
+			const char *&fromPtr,
+			PixelType type,
                         size_t numPixels);
 
 //
@@ -218,12 +362,76 @@ void    convertInPlace (char *&toPtr,
 //			data type conversion)
 //
 
+IMF_EXPORT
 void    copyFromFrameBuffer (char *&writePtr,
-                 const char *&readPtr,
+			     const char *&readPtr,
                              const char *endPtr,
-                 size_t xStride,
+			     size_t xStride,
                              Compressor::Format format,
-                 PixelType type);
+			     PixelType type);
+
+//
+// Copy a single channel of a horizontal row of pixels from a
+// a frame buffer in a deep data file into an output file's
+// internal line buffer or tile buffer.
+//
+//    writePtr                  initially points to the beginning of the
+//                              data in the line or tile buffer. writePtr
+//                              is advanced as the pixel data are copied;
+//                              when copyFromDeepFrameBuffer() returns,
+//                              writePtr points just past the end of the
+//                              copied data.
+//
+//    base                      the start pointer of each pixel in this channel.
+//                              It points to the real data in FrameBuffer.
+//                              It is different for different channels.
+//                              dataWindowMinX and dataWindowMinY are involved in
+//                              locating for base.
+//
+//    sampleCountBase,          used to locate the position to get
+//    sampleCountXStride,       the number of samples for each pixel.
+//    sampleCountYStride        Used to determine how far we should
+//                              read based on the pointer provided by base.
+//
+//    y                         the scanline to copy. If we are dealing
+//                              with a tiled deep file, then probably a portion
+//                              of the scanline is copied.
+//
+//    xMin, xMax                used to indicate which pixels in the scanline
+//                              will be copied.
+//
+//    xOffsetForSampleCount,    used to offset the sample count array
+//    yOffsetForSampleCount,    and the base array.
+//    xOffsetForData,
+//    yOffsetForData
+//
+//    xStride                   the xStride for the frame buffer slice
+//
+//    format                    indicates if the line or tile buffer is
+//                              in NATIVE or XDR format.
+//
+//    type                      the pixel data type in the frame buffer
+//                              and in the output file's channel (function
+//                              copyFromFrameBuffer() doesn't do on-the-fly
+//                              data type conversion)
+//
+
+IMF_EXPORT
+void    copyFromDeepFrameBuffer (char *& writePtr,
+                                 const char * base,
+                                 char* sampleCountBase,
+                                 ptrdiff_t sampleCountXStride,
+                                 ptrdiff_t sampleCountYStride,
+                                 int y, int xMin, int xMax,
+                                 int xOffsetForSampleCount,
+                                 int yOffsetForSampleCount,
+                                 int xOffsetForData,
+                                 int yOffsetForData,
+                                 ptrdiff_t sampleStride,
+                                 ptrdiff_t xStrideForData,
+                                 ptrdiff_t yStrideForData,
+                                 Compressor::Format format,
+                                 PixelType type);
 
 //
 // Fill part of an output file's line buffer or tile buffer with
@@ -245,11 +453,26 @@ void    copyFromFrameBuffer (char *&writePtr,
 //    xSize             number of pixels to be filled with zeroes.
 //
 
+IMF_EXPORT
 void    fillChannelWithZeroes (char *&writePtr,
-                   Compressor::Format format,
-                   PixelType type,
-                   size_t xSize);
+			       Compressor::Format format,
+			       PixelType type,
+			       size_t xSize);
 
-} // namespace Imf
+IMF_EXPORT
+bool usesLongNames (const Header &header);
+
+
+//
+// compute size of chunk offset table - if ignore_attribute set to true
+// will compute from the image size and layout, rather than the attribute
+// The default behaviour is to read the attribute
+//
+
+IMF_EXPORT
+int getChunkOffsetTableSize(const Header& header,bool ignore_attribute=false);
+
+OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_EXIT
+
 
 #endif

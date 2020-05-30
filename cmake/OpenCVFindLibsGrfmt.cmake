@@ -8,8 +8,7 @@ if(BUILD_ZLIB)
 else()
   find_package(ZLIB "${MIN_VER_ZLIB}")
   if(ZLIB_FOUND AND ANDROID)
-    if(ZLIB_LIBRARIES STREQUAL "${ANDROID_SYSROOT}/usr/lib/libz.so" OR
-        ZLIB_LIBRARIES STREQUAL "${ANDROID_SYSROOT}/usr/lib64/libz.so")
+    if(ZLIB_LIBRARIES MATCHES "/usr/(lib|lib32|lib64)/libz.so$")
       set(ZLIB_LIBRARIES z)
     endif()
   endif()
@@ -26,7 +25,51 @@ if(NOT ZLIB_FOUND)
   ocv_parse_header2(ZLIB "${${ZLIB_LIBRARY}_SOURCE_DIR}/zlib.h" ZLIB_VERSION)
 endif()
 
-# --- libtiff (optional, should be searched after zlib) ---
+# --- libjpeg (optional) ---
+if(WITH_JPEG)
+  if(BUILD_JPEG)
+    ocv_clear_vars(JPEG_FOUND)
+  else()
+    include(FindJPEG)
+  endif()
+
+  if(NOT JPEG_FOUND)
+    ocv_clear_vars(JPEG_LIBRARY JPEG_LIBRARIES JPEG_INCLUDE_DIR)
+
+    if(NOT BUILD_JPEG_TURBO_DISABLE)
+      set(JPEG_LIBRARY libjpeg-turbo)
+      set(JPEG_LIBRARIES ${JPEG_LIBRARY})
+      add_subdirectory("${OpenCV_SOURCE_DIR}/3rdparty/libjpeg-turbo")
+      set(JPEG_INCLUDE_DIR "${${JPEG_LIBRARY}_SOURCE_DIR}/src")
+    else()
+      set(JPEG_LIBRARY libjpeg)
+      set(JPEG_LIBRARIES ${JPEG_LIBRARY})
+      add_subdirectory("${OpenCV_SOURCE_DIR}/3rdparty/libjpeg")
+      set(JPEG_INCLUDE_DIR "${${JPEG_LIBRARY}_SOURCE_DIR}")
+    endif()
+  endif()
+
+  macro(ocv_detect_jpeg_version header_file)
+    if(NOT DEFINED JPEG_LIB_VERSION AND EXISTS "${header_file}")
+      ocv_parse_header("${header_file}" JPEG_VERSION_LINES JPEG_LIB_VERSION)
+    endif()
+  endmacro()
+  ocv_detect_jpeg_version("${JPEG_INCLUDE_DIR}/jpeglib.h")
+  if(DEFINED CMAKE_CXX_LIBRARY_ARCHITECTURE)
+    ocv_detect_jpeg_version("${JPEG_INCLUDE_DIR}/${CMAKE_CXX_LIBRARY_ARCHITECTURE}/jconfig.h")
+  endif()
+  # no needed for strict platform check here, both files 64/32 should contain the same version
+  ocv_detect_jpeg_version("${JPEG_INCLUDE_DIR}/jconfig-64.h")
+  ocv_detect_jpeg_version("${JPEG_INCLUDE_DIR}/jconfig-32.h")
+  ocv_detect_jpeg_version("${JPEG_INCLUDE_DIR}/jconfig.h")
+  ocv_detect_jpeg_version("${${JPEG_LIBRARY}_BINARY_DIR}/jconfig.h")
+  if(NOT DEFINED JPEG_LIB_VERSION)
+    set(JPEG_LIB_VERSION "unknown")
+  endif()
+  set(HAVE_JPEG YES)
+endif()
+
+# --- libtiff (optional, should be searched after zlib and libjpeg) ---
 if(WITH_TIFF)
   if(BUILD_TIFF)
     ocv_clear_vars(TIFF_FOUND)
@@ -68,27 +111,6 @@ if(WITH_TIFF)
   set(HAVE_TIFF YES)
 endif()
 
-# --- libjpeg (optional) ---
-if(WITH_JPEG)
-  if(BUILD_JPEG)
-    ocv_clear_vars(JPEG_FOUND)
-  else()
-    include(FindJPEG)
-  endif()
-
-  if(NOT JPEG_FOUND)
-    ocv_clear_vars(JPEG_LIBRARY JPEG_LIBRARIES JPEG_INCLUDE_DIR)
-
-    set(JPEG_LIBRARY libjpeg)
-    set(JPEG_LIBRARIES ${JPEG_LIBRARY})
-    add_subdirectory("${OpenCV_SOURCE_DIR}/3rdparty/libjpeg")
-    set(JPEG_INCLUDE_DIR "${${JPEG_LIBRARY}_SOURCE_DIR}")
-  endif()
-
-  ocv_parse_header("${JPEG_INCLUDE_DIR}/jpeglib.h" JPEG_VERSION_LINES JPEG_LIB_VERSION)
-  set(HAVE_JPEG YES)
-endif()
-
 # --- libwebp (optional) ---
 
 if(WITH_WEBP)
@@ -96,17 +118,23 @@ if(WITH_WEBP)
     ocv_clear_vars(WEBP_FOUND WEBP_LIBRARY WEBP_LIBRARIES WEBP_INCLUDE_DIR)
   else()
     include(cmake/OpenCVFindWebP.cmake)
+    if(WEBP_FOUND)
+      set(HAVE_WEBP 1)
+    endif()
   endif()
 endif()
 
 # --- Add libwebp to 3rdparty/libwebp and compile it if not available ---
-if(WITH_WEBP AND NOT WEBP_FOUND)
+if(WITH_WEBP AND NOT WEBP_FOUND
+    AND (NOT ANDROID OR HAVE_CPUFEATURES)
+)
 
   set(WEBP_LIBRARY libwebp)
   set(WEBP_LIBRARIES ${WEBP_LIBRARY})
 
   add_subdirectory("${OpenCV_SOURCE_DIR}/3rdparty/libwebp")
-  set(WEBP_INCLUDE_DIR "${${WEBP_LIBRARY}_SOURCE_DIR}")
+  set(WEBP_INCLUDE_DIR "${${WEBP_LIBRARY}_SOURCE_DIR}/src")
+  set(HAVE_WEBP 1)
 endif()
 
 if(NOT WEBP_VERSION AND WEBP_INCLUDE_DIR)
@@ -125,8 +153,23 @@ if(NOT WEBP_VERSION AND WEBP_INCLUDE_DIR)
   endif()
 endif()
 
+# --- libopenjp2 (optional, check before libjasper) ---
+if(WITH_OPENJPEG)
+  find_package(OpenJPEG QUIET)
+
+  if(NOT OpenJPEG_FOUND OR OPENJPEG_MAJOR_VERSION LESS 2)
+    set(HAVE_OPENJPEG NO)
+    ocv_clear_vars(OPENJPEG_MAJOR_VERSION OPENJPEG_MINOR_VERSION OPENJPEG_BUILD_VERSION OPENJPEG_LIBRARIES OPENJPEG_INCLUDE_DIRS)
+    message(STATUS "Could NOT find OpenJPEG (minimal suitable version: 2.0, recommended version >= 2.3.1)")
+  else()
+    set(HAVE_OPENJPEG YES)
+    message(STATUS "Found OpenJPEG: ${OPENJPEG_LIBRARIES} "
+            "(found version \"${OPENJPEG_MAJOR_VERSION}.${OPENJPEG_MINOR_VERSION}.${OPENJPEG_BUILD_VERSION}\")")
+  endif()
+endif()
+
 # --- libjasper (optional, should be searched after libjpeg) ---
-if(WITH_JASPER)
+if(WITH_JASPER AND NOT HAVE_OPENJPEG)
   if(BUILD_JASPER)
     ocv_clear_vars(JASPER_FOUND)
   else()
@@ -183,21 +226,22 @@ endif()
 
 # --- OpenEXR (optional) ---
 if(WITH_OPENEXR)
-  if(BUILD_OPENEXR)
-    ocv_clear_vars(OPENEXR_FOUND)
-  else()
+  ocv_clear_vars(HAVE_OPENEXR)
+  if(NOT BUILD_OPENEXR)
     include("${OpenCV_SOURCE_DIR}/cmake/OpenCVFindOpenEXR.cmake")
   endif()
 
-  if(NOT OPENEXR_FOUND)
+  if(OPENEXR_FOUND)
+    set(HAVE_OPENEXR YES)
+  else()
     ocv_clear_vars(OPENEXR_INCLUDE_PATHS OPENEXR_LIBRARIES OPENEXR_ILMIMF_LIBRARY OPENEXR_VERSION)
 
     set(OPENEXR_LIBRARIES IlmImf)
-    set(OPENEXR_ILMIMF_LIBRARY IlmImf)
     add_subdirectory("${OpenCV_SOURCE_DIR}/3rdparty/openexr")
+    if(OPENEXR_VERSION)  # check via TARGET doesn't work
+      set(HAVE_OPENEXR YES)
+    endif()
   endif()
-
-  set(HAVE_OPENEXR YES)
 endif()
 
 # --- GDAL (optional) ---
@@ -205,8 +249,8 @@ if(WITH_GDAL)
     find_package(GDAL QUIET)
 
     if(NOT GDAL_FOUND)
-        ocv_clear_vars(GDAL_LIBRARY GDAL_INCLUDE_DIR)
         set(HAVE_GDAL NO)
+        ocv_clear_vars(GDAL_VERSION GDAL_LIBRARIES)
     else()
         set(HAVE_GDAL YES)
         ocv_include_directories(${GDAL_INCLUDE_DIR})
@@ -223,4 +267,25 @@ if (WITH_GDCM)
     # include(${GDCM_USE_FILE})
     set(GDCM_LIBRARIES gdcmMSFF) # GDCM does not set this variable for some reason
   endif()
+endif()
+
+if(WITH_IMGCODEC_HDR)
+  set(HAVE_IMGCODEC_HDR ON)
+elseif(DEFINED WITH_IMGCODEC_HDR)
+  set(HAVE_IMGCODEC_HDR OFF)
+endif()
+if(WITH_IMGCODEC_SUNRASTER)
+  set(HAVE_IMGCODEC_SUNRASTER ON)
+elseif(DEFINED WITH_IMGCODEC_SUNRASTER)
+  set(HAVE_IMGCODEC_SUNRASTER OFF)
+endif()
+if(WITH_IMGCODEC_PXM)
+  set(HAVE_IMGCODEC_PXM ON)
+elseif(DEFINED WITH_IMGCODEC_PXM)
+  set(HAVE_IMGCODEC_PXM OFF)
+endif()
+if(WITH_IMGCODEC_PFM)
+  set(HAVE_IMGCODEC_PFM ON)
+elseif(DEFINED WITH_IMGCODEC_PFM)
+  set(HAVE_IMGCODEC_PFM OFF)
 endif()

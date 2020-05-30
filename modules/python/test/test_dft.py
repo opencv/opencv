@@ -7,7 +7,7 @@ Test for disctrete fourier transform (dft)
 # Python 2/3 compatibility
 from __future__ import print_function
 
-import cv2
+import cv2 as cv
 import numpy as np
 import sys
 
@@ -24,23 +24,27 @@ class dft_test(NewOpenCVTests):
         refDftShift = np.fft.fftshift(refDft)
         refMagnitide = np.log(1.0 + np.abs(refDftShift))
 
-        testDft = cv2.dft(np.float32(img),flags = cv2.DFT_COMPLEX_OUTPUT)
+        testDft = cv.dft(np.float32(img),flags = cv.DFT_COMPLEX_OUTPUT)
         testDftShift = np.fft.fftshift(testDft)
-        testMagnitude = np.log(1.0 + cv2.magnitude(testDftShift[:,:,0], testDftShift[:,:,1]))
+        testMagnitude = np.log(1.0 + cv.magnitude(testDftShift[:,:,0], testDftShift[:,:,1]))
 
-        refMagnitide = cv2.normalize(refMagnitide, 0.0, 1.0, cv2.NORM_MINMAX)
-        testMagnitude = cv2.normalize(testMagnitude, 0.0, 1.0, cv2.NORM_MINMAX)
+        refMagnitide = cv.normalize(refMagnitide, 0.0, 1.0, cv.NORM_MINMAX)
+        testMagnitude = cv.normalize(testMagnitude, 0.0, 1.0, cv.NORM_MINMAX)
 
-        self.assertLess(cv2.norm(refMagnitide - testMagnitude), eps)
+        self.assertLess(cv.norm(refMagnitide - testMagnitude), eps)
 
         #test inverse transform
         img_back = np.fft.ifft2(refDft)
         img_back = np.abs(img_back)
 
-        img_backTest = cv2.idft(testDft)
-        img_backTest = cv2.magnitude(img_backTest[:,:,0], img_backTest[:,:,1])
+        img_backTest = cv.idft(testDft)
+        img_backTest = cv.magnitude(img_backTest[:,:,0], img_backTest[:,:,1])
 
-        img_backTest = cv2.normalize(img_backTest, 0.0, 1.0, cv2.NORM_MINMAX)
-        img_back = cv2.normalize(img_back, 0.0, 1.0, cv2.NORM_MINMAX)
+        img_backTest = cv.normalize(img_backTest, 0.0, 1.0, cv.NORM_MINMAX)
+        img_back = cv.normalize(img_back, 0.0, 1.0, cv.NORM_MINMAX)
 
-        self.assertLess(cv2.norm(img_back - img_backTest), eps)
+        self.assertLess(cv.norm(img_back - img_backTest), eps)
+
+
+if __name__ == '__main__':
+    NewOpenCVTests.bootstrap()

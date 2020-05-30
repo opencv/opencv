@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2002, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -41,11 +41,12 @@
 //
 //-----------------------------------------------------------------------------
 
-#include <ImfLineOrderAttribute.h>
+#include "ImfLineOrderAttribute.h"
 
 
-namespace Imf {
+OPENEXR_IMF_INTERNAL_NAMESPACE_SOURCE_ENTER
 
+using namespace OPENEXR_IMF_INTERNAL_NAMESPACE;
 
 template <>
 const char *
@@ -57,7 +58,7 @@ LineOrderAttribute::staticTypeName ()
 
 template <>
 void
-LineOrderAttribute::writeValueTo (OStream &os, int) const
+LineOrderAttribute::writeValueTo (OPENEXR_IMF_INTERNAL_NAMESPACE::OStream &os, int version) const
 {
     unsigned char tmp = _value;
     Xdr::write <StreamIO> (os, tmp);
@@ -66,7 +67,7 @@ LineOrderAttribute::writeValueTo (OStream &os, int) const
 
 template <>
 void
-LineOrderAttribute::readValueFrom (IStream &is, int, int)
+LineOrderAttribute::readValueFrom (OPENEXR_IMF_INTERNAL_NAMESPACE::IStream &is, int size, int version)
 {
     unsigned char tmp;
     Xdr::read <StreamIO> (is, tmp);
@@ -74,4 +75,4 @@ LineOrderAttribute::readValueFrom (IStream &is, int, int)
 }
 
 
-} // namespace Imf
+OPENEXR_IMF_INTERNAL_NAMESPACE_SOURCE_EXIT 

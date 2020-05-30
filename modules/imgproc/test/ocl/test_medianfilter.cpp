@@ -46,7 +46,7 @@
 
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 /////////////////////////////////////////////medianFilter//////////////////////////////////////////////////////////
@@ -106,6 +106,6 @@ OCL_INSTANTIATE_TEST_CASE_P(ImageProc, MedianFilter, Combine(
                                 Values(3, 5),
                                 Bool())
                            );
-} } // namespace cvtest::ocl
+} } // namespace opencv_test::ocl
 
 #endif

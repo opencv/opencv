@@ -10,7 +10,7 @@
 * This program demonstrates how to use OpenCV PCA with a
 * specified amount of variance to retain. The effect
 * is illustrated further by using a trackbar to
-* change the value for retained varaince.
+* change the value for retained variance.
 *
 * The program takes as input a text file with each line
 * begin the full path to an image. PCA will be performed
@@ -141,7 +141,7 @@ int main(int argc, char** argv)
     // Read in the data. This can fail if not valid
     try {
         read_imgList(imgList, images);
-    } catch (cv::Exception& e) {
+    } catch (const cv::Exception& e) {
         cerr << "Error opening file \"" << imgList << "\". Reason: " << e.msg << endl;
         exit(1);
     }

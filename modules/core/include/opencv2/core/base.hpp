@@ -152,46 +152,57 @@ enum DecompTypes {
 };
 
 /** norm types
-- For one array:
-\f[norm =  \forkthree{\|\texttt{src1}\|_{L_{\infty}} =  \max _I | \texttt{src1} (I)|}{if  \(\texttt{normType} = \texttt{NORM_INF}\) }
-{ \| \texttt{src1} \| _{L_1} =  \sum _I | \texttt{src1} (I)|}{if  \(\texttt{normType} = \texttt{NORM_L1}\) }
-{ \| \texttt{src1} \| _{L_2} =  \sqrt{\sum_I \texttt{src1}(I)^2} }{if  \(\texttt{normType} = \texttt{NORM_L2}\) }\f]
 
-- Absolute norm for two arrays
-\f[norm =  \forkthree{\|\texttt{src1}-\texttt{src2}\|_{L_{\infty}} =  \max _I | \texttt{src1} (I) -  \texttt{src2} (I)|}{if  \(\texttt{normType} = \texttt{NORM_INF}\) }
-{ \| \texttt{src1} - \texttt{src2} \| _{L_1} =  \sum _I | \texttt{src1} (I) -  \texttt{src2} (I)|}{if  \(\texttt{normType} = \texttt{NORM_L1}\) }
-{ \| \texttt{src1} - \texttt{src2} \| _{L_2} =  \sqrt{\sum_I (\texttt{src1}(I) - \texttt{src2}(I))^2} }{if  \(\texttt{normType} = \texttt{NORM_L2}\) }\f]
+src1 and src2 denote input arrays.
+*/
 
-- Relative norm for two arrays
-\f[norm =  \forkthree{\frac{\|\texttt{src1}-\texttt{src2}\|_{L_{\infty}}    }{\|\texttt{src2}\|_{L_{\infty}} }}{if  \(\texttt{normType} = \texttt{NORM_RELATIVE_INF}\) }
-{ \frac{\|\texttt{src1}-\texttt{src2}\|_{L_1} }{\|\texttt{src2}\|_{L_1}} }{if  \(\texttt{normType} = \texttt{NORM_RELATIVE_L1}\) }
-{ \frac{\|\texttt{src1}-\texttt{src2}\|_{L_2} }{\|\texttt{src2}\|_{L_2}} }{if  \(\texttt{normType} = \texttt{NORM_RELATIVE_L2}\) }\f]
-
-As example for one array consider the function \f$r(x)= \begin{pmatrix} x \\ 1-x \end{pmatrix}, x \in [-1;1]\f$.
-The \f$ L_{1}, L_{2} \f$ and \f$ L_{\infty} \f$ norm for the sample value \f$r(-1) = \begin{pmatrix} -1 \\ 2 \end{pmatrix}\f$
-is calculated as follows
-\f{align*}
-    \| r(-1) \|_{L_1} &= |-1| + |2| = 3 \\
-    \| r(-1) \|_{L_2} &= \sqrt{(-1)^{2} + (2)^{2}} = \sqrt{5} \\
-    \| r(-1) \|_{L_\infty} &= \max(|-1|,|2|) = 2
-\f}
-and for \f$r(0.5) = \begin{pmatrix} 0.5 \\ 0.5 \end{pmatrix}\f$ the calculation is
-\f{align*}
-    \| r(0.5) \|_{L_1} &= |0.5| + |0.5| = 1 \\
-    \| r(0.5) \|_{L_2} &= \sqrt{(0.5)^{2} + (0.5)^{2}} = \sqrt{0.5} \\
-    \| r(0.5) \|_{L_\infty} &= \max(|0.5|,|0.5|) = 0.5.
-\f}
-The following graphic shows all values for the three norm functions \f$\| r(x) \|_{L_1}, \| r(x) \|_{L_2}\f$ and \f$\| r(x) \|_{L_\infty}\f$.
-It is notable that the \f$ L_{1} \f$ norm forms the upper and the \f$ L_{\infty} \f$ norm forms the lower border for the example function \f$ r(x) \f$.
-![Graphs for the different norm functions from the above example](pics/NormTypes_OneArray_1-2-INF.png)
- */
-enum NormTypes { NORM_INF       = 1,
+enum NormTypes {
+                /**
+                \f[
+                norm =  \forkthree
+                {\|\texttt{src1}\|_{L_{\infty}} =  \max _I | \texttt{src1} (I)|}{if  \(\texttt{normType} = \texttt{NORM_INF}\) }
+                {\|\texttt{src1}-\texttt{src2}\|_{L_{\infty}} =  \max _I | \texttt{src1} (I) -  \texttt{src2} (I)|}{if  \(\texttt{normType} = \texttt{NORM_INF}\) }
+                {\frac{\|\texttt{src1}-\texttt{src2}\|_{L_{\infty}}    }{\|\texttt{src2}\|_{L_{\infty}} }}{if  \(\texttt{normType} = \texttt{NORM_RELATIVE | NORM_INF}\) }
+                \f]
+                */
+                NORM_INF       = 1,
+                /**
+                \f[
+                norm =  \forkthree
+                {\| \texttt{src1} \| _{L_1} =  \sum _I | \texttt{src1} (I)|}{if  \(\texttt{normType} = \texttt{NORM_L1}\)}
+                { \| \texttt{src1} - \texttt{src2} \| _{L_1} =  \sum _I | \texttt{src1} (I) -  \texttt{src2} (I)|}{if  \(\texttt{normType} = \texttt{NORM_L1}\) }
+                { \frac{\|\texttt{src1}-\texttt{src2}\|_{L_1} }{\|\texttt{src2}\|_{L_1}} }{if  \(\texttt{normType} = \texttt{NORM_RELATIVE | NORM_L1}\) }
+                \f]*/
                  NORM_L1        = 2,
+                 /**
+                 \f[
+                 norm =  \forkthree
+                 { \| \texttt{src1} \| _{L_2} =  \sqrt{\sum_I \texttt{src1}(I)^2} }{if  \(\texttt{normType} = \texttt{NORM_L2}\) }
+                 { \| \texttt{src1} - \texttt{src2} \| _{L_2} =  \sqrt{\sum_I (\texttt{src1}(I) - \texttt{src2}(I))^2} }{if  \(\texttt{normType} = \texttt{NORM_L2}\) }
+                 { \frac{\|\texttt{src1}-\texttt{src2}\|_{L_2} }{\|\texttt{src2}\|_{L_2}} }{if  \(\texttt{normType} = \texttt{NORM_RELATIVE | NORM_L2}\) }
+                 \f]
+                 */
                  NORM_L2        = 4,
+                 /**
+                 \f[
+                 norm =  \forkthree
+                 { \| \texttt{src1} \| _{L_2} ^{2} = \sum_I \texttt{src1}(I)^2} {if  \(\texttt{normType} = \texttt{NORM_L2SQR}\)}
+                 { \| \texttt{src1} - \texttt{src2} \| _{L_2} ^{2} =  \sum_I (\texttt{src1}(I) - \texttt{src2}(I))^2 }{if  \(\texttt{normType} = \texttt{NORM_L2SQR}\) }
+                 { \left(\frac{\|\texttt{src1}-\texttt{src2}\|_{L_2} }{\|\texttt{src2}\|_{L_2}}\right)^2 }{if  \(\texttt{normType} = \texttt{NORM_RELATIVE | NORM_L2SQR}\) }
+                 \f]
+                 */
                  NORM_L2SQR     = 5,
+                 /**
+                 In the case of one input array, calculates the Hamming distance of the array from zero,
+                 In the case of two input arrays, calculates the Hamming distance between the arrays.
+                 */
                  NORM_HAMMING   = 6,
+                 /**
+                 Similar to NORM_HAMMING, but in the calculation, each two bits of the input sequence will
+                 be added and treated as a single bit to be used in the same calculation as NORM_HAMMING.
+                 */
                  NORM_HAMMING2  = 7,
-                 NORM_TYPE_MASK = 7,
+                 NORM_TYPE_MASK = 7, //!< bit-mask which can be used to separate norm type from norm flags
                  NORM_RELATIVE  = 8, //!< flag
                  NORM_MINMAX    = 32 //!< flag
                };
@@ -260,7 +271,7 @@ enum BorderTypes {
     BORDER_REFLECT     = 2, //!< `fedcba|abcdefgh|hgfedcb`
     BORDER_WRAP        = 3, //!< `cdefgh|abcdefgh|abcdefg`
     BORDER_REFLECT_101 = 4, //!< `gfedcb|abcdefgh|gfedcba`
-    BORDER_TRANSPARENT = 5, //!< `uvwxyz|absdefgh|ijklmno`
+    BORDER_TRANSPARENT = 5, //!< `uvwxyz|abcdefgh|ijklmno`
 
     BORDER_REFLECT101  = BORDER_REFLECT_101, //!< same as BORDER_REFLECT_101
     BORDER_DEFAULT     = BORDER_REFLECT_101, //!< same as BORDER_REFLECT_101
@@ -272,68 +283,6 @@ enum BorderTypes {
 //! @addtogroup core_utils
 //! @{
 
-//! @cond IGNORED
-
-//////////////// static assert /////////////////
-#define CVAUX_CONCAT_EXP(a, b) a##b
-#define CVAUX_CONCAT(a, b) CVAUX_CONCAT_EXP(a,b)
-
-#if defined(__clang__)
-#  ifndef __has_extension
-#    define __has_extension __has_feature /* compatibility, for older versions of clang */
-#  endif
-#  if __has_extension(cxx_static_assert)
-#    define CV_StaticAssert(condition, reason)    static_assert((condition), reason " " #condition)
-#  elif __has_extension(c_static_assert)
-#    define CV_StaticAssert(condition, reason)    _Static_assert((condition), reason " " #condition)
-#  endif
-#elif defined(__GNUC__)
-#  if (defined(__GXX_EXPERIMENTAL_CXX0X__) || __cplusplus >= 201103L)
-#    define CV_StaticAssert(condition, reason)    static_assert((condition), reason " " #condition)
-#  endif
-#elif defined(_MSC_VER)
-#  if _MSC_VER >= 1600 /* MSVC 10 */
-#    define CV_StaticAssert(condition, reason)    static_assert((condition), reason " " #condition)
-#  endif
-#endif
-#ifndef CV_StaticAssert
-#  if !defined(__clang__) && defined(__GNUC__) && (__GNUC__*100 + __GNUC_MINOR__ > 302)
-#    define CV_StaticAssert(condition, reason) ({ extern int __attribute__((error("CV_StaticAssert: " reason " " #condition))) CV_StaticAssert(); ((condition) ? 0 : CV_StaticAssert()); })
-#  else
-     template <bool x> struct CV_StaticAssert_failed;
-     template <> struct CV_StaticAssert_failed<true> { enum { val = 1 }; };
-     template<int x> struct CV_StaticAssert_test {};
-#    define CV_StaticAssert(condition, reason)\
-       typedef cv::CV_StaticAssert_test< sizeof(cv::CV_StaticAssert_failed< static_cast<bool>(condition) >) > CVAUX_CONCAT(CV_StaticAssert_failed_at_, __LINE__)
-#  endif
-#endif
-
-// Suppress warning "-Wdeprecated-declarations" / C4996
-#if defined(_MSC_VER)
-    #define CV_DO_PRAGMA(x) __pragma(x)
-#elif defined(__GNUC__)
-    #define CV_DO_PRAGMA(x) _Pragma (#x)
-#else
-    #define CV_DO_PRAGMA(x)
-#endif
-
-#ifdef _MSC_VER
-#define CV_SUPPRESS_DEPRECATED_START \
-    CV_DO_PRAGMA(warning(push)) \
-    CV_DO_PRAGMA(warning(disable: 4996))
-#define CV_SUPPRESS_DEPRECATED_END CV_DO_PRAGMA(warning(pop))
-#elif defined (__clang__) || ((__GNUC__)  && (__GNUC__*100 + __GNUC_MINOR__ > 405))
-#define CV_SUPPRESS_DEPRECATED_START \
-    CV_DO_PRAGMA(GCC diagnostic push) \
-    CV_DO_PRAGMA(GCC diagnostic ignored "-Wdeprecated-declarations")
-#define CV_SUPPRESS_DEPRECATED_END CV_DO_PRAGMA(GCC diagnostic pop)
-#else
-#define CV_SUPPRESS_DEPRECATED_START
-#define CV_SUPPRESS_DEPRECATED_END
-#endif
-#define CV_UNUSED(name) (void)name
-//! @endcond
-
 /*! @brief Signals an error and raises the exception.
 
 By default the function prints information about the error to stderr,
@@ -344,42 +293,19 @@ It is possible to alternate error processing by using redirectError().
 @param _func - function name. Available only when the compiler supports getting it
 @param _file - source file name where the error has occurred
 @param _line - line number in the source file where the error has occurred
-@see CV_Error, CV_Error_, CV_ErrorNoReturn, CV_ErrorNoReturn_, CV_Assert, CV_DbgAssert
+@see CV_Error, CV_Error_, CV_Assert, CV_DbgAssert
  */
-CV_EXPORTS void error(int _code, const String& _err, const char* _func, const char* _file, int _line);
+CV_EXPORTS CV_NORETURN void error(int _code, const String& _err, const char* _func, const char* _file, int _line);
 
-#ifdef __GNUC__
-# if defined __clang__ || defined __APPLE__
-#   pragma GCC diagnostic push
-#   pragma GCC diagnostic ignored "-Winvalid-noreturn"
-# endif
-#endif
+#ifdef CV_STATIC_ANALYSIS
 
-/** same as cv::error, but does not return */
-CV_INLINE CV_NORETURN void errorNoReturn(int _code, const String& _err, const char* _func, const char* _file, int _line)
-{
-    error(_code, _err, _func, _file, _line);
-#ifdef __GNUC__
-# if !defined __clang__ && !defined __APPLE__
-    // this suppresses this warning: "noreturn" function does return [enabled by default]
-    __builtin_trap();
-    // or use infinite loop: for (;;) {}
-# endif
-#endif
-}
-#ifdef __GNUC__
-# if defined __clang__ || defined __APPLE__
-#   pragma GCC diagnostic pop
-# endif
-#endif
+// In practice, some macro are not processed correctly (noreturn is not detected).
+// We need to use simplified definition for them.
+#define CV_Error(code, msg) do { (void)(code); (void)(msg); abort(); } while (0)
+#define CV_Error_(code, args) do { (void)(code); (void)(cv::format args); abort(); } while (0)
+#define CV_Assert( expr ) do { if (!(expr)) abort(); } while (0)
 
-#if defined __GNUC__
-#define CV_Func __func__
-#elif defined _MSC_VER
-#define CV_Func __FUNCTION__
-#else
-#define CV_Func ""
-#endif
+#else // CV_STATIC_ANALYSIS
 
 /** @brief Call the error handler.
 
@@ -399,7 +325,7 @@ This macro can be used to construct an error message on-fly to include some dyna
 for example:
 @code
     // note the extra parentheses around the formatted text message
-    CV_Error_( CV_StsOutOfRange,
+    CV_Error_(Error::StsOutOfRange,
     ("the value at (%d, %d)=%g is out of range", badPt.x, badPt.y, badValue));
 @endcode
 @param code one of Error::Code
@@ -413,18 +339,39 @@ The macros CV_Assert (and CV_DbgAssert(expr)) evaluate the specified expression.
 raise an error (see cv::error). The macro CV_Assert checks the condition in both Debug and Release
 configurations while CV_DbgAssert is only retained in the Debug configuration.
 */
-#define CV_Assert( expr ) if(!!(expr)) ; else cv::error( cv::Error::StsAssert, #expr, CV_Func, __FILE__, __LINE__ )
+#define CV_Assert( expr ) do { if(!!(expr)) ; else cv::error( cv::Error::StsAssert, #expr, CV_Func, __FILE__, __LINE__ ); } while(0)
 
-/** same as CV_Error(code,msg), but does not return */
-#define CV_ErrorNoReturn( code, msg ) cv::errorNoReturn( code, msg, CV_Func, __FILE__, __LINE__ )
+#endif // CV_STATIC_ANALYSIS
 
-/** same as CV_Error_(code,args), but does not return */
-#define CV_ErrorNoReturn_( code, args ) cv::errorNoReturn( code, cv::format args, CV_Func, __FILE__, __LINE__ )
+//! @cond IGNORED
+#if !defined(__OPENCV_BUILD)  // TODO: backward compatibility only
+#ifndef CV_ErrorNoReturn
+#define CV_ErrorNoReturn CV_Error
+#endif
+#ifndef CV_ErrorNoReturn_
+#define CV_ErrorNoReturn_ CV_Error_
+#endif
+#endif
 
-/** replaced with CV_Assert(expr) in Debug configuration */
-#ifdef _DEBUG
+#define CV_Assert_1 CV_Assert
+#define CV_Assert_2( expr, ... ) CV_Assert_1(expr); __CV_EXPAND(CV_Assert_1( __VA_ARGS__ ))
+#define CV_Assert_3( expr, ... ) CV_Assert_1(expr); __CV_EXPAND(CV_Assert_2( __VA_ARGS__ ))
+#define CV_Assert_4( expr, ... ) CV_Assert_1(expr); __CV_EXPAND(CV_Assert_3( __VA_ARGS__ ))
+#define CV_Assert_5( expr, ... ) CV_Assert_1(expr); __CV_EXPAND(CV_Assert_4( __VA_ARGS__ ))
+#define CV_Assert_6( expr, ... ) CV_Assert_1(expr); __CV_EXPAND(CV_Assert_5( __VA_ARGS__ ))
+#define CV_Assert_7( expr, ... ) CV_Assert_1(expr); __CV_EXPAND(CV_Assert_6( __VA_ARGS__ ))
+#define CV_Assert_8( expr, ... ) CV_Assert_1(expr); __CV_EXPAND(CV_Assert_7( __VA_ARGS__ ))
+#define CV_Assert_9( expr, ... ) CV_Assert_1(expr); __CV_EXPAND(CV_Assert_8( __VA_ARGS__ ))
+#define CV_Assert_10( expr, ... ) CV_Assert_1(expr); __CV_EXPAND(CV_Assert_9( __VA_ARGS__ ))
+
+#define CV_Assert_N(...) do { __CV_EXPAND(__CV_CAT(CV_Assert_, __CV_VA_NUM_ARGS(__VA_ARGS__)) (__VA_ARGS__)); } while(0)
+
+//! @endcond
+
+#if defined _DEBUG || defined CV_STATIC_ANALYSIS
 #  define CV_DbgAssert(expr) CV_Assert(expr)
 #else
+/** replaced with CV_Assert(expr) in Debug configuration */
 #  define CV_DbgAssert(expr)
 #endif
 
@@ -434,7 +381,7 @@ configurations while CV_DbgAssert is only retained in the Debug configuration.
  */
 struct CV_EXPORTS Hamming
 {
-    enum { normType = NORM_HAMMING };
+    static const NormTypes normType = NORM_HAMMING;
     typedef unsigned char ValueType;
     typedef int ResultType;
 
@@ -671,17 +618,23 @@ namespace cudev
 
 namespace ipp
 {
-#if OPENCV_ABI_COMPATIBILITY > 300
 CV_EXPORTS   unsigned long long getIppFeatures();
-#else
-CV_EXPORTS   int getIppFeatures();
-#endif
 CV_EXPORTS   void setIppStatus(int status, const char * const funcname = NULL, const char * const filename = NULL,
                              int line = 0);
 CV_EXPORTS   int getIppStatus();
 CV_EXPORTS   String getIppErrorLocation();
-CV_EXPORTS_W bool useIPP();
-CV_EXPORTS_W void setUseIPP(bool flag);
+CV_EXPORTS_W bool   useIPP();
+CV_EXPORTS_W void   setUseIPP(bool flag);
+CV_EXPORTS_W String getIppVersion();
+
+// IPP Not-Exact mode. This function may force use of IPP then both IPP and OpenCV provide proper results
+// but have internal accuracy differences which have too much direct or indirect impact on accuracy tests.
+CV_EXPORTS_W bool useIPP_NotExact();
+CV_EXPORTS_W void setUseIPP_NotExact(bool flag);
+#ifndef DISABLE_OPENCV_3_COMPATIBILITY
+static inline bool useIPP_NE() { return useIPP_NotExact(); }
+static inline void setUseIPP_NE(bool flag) { setUseIPP_NotExact(flag); }
+#endif
 
 } // ipp
 
@@ -695,5 +648,7 @@ CV_EXPORTS_W void setUseIPP(bool flag);
 } // cv
 
 #include "opencv2/core/neon_utils.hpp"
+#include "opencv2/core/vsx_utils.hpp"
+#include "opencv2/core/check.hpp"
 
 #endif //OPENCV_CORE_BASE_HPP

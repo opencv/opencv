@@ -25,7 +25,7 @@
  * TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
  * OF SUCH DAMAGE.
- * Copyright© 2009, Liu Liu All rights reserved.
+ * Copyright (C) 2009, Liu Liu All rights reserved.
  *
  * OpenCV functions for MSER extraction
  *
@@ -48,7 +48,7 @@ namespace cv
 
 using std::vector;
 
-class MSER_Impl : public MSER
+class MSER_Impl CV_FINAL : public MSER
 {
 public:
     struct Params
@@ -85,19 +85,19 @@ public:
 
     explicit MSER_Impl(const Params& _params) : params(_params) {}
 
-    virtual ~MSER_Impl() {}
+    virtual ~MSER_Impl() CV_OVERRIDE {}
 
-    void setDelta(int delta) { params.delta = delta; }
-    int getDelta() const { return params.delta; }
+    void setDelta(int delta) CV_OVERRIDE { params.delta = delta; }
+    int getDelta() const CV_OVERRIDE { return params.delta; }
 
-    void setMinArea(int minArea) { params.minArea = minArea; }
-    int getMinArea() const { return params.minArea; }
+    void setMinArea(int minArea) CV_OVERRIDE { params.minArea = minArea; }
+    int getMinArea() const CV_OVERRIDE { return params.minArea; }
 
-    void setMaxArea(int maxArea) { params.maxArea = maxArea; }
-    int getMaxArea() const { return params.maxArea; }
+    void setMaxArea(int maxArea) CV_OVERRIDE { params.maxArea = maxArea; }
+    int getMaxArea() const CV_OVERRIDE { return params.maxArea; }
 
-    void setPass2Only(bool f) { params.pass2Only = f; }
-    bool getPass2Only() const { return params.pass2Only; }
+    void setPass2Only(bool f) CV_OVERRIDE { params.pass2Only = f; }
+    bool getPass2Only() const CV_OVERRIDE { return params.pass2Only; }
 
     enum { DIR_SHIFT = 29, NEXT_MASK = ((1<<DIR_SHIFT)-1)  };
 
@@ -262,96 +262,96 @@ public:
         }
 
         // add history chunk to a connected component
-        void growHistory( CompHistory*& hptr, WParams& wp, int new_gray_level, bool final, bool force=false )
+        void growHistory(CompHistory*& hptr, WParams& wp, int new_gray_level, bool final)
         {
-            bool update = final;
-            if( new_gray_level < 0 )
+            if (new_gray_level < gray_level)
                 new_gray_level = gray_level;
-            if( !history || (history->size != size && size > 0 &&
-                (gray_level != history->val || force)))
+
+            CompHistory *h;
+            if (history && history->val == gray_level)
             {
-                CompHistory* h;
+                h = history;
+            }
+            else
+            {
+                h = hptr++;
+                h->parent_ = 0;
+                h->child_ = history;
+                h->next_ = 0;
 
-                if (history && gray_level == history->val)
-                    h = history;
-                else
+                if (history)
                 {
-                    h = hptr++;
-                    h->parent_ = 0;
-                    h->child_ = history;
-                    h->next_ = 0;
-                    if (history)
-                        history->parent_ = h;
-                }
-
-                h->val = gray_level;
-                h->size = size;
-                h->head = head;
-
-                history = h;
-                h->var = FLT_MAX;
-                h->checked = true;
-                if (h->size >= wp.p.minArea)
-                {
-                    h->var = -1.f;
-                    h->checked = false;
-                    update = true;
+                    history->parent_ = h;
                 }
             }
+            CV_Assert(h != NULL);
+            h->val = gray_level;
+            h->size = size;
+            h->head = head;
+            h->var = FLT_MAX;
+            h->checked = true;
+            if (h->size >= wp.p.minArea)
+            {
+                h->var = -1.f;
+                h->checked = false;
+            }
+
             gray_level = new_gray_level;
-            if( update && history && gray_level != history->val )
+            history = h;
+            if (history && history->val != gray_level)
+            {
                 history->updateTree(wp, 0, 0, final);
+            }
         }
 
         // merging two connected components
         void merge( ConnectedComp* comp1, ConnectedComp* comp2,
                     CompHistory*& hptr, WParams& wp )
         {
-            if( comp1->size < comp2->size )
-                std::swap(comp1, comp2);
-
-            if( comp2->size == 0 )
-            {
-                // only grow comp1's history
-                comp1->growHistory(hptr, wp, -1, false);
-                gray_level = comp1->gray_level;
-                head = comp1->head;
-                tail = comp1->tail;
-                size = comp1->size;
-                history = comp1->history;
-                return;
-            }
-
-            comp1->growHistory( hptr, wp, -1, false );
-            comp2->growHistory( hptr, wp, -1, false );
-
             if (comp1->gray_level < comp2->gray_level)
                 std::swap(comp1, comp2);
 
             gray_level = comp1->gray_level;
-            history = comp1->history;
-            wp.pix0[comp1->tail].setNext(comp2->head);
+            comp1->growHistory(hptr, wp, gray_level, false);
+            comp2->growHistory(hptr, wp, gray_level, false);
 
-            head = comp1->head;
-            tail = comp2->tail;
+            if (comp1->size == 0)
+            {
+                head = comp2->head;
+                tail = comp2->tail;
+            }
+            else
+            {
+                head = comp1->head;
+                wp.pix0[comp1->tail].setNext(comp2->head);
+                tail = comp2->tail;
+            }
+
             size = comp1->size + comp2->size;
+            history = comp1->history;
 
             CompHistory *h1 = history->child_;
             CompHistory *h2 = comp2->history;
-            if (h2->size > wp.p.minArea)
+            // the child_'s size should be the large one
+            if (h1 && h1->size > h2->size)
             {
-                // the child_'s size should be the large one
-                if (h1 && h1->size > h2->size)
+                // add h2 as a child only if its size is large enough
+                if(h2->size >= wp.p.minArea)
                 {
                     h2->next_ = h1->next_;
                     h1->next_ = h2;
+                    h2->parent_ = history;
                 }
-                else
+            }
+            else
+            {
+                history->child_ = h2;
+                h2->parent_ = history;
+                // reserve h1 as a child only if its size is large enough
+                if (h1 && h1->size >= wp.p.minArea)
                 {
-                    history->child_ = h2;
                     h2->next_ = h1;
                 }
-                h2->parent_ = history;
             }
         }
 
@@ -364,8 +364,8 @@ public:
 
     void detectRegions( InputArray image,
                         std::vector<std::vector<Point> >& msers,
-                        std::vector<Rect>& bboxes );
-    void detect( InputArray _src, vector<KeyPoint>& keypoints, InputArray _mask );
+                        std::vector<Rect>& bboxes ) CV_OVERRIDE;
+    void detect( InputArray _src, vector<KeyPoint>& keypoints, InputArray _mask ) CV_OVERRIDE;
 
     void preprocess1( const Mat& img, int* level_size )
     {
@@ -515,30 +515,26 @@ public:
                 ptr = *heap[curr_gray];
                 heap[curr_gray]--;
 
-                if( curr_gray < comptr[-1].gray_level )
+                if (curr_gray < comptr[-1].gray_level)
+                {
                     comptr->growHistory(histptr, wp, curr_gray, false);
+                    CV_DbgAssert(comptr->size == comptr->history->size);
+                }
                 else
                 {
-                    // keep merging top two comp in stack until the gray level >= pixel_val
-                    for(;;)
-                    {
-                        comptr--;
-                        comptr->merge(comptr, comptr+1, histptr, wp);
-                        if( curr_gray <= comptr[0].gray_level )
-                            break;
-                        if( curr_gray < comptr[-1].gray_level )
-                        {
-                            comptr->growHistory(histptr, wp, curr_gray, false);
-                            break;
-                        }
-                    }
+                    // there must one pixel with the second component's gray level in the heap,
+                    // so curr_gray is not large than the second component's gray level
+                    comptr--;
+                    CV_DbgAssert(curr_gray == comptr->gray_level);
+                    comptr->merge(comptr, comptr + 1, histptr, wp);
+                    CV_DbgAssert(curr_gray == comptr->gray_level);
                 }
             }
         }
 
         for( ; comptr->gray_level != 256; comptr-- )
         {
-            comptr->growHistory(histptr, wp, 256, true, true);
+            comptr->growHistory(histptr, wp, 256, true);
         }
     }
 
@@ -987,7 +983,7 @@ extractMSER_8uC3( const Mat& src,
                     double s = (double)(lr->size-lr->sizei)/(lr->dt-lr->di);
                     if ( s < lr->s )
                     {
-                        // skip the first one and check stablity
+                        // skip the first one and check stability
                         if ( i > lr->reinit+1 && MSCRStableCheck( lr, params ) )
                         {
                             if ( lr->tmsr == NULL )
@@ -1040,7 +1036,7 @@ extractMSER_8uC3( const Mat& src,
 
 void MSER_Impl::detectRegions( InputArray _src, vector<vector<Point> >& msers, vector<Rect>& bboxes )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat src = _src.getMat();
 
@@ -1078,7 +1074,7 @@ void MSER_Impl::detectRegions( InputArray _src, vector<vector<Point> >& msers, v
 
 void MSER_Impl::detect( InputArray _image, vector<KeyPoint>& keypoints, InputArray _mask )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     vector<Rect> bboxes;
     vector<vector<Point> > msers;
@@ -1111,6 +1107,11 @@ Ptr<MSER> MSER::create( int _delta, int _min_area, int _max_area,
                           _max_variation, _min_diversity,
                           _max_evolution, _area_threshold,
                           _min_margin, _edge_blur_size));
+}
+
+String MSER::getDefaultName() const
+{
+    return (Feature2D::getDefaultName() + ".MSER");
 }
 
 }

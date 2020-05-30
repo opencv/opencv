@@ -72,7 +72,7 @@
     #pragma warning( disable: 4611 )
 #endif
 
-// the following defines are a hack to avoid multiple problems with frame ponter handling and setjmp
+// the following defines are a hack to avoid multiple problems with frame pointer handling and setjmp
 // see http://gcc.gnu.org/ml/gcc/2011-10/msg00324.html for some details
 #define mingw_getsp(...) 0
 #define __builtin_frame_address(...) 0
@@ -91,6 +91,7 @@ PngDecoder::PngDecoder()
     m_f = 0;
     m_buf_supported = true;
     m_buf_pos = 0;
+    m_bit_depth = 0;
 }
 
 
@@ -224,15 +225,15 @@ bool  PngDecoder::readData( Mat& img )
 {
     volatile bool result = false;
     AutoBuffer<uchar*> _buffer(m_height);
-    uchar** buffer = _buffer;
-    int color = img.channels() > 1;
+    uchar** buffer = _buffer.data();
+    bool color = img.channels() > 1;
+
+    png_structp png_ptr = (png_structp)m_png_ptr;
+    png_infop info_ptr = (png_infop)m_info_ptr;
+    png_infop end_info = (png_infop)m_end_info;
 
     if( m_png_ptr && m_info_ptr && m_end_info && m_width && m_height )
     {
-        png_structp png_ptr = (png_structp)m_png_ptr;
-        png_infop info_ptr = (png_infop)m_info_ptr;
-        png_infop end_info = (png_infop)m_end_info;
-
         if( setjmp( png_jmpbuf ( png_ptr ) ) == 0 )
         {
             int y;
@@ -425,7 +426,7 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
                     for( y = 0; y < height; y++ )
                         buffer[y] = img.data + y*img.step;
 
-                    png_write_image( png_ptr, buffer );
+                    png_write_image( png_ptr, buffer.data() );
                     png_write_end( png_ptr, info_ptr );
 
                     result = true;

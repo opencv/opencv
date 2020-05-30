@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2005, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -38,24 +38,25 @@
 //
 //-----------------------------------------------------------------------------
 
-#include "IlmThreadPool.h"
 #include "ImfThreading.h"
+#include "IlmThreadPool.h"
+#include "ImfNamespace.h"
 
-namespace Imf {
+OPENEXR_IMF_INTERNAL_NAMESPACE_SOURCE_ENTER
 
 
 int
 globalThreadCount ()
 {
-    return IlmThread::ThreadPool::globalThreadPool().numThreads();
+    return ILMTHREAD_NAMESPACE::ThreadPool::globalThreadPool().numThreads();
 }
 
 
 void
 setGlobalThreadCount (int count)
 {
-    IlmThread::ThreadPool::globalThreadPool().setNumThreads (count);
+    ILMTHREAD_NAMESPACE::ThreadPool::globalThreadPool().setNumThreads (count);
 }
 
 
-} // namespace Imf
+OPENEXR_IMF_INTERNAL_NAMESPACE_SOURCE_EXIT

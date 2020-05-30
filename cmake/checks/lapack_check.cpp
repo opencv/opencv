@@ -1,3 +1,4 @@
+#include <complex.h>
 #include "opencv_lapack.h"
 
 static char* check_fn1 = (char*)sgesv_;

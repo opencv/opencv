@@ -40,10 +40,8 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include <limits.h>
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 //
 // TODO!!!:
@@ -66,7 +64,7 @@ public:
     //int write_default_params(CvFileStorage* fs);
 
 protected:
-    //int read_params( CvFileStorage* fs );
+    //int read_params( const cv::FileStorage& fs );
 
     int check_slice( CvPoint StartPt, CvPoint EndPt,
                      CvSeqReader* SrcReader, float Eps,
@@ -108,7 +106,7 @@ void CV_ApproxPolyTest::clear()
 }
 
 
-int CV_ApproxPolyTest::read_params( CvFileStorage* fs )
+int CV_ApproxPolyTest::read_params( const cv::FileStorage& fs )
 {
     int code = cvtest::BaseTest::read_params( fs );
     if( code < 0 )
@@ -128,10 +126,10 @@ bool CV_ApproxPolyTest::get_contour( int /*type*/, CvSeq** Seq, int* d,
     int i;
     CvSeq* seq;
     int total = cvtest::randInt(rng) % 1000 + 1;
-    CvPoint center;
+    Point center;
     int radius, angle;
     double deg_to_rad = CV_PI/180.;
-    CvPoint pt;
+    Point pt;
 
     center.x = cvtest::randInt( rng ) % 1000;
     center.y = cvtest::randInt( rng ) % 1000;
@@ -168,7 +166,7 @@ int CV_ApproxPolyTest::check_slice( CvPoint StartPt, CvPoint EndPt,
                                    int* _j, int Count )
 {
     ///////////
-    CvPoint Pt;
+    Point Pt;
     ///////////
     bool flag;
     double dy,dx;
@@ -210,7 +208,7 @@ int CV_ApproxPolyTest::check_slice( CvPoint StartPt, CvPoint EndPt,
     /////// find start point and check distance ////////
     for( j = *_j; j < Count; j++ )
     {
-        CV_READ_SEQ_ELEM( Pt, *SrcReader );
+        { CvPoint pt_ = CV_STRUCT_INITIALIZER; CV_READ_SEQ_ELEM(pt_, *SrcReader); Pt = pt_; }
         if( StartPt.x == Pt.x && StartPt.y == Pt.y ) break;
         else
         {
@@ -232,7 +230,7 @@ int CV_ApproxPolyTest::check( CvSeq* SrcSeq, CvSeq* DstSeq, float Eps )
     //////////
     CvSeqReader  DstReader;
     CvSeqReader  SrcReader;
-    CvPoint StartPt, EndPt;
+    CvPoint StartPt = {0, 0}, EndPt = {0, 0};
     ///////////
     int TotalErrors = 0;
     ///////////
@@ -327,7 +325,7 @@ void CV_ApproxPolyTest::run( int /*start_from*/ )
             if( DstSeq == NULL )
             {
                 ts->printf( cvtest::TS::LOG,
-                    "cvApproxPoly returned NULL for contour #%d, espilon = %g\n", i, Eps );
+                    "cvApproxPoly returned NULL for contour #%d, epsilon = %g\n", i, Eps );
                 code = cvtest::TS::FAIL_INVALID_OUTPUT;
                 goto _exit_;
             } // if( DstSeq == NULL )
@@ -356,3 +354,26 @@ _exit_:
 }
 
 TEST(Imgproc_ApproxPoly, accuracy) { CV_ApproxPolyTest test; test.safe_run(); }
+
+//Tests to make sure that unreasonable epsilon (error)
+//values never get passed to the Douglas-Peucker algorithm.
+TEST(Imgproc_ApproxPoly, bad_epsilon)
+{
+    std::vector<Point2f> inputPoints;
+    inputPoints.push_back(Point2f(0.0f, 0.0f));
+    std::vector<Point2f> outputPoints;
+
+    double eps = std::numeric_limits<double>::infinity();
+    ASSERT_ANY_THROW(approxPolyDP(inputPoints, outputPoints, eps, false));
+
+    eps = 9e99;
+    ASSERT_ANY_THROW(approxPolyDP(inputPoints, outputPoints, eps, false));
+
+    eps = -1e-6;
+    ASSERT_ANY_THROW(approxPolyDP(inputPoints, outputPoints, eps, false));
+
+    eps = NAN;
+    ASSERT_ANY_THROW(approxPolyDP(inputPoints, outputPoints, eps, false));
+}
+
+}} // namespace

@@ -10,7 +10,7 @@
 
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 struct Vec2fComparator
@@ -173,12 +173,12 @@ OCL_TEST_P(HoughLinesP, RealImage)
 
 OCL_INSTANTIATE_TEST_CASE_P(Imgproc, HoughLines, Combine(Values(1, 0.5),                        // rhoStep
                                                          Values(CV_PI / 180.0, CV_PI / 360.0),  // thetaStep
-                                                         Values(80, 150)));                     // threshold
+                                                         Values(85, 150)));                     // threshold
 
 OCL_INSTANTIATE_TEST_CASE_P(Imgproc, HoughLinesP, Combine(Values(100, 150),                     // threshold
                                                           Values(50, 100),                      // minLineLength
                                                           Values(5, 10)));                      // maxLineGap
 
-} } // namespace cvtest::ocl
+} } // namespace opencv_test::ocl
 
 #endif // HAVE_OPENCL

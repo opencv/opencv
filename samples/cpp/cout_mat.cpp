@@ -11,16 +11,16 @@
 using namespace std;
 using namespace cv;
 
-static void help()
+static void help(char** argv)
 {
     cout
     << "\n------------------------------------------------------------------\n"
     << " This program shows the serial out capabilities of cv::Mat\n"
     << "That is, cv::Mat M(...); cout << M;  Now works.\n"
-    << "Output can be formated to OpenCV, matlab, python, numpy, csv and \n"
+    << "Output can be formatted to OpenCV, matlab, python, numpy, csv and \n"
     << "C styles Usage:\n"
-    << "./cvout_sample\n"
-    << "------------------------------------------------------------------\n\n"
+    << argv[0]
+    << "\n------------------------------------------------------------------\n\n"
     << endl;
 }
 
@@ -30,7 +30,7 @@ int main(int argc, char** argv)
     cv::CommandLineParser parser(argc, argv, "{help h||}");
     if (parser.has("help"))
     {
-        help();
+        help(argv);
         return 0;
     }
     Mat I = Mat::eye(4, 4, CV_64F);

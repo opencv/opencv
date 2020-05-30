@@ -51,7 +51,7 @@
 // developed by Greg Ward.  It handles the conversions between rgbe and
 // pixels consisting of floats.  The data is assumed to be an array of floats.
 // By default there are three floats per pixel in the order red, green, blue.
-// (RGBE_DATA_??? values control this.)  Only the mimimal header reading and
+// (RGBE_DATA_??? values control this.)  Only the minimal header reading and
 // writing is implemented.  Each routine does error checking and will return
 // a status value as defined below.  This code is intended as a skeleton so
 // feel free to modify it to suit your needs.
@@ -99,7 +99,6 @@ static int rgbe_error(int rgbe_error_code, const char *msg)
        CV_Error(cv::Error::StsError, cv::String("RGBE error: \n") +
                      cv::String(msg));
   }
-  return RGBE_RETURN_FAILURE;
 }
 
 /* standard conversion from float pixels to rgbe pixels */
@@ -146,7 +145,7 @@ rgbe2float(float *red, float *green, float *blue, unsigned char rgbe[4])
 /* default minimal header. modify if you want more information in header */
 int RGBE_WriteHeader(FILE *fp, int width, int height, rgbe_header_info *info)
 {
-  const char *programtype = "RGBE";
+  const char *programtype = "RADIANCE";
 
   if (info && (info->valid & RGBE_VALID_PROGRAMTYPE))
     programtype = info->programtype;
@@ -205,7 +204,7 @@ int RGBE_ReadHeader(FILE *fp, int *width, int *height, rgbe_header_info *info)
       return rgbe_error(rgbe_read_error,NULL);
     if (buf[0] == '\n') // end of the header
       break;
-    else if (buf[0] == '#') // commment
+    else if (buf[0] == '#') // comment
       continue;
     else if (strcmp(buf,"FORMAT=32-bit_rle_rgbe\n") == 0)
       hasFormat = true;

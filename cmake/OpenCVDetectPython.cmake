@@ -27,12 +27,18 @@ function(find_python preferred_version min_version library_env include_dir_env
          debug_library include_path include_dir include_dir2 packages_path
          numpy_include_dirs numpy_version)
 if(NOT ${found})
+  if(" ${executable}" STREQUAL " PYTHON_EXECUTABLE")
+    set(__update_python_vars 0)
+  else()
+    set(__update_python_vars 1)
+  endif()
+
   ocv_check_environment_variables(${executable})
   if(${executable})
     set(PYTHON_EXECUTABLE "${${executable}}")
   endif()
 
-  if(WIN32 AND NOT ${executable})
+  if(WIN32 AND NOT ${executable} AND OPENCV_PYTHON_PREFER_WIN32_REGISTRY)  # deprecated
     # search for executable with the same bitness as resulting binaries
     # standard FindPythonInterp always prefers executable from system path
     # this is really important because we are using the interpreter for numpy search and for choosing the install location
@@ -47,16 +53,53 @@ if(NOT ${found})
     endforeach()
   endif()
 
-  string(REGEX MATCH "^[0-9]+" _preferred_version_major ${preferred_version})
-
-  find_host_package(PythonInterp "${preferred_version}")
-  if(NOT PYTHONINTERP_FOUND)
+  if(preferred_version)
+    set(__python_package_version "${preferred_version} EXACT")
+    find_host_package(PythonInterp "${preferred_version}" EXACT)
+    if(NOT PYTHONINTERP_FOUND)
+      message(STATUS "Python is not found: ${preferred_version} EXACT")
+    endif()
+  elseif(min_version)
+    set(__python_package_version "${min_version}")
     find_host_package(PythonInterp "${min_version}")
+  else()
+    set(__python_package_version "")
+    find_host_package(PythonInterp)
   endif()
+
+  string(REGEX MATCH "^[0-9]+" _python_version_major "${min_version}")
 
   if(PYTHONINTERP_FOUND)
     # Check if python major version is correct
-    if(${_preferred_version_major} EQUAL ${PYTHON_VERSION_MAJOR})
+    if(" ${_python_version_major}" STREQUAL " ")
+      set(_python_version_major "${PYTHON_VERSION_MAJOR}")
+    endif()
+    if(NOT "${_python_version_major}" STREQUAL "${PYTHON_VERSION_MAJOR}"
+        AND NOT DEFINED ${executable}
+    )
+      if(NOT OPENCV_SKIP_PYTHON_WARNING)
+        message(WARNING "CMake's 'find_host_package(PythonInterp ${__python_package_version})' found wrong Python version:\n"
+                        "PYTHON_EXECUTABLE=${PYTHON_EXECUTABLE}\n"
+                        "PYTHON_VERSION_STRING=${PYTHON_VERSION_STRING}\n"
+                        "Consider providing the '${executable}' variable via CMake command line or environment variables\n")
+      endif()
+      ocv_clear_vars(PYTHONINTERP_FOUND PYTHON_EXECUTABLE PYTHON_VERSION_STRING PYTHON_VERSION_MAJOR PYTHON_VERSION_MINOR PYTHON_VERSION_PATCH)
+      if(NOT CMAKE_VERSION VERSION_LESS "3.12")
+        if(_python_version_major STREQUAL "2")
+          set(__PYTHON_PREFIX Python2)
+        else()
+          set(__PYTHON_PREFIX Python3)
+        endif()
+        find_host_package(${__PYTHON_PREFIX} "${preferred_version}" COMPONENTS Interpreter)
+        if(${__PYTHON_PREFIX}_EXECUTABLE)
+          set(PYTHON_EXECUTABLE "${${__PYTHON_PREFIX}_EXECUTABLE}")
+          find_host_package(PythonInterp "${preferred_version}")  # Populate other variables
+        endif()
+      else()
+        message(STATUS "Consider using CMake 3.12+ for better Python support")
+      endif()
+    endif()
+    if(PYTHONINTERP_FOUND AND "${_python_version_major}" STREQUAL "${PYTHON_VERSION_MAJOR}")
       # Copy outputs
       set(_found ${PYTHONINTERP_FOUND})
       set(_executable ${PYTHON_EXECUTABLE})
@@ -65,7 +108,9 @@ if(NOT ${found})
       set(_version_minor ${PYTHON_VERSION_MINOR})
       set(_version_patch ${PYTHON_VERSION_PATCH})
     endif()
+  endif()
 
+  if(__update_python_vars)
     # Clear find_host_package side effects
     unset(PYTHONINTERP_FOUND)
     unset(PYTHON_EXECUTABLE CACHE)
@@ -109,7 +154,8 @@ if(NOT ${found})
         set(_library_release ${PYTHON_LIBRARY_RELEASE})
         set(_include_dir ${PYTHON_INCLUDE_DIR})
         set(_include_dir2 ${PYTHON_INCLUDE_DIR2})
-
+      endif()
+      if(__update_python_vars)
         # Clear find_package side effects
         unset(PYTHONLIBS_FOUND)
         unset(PYTHON_LIBRARIES)
@@ -140,11 +186,7 @@ if(NOT ${found})
         else() #debian based assumed, install to the dist-packages.
           set(_packages_path "python${_version_major_minor}/dist-packages")
         endif()
-        if(EXISTS "${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}/${${packages_path}}")
-          set(_packages_path "lib${LIB_SUFFIX}/${_packages_path}")
-        else()
-          set(_packages_path "lib/${_packages_path}")
-        endif()
+        set(_packages_path "lib/${_packages_path}")
       elseif(CMAKE_HOST_WIN32)
         get_filename_component(_path "${_executable}" PATH)
         file(TO_CMAKE_PATH "${_path}" _path)
@@ -160,7 +202,7 @@ if(NOT ${found})
         unset(_path)
       endif()
 
-      set(_numpy_include_dirs ${${numpy_include_dirs}})
+      set(_numpy_include_dirs "${${numpy_include_dirs}}")
 
       if(NOT _numpy_include_dirs)
         if(CMAKE_CROSSCOMPILING)
@@ -203,7 +245,7 @@ if(NOT ${found})
 
   # Export return values
   set(${found} "${_found}" CACHE INTERNAL "")
-  set(${executable} "${_executable}" CACHE FILEPATH "Path to Python interpretor")
+  set(${executable} "${_executable}" CACHE FILEPATH "Path to Python interpreter")
   set(${version_string} "${_version_string}" CACHE INTERNAL "")
   set(${version_major} "${_version_major}" CACHE INTERNAL "")
   set(${version_minor} "${_version_minor}" CACHE INTERNAL "")
@@ -222,7 +264,11 @@ if(NOT ${found})
 endif()
 endfunction(find_python)
 
-find_python(2.7 "${MIN_VER_PYTHON2}" PYTHON2_LIBRARY PYTHON2_INCLUDE_DIR
+if(OPENCV_PYTHON_SKIP_DETECTION)
+  return()
+endif()
+
+find_python("" "${MIN_VER_PYTHON2}" PYTHON2_LIBRARY PYTHON2_INCLUDE_DIR
     PYTHON2INTERP_FOUND PYTHON2_EXECUTABLE PYTHON2_VERSION_STRING
     PYTHON2_VERSION_MAJOR PYTHON2_VERSION_MINOR PYTHON2LIBS_FOUND
     PYTHON2LIBS_VERSION_STRING PYTHON2_LIBRARIES PYTHON2_LIBRARY
@@ -230,7 +276,8 @@ find_python(2.7 "${MIN_VER_PYTHON2}" PYTHON2_LIBRARY PYTHON2_INCLUDE_DIR
     PYTHON2_INCLUDE_DIR PYTHON2_INCLUDE_DIR2 PYTHON2_PACKAGES_PATH
     PYTHON2_NUMPY_INCLUDE_DIRS PYTHON2_NUMPY_VERSION)
 
-find_python(3.4 "${MIN_VER_PYTHON3}" PYTHON3_LIBRARY PYTHON3_INCLUDE_DIR
+option(OPENCV_PYTHON3_VERSION "Python3 version" "")
+find_python("${OPENCV_PYTHON3_VERSION}" "${MIN_VER_PYTHON3}" PYTHON3_LIBRARY PYTHON3_INCLUDE_DIR
     PYTHON3INTERP_FOUND PYTHON3_EXECUTABLE PYTHON3_VERSION_STRING
     PYTHON3_VERSION_MAJOR PYTHON3_VERSION_MINOR PYTHON3LIBS_FOUND
     PYTHON3LIBS_VERSION_STRING PYTHON3_LIBRARIES PYTHON3_LIBRARY
@@ -241,10 +288,12 @@ find_python(3.4 "${MIN_VER_PYTHON3}" PYTHON3_LIBRARY PYTHON3_INCLUDE_DIR
 
 if(PYTHON_DEFAULT_EXECUTABLE)
     set(PYTHON_DEFAULT_AVAILABLE "TRUE")
-elseif(PYTHON2INTERP_FOUND) # Use Python 2 as default Python interpreter
+elseif(PYTHON2_EXECUTABLE AND PYTHON2INTERP_FOUND)
+    # Use Python 2 as default Python interpreter
     set(PYTHON_DEFAULT_AVAILABLE "TRUE")
     set(PYTHON_DEFAULT_EXECUTABLE "${PYTHON2_EXECUTABLE}")
-elseif(PYTHON3INTERP_FOUND) # Use Python 3 as fallback Python interpreter (if there is no Python 2)
+elseif(PYTHON3_EXECUTABLE AND PYTHON3INTERP_FOUND)
+    # Use Python 3 as fallback Python interpreter (if there is no Python 2)
     set(PYTHON_DEFAULT_AVAILABLE "TRUE")
     set(PYTHON_DEFAULT_EXECUTABLE "${PYTHON3_EXECUTABLE}")
 endif()

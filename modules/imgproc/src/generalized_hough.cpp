@@ -326,41 +326,41 @@ namespace
 
 namespace
 {
-    class GeneralizedHoughBallardImpl : public GeneralizedHoughBallard, private GeneralizedHoughBase
+    class GeneralizedHoughBallardImpl CV_FINAL : public GeneralizedHoughBallard, private GeneralizedHoughBase
     {
     public:
         GeneralizedHoughBallardImpl();
 
-        void setTemplate(InputArray templ, Point templCenter) { setTemplateImpl(templ, templCenter); }
-        void setTemplate(InputArray edges, InputArray dx, InputArray dy, Point templCenter) { setTemplateImpl(edges, dx, dy, templCenter); }
+        void setTemplate(InputArray templ, Point templCenter) CV_OVERRIDE { setTemplateImpl(templ, templCenter); }
+        void setTemplate(InputArray edges, InputArray dx, InputArray dy, Point templCenter) CV_OVERRIDE { setTemplateImpl(edges, dx, dy, templCenter); }
 
-        void detect(InputArray image, OutputArray positions, OutputArray votes) { detectImpl(image, positions, votes); }
-        void detect(InputArray edges, InputArray dx, InputArray dy, OutputArray positions, OutputArray votes) { detectImpl(edges, dx, dy, positions, votes); }
+        void detect(InputArray image, OutputArray positions, OutputArray votes) CV_OVERRIDE { detectImpl(image, positions, votes); }
+        void detect(InputArray edges, InputArray dx, InputArray dy, OutputArray positions, OutputArray votes) CV_OVERRIDE { detectImpl(edges, dx, dy, positions, votes); }
 
-        void setCannyLowThresh(int cannyLowThresh) { cannyLowThresh_ = cannyLowThresh; }
-        int getCannyLowThresh() const { return cannyLowThresh_; }
+        void setCannyLowThresh(int cannyLowThresh) CV_OVERRIDE { cannyLowThresh_ = cannyLowThresh; }
+        int getCannyLowThresh() const CV_OVERRIDE { return cannyLowThresh_; }
 
-        void setCannyHighThresh(int cannyHighThresh) { cannyHighThresh_ = cannyHighThresh; }
-        int getCannyHighThresh() const { return cannyHighThresh_; }
+        void setCannyHighThresh(int cannyHighThresh) CV_OVERRIDE { cannyHighThresh_ = cannyHighThresh; }
+        int getCannyHighThresh() const CV_OVERRIDE { return cannyHighThresh_; }
 
-        void setMinDist(double minDist) { minDist_ = minDist; }
-        double getMinDist() const { return minDist_; }
+        void setMinDist(double minDist) CV_OVERRIDE { minDist_ = minDist; }
+        double getMinDist() const CV_OVERRIDE { return minDist_; }
 
-        void setDp(double dp) { dp_ = dp; }
-        double getDp() const { return dp_; }
+        void setDp(double dp) CV_OVERRIDE { dp_ = dp; }
+        double getDp() const CV_OVERRIDE { return dp_; }
 
-        void setMaxBufferSize(int) {  }
-        int getMaxBufferSize() const { return 0; }
+        void setMaxBufferSize(int) CV_OVERRIDE {  }
+        int getMaxBufferSize() const CV_OVERRIDE { return 0; }
 
-        void setLevels(int levels) { levels_ = levels; }
-        int getLevels() const { return levels_; }
+        void setLevels(int levels) CV_OVERRIDE { levels_ = levels; }
+        int getLevels() const CV_OVERRIDE { return levels_; }
 
-        void setVotesThreshold(int votesThreshold) { votesThreshold_ = votesThreshold; }
-        int getVotesThreshold() const { return votesThreshold_; }
+        void setVotesThreshold(int votesThreshold) CV_OVERRIDE { votesThreshold_ = votesThreshold; }
+        int getVotesThreshold() const CV_OVERRIDE { return votesThreshold_; }
 
     private:
-        void processTempl();
-        void processImage();
+        void processTempl() CV_OVERRIDE;
+        void processImage() CV_OVERRIDE;
 
         void calcHist();
         void findPosInHist();
@@ -385,7 +385,7 @@ namespace
         const double thetaScale = levels_ / 360.0;
 
         r_table_.resize(levels_ + 1);
-        std::for_each(r_table_.begin(), r_table_.end(), std::mem_fun_ref(&std::vector<Point>::clear));
+        std::for_each(r_table_.begin(), r_table_.end(), [](std::vector<Point>& e)->void { e.clear(); });
 
         for (int y = 0; y < templSize_.height; ++y)
         {
@@ -415,7 +415,7 @@ namespace
 
     void GeneralizedHoughBallardImpl::calcHist()
     {
-        CV_INSTRUMENT_REGION()
+        CV_INSTRUMENT_REGION();
 
         CV_Assert( imageEdges_.type() == CV_8UC1 );
         CV_Assert( imageDx_.type() == CV_32FC1 && imageDx_.size() == imageSize_);
@@ -500,71 +500,71 @@ Ptr<GeneralizedHoughBallard> cv::createGeneralizedHoughBallard()
 
 namespace
 {
-    class GeneralizedHoughGuilImpl : public GeneralizedHoughGuil, private GeneralizedHoughBase
+    class GeneralizedHoughGuilImpl CV_FINAL : public GeneralizedHoughGuil, private GeneralizedHoughBase
     {
     public:
         GeneralizedHoughGuilImpl();
 
-        void setTemplate(InputArray templ, Point templCenter) { setTemplateImpl(templ, templCenter); }
-        void setTemplate(InputArray edges, InputArray dx, InputArray dy, Point templCenter) { setTemplateImpl(edges, dx, dy, templCenter); }
+        void setTemplate(InputArray templ, Point templCenter) CV_OVERRIDE { setTemplateImpl(templ, templCenter); }
+        void setTemplate(InputArray edges, InputArray dx, InputArray dy, Point templCenter) CV_OVERRIDE { setTemplateImpl(edges, dx, dy, templCenter); }
 
-        void detect(InputArray image, OutputArray positions, OutputArray votes) { detectImpl(image, positions, votes); }
-        void detect(InputArray edges, InputArray dx, InputArray dy, OutputArray positions, OutputArray votes) { detectImpl(edges, dx, dy, positions, votes); }
+        void detect(InputArray image, OutputArray positions, OutputArray votes) CV_OVERRIDE { detectImpl(image, positions, votes); }
+        void detect(InputArray edges, InputArray dx, InputArray dy, OutputArray positions, OutputArray votes) CV_OVERRIDE { detectImpl(edges, dx, dy, positions, votes); }
 
-        void setCannyLowThresh(int cannyLowThresh) { cannyLowThresh_ = cannyLowThresh; }
-        int getCannyLowThresh() const { return cannyLowThresh_; }
+        void setCannyLowThresh(int cannyLowThresh) CV_OVERRIDE { cannyLowThresh_ = cannyLowThresh; }
+        int getCannyLowThresh() const CV_OVERRIDE { return cannyLowThresh_; }
 
-        void setCannyHighThresh(int cannyHighThresh) { cannyHighThresh_ = cannyHighThresh; }
-        int getCannyHighThresh() const { return cannyHighThresh_; }
+        void setCannyHighThresh(int cannyHighThresh) CV_OVERRIDE { cannyHighThresh_ = cannyHighThresh; }
+        int getCannyHighThresh() const CV_OVERRIDE { return cannyHighThresh_; }
 
-        void setMinDist(double minDist) { minDist_ = minDist; }
-        double getMinDist() const { return minDist_; }
+        void setMinDist(double minDist) CV_OVERRIDE { minDist_ = minDist; }
+        double getMinDist() const CV_OVERRIDE { return minDist_; }
 
-        void setDp(double dp) { dp_ = dp; }
-        double getDp() const { return dp_; }
+        void setDp(double dp) CV_OVERRIDE { dp_ = dp; }
+        double getDp() const CV_OVERRIDE { return dp_; }
 
-        void setMaxBufferSize(int maxBufferSize) { maxBufferSize_ = maxBufferSize; }
-        int getMaxBufferSize() const { return maxBufferSize_; }
+        void setMaxBufferSize(int maxBufferSize) CV_OVERRIDE { maxBufferSize_ = maxBufferSize; }
+        int getMaxBufferSize() const CV_OVERRIDE { return maxBufferSize_; }
 
-        void setXi(double xi) { xi_ = xi; }
-        double getXi() const { return xi_; }
+        void setXi(double xi) CV_OVERRIDE { xi_ = xi; }
+        double getXi() const CV_OVERRIDE { return xi_; }
 
-        void setLevels(int levels) { levels_ = levels; }
-        int getLevels() const { return levels_; }
+        void setLevels(int levels) CV_OVERRIDE { levels_ = levels; }
+        int getLevels() const CV_OVERRIDE { return levels_; }
 
-        void setAngleEpsilon(double angleEpsilon) { angleEpsilon_ = angleEpsilon; }
-        double getAngleEpsilon() const { return angleEpsilon_; }
+        void setAngleEpsilon(double angleEpsilon) CV_OVERRIDE { angleEpsilon_ = angleEpsilon; }
+        double getAngleEpsilon() const CV_OVERRIDE { return angleEpsilon_; }
 
-        void setMinAngle(double minAngle) { minAngle_ = minAngle; }
-        double getMinAngle() const { return minAngle_; }
+        void setMinAngle(double minAngle) CV_OVERRIDE { minAngle_ = minAngle; }
+        double getMinAngle() const CV_OVERRIDE { return minAngle_; }
 
-        void setMaxAngle(double maxAngle) { maxAngle_ = maxAngle; }
-        double getMaxAngle() const { return maxAngle_; }
+        void setMaxAngle(double maxAngle) CV_OVERRIDE { maxAngle_ = maxAngle; }
+        double getMaxAngle() const CV_OVERRIDE { return maxAngle_; }
 
-        void setAngleStep(double angleStep) { angleStep_ = angleStep; }
-        double getAngleStep() const { return angleStep_; }
+        void setAngleStep(double angleStep) CV_OVERRIDE { angleStep_ = angleStep; }
+        double getAngleStep() const CV_OVERRIDE { return angleStep_; }
 
-        void setAngleThresh(int angleThresh) { angleThresh_ = angleThresh; }
-        int getAngleThresh() const { return angleThresh_; }
+        void setAngleThresh(int angleThresh) CV_OVERRIDE { angleThresh_ = angleThresh; }
+        int getAngleThresh() const CV_OVERRIDE { return angleThresh_; }
 
-        void setMinScale(double minScale) { minScale_ = minScale; }
-        double getMinScale() const { return minScale_; }
+        void setMinScale(double minScale) CV_OVERRIDE { minScale_ = minScale; }
+        double getMinScale() const CV_OVERRIDE { return minScale_; }
 
-        void setMaxScale(double maxScale) { maxScale_ = maxScale; }
-        double getMaxScale() const { return maxScale_; }
+        void setMaxScale(double maxScale) CV_OVERRIDE { maxScale_ = maxScale; }
+        double getMaxScale() const CV_OVERRIDE { return maxScale_; }
 
-        void setScaleStep(double scaleStep) { scaleStep_ = scaleStep; }
-        double getScaleStep() const { return scaleStep_; }
+        void setScaleStep(double scaleStep) CV_OVERRIDE { scaleStep_ = scaleStep; }
+        double getScaleStep() const CV_OVERRIDE { return scaleStep_; }
 
-        void setScaleThresh(int scaleThresh) { scaleThresh_ = scaleThresh; }
-        int getScaleThresh() const { return scaleThresh_; }
+        void setScaleThresh(int scaleThresh) CV_OVERRIDE { scaleThresh_ = scaleThresh; }
+        int getScaleThresh() const CV_OVERRIDE { return scaleThresh_; }
 
-        void setPosThresh(int posThresh) { posThresh_ = posThresh; }
-        int getPosThresh() const { return posThresh_; }
+        void setPosThresh(int posThresh) CV_OVERRIDE { posThresh_ = posThresh; }
+        int getPosThresh() const CV_OVERRIDE { return posThresh_; }
 
     private:
-        void processTempl();
-        void processImage();
+        void processTempl() CV_OVERRIDE;
+        void processImage() CV_OVERRIDE;
 
         int maxBufferSize_;
         double xi_;
@@ -692,8 +692,7 @@ namespace
         getContourPoints(edges, dx, dy, points);
 
         features.resize(levels_ + 1);
-        std::for_each(features.begin(), features.end(), std::mem_fun_ref(&std::vector<Feature>::clear));
-        std::for_each(features.begin(), features.end(), std::bind2nd(std::mem_fun_ref(&std::vector<Feature>::reserve), maxBufferSize_));
+        std::for_each(features.begin(), features.end(), [=](std::vector<Feature>& e) { e.clear(); e.reserve(maxBufferSize_); });
 
         for (size_t i = 0; i < points.size(); ++i)
         {

@@ -146,7 +146,7 @@ void CvHOGEvaluator::Feature::write(FileStorage &fs) const
 //}
 
 //cell[0] and featComponent idx writing. By cell[0] it's possible to recover all block
-//All block is nessesary for block normalization
+//All block is necessary for block normalization
 void CvHOGEvaluator::Feature::write(FileStorage &fs, int featComponentIdx) const
 {
     fs << CC_RECT << "[:" << rect[0].x << rect[0].y <<
@@ -165,7 +165,7 @@ void CvHOGEvaluator::integralHistogram(const Mat &img, vector<Mat> &histogram, M
     Mat qangle(gradSize, CV_8U);
 
     AutoBuffer<int> mapbuf(gradSize.width + gradSize.height + 4);
-    int* xmap = (int*)mapbuf + 1;
+    int* xmap = mapbuf.data() + 1;
     int* ymap = xmap + gradSize.width + 2;
 
     const int borderType = (int)BORDER_REPLICATE;
@@ -177,7 +177,7 @@ void CvHOGEvaluator::integralHistogram(const Mat &img, vector<Mat> &histogram, M
 
     int width = gradSize.width;
     AutoBuffer<float> _dbuf(width*4);
-    float* dbuf = _dbuf;
+    float* dbuf = _dbuf.data();
     Mat Dx(1, width, CV_32F, dbuf);
     Mat Dy(1, width, CV_32F, dbuf + width);
     Mat Mag(1, width, CV_32F, dbuf + width*2);

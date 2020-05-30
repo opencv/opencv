@@ -8,7 +8,7 @@ Watershed segmentation test
 from __future__ import print_function
 
 import numpy as np
-import cv2
+import cv2 as cv
 
 from tests_common import NewOpenCVTests
 
@@ -23,11 +23,14 @@ class watershed_test(NewOpenCVTests):
             self.assertEqual(0, 1, 'Missing test data')
 
         colors = np.int32( list(np.ndindex(3, 3, 3)) ) * 122
-        cv2.watershed(img, np.int32(markers))
+        cv.watershed(img, np.int32(markers))
         segments = colors[np.maximum(markers, 0)]
 
         if refSegments is None:
             refSegments = segments.copy()
-            cv2.imwrite(self.extraTestDataPath + '/cv/watershed/wshed_segments.png', refSegments)
+            cv.imwrite(self.extraTestDataPath + '/cv/watershed/wshed_segments.png', refSegments)
 
-        self.assertLess(cv2.norm(segments - refSegments, cv2.NORM_L1) / 255.0, 50)
+        self.assertLess(cv.norm(segments - refSegments, cv.NORM_L1) / 255.0, 50)
+
+if __name__ == '__main__':
+    NewOpenCVTests.bootstrap()

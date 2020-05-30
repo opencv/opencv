@@ -1,91 +1,85 @@
-#ifdef __GNUC__
-#  pragma GCC diagnostic ignored "-Wmissing-declarations"
-#  if defined __clang__ || defined __APPLE__
-#    pragma GCC diagnostic ignored "-Wmissing-prototypes"
-#    pragma GCC diagnostic ignored "-Wextra"
-#  endif
-#endif
-
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
 #ifndef __OPENCV_TEST_PRECOMP_HPP__
 #define __OPENCV_TEST_PRECOMP_HPP__
 
-#include <iostream>
 #include "opencv2/ts.hpp"
-#include "opencv2/imgproc.hpp"
-#include "opencv2/imgcodecs.hpp"
 #include "opencv2/videoio.hpp"
+#include "opencv2/videoio/registry.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
 
 #include "opencv2/core/private.hpp"
 
-#if defined(HAVE_DSHOW)        || \
-    defined(HAVE_TYZX)         || \
-    defined(HAVE_VFW)          || \
-    defined(HAVE_LIBV4L)       || \
-    (defined(HAVE_CAMV4L) && defined(HAVE_CAMV4L2)) || \
-    defined(HAVE_GSTREAMER)    || \
-    defined(HAVE_DC1394_2)     || \
-    defined(HAVE_DC1394)       || \
-    defined(HAVE_CMU1394)      || \
-    defined(HAVE_MIL)          || \
-    defined(HAVE_QUICKTIME)    || \
-    defined(HAVE_QTKIT)        || \
-    defined(HAVE_UNICAP)       || \
-    defined(HAVE_PVAPI)        || \
-    defined(HAVE_OPENNI)       || \
-    defined(HAVE_XIMEA)        || \
-    defined(HAVE_AVFOUNDATION) || \
-    defined(HAVE_GIGE_API)     || \
-    defined(HAVE_INTELPERC)    || \
-    defined(HAVE_GPHOTO2)      || \
-    (0)
-#  define BUILD_WITH_CAMERA_SUPPORT 1
-#else
-#  define BUILD_WITH_CAMERA_SUPPORT 0
-#endif
+namespace cv {
 
-#if defined(HAVE_XINE)         || \
-    defined(HAVE_GSTREAMER)    || \
-    defined(HAVE_QUICKTIME)    || \
-    defined(HAVE_QTKIT)        || \
-    defined(HAVE_AVFOUNDATION) || \
-    /*defined(HAVE_OPENNI)     || too specialized */ \
-    defined(HAVE_FFMPEG)       || \
-    defined(HAVE_MSMF)
-#  define BUILD_WITH_VIDEO_INPUT_SUPPORT 1
-#else
-#  define BUILD_WITH_VIDEO_INPUT_SUPPORT 0
-#endif
-
-#if /*defined(HAVE_XINE)       || */\
-    defined(HAVE_GSTREAMER)    || \
-    defined(HAVE_QUICKTIME)    || \
-    defined(HAVE_QTKIT)        || \
-    defined(HAVE_AVFOUNDATION) || \
-    defined(HAVE_FFMPEG)       || \
-    defined(HAVE_MSMF)
-#  define BUILD_WITH_VIDEO_OUTPUT_SUPPORT 1
-#else
-#  define BUILD_WITH_VIDEO_OUTPUT_SUPPORT 0
-#endif
-
-namespace cvtest
+inline std::ostream &operator<<(std::ostream &out, const VideoCaptureAPIs& api)
 {
+    out << cv::videoio_registry::getBackendName(api); return out;
+}
 
-string fourccToString(int fourcc);
-
-struct VideoFormat
+static inline void PrintTo(const cv::VideoCaptureAPIs& api, std::ostream* os)
 {
-    VideoFormat() { fourcc = -1; }
-    VideoFormat(const string& _ext, int _fourcc) : ext(_ext), fourcc(_fourcc) {}
-    bool empty() const { return ext.empty(); }
+    *os << cv::videoio_registry::getBackendName(api);
+}
 
-    string ext;
-    int fourcc;
+} // namespace
+
+
+inline std::string fourccToString(int fourcc)
+{
+    return cv::format("%c%c%c%c", fourcc & 255, (fourcc >> 8) & 255, (fourcc >> 16) & 255, (fourcc >> 24) & 255);
+}
+
+inline int fourccFromString(const std::string &fourcc)
+{
+    if (fourcc.size() != 4) return 0;
+    return cv::VideoWriter::fourcc(fourcc[0], fourcc[1], fourcc[2], fourcc[3]);
+}
+
+inline void generateFrame(int i, int FRAME_COUNT, cv::Mat & frame)
+{
+    using namespace cv;
+    using namespace std;
+    int offset = (((i * 5) % FRAME_COUNT) - FRAME_COUNT / 2) * (frame.cols / 2) / FRAME_COUNT;
+    frame(cv::Rect(0, 0, frame.cols / 2 + offset, frame.rows)) = Scalar(255, 255, 255);
+    frame(cv::Rect(frame.cols / 2 + offset, 0, frame.cols - frame.cols / 2 - offset, frame.rows)) = Scalar(0, 0, 0);
+    ostringstream buf; buf << "Frame " << setw(2) << setfill('0') << i + 1;
+    int baseLine = 0;
+    Size box = getTextSize(buf.str(), FONT_HERSHEY_COMPLEX, 2, 5, &baseLine);
+    putText(frame, buf.str(), Point((frame.cols - box.width) / 2, (frame.rows - box.height) / 2 + baseLine),
+            FONT_HERSHEY_COMPLEX, 2, Scalar(0, 0, 255), 5, LINE_AA);
+    Point p(i * frame.cols / (FRAME_COUNT - 1), i * frame.rows / (FRAME_COUNT - 1));
+    circle(frame, p, 50, Scalar(200, 25, 55), 8, LINE_AA);
+#if 0
+    imshow("frame", frame);
+    waitKey();
+#endif
+}
+
+class BunnyParameters
+{
+public:
+    inline static int    getWidth()  { return 672; };
+    inline static int    getHeight() { return 384; };
+    inline static int    getFps()    { return 24; };
+    inline static double getTime()   { return 5.21; };
+    inline static int    getCount()  { return cvRound(getFps() * getTime()); };
+    inline static std::string getFilename(const std::string &ext)
+    {
+        return cvtest::TS::ptr()->get_data_path() + "video/big_buck_bunny" + ext;
+    }
 };
 
-extern const VideoFormat g_specific_fmt_list[];
 
+static inline bool isBackendAvailable(cv::VideoCaptureAPIs api, const std::vector<cv::VideoCaptureAPIs>& api_list)
+{
+    for (size_t i = 0; i < api_list.size(); i++)
+    {
+        if (api_list[i] == api)
+            return true;
+    }
+    return false;
 }
 
 #endif

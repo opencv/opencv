@@ -359,7 +359,7 @@ static int icvInitEMD( const float* signature1, int size1,
     /* allocate buffers */
     _buffer.allocate(buffer_size);
 
-    state->buffer = buffer = _buffer;
+    state->buffer = buffer = _buffer.data();
     buffer_end = buffer + buffer_size;
 
     state->idx1 = (int*) buffer;
@@ -567,10 +567,13 @@ static int icvInitEMD( const float* signature1, int size1,
 static int icvFindBasicVariables( float **cost, char **is_x,
                        CvNode1D * u, CvNode1D * v, int ssize, int dsize )
 {
-    int i, j, found;
+    int i, j;
     int u_cfound, v_cfound;
     CvNode1D u0_head, u1_head, *cur_u, *prev_u;
     CvNode1D v0_head, v1_head, *cur_v, *prev_v;
+    bool found;
+
+    CV_Assert(u != 0 && v != 0);
 
     /* initialize the rows list (u) and the columns list (v) */
     u0_head.next = u;
@@ -599,13 +602,14 @@ static int icvFindBasicVariables( float **cost, char **is_x,
     u_cfound = v_cfound = 0;
     while( u_cfound < ssize || v_cfound < dsize )
     {
-        found = 0;
+        found = false;
         if( v_cfound < dsize )
         {
             /* loop over all marked columns */
             prev_v = &v1_head;
-
-            for( found |= (cur_v = v1_head.next) != 0; cur_v != 0; cur_v = cur_v->next )
+            cur_v = v1_head.next;
+            found = found || (cur_v != 0);
+            for( ; cur_v != 0; cur_v = cur_v->next )
             {
                 float cur_v_val = cur_v->val;
 
@@ -640,7 +644,9 @@ static int icvFindBasicVariables( float **cost, char **is_x,
         {
             /* loop over all marked rows */
             prev_u = &u1_head;
-            for( found |= (cur_u = u1_head.next) != 0; cur_u != 0; cur_u = cur_u->next )
+            cur_u = u1_head.next;
+            found = found || (cur_u != 0);
+            for( ; cur_u != 0; cur_u = cur_u->next )
             {
                 float cur_u_val = cur_u->val;
                 float *_cost;
@@ -730,7 +736,7 @@ icvNewSolution( CvEMDState * state )
     int i, j;
     float min_val = CV_EMD_INF;
     int steps;
-    CvNode2D head, *cur_x, *next_x, *leave_x = 0;
+    CvNode2D head = {0, {0}, 0, 0}, *cur_x, *next_x, *leave_x = 0;
     CvNode2D *enter_x = state->enter_x;
     CvNode2D **loop = state->loop;
 
@@ -773,6 +779,7 @@ icvNewSolution( CvEMDState * state )
     }
 
     /* remove the leaving basic variable */
+    CV_Assert(leave_x != NULL);
     i = leave_x->i;
     j = leave_x->j;
     state->is_x[i][j] = 0;
@@ -782,7 +789,7 @@ icvNewSolution( CvEMDState * state )
     while( (next_x = cur_x->next[0]) != leave_x )
     {
         cur_x = next_x;
-        assert( cur_x );
+        CV_Assert( cur_x );
     }
     cur_x->next[0] = next_x->next[0];
     state->rows_x[i] = head.next[0];
@@ -792,7 +799,7 @@ icvNewSolution( CvEMDState * state )
     while( (next_x = cur_x->next[1]) != leave_x )
     {
         cur_x = next_x;
-        assert( cur_x );
+        CV_Assert( cur_x );
     }
     cur_x->next[1] = next_x->next[1];
     state->cols_x[j] = head.next[1];
@@ -1144,20 +1151,20 @@ float cv::EMD( InputArray _signature1, InputArray _signature2,
                int distType, InputArray _cost,
                float* lowerBound, OutputArray _flow )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat signature1 = _signature1.getMat(), signature2 = _signature2.getMat();
     Mat cost = _cost.getMat(), flow;
 
-    CvMat _csignature1 = signature1;
-    CvMat _csignature2 = signature2;
-    CvMat _ccost = cost, _cflow;
+    CvMat _csignature1 = cvMat(signature1);
+    CvMat _csignature2 = cvMat(signature2);
+    CvMat _ccost = cvMat(cost), _cflow;
     if( _flow.needed() )
     {
         _flow.create(signature1.rows, signature2.rows, CV_32F);
         flow = _flow.getMat();
         flow = Scalar::all(0);
-        _cflow = flow;
+        _cflow = cvMat(flow);
     }
 
     return cvCalcEMD2( &_csignature1, &_csignature2, distType, 0, cost.empty() ? 0 : &_ccost,

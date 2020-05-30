@@ -17,11 +17,11 @@ Theory and Code
 We saw what is convex hull in second chapter about contours. Any deviation of the object from this
 hull can be considered as convexity defect.
 
-OpenCV comes with a ready-made function to find this, **cv2.convexityDefects()**. A basic function
+OpenCV comes with a ready-made function to find this, **cv.convexityDefects()**. A basic function
 call would look like below:
 @code{.py}
-hull = cv2.convexHull(cnt,returnPoints = False)
-defects = cv2.convexityDefects(cnt,hull)
+hull = cv.convexHull(cnt,returnPoints = False)
+defects = cv.convexityDefects(cnt,hull)
 @endcode
 
 @note Remember we have to pass returnPoints = False while finding convex hull, in order to find
@@ -33,29 +33,29 @@ line joining start point and end point, then draw a circle at the farthest point
 three values returned are indices of cnt. So we have to bring those values from cnt.
 
 @code{.py}
-import cv2
+import cv2 as cv
 import numpy as np
 
-img = cv2.imread('star.jpg')
-img_gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-ret,thresh = cv2.threshold(img_gray, 127, 255,0)
-im2,contours,hierarchy = cv2.findContours(thresh,2,1)
+img = cv.imread('star.jpg')
+img_gray = cv.cvtColor(img,cv.COLOR_BGR2GRAY)
+ret,thresh = cv.threshold(img_gray, 127, 255,0)
+contours,hierarchy = cv.findContours(thresh,2,1)
 cnt = contours[0]
 
-hull = cv2.convexHull(cnt,returnPoints = False)
-defects = cv2.convexityDefects(cnt,hull)
+hull = cv.convexHull(cnt,returnPoints = False)
+defects = cv.convexityDefects(cnt,hull)
 
 for i in range(defects.shape[0]):
     s,e,f,d = defects[i,0]
     start = tuple(cnt[s][0])
     end = tuple(cnt[e][0])
     far = tuple(cnt[f][0])
-    cv2.line(img,start,end,[0,255,0],2)
-    cv2.circle(img,far,5,[0,0,255],-1)
+    cv.line(img,start,end,[0,255,0],2)
+    cv.circle(img,far,5,[0,0,255],-1)
 
-cv2.imshow('img',img)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
+cv.imshow('img',img)
+cv.waitKey(0)
+cv.destroyAllWindows()
 @endcode
 And see the result:
 
@@ -69,7 +69,7 @@ if point is on the contour.
 
 For example, we can check the point (50,50) as follows:
 @code{.py}
-dist = cv2.pointPolygonTest(cnt,(50,50),True)
+dist = cv.pointPolygonTest(cnt,(50,50),True)
 @endcode
 In the function, third argument is measureDist. If it is True, it finds the signed distance. If
 False, it finds whether the point is inside or outside or on the contour (it returns +1, -1, 0
@@ -80,26 +80,26 @@ time consuming process. So, making it False gives about 2-3X speedup.
 
 ### 3. Match Shapes
 
-OpenCV comes with a function **cv2.matchShapes()** which enables us to compare two shapes, or two
+OpenCV comes with a function **cv.matchShapes()** which enables us to compare two shapes, or two
 contours and returns a metric showing the similarity. The lower the result, the better match it is.
 It is calculated based on the hu-moment values. Different measurement methods are explained in the
 docs.
 @code{.py}
-import cv2
+import cv2 as cv
 import numpy as np
 
-img1 = cv2.imread('star.jpg',0)
-img2 = cv2.imread('star2.jpg',0)
+img1 = cv.imread('star.jpg',0)
+img2 = cv.imread('star2.jpg',0)
 
-ret, thresh = cv2.threshold(img1, 127, 255,0)
-ret, thresh2 = cv2.threshold(img2, 127, 255,0)
-im2,contours,hierarchy = cv2.findContours(thresh,2,1)
+ret, thresh = cv.threshold(img1, 127, 255,0)
+ret, thresh2 = cv.threshold(img2, 127, 255,0)
+contours,hierarchy = cv.findContours(thresh,2,1)
 cnt1 = contours[0]
-im2,contours,hierarchy = cv2.findContours(thresh2,2,1)
+contours,hierarchy = cv.findContours(thresh2,2,1)
 cnt2 = contours[0]
 
-ret = cv2.matchShapes(cnt1,cnt2,1,0.0)
-print ret
+ret = cv.matchShapes(cnt1,cnt2,1,0.0)
+print( ret )
 @endcode
 I tried matching shapes with different shapes given below:
 
@@ -113,9 +113,9 @@ I got following results:
 
 See, even image rotation doesn't affect much on this comparison.
 
-@sa [Hu-Moments](http://en.wikipedia.org/wiki/Image_moment#Rotation_invariant_moments) are seven
+@note [Hu-Moments](http://en.wikipedia.org/wiki/Image_moment#Rotation_invariant_moments) are seven
 moments invariant to translation, rotation and scale. Seventh one is skew-invariant. Those values
-can be found using **cv2.HuMoments()** function.
+can be found using **cv.HuMoments()** function.
 
 Additional Resources
 ====================
@@ -123,10 +123,10 @@ Additional Resources
 Exercises
 ---------
 
--#  Check the documentation for **cv2.pointPolygonTest()**, you can find a nice image in Red and
+-#  Check the documentation for **cv.pointPolygonTest()**, you can find a nice image in Red and
     Blue color. It represents the distance from all pixels to the white curve on it. All pixels
     inside curve is blue depending on the distance. Similarly outside points are red. Contour edges
     are marked with White. So problem is simple. Write a code to create such a representation of
     distance.
--#  Compare images of digits or letters using **cv2.matchShapes()**. ( That would be a simple step
+-#  Compare images of digits or letters using **cv.matchShapes()**. ( That would be a simple step
     towards OCR )

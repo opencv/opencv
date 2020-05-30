@@ -1,6 +1,9 @@
 Installation in Linux {#tutorial_linux_install}
 =====================
 
+@next_tutorial{tutorial_linux_gcc_cmake}
+
+
 The following steps have been tested for Ubuntu 10.04 but should work with other distros as well.
 
 Required Packages
@@ -33,7 +36,7 @@ repository](https://github.com/opencv/opencv.git).
 
 ### Getting the Latest Stable OpenCV Version
 
--   Go to our [downloads page](http://opencv.org/downloads.html).
+-   Go to our [downloads page](http://opencv.org/releases.html).
 -   Download the source archive and unpack it.
 
 ### Getting the Cutting-edge OpenCV from the Git Repository
@@ -97,6 +100,12 @@ Building OpenCV from Source Using CMake
     -   It is useful also to unset BUILD_EXAMPLES, BUILD_TESTS, BUILD_PERF_TESTS - as they all
         will be statically linked with OpenCV and can take a lot of memory.
 
+-#  [optional] Generate pkg-config info
+    -   Add this flag when running CMake: `-DOPENCV_GENERATE_PKGCONFIG=ON`
+    -   Will generate the .pc file for pkg-config and install it.
+    -   Useful if not using CMake in projects that use OpenCV
+    -   Installed as `opencv4`, usage: `pkg-config --cflags --libs opencv4`
+
 -#  Build. From build directory execute *make*, it is recommended to do this in several threads
 
     For example
@@ -104,12 +113,12 @@ Building OpenCV from Source Using CMake
     make -j7 # runs 7 jobs in parallel
     @endcode
 -#  [optional] Building documents. Enter \<cmake_build_dir/doc/\> and run make with target
-    "html_docs"
+    "doxygen"
 
     For example
     @code{.bash}
     cd ~/opencv/build/doc/
-    make -j7 html_docs
+    make -j7 doxygen
     @endcode
 -#  To install libraries, execute the following command from build directory
     @code{.bash}

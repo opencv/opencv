@@ -39,33 +39,29 @@ static void onTrackbar(int, void*)
     imshow(window_name2, cedge);
 }
 
-static void help()
+static void help(const char** argv)
 {
     printf("\nThis sample demonstrates Canny edge detection\n"
            "Call:\n"
-           "    /.edge [image_name -- Default is ../data/fruits.jpg]\n\n");
+           "    %s [image_name -- Default is fruits.jpg]\n\n", argv[0]);
 }
 
 const char* keys =
 {
-    "{help h||}{@image |../data/fruits.jpg|input image name}"
+    "{help h||}{@image |fruits.jpg|input image name}"
 };
 
 int main( int argc, const char** argv )
 {
+    help(argv);
     CommandLineParser parser(argc, argv, keys);
-    if (parser.has("help"))
-    {
-        help();
-        return 0;
-    }
     string filename = parser.get<string>(0);
 
-    image = imread(filename, 1);
+    image = imread(samples::findFile(filename), IMREAD_COLOR);
     if(image.empty())
     {
         printf("Cannot read image file: %s\n", filename.c_str());
-        help();
+        help(argv);
         return -1;
     }
     cedge.create(image.size(), image.type());

@@ -1,10 +1,10 @@
 
 /* pngmem.c - stub functions for memory allocation
  *
- * Last changed in libpng 1.6.24 [August 4, 2016]
+ * Copyright (c) 2018 Cosmin Truta
  * Copyright (c) 1998-2002,2004,2006-2014,2016 Glenn Randers-Pehrson
- * (Version 0.96 Copyright (c) 1996, 1997 Andreas Dilger)
- * (Version 0.88 Copyright (c) 1995, 1996 Guy Eric Schalnat, Group 42, Inc.)
+ * Copyright (c) 1996-1997 Andreas Dilger
+ * Copyright (c) 1995-1996 Guy Eric Schalnat, Group 42, Inc.
  *
  * This code is released under the libpng license.
  * For conditions of distribution and use, see the disclaimer
@@ -109,7 +109,7 @@ static png_voidp
 png_malloc_array_checked(png_const_structrp png_ptr, int nelements,
     size_t element_size)
 {
-   png_alloc_size_t req = nelements; /* known to be > 0 */
+   png_alloc_size_t req = (png_alloc_size_t)nelements; /* known to be > 0 */
 
    if (req <= PNG_SIZE_MAX/element_size)
       return png_malloc_base(png_ptr, req * element_size);

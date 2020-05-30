@@ -1,10 +1,10 @@
 ///////////////////////////////////////////////////////////////////////////
 //
-// Copyright (c) 2002, Industrial Light & Magic, a division of Lucas
+// Copyright (c) 2002-2012, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -46,8 +46,9 @@
 #include "ImathVec.h"
 #include "ImathBox.h"
 #include "ImathLine.h"
+#include "ImathNamespace.h"
 
-namespace Imath {
+IMATH_INTERNAL_NAMESPACE_HEADER_ENTER
 
 template <class T>
 class Sphere3
@@ -129,26 +130,26 @@ bool Sphere3<T>::intersectT(const Line3<T> &line, T &t) const
 
     if (discr < 0.0)
     {
-    // line and Sphere3 do not intersect
+	// line and Sphere3 do not intersect
 
-    doesIntersect = false;
+	doesIntersect = false;
     }
     else
     {
-    // t0: (-B - sqrt(B^2 - 4AC)) / 2A  (A = 1)
+	// t0: (-B - sqrt(B^2 - 4AC)) / 2A  (A = 1)
 
-    T sqroot = Math<T>::sqrt(discr);
-    t = (-B - sqroot) * T(0.5);
+	T sqroot = Math<T>::sqrt(discr);
+	t = (-B - sqroot) * T(0.5);
 
-    if (t < 0.0)
-    {
-        // no intersection, try t1: (-B + sqrt(B^2 - 4AC)) / 2A  (A = 1)
+	if (t < 0.0)
+	{
+	    // no intersection, try t1: (-B + sqrt(B^2 - 4AC)) / 2A  (A = 1)
 
-        t = (-B + sqroot) * T(0.5);
-    }
+	    t = (-B + sqroot) * T(0.5);
+	}
 
-    if (t < 0.0)
-        doesIntersect = false;
+	if (t < 0.0)
+	    doesIntersect = false;
     }
 
     return doesIntersect;
@@ -162,16 +163,15 @@ bool Sphere3<T>::intersect(const Line3<T> &line, Vec3<T> &intersection) const
 
     if (intersectT (line, t))
     {
-    intersection = line(t);
-    return true;
+	intersection = line(t);
+	return true;
     }
     else
     {
-    return false;
+	return false;
     }
 }
 
+IMATH_INTERNAL_NAMESPACE_HEADER_EXIT
 
-} //namespace Imath
-
-#endif
+#endif // INCLUDED_IMATHSPHERE_H

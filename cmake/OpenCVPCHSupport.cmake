@@ -12,7 +12,7 @@
 #   ADD_NATIVE_PRECOMPILED_HEADER _targetName _input _dowarn
 #   GET_NATIVE_PRECOMPILED_HEADER _targetName _input
 
-IF(CMAKE_COMPILER_IS_GNUCXX)
+IF(CV_GCC)
 
     IF(NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "4.2.0")
         SET(PCHSupport_FOUND TRUE)
@@ -36,26 +36,26 @@ MACRO(_PCH_GET_COMPILE_FLAGS _out_compile_flags)
     STRING(TOUPPER "CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE}" _flags_var_name)
     SET(${_out_compile_flags} ${${_flags_var_name}} )
 
-    IF(CMAKE_COMPILER_IS_GNUCXX)
+    IF(CV_GCC)
 
         GET_TARGET_PROPERTY(_targetType ${_PCH_current_target} TYPE)
         IF(${_targetType} STREQUAL SHARED_LIBRARY AND NOT WIN32)
             LIST(APPEND ${_out_compile_flags} "-fPIC")
         ENDIF()
 
-        GET_PROPERTY(_definitions DIRECTORY PROPERTY COMPILE_DEFINITIONS)
-        if(_definitions)
-          foreach(_def ${_definitions})
-            LIST(APPEND ${_out_compile_flags} "\"-D${_def}\"")
-          endforeach()
-        endif()
-        GET_TARGET_PROPERTY(_target_definitions ${_PCH_current_target} COMPILE_DEFINITIONS)
-        if(_target_definitions)
-          foreach(_def ${_target_definitions})
-            LIST(APPEND ${_out_compile_flags} "\"-D${_def}\"")
-          endforeach()
-        endif()
+        # Processed via $<TARGET_PROPERTY:target,COMPILE_DEFINITIONS>
+        #GET_PROPERTY(_definitions DIRECTORY PROPERTY COMPILE_DEFINITIONS)
+        #GET_TARGET_PROPERTY(_target_definitions ${_PCH_current_target} COMPILE_DEFINITIONS)
 
+        GET_TARGET_PROPERTY(_cxx_standard ${_PCH_current_target} CXX_STANDARD)
+        if (_cxx_standard)
+            GET_TARGET_PROPERTY(_cxx_extensions ${_PCH_current_target} CXX_EXTENSIONS)
+            if (_cxx_extensions)
+                LIST(APPEND ${_out_compile_flags} "${CMAKE_CXX${_cxx_standard}_EXTENSION_COMPILE_OPTION}")
+            else()
+                LIST(APPEND ${_out_compile_flags} "${CMAKE_CXX${_cxx_standard}_STANDARD_COMPILE_OPTION}")
+            endif()
+        endif()
     ELSE()
         ## TODO ... ? or does it work out of the box
     ENDIF()
@@ -65,7 +65,7 @@ MACRO(_PCH_GET_COMPILE_FLAGS _out_compile_flags)
         ocv_is_opencv_directory(__result ${item})
         if(__result)
           LIST(APPEND ${_out_compile_flags} "${_PCH_include_prefix}\"${item}\"")
-        elseif(CMAKE_COMPILER_IS_GNUCXX AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "6.0" AND
+        elseif(CV_GCC AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "6.0" AND
                item MATCHES "/usr/include$")
           # workaround for GCC 6.x bug
         else()
@@ -78,7 +78,7 @@ MACRO(_PCH_GET_COMPILE_FLAGS _out_compile_flags)
         ocv_is_opencv_directory(__result ${item})
         if(__result)
           LIST(APPEND ${_out_compile_flags} "${_PCH_include_prefix}\"${item}\"")
-        elseif(CMAKE_COMPILER_IS_GNUCXX AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "6.0" AND
+        elseif(CV_GCC AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "6.0" AND
                item MATCHES "/usr/include$")
           # workaround for GCC 6.x bug
         else()
@@ -97,8 +97,8 @@ MACRO(_PCH_WRITE_PCHDEP_CXX _targetName _include_file _dephelp)
 
     set(${_dephelp} "${CMAKE_CURRENT_BINARY_DIR}/${_targetName}_pch_dephelp.cxx")
     set(_content "")
-    if(EXISTS "${_dephelp}")
-      file(READ "${_dephelp}" _content)
+    if(EXISTS "${${_dephelp}}")
+      file(READ "${${_dephelp}}" _content)
     endif()
     set(_dummy_str
 "#include \"${_include_file}\"
@@ -119,20 +119,20 @@ MACRO(_PCH_GET_COMPILE_COMMAND out_command _input _output)
     FILE(TO_NATIVE_PATH ${_input} _native_input)
     FILE(TO_NATIVE_PATH ${_output} _native_output)
 
-    IF(CMAKE_COMPILER_IS_GNUCXX)
+    if(CV_GCC)
         IF(CMAKE_CXX_COMPILER_ARG1)
             # remove leading space in compiler argument
             STRING(REGEX REPLACE "^ +" "" pchsupport_compiler_cxx_arg1 ${CMAKE_CXX_COMPILER_ARG1})
 
             SET(${out_command}
-              ${CMAKE_CXX_COMPILER} ${pchsupport_compiler_cxx_arg1} ${_compile_FLAGS} -x c++-header -o ${_output} ${_input}
+              ${CMAKE_CXX_COMPILER} ${pchsupport_compiler_cxx_arg1} ${_compile_FLAGS} -x c++-header -o ${_output} -c ${_input}
               )
         ELSE(CMAKE_CXX_COMPILER_ARG1)
             SET(${out_command}
-              ${CMAKE_CXX_COMPILER}  ${_compile_FLAGS} -x c++-header -o ${_output} ${_input}
+              ${CMAKE_CXX_COMPILER}  ${_compile_FLAGS} -x c++-header -o ${_output} -c ${_input}
               )
         ENDIF(CMAKE_CXX_COMPILER_ARG1)
-    ELSE(CMAKE_COMPILER_IS_GNUCXX)
+    ELSE()
 
         SET(_dummy_str "#include <${_input}>")
         FILE(WRITE ${CMAKE_CURRENT_BINARY_DIR}/pch_dummy.cpp ${_dummy_str})
@@ -142,7 +142,7 @@ MACRO(_PCH_GET_COMPILE_COMMAND out_command _input _output)
           )
         #/out:${_output}
 
-    ENDIF(CMAKE_COMPILER_IS_GNUCXX)
+    ENDIF()
 
 ENDMACRO(_PCH_GET_COMPILE_COMMAND )
 
@@ -151,7 +151,7 @@ MACRO(_PCH_GET_TARGET_COMPILE_FLAGS _cflags  _header_name _pch_path _dowarn )
 
     FILE(TO_NATIVE_PATH ${_pch_path} _native_pch_path)
 
-    IF(CMAKE_COMPILER_IS_GNUCXX)
+    IF(CV_GCC)
         # for use with distcc and gcc >4.0.1 if preprocessed files are accessible
         # on all remote machines set
         # PCH_ADDITIONAL_COMPILER_FLAGS to -fpch-preprocess
@@ -164,11 +164,11 @@ MACRO(_PCH_GET_TARGET_COMPILE_FLAGS _cflags  _header_name _pch_path _dowarn )
             SET(${_cflags} "${PCH_ADDITIONAL_COMPILER_FLAGS} " )
         ENDIF (_dowarn)
 
-    ELSE(CMAKE_COMPILER_IS_GNUCXX)
+    ELSE()
 
         set(${_cflags} "/Fp${_native_pch_path} /Yu${_header_name}" )
 
-    ENDIF(CMAKE_COMPILER_IS_GNUCXX)
+    ENDIF()
 
 ENDMACRO(_PCH_GET_TARGET_COMPILE_FLAGS )
 
@@ -196,13 +196,13 @@ MACRO(ADD_PRECOMPILED_HEADER_TO_TARGET _targetName _input _pch_output_to_use )
 
     _PCH_GET_TARGET_COMPILE_FLAGS(_target_cflags ${_name} ${_pch_output_to_use} ${_dowarn})
     #MESSAGE("Add flags ${_target_cflags} to ${_targetName} " )
-    if(CMAKE_COMPILER_IS_GNUCXX)
+    if(CV_GCC)
       set(_target_cflags "${_target_cflags} -include \"${CMAKE_CURRENT_BINARY_DIR}/${_name}\"")
     endif()
 
     GET_TARGET_PROPERTY(_sources ${_targetName} SOURCES)
     FOREACH(src ${_sources})
-      if(NOT "${src}" MATCHES "\\.mm$")
+      if(NOT "${src}" MATCHES "\\.mm$" AND NOT "${src}" MATCHES "\\.rc$")
         get_source_file_property(_flags "${src}" COMPILE_FLAGS)
         get_source_file_property(_flags2 "${src}" COMPILE_DEFINITIONS)
         if(NOT _flags AND NOT _flags2)
@@ -252,6 +252,7 @@ MACRO(ADD_PRECOMPILED_HEADER _targetName _input)
       )
 
     _PCH_GET_COMPILE_FLAGS(_compile_FLAGS)
+    list(APPEND _compile_FLAGS "${_PCH_include_prefix}\"${_path}\"")
 
     get_target_property(type ${_targetName} TYPE)
     if(type STREQUAL "SHARED_LIBRARY")
@@ -259,6 +260,24 @@ MACRO(ADD_PRECOMPILED_HEADER _targetName _input)
         if(NOT __DEFINES MATCHES __DEFINES-NOTFOUND)
             list(APPEND _compile_FLAGS "${_PCH_define_prefix}${__DEFINES}")
         endif()
+    endif()
+
+    if(type STREQUAL "SHARED_LIBRARY" OR type STREQUAL "STATIC_LIBRARY")
+      get_target_property(__pic ${_targetName} POSITION_INDEPENDENT_CODE)
+      if(__pic AND CMAKE_CXX_COMPILE_OPTIONS_PIC
+          AND NOT OPENCV_SKIP_PCH_PIC_HANDLING
+          AND NOT OPENCV_SKIP_PCH_PIC_HANDLING_${_targetName}
+      )
+        list(APPEND _compile_FLAGS "${CMAKE_CXX_COMPILE_OPTIONS_PIC}")
+      endif()
+    elseif(type STREQUAL "EXECUTABLE")
+      get_target_property(__pie ${_targetName} POSITION_INDEPENDENT_CODE)
+      if(__pie AND CMAKE_CXX_COMPILE_OPTIONS_PIE
+          AND NOT OPENCV_SKIP_PCH_PIE_HANDLING
+          AND NOT OPENCV_SKIP_PCH_PIE_HANDLING_${_targetName}
+      )
+        list(APPEND _compile_FLAGS "${CMAKE_CXX_COMPILE_OPTIONS_PIE}")
+      endif()
     endif()
 
     get_target_property(DIRINC ${_targetName} INCLUDE_DIRECTORIES)
@@ -276,12 +295,25 @@ MACRO(ADD_PRECOMPILED_HEADER _targetName _input)
     #message("_command  ${_input} ${_output}")
     _PCH_GET_COMPILE_COMMAND(_command  ${CMAKE_CURRENT_BINARY_DIR}/${_name} ${_output} )
 
+    set(_pch_generate_file_cmd "${CMAKE_CURRENT_BINARY_DIR}/${_name}.command.sh")
+    string(REPLACE " " "\\ " _command "${_command}")
+    string(REPLACE ";" " " _command "${_command}")
+    file(GENERATE OUTPUT "${_pch_generate_file_cmd}" CONTENT "#!/bin/sh
+if [ -n \"$VERBOSE\" ]; then
+  tail -n1 \$0
+fi
+${_command} '-D$<JOIN:$<TARGET_PROPERTY:${_targetName},COMPILE_DEFINITIONS>,' '-D>'
+")
     GET_FILENAME_COMPONENT(_outdir ${_output} PATH)
+    if(NOT CMAKE_HOST_WIN32)  # chmod may be not available on Win32/MinGW (and it is not required)
+      set(_pch_prepare_command COMMAND chmod +x "${_pch_generate_file_cmd}")
+    endif()
     ADD_CUSTOM_COMMAND(
       OUTPUT "${_output}"
       COMMAND ${CMAKE_COMMAND} -E make_directory "${_outdir}"
-      COMMAND ${_command}
-      DEPENDS "${_input}"
+      ${_pch_prepare_command}
+      COMMAND "${_pch_generate_file_cmd}"
+      DEPENDS "${_input}" "${_pch_generate_file_cmd}"
       DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/${_name}"
       DEPENDS ${_targetName}_pch_dephelp
       )
@@ -292,7 +324,7 @@ ENDMACRO(ADD_PRECOMPILED_HEADER)
 
 
 # Generates the use of precompiled in a target,
-# without using depency targets (2 extra for each target)
+# without using dependency targets (2 extra for each target)
 # Using Visual, must also add ${_targetName}_pch to sources
 # Not needed by Xcode
 
@@ -319,14 +351,11 @@ MACRO(ADD_NATIVE_PRECOMPILED_HEADER _targetName _input)
 
         # Auto include the precompile (useful for moc processing, since the use of
         # precompiled is specified at the target level
-        # and I don't want to specifiy /F- for each moc/res/ui generated files (using Qt)
+        # and I don't want to specify /F- for each moc/res/ui generated files (using Qt)
 
         get_target_property(_sources ${_targetName} SOURCES)
         foreach(src ${_sources})
-          if(NOT "${src}" MATCHES "\\.mm$"
-               AND NOT "${src}" MATCHES "\\.h$" AND NOT "${src}" MATCHES "\\.hpp$" # header files
-               AND NOT "${src}" MATCHES "^\$" # CMake generator expressions
-          )
+          if("${src}" MATCHES "\\.c(pp|xx)?$")
             get_source_file_property(oldProps "${src}" COMPILE_FLAGS)
             get_source_file_property(oldProps2 "${src}" COMPILE_DEFINITIONS)
             if(NOT oldProps AND NOT oldProps2)
@@ -338,7 +367,7 @@ MACRO(ADD_NATIVE_PRECOMPILED_HEADER _targetName _input)
           endif()
         endforeach()
 
-        #also inlude ${oldProps} to have the same compile options
+        #also include ${oldProps} to have the same compile options
         GET_TARGET_PROPERTY(oldProps ${_targetName} COMPILE_FLAGS)
         if (oldProps MATCHES NOTFOUND)
             SET(oldProps "")
@@ -359,7 +388,7 @@ MACRO(ADD_NATIVE_PRECOMPILED_HEADER _targetName _input)
         # For Xcode, cmake needs my patch to process
         # GCC_PREFIX_HEADER and GCC_PRECOMPILE_PREFIX_HEADER as target properties
 
-        # When buiding out of the tree, precompiled may not be located
+        # When building out of the tree, precompiled may not be located
         # Use full path instead.
         GET_FILENAME_COMPONENT(fullPath ${_input} ABSOLUTE)
 
@@ -368,7 +397,7 @@ MACRO(ADD_NATIVE_PRECOMPILED_HEADER _targetName _input)
 
     else()
 
-        #Fallback to the "old" precompiled suppport
+        #Fallback to the "old" precompiled support
         #ADD_PRECOMPILED_HEADER(${_targetName} ${_input} ${_dowarn})
 
     endif()
@@ -379,7 +408,7 @@ macro(ocv_add_precompiled_header_to_target the_target pch_header)
   if(PCHSupport_FOUND AND ENABLE_PRECOMPILED_HEADERS AND EXISTS "${pch_header}")
     if(CMAKE_GENERATOR MATCHES "^Visual" OR CMAKE_GENERATOR MATCHES Xcode)
       add_native_precompiled_header(${the_target} ${pch_header})
-    elseif(CMAKE_COMPILER_IS_GNUCXX AND CMAKE_GENERATOR MATCHES "Makefiles|Ninja")
+    elseif(CV_GCC AND CMAKE_GENERATOR MATCHES "Makefiles|Ninja")
       add_precompiled_header(${the_target} ${pch_header})
     endif()
   endif()

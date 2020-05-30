@@ -47,9 +47,7 @@
 #include "../perf_precomp.hpp"
 #include "opencv2/ts/ocl_perf.hpp"
 
-#ifdef HAVE_OPENCL
-
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 ///////////// equalizeHist ////////////////////////
@@ -313,16 +311,16 @@ OCL_PERF_TEST_P(CannyFixture, Canny, ::testing::Combine(OCL_TEST_SIZES, OCL_PERF
     ASSERT_TRUE(!_img.empty()) << "can't open aloe-L.png";
 
     UMat img;
-    cv::resize(_img, img, imgSize);
+    cv::resize(_img, img, imgSize, 0, 0, INTER_LINEAR_EXACT);
     UMat edges(img.size(), CV_8UC1);
 
     declare.in(img).out(edges);
 
-    OCL_TEST_CYCLE() cv::Canny(img, edges, 50.0, 100.0, apertureSize, L2Grad);
+    PERF_SAMPLE_BEGIN();
+        cv::Canny(img, edges, 50.0, 100.0, apertureSize, L2Grad);
+    PERF_SAMPLE_END();
 
     SANITY_CHECK_NOTHING();
 }
 
-} } // namespace cvtest::ocl
-
-#endif // HAVE_OPENCL
+} } // namespace opencv_test::ocl

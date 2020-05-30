@@ -11,7 +11,7 @@
 
 // TODO remove LOG macros, add logging class
 #if ENABLE_LOG
-#ifdef ANDROID
+#ifdef __ANDROID__
   #include <iostream>
   #include <sstream>
   #include <android/log.h>

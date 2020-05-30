@@ -96,8 +96,8 @@ int main(int argc, const char* argv[])
     }
 
     bool defaultPicturesFail = true;
-    string fname0 = cmd.get<string>("left");
-    string fname1 = cmd.get<string>("right");
+    string fname0 = samples::findFile(cmd.get<string>("left"));
+    string fname1 = samples::findFile(cmd.get<string>("right"));
     string vdofile = cmd.get<string>("video");
     string outfile = cmd.get<string>("output");
     int points = cmd.get<int>("points");
@@ -105,9 +105,9 @@ int main(int argc, const char* argv[])
     int inputName = cmd.get<int>("c");
 
     UMat frame0;
-    imread(fname0, cv::IMREAD_GRAYSCALE).copyTo(frame0);
+    imread(fname0, IMREAD_GRAYSCALE).copyTo(frame0);
     UMat frame1;
-    imread(fname1, cv::IMREAD_GRAYSCALE).copyTo(frame1);
+    imread(fname1, IMREAD_GRAYSCALE).copyTo(frame1);
 
     vector<cv::Point2f> pts(points);
     vector<cv::Point2f> nextPts(points);

@@ -115,7 +115,7 @@ public:
     always sensible) will be used.
 
     @param x The initial point, that will become a centroid of an initial simplex. After the algorithm
-    will terminate, it will be setted to the point where the algorithm stops, the point of possible
+    will terminate, it will be set to the point where the algorithm stops, the point of possible
     minimum.
     @return The value of a function at the point found.
      */
@@ -165,7 +165,7 @@ public:
 
     /** @brief Sets the initial step that will be used in downhill simplex algorithm.
 
-    Step, together with initial point (givin in DownhillSolver::minimize) are two `n`-dimensional
+    Step, together with initial point (given in DownhillSolver::minimize) are two `n`-dimensional
     vectors that are used to determine the shape of initial simplex. Roughly said, initial point
     determines the position of a simplex (it will become simplex's centroid), while step determines the
     spread (size in each dimension) of a simplex. To be more precise, if \f$s,x_0\in\mathbb{R}^n\f$ are
@@ -219,10 +219,10 @@ converge to it. Another obvious restriction is that it should be possible to com
 a function at any point, thus it is preferable to have analytic expression for gradient and
 computational burden should be born by the user.
 
-The latter responsibility is accompilished via the getGradient method of a
+The latter responsibility is accomplished via the getGradient method of a
 MinProblemSolver::Function interface (which represents function being optimized). This method takes
 point a point in *n*-dimensional space (first argument represents the array of coordinates of that
-point) and comput its gradient (it should be stored in the second argument as an array).
+point) and compute its gradient (it should be stored in the second argument as an array).
 
 @note class ConjGradSolver thus does not add any new methods to the basic MinProblemSolver interface.
 
@@ -288,12 +288,12 @@ Bland's rule <http://en.wikipedia.org/wiki/Bland%27s_rule> is used to prevent cy
 contain 32- or 64-bit floating point numbers. As a convenience, column-vector may be also submitted,
 in the latter case it is understood to correspond to \f$c^T\f$.
 @param Constr `m`-by-`n+1` matrix, whose rightmost column corresponds to \f$b\f$ in formulation above
-and the remaining to \f$A\f$. It should containt 32- or 64-bit floating point numbers.
+and the remaining to \f$A\f$. It should contain 32- or 64-bit floating point numbers.
 @param z The solution will be returned here as a column-vector - it corresponds to \f$c\f$ in the
 formulation above. It will contain 64-bit floating point numbers.
 @return One of cv::SolveLPResult
  */
-CV_EXPORTS_W int solveLP(const Mat& Func, const Mat& Constr, Mat& z);
+CV_EXPORTS_W int solveLP(InputArray Func, InputArray Constr, OutputArray z);
 
 //! @}
 

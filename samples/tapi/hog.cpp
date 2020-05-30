@@ -7,7 +7,6 @@
 #include <opencv2/core/ocl.hpp>
 #include <opencv2/core/utility.hpp>
 #include "opencv2/imgcodecs.hpp"
-#include <opencv2/video.hpp>
 #include <opencv2/videoio.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/objdetect.hpp>
@@ -28,16 +27,6 @@ public:
     void workBegin();
     void workEnd();
     string workFps() const;
-    string message() const;
-
-
-// This function test if gpu_rst matches cpu_rst.
-// If the two vectors are not equal, it will return the difference in vector size
-// Else if will return
-// (total diff of each cpu and gpu rects covered pixels)/(total cpu rects covered pixels)
-    double checkRectSimilarity(Size sz,
-                               std::vector<Rect>& cpu_rst,
-                               std::vector<Rect>& gpu_rst);
 private:
     App operator=(App&);
 
@@ -71,10 +60,10 @@ int main(int argc, char** argv)
         "{ h help      |                | print help message }"
         "{ i input     |                | specify input image}"
         "{ c camera    | -1             | enable camera capturing }"
-        "{ v video     | ../data/vtest.avi | use video as input }"
+        "{ v video     | vtest.avi | use video as input }"
         "{ g gray      |                | convert image to gray one or not}"
         "{ s scale     | 1.0            | resize the image before detect}"
-        "{ o output    |                | specify output path when input is images}";
+        "{ o output    |   output.avi   | specify output path when input is images}";
     CommandLineParser cmd(argc, argv, keys);
     if (cmd.has("help"))
     {
@@ -117,7 +106,7 @@ App::App(CommandLineParser& cmd)
 
     make_gray = cmd.has("gray");
     resize_scale = cmd.get<double>("s");
-    vdo_source = cmd.get<string>("v");
+    vdo_source = samples::findFileOrKeep(cmd.get<string>("v"));
     img_source = cmd.get<string>("i");
     output = cmd.get<string>("o");
     camera_id = cmd.get<int>("c");
@@ -185,8 +174,7 @@ void App::run()
                 throw runtime_error(string("can't open image file: " + img_source));
         }
 
-        UMat img_aux, img;
-        Mat img_to_show;
+        UMat img_aux, img, img_to_show;
 
         // Iterate over all frames
         while (running && !frame.empty())
@@ -201,7 +189,7 @@ void App::run()
             if (abs(scale-1.0)>0.001)
             {
                 Size sz((int)((double)img_aux.cols/resize_scale), (int)((double)img_aux.rows/resize_scale));
-                resize(img_aux, img, sz);
+                resize(img_aux, img, sz, 0, 0, INTER_LINEAR_EXACT);
             }
             else img = img_aux;
             img.copyTo(img_to_show);
@@ -219,8 +207,7 @@ void App::run()
             // Draw positive classified windows
             for (size_t i = 0; i < found.size(); i++)
             {
-                Rect r = found[i];
-                rectangle(img_to_show, r.tl(), r.br(), Scalar(0, 255, 0), 3);
+                rectangle(img_to_show, found[i], Scalar(0, 255, 0), 3);
             }
 
             putText(img_to_show, ocl::useOpenCL() ? "Mode: OpenCL"  : "Mode: CPU", Point(5, 25), FONT_HERSHEY_SIMPLEX, 1., Scalar(255, 100, 0), 2);
@@ -233,7 +220,7 @@ void App::run()
 
             if (output!="" && write_once)
             {
-                if (img_source!="")     // wirte image
+                if (img_source!="")     // write image
                 {
                     write_once = false;
                     imwrite(output, img_to_show);
@@ -251,7 +238,7 @@ void App::run()
                     if (make_gray) cvtColor(img_to_show, img, COLOR_GRAY2BGR);
                     else cvtColor(img_to_show, img, COLOR_BGRA2BGR);
 
-                    video_writer << img.getMat(ACCESS_READ);
+                    video_writer << img;
                 }
             }
 

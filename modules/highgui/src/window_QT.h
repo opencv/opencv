@@ -76,6 +76,8 @@
 #include <QDate>
 #include <QFileDialog>
 #include <QToolBar>
+#include <QClipboard>
+
 #include <QAction>
 #include <QCheckBox>
 #include <QRadioButton>
@@ -90,6 +92,7 @@ enum { CV_MODE_NORMAL = 0, CV_MODE_OPENGL = 1 };
 enum {	shortcut_zoom_normal 	= Qt::CTRL + Qt::Key_Z,
         shortcut_zoom_imgRegion = Qt::CTRL + Qt::Key_X,
         shortcut_save_img		= Qt::CTRL + Qt::Key_S,
+        shortcut_copy_clipbrd   = Qt::CTRL + Qt::Key_C,
         shortcut_properties_win	= Qt::CTRL + Qt::Key_P,
         shortcut_zoom_in 		= Qt::CTRL + Qt::Key_Plus,//QKeySequence(QKeySequence::ZoomIn),
         shortcut_zoom_out		= Qt::CTRL + Qt::Key_Minus,//QKeySequence(QKeySequence::ZoomOut),
@@ -98,7 +101,6 @@ enum {	shortcut_zoom_normal 	= Qt::CTRL + Qt::Key_Z,
         shortcut_panning_up 	= Qt::CTRL + Qt::Key_Up,
         shortcut_panning_down 	= Qt::CTRL + Qt::Key_Down
     };
-
 //end enum
 
 class CvWindow;
@@ -132,6 +134,7 @@ public slots:
     void displayStatusBar( QString name, QString text, int delayms );
     void timeOut();
     void toggleFullScreen(QString name, double flags );
+    CvRect getWindowRect(QString name);
     double isFullScreen(QString name);
     double getPropWindow(QString name);
     void setPropWindow(QString name, double flags );
@@ -257,7 +260,7 @@ private:
     void* userdata;
 };
 
-//Both are top level window, so that a way to differenciate them.
+//Both are top level window, so that a way to differentiate them.
 //if (obj->metaObject ()->className () == "CvWindow") does not give me robust result
 
 enum typeWindow { type_CvWindow = 1, type_CvWinProperties = 2 };
@@ -277,9 +280,9 @@ public:
     QPointer<QBoxLayout> myLayout;
 
 private:
-    void closeEvent ( QCloseEvent * e );
-    void showEvent ( QShowEvent * event ) ;
-    void hideEvent ( QHideEvent * event ) ;
+    void closeEvent ( QCloseEvent * e ) CV_OVERRIDE;
+    void showEvent ( QShowEvent * event ) CV_OVERRIDE;
+    void hideEvent ( QHideEvent * event ) CV_OVERRIDE;
 };
 
 
@@ -298,6 +301,7 @@ public:
     double getRatio();
     void setRatio(int flags);
 
+    CvRect getWindowRect();
     int getPropWindow();
     void setPropWindow(int flags);
 
@@ -337,7 +341,7 @@ public:
     QPointer<QLabel> myStatusBar_msg;
 
 protected:
-    virtual void keyPressEvent(QKeyEvent* event);
+    virtual void keyPressEvent(QKeyEvent* event) CV_OVERRIDE;
 
 private:
 
@@ -412,8 +416,8 @@ class OCVViewPort : public ViewPort
 {
 public:
     explicit OCVViewPort();
-    ~OCVViewPort() {};
-    void setMouseCallBack(CvMouseCallback callback, void* param);
+    ~OCVViewPort() CV_OVERRIDE {};
+    void setMouseCallBack(CvMouseCallback callback, void* param) CV_OVERRIDE;
 
 protected:
     void icvmouseEvent(QMouseEvent* event, type_mouse_event category);
@@ -431,38 +435,38 @@ class OpenGlViewPort : public QGLWidget, public OCVViewPort
 {
 public:
     explicit OpenGlViewPort(QWidget* parent);
-    ~OpenGlViewPort();
+    ~OpenGlViewPort() CV_OVERRIDE;
 
-    QWidget* getWidget();
+    QWidget* getWidget() CV_OVERRIDE;
 
-    void writeSettings(QSettings& settings);
-    void readSettings(QSettings& settings);
+    void writeSettings(QSettings& settings) CV_OVERRIDE;
+    void readSettings(QSettings& settings) CV_OVERRIDE;
 
-    double getRatio();
-    void setRatio(int flags);
+    double getRatio() CV_OVERRIDE;
+    void setRatio(int flags) CV_OVERRIDE;
 
-    void updateImage(const CvArr* arr);
+    void updateImage(const CvArr* arr) CV_OVERRIDE;
 
-    void startDisplayInfo(QString text, int delayms);
+    void startDisplayInfo(QString text, int delayms) CV_OVERRIDE;
 
-    void setOpenGlDrawCallback(CvOpenGlDrawCallback callback, void* userdata);
-    void makeCurrentOpenGlContext();
-    void updateGl();
+    void setOpenGlDrawCallback(CvOpenGlDrawCallback callback, void* userdata) CV_OVERRIDE;
+    void makeCurrentOpenGlContext() CV_OVERRIDE;
+    void updateGl() CV_OVERRIDE;
 
-    void setSize(QSize size_);
+    void setSize(QSize size_) CV_OVERRIDE;
 
 protected:
-    void initializeGL();
-    void resizeGL(int w, int h);
-    void paintGL();
+    void initializeGL() CV_OVERRIDE;
+    void resizeGL(int w, int h) CV_OVERRIDE;
+    void paintGL() CV_OVERRIDE;
 
-    void wheelEvent(QWheelEvent* event);
-    void mouseMoveEvent(QMouseEvent* event);
-    void mousePressEvent(QMouseEvent* event);
-    void mouseReleaseEvent(QMouseEvent* event);
-    void mouseDoubleClickEvent(QMouseEvent* event);
+    void wheelEvent(QWheelEvent* event) CV_OVERRIDE;
+    void mouseMoveEvent(QMouseEvent* event) CV_OVERRIDE;
+    void mousePressEvent(QMouseEvent* event) CV_OVERRIDE;
+    void mouseReleaseEvent(QMouseEvent* event) CV_OVERRIDE;
+    void mouseDoubleClickEvent(QMouseEvent* event) CV_OVERRIDE;
 
-    QSize sizeHint() const;
+    QSize sizeHint() const CV_OVERRIDE;
 
 private:
     QSize size;
@@ -480,25 +484,25 @@ class DefaultViewPort : public QGraphicsView, public OCVViewPort
 
 public:
     DefaultViewPort(CvWindow* centralWidget, int arg2);
-    ~DefaultViewPort();
+    ~DefaultViewPort() CV_OVERRIDE;
 
-    QWidget* getWidget();
+    QWidget* getWidget() CV_OVERRIDE;
 
-    void writeSettings(QSettings& settings);
-    void readSettings(QSettings& settings);
+    void writeSettings(QSettings& settings) CV_OVERRIDE;
+    void readSettings(QSettings& settings) CV_OVERRIDE;
 
-    double getRatio();
-    void setRatio(int flags);
+    double getRatio() CV_OVERRIDE;
+    void setRatio(int flags) CV_OVERRIDE;
 
-    void updateImage(const CvArr* arr);
+    void updateImage(const CvArr* arr) CV_OVERRIDE;
 
-    void startDisplayInfo(QString text, int delayms);
+    void startDisplayInfo(QString text, int delayms) CV_OVERRIDE;
 
-    void setOpenGlDrawCallback(CvOpenGlDrawCallback callback, void* userdata);
-    void makeCurrentOpenGlContext();
-    void updateGl();
+    void setOpenGlDrawCallback(CvOpenGlDrawCallback callback, void* userdata) CV_OVERRIDE;
+    void makeCurrentOpenGlContext() CV_OVERRIDE;
+    void updateGl() CV_OVERRIDE;
 
-    void setSize(QSize size_);
+    void setSize(QSize size_) CV_OVERRIDE;
 
 public slots:
     //reference:
@@ -516,17 +520,18 @@ public slots:
     void ZoomOut();
 
     void saveView();
+    void copy2Clipbrd();
 
 protected:
-    void contextMenuEvent(QContextMenuEvent* event);
-    void resizeEvent(QResizeEvent* event);
-    void paintEvent(QPaintEvent* paintEventInfo);
+    void contextMenuEvent(QContextMenuEvent* event) CV_OVERRIDE;
+    void resizeEvent(QResizeEvent* event) CV_OVERRIDE;
+    void paintEvent(QPaintEvent* paintEventInfo) CV_OVERRIDE;
 
-    void wheelEvent(QWheelEvent* event);
-    void mouseMoveEvent(QMouseEvent* event);
-    void mousePressEvent(QMouseEvent* event);
-    void mouseReleaseEvent(QMouseEvent* event);
-    void mouseDoubleClickEvent(QMouseEvent* event);
+    void wheelEvent(QWheelEvent* event) CV_OVERRIDE;
+    void mouseMoveEvent(QMouseEvent* event) CV_OVERRIDE;
+    void mousePressEvent(QMouseEvent* event) CV_OVERRIDE;
+    void mouseReleaseEvent(QMouseEvent* event) CV_OVERRIDE;
+    void mouseDoubleClickEvent(QMouseEvent* event) CV_OVERRIDE;
 
 private:
     int param_keepRatio;
@@ -550,7 +555,7 @@ private:
 
     bool isSameSize(IplImage* img1,IplImage* img2);
 
-    QSize sizeHint() const;
+    QSize sizeHint() const CV_OVERRIDE;
     QPointer<CvWindow> centralWidget;
     QPointer<QTimer> timerDisplay;
     bool drawInfo;
@@ -564,7 +569,7 @@ private:
     void drawStatusBar();
     void controlImagePosition();
 
-    void icvmouseProcessing(QPointF pt, int cv_event, int flags);
+    void icvmouseProcessing(QPointF pt, int cv_event, int flags) CV_OVERRIDE;
 
 private slots:
     void stopDisplayInfo();

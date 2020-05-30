@@ -49,66 +49,48 @@
 using namespace std;
 using namespace cv;
 
-void cv::edgePreservingFilter(InputArray _src, OutputArray _dst, int flags, float sigma_s, float sigma_r)
+void cv::edgePreservingFilter(InputArray _src, OutputArray dst, int flags, float sigma_s, float sigma_r)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat I = _src.getMat();
-    _dst.create(I.size(), CV_8UC3);
-    Mat dst = _dst.getMat();
-
-    int h = I.size().height;
-    int w = I.size().width;
-
-    Mat res = Mat(h,w,CV_32FC3);
-    dst.convertTo(res,CV_32FC3,1.0/255.0);
 
     Domain_Filter obj;
 
-    Mat img = Mat(I.size(),CV_32FC3);
+    Mat img;
     I.convertTo(img,CV_32FC3,1.0/255.0);
 
+    Mat res;
     obj.filter(img, res, sigma_s, sigma_r, flags);
 
     convertScaleAbs(res, dst, 255,0);
 }
 
-void cv::detailEnhance(InputArray _src, OutputArray _dst, float sigma_s, float sigma_r)
+void cv::detailEnhance(InputArray _src, OutputArray dst, float sigma_s, float sigma_r)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat I = _src.getMat();
-    _dst.create(I.size(), CV_8UC3);
-    Mat dst = _dst.getMat();
 
-    int h = I.size().height;
-    int w = I.size().width;
     float factor = 3.0f;
 
-    Mat img = Mat(I.size(),CV_32FC3);
+    Mat img;
     I.convertTo(img,CV_32FC3,1.0/255.0);
 
-    Mat res = Mat(h,w,CV_32FC1);
-    dst.convertTo(res,CV_32FC3,1.0/255.0);
-
-    Mat result = Mat(img.size(),CV_32FC3);
-    Mat lab = Mat(img.size(),CV_32FC3);
+    Mat lab;
     vector <Mat> lab_channel;
-
     cvtColor(img,lab,COLOR_BGR2Lab);
     split(lab,lab_channel);
 
-    Mat L = Mat(img.size(),CV_32FC1);
-
+    Mat L;
     lab_channel[0].convertTo(L,CV_32FC1,1.0/255.0);
 
     Domain_Filter obj;
 
+    Mat res;
     obj.filter(L, res, sigma_s, sigma_r, 1);
 
-    Mat detail = Mat(h,w,CV_32FC1);
-
-    detail = L - res;
+    Mat detail = L - res;
     multiply(detail,factor,detail);
     L = res + detail;
 
@@ -116,13 +98,13 @@ void cv::detailEnhance(InputArray _src, OutputArray _dst, float sigma_s, float s
 
     merge(lab_channel,lab);
 
-    cvtColor(lab,result,COLOR_Lab2BGR);
-    result.convertTo(dst,CV_8UC3,255);
+    cvtColor(lab,res,COLOR_Lab2BGR);
+    res.convertTo(dst,CV_8UC3,255);
 }
 
 void cv::pencilSketch(InputArray _src, OutputArray _dst1, OutputArray _dst2, float sigma_s, float sigma_r, float shade_factor)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat I = _src.getMat();
     _dst1.create(I.size(), CV_8UC1);
@@ -148,19 +130,19 @@ void cv::pencilSketch(InputArray _src, OutputArray _dst1, OutputArray _dst2, flo
 
 void cv::stylization(InputArray _src, OutputArray _dst, float sigma_s, float sigma_r)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat I = _src.getMat();
     _dst.create(I.size(), CV_8UC3);
     Mat dst = _dst.getMat();
 
-    Mat img = Mat(I.size(),CV_32FC3);
+    Mat img;
     I.convertTo(img,CV_32FC3,1.0/255.0);
 
     int h = img.size().height;
     int w = img.size().width;
 
-    Mat res = Mat(h,w,CV_32FC3);
+    Mat res;
     Mat magnitude = Mat(h,w,CV_32FC1);
 
     Domain_Filter obj;
@@ -168,7 +150,7 @@ void cv::stylization(InputArray _src, OutputArray _dst, float sigma_s, float sig
 
     obj.find_magnitude(res,magnitude);
 
-    Mat stylized = Mat(h,w,CV_32FC3);
+    Mat stylized;
 
     vector <Mat> temp;
     split(res,temp);

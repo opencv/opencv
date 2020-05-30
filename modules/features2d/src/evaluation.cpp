@@ -179,7 +179,7 @@ void EllipticKeyPoint::calcProjection( const Mat_<double>& H, EllipticKeyPoint& 
 
 void EllipticKeyPoint::convert( const std::vector<KeyPoint>& src, std::vector<EllipticKeyPoint>& dst )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     if( !src.empty() )
     {
@@ -196,7 +196,7 @@ void EllipticKeyPoint::convert( const std::vector<KeyPoint>& src, std::vector<El
 
 void EllipticKeyPoint::convert( const std::vector<EllipticKeyPoint>& src, std::vector<KeyPoint>& dst )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     if( !src.empty() )
     {
@@ -218,7 +218,7 @@ void EllipticKeyPoint::calcProjection( const std::vector<EllipticKeyPoint>& src,
         dst.resize(src.size());
         std::vector<EllipticKeyPoint>::const_iterator srcIt = src.begin();
         std::vector<EllipticKeyPoint>::iterator       dstIt = dst.begin();
-        for( ; srcIt != src.end(); ++srcIt, ++dstIt )
+        for( ; srcIt != src.end() && dstIt != dst.end(); ++srcIt, ++dstIt )
             srcIt->calcProjection(H, *dstIt);
     }
 }
@@ -460,7 +460,7 @@ void cv::evaluateFeatureDetector( const Mat& img1, const Mat& img2, const Mat& H
                               float& repeatability, int& correspCount,
                               const Ptr<FeatureDetector>& _fdetector )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Ptr<FeatureDetector> fdetector(_fdetector);
     std::vector<KeyPoint> *keypoints1, *keypoints2, buf1, buf2;
@@ -481,7 +481,7 @@ void cv::evaluateFeatureDetector( const Mat& img1, const Mat& img2, const Mat& H
 struct DMatchForEvaluation : public DMatch
 {
     uchar isCorrect;
-    DMatchForEvaluation( const DMatch &dm ) : DMatch( dm ) {}
+    DMatchForEvaluation( const DMatch &dm ) : DMatch( dm ), isCorrect(0) {}
 };
 
 static inline float recall( int correctMatchCount, int correspondenceCount )
@@ -498,7 +498,7 @@ void cv::computeRecallPrecisionCurve( const std::vector<std::vector<DMatch> >& m
                                       const std::vector<std::vector<uchar> >& correctMatches1to2Mask,
                                       std::vector<Point2f>& recallPrecisionCurve )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert( matches1to2.size() == correctMatches1to2Mask.size() );
 
@@ -534,7 +534,7 @@ void cv::computeRecallPrecisionCurve( const std::vector<std::vector<DMatch> >& m
 
 float cv::getRecall( const std::vector<Point2f>& recallPrecisionCurve, float l_precision )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     int nearestPointIndex = getNearestPoint( recallPrecisionCurve, l_precision );
 
@@ -548,7 +548,7 @@ float cv::getRecall( const std::vector<Point2f>& recallPrecisionCurve, float l_p
 
 int cv::getNearestPoint( const std::vector<Point2f>& recallPrecisionCurve, float l_precision )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     int nearestPointIndex = -1;
 

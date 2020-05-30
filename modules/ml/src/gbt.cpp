@@ -253,7 +253,7 @@ CvGBTrees::train( const CvMat* _train_data, int _tflag,
         }
     }
 
-    // inside gbt learning proccess only regression decision trees are built
+    // inside gbt learning process only regression decision trees are built
     data->is_classifier = false;
 
     // preproccessing sample indices

@@ -6,13 +6,17 @@ of data.
 
 -   @subpage tutorial_introduction_to_svm
 
+    *Languages:* C++, Java, Python
+
     *Compatibility:* \> OpenCV 2.0
 
     *Author:* Fernando Iglesias García
 
-    Learn what a Suport Vector Machine is.
+    Learn what a Support Vector Machine is.
 
 -   @subpage tutorial_non_linear_svms
+
+    *Languages:* C++, Java, Python
 
     *Compatibility:* \> OpenCV 2.0
 
@@ -22,6 +26,8 @@ of data.
     separate linearly the training data.
 
 -   @subpage tutorial_introduction_to_pca
+
+    *Languages:* C++, Java, Python
 
     *Compatibility:* \> OpenCV 2.0
 

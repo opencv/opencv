@@ -42,10 +42,7 @@
 
 #include "test_precomp.hpp"
 
-namespace {
-
-using namespace std;
-using namespace cv;
+namespace opencv_test { namespace {
 
 //#define DRAW_TEST_IMAGE
 
@@ -57,6 +54,7 @@ protected:
     void run( int );
     virtual void draw( Mat& img ) = 0;
     virtual int checkLineIterator( Mat& img) = 0;
+    virtual int checkLineVirtualIterator() = 0;
 };
 
 void CV_DrawingTest::run( int )
@@ -96,6 +94,7 @@ void CV_DrawingTest::run( int )
             ts->set_failed_test_info(checkLineIterator( testImg ));
         }
     }
+    ts->set_failed_test_info(checkLineVirtualIterator());
     ts->set_failed_test_info(cvtest::TS::OK);
 }
 
@@ -106,6 +105,7 @@ public:
 protected:
     virtual void draw( Mat& img );
     virtual int checkLineIterator( Mat& img);
+    virtual int checkLineVirtualIterator();
 };
 
 void CV_DrawingTest_CPP::draw( Mat& img )
@@ -248,171 +248,46 @@ int CV_DrawingTest_CPP::checkLineIterator( Mat& img )
     return 0;
 }
 
-class CV_DrawingTest_C : public CV_DrawingTest
+int CV_DrawingTest_CPP::checkLineVirtualIterator(  )
 {
-public:
-    CV_DrawingTest_C() {}
-protected:
-    virtual void draw( Mat& img );
-    virtual int checkLineIterator( Mat& img);
-};
-
-void CV_DrawingTest_C::draw( Mat& _img )
-{
-    CvSize imgSize = cvSize(600, 400);
-    _img.create( imgSize, CV_8UC3 );
-    CvMat img = _img;
-
-    vector<CvPoint> polyline(4);
-    polyline[0] = cvPoint(0, 0);
-    polyline[1] = cvPoint(imgSize.width, 0);
-    polyline[2] = cvPoint(imgSize.width, imgSize.height);
-    polyline[3] = cvPoint(0, imgSize.height);
-    CvPoint* pts = &polyline[0];
-    int n = (int)polyline.size();
-    int actualSize = 0;
-    cvFillPoly( &img, &pts, &n, 1, cvScalar(255,255,255) );
-
-    CvPoint p1 = cvPoint(1,1), p2 = cvPoint(3,3);
-    if( cvClipLine(imgSize, &p1, &p2) )
-        cvCircle( &img, cvPoint(300,100), 40, cvScalar(0,0,255), 3 ); // draw
-
-    p1 = cvPoint(1,1), p2 = cvPoint(3,imgSize.height+1000);
-    if( cvClipLine(imgSize, &p1, &p2) )
-        cvCircle( &img, cvPoint(500,300), 50, cvScalar(255,0,0), 5, 8, 1 ); // draw
-
-    p1 = cvPoint(imgSize.width,1), p2 = cvPoint(imgSize.width,3);
-    if( cvClipLine(imgSize, &p1, &p2) )
-        cvCircle( &img, cvPoint(390,100), 10, cvScalar(0,0,255), 3 ); // not draw
-
-    p1 = Point(imgSize.width-1,1), p2 = Point(imgSize.width,3);
-    if( cvClipLine(imgSize, &p1, &p2) )
-        cvEllipse( &img, cvPoint(390,100), cvSize(20,30), 60, 0, 220.0, cvScalar(0,200,0), 4 ); //draw
-
-    CvBox2D box;
-    box.center.x = 100;
-    box.center.y = 200;
-    box.size.width = 200;
-    box.size.height = 100;
-    box.angle = 160;
-    cvEllipseBox( &img, box, Scalar(200,200,255), 5 );
-
-    polyline.resize(9);
-    pts = &polyline[0];
-    n = (int)polyline.size();
-    actualSize = cvEllipse2Poly( cvPoint(430,180), cvSize(100,150), 30, 0, 150, &polyline[0], 20 );
-    CV_Assert(actualSize == n);
-    cvPolyLine( &img, &pts, &n, 1, false, cvScalar(0,0,150), 4, CV_AA );
-    n = 0;
-    for( vector<CvPoint>::const_iterator it = polyline.begin(); n < (int)polyline.size()-1; ++it, n++ )
+    RNG randomGenerator(1);
+    for (size_t test = 0; test < 10000; ++test)
     {
-        cvLine( &img, *it, *(it+1), cvScalar(50,250,100) );
-    }
-
-    polyline.resize(19);
-    pts = &polyline[0];
-    n = (int)polyline.size();
-    actualSize = cvEllipse2Poly( cvPoint(500,300), cvSize(50,80), 0, 0, 180, &polyline[0], 10 );
-    CV_Assert(actualSize == n);
-    cvPolyLine( &img, &pts, &n, 1, true, Scalar(100,200,100), 20 );
-    cvFillConvexPoly( &img, pts, n, cvScalar(0, 80, 0) );
-
-    polyline.resize(8);
-    // external rectengular
-    polyline[0] = cvPoint(500, 20);
-    polyline[1] = cvPoint(580, 20);
-    polyline[2] = cvPoint(580, 100);
-    polyline[3] = cvPoint(500, 100);
-    // internal rectangular
-    polyline[4] = cvPoint(520, 40);
-    polyline[5] = cvPoint(560, 40);
-    polyline[6] = cvPoint(560, 80);
-    polyline[7] = cvPoint(520, 80);
-    CvPoint* ppts[] = {&polyline[0], &polyline[0]+4};
-    int pn[] = {4, 4};
-    cvFillPoly( &img, ppts, pn, 2, cvScalar(100, 100, 0), 8, 0 );
-
-    cvRectangle( &img, cvPoint(0, 300), cvPoint(50, 398), cvScalar(0,0,255) );
-
-    string text1 = "OpenCV";
-    CvFont font;
-    cvInitFont( &font, FONT_HERSHEY_SCRIPT_SIMPLEX, 2, 2, 0, 3 );
-    int baseline = 0;
-    CvSize textSize;
-    cvGetTextSize( text1.c_str(), &font, &textSize, &baseline );
-    baseline += font.thickness;
-    CvPoint textOrg = cvPoint((imgSize.width - textSize.width)/2, (imgSize.height + textSize.height)/2);
-    cvRectangle( &img, cvPoint( textOrg.x, textOrg.y + baseline),
-                 cvPoint(textOrg.x + textSize.width, textOrg.y - textSize.height), cvScalar(0,0,255));
-    cvLine( &img, cvPoint(textOrg.x, textOrg.y + font.thickness),
-            cvPoint(textOrg.x + textSize.width, textOrg.y + font.thickness), cvScalar(0, 0, 255));
-    cvPutText( &img, text1.c_str(), textOrg, &font, cvScalar(150,0,150) );
-
-    int dist = 5;
-    string text2 = "abcdefghijklmnopqrstuvwxyz1234567890";
-    CvScalar color = cvScalar(200,0,0);
-    cvInitFont( &font, FONT_HERSHEY_SIMPLEX, 0.5, 0.5, 0, 1, CV_AA );
-    cvGetTextSize( text2.c_str(), &font, &textSize, &baseline );
-    textOrg = cvPoint(5, 5+textSize.height+dist);
-    cvPutText(&img, text2.c_str(), textOrg, &font, color );
-
-    cvInitFont( &font, FONT_HERSHEY_PLAIN, 1, 1, 0, 1, CV_AA );
-    cvGetTextSize( text2.c_str(), &font, &textSize, &baseline );
-    textOrg = cvPoint(textOrg.x,textOrg.y+textSize.height+dist);
-    cvPutText(&img, text2.c_str(), textOrg, &font, color );
-
-    cvInitFont( &font, FONT_HERSHEY_DUPLEX, 0.5, 0.5, 0, 1, CV_AA );
-    cvGetTextSize( text2.c_str(), &font, &textSize, &baseline );
-    textOrg = cvPoint(textOrg.x,textOrg.y+textSize.height+dist);
-    cvPutText(&img, text2.c_str(), textOrg, &font, color );
-
-    cvInitFont( &font, FONT_HERSHEY_COMPLEX, 0.5, 0.5, 0, 1, CV_AA );
-    cvGetTextSize( text2.c_str(), &font, &textSize, &baseline );
-    textOrg = cvPoint(textOrg.x,textOrg.y+textSize.height+dist);
-    cvPutText(&img, text2.c_str(), textOrg, &font, color );
-
-    cvInitFont( &font, FONT_HERSHEY_TRIPLEX, 0.5, 0.5, 0, 1, CV_AA );
-    cvGetTextSize( text2.c_str(), &font, &textSize, &baseline );
-    textOrg = cvPoint(textOrg.x,textOrg.y+textSize.height+dist);
-    cvPutText(&img, text2.c_str(), textOrg, &font, color );
-
-    cvInitFont( &font, FONT_HERSHEY_COMPLEX_SMALL, 1, 1, 0, 1, CV_AA );
-    cvGetTextSize( text2.c_str(), &font, &textSize, &baseline );
-    textOrg = cvPoint(textOrg.x,textOrg.y+textSize.height+dist + 180);
-    cvPutText(&img, text2.c_str(), textOrg, &font, color );
-
-    cvInitFont( &font, FONT_HERSHEY_SCRIPT_SIMPLEX, 1, 1, 0, 1, CV_AA );
-    cvGetTextSize( text2.c_str(), &font, &textSize, &baseline );
-    textOrg = cvPoint(textOrg.x,textOrg.y+textSize.height+dist);
-    cvPutText(&img, text2.c_str(), textOrg, &font, color );
-
-    cvInitFont( &font, FONT_HERSHEY_SCRIPT_COMPLEX, 1, 1, 0, 1, CV_AA );
-    cvGetTextSize( text2.c_str(), &font, &textSize, &baseline );
-    textOrg = cvPoint(textOrg.x,textOrg.y+textSize.height+dist);
-    cvPutText(&img, text2.c_str(), textOrg, &font, color );
-
-    dist = 15;
-    cvInitFont( &font, FONT_ITALIC, 0.5, 0.5, 0, 1, CV_AA );
-    cvGetTextSize( text2.c_str(), &font, &textSize, &baseline );
-    textOrg = cvPoint(textOrg.x,textOrg.y+textSize.height+dist);
-    cvPutText(&img, text2.c_str(), textOrg, &font, color );
-}
-
-int CV_DrawingTest_C::checkLineIterator( Mat& _img )
-{
-    CvLineIterator it;
-    CvMat img = _img;
-    int count = cvInitLineIterator( &img, cvPoint(0,300), cvPoint(1000, 300), &it );
-    for(int i = 0; i < count; i++ )
-    {
-        Vec3b v = (Vec3b)(*(it.ptr)) - _img.at<Vec3b>(300,i);
-        float err = (float)cvtest::norm( v, NORM_L2 );
-        if( err != 0 )
+        int width = randomGenerator.uniform(0, 512+1);
+        int height = randomGenerator.uniform(0, 512+1);
+        int x1 = randomGenerator.uniform(-512, 1024+1);
+        int y1 = randomGenerator.uniform(-512, 1024+1);
+        int x2 = randomGenerator.uniform(-512, 1024+1);
+        int y2 = randomGenerator.uniform(-512, 1024+1);
+        int x3 = randomGenerator.uniform(-512, 1024+1);
+        int y3 = randomGenerator.uniform(-512, 1024+1);
+        int channels = randomGenerator.uniform(1, 3+1);
+        Mat m(cv::Size(width, height), CV_MAKETYPE(8U, channels));
+        Point p1(x1, y1);
+        Point p2(x2, y2);
+        Point offset(x3, y3);
+        LineIterator it( m, p1, p2 );
+        LineIterator vit(Rect(offset.x, offset.y, width, height), p1 + offset, p2 + offset);
+        if (it.count != vit.count)
         {
-            ts->printf( ts->LOG, "CvLineIterator works incorrect" );
-            ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
+           ts->printf( ts->LOG, "virtual LineIterator works incorrectly" );
+           ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
+           break;
         }
-        CV_NEXT_LINE_POINT(it);
+        else
+        {
+            for(int i = 0; i < it.count; ++it, ++vit, i++ )
+            {
+                Point pIt = it.pos();
+                Point pVit = vit.pos() - offset;
+                if (pIt != pVit)
+                {
+                    ts->printf( ts->LOG, "virtual LineIterator works incorrectly" );
+                    ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
+                    break;
+                }
+            }
+        }
     }
     ts->set_failed_test_info(cvtest::TS::OK);
     return 0;
@@ -552,7 +427,6 @@ void CV_DrawingTest_Far::draw(Mat& img)
 }
 
 TEST(Drawing,    cpp_regression) { CV_DrawingTest_CPP test; test.safe_run(); }
-TEST(Drawing,      c_regression) { CV_DrawingTest_C   test; test.safe_run(); }
 TEST(Drawing,    far_regression) { CV_DrawingTest_Far test; test.safe_run(); }
 
 class CV_FillConvexPolyTest : public cvtest::BaseTest
@@ -709,6 +583,31 @@ TEST(Drawing, polylines)
     ASSERT_EQ(cnt, 21);
 }
 
+TEST(Drawing, longline)
+{
+    Mat mat = Mat::zeros(256, 256, CV_8UC1);
+
+    line(mat, cv::Point(34, 204), cv::Point(46400, 47400), cv::Scalar(255), 3);
+    EXPECT_EQ(310, cv::countNonZero(mat));
+
+    Point pt[6];
+    pt[0].x = 32;
+    pt[0].y = 204;
+    pt[1].x = 34;
+    pt[1].y = 202;
+    pt[2].x = 87;
+    pt[2].y = 255;
+    pt[3].x = 82;
+    pt[3].y = 255;
+    pt[4].x = 37;
+    pt[4].y = 210;
+    pt[5].x = 37;
+    pt[5].y = 209;
+    fillConvexPoly(mat, pt, 6, cv::Scalar(0));
+
+    EXPECT_EQ(0, cv::countNonZero(mat));
+}
+
 
 TEST(Drawing, putText_no_garbage)
 {
@@ -725,5 +624,59 @@ TEST(Drawing, putText_no_garbage)
 }
 
 
+TEST(Drawing, line)
+{
+    Mat mat = Mat::zeros(Size(100,100), CV_8UC1);
 
-} // namespace
+    ASSERT_THROW(line(mat, Point(1,1),Point(99,99),Scalar(255),0), cv::Exception);
+}
+
+TEST(Drawing, regression_16308)
+{
+    Mat_<uchar> img(Size(100, 100), (uchar)0);
+    circle(img, Point(50, 50), 50, 255, 1, LINE_AA);
+    EXPECT_NE(0, (int)img.at<uchar>(0, 50));
+    EXPECT_NE(0, (int)img.at<uchar>(50, 0));
+    EXPECT_NE(0, (int)img.at<uchar>(50, 99));
+    EXPECT_NE(0, (int)img.at<uchar>(99, 50));
+}
+
+TEST(Drawing, fillpoly_circle)
+{
+    Mat img_c(640, 480, CV_8UC3, Scalar::all(0));
+    Mat img_fp = img_c.clone(), img_fcp = img_c.clone(), img_fp3 = img_c.clone();
+
+    Point center1(img_c.cols/2, img_c.rows/2);
+    Point center2(img_c.cols/10, img_c.rows*3/4);
+    Point center3 = Point(img_c.cols, img_c.rows) - center2;
+    int radius = img_c.rows/4;
+    int radius_small = img_c.cols/15;
+    Scalar color(0, 0, 255);
+
+    circle(img_c, center1, radius, color, -1);
+
+    // check that circle, fillConvexPoly and fillPoly
+    // give almost the same result then asked to draw a single circle
+    vector<Point> vtx;
+    ellipse2Poly(center1, Size(radius, radius), 0, 0, 360, 1, vtx);
+    fillConvexPoly(img_fcp, vtx, color);
+    fillPoly(img_fp, vtx, color);
+    double diff_fp = cv::norm(img_c, img_fp, NORM_L1)/(255*radius*2*CV_PI);
+    double diff_fcp = cv::norm(img_c, img_fcp, NORM_L1)/(255*radius*2*CV_PI);
+    EXPECT_LT(diff_fp, 1.);
+    EXPECT_LT(diff_fcp, 1.);
+
+    // check that fillPoly can draw 3 disjoint circles at once
+    circle(img_c, center2, radius_small, color, -1);
+    circle(img_c, center3, radius_small, color, -1);
+
+    vector<vector<Point> > vtx3(3);
+    vtx3[0] = vtx;
+    ellipse2Poly(center2, Size(radius_small, radius_small), 0, 0, 360, 1, vtx3[1]);
+    ellipse2Poly(center3, Size(radius_small, radius_small), 0, 0, 360, 1, vtx3[2]);
+    fillPoly(img_fp3, vtx3, color);
+    double diff_fp3 = cv::norm(img_c, img_fp3, NORM_L1)/(255*(radius+radius_small*2)*2*CV_PI);
+    EXPECT_LT(diff_fp3, 1.);
+}
+
+}} // namespace

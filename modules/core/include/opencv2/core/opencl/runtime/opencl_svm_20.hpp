@@ -8,8 +8,6 @@
 
 #include "opencl_svm_definitions.hpp"
 
-#ifndef HAVE_OPENCL_STATIC
-
 #undef clSVMAlloc
 #define clSVMAlloc clSVMAlloc_pfn
 #undef clSVMFree
@@ -44,8 +42,6 @@ extern CL_RUNTIME_EXPORT cl_int (CL_API_CALL *clEnqueueSVMMap)(cl_command_queue 
         cl_uint num_events_in_wait_list, const cl_event* event_wait_list, cl_event* event);
 extern CL_RUNTIME_EXPORT cl_int (CL_API_CALL *clEnqueueSVMUnmap)(cl_command_queue command_queue, void* svm_ptr,
         cl_uint num_events_in_wait_list, const cl_event* event_wait_list, cl_event* event);
-
-#endif // HAVE_OPENCL_STATIC
 
 #endif // HAVE_OPENCL_SVM
 

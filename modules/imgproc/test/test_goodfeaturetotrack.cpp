@@ -41,8 +41,7 @@
 
 #include "test_precomp.hpp"
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 enum { MINEIGENVAL=0, HARRIS=1, EIGENVALSVECS=2 };
 
@@ -57,8 +56,7 @@ enum { MINEIGENVAL=0, HARRIS=1, EIGENVALSVECS=2 };
 
 /////////////////////ref//////////////////////
 
-struct greaterThanPtr :
-        public std::binary_function<const float *, const float *, bool>
+struct greaterThanPtr
 {
     bool operator () (const float * a, const float * b) const
     { return *a > *b; }
@@ -161,7 +159,7 @@ test_cornerEigenValsVecs( const Mat& src, Mat& eigenv, int block_size,
 static void
 test_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
                               int maxCorners, double qualityLevel, double minDistance,
-                              InputArray _mask, int blockSize,
+                              InputArray _mask, int blockSize, int gradientSize,
                               bool useHarrisDetector, double harrisK )
 {
 
@@ -170,7 +168,7 @@ test_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
 
 
     Mat image = _image.getMat(), mask = _mask.getMat();
-    int aperture_size = 3;
+    int aperture_size = gradientSize;
     int borderType = BORDER_DEFAULT;
 
     Mat eig, tmp, tt;
@@ -330,6 +328,7 @@ protected:
     double qualityLevel;
     double minDistance;
     int blockSize;
+    int gradientSize;
     bool useHarrisDetector;
     double k;
     int SrcType;
@@ -343,6 +342,7 @@ CV_GoodFeatureToTTest::CV_GoodFeatureToTTest()
     qualityLevel = 0.01;
     minDistance = 10;
     blockSize = 3;
+    gradientSize = 3;
     useHarrisDetector = false;
     k = 0.04;
     mask = Mat();
@@ -359,7 +359,7 @@ int CV_GoodFeatureToTTest::prepare_test_case( int test_case_idx )
 
     CV_Assert(src.data != NULL);
 
-    cvtColor( src, src_gray, CV_BGR2GRAY );
+    cvtColor( src, src_gray, COLOR_BGR2GRAY );
     SrcType = types[test_case_idx & 0x1];
     useHarrisDetector = test_case_idx & 2 ?  true : false;
     return 1;
@@ -397,6 +397,7 @@ void CV_GoodFeatureToTTest::run_func()
                minDistance,
                Mat(),
                blockSize,
+               gradientSize,
                useHarrisDetector,
                k );
     }
@@ -414,6 +415,7 @@ void CV_GoodFeatureToTTest::run_func()
                minDistance,
                Mat(),
                blockSize,
+               gradientSize,
                useHarrisDetector,
                k );
     }
@@ -438,6 +440,7 @@ int CV_GoodFeatureToTTest::validate_test_results( int test_case_idx )
                minDistance,
                Mat(),
                blockSize,
+               gradientSize,
                useHarrisDetector,
                k );
     }
@@ -455,11 +458,12 @@ int CV_GoodFeatureToTTest::validate_test_results( int test_case_idx )
                minDistance,
                Mat(),
                blockSize,
+               gradientSize,
                useHarrisDetector,
                k );
     }
 
-    double e =norm(corners, Refcorners);
+    double e = cv::norm(corners, Refcorners); // TODO cvtest
 
     if (e > eps)
     {
@@ -491,4 +495,5 @@ int CV_GoodFeatureToTTest::validate_test_results( int test_case_idx )
 TEST(Imgproc_GoodFeatureToT, accuracy) { CV_GoodFeatureToTTest test; test.safe_run(); }
 
 
+}} // namespace
 /* End of file. */

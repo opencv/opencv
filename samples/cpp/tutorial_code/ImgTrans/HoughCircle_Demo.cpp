@@ -18,10 +18,9 @@ namespace
     const std::string windowName = "Hough Circle Detection Demo";
     const std::string cannyThresholdTrackbarName = "Canny threshold";
     const std::string accumulatorThresholdTrackbarName = "Accumulator Threshold";
-    const std::string usage = "Usage : tutorial_HoughCircle_Demo <path_to_input_image>\n";
 
     // initial and max values of the parameters of interests.
-    const int cannyThresholdInitialValue = 200;
+    const int cannyThresholdInitialValue = 100;
     const int accumulatorThresholdInitialValue = 50;
     const int maxAccumulatorThreshold = 200;
     const int maxCannyThreshold = 255;
@@ -55,20 +54,18 @@ int main(int argc, char** argv)
 {
     Mat src, src_gray;
 
-    if (argc < 2)
-    {
-        std::cerr<<"No input image specified\n";
-        std::cout<<usage;
-        return -1;
-    }
-
     // Read the image
-    src = imread( argv[1], IMREAD_COLOR );
+    String imageName("stuff.jpg"); // by default
+    if (argc > 1)
+    {
+       imageName = argv[1];
+    }
+    src = imread( samples::findFile( imageName ), IMREAD_COLOR );
 
     if( src.empty() )
     {
-        std::cerr<<"Invalid input image\n";
-        std::cout<<usage;
+        std::cerr << "Invalid input image\n";
+        std::cout << "Usage : " << argv[0] << " <path_to_input_image>\n";;
         return -1;
     }
 
@@ -93,7 +90,7 @@ int main(int argc, char** argv)
     char key = 0;
     while(key != 'q' && key != 'Q')
     {
-        // those paramaters cannot be =0
+        // those parameters cannot be =0
         // so we must check here
         cannyThreshold = std::max(cannyThreshold, 1);
         accumulatorThreshold = std::max(accumulatorThreshold, 1);

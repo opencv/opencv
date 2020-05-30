@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2004, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -39,29 +39,30 @@
 //
 //-----------------------------------------------------------------------------
 
-#include <ImfPizCompressor.h>
-#include <ImfHeader.h>
-#include <ImfChannelList.h>
-#include <ImfHuf.h>
-#include <ImfWav.h>
-#include <ImfMisc.h>
-#include <ImfCheckedArithmetic.h>
+#include "ImfPizCompressor.h"
+#include "ImfHeader.h"
+#include "ImfChannelList.h"
+#include "ImfHuf.h"
+#include "ImfWav.h"
+#include "ImfMisc.h"
+#include "ImfCheckedArithmetic.h"
 #include <ImathFun.h>
 #include <ImathBox.h>
 #include <Iex.h>
-#include <ImfIO.h>
-#include <ImfXdr.h>
-#include <ImfAutoArray.h>
+#include "ImfIO.h"
+#include "ImfXdr.h"
+#include "ImfAutoArray.h"
 #include <string.h>
 #include <assert.h>
+#include "ImfNamespace.h"
 
-namespace Imf {
+OPENEXR_IMF_INTERNAL_NAMESPACE_SOURCE_ENTER
 
-using Imath::divp;
-using Imath::modp;
-using Imath::Box2i;
-using Imath::V2i;
-using Iex::InputExc;
+using IMATH_NAMESPACE::divp;
+using IMATH_NAMESPACE::modp;
+using IMATH_NAMESPACE::Box2i;
+using IMATH_NAMESPACE::V2i;
+using IEX_NAMESPACE::InputExc;
 
 namespace {
 
@@ -74,48 +75,48 @@ const int BITMAP_SIZE  = (USHORT_RANGE >> 3);
 
 void
 bitmapFromData (const unsigned short data[/*nData*/],
-        int nData,
-        unsigned char bitmap[BITMAP_SIZE],
-        unsigned short &minNonZero,
-        unsigned short &maxNonZero)
+		int nData,
+		unsigned char bitmap[BITMAP_SIZE],
+		unsigned short &minNonZero,
+		unsigned short &maxNonZero)
 {
     for (int i = 0; i < BITMAP_SIZE; ++i)
-    bitmap[i] = 0;
+	bitmap[i] = 0;
 
     for (int i = 0; i < nData; ++i)
-    bitmap[data[i] >> 3] |= (1 << (data[i] & 7));
+	bitmap[data[i] >> 3] |= (1 << (data[i] & 7));
 
     bitmap[0] &= ~1;			// zero is not explicitly stored in
-                    // the bitmap; we assume that the
-                    // data always contain zeroes
+					// the bitmap; we assume that the
+					// data always contain zeroes
     minNonZero = BITMAP_SIZE - 1;
     maxNonZero = 0;
 
     for (int i = 0; i < BITMAP_SIZE; ++i)
     {
-    if (bitmap[i])
-    {
-        if (minNonZero > i)
-        minNonZero = i;
-        if (maxNonZero < i)
-        maxNonZero = i;
-    }
+	if (bitmap[i])
+	{
+	    if (minNonZero > i)
+		minNonZero = i;
+	    if (maxNonZero < i)
+		maxNonZero = i;
+	}
     }
 }
 
 
 unsigned short
 forwardLutFromBitmap (const unsigned char bitmap[BITMAP_SIZE],
-              unsigned short lut[USHORT_RANGE])
+		      unsigned short lut[USHORT_RANGE])
 {
     int k = 0;
 
     for (int i = 0; i < USHORT_RANGE; ++i)
     {
-    if ((i == 0) || (bitmap[i >> 3] & (1 << (i & 7))))
-        lut[i] = k++;
-    else
-        lut[i] = 0;
+	if ((i == 0) || (bitmap[i >> 3] & (1 << (i & 7))))
+	    lut[i] = k++;
+	else
+	    lut[i] = 0;
     }
 
     return k - 1;	// maximum value stored in lut[],
@@ -124,20 +125,20 @@ forwardLutFromBitmap (const unsigned char bitmap[BITMAP_SIZE],
 
 unsigned short
 reverseLutFromBitmap (const unsigned char bitmap[BITMAP_SIZE],
-              unsigned short lut[USHORT_RANGE])
+		      unsigned short lut[USHORT_RANGE])
 {
     int k = 0;
 
     for (int i = 0; i < USHORT_RANGE; ++i)
     {
-    if ((i == 0) || (bitmap[i >> 3] & (1 << (i & 7))))
-        lut[k++] = i;
+	if ((i == 0) || (bitmap[i >> 3] & (1 << (i & 7))))
+	    lut[k++] = i;
     }
 
     int n = k - 1;
 
     while (k < USHORT_RANGE)
-    lut[k++] = 0;
+	lut[k++] = 0;
 
     return n;		// maximum k where lut[k] is non-zero,
 }			// i.e. number of ones in bitmap minus 1
@@ -145,11 +146,11 @@ reverseLutFromBitmap (const unsigned char bitmap[BITMAP_SIZE],
 
 void
 applyLut (const unsigned short lut[USHORT_RANGE],
-      unsigned short data[/*nData*/],
-      int nData)
+	  unsigned short data[/*nData*/],
+	  int nData)
 {
     for (int i = 0; i < nData; ++i)
-    data[i] = lut[data[i]];
+	data[i] = lut[data[i]];
 }
 
 
@@ -198,15 +199,15 @@ PizCompressor::PizCompressor
     bool onlyHalfChannels = true;
 
     for (ChannelList::ConstIterator c = channels.begin();
-     c != channels.end();
-     ++c)
+	 c != channels.end();
+	 ++c)
     {
-    _numChans++;
+	_numChans++;
 
-    assert (pixelTypeSize (c.channel().type) % pixelTypeSize (HALF) == 0);
+	assert (pixelTypeSize (c.channel().type) % pixelTypeSize (HALF) == 0);
 
-    if (c.channel().type != HALF)
-        onlyHalfChannels = false;
+	if (c.channel().type != HALF)
+	    onlyHalfChannels = false;
     }
 
     _channelData = new ChannelData[_numChans];
@@ -224,7 +225,7 @@ PizCompressor::PizCompressor
     //
 
     if (onlyHalfChannels && (sizeof (half) == pixelTypeSize (HALF)))
-    _format = NATIVE;
+	_format = NATIVE;
 }
 
 
@@ -252,23 +253,23 @@ PizCompressor::format () const
 
 int
 PizCompressor::compress (const char *inPtr,
-             int inSize,
-             int minY,
-             const char *&outPtr)
+			 int inSize,
+			 int minY,
+			 const char *&outPtr)
 {
     return compress (inPtr,
-             inSize,
-             Box2i (V2i (_minX, minY),
-                V2i (_maxX, minY + numScanLines() - 1)),
-             outPtr);
+		     inSize,
+		     Box2i (V2i (_minX, minY),
+			    V2i (_maxX, minY + numScanLines() - 1)),
+		     outPtr);
 }
 
 
 int
 PizCompressor::compressTile (const char *inPtr,
-                 int inSize,
-                 Imath::Box2i range,
-                 const char *&outPtr)
+			     int inSize,
+			     IMATH_NAMESPACE::Box2i range,
+			     const char *&outPtr)
 {
     return compress (inPtr, inSize, range, outPtr);
 }
@@ -276,23 +277,23 @@ PizCompressor::compressTile (const char *inPtr,
 
 int
 PizCompressor::uncompress (const char *inPtr,
-               int inSize,
-               int minY,
-               const char *&outPtr)
+			   int inSize,
+			   int minY,
+			   const char *&outPtr)
 {
     return uncompress (inPtr,
-               inSize,
-               Box2i (V2i (_minX, minY),
-                  V2i (_maxX, minY + numScanLines() - 1)),
-               outPtr);
+		       inSize,
+		       Box2i (V2i (_minX, minY),
+			      V2i (_maxX, minY + numScanLines() - 1)),
+		       outPtr);
 }
 
 
 int
 PizCompressor::uncompressTile (const char *inPtr,
-                   int inSize,
-                   Imath::Box2i range,
-                   const char *&outPtr)
+			       int inSize,
+			       IMATH_NAMESPACE::Box2i range,
+			       const char *&outPtr)
 {
     return uncompress (inPtr, inSize, range, outPtr);
 }
@@ -300,9 +301,9 @@ PizCompressor::uncompressTile (const char *inPtr,
 
 int
 PizCompressor::compress (const char *inPtr,
-             int inSize,
-             Imath::Box2i range,
-             const char *&outPtr)
+			 int inSize,
+			 IMATH_NAMESPACE::Box2i range,
+			 const char *&outPtr)
 {
     //
     // This is the compress function which is used by both the tiled and
@@ -310,13 +311,13 @@ PizCompressor::compress (const char *inPtr,
     //
 
     //
-    // Special case ­- empty input buffer
+    // Special case ï¿½- empty input buffer
     //
 
     if (inSize == 0)
     {
-    outPtr = _outBuffer;
-    return 0;
+	outPtr = _outBuffer;
+	return 0;
     }
 
     //
@@ -333,10 +334,10 @@ PizCompressor::compress (const char *inPtr,
     int maxX = range.max.x;
     int minY = range.min.y;
     int maxY = range.max.y;
-
+    
     if (maxY > _maxY)
         maxY = _maxY;
-
+    
     if (maxX > _maxX)
         maxX = _maxX;
 
@@ -344,75 +345,75 @@ PizCompressor::compress (const char *inPtr,
     int i = 0;
 
     for (ChannelList::ConstIterator c = _channels.begin();
-     c != _channels.end();
-     ++c, ++i)
+	 c != _channels.end();
+	 ++c, ++i)
     {
-    ChannelData &cd = _channelData[i];
+	ChannelData &cd = _channelData[i];
 
-    cd.start = tmpBufferEnd;
-    cd.end = cd.start;
+	cd.start = tmpBufferEnd;
+	cd.end = cd.start;
 
-    cd.nx = numSamples (c.channel().xSampling, minX, maxX);
-    cd.ny = numSamples (c.channel().ySampling, minY, maxY);
-    cd.ys = c.channel().ySampling;
+	cd.nx = numSamples (c.channel().xSampling, minX, maxX);
+	cd.ny = numSamples (c.channel().ySampling, minY, maxY);
+	cd.ys = c.channel().ySampling;
 
-    cd.size = pixelTypeSize (c.channel().type) / pixelTypeSize (HALF);
+	cd.size = pixelTypeSize (c.channel().type) / pixelTypeSize (HALF);
 
-    tmpBufferEnd += cd.nx * cd.ny * cd.size;
+	tmpBufferEnd += cd.nx * cd.ny * cd.size;
     }
 
     if (_format == XDR)
     {
-    //
-    // Machine-independent (Xdr) data format
-    //
+	//
+	// Machine-independent (Xdr) data format
+	//
 
-    for (int y = minY; y <= maxY; ++y)
-    {
-        for (int i = 0; i < _numChans; ++i)
-        {
-        ChannelData &cd = _channelData[i];
+	for (int y = minY; y <= maxY; ++y)
+	{
+	    for (int i = 0; i < _numChans; ++i)
+	    {
+		ChannelData &cd = _channelData[i];
 
-        if (modp (y, cd.ys) != 0)
-            continue;
+		if (modp (y, cd.ys) != 0)
+		    continue;
 
-        for (int x = cd.nx * cd.size; x > 0; --x)
-        {
-            Xdr::read <CharPtrIO> (inPtr, *cd.end);
-            ++cd.end;
-        }
-        }
-    }
+		for (int x = cd.nx * cd.size; x > 0; --x)
+		{
+		    Xdr::read <CharPtrIO> (inPtr, *cd.end);
+		    ++cd.end;
+		}
+	    }
+	}
     }
     else
     {
-    //
-    // Native, machine-dependent data format
-    //
+	//
+	// Native, machine-dependent data format
+	//
 
-    for (int y = minY; y <= maxY; ++y)
-    {
-        for (int i = 0; i < _numChans; ++i)
-        {
-        ChannelData &cd = _channelData[i];
+	for (int y = minY; y <= maxY; ++y)
+	{
+	    for (int i = 0; i < _numChans; ++i)
+	    {
+		ChannelData &cd = _channelData[i];
 
-        if (modp (y, cd.ys) != 0)
-            continue;
+		if (modp (y, cd.ys) != 0)
+		    continue;
 
-        int n = cd.nx * cd.size;
-        memcpy (cd.end, inPtr, n * sizeof (unsigned short));
-        inPtr  += n * sizeof (unsigned short);
-        cd.end += n;
-        }
-    }
+		int n = cd.nx * cd.size;
+		memcpy (cd.end, inPtr, n * sizeof (unsigned short));
+		inPtr  += n * sizeof (unsigned short);
+		cd.end += n;
+	    }
+	}
     }
 
     #if defined (DEBUG)
 
-    for (int i = 1; i < _numChans; ++i)
-        assert (_channelData[i-1].end == _channelData[i].start);
+	for (int i = 1; i < _numChans; ++i)
+	    assert (_channelData[i-1].end == _channelData[i].start);
 
-    assert (_channelData[_numChans-1].end == tmpBufferEnd);
+	assert (_channelData[_numChans-1].end == tmpBufferEnd);
 
     #endif
 
@@ -425,9 +426,9 @@ PizCompressor::compress (const char *inPtr,
     unsigned short maxNonZero;
 
     bitmapFromData (_tmpBuffer,
-            tmpBufferEnd - _tmpBuffer,
-            bitmap,
-            minNonZero, maxNonZero);
+		    tmpBufferEnd - _tmpBuffer,
+		    bitmap,
+		    minNonZero, maxNonZero);
 
     AutoArray <unsigned short, USHORT_RANGE> lut;
     unsigned short maxValue = forwardLutFromBitmap (bitmap, lut);
@@ -444,8 +445,8 @@ PizCompressor::compress (const char *inPtr,
 
     if (minNonZero <= maxNonZero)
     {
-    Xdr::write <CharPtrIO> (buf, (char *) &bitmap[0] + minNonZero,
-                maxNonZero - minNonZero + 1);
+	Xdr::write <CharPtrIO> (buf, (char *) &bitmap[0] + minNonZero,
+				maxNonZero - minNonZero + 1);
     }
 
     //
@@ -454,15 +455,15 @@ PizCompressor::compress (const char *inPtr,
 
     for (int i = 0; i < _numChans; ++i)
     {
-    ChannelData &cd = _channelData[i];
+	ChannelData &cd = _channelData[i];
 
-    for (int j = 0; j < cd.size; ++j)
-    {
-        wav2Encode (cd.start + j,
-            cd.nx, cd.size,
-            cd.ny, cd.nx * cd.size,
-            maxValue);
-    }
+	for (int j = 0; j < cd.size; ++j)
+	{
+	    wav2Encode (cd.start + j,
+			cd.nx, cd.size,
+			cd.ny, cd.nx * cd.size,
+			maxValue);
+	}
     }
 
     //
@@ -482,23 +483,23 @@ PizCompressor::compress (const char *inPtr,
 
 int
 PizCompressor::uncompress (const char *inPtr,
-               int inSize,
-               Imath::Box2i range,
-               const char *&outPtr)
+			   int inSize,
+			   IMATH_NAMESPACE::Box2i range,
+			   const char *&outPtr)
 {
     //
     // This is the cunompress function which is used by both the tiled and
     // scanline decompression routines.
     //
-
+    
     //
     // Special case - empty input buffer
     //
 
     if (inSize == 0)
     {
-    outPtr = _outBuffer;
-    return 0;
+	outPtr = _outBuffer;
+	return 0;
     }
 
     //
@@ -509,10 +510,10 @@ PizCompressor::uncompress (const char *inPtr,
     int maxX = range.max.x;
     int minY = range.min.y;
     int maxY = range.max.y;
-
+    
     if (maxY > _maxY)
         maxY = _maxY;
-
+    
     if (maxX > _maxX)
         maxX = _maxX;
 
@@ -520,21 +521,21 @@ PizCompressor::uncompress (const char *inPtr,
     int i = 0;
 
     for (ChannelList::ConstIterator c = _channels.begin();
-     c != _channels.end();
-     ++c, ++i)
+	 c != _channels.end();
+	 ++c, ++i)
     {
-    ChannelData &cd = _channelData[i];
+	ChannelData &cd = _channelData[i];
 
-    cd.start = tmpBufferEnd;
-    cd.end = cd.start;
+	cd.start = tmpBufferEnd;
+	cd.end = cd.start;
 
-    cd.nx = numSamples (c.channel().xSampling, minX, maxX);
-    cd.ny = numSamples (c.channel().ySampling, minY, maxY);
-    cd.ys = c.channel().ySampling;
+	cd.nx = numSamples (c.channel().xSampling, minX, maxX);
+	cd.ny = numSamples (c.channel().ySampling, minY, maxY);
+	cd.ys = c.channel().ySampling;
 
-    cd.size = pixelTypeSize (c.channel().type) / pixelTypeSize (HALF);
+	cd.size = pixelTypeSize (c.channel().type) / pixelTypeSize (HALF);
 
-    tmpBufferEnd += cd.nx * cd.ny * cd.size;
+	tmpBufferEnd += cd.nx * cd.ny * cd.size;
     }
 
     //
@@ -552,14 +553,14 @@ PizCompressor::uncompress (const char *inPtr,
 
     if (maxNonZero >= BITMAP_SIZE)
     {
-    throw InputExc ("Error in header for PIZ-compressed data "
-            "(invalid bitmap size).");
+	throw InputExc ("Error in header for PIZ-compressed data "
+			"(invalid bitmap size).");
     }
 
     if (minNonZero <= maxNonZero)
     {
-    Xdr::read <CharPtrIO> (inPtr, (char *) &bitmap[0] + minNonZero,
-                   maxNonZero - minNonZero + 1);
+	Xdr::read <CharPtrIO> (inPtr, (char *) &bitmap[0] + minNonZero,
+			       maxNonZero - minNonZero + 1);
     }
 
     AutoArray <unsigned short, USHORT_RANGE> lut;
@@ -572,6 +573,12 @@ PizCompressor::uncompress (const char *inPtr,
     int length;
     Xdr::read <CharPtrIO> (inPtr, length);
 
+    if (length > inSize)
+    {
+	throw InputExc ("Error in header for PIZ-compressed data "
+			"(invalid array length).");
+    }
+
     hufUncompress (inPtr, length, _tmpBuffer, tmpBufferEnd - _tmpBuffer);
 
     //
@@ -580,15 +587,15 @@ PizCompressor::uncompress (const char *inPtr,
 
     for (int i = 0; i < _numChans; ++i)
     {
-    ChannelData &cd = _channelData[i];
+	ChannelData &cd = _channelData[i];
 
-    for (int j = 0; j < cd.size; ++j)
-    {
-        wav2Decode (cd.start + j,
-            cd.nx, cd.size,
-            cd.ny, cd.nx * cd.size,
-            maxValue);
-    }
+	for (int j = 0; j < cd.size; ++j)
+	{
+	    wav2Decode (cd.start + j,
+			cd.nx, cd.size,
+			cd.ny, cd.nx * cd.size,
+			maxValue);
+	}
     }
 
     //
@@ -596,7 +603,7 @@ PizCompressor::uncompress (const char *inPtr,
     //
 
     applyLut (lut, _tmpBuffer, tmpBufferEnd - _tmpBuffer);
-
+    
     //
     // Rearrange the pixel data into the format expected by the caller.
     //
@@ -605,56 +612,56 @@ PizCompressor::uncompress (const char *inPtr,
 
     if (_format == XDR)
     {
-    //
-    // Machine-independent (Xdr) data format
-    //
+	//
+	// Machine-independent (Xdr) data format
+	//
 
-    for (int y = minY; y <= maxY; ++y)
-    {
-        for (int i = 0; i < _numChans; ++i)
-        {
-        ChannelData &cd = _channelData[i];
+	for (int y = minY; y <= maxY; ++y)
+	{
+	    for (int i = 0; i < _numChans; ++i)
+	    {
+		ChannelData &cd = _channelData[i];
 
-        if (modp (y, cd.ys) != 0)
-            continue;
+		if (modp (y, cd.ys) != 0)
+		    continue;
 
-        for (int x = cd.nx * cd.size; x > 0; --x)
-        {
-            Xdr::write <CharPtrIO> (outEnd, *cd.end);
-            ++cd.end;
-        }
-        }
-    }
+		for (int x = cd.nx * cd.size; x > 0; --x)
+		{
+		    Xdr::write <CharPtrIO> (outEnd, *cd.end);
+		    ++cd.end;
+		}
+	    }
+	}
     }
     else
     {
-    //
-    // Native, machine-dependent data format
-    //
+	//
+	// Native, machine-dependent data format
+	//
 
-    for (int y = minY; y <= maxY; ++y)
-    {
-        for (int i = 0; i < _numChans; ++i)
-        {
-        ChannelData &cd = _channelData[i];
+	for (int y = minY; y <= maxY; ++y)
+	{
+	    for (int i = 0; i < _numChans; ++i)
+	    {
+		ChannelData &cd = _channelData[i];
 
-        if (modp (y, cd.ys) != 0)
-            continue;
+		if (modp (y, cd.ys) != 0)
+		    continue;
 
-        int n = cd.nx * cd.size;
-        memcpy (outEnd, cd.end, n * sizeof (unsigned short));
-        outEnd += n * sizeof (unsigned short);
-        cd.end += n;
-        }
-    }
+		int n = cd.nx * cd.size;
+		memcpy (outEnd, cd.end, n * sizeof (unsigned short));
+		outEnd += n * sizeof (unsigned short);
+		cd.end += n;
+	    }
+	}
     }
 
     #if defined (DEBUG)
 
-    for (int i = 1; i < _numChans; ++i)
-        assert (_channelData[i-1].end == _channelData[i].start);
+	for (int i = 1; i < _numChans; ++i)
+	    assert (_channelData[i-1].end == _channelData[i].start);
 
-    assert (_channelData[_numChans-1].end == tmpBufferEnd);
+	assert (_channelData[_numChans-1].end == tmpBufferEnd);
 
     #endif
 
@@ -663,4 +670,4 @@ PizCompressor::uncompress (const char *inPtr,
 }
 
 
-} // namespace Imf
+OPENEXR_IMF_INTERNAL_NAMESPACE_SOURCE_EXIT

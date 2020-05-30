@@ -1,7 +1,7 @@
 /*
  * jdarith.c
  *
- * Developed 1997-2012 by Guido Vollbeding.
+ * Developed 1997-2015 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -94,7 +94,7 @@ get_byte (j_decompress_ptr cinfo)
  * (instead of fixed) with the bit shift counter CT.
  * Thus, we also need only one (variable instead of
  * fixed size) shift for the LPS/MPS decision, and
- * we can get away with any renormalization update
+ * we can do away with any renormalization update
  * of C (except for new data insertion, of course).
  *
  * I've also introduced a new scheme for accessing
@@ -115,32 +115,32 @@ arith_decode (j_decompress_ptr cinfo, unsigned char *st)
     if (--e->ct < 0) {
       /* Need to fetch next data byte */
       if (cinfo->unread_marker)
-        data = 0;		/* stuff zero data */
+	data = 0;		/* stuff zero data */
       else {
-        data = get_byte(cinfo);	/* read next input byte */
-        if (data == 0xFF) {	/* zero stuff or marker code */
-          do data = get_byte(cinfo);
-          while (data == 0xFF);	/* swallow extra 0xFF bytes */
-          if (data == 0)
-            data = 0xFF;	/* discard stuffed zero byte */
-          else {
-            /* Note: Different from the Huffman decoder, hitting
-             * a marker while processing the compressed data
-             * segment is legal in arithmetic coding.
-             * The convention is to supply zero data
-             * then until decoding is complete.
-             */
-            cinfo->unread_marker = data;
-            data = 0;
-          }
-        }
+	data = get_byte(cinfo);	/* read next input byte */
+	if (data == 0xFF) {	/* zero stuff or marker code */
+	  do data = get_byte(cinfo);
+	  while (data == 0xFF);	/* swallow extra 0xFF bytes */
+	  if (data == 0)
+	    data = 0xFF;	/* discard stuffed zero byte */
+	  else {
+	    /* Note: Different from the Huffman decoder, hitting
+	     * a marker while processing the compressed data
+	     * segment is legal in arithmetic coding.
+	     * The convention is to supply zero data
+	     * then until decoding is complete.
+	     */
+	    cinfo->unread_marker = data;
+	    data = 0;
+	  }
+	}
       }
       e->c = (e->c << 8) | data; /* insert data into C register */
       if ((e->ct += 8) < 0)	 /* update bit shift counter */
-        /* Need more initial bytes */
-        if (++e->ct == 0)
-          /* Got 2 initial bytes -> re-init A and exit loop */
-          e->a = 0x8000L; /* => e->a = 0x10000L after loop exit */
+	/* Need more initial bytes */
+	if (++e->ct == 0)
+	  /* Got 2 initial bytes -> re-init A and exit loop */
+	  e->a = 0x8000L; /* => e->a = 0x10000L after loop exit */
     }
     e->a <<= 1;
   }
@@ -207,7 +207,7 @@ process_restart (j_decompress_ptr cinfo)
       entropy->dc_context[ci] = 0;
     }
     if ((! cinfo->progressive_mode && cinfo->lim_Se) ||
-        (cinfo->progressive_mode && cinfo->Ss)) {
+	(cinfo->progressive_mode && cinfo->Ss)) {
       MEMZERO(entropy->ac_stats[compptr->ac_tbl_no], AC_STAT_BINS);
     }
   }
@@ -278,28 +278,28 @@ decode_mcu_DC_first (j_decompress_ptr cinfo, JBLOCKROW *MCU_data)
       st += 2; st += sign;
       /* Figure F.23: Decoding the magnitude category of v */
       if ((m = arith_decode(cinfo, st)) != 0) {
-        st = entropy->dc_stats[tbl] + 20;	/* Table F.4: X1 = 20 */
-        while (arith_decode(cinfo, st)) {
-          if ((m <<= 1) == 0x8000) {
-            WARNMS(cinfo, JWRN_ARITH_BAD_CODE);
-            entropy->ct = -1;			/* magnitude overflow */
-            return TRUE;
-          }
-          st += 1;
-        }
+	st = entropy->dc_stats[tbl] + 20;	/* Table F.4: X1 = 20 */
+	while (arith_decode(cinfo, st)) {
+	  if ((m <<= 1) == 0x8000) {
+	    WARNMS(cinfo, JWRN_ARITH_BAD_CODE);
+	    entropy->ct = -1;			/* magnitude overflow */
+	    return TRUE;
+	  }
+	  st += 1;
+	}
       }
       /* Section F.1.4.4.1.2: Establish dc_context conditioning category */
       if (m < (int) ((1L << cinfo->arith_dc_L[tbl]) >> 1))
-        entropy->dc_context[ci] = 0;		   /* zero diff category */
+	entropy->dc_context[ci] = 0;		   /* zero diff category */
       else if (m > (int) ((1L << cinfo->arith_dc_U[tbl]) >> 1))
-        entropy->dc_context[ci] = 12 + (sign * 4); /* large diff category */
+	entropy->dc_context[ci] = 12 + (sign * 4); /* large diff category */
       else
-        entropy->dc_context[ci] = 4 + (sign * 4);  /* small diff category */
+	entropy->dc_context[ci] = 4 + (sign * 4);  /* small diff category */
       v = m;
       /* Figure F.24: Decoding the magnitude bit pattern of v */
       st += 14;
       while (m >>= 1)
-        if (arith_decode(cinfo, st)) v |= m;
+	if (arith_decode(cinfo, st)) v |= m;
       v += 1; if (sign) v = -v;
       entropy->last_dc_val[ci] += v;
     }
@@ -354,9 +354,9 @@ decode_mcu_AC_first (j_decompress_ptr cinfo, JBLOCKROW *MCU_data)
       if (arith_decode(cinfo, st + 1)) break;
       st += 3;
       if (k >= cinfo->Se) {
-        WARNMS(cinfo, JWRN_ARITH_BAD_CODE);
-        entropy->ct = -1;			/* spectral overflow */
-        return TRUE;
+	WARNMS(cinfo, JWRN_ARITH_BAD_CODE);
+	entropy->ct = -1;			/* spectral overflow */
+	return TRUE;
       }
     }
     /* Figure F.21: Decoding nonzero value v */
@@ -366,17 +366,17 @@ decode_mcu_AC_first (j_decompress_ptr cinfo, JBLOCKROW *MCU_data)
     /* Figure F.23: Decoding the magnitude category of v */
     if ((m = arith_decode(cinfo, st)) != 0) {
       if (arith_decode(cinfo, st)) {
-        m <<= 1;
-        st = entropy->ac_stats[tbl] +
-             (k <= cinfo->arith_ac_K[tbl] ? 189 : 217);
-        while (arith_decode(cinfo, st)) {
-          if ((m <<= 1) == 0x8000) {
-            WARNMS(cinfo, JWRN_ARITH_BAD_CODE);
-            entropy->ct = -1;			/* magnitude overflow */
-            return TRUE;
-          }
-          st += 1;
-        }
+	m <<= 1;
+	st = entropy->ac_stats[tbl] +
+	     (k <= cinfo->arith_ac_K[tbl] ? 189 : 217);
+	while (arith_decode(cinfo, st)) {
+	  if ((m <<= 1) == 0x8000) {
+	    WARNMS(cinfo, JWRN_ARITH_BAD_CODE);
+	    entropy->ct = -1;			/* magnitude overflow */
+	    return TRUE;
+	  }
+	  st += 1;
+	}
       }
     }
     v = m;
@@ -395,6 +395,8 @@ decode_mcu_AC_first (j_decompress_ptr cinfo, JBLOCKROW *MCU_data)
 
 /*
  * MCU decoding for DC successive approximation refinement scan.
+ * Note: we assume such scans can be multi-component,
+ * although the spec is not very clear on the point.
  */
 
 METHODDEF(boolean)
@@ -473,26 +475,26 @@ decode_mcu_AC_refine (j_decompress_ptr cinfo, JBLOCKROW *MCU_data)
     for (;;) {
       thiscoef = *block + natural_order[++k];
       if (*thiscoef) {				/* previously nonzero coef */
-        if (arith_decode(cinfo, st + 2)) {
-          if (*thiscoef < 0)
-            *thiscoef += m1;
-          else
-            *thiscoef += p1;
-        }
-        break;
+	if (arith_decode(cinfo, st + 2)) {
+	  if (*thiscoef < 0)
+	    *thiscoef += m1;
+	  else
+	    *thiscoef += p1;
+	}
+	break;
       }
       if (arith_decode(cinfo, st + 1)) {	/* newly nonzero coef */
-        if (arith_decode(cinfo, entropy->fixed_bin))
-          *thiscoef = m1;
-        else
-          *thiscoef = p1;
-        break;
+	if (arith_decode(cinfo, entropy->fixed_bin))
+	  *thiscoef = m1;
+	else
+	  *thiscoef = p1;
+	break;
       }
       st += 3;
       if (k >= cinfo->Se) {
-        WARNMS(cinfo, JWRN_ARITH_BAD_CODE);
-        entropy->ct = -1;			/* spectral overflow */
-        return TRUE;
+	WARNMS(cinfo, JWRN_ARITH_BAD_CODE);
+	entropy->ct = -1;			/* spectral overflow */
+	return TRUE;
       }
     }
   } while (k < cinfo->Se);
@@ -551,28 +553,28 @@ decode_mcu (j_decompress_ptr cinfo, JBLOCKROW *MCU_data)
       st += 2; st += sign;
       /* Figure F.23: Decoding the magnitude category of v */
       if ((m = arith_decode(cinfo, st)) != 0) {
-        st = entropy->dc_stats[tbl] + 20;	/* Table F.4: X1 = 20 */
-        while (arith_decode(cinfo, st)) {
-          if ((m <<= 1) == 0x8000) {
-            WARNMS(cinfo, JWRN_ARITH_BAD_CODE);
-            entropy->ct = -1;			/* magnitude overflow */
-            return TRUE;
-          }
-          st += 1;
-        }
+	st = entropy->dc_stats[tbl] + 20;	/* Table F.4: X1 = 20 */
+	while (arith_decode(cinfo, st)) {
+	  if ((m <<= 1) == 0x8000) {
+	    WARNMS(cinfo, JWRN_ARITH_BAD_CODE);
+	    entropy->ct = -1;			/* magnitude overflow */
+	    return TRUE;
+	  }
+	  st += 1;
+	}
       }
       /* Section F.1.4.4.1.2: Establish dc_context conditioning category */
       if (m < (int) ((1L << cinfo->arith_dc_L[tbl]) >> 1))
-        entropy->dc_context[ci] = 0;		   /* zero diff category */
+	entropy->dc_context[ci] = 0;		   /* zero diff category */
       else if (m > (int) ((1L << cinfo->arith_dc_U[tbl]) >> 1))
-        entropy->dc_context[ci] = 12 + (sign * 4); /* large diff category */
+	entropy->dc_context[ci] = 12 + (sign * 4); /* large diff category */
       else
-        entropy->dc_context[ci] = 4 + (sign * 4);  /* small diff category */
+	entropy->dc_context[ci] = 4 + (sign * 4);  /* small diff category */
       v = m;
       /* Figure F.24: Decoding the magnitude bit pattern of v */
       st += 14;
       while (m >>= 1)
-        if (arith_decode(cinfo, st)) v |= m;
+	if (arith_decode(cinfo, st)) v |= m;
       v += 1; if (sign) v = -v;
       entropy->last_dc_val[ci] += v;
     }
@@ -590,14 +592,14 @@ decode_mcu (j_decompress_ptr cinfo, JBLOCKROW *MCU_data)
       st = entropy->ac_stats[tbl] + 3 * k;
       if (arith_decode(cinfo, st)) break;	/* EOB flag */
       for (;;) {
-        k++;
-        if (arith_decode(cinfo, st + 1)) break;
-        st += 3;
-        if (k >= cinfo->lim_Se) {
-          WARNMS(cinfo, JWRN_ARITH_BAD_CODE);
-          entropy->ct = -1;			/* spectral overflow */
-          return TRUE;
-        }
+	k++;
+	if (arith_decode(cinfo, st + 1)) break;
+	st += 3;
+	if (k >= cinfo->lim_Se) {
+	  WARNMS(cinfo, JWRN_ARITH_BAD_CODE);
+	  entropy->ct = -1;			/* spectral overflow */
+	  return TRUE;
+	}
       }
       /* Figure F.21: Decoding nonzero value v */
       /* Figure F.22: Decoding the sign of v */
@@ -605,25 +607,25 @@ decode_mcu (j_decompress_ptr cinfo, JBLOCKROW *MCU_data)
       st += 2;
       /* Figure F.23: Decoding the magnitude category of v */
       if ((m = arith_decode(cinfo, st)) != 0) {
-        if (arith_decode(cinfo, st)) {
-          m <<= 1;
-          st = entropy->ac_stats[tbl] +
-               (k <= cinfo->arith_ac_K[tbl] ? 189 : 217);
-          while (arith_decode(cinfo, st)) {
-            if ((m <<= 1) == 0x8000) {
-              WARNMS(cinfo, JWRN_ARITH_BAD_CODE);
-              entropy->ct = -1;			/* magnitude overflow */
-              return TRUE;
-            }
-            st += 1;
-          }
-        }
+	if (arith_decode(cinfo, st)) {
+	  m <<= 1;
+	  st = entropy->ac_stats[tbl] +
+	       (k <= cinfo->arith_ac_K[tbl] ? 189 : 217);
+	  while (arith_decode(cinfo, st)) {
+	    if ((m <<= 1) == 0x8000) {
+	      WARNMS(cinfo, JWRN_ARITH_BAD_CODE);
+	      entropy->ct = -1;			/* magnitude overflow */
+	      return TRUE;
+	    }
+	    st += 1;
+	  }
+	}
       }
       v = m;
       /* Figure F.24: Decoding the magnitude bit pattern of v */
       st += 14;
       while (m >>= 1)
-        if (arith_decode(cinfo, st)) v |= m;
+	if (arith_decode(cinfo, st)) v |= m;
       v += 1; if (sign) v = -v;
       (*block)[natural_order[k]] = (JCOEF) v;
     } while (k < cinfo->lim_Se);
@@ -648,24 +650,24 @@ start_pass (j_decompress_ptr cinfo)
     /* Validate progressive scan parameters */
     if (cinfo->Ss == 0) {
       if (cinfo->Se != 0)
-        goto bad;
+	goto bad;
     } else {
       /* need not check Ss/Se < 0 since they came from unsigned bytes */
       if (cinfo->Se < cinfo->Ss || cinfo->Se > cinfo->lim_Se)
-        goto bad;
+	goto bad;
       /* AC scans may have only one component */
       if (cinfo->comps_in_scan != 1)
-        goto bad;
+	goto bad;
     }
     if (cinfo->Ah != 0) {
       /* Successive approximation refinement scan: must have Al = Ah-1. */
       if (cinfo->Ah-1 != cinfo->Al)
-        goto bad;
+	goto bad;
     }
     if (cinfo->Al > 13) {	/* need not check for < 0 */
       bad:
       ERREXIT4(cinfo, JERR_BAD_PROGRESSION,
-               cinfo->Ss, cinfo->Se, cinfo->Ah, cinfo->Al);
+	       cinfo->Ss, cinfo->Se, cinfo->Ah, cinfo->Al);
     }
     /* Update progression status, and verify that scan order is legal.
      * Note that inter-scan inconsistencies are treated as warnings
@@ -675,32 +677,32 @@ start_pass (j_decompress_ptr cinfo)
       int coefi, cindex = cinfo->cur_comp_info[ci]->component_index;
       int *coef_bit_ptr = & cinfo->coef_bits[cindex][0];
       if (cinfo->Ss && coef_bit_ptr[0] < 0) /* AC without prior DC scan */
-        WARNMS2(cinfo, JWRN_BOGUS_PROGRESSION, cindex, 0);
+	WARNMS2(cinfo, JWRN_BOGUS_PROGRESSION, cindex, 0);
       for (coefi = cinfo->Ss; coefi <= cinfo->Se; coefi++) {
-        int expected = (coef_bit_ptr[coefi] < 0) ? 0 : coef_bit_ptr[coefi];
-        if (cinfo->Ah != expected)
-          WARNMS2(cinfo, JWRN_BOGUS_PROGRESSION, cindex, coefi);
-        coef_bit_ptr[coefi] = cinfo->Al;
+	int expected = (coef_bit_ptr[coefi] < 0) ? 0 : coef_bit_ptr[coefi];
+	if (cinfo->Ah != expected)
+	  WARNMS2(cinfo, JWRN_BOGUS_PROGRESSION, cindex, coefi);
+	coef_bit_ptr[coefi] = cinfo->Al;
       }
     }
     /* Select MCU decoding routine */
     if (cinfo->Ah == 0) {
       if (cinfo->Ss == 0)
-        entropy->pub.decode_mcu = decode_mcu_DC_first;
+	entropy->pub.decode_mcu = decode_mcu_DC_first;
       else
-        entropy->pub.decode_mcu = decode_mcu_AC_first;
+	entropy->pub.decode_mcu = decode_mcu_AC_first;
     } else {
       if (cinfo->Ss == 0)
-        entropy->pub.decode_mcu = decode_mcu_DC_refine;
+	entropy->pub.decode_mcu = decode_mcu_DC_refine;
       else
-        entropy->pub.decode_mcu = decode_mcu_AC_refine;
+	entropy->pub.decode_mcu = decode_mcu_AC_refine;
     }
   } else {
     /* Check that the scan parameters Ss, Se, Ah/Al are OK for sequential JPEG.
      * This ought to be an error condition, but we make it a warning.
      */
     if (cinfo->Ss != 0 || cinfo->Ah != 0 || cinfo->Al != 0 ||
-        (cinfo->Se < DCTSIZE2 && cinfo->Se != cinfo->lim_Se))
+	(cinfo->Se < DCTSIZE2 && cinfo->Se != cinfo->lim_Se))
       WARNMS(cinfo, JWRN_NOT_SEQUENTIAL);
     /* Select MCU decoding routine */
     entropy->pub.decode_mcu = decode_mcu;
@@ -712,23 +714,23 @@ start_pass (j_decompress_ptr cinfo)
     if (! cinfo->progressive_mode || (cinfo->Ss == 0 && cinfo->Ah == 0)) {
       tbl = compptr->dc_tbl_no;
       if (tbl < 0 || tbl >= NUM_ARITH_TBLS)
-        ERREXIT1(cinfo, JERR_NO_ARITH_TABLE, tbl);
+	ERREXIT1(cinfo, JERR_NO_ARITH_TABLE, tbl);
       if (entropy->dc_stats[tbl] == NULL)
-        entropy->dc_stats[tbl] = (unsigned char *) (*cinfo->mem->alloc_small)
-          ((j_common_ptr) cinfo, JPOOL_IMAGE, DC_STAT_BINS);
+	entropy->dc_stats[tbl] = (unsigned char *) (*cinfo->mem->alloc_small)
+	  ((j_common_ptr) cinfo, JPOOL_IMAGE, DC_STAT_BINS);
       MEMZERO(entropy->dc_stats[tbl], DC_STAT_BINS);
       /* Initialize DC predictions to 0 */
       entropy->last_dc_val[ci] = 0;
       entropy->dc_context[ci] = 0;
     }
     if ((! cinfo->progressive_mode && cinfo->lim_Se) ||
-        (cinfo->progressive_mode && cinfo->Ss)) {
+	(cinfo->progressive_mode && cinfo->Ss)) {
       tbl = compptr->ac_tbl_no;
       if (tbl < 0 || tbl >= NUM_ARITH_TBLS)
-        ERREXIT1(cinfo, JERR_NO_ARITH_TABLE, tbl);
+	ERREXIT1(cinfo, JERR_NO_ARITH_TABLE, tbl);
       if (entropy->ac_stats[tbl] == NULL)
-        entropy->ac_stats[tbl] = (unsigned char *) (*cinfo->mem->alloc_small)
-          ((j_common_ptr) cinfo, JPOOL_IMAGE, AC_STAT_BINS);
+	entropy->ac_stats[tbl] = (unsigned char *) (*cinfo->mem->alloc_small)
+	  ((j_common_ptr) cinfo, JPOOL_IMAGE, AC_STAT_BINS);
       MEMZERO(entropy->ac_stats[tbl], AC_STAT_BINS);
     }
   }
@@ -744,6 +746,17 @@ start_pass (j_decompress_ptr cinfo)
 
 
 /*
+ * Finish up at the end of an arithmetic-compressed scan.
+ */
+
+METHODDEF(void)
+finish_pass (j_decompress_ptr cinfo)
+{
+  /* no work necessary here */
+}
+
+
+/*
  * Module initialization routine for arithmetic entropy decoding.
  */
 
@@ -755,9 +768,10 @@ jinit_arith_decoder (j_decompress_ptr cinfo)
 
   entropy = (arith_entropy_ptr)
     (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
-                                SIZEOF(arith_entropy_decoder));
+				SIZEOF(arith_entropy_decoder));
   cinfo->entropy = &entropy->pub;
   entropy->pub.start_pass = start_pass;
+  entropy->pub.finish_pass = finish_pass;
 
   /* Mark tables unallocated */
   for (i = 0; i < NUM_ARITH_TBLS; i++) {
@@ -773,10 +787,10 @@ jinit_arith_decoder (j_decompress_ptr cinfo)
     int *coef_bit_ptr, ci;
     cinfo->coef_bits = (int (*)[DCTSIZE2])
       (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
-                                  cinfo->num_components*DCTSIZE2*SIZEOF(int));
+				  cinfo->num_components*DCTSIZE2*SIZEOF(int));
     coef_bit_ptr = & cinfo->coef_bits[0][0];
-    for (ci = 0; ci < cinfo->num_components; ci++)
+    for (ci = 0; ci < cinfo->num_components; ci++) 
       for (i = 0; i < DCTSIZE2; i++)
-        *coef_bit_ptr++ = -1;
+	*coef_bit_ptr++ = -1;
   }
 }

@@ -39,15 +39,12 @@
 //
 //M*/
 #include "precomp.hpp"
+#include "opencv2/core/hal/intrin.hpp"
 
 namespace cv
 {
 
-// inner product
-static float innerProduct(Point2f &v1, Point2f &v2)
-{
-    return v1.x * v2.y - v1.y * v2.x;
-}
+const float EPS = 1.0e-4f;
 
 static void findCircle3pts(Point2f *pts, Point2f &center, float &radius)
 {
@@ -55,72 +52,44 @@ static void findCircle3pts(Point2f *pts, Point2f &center, float &radius)
     Point2f v1 = pts[1] - pts[0];
     Point2f v2 = pts[2] - pts[0];
 
-    if (innerProduct(v1, v2) == 0.0f)
+    // center is intersection of midperpendicular lines of the two edges v1, v2
+    // a1*x + b1*y = c1 where a1 = v1.x, b1 = v1.y
+    // a2*x + b2*y = c2 where a2 = v2.x, b2 = v2.y
+    Point2f midPoint1 = (pts[0] + pts[1]) / 2.0f;
+    float c1 = midPoint1.x * v1.x + midPoint1.y * v1.y;
+    Point2f midPoint2 = (pts[0] + pts[2]) / 2.0f;
+    float c2 = midPoint2.x * v2.x + midPoint2.y * v2.y;
+    float det = v1.x * v2.y - v1.y * v2.x;
+    if (fabs(det) <= EPS)
     {
-        // v1, v2 colineation, can not determine a unique circle
-        // find the longtest distance as diameter line
-        float d1 = (float)norm(pts[0] - pts[1]);
-        float d2 = (float)norm(pts[0] - pts[2]);
-        float d3 = (float)norm(pts[1] - pts[2]);
+        // v1 and v2 are colinear, so the longest distance between any 2 points
+        // is the diameter of the minimum enclosing circle.
+        float d1 = normL2Sqr<float>(pts[0] - pts[1]);
+        float d2 = normL2Sqr<float>(pts[0] - pts[2]);
+        float d3 = normL2Sqr<float>(pts[1] - pts[2]);
+        radius = sqrt(std::max(d1, std::max(d2, d3))) * 0.5f + EPS;
         if (d1 >= d2 && d1 >= d3)
         {
-            center = (pts[0] + pts[1]) / 2.0f;
-            radius = (d1 / 2.0f);
+            center = (pts[0] + pts[1]) * 0.5f;
         }
         else if (d2 >= d1 && d2 >= d3)
         {
-            center = (pts[0] + pts[2]) / 2.0f;
-            radius = (d2 / 2.0f);
+            center = (pts[0] + pts[2]) * 0.5f;
         }
-        else if (d3 >= d1 && d3 >= d2)
+        else
         {
-            center = (pts[1] + pts[2]) / 2.0f;
-            radius = (d3 / 2.0f);
+            CV_DbgAssert(d3 >= d1 && d3 >= d2);
+            center = (pts[1] + pts[2]) * 0.5f;
         }
+        return;
     }
-    else
-    {
-        // center is intersection of midperpendicular lines of the two edges v1, v2
-        // a1*x + b1*y = c1 where a1 = v1.x, b1 = v1.y
-        // a2*x + b2*y = c2 where a2 = v2.x, b2 = v2.y
-        Point2f midPoint1 = (pts[0] + pts[1]) / 2.0f;
-        float c1 = midPoint1.x * v1.x + midPoint1.y * v1.y;
-        Point2f midPoint2 = (pts[0] + pts[2]) / 2.0f;
-        float c2 = midPoint2.x * v2.x + midPoint2.y * v2.y;
-        float det = v1.x * v2.y - v1.y * v2.x;
-        float cx = (c1 * v2.y - c2 * v1.y) / det;
-        float cy = (v1.x * c2 - v2.x * c1) / det;
-        center.x = (float)cx;
-        center.y = (float)cy;
-        cx -= pts[0].x;
-        cy -= pts[0].y;
-        radius = (float)(std::sqrt(cx *cx + cy * cy));
-    }
-}
-
-const float EPS = 1.0e-4f;
-
-static void findEnclosingCircle3pts_orLess_32f(Point2f *pts, int count, Point2f &center, float &radius)
-{
-    switch (count)
-    {
-    case 1:
-        center = pts[0];
-        radius = 0.0f;
-        break;
-    case 2:
-        center.x = (pts[0].x + pts[1].x) / 2.0f;
-        center.y = (pts[0].y + pts[1].y) / 2.0f;
-        radius = (float)(norm(pts[0] - pts[1]) / 2.0);
-        break;
-    case 3:
-        findCircle3pts(pts, center, radius);
-        break;
-    default:
-        break;
-    }
-
-    radius += EPS;
+    float cx = (c1 * v2.y - c2 * v1.y) / det;
+    float cy = (v1.x * c2 - v2.x * c1) / det;
+    center.x = (float)cx;
+    center.y = (float)cy;
+    cx -= pts[0].x;
+    cy -= pts[0].y;
+    radius = (float)(std::sqrt(cx *cx + cy * cy)) + EPS;
 }
 
 template<typename PT>
@@ -146,7 +115,13 @@ static void findThirdPoint(const PT *pts, int i, int j, Point2f &center, float &
             ptsf[0] = (Point2f)pts[i];
             ptsf[1] = (Point2f)pts[j];
             ptsf[2] = (Point2f)pts[k];
-            findEnclosingCircle3pts_orLess_32f(ptsf, 3, center, radius);
+            Point2f new_center; float new_radius = 0;
+            findCircle3pts(ptsf, new_center, new_radius);
+            if (new_radius > 0)
+            {
+                radius = new_radius;
+                center = new_center;
+            }
         }
     }
 }
@@ -171,7 +146,13 @@ void findSecondPoint(const PT *pts, int i, Point2f &center, float &radius)
         }
         else
         {
-            findThirdPoint(pts, i, j, center, radius);
+            Point2f new_center; float new_radius = 0;
+            findThirdPoint(pts, i, j, new_center, new_radius);
+            if (new_radius > 0)
+            {
+                radius = new_radius;
+                center = new_center;
+            }
         }
     }
 }
@@ -197,7 +178,13 @@ static void findMinEnclosingCircle(const PT *pts, int count, Point2f &center, fl
         }
         else
         {
-            findSecondPoint(pts, i, center, radius);
+            Point2f new_center; float new_radius = 0;
+            findSecondPoint(pts, i, new_center, new_radius);
+            if (new_radius > 0)
+            {
+                radius = new_radius;
+                center = new_center;
+            }
         }
     }
 }
@@ -206,13 +193,11 @@ static void findMinEnclosingCircle(const PT *pts, int count, Point2f &center, fl
 // see Welzl, Emo. Smallest enclosing disks (balls and ellipsoids). Springer Berlin Heidelberg, 1991.
 void cv::minEnclosingCircle( InputArray _points, Point2f& _center, float& _radius )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat points = _points.getMat();
     int count = points.checkVector(2);
     int depth = points.depth();
-    Point2f center;
-    float radius = 0.f;
     CV_Assert(count >= 0 && (depth == CV_32F || depth == CV_32S));
 
     _center.x = _center.y = 0.f;
@@ -225,59 +210,69 @@ void cv::minEnclosingCircle( InputArray _points, Point2f& _center, float& _radiu
     const Point* ptsi = points.ptr<Point>();
     const Point2f* ptsf = points.ptr<Point2f>();
 
-    // point count <= 3
-    if (count <= 3)
+    switch (count)
     {
-        Point2f ptsf3[3];
-        for (int i = 0; i < count; ++i)
+        case 1:
         {
-            ptsf3[i] = (is_float) ? ptsf[i] : Point2f((float)ptsi[i].x, (float)ptsi[i].y);
+            _center = (is_float) ? ptsf[0] : Point2f((float)ptsi[0].x, (float)ptsi[0].y);
+            _radius = EPS;
+            break;
         }
-        findEnclosingCircle3pts_orLess_32f(ptsf3, count, center, radius);
-        _center = center;
-        _radius = radius;
-        return;
-    }
-
-    if (is_float)
-    {
-        findMinEnclosingCircle<Point2f>(ptsf, count, center, radius);
-#if 0
-        for (size_t m = 0; m < count; ++m)
+        case 2:
         {
-            float d = (float)norm(ptsf[m] - center);
-            if (d > radius)
+            Point2f p1 = (is_float) ? ptsf[0] : Point2f((float)ptsi[0].x, (float)ptsi[0].y);
+            Point2f p2 = (is_float) ? ptsf[1] : Point2f((float)ptsi[1].x, (float)ptsi[1].y);
+            _center.x = (p1.x + p2.x) / 2.0f;
+            _center.y = (p1.y + p2.y) / 2.0f;
+            _radius = (float)(norm(p1 - p2) / 2.0) + EPS;
+            break;
+        }
+        default:
+        {
+            Point2f center;
+            float radius = 0.f;
+            if (is_float)
             {
-                printf("error!\n");
+                findMinEnclosingCircle<Point2f>(ptsf, count, center, radius);
+                #if 0
+                    for (size_t m = 0; m < count; ++m)
+                    {
+                        float d = (float)norm(ptsf[m] - center);
+                        if (d > radius)
+                        {
+                            printf("error!\n");
+                        }
+                    }
+                #endif
             }
-        }
-#endif
-    }
-    else
-    {
-        findMinEnclosingCircle<Point>(ptsi, count, center, radius);
-#if 0
-        for (size_t m = 0; m < count; ++m)
-        {
-            double dx = ptsi[m].x - center.x;
-            double dy = ptsi[m].y - center.y;
-            double d = std::sqrt(dx * dx + dy * dy);
-            if (d > radius)
+            else
             {
-                printf("error!\n");
+                findMinEnclosingCircle<Point>(ptsi, count, center, radius);
+                #if 0
+                    for (size_t m = 0; m < count; ++m)
+                    {
+                        double dx = ptsi[m].x - center.x;
+                        double dy = ptsi[m].y - center.y;
+                        double d = std::sqrt(dx * dx + dy * dy);
+                        if (d > radius)
+                        {
+                            printf("error!\n");
+                        }
+                    }
+                #endif
             }
+            _center = center;
+            _radius = radius;
+            break;
         }
-#endif
     }
-    _center = center;
-    _radius = radius;
 }
 
 
 // calculates length of a curve (e.g. contour perimeter)
 double cv::arcLength( InputArray _curve, bool is_closed )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat curve = _curve.getMat();
     int count = curve.checkVector(2);
@@ -312,7 +307,7 @@ double cv::arcLength( InputArray _curve, bool is_closed )
 // area of a whole sequence
 double cv::contourArea( InputArray _contour, bool oriented )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat contour = _contour.getMat();
     int npoints = contour.checkVector(2);
@@ -345,7 +340,7 @@ double cv::contourArea( InputArray _contour, bool oriented )
 
 cv::RotatedRect cv::fitEllipse( InputArray _points )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat points = _points.getMat();
     int i, n = points.checkVector(2);
@@ -359,14 +354,14 @@ cv::RotatedRect cv::fitEllipse( InputArray _points )
 
     // New fitellipse algorithm, contributed by Dr. Daniel Weiss
     Point2f c(0,0);
-    double gfp[5], rp[5], t;
+    double gfp[5] = {0}, rp[5] = {0}, t;
     const double min_eps = 1e-8;
     bool is_float = depth == CV_32F;
     const Point* ptsi = points.ptr<Point>();
     const Point2f* ptsf = points.ptr<Point2f>();
 
     AutoBuffer<double> _Ad(n*5), _bd(n);
-    double *Ad = _Ad, *bd = _bd;
+    double *Ad = _Ad.data(), *bd = _bd.data();
 
     // first fit for parameters A - E
     Mat A( n, 5, CV_64F, Ad );
@@ -454,11 +449,334 @@ cv::RotatedRect cv::fitEllipse( InputArray _points )
     return box;
 }
 
+cv::RotatedRect cv::fitEllipseAMS( InputArray _points )
+{
+    Mat points = _points.getMat();
+    int i, n = points.checkVector(2);
+    int depth = points.depth();
+    CV_Assert( n >= 0 && (depth == CV_32F || depth == CV_32S));
+
+    RotatedRect box;
+
+    if( n < 5 )
+        CV_Error( CV_StsBadSize, "There should be at least 5 points to fit the ellipse" );
+
+    Point2f c(0,0);
+
+    bool is_float = depth == CV_32F;
+    const Point* ptsi = points.ptr<Point>();
+    const Point2f* ptsf = points.ptr<Point2f>();
+
+    Mat A( n, 6, CV_64F);
+    Matx<double, 6, 6> DM;
+    Matx<double, 5, 5> M;
+    Matx<double, 5, 1> pVec;
+    Matx<double, 6, 1> coeffs;
+
+    double x0, y0, a, b, theta;
+
+    for( i = 0; i < n; i++ )
+    {
+        Point2f p = is_float ? ptsf[i] : Point2f((float)ptsi[i].x, (float)ptsi[i].y);
+        c += p;
+    }
+    c.x /= (float)n;
+    c.y /= (float)n;
+
+    for( i = 0; i < n; i++ )
+    {
+        Point2f p = is_float ? ptsf[i] : Point2f((float)ptsi[i].x, (float)ptsi[i].y);
+        p -= c;
+
+        A.at<double>(i,0) = (double)(p.x)*(p.x);
+        A.at<double>(i,1) = (double)(p.x)*(p.y);
+        A.at<double>(i,2) = (double)(p.y)*(p.y);
+        A.at<double>(i,3) = (double)p.x;
+        A.at<double>(i,4) = (double)p.y;
+        A.at<double>(i,5) = 1.0;
+    }
+    cv::mulTransposed( A, DM, true, noArray(), 1.0, -1 );
+    DM *= (1.0/n);
+    double dnm = ( DM(2,5)*(DM(0,5) + DM(2,5)) - (DM(1,5)*DM(1,5)) );
+    double ddm =  (4.*(DM(0,5) + DM(2,5))*( (DM(0,5)*DM(2,5)) - (DM(1,5)*DM(1,5))));
+    double ddmm = (2.*(DM(0,5) + DM(2,5))*( (DM(0,5)*DM(2,5)) - (DM(1,5)*DM(1,5))));
+
+    M(0,0)=((-DM(0,0) + DM(0,2) + DM(0,5)*DM(0,5))*(DM(1,5)*DM(1,5)) + (-2*DM(0,1)*DM(1,5) + DM(0,5)*(DM(0,0) \
+            - (DM(0,5)*DM(0,5)) + (DM(1,5)*DM(1,5))))*DM(2,5) + (DM(0,0) - (DM(0,5)*DM(0,5)))*(DM(2,5)*DM(2,5))) / ddm;
+    M(0,1)=((DM(1,5)*DM(1,5))*(-DM(0,1) + DM(1,2) + DM(0,5)*DM(1,5)) + (DM(0,1)*DM(0,5) - ((DM(0,5)*DM(0,5)) + 2*DM(1,1))*DM(1,5) + \
+            (DM(1,5)*DM(1,5)*DM(1,5)))*DM(2,5) + (DM(0,1) - DM(0,5)*DM(1,5))*(DM(2,5)*DM(2,5))) / ddm;
+    M(0,2)=(-2*DM(1,2)*DM(1,5)*DM(2,5) - DM(0,5)*(DM(2,5)*DM(2,5))*(DM(0,5) + DM(2,5)) + DM(0,2)*dnm + \
+            (DM(1,5)*DM(1,5))*(DM(2,2) + DM(2,5)*(DM(0,5) + DM(2,5))))/ddm;
+    M(0,3)=(DM(1,5)*(DM(1,5)*DM(2,3) - 2*DM(1,3)*DM(2,5)) + DM(0,3)*dnm) / ddm;
+    M(0,4)=(DM(1,5)*(DM(1,5)*DM(2,4) - 2*DM(1,4)*DM(2,5)) + DM(0,4)*dnm) / ddm;
+    M(1,0)=(-(DM(0,2)*DM(0,5)*DM(1,5)) + (2*DM(0,1)*DM(0,5) - DM(0,0)*DM(1,5))*DM(2,5))/ddmm;
+    M(1,1)=(-(DM(0,1)*DM(1,5)*DM(2,5)) + DM(0,5)*(-(DM(1,2)*DM(1,5)) + 2*DM(1,1)*DM(2,5)))/ddmm;
+    M(1,2)=(-(DM(0,2)*DM(1,5)*DM(2,5)) + DM(0,5)*(-(DM(1,5)*DM(2,2)) + 2*DM(1,2)*DM(2,5)))/ddmm;
+    M(1,3)=(-(DM(0,3)*DM(1,5)*DM(2,5)) + DM(0,5)*(-(DM(1,5)*DM(2,3)) + 2*DM(1,3)*DM(2,5)))/ddmm;
+    M(1,4)=(-(DM(0,4)*DM(1,5)*DM(2,5)) + DM(0,5)*(-(DM(1,5)*DM(2,4)) + 2*DM(1,4)*DM(2,5)))/ddmm;
+    M(2,0)=(-2*DM(0,1)*DM(0,5)*DM(1,5) + (DM(0,0) + (DM(0,5)*DM(0,5)))*(DM(1,5)*DM(1,5)) + DM(0,5)*(-(DM(0,5)*DM(0,5)) \
+            + (DM(1,5)*DM(1,5)))*DM(2,5) - (DM(0,5)*DM(0,5))*(DM(2,5)*DM(2,5)) + DM(0,2)*(-(DM(1,5)*DM(1,5)) + DM(0,5)*(DM(0,5) + DM(2,5)))) / ddm;
+    M(2,1)=((DM(0,5)*DM(0,5))*(DM(1,2) - DM(1,5)*DM(2,5)) + (DM(1,5)*DM(1,5))*(DM(0,1) - DM(1,2) + DM(1,5)*DM(2,5)) \
+            + DM(0,5)*(DM(1,2)*DM(2,5) + DM(1,5)*(-2*DM(1,1) + (DM(1,5)*DM(1,5)) - (DM(2,5)*DM(2,5))))) / ddm;
+    M(2,2)=((DM(0,5)*DM(0,5))*(DM(2,2) - (DM(2,5)*DM(2,5))) + (DM(1,5)*DM(1,5))*(DM(0,2) - DM(2,2) + (DM(2,5)*DM(2,5))) + \
+             DM(0,5)*(-2*DM(1,2)*DM(1,5) + DM(2,5)*((DM(1,5)*DM(1,5)) + DM(2,2) - (DM(2,5)*DM(2,5))))) / ddm;
+    M(2,3)=((DM(1,5)*DM(1,5))*(DM(0,3) - DM(2,3)) + (DM(0,5)*DM(0,5))*DM(2,3) + DM(0,5)*(-2*DM(1,3)*DM(1,5) + DM(2,3)*DM(2,5))) / ddm;
+    M(2,4)=((DM(1,5)*DM(1,5))*(DM(0,4) - DM(2,4)) + (DM(0,5)*DM(0,5))*DM(2,4) + DM(0,5)*(-2*DM(1,4)*DM(1,5) + DM(2,4)*DM(2,5))) / ddm;
+    M(3,0)=DM(0,3);
+    M(3,1)=DM(1,3);
+    M(3,2)=DM(2,3);
+    M(3,3)=DM(3,3);
+    M(3,4)=DM(3,4);
+    M(4,0)=DM(0,4);
+    M(4,1)=DM(1,4);
+    M(4,2)=DM(2,4);
+    M(4,3)=DM(3,4);
+    M(4,4)=DM(4,4);
+
+    if (fabs(cv::determinant(M)) > 1.0e-10) {
+            Mat eVal, eVec;
+            eigenNonSymmetric(M, eVal, eVec);
+
+            // Select the eigen vector {a,b,c,d,e} which has the lowest eigenvalue
+            int minpos = 0;
+            double normi, normEVali, normMinpos, normEValMinpos;
+            normMinpos = sqrt(eVec.at<double>(minpos,0)*eVec.at<double>(minpos,0) + eVec.at<double>(minpos,1)*eVec.at<double>(minpos,1) + \
+                              eVec.at<double>(minpos,2)*eVec.at<double>(minpos,2) + eVec.at<double>(minpos,3)*eVec.at<double>(minpos,3) + \
+                              eVec.at<double>(minpos,4)*eVec.at<double>(minpos,4) );
+            normEValMinpos = eVal.at<double>(minpos,0) * normMinpos;
+            for (i=1; i<5; i++) {
+                normi = sqrt(eVec.at<double>(i,0)*eVec.at<double>(i,0) + eVec.at<double>(i,1)*eVec.at<double>(i,1) + \
+                             eVec.at<double>(i,2)*eVec.at<double>(i,2) + eVec.at<double>(i,3)*eVec.at<double>(i,3) + \
+                             eVec.at<double>(i,4)*eVec.at<double>(i,4) );
+                normEVali = eVal.at<double>(i,0) * normi;
+                if (normEVali < normEValMinpos) {
+                    minpos = i;
+                    normMinpos=normi;
+                    normEValMinpos=normEVali;
+                }
+            };
+
+            pVec(0) =eVec.at<double>(minpos,0) / normMinpos;
+            pVec(1) =eVec.at<double>(minpos,1) / normMinpos;
+            pVec(2) =eVec.at<double>(minpos,2) / normMinpos;
+            pVec(3) =eVec.at<double>(minpos,3) / normMinpos;
+            pVec(4) =eVec.at<double>(minpos,4) / normMinpos;
+
+            coeffs(0) =pVec(0) ;
+            coeffs(1) =pVec(1) ;
+            coeffs(2) =pVec(2) ;
+            coeffs(3) =pVec(3) ;
+            coeffs(4) =pVec(4) ;
+            coeffs(5) =-pVec(0) *DM(0,5)-pVec(1) *DM(1,5)-coeffs(2) *DM(2,5);
+
+        // Check that an elliptical solution has been found. AMS sometimes produces Parabolic solutions.
+        bool is_ellipse = (coeffs(0)  < 0 && \
+                           coeffs(2)  < (coeffs(1) *coeffs(1) )/(4.*coeffs(0) ) && \
+                           coeffs(5)  > (-(coeffs(2) *(coeffs(3) *coeffs(3) )) + coeffs(1) *coeffs(3) *coeffs(4)  - coeffs(0) *(coeffs(4) *coeffs(4) )) / \
+                                        ((coeffs(1) *coeffs(1) ) - 4*coeffs(0) *coeffs(2) )) || \
+                          (coeffs(0)  > 0 && \
+                           coeffs(2)  > (coeffs(1) *coeffs(1) )/(4.*coeffs(0) ) && \
+                           coeffs(5)  < (-(coeffs(2) *(coeffs(3) *coeffs(3) )) + coeffs(1) *coeffs(3) *coeffs(4)  - coeffs(0) *(coeffs(4) *coeffs(4) )) / \
+                                        ( (coeffs(1) *coeffs(1) ) - 4*coeffs(0) *coeffs(2) ));
+        if (is_ellipse) {
+            double u1 = pVec(2) *pVec(3) *pVec(3)  - pVec(1) *pVec(3) *pVec(4)  + pVec(0) *pVec(4) *pVec(4)  + pVec(1) *pVec(1) *coeffs(5) ;
+            double u2 = pVec(0) *pVec(2) *coeffs(5) ;
+            double l1 = sqrt(pVec(1) *pVec(1)  + (pVec(0)  - pVec(2) )*(pVec(0)  - pVec(2) ));
+            double l2 = pVec(0)  + pVec(2) ;
+            double l3 = pVec(1) *pVec(1)  - 4.0*pVec(0) *pVec(2) ;
+            double p1 = 2.0*pVec(2) *pVec(3)  - pVec(1) *pVec(4) ;
+            double p2 = 2.0*pVec(0) *pVec(4) -(pVec(1) *pVec(3) );
+
+            x0 = p1/l3 + c.x;
+            y0 = p2/l3 + c.y;
+            a = std::sqrt(2.)*sqrt((u1 - 4.0*u2)/((l1 - l2)*l3));
+            b = std::sqrt(2.)*sqrt(-1.0*((u1 - 4.0*u2)/((l1 + l2)*l3)));
+            if (pVec(1)  == 0) {
+                if (pVec(0)  < pVec(2) ) {
+                    theta = 0;
+                } else {
+                    theta = CV_PI/2.;
+                }
+            } else {
+                theta = CV_PI/2. + 0.5*std::atan2(pVec(1) , (pVec(0)  - pVec(2) ));
+            }
+
+            box.center.x = (float)x0; // +c.x;
+            box.center.y = (float)y0; // +c.y;
+            box.size.width = (float)(2.0*a);
+            box.size.height = (float)(2.0*b);
+            if( box.size.width > box.size.height )
+            {
+                float tmp;
+                CV_SWAP( box.size.width, box.size.height, tmp );
+                box.angle = (float)(90 + theta*180/CV_PI);
+            } else {
+                box.angle = (float)(fmod(theta*180/CV_PI,180.0));
+            };
+
+
+        } else {
+            box = cv::fitEllipseDirect( points );
+        }
+    } else {
+        box = cv::fitEllipse( points );
+    }
+
+    return box;
+}
+
+cv::RotatedRect cv::fitEllipseDirect( InputArray _points )
+{
+    Mat points = _points.getMat();
+    int i, n = points.checkVector(2);
+    int depth = points.depth();
+    CV_Assert( n >= 0 && (depth == CV_32F || depth == CV_32S));
+
+    RotatedRect box;
+
+    if( n < 5 )
+        CV_Error( CV_StsBadSize, "There should be at least 5 points to fit the ellipse" );
+
+    Point2f c(0,0);
+
+    bool is_float = (depth == CV_32F);
+    const Point*   ptsi = points.ptr<Point>();
+    const Point2f* ptsf = points.ptr<Point2f>();
+
+    Mat A( n, 6, CV_64F);
+    Matx<double, 6, 6> DM;
+    Matx33d M, TM, Q;
+    Matx<double, 3, 1> pVec;
+
+    double x0, y0, a, b, theta, Ts;
+
+    for( i = 0; i < n; i++ )
+    {
+        Point2f p = is_float ? ptsf[i] : Point2f((float)ptsi[i].x, (float)ptsi[i].y);
+        c += p;
+    }
+    c.x /= (float)n;
+    c.y /= (float)n;
+
+    for( i = 0; i < n; i++ )
+    {
+        Point2f p = is_float ? ptsf[i] : Point2f((float)ptsi[i].x, (float)ptsi[i].y);
+        p -= c;
+
+        A.at<double>(i,0) = (double)(p.x)*(p.x);
+        A.at<double>(i,1) = (double)(p.x)*(p.y);
+        A.at<double>(i,2) = (double)(p.y)*(p.y);
+        A.at<double>(i,3) = (double)p.x;
+        A.at<double>(i,4) = (double)p.y;
+        A.at<double>(i,5) = 1.0;
+    }
+    cv::mulTransposed( A, DM, true, noArray(), 1.0, -1 );
+    DM *= (1.0/n);
+
+    TM(0,0) = DM(0,5)*DM(3,5)*DM(4,4) - DM(0,5)*DM(3,4)*DM(4,5) - DM(0,4)*DM(3,5)*DM(5,4) + \
+              DM(0,3)*DM(4,5)*DM(5,4) + DM(0,4)*DM(3,4)*DM(5,5) - DM(0,3)*DM(4,4)*DM(5,5);
+    TM(0,1) = DM(1,5)*DM(3,5)*DM(4,4) - DM(1,5)*DM(3,4)*DM(4,5) - DM(1,4)*DM(3,5)*DM(5,4) + \
+              DM(1,3)*DM(4,5)*DM(5,4) + DM(1,4)*DM(3,4)*DM(5,5) - DM(1,3)*DM(4,4)*DM(5,5);
+    TM(0,2) = DM(2,5)*DM(3,5)*DM(4,4) - DM(2,5)*DM(3,4)*DM(4,5) - DM(2,4)*DM(3,5)*DM(5,4) + \
+              DM(2,3)*DM(4,5)*DM(5,4) + DM(2,4)*DM(3,4)*DM(5,5) - DM(2,3)*DM(4,4)*DM(5,5);
+    TM(1,0) = DM(0,5)*DM(3,3)*DM(4,5) - DM(0,5)*DM(3,5)*DM(4,3) + DM(0,4)*DM(3,5)*DM(5,3) - \
+              DM(0,3)*DM(4,5)*DM(5,3) - DM(0,4)*DM(3,3)*DM(5,5) + DM(0,3)*DM(4,3)*DM(5,5);
+    TM(1,1) = DM(1,5)*DM(3,3)*DM(4,5) - DM(1,5)*DM(3,5)*DM(4,3) + DM(1,4)*DM(3,5)*DM(5,3) - \
+              DM(1,3)*DM(4,5)*DM(5,3) - DM(1,4)*DM(3,3)*DM(5,5) + DM(1,3)*DM(4,3)*DM(5,5);
+    TM(1,2) = DM(2,5)*DM(3,3)*DM(4,5) - DM(2,5)*DM(3,5)*DM(4,3) + DM(2,4)*DM(3,5)*DM(5,3) - \
+              DM(2,3)*DM(4,5)*DM(5,3) - DM(2,4)*DM(3,3)*DM(5,5) + DM(2,3)*DM(4,3)*DM(5,5);
+    TM(2,0) = DM(0,5)*DM(3,4)*DM(4,3) - DM(0,5)*DM(3,3)*DM(4,4) - DM(0,4)*DM(3,4)*DM(5,3) + \
+              DM(0,3)*DM(4,4)*DM(5,3) + DM(0,4)*DM(3,3)*DM(5,4) - DM(0,3)*DM(4,3)*DM(5,4);
+    TM(2,1) = DM(1,5)*DM(3,4)*DM(4,3) - DM(1,5)*DM(3,3)*DM(4,4) - DM(1,4)*DM(3,4)*DM(5,3) + \
+              DM(1,3)*DM(4,4)*DM(5,3) + DM(1,4)*DM(3,3)*DM(5,4) - DM(1,3)*DM(4,3)*DM(5,4);
+    TM(2,2) = DM(2,5)*DM(3,4)*DM(4,3) - DM(2,5)*DM(3,3)*DM(4,4) - DM(2,4)*DM(3,4)*DM(5,3) + \
+              DM(2,3)*DM(4,4)*DM(5,3) + DM(2,4)*DM(3,3)*DM(5,4) - DM(2,3)*DM(4,3)*DM(5,4);
+
+    Ts=(-(DM(3,5)*DM(4,4)*DM(5,3)) + DM(3,4)*DM(4,5)*DM(5,3) + DM(3,5)*DM(4,3)*DM(5,4) - \
+          DM(3,3)*DM(4,5)*DM(5,4)  - DM(3,4)*DM(4,3)*DM(5,5) + DM(3,3)*DM(4,4)*DM(5,5));
+
+    M(0,0) = (DM(2,0) + (DM(2,3)*TM(0,0) + DM(2,4)*TM(1,0) + DM(2,5)*TM(2,0))/Ts)/2.;
+    M(0,1) = (DM(2,1) + (DM(2,3)*TM(0,1) + DM(2,4)*TM(1,1) + DM(2,5)*TM(2,1))/Ts)/2.;
+    M(0,2) = (DM(2,2) + (DM(2,3)*TM(0,2) + DM(2,4)*TM(1,2) + DM(2,5)*TM(2,2))/Ts)/2.;
+    M(1,0) = -DM(1,0) - (DM(1,3)*TM(0,0) + DM(1,4)*TM(1,0) + DM(1,5)*TM(2,0))/Ts;
+    M(1,1) = -DM(1,1) - (DM(1,3)*TM(0,1) + DM(1,4)*TM(1,1) + DM(1,5)*TM(2,1))/Ts;
+    M(1,2) = -DM(1,2) - (DM(1,3)*TM(0,2) + DM(1,4)*TM(1,2) + DM(1,5)*TM(2,2))/Ts;
+    M(2,0) = (DM(0,0) + (DM(0,3)*TM(0,0) + DM(0,4)*TM(1,0) + DM(0,5)*TM(2,0))/Ts)/2.;
+    M(2,1) = (DM(0,1) + (DM(0,3)*TM(0,1) + DM(0,4)*TM(1,1) + DM(0,5)*TM(2,1))/Ts)/2.;
+    M(2,2) = (DM(0,2) + (DM(0,3)*TM(0,2) + DM(0,4)*TM(1,2) + DM(0,5)*TM(2,2))/Ts)/2.;
+
+    if (fabs(cv::determinant(M)) > 1.0e-10) {
+        Mat eVal, eVec;
+        eigenNonSymmetric(M, eVal, eVec);
+
+        // Select the eigen vector {a,b,c} which satisfies 4ac-b^2 > 0
+        double cond[3];
+        cond[0]=(4.0 * eVec.at<double>(0,0) * eVec.at<double>(0,2) - eVec.at<double>(0,1) * eVec.at<double>(0,1));
+        cond[1]=(4.0 * eVec.at<double>(1,0) * eVec.at<double>(1,2) - eVec.at<double>(1,1) * eVec.at<double>(1,1));
+        cond[2]=(4.0 * eVec.at<double>(2,0) * eVec.at<double>(2,2) - eVec.at<double>(2,1) * eVec.at<double>(2,1));
+        if (cond[0]<cond[1]) {
+            i = (cond[1]<cond[2]) ? 2 : 1;
+        } else {
+            i = (cond[0]<cond[2]) ? 2 : 0;
+        }
+        double norm = std::sqrt(eVec.at<double>(i,0)*eVec.at<double>(i,0) + eVec.at<double>(i,1)*eVec.at<double>(i,1) + eVec.at<double>(i,2)*eVec.at<double>(i,2));
+        if (((eVec.at<double>(i,0)<0.0  ? -1 : 1) * (eVec.at<double>(i,1)<0.0  ? -1 : 1) * (eVec.at<double>(i,2)<0.0  ? -1 : 1)) <= 0.0) {
+                norm=-1.0*norm;
+            }
+        pVec(0) =eVec.at<double>(i,0)/norm; pVec(1) =eVec.at<double>(i,1)/norm;pVec(2) =eVec.at<double>(i,2)/norm;
+
+    //  Q = (TM . pVec)/Ts;
+        Q(0,0) = (TM(0,0)*pVec(0) +TM(0,1)*pVec(1) +TM(0,2)*pVec(2) )/Ts;
+        Q(0,1) = (TM(1,0)*pVec(0) +TM(1,1)*pVec(1) +TM(1,2)*pVec(2) )/Ts;
+        Q(0,2) = (TM(2,0)*pVec(0) +TM(2,1)*pVec(1) +TM(2,2)*pVec(2) )/Ts;
+
+    // We compute the ellipse properties in the shifted coordinates as doing so improves the numerical accuracy.
+
+        double u1 = pVec(2)*Q(0,0)*Q(0,0) - pVec(1)*Q(0,0)*Q(0,1) + pVec(0)*Q(0,1)*Q(0,1) + pVec(1)*pVec(1)*Q(0,2);
+        double u2 = pVec(0)*pVec(2)*Q(0,2);
+        double l1 = sqrt(pVec(1)*pVec(1) + (pVec(0) - pVec(2))*(pVec(0) - pVec(2)));
+        double l2 = pVec(0) + pVec(2) ;
+        double l3 = pVec(1)*pVec(1) - 4*pVec(0)*pVec(2) ;
+        double p1 = 2*pVec(2)*Q(0,0) - pVec(1)*Q(0,1);
+        double p2 = 2*pVec(0)*Q(0,1) - pVec(1)*Q(0,0);
+
+        x0 = p1/l3 + c.x;
+        y0 = p2/l3 + c.y;
+        a = sqrt(2.)*sqrt((u1 - 4.0*u2)/((l1 - l2)*l3));
+        b = sqrt(2.)*sqrt(-1.0*((u1 - 4.0*u2)/((l1 + l2)*l3)));
+        if (pVec(1)  == 0) {
+            if (pVec(0)  < pVec(2) ) {
+                theta = 0;
+            } else {
+                theta = CV_PI/2.;
+            }
+        } else {
+                theta = CV_PI/2. + 0.5*std::atan2(pVec(1) , (pVec(0)  - pVec(2) ));
+        }
+
+        box.center.x = (float)x0;
+        box.center.y = (float)y0;
+        box.size.width = (float)(2.0*a);
+        box.size.height = (float)(2.0*b);
+        if( box.size.width > box.size.height )
+        {
+            float tmp;
+            CV_SWAP( box.size.width, box.size.height, tmp );
+            box.angle = (float)(fmod((90 + theta*180/CV_PI),180.0)) ;
+        } else {
+            box.angle = (float)(fmod(theta*180/CV_PI,180.0));
+        };
+    } else {
+        box = cv::fitEllipse( points );
+    }
+    return box;
+}
+
 
 namespace cv
 {
 
-// Calculates bounding rectagnle of a point set or retrieves already calculated
+// Calculates bounding rectangle of a point set or retrieves already calculated
 static Rect pointSetBoundingRect( const Mat& points )
 {
     int npoints = points.checkVector(2);
@@ -471,109 +789,161 @@ static Rect pointSetBoundingRect( const Mat& points )
     if( npoints == 0 )
         return Rect();
 
+#if CV_SIMD
+    const int64_t* pts = points.ptr<int64_t>();
+
+    if( !is_float )
+    {
+        v_int32 minval, maxval;
+        minval = maxval = v_reinterpret_as_s32(vx_setall_s64(*pts)); //min[0]=pt.x, min[1]=pt.y, min[2]=pt.x, min[3]=pt.y
+        for( i = 1; i <= npoints - v_int32::nlanes/2; i+= v_int32::nlanes/2 )
+        {
+            v_int32 ptXY2 = v_reinterpret_as_s32(vx_load(pts + i));
+            minval = v_min(ptXY2, minval);
+            maxval = v_max(ptXY2, maxval);
+        }
+        minval = v_min(v_reinterpret_as_s32(v_expand_low(v_reinterpret_as_u32(minval))), v_reinterpret_as_s32(v_expand_high(v_reinterpret_as_u32(minval))));
+        maxval = v_max(v_reinterpret_as_s32(v_expand_low(v_reinterpret_as_u32(maxval))), v_reinterpret_as_s32(v_expand_high(v_reinterpret_as_u32(maxval))));
+        if( i <= npoints - v_int32::nlanes/4 )
+        {
+            v_int32 ptXY = v_reinterpret_as_s32(v_expand_low(v_reinterpret_as_u32(vx_load_low(pts + i))));
+            minval = v_min(ptXY, minval);
+            maxval = v_max(ptXY, maxval);
+            i += v_int64::nlanes/2;
+        }
+        for(int j = 16; j < CV_SIMD_WIDTH; j*=2)
+        {
+            minval = v_min(v_reinterpret_as_s32(v_expand_low(v_reinterpret_as_u32(minval))), v_reinterpret_as_s32(v_expand_high(v_reinterpret_as_u32(minval))));
+            maxval = v_max(v_reinterpret_as_s32(v_expand_low(v_reinterpret_as_u32(maxval))), v_reinterpret_as_s32(v_expand_high(v_reinterpret_as_u32(maxval))));
+        }
+        xmin = minval.get0();
+        xmax = maxval.get0();
+        ymin = v_reinterpret_as_s32(v_expand_high(v_reinterpret_as_u32(minval))).get0();
+        ymax = v_reinterpret_as_s32(v_expand_high(v_reinterpret_as_u32(maxval))).get0();
+#if CV_SIMD_WIDTH > 16
+        if( i < npoints )
+        {
+            v_int32x4 minval2, maxval2;
+            minval2 = maxval2 = v_reinterpret_as_s32(v_expand_low(v_reinterpret_as_u32(v_load_low(pts + i))));
+            for( i++; i < npoints; i++ )
+            {
+                v_int32x4 ptXY = v_reinterpret_as_s32(v_expand_low(v_reinterpret_as_u32(v_load_low(pts + i))));
+                minval2 = v_min(ptXY, minval2);
+                maxval2 = v_max(ptXY, maxval2);
+            }
+            xmin = min(xmin, minval2.get0());
+            xmax = max(xmax, maxval2.get0());
+            ymin = min(ymin, v_reinterpret_as_s32(v_expand_high(v_reinterpret_as_u32(minval2))).get0());
+            ymax = max(ymax, v_reinterpret_as_s32(v_expand_high(v_reinterpret_as_u32(maxval2))).get0());
+        }
+#endif
+    }
+    else
+    {
+        v_float32 minval, maxval;
+        minval = maxval = v_reinterpret_as_f32(vx_setall_s64(*pts)); //min[0]=pt.x, min[1]=pt.y, min[2]=pt.x, min[3]=pt.y
+        for( i = 1; i <= npoints - v_float32::nlanes/2; i+= v_float32::nlanes/2 )
+        {
+            v_float32 ptXY2 = v_reinterpret_as_f32(vx_load(pts + i));
+            minval = v_min(ptXY2, minval);
+            maxval = v_max(ptXY2, maxval);
+        }
+        minval = v_min(v_reinterpret_as_f32(v_expand_low(v_reinterpret_as_u32(minval))), v_reinterpret_as_f32(v_expand_high(v_reinterpret_as_u32(minval))));
+        maxval = v_max(v_reinterpret_as_f32(v_expand_low(v_reinterpret_as_u32(maxval))), v_reinterpret_as_f32(v_expand_high(v_reinterpret_as_u32(maxval))));
+        if( i <= npoints - v_float32::nlanes/4 )
+        {
+            v_float32 ptXY = v_reinterpret_as_f32(v_expand_low(v_reinterpret_as_u32(vx_load_low(pts + i))));
+            minval = v_min(ptXY, minval);
+            maxval = v_max(ptXY, maxval);
+            i += v_float32::nlanes/4;
+        }
+        for(int j = 16; j < CV_SIMD_WIDTH; j*=2)
+        {
+            minval = v_min(v_reinterpret_as_f32(v_expand_low(v_reinterpret_as_u32(minval))), v_reinterpret_as_f32(v_expand_high(v_reinterpret_as_u32(minval))));
+            maxval = v_max(v_reinterpret_as_f32(v_expand_low(v_reinterpret_as_u32(maxval))), v_reinterpret_as_f32(v_expand_high(v_reinterpret_as_u32(maxval))));
+        }
+        xmin = cvFloor(minval.get0());
+        xmax = cvFloor(maxval.get0());
+        ymin = cvFloor(v_reinterpret_as_f32(v_expand_high(v_reinterpret_as_u32(minval))).get0());
+        ymax = cvFloor(v_reinterpret_as_f32(v_expand_high(v_reinterpret_as_u32(maxval))).get0());
+#if CV_SIMD_WIDTH > 16
+        if( i < npoints )
+        {
+            v_float32x4 minval2, maxval2;
+            minval2 = maxval2 = v_reinterpret_as_f32(v_expand_low(v_reinterpret_as_u32(v_load_low(pts + i))));
+            for( i++; i < npoints; i++ )
+            {
+                v_float32x4 ptXY = v_reinterpret_as_f32(v_expand_low(v_reinterpret_as_u32(v_load_low(pts + i))));
+                minval2 = v_min(ptXY, minval2);
+                maxval2 = v_max(ptXY, maxval2);
+            }
+            xmin = min(xmin, cvFloor(minval2.get0()));
+            xmax = max(xmax, cvFloor(maxval2.get0()));
+            ymin = min(ymin, cvFloor(v_reinterpret_as_f32(v_expand_high(v_reinterpret_as_u32(minval2))).get0()));
+            ymax = max(ymax, cvFloor(v_reinterpret_as_f32(v_expand_high(v_reinterpret_as_u32(maxval2))).get0()));
+        }
+#endif
+    }
+#else
     const Point* pts = points.ptr<Point>();
     Point pt = pts[0];
 
-#if CV_SSE4_2
-    if(cv::checkHardwareSupport(CV_CPU_SSE4_2))
+    if( !is_float )
     {
-        if( !is_float )
+        xmin = xmax = pt.x;
+        ymin = ymax = pt.y;
+
+        for( i = 1; i < npoints; i++ )
         {
-            __m128i minval, maxval;
-            minval = maxval = _mm_loadl_epi64((const __m128i*)(&pt)); //min[0]=pt.x, min[1]=pt.y
+            pt = pts[i];
 
-            for( i = 1; i < npoints; i++ )
-            {
-                __m128i ptXY = _mm_loadl_epi64((const __m128i*)&pts[i]);
-                minval = _mm_min_epi32(ptXY, minval);
-                maxval = _mm_max_epi32(ptXY, maxval);
-            }
-            xmin = _mm_cvtsi128_si32(minval);
-            ymin = _mm_cvtsi128_si32(_mm_srli_si128(minval, 4));
-            xmax = _mm_cvtsi128_si32(maxval);
-            ymax = _mm_cvtsi128_si32(_mm_srli_si128(maxval, 4));
-        }
-        else
-        {
-            __m128 minvalf, maxvalf, z = _mm_setzero_ps(), ptXY = _mm_setzero_ps();
-            minvalf = maxvalf = _mm_loadl_pi(z, (const __m64*)(&pt));
+            if( xmin > pt.x )
+                xmin = pt.x;
 
-            for( i = 1; i < npoints; i++ )
-            {
-                ptXY = _mm_loadl_pi(ptXY, (const __m64*)&pts[i]);
+            if( xmax < pt.x )
+                xmax = pt.x;
 
-                minvalf = _mm_min_ps(minvalf, ptXY);
-                maxvalf = _mm_max_ps(maxvalf, ptXY);
-            }
+            if( ymin > pt.y )
+                ymin = pt.y;
 
-            float xyminf[2], xymaxf[2];
-            _mm_storel_pi((__m64*)xyminf, minvalf);
-            _mm_storel_pi((__m64*)xymaxf, maxvalf);
-            xmin = cvFloor(xyminf[0]);
-            ymin = cvFloor(xyminf[1]);
-            xmax = cvFloor(xymaxf[0]);
-            ymax = cvFloor(xymaxf[1]);
+            if( ymax < pt.y )
+                ymax = pt.y;
         }
     }
     else
-#endif
     {
-        if( !is_float )
+        Cv32suf v;
+        // init values
+        xmin = xmax = CV_TOGGLE_FLT(pt.x);
+        ymin = ymax = CV_TOGGLE_FLT(pt.y);
+
+        for( i = 1; i < npoints; i++ )
         {
-            xmin = xmax = pt.x;
-            ymin = ymax = pt.y;
+            pt = pts[i];
+            pt.x = CV_TOGGLE_FLT(pt.x);
+            pt.y = CV_TOGGLE_FLT(pt.y);
 
-            for( i = 1; i < npoints; i++ )
-            {
-                pt = pts[i];
+            if( xmin > pt.x )
+                xmin = pt.x;
 
-                if( xmin > pt.x )
-                    xmin = pt.x;
+            if( xmax < pt.x )
+                xmax = pt.x;
 
-                if( xmax < pt.x )
-                    xmax = pt.x;
+            if( ymin > pt.y )
+                ymin = pt.y;
 
-                if( ymin > pt.y )
-                    ymin = pt.y;
-
-                if( ymax < pt.y )
-                    ymax = pt.y;
-            }
+            if( ymax < pt.y )
+                ymax = pt.y;
         }
-        else
-        {
-            Cv32suf v;
-            // init values
-            xmin = xmax = CV_TOGGLE_FLT(pt.x);
-            ymin = ymax = CV_TOGGLE_FLT(pt.y);
 
-            for( i = 1; i < npoints; i++ )
-            {
-                pt = pts[i];
-                pt.x = CV_TOGGLE_FLT(pt.x);
-                pt.y = CV_TOGGLE_FLT(pt.y);
-
-                if( xmin > pt.x )
-                    xmin = pt.x;
-
-                if( xmax < pt.x )
-                    xmax = pt.x;
-
-                if( ymin > pt.y )
-                    ymin = pt.y;
-
-                if( ymax < pt.y )
-                    ymax = pt.y;
-            }
-
-            v.i = CV_TOGGLE_FLT(xmin); xmin = cvFloor(v.f);
-            v.i = CV_TOGGLE_FLT(ymin); ymin = cvFloor(v.f);
-            // because right and bottom sides of the bounding rectangle are not inclusive
-            // (note +1 in width and height calculation below), cvFloor is used here instead of cvCeil
-            v.i = CV_TOGGLE_FLT(xmax); xmax = cvFloor(v.f);
-            v.i = CV_TOGGLE_FLT(ymax); ymax = cvFloor(v.f);
-        }
+        v.i = CV_TOGGLE_FLT(xmin); xmin = cvFloor(v.f);
+        v.i = CV_TOGGLE_FLT(ymin); ymin = cvFloor(v.f);
+        // because right and bottom sides of the bounding rectangle are not inclusive
+        // (note +1 in width and height calculation below), cvFloor is used here instead of cvCeil
+        v.i = CV_TOGGLE_FLT(xmax); xmax = cvFloor(v.f);
+        v.i = CV_TOGGLE_FLT(ymax); ymax = cvFloor(v.f);
     }
+#endif
 
     return Rect(xmin, ymin, xmax - xmin + 1, ymax - ymin + 1);
 }
@@ -676,7 +1046,7 @@ static Rect maskBoundingRect( const Mat& img )
 
 cv::Rect cv::boundingRect(InputArray array)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat m = array.getMat();
     return m.depth() <= CV_8U ? maskBoundingRect(m) : pointSetBoundingRect(m);
@@ -694,7 +1064,7 @@ cvMinEnclosingCircle( const void* array, CvPoint2D32f * _center, float *_radius 
 
     cv::minEnclosingCircle(points, center, radius);
     if(_center)
-        *_center = center;
+        *_center = cvPoint2D32f(center);
     if(_radius)
         *_radius = radius;
     return 1;
@@ -734,8 +1104,8 @@ icvMemCopy( double **buf1, double **buf2, double **buf3, int *b_max )
 /* area of a contour sector */
 static double icvContourSecArea( CvSeq * contour, CvSlice slice )
 {
-    CvPoint pt;                 /*  pointer to points   */
-    CvPoint pt_s, pt_e;         /*  first and last points  */
+    cv::Point pt;                 /*  pointer to points   */
+    cv::Point pt_s, pt_e;         /*  first and last points  */
     CvSeqReader reader;         /*  points reader of contour   */
 
     int p_max = 2, p_ind;
@@ -769,10 +1139,10 @@ static double icvContourSecArea( CvSeq * contour, CvSlice slice )
 
     cvStartReadSeq( contour, &reader, 0 );
     cvSetSeqReaderPos( &reader, slice.start_index );
-    CV_READ_SEQ_ELEM( pt_s, reader );
+    { CvPoint pt_s_ = CV_STRUCT_INITIALIZER; CV_READ_SEQ_ELEM(pt_s_, reader); pt_s = pt_s_; }
     p_ind = 0;
     cvSetSeqReaderPos( &reader, slice.end_index );
-    CV_READ_SEQ_ELEM( pt_e, reader );
+    { CvPoint pt_e_ = CV_STRUCT_INITIALIZER; CV_READ_SEQ_ELEM(pt_e_, reader); pt_e = pt_e_; }
 
 /*    normal coefficients    */
     nx = pt_s.y - pt_e.y;
@@ -781,7 +1151,7 @@ static double icvContourSecArea( CvSeq * contour, CvSlice slice )
 
     while( lpt-- > 0 )
     {
-        CV_READ_SEQ_ELEM( pt, reader );
+        { CvPoint pt_ = CV_STRUCT_INITIALIZER; CV_READ_SEQ_ELEM(pt_, reader); pt = pt_; }
 
         if( flag == 0 )
         {
@@ -1019,14 +1389,14 @@ cvFitEllipse2( const CvArr* array )
 {
     cv::AutoBuffer<double> abuf;
     cv::Mat points = cv::cvarrToMat(array, false, false, 0, &abuf);
-    return cv::fitEllipse(points);
+    return cvBox2D(cv::fitEllipse(points));
 }
 
-/* Calculates bounding rectagnle of a point set or retrieves already calculated */
+/* Calculates bounding rectangle of a point set or retrieves already calculated */
 CV_IMPL  CvRect
 cvBoundingRect( CvArr* array, int update )
 {
-    CvRect  rect;
+    cv::Rect rect;
     CvContour contour_header;
     CvSeq* ptseq = 0;
     CvSeqBlock block;
@@ -1068,17 +1438,16 @@ cvBoundingRect( CvArr* array, int update )
 
     if( mat )
     {
-        rect = cv::maskBoundingRect(cv::cvarrToMat(mat));
+        rect = cvRect(cv::maskBoundingRect(cv::cvarrToMat(mat)));
     }
     else if( ptseq->total )
     {
         cv::AutoBuffer<double> abuf;
-        rect = cv::pointSetBoundingRect(cv::cvarrToMat(ptseq, false, false, 0, &abuf));
+        rect = cvRect(cv::pointSetBoundingRect(cv::cvarrToMat(ptseq, false, false, 0, &abuf)));
     }
     if( update )
-        ((CvContour*)ptseq)->rect = rect;
-    return rect;
+        ((CvContour*)ptseq)->rect = cvRect(rect);
+    return cvRect(rect);
 }
-
 
 /* End of file. */

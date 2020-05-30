@@ -33,9 +33,9 @@ p3p::p3p(double _fx, double _fy, double _cx, double _cy)
 
 bool p3p::solve(cv::Mat& R, cv::Mat& tvec, const cv::Mat& opoints, const cv::Mat& ipoints)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
-    double rotation_matrix[3][3], translation[3];
+    double rotation_matrix[3][3] = {}, translation[3] = {};
     std::vector<double> points;
     if (opoints.depth() == ipoints.depth())
     {
@@ -49,12 +49,52 @@ bool p3p::solve(cv::Mat& R, cv::Mat& tvec, const cv::Mat& opoints, const cv::Mat
     else
         extract_points<cv::Point3d,cv::Point2f>(opoints, ipoints, points);
 
-    bool result = solve(rotation_matrix, translation, points[0], points[1], points[2], points[3], points[4], points[5],
-          points[6], points[7], points[8], points[9], points[10], points[11], points[12], points[13], points[14],
-          points[15], points[16], points[17], points[18], points[19]);
+    bool result = solve(rotation_matrix, translation,
+                        points[0], points[1], points[2], points[3], points[4],
+                        points[5], points[6], points[7], points[8], points[9],
+                        points[10], points[11], points[12], points[13], points[14],
+                        points[15], points[16], points[17], points[18], points[19]);
     cv::Mat(3, 1, CV_64F, translation).copyTo(tvec);
     cv::Mat(3, 3, CV_64F, rotation_matrix).copyTo(R);
     return result;
+}
+
+int p3p::solve(std::vector<cv::Mat>& Rs, std::vector<cv::Mat>& tvecs, const cv::Mat& opoints, const cv::Mat& ipoints)
+{
+    CV_INSTRUMENT_REGION();
+
+    double rotation_matrix[4][3][3] = {}, translation[4][3] = {};
+    std::vector<double> points;
+    if (opoints.depth() == ipoints.depth())
+    {
+        if (opoints.depth() == CV_32F)
+            extract_points<cv::Point3f,cv::Point2f>(opoints, ipoints, points);
+        else
+            extract_points<cv::Point3d,cv::Point2d>(opoints, ipoints, points);
+    }
+    else if (opoints.depth() == CV_32F)
+        extract_points<cv::Point3f,cv::Point2d>(opoints, ipoints, points);
+    else
+        extract_points<cv::Point3d,cv::Point2f>(opoints, ipoints, points);
+
+    const bool p4p = std::max(opoints.checkVector(3, CV_32F), opoints.checkVector(3, CV_64F)) == 4;
+    int solutions = solve(rotation_matrix, translation,
+                          points[0], points[1], points[2], points[3], points[4],
+                          points[5], points[6], points[7], points[8], points[9],
+                          points[10], points[11], points[12], points[13], points[14],
+                          points[15], points[16], points[17], points[18], points[19],
+                          p4p);
+
+    for (int i = 0; i < solutions; i++) {
+        cv::Mat R, tvec;
+        cv::Mat(3, 1, CV_64F, translation[i]).copyTo(tvec);
+        cv::Mat(3, 3, CV_64F, rotation_matrix[i]).copyTo(R);
+
+        Rs.push_back(R);
+        tvecs.push_back(tvec);
+    }
+
+    return solutions;
 }
 
 bool p3p::solve(double R[3][3], double t[3],
@@ -63,41 +103,29 @@ bool p3p::solve(double R[3][3], double t[3],
     double mu2, double mv2,   double X2, double Y2, double Z2,
     double mu3, double mv3,   double X3, double Y3, double Z3)
 {
-    double Rs[4][3][3], ts[4][3];
+    double Rs[4][3][3] = {}, ts[4][3] = {};
 
-    int n = solve(Rs, ts, mu0, mv0, X0, Y0, Z0,  mu1, mv1, X1, Y1, Z1, mu2, mv2, X2, Y2, Z2);
+    const bool p4p = true;
+    int n = solve(Rs, ts, mu0, mv0, X0, Y0, Z0,  mu1, mv1, X1, Y1, Z1, mu2, mv2, X2, Y2, Z2, mu3, mv3, X3, Y3, Z3, p4p);
 
     if (n == 0)
         return false;
 
-    int ns = 0;
-    double min_reproj = 0;
-    for(int i = 0; i < n; i++) {
-        double X3p = Rs[i][0][0] * X3 + Rs[i][0][1] * Y3 + Rs[i][0][2] * Z3 + ts[i][0];
-        double Y3p = Rs[i][1][0] * X3 + Rs[i][1][1] * Y3 + Rs[i][1][2] * Z3 + ts[i][1];
-        double Z3p = Rs[i][2][0] * X3 + Rs[i][2][1] * Y3 + Rs[i][2][2] * Z3 + ts[i][2];
-        double mu3p = cx + fx * X3p / Z3p;
-        double mv3p = cy + fy * Y3p / Z3p;
-        double reproj = (mu3p - mu3) * (mu3p - mu3) + (mv3p - mv3) * (mv3p - mv3);
-        if (i == 0 || min_reproj > reproj) {
-            ns = i;
-            min_reproj = reproj;
-        }
-    }
-
     for(int i = 0; i < 3; i++) {
         for(int j = 0; j < 3; j++)
-            R[i][j] = Rs[ns][i][j];
-        t[i] = ts[ns][i];
+            R[i][j] = Rs[0][i][j];
+        t[i] = ts[0][i];
     }
 
     return true;
 }
 
 int p3p::solve(double R[4][3][3], double t[4][3],
-    double mu0, double mv0,   double X0, double Y0, double Z0,
-    double mu1, double mv1,   double X1, double Y1, double Z1,
-    double mu2, double mv2,   double X2, double Y2, double Z2)
+               double mu0, double mv0,   double X0, double Y0, double Z0,
+               double mu1, double mv1,   double X1, double Y1, double Z1,
+               double mu2, double mv2,   double X2, double Y2, double Z2,
+               double mu3, double mv3,   double X3, double Y3, double Z3,
+               bool p4p)
 {
     double mk0, mk1, mk2;
     double norm;
@@ -117,6 +145,9 @@ int p3p::solve(double R[4][3][3], double t[4][3],
     norm = sqrt(mu2 * mu2 + mv2 * mv2 + 1);
     mk2 = 1. / norm; mu2 *= mk2; mv2 *= mk2;
 
+    mu3 = inv_fx * mu3 - cx_fx;
+    mv3 = inv_fy * mv3 - cy_fy;
+
     double distances[3];
     distances[0] = sqrt( (X1 - X2) * (X1 - X2) + (Y1 - Y2) * (Y1 - Y2) + (Z1 - Z2) * (Z1 - Z2) );
     distances[1] = sqrt( (X0 - X2) * (X0 - X2) + (Y0 - Y2) * (Y0 - Y2) + (Z0 - Z2) * (Z0 - Z2) );
@@ -128,10 +159,11 @@ int p3p::solve(double R[4][3][3], double t[4][3],
     cosines[1] = mu0 * mu2 + mv0 * mv2 + mk0 * mk2;
     cosines[2] = mu0 * mu1 + mv0 * mv1 + mk0 * mk1;
 
-    double lengths[4][3];
+    double lengths[4][3] = {};
     int n = solve_for_lengths(lengths, distances, cosines);
 
     int nb_solutions = 0;
+    double reproj_errors[4];
     for(int i = 0; i < n; i++) {
         double M_orig[3][3];
 
@@ -150,14 +182,34 @@ int p3p::solve(double R[4][3][3], double t[4][3],
         if (!align(M_orig, X0, Y0, Z0, X1, Y1, Z1, X2, Y2, Z2, R[nb_solutions], t[nb_solutions]))
             continue;
 
+        if (p4p) {
+            double X3p = R[nb_solutions][0][0] * X3 + R[nb_solutions][0][1] * Y3 + R[nb_solutions][0][2] * Z3 + t[nb_solutions][0];
+            double Y3p = R[nb_solutions][1][0] * X3 + R[nb_solutions][1][1] * Y3 + R[nb_solutions][1][2] * Z3 + t[nb_solutions][1];
+            double Z3p = R[nb_solutions][2][0] * X3 + R[nb_solutions][2][1] * Y3 + R[nb_solutions][2][2] * Z3 + t[nb_solutions][2];
+            double mu3p = X3p / Z3p;
+            double mv3p = Y3p / Z3p;
+            reproj_errors[nb_solutions] = (mu3p - mu3) * (mu3p - mu3) + (mv3p - mv3) * (mv3p - mv3);
+        }
+
         nb_solutions++;
+    }
+
+    if (p4p) {
+        //sort the solutions
+        for (int i = 1; i < nb_solutions; i++) {
+            for (int j = i; j > 0 && reproj_errors[j-1] > reproj_errors[j]; j--) {
+                std::swap(reproj_errors[j], reproj_errors[j-1]);
+                std::swap(R[j], R[j-1]);
+                std::swap(t[j], t[j-1]);
+            }
+        }
     }
 
     return nb_solutions;
 }
 
 /// Given 3D distances between three points and cosines of 3 angles at the apex, calculates
-/// the lentghs of the line segments connecting projection center (P) and the three 3D points (A, B, C).
+/// the lengths of the line segments connecting projection center (P) and the three 3D points (A, B, C).
 /// Returned distances are for |PA|, |PB|, |PC| respectively.
 /// Only the solution to the main branch.
 /// Reference : X.S. Gao, X.-R. Hou, J. Tang, H.-F. Chang; "Complete Solution Classification for the Perspective-Three-Point Problem"
@@ -267,21 +319,21 @@ bool p3p::align(double M_end[3][3],
     double R[3][3], double T[3])
 {
     // Centroids:
-    double C_start[3], C_end[3];
+    double C_start[3] = {}, C_end[3] = {};
     for(int i = 0; i < 3; i++) C_end[i] = (M_end[0][i] + M_end[1][i] + M_end[2][i]) / 3;
     C_start[0] = (X0 + X1 + X2) / 3;
     C_start[1] = (Y0 + Y1 + Y2) / 3;
     C_start[2] = (Z0 + Z1 + Z2) / 3;
 
     // Covariance matrix s:
-    double s[3 * 3];
+    double s[3 * 3] = {};
     for(int j = 0; j < 3; j++) {
         s[0 * 3 + j] = (X0 * M_end[0][j] + X1 * M_end[1][j] + X2 * M_end[2][j]) / 3 - C_end[j] * C_start[0];
         s[1 * 3 + j] = (Y0 * M_end[0][j] + Y1 * M_end[1][j] + Y2 * M_end[2][j]) / 3 - C_end[j] * C_start[1];
         s[2 * 3 + j] = (Z0 * M_end[0][j] + Z1 * M_end[1][j] + Z2 * M_end[2][j]) / 3 - C_end[j] * C_start[2];
     }
 
-    double Qs[16], evs[4], U[16];
+    double Qs[16] = {}, evs[4] = {}, U[16] = {};
 
     Qs[0 * 4 + 0] = s[0 * 3 + 0] + s[1 * 3 + 1] + s[2 * 3 + 2];
     Qs[1 * 4 + 1] = s[0 * 3 + 0] - s[1 * 3 + 1] - s[2 * 3 + 2];
@@ -334,7 +386,7 @@ bool p3p::align(double M_end[3][3],
 
 bool p3p::jacobi_4x4(double * A, double * D, double * U)
 {
-    double B[4], Z[4];
+    double B[4] = {}, Z[4] = {};
     double Id[16] = {1., 0., 0., 0.,
         0., 1., 0., 0.,
         0., 0., 1., 0.,
@@ -344,7 +396,6 @@ bool p3p::jacobi_4x4(double * A, double * D, double * U)
 
     B[0] = A[0]; B[1] = A[5]; B[2] = A[10]; B[3] = A[15];
     memcpy(D, B, 4 * sizeof(double));
-    memset(Z, 0, 4 * sizeof(double));
 
     for(int iter = 0; iter < 50; iter++) {
         double sum = fabs(A[1]) + fabs(A[2]) + fabs(A[3]) + fabs(A[6]) + fabs(A[7]) + fabs(A[11]);

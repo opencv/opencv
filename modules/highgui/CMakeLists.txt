@@ -1,5 +1,9 @@
-set(the_description "High-level GUI and Media I/O")
-ocv_add_module(highgui opencv_imgproc opencv_imgcodecs OPTIONAL opencv_videoio WRAP python)
+set(the_description "High-level GUI")
+if(ANDROID)
+  ocv_add_module(highgui opencv_imgproc opencv_imgcodecs OPTIONAL opencv_videoio WRAP python)
+else()
+  ocv_add_module(highgui opencv_imgproc opencv_imgcodecs OPTIONAL opencv_videoio WRAP python java)
+endif()
 
 # ----------------------------------------------------------------------------
 #  CMake file for highgui. See root CMakeLists.txt
@@ -14,6 +18,10 @@ endif()
 if(APPLE)
   ocv_include_directories(${ZLIB_INCLUDE_DIRS})
   list(APPEND HIGHGUI_LIBRARIES ${ZLIB_LIBRARIES})
+endif()
+
+if(HAVE_WEBP)
+  add_definitions(-DHAVE_WEBP)
 endif()
 
 set(highgui_hdrs
@@ -34,13 +42,17 @@ file(GLOB highgui_ext_hdrs
 list(REMOVE_ITEM highgui_ext_hdrs "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/highgui_winrt.hpp")
 
 if(HAVE_QT5)
-  set(CMAKE_AUTOMOC ON)
+  # "Automoc" doesn't work properly with opencv_world build, use QT5_WRAP_CPP() directly
+  #set(CMAKE_AUTOMOC ON)
+
   set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
   QT5_ADD_RESOURCES(_RCC_OUTFILES ${CMAKE_CURRENT_LIST_DIR}/src/window_QT.qrc)
+  QT5_WRAP_CPP(_MOC_OUTFILES ${CMAKE_CURRENT_LIST_DIR}/src/window_QT.h)
   list(APPEND highgui_srcs
        ${CMAKE_CURRENT_LIST_DIR}/src/window_QT.cpp
        ${CMAKE_CURRENT_LIST_DIR}/src/window_QT.h
+       ${_MOC_OUTFILES}
        ${_RCC_OUTFILES})
 
   foreach(dt5_dep Core Gui Widgets Test Concurrent)
@@ -106,18 +118,18 @@ elseif(WINRT)
   endif()
 elseif(HAVE_WIN32UI)
   list(APPEND highgui_srcs ${CMAKE_CURRENT_LIST_DIR}/src/window_w32.cpp)
+  if(OpenCV_ARCH STREQUAL "ARM64")
+    list(APPEND HIGHGUI_LIBRARIES "comdlg32" "advapi32")
+  endif()
 elseif(HAVE_GTK OR HAVE_GTK3)
   list(APPEND highgui_srcs ${CMAKE_CURRENT_LIST_DIR}/src/window_gtk.cpp)
-elseif(HAVE_CARBON)
-  list(APPEND highgui_srcs ${CMAKE_CURRENT_LIST_DIR}/src/window_carbon.cpp)
-  list(APPEND HIGHGUI_LIBRARIES "-framework Carbon" "-framework QuickTime")
 elseif(HAVE_COCOA)
   list(APPEND highgui_srcs ${CMAKE_CURRENT_LIST_DIR}/src/window_cocoa.mm)
   list(APPEND HIGHGUI_LIBRARIES "-framework Cocoa")
 endif()
 
-if(UNIX)
-  #these variables are set by CHECK_MODULE macro
+if(TRUE)
+  # these variables are set by 'ocv_append_build_options(HIGHGUI ...)'
   foreach(P ${HIGHGUI_INCLUDE_DIRS})
     ocv_include_directories(${P})
   endforeach()
@@ -141,11 +153,6 @@ endif()
 
 if(MSVC)
   set_target_properties(${the_module} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:atlthunk.lib /NODEFAULTLIB:atlsd.lib /NODEFAULTLIB:libcmt.lib /DEBUG")
-endif()
-
-if(NOT BUILD_opencv_world)
-  #stop automatic dependencies propagation for this module
-  set_target_properties(${the_module} PROPERTIES LINK_INTERFACE_LIBRARIES "")
 endif()
 
 ocv_warnings_disable(CMAKE_CXX_FLAGS -Wno-deprecated-declarations)

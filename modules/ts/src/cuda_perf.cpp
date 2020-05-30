@@ -237,7 +237,7 @@ namespace perf
     #   else
             printf("[----------]\n[ GPU INFO ] \tRun on OS Windows x32.\n[----------]\n"), fflush(stdout);
     #   endif
-    #elif defined ANDROID
+    #elif defined __ANDROID__
     #   if defined _LP64 || defined __LP64__
             printf("[----------]\n[ GPU INFO ] \tRun on OS Android x64.\n[----------]\n"), fflush(stdout);
     #   else

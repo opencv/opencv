@@ -16,18 +16,18 @@ Image moments help you to calculate some features like center of mass of the obj
 object etc. Check out the wikipedia page on [Image
 Moments](http://en.wikipedia.org/wiki/Image_moment)
 
-The function **cv2.moments()** gives a dictionary of all moment values calculated. See below:
+The function **cv.moments()** gives a dictionary of all moment values calculated. See below:
 @code{.py}
-import cv2
 import numpy as np
+import cv2 as cv
 
-img = cv2.imread('star.jpg',0)
-ret,thresh = cv2.threshold(img,127,255,0)
-im2,contours,hierarchy = cv2.findContours(thresh, 1, 2)
+img = cv.imread('star.jpg',0)
+ret,thresh = cv.threshold(img,127,255,0)
+contours,hierarchy = cv.findContours(thresh, 1, 2)
 
 cnt = contours[0]
-M = cv2.moments(cnt)
-print M
+M = cv.moments(cnt)
+print( M )
 @endcode
 From this moments, you can extract useful data like area, centroid etc. Centroid is given by the
 relations, \f$C_x = \frac{M_{10}}{M_{00}}\f$ and \f$C_y = \frac{M_{01}}{M_{00}}\f$. This can be done as
@@ -40,18 +40,18 @@ cy = int(M['m01']/M['m00'])
 2. Contour Area
 ---------------
 
-Contour area is given by the function **cv2.contourArea()** or from moments, **M['m00']**.
+Contour area is given by the function **cv.contourArea()** or from moments, **M['m00']**.
 @code{.py}
-area = cv2.contourArea(cnt)
+area = cv.contourArea(cnt)
 @endcode
 
 3. Contour Perimeter
 --------------------
 
-It is also called arc length. It can be found out using **cv2.arcLength()** function. Second
+It is also called arc length. It can be found out using **cv.arcLength()** function. Second
 argument specify whether shape is a closed contour (if passed True), or just a curve.
 @code{.py}
-perimeter = cv2.arcLength(cnt,True)
+perimeter = cv.arcLength(cnt,True)
 @endcode
 
 4. Contour Approximation
@@ -68,8 +68,8 @@ you can use this function to approximate the shape. In this, second argument is 
 which is maximum distance from contour to approximated contour. It is an accuracy parameter. A wise
 selection of epsilon is needed to get the correct output.
 @code{.py}
-epsilon = 0.1*cv2.arcLength(cnt,True)
-approx = cv2.approxPolyDP(cnt,epsilon,True)
+epsilon = 0.1*cv.arcLength(cnt,True)
+approx = cv.approxPolyDP(cnt,epsilon,True)
 @endcode
 Below, in second image, green line shows the approximated curve for epsilon = 10% of arc length.
 Third image shows the same for epsilon = 1% of the arc length. Third argument specifies whether
@@ -81,7 +81,7 @@ curve is closed or not.
 --------------
 
 Convex Hull will look similar to contour approximation, but it is not (Both may provide same results
-in some cases). Here, **cv2.convexHull()** function checks a curve for convexity defects and
+in some cases). Here, **cv.convexHull()** function checks a curve for convexity defects and
 corrects it. Generally speaking, convex curves are the curves which are always bulged out, or
 at-least flat. And if it is bulged inside, it is called convexity defects. For example, check the
 below image of hand. Red line shows the convex hull of hand. The double-sided arrow marks shows the
@@ -91,7 +91,7 @@ convexity defects, which are the local maximum deviations of hull from contours.
 
 There is a little bit things to discuss about it its syntax:
 @code{.py}
-hull = cv2.convexHull(points[, hull[, clockwise[, returnPoints]]
+hull = cv.convexHull(points[, hull[, clockwise[, returnPoints]]
 @endcode
 Arguments details:
 
@@ -104,7 +104,7 @@ Arguments details:
 
 So to get a convex hull as in above image, following is sufficient:
 @code{.py}
-hull = cv2.convexHull(cnt)
+hull = cv.convexHull(cnt)
 @endcode
 But if you want to find convexity defects, you need to pass returnPoints = False. To understand it,
 we will take the rectangle image above. First I found its contour as cnt. Now I found its convex
@@ -119,10 +119,10 @@ You will see it again when we discuss about convexity defects.
 6. Checking Convexity
 ---------------------
 
-There is a function to check if a curve is convex or not, **cv2.isContourConvex()**. It just return
+There is a function to check if a curve is convex or not, **cv.isContourConvex()**. It just return
 whether True or False. Not a big deal.
 @code{.py}
-k = cv2.isContourConvex(cnt)
+k = cv.isContourConvex(cnt)
 @endcode
 
 7. Bounding Rectangle
@@ -133,25 +133,25 @@ There are two types of bounding rectangles.
 ### 7.a. Straight Bounding Rectangle
 
 It is a straight rectangle, it doesn't consider the rotation of the object. So area of the bounding
-rectangle won't be minimum. It is found by the function **cv2.boundingRect()**.
+rectangle won't be minimum. It is found by the function **cv.boundingRect()**.
 
 Let (x,y) be the top-left coordinate of the rectangle and (w,h) be its width and height.
 @code{.py}
-x,y,w,h = cv2.boundingRect(cnt)
-cv2.rectangle(img,(x,y),(x+w,y+h),(0,255,0),2)
+x,y,w,h = cv.boundingRect(cnt)
+cv.rectangle(img,(x,y),(x+w,y+h),(0,255,0),2)
 @endcode
 
 ### 7.b. Rotated Rectangle
 
 Here, bounding rectangle is drawn with minimum area, so it considers the rotation also. The function
-used is **cv2.minAreaRect()**. It returns a Box2D structure which contains following detals - (
+used is **cv.minAreaRect()**. It returns a Box2D structure which contains following details - (
 center (x,y), (width, height), angle of rotation ). But to draw this rectangle, we need 4 corners of
-the rectangle. It is obtained by the function **cv2.boxPoints()**
+the rectangle. It is obtained by the function **cv.boxPoints()**
 @code{.py}
-rect = cv2.minAreaRect(cnt)
-box = cv2.boxPoints(rect)
+rect = cv.minAreaRect(cnt)
+box = cv.boxPoints(rect)
 box = np.int0(box)
-cv2.drawContours(img,[box],0,(0,0,255),2)
+cv.drawContours(img,[box],0,(0,0,255),2)
 @endcode
 Both the rectangles are shown in a single image. Green rectangle shows the normal bounding rect. Red
 rectangle is the rotated rect.
@@ -161,13 +161,13 @@ rectangle is the rotated rect.
 8. Minimum Enclosing Circle
 ---------------------------
 
-Next we find the circumcircle of an object using the function **cv2.minEnclosingCircle()**. It is a
+Next we find the circumcircle of an object using the function **cv.minEnclosingCircle()**. It is a
 circle which completely covers the object with minimum area.
 @code{.py}
-(x,y),radius = cv2.minEnclosingCircle(cnt)
+(x,y),radius = cv.minEnclosingCircle(cnt)
 center = (int(x),int(y))
 radius = int(radius)
-cv2.circle(img,center,radius,(0,255,0),2)
+cv.circle(img,center,radius,(0,255,0),2)
 @endcode
 ![image](images/circumcircle.png)
 
@@ -177,8 +177,8 @@ cv2.circle(img,center,radius,(0,255,0),2)
 Next one is to fit an ellipse to an object. It returns the rotated rectangle in which the ellipse is
 inscribed.
 @code{.py}
-ellipse = cv2.fitEllipse(cnt)
-cv2.ellipse(img,ellipse,(0,255,0),2)
+ellipse = cv.fitEllipse(cnt)
+cv.ellipse(img,ellipse,(0,255,0),2)
 @endcode
 ![image](images/fitellipse.png)
 
@@ -189,10 +189,10 @@ Similarly we can fit a line to a set of points. Below image contains a set of wh
 approximate a straight line to it.
 @code{.py}
 rows,cols = img.shape[:2]
-[vx,vy,x,y] = cv2.fitLine(cnt, cv2.DIST_L2,0,0.01,0.01)
+[vx,vy,x,y] = cv.fitLine(cnt, cv.DIST_L2,0,0.01,0.01)
 lefty = int((-x*vy/vx) + y)
 righty = int(((cols-x)*vy/vx)+y)
-cv2.line(img,(cols-1,righty),(0,lefty),(0,255,0),2)
+cv.line(img,(cols-1,righty),(0,lefty),(0,255,0),2)
 @endcode
 ![image](images/fitline.jpg)
 

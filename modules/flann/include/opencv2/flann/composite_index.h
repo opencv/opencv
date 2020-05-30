@@ -31,6 +31,8 @@
 #ifndef OPENCV_FLANN_COMPOSITE_INDEX_H_
 #define OPENCV_FLANN_COMPOSITE_INDEX_H_
 
+//! @cond IGNORED
+
 #include "general.h"
 #include "nn_index.h"
 #include "kdtree_index.h"
@@ -101,7 +103,7 @@ public:
     /**
      * @return The index type
      */
-    flann_algorithm_t getType() const
+    flann_algorithm_t getType() const CV_OVERRIDE
     {
         return FLANN_INDEX_COMPOSITE;
     }
@@ -109,7 +111,7 @@ public:
     /**
      * @return Size of the index
      */
-    size_t size() const
+    size_t size() const CV_OVERRIDE
     {
         return kdtree_index_->size();
     }
@@ -117,7 +119,7 @@ public:
     /**
      * \returns The dimensionality of the features in this index.
      */
-    size_t veclen() const
+    size_t veclen() const CV_OVERRIDE
     {
         return kdtree_index_->veclen();
     }
@@ -125,7 +127,7 @@ public:
     /**
      * \returns The amount of memory (in bytes) used by the index.
      */
-    int usedMemory() const
+    int usedMemory() const CV_OVERRIDE
     {
         return kmeans_index_->usedMemory() + kdtree_index_->usedMemory();
     }
@@ -133,7 +135,7 @@ public:
     /**
      * \brief Builds the index
      */
-    void buildIndex()
+    void buildIndex() CV_OVERRIDE
     {
         Logger::info("Building kmeans tree...\n");
         kmeans_index_->buildIndex();
@@ -145,7 +147,7 @@ public:
      * \brief Saves the index to a stream
      * \param stream The stream to save the index to
      */
-    void saveIndex(FILE* stream)
+    void saveIndex(FILE* stream) CV_OVERRIDE
     {
         kmeans_index_->saveIndex(stream);
         kdtree_index_->saveIndex(stream);
@@ -155,7 +157,7 @@ public:
      * \brief Loads the index from a stream
      * \param stream The stream from which the index is loaded
      */
-    void loadIndex(FILE* stream)
+    void loadIndex(FILE* stream) CV_OVERRIDE
     {
         kmeans_index_->loadIndex(stream);
         kdtree_index_->loadIndex(stream);
@@ -164,7 +166,7 @@ public:
     /**
      * \returns The index parameters
      */
-    IndexParams getParameters() const
+    IndexParams getParameters() const CV_OVERRIDE
     {
         return index_params_;
     }
@@ -172,7 +174,7 @@ public:
     /**
      * \brief Method that searches for nearest-neighbours
      */
-    void findNeighbors(ResultSet<DistanceType>& result, const ElementType* vec, const SearchParams& searchParams)
+    void findNeighbors(ResultSet<DistanceType>& result, const ElementType* vec, const SearchParams& searchParams) CV_OVERRIDE
     {
         kmeans_index_->findNeighbors(result, vec, searchParams);
         kdtree_index_->findNeighbors(result, vec, searchParams);
@@ -190,5 +192,7 @@ private:
 };
 
 }
+
+//! @endcond
 
 #endif //OPENCV_FLANN_COMPOSITE_INDEX_H_

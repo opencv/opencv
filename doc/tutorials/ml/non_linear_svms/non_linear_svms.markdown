@@ -1,6 +1,9 @@
 Support Vector Machines for Non-Linearly Separable Data {#tutorial_non_linear_svms}
 =======================================================
 
+@prev_tutorial{tutorial_introduction_to_svm}
+@next_tutorial{tutorial_introduction_to_pca}
+
 Goal
 ----
 
@@ -13,7 +16,7 @@ In this tutorial you will learn how to:
 Motivation
 ----------
 
-Why is it interesting to extend the SVM optimation problem in order to handle non-linearly separable
+Why is it interesting to extend the SVM optimization problem in order to handle non-linearly separable
 training data? Most of the applications in which SVMs are used in computer vision require a more
 powerful tool than a simple linear classifier. This stems from the fact that in these tasks __the
 training data can be rarely separated using an hyperplane__.
@@ -43,7 +46,7 @@ There are multiple ways in which this model can be modified so it takes into acc
 misclassification errors. For example, one could think of minimizing the same quantity plus a
 constant times the number of misclassification errors in the training data, i.e.:
 
-\f[\min ||\beta||^{2} + C \text{(\# misclassication errors)}\f]
+\f[\min ||\beta||^{2} + C \text{(misclassification errors)}\f]
 
 However, this one is not a very good solution since, among some other reasons, we do not distinguish
 between samples that are misclassified with a small distance to their appropriate decision region or
@@ -87,86 +90,177 @@ Source Code
 -----------
 
 You may also find the source code in `samples/cpp/tutorial_code/ml/non_linear_svms` folder of the OpenCV source library or
-[download it from here](https://github.com/opencv/tree/master/samples/cpp/tutorial_code/ml/non_linear_svms/non_linear_svms.cpp).
+[download it from here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/ml/non_linear_svms/non_linear_svms.cpp).
 
-@note The following code has been implemented with OpenCV 3.0 classes and functions. An equivalent version of the code
-using OpenCV 2.4 can be found in [this page.](http://docs.opencv.org/2.4/doc/tutorials/ml/non_linear_svms/non_linear_svms.html#nonlinearsvms)
+@add_toggle_cpp
+-   **Downloadable code**: Click
+    [here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/ml/non_linear_svms/non_linear_svms.cpp)
 
-@include cpp/tutorial_code/ml/non_linear_svms/non_linear_svms.cpp
+-   **Code at glance:**
+    @include samples/cpp/tutorial_code/ml/non_linear_svms/non_linear_svms.cpp
+@end_toggle
+
+@add_toggle_java
+-   **Downloadable code**: Click
+    [here](https://github.com/opencv/opencv/tree/master/samples/java/tutorial_code/ml/non_linear_svms/NonLinearSVMsDemo.java)
+
+-   **Code at glance:**
+    @include samples/java/tutorial_code/ml/non_linear_svms/NonLinearSVMsDemo.java
+@end_toggle
+
+@add_toggle_python
+-   **Downloadable code**: Click
+    [here](https://github.com/opencv/opencv/tree/master/samples/python/tutorial_code/ml/non_linear_svms/non_linear_svms.py)
+
+-   **Code at glance:**
+    @include samples/python/tutorial_code/ml/non_linear_svms/non_linear_svms.py
+@end_toggle
 
 Explanation
 -----------
 
--#  __Set up the training data__
+-   __Set up the training data__
 
-    The training data of this exercise is formed by a set of labeled 2D-points that belong to one of
-    two different classes. To make the exercise more appealing, the training data is generated
-    randomly using a uniform probability density functions (PDFs).
+The training data of this exercise is formed by a set of labeled 2D-points that belong to one of
+two different classes. To make the exercise more appealing, the training data is generated
+randomly using a uniform probability density functions (PDFs).
 
-    We have divided the generation of the training data into two main parts.
+We have divided the generation of the training data into two main parts.
 
-    In the first part we generate data for both classes that is linearly separable.
-    @snippet cpp/tutorial_code/ml/non_linear_svms/non_linear_svms.cpp setup1
+In the first part we generate data for both classes that is linearly separable.
 
-    In the second part we create data for both classes that is non-linearly separable, data that
-    overlaps.
-    @snippet cpp/tutorial_code/ml/non_linear_svms/non_linear_svms.cpp setup2
+@add_toggle_cpp
+@snippet samples/cpp/tutorial_code/ml/non_linear_svms/non_linear_svms.cpp setup1
+@end_toggle
 
--#  __Set up SVM's parameters__
+@add_toggle_java
+@snippet samples/java/tutorial_code/ml/non_linear_svms/NonLinearSVMsDemo.java setup1
+@end_toggle
 
-    @note In the previous tutorial @ref tutorial_introduction_to_svm there is an explanation of the
-    atributes of the class @ref cv::ml::SVM that we configure here before training the SVM.
+@add_toggle_python
+@snippet samples/python/tutorial_code/ml/non_linear_svms/non_linear_svms.py setup1
+@end_toggle
 
-    @snippet cpp/tutorial_code/ml/non_linear_svms/non_linear_svms.cpp init
+In the second part we create data for both classes that is non-linearly separable, data that
+overlaps.
 
-    There are just two differences between the configuration we do here and the one that was done in
-    the previous tutorial (@ref tutorial_introduction_to_svm) that we use as reference.
+@add_toggle_cpp
+@snippet samples/cpp/tutorial_code/ml/non_linear_svms/non_linear_svms.cpp setup2
+@end_toggle
 
-    -   _C_. We chose here a small value of this parameter in order not to punish too much the
-        misclassification errors in the optimization. The idea of doing this stems from the will of
-        obtaining a solution close to the one intuitively expected. However, we recommend to get a
-        better insight of the problem by making adjustments to this parameter.
+@add_toggle_java
+@snippet samples/java/tutorial_code/ml/non_linear_svms/NonLinearSVMsDemo.java setup2
+@end_toggle
 
-        @note In this case there are just very few points in the overlapping region between classes.
-        By giving a smaller value to __FRAC_LINEAR_SEP__ the density of points can be incremented and the
-        impact of the parameter _C_ explored deeply.
+@add_toggle_python
+@snippet samples/python/tutorial_code/ml/non_linear_svms/non_linear_svms.py setup2
+@end_toggle
 
-    -   _Termination Criteria of the algorithm_. The maximum number of iterations has to be
-        increased considerably in order to solve correctly a problem with non-linearly separable
-        training data. In particular, we have increased in five orders of magnitude this value.
+-   __Set up SVM's parameters__
 
--#  __Train the SVM__
+@note In the previous tutorial @ref tutorial_introduction_to_svm there is an explanation of the
+attributes of the class @ref cv::ml::SVM that we configure here before training the SVM.
 
-    We call the method @ref cv::ml::SVM::train to build the SVM model. Watch out that the training
-    process may take a quite long time. Have patiance when your run the program.
+@add_toggle_cpp
+@snippet samples/cpp/tutorial_code/ml/non_linear_svms/non_linear_svms.cpp init
+@end_toggle
 
-    @snippet cpp/tutorial_code/ml/non_linear_svms/non_linear_svms.cpp train
+@add_toggle_java
+@snippet samples/java/tutorial_code/ml/non_linear_svms/NonLinearSVMsDemo.java init
+@end_toggle
 
--#  __Show the Decision Regions__
+@add_toggle_python
+@snippet samples/python/tutorial_code/ml/non_linear_svms/non_linear_svms.py init
+@end_toggle
 
-    The method @ref cv::ml::SVM::predict is used to classify an input sample using a trained SVM. In
-    this example we have used this method in order to color the space depending on the prediction done
-    by the SVM. In other words, an image is traversed interpreting its pixels as points of the
-    Cartesian plane. Each of the points is colored depending on the class predicted by the SVM; in
-    dark green if it is the class with label 1 and in dark blue if it is the class with label 2.
+There are just two differences between the configuration we do here and the one that was done in
+the previous tutorial (@ref tutorial_introduction_to_svm) that we use as reference.
 
-    @snippet cpp/tutorial_code/ml/non_linear_svms/non_linear_svms.cpp show
+-   _C_. We chose here a small value of this parameter in order not to punish too much the
+    misclassification errors in the optimization. The idea of doing this stems from the will of
+    obtaining a solution close to the one intuitively expected. However, we recommend to get a
+    better insight of the problem by making adjustments to this parameter.
 
--#  __Show the training data__
+    @note In this case there are just very few points in the overlapping region between classes.
+    By giving a smaller value to __FRAC_LINEAR_SEP__ the density of points can be incremented and the
+    impact of the parameter _C_ explored deeply.
 
-    The method @ref cv::circle is used to show the samples that compose the training data. The samples
-    of the class labeled with 1 are shown in light green and in light blue the samples of the class
-    labeled with 2.
+-   _Termination Criteria of the algorithm_. The maximum number of iterations has to be
+    increased considerably in order to solve correctly a problem with non-linearly separable
+    training data. In particular, we have increased in five orders of magnitude this value.
 
-    @snippet cpp/tutorial_code/ml/non_linear_svms/non_linear_svms.cpp show_data
+-   __Train the SVM__
 
--#  __Support vectors__
+We call the method @ref cv::ml::SVM::train to build the SVM model. Watch out that the training
+process may take a quite long time. Have patiance when your run the program.
 
-    We use here a couple of methods to obtain information about the support vectors. The method
-    @ref cv::ml::SVM::getSupportVectors obtain all support vectors. We have used this methods here
-    to find the training examples that are support vectors and highlight them.
+@add_toggle_cpp
+@snippet samples/cpp/tutorial_code/ml/non_linear_svms/non_linear_svms.cpp train
+@end_toggle
 
-    @snippet cpp/tutorial_code/ml/non_linear_svms/non_linear_svms.cpp show_vectors
+@add_toggle_java
+@snippet samples/java/tutorial_code/ml/non_linear_svms/NonLinearSVMsDemo.java train
+@end_toggle
+
+@add_toggle_python
+@snippet samples/python/tutorial_code/ml/non_linear_svms/non_linear_svms.py train
+@end_toggle
+
+-   __Show the Decision Regions__
+
+The method @ref cv::ml::SVM::predict is used to classify an input sample using a trained SVM. In
+this example we have used this method in order to color the space depending on the prediction done
+by the SVM. In other words, an image is traversed interpreting its pixels as points of the
+Cartesian plane. Each of the points is colored depending on the class predicted by the SVM; in
+dark green if it is the class with label 1 and in dark blue if it is the class with label 2.
+
+@add_toggle_cpp
+@snippet samples/cpp/tutorial_code/ml/non_linear_svms/non_linear_svms.cpp show
+@end_toggle
+
+@add_toggle_java
+@snippet samples/java/tutorial_code/ml/non_linear_svms/NonLinearSVMsDemo.java show
+@end_toggle
+
+@add_toggle_python
+@snippet samples/python/tutorial_code/ml/non_linear_svms/non_linear_svms.py show
+@end_toggle
+
+-   __Show the training data__
+
+The method @ref cv::circle is used to show the samples that compose the training data. The samples
+of the class labeled with 1 are shown in light green and in light blue the samples of the class
+labeled with 2.
+
+@add_toggle_cpp
+@snippet samples/cpp/tutorial_code/ml/non_linear_svms/non_linear_svms.cpp show_data
+@end_toggle
+
+@add_toggle_java
+@snippet samples/java/tutorial_code/ml/non_linear_svms/NonLinearSVMsDemo.java show_data
+@end_toggle
+
+@add_toggle_python
+@snippet samples/python/tutorial_code/ml/non_linear_svms/non_linear_svms.py show_data
+@end_toggle
+
+-   __Support vectors__
+
+We use here a couple of methods to obtain information about the support vectors. The method
+@ref cv::ml::SVM::getSupportVectors obtain all support vectors. We have used this methods here
+to find the training examples that are support vectors and highlight them.
+
+@add_toggle_cpp
+@snippet samples/cpp/tutorial_code/ml/non_linear_svms/non_linear_svms.cpp show_vectors
+@end_toggle
+
+@add_toggle_java
+@snippet samples/java/tutorial_code/ml/non_linear_svms/NonLinearSVMsDemo.java show_vectors
+@end_toggle
+
+@add_toggle_python
+@snippet samples/python/tutorial_code/ml/non_linear_svms/non_linear_svms.py show_vectors
+@end_toggle
 
 Results
 -------
@@ -184,8 +278,4 @@ Results
 
 You may observe a runtime instance of this on the [YouTube here](https://www.youtube.com/watch?v=vFv2yPcSo-Q).
 
-\htmlonly
-<div align="center">
-<iframe title="Support Vector Machines for Non-Linearly Separable Data" width="560" height="349" src="http://www.youtube.com/embed/vFv2yPcSo-Q?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
-</div>
-\endhtmlonly
+@youtube{vFv2yPcSo-Q}

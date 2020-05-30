@@ -14,7 +14,7 @@ Ptr<CLAHE> pFilter;
 int tilesize;
 int cliplimit;
 
-static void TSize_Callback(int pos)
+static void TSize_Callback(int pos, void* /*data*/)
 {
     if(pos==0)
         pFilter->setTilesGridSize(Size(1,1));
@@ -22,7 +22,7 @@ static void TSize_Callback(int pos)
         pFilter->setTilesGridSize(Size(tilesize,tilesize));
 }
 
-static void Clip_Callback(int)
+static void Clip_Callback(int, void* /*data*/)
 {
     pFilter->setClipLimit(cliplimit);
 }
@@ -63,8 +63,9 @@ int main(int argc, char** argv)
     setTrackbarPos("Tile Size", "CLAHE", cur_tilesize.width);
     setTrackbarPos("Clip Limit", "CLAHE", cur_clip);
 
-    if(infile != "")
+    if(!infile.empty())
     {
+        infile = samples::findFile(infile);
         imread(infile).copyTo(frame);
         if(frame.empty())
         {
@@ -87,7 +88,10 @@ int main(int argc, char** argv)
         else
             imread(infile).copyTo(frame);
         if(frame.empty())
-            continue;
+        {
+            waitKey();
+            break;
+        }
 
         cvtColor(frame, frame, COLOR_BGR2GRAY);
         pFilter->apply(frame, outframe);

@@ -30,12 +30,14 @@
 #ifndef OPENCV_FLANN_DEFINES_H_
 #define OPENCV_FLANN_DEFINES_H_
 
+//! @cond IGNORED
+
 #include "config.h"
 
 #ifdef FLANN_EXPORT
 #undef FLANN_EXPORT
 #endif
-#ifdef WIN32
+#ifdef _WIN32
 /* win32 dll export/import directives */
  #ifdef FLANN_EXPORTS
   #define FLANN_EXPORT __declspec(dllexport)
@@ -160,5 +162,7 @@ enum
 };
 
 }
+
+//! @endcond
 
 #endif /* OPENCV_FLANN_DEFINES_H_ */

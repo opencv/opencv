@@ -1,6 +1,8 @@
 Introduction to Principal Component Analysis (PCA) {#tutorial_introduction_to_pca}
 =======================================
 
+@prev_tutorial{tutorial_non_linear_svms}
+
 Goal
 ----
 
@@ -91,37 +93,112 @@ __Find the eigenvectors and eigenvalues of the covariance matrix__
 Source Code
 -----------
 
-This tutorial code's is shown lines below. You can also download it from
-    [here](https://github.com/opencv/tree/master/samples/cpp/tutorial_code/ml/introduction_to_pca/introduction_to_pca.cpp).
-@include cpp/tutorial_code/ml/introduction_to_pca/introduction_to_pca.cpp
+@add_toggle_cpp
+-   **Downloadable code**: Click
+    [here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/ml/introduction_to_pca/introduction_to_pca.cpp)
 
-@note Another example using PCA for dimensionality reduction while maintaining an amount of variance can be found at [opencv_source_code/samples/cpp/pca.cpp](https://github.com/opencv/tree/master/samples/cpp/pca.cpp)
+-   **Code at glance:**
+    @include samples/cpp/tutorial_code/ml/introduction_to_pca/introduction_to_pca.cpp
+@end_toggle
+
+@add_toggle_java
+-   **Downloadable code**: Click
+    [here](https://github.com/opencv/opencv/tree/master/samples/java/tutorial_code/ml/introduction_to_pca/IntroductionToPCADemo.java)
+
+-   **Code at glance:**
+    @include samples/java/tutorial_code/ml/introduction_to_pca/IntroductionToPCADemo.java
+@end_toggle
+
+@add_toggle_python
+-   **Downloadable code**: Click
+    [here](https://github.com/opencv/opencv/tree/master/samples/python/tutorial_code/ml/introduction_to_pca/introduction_to_pca.py)
+
+-   **Code at glance:**
+    @include samples/python/tutorial_code/ml/introduction_to_pca/introduction_to_pca.py
+@end_toggle
+
+@note Another example using PCA for dimensionality reduction while maintaining an amount of variance can be found at [opencv_source_code/samples/cpp/pca.cpp](https://github.com/opencv/opencv/tree/master/samples/cpp/pca.cpp)
 
 Explanation
 -----------
 
--#  __Read image and convert it to binary__
+-   __Read image and convert it to binary__
 
-    Here we apply the necessary pre-processing procedures in order to be able to detect the objects of interest.
-    @snippet samples/cpp/tutorial_code/ml/introduction_to_pca/introduction_to_pca.cpp pre-process
+Here we apply the necessary pre-processing procedures in order to be able to detect the objects of interest.
 
--#  __Extract objects of interest__
+@add_toggle_cpp
+@snippet samples/cpp/tutorial_code/ml/introduction_to_pca/introduction_to_pca.cpp pre-process
+@end_toggle
 
-    Then find and filter contours by size and obtain the orientation of the remaining ones.
-    @snippet samples/cpp/tutorial_code/ml/introduction_to_pca/introduction_to_pca.cpp contours
+@add_toggle_java
+@snippet samples/java/tutorial_code/ml/introduction_to_pca/IntroductionToPCADemo.java pre-process
+@end_toggle
 
--#  __Extract orientation__
+@add_toggle_python
+@snippet samples/python/tutorial_code/ml/introduction_to_pca/introduction_to_pca.py pre-process
+@end_toggle
 
-    Orientation is extracted by the call of getOrientation() function, which performs all the PCA procedure.
-    @snippet samples/cpp/tutorial_code/ml/introduction_to_pca/introduction_to_pca.cpp pca
+-   __Extract objects of interest__
 
-    First the data need to be arranged in a matrix with size n x 2, where n is the number of data points we have. Then we can perform that PCA analysis. The calculated mean (i.e. center of mass) is stored in the _cntr_ variable and the eigenvectors and eigenvalues are stored in the corresponding std::vector’s.
+Then find and filter contours by size and obtain the orientation of the remaining ones.
 
--#  __Visualize result__
+@add_toggle_cpp
+@snippet samples/cpp/tutorial_code/ml/introduction_to_pca/introduction_to_pca.cpp contours
+@end_toggle
 
-    The final result is visualized through the drawAxis() function, where the principal components are drawn in lines, and each eigenvector is multiplied by its eigenvalue and translated to the mean position.
-    @snippet samples/cpp/tutorial_code/ml/introduction_to_pca/introduction_to_pca.cpp visualization
-    @snippet samples/cpp/tutorial_code/ml/introduction_to_pca/introduction_to_pca.cpp visualization1
+@add_toggle_java
+@snippet samples/java/tutorial_code/ml/introduction_to_pca/IntroductionToPCADemo.java contours
+@end_toggle
+
+@add_toggle_python
+@snippet samples/python/tutorial_code/ml/introduction_to_pca/introduction_to_pca.py contours
+@end_toggle
+
+-   __Extract orientation__
+
+Orientation is extracted by the call of getOrientation() function, which performs all the PCA procedure.
+
+@add_toggle_cpp
+@snippet samples/cpp/tutorial_code/ml/introduction_to_pca/introduction_to_pca.cpp pca
+@end_toggle
+
+@add_toggle_java
+@snippet samples/java/tutorial_code/ml/introduction_to_pca/IntroductionToPCADemo.java pca
+@end_toggle
+
+@add_toggle_python
+@snippet samples/python/tutorial_code/ml/introduction_to_pca/introduction_to_pca.py pca
+@end_toggle
+
+First the data need to be arranged in a matrix with size n x 2, where n is the number of data points we have. Then we can perform that PCA analysis. The calculated mean (i.e. center of mass) is stored in the _cntr_ variable and the eigenvectors and eigenvalues are stored in the corresponding std::vector’s.
+
+-   __Visualize result__
+
+The final result is visualized through the drawAxis() function, where the principal components are drawn in lines, and each eigenvector is multiplied by its eigenvalue and translated to the mean position.
+
+@add_toggle_cpp
+@snippet samples/cpp/tutorial_code/ml/introduction_to_pca/introduction_to_pca.cpp visualization
+@end_toggle
+
+@add_toggle_java
+@snippet samples/java/tutorial_code/ml/introduction_to_pca/IntroductionToPCADemo.java visualization
+@end_toggle
+
+@add_toggle_python
+@snippet samples/python/tutorial_code/ml/introduction_to_pca/introduction_to_pca.py visualization
+@end_toggle
+
+@add_toggle_cpp
+@snippet samples/cpp/tutorial_code/ml/introduction_to_pca/introduction_to_pca.cpp visualization1
+@end_toggle
+
+@add_toggle_java
+@snippet samples/java/tutorial_code/ml/introduction_to_pca/IntroductionToPCADemo.java visualization1
+@end_toggle
+
+@add_toggle_python
+@snippet samples/python/tutorial_code/ml/introduction_to_pca/introduction_to_pca.py visualization1
+@end_toggle
 
 Results
 -------
@@ -130,4 +207,4 @@ The code opens an image, finds the orientation of the detected objects of intere
 
 ![](images/pca_test1.jpg)
 
-![](images/output.png)
+![](images/pca_output.png)

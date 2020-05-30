@@ -46,6 +46,7 @@
 
 #ifdef HAVE_LAPACK
 
+#include <complex.h>
 #include "opencv_lapack.h"
 
 #include <cmath>
@@ -62,7 +63,7 @@
 #define HAL_LU_SMALL_MATRIX_THRESH 100
 #define HAL_CHOLESKY_SMALL_MATRIX_THRESH 100
 
-//lapack stores matrices in column-major order so transposing is neded everywhere
+//lapack stores matrices in column-major order so transposing is needed everywhere
 template <typename fptype> static inline void
 transpose_square_inplace(fptype *src, size_t src_ld, size_t m)
 {

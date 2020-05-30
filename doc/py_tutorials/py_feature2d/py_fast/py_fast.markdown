@@ -82,7 +82,7 @@ Non-maximum Suppression.
 
 It is several times faster than other existing corner detectors.
 
-But it is not robust to high levels of noise. It is dependant on a threshold.
+But it is not robust to high levels of noise. It is dependent on a threshold.
 
 FAST Feature Detector in OpenCV
 -------------------------------
@@ -90,40 +90,40 @@ FAST Feature Detector in OpenCV
 It is called as any other feature detector in OpenCV. If you want, you can specify the threshold,
 whether non-maximum suppression to be applied or not, the neighborhood to be used etc.
 
-For the neighborhood, three flags are defined, cv2.FAST_FEATURE_DETECTOR_TYPE_5_8,
-cv2.FAST_FEATURE_DETECTOR_TYPE_7_12 and cv2.FAST_FEATURE_DETECTOR_TYPE_9_16. Below is a
+For the neighborhood, three flags are defined, cv.FAST_FEATURE_DETECTOR_TYPE_5_8,
+cv.FAST_FEATURE_DETECTOR_TYPE_7_12 and cv.FAST_FEATURE_DETECTOR_TYPE_9_16. Below is a
 simple code on how to detect and draw the FAST feature points.
 @code{.py}
 import numpy as np
-import cv2
+import cv2 as cv
 from matplotlib import pyplot as plt
 
-img = cv2.imread('simple.jpg',0)
+img = cv.imread('simple.jpg',0)
 
 # Initiate FAST object with default values
-fast = cv2.FastFeatureDetector_create()
+fast = cv.FastFeatureDetector_create()
 
 # find and draw the keypoints
 kp = fast.detect(img,None)
-img2 = cv2.drawKeypoints(img, kp, None, color=(255,0,0))
+img2 = cv.drawKeypoints(img, kp, None, color=(255,0,0))
 
 # Print all default params
-print "Threshold: ", fast.getThreshold()
-print "nonmaxSuppression: ", fast.getNonmaxSuppression()
-print "neighborhood: ", fast.getType()
-print "Total Keypoints with nonmaxSuppression: ", len(kp)
+print( "Threshold: {}".format(fast.getThreshold()) )
+print( "nonmaxSuppression:{}".format(fast.getNonmaxSuppression()) )
+print( "neighborhood: {}".format(fast.getType()) )
+print( "Total Keypoints with nonmaxSuppression: {}".format(len(kp)) )
 
-cv2.imwrite('fast_true.png',img2)
+cv.imwrite('fast_true.png',img2)
 
 # Disable nonmaxSuppression
 fast.setNonmaxSuppression(0)
 kp = fast.detect(img,None)
 
-print "Total Keypoints without nonmaxSuppression: ", len(kp)
+print( "Total Keypoints without nonmaxSuppression: {}".format(len(kp)) )
 
-img3 = cv2.drawKeypoints(img, kp, None, color=(255,0,0))
+img3 = cv.drawKeypoints(img, kp, None, color=(255,0,0))
 
-cv2.imwrite('fast_false.png',img3)
+cv.imwrite('fast_false.png',img3)
 @endcode
 See the results. First image shows FAST with nonmaxSuppression and second one without
 nonmaxSuppression:

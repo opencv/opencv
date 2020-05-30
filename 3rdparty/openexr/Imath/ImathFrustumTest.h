@@ -1,10 +1,10 @@
 ///////////////////////////////////////////////////////////////////////////
 //
-// Copyright (c) 2011, Industrial Light & Magic, a division of Lucas
+// Copyright (c) 2011-2012, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -38,10 +38,10 @@
 
 //-------------------------------------------------------------------------
 //
-//      This file contains algorithms applied to or in conjunction with
-//	Frustum visibility testing (Imath::Frustum).
+//  This file contains algorithms applied to or in conjunction with
+//  Frustum visibility testing (Imath::Frustum).
 //
-//	Methods for frustum-based rejection of primitives are contained here.
+//  Methods for frustum-based rejection of primitives are contained here.
 //
 //-------------------------------------------------------------------------
 
@@ -50,8 +50,9 @@
 #include "ImathSphere.h"
 #include "ImathMatrix.h"
 #include "ImathVec.h"
+#include "ImathNamespace.h"
 
-namespace Imath {
+IMATH_INTERNAL_NAMESPACE_HEADER_ENTER
 
 /////////////////////////////////////////////////////////////////
 // FrustumTest
@@ -73,7 +74,7 @@ namespace Imath {
 //
 // Given that you already have:
 //    Imath::Frustum   myFrustum
-//    IMath::Matrix44  myCameraWorldMatrix
+//    Imath::Matrix44  myCameraWorldMatrix
 //
 // First, make a frustum test object:
 //    FrustumTest myFrustumTest(myFrustum, myCameraWorldMatrix)
@@ -133,7 +134,7 @@ public:
         cameraMat.makeIdentity();
         setFrustum(frust, cameraMat);
     }
-    FrustumTest(Frustum<T> &frustum, const Matrix44<T> &cameraMat)
+    FrustumTest(const Frustum<T> &frustum, const Matrix44<T> &cameraMat)
     {
         setFrustum(frustum, cameraMat);
     }
@@ -142,7 +143,7 @@ public:
     // setFrustum()
     // This updates the frustum test with a new frustum and matrix.
     // This should usually be called just once per frame.
-    void setFrustum(Frustum<T> &frustum, const Matrix44<T> &cameraMat);
+    void setFrustum(const Frustum<T> &frustum, const Matrix44<T> &cameraMat);
 
     ////////////////////////////////////////////////////////////////////
     // isVisible()
@@ -150,18 +151,18 @@ public:
     bool isVisible(const Sphere3<T> &sphere) const;
     bool isVisible(const Box<Vec3<T> > &box) const;
     bool isVisible(const Vec3<T> &vec) const;
-
+    
     ////////////////////////////////////////////////////////////////////
     // completelyContains()
     // Check to see if shapes are entirely contained.
     bool completelyContains(const Sphere3<T> &sphere) const;
     bool completelyContains(const Box<Vec3<T> > &box) const;
-
+    
     // These next items are kept primarily for debugging tools.
     // It's useful for drawing the culling environment, and also
     // for getting an "outside view" of the culling frustum.
-    Imath::Matrix44<T> cameraMat() const {return cameraMatrix;}
-    Imath::Frustum<T> currentFrustum() const {return currFrustum;}
+    IMATH_INTERNAL_NAMESPACE::Matrix44<T> cameraMat() const {return cameraMatrix;}
+    IMATH_INTERNAL_NAMESPACE::Frustum<T> currentFrustum() const {return currFrustum;}
 
 protected:
     // To understand why the planes are stored this way, see
@@ -188,7 +189,7 @@ protected:
 // This should usually only be called once per frame, or however
 // often the camera moves.
 template<class T>
-void FrustumTest<T>::setFrustum(Frustum<T> &frustum,
+void FrustumTest<T>::setFrustum(const Frustum<T> &frustum,
                                 const Matrix44<T> &cameraMat)
 {
     Plane3<T> frustumPlanes[6];
@@ -201,7 +202,7 @@ void FrustumTest<T>::setFrustum(Frustum<T> &frustum,
         int index = i * 3;
 
         planeNormX[i]     = Vec3<T>(frustumPlanes[index + 0].normal.x,
-                                    frustumPlanes[index + 1].normal.x,
+                                    frustumPlanes[index + 1].normal.x, 
                                     frustumPlanes[index + 2].normal.x);
         planeNormY[i]     = Vec3<T>(frustumPlanes[index + 0].normal.y,
                                     frustumPlanes[index + 1].normal.y,
@@ -210,15 +211,15 @@ void FrustumTest<T>::setFrustum(Frustum<T> &frustum,
                                     frustumPlanes[index + 1].normal.z,
                                     frustumPlanes[index + 2].normal.z);
 
-        planeNormAbsX[i]  = Vec3<T>(Imath::abs(planeNormX[i].x),
-                                    Imath::abs(planeNormX[i].y),
-                                    Imath::abs(planeNormX[i].z));
-        planeNormAbsY[i]  = Vec3<T>(Imath::abs(planeNormY[i].x),
-                                    Imath::abs(planeNormY[i].y),
-                                    Imath::abs(planeNormY[i].z));
-        planeNormAbsZ[i]  = Vec3<T>(Imath::abs(planeNormZ[i].x),
-                                    Imath::abs(planeNormZ[i].y),
-                                    Imath::abs(planeNormZ[i].z));
+        planeNormAbsX[i]  = Vec3<T>(IMATH_INTERNAL_NAMESPACE::abs(planeNormX[i].x),
+                                    IMATH_INTERNAL_NAMESPACE::abs(planeNormX[i].y), 
+                                    IMATH_INTERNAL_NAMESPACE::abs(planeNormX[i].z));
+        planeNormAbsY[i]  = Vec3<T>(IMATH_INTERNAL_NAMESPACE::abs(planeNormY[i].x), 
+                                    IMATH_INTERNAL_NAMESPACE::abs(planeNormY[i].y),
+                                    IMATH_INTERNAL_NAMESPACE::abs(planeNormY[i].z));
+        planeNormAbsZ[i]  = Vec3<T>(IMATH_INTERNAL_NAMESPACE::abs(planeNormZ[i].x), 
+                                    IMATH_INTERNAL_NAMESPACE::abs(planeNormZ[i].y),
+                                    IMATH_INTERNAL_NAMESPACE::abs(planeNormZ[i].z));
 
         planeOffsetVec[i] = Vec3<T>(frustumPlanes[index + 0].distance,
                                     frustumPlanes[index + 1].distance,
@@ -242,18 +243,18 @@ bool FrustumTest<T>::isVisible(const Sphere3<T> &sphere) const
     Vec3<T> radiusVec = Vec3<T>(sphere.radius, sphere.radius, sphere.radius);
 
     // This is a vertical dot-product on three vectors at once.
-    Vec3<T> d0  = planeNormX[0] * center.x
-                + planeNormY[0] * center.y
-                + planeNormZ[0] * center.z
+    Vec3<T> d0  = planeNormX[0] * center.x 
+                + planeNormY[0] * center.y 
+                + planeNormZ[0] * center.z 
                 - radiusVec
                 - planeOffsetVec[0];
 
     if (d0.x >= 0 || d0.y >= 0 || d0.z >= 0)
         return false;
 
-    Vec3<T> d1  = planeNormX[1] * center.x
-                + planeNormY[1] * center.y
-                + planeNormZ[1] * center.z
+    Vec3<T> d1  = planeNormX[1] * center.x 
+                + planeNormY[1] * center.y 
+                + planeNormZ[1] * center.z 
                 - radiusVec
                 - planeOffsetVec[1];
 
@@ -276,18 +277,18 @@ bool FrustumTest<T>::completelyContains(const Sphere3<T> &sphere) const
     Vec3<T> radiusVec = Vec3<T>(sphere.radius, sphere.radius, sphere.radius);
 
     // This is a vertical dot-product on three vectors at once.
-    Vec3<T> d0  = planeNormX[0] * center.x
-                + planeNormY[0] * center.y
-                + planeNormZ[0] * center.z
+    Vec3<T> d0  = planeNormX[0] * center.x 
+                + planeNormY[0] * center.y 
+                + planeNormZ[0] * center.z 
                 + radiusVec
                 - planeOffsetVec[0];
 
     if (d0.x >= 0 || d0.y >= 0 || d0.z >= 0)
         return false;
 
-    Vec3<T> d1  = planeNormX[1] * center.x
-                + planeNormY[1] * center.y
-                + planeNormZ[1] * center.z
+    Vec3<T> d1  = planeNormX[1] * center.x 
+                + planeNormY[1] * center.y 
+                + planeNormZ[1] * center.z 
                 + radiusVec
                 - planeOffsetVec[1];
 
@@ -306,27 +307,30 @@ bool FrustumTest<T>::completelyContains(const Sphere3<T> &sphere) const
 template<typename T>
 bool FrustumTest<T>::isVisible(const Box<Vec3<T> > &box) const
 {
+    if (box.isEmpty())
+        return false;
+    
     Vec3<T> center = (box.min + box.max) / 2;
     Vec3<T> extent = (box.max - center);
 
     // This is a vertical dot-product on three vectors at once.
-    Vec3<T> d0  = planeNormX[0] * center.x
-                + planeNormY[0] * center.y
+    Vec3<T> d0  = planeNormX[0] * center.x 
+                + planeNormY[0] * center.y 
                 + planeNormZ[0] * center.z
-                - planeNormAbsX[0] * extent.x
-                - planeNormAbsY[0] * extent.y
-                - planeNormAbsZ[0] * extent.z
+                - planeNormAbsX[0] * extent.x 
+                - planeNormAbsY[0] * extent.y 
+                - planeNormAbsZ[0] * extent.z 
                 - planeOffsetVec[0];
 
     if (d0.x >= 0 || d0.y >= 0 || d0.z >= 0)
         return false;
 
-    Vec3<T> d1  = planeNormX[1] * center.x
-                + planeNormY[1] * center.y
+    Vec3<T> d1  = planeNormX[1] * center.x 
+                + planeNormY[1] * center.y 
                 + planeNormZ[1] * center.z
-                - planeNormAbsX[1] * extent.x
-                - planeNormAbsY[1] * extent.y
-                - planeNormAbsZ[1] * extent.z
+                - planeNormAbsX[1] * extent.x 
+                - planeNormAbsY[1] * extent.y 
+                - planeNormAbsZ[1] * extent.z 
                 - planeOffsetVec[1];
 
     if (d1.x >= 0 || d1.y >= 0 || d1.z >= 0)
@@ -344,27 +348,30 @@ bool FrustumTest<T>::isVisible(const Box<Vec3<T> > &box) const
 template<typename T>
 bool FrustumTest<T>::completelyContains(const Box<Vec3<T> > &box) const
 {
+    if (box.isEmpty())
+        return false;
+    
     Vec3<T> center = (box.min + box.max) / 2;
     Vec3<T> extent = (box.max - center);
 
     // This is a vertical dot-product on three vectors at once.
-    Vec3<T> d0  = planeNormX[0] * center.x
-                + planeNormY[0] * center.y
+    Vec3<T> d0  = planeNormX[0] * center.x 
+                + planeNormY[0] * center.y 
                 + planeNormZ[0] * center.z
-                + planeNormAbsX[0] * extent.x
-                + planeNormAbsY[0] * extent.y
-                + planeNormAbsZ[0] * extent.z
+                + planeNormAbsX[0] * extent.x 
+                + planeNormAbsY[0] * extent.y 
+                + planeNormAbsZ[0] * extent.z 
                 - planeOffsetVec[0];
 
     if (d0.x >= 0 || d0.y >= 0 || d0.z >= 0)
         return false;
 
-    Vec3<T> d1  = planeNormX[1] * center.x
-                + planeNormY[1] * center.y
+    Vec3<T> d1  = planeNormX[1] * center.x 
+                + planeNormY[1] * center.y 
                 + planeNormZ[1] * center.z
-                + planeNormAbsX[1] * extent.x
-                + planeNormAbsY[1] * extent.y
-                + planeNormAbsZ[1] * extent.z
+                + planeNormAbsX[1] * extent.x 
+                + planeNormAbsY[1] * extent.y 
+                + planeNormAbsZ[1] * extent.z 
                 - planeOffsetVec[1];
 
     if (d1.x >= 0 || d1.y >= 0 || d1.z >= 0)
@@ -382,17 +389,17 @@ template<typename T>
 bool FrustumTest<T>::isVisible(const Vec3<T> &vec) const
 {
     // This is a vertical dot-product on three vectors at once.
-    Vec3<T> d0  = (planeNormX[0] * vec.x)
-                + (planeNormY[0] * vec.y)
-                + (planeNormZ[0] * vec.z)
+    Vec3<T> d0  = (planeNormX[0] * vec.x) 
+                + (planeNormY[0] * vec.y) 
+                + (planeNormZ[0] * vec.z) 
                 - planeOffsetVec[0];
 
     if (d0.x >= 0 || d0.y >= 0 || d0.z >= 0)
         return false;
 
-    Vec3<T> d1  = (planeNormX[1] * vec.x)
-                + (planeNormY[1] * vec.y)
-                + (planeNormZ[1] * vec.z)
+    Vec3<T> d1  = (planeNormX[1] * vec.x) 
+                + (planeNormY[1] * vec.y) 
+                + (planeNormZ[1] * vec.z) 
                 - planeOffsetVec[1];
 
     if (d1.x >= 0 || d1.y >= 0 || d1.z >= 0)
@@ -405,6 +412,6 @@ bool FrustumTest<T>::isVisible(const Vec3<T> &vec) const
 typedef FrustumTest<float>	FrustumTestf;
 typedef FrustumTest<double> FrustumTestd;
 
-} //namespace Imath
+IMATH_INTERNAL_NAMESPACE_HEADER_EXIT
 
-#endif
+#endif // INCLUDED_IMATHFRUSTUMTEST_H

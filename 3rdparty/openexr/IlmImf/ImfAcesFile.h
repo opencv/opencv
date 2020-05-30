@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2007, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -41,33 +41,33 @@
 //-----------------------------------------------------------------------------
 //
 //	ACES image file I/O.
-//
+//	
 //	This header file declares two classes that directly support
 //	image file input and output according to the Academy Image
 //	Interchange Framework.
-//
+//	
 //	The Academy Image Interchange file format is a subset of OpenEXR:
-//
+//	
 //	    - Images are stored as scanlines.  Tiles are not allowed.
-//
+//	
 //	    - Images contain three color channels, either
 //		    R, G, B (red, green, blue) or
 //		    Y, RY, BY (luminance, sub-sampled chroma)
-//
+//	
 //	    - Images may optionally contain an alpha channel.
-//
+//	
 //	    - Only three compression types are allowed:
 //		    - NO_COMPRESSION (file is not compressed)
 //		    - PIZ_COMPRESSION (lossless)
 //		    - B44A_COMPRESSION (lossy)
-//
+//	
 //	    - The "chromaticities" header attribute must specify
 //	      the ACES RGB primaries and white point.
-//
+//	
 //	class AcesOutputFile writes an OpenEXR file, enforcing the
 //	restrictions listed above.  Pixel data supplied by application
 //	software must already be in the ACES RGB space.
-//
+//	
 //	class AcesInputFile reads an OpenEXR file.  Pixel data delivered
 //	to application software is guaranteed to be in the ACES RGB space.
 //	If the RGB space of the file is not the same as the ACES space,
@@ -77,20 +77,19 @@
 //
 //-----------------------------------------------------------------------------
 
-#include <ImfHeader.h>
-#include <ImfRgba.h>
+#include "ImfHeader.h"
+#include "ImfRgba.h"
 #include "ImathVec.h"
 #include "ImathBox.h"
-#include <ImfThreading.h>
+#include "ImfThreading.h"
+#include "ImfNamespace.h"
+#include "ImfExport.h"
+#include "ImfForward.h"
+
 #include <string>
 
-namespace Imf {
+OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_ENTER
 
-
-class RgbaOutputFile;
-class RgbaInputFile;
-struct PreviewRgba;
-struct Chromaticities;
 
 //
 // ACES red, green, blue and white-point chromaticities.
@@ -111,9 +110,10 @@ class AcesOutputFile
     // Constructor -- header is constructed by the caller
     //---------------------------------------------------
 
+    IMF_EXPORT
     AcesOutputFile (const std::string &name,
-            const Header &header,
-            RgbaChannels rgbaChannels = WRITE_RGBA,
+		    const Header &header,
+		    RgbaChannels rgbaChannels = WRITE_RGBA,
                     int numThreads = globalThreadCount());
 
 
@@ -123,9 +123,10 @@ class AcesOutputFile
     // automatically close the file.
     //----------------------------------------------------
 
-    AcesOutputFile (OStream &os,
-            const Header &header,
-            RgbaChannels rgbaChannels = WRITE_RGBA,
+    IMF_EXPORT
+    AcesOutputFile (OPENEXR_IMF_INTERNAL_NAMESPACE::OStream &os,
+		    const Header &header,
+		    RgbaChannels rgbaChannels = WRITE_RGBA,
                     int numThreads = globalThreadCount());
 
 
@@ -134,15 +135,16 @@ class AcesOutputFile
     // call arguments (empty dataWindow means "same as displayWindow")
     //----------------------------------------------------------------
 
+    IMF_EXPORT
     AcesOutputFile (const std::string &name,
-            const Imath::Box2i &displayWindow,
-            const Imath::Box2i &dataWindow = Imath::Box2i(),
-            RgbaChannels rgbaChannels = WRITE_RGBA,
-            float pixelAspectRatio = 1,
-            const Imath::V2f screenWindowCenter = Imath::V2f (0, 0),
-            float screenWindowWidth = 1,
-            LineOrder lineOrder = INCREASING_Y,
-            Compression compression = PIZ_COMPRESSION,
+		    const IMATH_NAMESPACE::Box2i &displayWindow,
+		    const IMATH_NAMESPACE::Box2i &dataWindow = IMATH_NAMESPACE::Box2i(),
+		    RgbaChannels rgbaChannels = WRITE_RGBA,
+		    float pixelAspectRatio = 1,
+		    const IMATH_NAMESPACE::V2f screenWindowCenter = IMATH_NAMESPACE::V2f (0, 0),
+		    float screenWindowWidth = 1,
+		    LineOrder lineOrder = INCREASING_Y,
+		    Compression compression = PIZ_COMPRESSION,
                     int numThreads = globalThreadCount());
 
 
@@ -152,15 +154,16 @@ class AcesOutputFile
     // Box2i (V2i (0, 0), V2i (width - 1, height -1))
     //-----------------------------------------------
 
+    IMF_EXPORT
     AcesOutputFile (const std::string &name,
-            int width,
-            int height,
-            RgbaChannels rgbaChannels = WRITE_RGBA,
-            float pixelAspectRatio = 1,
-            const Imath::V2f screenWindowCenter = Imath::V2f (0, 0),
-            float screenWindowWidth = 1,
-            LineOrder lineOrder = INCREASING_Y,
-            Compression compression = PIZ_COMPRESSION,
+		    int width,
+		    int height,
+		    RgbaChannels rgbaChannels = WRITE_RGBA,
+		    float pixelAspectRatio = 1,
+		    const IMATH_NAMESPACE::V2f screenWindowCenter = IMATH_NAMESPACE::V2f (0, 0),
+		    float screenWindowWidth = 1,
+		    LineOrder lineOrder = INCREASING_Y,
+		    Compression compression = PIZ_COMPRESSION,
                     int numThreads = globalThreadCount());
 
 
@@ -168,6 +171,7 @@ class AcesOutputFile
     // Destructor
     //-----------
 
+    IMF_EXPORT
     virtual ~AcesOutputFile ();
 
 
@@ -179,9 +183,10 @@ class AcesOutputFile
     //
     //------------------------------------------------
 
+    IMF_EXPORT
     void			setFrameBuffer (const Rgba *base,
-                        size_t xStride,
-                        size_t yStride);
+						size_t xStride,
+						size_t yStride);
 
 
     //-------------------------------------------------
@@ -197,14 +202,23 @@ class AcesOutputFile
     // Access to the file header
     //--------------------------
 
+    IMF_EXPORT
     const Header &		header () const;
-    const Imath::Box2i &	displayWindow () const;
-    const Imath::Box2i &	dataWindow () const;
+    IMF_EXPORT
+    const IMATH_NAMESPACE::Box2i &	displayWindow () const;
+    IMF_EXPORT
+    const IMATH_NAMESPACE::Box2i &	dataWindow () const;
+    IMF_EXPORT
     float			pixelAspectRatio () const;
-    const Imath::V2f		screenWindowCenter () const;
+    IMF_EXPORT
+    const IMATH_NAMESPACE::V2f		screenWindowCenter () const;
+    IMF_EXPORT
     float			screenWindowWidth () const;
+    IMF_EXPORT
     LineOrder			lineOrder () const;
+    IMF_EXPORT
     Compression			compression () const;
+    IMF_EXPORT
     RgbaChannels		channels () const;
 
 
@@ -212,6 +226,7 @@ class AcesOutputFile
     // Update the preview image (see Imf::OutputFile::updatePreviewImage())
     // --------------------------------------------------------------------
 
+    IMF_EXPORT
     void			updatePreviewImage (const PreviewRgba[]);
 
 
@@ -239,8 +254,9 @@ class AcesInputFile
     // destructor will automatically close the file.
     //-------------------------------------------------------
 
+    IMF_EXPORT
     AcesInputFile (const std::string &name,
-           int numThreads = globalThreadCount());
+		   int numThreads = globalThreadCount());
 
 
     //-----------------------------------------------------------
@@ -250,14 +266,16 @@ class AcesInputFile
     // close the file.
     //-----------------------------------------------------------
 
-    AcesInputFile (IStream &is,
-           int numThreads = globalThreadCount());
+    IMF_EXPORT
+    AcesInputFile (OPENEXR_IMF_INTERNAL_NAMESPACE::IStream &is,
+		   int numThreads = globalThreadCount());
 
 
     //-----------
     // Destructor
     //-----------
 
+    IMF_EXPORT
     virtual ~AcesInputFile ();
 
 
@@ -269,9 +287,10 @@ class AcesInputFile
     //
     //-----------------------------------------------------
 
+    IMF_EXPORT
     void			setFrameBuffer (Rgba *base,
-                        size_t xStride,
-                        size_t yStride);
+						size_t xStride,
+						size_t yStride);
 
 
     //--------------------------------------------
@@ -279,7 +298,9 @@ class AcesInputFile
     // Pixels returned will contain ACES RGB data.
     //--------------------------------------------
 
+    IMF_EXPORT
     void			readPixels (int scanLine1, int scanLine2);
+    IMF_EXPORT
     void			readPixels (int scanLine);
 
 
@@ -287,16 +308,27 @@ class AcesInputFile
     // Access to the file header
     //--------------------------
 
+    IMF_EXPORT
     const Header &		header () const;
-    const Imath::Box2i &	displayWindow () const;
-    const Imath::Box2i &	dataWindow () const;
+    IMF_EXPORT
+    const IMATH_NAMESPACE::Box2i &	displayWindow () const;
+    IMF_EXPORT
+    const IMATH_NAMESPACE::Box2i &	dataWindow () const;
+    IMF_EXPORT
     float			pixelAspectRatio () const;
-    const Imath::V2f		screenWindowCenter () const;
+    IMF_EXPORT
+    const IMATH_NAMESPACE::V2f		screenWindowCenter () const;
+    IMF_EXPORT
     float			screenWindowWidth () const;
+    IMF_EXPORT
     LineOrder			lineOrder () const;
+    IMF_EXPORT
     Compression			compression () const;
+    IMF_EXPORT
     RgbaChannels		channels () const;
+    IMF_EXPORT
     const char *                fileName () const;
+    IMF_EXPORT
     bool			isComplete () const;
 
 
@@ -304,6 +336,7 @@ class AcesInputFile
     // Access to the file format version
     //----------------------------------
 
+    IMF_EXPORT
     int				version () const;
 
   private:
@@ -317,6 +350,9 @@ class AcesInputFile
 };
 
 
-} // namespace Imf
+OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_EXIT
+
+
+
 
 #endif

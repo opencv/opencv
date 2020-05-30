@@ -13,7 +13,7 @@ Press any key to continue, ESC to stop.
 from __future__ import print_function
 
 import numpy as np
-import cv2
+import cv2 as cv
 
 
 def inside(r, q):
@@ -27,25 +27,23 @@ def draw_detections(img, rects, thickness = 1):
         # the HOG detector returns slightly larger rectangles than the real objects.
         # so we slightly shrink the rectangles to get a nicer output.
         pad_w, pad_h = int(0.15*w), int(0.05*h)
-        cv2.rectangle(img, (x+pad_w, y+pad_h), (x+w-pad_w, y+h-pad_h), (0, 255, 0), thickness)
+        cv.rectangle(img, (x+pad_w, y+pad_h), (x+w-pad_w, y+h-pad_h), (0, 255, 0), thickness)
 
 
-if __name__ == '__main__':
+def main():
     import sys
     from glob import glob
     import itertools as it
 
-    print(__doc__)
+    hog = cv.HOGDescriptor()
+    hog.setSVMDetector( cv.HOGDescriptor_getDefaultPeopleDetector() )
 
-    hog = cv2.HOGDescriptor()
-    hog.setSVMDetector( cv2.HOGDescriptor_getDefaultPeopleDetector() )
-
-    default = ['../data/basketball2.png '] if len(sys.argv[1:]) == 0 else []
+    default = [cv.samples.findFile('basketball2.png')] if len(sys.argv[1:]) == 0 else []
 
     for fn in it.chain(*map(glob, default + sys.argv[1:])):
         print(fn, ' - ',)
         try:
-            img = cv2.imread(fn)
+            img = cv.imread(fn)
             if img is None:
                 print('Failed to load image file:', fn)
                 continue
@@ -53,7 +51,7 @@ if __name__ == '__main__':
             print('loading error')
             continue
 
-        found, w = hog.detectMultiScale(img, winStride=(8,8), padding=(32,32), scale=1.05)
+        found, _w = hog.detectMultiScale(img, winStride=(8,8), padding=(32,32), scale=1.05)
         found_filtered = []
         for ri, r in enumerate(found):
             for qi, q in enumerate(found):
@@ -64,8 +62,15 @@ if __name__ == '__main__':
         draw_detections(img, found)
         draw_detections(img, found_filtered, 3)
         print('%d (%d) found' % (len(found_filtered), len(found)))
-        cv2.imshow('img', img)
-        ch = cv2.waitKey()
+        cv.imshow('img', img)
+        ch = cv.waitKey()
         if ch == 27:
             break
-    cv2.destroyAllWindows()
+
+    print('Done')
+
+
+if __name__ == '__main__':
+    print(__doc__)
+    main()
+    cv.destroyAllWindows()

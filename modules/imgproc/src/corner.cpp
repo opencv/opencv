@@ -44,97 +44,17 @@
 #include "precomp.hpp"
 #include "opencl_kernels_imgproc.hpp"
 #include "opencv2/core/hal/intrin.hpp"
+#include "corner.hpp"
 
 namespace cv
 {
-
-#if CV_AVX
-// load three 8-packed float vector and deinterleave
-// probably it's better to write down somewhere else
-static inline void load_deinterleave(const float* ptr, __m256& a, __m256& b, __m256& c)
-{
-    __m256 s0 = _mm256_loadu_ps(ptr);                    // a0, b0, c0, a1, b1, c1, a2, b2,
-    __m256 s1 = _mm256_loadu_ps(ptr + 8);                // c2, a3, b3, c3, a4, b4, c4, a5,
-    __m256 s2 = _mm256_loadu_ps(ptr + 16);               // b5, c5, a6, b6, c6, a7, b7, c7,
-    __m256 s3 = _mm256_permute2f128_ps(s1, s2, 0x21);    // a4, b4, c4, a5, b5, c5, a6, b6,
-    __m256 s4 = _mm256_permute2f128_ps(s2, s2, 0x33);    // c6, a7, b7, c7, c6, a7, b7, c7,
-
-    __m256 v00 = _mm256_unpacklo_ps(s0, s3);             // a0, a4, b0, b4, b1, b5, c1, c5,
-    __m256 v01 = _mm256_unpackhi_ps(s0, s3);             // c0, c4, a1, a5, a2, a6, b2, b6,
-    __m256 v02 = _mm256_unpacklo_ps(s1, s4);             // c2, c6, a3, a7, x,  x,  x,  x,
-    __m256 v03 = _mm256_unpackhi_ps(s1, s4);             // b3, b7, c3, c7, x,  x,  x,  x,
-    __m256 v04 = _mm256_permute2f128_ps(v02, v03, 0x20); // c2, c6, a3, a7, b3, b7, c3, c7,
-    __m256 v05 = _mm256_permute2f128_ps(v01, v03, 0x21); // a2, a6, b2, b6, b3, b7, c3, c7,
-
-    __m256 v10 = _mm256_unpacklo_ps(v00, v05);           // a0, a2, a4, a6, b1, b3, b5, b7,
-    __m256 v11 = _mm256_unpackhi_ps(v00, v05);           // b0, b2, b4, b6, c1, c3, c5, c7,
-    __m256 v12 = _mm256_unpacklo_ps(v01, v04);           // c0, c2, c4, c6, x,  x,  x,  x,
-    __m256 v13 = _mm256_unpackhi_ps(v01, v04);           // a1, a3, a5, a7, x,  x,  x,  x,
-    __m256 v14 = _mm256_permute2f128_ps(v11, v12, 0x20); // b0, b2, b4, b6, c0, c2, c4, c6,
-    __m256 v15 = _mm256_permute2f128_ps(v10, v11, 0x31); // b1, b3, b5, b7, c1, c3, c5, c7,
-
-    __m256 v20 = _mm256_unpacklo_ps(v14, v15);           // b0, b1, b2, b3, c0, c1, c2, c3,
-    __m256 v21 = _mm256_unpackhi_ps(v14, v15);           // b4, b5, b6, b7, c4, c5, c6, c7,
-    __m256 v22 = _mm256_unpacklo_ps(v10, v13);           // a0, a1, a2, a3, x,  x,  x,  x,
-    __m256 v23 = _mm256_unpackhi_ps(v10, v13);           // a4, a5, a6, a7, x,  x,  x,  x,
-
-    a = _mm256_permute2f128_ps(v22, v23, 0x20);          // a0, a1, a2, a3, a4, a5, a6, a7,
-    b = _mm256_permute2f128_ps(v20, v21, 0x20);          // b0, b1, b2, b3, b4, b5, b6, b7,
-    c = _mm256_permute2f128_ps(v20, v21, 0x31);          // c0, c1, c2, c3, c4, c5, c6, c7,
-}
-
-// realign four 3-packed vector to three 4-packed vector
-static inline void v_pack4x3to3x4(const __m128i& s0, const __m128i& s1, const __m128i& s2, const __m128i& s3, __m128i& d0, __m128i& d1, __m128i& d2)
-{
-    d0 = _mm_or_si128(s0, _mm_slli_si128(s1, 12));
-    d1 = _mm_or_si128(_mm_srli_si128(s1, 4), _mm_slli_si128(s2, 8));
-    d2 = _mm_or_si128(_mm_srli_si128(s2, 8), _mm_slli_si128(s3, 4));
-}
-
-// separate high and low 128 bit and cast to __m128i
-static inline void v_separate_lo_hi(const __m256& src, __m128i& lo, __m128i& hi)
-{
-    lo = _mm_castps_si128(_mm256_castps256_ps128(src));
-    hi = _mm_castps_si128(_mm256_extractf128_ps(src, 1));
-}
-
-// interleave three 8-float vector and store
-static inline void store_interleave(float* ptr, const __m256& a, const __m256& b, const __m256& c)
-{
-    __m128i a0, a1, b0, b1, c0, c1;
-    v_separate_lo_hi(a, a0, a1);
-    v_separate_lo_hi(b, b0, b1);
-    v_separate_lo_hi(c, c0, c1);
-
-    v_uint32x4 z = v_setzero_u32();
-    v_uint32x4 u0, u1, u2, u3;
-    v_transpose4x4(v_uint32x4(a0), v_uint32x4(b0), v_uint32x4(c0), z, u0, u1, u2, u3);
-    v_pack4x3to3x4(u0.val, u1.val, u2.val, u3.val, a0, b0, c0);
-    v_transpose4x4(v_uint32x4(a1), v_uint32x4(b1), v_uint32x4(c1), z, u0, u1, u2, u3);
-    v_pack4x3to3x4(u0.val, u1.val, u2.val, u3.val, a1, b1, c1);
-
-#if !defined(__GNUC__) || defined(__INTEL_COMPILER)
-    _mm256_storeu_ps(ptr, _mm256_setr_m128(_mm_castsi128_ps(a0), _mm_castsi128_ps(b0)));
-    _mm256_storeu_ps(ptr + 8, _mm256_setr_m128(_mm_castsi128_ps(c0), _mm_castsi128_ps(a1)));
-    _mm256_storeu_ps(ptr + 16,  _mm256_setr_m128(_mm_castsi128_ps(b1), _mm_castsi128_ps(c1)));
-#else
-    // GCC: workaround for missing AVX intrinsic: "_mm256_setr_m128()"
-    _mm256_storeu_ps(ptr, _mm256_insertf128_ps(_mm256_castps128_ps256(_mm_castsi128_ps(a0)), _mm_castsi128_ps(b0), 1));
-    _mm256_storeu_ps(ptr + 8, _mm256_insertf128_ps(_mm256_castps128_ps256(_mm_castsi128_ps(c0)), _mm_castsi128_ps(a1), 1));
-    _mm256_storeu_ps(ptr + 16,  _mm256_insertf128_ps(_mm256_castps128_ps256(_mm_castsi128_ps(b1)), _mm_castsi128_ps(c1), 1));
-#endif
-}
-#endif // CV_AVX
 
 static void calcMinEigenVal( const Mat& _cov, Mat& _dst )
 {
     int i, j;
     Size size = _cov.size();
-#if CV_AVX
-    bool haveAvx = checkHardwareSupport(CV_CPU_AVX);
-#endif
-#if CV_SIMD128
-    bool haveSimd = hasSIMD128();
+#if CV_TRY_AVX
+    bool haveAvx = CV_CPU_HAS_SUPPORT_AVX;
 #endif
 
     if( _cov.isContinuous() && _dst.isContinuous() )
@@ -147,26 +67,14 @@ static void calcMinEigenVal( const Mat& _cov, Mat& _dst )
     {
         const float* cov = _cov.ptr<float>(i);
         float* dst = _dst.ptr<float>(i);
-        j = 0;
-#if CV_AVX
+#if CV_TRY_AVX
         if( haveAvx )
-        {
-            __m256 half = _mm256_set1_ps(0.5f);
-            for( ; j <= size.width - 8; j += 8 )
-            {
-                __m256 v_a, v_b, v_c, v_t;
-                load_deinterleave(cov + j*3, v_a, v_b, v_c);
-                v_a = _mm256_mul_ps(v_a, half);
-                v_c = _mm256_mul_ps(v_c, half);
-                v_t = _mm256_sub_ps(v_a, v_c);
-                v_t = _mm256_add_ps(_mm256_mul_ps(v_b, v_b), _mm256_mul_ps(v_t, v_t));
-                _mm256_storeu_ps(dst + j, _mm256_sub_ps(_mm256_add_ps(v_a, v_c), _mm256_sqrt_ps(v_t)));
-            }
-        }
-#endif // CV_AVX
+            j = calcMinEigenValLine_AVX(cov, dst, size.width);
+        else
+#endif // CV_TRY_AVX
+            j = 0;
 
 #if CV_SIMD128
-        if( haveSimd )
         {
             v_float32x4 half = v_setall_f32(0.5f);
             for( ; j <= size.width - v_float32x4::nlanes; j += v_float32x4::nlanes )
@@ -197,11 +105,8 @@ static void calcHarris( const Mat& _cov, Mat& _dst, double k )
 {
     int i, j;
     Size size = _cov.size();
-#if CV_AVX
-    bool haveAvx = checkHardwareSupport(CV_CPU_AVX);
-#endif
-#if CV_SIMD128
-    bool haveSimd = hasSIMD128();
+#if CV_TRY_AVX
+    bool haveAvx = CV_CPU_HAS_SUPPORT_AVX;
 #endif
 
     if( _cov.isContinuous() && _dst.isContinuous() )
@@ -214,28 +119,15 @@ static void calcHarris( const Mat& _cov, Mat& _dst, double k )
     {
         const float* cov = _cov.ptr<float>(i);
         float* dst = _dst.ptr<float>(i);
-        j = 0;
 
-#if CV_AVX
+#if CV_TRY_AVX
         if( haveAvx )
-        {
-            __m256 v_k = _mm256_set1_ps((float)k);
-
-            for( ; j <= size.width - 8; j += 8 )
-            {
-                __m256 v_a, v_b, v_c;
-                load_deinterleave(cov + j * 3, v_a, v_b, v_c);
-
-                __m256 v_ac_bb = _mm256_sub_ps(_mm256_mul_ps(v_a, v_c), _mm256_mul_ps(v_b, v_b));
-                __m256 v_ac = _mm256_add_ps(v_a, v_c);
-                __m256 v_dst = _mm256_sub_ps(v_ac_bb, _mm256_mul_ps(v_k, _mm256_mul_ps(v_ac, v_ac)));
-                _mm256_storeu_ps(dst + j, v_dst);
-            }
-        }
-#endif // CV_AVX
+            j = calcHarrisLine_AVX(cov, dst, k, size.width);
+        else
+#endif // CV_TRY_AVX
+            j = 0;
 
 #if CV_SIMD128
-        if( haveSimd )
         {
             v_float32x4 v_k = v_setall_f32((float)k);
 
@@ -347,15 +239,8 @@ cornerEigenValsVecs( const Mat& src, Mat& eigenv, int block_size,
                      int aperture_size, int op_type, double k=0.,
                      int borderType=BORDER_DEFAULT )
 {
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    if (tegra::useTegra() && tegra::cornerEigenValsVecs(src, eigenv, block_size, aperture_size, op_type, k, borderType))
-        return;
-#endif
-#if CV_AVX
-    bool haveAvx = checkHardwareSupport(CV_CPU_AVX);
-#endif
-#if CV_SIMD128
-    bool haveSimd = hasSIMD128();
+#if CV_TRY_AVX
+    bool haveAvx = CV_CPU_HAS_SUPPORT_AVX;
 #endif
 
     int depth = src.depth();
@@ -389,28 +274,15 @@ cornerEigenValsVecs( const Mat& src, Mat& eigenv, int block_size,
         float* cov_data = cov.ptr<float>(i);
         const float* dxdata = Dx.ptr<float>(i);
         const float* dydata = Dy.ptr<float>(i);
-        j = 0;
 
-#if CV_AVX
+#if CV_TRY_AVX
         if( haveAvx )
-        {
-            for( ; j <= size.width - 8; j += 8 )
-            {
-                __m256 v_dx = _mm256_loadu_ps(dxdata + j);
-                __m256 v_dy = _mm256_loadu_ps(dydata + j);
-
-                __m256 v_dst0, v_dst1, v_dst2;
-                v_dst0 = _mm256_mul_ps(v_dx, v_dx);
-                v_dst1 = _mm256_mul_ps(v_dx, v_dy);
-                v_dst2 = _mm256_mul_ps(v_dy, v_dy);
-
-                store_interleave(cov_data + j * 3, v_dst0, v_dst1, v_dst2);
-            }
-        }
-#endif // CV_AVX
+            j = cornerEigenValsVecsLine_AVX(dxdata, dydata, cov_data, size.width);
+        else
+#endif // CV_TRY_AVX
+            j = 0;
 
 #if CV_SIMD128
-        if( haveSimd )
         {
             for( ; j <= size.width - v_float32x4::nlanes; j += v_float32x4::nlanes )
             {
@@ -599,13 +471,13 @@ static bool ocl_preCornerDetect( InputArray _src, OutputArray _dst, int ksize, i
 
 }
 
-#if defined(HAVE_IPP)
+#if 0 //defined(HAVE_IPP)
 namespace cv
 {
 static bool ipp_cornerMinEigenVal( InputArray _src, OutputArray _dst, int blockSize, int ksize, int borderType )
 {
 #if IPP_VERSION_X100 >= 800
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
     Mat src = _src.getMat();
     _dst.create( src.size(), CV_32FC1 );
@@ -654,7 +526,7 @@ static bool ipp_cornerMinEigenVal( InputArray _src, OutputArray _dst, int blockS
                 if (ok >= 0)
                 {
                     AutoBuffer<uchar> buffer(bufferSize);
-                    ok = CV_INSTRUMENT_FUN_IPP(ippiMinEigenVal_C1R, src.ptr(), (int) src.step, dst.ptr<Ipp32f>(), (int) dst.step, srcRoi, kerType, kerSize, blockSize, buffer);
+                    ok = CV_INSTRUMENT_FUN_IPP(ippiMinEigenVal_C1R, src.ptr(), (int) src.step, dst.ptr<Ipp32f>(), (int) dst.step, srcRoi, kerType, kerSize, blockSize, buffer.data());
                     CV_SUPPRESS_DEPRECATED_START
                     if (ok >= 0) ok = CV_INSTRUMENT_FUN_IPP(ippiMulC_32f_C1IR, norm_coef, dst.ptr<Ipp32f>(), (int) dst.step, srcRoi);
                     CV_SUPPRESS_DEPRECATED_END
@@ -677,12 +549,12 @@ static bool ipp_cornerMinEigenVal( InputArray _src, OutputArray _dst, int blockS
 
 void cv::cornerMinEigenVal( InputArray _src, OutputArray _dst, int blockSize, int ksize, int borderType )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
                ocl_cornerMinEigenValVecs(_src, _dst, blockSize, ksize, 0.0, borderType, MINEIGENVAL))
 
-#ifdef HAVE_IPP
+/*#ifdef HAVE_IPP
     int kerSize = (ksize < 0)?3:ksize;
     bool isolated = (borderType & BORDER_ISOLATED) != 0;
     int borderTypeNI = borderType & ~BORDER_ISOLATED;
@@ -690,7 +562,7 @@ void cv::cornerMinEigenVal( InputArray _src, OutputArray _dst, int blockSize, in
     CV_IPP_RUN(((borderTypeNI == BORDER_REPLICATE && (!_src.isSubmatrix() || isolated)) &&
             (kerSize == 3 || kerSize == 5) && (blockSize == 3 || blockSize == 5)) && IPP_VERSION_X100 >= 800,
         ipp_cornerMinEigenVal( _src, _dst, blockSize, ksize, borderType ));
-
+    */
 
     Mat src = _src.getMat();
     _dst.create( src.size(), CV_32FC1 );
@@ -706,7 +578,7 @@ namespace cv
 static bool ipp_cornerHarris( Mat &src, Mat &dst, int blockSize, int ksize, double k, int borderType )
 {
 #if IPP_VERSION_X100 >= 810
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
     {
         int type = src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
@@ -761,7 +633,7 @@ static bool ipp_cornerHarris( Mat &src, Mat &dst, int blockSize, int ksize, doub
 
 void cv::cornerHarris( InputArray _src, OutputArray _dst, int blockSize, int ksize, double k, int borderType )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
                ocl_cornerMinEigenValVecs(_src, _dst, blockSize, ksize, k, borderType, HARRIS))
@@ -784,7 +656,7 @@ void cv::cornerHarris( InputArray _src, OutputArray _dst, int blockSize, int ksi
 
 void cv::cornerEigenValsAndVecs( InputArray _src, OutputArray _dst, int blockSize, int ksize, int borderType )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat src = _src.getMat();
     Size dsz = _dst.size();
@@ -799,7 +671,7 @@ void cv::cornerEigenValsAndVecs( InputArray _src, OutputArray _dst, int blockSiz
 
 void cv::preCornerDetect( InputArray _src, OutputArray _dst, int ksize, int borderType )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     int type = _src.type();
     CV_Assert( type == CV_8UC1 || type == CV_32FC1 );
@@ -823,7 +695,6 @@ void cv::preCornerDetect( InputArray _src, OutputArray _dst, int ksize, int bord
     factor = 1./(factor * factor * factor);
 #if CV_SIMD128
     float factor_f = (float)factor;
-    bool haveSimd = hasSIMD128();
     v_float32x4 v_factor = v_setall_f32(factor_f), v_m2 = v_setall_f32(-2.0f);
 #endif
 
@@ -841,7 +712,6 @@ void cv::preCornerDetect( InputArray _src, OutputArray _dst, int ksize, int bord
         j = 0;
 
 #if CV_SIMD128
-        if (haveSimd)
         {
             for( ; j <= size.width - v_float32x4::nlanes; j += v_float32x4::nlanes )
             {

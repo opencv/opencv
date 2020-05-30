@@ -63,11 +63,11 @@ void dumpCLinfo()
                   i, name.c_str(), (type==CL_DEVICE_TYPE_GPU ? "GPU" : "CPU"), extensions.c_str() );
         }
     }
-    catch(cl::Error& e)
+    catch(const cl::Error& e)
     {
         LOGE( "OpenCL info: error while gathering OpenCL info: %s (%d)", e.what(), e.err() );
     }
-    catch(std::exception& e)
+    catch(const std::exception& e)
     {
         LOGE( "OpenCL info: error while gathering OpenCL info: %s", e.what() );
     }
@@ -130,11 +130,11 @@ extern "C" void initCL()
             LOGE("Can't init OpenCV with OpenCL TAPI");
         haveOpenCL = true;
     }
-    catch(cl::Error& e)
+    catch(const cl::Error& e)
     {
         LOGE("cl::Error: %s (%d)", e.what(), e.err());
     }
-    catch(std::exception& e)
+    catch(const std::exception& e)
     {
         LOGE("std::exception: %s", e.what());
     }

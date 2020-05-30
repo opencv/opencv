@@ -29,6 +29,12 @@ try:
 except NameError:
     unicode = lambda s: str(s)
 
+try:
+    xrange          # Python 2
+except NameError:
+    xrange = range  # Python 3
+
+
 if re.search("windows", platform.system(), re.I):
     try:
         import _winreg
@@ -600,7 +606,7 @@ def template(fileName, svg, replaceme="REPLACEME"):
 
 def load(fileName):
     """Loads an SVG image from a file."""
-    return load_stream(file(fileName))
+    return load_stream(open(fileName))
 
 def load_stream(stream):
     """Loads an SVG image from a stream (can be a string or a file object)."""
@@ -1857,7 +1863,7 @@ class Poly:
                                             piecewise-linear segments joining the (x,y) points
     "bezier"/"B"        d=[(x, y, c1x, c1y, c2x, c2y), ...]
                                             Bezier curve with two control points (control points
-                                            preceed (x,y), as in SVG paths). If (c1x,c1y) and
+                                            precede (x,y), as in SVG paths). If (c1x,c1y) and
                                             (c2x,c2y) both equal (x,y), you get a linear
                                             interpolation ("lines")
     "velocity"/"V"      d=[(x, y, vx, vy), ...]

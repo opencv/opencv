@@ -1,7 +1,7 @@
 
 #include "precomp.hpp"
 
-#ifdef WIN32
+#ifdef _WIN32
 #include <xiApi.h>
 #else
 #include <m3api/xiApi.h>
@@ -18,14 +18,16 @@ public:
     virtual ~CvCaptureCAM_XIMEA() { close(); }
 
     virtual bool open( int index );
+    bool open( const char* deviceName );
     virtual void close();
-    virtual double getProperty(int) const;
-    virtual bool setProperty(int, double);
-    virtual bool grabFrame();
-    virtual IplImage* retrieveFrame(int);
-    virtual int getCaptureDomain() { return CV_CAP_XIAPI; } // Return the type of the capture object: CV_CAP_VFW, etc...
+    virtual double getProperty(int) const CV_OVERRIDE;
+    virtual bool setProperty(int, double) CV_OVERRIDE;
+    virtual bool grabFrame() CV_OVERRIDE;
+    virtual IplImage* retrieveFrame(int) CV_OVERRIDE;
+    virtual int getCaptureDomain() CV_OVERRIDE { return CV_CAP_XIAPI; }
 
 private:
+    bool _open();
     void init();
     void errMsg(const char* msg, int errNum) const;
     void resetCvImage();
@@ -40,12 +42,23 @@ private:
 
 /**********************************************************************************/
 
-CvCapture* cvCreateCameraCapture_XIMEA( int index )
+cv::Ptr<cv::IVideoCapture> cv::create_XIMEA_capture_cam( int index )
 {
     CvCaptureCAM_XIMEA* capture = new CvCaptureCAM_XIMEA;
 
     if( capture->open( index ))
-        return capture;
+        return cv::makePtr<cv::LegacyCapture>(capture);
+
+    delete capture;
+    return 0;
+}
+
+cv::Ptr<cv::IVideoCapture> cv::create_XIMEA_capture_file( const std::string &serialNumber )
+{
+    CvCaptureCAM_XIMEA* capture = new CvCaptureCAM_XIMEA;
+
+    if( capture->open( serialNumber.c_str() ))
+        return cv::makePtr<cv::LegacyCapture>(capture);
 
     delete capture;
     return 0;
@@ -55,7 +68,7 @@ CvCapture* cvCreateCameraCapture_XIMEA( int index )
 // Enumerate connected devices
 void CvCaptureCAM_XIMEA::init()
 {
-#if defined WIN32 || defined _WIN32
+#if defined _WIN32
     xiGetNumberDevices( &numDevices);
 #else
     // try second re-enumeration if first one fails
@@ -75,16 +88,13 @@ void CvCaptureCAM_XIMEA::init()
 // Initialize camera input
 bool CvCaptureCAM_XIMEA::open( int wIndex )
 {
-#define HandleXiResult(res) if (res!=XI_OK)  goto error;
-
-    int mvret = XI_OK;
-
     if(numDevices == 0)
         return false;
 
+    int mvret = XI_OK;
     if((mvret = xiOpenDevice( wIndex, &hmv)) != XI_OK)
     {
-#if defined WIN32 || defined _WIN32
+#if defined _WIN32
         errMsg("Open XI_DEVICE failed", mvret);
         return false;
 #else
@@ -97,12 +107,33 @@ bool CvCaptureCAM_XIMEA::open( int wIndex )
 #endif
     }
 
+    return _open();
+}
+
+bool CvCaptureCAM_XIMEA::open( const char* serialNumber )
+{
+    if(numDevices == 0)
+        return false;
+
+    int mvret = XI_OK;
+    if((mvret = xiOpenDeviceBy(XI_OPEN_BY_SN, serialNumber, &hmv)) != XI_OK)
+    {
+        errMsg("Open XI_DEVICE failed", mvret);
+        return false;
+    }
+
+    return _open();
+}
+
+bool CvCaptureCAM_XIMEA::_open()
+{
+#define HandleXiResult(res) if (res!=XI_OK)  goto error;
     int width   = 0;
     int height  = 0;
     int isColor = 0;
 
     // always use auto exposure/gain
-    mvret = xiSetParamInt( hmv, XI_PRM_AEAG, 1);
+    int mvret = xiSetParamInt( hmv, XI_PRM_AEAG, 1);
     HandleXiResult(mvret);
 
     mvret = xiGetParamInt( hmv, XI_PRM_WIDTH, &width);
@@ -1676,7 +1707,7 @@ void CvCaptureCAM_XIMEA::errMsg(const char* msg, int errNum) const
     case XI_WRITEREG : error_message = "Register write error"; break;
     case XI_FREE_RESOURCES : error_message = "Freeing resiurces error"; break;
     case XI_FREE_CHANNEL : error_message = "Freeing channel error"; break;
-    case XI_FREE_BANDWIDTH : error_message = "Freeing bandwith error"; break;
+    case XI_FREE_BANDWIDTH : error_message = "Freeing bandwidth error"; break;
     case XI_READBLK : error_message = "Read block error"; break;
     case XI_WRITEBLK : error_message = "Write block error"; break;
     case XI_NO_IMAGE : error_message = "No image"; break;
@@ -1713,22 +1744,22 @@ void CvCaptureCAM_XIMEA::errMsg(const char* msg, int errNum) const
     case XI_ACQUISITION_ALREADY_UP : error_message = "Acquisition already started"; break;
     case XI_OLD_DRIVER_VERSION : error_message = "Old version of device driver installed to the system."; break;
     case XI_GET_LAST_ERROR : error_message = "To get error code please call GetLastError function."; break;
-    case XI_CANT_PROCESS : error_message = "Data cant be processed"; break;
+    case XI_CANT_PROCESS : error_message = "Data can't be processed"; break;
     case XI_ACQUISITION_STOPED : error_message = "Acquisition has been stopped. It should be started before GetImage."; break;
-    case XI_ACQUISITION_STOPED_WERR : error_message = "Acquisition has been stoped with error."; break;
+    case XI_ACQUISITION_STOPED_WERR : error_message = "Acquisition has been stopped with error."; break;
     case XI_INVALID_INPUT_ICC_PROFILE : error_message = "Input ICC profile missed or corrupted"; break;
     case XI_INVALID_OUTPUT_ICC_PROFILE : error_message = "Output ICC profile missed or corrupted"; break;
     case XI_DEVICE_NOT_READY : error_message = "Device not ready to operate"; break;
     case XI_SHADING_TOOCONTRAST : error_message = "Shading too contrast"; break;
     case XI_ALREADY_INITIALIZED : error_message = "Module already initialized"; break;
-    case XI_NOT_ENOUGH_PRIVILEGES : error_message = "Application doesnt enough privileges(one or more app"; break;
+    case XI_NOT_ENOUGH_PRIVILEGES : error_message = "Application doesn't enough privileges(one or more app"; break;
     case XI_NOT_COMPATIBLE_DRIVER : error_message = "Installed driver not compatible with current software"; break;
     case XI_TM_INVALID_RESOURCE : error_message = "TM file was not loaded successfully from resources"; break;
-    case XI_DEVICE_HAS_BEEN_RESETED : error_message = "Device has been reseted, abnormal initial state"; break;
+    case XI_DEVICE_HAS_BEEN_RESETED : error_message = "Device has been reset, abnormal initial state"; break;
     case XI_NO_DEVICES_FOUND : error_message = "No Devices Found"; break;
     case XI_RESOURCE_OR_FUNCTION_LOCKED : error_message = "Resource(device) or function locked by mutex"; break;
     case XI_BUFFER_SIZE_TOO_SMALL : error_message = "Buffer provided by user is too small"; break;
-    case XI_COULDNT_INIT_PROCESSOR : error_message = "Couldnt initialize processor."; break;
+    case XI_COULDNT_INIT_PROCESSOR : error_message = "Couldn't initialize processor."; break;
     case XI_NOT_INITIALIZED : error_message = "The object/module/procedure/process being referred to has not been started."; break;
     case XI_RESOURCE_NOT_FOUND : error_message = "Resource not found(could be processor, file, item..)."; break;
     case XI_UNKNOWN_PARAM : error_message = "Unknown parameter"; break;
@@ -1751,7 +1782,7 @@ void CvCaptureCAM_XIMEA::errMsg(const char* msg, int errNum) const
         error_message = "Unknown error value";
     }
 
-    #if defined WIN32 || defined _WIN32
+    #if defined _WIN32
     char buf[512]="";
     sprintf( buf, "%s : %d, %s\n", msg, errNum, error_message.c_str());
     OutputDebugString(buf);

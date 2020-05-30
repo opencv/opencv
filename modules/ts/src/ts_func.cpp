@@ -3,10 +3,6 @@
 #include <limits.h>
 #include "opencv2/imgproc/types_c.h"
 
-#ifdef HAVE_TEGRA_OPTIMIZATION
-#include "tegra.hpp"
-#endif
-
 using namespace cv;
 
 namespace cvtest
@@ -72,14 +68,14 @@ void randomSize(RNG& rng, int minDims, int maxDims, double maxSizeLog, vector<in
     }
 }
 
-int randomType(RNG& rng, int typeMask, int minChannels, int maxChannels)
+int randomType(RNG& rng, _OutputArray::DepthMask typeMask, int minChannels, int maxChannels)
 {
     int channels = rng.uniform(minChannels, maxChannels+1);
     int depth = 0;
-    CV_Assert((typeMask & _OutputArray::DEPTH_MASK_ALL) != 0);
+    CV_Assert((typeMask & _OutputArray::DEPTH_MASK_ALL_16F) != 0);
     for(;;)
     {
-        depth = rng.uniform(CV_8U, CV_64F+1);
+        depth = rng.uniform(CV_8U, CV_16F+1);
         if( ((1 << depth) & typeMask) != 0 )
             break;
     }
@@ -91,7 +87,9 @@ double getMinVal(int depth)
     depth = CV_MAT_DEPTH(depth);
     double val = depth == CV_8U ? 0 : depth == CV_8S ? SCHAR_MIN : depth == CV_16U ? 0 :
     depth == CV_16S ? SHRT_MIN : depth == CV_32S ? INT_MIN :
-    depth == CV_32F ? -FLT_MAX : depth == CV_64F ? -DBL_MAX : -1;
+    depth == CV_32F ? -FLT_MAX : depth == CV_64F ? -DBL_MAX :
+            depth == CV_16F ? -65504
+            : -1;
     CV_Assert(val != -1);
     return val;
 }
@@ -101,7 +99,9 @@ double getMaxVal(int depth)
     depth = CV_MAT_DEPTH(depth);
     double val = depth == CV_8U ? UCHAR_MAX : depth == CV_8S ? SCHAR_MAX : depth == CV_16U ? USHRT_MAX :
     depth == CV_16S ? SHRT_MAX : depth == CV_32S ? INT_MAX :
-    depth == CV_32F ? FLT_MAX : depth == CV_64F ? DBL_MAX : -1;
+    depth == CV_32F ? FLT_MAX : depth == CV_64F ? DBL_MAX :
+            depth == CV_16F ? 65504
+            : -1;
     CV_Assert(val != -1);
     return val;
 }
@@ -353,26 +353,38 @@ void copy(const Mat& src, Mat& dst, const Mat& mask, bool invertMask)
         return;
     }
 
-    CV_Assert( src.size == mask.size && mask.type() == CV_8U );
+    int mcn = mask.channels();
+    CV_Assert( src.size == mask.size && mask.depth() == CV_8U
+               && (mcn == 1 || mcn == src.channels()) );
 
     const Mat *arrays[]={&src, &dst, &mask, 0};
     Mat planes[3];
 
     NAryMatIterator it(arrays, planes);
-    size_t j, k, elemSize = src.elemSize(), total = planes[0].total();
+    size_t j, k, elemSize = src.elemSize(), maskElemSize = mask.elemSize(), total = planes[0].total();
     size_t i, nplanes = it.nplanes;
+    size_t elemSize1 = src.elemSize1();
 
     for( i = 0; i < nplanes; i++, ++it)
     {
         const uchar* sptr = planes[0].ptr();
         uchar* dptr = planes[1].ptr();
         const uchar* mptr = planes[2].ptr();
-
-        for( j = 0; j < total; j++, sptr += elemSize, dptr += elemSize )
+        for( j = 0; j < total; j++, sptr += elemSize, dptr += elemSize, mptr += maskElemSize )
         {
-            if( (mptr[j] != 0) ^ invertMask )
-                for( k = 0; k < elemSize; k++ )
-                    dptr[k] = sptr[k];
+            if( mcn == 1)
+            {
+                if( (mptr[0] != 0) ^ invertMask )
+                    for( k = 0; k < elemSize; k++ )
+                        dptr[k] = sptr[k];
+            }
+            else
+            {
+                for( int c = 0; c < mcn; c++ )
+                    if( (mptr[c] != 0) ^ invertMask )
+                        for( k = 0; k < elemSize1; k++ )
+                            dptr[k + c * elemSize1] = sptr[k + c * elemSize1];
+            }
         }
     }
 }
@@ -414,25 +426,37 @@ void set(Mat& dst, const Scalar& gamma, const Mat& mask)
         return;
     }
 
-    CV_Assert( dst.size == mask.size && mask.type() == CV_8U );
+    int cn = dst.channels(), mcn = mask.channels();
+    CV_Assert( dst.size == mask.size && (mcn == 1 || mcn == cn) );
 
     const Mat *arrays[]={&dst, &mask, 0};
     Mat planes[2];
 
     NAryMatIterator it(arrays, planes);
-    size_t j, k, elemSize = dst.elemSize(), total = planes[0].total();
+    size_t j, k, elemSize = dst.elemSize(), maskElemSize = mask.elemSize(), total = planes[0].total();
     size_t i, nplanes = it.nplanes;
+    size_t elemSize1 = dst.elemSize1();
 
     for( i = 0; i < nplanes; i++, ++it)
     {
         uchar* dptr = planes[0].ptr();
         const uchar* mptr = planes[1].ptr();
 
-        for( j = 0; j < total; j++, dptr += elemSize )
+        for( j = 0; j < total; j++, dptr += elemSize, mptr += maskElemSize )
         {
-            if( mptr[j] )
-                for( k = 0; k < elemSize; k++ )
-                    dptr[k] = gptr[k];
+            if( mcn == 1)
+            {
+                if( mptr[0] )
+                    for( k = 0; k < elemSize; k++ )
+                        dptr[k] = gptr[k];
+            }
+            else
+            {
+                for( int c = 0; c < mcn; c++ )
+                    if( mptr[c] )
+                        for( k = 0; k < elemSize1; k++ )
+                            dptr[k + c * elemSize1] = gptr[k + c * elemSize1];
+            }
         }
     }
 }
@@ -490,6 +514,7 @@ void extract(const Mat& src, Mat& dst, int coi)
 
 void transpose(const Mat& src, Mat& dst)
 {
+    CV_Assert(src.data != dst.data && "Inplace is not support in cvtest::transpose");
     CV_Assert(src.dims == 2);
     dst.create(src.cols, src.rows, src.type());
     int i, j, k, esz = (int)src.elemSize();
@@ -1239,6 +1264,13 @@ norm_(const _Tp* src1, const _Tp* src2, size_t total, int cn, int normType, doub
 double norm(InputArray _src, int normType, InputArray _mask)
 {
     Mat src = _src.getMat(), mask = _mask.getMat();
+    if( src.depth() == CV_16F )
+    {
+        Mat src32f;
+        src.convertTo(src32f, CV_32F);
+        return cvtest::norm(src32f, normType, _mask);
+    }
+
     if( normType == NORM_HAMMING || normType == NORM_HAMMING2 )
     {
         if( !mask.empty() )
@@ -1319,6 +1351,14 @@ double norm(InputArray _src, int normType, InputArray _mask)
 double norm(InputArray _src1, InputArray _src2, int normType, InputArray _mask)
 {
     Mat src1 = _src1.getMat(), src2 = _src2.getMat(), mask = _mask.getMat();
+    if( src1.depth() == CV_16F )
+    {
+        Mat src1_32f, src2_32f;
+        src1.convertTo(src1_32f, CV_32F);
+        src2.convertTo(src2_32f, CV_32F);
+        return cvtest::norm(src1_32f, src2_32f, normType, _mask);
+    }
+
     bool isRelative = (normType & NORM_RELATIVE) != 0;
     normType &= ~NORM_RELATIVE;
 
@@ -1347,7 +1387,8 @@ double norm(InputArray _src1, InputArray _src2, int normType, InputArray _mask)
     int normType0 = normType;
     normType = normType == NORM_L2SQR ? NORM_L2 : normType;
 
-    CV_Assert( src1.type() == src2.type() && src1.size == src2.size );
+    CV_CheckTypeEQ(src1.type(), src2.type(), "");
+    CV_Assert(src1.size == src2.size);
     CV_Assert( mask.empty() || (src1.size == mask.size && mask.type() == CV_8U) );
     CV_Assert( normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2 );
     const Mat *arrays[]={&src1, &src2, &mask, 0};
@@ -1961,11 +2002,20 @@ int check( const Mat& a, double fmin, double fmax, vector<int>* _idx )
 // success_err_level is maximum allowed difference, idx is the index of the first
 // element for which difference is >success_err_level
 // (or index of element with the maximum difference)
-int cmpEps( const Mat& arr, const Mat& refarr, double* _realmaxdiff,
+int cmpEps( const Mat& arr_, const Mat& refarr_, double* _realmaxdiff,
             double success_err_level, vector<int>* _idx,
             bool element_wise_relative_error )
 {
+    Mat arr = arr_, refarr = refarr_;
     CV_Assert( arr.type() == refarr.type() && arr.size == refarr.size );
+    if( arr.depth() == CV_16F )
+    {
+        Mat arr32f, refarr32f;
+        arr.convertTo(arr32f, CV_32F);
+        refarr.convertTo(refarr32f, CV_32F);
+        arr = arr32f;
+        refarr = refarr32f;
+    }
 
     int ilevel = refarr.depth() <= CV_32S ? cvFloor(success_err_level) : 0;
     int result = CMP_EPS_OK;
@@ -2104,7 +2154,7 @@ int cmpEps2( TS* ts, const Mat& a, const Mat& b, double success_err_level,
     switch( code )
     {
     case CMP_EPS_BIG_DIFF:
-        sprintf( msg, "%s: Too big difference (=%g)", desc, diff );
+        sprintf( msg, "%s: Too big difference (=%g > %g)", desc, diff, success_err_level );
         code = TS::FAIL_BAD_ACCURACY;
         break;
     case CMP_EPS_INVALID_TEST_DATA:
@@ -2682,7 +2732,7 @@ static void calcSobelKernel1D( int order, int _aperture_size, int size, vector<i
 
     if( _aperture_size < 0 )
     {
-        static const int scharr[] = { 3, 10, 3, -1, 0, 1 };
+        static const int scharr[8] = { 3, 10, 3, -1, 0, 1, 0, 0 };  // extra elements to eliminate "-Warray-bounds" bogus warning
         assert( size == 3 );
         for( i = 0; i < size; i++ )
             kernel[i] = scharr[order*3 + i];
@@ -2765,29 +2815,57 @@ Mat calcLaplaceKernel2D( int aperture_size )
 }
 
 
-void initUndistortMap( const Mat& _a0, const Mat& _k0, Size sz, Mat& _mapx, Mat& _mapy )
+void initUndistortMap( const Mat& _a0, const Mat& _k0, const Mat& _R0, const Mat& _new_cam0, Size sz, Mat& __mapx, Mat& __mapy, int map_type )
 {
-    _mapx.create(sz, CV_32F);
-    _mapy.create(sz, CV_32F);
+    Mat _mapx(sz, CV_32F), _mapy(sz, CV_32F);
 
-    double a[9], k[5]={0,0,0,0,0};
-    Mat _a(3, 3, CV_64F, a);
+    double a[9], k[5]={0,0,0,0,0}, iR[9]={1, 0, 0, 0, 1, 0, 0, 0, 1}, a1[9];
+    Mat _a(3, 3, CV_64F, a), _a1(3, 3, CV_64F, a1);
     Mat _k(_k0.rows,_k0.cols, CV_MAKETYPE(CV_64F,_k0.channels()),k);
+    Mat _iR(3, 3, CV_64F, iR);
     double fx, fy, cx, cy, ifx, ify, cxn, cyn;
 
+    CV_Assert(_k0.empty() ||
+              _k0.size() == Size(5, 1) ||
+              _k0.size() == Size(1, 5) ||
+              _k0.size() == Size(4, 1) ||
+              _k0.size() == Size(1, 4));
+    CV_Assert(_a0.size() == Size(3, 3));
+
     _a0.convertTo(_a, CV_64F);
-    _k0.convertTo(_k, CV_64F);
+    if( !_k0.empty() )
+        _k0.convertTo(_k, CV_64F);
+    if( !_R0.empty() )
+    {
+        CV_Assert(_R0.size() == Size(3, 3));
+        Mat tmp;
+        _R0.convertTo(tmp, CV_64F);
+        invert(tmp, _iR, DECOMP_LU);
+    }
+    if( !_new_cam0.empty() )
+    {
+        CV_Assert(_new_cam0.size() == Size(3, 3));
+        _new_cam0.convertTo(_a1, CV_64F);
+    }
+    else
+        _a.copyTo(_a1);
+
     fx = a[0]; fy = a[4]; cx = a[2]; cy = a[5];
-    ifx = 1./fx; ify = 1./fy;
-    cxn = cx;
-    cyn = cy;
+    ifx = 1./a1[0]; ify = 1./a1[4];
+    cxn = a1[2];
+    cyn = a1[5];
 
     for( int v = 0; v < sz.height; v++ )
     {
         for( int u = 0; u < sz.width; u++ )
         {
-            double x = (u - cxn)*ifx;
-            double y = (v - cyn)*ify;
+            double x_ = (u - cxn)*ifx;
+            double y_ = (v - cyn)*ify;
+            double X = iR[0]*x_ + iR[1]*y_ + iR[2];
+            double Y = iR[3]*x_ + iR[4]*y_ + iR[5];
+            double Z = iR[6]*x_ + iR[7]*y_ + iR[8];
+            double x = X/Z;
+            double y = Y/Z;
             double x2 = x*x, y2 = y*y;
             double r2 = x2 + y2;
             double cdist = 1 + (k[0] + (k[1] + k[4]*r2)*r2)*r2;
@@ -2798,8 +2876,10 @@ void initUndistortMap( const Mat& _a0, const Mat& _k0, Size sz, Mat& _mapx, Mat&
             _mapx.at<float>(v, u) = (float)(x1*fx + cx);
         }
     }
-}
 
+    _mapx.convertTo(__mapx, map_type);
+    _mapy.convertTo(__mapy, map_type);
+}
 
 std::ostream& operator << (std::ostream& out, const MatInfo& m)
 {
@@ -2947,140 +3027,10 @@ MatComparator::operator()(const char* expr1, const char* expr2,
     return ::testing::AssertionFailure()
     << "too big relative difference (" << realmaxdiff << " > "
     << maxdiff << ") between "
-    << MatInfo(m1) << " '" << expr1 << "' and '" << expr2 << "' at " << Mat(loc0) << ".\n\n"
-    << "'" << expr1 << "': " << MatPart(m1part, border > 0 ? &loc : 0) << ".\n\n"
-    << "'" << expr2 << "': " << MatPart(m2part, border > 0 ? &loc : 0) << ".\n";
+    << MatInfo(m1) << " '" << expr1 << "' and '" << expr2 << "' at " << Mat(loc0).t() << ".\n"
+    << "- " << expr1 << ":\n" << MatPart(m1part, border > 0 ? &loc : 0) << ".\n"
+    << "- " << expr2 << ":\n" << MatPart(m2part, border > 0 ? &loc : 0) << ".\n";
 }
-
-void printVersionInfo(bool useStdOut)
-{
-    // Tell CTest not to discard any output
-    if(useStdOut) std::cout << "CTEST_FULL_OUTPUT" << std::endl;
-
-    ::testing::Test::RecordProperty("cv_version", CV_VERSION);
-    if(useStdOut) std::cout << "OpenCV version: " << CV_VERSION << std::endl;
-
-    std::string buildInfo( cv::getBuildInformation() );
-
-    size_t pos1 = buildInfo.find("Version control");
-    size_t pos2 = buildInfo.find('\n', pos1);
-    if(pos1 != std::string::npos && pos2 != std::string::npos)
-    {
-        size_t value_start = buildInfo.rfind(' ', pos2) + 1;
-        std::string ver( buildInfo.substr(value_start, pos2 - value_start) );
-        ::testing::Test::RecordProperty("cv_vcs_version", ver);
-        if (useStdOut) std::cout << "OpenCV VCS version: " << ver << std::endl;
-    }
-
-    pos1 = buildInfo.find("inner version");
-    pos2 = buildInfo.find('\n', pos1);
-    if(pos1 != std::string::npos && pos2 != std::string::npos)
-    {
-        size_t value_start = buildInfo.rfind(' ', pos2) + 1;
-        std::string ver( buildInfo.substr(value_start, pos2 - value_start) );
-        ::testing::Test::RecordProperty("cv_inner_vcs_version", ver);
-        if(useStdOut) std::cout << "Inner VCS version: " << ver << std::endl;
-    }
-
-    const char * build_type =
-#ifdef _DEBUG
-        "debug";
-#else
-        "release";
-#endif
-
-    ::testing::Test::RecordProperty("cv_build_type", build_type);
-    if (useStdOut) std::cout << "Build type: " << build_type << std::endl;
-
-    const char* parallel_framework = currentParallelFramework();
-
-    if (parallel_framework) {
-        ::testing::Test::RecordProperty("cv_parallel_framework", parallel_framework);
-        if (useStdOut) std::cout << "Parallel framework: " << parallel_framework << std::endl;
-    }
-
-    std::string cpu_features;
-
-#if CV_POPCNT
-    if (checkHardwareSupport(CV_CPU_POPCNT)) cpu_features += " popcnt";
-#endif
-#if CV_MMX
-    if (checkHardwareSupport(CV_CPU_MMX)) cpu_features += " mmx";
-#endif
-#if CV_SSE
-    if (checkHardwareSupport(CV_CPU_SSE)) cpu_features += " sse";
-#endif
-#if CV_SSE2
-    if (checkHardwareSupport(CV_CPU_SSE2)) cpu_features += " sse2";
-#endif
-#if CV_SSE3
-    if (checkHardwareSupport(CV_CPU_SSE3)) cpu_features += " sse3";
-#endif
-#if CV_SSSE3
-    if (checkHardwareSupport(CV_CPU_SSSE3)) cpu_features += " ssse3";
-#endif
-#if CV_SSE4_1
-    if (checkHardwareSupport(CV_CPU_SSE4_1)) cpu_features += " sse4.1";
-#endif
-#if CV_SSE4_2
-    if (checkHardwareSupport(CV_CPU_SSE4_2)) cpu_features += " sse4.2";
-#endif
-#if CV_AVX
-    if (checkHardwareSupport(CV_CPU_AVX)) cpu_features += " avx";
-#endif
-#if CV_AVX2
-    if (checkHardwareSupport(CV_CPU_AVX2)) cpu_features += " avx2";
-#endif
-#if CV_FMA3
-    if (checkHardwareSupport(CV_CPU_FMA3)) cpu_features += " fma3";
-#endif
-#if CV_AVX_512F
-    if (checkHardwareSupport(CV_CPU_AVX_512F)) cpu_features += " avx-512f";
-#endif
-#if CV_AVX_512BW
-    if (checkHardwareSupport(CV_CPU_AVX_512BW)) cpu_features += " avx-512bw";
-#endif
-#if CV_AVX_512CD
-    if (checkHardwareSupport(CV_CPU_AVX_512CD)) cpu_features += " avx-512cd";
-#endif
-#if CV_AVX_512DQ
-    if (checkHardwareSupport(CV_CPU_AVX_512DQ)) cpu_features += " avx-512dq";
-#endif
-#if CV_AVX_512ER
-    if (checkHardwareSupport(CV_CPU_AVX_512ER)) cpu_features += " avx-512er";
-#endif
-#if CV_AVX_512IFMA512
-    if (checkHardwareSupport(CV_CPU_AVX_512IFMA512)) cpu_features += " avx-512ifma512";
-#endif
-#if CV_AVX_512PF
-    if (checkHardwareSupport(CV_CPU_AVX_512PF)) cpu_features += " avx-512pf";
-#endif
-#if CV_AVX_512VBMI
-    if (checkHardwareSupport(CV_CPU_AVX_512VBMI)) cpu_features += " avx-512vbmi";
-#endif
-#if CV_AVX_512VL
-    if (checkHardwareSupport(CV_CPU_AVX_512VL)) cpu_features += " avx-512vl";
-#endif
-#if CV_NEON
-    if (checkHardwareSupport(CV_CPU_NEON)) cpu_features += " neon";
-#endif
-#if CV_FP16
-    if (checkHardwareSupport(CV_CPU_FP16)) cpu_features += " fp16";
-#endif
-
-    cpu_features.erase(0, 1); // erase initial space
-
-    ::testing::Test::RecordProperty("cv_cpu_features", cpu_features);
-    if (useStdOut) std::cout << "CPU features: " << cpu_features << std::endl;
-
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    const char * tegra_optimization = tegra::useTegra() && tegra::isDeviceSupported() ? "enabled" : "disabled";
-    ::testing::Test::RecordProperty("cv_tegra_optimization", tegra_optimization);
-    if (useStdOut) std::cout << "Tegra optimization: " << tegra_optimization << std::endl;
-#endif
-}
-
-
 
 void threshold( const Mat& _src, Mat& _dst,
                             double thresh, double maxval, int thresh_type )

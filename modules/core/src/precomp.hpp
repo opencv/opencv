@@ -63,6 +63,7 @@
 #include <float.h>
 #include <limits.h>
 #include <math.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -84,15 +85,10 @@
 #include "opencv2/core/hal/intrin.hpp"
 #include "opencv2/core/sse_utils.hpp"
 #include "opencv2/core/neon_utils.hpp"
-
-#include "arithm_core.hpp"
+#include "opencv2/core/vsx_utils.hpp"
 #include "hal_replacement.hpp"
 
-#ifdef HAVE_TEGRA_OPTIMIZATION
-#include "opencv2/core/core_tegra.hpp"
-#else
 #define GET_OPTIMIZED(func) (func)
-#endif
 
 namespace cv
 {
@@ -108,6 +104,102 @@ extern const uchar g_Saturate8u[];
 #define CV_FAST_CAST_8U(t)   (assert(-256 <= (t) && (t) <= 512), cv::g_Saturate8u[(t)+256])
 #define CV_MIN_8U(a,b)       ((a) - CV_FAST_CAST_8U((a) - (b)))
 #define CV_MAX_8U(a,b)       ((a) + CV_FAST_CAST_8U((b) - (a)))
+
+template<typename T1, typename T2=T1, typename T3=T1> struct OpAdd
+{
+    typedef T1 type1;
+    typedef T2 type2;
+    typedef T3 rtype;
+    T3 operator ()(const T1 a, const T2 b) const { return saturate_cast<T3>(a + b); }
+};
+
+template<typename T1, typename T2=T1, typename T3=T1> struct OpSub
+{
+    typedef T1 type1;
+    typedef T2 type2;
+    typedef T3 rtype;
+    T3 operator ()(const T1 a, const T2 b) const { return saturate_cast<T3>(a - b); }
+};
+
+template<typename T1, typename T2=T1, typename T3=T1> struct OpRSub
+{
+    typedef T1 type1;
+    typedef T2 type2;
+    typedef T3 rtype;
+    T3 operator ()(const T1 a, const T2 b) const { return saturate_cast<T3>(b - a); }
+};
+
+template<typename T> struct OpMin
+{
+    typedef T type1;
+    typedef T type2;
+    typedef T rtype;
+    T operator ()(const T a, const T b) const { return std::min(a, b); }
+};
+
+template<typename T> struct OpMax
+{
+    typedef T type1;
+    typedef T type2;
+    typedef T rtype;
+    T operator ()(const T a, const T b) const { return std::max(a, b); }
+};
+
+template<typename T> struct OpAbsDiff
+{
+    typedef T type1;
+    typedef T type2;
+    typedef T rtype;
+    T operator()(T a, T b) const { return a > b ? a - b : b - a; }
+};
+
+// specializations to prevent "-0" results
+template<> struct OpAbsDiff<float>
+{
+    typedef float type1;
+    typedef float type2;
+    typedef float rtype;
+    float operator()(float a, float b) const { return std::abs(a - b); }
+};
+template<> struct OpAbsDiff<double>
+{
+    typedef double type1;
+    typedef double type2;
+    typedef double rtype;
+    double operator()(double a, double b) const { return std::abs(a - b); }
+};
+
+template<typename T> struct OpAnd
+{
+    typedef T type1;
+    typedef T type2;
+    typedef T rtype;
+    T operator()( T a, T b ) const { return a & b; }
+};
+
+template<typename T> struct OpOr
+{
+    typedef T type1;
+    typedef T type2;
+    typedef T rtype;
+    T operator()( T a, T b ) const { return a | b; }
+};
+
+template<typename T> struct OpXor
+{
+    typedef T type1;
+    typedef T type2;
+    typedef T rtype;
+    T operator()( T a, T b ) const { return a ^ b; }
+};
+
+template<typename T> struct OpNot
+{
+    typedef T type1;
+    typedef T type2;
+    typedef T rtype;
+    T operator()( T a, T ) const { return ~a; }
+};
 
 template<> inline uchar OpAdd<uchar>::operator ()(uchar a, uchar b) const
 { return CV_FAST_CAST_8U(a + b); }
@@ -125,6 +217,10 @@ template<> inline uchar OpMin<uchar>::operator ()(uchar a, uchar b) const { retu
 
 template<> inline uchar OpMax<uchar>::operator ()(uchar a, uchar b) const { return CV_MAX_8U(a, b); }
 
+typedef void (*UnaryFunc)(const uchar* src1, size_t step1,
+                       uchar* dst, size_t step, Size sz,
+                       void*);
+
 typedef void (*BinaryFunc)(const uchar* src1, size_t step1,
                        const uchar* src2, size_t step2,
                        uchar* dst, size_t step, Size sz,
@@ -135,8 +231,8 @@ typedef void (*BinaryFuncC)(const uchar* src1, size_t step1,
                        uchar* dst, size_t step, int width, int height,
                        void*);
 
-BinaryFunc getConvertFuncFp16(int ddepth);
 BinaryFunc getConvertFunc(int sdepth, int ddepth);
+BinaryFunc getConvertScaleFunc(int sdepth, int ddepth);
 BinaryFunc getCopyMaskFunc(size_t esz);
 
 /* default memory block for sparse array elements */
@@ -148,56 +244,23 @@ BinaryFunc getCopyMaskFunc(size_t esz);
 /* maximal average node_count/hash_size ratio beyond which hash table is resized */
 #define  CV_SPARSE_HASH_RATIO    3
 
-#if defined WIN32 || defined _WIN32
-void deleteThreadAllocData();
-#endif
+// There is some mess in code with vectors representation.
+// Both vector-column / vector-rows are used with dims=2 (as Mat2D always).
+// Reshape matrices if necessary (in case of vectors) and returns size with scaled width.
+Size getContinuousSize2D(Mat& m1, int widthScale=1);
+Size getContinuousSize2D(Mat& m1, Mat& m2, int widthScale=1);
+Size getContinuousSize2D(Mat& m1, Mat& m2, Mat& m3, int widthScale=1);
 
-inline Size getContinuousSize_( int flags, int cols, int rows, int widthScale )
-{
-    int64 sz = (int64)cols * rows * widthScale;
-    return (flags & Mat::CONTINUOUS_FLAG) != 0 &&
-        (int)sz == sz ? Size((int)sz, 1) : Size(cols * widthScale, rows);
-}
-
-inline Size getContinuousSize( const Mat& m1, int widthScale=1 )
-{
-    return getContinuousSize_(m1.flags,
-                              m1.cols, m1.rows, widthScale);
-}
-
-inline Size getContinuousSize( const Mat& m1, const Mat& m2, int widthScale=1 )
-{
-    return getContinuousSize_(m1.flags & m2.flags,
-                              m1.cols, m1.rows, widthScale);
-}
-
-inline Size getContinuousSize( const Mat& m1, const Mat& m2,
-                               const Mat& m3, int widthScale=1 )
-{
-    return getContinuousSize_(m1.flags & m2.flags & m3.flags,
-                              m1.cols, m1.rows, widthScale);
-}
-
-inline Size getContinuousSize( const Mat& m1, const Mat& m2,
-                               const Mat& m3, const Mat& m4,
-                               int widthScale=1 )
-{
-    return getContinuousSize_(m1.flags & m2.flags & m3.flags & m4.flags,
-                              m1.cols, m1.rows, widthScale);
-}
-
-inline Size getContinuousSize( const Mat& m1, const Mat& m2,
-                               const Mat& m3, const Mat& m4,
-                               const Mat& m5, int widthScale=1 )
-{
-    return getContinuousSize_(m1.flags & m2.flags & m3.flags & m4.flags & m5.flags,
-                              m1.cols, m1.rows, widthScale);
-}
+void setSize( Mat& m, int _dims, const int* _sz, const size_t* _steps, bool autoSteps=false );
+void finalizeHdr(Mat& m);
+int updateContinuityFlag(int flags, int dims, const int* size, const size_t* step);
 
 struct NoVec
 {
     size_t operator()(const void*, const void*, void*, size_t) const { return 0; }
 };
+
+#define CV_SPLIT_MERGE_MAX_BLOCK_SIZE(cn) ((INT_MAX/4)/(cn)) // HAL implementation accepts 'int' len, so INT_MAX doesn't work here
 
 enum { BLOCK_SIZE = 1024 };
 
@@ -207,7 +270,7 @@ enum { BLOCK_SIZE = 1024 };
 #define ARITHM_USE_IPP 0
 #endif
 
-inline bool checkScalar(const Mat& sc, int atype, int sckind, int akind)
+inline bool checkScalar(const Mat& sc, int atype, _InputArray::KindFlag sckind, _InputArray::KindFlag akind)
 {
     if( sc.dims > 2 || !sc.isContinuous() )
         return false;
@@ -221,7 +284,7 @@ inline bool checkScalar(const Mat& sc, int atype, int sckind, int akind)
            (sz == Size(1, 4) && sc.type() == CV_64F && cn <= 4);
 }
 
-inline bool checkScalar(InputArray sc, int atype, int sckind, int akind)
+inline bool checkScalar(InputArray sc, int atype, _InputArray::KindFlag sckind, _InputArray::KindFlag akind)
 {
     if( sc.dims() > 2 || !sc.isContinuous() )
         return false;
@@ -261,10 +324,8 @@ struct CoreTLSData
 //#ifdef HAVE_OPENCL
         device(0), useOpenCL(-1),
 //#endif
-        useIPP(-1)
-#ifdef HAVE_TEGRA_OPTIMIZATION
-        ,useTegra(-1)
-#endif
+        useIPP(-1),
+        useIPP_NE(-1)
 #ifdef HAVE_OPENVX
         ,useOpenVX(-1)
 #endif
@@ -276,19 +337,17 @@ struct CoreTLSData
     ocl::Queue oclQueue; // the queue used for running a kernel, see also getQueue, Kernel::run
     int useOpenCL; // 1 - use, 0 - do not use, -1 - auto/not initialized
 //#endif
-    int useIPP; // 1 - use, 0 - do not use, -1 - auto/not initialized
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    int useTegra; // 1 - use, 0 - do not use, -1 - auto/not initialized
-#endif
+    int useIPP;    // 1 - use, 0 - do not use, -1 - auto/not initialized
+    int useIPP_NE; // 1 - use, 0 - do not use, -1 - auto/not initialized
 #ifdef HAVE_OPENVX
     int useOpenVX; // 1 - use, 0 - do not use, -1 - auto/not initialized
 #endif
 };
 
-TLSData<CoreTLSData>& getCoreTlsData();
+CoreTLSData& getCoreTlsData();
 
 #if defined(BUILD_SHARED_LIBS)
-#if defined WIN32 || defined _WIN32 || defined WINCE
+#if defined _WIN32 || defined WINCE
 #define CL_RUNTIME_EXPORT __declspec(dllexport)
 #elif defined __GNUC__ && __GNUC__ >= 4
 #define CL_RUNTIME_EXPORT __attribute__ ((visibility ("default")))
@@ -299,8 +358,9 @@ TLSData<CoreTLSData>& getCoreTlsData();
 #define CL_RUNTIME_EXPORT
 #endif
 
-extern bool __termination; // skip some cleanups, because process is terminating
-                           // (for example, if ExitProcess() was already called)
+extern CV_EXPORTS
+bool __termination;  // skip some cleanups, because process is terminating
+                     // (for example, if ExitProcess() was already called)
 
 cv::Mutex& getInitializationMutex();
 
@@ -318,6 +378,8 @@ cv::Mutex& getInitializationMutex();
 #define CV_SINGLETON_LAZY_INIT(TYPE, INITIALIZER) CV_SINGLETON_LAZY_INIT_(TYPE, INITIALIZER, instance)
 #define CV_SINGLETON_LAZY_INIT_REF(TYPE, INITIALIZER) CV_SINGLETON_LAZY_INIT_(TYPE, INITIALIZER, *instance)
 
+int cv_snprintf(char* buf, int len, const char* fmt, ...);
+int cv_vsnprintf(char* buf, int len, const char* fmt, va_list args);
 }
 
 #endif /*_CXCORE_INTERNAL_H_*/

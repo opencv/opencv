@@ -1,6 +1,8 @@
 Introduction to Support Vector Machines {#tutorial_introduction_to_svm}
 =======================================
 
+@next_tutorial{tutorial_non_linear_svms}
+
 Goal
 ----
 
@@ -51,7 +53,7 @@ Let's introduce the notation used to define formally a hyperplane:
 
 where \f$\beta\f$ is known as the *weight vector* and \f$\beta_{0}\f$ as the *bias*.
 
-@sa A more in depth description of this and hyperplanes you can find in the section 4.5 (*Seperating
+@note A more in depth description of this and hyperplanes you can find in the section 4.5 (*Separating
 Hyperplanes*) of the book: *Elements of Statistical Learning* by T. Hastie, R. Tibshirani and J. H.
 Friedman (@cite HTF01).
 
@@ -94,27 +96,67 @@ the weight vector \f$\beta\f$ and the bias \f$\beta_{0}\f$ of the optimal hyperp
 Source Code
 -----------
 
-@note The following code has been implemented with OpenCV 3.0 classes and functions. An equivalent version of the code using OpenCV 2.4 can be found in [this page.](http://docs.opencv.org/2.4/doc/tutorials/ml/introduction_to_svm/introduction_to_svm.html#introductiontosvms)
+@add_toggle_cpp
+-   **Downloadable code**: Click
+    [here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/ml/introduction_to_svm/introduction_to_svm.cpp)
 
-@include cpp/tutorial_code/ml/introduction_to_svm/introduction_to_svm.cpp
+-   **Code at glance:**
+    @include samples/cpp/tutorial_code/ml/introduction_to_svm/introduction_to_svm.cpp
+@end_toggle
+
+@add_toggle_java
+-   **Downloadable code**: Click
+    [here](https://github.com/opencv/opencv/tree/master/samples/java/tutorial_code/ml/introduction_to_svm/IntroductionToSVMDemo.java)
+
+-   **Code at glance:**
+    @include samples/java/tutorial_code/ml/introduction_to_svm/IntroductionToSVMDemo.java
+@end_toggle
+
+@add_toggle_python
+-   **Downloadable code**: Click
+    [here](https://github.com/opencv/opencv/tree/master/samples/python/tutorial_code/ml/introduction_to_svm/introduction_to_svm.py)
+
+-   **Code at glance:**
+    @include samples/python/tutorial_code/ml/introduction_to_svm/introduction_to_svm.py
+@end_toggle
 
 Explanation
 -----------
 
--#  **Set up the training data**
+-   **Set up the training data**
 
-    The training data of this exercise is formed by a set of labeled 2D-points that belong to one of
-    two different classes; one of the classes consists of one point and the other of three points.
+The training data of this exercise is formed by a set of labeled 2D-points that belong to one of
+two different classes; one of the classes consists of one point and the other of three points.
 
-    @snippet cpp/tutorial_code/ml/introduction_to_svm/introduction_to_svm.cpp setup1
+@add_toggle_cpp
+@snippet samples/cpp/tutorial_code/ml/introduction_to_svm/introduction_to_svm.cpp setup1
+@end_toggle
 
-    The function @ref cv::ml::SVM::train that will be used afterwards requires the training data to be
-    stored as @ref cv::Mat objects of floats. Therefore, we create these objects from the arrays
-    defined above:
+@add_toggle_java
+@snippet samples/java/tutorial_code/ml/introduction_to_svm/IntroductionToSVMDemo.java setup1
+@end_toggle
 
-    @snippet cpp/tutorial_code/ml/introduction_to_svm/introduction_to_svm.cpp setup2
+@add_toggle_python
+@snippet samples/python/tutorial_code/ml/introduction_to_svm/introduction_to_svm.py setup1
+@end_toggle
 
--#  **Set up SVM's parameters**
+The function @ref cv::ml::SVM::train that will be used afterwards requires the training data to be
+stored as @ref cv::Mat objects of floats. Therefore, we create these objects from the arrays
+defined above:
+
+@add_toggle_cpp
+@snippet samples/cpp/tutorial_code/ml/introduction_to_svm/introduction_to_svm.cpp setup2
+@end_toggle
+
+@add_toggle_java
+@snippet samples/java/tutorial_code/ml/introduction_to_svm/IntroductionToSVMDemo.java setup2
+@end_toggle
+
+@add_toggle_python
+@snippet samples/python/tutorial_code/ml/introduction_to_svm/introduction_to_svm.py setup1
+@end_toggle
+
+-   **Set up SVM's parameters**
 
     In this tutorial we have introduced the theory of SVMs in the most simple case, when the
     training examples are spread into two classes that are linearly separable. However, SVMs can be
@@ -123,35 +165,55 @@ Explanation
     we have to define some parameters before training the SVM. These parameters are stored in an
     object of the class @ref cv::ml::SVM.
 
-    @snippet cpp/tutorial_code/ml/introduction_to_svm/introduction_to_svm.cpp init
+@add_toggle_cpp
+@snippet samples/cpp/tutorial_code/ml/introduction_to_svm/introduction_to_svm.cpp init
+@end_toggle
 
-    Here:
-    -   *Type of SVM*. We choose here the type @ref cv::ml::SVM::C_SVC "C_SVC" that can be used for
-        n-class classification (n \f$\geq\f$ 2). The important feature of this type is that it deals
-        with imperfect separation of classes (i.e. when the training data is non-linearly separable).
-        This feature is not important here since the data is linearly separable and we chose this SVM
-        type only for being the most commonly used.
+@add_toggle_java
+@snippet samples/java/tutorial_code/ml/introduction_to_svm/IntroductionToSVMDemo.java init
+@end_toggle
 
-    -   *Type of SVM kernel*. We have not talked about kernel functions since they are not
-        interesting for the training data we are dealing with. Nevertheless, let's explain briefly now
-        the main idea behind a kernel function. It is a mapping done to the training data to improve
-        its resemblance to a linearly separable set of data. This mapping consists of increasing the
-        dimensionality of the data and is done efficiently using a kernel function. We choose here the
-        type @ref cv::ml::SVM::LINEAR "LINEAR" which means that no mapping is done. This parameter is
-        defined using cv::ml::SVM::setKernel.
+@add_toggle_python
+@snippet samples/python/tutorial_code/ml/introduction_to_svm/introduction_to_svm.py init
+@end_toggle
 
-    -   *Termination criteria of the algorithm*. The SVM training procedure is implemented solving a
-        constrained quadratic optimization problem in an **iterative** fashion. Here we specify a
-        maximum number of iterations and a tolerance error so we allow the algorithm to finish in
-        less number of steps even if the optimal hyperplane has not been computed yet. This
-        parameter is defined in a structure @ref cv::TermCriteria .
+Here:
+-   *Type of SVM*. We choose here the type @ref cv::ml::SVM::C_SVC "C_SVC" that can be used for
+    n-class classification (n \f$\geq\f$ 2). The important feature of this type is that it deals
+    with imperfect separation of classes (i.e. when the training data is non-linearly separable).
+    This feature is not important here since the data is linearly separable and we chose this SVM
+    type only for being the most commonly used.
 
--#  **Train the SVM**
+-   *Type of SVM kernel*. We have not talked about kernel functions since they are not
+    interesting for the training data we are dealing with. Nevertheless, let's explain briefly now
+    the main idea behind a kernel function. It is a mapping done to the training data to improve
+    its resemblance to a linearly separable set of data. This mapping consists of increasing the
+    dimensionality of the data and is done efficiently using a kernel function. We choose here the
+    type @ref cv::ml::SVM::LINEAR "LINEAR" which means that no mapping is done. This parameter is
+    defined using cv::ml::SVM::setKernel.
+
+-   *Termination criteria of the algorithm*. The SVM training procedure is implemented solving a
+    constrained quadratic optimization problem in an **iterative** fashion. Here we specify a
+    maximum number of iterations and a tolerance error so we allow the algorithm to finish in
+    less number of steps even if the optimal hyperplane has not been computed yet. This
+    parameter is defined in a structure @ref cv::TermCriteria .
+
+-   **Train the SVM**
     We call the method @ref cv::ml::SVM::train to build the SVM model.
 
-    @snippet cpp/tutorial_code/ml/introduction_to_svm/introduction_to_svm.cpp train
+@add_toggle_cpp
+@snippet samples/cpp/tutorial_code/ml/introduction_to_svm/introduction_to_svm.cpp train
+@end_toggle
 
--#  **Regions classified by the SVM**
+@add_toggle_java
+@snippet samples/java/tutorial_code/ml/introduction_to_svm/IntroductionToSVMDemo.java train
+@end_toggle
+
+@add_toggle_python
+@snippet samples/python/tutorial_code/ml/introduction_to_svm/introduction_to_svm.py train
+@end_toggle
+
+-   **Regions classified by the SVM**
 
     The method @ref cv::ml::SVM::predict is used to classify an input sample using a trained SVM. In
     this example we have used this method in order to color the space depending on the prediction done
@@ -159,16 +221,36 @@ Explanation
     Cartesian plane. Each of the points is colored depending on the class predicted by the SVM; in
     green if it is the class with label 1 and in blue if it is the class with label -1.
 
-    @snippet cpp/tutorial_code/ml/introduction_to_svm/introduction_to_svm.cpp show
+@add_toggle_cpp
+@snippet samples/cpp/tutorial_code/ml/introduction_to_svm/introduction_to_svm.cpp show
+@end_toggle
 
--#  **Support vectors**
+@add_toggle_java
+@snippet samples/java/tutorial_code/ml/introduction_to_svm/IntroductionToSVMDemo.java show
+@end_toggle
+
+@add_toggle_python
+@snippet samples/python/tutorial_code/ml/introduction_to_svm/introduction_to_svm.py show
+@end_toggle
+
+-   **Support vectors**
 
     We use here a couple of methods to obtain information about the support vectors.
     The method @ref cv::ml::SVM::getSupportVectors obtain all of the support
     vectors. We have used this methods here to find the training examples that are
     support vectors and highlight them.
 
-    @snippet cpp/tutorial_code/ml/introduction_to_svm/introduction_to_svm.cpp show_vectors
+@add_toggle_cpp
+@snippet samples/cpp/tutorial_code/ml/introduction_to_svm/introduction_to_svm.cpp show_vectors
+@end_toggle
+
+@add_toggle_java
+@snippet samples/java/tutorial_code/ml/introduction_to_svm/IntroductionToSVMDemo.java show_vectors
+@end_toggle
+
+@add_toggle_python
+@snippet samples/python/tutorial_code/ml/introduction_to_svm/introduction_to_svm.py show_vectors
+@end_toggle
 
 Results
 -------

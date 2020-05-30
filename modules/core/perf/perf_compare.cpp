@@ -1,14 +1,12 @@
 #include "perf_precomp.hpp"
 
-using namespace std;
-using namespace cv;
+namespace opencv_test
+{
 using namespace perf;
-using std::tr1::make_tuple;
-using std::tr1::get;
 
 CV_ENUM(CmpType, CMP_EQ, CMP_GT, CMP_GE, CMP_LT, CMP_LE, CMP_NE)
 
-typedef std::tr1::tuple<Size, MatType, CmpType> Size_MatType_CmpType_t;
+typedef tuple<Size, MatType, CmpType> Size_MatType_CmpType_t;
 typedef perf::TestBaseWithParam<Size_MatType_CmpType_t> Size_MatType_CmpType;
 
 PERF_TEST_P( Size_MatType_CmpType, compare,
@@ -57,3 +55,5 @@ PERF_TEST_P( Size_MatType_CmpType, compareScalar,
 
     SANITY_CHECK(dst);
 }
+
+} // namespace

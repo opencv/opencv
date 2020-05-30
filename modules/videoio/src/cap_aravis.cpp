@@ -44,6 +44,7 @@
 //
 
 #include "precomp.hpp"
+#include "cap_interface.hpp"
 
 #ifdef HAVE_ARAVIS_API
 
@@ -58,7 +59,7 @@
 // Please obvserve, that jumbo frames are required when high fps & 16bit data is selected.
 // (camera, switches/routers and the computer this software is running on)
 //
-// Basic usage: VideoCapture cap(CAP_ARAVIS + <camera id>);
+// Basic usage: VideoCapture cap(<camera id>, CAP_ARAVIS);
 //
 // Supported properties:
 //  read/write
@@ -79,12 +80,14 @@
 //      video/x-raw, fourcc:'Y800'  -> 8bit, 1 channel
 //      video/x-raw, fourcc:'Y12 '  -> 12bit, 1 channel
 //      video/x-raw, fourcc:'Y16 '  -> 16bit, 1 channel
+//      video/x-raw, fourcc:'GRBG'  -> 8bit, 1 channel
 //
 
 #define MODE_GREY   CV_FOURCC_MACRO('G','R','E','Y')
 #define MODE_Y800   CV_FOURCC_MACRO('Y','8','0','0')
 #define MODE_Y12    CV_FOURCC_MACRO('Y','1','2',' ')
 #define MODE_Y16    CV_FOURCC_MACRO('Y','1','6',' ')
+#define MODE_GRBG   CV_FOURCC_MACRO('G','R','B','G')
 
 #define CLIP(a,b,c) (cv::max(cv::min((a),(c)),(b)))
 
@@ -101,13 +104,13 @@ public:
 
     virtual bool open(int);
     virtual void close();
-    virtual double getProperty(int) const;
-    virtual bool setProperty(int, double);
-    virtual bool grabFrame();
-    virtual IplImage* retrieveFrame(int);
-    virtual int getCaptureDomain()
+    virtual double getProperty(int) const CV_OVERRIDE;
+    virtual bool setProperty(int, double) CV_OVERRIDE;
+    virtual bool grabFrame() CV_OVERRIDE;
+    virtual IplImage* retrieveFrame(int) CV_OVERRIDE;
+    virtual int getCaptureDomain() CV_OVERRIDE
     {
-        return CV_CAP_ARAVIS;
+        return cv::CAP_ARAVIS;
     }
 
 protected:
@@ -127,12 +130,12 @@ protected:
 
     unsigned int    payload;                // Width x height x Pixel width.
 
-    int             widthMin;               // Camera sensor minium width.
+    int             widthMin;               // Camera sensor minimum width.
     int             widthMax;               // Camera sensor maximum width.
-    int             heightMin;              // Camera sensor minium height.
+    int             heightMin;              // Camera sensor minimum height.
     int             heightMax;              // Camera sensor maximum height.
     bool            fpsAvailable;
-    double          fpsMin;                 // Camera minium fps.
+    double          fpsMin;                 // Camera minimum fps.
     double          fpsMax;                 // Camera maximum fps.
     bool            gainAvailable;
     double          gainMin;                // Camera minimum gain.
@@ -145,6 +148,8 @@ protected:
     double          exposureCompensation;
     bool            autoGain;
     double          targetGrey;             // Target grey value (mid grey))
+    bool            softwareTriggered;      // Flag if the camera is software triggered
+    bool            allowAutoTrigger;       // Flag that user allowed to trigger software triggered cameras automatically
 
     gint64          *pixelFormats;
     guint           pixelFormatsCnt;
@@ -186,6 +191,7 @@ CvCaptureCAM_Aravis::CvCaptureCAM_Aravis()
     exposureCompensation = 0;
     targetGrey = 0;
     frameID = prevFrameID = 0;
+    allowAutoTrigger = false;
 
     num_buffers = 10;
     frame = NULL;
@@ -229,15 +235,16 @@ bool CvCaptureCAM_Aravis::init_buffers()
         stream = NULL;
     }
     if( (stream = arv_camera_create_stream(camera, NULL, NULL)) ) {
-        g_object_set(stream,
-            "socket-buffer", ARV_GV_STREAM_SOCKET_BUFFER_AUTO,
-            "socket-buffer-size", 0, NULL);
-        g_object_set(stream,
-            "packet-resend", ARV_GV_STREAM_PACKET_RESEND_NEVER, NULL);
-        g_object_set(stream,
-            "packet-timeout", (unsigned) 40000,
-            "frame-retention", (unsigned) 200000, NULL);
-
+        if( arv_camera_is_gv_device(camera) ) {
+            g_object_set(stream,
+                "socket-buffer", ARV_GV_STREAM_SOCKET_BUFFER_AUTO,
+                "socket-buffer-size", 0, NULL);
+            g_object_set(stream,
+                "packet-resend", ARV_GV_STREAM_PACKET_RESEND_NEVER, NULL);
+            g_object_set(stream,
+                "packet-timeout", (unsigned) 40000,
+                "frame-retention", (unsigned) 200000, NULL);
+        }
         payload = arv_camera_get_payload (camera);
 
         for (int i = 0; i < num_buffers; i++)
@@ -271,6 +278,7 @@ bool CvCaptureCAM_Aravis::open( int index )
         exposure = exposureAvailable ? arv_camera_get_exposure_time(camera) : 0;
         gain = gainAvailable ? arv_camera_get_gain(camera) : 0;
         fps = arv_camera_get_frame_rate(camera);
+        softwareTriggered = (strcmp(arv_camera_get_trigger_source(camera), "Software") == 0);
 
         return startCapture();
     }
@@ -286,6 +294,9 @@ bool CvCaptureCAM_Aravis::grabFrame()
         ArvBuffer *arv_buffer = NULL;
         int max_tries = 10;
         int tries = 0;
+        if (softwareTriggered && allowAutoTrigger) {
+            arv_camera_software_trigger (camera);
+        }
         for(; tries < max_tries; tries ++) {
             arv_buffer = arv_stream_timeout_pop_buffer (stream, 200000);
             if (arv_buffer != NULL && arv_buffer_get_status (arv_buffer) != ARV_BUFFER_STATUS_SUCCESS) {
@@ -296,10 +307,10 @@ bool CvCaptureCAM_Aravis::grabFrame()
             size_t buffer_size;
             framebuffer = (void*)arv_buffer_get_data (arv_buffer, &buffer_size);
 
-            // retieve image size properites
+            // retrieve image size properties
             arv_buffer_get_image_region (arv_buffer, &xoffset, &yoffset, &width, &height);
 
-            // retieve image ID set by camera
+            // retrieve image ID set by camera
             frameID = arv_buffer_get_frame_id(arv_buffer);
 
             arv_stream_push_buffer(stream, arv_buffer);
@@ -315,6 +326,7 @@ IplImage* CvCaptureCAM_Aravis::retrieveFrame(int)
         int depth = 0, channels = 0;
         switch(pixelFormat) {
             case ARV_PIXEL_FORMAT_MONO_8:
+            case ARV_PIXEL_FORMAT_BAYER_GR_8:
                 depth = IPL_DEPTH_8U;
                 channels = 1;
                 break;
@@ -389,7 +401,7 @@ void CvCaptureCAM_Aravis::autoExposureControl(IplImage* image)
             ng = CLIP( gain + ev + exposureCompensation, gainMin, gainMax);
 
             if( ng < gain ) {
-                // piority 1 - reduce gain
+                // priority 1 - reduce gain
                 arv_camera_set_gain(camera, (gain = ng));
                 return;
             }
@@ -475,6 +487,8 @@ double CvCaptureCAM_Aravis::getProperty( int property_id ) const
                         return MODE_Y12;
                     case ARV_PIXEL_FORMAT_MONO_16:
                         return MODE_Y16;
+                    case ARV_PIXEL_FORMAT_BAYER_GR_8:
+                        return MODE_GRBG;
                 }
             }
             break;
@@ -487,6 +501,12 @@ double CvCaptureCAM_Aravis::getProperty( int property_id ) const
                 return out;
             }
             break;
+
+        case CAP_PROP_ARAVIS_AUTOTRIGGER:
+        {
+            return allowAutoTrigger ? 1. : 0.;
+        }
+        break;
     }
     return -1.0;
 }
@@ -547,6 +567,10 @@ bool CvCaptureCAM_Aravis::setProperty( int property_id, double value )
                         newFormat = ARV_PIXEL_FORMAT_MONO_16;
                         targetGrey = 32768;
                         break;
+                    case MODE_GRBG:
+                        newFormat = ARV_PIXEL_FORMAT_BAYER_GR_8;
+                        targetGrey = 128;
+                        break;
                 }
                 if(newFormat != pixelFormat) {
                     stopCapture();
@@ -567,6 +591,11 @@ bool CvCaptureCAM_Aravis::setProperty( int property_id, double value )
             }
             break;
 
+        case CAP_PROP_ARAVIS_AUTOTRIGGER:
+            {
+                allowAutoTrigger = (bool) value;
+            }
+            break;
 
         default:
             return false;
@@ -596,12 +625,12 @@ bool CvCaptureCAM_Aravis::startCapture()
     return false;
 }
 
-CvCapture* cvCreateCameraCapture_Aravis( int index )
+cv::Ptr<cv::IVideoCapture> cv::create_Aravis_capture( int index )
 {
     CvCaptureCAM_Aravis* capture = new CvCaptureCAM_Aravis;
 
     if(capture->open(index)) {
-        return capture;
+        return cv::makePtr<cv::LegacyCapture>(capture);
     }
 
     delete capture;

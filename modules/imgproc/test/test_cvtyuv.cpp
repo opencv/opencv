@@ -1,7 +1,6 @@
 #include "test_precomp.hpp"
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 #undef RGB
 #undef YUV
@@ -362,54 +361,54 @@ YUVreader* YUVreader::getReader(int code)
 {
     switch(code)
     {
-    case CV_YUV2RGB_NV12:
-    case CV_YUV2BGR_NV12:
-    case CV_YUV2RGBA_NV12:
-    case CV_YUV2BGRA_NV12:
+    case COLOR_YUV2RGB_NV12:
+    case COLOR_YUV2BGR_NV12:
+    case COLOR_YUV2RGBA_NV12:
+    case COLOR_YUV2BGRA_NV12:
         return new NV12Reader();
-    case CV_YUV2RGB_NV21:
-    case CV_YUV2BGR_NV21:
-    case CV_YUV2RGBA_NV21:
-    case CV_YUV2BGRA_NV21:
+    case COLOR_YUV2RGB_NV21:
+    case COLOR_YUV2BGR_NV21:
+    case COLOR_YUV2RGBA_NV21:
+    case COLOR_YUV2BGRA_NV21:
         return new NV21Reader();
-    case CV_YUV2RGB_YV12:
-    case CV_YUV2BGR_YV12:
-    case CV_YUV2RGBA_YV12:
-    case CV_YUV2BGRA_YV12:
+    case COLOR_YUV2RGB_YV12:
+    case COLOR_YUV2BGR_YV12:
+    case COLOR_YUV2RGBA_YV12:
+    case COLOR_YUV2BGRA_YV12:
         return new YV12Reader();
-    case CV_YUV2RGB_IYUV:
-    case CV_YUV2BGR_IYUV:
-    case CV_YUV2RGBA_IYUV:
-    case CV_YUV2BGRA_IYUV:
+    case COLOR_YUV2RGB_IYUV:
+    case COLOR_YUV2BGR_IYUV:
+    case COLOR_YUV2RGBA_IYUV:
+    case COLOR_YUV2BGRA_IYUV:
         return new IYUVReader();
-    case CV_YUV2RGB_UYVY:
-    case CV_YUV2BGR_UYVY:
-    case CV_YUV2RGBA_UYVY:
-    case CV_YUV2BGRA_UYVY:
+    case COLOR_YUV2RGB_UYVY:
+    case COLOR_YUV2BGR_UYVY:
+    case COLOR_YUV2RGBA_UYVY:
+    case COLOR_YUV2BGRA_UYVY:
         return new UYVYReader();
-    //case CV_YUV2RGB_VYUY = 109,
-    //case CV_YUV2BGR_VYUY = 110,
-    //case CV_YUV2RGBA_VYUY = 113,
-    //case CV_YUV2BGRA_VYUY = 114,
+    //case COLOR_YUV2RGB_VYUY = 109,
+    //case COLOR_YUV2BGR_VYUY = 110,
+    //case COLOR_YUV2RGBA_VYUY = 113,
+    //case COLOR_YUV2BGRA_VYUY = 114,
     //    return ??
-    case CV_YUV2RGB_YUY2:
-    case CV_YUV2BGR_YUY2:
-    case CV_YUV2RGBA_YUY2:
-    case CV_YUV2BGRA_YUY2:
+    case COLOR_YUV2RGB_YUY2:
+    case COLOR_YUV2BGR_YUY2:
+    case COLOR_YUV2RGBA_YUY2:
+    case COLOR_YUV2BGRA_YUY2:
         return new YUY2Reader();
-    case CV_YUV2RGB_YVYU:
-    case CV_YUV2BGR_YVYU:
-    case CV_YUV2RGBA_YVYU:
-    case CV_YUV2BGRA_YVYU:
+    case COLOR_YUV2RGB_YVYU:
+    case COLOR_YUV2BGR_YVYU:
+    case COLOR_YUV2RGBA_YVYU:
+    case COLOR_YUV2BGRA_YVYU:
         return new YVYUReader();
-    case CV_YUV2GRAY_420:
+    case COLOR_YUV2GRAY_420:
         return new NV21Reader();
-    case CV_YUV2GRAY_UYVY:
+    case COLOR_YUV2GRAY_UYVY:
         return new UYVYReader();
-    case CV_YUV2GRAY_YUY2:
+    case COLOR_YUV2GRAY_YUY2:
         return new YUY2Reader();
-    case CV_YUV2BGR:
-    case CV_YUV2RGB:
+    case COLOR_YUV2BGR:
+    case COLOR_YUV2RGB:
         return new YUV888Reader();
     default:
         return 0;
@@ -420,17 +419,17 @@ RGBreader* RGBreader::getReader(int code)
 {
     switch(code)
     {
-    case CV_RGB2YUV_YV12:
-    case CV_RGB2YUV_I420:
+    case COLOR_RGB2YUV_YV12:
+    case COLOR_RGB2YUV_I420:
         return new RGB888Reader();
-    case CV_BGR2YUV_YV12:
-    case CV_BGR2YUV_I420:
+    case COLOR_BGR2YUV_YV12:
+    case COLOR_BGR2YUV_I420:
         return new BGR888Reader();
-    case CV_RGBA2YUV_I420:
-    case CV_RGBA2YUV_YV12:
+    case COLOR_RGBA2YUV_I420:
+    case COLOR_RGBA2YUV_YV12:
         return new RGBA8888Reader();
-    case CV_BGRA2YUV_YV12:
-    case CV_BGRA2YUV_I420:
+    case COLOR_BGRA2YUV_YV12:
+    case COLOR_BGRA2YUV_I420:
         return new BGRA8888Reader();
     default:
         return 0;
@@ -441,43 +440,43 @@ RGBwriter* RGBwriter::getWriter(int code)
 {
     switch(code)
     {
-    case CV_YUV2RGB_NV12:
-    case CV_YUV2RGB_NV21:
-    case CV_YUV2RGB_YV12:
-    case CV_YUV2RGB_IYUV:
-    case CV_YUV2RGB_UYVY:
-    //case CV_YUV2RGB_VYUY:
-    case CV_YUV2RGB_YUY2:
-    case CV_YUV2RGB_YVYU:
-    case CV_YUV2RGB:
+    case COLOR_YUV2RGB_NV12:
+    case COLOR_YUV2RGB_NV21:
+    case COLOR_YUV2RGB_YV12:
+    case COLOR_YUV2RGB_IYUV:
+    case COLOR_YUV2RGB_UYVY:
+    //case COLOR_YUV2RGB_VYUY:
+    case COLOR_YUV2RGB_YUY2:
+    case COLOR_YUV2RGB_YVYU:
+    case COLOR_YUV2RGB:
         return new RGB888Writer();
-    case CV_YUV2BGR_NV12:
-    case CV_YUV2BGR_NV21:
-    case CV_YUV2BGR_YV12:
-    case CV_YUV2BGR_IYUV:
-    case CV_YUV2BGR_UYVY:
-    //case CV_YUV2BGR_VYUY:
-    case CV_YUV2BGR_YUY2:
-    case CV_YUV2BGR_YVYU:
-    case CV_YUV2BGR:
+    case COLOR_YUV2BGR_NV12:
+    case COLOR_YUV2BGR_NV21:
+    case COLOR_YUV2BGR_YV12:
+    case COLOR_YUV2BGR_IYUV:
+    case COLOR_YUV2BGR_UYVY:
+    //case COLOR_YUV2BGR_VYUY:
+    case COLOR_YUV2BGR_YUY2:
+    case COLOR_YUV2BGR_YVYU:
+    case COLOR_YUV2BGR:
         return new BGR888Writer();
-    case CV_YUV2RGBA_NV12:
-    case CV_YUV2RGBA_NV21:
-    case CV_YUV2RGBA_YV12:
-    case CV_YUV2RGBA_IYUV:
-    case CV_YUV2RGBA_UYVY:
-    //case CV_YUV2RGBA_VYUY:
-    case CV_YUV2RGBA_YUY2:
-    case CV_YUV2RGBA_YVYU:
+    case COLOR_YUV2RGBA_NV12:
+    case COLOR_YUV2RGBA_NV21:
+    case COLOR_YUV2RGBA_YV12:
+    case COLOR_YUV2RGBA_IYUV:
+    case COLOR_YUV2RGBA_UYVY:
+    //case COLOR_YUV2RGBA_VYUY:
+    case COLOR_YUV2RGBA_YUY2:
+    case COLOR_YUV2RGBA_YVYU:
         return new RGBA8888Writer();
-    case CV_YUV2BGRA_NV12:
-    case CV_YUV2BGRA_NV21:
-    case CV_YUV2BGRA_YV12:
-    case CV_YUV2BGRA_IYUV:
-    case CV_YUV2BGRA_UYVY:
-    //case CV_YUV2BGRA_VYUY:
-    case CV_YUV2BGRA_YUY2:
-    case CV_YUV2BGRA_YVYU:
+    case COLOR_YUV2BGRA_NV12:
+    case COLOR_YUV2BGRA_NV21:
+    case COLOR_YUV2BGRA_YV12:
+    case COLOR_YUV2BGRA_IYUV:
+    case COLOR_YUV2BGRA_UYVY:
+    //case COLOR_YUV2BGRA_VYUY:
+    case COLOR_YUV2BGRA_YUY2:
+    case COLOR_YUV2BGRA_YVYU:
         return new BGRA8888Writer();
     default:
         return 0;
@@ -488,9 +487,9 @@ GRAYwriter* GRAYwriter::getWriter(int code)
 {
     switch(code)
     {
-    case CV_YUV2GRAY_420:
-    case CV_YUV2GRAY_UYVY:
-    case CV_YUV2GRAY_YUY2:
+    case COLOR_YUV2GRAY_420:
+    case COLOR_YUV2GRAY_UYVY:
+    case COLOR_YUV2GRAY_YUY2:
         return new GRAYwriter();
     default:
         return 0;
@@ -501,15 +500,15 @@ YUVwriter* YUVwriter::getWriter(int code)
 {
     switch(code)
     {
-    case CV_RGB2YUV_YV12:
-    case CV_BGR2YUV_YV12:
-    case CV_RGBA2YUV_YV12:
-    case CV_BGRA2YUV_YV12:
+    case COLOR_RGB2YUV_YV12:
+    case COLOR_BGR2YUV_YV12:
+    case COLOR_RGBA2YUV_YV12:
+    case COLOR_BGRA2YUV_YV12:
         return new YV12Writer();
-    case CV_RGB2YUV_I420:
-    case CV_BGR2YUV_I420:
-    case CV_RGBA2YUV_I420:
-    case CV_BGRA2YUV_I420:
+    case COLOR_RGB2YUV_I420:
+    case COLOR_BGR2YUV_I420:
+    case COLOR_RGBA2YUV_I420:
+    case COLOR_BGRA2YUV_I420:
         return new I420Writer();
     default:
         return 0;
@@ -612,16 +611,16 @@ struct ConversionYUV
     GRAYwriter* grayWriter_;
 };
 
-CV_ENUM(YUVCVTS, CV_YUV2RGB_NV12, CV_YUV2BGR_NV12, CV_YUV2RGB_NV21, CV_YUV2BGR_NV21,
-                 CV_YUV2RGBA_NV12, CV_YUV2BGRA_NV12, CV_YUV2RGBA_NV21, CV_YUV2BGRA_NV21,
-                 CV_YUV2RGB_YV12, CV_YUV2BGR_YV12, CV_YUV2RGB_IYUV, CV_YUV2BGR_IYUV,
-                 CV_YUV2RGBA_YV12, CV_YUV2BGRA_YV12, CV_YUV2RGBA_IYUV, CV_YUV2BGRA_IYUV,
-                 CV_YUV2RGB_UYVY, CV_YUV2BGR_UYVY, CV_YUV2RGBA_UYVY, CV_YUV2BGRA_UYVY,
-                 CV_YUV2RGB_YUY2, CV_YUV2BGR_YUY2, CV_YUV2RGB_YVYU, CV_YUV2BGR_YVYU,
-                 CV_YUV2RGBA_YUY2, CV_YUV2BGRA_YUY2, CV_YUV2RGBA_YVYU, CV_YUV2BGRA_YVYU,
-                 CV_YUV2GRAY_420, CV_YUV2GRAY_UYVY, CV_YUV2GRAY_YUY2,
-                 CV_YUV2BGR, CV_YUV2RGB, CV_RGB2YUV_YV12, CV_BGR2YUV_YV12, CV_RGBA2YUV_YV12,
-                 CV_BGRA2YUV_YV12, CV_RGB2YUV_I420, CV_BGR2YUV_I420, CV_RGBA2YUV_I420, CV_BGRA2YUV_I420)
+CV_ENUM(YUVCVTS, COLOR_YUV2RGB_NV12, COLOR_YUV2BGR_NV12, COLOR_YUV2RGB_NV21, COLOR_YUV2BGR_NV21,
+                 COLOR_YUV2RGBA_NV12, COLOR_YUV2BGRA_NV12, COLOR_YUV2RGBA_NV21, COLOR_YUV2BGRA_NV21,
+                 COLOR_YUV2RGB_YV12, COLOR_YUV2BGR_YV12, COLOR_YUV2RGB_IYUV, COLOR_YUV2BGR_IYUV,
+                 COLOR_YUV2RGBA_YV12, COLOR_YUV2BGRA_YV12, COLOR_YUV2RGBA_IYUV, COLOR_YUV2BGRA_IYUV,
+                 COLOR_YUV2RGB_UYVY, COLOR_YUV2BGR_UYVY, COLOR_YUV2RGBA_UYVY, COLOR_YUV2BGRA_UYVY,
+                 COLOR_YUV2RGB_YUY2, COLOR_YUV2BGR_YUY2, COLOR_YUV2RGB_YVYU, COLOR_YUV2BGR_YVYU,
+                 COLOR_YUV2RGBA_YUY2, COLOR_YUV2BGRA_YUY2, COLOR_YUV2RGBA_YVYU, COLOR_YUV2BGRA_YVYU,
+                 COLOR_YUV2GRAY_420, COLOR_YUV2GRAY_UYVY, COLOR_YUV2GRAY_YUY2,
+                 COLOR_YUV2BGR, COLOR_YUV2RGB, COLOR_RGB2YUV_YV12, COLOR_BGR2YUV_YV12, COLOR_RGBA2YUV_YV12,
+                 COLOR_BGRA2YUV_YV12, COLOR_RGB2YUV_I420, COLOR_BGR2YUV_I420, COLOR_RGBA2YUV_I420, COLOR_BGRA2YUV_I420)
 
 typedef ::testing::TestWithParam<YUVCVTS> Imgproc_ColorYUV;
 
@@ -711,16 +710,18 @@ TEST_P(Imgproc_ColorYUV, roi_accuracy)
 }
 
 INSTANTIATE_TEST_CASE_P(cvt420, Imgproc_ColorYUV,
-    ::testing::Values((int)CV_YUV2RGB_NV12, (int)CV_YUV2BGR_NV12, (int)CV_YUV2RGB_NV21, (int)CV_YUV2BGR_NV21,
-                      (int)CV_YUV2RGBA_NV12, (int)CV_YUV2BGRA_NV12, (int)CV_YUV2RGBA_NV21, (int)CV_YUV2BGRA_NV21,
-                      (int)CV_YUV2RGB_YV12, (int)CV_YUV2BGR_YV12, (int)CV_YUV2RGB_IYUV, (int)CV_YUV2BGR_IYUV,
-                      (int)CV_YUV2RGBA_YV12, (int)CV_YUV2BGRA_YV12, (int)CV_YUV2RGBA_IYUV, (int)CV_YUV2BGRA_IYUV,
-                      (int)CV_YUV2GRAY_420, (int)CV_RGB2YUV_YV12, (int)CV_BGR2YUV_YV12, (int)CV_RGBA2YUV_YV12,
-                      (int)CV_BGRA2YUV_YV12, (int)CV_RGB2YUV_I420, (int)CV_BGR2YUV_I420, (int)CV_RGBA2YUV_I420,
-                      (int)CV_BGRA2YUV_I420));
+    ::testing::Values((int)COLOR_YUV2RGB_NV12, (int)COLOR_YUV2BGR_NV12, (int)COLOR_YUV2RGB_NV21, (int)COLOR_YUV2BGR_NV21,
+                      (int)COLOR_YUV2RGBA_NV12, (int)COLOR_YUV2BGRA_NV12, (int)COLOR_YUV2RGBA_NV21, (int)COLOR_YUV2BGRA_NV21,
+                      (int)COLOR_YUV2RGB_YV12, (int)COLOR_YUV2BGR_YV12, (int)COLOR_YUV2RGB_IYUV, (int)COLOR_YUV2BGR_IYUV,
+                      (int)COLOR_YUV2RGBA_YV12, (int)COLOR_YUV2BGRA_YV12, (int)COLOR_YUV2RGBA_IYUV, (int)COLOR_YUV2BGRA_IYUV,
+                      (int)COLOR_YUV2GRAY_420, (int)COLOR_RGB2YUV_YV12, (int)COLOR_BGR2YUV_YV12, (int)COLOR_RGBA2YUV_YV12,
+                      (int)COLOR_BGRA2YUV_YV12, (int)COLOR_RGB2YUV_I420, (int)COLOR_BGR2YUV_I420, (int)COLOR_RGBA2YUV_I420,
+                      (int)COLOR_BGRA2YUV_I420));
 
 INSTANTIATE_TEST_CASE_P(cvt422, Imgproc_ColorYUV,
-    ::testing::Values((int)CV_YUV2RGB_UYVY, (int)CV_YUV2BGR_UYVY, (int)CV_YUV2RGBA_UYVY, (int)CV_YUV2BGRA_UYVY,
-                      (int)CV_YUV2RGB_YUY2, (int)CV_YUV2BGR_YUY2, (int)CV_YUV2RGB_YVYU, (int)CV_YUV2BGR_YVYU,
-                      (int)CV_YUV2RGBA_YUY2, (int)CV_YUV2BGRA_YUY2, (int)CV_YUV2RGBA_YVYU, (int)CV_YUV2BGRA_YVYU,
-                      (int)CV_YUV2GRAY_UYVY, (int)CV_YUV2GRAY_YUY2));
+    ::testing::Values((int)COLOR_YUV2RGB_UYVY, (int)COLOR_YUV2BGR_UYVY, (int)COLOR_YUV2RGBA_UYVY, (int)COLOR_YUV2BGRA_UYVY,
+                      (int)COLOR_YUV2RGB_YUY2, (int)COLOR_YUV2BGR_YUY2, (int)COLOR_YUV2RGB_YVYU, (int)COLOR_YUV2BGR_YVYU,
+                      (int)COLOR_YUV2RGBA_YUY2, (int)COLOR_YUV2BGRA_YUY2, (int)COLOR_YUV2RGBA_YVYU, (int)COLOR_YUV2BGRA_YVYU,
+                      (int)COLOR_YUV2GRAY_UYVY, (int)COLOR_YUV2GRAY_YUY2));
+
+}} // namespace
