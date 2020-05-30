@@ -458,7 +458,7 @@ public:
 
     /** @brief Starts to write a nested structure (sequence or a mapping).
     @param name name of the structure (if it's a member of parent mapping, otherwise it should be empty
-    @param flags type of the structure (FileNode::MAP[|FileNode::FLOW] or FileNode::SEQ[|FileNode::FLOW]).
+    @param flags type of the structure (FileNode::MAP or FileNode::SEQ (both with optional FileNode::FLOW)).
     @param typeName usually an empty string
     */
     CV_WRAP void startWriteStruct(const String& name, int flags, const String& typeName=String());
