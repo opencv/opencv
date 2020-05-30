@@ -1,3 +1,10 @@
+# VTK 9.0
+find_package(VTK QUIET NAMES vtk COMPONENTS InteractionStyle RenderingLOD IOPLY FiltersTexture RenderingFreeType IOExport IOGeometry FiltersExtraction RenderingCore NO_MODULE)
+if(VTK_FOUND)
+  set(HAVE_VTK ON)
+  return()
+endif()
+
 # VTK 6.x components
 find_package(VTK QUIET COMPONENTS vtkInteractionStyle vtkRenderingLOD vtkIOPLY vtkFiltersTexture vtkRenderingFreeType vtkIOExport NO_MODULE)
 IF(VTK_FOUND)
