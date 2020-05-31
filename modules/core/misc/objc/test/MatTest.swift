@@ -270,7 +270,6 @@ class MatTests: OpenCVTestCase {
         let m = try getTestMat(size: 5, type: CvType.CV_8UC2)
 
         // whole Mat
-        print(m.get(row: 4, col: 4))
         XCTAssert([0.0, 1.0] == m.get(row: 0, col: 0))
         XCTAssert([240, 241] == m.get(row: 2, col: 4))
         XCTAssert([255, 255] == m.get(row: 4, col: 4))

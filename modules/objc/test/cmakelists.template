@@ -23,7 +23,7 @@ add_library(OpenCVTest STATIC dummy/dummy.mm)
 enable_language(Swift)
 
 # XCTest for Framework
-xctest_add_bundle(OpenCVTestTests OpenCVTest ${test_sources} test/resources ${FRAMEWORK_DIR}/OpenCV.framework)
+xctest_add_bundle(OpenCVTestTests OpenCVTest ${test_sources} test/resources ${FRAMEWORK_DIR}/${FRAMEWORK_NAME}.framework)
 set_target_properties(OpenCVTestTests PROPERTIES XCODE_ATTRIBUTE_FRAMEWORK_SEARCH_PATHS "${FRAMEWORK_DIR}")
 
 # link necessary Frameworks

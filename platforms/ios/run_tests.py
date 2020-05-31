@@ -17,11 +17,12 @@ def execute(cmd, cwd = None):
         raise Exception("Child returned:", retcode)
 
 class TestRunner:
-    def __init__(self, script_dir, tests_dir, build_dir, framework_dir, arch, target, platform):
+    def __init__(self, script_dir, tests_dir, build_dir, framework_dir, framework_name, arch, target, platform):
         self.script_dir = script_dir
         self.tests_dir = tests_dir
         self.build_dir = build_dir
         self.framework_dir = framework_dir
+        self.framework_name = framework_name
         self.arch = arch
         self.target = target
         self.platform = platform
@@ -50,6 +51,7 @@ class TestRunner:
             "cmake",
             "-GXcode",
             "-DFRAMEWORK_DIR=%s" % self.framework_dir,
+            "-DFRAMEWORK_NAME=%s" % self.framework_name,
         ]
         return args
 
@@ -97,6 +99,7 @@ if __name__ == "__main__":
     parser.add_argument('tests_dir', metavar='TEST_DIR', help='folder where test files are located')
     parser.add_argument('--build_dir', default=None, help='folder where test will be built (default is "../test_build" relative to tests_dir)')
     parser.add_argument('--framework_dir', default=None, help='folder where OpenCV framework is located')
+    parser.add_argument('--framework_name', default='opencv2', help='Name of OpenCV framework (default: opencv2, will change to OpenCV in future version)')
     parser.add_argument('--iphoneos_deployment_target', default=os.environ.get('IPHONEOS_DEPLOYMENT_TARGET', IPHONEOS_DEPLOYMENT_TARGET), help='specify IPHONEOS_DEPLOYMENT_TARGET')
     parser.add_argument('--platform', default='iOS Simulator,name=iPhone 11', help='xcodebuild platform parameter (default is iOS 11 simulator)')
     args = parser.parse_args()
@@ -107,5 +110,5 @@ if __name__ == "__main__":
     target = "iPhoneSimulator"
     print('Using iPhoneSimulator ARCH=' + arch)
 
-    r = iOSTestRunner(script_dir, args.tests_dir, args.build_dir if args.build_dir else os.path.join(args.tests_dir, "../test_build"), args.framework_dir, arch, target, args.platform)
+    r = iOSTestRunner(script_dir, args.tests_dir, args.build_dir if args.build_dir else os.path.join(args.tests_dir, "../test_build"), args.framework_dir, args.framework_name, arch, target, args.platform)
     r.run()

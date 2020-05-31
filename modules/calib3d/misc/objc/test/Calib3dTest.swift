@@ -105,7 +105,6 @@ class Calib3dTest: OpenCVTestCase {
         let size:Int32 = 300
         let img = Mat(rows:size, cols: size, type: CvType.CV_8U)
         img.setTo(scalar: Scalar(255))
-        print(img.dump())
         let centers = Mat()
 
         XCTAssertFalse(Calib3d.findCirclesGrid(image: img, patternSize: Size(width: 3, height: 5), centers: centers, flags: Calib3d.CALIB_CB_CLUSTERING | Calib3d.CALIB_CB_ASYMMETRIC_GRID))

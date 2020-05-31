@@ -119,7 +119,7 @@ class Builder:
         self.makeFramework(outdir, dirs)
         if self.build_objc_wrapper:
             print("To run tests call:")
-            print(sys.argv[0].replace("build_framework", "run_tests") + " --framework_dir=" +  outdir + " " + dirs[0] +  "/modules/objc/test")
+            print(sys.argv[0].replace("build_framework", "run_tests") + " --framework_dir=" + outdir + " --framework_name=" + self.framework_name + " " + dirs[0] +  "/modules/objc/test")
             self.copy_samples(outdir)
 
     def build(self, outdir):
@@ -354,7 +354,23 @@ class iOSBuilder(Builder):
 
     def copy_samples(self, outdir):
         print('Copying samples to: ' + outdir)
-        shutil.copytree(os.path.join(self.opencv, "samples", "swift", "ios"), os.path.join(outdir, "samples"))
+        samples_dir = os.path.join(outdir, "samples")
+        shutil.copytree(os.path.join(self.opencv, "samples", "swift", "ios"), samples_dir)
+        if self.framework_name != "OpenCV":
+            for dirname, dirs, files in os.walk(samples_dir):
+                for filename in files:
+                    if not filename.endswith((".h", ".swift", ".pbxproj")):
+                        continue
+                    filepath = os.path.join(dirname, filename)
+                    with open(filepath) as file:
+                        body = file.read()
+                    body = body.replace("import OpenCV", "import " + self.framework_name)
+                    body = body.replace("#import <OpenCV/OpenCV.h>", "#import <" + self.framework_name + "/" + self.framework_name + ".h>")
+                    body = body.replace("OpenCV.framework", self.framework_name + ".framework")
+                    body = body.replace("../../OpenCV/**", "../../" + self.framework_name + "/**")
+                    with open(filepath, "w") as file:
+                        file.write(body)
+
 
 if __name__ == "__main__":
     folder = os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), "../.."))
@@ -372,7 +388,7 @@ if __name__ == "__main__":
     parser.add_argument('--enable_nonfree', default=False, dest='enablenonfree', action='store_true', help='enable non-free modules (disabled by default)')
     parser.add_argument('--debug', default=False, dest='debug', action='store_true', help='Build "Debug" binaries (disabled by default)')
     parser.add_argument('--debug_info', default=False, dest='debug_info', action='store_true', help='Build with debug information (useful for Release mode: BUILD_WITH_DEBUG_INFO=ON)')
-    parser.add_argument('--framework_name', default='OpenCV', dest='framework_name', action='store_true', help='Name of OpenCV framework (default: OpenCV, set to opencv2 for compatibility with old framework version)')
+    parser.add_argument('--framework_name', default='opencv2', dest='framework_name', action='store_true', help='Name of OpenCV framework (default: opencv2, will change to OpenCV in future version)')
     parser.add_argument('--legacy_build', default=False, dest='legacy_build', action='store_true', help='Build legacy opencv2 framework (default: False, equivalent to "--framework_name=opencv2 --without=objc")')
     args = parser.parse_args()
 

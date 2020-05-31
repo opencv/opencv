@@ -1144,6 +1144,17 @@ typedef NS_ENUM(int, {2}) {{
         mkdir_p("./test_build")
         mkdir_p("./doc_build")
         copyfile(os.path.join(SCRIPT_DIR, '../doc/README.md'), "./doc_build/README.md")
+        if framework_name != "OpenCV":
+            for dirname, dirs, files in os.walk(os.path.join(testdir, "test")):
+                for filename in files:
+                    filepath = os.path.join(dirname, filename)
+                    with open(filepath) as file:
+                        body = file.read()
+                    body = body.replace("import OpenCV", "import " + framework_name)
+                    body = body.replace("#import <OpenCV/OpenCV.h>", "#import <" + framework_name + "/" + framework_name + ".h>")
+                    with open(filepath, "w") as file:
+                        file.write(body)
+
 
 def copy_objc_files(objc_files_dir, objc_base_path, module_path, include = False):
     global total_files, updated_files
