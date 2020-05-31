@@ -7,6 +7,7 @@
 #import "DetectionBasedTracker.h"
 #import "Mat.h"
 #import "Rect2i.h"
+#import "CVObjcUtil.h"
 
 class CascadeDetectorAdapter: public cv::DetectionBasedTracker::IDetector
 {
@@ -78,7 +79,7 @@ struct DetectorAgregator
     std::vector<cv::Rect> rectFaces;
     agregator->tracker->process(*((cv::Mat*)imageGray.nativePtr));
     agregator->tracker->getObjects(rectFaces);
-    CV2OBJC(cv::Rect2i, Rect2i, rectFaces, faces);
+    CV2OBJC(cv::Rect, Rect2i, rectFaces, faces);
 }
 
 @end

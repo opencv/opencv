@@ -118,7 +118,7 @@ class ViewController: UIViewController, CvVideoCameraDelegate2 {
         let pointMatHsv = Mat(rows: 1, cols: 1, type: CvType.CV_8UC3, scalar: hsvColor)
         Imgproc.cvtColor(src: pointMatHsv, dst: pointMatRgba, code: .COLOR_HSV2RGB_FULL, dstCn: 4)
         let elementData = pointMatRgba.get(row: 0, col: 0)
-        return Scalar(vals: elementData)
+        return Scalar(vals: elementData as [NSNumber])
     }
 
 }

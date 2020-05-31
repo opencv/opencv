@@ -5,7 +5,6 @@
 //
 
 import OpenCV
-import OpenCV.ArrayUtil
 
 public class ColorBlobDetector {
     // Lower and Upper bounds for range checking in HSV color space
@@ -35,8 +34,8 @@ public class ColorBlobDetector {
         let spectrumHsv = Mat(rows: 1, cols: (Int32)(maxH-minH), type:CvType.CV_8UC3);
 
         for j:Int32 in 0..<Int32(maxH - minH) {
-            let tmp:[NSNumber] = [NSNumber(value: Int32(minH) + j), 255, 255]
-            spectrumHsv.put(row: 0, col: j, data: tmp)
+            let tmp:[Double] = [Double(Int32(minH) + j), 255, 255]
+            try! spectrumHsv.put(row: 0, col: j, data: tmp)
         }
 
         Imgproc.cvtColor(src: spectrumHsv, dst: spectrum, code: .COLOR_HSV2RGB_FULL, dstCn: 4)
