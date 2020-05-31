@@ -77,7 +77,8 @@ extern "C" {
 
 #include <libavutil/mathematics.h>
 
-#if LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(57,100,100)
+#if LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(57,100,100) && \
+    !defined __APPLE__
   #define ENABLE_FFMPEG_HW_SELECTION
   #include <libavutil/hwcontext.h>
   #include <libavutil/pixfmt.h>
@@ -948,9 +949,6 @@ AVPixelFormat CvCapture_FFMPEG::find_fmt_by_hw_type(const AVHWDeviceType type)
     case AV_HWDEVICE_TYPE_D3D11VA:
         fmt = AV_PIX_FMT_D3D11;
         break;
-    case AV_HWDEVICE_TYPE_VIDEOTOOLBOX:
-        fmt = AV_PIX_FMT_VIDEOTOOLBOX;
-        break;
     case AV_HWDEVICE_TYPE_CUDA:
         fmt = AV_PIX_FMT_CUDA;
         break;
@@ -968,9 +966,9 @@ int CvCapture_FFMPEG::init_hw(AVCodecContext *ctx, const char *hwaccel, const ch
 {
     const AVHWDeviceType hw_accel_type = av_hwdevice_find_type_by_name(hwaccel);
 
-    if (hw_accel_type == AV_HWDEVICE_TYPE_VDPAU)
+    if (hw_accel_type == AV_HWDEVICE_TYPE_VDPAU || hw_accel_type == AV_HWDEVICE_TYPE_VIDEOTOOLBOX)
     {
-        av_log(ctx, AV_LOG_ERROR, "VDPAU HW not supported by OpenCV\n");
+        av_log(ctx, AV_LOG_ERROR, "HW not supported by OpenCV\n");
         return -1;
     }
 
