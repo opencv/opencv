@@ -103,7 +103,7 @@ class filestorage_io_test(NewOpenCVTests):
     def test_xml(self):
         self.run_fs_test(".xml")
 
-    def test_xml(self):
+    def test_yml(self):
         self.run_fs_test(".yml")
 
     def test_json(self):
