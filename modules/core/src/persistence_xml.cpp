@@ -853,7 +853,7 @@ void icvXMLWriteScalar( CvFileStorage* fs, const char* key, const char* data, in
         char* ptr = fs->buffer;
         int new_offset = (int)(ptr - fs->buffer_start) + len;
 
-        if( key )
+        if( key && key[0] != '\0' )
             CV_Error( CV_StsBadArg, "elements with keys can not be written to sequence" );
 
         fs->struct_flags = CV_NODE_SEQ;
