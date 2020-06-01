@@ -429,7 +429,7 @@ public:
     /** @brief Writes the registered C structure (CvMat, CvMatND, CvSeq).
     @param name Name of the written object.
     @param obj Pointer to the object.
-    @see ocvWrite for details.
+    @see cvWrite for details.
      */
     void writeObj( const String& name, const void* obj );
 
@@ -455,6 +455,17 @@ public:
     line, the comment starts a new line.
      */
     CV_WRAP void writeComment(const String& comment, bool append = false);
+
+    /** @brief Starts to write a nested structure (sequence or a mapping).
+    @param name name of the structure (if it's a member of parent mapping, otherwise it should be empty
+    @param flags type of the structure (FileNode::MAP or FileNode::SEQ (both with optional FileNode::FLOW)).
+    @param typeName usually an empty string
+    */
+    CV_WRAP void startWriteStruct(const String& name, int flags, const String& typeName=String());
+
+    /** @brief Finishes writing nested structure (should pair startWriteStruct())
+    */
+    CV_WRAP void endWriteStruct();
 
     /** @brief Returns the normalized object name for the specified name of a file.
     @param filename Name of a file
