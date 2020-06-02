@@ -229,13 +229,12 @@ public:
     }
     virtual bool retrieveFrame(int, cv::OutputArray frame) CV_OVERRIDE
     {
-        unsigned char* data = 0;
-        int step=0, width=0, height=0, cn=0;
-
+        cv::Mat mat;
         if (!ffmpegCapture ||
-           !icvRetrieveFrame_FFMPEG_p(ffmpegCapture, &data, &step, &width, &height, &cn))
+           !icvRetrieveFrame_FFMPEG_p(ffmpegCapture, mat))
             return false;
-        cv::Mat(height, width, CV_MAKETYPE(CV_8U, cn), data, step).copyTo(frame);
+
+        mat.copyTo(frame);
         return true;
     }
     virtual bool open( const cv::String& filename )
@@ -262,6 +261,8 @@ public:
 
 protected:
     CvCapture_FFMPEG* ffmpegCapture;
+private:
+
 };
 
 } // namespace

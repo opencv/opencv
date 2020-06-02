@@ -28,7 +28,9 @@ enum
     CV_FFMPEG_CAP_PROP_SAR_NUM=40,
     CV_FFMPEG_CAP_PROP_SAR_DEN=41,
     CV_FFMPEG_CAP_PROP_CODEC_PIXEL_FORMAT=46,
-    CV_FFMPEG_CAP_PROP_BITRATE=47
+    CV_FFMPEG_CAP_PROP_BITRATE=47,
+    CV_FFMPEG_CAP_PROP_ORIENTATION_META=48,
+    CV_FFMPEG_CAP_PROP_ORIENTATION_AUTO=49
 };
 
 typedef struct CvCapture_FFMPEG CvCapture_FFMPEG;
@@ -39,8 +41,7 @@ OPENCV_FFMPEG_API int cvSetCaptureProperty_FFMPEG(struct CvCapture_FFMPEG* cap,
                                                   int prop, double value);
 OPENCV_FFMPEG_API double cvGetCaptureProperty_FFMPEG(struct CvCapture_FFMPEG* cap, int prop);
 OPENCV_FFMPEG_API int cvGrabFrame_FFMPEG(struct CvCapture_FFMPEG* cap);
-OPENCV_FFMPEG_API int cvRetrieveFrame_FFMPEG(struct CvCapture_FFMPEG* capture, unsigned char** data,
-                                             int* step, int* width, int* height, int* cn);
+OPENCV_FFMPEG_API int cvRetrieveFrame_FFMPEG(struct CvCapture_FFMPEG* capture, cv::Mat &mat);
 OPENCV_FFMPEG_API void cvReleaseCapture_FFMPEG(struct CvCapture_FFMPEG** cap);
 
 OPENCV_FFMPEG_API struct CvVideoWriter_FFMPEG* cvCreateVideoWriter_FFMPEG(const char* filename,
@@ -52,8 +53,7 @@ OPENCV_FFMPEG_API void cvReleaseVideoWriter_FFMPEG(struct CvVideoWriter_FFMPEG**
 typedef CvCapture_FFMPEG* (*CvCreateFileCapture_Plugin)( const char* filename );
 typedef CvCapture_FFMPEG* (*CvCreateCameraCapture_Plugin)( int index );
 typedef int (*CvGrabFrame_Plugin)( CvCapture_FFMPEG* capture_handle );
-typedef int (*CvRetrieveFrame_Plugin)( CvCapture_FFMPEG* capture_handle, unsigned char** data, int* step,
-                                       int* width, int* height, int* cn );
+typedef int (*CvRetrieveFrame_Plugin)( CvCapture_FFMPEG* capture_handle, cv::Mat &mat);
 typedef int (*CvSetCaptureProperty_Plugin)( CvCapture_FFMPEG* capture_handle, int prop_id, double value );
 typedef double (*CvGetCaptureProperty_Plugin)( CvCapture_FFMPEG* capture_handle, int prop_id );
 typedef void (*CvReleaseCapture_Plugin)( CvCapture_FFMPEG** capture_handle );

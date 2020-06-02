@@ -481,7 +481,8 @@ struct CvCapture_FFMPEG
     double getProperty(int) const;
     bool setProperty(int, double);
     bool grabFrame();
-    bool retrieveFrame(int, unsigned char** data, int* step, int* width, int* height, int* cn);
+    bool retrieveFrame(int, cv::Mat &mat);
+    void rotateFrame(cv::Mat &mat) const;
 
     void init();
 
@@ -497,6 +498,7 @@ struct CvCapture_FFMPEG
     double  r2d(AVRational r) const;
     int64_t dts_to_frame_number(int64_t dts);
     double  dts_to_sec(int64_t dts) const;
+    void    get_rotation_angle();
 
     AVFormatContext * ic;
     AVCodec         * avcodec;
@@ -512,6 +514,8 @@ struct CvCapture_FFMPEG
 
     int64_t frame_number, first_frame_number;
 
+    bool   rotation_auto;
+    int    rotation_angle; // valid 0, 90, 180, 270
     double eps_zero;
 /*
    'filename' contains the filename of the videosource,
@@ -559,6 +563,9 @@ void CvCapture_FFMPEG::init()
     avcodec = 0;
     frame_number = 0;
     eps_zero = 0.000025;
+
+    rotation_auto = true;
+    rotation_angle = 0;
 
 #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(52, 111, 0)
     dict = NULL;
@@ -1032,6 +1039,7 @@ bool CvCapture_FFMPEG::open( const char* _filename )
             frame.cn = 3;
             frame.step = 0;
             frame.data = NULL;
+            get_rotation_angle();
             break;
         }
     }
@@ -1279,8 +1287,7 @@ bool CvCapture_FFMPEG::grabFrame()
     return valid;
 }
 
-
-bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* width, int* height, int* cn)
+bool CvCapture_FFMPEG::retrieveFrame(int, cv::Mat &mat)
 {
     if (!video_st)
         return false;
@@ -1288,12 +1295,11 @@ bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* 
     if (rawMode)
     {
         AVPacket& p = bsfc ? packet_filtered : packet;
-        *data = p.data;
-        *step = p.size;
-        *width = p.size;
-        *height = 1;
-        *cn = 1;
-        return p.data != NULL;
+        if (p.data == NULL)
+            return false;
+
+        mat = cv::Mat(1, p.size, CV_MAKETYPE(CV_8U, 1), p.data, p.size);
+        return true;
     }
 
     if (!picture->data[0])
@@ -1356,15 +1362,29 @@ bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* 
             rgb_picture.linesize
             );
 
-    *data = frame.data;
-    *step = frame.step;
-    *width = frame.width;
-    *height = frame.height;
-    *cn = frame.cn;
-
+    mat = cv::Mat(frame.height, frame.width, CV_MAKETYPE(CV_8U, frame.cn), frame.data, frame.step);
+    rotateFrame(mat);
     return true;
 }
 
+void CvCapture_FFMPEG::rotateFrame(cv::Mat &mat) const {
+    if(!rotation_auto || rotation_angle%360 == 0) {
+        return;
+    }
+
+    cv::RotateFlags flag;
+    if(rotation_angle == 90 || rotation_angle == -270) { // Rotate clockwise 90 degrees
+        flag = cv::ROTATE_90_CLOCKWISE;
+    } else if(rotation_angle == 270 || rotation_angle == -90) { // Rotate clockwise 270 degrees
+        flag = cv::ROTATE_90_COUNTERCLOCKWISE;
+    } else if(rotation_angle == 180 || rotation_angle == -180) { // Rotate clockwise 180 degrees
+        flag = cv::ROTATE_180;
+    } else { // Unsupported rotation
+        return;
+    }
+
+    cv::rotate(mat, mat, flag);
+}
 
 double CvCapture_FFMPEG::getProperty( int property_id ) const
 {
@@ -1389,9 +1409,9 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
     case CV_FFMPEG_CAP_PROP_FRAME_COUNT:
         return (double)get_total_frames();
     case CV_FFMPEG_CAP_PROP_FRAME_WIDTH:
-        return (double)frame.width;
+        return (double)((rotation_auto && rotation_angle%360) ? frame.height : frame.width);
     case CV_FFMPEG_CAP_PROP_FRAME_HEIGHT:
-        return (double)frame.height;
+        return (double)((rotation_auto && rotation_angle%360) ? frame.width : frame.height);
     case CV_FFMPEG_CAP_PROP_FPS:
         return get_fps();
     case CV_FFMPEG_CAP_PROP_FOURCC:
@@ -1435,6 +1455,10 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
         break;
     case CV_FFMPEG_CAP_PROP_BITRATE:
         return static_cast<double>(get_bitrate());
+    case CV_FFMPEG_CAP_PROP_ORIENTATION_META:
+        return static_cast<double>(rotation_angle);
+    case CV_FFMPEG_CAP_PROP_ORIENTATION_AUTO:
+        return static_cast<double>(rotation_auto);
     default:
         break;
     }
@@ -1511,6 +1535,14 @@ double CvCapture_FFMPEG::dts_to_sec(int64_t dts) const
 {
     return (double)(dts - ic->streams[video_stream]->start_time) *
         r2d(ic->streams[video_stream]->time_base);
+}
+
+void CvCapture_FFMPEG::get_rotation_angle()
+{
+    rotation_angle = 0;
+    AVDictionaryEntry *rotate_tag = av_dict_get(video_st->metadata, "rotate", NULL, 0);
+    if (rotate_tag != NULL)
+        rotation_angle = atoi(rotate_tag->value);
 }
 
 void CvCapture_FFMPEG::seek(int64_t _frame_number)
@@ -1608,6 +1640,9 @@ bool CvCapture_FFMPEG::setProperty( int property_id, double value )
         if (value == -1)
             return setRaw();
         return false;
+    case CV_FFMPEG_CAP_PROP_ORIENTATION_AUTO:
+        rotation_auto = static_cast<bool>(value);
+        break;
     default:
         return false;
     }
@@ -2635,9 +2670,9 @@ int cvGrabFrame_FFMPEG(CvCapture_FFMPEG* capture)
     return capture->grabFrame();
 }
 
-int cvRetrieveFrame_FFMPEG(CvCapture_FFMPEG* capture, unsigned char** data, int* step, int* width, int* height, int* cn)
+int cvRetrieveFrame_FFMPEG(CvCapture_FFMPEG* capture, cv::Mat &mat)
 {
-    return capture->retrieveFrame(0, data, step, width, height, cn);
+    return capture->retrieveFrame(0, mat);
 }
 
 CvVideoWriter_FFMPEG* cvCreateVideoWriter_FFMPEG( const char* filename, int fourcc, double fps,
