@@ -1,5 +1,16 @@
 # VTK 9.0
-find_package(VTK 9 QUIET NAMES vtk COMPONENTS InteractionStyle RenderingLOD IOPLY FiltersTexture RenderingFreeType IOExport IOGeometry FiltersExtraction RenderingCore NO_MODULE)
+find_package(VTK 9 QUIET NAMES vtk COMPONENTS
+    FiltersExtraction
+    FiltersSources
+    FiltersTexture
+    IOExport
+    IOGeometry
+    IOPLY
+    InteractionStyle
+    RenderingCore
+    RenderingLOD
+    RenderingOpenGL2
+    NO_MODULE)
 if(VTK_FOUND)
   set(HAVE_VTK ON)
   return()
