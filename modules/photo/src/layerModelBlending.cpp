@@ -127,3 +127,4 @@ CV_EXPORTS_W void layerModelBlending(InputArray _target, InputArray _blend, Outp
         }
     }
 }
+}
