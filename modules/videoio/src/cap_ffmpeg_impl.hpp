@@ -497,6 +497,7 @@ struct CvCapture_FFMPEG
     double  r2d(AVRational r) const;
     int64_t dts_to_frame_number(int64_t dts);
     double  dts_to_sec(int64_t dts) const;
+    int     get_rotation_angle() const;
 
     AVFormatContext * ic;
     AVCodec         * avcodec;
@@ -1435,6 +1436,8 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
         break;
     case CV_FFMPEG_CAP_PROP_BITRATE:
         return static_cast<double>(get_bitrate());
+    case CV_FFMPEG_CAP_PROP_ORIENTATION_META:
+        return static_cast<double>(get_rotation_angle());
     default:
         break;
     }
@@ -1511,6 +1514,16 @@ double CvCapture_FFMPEG::dts_to_sec(int64_t dts) const
 {
     return (double)(dts - ic->streams[video_stream]->start_time) *
         r2d(ic->streams[video_stream]->time_base);
+}
+
+int CvCapture_FFMPEG::get_rotation_angle() const
+{
+    int angle = 0;
+    AVDictionaryEntry *rotate_tag = av_dict_get(video_st->metadata, "rotate", NULL, 0);
+    if (rotate_tag != NULL)
+        angle = atoi(rotate_tag->value);
+
+    return angle;
 }
 
 void CvCapture_FFMPEG::seek(int64_t _frame_number)
