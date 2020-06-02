@@ -880,9 +880,9 @@ enum
 /** @brief This function can achieve 17 types including DARKEN、MULTIPY、COLOR_BURN、etc layer model blending effects
 check the notes to learn more.
 
-@param target Input 8-bit 3-channel image.
-@param blend  Input 8-bit 3-channel image.
-@param dst Output 8-bit 3-channel image.
+@param target input image - CV_32FC3 Mat (float 32 bits 3 channels)
+@param blend input image - CV_32FC3 Mat (float 32 bits 3 channels).Same size of target.
+@param dst Output image - CV_32FC3 Mat (float 32 bits 3 channels)
 @param flag layerModelBlending algorithm : CV::DARKEN、CV::MULTIPY、CV::COLOR_BURN 、CV::LINEAR_BRUN
 、CV::LIGHTEN 、CV::SCREEN 、CV::COLOR_DODGE 、CV::LINEAR_DODGE 、CV::OVERLAY、CV::SOFT_LIGHT、CV::HARD_LIGHT、
 CV::VIVID_LIGHT、CV::LINEAR_LIGHT、CV::PIN_LIGHT、CV::DIFFERENCE、CV::EXCLUSION 、CV::DIVIDE
