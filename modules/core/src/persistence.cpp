@@ -1792,10 +1792,47 @@ FileStorage::FileStorage()
 FileStorage::FileStorage(const String& filename, int flags, const String& encoding)
     : state(0)
 {
+    // Assigns the encoding field with the one passed in
+    this->encoding = encoding;
+
     p = makePtr<FileStorage::Impl>(this);
     bool ok = p->open(filename.c_str(), flags, encoding.c_str());
     if(ok)
         state = FileStorage::NAME_EXPECTED + FileStorage::INSIDE_MAP;
+}
+
+FileStorage::FileStorage(const FileStorage& other) : state(0)
+{
+    // Assign this->encoding to other.encoding
+    this->encoding = other.encoding;
+
+    p = makePtr<FileStorage::Impl>(this);
+    bool ok = p->open(other.p->filename.c_str(), other.p->flags, other.encoding.c_str());
+    if (ok)
+        state = FileStorage::NAME_EXPECTED + FileStorage::INSIDE_MAP;
+
+}
+
+FileStorage& FileStorage::operator=(const FileStorage& other)
+{
+    // Takes care of possible self-assignments
+    if (this == &other)
+    {
+        return *this;
+    }
+
+    // Releases the file handled by this
+    this->p.release();
+
+    // Get other's encoding
+    this->encoding = other.encoding;
+
+    this->p = makePtr<FileStorage::Impl>(this);
+    bool ok = this->p->open(other.p->filename.c_str(), other.p->flags, other.encoding.c_str());
+    if (ok)
+        this->state = FileStorage::NAME_EXPECTED + FileStorage::INSIDE_MAP;
+
+    return *this;
 }
 
 void FileStorage::startWriteStruct(const String& name, int struct_flags, const String& typeName)
@@ -1826,6 +1863,10 @@ bool FileStorage::open(const String& filename, int flags, const String& encoding
 {
     try
     {
+        // Added the initialize encoding line here just in case user makes a default FileStorage
+        // object and uses open() afterwards
+        this->encoding = encoding;
+
         bool ok = p->open(filename.c_str(), flags, encoding.c_str());
         if(ok)
             state = FileStorage::NAME_EXPECTED + FileStorage::INSIDE_MAP;
