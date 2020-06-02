@@ -8,7 +8,7 @@ To get started: add the OpenCV framework to your project and add the following t
 
     #import <OpenCV/OpenCV.h>
 
-###Swift 
+###Swift
 
     import OpenCV
 
