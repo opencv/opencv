@@ -11,8 +11,8 @@
 
 @implementation MatOfFloat6
 
-const int _depth = CV_32F;
-const int _channels = 6;
+static const int _depth = CV_32F;
+static const int _channels = 6;
 
 #ifdef __cplusplus
 - (instancetype)initWithNativeMat:(cv::Mat*)nativeMat {

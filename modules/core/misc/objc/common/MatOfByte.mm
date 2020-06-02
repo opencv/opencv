@@ -11,8 +11,8 @@
 
 @implementation MatOfByte
 
-const int _depth = CV_8U;
-const int _channels = 1;
+static const int _depth = CV_8U;
+static const int _channels = 1;
 
 #ifdef __cplusplus
 - (instancetype)initWithNativeMat:(cv::Mat*)nativeMat {

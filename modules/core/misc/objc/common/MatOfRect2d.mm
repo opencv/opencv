@@ -12,8 +12,8 @@
 
 @implementation MatOfRect2d
 
-const int _depth = CV_64F;
-const int _channels = 4;
+static const int _depth = CV_64F;
+static const int _channels = 4;
 
 #ifdef __cplusplus
 - (instancetype)initWithNativeMat:(cv::Mat*)nativeMat {

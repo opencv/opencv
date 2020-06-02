@@ -11,8 +11,8 @@
 
 @implementation MatOfInt
 
-const int _depth = CV_32S;
-const int _channels = 1;
+static const int _depth = CV_32S;
+static const int _channels = 1;
 
 #ifdef __cplusplus
 - (instancetype)initWithNativeMat:(cv::Mat*)nativeMat {

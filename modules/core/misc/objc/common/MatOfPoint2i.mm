@@ -12,8 +12,8 @@
 
 @implementation MatOfPoint2i
 
-const int _depth = CV_32S;
-const int _channels = 2;
+static const int _depth = CV_32S;
+static const int _channels = 2;
 
 #ifdef __cplusplus
 - (instancetype)initWithNativeMat:(cv::Mat*)nativeMat {

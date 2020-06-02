@@ -14,8 +14,8 @@
 
 @implementation MatOfRotatedRect
 
-const int _depth = CV_32F;
-const int _channels = 5;
+static const int _depth = CV_32F;
+static const int _channels = 5;
 
 #ifdef __cplusplus
 - (instancetype)initWithNativeMat:(cv::Mat*)nativeMat {

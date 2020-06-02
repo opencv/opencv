@@ -11,8 +11,8 @@
 
 @implementation MatOfDouble
 
-const int _depth = CV_64F;
-const int _channels = 1;
+static const int _depth = CV_64F;
+static const int _channels = 1;
 
 #ifdef __cplusplus
 - (instancetype)initWithNativeMat:(cv::Mat*)nativeMat {
