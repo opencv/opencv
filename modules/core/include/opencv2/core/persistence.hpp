@@ -340,6 +340,12 @@ public:
      */
     CV_WRAP FileStorage(const String& filename, int flags, const String& encoding=String());
 
+    /** @brief Copy constructor for FileStorage
+
+    This copy constructor creates a deep copy the passed in FileStorage object
+    */
+    CV_WRAP FileStorage(const FileStorage& other);
+
     //! the destructor. calls release()
     virtual ~FileStorage();
 
@@ -398,6 +404,12 @@ public:
      */
     FileNode operator[](const String& nodename) const;
 
+    /** @brief Overloaded assignment operator for FileStorage objects
+    @param other FileStorage object on right hand side of assignment
+    @returns A reference to a FileStorage object
+    */
+    FileStorage& operator=(const FileStorage& other);
+
     /** @overload */
     CV_WRAP_AS(getNode) FileNode operator[](const char* nodename) const;
 
@@ -455,6 +467,8 @@ public:
 
     class Impl;
     Ptr<Impl> p;
+    // Added encoding field to have a complete deep copy
+    std::string encoding;
 };
 
 /** @brief File Storage Node class.
