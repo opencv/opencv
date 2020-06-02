@@ -798,6 +798,7 @@ class CoreTest: OpenCVTestCase {
     }
 
     func testMahalanobis() {
+        Core.setRNGSeed(seed: 45)
         let src = Mat(rows: OpenCVTestCase.matSize, cols: OpenCVTestCase.matSize, type: CvType.CV_32F)
         Core.randu(dst: src, low: -128, high: 128)
 
