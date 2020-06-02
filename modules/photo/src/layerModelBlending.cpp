@@ -34,131 +34,97 @@ static inline float safe_div(float a, float b)
 }
 CV_EXPORTS_W void layerModelBlending(InputArray _target, InputArray _blend, OutputArray _dst, int flag)
 {
+    CV_Assert(!_target.empty());
+    CV_Assert(!_blend.empty());
+    CV_Assert(_target.type() == CV_32FC3 && _blend.type() == CV_32FC3 );
+    CV_Assert(_target.size() == _blend.size());
+    
     Mat target = _target.getMat();
     Mat blend = _blend.getMat();
+    Size target_size = _target.size();
+    _dst.create(target_size,target.type());
     Mat dst = _dst.getMat();
+    int nr = target.rows;    
+    int nl = target.cols*target.channels();
 
-    for (int index_row = 0; index_row < target.rows; index_row++)
-        for (int index_col = 0; index_col < target.cols; index_col++)
-            for (int index_c = 0; index_c < 3; index_c++)
-                switch (flag)
-                {
+     for (int k = 0; k < nr; k++)
+    {    
+        const float* targetData = target.ptr<float>(k);
+        const float* blendData = blend.ptr<float>(k);
+        float* dstData = dst.ptr<float>(k);
+        for (int i = 0; i < nl; i++)
+        {
+            switch (flag)
+            {
                 case BLEND_MODEL_DARKEN:
-                    dst.at<Vec3f>(index_row, index_col)[index_c] = min(
-                        target.at<Vec3f>(index_row, index_col)[index_c],
-                        blend.at<Vec3f>(index_row, index_col)[index_c]);
-                    break;
+                dstData[i] = min(targetData[i], blendData[i]);
+                break;
                 case BLEND_MODEL_MULTIPY:
-                    dst.at<Vec3f>(index_row, index_col)[index_c] =
-                        target.at<Vec3f>(index_row, index_col)[index_c] *
-                        blend.at<Vec3f>(index_row, index_col)[index_c];
-                    break;
+                dstData[i] = targetData[i] * blendData[i];
+                break;
                 case BLEND_MODEL_COLOR_BURN:
-                    dst.at<Vec3f>(index_row, index_col)[index_c] = 1.0f -
-                        safe_div((1.0f - target.at<Vec3f>(index_row, index_col)[index_c]),
-                            blend.at<Vec3f>(index_row, index_col)[index_c]);
-                    break;
+                dstData[i] = 1 - safe_div((1 - targetData[i]), blendData[i]);
+                break;
                 case BLEND_MODEL_LINEAR_BRUN:
-                    dst.at<Vec3f>(index_row, index_col)[index_c] =
-                        target.at<Vec3f>(index_row, index_col)[index_c] +
-                        blend.at<Vec3f>(index_row, index_col)[index_c] - 1.0f;
-                    break;
+                dstData[i] = targetData[i] + blendData[i] - 1;
+                break;
                 case BLEND_MODEL_LIGHTEN:
-                    dst.at<Vec3f>(index_row, index_col)[index_c] = max(
-                        target.at<Vec3f>(index_row, index_col)[index_c],
-                        blend.at<Vec3f>(index_row, index_col)[index_c]);
-                    break;
+                dstData[i] = max(targetData[i], blendData[i]);
+                break;
                 case BLEND_MODEL_SCREEN:
-                    dst.at<Vec3f>(index_row, index_col)[index_c] = 1.0f -
-                        (1.0f - target.at<Vec3f>(index_row, index_col)[index_c]) *
-                        (1.0f - blend.at<Vec3f>(index_row, index_col)[index_c]);
-                    break;
+                dstData[i] = 1 - (1 - targetData[i])*(1 - blendData[i]);
+                break;
                 case BLEND_MODEL_COLOR_DODGE:
-                    dst.at<Vec3f>(index_row, index_col)[index_c] = safe_div
-                    (target.at<Vec3f>(index_row, index_col)[index_c],
-                        1.0f - blend.at<Vec3f>(index_row, index_col)[index_c]);
-                    break;
+                dstData[i] = safe_div(targetData[i], 1 - blendData[i]);
+                break;
                 case BLEND_MODEL_LINEAR_DODGE:
-                    dst.at<Vec3f>(index_row, index_col)[index_c] =
-                        target.at<Vec3f>(index_row, index_col)[index_c] +
-                        blend.at<Vec3f>(index_row, index_col)[index_c];
-                    break;
+                dstData[i] = targetData[i] + blendData[i];
+                break;
                 case BLEND_MODEL_OVERLAY:
-                    if (target.at<Vec3f>(index_row, index_col)[index_c] > 0.5f)
-                        dst.at<Vec3f>(index_row, index_col)[index_c] = 1.0f -
-                        (1.0f - 2.0f * (target.at<Vec3f>(index_row, index_col)[index_c] - 0.5f)) *
-                        (1.0f - blend.at<Vec3f>(index_row, index_col)[index_c]);
-                    else
-                        dst.at<Vec3f>(index_row, index_col)[index_c] = 2.0f *
-                        target.at<Vec3f>(index_row, index_col)[index_c] *
-                        blend.at<Vec3f>(index_row, index_col)[index_c];
-                    break;
+                if (targetData[i] > 0.5f)
+                    dstData[i] = 1 - (1 - 2 * (targetData[i] - 0.5))*(1 - blendData[i]);
+                else
+                    dstData[i] = 2 * targetData[i] * blendData[i];
                 case BLEND_MODEL_SOFT_LIGHT:
-                    if (target.at<Vec3f>(index_row, index_col)[index_c] > 0.5f)
-                        dst.at<Vec3f>(index_row, index_col)[index_c] = 1.0f -
-                        (1.0f - target.at<Vec3f>(index_row, index_col)[index_c]) *
-                        (1.0f - (blend.at<Vec3f>(index_row, index_col)[index_c] - 0.5f));
-                    else
-                        dst.at<Vec3f>(index_row, index_col)[index_c] =
-                        target.at<Vec3f>(index_row, index_col)[index_c] *
-                        (blend.at<Vec3f>(index_row, index_col)[index_c] + 0.5f);
-                    break;
+                if (targetData[i] > 0.5f)
+                    dstData[i] = 1 - (1 - targetData[i]) * (1 - (blendData[i] - 0.5));
+                else
+                    dstData[i] = targetData[i] * (blendData[i] + 0.5);
+                break;
                 case BLEND_MODEL_HARD_LIGHT:
-                    if (target.at<Vec3f>(index_row, index_col)[index_c] > 0.5f)
-                        dst.at<Vec3f>(index_row, index_col)[index_c] = 1.0f -
-                        (1.0f - target.at<Vec3f>(index_row, index_col)[index_c]) *
-                        (1 - 2 * blend.at<Vec3f>(index_row, index_col)[index_c] - 0.5f);
-                    else
-                        dst.at<Vec3f>(index_row, index_col)[index_c] =
-                        target.at<Vec3f>(index_row, index_col)[index_c] *
-                        (2 * blend.at<Vec3f>(index_row, index_col)[index_c]);
-                    break;
+                if (targetData[i] > 0.5f)
+                    dstData[i] = 1 - (1 - targetData[i])*(1 - 2 * blendData[i] - 0.5);
+                else
+                    dstData[i] = 2 * targetData[i] * blendData[i];
+                break;
                 case BLEND_MODEL_VIVID_LIGHT:
-                    if (target.at<Vec3f>(index_row, index_col)[index_c] > 0.5f)
-                        dst.at<Vec3f>(index_row, index_col)[index_c] = 1.0f -
-                        safe_div(1.0f - target.at<Vec3f>(index_row, index_col)[index_c],
-                        (2.0f * (blend.at<Vec3f>(index_row, index_col)[index_c] - 0.5f)));
-                    else
-                        dst.at<Vec3f>(index_row, index_col)[index_c] =
-                        safe_div(target.at<Vec3f>(index_row, index_col)[index_c],
-                        (1.0f - 2.0f * blend.at<Vec3f>(index_row, index_col)[index_c]));
-                    break;
+                if (targetData[i] > 0.5f)
+                    dstData[i] = 1 - safe_div((1 - targetData[i]), (2 * (blendData[i] - 0.5)));
+                else
+                    dstData[i] = safe_div(targetData[i], (1 - 2 * blendData[i]));
+                break;
                 case BLEND_MODEL_LINEAR_LIGHT:
-                    if (target.at<Vec3f>(index_row, index_col)[index_c] > 0.5f)
-                        dst.at<Vec3f>(index_row, index_col)[index_c] =
-                        target.at<Vec3f>(index_row, index_col)[index_c] +
-                        (2.0f * (blend.at<Vec3f>(index_row, index_col)[index_c] - 0.5f));
-                    else
-                        dst.at<Vec3f>(index_row, index_col)[index_c] =
-                        target.at<Vec3f>(index_row, index_col)[index_c] +
-                        2.0f * blend.at<Vec3f>(index_row, index_col)[index_c] - 1.0f;
-                    break;
+                if (targetData[i] > 0.5f)
+                    dstData[i] = targetData[i] + (2 * (blendData[i] - 0.5));
+                else
+                    dstData[i] = targetData[i] + 2 * blendData[i] - 1;
+                break;
                 case BLEND_MODEL_PIN_LIGHT:
-                    if (target.at<Vec3f>(index_row, index_col)[index_c] > 0.5f)
-                        dst.at<Vec3f>(index_row, index_col)[index_c] =
-                        max(target.at<Vec3f>(index_row, index_col)[index_c],
-                        (float)(2.0f * (blend.at<Vec3f>(index_row, index_col)[index_c] - 0.5f)));
-                    else
-                        dst.at<Vec3f>(index_row, index_col)[index_c] =
-                        min(target.at<Vec3f>(index_row, index_col)[index_c],
-                            2.0f * blend.at<Vec3f>(index_row, index_col)[index_c]);
-                    break;
+                if (targetData[i] > 0.5f)
+                    dstData[i] = max(targetData[i], (float)(2 * (blendData[i] - 0.5)));
+                else
+                    dstData[i] = min(targetData[i], (float)(2 * (blendData[i])));
+                break;
                 case BLEND_MODEL_DIFFERENCE:
-                    dst.at<Vec3f>(index_row, index_col)[index_c] =
-                        abs(target.at<Vec3f>(index_row, index_col)[index_c] -
-                            blend.at<Vec3f>(index_row, index_col)[index_c]);
-                    break;
+                dstData[i] = abs(targetData[i] - blendData[i]);
+                break;
                 case BLEND_MODEL_EXCLUSION:
-                    dst.at<Vec3f>(index_row, index_col)[index_c] =
-                        target.at<Vec3f>(index_row, index_col)[index_c] +
-                        blend.at<Vec3f>(index_row, index_col)[index_c] -
-                        2.0f * target.at<Vec3f>(index_row, index_col)[index_c] * blend.at<Vec3f>(index_row, index_col)[index_c];
-                    break;
+                dstData[i] = targetData[i] + blendData[i] - 2 * targetData[i] * blendData[i];
+                break;
                 case BLEND_MODEL_DIVIDE:
-                    dst.at<Vec3f>(index_row, index_col)[index_c] =
-                        safe_div(target.at<Vec3f>(index_row, index_col)[index_c],
-                            blend.at<Vec3f>(index_row, index_col)[index_c]);
-                    break;
-                }
-}
+                dstData[i] = safe_div(targetData[i], blendData[i]);
+                break;
+            }
+        }
+    }
 }
