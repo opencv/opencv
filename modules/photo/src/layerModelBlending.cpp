@@ -63,63 +63,63 @@ CV_EXPORTS_W void layerModelBlending(InputArray _target, InputArray _blend, Outp
                 dstData[i] = targetData[i] * blendData[i];
                 break;
                 case BLEND_MODEL_COLOR_BURN:
-                dstData[i] = 1 - safe_div((1 - targetData[i]), blendData[i]);
+                dstData[i] = 1.0f - safe_div((1.0f - targetData[i]), blendData[i]);
                 break;
                 case BLEND_MODEL_LINEAR_BRUN:
-                dstData[i] = targetData[i] + blendData[i] - 1;
+                dstData[i] = targetData[i] + blendData[i] - 1.0f;
                 break;
                 case BLEND_MODEL_LIGHTEN:
                 dstData[i] = max(targetData[i], blendData[i]);
                 break;
                 case BLEND_MODEL_SCREEN:
-                dstData[i] = 1 - (1 - targetData[i])*(1 - blendData[i]);
+                dstData[i] = 1.0f - (1 - targetData[i])*(1.0f - blendData[i]);
                 break;
                 case BLEND_MODEL_COLOR_DODGE:
-                dstData[i] = safe_div(targetData[i], 1 - blendData[i]);
+                dstData[i] = safe_div(targetData[i], 1.0f - blendData[i]);
                 break;
                 case BLEND_MODEL_LINEAR_DODGE:
                 dstData[i] = targetData[i] + blendData[i];
                 break;
                 case BLEND_MODEL_OVERLAY:
                 if (targetData[i] > 0.5f)
-                    dstData[i] = 1 - (1 - 2 * (targetData[i] - 0.5))*(1 - blendData[i]);
+                    dstData[i] = 1.0f - (1.0f - 2.0f * (targetData[i] - 0.5))*(1.0f - blendData[i]);
                 else
-                    dstData[i] = 2 * targetData[i] * blendData[i];
+                    dstData[i] = 2.0f * targetData[i] * blendData[i];
                 case BLEND_MODEL_SOFT_LIGHT:
                 if (targetData[i] > 0.5f)
-                    dstData[i] = 1 - (1 - targetData[i]) * (1 - (blendData[i] - 0.5));
+                    dstData[i] = 1.0f - (1.0f - targetData[i]) * (1.0f - (blendData[i] - 0.5));
                 else
-                    dstData[i] = targetData[i] * (blendData[i] + 0.5);
+                    dstData[i] = targetData[i] * (blendData[i] + 0.5f);
                 break;
                 case BLEND_MODEL_HARD_LIGHT:
                 if (targetData[i] > 0.5f)
-                    dstData[i] = 1 - (1 - targetData[i])*(1 - 2 * blendData[i] - 0.5);
+                    dstData[i] = 1.0f - (1.0f - targetData[i])*(1.0f - 2.0f * blendData[i] - 0.5f);
                 else
-                    dstData[i] = 2 * targetData[i] * blendData[i];
+                    dstData[i] = 2.0f * targetData[i] * blendData[i];
                 break;
                 case BLEND_MODEL_VIVID_LIGHT:
                 if (targetData[i] > 0.5f)
-                    dstData[i] = 1 - safe_div((1 - targetData[i]), (2 * (blendData[i] - 0.5)));
+                    dstData[i] = 1.0f - safe_div((1.0f - targetData[i]), (2.0f * (blendData[i] - 0.5f)));
                 else
-                    dstData[i] = safe_div(targetData[i], (1 - 2 * blendData[i]));
+                    dstData[i] = safe_div(targetData[i], (1.0f - 2.0f * blendData[i]));
                 break;
                 case BLEND_MODEL_LINEAR_LIGHT:
                 if (targetData[i] > 0.5f)
-                    dstData[i] = targetData[i] + (2 * (blendData[i] - 0.5));
+                    dstData[i] = targetData[i] + (2.0f * (blendData[i] - 0.5f));
                 else
-                    dstData[i] = targetData[i] + 2 * blendData[i] - 1;
+                    dstData[i] = targetData[i] + 2.0f * blendData[i] - 1.0f;
                 break;
                 case BLEND_MODEL_PIN_LIGHT:
                 if (targetData[i] > 0.5f)
-                    dstData[i] = max(targetData[i], (float)(2 * (blendData[i] - 0.5)));
+                    dstData[i] = max(targetData[i], (float)(2.0f * (blendData[i] - 0.5f)));
                 else
-                    dstData[i] = min(targetData[i], (float)(2 * (blendData[i])));
+                    dstData[i] = min(targetData[i], (float)(2.0f * (blendData[i])));
                 break;
                 case BLEND_MODEL_DIFFERENCE:
                 dstData[i] = abs(targetData[i] - blendData[i]);
                 break;
                 case BLEND_MODEL_EXCLUSION:
-                dstData[i] = targetData[i] + blendData[i] - 2 * targetData[i] * blendData[i];
+                dstData[i] = targetData[i] + blendData[i] - 2.0f * targetData[i] * blendData[i];
                 break;
                 case BLEND_MODEL_DIVIDE:
                 dstData[i] = safe_div(targetData[i], blendData[i]);
