@@ -1,375 +1,184 @@
-#include "opencv2/core.hpp"
-#include "opencv2/highgui.hpp"
-#include "opencv2/imgcodecs.hpp"
-#include "opencv2/imgproc.hpp"
-#include "opencv2/ml.hpp"
+//  This example provides a digital recognition based on LeNet-5 and connected component analysis.
+//  It makes it possible for OpenCV beginner to run dnn models in real time using only CPU.
+//  It can read pictures from the camera in real time to make predictions, and display the recognized digits as overlays on top of the original digits.
+//
+//  In order to achieve a better display effect, please write the number on white paper and occupy the entire camera.
+//
+//  You can follow the following guide to train LeNet-5 by yourself using the minist dataset.
+//  https://github.com/intel/caffe/blob/a3d5b022fe026e9092fc7abc7654b1162ab9940d/examples/mnist/readme.md
+//
+//  You can also download and train the model directly.
+//  https://github.com/zihaomu/opencv_lenet_demo/blob/master/src/lenet.caffemodel
+//  https://github.com/zihaomu/opencv_lenet_demo/blob/master/src/lenet.prototxt
 
-#include <algorithm>
+#include <opencv2/opencv.hpp>
+#include <opencv2/dnn.hpp>
+
 #include <iostream>
 #include <vector>
 
-using namespace cv;
 using namespace std;
+using namespace cv;
+using namespace cv::dnn;
 
-const int SZ = 20;  // size of each digit is SZ x SZ
-const int CLASS_N = 10;
-const char* DIGITS_FN = "digits.png";
+const char *keys =
+    "{ help     h  | | Print help message. }"
+    "{ modelBin    | | Path to a binary .caffemodel file contains trained network.}"
+    "{ modelTxt    | | Path to a .prototxt file contains the model definition of trained network.}"
+    "{ width       | 640 | Set the width of the camera }"
+    "{ height      | 480 | Set the height of the camera }"
+    "{ thr         | 0.8 | Confidence threshold. }";
 
-static void help(char** argv)
+// Find best class for the blob (i.e. class with maximal probability)
+static void getMaxClass(const Mat &probBlob, int *classId, double *classProb);
+
+void predictor(dnn::Net net, Mat &roi, int &class_id, double &probability);
+
+int main(int argc, char **argv)
 {
-    cout <<
-    "\n"
-    "SVM and KNearest digit recognition.\n"
-    "\n"
-    "Sample loads a dataset of handwritten digits from 'digits.png'.\n"
-    "Then it trains a SVM and KNearest classifiers on it and evaluates\n"
-    "their accuracy.\n"
-    "\n"
-    "Following preprocessing is applied to the dataset:\n"
-    " - Moment-based image deskew (see deskew())\n"
-    " - Digit images are split into 4 10x10 cells and 16-bin\n"
-    "   histogram of oriented gradients is computed for each\n"
-    "   cell\n"
-    " - Transform histograms to space with Hellinger metric (see [1] (RootSIFT))\n"
-    "\n"
-    "\n"
-    "[1] R. Arandjelovic, A. Zisserman\n"
-    "    \"Three things everyone should know to improve object retrieval\"\n"
-    "    http://www.robots.ox.ac.uk/~vgg/publications/2012/Arandjelovic12/arandjelovic12.pdf\n"
-    "\n"
-    "Usage:\n"
-    << argv[0] << endl;
-}
+    // Parse command line arguments.
+    CommandLineParser parser(argc, argv, keys);
 
-static void split2d(const Mat& image, const Size cell_size, vector<Mat>& cells)
-{
-    int height = image.rows;
-    int width = image.cols;
-
-    int sx = cell_size.width;
-    int sy = cell_size.height;
-
-    cells.clear();
-
-    for (int i = 0; i < height; i += sy)
+    if (argc == 1 || parser.has("help"))
     {
-        for (int j = 0; j < width; j += sx)
-        {
-            cells.push_back(image(Rect(j, i, sx, sy)));
-        }
-    }
-}
-
-static void load_digits(const char* fn, vector<Mat>& digits, vector<int>& labels)
-{
-    digits.clear();
-    labels.clear();
-
-    String filename = samples::findFile(fn);
-
-    cout << "Loading " << filename << " ..." << endl;
-
-    Mat digits_img = imread(filename, IMREAD_GRAYSCALE);
-    split2d(digits_img, Size(SZ, SZ), digits);
-
-    for (int i = 0; i < CLASS_N; i++)
-    {
-        for (size_t j = 0; j < digits.size() / CLASS_N; j++)
-        {
-            labels.push_back(i);
-        }
-    }
-}
-
-static void deskew(const Mat& img, Mat& deskewed_img)
-{
-    Moments m = moments(img);
-
-    if (abs(m.mu02) < 0.01)
-    {
-        deskewed_img = img.clone();
-        return;
+        parser.printMessage();
+        return 0;
     }
 
-    float skew = (float)(m.mu11 / m.mu02);
-    float M_vals[2][3] = {{1, skew, -0.5f * SZ * skew}, {0, 1, 0}};
-    Mat M(Size(3, 2), CV_32F);
+    int vWidth = parser.get<int>("width");
+    int vHeight = parser.get<int>("height");
+    float confThreshold = parser.get<float>("thr");
+    String modelTxt = parser.get<String>("modelTxt");
+    String modelBin = parser.get<String>("modelBin");
 
-    for (int i = 0; i < M.rows; i++)
+    dnn::Net net;
+    try
     {
-        for (int j = 0; j < M.cols; j++)
+        net = dnn::readNetFromCaffe(modelTxt, modelBin);
+    }
+    catch (cv::Exception &ee)
+    {
+        cerr << "Exception: " << ee.what() << endl;
+        if (net.empty())
         {
-            M.at<float>(i, j) = M_vals[i][j];
+            cout << "Can't load the network by using the flowing files:" << endl;
+            cout << "modelTxt: " << modelTxt << endl;
+            cout << "modelBin: " << modelBin << endl;
+            exit(-1);
         }
     }
 
-    warpAffine(img, deskewed_img, M, Size(SZ, SZ), WARP_INVERSE_MAP | INTER_LINEAR);
-}
+    static const string resultWinName = "LeNet Result";
+    static const string preWinName = "Preprocessing";
 
-static void mosaic(const int width, const vector<Mat>& images, Mat& grid)
-{
-    int mat_width = SZ * width;
-    int mat_height = SZ * (int)ceil((double)images.size() / width);
+    namedWindow(resultWinName, WINDOW_AUTOSIZE);
+    namedWindow(preWinName, WINDOW_AUTOSIZE);
 
-    if (!images.empty())
+    Mat labels, img_color, stats, centroids;
+    Point positiosn;
+
+    Rect getRectangle;
+    bool ifDrawingBox = false;
+
+    int classId = 0;
+    double probability = 0;
+
+    VideoCapture cap(0);
+
+    // Set camera resolution
+    cap.set(CAP_PROP_FRAME_WIDTH, vWidth);
+    cap.set(CAP_PROP_FRAME_HEIGHT, vHeight);
+
+    Rect basicRact = Rect(0, 0, 640, 480);
+    Mat rawImage;
+
+    double fps = 0;
+
+    // Open a video file or an image file or a camera stream.
+    if (cap.isOpened())
     {
-        grid = Mat(Size(mat_width, mat_height), images[0].type());
+        TickMeter cvtm;
 
-        for (size_t i = 0; i < images.size(); i++)
+        while (true)
         {
-            Mat location_on_grid = grid(Rect(SZ * ((int)i % width), SZ * ((int)i / width), SZ, SZ));
-            images[i].copyTo(location_on_grid);
-        }
-    }
-}
+            cvtm.reset();
+            cvtm.start();
+            cap >> rawImage;
 
-static void evaluate_model(const vector<float>& predictions, const vector<Mat>& digits, const vector<int>& labels, Mat& mos)
-{
-    double err = 0;
+            Mat image = rawImage.clone();
 
-    for (size_t i = 0; i < predictions.size(); i++)
-    {
-        if ((int)predictions[i] != labels[i])
-        {
-            err++;
-        }
-    }
+            // Image preprocessing
+            cvtColor(image, image, COLOR_BGR2GRAY);
+            GaussianBlur(image, image, Size(3, 3), 2, 2);
+            adaptiveThreshold(image, image, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, 25, 10);
+            bitwise_not(image, image);
 
-    err /= predictions.size();
+            // Find connected component
+            int nccomps = cv::connectedComponentsWithStats(image, labels, stats, centroids);
 
-    cout << format("error: %.2f %%", err * 100) << endl;
-
-    int confusion[10][10] = {};
-
-    for (size_t i = 0; i < labels.size(); i++)
-    {
-        confusion[labels[i]][(int)predictions[i]]++;
-    }
-
-    cout << "confusion matrix:" << endl;
-    for (int i = 0; i < 10; i++)
-    {
-        for (int j = 0; j < 10; j++)
-        {
-            cout << format("%2d ", confusion[i][j]);
-        }
-        cout << endl;
-    }
-
-    cout << endl;
-
-    vector<Mat> vis;
-
-    for (size_t i = 0; i < digits.size(); i++)
-    {
-        Mat img;
-        cvtColor(digits[i], img, COLOR_GRAY2BGR);
-
-        if ((int)predictions[i] != labels[i])
-        {
-            for (int j = 0; j < img.rows; j++)
+            for (int i = 1; i < nccomps; i++)
             {
-                for (int k = 0; k < img.cols; k++)
+                ifDrawingBox = false;
+
+                // Extend the bounding box of connected component for easier recognition
+                if (stats.at<int>(i - 1, CC_STAT_AREA) > 80 && stats.at<int>(i - 1, CC_STAT_AREA) < 3000)
                 {
-                    img.at<Vec3b>(j, k)[0] = 0;
-                    img.at<Vec3b>(j, k)[1] = 0;
+                    ifDrawingBox = true;
+                    int left = stats.at<int>(i - 1, CC_STAT_HEIGHT) / 4;
+                    getRectangle = Rect(stats.at<int>(i - 1, CC_STAT_LEFT) - left, stats.at<int>(i - 1, CC_STAT_TOP) - left, stats.at<int>(i - 1, CC_STAT_WIDTH) + 2 * left, stats.at<int>(i - 1, CC_STAT_HEIGHT) + 2 * left);
+                    getRectangle &= basicRact;
+                }
+
+                if (ifDrawingBox)
+                {
+                    Mat roi = image(getRectangle);
+                    predictor(net, roi, classId, probability);
+
+                    if (probability < confThreshold)
+                        continue;
+
+                    // cout << "probability : "<<probability << endl;
+
+                    rectangle(rawImage, getRectangle, Scalar(128, 255, 128), 2);
+
+                    positiosn = Point(getRectangle.br().x - 7, getRectangle.br().y + 25);
+                    putText(rawImage, to_string(classId), positiosn, 3, 1.0, Scalar(128, 128, 255), 2);
                 }
             }
-        }
 
-        vis.push_back(img);
-    }
+            cvtm.stop();
+            fps = 1 / cvtm.getTimeSec();
+            string fpsString = format("Inference FPS: %.2f ms", fps);
+            putText(image, fpsString, Point(5, 20), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(128, 255, 128));
 
-    mosaic(25, vis, mos);
-}
-
-static void bincount(const Mat& x, const Mat& weights, const int min_length, vector<double>& bins)
-{
-    double max_x_val = 0;
-    minMaxLoc(x, NULL, &max_x_val);
-
-    bins = vector<double>(max((int)max_x_val, min_length));
-
-    for (int i = 0; i < x.rows; i++)
-    {
-        for (int j = 0; j < x.cols; j++)
-        {
-            bins[x.at<int>(i, j)] += weights.at<float>(i, j);
+            // printf("time = %gms\n", cvtm.getTimeMilli());
+            imshow(resultWinName, image);
+            imshow(preWinName, rawImage);
+            waitKey(30);
         }
     }
-}
-
-static void preprocess_hog(const vector<Mat>& digits, Mat& hog)
-{
-    int bin_n = 16;
-    int half_cell = SZ / 2;
-    double eps = 1e-7;
-
-    hog = Mat(Size(4 * bin_n, (int)digits.size()), CV_32F);
-
-    for (size_t img_index = 0; img_index < digits.size(); img_index++)
-    {
-        Mat gx;
-        Sobel(digits[img_index], gx, CV_32F, 1, 0);
-
-        Mat gy;
-        Sobel(digits[img_index], gy, CV_32F, 0, 1);
-
-        Mat mag;
-        Mat ang;
-        cartToPolar(gx, gy, mag, ang);
-
-        Mat bin(ang.size(), CV_32S);
-
-        for (int i = 0; i < ang.rows; i++)
-        {
-            for (int j = 0; j < ang.cols; j++)
-            {
-                bin.at<int>(i, j) = (int)(bin_n * ang.at<float>(i, j) / (2 * CV_PI));
-            }
-        }
-
-        Mat bin_cells[] = {
-            bin(Rect(0, 0, half_cell, half_cell)),
-            bin(Rect(half_cell, 0, half_cell, half_cell)),
-            bin(Rect(0, half_cell, half_cell, half_cell)),
-            bin(Rect(half_cell, half_cell, half_cell, half_cell))
-        };
-        Mat mag_cells[] = {
-            mag(Rect(0, 0, half_cell, half_cell)),
-            mag(Rect(half_cell, 0, half_cell, half_cell)),
-            mag(Rect(0, half_cell, half_cell, half_cell)),
-            mag(Rect(half_cell, half_cell, half_cell, half_cell))
-        };
-
-        vector<double> hist;
-        hist.reserve(4 * bin_n);
-
-        for (int i = 0; i < 4; i++)
-        {
-            vector<double> partial_hist;
-            bincount(bin_cells[i], mag_cells[i], bin_n, partial_hist);
-            hist.insert(hist.end(), partial_hist.begin(), partial_hist.end());
-        }
-
-        // transform to Hellinger kernel
-        double sum = 0;
-
-        for (size_t i = 0; i < hist.size(); i++)
-        {
-            sum += hist[i];
-        }
-
-        for (size_t i = 0; i < hist.size(); i++)
-        {
-            hist[i] /= sum + eps;
-            hist[i] = sqrt(hist[i]);
-        }
-
-        double hist_norm = norm(hist);
-
-        for (size_t i = 0; i < hist.size(); i++)
-        {
-            hog.at<float>((int)img_index, (int)i) = (float)(hist[i] / (hist_norm + eps));
-        }
-    }
-}
-
-static void shuffle(vector<Mat>& digits, vector<int>& labels)
-{
-    vector<int> shuffled_indexes(digits.size());
-
-    for (size_t i = 0; i < digits.size(); i++)
-    {
-        shuffled_indexes[i] = (int)i;
-    }
-
-    randShuffle(shuffled_indexes);
-
-    vector<Mat> shuffled_digits(digits.size());
-    vector<int> shuffled_labels(labels.size());
-
-    for (size_t i = 0; i < shuffled_indexes.size(); i++)
-    {
-        shuffled_digits[shuffled_indexes[i]] = digits[i];
-        shuffled_labels[shuffled_indexes[i]] = labels[i];
-    }
-
-    digits = shuffled_digits;
-    labels = shuffled_labels;
-}
-
-int main(int /* argc */, char* argv[])
-{
-    help(argv);
-
-    vector<Mat> digits;
-    vector<int> labels;
-
-    load_digits(DIGITS_FN, digits, labels);
-
-    cout << "preprocessing..." << endl;
-
-    // shuffle digits
-    shuffle(digits, labels);
-
-    vector<Mat> digits2;
-
-    for (size_t i = 0; i < digits.size(); i++)
-    {
-        Mat deskewed_digit;
-        deskew(digits[i], deskewed_digit);
-        digits2.push_back(deskewed_digit);
-    }
-
-    Mat samples;
-
-    preprocess_hog(digits2, samples);
-
-    int train_n = (int)(0.9 * samples.rows);
-    Mat test_set;
-
-    vector<Mat> digits_test(digits2.begin() + train_n, digits2.end());
-    mosaic(25, digits_test, test_set);
-    imshow("test set", test_set);
-
-    Mat samples_train = samples(Rect(0, 0, samples.cols, train_n));
-    Mat samples_test = samples(Rect(0, train_n, samples.cols, samples.rows - train_n));
-    vector<int> labels_train(labels.begin(), labels.begin() + train_n);
-    vector<int> labels_test(labels.begin() + train_n, labels.end());
-
-    Ptr<ml::KNearest> k_nearest;
-    Ptr<ml::SVM> svm;
-    vector<float> predictions;
-    Mat vis;
-
-    cout << "training KNearest..." << endl;
-    k_nearest = ml::KNearest::create();
-    k_nearest->train(samples_train, ml::ROW_SAMPLE, labels_train);
-
-    // predict digits with KNearest
-    k_nearest->findNearest(samples_test, 4, predictions);
-    evaluate_model(predictions, digits_test, labels_test, vis);
-    imshow("KNearest test", vis);
-    k_nearest.release();
-
-    cout << "training SVM..." << endl;
-    svm = ml::SVM::create();
-    svm->setGamma(5.383);
-    svm->setC(2.67);
-    svm->setKernel(ml::SVM::RBF);
-    svm->setType(ml::SVM::C_SVC);
-    svm->train(samples_train, ml::ROW_SAMPLE, labels_train);
-
-    // predict digits with SVM
-    svm->predict(samples_test, predictions);
-    evaluate_model(predictions, digits_test, labels_test, vis);
-    imshow("SVM test", vis);
-    cout << "Saving SVM as \"digits_svm.yml\"..." << endl;
-    svm->save("digits_svm.yml");
-    svm.release();
-
-    waitKey();
 
     return 0;
+}
+
+static void getMaxClass(const Mat &probBlob, int *classId, double *classProb)
+{
+    Mat probMat = probBlob.reshape(1, 1);
+    Point classNumber;
+    minMaxLoc(probMat, NULL, classProb, NULL, &classNumber);
+    *classId = classNumber.x;
+}
+
+void predictor(dnn::Net net, Mat &roi, int &classId, double &probability)
+{
+    Mat pred;
+    //Convert Mat to batch of images
+    Mat inputBlob = dnn::blobFromImage(roi, 1, Size(28, 28), Scalar(), false);
+    //set the network input, "data" is the name of the input layer
+    net.setInput(inputBlob, "data");
+
+    //compute output, "prob" is the name of the output layer
+    pred = net.forward("prob");
+    //cout << pred << endl;
+    getMaxClass(pred, &classId, &probability);
 }
