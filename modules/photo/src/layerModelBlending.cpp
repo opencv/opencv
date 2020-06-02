@@ -82,12 +82,12 @@ CV_EXPORTS_W void layerModelBlending(InputArray _target, InputArray _blend, Outp
                 break;
                 case BLEND_MODEL_OVERLAY:
                 if (targetData[i] > 0.5f)
-                    dstData[i] = 1.0f - (1.0f - 2.0f * (targetData[i] - 0.5))*(1.0f - blendData[i]);
+                    dstData[i] = 1.0f - (1.0f - 2.0f * (targetData[i] - 0.5f))*(1.0f - blendData[i]);
                 else
                     dstData[i] = 2.0f * targetData[i] * blendData[i];
                 case BLEND_MODEL_SOFT_LIGHT:
                 if (targetData[i] > 0.5f)
-                    dstData[i] = 1.0f - (1.0f - targetData[i]) * (1.0f - (blendData[i] - 0.5));
+                    dstData[i] = 1.0f - (1.0f - targetData[i]) * (1.0f - (blendData[i] - 0.5f));
                 else
                     dstData[i] = targetData[i] * (blendData[i] + 0.5f);
                 break;
