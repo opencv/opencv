@@ -111,6 +111,11 @@ class CppHeaderParser(object):
         if npos >= 0:
             modlist.append("/C")
 
+        npos = arg_str.find("&&")
+        if npos >= 0:
+            arg_str = arg_str.replace("&&", '')
+            modlist.append("/RRef")
+
         npos = arg_str.find("&")
         if npos >= 0:
             modlist.append("/Ref")
@@ -251,6 +256,9 @@ class CppHeaderParser(object):
         if "CV_EXPORTS_W_MAP" in l:
             l = l.replace("CV_EXPORTS_W_MAP", "")
             modlist.append("/Map")
+        if "GAPI_EXPORTS_W_SIMPLE" in l:
+            l = l.replace("GAPI_EXPORTS_W_SIMPLE", "")
+            modlist.append("/Simple")
         if "CV_EXPORTS_W_SIMPLE" in l:
             l = l.replace("CV_EXPORTS_W_SIMPLE", "")
             modlist.append("/Simple")
@@ -260,7 +268,7 @@ class CppHeaderParser(object):
             modlist.append("=" + macro_arg)
             l = l[:npos] + l[npos3+1:]
 
-        l = self.batch_replace(l, [("CV_EXPORTS_W", ""), ("CV_EXPORTS", ""), ("public virtual ", " "), ("public ", " "), ("::", ".")]).strip()
+        l = self.batch_replace(l, [("CV_EXPORTS_W", ""), ("CV_EXPORTS", ""), ("GAPI_EXPORTS", ""), ("GAPI_EXPORTS_W", ""), ("public virtual ", " "), ("public ", " "), ("::", ".")]).strip()
         ll = re.split(r'\s+|\s*[,:]\s*', l)
         ll = [le for le in ll if le]
         classname = ll[1]
@@ -392,7 +400,7 @@ class CppHeaderParser(object):
         """
 
         if self.wrap_mode:
-            if not (("CV_EXPORTS_AS" in decl_str) or ("CV_EXPORTS_W" in decl_str) or ("CV_WRAP" in decl_str)):
+            if not (("CV_EXPORTS_AS" in decl_str) or ("CV_EXPORTS_W" in decl_str) or ("GAPI_EXPORTS_W" in decl_str) or ("CV_WRAP" in decl_str) or ("GAPI_WRAP" in decl_str)):
                 return []
 
         # ignore old API in the documentation check (for now)
@@ -431,8 +439,8 @@ class CppHeaderParser(object):
         # note that we do not strip "static" prefix, which does matter;
         # it means class methods, not instance methods
         decl_str = self.batch_replace(decl_str, [("static inline", ""), ("inline", ""), ("explicit ", ""),
-                                                 ("CV_EXPORTS_W", ""), ("CV_EXPORTS", ""), ("CV_CDECL", ""),
-                                                 ("CV_WRAP ", " "), ("CV_INLINE", ""),
+                                                 ("CV_EXPORTS_W", ""), ("GAPI_EXPORTS_W", ""), ("CV_EXPORTS", ""), ("GAPI_EXPORTS", ""), ("CV_CDECL", ""),
+                                                 ("CV_WRAP ", " "), ("GAPI_WRAP ", " "), ("CV_INLINE", ""),
                                                  ("CV_DEPRECATED", ""), ("CV_DEPRECATED_EXTERNAL", "")]).strip()
 
 
@@ -699,7 +707,7 @@ class CppHeaderParser(object):
                     decl[1] = ": " + ", ".join([self.get_dotted_name(b).replace(".","::") for b in bases])
                 return stmt_type, classname, True, decl
 
-            if stmt.startswith("class") or stmt.startswith("struct"):
+            if (stmt.startswith("class") or stmt.startswith("struct")) and not stmt.startswith('enum'):
                 stmt_type = stmt.split()[0]
                 if stmt.strip() != stmt_type:
                     try:
@@ -708,13 +716,15 @@ class CppHeaderParser(object):
                         print("Error at %s:%d" % (self.hname, self.lineno))
                         exit(1)
                     decl = []
-                    if ("CV_EXPORTS_W" in stmt) or ("CV_EXPORTS_AS" in stmt) or (not self.wrap_mode):# and ("CV_EXPORTS" in stmt)):
+                    if ("CV_EXPORTS_W" in stmt) or ("GAPI_EXPORTS_W" in stmt) or ("CV_EXPORTS_AS" in stmt) or (not self.wrap_mode):# and ("CV_EXPORTS" in stmt)):
                         decl = [stmt_type + " " + self.get_dotted_name(classname), "", modlist, [], None, docstring]
                         if bases:
                             decl[1] = ": " + ", ".join([self.get_dotted_name(b).replace(".","::") for b in bases])
                     return stmt_type, classname, True, decl
 
             if stmt.startswith("enum") or stmt.startswith("namespace"):
+                # NB: Drop inheritance syntax for enum
+                stmt = stmt.split(':')[0]
                 stmt_list = stmt.rsplit(" ", 1)
                 if len(stmt_list) < 2:
                     stmt_list.append("<unnamed>")
@@ -821,7 +831,7 @@ class CppHeaderParser(object):
                     continue
                 state = SCAN
                 l = re.sub(r'//(.+)?', '', l).strip()  # drop // comment
-                if l == '#if 0' or l == '#if defined(__OPENCV_BUILD)' or l == '#ifdef __OPENCV_BUILD':
+                if l == '#if 0' or l == '#if defined(__OPENCV_BUILD)' or l == '#ifdef __OPENCV_BUILD' or l == '#if defined(GAPI_STANDALONE)':
                     state = DIRECTIVE_IF_0
                     depth_if_0 = 1
                 continue
@@ -867,7 +877,13 @@ class CppHeaderParser(object):
                 sys.exit(-1)
 
             while 1:
-                token, pos = self.find_next_token(l, [";", "\"", "{", "}", "//", "/*"])
+                token, pos = self.find_next_token(l, ["= {", ";", "\"", "{", "}", "//", "/*",])
+
+                # NB: Handle case with argument default value:
+                # foo(const Obj& = {})
+                if token == "= {":
+                    block_head = l[:-1]
+                    l = ''
 
                 if not token:
                     block_head += " " + l

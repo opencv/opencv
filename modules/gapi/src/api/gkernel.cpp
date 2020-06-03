@@ -98,3 +98,8 @@ std::vector<cv::gapi::GBackend> cv::gapi::GKernelPackage::backends() const
 
     return std::vector<cv::gapi::GBackend>(unique_set.begin(), unique_set.end());
 }
+
+cv::GCompileArgs cv::compile_args(cv::gapi::GKernelPackage pkg)
+{
+    return cv::GCompileArgs{ cv::GCompileArg(std::move(pkg)) };
+}

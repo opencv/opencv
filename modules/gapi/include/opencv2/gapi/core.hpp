@@ -528,7 +528,7 @@ Supported matrix data types are @ref CV_8UC1, @ref CV_8UC3, @ref CV_16UC1, @ref 
 @param ddepth optional depth of the output matrix.
 @sa sub, addWeighted
 */
-GAPI_EXPORTS GMat add(const GMat& src1, const GMat& src2, int ddepth = -1);
+GAPI_EXPORTS_W GMat add(const GMat& src1, const GMat& src2, int ddepth = -1);
 
 /** @brief Calculates the per-element sum of matrix and given scalar.
 

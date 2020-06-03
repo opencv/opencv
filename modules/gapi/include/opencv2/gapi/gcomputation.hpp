@@ -108,7 +108,7 @@ namespace detail
  *
  * @sa GCompiled
  */
-class GAPI_EXPORTS GComputation
+class GAPI_EXPORTS_W GComputation
 {
 public:
     class Priv;
@@ -181,7 +181,7 @@ public:
      * @param in2 second input GMat of the defined binary computation
      * @param out output GMat of the defined binary computation
      */
-    GComputation(GMat in1, GMat in2, GMat out);        // Binary overload
+    GAPI_WRAP GComputation(GMat in1, GMat in2, GMat out);        // Binary overload
 
     /**
      * @brief Defines a binary (two inputs -- one output) computation
@@ -265,7 +265,7 @@ public:
      * @param args compilation arguments for underlying compilation
      * process.
      */
-    void apply(cv::Mat in, cv::Mat &out, GCompileArgs &&args = {});               // Unary overload
+    GAPI_WRAP void apply(cv::Mat in, CV_OUT cv::Mat &out, GCompileArgs &&args = {}); // Unary overload
 
     /**
      * @brief Execute an unary computation (with compilation on the fly)
@@ -276,7 +276,7 @@ public:
      * @param args compilation arguments for underlying compilation
      * process.
      */
-    void apply(cv::Mat in, cv::Scalar &out, GCompileArgs &&args = {});            // Unary overload (scalar)
+    GAPI_WRAP void apply(cv::Mat in, CV_OUT cv::Scalar &out, GCompileArgs &&args = {}); // Unary overload (scalar)
 
     /**
      * @brief Execute a binary computation (with compilation on the fly)
@@ -288,7 +288,7 @@ public:
      * @param args compilation arguments for underlying compilation
      * process.
      */
-    void apply(cv::Mat in1, cv::Mat in2, cv::Mat &out, GCompileArgs &&args = {}); // Binary overload
+    GAPI_WRAP void apply(cv::Mat in1, cv::Mat in2, CV_OUT cv::Mat &out, GCompileArgs &&args = {}); // Binary overload
 
     /**
      * @brief Execute an binary computation (with compilation on the fly)
@@ -300,7 +300,7 @@ public:
      * @param args compilation arguments for underlying compilation
      * process.
      */
-    void apply(cv::Mat in1, cv::Mat in2, cv::Scalar &out, GCompileArgs &&args = {}); // Binary overload (scalar)
+    GAPI_WRAP void apply(cv::Mat in1, cv::Mat in2, CV_OUT cv::Scalar &out, GCompileArgs &&args = {}); // Binary overload (scalar)
 
     /**
      * @brief Execute a computation with arbitrary number of

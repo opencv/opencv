@@ -24,6 +24,8 @@ ocv_add_module(gapi
       opencv_imgproc
     OPTIONAL
       opencv_video
+      WRAP
+      python
 )
 
 if(MSVC)
