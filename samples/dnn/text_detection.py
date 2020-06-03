@@ -1,12 +1,13 @@
 # Import required modules
+import numpy as np
 import cv2 as cv
 import math
 import argparse
-import numpy as np
 
 ############ Add argument parser for command line arguments ############
-parser = argparse.ArgumentParser(description="Use this script to run TensorFlow implementation (https://github.com/argman/EAST) of "
-                                             "EAST: An Efficient and Accurate Scene Text Detector (https://arxiv.org/abs/1704.03155v2)")
+parser = argparse.ArgumentParser(
+    description="Use this script to run TensorFlow implementation (https://github.com/argman/EAST) of "
+                "EAST: An Efficient and Accurate Scene Text Detector (https://arxiv.org/abs/1704.03155v2)")
 parser.add_argument('--input',
                     help='Path to input image or video file. Skip this argument to capture frames from a camera.')
 parser.add_argument('--model', '-m', required=True,
@@ -27,15 +28,15 @@ args = parser.parse_args()
 ############ Utility functions ############
 
 def fourPointsTransform(frame, vertices):
-    outputSize = (32, 100)
+    outputSize = (100, 32)
     targetVertices = np.array([
-        [0, outputSize[0] - 1],
+        [0, outputSize[1] - 1],
         [0, 0],
-        [outputSize[1] - 1, 0],
-        [outputSize[1] - 1, outputSize[0] - 1]], dtype="float32")
+        [outputSize[0] - 1, 0],
+        [outputSize[0] - 1, outputSize[1] - 1]], dtype="float32")
 
     rotationMatrix = cv.getPerspectiveTransform(vertices, targetVertices)
-    result = cv.warpPerspective(frame, rotationMatrix, (outputSize[1], outputSize[0]))
+    result = cv.warpPerspective(frame, rotationMatrix, outputSize)
     return result
 
 
@@ -85,7 +86,7 @@ def decodeBoundingBoxes(scores, geometry, scoreThresh):
             score = scoresData[x]
 
             # If score is lower than threshold score, move to next x
-            if(score < scoreThresh):
+            if (score < scoreThresh):
                 continue
 
             # Calculate offset
@@ -100,17 +101,19 @@ def decodeBoundingBoxes(scores, geometry, scoreThresh):
             w = x1_data[x] + x3_data[x]
 
             # Calculate offset
-            offset = ([offsetX + cosA * x1_data[x] + sinA * x2_data[x], offsetY - sinA * x1_data[x] + cosA * x2_data[x]])
+            offset = (
+            [offsetX + cosA * x1_data[x] + sinA * x2_data[x], offsetY - sinA * x1_data[x] + cosA * x2_data[x]])
 
             # Find points for rectangle
             p1 = (-sinA * h + offset[0], -cosA * h + offset[1])
-            p3 = (-cosA * w + offset[0],  sinA * w + offset[1])
-            center = (0.5*(p1[0]+p3[0]), 0.5*(p1[1]+p3[1]))
-            detections.append((center, (w,h), -1*angle * 180.0 / math.pi))
+            p3 = (-cosA * w + offset[0], sinA * w + offset[1])
+            center = (0.5 * (p1[0] + p3[0]), 0.5 * (p1[1] + p3[1]))
+            detections.append((center, (w, h), -1 * angle * 180.0 / math.pi))
             confidences.append(float(score))
 
     # Return detections and confidences
     return [detections, confidences]
+
 
 def main():
     # Read and store arguments
@@ -165,7 +168,7 @@ def main():
         [boxes, confidences] = decodeBoundingBoxes(scores, geometry, confThreshold)
 
         # Apply NMS
-        indices = cv.dnn.NMSBoxesRotated(boxes, confidences, confThreshold,nmsThreshold)
+        indices = cv.dnn.NMSBoxesRotated(boxes, confidences, confThreshold, nmsThreshold)
         for i in indices:
             # get 4 corners of the rotated rect
             vertices = cv.boxPoints(boxes[i[0]])
@@ -174,17 +177,15 @@ def main():
                 vertices[j][0] *= rW
                 vertices[j][1] *= rH
 
-
             vertices = np.asarray(vertices)
 
             # get cropped image using perspective transform
             if modelRecognition is not None:
                 cropped = fourPointsTransform(frame, vertices)
                 cropped = cv.cvtColor(cropped, cv.COLOR_BGR2GRAY)
-                cropped = cropped.astype("float32")
 
                 # Create a 4D blob from cropped image
-                blob = cv.dnn.blobFromImage(cropped, size=(100, 32), mean=0.5, scalefactor=2 / 255.0)
+                blob = cv.dnn.blobFromImage(cropped, size=(100, 32), mean=127.5, scalefactor=1 / 127.5)
                 recognizer.setInput(blob)
 
                 # Run the recognition model
@@ -194,7 +195,8 @@ def main():
 
                 # decode the result into text
                 wordRecognized = decodeText(result)
-                cv.putText(frame, wordRecognized, (int(vertices[1][0]), int(vertices[1][1])), cv.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0))
+                cv.putText(frame, wordRecognized, (int(vertices[1][0]), int(vertices[1][1])), cv.FONT_HERSHEY_SIMPLEX,
+                           0.5, (255, 0, 0))
 
                 for j in range(4):
                     p1 = (vertices[j][0], vertices[j][1])
@@ -206,7 +208,7 @@ def main():
         cv.putText(frame, label, (0, 15), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
 
         # Display the frame
-        cv.imshow(kWinName,frame)
+        cv.imshow(kWinName, frame)
         tickmeter.reset()
 
 
