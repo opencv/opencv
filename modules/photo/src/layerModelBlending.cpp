@@ -71,7 +71,7 @@ CV_EXPORTS_W void layerModelBlending(InputArray _target, InputArray _blend, Outp
         case BLEND_MODEL_LIGHTEN:
             dst = max(target, blend);
         break;
-        case BLEND_MODEL_SCREEN: 
+        case BLEND_MODEL_SCREEN:
             for (int k = 0; k < nr; k++)
             {
                 const float* targetData = target.ptr<float>(k);
@@ -183,7 +183,7 @@ CV_EXPORTS_W void layerModelBlending(InputArray _target, InputArray _blend, Outp
                     float* dstData = dst.ptr<float>(k);
                     for (int i = 0; i < nl; i++)
                         dstData[i] = targetData[i] + blendData[i] - 2.0f * targetData[i] * blendData[i];
-                }    
+                }
             break;
             case BLEND_MODEL_DIVIDE:
                 for (int k = 0; k < nr; k++)
