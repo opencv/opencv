@@ -10,9 +10,9 @@ find_package(XCTest REQUIRED)
 set (CMAKE_CXX_STANDARD 11)
 set (CMAKE_CXX_STANDARD_REQUIRED TRUE)
 
-set (OBJC_ARC_COMPILE_FLAGS "-fobjc-arc -fobjc-weak")
+set (OBJC_COMPILE_FLAGS "-fobjc-arc -fobjc-weak -fvisibility=hidden")
 set (SUPPRESS_WARNINGS_FLAGS "-Wno-incomplete-umbrella")
-set (CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} ${OBJC_ARC_COMPILE_FLAGS} ${SUPPRESS_WARNINGS_FLAGS}")
+set (CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} ${OBJC_COMPILE_FLAGS} ${SUPPRESS_WARNINGS_FLAGS}")
 set (CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${OBJC_ARC_COMPILE_FLAGS} ${SUPPRESS_WARNINGS_FLAGS}")
 
 # grab the files
@@ -24,7 +24,10 @@ enable_language(Swift)
 
 # XCTest for Framework
 xctest_add_bundle(OpenCVTestTests OpenCVTest ${test_sources} test/resources ${FRAMEWORK_DIR}/${FRAMEWORK_NAME}.framework)
-set_target_properties(OpenCVTestTests PROPERTIES XCODE_ATTRIBUTE_FRAMEWORK_SEARCH_PATHS "${FRAMEWORK_DIR}")
+set_target_properties(OpenCVTestTests PROPERTIES
+    XCODE_ATTRIBUTE_FRAMEWORK_SEARCH_PATHS "${FRAMEWORK_DIR}"
+    XCODE_ATTRIBUTE_OTHER_SWIFT_FLAGS "-Xcc ${SUPPRESS_WARNINGS_FLAGS}"
+    )
 
 # link necessary Frameworks
 target_link_libraries(OpenCVTestTests PRIVATE "-framework Accelerate")

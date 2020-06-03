@@ -110,6 +110,7 @@ class GeneralInfo():
         # parse doxygen comments
         self.params={}
 
+        self.deprecated = False
         if type == "class":
             docstring = "// C++: class " + self.name + "\n"
         else:
@@ -117,6 +118,9 @@ class GeneralInfo():
 
         if len(decl)>5 and decl[5]:
             doc = decl[5]
+
+            if re.search("(@|\\\\)deprecated", doc):
+                self.deprecated = True
 
             docstring += sanitize_documentation_string(doc, type)
         elif type == "class":
@@ -966,12 +970,13 @@ class ObjectiveCWrapperGenerator(object):
                 )
 
             method_declarations.write( Template(
-"""$prototype$swift_name;
+"""$prototype$swift_name$deprecation_decl;
 
 """
                 ).substitute(
                     prototype = prototype,
-                    swift_name = " NS_SWIFT_NAME(" + fi.swift_name + "(" + build_swift_signature(args) + "))" if not constructor else ""
+                    swift_name = " NS_SWIFT_NAME(" + fi.swift_name + "(" + build_swift_signature(args) + "))" if not constructor else "",
+                    deprecation_decl = " DEPRECATED_ATTRIBUTE" if fi.deprecated else ""
                 )
             )
 
