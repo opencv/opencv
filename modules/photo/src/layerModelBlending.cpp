@@ -36,95 +36,165 @@ CV_EXPORTS_W void layerModelBlending(InputArray _target, InputArray _blend, Outp
 {
     CV_Assert(!_target.empty());
     CV_Assert(!_blend.empty());
-    CV_Assert(_target.type() == CV_32FC3 && _blend.type() == CV_32FC3 );
+    CV_Assert(_target.type() == CV_32FC3 && _blend.type() == CV_32FC3);
     CV_Assert(_target.size() == _blend.size());
+
     Mat target = _target.getMat();
     Mat blend = _blend.getMat();
     Size target_size = _target.size();
-    _dst.create(target_size,target.type());
+    _dst.create(target_size, target.type());
     Mat dst = _dst.getMat();
     int nr = target.rows;
     int nl = target.cols*target.channels();
 
-    for (int k = 0; k < nr; k++)
+    switch (flag)
     {
-        const float* targetData = target.ptr<float>(k);
-        const float* blendData = blend.ptr<float>(k);
-        float* dstData = dst.ptr<float>(k);
-        for (int i = 0; i < nl; i++)
-        {
-            switch (flag)
+        case BLEND_MODEL_DARKEN:
+            dst = min(target, blend);
+        break;
+        case BLEND_MODEL_MULTIPY:
+            multiply(target, blend, dst);
+        break;
+        case BLEND_MODEL_COLOR_BURN:
+            for (int k = 0; k < nr; k++)
             {
-                case BLEND_MODEL_DARKEN:
-                dstData[i] = min(targetData[i], blendData[i]);
-                break;
-                case BLEND_MODEL_MULTIPY:
-                dstData[i] = targetData[i] * blendData[i];
-                break;
-                case BLEND_MODEL_COLOR_BURN:
-                dstData[i] = 1.0f - safe_div((1.0f - targetData[i]), blendData[i]);
-                break;
-                case BLEND_MODEL_LINEAR_BRUN:
-                dstData[i] = targetData[i] + blendData[i] - 1.0f;
-                break;
-                case BLEND_MODEL_LIGHTEN:
-                dstData[i] = max(targetData[i], blendData[i]);
-                break;
-                case BLEND_MODEL_SCREEN:
-                dstData[i] = 1.0f - (1 - targetData[i])*(1.0f - blendData[i]);
-                break;
-                case BLEND_MODEL_COLOR_DODGE:
-                dstData[i] = safe_div(targetData[i], 1.0f - blendData[i]);
-                break;
-                case BLEND_MODEL_LINEAR_DODGE:
-                dstData[i] = targetData[i] + blendData[i];
-                break;
-                case BLEND_MODEL_OVERLAY:
-                if (targetData[i] > 0.5f)
-                    dstData[i] = 1.0f - (1.0f - 2.0f * (targetData[i] - 0.5f))*(1.0f - blendData[i]);
-                else
-                    dstData[i] = 2.0f * targetData[i] * blendData[i];
-                case BLEND_MODEL_SOFT_LIGHT:
-                if (targetData[i] > 0.5f)
-                    dstData[i] = 1.0f - (1.0f - targetData[i]) * (1.0f - (blendData[i] - 0.5f));
-                else
-                    dstData[i] = targetData[i] * (blendData[i] + 0.5f);
-                break;
-                case BLEND_MODEL_HARD_LIGHT:
+                const float* targetData = target.ptr<float>(k);
+                const float* blendData = blend.ptr<float>(k);
+                float* dstData = dst.ptr<float>(k);
+                for (int i = 0; i < nl; i++)
+                    dstData[i] = 1.0f - safe_div((1.0f - targetData[i]), blendData[i]);
+            }
+        break;
+        case BLEND_MODEL_LINEAR_BRUN:
+            dst = target + blend - 1.0f;
+        break;
+        case BLEND_MODEL_LIGHTEN:
+            dst = max(target, blend);
+        break;
+        case BLEND_MODEL_SCREEN: 
+            for (int k = 0; k < nr; k++)
+            {
+                const float* targetData = target.ptr<float>(k);
+                const float* blendData = blend.ptr<float>(k);
+                float* dstData = dst.ptr<float>(k);
+                for (int i = 0; i < nl; i++)
+                    dstData[i] = 1.0f - (1.0f - targetData[i])*(1.0f - blendData[i]);
+            }
+        break;
+        case BLEND_MODEL_COLOR_DODGE:
+            for (int k = 0; k < nr; k++)
+            {
+                const float* targetData = target.ptr<float>(k);
+                const float* blendData = blend.ptr<float>(k);
+                float* dstData = dst.ptr<float>(k);
+                for (int i = 0; i < nl; i++)
+                    dstData[i] = safe_div(targetData[i], 1.0f - blendData[i]);
+            }
+        break;
+        case BLEND_MODEL_LINEAR_DODGE:
+            add(target, blend, dst);
+        break;
+        case BLEND_MODEL_OVERLAY:
+            for (int k = 0; k < nr; k++)
+            {
+                const float* targetData = target.ptr<float>(k);
+                const float* blendData = blend.ptr<float>(k);
+                float* dstData = dst.ptr<float>(k);
+                for (int i = 0; i < nl; i++)
+                    if (targetData[i] > 0.5f)
+                        dstData[i] = 1.0f - (1.0f - 2.0f * (targetData[i] - 0.5f))*(1.0f - blendData[i]);
+                    else
+                        dstData[i] = 2 * targetData[i] * blendData[i];
+            }
+        break;
+        case BLEND_MODEL_SOFT_LIGHT:
+            for (int k = 0; k < nr; k++)
+            {
+                const float* targetData = target.ptr<float>(k);
+                const float* blendData = blend.ptr<float>(k);
+                float* dstData = dst.ptr<float>(k);
+                for (int i = 0; i < nl; i++)
+                    if (targetData[i] > 0.5f)
+                        dstData[i] = 1.0f - (1.0f - targetData[i]) * (1.0f - (blendData[i] - 0.5f));
+                    else
+                        dstData[i] = targetData[i] * (blendData[i] + 0.5f);
+            }
+            break;
+        case BLEND_MODEL_HARD_LIGHT:
+            for (int k = 0; k < nr; k++)
+            {
+                const float* targetData = target.ptr<float>(k);
+                const float* blendData = blend.ptr<float>(k);
+                float* dstData = dst.ptr<float>(k);
+                for (int i = 0; i < nl; i++)
                 if (targetData[i] > 0.5f)
                     dstData[i] = 1.0f - (1.0f - targetData[i])*(1.0f - 2.0f * blendData[i] - 0.5f);
                 else
                     dstData[i] = 2.0f * targetData[i] * blendData[i];
-                break;
-                case BLEND_MODEL_VIVID_LIGHT:
-                if (targetData[i] > 0.5f)
-                    dstData[i] = 1.0f - safe_div((1.0f - targetData[i]), (2.0f * (blendData[i] - 0.5f)));
-                else
-                    dstData[i] = safe_div(targetData[i], (1.0f - 2.0f * blendData[i]));
-                break;
-                case BLEND_MODEL_LINEAR_LIGHT:
-                if (targetData[i] > 0.5f)
-                    dstData[i] = targetData[i] + (2.0f * (blendData[i] - 0.5f));
-                else
-                    dstData[i] = targetData[i] + 2.0f * blendData[i] - 1.0f;
-                break;
-                case BLEND_MODEL_PIN_LIGHT:
-                if (targetData[i] > 0.5f)
-                    dstData[i] = max(targetData[i], (float)(2.0f * (blendData[i] - 0.5f)));
-                else
-                    dstData[i] = min(targetData[i], (float)(2.0f * (blendData[i])));
-                break;
-                case BLEND_MODEL_DIFFERENCE:
-                dstData[i] = abs(targetData[i] - blendData[i]);
-                break;
-                case BLEND_MODEL_EXCLUSION:
-                dstData[i] = targetData[i] + blendData[i] - 2.0f * targetData[i] * blendData[i];
-                break;
-                case BLEND_MODEL_DIVIDE:
-                dstData[i] = safe_div(targetData[i], blendData[i]);
-                break;
             }
-        }
+            break;
+        case BLEND_MODEL_VIVID_LIGHT:
+            for (int k = 0; k < nr; k++)
+            {
+                const float* targetData = target.ptr<float>(k);
+                const float* blendData = blend.ptr<float>(k);
+                float* dstData = dst.ptr<float>(k);
+                for (int i = 0; i < nl; i++)
+                    if (targetData[i] > 0.5f)
+                        dstData[i] = 1.0f - safe_div((1.0f - targetData[i]), (2.0f * (blendData[i] - 0.5f)));
+                    else
+                        dstData[i] = safe_div(targetData[i], (1.0f - 2.0f * blendData[i]));
+            }
+            break;
+        case BLEND_MODEL_LINEAR_LIGHT:
+            for (int k = 0; k < nr; k++)
+            {
+                const float* targetData = target.ptr<float>(k);
+                const float* blendData = blend.ptr<float>(k);
+                float* dstData = dst.ptr<float>(k);
+                for (int i = 0; i < nl; i++)
+                    if (targetData[i] > 0.5f)
+                        dstData[i] = targetData[i] + (2.0f * (blendData[i] - 0.5f));
+                    else
+                        dstData[i] = targetData[i] + 2.0f * blendData[i] - 1.0f;
+            }
+            break;
+        case BLEND_MODEL_PIN_LIGHT:
+            for (int k = 0; k < nr; k++)
+            {
+                const float* targetData = target.ptr<float>(k);
+                const float* blendData = blend.ptr<float>(k);
+                float* dstData = dst.ptr<float>(k);
+                for (int i = 0; i < nl; i++)
+                    if (targetData[i] > 0.5f)
+                        dstData[i] = max(targetData[i], (float)(2.0f * (blendData[i] - 0.5f)));
+                    else
+                        dstData[i] = min(targetData[i], (float)(2.0f * (blendData[i])));
+            }
+            break;
+            case BLEND_MODEL_DIFFERENCE:
+                dst = abs(target - blend);
+            break;
+            case BLEND_MODEL_EXCLUSION:
+                for (int k = 0; k < nr; k++)
+                {
+                    const float* targetData = target.ptr<float>(k);
+                    const float* blendData = blend.ptr<float>(k);
+                    float* dstData = dst.ptr<float>(k);
+                    for (int i = 0; i < nl; i++)
+                        dstData[i] = targetData[i] + blendData[i] - 2.0f * targetData[i] * blendData[i];
+                }    
+            break;
+            case BLEND_MODEL_DIVIDE:
+                for (int k = 0; k < nr; k++)
+                {
+                    const float* targetData = target.ptr<float>(k);
+                    const float* blendData = blend.ptr<float>(k);
+                    float* dstData = dst.ptr<float>(k);
+                    for (int i = 0; i < nl; i++)
+                        dstData[i] = safe_div(targetData[i], blendData[i]);
+                }
+            break;
     }
-}
+  }
 }
