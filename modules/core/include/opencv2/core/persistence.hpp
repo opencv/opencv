@@ -342,9 +342,10 @@ public:
 
     /** @brief Copy constructor for FileStorage
 
-    This copy constructor creates a deep copy the passed in FileStorage object
+    Copy constructor that creates deep copies of passed in cv::FileStorage objects. Based of the full
+    constructor.
     */
-    CV_WRAP FileStorage(const FileStorage& other);
+    FileStorage(const FileStorage& other);
 
     //! the destructor. calls release()
     virtual ~FileStorage();
@@ -464,11 +465,11 @@ public:
 
     int state;
     std::string elname;
+    // Added encoding field to have a complete deep copy
+    std::string encoding;
 
     class Impl;
     Ptr<Impl> p;
-    // Added encoding field to have a complete deep copy
-    std::string encoding;
 };
 
 /** @brief File Storage Node class.
