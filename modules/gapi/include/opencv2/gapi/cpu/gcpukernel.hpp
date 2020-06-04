@@ -285,158 +285,157 @@ template<typename Impl, typename... Ins>
 struct OCVSetupHelper<Impl, std::tuple<Ins...>>
 {
     template<int... IIs>
-    static void setup_impl(const GMetaArgs &metaArgs, const GArgs &args, GArg &state,
-                           detail::Seq<IIs...>)
+    static void setup_impl(const GMetaArgs &metaArgs, const GArgs &args, GArg &state, Seq<IIs...>)
     {
         // TODO: unique_ptr <-> shared_ptr conversion ?
         // To check: Conversion is possible only if the state which should be passed to
         // 'setup' user callback isn't required to have previous value
         std::shared_ptr<typename Impl::State> stPtr;
-        Impl::setup(detail::get_in_meta<Ins>(metaArgs, args, IIs)..., stPtr);
+        Impl::setup(get_in_meta<Ins>(metaArgs, args, IIs)..., stPtr);
         state = GArg(stPtr);
     }
 
     static void setup(const GMetaArgs &metaArgs, const GArgs &args, GArg& state)
     {
-        setup_impl(metaArgs, args, state,
-                   typename detail::MkSeq<sizeof...(Ins)>::type());
+        setup_impl(metaArgs, args, state, typename MkSeq<sizeof...(Ins)>::type());
     }
 };
 
-// OCVCallHelper is a helper class to call stateless OCV kernels and OCV kernel functors.
 template<typename, typename, typename>
 struct OCVCallHelper;
 
 // FIXME: probably can be simplified with std::apply or analogue.
-template<typename Impl, typename... Ins, typename... Outs>
-struct OCVCallHelper<Impl, std::tuple<Ins...>, std::tuple<Outs...>>
+template<typename CallerType, typename... Ins, typename... Outs>
+struct OCVCallHelper<CallerType, std::tuple<Ins...>, std::tuple<Outs...>>
 {
-    template<typename... Inputs>
+    template<typename... ArgsAndInputs>
     struct call_and_postprocess
     {
         template<typename... Outputs>
-        static void call(Inputs&&... ins, Outputs&&... outs)
+        static void launch(ArgsAndInputs&&... argsAndIns, Outputs&&... outs)
         {
             //not using a std::forward on outs is deliberate in order to
             //cause compilation error, by trying to bind rvalue references to lvalue references
-            Impl::run(std::forward<Inputs>(ins)..., outs...);
+            CallerType::call_impl(std::forward<ArgsAndInputs>(argsAndIns)..., outs...);
             postprocess(outs...);
-        }
-
-        template<typename... Outputs>
-        static void call(Impl& impl, Inputs&&... ins, Outputs&&... outs)
-        {
-            impl(std::forward<Inputs>(ins)..., outs...);
         }
     };
 
-    template<int... IIs, int... OIs>
-    static void call_impl(GCPUContext &ctx, detail::Seq<IIs...>, detail::Seq<OIs...>)
+    template<int... IIs, int... OIs, typename... Args>
+    static void call_ocv_kernel_helper(GCPUContext &ctx, Seq<IIs...>, Seq<OIs...>, Args&&... args)
     {
         //Make sure that OpenCV kernels do not reallocate memory for output parameters
         //by comparing it's state (data ptr) before and after the call.
         //This is done by converting each output Mat into tracked_cv_mat object, and binding
         //them to parameters of ad-hoc function
-        call_and_postprocess<decltype(get_in<Ins>::get(ctx, IIs))...>
-            ::call(get_in<Ins>::get(ctx, IIs)..., get_out<Outs>::get(ctx, OIs)...);
+        call_and_postprocess<Args..., decltype(get_in<Ins>::get(ctx, IIs))...>::
+            launch(args..., get_in<Ins>::get(ctx, IIs)..., get_out<Outs>::get(ctx, OIs)...);
     }
 
-    template<int... IIs, int... OIs>
-    static void call_impl(cv::GCPUContext &ctx, Impl& impl,
-                          detail::Seq<IIs...>, detail::Seq<OIs...>)
+    template<int... IIs, int... OIs, typename... Args>
+    static void call_ocv_kernel(GCPUContext &ctx, Args&&... args)
     {
-        call_and_postprocess<decltype(get_in<Ins>::get(ctx, IIs))...>
-            ::call(impl, get_in<Ins>::get(ctx, IIs)..., get_out<Outs>::get(ctx, OIs)...);
+        call_ocv_kernel_helper(ctx,
+                               typename MkSeq<sizeof...(Ins)>::type(),
+                               typename MkSeq<sizeof...(Outs)>::type(),
+                               args...);
+    }
+};
+
+template<typename Impl, typename InsTuple, typename OutsTuple>
+struct OCVStatelessCaller
+{
+    using CallHelper = OCVCallHelper<OCVStatelessCaller, InsTuple, OutsTuple>;
+
+    template<typename... Args>
+    static void call_impl(Args&&... args)
+    {
+        Impl::run(args...);
     }
 
     static void call(GCPUContext &ctx)
     {
-        call_impl(ctx,
-                  typename detail::MkSeq<sizeof...(Ins)>::type(),
-                  typename detail::MkSeq<sizeof...(Outs)>::type());
+        CallHelper::template call_ocv_kernel(ctx);
+    }
+};
+
+template<typename Impl, typename InsTuple, typename OutsTuple>
+struct OCVStatefullCaller
+{
+    using CallHelper = OCVCallHelper<OCVStatefullCaller, InsTuple, OutsTuple>;
+
+    template<typename... Args>
+    static void call_impl(GArg st, Args&&... args)
+    {
+        auto& state = *st.get<std::shared_ptr<typename Impl::State>>();
+        Impl::run(args..., state);
+    }
+
+    static void call(GCPUContext &ctx)
+    {
+        CallHelper::template call_ocv_kernel(ctx, ctx.state());
+    }
+};
+
+template<typename Impl, typename InsTuple, typename OutsTuple>
+struct OCVFunctorCaller
+{
+    using CallHelper = OCVCallHelper<OCVFunctorCaller, InsTuple, OutsTuple>;
+
+    template<typename... Args>
+    static void call_impl(Impl& impl, Args&&... args)
+    {
+        impl(args...);
     }
 
     // NB: Same as call but calling the object
     // This necessary for kernel implementations that have a state
     // and are represented as an object
-    static void callFunctor(cv::GCPUContext &ctx, Impl& impl)
+    static void call(cv::GCPUContext &ctx, Impl& impl)
     {
-        call_impl(ctx, impl,
-                  typename detail::MkSeq<sizeof...(Ins)>::type(),
-                  typename detail::MkSeq<sizeof...(Outs)>::type());
+        CallHelper::template call_ocv_kernel(ctx, impl);
     }
+
 };
-
-// OCVStCallHelper is a helper class to call stateful OCV kernels.
-template<typename, typename, typename>
-struct OCVStCallHelper;
-
-template<typename Impl, typename... Ins, typename... Outs>
-struct OCVStCallHelper<Impl, std::tuple<Ins...>, std::tuple<Outs...>> :
-    OCVCallHelper<Impl, std::tuple<Ins...>, std::tuple<Outs...>>
-{
-    template<typename... Inputs>
-    struct call_and_postprocess
-    {
-        template<typename... Outputs>
-        static void call(typename Impl::State& st, Inputs&&... ins, Outputs&&... outs)
-        {
-            Impl::run(std::forward<Inputs>(ins)..., outs..., st);
-            postprocess(outs...);
-        }
-    };
-
-    template<int... IIs, int... OIs>
-    static void call_impl(GCPUContext &ctx, detail::Seq<IIs...>, detail::Seq<OIs...>)
-    {
-        auto& st = *ctx.state().get<std::shared_ptr<typename Impl::State>>();
-        call_and_postprocess<decltype(get_in<Ins>::get(ctx, IIs))...>
-            ::call(st, get_in<Ins>::get(ctx, IIs)..., get_out<Outs>::get(ctx, OIs)...);
-    }
-
-    static void call(GCPUContext &ctx)
-    {
-        call_impl(ctx,
-                  typename detail::MkSeq<sizeof...(Ins)>::type(),
-                  typename detail::MkSeq<sizeof...(Outs)>::type());
-    }
-};
-
 } // namespace detail
 
 template<class Impl, class K>
-class GCPUKernelImpl: public cv::detail::KernelTag
+class GCPUKernelImpl: public detail::KernelTag
 {
-    using CallHelper = detail::OCVCallHelper<Impl, typename K::InArgs, typename K::OutArgs>;
+    using StatelessCaller  = detail::OCVStatelessCaller<Impl,
+                                                        typename K::InArgs,
+                                                        typename K::OutArgs>;
 
 public:
     using API = K;
 
     static cv::gapi::GBackend backend() { return cv::gapi::cpu::backend(); }
-    static cv::GCPUKernel      kernel() { return GCPUKernel(&CallHelper::call); }
+    static cv::GCPUKernel     kernel()  { return GCPUKernel(&StatelessCaller::call); }
 };
 
 template<class Impl, class K, class S>
-class GCPUStKernelImpl: public cv::detail::KernelTag
+class GCPUStatefulKernelImpl: public detail::KernelTag
 {
-    using StSetupHelper = detail::OCVSetupHelper<Impl, typename K::InArgs>;
-    using StCallHelper  = detail::OCVStCallHelper<Impl, typename K::InArgs, typename K::OutArgs>;
+    using StateSetupHelper = detail::OCVSetupHelper<Impl, typename K::InArgs>;
+    using StatefullCaller  = detail::OCVStatefullCaller<Impl,
+                                                        typename K::InArgs,
+                                                        typename K::OutArgs>;
 
 public:
     using API = K;
     using State = S;
 
     static cv::gapi::GBackend backend() { return cv::gapi::cpu::backend(); }
-    static cv::GCPUKernel     kernel()  { return GCPUKernel(&StCallHelper::call,
-                                                            &StSetupHelper::setup); }
+    static cv::GCPUKernel     kernel()  { return GCPUKernel(&StatefullCaller::call,
+                                                            &StateSetupHelper::setup); }
 };
 
 #define GAPI_OCV_KERNEL(Name, API) struct Name: public cv::GCPUKernelImpl<Name, API>
 
 // TODO: Reuse Anatoliy's logic for support of types with commas in macro.
 //       Retrieve the common part from Anatoliy's logic to the separate place.
-#define GAPI_OCV_KERNEL_ST(Name, API, State)                  \
-    struct Name:public cv::GCPUStKernelImpl<Name, API, State> \
+#define GAPI_OCV_KERNEL_ST(Name, API, State)                        \
+    struct Name:public cv::GCPUStatefulKernelImpl<Name, API, State> \
 
 
 class gapi::cpu::GOCVFunctor : public gapi::GFunctor
@@ -460,15 +459,18 @@ private:
 template<typename K, typename Callable>
 gapi::cpu::GOCVFunctor gapi::cpu::ocv_kernel(Callable& c)
 {
-    using P = detail::OCVCallHelper<Callable, typename K::InArgs, typename K::OutArgs>;
-    return GOCVFunctor(K::id(), std::bind(&P::callFunctor, std::placeholders::_1, std::ref(c)));
+    using FunctorCaller = detail::OCVFunctorCaller<Callable, typename K::InArgs,
+                                                             typename K::OutArgs>;
+    return GOCVFunctor(K::id(),
+                       std::bind(&FunctorCaller::call, std::placeholders::_1, std::ref(c)));
 }
 
 template<typename K, typename Callable>
 gapi::cpu::GOCVFunctor gapi::cpu::ocv_kernel(const Callable& c)
 {
-    using P = detail::OCVCallHelper<Callable, typename K::InArgs, typename K::OutArgs>;
-    return GOCVFunctor(K::id(), std::bind(&P::callFunctor, std::placeholders::_1, c));
+    using FunctorCaller = detail::OCVFunctorCaller<Callable, typename K::InArgs,
+                                                             typename K::OutArgs>;
+    return GOCVFunctor(K::id(), std::bind(&FunctorCaller::call, std::placeholders::_1, c));
 }
 //! @endcond
 

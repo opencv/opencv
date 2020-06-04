@@ -32,11 +32,10 @@ struct add_type_to_tuple<P, std::tuple<Ts...>>
 };
 
 template<class Impl, class K>
-class GRenderKernelImpl: public cv::detail::OCVCallHelper<Impl, typename K::InArgs, typename K::OutArgs>,
-                         public cv::detail::KernelTag
+class GRenderKernelImpl: public cv::detail::KernelTag
 {
     using InArgs = typename add_type_to_tuple<cv::gapi::wip::draw::FTTextRender*, typename K::InArgs>::type;
-    using P      = detail::OCVCallHelper<Impl, InArgs, typename K::OutArgs>;
+    using P      = detail::OCVStatelessCaller<Impl, InArgs, typename K::OutArgs>;
 
 public:
     using API = K;
