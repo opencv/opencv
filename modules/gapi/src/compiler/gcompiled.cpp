@@ -72,6 +72,12 @@ void cv::GCompiled::Priv::reshape(const GMetaArgs& inMetas, const GCompileArgs& 
     m_metas = inMetas;
 }
 
+void cv::GCompiled::Priv::prepareForNewStream()
+{
+    GAPI_Assert(m_exec);
+    m_exec->prepareForNewStream();
+}
+
 const cv::gimpl::GModel::Graph& cv::GCompiled::Priv::model() const
 {
     GAPI_Assert(nullptr != m_exec);
@@ -154,4 +160,9 @@ bool cv::GCompiled::canReshape() const
 void cv::GCompiled::reshape(const GMetaArgs& inMetas, const GCompileArgs& args)
 {
     m_priv->reshape(inMetas, args);
+}
+
+void cv::GCompiled::prepareForNewStream()
+{
+    m_priv->prepareForNewStream();
 }

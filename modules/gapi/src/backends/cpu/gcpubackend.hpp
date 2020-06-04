@@ -23,7 +23,7 @@
 
 namespace cv { namespace gimpl {
 
-struct Unit
+struct CPUUnit
 {
     static const char *name() { return "HostKernel"; }
     GCPUKernel k;
@@ -48,6 +48,13 @@ class GCPUExecutable final: public GIslandExecutable
     // Actual data of all resources in graph (both internal and external)
     Mag m_res;
     GArg packArg(const GArg &arg);
+    void setupKernelStates();
+
+    // TODO: Check that it is thread-safe
+    std::unordered_map<ade::NodeHandle, GArg,
+                       ade::HandleHasher<ade::Node>> m_nodesToStates;
+
+    bool m_newStreamStarted = false;
 
 public:
     GCPUExecutable(const ade::Graph                   &graph,
@@ -61,6 +68,8 @@ public:
         // should be dropped.
         util::throw_error(std::logic_error("GCPUExecutable::reshape() should never be called"));
     }
+
+    virtual void handleNewStream() override;
 
     virtual void run(std::vector<InObj>  &&input_objs,
                      std::vector<OutObj> &&output_objs) override;
