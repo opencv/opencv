@@ -31,4 +31,3 @@ cv::GComputation deserialize(const std::vector<char> &p) {
 } // namespace cv
 
 #endif // OPENCV_GAPI_S11N_HPP
-

@@ -256,7 +256,7 @@ I::IStream& operator>> (I::IStream& is, cv::util::variant<Ts...> &v) {
 class GAPI_EXPORTS ByteMemoryOutStream final: public I::OStream {
     std::vector<char> m_storage;
 
-    I::OStream& operator<< (uint32_t);
+    virtual I::OStream& operator << (uint32_t);
 
 public:
     const std::vector<char>& data() const;
@@ -280,7 +280,7 @@ class GAPI_EXPORTS ByteMemoryInStream final: public I::IStream {
     void check(std::size_t n) { (void) n; GAPI_DbgAssert(m_idx+n-1 < m_storage.size()); }
     uint32_t getU32() { uint32_t v{}; *this >> v; return v; };
 
-    I::IStream& operator>> (uint32_t &);
+    virtual I::IStream& operator>> (uint32_t &);
 
 public:
     explicit ByteMemoryInStream(const std::vector<char> &data);
