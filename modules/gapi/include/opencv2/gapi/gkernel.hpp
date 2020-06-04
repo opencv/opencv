@@ -457,7 +457,7 @@ namespace gapi {
         /// @private
         // Partial include() specialization for kernels
         template <typename KImpl>
-        typename std::enable_if<(std::is_base_of<detail::KernelTag, KImpl>::value), void>::type
+        typename std::enable_if<(std::is_base_of<cv::detail::KernelTag, KImpl>::value), void>::type
         includeHelper()
         {
             auto backend     = KImpl::backend();
@@ -471,7 +471,7 @@ namespace gapi {
         /// @private
         // Partial include() specialization for transformations
         template <typename TImpl>
-        typename std::enable_if<(std::is_base_of<detail::TransformTag, TImpl>::value), void>::type
+        typename std::enable_if<(std::is_base_of<cv::detail::TransformTag, TImpl>::value), void>::type
         includeHelper()
         {
             m_transformations.emplace_back(TImpl::transformation());
