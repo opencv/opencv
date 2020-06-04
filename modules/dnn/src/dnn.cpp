@@ -3508,6 +3508,7 @@ Net Net::Impl::createNetworkFromModelOptimizer(InferenceEngine::CNNNetwork& ieNe
     for (auto& it : ieNet.getOutputsInfo())
     {
         CV_TRACE_REGION("output");
+        const auto& outputName = it.first;
 
         LayerParams lp;
         int lid = cvNet.addLayer(it.first, "", lp);
@@ -3517,37 +3518,60 @@ Net Net::Impl::createNetworkFromModelOptimizer(InferenceEngine::CNNNetwork& ieNe
 #ifdef HAVE_DNN_NGRAPH
         if (DNN_BACKEND_INFERENCE_ENGINE_NGRAPH == getInferenceEngineBackendTypeParam())
         {
-            const auto& outputName = it.first;
             Ptr<Layer> cvLayer(new NgraphBackendLayer(ieNet));
             cvLayer->name = outputName;
             cvLayer->type = "_unknown_";
 
-            if (ngraphFunction)
+            auto process_layer = [&](const std::string& name) -> bool
             {
-                CV_TRACE_REGION("ngraph_function");
-                bool found = false;
-                for (const auto& op : ngraphOperations)
+                if (ngraphFunction)
                 {
-                    CV_Assert(op);
-                    if (op->get_friendly_name() == outputName)
+                    CV_TRACE_REGION("ngraph_function");
+                    for (const auto& op : ngraphOperations)
                     {
-                        const std::string typeName = op->get_type_info().name;
-                        cvLayer->type = typeName;
-                        found = true;
-                        break;
+                        CV_Assert(op);
+                        if (op->get_friendly_name() == name)
+                        {
+                            const std::string typeName = op->get_type_info().name;
+                            cvLayer->type = typeName;
+                            return true;
+                        }
+                    }
+                    return false;
+                }
+                else
+                {
+                    CV_TRACE_REGION("legacy_cnn_layer");
+                    try
+                    {
+                        InferenceEngine::CNNLayerPtr ieLayer = ieNet.getLayerByName(name.c_str());
+                        CV_Assert(ieLayer);
+
+                        cvLayer->type = ieLayer->type;
+                        return true;
+                    }
+                    catch (const std::exception& e)
+                    {
+                        CV_UNUSED(e);
+                        CV_LOG_DEBUG(NULL, "IE layer extraction failure: '" << name << "' - " << e.what());
+                        return false;
                     }
                 }
-                if (!found)
-                    CV_LOG_WARNING(NULL, "DNN/IE: Can't determine output layer type: '" << outputName << "'");
-            }
-            else
-            {
-                CV_TRACE_REGION("legacy_cnn_layer");
-                InferenceEngine::CNNLayerPtr ieLayer = ieNet.getLayerByName(it.first.c_str());
-                CV_Assert(ieLayer);
+            };
 
-                cvLayer->type = ieLayer->type;
+            bool found = process_layer(outputName);
+            if (!found)
+            {
+                auto pos = outputName.rfind('.');  // cut port number: ".0"
+                if (pos != std::string::npos)
+                {
+                    std::string layerName = outputName.substr(0, pos);
+                    found = process_layer(layerName);
+                }
             }
+            if (!found)
+                CV_LOG_WARNING(NULL, "DNN/IE: Can't determine output layer type: '" << outputName << "'");
+
             ld.layerInstance = cvLayer;
             ld.backendNodes[DNN_BACKEND_INFERENCE_ENGINE_NGRAPH] = backendNode;
         }
@@ -3557,10 +3581,23 @@ Net Net::Impl::createNetworkFromModelOptimizer(InferenceEngine::CNNNetwork& ieNe
 #ifdef HAVE_DNN_IE_NN_BUILDER_2019
             Ptr<Layer> cvLayer(new InfEngineBackendLayer(ieNet));
 
-            InferenceEngine::CNNLayerPtr ieLayer = ieNet.getLayerByName(it.first.c_str());
+            InferenceEngine::CNNLayerPtr ieLayer;
+            try
+            {
+                ieLayer = ieNet.getLayerByName(outputName.c_str());
+            }
+            catch (...)
+            {
+                auto pos = outputName.rfind('.');  // cut port number: ".0"
+                if (pos != std::string::npos)
+                {
+                    std::string layerName = outputName.substr(0, pos);
+                    ieLayer = ieNet.getLayerByName(layerName.c_str());
+                }
+            }
             CV_Assert(ieLayer);
 
-            cvLayer->name = it.first;
+            cvLayer->name = outputName;
             cvLayer->type = ieLayer->type;
             ld.layerInstance = cvLayer;
 

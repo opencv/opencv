@@ -1220,7 +1220,7 @@ TEST_P(Test_TensorFlow_nets, EfficientDet)
     }
     checkBackend();
     std::string proto = findDataFile("dnn/efficientdet-d0.pbtxt");
-    std::string model = findDataFile("dnn/efficientdet-d0.pb");
+    std::string model = findDataFile("dnn/efficientdet-d0.pb", false);
 
     Net net = readNetFromTensorflow(model, proto);
     Mat img = imread(findDataFile("dnn/dog416.png"));
