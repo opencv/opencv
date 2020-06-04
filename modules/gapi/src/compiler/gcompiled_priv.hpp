@@ -48,6 +48,7 @@ public:
 
     bool canReshape() const;
     void reshape(const GMetaArgs& inMetas, const GCompileArgs &args);
+    void prepareForNewStream();
 
     void run(cv::gimpl::GRuntimeArgs &&args);
     const GMetaArgs& metas() const;
