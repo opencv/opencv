@@ -510,7 +510,7 @@ namespace gapi {
         template<typename KImpl>
         bool includes() const
         {
-            static_assert(std::is_base_of<detail::KernelTag, KImpl>::value,
+            static_assert(std::is_base_of<cv::detail::KernelTag, KImpl>::value,
                           "includes() can be applied to kernels only");
 
             auto kernel_it = m_id_kernels.find(KImpl::API::id());
@@ -625,7 +625,7 @@ namespace gapi {
     {
         // FIXME: currently there is no check that transformations' signatures are unique
         // and won't be any intersection in graph compilation stage
-        static_assert(detail::all_unique<typename KK::API...>::value, "Kernels API must be unique");
+        static_assert(cv::detail::all_unique<typename KK::API...>::value, "Kernels API must be unique");
 
         GKernelPackage pkg;
 
