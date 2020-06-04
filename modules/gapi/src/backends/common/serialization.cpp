@@ -61,7 +61,7 @@ void linkNodes(ade::Graph& g) {
     for (const auto& nh : g.nodes()) {
         if (gm.metadata(nh).get<NodeType>().t == NodeType::DATA) {
             const auto &d = gm.metadata(nh).get<gimpl::Data>();
-            const auto rc = cv::gimpl::RcDesc{d.rc, d.shape};
+            const auto rc = cv::gimpl::RcDesc{d.rc, d.shape, d.ctor};
             dataNodes[rc] = nh;
         }
     }
@@ -108,7 +108,7 @@ void relinkProto(ade::Graph& g) {
     for (auto &&nh : gm.nodes()) {
         if (gm.metadata(nh).get<cv::gimpl::NodeType>().t == cv::gimpl::NodeType::DATA) {
             const auto &d = gm.metadata(nh).get<cv::gimpl::Data>();
-            const auto rc = cv::gimpl::RcDesc{d.rc, d.shape};
+            const auto rc = cv::gimpl::RcDesc{d.rc, d.shape, d.ctor};
             if (set_in.count(rc) > 0) {
                 GAPI_DbgAssert(set_out.count(rc) == 0);
                 map_in[rc] = nh;

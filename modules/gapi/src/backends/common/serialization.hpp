@@ -246,7 +246,7 @@ template<typename... Ts>
 I::IStream& operator>> (I::IStream& is, cv::util::variant<Ts...> &v) {
     int idx = -1;
     is >> idx;
-    GAPI_Assert(idx >= 0 && idx < sizeof...(Ts));
+    GAPI_Assert(idx >= 0 && idx < (int)sizeof...(Ts));
     return detail::get_v<cv::util::variant<Ts...>, Ts...>(is, v, 0u, idx);
 }
 
