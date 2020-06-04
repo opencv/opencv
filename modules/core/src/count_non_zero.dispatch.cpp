@@ -62,6 +62,12 @@ static bool ipp_countNonZero( Mat &src, int &res )
 {
     CV_INSTRUMENT_REGION_IPP();
 
+#if defined __APPLE__ || (defined _MSC_VER && defined _M_IX86)
+    // see https://github.com/opencv/opencv/issues/17453
+    if (src.dims <= 2 && src.step > 520000)
+        return false;
+#endif
+
 #if IPP_VERSION_X100 < 201801
     // Poor performance of SSE42
     if(cv::ipp::getIppTopFeatures() == ippCPUID_SSE42)

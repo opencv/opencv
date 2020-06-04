@@ -895,7 +895,10 @@ class JavaWrapperGenerator(object):
                 ret = ""
                 default = ""
             elif not fi.ctype: # c-tor
-                ret = "return (jlong) _retval_;"
+                if self.isSmartClass(ci):
+                    ret = "return (jlong)(new Ptr<%(ctype)s>(_retval_));" % { 'ctype': fi.fullClass(isCPP=True) }
+                else:
+                    ret = "return (jlong) _retval_;"
             elif "v_type" in type_dict[fi.ctype]: # c-tor
                 if type_dict[fi.ctype]["v_type"] in ("Mat", "vector_Mat"):
                     ret = "return (jlong) _retval_;"
@@ -940,8 +943,12 @@ class JavaWrapperGenerator(object):
                         c_epilogue.append("return " + fi.ctype + "_to_List(env, _ret_val_vector_);")
             if fi.classname:
                 if not fi.ctype: # c-tor
-                    retval = fi.fullClass(isCPP=True) + "* _retval_ = "
-                    cvname = "new " + fi.fullClass(isCPP=True)
+                    if self.isSmartClass(ci):
+                        retval = self.smartWrap(ci, fi.fullClass(isCPP=True)) + " _retval_ = "
+                        cvname = "makePtr<" + fi.fullClass(isCPP=True) +">"
+                    else:
+                        retval = fi.fullClass(isCPP=True) + "* _retval_ = "
+                        cvname = "new " + fi.fullClass(isCPP=True)
                 elif fi.static:
                     cvname = fi.fullName(isCPP=True)
                 else:

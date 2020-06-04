@@ -1208,9 +1208,20 @@ bool CvCapture_FFMPEG::grabFrame()
 #endif
 
         int ret = av_read_frame(ic, &packet);
-        if (ret == AVERROR(EAGAIN)) continue;
 
-        /* else if (ret < 0) break; */
+        if (ret == AVERROR(EAGAIN))
+            continue;
+
+        if (ret == AVERROR_EOF)
+        {
+            if (rawMode)
+                break;
+
+            // flush cached frames from video decoder
+            packet.data = NULL;
+            packet.size = 0;
+            packet.stream_index = video_stream;
+        }
 
         if( packet.stream_index != video_stream )
         {

@@ -197,8 +197,8 @@ bool convert(const FileNode& oldroot, FileStorage& newfs)
     newfs << "cascade" << "{:opencv-cascade-classifier"
     << "stageType" << "BOOST"
     << "featureType" << "HAAR"
-    << "height" << cascadesize.width
-    << "width" << cascadesize.height
+    << "width" << cascadesize.width
+    << "height" << cascadesize.height
     << "stageParams" << "{"
         << "maxWeakCount" << (int)maxWeakCount
     << "}"

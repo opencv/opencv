@@ -419,7 +419,7 @@ Simply call it with 4 chars fourcc code like `CV_FOURCC('I', 'Y', 'U', 'V')`
 
 List of codes can be obtained at [Video Codecs by FOURCC](http://www.fourcc.org/codecs.php) page.
 FFMPEG backend with MP4 container natively uses other values as fourcc code:
-see [ObjectType](http://www.mp4ra.org/codecs.html).
+see [ObjectType](http://mp4ra.org/#/codecs).
 */
 CV_INLINE int CV_FOURCC(char c1, char c2, char c3, char c4)
 {

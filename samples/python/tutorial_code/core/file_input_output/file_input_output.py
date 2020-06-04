@@ -29,12 +29,12 @@ class MyData:
         return s
 
     ## [inside]
-    def write(self, fs):
-        fs.write('MyData','{')
+    def write(self, fs, name):
+        fs.startWriteStruct(name, cv.FileNode_MAP|cv.FileNode_FLOW)
         fs.write('A', self.A)
         fs.write('X', self.X)
         fs.write('name', self.name)
-        fs.write('MyData','}')
+        fs.endWriteStruct()
 
     def read(self, node):
         if (not node.empty()):
@@ -74,25 +74,26 @@ def main(argv):
     ## [writeNum]
 
     ## [writeStr]
-    s.write('strings', '[')
-    s.write('image1.jpg','Awesomeness')
-    s.write('../data/baboon.jpg',']')
+    s.startWriteStruct('strings', cv.FileNode_SEQ)
+    for elem in ['image1.jpg', 'Awesomeness', '../data/baboon.jpg']:
+        s.write('', elem)
+    s.endWriteStruct()
     ## [writeStr]
 
     ## [writeMap]
-    s.write ('Mapping', '{')
-    s.write ('One', 1)
-    s.write ('Two', 2)
-    s.write ('Mapping', '}')
+    s.startWriteStruct('Mapping', cv.FileNode_MAP)
+    s.write('One', 1)
+    s.write('Two', 2)
+    s.endWriteStruct()
     ## [writeMap]
 
     ## [iomatw]
-    s.write ('R_MAT', R)
-    s.write ('T_MAT', T)
+    s.write('R_MAT', R)
+    s.write('T_MAT', T)
     ## [iomatw]
 
     ## [customIOw]
-    m.write(s)
+    m.write(s, 'MyData')
     ## [customIOw]
     ## [close]
     s.release()

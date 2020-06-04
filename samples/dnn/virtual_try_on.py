@@ -185,7 +185,7 @@ class CpVton(object):
 
         agnostic = np.concatenate((res_shape, img_head, pose_map), axis=0)
         agnostic = np.expand_dims(agnostic, axis=0)
-        return agnostic
+        return agnostic.astype(np.float32)
 
     def get_warped_cloth(self, cloth_img, agnostic, height=256, width=192):
         cloth = cv.dnn.blobFromImage(cloth_img, 1.0 / 127.5, (width, height), mean=(127.5, 127.5, 127.5), swapRB=True)

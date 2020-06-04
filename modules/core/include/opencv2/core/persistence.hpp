@@ -436,12 +436,20 @@ public:
      */
     CV_WRAP void writeComment(const String& comment, bool append = false);
 
-    void startWriteStruct(const String& name, int flags, const String& typeName);
-    void endWriteStruct();
+    /** @brief Starts to write a nested structure (sequence or a mapping).
+    @param name name of the structure (if it's a member of parent mapping, otherwise it should be empty
+    @param flags type of the structure (FileNode::MAP or FileNode::SEQ (both with optional FileNode::FLOW)).
+    @param typeName usually an empty string
+    */
+    CV_WRAP void startWriteStruct(const String& name, int flags, const String& typeName=String());
+
+    /** @brief Finishes writing nested structure (should pair startWriteStruct())
+    */
+    CV_WRAP void endWriteStruct();
 
     /** @brief Returns the normalized object name for the specified name of a file.
-     @param filename Name of a file
-     @returns The normalized object name.
+    @param filename Name of a file
+    @returns The normalized object name.
      */
     static String getDefaultObjectName(const String& filename);
 
