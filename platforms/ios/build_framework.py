@@ -238,6 +238,7 @@ class Builder:
             cmakecmd = self.makeCMakeCmd(arch, target, builddir + "/modules/objc/gen", cmakeargs)
             cmakecmd.append("-DBUILD_ROOT=%s" % builddir)
             cmakecmd.append("-DCMAKE_INSTALL_NAME_TOOL=install_name_tool")
+            cmakecmd.append("--no-warn-unused-cli")
             execute(cmakecmd, cwd = builddir + "/modules/objc/framework_build")
 
             execute(buildcmd + ["-target", "ALL_BUILD", "build"], cwd = builddir + "/modules/objc/framework_build")
