@@ -265,3 +265,11 @@ void cv::gimpl::GExecutor::reshape(const GMetaArgs& inMetas, const GCompileArgs&
     passes::inferMeta(ctx, true);
     m_ops[0].isl_exec->reshape(g, args);
 }
+
+void cv::gimpl::GExecutor::prepareForNewStream()
+{
+    for (auto &op : m_ops)
+    {
+        op.isl_exec->handleNewStream();
+    }
+}

@@ -91,6 +91,8 @@ public:
     bool canReshape() const;
     void reshape(const GMetaArgs& inMetas, const GCompileArgs& args);
 
+    void prepareForNewStream();
+
     const GModel::Graph& model() const; // FIXME: make it ConstGraph?
 };
 
