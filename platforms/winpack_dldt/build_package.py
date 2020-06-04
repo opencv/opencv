@@ -208,7 +208,7 @@ class BuilderDLDT:
 
         def do_clone(srcdir, noFetch):
             git_checkout(srcdir, self.config.dldt_src_url, self.config.dldt_src_branch, self.config.dldt_src_commit,
-                    ['-n', '--depth=100', '--recurse-submodules'] +
+                    ['-n', '--depth=100', '--no-single-branch', '--recurse-submodules'] +
                     (self.config.dldt_src_git_clone_extra or []),
                     noFetch=noFetch
             )
@@ -432,9 +432,9 @@ class Builder:
 
 def main():
 
-    dldt_src_url = 'https://github.com/opencv/dldt.git'
-    dldt_src_commit = '2020.2'
-    dldt_release = '2020020000'
+    dldt_src_url = 'https://github.com/openvinotoolkit/openvino'
+    dldt_src_commit = '2020.3.0'
+    dldt_release = '2020030000'
 
     build_cache_dir_default = os.environ.get('BUILD_CACHE_DIR', '.build_cache')
     build_subst_drive = os.environ.get('BUILD_SUBST_DRIVE', None)
