@@ -45,13 +45,7 @@ cv::GCPUKernel::GCPUKernel()
 {
 }
 
-cv::GCPUKernel::GCPUKernel(const GCPUKernel::F &f)
-    : m_f(f)
+cv::GCPUKernel::GCPUKernel(const GCPUKernel::RunF &runF, const GCPUKernel::SetupF &setupF)
+    : m_runF(runF), m_setupF(setupF), m_isStateful(m_setupF != nullptr)
 {
-}
-
-void cv::GCPUKernel::apply(GCPUContext &ctx)
-{
-    GAPI_Assert(m_f);
-    m_f(ctx);
 }
