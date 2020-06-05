@@ -42,7 +42,6 @@ namespace cv
         Mat dst = _dst.getMat();
         int nr = target.rows;
         int nl = target.cols*target.channels();
-    
         switch (flag)
         {
         case BLEND_MODEL_DARKEN:
