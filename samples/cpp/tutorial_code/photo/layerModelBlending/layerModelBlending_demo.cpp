@@ -70,7 +70,8 @@ int main()
     cin >> num;
     cout << endl;
     Mat target = cv::imread("samples/cpp/lena.jpg");
-    Mat blend = cv::imread("samples/cpp/opencv-logo.png");
+    Mat blend;
+    GaussianBlur(target, blend, Size(33, 33), 0);
     Mat temp(target.size(), CV_32FC3, Scalar::all(0));
     Mat result(target.size(), CV_8UC3, Scalar::all(0));
     if (target.empty()) {
