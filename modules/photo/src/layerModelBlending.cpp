@@ -33,7 +33,6 @@ CV_EXPORTS_W void layerModelBlending(InputArray _target, InputArray _blend, Outp
     CV_Assert(!_blend.empty());
     CV_Assert(_target.type() == CV_8UC3 && _blend.type() == CV_8UC3);
     CV_Assert(_target.size() == _blend.size());
-    
     Mat target = _target.getMat();
     Mat blend = _blend.getMat();
     Size target_size = _target.size();
