@@ -27,6 +27,7 @@ using namespace cv;
 #define LayerModelBlend_LinearLight(A,B)((uchar)(B < 128)?LayerModelBlend_LinearBurn(A,(2 * B)):LayerModelBlend_LinearDodge(A,(2 * (B - 128))))
 #define LayerModelBlend_VividLight(A,B) ((uchar)(B < 128)?LayerModelBlend_ColorBurn(A,(2 * B)):LayerModelBlend_ColorDodge(A,(2 * (B - 128))))
 #define LayerModelBlend_PinLight(A,B)   ((uchar)(B < 128)?LayerModelBlend_Darken(A,(2 * B)):LayerModelBlend_Lighten(A,(2 * (B - 128))))
+CV_EXPORTS_W void layerModelBlending(InputArray _target, InputArray _blend, OutputArray _dst, int flag);
 CV_EXPORTS_W void layerModelBlending(InputArray _target, InputArray _blend, OutputArray _dst, int flag)
 {
     CV_Assert(!_target.empty());
