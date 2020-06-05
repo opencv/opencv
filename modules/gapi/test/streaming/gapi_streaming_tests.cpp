@@ -730,6 +730,8 @@ TEST(GAPI_Streaming_Types, OutputScalar)
 
     cv::VideoCapture cap;
     cap.open(video_path);
+    if (!cap.isOpened())
+        throw SkipTestException("Video file can not be opened");
 
     cv::Mat tmp;
     cv::Scalar out_scl;
@@ -774,6 +776,8 @@ TEST(GAPI_Streaming_Types, OutputVector)
 
     cv::VideoCapture cap;
     cap.open(video_path);
+    if (!cap.isOpened())
+        throw SkipTestException("Video file can not be opened");
 
     cv::Mat tmp;
     std::vector<int> ref_vec;
