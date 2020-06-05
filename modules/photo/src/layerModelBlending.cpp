@@ -27,164 +27,166 @@ using namespace cv;
 #define LayerModelBlend_LinearLight(A,B)((uchar)(B < 128)?LayerModelBlend_LinearBurn(A,(2 * B)):LayerModelBlend_LinearDodge(A,(2 * (B - 128))))
 #define LayerModelBlend_VividLight(A,B) ((uchar)(B < 128)?LayerModelBlend_ColorBurn(A,(2 * B)):LayerModelBlend_ColorDodge(A,(2 * (B - 128))))
 #define LayerModelBlend_PinLight(A,B)   ((uchar)(B < 128)?LayerModelBlend_Darken(A,(2 * B)):LayerModelBlend_Lighten(A,(2 * (B - 128))))
-CV_EXPORTS_W void layerModelBlending(InputArray _target, InputArray _blend, OutputArray _dst, int flag);
-CV_EXPORTS_W void layerModelBlending(InputArray _target, InputArray _blend, OutputArray _dst, int flag)
+namespace cv
 {
-    CV_Assert(!_target.empty());
-    CV_Assert(!_blend.empty());
-    CV_Assert(_target.type() == CV_8UC3 && _blend.type() == CV_8UC3);
-    CV_Assert(_target.size() == _blend.size());
-    Mat target = _target.getMat();
-    Mat blend = _blend.getMat();
-    Size target_size = _target.size();
-    _dst.create(target_size, target.type());
-    Mat dst = _dst.getMat();
-    int nr = target.rows;
-    int nl = target.cols*target.channels();
-
-    switch (flag)
+    CV_EXPORTS_W void layerModelBlending(InputArray _target, InputArray _blend, OutputArray _dst, int flag)
     {
-    case BLEND_MODEL_DARKEN:
-        dst = min(target, blend);
-    break;
-    case BLEND_MODEL_MULTIPY:
-        multiply(target, blend, dst, 1.0 / 255);
-    break;
-    case BLEND_MODEL_COLOR_BURN:
-        for (int k = 0; k < nr; k++)
+        CV_Assert(!_target.empty());
+        CV_Assert(!_blend.empty());
+        CV_Assert(_target.type() == CV_8UC3 && _blend.type() == CV_8UC3);
+        CV_Assert(_target.size() == _blend.size());
+        Mat target = _target.getMat();
+        Mat blend = _blend.getMat();
+        Size target_size = _target.size();
+        _dst.create(target_size, target.type());
+        Mat dst = _dst.getMat();
+        int nr = target.rows;
+        int nl = target.cols*target.channels();
+    
+        switch (flag)
         {
-            const uchar* targetData = target.ptr<uchar>(k);
-            const uchar* blendData = blend.ptr<uchar>(k);
-            uchar* dstData = dst.ptr<uchar>(k);
-            for (int i = 0; i < nl; i++)
-                dstData[i] = LayerModelBlend_ColorBurn(targetData[i], blendData[i]);
-        }
-    break;
-    case BLEND_MODEL_LINEAR_BRUN:
-        for (int k = 0; k < nr; k++)
-        {
-            const uchar* targetData = target.ptr<uchar>(k);
-            const uchar* blendData = blend.ptr<uchar>(k);
-            uchar* dstData = dst.ptr<uchar>(k);
-            for (int i = 0; i < nl; i++)
-                dstData[i] = LayerModelBlend_LinearBurn(targetData[i], blendData[i]);
-        }
-    break;
-    case BLEND_MODEL_LIGHTEN:
-        dst = max(target, blend);
-    break;
-    case BLEND_MODEL_SCREEN:
-        for (int k = 0; k < nr; k++)
-        {
-            const uchar* targetData = target.ptr<uchar>(k);
-            const uchar* blendData = blend.ptr<uchar>(k);
-            uchar* dstData = dst.ptr<uchar>(k);
-            for (int i = 0; i < nl; i++)
-                dstData[i] = LayerModelBlend_Screen(targetData[i], blendData[i]);
-        }
-    break;
-    case BLEND_MODEL_COLOR_DODGE:
-        for (int k = 0; k < nr; k++)
-        {
-            const uchar* targetData = target.ptr<uchar>(k);
-            const uchar* blendData = blend.ptr<uchar>(k);
-            uchar* dstData = dst.ptr<uchar>(k);
-            for (int i = 0; i < nl; i++)
-                dstData[i] = LayerModelBlend_ColorDodge(targetData[i], blendData[i]);
-        }
-    break;
-    case BLEND_MODEL_LINEAR_DODGE:
-        for (int k = 0; k < nr; k++)
-        {
-            const uchar* targetData = target.ptr<uchar>(k);
-            const uchar* blendData = blend.ptr<uchar>(k);
-            uchar* dstData = dst.ptr<uchar>(k);
-            for (int i = 0; i < nl; i++)
-                dstData[i] = LayerModelBlend_LinearDodge(targetData[i], blendData[i]);
-        }
-    break;
-    case BLEND_MODEL_OVERLAY:
-        for (int k = 0; k < nr; k++)
-        {
-            const uchar* targetData = target.ptr<uchar>(k);
-            const uchar* blendData = blend.ptr<uchar>(k);
-            uchar* dstData = dst.ptr<uchar>(k);
-            for (int i = 0; i < nl; i++)
-                dstData[i] = LayerModelBlend_Overlay(targetData[i], blendData[i]);
-        }
-    break;
-    case BLEND_MODEL_SOFT_LIGHT:
-        for (int k = 0; k < nr; k++)
-        {
-            const uchar* targetData = target.ptr<uchar>(k);
-            const uchar* blendData = blend.ptr<uchar>(k);
-            uchar* dstData = dst.ptr<uchar>(k);
-            for (int i = 0; i < nl; i++)
-                dstData[i] = LayerModelBlend_SoftLight(targetData[i], blendData[i]);
-        }
-    break;
-    case BLEND_MODEL_HARD_LIGHT:
-        for (int k = 0; k < nr; k++)
-        {
-            const uchar* targetData = target.ptr<uchar>(k);
-            const uchar* blendData = blend.ptr<uchar>(k);
-            uchar* dstData = dst.ptr<uchar>(k);
-            for (int i = 0; i < nl; i++)
-                dstData[i] = LayerModelBlend_HardLight(targetData[i], blendData[i]);
-        }
-    break;
-    case BLEND_MODEL_VIVID_LIGHT:
-        for (int k = 0; k < nr; k++)
-        {
-            const uchar* targetData = target.ptr<uchar>(k);
-            const uchar* blendData = blend.ptr<uchar>(k);
-            uchar* dstData = dst.ptr<uchar>(k);
-            for (int i = 0; i < nl; i++)
-                dstData[i] = LayerModelBlend_VividLight(targetData[i], blendData[i]);
-        }
-    break;
-    case BLEND_MODEL_LINEAR_LIGHT:
-        for (int k = 0; k < nr; k++)
-        {
-            const uchar* targetData = target.ptr<uchar>(k);
-            const uchar* blendData = blend.ptr<uchar>(k);
-            uchar* dstData = dst.ptr<uchar>(k);
-            for (int i = 0; i < nl; i++)
-                dstData[i] = LayerModelBlend_LinearLight(targetData[i], blendData[i]);
-        }
-    break;
-    case BLEND_MODEL_PIN_LIGHT:
-        for (int k = 0; k < nr; k++)
-        {
-            const uchar* targetData = target.ptr<uchar>(k);
-            const uchar* blendData = blend.ptr<uchar>(k);
-            uchar* dstData = dst.ptr<uchar>(k);
-            for (int i = 0; i < nl; i++)
-                dstData[i] = LayerModelBlend_PinLight(targetData[i], blendData[i]);
-        }
-    break;
-    case BLEND_MODEL_DIFFERENCE:
-        dst = abs(target - blend);
-    break;
-    case BLEND_MODEL_EXCLUSION:
-        for (int k = 0; k < nr; k++)
-        {
-            const uchar* targetData = target.ptr<uchar>(k);
-            const uchar* blendData = blend.ptr<uchar>(k);
-            uchar* dstData = dst.ptr<uchar>(k);
-            for (int i = 0; i < nl; i++)
-                dstData[i] = LayerModelBlend_Exclusion(targetData[i], blendData[i]);
-        }
-    break;
-    case BLEND_MODEL_DIVIDE:
-        for (int k = 0; k < nr; k++)
-        {
-            const uchar* targetData = target.ptr<uchar>(k);
-            const uchar* blendData = blend.ptr<uchar>(k);
-            uchar* dstData = dst.ptr<uchar>(k);
-            for (int i = 0; i < nl; i++)
-                dstData[i] = (targetData[i] / blendData[i]) * 255;
-        }
-    break;
+        case BLEND_MODEL_DARKEN:
+            dst = min(target, blend);
+        break;
+        case BLEND_MODEL_MULTIPY:
+            multiply(target, blend, dst, 1.0 / 255);
+        break;
+        case BLEND_MODEL_COLOR_BURN:
+            for (int k = 0; k < nr; k++)
+            {
+                const uchar* targetData = target.ptr<uchar>(k);
+                const uchar* blendData = blend.ptr<uchar>(k);
+                uchar* dstData = dst.ptr<uchar>(k);
+                for (int i = 0; i < nl; i++)
+                    dstData[i] = LayerModelBlend_ColorBurn(targetData[i], blendData[i]);
+            }
+        break;
+        case BLEND_MODEL_LINEAR_BRUN:
+            for (int k = 0; k < nr; k++)
+            {
+                const uchar* targetData = target.ptr<uchar>(k);
+                const uchar* blendData = blend.ptr<uchar>(k);
+                uchar* dstData = dst.ptr<uchar>(k);
+                for (int i = 0; i < nl; i++)
+                    dstData[i] = LayerModelBlend_LinearBurn(targetData[i], blendData[i]);
+            }
+        break;
+        case BLEND_MODEL_LIGHTEN:
+            dst = max(target, blend);
+        break;
+        case BLEND_MODEL_SCREEN:
+            for (int k = 0; k < nr; k++)
+            {
+                const uchar* targetData = target.ptr<uchar>(k);
+                const uchar* blendData = blend.ptr<uchar>(k);
+                uchar* dstData = dst.ptr<uchar>(k);
+                for (int i = 0; i < nl; i++)
+                    dstData[i] = LayerModelBlend_Screen(targetData[i], blendData[i]);
+            }
+        break;
+        case BLEND_MODEL_COLOR_DODGE:
+            for (int k = 0; k < nr; k++)
+            {
+                const uchar* targetData = target.ptr<uchar>(k);
+                const uchar* blendData = blend.ptr<uchar>(k);
+                uchar* dstData = dst.ptr<uchar>(k);
+                for (int i = 0; i < nl; i++)
+                    dstData[i] = LayerModelBlend_ColorDodge(targetData[i], blendData[i]);
+            }
+        break;
+        case BLEND_MODEL_LINEAR_DODGE:
+            for (int k = 0; k < nr; k++)
+            {
+                const uchar* targetData = target.ptr<uchar>(k);
+                const uchar* blendData = blend.ptr<uchar>(k);
+                uchar* dstData = dst.ptr<uchar>(k);
+                for (int i = 0; i < nl; i++)
+                    dstData[i] = LayerModelBlend_LinearDodge(targetData[i], blendData[i]);
+            }
+        break;
+        case BLEND_MODEL_OVERLAY:
+            for (int k = 0; k < nr; k++)
+            {
+                const uchar* targetData = target.ptr<uchar>(k);
+                const uchar* blendData = blend.ptr<uchar>(k);
+                uchar* dstData = dst.ptr<uchar>(k);
+                for (int i = 0; i < nl; i++)
+                    dstData[i] = LayerModelBlend_Overlay(targetData[i], blendData[i]);
+            }
+        break;
+        case BLEND_MODEL_SOFT_LIGHT:
+            for (int k = 0; k < nr; k++)
+            {
+                const uchar* targetData = target.ptr<uchar>(k);
+                const uchar* blendData = blend.ptr<uchar>(k);
+                uchar* dstData = dst.ptr<uchar>(k);
+                for (int i = 0; i < nl; i++)
+                    dstData[i] = LayerModelBlend_SoftLight(targetData[i], blendData[i]);
+            }
+        break;
+        case BLEND_MODEL_HARD_LIGHT:
+            for (int k = 0; k < nr; k++)
+            {
+                const uchar* targetData = target.ptr<uchar>(k);
+                const uchar* blendData = blend.ptr<uchar>(k);
+                uchar* dstData = dst.ptr<uchar>(k);
+                for (int i = 0; i < nl; i++)
+                    dstData[i] = LayerModelBlend_HardLight(targetData[i], blendData[i]);
+            }
+        break;
+        case BLEND_MODEL_VIVID_LIGHT:
+            for (int k = 0; k < nr; k++)
+            {
+                const uchar* targetData = target.ptr<uchar>(k);
+                const uchar* blendData = blend.ptr<uchar>(k);
+                uchar* dstData = dst.ptr<uchar>(k);
+                for (int i = 0; i < nl; i++)
+                    dstData[i] = LayerModelBlend_VividLight(targetData[i], blendData[i]);
+            }
+        break;
+        case BLEND_MODEL_LINEAR_LIGHT:
+            for (int k = 0; k < nr; k++)
+            {
+                const uchar* targetData = target.ptr<uchar>(k);
+                const uchar* blendData = blend.ptr<uchar>(k);
+                uchar* dstData = dst.ptr<uchar>(k);
+                for (int i = 0; i < nl; i++)
+                    dstData[i] = LayerModelBlend_LinearLight(targetData[i], blendData[i]);
+            }
+        break;
+        case BLEND_MODEL_PIN_LIGHT:
+            for (int k = 0; k < nr; k++)
+            {
+                const uchar* targetData = target.ptr<uchar>(k);
+                const uchar* blendData = blend.ptr<uchar>(k);
+                uchar* dstData = dst.ptr<uchar>(k);
+                for (int i = 0; i < nl; i++)
+                    dstData[i] = LayerModelBlend_PinLight(targetData[i], blendData[i]);
+            }
+        break;
+        case BLEND_MODEL_DIFFERENCE:
+            dst = abs(target - blend);
+        break;
+        case BLEND_MODEL_EXCLUSION:
+            for (int k = 0; k < nr; k++)
+            {
+                const uchar* targetData = target.ptr<uchar>(k);
+                const uchar* blendData = blend.ptr<uchar>(k);
+                uchar* dstData = dst.ptr<uchar>(k);
+                for (int i = 0; i < nl; i++)
+                    dstData[i] = LayerModelBlend_Exclusion(targetData[i], blendData[i]);
+            }
+        break;
+        case BLEND_MODEL_DIVIDE:
+            for (int k = 0; k < nr; k++)
+            {
+                const uchar* targetData = target.ptr<uchar>(k);
+                const uchar* blendData = blend.ptr<uchar>(k);
+                uchar* dstData = dst.ptr<uchar>(k);
+                for (int i = 0; i < nl; i++)
+                    dstData[i] = (targetData[i] / blendData[i]) * 255;
+            }
+        break;
     }
+  }
 }
