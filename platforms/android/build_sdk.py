@@ -109,6 +109,10 @@ def copytree_smart(src, dst):
                 shutil.copy2(s, d)
     copy_recurse('')
 
+def get_highest_version(subdirs):
+    return max(subdirs, key=lambda dir: [int(comp) for comp in os.path.split(dir)[-1].split('.')])
+
+
 #===================================================================================================
 
 class ABI:
@@ -162,8 +166,8 @@ class Builder:
         if os.path.exists(android_cmake):
             cmake_subdirs = [f for f in os.listdir(android_cmake) if check_executable([os.path.join(android_cmake, f, 'bin', 'cmake'), '--version'])]
             if len(cmake_subdirs) > 0:
-                # there could be more than one - just take the first one
-                cmake_from_sdk = os.path.join(android_cmake, cmake_subdirs[0], 'bin', 'cmake')
+                # there could be more than one - get the most recent
+                cmake_from_sdk = os.path.join(android_cmake, get_highest_version(cmake_subdirs), 'bin', 'cmake')
                 log.info("Using cmake from Android SDK: %s", cmake_from_sdk)
                 return cmake_from_sdk
         raise Fail("Can't find cmake")
@@ -311,6 +315,22 @@ class Builder:
                 else:
                     shutil.move(src, dst)
 
+def get_ndk_dir():
+    # look to see if Android NDK is installed
+    android_sdk_ndk = os.path.join(os.environ["ANDROID_SDK"], 'ndk')
+    android_sdk_ndk_bundle = os.path.join(os.environ["ANDROID_SDK"], 'ndk-bundle')
+    if os.path.exists(android_sdk_ndk):
+        ndk_subdirs = [f for f in os.listdir(android_sdk_ndk) if os.path.exists(os.path.join(android_sdk_ndk, f, 'package.xml'))]
+        if len(ndk_subdirs) > 0:
+            # there could be more than one - get the most recent
+            ndk_from_sdk = os.path.join(android_sdk_ndk, get_highest_version(ndk_subdirs))
+            log.info("Using NDK (side-by-side) from Android SDK: %s", ndk_from_sdk)
+            return ndk_from_sdk
+    if os.path.exists(os.path.join(android_sdk_ndk_bundle, 'package.xml')):
+        log.info("Using NDK bundle from Android SDK: %s", android_sdk_ndk_bundle)
+        return android_sdk_ndk_bundle
+    return None
+
 
 #===================================================================================================
 
@@ -349,11 +369,19 @@ if __name__ == "__main__":
         raise Fail("SDK location not set. Either pass --sdk_path or set ANDROID_SDK environment variable")
 
     # look for an NDK installed with the Android SDK
-    if not 'ANDROID_NDK' in os.environ and 'ANDROID_SDK' in os.environ and os.path.exists(os.path.join(os.environ["ANDROID_SDK"], 'ndk-bundle')):
-        os.environ['ANDROID_NDK'] = os.path.join(os.environ["ANDROID_SDK"], 'ndk-bundle')
+    if not 'ANDROID_NDK' in os.environ and 'ANDROID_SDK' in os.environ:
+        sdk_ndk_dir = get_ndk_dir()
+        if sdk_ndk_dir:
+            os.environ['ANDROID_NDK'] = sdk_ndk_dir
 
     if not 'ANDROID_NDK' in os.environ:
         raise Fail("NDK location not set. Either pass --ndk_path or set ANDROID_NDK environment variable")
+
+    show_samples_build_warning = False
+    #also set ANDROID_NDK_HOME (needed by the gradle build)
+    if not 'ANDROID_NDK_HOME' in os.environ and 'ANDROID_NDK' in os.environ:
+        os.environ['ANDROID_NDK_HOME'] = os.environ["ANDROID_NDK"]
+        show_samples_build_warning = True
 
     if not check_executable(['ccache', '--version']):
         log.info("ccache not found - disabling ccache support")
@@ -411,5 +439,8 @@ if __name__ == "__main__":
     log.info("=====")
     log.info("===== Build finished")
     log.info("=====")
+    if show_samples_build_warning:
+        #give a hint how to solve "Gradle sync failed: NDK not configured."
+        log.info("ANDROID_NDK_HOME environment variable required by the samples project is not set")
     log.info("SDK location: %s", builder.resultdest)
     log.info("Documentation location: %s", builder.docdest)
