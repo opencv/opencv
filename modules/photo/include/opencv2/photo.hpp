@@ -891,7 +891,7 @@ CV::VIVID_LIGHT、CV::LINEAR_LIGHT、CV::PIN_LIGHT、CV::DIFFERENCE、CV::EXCLUS
    -   An example using the layerModelBlending technique can be found at
         opencv/samples/cpp/tutorial_code/photo/layerModelBlending/layerModelBlending_demo.cpp
 */
-CV_EXPORTS_W void layerModelBlending(InputArray target, InputArray blend, OutputArray dst, int flag);
+CV_EXPORTS_W void layerModelBlending(InputArray _target, InputArray _blend, OutputArray _dst, int flag);
 
 //! @} addtogroup layerModelBlending
 
