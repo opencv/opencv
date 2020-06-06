@@ -4,7 +4,7 @@
 //
 //  In order to achieve a better display effect, please write the number on white paper and occupy the entire camera.
 //
-//  You can follow the following guide to train LeNet-5 by yourself using the minist dataset.
+//  You can follow the following guide to train LeNet-5 by yourself using the MNIST dataset.
 //  https://github.com/intel/caffe/blob/a3d5b022fe026e9092fc7abc7654b1162ab9940d/examples/mnist/readme.md
 //
 //  You can also download and train the model directly.
@@ -18,12 +18,13 @@
 #include <iostream>
 #include <vector>
 
-using namespace std;
 using namespace cv;
 using namespace cv::dnn;
 
 const char *keys =
     "{ help     h  | | Print help message. }"
+    "{ input    i  | | Path to input image or video file. Skip this argument to capture frames from a camera.}"
+    "{ device      |  0 | camera device number. }"
     "{ modelBin    | | Path to a binary .caffemodel file contains trained network.}"
     "{ modelTxt    | | Path to a .prototxt file contains the model definition of trained network.}"
     "{ width       | 640 | Set the width of the camera }"
@@ -49,8 +50,8 @@ int main(int argc, char **argv)
     int vWidth = parser.get<int>("width");
     int vHeight = parser.get<int>("height");
     float confThreshold = parser.get<float>("thr");
-    String modelTxt = parser.get<String>("modelTxt");
-    String modelBin = parser.get<String>("modelBin");
+    std::string modelTxt = parser.get<String>("modelTxt");
+    std::string modelBin = parser.get<String>("modelBin");
 
     dnn::Net net;
     try
@@ -59,24 +60,24 @@ int main(int argc, char **argv)
     }
     catch (cv::Exception &ee)
     {
-        cerr << "Exception: " << ee.what() << endl;
+        std::cerr << "Exception: " << ee.what() << std::endl;
         if (net.empty())
         {
-            cout << "Can't load the network by using the flowing files:" << endl;
-            cout << "modelTxt: " << modelTxt << endl;
-            cout << "modelBin: " << modelBin << endl;
-            exit(-1);
+            std::cout << "Can't load the network by using the flowing files:" << std::endl;
+            std::cout << "modelTxt: " << modelTxt << std::endl;
+            std::cout << "modelBin: " << modelBin << std::endl;
+            return 1;
         }
     }
 
-    static const string resultWinName = "LeNet Result";
-    static const string preWinName = "Preprocessing";
+    const std::string resultWinName = "Handwritten digit recognition based on LeNet-5";
+    const std::string preWinName = "Preprocessing";
 
-    namedWindow(resultWinName, WINDOW_AUTOSIZE);
     namedWindow(preWinName, WINDOW_AUTOSIZE);
+    namedWindow(resultWinName, WINDOW_AUTOSIZE);
 
-    Mat labels, img_color, stats, centroids;
-    Point positiosn;
+    Mat labels, stats, centroids;
+    Point position;
 
     Rect getRectangle;
     bool ifDrawingBox = false;
@@ -84,30 +85,37 @@ int main(int argc, char **argv)
     int classId = 0;
     double probability = 0;
 
-    VideoCapture cap(0);
-
-    // Set camera resolution
-    cap.set(CAP_PROP_FRAME_WIDTH, vWidth);
-    cap.set(CAP_PROP_FRAME_HEIGHT, vHeight);
-
-    Rect basicRact = Rect(0, 0, 640, 480);
+    Rect basicRect = Rect(0, 0, vWidth, vHeight);
     Mat rawImage;
 
     double fps = 0;
 
     // Open a video file or an image file or a camera stream.
-    if (cap.isOpened())
+    VideoCapture cap;
+    if (parser.has("input"))
+        cap.open(parser.get<String>("input"));
+    else
+        cap.open(parser.get<int>("device"));
+
+        // Set camera resolution
+        cap.set(CAP_PROP_FRAME_WIDTH, vWidth);
+        cap.set(CAP_PROP_FRAME_HEIGHT, vHeight);
+
+    TickMeter cvtm;
+
+    while (waitKey(1) < 0)
     {
-        TickMeter cvtm;
-
-        while (true)
+        cap >> rawImage;
+        if (rawImage.empty())
         {
-            cvtm.reset();
-            cvtm.start();
-            cap >> rawImage;
+            waitKey();
+            break;
+        }
 
-            Mat image = rawImage.clone();
+        cvtm.reset();
+        cvtm.start();
 
+        Mat image = rawImage.clone();
             // Image preprocessing
             cvtColor(image, image, COLOR_BGR2GRAY);
             GaussianBlur(image, image, Size(3, 3), 2, 2);
@@ -127,7 +135,7 @@ int main(int argc, char **argv)
                     ifDrawingBox = true;
                     int left = stats.at<int>(i - 1, CC_STAT_HEIGHT) / 4;
                     getRectangle = Rect(stats.at<int>(i - 1, CC_STAT_LEFT) - left, stats.at<int>(i - 1, CC_STAT_TOP) - left, stats.at<int>(i - 1, CC_STAT_WIDTH) + 2 * left, stats.at<int>(i - 1, CC_STAT_HEIGHT) + 2 * left);
-                    getRectangle &= basicRact;
+                    getRectangle &= basicRect;
                 }
 
                 if (ifDrawingBox)
@@ -138,25 +146,21 @@ int main(int argc, char **argv)
                     if (probability < confThreshold)
                         continue;
 
-                    // cout << "probability : "<<probability << endl;
-
                     rectangle(rawImage, getRectangle, Scalar(128, 255, 128), 2);
 
-                    positiosn = Point(getRectangle.br().x - 7, getRectangle.br().y + 25);
-                    putText(rawImage, to_string(classId), positiosn, 3, 1.0, Scalar(128, 128, 255), 2);
+                    position = Point(getRectangle.br().x - 7, getRectangle.br().y + 25);
+                    putText(rawImage, std::to_string(classId), position, 3, 1.0, Scalar(128, 128, 255), 2);
                 }
             }
 
             cvtm.stop();
             fps = 1 / cvtm.getTimeSec();
-            string fpsString = format("Inference FPS: %.2f ms", fps);
+            std::string fpsString = format("Inference FPS: %.2f m/s.", fps);
             putText(image, fpsString, Point(5, 20), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(128, 255, 128));
 
-            // printf("time = %gms\n", cvtm.getTimeMilli());
-            imshow(resultWinName, image);
-            imshow(preWinName, rawImage);
-            waitKey(30);
-        }
+            imshow(resultWinName, rawImage);
+            imshow(preWinName, image);
+
     }
 
     return 0;
@@ -174,12 +178,10 @@ void predictor(dnn::Net net, Mat &roi, int &classId, double &probability)
 {
     Mat pred;
     //Convert Mat to batch of images
-    Mat inputBlob = dnn::blobFromImage(roi, 1, Size(28, 28), Scalar(), false);
-    //set the network input, "data" is the name of the input layer
-    net.setInput(inputBlob, "data");
-
+    Mat inputBlob = dnn::blobFromImage(roi, 1.0, Size(28, 28));
+    //set the network input
+    net.setInput(inputBlob);
     //compute output, "prob" is the name of the output layer
     pred = net.forward("prob");
-    //cout << pred << endl;
     getMaxClass(pred, &classId, &probability);
 }
