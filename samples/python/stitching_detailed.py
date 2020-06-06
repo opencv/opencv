@@ -103,19 +103,19 @@ parser.add_argument(
 )
 parser.add_argument(
     '--features', action='store', default=list(FEATURES_FIND_CHOICES.keys())[0],
-    help="Type of features used for images matching. The default is '%s'." % FEATURES_FIND_CHOICES.keys(),
+    help="Type of features used for images matching. The default is '%s'." % list(FEATURES_FIND_CHOICES.keys())[0],
     choices=FEATURES_FIND_CHOICES.keys(),
     type=str, dest='features'
 )
 parser.add_argument(
     '--matcher', action='store', default='homography',
-    help="Matcher used for pairwise image matching.",
+    help="Matcher used for pairwise image matching. The default is 'homography'.",
     choices=('homography', 'affine'),
     type=str, dest='matcher'
 )
 parser.add_argument(
     '--estimator', action='store', default=list(ESTIMATOR_CHOICES.keys())[0],
-    help="Type of estimator used for transformation estimation.",
+    help="Type of estimator used for transformation estimation. The default is '%s'." % list(ESTIMATOR_CHOICES.keys())[0],
     choices=ESTIMATOR_CHOICES.keys(),
     type=str, dest='estimator'
 )
