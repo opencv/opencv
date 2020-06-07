@@ -1,3 +1,18 @@
+'''
+    Text detection model: https://github.com/argman/EAST
+    Download link: https://www.dropbox.com/s/r2ingd0l3zt8hxs/frozen_east_text_detection.tar.gz?dl=1
+    Text recognition model taken from here: https://github.com/meijieru/crnn.pytorch
+    How to convert from pb to onnx:
+    Using classes from here: https://github.com/meijieru/crnn.pytorch/blob/master/models/crnn.py
+    import torch
+    import models.crnn as CRNN
+    model = CRNN(32, 1, 37, 256)
+    model.load_state_dict(torch.load('crnn.pth'))
+    dummy_input = torch.randn(1, 1, 32, 100)
+    torch.onnx.export(model, dummy_input, "crnn.onnx", verbose=True)
+'''
+
+
 # Import required modules
 import numpy as np
 import cv2 as cv
@@ -7,12 +22,13 @@ import argparse
 ############ Add argument parser for command line arguments ############
 parser = argparse.ArgumentParser(
     description="Use this script to run TensorFlow implementation (https://github.com/argman/EAST) of "
-                "EAST: An Efficient and Accurate Scene Text Detector (https://arxiv.org/abs/1704.03155v2)")
+                "EAST: An Efficient and Accurate Scene Text Detector (https://arxiv.org/abs/1704.03155v2)"
+                "The OCR model can be obtained from converting the pretrained CRNN model to .onnx format from the github repository https://github.com/meijieru/crnn.pytorch")
 parser.add_argument('--input',
                     help='Path to input image or video file. Skip this argument to capture frames from a camera.')
 parser.add_argument('--model', '-m', required=True,
                     help='Path to a binary .pb file contains trained detector network.')
-parser.add_argument('--ocr', required=True, default="crnn.onnx",
+parser.add_argument('--ocr', default="crnn.onnx",
                     help="Path to a binary .pb or .onnx file contains trained recognition network", )
 parser.add_argument('--width', type=int, default=320,
                     help='Preprocess input image by resizing to a specific width. It should be multiple by 32.')
@@ -28,6 +44,7 @@ args = parser.parse_args()
 ############ Utility functions ############
 
 def fourPointsTransform(frame, vertices):
+    vertices = np.asarray(vertices)
     outputSize = (100, 32)
     targetVertices = np.array([
         [0, outputSize[1] - 1],
@@ -101,8 +118,7 @@ def decodeBoundingBoxes(scores, geometry, scoreThresh):
             w = x1_data[x] + x3_data[x]
 
             # Calculate offset
-            offset = (
-            [offsetX + cosA * x1_data[x] + sinA * x2_data[x], offsetY - sinA * x1_data[x] + cosA * x2_data[x]])
+            offset = ([offsetX + cosA * x1_data[x] + sinA * x2_data[x], offsetY - sinA * x1_data[x] + cosA * x2_data[x]])
 
             # Find points for rectangle
             p1 = (-sinA * h + offset[0], -cosA * h + offset[1])
@@ -121,11 +137,11 @@ def main():
     nmsThreshold = args.nms
     inpWidth = args.width
     inpHeight = args.height
-    modelDecoder = args.model
+    modelDetector = args.model
     modelRecognition = args.ocr
 
     # Load network
-    detector = cv.dnn.readNet(modelDecoder)
+    detector = cv.dnn.readNet(modelDetector)
     recognizer = cv.dnn.readNet(modelRecognition)
 
     # Create a new named window
@@ -160,7 +176,7 @@ def main():
 
         tickmeter.start()
         outs = detector.forward(outNames)
-        tickmeter.start()
+        tickmeter.stop()
 
         # Get scores and geometry
         scores = outs[0]
@@ -177,10 +193,9 @@ def main():
                 vertices[j][0] *= rW
                 vertices[j][1] *= rH
 
-            vertices = np.asarray(vertices)
 
             # get cropped image using perspective transform
-            if modelRecognition is not None:
+            if modelRecognition:
                 cropped = fourPointsTransform(frame, vertices)
                 cropped = cv.cvtColor(cropped, cv.COLOR_BGR2GRAY)
 
@@ -198,10 +213,10 @@ def main():
                 cv.putText(frame, wordRecognized, (int(vertices[1][0]), int(vertices[1][1])), cv.FONT_HERSHEY_SIMPLEX,
                            0.5, (255, 0, 0))
 
-                for j in range(4):
-                    p1 = (vertices[j][0], vertices[j][1])
-                    p2 = (vertices[(j + 1) % 4][0], vertices[(j + 1) % 4][1])
-                    cv.line(frame, p1, p2, (0, 255, 0), 1)
+            for j in range(4):
+                p1 = (vertices[j][0], vertices[j][1])
+                p2 = (vertices[(j + 1) % 4][0], vertices[(j + 1) % 4][1])
+                cv.line(frame, p1, p2, (0, 255, 0), 1)
 
         # Put efficiency information
         label = 'Inference time: %.2f ms' % (tickmeter.getTimeMilli())
