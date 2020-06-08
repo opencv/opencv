@@ -34,7 +34,10 @@ function(ocv_create_videoio_plugin default_name target target_desc videoio_src_f
   set(imgproc_ROOT "${modules_ROOT}/imgproc")
   set(imgcodecs_ROOT "${modules_ROOT}/imgcodecs")
 
-  add_library(${OPENCV_PLUGIN_NAME} MODULE "${videoio_ROOT}/src/${videoio_src_file}")
+  add_library(${OPENCV_PLUGIN_NAME} MODULE
+      "${videoio_ROOT}/src/${videoio_src_file}"
+      ${OPENCV_PLUGIN_EXTRA_SRC_FILES}
+  )
   target_include_directories(${OPENCV_PLUGIN_NAME} PRIVATE
     "${CMAKE_CURRENT_BINARY_DIR}"
     "${videoio_ROOT}/src"
