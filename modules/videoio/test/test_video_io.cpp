@@ -459,6 +459,56 @@ INSTANTIATE_TEST_CASE_P(videoio, Videoio_Synthetic,
                             testing::ValuesIn(all_sizes),
                             testing::ValuesIn(synthetic_params)));
 
+// related issue: https://github.com/opencv/opencv/issues/15499
+static const VideoCaptureAPIs mp4_meta_backend_params[] = {
+#ifdef HAVE_QUICKTIME
+    CAP_QT,
+#endif
+
+#ifdef HAVE_AVFOUNDATION
+   CAP_AVFOUNDATION,
+#endif
+
+#ifdef HAVE_MSMF
+    CAP_MSMF,
+#endif
+
+#ifdef HAVE_FFMPEG
+    CAP_FFMPEG,
+#endif
+};
+
+struct Mp4OrientationTest: public testing::TestWithParam<VideoCaptureAPIs> {};
+
+TEST_P(Mp4OrientationTest, mp4_orientation_meta_auto)
+{
+    const VideoCaptureAPIs apiPref = GetParam();
+    string video_file = string(cvtest::TS::ptr()->get_data_path()) + "video/big_buck_bunny_rotated.mp4";
+
+    if (!isBackendAvailable(apiPref, cv::videoio_registry::getStreamBackends()))
+        throw SkipTestException(cv::String("Backend is not available/disabled: ") + cv::videoio_registry::getBackendName(apiPref));
+
+    VideoCapture cap;
+    EXPECT_NO_THROW(cap.open(video_file, apiPref));
+    ASSERT_TRUE(cap.isOpened()) << "Can't open the video: " << video_file << " with backend " << apiPref << std::endl;
+
+    Size actual;
+    EXPECT_NO_THROW(actual = Size((int)cap.get(CAP_PROP_FRAME_WIDTH),
+                                    (int)cap.get(CAP_PROP_FRAME_HEIGHT)));
+    EXPECT_EQ(384, actual.width);
+    EXPECT_EQ(672, actual.height);
+
+    Mat frame;
+
+    cap >> frame;
+
+    ASSERT_EQ(384, frame.cols);
+    ASSERT_EQ(672, frame.rows);
+}
+
+INSTANTIATE_TEST_CASE_P(videoio, Mp4OrientationTest,
+                          testing::ValuesIn(mp4_meta_backend_params));
+
 struct Ext_Fourcc_API
 {
     const char* ext;
