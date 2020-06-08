@@ -311,13 +311,13 @@ I::IStream& operator>> (I::IStream& is, cv::GArg &arg) {
     if (arg.kind == cv::detail::ArgKind::GOBJREF) {
         cv::gimpl::RcDesc rc;
         is >> rc;
-        arg = std::move(GArg(rc));
+        arg = (GArg(rc));
     } else {
         GAPI_Assert(arg.kind == cv::detail::ArgKind::OPAQUE_VAL);
         GAPI_Assert(arg.opaque_kind != cv::detail::OpaqueKind::CV_UNKNOWN);
         switch (arg.opaque_kind) {
 #define HANDLE_CASE(E,T) case cv::detail::OpaqueKind::CV_##E:           \
-            { T t{}; is >> t; arg = std::move(cv::GArg(t)); } break
+            { T t{}; is >> t; arg = (cv::GArg(t)); } break
             HANDLE_CASE(BOOL   , bool);
             HANDLE_CASE(INT    , int);
             HANDLE_CASE(DOUBLE , double);
