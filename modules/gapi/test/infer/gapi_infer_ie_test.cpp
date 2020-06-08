@@ -361,7 +361,6 @@ TEST(TestAgeGenderIE, InferROIList2)
     normAssert(ie_gender[1], gapi_gender[1], "1: Test gender output");
 }
 
-
 } // namespace opencv_test
 
 #endif //  HAVE_INF_ENGINE
