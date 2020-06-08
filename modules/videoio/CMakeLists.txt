@@ -10,7 +10,7 @@ if(NOT TARGET opencv_videoio_plugins)
   add_custom_target(opencv_videoio_plugins ALL)
 endif()
 
-ocv_add_module(videoio opencv_imgproc opencv_imgcodecs WRAP java python)
+ocv_add_module(videoio opencv_imgproc opencv_imgcodecs WRAP java objc python)
 
 set(videoio_hdrs ${CMAKE_CURRENT_LIST_DIR}/src/precomp.hpp)
 

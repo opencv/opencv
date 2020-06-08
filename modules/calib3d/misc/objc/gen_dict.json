@@ -1,0 +1,5 @@
+{
+    "func_arg_fix" : {
+        "findCirclesGrid" : { "blobDetector" : {"defval" : "cv::SimpleBlobDetector::create()"} }
+    }
+}

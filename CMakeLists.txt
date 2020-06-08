@@ -452,6 +452,7 @@ OCV_OPTION(BUILD_FAT_JAVA_LIB       "Create Java wrapper exporting all functions
 OCV_OPTION(BUILD_ANDROID_SERVICE    "Build OpenCV Manager for Google Play" OFF IF ANDROID )
 OCV_OPTION(BUILD_CUDA_STUBS         "Build CUDA modules stubs when no CUDA SDK" OFF  IF (NOT APPLE_FRAMEWORK) )
 OCV_OPTION(BUILD_JAVA               "Enable Java support"                         (ANDROID OR NOT CMAKE_CROSSCOMPILING)  IF (ANDROID OR (NOT APPLE_FRAMEWORK AND NOT WINRT)) )
+OCV_OPTION(BUILD_OBJC               "Enable Objective-C support"                  ON  IF APPLE_FRAMEWORK )
 
 # OpenCV installation options
 # ===================================================
@@ -1593,6 +1594,12 @@ if(BUILD_JAVA)
   endif()
   status("    Java wrappers:" HAVE_opencv_java                                                            THEN YES ELSE NO)
   status("    Java tests:"    BUILD_TESTS AND opencv_test_java_BINARY_DIR                                 THEN YES ELSE NO)
+endif()
+
+# ========================== Objective-C =======================
+if(BUILD_OBJC)
+  status("")
+  status("  Objective-C wrappers:" HAVE_opencv_objc                                                       THEN YES ELSE NO)
 endif()
 
 ocv_cmake_hook(STATUS_DUMP_EXTRA)
