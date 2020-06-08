@@ -18,6 +18,8 @@ var fillGradient = function(cv, img, delta=5) {
 
 var cvtStr2cvSize = function(strSize) {
   let size;
+
+  let cvSize = getCvSize();
   switch(strSize) {
     case "127,61": size = cvSize.szODD;break;
     case '320,240': size = cvSize.szQVGA;break;
@@ -52,8 +54,170 @@ function permute (source, target) {
   return result;
 }
 
+var constructMode = function (startStr, sChannel, dChannel) {
+  let modeList = []
+  for (let j in dChannel) {
+    modeList.push(startStr+sChannel+"2"+dChannel[j])
+  }
+  return modeList;
+}
+
+var enableButton = function () {
+  runButton.removeAttribute('disabled');
+  runButton.setAttribute('class', 'btn btn-primary');
+  runButton.innerHTML = 'Run';
+}
+
+var disableButton = function () {
+  runButton.setAttribute("disabled", "disabled");
+  runButton.setAttribute('class', 'btn btn-primary disabled');
+  runButton.innerHTML = "Running";
+}
+
+var log = function (message) {
+  console.log(message);
+  if (!isNodeJs) {
+    logElement.innerHTML += `\n${'\t' + message}`;
+  }
+}
+
+var addKernelCase = function (suite, params, type, kernelFunc) {
+  kernelFunc(suite, type);
+  let index = suite.length - 1;
+  suite[index].params = params;
+}
+
+function constructParamLog(params, kernel) {
+  let paramLog = '';
+  if (kernel == "cvtcolor") {
+    let mode = params.mode;
+    let size = params.size;
+    paramLog = `params: (${parseInt(size[0])}x${parseInt(size[1])}, ${mode})`;
+  } else if (kernel == "resize") {
+    let matType = params.matType;
+    let size1 = params.from;
+    let size2 = params.to;
+    paramLog = `params: (${matType},${parseInt(size1.width)}x${parseInt(size1.height)},`+
+    `${parseInt(size2.width)}x${parseInt(size2.height)})`;
+  } else if (kernel == "threshold") {
+    let matSize = params.matSize;
+    let matType = params.matType;
+    let threshType = params.threshType;
+    paramLog = `params: (${parseInt(matSize.width)}x${parseInt(matSize.height)},`+
+    `${matType},${threshType})`;
+  } else if (kernel == "sobel") {
+    let size = params.size;
+    let ddepth = params.ddepth;
+    let dxdy = params.dxdy;
+    let ksize = params.ksize;
+    let borderType = params.borderType;
+    paramLog = `params: (${parseInt(size[0])}x${parseInt(size[1])},`+
+    `${ddepth},${dxdy},${borderType}, ksize:${ksize})`;
+  } else if (kernel == "filter2d") {
+    let size = params.size;
+    let ksize = params.ksize;
+    let borderMode = params.borderMode;
+    paramLog = `params: (${parseInt(size.width)}x${parseInt(size.height)},`+
+    `${ksize},${borderMode})`;
+  }
+  return paramLog;
+}
+
+var setBenchmarkSuite =  function (suite, kernel, currentCaseId) {
+  suite
+  // add listeners
+  .on('cycle', function(event) {
+    ++currentCaseId;
+    let params = event.target.params;
+    paramLog = constructParamLog(params, kernel);
+
+    log(`=== ${event.target.name} ${currentCaseId} ===`);
+    log(paramLog);
+    log('elapsed time:' +String(event.target.times.elapsed*1000)+' ms');
+    log('mean time:' +String(event.target.stats.mean*1000)+' ms');
+    log('stddev time:' +String(event.target.stats.deviation*1000)+' ms');
+    log(String(event.target));
+  })
+  .on('error', function(event) { log(`test case ${event.target.name} failed`); })
+  .on('complete', function(event) {
+    log(`\n ###################################`)
+    log(`Finished testing ${event.currentTarget.length} cases \n`);
+    if (!isNodeJs) {
+      runButton.removeAttribute('disabled');
+      runButton.setAttribute('class', 'btn btn-primary');
+      runButton.innerHTML = 'Run';
+    }
+  });
+}
+
+var decodeParams2Case = function(paramContent, paramsList, combinations) {
+  let sizeString = (paramContent.match(/[0-9]+x[0-9]+/g) || []).toString();
+  let sizes = (sizeString.match(/[0-9]+/g) || []);
+  let paramSize = paramsList.length;
+  let paramObjs = []
+  let sizeCount = 0;
+  for (let i = 0; i < paramSize; i++) {
+      let param = paramsList[i];
+      let paramName = param.name;
+      let paramValue = param.value;
+      let paramReg = param.reg;
+      let paramIndex = param.index;
+
+      if(paramValue != "") {
+        paramObjs.push({name: paramName, value: paramValue, index: paramIndex});
+      } else if (paramName.startsWith('size')) {
+        let sizeStr = sizes.slice(sizeCount, sizeCount+2).toString();
+        paramValue = cvtStr2cvSize(sizeStr);
+        sizeCount += 2;
+        paramObjs.push({name: paramName, value: paramValue, index: paramIndex});
+      } else {
+        for (let index in paramReg) {
+          let reg = eval(paramReg[index]);
+          if ('loc' in param) {
+            paramValue = (paramContent.match(reg) || [])[param.loc].toString();
+          } else {
+            paramValue = (paramContent.match(reg) || []).toString();
+          }
+
+          if (paramValue != "") {
+            paramObjs.push({name: paramName, value: paramValue, index: paramIndex});
+            break;
+          }
+        }
+      }
+  }
+
+  let location = [];
+  for (let i = 0; i < combinations.length; ++i) {
+    let combination = combinations[i];
+    for (let j = 0; j < combination.length; ++j) {
+      if (judgeCombin(combination[j], paramObjs)) {
+        location.push([i,j]);
+      }
+    }
+  }
+  return location;
+}
+
+function judgeCombin(combination, paramObjs) {
+  for (let i =0; i < paramObjs.length; i++) {
+    if (paramObjs[i].value != combination[paramObjs[i].index]){
+      return false;
+    }
+  }
+  return true;
+}
+
+
 if (typeof window === 'undefined') {
+  exports.enableButton = enableButton;
+  exports.disableButton = disableButton;
   exports.fillGradient = fillGradient;
   exports.cvtStr2cvSize = cvtStr2cvSize;
   exports.combine = combine;
+  exports.constructMode = constructMode;
+  exports.log = log;
+  exports.decodeParams2Case = decodeParams2Case;
+  exports.setBenchmarkSuite = setBenchmarkSuite;
+  exports.addKernelCase = addKernelCase;
 }
