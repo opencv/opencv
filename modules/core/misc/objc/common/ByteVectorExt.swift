@@ -14,7 +14,7 @@ public extension ByteVector {
 
     subscript(index: Int) -> Int8 {
         get {
-            self.get(index)
+            return self.get(index)
         }
     }
 

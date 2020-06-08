@@ -14,7 +14,7 @@ public extension IntVector {
 
     subscript(index: Int) -> Int32 {
         get {
-            self.get(index)
+            return self.get(index)
         }
     }
 

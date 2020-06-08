@@ -14,7 +14,7 @@ public extension FloatVector {
 
     subscript(index: Int) -> Float {
         get {
-            self.get(index)
+            return self.get(index)
         }
     }
 

@@ -14,7 +14,7 @@ public extension DoubleVector {
 
     subscript(index: Int) -> Double {
         get {
-            self.get(index)
+            return self.get(index)
         }
     }
 
