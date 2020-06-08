@@ -75,7 +75,7 @@ G_API_OP(ParseEyes,
         outMeta(  const cv::GArrayDesc &
                 , const cv::GArrayDesc &
                 , const cv::GOpaqueDesc &) {
-        return { cv::empty_array_desc(), cv::empty_array_desc() };
+        return std::make_tuple(cv::empty_array_desc(), cv::empty_array_desc());
     }
 };
 
@@ -243,7 +243,7 @@ GAPI_OCV_KERNEL(OCVProcessPoses, ProcessPoses) {
             ptr[0] = in_ys[idx].ptr<float>()[0];
             ptr[1] = in_ps[idx].ptr<float>()[0];
             ptr[2] = in_rs[idx].ptr<float>()[0];
-            out_poses.push_back(pose);
+            out_poses.push_back(std::move(pose));
         }
     }
 };
@@ -275,21 +275,18 @@ namespace vis {
         const auto xCenter = face_rc.x + face_rc.width  / 2;
         const auto yCenter = face_rc.y + face_rc.height / 2;
 
+        const auto center = cv::Point{xCenter, yCenter};
+        const auto axisln = cv::Point2f{axisLength, axisLength};
+        const auto ctr    = cv::Matx<float,2,2>(cosR*cosY, sinY*sinP*sinR, 0.f,  cosP*sinR);
+        const auto ctt    = cv::Matx<float,2,2>(cosR*sinY*sinP, cosY*sinR, 0.f, -cosP*cosR);
+        const auto ctf    = cv::Matx<float,2,2>(sinY*cosP, 0.f, 0.f, sinP);
+
         // center to right
-        cv::line(m, cv::Point(xCenter, yCenter),
-                 cv::Point(static_cast<int>(xCenter + axisLength * (cosR * cosY + sinY * sinP * sinR)),
-                           static_cast<int>(yCenter + axisLength * cosP * sinR)),
-                 cv::Scalar(0, 0, 255), 2);
+        cv::line(m, center, center + static_cast<cv::Point>(ctr*axisln), cv::Scalar(0, 0, 255), 2);
         // center to top
-        cv::line(m, cv::Point(xCenter, yCenter),
-                 cv::Point(static_cast<int>(xCenter + axisLength * (cosR * sinY * sinP + cosY * sinR)),
-                           static_cast<int>(yCenter - axisLength * cosP * cosR)),
-                 cv::Scalar(0, 255, 0), 2);
+        cv::line(m, center, center + static_cast<cv::Point>(ctt*axisln), cv::Scalar(0, 255, 0), 2);
         // center to forward
-        cv::line(m, cv::Point(xCenter, yCenter),
-                 cv::Point(static_cast<int>(xCenter + axisLength * sinY * cosP),
-                           static_cast<int>(yCenter + axisLength * sinP)),
-                 cv::Scalar(255, 0, 255), 2);
+        cv::line(m, center, center + static_cast<cv::Point>(ctf*axisln), cv::Scalar(255, 0, 255), 2);
     }
     void vvec(cv::Mat &m, const cv::Mat &v, const cv::Rect &face_rc,
               const cv::Rect &left_rc, const cv::Rect &right_rc) {
