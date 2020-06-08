@@ -489,7 +489,6 @@ struct Infer: public cv::detail::KernelTag {
 
             const auto &meta = util::get<cv::GMatDesc>(mm);
             ii->setPrecision(toIE(meta.depth));
-            ii->setLayout(meta.isND() ? IE::Layout::NCHW : IE::Layout::NHWC);
             ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
         }
 
@@ -570,7 +569,6 @@ struct InferList: public cv::detail::KernelTag {
 
             const auto &meta = util::get<cv::GMatDesc>(mm);
             ii->setPrecision(toIE(meta.depth));
-            ii->setLayout(meta.isND() ? IE::Layout::NCHW : IE::Layout::NHWC);
             ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
         }
 
@@ -668,7 +666,6 @@ struct InferList2: public cv::detail::KernelTag {
             if (ii->getTensorDesc().getDims().size() != 2) {
                 // FIXME: SUPER-MEGA-KLUDGE!!!
                 ii->setPrecision(toIE(meta_0.depth));
-                ii->setLayout(IE::Layout::NHWC);
                 ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
             }
         }
@@ -690,8 +687,8 @@ struct InferList2: public cv::detail::KernelTag {
         IE::Blob::Ptr blob_0 = wrapIE(mat_0, cv::gapi::ie::TraitAs::IMAGE);
 
         // Take the next argument, which must be vector (of any kind).
-        // Use this only to obtain the ROI list size (sizes of all
-        // other vectors must be equal to this one)
+        // Use it only to obtain the ROI list size (sizes of all other
+        // vectors must be equal to this one)
         const auto list_size = ctx.inArg<cv::detail::VectorRef>(1u).size();
 
         // FIXME: This could be done ONCE at graph compile stage!
@@ -724,14 +721,6 @@ struct InferList2: public cv::detail::KernelTag {
                     // Mat case - create a regular blob
                     // FIXME: NOW Assume Mats are always BLOBS (not
                     // images)
-                    const auto &vec = this_vec.rref<cv::Mat>();
-                    const auto &mat = vec[list_idx];
-                    this_blob = wrapIE(mat, cv::gapi::ie::TraitAs::TENSOR);
-                } else if (this_vec.holds<cv::gapi::own::Mat>()) {
-                    // own::Mat case - create a regular blob
-                    // FIXME: NOW Assume Mats are always BLOBS (not
-                    // images)
-                    // FIXME: This path may be dead!
                     const auto &vec = this_vec.rref<cv::Mat>();
                     const auto &mat = vec[list_idx];
                     this_blob = wrapIE(mat, cv::gapi::ie::TraitAs::TENSOR);

@@ -159,7 +159,6 @@ TEST(TestAgeGenderIE, InferBasicImage)
         auto net = reader.getNetwork();
         auto &ii = net.getInputsInfo().at("data");
         ii->setPrecision(IE::Precision::U8);
-        ii->setLayout(IE::Layout::NHWC);
         ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
 
         auto plugin = IE::PluginDispatcher().getPluginByDevice("CPU");
@@ -222,7 +221,6 @@ TEST(TestAgeGenderIE, InferROIList)
         auto net = reader.getNetwork();
         auto &ii = net.getInputsInfo().at("data");
         ii->setPrecision(IE::Precision::U8);
-        ii->setLayout(IE::Layout::NHWC);
         ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
 
         auto plugin = IE::PluginDispatcher().getPluginByDevice("CPU");
@@ -308,7 +306,6 @@ TEST(TestAgeGenderIE, InferROIList2)
         auto net = reader.getNetwork();
         auto &ii = net.getInputsInfo().at("data");
         ii->setPrecision(IE::Precision::U8);
-        ii->setLayout(IE::Layout::NHWC);
         ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
 
         auto plugin = IE::PluginDispatcher().getPluginByDevice("CPU");
