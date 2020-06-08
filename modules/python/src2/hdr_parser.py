@@ -268,7 +268,7 @@ class CppHeaderParser(object):
             modlist.append("=" + macro_arg)
             l = l[:npos] + l[npos3+1:]
 
-        l = self.batch_replace(l, [("CV_EXPORTS_W", ""), ("CV_EXPORTS", ""), ("GAPI_EXPORTS", ""), ("GAPI_EXPORTS_W", ""), ("public virtual ", " "), ("public ", " "), ("::", ".")]).strip()
+        l = self.batch_replace(l, [("CV_EXPORTS_W", ""), ("CV_EXPORTS", ""), ("GAPI_EXPORTS_W", ""), ("GAPI_EXPORTS", ""), ("public virtual ", " "), ("public ", " "), ("::", ".")]).strip()
         ll = re.split(r'\s+|\s*[,:]\s*', l)
         ll = [le for le in ll if le]
         classname = ll[1]
@@ -877,11 +877,11 @@ class CppHeaderParser(object):
                 sys.exit(-1)
 
             while 1:
-                token, pos = self.find_next_token(l, ["= {", ";", "\"", "{", "}", "//", "/*",])
+                token, pos = self.find_next_token(l, ["= {}", ";", "\"", "{", "}", "//", "/*",])
 
                 # NB: Handle case with argument default value:
                 # foo(const Obj& = {})
-                if token == "= {":
+                if token == "= {}":
                     block_head = l[:-1]
                     l = ''
 
