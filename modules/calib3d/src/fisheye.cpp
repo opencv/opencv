@@ -387,7 +387,9 @@ void cv::fisheye::undistortPoints( InputArray distorted, OutputArray undistorted
         bool converged = false;
         double theta = theta_d;
 
-        if (theta_d > 1e-8)
+        double scale = 0.0;
+
+        if (fabs(theta_d) > 1e-8)
         {
             // compensate distortion iteratively
 
@@ -407,6 +409,12 @@ void cv::fisheye::undistortPoints( InputArray distorted, OutputArray undistorted
                     break;
                 }
             }
+
+            scale = std::tan(theta) / theta_d;
+        } 
+        else 
+        {
+            converged = true;
         }
 
         // theta is monotonously increasing or decreasing depending on the sign of theta
@@ -416,7 +424,6 @@ void cv::fisheye::undistortPoints( InputArray distorted, OutputArray undistorted
 
         if (converged && !theta_flipped)
         {
-            double scale = std::tan(theta) / theta_d;
             Vec2d pu = pw * scale; //undistorted point
 
             // reproject
@@ -430,7 +437,8 @@ void cv::fisheye::undistortPoints( InputArray distorted, OutputArray undistorted
         }
         else
         {
-            Vec2d fi(std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::quiet_NaN());
+            // Vec2d fi(std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::quiet_NaN());
+            Vec2d fi(-1000000.0, -1000000.0);
 
             if( sdepth == CV_32F )
                 dstf[i] = fi;
