@@ -1792,8 +1792,8 @@ FileStorage::FileStorage()
 FileStorage::FileStorage(const String& filename, int flags, const String& encoding)
     : state(0)
 {
-    // Assigns the encoding field with the one passed in
-    this->encoding = encoding;
+    // Assigns the file_encoding field with the one passed in
+    file_encoding = encoding;
 
     p = makePtr<FileStorage::Impl>(this);
     bool ok = p->open(filename.c_str(), flags, encoding.c_str());
@@ -1803,14 +1803,22 @@ FileStorage::FileStorage(const String& filename, int flags, const String& encodi
 
 FileStorage::FileStorage(const FileStorage& other) : state(0)
 {
-    // Assign this->encoding to other.encoding
-    this->encoding = other.encoding;
+    // If other is opened, we are able to open a file
+    // However if other is closed, we should not open the file
+    if (other.isOpened())
+    {
+        // Assign file_encoding to other.encoding
+        file_encoding = other.file_encoding;
 
-    p = makePtr<FileStorage::Impl>(this);
-    bool ok = p->open(other.p->filename.c_str(), other.p->flags, other.encoding.c_str());
-    if (ok)
-        state = FileStorage::NAME_EXPECTED + FileStorage::INSIDE_MAP;
-
+        p = makePtr<FileStorage::Impl>(this);
+        bool ok = p->open(other.p->filename.c_str(), other.p->flags, other.file_encoding.c_str());
+        if (ok)
+            state = FileStorage::NAME_EXPECTED + FileStorage::INSIDE_MAP;
+    }
+    else
+    {
+        p = makePtr<FileStorage::Impl>(this);
+    }
 }
 
 FileStorage& FileStorage::operator=(const FileStorage& other)
@@ -1821,16 +1829,25 @@ FileStorage& FileStorage::operator=(const FileStorage& other)
         return *this;
     }
 
-    // Releases the file handled by this
-    this->p.release();
+    // If other is opened, we are able to open a file
+    // However if other is closed, we should not open the file
+    if (other.isOpened())
+    {
 
-    // Get other's encoding
-    this->encoding = other.encoding;
+        // If this has a file open, close the file
+        if (this->isOpened())
+        {
+            this->p.release();
+        }
 
-    this->p = makePtr<FileStorage::Impl>(this);
-    bool ok = this->p->open(other.p->filename.c_str(), other.p->flags, other.encoding.c_str());
-    if (ok)
-        this->state = FileStorage::NAME_EXPECTED + FileStorage::INSIDE_MAP;
+        // Get assign file_encoding to other.encoding
+        file_encoding = other.file_encoding;
+
+        this->p = makePtr<FileStorage::Impl>(this);
+        bool ok = this->p->open(other.p->filename.c_str(), other.p->flags, other.file_encoding.c_str());
+        if (ok)
+            this->state = FileStorage::NAME_EXPECTED + FileStorage::INSIDE_MAP;
+    }
 
     return *this;
 }
@@ -1863,9 +1880,9 @@ bool FileStorage::open(const String& filename, int flags, const String& encoding
 {
     try
     {
-        // Added the initialize encoding line here just in case user makes a default FileStorage
+        // Added the initialize file_encoding line here just in case user makes a default FileStorage
         // object and uses open() afterwards
-        this->encoding = encoding;
+        file_encoding = encoding;
 
         bool ok = p->open(filename.c_str(), flags, encoding.c_str());
         if(ok)
