@@ -267,7 +267,7 @@ public:
     virtual I::OStream& operator<< (short) override;
     virtual I::OStream& operator<< (unsigned short) override;
     virtual I::OStream& operator<< (int) override;
-    virtual I::OStream& operator<< (std::size_t) override;
+    virtual I::OStream& operator<< (std::size_t);
     virtual I::OStream& operator<< (float) override;
     virtual I::OStream& operator<< (double) override;
     virtual I::OStream& operator<< (const std::string&) override;
