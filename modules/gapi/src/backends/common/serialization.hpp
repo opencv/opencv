@@ -271,7 +271,7 @@ public:
     virtual I::OStream& operator<< (float) override;
     virtual I::OStream& operator<< (double) override;
     virtual I::OStream& operator<< (const std::string&) override;
-    virtual I::OStream& operator << (uint32_t);
+    virtual I::OStream& operator<< (uint32_t) final;
 };
 
 class GAPI_EXPORTS ByteMemoryInStream final: public I::IStream {
