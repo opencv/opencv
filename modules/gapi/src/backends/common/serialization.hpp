@@ -257,7 +257,7 @@ class GAPI_EXPORTS ByteMemoryOutStream final: public I::OStream {
     std::vector<char> m_storage;
 
     //virtual I::OStream& operator << (uint32_t) override;
-
+    virtual I::OStream& operator<< (uint32_t) final;
 public:
     const std::vector<char>& data() const;
 
@@ -267,11 +267,11 @@ public:
     virtual I::OStream& operator<< (short) override;
     virtual I::OStream& operator<< (unsigned short) override;
     virtual I::OStream& operator<< (int) override;
-    virtual I::OStream& operator<< (std::size_t);
+    virtual I::OStream& operator<< (std::size_t) override;
     virtual I::OStream& operator<< (float) override;
     virtual I::OStream& operator<< (double) override;
     virtual I::OStream& operator<< (const std::string&) override;
-    virtual I::OStream& operator<< (uint32_t) final;
+    //virtual I::OStream& operator<< (uint32_t) final;
 };
 
 class GAPI_EXPORTS ByteMemoryInStream final: public I::IStream {
