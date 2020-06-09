@@ -16,7 +16,7 @@ namespace gapi {
 namespace core {
 namespace ocl {
 
-        CV_EXPORTS_W cv::gapi::GKernelPackage kernels();
+        GAPI_EXPORTS_W cv::gapi::GKernelPackage kernels();
 
 } // namespace ocl
 } // namespace core
