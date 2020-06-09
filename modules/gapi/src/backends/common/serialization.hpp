@@ -256,7 +256,7 @@ I::IStream& operator>> (I::IStream& is, cv::util::variant<Ts...> &v) {
 class GAPI_EXPORTS ByteMemoryOutStream final: public I::OStream {
     std::vector<char> m_storage;
 
-    virtual I::OStream& operator << (uint32_t) final;
+    //virtual I::OStream& operator << (uint32_t) override;
 
 public:
     const std::vector<char>& data() const;
@@ -271,6 +271,7 @@ public:
     virtual I::OStream& operator<< (float) override;
     virtual I::OStream& operator<< (double) override;
     virtual I::OStream& operator<< (const std::string&) override;
+    virtual I::OStream& operator << (uint32_t);
 };
 
 class GAPI_EXPORTS ByteMemoryInStream final: public I::IStream {
