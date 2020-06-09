@@ -876,10 +876,13 @@ class CppHeaderParser(object):
                 print("Error at %d: invalid state = %d" % (self.lineno, state))
                 sys.exit(-1)
 
-            # Drop default initilization with brackets: foo(const Obj& = {})
-            l = re.sub(r'=\s*\{\s*\}', '', l).strip()
             while 1:
-                token, pos = self.find_next_token(l, [";", "\"", "{", "}", "//", "/*"])
+                # NB: Avoid parsing '{' for case:
+                # foo(Obj&& = {});
+                if re.search(r'=\s*\{\s*\}', l):
+                    token, pos = ';', len(l)
+                else:
+                    token, pos = self.find_next_token(l, [";", "\"", "{", "}", "//", "/*"])
 
                 if not token:
                     block_head += " " + l
