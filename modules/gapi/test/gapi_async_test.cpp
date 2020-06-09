@@ -313,7 +313,7 @@ TYPED_TEST_CASE_P(exception);
 TYPED_TEST_P(exception, basic){
     //Exceptional scenario:  start function asynchronously and make sure exception is passed to the user
     this->start_async(this->in_args(), this->out_args());
-    EXPECT_THROW(this->wait_for_result(), gthrow_exception);
+    GAPI_EXPECT_THROW(this->wait_for_result(), gthrow_exception);
 }
 
 REGISTER_TYPED_TEST_CASE_P(exception,

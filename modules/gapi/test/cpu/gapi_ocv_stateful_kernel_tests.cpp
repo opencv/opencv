@@ -166,7 +166,7 @@ TEST(StatefulKernel, InvalidReallocatingKernel)
     const auto pkg = cv::gapi::kernels<GOCVStInvalidResize>();
     cv::GComputation comp(cv::GIn(in), cv::GOut(out));
 
-    EXPECT_THROW(comp.apply(in_mat, out_mat, cv::compile_args(pkg)), std::logic_error);
+    GAPI_EXPECT_THROW(comp.apply(in_mat, out_mat, cv::compile_args(pkg)), std::logic_error);
 
 }
 //-------------------------------------------------------------------------------------------------------------

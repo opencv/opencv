@@ -298,7 +298,7 @@ TEST(GAPI_Pipeline, PipelineWithInvalidKernel)
     const auto pkg = cv::gapi::kernels<GOCVInvalidResize>();
     cv::GComputation comp(cv::GIn(in), cv::GOut(out));
 
-    EXPECT_THROW(comp.apply(in_mat, out_mat, cv::compile_args(pkg)), std::logic_error);
+    GAPI_EXPECT_THROW(comp.apply(in_mat, out_mat, cv::compile_args(pkg)), std::logic_error);
 }
 
 TEST(GAPI_Pipeline, InvalidOutputComputation)
@@ -312,7 +312,7 @@ TEST(GAPI_Pipeline, InvalidOutputComputation)
     std::vector<cv::Mat> u_outs = {out_mat1, out_mat2, out_mat3, out_mat4};
     std::vector<cv::Mat> u_ins = {in_mat};
 
-    EXPECT_THROW(c.apply(u_ins, u_outs), std::logic_error);
+    GAPI_EXPECT_THROW(c.apply(u_ins, u_outs), std::logic_error);
 }
 
 TEST(GAPI_Pipeline, PipelineAllocatingKernel)
@@ -324,7 +324,7 @@ TEST(GAPI_Pipeline, PipelineAllocatingKernel)
     const auto pkg = cv::gapi::kernels<GOCVReallocatingCopy>();
     cv::GComputation comp(cv::GIn(in), cv::GOut(out));
 
-    EXPECT_THROW(comp.apply(in_mat, out_mat, cv::compile_args(pkg)), std::logic_error);
+    GAPI_EXPECT_THROW(comp.apply(in_mat, out_mat, cv::compile_args(pkg)), std::logic_error);
 }
 
 TEST(GAPI_Pipeline, CreateKernelImplFromLambda)

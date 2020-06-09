@@ -34,4 +34,15 @@ static inline void countNonZero_is_forbidden_in_tests_use_norm_instead() {}
 }
 #define countNonZero() countNonZero_is_forbidden_in_tests_use_norm_instead()
 
+namespace opencv_test {
+    bool isExactExceptionPropogationEnabled();
+}
+
+#define GAPI_EXPECT_THROW(expr, expected_exception)          \
+if (opencv_test::isExactExceptionPropogationEnabled()) {     \
+    EXPECT_THROW(expr, expected_exception);                  \
+} else {                                                     \
+    EXPECT_ANY_THROW(expr);                                  \
+}                                                            \
+
 #endif // __OPENCV_GAPI_TEST_PRECOMP_HPP__
