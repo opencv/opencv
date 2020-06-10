@@ -75,6 +75,26 @@ void normAssert(cv::InputArray ref, cv::InputArray test,
     EXPECT_LE(normInf, lInf) << comment;
 }
 
+std::string modelPathByName(const std::string &model_name) {
+    // Handle OMZ model layout changes among OpenVINO versions here
+    static const std::unordered_map<std::string, std::string> map = {
+#if INF_ENGINE_RELEASE >= 2019030000
+        {"age-gender-recognition-retail-0013",
+         "intel/age-gender-recognition-retail-0013/FP32"},
+#else
+        {"age-gender-recognition-retail-0013",
+         "Retail/object_attributes/age_gender/dldt/age-gender-recognition-retail-0013"},
+#endif
+    };
+    return map.at(model_name);
+}
+
+std::tuple<std::string, std::string> findModel(const std::string &model_name) {
+    const std::string path = modelPathByName(model_name);
+    return std::make_tuple(findDataFile(path + "/" + model_name + ".xml", false),
+                           findDataFile(path + "/" + model_name + ".bin", false));
+}
+
 } // anonymous namespace
 
 // TODO: Probably DNN/IE part can be further parametrized with a template
@@ -83,9 +103,8 @@ TEST(TestAgeGenderIE, InferBasicTensor)
 {
     initDLDTDataPath();
 
-    const std::string path = "Retail/object_attributes/age_gender/dldt/age-gender-recognition-retail-0013";
-    const auto topology_path = findDataFile(path + ".xml", false);
-    const auto weights_path  = findDataFile(path + ".bin", false);
+    std::string topology_path, weights_path;
+    std::tie(topology_path, weights_path) = findModel("age-gender-recognition-retail-0013");
 
     // Load IE network, initialize input data using that.
     namespace IE = InferenceEngine;
@@ -138,9 +157,8 @@ TEST(TestAgeGenderIE, InferBasicImage)
 {
     initDLDTDataPath();
 
-    const std::string path = "Retail/object_attributes/age_gender/dldt/age-gender-recognition-retail-0013";
-    const auto topology_path = findDataFile(path + ".xml", false);
-    const auto weights_path  = findDataFile(path + ".bin", false);
+    std::string topology_path, weights_path;
+    std::tie(topology_path, weights_path) = findModel("age-gender-recognition-retail-0013");
 
     // FIXME: Ideally it should be an image from disk
     // cv::Mat in_mat = cv::imread(findDataFile("grace_hopper_227.png"));
@@ -191,64 +209,83 @@ TEST(TestAgeGenderIE, InferBasicImage)
     normAssert(cv::gapi::ie::util::to_ocv(ie_gender), gapi_gender, "Test gender output");
 }
 
-TEST(TestAgeGenderIE, InferROIList)
-{
-    initDLDTDataPath();
+struct ROIList: public ::testing::Test {
+    std::string m_model_path;
+    std::string m_weights_path;
 
-    const std::string path = "Retail/object_attributes/age_gender/dldt/age-gender-recognition-retail-0013";
-    const auto topology_path = findDataFile(path + ".xml", false);
-    const auto weights_path  = findDataFile(path + ".bin", false);
+    cv::Mat m_in_mat;
+    std::vector<cv::Rect> m_roi_list;
 
-    // FIXME: Ideally it should be an image from disk
-    // cv::Mat in_mat = cv::imread(findDataFile("grace_hopper_227.png"));
-    cv::Mat in_mat(cv::Size(640, 480), CV_8UC3);
-    cv::randu(in_mat, 0, 255);
+    std::vector<cv::Mat> m_out_ie_ages;
+    std::vector<cv::Mat> m_out_ie_genders;
 
-    std::vector<cv::Rect> rois = {
-        cv::Rect(cv::Point{ 0,   0}, cv::Size{80, 120}),
-        cv::Rect(cv::Point{50, 100}, cv::Size{96, 160}),
-    };
+    std::vector<cv::Mat> m_out_gapi_ages;
+    std::vector<cv::Mat> m_out_gapi_genders;
 
-    std::vector<cv::Mat> gapi_age, gapi_gender;
-
-    // Load & run IE network
-    namespace IE = InferenceEngine;
-    std::vector<cv::Mat> ie_age, ie_gender;
-    {
-        IE::CNNNetReader reader;
-        reader.ReadNetwork(topology_path);
-        reader.ReadWeights(weights_path);
-        auto net = reader.getNetwork();
-        auto &ii = net.getInputsInfo().at("data");
-        ii->setPrecision(IE::Precision::U8);
-        ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
-
-        auto plugin = IE::PluginDispatcher().getPluginByDevice("CPU");
-        auto plugin_net = plugin.LoadNetwork(net, {});
-        auto infer_request = plugin_net.CreateInferRequest();
-        auto frame_blob = cv::gapi::ie::util::to_ie(in_mat);
-
-        for (auto &&rc : rois) {
-            const auto ie_rc = IE::ROI {
-                  0u
-                , static_cast<std::size_t>(rc.x)
-                , static_cast<std::size_t>(rc.y)
-                , static_cast<std::size_t>(rc.width)
-                , static_cast<std::size_t>(rc.height)
-            };
-            infer_request.SetBlob("data", IE::make_shared_blob(frame_blob, ie_rc));
-            infer_request.Infer();
-
-            using namespace cv::gapi::ie::util;
-            ie_age.push_back(to_ocv(infer_request.GetBlob("age_conv3")).clone());
-            ie_gender.push_back(to_ocv(infer_request.GetBlob("prob")).clone());
-        }
-    }
-
-    // Configure & run G-API
     using AGInfo = std::tuple<cv::GMat, cv::GMat>;
     G_API_NET(AgeGender, <AGInfo(cv::GMat)>, "test-age-gender");
 
+    ROIList() {
+        initDLDTDataPath();
+        std::tie(m_model_path, m_weights_path) = findModel("age-gender-recognition-retail-0013");
+
+        m_in_mat = cv::imread(findDataFile("grace_hopper_227.png", false));
+        // both ROIs point to the same face, with a slightly changed geometry
+        m_roi_list = {
+            cv::Rect(cv::Point{64, 60}, cv::Size{ 96,  96}),
+            cv::Rect(cv::Point{50, 32}, cv::Size{128, 160}),
+        };
+
+        // Load & run IE network
+        namespace IE = InferenceEngine;
+        {
+            IE::CNNNetReader reader;
+            reader.ReadNetwork(m_model_path);
+            reader.ReadWeights(m_weights_path);
+            auto net = reader.getNetwork();
+            auto &ii = net.getInputsInfo().at("data");
+            ii->setPrecision(IE::Precision::U8);
+            ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
+
+            auto plugin = IE::PluginDispatcher().getPluginByDevice("CPU");
+            auto plugin_net = plugin.LoadNetwork(net, {});
+            auto infer_request = plugin_net.CreateInferRequest();
+            auto frame_blob = cv::gapi::ie::util::to_ie(m_in_mat);
+
+            for (auto &&rc : m_roi_list) {
+                const auto ie_rc = IE::ROI {
+                    0u
+                    , static_cast<std::size_t>(rc.x)
+                    , static_cast<std::size_t>(rc.y)
+                    , static_cast<std::size_t>(rc.width)
+                    , static_cast<std::size_t>(rc.height)
+                };
+                infer_request.SetBlob("data", IE::make_shared_blob(frame_blob, ie_rc));
+                infer_request.Infer();
+
+                using namespace cv::gapi::ie::util;
+                m_out_ie_ages.push_back(to_ocv(infer_request.GetBlob("age_conv3")).clone());
+                m_out_ie_genders.push_back(to_ocv(infer_request.GetBlob("prob")).clone());
+            }
+        } // namespace IE = ..
+    } // ROIList()
+
+    void validate() {
+        // Validate with IE itself (avoid DNN module dependency here)
+        ASSERT_EQ(2u, m_out_ie_ages.size());
+        ASSERT_EQ(2u, m_out_ie_genders.size());
+        ASSERT_EQ(2u, m_out_gapi_ages.size());
+        ASSERT_EQ(2u, m_out_gapi_genders.size());
+
+        normAssert(m_out_ie_ages   [0], m_out_gapi_ages   [0], "0: Test age output");
+        normAssert(m_out_ie_genders[0], m_out_gapi_genders[0], "0: Test gender output");
+        normAssert(m_out_ie_ages   [1], m_out_gapi_ages   [1], "1: Test age output");
+        normAssert(m_out_ie_genders[1], m_out_gapi_genders[1], "1: Test gender output");
+    }
+}; // ROIList
+
+TEST_F(ROIList, TestInfer)
+{
     cv::GArray<cv::Rect> rr;
     cv::GMat in;
     cv::GArray<cv::GMat> age, gender;
@@ -256,84 +293,16 @@ TEST(TestAgeGenderIE, InferROIList)
     cv::GComputation comp(cv::GIn(in, rr), cv::GOut(age, gender));
 
     auto pp = cv::gapi::ie::Params<AgeGender> {
-        topology_path, weights_path, "CPU"
+        m_model_path, m_weights_path, "CPU"
     }.cfgOutputLayers({ "age_conv3", "prob" });
-    comp.apply(cv::gin(in_mat, rois), cv::gout(gapi_age, gapi_gender),
+    comp.apply(cv::gin(m_in_mat, m_roi_list),
+               cv::gout(m_out_gapi_ages, m_out_gapi_genders),
                cv::compile_args(cv::gapi::networks(pp)));
-
-    // Validate with IE itself (avoid DNN module dependency here)
-    ASSERT_EQ(2u, ie_age.size()   );
-    ASSERT_EQ(2u, ie_gender.size());
-    ASSERT_EQ(2u, gapi_age.size()   );
-    ASSERT_EQ(2u, gapi_gender.size());
-
-    normAssert(ie_age   [0], gapi_age   [0], "0: Test age output");
-    normAssert(ie_gender[0], gapi_gender[0], "0: Test gender output");
-    normAssert(ie_age   [1], gapi_age   [1], "1: Test age output");
-    normAssert(ie_gender[1], gapi_gender[1], "1: Test gender output");
+    validate();
 }
 
-TEST(TestAgeGenderIE, InferROIList2)
+TEST_F(ROIList, TestInfer2)
 {
-    // This test is using another list-oriented overload for Infer
-    // FIXME: Unify with the previous test?
-    // FIXME: Add another case with more inputs
-    initDLDTDataPath();
-
-    const std::string path = "Retail/object_attributes/age_gender/dldt/age-gender-recognition-retail-0013";
-    const auto topology_path = findDataFile(path + ".xml", false);
-    const auto weights_path  = findDataFile(path + ".bin", false);
-
-    // FIXME: Ideally it should be an image from disk
-    // cv::Mat in_mat = cv::imread(findDataFile("grace_hopper_227.png"));
-    cv::Mat in_mat(cv::Size(640, 480), CV_8UC3);
-    cv::randu(in_mat, 0, 255);
-
-    std::vector<cv::Rect> rois = {
-        cv::Rect(cv::Point{ 0,   0}, cv::Size{80, 120}),
-        cv::Rect(cv::Point{50, 100}, cv::Size{96, 160}),
-    };
-
-    std::vector<cv::Mat> gapi_age, gapi_gender;
-
-    // Load & run IE network
-    namespace IE = InferenceEngine;
-    std::vector<cv::Mat> ie_age, ie_gender;
-    {
-        IE::CNNNetReader reader;
-        reader.ReadNetwork(topology_path);
-        reader.ReadWeights(weights_path);
-        auto net = reader.getNetwork();
-        auto &ii = net.getInputsInfo().at("data");
-        ii->setPrecision(IE::Precision::U8);
-        ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
-
-        auto plugin = IE::PluginDispatcher().getPluginByDevice("CPU");
-        auto plugin_net = plugin.LoadNetwork(net, {});
-        auto infer_request = plugin_net.CreateInferRequest();
-        auto frame_blob = cv::gapi::ie::util::to_ie(in_mat);
-
-        for (auto &&rc : rois) {
-            const auto ie_rc = IE::ROI {
-                  0u
-                , static_cast<std::size_t>(rc.x)
-                , static_cast<std::size_t>(rc.y)
-                , static_cast<std::size_t>(rc.width)
-                , static_cast<std::size_t>(rc.height)
-            };
-            infer_request.SetBlob("data", IE::make_shared_blob(frame_blob, ie_rc));
-            infer_request.Infer();
-
-            using namespace cv::gapi::ie::util;
-            ie_age.push_back(to_ocv(infer_request.GetBlob("age_conv3")).clone());
-            ie_gender.push_back(to_ocv(infer_request.GetBlob("prob")).clone());
-        }
-    }
-
-    // Configure & run G-API
-    using AGInfo = std::tuple<cv::GMat, cv::GMat>;
-    G_API_NET(AgeGender, <AGInfo(cv::GMat)>, "test-age-gender");
-
     cv::GArray<cv::Rect> rr;
     cv::GMat in;
     cv::GArray<cv::GMat> age, gender;
@@ -341,21 +310,12 @@ TEST(TestAgeGenderIE, InferROIList2)
     cv::GComputation comp(cv::GIn(in, rr), cv::GOut(age, gender));
 
     auto pp = cv::gapi::ie::Params<AgeGender> {
-        topology_path, weights_path, "CPU"
+        m_model_path, m_weights_path, "CPU"
     }.cfgOutputLayers({ "age_conv3", "prob" });
-    comp.apply(cv::gin(in_mat, rois), cv::gout(gapi_age, gapi_gender),
+    comp.apply(cv::gin(m_in_mat, m_roi_list),
+               cv::gout(m_out_gapi_ages, m_out_gapi_genders),
                cv::compile_args(cv::gapi::networks(pp)));
-
-    // Validate with IE itself (avoid DNN module dependency here)
-    ASSERT_EQ(2u, ie_age.size()   );
-    ASSERT_EQ(2u, ie_gender.size());
-    ASSERT_EQ(2u, gapi_age.size()   );
-    ASSERT_EQ(2u, gapi_gender.size());
-
-    normAssert(ie_age   [0], gapi_age   [0], "0: Test age output");
-    normAssert(ie_gender[0], gapi_gender[0], "0: Test gender output");
-    normAssert(ie_age   [1], gapi_age   [1], "1: Test age output");
-    normAssert(ie_gender[1], gapi_gender[1], "1: Test gender output");
+    validate();
 }
 
 } // namespace opencv_test

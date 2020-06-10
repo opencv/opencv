@@ -26,7 +26,6 @@ const std::string keys =
     ;
 
 namespace {
-
 std::string weights_path(const std::string &model_path) {
     const auto EXT_LEN = 4u;
     const auto sz = model_path.size();
@@ -40,8 +39,10 @@ std::string weights_path(const std::string &model_path) {
     CV_Assert(ext == ".xml");
     return model_path.substr(0u, sz - EXT_LEN) + ".bin";
 }
+} // anonymous namespace
 
 namespace custom {
+namespace {
 using GMat3  = std::tuple<cv::GMat,cv::GMat,cv::GMat>;
 using GMats  = cv::GArray<cv::GMat>;
 using GRects = cv::GArray<cv::Rect>;
@@ -247,83 +248,84 @@ GAPI_OCV_KERNEL(OCVProcessPoses, ProcessPoses) {
         }
     }
 };
-
+} // anonymous namespace
 } // namespace custom
 
 namespace vis {
-    cv::Point2f midp(const cv::Rect &rc) {
-        return (rc.tl() + rc.br()) / 2;
-    };
-    void bbox(cv::Mat &m, const cv::Rect &rc) {
-        cv::rectangle(m, rc, cv::Scalar{0,255,0}, 2, cv::LINE_8, 0);
-    };
-    void pose(cv::Mat &m, const cv::Mat &p, const cv::Rect &face_rc) {
-        const auto *posePtr = p.ptr<float>();
-        const auto yaw   = static_cast<double>(posePtr[0]);
-        const auto pitch = static_cast<double>(posePtr[1]);
-        const auto roll  = static_cast<double>(posePtr[2]);
+namespace {
+cv::Point2f midp(const cv::Rect &rc) {
+    return (rc.tl() + rc.br()) / 2;
+};
+void bbox(cv::Mat &m, const cv::Rect &rc) {
+    cv::rectangle(m, rc, cv::Scalar{0,255,0}, 2, cv::LINE_8, 0);
+};
+void pose(cv::Mat &m, const cv::Mat &p, const cv::Rect &face_rc) {
+    const auto *posePtr = p.ptr<float>();
+    const auto yaw   = static_cast<double>(posePtr[0]);
+    const auto pitch = static_cast<double>(posePtr[1]);
+    const auto roll  = static_cast<double>(posePtr[2]);
 
-        const auto sinY = std::sin(yaw   * M_PI / 180.0);
-        const auto sinP = std::sin(pitch * M_PI / 180.0);
-        const auto sinR = std::sin(roll  * M_PI / 180.0);
+    const auto sinY = std::sin(yaw   * M_PI / 180.0);
+    const auto sinP = std::sin(pitch * M_PI / 180.0);
+    const auto sinR = std::sin(roll  * M_PI / 180.0);
 
-        const auto cosY = std::cos(yaw   * M_PI / 180.0);
-        const auto cosP = std::cos(pitch * M_PI / 180.0);
-        const auto cosR = std::cos(roll  * M_PI / 180.0);
+    const auto cosY = std::cos(yaw   * M_PI / 180.0);
+    const auto cosP = std::cos(pitch * M_PI / 180.0);
+    const auto cosR = std::cos(roll  * M_PI / 180.0);
 
-        const auto axisLength = 0.4 * face_rc.width;
-        const auto xCenter = face_rc.x + face_rc.width  / 2;
-        const auto yCenter = face_rc.y + face_rc.height / 2;
+    const auto axisLength = 0.4 * face_rc.width;
+    const auto xCenter = face_rc.x + face_rc.width  / 2;
+    const auto yCenter = face_rc.y + face_rc.height / 2;
 
-        const auto center = cv::Point{xCenter, yCenter};
-        const auto axisln = cv::Point2d{axisLength, axisLength};
-        const auto ctr    = cv::Matx<double,2,2>(cosR*cosY, sinY*sinP*sinR, 0.f,  cosP*sinR);
-        const auto ctt    = cv::Matx<double,2,2>(cosR*sinY*sinP, cosY*sinR, 0.f, -cosP*cosR);
-        const auto ctf    = cv::Matx<double,2,2>(sinY*cosP, 0.f, 0.f, sinP);
+    const auto center = cv::Point{xCenter, yCenter};
+    const auto axisln = cv::Point2d{axisLength, axisLength};
+    const auto ctr    = cv::Matx<double,2,2>(cosR*cosY, sinY*sinP*sinR, 0.f,  cosP*sinR);
+    const auto ctt    = cv::Matx<double,2,2>(cosR*sinY*sinP, cosY*sinR, 0.f, -cosP*cosR);
+    const auto ctf    = cv::Matx<double,2,2>(sinY*cosP, 0.f, 0.f, sinP);
 
-        // center to right
-        cv::line(m, center, center + static_cast<cv::Point>(ctr*axisln), cv::Scalar(0, 0, 255), 2);
-        // center to top
-        cv::line(m, center, center + static_cast<cv::Point>(ctt*axisln), cv::Scalar(0, 255, 0), 2);
-        // center to forward
-        cv::line(m, center, center + static_cast<cv::Point>(ctf*axisln), cv::Scalar(255, 0, 255), 2);
-    }
-    void vvec(cv::Mat &m, const cv::Mat &v, const cv::Rect &face_rc,
-              const cv::Rect &left_rc, const cv::Rect &right_rc) {
-        const auto scale =  0.002 * face_rc.width;
+    // center to right
+    cv::line(m, center, center + static_cast<cv::Point>(ctr*axisln), cv::Scalar(0, 0, 255), 2);
+    // center to top
+    cv::line(m, center, center + static_cast<cv::Point>(ctt*axisln), cv::Scalar(0, 255, 0), 2);
+    // center to forward
+    cv::line(m, center, center + static_cast<cv::Point>(ctf*axisln), cv::Scalar(255, 0, 255), 2);
+}
+void vvec(cv::Mat &m, const cv::Mat &v, const cv::Rect &face_rc,
+          const cv::Rect &left_rc, const cv::Rect &right_rc) {
+    const auto scale =  0.002 * face_rc.width;
 
-        cv::Point3f gazeVector;
-        const auto *gazePtr = v.ptr<float>();
-        gazeVector.x = gazePtr[0];
-        gazeVector.y = gazePtr[1];
-        gazeVector.z = gazePtr[2];
-        gazeVector = gazeVector / cv::norm(gazeVector);
+    cv::Point3f gazeVector;
+    const auto *gazePtr = v.ptr<float>();
+    gazeVector.x = gazePtr[0];
+    gazeVector.y = gazePtr[1];
+    gazeVector.z = gazePtr[2];
+    gazeVector = gazeVector / cv::norm(gazeVector);
 
-        const double arrowLength = 0.4 * face_rc.width;
-        const auto left_mid = midp(left_rc);
-        const auto right_mid = midp(right_rc);
+    const double arrowLength = 0.4 * face_rc.width;
+    const auto left_mid = midp(left_rc);
+    const auto right_mid = midp(right_rc);
 
-        cv::Point2f gazeArrow;
-        gazeArrow.x =  gazeVector.x;
-        gazeArrow.y = -gazeVector.y;
-        gazeArrow  *= arrowLength;
+    cv::Point2f gazeArrow;
+    gazeArrow.x =  gazeVector.x;
+    gazeArrow.y = -gazeVector.y;
+    gazeArrow  *= arrowLength;
 
-        cv::arrowedLine(m, left_mid,  left_mid  + gazeArrow, cv::Scalar(255, 0, 0), 2);
-        cv::arrowedLine(m, right_mid, right_mid + gazeArrow, cv::Scalar(255, 0, 0), 2);
+    cv::arrowedLine(m, left_mid,  left_mid  + gazeArrow, cv::Scalar(255, 0, 0), 2);
+    cv::arrowedLine(m, right_mid, right_mid + gazeArrow, cv::Scalar(255, 0, 0), 2);
 
-        cv::Point2f gazeAngles;
-        custom::gazeVectorToGazeAngles(gazeVector, gazeAngles);
+    cv::Point2f gazeAngles;
+    custom::gazeVectorToGazeAngles(gazeVector, gazeAngles);
 
-        cv::putText(m,
-                    cv::format("gaze angles: (h=%0.0f, v=%0.0f)",
-                               static_cast<double>(std::round(gazeAngles.x)),
-                               static_cast<double>(std::round(gazeAngles.y))),
-                    cv::Point(static_cast<int>(face_rc.tl().x),
-                              static_cast<int>(face_rc.br().y + 12. * face_rc.width / 100.)),
-                    cv::FONT_HERSHEY_PLAIN, scale * 2, cv::Scalar::all(255), 1);
-    };
-} // namespace vis
+    cv::putText(m,
+                cv::format("gaze angles: (h=%0.0f, v=%0.0f)",
+                           static_cast<double>(std::round(gazeAngles.x)),
+                           static_cast<double>(std::round(gazeAngles.y))),
+                cv::Point(static_cast<int>(face_rc.tl().x),
+                          static_cast<int>(face_rc.br().y + 12. * face_rc.width / 100.)),
+                cv::FONT_HERSHEY_PLAIN, scale * 2, cv::Scalar::all(255), 1);
+};
 } // anonymous namespace
+} // namespace vis
 
 int main(int argc, char *argv[])
 {
