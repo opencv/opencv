@@ -17,6 +17,7 @@
 #include <cmath>
 #include <iostream>
 #include <queue>
+#include <limits>
 
 namespace cv
 {
@@ -1293,7 +1294,7 @@ protected:
     void deleteUsedPoints(vector<vector<Point2f> >& true_points_group, vector<vector<Point2f> >& loc,
                           vector<Point2f>& tmp_localization_points);
     void fixationPoints(vector<Point2f> &local_point);
-    bool checkPoints(const vector<Point2f>& quadrangle_points);
+    bool checkPoints(vector<Point2f> quadrangle_points);
     bool checkPointsInsideQuadrangle(const vector<Point2f>& quadrangle_points);
     bool checkPointsInsideTriangle(const vector<Point2f>& triangle_points);
 
@@ -1571,59 +1572,39 @@ void QRDetectMulti::fixationPoints(vector<Point2f> &local_point)
     }
 }
 
-bool QRDetectMulti::checkPoints(const vector<Point2f>& quadrangle_points)
+class BWCounter
 {
-    if (quadrangle_points.size() != 4)
-        return false;
-    vector<Point2f> quadrangle = quadrangle_points;
-    std::sort(quadrangle.begin(), quadrangle.end(), compareDistanse_y());
-    LineIterator it1(bin_barcode_fullsize, quadrangle[1], quadrangle[0]);
-    LineIterator it2(bin_barcode_fullsize, quadrangle[2], quadrangle[0]);
-    LineIterator it3(bin_barcode_fullsize, quadrangle[1], quadrangle[3]);
-    LineIterator it4(bin_barcode_fullsize, quadrangle[2], quadrangle[3]);
-    vector<LineIterator> list_line_iter;
-    list_line_iter.push_back(it1);
-    list_line_iter.push_back(it2);
-    list_line_iter.push_back(it3);
-    list_line_iter.push_back(it4);
-    int count_w = 0;
-    int count_b = 0;
-    for (int j = 0; j < 3; j +=2)
+    size_t white;
+    size_t black;
+public:
+    BWCounter(size_t b = 0, size_t w = 0) : white(w), black(b) {}
+    BWCounter& operator+=(const BWCounter& other) { black += other.black; white += other.white; return *this; }
+    void count1(uchar pixel) { if (pixel == 255) white++; else if (pixel == 0) black++; }
+    double getBWFraction() const { return white == 0 ? std::numeric_limits<double>::infinity() : double(black) / double(white); }
+    static BWCounter checkOnePair(const Point2f& tl, const Point2f& tr, const Point2f& bl, const Point2f& br, const Mat& img)
     {
-        LineIterator& li = list_line_iter[j];
-        LineIterator& li2 = list_line_iter[j + 1];
-        for (int i = 0; i < li.count; i++)
+        BWCounter res;
+        LineIterator li1(img, tl, tr), li2(img, bl, br);
+        for (int i = 0; i < li1.count && i < li2.count; i++, li1++, li2++)
         {
-
-            Point pt1 = li.pos();
-            Point pt2 = li2.pos();
-            LineIterator it0(bin_barcode_fullsize, pt1, pt2);
-            for (int r = 0; r < it0.count; r++)
-            {
-                int pixel = bin_barcode.at<uchar>(it0.pos().y , it0.pos().x);
-                if (pixel == 255)
-                {
-                    count_w++;
-                }
-                if (pixel == 0)
-                {
-                    count_b++;
-                }
-                it0++;
-            }
-            li++;
-            li2++;
+            LineIterator it(img, li1.pos(), li2.pos());
+            for (int r = 0; r < it.count; r++, it++)
+                res.count1(img.at<uchar>(it.pos()));
         }
+        return res;
     }
-    if (count_w == 0)
-        return false;
+};
 
-    double frac = double(count_b) / double(count_w);
-    double bottom_bound = 0.76;
-    double upper_bound = 1.24;
-    if ((frac <= bottom_bound) || (frac >= upper_bound))
+bool QRDetectMulti::checkPoints(vector<Point2f> quadrangle)
+{
+    if (quadrangle.size() != 4)
         return false;
-    return true;
+    std::sort(quadrangle.begin(), quadrangle.end(), compareDistanse_y());
+    BWCounter s;
+    s += BWCounter::checkOnePair(quadrangle[1], quadrangle[0], quadrangle[2], quadrangle[0], bin_barcode);
+    s += BWCounter::checkOnePair(quadrangle[1], quadrangle[3], quadrangle[2], quadrangle[3], bin_barcode);
+    const double frac = s.getBWFraction();
+    return frac > 0.76 && frac < 1.24;
 }
 
 bool QRDetectMulti::checkPointsInsideQuadrangle(const vector<Point2f>& quadrangle_points)
