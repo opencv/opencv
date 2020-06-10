@@ -66,10 +66,18 @@
 namespace cv
 {
 
-//! @addtogroup core_eigen
+/** @addtogroup core_eigen
+These functions are provided for OpenCV-Eigen interoperability. They convert `Mat`
+objects to corresponding `Eigen::Matrix` objects and vice-versa. Consult the [Eigen
+documentation](https://eigen.tuxfamily.org/dox/group__TutorialMatrixClass.html) for
+information about the `Matrix` template type.
+
+@note Using these functions requires the `Eigen/Dense` or similar header to be
+included before this header.
+*/
 //! @{
 
-#ifdef OPENCV_EIGEN_TENSOR_SUPPORT
+#if defined(OPENCV_EIGEN_TENSOR_SUPPORT) || defined(CV_DOXYGEN)
 /** @brief Converts an Eigen::Tensor to a cv::Mat.
 
 The method converts an Eigen::Tensor with shape (H x W x C) to a cv::Mat where:
