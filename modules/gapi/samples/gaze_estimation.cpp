@@ -276,10 +276,10 @@ namespace vis {
         const auto yCenter = face_rc.y + face_rc.height / 2;
 
         const auto center = cv::Point{xCenter, yCenter};
-        const auto axisln = cv::Point2f{axisLength, axisLength};
-        const auto ctr    = cv::Matx<float,2,2>(cosR*cosY, sinY*sinP*sinR, 0.f,  cosP*sinR);
-        const auto ctt    = cv::Matx<float,2,2>(cosR*sinY*sinP, cosY*sinR, 0.f, -cosP*cosR);
-        const auto ctf    = cv::Matx<float,2,2>(sinY*cosP, 0.f, 0.f, sinP);
+        const auto axisln = cv::Point2d{axisLength, axisLength};
+        const auto ctr    = cv::Matx<double,2,2>(cosR*cosY, sinY*sinP*sinR, 0.f,  cosP*sinR);
+        const auto ctt    = cv::Matx<double,2,2>(cosR*sinY*sinP, cosY*sinR, 0.f, -cosP*cosR);
+        const auto ctf    = cv::Matx<double,2,2>(sinY*cosP, 0.f, 0.f, sinP);
 
         // center to right
         cv::line(m, center, center + static_cast<cv::Point>(ctr*axisln), cv::Scalar(0, 0, 255), 2);

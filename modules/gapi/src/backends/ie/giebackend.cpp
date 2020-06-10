@@ -644,13 +644,15 @@ struct InferList2: public cv::detail::KernelTag {
         GAPI_Assert(uu.params.input_names.size() == (in_metas.size() - 1u)
                     && "Known input layers count doesn't match input meta count");
 
+        const auto &op = gm.metadata(nh).get<Op>();
+
         // In contrast to InferList, the InferList2 has only one
         // "full-frame" image argument, and all the rest are arrays of
         // ether ROI or blobs. So here we set the 0th arg image format
         // to all inputs which are ROI-based (skipping the
         // "blob"-based ones)
         // FIXME: this is filtering not done, actually! GArrayDesc has
-        // no hint for type!
+        // no hint for its underlying type!
         const auto &mm_0   = in_metas[0u];
         const auto &meta_0 = util::get<cv::GMatDesc>(mm_0);
         GAPI_Assert(   !meta_0.isND()
@@ -659,15 +661,21 @@ struct InferList2: public cv::detail::KernelTag {
         std::size_t idx = 1u;
         for (auto &&input_name : uu.params.input_names) {
                   auto &ii = uu.inputs.at(input_name);
-            const auto &mm = in_metas[idx++];
+            const auto &mm = in_metas[idx];
             GAPI_Assert(util::holds_alternative<cv::GArrayDesc>(mm)
                         && "Non-array inputs are not supported");
 
-            if (ii->getTensorDesc().getDims().size() != 2) {
-                // FIXME: SUPER-MEGA-KLUDGE!!!
+            if (op.k.inSpecs[idx] == cv::detail::ArgSpec::RECT) {
+                // This is a cv::Rect -- configure the IE preprocessing
                 ii->setPrecision(toIE(meta_0.depth));
                 ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
+            } else {
+                // This is a cv::GMat (equals to: cv::Mat)
+                // Just validate that it is really the type
+                // (other types are prohibited here)
+                GAPI_Assert(op.k.inSpecs[idx] == cv::detail::ArgSpec::GMAT);
             }
+            idx++; // NB: Never forget to increment the counter
         }
 
         // roi-list version is much easier at the moment.
@@ -708,16 +716,12 @@ struct InferList2: public cv::detail::KernelTag {
                 const auto &this_vec = ctx.inArg<cv::detail::VectorRef>(in_idx+1u);
                 GAPI_Assert(this_vec.size() == list_size);
                 // Prepare input {{{
-                //   FIXME: Terrible run-time logic based on RTTI!
-                //   FIXME: Will never work on non-RTTI systems!
-                //   FIXME: Need to replace with a static type tags
-                //   (like with serialization) instead!
                 IE::Blob::Ptr this_blob;
-                if (this_vec.holds<cv::Rect>()) {
+                if (this_vec.spec() == cv::detail::TypeSpec::RECT) {
                     // ROI case - create an ROI blob
                     const auto &vec = this_vec.rref<cv::Rect>();
                     this_blob = IE::make_shared_blob(blob_0, toIE(vec[list_idx]));
-                } else if (this_vec.holds<cv::Mat>()) {
+                } else if (this_vec.spec() == cv::detail::TypeSpec::MAT) {
                     // Mat case - create a regular blob
                     // FIXME: NOW Assume Mats are always BLOBS (not
                     // images)

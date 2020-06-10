@@ -26,6 +26,7 @@
 
 namespace cv {
 
+using GSpecs = std::vector<cv::detail::ArgSpec>;
 using GShapes = std::vector<GShape>;
 
 // GKernel describes kernel API to the system
@@ -38,8 +39,11 @@ struct GAPI_EXPORTS GKernel
     const std::string name;       // kernel ID, defined by its API (signature)
     const std::string tag;        // some (implementation-specific) tag
     const M           outMeta;    // generic adaptor to API::outMeta(...)
+    const GSpecs      inSpecs;    // specs of kernel's inputs (FIXME: below)
     const GShapes     outShapes;  // types (shapes) kernel's outputs
 };
+// TODO: It's questionable if inSpecs shoul really be here. Instead,
+// this information could come from meta.
 
 // GKernelImpl describes particular kernel implementation to the system
 struct GAPI_EXPORTS GKernelImpl
@@ -205,7 +209,11 @@ public:
     // TODO: Args&&... here?
     static std::tuple<R...> on(Args... args)
     {
-        cv::GCall call(GKernel{K::id(), K::tag(), &K::getOutMeta, {detail::GTypeTraits<R>::shape...}});
+        cv::GCall call(GKernel{ K::id()
+                              , K::tag()
+                              , &K::getOutMeta
+                              , {detail::GTypeTraits<Args>::spec...}
+                              , {detail::GTypeTraits<R>::shape...}});
         call.pass(args...); // TODO: std::forward() here?
         return yield(call, typename detail::MkSeq<sizeof...(R)>::type());
     }
@@ -226,7 +234,11 @@ public:
 
     static R on(Args... args)
     {
-        cv::GCall call(GKernel{K::id(), K::tag(), &K::getOutMeta, {detail::GTypeTraits<R>::shape}});
+        cv::GCall call(GKernel{ K::id()
+                              , K::tag()
+                              , &K::getOutMeta
+                              , {detail::GTypeTraits<Args>::spec...}
+                              , {detail::GTypeTraits<R>::shape}});
         call.pass(args...);
         return detail::Yield<R>::yield(call, 0);
     }
