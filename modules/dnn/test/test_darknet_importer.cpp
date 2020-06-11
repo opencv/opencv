@@ -574,6 +574,11 @@ TEST_P(Test_Darknet_nets, YOLOv4)
 
     double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.006 : 8e-5;
     double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.042 : 3e-4;
+    if (target == DNN_TARGET_CUDA_FP16)
+    {
+        scoreDiff = 0.008;
+        iouDiff = 0.03;
+    }
 
     std::string config_file = "yolov4.cfg";
     std::string weights_file = "yolov4.weights";
