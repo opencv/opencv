@@ -474,10 +474,10 @@ I::OStream& ByteMemoryOutStream::operator<< (int atom) {
     static_assert(sizeof(int) == 4, "Expecting sizeof(int) == 4");
     return *this << static_cast<uint32_t>(atom);
 }
-I::OStream& ByteMemoryOutStream::operator<< (std::size_t atom) {
-    // NB: type truncated!
-    return *this << static_cast<uint32_t>(atom);
-}
+//I::OStream& ByteMemoryOutStream::operator<< (std::size_t atom) {
+//    // NB: type truncated!
+//    return *this << static_cast<uint32_t>(atom);
+//}
 I::OStream& ByteMemoryOutStream::operator<< (float atom) {
     static_assert(sizeof(float) == 4, "Expecting sizeof(float) == 4");
     uint32_t tmp = 0u;
@@ -493,7 +493,8 @@ I::OStream& ByteMemoryOutStream::operator<< (double atom) {
     return *this;
 }
 I::OStream& ByteMemoryOutStream::operator<< (const std::string &str) {
-    *this << static_cast<std::size_t>(str.size()); // N.B. Put type explicitly
+    //*this << static_cast<std::size_t>(str.size()); // N.B. Put type explicitly
+    *this << static_cast<uint32_t>(str.size()); // N.B. Put type explicitly
     for (auto c : str) *this << c;
     return *this;
 }
@@ -547,11 +548,11 @@ I::IStream& ByteMemoryInStream::operator>> (int& atom) {
     atom = static_cast<int>(getU32());
     return *this;
 }
-I::IStream& ByteMemoryInStream::operator>> (std::size_t& atom) {
-    // NB. Type was truncated!
-    atom = static_cast<std::size_t>(getU32());
-    return *this;
-}
+//I::IStream& ByteMemoryInStream::operator>> (std::size_t& atom) {
+//    // NB. Type was truncated!
+//    atom = static_cast<std::size_t>(getU32());
+//    return *this;
+//}
 I::IStream& ByteMemoryInStream::operator>> (float& atom) {
     static_assert(sizeof(float) == 4, "Expecting sizeof(float) == 4");
     uint32_t tmp = ntohl(getU32());
@@ -565,7 +566,8 @@ I::IStream& ByteMemoryInStream::operator>> (double& atom) {
     return *this;
 }
 I::IStream& ByteMemoryInStream::operator>> (std::string& str) {
-    std::size_t sz = 0u;
+    //std::size_t sz = 0u;
+    uint32_t sz = 0u;
     *this >> sz;
     if (sz == 0u) {
         str.clear();

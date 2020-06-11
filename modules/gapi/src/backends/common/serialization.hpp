@@ -39,7 +39,8 @@ namespace I {
         virtual OStream& operator<< (short) = 0;
         virtual OStream& operator<< (unsigned short) = 0;
         virtual OStream& operator<< (int) = 0;
-        virtual OStream& operator<< (std::size_t) = 0;
+        //virtual OStream& operator<< (std::size_t) = 0;
+        virtual OStream& operator<< (uint32_t) = 0;
         virtual OStream& operator<< (float) = 0;
         virtual OStream& operator<< (double) = 0;
         virtual OStream& operator<< (const std::string&) = 0;
@@ -56,7 +57,8 @@ namespace I {
         virtual IStream& operator>> (int &) = 0;
         virtual IStream& operator>> (float &) = 0;
         virtual IStream& operator>> (double &) = 0;
-        virtual IStream& operator>> (std::size_t &) = 0;
+        //virtual IStream& operator>> (std::size_t &) = 0;
+        virtual IStream& operator >> (uint32_t &) = 0;
         virtual IStream& operator>> (std::string &) = 0;
     };
 } // namespace I
@@ -166,14 +168,16 @@ GAPI_EXPORTS void reconstruct(const GSerialized &s, ade::Graph &g);
 // Generic: vector serialization ///////////////////////////////////////////////
 template<typename T>
 I::OStream& operator<< (I::OStream& os, const std::vector<T> &ts) {
-    const std::size_t sz = ts.size(); // explicitly specify type
+    //const std::size_t sz = ts.size(); // explicitly specify type
+    const uint32_t sz = (uint32_t)ts.size(); // explicitly specify type
     os << sz;
     for (auto &&v : ts) os << v;
     return os;
 }
 template<typename T>
 I::IStream& operator>> (I::IStream& is, std::vector<T> &ts) {
-    std::size_t sz = 0u;
+    //std::size_t sz = 0u;
+    uint32_t sz = 0u;
     is >> sz;
     if (sz == 0u) {
         ts.clear();
@@ -187,7 +191,8 @@ I::IStream& operator>> (I::IStream& is, std::vector<T> &ts) {
 // Generic: unordered_map serialization ////////////////////////////////////////
 template<typename K, typename V>
 I::OStream& operator<< (I::OStream& os, const std::unordered_map<K, V> &m) {
-    const std::size_t sz = m.size(); // explicitly specify type
+    //const std::size_t sz = m.size(); // explicitly specify type
+    const uint32_t sz = (uint32_t)m.size(); // explicitly specify type
     os << sz;
     for (auto &&it : m) os << it.first << it.second;
     return os;
@@ -195,7 +200,8 @@ I::OStream& operator<< (I::OStream& os, const std::unordered_map<K, V> &m) {
 template<typename K, typename V>
 I::IStream& operator>> (I::IStream& is, std::unordered_map<K, V> &m) {
     m.clear();
-    std::size_t sz = 0u;
+    //std::size_t sz = 0u;
+    uint32_t sz = 0u;
     is >> sz;
     if (sz != 0u) {
         for (auto &&i : ade::util::iota(sz)) {
@@ -239,7 +245,7 @@ I::IStream& get_v(I::IStream& is, V& v, std::size_t i, std::size_t gi) {
 
 template<typename... Ts>
 I::OStream& operator<< (I::OStream& os, const cv::util::variant<Ts...> &v) {
-    os << v.index();
+    os << (uint32_t)v.index();
     return detail::put_v<cv::util::variant<Ts...>, Ts...>(os, v, v.index());
 }
 template<typename... Ts>
@@ -257,7 +263,7 @@ class GAPI_EXPORTS ByteMemoryOutStream final: public I::OStream {
     std::vector<char> m_storage;
 
     //virtual I::OStream& operator << (uint32_t) override;
-    virtual I::OStream& operator<< (uint32_t) final;
+    //virtual I::OStream& operator<< (uint32_t) final;
 public:
     const std::vector<char>& data() const;
 
@@ -267,11 +273,11 @@ public:
     virtual I::OStream& operator<< (short) override;
     virtual I::OStream& operator<< (unsigned short) override;
     virtual I::OStream& operator<< (int) override;
-    virtual I::OStream& operator<< (std::size_t) override;
+    //virtual I::OStream& operator<< (std::size_t) override;
     virtual I::OStream& operator<< (float) override;
     virtual I::OStream& operator<< (double) override;
     virtual I::OStream& operator<< (const std::string&) override;
-    //virtual I::OStream& operator<< (uint32_t) final;
+    virtual I::OStream& operator<< (uint32_t) override;
 };
 
 class GAPI_EXPORTS ByteMemoryInStream final: public I::IStream {
@@ -281,7 +287,7 @@ class GAPI_EXPORTS ByteMemoryInStream final: public I::IStream {
     void check(std::size_t n) { (void) n; GAPI_DbgAssert(m_idx+n-1 < m_storage.size()); }
     uint32_t getU32() { uint32_t v{}; *this >> v; return v; };
 
-    virtual I::IStream& operator>> (uint32_t &) final;
+    //virtual I::IStream& operator>> (uint32_t &) final;
 
 public:
     explicit ByteMemoryInStream(const std::vector<char> &data);
@@ -294,7 +300,8 @@ public:
     virtual I::IStream& operator>> (int &) override;
     virtual I::IStream& operator>> (float &) override;
     virtual I::IStream& operator>> (double &) override;
-    virtual I::IStream& operator>> (std::size_t &) override;
+    //virtual I::IStream& operator>> (std::size_t &) override;
+    virtual I::IStream& operator >> (uint32_t &) override;
     virtual I::IStream& operator>> (std::string &) override;
 };
 
