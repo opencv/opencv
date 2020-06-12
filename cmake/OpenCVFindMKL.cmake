@@ -79,9 +79,10 @@ get_mkl_version(${MKL_INCLUDE_DIRS}/mkl_version.h)
 
 #determine arch
 if(CMAKE_CXX_SIZEOF_DATA_PTR EQUAL 8)
-    set(MKL_X64 1)
-    set(MKL_ARCH "intel64")
-
+    set(MKL_ARCH_LIST "intel64")
+    if(MSVC)
+        list(APPEND MKL_ARCH_LIST "win-x64")
+    endif()
     include(CheckTypeSize)
     CHECK_TYPE_SIZE(int _sizeof_int)
     if (_sizeof_int EQUAL 4)
@@ -90,14 +91,19 @@ if(CMAKE_CXX_SIZEOF_DATA_PTR EQUAL 8)
         set(MKL_ARCH_SUFFIX "ilp64")
     endif()
 else()
-    set(MKL_ARCH "ia32")
+    set(MKL_ARCH_LIST "ia32")
     set(MKL_ARCH_SUFFIX "c")
 endif()
 
 if(MKL_VERSION_STR VERSION_GREATER "11.3.0" OR MKL_VERSION_STR VERSION_EQUAL "11.3.0")
     set(mkl_lib_find_paths
-        ${MKL_ROOT_DIR}/lib
-        ${MKL_ROOT_DIR}/lib/${MKL_ARCH} ${MKL_ROOT_DIR}/../tbb/lib/${MKL_ARCH})
+        ${MKL_ROOT_DIR}/lib)
+    foreach(MKL_ARCH ${MKL_ARCH_LIST})
+      list(APPEND mkl_lib_find_paths
+        ${MKL_ROOT_DIR}/lib/${MKL_ARCH}
+        ${MKL_ROOT_DIR}/../tbb/lib/${MKL_ARCH}
+        ${MKL_ROOT_DIR}/${MKL_ARCH})
+    endforeach()
 
     set(mkl_lib_list "mkl_intel_${MKL_ARCH_SUFFIX}")
 
@@ -121,7 +127,7 @@ endif()
 
 set(MKL_LIBRARIES "")
 foreach(lib ${mkl_lib_list})
-    find_library(${lib} ${lib} ${mkl_lib_find_paths})
+    find_library(${lib} NAMES ${lib} ${lib}_dll HINTS ${mkl_lib_find_paths})
     mark_as_advanced(${lib})
     if(NOT ${lib})
         mkl_fail()
