@@ -35,7 +35,8 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             const std::vector<cv::Ptr<BackendWrapper>>& outputs,
             csl::Workspace& workspace) override
         {
-            CV_Assert(inputs.size() == 1 && outputs.size() == 1);
+            // sometimes the target shape is taken from the second input; we don't use it however
+            CV_Assert((inputs.size() == 1 || inputs.size() == 2) && outputs.size() == 1);
 
             auto input_wrapper = inputs[0].dynamicCast<wrapper_type>();
             auto input = input_wrapper->getView();
