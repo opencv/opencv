@@ -225,7 +225,9 @@ private:
 class InfEngineExtension : public InferenceEngine::IExtension
 {
 public:
+#if INF_ENGINE_VER_MAJOR_LT(INF_ENGINE_RELEASE_2020_2)
     virtual void SetLogCallback(InferenceEngine::IErrorListener&) noexcept {}
+#endif
     virtual void Unload() noexcept {}
     virtual void Release() noexcept {}
     virtual void GetVersion(const InferenceEngine::Version*&) const noexcept {}
