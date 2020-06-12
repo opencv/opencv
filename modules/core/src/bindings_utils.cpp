@@ -25,9 +25,26 @@ String dumpInputArray(InputArray argument)
                 break; // done
             }
             ss << cv::format(" total(-1)=%lld", (long long int)argument.total(-1));
-            ss << cv::format(" dims(-1)=%d", argument.dims(-1));
-            Size size = argument.size(-1);
-            ss << cv::format(" size(-1)=%dx%d", size.width, size.height);
+            int dims = argument.dims(-1);
+            ss << cv::format(" dims(-1)=%d", dims);
+            if (dims <= 2)
+            {
+                Size size = argument.size(-1);
+                ss << cv::format(" size(-1)=%dx%d", size.width, size.height);
+            }
+            else
+            {
+                int sz[CV_MAX_DIM] = {0};
+                argument.sizend(sz, -1);
+                ss << " size(-1)=[";
+                for (int i = 0; i < dims; i++)
+                {
+                    if (i > 0)
+                        ss << ' ';
+                    ss << sz[i];
+                }
+                ss << "]";
+            }
             ss << " type(-1)=" << cv::typeToString(argument.type(-1));
         } while (0);
     }
@@ -61,10 +78,26 @@ CV_EXPORTS_W String dumpInputArrayOfArrays(InputArrayOfArrays argument)
             if (argument.total(-1) > 0)
             {
                 ss << " type(0)=" << cv::typeToString(argument.type(0));
-                ss << cv::format(" dims(0)=%d", argument.dims(0));
-                size = argument.size(0);
-                ss << cv::format(" size(0)=%dx%d", size.width, size.height);
-                ss << " type(0)=" << cv::typeToString(argument.type(0));
+                int dims = argument.dims(0);
+                ss << cv::format(" dims(0)=%d", dims);
+                if (dims <= 2)
+                {
+                    Size size0 = argument.size(0);
+                    ss << cv::format(" size(0)=%dx%d", size0.width, size0.height);
+                }
+                else
+                {
+                    int sz[CV_MAX_DIM] = {0};
+                    argument.sizend(sz, 0);
+                    ss << " size(0)=[";
+                    for (int i = 0; i < dims; i++)
+                    {
+                        if (i > 0)
+                            ss << ' ';
+                        ss << sz[i];
+                    }
+                    ss << "]";
+                }
             }
         } while (0);
     }
@@ -92,9 +125,26 @@ CV_EXPORTS_W String dumpInputOutputArray(InputOutputArray argument)
                 break; // done
             }
             ss << cv::format(" total(-1)=%lld", (long long int)argument.total(-1));
-            ss << cv::format(" dims(-1)=%d", argument.dims(-1));
-            Size size = argument.size(-1);
-            ss << cv::format(" size(-1)=%dx%d", size.width, size.height);
+            int dims = argument.dims(-1);
+            ss << cv::format(" dims(-1)=%d", dims);
+            if (dims <= 2)
+            {
+                Size size = argument.size(-1);
+                ss << cv::format(" size(-1)=%dx%d", size.width, size.height);
+            }
+            else
+            {
+                int sz[CV_MAX_DIM] = {0};
+                argument.sizend(sz, -1);
+                ss << " size(-1)=[";
+                for (int i = 0; i < dims; i++)
+                {
+                    if (i > 0)
+                        ss << ' ';
+                    ss << sz[i];
+                }
+                ss << "]";
+            }
             ss << " type(-1)=" << cv::typeToString(argument.type(-1));
         } while (0);
     }
@@ -128,10 +178,26 @@ CV_EXPORTS_W String dumpInputOutputArrayOfArrays(InputOutputArrayOfArrays argume
             if (argument.total(-1) > 0)
             {
                 ss << " type(0)=" << cv::typeToString(argument.type(0));
-                ss << cv::format(" dims(0)=%d", argument.dims(0));
-                size = argument.size(0);
-                ss << cv::format(" size(0)=%dx%d", size.width, size.height);
-                ss << " type(0)=" << cv::typeToString(argument.type(0));
+                int dims = argument.dims(0);
+                ss << cv::format(" dims(0)=%d", dims);
+                if (dims <= 2)
+                {
+                    Size size0 = argument.size(0);
+                    ss << cv::format(" size(0)=%dx%d", size0.width, size0.height);
+                }
+                else
+                {
+                    int sz[CV_MAX_DIM] = {0};
+                    argument.sizend(sz, 0);
+                    ss << " size(0)=[";
+                    for (int i = 0; i < dims; i++)
+                    {
+                        if (i > 0)
+                            ss << ' ';
+                        ss << sz[i];
+                    }
+                    ss << "]";
+                }
             }
         } while (0);
     }
