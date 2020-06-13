@@ -100,12 +100,10 @@ SimpleBlobDetector::Params::Params()
     maxCircularity = std::numeric_limits<float>::max();
 
     filterByInertia = true;
-    //minInertiaRatio = 0.6;
     minInertiaRatio = 0.1f;
     maxInertiaRatio = std::numeric_limits<float>::max();
 
     filterByConvexity = true;
-    //minConvexity = 0.8;
     minConvexity = 0.95f;
     maxConvexity = std::numeric_limits<float>::max();
 }
