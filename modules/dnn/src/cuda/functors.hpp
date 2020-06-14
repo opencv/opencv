@@ -54,11 +54,8 @@ struct mish_functor<float> {
         using csl::device::fast_exp;
 
         auto e = fast_exp(value);
-        if (value <= -18.0f)
-            return value * e;
-
         auto n = e * e + 2 * e;
-        if (value <= -5.0f)
+        if (value <= -0.6f)
             return value * fast_divide(n, n + 2);
 
         return value - 2 * fast_divide(value, n + 2);
