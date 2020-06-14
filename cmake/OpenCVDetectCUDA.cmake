@@ -38,11 +38,30 @@ if(CUDA_FOUND)
   endif()
 
   if(WITH_NVCUVID)
+    macro(SEARCH_NVCUVID_HEADER _filename _result)
+      # place header file under CUDA_TOOLKIT_TARGET_DIR or CUDA_TOOLKIT_ROOT_DIR
+      find_path(_header_result
+        ${_filename}
+        PATHS "${CUDA_TOOLKIT_TARGET_DIR}" "${CUDA_TOOLKIT_ROOT_DIR}"
+        ENV CUDA_PATH
+        ENV CUDA_INC_PATH
+        PATH_SUFFIXES include
+        NO_DEFAULT_PATH
+        )
+      if("x${_header_result}" STREQUAL "x_header_result-NOTFOUND")
+        set(${_result} 0)
+      else()
+        set(${_result} 1)
+      endif()
+    endmacro()
+    SEARCH_NVCUVID_HEADER("nvcuvid.h" HAVE_NVCUVID_HEADER)
+    SEARCH_NVCUVID_HEADER("dynlink_nvcuvid.h" HAVE_DYNLINK_NVCUVID_HEADER)
     find_cuda_helper_libs(nvcuvid)
     if(WIN32)
       find_cuda_helper_libs(nvcuvenc)
     endif()
-    if(CUDA_nvcuvid_LIBRARY)
+    if(CUDA_nvcuvid_LIBRARY AND (${HAVE_NVCUVID_HEADER} OR ${HAVE_DYNLINK_NVCUVID_HEADER}))
+      # make sure to have both header and library before enabling
       set(HAVE_NVCUVID 1)
     endif()
     if(CUDA_nvcuvenc_LIBRARY)
