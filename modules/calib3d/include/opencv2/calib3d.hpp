@@ -2521,7 +2521,7 @@ CV_EXPORTS_W Mat findEssentialMat( InputArray points1, InputArray points2,
                                  double focal = 1.0, Point2d pp = Point2d(0, 0),
                                  int method = RANSAC, double prob = 0.999,
                                  double threshold = 1.0, OutputArray mask = noArray() );
-    
+
 /** @brief Calculates an essential matrix from the corresponding points in two images from potentially two different cameras.
 
 @param points1 Array of N (N \>= 5) 2D points from the first image. The point coordinates should
