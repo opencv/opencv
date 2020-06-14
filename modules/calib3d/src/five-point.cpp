@@ -469,7 +469,7 @@ cv::Mat cv::findEssentialMat( InputArray _points1, InputArray _points2,
     cv::undistortPoints(_points1, _points1, cameraMatrix1, distCoeffs1);
     cv::undistortPoints(_points2, _points2, cameraMatrix2, distCoeffs2);
 
-    Mat cameraMatrix = cv::Mat::eye(3,3, CV_64F);
+    Mat cameraMatrix = Mat::eye(3,3, CV_64F);
     return cv::findEssentialMat(_points1, _points2, cameraMatrix, method, prob, threshold, _mask);
 }
 
