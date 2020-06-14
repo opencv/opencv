@@ -458,6 +458,21 @@ cv::Mat cv::findEssentialMat( InputArray _points1, InputArray _points2, double f
     return cv::findEssentialMat(_points1, _points2, cameraMatrix, method, prob, threshold, _mask);
 }
 
+cv::Mat cv::findEssentialMat( InputArray _points1, InputArray _points2,
+                              InputArray cameraMatrix1, InputArray distCoeffs1,
+                              InputArray cameraMatrix2, InputArray distCoeffs2,
+                              int method, double prob, double threshold, OutputArray _mask)
+{
+    CV_INSTRUMENT_REGION();
+    
+    //undistort image points and use 3x3 eye matrix as camera matrix
+    cv::undistortPoints(_points1, _points1, cameraMatrix1, distCoeffs1);
+    cv::undistortPoints(_points2, _points2, cameraMatrix2, distCoeffs2);
+
+    Mat cameraMatrix = cv::Mat::eye(3,3, CV_64F);
+    return cv::findEssentialMat(_points1, _points2, cameraMatrix, method, prob, threshold, _mask);
+}
+
 int cv::recoverPose( InputArray E, InputArray _points1, InputArray _points2,
                             InputArray _cameraMatrix, OutputArray _R, OutputArray _t, double distanceThresh,
                      InputOutputArray _mask, OutputArray triangulatedPoints)
