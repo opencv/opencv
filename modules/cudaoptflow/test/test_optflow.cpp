@@ -405,10 +405,71 @@ CUDA_TEST_P(OpticalFlowDual_TVL1, Accuracy)
     EXPECT_MAT_SIMILAR(flow, d_flow, 4e-3);
 }
 
+class TVL1AsyncParallelLoopBody : public cv::ParallelLoopBody
+{
+public:
+    TVL1AsyncParallelLoopBody(const cv::cuda::GpuMat& d_img1_, const cv::cuda::GpuMat& d_img2_, cv::cuda::GpuMat* d_flow_, int iterations_, double gamma_)
+        : d_img1(d_img1_), d_img2(d_img2_), d_flow(d_flow_), iterations(iterations_), gamma(gamma_) {}
+    ~TVL1AsyncParallelLoopBody() {}
+    void operator()(const cv::Range& r) const
+    {
+        for (int i = r.start; i < r.end; i++) {
+            cv::cuda::Stream stream;
+            cv::Ptr<cv::cuda::OpticalFlowDual_TVL1> d_alg = cv::cuda::OpticalFlowDual_TVL1::create();
+            d_alg->setNumIterations(iterations);
+            d_alg->setGamma(gamma);
+            d_alg->calc(d_img1, d_img2, d_flow[i], stream);
+            stream.waitForCompletion();
+        }
+    }
+protected:
+    const cv::cuda::GpuMat& d_img1;
+    const cv::cuda::GpuMat& d_img2;
+    cv::cuda::GpuMat* d_flow;
+    int iterations;
+    double gamma;
+};
+
+#define NUM_STREAMS 16
+
+CUDA_TEST_P(OpticalFlowDual_TVL1, Async)
+{
+    if (!supportFeature(devInfo, cv::cuda::FEATURE_SET_COMPUTE_30))
+    {
+        throw SkipTestException("CUDA device doesn't support texture objects");
+    }
+    else
+    {
+        cv::Mat frame0 = readImage("opticalflow/rubberwhale1.png", cv::IMREAD_GRAYSCALE);
+        ASSERT_FALSE(frame0.empty());
+
+        cv::Mat frame1 = readImage("opticalflow/rubberwhale2.png", cv::IMREAD_GRAYSCALE);
+        ASSERT_FALSE(frame1.empty());
+
+        const int iterations = 10;
+
+        // Synchronous call
+        cv::Ptr<cv::cuda::OpticalFlowDual_TVL1> d_alg =
+                cv::cuda::OpticalFlowDual_TVL1::create();
+        d_alg->setNumIterations(iterations);
+        d_alg->setGamma(gamma);
+
+        cv::cuda::GpuMat d_flow_gold;
+        d_alg->calc(loadMat(frame0), loadMat(frame1), d_flow_gold);
+
+        // Asynchronous call
+        cv::cuda::GpuMat d_flow[NUM_STREAMS];
+        cv::parallel_for_(cv::Range(0, NUM_STREAMS), TVL1AsyncParallelLoopBody(loadMat(frame0), loadMat(frame1), d_flow, iterations, gamma));
+
+        // Compare the results of synchronous call and asynchronous call
+        for (int i = 0; i < NUM_STREAMS; i++)
+            EXPECT_MAT_NEAR(d_flow_gold, d_flow[i], 0.0);
+    }
+}
+
 INSTANTIATE_TEST_CASE_P(CUDA_OptFlow, OpticalFlowDual_TVL1, testing::Combine(
     ALL_DEVICES,
     testing::Values(Gamma(0.0), Gamma(1.0))));
-
 
 }} // namespace
 #endif // HAVE_CUDA
