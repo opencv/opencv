@@ -231,8 +231,12 @@ class ClassInfo(GeneralInfo):
                 self.objc_name = m[1:]
         self.base = ''
         self.is_base_class = True
+        self.native_ptr_name = "nativePtr"
         if decl[1]:
             self.base = re.sub(r"^.*:", "", decl[1].split(",")[0]).strip().replace(self.objc_name, "")
+            if self.base:
+                self.is_base_class = False
+                self.native_ptr_name = "nativePtr" + self.objc_name
 
     def __repr__(self):
         return Template("CLASS $namespace::$classpath.$name : $base").substitute(**self.__dict__)
@@ -296,7 +300,6 @@ class ClassInfo(GeneralInfo):
         if self.base:
             self.objc_header_template = T_OBJC_CLASS_HEADER
             self.objc_body_template = T_OBJC_CLASS_BODY
-            self.is_base_class = False
         else:
             self.base = "NSObject"
             if self.name != Module:
@@ -326,19 +329,18 @@ class ClassInfo(GeneralInfo):
                             nativePointerHandling = Template(
 """
 #ifdef __cplusplus
-@property(readonly)$cName* nativePtr;
+@property(readonly)cv::Ptr<$cName> $native_ptr_name;
 #endif
 
-- (void)dealloc;
-
 #ifdef __cplusplus
-- (instancetype)initWithNativePtr:($cName*)nativePtr;
-+ (instancetype)fromNative:($cName*)nativePtr;
+- (instancetype)initWithNativePtr:(cv::Ptr<$cName>)nativePtr;
++ (instancetype)fromNative:(cv::Ptr<$cName>)nativePtr;
 #endif
 """
                             ).substitute(
-                                cName = self.fullName(isCPP=True)
-                            ) if self.is_base_class else "",
+                                cName = self.fullName(isCPP=True),
+                                native_ptr_name = self.native_ptr_name
+                            ),
                             manualMethodDeclations = "",
                             methodDeclarations = self.method_declarations.getvalue(),
                             name = self.name,
@@ -353,28 +355,24 @@ class ClassInfo(GeneralInfo):
                             module = M,
                             nativePointerHandling=Template(
 """
-- (void)dealloc {
-    if (_nativePtr != NULL) {
-        delete _nativePtr;
-    }
-}
-
-- (instancetype)initWithNativePtr:($cName*)nativePtr {
-    self = [super init];
+- (instancetype)initWithNativePtr:(cv::Ptr<$cName>)nativePtr {
+    self = [super $init_call];
     if (self) {
-        _nativePtr = nativePtr;
+        _$native_ptr_name = nativePtr;
     }
     return self;
 }
 
-+ (instancetype)fromNative:($cName*)nativePtr {
++ (instancetype)fromNative:(cv::Ptr<$cName>)nativePtr {
     return [[$objcName alloc] initWithNativePtr:nativePtr];
 }
 """
                             ).substitute(
-                                cName=self.fullName(isCPP=True),
-                                objcName=self.objc_name
-                            ) if self.is_base_class else "",
+                                cName = self.fullName(isCPP=True),
+                                objcName = self.objc_name,
+                                native_ptr_name = self.native_ptr_name,
+                                init_call = "init" if self.is_base_class else "initWithNativePtr:nativePtr"
+                            ),
                             manualMethodDeclations = "",
                             methodImplementations = self.method_implementations.getvalue(),
                             name = self.name,
@@ -576,7 +574,7 @@ class ObjectiveCWrapperGenerator(object):
             type_dict.setdefault(name, {}).update(
                 { "objc_type" : classinfo.objc_name + "*",
                   "from_cpp" : "[" + classinfo.objc_name + " fromNative:%(n)s]",
-                  "to_cpp" : "*(" + classinfo.namespace.replace(".", "::") + "::" + classinfo.objc_name +  "*)(%(n)s.nativePtr)" }
+                  "to_cpp" : "*(%(n)s." + classinfo.native_ptr_name + ")" }
             )
 
         # missing_consts { Module : { public : [[name, val],...], private : [[]...] } }
@@ -596,7 +594,7 @@ class ObjectiveCWrapperGenerator(object):
             type_dict.setdefault("Ptr_"+name, {}).update(
                 { "objc_type" : classinfo.objc_name + "*",
                   "c_type" : name,
-                  "to_cpp": "%(n)s.nativePtr",
+                  "to_cpp": "%(n)s." + classinfo.native_ptr_name,
                   "from_cpp_ptr": "[" + name + " fromNativePtr:%(n)s]"}
             )
         logging.info('ok: class %s, name: %s, base: %s', classinfo, name, classinfo.base)
@@ -934,19 +932,19 @@ class ObjectiveCWrapperGenerator(object):
             elif ret_type.startswith("Ptr_"):
                 cpp_type = type_dict[ret_type]["c_type"]
                 namespace_prefix = self.get_namespace_prefix(cpp_type)
-                ret_val = namespace_prefix + cpp_type + "* retVal = "
+                ret_val = "cv::Ptr<" + namespace_prefix + cpp_type + "> retVal = "
                 ret = "return [" + type_dict[ret_type]["objc_type"][:-1] + " fromNative:retVal];"
             elif ret_type == "void":
                 ret_val = ""
                 ret = ""
             elif ret_type == "": # c-tor
                 constructor = True
-                ret_val = "return [self initWithNativePtr:new "
-                tail = "]"
+                ret_val = "return [self initWithNativePtr:cv::Ptr<" + fi.fullClass(isCPP=True) + ">(new "
+                tail = ")]"
                 ret = ""
             elif self.isWrapped(ret_type): # wrapped class
                 namespace_prefix = self.get_namespace_prefix(ret_type)
-                ret_val = namespace_prefix + ret_type + "* retVal = new " + namespace_prefix + ret_type + "("
+                ret_val = "cv::Ptr<" + namespace_prefix + ret_type + "> retVal = new " + namespace_prefix + ret_type + "("
                 tail = ")"
                 ret_type_dict = type_dict[ret_type]
                 from_cpp = ret_type_dict["from_cpp_ptr"] if ret_type_dict.has_key("from_cpp_ptr") else ret_type_dict["from_cpp"]
@@ -993,7 +991,7 @@ class ObjectiveCWrapperGenerator(object):
                     prologue = "\n    " + "\n    ".join(prologue) if prologue else "",
                     epilogue = "\n    " + "\n    ".join(epilogue) if epilogue else "",
                     static = "+" if static else "-",
-                    obj_deref =  ("MAKE_PTR(" + fi.fullClass(isCPP=True) + ")->" if not ci.is_base_class else "_nativePtr->") if not static and not constructor else "",
+                    obj_deref = ("self." + ci.native_ptr_name + "->") if not static and not constructor else "",
                     cv_name = fi.cv_name if static else fi.fullClass(isCPP=True) if constructor else fi.name,
                     cv_args = ", ".join(cv_args),
                     tail = tail
@@ -1068,7 +1066,7 @@ typedef NS_ENUM(int, {2}) {{
             objc_type = type_data.get("objc_type", pi.ctype)
             ci.addImports(pi.ctype, False)
             ci.method_declarations.write("@property " + ("(readonly) " if not pi.rw else "") + objc_type + " " + pi.name + ";\n")
-            ptr_ref = "MAKE_PTR(" + ci.fullName(isCPP=True) + ")->" if not ci.is_base_class else "_nativePtr->"
+            ptr_ref = "self." + ci.native_ptr_name + "->" if not ci.is_base_class else "self.nativePtr->"
             if type_data.has_key("v_type"):
                 vector_type = type_data["v_type"]
                 full_cpp_type = (self.get_namespace_prefix(vector_type) if (vector_type.find("::") == -1) else "") + vector_type
