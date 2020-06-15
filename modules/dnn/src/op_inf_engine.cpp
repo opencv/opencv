@@ -11,7 +11,6 @@
 
 #ifdef HAVE_INF_ENGINE
 #include <ie_extension.h>
-#include <ie_plugin_dispatcher.hpp>
 #endif  // HAVE_INF_ENGINE
 
 #include <opencv2/core/utils/configuration.private.hpp>
