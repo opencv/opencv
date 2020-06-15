@@ -159,10 +159,10 @@ int main( int argc, char* argv[] )
 
     //-- Step 5: filter goodmatches that belong to the best image match of the dataset
     std::vector<DMatch> filtered_good_matches;
-    for (std::vector<DMatch>::iterator it(good_matches.begin()); it != good_matches.end(); ++it)
+    for (std::vector<DMatch>::iterator itr(good_matches.begin()); itr != good_matches.end(); ++itr)
     {
-        if (it->imgIdx == best_img.img_index)
-            filtered_good_matches.push_back(*it);
+        if (itr->imgIdx == best_img.img_index)
+            filtered_good_matches.push_back(*itr);
     }
 
     //-- Retrieve the best image match from the dataset
