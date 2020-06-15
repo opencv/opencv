@@ -177,7 +177,12 @@ int main( int argc, char* argv[] )
     //-- Show detected matches
     imshow("Good Matches", img_matches );
 
-    waitKey();
+    while(1)
+    {
+        int k = waitKey();
+        if (k == 27) // Esc key
+            break;
+    }
     return 0;
 }
 #else
