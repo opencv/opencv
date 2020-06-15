@@ -15,7 +15,6 @@
 
 #ifdef HAVE_DNN_NGRAPH
 #include <ie_extension.h>
-#include <ie_plugin_dispatcher.hpp>
 #endif  // HAVE_DNN_NGRAPH
 
 #include <opencv2/core/utils/configuration.private.hpp>
