@@ -671,9 +671,12 @@ class ImgprocTest: OpenCVTestCase {
         let points = [Point2f(x: 0, y: 0), Point2f(x: -1, y: 1), Point2f(x: 1, y: 1), Point2f(x: 1, y: -1), Point2f(x: -1, y: -1)]
         let rrect = Imgproc.fitEllipse(points: points)
 
-        assertPoint2fEquals(Point2f(x: 0, y: 0), rrect.center, OpenCVTestCase.FEPS)
-        XCTAssertEqual(Float(2.828), rrect.size.width, accuracy: OpenCVTestCase.FEPS)
-        XCTAssertEqual(Float(2.828), rrect.size.height, accuracy: OpenCVTestCase.FEPS)
+        let FIT_ELLIPSE_CENTER_EPS:Float = 0.01
+        let FIT_ELLIPSE_SIZE_EPS:Float = 0.4
+
+        assertPoint2fEquals(Point2f(x: 0, y: 0), rrect.center, FIT_ELLIPSE_CENTER_EPS)
+        XCTAssertEqual(Float(2.828), rrect.size.width, accuracy: FIT_ELLIPSE_SIZE_EPS)
+        XCTAssertEqual(Float(2.828), rrect.size.height, accuracy: FIT_ELLIPSE_SIZE_EPS)
     }
 
     func testFitLine() throws {
