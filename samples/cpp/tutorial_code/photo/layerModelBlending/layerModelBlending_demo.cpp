@@ -89,17 +89,17 @@ int main()
     else if (num == BLEND_MODEL_COLOR_BURN)
     {
         layerModelBlending(target, blend, result, BLEND_MODEL_COLOR_BURN);
-        imwrite("samples/cpp/tutorial_code/photo/layerModelBlending/COLOR_BURN.jpg", result);
+        imwrite("samples/cpp/tutorial_code/photo/layerModelBlending/COLOR_BURN_RESULT.jpg", result);
     }
     else if (num == BLEND_MODEL_LINEAR_BRUN)
     {
         layerModelBlending(target, blend, result, BLEND_MODEL_LINEAR_BRUN);
-        imwrite("samples/cpp/tutorial_code/photo/layerModelBlending/LINEAR_BRUN.jpg", result);
+        imwrite("samples/cpp/tutorial_code/photo/layerModelBlending/LINEAR_BRUN_RESULT.jpg", result);
     }
     else if (num == BLEND_MODEL_LIGHTEN)
     {
         layerModelBlending(target, blend, result, BLEND_MODEL_LIGHTEN);
-        imwrite("samples/cpp/tutorial_code/photo/layerModelBlending/LIGHTEN.jpg", result);
+        imwrite("samples/cpp/tutorial_code/photo/layerModelBlending/LIGHTEN_RESULT.jpg", result);
     }
     else if (num == BLEND_MODEL_SCREEN)
     {
