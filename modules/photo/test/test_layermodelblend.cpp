@@ -22,7 +22,7 @@ TEST(Photo_LayerModelBlend_DARKEN, regression)
 {
     string folder = string(cvtest::TS::ptr()->get_data_path()) + "LayerModelBlend/";
     string target_path = "samples/cpp/lena.jpg";
-    string reference_path = folder + "DARKEN_RESULT.jpg";    
+    string reference_path = folder + "DARKEN_RESULT.jpg";
     Mat target = imread(target_path, IMREAD_COLOR);
     ASSERT_FALSE(target.empty()) << "Could not load target image " << target_path;
     Mat blend(target.size(), CV_8UC3, Scalar::all(0));
