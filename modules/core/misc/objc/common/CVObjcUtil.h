@@ -15,8 +15,6 @@ typedef union { float f; int32_t i; } V32;
 #ifdef __cplusplus
 #import <vector>
 
-#define MAKE_PTR(t) (*((cv::Ptr<t>*)self.nativePtr))
-
 template <typename CV, typename OBJC> std::vector<CV> objc2cv(NSArray<OBJC*>* _Nonnull array, CV& (* _Nonnull converter)(OBJC* _Nonnull)) {
     std::vector<CV> ret;
     for (OBJC* obj in array) {

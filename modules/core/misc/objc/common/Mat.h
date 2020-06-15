@@ -33,7 +33,6 @@ NS_ASSUME_NONNULL_BEGIN
 #pragma mark - Constructors
 
 - (instancetype)init;
-- (void)dealloc;
 #ifdef __cplusplus
 - (instancetype)initWithNativeMat:(cv::Ptr<cv::Mat>)nativeMat;
 + (instancetype)fromNativePtr:(cv::Ptr<cv::Mat>)nativePtr;
