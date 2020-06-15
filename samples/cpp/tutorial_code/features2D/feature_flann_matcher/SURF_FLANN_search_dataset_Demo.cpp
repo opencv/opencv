@@ -3,15 +3,14 @@
 
 #include <iostream>
 #include <vector>
-#include <boost/filesystem.hpp>
 #include "opencv2/core.hpp"
+#include "opencv2/core/utils/filesystem.hpp"
 #ifdef HAVE_OPENCV_XFEATURES2D
 #include "opencv2/highgui.hpp"
 #include "opencv2/features2d.hpp"
 #include "opencv2/xfeatures2d.hpp"
 #include "opencv2/flann.hpp"
 
-namespace fs = boost::filesystem;
 using namespace cv;
 using namespace cv::xfeatures2d;
 using std::cout;
@@ -39,8 +38,8 @@ int main( int argc, char* argv[] )
         return -1;
     }
 
-    fs::path db_path( parser.get<String>("dataset") );
-    if (!fs::is_directory( db_path))
+    const cv::String db_path = parser.get<String>("dataset");
+    if (!utils::fs::isDirectory(db_path))
     {
         cout << "The dataset folder doesn't exist!\n" << endl;
         return -1;
@@ -62,9 +61,11 @@ int main( int argc, char* argv[] )
     std::vector<int> db_indice_2_image_lut;  //match descriptor indice to its image
 
     db_images_indice_range.push_back(0);
-    for (fs::directory_iterator itr(db_path); itr != fs::directory_iterator(); ++itr)
+    std::vector<cv::String> files;
+    utils::fs::glob(db_path, cv::String(), files);
+    for (std::vector<cv::String>::iterator itr = files.begin(); itr != files.end(); ++itr)
     {
-        Mat tmp_img = imread( itr->path().string(), IMREAD_GRAYSCALE );
+        Mat tmp_img = imread( *itr, IMREAD_GRAYSCALE );
         if (!tmp_img.empty())
         {
             std::vector<KeyPoint> kpts;
@@ -166,9 +167,7 @@ int main( int argc, char* argv[] )
     }
 
     //-- Retrieve the best image match from the dataset
-    fs::directory_iterator itr(db_path);
-    std::advance (itr, best_img.img_index);
-    Mat db_img = imread( itr->path().string(), IMREAD_GRAYSCALE );
+    Mat db_img = imread( files[best_img.img_index], IMREAD_GRAYSCALE );
 
     //-- Draw matches
     Mat img_matches;
