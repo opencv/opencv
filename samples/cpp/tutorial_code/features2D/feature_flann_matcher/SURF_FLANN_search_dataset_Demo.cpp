@@ -21,7 +21,9 @@ using std::endl;
 const char* keys =
     "{ help h |  | Print help message. }"
     "{ dataset | | Path to the images folder used as dataset. }"
-    "{ image |   | Path to the image to search for in the dataset. }";
+    "{ image |   | Path to the image to search for in the dataset. }"
+    "{ save |    | Path and filename where to save the flann structure to. }"
+    "{ load |    | Path and filename where to load the flann structure from. }";
 
 struct img_info {
     int img_index;
@@ -31,23 +33,46 @@ struct img_info {
 
 int main( int argc, char* argv[] )
 {
+    //-- Test the program options
     CommandLineParser parser( argc, argv, keys );
-    Mat img = imread( samples::findFile( parser.get<String>("image") ), IMREAD_GRAYSCALE );
-    if ( img.empty() )
+    const cv::String img_path = parser.get<String>("image");
+    if ((img_path != String()) && (!utils::fs::exists(img_path)))
     {
-        cout << "Could not open or find the image!\n" << endl;
-        parser.printMessage();
+        cout << "Query image " << img_path.c_str() << " doesn't exist!" << endl;
         return -1;
+    }
+
+    Mat img;
+    if (img_path != String())
+    {
+        img = imread( samples::findFile( img_path ), IMREAD_GRAYSCALE );
+        if (img.empty() )
+        {
+            cout << "Could not open the image!" << endl;
+            parser.printMessage();
+            return -1;
+        }
     }
 
     const cv::String db_path = parser.get<String>("dataset");
     if (!utils::fs::isDirectory(db_path))
     {
-        cout << "The dataset folder doesn't exist!\n" << endl;
+        cout << "Dataset folder "<< db_path.c_str() <<" doesn't exist!" << endl;
         return -1;
     }
 
-    //-- Step 1: Detect the keypoints using SURF Detector, compute the descriptors...
+    const cv::String load_db_path = parser.get<String>("load");
+    if ((load_db_path != String()) && (!utils::fs::exists(load_db_path)))
+    {
+        cout << "File " << load_db_path.c_str()
+             << " where to load the flann structure from doesn't exist!" << endl;
+        return -1;
+    }
+
+    const cv::String save_db_path = parser.get<String>("save");
+
+    //-- Step 1: Detect the keypoints using a detector, compute the descriptors
+    //   in the folder containing the images of the dataset
 #ifdef _SURF_
     int minHessian = 400;
     Ptr<Feature2D> detector = SURF::create( minHessian );
@@ -58,16 +83,10 @@ int main( int argc, char* argv[] )
     return -1;
 #endif
 
-    // ...for the query image...
-    std::vector<KeyPoint> img_keypoints;
-    Mat img_descriptors;
-    detector->detectAndCompute( img, noArray(), img_keypoints, img_descriptors );
-
-    // ...and in the folder containing the images of the dataset
     std::vector<KeyPoint> db_keypoints;
     Mat db_descriptors;
     std::vector<unsigned int> db_images_indice_range; //store the range of indices per image
-    std::vector<int> db_indice_2_image_lut;  //match descriptor indice to its image
+    std::vector<int> db_indice_2_image_lut;           //match descriptor indice to its image
 
     db_images_indice_range.push_back(0);
     std::vector<cv::String> files;
@@ -101,17 +120,42 @@ int main( int argc, char* argv[] )
 
     //-- Step 2: build the structure storing the descriptors
 #if defined(_SIFT_) || defined(_SURF_)
-    flann::GenericIndex<cvflann::L2<float> > index(db_descriptors,
-                                                   cvflann::KDTreeIndexParams(4));
+
+    flann::GenericIndex<cvflann::L2<float> >* index;
+    if (load_db_path != String())
+        index = new flann::GenericIndex<cvflann::L2<float> >(db_descriptors,
+                                                             cvflann::SavedIndexParams(load_db_path));
+    else
+        index = new flann::GenericIndex<cvflann::L2<float> >(db_descriptors,
+                                                             cvflann::KDTreeIndexParams(4));
 
 #elif defined(_ORB_) || defined(_BRISK_) || defined(_FREAK_) || defined(_AKAZE_)
-    /* in case of 'anyimpl::bad_any_cast', requires the get_param fix in LshIndex ctor */
-    flann::GenericIndex<cvflann::Hamming<unsigned char> > index(db_descriptors,
-                                                                cvflann::LshIndexParams());
+
+    /* /!\ in case of 'anyimpl::bad_any_cast', requires the get_param fix in LshIndex ctor */
+    flann::GenericIndex<cvflann::Hamming<unsigned char> >* index;
+    if (load_db_path != String())
+        index  = new flann::GenericIndex<cvflann::Hamming<unsigned char> >
+                (db_descriptors, cvflann::SavedIndexParams(load_db_path));
+    else
+        index  = new flann::GenericIndex<cvflann::Hamming<unsigned char> >
+                (db_descriptors, cvflann::LshIndexParams());
 #else
     cout<< "Descriptor not listed. Set the proper FLANN distance for this descriptor" <<endl;
     return -1;
 #endif
+    if (save_db_path != String())
+        index->save(save_db_path);
+
+
+    // Return if no query image was set
+    if (img_path == String())
+        return 0;
+
+    //-- Detect the keypoints and compute the descriptors for the query image
+    std::vector<KeyPoint> img_keypoints;
+    Mat img_descriptors;
+    detector->detectAndCompute( img, noArray(), img_keypoints, img_descriptors );
+
 
     //-- Step 3: retrieve the descriptors in the dataset matching the ones of the query image
     // /!\ knnSearch doesn't follow OpenCV standards by not initialising empty Mat properties
@@ -122,7 +166,7 @@ int main( int argc, char* argv[] )
 #elif defined(_ORB_) || defined(_BRISK_) || defined(_FREAK_) || defined(_AKAZE_)
     Mat dists(img_descriptors.rows, knn, CV_32S);
 #endif
-    index.knnSearch( img_descriptors, indices, dists, knn, cvflann::SearchParams(32) );
+    index->knnSearch( img_descriptors, indices, dists, knn, cvflann::SearchParams(32) );
 
     //-- Filter matches using the Lowe's ratio test
     const float ratio_thresh = 0.7f;
@@ -140,6 +184,7 @@ int main( int argc, char* argv[] )
             matches_per_img_histogram[ db_indice_2_image_lut[indice_in_db] ]++;
         }
     }
+
 
     //-- Step 4: find the dataset image with the highest proportion of matches
     std::multimap<float, img_info> images_infos;
@@ -208,6 +253,7 @@ int main( int argc, char* argv[] )
         if (k == 27) // Esc key
             break;
     }
+    delete index;
     return 0;
 }
 #else
