@@ -9,47 +9,35 @@
 #define OPENCV_GAPI_RENDER_PERF_TESTS_HPP
 
 
-#include <codecvt>
-
 #include "../../test/common/gapi_tests_common.hpp"
 #include <opencv2/gapi/render/render.hpp>
 
 namespace opencv_test
 {
 
-namespace
-{
-// FIXME: remove this code duplication with gapi/test/render/gapi_render_tests_ocv.cpp
-  inline std::wstring to_wstring(const char* bytes)
-  {
-      std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
-      return converter.from_bytes(bytes);
-  }
-}
+using namespace perf;
 
-  using namespace perf;
-
-  class RenderTestFTexts : public TestPerfParams<tuple<std::wstring, cv::Size, cv::Point,
-                                                       int, cv::Scalar, cv::GCompileArgs>> {};
-  class RenderTestTexts : public TestPerfParams<tuple<std::string, cv::Size, cv::Point,
-                                                      int, cv::Scalar, int, int,
-                                                      bool, cv::GCompileArgs>> {};
-  class RenderTestRects : public TestPerfParams<tuple<cv::Size, cv::Rect, cv::Scalar,
-                                                      int, int, int, cv::GCompileArgs>> {};
-  class RenderTestCircles : public TestPerfParams<tuple<cv::Size, cv::Point, int,
-                                                        cv::Scalar, int, int, int,
-                                                        cv::GCompileArgs>> {};
-  class RenderTestLines : public TestPerfParams<tuple<cv::Size, cv::Point, cv::Point,
+class RenderTestFTexts : public TestPerfParams<tuple<std::wstring, cv::Size, cv::Point,
+                                                     int, cv::Scalar, cv::GCompileArgs>> {};
+class RenderTestTexts : public TestPerfParams<tuple<std::string, cv::Size, cv::Point,
+                                                    int, cv::Scalar, int, int,
+                                                    bool, cv::GCompileArgs>> {};
+class RenderTestRects : public TestPerfParams<tuple<cv::Size, cv::Rect, cv::Scalar,
+                                                    int, int, int, cv::GCompileArgs>> {};
+class RenderTestCircles : public TestPerfParams<tuple<cv::Size, cv::Point, int,
                                                       cv::Scalar, int, int, int,
                                                       cv::GCompileArgs>> {};
-  class RenderTestMosaics : public TestPerfParams<tuple<cv::Size, cv::Rect, int, int,
+class RenderTestLines : public TestPerfParams<tuple<cv::Size, cv::Point, cv::Point,
+                                                    cv::Scalar, int, int, int,
+                                                    cv::GCompileArgs>> {};
+class RenderTestMosaics : public TestPerfParams<tuple<cv::Size, cv::Rect, int, int,
+                                                      cv::GCompileArgs>> {};
+class RenderTestImages : public TestPerfParams<tuple<cv::Size, cv::Rect, cv::Scalar, double,
+                                                     cv::GCompileArgs>> {};
+class RenderTestPolylines : public TestPerfParams<tuple<cv::Size, std::vector<cv::Point>,
+                                                        cv::Scalar, int, int, int,
                                                         cv::GCompileArgs>> {};
-  class RenderTestImages : public TestPerfParams<tuple<cv::Size, cv::Rect, cv::Scalar, double,
-                                                       cv::GCompileArgs>> {};
-  class RenderTestPolylines : public TestPerfParams<tuple<cv::Size, std::vector<cv::Point>,
-                                                          cv::Scalar, int, int, int,
-                                                          cv::GCompileArgs>> {};
-  class RenderTestPolyItems : public TestPerfParams<tuple<cv::Size, int, int, int, cv::GCompileArgs>> {};
+class RenderTestPolyItems : public TestPerfParams<tuple<cv::Size, int, int, int, cv::GCompileArgs>> {};
 
 }
 #endif //OPENCV_GAPI_RENDER_PERF_TESTS_HPP

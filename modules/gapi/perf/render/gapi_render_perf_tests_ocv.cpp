@@ -15,7 +15,7 @@ namespace opencv_test
 
 #ifdef HAVE_FREETYPE
 INSTANTIATE_TEST_CASE_P(RenderTestFTexts, RenderTestFTexts,
-                        Combine(Values(to_wstring("\xe4\xbd\xa0\xe5\xa5\xbd")),
+                        Combine(Values(L"\xe4\xbd\xa0\xe5\xa5\xbd"),
                                 Values(szVGA, sz720p, sz1080p),
                                 Values(cv::Point(50, 50)),
                                 Values(60),
