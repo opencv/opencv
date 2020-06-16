@@ -16,6 +16,8 @@ using namespace cv::xfeatures2d;
 using std::cout;
 using std::endl;
 
+#define _ORB_
+
 const char* keys =
     "{ help h |  | Print help message. }"
     "{ dataset | | Path to the images folder used as dataset. }"
@@ -46,8 +48,15 @@ int main( int argc, char* argv[] )
     }
 
     //-- Step 1: Detect the keypoints using SURF Detector, compute the descriptors...
+#ifdef _SURF_
     int minHessian = 400;
-    Ptr<SURF> detector = SURF::create( minHessian );
+    Ptr<Feature2D> detector = SURF::create( minHessian );
+#elif defined(_ORB_)
+    Ptr<Feature2D> detector = ORB::create();
+#else
+    cout << "Missing or unknown defined descriptor" << endl;
+    return -1;
+#endif
 
     // ...for the query image...
     std::vector<KeyPoint> img_keypoints;
@@ -91,12 +100,28 @@ int main( int argc, char* argv[] )
     }
 
     //-- Step 2: build the structure storing the descriptors
-    flann::GenericIndex<cvflann::L2<float> > index(db_descriptors, cvflann::KDTreeIndexParams(4));
+#if defined(_SIFT_) || defined(_SURF_)
+    flann::GenericIndex<cvflann::L2<float> > index(db_descriptors,
+                                                   cvflann::KDTreeIndexParams(4));
+
+#elif defined(_ORB_) || defined(_BRISK_) || defined(_FREAK_) || defined(_AKAZE_)
+    /* in case of 'anyimpl::bad_any_cast', requires the get_param fix in LshIndex ctor */
+    flann::GenericIndex<cvflann::Hamming<unsigned char> > index(db_descriptors,
+                                                                cvflann::LshIndexParams());
+#else
+    cout<< "Descriptor not listed. Set the proper FLANN distance for this descriptor" <<endl;
+    return -1;
+#endif
 
     //-- Step 3: retrieve the descriptors in the dataset matching the ones of the query image
+    // /!\ knnSearch doesn't follow OpenCV standards by not initialising empty Mat properties
     const int knn = 2;
     Mat indices(img_descriptors.rows, knn, CV_32S);
+#if defined(_SIFT_) || defined(_SURF_)
     Mat dists(img_descriptors.rows, knn, CV_32F);
+#elif defined(_ORB_) || defined(_BRISK_) || defined(_FREAK_) || defined(_AKAZE_)
+    Mat dists(img_descriptors.rows, knn, CV_32S);
+#endif
     index.knnSearch( img_descriptors, indices, dists, knn, cvflann::SearchParams(32) );
 
     //-- Filter matches using the Lowe's ratio test
