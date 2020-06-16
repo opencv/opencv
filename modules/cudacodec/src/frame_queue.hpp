@@ -45,16 +45,8 @@
 #define __FRAME_QUEUE_HPP__
 
 #include "opencv2/core/utility.hpp"
-#include "opencv2/core/private.cuda.hpp"
 
-#if defined(HAVE_DYNLINK_NVCUVID_HEADER)
-    #include <dynlink_nvcuvid.h>
-#elif defined(HAVE_NVCUVID_HEADER)
-    #include <nvcuvid.h>
-#endif
-
-namespace cv { namespace cudacodec { namespace detail
-{
+namespace cv { namespace cudacodec { namespace detail {
 
 class FrameQueue
 {
