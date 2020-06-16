@@ -20,7 +20,7 @@ namespace detail {
 GAPI_EXPORTS std::vector<char> serialize(const cv::GComputation &c);
 
 template<typename T>
-T deserialize(const std::vector<char> &p);
+static T deserialize(const std::vector<char> &p);
 
 template<>
 cv::GComputation deserialize(const std::vector<char> &p) {
