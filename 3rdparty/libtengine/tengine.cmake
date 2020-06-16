@@ -22,7 +22,7 @@
 #         sqfu@openailab.com
 #
 
-SET(TENGINE_COMMIT_VERSION "c95a13a3e180bf7fbd1071cf693d8013fcffb7bb")
+SET(TENGINE_COMMIT_VERSION "8a4c58e0e05cd850f4bb0936a330edc86dc0e28c")
 SET(OCV_TENGINE_DIR "${OpenCV_BINARY_DIR}/3rdparty/libtengine")
 SET(OCV_TENGINE_SOURCE_PATH "${OCV_TENGINE_DIR}/Tengine-${TENGINE_COMMIT_VERSION}")
 
@@ -34,7 +34,7 @@ IF(EXISTS "${OCV_TENGINE_SOURCE_PATH}")
 ELSE()
 	SET(OCV_TENGINE_FILENAME "${TENGINE_COMMIT_VERSION}.zip")#name2
 	SET(OCV_TENGINE_URL "https://github.com/OAID/Tengine/archive/") #url2
-	SET(tengine_md5sum 354b1219382175d67ecaac98b46ddecf) #md5sum2
+	SET(tengine_md5sum f51ca8f3963faeeff3f019a6f6edc206) #md5sum2
 
 	#MESSAGE(STATUS "**** TENGINE DOWNLOAD BEGIN ****")
 	ocv_download(FILENAME ${OCV_TENGINE_FILENAME}
@@ -80,9 +80,8 @@ if(BUILD_TENGINE)
 
 	SET(BUILT_IN_OPENCV ON) ## set for tengine compile discern .
 	SET(Tengine_INCLUDE_DIR  "${OCV_TENGINE_SOURCE_PATH}/core/include" CACHE INTERNAL "")
-	#SET(Tengine_LIB "${CMAKE_BINARY_DIR}/lib/${ANDROID_ABI}/libtengine.a" CACHE INTERNAL "")
 	if(EXISTS "${OCV_TENGINE_SOURCE_PATH}/CMakeLists.txt")
-		add_subdirectory("${OCV_TENGINE_SOURCE_PATH}" "${OCV_TENGINE_DIR}/build" EXCLUDE_FROM_ALL )
+		add_subdirectory("${OCV_TENGINE_SOURCE_PATH}" "${OCV_TENGINE_DIR}/build")
 	else()
 		message(WARNING "TENGINE: Missing 'CMakeLists.txt' in source code package: ${OCV_TENGINE_SOURCE_PATH}")
 	endif()
