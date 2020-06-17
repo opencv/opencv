@@ -59,6 +59,7 @@ def check_executable(cmd):
     try:
         log.debug("Executing: %s" % cmd)
         result = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+        result = str(result)
         log.debug("Result: %s" % (result+'\n').split('\n')[0])
         return True
     except Exception as e:
