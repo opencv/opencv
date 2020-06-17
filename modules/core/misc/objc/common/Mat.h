@@ -26,17 +26,16 @@ NS_ASSUME_NONNULL_BEGIN
 @interface Mat : NSObject
 
 #ifdef __cplusplus
-@property(readonly) cv::Mat* nativePtr;
+@property(readonly) cv::Ptr<cv::Mat> nativePtr;
 @property(readonly) cv::Mat& nativeRef;
 #endif
 
 #pragma mark - Constructors
 
 - (instancetype)init;
-- (void)dealloc;
 #ifdef __cplusplus
-- (instancetype)initWithNativeMat:(cv::Mat*)nativeMat;
-+ (instancetype)fromNativePtr:(cv::Mat*)nativePtr;
+- (instancetype)initWithNativeMat:(cv::Ptr<cv::Mat>)nativeMat;
++ (instancetype)fromNativePtr:(cv::Ptr<cv::Mat>)nativePtr;
 + (instancetype)fromNative:(cv::Mat&)nativeRef;
 #endif
 - (instancetype)initWithRows:(int)rows cols:(int)cols type:(int)type;
