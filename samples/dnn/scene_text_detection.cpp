@@ -1,0 +1,167 @@
+/*
+ * Real-time Scene Text Detection with Differentiable Binarization
+ * Copyright (C) 2020, The patent is owned by <Huazhong University of Science and Technology>
+ * Author List:
+ *      Minghui Liao    <Huazhong University of Science and Technology>
+ *      Zhaoyi Wan      <Megvii>
+ *      Cong Yao        <Megvii>
+ *      Kai Chen        <Shanghai Jiao Tong University>
+ *      Xiang Bai       <Huazhong University of Science and Technology>, Corresponding author
+ *
+ * This script is written by Wenqing Zhang <Huazhong University of Science and Technology>.
+ *
+ * This code has been contributed to OpenCV under the terms of Apache 2 license:
+ * https://www.apche.org/licenses/LICENSE-2.0
+*/
+
+#include <iostream>
+#include <fstream>
+#include <regex>
+
+#include <opencv2/imgproc.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/dnn/dnn.hpp>
+
+using namespace cv;
+using namespace cv::dnn;
+
+std::string keys =
+        "{ help  h                          | | Print help message. }"
+        "{ inputImage i                     | | Path to an input image. Skip this argument to capture frames from a camera. }"
+        "{ modelPath mp                     | | Path to a binary .onnx file contains trained DB detector model. "
+            "Download links are provided in doc/tutorials/dnn/dnn_text_spotting/dnn_text_spotting.markdown}"
+        "{ inputHeight ih                    |736| image height of the model input. }"
+        "{ inputWidth iw                     |736| image width of the model input. }"
+        "{ binaryThreshold bt               |0.3| Confidence threshold of the binary map. }"
+        "{ polygonThreshold pt              |0.5| Confidence threshold of polygons. }"
+        "{ maxCandidate max                 |200| Max candidates of polygons. }"
+        "{ outputType type                  |0| The output type of detected text: 0: multi-oriented quadrilateral; 1: polygon }"
+        "{ unclipRatio ratio                |2.0| unclip ratio. }"
+        "{ evaluate e                       |false| false: predict with input images; true: evaluate on benchmarks. }"
+        "{ evalDataPath edp                  | | Path to benchmarks for evaluation. "
+            "Download links are provided in doc/tutorials/dnn/dnn_text_spotting/dnn_text_spotting.markdown}";
+
+int main(int argc, char** argv)
+{
+    // Parse arguments
+    CommandLineParser parser(argc, argv, keys);
+    parser.about("Use this script to run the official PyTorch implementation (https://github.com/MhLiao/DB) of "
+                 "Real-time Scene Text Detection with Differentiable Binarization (https://arxiv.org/abs/1911.08947)\n"
+                 "The current version of this script is a variant of the original network w/o deformable convolution");
+    if (argc == 1 || parser.has("help"))
+    {
+        parser.printMessage();
+        return 0;
+    }
+
+    float binThresh = parser.get<float>("binaryThreshold");
+    float polyThresh = parser.get<float>("polygonThreshold");
+    uint maxCandidates = parser.get<uint>("maxCandidate");
+    String modelPath = parser.get<String>("modelPath");
+    int outputType = parser.get<int>("outputType");
+    double unclipRatio = parser.get<double>("unclipRatio");
+    int height = parser.get<int>("inputHeight");
+    int width = parser.get<int>("inputWidth");
+
+    if (!parser.check())
+    {
+        parser.printErrors();
+        return 1;
+    }
+
+    // Load the network
+    CV_Assert(!modelPath.empty());
+    TextDetectionModel detector(modelPath);
+
+    double scale = 1.0 / 255.0;
+    Size inputSize = Size(width, height);
+    Scalar mean = Scalar(122.67891434, 116.66876762, 104.00698793);
+    detector.setInputParams(scale, inputSize, mean);
+
+    // Create a window
+    static const std::string winName = "TextDetectionModel";
+    namedWindow(winName, WINDOW_NORMAL);
+
+    if (parser.get<bool>("evaluate")) {
+        // for evaluation
+        String evalDataPath = parser.get<String>("evalDataPath");
+        CV_Assert(!evalDataPath.empty());
+        String testListPath = evalDataPath + "/test_list.txt";
+        std::ifstream testList;
+        testList.open(testListPath);
+        CV_Assert(testList.is_open());
+
+        // Create a window for showing groundtruth
+        static const std::string winNameGT = "GT";
+        namedWindow(winNameGT, WINDOW_NORMAL);
+
+        String testImgPath;
+        while (std::getline(testList, testImgPath)) {
+            String imgPath = evalDataPath + "/test_images/" + testImgPath;
+            // std::cout << "Image Path: " << imgPath << std::endl;
+
+            Mat frame = imread(imgPath, 1);
+            CV_Assert(!frame.empty());
+            Mat src = frame.clone();
+
+            // Inference
+            std::vector<std::vector<Point>> results;
+            detector.detect(frame, results, outputType, binThresh, polyThresh, unclipRatio, maxCandidates);
+
+            polylines(frame, results, true, Scalar(0, 255, 0), 2);
+            imshow(winName, frame);
+
+            // load groundtruth
+            String imgName = testImgPath.substr(0, testImgPath.length() - 4);
+            String gtPath = evalDataPath + "/test_gts/" + imgName + ".txt";
+            std::cout << gtPath << std::endl;
+            std::ifstream gtFile;
+            gtFile.open(gtPath);
+            CV_Assert(gtFile.is_open());
+
+            std::vector<std::vector<Point>> gts;
+            String gtLine;
+            while (std::getline(gtFile, gtLine)) {
+                size_t splitLoc = gtLine.find_last_of(',');
+                String text = gtLine.substr(splitLoc+1);
+                if ( text == "###\r" || text == "1") {
+                    // ignore difficult instances
+                    continue;
+                }
+                gtLine = gtLine.substr(0, splitLoc);
+
+                std::regex delimiter(",");
+                std::vector<String> v(std::sregex_token_iterator(gtLine.begin(), gtLine.end(), delimiter, -1),
+                                      std::sregex_token_iterator());
+                std::vector<int> loc;
+                std::vector<Point> pts;
+                for (auto && s : v) {
+                    loc.push_back(atoi(s.c_str()));
+                }
+                for (size_t i = 0; i < loc.size() / 2; i++) {
+                    pts.push_back(Point(loc[2 * i], loc[2 * i + 1]));
+                }
+                gts.push_back(pts);
+            }
+            polylines(src, gts, true, Scalar(0, 255, 0), 2);
+            imshow(winNameGT, src);
+
+            waitKey();
+        }
+    } else {
+        // Open an image file
+        CV_Assert(parser.has("inputImage"));
+        Mat frame = imread(parser.get<String>("inputImage"));
+        CV_Assert(!frame.empty());
+
+        // Detect
+        std::vector<std::vector<Point>> results;
+        detector.detect(frame, results, outputType, binThresh, polyThresh, unclipRatio, maxCandidates);
+
+        polylines(frame, results, true, Scalar(0, 255, 0), 2);
+        imshow(winName, frame);
+        waitKey();
+    }
+
+    return 0;
+}

@@ -70,3 +70,13 @@ Deep Neural Networks (dnn module) {#tutorial_table_of_content_dnn}
     *Author:* Dmitry Kurtaev
 
     How to define custom layers to import networks.
+
+-   @subpage tutorial_dnn_text_spotting
+
+    *Languages:* C++
+
+    *Compatibility:* \> OpenCV 4.3
+
+    *Author:* Wenqing Zhang
+
+    In these tutorial, we'll introduce how to use the high-level APIs for text recognition and text detection

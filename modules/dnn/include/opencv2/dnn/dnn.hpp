@@ -1281,6 +1281,111 @@ CV__DNN_INLINE_NS_BEGIN
                              float confThreshold = 0.5f, float nmsThreshold = 0.0f);
      };
 
+     /** @brief This class represents high-level API for text recognition networks.
+      *
+      * SceneTextRecModel allows to set params for preprocessing input image.
+      * SceneTextRecModel creates net from file with trained weights and config,
+      * sets preprocessing input, runs forward pass and return recognition result.
+      * For TextRecognitionModel, CRNN-CTC is supported.
+      */
+     class CV_EXPORTS_W TextRecognitionModel : public Model
+     {
+     public:
+         /**
+          * @brief Create text recognition model from network represented in one of the supported formats.
+          * An order of @p model and @p config arguments does not matter.
+          * @param[in] model Binary file contains trained weights.
+          * @param[in] config Text file contains network configuration.
+          */
+         CV_WRAP TextRecognitionModel(const String& model, const String& config = "");
+
+         /**
+          * @brief Create model from deep learning network.
+          * @param[in] network Net object.
+          */
+         CV_WRAP TextRecognitionModel(const Net& network);
+
+         /**
+          * @brief Given the @p input frame, create input blob, run net and return recognition result.
+          * @param[in] frame: The input image.
+          * @param[in] decodeType: The decoding method of translating the network output into string.
+          * @param[in] vocabulary: The vocabulary for decoding.
+          * @param[out] results: A set of text recognition results.
+          * @param[in] roiPolygons: A set of text detection results.
+          */
+         CV_WRAP void recognize(InputArray frame, String decodeType, const std::vector<String> & vocabulary,
+                                CV_OUT std::vector<String> & results,
+                                const std::vector<std::vector<Point>> & roiPolygons = std::vector<std::vector<Point>>());
+
+     private:
+         /**
+          * @brief decode the output of the network.
+          * @param[in] prediction: The output of the network.
+          * @param[in] decodeType: The decoding method of translating the network output into string.
+          * @param[in] vocabulary: The vocabulary for decoding.
+          * @returns a string holding the decoded recognition result
+          */
+         CV_WRAP String decode(Mat prediction, String decodeType, const std::vector<String> & vocabulary);
+     };
+
+     /** @brief This class represents high-level API for text detection networks.
+      *
+      * TextDetectionModel allows to set params for preprocessing input image.
+      * TextDetectionModel creates net from file with trained weights and config,
+      * sets preprocessing input, runs forward pass and return detection results.
+      * For TextDetectionModel, "DB" is supported.
+      */
+     class CV_EXPORTS_W TextDetectionModel : public Model
+     {
+     public:
+         /**
+          * @brief Create text detection model from network represented in one of the supported formats.
+          * An order of @p model and @p config arguments does not matter.
+          * @param[in] model Binary file contains trained weights.
+          * @param[in] config Text file contains network configuration.
+          */
+         CV_WRAP TextDetectionModel(const String& model, const String& config = "");
+
+         /**
+          * @brief Create model from deep learning network.
+          * @param[in] network Net object.
+          */
+         CV_WRAP TextDetectionModel(const Net& network);
+
+         /**
+          * @brief Given the @p input frame, create input blob, run net and return detection results.
+          * @param[in] frame: The input image.
+          * @param[out] results: A set of text detection results.
+          * @param[in] outputType: The output type: {0: multi-oriented quadrilateral; 1: polygon}
+          * @param[in] binThresh: The threshold of the binary map.
+          * @param[in] polyThresh: The threshold of text polygons.
+          * @param[in] unclipRatio: The unclip ratio of the detected text region.
+          * @param[in] maxCandidates: The max number of the output polygons.
+          */
+         CV_WRAP void detect(InputArray frame, CV_OUT std::vector<std::vector<Point>>& results, int outputType,
+                             float binThresh, float polyThresh, double unclipRatio, uint maxCandidates);
+
+     private:
+         /**
+          * @brief calculate the score of the text contour.
+          * @param[in] binary: The output of the network.
+          * @param[in] contour: The contour of text.
+          * @returns a score of the input text contour
+          */
+         CV_WRAP double contourScore(const Mat & binary, std::vector<Point> & contour);
+
+         /**
+          * @brief Dialate the kernel polygon to the detection result
+          * @param[in] inPoly: A detected text polygon.
+          * @param[out] outPoly: The unclipped text polygon.
+          * @param[in] unclipRatio: The unclip ratio of the input text polygon.
+          * @param[in] scaleWidth: The rescale width ratio for the original image.
+          * @param[in] scaleHeight: The rescale height ratio for the original image.
+          */
+         CV_WRAP void unclip(std::vector<Point> &inPoly, CV_OUT std::vector<Point> &outPoly, double unclipRatio,
+                             float scaleWidth, float scaleHeight);
+     };
+
 //! @}
 CV__DNN_INLINE_NS_END
 }

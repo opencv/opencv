@@ -401,4 +401,234 @@ void DetectionModel::detect(InputArray frame, CV_OUT std::vector<int>& classIds,
         CV_Error(Error::StsNotImplemented, "Unknown output layer type: \"" + lastLayer->type + "\"");
 }
 
+TextRecognitionModel::TextRecognitionModel(const String& model, const String& config)
+    : Model(model, config) {}
+
+TextRecognitionModel::TextRecognitionModel(const Net& network) : Model(network) {}
+
+void TextRecognitionModel::recognize(InputArray frame, String decodeType, const std::vector<String> & vocabulary,
+                                     std::vector<String> & results, const std::vector<std::vector<Point>> & roiPolygons)
+{
+    results.clear();
+
+    std::vector<Mat> outs;
+    uint roiSize = roiPolygons.size();
+    if (roiSize == 0) {
+        impl->predict(*this, frame.getMat(), outs);
+        CV_Assert(outs.size() == 1);
+        Mat prediction = outs[0];
+        String result = this->decode(prediction, decodeType, vocabulary);
+        results.push_back(result);
+    } else {
+        Mat input = frame.getMat();
+
+        // Predict for each roi
+        for (uint i = 0; i < roiSize; i++) {
+            int xmin = input.cols, xmax = 0, ymin = input.rows, ymax = 0;
+            for (uint j = 0; j < roiPolygons[i].size(); j++) {
+                if (xmin > roiPolygons[i][j].x) xmin = roiPolygons[i][j].x;
+                if (xmax < roiPolygons[i][j].x) xmax = roiPolygons[i][j].x;
+                if (ymin > roiPolygons[i][j].y) ymin = roiPolygons[i][j].y;
+                if (ymax < roiPolygons[i][j].y) ymax = roiPolygons[i][j].y;
+            }
+            if (xmin < 0) xmin = 0;
+            if (ymin < 0) ymin = 0;
+            if (xmax > input.cols) xmax = input.cols - 1;
+            if (ymax > input.rows) ymax = input.rows - 1;
+            Rect roiRect = Rect(xmin, ymin, xmax - xmin, ymax - ymin);
+            Mat roi = input(roiRect);
+            impl->predict(*this, roi, outs);
+            CV_Assert(outs.size() == 1);
+            Mat prediction = outs[0];
+            String result = this->decode(prediction, decodeType, vocabulary);
+            results.push_back(result);
+        }
+    }
+}
+
+String TextRecognitionModel::decode(Mat prediction, String decodeType, const std::vector<String> & vocabulary)
+{
+    String decodeSeq = "";
+    if (decodeType == "CTC-greedy") {
+        bool ctcFlag = true;
+        int lastLoc = 0;
+        int vocLength = (int)(vocabulary.size());
+        for (int i = 0; i < prediction.size[0]; i++) {
+            const float* pred = prediction.ptr<float>(i);
+            int maxLoc = 0;
+            float maxScore = pred[0];
+            for (int j = 0; j < vocLength + 1; j++) {
+                float score = pred[j];
+                if (maxScore < score) {
+                    maxScore = score;
+                    maxLoc = j;
+                }
+            }
+
+            if (maxLoc > 0) {
+                String currentChar = vocabulary.at(maxLoc - 1);
+                if (maxLoc != lastLoc || ctcFlag) {
+                    lastLoc = maxLoc;
+                    decodeSeq += currentChar;
+                    ctcFlag = false;
+                }
+            } else {
+                ctcFlag = true;
+            }
+        }
+    } else {
+        CV_Error(Error::StsBadArg, "Unsupported decoding type");
+    }
+
+    return decodeSeq;
+}
+
+TextDetectionModel::TextDetectionModel(const String& model, const String& config)
+    : Model(model, config) {}
+
+TextDetectionModel::TextDetectionModel(const Net& network) : Model(network) {}
+
+void TextDetectionModel::detect(InputArray frame, std::vector<std::vector<Point>>& results, int outputType,
+            float binThresh, float polyThresh, double unclipRatio, uint maxCandidates)
+{
+    results.clear();
+
+    std::vector<Mat> outs;
+    impl->predict(*this, frame.getMat(), outs);
+    CV_Assert(outs.size() == 1);
+    Mat binary = outs[0];
+
+    // Threshold
+    Mat bitmap;
+    threshold(binary, bitmap, binThresh, 255, THRESH_BINARY);
+
+    // Scale ratio
+    float scaleHeight = (float)(frame.rows()) / (float)(binary.size[0]);
+    float scaleWidth = (float)(frame.cols()) / (float)(binary.size[1]);
+
+    // Find contours
+    std::vector<std::vector<Point>> contours;
+    bitmap.convertTo(bitmap, CV_8UC1);
+    findContours(bitmap, contours, RETR_LIST, CHAIN_APPROX_SIMPLE);
+
+    // Candidate number limitation
+    size_t numCandidate = 0;
+    if (contours.size() < maxCandidates) {
+        numCandidate = contours.size();
+    } else {
+        numCandidate = maxCandidates;
+    }
+
+    for (size_t i = 0; i < numCandidate; i++) {
+        std::vector<Point> contour = contours[i];
+
+        // Calculate text contour score
+        if (this->contourScore(binary, contour) < polyThresh) continue;
+
+        // Unclip and Rescale
+        std::vector<Point> approx;
+        if (outputType == 0) {
+            RotatedRect box = minAreaRect(contour);
+            Point2f vertex[4];
+            box.points(vertex);
+            for (int j = 0; j < 4; j++) {
+                approx.push_back(Point((int)(vertex[3-j].x), (int)(vertex[3-j].y)));
+            }
+        } else {
+            double epsilon = arcLength(contour, true) * 0.01;
+            approxPolyDP(contour, approx, epsilon, true);
+            if (approx.size() < 4) continue;
+        }
+        std::vector<Point> polygon;
+        this->unclip(approx, polygon, unclipRatio, scaleWidth, scaleHeight);
+        results.push_back(polygon);
+    }
+}
+
+double TextDetectionModel::contourScore(const Mat & binary, std::vector<Point> & contour)
+{
+    int rows = binary.rows;
+    int cols = binary.cols;
+
+    int xmin = cols - 1;
+    int xmax = 0;
+    int ymin = rows - 1;
+    int ymax = 0;
+    for (size_t i = 0; i < contour.size(); i++) {
+        Point pt = contour[i];
+        if (pt.x < xmin) xmin = pt.x;
+        if (pt.x > xmax) xmax = pt.x;
+        if (pt.y < ymin) ymin = pt.y;
+        if (pt.y > ymax) ymax = pt.y;
+    }
+
+    if (xmin < 0) xmin = 0;
+    if (xmax > cols) xmax = cols - 1;
+    if (ymin < 0) ymin = 0;
+    if (ymax > rows) ymax = rows - 1;
+
+    Mat binROI = binary(Rect(xmin, ymin, xmax - xmin + 1, ymax - ymin + 1));
+
+    Mat mask = Mat::zeros(ymax - ymin + 1, xmax - xmin + 1, CV_8U);
+    std::vector<std::vector<Point>> roiContours;
+    std::vector<Point> roiContour;
+    for (size_t i = 0; i < contour.size(); i++) {
+        Point pt = Point(contour[i].x - xmin, contour[i].y - ymin);
+        roiContour.push_back(pt);
+    }
+    roiContours.push_back(roiContour);
+    fillPoly(mask, roiContours, Scalar(1));
+    double score = mean(binROI, mask).val[0];
+
+    return score;
+}
+
+void TextDetectionModel::unclip(std::vector<Point> &inPoly, std::vector<Point> &outPoly, double unclipRatio, float scaleWidth, float scaleHeight)
+{
+    double area = contourArea(inPoly);
+    double length = arcLength(inPoly, true);
+    double distance = area * unclipRatio / length;
+
+    size_t numPoints = inPoly.size();
+    std::vector<std::vector<Point2f>> newLines;
+    for (size_t i = 0; i < numPoints; i++) {
+        std::vector<Point2f> newLine;
+        Point pt1 = inPoly[i];
+        Point pt2 = inPoly[(i + 1) % numPoints];
+        Point vec = pt2 - pt1;
+        float unclipDis = (float)(distance / norm(vec));
+        Point2f rotateVec = Point2f(-vec.y * unclipDis, vec.x * unclipDis);
+        newLine.push_back(Point2f(pt1.x + rotateVec.x, pt1.y + rotateVec.y));
+        newLine.push_back(Point2f(pt2.x + rotateVec.x, pt2.y + rotateVec.y));
+        newLines.push_back(newLine);
+    }
+
+    size_t numLines = newLines.size();
+    for (size_t i = 0; i < numLines; i++) {
+        Point2f a = newLines[i][0];
+        Point2f b = newLines[i][1];
+        Point2f c = newLines[(i + 1) % numLines][0];
+        Point2f d = newLines[(i + 1) % numLines][1];
+        Point pt;
+        Point2f v1 = b - a;
+        Point2f v2 = d - c;
+        double cosAngle = (v1.x * v2.x + v1.y * v2.y) / (norm(v1) * norm(v2));
+
+        if( fabs(cosAngle) > 0.7 ) {
+            pt.x = (int)((b.x + c.x) / 2);
+            pt.y = (int)((b.y + c.y) / 2);
+        } else {
+            double denom = a.x * (double)(d.y - c.y) + b.x * (double)(c.y - d.y) +
+                           d.x * (double)(b.y - a.y) + c.x * (double)(a.y - b.y);
+            double num = a.x * (double)(d.y - c.y) + c.x * (double)(a.y - d.y) + d.x * (double)(c.y - a.y);
+            double s = num / denom;
+
+            pt.x = (int)((a.x + s*(b.x - a.x)) * scaleWidth);
+            pt.y = (int)((a.y + s*(b.y - a.y)) * scaleHeight);
+        }
+
+        outPoly.push_back(pt);
+    }
+}
+
 }} // namespace
