@@ -39,39 +39,31 @@ static bool updateIdx(cv::Mat* mat, std::vector<int>& indices, int inc) {
 }
 
 - (cv::Mat&)nativeRef {
-    return *(cv::Mat*)_nativePtr;
+    return *_nativePtr;
 }
 
 - (instancetype)init {
     self = [super init];
     if (self) {
-        _nativePtr = new cv::Mat();
+        _nativePtr = cv::Ptr<cv::Mat>(new cv::Mat());
     }
     return self;
 }
 
-- (void)dealloc {
-    if (_nativePtr != NULL) {
-        _nativePtr->release();
-        delete _nativePtr;
-    }
-    _nsdata = NULL;
-}
-
-- (instancetype)initWithNativeMat:(cv::Mat*)nativePtr {
+- (instancetype)initWithNativeMat:(cv::Ptr<cv::Mat>)nativePtr {
     self = [super init];
     if (self) {
-        _nativePtr = new cv::Mat(*nativePtr);
+        _nativePtr = nativePtr;
     }
     return self;
 }
 
-+ (instancetype)fromNativePtr:(cv::Mat*)nativePtr {
++ (instancetype)fromNativePtr:(cv::Ptr<cv::Mat>)nativePtr {
     return [[Mat alloc] initWithNativeMat:nativePtr];
 }
 
 + (instancetype)fromNative:(cv::Mat&)nativeRef {
-    return [[Mat alloc] initWithNativeMat:&nativeRef];
+    return [[Mat alloc] initWithNativeMat:cv::Ptr<cv::Mat>(new cv::Mat(nativeRef))];
 }
 
 - (instancetype)initWithRows:(int)rows cols:(int)cols type:(int)type {
