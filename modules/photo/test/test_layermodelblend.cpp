@@ -21,7 +21,7 @@ static const double numerical_precision = 0.05; // 95% of pixels should have exa
 TEST(Photo_LayerModelBlend_DARKEN, regression)
 {
     string folder = string(cvtest::TS::ptr()->get_data_path()) + "layermodelblend/";
-    string target_path = cvtest::findDataFile("cv/shared/lena.png");
+    string target_path = folder + "lena.png";
     string reference_path = folder + "DARKEN_RESULT.jpg";
     Mat target = imread(target_path, IMREAD_COLOR);
     ASSERT_FALSE(target.empty()) << "Could not load target image " << target_path;
