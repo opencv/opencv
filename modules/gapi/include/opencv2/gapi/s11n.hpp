@@ -18,13 +18,16 @@ namespace detail {
 } // namespace detail
 
 GAPI_EXPORTS std::vector<char> serialize(const cv::GComputation &c);
+namespace{
 
 template<typename T>
-static T deserialize(const std::vector<char> &p);
+T deserialize(const std::vector<char> &p);
 
 template<>
 cv::GComputation deserialize(const std::vector<char> &p) {
     return detail::getGraph(p);
+}
+
 }
 
 } // namespace gapi
