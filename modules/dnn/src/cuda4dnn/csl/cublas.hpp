@@ -8,7 +8,6 @@
 #include "error.hpp"
 #include "stream.hpp"
 #include "pointer.hpp"
-#include "fp16.hpp"
 
 #include <opencv2/core.hpp>
 
