@@ -462,7 +462,8 @@ private:
 
         /* Keep searching other branches from heap until finished. */
         while ( heap->popMin(branch) && (checkCount < maxCheck || !result.full() )) {
-            searchLevel(result, vec, branch.node, branch.mindist, checkCount, maxCheck, epsError, heap, checked, false);
+            searchLevel(result, vec, branch.node, branch.mindist, checkCount, maxCheck,
+                        epsError, heap, checked, false);
         }
 
         delete heap;
