@@ -347,16 +347,16 @@ struct RGB2YCrCb_i<ushort>
             sr0 = sr0 - sy0; sr1 = sr1 - sy1;
             sb0 = sb0 - sy0; sb1 = sb1 - sy1;
 
-            v_int32 scr0, scr1, scb0, scb1;
+            v_int32 v_scr0, v_scr1, v_scb0, v_scb1;
 
-            scr0 = (sr0*vc3 + vdd) >> shift;
-            scr1 = (sr1*vc3 + vdd) >> shift;
-            scb0 = (sb0*vc4 + vdd) >> shift;
-            scb1 = (sb1*vc4 + vdd) >> shift;
+            v_scr0 = (sr0*vc3 + vdd) >> shift;
+            v_scr1 = (sr1*vc3 + vdd) >> shift;
+            v_scb0 = (sb0*vc4 + vdd) >> shift;
+            v_scb1 = (sb1*vc4 + vdd) >> shift;
 
             // saturate and pack
-            cr = v_pack_u(scr0, scr1);
-            cb = v_pack_u(scb0, scb1);
+            cr = v_pack_u(v_scr0, v_scr1);
+            cb = v_pack_u(v_scb0, v_scb1);
 
             if(yuvOrder)
             {
@@ -781,36 +781,36 @@ struct YCrCb2RGB_i<uchar>
             v_int8 scr = v_reinterpret_as_s8(cr);
             v_int8 scb = v_reinterpret_as_s8(cb);
 
-            v_int16 scr0, scr1, scb0, scb1;
-            v_expand(scr, scr0, scr1);
-            v_expand(scb, scb0, scb1);
+            v_int16 v_scr0, v_scr1, v_scb0, v_scb1;
+            v_expand(scr, v_scr0, v_scr1);
+            v_expand(scb, v_scb0, v_scb1);
 
             v_int32 b00, b01, b10, b11;
             v_int32 g00, g01, g10, g11;
             v_int32 r00, r01, r10, r11;
 
-            v_mul_expand(scb0, vc3, b00, b01);
-            v_mul_expand(scb1, vc3, b10, b11);
+            v_mul_expand(v_scb0, vc3, b00, b01);
+            v_mul_expand(v_scb1, vc3, b10, b11);
             if(yuvOrder)
             {
                 // if YUV then C3 > 2^15
                 // so we fix the multiplication
                 v_int32 cb00, cb01, cb10, cb11;
-                v_expand(scb0, cb00, cb01);
-                v_expand(scb1, cb10, cb11);
+                v_expand(v_scb0, cb00, cb01);
+                v_expand(v_scb1, cb10, cb11);
                 b00 += cb00 << 15; b01 += cb01 << 15;
                 b10 += cb10 << 15; b11 += cb11 << 15;
             }
 
             v_int32 t00, t01, t10, t11;
-            v_mul_expand(scb0, vc2, t00, t01);
-            v_mul_expand(scb1, vc2, t10, t11);
-            v_mul_expand(scr0, vc1, g00, g01);
-            v_mul_expand(scr1, vc1, g10, g11);
+            v_mul_expand(v_scb0, vc2, t00, t01);
+            v_mul_expand(v_scb1, vc2, t10, t11);
+            v_mul_expand(v_scr0, vc1, g00, g01);
+            v_mul_expand(v_scr1, vc1, g10, g11);
             g00 += t00; g01 += t01;
             g10 += t10; g11 += t11;
-            v_mul_expand(scr0, vc0, r00, r01);
-            v_mul_expand(scr1, vc0, r10, r11);
+            v_mul_expand(v_scr0, vc0, r00, r01);
+            v_mul_expand(v_scr1, vc0, r10, r11);
 
             b00 = (b00 + vdescale) >> shift; b01 = (b01 + vdescale) >> shift;
             b10 = (b10 + vdescale) >> shift; b11 = (b11 + vdescale) >> shift;
