@@ -306,7 +306,7 @@ INSTANTIATE_TEST_CASE_P(/**/, videoio_container, testing::ValuesIn(videoio_conta
 typedef tuple<string, string, int> videoio_skip_params_t;
 typedef testing::TestWithParam< videoio_skip_params_t > videoio_skip;
 
-TEST_P(videoio_skip, DISABLED_read)  // optional test, may fail in some configurations
+TEST_P(videoio_skip, read)  // optional test, may fail in some configurations
 {
 #if CV_VERSION_MAJOR >= 4
     if (!videoio_registry::hasBackend(CAP_FFMPEG))
