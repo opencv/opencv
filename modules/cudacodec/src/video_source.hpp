@@ -44,12 +44,9 @@
 #ifndef __CUDACODEC_VIDEO_SOURCE_H__
 #define __CUDACODEC_VIDEO_SOURCE_H__
 
-#include "opencv2/core/private.cuda.hpp"
-#include "opencv2/cudacodec.hpp"
 #include "thread.hpp"
 
-namespace cv { namespace cudacodec { namespace detail
-{
+namespace cv { namespace cudacodec { namespace detail {
 
 class VideoParser;
 
