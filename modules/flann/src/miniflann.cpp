@@ -294,7 +294,7 @@ SavedIndexParams::SavedIndexParams(const String& _filename)
     p["filename"] = filename;
 }
 
-SearchParams::SearchParams( int checks, float eps, bool sorted )
+SearchParams::SearchParams( int checks, float eps, bool sorted, bool explore_all_trees )
 {
     ::cvflann::IndexParams& p = get_params(*this);
 
@@ -304,6 +304,10 @@ SearchParams::SearchParams( int checks, float eps, bool sorted )
     p["eps"] = eps;
     // only for radius search, require neighbours sorted by distance (default: true)
     p["sorted"] = sorted;
+    // if false, search stops at the tree reaching the number of  max checks (original behavior).
+    // When true, we do a descent in each tree and. Like before the alternative paths
+    // stored in the heap are not be processed further when max checks is reached.
+    p["explore_all_trees"] = explore_all_trees;
 }
 
 
