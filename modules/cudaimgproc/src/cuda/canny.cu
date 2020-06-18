@@ -107,7 +107,7 @@ namespace canny
     {
         __host__ SrcTexRef(int _xoff, int _yoff) : SrcTex(_xoff, _yoff) {}
 
-        __device__ __forceinline__ int operator ()(int y, int x) const override
+        __device__ __forceinline__ int operator ()(int y, int x) const
         {
             return tex2D(tex_src, x + xoff, y + yoff);
         }
@@ -117,7 +117,7 @@ namespace canny
     {
         __host__ SrcTexObj(int _xoff, int _yoff, cudaTextureObject_t _tex_src_object) : SrcTex(_xoff, _yoff), tex_src_object(_tex_src_object) { }
 
-        __device__ __forceinline__ int operator ()(int y, int x) const override
+        __device__ __forceinline__ int operator ()(int y, int x) const
         {
             return tex2D<uchar>(tex_src_object, x + xoff, y + yoff);
         }
@@ -127,8 +127,7 @@ namespace canny
 
     template <
         class T,
-        class Norm,
-        typename = std::enable_if_t<std::is_base_of<SrcTex, T>::value>
+        class Norm
     >
     __global__ void calcMagnitudeKernel(const T src, PtrStepi dx, PtrStepi dy, PtrStepSzf mag, const Norm norm)
     {
