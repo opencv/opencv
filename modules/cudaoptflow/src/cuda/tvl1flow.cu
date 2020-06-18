@@ -154,8 +154,7 @@ namespace tvl1flow
     };
 
     template <
-        typename T,
-        typename = std::enable_if_t<std::is_base_of<SrcTex, T>::value>
+        typename T
     >
     __global__ void warpBackwardKernel(
         const PtrStepSzf I0, const T src, const PtrStepf u1, const PtrStepf u2,
