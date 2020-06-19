@@ -48,11 +48,31 @@ if(CUDA_FOUND)
   endif()
 
   if(WITH_NVCUVID)
+    macro(SEARCH_NVCUVID_HEADER _filename _result)
+      # place header file under CUDA_TOOLKIT_TARGET_DIR or CUDA_TOOLKIT_ROOT_DIR
+      find_path(_header_result
+        ${_filename}
+        PATHS "${CUDA_TOOLKIT_TARGET_DIR}" "${CUDA_TOOLKIT_ROOT_DIR}"
+        ENV CUDA_PATH
+        ENV CUDA_INC_PATH
+        PATH_SUFFIXES include
+        NO_DEFAULT_PATH
+        )
+      if("x${_header_result}" STREQUAL "x_header_result-NOTFOUND")
+        set(${_result} 0)
+      else()
+        set(${_result} 1)
+      endif()
+      unset(_header_result CACHE)
+    endmacro()
+    SEARCH_NVCUVID_HEADER("nvcuvid.h" HAVE_NVCUVID_HEADER)
+    SEARCH_NVCUVID_HEADER("dynlink_nvcuvid.h" HAVE_DYNLINK_NVCUVID_HEADER)
     find_cuda_helper_libs(nvcuvid)
     if(WIN32)
       find_cuda_helper_libs(nvcuvenc)
     endif()
-    if(CUDA_nvcuvid_LIBRARY)
+    if(CUDA_nvcuvid_LIBRARY AND (${HAVE_NVCUVID_HEADER} OR ${HAVE_DYNLINK_NVCUVID_HEADER}))
+      # make sure to have both header and library before enabling
       set(HAVE_NVCUVID 1)
     endif()
     if(CUDA_nvcuvenc_LIBRARY)
@@ -98,7 +118,7 @@ if(CUDA_FOUND)
     else()
       set(CC_LIST ${ARGN})
       foreach(target_arch ${CC_LIST})
-        string(REPLACE "." "" target_arch_short ${target_arch})
+        string(REPLACE "." "" target_arch_short "${target_arch}")
         set(NVCC_OPTION "-gencode;arch=compute_${target_arch_short},code=sm_${target_arch_short}")
         execute_process( COMMAND "${CUDA_NVCC_EXECUTABLE}" ${NVCC_OPTION} "${OpenCV_SOURCE_DIR}/cmake/checks/OpenCVDetectCudaArch.cu"
                          WORKING_DIRECTORY "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/"
@@ -108,7 +128,7 @@ if(CUDA_FOUND)
           set(${result_list} "${${result_list}} ${target_arch}")
         endif()
       endforeach()
-      string(STRIP ${${result_list}} ${result_list})
+      string(STRIP "${${result_list}}" ${result_list})
       set(CUDA_SUPPORTED_CC ${${result_list}} CACHE INTERNAL "List of supported compute capability")
     endif()
   endmacro()
@@ -122,7 +142,7 @@ if(CUDA_FOUND)
   endmacro()
 
   macro(ocv_wipeout_deprecated _arch_bin_list)
-    string(REPLACE "2.1" "2.1(2.0)" ${_arch_bin_list} ${${_arch_bin_list}})
+    string(REPLACE "2.1" "2.1(2.0)" ${_arch_bin_list} "${${_arch_bin_list}}")
   endmacro()
 
   set(__cuda_arch_ptx "")
