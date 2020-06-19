@@ -536,7 +536,7 @@ private:
 @param features The points to be clustered. The matrix must have elements of type
 Distance::ElementType.
 @param centers The centers of the clusters obtained. The matrix must have type
-Distance::ResultType. The number of rows in this matrix represents the number of clusters desired,
+Distance::CentersType. The number of rows in this matrix represents the number of clusters desired,
 however, because of the way the cut in the hierarchical tree is chosen, the number of clusters
 computed will be the highest number of the form (branching-1)\*k+1 that's lower than the number of
 clusters desired, where branching is the tree's branching factor (see description of the
@@ -553,15 +553,15 @@ int hierarchicalClustering(const Mat& features, Mat& centers, const ::cvflann::K
                            Distance d = Distance())
 {
     typedef typename Distance::ElementType ElementType;
-    typedef typename Distance::ResultType DistanceType;
+    typedef typename Distance::CentersType CentersType;
 
     CV_Assert(features.type() == CvType<ElementType>::type());
     CV_Assert(features.isContinuous());
     ::cvflann::Matrix<ElementType> m_features((ElementType*)features.ptr<ElementType>(0), features.rows, features.cols);
 
-    CV_Assert(centers.type() == CvType<DistanceType>::type());
+    CV_Assert(centers.type() == CvType<CentersType>::type());
     CV_Assert(centers.isContinuous());
-    ::cvflann::Matrix<DistanceType> m_centers((DistanceType*)centers.ptr<DistanceType>(0), centers.rows, centers.cols);
+    ::cvflann::Matrix<CentersType> m_centers((CentersType*)centers.ptr<CentersType>(0), centers.rows, centers.cols);
 
     return ::cvflann::hierarchicalClustering<Distance>(m_features, m_centers, params, d);
 }
