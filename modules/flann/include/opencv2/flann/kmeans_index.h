@@ -440,7 +440,7 @@ public:
 
         if(is_kdtree_distance::val || is_vector_space_distance::val)
         {
-            computeNodeStatistics(root_, indices_, (int)size_);
+            computeNodeStatistics(root_, indices_, size_);
             computeClustering(root_, indices_, (int)size_, branching_,0);
         }
         else
@@ -668,7 +668,7 @@ private:
      *     node = the node to use
      *     indices = the indices of the points belonging to the node
      */
-    void computeNodeStatistics(KMeansNodePtr node, int* indices, int indices_length)
+    void computeNodeStatistics(KMeansNodePtr node, int* indices, unsigned int indices_length)
     {
 
         DistanceType radius = 0;
@@ -678,7 +678,7 @@ private:
 
         memset(mean,0,veclen_*sizeof(DistanceType));
 
-        for (size_t i=0; i<size_; ++i) {
+        for (unsigned int i=0; i<indices_length; ++i) {
             ElementType* vec = dataset_[indices[i]];
             for (size_t j=0; j<veclen_; ++j) {
                 mean[j] += vec[j];
@@ -686,13 +686,13 @@ private:
             variance += distance_(vec, ZeroIterator<ElementType>(), veclen_);
         }
         for (size_t j=0; j<veclen_; ++j) {
-            mean[j] /= size_;
+            mean[j] /= indices_length;
         }
-        variance /= size_;
+        variance /= indices_length;
         variance -= distance_(mean, ZeroIterator<ElementType>(), veclen_);
 
         DistanceType tmp = 0;
-        for (int i=0; i<indices_length; ++i) {
+        for (unsigned int i=0; i<indices_length; ++i) {
             tmp = distance_(mean, dataset_[indices[i]], veclen_);
             if (tmp>radius) {
                 radius = tmp;
