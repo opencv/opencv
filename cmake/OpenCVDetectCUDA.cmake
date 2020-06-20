@@ -106,11 +106,16 @@ if(CUDA_FOUND)
     unset(CUDA_ARCH_PTX CACHE)
   endif()
 
-  SET(DETECT_ARCHS_COMMAND "${CUDA_NVCC_EXECUTABLE}" ${CUDA_NVCC_FLAGS} "${OpenCV_SOURCE_DIR}/cmake/checks/OpenCVDetectCudaArch.cu" "--run")
-  if(WIN32 AND CMAKE_LINKER) #Workaround for VS cl.exe not being in the env. path
-    get_filename_component(host_compiler_bindir ${CMAKE_LINKER} DIRECTORY)
-    SET(DETECT_ARCHS_COMMAND ${DETECT_ARCHS_COMMAND} "-ccbin" "${host_compiler_bindir}")
+  if(CUDA_HOST_COMPILER)
+    LIST(APPEND CUDA_NVCC_FLAGS -ccbin ${CUDA_HOST_COMPILER})
+  else()
+    if(WIN32 AND CMAKE_LINKER) #Workaround for VS cl.exe not being in the env. path
+      get_filename_component(host_compiler_bindir ${CMAKE_LINKER} DIRECTORY)
+      LIST(APPEND CUDA_NVCC_FLAGS -ccbin ${host_compiler_bindir})
+    endif()
   endif()
+
+  SET(DETECT_ARCHS_COMMAND "${CUDA_NVCC_EXECUTABLE}" ${CUDA_NVCC_FLAGS} "${OpenCV_SOURCE_DIR}/cmake/checks/OpenCVDetectCudaArch.cu" "--run")
 
   macro(ocv_filter_available_architecture result_list)
     if(DEFINED CUDA_SUPPORTED_CC)
