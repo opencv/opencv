@@ -86,6 +86,10 @@ class KMeansIndex : public NNIndex<Distance>
 public:
     typedef typename Distance::ElementType ElementType;
     typedef typename Distance::ResultType DistanceType;
+    typedef typename Distance::PivotType PivotType;
+
+    typedef typename Distance::is_kdtree_distance is_kdtree_distance;
+    typedef typename Distance::is_vector_space_distance is_vector_space_distance;
 
 
 
@@ -275,12 +279,14 @@ public:
         return FLANN_INDEX_KMEANS;
     }
 
+    template<class CentersContainerType>
     class KMeansDistanceComputer : public cv::ParallelLoopBody
     {
     public:
         KMeansDistanceComputer(Distance _distance, const Matrix<ElementType>& _dataset,
-            const int _branching, const int* _indices, const Matrix<double>& _dcenters, const size_t _veclen,
-            std::vector<int> &_new_centroids, std::vector<DistanceType> &_sq_dists)
+            const int _branching, const int* _indices, const CentersContainerType& _dcenters,
+            const size_t _veclen, std::vector<int> &_new_centroids,
+            std::vector<DistanceType> &_sq_dists)
             : distance(_distance)
             , dataset(_dataset)
             , branching(_branching)
@@ -318,7 +324,7 @@ public:
         const Matrix<ElementType>& dataset;
         const int branching;
         const int* indices;
-        const Matrix<double>& dcenters;
+        const CentersContainerType& dcenters;
         const size_t veclen;
         std::vector<int> &new_centroids;
         std::vector<DistanceType> &sq_dists;
@@ -432,8 +438,16 @@ public:
         root_ = pool_.allocate<KMeansNode>();
         std::memset(root_, 0, sizeof(KMeansNode));
 
-        computeNodeStatistics(root_, indices_, (int)size_);
-        computeClustering(root_, indices_, (int)size_, branching_,0);
+        if(is_kdtree_distance::val || is_vector_space_distance::val)
+        {
+            computeNodeStatistics(root_, indices_, (int)size_);
+            computeClustering(root_, indices_, (int)size_, branching_,0);
+        }
+        else
+        {
+            computeNodeStatistics(root_, indices_, (int)size_);
+            computeBitfieldClustering(root_, indices_, (int)size_, branching_,0);
+        }
     }
 
 
@@ -558,7 +572,7 @@ private:
         /**
          * The cluster center.
          */
-        DistanceType* pivot;
+        PivotType* pivot;
         /**
          * The cluster radius.
          */
@@ -793,7 +807,7 @@ private:
             std::vector<DistanceType> sq_dists(indices_length);
 
             // reassign points to clusters
-            KMeansDistanceComputer invoker(distance_, dataset_, branching, indices, dcenters, veclen_, new_centroids, sq_dists);
+            KMeansDistanceComputer<Matrix<double> > invoker(distance_, dataset_, branching, indices, dcenters, veclen_, new_centroids, sq_dists);
             parallel_for_(cv::Range(0, (int)indices_length), invoker);
 
             for (int i=0; i < (int)indices_length; ++i) {
@@ -898,7 +912,7 @@ private:
             return;
         }
 
-        cv::AutoBuffer<ElementType> centers_idx_buf(branching);
+        cv::AutoBuffer<int> centers_idx_buf(branching);
         int* centers_idx = centers_idx_buf.data();
         int centers_length;
         (this->*chooseCenters)(branching, indices, indices_length, centers_idx, centers_length);
@@ -910,7 +924,7 @@ private:
             return;
         }
 
-        const int accumulator_veclen = veclen_*sizeof(ElementType)*BITS_PER_CHAR;
+        const unsigned int accumulator_veclen = veclen_*sizeof(ElementType)*BITS_PER_CHAR;
         cv::AutoBuffer<unsigned int> dcenters_buf(branching*accumulator_veclen);
         Matrix<unsigned int> dcenters(dcenters_buf.data(), branching, accumulator_veclen);
 
@@ -961,7 +975,7 @@ private:
                 radiuses[i] = 0;
             }
             for (int i=0; i<indices_length; ++i) {
-                unsigned char* vec = static_cast<unsigned char*>(dataset_[indices[i]]);
+                unsigned char* vec = (unsigned char*)dataset_[indices[i]];
                 unsigned int* dcenter = dcenters[belongs_to[i]];
                 for (size_t k=0, l=0; k<accumulator_veclen; k+=BITS_PER_CHAR, ++l) {
                     dcenter[k]   += (vec[l])    & 0x01;
@@ -976,16 +990,17 @@ private:
             }
             for (int i=0; i<branching; ++i) {
                 double cnt = static_cast<double>(count[i]);
+                unsigned int* dcenter = dcenters[i];
                 unsigned char* charCenter = (unsigned char*)centers[i];
                 for (size_t k=0, l=0; k<accumulator_veclen; k+=BITS_PER_CHAR, ++l) {
-                    charCenter[l] =   (((int)(0.5 + (double)(dcenters[k])   / cnt)))
-                                    | (((int)(0.5 + (double)(dcenters[k+1]) / cnt))<<1)
-                                    | (((int)(0.5 + (double)(dcenters[k+2]) / cnt))<<2)
-                                    | (((int)(0.5 + (double)(dcenters[k+3]) / cnt))<<3)
-                                    | (((int)(0.5 + (double)(dcenters[k+4]) / cnt))<<4)
-                                    | (((int)(0.5 + (double)(dcenters[k+5]) / cnt))<<5)
-                                    | (((int)(0.5 + (double)(dcenters[k+6]) / cnt))<<6)
-                                    | (((int)(0.5 + (double)(dcenters[k+7]) / cnt))<<7);
+                    charCenter[l] =   (((int)(0.5 + (double)(dcenter[k])   / cnt)))
+                                    | (((int)(0.5 + (double)(dcenter[k+1]) / cnt))<<1)
+                                    | (((int)(0.5 + (double)(dcenter[k+2]) / cnt))<<2)
+                                    | (((int)(0.5 + (double)(dcenter[k+3]) / cnt))<<3)
+                                    | (((int)(0.5 + (double)(dcenter[k+4]) / cnt))<<4)
+                                    | (((int)(0.5 + (double)(dcenter[k+5]) / cnt))<<5)
+                                    | (((int)(0.5 + (double)(dcenter[k+6]) / cnt))<<6)
+                                    | (((int)(0.5 + (double)(dcenter[k+7]) / cnt))<<7);
                 }
             }
 
@@ -993,7 +1008,7 @@ private:
             std::vector<DistanceType> dists(indices_length);
 
             // reassign points to clusters
-            KMeansDistanceComputer invoker(distance_, dataset_, branching, indices, centers, veclen_, new_centroids, dists);
+            KMeansDistanceComputer<ElementType**> invoker(distance_, dataset_, branching, indices, centers, veclen_, new_centroids, dists);
             parallel_for_(cv::Range(0, (int)indices_length), invoker);
 
             for (int i=0; i < indices_length; ++i) {
@@ -1049,8 +1064,8 @@ private:
             for (int i=0; i<indices_length; ++i) {
                 if (belongs_to[i]==c) {
                     DistanceType d = distance_(dataset_[indices[i]], ZeroIterator<ElementType>(), veclen_);
-                    variance += ensureSquareDistance<DistanceType>(d);
-                    mean_radius += ensureSimpleDistance<DistanceType>(d);
+                    variance += ensureSquareDistance<Distance>(d);
+                    mean_radius += ensureSimpleDistance<Distance>(d);
                     std::swap(indices[i],indices[end]);
                     std::swap(belongs_to[i],belongs_to[end]);
                     end++;
@@ -1060,7 +1075,7 @@ private:
                         (0.5f + static_cast<float>(mean_radius)) / static_cast<float>(s));
             variance = static_cast<DistanceType>(
                         (0.5f + static_cast<float>(variance)) / static_cast<float>(s));
-            variance -= ensureSquareDistance<DistanceType>(distance_(centers[c], ZeroIterator<ElementType>(), veclen_));
+            variance -= ensureSquareDistance<Distance>(distance_(centers[c], ZeroIterator<ElementType>(), veclen_));
 
             node->childs[c] = pool_.allocate<KMeansNode>();
             std::memset(node->childs[c], 0, sizeof(KMeansNode));
