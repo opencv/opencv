@@ -1174,12 +1174,16 @@ private:
             DistanceType rsq = node->radius;
             DistanceType wsq = result.worstDist();
 
-            DistanceType val = bsq-rsq-wsq;
-            DistanceType val2 = val*val-4*rsq*wsq;
-
-            //if (val>0) {
-            if ((val>0)&&(val2>0)) {
-                return;
+            if (isSquareDistance<Distance>())
+            {
+                DistanceType val = bsq-rsq-wsq;
+                if ((val>0) && (val*val > 4*rsq*wsq))
+                    return;
+            }
+            else
+            {
+                if (bsq-rsq > wsq)
+                    return;
             }
         }
 
@@ -1250,12 +1254,16 @@ private:
             DistanceType rsq = node->radius;
             DistanceType wsq = result.worstDist();
 
-            DistanceType val = bsq-rsq-wsq;
-            DistanceType val2 = val*val-4*rsq*wsq;
-
-            //                  if (val>0) {
-            if ((val>0)&&(val2>0)) {
-                return;
+            if (isSquareDistance<Distance>())
+            {
+                DistanceType val = bsq-rsq-wsq;
+                if ((val>0) && (val*val > 4*rsq*wsq))
+                    return;
+            }
+            else
+            {
+                if (bsq-rsq > wsq)
+                    return;
             }
         }
 
@@ -1293,7 +1301,8 @@ private:
             DistanceType dist = distance_(q, node->childs[i]->pivot, veclen_);
 
             int j=0;
-            while (domain_distances[j]<dist && j<i) j++;
+            while (domain_distances[j]<dist && j<i)
+                j++;
             for (int k=i; k>j; --k) {
                 domain_distances[k] = domain_distances[k-1];
                 sort_indices[k] = sort_indices[k-1];

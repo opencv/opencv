@@ -859,6 +859,58 @@ typename Distance::ResultType ensureSquareDistance( typename Distance::ResultTyp
 
 
 /*
+ * ...a template to tell the user if the distance he is working with is actually squared
+ */
+
+template <typename Distance, typename ElementType>
+struct isSquareDist
+{
+    bool operator()() { return false; }
+};
+
+
+template <typename ElementType>
+struct isSquareDist<L2_Simple<ElementType>, ElementType>
+{
+    bool operator()() { return true; }
+};
+
+template <typename ElementType>
+struct isSquareDist<L2<ElementType>, ElementType>
+{
+    bool operator()() { return true; }
+};
+
+
+template <typename ElementType>
+struct isSquareDist<MinkowskiDistance<ElementType>, ElementType>
+{
+    bool operator()() { return true; }
+};
+
+template <typename ElementType>
+struct isSquareDist<HellingerDistance<ElementType>, ElementType>
+{
+    bool operator()() { return true; }
+};
+
+template <typename ElementType>
+struct isSquareDist<ChiSquareDistance<ElementType>, ElementType>
+{
+    bool operator()() { return true; }
+};
+
+
+template <typename Distance>
+bool isSquareDistance()
+{
+    typedef typename Distance::ElementType ElementType;
+
+    isSquareDist<Distance, ElementType> dummy;
+    return dummy();
+}
+
+/*
  * ...and a template to ensure the user that he will process the normal distance,
  * and not squared distance, without losing processing time calling sqrt(ensureSquareDistance)
  * that will result in doing actually sqrt(dist*dist) for L1 distance for instance.
