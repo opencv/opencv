@@ -445,7 +445,7 @@ public:
         }
         else
         {
-            computeNodeStatistics(root_, indices_, (int)size_);
+            computeBitfieldNodeStatistics(root_, indices_, size_);
             computeBitfieldClustering(root_, indices_, (int)size_, branching_,0);
         }
     }
@@ -670,8 +670,6 @@ private:
      */
     void computeNodeStatistics(KMeansNodePtr node, int* indices, unsigned int indices_length)
     {
-
-        DistanceType radius = 0;
         DistanceType variance = 0;
         DistanceType* mean = new DistanceType[veclen_];
         memoryCounter_ += int(veclen_*sizeof(DistanceType));
@@ -685,15 +683,16 @@ private:
             }
             variance += distance_(vec, ZeroIterator<ElementType>(), veclen_);
         }
+        float length = static_cast<float>(indices_length);
         for (size_t j=0; j<veclen_; ++j) {
-            mean[j] /= indices_length;
+            mean[j] /= length;
         }
-        variance /= indices_length;
+        variance /= length;
         variance -= distance_(mean, ZeroIterator<ElementType>(), veclen_);
 
-        DistanceType tmp = 0;
+        DistanceType radius = 0;
         for (unsigned int i=0; i<indices_length; ++i) {
-            tmp = distance_(mean, dataset_[indices[i]], veclen_);
+            DistanceType tmp = distance_(mean, dataset_[indices[i]], veclen_);
             if (tmp>radius) {
                 radius = tmp;
             }
@@ -703,6 +702,66 @@ private:
         node->radius = radius;
         node->pivot = mean;
     }
+
+
+    void computeBitfieldNodeStatistics(KMeansNodePtr node, int* indices,
+                                       unsigned int indices_length)
+    {
+        const unsigned int accumulator_veclen = veclen_*sizeof(ElementType)*BITS_PER_CHAR;
+
+        unsigned long long variance = 0ull;
+        ElementType* mean = new ElementType[veclen_];
+        memoryCounter_ += int(veclen_*sizeof(ElementType));
+        unsigned int* mean_accumulator = new unsigned int[accumulator_veclen];
+
+        memset(mean_accumulator, 0, accumulator_veclen);
+
+        for (unsigned int i=0; i<indices_length; ++i) {
+            variance += ensureSquareDistance<Distance>(
+                        distance_(dataset_[indices[i]], ZeroIterator<ElementType>(), veclen_));
+            unsigned char* vec = (unsigned char*)dataset_[indices[i]];
+            for (size_t k=0, l=0; k<accumulator_veclen; k+=BITS_PER_CHAR, ++l) {
+                mean_accumulator[k]   += (vec[l])    & 0x01;
+                mean_accumulator[k+1] += (vec[l]>>1) & 0x01;
+                mean_accumulator[k+2] += (vec[l]>>2) & 0x01;
+                mean_accumulator[k+3] += (vec[l]>>3) & 0x01;
+                mean_accumulator[k+4] += (vec[l]>>4) & 0x01;
+                mean_accumulator[k+5] += (vec[l]>>5) & 0x01;
+                mean_accumulator[k+6] += (vec[l]>>6) & 0x01;
+                mean_accumulator[k+7] += (vec[l]>>7) & 0x01;
+            }
+        }
+        double cnt = static_cast<double>(indices_length);
+        unsigned char* char_mean = (unsigned char*)mean;
+        for (size_t k=0, l=0; k<accumulator_veclen; k+=BITS_PER_CHAR, ++l) {
+            char_mean[l] =    (((int)(0.5 + (double)(mean_accumulator[k])   / cnt)))
+                            | (((int)(0.5 + (double)(mean_accumulator[k+1]) / cnt))<<1)
+                            | (((int)(0.5 + (double)(mean_accumulator[k+2]) / cnt))<<2)
+                            | (((int)(0.5 + (double)(mean_accumulator[k+3]) / cnt))<<3)
+                            | (((int)(0.5 + (double)(mean_accumulator[k+4]) / cnt))<<4)
+                            | (((int)(0.5 + (double)(mean_accumulator[k+5]) / cnt))<<5)
+                            | (((int)(0.5 + (double)(mean_accumulator[k+6]) / cnt))<<6)
+                            | (((int)(0.5 + (double)(mean_accumulator[k+7]) / cnt))<<7);
+        }
+        variance = static_cast<unsigned long long>(
+                    (0.5 + static_cast<double>(variance)) / static_cast<double>(indices_length));
+        variance -= ensureSquareDistance<Distance>(distance_(mean, ZeroIterator<ElementType>(), veclen_));
+
+        DistanceType radius = 0;
+        for (unsigned int i=0; i<indices_length; ++i) {
+            DistanceType tmp = distance_(mean, dataset_[indices[i]], veclen_);
+            if (tmp>radius) {
+                radius = tmp;
+            }
+        }
+
+        node->variance = static_cast<DistanceType>(variance);
+        node->radius = radius;
+        node->pivot = mean;
+
+        delete[] mean_accumulator;
+    }
+
 
 
     /**
@@ -1059,7 +1118,7 @@ private:
         for (int c=0; c<branching; ++c) {
             int s = count[c];
 
-            DistanceType variance = 0;
+            unsigned long long variance = 0ull;
             DistanceType mean_radius =0;
             for (int i=0; i<indices_length; ++i) {
                 if (belongs_to[i]==c) {
@@ -1073,15 +1132,15 @@ private:
             }
             mean_radius = static_cast<DistanceType>(
                         (0.5f + static_cast<float>(mean_radius)) / static_cast<float>(s));
-            variance = static_cast<DistanceType>(
-                        (0.5f + static_cast<float>(variance)) / static_cast<float>(s));
+            variance = static_cast<unsigned long long>(
+                        (0.5 + static_cast<double>(variance)) / static_cast<double>(s));
             variance -= ensureSquareDistance<Distance>(distance_(centers[c], ZeroIterator<ElementType>(), veclen_));
 
             node->childs[c] = pool_.allocate<KMeansNode>();
             std::memset(node->childs[c], 0, sizeof(KMeansNode));
             node->childs[c]->radius = radiuses[c];
             node->childs[c]->pivot = centers[c];
-            node->childs[c]->variance = variance;
+            node->childs[c]->variance = static_cast<DistanceType>(variance);
             node->childs[c]->mean_radius = mean_radius;
             computeBitfieldClustering(node->childs[c],indices+start, end-start, branching, level+1);
             start=end;
