@@ -671,10 +671,10 @@ private:
     void computeNodeStatistics(KMeansNodePtr node, int* indices, unsigned int indices_length)
     {
         DistanceType variance = 0;
-        DistanceType* mean = new DistanceType[veclen_];
-        memoryCounter_ += int(veclen_*sizeof(DistanceType));
+        PivotType* mean = new PivotType[veclen_];
+        memoryCounter_ += int(veclen_*sizeof(PivotType));
 
-        memset(mean,0,veclen_*sizeof(DistanceType));
+        memset(mean,0,veclen_*sizeof(PivotType));
 
         for (unsigned int i=0; i<indices_length; ++i) {
             ElementType* vec = dataset_[indices[i]];
@@ -707,11 +707,11 @@ private:
     void computeBitfieldNodeStatistics(KMeansNodePtr node, int* indices,
                                        unsigned int indices_length)
     {
-        const unsigned int accumulator_veclen = veclen_*sizeof(ElementType)*BITS_PER_CHAR;
+        const unsigned int accumulator_veclen = veclen_*sizeof(PivotType)*BITS_PER_CHAR;
 
         unsigned long long variance = 0ull;
-        ElementType* mean = new ElementType[veclen_];
-        memoryCounter_ += int(veclen_*sizeof(ElementType));
+        PivotType* mean = new PivotType[veclen_];
+        memoryCounter_ += int(veclen_*sizeof(PivotType));
         unsigned int* mean_accumulator = new unsigned int[accumulator_veclen];
 
         memset(mean_accumulator, 0, accumulator_veclen);
@@ -909,13 +909,13 @@ private:
 
         }
 
-        DistanceType** centers = new DistanceType*[branching];
+        PivotType** centers = new PivotType*[branching];
 
         for (int i=0; i<branching; ++i) {
-            centers[i] = new DistanceType[veclen_];
-            memoryCounter_ += (int)(veclen_*sizeof(DistanceType));
+            centers[i] = new PivotType[veclen_];
+            memoryCounter_ += (int)(veclen_*sizeof(PivotType));
             for (size_t k=0; k<veclen_; ++k) {
-                centers[i][k] = (DistanceType)dcenters[i][k];
+                centers[i][k] = (PivotType)dcenters[i][k];
             }
         }
 
@@ -987,11 +987,11 @@ private:
         cv::AutoBuffer<unsigned int> dcenters_buf(branching*accumulator_veclen);
         Matrix<unsigned int> dcenters(dcenters_buf.data(), branching, accumulator_veclen);
 
-        ElementType** centers = new ElementType*[branching];
+        PivotType** centers = new PivotType*[branching];
 
         for (int i=0; i<branching; ++i) {
-            centers[i] = new ElementType[veclen_];
-            memoryCounter_ += (int)(veclen_*sizeof(ElementType));
+            centers[i] = new PivotType[veclen_];
+            memoryCounter_ += (int)(veclen_*sizeof(PivotType));
         }
 
         std::vector<DistanceType> radiuses(branching);
