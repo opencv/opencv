@@ -632,7 +632,7 @@ private:
     {
         node = pool_.allocate<KMeansNode>();
         load_value(stream, *node);
-        node->pivot = new DistanceType[veclen_];
+        node->pivot = new PivotType[veclen_];
         load_value(stream, *(node->pivot), (int)veclen_);
         if (node->childs==NULL) {
             int indices_offset;
@@ -821,7 +821,6 @@ private:
         cv::AutoBuffer<int> belongs_to_buf(indices_length);
         int* belongs_to = belongs_to_buf.data();
         for (int i=0; i<indices_length; ++i) {
-
             DistanceType sq_dist = distance_(dataset_[indices[i]], dcenters[0], veclen_);
             belongs_to[i] = 0;
             for (int j=1; j<branching; ++j) {
