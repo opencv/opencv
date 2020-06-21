@@ -493,6 +493,101 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
             outputDesc.get(), outputPtr.get()));
     }
 
+    /** @brief performs convolution, bias addition, eltwise addition and activation simultaneously
+     *
+     * dstValue = act(alpha1 * conv(input) + bias + alpha2 * eltwise)
+     *
+     * @tparam          T           convolution element type (must be `half` or `float`)
+     *
+     * @param           handle      valid cuDNN Handle
+     * @param           convDesc    convolution description
+     * @param           convAlgo    algorithm to use for convolution
+     * @param           workspace   workspace memory which meets the requirements of \p convAlgo
+     * @param           filterDesc  filter descriptor
+     * @param[in]       filterPtr   pointer to device memory containing the filters
+     * @param           alpha1      convolution scale factor
+     * @param           inputDesc   tensor descriptor describing the input
+     * @param[in]       inputPtr    pointer to input tensor in device memory
+     * @param           biasDesc    tensor descriptor describing the bias
+     * @param[in]       biasPtr     pointer to bias tensor in device memory
+     * @param           alpha2      eltwise scale factor
+     * @param           eltwiseDesc tensor descriptor describing the eltwise tensor
+     * @param[in]       eltwisePtr  pointer to the eltwise tensor in device memory
+     * @param           actDesc     activation descriptor
+     * @param           outputDesc  tensor descriptor describing the output
+     * @param[out]      outputPtr   pointer to output tensor in device memory
+     *
+     * Exception Guarantee: Basic
+     */
+    template <class T>
+    void convolve_with_bias_eltwise_activation(
+        const Handle& handle,
+        T alpha1,
+        const ConvolutionDescriptor<T>& convDesc,
+        const ConvolutionAlgorithm<T>& convAlgo,
+        WorkspaceInstance workspace,
+        const FilterDescriptor<T>& filterDesc,
+        DevicePtr<const T> filterPtr,
+        const TensorDescriptor<T>& inputDesc,
+        DevicePtr<const T> inputPtr,
+        const TensorDescriptor<T>& biasDesc,
+        DevicePtr<const T> biasPtr,
+        T alpha2,
+        const TensorDescriptor<T>& eltwiseDesc,
+        DevicePtr<const T> eltwisePtr,
+        const ActivationDescriptor& actDesc,
+        const TensorDescriptor<T>& outputDesc,
+        DevicePtr<T> outputPtr)
+    {
+        CV_Assert(handle);
+
+        CUDA4DNN_CHECK_CUDNN(cudnnConvolutionBiasActivationForward(
+            handle.get(),
+            &alpha1, inputDesc.get(), inputPtr.get(),
+            filterDesc.get(), filterPtr.get(),
+            convDesc.get(), convAlgo.get(),
+            static_cast<void*>(workspace.get()), workspace.size_in_bytes(),
+            &alpha2, eltwiseDesc.get(), eltwisePtr.get(),
+            biasDesc.get(), biasPtr.get(),
+            actDesc.get(),
+            outputDesc.get(), outputPtr.get()));
+    }
+
+    template <> inline
+    void convolve_with_bias_eltwise_activation(
+        const Handle& handle,
+        half alpha1,
+        const ConvolutionDescriptor<half>& convDesc,
+        const ConvolutionAlgorithm<half>& convAlgo,
+        WorkspaceInstance workspace,
+        const FilterDescriptor<half>& filterDesc,
+        DevicePtr<const half> filterPtr,
+        const TensorDescriptor<half>& inputDesc,
+        DevicePtr<const half> inputPtr,
+        const TensorDescriptor<half>& biasDesc,
+        DevicePtr<const half> biasPtr,
+        half alpha2,
+        const TensorDescriptor<half>& eltwiseDesc,
+        DevicePtr<const half> eltwisePtr,
+        const ActivationDescriptor& actDesc,
+        const TensorDescriptor<half>& outputDesc,
+        DevicePtr<half> outputPtr)
+    {
+        CV_Assert(handle);
+
+        float alpha1_ = alpha1, alpha2_ = alpha2;
+        CUDA4DNN_CHECK_CUDNN(cudnnConvolutionBiasActivationForward(
+            handle.get(),
+            &alpha1_, inputDesc.get(), inputPtr.get(),
+            filterDesc.get(), filterPtr.get(),
+            convDesc.get(), convAlgo.get(),
+            static_cast<void*>(workspace.get()), workspace.size_in_bytes(),
+            &alpha2_, eltwiseDesc.get(), eltwisePtr.get(),
+            biasDesc.get(), biasPtr.get(),
+            actDesc.get(),
+            outputDesc.get(), outputPtr.get()));
+    }
+
 }}}}} /* namespace cv::dnn::cuda4dnn::csl::cudnn */
 
 #endif /* OPENCV_DNN_CUDA4DNN_CSL_CUDNN_CONVOLUTION_HPP */
