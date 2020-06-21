@@ -532,7 +532,7 @@ public:
      *     numClusters = number of clusters to have in the clustering computed
      * Returns: number of cluster centers
      */
-    int getClusterCenters(Matrix<DistanceType>& centers)
+    int getClusterCenters(Matrix<PivotType>& centers)
     {
         int numClusters = centers.rows;
         if (numClusters<1) {
@@ -547,7 +547,7 @@ public:
         Logger::info("Clusters requested: %d, returning %d\n",numClusters, clusterCount);
 
         for (int i=0; i<clusterCount; ++i) {
-            DistanceType* center = clusters[i]->pivot;
+            PivotType* center = clusters[i]->pivot;
             for (size_t j=0; j<veclen_; ++j) {
                 centers[i][j] = center[j];
             }
