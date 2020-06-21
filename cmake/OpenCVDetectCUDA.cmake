@@ -162,7 +162,12 @@ if(CUDA_FOUND)
       if(NOT _nvcc_res EQUAL 0)
         message(STATUS "Automatic detection of CUDA generation failed. Going to build for all known architectures.")
         # TX1 (5.3) TX2 (6.2) Xavier (7.2) V100 (7.0)
-        set(__cuda_arch_bin "5.3 6.2 7.2 7.0")
+        ocv_filter_available_architecture(__cuda_arch_bin
+            5.3
+            6.2
+            7.2
+            7.0
+        )
       else()
         set(__cuda_arch_bin "${_nvcc_out}")
       endif()
