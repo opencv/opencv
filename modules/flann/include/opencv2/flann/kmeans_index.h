@@ -86,7 +86,7 @@ class KMeansIndex : public NNIndex<Distance>
 public:
     typedef typename Distance::ElementType ElementType;
     typedef typename Distance::ResultType DistanceType;
-    typedef typename Distance::PivotType PivotType;
+    typedef typename Distance::CentersType CentersType;
 
     typedef typename Distance::is_kdtree_distance is_kdtree_distance;
     typedef typename Distance::is_vector_space_distance is_vector_space_distance;
@@ -532,7 +532,7 @@ public:
      *     numClusters = number of clusters to have in the clustering computed
      * Returns: number of cluster centers
      */
-    int getClusterCenters(Matrix<PivotType>& centers)
+    int getClusterCenters(Matrix<CentersType>& centers)
     {
         int numClusters = centers.rows;
         if (numClusters<1) {
@@ -547,7 +547,7 @@ public:
         Logger::info("Clusters requested: %d, returning %d\n",numClusters, clusterCount);
 
         for (int i=0; i<clusterCount; ++i) {
-            PivotType* center = clusters[i]->pivot;
+            CentersType* center = clusters[i]->pivot;
             for (size_t j=0; j<veclen_; ++j) {
                 centers[i][j] = center[j];
             }
@@ -572,7 +572,7 @@ private:
         /**
          * The cluster center.
          */
-        PivotType* pivot;
+        CentersType* pivot;
         /**
          * The cluster radius.
          */
@@ -632,7 +632,7 @@ private:
     {
         node = pool_.allocate<KMeansNode>();
         load_value(stream, *node);
-        node->pivot = new PivotType[veclen_];
+        node->pivot = new CentersType[veclen_];
         load_value(stream, *(node->pivot), (int)veclen_);
         if (node->childs==NULL) {
             int indices_offset;
@@ -671,10 +671,10 @@ private:
     void computeNodeStatistics(KMeansNodePtr node, int* indices, unsigned int indices_length)
     {
         DistanceType variance = 0;
-        PivotType* mean = new PivotType[veclen_];
-        memoryCounter_ += int(veclen_*sizeof(PivotType));
+        CentersType* mean = new CentersType[veclen_];
+        memoryCounter_ += int(veclen_*sizeof(CentersType));
 
-        memset(mean,0,veclen_*sizeof(PivotType));
+        memset(mean,0,veclen_*sizeof(CentersType));
 
         for (unsigned int i=0; i<indices_length; ++i) {
             ElementType* vec = dataset_[indices[i]];
@@ -707,11 +707,11 @@ private:
     void computeBitfieldNodeStatistics(KMeansNodePtr node, int* indices,
                                        unsigned int indices_length)
     {
-        const unsigned int accumulator_veclen = veclen_*sizeof(PivotType)*BITS_PER_CHAR;
+        const unsigned int accumulator_veclen = veclen_*sizeof(CentersType)*BITS_PER_CHAR;
 
         unsigned long long variance = 0ull;
-        PivotType* mean = new PivotType[veclen_];
-        memoryCounter_ += int(veclen_*sizeof(PivotType));
+        CentersType* mean = new CentersType[veclen_];
+        memoryCounter_ += int(veclen_*sizeof(CentersType));
         unsigned int* mean_accumulator = new unsigned int[accumulator_veclen];
 
         memset(mean_accumulator, 0, accumulator_veclen);
@@ -908,13 +908,13 @@ private:
 
         }
 
-        PivotType** centers = new PivotType*[branching];
+        CentersType** centers = new CentersType*[branching];
 
         for (int i=0; i<branching; ++i) {
-            centers[i] = new PivotType[veclen_];
-            memoryCounter_ += (int)(veclen_*sizeof(PivotType));
+            centers[i] = new CentersType[veclen_];
+            memoryCounter_ += (int)(veclen_*sizeof(CentersType));
             for (size_t k=0; k<veclen_; ++k) {
-                centers[i][k] = (PivotType)dcenters[i][k];
+                centers[i][k] = (CentersType)dcenters[i][k];
             }
         }
 
@@ -986,11 +986,11 @@ private:
         cv::AutoBuffer<unsigned int> dcenters_buf(branching*accumulator_veclen);
         Matrix<unsigned int> dcenters(dcenters_buf.data(), branching, accumulator_veclen);
 
-        PivotType** centers = new PivotType*[branching];
+        CentersType** centers = new CentersType*[branching];
 
         for (int i=0; i<branching; ++i) {
-            centers[i] = new PivotType[veclen_];
-            memoryCounter_ += (int)(veclen_*sizeof(PivotType));
+            centers[i] = new CentersType[veclen_];
+            memoryCounter_ += (int)(veclen_*sizeof(CentersType));
         }
 
         std::vector<DistanceType> radiuses(branching);

@@ -153,7 +153,7 @@ struct L2_Simple
 
     typedef T ElementType;
     typedef typename Accumulator<T>::Type ResultType;
-    typedef ResultType PivotType;
+    typedef ResultType CentersType;
 
     template <typename Iterator1, typename Iterator2>
     ResultType operator()(Iterator1 a, Iterator2 b, size_t size, ResultType /*worst_dist*/ = -1) const
@@ -187,7 +187,7 @@ struct L2
 
     typedef T ElementType;
     typedef typename Accumulator<T>::Type ResultType;
-    typedef ResultType PivotType;
+    typedef ResultType CentersType;
 
     /**
      *  Compute the squared Euclidean distance between two vectors.
@@ -253,7 +253,7 @@ struct L1
 
     typedef T ElementType;
     typedef typename Accumulator<T>::Type ResultType;
-    typedef ResultType PivotType;
+    typedef ResultType CentersType;
 
     /**
      *  Compute the Manhattan (L_1) distance between two vectors.
@@ -311,7 +311,7 @@ struct MinkowskiDistance
 
     typedef T ElementType;
     typedef typename Accumulator<T>::Type ResultType;
-    typedef ResultType PivotType;
+    typedef ResultType CentersType;
 
     int order;
 
@@ -376,7 +376,7 @@ struct MaxDistance
 
     typedef T ElementType;
     typedef typename Accumulator<T>::Type ResultType;
-    typedef ResultType PivotType;
+    typedef ResultType CentersType;
 
     /**
      *  Compute the max distance (L_infinity) between two vectors.
@@ -434,7 +434,7 @@ struct HammingLUT
 
     typedef unsigned char ElementType;
     typedef int ResultType;
-    typedef ElementType PivotType;
+    typedef ElementType CentersType;
 
     /** this will count the bits in a ^ b
      */
@@ -496,7 +496,7 @@ struct Hamming
 
     typedef T ElementType;
     typedef int ResultType;
-    typedef ElementType PivotType;
+    typedef ElementType CentersType;
 
     template<typename Iterator1, typename Iterator2>
     ResultType operator()(const Iterator1 a, const Iterator2 b, size_t size, ResultType /*worst_dist*/ = -1) const
@@ -600,7 +600,7 @@ struct Hamming2
 
     typedef T ElementType;
     typedef int ResultType;
-    typedef ElementType PivotType;
+    typedef ElementType CentersType;
 
     /** This is popcount_3() from:
      * http://en.wikipedia.org/wiki/Hamming_weight */
@@ -685,7 +685,7 @@ struct HistIntersectionDistance
 
     typedef T ElementType;
     typedef typename Accumulator<T>::Type ResultType;
-    typedef ResultType PivotType;
+    typedef ResultType CentersType;
 
     /**
      *  Compute the histogram intersection distance
@@ -741,7 +741,7 @@ struct HellingerDistance
 
     typedef T ElementType;
     typedef typename Accumulator<T>::Type ResultType;
-    typedef ResultType PivotType;
+    typedef ResultType CentersType;
 
     /**
      *  Compute the Hellinger distance
@@ -791,7 +791,7 @@ struct ChiSquareDistance
 
     typedef T ElementType;
     typedef typename Accumulator<T>::Type ResultType;
-    typedef ResultType PivotType;
+    typedef ResultType CentersType;
 
     /**
      *  Compute the chi-square distance
@@ -846,7 +846,7 @@ struct KL_Divergence
 
     typedef T ElementType;
     typedef typename Accumulator<T>::Type ResultType;
-    typedef ResultType PivotType;
+    typedef ResultType CentersType;
 
     /**
      *  Compute the Kullback-Leibler divergence
