@@ -1,4 +1,3 @@
-using vector_GCompileArg  = std::vector<GCompileArg>;
 using gapi_GKernelPackage = cv::gapi::GKernelPackage;
 
 template<>

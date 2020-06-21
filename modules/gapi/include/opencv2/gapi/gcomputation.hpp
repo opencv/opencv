@@ -265,7 +265,7 @@ public:
      * @param args compilation arguments for underlying compilation
      * process.
      */
-    GAPI_WRAP void apply(cv::Mat in, CV_OUT cv::Mat &out, GCompileArgs &&args = {}); // Unary overload
+    void apply(cv::Mat in, cv::Mat &out, GCompileArgs &&args = {}); // Unary overload
 
     /**
      * @brief Execute an unary computation (with compilation on the fly)
@@ -276,7 +276,7 @@ public:
      * @param args compilation arguments for underlying compilation
      * process.
      */
-    GAPI_WRAP void apply(cv::Mat in, CV_OUT cv::Scalar &out, GCompileArgs &&args = {}); // Unary overload (scalar)
+    void apply(cv::Mat in, cv::Scalar &out, GCompileArgs &&args = {}); // Unary overload (scalar)
 
     /**
      * @brief Execute a binary computation (with compilation on the fly)
@@ -300,7 +300,7 @@ public:
      * @param args compilation arguments for underlying compilation
      * process.
      */
-    GAPI_WRAP void apply(cv::Mat in1, cv::Mat in2, CV_OUT cv::Scalar &out, GCompileArgs &&args = {}); // Binary overload (scalar)
+    void apply(cv::Mat in1, cv::Mat in2, cv::Scalar &out, GCompileArgs &&args = {}); // Binary overload (scalar)
 
     /**
      * @brief Execute a computation with arbitrary number of
