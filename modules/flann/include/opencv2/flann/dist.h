@@ -1,4 +1,4 @@
-/***********************************************************************
+﻿/***********************************************************************
  * Software License Agreement (BSD License)
  *
  * Copyright 2008-2009  Marius Muja (mariusm@cs.ubc.ca). All rights reserved.
@@ -97,6 +97,46 @@ class False
 public:
     static const bool val = false;
 };
+
+
+/*
+ * This is a "zero iterator". It basically behaves like a zero filled
+ * array to all algorithms that use arrays as iterators (STL style).
+ * It's useful when there's a need to compute the distance between feature
+ * and origin it and allows for better compiler optimisation than using a
+ * zero-filled array.
+ */
+template <typename T>
+struct ZeroIterator
+{
+
+    T operator*()
+    {
+        return 0;
+    }
+
+    T operator[](int)
+    {
+        return 0;
+    }
+
+    const ZeroIterator<T>& operator ++()
+    {
+        return *this;
+    }
+
+    ZeroIterator<T> operator ++(int)
+    {
+        return *this;
+    }
+
+    ZeroIterator<T>& operator+=(int)
+    {
+        return *this;
+    }
+
+};
+
 
 
 /**
@@ -398,7 +438,8 @@ struct HammingLUT
 
     /** this will count the bits in a ^ b
      */
-    ResultType operator()(const unsigned char* a, const unsigned char* b, size_t size) const
+    template<typename Iterator2>
+    ResultType operator()(const unsigned char* a, const Iterator2 b, size_t size) const
     {
         static const uchar popCountTable[] =
         {
@@ -412,8 +453,31 @@ struct HammingLUT
             3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7, 4, 5, 5, 6, 5, 6, 6, 7, 5, 6, 6, 7, 6, 7, 7, 8
         };
         ResultType result = 0;
+        const unsigned char* b2 = reinterpret_cast<const unsigned char*> (b);
         for (size_t i = 0; i < size; i++) {
-            result += popCountTable[a[i] ^ b[i]];
+            result += popCountTable[a[i] ^ b2[i]];
+        }
+        return result;
+    }
+
+
+    ResultType operator()(const unsigned char* a, const ZeroIterator<unsigned char> b, size_t size) const
+    {
+        (void)b;
+        static const uchar popCountTable[] =
+        {
+            0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4, 1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
+            1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, 2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
+            1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, 2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
+            2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, 3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
+            1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, 2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
+            2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, 3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
+            2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, 3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
+            3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7, 4, 5, 5, 6, 5, 6, 6, 7, 5, 6, 6, 7, 6, 7, 7, 8
+        };
+        ResultType result = 0;
+        for (size_t i = 0; i < size; i++) {
+            result += popCountTable[a[i]];
         }
         return result;
     }
@@ -435,7 +499,7 @@ struct Hamming
     typedef ElementType PivotType;
 
     template<typename Iterator1, typename Iterator2>
-    ResultType operator()(Iterator1 a, Iterator2 b, size_t size, ResultType /*worst_dist*/ = -1) const
+    ResultType operator()(const Iterator1 a, const Iterator2 b, size_t size, ResultType /*worst_dist*/ = -1) const
     {
         ResultType result = 0;
 #if defined(__ARM_NEON__) && !defined(__CUDACC__)
@@ -481,6 +545,51 @@ struct Hamming
 #endif
         return result;
     }
+
+
+    template<typename Iterator1>
+    ResultType operator()(const Iterator1 a, ZeroIterator<unsigned char> b, size_t size, ResultType /*worst_dist*/ = -1) const
+    {
+        (void)b;
+        ResultType result = 0;
+#if defined(__ARM_NEON__) && !defined(__CUDACC__)
+        {
+            uint32x4_t bits = vmovq_n_u32(0);
+            for (size_t i = 0; i < size; i += 16) {
+                uint8x16_t A_vec = vld1q_u8 (a + i);
+                uint8x16_t bitsSet = vcntq_u8 (A_vec);
+                uint16x8_t bitSet8 = vpaddlq_u8 (bitsSet);
+                uint32x4_t bitSet4 = vpaddlq_u16 (bitSet8);
+                bits = vaddq_u32(bits, bitSet4);
+            }
+            uint64x2_t bitSet2 = vpaddlq_u32 (bits);
+            result = vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),0);
+            result += vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),2);
+        }
+#elif defined(__GNUC__)
+        {
+            //for portability just use unsigned long -- and use the __builtin_popcountll (see docs for __builtin_popcountll)
+            typedef unsigned long long pop_t;
+            const size_t modulo = size % sizeof(pop_t);
+            const pop_t* a2 = reinterpret_cast<const pop_t*> (a);
+            const pop_t* a2_end = a2 + (size / sizeof(pop_t));
+
+            for (; a2 != a2_end; ++a2) result += __builtin_popcountll(*a2);
+
+            if (modulo) {
+                //in the case where size is not dividable by sizeof(size_t)
+                //need to mask off the bits at the end
+                pop_t a_final = 0;
+                memcpy(&a_final, a2, modulo);
+                result += __builtin_popcountll(a_final);
+            }
+        }
+#else // NO NEON and NOT GNUC
+        HammingLUT lut;
+        result = lut(reinterpret_cast<const unsigned char*> (a), b, size);
+#endif
+        return result;
+    }
 };
 
 template<typename T>
@@ -512,7 +621,7 @@ struct Hamming2
 #endif
 
     template <typename Iterator1, typename Iterator2>
-    ResultType operator()(Iterator1 a, Iterator2 b, size_t size, ResultType /*worst_dist*/ = -1) const
+    ResultType operator()(const Iterator1 a, const Iterator2 b, size_t size, ResultType /*worst_dist*/ = -1) const
     {
 #ifdef FLANN_PLATFORM_64_BIT
         const uint64_t* pa = reinterpret_cast<const uint64_t*>(a);
@@ -533,6 +642,31 @@ struct Hamming2
             result += popcnt32(*pa ^ *pb);
             ++pa;
             ++pb;
+        }
+#endif
+        return result;
+    }
+
+
+    template <typename Iterator1>
+    ResultType operator()(const Iterator1 a, ZeroIterator<unsigned char> b, size_t size, ResultType /*worst_dist*/ = -1) const
+    {
+        (void)b;
+#ifdef FLANN_PLATFORM_64_BIT
+        const uint64_t* pa = reinterpret_cast<const uint64_t*>(a);
+        ResultType result = 0;
+        size /= (sizeof(uint64_t)/sizeof(unsigned char));
+        for(size_t i = 0; i < size; ++i ) {
+            result += popcnt64(*pa);
+            ++pa;
+        }
+#else
+        const uint32_t* pa = reinterpret_cast<const uint32_t*>(a);
+        ResultType result = 0;
+        size /= (sizeof(uint32_t)/sizeof(unsigned char));
+        for(size_t i = 0; i < size; ++i ) {
+            result += popcnt32(*pa);
+            ++pa;
         }
 #endif
         return result;
@@ -755,46 +889,6 @@ struct KL_Divergence
         }
         return result;
     }
-};
-
-
-
-/*
- * This is a "zero iterator". It basically behaves like a zero filled
- * array to all algorithms that use arrays as iterators (STL style).
- * It's useful when there's a need to compute the distance between feature
- * and origin it and allows for better compiler optimisation than using a
- * zero-filled array.
- */
-template <typename T>
-struct ZeroIterator
-{
-
-    T operator*()
-    {
-        return 0;
-    }
-
-    T operator[](int)
-    {
-        return 0;
-    }
-
-    const ZeroIterator<T>& operator ++()
-    {
-        return *this;
-    }
-
-    ZeroIterator<T> operator ++(int)
-    {
-        return *this;
-    }
-
-    ZeroIterator<T>& operator+=(int)
-    {
-        return *this;
-    }
-
 };
 
 
