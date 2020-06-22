@@ -102,13 +102,14 @@ int main( int argc, char* argv[] )
 
             db_keypoints.insert( db_keypoints.end(), kpts.begin(), kpts.end() );
             db_descriptors.push_back( descriptors );
-            db_images_indice_range.push_back( db_images_indice_range.back() + kpts.size() );
+            db_images_indice_range.push_back( db_images_indice_range.back()
+                                              + static_cast<unsigned int>(kpts.size()) );
         }
     }
 
     //-- Set the LUT
     db_indice_2_image_lut.resize( db_images_indice_range.back() );
-    const int nbr_of_imgs = db_images_indice_range.size()-1;
+    const int nbr_of_imgs = static_cast<int>( db_images_indice_range.size()-1 );
     for (int i = 0; i < nbr_of_imgs; ++i)
     {
         const unsigned int first_indice = db_images_indice_range[i];
