@@ -440,12 +440,12 @@ public:
 
         if(is_kdtree_distance::val || is_vector_space_distance::val)
         {
-            computeNodeStatistics(root_, indices_, size_);
+            computeNodeStatistics(root_, indices_, (unsigned int)size_);
             computeClustering(root_, indices_, (int)size_, branching_,0);
         }
         else
         {
-            computeBitfieldNodeStatistics(root_, indices_, size_);
+            computeBitfieldNodeStatistics(root_, indices_, (unsigned int)size_);
             computeBitfieldClustering(root_, indices_, (int)size_, branching_,0);
         }
     }
@@ -707,7 +707,8 @@ private:
     void computeBitfieldNodeStatistics(KMeansNodePtr node, int* indices,
                                        unsigned int indices_length)
     {
-        const unsigned int accumulator_veclen = veclen_*sizeof(CentersType)*BITS_PER_CHAR;
+        const unsigned int accumulator_veclen = static_cast<unsigned int>(
+                                                veclen_*sizeof(CentersType)*BITS_PER_CHAR);
 
         unsigned long long variance = 0ull;
         CentersType* mean = new CentersType[veclen_];
@@ -985,7 +986,8 @@ private:
             return;
         }
 
-        const unsigned int accumulator_veclen = veclen_*sizeof(ElementType)*BITS_PER_CHAR;
+        const unsigned int accumulator_veclen = static_cast<unsigned int>(
+                                                veclen_*sizeof(ElementType)*BITS_PER_CHAR);
         cv::AutoBuffer<unsigned int> dcenters_buf(branching*accumulator_veclen);
         Matrix<unsigned int> dcenters(dcenters_buf.data(), branching, accumulator_veclen);
 
