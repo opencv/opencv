@@ -685,9 +685,9 @@ private:
         }
         float length = static_cast<float>(indices_length);
         for (size_t j=0; j<veclen_; ++j) {
-            mean[j] /= length;
+            mean[j] /= static_cast<CentersType>( length );
         }
-        variance /= length;
+        variance /= static_cast<DistanceType>( length );
         variance -= distance_(mean, ZeroIterator<ElementType>(), veclen_);
 
         DistanceType radius = 0;
@@ -717,8 +717,8 @@ private:
         memset(mean_accumulator, 0, accumulator_veclen);
 
         for (unsigned int i=0; i<indices_length; ++i) {
-            variance += ensureSquareDistance<Distance>(
-                        distance_(dataset_[indices[i]], ZeroIterator<ElementType>(), veclen_));
+            variance += static_cast<unsigned long long>( ensureSquareDistance<Distance>(
+                        distance_(dataset_[indices[i]], ZeroIterator<ElementType>(), veclen_)));
             unsigned char* vec = (unsigned char*)dataset_[indices[i]];
             for (size_t k=0, l=0; k<accumulator_veclen; k+=BITS_PER_CHAR, ++l) {
                 mean_accumulator[k]   += (vec[l])    & 0x01;
@@ -734,18 +734,21 @@ private:
         double cnt = static_cast<double>(indices_length);
         unsigned char* char_mean = (unsigned char*)mean;
         for (size_t k=0, l=0; k<accumulator_veclen; k+=BITS_PER_CHAR, ++l) {
-            char_mean[l] =    (((int)(0.5 + (double)(mean_accumulator[k])   / cnt)))
+            char_mean[l] = static_cast<unsigned char>(
+                              (((int)(0.5 + (double)(mean_accumulator[k])   / cnt)))
                             | (((int)(0.5 + (double)(mean_accumulator[k+1]) / cnt))<<1)
                             | (((int)(0.5 + (double)(mean_accumulator[k+2]) / cnt))<<2)
                             | (((int)(0.5 + (double)(mean_accumulator[k+3]) / cnt))<<3)
                             | (((int)(0.5 + (double)(mean_accumulator[k+4]) / cnt))<<4)
                             | (((int)(0.5 + (double)(mean_accumulator[k+5]) / cnt))<<5)
                             | (((int)(0.5 + (double)(mean_accumulator[k+6]) / cnt))<<6)
-                            | (((int)(0.5 + (double)(mean_accumulator[k+7]) / cnt))<<7);
+                            | (((int)(0.5 + (double)(mean_accumulator[k+7]) / cnt))<<7));
         }
         variance = static_cast<unsigned long long>(
                     (0.5 + static_cast<double>(variance)) / static_cast<double>(indices_length));
-        variance -= ensureSquareDistance<Distance>(distance_(mean, ZeroIterator<ElementType>(), veclen_));
+        variance -= static_cast<unsigned long long>(
+                    ensureSquareDistance<Distance>(
+                        distance_(mean, ZeroIterator<ElementType>(), veclen_)));
 
         DistanceType radius = 0;
         for (unsigned int i=0; i<indices_length; ++i) {
@@ -932,7 +935,7 @@ private:
                 if (belongs_to[i]==c) {
                     DistanceType d = distance_(dataset_[indices[i]], ZeroIterator<ElementType>(), veclen_);
                     variance += d;
-                    mean_radius += sqrt(d);
+                    mean_radius += static_cast<DistanceType>( sqrt(d) );
                     std::swap(indices[i],indices[end]);
                     std::swap(belongs_to[i],belongs_to[end]);
                     end++;
@@ -1051,14 +1054,15 @@ private:
                 unsigned int* dcenter = dcenters[i];
                 unsigned char* charCenter = (unsigned char*)centers[i];
                 for (size_t k=0, l=0; k<accumulator_veclen; k+=BITS_PER_CHAR, ++l) {
-                    charCenter[l] =   (((int)(0.5 + (double)(dcenter[k])   / cnt)))
+                    charCenter[l] = static_cast<unsigned char>(
+                                      (((int)(0.5 + (double)(dcenter[k])   / cnt)))
                                     | (((int)(0.5 + (double)(dcenter[k+1]) / cnt))<<1)
                                     | (((int)(0.5 + (double)(dcenter[k+2]) / cnt))<<2)
                                     | (((int)(0.5 + (double)(dcenter[k+3]) / cnt))<<3)
                                     | (((int)(0.5 + (double)(dcenter[k+4]) / cnt))<<4)
                                     | (((int)(0.5 + (double)(dcenter[k+5]) / cnt))<<5)
                                     | (((int)(0.5 + (double)(dcenter[k+6]) / cnt))<<6)
-                                    | (((int)(0.5 + (double)(dcenter[k+7]) / cnt))<<7);
+                                    | (((int)(0.5 + (double)(dcenter[k+7]) / cnt))<<7));
                 }
             }
 
@@ -1122,7 +1126,7 @@ private:
             for (int i=0; i<indices_length; ++i) {
                 if (belongs_to[i]==c) {
                     DistanceType d = distance_(dataset_[indices[i]], ZeroIterator<ElementType>(), veclen_);
-                    variance += ensureSquareDistance<Distance>(d);
+                    variance += static_cast<unsigned long long>( ensureSquareDistance<Distance>(d) );
                     mean_radius += ensureSimpleDistance<Distance>(d);
                     std::swap(indices[i],indices[end]);
                     std::swap(belongs_to[i],belongs_to[end]);
@@ -1133,7 +1137,9 @@ private:
                         (0.5f + static_cast<float>(mean_radius)) / static_cast<float>(s));
             variance = static_cast<unsigned long long>(
                         (0.5 + static_cast<double>(variance)) / static_cast<double>(s));
-            variance -= ensureSquareDistance<Distance>(distance_(centers[c], ZeroIterator<ElementType>(), veclen_));
+            variance -= static_cast<unsigned long long>(
+                        ensureSquareDistance<Distance>(
+                            distance_(centers[c], ZeroIterator<ElementType>(), veclen_)));
 
             node->childs[c] = pool_.allocate<KMeansNode>();
             std::memset(node->childs[c], 0, sizeof(KMeansNode));
@@ -1228,7 +1234,8 @@ private:
         //		float* best_center = node->childs[best_index]->pivot;
         for (int i=0; i<branching_; ++i) {
             if (i != best_index) {
-                domain_distances[i] -= cb_index_*node->childs[i]->variance;
+                domain_distances[i] -= cvflann::round<DistanceType>(
+                                        cb_index_*node->childs[i]->variance );
 
                 //				float dist_to_border = getDistanceToBorder(node.childs[i].pivot,best_center,q);
                 //				if (domain_distances[i]<dist_to_border) {

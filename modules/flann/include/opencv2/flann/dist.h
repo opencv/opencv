@@ -68,6 +68,29 @@ inline float abs<float>(float x) { return fabsf(x); }
 template<>
 inline double abs<double>(double x) { return fabs(x); }
 
+
+template<typename TargetType>
+inline TargetType round(float x) { return static_cast<TargetType>(x); }
+
+template<>
+inline unsigned int round<unsigned int>(float x) { return static_cast<unsigned int>(x + 0.5f); }
+
+template<>
+inline unsigned short round<unsigned short>(float x) { return static_cast<unsigned short>(x + 0.5f); }
+
+template<>
+inline unsigned char round<unsigned char>(float x) { return static_cast<unsigned char>(x + 0.5f); }
+
+template<>
+inline int round<int>(float x) { return static_cast<int>(x + 0.5f) - (x<0); }
+
+template<>
+inline short round<short>(float x) { return static_cast<short>(x + 0.5f) - (x<0); }
+
+template<>
+inline char round<char>(float x) { return static_cast<char>(x + 0.5f) - (x<0); }
+
+
 template<typename T>
 struct Accumulator { typedef T Type; };
 template<>
