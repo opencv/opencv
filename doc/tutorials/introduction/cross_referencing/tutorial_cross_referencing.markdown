@@ -1,6 +1,9 @@
 Cross referencing OpenCV from other Doxygen projects {#tutorial_cross_referencing}
 ====================================================
 
+@prev_tutorial{tutorial_transition_guide}
+
+
 Cross referencing OpenCV
 ------------------------
 
@@ -36,14 +39,14 @@ Open your Doxyfile using your favorite text editor and search for the key
 `TAGFILES`. Change it as follows:
 
 @code
-TAGFILES = ./docs/doxygen-tags/opencv.tag=http://docs.opencv.org/4.3.0
+TAGFILES = ./docs/doxygen-tags/opencv.tag=http://docs.opencv.org/4.4.0
 @endcode
 
 If you had other definitions already, you can append the line using a `\`:
 
 @code
 TAGFILES = ./docs/doxygen-tags/libstdc++.tag=https://gcc.gnu.org/onlinedocs/libstdc++/latest-doxygen \
-           ./docs/doxygen-tags/opencv.tag=http://docs.opencv.org/4.3.0
+           ./docs/doxygen-tags/opencv.tag=http://docs.opencv.org/4.4.0
 @endcode
 
 Doxygen can now use the information from the tag file to link to the OpenCV

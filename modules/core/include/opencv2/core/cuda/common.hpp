@@ -101,6 +101,20 @@ namespace cv { namespace cuda
             cudaChannelFormatDesc desc = cudaCreateChannelDesc<T>();
             cudaSafeCall( cudaBindTexture2D(0, tex, img.ptr(), &desc, img.cols, img.rows, img.step) );
         }
+
+        template<class T> inline void createTextureObjectPitch2D(cudaTextureObject_t* tex, PtrStepSz<T>& img, const cudaTextureDesc& texDesc)
+        {
+            cudaResourceDesc resDesc;
+            memset(&resDesc, 0, sizeof(resDesc));
+            resDesc.resType = cudaResourceTypePitch2D;
+            resDesc.res.pitch2D.devPtr = static_cast<void*>(img.ptr());
+            resDesc.res.pitch2D.height = img.rows;
+            resDesc.res.pitch2D.width = img.cols;
+            resDesc.res.pitch2D.pitchInBytes = img.step;
+            resDesc.res.pitch2D.desc = cudaCreateChannelDesc<T>();
+
+            cudaSafeCall( cudaCreateTextureObject(tex, &resDesc, &texDesc, NULL) );
+        }
     }
 }}
 

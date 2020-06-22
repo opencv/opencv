@@ -1,6 +1,9 @@
 AKAZE and ORB planar tracking {#tutorial_akaze_tracking}
 =============================
 
+@prev_tutorial{tutorial_akaze_matching}
+@next_tutorial{tutorial_homography}
+
 Introduction
 ------------
 

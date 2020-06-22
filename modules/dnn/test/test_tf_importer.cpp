@@ -222,6 +222,21 @@ TEST_P(Test_TensorFlow_layers, concat_axis_1)
     runTensorFlowNet("concat_axis_1");
 }
 
+TEST_P(Test_TensorFlow_layers, concat_3d)
+{
+    if (backend == DNN_BACKEND_OPENCV && target != DNN_TARGET_CPU)
+    {
+        if (target == DNN_TARGET_OPENCL_FP16) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16);
+        if (target == DNN_TARGET_OPENCL)      applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL);
+    }
+
+    if ((backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ||
+         backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019) && target == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+
+    runTensorFlowNet("concat_3d");
+}
+
 TEST_P(Test_TensorFlow_layers, batch_norm_1)
 {
     runTensorFlowNet("batch_norm");
@@ -1033,11 +1048,17 @@ TEST_P(Test_TensorFlow_layers, resize_bilinear)
 {
     runTensorFlowNet("resize_bilinear");
     runTensorFlowNet("resize_bilinear_factor");
+    runTensorFlowNet("resize_bilinear_down");
 }
 
 TEST_P(Test_TensorFlow_layers, tf2_dense)
 {
     runTensorFlowNet("tf2_dense");
+}
+
+TEST_P(Test_TensorFlow_layers, clip_by_value)
+{
+    runTensorFlowNet("clip_by_value");
 }
 
 TEST_P(Test_TensorFlow_layers, tf2_prelu)
@@ -1046,6 +1067,8 @@ TEST_P(Test_TensorFlow_layers, tf2_prelu)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    if (backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA); // not supported; only across channels is supported
     runTensorFlowNet("tf2_prelu");
 }
 
@@ -1187,6 +1210,44 @@ TEST_P(Test_TensorFlow_nets, Mask_RCNN)
 
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         expectNoFallbacks(net);
+}
+
+TEST_P(Test_TensorFlow_nets, EfficientDet)
+{
+    if (target != DNN_TARGET_CPU)
+    {
+        if (target == DNN_TARGET_OPENCL_FP16) applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+        if (target == DNN_TARGET_OPENCL)      applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL);
+        if (target == DNN_TARGET_MYRIAD)      applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD);
+    }
+    checkBackend();
+    std::string proto = findDataFile("dnn/efficientdet-d0.pbtxt");
+    std::string model = findDataFile("dnn/efficientdet-d0.pb", false);
+
+    Net net = readNetFromTensorflow(model, proto);
+    Mat img = imread(findDataFile("dnn/dog416.png"));
+    Mat blob = blobFromImage(img, 1.0/255, Size(512, 512), Scalar(123.675, 116.28, 103.53));
+
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+    net.setInput(blob);
+    // Output has shape 1x1xNx7 where N - number of detections.
+    // An every detection is a vector of values [id, classId, confidence, left, top, right, bottom]
+    Mat out = net.forward();
+
+    // References are from test for TensorFlow model.
+    Mat ref = (Mat_<float>(3, 7) << 0, 1, 0.8437444, 0.153996080160141, 0.20534580945968628, 0.7463544607162476, 0.7414066195487976,
+                                    0, 17, 0.8245924, 0.16657517850399017, 0.3996818959712982, 0.4111558794975281, 0.9306337833404541,
+                                    0, 7, 0.8039304, 0.6118435263633728, 0.13175517320632935, 0.9065558314323425, 0.2943994700908661);
+    double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 4e-3 : 1e-5;
+    double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 2e-3 : 1e-4;
+    if (target == DNN_TARGET_CUDA_FP16)
+    {
+        scoreDiff = 0.002;
+        iouDiff = 0.003;
+    }
+    normAssertDetections(ref, out, "", 0.5, scoreDiff, iouDiff);
+    expectNoFallbacksFromIE(net);
 }
 
 }

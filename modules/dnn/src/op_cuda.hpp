@@ -11,7 +11,6 @@
 #include "cuda4dnn/csl/cudnn.hpp"
 #include "cuda4dnn/csl/tensor.hpp"
 #include "cuda4dnn/csl/memory.hpp"
-#include "cuda4dnn/csl/fp16.hpp"
 #include "cuda4dnn/csl/workspace.hpp"
 #include "cuda4dnn/kernels/fp_conversion.hpp"
 #endif

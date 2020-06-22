@@ -48,11 +48,31 @@ if(CUDA_FOUND)
   endif()
 
   if(WITH_NVCUVID)
+    macro(SEARCH_NVCUVID_HEADER _filename _result)
+      # place header file under CUDA_TOOLKIT_TARGET_DIR or CUDA_TOOLKIT_ROOT_DIR
+      find_path(_header_result
+        ${_filename}
+        PATHS "${CUDA_TOOLKIT_TARGET_DIR}" "${CUDA_TOOLKIT_ROOT_DIR}"
+        ENV CUDA_PATH
+        ENV CUDA_INC_PATH
+        PATH_SUFFIXES include
+        NO_DEFAULT_PATH
+        )
+      if("x${_header_result}" STREQUAL "x_header_result-NOTFOUND")
+        set(${_result} 0)
+      else()
+        set(${_result} 1)
+      endif()
+      unset(_header_result CACHE)
+    endmacro()
+    SEARCH_NVCUVID_HEADER("nvcuvid.h" HAVE_NVCUVID_HEADER)
+    SEARCH_NVCUVID_HEADER("dynlink_nvcuvid.h" HAVE_DYNLINK_NVCUVID_HEADER)
     find_cuda_helper_libs(nvcuvid)
     if(WIN32)
       find_cuda_helper_libs(nvcuvenc)
     endif()
-    if(CUDA_nvcuvid_LIBRARY)
+    if(CUDA_nvcuvid_LIBRARY AND (${HAVE_NVCUVID_HEADER} OR ${HAVE_DYNLINK_NVCUVID_HEADER}))
+      # make sure to have both header and library before enabling
       set(HAVE_NVCUVID 1)
     endif()
     if(CUDA_nvcuvenc_LIBRARY)
@@ -63,6 +83,12 @@ if(CUDA_FOUND)
   message(STATUS "CUDA detected: " ${CUDA_VERSION})
 
   set(_generations "Fermi" "Kepler" "Maxwell" "Pascal" "Volta" "Turing")
+  set(_arch_fermi   "2.0")
+  set(_arch_kepler  "3.0;3.5;3.7")
+  set(_arch_maxwell "5.0;5.2")
+  set(_arch_pascal  "6.0;6.1")
+  set(_arch_volta   "7.0")
+  set(_arch_turing  "7.5")
   if(NOT CMAKE_CROSSCOMPILING)
     list(APPEND _generations "Auto")
   endif()
@@ -80,36 +106,69 @@ if(CUDA_FOUND)
     unset(CUDA_ARCH_PTX CACHE)
   endif()
 
-  SET(DETECT_ARCHS_COMMAND "${CUDA_NVCC_EXECUTABLE}" ${CUDA_NVCC_FLAGS} "${OpenCV_SOURCE_DIR}/cmake/checks/OpenCVDetectCudaArch.cu" "--run")
-  if(WIN32 AND CMAKE_LINKER) #Workaround for VS cl.exe not being in the env. path
-    get_filename_component(host_compiler_bindir ${CMAKE_LINKER} DIRECTORY)
-    SET(DETECT_ARCHS_COMMAND ${DETECT_ARCHS_COMMAND} "-ccbin" "${host_compiler_bindir}")
+  if(CUDA_HOST_COMPILER)
+    LIST(APPEND CUDA_NVCC_FLAGS -ccbin ${CUDA_HOST_COMPILER})
+  else()
+    if(WIN32 AND CMAKE_LINKER) #Workaround for VS cl.exe not being in the env. path
+      get_filename_component(host_compiler_bindir ${CMAKE_LINKER} DIRECTORY)
+      LIST(APPEND CUDA_NVCC_FLAGS -ccbin ${host_compiler_bindir})
+    endif()
   endif()
+
+  SET(DETECT_ARCHS_COMMAND "${CUDA_NVCC_EXECUTABLE}" ${CUDA_NVCC_FLAGS} "${OpenCV_SOURCE_DIR}/cmake/checks/OpenCVDetectCudaArch.cu" "--run")
+
+  macro(ocv_filter_available_architecture result_list)
+    if(DEFINED CUDA_SUPPORTED_CC)
+      set(${result_list} "${CUDA_SUPPORTED_CC}")
+    else()
+      set(CC_LIST ${ARGN})
+      foreach(target_arch ${CC_LIST})
+        string(REPLACE "." "" target_arch_short "${target_arch}")
+        set(NVCC_OPTION "-gencode;arch=compute_${target_arch_short},code=sm_${target_arch_short}")
+        execute_process( COMMAND "${CUDA_NVCC_EXECUTABLE}" ${NVCC_OPTION} "${OpenCV_SOURCE_DIR}/cmake/checks/OpenCVDetectCudaArch.cu"
+                         WORKING_DIRECTORY "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/"
+                         RESULT_VARIABLE _nvcc_res OUTPUT_VARIABLE _nvcc_out
+                         ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
+        if(_nvcc_res EQUAL 0)
+          set(${result_list} "${${result_list}} ${target_arch}")
+        endif()
+      endforeach()
+      string(STRIP "${${result_list}}" ${result_list})
+      set(CUDA_SUPPORTED_CC ${${result_list}} CACHE INTERNAL "List of supported compute capability")
+    endif()
+  endmacro()
+
+  macro(ocv_detect_native_cuda_arch status output)
+    execute_process( COMMAND ${DETECT_ARCHS_COMMAND}
+                     WORKING_DIRECTORY "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/"
+                     RESULT_VARIABLE ${status} OUTPUT_VARIABLE _nvcc_out
+                     ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
+    string(REGEX REPLACE ".*\n" "" ${output} "${_nvcc_out}") #Strip leading warning messages, if any
+  endmacro()
+
+  macro(ocv_wipeout_deprecated _arch_bin_list)
+    string(REPLACE "2.1" "2.1(2.0)" ${_arch_bin_list} "${${_arch_bin_list}}")
+  endmacro()
 
   set(__cuda_arch_ptx "")
   if(CUDA_GENERATION STREQUAL "Fermi")
-    set(__cuda_arch_bin "2.0")
+    set(__cuda_arch_bin ${_arch_fermi})
   elseif(CUDA_GENERATION STREQUAL "Kepler")
-    set(__cuda_arch_bin "3.0 3.5 3.7")
+    set(__cuda_arch_bin ${_arch_kepler})
   elseif(CUDA_GENERATION STREQUAL "Maxwell")
-    set(__cuda_arch_bin "5.0 5.2")
+    set(__cuda_arch_bin ${_arch_maxwell})
   elseif(CUDA_GENERATION STREQUAL "Pascal")
-    set(__cuda_arch_bin "6.0 6.1")
+    set(__cuda_arch_bin ${_arch_pascal})
   elseif(CUDA_GENERATION STREQUAL "Volta")
-    set(__cuda_arch_bin "7.0")
+    set(__cuda_arch_bin ${_arch_volta})
   elseif(CUDA_GENERATION STREQUAL "Turing")
-    set(__cuda_arch_bin "7.5")
+    set(__cuda_arch_bin ${_arch_turing})
   elseif(CUDA_GENERATION STREQUAL "Auto")
-    execute_process( COMMAND ${DETECT_ARCHS_COMMAND}
-                     WORKING_DIRECTORY "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/"
-                     RESULT_VARIABLE _nvcc_res OUTPUT_VARIABLE _nvcc_out
-                     ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
-    string(REGEX REPLACE ".*\n" "" _nvcc_out "${_nvcc_out}") #Strip leading warning messages, if any
+    ocv_detect_native_cuda_arch(_nvcc_res _nvcc_out)
     if(NOT _nvcc_res EQUAL 0)
       message(STATUS "Automatic detection of CUDA generation failed. Going to build for all known architectures.")
     else()
-      set(__cuda_arch_bin "${_nvcc_out}")
-      string(REPLACE "2.1" "2.1(2.0)" __cuda_arch_bin "${__cuda_arch_bin}")
+      string(REGEX MATCHALL "[0-9]+\\.[0-9]" __cuda_arch_bin "${_nvcc_out}")
     endif()
   endif()
 
@@ -118,29 +177,26 @@ if(CUDA_FOUND)
       set(__cuda_arch_bin "3.2")
       set(__cuda_arch_ptx "")
     elseif(AARCH64)
-      execute_process( COMMAND ${DETECT_ARCHS_COMMAND}
-                       WORKING_DIRECTORY "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/"
-                       RESULT_VARIABLE _nvcc_res OUTPUT_VARIABLE _nvcc_out
-                       ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
-      string(REGEX REPLACE ".*\n" "" _nvcc_out "${_nvcc_out}") #Strip leading warning messages, if any
+      ocv_detect_native_cuda_arch(_nvcc_res _nvcc_out)
       if(NOT _nvcc_res EQUAL 0)
         message(STATUS "Automatic detection of CUDA generation failed. Going to build for all known architectures.")
         set(__cuda_arch_bin "5.3 6.2 7.2")
       else()
         set(__cuda_arch_bin "${_nvcc_out}")
-        string(REPLACE "2.1" "2.1(2.0)" __cuda_arch_bin "${__cuda_arch_bin}")
       endif()
       set(__cuda_arch_ptx "")
     else()
-      if(CUDA_VERSION VERSION_LESS "9.0")
-        set(__cuda_arch_bin "2.0 3.0 3.5 3.7 5.0 5.2 6.0 6.1")
-      elseif(CUDA_VERSION VERSION_LESS "10.0")
-        set(__cuda_arch_bin "3.0 3.5 3.7 5.0 5.2 6.0 6.1 7.0")
-      else()
-        set(__cuda_arch_bin "3.0 3.5 3.7 5.0 5.2 6.0 6.1 7.0 7.5")
-      endif()
+      ocv_filter_available_architecture(__cuda_arch_bin
+          ${_arch_fermi}
+          ${_arch_kepler}
+          ${_arch_maxwell}
+          ${_arch_pascal}
+          ${_arch_volta}
+          ${_arch_turing}
+      )
     endif()
   endif()
+  ocv_wipeout_deprecated(__cuda_arch_bin)
 
   set(CUDA_ARCH_BIN ${__cuda_arch_bin} CACHE STRING "Specify 'real' GPU architectures to build binaries for, BIN(PTX) format is supported")
   set(CUDA_ARCH_PTX ${__cuda_arch_ptx} CACHE STRING "Specify 'virtual' PTX architectures to build PTX intermediate code for")

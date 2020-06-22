@@ -1,6 +1,9 @@
 AKAZE local features matching {#tutorial_akaze_matching}
 =============================
 
+@prev_tutorial{tutorial_detection_of_planar_objects}
+@next_tutorial{tutorial_akaze_tracking}
+
 Introduction
 ------------
 
