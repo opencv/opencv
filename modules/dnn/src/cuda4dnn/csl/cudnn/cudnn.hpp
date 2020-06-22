@@ -5,7 +5,6 @@
 #ifndef OPENCV_DNN_CUDA4DNN_CSL_CUDNN_CUDNN_HPP
 #define OPENCV_DNN_CUDA4DNN_CSL_CUDNN_CUDNN_HPP
 
-#include "../fp16.hpp"
 #include "../pointer.hpp"
 
 #include <cudnn.h>
@@ -58,15 +57,11 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
      */
     class UniqueHandle {
     public:
-        /** creates a cuDNN handle which executes in the default stream
-         *
-         * Exception Guarantee: Basic
-         */
-        UniqueHandle() { CUDA4DNN_CHECK_CUDNN(cudnnCreate(&handle)); }
-
+        UniqueHandle() noexcept : handle{ nullptr } { }
         UniqueHandle(UniqueHandle&) = delete;
-        UniqueHandle(UniqueHandle&& other) noexcept
-            : stream(std::move(other.stream)), handle{ other.handle } {
+        UniqueHandle(UniqueHandle&& other) noexcept {
+            stream = std::move(other.stream);
+            handle = other.handle;
             other.handle = nullptr;
         }
 
@@ -75,6 +70,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
          * Exception Guarantee: Basic
          */
         UniqueHandle(Stream strm) : stream(std::move(strm)) {
+            CV_Assert(stream);
             CUDA4DNN_CHECK_CUDNN(cudnnCreate(&handle));
             try {
                 CUDA4DNN_CHECK_CUDNN(cudnnSetStream(handle, stream.get()));
@@ -94,14 +90,24 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
 
         UniqueHandle& operator=(const UniqueHandle&) = delete;
         UniqueHandle& operator=(UniqueHandle&& other) noexcept {
-            stream = std::move(other.stream);
-            handle = other.handle;
-            other.handle = nullptr;
+            CV_Assert(other);
+            if (&other != this) {
+                UniqueHandle(std::move(*this)); /* destroy current handle */
+                stream = std::move(other.stream);
+                handle = other.handle;
+                other.handle = nullptr;
+            }
             return *this;
         }
 
         /** returns the raw cuDNN handle */
-        cudnnHandle_t get() const noexcept { return handle; }
+        cudnnHandle_t get() const noexcept {
+            CV_Assert(handle);
+            return handle;
+        }
+
+        /** returns true if the handle is valid */
+        explicit operator bool() const noexcept { return static_cast<bool>(handle); }
 
     private:
         Stream stream;
@@ -111,18 +117,14 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
     /** @brief sharable cuDNN smart handle
      *
      * Handle is a smart sharable wrapper for cuDNN handle which ensures that the handle
-     * is destroyed after all references to the handle are destroyed.
+     * is destroyed after all references to the handle are destroyed. The handle must always
+     * be associated with a non-default stream. The stream must be specified during construction.
      *
      * @note Moving a Handle object to another invalidates the former
      */
     class Handle {
     public:
-        /** creates a cuDNN handle which executes in the default stream
-         *
-         * Exception Guarantee: Basic
-         */
-        Handle() : handle(std::make_shared<UniqueHandle>()) { }
-
+        Handle() = default;
         Handle(const Handle&) = default;
         Handle(Handle&&) = default;
 
@@ -138,6 +140,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         /** returns true if the handle is valid */
         explicit operator bool() const noexcept { return static_cast<bool>(handle); }
 
+        /** returns the raw cuDNN handle */
         cudnnHandle_t get() const noexcept {
             CV_Assert(handle);
             return handle->get();

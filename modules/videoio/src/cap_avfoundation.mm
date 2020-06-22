@@ -392,7 +392,7 @@ int CvCaptureCAM::startCaptureDevice(int cameraNum) {
         [mCaptureDecompressedVideoOutput setVideoSettings:pixelBufferOptions];
         mCaptureDecompressedVideoOutput.alwaysDiscardsLateVideoFrames = YES;
 
-#if TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR
+#if (TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR) && (!defined(TARGET_OS_MACCATALYST) || !TARGET_OS_MACCATALYST)
         mCaptureDecompressedVideoOutput.minFrameDuration = CMTimeMake(1, 30);
 #endif
 

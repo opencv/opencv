@@ -33,13 +33,13 @@
 //
 // If not, we need to introduce that!
 using GCPUModel = ade::TypedGraph
-    < cv::gimpl::Unit
+    < cv::gimpl::CPUUnit
     , cv::gimpl::Protocol
     >;
 
 // FIXME: Same issue with Typed and ConstTyped
 using GConstGCPUModel = ade::ConstTypedGraph
-    < cv::gimpl::Unit
+    < cv::gimpl::CPUUnit
     , cv::gimpl::Protocol
     >;
 
@@ -53,7 +53,7 @@ namespace
         {
             GCPUModel gm(graph);
             auto cpu_impl = cv::util::any_cast<cv::GCPUKernel>(impl.opaque);
-            gm.metadata(op_node).set(cv::gimpl::Unit{cpu_impl});
+            gm.metadata(op_node).set(cv::gimpl::CPUUnit{cpu_impl});
         }
 
         virtual EPtr compile(const ade::Graph &graph,
@@ -78,11 +78,23 @@ cv::gimpl::GCPUExecutable::GCPUExecutable(const ade::Graph &g,
 {
     // Convert list of operations (which is topologically sorted already)
     // into an execution script.
+    GConstGCPUModel gcm(m_g);
     for (auto &nh : nodes)
     {
         switch (m_gm.metadata(nh).get<NodeType>().t)
         {
-        case NodeType::OP: m_script.push_back({nh, GModel::collectOutputMeta(m_gm, nh)}); break;
+        case NodeType::OP:
+        {
+            m_script.push_back({nh, GModel::collectOutputMeta(m_gm, nh)});
+
+            // If kernel is stateful then prepare storage for its state.
+            GCPUKernel k = gcm.metadata(nh).get<CPUUnit>().k;
+            if (k.m_isStateful)
+            {
+                m_nodesToStates[nh] = GArg{ };
+            }
+            break;
+        }
         case NodeType::DATA:
         {
             m_dataNodes.push_back(nh);
@@ -104,6 +116,9 @@ cv::gimpl::GCPUExecutable::GCPUExecutable(const ade::Graph &g,
         default: util::throw_error(std::logic_error("Unsupported NodeType type"));
         }
     }
+
+    // For each stateful kernel call 'setup' user callback to initialize state.
+    setupKernelStates();
 }
 
 // FIXME: Document what it does
@@ -140,6 +155,26 @@ cv::GArg cv::gimpl::GCPUExecutable::packArg(const GArg &arg)
     }
 }
 
+void cv::gimpl::GCPUExecutable::setupKernelStates()
+{
+    GConstGCPUModel gcm(m_g);
+    for (auto& nodeToState : m_nodesToStates)
+    {
+        auto& kernelNode = nodeToState.first;
+        auto& kernelState = nodeToState.second;
+
+        const GCPUKernel& kernel = gcm.metadata(kernelNode).get<CPUUnit>().k;
+        kernel.m_setupF(GModel::collectInputMeta(m_gm, kernelNode),
+                        m_gm.metadata(kernelNode).get<Op>().args,
+                        kernelState);
+    }
+}
+
+void cv::gimpl::GCPUExecutable::handleNewStream()
+{
+    m_newStreamStarted = true;
+}
+
 void cv::gimpl::GCPUExecutable::run(std::vector<InObj>  &&input_objs,
                                     std::vector<OutObj> &&output_objs)
 {
@@ -167,6 +202,14 @@ void cv::gimpl::GCPUExecutable::run(std::vector<InObj>  &&input_objs,
         }
     }
 
+    // In case if new video-stream happens - for each stateful kernel
+    // call 'setup' user callback to re-initialize state.
+    if (m_newStreamStarted)
+    {
+        setupKernelStates();
+        m_newStreamStarted = false;
+    }
+
     // OpenCV backend execution is not a rocket science at all.
     // Simply invoke our kernels in the proper order.
     GConstGCPUModel gcm(m_g);
@@ -176,7 +219,7 @@ void cv::gimpl::GCPUExecutable::run(std::vector<InObj>  &&input_objs,
 
         // Obtain our real execution unit
         // TODO: Should kernels be copyable?
-        GCPUKernel k = gcm.metadata(op_info.nh).get<Unit>().k;
+        GCPUKernel k = gcm.metadata(op_info.nh).get<CPUUnit>().k;
 
         // Initialize kernel's execution context:
         // - Input parameters
@@ -185,8 +228,8 @@ void cv::gimpl::GCPUExecutable::run(std::vector<InObj>  &&input_objs,
 
         using namespace std::placeholders;
         ade::util::transform(op.args,
-                          std::back_inserter(context.m_args),
-                          std::bind(&GCPUExecutable::packArg, this, _1));
+                             std::back_inserter(context.m_args),
+                             std::bind(&GCPUExecutable::packArg, this, _1));
 
         // - Output parameters.
         // FIXME: pre-allocate internal Mats, etc, according to the known meta
@@ -198,8 +241,14 @@ void cv::gimpl::GCPUExecutable::run(std::vector<InObj>  &&input_objs,
             context.m_results[out_port] = magazine::getObjPtr(m_res, out_desc);
         }
 
+        // For stateful kernel add state to its execution context
+        if (k.m_isStateful)
+        {
+            context.m_state = m_nodesToStates.at(op_info.nh);
+        }
+
         // Now trigger the executable unit
-        k.apply(context);
+        k.m_runF(context);
 
         //As Kernels are forbidden to allocate memory for (Mat) outputs,
         //this code seems redundant, at least for Mats

@@ -245,7 +245,7 @@ class GAPI_EXPORTS Buffer::Priv
 
     // Coordinate starting from which this buffer is assumed
     // to be read (with border not being taken into account)
-    int m_readStart;
+    int m_readStart = 0;
     cv::Rect m_roi;
 
     friend void debugBufferPriv(const Buffer& p, std::ostream &os);
