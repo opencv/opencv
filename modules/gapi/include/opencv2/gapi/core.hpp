@@ -392,10 +392,10 @@ namespace core {
             }
             else
             {
-                GAPI_Assert(fx != 0. && fy != 0.);
-                return in.withSize
-                    (Size(static_cast<int>(round(in.size.width  * fx)),
-                          static_cast<int>(round(in.size.height * fy))));
+                int outSz_w = static_cast<int>(round(in.size.width  * fx));
+                int outSz_h = static_cast<int>(round(in.size.height * fy));
+                GAPI_Assert(outSz_w > 0 && outSz_h > 0);
+                return in.withSize(Size(outSz_w, outSz_h));
             }
         }
     };

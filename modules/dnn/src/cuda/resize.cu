@@ -9,6 +9,7 @@
 #include "types.hpp"
 #include "grid_stride_range.hpp"
 #include "execution.hpp"
+#include "memory.hpp"
 
 #include "../cuda4dnn/csl/stream.hpp"
 #include "../cuda4dnn/csl/tensor.hpp"
@@ -70,7 +71,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
                 index_type out_idx = c_start * out_image_size + y * out_width + x;
 
                 for (int i = 0; i < CHANNELS_PER_ITER; i++) {
-                    output[out_idx] = input[in_idx];
+                    output[out_idx] = load_ldg(input[in_idx]);
 
                     in_idx += in_image_size;
                     out_idx += out_image_size;
@@ -134,10 +135,10 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
                 #pragma unroll 1 /* disable unrolling to reduce register pressure; not sure how but it works */
                 for (auto c = c_start; c < c_end; c++) {
-                    auto v_00 = input[in_offset_r0 + in_x0],
-                         v_01 = input[in_offset_r0 + in_x1],
-                         v_10 = input[in_offset_r1 + in_x0],
-                         v_11 = input[in_offset_r1 + in_x1];
+                    auto v_00 = load_ldg(input[in_offset_r0 + in_x0]),
+                         v_01 = load_ldg(input[in_offset_r0 + in_x1]),
+                         v_10 = load_ldg(input[in_offset_r1 + in_x0]),
+                         v_11 = load_ldg(input[in_offset_r1 + in_x1]);
 
                     output[out_idx] =
                         v_00 +

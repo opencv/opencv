@@ -354,6 +354,20 @@ INSTANTIATE_TEST_CASE_P(ResizeTestFluid, ResizeTest,
                                        cv::Size(64, 64),
                                        cv::Size(30, 30))));
 
+INSTANTIATE_TEST_CASE_P(ResizeTestFxFyFluid, ResizeTestFxFy,
+                        Combine(Values(CV_8UC3/*CV_8UC1, CV_16UC1, CV_16SC1*/),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480),
+                                       cv::Size(128, 128),
+                                       cv::Size(64, 64),
+                                       cv::Size(30, 30)),
+                                Values(-1),
+                                Values(CORE_FLUID),
+                                Values(AbsExact().to_compare_obj()),
+                                Values(/*cv::INTER_NEAREST,*/ cv::INTER_LINEAR/*, cv::INTER_AREA*/),
+                                Values(0.5, 1, 2),
+                                Values(0.5, 1, 2)));
+
 INSTANTIATE_TEST_CASE_P(BackendOutputAllocationTestFluid, BackendOutputAllocationTest,
                         Combine(Values(CV_8UC3, CV_16SC2, CV_32FC1),
                                 Values(cv::Size(50, 50)),

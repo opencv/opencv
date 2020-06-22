@@ -93,7 +93,7 @@ void cv::gimpl::render::ocv::GRenderExecutable::run(std::vector<InObj>  &&input_
 
     context.m_args.emplace_back(m_ftpr.get());
 
-    k.apply(context);
+    k.m_runF(context);
 
     for (auto &it : output_objs) magazine::writeBack(m_res, it.first, it.second);
 }

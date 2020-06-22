@@ -30,6 +30,11 @@ if(BUILD_FAT_JAVA_LIB AND HAVE_opencv_java)
   list(APPEND OPENCV_MODULES_CONFIGCMAKE opencv_java)
 endif()
 
+if(BUILD_OBJC AND HAVE_opencv_objc)
+  list(APPEND OPENCV_MODULES_CONFIGCMAKE opencv_objc)
+endif()
+
+
 # -------------------------------------------------------------------------------------------
 #  Part 1/3: ${BIN_DIR}/OpenCVConfig.cmake              -> For use *without* "make install"
 # -------------------------------------------------------------------------------------------

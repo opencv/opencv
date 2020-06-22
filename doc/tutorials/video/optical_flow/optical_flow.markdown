@@ -1,6 +1,8 @@
 Optical Flow {#tutorial_optical_flow}
 ============
 
+@prev_tutorial{tutorial_meanshift}
+
 Goal
 ----
 

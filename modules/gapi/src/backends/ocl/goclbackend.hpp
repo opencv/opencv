@@ -23,7 +23,7 @@
 
 namespace cv { namespace gimpl {
 
-struct Unit
+struct OCLUnit
 {
     static const char *name() { return "OCLKernel"; }
     GOCLKernel k;
