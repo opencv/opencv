@@ -504,10 +504,12 @@ struct Hamming
         ResultType result = 0;
 #if defined(__ARM_NEON__) && !defined(__CUDACC__)
         {
+            const unsigned char* a2 = reinterpret_cast<const unsigned char*> (a);
+            const unsigned char* b2 = reinterpret_cast<const unsigned char*> (b);
             uint32x4_t bits = vmovq_n_u32(0);
             for (size_t i = 0; i < size; i += 16) {
-                uint8x16_t A_vec = vld1q_u8 (a + i);
-                uint8x16_t B_vec = vld1q_u8 (b + i);
+                uint8x16_t A_vec = vld1q_u8 (a2 + i);
+                uint8x16_t B_vec = vld1q_u8 (b2 + i);
                 uint8x16_t AxorB = veorq_u8 (A_vec, B_vec);
                 uint8x16_t bitsSet = vcntq_u8 (AxorB);
                 uint16x8_t bitSet8 = vpaddlq_u8 (bitsSet);
@@ -554,9 +556,10 @@ struct Hamming
         ResultType result = 0;
 #if defined(__ARM_NEON__) && !defined(__CUDACC__)
         {
+            const unsigned char* a2 = reinterpret_cast<const unsigned char*> (a);
             uint32x4_t bits = vmovq_n_u32(0);
             for (size_t i = 0; i < size; i += 16) {
-                uint8x16_t A_vec = vld1q_u8 (a + i);
+                uint8x16_t A_vec = vld1q_u8 (a2 + i);
                 uint8x16_t bitsSet = vcntq_u8 (A_vec);
                 uint16x8_t bitSet8 = vpaddlq_u8 (bitsSet);
                 uint32x4_t bitSet4 = vpaddlq_u16 (bitSet8);
