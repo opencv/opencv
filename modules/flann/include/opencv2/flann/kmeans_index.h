@@ -746,7 +746,7 @@ private:
                             | (((int)(0.5 + (double)(mean_accumulator[k+7]) / cnt))<<7));
         }
         variance = static_cast<unsigned long long>(
-                    (0.5 + static_cast<double>(variance)) / static_cast<double>(indices_length));
+                    0.5 + static_cast<double>(variance) / static_cast<double>(indices_length));
         variance -= static_cast<unsigned long long>(
                     ensureSquareDistance<Distance>(
                         distance_(mean, ZeroIterator<ElementType>(), veclen_)));
@@ -1136,9 +1136,9 @@ private:
                 }
             }
             mean_radius = static_cast<DistanceType>(
-                        (0.5f + static_cast<float>(mean_radius)) / static_cast<float>(s));
+                        0.5f + static_cast<float>(mean_radius) / static_cast<float>(s));
             variance = static_cast<unsigned long long>(
-                        (0.5 + static_cast<double>(variance)) / static_cast<double>(s));
+                        0.5 + static_cast<double>(variance) / static_cast<double>(s));
             variance -= static_cast<unsigned long long>(
                         ensureSquareDistance<Distance>(
                             distance_(centers[c], ZeroIterator<ElementType>(), veclen_)));
