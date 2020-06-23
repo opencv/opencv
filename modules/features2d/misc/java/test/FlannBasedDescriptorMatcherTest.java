@@ -44,7 +44,7 @@ public class FlannBasedDescriptorMatcherTest extends OpenCVTestCase {
             + "    <value>0.</value></_>\n"
             + "  <_>\n"
             + "    <name>explore_all_trees</name>\n"
-            + "    <type>8</type>\n"
+            + "    <type>15</type>\n"
             + "    <value>0</value></_>\n"
             + "  <_>\n"
             + "    <name>sorted</name>\n"
@@ -73,7 +73,7 @@ public class FlannBasedDescriptorMatcherTest extends OpenCVTestCase {
             + "      value: 0.\n"
             + "   -\n"
             + "      name: explore_all_trees\n"
-            + "      type: 8\n"
+            + "      type: 15\n"
             + "      value: 0\n"
             + "   -\n"
             + "      name: sorted\n"
@@ -101,7 +101,7 @@ public class FlannBasedDescriptorMatcherTest extends OpenCVTestCase {
             + "      value: 4.\n"// this line is changed!
             + "   -\n"
             + "      name: explore_all_trees\n"
-            + "      type: 8\n"
+            + "      type: 15\n"
             + "      value: 1\n"// this line is changed!
             + "   -\n"
             + "      name: sorted\n"
