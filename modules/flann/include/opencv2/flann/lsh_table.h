@@ -245,7 +245,7 @@ public:
     {
         std::cerr << "LSH is not implemented for that type" << std::endl;
         assert(0);
-        return static_cast<size_t>(-1);
+        return 0;
     }
 
     /** Get statistics about the table
