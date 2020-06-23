@@ -28,6 +28,11 @@ const char* keys =
 struct img_info {
     int img_index;
     unsigned int nbr_of_matches;
+
+    img_info(int _img_index, unsigned int _nbr_of_matches)
+        : img_index(_img_index)
+        , nbr_of_matches(_nbr_of_matches)
+    {}
 };
 
 
