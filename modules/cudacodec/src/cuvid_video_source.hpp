@@ -44,17 +44,9 @@
 #ifndef __CUVID_VIDEO_SOURCE_HPP__
 #define __CUVID_VIDEO_SOURCE_HPP__
 
-#if CUDA_VERSION >= 9000 && CUDA_VERSION < 10000
-    #include <dynlink_nvcuvid.h>
-#else
-    #include <nvcuvid.h>
-#endif
-#include "opencv2/core/private.cuda.hpp"
-#include "opencv2/cudacodec.hpp"
 #include "video_source.hpp"
 
-namespace cv { namespace cudacodec { namespace detail
-{
+namespace cv { namespace cudacodec { namespace detail {
 
 class CuvidVideoSource : public VideoSource
 {
