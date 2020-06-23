@@ -763,8 +763,11 @@ struct MishFunctor : public BaseFunctor
         {
             for( int i = 0; i < len; i++ )
             {
+                // Use fast approximation introduced in https://github.com/opencv/opencv/pull/17200
                 float x = srcptr[i];
-                dstptr[i] = x * tanh(log(1.0f + exp(x)));
+                float eX = exp(std::min(x, 20.f));
+                float n = (eX + 2) * eX;
+                dstptr[i] = (x * n) / (n + 2);
             }
         }
     }

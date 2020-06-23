@@ -797,7 +797,7 @@ namespace cv {
                         int classes = getParam<int>(layer_params, "classes", -1);
                         int num_of_anchors = getParam<int>(layer_params, "num", -1);
                         float thresh = getParam<float>(layer_params, "thresh", 0.2);
-                        float nms_threshold = getParam<float>(layer_params, "nms_threshold", 0.4);
+                        float nms_threshold = getParam<float>(layer_params, "nms_threshold", 0.0);
                         float scale_x_y = getParam<float>(layer_params, "scale_x_y", 1.0);
 
                         std::string anchors_values = getParam<std::string>(layer_params, "anchors", std::string());
