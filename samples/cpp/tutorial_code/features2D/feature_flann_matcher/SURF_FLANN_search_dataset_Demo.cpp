@@ -178,10 +178,8 @@ int main( int argc, char* argv[] )
         if (dists.at<float>(i,0) < ratio_thresh * dists.at<float>(i,1))
         {
             const int indice_in_db = indices.at<int>(i,0);
-            good_matches.push_back( DMatch{i,
-                                           indice_in_db,
-                                           db_indice_2_image_lut[indice_in_db],
-                                           dists.at<float>(i,0)} );
+            DMatch dmatch(i, indice_in_db, db_indice_2_image_lut[indice_in_db], dists.at<float>(i,0));
+            good_matches.push_back( dmatch );
             matches_per_img_histogram[ db_indice_2_image_lut[indice_in_db] ]++;
         }
     }
@@ -199,8 +197,9 @@ int main( int argc, char* argv[] )
         const float inverse_proportion_of_retrieved_kpts =
                 static_cast<float>(nbr_of_kpts) / static_cast<float>(nbr_of_matches);
 
+        img_info info(i, nbr_of_matches);
         images_infos.insert( std::pair<float,img_info>(inverse_proportion_of_retrieved_kpts,
-                                                       img_info{i, nbr_of_matches}) );
+                                                       info) );
     }
 
     if (images_infos.begin() == images_infos.end())
