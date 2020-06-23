@@ -2,7 +2,7 @@
  * jdmarker.c
  *
  * Copyright (C) 1991-1998, Thomas G. Lane.
- * Modified 2009-2013 by Guido Vollbeding.
+ * Modified 2009-2019 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -496,8 +496,6 @@ get_dht (j_decompress_ptr cinfo)
     if (count > 256 || ((INT32) count) > length)
       ERREXIT(cinfo, JERR_BAD_HUFF_TABLE);
 
-    MEMZERO(huffval, SIZEOF(huffval)); /* pre-zero array for later copy */
-
     for (i = 0; i < count; i++)
       INPUT_BYTE(cinfo, huffval[i], return FALSE);
 
@@ -517,7 +515,8 @@ get_dht (j_decompress_ptr cinfo)
       *htblptr = jpeg_alloc_huff_table((j_common_ptr) cinfo);
   
     MEMCOPY((*htblptr)->bits, bits, SIZEOF((*htblptr)->bits));
-    MEMCOPY((*htblptr)->huffval, huffval, SIZEOF((*htblptr)->huffval));
+    if (count > 0)
+      MEMCOPY((*htblptr)->huffval, huffval, count * SIZEOF(UINT8));
   }
 
   if (length != 0)
@@ -577,14 +576,14 @@ get_dqt (j_decompress_ptr cinfo)
 	count = DCTSIZE2;
     }
 
-    switch (count) {
+    switch ((int) count) {
     case (2*2): natural_order = jpeg_natural_order2; break;
     case (3*3): natural_order = jpeg_natural_order3; break;
     case (4*4): natural_order = jpeg_natural_order4; break;
     case (5*5): natural_order = jpeg_natural_order5; break;
     case (6*6): natural_order = jpeg_natural_order6; break;
     case (7*7): natural_order = jpeg_natural_order7; break;
-    default:    natural_order = jpeg_natural_order;  break;
+    default:    natural_order = jpeg_natural_order;
     }
 
     for (i = 0; i < count; i++) {
@@ -784,7 +783,6 @@ examine_app0 (j_decompress_ptr cinfo, JOCTET FAR * data,
     default:
       TRACEMS2(cinfo, 1, JTRC_JFIF_EXTENSION,
 	       GETJOCTET(data[5]), (int) totallen);
-      break;
     }
   } else {
     /* Start of APP0 does not match "JFIF" or "JFXX", or too short */
@@ -858,7 +856,6 @@ get_interesting_appn (j_decompress_ptr cinfo)
   default:
     /* can't get here unless jpeg_save_markers chooses wrong processor */
     ERREXIT1(cinfo, JERR_UNKNOWN_MARKER, cinfo->unread_marker);
-    break;
   }
 
   /* skip any remaining data -- could be lots */
@@ -964,7 +961,6 @@ save_marker (j_decompress_ptr cinfo)
   default:
     TRACEMS2(cinfo, 1, JTRC_MISC_MARKER, cinfo->unread_marker,
 	     (int) (data_length + length));
-    break;
   }
 
   /* skip any remaining data -- could be lots */
@@ -1240,7 +1236,6 @@ read_markers (j_decompress_ptr cinfo)
        * ought to change!
        */
       ERREXIT1(cinfo, JERR_UNKNOWN_MARKER, cinfo->unread_marker);
-      break;
     }
     /* Successfully processed marker, so reset state variable */
     cinfo->unread_marker = 0;
@@ -1416,9 +1411,8 @@ jinit_marker_reader (j_decompress_ptr cinfo)
   int i;
 
   /* Create subobject in permanent pool */
-  marker = (my_marker_ptr)
-    (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_PERMANENT,
-				SIZEOF(my_marker_reader));
+  marker = (my_marker_ptr) (*cinfo->mem->alloc_small)
+    ((j_common_ptr) cinfo, JPOOL_PERMANENT, SIZEOF(my_marker_reader));
   cinfo->marker = &marker->pub;
   /* Initialize public method pointers */
   marker->pub.reset_marker_reader = reset_marker_reader;
