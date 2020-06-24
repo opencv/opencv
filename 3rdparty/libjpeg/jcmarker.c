@@ -2,7 +2,7 @@
  * jcmarker.c
  *
  * Copyright (C) 1991-1998, Thomas G. Lane.
- * Modified 2003-2013 by Guido Vollbeding.
+ * Modified 2003-2019 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -471,7 +471,6 @@ emit_adobe_app14 (j_compress_ptr cinfo)
     break;
   default:
     emit_byte(cinfo, 0);	/* Color transform = 0 */
-    break;
   }
 }
 
@@ -702,9 +701,8 @@ jinit_marker_writer (j_compress_ptr cinfo)
   my_marker_ptr marker;
 
   /* Create the subobject */
-  marker = (my_marker_ptr)
-    (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
-				SIZEOF(my_marker_writer));
+  marker = (my_marker_ptr) (*cinfo->mem->alloc_small)
+    ((j_common_ptr) cinfo, JPOOL_IMAGE, SIZEOF(my_marker_writer));
   cinfo->marker = &marker->pub;
   /* Initialize method pointers */
   marker->pub.write_file_header = write_file_header;

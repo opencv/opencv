@@ -2,7 +2,7 @@
  * jpegint.h
  *
  * Copyright (C) 1991-1997, Thomas G. Lane.
- * Modified 1997-2017 by Guido Vollbeding.
+ * Modified 1997-2019 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -301,6 +301,13 @@ struct jpeg_color_quantizer {
 #define SHIFT_TEMPS
 #define RIGHT_SHIFT(x,shft)	((x) >> (shft))
 #endif
+
+/* Descale and correctly round an INT32 value that's scaled by N bits.
+ * We assume RIGHT_SHIFT rounds towards minus infinity, so adding
+ * the fudge factor is correct for either sign of X.
+ */
+
+#define DESCALE(x,n)	RIGHT_SHIFT((x) + ((INT32) 1 << ((n)-1)), n)
 
 
 /* Short forms of external names for systems with brain-damaged linkers. */

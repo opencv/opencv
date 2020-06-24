@@ -2,7 +2,7 @@
  * jidctint.c
  *
  * Copyright (C) 1991-1998, Thomas G. Lane.
- * Modification developed 2002-2016 by Guido Vollbeding.
+ * Modification developed 2002-2018 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -1474,7 +1474,7 @@ jpeg_idct_10x10 (j_decompress_ptr cinfo, jpeg_component_info * compptr,
 
 /*
  * Perform dequantization and inverse DCT on one block of coefficients,
- * producing a 11x11 output block.
+ * producing an 11x11 output block.
  *
  * Optimized algorithm with 24 multiplications in the 1-D kernel.
  * cK represents sqrt(2) * cos(K*pi/22).
@@ -3675,7 +3675,7 @@ jpeg_idct_10x5 (j_decompress_ptr cinfo, jpeg_component_info * compptr,
 
 /*
  * Perform dequantization and inverse DCT on one block of coefficients,
- * producing a 8x4 output block.
+ * producing an 8x4 output block.
  *
  * 4-point IDCT in pass 1 (columns), 8-point in pass 2 (rows).
  */
@@ -3835,7 +3835,7 @@ jpeg_idct_8x4 (j_decompress_ptr cinfo, jpeg_component_info * compptr,
 
 /*
  * Perform dequantization and inverse DCT on one block of coefficients,
- * producing a reduced-size 6x3 output block.
+ * producing a 6x3 output block.
  *
  * 3-point IDCT in pass 1 (columns), 6-point in pass 2 (rows).
  */
@@ -4082,7 +4082,7 @@ jpeg_idct_2x1 (j_decompress_ptr cinfo, jpeg_component_info * compptr,
 
 /*
  * Perform dequantization and inverse DCT on one block of coefficients,
- * producing a 8x16 output block.
+ * producing an 8x16 output block.
  *
  * 16-point IDCT in pass 1 (columns), 8-point in pass 2 (rows).
  */
@@ -5004,7 +5004,7 @@ jpeg_idct_4x8 (j_decompress_ptr cinfo, jpeg_component_info * compptr,
 
 /*
  * Perform dequantization and inverse DCT on one block of coefficients,
- * producing a reduced-size 3x6 output block.
+ * producing a 3x6 output block.
  *
  * 6-point IDCT in pass 1 (columns), 3-point in pass 2 (rows).
  */
