@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2019 Intel Corporation
+// Copyright (C) 2019-2020 Intel Corporation
 
 #ifndef OPENCV_GAPI_GSTREAMING_EXECUTOR_HPP
 #define OPENCV_GAPI_GSTREAMING_EXECUTOR_HPP
@@ -126,7 +126,8 @@ protected:
     void wait_shutdown();
 
 public:
-    explicit GStreamingExecutor(std::unique_ptr<ade::Graph> &&g_model);
+    explicit GStreamingExecutor(std::unique_ptr<ade::Graph> &&g_model,
+                                const cv::GCompileArgs &comp_args);
     ~GStreamingExecutor();
     void setSource(GRunArgs &&args);
     void start();

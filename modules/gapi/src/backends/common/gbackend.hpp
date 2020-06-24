@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2020 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_GBACKEND_HPP
@@ -87,14 +87,7 @@ struct GRuntimeArgs
 template<typename T>
 inline cv::util::optional<T> getCompileArg(const cv::GCompileArgs &args)
 {
-    for (auto &compile_arg : args)
-    {
-        if (compile_arg.tag == cv::detail::CompileArgTag<T>::tag())
-        {
-            return cv::util::optional<T>(compile_arg.get<T>());
-        }
-    }
-    return cv::util::optional<T>();
+    return cv::gapi::getCompileArg<T>(args);
 }
 
 void createMat(const cv::GMatDesc& desc, cv::Mat& mat);

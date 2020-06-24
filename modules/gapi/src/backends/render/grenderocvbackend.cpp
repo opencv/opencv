@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2020 Intel Corporation
 
 #include "precomp.hpp"
 
@@ -136,7 +136,7 @@ namespace {
                              const std::vector<ade::NodeHandle> &nodes) const override {
 
             using namespace cv::gapi::wip::draw;
-            auto has_freetype_font = cv::gimpl::getCompileArg<freetype_font>(args);
+            auto has_freetype_font = cv::gapi::getCompileArg<freetype_font>(args);
             std::unique_ptr<FTTextRender> ftpr;
             if (has_freetype_font)
             {
