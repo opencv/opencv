@@ -53,26 +53,28 @@ class PyTorchModelPreparer(AbstractModel):
 
 
 class PyTorchModelProcessor(Framework):
-    def __init__(self, prepared_model):
+    def __init__(self, prepared_model, model_name):
         self._prepared_model = prepared_model
+        self._name = model_name
 
     def get_output(self, input_blob):
-        # TBD: in progress, modifications
-        pass
+        tensor = torch.FloatTensor(input_blob)
+        out = self._prepared_model.forward(tensor).detach().numpy()
+        return out
 
     def get_name(self):
-        return CURRENT_LIB
+        return self._name
 
 
 class PyTorchDnnModelProcessor(Framework):
-    def __init__(self, prepared_dnn_model, in_blob_name="data", out_blob_name="prob"):
+    def __init__(self, prepared_dnn_model, model_name):
         self._prepared_dnn_model = prepared_dnn_model
-        self.in_blob_name = in_blob_name
-        self.out_blob_name = out_blob_name
+        self._name = model_name
 
     def get_output(self, input_blob):
-        self._prepared_dnn_model.setInput(input_blob, self.in_blob_name)
-        return self._prepared_dnn_model.forward(self.out_blob_name)
+        layer_names = self._prepared_dnn_model.getLayerNames()
+        self._prepared_dnn_model.setInput(input_blob, '')
+        return self._prepared_dnn_model.forward(layer_names[-1])
 
     def get_name(self):
-        return DNN_LIB
+        return self._name

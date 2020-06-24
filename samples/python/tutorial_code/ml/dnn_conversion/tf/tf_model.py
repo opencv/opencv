@@ -53,26 +53,29 @@ class TFModelPreparer(AbstractModel):
 
 
 class TFModelProcessor(Framework):
-    def __init__(self, prepared_model):
+    def __init__(self, prepared_model, model_name):
         self._prepared_model = prepared_model
+        self._name = model_name
 
     def get_output(self, input_blob):
-        # TBD: in progress, modifications
-        pass
+        assert len(input_blob.shape) == 4
+        batch_tf = input_blob.transpose(0, 2, 3, 1)
+        out = self._prepared_model(batch_tf)[..., 1:1001]
+        return out
 
     def get_name(self):
         return CURRENT_LIB
 
 
 class TFDnnModelProcessor(Framework):
-    def __init__(self, prepared_dnn_model, in_blob_name="data", out_blob_name="prob"):
+    def __init__(self, prepared_dnn_model, model_name):
         self._prepared_dnn_model = prepared_dnn_model
-        self.in_blob_name = in_blob_name
-        self.out_blob_name = out_blob_name
+        self._name = model_name
 
     def get_output(self, input_blob):
-        self._prepared_dnn_model.setInput(input_blob, self.in_blob_name)
-        return self._prepared_dnn_model.forward(self.out_blob_name)[..., 1:1001]
+        layer_names = self._prepared_dnn_model.getLayerNames()
+        self._prepared_dnn_model.setInput(input_blob, '')
+        return self._prepared_dnn_model.forward(layer_names[-1])[..., 1:1001]
 
     def get_name(self):
         return DNN_LIB
