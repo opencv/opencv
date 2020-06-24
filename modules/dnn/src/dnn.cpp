@@ -3263,6 +3263,9 @@ Net Net::Impl::createNetworkFromModelOptimizer(InferenceEngine::CNNNetwork& ieNe
                 }
                 else
                 {
+#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2020_4)
+                    CV_Error(Error::StsNotImplemented, "This OpenCV version is built with Inference Engine which has dropped IR v7 support");
+#else
                     CV_TRACE_REGION("legacy_cnn_layer");
                     try
                     {
@@ -3278,6 +3281,8 @@ Net Net::Impl::createNetworkFromModelOptimizer(InferenceEngine::CNNNetwork& ieNe
                         CV_LOG_DEBUG(NULL, "IE layer extraction failure: '" << name << "' - " << e.what());
                         return false;
                     }
+#endif
+
                 }
             };
 
