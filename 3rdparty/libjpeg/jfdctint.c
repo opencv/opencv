@@ -2,7 +2,7 @@
  * jfdctint.c
  *
  * Copyright (C) 1991-1996, Thomas G. Lane.
- * Modification developed 2003-2015 by Guido Vollbeding.
+ * Modification developed 2003-2018 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -3261,78 +3261,84 @@ jpeg_fdct_6x3 (DCTELEM * data, JSAMPARRAY sample_data, JDIMENSION start_col)
 GLOBAL(void)
 jpeg_fdct_4x2 (DCTELEM * data, JSAMPARRAY sample_data, JDIMENSION start_col)
 {
-  INT32 tmp0, tmp1;
-  INT32 tmp10, tmp11;
-  DCTELEM *dataptr;
+  DCTELEM tmp0, tmp2, tmp10, tmp12, tmp4, tmp5;
+  INT32 tmp1, tmp3, tmp11, tmp13;
+  INT32 z1, z2, z3;
   JSAMPROW elemptr;
-  int ctr;
   SHIFT_TEMPS
 
   /* Pre-zero output coefficient block. */
   MEMZERO(data, SIZEOF(DCTELEM) * DCTSIZE2);
 
   /* Pass 1: process rows.
-   * Note results are scaled up by sqrt(8) compared to a true DCT;
-   * furthermore, we scale the results by 2**PASS1_BITS.
-   * We must also scale the output by (8/4)*(8/2) = 2**3, which we add here.
+   * Note results are scaled up by sqrt(8) compared to a true DCT.
    * 4-point FDCT kernel,
    * cK represents sqrt(2) * cos(K*pi/16) [refers to 8-point FDCT].
    */
 
-  dataptr = data;
-  for (ctr = 0; ctr < 2; ctr++) {
-    elemptr = sample_data[ctr] + start_col;
+  /* Row 0 */
+  elemptr = sample_data[0] + start_col;
 
-    /* Even part */
+  /* Even part */
 
-    tmp0 = GETJSAMPLE(elemptr[0]) + GETJSAMPLE(elemptr[3]);
-    tmp1 = GETJSAMPLE(elemptr[1]) + GETJSAMPLE(elemptr[2]);
+  tmp4 = GETJSAMPLE(elemptr[0]) + GETJSAMPLE(elemptr[3]);
+  tmp5 = GETJSAMPLE(elemptr[1]) + GETJSAMPLE(elemptr[2]);
 
-    tmp10 = GETJSAMPLE(elemptr[0]) - GETJSAMPLE(elemptr[3]);
-    tmp11 = GETJSAMPLE(elemptr[1]) - GETJSAMPLE(elemptr[2]);
+  tmp0 = tmp4 + tmp5;
+  tmp2 = tmp4 - tmp5;
 
-    /* Apply unsigned->signed conversion. */
-    dataptr[0] = (DCTELEM)
-      ((tmp0 + tmp1 - 4 * CENTERJSAMPLE) << (PASS1_BITS+3));
-    dataptr[2] = (DCTELEM) ((tmp0 - tmp1) << (PASS1_BITS+3));
+  /* Odd part */
 
-    /* Odd part */
+  z2 = GETJSAMPLE(elemptr[0]) - GETJSAMPLE(elemptr[3]);
+  z3 = GETJSAMPLE(elemptr[1]) - GETJSAMPLE(elemptr[2]);
 
-    tmp0 = MULTIPLY(tmp10 + tmp11, FIX_0_541196100);       /* c6 */
-    /* Add fudge factor here for final descale. */
-    tmp0 += ONE << (CONST_BITS-PASS1_BITS-4);
+  z1 = MULTIPLY(z2 + z3, FIX_0_541196100);    /* c6 */
+  /* Add fudge factor here for final descale. */
+  z1 += ONE << (CONST_BITS-3-1);
+  tmp1 = z1 + MULTIPLY(z2, FIX_0_765366865); /* c2-c6 */
+  tmp3 = z1 - MULTIPLY(z3, FIX_1_847759065); /* c2+c6 */
 
-    dataptr[1] = (DCTELEM)
-      RIGHT_SHIFT(tmp0 + MULTIPLY(tmp10, FIX_0_765366865), /* c2-c6 */
-		  CONST_BITS-PASS1_BITS-3);
-    dataptr[3] = (DCTELEM)
-      RIGHT_SHIFT(tmp0 - MULTIPLY(tmp11, FIX_1_847759065), /* c2+c6 */
-		  CONST_BITS-PASS1_BITS-3);
+  /* Row 1 */
+  elemptr = sample_data[1] + start_col;
 
-    dataptr += DCTSIZE;		/* advance pointer to next row */
-  }
+  /* Even part */
+
+  tmp4 = GETJSAMPLE(elemptr[0]) + GETJSAMPLE(elemptr[3]);
+  tmp5 = GETJSAMPLE(elemptr[1]) + GETJSAMPLE(elemptr[2]);
+
+  tmp10 = tmp4 + tmp5;
+  tmp12 = tmp4 - tmp5;
+
+  /* Odd part */
+
+  z2 = GETJSAMPLE(elemptr[0]) - GETJSAMPLE(elemptr[3]);
+  z3 = GETJSAMPLE(elemptr[1]) - GETJSAMPLE(elemptr[2]);
+
+  z1 = MULTIPLY(z2 + z3, FIX_0_541196100);    /* c6 */
+  tmp11 = z1 + MULTIPLY(z2, FIX_0_765366865); /* c2-c6 */
+  tmp13 = z1 - MULTIPLY(z3, FIX_1_847759065); /* c2+c6 */
 
   /* Pass 2: process columns.
-   * We remove the PASS1_BITS scaling, but leave the results scaled up
-   * by an overall factor of 8.
+   * We leave the results scaled up by an overall factor of 8.
+   * We must also scale the output by (8/4)*(8/2) = 2**3.
    */
 
-  dataptr = data;
-  for (ctr = 0; ctr < 4; ctr++) {
-    /* Even part */
+  /* Column 0 */
+  /* Apply unsigned->signed conversion. */
+  data[DCTSIZE*0] = (tmp0 + tmp10 - 8 * CENTERJSAMPLE) << 3;
+  data[DCTSIZE*1] = (tmp0 - tmp10) << 3;
 
-    /* Add fudge factor here for final descale. */
-    tmp0 = dataptr[DCTSIZE*0] + (ONE << (PASS1_BITS-1));
-    tmp1 = dataptr[DCTSIZE*1];
+  /* Column 1 */
+  data[DCTSIZE*0+1] = (DCTELEM) RIGHT_SHIFT(tmp1 + tmp11, CONST_BITS-3);
+  data[DCTSIZE*1+1] = (DCTELEM) RIGHT_SHIFT(tmp1 - tmp11, CONST_BITS-3);
 
-    dataptr[DCTSIZE*0] = (DCTELEM) RIGHT_SHIFT(tmp0 + tmp1, PASS1_BITS);
+  /* Column 2 */
+  data[DCTSIZE*0+2] = (tmp2 + tmp12) << 3;
+  data[DCTSIZE*1+2] = (tmp2 - tmp12) << 3;
 
-    /* Odd part */
-
-    dataptr[DCTSIZE*1] = (DCTELEM) RIGHT_SHIFT(tmp0 - tmp1, PASS1_BITS);
-
-    dataptr++;			/* advance pointer to next column */
-  }
+  /* Column 3 */
+  data[DCTSIZE*0+3] = (DCTELEM) RIGHT_SHIFT(tmp3 + tmp13, CONST_BITS-3);
+  data[DCTSIZE*1+3] = (DCTELEM) RIGHT_SHIFT(tmp3 - tmp13, CONST_BITS-3);
 }
 
 
@@ -4312,7 +4318,6 @@ jpeg_fdct_2x4 (DCTELEM * data, JSAMPARRAY sample_data, JDIMENSION start_col)
 
   /* Pass 1: process rows.
    * Note results are scaled up by sqrt(8) compared to a true DCT.
-   * We must also scale the output by (8/2)*(8/4) = 2**3, which we add here.
    */
 
   dataptr = data;
@@ -4325,17 +4330,18 @@ jpeg_fdct_2x4 (DCTELEM * data, JSAMPARRAY sample_data, JDIMENSION start_col)
     tmp1 = GETJSAMPLE(elemptr[1]);
 
     /* Apply unsigned->signed conversion. */
-    dataptr[0] = (DCTELEM) ((tmp0 + tmp1 - 2 * CENTERJSAMPLE) << 3);
+    dataptr[0] = (DCTELEM) (tmp0 + tmp1 - 2 * CENTERJSAMPLE);
 
     /* Odd part */
 
-    dataptr[1] = (DCTELEM) ((tmp0 - tmp1) << 3);
+    dataptr[1] = (DCTELEM) (tmp0 - tmp1);
 
     dataptr += DCTSIZE;		/* advance pointer to next row */
   }
 
   /* Pass 2: process columns.
    * We leave the results scaled up by an overall factor of 8.
+   * We must also scale the output by (8/2)*(8/4) = 2**3.
    * 4-point FDCT kernel,
    * cK represents sqrt(2) * cos(K*pi/16) [refers to 8-point FDCT].
    */
@@ -4350,21 +4356,21 @@ jpeg_fdct_2x4 (DCTELEM * data, JSAMPARRAY sample_data, JDIMENSION start_col)
     tmp10 = dataptr[DCTSIZE*0] - dataptr[DCTSIZE*3];
     tmp11 = dataptr[DCTSIZE*1] - dataptr[DCTSIZE*2];
 
-    dataptr[DCTSIZE*0] = (DCTELEM) (tmp0 + tmp1);
-    dataptr[DCTSIZE*2] = (DCTELEM) (tmp0 - tmp1);
+    dataptr[DCTSIZE*0] = (DCTELEM) ((tmp0 + tmp1) << 3);
+    dataptr[DCTSIZE*2] = (DCTELEM) ((tmp0 - tmp1) << 3);
 
     /* Odd part */
 
     tmp0 = MULTIPLY(tmp10 + tmp11, FIX_0_541196100);       /* c6 */
     /* Add fudge factor here for final descale. */
-    tmp0 += ONE << (CONST_BITS-1);
+    tmp0 += ONE << (CONST_BITS-3-1);
 
     dataptr[DCTSIZE*1] = (DCTELEM)
       RIGHT_SHIFT(tmp0 + MULTIPLY(tmp10, FIX_0_765366865), /* c2-c6 */
-		  CONST_BITS);
+		  CONST_BITS-3);
     dataptr[DCTSIZE*3] = (DCTELEM)
       RIGHT_SHIFT(tmp0 - MULTIPLY(tmp11, FIX_1_847759065), /* c2+c6 */
-		  CONST_BITS);
+		  CONST_BITS-3);
 
     dataptr++;			/* advance pointer to next column */
   }
