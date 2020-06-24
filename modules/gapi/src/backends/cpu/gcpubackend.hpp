@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2020 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_GCPUBACKEND_HPP
@@ -33,6 +33,7 @@ class GCPUExecutable final: public GIslandExecutable
 {
     const ade::Graph &m_g;
     GModel::ConstGraph m_gm;
+    const cv::GCompileArgs m_compileArgs;
 
     struct OperationInfo
     {
@@ -42,22 +43,27 @@ class GCPUExecutable final: public GIslandExecutable
 
     // Execution script, currently absolutely naive
     std::vector<OperationInfo> m_script;
+
+    // TODO: Check that it is thread-safe
+    // Map of stateful kernel nodes to their kernels' states
+    std::unordered_map<ade::NodeHandle, GArg,
+                       ade::HandleHasher<ade::Node>> m_nodesToStates;
+
     // List of all resources in graph (both internal and external)
     std::vector<ade::NodeHandle> m_dataNodes;
 
     // Actual data of all resources in graph (both internal and external)
     Mag m_res;
+
+    // Flag which identifies if new stream was started
+    bool m_newStreamStarted = false;
+
     GArg packArg(const GArg &arg);
     void setupKernelStates();
 
-    // TODO: Check that it is thread-safe
-    std::unordered_map<ade::NodeHandle, GArg,
-                       ade::HandleHasher<ade::Node>> m_nodesToStates;
-
-    bool m_newStreamStarted = false;
-
 public:
     GCPUExecutable(const ade::Graph                   &graph,
+                   const cv::GCompileArgs             &compileArgs,
                    const std::vector<ade::NodeHandle> &nodes);
 
     virtual inline bool canReshape() const override { return false; }
