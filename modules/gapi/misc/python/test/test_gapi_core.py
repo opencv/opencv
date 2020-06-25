@@ -35,7 +35,7 @@ class gapi_core_test(NewOpenCVTests):
         for pkg in pkgs:
             actual = comp.apply(in1, in2, args=cv.compile_args(pkg))
             # Comparison
-            np.testing.assert_array_equal(expected, actual)
+            self.assertEqual(0.0, cv.norm(expected, actual, cv.NORM_INF))
 
 
 if __name__ == '__main__':
