@@ -176,11 +176,15 @@ struct IEUnit {
 
     explicit IEUnit(const cv::gapi::ie::detail::ParamDesc &pp)
         : params(pp) {
-
+#if INF_ENGINE_RELEASE < 2020000000  // < 2020.1
         IE::CNNNetReader reader;
         reader.ReadNetwork(params.model_path);
         reader.ReadWeights(params.weights_path);
         net = reader.getNetwork();
+#else // >= 2020.1
+        IE::Core core;
+        net = core.ReadNetwork(params.model_path, params.weights_path);
+#endif
         inputs = net.getInputsInfo();
         outputs = net.getOutputsInfo();
 
@@ -208,9 +212,12 @@ struct IEUnit {
     }
 
     // This method is [supposed to be] called at Island compilation stage
-    // TODO: Move to a new OpenVINO Core API!
     cv::gimpl::ie::IECompiled compile() const {
+#if INF_ENGINE_RELEASE < 2019020000  // < 2019.R2
         auto this_plugin = IE::PluginDispatcher().getPluginByDevice(params.device_id);
+#else
+        IE::Core core;
+#endif
 
 #if INF_ENGINE_RELEASE < 2020000000  // <= 2019.R3
         // Load extensions (taken from DNN module)
@@ -243,7 +250,12 @@ struct IEUnit {
             {
                 try
                 {
-                    this_plugin.AddExtension(IE::make_so_pointer<IE::IExtension>(extlib));
+                    auto extension = IE::make_so_pointer<IE::IExtension>(extlib);
+#if INF_ENGINE_RELEASE < 2019020000  // < 2019.R2
+                    this_plugin.AddExtension(extension);
+#else
+                    core.AddExtension(extension, "CPU"); //CPU only??
+#endif
                     CV_LOG_INFO(NULL, "DNN-IE: Loaded extension plugin: " << extlib);
                     break;
                 }
@@ -253,10 +265,40 @@ struct IEUnit {
                 }
             }
         }
-#endif
-
+#endif // INF_ENGINE_RELEASE < 2020000000
+        // In dnn, after ordinary extensions they try to add custom <InfEngineExtension> as
+        // "some of networks can work without a library of extra layers.
+        //  OpenCV fallbacks as extensions"
+        // Do WE need this? (dnn/src/op_inf_engine.cpp:824)
+#if INF_ENGINE_RELEASE < 2019020000  // < 2019.R2
         auto this_network = this_plugin.LoadNetwork(net, {}); // FIXME: 2nd parameter to be
                                                               // configurable via the API
+#else
+        bool isHetero = false;
+        if (params.device_id != "CPU")
+        {
+            isHetero = params.device_id == "FPGA";
+            for (auto& layer : net)
+            {
+                if (layer->type == "OpenCVLayer")
+                {
+                    isHetero = true;
+#if INF_ENGINE_RELEASE < 2019030000  // < 2019.R3
+                    // Not sure about lower versions but in 2019R3 we do not need this
+                    layer->affinity = "CPU";
+                }
+                else
+                {
+                    layer->affinity = params.device_id;
+#endif
+                }
+            }
+        }
+        IE::ExecutableNetwork this_network = isHetero ?
+            core.LoadNetwork(net, "HETERO:" + params.device_id + ",CPU", {}) :
+            core.LoadNetwork(net, params.device_id, {});
+#endif // INF_ENGINE_RELEASE < 2019020000
+
         auto this_request = this_network.CreateInferRequest();
 
         // Bind const data to infer request
@@ -267,8 +309,11 @@ struct IEUnit {
             // Still, constant data is to set only once.
             this_request.SetBlob(p.first, wrapIE(p.second.first, p.second.second));
         }
-
+#if INF_ENGINE_RELEASE < 2019020000  // < 2019.R2
         return {this_plugin, this_network, this_request};
+#else
+        return {core, this_network, this_request};
+#endif
     }
 };
 

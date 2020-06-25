@@ -48,7 +48,11 @@ namespace gimpl {
 namespace ie {
 
 struct IECompiled {
+#if INF_ENGINE_RELEASE < 2019020000  // < 2019.R2
     InferenceEngine::InferencePlugin   this_plugin;
+#else
+    InferenceEngine::Core              this_core;
+#endif
     InferenceEngine::ExecutableNetwork this_network;
     InferenceEngine::InferRequest      this_request;
 };
