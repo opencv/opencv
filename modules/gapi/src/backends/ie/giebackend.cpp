@@ -254,7 +254,7 @@ struct IEUnit {
 #if INF_ENGINE_RELEASE < 2019020000  // < 2019.R2
                     this_plugin.AddExtension(extension);
 #else
-                    core.AddExtension(extension, "CPU"); //CPU only??
+                    core.AddExtension(extension, "CPU"); //CPU only?
 #endif
                     CV_LOG_INFO(NULL, "DNN-IE: Loaded extension plugin: " << extlib);
                     break;
