@@ -699,7 +699,9 @@ namespace detail
     };
 } // namespace detail
 
+#ifdef OPENCV_BINDINGS_PARSER
 GAPI_EXPORTS_W GCompileArgs compile_args(cv::gapi::GKernelPackage pkg);
+#endif // OPENCV_BINDINGS_PARSER
 
 } // namespace cv
 

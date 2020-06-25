@@ -707,7 +707,7 @@ class CppHeaderParser(object):
                     decl[1] = ": " + ", ".join([self.get_dotted_name(b).replace(".","::") for b in bases])
                 return stmt_type, classname, True, decl
 
-            if (stmt.startswith("class") or stmt.startswith("struct")) and not stmt.startswith('enum'):
+            if stmt.startswith("class") or stmt.startswith("struct"):
                 stmt_type = stmt.split()[0]
                 if stmt.strip() != stmt_type:
                     try:
