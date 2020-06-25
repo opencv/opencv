@@ -40,16 +40,51 @@ if((CV_CLANG AND NOT CMAKE_GENERATOR MATCHES "Xcode")  # PCH has no support for 
   set(ENABLE_PRECOMPILED_HEADERS OFF CACHE BOOL "" FORCE)
 endif()
 
+# add_extra_compiler_option(<option> [...]
+#                           [TURN_OFF_COMPILER_FLAG <flag> [<flag> ...]]
+#                           [TURN_OFF_LINKER_FLAG <flag> [<flag> ...]]
+#                           [LINKER_FLAG <flag> [<flag> ...]])
 macro(add_extra_compiler_option option)
-  ocv_check_flag_support(CXX "${option}" _varname "${OPENCV_EXTRA_CXX_FLAGS} ${ARGN}")
-  if(${_varname})
-    set(OPENCV_EXTRA_CXX_FLAGS "${OPENCV_EXTRA_CXX_FLAGS} ${option}")
-  endif()
+  set(options        "")
+  set(oneValueArgs   "")
+  set(multiValueArgs TURN_OFF_COMPILER_FLAG
+                     TURN_OFF_LINKER_FLAG
+                     LINKER_FLAG)
+  cmake_parse_arguments(EXTRA_OPT "${options}" "${oneValueArgs}"
+                        "${multiValueArgs}" ${ARGN} )
 
-  ocv_check_flag_support(C "${option}" _varname "${OPENCV_EXTRA_C_FLAGS} ${ARGN}")
-  if(${_varname})
-    set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} ${option}")
-  endif()
+  foreach(lang "CXX" "X")
+    # Compiler flags
+    set(_compiler_flags "${OPENCV_EXTRA_${lang}_FLAGS}")
+    if(EXTRA_OPT_TURN_OFF_COMPILER_FLAG)
+      foreach(_option ${EXTRA_OPT_TURN_OFF_COMPILER_FLAG})
+        string(REPLACE ${_option} "" _compiler_flags "${_compiler_flags}")
+      endforeach()
+    endif()
+    string(STRIP "${_compiler_flags}" _compiler_flags)  # Strip lead and trailing whitespaces
+
+    # Linker flags
+    set(_linker_flags "${OPENCV_EXTRA_EXE_LINKER_FLAGS}")
+    if(EXTRA_OPT_TURN_OFF_LINKER_FLAG)
+      foreach(_option ${EXTRA_OPT_TURN_OFF_LINKER_FLAG})
+        string(REPLACE ${_option} "" _linker_flags "${_linker_flags}")
+      endforeach()
+    endif()
+    foreach(_option ${EXTRA_OPT_LINKER_FLAG})
+      set(_linker_flags "${_linker_flags} ${_option}")
+    endforeach()
+    string(STRIP "${_linker_flags}" _linker_flags)  # Strip lead and trailing whitespaces
+
+    ocv_check_flag_support(${lang} "${option}" _varname
+                           COMPILER_FLAGS "${_compiler_flags}"
+                           LINKER_FLAGS   "${_linker_flags}"
+                           ${ARGN})
+
+    if(${_varname})
+      set(OPENCV_EXTRA_${lang}_FLAGS    "${option} ${_compiler_flags}")
+      set(OPENCV_EXTRA_EXE_LINKER_FLAGS "${_linker_flags}")
+    endif()
+  endforeach()
 endmacro()
 
 macro(add_extra_compiler_option_force option)
@@ -72,7 +107,7 @@ endmacro()
 
 if(NOT MSVC)
   # OpenCV fails some tests when 'char' is 'unsigned' by default
-  add_extra_compiler_option(-fsigned-char)
+  add_extra_compiler_option("-fsigned-char")
 endif()
 
 if(MSVC)
@@ -93,110 +128,107 @@ elseif(CV_ICC)
   endif()
 elseif(CV_GCC OR CV_CLANG)
   if(ENABLE_FAST_MATH)
-    add_extra_compiler_option(-ffast-math)
+    add_extra_compiler_option("-ffast-math")
   endif()
 endif()
 
 if(CV_GCC OR CV_CLANG)
   # High level of warnings.
-  add_extra_compiler_option(-W)
+  add_extra_compiler_option("-W")
   if (NOT MSVC)
     # clang-cl interprets -Wall as MSVC would: -Weverything, which is more than
     # we want.
-    add_extra_compiler_option(-Wall)
+    add_extra_compiler_option("-Wall")
   endif()
-  add_extra_compiler_option(-Werror=return-type)
-  add_extra_compiler_option(-Werror=non-virtual-dtor)
-  add_extra_compiler_option(-Werror=address)
-  add_extra_compiler_option(-Werror=sequence-point)
-  add_extra_compiler_option(-Wformat)
-  add_extra_compiler_option(-Werror=format-security -Wformat)
-  add_extra_compiler_option(-Wmissing-declarations)
-  add_extra_compiler_option(-Wmissing-prototypes)
-  add_extra_compiler_option(-Wstrict-prototypes)
-  add_extra_compiler_option(-Wundef)
-  add_extra_compiler_option(-Winit-self)
-  add_extra_compiler_option(-Wpointer-arith)
-  add_extra_compiler_option(-Wshadow)
-  add_extra_compiler_option(-Wsign-promo)
-  add_extra_compiler_option(-Wuninitialized)
-  add_extra_compiler_option(-Winit-self)
+  add_extra_compiler_option("-Werror=return-type")
+  add_extra_compiler_option("-Werror=non-virtual-dtor")
+  add_extra_compiler_option("-Werror=address")
+  add_extra_compiler_option("-Werror=sequence-point")
+  add_extra_compiler_option("-Wformat")
+  add_extra_compiler_option("-Werror=format-security -Wformat")
+  add_extra_compiler_option("-Wmissing-declarations")
+  add_extra_compiler_option("-Wmissing-prototypes")
+  add_extra_compiler_option("-Wstrict-prototypes")
+  add_extra_compiler_option("-Wundef")
+  add_extra_compiler_option("-Winit-self")
+  add_extra_compiler_option("-Wpointer-arith")
+  add_extra_compiler_option("-Wshadow")
+  add_extra_compiler_option("-Wsign-promo")
+  add_extra_compiler_option("-Wuninitialized")
+  add_extra_compiler_option("-Winit-self")
   if(CV_GCC AND (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 6.0) AND (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 7.0))
-    add_extra_compiler_option(-Wno-psabi)
+    add_extra_compiler_option("-Wno-psabi")
   endif()
   if(HAVE_CXX11)
     if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND NOT ENABLE_PRECOMPILED_HEADERS)
-      add_extra_compiler_option(-Wsuggest-override)
+      add_extra_compiler_option("-Wsuggest-override")
     elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-      add_extra_compiler_option(-Winconsistent-missing-override)
+      add_extra_compiler_option("-Winconsistent-missing-override")
     endif()
   endif()
 
   if(ENABLE_NOISY_WARNINGS)
-    add_extra_compiler_option(-Wcast-align)
-    add_extra_compiler_option(-Wstrict-aliasing=2)
+    add_extra_compiler_option("-Wcast-align")
+    add_extra_compiler_option("-Wstrict-aliasing=2")
   else()
-    add_extra_compiler_option(-Wno-delete-non-virtual-dtor)
-    add_extra_compiler_option(-Wno-unnamed-type-template-args)
-    add_extra_compiler_option(-Wno-comment)
+    add_extra_compiler_option("-Wno-delete-non-virtual-dtor")
+    add_extra_compiler_option("-Wno-unnamed-type-template-args")
+    add_extra_compiler_option("-Wno-comment")
     if(NOT OPENCV_SKIP_IMPLICIT_FALLTHROUGH
         AND NOT " ${CMAKE_CXX_FLAGS} ${OPENCV_EXTRA_FLAGS} ${OPENCV_EXTRA_CXX_FLAGS}" MATCHES "implicit-fallthrough"
         AND (CV_GCC AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS 7.0.0)
     )
-      add_extra_compiler_option(-Wimplicit-fallthrough=3)
+      add_extra_compiler_option("-Wimplicit-fallthrough=3")
     endif()
     if(CV_GCC AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 7.0)
-      add_extra_compiler_option(-Wno-strict-overflow) # Issue appears when compiling surf.cpp from opencv_contrib/modules/xfeatures2d
+      add_extra_compiler_option("-Wno-strict-overflow") # Issue appears when compiling surf.cpp from opencv_contrib/modules/xfeatures2d
     endif()
     if(CV_GCC AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 5.0)
-      add_extra_compiler_option(-Wno-missing-field-initializers)  # GCC 4.x emits warnings about {}, fixed in GCC 5+
+      add_extra_compiler_option("-Wno-missing-field-initializers")  # GCC 4.x emits warnings about {}, fixed in GCC 5+
     endif()
     if(CV_CLANG AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS 10.0)
-      add_extra_compiler_option(-Wno-deprecated-enum-enum-conversion)
-      add_extra_compiler_option(-Wno-deprecated-anon-enum-enum-conversion)
+      add_extra_compiler_option("-Wno-deprecated-enum-enum-conversion")
+      add_extra_compiler_option("-Wno-deprecated-anon-enum-enum-conversion")
     endif()
   endif()
-  add_extra_compiler_option(-fdiagnostics-show-option)
+  add_extra_compiler_option("-fdiagnostics-show-option")
 
   # The -Wno-long-long is required in 64bit systems when including system headers.
   if(X86_64)
-    add_extra_compiler_option(-Wno-long-long)
+    add_extra_compiler_option("-Wno-long-long")
   endif()
 
   # We need pthread's
   if(UNIX AND NOT ANDROID AND NOT (APPLE AND CV_CLANG)) # TODO
-    add_extra_compiler_option(-pthread)
+    add_extra_compiler_option("-pthread")
   endif()
 
   if(CV_CLANG)
-    add_extra_compiler_option(-Qunused-arguments)
+    add_extra_compiler_option("-Qunused-arguments")
   endif()
 
   if(OPENCV_WARNINGS_ARE_ERRORS)
-    add_extra_compiler_option(-Werror)
+    add_extra_compiler_option("-Werror")
   endif()
 
   if(APPLE)
-    add_extra_compiler_option(-Wno-semicolon-before-method-body)
+    add_extra_compiler_option("-Wno-semicolon-before-method-body")
   endif()
 
   # Other optimizations
   if(ENABLE_OMIT_FRAME_POINTER)
-    add_extra_compiler_option(-fomit-frame-pointer)
+    add_extra_compiler_option("-fomit-frame-pointer")
   elseif(DEFINED ENABLE_OMIT_FRAME_POINTER)
-    add_extra_compiler_option(-fno-omit-frame-pointer)
+    add_extra_compiler_option("-fno-omit-frame-pointer")
   endif()
 
   # Profiling?
   if(ENABLE_PROFILING)
-    add_extra_compiler_option("-pg -g")
-    # turn off incompatible options
-    foreach(flags CMAKE_CXX_FLAGS CMAKE_C_FLAGS CMAKE_CXX_FLAGS_RELEASE CMAKE_C_FLAGS_RELEASE CMAKE_CXX_FLAGS_DEBUG CMAKE_C_FLAGS_DEBUG
-                  OPENCV_EXTRA_FLAGS_RELEASE OPENCV_EXTRA_FLAGS_DEBUG OPENCV_EXTRA_C_FLAGS OPENCV_EXTRA_CXX_FLAGS)
-      string(REPLACE "-fomit-frame-pointer" "" ${flags} "${${flags}}")
-      string(REPLACE "-ffunction-sections" "" ${flags} "${${flags}}")
-      string(REPLACE "-fdata-sections" "" ${flags} "${${flags}}")
-    endforeach()
+    add_extra_compiler_option("-pg -g"
+      # turn off incompatible options
+      TURN_OFF_COMPILER_FLAG "-fomit-frame-pointer" "-ffunction-sections" "-fdata-sections"
+      # -pg should be placed both in the linker and in the compiler settings
+      LINKER_FLAG "-pg")
   else()
     if(MSVC)
       # TODO: Clang/C2 is not supported
@@ -204,8 +236,8 @@ if(CV_GCC OR CV_CLANG)
       # don't create separate sections for functions/data, reduce package size
     else()
       # Remove unreferenced functions: function level linking
-      add_extra_compiler_option(-ffunction-sections)
-      add_extra_compiler_option(-fdata-sections)
+      add_extra_compiler_option("-ffunction-sections")
+      add_extra_compiler_option("-fdata-sections")
       if(NOT OPENCV_SKIP_GC_SECTIONS)
         if(APPLE)
           set(OPENCV_EXTRA_EXE_LINKER_FLAGS "${OPENCV_EXTRA_EXE_LINKER_FLAGS} -Wl,-dead_strip")
@@ -232,10 +264,10 @@ if(CV_GCC OR CV_CLANG)
   endif()
 
   if(ENABLE_LTO)
-    add_extra_compiler_option(-flto)
+    add_extra_compiler_option("-flto")
   endif()
   if(ENABLE_THIN_LTO)
-    add_extra_compiler_option(-flto=thin)
+    add_extra_compiler_option("-flto=thin")
   endif()
 
   set(OPENCV_EXTRA_FLAGS_RELEASE "${OPENCV_EXTRA_FLAGS_RELEASE} -DNDEBUG")
@@ -300,8 +332,10 @@ if((CV_GCC OR CV_CLANG)
     AND NOT MSVC
     AND NOT OPENCV_SKIP_VISIBILITY_HIDDEN
     AND NOT " ${CMAKE_CXX_FLAGS} ${OPENCV_EXTRA_FLAGS} ${OPENCV_EXTRA_CXX_FLAGS}" MATCHES " -fvisibility")
-  add_extra_compiler_option(-fvisibility=hidden)
-  add_extra_compiler_option(-fvisibility-inlines-hidden)
+  add_extra_compiler_option("-fvisibility=hidden"
+                            # turn off incompatible options
+                            TURN_OFF_LINKER_FLAG "-Wl,--gc-sections")
+  add_extra_compiler_option("-fvisibility-inlines-hidden")
 endif()
 
 # workaround gcc bug for aligned ld/st
@@ -309,14 +343,14 @@ endif()
 if((PPC64LE AND NOT CMAKE_CROSSCOMPILING) OR OPENCV_FORCE_COMPILER_CHECK_VSX_ALIGNED)
   ocv_check_runtime_flag("${CPU_BASELINE_FLAGS}" OPENCV_CHECK_VSX_ALIGNED "${OpenCV_SOURCE_DIR}/cmake/checks/runtime/cpu_vsx_aligned.cpp")
   if(NOT OPENCV_CHECK_VSX_ALIGNED)
-    add_extra_compiler_option_force(-DCV_COMPILER_VSX_BROKEN_ALIGNED)
+    add_extra_compiler_option_force("-DCV_COMPILER_VSX_BROKEN_ALIGNED")
   endif()
 endif()
 # validate inline asm with fixes register number and constraints wa, wd, wf
 if(PPC64LE)
-  ocv_check_compiler_flag(CXX "${CPU_BASELINE_FLAGS}" OPENCV_CHECK_VSX_ASM "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_vsx_asm.cpp")
+  ocv_check_compiler_flag(CXX "${CPU_BASELINE_FLAGS}" OPENCV_CHECK_VSX_ASM TEST_FILE "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_vsx_asm.cpp")
   if(NOT OPENCV_CHECK_VSX_ASM)
-    add_extra_compiler_option_force(-DCV_COMPILER_VSX_BROKEN_ASM)
+    add_extra_compiler_option_force("-DCV_COMPILER_VSX_BROKEN_ASM")
   endif()
 endif()
 

@@ -417,38 +417,52 @@ set(OCV_COMPILER_FAIL_REGEX
     "WARNING: unknown flag:"                    # Open64
   )
 
-MACRO(ocv_check_compiler_flag LANG FLAG RESULT)
-  set(_fname "${ARGN}")
+# ocv_check_compiler_flag(<LANG> <FLAG> <RESULT>
+#                         [TEST_FILE <file> [<file> ...]]
+#                         [COMPILER_FLAGS <flags>]
+#                         [LINKER_FLAGS <flags>])
+macro(ocv_check_compiler_flag LANG FLAG RESULT)
   if(NOT DEFINED ${RESULT})
-    if(_fname)
-      # nothing
+    set(options        "")
+    set(oneValueArgs   COMPILER_FLAGS
+                       LINKER_FLAGS)
+    set(multiValueArgs TEST_FILE)
+    cmake_parse_arguments(OCV_CHECK_CF "${options}" "${oneValueArgs}"
+                          "${multiValueArgs}" ${ARGN})
+
+    # Strip lead and trailing whitespaces
+    string(STRIP "${OCV_CHECK_CF_COMPILER_FLAGS}" OCV_CHECK_CF_COMPILER_FLAGS)
+    string(STRIP "${OCV_CHECK_CF_LINKER_FLAGS}"   OCV_CHECK_CF_LINKER_FLAGS)
+
+    if(OCV_CHECK_CF_TEST_FILE)
+      set(_fname "${OCV_CHECK_CF_TEST_FILE}")
     elseif("_${LANG}_" MATCHES "_CXX_")
       set(_fname "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/src.cxx")
       if("${CMAKE_CXX_FLAGS} ${FLAG} " MATCHES "-Werror " OR "${CMAKE_CXX_FLAGS} ${FLAG} " MATCHES "-Werror=unknown-pragmas ")
-        FILE(WRITE "${_fname}" "int main() { return 0; }\n")
+        file(WRITE "${_fname}" "int main() { return 0; }\n")
       else()
-        FILE(WRITE "${_fname}" "#pragma\nint main() { return 0; }\n")
+        file(WRITE "${_fname}" "#pragma\nint main() { return 0; }\n")
       endif()
     elseif("_${LANG}_" MATCHES "_C_")
       set(_fname "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/src.c")
       if("${CMAKE_C_FLAGS} ${FLAG} " MATCHES "-Werror " OR "${CMAKE_C_FLAGS} ${FLAG} " MATCHES "-Werror=unknown-pragmas ")
-        FILE(WRITE "${_fname}" "int main(void) { return 0; }\n")
+        file(WRITE "${_fname}" "int main(void) { return 0; }\n")
       else()
-        FILE(WRITE "${_fname}" "#pragma\nint main(void) { return 0; }\n")
+        file(WRITE "${_fname}" "#pragma\nint main(void) { return 0; }\n")
       endif()
     elseif("_${LANG}_" MATCHES "_OBJCXX_")
       set(_fname "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/src.mm")
       if("${CMAKE_CXX_FLAGS} ${FLAG} " MATCHES "-Werror " OR "${CMAKE_CXX_FLAGS} ${FLAG} " MATCHES "-Werror=unknown-pragmas ")
-        FILE(WRITE "${_fname}" "int main() { return 0; }\n")
+        file(WRITE "${_fname}" "int main() { return 0; }\n")
       else()
-        FILE(WRITE "${_fname}" "#pragma\nint main() { return 0; }\n")
+        file(WRITE "${_fname}" "#pragma\nint main() { return 0; }\n")
       endif()
     else()
       unset(_fname)
     endif()
     if(_fname)
-      if(NOT "x${ARGN}" STREQUAL "x")
-        file(RELATIVE_PATH __msg "${CMAKE_SOURCE_DIR}" "${ARGN}")
+      if(NOT "x${OCV_CHECK_CF_TEST_FILE}" STREQUAL "x")
+        file(RELATIVE_PATH __msg "${CMAKE_SOURCE_DIR}" "${OCV_CHECK_CF_TEST_FILE}")
         set(__msg " (check file: ${__msg})")
       else()
         set(__msg "")
@@ -474,12 +488,13 @@ MACRO(ocv_check_compiler_flag LANG FLAG RESULT)
         list(APPEND __cmake_flags "-DCMAKE_CXX_EXTENSIONS=${CMAKE_CXX_EXTENSIONS}")
       endif()
 
-      MESSAGE(STATUS "Performing Test ${RESULT}${__msg}")
-      TRY_COMPILE(${RESULT}
+      message(STATUS "Performing Test ${RESULT}${__msg}")
+      try_compile(${RESULT}
         "${CMAKE_BINARY_DIR}"
         "${_fname}"
         CMAKE_FLAGS ${__cmake_flags}
-        COMPILE_DEFINITIONS "${FLAG}"
+        COMPILE_DEFINITIONS ${FLAG} ${OCV_CHECK_CF_COMPILER_FLAGS}
+        LINK_OPTIONS "${OCV_CHECK_CF_LINKER_FLAGS}"
         ${__link_libs}
         OUTPUT_VARIABLE OUTPUT)
 
@@ -503,12 +518,13 @@ MACRO(ocv_check_compiler_flag LANG FLAG RESULT)
         endforeach()
       endif()
 
-      IF(${RESULT})
-        SET(${RESULT} 1 CACHE INTERNAL "Test ${RESULT}")
-        MESSAGE(STATUS "Performing Test ${RESULT} - Success")
-      ELSE(${RESULT})
-        MESSAGE(STATUS "Performing Test ${RESULT} - Failed")
-        SET(${RESULT} "" CACHE INTERNAL "Test ${RESULT}")
+      if(${RESULT})
+        set(${RESULT} 1 CACHE INTERNAL "Test ${RESULT}")
+        message(STATUS "Performing Test ${RESULT} - Success")
+      else(${RESULT})
+        message(STATUS "Performing Test ${RESULT} - Failed")
+        # message("${OUTPUT}")
+        set(${RESULT} "" CACHE INTERNAL "Test ${RESULT}")
         file(APPEND ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeError.log
             "Compilation failed:\n"
             "    source file: '${_fname}'\n"
@@ -516,14 +532,14 @@ MACRO(ocv_check_compiler_flag LANG FLAG RESULT)
             "===== BUILD LOG =====\n"
             "${OUTPUT}\n"
             "===== END =====\n\n")
-      ENDIF(${RESULT})
+      endif(${RESULT})
     else()
-      SET(${RESULT} 0)
+      set(${RESULT} 0)
     endif()
   endif()
-ENDMACRO()
+endmacro()
 
-macro(ocv_check_flag_support lang flag varname base_options)
+macro(ocv_check_flag_support lang flag varname)
   if(CMAKE_BUILD_TYPE)
     set(CMAKE_TRY_COMPILE_CONFIGURATION ${CMAKE_BUILD_TYPE})
   endif()
@@ -542,7 +558,7 @@ macro(ocv_check_flag_support lang flag varname base_options)
   string(REGEX REPLACE "^(/|-)" "HAVE_${_lang}_" ${varname} "${${varname}}")
   string(REGEX REPLACE " -|-|=| |\\.|," "_" ${varname} "${${varname}}")
 
-  ocv_check_compiler_flag("${_lang}" "${base_options} ${flag}" ${${varname}} ${ARGN})
+  ocv_check_compiler_flag("${_lang}" "${flag}" ${${varname}} ${ARGN})
 endmacro()
 
 macro(ocv_check_runtime_flag flag result)
@@ -614,7 +630,7 @@ macro(ocv_warnings_disable)
             string(REGEX REPLACE "(^|[ ]+)${warning}(=[^ ]*)?([ ]+|$)" " " ${var} "${${var}}")
             string(REPLACE "-W" "-Wno-" warning "${warning}")
           endif()
-          ocv_check_flag_support(${var} "${warning}" _varname "")
+          ocv_check_flag_support(${var} "${warning}" _varname)
           if(${_varname})
             set(${var} "${${var}} ${warning}")
           endif()
@@ -629,7 +645,7 @@ macro(ocv_warnings_disable)
           else()
             string(REPLACE "-wd" "-Qwd" warning "${warning}")
           endif()
-          ocv_check_flag_support(${var} "${warning}" _varname "")
+          ocv_check_flag_support(${var} "${warning}" _varname)
           if(${_varname})
             set(${var} "${${var}} ${warning}")
           endif()
@@ -654,7 +670,7 @@ macro(ocv_append_source_file_compile_definitions source)
 endmacro()
 
 macro(add_apple_compiler_options the_module)
-  ocv_check_flag_support(OBJCXX "-fobjc-exceptions" HAVE_OBJC_EXCEPTIONS "")
+  ocv_check_flag_support(OBJCXX "-fobjc-exceptions" HAVE_OBJC_EXCEPTIONS)
   if(HAVE_OBJC_EXCEPTIONS)
     foreach(source ${OPENCV_MODULE_${the_module}_SOURCES})
       if("${source}" MATCHES "\\.mm$")
@@ -776,7 +792,7 @@ endmacro()
 
 function(ocv_append_source_files_cxx_compiler_options files_var)
   set(__flags "${ARGN}")
-  ocv_check_flag_support(CXX "${__flags}" __HAVE_COMPILER_OPTIONS_VAR "")
+  ocv_check_flag_support(CXX "${__flags}" __HAVE_COMPILER_OPTIONS_VAR)
   if(${__HAVE_COMPILER_OPTIONS_VAR})
     foreach(source ${${files_var}})
       if("${source}" MATCHES "\\.(cpp|cc|cxx)$")
