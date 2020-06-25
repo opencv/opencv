@@ -211,7 +211,7 @@ I::OStream& operator<< (I::OStream& os, const cv::Mat &m) {
 #if !defined(GAPI_STANDALONE)
     GAPI_Assert(m.size.dims() == 2 && "Only 2D images are supported now");
 #else
-    GAPI_Assert(m.dims() == 2 && "Only 2D images are supported now");
+    GAPI_Assert(m.dims.size() == 2 && "Only 2D images are supported now");
 #endif
     os << m.rows << m.cols << m.type();
     switch (m.depth()) {
