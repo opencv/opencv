@@ -238,6 +238,11 @@ I::IStream& operator>> (I::IStream& is,       cv::GOpaqueDesc &) {return is;}
 I::OStream& operator<< (I::OStream& os, const cv::GArrayDesc &) {return os;}
 I::IStream& operator>> (I::IStream& is,       cv::GArrayDesc &) {return is;}
 
+#if !defined(GAPI_STANDALONE)
+I::OStream& operator<< (I::OStream& os, const cv::UMat &) { return os; }
+I::IStream& operator >> (I::IStream& is, cv::UMat &) { return is; }
+#endif // !defined(GAPI_STANDALONE)
+
 // Enums and structures
 
 namespace {
@@ -373,6 +378,44 @@ I::IStream& operator >> (I::IStream& is, cv::GMetaArg &arg) {
     }
     return is;
 }
+
+I::OStream& operator<< (I::OStream& os, const cv::GRunArg &arg) {
+    os << (uint32_t)arg.index();
+    switch (arg.index()) {
+#if !defined(GAPI_STANDALONE)
+    case cv::GRunArg::index_of<cv::UMat>() :
+        os << cv::util::get<cv::UMat>(arg);       break;
+#endif
+    case cv::GRunArg::index_of<cv::Mat>() :
+        os << cv::util::get<cv::Mat>(arg);        break;
+    case cv::GRunArg::index_of<cv::Scalar>() :
+        os << cv::util::get<cv::Scalar>(arg);     break;
+    default: GAPI_Assert(false && "GRunArg: Unsupported type for <<");
+    }
+    return os;
+}
+I::IStream& operator >> (I::IStream& is, cv::GRunArg &arg) {
+    uint32_t index;
+    is >> index;
+#if !defined(GAPI_STANDALONE)
+    cv::UMat  v0;
+#endif
+    cv::Mat v1;
+    cv::Scalar v2;
+    switch (index) {
+#if !defined(GAPI_STANDALONE)
+    case cv::GRunArg::index_of<cv::UMat>() :
+        is >> v0; arg = v0; break;
+#endif
+    case cv::GRunArg::index_of<cv::Mat>() :
+        is >> v1; arg = v1; break;
+    case cv::GRunArg::index_of<cv::Scalar>() :
+        is >> v2; arg = v2; break;
+    default: GAPI_Assert(false && "GRunArg: Unsupported type for >>");
+    }
+    return is;
+}
+
 
 I::OStream& operator<< (I::OStream& os, const cv::GKernel &k) {
     return os << k.name << k.tag << k.outShapes;

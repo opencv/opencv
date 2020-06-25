@@ -85,6 +85,8 @@ GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::Scalar &s);
 GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::Mat &m);
 GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::Mat &m);
 
+
+
 // G-API types /////////////////////////////////////////////////////////////////
 
 GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, cv::util::monostate  );
@@ -114,6 +116,9 @@ GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::GArg &arg);
 GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::GMetaArg &arg);
 GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::GMetaArg &arg);
 
+GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::GRunArg &arg);
+GAPI_EXPORTS I::IStream& operator>> (I::IStream& is, cv::GRunArg &arg);
+
 GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::GKernel &k);
 GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::GKernel &k);
 
@@ -128,6 +133,11 @@ GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::GOpaqueDesc &);
 
 GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::GArrayDesc &);
 GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::GArrayDesc &);
+
+#if !defined(GAPI_STANDALONE)
+GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::UMat &);
+GAPI_EXPORTS I::IStream& operator >> (I::IStream& is, cv::UMat &);
+#endif // !defined(GAPI_STANDALONE)
 
 GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::gimpl::RcDesc &rc);
 GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::gimpl::RcDesc &rc);

@@ -150,4 +150,22 @@ TEST_F(S11N_Basic, Test_MetaArg_Monostate) {
     }
 }
 
+TEST_F(S11N_Basic, Test_RunArg_Mat) {
+    cv::Mat mat = cv::Mat::eye(cv::Size(64, 64), CV_8UC3);
+    auto v = cv::GRunArg{ mat };
+    put(v);
+    cv::GRunArg out_v = get<cv::GRunArg>();
+    cv::Mat out_mat = cv::util::get<cv::Mat>(out_v);
+    EXPECT_EQ(0, cv::norm(mat, out_mat, cv::NORM_INF));
+}
+
+TEST_F(S11N_Basic, Test_RunArg_Scalar) {
+    cv::Scalar scalar = cv::Scalar(128, 33, 53);
+    auto v = cv::GRunArg{ scalar };
+    put(v);
+    cv::GRunArg out_v = get<cv::GRunArg>();
+    cv::Scalar out_scalar = cv::util::get<cv::Scalar>(out_v);
+    EXPECT_EQ(scalar, out_scalar);
+}
+
 } // namespace opencv_test
