@@ -8,6 +8,8 @@
 
 #ifdef __cplusplus
 #import <opencv2/opencv.hpp>
+#else
+#define CV_EXPORTS
 #endif
 
 #import <Foundation/Foundation.h>
@@ -27,7 +29,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface Converters : NSObject
+CV_EXPORTS @interface Converters : NSObject
 
 + (Mat*)vector_Point_to_Mat:(NSArray<Point2i*>*)pts NS_SWIFT_NAME(vector_Point_to_Mat(_:));
 

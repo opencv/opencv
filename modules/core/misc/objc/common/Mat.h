@@ -8,6 +8,8 @@
 
 #ifdef __cplusplus
 #import "opencv.hpp"
+#else
+#define CV_EXPORTS
 #endif
 
 #import <Foundation/Foundation.h>
@@ -23,7 +25,7 @@ NS_ASSUME_NONNULL_BEGIN
 /**
 * The class Mat represents an n-dimensional dense numerical single-channel or multi-channel array.
 */
-@interface Mat : NSObject
+CV_EXPORTS @interface Mat : NSObject
 
 #ifdef __cplusplus
 @property(readonly) cv::Ptr<cv::Mat> nativePtr;

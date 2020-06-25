@@ -15,7 +15,7 @@ NS_ASSUME_NONNULL_BEGIN
 /**
 * Mat representation of an array of RotatedRect objects
 */
-@interface MatOfRotatedRect : Mat
+CV_EXPORTS @interface MatOfRotatedRect : Mat
 
 #pragma mark - Constructors
 

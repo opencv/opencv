@@ -49,6 +49,14 @@ def getXCodeMajor():
     else:
         raise Exception("Failed to parse Xcode version")
 
+def getXCodeSetting(var, projectdir):
+    ret = check_output(["xcodebuild", "-showBuildSettings"], cwd = projectdir)
+    m = re.search("\s" + var + " = (.*)", ret)
+    if m:
+        return m.group(1)
+    else:
+        raise Exception("Failed to parse Xcode settings")
+
 class Builder:
     def __init__(self, opencv, contrib, dynamic, bitcodedisabled, exclude, disable, enablenonfree, targets, debug, debug_info, framework_name):
         self.opencv = os.path.abspath(opencv)
@@ -90,7 +98,7 @@ class Builder:
 
         xcode_ver = getXCodeMajor()
 
-        if self.dynamic:
+        if self.dynamic and not self.build_objc_wrapper:
             alltargets = self.targets
         else:
             # if we are building a static library, we must build each architecture separately
@@ -114,8 +122,10 @@ class Builder:
                 cmake_flags.append("-DCMAKE_CXX_FLAGS=-fembed-bitcode")
             self.buildOne(t[0], t[1], mainBD, cmake_flags)
 
-            if self.dynamic == False:
+            if not self.dynamic:
                 self.mergeLibs(mainBD)
+            elif self.dynamic and self.build_objc_wrapper:
+                self.makeDynamicLib(mainBD)
         self.makeFramework(outdir, dirs)
         if self.build_objc_wrapper:
             print("To run tests call:")
@@ -153,6 +163,8 @@ class Builder:
             "-DBUILD_SHARED_LIBS=ON",
             "-DCMAKE_MACOSX_BUNDLE=ON",
             "-DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED=NO",
+        ] if self.dynamic and not self.build_objc_wrapper else []) + ([
+            "-DDYNAMIC_PLIST=ON"
         ] if self.dynamic else []) + ([
             "-DOPENCV_ENABLE_NONFREE=ON"
         ] if self.enablenonfree else []) + ([
@@ -160,7 +172,7 @@ class Builder:
         ] if self.debug_info else [])
 
         if len(self.exclude) > 0:
-            args += ["-DBUILD_opencv_world=OFF"] if not self.dynamic else []
+            args += ["-DBUILD_opencv_world=OFF"] if not (self.dynamic and not self.build_objc_wrapper) else []
             args += ["-DBUILD_opencv_%s=OFF" % m for m in self.exclude]
 
         if len(self.disable) > 0:
@@ -174,14 +186,14 @@ class Builder:
             "xcodebuild",
         ]
 
-        if self.dynamic:
+        if (self.dynamic or self.build_objc_wrapper) and not self.bitcodedisabled and target == "iPhoneOS":
+            buildcmd.append("BITCODE_GENERATION_MODE=bitcode")
+
+        if self.dynamic and not self.build_objc_wrapper:
             buildcmd += [
                 "IPHONEOS_DEPLOYMENT_TARGET=" + os.environ['IPHONEOS_DEPLOYMENT_TARGET'],
                 "ONLY_ACTIVE_ARCH=NO",
             ]
-
-            if not self.bitcodedisabled:
-                buildcmd.append("BITCODE_GENERATION_MODE=bitcode")
 
             for arch in archs:
                 buildcmd.append("-arch")
@@ -198,7 +210,7 @@ class Builder:
                 "-configuration", self.getConfiguration(),
                 "-parallelizeTargets",
                 "-jobs", str(multiprocessing.cpu_count()),
-            ] + (["-target","ALL_BUILD"] if self.dynamic else [])
+            ] + (["-target","ALL_BUILD"] if self.dynamic and not self.build_objc_wrapper else [])
 
         return buildcmd
 
@@ -253,6 +265,32 @@ class Builder:
         print("Merging libraries:\n\t%s" % "\n\t".join(libs + libs3 + module), file=sys.stderr)
         execute(["libtool", "-static", "-o", res] + libs + libs3 + module)
 
+    def makeDynamicLib(self, builddir):
+        target = builddir[(builddir.rfind("build-") + 6):]
+        target_platform = target[(target.rfind("-") + 1):]
+        is_device = target_platform == "iphoneos"
+        res = os.path.join(builddir, "install", "lib", self.framework_name + ".framework", self.framework_name)
+        libs = glob.glob(os.path.join(builddir, "install", "lib", "*.a"))
+        module = [os.path.join(builddir, "lib", self.getConfiguration(), self.framework_name + ".framework", self.framework_name)]
+
+        libs3 = glob.glob(os.path.join(builddir, "install", "lib", "3rdparty", "*.a"))
+
+        link_target = target[:target.find("-")] + "-apple-ios" + os.environ['IPHONEOS_DEPLOYMENT_TARGET'] + ("-simulator" if target.endswith("simulator") else "")
+        bitcode_flags = ["-fembed-bitcode", "-Xlinker", "-bitcode_verify"] if is_device and not self.bitcodedisabled else []
+        toolchain_dir = getXCodeSetting("TOOLCHAIN_DIR", builddir)
+        swift_link_dirs = ["-L" + toolchain_dir + "/usr/lib/swift/" + target_platform, "-L/usr/lib/swift"]
+        sdk_dir = getXCodeSetting("SDK_DIR", builddir)
+        execute([
+            "clang++",
+            "-Xlinker", "-rpath",
+            "-Xlinker", "/usr/lib/swift",
+            "-target", link_target,
+            "-isysroot", sdk_dir,
+            "-install_name", ("@executable_path/Frameworks/" + self.framework_name + ".framework/" + self.framework_name) if is_device else res,
+            "-dynamiclib", "-dead_strip", "-fobjc-link-runtime", "-all_load",
+            "-o", res
+        ] + swift_link_dirs + bitcode_flags + module + libs + libs3)
+
     def makeFramework(self, outdir, builddirs):
         name = self.framework_name
 
@@ -264,10 +302,8 @@ class Builder:
 
         if self.dynamic:
             dstdir = framework_dir
-            libname = name + ".framework/" + name
         else:
             dstdir = os.path.join(framework_dir, "Versions", "A")
-            libname = "libopencv_merged.a"
 
         # copy headers from one of build folders
         shutil.copytree(os.path.join(builddirs[0], "install", "include", "opencv2"), os.path.join(dstdir, "Headers"))
@@ -301,7 +337,10 @@ class Builder:
                         os.rename(os.path.join(dirname, filename), os.path.join(dirname, platform_name_map[filestem] + fileext))
 
         # make universal static lib
-        libs = [os.path.join(d, "lib", self.getConfiguration(), libname) for d in builddirs]
+        if self.dynamic:
+            libs = [os.path.join(d, "install", "lib", name + ".framework", name) for d in builddirs]
+        else:
+            libs = [os.path.join(d, "lib", self.getConfiguration(), "libopencv_merged.a") for d in builddirs]
         lipocmd = ["lipo", "-create"]
         lipocmd.extend(libs)
         lipocmd.extend(["-o", os.path.join(dstdir, name)])
@@ -412,4 +451,5 @@ if __name__ == "__main__":
             (iphoneos_archs, "iPhoneOS"),
             (iphonesimulator_archs, "iPhoneSimulator"),
         ], args.debug, args.debug_info, args.framework_name)
+
     b.build(args.out)

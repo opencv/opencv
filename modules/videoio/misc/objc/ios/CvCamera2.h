@@ -8,12 +8,13 @@
 #import <Accelerate/Accelerate.h>
 #import <AVFoundation/AVFoundation.h>
 #import <ImageIO/ImageIO.h>
+#import "CVObjcUtil.h"
 
 @class Mat;
 
 @class CvAbstractCamera2;
 
-@interface CvAbstractCamera2 : NSObject
+CV_EXPORTS @interface CvAbstractCamera2 : NSObject
 
 @property UIDeviceOrientation currentDeviceOrientation;
 @property BOOL cameraAvailable;
@@ -55,7 +56,7 @@
 - (void)processImage:(Mat*)image;
 @end
 
-@interface CvVideoCamera2 : CvAbstractCamera2<AVCaptureVideoDataOutputSampleBufferDelegate>
+CV_EXPORTS @interface CvVideoCamera2 : CvAbstractCamera2<AVCaptureVideoDataOutputSampleBufferDelegate>
 @property (nonatomic, weak) id<CvVideoCameraDelegate2> delegate;
 @property (nonatomic, assign) BOOL grayscaleMode;
 @property (nonatomic, assign) BOOL recordVideo;
@@ -78,7 +79,7 @@
 - (void)photoCameraCancel:(CvPhotoCamera2*)photoCamera;
 @end
 
-@interface CvPhotoCamera2 : CvAbstractCamera2<AVCapturePhotoCaptureDelegate>
+CV_EXPORTS @interface CvPhotoCamera2 : CvAbstractCamera2<AVCapturePhotoCaptureDelegate>
 @property (nonatomic, weak) id<CvPhotoCameraDelegate2> delegate;
 - (void)takePicture;
 @end
