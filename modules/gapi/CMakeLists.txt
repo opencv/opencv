@@ -131,7 +131,6 @@ set(gapi_srcs
     src/backends/ie/giebackend/giewrapper.cpp
 
     # Render Backend.
-    src/backends/render/grenderocvbackend.cpp
     src/backends/render/grenderocv.cpp
 
     #PlaidML Backend
