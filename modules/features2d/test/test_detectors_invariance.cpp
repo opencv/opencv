@@ -29,7 +29,6 @@ void matchKeyPoints(const vector<KeyPoint>& keypoints0, const Mat& H,
         perspectiveTransform(Mat(points0), points0t, H);
 
     matches.clear();
-    vector<uchar> usedMask(keypoints1.size(), 0);
     for(int i0 = 0; i0 < static_cast<int>(keypoints0.size()); i0++)
     {
         int nearestPointIndex = -1;
@@ -37,8 +36,6 @@ void matchKeyPoints(const vector<KeyPoint>& keypoints0, const Mat& H,
         const float r0 =  0.5f * keypoints0[i0].size;
         for(size_t i1 = 0; i1 < keypoints1.size(); i1++)
         {
-            if(nearestPointIndex >= 0 && usedMask[i1])
-                continue;
 
             float r1 = 0.5f * keypoints1[i1].size;
             float intersectRatio = calcIntersectRatio(points0t.at<Point2f>(i0), r0,
@@ -51,8 +48,6 @@ void matchKeyPoints(const vector<KeyPoint>& keypoints0, const Mat& H,
         }
 
         matches.push_back(DMatch(i0, nearestPointIndex, maxIntersectRatio));
-        if(nearestPointIndex >= 0)
-            usedMask[nearestPointIndex] = 1;
     }
 }
 
@@ -239,9 +234,8 @@ INSTANTIATE_TEST_CASE_P(AKAZE_DESCRIPTOR_KAZE, DetectorRotationInvariance,
  * Detector's scale invariance check
  */
 
-// TODO: Expected: (keyPointMatchesRatio) >= (minKeyPointMatchesRatio), actual: 0.596752 vs 0.69
-INSTANTIATE_TEST_CASE_P(DISABLED_SIFT, DetectorScaleInvariance,
-                        Value(IMAGE_BIKES, SIFT::create(), 0.69f, 0.98f));
+INSTANTIATE_TEST_CASE_P(SIFT, DetectorScaleInvariance,
+                        Value(IMAGE_BIKES, SIFT::create(0, 3, 0.09), 0.69f, 0.98f));
 
 INSTANTIATE_TEST_CASE_P(BRISK, DetectorScaleInvariance,
                         Value(IMAGE_BIKES, BRISK::create(), 0.08f, 0.49f));
