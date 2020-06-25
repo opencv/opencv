@@ -8,6 +8,8 @@
 
 #ifdef __cplusplus
 #import "opencv.hpp"
+#else
+#define CV_EXPORTS
 #endif
 
 #import <Foundation/Foundation.h>
@@ -17,7 +19,7 @@ NS_ASSUME_NONNULL_BEGIN
 /**
 * Represents a range of dimension indices
 */
-@interface Range : NSObject
+CV_EXPORTS @interface Range : NSObject
 
 #pragma mark - Properties
 

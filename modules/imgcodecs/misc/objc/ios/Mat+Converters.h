@@ -8,6 +8,8 @@
 
 #ifdef __cplusplus
 #import "opencv.hpp"
+#else
+#define CV_EXPORTS
 #endif
 
 #import <Foundation/Foundation.h>
@@ -16,7 +18,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface Mat (Converters)
+CV_EXPORTS @interface Mat (Converters)
 
 -(UIImage*)toUIImage;
 -(instancetype)initWithUIImage:(UIImage*)image;
