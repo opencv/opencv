@@ -166,15 +166,16 @@ I::IStream& operator>> (I::IStream& is, cv::Scalar& s) {
 
 namespace
 {
-template<typename T>
-void write_plain(I::OStream &os, const T *arr, std::size_t sz) {
-    for (auto &&it : ade::util::iota(sz)) os << arr[it];
-}
-template<typename T>
-void read_plain(I::IStream &is, T *arr, std::size_t sz) {
-    for (auto &&it : ade::util::iota(sz)) is >> arr[it];
-}
+
 #if !defined(GAPI_STANDALONE)
+template<typename T>
+    void write_plain(I::OStream &os, const T *arr, std::size_t sz) {
+        for (auto &&it : ade::util::iota(sz)) os << arr[it];
+}
+template<typename T>
+    void read_plain(I::IStream &is, T *arr, std::size_t sz) {
+        for (auto &&it : ade::util::iota(sz)) is >> arr[it];
+}
 template<typename T>
 void write_mat_data(I::OStream &os, const cv::Mat &m) {
     // Write every row individually (handles the case when Mat is a view)
@@ -190,18 +191,24 @@ void read_mat_data(I::IStream &is, cv::Mat &m) {
     }
 }
 #else
+void write_plain(I::OStream &os, const uchar *arr, std::size_t sz) {
+    for (auto &&it : ade::util::iota(sz)) os << arr[it];
+}
+void read_plain(I::IStream &is, uchar *arr, std::size_t sz) {
+    for (auto &&it : ade::util::iota(sz)) is >> arr[it];
+}
 template<typename T>
 void write_mat_data(I::OStream &os, const cv::Mat &m) {
     // Write every row individually (handles the case when Mat is a view)
     for (auto &&r : ade::util::iota(m.rows)) {
-        write_plain(os, m.data<T>(r), m.cols*m.channels());
+        write_plain(os, m.ptr(r), m.cols*m.channels()*sizeof(T));
     }
 }
 template<typename T>
 void read_mat_data(I::IStream &is, cv::Mat &m) {
     // Write every row individually (handles the case when Mat is aligned)
     for (auto &&r : ade::util::iota(m.rows)) {
-        read_plain(is, m.data<T>(r), m.cols*m.channels());
+        read_plain(is, m.ptr(r), m.cols*m.channels()*sizeof(T));
     }
 }
 #endif
