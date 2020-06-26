@@ -128,6 +128,10 @@ set(gapi_srcs
     # Compound
     src/backends/common/gcompoundbackend.cpp
     src/backends/common/gcompoundkernel.cpp
+
+    # Serialization API and routines
+    src/api/s11n.cpp
+    src/backends/common/serialization.cpp
     )
 
 ocv_add_dispatched_file(backends/fluid/gfluidimgproc_func SSE4_1 AVX2)
@@ -156,6 +160,7 @@ if(OPENCV_GAPI_INF_ENGINE)
   list(APPEND __test_extra_deps ${INF_ENGINE_TARGET})
 endif()
 ocv_add_accuracy_tests(${__test_extra_deps})
+
 # FIXME: test binary is linked with ADE directly since ADE symbols
 # are not exported from libopencv_gapi.so in any form - thus
 # there're two copies of ADE code in memory when tests run (!)
@@ -181,6 +186,11 @@ if(HAVE_PLAIDML)
   endif()
   ocv_target_link_libraries(${the_module} PRIVATE ${PLAIDML_LIBRARIES})
   ocv_target_include_directories(${the_module} SYSTEM PRIVATE ${PLAIDML_INCLUDE_DIRS})
+endif()
+
+if(WIN32)
+  # Required for htonl/ntohl on Windows
+  target_link_libraries(${the_module} PRIVATE wsock32 ws2_32)
 endif()
 
 ocv_add_perf_tests()
