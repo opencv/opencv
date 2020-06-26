@@ -45,6 +45,7 @@
 #include "opencv2/core/cuda/common.hpp"
 #include "opencv2/core/cuda/border_interpolate.hpp"
 #include "opencv2/core/cuda/limits.hpp"
+#include "opencv2/core/cuda.hpp"
 
 using namespace cv::cuda;
 using namespace cv::cuda::device;
@@ -101,11 +102,63 @@ namespace tvl1flow
         }
     }
 
+    struct SrcTex
+    {
+        virtual ~SrcTex() {}
+
+        __device__ __forceinline__ virtual float I1(float x, float y) const = 0;
+        __device__ __forceinline__ virtual float I1x(float x, float y) const = 0;
+        __device__ __forceinline__ virtual float I1y(float x, float y) const = 0;
+    };
+
     texture<float, cudaTextureType2D, cudaReadModeElementType> tex_I1 (false, cudaFilterModePoint, cudaAddressModeClamp);
     texture<float, cudaTextureType2D, cudaReadModeElementType> tex_I1x(false, cudaFilterModePoint, cudaAddressModeClamp);
     texture<float, cudaTextureType2D, cudaReadModeElementType> tex_I1y(false, cudaFilterModePoint, cudaAddressModeClamp);
+    struct SrcTexRef : SrcTex
+    {
+        __device__ __forceinline__ float I1(float x, float y) const override
+        {
+            return tex2D(tex_I1, x, y);
+        }
+        __device__ __forceinline__ float I1x(float x, float y) const override
+        {
+            return tex2D(tex_I1x, x, y);
+        }
+        __device__ __forceinline__ float I1y(float x, float y) const override
+        {
+            return tex2D(tex_I1y, x, y);
+        }
+    };
 
-    __global__ void warpBackwardKernel(const PtrStepSzf I0, const PtrStepf u1, const PtrStepf u2, PtrStepf I1w, PtrStepf I1wx, PtrStepf I1wy, PtrStepf grad, PtrStepf rho)
+    struct SrcTexObj : SrcTex
+    {
+        __host__ SrcTexObj(cudaTextureObject_t tex_obj_I1_, cudaTextureObject_t tex_obj_I1x_, cudaTextureObject_t tex_obj_I1y_)
+            : tex_obj_I1(tex_obj_I1_), tex_obj_I1x(tex_obj_I1x_), tex_obj_I1y(tex_obj_I1y_) {}
+
+        __device__ __forceinline__ float I1(float x, float y) const override
+        {
+            return tex2D<float>(tex_obj_I1, x, y);
+        }
+        __device__ __forceinline__ float I1x(float x, float y) const override
+        {
+            return tex2D<float>(tex_obj_I1x, x, y);
+        }
+        __device__ __forceinline__ float I1y(float x, float y) const override
+        {
+            return tex2D<float>(tex_obj_I1y, x, y);
+        }
+
+        cudaTextureObject_t tex_obj_I1;
+        cudaTextureObject_t tex_obj_I1x;
+        cudaTextureObject_t tex_obj_I1y;
+    };
+
+    template <
+        typename T
+    >
+    __global__ void warpBackwardKernel(
+        const PtrStepSzf I0, const T src, const PtrStepf u1, const PtrStepf u2,
+        PtrStepf I1w, PtrStepf I1wx, PtrStepf I1wy, PtrStepf grad, PtrStepf rho)
     {
         const int x = blockIdx.x * blockDim.x + threadIdx.x;
         const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -136,9 +189,9 @@ namespace tvl1flow
             {
                 const float w = bicubicCoeff(wx - cx) * bicubicCoeff(wy - cy);
 
-                sum  += w * tex2D(tex_I1 , cx, cy);
-                sumx += w * tex2D(tex_I1x, cx, cy);
-                sumy += w * tex2D(tex_I1y, cx, cy);
+                sum  += w * src.I1(cx, cy);
+                sumx += w * src.I1x(cx, cy);
+                sumy += w * src.I1y(cx, cy);
 
                 wsum += w;
             }
@@ -173,15 +226,46 @@ namespace tvl1flow
         const dim3 block(32, 8);
         const dim3 grid(divUp(I0.cols, block.x), divUp(I0.rows, block.y));
 
-        bindTexture(&tex_I1 , I1);
-        bindTexture(&tex_I1x, I1x);
-        bindTexture(&tex_I1y, I1y);
+        bool cc30 = deviceSupports(FEATURE_SET_COMPUTE_30);
 
-        warpBackwardKernel<<<grid, block, 0, stream>>>(I0, u1, u2, I1w, I1wx, I1wy, grad, rho);
-        cudaSafeCall( cudaGetLastError() );
+        if (cc30)
+        {
+            cudaTextureDesc texDesc;
+            memset(&texDesc, 0, sizeof(texDesc));
+            texDesc.addressMode[0] = cudaAddressModeClamp;
+            texDesc.addressMode[1] = cudaAddressModeClamp;
+            texDesc.addressMode[2] = cudaAddressModeClamp;
 
-        if (!stream)
-            cudaSafeCall( cudaDeviceSynchronize() );
+            cudaTextureObject_t texObj_I1 = 0, texObj_I1x = 0, texObj_I1y = 0;
+
+            createTextureObjectPitch2D(&texObj_I1, I1, texDesc);
+            createTextureObjectPitch2D(&texObj_I1x, I1x, texDesc);
+            createTextureObjectPitch2D(&texObj_I1y, I1y, texDesc);
+
+            warpBackwardKernel << <grid, block, 0, stream >> > (I0, SrcTexObj(texObj_I1, texObj_I1x, texObj_I1y), u1, u2, I1w, I1wx, I1wy, grad, rho);
+            cudaSafeCall(cudaGetLastError());
+
+            if (!stream)
+                cudaSafeCall(cudaDeviceSynchronize());
+            else
+                cudaSafeCall(cudaStreamSynchronize(stream));
+
+            cudaSafeCall(cudaDestroyTextureObject(texObj_I1));
+            cudaSafeCall(cudaDestroyTextureObject(texObj_I1x));
+            cudaSafeCall(cudaDestroyTextureObject(texObj_I1y));
+        }
+        else
+        {
+            bindTexture(&tex_I1, I1);
+            bindTexture(&tex_I1x, I1x);
+            bindTexture(&tex_I1y, I1y);
+
+            warpBackwardKernel << <grid, block, 0, stream >> > (I0, SrcTexRef(), u1, u2, I1w, I1wx, I1wy, grad, rho);
+            cudaSafeCall(cudaGetLastError());
+
+            if (!stream)
+                cudaSafeCall(cudaDeviceSynchronize());
+        }
     }
 }
 

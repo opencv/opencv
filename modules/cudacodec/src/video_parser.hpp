@@ -44,19 +44,10 @@
 #ifndef __VIDEO_PARSER_HPP__
 #define __VIDEO_PARSER_HPP__
 
-#if CUDA_VERSION >= 9000 && CUDA_VERSION < 10000
-    #include <dynlink_nvcuvid.h>
-#else
-    #include <nvcuvid.h>
-#endif
-
-#include "opencv2/core/private.cuda.hpp"
-#include "opencv2/cudacodec.hpp"
 #include "frame_queue.hpp"
 #include "video_decoder.hpp"
 
-namespace cv { namespace cudacodec { namespace detail
-{
+namespace cv { namespace cudacodec { namespace detail {
 
 class VideoParser
 {

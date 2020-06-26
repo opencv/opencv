@@ -116,7 +116,7 @@ protected:
     bool useL2gradient;
 };
 
-#define NUM_STREAMS 64
+#define NUM_STREAMS 128
 
 CUDA_TEST_P(Canny, Async)
 {
