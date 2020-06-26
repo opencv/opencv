@@ -36,6 +36,16 @@ namespace detail
     using last_type_t = typename last_type<Ts...>::type;
 }
 
+// Forward-declare the serialization objects
+namespace gimpl {
+namespace s11n {
+namespace I {
+    struct IStream;
+    struct OStream;
+} // namespace I
+} // namespace s11n
+} // namespace gimpl
+
 /**
  * \addtogroup gapi_main_classes
  * @{
@@ -495,6 +505,10 @@ public:
     Priv& priv();
     /// @private
     const Priv& priv() const;
+    /// @private
+    explicit GComputation(cv::gimpl::s11n::I::IStream &);
+    /// @private
+    void serialize(cv::gimpl::s11n::I::OStream &) const;
 
 protected:
 

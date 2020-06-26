@@ -198,7 +198,7 @@ TEST(KernelPackageTransform, gmat_gsc_garray_in_gmat2_out)
     auto tr = gmat_gsc_garray_in_gmat2_out::transformation();
 
     auto check = [](const cv::GComputation &comp){
-        const auto &p = comp.priv();
+        const auto &p = cv::util::get<cv::GComputation::Priv::Expr>(comp.priv().m_shape);
         EXPECT_EQ(3u, p.m_ins.size());
         EXPECT_EQ(2u, p.m_outs.size());
 
@@ -221,7 +221,7 @@ TEST(KernelPackageTransform, gmat_gsc_gopaque_in_gmat2_out)
     auto tr = gmat_gsc_gopaque_in_gmat2_out::transformation();
 
     auto check = [](const cv::GComputation &comp){
-        const auto &p = comp.priv();
+        const auto &p = cv::util::get<cv::GComputation::Priv::Expr>(comp.priv().m_shape);
         EXPECT_EQ(3u, p.m_ins.size());
         EXPECT_EQ(2u, p.m_outs.size());
 
@@ -270,7 +270,7 @@ namespace
     template<typename InType, typename OutType>
     void args_check(const cv::GComputation &comp)
     {
-        const auto &p = comp.priv();
+        const auto &p = cv::util::get<cv::GComputation::Priv::Expr>(comp.priv().m_shape);
         EXPECT_EQ(1u, p.m_ins.size());
         EXPECT_EQ(1u, p.m_outs.size());
         arg_check<InType>(p.m_ins[0]);

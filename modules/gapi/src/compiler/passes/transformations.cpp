@@ -77,7 +77,8 @@ bool tryToSubstitute(ade::Graph& main,
 
     // 2. build substitute graph inside the main graph
     cv::gimpl::GModelBuilder builder(main);
-    const auto& proto_slots = builder.put(substitute.priv().m_ins, substitute.priv().m_outs);
+    auto expr = cv::util::get<cv::GComputation::Priv::Expr>(substitute.priv().m_shape);
+    const auto& proto_slots = builder.put(expr.m_ins, expr.m_outs);
     Protocol substituteP;
     std::tie(substituteP.inputs, substituteP.outputs, substituteP.in_nhs, substituteP.out_nhs) =
         proto_slots;

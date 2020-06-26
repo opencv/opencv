@@ -479,9 +479,10 @@ class gapi::cpu::GOCVFunctor : public gapi::GFunctor
 {
 public:
     using Impl = std::function<void(GCPUContext &)>;
+    using Meta = cv::GKernel::M;
 
-    GOCVFunctor(const char* id, const Impl& impl)
-        : gapi::GFunctor(id), impl_{GCPUKernel(impl)}
+    GOCVFunctor(const char* id, const Meta &meta, const Impl& impl)
+        : gapi::GFunctor(id), impl_{GCPUKernel(impl), meta}
     {
     }
 
@@ -497,14 +498,20 @@ template<typename K, typename Callable>
 gapi::cpu::GOCVFunctor gapi::cpu::ocv_kernel(Callable& c)
 {
     using P = detail::OCVCallHelper<Callable, typename K::InArgs, typename K::OutArgs>;
-    return GOCVFunctor(K::id(), std::bind(&P::callFunctor, std::placeholders::_1, std::ref(c)));
+    return GOCVFunctor{ K::id()
+                      , &K::getOutMeta
+                      , std::bind(&P::callFunctor, std::placeholders::_1, std::ref(c))
+                      };
 }
 
 template<typename K, typename Callable>
 gapi::cpu::GOCVFunctor gapi::cpu::ocv_kernel(const Callable& c)
 {
     using P = detail::OCVCallHelper<Callable, typename K::InArgs, typename K::OutArgs>;
-    return GOCVFunctor(K::id(), std::bind(&P::callFunctor, std::placeholders::_1, c));
+    return GOCVFunctor{ K::id()
+                      , &K::getOutMeta
+                      , std::bind(&P::callFunctor, std::placeholders::_1, c)
+                      };
 }
 //! @endcond
 

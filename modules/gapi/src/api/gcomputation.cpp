@@ -56,18 +56,37 @@ cv::GComputation::GComputation(const std::vector<GMat> &ins,
                                const std::vector<GMat> &outs)
     : m_priv(new Priv())
 {
+    Priv::Expr e;
     const auto wrap = [](cv::GMat m) { return GProtoArg(m); };
-    ade::util::transform(ins,  std::back_inserter(m_priv->m_ins),  wrap);
-    ade::util::transform(outs, std::back_inserter(m_priv->m_outs), wrap);
+    ade::util::transform(ins,  std::back_inserter(e.m_ins),  wrap);
+    ade::util::transform(outs, std::back_inserter(e.m_outs), wrap);
+    m_priv->m_shape = std::move(e);
 }
 
 cv::GComputation::GComputation(cv::GProtoInputArgs &&ins,
                                cv::GProtoOutputArgs &&outs)
     : m_priv(new Priv())
 {
-    m_priv->m_ins  = std::move(ins.m_args);
-    m_priv->m_outs = std::move(outs.m_args);
+    m_priv->m_shape = Priv::Expr{
+          std::move(ins.m_args)
+        , std::move(outs.m_args)
+    };
 }
+
+cv::GComputation::GComputation(cv::gimpl::s11n::I::IStream &is)
+    : m_priv(new Priv())
+{
+    m_priv->m_shape = gimpl::s11n::deserialize(is);
+}
+
+void cv::GComputation::serialize(cv::gimpl::s11n::I::OStream &os) const
+{
+    // Build a basic GModel and write the whole thing to the stream
+    auto pG = cv::gimpl::GCompiler::makeGraph(*m_priv);
+    std::vector<ade::NodeHandle> nhs(pG->nodes().begin(), pG->nodes().end());
+    gimpl::s11n::serialize(os, *pG, nhs);
+}
+
 
 cv::GCompiled cv::GComputation::compile(GMetaArgs &&metas, GCompileArgs &&args)
 {
