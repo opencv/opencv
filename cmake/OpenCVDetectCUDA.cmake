@@ -8,7 +8,10 @@ if(NOT UNIX AND CV_CLANG)
   return()
 endif()
 
-
+if(CUDA_HOST_COMPILER)
+  # respect the CUDA_HOST_COMPILER if specified manually
+  set(PREFERRED_CUDA_HOST_COMPILER "${CUDA_HOST_COMPILER}")
+endif()
 if(((NOT CMAKE_VERSION VERSION_LESS "3.9.0")  # requires https://gitlab.kitware.com/cmake/cmake/merge_requests/663
       OR OPENCV_CUDA_FORCE_EXTERNAL_CMAKE_MODULE)
     AND NOT OPENCV_CUDA_FORCE_BUILTIN_CMAKE_MODULE)
@@ -106,8 +109,8 @@ if(CUDA_FOUND)
     unset(CUDA_ARCH_PTX CACHE)
   endif()
 
-  if(CUDA_HOST_COMPILER)
-    LIST(APPEND CUDA_NVCC_FLAGS -ccbin ${CUDA_HOST_COMPILER})
+  if(PREFERRED_CUDA_HOST_COMPILER)
+    LIST(APPEND CUDA_NVCC_FLAGS -ccbin "${PREFERRED_CUDA_HOST_COMPILER}")
   else()
     if(WIN32 AND CMAKE_LINKER) #Workaround for VS cl.exe not being in the env. path
       get_filename_component(host_compiler_bindir ${CMAKE_LINKER} DIRECTORY)
