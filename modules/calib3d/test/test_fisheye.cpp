@@ -151,8 +151,8 @@ TEST_F(fisheyeTest, undistortAndDistortImage)
     cv::Vec4d D_dst_vec (-1.0, 0.0, 0.0, 0.0);
     cv::Mat D_dst = cv::Mat(D_dst_vec);
 
-    double imageWidth = this->imageSize.width;
-    double imageHeight = this->imageSize.height;
+    int imageWidth = (int)this->imageSize.width;
+    int imageHeight = (int)this->imageSize.height;
 
     cv::Mat imagePoints(imageHeight, imageWidth, CV_32FC2), undPoints, distPoints;
     cv::Vec2f* pts = imagePoints.ptr<cv::Vec2f>();
@@ -161,7 +161,7 @@ TEST_F(fisheyeTest, undistortAndDistortImage)
     {
         for(int x = 0; x < imageWidth; ++x)
         {
-            cv::Vec2f point(x, y);
+            cv::Vec2f point((float)x, (float)y);
             pts[k++] = point;
         }
     }
@@ -172,8 +172,8 @@ TEST_F(fisheyeTest, undistortAndDistortImage)
 
     float dx, dy, r_sq;
     float R_MAX = 250;
-    float imageCenterX = imageWidth / 2;
-    float imageCenterY = imageHeight / 2;
+    float imageCenterX = (float)imageWidth / 2;
+    float imageCenterY = (float)imageHeight / 2;
 
     cv::Mat undPointsGt(imageHeight, imageWidth, CV_32FC2);
     cv::Mat imageGt(imageHeight, imageWidth, CV_8UC3);
@@ -220,19 +220,19 @@ TEST_F(fisheyeTest, undistortAndDistortImage)
     EXPECT_MAT_NEAR(image_projected, imageGt, 1e-10);
 
     Vec2f dist_point_1 = distPoints.at<Vec2f>(400, 640);
-    Vec2f dist_point_1_gt(640.044, 400.041);
+    Vec2f dist_point_1_gt(640.044f, 400.041f);
 
     Vec2f dist_point_2 = distPoints.at<Vec2f>(400, 440);
-    Vec2f dist_point_2_gt(409.731, 403.029);
+    Vec2f dist_point_2_gt(409.731f, 403.029f);
 
     Vec2f dist_point_3 = distPoints.at<Vec2f>(200, 640);
-    Vec2f dist_point_3_gt(643.341, 168.896);
+    Vec2f dist_point_3_gt(643.341f, 168.896f);
 
     Vec2f dist_point_4 = distPoints.at<Vec2f>(300, 480);
-    Vec2f dist_point_4_gt(463.402, 290.317);
+    Vec2f dist_point_4_gt(463.402f, 290.317f);
 
     Vec2f dist_point_5 = distPoints.at<Vec2f>(550, 750);
-    Vec2f dist_point_5_gt(797.51, 611.637);
+    Vec2f dist_point_5_gt(797.51f, 611.637f);
 
     EXPECT_MAT_NEAR(dist_point_1, dist_point_1_gt, 1e-2);
     EXPECT_MAT_NEAR(dist_point_2, dist_point_2_gt, 1e-2);
