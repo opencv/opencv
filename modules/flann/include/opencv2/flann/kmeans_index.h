@@ -463,14 +463,10 @@ public:
             root_[i] = pool_.allocate<KMeansNode>();
             std::memset(root_[i], 0, sizeof(KMeansNode));
 
-            if(is_kdtree_distance::val || is_vector_space_distance::val) {
-                computeNodeStatistics(root_[i], indices_[i], (unsigned int)size_);
-                computeClustering(root_[i], indices_[i], (int)size_, branching_,0);
-            }
-            else {
-                computeBitfieldNodeStatistics(root_[i], indices_[i], (unsigned int)size_);
-                computeBitfieldClustering(root_[i], indices_[i], (int)size_, branching_,0);
-            }
+            Distance* dummy = NULL;
+            computeNodeStatistics(root_[i], indices_[i], (unsigned int)size_, dummy);
+
+            computeClustering(root_[i], indices_[i], (int)size_, branching_,0);
         }
     }
 
@@ -829,6 +825,413 @@ private:
     }
 
 
+    template<typename DistType>
+    void computeNodeStatistics(KMeansNodePtr node, int* indices,
+                               unsigned int indices_length,
+                               const DistType* identifier)
+    {
+        (void)identifier;
+        computeNodeStatistics(node, indices, indices_length);
+    }
+
+    void computeNodeStatistics(KMeansNodePtr node, int* indices,
+                               unsigned int indices_length,
+                               const cvflann::HammingLUT* identifier)
+    {
+        (void)identifier;
+        computeBitfieldNodeStatistics(node, indices, indices_length);
+    }
+
+    void computeNodeStatistics(KMeansNodePtr node, int* indices,
+                               unsigned int indices_length,
+                               const cvflann::Hamming<unsigned char>* identifier)
+    {
+        (void)identifier;
+        computeBitfieldNodeStatistics(node, indices, indices_length);
+    }
+
+    void computeNodeStatistics(KMeansNodePtr node, int* indices,
+                               unsigned int indices_length,
+                               const cvflann::Hamming2<unsigned char>* identifier)
+    {
+        (void)identifier;
+        computeBitfieldNodeStatistics(node, indices, indices_length);
+    }
+
+
+    void refineClustering(int* indices, int indices_length, int branching, CentersType** centers,
+                          std::vector<DistanceType>& radiuses, int* belongs_to, int* count)
+    {
+        cv::AutoBuffer<double> dcenters_buf(branching*veclen_);
+        Matrix<double> dcenters(dcenters_buf.data(), branching, veclen_);
+
+        bool converged = false;
+        int iteration = 0;
+        while (!converged && iteration<iterations_) {
+            converged = true;
+            iteration++;
+
+            // compute the new cluster centers
+            for (int i=0; i<branching; ++i) {
+                memset(dcenters[i],0,sizeof(double)*veclen_);
+                radiuses[i] = 0;
+            }
+            for (int i=0; i<indices_length; ++i) {
+                ElementType* vec = dataset_[indices[i]];
+                double* center = dcenters[belongs_to[i]];
+                for (size_t k=0; k<veclen_; ++k) {
+                    center[k] += vec[k];
+                }
+            }
+            for (int i=0; i<branching; ++i) {
+                int cnt = count[i];
+                for (size_t k=0; k<veclen_; ++k) {
+                    dcenters[i][k] /= cnt;
+                }
+            }
+
+            std::vector<int> new_centroids(indices_length);
+            std::vector<DistanceType> sq_dists(indices_length);
+
+            // reassign points to clusters
+            KMeansDistanceComputer<Matrix<double> > invoker(
+                        distance_, dataset_, branching, indices, dcenters, veclen_, new_centroids, sq_dists);
+            parallel_for_(cv::Range(0, (int)indices_length), invoker);
+
+            for (int i=0; i < (int)indices_length; ++i) {
+                DistanceType sq_dist(sq_dists[i]);
+                int new_centroid(new_centroids[i]);
+                if (sq_dist > radiuses[new_centroid]) {
+                    radiuses[new_centroid] = sq_dist;
+                }
+                if (new_centroid != belongs_to[i]) {
+                    count[belongs_to[i]]--;
+                    count[new_centroid]++;
+                    belongs_to[i] = new_centroid;
+                    converged = false;
+                }
+            }
+
+            for (int i=0; i<branching; ++i) {
+                // if one cluster converges to an empty cluster,
+                // move an element into that cluster
+                if (count[i]==0) {
+                    int j = (i+1)%branching;
+                    while (count[j]<=1) {
+                        j = (j+1)%branching;
+                    }
+
+                    for (int k=0; k<indices_length; ++k) {
+                        if (belongs_to[k]==j) {
+                            // for cluster j, we move the furthest element from the center to the empty cluster i
+                            if ( distance_(dataset_[indices[k]], dcenters[j], veclen_) == radiuses[j] ) {
+                                belongs_to[k] = i;
+                                count[j]--;
+                                count[i]++;
+                                break;
+                            }
+                        }
+                    }
+                    converged = false;
+                }
+            }
+        }
+
+       for (int i=0; i<branching; ++i) {
+           centers[i] = new CentersType[veclen_];
+           memoryCounter_ += (int)(veclen_*sizeof(CentersType));
+           for (size_t k=0; k<veclen_; ++k) {
+               centers[i][k] = (CentersType)dcenters[i][k];
+           }
+       }
+    }
+
+
+    void refineBitfieldClustering(int* indices, int indices_length, int branching, CentersType** centers,
+                                  std::vector<DistanceType>& radiuses, int* belongs_to, int* count)
+    {
+        for (int i=0; i<branching; ++i) {
+            centers[i] = new CentersType[veclen_];
+            memoryCounter_ += (int)(veclen_*sizeof(CentersType));
+        }
+
+        const unsigned int accumulator_veclen = static_cast<unsigned int>(
+                                                veclen_*sizeof(ElementType)*BITS_PER_CHAR);
+        cv::AutoBuffer<unsigned int> dcenters_buf(branching*accumulator_veclen);
+        Matrix<unsigned int> dcenters(dcenters_buf.data(), branching, accumulator_veclen);
+
+        bool converged = false;
+        int iteration = 0;
+        while (!converged && iteration<iterations_) {
+            converged = true;
+            iteration++;
+
+            // compute the new cluster centers
+            for (int i=0; i<branching; ++i) {
+                memset(dcenters[i],0,sizeof(unsigned int)*accumulator_veclen);
+                radiuses[i] = 0;
+            }
+            for (int i=0; i<indices_length; ++i) {
+                unsigned char* vec = (unsigned char*)dataset_[indices[i]];
+                unsigned int* dcenter = dcenters[belongs_to[i]];
+                for (size_t k=0, l=0; k<accumulator_veclen; k+=BITS_PER_CHAR, ++l) {
+                    dcenter[k]   += (vec[l])    & 0x01;
+                    dcenter[k+1] += (vec[l]>>1) & 0x01;
+                    dcenter[k+2] += (vec[l]>>2) & 0x01;
+                    dcenter[k+3] += (vec[l]>>3) & 0x01;
+                    dcenter[k+4] += (vec[l]>>4) & 0x01;
+                    dcenter[k+5] += (vec[l]>>5) & 0x01;
+                    dcenter[k+6] += (vec[l]>>6) & 0x01;
+                    dcenter[k+7] += (vec[l]>>7) & 0x01;
+                }
+            }
+            for (int i=0; i<branching; ++i) {
+                double cnt = static_cast<double>(count[i]);
+                unsigned int* dcenter = dcenters[i];
+                unsigned char* charCenter = (unsigned char*)centers[i];
+                for (size_t k=0, l=0; k<accumulator_veclen; k+=BITS_PER_CHAR, ++l) {
+                    charCenter[l] = static_cast<unsigned char>(
+                                      (((int)(0.5 + (double)(dcenter[k])   / cnt)))
+                                    | (((int)(0.5 + (double)(dcenter[k+1]) / cnt))<<1)
+                                    | (((int)(0.5 + (double)(dcenter[k+2]) / cnt))<<2)
+                                    | (((int)(0.5 + (double)(dcenter[k+3]) / cnt))<<3)
+                                    | (((int)(0.5 + (double)(dcenter[k+4]) / cnt))<<4)
+                                    | (((int)(0.5 + (double)(dcenter[k+5]) / cnt))<<5)
+                                    | (((int)(0.5 + (double)(dcenter[k+6]) / cnt))<<6)
+                                    | (((int)(0.5 + (double)(dcenter[k+7]) / cnt))<<7));
+                }
+            }
+
+            std::vector<int> new_centroids(indices_length);
+            std::vector<DistanceType> dists(indices_length);
+
+            // reassign points to clusters
+            KMeansDistanceComputer<ElementType**> invoker(
+                        distance_, dataset_, branching, indices, centers, veclen_, new_centroids, dists);
+            parallel_for_(cv::Range(0, (int)indices_length), invoker);
+
+            for (int i=0; i < indices_length; ++i) {
+                DistanceType dist(dists[i]);
+                int new_centroid(new_centroids[i]);
+                if (dist > radiuses[new_centroid]) {
+                    radiuses[new_centroid] = dist;
+                }
+                if (new_centroid != belongs_to[i]) {
+                    count[belongs_to[i]]--;
+                    count[new_centroid]++;
+                    belongs_to[i] = new_centroid;
+                    converged = false;
+                }
+            }
+
+            for (int i=0; i<branching; ++i) {
+                // if one cluster converges to an empty cluster,
+                // move an element into that cluster
+                if (count[i]==0) {
+                    int j = (i+1)%branching;
+                    while (count[j]<=1) {
+                        j = (j+1)%branching;
+                    }
+
+                    for (int k=0; k<indices_length; ++k) {
+                        if (belongs_to[k]==j) {
+                            // for cluster j, we move the furthest element from the center to the empty cluster i
+                            if ( distance_(dataset_[indices[k]], centers[j], veclen_) == radiuses[j] ) {
+                                belongs_to[k] = i;
+                                count[j]--;
+                                count[i]++;
+                                break;
+                            }
+                        }
+                    }
+                    converged = false;
+                }
+            }
+        }
+    }
+
+
+    void computeSubClustering(KMeansNodePtr node, int* indices, int indices_length,
+                              int branching, int level, CentersType** centers,
+                              std::vector<DistanceType>& radiuses, int* belongs_to, int* count)
+    {
+        // compute kmeans clustering for each of the resulting clusters
+        node->childs = pool_.allocate<KMeansNodePtr>(branching);
+        int start = 0;
+        int end = start;
+        for (int c=0; c<branching; ++c) {
+            int s = count[c];
+
+            DistanceType variance = 0;
+            DistanceType mean_radius =0;
+            for (int i=0; i<indices_length; ++i) {
+                if (belongs_to[i]==c) {
+                    DistanceType d = distance_(dataset_[indices[i]], ZeroIterator<ElementType>(), veclen_);
+                    variance += d;
+                    mean_radius += static_cast<DistanceType>( sqrt(d) );
+                    std::swap(indices[i],indices[end]);
+                    std::swap(belongs_to[i],belongs_to[end]);
+                    end++;
+                }
+            }
+            variance /= s;
+            mean_radius /= s;
+            variance -= distance_(centers[c], ZeroIterator<ElementType>(), veclen_);
+
+            node->childs[c] = pool_.allocate<KMeansNode>();
+            std::memset(node->childs[c], 0, sizeof(KMeansNode));
+            node->childs[c]->radius = radiuses[c];
+            node->childs[c]->pivot = centers[c];
+            node->childs[c]->variance = variance;
+            node->childs[c]->mean_radius = mean_radius;
+            computeClustering(node->childs[c],indices+start, end-start, branching, level+1);
+            start=end;
+        }
+    }
+
+
+    void computeAnyBitfieldSubClustering(KMeansNodePtr node, int* indices, int indices_length,
+                              int branching, int level, CentersType** centers,
+                              std::vector<DistanceType>& radiuses, int* belongs_to, int* count)
+    {
+        // compute kmeans clustering for each of the resulting clusters
+        node->childs = pool_.allocate<KMeansNodePtr>(branching);
+        int start = 0;
+        int end = start;
+        for (int c=0; c<branching; ++c) {
+            int s = count[c];
+
+            unsigned long long variance = 0ull;
+            DistanceType mean_radius =0;
+            for (int i=0; i<indices_length; ++i) {
+                if (belongs_to[i]==c) {
+                    DistanceType d = distance_(dataset_[indices[i]], ZeroIterator<ElementType>(), veclen_);
+                    variance += static_cast<unsigned long long>( ensureSquareDistance<Distance>(d) );
+                    mean_radius += ensureSimpleDistance<Distance>(d);
+                    std::swap(indices[i],indices[end]);
+                    std::swap(belongs_to[i],belongs_to[end]);
+                    end++;
+                }
+            }
+            mean_radius = static_cast<DistanceType>(
+                        0.5f + static_cast<float>(mean_radius) / static_cast<float>(s));
+            variance = static_cast<unsigned long long>(
+                        0.5 + static_cast<double>(variance) / static_cast<double>(s));
+            variance -= static_cast<unsigned long long>(
+                        ensureSquareDistance<Distance>(
+                            distance_(centers[c], ZeroIterator<ElementType>(), veclen_)));
+
+            node->childs[c] = pool_.allocate<KMeansNode>();
+            std::memset(node->childs[c], 0, sizeof(KMeansNode));
+            node->childs[c]->radius = radiuses[c];
+            node->childs[c]->pivot = centers[c];
+            node->childs[c]->variance = static_cast<DistanceType>(variance);
+            node->childs[c]->mean_radius = mean_radius;
+            computeClustering(node->childs[c],indices+start, end-start, branching, level+1);
+            start=end;
+        }
+    }
+
+
+    template<typename DistType>
+    void refineAndSplitClustering(
+            KMeansNodePtr node, int* indices, int indices_length, int branching,
+            int level, CentersType** centers, std::vector<DistanceType>& radiuses,
+            int* belongs_to, int* count, const DistType* identifier)
+    {
+        (void)identifier;
+        refineClustering(indices, indices_length, branching, centers, radiuses, belongs_to, count);
+
+        computeSubClustering(node, indices, indices_length, branching,
+                             level, centers, radiuses, belongs_to, count);
+    }
+
+
+    /**
+     * The methods responsible with doing the recursive hierarchical clustering on
+     * binary vectors.
+     * As some might have heared that KMeans on binary data doesn't make sense,
+     * it's worth a little explanation why it actually fairly works. As
+     * with the Hierarchical Clustering algortihm, we seed several centers for the
+     * current node by picking some of its points. Then in a first pass each point
+     * of the node is then related to its closest center. Now let's have a look at
+     * the 5 central dimensions of the 9 following points:
+     *
+     * xxxxxx11100xxxxx (1)
+     * xxxxxx11010xxxxx (2)
+     * xxxxxx11001xxxxx (3)
+     * xxxxxx10110xxxxx (4)
+     * xxxxxx10101xxxxx (5)
+     * xxxxxx10011xxxxx (6)
+     * xxxxxx01110xxxxx (7)
+     * xxxxxx01101xxxxx (8)
+     * xxxxxx01011xxxxx (9)
+     * sum   _____
+     * of 1: 66555
+     *
+     * Even if the barycenter notion doesn't apply, we can set a center
+     * xxxxxx11111xxxxx that will better fit the five dimensions we are focusing
+     * on for these points.
+     *
+     * Note that convergence isn't ensured anymore. In practice, using Gonzales
+     * as seeding algorithm should be fine for getting convergence ("iterations"
+     * value can be set to -1). But with KMeans++ seeding you should definitely
+     * set a maximum number of iterations (but make it higher than the "iterations"
+     * default value of 11).
+     *
+     * Params:
+     *     node = the node to cluster
+     *     indices = indices of the points belonging to the current node
+     *     indices_length = number of points in the current node
+     *     branching = the branching factor to use in the clustering
+     *     level = 0 for the root node, it increases with the subdivision levels
+     *     centers = clusters centers to compute
+     *     radiuses = radiuses of clusters
+     *     belongs_to = LookUp Table returning, for a given indice id, the center id it belongs to
+     *     count = array storing the number of indices for a given center id
+     *     identifier = dummy pointer on an instance of Distance (use to branch correctly among templates)
+     */
+    void refineAndSplitClustering(
+            KMeansNodePtr node, int* indices, int indices_length, int branching,
+            int level, CentersType** centers, std::vector<DistanceType>& radiuses,
+            int* belongs_to, int* count, const cvflann::HammingLUT* identifier)
+    {
+        (void)identifier;
+        refineBitfieldClustering(
+                    indices, indices_length, branching, centers, radiuses, belongs_to, count);
+
+        computeAnyBitfieldSubClustering(node, indices, indices_length, branching,
+                                        level, centers, radiuses, belongs_to, count);
+    }
+
+
+    void refineAndSplitClustering(
+            KMeansNodePtr node, int* indices, int indices_length, int branching,
+            int level, CentersType** centers, std::vector<DistanceType>& radiuses,
+            int* belongs_to, int* count, const cvflann::Hamming<unsigned char>* identifier)
+    {
+        (void)identifier;
+        refineBitfieldClustering(
+                    indices, indices_length, branching, centers, radiuses, belongs_to, count);
+
+        computeAnyBitfieldSubClustering(node, indices, indices_length, branching,
+                                        level, centers, radiuses, belongs_to, count);
+    }
+
+
+    void refineAndSplitClustering(
+            KMeansNodePtr node, int* indices, int indices_length, int branching,
+            int level, CentersType** centers, std::vector<DistanceType>& radiuses,
+            int* belongs_to, int* count, const cvflann::Hamming2<unsigned char>* identifier)
+    {
+        (void)identifier;
+        refineBitfieldClustering(
+                    indices, indices_length, branching, centers, radiuses, belongs_to, count);
+
+        computeAnyBitfieldSubClustering(node, indices, indices_length, branching,
+                                        level, centers, radiuses, belongs_to, count);
+    }
+
 
     /**
      * The method responsible with actually doing the recursive hierarchical
@@ -893,370 +1296,14 @@ private:
             count[belongs_to[i]]++;
         }
 
-        cv::AutoBuffer<double> dcenters_buf(branching*veclen_);
-        Matrix<double> dcenters(dcenters_buf.data(), branching, veclen_);
-        for (int i=0; i<centers_length; ++i) {
-            ElementType* vec = dataset_[centers_idx[i]];
-            for (size_t k=0; k<veclen_; ++k) {
-                dcenters[i][k] = double(vec[k]);
-            }
-        }
-
-        bool converged = false;
-        int iteration = 0;
-        while (!converged && iteration<iterations_) {
-            converged = true;
-            iteration++;
-
-            // compute the new cluster centers
-            for (int i=0; i<branching; ++i) {
-                memset(dcenters[i],0,sizeof(double)*veclen_);
-                radiuses[i] = 0;
-            }
-            for (int i=0; i<indices_length; ++i) {
-                ElementType* vec = dataset_[indices[i]];
-                double* center = dcenters[belongs_to[i]];
-                for (size_t k=0; k<veclen_; ++k) {
-                    center[k] += vec[k];
-                }
-            }
-            for (int i=0; i<branching; ++i) {
-                int cnt = count[i];
-                for (size_t k=0; k<veclen_; ++k) {
-                    dcenters[i][k] /= cnt;
-                }
-            }
-
-            std::vector<int> new_centroids(indices_length);
-            std::vector<DistanceType> sq_dists(indices_length);
-
-            // reassign points to clusters
-            KMeansDistanceComputer<Matrix<double> > invoker(distance_, dataset_, branching, indices, dcenters, veclen_, new_centroids, sq_dists);
-            parallel_for_(cv::Range(0, (int)indices_length), invoker);
-
-            for (int i=0; i < (int)indices_length; ++i) {
-                DistanceType sq_dist(sq_dists[i]);
-                int new_centroid(new_centroids[i]);
-                if (sq_dist > radiuses[new_centroid]) {
-                    radiuses[new_centroid] = sq_dist;
-                }
-                if (new_centroid != belongs_to[i]) {
-                    count[belongs_to[i]]--;
-                    count[new_centroid]++;
-                    belongs_to[i] = new_centroid;
-                    converged = false;
-                }
-            }
-
-            for (int i=0; i<branching; ++i) {
-                // if one cluster converges to an empty cluster,
-                // move an element into that cluster
-                if (count[i]==0) {
-                    int j = (i+1)%branching;
-                    while (count[j]<=1) {
-                        j = (j+1)%branching;
-                    }
-
-                    for (int k=0; k<indices_length; ++k) {
-                        if (belongs_to[k]==j) {
-                            // for cluster j, we move the furthest element from the center to the empty cluster i
-                            if ( distance_(dataset_[indices[k]], dcenters[j], veclen_) == radiuses[j] ) {
-                                belongs_to[k] = i;
-                                count[j]--;
-                                count[i]++;
-                                break;
-                            }
-                        }
-                    }
-                    converged = false;
-                }
-            }
-
-        }
-
         CentersType** centers = new CentersType*[branching];
 
-        for (int i=0; i<branching; ++i) {
-            centers[i] = new CentersType[veclen_];
-            memoryCounter_ += (int)(veclen_*sizeof(CentersType));
-            for (size_t k=0; k<veclen_; ++k) {
-                centers[i][k] = (CentersType)dcenters[i][k];
-            }
-        }
-
-
-        // compute kmeans clustering for each of the resulting clusters
-        node->childs = pool_.allocate<KMeansNodePtr>(branching);
-        int start = 0;
-        int end = start;
-        for (int c=0; c<branching; ++c) {
-            int s = count[c];
-
-            DistanceType variance = 0;
-            DistanceType mean_radius =0;
-            for (int i=0; i<indices_length; ++i) {
-                if (belongs_to[i]==c) {
-                    DistanceType d = distance_(dataset_[indices[i]], ZeroIterator<ElementType>(), veclen_);
-                    variance += d;
-                    mean_radius += static_cast<DistanceType>( sqrt(d) );
-                    std::swap(indices[i],indices[end]);
-                    std::swap(belongs_to[i],belongs_to[end]);
-                    end++;
-                }
-            }
-            variance /= s;
-            mean_radius /= s;
-            variance -= distance_(centers[c], ZeroIterator<ElementType>(), veclen_);
-
-            node->childs[c] = pool_.allocate<KMeansNode>();
-            std::memset(node->childs[c], 0, sizeof(KMeansNode));
-            node->childs[c]->radius = radiuses[c];
-            node->childs[c]->pivot = centers[c];
-            node->childs[c]->variance = variance;
-            node->childs[c]->mean_radius = mean_radius;
-            computeClustering(node->childs[c],indices+start, end-start, branching, level+1);
-            start=end;
-        }
+        Distance* dummy = NULL;
+        refineAndSplitClustering(node, indices, indices_length, branching, level,
+                                 centers, radiuses, belongs_to, count, dummy);
 
         delete[] centers;
     }
-
-
-    /**
-     * The method responsible with doing the recursive hierarchical clustering on
-     * binary vectors.
-     * As some might have heared that KMeans on binary data doesn't make sense,
-     * it's worth a little explanation why it actually fairly works. As
-     * with the Hierarchical Clustering algortihm, we seed several centers for the
-     * current node by picking some of its points. Then in a first pass each point
-     * of the node is then related to its closest center. Now let's have a look at
-     * the 5 central dimensions of the 9 following points:
-     *
-     * xxxxxx11100xxxxx (1)
-     * xxxxxx11010xxxxx (2)
-     * xxxxxx11001xxxxx (3)
-     * xxxxxx10110xxxxx (4)
-     * xxxxxx10101xxxxx (5)
-     * xxxxxx10011xxxxx (6)
-     * xxxxxx01110xxxxx (7)
-     * xxxxxx01101xxxxx (8)
-     * xxxxxx01011xxxxx (9)
-     * sum   _____
-     * of 1: 66555
-     *
-     * Even if the barycenter notion doesn't apply, we can set a center
-     * xxxxxx11111xxxxx that will better fit the five dimensions we are focusing
-     * on for these points.
-     *
-     * Note that convergence isn't ensured anymore. In practice, using Gonzales
-     * as seeding algorithm should be fine for getting convergence ("iterations"
-     * value can be set to -1). But with KMeans++ seeding you should definitely
-     * set a maximum number of iterations (but make it higher than the "iterations"
-     * default value of 11).
-     *
-     * Params:
-     *     node = the node to cluster
-     *     indices = indices of the points belonging to the current node
-     *     indices_length = number of points in the current node
-     *     branching = the branching factor to use in the clustering
-     *     level = 0 for the root node, it increases with the subdivision levels
-     */
-    void computeBitfieldClustering(KMeansNodePtr node, int* indices,
-                                   int indices_length, int branching, int level)
-    {
-        node->size = indices_length;
-        node->level = level;
-
-        if (indices_length < branching) {
-            node->indices = indices;
-            std::sort(node->indices,node->indices+indices_length);
-            node->childs = NULL;
-            return;
-        }
-
-        cv::AutoBuffer<int> centers_idx_buf(branching);
-        int* centers_idx = centers_idx_buf.data();
-        int centers_length;
-        (this->*chooseCenters)(branching, indices, indices_length, centers_idx, centers_length);
-
-        if (centers_length<branching) {
-            node->indices = indices;
-            std::sort(node->indices,node->indices+indices_length);
-            node->childs = NULL;
-            return;
-        }
-
-        const unsigned int accumulator_veclen = static_cast<unsigned int>(
-                                                veclen_*sizeof(ElementType)*BITS_PER_CHAR);
-        cv::AutoBuffer<unsigned int> dcenters_buf(branching*accumulator_veclen);
-        Matrix<unsigned int> dcenters(dcenters_buf.data(), branching, accumulator_veclen);
-
-        CentersType** centers = new CentersType*[branching];
-
-        for (int i=0; i<branching; ++i) {
-            centers[i] = new CentersType[veclen_];
-            memoryCounter_ += (int)(veclen_*sizeof(CentersType));
-        }
-
-        std::vector<DistanceType> radiuses(branching);
-        cv::AutoBuffer<int> count_buf(branching);
-        int* count = count_buf.data();
-        for (int i=0; i<branching; ++i) {
-            radiuses[i] = 0;
-            count[i] = 0;
-        }
-
-        //	assign points to clusters
-        cv::AutoBuffer<int> belongs_to_buf(indices_length);
-        int* belongs_to = belongs_to_buf.data();
-        for (int i=0; i<indices_length; ++i) {
-
-            DistanceType dist = distance_(dataset_[indices[i]], dataset_[centers_idx[0]], veclen_);
-            belongs_to[i] = 0;
-            for (int j=1; j<branching; ++j) {
-                DistanceType new_dist = distance_(dataset_[indices[i]], dataset_[centers_idx[j]], veclen_);
-                if (dist>new_dist) {
-                    belongs_to[i] = j;
-                    dist = new_dist;
-                }
-            }
-            if (dist>radiuses[belongs_to[i]]) {
-                radiuses[belongs_to[i]] = dist;
-            }
-            count[belongs_to[i]]++;
-        }
-
-        bool converged = false;
-        int iteration = 0;
-        while (!converged && iteration<iterations_) {
-            converged = true;
-            iteration++;
-
-            // compute the new cluster centers
-            for (int i=0; i<branching; ++i) {
-                memset(dcenters[i],0,sizeof(unsigned int)*accumulator_veclen);
-                radiuses[i] = 0;
-            }
-            for (int i=0; i<indices_length; ++i) {
-                unsigned char* vec = (unsigned char*)dataset_[indices[i]];
-                unsigned int* dcenter = dcenters[belongs_to[i]];
-                for (size_t k=0, l=0; k<accumulator_veclen; k+=BITS_PER_CHAR, ++l) {
-                    dcenter[k]   += (vec[l])    & 0x01;
-                    dcenter[k+1] += (vec[l]>>1) & 0x01;
-                    dcenter[k+2] += (vec[l]>>2) & 0x01;
-                    dcenter[k+3] += (vec[l]>>3) & 0x01;
-                    dcenter[k+4] += (vec[l]>>4) & 0x01;
-                    dcenter[k+5] += (vec[l]>>5) & 0x01;
-                    dcenter[k+6] += (vec[l]>>6) & 0x01;
-                    dcenter[k+7] += (vec[l]>>7) & 0x01;
-                }
-            }
-            for (int i=0; i<branching; ++i) {
-                double cnt = static_cast<double>(count[i]);
-                unsigned int* dcenter = dcenters[i];
-                unsigned char* charCenter = (unsigned char*)centers[i];
-                for (size_t k=0, l=0; k<accumulator_veclen; k+=BITS_PER_CHAR, ++l) {
-                    charCenter[l] = static_cast<unsigned char>(
-                                      (((int)(0.5 + (double)(dcenter[k])   / cnt)))
-                                    | (((int)(0.5 + (double)(dcenter[k+1]) / cnt))<<1)
-                                    | (((int)(0.5 + (double)(dcenter[k+2]) / cnt))<<2)
-                                    | (((int)(0.5 + (double)(dcenter[k+3]) / cnt))<<3)
-                                    | (((int)(0.5 + (double)(dcenter[k+4]) / cnt))<<4)
-                                    | (((int)(0.5 + (double)(dcenter[k+5]) / cnt))<<5)
-                                    | (((int)(0.5 + (double)(dcenter[k+6]) / cnt))<<6)
-                                    | (((int)(0.5 + (double)(dcenter[k+7]) / cnt))<<7));
-                }
-            }
-
-            std::vector<int> new_centroids(indices_length);
-            std::vector<DistanceType> dists(indices_length);
-
-            // reassign points to clusters
-            KMeansDistanceComputer<ElementType**> invoker(distance_, dataset_, branching, indices, centers, veclen_, new_centroids, dists);
-            parallel_for_(cv::Range(0, (int)indices_length), invoker);
-
-            for (int i=0; i < indices_length; ++i) {
-                DistanceType dist(dists[i]);
-                int new_centroid(new_centroids[i]);
-                if (dist > radiuses[new_centroid]) {
-                    radiuses[new_centroid] = dist;
-                }
-                if (new_centroid != belongs_to[i]) {
-                    count[belongs_to[i]]--;
-                    count[new_centroid]++;
-                    belongs_to[i] = new_centroid;
-                    converged = false;
-                }
-            }
-
-            for (int i=0; i<branching; ++i) {
-                // if one cluster converges to an empty cluster,
-                // move an element into that cluster
-                if (count[i]==0) {
-                    int j = (i+1)%branching;
-                    while (count[j]<=1) {
-                        j = (j+1)%branching;
-                    }
-
-                    for (int k=0; k<indices_length; ++k) {
-                        if (belongs_to[k]==j) {
-                            // for cluster j, we move the furthest element from the center to the empty cluster i
-                            if ( distance_(dataset_[indices[k]], centers[j], veclen_) == radiuses[j] ) {
-                                belongs_to[k] = i;
-                                count[j]--;
-                                count[i]++;
-                                break;
-                            }
-                        }
-                    }
-                    converged = false;
-                }
-            }
-
-        }
-
-
-        // compute kmeans clustering for each of the resulting clusters
-        node->childs = pool_.allocate<KMeansNodePtr>(branching);
-        int start = 0;
-        int end = start;
-        for (int c=0; c<branching; ++c) {
-            int s = count[c];
-
-            unsigned long long variance = 0ull;
-            DistanceType mean_radius =0;
-            for (int i=0; i<indices_length; ++i) {
-                if (belongs_to[i]==c) {
-                    DistanceType d = distance_(dataset_[indices[i]], ZeroIterator<ElementType>(), veclen_);
-                    variance += static_cast<unsigned long long>( ensureSquareDistance<Distance>(d) );
-                    mean_radius += ensureSimpleDistance<Distance>(d);
-                    std::swap(indices[i],indices[end]);
-                    std::swap(belongs_to[i],belongs_to[end]);
-                    end++;
-                }
-            }
-            mean_radius = static_cast<DistanceType>(
-                        0.5f + static_cast<float>(mean_radius) / static_cast<float>(s));
-            variance = static_cast<unsigned long long>(
-                        0.5 + static_cast<double>(variance) / static_cast<double>(s));
-            variance -= static_cast<unsigned long long>(
-                        ensureSquareDistance<Distance>(
-                            distance_(centers[c], ZeroIterator<ElementType>(), veclen_)));
-
-            node->childs[c] = pool_.allocate<KMeansNode>();
-            std::memset(node->childs[c], 0, sizeof(KMeansNode));
-            node->childs[c]->radius = radiuses[c];
-            node->childs[c]->pivot = centers[c];
-            node->childs[c]->variance = static_cast<DistanceType>(variance);
-            node->childs[c]->mean_radius = mean_radius;
-            computeBitfieldClustering(node->childs[c],indices+start, end-start, branching, level+1);
-            start=end;
-        }
-
-        delete[] centers;
-    }
-
-
 
 
     /**
