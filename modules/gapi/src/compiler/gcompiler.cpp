@@ -61,7 +61,7 @@ namespace
             return combine(pkg, aux_pkg);
         };
 
-        auto has_use_only = cv::gimpl::getCompileArg<cv::gapi::use_only>(args);
+        auto has_use_only = cv::gapi::getCompileArg<cv::gapi::use_only>(args);
         if (has_use_only)
             return withAuxKernels(has_use_only.value().pkg);
 
@@ -75,20 +75,20 @@ namespace
             cv::gapi::GKernelPackage();
 #endif // !defined(GAPI_STANDALONE)
 
-        auto user_pkg = cv::gimpl::getCompileArg<cv::gapi::GKernelPackage>(args);
+        auto user_pkg = cv::gapi::getCompileArg<cv::gapi::GKernelPackage>(args);
         auto user_pkg_with_aux = withAuxKernels(user_pkg.value_or(cv::gapi::GKernelPackage{}));
         return combine(ocv_pkg, user_pkg_with_aux);
     }
 
     cv::gapi::GNetPackage getNetworkPackage(cv::GCompileArgs &args)
     {
-        return cv::gimpl::getCompileArg<cv::gapi::GNetPackage>(args)
+        return cv::gapi::getCompileArg<cv::gapi::GNetPackage>(args)
             .value_or(cv::gapi::GNetPackage{});
     }
 
     cv::util::optional<std::string> getGraphDumpDirectory(cv::GCompileArgs& args)
     {
-        auto dump_info = cv::gimpl::getCompileArg<cv::graph_dump_path>(args);
+        auto dump_info = cv::gapi::getCompileArg<cv::graph_dump_path>(args);
         if (!dump_info.has_value())
         {
             const char* path = std::getenv("GRAPH_DUMP_PATH");
@@ -452,7 +452,8 @@ cv::GStreamingCompiled cv::gimpl::GCompiler::produceStreamingCompiled(GPtr &&pg)
         outMetas = GModel::ConstGraph(*pg).metadata().get<OutputMeta>().outMeta;
     }
 
-    std::unique_ptr<GStreamingExecutor> pE(new GStreamingExecutor(std::move(pg)));
+    std::unique_ptr<GStreamingExecutor> pE(new GStreamingExecutor(std::move(pg),
+                                                                  m_args));
     if (!m_metas.empty() && !outMetas.empty())
     {
         compiled.priv().setup(m_metas, outMetas, std::move(pE));
