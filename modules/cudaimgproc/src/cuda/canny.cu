@@ -90,22 +90,12 @@ namespace cv { namespace cuda { namespace device
 
 namespace canny
 {
+    texture<uchar, cudaTextureType2D, cudaReadModeElementType> tex_src(false, cudaFilterModePoint, cudaAddressModeClamp);
     struct SrcTex
     {
-        virtual ~SrcTex() {}
-
-        __host__ SrcTex(int _xoff, int _yoff) : xoff(_xoff), yoff(_yoff) {}
-
-        __device__ __forceinline__ virtual int operator ()(int y, int x) const = 0;
-
         int xoff;
         int yoff;
-    };
-
-    texture<uchar, cudaTextureType2D, cudaReadModeElementType> tex_src(false, cudaFilterModePoint, cudaAddressModeClamp);
-    struct SrcTexRef : SrcTex
-    {
-        __host__ SrcTexRef(int _xoff, int _yoff) : SrcTex(_xoff, _yoff) {}
+        __host__ SrcTex(int _xoff, int _yoff) : xoff(_xoff), yoff(_yoff) {}
 
         __device__ __forceinline__ int operator ()(int y, int x) const
         {
@@ -113,23 +103,40 @@ namespace canny
         }
     };
 
-    struct SrcTexObj : SrcTex
+    struct SrcTexObject
     {
-        __host__ SrcTexObj(int _xoff, int _yoff, cudaTextureObject_t _tex_src_object) : SrcTex(_xoff, _yoff), tex_src_object(_tex_src_object) { }
+        int xoff;
+        int yoff;
+        cudaTextureObject_t tex_src_object;
+        __host__ SrcTexObject(int _xoff, int _yoff, cudaTextureObject_t _tex_src_object) : xoff(_xoff), yoff(_yoff), tex_src_object(_tex_src_object) { }
 
         __device__ __forceinline__ int operator ()(int y, int x) const
         {
             return tex2D<uchar>(tex_src_object, x + xoff, y + yoff);
         }
 
-        cudaTextureObject_t tex_src_object;
     };
 
-    template <
-        class T,
-        class Norm
-    >
-    __global__ void calcMagnitudeKernel(const T src, PtrStepi dx, PtrStepi dy, PtrStepSzf mag, const Norm norm)
+    template <class Norm> __global__
+    void calcMagnitudeKernel(const SrcTex src, PtrStepi dx, PtrStepi dy, PtrStepSzf mag, const Norm norm)
+    {
+        const int x = blockIdx.x * blockDim.x + threadIdx.x;
+        const int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+        if (y >= mag.rows || x >= mag.cols)
+            return;
+
+        int dxVal = (src(y - 1, x + 1) + 2 * src(y, x + 1) + src(y + 1, x + 1)) - (src(y - 1, x - 1) + 2 * src(y, x - 1) + src(y + 1, x - 1));
+        int dyVal = (src(y + 1, x - 1) + 2 * src(y + 1, x) + src(y + 1, x + 1)) - (src(y - 1, x - 1) + 2 * src(y - 1, x) + src(y - 1, x + 1));
+
+        dx(y, x) = dxVal;
+        dy(y, x) = dyVal;
+
+        mag(y, x) = norm(dxVal, dyVal);
+    }
+
+    template <class Norm> __global__
+    void calcMagnitudeKernel(const SrcTexObject src, PtrStepi dx, PtrStepi dy, PtrStepSzf mag, const Norm norm)
     {
         const int x = blockIdx.x * blockDim.x + threadIdx.x;
         const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -155,6 +162,15 @@ namespace canny
 
         if (cc30)
         {
+            cudaResourceDesc resDesc;
+            memset(&resDesc, 0, sizeof(resDesc));
+            resDesc.resType = cudaResourceTypePitch2D;
+            resDesc.res.pitch2D.devPtr = srcWhole.ptr();
+            resDesc.res.pitch2D.height = srcWhole.rows;
+            resDesc.res.pitch2D.width = srcWhole.cols;
+            resDesc.res.pitch2D.pitchInBytes = srcWhole.step;
+            resDesc.res.pitch2D.desc = cudaCreateChannelDesc<uchar>();
+
             cudaTextureDesc texDesc;
             memset(&texDesc, 0, sizeof(texDesc));
             texDesc.addressMode[0] = cudaAddressModeClamp;
@@ -162,9 +178,9 @@ namespace canny
             texDesc.addressMode[2] = cudaAddressModeClamp;
 
             cudaTextureObject_t tex = 0;
-            createTextureObjectPitch2D(&tex, srcWhole, texDesc);
+            cudaCreateTextureObject(&tex, &resDesc, &texDesc, NULL);
 
-            SrcTexObj src(xoff, yoff, tex);
+            SrcTexObject src(xoff, yoff, tex);
 
             if (L2Grad)
             {
@@ -189,7 +205,7 @@ namespace canny
         else
         {
             bindTexture(&tex_src, srcWhole);
-            SrcTexRef src(xoff, yoff);
+            SrcTex src(xoff, yoff);
 
             if (L2Grad)
             {

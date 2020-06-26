@@ -127,8 +127,6 @@
 
 /* NVIDIA Video Decoding API*/
 #cmakedefine HAVE_NVCUVID
-#cmakedefine HAVE_NVCUVID_HEADER
-#cmakedefine HAVE_DYNLINK_NVCUVID_HEADER
 
 /* NVIDIA Video Encoding API*/
 #cmakedefine HAVE_NVCUVENC
