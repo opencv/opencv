@@ -411,8 +411,8 @@ void cv::fisheye::undistortPoints( InputArray distorted, OutputArray undistorted
             }
 
             scale = std::tan(theta) / theta_d;
-        } 
-        else 
+        }
+        else
         {
             converged = true;
         }
