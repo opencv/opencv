@@ -8,6 +8,8 @@
 
 #ifdef __cplusplus
 #import "opencv.hpp"
+#else
+#define CV_EXPORTS
 #endif
 
 #import <Foundation/Foundation.h>
@@ -18,7 +20,7 @@ NS_ASSUME_NONNULL_BEGIN
 /**
 *  Object representing a point feature found by one of many available keypoint detectors, such as Harris corner detector, FAST, StarDetector, SURF, SIFT etc.
 */
-@interface KeyPoint : NSObject
+CV_EXPORTS @interface KeyPoint : NSObject
 
 #pragma mark - Properties
 

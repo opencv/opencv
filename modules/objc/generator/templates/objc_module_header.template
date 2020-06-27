@@ -6,6 +6,8 @@
 #ifdef __cplusplus
 #import "opencv.hpp"
 $additionalImports
+#else
+#define CV_EXPORTS
 #endif
 
 #import <Foundation/Foundation.h>
@@ -17,7 +19,7 @@ $enumDeclarations
 NS_ASSUME_NONNULL_BEGIN
 
 $docs
-@interface $module : $base
+CV_EXPORTS @interface $module : $base
 
 $methodDeclarations
 
