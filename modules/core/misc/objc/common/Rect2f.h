@@ -8,6 +8,8 @@
 
 #ifdef __cplusplus
 #import "opencv.hpp"
+#else
+#define CV_EXPORTS
 #endif
 
 @class Point2f;
@@ -20,7 +22,7 @@ NS_ASSUME_NONNULL_BEGIN
 /**
 * Represents a rectange the coordinate and dimension values of which are of type `float`
 */
-@interface Rect2f : NSObject
+CV_EXPORTS @interface Rect2f : NSObject
 
 #pragma mark - Properties
 

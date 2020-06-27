@@ -13,7 +13,7 @@ NS_ASSUME_NONNULL_BEGIN
 /**
 * Mat representation of an array of vectors of six floats
 */
-@interface MatOfFloat6 : Mat
+CV_EXPORTS @interface MatOfFloat6 : Mat
 
 #pragma mark - Constructors
 

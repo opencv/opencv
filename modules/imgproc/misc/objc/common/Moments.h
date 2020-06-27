@@ -8,13 +8,15 @@
 
 #ifdef __cplusplus
 #import "opencv.hpp"
+#else
+#define CV_EXPORTS
 #endif
 
 #import <Foundation/Foundation.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface Moments : NSObject
+CV_EXPORTS @interface Moments : NSObject
 
 @property double m00;
 @property double m10;

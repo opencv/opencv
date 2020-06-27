@@ -15,7 +15,7 @@ NS_ASSUME_NONNULL_BEGIN
 /**
 * Mat representation of an array of Rect2d objects
 */
-@interface MatOfRect2d : Mat
+CV_EXPORTS @interface MatOfRect2d : Mat
 
 #pragma mark - Constructors
 
