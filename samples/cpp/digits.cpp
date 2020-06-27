@@ -7,7 +7,7 @@
 //  You can follow the following guide to train LeNet-5 by yourself using the MNIST dataset.
 //  https://github.com/intel/caffe/blob/a3d5b022fe026e9092fc7abc7654b1162ab9940d/examples/mnist/readme.md
 //
-//  You can also download and train the model directly.
+//  You can also download already trained model directly.
 //  https://github.com/zihaomu/opencv_lenet_demo/blob/master/src/lenet.caffemodel
 //  https://github.com/zihaomu/opencv_lenet_demo/blob/master/src/lenet.prototxt
 
@@ -16,7 +16,6 @@
 #include <opencv2/dnn.hpp>
 
 #include <iostream>
-#include <vector>
 
 using namespace cv;
 using namespace cv::dnn;
@@ -32,9 +31,9 @@ const char *keys =
     "{ thr         | 0.8 | Confidence threshold. }";
 
 // Find best class for the blob (i.e. class with maximal probability)
-static void getMaxClass(const Mat &probBlob, int *classId, double *classProb);
+static void getMaxClass(const Mat &probBlob, int &classId, double &classProb);
 
-void predictor(dnn::Net net, Mat &roi, int &class_id, double &probability);
+void predictor(Net net, const Mat &roi, int &class_id, double &probability);
 
 int main(int argc, char **argv)
 {
@@ -53,24 +52,21 @@ int main(int argc, char **argv)
     std::string modelTxt = parser.get<String>("modelTxt");
     std::string modelBin = parser.get<String>("modelBin");
 
-    dnn::Net net;
+    Net net;
     try
     {
-        net = dnn::readNetFromCaffe(modelTxt, modelBin);
+        net = readNet(modelTxt, modelBin);
     }
     catch (cv::Exception &ee)
     {
         std::cerr << "Exception: " << ee.what() << std::endl;
-        if (net.empty())
-        {
-            std::cout << "Can't load the network by using the flowing files:" << std::endl;
-            std::cout << "modelTxt: " << modelTxt << std::endl;
-            std::cout << "modelBin: " << modelBin << std::endl;
-            return 1;
-        }
+        std::cout << "Can't load the network by using the flowing files:" << std::endl;
+        std::cout << "modelTxt: " << modelTxt << std::endl;
+        std::cout << "modelBin: " << modelBin << std::endl;
+        return 1;
     }
 
-    const std::string resultWinName = "Handwritten digit recognition based on LeNet-5";
+    const std::string resultWinName = "Please write the number on white paper and occupy the entire camera.";
     const std::string preWinName = "Preprocessing";
 
     namedWindow(preWinName, WINDOW_AUTOSIZE);
@@ -101,7 +97,7 @@ int main(int argc, char **argv)
         cap.set(CAP_PROP_FRAME_WIDTH, vWidth);
         cap.set(CAP_PROP_FRAME_HEIGHT, vHeight);
 
-    TickMeter cvtm;
+    TickMeter tm;
 
     while (waitKey(1) < 0)
     {
@@ -112,69 +108,69 @@ int main(int argc, char **argv)
             break;
         }
 
-        cvtm.reset();
-        cvtm.start();
+        tm.reset();
+        tm.start();
 
         Mat image = rawImage.clone();
-            // Image preprocessing
-            cvtColor(image, image, COLOR_BGR2GRAY);
-            GaussianBlur(image, image, Size(3, 3), 2, 2);
-            adaptiveThreshold(image, image, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, 25, 10);
-            bitwise_not(image, image);
+        // Image preprocessing
+        cvtColor(image, image, COLOR_BGR2GRAY);
+        GaussianBlur(image, image, Size(3, 3), 2, 2);
+        adaptiveThreshold(image, image, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, 25, 10);
+        bitwise_not(image, image);
 
-            // Find connected component
-            int nccomps = cv::connectedComponentsWithStats(image, labels, stats, centroids);
+        // Find connected component
+        int nccomps = cv::connectedComponentsWithStats(image, labels, stats, centroids);
 
-            for (int i = 1; i < nccomps; i++)
+        for (int i = 1; i < nccomps; i++)
+        {
+            ifDrawingBox = false;
+
+            // Extend the bounding box of connected component for easier recognition
+            if (stats.at<int>(i - 1, CC_STAT_AREA) > 80 && stats.at<int>(i - 1, CC_STAT_AREA) < 3000)
             {
-                ifDrawingBox = false;
-
-                // Extend the bounding box of connected component for easier recognition
-                if (stats.at<int>(i - 1, CC_STAT_AREA) > 80 && stats.at<int>(i - 1, CC_STAT_AREA) < 3000)
-                {
-                    ifDrawingBox = true;
-                    int left = stats.at<int>(i - 1, CC_STAT_HEIGHT) / 4;
-                    getRectangle = Rect(stats.at<int>(i - 1, CC_STAT_LEFT) - left, stats.at<int>(i - 1, CC_STAT_TOP) - left, stats.at<int>(i - 1, CC_STAT_WIDTH) + 2 * left, stats.at<int>(i - 1, CC_STAT_HEIGHT) + 2 * left);
-                    getRectangle &= basicRect;
-                }
-
-                if (ifDrawingBox)
-                {
-                    Mat roi = image(getRectangle);
-                    predictor(net, roi, classId, probability);
-
-                    if (probability < confThreshold)
-                        continue;
-
-                    rectangle(rawImage, getRectangle, Scalar(128, 255, 128), 2);
-
-                    position = Point(getRectangle.br().x - 7, getRectangle.br().y + 25);
-                    putText(rawImage, std::to_string(classId), position, 3, 1.0, Scalar(128, 128, 255), 2);
-                }
+                ifDrawingBox = true;
+                int left = stats.at<int>(i - 1, CC_STAT_HEIGHT) / 4;
+                getRectangle = Rect(stats.at<int>(i - 1, CC_STAT_LEFT) - left, stats.at<int>(i - 1, CC_STAT_TOP) - left, stats.at<int>(i - 1, CC_STAT_WIDTH) + 2 * left, stats.at<int>(i - 1, CC_STAT_HEIGHT) + 2 * left);
+                getRectangle &= basicRect;
             }
 
-            cvtm.stop();
-            fps = 1 / cvtm.getTimeSec();
-            std::string fpsString = format("Inference FPS: %.2f m/s.", fps);
-            putText(image, fpsString, Point(5, 20), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(128, 255, 128));
+            if (ifDrawingBox)
+            {
+                Mat roi = image(getRectangle);
+                predictor(net, roi, classId, probability);
 
-            imshow(resultWinName, rawImage);
-            imshow(preWinName, image);
+                if (probability < confThreshold)
+                    continue;
+
+                rectangle(rawImage, getRectangle, Scalar(128, 255, 128), 2);
+
+                position = Point(getRectangle.br().x - 7, getRectangle.br().y + 25);
+                putText(rawImage, std::to_string(classId), position, 3, 1.0, Scalar(128, 128, 255), 2);
+            }
+        }
+
+        tm.stop();
+        fps = 1 / tm.getTimeSec();
+        std::string fpsString = format("Inference FPS: %.2f m/s.", fps);
+        putText(image, fpsString, Point(5, 20), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(128, 255, 128));
+
+        imshow(resultWinName, rawImage);
+        imshow(preWinName, image);
 
     }
 
     return 0;
 }
 
-static void getMaxClass(const Mat &probBlob, int *classId, double *classProb)
+static void getMaxClass(const Mat &probBlob, int &classId, double &classProb)
 {
     Mat probMat = probBlob.reshape(1, 1);
     Point classNumber;
-    minMaxLoc(probMat, NULL, classProb, NULL, &classNumber);
-    *classId = classNumber.x;
+    minMaxLoc(probMat, NULL, &classProb, NULL, &classNumber);
+    classId = classNumber.x;
 }
 
-void predictor(dnn::Net net, Mat &roi, int &classId, double &probability)
+void predictor(Net net, const Mat &roi, int &classId, double &probability)
 {
     Mat pred;
     //Convert Mat to batch of images
@@ -182,6 +178,6 @@ void predictor(dnn::Net net, Mat &roi, int &classId, double &probability)
     //set the network input
     net.setInput(inputBlob);
     //compute output, "prob" is the name of the output layer
-    pred = net.forward("prob");
-    getMaxClass(pred, &classId, &probability);
+    pred = net.forward();
+    getMaxClass(pred, classId, probability);
 }
