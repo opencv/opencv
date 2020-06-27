@@ -70,3 +70,13 @@ Deep Neural Networks (dnn module) {#tutorial_table_of_content_dnn}
     *Author:* Dmitry Kurtaev
 
     How to define custom layers to import networks.
+
+-   @subpage tutorial_dnn_OCR
+
+    *Languages:* C++
+
+    *Compatibility:* \> OpenCV 4.3
+
+    *Author:* Zihao Mu
+
+    In this tutorial you will learn how to use opencv_dnn module using custom OCR models.
