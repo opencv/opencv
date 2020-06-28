@@ -165,6 +165,30 @@ inline void copyFromIE(const IE::Blob::Ptr &blob, MatType &mat) {
     }
 }
 
+// (taken from DNN module)
+static cv::Mutex* __initialization_mutex = NULL;
+cv::Mutex& getInitializationMutex()
+{
+    if (__initialization_mutex == NULL)
+        __initialization_mutex = new cv::Mutex();
+    return *__initialization_mutex;
+}
+// force initialization (single-threaded environment)
+cv::Mutex* __initialization_mutex_initializer = &getInitializationMutex();
+
+IE::Core& getCore(const std::string& id) {
+    static std::map<std::string, std::shared_ptr<IE::Core> > cores;
+    cv::AutoLock lock_unit(getInitializationMutex());
+    std::map<std::string, std::shared_ptr<IE::Core> >::iterator i = cores.find(id);
+    if (i == cores.end())
+    {
+        std::shared_ptr<IE::Core> core = std::make_shared<IE::Core>();
+        cores[id] = core;
+        return *core.get();
+    }
+    return *(i->second).get();
+}
+
 // IE-specific metadata, represents a network with its parameters
 struct IEUnit {
     static const char *name() { return "IEModelConfig"; }
@@ -182,7 +206,7 @@ struct IEUnit {
         reader.ReadWeights(params.weights_path);
         net = reader.getNetwork();
 #else // >= 2020.1
-        IE::Core core;
+        InferenceEngine::Core& core = getCore(params.device_id);
         net = core.ReadNetwork(params.model_path, params.weights_path);
 #endif
         inputs = net.getInputsInfo();
@@ -216,7 +240,7 @@ struct IEUnit {
 #if INF_ENGINE_RELEASE < 2019020000  // < 2019.R2
         auto this_plugin = IE::PluginDispatcher().getPluginByDevice(params.device_id);
 #else
-        IE::Core core;
+        InferenceEngine::Core& core = getCore(params.device_id);
 #endif
 
 #if INF_ENGINE_RELEASE < 2020000000  // <= 2019.R3
@@ -266,37 +290,11 @@ struct IEUnit {
             }
         }
 #endif // INF_ENGINE_RELEASE < 2020000000
-        // In dnn, after ordinary extensions they try to add custom <InfEngineExtension> as
-        // "some of networks can work without a library of extra layers.
-        //  OpenCV fallbacks as extensions"
-        // Do WE need this? (dnn/src/op_inf_engine.cpp:824)
 #if INF_ENGINE_RELEASE < 2019020000  // < 2019.R2
         auto this_network = this_plugin.LoadNetwork(net, {}); // FIXME: 2nd parameter to be
                                                               // configurable via the API
 #else
-        bool isHetero = false;
-        if (params.device_id != "CPU")
-        {
-            isHetero = params.device_id == "FPGA";
-            for (auto& layer : net)
-            {
-                if (layer->type == "OpenCVLayer")
-                {
-                    isHetero = true;
-#if INF_ENGINE_RELEASE < 2019030000  // < 2019.R3
-                    // Not sure about lower versions but in 2019R3 we do not need this
-                    layer->affinity = "CPU";
-                }
-                else
-                {
-                    layer->affinity = params.device_id;
-#endif
-                }
-            }
-        }
-        IE::ExecutableNetwork this_network = isHetero ?
-            core.LoadNetwork(net, "HETERO:" + params.device_id + ",CPU", {}) :
-            core.LoadNetwork(net, params.device_id, {});
+        auto this_network = core.LoadNetwork(net, params.device_id);
 #endif // INF_ENGINE_RELEASE < 2019020000
 
         auto this_request = this_network.CreateInferRequest();

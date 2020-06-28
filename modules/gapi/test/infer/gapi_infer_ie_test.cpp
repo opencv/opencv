@@ -131,19 +131,26 @@ TEST(TestAgeGenderIE, InferBasicTensor)
 
     IE::Blob::Ptr ie_age, ie_gender;
     {
+#if INF_ENGINE_RELEASE < 2020000000  // < 2020.1
         IE::CNNNetReader reader;
         reader.ReadNetwork(topology_path);
         reader.ReadWeights(weights_path);
         auto net = reader.getNetwork();
 
+        auto plugin = IE::PluginDispatcher().getPluginByDevice("CPU");
+        auto plugin_net = plugin.LoadNetwork(net, {});
+#else
+        IE::Core core;
+        auto net = core.ReadNetwork(topology_path, weights_path);
+
+        auto plugin_net = core.LoadNetwork(net, "CPU");
+#endif
+        auto infer_request = plugin_net.CreateInferRequest();
+
         const auto &iedims = net.getInputsInfo().begin()->second->getTensorDesc().getDims();
               auto  cvdims = cv::gapi::ie::util::to_ocv(iedims);
         in_mat.create(cvdims, CV_32F);
         cv::randu(in_mat, -1, 1);
-
-        auto plugin = IE::PluginDispatcher().getPluginByDevice("CPU");
-        auto plugin_net = plugin.LoadNetwork(net, {});
-        auto infer_request = plugin_net.CreateInferRequest();
 
         infer_request.SetBlob("data", cv::gapi::ie::util::to_ie(in_mat));
         infer_request.Infer();
@@ -189,18 +196,25 @@ TEST(TestAgeGenderIE, InferBasicImage)
     namespace IE = InferenceEngine;
     IE::Blob::Ptr ie_age, ie_gender;
     {
+#if INF_ENGINE_RELEASE < 2020000000  // < 2020.1
         IE::CNNNetReader reader;
         reader.ReadNetwork(topology_path);
         reader.ReadWeights(weights_path);
         auto net = reader.getNetwork();
+#else
+        IE::Core core;
+        auto net = core.ReadNetwork(topology_path, weights_path);
+#endif
         auto &ii = net.getInputsInfo().at("data");
         ii->setPrecision(IE::Precision::U8);
         ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
-
+#if INF_ENGINE_RELEASE < 2020000000  // < 2020.1
         auto plugin = IE::PluginDispatcher().getPluginByDevice("CPU");
         auto plugin_net = plugin.LoadNetwork(net, {});
+#else
+        auto plugin_net = core.LoadNetwork(net, "CPU");
+#endif
         auto infer_request = plugin_net.CreateInferRequest();
-
         infer_request.SetBlob("data", cv::gapi::ie::util::to_ie(in_mat));
         infer_request.Infer();
         ie_age    = infer_request.GetBlob("age_conv3");
@@ -260,16 +274,25 @@ struct ROIList: public ::testing::Test {
         // Load & run IE network
         namespace IE = InferenceEngine;
         {
+#if INF_ENGINE_RELEASE < 2020000000  // < 2020.1
             IE::CNNNetReader reader;
-            reader.ReadNetwork(m_model_path);
-            reader.ReadWeights(m_weights_path);
+            reader.ReadNetwork(topology_path);
+            reader.ReadWeights(weights_path);
             auto net = reader.getNetwork();
+#else
+            IE::Core core;
+            auto net = core.ReadNetwork(topology_path, weights_path);
+#endif
             auto &ii = net.getInputsInfo().at("data");
             ii->setPrecision(IE::Precision::U8);
             ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
 
+#if INF_ENGINE_RELEASE < 2020000000  // < 2020.1
             auto plugin = IE::PluginDispatcher().getPluginByDevice("CPU");
             auto plugin_net = plugin.LoadNetwork(net, {});
+#else
+            auto plugin_net = core.LoadNetwork(net, "CPU");
+#endif
             auto infer_request = plugin_net.CreateInferRequest();
             auto frame_blob = cv::gapi::ie::util::to_ie(m_in_mat);
 
