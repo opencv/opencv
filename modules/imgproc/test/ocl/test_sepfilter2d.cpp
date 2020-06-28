@@ -73,7 +73,7 @@ PARAM_TEST_CASE(SepFilter2D, MatDepth, Channels, BorderType, bool, bool)
         useRoi = GET_PARAM(4);
     }
 
-    void random_roi()
+    void random_roi(bool bitExact)
     {
         Size ksize = randomSize(kernelMinSize, kernelMaxSize);
         if (1 != ksize.width % 2)
@@ -81,10 +81,18 @@ PARAM_TEST_CASE(SepFilter2D, MatDepth, Channels, BorderType, bool, bool)
         if (1 != ksize.height % 2)
             ksize.height++;
 
-        Mat temp = randomMat(Size(ksize.width, 1), CV_MAKE_TYPE(CV_32F, 1), -MAX_VALUE, MAX_VALUE);
+        Mat temp = randomMat(Size(ksize.width, 1), CV_32FC1, -0.5, 1.0);
         cv::normalize(temp, kernelX, 1.0, 0.0, NORM_L1);
-        temp = randomMat(Size(1, ksize.height),  CV_MAKE_TYPE(CV_32F, 1), -MAX_VALUE, MAX_VALUE);
+        temp = randomMat(Size(1, ksize.height), CV_32FC1, -0.5, 1.0);
         cv::normalize(temp, kernelY, 1.0, 0.0, NORM_L1);
+
+        if (bitExact)
+        {
+            kernelX.convertTo(temp, CV_32S, 256);
+            temp.convertTo(kernelX, CV_32F, 1.0 / 256);
+            kernelY.convertTo(temp, CV_32S, 256);
+            temp.convertTo(kernelY, CV_32F, 1.0 / 256);
+        }
 
         Size roiSize = randomSize(ksize.width, MAX_VALUE, ksize.height, MAX_VALUE);
         Border srcBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
@@ -95,6 +103,11 @@ PARAM_TEST_CASE(SepFilter2D, MatDepth, Channels, BorderType, bool, bool)
 
         anchor.x = anchor.y = -1;
         delta = randomDouble(-100, 100);
+
+        if (bitExact)
+        {
+            delta = (int)(delta * 256) / 256.0;
+        }
 
         UMAT_UPLOAD_INPUT_PARAMETER(src);
         UMAT_UPLOAD_OUTPUT_PARAMETER(dst);
@@ -110,12 +123,28 @@ OCL_TEST_P(SepFilter2D, Mat)
 {
     for (int j = 0; j < test_loop_times + 3; j++)
     {
-        random_roi();
+        random_roi(false);
 
         OCL_OFF(cv::sepFilter2D(src_roi, dst_roi, -1, kernelX, kernelY, anchor, delta, borderType));
         OCL_ON(cv::sepFilter2D(usrc_roi, udst_roi, -1, kernelX, kernelY, anchor, delta, borderType));
 
         Near(1.0);
+    }
+}
+
+OCL_TEST_P(SepFilter2D, Mat_BitExact)
+{
+    for (int j = 0; j < test_loop_times + 3; j++)
+    {
+        random_roi(true);
+
+        OCL_OFF(cv::sepFilter2D(src_roi, dst_roi, -1, kernelX, kernelY, anchor, delta, borderType));
+        OCL_ON(cv::sepFilter2D(usrc_roi, udst_roi, -1, kernelX, kernelY, anchor, delta, borderType));
+
+        if (src_roi.depth() < CV_32F)
+            Near(0.0);
+        else
+            Near(1e-3);
     }
 }
 
