@@ -271,7 +271,8 @@ struct IEUnit {
             {
                 try
                 {
-                    auto extension = IE::make_so_pointer<IE::IExtension>(extlib);
+                    std::shared_ptr<IE::IExtension> extension =
+                        IE::make_so_pointer<IE::IExtension>(extlib);
 #if INF_ENGINE_RELEASE < 2019020000  // < 2019.R2
                     this_plugin.AddExtension(extension);
 #else
