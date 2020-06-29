@@ -125,4 +125,47 @@ TEST_F(S11N_Basic, Test_Mat_view) {
     EXPECT_EQ(0, cv::norm(view, get<cv::Mat>(), cv::NORM_INF));
 }
 
+TEST_F(S11N_Basic, Test_MatDesc) {
+    cv::GMatDesc v = { CV_8U, 1, {320,240} };
+    put(v);
+    EXPECT_EQ(v, get<cv::GMatDesc>());
+}
+
+TEST_F(S11N_Basic, Test_MetaArg_MatDesc) {
+    cv::GMatDesc desc = { CV_8U, 1,{ 320,240 } };
+    auto v = cv::GMetaArg{ desc };
+    put(v);
+    cv::GMetaArg out_v = get<cv::GMetaArg>();
+    cv::GMatDesc out_desc = cv::util::get<cv::GMatDesc>(out_v);
+    EXPECT_EQ(desc, out_desc);
+}
+
+TEST_F(S11N_Basic, Test_MetaArg_Monostate) {
+    GMetaArg v;
+    put(v);
+    cv::GMetaArg out_v = get<cv::GMetaArg>();
+    if (!util::holds_alternative<util::monostate>(out_v))
+    {
+        GTEST_FAIL();
+    }
+}
+
+TEST_F(S11N_Basic, Test_RunArg_Mat) {
+    cv::Mat mat = cv::Mat::eye(cv::Size(64, 64), CV_8UC3);
+    auto v = cv::GRunArg{ mat };
+    put(v);
+    cv::GRunArg out_v = get<cv::GRunArg>();
+    cv::Mat out_mat = cv::util::get<cv::Mat>(out_v);
+    EXPECT_EQ(0, cv::norm(mat, out_mat, cv::NORM_INF));
+}
+
+TEST_F(S11N_Basic, Test_RunArg_Scalar) {
+    cv::Scalar scalar = cv::Scalar(128, 33, 53);
+    auto v = cv::GRunArg{ scalar };
+    put(v);
+    cv::GRunArg out_v = get<cv::GRunArg>();
+    cv::Scalar out_scalar = cv::util::get<cv::Scalar>(out_v);
+    EXPECT_EQ(scalar, out_scalar);
+}
+
 } // namespace opencv_test
