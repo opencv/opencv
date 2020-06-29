@@ -360,6 +360,9 @@ void max(const Mat& src, double s, Mat& dst);
 
 void compare(const Mat& src1, const Mat& src2, Mat& dst, int cmpop);
 void compare(const Mat& src, double s, Mat& dst, int cmpop);
+
+int countExceed(const Mat& src, double value, int cmpop);
+int countExceed(const Mat& src1, const Mat& src2, double value, int cmpop);
 void gemm(const Mat& src1, const Mat& src2, double alpha,
                      const Mat& src3, double beta, Mat& dst, int flags);
 void transform( const Mat& src, Mat& dst, const Mat& transmat, const Mat& shift );

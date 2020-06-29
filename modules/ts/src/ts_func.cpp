@@ -1744,6 +1744,19 @@ void compare(const Mat& src, double value, Mat& dst, int cmpop)
     }
 }
 
+int countExceed(const Mat& src, double value, int cmpop)
+{
+    Mat count;
+    cvtest::compare(src, value, count, cmpop);
+    return countNonZero(count.reshape(1));
+}
+
+int countExceed(const Mat& src1, const Mat& src2, double value, int cmpop)
+{
+    Mat diff;
+    absdiff(src1.reshape(1), src2.reshape(1), diff);
+    return countExceed(diff, value, cmpop);
+}
 
 template<typename _Tp> double
 cmpUlpsInt_(const _Tp* src1, const _Tp* src2, size_t total, int imaxdiff,
