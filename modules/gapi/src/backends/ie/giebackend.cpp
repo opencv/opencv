@@ -165,17 +165,14 @@ inline void copyFromIE(const IE::Blob::Ptr &blob, MatType &mat) {
     }
 }
 
-// (taken from DNN module)
-static cv::Mutex* __initialization_mutex = NULL;
-cv::Mutex& getInitializationMutex()
+// (taken from videoio module)
+static cv::Mutex& getInitializationMutex()
 {
-    if (__initialization_mutex == NULL)
-        __initialization_mutex = new cv::Mutex();
-    return *__initialization_mutex;
+    static cv::Mutex initializationMutex;
+    return initializationMutex;
 }
-// force initialization (single-threaded environment)
-cv::Mutex* __initialization_mutex_initializer = &getInitializationMutex();
 
+// (taken from DNN module)
 IE::Core& getCore(const std::string& id) {
     static std::map<std::string, std::shared_ptr<IE::Core> > cores;
     cv::AutoLock lock_unit(getInitializationMutex());
