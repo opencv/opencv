@@ -483,5 +483,26 @@
 #endif
 #define __CV_CPU_DISPATCH_CHAIN_VSX3(fn, args, mode, ...)  CV_CPU_CALL_VSX3(fn, args); __CV_EXPAND(__CV_CPU_DISPATCH_CHAIN_ ## mode(fn, args, __VA_ARGS__))
 
+#if !defined CV_DISABLE_OPTIMIZATION && defined CV_ENABLE_INTRINSICS && defined CV_CPU_COMPILE_RVV
+#  define CV_TRY_RVV 1
+#  define CV_CPU_FORCE_RVV 1
+#  define CV_CPU_HAS_SUPPORT_RVV 1
+#  define CV_CPU_CALL_RVV(fn, args) return (cpu_baseline::fn args)
+#  define CV_CPU_CALL_RVV_(fn, args) return (opt_RVV::fn args)
+#elif !defined CV_DISABLE_OPTIMIZATION && defined CV_ENABLE_INTRINSICS && defined CV_CPU_DISPATCH_COMPILE_RVV
+#  define CV_TRY_RVV 1
+#  define CV_CPU_FORCE_RVV 0
+#  define CV_CPU_HAS_SUPPORT_RVV (cv::checkHardwareSupport(CV_CPU_RVV))
+#  define CV_CPU_CALL_RVV(fn, args) if (CV_CPU_HAS_SUPPORT_RVV) return (opt_RVV::fn args)
+#  define CV_CPU_CALL_RVV_(fn, args) if (CV_CPU_HAS_SUPPORT_RVV) return (opt_RVV::fn args)
+#else
+#  define CV_TRY_RVV 0
+#  define CV_CPU_FORCE_RVV 0
+#  define CV_CPU_HAS_SUPPORT_RVV 0
+#  define CV_CPU_CALL_RVV(fn, args)
+#  define CV_CPU_CALL_RVV_(fn, args)
+#endif
+#define __CV_CPU_DISPATCH_CHAIN_RVV(fn, args, mode, ...)  CV_CPU_CALL_RVV(fn, args); __CV_EXPAND(__CV_CPU_DISPATCH_CHAIN_ ## mode(fn, args, __VA_ARGS__))
+
 #define CV_CPU_CALL_BASELINE(fn, args) return (cpu_baseline::fn args)
 #define __CV_CPU_DISPATCH_CHAIN_BASELINE(fn, args, mode, ...)  CV_CPU_CALL_BASELINE(fn, args) /* last in sequence */
