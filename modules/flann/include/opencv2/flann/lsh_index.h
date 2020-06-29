@@ -112,7 +112,7 @@ public:
     void buildIndex() CV_OVERRIDE
     {
         tables_.resize(table_number_);
-        for (int i = 0; i < table_number_; ++i) {
+        for (unsigned int i = 0; i < table_number_; ++i) {
             lsh::LshTable<ElementType>& table = tables_[i];
             table = lsh::LshTable<ElementType>(feature_size_, key_size_);
 
@@ -378,11 +378,11 @@ private:
     IndexParams index_params_;
 
     /** table number */
-    int table_number_;
+    unsigned int table_number_;
     /** key size */
-    int key_size_;
+    unsigned int key_size_;
     /** How far should we look for neighbors in multi-probe LSH */
-    int multi_probe_level_;
+    unsigned int multi_probe_level_;
 
     /** The XOR masks to apply to a key to get the neighboring buckets */
     std::vector<lsh::BucketKey> xor_masks_;
