@@ -190,7 +190,7 @@ endif()
 
 if(WIN32)
   # Required for htonl/ntohl on Windows
-  target_link_libraries(${the_module} PRIVATE wsock32 ws2_32)
+  ocv_target_link_libraries(${the_module} PRIVATE wsock32 ws2_32)
 endif()
 
 ocv_add_perf_tests()
