@@ -119,6 +119,8 @@ GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::GMetaArg &arg);
 GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::GRunArg &arg);
 GAPI_EXPORTS I::IStream& operator>> (I::IStream& is, cv::GRunArg &arg);
 
+GAPI_EXPORTS I::IStream& operator >> (I::IStream& is, cv::GRunArgP &arg);
+
 GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::GKernel &k);
 GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::GKernel &k);
 

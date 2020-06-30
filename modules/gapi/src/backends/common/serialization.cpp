@@ -443,6 +443,25 @@ I::IStream& operator >> (I::IStream& is, cv::GRunArg &arg) {
     }
     return is;
 }
+I::IStream& operator >> (I::IStream& is, cv::GRunArgP &arg) {
+    GRunArg res_obj;
+    is >> res_obj;
+    using T = cv::GRunArg;
+    switch (res_obj.index())
+    {
+    case T::index_of<cv::Mat>() :
+    {
+        *cv::util::get<cv::Mat*>(arg) = cv::util::get<cv::Mat>(res_obj);
+    } break;
+    case T::index_of<cv::Scalar>() :
+        *cv::util::get<cv::Scalar*>(arg) = cv::util::get<cv::Scalar>(res_obj);
+        break;
+    default:
+        GAPI_Assert(false && "This value type is not supported!"); // ...maybe because of STANDALONE mode.
+        break;
+    }
+    return is;
+}
 
 
 I::OStream& operator<< (I::OStream& os, const cv::GKernel &k) {
