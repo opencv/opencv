@@ -224,9 +224,9 @@ public:
         struct LshIndexParams : public IndexParams
         {
             LshIndexParams(
-                unsigned int table_number,
-                unsigned int key_size,
-                unsigned int multi_probe_level );
+                int table_number,
+                int key_size,
+                int multi_probe_level );
         };
         @endcode
         - **AutotunedIndexParams** When passing an object of this type the index created is
