@@ -663,7 +663,7 @@ private:
 
         memset(mean,0,veclen_*sizeof(DistanceType));
 
-        for (size_t i=0; i<(size_t)indices_length; ++i) {
+        for (int i=0; i<indices_length; ++i) {
             ElementType* vec = dataset_[indices[i]];
             for (size_t j=0; j<veclen_; ++j) {
                 mean[j] += vec[j];
@@ -671,9 +671,9 @@ private:
             variance += distance_(vec, ZeroIterator<ElementType>(), veclen_);
         }
         for (size_t j=0; j<veclen_; ++j) {
-            mean[j] /= size_;
+            mean[j] /= indices_length;
         }
-        variance /= size_;
+        variance /= indices_length;
         variance -= distance_(mean, ZeroIterator<ElementType>(), veclen_);
 
         DistanceType tmp = 0;
