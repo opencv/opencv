@@ -122,8 +122,22 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace de
     template <> inline __device__ __half ceil(__half value) { return hceil(value); }
 #endif
 
+    template <class T> __device__ T mul_ftz(T x, T y) { return x * y; }
+    template <> inline __device__ float mul_ftz(float x, float y) {
+        float result;
+        asm("mul.ftz.f32 %0, %1, %2;" : "=f"(result) : "f"(x), "f"(y));
+        return result;
+    }
+
     template <class T> __device__ T fast_divide(T x, T y) { return x / y; }
     template <> inline __device__ float fast_divide(float x, float y) { return __fdividef(x, y); }
+
+    template <class T> __device__ T fast_divide_ftz(T x, T y) { return fast_divide(x, y); }
+    template <> inline __device__ float fast_divide_ftz(float x, float y) {
+        float result;
+        asm("div.approx.ftz.f32 %0, %1, %2;" : "=f"(result) : "f"(x), "f"(y));
+        return result;
+    }
 
     template <class T> __device__ T fast_exp(T value) { return exp(value); }
     template <> inline __device__ float fast_exp(float value) { return __expf(value); }

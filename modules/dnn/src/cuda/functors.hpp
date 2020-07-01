@@ -11,7 +11,7 @@
 
 #include "../cuda4dnn/csl/nvcc_defs.hpp"
 
-namespace cv { namespace dnn { namespace cuda4dnn  { namespace kernels {
+namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
 template <class T>
 struct IdentityFunctor {
