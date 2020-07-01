@@ -726,15 +726,6 @@ private:
         }
 
 
-        cv::AutoBuffer<double> dcenters_buf(branching*veclen_);
-        Matrix<double> dcenters(dcenters_buf.data(), branching, veclen_);
-        for (int i=0; i<centers_length; ++i) {
-            ElementType* vec = dataset_[centers_idx[i]];
-            for (size_t k=0; k<veclen_; ++k) {
-                dcenters[i][k] = double(vec[k]);
-            }
-        }
-
         std::vector<DistanceType> radiuses(branching);
         cv::AutoBuffer<int> count_buf(branching);
         int* count = count_buf.data();
@@ -748,10 +739,10 @@ private:
         int* belongs_to = belongs_to_buf.data();
         for (int i=0; i<indices_length; ++i) {
 
-            DistanceType sq_dist = distance_(dataset_[indices[i]], dcenters[0], veclen_);
+            DistanceType sq_dist = distance_(dataset_[indices[i]], dataset_[centers_idx[0]], veclen_);
             belongs_to[i] = 0;
             for (int j=1; j<branching; ++j) {
-                DistanceType new_sq_dist = distance_(dataset_[indices[i]], dcenters[j], veclen_);
+                DistanceType new_sq_dist = distance_(dataset_[indices[i]], dataset_[centers_idx[j]], veclen_);
                 if (sq_dist>new_sq_dist) {
                     belongs_to[i] = j;
                     sq_dist = new_sq_dist;
@@ -761,6 +752,15 @@ private:
                 radiuses[belongs_to[i]] = sq_dist;
             }
             count[belongs_to[i]]++;
+        }
+
+        cv::AutoBuffer<double> dcenters_buf(branching*veclen_);
+        Matrix<double> dcenters(dcenters_buf.data(), branching, veclen_);
+        for (int i=0; i<centers_length; ++i) {
+            ElementType* vec = dataset_[centers_idx[i]];
+            for (size_t k=0; k<veclen_; ++k) {
+                dcenters[i][k] = double(vec[k]);
+            }
         }
 
         bool converged = false;
