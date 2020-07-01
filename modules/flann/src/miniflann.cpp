@@ -801,7 +801,7 @@ bool Index::load(InputArray _data, const String& filename)
         loadIndex< ::cvflann::MaxDistance<float> >(this, index, data, fin);
         break;
     case FLANN_DIST_HIST_INTERSECT:
-        loadIndex< ::cvflann::HistIntersectionDistance<float> >(index, data, fin);
+        loadIndex< ::cvflann::HistIntersectionDistance<float> >(this, index, data, fin);
         break;
     case FLANN_DIST_HELLINGER:
         loadIndex< ::cvflann::HellingerDistance<float> >(this, index, data, fin);
