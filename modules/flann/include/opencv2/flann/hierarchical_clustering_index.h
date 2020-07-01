@@ -35,7 +35,6 @@
 
 #include <algorithm>
 #include <map>
-#include <cassert>
 #include <limits>
 #include <cmath>
 
@@ -153,7 +152,7 @@ private:
         int n = indices_length;
 
         int rnd = rand_int(n);
-        assert(rnd >=0 && rnd < n);
+        CV_DbgAssert(rnd >=0 && rnd < n);
 
         centers[0] = dsindices[rnd];
 
@@ -208,7 +207,7 @@ private:
 
         // Choose one random center and set the closestDistSq values
         int index = rand_int(n);
-        assert(index >=0 && index < n);
+        CV_DbgAssert(index >=0 && index < n);
         centers[0] = dsindices[index];
 
         // Computing distance^2 will have the advantage of even higher probability further to pick new centers
@@ -295,7 +294,7 @@ private:
 
         // Choose one random center and set the closestDistSq values
         int index = rand_int(n);
-        assert(index >=0 && index < n);
+        CV_DbgAssert(index >=0 && index < n);
         centers[0] = dsindices[index];
 
         for (int i = 0; i < n; i++) {
@@ -565,10 +564,10 @@ public:
             NodePtr node = branch.node;
             findNN(node, result, vec, checks, maxChecks, heap, checked);
         }
-        assert(result.full());
 
         delete heap;
 
+        CV_Assert(result.full());
     }
 
     IndexParams getParameters() const CV_OVERRIDE
