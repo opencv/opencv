@@ -386,7 +386,6 @@ public:
             throw FLANNException("Unknown algorithm for choosing initial centers.");
         }
 
-        trees_ = get_param(params,"trees",4);
         root = new NodePtr[trees_];
         indices = new int*[trees_];
 
