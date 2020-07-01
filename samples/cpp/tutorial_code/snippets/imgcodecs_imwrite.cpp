@@ -3,7 +3,7 @@
 using namespace cv;
 using namespace std;
 
-static void createAlphaMat(Mat &mat)
+static void paintAlphaMat(Mat &mat)
 {
     CV_Assert(mat.channels() == 4);
     for (int i = 0; i < mat.rows; ++i)
@@ -21,9 +21,9 @@ static void createAlphaMat(Mat &mat)
 
 int main()
 {
-    // Create mat with alpha channel
-    Mat mat(480, 640, CV_8UC4);
-    createAlphaMat(mat);
+    Mat mat(480, 640, CV_8UC4); // Create a matrix with alpha channel
+    paintAlphaMat(mat);
+
     vector<int> compression_params;
     compression_params.push_back(IMWRITE_PNG_COMPRESSION);
     compression_params.push_back(9);
@@ -37,9 +37,18 @@ int main()
     {
         fprintf(stderr, "Exception converting image to PNG format: %s\n", ex.what());
     }
+
     if (result)
         printf("Saved PNG file with alpha data.\n");
     else
         printf("ERROR: Can't save PNG file.\n");
+
+    vector<Mat> imgs;
+    imgs.push_back(mat);
+    imgs.push_back(~mat);
+    imgs.push_back(mat(Rect(0, 0, mat.cols / 2, mat.rows / 2)));
+    imwrite("test.tiff", imgs);
+    printf("Multiple files saved in test.tiff\n");
+
     return result ? 0 : 1;
 }
