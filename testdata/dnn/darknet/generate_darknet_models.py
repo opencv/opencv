@@ -6,7 +6,7 @@ import numpy as np
 np.random.seed(324)
 
 def genTestData(name, inpShape, outShape):
-    net = dn.load_net(name + '.cfg', '', 0)
+    net = dn.load_net((name + '.cfg').encode(), b'', 0)
 
     inp = np.random.standard_normal(inpShape).astype(np.float32)
 
@@ -33,3 +33,5 @@ genTestData('connected', [1, 3, 4, 6], [1, 2])
 genTestData('maxpool', [1, 3, 3, 6], [1, 3, 2, 3])
 genTestData('scale_channels', [1, 3, 3, 3], [1, 3, 3, 3])
 genTestData('mish', [1, 3, 4, 6], [1, 4, 4, 6])
+genTestData('route', [1, 4, 3, 6], [1, 2, 2, 3])
+genTestData('route_multi', [1, 6, 3, 6], [1, 4, 2, 3])
