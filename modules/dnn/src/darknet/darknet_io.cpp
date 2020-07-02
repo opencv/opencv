@@ -363,36 +363,26 @@ namespace cv {
                     fused_layer_names.push_back(last_layer);
                 }
 
-                void setSlice(const std::vector<int>& input_indexes, int split_size, int split_id)
+                void setSlice(int input_index, int split_size, int group_id)
                 {
-                    cv::dnn::LayerParams slice_param;
-                    slice_param.name = "Slice-name";
-                    slice_param.type = "Slice";
-
-                    int begin[] = {0, split_size * split_id, 0, 0};
+                    int begin[] = {0, split_size * group_id, 0, 0};
                     cv::dnn::DictValue paramBegin = cv::dnn::DictValue::arrayInt(begin, 4);
-                    slice_param.set("begin", paramBegin);
 
                     int end[] = {-1, begin[1] + split_size, -1, -1};
                     cv::dnn::DictValue paramEnd = cv::dnn::DictValue::arrayInt(end, 4);
-                    slice_param.set("end", paramEnd);
 
-                    for (int i = 0; i < input_indexes.size(); ++i)
-                    {
-                        darknet::LayerParameter lp;
-                        lp.layer_name = cv::format("slice_%d_%d", layer_id, input_indexes[i]);
-                        lp.layer_type = slice_param.type;
-                        lp.layerParams = slice_param;
-                        lp.bottom_indexes.push_back(fused_layer_names.at(input_indexes[i]));
-                        net->layers.push_back(lp);
-                        fused_layer_names.push_back(lp.layer_name);
-                    }
+                    darknet::LayerParameter lp;
+                    lp.layer_name = cv::format("slice_%d", layer_id);
+                    lp.layer_type = "Slice";
+                    lp.layerParams.set("begin", paramBegin);
+                    lp.layerParams.set("end", paramEnd);
 
-                    if (input_indexes.size() == 1)
-                    {
-                        last_layer = cv::format("slice_%d_%d", layer_id, input_indexes[0]);
-                        layer_id++;
-                    }
+                    lp.bottom_indexes.push_back(fused_layer_names.at(input_index));
+                    net->layers.push_back(lp);
+
+                    layer_id++;
+                    last_layer = lp.layer_name;
+                    fused_layer_names.push_back(last_layer);
                 }
 
                 void setReorg(int stride)
@@ -749,7 +739,7 @@ namespace cv {
                     {
                         std::string bottom_layers = getParam<std::string>(layer_params, "layers", "");
                         CV_Assert(!bottom_layers.empty());
-                        int num_splits = getParam<int>(layer_params, "groups", 1);
+                        int groups = getParam<int>(layer_params, "groups", 1);
                         std::vector<int> layers_vec = getNumbers<int>(bottom_layers);
 
                         tensor_shape[0] = 0;
@@ -758,14 +748,18 @@ namespace cv {
                             tensor_shape[0] += net->out_channels_vec[layers_vec[k]];
                         }
 
-                        if (num_splits > 1)
+                        if (groups > 1)
                         {
                             int group_id = getParam<int>(layer_params, "group_id", 0);
-                            tensor_shape[0] /= num_splits;
+                            tensor_shape[0] /= groups;
                             int split_size = tensor_shape[0] / layers_vec.size();
-                            setParams.setSlice(layers_vec, split_size, group_id);
+                            for (size_t k = 0; k < layers_vec.size(); ++k)
+                                setParams.setSlice(layers_vec[k], split_size, group_id);
+
                             if (layers_vec.size() > 1)
                             {
+                                // layer ids in layers_vec - inputs of Slice layers
+                                // after adding offset to layers_vec: layer ids - ouputs of Slice layers
                                 for (size_t k = 0; k < layers_vec.size(); ++k)
                                     layers_vec[k] += layers_vec.size();
 
