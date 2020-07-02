@@ -65,7 +65,7 @@ size_t KeyPoint::hash() const
 void KeyPoint::convert(const std::vector<KeyPoint>& keypoints, std::vector<Point2f>& points2f,
                        const std::vector<int>& keypointIndexes)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     if( keypointIndexes.empty() )
     {
@@ -93,7 +93,7 @@ void KeyPoint::convert(const std::vector<KeyPoint>& keypoints, std::vector<Point
 void KeyPoint::convert( const std::vector<Point2f>& points2f, std::vector<KeyPoint>& keypoints,
                         float size, float response, int octave, int class_id )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     keypoints.resize(points2f.size());
     for( size_t i = 0; i < points2f.size(); i++ )
@@ -150,16 +150,18 @@ RotatedRect::RotatedRect(const Point2f& _point1, const Point2f& _point2, const P
     Vec2f vecs[2];
     vecs[0] = Vec2f(_point1 - _point2);
     vecs[1] = Vec2f(_point2 - _point3);
+    double x = std::max(norm(_point1), std::max(norm(_point2), norm(_point3)));
+    double a = std::min(norm(vecs[0]), norm(vecs[1]));
     // check that given sides are perpendicular
-    CV_Assert( abs(vecs[0].dot(vecs[1])) / (norm(vecs[0]) * norm(vecs[1])) <= FLT_EPSILON );
+    CV_Assert( std::fabs(vecs[0].ddot(vecs[1])) * a <= FLT_EPSILON * 9 * x * (norm(vecs[0]) * norm(vecs[1])) );
 
     // wd_i stores which vector (0,1) or (1,2) will make the width
     // One of them will definitely have slope within -1 to 1
     int wd_i = 0;
-    if( abs(vecs[1][1]) < abs(vecs[1][0]) ) wd_i = 1;
+    if( std::fabs(vecs[1][1]) < std::fabs(vecs[1][0]) ) wd_i = 1;
     int ht_i = (wd_i + 1) % 2;
 
-    float _angle = atan(vecs[wd_i][1] / vecs[wd_i][0]) * 180.0f / (float) CV_PI;
+    float _angle = std::atan(vecs[wd_i][1] / vecs[wd_i][0]) * 180.0f / (float) CV_PI;
     float _width = (float) norm(vecs[wd_i]);
     float _height = (float) norm(vecs[ht_i]);
 

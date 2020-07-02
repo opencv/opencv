@@ -31,7 +31,7 @@
  */
 
 GLOBAL(void)
-jpeg_CreateDecompress (j_decompress_ptr cinfo, int version, size_t structsize)
+jpeg_CreateDecompress(j_decompress_ptr cinfo, int version, size_t structsize)
 {
   int i;
 
@@ -41,7 +41,7 @@ jpeg_CreateDecompress (j_decompress_ptr cinfo, int version, size_t structsize)
     ERREXIT2(cinfo, JERR_BAD_LIB_VERSION, JPEG_LIB_VERSION, version);
   if (structsize != sizeof(struct jpeg_decompress_struct))
     ERREXIT2(cinfo, JERR_BAD_STRUCT_SIZE,
-             (int) sizeof(struct jpeg_decompress_struct), (int) structsize);
+             (int)sizeof(struct jpeg_decompress_struct), (int)structsize);
 
   /* For debugging purposes, we zero the whole master structure.
    * But the application has already set the err pointer, and may have set
@@ -50,8 +50,8 @@ jpeg_CreateDecompress (j_decompress_ptr cinfo, int version, size_t structsize)
    * complain here.
    */
   {
-    struct jpeg_error_mgr * err = cinfo->err;
-    void * client_data = cinfo->client_data; /* ignore Purify complaint here */
+    struct jpeg_error_mgr *err = cinfo->err;
+    void *client_data = cinfo->client_data; /* ignore Purify complaint here */
     MEMZERO(cinfo, sizeof(struct jpeg_decompress_struct));
     cinfo->err = err;
     cinfo->client_data = client_data;
@@ -59,7 +59,7 @@ jpeg_CreateDecompress (j_decompress_ptr cinfo, int version, size_t structsize)
   cinfo->is_decompressor = TRUE;
 
   /* Initialize a memory manager instance for this object */
-  jinit_memory_mgr((j_common_ptr) cinfo);
+  jinit_memory_mgr((j_common_ptr)cinfo);
 
   /* Zero out pointers to permanent structures. */
   cinfo->progress = NULL;
@@ -89,8 +89,8 @@ jpeg_CreateDecompress (j_decompress_ptr cinfo, int version, size_t structsize)
    * here.
    */
   cinfo->master = (struct jpeg_decomp_master *)
-      (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_PERMANENT,
-                                  sizeof(my_decomp_master));
+    (*cinfo->mem->alloc_small) ((j_common_ptr)cinfo, JPOOL_PERMANENT,
+                                sizeof(my_decomp_master));
   MEMZERO(cinfo->master, sizeof(my_decomp_master));
 }
 
@@ -100,9 +100,9 @@ jpeg_CreateDecompress (j_decompress_ptr cinfo, int version, size_t structsize)
  */
 
 GLOBAL(void)
-jpeg_destroy_decompress (j_decompress_ptr cinfo)
+jpeg_destroy_decompress(j_decompress_ptr cinfo)
 {
-  jpeg_destroy((j_common_ptr) cinfo); /* use common routine */
+  jpeg_destroy((j_common_ptr)cinfo); /* use common routine */
 }
 
 
@@ -112,9 +112,9 @@ jpeg_destroy_decompress (j_decompress_ptr cinfo)
  */
 
 GLOBAL(void)
-jpeg_abort_decompress (j_decompress_ptr cinfo)
+jpeg_abort_decompress(j_decompress_ptr cinfo)
 {
-  jpeg_abort((j_common_ptr) cinfo); /* use common routine */
+  jpeg_abort((j_common_ptr)cinfo); /* use common routine */
 }
 
 
@@ -123,7 +123,7 @@ jpeg_abort_decompress (j_decompress_ptr cinfo)
  */
 
 LOCAL(void)
-default_decompress_parms (j_decompress_ptr cinfo)
+default_decompress_parms(j_decompress_ptr cinfo)
 {
   /* Guess the input colorspace, and set output colorspace accordingly. */
   /* (Wish JPEG committee had provided a real way to specify this...) */
@@ -250,7 +250,7 @@ default_decompress_parms (j_decompress_ptr cinfo)
  */
 
 GLOBAL(int)
-jpeg_read_header (j_decompress_ptr cinfo, boolean require_image)
+jpeg_read_header(j_decompress_ptr cinfo, boolean require_image)
 {
   int retcode;
 
@@ -271,7 +271,7 @@ jpeg_read_header (j_decompress_ptr cinfo, boolean require_image)
      * call jpeg_abort, but we can't change it now for compatibility reasons.
      * A side effect is to free any temporary memory (there shouldn't be any).
      */
-    jpeg_abort((j_common_ptr) cinfo); /* sets state = DSTATE_START */
+    jpeg_abort((j_common_ptr)cinfo); /* sets state = DSTATE_START */
     retcode = JPEG_HEADER_TABLES_ONLY;
     break;
   case JPEG_SUSPENDED:
@@ -296,7 +296,7 @@ jpeg_read_header (j_decompress_ptr cinfo, boolean require_image)
  */
 
 GLOBAL(int)
-jpeg_consume_input (j_decompress_ptr cinfo)
+jpeg_consume_input(j_decompress_ptr cinfo)
 {
   int retcode = JPEG_SUSPENDED;
 
@@ -343,7 +343,7 @@ jpeg_consume_input (j_decompress_ptr cinfo)
  */
 
 GLOBAL(boolean)
-jpeg_input_complete (j_decompress_ptr cinfo)
+jpeg_input_complete(j_decompress_ptr cinfo)
 {
   /* Check for valid jpeg object */
   if (cinfo->global_state < DSTATE_START ||
@@ -358,7 +358,7 @@ jpeg_input_complete (j_decompress_ptr cinfo)
  */
 
 GLOBAL(boolean)
-jpeg_has_multiple_scans (j_decompress_ptr cinfo)
+jpeg_has_multiple_scans(j_decompress_ptr cinfo)
 {
   /* Only valid after jpeg_read_header completes */
   if (cinfo->global_state < DSTATE_READY ||
@@ -378,10 +378,10 @@ jpeg_has_multiple_scans (j_decompress_ptr cinfo)
  */
 
 GLOBAL(boolean)
-jpeg_finish_decompress (j_decompress_ptr cinfo)
+jpeg_finish_decompress(j_decompress_ptr cinfo)
 {
   if ((cinfo->global_state == DSTATE_SCANNING ||
-       cinfo->global_state == DSTATE_RAW_OK) && ! cinfo->buffered_image) {
+       cinfo->global_state == DSTATE_RAW_OK) && !cinfo->buffered_image) {
     /* Terminate final pass of non-buffered mode */
     if (cinfo->output_scanline < cinfo->output_height)
       ERREXIT(cinfo, JERR_TOO_LITTLE_DATA);
@@ -395,13 +395,13 @@ jpeg_finish_decompress (j_decompress_ptr cinfo)
     ERREXIT1(cinfo, JERR_BAD_STATE, cinfo->global_state);
   }
   /* Read until EOI */
-  while (! cinfo->inputctl->eoi_reached) {
+  while (!cinfo->inputctl->eoi_reached) {
     if ((*cinfo->inputctl->consume_input) (cinfo) == JPEG_SUSPENDED)
       return FALSE;             /* Suspend, come back later */
   }
   /* Do final cleanup */
   (*cinfo->src->term_source) (cinfo);
   /* We can use jpeg_abort to release memory and reset global_state */
-  jpeg_abort((j_common_ptr) cinfo);
+  jpeg_abort((j_common_ptr)cinfo);
   return TRUE;
 }

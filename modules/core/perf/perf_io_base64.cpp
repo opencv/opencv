@@ -12,7 +12,7 @@ typedef TestBaseWithParam<Size_MatType_Str_t> Size_Mat_StrType;
 #define FILE_EXTENSION String(".xml"), String(".yml"), String(".json")
 
 
-PERF_TEST_P(Size_Mat_StrType, fs_text,
+PERF_TEST_P(Size_Mat_StrType, DISABLED_fs_text,
             testing::Combine(testing::Values(MAT_SIZES),
                              testing::Values(MAT_TYPES),
                              testing::Values(FILE_EXTENSION))
@@ -48,7 +48,7 @@ PERF_TEST_P(Size_Mat_StrType, fs_text,
     SANITY_CHECK_NOTHING();
 }
 
-PERF_TEST_P(Size_Mat_StrType, fs_base64,
+PERF_TEST_P(Size_Mat_StrType, DISABLED_fs_base64,
             testing::Combine(testing::Values(MAT_SIZES),
                              testing::Values(MAT_TYPES),
                              testing::Values(FILE_EXTENSION))

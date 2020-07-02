@@ -4,10 +4,10 @@ import numpy as np
 import argparse
 
 parser = argparse.ArgumentParser(description='Code for Feature Detection tutorial.')
-parser.add_argument('--input', help='Path to input image.', default='../data/box.png')
+parser.add_argument('--input', help='Path to input image.', default='box.png')
 args = parser.parse_args()
 
-src = cv.imread(args.input, cv.IMREAD_GRAYSCALE)
+src = cv.imread(cv.samples.findFile(args.input), cv.IMREAD_GRAYSCALE)
 if src is None:
     print('Could not open or find the image:', args.input)
     exit(0)

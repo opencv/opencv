@@ -18,6 +18,22 @@ set(depends gen_opencv_java_source "${OPENCV_DEPHELPER}/gen_opencv_java_source")
 ocv_copyfiles_add_target(${the_module}_jar_source_copy JAVA_SRC_COPY "Copy Java(JAR) source files" ${depends})
 set(depends ${the_module}_jar_source_copy "${OPENCV_DEPHELPER}/${the_module}_jar_source_copy")
 
+if(OPENCV_JAVA_SOURCE_VERSION)
+  set(OPENCV_ANT_JAVAC_EXTRA_ATTRS "${OPENCV_ANT_JAVAC_EXTRA_ATTRS} source=\"${OPENCV_JAVA_SOURCE_VERSION}\"")
+endif()
+if(OPENCV_JAVA_TARGET_VERSION)
+  set(OPENCV_ANT_JAVAC_EXTRA_ATTRS "${OPENCV_ANT_JAVAC_EXTRA_ATTRS} target=\"${OPENCV_JAVA_TARGET_VERSION}\"")
+endif()
+
+set(OPENCV_JAVADOC_DESTINATION "${OpenCV_BINARY_DIR}/doc/doxygen/html/javadoc" CACHE STRING "")
+
+# Old Javadoc URL looks like this: https://docs.oracle.com/javase/6/docs/api/
+# New Javadoc URL looks like this: https://docs.oracle.com/en/java/javase/11/docs/api/
+set(OPENCV_JAVADOC_LINK_URL "" CACHE STRING "See details in modules/java/jar/CMakeLists.txt")
+if(OPENCV_JAVADOC_LINK_URL)
+  set(CMAKE_CONFIG_OPENCV_JAVADOC_LINK "link=\"${OPENCV_JAVADOC_LINK_URL}\"")
+endif()
+
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/build.xml.in" "${OPENCV_JAVA_DIR}/build.xml" @ONLY)
 list(APPEND depends "${OPENCV_JAVA_DIR}/build.xml")
 

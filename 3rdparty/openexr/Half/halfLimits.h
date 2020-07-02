@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2002, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -94,6 +94,15 @@ class numeric_limits <half>
     static const bool traps = true;
     static const bool tinyness_before = false;
     static const float_round_style round_style = round_to_nearest;
+
+#if __cplusplus >= 201103L
+
+    // C++11 additions.
+    static constexpr int max_digits10 = HALF_DECIMAL_DIG;
+    static half lowest () {return -HALF_MAX;}
+
+#endif
+
 };
 
 

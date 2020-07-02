@@ -180,7 +180,7 @@ void CV_ChessboardSubpixelTest::run( int )
             break;
         }
 
-        IplImage chessboard_image_header = chessboard_image;
+        IplImage chessboard_image_header = cvIplImage(chessboard_image);
         cvFindCornerSubPix(&chessboard_image_header, (CvPoint2D32f*)&test_corners[0],
             (int)test_corners.size(), cvSize(3, 3), cvSize(1, 1), cvTermCriteria(CV_TERMCRIT_EPS|CV_TERMCRIT_ITER,300,0.1));
         find4QuadCornerSubpix(chessboard_image, test_corners, Size(5, 5));

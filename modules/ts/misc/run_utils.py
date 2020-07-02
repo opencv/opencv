@@ -37,6 +37,13 @@ def execute(cmd, silent=False, cwd=".", env=None):
             new_env = os.environ.copy()
             new_env.update(env)
             env = new_env
+
+        if sys.platform == 'darwin':  # https://github.com/opencv/opencv/issues/14351
+            if env is None:
+                env = os.environ.copy()
+            if 'DYLD_LIBRARY_PATH' in env:
+                env['OPENCV_SAVED_DYLD_LIBRARY_PATH'] = env['DYLD_LIBRARY_PATH']
+
         if silent:
             return check_output(cmd, stderr=STDOUT, cwd=cwd, env=env).decode("latin-1")
         else:

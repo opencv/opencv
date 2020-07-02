@@ -28,7 +28,7 @@ PERF_TEST_P(Image_RhoStep_ThetaStep_Threshold, HoughLines,
 
     Canny(image, image, 32, 128);
 
-    // add some syntetic lines:
+    // add some synthetic lines:
     line(image, Point(0, 0), Point(image.cols, image.rows), Scalar::all(255), 3);
     line(image, Point(image.cols, 0), Point(image.cols/2, image.rows), Scalar::all(255), 3);
 
@@ -89,7 +89,7 @@ PERF_TEST_P(Image_RhoStep_ThetaStep_Threshold, HoughLines3f,
 
     Canny(image, image, 32, 128);
 
-    // add some syntetic lines:
+    // add some synthetic lines:
     line(image, Point(0, 0), Point(image.cols, image.rows), Scalar::all(255), 3);
     line(image, Point(image.cols, 0), Point(image.cols/2, image.rows), Scalar::all(255), 3);
 

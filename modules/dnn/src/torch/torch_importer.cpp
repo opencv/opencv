@@ -51,7 +51,7 @@
 
 namespace cv {
 namespace dnn {
-CV__DNN_EXPERIMENTAL_NS_BEGIN
+CV__DNN_INLINE_NS_BEGIN
 
 using namespace TH;
 
@@ -72,6 +72,18 @@ enum LuaType
     TYPE_FUNCTION = 6,
     TYPE_RECUR_FUNCTION = 8,
     LEGACY_TYPE_RECUR_FUNCTION = 7
+};
+
+// We use OpenCV's types to manage CV_ELEM_SIZE.
+enum TorchType
+{
+    TYPE_DOUBLE = CV_64F,
+    TYPE_FLOAT  = CV_32F,
+    TYPE_BYTE   = CV_8U,
+    TYPE_CHAR   = CV_8S,
+    TYPE_SHORT  = CV_16S,
+    TYPE_INT    = CV_32S,
+    TYPE_LONG   = CV_32SC2
 };
 
 template<typename T>
@@ -117,13 +129,15 @@ struct TorchImporter
     Module *rootModule;
     Module *curModule;
     int moduleCounter;
+    bool testPhase;
 
-    TorchImporter(String filename, bool isBinary)
+    TorchImporter(String filename, bool isBinary, bool evaluate)
     {
         CV_TRACE_FUNCTION();
 
         rootModule = curModule = NULL;
         moduleCounter = 0;
+        testPhase = evaluate;
 
         file = cv::Ptr<THFile>(THDiskFile_new(filename, "r", 0), THFile_free);
         CV_Assert(file && THFile_isOpened(file));
@@ -203,19 +217,19 @@ struct TorchImporter
            String typeStr = str.substr(strlen(prefix), str.length() - strlen(prefix) - strlen(suffix));
 
            if (typeStr == "Double")
-               return CV_64F;
+               return TYPE_DOUBLE;
            else if (typeStr == "Float" || typeStr == "Cuda")
-               return CV_32F;
+               return TYPE_FLOAT;
            else if (typeStr == "Byte")
-               return CV_8U;
+               return TYPE_BYTE;
            else if (typeStr == "Char")
-               return CV_8S;
+               return TYPE_CHAR;
            else if (typeStr == "Short")
-               return CV_16S;
+               return TYPE_SHORT;
            else if (typeStr == "Int")
-               return CV_32S;
-           else if (typeStr == "Long") //Carefully! CV_64S type coded as CV_USRTYPE1
-               return CV_USRTYPE1;
+               return TYPE_INT;
+           else if (typeStr == "Long")
+               return TYPE_LONG;
            else
                CV_Error(Error::StsNotImplemented, "Unknown type \"" + typeStr + "\" of torch class \"" + str + "\"");
         }
@@ -236,36 +250,44 @@ struct TorchImporter
     void readTorchStorage(int index, int type = -1)
     {
         long size = readLong();
-        Mat storageMat(1, size, (type != CV_USRTYPE1) ? type : CV_64F); //handle LongStorage as CV_64F Mat
+        Mat storageMat;
 
         switch (type)
         {
-        case CV_32F:
+        case TYPE_FLOAT:
+            storageMat.create(1, size, CV_32F);
             THFile_readFloatRaw(file, (float*)storageMat.data, size);
             break;
-        case CV_64F:
+        case TYPE_DOUBLE:
+            storageMat.create(1, size, CV_64F);
             THFile_readDoubleRaw(file, (double*)storageMat.data, size);
             break;
-        case CV_8S:
-        case CV_8U:
+        case TYPE_CHAR:
+            storageMat.create(1, size, CV_8S);
             THFile_readByteRaw(file, (uchar*)storageMat.data, size);
             break;
-        case CV_16S:
-        case CV_16U:
+        case TYPE_BYTE:
+            storageMat.create(1, size, CV_8U);
+            THFile_readByteRaw(file, (uchar*)storageMat.data, size);
+            break;
+        case TYPE_SHORT:
+            storageMat.create(1, size, CV_16S);
             THFile_readShortRaw(file, (short*)storageMat.data, size);
             break;
-        case CV_32S:
+        case TYPE_INT:
+            storageMat.create(1, size, CV_32S);
             THFile_readIntRaw(file, (int*)storageMat.data, size);
             break;
-        case CV_USRTYPE1:
+        case TYPE_LONG:
         {
+            storageMat.create(1, size, CV_64F);   //handle LongStorage as CV_64F Mat
             double *buf = storageMat.ptr<double>();
             THFile_readLongRaw(file, (int64*)buf, size);
 
             for (size_t i = (size_t)size; i-- > 0; )
                 buf[i] = ((int64*)buf)[i];
-        }
             break;
+        }
         default:
             CV_Error(Error::StsInternal, "");
             break;
@@ -290,7 +312,7 @@ struct TorchImporter
             fpos = THFile_position(file);
             int ktype = readInt();
 
-            if (ktype != TYPE_STRING) //skip non-string fileds
+            if (ktype != TYPE_STRING) //skip non-string fields
             {
                 THFile_seek(file, fpos);
                 readObject(); //key
@@ -660,7 +682,8 @@ struct TorchImporter
                     layerParams.blobs.push_back(tensorParams["bias"].second);
                 }
 
-                if (nnName == "InstanceNormalization")
+                bool trainPhase = scalarParams.get<bool>("train", false);
+                if (nnName == "InstanceNormalization" || (trainPhase && !testPhase))
                 {
                     cv::Ptr<Module> mvnModule(new Module(nnName));
                     mvnModule->apiType = "MVN";
@@ -842,15 +865,10 @@ struct TorchImporter
                 layerParams.set("indices_blob_id", tensorParams["indices"].first);
                 curModule->modules.push_back(newModule);
             }
-            else if (nnName == "SoftMax")
+            else if (nnName == "LogSoftMax" || nnName == "SoftMax")
             {
-                newModule->apiType = "SoftMax";
-                curModule->modules.push_back(newModule);
-            }
-            else if (nnName == "LogSoftMax")
-            {
-                newModule->apiType = "SoftMax";
-                layerParams.set("log_softmax", true);
+                newModule->apiType = "Softmax";
+                layerParams.set("log_softmax", nnName == "LogSoftMax");
                 curModule->modules.push_back(newModule);
             }
             else if (nnName == "SpatialCrossMapLRN")
@@ -896,8 +914,8 @@ struct TorchImporter
             else if (nnName == "SpatialZeroPadding" || nnName == "SpatialReflectionPadding")
             {
                 readTorchTable(scalarParams, tensorParams);
-                CV_Assert(scalarParams.has("pad_l"), scalarParams.has("pad_r"),
-                          scalarParams.has("pad_t"), scalarParams.has("pad_b"));
+                CV_Assert_N(scalarParams.has("pad_l"), scalarParams.has("pad_r"),
+                            scalarParams.has("pad_t"), scalarParams.has("pad_b"));
                 int padTop = scalarParams.get<int>("pad_t");
                 int padLeft = scalarParams.get<int>("pad_l");
                 int padRight = scalarParams.get<int>("pad_r");
@@ -936,6 +954,16 @@ struct TorchImporter
                 newModule->apiType = "Slice";
                 layerParams.set("begin", DictValue::arrayInt<int*>(&begins[0], 4));
                 layerParams.set("end", DictValue::arrayInt<int*>(&ends[0], 4));
+                curModule->modules.push_back(newModule);
+            }
+            else if (nnName == "SpatialUpSamplingNearest")
+            {
+                readTorchTable(scalarParams, tensorParams);
+                CV_Assert(scalarParams.has("scale_factor"));
+                int scale_factor = scalarParams.get<int>("scale_factor");
+                newModule->apiType = "Resize";
+                layerParams.set("interpolation", "nearest");
+                layerParams.set("zoom_factor", scale_factor);
                 curModule->modules.push_back(newModule);
             }
             else
@@ -1213,22 +1241,22 @@ struct TorchImporter
 
 Mat readTorchBlob(const String &filename, bool isBinary)
 {
-    TorchImporter importer(filename, isBinary);
+    TorchImporter importer(filename, isBinary, true);
     importer.readObject();
     CV_Assert(importer.tensors.size() == 1);
 
     return importer.tensors.begin()->second;
 }
 
-Net readNetFromTorch(const String &model, bool isBinary)
+Net readNetFromTorch(const String &model, bool isBinary, bool evaluate)
 {
     CV_TRACE_FUNCTION();
 
-    TorchImporter importer(model, isBinary);
+    TorchImporter importer(model, isBinary, evaluate);
     Net net;
     importer.populateNet(net);
     return net;
 }
 
-CV__DNN_EXPERIMENTAL_NS_END
+CV__DNN_INLINE_NS_END
 }} // namespace

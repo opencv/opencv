@@ -1,6 +1,7 @@
 Smoothing Images {#tutorial_gausian_median_blur_bilateral_filter}
 ================
 
+@prev_tutorial{tutorial_random_generator_and_text}
 @next_tutorial{tutorial_erosion_dilatation}
 
 Goal
@@ -156,7 +157,7 @@ already known by now.
     -   *src*: Source image
     -   *dst*: Destination image
     -   *Size(w, h)*: The size of the kernel to be used (the neighbors to be considered). \f$w\f$ and
-        \f$h\f$ have to be odd and positive numbers otherwise thi size will be calculated using the
+        \f$h\f$ have to be odd and positive numbers otherwise the size will be calculated using the
         \f$\sigma_{x}\f$ and \f$\sigma_{y}\f$ arguments.
     -   \f$\sigma_{x}\f$: The standard deviation in x. Writing \f$0\f$ implies that \f$\sigma_{x}\f$ is
         calculated using kernel size.

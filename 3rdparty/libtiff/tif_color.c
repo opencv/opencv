@@ -1,5 +1,3 @@
-/* $Id: tif_color.c,v 1.24 2017-05-29 10:12:54 erouault Exp $ */
-
 /*
  * Copyright (c) 1988-1997 Sam Leffler
  * Copyright (c) 1991-1997 Silicon Graphics, Inc.
@@ -168,7 +166,7 @@ TIFFCIELabToRGBInit(TIFFCIELabToRGB* cielab,
 }
 
 /* 
- * Convert color value from the YCbCr space to CIE XYZ.
+ * Convert color value from the YCbCr space to RGB.
  * The colorspace conversion algorithm comes from the IJG v5a code;
  * see below for more information on how it works.
  */

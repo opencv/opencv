@@ -4,12 +4,20 @@ public final class CvType {
 
     // type depth constants
     public static final int
-            CV_8U = 0, CV_8S = 1,
-            CV_16U = 2, CV_16S = 3,
+            CV_8U = 0,
+            CV_8S = 1,
+            CV_16U = 2,
+            CV_16S = 3,
             CV_32S = 4,
             CV_32F = 5,
             CV_64F = 6,
-            CV_USRTYPE1 = 7;
+            CV_16F = 7;
+
+    /**
+     * @deprecated please use {@link #CV_16F}
+     */
+    @Deprecated
+    public static final int CV_USRTYPE1 = CV_16F;
 
     // predefined type constants
     public static final int
@@ -19,17 +27,18 @@ public final class CvType {
             CV_16SC1 = CV_16SC(1), CV_16SC2 = CV_16SC(2), CV_16SC3 = CV_16SC(3), CV_16SC4 = CV_16SC(4),
             CV_32SC1 = CV_32SC(1), CV_32SC2 = CV_32SC(2), CV_32SC3 = CV_32SC(3), CV_32SC4 = CV_32SC(4),
             CV_32FC1 = CV_32FC(1), CV_32FC2 = CV_32FC(2), CV_32FC3 = CV_32FC(3), CV_32FC4 = CV_32FC(4),
-            CV_64FC1 = CV_64FC(1), CV_64FC2 = CV_64FC(2), CV_64FC3 = CV_64FC(3), CV_64FC4 = CV_64FC(4);
+            CV_64FC1 = CV_64FC(1), CV_64FC2 = CV_64FC(2), CV_64FC3 = CV_64FC(3), CV_64FC4 = CV_64FC(4),
+            CV_16FC1 = CV_16FC(1), CV_16FC2 = CV_16FC(2), CV_16FC3 = CV_16FC(3), CV_16FC4 = CV_16FC(4);
 
     private static final int CV_CN_MAX = 512, CV_CN_SHIFT = 3, CV_DEPTH_MAX = (1 << CV_CN_SHIFT);
 
     public static final int makeType(int depth, int channels) {
         if (channels <= 0 || channels >= CV_CN_MAX) {
-            throw new java.lang.UnsupportedOperationException(
+            throw new UnsupportedOperationException(
                     "Channels count should be 1.." + (CV_CN_MAX - 1));
         }
         if (depth < 0 || depth >= CV_DEPTH_MAX) {
-            throw new java.lang.UnsupportedOperationException(
+            throw new UnsupportedOperationException(
                     "Data type depth should be 0.." + (CV_DEPTH_MAX - 1));
         }
         return (depth & (CV_DEPTH_MAX - 1)) + ((channels - 1) << CV_CN_SHIFT);
@@ -63,6 +72,10 @@ public final class CvType {
         return makeType(CV_64F, ch);
     }
 
+    public static final int CV_16FC(int ch) {
+        return makeType(CV_16F, ch);
+    }
+
     public static final int channels(int type) {
         return (type >> CV_CN_SHIFT) + 1;
     }
@@ -82,6 +95,7 @@ public final class CvType {
             return channels(type);
         case CV_16U:
         case CV_16S:
+        case CV_16F:
             return 2 * channels(type);
         case CV_32S:
         case CV_32F:
@@ -89,7 +103,7 @@ public final class CvType {
         case CV_64F:
             return 8 * channels(type);
         default:
-            throw new java.lang.UnsupportedOperationException(
+            throw new UnsupportedOperationException(
                     "Unsupported CvType value: " + type);
         }
     }
@@ -118,11 +132,11 @@ public final class CvType {
         case CV_64F:
             s = "CV_64F";
             break;
-        case CV_USRTYPE1:
-            s = "CV_USRTYPE1";
+        case CV_16F:
+            s = "CV_16F";
             break;
         default:
-            throw new java.lang.UnsupportedOperationException(
+            throw new UnsupportedOperationException(
                     "Unsupported CvType value: " + type);
         }
 

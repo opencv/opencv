@@ -17,7 +17,7 @@ def thresh_callback(val):
 
     ## [findContours]
     # Find contours
-    _, contours, _ = cv.findContours(canny_output, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+    contours, _ = cv.findContours(canny_output, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
     ## [findContours]
 
     # Get the moments
@@ -54,10 +54,10 @@ def thresh_callback(val):
 ## [setup]
 # Load source image
 parser = argparse.ArgumentParser(description='Code for Image Moments tutorial.')
-parser.add_argument('--input', help='Path to input image.', default='../data/stuff.jpg')
+parser.add_argument('--input', help='Path to input image.', default='stuff.jpg')
 args = parser.parse_args()
 
-src = cv.imread(args.input)
+src = cv.imread(cv.samples.findFile(args.input))
 if src is None:
     print('Could not open or find the image:', args.input)
     exit(0)

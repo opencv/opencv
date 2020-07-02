@@ -67,7 +67,7 @@ int cv::cuda::getCudaEnabledDeviceCount()
 void cv::cuda::setDevice(int device)
 {
 #ifndef HAVE_CUDA
-    (void) device;
+    CV_UNUSED(device);
     throw_no_cuda();
 #else
     cudaSafeCall( cudaSetDevice(device) );
@@ -98,7 +98,7 @@ void cv::cuda::resetDevice()
 bool cv::cuda::deviceSupports(FeatureSet feature_set)
 {
 #ifndef HAVE_CUDA
-    (void) feature_set;
+    CV_UNUSED(feature_set);
     throw_no_cuda();
 #else
     static int versions[] =
@@ -227,7 +227,7 @@ namespace
 bool cv::cuda::TargetArchs::builtWith(cv::cuda::FeatureSet feature_set)
 {
 #ifndef HAVE_CUDA
-    (void) feature_set;
+    CV_UNUSED(feature_set);
     throw_no_cuda();
 #else
     return cudaArch.builtWith(feature_set);
@@ -237,8 +237,8 @@ bool cv::cuda::TargetArchs::builtWith(cv::cuda::FeatureSet feature_set)
 bool cv::cuda::TargetArchs::hasPtx(int major, int minor)
 {
 #ifndef HAVE_CUDA
-    (void) major;
-    (void) minor;
+    CV_UNUSED(major);
+    CV_UNUSED(minor);
     throw_no_cuda();
 #else
     return cudaArch.hasPtx(major, minor);
@@ -248,8 +248,8 @@ bool cv::cuda::TargetArchs::hasPtx(int major, int minor)
 bool cv::cuda::TargetArchs::hasBin(int major, int minor)
 {
 #ifndef HAVE_CUDA
-    (void) major;
-    (void) minor;
+    CV_UNUSED(major);
+    CV_UNUSED(minor);
     throw_no_cuda();
 #else
     return cudaArch.hasBin(major, minor);
@@ -259,8 +259,8 @@ bool cv::cuda::TargetArchs::hasBin(int major, int minor)
 bool cv::cuda::TargetArchs::hasEqualOrLessPtx(int major, int minor)
 {
 #ifndef HAVE_CUDA
-    (void) major;
-    (void) minor;
+    CV_UNUSED(major);
+    CV_UNUSED(minor);
     throw_no_cuda();
 #else
     return cudaArch.hasEqualOrLessPtx(major, minor);
@@ -270,8 +270,8 @@ bool cv::cuda::TargetArchs::hasEqualOrLessPtx(int major, int minor)
 bool cv::cuda::TargetArchs::hasEqualOrGreaterPtx(int major, int minor)
 {
 #ifndef HAVE_CUDA
-    (void) major;
-    (void) minor;
+    CV_UNUSED(major);
+    CV_UNUSED(minor);
     throw_no_cuda();
 #else
     return cudaArch.hasEqualOrGreaterPtx(major, minor);
@@ -281,8 +281,8 @@ bool cv::cuda::TargetArchs::hasEqualOrGreaterPtx(int major, int minor)
 bool cv::cuda::TargetArchs::hasEqualOrGreaterBin(int major, int minor)
 {
 #ifndef HAVE_CUDA
-    (void) major;
-    (void) minor;
+    CV_UNUSED(major);
+    CV_UNUSED(minor);
     throw_no_cuda();
 #else
     return cudaArch.hasEqualOrGreaterBin(major, minor);
@@ -827,8 +827,8 @@ int cv::cuda::DeviceInfo::maxThreadsPerMultiProcessor() const
 void cv::cuda::DeviceInfo::queryMemory(size_t& _totalMemory, size_t& _freeMemory) const
 {
 #ifndef HAVE_CUDA
-    (void) _totalMemory;
-    (void) _freeMemory;
+    CV_UNUSED(_totalMemory);
+    CV_UNUSED(_freeMemory);
     throw_no_cuda();
 #else
     int prevDeviceID = getDevice();
@@ -894,7 +894,7 @@ namespace
 void cv::cuda::printCudaDeviceInfo(int device)
 {
 #ifndef HAVE_CUDA
-    (void) device;
+    CV_UNUSED(device);
     throw_no_cuda();
 #else
     int count = getCudaEnabledDeviceCount();
@@ -980,7 +980,7 @@ void cv::cuda::printCudaDeviceInfo(int device)
 void cv::cuda::printShortCudaDeviceInfo(int device)
 {
 #ifndef HAVE_CUDA
-    (void) device;
+    CV_UNUSED(device);
     throw_no_cuda();
 #else
     int count = getCudaEnabledDeviceCount();
@@ -1194,7 +1194,7 @@ namespace
 String cv::cuda::getNppErrorMessage(int code)
 {
 #ifndef HAVE_CUDA
-    (void) code;
+    CV_UNUSED(code);
     return String();
 #else
     return getErrorString(code, npp_errors, npp_error_num);
@@ -1204,7 +1204,7 @@ String cv::cuda::getNppErrorMessage(int code)
 String cv::cuda::getCudaDriverApiErrorMessage(int code)
 {
 #ifndef HAVE_CUDA
-    (void) code;
+    CV_UNUSED(code);
     return String();
 #else
     return getErrorString(code, cu_errors, cu_errors_num);

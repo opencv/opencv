@@ -793,7 +793,7 @@ CxCore_MulSpectrumsTest::CxCore_MulSpectrumsTest() : CxCore_DXTBaseTest( true, t
 
 double CxCore_MulSpectrumsTest::get_success_error_level( int test_case_idx, int i, int j )
 {
-    (void)test_case_idx;
+    CV_UNUSED(test_case_idx);
     CV_Assert(i == OUTPUT);
     CV_Assert(j == 0);
     int elem_depth = CV_MAT_DEPTH(cvGetElemType(test_array[i][j]));

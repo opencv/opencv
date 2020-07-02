@@ -12,7 +12,7 @@ Theory
 
 We know SIFT uses 128-dim vector for descriptors. Since it is using floating point numbers, it takes
 basically 512 bytes. Similarly SURF also takes minimum of 256 bytes (for 64-dim). Creating such a
-vector for thousands of features takes a lot of memory which are not feasible for resouce-constraint
+vector for thousands of features takes a lot of memory which are not feasible for resource-constraint
 applications especially for embedded systems. Larger the memory, longer the time it takes for
 matching.
 
@@ -43,11 +43,19 @@ points than for SURF points.
 In short, BRIEF is a faster method feature descriptor calculation and matching. It also provides
 high recognition rate unless there is large in-plane rotation.
 
+STAR(CenSurE) in OpenCV
+------
+STAR is a feature detector derived from CenSurE.
+Unlike CenSurE however, which uses polygons like squares, hexagons and octagons to approach a circle,
+Star emulates a circle with 2 overlapping squares: 1 upright and 1 45-degree rotated. These polygons are bi-level.
+They can be seen as polygons with thick borders. The borders and the enclosed area have weights of opposing signs.
+This has better computational characteristics than other scale-space detectors and it is capable of real-time implementation.
+In contrast to SIFT and SURF, which find extrema at sub-sampled pixels that compromises accuracy at larger scales,
+CenSurE creates a feature vector using full spatial resolution at all scales in the pyramid.
 BRIEF in OpenCV
 ---------------
 
-Below code shows the computation of BRIEF descriptors with the help of CenSurE detector. (CenSurE
-detector is called STAR detector in OpenCV)
+Below code shows the computation of BRIEF descriptors with the help of CenSurE detector.
 
 note, that you need [opencv contrib](https://github.com/opencv/opencv_contrib)) to use this.
 @code{.py}

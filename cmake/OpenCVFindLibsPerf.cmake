@@ -25,19 +25,18 @@ if(WITH_IPP)
     elseif(ANDROID AND NOT OPENCV_SKIP_ANDROID_IPP_FIX_2)
       set(CMAKE_SHARED_LINKER_FLAGS "-Wl,-Bsymbolic ${CMAKE_SHARED_LINKER_FLAGS}")
     endif()
+
+    if(OPENCV_FORCE_IPP_EXCLUDE_LIBS
+        OR (HAVE_IPP_ICV
+            AND UNIX AND NOT ANDROID AND NOT APPLE
+            AND (CMAKE_CXX_COMPILER_ID MATCHES "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        )
+        AND NOT OPENCV_SKIP_IPP_EXCLUDE_LIBS
+    )
+      set(CMAKE_SHARED_LINKER_FLAGS "-Wl,--exclude-libs,libippicv.a -Wl,--exclude-libs,libippiw.a ${CMAKE_SHARED_LINKER_FLAGS}")
+    endif()
   endif()
 endif()
-
-# --- IPP Async ---
-
-if(WITH_IPP_A)
-  include("${OpenCV_SOURCE_DIR}/cmake/OpenCVFindIPPAsync.cmake")
-  if(IPP_A_INCLUDE_DIR AND IPP_A_LIBRARIES)
-    ocv_include_directories(${IPP_A_INCLUDE_DIR})
-    link_directories(${IPP_A_LIBRARIES})
-    set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${IPP_A_LIBRARIES})
-   endif()
-endif(WITH_IPP_A)
 
 # --- CUDA ---
 if(WITH_CUDA)
@@ -51,33 +50,80 @@ To eliminate this warning remove WITH_CUDA=ON CMake configuration option.
 endif(WITH_CUDA)
 
 # --- Eigen ---
-if(WITH_EIGEN)
-  find_path(EIGEN_INCLUDE_PATH "Eigen/Core"
-            PATHS /usr/local /opt /usr $ENV{EIGEN_ROOT}/include ENV ProgramFiles ENV ProgramW6432
-            PATH_SUFFIXES include/eigen3 include/eigen2 Eigen/include/eigen3 Eigen/include/eigen2
-            DOC "The path to Eigen3/Eigen2 headers"
-            CMAKE_FIND_ROOT_PATH_BOTH)
+if(WITH_EIGEN AND NOT HAVE_EIGEN)
+  find_package(Eigen3 QUIET)
 
-  if(EIGEN_INCLUDE_PATH)
-    ocv_include_directories(${EIGEN_INCLUDE_PATH})
-    ocv_parse_header("${EIGEN_INCLUDE_PATH}/Eigen/src/Core/util/Macros.h" EIGEN_VERSION_LINES EIGEN_WORLD_VERSION EIGEN_MAJOR_VERSION EIGEN_MINOR_VERSION)
-    set(HAVE_EIGEN 1)
+  if(Eigen3_FOUND)
+    if(TARGET Eigen3::Eigen)
+      # Use Eigen3 imported target if possible
+      list(APPEND OPENCV_LINKER_LIBS Eigen3::Eigen)
+      set(HAVE_EIGEN 1)
+    else()
+      if(DEFINED EIGEN3_INCLUDE_DIRS)
+        set(EIGEN_INCLUDE_PATH ${EIGEN3_INCLUDE_DIRS})
+        set(HAVE_EIGEN 1)
+      elseif(DEFINED EIGEN3_INCLUDE_DIR)
+        set(EIGEN_INCLUDE_PATH ${EIGEN3_INCLUDE_DIR})
+        set(HAVE_EIGEN 1)
+      endif()
+    endif()
+    if(HAVE_EIGEN)
+      if(DEFINED EIGEN3_WORLD_VERSION)  # CMake module
+        set(EIGEN_WORLD_VERSION ${EIGEN3_WORLD_VERSION})
+        set(EIGEN_MAJOR_VERSION ${EIGEN3_MAJOR_VERSION})
+        set(EIGEN_MINOR_VERSION ${EIGEN3_MINOR_VERSION})
+      else()  # Eigen config file
+        set(EIGEN_WORLD_VERSION ${EIGEN3_VERSION_MAJOR})
+        set(EIGEN_MAJOR_VERSION ${EIGEN3_VERSION_MINOR})
+        set(EIGEN_MINOR_VERSION ${EIGEN3_VERSION_PATCH})
+      endif()
+    endif()
   endif()
-endif(WITH_EIGEN)
+
+  if(NOT HAVE_EIGEN)
+    if(NOT EIGEN_INCLUDE_PATH OR NOT EXISTS "${EIGEN_INCLUDE_PATH}")
+      set(__find_paths "")
+      set(__find_path_extra_options "")
+      if(NOT CMAKE_CROSSCOMPILING)
+        list(APPEND __find_paths /opt)
+      endif()
+      if(DEFINED ENV{EIGEN_ROOT})
+        set(__find_paths "$ENV{EIGEN_ROOT}/include")
+        list(APPEND __find_path_extra_options NO_DEFAULT_PATH)
+      else()
+        set(__find_paths ENV ProgramFiles ENV ProgramW6432)
+      endif()
+      find_path(EIGEN_INCLUDE_PATH "Eigen/Core"
+                PATHS ${__find_paths}
+                PATH_SUFFIXES include/eigen3 include/eigen2 Eigen/include/eigen3 Eigen/include/eigen2
+                DOC "The path to Eigen3/Eigen2 headers"
+                ${__find_path_extra_options}
+      )
+    endif()
+    if(EIGEN_INCLUDE_PATH AND EXISTS "${EIGEN_INCLUDE_PATH}")
+      ocv_parse_header("${EIGEN_INCLUDE_PATH}/Eigen/src/Core/util/Macros.h" EIGEN_VERSION_LINES EIGEN_WORLD_VERSION EIGEN_MAJOR_VERSION EIGEN_MINOR_VERSION)
+      set(HAVE_EIGEN 1)
+    endif()
+  endif()
+endif()
+if(HAVE_EIGEN)
+  if(EIGEN_INCLUDE_PATH AND EXISTS "${EIGEN_INCLUDE_PATH}")
+    ocv_include_directories(SYSTEM ${EIGEN_INCLUDE_PATH})
+  endif()
+endif()
 
 # --- Clp ---
 # Ubuntu: sudo apt-get install coinor-libclp-dev coinor-libcoinutils-dev
 ocv_clear_vars(HAVE_CLP)
 if(WITH_CLP)
   if(UNIX)
-    PKG_CHECK_MODULES(CLP clp)
+    ocv_check_modules(CLP clp)
     if(CLP_FOUND)
       set(HAVE_CLP TRUE)
       if(NOT ${CLP_INCLUDE_DIRS} STREQUAL "")
         ocv_include_directories(${CLP_INCLUDE_DIRS})
       endif()
-      link_directories(${CLP_LIBRARY_DIRS})
-      set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${CLP_LIBRARIES})
+      list(APPEND OPENCV_LINKER_LIBS ${CLP_LIBRARIES})
     endif()
   endif()
 
@@ -103,37 +149,3 @@ if(WITH_CLP)
     endif()
   endif()
 endif(WITH_CLP)
-
-# --- GCD ---
-if(APPLE AND NOT HAVE_TBB)
-  set(HAVE_GCD 1)
-else()
-  set(HAVE_GCD 0)
-endif()
-
-# --- Concurrency ---
-if(MSVC AND NOT HAVE_TBB)
-  set(_fname "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/concurrencytest.cpp")
-  file(WRITE "${_fname}" "#if _MSC_VER < 1600\n#error\n#endif\nint main() { return 0; }\n")
-  try_compile(HAVE_CONCURRENCY "${CMAKE_BINARY_DIR}" "${_fname}")
-  file(REMOVE "${_fname}")
-else()
-  set(HAVE_CONCURRENCY 0)
-endif()
-
-# --- OpenMP ---
-if(WITH_OPENMP)
-  find_package(OpenMP)
-  if(OPENMP_FOUND)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-  endif()
-  set(HAVE_OPENMP "${OPENMP_FOUND}")
-endif()
-
-ocv_clear_vars(HAVE_PTHREADS_PF)
-if(WITH_PTHREADS_PF AND HAVE_PTHREAD)
-  set(HAVE_PTHREADS_PF 1)
-else()
-  set(HAVE_PTHREADS_PF 0)
-endif()

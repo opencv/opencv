@@ -1,63 +1,85 @@
-Load and Display an Image {#tutorial_display_image}
-=========================
+Getting Started with Images {#tutorial_display_image}
+===========================
+
+@prev_tutorial{tutorial_building_tegra_cuda}
+@next_tutorial{tutorial_documentation}
 
 Goal
 ----
 
 In this tutorial you will learn how to:
 
--   Load an image (using @ref cv::imread )
--   Create a named OpenCV window (using @ref cv::namedWindow )
--   Display an image in an OpenCV window (using @ref cv::imshow )
+-   Read an image from file (using @ref cv::imread)
+-   Display an image in an OpenCV window (using @ref cv::imshow)
+-   Write an image to a file (using @ref cv::imwrite)
 
 Source Code
 -----------
 
-Download the source code from
-[here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/introduction/display_image/display_image.cpp).
+@add_toggle_cpp
+-   **Downloadable code**: Click
+    [here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/introduction/display_image/display_image.cpp)
 
-@include cpp/tutorial_code/introduction/display_image/display_image.cpp
+-   **Code at glance:**
+    @include samples/cpp/tutorial_code/introduction/display_image/display_image.cpp
+@end_toggle
+
+@add_toggle_python
+-   **Downloadable code**: Click
+    [here](https://github.com/opencv/opencv/tree/master/samples/python/tutorial_code/introduction/display_image/display_image.py)
+
+-   **Code at glance:**
+    @include samples/python/tutorial_code/introduction/display_image/display_image.py
+@end_toggle
+
 
 Explanation
 -----------
 
-In OpenCV 2 we have multiple modules. Each one takes care of a different area or approach towards
+@add_toggle_cpp
+In OpenCV 3 we have multiple modules. Each one takes care of a different area or approach towards
 image processing. You could already observe this in the structure of the user guide of these
 tutorials itself. Before you use any of them you first need to include the header files where the
 content of each individual module is declared.
 
 You'll almost always end up using the:
 
--   *core* section, as here are defined the basic building blocks of the library
--   *highgui* module, as this contains the functions for input and output operations
+- @ref core "core" section, as here are defined the basic building blocks of the library
+- @ref imgcodecs "imgcodecs" module, which provides functions for reading and writing
+- @ref highgui "highgui" module, as this contains the functions to show an image in a window
+
+We also include the *iostream* to facilitate console line output and input.
+
+By declaring `using namespace cv;`, in the following, the library functions can be accessed without explicitly stating the namespace.
 
 @snippet cpp/tutorial_code/introduction/display_image/display_image.cpp includes
+@end_toggle
 
-We also include the *iostream* to facilitate console line output and input. To avoid data structure
-and function name conflicts with other libraries, OpenCV has its own namespace: *cv*. To avoid the
-need appending prior each of these the *cv::* keyword you can import the namespace in the whole file
-by using the lines:
+@add_toggle_python
+As a first step, the OpenCV python library is imported.
+The proper way to do this is to additionally assign it the name *cv*, which is used in the following to reference the library.
 
-@snippet cpp/tutorial_code/introduction/display_image/display_image.cpp namespace
+@snippet samples/python/tutorial_code/introduction/display_image/display_image.py imports
+@end_toggle
 
-This is true for the STL library too (used for console I/O). Now, let's analyze the *main* function.
-We start up assuring that we acquire a valid image name argument from the command line. Otherwise
-take a picture by default: "HappyFish.jpg".
+Now, let's analyze the main code.
+As a first step, we read the image "starry_night.jpg" from the OpenCV samples.
+In order to do so, a call to the @ref cv::imread function loads the image using the file path specified by the first argument.
+The second argument is optional and specifies the format in which we want the image. This may be:
 
-@snippet cpp/tutorial_code/introduction/display_image/display_image.cpp load
+-   IMREAD_COLOR loads the image in the BGR 8-bit format. This is the **default** that is used here.
+-   IMREAD_UNCHANGED loads the image as is (including the alpha channel if present)
+-   IMREAD_GRAYSCALE loads the image as an intensity one
 
-Then create a *Mat* object that will store the data of the loaded image.
+After reading in the image data will be stored in a @ref cv::Mat object.
 
-@snippet cpp/tutorial_code/introduction/display_image/display_image.cpp mat
-
-Now we call the @ref cv::imread function which loads the image name specified by the first argument
-(*argv[1]*). The second argument specifies the format in what we want the image. This may be:
-
--   IMREAD_UNCHANGED (\<0) loads the image as is (including the alpha channel if present)
--   IMREAD_GRAYSCALE ( 0) loads the image as an intensity one
--   IMREAD_COLOR (\>0) loads the image in the RGB format
-
+@add_toggle_cpp
 @snippet cpp/tutorial_code/introduction/display_image/display_image.cpp imread
+@end_toggle
+
+@add_toggle_python
+@snippet samples/python/tutorial_code/introduction/display_image/display_image.py imread
+@end_toggle
 
 @note
    OpenCV offers support for the image formats Windows bitmap (bmp), portable image formats (pbm,
@@ -67,42 +89,38 @@ Now we call the @ref cv::imread function which loads the image name specified by
     Jasper), TIFF files (tiff, tif) and portable network graphics (png). Furthermore, OpenEXR is
     also a possibility.
 
-After checking that the image data was loaded correctly, we want to display our image, so we create
-an OpenCV window using the @ref cv::namedWindow function. These are automatically managed by OpenCV
-once you create them. For this you need to specify its name and how it should handle the change of
-the image it contains from a size point of view. It may be:
+Afterwards, a check is executed, if the image was loaded correctly.
+@add_toggle_cpp
+@snippet cpp/tutorial_code/introduction/display_image/display_image.cpp empty
+@end_toggle
 
--   *WINDOW_AUTOSIZE* is the only supported one if you do not use the Qt backend. In this case the
-    window size will take up the size of the image it shows. No resize permitted!
--   *WINDOW_NORMAL* on Qt you may use this to allow window resize. The image will resize itself
-    according to the current window size. By using the | operator you also need to specify if you
-    would like the image to keep its aspect ratio (*WINDOW_KEEPRATIO*) or not
-    (*WINDOW_FREERATIO*).
+@add_toggle_python
+@snippet samples/python/tutorial_code/introduction/display_image/display_image.py empty
+@end_toggle
 
-@snippet cpp/tutorial_code/introduction/display_image/display_image.cpp window
-
-Finally, to update the content of the OpenCV window with a new image use the @ref cv::imshow
-function. Specify the OpenCV window name to update and the image to use during this operation:
-
-@snippet cpp/tutorial_code/introduction/display_image/display_image.cpp imshow
+Then, the image is shown using a call to the @ref cv::imshow function.
+The first argument is the title of the window and the second argument is the @ref cv::Mat object that will be shown.
 
 Because we want our window to be displayed until the user presses a key (otherwise the program would
 end far too quickly), we use the @ref cv::waitKey function whose only parameter is just how long
 should it wait for a user input (measured in milliseconds). Zero means to wait forever.
+The return value is the key that was pressed.
 
-@snippet cpp/tutorial_code/introduction/display_image/display_image.cpp wait
+@add_toggle_cpp
+@snippet cpp/tutorial_code/introduction/display_image/display_image.cpp imshow
+@end_toggle
 
-Result
-------
+@add_toggle_python
+@snippet samples/python/tutorial_code/introduction/display_image/display_image.py imshow
+@end_toggle
 
--   Compile your code and then run the executable giving an image path as argument. If you're on
-    Windows the executable will of course contain an *exe* extension too. Of course assure the image
-    file is near your program file.
-    @code{.sh}
-    ./DisplayImage HappyFish.jpg
-    @endcode
--   You should get a nice window as the one shown below:
+In the end, the image is written to a file if the pressed key was the "s"-key.
+For this the cv::imwrite function is called that has the file path and the cv::Mat object as an argument.
 
-    ![](images/Display_Image_Tutorial_Result.jpg)
+@add_toggle_cpp
+@snippet cpp/tutorial_code/introduction/display_image/display_image.cpp imsave
+@end_toggle
 
-@youtube{1OJEqpuaGc4}
+@add_toggle_python
+@snippet samples/python/tutorial_code/introduction/display_image/display_image.py imsave
+@end_toggle

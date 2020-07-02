@@ -7,6 +7,7 @@ Loads several images sequentially and tries to find squares in each image.
 '''
 
 # Python 2/3 compatibility
+from __future__ import print_function
 import sys
 PY3 = sys.version_info[0] == 3
 
@@ -31,7 +32,7 @@ def find_squares(img):
                 bin = cv.dilate(bin, None)
             else:
                 _retval, bin = cv.threshold(gray, thrs, 255, cv.THRESH_BINARY)
-            bin, contours, _hierarchy = cv.findContours(bin, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE)
+            contours, _hierarchy = cv.findContours(bin, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE)
             for cnt in contours:
                 cnt_len = cv.arcLength(cnt, True)
                 cnt = cv.approxPolyDP(cnt, 0.02*cnt_len, True)
@@ -42,7 +43,7 @@ def find_squares(img):
                         squares.append(cnt)
     return squares
 
-if __name__ == '__main__':
+def main():
     from glob import glob
     for fn in glob('../data/pic*.png'):
         img = cv.imread(fn)
@@ -52,4 +53,11 @@ if __name__ == '__main__':
         ch = cv.waitKey()
         if ch == 27:
             break
+
+    print('Done')
+
+
+if __name__ == '__main__':
+    print(__doc__)
+    main()
     cv.destroyAllWindows()

@@ -44,12 +44,12 @@ typedef my_main_controller *my_main_ptr;
 
 
 LOCAL(void)
-set_wraparound_pointers (j_decompress_ptr cinfo)
+set_wraparound_pointers(j_decompress_ptr cinfo)
 /* Set up the "wraparound" pointers at top and bottom of the pointer lists.
  * This changes the pointer list state from top-of-image to the normal state.
  */
 {
-  my_main_ptr main_ptr = (my_main_ptr) cinfo->main;
+  my_main_ptr main_ptr = (my_main_ptr)cinfo->main;
   int ci, i, rgroup;
   int M = cinfo->_min_DCT_scaled_size;
   jpeg_component_info *compptr;
@@ -62,10 +62,10 @@ set_wraparound_pointers (j_decompress_ptr cinfo)
     xbuf0 = main_ptr->xbuffer[0][ci];
     xbuf1 = main_ptr->xbuffer[1][ci];
     for (i = 0; i < rgroup; i++) {
-      xbuf0[i - rgroup] = xbuf0[rgroup*(M+1) + i];
-      xbuf1[i - rgroup] = xbuf1[rgroup*(M+1) + i];
-      xbuf0[rgroup*(M+2) + i] = xbuf0[i];
-      xbuf1[rgroup*(M+2) + i] = xbuf1[i];
+      xbuf0[i - rgroup] = xbuf0[rgroup * (M + 1) + i];
+      xbuf1[i - rgroup] = xbuf1[rgroup * (M + 1) + i];
+      xbuf0[rgroup * (M + 2) + i] = xbuf0[i];
+      xbuf1[rgroup * (M + 2) + i] = xbuf1[i];
     }
   }
 }

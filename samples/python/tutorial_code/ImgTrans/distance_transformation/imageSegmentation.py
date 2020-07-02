@@ -11,10 +11,10 @@ rng.seed(12345)
 parser = argparse.ArgumentParser(description='Code for Image Segmentation with Distance Transform and Watershed Algorithm.\
     Sample code showing how to segment overlapping objects using Laplacian filtering, \
     in addition to Watershed and Distance Transformation')
-parser.add_argument('--input', help='Path to input image.', default='../data/cards.png')
+parser.add_argument('--input', help='Path to input image.', default='cards.png')
 args = parser.parse_args()
 
-src = cv.imread(args.input)
+src = cv.imread(cv.samples.findFile(args.input))
 if src is None:
     print('Could not open or find the image:', args.input)
     exit(0)
@@ -91,7 +91,7 @@ cv.imshow('Peaks', dist)
 dist_8u = dist.astype('uint8')
 
 # Find total markers
-_, contours, _ = cv.findContours(dist_8u, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+contours, _ = cv.findContours(dist_8u, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
 
 # Create the marker image for the watershed algorithm
 markers = np.zeros(dist.shape, dtype=np.int32)

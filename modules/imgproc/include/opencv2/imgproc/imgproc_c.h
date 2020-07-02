@@ -273,39 +273,6 @@ CVAPI(void)  cvLinearPolar( const CvArr* src, CvArr* dst,
                          CvPoint2D32f center, double maxRadius,
                          int flags CV_DEFAULT(CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS));
 
-/** @brief Transforms the input image to compensate lens distortion
-@see cv::undistort
-*/
-CVAPI(void) cvUndistort2( const CvArr* src, CvArr* dst,
-                          const CvMat* camera_matrix,
-                          const CvMat* distortion_coeffs,
-                          const CvMat* new_camera_matrix CV_DEFAULT(0) );
-
-/** @brief Computes transformation map from intrinsic camera parameters
-   that can used by cvRemap
-*/
-CVAPI(void) cvInitUndistortMap( const CvMat* camera_matrix,
-                                const CvMat* distortion_coeffs,
-                                CvArr* mapx, CvArr* mapy );
-
-/** @brief Computes undistortion+rectification map for a head of stereo camera
-@see cv::initUndistortRectifyMap
-*/
-CVAPI(void) cvInitUndistortRectifyMap( const CvMat* camera_matrix,
-                                       const CvMat* dist_coeffs,
-                                       const CvMat *R, const CvMat* new_camera_matrix,
-                                       CvArr* mapx, CvArr* mapy );
-
-/** @brief Computes the original (undistorted) feature coordinates
-   from the observed (distorted) coordinates
-@see cv::undistortPoints
-*/
-CVAPI(void) cvUndistortPoints( const CvMat* src, CvMat* dst,
-                               const CvMat* camera_matrix,
-                               const CvMat* dist_coeffs,
-                               const CvMat* R CV_DEFAULT(0),
-                               const CvMat* P CV_DEFAULT(0));
-
 /** @brief Returns a structuring element of the specified size and shape for morphological operations.
 
 @note the created structuring element IplConvKernel\* element must be released in the end using
@@ -1036,9 +1003,10 @@ CV_INLINE  void  cvEllipseBox( CvArr* img, CvBox2D box, CvScalar color,
                                int thickness CV_DEFAULT(1),
                                int line_type CV_DEFAULT(8), int shift CV_DEFAULT(0) )
 {
-    CvSize axes;
-    axes.width = cvRound(box.size.width*0.5);
-    axes.height = cvRound(box.size.height*0.5);
+    CvSize axes = cvSize(
+        cvRound(box.size.width*0.5),
+        cvRound(box.size.height*0.5)
+    );
 
     cvEllipse( img, cvPointFrom32f( box.center ), axes, box.angle,
                0, 360, color, thickness, line_type, shift );
@@ -1183,7 +1151,7 @@ CVAPI(CvScalar)  cvColorToScalar( double packed_color, int arrtype );
 /** @brief Returns the polygon points which make up the given ellipse.
 
 The ellipse is define by the box of size 'axes' rotated 'angle' around the 'center'. A partial
-sweep of the ellipse arc can be done by spcifying arc_start and arc_end to be something other than
+sweep of the ellipse arc can be done by specifying arc_start and arc_end to be something other than
 0 and 360, respectively. The input array 'pts' must be large enough to hold the result. The total
 number of points stored into 'pts' is returned by this function.
 @see cv::ellipse2Poly

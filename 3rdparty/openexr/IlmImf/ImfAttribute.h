@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2004, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -44,11 +44,13 @@
 //-----------------------------------------------------------------------------
 
 #include "IexBaseExc.h"
-#include <ImfIO.h>
-#include <ImfXdr.h>
+#include "ImfIO.h"
+#include "ImfXdr.h"
+#include "ImfForward.h"
+#include "ImfExport.h"
+#include "ImfNamespace.h"
 
-
-namespace Imf {
+OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_ENTER
 
 
 class Attribute
@@ -59,7 +61,9 @@ class Attribute
     // Constructor and destructor
     //---------------------------
 
+    IMF_EXPORT
     Attribute ();
+    IMF_EXPORT
     virtual ~Attribute ();
 
 
@@ -81,12 +85,12 @@ class Attribute
     // Type-specific attribute I/O and copying
     //----------------------------------------
 
-    virtual void		writeValueTo (OStream &os,
-                          int version) const = 0;
+    virtual void		writeValueTo (OPENEXR_IMF_INTERNAL_NAMESPACE::OStream &os,
+					      int version) const = 0;
 
-    virtual void		readValueFrom (IStream &is,
-                           int size,
-                           int version) = 0;
+    virtual void		readValueFrom (OPENEXR_IMF_INTERNAL_NAMESPACE::IStream &is,
+					       int size,
+					       int version) = 0;
 
     virtual void		copyValueFrom (const Attribute &other) = 0;
 
@@ -95,6 +99,7 @@ class Attribute
     // Attribute factory
     //------------------
 
+    IMF_EXPORT
     static Attribute *		newAttribute (const char typeName[]);
 
 
@@ -102,6 +107,7 @@ class Attribute
     // Test if a given attribute type has already been registered
     //-----------------------------------------------------------
 
+    IMF_EXPORT
     static bool			knownType (const char typeName[]);
 
 
@@ -112,8 +118,9 @@ class Attribute
     // knows how to make objects of this type.
     //--------------------------------------------------
 
+    IMF_EXPORT
     static void		registerAttributeType (const char typeName[],
-                           Attribute *(*newAttribute)());
+					       Attribute *(*newAttribute)());
 
     //------------------------------------------------------
     // Un-register an attribute type so that newAttribute()
@@ -121,6 +128,7 @@ class Attribute
     // debugging only).
     //------------------------------------------------------
 
+    IMF_EXPORT
     static void		unRegisterAttributeType (const char typeName[]);
 };
 
@@ -128,7 +136,7 @@ class Attribute
 //-------------------------------------------------
 // Class template for attributes of a specific type
 //-------------------------------------------------
-
+    
 template <class T>
 class TypedAttribute: public Attribute
 {
@@ -157,7 +165,7 @@ class TypedAttribute: public Attribute
     //--------------------------------
 
     virtual const char *		typeName () const;
-
+    
 
     //---------------------------------------------------------
     // Static version of typeName()
@@ -165,7 +173,7 @@ class TypedAttribute: public Attribute
     //---------------------------------------------------------
 
     static const char *			staticTypeName ();
-
+    
 
     //---------------------
     // Make a new attribute
@@ -186,12 +194,12 @@ class TypedAttribute: public Attribute
     // Depending on type T, these functions may have to be specialized.
     //-----------------------------------------------------------------
 
-    virtual void		writeValueTo (OStream &os,
-                          int version) const;
+    virtual void		writeValueTo (OPENEXR_IMF_INTERNAL_NAMESPACE::OStream &os,
+					      int version) const;
 
-    virtual void		readValueFrom (IStream &is,
-                           int size,
-                           int version);
+    virtual void		readValueFrom (OPENEXR_IMF_INTERNAL_NAMESPACE::IStream &is,
+					       int size,
+					       int version);
 
     virtual void		copyValueFrom (const Attribute &other);
 
@@ -233,11 +241,9 @@ class TypedAttribute: public Attribute
     T					_value;
 };
 
-
 //------------------------------------
 // Implementation of TypedAttribute<T>
 //------------------------------------
-
 template <class T>
 TypedAttribute<T>::TypedAttribute ():
     Attribute (),
@@ -248,7 +254,7 @@ TypedAttribute<T>::TypedAttribute ():
 
 
 template <class T>
-TypedAttribute<T>::TypedAttribute (const T &value):
+TypedAttribute<T>::TypedAttribute (const T & value):
     Attribute (),
     _value (value)
 {
@@ -289,7 +295,7 @@ TypedAttribute<T>::value () const
 
 
 template <class T>
-const char *
+const char *	
 TypedAttribute<T>::typeName () const
 {
     return staticTypeName();
@@ -315,23 +321,26 @@ TypedAttribute<T>::copy () const
 
 
 template <class T>
-void
-TypedAttribute<T>::writeValueTo (OStream &os, int) const
+void		
+TypedAttribute<T>::writeValueTo (OPENEXR_IMF_INTERNAL_NAMESPACE::OStream &os,
+                                    int version) const
 {
-    Xdr::write <StreamIO> (os, _value);
+    OPENEXR_IMF_INTERNAL_NAMESPACE::Xdr::write <OPENEXR_IMF_INTERNAL_NAMESPACE::StreamIO> (os, _value);
 }
 
 
 template <class T>
-void
-TypedAttribute<T>::readValueFrom (IStream &is, int, int)
+void		
+TypedAttribute<T>::readValueFrom (OPENEXR_IMF_INTERNAL_NAMESPACE::IStream &is,
+                                     int size,
+                                     int version)
 {
-    Xdr::read <StreamIO> (is, _value);
+    OPENEXR_IMF_INTERNAL_NAMESPACE::Xdr::read <OPENEXR_IMF_INTERNAL_NAMESPACE::StreamIO> (is, _value);
 }
 
 
 template <class T>
-void
+void		
 TypedAttribute<T>::copyValueFrom (const Attribute &other)
 {
     _value = cast(other)._value;
@@ -343,10 +352,10 @@ TypedAttribute<T> *
 TypedAttribute<T>::cast (Attribute *attribute)
 {
     TypedAttribute<T> *t =
-    dynamic_cast <TypedAttribute<T> *> (attribute);
+	dynamic_cast <TypedAttribute<T> *> (attribute);
 
     if (t == 0)
-    throw Iex::TypeExc ("Unexpected attribute type.");
+	throw IEX_NAMESPACE::TypeExc ("Unexpected attribute type.");
 
     return t;
 }
@@ -357,10 +366,10 @@ const TypedAttribute<T> *
 TypedAttribute<T>::cast (const Attribute *attribute)
 {
     const TypedAttribute<T> *t =
-    dynamic_cast <const TypedAttribute<T> *> (attribute);
+	dynamic_cast <const TypedAttribute<T> *> (attribute);
 
     if (t == 0)
-    throw Iex::TypeExc ("Unexpected attribute type.");
+	throw IEX_NAMESPACE::TypeExc ("Unexpected attribute type.");
 
     return t;
 }
@@ -398,30 +407,7 @@ TypedAttribute<T>::unRegisterAttributeType ()
 }
 
 
-} // namespace Imf
+OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_EXIT
 
-#if defined(OPENEXR_DLL) && defined(_MSC_VER)
-    // Tell MS VC++ to disable "non dll-interface class used as base
-    // for dll-interface class" and "no suitable definition provided
-    // for explicit template"
-    #pragma warning (disable : 4275 4661)
-
-    #if defined (ILMIMF_EXPORTS)
-    #define IMF_EXPIMP_TEMPLATE
-    #else
-    #define IMF_EXPIMP_TEMPLATE extern
-    #endif
-
-    IMF_EXPIMP_TEMPLATE template class Imf::TypedAttribute<float>;
-    IMF_EXPIMP_TEMPLATE template class Imf::TypedAttribute<double>;
-
-    #pragma warning(default : 4251)
-    #undef EXTERN_TEMPLATE
-#endif
-
-// Metrowerks compiler wants the .cpp file inlined, too
-#ifdef __MWERKS__
-#include <ImfAttribute.cpp>
-#endif
 
 #endif

@@ -1,10 +1,14 @@
 package org.opencv.test.dnn;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import org.opencv.core.Core;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfFloat;
+import org.opencv.core.MatOfByte;
 import org.opencv.core.Scalar;
 import org.opencv.core.Size;
 import org.opencv.dnn.DictValue;
@@ -26,6 +30,15 @@ public class DnnTensorFlowTest extends OpenCVTestCase {
 
     Net net;
 
+    private static void normAssert(Mat ref, Mat test) {
+        final double l1 = 1e-5;
+        final double lInf = 1e-4;
+        double normL1 = Core.norm(ref, test, Core.NORM_L1) / ref.total();
+        double normLInf = Core.norm(ref, test, Core.NORM_INF) / ref.total();
+        assertTrue(normL1 < l1);
+        assertTrue(normLInf < lInf);
+    }
+
     @Override
     protected void setUp() throws Exception {
         super.setUp();
@@ -46,7 +59,7 @@ public class DnnTensorFlowTest extends OpenCVTestCase {
 
         File testDataPath = new File(envTestDataPath);
 
-        File f = new File(testDataPath, "dnn/space_shuttle.jpg");
+        File f = new File(testDataPath, "dnn/grace_hopper_227.png");
         sourceImageFile = f.toString();
         if(!f.exists()) throw new Exception("Test image is missing: " + sourceImageFile);
 
@@ -77,31 +90,60 @@ public class DnnTensorFlowTest extends OpenCVTestCase {
 
     }
 
-    public void testTestNetForward() {
-        Mat rawImage = Imgcodecs.imread(sourceImageFile);
+    public void checkInceptionNet(Net net)
+    {
+        Mat image = Imgcodecs.imread(sourceImageFile);
+        assertNotNull("Loading image from file failed!", image);
 
-        assertNotNull("Loading image from file failed!", rawImage);
-
-        Mat image = new Mat();
-        Imgproc.resize(rawImage, image, new Size(224,224));
-
-        Mat inputBlob = Dnn.blobFromImage(image);
+        Mat inputBlob = Dnn.blobFromImage(image, 1.0, new Size(224, 224), new Scalar(0), true, true);
         assertNotNull("Converting image to blob failed!", inputBlob);
 
-        Mat inputBlobP = new Mat();
-        Core.subtract(inputBlob, new Scalar(117.0), inputBlobP);
+        net.setInput(inputBlob, "input");
 
-        net.setInput(inputBlobP, "input" );
-
-        Mat result = net.forward();
-
+        Mat result = new Mat();
+        try {
+            net.setPreferableBackend(Dnn.DNN_BACKEND_OPENCV);
+            result = net.forward("softmax2");
+        }
+        catch (Exception e) {
+            fail("DNN forward failed: " + e.getMessage());
+        }
         assertNotNull("Net returned no result!", result);
 
-        Core.MinMaxLocResult minmax = Core.minMaxLoc(result.reshape(1, 1));
+        result = result.reshape(1, 1);
+        Core.MinMaxLocResult minmax = Core.minMaxLoc(result);
+        assertEquals("Wrong prediction", (int)minmax.maxLoc.x, 866);
 
-        assertTrue("No image recognized!", minmax.maxVal > 0.9);
+        Mat top5RefScores = new MatOfFloat(new float[] {
+            0.63032645f, 0.2561979f, 0.032181446f, 0.015721032f, 0.014785315f
+        }).reshape(1, 1);
 
+        Core.sort(result, result, Core.SORT_DESCENDING);
 
+        normAssert(result.colRange(0, 5), top5RefScores);
     }
 
+    public void testTestNetForward() {
+        checkInceptionNet(net);
+    }
+
+    public void testReadFromBuffer() {
+        File modelFile = new File(modelFileName);
+        byte[] modelBuffer = new byte[ (int)modelFile.length() ];
+
+        try {
+            FileInputStream fis = new FileInputStream(modelFile);
+            fis.read(modelBuffer);
+            fis.close();
+        } catch (IOException e) {
+            fail("Failed to read a model: " + e.getMessage());
+        }
+        net = Dnn.readNetFromTensorflow(new MatOfByte(modelBuffer));
+        checkInceptionNet(net);
+    }
+
+    public void testGetAvailableTargets() {
+        List<Integer> targets = Dnn.getAvailableTargets(Dnn.DNN_BACKEND_OPENCV);
+        assertTrue(targets.contains(Dnn.DNN_TARGET_CPU));
+    }
 }

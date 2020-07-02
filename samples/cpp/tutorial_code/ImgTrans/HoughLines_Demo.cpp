@@ -38,12 +38,12 @@ void Probabilistic_Hough( int, void* );
 int main( int argc, char** argv )
 {
    // Read the image
-    String imageName("../data/building.jpg"); // by default
+    String imageName("building.jpg"); // by default
     if (argc > 1)
     {
         imageName = argv[1];
     }
-    src = imread( imageName, IMREAD_COLOR );
+    src = imread( samples::findFile( imageName ), IMREAD_COLOR );
 
    if( src.empty() )
      { help();

@@ -30,7 +30,6 @@ using cv::ParallelLoopBody;
 #include "boost.h"
 #include "cascadeclassifier.h"
 #include <queue>
-#include "cxmisc.h"
 
 #include "cvconfig.h"
 
@@ -543,7 +542,7 @@ void CvCascadeBoostTrainData::setData( const CvFeatureEvaluator* _featureEvaluat
     featureEvaluator = _featureEvaluator;
 
     max_c_count = MAX( 2, featureEvaluator->getMaxCatCount() );
-    _resp = featureEvaluator->getCls();
+    _resp = cvMat(featureEvaluator->getCls());
     responses = &_resp;
     // TODO: check responses: elements must be 0 or 1
 

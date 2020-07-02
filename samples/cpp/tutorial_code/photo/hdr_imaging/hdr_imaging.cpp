@@ -35,7 +35,7 @@ int main(int argc, char**argv)
 
     //! [Tonemap HDR image]
     Mat ldr;
-    Ptr<TonemapDurand> tonemap = createTonemapDurand(2.2f);
+    Ptr<Tonemap> tonemap = createTonemap(2.2f);
     tonemap->process(hdr, ldr);
     //! [Tonemap HDR image]
 

@@ -34,7 +34,7 @@
 #include <errno.h>
 #include <io.h>
 #include <stdio.h>
-#elif defined __linux__ || defined __APPLE__ || defined __HAIKU__
+#elif defined __linux__ || defined __APPLE__ || defined __HAIKU__ || defined __FreeBSD__
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -83,11 +83,44 @@ cv::String join(const cv::String& base, const cv::String& path)
     return result;
 }
 
+CV_EXPORTS cv::String getParent(const cv::String &path)
+{
+    std::string::size_type loc = path.find_last_of("/\\");
+    if (loc == std::string::npos)
+        return std::string();
+    return std::string(path, 0, loc);
+}
+
+CV_EXPORTS std::wstring getParent(const std::wstring& path)
+{
+    std::wstring::size_type loc = path.find_last_of(L"/\\");
+    if (loc == std::wstring::npos)
+        return std::wstring();
+    return std::wstring(path, 0, loc);
+}
+
 #if OPENCV_HAVE_FILESYSTEM_SUPPORT
+
+cv::String canonical(const cv::String& path)
+{
+    cv::String result;
+#ifdef _WIN32
+    const char* result_str = _fullpath(NULL, path.c_str(), 0);
+#else
+    const char* result_str = realpath(path.c_str(), NULL);
+#endif
+    if (result_str)
+    {
+        result = cv::String(result_str);
+        free((void*)result_str);
+    }
+    return result.empty() ? path : result;
+}
+
 
 bool exists(const cv::String& path)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
 #if defined _WIN32 || defined WINCE
     BOOL status = TRUE;
@@ -150,7 +183,7 @@ CV_EXPORTS void remove_all(const cv::String& path)
 
 cv::String getcwd()
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
     cv::AutoBuffer<char, 4096> buf;
 #if defined WIN32 || defined _WIN32 || defined WINCE
 #ifdef WINRT
@@ -161,7 +194,7 @@ cv::String getcwd()
     sz = GetCurrentDirectoryA((DWORD)buf.size(), buf.data());
     return cv::String(buf.data(), (size_t)sz);
 #endif
-#elif defined __linux__ || defined __APPLE__ || defined __HAIKU__
+#elif defined __linux__ || defined __APPLE__ || defined __HAIKU__ || defined __FreeBSD__
     for(;;)
     {
         char* p = ::getcwd(buf.data(), buf.size());
@@ -185,7 +218,7 @@ cv::String getcwd()
 
 bool createDirectory(const cv::String& path)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 #if defined WIN32 || defined _WIN32 || defined WINCE
 #ifdef WINRT
     wchar_t wpath[MAX_PATH];
@@ -195,7 +228,7 @@ bool createDirectory(const cv::String& path)
 #else
     int result = _mkdir(path.c_str());
 #endif
-#elif defined __linux__ || defined __APPLE__ || defined __HAIKU__
+#elif defined __linux__ || defined __APPLE__ || defined __HAIKU__ || defined __FreeBSD__
     int result = mkdir(path.c_str(), 0777);
 #else
     int result = -1;
@@ -310,7 +343,7 @@ private:
     Impl& operator=(const Impl&); // disabled
 };
 
-#elif defined __linux__ || defined __APPLE__ || defined __HAIKU__
+#elif defined __linux__ || defined __APPLE__ || defined __HAIKU__ || defined __FreeBSD__
 
 struct FileLock::Impl
 {
@@ -424,7 +457,7 @@ cv::String getCacheDirectory(const char* sub_directory_name, const char* configu
             default_cache_path = "/tmp/";
             CV_LOG_WARNING(NULL, "Using world accessible cache directory. This may be not secure: " << default_cache_path);
         }
-#elif defined __linux__ || defined __HAIKU__
+#elif defined __linux__ || defined __HAIKU__ || defined __FreeBSD__
         // https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
         if (default_cache_path.empty())
         {
@@ -469,7 +502,32 @@ cv::String getCacheDirectory(const char* sub_directory_name, const char* configu
         {
             if (utils::fs::isDirectory(default_cache_path))
             {
-                default_cache_path = utils::fs::join(default_cache_path, utils::fs::join("opencv", CV_VERSION));
+                cv::String default_cache_path_base = utils::fs::join(default_cache_path, "opencv");
+                default_cache_path = utils::fs::join(default_cache_path_base, CVAUX_STR(CV_VERSION_MAJOR) "." CVAUX_STR(CV_VERSION_MINOR) CV_VERSION_STATUS);
+                if (utils::getConfigurationParameterBool("OPENCV_CACHE_SHOW_CLEANUP_MESSAGE", true)
+                    && !utils::fs::isDirectory(default_cache_path))
+                {
+                    std::vector<cv::String> existedCacheDirs;
+                    try
+                    {
+                        utils::fs::glob_relative(default_cache_path_base, "*", existedCacheDirs, false, true);
+                    }
+                    catch (...)
+                    {
+                        // ignore
+                    }
+                    if (!existedCacheDirs.empty())
+                    {
+                        CV_LOG_WARNING(NULL, "Creating new OpenCV cache directory: " << default_cache_path);
+                        CV_LOG_WARNING(NULL, "There are several neighbour directories, probably created by old OpenCV versions.");
+                        CV_LOG_WARNING(NULL, "Feel free to cleanup these unused directories:");
+                        for (size_t i = 0; i < existedCacheDirs.size(); i++)
+                        {
+                            CV_LOG_WARNING(NULL, "  - " << existedCacheDirs[i]);
+                        }
+                        CV_LOG_WARNING(NULL, "Note: This message is showed only once.");
+                    }
+                }
                 if (sub_directory_name && sub_directory_name[0] != '\0')
                     default_cache_path = utils::fs::join(default_cache_path, cv::String(sub_directory_name) + native_separator);
                 if (!utils::fs::createDirectories(default_cache_path))
@@ -518,11 +576,13 @@ cv::String getCacheDirectory(const char* sub_directory_name, const char* configu
 
 #else
 #define NOT_IMPLEMENTED CV_Error(Error::StsNotImplemented, "");
-CV_EXPORTS bool exists(const cv::String& /*path*/) { NOT_IMPLEMENTED }
-CV_EXPORTS void remove_all(const cv::String& /*path*/) { NOT_IMPLEMENTED }
-CV_EXPORTS bool createDirectory(const cv::String& /*path*/) { NOT_IMPLEMENTED }
-CV_EXPORTS bool createDirectories(const cv::String& /*path*/) { NOT_IMPLEMENTED }
-CV_EXPORTS cv::String getCacheDirectory(const char* /*sub_directory_name*/, const char* /*configuration_name = NULL*/) { NOT_IMPLEMENTED }
+cv::String canonical(const cv::String& /*path*/) { NOT_IMPLEMENTED }
+bool exists(const cv::String& /*path*/) { NOT_IMPLEMENTED }
+void remove_all(const cv::String& /*path*/) { NOT_IMPLEMENTED }
+cv::String getcwd() { NOT_IMPLEMENTED }
+bool createDirectory(const cv::String& /*path*/) { NOT_IMPLEMENTED }
+bool createDirectories(const cv::String& /*path*/) { NOT_IMPLEMENTED }
+cv::String getCacheDirectory(const char* /*sub_directory_name*/, const char* /*configuration_name = NULL*/) { NOT_IMPLEMENTED }
 #undef NOT_IMPLEMENTED
 #endif // OPENCV_HAVE_FILESYSTEM_SUPPORT
 

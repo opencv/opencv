@@ -80,15 +80,14 @@ ExifReader::~ExifReader()
  */
 bool ExifReader::parse()
 {
-    CV_TRY {
+    try {
         m_exif = getExif();
         if( !m_exif.empty() )
         {
             return true;
         }
         return false;
-    } CV_CATCH (ExifParsingError, e) {
-        CV_UNUSED(e);
+    } catch (ExifParsingError&) {
         return false;
     }
 }
@@ -152,11 +151,11 @@ std::map<int, ExifEntry_t > ExifReader::getExif()
             case COM:
                 bytesToSkip = getFieldSize();
                 if (bytesToSkip < markerSize) {
-                    CV_THROW (ExifParsingError());
+                    throw ExifParsingError();
                 }
                 m_stream.seekg( static_cast<long>( bytesToSkip - markerSize ), m_stream.cur );
                 if ( m_stream.fail() ) {
-                    CV_THROW (ExifParsingError());
+                    throw ExifParsingError();
                 }
                 break;
 
@@ -167,15 +166,14 @@ std::map<int, ExifEntry_t > ExifReader::getExif()
             case APP1: //actual Exif Marker
                 exifSize = getFieldSize();
                 if (exifSize <= offsetToTiffHeader) {
-                    CV_THROW (ExifParsingError());
+                    throw ExifParsingError();
                 }
                 m_data.resize( exifSize - offsetToTiffHeader );
                 m_stream.seekg( static_cast<long>( offsetToTiffHeader ), m_stream.cur );
                 if ( m_stream.fail() ) {
-                    CV_THROW (ExifParsingError());
+                    throw ExifParsingError();
                 }
                 m_stream.read( reinterpret_cast<char*>(&m_data[0]), exifSize - offsetToTiffHeader );
-                count = m_stream.gcount();
                 exifFound = true;
                 break;
 
@@ -217,7 +215,7 @@ size_t ExifReader::getFieldSize ()
  * @brief Filling m_exif member with exif directory elements
  *          This is internal function and is not exposed to client
  *
- *  @return The function doesn't return any value. In case of unsiccessful parsing
+ *  @return The function doesn't return any value. In case of unsuccessful parsing
  *      the m_exif member is not filled up
  */
 void ExifReader::parseExif()
@@ -231,7 +229,7 @@ void ExifReader::parseExif()
 
     uint32_t offset = getStartOffset();
 
-    size_t numEntry = getNumDirEntry();
+    size_t numEntry = getNumDirEntry( offset );
 
     offset += 2; //go to start of tag fields
 
@@ -305,7 +303,7 @@ uint32_t ExifReader::getStartOffset() const
  *
  * @return The number of directory entries
  */
-size_t ExifReader::getNumDirEntry() const
+size_t ExifReader::getNumDirEntry(const size_t offsetNumDir) const
 {
     return getU16( offsetNumDir );
 }
@@ -417,7 +415,7 @@ std::string ExifReader::getString(const size_t offset) const
         dataOffset = getU32( offset + 8 );
     }
     if (dataOffset > m_data.size() || dataOffset + size > m_data.size()) {
-        CV_THROW (ExifParsingError());
+        throw ExifParsingError();
     }
     std::vector<uint8_t>::const_iterator it = m_data.begin() + dataOffset;
     std::string result( it, it + size ); //copy vector content into result
@@ -434,7 +432,7 @@ std::string ExifReader::getString(const size_t offset) const
 uint16_t ExifReader::getU16(const size_t offset) const
 {
     if (offset + 1 >= m_data.size())
-        CV_THROW (ExifParsingError());
+        throw ExifParsingError();
 
     if( m_format == INTEL )
     {
@@ -452,7 +450,7 @@ uint16_t ExifReader::getU16(const size_t offset) const
 uint32_t ExifReader::getU32(const size_t offset) const
 {
     if (offset + 3 >= m_data.size())
-        CV_THROW (ExifParsingError());
+        throw ExifParsingError();
 
     if( m_format == INTEL )
     {

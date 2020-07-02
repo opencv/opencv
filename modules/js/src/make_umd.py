@@ -87,8 +87,14 @@ def make_umd(opencvjs, cvjs):
     // only CommonJS-like environments that support module.exports,
     // like Node.
     module.exports = factory();
-  } else {
+  } else if (typeof window === 'object') {
     // Browser globals
+    root.cv = factory();
+  } else if (typeof importScripts === 'function') {
+    // Web worker
+    root.cv = factory;
+  } else {
+    // Other shells, e.g. d8
     root.cv = factory();
   }
 }(this, function () {
@@ -103,4 +109,7 @@ if __name__ == "__main__":
     if len(sys.argv) > 2:
         opencvjs = sys.argv[1]
         cvjs = sys.argv[2]
+        if not os.path.isfile(opencvjs):
+            print('opencv.js file not found! Have you compiled the opencv_js module?')
+            exit()
         make_umd(opencvjs, cvjs);

@@ -1,6 +1,76 @@
 CHANGE LOG for Independent JPEG Group's JPEG software
 
 
+Version 9d  12-Jan-2020
+-----------------------
+
+Optimize the optimal Huffman code table generation to produce
+slightly smaller files.  Thank to John Korejwa for suggestion.
+Note: Requires rebuild of testimgp.jpg.
+
+Decoding Huffman: Use default tables if tables are not defined.
+Thank to Simone Azzalin for report (Motion JPEG),
+and to Martin Strunz for hint.
+
+Add sanity check in optimal Huffman code table generation.
+Thank to Adam Farley for suggestion.
+
+rdtarga.c: use read_byte(), with EOF check, instead of getc()
+in read_*_pixel().
+Thank to Chijin Zhou for cjpeg potential vulnerability report.
+
+jmemnobs.c: respect the max_memory_to_use setting in
+jpeg_mem_available() computation.  Thank to Sheng Shu and
+Dongdong She for djpeg potential vulnerability report.
+
+jdarith.c, jdhuff.c: avoid left shift of negative value
+compiler warning in decode_mcu_AC_refine().
+Thank to Indu Bhagat for suggestion.
+
+Add x64 (64-bit) platform support, avoid compiler warnings.
+Thank to Jonathan Potter, Feiyun Wang, and Sheng Shu for suggestion.
+
+Adjust libjpeg version specification for pkg-config file.
+Thank to Chen Chen for suggestion.
+
+Restore GIF read and write support from libjpeg version 6a.
+Thank to Wolfgang Werner (W.W.) Heinz for suggestion.
+
+Improve consistency in raw (downsampled) image data processing mode.
+Thank to Zhongyuan Zhou for hint.
+
+Avoid out of bounds array read (AC derived table pointers)
+in start pass in jdhuff.c.  Thank to Peng Li for report.
+
+Improve code sanity (jdhuff.c).
+Thank to Reza Mirzazade farkhani for reports.
+
+Add jpegtran -drop option; add options to the crop extension and wipe
+to fill the extra area with content from the source image region,
+instead of gray out.
+
+
+Version 9c  14-Jan-2018
+-----------------------
+
+jpegtran: add an option to the -wipe switch to fill the region
+with the average of adjacent blocks, instead of gray out.
+Thank to Caitlyn Feddock and Maddie Ziegler for inspiration.
+
+Make range extension bits adjustable (in jpegint.h).
+Thank to Robin Watts for suggestion.
+
+Provide macros for fflush() and ferror() in jinclude.h in order
+to facilitate adaption by applications using an own FILE class.
+Thank to Gerhard Huber for suggestion.
+
+Add libjpeg pkg-config file.  Thank to Mark Lavi, Vincent Torri,
+Patrick McMunn, and Huw Davies for suggestion.
+
+Add sanity checks in cjpeg image reader modules.
+Thank to Bingchang, Liu for reports.
+
+
 Version 9b  17-Jan-2016
 -----------------------
 

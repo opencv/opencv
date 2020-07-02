@@ -85,11 +85,11 @@ public class BruteForceL1DescriptorMatcherTest extends OpenCVTestCase {
         matSize = 100;
 
         truth = new DMatch[] {
-                new DMatch(0, 0, 0, 3.0975165f),
-                new DMatch(1, 1, 0, 3.5680308f),
-                new DMatch(2, 1, 0, 1.3722466f),
-                new DMatch(3, 1, 0, 1.3041023f),
-                new DMatch(4, 1, 0, 3.5970376f)
+                new DMatch(0, 0, 0, 3.0710702f),
+                new DMatch(1, 1, 0, 3.562016f),
+                new DMatch(2, 1, 0, 1.3682679f),
+                new DMatch(3, 1, 0, 1.3012862f),
+                new DMatch(4, 1, 0, 1.1852086f)
                 };
     }
 

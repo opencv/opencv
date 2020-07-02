@@ -2,7 +2,7 @@
  * jctrans.c
  *
  * Copyright (C) 1995-1998, Thomas G. Lane.
- * Modified 2000-2013 by Guido Vollbeding.
+ * Modified 2000-2017 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -85,12 +85,15 @@ jpeg_copy_critical_parameters (j_decompress_ptr srcinfo,
   jpeg_set_defaults(dstinfo);
   /* jpeg_set_defaults may choose wrong colorspace, eg YCbCr if input is RGB.
    * Fix it to get the right header markers for the image colorspace.
-   * Note: Entropy table assignment in jpeg_set_colorspace depends
-   * on color_transform.
+   * Note: Entropy table assignment in jpeg_set_colorspace
+   * depends on color_transform.
+   * Adaption is also required for setting the appropriate
+   * entropy coding mode dependent on image data precision.
    */
   dstinfo->color_transform = srcinfo->color_transform;
   jpeg_set_colorspace(dstinfo, srcinfo->jpeg_color_space);
   dstinfo->data_precision = srcinfo->data_precision;
+  dstinfo->arith_code = srcinfo->data_precision > 8 ? TRUE : FALSE;
   dstinfo->CCIR601_sampling = srcinfo->CCIR601_sampling;
   /* Copy the source's quantization tables. */
   for (tblno = 0; tblno < NUM_QUANT_TBLS; tblno++) {
@@ -157,6 +160,18 @@ jpeg_copy_critical_parameters (j_decompress_ptr srcinfo,
 }
 
 
+LOCAL(void)
+jpeg_calc_trans_dimensions (j_compress_ptr cinfo)
+/* Do computations that are needed before master selection phase */
+{
+  if (cinfo->min_DCT_h_scaled_size != cinfo->min_DCT_v_scaled_size)
+    ERREXIT2(cinfo, JERR_BAD_DCTSIZE,
+	     cinfo->min_DCT_h_scaled_size, cinfo->min_DCT_v_scaled_size);
+
+  cinfo->block_size = cinfo->min_DCT_h_scaled_size;
+}
+
+
 /*
  * Master selection of compression modules for transcoding.
  * This substitutes for jcinit.c's initialization of the full compressor.
@@ -166,6 +181,9 @@ LOCAL(void)
 transencode_master_selection (j_compress_ptr cinfo,
 			      jvirt_barray_ptr * coef_arrays)
 {
+  /* Do computations that are needed before master selection phase */
+  jpeg_calc_trans_dimensions(cinfo);
+
   /* Initialize master control (includes parameter checking/processing) */
   jinit_c_master_control(cinfo, TRUE /* transcode only */);
 

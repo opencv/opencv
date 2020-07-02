@@ -5,6 +5,7 @@
 
 #include "precomp.hpp"
 #include "stat.hpp"
+#include <opencv2/core/hal/hal.hpp>
 
 namespace cv
 {
@@ -45,6 +46,24 @@ void batchDistL2Sqr_(const _Tp* src1, const _Tp* src2, size_t step2,
     }
 }
 
+template<>
+void batchDistL2Sqr_(const float* src1, const float* src2, size_t step2,
+                     int nvecs, int len, float* dist, const uchar* mask)
+{
+    step2 /= sizeof(src2[0]);
+    if( !mask )
+    {
+        for( int i = 0; i < nvecs; i++ )
+            dist[i] = hal::normL2Sqr_(src1, src2 + step2*i, len);
+    }
+    else
+    {
+        float val0 = std::numeric_limits<float>::max();
+        for( int i = 0; i < nvecs; i++ )
+            dist[i] = mask[i] ? hal::normL2Sqr_(src1, src2 + step2*i, len) : val0;
+    }
+}
+
 template<typename _Tp, typename _Rt>
 void batchDistL2_(const _Tp* src1, const _Tp* src2, size_t step2,
                   int nvecs, int len, _Rt* dist, const uchar* mask)
@@ -60,6 +79,24 @@ void batchDistL2_(const _Tp* src1, const _Tp* src2, size_t step2,
         _Rt val0 = std::numeric_limits<_Rt>::max();
         for( int i = 0; i < nvecs; i++ )
             dist[i] = mask[i] ? std::sqrt(normL2Sqr<_Tp, _Rt>(src1, src2 + step2*i, len)) : val0;
+    }
+}
+
+template<>
+void batchDistL2_(const float* src1, const float* src2, size_t step2,
+                  int nvecs, int len, float* dist, const uchar* mask)
+{
+    step2 /= sizeof(src2[0]);
+    if( !mask )
+    {
+        for( int i = 0; i < nvecs; i++ )
+            dist[i] = std::sqrt(hal::normL2Sqr_(src1, src2 + step2*i, len));
+    }
+    else
+    {
+        float val0 = std::numeric_limits<float>::max();
+        for( int i = 0; i < nvecs; i++ )
+            dist[i] = mask[i] ? std::sqrt(hal::normL2Sqr_(src1, src2 + step2*i, len)) : val0;
     }
 }
 
@@ -230,7 +267,7 @@ void cv::batchDistance( InputArray _src1, InputArray _src2,
                         int normType, int K, InputArray _mask,
                         int update, bool crosscheck )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat src1 = _src1.getMat(), src2 = _src2.getMat(), mask = _mask.getMat();
     int type = src1.type();
@@ -260,18 +297,21 @@ void cv::batchDistance( InputArray _src1, InputArray _src2,
         nidx = Scalar::all(-1);
     }
 
+
     if( crosscheck )
     {
         CV_Assert( K == 1 && update == 0 && mask.empty() );
-        Mat tdist, tidx;
+        CV_Assert(!nidx.empty());
+        Mat tdist, tidx, sdist, sidx;
         batchDistance(src2, src1, tdist, dtype, tidx, normType, K, mask, 0, false);
+        batchDistance(src1, src2, sdist, dtype, sidx, normType, K, mask, 0, false);
 
         // if an idx-th element from src1 appeared to be the nearest to i-th element of src2,
         // we update the minimum mutual distance between idx-th element of src1 and the whole src2 set.
         // As a result, if nidx[idx] = i*, it means that idx-th element of src1 is the nearest
         // to i*-th element of src2 and i*-th element of src2 is the closest to idx-th element of src1.
         // If nidx[idx] = -1, it means that there is no such ideal couple for it in src2.
-        // This O(N) procedure is called cross-check and it helps to eliminate some false matches.
+        // This O(2N) procedure is called cross-check and it helps to eliminate some false matches.
         if( dtype == CV_32S )
         {
             for( int i = 0; i < tdist.rows; i++ )
@@ -296,6 +336,13 @@ void cv::batchDistance( InputArray _src1, InputArray _src2,
                     dist.at<float>(idx) = d;
                     nidx.at<int>(idx) = i + update;
                 }
+            }
+        }
+        for( int i = 0; i < sdist.rows; i++ )
+        {
+            if( tidx.at<int>(sidx.at<int>(i)) != i )
+            {
+                nidx.at<int>(i) = -1;
             }
         }
         return;

@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2004, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -43,8 +43,9 @@
 #include <ImfOpaqueAttribute.h>
 #include "Iex.h"
 #include <string.h>
+#include "ImfNamespace.h"
 
-namespace Imf {
+OPENEXR_IMF_INTERNAL_NAMESPACE_SOURCE_ENTER
 
 
 OpaqueAttribute::OpaqueAttribute (const char typeName[]):
@@ -79,22 +80,22 @@ OpaqueAttribute::typeName () const
 }
 
 
-Attribute *
+Attribute *	
 OpaqueAttribute::copy () const
 {
     return new OpaqueAttribute (*this);
 }
 
 
-void
-OpaqueAttribute::writeValueTo (OStream &os, int) const
+void	
+OpaqueAttribute::writeValueTo (OPENEXR_IMF_INTERNAL_NAMESPACE::OStream &os, int version) const
 {
     Xdr::write <StreamIO> (os, _data, _dataSize);
 }
 
 
-void
-OpaqueAttribute::readValueFrom (IStream &is, int size, int)
+void	
+OpaqueAttribute::readValueFrom (OPENEXR_IMF_INTERNAL_NAMESPACE::IStream &is, int size, int version)
 {
     _data.resizeErase (size);
     _dataSize = size;
@@ -102,18 +103,18 @@ OpaqueAttribute::readValueFrom (IStream &is, int size, int)
 }
 
 
-void
+void	
 OpaqueAttribute::copyValueFrom (const Attribute &other)
 {
     const OpaqueAttribute *oa = dynamic_cast <const OpaqueAttribute *> (&other);
 
     if (oa == 0 || strcmp (_typeName, oa->_typeName))
     {
-    THROW (Iex::TypeExc, "Cannot copy the value of an "
-                 "image file attribute of type "
-                 "\"" << other.typeName() << "\" "
-                 "to an attribute of type "
-                 "\"" << _typeName << "\".");
+	THROW (IEX_NAMESPACE::TypeExc, "Cannot copy the value of an "
+			     "image file attribute of type "
+			     "\"" << other.typeName() << "\" "
+			     "to an attribute of type "
+			     "\"" << _typeName << "\".");
     }
 
     _data.resizeErase (oa->_dataSize);
@@ -122,4 +123,4 @@ OpaqueAttribute::copyValueFrom (const Attribute &other)
 }
 
 
-} // namespace Imf
+OPENEXR_IMF_INTERNAL_NAMESPACE_SOURCE_EXIT

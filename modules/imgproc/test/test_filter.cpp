@@ -50,15 +50,22 @@ public:
 
 protected:
     int prepare_test_case( int test_case_idx );
-    int read_params( CvFileStorage* fs );
+    int read_params( const cv::FileStorage& fs );
     void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types );
     void get_minmax_bounds( int i, int j, int type, Scalar& low, Scalar& high );
-    CvSize aperture_size;
-    CvPoint anchor;
+    Size aperture_size;
+    Point anchor;
     int max_aperture_size;
     bool fp_kernel;
     bool inplace;
     int border;
+
+    void dump_test_case(int test_case_idx, std::ostream* out) CV_OVERRIDE
+    {
+        ArrayTest::dump_test_case(test_case_idx, out);
+        *out << "border=" << border << std::endl;
+    }
+
 };
 
 
@@ -70,19 +77,19 @@ CV_FilterBaseTest::CV_FilterBaseTest( bool _fp_kernel ) : fp_kernel(_fp_kernel)
     test_array[REF_OUTPUT].push_back(NULL);
     max_aperture_size = 13;
     inplace = false;
-    aperture_size = cvSize(0,0);
-    anchor = cvPoint(0,0);
+    aperture_size = Size(0,0);
+    anchor = Point(0,0);
     element_wise_relative_error = false;
 }
 
 
-int CV_FilterBaseTest::read_params( CvFileStorage* fs )
+int CV_FilterBaseTest::read_params( const cv::FileStorage& fs )
 {
     int code = cvtest::ArrayTest::read_params( fs );
     if( code < 0 )
         return code;
 
-    max_aperture_size = cvReadInt( find_param( fs, "max_aperture_size" ), max_aperture_size );
+    read( find_param( fs, "max_aperture_size" ), max_aperture_size, max_aperture_size );
     max_aperture_size = cvtest::clipInt( max_aperture_size, 1, 100 );
 
     return code;
@@ -403,9 +410,9 @@ void CV_FilterTest::get_test_array_types_and_sizes( int test_case_idx,
 {
     CV_FilterBaseTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
     RNG& rng = ts->get_rng();
-    int depth = cvtest::randInt(rng)%3;
+    int depth = cvtest::randInt(rng)%4;
     int cn = CV_MAT_CN(types[INPUT][0]);
-    depth = depth == 0 ? CV_8U : depth == 1 ? CV_16U : CV_32F;
+    depth = depth == 0 ? CV_8U : depth == 1 ? CV_16U : depth == 2 ? CV_16S : CV_32F;
     types[INPUT][0] = types[OUTPUT][0] = types[REF_OUTPUT][0] = CV_MAKETYPE(depth, cn);
 }
 
@@ -420,9 +427,9 @@ double CV_FilterTest::get_success_error_level( int /*test_case_idx*/, int /*i*/,
 
 void CV_FilterTest::run_func()
 {
-    CvMat kernel = test_mat[INPUT][1];
+    CvMat kernel = cvMat(test_mat[INPUT][1]);
     cvFilter2D( test_array[inplace ? OUTPUT : INPUT][0],
-                test_array[OUTPUT][0], &kernel, anchor );
+                test_array[OUTPUT][0], &kernel, cvPoint(anchor));
 }
 
 
@@ -457,10 +464,11 @@ void CV_DerivBaseTest::get_test_array_types_and_sizes( int test_case_idx,
 {
     RNG& rng = ts->get_rng();
     CV_FilterBaseTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
-    int depth = cvtest::randInt(rng) % 2;
-    depth = depth == 0 ? CV_8U : CV_32F;
+    int depth = cvtest::randInt(rng) % 4;
+    depth = depth == 0 ? CV_8U : depth == 1 ? CV_16U : depth == 2 ? CV_16S : CV_32F;
     types[INPUT][0] = CV_MAKETYPE(depth,1);
-    types[OUTPUT][0] = types[REF_OUTPUT][0] = CV_MAKETYPE(depth==CV_8U?CV_16S:CV_32F,1);
+    int sameDepth = cvtest::randInt(rng) % 2;
+    types[OUTPUT][0] = types[REF_OUTPUT][0] = sameDepth ? depth : CV_MAKETYPE(depth==CV_8U?CV_16S:CV_32F,1);
     _aperture_size = (cvtest::randInt(rng)%5)*2 - 1;
     sizes[INPUT][1] = aperture_size = cvSize(_aperture_size, _aperture_size);
 }
@@ -535,11 +543,9 @@ void CV_SobelTest::get_test_array_types_and_sizes( int test_case_idx,
 
 void CV_SobelTest::run_func()
 {
-    cvSobel( test_array[inplace ? OUTPUT : INPUT][0],
-             test_array[OUTPUT][0], dx, dy, _aperture_size );
-    /*cv::Sobel( test_mat[inplace ? OUTPUT : INPUT][0],
+    cv::Sobel( test_mat[inplace ? OUTPUT : INPUT][0],
                test_mat[OUTPUT][0], test_mat[OUTPUT][0].depth(),
-               dx, dy, _aperture_size, 1, 0, border );*/
+               dx, dy, _aperture_size, 1, 0, border );
 }
 
 
@@ -654,8 +660,9 @@ void CV_LaplaceTest::get_test_array_types_and_sizes( int test_case_idx,
 
 void CV_LaplaceTest::run_func()
 {
-    cvLaplace( test_array[inplace ? OUTPUT : INPUT][0],
-               test_array[OUTPUT][0], _aperture_size );
+    cv::Laplacian( test_mat[inplace ? OUTPUT : INPUT][0],
+                   test_mat[OUTPUT][0],test_mat[OUTPUT][0].depth(),
+                   _aperture_size, 1, 0, cv::BORDER_REPLICATE );
 }
 
 
@@ -685,6 +692,12 @@ protected:
     void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types );
     double get_success_error_level( int test_case_idx, int i, int j );
     const char* smooth_type;
+
+    void dump_test_case(int test_case_idx, std::ostream* out) CV_OVERRIDE
+    {
+        CV_FilterBaseTest::dump_test_case(test_case_idx, out);
+        *out << "smooth_type=" << smooth_type << std::endl;
+    }
 };
 
 
@@ -795,6 +808,12 @@ protected:
     double get_success_error_level( int /*test_case_idx*/, int /*i*/, int /*j*/ );
     double sigma;
     int param1, param2;
+
+    void dump_test_case(int test_case_idx, std::ostream* out) CV_OVERRIDE
+    {
+        CV_SmoothBaseTest::dump_test_case(test_case_idx, out);
+        *out << "kernel=(" << param1 << ", " << param2 << ") sigma=" << sigma << std::endl;
+    }
 };
 
 
@@ -838,7 +857,7 @@ void CV_GaussianBlurTest::run_func()
 
 // !!! Copied from cvSmooth, if the code is changed in cvSmooth,
 // make sure to update this one too.
-#define SMALL_GAUSSIAN_SIZE 7
+#define SMALL_GAUSSIAN_SIZE 9
 static void
 calcGaussianKernel( int n, double sigma, vector<float>& kernel )
 {
@@ -847,14 +866,15 @@ calcGaussianKernel( int n, double sigma, vector<float>& kernel )
         {1.f},
         {0.25f, 0.5f, 0.25f},
         {0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f},
-        {0.03125, 0.109375, 0.21875, 0.28125, 0.21875, 0.109375, 0.03125}
+        {0.03125, 0.109375, 0.21875, 0.28125, 0.21875, 0.109375, 0.03125},
+        {4.0 / 256, 13.0 / 256, 30.0 / 256, 51.0 / 256, 60.0 / 256, 51.0 / 256, 30.0 / 256, 13.0 / 256, 4.0 / 256}
     };
 
     kernel.resize(n);
     if( n <= SMALL_GAUSSIAN_SIZE && sigma <= 0 )
     {
-        assert( n%2 == 1 );
-        memcpy( &kernel[0], small_gaussian_tab[n>>1], n*sizeof(kernel[0]));
+        CV_Assert(n%2 == 1);
+        memcpy(&kernel[0], small_gaussian_tab[n / 2], n*sizeof(kernel[0]));
     }
     else
     {
@@ -1119,7 +1139,7 @@ void CV_PyramidBaseTest::get_test_array_types_and_sizes( int test_case_idx,
     const int depthes[] = {CV_8U, CV_16S, CV_16U, CV_32F};
 
     RNG& rng = ts->get_rng();
-    CvSize sz;
+    CvSize sz = {0, 0};
     CV_FilterBaseTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
 
     int depth = depthes[cvtest::randInt(rng) % (sizeof(depthes)/sizeof(depthes[0]))];
@@ -1265,7 +1285,7 @@ public:
     CV_FeatureSelBaseTest( int width_factor );
 
 protected:
-    int read_params( CvFileStorage* fs );
+    int read_params( const FileStorage& fs );
     void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types );
     void get_minmax_bounds( int i, int j, int type, Scalar& low, Scalar& high );
     double get_success_error_level( int test_case_idx, int i, int j );
@@ -1289,15 +1309,15 @@ CV_FeatureSelBaseTest::CV_FeatureSelBaseTest( int _width_factor )
 }
 
 
-int CV_FeatureSelBaseTest::read_params( CvFileStorage* fs )
+int CV_FeatureSelBaseTest::read_params( const cv::FileStorage& fs )
 {
     int code = cvtest::BaseTest::read_params( fs );
     if( code < 0 )
         return code;
 
-    max_aperture_size = cvReadInt( find_param( fs, "max_aperture_size" ), max_aperture_size );
+    read( find_param( fs, "max_aperture_size" ), max_aperture_size, max_aperture_size );
     max_aperture_size = cvtest::clipInt( max_aperture_size, 1, 9 );
-    max_block_size = cvReadInt( find_param( fs, "max_block_size" ), max_block_size );
+    read( find_param( fs, "max_block_size" ), max_block_size, max_block_size );
     max_block_size = cvtest::clipInt( max_aperture_size, 1, 100 );
 
     return code;
@@ -1666,12 +1686,11 @@ void CV_IntegralTest::get_test_array_types_and_sizes( int test_case_idx,
 {
     RNG& rng = ts->get_rng();
     int depth = cvtest::randInt(rng) % 2, sum_depth;
-    int cn = cvtest::randInt(rng) % 3 + 1;
+    int cn = cvtest::randInt(rng) % 4 + 1;
     cvtest::ArrayTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
     Size sum_size;
 
     depth = depth == 0 ? CV_8U : CV_32F;
-    cn += cn == 2;
     int b = (cvtest::randInt(rng) & 1) != 0;
     sum_depth = depth == CV_8U && b ? CV_32S : b ? CV_32F : CV_64F;
 
@@ -2200,4 +2219,141 @@ TEST(Imgproc_Filter2D, dftFilter2d_regression_10683)
 
     EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 2);
 }
+
+TEST(Imgproc_Filter2D, dftFilter2d_regression_13179)
+{
+    uchar src_[24*24] = {
+        0, 40, 0, 0, 255, 0, 0, 78, 131, 0, 196, 0, 255, 0, 0, 0, 0, 255, 70, 0, 255, 0, 0, 0,
+        0, 0, 255, 204, 0, 0, 255, 93, 255, 0, 0, 255, 12, 0, 0, 0, 255, 121, 0, 255, 0, 0, 0, 255,
+        0, 178, 0, 25, 67, 0, 165, 0, 255, 0, 0, 181, 151, 175, 0, 0, 32, 0, 0, 255, 165, 93, 0, 255,
+        255, 255, 0, 0, 255, 126, 0, 0, 0, 0, 133, 29, 9, 0, 220, 255, 0, 142, 255, 255, 255, 0, 255, 0,
+        255, 32, 255, 0, 13, 237, 0, 0, 0, 0, 0, 19, 90, 0, 0, 85, 122, 62, 95, 29, 255, 20, 0, 0,
+        0, 0, 166, 41, 0, 48, 70, 0, 68, 0, 255, 0, 139, 7, 63, 144, 0, 204, 0, 0, 0, 98, 114, 255,
+        105, 0, 0, 0, 0, 255, 91, 0, 73, 0, 255, 0, 0, 0, 255, 198, 21, 0, 0, 0, 255, 43, 153, 128,
+        0, 98, 26, 0, 101, 0, 0, 0, 255, 0, 0, 0, 255, 77, 56, 0, 241, 0, 169, 132, 0, 255, 186, 255,
+        255, 87, 0, 1, 0, 0, 10, 39, 120, 0, 23, 69, 207, 0, 0, 0, 0, 84, 0, 0, 0, 0, 255, 0,
+        255, 0, 0, 136, 255, 77, 247, 0, 67, 0, 15, 255, 0, 143, 0, 243, 255, 0, 0, 238, 255, 0, 255, 8,
+        42, 0, 0, 255, 29, 0, 0, 0, 255, 255, 255, 75, 0, 0, 0, 255, 0, 0, 255, 38, 197, 0, 255, 87,
+        0, 123, 17, 0, 234, 0, 0, 149, 0, 0, 255, 16, 0, 0, 0, 255, 0, 255, 0, 38, 0, 114, 255, 76,
+        0, 0, 8, 0, 255, 0, 0, 0, 220, 0, 11, 255, 0, 0, 55, 98, 0, 0, 0, 255, 0, 175, 255, 110,
+        235, 0, 175, 0, 255, 227, 38, 206, 0, 0, 255, 246, 0, 0, 123, 183, 255, 0, 0, 255, 0, 156, 0, 54,
+        0, 255, 0, 202, 0, 0, 0, 0, 157, 0, 255, 63, 0, 0, 0, 0, 0, 255, 132, 0, 255, 0, 0, 0,
+        0, 0, 0, 255, 0, 0, 128, 126, 0, 243, 46, 7, 0, 211, 108, 166, 0, 0, 162, 227, 0, 204, 0, 51,
+        255, 216, 0, 0, 43, 0, 255, 40, 188, 188, 255, 0, 0, 255, 34, 0, 0, 168, 0, 0, 0, 35, 0, 0,
+        0, 80, 131, 255, 0, 255, 10, 0, 0, 0, 180, 255, 209, 255, 173, 34, 0, 66, 0, 49, 0, 255, 83, 0,
+        0, 204, 0, 91, 0, 0, 0, 205, 84, 0, 0, 0, 92, 255, 91, 0, 126, 0, 185, 145, 0, 0, 9, 0,
+        255, 0, 0, 255, 255, 0, 0, 255, 0, 0, 216, 0, 187, 221, 0, 0, 141, 0, 0, 209, 0, 0, 255, 0,
+        255, 0, 0, 154, 150, 0, 0, 0, 148, 0, 201, 255, 0, 255, 16, 0, 0, 160, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 255, 0, 255, 0, 255, 0, 255, 198, 255, 147, 131, 0, 255, 202, 0, 0, 0, 0, 255, 0,
+        0, 0, 0, 164, 181, 0, 0, 0, 69, 255, 31, 0, 255, 195, 0, 0, 255, 164, 109, 0, 0, 202, 0, 206,
+        0, 0, 61, 235, 33, 255, 77, 0, 0, 0, 0, 85, 0, 228, 0, 0, 0, 0, 255, 0, 0, 5, 255, 255
+    };
+    cv::Mat_<uchar> src(24, 24, src_);
+
+    uchar expected_[16*16] = {
+         0,255,  0,  0,255,  0,  0,255,  0,  0,255,255,  0,255,  0,  0,
+         0,255,  0,  0,255,  0,  0,255,  0,  0,255,255,  0,255,  0,  0,
+         0,255,  0,  0,255,  0,  0,255, 70,  0,255,255,  0,255,  0,  0,
+         0,234,138,  0,255,  0,  0,255,  8,  0,255,255,  0,255,  0,  0,
+         0,  0,255,  0,255,228,  0,255,255,  0,255,255,  0,255,  0,  5,
+         0,  0,255,  0,255,  0,  0,255,  0,  0,255,255,  0,255,  0,  0,
+         0,253,  0,  0,255,  0,  0,255,  0,  0,255,255,  0,255,  0,  0,
+         0,255,  0,  0,255,  0,  0,255,  0,  0,255, 93,  0,255,  0,255,
+         0,255,  0,  0,255,  0,182,255,  0,  0,255,  0,  0,255,  0,  0,
+         0,  0,253,  0,228,  0,255,255,  0,  0,255,  0,  0,  0,  0, 75,
+         0,  0,255,  0,  0,  0,255,255,  0,255,206,  0,  1,162,  0,255,
+         0,  0,255,  0,  0,  0,255,255,  0,255,255,  0,  0,255,  0,255,
+         0,  0,255,  0,  0,  0,255,255,  0,255,255,  0,255,255,  0,255,
+         0,  0,255,255,  0,  0,255,  0,  0,255,255,  0,255,168,  0,255,
+         0,  0,255,255,  0,  0,255, 26,  0,255,255,  0,255,255,  0,255,
+         0,  0,255,255,  0,  0,255,  0,  0,255,255,  0,255,255,  0,255,
+    };
+    cv::Mat_<uchar> expected(16, 16, expected_);
+
+    cv::Mat kernel = cv::getGaborKernel(cv::Size(13, 13), 8, 0, 3, 0.25);
+
+    cv::Mat roi(src, cv::Rect(0, 0, 16, 16));
+
+    cv::Mat filtered(16, 16, roi.type());
+
+    cv::filter2D(roi, filtered, -1, kernel);
+
+    EXPECT_LE(cvtest::norm(filtered, expected, cv::NORM_INF), 2);
+}
+
+TEST(Imgproc_MedianBlur, hires_regression_13409)
+{
+    Mat src(2048, 2048, CV_8UC1), dst_hires, dst_ref;
+    randu(src, 0, 256);
+
+    medianBlur(src, dst_hires, 9);
+    medianBlur(src(Rect(512, 512, 1024, 1024)), dst_ref, 9);
+
+    ASSERT_EQ(0.0, cvtest::norm(dst_hires(Rect(516, 516, 1016, 1016)), dst_ref(Rect(4, 4, 1016, 1016)), NORM_INF));
+}
+
+TEST(Imgproc_Sobel, s16_regression_13506)
+{
+    Mat src = (Mat_<short>(8, 16) << 127, 138, 130, 102, 118,  97,  76,  84, 124,  90, 146,  63, 130,  87, 212,  85,
+                                     164,   3,  51, 124, 151,  89, 154, 117,  36,  88, 116, 117, 180, 112, 147, 124,
+                                      63,  50, 115, 103,  83, 148, 106,  79, 213, 106, 135,  53,  79, 106, 122, 112,
+                                     218, 107,  81, 126,  78, 138,  85, 142, 151, 108, 104, 158, 155,  81, 112, 178,
+                                     184,  96, 187, 148, 150, 112, 138, 162, 222, 146, 128,  49, 124,  46, 165, 104,
+                                     119, 164,  77, 144, 186,  98, 106, 148, 155, 157, 160, 151, 156, 149,  43, 122,
+                                     106, 155, 120, 132, 159, 115, 126, 188,  44,  79, 164, 201, 153,  97, 139, 133,
+                                     133,  98, 111, 165,  66, 106, 131,  85, 176, 156,  67, 108, 142,  91,  74, 137);
+    Mat ref = (Mat_<short>(8, 16) <<     0,    0,    0,    0,     0,    0,    0,     0,     0,     0,     0,    0,    0,     0,     0,     0,
+                                     -1020, -796, -489, -469,  -247,  317,  760,  1429,  1983,  1384,   254, -459, -899, -1197, -1172, -1058,
+                                      2552, 2340, 1617,  591,     9,   96,  722,  1985,  2746,  1916,   676,    9, -635, -1115,  -779,  -380,
+                                      3546, 3349, 2838, 2206,  1388,  669,  938,  1880,  2252,  1785,  1083,  606,  180,  -298,  -464,  -418,
+                                       816,  966, 1255, 1652,  1619,  924,  535,   288,     5,   601,  1581, 1870, 1520,   625,  -627, -1260,
+                                      -782, -610, -395, -267,  -122,  -42, -317, -1378, -2293, -1451,   596, 1870, 1679,   763,   -69,  -394,
+                                      -882, -681, -463, -818, -1167, -732, -463, -1042, -1604, -1592, -1047, -334, -104,  -117,   229,   512,
+                                         0,    0,    0,    0,     0,    0,    0,     0,     0,     0,     0,    0,    0,     0,     0,     0);
+    Mat dst;
+    Sobel(src, dst, CV_16S, 0, 1, 5);
+    ASSERT_EQ(0.0, cvtest::norm(dst, ref, NORM_INF));
+}
+
+TEST(Imgproc_Pyrdown, issue_12961)
+{
+    Mat src(9, 9, CV_8UC1, Scalar::all(0));
+    Mat dst;
+    cv::pyrDown(src, dst);
+    ASSERT_EQ(0.0, cv::norm(dst));
+}
+
+
+// https://github.com/opencv/opencv/issues/16857
+TEST(Imgproc, filter_empty_src_16857)
+{
+#define CV_TEST_EXPECT_EMPTY_THROW(statement) CV_TEST_EXPECT_EXCEPTION_MESSAGE(statement, ".empty()")
+
+    Mat src, dst, dst2;
+
+    CV_TEST_EXPECT_EMPTY_THROW(bilateralFilter(src, dst, 5, 50, 20));
+    CV_TEST_EXPECT_EMPTY_THROW(blur(src, dst, Size(3, 3)));
+    CV_TEST_EXPECT_EMPTY_THROW(boxFilter(src, dst, CV_8U, Size(3, 3)));
+    CV_TEST_EXPECT_EMPTY_THROW(sqrBoxFilter(src, dst, CV_8U, Size(3, 3)));
+    CV_TEST_EXPECT_EMPTY_THROW(medianBlur(src, dst, 3));
+    CV_TEST_EXPECT_EMPTY_THROW(GaussianBlur(src, dst, Size(3, 3), 0));
+    CV_TEST_EXPECT_EMPTY_THROW(cv::filter2D(src, dst, CV_8U, Mat_<float>::zeros(Size(3, 3))));
+    CV_TEST_EXPECT_EMPTY_THROW(sepFilter2D(src, dst, CV_8U, Mat_<float>::zeros(Size(3, 1)), Mat_<float>::zeros(Size(1, 3))));
+    CV_TEST_EXPECT_EMPTY_THROW(Sobel(src, dst, CV_8U, 1, 1));
+    CV_TEST_EXPECT_EMPTY_THROW(spatialGradient(src, dst, dst2));
+    CV_TEST_EXPECT_EMPTY_THROW(Scharr(src, dst, CV_8U, 1, 1));
+    CV_TEST_EXPECT_EMPTY_THROW(Laplacian(src, dst, CV_8U));
+
+    CV_TEST_EXPECT_EMPTY_THROW(cv::dilate(src, dst, Mat()));  // cvtest:: by default
+    CV_TEST_EXPECT_EMPTY_THROW(cv::erode(src, dst, Mat()));  // cvtest:: by default
+    CV_TEST_EXPECT_EMPTY_THROW(morphologyEx(src, dst, MORPH_OPEN, Mat()));
+
+    //debug: CV_TEST_EXPECT_EMPTY_THROW(blur(Mat_<uchar>(Size(3,3)), dst, Size(3, 3)));
+
+    EXPECT_TRUE(src.empty());
+    EXPECT_TRUE(dst.empty());
+    EXPECT_TRUE(dst2.empty());
+}
+
+
 }} // namespace

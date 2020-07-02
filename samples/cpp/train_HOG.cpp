@@ -2,7 +2,7 @@
 #include "opencv2/highgui.hpp"
 #include "opencv2/ml.hpp"
 #include "opencv2/objdetect.hpp"
-
+#include "opencv2/videoio.hpp"
 #include <iostream>
 #include <time.h>
 
@@ -204,7 +204,7 @@ int main( int argc, char** argv )
     const char* keys =
     {
         "{help h|     | show help message}"
-        "{pd    |     | path of directory contains possitive images}"
+        "{pd    |     | path of directory contains positive images}"
         "{nd    |     | path of directory contains negative images}"
         "{td    |     | path of directory contains test images}"
         "{tv    |     | test video file name}"

@@ -6,10 +6,10 @@ import argparse
 
 ## [Load image]
 parser = argparse.ArgumentParser(description='Code for Histogram Calculation tutorial.')
-parser.add_argument('--input', help='Path to input image.', default='../data/lena.jpg')
+parser.add_argument('--input', help='Path to input image.', default='lena.jpg')
 args = parser.parse_args()
 
-src = cv.imread(args.input)
+src = cv.imread(cv.samples.findFile(args.input))
 if src is None:
     print('Could not open or find the image:', args.input)
     exit(0)

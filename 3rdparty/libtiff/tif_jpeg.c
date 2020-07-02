@@ -1,5 +1,3 @@
-/* $Id: tif_jpeg.c,v 1.134 2017-10-17 19:04:47 erouault Exp $ */
-
 /*
  * Copyright (c) 1994-1997 Sam Leffler
  * Copyright (c) 1994-1997 Silicon Graphics, Inc.
@@ -27,9 +25,9 @@
 #define WIN32_LEAN_AND_MEAN
 #define VC_EXTRALEAN
 
+#include "tiffiop.h"
 #include <stdlib.h>
 
-#include "tiffiop.h"
 #ifdef JPEG_SUPPORT
 
 /*
@@ -76,7 +74,7 @@ int TIFFJPEGIsFullStripRequired_12(TIFF* tif);
    "JPEGLib: JPEG parameter struct mismatch: library thinks size is 432,
    caller expects 464"
 
-   For such users we wil fix the problem here. See install.doc file from
+   For such users we will fix the problem here. See install.doc file from
    the JPEG library distribution for details.
 */
 

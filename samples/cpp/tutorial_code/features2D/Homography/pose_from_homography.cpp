@@ -1,11 +1,8 @@
 #include <iostream>
-#include <opencv2/opencv_modules.hpp>
-#ifdef HAVE_OPENCV_ARUCO
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/calib3d.hpp>
 #include <opencv2/highgui.hpp>
-#include <opencv2/aruco.hpp>
 
 using namespace std;
 using namespace cv;
@@ -45,7 +42,7 @@ void calcChessboardCorners(Size boardSize, float squareSize, vector<Point3f>& co
 void poseEstimationFromCoplanarPoints(const string &imgPath, const string &intrinsicsPath, const Size &patternSize,
                                              const float squareSize)
 {
-    Mat img = imread(imgPath);
+    Mat img = imread( samples::findFile( imgPath) );
     Mat img_corners = img.clone(), img_pose = img.clone();
 
     //! [find-chessboard-corners]
@@ -72,7 +69,7 @@ void poseEstimationFromCoplanarPoints(const string &imgPath, const string &intri
     //! [compute-object-points]
 
     //! [load-intrinsics]
-    FileStorage fs(intrinsicsPath, FileStorage::READ);
+    FileStorage fs( samples::findFile( intrinsicsPath ), FileStorage::READ);
     Mat cameraMatrix, distCoeffs;
     fs["camera_matrix"] >> cameraMatrix;
     fs["distortion_coefficients"] >> distCoeffs;
@@ -121,7 +118,7 @@ void poseEstimationFromCoplanarPoints(const string &imgPath, const string &intri
     //! [display-pose]
     Mat rvec;
     Rodrigues(R, rvec);
-    aruco::drawAxis(img_pose, cameraMatrix, distCoeffs, rvec, tvec, 2*squareSize);
+    drawFrameAxes(img_pose, cameraMatrix, distCoeffs, rvec, tvec, 2*squareSize);
     imshow("Pose from coplanar points", img_pose);
     waitKey();
     //! [display-pose]
@@ -129,8 +126,8 @@ void poseEstimationFromCoplanarPoints(const string &imgPath, const string &intri
 
 const char* params
     = "{ help h         |       | print usage }"
-      "{ image          | ../data/left04.jpg | path to a chessboard image }"
-      "{ intrinsics     | ../data/left_intrinsics.yml | path to camera intrinsics }"
+      "{ image          | left04.jpg | path to a chessboard image }"
+      "{ intrinsics     | left_intrinsics.yml | path to camera intrinsics }"
       "{ width bw       | 9     | chessboard width }"
       "{ height bh      | 6     | chessboard height }"
       "{ square_size    | 0.025 | chessboard square size }";
@@ -156,10 +153,3 @@ int main(int argc, char *argv[])
 
     return 0;
 }
-#else
-int main()
-{
-    std::cerr << "FATAL ERROR: This sample requires opencv_aruco module (from opencv_contrib)" << std::endl;
-    return 0;
-}
-#endif

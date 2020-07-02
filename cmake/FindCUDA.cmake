@@ -141,7 +141,7 @@
 #   -- Same as CUDA_ADD_EXECUTABLE except that a library is created.
 #
 #   CUDA_BUILD_CLEAN_TARGET()
-#   -- Creates a convience target that deletes all the dependency files
+#   -- Creates a convenience target that deletes all the dependency files
 #      generated.  You should make clean after running this target to ensure the
 #      dependency files get regenerated.
 #
@@ -473,7 +473,7 @@ else()
 endif()
 
 # Propagate the host flags to the host compiler via -Xcompiler
-option(CUDA_PROPAGATE_HOST_FLAGS "Propage C/CXX_FLAGS and friends to the host compiler via -Xcompile" ON)
+option(CUDA_PROPAGATE_HOST_FLAGS "Propagate C/CXX_FLAGS and friends to the host compiler via -Xcompile" ON)
 
 # Enable CUDA_SEPARABLE_COMPILATION
 option(CUDA_SEPARABLE_COMPILATION "Compile CUDA objects with separable compilation enabled.  Requires CUDA 5.0+" OFF)

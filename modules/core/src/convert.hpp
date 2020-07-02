@@ -8,192 +8,401 @@
 
 #include "opencv2/core/types.hpp"
 
-namespace
-{
-float convertFp16SW(short fp16);
-short convertFp16SW(float fp32);
-
-#if !CV_FP16_TYPE
-// const numbers for floating points format
-const unsigned int kShiftSignificand    = 13;
-const unsigned int kMaskFp16Significand = 0x3ff;
-const unsigned int kBiasFp16Exponent    = 15;
-const unsigned int kBiasFp32Exponent    = 127;
-#endif
-
-#if CV_FP16_TYPE
-inline float convertFp16SW(short fp16)
-{
-    // Fp16 -> Fp32
-    Cv16suf a;
-    a.i = fp16;
-    return (float)a.h;
-}
-#else
-inline float convertFp16SW(short fp16)
-{
-    // Fp16 -> Fp32
-    Cv16suf b;
-    b.i = fp16;
-    int exponent    = b.fmt.exponent - kBiasFp16Exponent;
-    int significand = b.fmt.significand;
-
-    Cv32suf a;
-    a.i = 0;
-    a.fmt.sign = b.fmt.sign; // sign bit
-    if( exponent == 16 )
-    {
-        // Inf or NaN
-        a.i = a.i | 0x7F800000;
-        if( significand != 0 )
-        {
-            // NaN
-#if defined(__x86_64__) || defined(_M_X64)
-            // 64bit
-            a.i = a.i | 0x7FC00000;
-#endif
-            a.fmt.significand = a.fmt.significand | (significand << kShiftSignificand);
-        }
-        return a.f;
-    }
-    else if ( exponent == -(int)kBiasFp16Exponent )
-    {
-        // subnormal in Fp16
-        if( significand == 0 )
-        {
-            // zero
-            return a.f;
-        }
-        else
-        {
-            int shift = -1;
-            while( ( significand & 0x400 ) == 0 )
-            {
-                significand = significand << 1;
-                shift++;
-            }
-            significand = significand & kMaskFp16Significand;
-            exponent -= shift;
-        }
-    }
-
-    a.fmt.exponent = (exponent+kBiasFp32Exponent);
-    a.fmt.significand = significand << kShiftSignificand;
-    return a.f;
-}
-#endif
-
-#if CV_FP16_TYPE
-inline short convertFp16SW(float fp32)
-{
-    // Fp32 -> Fp16
-    Cv16suf a;
-    a.h = (__fp16)fp32;
-    return a.i;
-}
-#else
-inline short convertFp16SW(float fp32)
-{
-    // Fp32 -> Fp16
-    Cv32suf a;
-    a.f = fp32;
-    int exponent    = a.fmt.exponent - kBiasFp32Exponent;
-    int significand = a.fmt.significand;
-
-    Cv16suf result;
-    result.i = 0;
-    unsigned int absolute = a.i & 0x7fffffff;
-    if( 0x477ff000 <= absolute )
-    {
-        // Inf in Fp16
-        result.i = result.i | 0x7C00;
-        if( exponent == 128 && significand != 0 )
-        {
-            // NaN
-            result.i = (short)( result.i | 0x200 | ( significand >> kShiftSignificand ) );
-        }
-    }
-    else if ( absolute < 0x33000001 )
-    {
-        // too small for fp16
-        result.i = 0;
-    }
-    else if ( absolute < 0x387fe000 )
-    {
-        // subnormal in Fp16
-        int fp16Significand = significand | 0x800000;
-        int bitShift = (-exponent) - 1;
-        fp16Significand = fp16Significand >> bitShift;
-
-        // special cases to round up
-        bitShift = exponent + 24;
-        int threshold = ( ( 0x400000 >> bitShift ) | ( ( ( significand & ( 0x800000 >> bitShift ) ) >> ( 126 - a.fmt.exponent ) ) ^ 1 ) );
-        if( absolute == 0x33c00000 )
-        {
-            result.i = 2;
-        }
-        else
-        {
-            if( threshold <= ( significand & ( 0xffffff >> ( exponent + 25 ) ) ) )
-            {
-                fp16Significand++;
-            }
-            result.i = (short)fp16Significand;
-        }
-    }
-    else
-    {
-        // usual situation
-        // exponent
-        result.fmt.exponent = ( exponent + kBiasFp16Exponent );
-
-        // significand;
-        short fp16Significand = (short)(significand >> kShiftSignificand);
-        result.fmt.significand = fp16Significand;
-
-        // special cases to round up
-        short lsb10bitsFp32 = (significand & 0x1fff);
-        short threshold = 0x1000 + ( ( fp16Significand & 0x1 ) ? 0 : 1 );
-        if( threshold <= lsb10bitsFp32 )
-        {
-            result.i++;
-        }
-        else if ( fp16Significand == kMaskFp16Significand && exponent == -15)
-        {
-            result.i++;
-        }
-    }
-
-    // sign bit
-    result.fmt.sign = a.fmt.sign;
-    return result.i;
-}
-#endif
-
-}
-
 namespace cv
 {
-namespace opt_FP16
+
+#if CV_SIMD
+
+static inline void vx_load_as(const uchar* ptr, v_float32& a)
+{ a = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(ptr))); }
+
+static inline void vx_load_as(const schar* ptr, v_float32& a)
+{ a = v_cvt_f32(vx_load_expand_q(ptr)); }
+
+static inline void vx_load_as(const ushort* ptr, v_float32& a)
+{ a = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand(ptr))); }
+
+static inline void vx_load_as(const short* ptr, v_float32& a)
+{ a = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand(ptr))); }
+
+static inline void vx_load_as(const int* ptr, v_float32& a)
+{ a = v_cvt_f32(vx_load(ptr)); }
+
+static inline void vx_load_as(const float* ptr, v_float32& a)
+{ a = vx_load(ptr); }
+
+static inline void vx_load_as(const float16_t* ptr, v_float32& a)
+{ a = vx_load_expand(ptr); }
+
+static inline void v_store_as(ushort* ptr, const v_float32& a)
+{ v_pack_u_store(ptr, v_round(a)); }
+
+static inline void v_store_as(short* ptr, const v_float32& a)
+{ v_pack_store(ptr, v_round(a)); }
+
+static inline void v_store_as(int* ptr, const v_float32& a)
+{ v_store(ptr, v_round(a)); }
+
+static inline void v_store_as(float* ptr, const v_float32& a)
+{ v_store(ptr, a); }
+
+static inline void v_store_as(float16_t* ptr, const v_float32& a)
+{ v_pack_store(ptr, a); }
+
+static inline void vx_load_pair_as(const uchar* ptr, v_uint16& a, v_uint16& b)
+{ v_expand(vx_load(ptr), a, b); }
+
+static inline void vx_load_pair_as(const schar* ptr, v_uint16& a, v_uint16& b)
 {
-void cvtScaleHalf_SIMD32f16f( const float* src, size_t sstep, short* dst, size_t dstep, cv::Size size );
-void cvtScaleHalf_SIMD16f32f( const short* src, size_t sstep, float* dst, size_t dstep, cv::Size size );
+    const v_int8 z = vx_setzero_s8();
+    v_int16 sa, sb;
+    v_expand(v_max(vx_load(ptr), z), sa, sb);
+    a = v_reinterpret_as_u16(sa);
+    b = v_reinterpret_as_u16(sb);
 }
-namespace opt_AVX2
+
+static inline void vx_load_pair_as(const ushort* ptr, v_uint16& a, v_uint16& b)
+{ a = vx_load(ptr); b = vx_load(ptr + v_uint16::nlanes); }
+
+static inline void vx_load_pair_as(const uchar* ptr, v_int16& a, v_int16& b)
 {
-void cvtScale_s16s32f32Line_AVX2(const short* src, int* dst, float scale, float shift, int width);
+    v_uint16 ua, ub;
+    v_expand(vx_load(ptr), ua, ub);
+    a = v_reinterpret_as_s16(ua);
+    b = v_reinterpret_as_s16(ub);
 }
-namespace opt_SSE4_1
+
+static inline void vx_load_pair_as(const schar* ptr, v_int16& a, v_int16& b)
+{ v_expand(vx_load(ptr), a, b); }
+
+static inline void vx_load_pair_as(const short* ptr, v_int16& a, v_int16& b)
+{ a = vx_load(ptr); b = vx_load(ptr + v_uint16::nlanes); }
+
+static inline void vx_load_pair_as(const uchar* ptr, v_int32& a, v_int32& b)
 {
-    int cvtScale_SIMD_u8u16f32_SSE41(const uchar * src, ushort * dst, int width, float scale, float shift);
-    int cvtScale_SIMD_s8u16f32_SSE41(const schar * src, ushort * dst, int width, float scale, float shift);
-    int cvtScale_SIMD_u16u16f32_SSE41(const ushort * src, ushort * dst, int width, float scale, float shift);
-    int cvtScale_SIMD_s16u16f32_SSE41(const short * src, ushort * dst, int width, float scale, float shift);
-    int cvtScale_SIMD_s32u16f32_SSE41(const int * src, ushort * dst, int width, float scale, float shift);
-    int cvtScale_SIMD_f32u16f32_SSE41(const float * src, ushort * dst, int width, float scale, float shift);
-    int cvtScale_SIMD_f64u16f32_SSE41(const double * src, ushort * dst, int width, float scale, float shift);
-    int Cvt_SIMD_f64u16_SSE41(const double * src, ushort * dst, int width);
+    v_uint32 ua, ub;
+    v_expand(vx_load_expand(ptr), ua, ub);
+    a = v_reinterpret_as_s32(ua);
+    b = v_reinterpret_as_s32(ub);
 }
+
+static inline void vx_load_pair_as(const schar* ptr, v_int32& a, v_int32& b)
+{ v_expand(vx_load_expand(ptr), a, b); }
+
+static inline void vx_load_pair_as(const ushort* ptr, v_int32& a, v_int32& b)
+{
+    v_uint32 ua, ub;
+    v_expand(vx_load(ptr), ua, ub);
+    a = v_reinterpret_as_s32(ua);
+    b = v_reinterpret_as_s32(ub);
+}
+
+static inline void vx_load_pair_as(const short* ptr, v_int32& a, v_int32& b)
+{
+    v_expand(vx_load(ptr), a, b);
+}
+
+static inline void vx_load_pair_as(const int* ptr, v_int32& a, v_int32& b)
+{
+    a = vx_load(ptr);
+    b = vx_load(ptr + v_int32::nlanes);
+}
+
+static inline void vx_load_pair_as(const uchar* ptr, v_float32& a, v_float32& b)
+{
+    v_uint32 ua, ub;
+    v_expand(vx_load_expand(ptr), ua, ub);
+    a = v_cvt_f32(v_reinterpret_as_s32(ua));
+    b = v_cvt_f32(v_reinterpret_as_s32(ub));
+}
+
+static inline void vx_load_pair_as(const schar* ptr, v_float32& a, v_float32& b)
+{
+    v_int32 ia, ib;
+    v_expand(vx_load_expand(ptr), ia, ib);
+    a = v_cvt_f32(ia);
+    b = v_cvt_f32(ib);
+}
+
+static inline void vx_load_pair_as(const ushort* ptr, v_float32& a, v_float32& b)
+{
+    v_uint32 ua, ub;
+    v_expand(vx_load(ptr), ua, ub);
+    a = v_cvt_f32(v_reinterpret_as_s32(ua));
+    b = v_cvt_f32(v_reinterpret_as_s32(ub));
+}
+
+static inline void vx_load_pair_as(const short* ptr, v_float32& a, v_float32& b)
+{
+    v_int32 ia, ib;
+    v_expand(vx_load(ptr), ia, ib);
+    a = v_cvt_f32(ia);
+    b = v_cvt_f32(ib);
+}
+
+static inline void vx_load_pair_as(const int* ptr, v_float32& a, v_float32& b)
+{
+    v_int32 ia = vx_load(ptr), ib = vx_load(ptr + v_int32::nlanes);
+    a = v_cvt_f32(ia);
+    b = v_cvt_f32(ib);
+}
+
+static inline void vx_load_pair_as(const float* ptr, v_float32& a, v_float32& b)
+{ a = vx_load(ptr); b = vx_load(ptr + v_float32::nlanes); }
+
+static inline void vx_load_pair_as(const float16_t* ptr, v_float32& a, v_float32& b)
+{
+    a = vx_load_expand(ptr);
+    b = vx_load_expand(ptr + v_float32::nlanes);
+}
+
+static inline void v_store_pair_as(uchar* ptr, const v_uint16& a, const v_uint16& b)
+{
+    v_store(ptr, v_pack(a, b));
+}
+
+static inline void v_store_pair_as(schar* ptr, const v_uint16& a, const v_uint16& b)
+{
+    const v_uint8 maxval = vx_setall_u8((uchar)std::numeric_limits<schar>::max());
+    v_uint8 v = v_pack(a, b);
+    v_store(ptr, v_reinterpret_as_s8(v_min(v, maxval)));
+}
+
+static inline void v_store_pair_as(ushort* ptr, const v_uint16& a, const v_uint16& b)
+{ v_store(ptr, a); v_store(ptr + v_uint16::nlanes, b); }
+
+static inline void v_store_pair_as(uchar* ptr, const v_int16& a, const v_int16& b)
+{ v_store(ptr, v_pack_u(a, b)); }
+
+static inline void v_store_pair_as(schar* ptr, const v_int16& a, const v_int16& b)
+{ v_store(ptr, v_pack(a, b)); }
+
+static inline void v_store_pair_as(short* ptr, const v_int16& a, const v_int16& b)
+{ v_store(ptr, a); v_store(ptr + v_int16::nlanes, b); }
+
+static inline void v_store_pair_as(uchar* ptr, const v_int32& a, const v_int32& b)
+{ v_pack_u_store(ptr, v_pack(a, b)); }
+
+static inline void v_store_pair_as(schar* ptr, const v_int32& a, const v_int32& b)
+{ v_pack_store(ptr, v_pack(a, b)); }
+
+static inline void v_store_pair_as(ushort* ptr, const v_int32& a, const v_int32& b)
+{ v_store(ptr, v_pack_u(a, b)); }
+
+static inline void v_store_pair_as(short* ptr, const v_int32& a, const v_int32& b)
+{ v_store(ptr, v_pack(a, b)); }
+
+static inline void v_store_pair_as(int* ptr, const v_int32& a, const v_int32& b)
+{
+    v_store(ptr, a);
+    v_store(ptr + v_int32::nlanes, b);
+}
+
+static inline void v_store_pair_as(uchar* ptr, const v_float32& a, const v_float32& b)
+{ v_pack_u_store(ptr, v_pack(v_round(a), v_round(b))); }
+
+static inline void v_store_pair_as(schar* ptr, const v_float32& a, const v_float32& b)
+{ v_pack_store(ptr, v_pack(v_round(a), v_round(b))); }
+
+static inline void v_store_pair_as(ushort* ptr, const v_float32& a, const v_float32& b)
+{ v_store(ptr, v_pack_u(v_round(a), v_round(b))); }
+
+static inline void v_store_pair_as(short* ptr, const v_float32& a, const v_float32& b)
+{ v_store(ptr, v_pack(v_round(a), v_round(b))); }
+
+static inline void v_store_pair_as(int* ptr, const v_float32& a, const v_float32& b)
+{
+    v_int32 ia = v_round(a), ib = v_round(b);
+    v_store(ptr, ia);
+    v_store(ptr + v_int32::nlanes, ib);
+}
+
+static inline void v_store_pair_as(float* ptr, const v_float32& a, const v_float32& b)
+{ v_store(ptr, a); v_store(ptr + v_float32::nlanes, b); }
+
+#if CV_SIMD_64F
+
+static inline void vx_load_as(const double* ptr, v_float32& a)
+{
+    v_float64 v0 = vx_load(ptr), v1 = vx_load(ptr + v_float64::nlanes);
+    a = v_cvt_f32(v0, v1);
+}
+
+static inline void vx_load_pair_as(const double* ptr, v_int32& a, v_int32& b)
+{
+    v_float64 v0 = vx_load(ptr), v1 = vx_load(ptr + v_float64::nlanes);
+    v_float64 v2 = vx_load(ptr + v_float64::nlanes*2), v3 = vx_load(ptr + v_float64::nlanes*3);
+    v_int32 iv0 = v_round(v0), iv1 = v_round(v1);
+    v_int32 iv2 = v_round(v2), iv3 = v_round(v3);
+    a = v_combine_low(iv0, iv1);
+    b = v_combine_low(iv2, iv3);
+}
+
+static inline void vx_load_pair_as(const double* ptr, v_float32& a, v_float32& b)
+{
+    v_float64 v0 = vx_load(ptr), v1 = vx_load(ptr + v_float64::nlanes);
+    v_float64 v2 = vx_load(ptr + v_float64::nlanes*2), v3 = vx_load(ptr + v_float64::nlanes*3);
+    a = v_cvt_f32(v0, v1);
+    b = v_cvt_f32(v2, v3);
+}
+
+static inline void vx_load_pair_as(const uchar* ptr, v_float64& a, v_float64& b)
+{
+    v_int32 v0 = v_reinterpret_as_s32(vx_load_expand_q(ptr));
+    a = v_cvt_f64(v0);
+    b = v_cvt_f64_high(v0);
+}
+
+static inline void vx_load_pair_as(const schar* ptr, v_float64& a, v_float64& b)
+{
+    v_int32 v0 = vx_load_expand_q(ptr);
+    a = v_cvt_f64(v0);
+    b = v_cvt_f64_high(v0);
+}
+
+static inline void vx_load_pair_as(const ushort* ptr, v_float64& a, v_float64& b)
+{
+    v_int32 v0 = v_reinterpret_as_s32(vx_load_expand(ptr));
+    a = v_cvt_f64(v0);
+    b = v_cvt_f64_high(v0);
+}
+
+static inline void vx_load_pair_as(const short* ptr, v_float64& a, v_float64& b)
+{
+    v_int32 v0 = vx_load_expand(ptr);
+    a = v_cvt_f64(v0);
+    b = v_cvt_f64_high(v0);
+}
+
+static inline void vx_load_pair_as(const int* ptr, v_float64& a, v_float64& b)
+{
+    v_int32 v0 = vx_load(ptr);
+    a = v_cvt_f64(v0);
+    b = v_cvt_f64_high(v0);
+}
+
+static inline void vx_load_pair_as(const float* ptr, v_float64& a, v_float64& b)
+{
+    v_float32 v0 = vx_load(ptr);
+    a = v_cvt_f64(v0);
+    b = v_cvt_f64_high(v0);
+}
+
+static inline void vx_load_pair_as(const double* ptr, v_float64& a, v_float64& b)
+{
+    a = vx_load(ptr);
+    b = vx_load(ptr + v_float64::nlanes);
+}
+
+static inline void vx_load_pair_as(const float16_t* ptr, v_float64& a, v_float64& b)
+{
+    v_float32 v0 = vx_load_expand(ptr);
+    a = v_cvt_f64(v0);
+    b = v_cvt_f64_high(v0);
+}
+
+static inline void v_store_as(double* ptr, const v_float32& a)
+{
+    v_float64 fa0 = v_cvt_f64(a), fa1 = v_cvt_f64_high(a);
+    v_store(ptr, fa0);
+    v_store(ptr + v_float64::nlanes, fa1);
+}
+
+static inline void v_store_pair_as(double* ptr, const v_int32& a, const v_int32& b)
+{
+    v_float64 fa0 = v_cvt_f64(a), fa1 = v_cvt_f64_high(a);
+    v_float64 fb0 = v_cvt_f64(b), fb1 = v_cvt_f64_high(b);
+
+    v_store(ptr, fa0);
+    v_store(ptr + v_float64::nlanes, fa1);
+    v_store(ptr + v_float64::nlanes*2, fb0);
+    v_store(ptr + v_float64::nlanes*3, fb1);
+}
+
+static inline void v_store_pair_as(double* ptr, const v_float32& a, const v_float32& b)
+{
+    v_float64 fa0 = v_cvt_f64(a), fa1 = v_cvt_f64_high(a);
+    v_float64 fb0 = v_cvt_f64(b), fb1 = v_cvt_f64_high(b);
+
+    v_store(ptr, fa0);
+    v_store(ptr + v_float64::nlanes, fa1);
+    v_store(ptr + v_float64::nlanes*2, fb0);
+    v_store(ptr + v_float64::nlanes*3, fb1);
+}
+
+static inline void v_store_pair_as(double* ptr, const v_float64& a, const v_float64& b)
+{
+    v_store(ptr, a);
+    v_store(ptr + v_float64::nlanes, b);
+}
+
+static inline void v_store_pair_as(int* ptr, const v_float64& a, const v_float64& b)
+{
+    v_int32 ia = v_round(a), ib = v_round(b);
+    v_store(ptr, v_combine_low(ia, ib));
+}
+
+static inline void v_store_pair_as(float* ptr, const v_float64& a, const v_float64& b)
+{
+    v_float32 v = v_cvt_f32(a, b);
+    v_store(ptr, v);
+}
+
+static inline void v_store_pair_as(float16_t* ptr, const v_float64& a, const v_float64& b)
+{
+    v_float32 v = v_cvt_f32(a, b);
+    v_pack_store(ptr, v);
+}
+
+#else
+
+static inline void vx_load_as(const double* ptr, v_float32& a)
+{
+    const int VECSZ = v_float32::nlanes;
+    float buf[VECSZ*2];
+
+    for( int i = 0; i < VECSZ; i++ )
+        buf[i] = saturate_cast<float>(ptr[i]);
+    a = vx_load(buf);
+}
+
+template<typename _Tdvec>
+static inline void vx_load_pair_as(const double* ptr, _Tdvec& a, _Tdvec& b)
+{
+    const int VECSZ = _Tdvec::nlanes;
+    typename _Tdvec::lane_type buf[VECSZ*2];
+
+    for( int i = 0; i < VECSZ*2; i++ )
+        buf[i] = saturate_cast<typename _Tdvec::lane_type>(ptr[i]);
+    a = vx_load(buf);
+    b = vx_load(buf + VECSZ);
+}
+
+static inline void v_store_as(double* ptr, const v_float32& a)
+{
+    const int VECSZ = v_float32::nlanes;
+    float buf[VECSZ];
+
+    v_store(buf, a);
+    for( int i = 0; i < VECSZ; i++ )
+        ptr[i] = (double)buf[i];
+}
+
+template<typename _Tsvec>
+static inline void v_store_pair_as(double* ptr, const _Tsvec& a, const _Tsvec& b)
+{
+    const int VECSZ = _Tsvec::nlanes;
+    typename _Tsvec::lane_type buf[VECSZ*2];
+
+    v_store(buf, a); v_store(buf + VECSZ, b);
+    for( int i = 0; i < VECSZ*2; i++ )
+        ptr[i] = (double)buf[i];
+}
+
+#endif /////////// CV_SIMD_64F
+
+#endif /////////// CV_SIMD
+
 }
 
 #endif // SRC_CONVERT_HPP

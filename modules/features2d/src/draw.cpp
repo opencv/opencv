@@ -50,12 +50,12 @@ namespace cv
 /*
  * Functions to draw keypoints and matches.
  */
-static inline void _drawKeypoint( InputOutputArray img, const KeyPoint& p, const Scalar& color, int flags )
+static inline void _drawKeypoint( InputOutputArray img, const KeyPoint& p, const Scalar& color, DrawMatchesFlags flags )
 {
     CV_Assert( !img.empty() );
     Point center( cvRound(p.pt.x * draw_multiplier), cvRound(p.pt.y * draw_multiplier) );
 
-    if( flags & DrawMatchesFlags::DRAW_RICH_KEYPOINTS )
+    if( !!(flags & DrawMatchesFlags::DRAW_RICH_KEYPOINTS) )
     {
         int radius = cvRound(p.size/2 * draw_multiplier); // KeyPoint::size is a diameter
 
@@ -89,15 +89,15 @@ static inline void _drawKeypoint( InputOutputArray img, const KeyPoint& p, const
 }
 
 void drawKeypoints( InputArray image, const std::vector<KeyPoint>& keypoints, InputOutputArray outImage,
-                    const Scalar& _color, int flags )
+                    const Scalar& _color, DrawMatchesFlags flags )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     if( !(flags & DrawMatchesFlags::DRAW_OVER_OUTIMG) )
     {
-        if( image.type() == CV_8UC3 )
+        if (image.type() == CV_8UC3 || image.type() == CV_8UC4)
         {
-            image.copyTo( outImage );
+            image.copyTo(outImage);
         }
         else if( image.type() == CV_8UC1 )
         {
@@ -105,7 +105,7 @@ void drawKeypoints( InputArray image, const std::vector<KeyPoint>& keypoints, In
         }
         else
         {
-            CV_Error( Error::StsBadArg, "Incorrect type of input image.\n" );
+            CV_Error( Error::StsBadArg, "Incorrect type of input image: " + typeToString(image.type()) );
         }
     }
 
@@ -117,20 +117,39 @@ void drawKeypoints( InputArray image, const std::vector<KeyPoint>& keypoints, In
                                      end = keypoints.end();
     for( ; it != end; ++it )
     {
-        Scalar color = isRandColor ? Scalar(rng(256), rng(256), rng(256)) : _color;
+        Scalar color = isRandColor ? Scalar( rng(256), rng(256), rng(256), 255 ) : _color;
         _drawKeypoint( outImage, *it, color, flags );
     }
+}
+
+static void _prepareImage(InputArray src, const Mat& dst)
+{
+    CV_CheckType(src.type(), src.type() == CV_8UC1 || src.type() == CV_8UC3 || src.type() == CV_8UC4, "Unsupported source image");
+    CV_CheckType(dst.type(), dst.type() == CV_8UC3 || dst.type() == CV_8UC4, "Unsupported destination image");
+    const int src_cn = src.channels();
+    const int dst_cn = dst.channels();
+
+    if (src_cn == dst_cn)
+        src.copyTo(dst);
+    else if (src_cn == 1)
+        cvtColor(src, dst, dst_cn == 3 ? COLOR_GRAY2BGR : COLOR_GRAY2BGRA);
+    else if (src_cn == 3 && dst_cn == 4)
+        cvtColor(src, dst, COLOR_BGR2BGRA);
+    else if (src_cn == 4 && dst_cn == 3)
+        cvtColor(src, dst, COLOR_BGRA2BGR);
+    else
+        CV_Error(Error::StsInternal, "");
 }
 
 static void _prepareImgAndDrawKeypoints( InputArray img1, const std::vector<KeyPoint>& keypoints1,
                                          InputArray img2, const std::vector<KeyPoint>& keypoints2,
                                          InputOutputArray _outImg, Mat& outImg1, Mat& outImg2,
-                                         const Scalar& singlePointColor, int flags )
+                                         const Scalar& singlePointColor, DrawMatchesFlags flags )
 {
     Mat outImg;
     Size img1size = img1.size(), img2size = img2.size();
     Size size( img1size.width + img2size.width, MAX(img1size.height, img2size.height) );
-    if( flags & DrawMatchesFlags::DRAW_OVER_OUTIMG )
+    if( !!(flags & DrawMatchesFlags::DRAW_OVER_OUTIMG) )
     {
         outImg = _outImg.getMat();
         if( size.width > outImg.cols || size.height > outImg.rows )
@@ -140,21 +159,16 @@ static void _prepareImgAndDrawKeypoints( InputArray img1, const std::vector<KeyP
     }
     else
     {
-        _outImg.create( size, CV_MAKETYPE(img1.depth(), 3) );
+        const int cn1 = img1.channels(), cn2 = img2.channels();
+        const int out_cn = std::max(3, std::max(cn1, cn2));
+        _outImg.create(size, CV_MAKETYPE(img1.depth(), out_cn));
         outImg = _outImg.getMat();
         outImg = Scalar::all(0);
         outImg1 = outImg( Rect(0, 0, img1size.width, img1size.height) );
         outImg2 = outImg( Rect(img1size.width, 0, img2size.width, img2size.height) );
 
-        if( img1.type() == CV_8U )
-            cvtColor( img1, outImg1, COLOR_GRAY2BGR );
-        else
-            img1.copyTo( outImg1 );
-
-        if( img2.type() == CV_8U )
-            cvtColor( img2, outImg2, COLOR_GRAY2BGR );
-        else
-            img2.copyTo( outImg2 );
+        _prepareImage(img1, outImg1);
+        _prepareImage(img2, outImg2);
     }
 
     // draw keypoints
@@ -169,11 +183,11 @@ static void _prepareImgAndDrawKeypoints( InputArray img1, const std::vector<KeyP
 }
 
 static inline void _drawMatch( InputOutputArray outImg, InputOutputArray outImg1, InputOutputArray outImg2 ,
-                          const KeyPoint& kp1, const KeyPoint& kp2, const Scalar& matchColor, int flags )
+                          const KeyPoint& kp1, const KeyPoint& kp2, const Scalar& matchColor, DrawMatchesFlags flags )
 {
     RNG& rng = theRNG();
     bool isRandMatchColor = matchColor == Scalar::all(-1);
-    Scalar color = isRandMatchColor ? Scalar( rng(256), rng(256), rng(256) ) : matchColor;
+    Scalar color = isRandMatchColor ? Scalar( rng(256), rng(256), rng(256), 255 ) : matchColor;
 
     _drawKeypoint( outImg1, kp1, color, flags );
     _drawKeypoint( outImg2, kp2, color, flags );
@@ -192,7 +206,7 @@ void drawMatches( InputArray img1, const std::vector<KeyPoint>& keypoints1,
                   InputArray img2, const std::vector<KeyPoint>& keypoints2,
                   const std::vector<DMatch>& matches1to2, InputOutputArray outImg,
                   const Scalar& matchColor, const Scalar& singlePointColor,
-                  const std::vector<char>& matchesMask, int flags )
+                  const std::vector<char>& matchesMask, DrawMatchesFlags flags )
 {
     if( !matchesMask.empty() && matchesMask.size() != matches1to2.size() )
         CV_Error( Error::StsBadSize, "matchesMask must have the same size as matches1to2" );
@@ -221,7 +235,7 @@ void drawMatches( InputArray img1, const std::vector<KeyPoint>& keypoints1,
                   InputArray img2, const std::vector<KeyPoint>& keypoints2,
                   const std::vector<std::vector<DMatch> >& matches1to2, InputOutputArray outImg,
                   const Scalar& matchColor, const Scalar& singlePointColor,
-                  const std::vector<std::vector<char> >& matchesMask, int flags )
+                  const std::vector<std::vector<char> >& matchesMask, DrawMatchesFlags flags )
 {
     if( !matchesMask.empty() && matchesMask.size() != matches1to2.size() )
         CV_Error( Error::StsBadSize, "matchesMask must have the same size as matches1to2" );

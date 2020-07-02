@@ -54,12 +54,37 @@
 #pragma warning( disable: 4127 )
 #endif
 
+#if defined(CV_SKIP_DISABLE_CLANG_ENUM_WARNINGS)
+  // nothing
+#elif defined(CV_FORCE_DISABLE_CLANG_ENUM_WARNINGS)
+  #define CV_DISABLE_CLANG_ENUM_WARNINGS
+#elif defined(__clang__) && defined(__has_warning)
+  #if __has_warning("-Wdeprecated-enum-enum-conversion") && __has_warning("-Wdeprecated-anon-enum-enum-conversion")
+    #define CV_DISABLE_CLANG_ENUM_WARNINGS
+  #endif
+#endif
+#ifdef CV_DISABLE_CLANG_ENUM_WARNINGS
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-enum-enum-conversion"
+#pragma clang diagnostic ignored "-Wdeprecated-anon-enum-enum-conversion"
+#endif
+
 namespace cv
 {
 CV__DEBUG_NS_BEGIN
 
 
 //! @cond IGNORED
+
+////////////////////////// Custom (raw) type wrapper //////////////////////////
+
+template<typename _Tp> static inline
+int rawType()
+{
+    CV_StaticAssert(sizeof(_Tp) <= CV_CN_MAX, "sizeof(_Tp) is too large");
+    const int elemSize = sizeof(_Tp);
+    return (int)CV_MAKETYPE(CV_8U, elemSize);
+}
 
 //////////////////////// Input/Output Arrays ////////////////////////
 
@@ -73,7 +98,7 @@ inline void* _InputArray::getObj() const { return obj; }
 inline int _InputArray::getFlags() const { return flags; }
 inline Size _InputArray::getSz() const { return sz; }
 
-inline _InputArray::_InputArray() { init(NONE, 0); }
+inline _InputArray::_InputArray() { init(0 + NONE, 0); }
 inline _InputArray::_InputArray(int _flags, void* _obj) { init(_flags, _obj); }
 inline _InputArray::_InputArray(const Mat& m) { init(MAT+ACCESS_READ, &m); }
 inline _InputArray::_InputArray(const std::vector<Mat>& vec) { init(STD_VECTOR_MAT+ACCESS_READ, &vec); }
@@ -100,10 +125,6 @@ template<typename _Tp> inline
 _InputArray::_InputArray(const std::vector<std::vector<_Tp> >& vec)
 { init(FIXED_TYPE + STD_VECTOR_VECTOR + traits::Type<_Tp>::value + ACCESS_READ, &vec); }
 
-inline
-_InputArray::_InputArray(const std::vector<std::vector<bool> >&)
-{ CV_Error(Error::StsUnsupportedFormat, "std::vector<std::vector<bool> > is not supported!\n"); }
-
 template<typename _Tp> inline
 _InputArray::_InputArray(const std::vector<Mat_<_Tp> >& vec)
 { init(FIXED_TYPE + STD_VECTOR_MAT + traits::Type<_Tp>::value + ACCESS_READ, &vec); }
@@ -123,9 +144,6 @@ _InputArray::_InputArray(const Mat_<_Tp>& m)
 inline _InputArray::_InputArray(const double& val)
 { init(FIXED_TYPE + FIXED_SIZE + MATX + CV_64F + ACCESS_READ, &val, Size(1,1)); }
 
-inline _InputArray::_InputArray(const MatExpr& expr)
-{ init(FIXED_TYPE + FIXED_SIZE + EXPR + ACCESS_READ, &expr); }
-
 inline _InputArray::_InputArray(const cuda::GpuMat& d_mat)
 { init(CUDA_GPU_MAT + ACCESS_READ, &d_mat); }
 
@@ -137,6 +155,25 @@ inline _InputArray::_InputArray(const ogl::Buffer& buf)
 
 inline _InputArray::_InputArray(const cuda::HostMem& cuda_mem)
 { init(CUDA_HOST_MEM + ACCESS_READ, &cuda_mem); }
+
+template<typename _Tp> inline
+_InputArray _InputArray::rawIn(const std::vector<_Tp>& vec)
+{
+    _InputArray v;
+    v.flags = _InputArray::FIXED_TYPE + _InputArray::STD_VECTOR + rawType<_Tp>() + ACCESS_READ;
+    v.obj = (void*)&vec;
+    return v;
+}
+
+template<typename _Tp, std::size_t _Nm> inline
+_InputArray _InputArray::rawIn(const std::array<_Tp, _Nm>& arr)
+{
+    _InputArray v;
+    v.flags = FIXED_TYPE + FIXED_SIZE + STD_ARRAY + traits::Type<_Tp>::value + ACCESS_READ;
+    v.obj = (void*)arr.data();
+    v.sz = Size(1, _Nm);
+    return v;
+}
 
 inline _InputArray::~_InputArray() {}
 
@@ -160,12 +197,12 @@ inline bool _InputArray::isGpuMatVector() const { return kind() == _InputArray::
 
 ////////////////////////////////////////////////////////////////////////////////////////
 
-inline _OutputArray::_OutputArray() { init(ACCESS_WRITE, 0); }
-inline _OutputArray::_OutputArray(int _flags, void* _obj) { init(_flags|ACCESS_WRITE, _obj); }
+inline _OutputArray::_OutputArray() { init(NONE + ACCESS_WRITE, 0); }
+inline _OutputArray::_OutputArray(int _flags, void* _obj) { init(_flags + ACCESS_WRITE, _obj); }
 inline _OutputArray::_OutputArray(Mat& m) { init(MAT+ACCESS_WRITE, &m); }
-inline _OutputArray::_OutputArray(std::vector<Mat>& vec) { init(STD_VECTOR_MAT+ACCESS_WRITE, &vec); }
-inline _OutputArray::_OutputArray(UMat& m) { init(UMAT+ACCESS_WRITE, &m); }
-inline _OutputArray::_OutputArray(std::vector<UMat>& vec) { init(STD_VECTOR_UMAT+ACCESS_WRITE, &vec); }
+inline _OutputArray::_OutputArray(std::vector<Mat>& vec) { init(STD_VECTOR_MAT + ACCESS_WRITE, &vec); }
+inline _OutputArray::_OutputArray(UMat& m) { init(UMAT + ACCESS_WRITE, &m); }
+inline _OutputArray::_OutputArray(std::vector<UMat>& vec) { init(STD_VECTOR_UMAT + ACCESS_WRITE, &vec); }
 
 template<typename _Tp> inline
 _OutputArray::_OutputArray(std::vector<_Tp>& vec)
@@ -179,17 +216,9 @@ template<std::size_t _Nm> inline
 _OutputArray::_OutputArray(std::array<Mat, _Nm>& arr)
 { init(STD_ARRAY_MAT + ACCESS_WRITE, arr.data(), Size(1, _Nm)); }
 
-inline
-_OutputArray::_OutputArray(std::vector<bool>&)
-{ CV_Error(Error::StsUnsupportedFormat, "std::vector<bool> cannot be an output array\n"); }
-
 template<typename _Tp> inline
 _OutputArray::_OutputArray(std::vector<std::vector<_Tp> >& vec)
 { init(FIXED_TYPE + STD_VECTOR_VECTOR + traits::Type<_Tp>::value + ACCESS_WRITE, &vec); }
-
-inline
-_OutputArray::_OutputArray(std::vector<std::vector<bool> >&)
-{ CV_Error(Error::StsUnsupportedFormat, "std::vector<std::vector<bool> > cannot be an output array\n"); }
 
 template<typename _Tp> inline
 _OutputArray::_OutputArray(std::vector<Mat_<_Tp> >& vec)
@@ -273,10 +302,29 @@ inline _OutputArray::_OutputArray(const ogl::Buffer& buf)
 inline _OutputArray::_OutputArray(const cuda::HostMem& cuda_mem)
 { init(FIXED_TYPE + FIXED_SIZE + CUDA_HOST_MEM + ACCESS_WRITE, &cuda_mem); }
 
+template<typename _Tp> inline
+_OutputArray _OutputArray::rawOut(std::vector<_Tp>& vec)
+{
+    _OutputArray v;
+    v.flags = _InputArray::FIXED_TYPE + _InputArray::STD_VECTOR + rawType<_Tp>() + ACCESS_WRITE;
+    v.obj = (void*)&vec;
+    return v;
+}
+
+template<typename _Tp, std::size_t _Nm> inline
+_OutputArray _OutputArray::rawOut(std::array<_Tp, _Nm>& arr)
+{
+    _OutputArray v;
+    v.flags = FIXED_TYPE + FIXED_SIZE + STD_ARRAY + traits::Type<_Tp>::value + ACCESS_WRITE;
+    v.obj = (void*)arr.data();
+    v.sz = Size(1, _Nm);
+    return v;
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////
 
-inline _InputOutputArray::_InputOutputArray() { init(ACCESS_RW, 0); }
-inline _InputOutputArray::_InputOutputArray(int _flags, void* _obj) { init(_flags|ACCESS_RW, _obj); }
+inline _InputOutputArray::_InputOutputArray() { init(0+ACCESS_RW, 0); }
+inline _InputOutputArray::_InputOutputArray(int _flags, void* _obj) { init(_flags+ACCESS_RW, _obj); }
 inline _InputOutputArray::_InputOutputArray(Mat& m) { init(MAT+ACCESS_RW, &m); }
 inline _InputOutputArray::_InputOutputArray(std::vector<Mat>& vec) { init(STD_VECTOR_MAT+ACCESS_RW, &vec); }
 inline _InputOutputArray::_InputOutputArray(UMat& m) { init(UMAT+ACCESS_RW, &m); }
@@ -293,9 +341,6 @@ _InputOutputArray::_InputOutputArray(std::array<_Tp, _Nm>& arr)
 template<std::size_t _Nm> inline
 _InputOutputArray::_InputOutputArray(std::array<Mat, _Nm>& arr)
 { init(STD_ARRAY_MAT + ACCESS_RW, arr.data(), Size(1, _Nm)); }
-
-inline _InputOutputArray::_InputOutputArray(std::vector<bool>&)
-{ CV_Error(Error::StsUnsupportedFormat, "std::vector<bool> cannot be an input/output array\n"); }
 
 template<typename _Tp> inline
 _InputOutputArray::_InputOutputArray(std::vector<std::vector<_Tp> >& vec)
@@ -384,6 +429,30 @@ inline _InputOutputArray::_InputOutputArray(const ogl::Buffer& buf)
 
 inline _InputOutputArray::_InputOutputArray(const cuda::HostMem& cuda_mem)
 { init(FIXED_TYPE + FIXED_SIZE + CUDA_HOST_MEM + ACCESS_RW, &cuda_mem); }
+
+template<typename _Tp> inline
+_InputOutputArray _InputOutputArray::rawInOut(std::vector<_Tp>& vec)
+{
+    _InputOutputArray v;
+    v.flags = _InputArray::FIXED_TYPE + _InputArray::STD_VECTOR + rawType<_Tp>() + ACCESS_RW;
+    v.obj = (void*)&vec;
+    return v;
+}
+
+template<typename _Tp, std::size_t _Nm> inline
+_InputOutputArray _InputOutputArray::rawInOut(std::array<_Tp, _Nm>& arr)
+{
+    _InputOutputArray v;
+    v.flags = FIXED_TYPE + FIXED_SIZE + STD_ARRAY + traits::Type<_Tp>::value + ACCESS_RW;
+    v.obj = (void*)arr.data();
+    v.sz = Size(1, _Nm);
+    return v;
+}
+
+
+template<typename _Tp> static inline _InputArray rawIn(_Tp& v) { return _InputArray::rawIn(v); }
+template<typename _Tp> static inline _OutputArray rawOut(_Tp& v) { return _OutputArray::rawOut(v); }
+template<typename _Tp> static inline _InputOutputArray rawInOut(_Tp& v) { return _InputOutputArray::rawInOut(v); }
 
 CV__DEBUG_NS_END
 
@@ -543,7 +612,7 @@ Mat::Mat(Size _sz, int _type, void* _data, size_t _step)
 
 template<typename _Tp> inline
 Mat::Mat(const std::vector<_Tp>& vec, bool copyData)
-    : flags(MAGIC_VAL | traits::Type<_Tp>::value | CV_MAT_CONT_FLAG), dims(2), rows((int)vec.size()),
+    : flags(MAGIC_VAL + traits::Type<_Tp>::value + CV_MAT_CONT_FLAG), dims(2), rows((int)vec.size()),
       cols(1), data(0), datastart(0), dataend(0), datalimit(0), allocator(0), u(0), size(&rows), step(0)
 {
     if(vec.empty())
@@ -580,7 +649,7 @@ Mat::Mat(const std::initializer_list<int> sizes, const std::initializer_list<_Tp
 
 template<typename _Tp, std::size_t _Nm> inline
 Mat::Mat(const std::array<_Tp, _Nm>& arr, bool copyData)
-    : flags(MAGIC_VAL | traits::Type<_Tp>::value | CV_MAT_CONT_FLAG), dims(2), rows((int)arr.size()),
+    : flags(MAGIC_VAL + traits::Type<_Tp>::value + CV_MAT_CONT_FLAG), dims(2), rows((int)arr.size()),
       cols(1), data(0), datastart(0), dataend(0), datalimit(0), allocator(0), u(0), size(&rows), step(0)
 {
     if(arr.empty())
@@ -597,7 +666,7 @@ Mat::Mat(const std::array<_Tp, _Nm>& arr, bool copyData)
 
 template<typename _Tp, int n> inline
 Mat::Mat(const Vec<_Tp, n>& vec, bool copyData)
-    : flags(MAGIC_VAL | traits::Type<_Tp>::value | CV_MAT_CONT_FLAG), dims(2), rows(n), cols(1), data(0),
+    : flags(MAGIC_VAL + traits::Type<_Tp>::value + CV_MAT_CONT_FLAG), dims(2), rows(n), cols(1), data(0),
       datastart(0), dataend(0), datalimit(0), allocator(0), u(0), size(&rows), step(0)
 {
     if( !copyData )
@@ -613,7 +682,7 @@ Mat::Mat(const Vec<_Tp, n>& vec, bool copyData)
 
 template<typename _Tp, int m, int n> inline
 Mat::Mat(const Matx<_Tp,m,n>& M, bool copyData)
-    : flags(MAGIC_VAL | traits::Type<_Tp>::value | CV_MAT_CONT_FLAG), dims(2), rows(m), cols(n), data(0),
+    : flags(MAGIC_VAL + traits::Type<_Tp>::value + CV_MAT_CONT_FLAG), dims(2), rows(m), cols(n), data(0),
       datastart(0), dataend(0), datalimit(0), allocator(0), u(0), size(&rows), step(0)
 {
     if( !copyData )
@@ -629,7 +698,7 @@ Mat::Mat(const Matx<_Tp,m,n>& M, bool copyData)
 
 template<typename _Tp> inline
 Mat::Mat(const Point_<_Tp>& pt, bool copyData)
-    : flags(MAGIC_VAL | traits::Type<_Tp>::value | CV_MAT_CONT_FLAG), dims(2), rows(2), cols(1), data(0),
+    : flags(MAGIC_VAL + traits::Type<_Tp>::value + CV_MAT_CONT_FLAG), dims(2), rows(2), cols(1), data(0),
       datastart(0), dataend(0), datalimit(0), allocator(0), u(0), size(&rows), step(0)
 {
     if( !copyData )
@@ -648,7 +717,7 @@ Mat::Mat(const Point_<_Tp>& pt, bool copyData)
 
 template<typename _Tp> inline
 Mat::Mat(const Point3_<_Tp>& pt, bool copyData)
-    : flags(MAGIC_VAL | traits::Type<_Tp>::value | CV_MAT_CONT_FLAG), dims(2), rows(3), cols(1), data(0),
+    : flags(MAGIC_VAL + traits::Type<_Tp>::value + CV_MAT_CONT_FLAG), dims(2), rows(3), cols(1), data(0),
       datastart(0), dataend(0), datalimit(0), allocator(0), u(0), size(&rows), step(0)
 {
     if( !copyData )
@@ -668,7 +737,7 @@ Mat::Mat(const Point3_<_Tp>& pt, bool copyData)
 
 template<typename _Tp> inline
 Mat::Mat(const MatCommaInitializer_<_Tp>& commaInitializer)
-    : flags(MAGIC_VAL | traits::Type<_Tp>::value | CV_MAT_CONT_FLAG), dims(0), rows(0), cols(0), data(0),
+    : flags(MAGIC_VAL + traits::Type<_Tp>::value + CV_MAT_CONT_FLAG), dims(0), rows(0), cols(0), data(0),
       datastart(0), dataend(0), allocator(0), u(0), size(&rows)
 {
     *this = commaInitializer.operator Mat_<_Tp>();
@@ -847,7 +916,9 @@ bool Mat::isSubmatrix() const
 inline
 size_t Mat::elemSize() const
 {
-    return dims > 0 ? step.p[dims - 1] : 0;
+    size_t res = dims > 0 ? step.p[dims - 1] : 0;
+    CV_DbgAssert(res != 0);
+    return res;
 }
 
 inline
@@ -932,7 +1003,7 @@ _Tp* Mat::ptr(int y)
 template<typename _Tp> inline
 const _Tp* Mat::ptr(int y) const
 {
-    CV_DbgAssert( y == 0 || (data && dims >= 1 && data && (unsigned)y < (unsigned)size.p[0]) );
+    CV_DbgAssert( y == 0 || (data && dims >= 1 && (unsigned)y < (unsigned)size.p[0]) );
     return (const _Tp*)(data + step.p[0] * y);
 }
 
@@ -1195,6 +1266,8 @@ const _Tp& Mat::at(const Vec<int, n>& idx) const
 template<typename _Tp> inline
 MatConstIterator_<_Tp> Mat::begin() const
 {
+    if (empty())
+        return MatConstIterator_<_Tp>();
     CV_DbgAssert( elemSize() == sizeof(_Tp) );
     return MatConstIterator_<_Tp>((const Mat_<_Tp>*)this);
 }
@@ -1202,6 +1275,8 @@ MatConstIterator_<_Tp> Mat::begin() const
 template<typename _Tp> inline
 MatConstIterator_<_Tp> Mat::end() const
 {
+    if (empty())
+        return MatConstIterator_<_Tp>();
     CV_DbgAssert( elemSize() == sizeof(_Tp) );
     MatConstIterator_<_Tp> it((const Mat_<_Tp>*)this);
     it += total();
@@ -1211,6 +1286,8 @@ MatConstIterator_<_Tp> Mat::end() const
 template<typename _Tp> inline
 MatIterator_<_Tp> Mat::begin()
 {
+    if (empty())
+        return MatIterator_<_Tp>();
     CV_DbgAssert( elemSize() == sizeof(_Tp) );
     return MatIterator_<_Tp>((Mat_<_Tp>*)this);
 }
@@ -1218,6 +1295,8 @@ MatIterator_<_Tp> Mat::begin()
 template<typename _Tp> inline
 MatIterator_<_Tp> Mat::end()
 {
+    if (empty())
+        return MatIterator_<_Tp>();
     CV_DbgAssert( elemSize() == sizeof(_Tp) );
     MatIterator_<_Tp> it((Mat_<_Tp>*)this);
     it += total();
@@ -1495,7 +1574,7 @@ template<typename _Tp> inline
 Mat_<_Tp>::Mat_()
     : Mat()
 {
-    flags = (flags & ~CV_MAT_TYPE_MASK) | traits::Type<_Tp>::value;
+    flags = (flags & ~CV_MAT_TYPE_MASK) + traits::Type<_Tp>::value;
 }
 
 template<typename _Tp> inline
@@ -1552,7 +1631,7 @@ template<typename _Tp> inline
 Mat_<_Tp>::Mat_(const Mat& m)
     : Mat()
 {
-    flags = (flags & ~CV_MAT_TYPE_MASK) | traits::Type<_Tp>::value;
+    flags = (flags & ~CV_MAT_TYPE_MASK) + traits::Type<_Tp>::value;
     *this = m;
 }
 
@@ -1640,6 +1719,11 @@ Mat_<_Tp>::Mat_(const std::array<_Tp, _Nm>& arr, bool copyData)
 template<typename _Tp> inline
 Mat_<_Tp>& Mat_<_Tp>::operator = (const Mat& m)
 {
+    if (m.empty())
+    {
+        release();
+        return *this;
+    }
     if( traits::Type<_Tp>::value == m.type() )
     {
         Mat::operator = (m);
@@ -1692,7 +1776,7 @@ void Mat_<_Tp>::release()
 {
     Mat::release();
 #ifdef _DEBUG
-    flags = (flags & ~CV_MAT_TYPE_MASK) | traits::Type<_Tp>::value;
+    flags = (flags & ~CV_MAT_TYPE_MASK) + traits::Type<_Tp>::value;
 #endif
 }
 
@@ -1705,7 +1789,7 @@ Mat_<_Tp> Mat_<_Tp>::cross(const Mat_& m) const
 template<typename _Tp> template<typename T2> inline
 Mat_<_Tp>::operator Mat_<T2>() const
 {
-    return Mat_<T2>(*this);
+    return Mat_<T2>(static_cast<const Mat&>(*this));
 }
 
 template<typename _Tp> inline
@@ -1995,7 +2079,7 @@ void Mat_<_Tp>::forEach(const Functor& operation) const {
 
 template<typename _Tp> inline
 Mat_<_Tp>::Mat_(Mat_&& m)
-    : Mat(m)
+    : Mat(std::move(m))
 {
 }
 
@@ -2010,13 +2094,18 @@ template<typename _Tp> inline
 Mat_<_Tp>::Mat_(Mat&& m)
     : Mat()
 {
-    flags = (flags & ~CV_MAT_TYPE_MASK) | traits::Type<_Tp>::value;
-    *this = m;
+    flags = (flags & ~CV_MAT_TYPE_MASK) + traits::Type<_Tp>::value;
+    *this = std::move(m);
 }
 
 template<typename _Tp> inline
 Mat_<_Tp>& Mat_<_Tp>::operator = (Mat&& m)
 {
+    if (m.empty())
+    {
+        release();
+        return *this;
+    }
     if( traits::Type<_Tp>::value == m.type() )
     {
         Mat::operator = ((Mat&&)m);
@@ -2036,7 +2125,7 @@ template<typename _Tp> inline
 Mat_<_Tp>::Mat_(MatExpr&& e)
     : Mat()
 {
-    flags = (flags & ~CV_MAT_TYPE_MASK) | traits::Type<_Tp>::value;
+    flags = (flags & ~CV_MAT_TYPE_MASK) + traits::Type<_Tp>::value;
     *this = Mat(e);
 }
 
@@ -2372,7 +2461,7 @@ SparseMatConstIterator_<_Tp> SparseMat::end() const
 template<typename _Tp> inline
 SparseMat_<_Tp>::SparseMat_()
 {
-    flags = MAGIC_VAL | traits::Type<_Tp>::value;
+    flags = MAGIC_VAL + traits::Type<_Tp>::value;
 }
 
 template<typename _Tp> inline
@@ -2556,6 +2645,7 @@ MatConstIterator::MatConstIterator(const Mat* _m)
 {
     if( m && m->isContinuous() )
     {
+        CV_Assert(!m->empty());
         sliceStart = m->ptr();
         sliceEnd = sliceStart + m->total()*elemSize;
     }
@@ -2569,6 +2659,7 @@ MatConstIterator::MatConstIterator(const Mat* _m, int _row, int _col)
     CV_Assert(m && m->dims <= 2);
     if( m->isContinuous() )
     {
+        CV_Assert(!m->empty());
         sliceStart = m->ptr();
         sliceEnd = sliceStart + m->total()*elemSize;
     }
@@ -2583,6 +2674,7 @@ MatConstIterator::MatConstIterator(const Mat* _m, Point _pt)
     CV_Assert(m && m->dims <= 2);
     if( m->isContinuous() )
     {
+        CV_Assert(!m->empty());
         sliceStart = m->ptr();
         sliceEnd = sliceStart + m->total()*elemSize;
     }
@@ -3595,7 +3687,7 @@ UMat::UMat(const UMat& m)
 
 template<typename _Tp> inline
 UMat::UMat(const std::vector<_Tp>& vec, bool copyData)
-: flags(MAGIC_VAL | traits::Type<_Tp>::value | CV_MAT_CONT_FLAG), dims(2), rows((int)vec.size()),
+: flags(MAGIC_VAL + traits::Type<_Tp>::value + CV_MAT_CONT_FLAG), dims(2), rows((int)vec.size()),
 cols(1), allocator(0), usageFlags(USAGE_DEFAULT), u(0), offset(0), size(&rows)
 {
     if(vec.empty())
@@ -3760,7 +3852,9 @@ bool UMat::isSubmatrix() const
 inline
 size_t UMat::elemSize() const
 {
-    return dims > 0 ? step.p[dims - 1] : 0;
+    size_t res = dims > 0 ? step.p[dims - 1] : 0;
+    CV_DbgAssert(res != 0);
+    return res;
 }
 
 inline
@@ -3903,10 +3997,18 @@ inline void UMatData::markDeviceCopyObsolete(bool flag)
 
 //! @endcond
 
+static inline
+void swap(MatExpr& a, MatExpr& b) { a.swap(b); }
+
 } //cv
 
 #ifdef _MSC_VER
 #pragma warning( pop )
+#endif
+
+#ifdef CV_DISABLE_CLANG_ENUM_WARNINGS
+#undef CV_DISABLE_CLANG_ENUM_WARNINGS
+#pragma clang diagnostic pop
 #endif
 
 #endif

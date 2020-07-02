@@ -1,5 +1,3 @@
-/* $Header: /cvs/maptools/cvsroot/libtiff/libtiff/tif_warning.c,v 1.4 2017-07-04 12:54:42 erouault Exp $ */
-
 /*
  * Copyright (c) 1988-1997 Sam Leffler
  * Copyright (c) 1991-1997 Silicon Graphics, Inc.

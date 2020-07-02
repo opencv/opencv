@@ -1,10 +1,10 @@
 ///////////////////////////////////////////////////////////////////////////
 //
-// Copyright (c) 2004, Industrial Light & Magic, a division of Lucas
+// Copyright (c) 2004-2012, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -41,13 +41,13 @@
 //	class Imath::Box<class T>
 //	--------------------------------
 //
-//	This class imposes the following requirements on its
+//	This class imposes the following requirements on its 
 //	parameter class:
-//
+//	
 //	1) The class T must implement these operators:
-//			+ - < > <= >= =
-//	   with the signature (T,T) and the expected
-//	   return values for a numeric type.
+//			+ - < > <= >= = 
+//	   with the signature (T,T) and the expected 
+//	   return values for a numeric type. 
 //
 //	2) The class T must implement operator=
 //	   with the signature (T,float and/or double)
@@ -63,11 +63,12 @@
 //-------------------------------------------------------------------
 
 #include "ImathVec.h"
+#include "ImathNamespace.h"
 
-namespace Imath {
+IMATH_INTERNAL_NAMESPACE_HEADER_ENTER
 
 
-template <class T>
+template <class T>	
 class Box
 {
   public:
@@ -83,14 +84,14 @@ class Box
     //	Constructors - an "empty" box is created by default
     //-----------------------------------------------------
 
-    Box ();
+    Box (); 
     Box (const T &point);
     Box (const T &minT, const T &maxT);
 
     //--------------------
     //  Operators:  ==, !=
     //--------------------
-
+    
     bool		operator == (const Box<T> &src) const;
     bool		operator != (const Box<T> &src) const;
 
@@ -101,7 +102,7 @@ class Box
     void		makeEmpty ();
     void		extendBy (const T &point);
     void		extendBy (const Box<T> &box);
-    void		makeInfinite ();
+    void		makeInfinite ();    
 
     //---------------------------------------------------
     //	Query functions - these compute results each time
@@ -202,11 +203,11 @@ Box<T>::extendBy(const T &point)
 {
     for (unsigned int i = 0; i < min.dimensions(); i++)
     {
-    if (point[i] < min[i])
-        min[i] = point[i];
+	if (point[i] < min[i])
+	    min[i] = point[i];
 
-    if (point[i] > max[i])
-        max[i] = point[i];
+	if (point[i] > max[i])
+	    max[i] = point[i];
     }
 }
 
@@ -217,11 +218,11 @@ Box<T>::extendBy(const Box<T> &box)
 {
     for (unsigned int i = 0; i < min.dimensions(); i++)
     {
-    if (box.min[i] < min[i])
-        min[i] = box.min[i];
+	if (box.min[i] < min[i])
+	    min[i] = box.min[i];
 
-    if (box.max[i] > max[i])
-        max[i] = box.max[i];
+	if (box.max[i] > max[i])
+	    max[i] = box.max[i];
     }
 }
 
@@ -233,7 +234,7 @@ Box<T>::intersects(const T &point) const
     for (unsigned int i = 0; i < min.dimensions(); i++)
     {
         if (point[i] < min[i] || point[i] > max[i])
-        return false;
+	    return false;
     }
 
     return true;
@@ -247,28 +248,28 @@ Box<T>::intersects(const Box<T> &box) const
     for (unsigned int i = 0; i < min.dimensions(); i++)
     {
         if (box.max[i] < min[i] || box.min[i] > max[i])
-        return false;
+	    return false;
     }
 
     return true;
 }
 
 
-template <class T>
+template <class T> 
 inline T
-Box<T>::size() const
-{
+Box<T>::size() const 
+{ 
     if (isEmpty())
-    return T (0);
+	return T (0);
 
     return max - min;
 }
 
 
-template <class T>
+template <class T> 
 inline T
-Box<T>::center() const
-{
+Box<T>::center() const 
+{ 
     return (max + min) / 2;
 }
 
@@ -280,7 +281,7 @@ Box<T>::isEmpty() const
     for (unsigned int i = 0; i < min.dimensions(); i++)
     {
         if (max[i] < min[i])
-        return true;
+	    return true;
     }
 
     return false;
@@ -293,7 +294,7 @@ Box<T>::isInfinite() const
     for (unsigned int i = 0; i < min.dimensions(); i++)
     {
         if (min[i] != T::baseTypeMin() || max[i] != T::baseTypeMax())
-        return false;
+	    return false;
     }
 
     return true;
@@ -307,7 +308,7 @@ Box<T>::hasVolume() const
     for (unsigned int i = 0; i < min.dimensions(); i++)
     {
         if (max[i] <= min[i])
-        return false;
+	    return false;
     }
 
     return true;
@@ -323,8 +324,8 @@ Box<T>::majorAxis() const
 
     for (unsigned int i = 1; i < min.dimensions(); i++)
     {
-    if (s[i] > s[major])
-        major = i;
+	if (s[i] > s[major])
+	    major = i;
     }
 
     return major;
@@ -354,7 +355,7 @@ class Box<Vec2<T> >
     //  Constructors - an "empty" box is created by default
     //-----------------------------------------------------
 
-    Box();
+    Box(); 
     Box (const Vec2<T> &point);
     Box (const Vec2<T> &minT, const Vec2<T> &maxT);
 
@@ -512,10 +513,10 @@ Box<Vec2<T> >::intersects (const Box<Vec2<T> > &box) const
 }
 
 
-template <class T>
+template <class T> 
 inline Vec2<T>
-Box<Vec2<T> >::size() const
-{
+Box<Vec2<T> >::size() const 
+{ 
     if (isEmpty())
         return Vec2<T> (0);
 
@@ -523,10 +524,10 @@ Box<Vec2<T> >::size() const
 }
 
 
-template <class T>
+template <class T> 
 inline Vec2<T>
-Box<Vec2<T> >::center() const
-{
+Box<Vec2<T> >::center() const 
+{ 
     return (max + min) / 2;
 }
 
@@ -549,7 +550,7 @@ Box<Vec2<T> > ::isInfinite() const
     if (min[0] != limits<T>::min() || max[0] != limits<T>::max() ||
         min[1] != limits<T>::min() || max[1] != limits<T>::max())
         return false;
-
+    
     return true;
 }
 
@@ -596,7 +597,7 @@ class Box<Vec3<T> >
     //  Constructors - an "empty" box is created by default
     //-----------------------------------------------------
 
-    Box();
+    Box(); 
     Box (const Vec3<T> &point);
     Box (const Vec3<T> &minT, const Vec3<T> &maxT);
 
@@ -769,10 +770,10 @@ Box<Vec3<T> >::intersects (const Box<Vec3<T> > &box) const
 }
 
 
-template <class T>
+template <class T> 
 inline Vec3<T>
-Box<Vec3<T> >::size() const
-{
+Box<Vec3<T> >::size() const 
+{ 
     if (isEmpty())
         return Vec3<T> (0);
 
@@ -780,10 +781,10 @@ Box<Vec3<T> >::size() const
 }
 
 
-template <class T>
+template <class T> 
 inline Vec3<T>
-Box<Vec3<T> >::center() const
-{
+Box<Vec3<T> >::center() const 
+{ 
     return (max + min) / 2;
 }
 
@@ -808,7 +809,7 @@ Box<Vec3<T> >::isInfinite() const
         min[1] != limits<T>::min() || max[1] != limits<T>::max() ||
         min[2] != limits<T>::min() || max[2] != limits<T>::max())
         return false;
-
+    
     return true;
 }
 
@@ -843,8 +844,6 @@ Box<Vec3<T> >::majorAxis() const
 }
 
 
+IMATH_INTERNAL_NAMESPACE_HEADER_EXIT
 
-
-} // namespace Imath
-
-#endif
+#endif // INCLUDED_IMATHBOX_H

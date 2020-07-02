@@ -41,7 +41,7 @@ class LetterStatModel(object):
     train_ratio = 0.5
 
     def load(self, fn):
-        self.model.load(fn)
+        self.model = self.model.load(fn)
     def save(self, fn):
         self.model.save(fn)
 
@@ -145,11 +145,9 @@ class MLP(LetterStatModel):
 
 
 
-if __name__ == '__main__':
+def main():
     import getopt
     import sys
-
-    print(__doc__)
 
     models = [RTrees, KNearest, Boost, SVM, MLP] # NBayes
     models = dict( [(cls.__name__.lower(), cls) for cls in models] )
@@ -158,10 +156,12 @@ if __name__ == '__main__':
     args, dummy = getopt.getopt(sys.argv[1:], '', ['model=', 'data=', 'load=', 'save='])
     args = dict(args)
     args.setdefault('--model', 'svm')
-    args.setdefault('--data', '../data/letter-recognition.data')
+    args.setdefault('--data', 'letter-recognition.data')
 
-    print('loading data %s ...' % args['--data'])
-    samples, responses = load_base(args['--data'])
+    datafile = cv.samples.findFile(args['--data'])
+
+    print('loading data %s ...' % datafile)
+    samples, responses = load_base(datafile)
     Model = models[args['--model']]
     model = Model()
 
@@ -184,4 +184,11 @@ if __name__ == '__main__':
         fn = args['--save']
         print('saving model to %s ...' % fn)
         model.save(fn)
+
+    print('Done')
+
+
+if __name__ == '__main__':
+    print(__doc__)
+    main()
     cv.destroyAllWindows()

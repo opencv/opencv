@@ -50,16 +50,16 @@ inline void InitDefaults() {
   InitDefaultsTensorProto();
 }
 }  // namespace protobuf_tensor_2eproto
-namespace tensorflow {
+namespace opencv_tensorflow {
 class TensorProto;
 class TensorProtoDefaultTypeInternal;
 extern TensorProtoDefaultTypeInternal _TensorProto_default_instance_;
-}  // namespace tensorflow
-namespace tensorflow {
+}  // namespace opencv_tensorflow
+namespace opencv_tensorflow {
 
 // ===================================================================
 
-class TensorProto : public ::google::protobuf::Message /* @@protoc_insertion_point(class_definition:tensorflow.TensorProto) */ {
+class TensorProto : public ::google::protobuf::Message /* @@protoc_insertion_point(class_definition:opencv_tensorflow.TensorProto) */ {
  public:
   TensorProto();
   virtual ~TensorProto();
@@ -294,26 +294,26 @@ class TensorProto : public ::google::protobuf::Message /* @@protoc_insertion_poi
   void unsafe_arena_set_allocated_tensor_content(
       ::std::string* tensor_content);
 
-  // .tensorflow.TensorShapeProto tensor_shape = 2;
+  // .opencv_tensorflow.TensorShapeProto tensor_shape = 2;
   bool has_tensor_shape() const;
   void clear_tensor_shape();
   static const int kTensorShapeFieldNumber = 2;
   private:
   void _slow_mutable_tensor_shape();
   public:
-  const ::tensorflow::TensorShapeProto& tensor_shape() const;
-  ::tensorflow::TensorShapeProto* release_tensor_shape();
-  ::tensorflow::TensorShapeProto* mutable_tensor_shape();
-  void set_allocated_tensor_shape(::tensorflow::TensorShapeProto* tensor_shape);
+  const ::opencv_tensorflow::TensorShapeProto& tensor_shape() const;
+  ::opencv_tensorflow::TensorShapeProto* release_tensor_shape();
+  ::opencv_tensorflow::TensorShapeProto* mutable_tensor_shape();
+  void set_allocated_tensor_shape(::opencv_tensorflow::TensorShapeProto* tensor_shape);
   void unsafe_arena_set_allocated_tensor_shape(
-      ::tensorflow::TensorShapeProto* tensor_shape);
-  ::tensorflow::TensorShapeProto* unsafe_arena_release_tensor_shape();
+      ::opencv_tensorflow::TensorShapeProto* tensor_shape);
+  ::opencv_tensorflow::TensorShapeProto* unsafe_arena_release_tensor_shape();
 
-  // .tensorflow.DataType dtype = 1;
+  // .opencv_tensorflow.DataType dtype = 1;
   void clear_dtype();
   static const int kDtypeFieldNumber = 1;
-  ::tensorflow::DataType dtype() const;
-  void set_dtype(::tensorflow::DataType value);
+  ::opencv_tensorflow::DataType dtype() const;
+  void set_dtype(::opencv_tensorflow::DataType value);
 
   // int32 version_number = 3;
   void clear_version_number();
@@ -321,7 +321,7 @@ class TensorProto : public ::google::protobuf::Message /* @@protoc_insertion_poi
   ::google::protobuf::int32 version_number() const;
   void set_version_number(::google::protobuf::int32 value);
 
-  // @@protoc_insertion_point(class_scope:tensorflow.TensorProto)
+  // @@protoc_insertion_point(class_scope:opencv_tensorflow.TensorProto)
  private:
 
   ::google::protobuf::internal::InternalMetadataWithArena _internal_metadata_;
@@ -346,7 +346,7 @@ class TensorProto : public ::google::protobuf::Message /* @@protoc_insertion_poi
   ::google::protobuf::RepeatedField< ::google::protobuf::int32 > half_val_;
   mutable int _half_val_cached_byte_size_;
   ::google::protobuf::internal::ArenaStringPtr tensor_content_;
-  ::tensorflow::TensorShapeProto* tensor_shape_;
+  ::opencv_tensorflow::TensorShapeProto* tensor_shape_;
   int dtype_;
   ::google::protobuf::int32 version_number_;
   mutable int _cached_size_;
@@ -364,56 +364,56 @@ class TensorProto : public ::google::protobuf::Message /* @@protoc_insertion_poi
 #endif  // __GNUC__
 // TensorProto
 
-// .tensorflow.DataType dtype = 1;
+// .opencv_tensorflow.DataType dtype = 1;
 inline void TensorProto::clear_dtype() {
   dtype_ = 0;
 }
-inline ::tensorflow::DataType TensorProto::dtype() const {
-  // @@protoc_insertion_point(field_get:tensorflow.TensorProto.dtype)
-  return static_cast< ::tensorflow::DataType >(dtype_);
+inline ::opencv_tensorflow::DataType TensorProto::dtype() const {
+  // @@protoc_insertion_point(field_get:opencv_tensorflow.TensorProto.dtype)
+  return static_cast< ::opencv_tensorflow::DataType >(dtype_);
 }
-inline void TensorProto::set_dtype(::tensorflow::DataType value) {
+inline void TensorProto::set_dtype(::opencv_tensorflow::DataType value) {
 
   dtype_ = value;
-  // @@protoc_insertion_point(field_set:tensorflow.TensorProto.dtype)
+  // @@protoc_insertion_point(field_set:opencv_tensorflow.TensorProto.dtype)
 }
 
-// .tensorflow.TensorShapeProto tensor_shape = 2;
+// .opencv_tensorflow.TensorShapeProto tensor_shape = 2;
 inline bool TensorProto::has_tensor_shape() const {
   return this != internal_default_instance() && tensor_shape_ != NULL;
 }
-inline const ::tensorflow::TensorShapeProto& TensorProto::tensor_shape() const {
-  const ::tensorflow::TensorShapeProto* p = tensor_shape_;
-  // @@protoc_insertion_point(field_get:tensorflow.TensorProto.tensor_shape)
-  return p != NULL ? *p : *reinterpret_cast<const ::tensorflow::TensorShapeProto*>(
-      &::tensorflow::_TensorShapeProto_default_instance_);
+inline const ::opencv_tensorflow::TensorShapeProto& TensorProto::tensor_shape() const {
+  const ::opencv_tensorflow::TensorShapeProto* p = tensor_shape_;
+  // @@protoc_insertion_point(field_get:opencv_tensorflow.TensorProto.tensor_shape)
+  return p != NULL ? *p : *reinterpret_cast<const ::opencv_tensorflow::TensorShapeProto*>(
+      &::opencv_tensorflow::_TensorShapeProto_default_instance_);
 }
-inline ::tensorflow::TensorShapeProto* TensorProto::release_tensor_shape() {
-  // @@protoc_insertion_point(field_release:tensorflow.TensorProto.tensor_shape)
+inline ::opencv_tensorflow::TensorShapeProto* TensorProto::release_tensor_shape() {
+  // @@protoc_insertion_point(field_release:opencv_tensorflow.TensorProto.tensor_shape)
 
-  ::tensorflow::TensorShapeProto* temp = tensor_shape_;
+  ::opencv_tensorflow::TensorShapeProto* temp = tensor_shape_;
   if (GetArenaNoVirtual() != NULL) {
     temp = ::google::protobuf::internal::DuplicateIfNonNull(temp, NULL);
   }
   tensor_shape_ = NULL;
   return temp;
 }
-inline ::tensorflow::TensorShapeProto* TensorProto::unsafe_arena_release_tensor_shape() {
-  // @@protoc_insertion_point(field_unsafe_arena_release:tensorflow.TensorProto.tensor_shape)
+inline ::opencv_tensorflow::TensorShapeProto* TensorProto::unsafe_arena_release_tensor_shape() {
+  // @@protoc_insertion_point(field_unsafe_arena_release:opencv_tensorflow.TensorProto.tensor_shape)
 
-  ::tensorflow::TensorShapeProto* temp = tensor_shape_;
+  ::opencv_tensorflow::TensorShapeProto* temp = tensor_shape_;
   tensor_shape_ = NULL;
   return temp;
 }
-inline ::tensorflow::TensorShapeProto* TensorProto::mutable_tensor_shape() {
+inline ::opencv_tensorflow::TensorShapeProto* TensorProto::mutable_tensor_shape() {
 
   if (tensor_shape_ == NULL) {
     _slow_mutable_tensor_shape();
   }
-  // @@protoc_insertion_point(field_mutable:tensorflow.TensorProto.tensor_shape)
+  // @@protoc_insertion_point(field_mutable:opencv_tensorflow.TensorProto.tensor_shape)
   return tensor_shape_;
 }
-inline void TensorProto::set_allocated_tensor_shape(::tensorflow::TensorShapeProto* tensor_shape) {
+inline void TensorProto::set_allocated_tensor_shape(::opencv_tensorflow::TensorShapeProto* tensor_shape) {
   ::google::protobuf::Arena* message_arena = GetArenaNoVirtual();
   if (message_arena == NULL) {
     delete reinterpret_cast< ::google::protobuf::MessageLite*>(tensor_shape_);
@@ -430,7 +430,7 @@ inline void TensorProto::set_allocated_tensor_shape(::tensorflow::TensorShapePro
 
   }
   tensor_shape_ = tensor_shape;
-  // @@protoc_insertion_point(field_set_allocated:tensorflow.TensorProto.tensor_shape)
+  // @@protoc_insertion_point(field_set_allocated:opencv_tensorflow.TensorProto.tensor_shape)
 }
 
 // int32 version_number = 3;
@@ -438,13 +438,13 @@ inline void TensorProto::clear_version_number() {
   version_number_ = 0;
 }
 inline ::google::protobuf::int32 TensorProto::version_number() const {
-  // @@protoc_insertion_point(field_get:tensorflow.TensorProto.version_number)
+  // @@protoc_insertion_point(field_get:opencv_tensorflow.TensorProto.version_number)
   return version_number_;
 }
 inline void TensorProto::set_version_number(::google::protobuf::int32 value) {
 
   version_number_ = value;
-  // @@protoc_insertion_point(field_set:tensorflow.TensorProto.version_number)
+  // @@protoc_insertion_point(field_set:opencv_tensorflow.TensorProto.version_number)
 }
 
 // bytes tensor_content = 4;
@@ -452,20 +452,20 @@ inline void TensorProto::clear_tensor_content() {
   tensor_content_.ClearToEmpty(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), GetArenaNoVirtual());
 }
 inline const ::std::string& TensorProto::tensor_content() const {
-  // @@protoc_insertion_point(field_get:tensorflow.TensorProto.tensor_content)
+  // @@protoc_insertion_point(field_get:opencv_tensorflow.TensorProto.tensor_content)
   return tensor_content_.Get();
 }
 inline void TensorProto::set_tensor_content(const ::std::string& value) {
 
   tensor_content_.Set(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), value, GetArenaNoVirtual());
-  // @@protoc_insertion_point(field_set:tensorflow.TensorProto.tensor_content)
+  // @@protoc_insertion_point(field_set:opencv_tensorflow.TensorProto.tensor_content)
 }
 #if LANG_CXX11
 inline void TensorProto::set_tensor_content(::std::string&& value) {
 
   tensor_content_.Set(
     &::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::move(value), GetArenaNoVirtual());
-  // @@protoc_insertion_point(field_set_rvalue:tensorflow.TensorProto.tensor_content)
+  // @@protoc_insertion_point(field_set_rvalue:opencv_tensorflow.TensorProto.tensor_content)
 }
 #endif
 inline void TensorProto::set_tensor_content(const char* value) {
@@ -473,22 +473,22 @@ inline void TensorProto::set_tensor_content(const char* value) {
 
   tensor_content_.Set(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::string(value),
               GetArenaNoVirtual());
-  // @@protoc_insertion_point(field_set_char:tensorflow.TensorProto.tensor_content)
+  // @@protoc_insertion_point(field_set_char:opencv_tensorflow.TensorProto.tensor_content)
 }
 inline void TensorProto::set_tensor_content(const void* value,
     size_t size) {
 
   tensor_content_.Set(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::string(
       reinterpret_cast<const char*>(value), size), GetArenaNoVirtual());
-  // @@protoc_insertion_point(field_set_pointer:tensorflow.TensorProto.tensor_content)
+  // @@protoc_insertion_point(field_set_pointer:opencv_tensorflow.TensorProto.tensor_content)
 }
 inline ::std::string* TensorProto::mutable_tensor_content() {
 
-  // @@protoc_insertion_point(field_mutable:tensorflow.TensorProto.tensor_content)
+  // @@protoc_insertion_point(field_mutable:opencv_tensorflow.TensorProto.tensor_content)
   return tensor_content_.Mutable(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), GetArenaNoVirtual());
 }
 inline ::std::string* TensorProto::release_tensor_content() {
-  // @@protoc_insertion_point(field_release:tensorflow.TensorProto.tensor_content)
+  // @@protoc_insertion_point(field_release:opencv_tensorflow.TensorProto.tensor_content)
 
   return tensor_content_.Release(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), GetArenaNoVirtual());
 }
@@ -500,10 +500,10 @@ inline void TensorProto::set_allocated_tensor_content(::std::string* tensor_cont
   }
   tensor_content_.SetAllocated(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), tensor_content,
       GetArenaNoVirtual());
-  // @@protoc_insertion_point(field_set_allocated:tensorflow.TensorProto.tensor_content)
+  // @@protoc_insertion_point(field_set_allocated:opencv_tensorflow.TensorProto.tensor_content)
 }
 inline ::std::string* TensorProto::unsafe_arena_release_tensor_content() {
-  // @@protoc_insertion_point(field_unsafe_arena_release:tensorflow.TensorProto.tensor_content)
+  // @@protoc_insertion_point(field_unsafe_arena_release:opencv_tensorflow.TensorProto.tensor_content)
   GOOGLE_DCHECK(GetArenaNoVirtual() != NULL);
 
   return tensor_content_.UnsafeArenaRelease(&::google::protobuf::internal::GetEmptyStringAlreadyInited(),
@@ -519,7 +519,7 @@ inline void TensorProto::unsafe_arena_set_allocated_tensor_content(
   }
   tensor_content_.UnsafeArenaSetAllocated(&::google::protobuf::internal::GetEmptyStringAlreadyInited(),
       tensor_content, GetArenaNoVirtual());
-  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:tensorflow.TensorProto.tensor_content)
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:opencv_tensorflow.TensorProto.tensor_content)
 }
 
 // repeated int32 half_val = 13 [packed = true];
@@ -530,25 +530,25 @@ inline void TensorProto::clear_half_val() {
   half_val_.Clear();
 }
 inline ::google::protobuf::int32 TensorProto::half_val(int index) const {
-  // @@protoc_insertion_point(field_get:tensorflow.TensorProto.half_val)
+  // @@protoc_insertion_point(field_get:opencv_tensorflow.TensorProto.half_val)
   return half_val_.Get(index);
 }
 inline void TensorProto::set_half_val(int index, ::google::protobuf::int32 value) {
   half_val_.Set(index, value);
-  // @@protoc_insertion_point(field_set:tensorflow.TensorProto.half_val)
+  // @@protoc_insertion_point(field_set:opencv_tensorflow.TensorProto.half_val)
 }
 inline void TensorProto::add_half_val(::google::protobuf::int32 value) {
   half_val_.Add(value);
-  // @@protoc_insertion_point(field_add:tensorflow.TensorProto.half_val)
+  // @@protoc_insertion_point(field_add:opencv_tensorflow.TensorProto.half_val)
 }
 inline const ::google::protobuf::RepeatedField< ::google::protobuf::int32 >&
 TensorProto::half_val() const {
-  // @@protoc_insertion_point(field_list:tensorflow.TensorProto.half_val)
+  // @@protoc_insertion_point(field_list:opencv_tensorflow.TensorProto.half_val)
   return half_val_;
 }
 inline ::google::protobuf::RepeatedField< ::google::protobuf::int32 >*
 TensorProto::mutable_half_val() {
-  // @@protoc_insertion_point(field_mutable_list:tensorflow.TensorProto.half_val)
+  // @@protoc_insertion_point(field_mutable_list:opencv_tensorflow.TensorProto.half_val)
   return &half_val_;
 }
 
@@ -560,25 +560,25 @@ inline void TensorProto::clear_float_val() {
   float_val_.Clear();
 }
 inline float TensorProto::float_val(int index) const {
-  // @@protoc_insertion_point(field_get:tensorflow.TensorProto.float_val)
+  // @@protoc_insertion_point(field_get:opencv_tensorflow.TensorProto.float_val)
   return float_val_.Get(index);
 }
 inline void TensorProto::set_float_val(int index, float value) {
   float_val_.Set(index, value);
-  // @@protoc_insertion_point(field_set:tensorflow.TensorProto.float_val)
+  // @@protoc_insertion_point(field_set:opencv_tensorflow.TensorProto.float_val)
 }
 inline void TensorProto::add_float_val(float value) {
   float_val_.Add(value);
-  // @@protoc_insertion_point(field_add:tensorflow.TensorProto.float_val)
+  // @@protoc_insertion_point(field_add:opencv_tensorflow.TensorProto.float_val)
 }
 inline const ::google::protobuf::RepeatedField< float >&
 TensorProto::float_val() const {
-  // @@protoc_insertion_point(field_list:tensorflow.TensorProto.float_val)
+  // @@protoc_insertion_point(field_list:opencv_tensorflow.TensorProto.float_val)
   return float_val_;
 }
 inline ::google::protobuf::RepeatedField< float >*
 TensorProto::mutable_float_val() {
-  // @@protoc_insertion_point(field_mutable_list:tensorflow.TensorProto.float_val)
+  // @@protoc_insertion_point(field_mutable_list:opencv_tensorflow.TensorProto.float_val)
   return &float_val_;
 }
 
@@ -590,25 +590,25 @@ inline void TensorProto::clear_double_val() {
   double_val_.Clear();
 }
 inline double TensorProto::double_val(int index) const {
-  // @@protoc_insertion_point(field_get:tensorflow.TensorProto.double_val)
+  // @@protoc_insertion_point(field_get:opencv_tensorflow.TensorProto.double_val)
   return double_val_.Get(index);
 }
 inline void TensorProto::set_double_val(int index, double value) {
   double_val_.Set(index, value);
-  // @@protoc_insertion_point(field_set:tensorflow.TensorProto.double_val)
+  // @@protoc_insertion_point(field_set:opencv_tensorflow.TensorProto.double_val)
 }
 inline void TensorProto::add_double_val(double value) {
   double_val_.Add(value);
-  // @@protoc_insertion_point(field_add:tensorflow.TensorProto.double_val)
+  // @@protoc_insertion_point(field_add:opencv_tensorflow.TensorProto.double_val)
 }
 inline const ::google::protobuf::RepeatedField< double >&
 TensorProto::double_val() const {
-  // @@protoc_insertion_point(field_list:tensorflow.TensorProto.double_val)
+  // @@protoc_insertion_point(field_list:opencv_tensorflow.TensorProto.double_val)
   return double_val_;
 }
 inline ::google::protobuf::RepeatedField< double >*
 TensorProto::mutable_double_val() {
-  // @@protoc_insertion_point(field_mutable_list:tensorflow.TensorProto.double_val)
+  // @@protoc_insertion_point(field_mutable_list:opencv_tensorflow.TensorProto.double_val)
   return &double_val_;
 }
 
@@ -620,25 +620,25 @@ inline void TensorProto::clear_int_val() {
   int_val_.Clear();
 }
 inline ::google::protobuf::int32 TensorProto::int_val(int index) const {
-  // @@protoc_insertion_point(field_get:tensorflow.TensorProto.int_val)
+  // @@protoc_insertion_point(field_get:opencv_tensorflow.TensorProto.int_val)
   return int_val_.Get(index);
 }
 inline void TensorProto::set_int_val(int index, ::google::protobuf::int32 value) {
   int_val_.Set(index, value);
-  // @@protoc_insertion_point(field_set:tensorflow.TensorProto.int_val)
+  // @@protoc_insertion_point(field_set:opencv_tensorflow.TensorProto.int_val)
 }
 inline void TensorProto::add_int_val(::google::protobuf::int32 value) {
   int_val_.Add(value);
-  // @@protoc_insertion_point(field_add:tensorflow.TensorProto.int_val)
+  // @@protoc_insertion_point(field_add:opencv_tensorflow.TensorProto.int_val)
 }
 inline const ::google::protobuf::RepeatedField< ::google::protobuf::int32 >&
 TensorProto::int_val() const {
-  // @@protoc_insertion_point(field_list:tensorflow.TensorProto.int_val)
+  // @@protoc_insertion_point(field_list:opencv_tensorflow.TensorProto.int_val)
   return int_val_;
 }
 inline ::google::protobuf::RepeatedField< ::google::protobuf::int32 >*
 TensorProto::mutable_int_val() {
-  // @@protoc_insertion_point(field_mutable_list:tensorflow.TensorProto.int_val)
+  // @@protoc_insertion_point(field_mutable_list:opencv_tensorflow.TensorProto.int_val)
   return &int_val_;
 }
 
@@ -650,64 +650,64 @@ inline void TensorProto::clear_string_val() {
   string_val_.Clear();
 }
 inline const ::std::string& TensorProto::string_val(int index) const {
-  // @@protoc_insertion_point(field_get:tensorflow.TensorProto.string_val)
+  // @@protoc_insertion_point(field_get:opencv_tensorflow.TensorProto.string_val)
   return string_val_.Get(index);
 }
 inline ::std::string* TensorProto::mutable_string_val(int index) {
-  // @@protoc_insertion_point(field_mutable:tensorflow.TensorProto.string_val)
+  // @@protoc_insertion_point(field_mutable:opencv_tensorflow.TensorProto.string_val)
   return string_val_.Mutable(index);
 }
 inline void TensorProto::set_string_val(int index, const ::std::string& value) {
-  // @@protoc_insertion_point(field_set:tensorflow.TensorProto.string_val)
+  // @@protoc_insertion_point(field_set:opencv_tensorflow.TensorProto.string_val)
   string_val_.Mutable(index)->assign(value);
 }
 #if LANG_CXX11
 inline void TensorProto::set_string_val(int index, ::std::string&& value) {
-  // @@protoc_insertion_point(field_set:tensorflow.TensorProto.string_val)
+  // @@protoc_insertion_point(field_set:opencv_tensorflow.TensorProto.string_val)
   string_val_.Mutable(index)->assign(std::move(value));
 }
 #endif
 inline void TensorProto::set_string_val(int index, const char* value) {
   GOOGLE_DCHECK(value != NULL);
   string_val_.Mutable(index)->assign(value);
-  // @@protoc_insertion_point(field_set_char:tensorflow.TensorProto.string_val)
+  // @@protoc_insertion_point(field_set_char:opencv_tensorflow.TensorProto.string_val)
 }
 inline void TensorProto::set_string_val(int index, const void* value, size_t size) {
   string_val_.Mutable(index)->assign(
     reinterpret_cast<const char*>(value), size);
-  // @@protoc_insertion_point(field_set_pointer:tensorflow.TensorProto.string_val)
+  // @@protoc_insertion_point(field_set_pointer:opencv_tensorflow.TensorProto.string_val)
 }
 inline ::std::string* TensorProto::add_string_val() {
-  // @@protoc_insertion_point(field_add_mutable:tensorflow.TensorProto.string_val)
+  // @@protoc_insertion_point(field_add_mutable:opencv_tensorflow.TensorProto.string_val)
   return string_val_.Add();
 }
 inline void TensorProto::add_string_val(const ::std::string& value) {
   string_val_.Add()->assign(value);
-  // @@protoc_insertion_point(field_add:tensorflow.TensorProto.string_val)
+  // @@protoc_insertion_point(field_add:opencv_tensorflow.TensorProto.string_val)
 }
 #if LANG_CXX11
 inline void TensorProto::add_string_val(::std::string&& value) {
   string_val_.Add(std::move(value));
-  // @@protoc_insertion_point(field_add:tensorflow.TensorProto.string_val)
+  // @@protoc_insertion_point(field_add:opencv_tensorflow.TensorProto.string_val)
 }
 #endif
 inline void TensorProto::add_string_val(const char* value) {
   GOOGLE_DCHECK(value != NULL);
   string_val_.Add()->assign(value);
-  // @@protoc_insertion_point(field_add_char:tensorflow.TensorProto.string_val)
+  // @@protoc_insertion_point(field_add_char:opencv_tensorflow.TensorProto.string_val)
 }
 inline void TensorProto::add_string_val(const void* value, size_t size) {
   string_val_.Add()->assign(reinterpret_cast<const char*>(value), size);
-  // @@protoc_insertion_point(field_add_pointer:tensorflow.TensorProto.string_val)
+  // @@protoc_insertion_point(field_add_pointer:opencv_tensorflow.TensorProto.string_val)
 }
 inline const ::google::protobuf::RepeatedPtrField< ::std::string>&
 TensorProto::string_val() const {
-  // @@protoc_insertion_point(field_list:tensorflow.TensorProto.string_val)
+  // @@protoc_insertion_point(field_list:opencv_tensorflow.TensorProto.string_val)
   return string_val_;
 }
 inline ::google::protobuf::RepeatedPtrField< ::std::string>*
 TensorProto::mutable_string_val() {
-  // @@protoc_insertion_point(field_mutable_list:tensorflow.TensorProto.string_val)
+  // @@protoc_insertion_point(field_mutable_list:opencv_tensorflow.TensorProto.string_val)
   return &string_val_;
 }
 
@@ -719,25 +719,25 @@ inline void TensorProto::clear_scomplex_val() {
   scomplex_val_.Clear();
 }
 inline float TensorProto::scomplex_val(int index) const {
-  // @@protoc_insertion_point(field_get:tensorflow.TensorProto.scomplex_val)
+  // @@protoc_insertion_point(field_get:opencv_tensorflow.TensorProto.scomplex_val)
   return scomplex_val_.Get(index);
 }
 inline void TensorProto::set_scomplex_val(int index, float value) {
   scomplex_val_.Set(index, value);
-  // @@protoc_insertion_point(field_set:tensorflow.TensorProto.scomplex_val)
+  // @@protoc_insertion_point(field_set:opencv_tensorflow.TensorProto.scomplex_val)
 }
 inline void TensorProto::add_scomplex_val(float value) {
   scomplex_val_.Add(value);
-  // @@protoc_insertion_point(field_add:tensorflow.TensorProto.scomplex_val)
+  // @@protoc_insertion_point(field_add:opencv_tensorflow.TensorProto.scomplex_val)
 }
 inline const ::google::protobuf::RepeatedField< float >&
 TensorProto::scomplex_val() const {
-  // @@protoc_insertion_point(field_list:tensorflow.TensorProto.scomplex_val)
+  // @@protoc_insertion_point(field_list:opencv_tensorflow.TensorProto.scomplex_val)
   return scomplex_val_;
 }
 inline ::google::protobuf::RepeatedField< float >*
 TensorProto::mutable_scomplex_val() {
-  // @@protoc_insertion_point(field_mutable_list:tensorflow.TensorProto.scomplex_val)
+  // @@protoc_insertion_point(field_mutable_list:opencv_tensorflow.TensorProto.scomplex_val)
   return &scomplex_val_;
 }
 
@@ -749,25 +749,25 @@ inline void TensorProto::clear_int64_val() {
   int64_val_.Clear();
 }
 inline ::google::protobuf::int64 TensorProto::int64_val(int index) const {
-  // @@protoc_insertion_point(field_get:tensorflow.TensorProto.int64_val)
+  // @@protoc_insertion_point(field_get:opencv_tensorflow.TensorProto.int64_val)
   return int64_val_.Get(index);
 }
 inline void TensorProto::set_int64_val(int index, ::google::protobuf::int64 value) {
   int64_val_.Set(index, value);
-  // @@protoc_insertion_point(field_set:tensorflow.TensorProto.int64_val)
+  // @@protoc_insertion_point(field_set:opencv_tensorflow.TensorProto.int64_val)
 }
 inline void TensorProto::add_int64_val(::google::protobuf::int64 value) {
   int64_val_.Add(value);
-  // @@protoc_insertion_point(field_add:tensorflow.TensorProto.int64_val)
+  // @@protoc_insertion_point(field_add:opencv_tensorflow.TensorProto.int64_val)
 }
 inline const ::google::protobuf::RepeatedField< ::google::protobuf::int64 >&
 TensorProto::int64_val() const {
-  // @@protoc_insertion_point(field_list:tensorflow.TensorProto.int64_val)
+  // @@protoc_insertion_point(field_list:opencv_tensorflow.TensorProto.int64_val)
   return int64_val_;
 }
 inline ::google::protobuf::RepeatedField< ::google::protobuf::int64 >*
 TensorProto::mutable_int64_val() {
-  // @@protoc_insertion_point(field_mutable_list:tensorflow.TensorProto.int64_val)
+  // @@protoc_insertion_point(field_mutable_list:opencv_tensorflow.TensorProto.int64_val)
   return &int64_val_;
 }
 
@@ -779,25 +779,25 @@ inline void TensorProto::clear_bool_val() {
   bool_val_.Clear();
 }
 inline bool TensorProto::bool_val(int index) const {
-  // @@protoc_insertion_point(field_get:tensorflow.TensorProto.bool_val)
+  // @@protoc_insertion_point(field_get:opencv_tensorflow.TensorProto.bool_val)
   return bool_val_.Get(index);
 }
 inline void TensorProto::set_bool_val(int index, bool value) {
   bool_val_.Set(index, value);
-  // @@protoc_insertion_point(field_set:tensorflow.TensorProto.bool_val)
+  // @@protoc_insertion_point(field_set:opencv_tensorflow.TensorProto.bool_val)
 }
 inline void TensorProto::add_bool_val(bool value) {
   bool_val_.Add(value);
-  // @@protoc_insertion_point(field_add:tensorflow.TensorProto.bool_val)
+  // @@protoc_insertion_point(field_add:opencv_tensorflow.TensorProto.bool_val)
 }
 inline const ::google::protobuf::RepeatedField< bool >&
 TensorProto::bool_val() const {
-  // @@protoc_insertion_point(field_list:tensorflow.TensorProto.bool_val)
+  // @@protoc_insertion_point(field_list:opencv_tensorflow.TensorProto.bool_val)
   return bool_val_;
 }
 inline ::google::protobuf::RepeatedField< bool >*
 TensorProto::mutable_bool_val() {
-  // @@protoc_insertion_point(field_mutable_list:tensorflow.TensorProto.bool_val)
+  // @@protoc_insertion_point(field_mutable_list:opencv_tensorflow.TensorProto.bool_val)
   return &bool_val_;
 }
 
@@ -809,25 +809,25 @@ inline void TensorProto::clear_dcomplex_val() {
   dcomplex_val_.Clear();
 }
 inline double TensorProto::dcomplex_val(int index) const {
-  // @@protoc_insertion_point(field_get:tensorflow.TensorProto.dcomplex_val)
+  // @@protoc_insertion_point(field_get:opencv_tensorflow.TensorProto.dcomplex_val)
   return dcomplex_val_.Get(index);
 }
 inline void TensorProto::set_dcomplex_val(int index, double value) {
   dcomplex_val_.Set(index, value);
-  // @@protoc_insertion_point(field_set:tensorflow.TensorProto.dcomplex_val)
+  // @@protoc_insertion_point(field_set:opencv_tensorflow.TensorProto.dcomplex_val)
 }
 inline void TensorProto::add_dcomplex_val(double value) {
   dcomplex_val_.Add(value);
-  // @@protoc_insertion_point(field_add:tensorflow.TensorProto.dcomplex_val)
+  // @@protoc_insertion_point(field_add:opencv_tensorflow.TensorProto.dcomplex_val)
 }
 inline const ::google::protobuf::RepeatedField< double >&
 TensorProto::dcomplex_val() const {
-  // @@protoc_insertion_point(field_list:tensorflow.TensorProto.dcomplex_val)
+  // @@protoc_insertion_point(field_list:opencv_tensorflow.TensorProto.dcomplex_val)
   return dcomplex_val_;
 }
 inline ::google::protobuf::RepeatedField< double >*
 TensorProto::mutable_dcomplex_val() {
-  // @@protoc_insertion_point(field_mutable_list:tensorflow.TensorProto.dcomplex_val)
+  // @@protoc_insertion_point(field_mutable_list:opencv_tensorflow.TensorProto.dcomplex_val)
   return &dcomplex_val_;
 }
 
@@ -837,7 +837,7 @@ TensorProto::mutable_dcomplex_val() {
 
 // @@protoc_insertion_point(namespace_scope)
 
-}  // namespace tensorflow
+}  // namespace opencv_tensorflow
 
 // @@protoc_insertion_point(global_scope)
 

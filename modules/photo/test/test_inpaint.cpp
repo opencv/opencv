@@ -139,4 +139,22 @@ TEST_P(formats, 1c)
 
 INSTANTIATE_TEST_CASE_P(Photo_Inpaint, formats, testing::Values(CV_32F, CV_16U, CV_8U));
 
+TEST(Photo_InpaintBorders, regression)
+{
+    Mat img(64, 64, CV_8U);
+    img = 128;
+    img(Rect(0, 0, 16, 64)) = 0;
+
+    Mat mask(64, 64, CV_8U);
+    mask = 0;
+    mask(Rect(0, 0, 16, 64)) = 255;
+
+    Mat inpainted;
+    inpaint(img, mask, inpainted, 1, INPAINT_TELEA);
+
+    Mat diff;
+    cv::absdiff(inpainted, 128*Mat::ones(inpainted.size(), inpainted.type()), diff);
+    ASSERT_TRUE(countNonZero(diff) == 0);
+}
+
 }} // namespace

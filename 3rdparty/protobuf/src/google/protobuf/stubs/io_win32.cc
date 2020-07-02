@@ -91,7 +91,7 @@ struct CharTraits<wchar_t> {
 
 template <typename char_type>
 bool null_or_empty(const char_type* s) {
-  return s == nullptr || *s == 0;
+  return s == NULL || *s == 0;
 }
 
 // Returns true if the path starts with a drive letter, e.g. "c:".

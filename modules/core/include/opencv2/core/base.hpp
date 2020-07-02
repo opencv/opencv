@@ -188,7 +188,7 @@ enum NormTypes {
                  norm =  \forkthree
                  { \| \texttt{src1} \| _{L_2} ^{2} = \sum_I \texttt{src1}(I)^2} {if  \(\texttt{normType} = \texttt{NORM_L2SQR}\)}
                  { \| \texttt{src1} - \texttt{src2} \| _{L_2} ^{2} =  \sum_I (\texttt{src1}(I) - \texttt{src2}(I))^2 }{if  \(\texttt{normType} = \texttt{NORM_L2SQR}\) }
-                 { \left(\frac{\|\texttt{src1}-\texttt{src2}\|_{L_2} }{\|\texttt{src2}\|_{L_2}}\right)^2 }{if  \(\texttt{normType} = \texttt{NORM_RELATIVE | NORM_L2}\) }
+                 { \left(\frac{\|\texttt{src1}-\texttt{src2}\|_{L_2} }{\|\texttt{src2}\|_{L_2}}\right)^2 }{if  \(\texttt{normType} = \texttt{NORM_RELATIVE | NORM_L2SQR}\) }
                  \f]
                  */
                  NORM_L2SQR     = 5,
@@ -283,84 +283,6 @@ enum BorderTypes {
 //! @addtogroup core_utils
 //! @{
 
-//! @cond IGNORED
-
-//////////////// static assert /////////////////
-#define CVAUX_CONCAT_EXP(a, b) a##b
-#define CVAUX_CONCAT(a, b) CVAUX_CONCAT_EXP(a,b)
-
-#if defined(__clang__)
-#  ifndef __has_extension
-#    define __has_extension __has_feature /* compatibility, for older versions of clang */
-#  endif
-#  if __has_extension(cxx_static_assert)
-#    define CV_StaticAssert(condition, reason)    static_assert((condition), reason " " #condition)
-#  elif __has_extension(c_static_assert)
-#    define CV_StaticAssert(condition, reason)    _Static_assert((condition), reason " " #condition)
-#  endif
-#elif defined(__GNUC__)
-#  if (defined(__GXX_EXPERIMENTAL_CXX0X__) || __cplusplus >= 201103L)
-#    define CV_StaticAssert(condition, reason)    static_assert((condition), reason " " #condition)
-#  endif
-#elif defined(_MSC_VER)
-#  if _MSC_VER >= 1600 /* MSVC 10 */
-#    define CV_StaticAssert(condition, reason)    static_assert((condition), reason " " #condition)
-#  endif
-#endif
-#ifndef CV_StaticAssert
-#  if !defined(__clang__) && defined(__GNUC__) && (__GNUC__*100 + __GNUC_MINOR__ > 302)
-#    define CV_StaticAssert(condition, reason) ({ extern int __attribute__((error("CV_StaticAssert: " reason " " #condition))) CV_StaticAssert(); ((condition) ? 0 : CV_StaticAssert()); })
-#  else
-     template <bool x> struct CV_StaticAssert_failed;
-     template <> struct CV_StaticAssert_failed<true> { enum { val = 1 }; };
-     template<int x> struct CV_StaticAssert_test {};
-#    define CV_StaticAssert(condition, reason)\
-       typedef cv::CV_StaticAssert_test< sizeof(cv::CV_StaticAssert_failed< static_cast<bool>(condition) >) > CVAUX_CONCAT(CV_StaticAssert_failed_at_, __LINE__)
-#  endif
-#endif
-
-// Suppress warning "-Wdeprecated-declarations" / C4996
-#if defined(_MSC_VER)
-    #define CV_DO_PRAGMA(x) __pragma(x)
-#elif defined(__GNUC__)
-    #define CV_DO_PRAGMA(x) _Pragma (#x)
-#else
-    #define CV_DO_PRAGMA(x)
-#endif
-
-#ifdef _MSC_VER
-#define CV_SUPPRESS_DEPRECATED_START \
-    CV_DO_PRAGMA(warning(push)) \
-    CV_DO_PRAGMA(warning(disable: 4996))
-#define CV_SUPPRESS_DEPRECATED_END CV_DO_PRAGMA(warning(pop))
-#elif defined (__clang__) || ((__GNUC__)  && (__GNUC__*100 + __GNUC_MINOR__ > 405))
-#define CV_SUPPRESS_DEPRECATED_START \
-    CV_DO_PRAGMA(GCC diagnostic push) \
-    CV_DO_PRAGMA(GCC diagnostic ignored "-Wdeprecated-declarations")
-#define CV_SUPPRESS_DEPRECATED_END CV_DO_PRAGMA(GCC diagnostic pop)
-#else
-#define CV_SUPPRESS_DEPRECATED_START
-#define CV_SUPPRESS_DEPRECATED_END
-#endif
-
-#define CV_UNUSED(name) (void)name
-
-#if defined __GNUC__ && !defined __EXCEPTIONS
-#define CV_TRY
-#define CV_CATCH(A, B) for (A B; false; )
-#define CV_CATCH_ALL if (false)
-#define CV_THROW(A) abort()
-#define CV_RETHROW() abort()
-#else
-#define CV_TRY try
-#define CV_CATCH(A, B) catch(const A & B)
-#define CV_CATCH_ALL catch(...)
-#define CV_THROW(A) throw A
-#define CV_RETHROW() throw
-#endif
-
-//! @endcond
-
 /*! @brief Signals an error and raises the exception.
 
 By default the function prints information about the error to stderr,
@@ -375,21 +297,13 @@ It is possible to alternate error processing by using redirectError().
  */
 CV_EXPORTS CV_NORETURN void error(int _code, const String& _err, const char* _func, const char* _file, int _line);
 
-#if defined __GNUC__
-#define CV_Func __func__
-#elif defined _MSC_VER
-#define CV_Func __FUNCTION__
-#else
-#define CV_Func ""
-#endif
-
 #ifdef CV_STATIC_ANALYSIS
 
 // In practice, some macro are not processed correctly (noreturn is not detected).
 // We need to use simplified definition for them.
-#define CV_Error(...) do { abort(); } while (0)
-#define CV_Error_( code, args ) do { cv::format args; abort(); } while (0)
-#define CV_Assert_1( expr ) do { if (!(expr)) abort(); } while (0)
+#define CV_Error(code, msg) do { (void)(code); (void)(msg); abort(); } while (0)
+#define CV_Error_(code, args) do { (void)(code); (void)(cv::format args); abort(); } while (0)
+#define CV_Assert( expr ) do { if (!(expr)) abort(); } while (0)
 
 #else // CV_STATIC_ANALYSIS
 
@@ -411,7 +325,7 @@ This macro can be used to construct an error message on-fly to include some dyna
 for example:
 @code
     // note the extra parentheses around the formatted text message
-    CV_Error_( CV_StsOutOfRange,
+    CV_Error_(Error::StsOutOfRange,
     ("the value at (%d, %d)=%g is out of range", badPt.x, badPt.y, badValue));
 @endcode
 @param code one of Error::Code
@@ -419,7 +333,13 @@ for example:
 */
 #define CV_Error_( code, args ) cv::error( code, cv::format args, CV_Func, __FILE__, __LINE__ )
 
-#define CV_Assert_1( expr ) if(!!(expr)) ; else cv::error( cv::Error::StsAssert, #expr, CV_Func, __FILE__, __LINE__ )
+/** @brief Checks a condition at runtime and throws exception if it fails
+
+The macros CV_Assert (and CV_DbgAssert(expr)) evaluate the specified expression. If it is 0, the macros
+raise an error (see cv::error). The macro CV_Assert checks the condition in both Debug and Release
+configurations while CV_DbgAssert is only retained in the Debug configuration.
+*/
+#define CV_Assert( expr ) do { if(!!(expr)) ; else cv::error( cv::Error::StsAssert, #expr, CV_Func, __FILE__, __LINE__ ); } while(0)
 
 #endif // CV_STATIC_ANALYSIS
 
@@ -432,33 +352,26 @@ for example:
 #define CV_ErrorNoReturn_ CV_Error_
 #endif
 #endif
+
+#define CV_Assert_1 CV_Assert
+#define CV_Assert_2( expr, ... ) CV_Assert_1(expr); __CV_EXPAND(CV_Assert_1( __VA_ARGS__ ))
+#define CV_Assert_3( expr, ... ) CV_Assert_1(expr); __CV_EXPAND(CV_Assert_2( __VA_ARGS__ ))
+#define CV_Assert_4( expr, ... ) CV_Assert_1(expr); __CV_EXPAND(CV_Assert_3( __VA_ARGS__ ))
+#define CV_Assert_5( expr, ... ) CV_Assert_1(expr); __CV_EXPAND(CV_Assert_4( __VA_ARGS__ ))
+#define CV_Assert_6( expr, ... ) CV_Assert_1(expr); __CV_EXPAND(CV_Assert_5( __VA_ARGS__ ))
+#define CV_Assert_7( expr, ... ) CV_Assert_1(expr); __CV_EXPAND(CV_Assert_6( __VA_ARGS__ ))
+#define CV_Assert_8( expr, ... ) CV_Assert_1(expr); __CV_EXPAND(CV_Assert_7( __VA_ARGS__ ))
+#define CV_Assert_9( expr, ... ) CV_Assert_1(expr); __CV_EXPAND(CV_Assert_8( __VA_ARGS__ ))
+#define CV_Assert_10( expr, ... ) CV_Assert_1(expr); __CV_EXPAND(CV_Assert_9( __VA_ARGS__ ))
+
+#define CV_Assert_N(...) do { __CV_EXPAND(__CV_CAT(CV_Assert_, __CV_VA_NUM_ARGS(__VA_ARGS__)) (__VA_ARGS__)); } while(0)
+
 //! @endcond
 
-#define CV_Assert_2( expr1, expr2 ) CV_Assert_1(expr1); CV_Assert_1(expr2)
-#define CV_Assert_3( expr1, expr2, expr3 ) CV_Assert_2(expr1, expr2); CV_Assert_1(expr3)
-#define CV_Assert_4( expr1, expr2, expr3, expr4 ) CV_Assert_3(expr1, expr2, expr3); CV_Assert_1(expr4)
-#define CV_Assert_5( expr1, expr2, expr3, expr4, expr5 ) CV_Assert_4(expr1, expr2, expr3, expr4); CV_Assert_1(expr5)
-#define CV_Assert_6( expr1, expr2, expr3, expr4, expr5, expr6 ) CV_Assert_5(expr1, expr2, expr3, expr4, expr5); CV_Assert_1(expr6)
-#define CV_Assert_7( expr1, expr2, expr3, expr4, expr5, expr6, expr7 ) CV_Assert_6(expr1, expr2, expr3, expr4, expr5, expr6 ); CV_Assert_1(expr7)
-#define CV_Assert_8( expr1, expr2, expr3, expr4, expr5, expr6, expr7, expr8 ) CV_Assert_7(expr1, expr2, expr3, expr4, expr5, expr6, expr7 ); CV_Assert_1(expr8)
-#define CV_Assert_9( expr1, expr2, expr3, expr4, expr5, expr6, expr7, expr8, expr9 ) CV_Assert_8(expr1, expr2, expr3, expr4, expr5, expr6, expr7, expr8 ); CV_Assert_1(expr9)
-#define CV_Assert_10( expr1, expr2, expr3, expr4, expr5, expr6, expr7, expr8, expr9, expr10 ) CV_Assert_9(expr1, expr2, expr3, expr4, expr5, expr6, expr7, expr8, expr9 ); CV_Assert_1(expr10)
-
-#define CV_VA_NUM_ARGS_HELPER(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, N, ...) N
-#define CV_VA_NUM_ARGS(...) CV_VA_NUM_ARGS_HELPER(__VA_ARGS__, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0)
-
-/** @brief Checks a condition at runtime and throws exception if it fails
-
-The macros CV_Assert (and CV_DbgAssert(expr)) evaluate the specified expression. If it is 0, the macros
-raise an error (see cv::error). The macro CV_Assert checks the condition in both Debug and Release
-configurations while CV_DbgAssert is only retained in the Debug configuration.
-*/
-#define CV_Assert(...) do { CVAUX_CONCAT(CV_Assert_, CV_VA_NUM_ARGS(__VA_ARGS__)) (__VA_ARGS__); } while(0)
-
-/** replaced with CV_Assert(expr) in Debug configuration */
-#ifdef _DEBUG
+#if defined _DEBUG || defined CV_STATIC_ANALYSIS
 #  define CV_DbgAssert(expr) CV_Assert(expr)
 #else
+/** replaced with CV_Assert(expr) in Debug configuration */
 #  define CV_DbgAssert(expr)
 #endif
 
@@ -468,7 +381,7 @@ configurations while CV_DbgAssert is only retained in the Debug configuration.
  */
 struct CV_EXPORTS Hamming
 {
-    enum { normType = NORM_HAMMING };
+    static const NormTypes normType = NORM_HAMMING;
     typedef unsigned char ValueType;
     typedef int ResultType;
 
@@ -715,9 +628,13 @@ CV_EXPORTS_W void   setUseIPP(bool flag);
 CV_EXPORTS_W String getIppVersion();
 
 // IPP Not-Exact mode. This function may force use of IPP then both IPP and OpenCV provide proper results
-// but have internal accuracy differences which have to much direct or indirect impact on accuracy tests.
-CV_EXPORTS_W bool useIPP_NE();
-CV_EXPORTS_W void setUseIPP_NE(bool flag);
+// but have internal accuracy differences which have too much direct or indirect impact on accuracy tests.
+CV_EXPORTS_W bool useIPP_NotExact();
+CV_EXPORTS_W void setUseIPP_NotExact(bool flag);
+#ifndef DISABLE_OPENCV_3_COMPATIBILITY
+static inline bool useIPP_NE() { return useIPP_NotExact(); }
+static inline void setUseIPP_NE(bool flag) { setUseIPP_NotExact(flag); }
+#endif
 
 } // ipp
 

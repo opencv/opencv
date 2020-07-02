@@ -45,9 +45,9 @@ TEST(Resize_Bitexact, Linear8U)
         { CV_8UC4, Size(   4,   3) },
         { CV_8UC1, Size( 342, 384) }, //   1/3      1/2
         { CV_8UC1, Size( 342, 256) }, //   1/3      1/3
-        { CV_8UC1, Size( 342, 256) },
-        { CV_8UC1, Size( 342, 256) },
-        { CV_8UC1, Size( 342, 256) },
+        { CV_8UC2, Size( 342, 256) },
+        { CV_8UC3, Size( 342, 256) },
+        { CV_8UC4, Size( 342, 256) },
         { CV_8UC1, Size( 512, 256) }, //   1/2      1/3
         { CV_8UC1, Size( 146, 110) }, //   1/7      1/7
         { CV_8UC3, Size( 146, 110) },
@@ -83,13 +83,13 @@ TEST(Resize_Bitexact, Linear8U)
             softdouble scale_y = softdouble::one() / softdouble(inv_scale_y);
 
             Mat src(rows, cols, type), refdst(drows, dcols, type), dst;
+            RNG rnd(0x123456789abcdefULL);
             for (int j = 0; j < rows; j++)
             {
                 uint8_t* line = src.ptr(j);
                 for (int i = 0; i < cols; i++)
                     for (int c = 0; c < cn; c++)
                     {
-                        RNG rnd(0x123456789abcdefULL);
                         double val = j < rows / 2 ? ( i < cols / 2 ? ((sin((i + 1)*CV_PI / 256.)*sin((j + 1)*CV_PI / 256.)*sin((cn + 4)*CV_PI / 8.) + 1.)*128.)                         :
                                                                      (((i / 128 + j / 128) % 2) * 250 + (j / 128) % 2)                                                                ) :
                                                     ( i < cols / 2 ? ((i / 128) * (85 - j / 256 * 40) * ((j / 128) % 2) + (7 - i / 128) * (85 - j / 256 * 40) * ((j / 128 + 1) % 2))    :

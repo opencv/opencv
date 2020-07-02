@@ -58,8 +58,8 @@ static void CannyThreshold(int, void*)
 int main( int argc, char** argv )
 {
   //![load]
-  CommandLineParser parser( argc, argv, "{@input | ../data/fruits.jpg | input image}" );
-  src = imread( parser.get<String>( "@input" ), IMREAD_COLOR ); // Load an image
+  CommandLineParser parser( argc, argv, "{@input | fruits.jpg | input image}" );
+  src = imread( samples::findFile( parser.get<String>( "@input" ) ), IMREAD_COLOR ); // Load an image
 
   if( src.empty() )
   {

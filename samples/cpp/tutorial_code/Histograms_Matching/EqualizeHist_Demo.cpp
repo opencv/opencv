@@ -18,8 +18,8 @@ using namespace std;
 int main( int argc, char** argv )
 {
     //! [Load image]
-    CommandLineParser parser( argc, argv, "{@input | ../data/lena.jpg | input image}" );
-    Mat src = imread( parser.get<String>( "@input" ), IMREAD_COLOR );
+    CommandLineParser parser( argc, argv, "{@input | lena.jpg | input image}" );
+    Mat src = imread( samples::findFile( parser.get<String>( "@input" ) ), IMREAD_COLOR );
     if( src.empty() )
     {
         cout << "Could not open or find the image!\n" << endl;

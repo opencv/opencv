@@ -513,7 +513,7 @@ static Point2d weightedCentroid(InputArray _src, cv::Point peakLocation, cv::Siz
 
 cv::Point2d cv::phaseCorrelate(InputArray _src1, InputArray _src2, InputArray _window, double* response)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat src1 = _src1.getMat();
     Mat src2 = _src2.getMat();
@@ -596,7 +596,7 @@ cv::Point2d cv::phaseCorrelate(InputArray _src1, InputArray _src2, InputArray _w
 
 void cv::createHanningWindow(OutputArray _dst, cv::Size winSize, int type)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert( type == CV_32FC1 || type == CV_64FC1 );
     CV_Assert( winSize.width > 1 && winSize.height > 1 );

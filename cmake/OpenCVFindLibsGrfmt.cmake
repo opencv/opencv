@@ -153,8 +153,23 @@ if(NOT WEBP_VERSION AND WEBP_INCLUDE_DIR)
   endif()
 endif()
 
+# --- libopenjp2 (optional, check before libjasper) ---
+if(WITH_OPENJPEG)
+  find_package(OpenJPEG QUIET)
+
+  if(NOT OpenJPEG_FOUND OR OPENJPEG_MAJOR_VERSION LESS 2)
+    set(HAVE_OPENJPEG NO)
+    ocv_clear_vars(OPENJPEG_MAJOR_VERSION OPENJPEG_MINOR_VERSION OPENJPEG_BUILD_VERSION OPENJPEG_LIBRARIES OPENJPEG_INCLUDE_DIRS)
+    message(STATUS "Could NOT find OpenJPEG (minimal suitable version: 2.0, recommended version >= 2.3.1)")
+  else()
+    set(HAVE_OPENJPEG YES)
+    message(STATUS "Found OpenJPEG: ${OPENJPEG_LIBRARIES} "
+            "(found version \"${OPENJPEG_MAJOR_VERSION}.${OPENJPEG_MINOR_VERSION}.${OPENJPEG_BUILD_VERSION}\")")
+  endif()
+endif()
+
 # --- libjasper (optional, should be searched after libjpeg) ---
-if(WITH_JASPER)
+if(WITH_JASPER AND NOT HAVE_OPENJPEG)
   if(BUILD_JASPER)
     ocv_clear_vars(JASPER_FOUND)
   else()
@@ -211,21 +226,22 @@ endif()
 
 # --- OpenEXR (optional) ---
 if(WITH_OPENEXR)
-  if(BUILD_OPENEXR)
-    ocv_clear_vars(OPENEXR_FOUND)
-  else()
+  ocv_clear_vars(HAVE_OPENEXR)
+  if(NOT BUILD_OPENEXR)
     include("${OpenCV_SOURCE_DIR}/cmake/OpenCVFindOpenEXR.cmake")
   endif()
 
-  if(NOT OPENEXR_FOUND)
+  if(OPENEXR_FOUND)
+    set(HAVE_OPENEXR YES)
+  else()
     ocv_clear_vars(OPENEXR_INCLUDE_PATHS OPENEXR_LIBRARIES OPENEXR_ILMIMF_LIBRARY OPENEXR_VERSION)
 
     set(OPENEXR_LIBRARIES IlmImf)
-    set(OPENEXR_ILMIMF_LIBRARY IlmImf)
     add_subdirectory("${OpenCV_SOURCE_DIR}/3rdparty/openexr")
+    if(OPENEXR_VERSION)  # check via TARGET doesn't work
+      set(HAVE_OPENEXR YES)
+    endif()
   endif()
-
-  set(HAVE_OPENEXR YES)
 endif()
 
 # --- GDAL (optional) ---
@@ -267,4 +283,9 @@ if(WITH_IMGCODEC_PXM)
   set(HAVE_IMGCODEC_PXM ON)
 elseif(DEFINED WITH_IMGCODEC_PXM)
   set(HAVE_IMGCODEC_PXM OFF)
+endif()
+if(WITH_IMGCODEC_PFM)
+  set(HAVE_IMGCODEC_PFM ON)
+elseif(DEFINED WITH_IMGCODEC_PFM)
+  set(HAVE_IMGCODEC_PFM OFF)
 endif()

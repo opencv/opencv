@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2007, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -35,30 +35,31 @@
 //-----------------------------------------------------------------------------
 //
 //	ACES image file I/O.
-//
+//	
 //-----------------------------------------------------------------------------
 
 #include <ImfAcesFile.h>
 #include <ImfRgbaFile.h>
 #include <ImfStandardAttributes.h>
 #include <Iex.h>
-#include <algorithm> // for std::max()
+#include <algorithm>
 
 using namespace std;
-using namespace Imath;
-using namespace Iex;
+using namespace IMATH_NAMESPACE;
+using namespace IEX_NAMESPACE;
+#include "ImfNamespace.h"
 
-namespace Imf {
+OPENEXR_IMF_INTERNAL_NAMESPACE_SOURCE_ENTER
 
 
 const Chromaticities &
 acesChromaticities ()
 {
-    static const Chromaticities acesChr
-        (V2f (0.73470,  0.26530),	// red
-         V2f (0.00000,  1.00000),	// green
-         V2f (0.00010, -0.07700),	// blue
-         V2f (0.32168,  0.33767));	// white
+    static const Chromaticities acesChr 
+	    (V2f (0.73470,  0.26530),	// red
+	     V2f (0.00000,  1.00000),	// green
+	     V2f (0.00010, -0.07700),	// blue
+	     V2f (0.32168,  0.33767));	// white
 
     return acesChr;
 }
@@ -102,10 +103,10 @@ checkCompression (Compression compression)
       case NO_COMPRESSION:
       case PIZ_COMPRESSION:
       case B44A_COMPRESSION:
-    break;
+	break;
 
       default:
-    throw ArgExc ("Invalid compression type for ACES file.");
+	throw ArgExc ("Invalid compression type for ACES file.");
     }
 }
 
@@ -127,16 +128,16 @@ AcesOutputFile::AcesOutputFile
     addAdoptedNeutral (newHeader, acesChromaticities().white);
 
     _data->rgbaFile = new RgbaOutputFile (name.c_str(),
-                      newHeader,
-                      rgbaChannels,
-                      numThreads);
+					  newHeader,
+					  rgbaChannels,
+					  numThreads);
 
     _data->rgbaFile->setYCRounding (7, 6);
 }
 
 
 AcesOutputFile::AcesOutputFile
-    (OStream &os,
+    (OPENEXR_IMF_INTERNAL_NAMESPACE::OStream &os,
      const Header &header,
      RgbaChannels rgbaChannels,
      int numThreads)
@@ -150,9 +151,9 @@ AcesOutputFile::AcesOutputFile
     addAdoptedNeutral (newHeader, acesChromaticities().white);
 
     _data->rgbaFile = new RgbaOutputFile (os,
-                      header,
-                      rgbaChannels,
-                      numThreads);
+					  header,
+					  rgbaChannels,
+					  numThreads);
 
     _data->rgbaFile->setYCRounding (7, 6);
 }
@@ -160,11 +161,11 @@ AcesOutputFile::AcesOutputFile
 
 AcesOutputFile::AcesOutputFile
     (const std::string &name,
-     const Imath::Box2i &displayWindow,
-     const Imath::Box2i &dataWindow,
+     const IMATH_NAMESPACE::Box2i &displayWindow,
+     const IMATH_NAMESPACE::Box2i &dataWindow,
      RgbaChannels rgbaChannels,
      float pixelAspectRatio,
-     const Imath::V2f screenWindowCenter,
+     const IMATH_NAMESPACE::V2f screenWindowCenter,
      float screenWindowWidth,
      LineOrder lineOrder,
      Compression compression,
@@ -175,20 +176,20 @@ AcesOutputFile::AcesOutputFile
     checkCompression (compression);
 
     Header newHeader (displayWindow,
-              dataWindow.isEmpty()? displayWindow: dataWindow,
-              pixelAspectRatio,
-              screenWindowCenter,
-              screenWindowWidth,
-              lineOrder,
-              compression);
+		      dataWindow.isEmpty()? displayWindow: dataWindow,
+		      pixelAspectRatio,
+		      screenWindowCenter,
+		      screenWindowWidth,
+		      lineOrder,
+		      compression);
 
     addChromaticities (newHeader, acesChromaticities());
     addAdoptedNeutral (newHeader, acesChromaticities().white);
 
     _data->rgbaFile = new RgbaOutputFile (name.c_str(),
-                      newHeader,
-                      rgbaChannels,
-                      numThreads);
+					  newHeader,
+					  rgbaChannels,
+					  numThreads);
 
     _data->rgbaFile->setYCRounding (7, 6);
 }
@@ -200,7 +201,7 @@ AcesOutputFile::AcesOutputFile
      int height,
      RgbaChannels rgbaChannels,
      float pixelAspectRatio,
-     const Imath::V2f screenWindowCenter,
+     const IMATH_NAMESPACE::V2f screenWindowCenter,
      float screenWindowWidth,
      LineOrder lineOrder,
      Compression compression,
@@ -211,20 +212,20 @@ AcesOutputFile::AcesOutputFile
     checkCompression (compression);
 
     Header newHeader (width,
-              height,
-              pixelAspectRatio,
-              screenWindowCenter,
-              screenWindowWidth,
-              lineOrder,
-              compression);
+		      height,
+		      pixelAspectRatio,
+		      screenWindowCenter,
+		      screenWindowWidth,
+		      lineOrder,
+		      compression);
 
     addChromaticities (newHeader, acesChromaticities());
     addAdoptedNeutral (newHeader, acesChromaticities().white);
 
     _data->rgbaFile = new RgbaOutputFile (name.c_str(),
-                      newHeader,
-                      rgbaChannels,
-                      numThreads);
+					  newHeader,
+					  rgbaChannels,
+					  numThreads);
 
     _data->rgbaFile->setYCRounding (7, 6);
 }
@@ -236,7 +237,7 @@ AcesOutputFile::~AcesOutputFile ()
 }
 
 
-void
+void		
 AcesOutputFile::setFrameBuffer
     (const Rgba *base,
      size_t xStride,
@@ -246,14 +247,14 @@ AcesOutputFile::setFrameBuffer
 }
 
 
-void
+void		
 AcesOutputFile::writePixels (int numScanLines)
 {
     _data->rgbaFile->writePixels (numScanLines);
 }
 
 
-int
+int			
 AcesOutputFile::currentScanLine () const
 {
     return _data->rgbaFile->currentScanLine();
@@ -267,49 +268,49 @@ AcesOutputFile::header () const
 }
 
 
-const Imath::Box2i &
+const IMATH_NAMESPACE::Box2i &
 AcesOutputFile::displayWindow () const
 {
     return _data->rgbaFile->displayWindow();
 }
 
 
-const Imath::Box2i &
+const IMATH_NAMESPACE::Box2i &
 AcesOutputFile::dataWindow () const
 {
     return _data->rgbaFile->dataWindow();
 }
 
 
-float
+float		
 AcesOutputFile::pixelAspectRatio () const
 {
     return _data->rgbaFile->pixelAspectRatio();
 }
 
 
-const Imath::V2f
+const IMATH_NAMESPACE::V2f
 AcesOutputFile::screenWindowCenter () const
 {
     return _data->rgbaFile->screenWindowCenter();
 }
 
 
-float
+float		
 AcesOutputFile::screenWindowWidth () const
 {
     return _data->rgbaFile->screenWindowWidth();
 }
 
 
-LineOrder
+LineOrder		
 AcesOutputFile::lineOrder () const
 {
     return _data->rgbaFile->lineOrder();
 }
 
 
-Compression
+Compression		
 AcesOutputFile::compression () const
 {
     return _data->rgbaFile->compression();
@@ -323,7 +324,7 @@ AcesOutputFile::channels () const
 }
 
 
-void
+void		
 AcesOutputFile::updatePreviewImage (const PreviewRgba pixels[])
 {
     _data->rgbaFile->updatePreviewImage (pixels);
@@ -379,28 +380,28 @@ AcesInputFile::Data::initColorConversion ()
     Chromaticities fileChr;
 
     if (hasChromaticities (header))
-    fileChr = chromaticities (header);
+	fileChr = chromaticities (header);
 
     V2f fileNeutral = fileChr.white;
 
     if (hasAdoptedNeutral (header))
-    fileNeutral = adoptedNeutral (header);
+	fileNeutral = adoptedNeutral (header);
 
     const Chromaticities acesChr = acesChromaticities();
 
     V2f acesNeutral = acesChr.white;
 
     if (fileChr.red == acesChr.red &&
-    fileChr.green == acesChr.green &&
-    fileChr.blue == acesChr.blue &&
-    fileChr.white == acesChr.white &&
-    fileNeutral == acesNeutral)
+	fileChr.green == acesChr.green &&
+	fileChr.blue == acesChr.blue &&
+	fileChr.white == acesChr.white &&
+	fileNeutral == acesNeutral)
     {
-    //
-    // The file already contains ACES data,
-    // color conversion is not necessary.
+	//
+	// The file already contains ACES data,
+	// color conversion is not necessary.
 
-    return;
+	return;
     }
 
     mustConvertColor = true;
@@ -419,16 +420,16 @@ AcesInputFile::Data::initColorConversion ()
     //
 
     static const M44f bradfordCPM
-        (0.895100, -0.750200,  0.038900,  0.000000,
-         0.266400,  1.713500, -0.068500,  0.000000,
-        -0.161400,  0.036700,  1.029600,  0.000000,
-         0.000000,  0.000000,  0.000000,  1.000000);
+	    (0.895100, -0.750200,  0.038900,  0.000000,
+	     0.266400,  1.713500, -0.068500,  0.000000,
+	    -0.161400,  0.036700,  1.029600,  0.000000,
+	     0.000000,  0.000000,  0.000000,  1.000000);
 
     const static M44f inverseBradfordCPM
-        (0.986993,  0.432305, -0.008529,  0.000000,
-        -0.147054,  0.518360,  0.040043,  0.000000,
-         0.159963,  0.049291,  0.968487,  0.000000,
-         0.000000,  0.000000,  0.000000,  1.000000);
+	    (0.986993,  0.432305, -0.008529,  0.000000,
+	    -0.147054,  0.518360,  0.040043,  0.000000,
+	     0.159963,  0.049291,  0.968487,  0.000000,
+	     0.000000,  0.000000,  0.000000,  1.000000);
 
     //
     // Convert the white points of the two RGB spaces to XYZ
@@ -447,16 +448,16 @@ AcesInputFile::Data::initColorConversion ()
     //
 
     V3f ratio ((acesNeutralXYZ * bradfordCPM) /
-           (fileNeutralXYZ * bradfordCPM));
+	       (fileNeutralXYZ * bradfordCPM));
 
     M44f ratioMat (ratio[0], 0,        0,        0,
-           0,        ratio[1], 0,        0,
-           0,        0,        ratio[2], 0,
-           0,        0,        0,        1);
+		   0,        ratio[1], 0,        0,
+		   0,        0,        ratio[2], 0,
+		   0,        0,        0,        1);
 
     M44f bradfordTrans = bradfordCPM *
                          ratioMat *
-             inverseBradfordCPM;
+			 inverseBradfordCPM;
 
     //
     // Build a combined file-RGB-to-ACES-RGB conversion matrix
@@ -488,7 +489,7 @@ AcesInputFile::~AcesInputFile ()
 }
 
 
-void
+void		
 AcesInputFile::setFrameBuffer (Rgba *base, size_t xStride, size_t yStride)
 {
     _data->rgbaFile->setFrameBuffer (base, xStride, yStride);
@@ -498,7 +499,7 @@ AcesInputFile::setFrameBuffer (Rgba *base, size_t xStride, size_t yStride)
 }
 
 
-void
+void		
 AcesInputFile::readPixels (int scanLine1, int scanLine2)
 {
     //
@@ -514,32 +515,32 @@ AcesInputFile::readPixels (int scanLine1, int scanLine2)
     //
 
     if (!_data->mustConvertColor)
-    return;
+	return;
 
     int minY = min (scanLine1, scanLine2);
     int maxY = max (scanLine1, scanLine2);
 
     for (int y = minY; y <= maxY; ++y)
     {
-    Rgba *base = _data->fbBase +
-             _data->fbXStride * _data->minX +
-             _data->fbYStride * y;
+	Rgba *base = _data->fbBase +
+		     _data->fbXStride * _data->minX +
+		     _data->fbYStride * y;
 
-    for (int x = _data->minX; x <= _data->maxX; ++x)
-    {
-        V3f aces = V3f (base->r, base->g, base->b) * _data->fileToAces;
+	for (int x = _data->minX; x <= _data->maxX; ++x)
+	{
+	    V3f aces = V3f (base->r, base->g, base->b) * _data->fileToAces;
 
-        base->r = aces[0];
-        base->g = aces[1];
-        base->b = aces[2];
+	    base->r = aces[0];
+	    base->g = aces[1];
+	    base->b = aces[2];
 
-        base += _data->fbXStride;
-    }
+	    base += _data->fbXStride;
+	}
     }
 }
 
 
-void
+void		
 AcesInputFile::readPixels (int scanLine)
 {
     readPixels (scanLine, scanLine);
@@ -553,14 +554,14 @@ AcesInputFile::header () const
 }
 
 
-const Imath::Box2i &
+const IMATH_NAMESPACE::Box2i &
 AcesInputFile::displayWindow () const
 {
     return _data->rgbaFile->displayWindow();
 }
 
 
-const Imath::Box2i &
+const IMATH_NAMESPACE::Box2i &
 AcesInputFile::dataWindow () const
 {
     return _data->rgbaFile->dataWindow();
@@ -574,7 +575,7 @@ AcesInputFile::pixelAspectRatio () const
 }
 
 
-const Imath::V2f
+const IMATH_NAMESPACE::V2f
 AcesInputFile::screenWindowCenter () const
 {
     return _data->rgbaFile->screenWindowCenter();
@@ -609,7 +610,7 @@ AcesInputFile::channels () const
 }
 
 
-const char *
+const char *  
 AcesInputFile::fileName () const
 {
     return _data->rgbaFile->fileName();
@@ -629,4 +630,4 @@ AcesInputFile::version () const
     return _data->rgbaFile->version();
 }
 
-} // namespace Imf
+OPENEXR_IMF_INTERNAL_NAMESPACE_SOURCE_EXIT

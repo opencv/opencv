@@ -85,10 +85,8 @@ we will later have to clip the data in order to avoid overflow.
 
 @code{.py}
 # Tonemap HDR image
-tonemap1 = cv.createTonemapDurand(gamma=2.2)
+tonemap1 = cv.createTonemap(gamma=2.2)
 res_debevec = tonemap1.process(hdr_debevec.copy())
-tonemap2 = cv.createTonemapDurand(gamma=1.3)
-res_robertson = tonemap2.process(hdr_robertson.copy())
 @endcode
 
 ### 4. Merge exposures using Mertens fusion
@@ -173,5 +171,5 @@ Additional Resources
 
 Exercises
 ---------
-1. Try all tonemap algorithms: cv::TonemapDrago, cv::TonemapDurand, cv::TonemapMantiuk and cv::TonemapReinhard
+1. Try all tonemap algorithms: cv::TonemapDrago, cv::TonemapMantiuk and cv::TonemapReinhard
 2. Try changing the parameters in the HDR calibration and tonemap methods.

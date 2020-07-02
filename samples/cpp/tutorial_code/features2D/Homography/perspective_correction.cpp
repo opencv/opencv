@@ -1,11 +1,8 @@
 #include <iostream>
-#include <opencv2/opencv_modules.hpp>
-#ifdef HAVE_OPENCV_ARUCO
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/calib3d.hpp>
 #include <opencv2/highgui.hpp>
-#include <opencv2/aruco.hpp>
 
 using namespace std;
 using namespace cv;
@@ -22,8 +19,8 @@ Scalar randomColor( RNG& rng )
 
 void perspectiveCorrection(const string &img1Path, const string &img2Path, const Size &patternSize, RNG &rng)
 {
-    Mat img1 = imread(img1Path);
-    Mat img2 = imread(img2Path);
+    Mat img1 = imread( samples::findFile(img1Path) );
+    Mat img2 = imread( samples::findFile(img2Path) );
 
     //! [find-corners]
     vector<Point2f> corners1, corners2;
@@ -71,8 +68,8 @@ void perspectiveCorrection(const string &img1Path, const string &img2Path, const
 
 const char* params
     = "{ help h         |       | print usage }"
-      "{ image1         | ../data/left02.jpg | path to the source chessboard image }"
-      "{ image2         | ../data/left01.jpg | path to the desired chessboard image }"
+      "{ image1         | left02.jpg | path to the source chessboard image }"
+      "{ image2         | left01.jpg | path to the desired chessboard image }"
       "{ width bw       | 9     | chessboard width }"
       "{ height bh      | 6     | chessboard height }";
 }
@@ -97,10 +94,3 @@ int main(int argc, char *argv[])
 
     return 0;
 }
-#else
-int main()
-{
-    std::cerr << "FATAL ERROR: This sample requires opencv_aruco module (from opencv_contrib)" << std::endl;
-    return 0;
-}
-#endif

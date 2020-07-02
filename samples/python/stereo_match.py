@@ -33,10 +33,10 @@ def write_ply(fn, verts, colors):
         np.savetxt(f, verts, fmt='%f %f %f %d %d %d ')
 
 
-if __name__ == '__main__':
+def main():
     print('loading images...')
-    imgL = cv.pyrDown( cv.imread('../data/aloeL.jpg') )  # downscale images for faster processing
-    imgR = cv.pyrDown( cv.imread('../data/aloeR.jpg') )
+    imgL = cv.pyrDown(cv.imread(cv.samples.findFile('aloeL.jpg')))  # downscale images for faster processing
+    imgR = cv.pyrDown(cv.imread(cv.samples.findFile('aloeR.jpg')))
 
     # disparity range is tuned for 'aloe' image pair
     window_size = 3
@@ -69,10 +69,17 @@ if __name__ == '__main__':
     out_points = points[mask]
     out_colors = colors[mask]
     out_fn = 'out.ply'
-    write_ply('out.ply', out_points, out_colors)
-    print('%s saved' % 'out.ply')
+    write_ply(out_fn, out_points, out_colors)
+    print('%s saved' % out_fn)
 
     cv.imshow('left', imgL)
     cv.imshow('disparity', (disp-min_disp)/num_disp)
     cv.waitKey()
+
+    print('Done')
+
+
+if __name__ == '__main__':
+    print(__doc__)
+    main()
     cv.destroyAllWindows()

@@ -21,7 +21,6 @@ set(OPENCV_CUDA_SAMPLES_REQUIRED_DEPS
   opencv_cudaoptflow
   opencv_cudabgsegm
   opencv_cudastereo
-  opencv_cudalegacy
   opencv_cudaobjdetect)
 ocv_check_dependencies(${OPENCV_CUDA_SAMPLES_REQUIRED_DEPS})
 
@@ -30,6 +29,9 @@ if(NOT BUILD_EXAMPLES OR NOT OCV_DEPENDENCIES_FOUND)
 endif()
 
 project(gpu_samples)
+if(HAVE_CUDA OR CUDA_FOUND)
+  add_definitions(-DHAVE_CUDA=1)
+endif()
 if(COMMAND ocv_warnings_disable)
   ocv_warnings_disable(CMAKE_CXX_FLAGS -Wsuggest-override -Winconsistent-missing-override)
 endif()
@@ -47,16 +49,13 @@ if((CV_GCC OR CV_CLANG) AND NOT ENABLE_NOISY_WARNINGS)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-function")
 endif()
 file(GLOB all_samples RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.cpp)
-if(NOT HAVE_OPENGL)
-  ocv_list_filterout(all_samples "opengl")
-endif()
 foreach(sample_filename ${all_samples})
   ocv_define_sample(tgt ${sample_filename} gpu)
-  ocv_target_link_libraries(${tgt} ${OPENCV_LINKER_LIBS} ${OPENCV_CUDA_SAMPLES_REQUIRED_DEPS})
+  ocv_target_link_libraries(${tgt} PRIVATE ${OPENCV_LINKER_LIBS} ${OPENCV_CUDA_SAMPLES_REQUIRED_DEPS})
   if(HAVE_opencv_xfeatures2d)
-    ocv_target_link_libraries(${tgt} opencv_xfeatures2d)
+    ocv_target_link_libraries(${tgt} PRIVATE opencv_xfeatures2d)
   endif()
   if(HAVE_opencv_cudacodec)
-    ocv_target_link_libraries(${tgt} opencv_cudacodec)
+    ocv_target_link_libraries(${tgt} PRIVATE opencv_cudacodec)
   endif()
 endforeach()

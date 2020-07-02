@@ -16,7 +16,7 @@ def thresh_callback(val):
 
     ## [findContours]
     # Find contours
-    _, contours, _ = cv.findContours(canny_output, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+    contours, _ = cv.findContours(canny_output, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
     ## [findContours]
 
     ## [allthework]
@@ -25,8 +25,8 @@ def thresh_callback(val):
     boundRect = [None]*len(contours)
     centers = [None]*len(contours)
     radius = [None]*len(contours)
-    for i in range(len(contours)):
-        contours_poly[i] = cv.approxPolyDP(contours[i], 3, True)
+    for i, c in enumerate(contours):
+        contours_poly[i] = cv.approxPolyDP(c, 3, True)
         boundRect[i] = cv.boundingRect(contours_poly[i])
         centers[i], radius[i] = cv.minEnclosingCircle(contours_poly[i])
     ## [allthework]
@@ -53,10 +53,10 @@ def thresh_callback(val):
 ## [setup]
 # Load source image
 parser = argparse.ArgumentParser(description='Code for Creating Bounding boxes and circles for contours tutorial.')
-parser.add_argument('--input', help='Path to input image.', default='../data/stuff.jpg')
+parser.add_argument('--input', help='Path to input image.', default='stuff.jpg')
 args = parser.parse_args()
 
-src = cv.imread(args.input)
+src = cv.imread(cv.samples.findFile(args.input))
 if src is None:
     print('Could not open or find the image:', args.input)
     exit(0)

@@ -1,6 +1,10 @@
 Introduction to OpenCV Development with Clojure {#tutorial_clojure_dev_intro}
 ===============================================
 
+@prev_tutorial{tutorial_java_eclipse}
+@next_tutorial{tutorial_android_dev_intro}
+
+
 As of OpenCV 2.4.4, OpenCV supports desktop Java development using nearly the same interface as for
 Android development.
 
@@ -27,8 +31,8 @@ lein run
 Preamble
 --------
 
-For detailed instruction on installing OpenCV with desktop Java support refer to the [corresponding
-tutorial](http://docs.opencv.org/2.4.4-beta/doc/tutorials/introduction/desktop_java/java_dev_intro.html).
+For detailed instruction on installing OpenCV with desktop Java support refer to the @ref tutorial_java_dev_intro "corresponding
+tutorial".
 
 If you are in hurry, here is a minimum quick start guide to install OpenCV on Mac OS X:
 
@@ -302,7 +306,7 @@ Then you can start interacting with OpenCV by just referencing the fully qualifi
 classes.
 
 @note
-[Here](http://docs.opencv.org/java/) you can find the full OpenCV Java API.
+[Here](https://docs.opencv.org/master/javadoc/index.html) you can find the full OpenCV Java API.
 
 @code{.clojure}
 user=> (org.opencv.core.Point. 0 0)
@@ -387,8 +391,7 @@ user=> (javadoc Rect)
 @endcode
 ### Mimic the OpenCV Java Tutorial Sample in the REPL
 
-Let's now try to port to Clojure the [opencv java tutorial
-sample](http://docs.opencv.org/2.4.4-beta/doc/tutorials/introduction/desktop_java/java_dev_intro.html).
+Let's now try to port to Clojure the @ref tutorial_java_dev_intro "OpenCV Java tutorial sample".
 Instead of writing it in a source file we're going to evaluate it at the REPL.
 
 Following is the original Java source code of the cited sample.
@@ -500,7 +503,7 @@ using the following OpenCV methods:
 -   the imwrite static method from the Highgui class to write an image to a file
 -   the GaussianBlur static method from the Imgproc class to apply to blur the original image
 
-We're also going to use the Mat class which is returned from the imread method and accpeted as the
+We're also going to use the Mat class which is returned from the imread method and accepted as the
 main argument to both the GaussianBlur and the imwrite methods.
 
 ### Add an image to the project

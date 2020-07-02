@@ -17,10 +17,10 @@ def main(argv):
     cv.namedWindow(window_name, cv.WINDOW_AUTOSIZE)
 
     # Load the source image
-    imageName = argv[0] if len(argv) > 0 else "../data/lena.jpg"
+    imageName = argv[0] if len(argv) > 0 else 'lena.jpg'
 
     global src
-    src = cv.imread(imageName, 1)
+    src = cv.imread(cv.samples.findFile(imageName))
     if src is None:
         print ('Error opening image')
         print ('Usage: smoothing.py [image_name -- default ../data/lena.jpg] \n')

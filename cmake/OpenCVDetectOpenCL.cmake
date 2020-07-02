@@ -2,14 +2,15 @@ set(OPENCL_FOUND ON CACHE BOOL "OpenCL library is found")
 if(APPLE)
   set(OPENCL_LIBRARY "-framework OpenCL" CACHE STRING "OpenCL library")
   set(OPENCL_INCLUDE_DIR "" CACHE PATH "OpenCL include directory")
-else(APPLE)
+else()
   set(OPENCL_LIBRARY "" CACHE STRING "OpenCL library")
   set(OPENCL_INCLUDE_DIR "${OpenCV_SOURCE_DIR}/3rdparty/include/opencl/1.2" CACHE PATH "OpenCL include directory")
   ocv_install_3rdparty_licenses(opencl-headers "${OpenCV_SOURCE_DIR}/3rdparty/include/opencl/LICENSE.txt")
-endif(APPLE)
+endif()
 mark_as_advanced(OPENCL_INCLUDE_DIR OPENCL_LIBRARY)
 
 if(OPENCL_FOUND)
+
   if(OPENCL_LIBRARY)
     set(HAVE_OPENCL_STATIC ON)
     set(OPENCL_LIBRARIES "${OPENCL_LIBRARY}")
@@ -77,4 +78,7 @@ if(OPENCL_FOUND)
       list(APPEND OPENCL_INCLUDE_DIRS "${CLAMDBLAS_INCLUDE_DIR}")
     endif()
   endif()
+
+  # check WITH_OPENCL_D3D11_NV is located in OpenCVDetectDirectX.cmake file
+
 endif()

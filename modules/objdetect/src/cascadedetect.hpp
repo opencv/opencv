@@ -317,12 +317,12 @@ public:
     struct Feature
     {
         Feature();
-        bool read( const FileNode& node );
+        bool read(const FileNode& node, const Size& origWinSize);
 
         bool tilted;
 
         enum { RECT_NUM = 3 };
-        struct
+        struct RectWeigth
         {
             Rect r;
             float weight;
@@ -412,7 +412,7 @@ public:
         Feature( int x, int y, int _block_w, int _block_h  ) :
                  rect(x, y, _block_w, _block_h) {}
 
-        bool read(const FileNode& node );
+        bool read(const FileNode& node, const Size& origWinSize);
 
         Rect rect; // weight and height for block
     };
@@ -484,7 +484,7 @@ template<class FEval>
 inline int predictOrdered( CascadeClassifierImpl& cascade,
                            Ptr<FeatureEvaluator> &_featureEvaluator, double& sum )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     int nstages = (int)cascade.data.stages.size();
     int nodeOfs = 0, leafOfs = 0;
@@ -526,7 +526,7 @@ template<class FEval>
 inline int predictCategorical( CascadeClassifierImpl& cascade,
                                Ptr<FeatureEvaluator> &_featureEvaluator, double& sum )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     int nstages = (int)cascade.data.stages.size();
     int nodeOfs = 0, leafOfs = 0;
@@ -570,7 +570,7 @@ template<class FEval>
 inline int predictOrderedStump( CascadeClassifierImpl& cascade,
                                 Ptr<FeatureEvaluator> &_featureEvaluator, double& sum )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert(!cascade.data.stumps.empty());
     FEval& featureEvaluator = (FEval&)*_featureEvaluator;
@@ -609,7 +609,7 @@ template<class FEval>
 inline int predictCategoricalStump( CascadeClassifierImpl& cascade,
                                     Ptr<FeatureEvaluator> &_featureEvaluator, double& sum )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert(!cascade.data.stumps.empty());
     int nstages = (int)cascade.data.stages.size();
@@ -647,4 +647,10 @@ inline int predictCategoricalStump( CascadeClassifierImpl& cascade,
     sum = (double)tmp;
     return 1;
 }
+
+namespace haar_cvt
+{
+bool convert(const FileNode& oldcascade_root, FileStorage& newfs);
+}
+
 }

@@ -9,13 +9,18 @@
 
 #include <stdio.h>
 #include <stdarg.h>
+#include "libport.h"
 
 int _TIFF_vsnprintf_f(char* str, size_t size, const char* format, va_list ap)
 {
   int count = -1;
 
   if (size != 0)
+#if _MSC_VER <=	1310
+    count = _vsnprintf(str, size, format, ap);
+#else
     count = _vsnprintf_s(str, size, _TRUNCATE, format, ap);
+#endif
   if (count == -1)
     count = _vscprintf(format, ap);
 
@@ -35,4 +40,3 @@ int _TIFF_snprintf_f(char* str, size_t size, const char* format, ...)
 }
 
 #endif // _MSC_VER
-

@@ -1,5 +1,3 @@
-/* $Id: tif_dir.h,v 1.55 2017-06-01 12:44:04 erouault Exp $ */
-
 /*
  * Copyright (c) 1988-1997 Sam Leffler
  * Copyright (c) 1991-1997 Silicon Graphics, Inc.
@@ -26,6 +24,10 @@
 
 #ifndef _TIFFDIR_
 #define	_TIFFDIR_
+
+#include "tiff.h"
+#include "tiffio.h"
+
 /*
  * ``Library-private'' Directory-related Definitions.
  */

@@ -71,7 +71,8 @@ TEST_P(Imgcodecs_FileMode, regression)
 
 const string all_images[] =
 {
-#ifdef HAVE_JASPER
+#if (defined(HAVE_JASPER) && defined(OPENCV_IMGCODECS_ENABLE_JASPER_TESTS)) \
+    || defined(HAVE_OPENJPEG)
     "readwrite/Rome.jp2",
     "readwrite/Bretagne2.jp2",
     "readwrite/Bretagne2.jp2",
@@ -158,6 +159,7 @@ TEST_P(Imgcodecs_ExtSize, write_imageseq)
 
         Mat img_gt(size, CV_MAKETYPE(CV_8U, cn), Scalar::all(0));
         circle(img_gt, center, radius, Scalar::all(255));
+
 #if 1
         if (ext == ".pbm" || ext == ".pgm" || ext == ".ppm")
         {
@@ -172,6 +174,7 @@ TEST_P(Imgcodecs_ExtSize, write_imageseq)
         EXPECT_EQ(img.type(), img.type());
         EXPECT_EQ(cn, img.channels());
 
+
         if (ext == ".jpg")
         {
             // JPEG format does not provide 100% accuracy
@@ -181,14 +184,21 @@ TEST_P(Imgcodecs_ExtSize, write_imageseq)
             EXPECT_LT(n, expected);
             EXPECT_PRED_FORMAT2(cvtest::MatComparator(10, 0), img, img_gt);
         }
+        else if (ext == ".pfm")
+        {
+            img_gt.convertTo(img_gt, CV_MAKETYPE(CV_32F, img.channels()));
+            double n = cvtest::norm(img, img_gt, NORM_L2);
+            EXPECT_LT(n, 1.);
+            EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), img, img_gt);
+        }
         else
         {
             double n = cvtest::norm(img, img_gt, NORM_L2);
             EXPECT_LT(n, 1.);
             EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), img, img_gt);
         }
+
 #if 0
-        std::cout << filename << std::endl;
         imshow("loaded", img);
         waitKey(0);
 #else
@@ -214,7 +224,10 @@ const string all_exts[] =
     ".ppm",
     ".pgm",
     ".pbm",
-    ".pnm"
+    ".pnm",
+#endif
+#ifdef HAVE_IMGCODEC_PFM
+    ".pfm",
 #endif
 };
 
@@ -337,6 +350,30 @@ TEST(Imgcodecs_Pam, read_write)
 }
 #endif
 
+#ifdef HAVE_IMGCODEC_PFM
+TEST(Imgcodecs_Pfm, read_write)
+{
+  Mat img = imread(findDataFile("readwrite/lena.pam"));
+  ASSERT_FALSE(img.empty());
+  img.convertTo(img, CV_32F, 1/255.0f);
+
+  std::vector<int> params;
+  string writefile = cv::tempfile(".pfm");
+  EXPECT_NO_THROW(cv::imwrite(writefile, img, params));
+  cv::Mat reread = cv::imread(writefile, IMREAD_UNCHANGED);
+
+  string writefile_no_param = cv::tempfile(".pfm");
+  EXPECT_NO_THROW(cv::imwrite(writefile_no_param, img));
+  cv::Mat reread_no_param = cv::imread(writefile_no_param, IMREAD_UNCHANGED);
+
+  EXPECT_EQ(0, cvtest::norm(reread, reread_no_param, NORM_INF));
+  EXPECT_EQ(0, cvtest::norm(img, reread, NORM_INF));
+
+  EXPECT_EQ(0, remove(writefile.c_str()));
+  EXPECT_EQ(0, remove(writefile_no_param.c_str()));
+}
+#endif
+
 TEST(Imgcodecs, write_parameter_type)
 {
     cv::Mat m(10, 10, CV_8UC1, cv::Scalar::all(0));
@@ -352,3 +389,7 @@ TEST(Imgcodecs, write_parameter_type)
 }
 
 }} // namespace
+
+#ifdef HAVE_OPENEXR
+#include "test_exr.impl.hpp"
+#endif

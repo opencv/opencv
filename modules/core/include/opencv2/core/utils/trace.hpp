@@ -7,14 +7,12 @@
 
 #include <opencv2/core/cvdef.h>
 
-//! @addtogroup core_logging
-// This section describes OpenCV tracing utilities.
-//
-//! @{
-
 namespace cv {
 namespace utils {
 namespace trace {
+
+//! @addtogroup core_logging
+//! @{
 
 //! Macro to trace function
 #define CV_TRACE_FUNCTION()
@@ -36,6 +34,10 @@ namespace trace {
 
 //! @cond IGNORED
 #define CV_TRACE_NS cv::utils::trace
+
+#if !defined(OPENCV_DISABLE_TRACE) && defined(__EMSCRIPTEN__)
+#define OPENCV_DISABLE_TRACE 1
+#endif
 
 namespace details {
 
@@ -142,7 +144,7 @@ CV_EXPORTS void traceArg(const TraceArg& arg, double value);
     static const CV_TRACE_NS::details::Region::LocationStaticStorage \
         CV__TRACE_LOCATION_VARNAME(loc_id) = { &(CV__TRACE_LOCATION_EXTRA_VARNAME(loc_id)), name, CV_TRACE_FILENAME, __LINE__, flags};
 
-#define CV__TRACE_DEFINE_LOCATION_FN(name, flags) CV__TRACE_DEFINE_LOCATION_(fn, name, (flags | CV_TRACE_NS::details::REGION_FLAG_FUNCTION))
+#define CV__TRACE_DEFINE_LOCATION_FN(name, flags) CV__TRACE_DEFINE_LOCATION_(fn, name, ((flags) | CV_TRACE_NS::details::REGION_FLAG_FUNCTION))
 
 
 #define CV__TRACE_OPENCV_FUNCTION() \
@@ -243,8 +245,8 @@ CV_EXPORTS void traceArg(const TraceArg& arg, double value);
 
 //! @endcond
 
-}}} // namespace
-
 //! @}
+
+}}} // namespace
 
 #endif // OPENCV_TRACE_HPP

@@ -68,13 +68,17 @@
         @defgroup core_c_glue Connections with C++
     @}
     @defgroup core_array Operations on arrays
+    @defgroup core_async Asynchronous API
     @defgroup core_xml XML/YAML Persistence
     @defgroup core_cluster Clustering
     @defgroup core_utils Utility and system functions and macros
     @{
+        @defgroup core_logging Logging facilities
         @defgroup core_utils_sse SSE utilities
         @defgroup core_utils_neon NEON utilities
+        @defgroup core_utils_vsx VSX utilities
         @defgroup core_utils_softfloat Softfloat support
+        @defgroup core_utils_samples Utility functions for OpenCV samples
     @}
     @defgroup core_opengl OpenGL interoperability
     @defgroup core_ipp Intel IPP Asynchronous C/C++ Converters
@@ -91,6 +95,7 @@
         @{
             @defgroup core_hal_intrin_impl Private implementation helpers
         @}
+        @defgroup core_lowlevel_api Low-level API for external libraries / plugins
     @}
 @}
  */
@@ -211,27 +216,6 @@ enum KmeansFlags {
     KMEANS_USE_INITIAL_LABELS = 1
 };
 
-//! type of line
-enum LineTypes {
-    FILLED  = -1,
-    LINE_4  = 4, //!< 4-connected line
-    LINE_8  = 8, //!< 8-connected line
-    LINE_AA = 16 //!< antialiased line
-};
-
-//! Only a subset of Hershey fonts <https://en.wikipedia.org/wiki/Hershey_fonts> are supported
-enum HersheyFonts {
-    FONT_HERSHEY_SIMPLEX        = 0, //!< normal size sans-serif font
-    FONT_HERSHEY_PLAIN          = 1, //!< small size sans-serif font
-    FONT_HERSHEY_DUPLEX         = 2, //!< normal size sans-serif font (more complex than FONT_HERSHEY_SIMPLEX)
-    FONT_HERSHEY_COMPLEX        = 3, //!< normal size serif font
-    FONT_HERSHEY_TRIPLEX        = 4, //!< normal size serif font (more complex than FONT_HERSHEY_COMPLEX)
-    FONT_HERSHEY_COMPLEX_SMALL  = 5, //!< smaller version of FONT_HERSHEY_COMPLEX
-    FONT_HERSHEY_SCRIPT_SIMPLEX = 6, //!< hand-writing style font
-    FONT_HERSHEY_SCRIPT_COMPLEX = 7, //!< more complex variant of FONT_HERSHEY_SCRIPT_SIMPLEX
-    FONT_ITALIC                 = 16 //!< flag for italic font
-};
-
 enum ReduceTypes { REDUCE_SUM = 0, //!< the output is the sum of all rows/columns of the matrix.
                    REDUCE_AVG = 1, //!< the output is the mean vector of all rows/columns of the matrix.
                    REDUCE_MAX = 2, //!< the output is the maximum (column/row-wise) of all rows/columns of the matrix.
@@ -273,9 +257,11 @@ of p and len.
 */
 CV_EXPORTS_W int borderInterpolate(int p, int len, int borderType);
 
-/** @example copyMakeBorder_demo.cpp
-An example using copyMakeBorder function
- */
+/** @example samples/cpp/tutorial_code/ImgTrans/copyMakeBorder_demo.cpp
+An example using copyMakeBorder function.
+Check @ref tutorial_copyMakeBorder "the corresponding tutorial" for more details
+*/
+
 /** @brief Forms a border around an image.
 
 The function copies the source image into the middle of the destination image. The areas to the
@@ -308,9 +294,9 @@ if src was not a ROI, use borderType | #BORDER_ISOLATED.
 @param src Source image.
 @param dst Destination image of the same type as src and the size Size(src.cols+left+right,
 src.rows+top+bottom) .
-@param top
-@param bottom
-@param left
+@param top the top pixels
+@param bottom the bottom pixels
+@param left the left pixels
 @param right Parameter specifying how many pixels in each direction from the source image rectangle
 to extrapolate. For example, top=1, bottom=1, left=1, right=1 mean that 1 pixel-wide border needs
 to be built.
@@ -434,8 +420,13 @@ The function cv::divide divides one array by another:
 or a scalar by an array when there is no src1 :
 \f[\texttt{dst(I) = saturate(scale/src2(I))}\f]
 
-When src2(I) is zero, dst(I) will also be zero. Different channels of
-multi-channel arrays are processed independently.
+Different channels of multi-channel arrays are processed independently.
+
+For integer types when src2(I) is zero, dst(I) will also be zero.
+
+@note In case of floating point data there is no special defined behavior for zero src2(I) values.
+Regular floating-point division is used.
+Expect correct IEEE-754 behaviour for floating-point data (with NaN, Inf result values).
 
 @note Saturation is not applied when the output array has the depth CV_32S. You may even get
 result of an incorrect sign in the case of overflow.
@@ -474,9 +465,10 @@ The function can also be emulated with a matrix expression, for example:
 */
 CV_EXPORTS_W void scaleAdd(InputArray src1, double alpha, InputArray src2, OutputArray dst);
 
-/** @example AddingImagesTrackbar.cpp
+/** @example samples/cpp/tutorial_code/HighGUI/AddingImagesTrackbar.cpp
+Check @ref tutorial_trackbar "the corresponding tutorial" for more details
+*/
 
- */
 /** @brief Calculates the weighted sum of two arrays.
 
 The function addWeighted calculates the weighted sum of two arrays as follows:
@@ -1359,6 +1351,17 @@ You may even get a negative value in the case of overflow.
 */
 CV_EXPORTS_W void absdiff(InputArray src1, InputArray src2, OutputArray dst);
 
+/** @brief  This is an overloaded member function, provided for convenience (python)
+Copies the matrix to another one.
+When the operation mask is specified, if the Mat::create call shown above reallocates the matrix, the newly allocated matrix is initialized with all zeros before copying the data.
+@param src source matrix.
+@param dst Destination matrix. If it does not have a proper size or type before the operation, it is
+reallocated.
+@param mask Operation mask of the same size as \*this. Its non-zero elements indicate which matrix
+elements need to be copied. The mask has to be of type CV_8U and can have 1 or multiple channels.
+*/
+
+void CV_EXPORTS_W copyTo(InputArray src, OutputArray dst, InputArray mask);
 /** @brief  Checks if array elements lie between the elements of two other arrays.
 
 The function checks the range as follows:
@@ -1981,9 +1984,19 @@ CV_EXPORTS_W void calcCovarMatrix( InputArray samples, OutputArray covar,
 CV_EXPORTS_W void PCACompute(InputArray data, InputOutputArray mean,
                              OutputArray eigenvectors, int maxComponents = 0);
 
+/** wrap PCA::operator() and add eigenvalues output parameter */
+CV_EXPORTS_AS(PCACompute2) void PCACompute(InputArray data, InputOutputArray mean,
+                                           OutputArray eigenvectors, OutputArray eigenvalues,
+                                           int maxComponents = 0);
+
 /** wrap PCA::operator() */
 CV_EXPORTS_W void PCACompute(InputArray data, InputOutputArray mean,
                              OutputArray eigenvectors, double retainedVariance);
+
+/** wrap PCA::operator() and add eigenvalues output parameter */
+CV_EXPORTS_AS(PCACompute2) void PCACompute(InputArray data, InputOutputArray mean,
+                                           OutputArray eigenvectors, OutputArray eigenvalues,
+                                           double retainedVariance);
 
 /** wrap PCA::project */
 CV_EXPORTS_W void PCAProject(InputArray data, InputArray mean,
@@ -2520,14 +2533,18 @@ public:
     Mat mean; //!< mean value subtracted before the projection and added after the back projection
 };
 
-/** @example pca.cpp
-  An example using %PCA for dimensionality reduction while maintaining an amount of variance
- */
+/** @example samples/cpp/pca.cpp
+An example using %PCA for dimensionality reduction while maintaining an amount of variance
+*/
+
+/** @example samples/cpp/tutorial_code/ml/introduction_to_pca/introduction_to_pca.cpp
+Check @ref tutorial_introduction_to_pca "the corresponding tutorial" for more details
+*/
 
 /**
-   @brief Linear Discriminant Analysis
-   @todo document this class
- */
+@brief Linear Discriminant Analysis
+@todo document this class
+*/
 class CV_EXPORTS LDA
 {
 public:
@@ -2589,7 +2606,6 @@ public:
     static Mat subspaceReconstruct(InputArray W, InputArray mean, InputArray src);
 
 protected:
-    bool _dataAsRow; // unused, but needed for 3.0 ABI compatibility.
     int _num_components;
     Mat _eigenvectors;
     Mat _eigenvalues;
@@ -2843,7 +2859,7 @@ public:
     use explicit type cast operators, as in the a1 initialization above.
     @param a lower inclusive boundary of the returned random number.
     @param b upper non-inclusive boundary of the returned random number.
-      */
+    */
     int uniform(int a, int b);
     /** @overload */
     float uniform(float a, float b);
@@ -2905,7 +2921,7 @@ public:
 
 Inspired by http://www.math.sci.hiroshima-u.ac.jp/~m-mat/MT/MT2002/CODES/mt19937ar.c
 @todo document
- */
+*/
 class CV_EXPORTS RNG_MT19937
 {
 public:
@@ -2923,17 +2939,11 @@ public:
     unsigned operator ()(unsigned N);
     unsigned operator ()();
 
-    /** @brief returns uniformly distributed integer random number from [a,b) range
-
-*/
+    /** @brief returns uniformly distributed integer random number from [a,b) range*/
     int uniform(int a, int b);
-    /** @brief returns uniformly distributed floating-point random number from [a,b) range
-
-*/
+    /** @brief returns uniformly distributed floating-point random number from [a,b) range*/
     float uniform(float a, float b);
-    /** @brief returns uniformly distributed double-precision floating-point random number from [a,b) range
-
-*/
+    /** @brief returns uniformly distributed double-precision floating-point random number from [a,b) range*/
     double uniform(double a, double b);
 
 private:
@@ -2947,14 +2957,14 @@ private:
 //! @addtogroup core_cluster
 //!  @{
 
-/** @example kmeans.cpp
-  An example on K-means clustering
+/** @example samples/cpp/kmeans.cpp
+An example on K-means clustering
 */
 
 /** @brief Finds centers of clusters and groups input samples around the clusters.
 
 The function kmeans implements a k-means algorithm that finds the centers of cluster_count clusters
-and groups the input samples around the clusters. As an output, \f$\texttt{labels}_i\f$ contains a
+and groups the input samples around the clusters. As an output, \f$\texttt{bestLabels}_i\f$ contains a
 0-based cluster index for the sample stored in the \f$i^{th}\f$ row of the samples matrix.
 
 @note
@@ -3008,7 +3018,8 @@ public:
 class CV_EXPORTS Formatter
 {
 public:
-    enum { FMT_DEFAULT = 0,
+    enum FormatType {
+           FMT_DEFAULT = 0,
            FMT_MATLAB  = 1,
            FMT_CSV     = 2,
            FMT_PYTHON  = 3,
@@ -3020,11 +3031,12 @@ public:
 
     virtual Ptr<Formatted> format(const Mat& mtx) const = 0;
 
+    virtual void set16fPrecision(int p = 4) = 0;
     virtual void set32fPrecision(int p = 8) = 0;
     virtual void set64fPrecision(int p = 16) = 0;
     virtual void setMultiline(bool ml = true) = 0;
 
-    static Ptr<Formatter> get(int fmt = FMT_DEFAULT);
+    static Ptr<Formatter> get(Formatter::FormatType fmt = FMT_DEFAULT);
 
 };
 
@@ -3047,7 +3059,7 @@ String& operator << (String& out, const Mat& mtx)
 
 class CV_EXPORTS Algorithm;
 
-template<typename _Tp> struct ParamType {};
+template<typename _Tp, typename _EnumTp = void> struct ParamType {};
 
 
 /** @brief This is a base class for all more or less complex algorithms in OpenCV
@@ -3060,7 +3072,7 @@ etc.).
 
 Here is example of SimpleBlobDetector use in your application via Algorithm interface:
 @snippet snippets/core_various.cpp Algorithm
- */
+*/
 class CV_EXPORTS_W Algorithm
 {
 public:
@@ -3073,32 +3085,32 @@ public:
 
     /** @brief Stores algorithm parameters in a file storage
     */
-    virtual void write(FileStorage& fs) const { (void)fs; }
+    virtual void write(FileStorage& fs) const { CV_UNUSED(fs); }
 
     /** @brief simplified API for language bindings
-     * @overload
-     */
+    * @overload
+    */
     CV_WRAP void write(const Ptr<FileStorage>& fs, const String& name = String()) const;
 
     /** @brief Reads algorithm parameters from a file storage
     */
-    CV_WRAP virtual void read(const FileNode& fn) { (void)fn; }
+    CV_WRAP virtual void read(const FileNode& fn) { CV_UNUSED(fn); }
 
     /** @brief Returns true if the Algorithm is empty (e.g. in the very beginning or after unsuccessful read
-     */
+    */
     CV_WRAP virtual bool empty() const { return false; }
 
     /** @brief Reads algorithm from the file node
 
-     This is static template method of Algorithm. It's usage is following (in the case of SVM):
-     @code
-     cv::FileStorage fsRead("example.xml", FileStorage::READ);
-     Ptr<SVM> svm = Algorithm::read<SVM>(fsRead.root());
-     @endcode
-     In order to make this method work, the derived class must overwrite Algorithm::read(const
-     FileNode& fn) and also have static create() method without parameters
-     (or with all the optional parameters)
-     */
+    This is static template method of Algorithm. It's usage is following (in the case of SVM):
+    @code
+    cv::FileStorage fsRead("example.xml", FileStorage::READ);
+    Ptr<SVM> svm = Algorithm::read<SVM>(fsRead.root());
+    @endcode
+    In order to make this method work, the derived class must overwrite Algorithm::read(const
+    FileNode& fn) and also have static create() method without parameters
+    (or with all the optional parameters)
+    */
     template<typename _Tp> static Ptr<_Tp> read(const FileNode& fn)
     {
         Ptr<_Tp> obj = _Tp::create();
@@ -3108,16 +3120,16 @@ public:
 
     /** @brief Loads algorithm from the file
 
-     @param filename Name of the file to read.
-     @param objname The optional name of the node to read (if empty, the first top-level node will be used)
+    @param filename Name of the file to read.
+    @param objname The optional name of the node to read (if empty, the first top-level node will be used)
 
-     This is static template method of Algorithm. It's usage is following (in the case of SVM):
-     @code
-     Ptr<SVM> svm = Algorithm::load<SVM>("my_svm_model.xml");
-     @endcode
-     In order to make this method work, the derived class must overwrite Algorithm::read(const
-     FileNode& fn).
-     */
+    This is static template method of Algorithm. It's usage is following (in the case of SVM):
+    @code
+    Ptr<SVM> svm = Algorithm::load<SVM>("my_svm_model.xml");
+    @endcode
+    In order to make this method work, the derived class must overwrite Algorithm::read(const
+    FileNode& fn).
+    */
     template<typename _Tp> static Ptr<_Tp> load(const String& filename, const String& objname=String())
     {
         FileStorage fs(filename, FileStorage::READ);
@@ -3131,14 +3143,14 @@ public:
 
     /** @brief Loads algorithm from a String
 
-     @param strModel The string variable containing the model you want to load.
-     @param objname The optional name of the node to read (if empty, the first top-level node will be used)
+    @param strModel The string variable containing the model you want to load.
+    @param objname The optional name of the node to read (if empty, the first top-level node will be used)
 
-     This is static template method of Algorithm. It's usage is following (in the case of SVM):
-     @code
-     Ptr<SVM> svm = Algorithm::loadFromString<SVM>(myStringModel);
-     @endcode
-     */
+    This is static template method of Algorithm. It's usage is following (in the case of SVM):
+    @code
+    Ptr<SVM> svm = Algorithm::loadFromString<SVM>(myStringModel);
+    @endcode
+    */
     template<typename _Tp> static Ptr<_Tp> loadFromString(const String& strModel, const String& objname=String())
     {
         FileStorage fs(strModel, FileStorage::READ + FileStorage::MEMORY);
@@ -3149,20 +3161,20 @@ public:
     }
 
     /** Saves the algorithm to a file.
-     In order to make this method work, the derived class must implement Algorithm::write(FileStorage& fs). */
+    In order to make this method work, the derived class must implement Algorithm::write(FileStorage& fs). */
     CV_WRAP virtual void save(const String& filename) const;
 
     /** Returns the algorithm string identifier.
-     This string is used as top level xml/yml node tag when the object is saved to a file or string. */
+    This string is used as top level xml/yml node tag when the object is saved to a file or string. */
     CV_WRAP virtual String getDefaultName() const;
 
 protected:
     void writeFormat(FileStorage& fs) const;
 };
 
-struct Param {
-    enum { INT=0, BOOLEAN=1, REAL=2, STRING=3, MAT=4, MAT_VECTOR=5, ALGORITHM=6, FLOAT=7,
-           UNSIGNED_INT=8, UINT64=9, UCHAR=11, SCALAR=12 };
+enum struct Param {
+    INT=0, BOOLEAN=1, REAL=2, STRING=3, MAT=4, MAT_VECTOR=5, ALGORITHM=6, FLOAT=7,
+    UNSIGNED_INT=8, UINT64=9, UCHAR=11, SCALAR=12
 };
 
 
@@ -3172,7 +3184,7 @@ template<> struct ParamType<bool>
     typedef bool const_param_type;
     typedef bool member_type;
 
-    enum { type = Param::BOOLEAN };
+    static const Param type = Param::BOOLEAN;
 };
 
 template<> struct ParamType<int>
@@ -3180,7 +3192,7 @@ template<> struct ParamType<int>
     typedef int const_param_type;
     typedef int member_type;
 
-    enum { type = Param::INT };
+    static const Param type = Param::INT;
 };
 
 template<> struct ParamType<double>
@@ -3188,7 +3200,7 @@ template<> struct ParamType<double>
     typedef double const_param_type;
     typedef double member_type;
 
-    enum { type = Param::REAL };
+    static const Param type = Param::REAL;
 };
 
 template<> struct ParamType<String>
@@ -3196,7 +3208,7 @@ template<> struct ParamType<String>
     typedef const String& const_param_type;
     typedef String member_type;
 
-    enum { type = Param::STRING };
+    static const Param type = Param::STRING;
 };
 
 template<> struct ParamType<Mat>
@@ -3204,7 +3216,7 @@ template<> struct ParamType<Mat>
     typedef const Mat& const_param_type;
     typedef Mat member_type;
 
-    enum { type = Param::MAT };
+    static const Param type = Param::MAT;
 };
 
 template<> struct ParamType<std::vector<Mat> >
@@ -3212,7 +3224,7 @@ template<> struct ParamType<std::vector<Mat> >
     typedef const std::vector<Mat>& const_param_type;
     typedef std::vector<Mat> member_type;
 
-    enum { type = Param::MAT_VECTOR };
+    static const Param type = Param::MAT_VECTOR;
 };
 
 template<> struct ParamType<Algorithm>
@@ -3220,7 +3232,7 @@ template<> struct ParamType<Algorithm>
     typedef const Ptr<Algorithm>& const_param_type;
     typedef Ptr<Algorithm> member_type;
 
-    enum { type = Param::ALGORITHM };
+    static const Param type = Param::ALGORITHM;
 };
 
 template<> struct ParamType<float>
@@ -3228,7 +3240,7 @@ template<> struct ParamType<float>
     typedef float const_param_type;
     typedef float member_type;
 
-    enum { type = Param::FLOAT };
+    static const Param type = Param::FLOAT;
 };
 
 template<> struct ParamType<unsigned>
@@ -3236,7 +3248,7 @@ template<> struct ParamType<unsigned>
     typedef unsigned const_param_type;
     typedef unsigned member_type;
 
-    enum { type = Param::UNSIGNED_INT };
+    static const Param type = Param::UNSIGNED_INT;
 };
 
 template<> struct ParamType<uint64>
@@ -3244,7 +3256,7 @@ template<> struct ParamType<uint64>
     typedef uint64 const_param_type;
     typedef uint64 member_type;
 
-    enum { type = Param::UINT64 };
+    static const Param type = Param::UINT64;
 };
 
 template<> struct ParamType<uchar>
@@ -3252,7 +3264,7 @@ template<> struct ParamType<uchar>
     typedef uchar const_param_type;
     typedef uchar member_type;
 
-    enum { type = Param::UCHAR };
+    static const Param type = Param::UCHAR;
 };
 
 template<> struct ParamType<Scalar>
@@ -3260,7 +3272,16 @@ template<> struct ParamType<Scalar>
     typedef const Scalar& const_param_type;
     typedef Scalar member_type;
 
-    enum { type = Param::SCALAR };
+    static const Param type = Param::SCALAR;
+};
+
+template<typename _Tp>
+struct ParamType<_Tp, typename std::enable_if< std::is_enum<_Tp>::value >::type>
+{
+    typedef typename std::underlying_type<_Tp>::type const_param_type;
+    typedef typename std::underlying_type<_Tp>::type member_type;
+
+    static const Param type = Param::INT;
 };
 
 //! @} core_basic

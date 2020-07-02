@@ -137,5 +137,5 @@ public abstract class BaseLoaderCallback implements LoaderCallbackInterface {
     }
 
     protected Context mAppContext;
-    private final static String TAG = "OpenCVLoader/BaseLoaderCallback";
+    private final static String TAG = "OCV/BaseLoaderCallback";
 }

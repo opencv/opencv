@@ -58,7 +58,7 @@ public:
 
     void process(InputArrayOfArrays src, OutputArray dst, InputArray _times, InputArray input_response) CV_OVERRIDE
     {
-        CV_INSTRUMENT_REGION()
+        CV_INSTRUMENT_REGION();
 
         std::vector<Mat> images;
         src.getMatVector(images);
@@ -124,7 +124,7 @@ public:
 
     void process(InputArrayOfArrays src, OutputArray dst, InputArray times) CV_OVERRIDE
     {
-        CV_INSTRUMENT_REGION()
+        CV_INSTRUMENT_REGION();
 
         process(src, dst, times, Mat());
     }
@@ -152,14 +152,14 @@ public:
 
     void process(InputArrayOfArrays src, OutputArrayOfArrays dst, InputArray, InputArray) CV_OVERRIDE
     {
-        CV_INSTRUMENT_REGION()
+        CV_INSTRUMENT_REGION();
 
         process(src, dst);
     }
 
     void process(InputArrayOfArrays src, OutputArray dst) CV_OVERRIDE
     {
-        CV_INSTRUMENT_REGION()
+        CV_INSTRUMENT_REGION();
 
         std::vector<Mat> images;
         src.getMatVector(images);
@@ -310,7 +310,7 @@ public:
 
     void process(InputArrayOfArrays src, OutputArray dst, InputArray _times, InputArray input_response) CV_OVERRIDE
     {
-        CV_INSTRUMENT_REGION()
+        CV_INSTRUMENT_REGION();
 
         std::vector<Mat> images;
         src.getMatVector(images);
@@ -349,7 +349,7 @@ public:
 
     void process(InputArrayOfArrays src, OutputArray dst, InputArray times) CV_OVERRIDE
     {
-        CV_INSTRUMENT_REGION()
+        CV_INSTRUMENT_REGION();
 
         process(src, dst, times, Mat());
     }

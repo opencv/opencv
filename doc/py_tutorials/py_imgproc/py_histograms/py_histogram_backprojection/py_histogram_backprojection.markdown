@@ -15,7 +15,7 @@ histograms**.
 **What is it actually in simple words?** It is used for image segmentation or finding objects of
 interest in an image. In simple words, it creates an image of the same size (but single channel) as
 that of our input image, where each pixel corresponds to the probability of that pixel belonging to
-our object. In more simpler worlds, the output image will have our object of interest in more white
+our object. In more simpler words, the output image will have our object of interest in more white
 compared to remaining part. Well, that is an intuitive explanation. (I can't make it more simpler).
 Histogram Backprojection is used with camshift algorithm etc.
 

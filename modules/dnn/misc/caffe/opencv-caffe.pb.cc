@@ -2092,19 +2092,19 @@ const ::google::protobuf::uint32 TableStruct::offsets[] GOOGLE_PROTOBUF_ATTRIBUT
   GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(::opencv_caffe::PriorBoxParameter, offset_w_),
   GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(::opencv_caffe::PriorBoxParameter, width_),
   GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(::opencv_caffe::PriorBoxParameter, height_),
+  ~0u,
+  ~0u,
+  ~0u,
+  6,
+  7,
+  ~0u,
   0,
   1,
-  ~0u,
-  8,
-  9,
-  ~0u,
   2,
   3,
   4,
   5,
-  6,
-  7,
-  10,
+  8,
   ~0u,
   ~0u,
   ~0u,
@@ -3528,8 +3528,8 @@ void AddDescriptorsImpl() {
       "al\030\001 \001(\010:\004true\0223\n\014scale_filler\030\002 \001(\0132\035.o"
       "pencv_caffe.FillerParameter\022\034\n\016channel_s"
       "hared\030\003 \001(\010:\004true\022\022\n\003eps\030\004 \001(\002:\0051e-10\"\346\002"
-      "\n\021PriorBoxParameter\022\020\n\010min_size\030\001 \001(\002\022\020\n"
-      "\010max_size\030\002 \001(\002\022\024\n\014aspect_ratio\030\003 \003(\002\022\022\n"
+      "\n\021PriorBoxParameter\022\020\n\010min_size\030\001 \003(\002\022\020\n"
+      "\010max_size\030\002 \003(\002\022\024\n\014aspect_ratio\030\003 \003(\002\022\022\n"
       "\004flip\030\004 \001(\010:\004true\022\022\n\004clip\030\005 \001(\010:\004true\022\020\n"
       "\010variance\030\006 \003(\002\022\020\n\010img_size\030\007 \001(\r\022\r\n\005img"
       "_h\030\010 \001(\r\022\r\n\005img_w\030\t \001(\r\022\014\n\004step\030\n \001(\002\022\016\n"
@@ -6600,6 +6600,8 @@ PriorBoxParameter::PriorBoxParameter(const PriorBoxParameter& from)
       _internal_metadata_(NULL),
       _has_bits_(from._has_bits_),
       _cached_size_(0),
+      min_size_(from.min_size_),
+      max_size_(from.max_size_),
       aspect_ratio_(from.aspect_ratio_),
       variance_(from.variance_),
       offset_h_(from.offset_h_),
@@ -6607,17 +6609,17 @@ PriorBoxParameter::PriorBoxParameter(const PriorBoxParameter& from)
       width_(from.width_),
       height_(from.height_) {
   _internal_metadata_.MergeFrom(from._internal_metadata_);
-  ::memcpy(&min_size_, &from.min_size_,
+  ::memcpy(&img_size_, &from.img_size_,
     static_cast<size_t>(reinterpret_cast<char*>(&offset_) -
-    reinterpret_cast<char*>(&min_size_)) + sizeof(offset_));
+    reinterpret_cast<char*>(&img_size_)) + sizeof(offset_));
   // @@protoc_insertion_point(copy_constructor:opencv_caffe.PriorBoxParameter)
 }
 
 void PriorBoxParameter::SharedCtor() {
   _cached_size_ = 0;
-  ::memset(&min_size_, 0, static_cast<size_t>(
+  ::memset(&img_size_, 0, static_cast<size_t>(
       reinterpret_cast<char*>(&step_w_) -
-      reinterpret_cast<char*>(&min_size_)) + sizeof(step_w_));
+      reinterpret_cast<char*>(&img_size_)) + sizeof(step_w_));
   flip_ = true;
   clip_ = true;
   offset_ = 0.5f;
@@ -6660,6 +6662,8 @@ void PriorBoxParameter::Clear() {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
+  min_size_.Clear();
+  max_size_.Clear();
   aspect_ratio_.Clear();
   variance_.Clear();
   offset_h_.Clear();
@@ -6668,15 +6672,13 @@ void PriorBoxParameter::Clear() {
   height_.Clear();
   cached_has_bits = _has_bits_[0];
   if (cached_has_bits & 255u) {
-    ::memset(&min_size_, 0, static_cast<size_t>(
+    ::memset(&img_size_, 0, static_cast<size_t>(
         reinterpret_cast<char*>(&step_w_) -
-        reinterpret_cast<char*>(&min_size_)) + sizeof(step_w_));
-  }
-  if (cached_has_bits & 1792u) {
+        reinterpret_cast<char*>(&img_size_)) + sizeof(step_w_));
     flip_ = true;
     clip_ = true;
-    offset_ = 0.5f;
   }
+  offset_ = 0.5f;
   _has_bits_.Clear();
   _internal_metadata_.Clear();
 }
@@ -6691,28 +6693,38 @@ bool PriorBoxParameter::MergePartialFromCodedStream(
     tag = p.first;
     if (!p.second) goto handle_unusual;
     switch (::google::protobuf::internal::WireFormatLite::GetTagFieldNumber(tag)) {
-      // optional float min_size = 1;
+      // repeated float min_size = 1;
       case 1: {
         if (static_cast< ::google::protobuf::uint8>(tag) ==
             static_cast< ::google::protobuf::uint8>(13u /* 13 & 0xFF */)) {
-          set_has_min_size();
-          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+          DO_((::google::protobuf::internal::WireFormatLite::ReadRepeatedPrimitive<
                    float, ::google::protobuf::internal::WireFormatLite::TYPE_FLOAT>(
-                 input, &min_size_)));
+                 1, 13u, input, this->mutable_min_size())));
+        } else if (
+            static_cast< ::google::protobuf::uint8>(tag) ==
+            static_cast< ::google::protobuf::uint8>(10u /* 10 & 0xFF */)) {
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPackedPrimitiveNoInline<
+                   float, ::google::protobuf::internal::WireFormatLite::TYPE_FLOAT>(
+                 input, this->mutable_min_size())));
         } else {
           goto handle_unusual;
         }
         break;
       }
 
-      // optional float max_size = 2;
+      // repeated float max_size = 2;
       case 2: {
         if (static_cast< ::google::protobuf::uint8>(tag) ==
             static_cast< ::google::protobuf::uint8>(21u /* 21 & 0xFF */)) {
-          set_has_max_size();
-          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+          DO_((::google::protobuf::internal::WireFormatLite::ReadRepeatedPrimitive<
                    float, ::google::protobuf::internal::WireFormatLite::TYPE_FLOAT>(
-                 input, &max_size_)));
+                 1, 21u, input, this->mutable_max_size())));
+        } else if (
+            static_cast< ::google::protobuf::uint8>(tag) ==
+            static_cast< ::google::protobuf::uint8>(18u /* 18 & 0xFF */)) {
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPackedPrimitiveNoInline<
+                   float, ::google::protobuf::internal::WireFormatLite::TYPE_FLOAT>(
+                 input, this->mutable_max_size())));
         } else {
           goto handle_unusual;
         }
@@ -6985,15 +6997,16 @@ void PriorBoxParameter::SerializeWithCachedSizes(
   ::google::protobuf::uint32 cached_has_bits = 0;
   (void) cached_has_bits;
 
-  cached_has_bits = _has_bits_[0];
-  // optional float min_size = 1;
-  if (cached_has_bits & 0x00000001u) {
-    ::google::protobuf::internal::WireFormatLite::WriteFloat(1, this->min_size(), output);
+  // repeated float min_size = 1;
+  for (int i = 0, n = this->min_size_size(); i < n; i++) {
+    ::google::protobuf::internal::WireFormatLite::WriteFloat(
+      1, this->min_size(i), output);
   }
 
-  // optional float max_size = 2;
-  if (cached_has_bits & 0x00000002u) {
-    ::google::protobuf::internal::WireFormatLite::WriteFloat(2, this->max_size(), output);
+  // repeated float max_size = 2;
+  for (int i = 0, n = this->max_size_size(); i < n; i++) {
+    ::google::protobuf::internal::WireFormatLite::WriteFloat(
+      2, this->max_size(i), output);
   }
 
   // repeated float aspect_ratio = 3;
@@ -7002,13 +7015,14 @@ void PriorBoxParameter::SerializeWithCachedSizes(
       3, this->aspect_ratio(i), output);
   }
 
+  cached_has_bits = _has_bits_[0];
   // optional bool flip = 4 [default = true];
-  if (cached_has_bits & 0x00000100u) {
+  if (cached_has_bits & 0x00000040u) {
     ::google::protobuf::internal::WireFormatLite::WriteBool(4, this->flip(), output);
   }
 
   // optional bool clip = 5 [default = true];
-  if (cached_has_bits & 0x00000200u) {
+  if (cached_has_bits & 0x00000080u) {
     ::google::protobuf::internal::WireFormatLite::WriteBool(5, this->clip(), output);
   }
 
@@ -7019,37 +7033,37 @@ void PriorBoxParameter::SerializeWithCachedSizes(
   }
 
   // optional uint32 img_size = 7;
-  if (cached_has_bits & 0x00000004u) {
+  if (cached_has_bits & 0x00000001u) {
     ::google::protobuf::internal::WireFormatLite::WriteUInt32(7, this->img_size(), output);
   }
 
   // optional uint32 img_h = 8;
-  if (cached_has_bits & 0x00000008u) {
+  if (cached_has_bits & 0x00000002u) {
     ::google::protobuf::internal::WireFormatLite::WriteUInt32(8, this->img_h(), output);
   }
 
   // optional uint32 img_w = 9;
-  if (cached_has_bits & 0x00000010u) {
+  if (cached_has_bits & 0x00000004u) {
     ::google::protobuf::internal::WireFormatLite::WriteUInt32(9, this->img_w(), output);
   }
 
   // optional float step = 10;
-  if (cached_has_bits & 0x00000020u) {
+  if (cached_has_bits & 0x00000008u) {
     ::google::protobuf::internal::WireFormatLite::WriteFloat(10, this->step(), output);
   }
 
   // optional float step_h = 11;
-  if (cached_has_bits & 0x00000040u) {
+  if (cached_has_bits & 0x00000010u) {
     ::google::protobuf::internal::WireFormatLite::WriteFloat(11, this->step_h(), output);
   }
 
   // optional float step_w = 12;
-  if (cached_has_bits & 0x00000080u) {
+  if (cached_has_bits & 0x00000020u) {
     ::google::protobuf::internal::WireFormatLite::WriteFloat(12, this->step_w(), output);
   }
 
   // optional float offset = 13 [default = 0.5];
-  if (cached_has_bits & 0x00000400u) {
+  if (cached_has_bits & 0x00000100u) {
     ::google::protobuf::internal::WireFormatLite::WriteFloat(13, this->offset(), output);
   }
 
@@ -7091,28 +7105,26 @@ void PriorBoxParameter::SerializeWithCachedSizes(
   ::google::protobuf::uint32 cached_has_bits = 0;
   (void) cached_has_bits;
 
-  cached_has_bits = _has_bits_[0];
-  // optional float min_size = 1;
-  if (cached_has_bits & 0x00000001u) {
-    target = ::google::protobuf::internal::WireFormatLite::WriteFloatToArray(1, this->min_size(), target);
-  }
+  // repeated float min_size = 1;
+  target = ::google::protobuf::internal::WireFormatLite::
+    WriteFloatToArray(1, this->min_size_, target);
 
-  // optional float max_size = 2;
-  if (cached_has_bits & 0x00000002u) {
-    target = ::google::protobuf::internal::WireFormatLite::WriteFloatToArray(2, this->max_size(), target);
-  }
+  // repeated float max_size = 2;
+  target = ::google::protobuf::internal::WireFormatLite::
+    WriteFloatToArray(2, this->max_size_, target);
 
   // repeated float aspect_ratio = 3;
   target = ::google::protobuf::internal::WireFormatLite::
     WriteFloatToArray(3, this->aspect_ratio_, target);
 
+  cached_has_bits = _has_bits_[0];
   // optional bool flip = 4 [default = true];
-  if (cached_has_bits & 0x00000100u) {
+  if (cached_has_bits & 0x00000040u) {
     target = ::google::protobuf::internal::WireFormatLite::WriteBoolToArray(4, this->flip(), target);
   }
 
   // optional bool clip = 5 [default = true];
-  if (cached_has_bits & 0x00000200u) {
+  if (cached_has_bits & 0x00000080u) {
     target = ::google::protobuf::internal::WireFormatLite::WriteBoolToArray(5, this->clip(), target);
   }
 
@@ -7121,37 +7133,37 @@ void PriorBoxParameter::SerializeWithCachedSizes(
     WriteFloatToArray(6, this->variance_, target);
 
   // optional uint32 img_size = 7;
-  if (cached_has_bits & 0x00000004u) {
+  if (cached_has_bits & 0x00000001u) {
     target = ::google::protobuf::internal::WireFormatLite::WriteUInt32ToArray(7, this->img_size(), target);
   }
 
   // optional uint32 img_h = 8;
-  if (cached_has_bits & 0x00000008u) {
+  if (cached_has_bits & 0x00000002u) {
     target = ::google::protobuf::internal::WireFormatLite::WriteUInt32ToArray(8, this->img_h(), target);
   }
 
   // optional uint32 img_w = 9;
-  if (cached_has_bits & 0x00000010u) {
+  if (cached_has_bits & 0x00000004u) {
     target = ::google::protobuf::internal::WireFormatLite::WriteUInt32ToArray(9, this->img_w(), target);
   }
 
   // optional float step = 10;
-  if (cached_has_bits & 0x00000020u) {
+  if (cached_has_bits & 0x00000008u) {
     target = ::google::protobuf::internal::WireFormatLite::WriteFloatToArray(10, this->step(), target);
   }
 
   // optional float step_h = 11;
-  if (cached_has_bits & 0x00000040u) {
+  if (cached_has_bits & 0x00000010u) {
     target = ::google::protobuf::internal::WireFormatLite::WriteFloatToArray(11, this->step_h(), target);
   }
 
   // optional float step_w = 12;
-  if (cached_has_bits & 0x00000080u) {
+  if (cached_has_bits & 0x00000020u) {
     target = ::google::protobuf::internal::WireFormatLite::WriteFloatToArray(12, this->step_w(), target);
   }
 
   // optional float offset = 13 [default = 0.5];
-  if (cached_has_bits & 0x00000400u) {
+  if (cached_has_bits & 0x00000100u) {
     target = ::google::protobuf::internal::WireFormatLite::WriteFloatToArray(13, this->offset(), target);
   }
 
@@ -7188,6 +7200,24 @@ size_t PriorBoxParameter::ByteSizeLong() const {
       ::google::protobuf::internal::WireFormat::ComputeUnknownFieldsSize(
         _internal_metadata_.unknown_fields());
   }
+  // repeated float min_size = 1;
+  {
+    unsigned int count = static_cast<unsigned int>(this->min_size_size());
+    size_t data_size = 4UL * count;
+    total_size += 1 *
+                  ::google::protobuf::internal::FromIntSize(this->min_size_size());
+    total_size += data_size;
+  }
+
+  // repeated float max_size = 2;
+  {
+    unsigned int count = static_cast<unsigned int>(this->max_size_size());
+    size_t data_size = 4UL * count;
+    total_size += 1 *
+                  ::google::protobuf::internal::FromIntSize(this->max_size_size());
+    total_size += data_size;
+  }
+
   // repeated float aspect_ratio = 3;
   {
     unsigned int count = static_cast<unsigned int>(this->aspect_ratio_size());
@@ -7243,16 +7273,6 @@ size_t PriorBoxParameter::ByteSizeLong() const {
   }
 
   if (_has_bits_[0 / 32] & 255u) {
-    // optional float min_size = 1;
-    if (has_min_size()) {
-      total_size += 1 + 4;
-    }
-
-    // optional float max_size = 2;
-    if (has_max_size()) {
-      total_size += 1 + 4;
-    }
-
     // optional uint32 img_size = 7;
     if (has_img_size()) {
       total_size += 1 +
@@ -7289,8 +7309,6 @@ size_t PriorBoxParameter::ByteSizeLong() const {
       total_size += 1 + 4;
     }
 
-  }
-  if (_has_bits_[8 / 32] & 1792u) {
     // optional bool flip = 4 [default = true];
     if (has_flip()) {
       total_size += 1 + 1;
@@ -7301,12 +7319,12 @@ size_t PriorBoxParameter::ByteSizeLong() const {
       total_size += 1 + 1;
     }
 
-    // optional float offset = 13 [default = 0.5];
-    if (has_offset()) {
-      total_size += 1 + 4;
-    }
-
   }
+  // optional float offset = 13 [default = 0.5];
+  if (has_offset()) {
+    total_size += 1 + 4;
+  }
+
   int cached_size = ::google::protobuf::internal::ToCachedSize(total_size);
   GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
   _cached_size_ = cached_size;
@@ -7336,6 +7354,8 @@ void PriorBoxParameter::MergeFrom(const PriorBoxParameter& from) {
   ::google::protobuf::uint32 cached_has_bits = 0;
   (void) cached_has_bits;
 
+  min_size_.MergeFrom(from.min_size_);
+  max_size_.MergeFrom(from.max_size_);
   aspect_ratio_.MergeFrom(from.aspect_ratio_);
   variance_.MergeFrom(from.variance_);
   offset_h_.MergeFrom(from.offset_h_);
@@ -7345,42 +7365,33 @@ void PriorBoxParameter::MergeFrom(const PriorBoxParameter& from) {
   cached_has_bits = from._has_bits_[0];
   if (cached_has_bits & 255u) {
     if (cached_has_bits & 0x00000001u) {
-      min_size_ = from.min_size_;
-    }
-    if (cached_has_bits & 0x00000002u) {
-      max_size_ = from.max_size_;
-    }
-    if (cached_has_bits & 0x00000004u) {
       img_size_ = from.img_size_;
     }
-    if (cached_has_bits & 0x00000008u) {
+    if (cached_has_bits & 0x00000002u) {
       img_h_ = from.img_h_;
     }
-    if (cached_has_bits & 0x00000010u) {
+    if (cached_has_bits & 0x00000004u) {
       img_w_ = from.img_w_;
     }
-    if (cached_has_bits & 0x00000020u) {
+    if (cached_has_bits & 0x00000008u) {
       step_ = from.step_;
     }
-    if (cached_has_bits & 0x00000040u) {
+    if (cached_has_bits & 0x00000010u) {
       step_h_ = from.step_h_;
     }
-    if (cached_has_bits & 0x00000080u) {
+    if (cached_has_bits & 0x00000020u) {
       step_w_ = from.step_w_;
+    }
+    if (cached_has_bits & 0x00000040u) {
+      flip_ = from.flip_;
+    }
+    if (cached_has_bits & 0x00000080u) {
+      clip_ = from.clip_;
     }
     _has_bits_[0] |= cached_has_bits;
   }
-  if (cached_has_bits & 1792u) {
-    if (cached_has_bits & 0x00000100u) {
-      flip_ = from.flip_;
-    }
-    if (cached_has_bits & 0x00000200u) {
-      clip_ = from.clip_;
-    }
-    if (cached_has_bits & 0x00000400u) {
-      offset_ = from.offset_;
-    }
-    _has_bits_[0] |= cached_has_bits;
+  if (cached_has_bits & 0x00000100u) {
+    set_offset(from.offset());
   }
 }
 
@@ -7408,14 +7419,14 @@ void PriorBoxParameter::Swap(PriorBoxParameter* other) {
 }
 void PriorBoxParameter::InternalSwap(PriorBoxParameter* other) {
   using std::swap;
+  min_size_.InternalSwap(&other->min_size_);
+  max_size_.InternalSwap(&other->max_size_);
   aspect_ratio_.InternalSwap(&other->aspect_ratio_);
   variance_.InternalSwap(&other->variance_);
   offset_h_.InternalSwap(&other->offset_h_);
   offset_w_.InternalSwap(&other->offset_w_);
   width_.InternalSwap(&other->width_);
   height_.InternalSwap(&other->height_);
-  swap(min_size_, other->min_size_);
-  swap(max_size_, other->max_size_);
   swap(img_size_, other->img_size_);
   swap(img_h_, other->img_h_);
   swap(img_w_, other->img_w_);

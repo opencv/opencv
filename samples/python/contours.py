@@ -48,13 +48,11 @@ def make_image():
         cv.ellipse( img, (dx+273, dy+100), (20,35), 0, 0, 360, white, -1 )
     return img
 
-if __name__ == '__main__':
-    print(__doc__)
-
+def main():
     img = make_image()
     h, w = img.shape[:2]
 
-    _, contours0, hierarchy = cv.findContours( img.copy(), cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+    contours0, hierarchy = cv.findContours( img.copy(), cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
     contours = [cv.approxPolyDP(cnt, 3, True) for cnt in contours0]
 
     def update(levels):
@@ -67,4 +65,10 @@ if __name__ == '__main__':
     cv.createTrackbar( "levels+3", "contours", 3, 7, update )
     cv.imshow('image', img)
     cv.waitKey()
+    print('Done')
+
+
+if __name__ == '__main__':
+    print(__doc__)
+    main()
     cv.destroyAllWindows()

@@ -145,7 +145,7 @@ protected:
 
         if (fail)
         {
-            // commented according to vp123's recomendation. TODO - improve accuaracy
+            // commented according to vp123's recommendation. TODO - improve accuracy
             //ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY); ss
         }
         ts->printf( cvtest::TS::LOG, "%d) DistCoeff exp=(%.2f, %.2f, %.4f, %.4f %.2f)\n", r, k1, k2, p1, p2, k3);
@@ -353,7 +353,7 @@ protected:
         rvecs_spnp.resize(brdsNum);
         tvecs_spnp.resize(brdsNum);
         for(size_t i = 0; i < brdsNum; ++i)
-            solvePnP(Mat(objectPoints[i]), Mat(imagePoints[i]), camMat, distCoeffs, rvecs_spnp[i], tvecs_spnp[i]);
+            solvePnP(objectPoints[i], imagePoints[i], camMat, distCoeffs, rvecs_spnp[i], tvecs_spnp[i]);
 
         compareShiftVecs(tvecs_exp, tvecs_spnp);
         compareRotationVecs(rvecs_exp, rvecs_spnp);

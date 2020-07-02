@@ -3,9 +3,31 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "opencv2/videoio/container_avi.private.hpp"
+#include <fstream>
+#include <limits>
+#include <typeinfo>
 
 namespace cv
 {
+
+// Utility function for safe integer conversions
+template <typename D, typename S>
+inline D safe_int_cast(S val, const char * msg = 0)
+{
+    typedef std::numeric_limits<S> st;
+    typedef std::numeric_limits<D> dt;
+    CV_StaticAssert(st::is_integer && dt::is_integer, "Integer type is expected");
+    const bool in_range_r = (double)val <= (double)dt::max();
+    const bool in_range_l = (double)val >= (double)dt::min();
+    if (!in_range_r || !in_range_l)
+    {
+        if (!msg)
+            CV_Error_(Error::StsOutOfRange, ("Can not convert integer values (%s -> %s), value 0x%jx is out of range", typeid(S).name(), typeid(D).name(), (uintmax_t)val));
+        else
+            CV_Error(Error::StsOutOfRange, msg);
+    }
+    return static_cast<D>(val);
+}
 
 const uint32_t RIFF_CC = CV_FOURCC('R','I','F','F');
 const uint32_t LIST_CC = CV_FOURCC('L','I','S','T');
@@ -109,19 +131,22 @@ public:
     VideoInputStream();
     VideoInputStream(const String& filename);
     ~VideoInputStream();
-    VideoInputStream& read(char*, uint64_t);
+    VideoInputStream& read(char*, uint32_t);
     VideoInputStream& seekg(uint64_t);
     uint64_t tellg();
     bool isOpened() const;
     bool open(const String& filename);
     void close();
     operator bool();
-    VideoInputStream& operator=(const VideoInputStream& stream);
 
 private:
+    VideoInputStream(const VideoInputStream&);
+    VideoInputStream& operator=(const VideoInputStream&);
+
+private:
+    std::ifstream input;
     bool    m_is_valid;
     String  m_fname;
-    FILE*   m_f;
 };
 
 #pragma pack(pop)
@@ -174,12 +199,12 @@ String fourccToString(uint32_t fourcc)
     return format("%c%c%c%c", fourcc & 255, (fourcc >> 8) & 255, (fourcc >> 16) & 255, (fourcc >> 24) & 255);
 }
 
-VideoInputStream::VideoInputStream(): m_is_valid(false), m_f(0)
+VideoInputStream::VideoInputStream(): m_is_valid(false)
 {
     m_fname = String();
 }
 
-VideoInputStream::VideoInputStream(const String& filename): m_is_valid(false), m_f(0)
+VideoInputStream::VideoInputStream(const String& filename): m_is_valid(false)
 {
     m_fname = filename;
     open(filename);
@@ -187,17 +212,14 @@ VideoInputStream::VideoInputStream(const String& filename): m_is_valid(false), m
 
 bool VideoInputStream::isOpened() const
 {
-    return m_f != 0;
+    return input.is_open();
 }
 
 bool VideoInputStream::open(const String& filename)
 {
     close();
-
-    m_f = fopen(filename.c_str(), "rb");
-
+    input.open(filename.c_str(), std::ios_base::binary);
     m_is_valid = isOpened();
-
     return m_is_valid;
 }
 
@@ -206,17 +228,16 @@ void VideoInputStream::close()
     if(isOpened())
     {
         m_is_valid = false;
-
-        fclose(m_f);
-        m_f = 0;
+        input.close();
     }
 }
 
-VideoInputStream& VideoInputStream::read(char* buf, uint64_t count)
+VideoInputStream& VideoInputStream::read(char* buf, uint32_t count)
 {
     if(isOpened())
     {
-        m_is_valid = (count == fread((void*)buf, 1, (size_t)count, m_f));
+        input.read(buf, safe_int_cast<std::streamsize>(count, "Failed to read AVI file: requested chunk size is too large"));
+        m_is_valid = (input.gcount() == (std::streamsize)count);
     }
 
     return *this;
@@ -224,29 +245,20 @@ VideoInputStream& VideoInputStream::read(char* buf, uint64_t count)
 
 VideoInputStream& VideoInputStream::seekg(uint64_t pos)
 {
-    m_is_valid = (fseek(m_f, (int32_t)pos, SEEK_SET) == 0);
-
+    input.clear();
+    input.seekg(safe_int_cast<std::streamoff>(pos, "Failed to seek in AVI file: position is out of range"));
+    m_is_valid = !input.eof();
     return *this;
 }
 
 uint64_t VideoInputStream::tellg()
 {
-    return ftell(m_f);
+    return input.tellg();
 }
 
 VideoInputStream::operator bool()
 {
     return m_is_valid;
-}
-
-VideoInputStream& VideoInputStream::operator=(const VideoInputStream& stream)
-{
-    if (this != &stream) {
-        m_fname = stream.m_fname;
-        // m_f = stream.m_f;
-        open(m_fname);
-    }
-    return *this;
 }
 
 VideoInputStream::~VideoInputStream()
@@ -313,9 +325,6 @@ bool AVIReadContainer::parseStrl(char stream_id, Codecs codec_)
 
     if(m_file_stream && strh.m_four_cc == STRH_CC)
     {
-        uint64_t next_strl_list = m_file_stream->tellg();
-        next_strl_list += strh.m_size;
-
         AviStreamHeader strm_hdr;
         *m_file_stream >> strm_hdr;
 
@@ -591,7 +600,7 @@ public:
     ~BitStream() { close(); }
 
     bool open(const String& filename);
-    bool isOpened() const { return m_f != 0; }
+    bool isOpened() const { return output.is_open(); }
     void close();
 
     void writeBlock();
@@ -600,20 +609,24 @@ public:
     void putBytes(const uchar* buf, int count);
 
     void putShort(int val);
-    void putInt(int val);
+    void putInt(uint32_t val);
     void jputShort(int val);
-    void patchInt(int val, size_t pos);
+    void patchInt(uint32_t val, size_t pos);
     void jput(unsigned currval);
     void jflush(unsigned currval, int bitIdx);
 
+private:
+    BitStream(const BitStream &);
+    BitStream &operator=(const BitStream&);
+
 protected:
+    std::ofstream output;
     std::vector<uchar> m_buf;
     uchar*  m_start;
     uchar*  m_end;
     uchar*  m_current;
     size_t  m_pos;
     bool    m_is_opened;
-    FILE*   m_f;
 };
 
 static const size_t DEFAULT_BLOCK_SIZE = (1 << 15);
@@ -624,7 +637,6 @@ BitStream::BitStream()
     m_start = &m_buf[0];
     m_end = m_start + DEFAULT_BLOCK_SIZE;
     m_is_opened = false;
-    m_f = 0;
     m_current = 0;
     m_pos = 0;
 }
@@ -632,9 +644,7 @@ BitStream::BitStream()
 bool BitStream::open(const String& filename)
 {
     close();
-    m_f = fopen(filename.c_str(), "wb");
-    if( !m_f )
-        return false;
+    output.open(filename.c_str(), std::ios_base::binary);
     m_current = m_start;
     m_pos = 0;
     return true;
@@ -643,25 +653,22 @@ bool BitStream::open(const String& filename)
 void BitStream::close()
 {
     writeBlock();
-    if( m_f )
-        fclose(m_f);
-    m_f = 0;
+    output.close();
 }
 
 void BitStream::writeBlock()
 {
-    size_t wsz0 = m_current - m_start;
-    if( wsz0 > 0 && m_f )
+    ptrdiff_t wsz0 = m_current - m_start;
+    if( wsz0 > 0 )
     {
-        size_t wsz = fwrite(m_start, 1, wsz0, m_f);
-        CV_Assert( wsz == wsz0 );
+        output.write((char*)m_start, wsz0);
     }
     m_pos += wsz0;
     m_current = m_start;
 }
 
 size_t BitStream::getPos() const {
-    return (size_t)(m_current - m_start) + m_pos;
+    return safe_int_cast<size_t>(m_current - m_start, "Failed to determine AVI buffer position: value is out of range") + m_pos;
 }
 
 void BitStream::putByte(int val)
@@ -674,7 +681,7 @@ void BitStream::putByte(int val)
 void BitStream::putBytes(const uchar* buf, int count)
 {
     uchar* data = (uchar*)buf;
-    CV_Assert(m_f && data && m_current && count >= 0);
+    CV_Assert(data && m_current && count >= 0);
     if( m_current >= m_end )
         writeBlock();
 
@@ -706,7 +713,7 @@ void BitStream::putShort(int val)
         writeBlock();
 }
 
-void BitStream::putInt(int val)
+void BitStream::putInt(uint32_t val)
 {
     m_current[0] = (uchar)val;
     m_current[1] = (uchar)(val >> 8);
@@ -726,11 +733,11 @@ void BitStream::jputShort(int val)
         writeBlock();
 }
 
-void BitStream::patchInt(int val, size_t pos)
+void BitStream::patchInt(uint32_t val, size_t pos)
 {
     if( pos >= m_pos )
     {
-        ptrdiff_t delta = pos - m_pos;
+        ptrdiff_t delta = safe_int_cast<ptrdiff_t>(pos - m_pos, "Failed to seek in AVI buffer: value is out of range");
         CV_Assert( delta < m_current - m_start );
         m_start[delta] = (uchar)val;
         m_start[delta+1] = (uchar)(val >> 8);
@@ -739,12 +746,11 @@ void BitStream::patchInt(int val, size_t pos)
     }
     else
     {
-        CV_Assert(pos < (1u<<31));
-        long fpos = ftell(m_f);
-        fseek(m_f, (long)pos, SEEK_SET);
+        std::streamoff fpos = output.tellp();
+        output.seekp(safe_int_cast<std::streamoff>(pos, "Failed to seek in AVI file: value is out of range"));
         uchar buf[] = { (uchar)val, (uchar)(val >> 8), (uchar)(val >> 16), (uchar)(val >> 24) };
-        fwrite(buf, 1, 4, m_f);
-        fseek(m_f, fpos, SEEK_SET);
+        output.write((char *)buf, 4);
+        output.seekp(fpos);
     }
 }
 
@@ -876,7 +882,7 @@ void AVIWriteContainer::writeStreamHeader(Codecs codec_)
 
     strm->putInt(0);
     strm->putInt(SUG_BUFFER_SIZE);
-    strm->putInt(AVI_DWQUALITY);
+    strm->putInt(static_cast<uint32_t>(AVI_DWQUALITY));
     strm->putInt(0);
     strm->putShort(0);
     strm->putShort(0);
@@ -935,7 +941,7 @@ void AVIWriteContainer::writeStreamHeader(Codecs codec_)
     strm->putInt(MOVI_CC);
 }
 
-void AVIWriteContainer::startWriteChunk(int fourcc)
+void AVIWriteContainer::startWriteChunk(uint32_t fourcc)
 {
     CV_Assert(fourcc != 0);
     strm->putInt(fourcc);
@@ -949,9 +955,12 @@ void AVIWriteContainer::endWriteChunk()
     if( !AVIChunkSizeIndex.empty() )
     {
         size_t currpos = strm->getPos();
+        CV_Assert(currpos > 4);
+        currpos -= 4;
         size_t pospos = AVIChunkSizeIndex.back();
         AVIChunkSizeIndex.pop_back();
-        int chunksz = (int)(currpos - (pospos + 4));
+        CV_Assert(currpos >= pospos);
+        uint32_t chunksz = safe_int_cast<uint32_t>(currpos - pospos, "Failed to write AVI file: chunk size is out of bounds");
         strm->patchInt(chunksz, pospos);
     }
 }
@@ -966,8 +975,8 @@ int AVIWriteContainer::getAVIIndex(int stream_number, StreamType strm_type) {
       case dc: return CV_FOURCC(strm_indx[0], strm_indx[1], 'd', 'c');
       case pc: return CV_FOURCC(strm_indx[0], strm_indx[1], 'p', 'c');
       case wb: return CV_FOURCC(strm_indx[0], strm_indx[1], 'w', 'b');
-      default: return CV_FOURCC(strm_indx[0], strm_indx[1], 'd', 'b');
     }
+    return CV_FOURCC(strm_indx[0], strm_indx[1], 'd', 'b');
 }
 
 void AVIWriteContainer::writeIndex(int stream_number, StreamType strm_type)
@@ -987,7 +996,7 @@ void AVIWriteContainer::writeIndex(int stream_number, StreamType strm_type)
 
 void AVIWriteContainer::finishWriteAVI()
 {
-    int nframes = (int)frameOffset.size();
+    uint32_t nframes = safe_int_cast<uint32_t>(frameOffset.size(), "Failed to write AVI file: number of frames is too large");
     // Record frames numbers to AVI Header
     while (!frameNumIndexes.empty())
     {

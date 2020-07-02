@@ -42,10 +42,28 @@
 
 #include "precomp.hpp"
 
+#include <opencv2/core/utils/logger.defines.hpp>
+#undef CV_LOG_STRIP_LEVEL
+#define CV_LOG_STRIP_LEVEL CV_LOG_LEVEL_VERBOSE + 1
+#include <opencv2/core/utils/logger.hpp>
+#include <opencv2/core/utils/configuration.private.hpp>
+
+#define CV__ALLOCATOR_STATS_LOG(...) CV_LOG_VERBOSE(NULL, 0, "alloc.cpp: " << __VA_ARGS__)
+#include "opencv2/core/utils/allocator_stats.impl.hpp"
+#undef CV__ALLOCATOR_STATS_LOG
+
+//#define OPENCV_ALLOC_ENABLE_STATISTICS
+#define OPENCV_ALLOC_STATISTICS_LIMIT 4096  // don't track buffers less than N bytes
+
+
 #ifdef HAVE_POSIX_MEMALIGN
 #include <stdlib.h>
 #elif defined HAVE_MALLOC_H
 #include <malloc.h>
+#endif
+
+#ifdef OPENCV_ALLOC_ENABLE_STATISTICS
+#include <map>
 #endif
 
 namespace cv {
@@ -55,36 +73,102 @@ static void* OutOfMemoryError(size_t size)
     CV_Error_(CV_StsNoMem, ("Failed to allocate %llu bytes", (unsigned long long)size));
 }
 
+CV_EXPORTS cv::utils::AllocatorStatisticsInterface& getAllocatorStatistics();
 
-void* fastMalloc( size_t size )
+static cv::utils::AllocatorStatistics allocator_stats;
+
+cv::utils::AllocatorStatisticsInterface& getAllocatorStatistics()
+{
+    return allocator_stats;
+}
+
+#if defined HAVE_POSIX_MEMALIGN || defined HAVE_MEMALIGN
+static bool readMemoryAlignmentParameter()
+{
+    bool value = true;
+#if defined(__GLIBC__) && defined(__linux__) \
+    && !defined(CV_STATIC_ANALYSIS) \
+    && !defined(OPENCV_ENABLE_MEMORY_SANITIZER) \
+    && !defined(FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION)  /* oss-fuzz */ \
+    && !defined(_WIN32)  /* MinGW? */
+    {
+        // https://github.com/opencv/opencv/issues/15526
+        value = false;
+    }
+#endif
+    value = cv::utils::getConfigurationParameterBool("OPENCV_ENABLE_MEMALIGN", value);  // should not call fastMalloc() internally
+    // TODO add checks for valgrind, ASAN if value == false
+    return value;
+}
+static inline
+bool isAlignedAllocationEnabled()
+{
+    static bool initialized = false;
+    static bool useMemalign = true;
+    if (!initialized)
+    {
+        initialized = true;  // trick to avoid stuck in acquire (works only if allocations are scope based)
+        useMemalign = readMemoryAlignmentParameter();
+    }
+    return useMemalign;
+}
+// do not use variable directly, details: https://github.com/opencv/opencv/issues/15691
+static const bool g_force_initialization_memalign_flag
+#if defined __GNUC__
+    __attribute__((unused))
+#endif
+    = isAlignedAllocationEnabled();
+
+#endif
+
+#ifdef OPENCV_ALLOC_ENABLE_STATISTICS
+static inline
+void* fastMalloc_(size_t size)
+#else
+void* fastMalloc(size_t size)
+#endif
 {
 #ifdef HAVE_POSIX_MEMALIGN
-    void* ptr = NULL;
-    if(posix_memalign(&ptr, CV_MALLOC_ALIGN, size))
-        ptr = NULL;
-    if(!ptr)
-        return OutOfMemoryError(size);
-    return ptr;
+    if (isAlignedAllocationEnabled())
+    {
+        void* ptr = NULL;
+        if(posix_memalign(&ptr, CV_MALLOC_ALIGN, size))
+            ptr = NULL;
+        if(!ptr)
+            return OutOfMemoryError(size);
+        return ptr;
+    }
 #elif defined HAVE_MEMALIGN
-    void* ptr = memalign(CV_MALLOC_ALIGN, size);
-    if(!ptr)
-        return OutOfMemoryError(size);
-    return ptr;
-#else
+    if (isAlignedAllocationEnabled())
+    {
+        void* ptr = memalign(CV_MALLOC_ALIGN, size);
+        if(!ptr)
+            return OutOfMemoryError(size);
+        return ptr;
+    }
+#endif
     uchar* udata = (uchar*)malloc(size + sizeof(void*) + CV_MALLOC_ALIGN);
     if(!udata)
         return OutOfMemoryError(size);
     uchar** adata = alignPtr((uchar**)udata + 1, CV_MALLOC_ALIGN);
     adata[-1] = udata;
     return adata;
-#endif
 }
 
+#ifdef OPENCV_ALLOC_ENABLE_STATISTICS
+static inline
+void fastFree_(void* ptr)
+#else
 void fastFree(void* ptr)
+#endif
 {
 #if defined HAVE_POSIX_MEMALIGN || defined HAVE_MEMALIGN
-    free(ptr);
-#else
+    if (isAlignedAllocationEnabled())
+    {
+        free(ptr);
+        return;
+    }
+#endif
     if(ptr)
     {
         uchar* udata = ((uchar**)ptr)[-1];
@@ -92,8 +176,48 @@ void fastFree(void* ptr)
                ((uchar*)ptr - udata) <= (ptrdiff_t)(sizeof(void*)+CV_MALLOC_ALIGN));
         free(udata);
     }
-#endif
 }
+
+#ifdef OPENCV_ALLOC_ENABLE_STATISTICS
+
+static
+Mutex& getAllocationStatisticsMutex()
+{
+    static Mutex* p_alloc_mutex = allocSingletonNew<Mutex>();
+    CV_Assert(p_alloc_mutex);
+    return *p_alloc_mutex;
+}
+
+static std::map<void*, size_t> allocated_buffers;  // guarded by getAllocationStatisticsMutex()
+
+void* fastMalloc(size_t size)
+{
+    void* res = fastMalloc_(size);
+    if (res && size >= OPENCV_ALLOC_STATISTICS_LIMIT)
+    {
+        cv::AutoLock lock(getAllocationStatisticsMutex());
+        allocated_buffers.insert(std::make_pair(res, size));
+        allocator_stats.onAllocate(size);
+    }
+    return res;
+}
+
+void fastFree(void* ptr)
+{
+    {
+        cv::AutoLock lock(getAllocationStatisticsMutex());
+        std::map<void*, size_t>::iterator i = allocated_buffers.find(ptr);
+        if (i != allocated_buffers.end())
+        {
+            size_t size = i->second;
+            allocator_stats.onFree(size);
+            allocated_buffers.erase(i);
+        }
+    }
+    fastFree_(ptr);
+}
+
+#endif // OPENCV_ALLOC_ENABLE_STATISTICS
 
 } // namespace
 

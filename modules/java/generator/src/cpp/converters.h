@@ -26,6 +26,8 @@ void vector_Rect_to_Mat(std::vector<cv::Rect>& v_rect, cv::Mat& mat);
 void Mat_to_vector_Rect2d(cv::Mat& mat, std::vector<cv::Rect2d>& v_rect);
 void vector_Rect2d_to_Mat(std::vector<cv::Rect2d>& v_rect, cv::Mat& mat);
 
+void Mat_to_vector_RotatedRect(cv::Mat& mat, std::vector<cv::RotatedRect>& v_rect);
+void vector_RotatedRect_to_Mat(std::vector<cv::RotatedRect>& v_rect, cv::Mat& mat);
 
 void Mat_to_vector_Point(cv::Mat& mat, std::vector<cv::Point>& v_point);
 void Mat_to_vector_Point2f(cv::Mat& mat, std::vector<cv::Point2f>& v_point);

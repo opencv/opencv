@@ -103,7 +103,7 @@ bool CalibProcessor::detectAndParseChAruco(const cv::Mat &frame)
         return true;
     }
 #else
-    (void)frame;
+    CV_UNUSED(frame);
 #endif
     return false;
 }
@@ -273,7 +273,7 @@ CalibProcessor::CalibProcessor(cv::Ptr<calibrationData> data, captureParameters 
 #ifdef HAVE_OPENCV_ARUCO
         mArucoDictionary = cv::aruco::getPredefinedDictionary(
                     cv::aruco::PREDEFINED_DICTIONARY_NAME(capParams.charucoDictName));
-        mCharucoBoard = cv::aruco::CharucoBoard::create(mBoardSize.width, mBoardSize.height, capParams.charucoSquareLenght,
+        mCharucoBoard = cv::aruco::CharucoBoard::create(mBoardSize.width, mBoardSize.height, capParams.charucoSquareLength,
                                                         capParams.charucoMarkerSize, mArucoDictionary);
 #endif
         break;
@@ -318,7 +318,7 @@ cv::Mat CalibProcessor::processFrame(const cv::Mat &frame)
             saveFrameData();
             bool isFrameBad = checkLastFrame();
             if (!isFrameBad) {
-                std::string displayMessage = cv::format("Frame # %d captured", std::max(mCalibData->imagePoints.size(),
+                std::string displayMessage = cv::format("Frame # %zu captured", std::max(mCalibData->imagePoints.size(),
                                                                                         mCalibData->allCharucoCorners.size()));
                 if(!showOverlayMessage(displayMessage))
                     showCaptureMessage(frame, displayMessage);

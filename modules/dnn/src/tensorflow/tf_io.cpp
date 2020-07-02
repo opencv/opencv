@@ -37,8 +37,6 @@ using namespace tensorflow;
 using namespace ::google::protobuf;
 using namespace ::google::protobuf::io;
 
-const int kProtoReadBytesLimit = INT_MAX;  // Max size of 2 GB minus 1 byte.
-
 void ReadTFNetParamsFromBinaryFileOrDie(const char* param_file,
                                         tensorflow::GraphDef* param) {
     CHECK(ReadProtoFromBinaryFile(param_file, param))

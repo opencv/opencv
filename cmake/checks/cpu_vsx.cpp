@@ -1,8 +1,12 @@
-# if defined(__VSX__)
-#   include <altivec.h>
-# else
-#   error "VSX is not supported"
-# endif
+#if defined(__VSX__)
+    #if defined(__PPC64__) && defined(__LITTLE_ENDIAN__)
+        #include <altivec.h>
+    #else
+        #error "OpenCV only supports little-endian mode"
+    #endif
+#else
+    #error "VSX is not supported"
+#endif
 
 int main()
 {

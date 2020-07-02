@@ -1,6 +1,10 @@
 Real Time pose estimation of a textured object {#tutorial_real_time_pose}
 ==============================================
 
+@prev_tutorial{tutorial_camera_calibration}
+@next_tutorial{tutorial_interactive_calibration}
+
+
 Nowadays, augmented reality is one of the top research topic in computer vision and robotics fields.
 The most elemental problem in augmented reality is the estimation of the camera pose respect of an
 object in the case of computer vision area to do later some 3D rendering or in the case of robotics
@@ -16,7 +20,7 @@ In this tutorial is explained how to build a real time application to estimate t
 order to track a textured object with six degrees of freedom given a 2D image and its 3D textured
 model.
 
-The application will have the followings parts:
+The application will have the following parts:
 
 -   Read 3D textured object model and object mesh.
 -   Take input from Camera or Video.
@@ -253,8 +257,8 @@ Here is explained in detail the code for the real time application:
     @code{.cpp}
     RobustMatcher rmatcher;                                                          // instantiate RobustMatcher
 
-    cv::FeatureDetector * detector = new cv::OrbFeatureDetector(numKeyPoints);       // instatiate ORB feature detector
-    cv::DescriptorExtractor * extractor = new cv::OrbDescriptorExtractor();          // instatiate ORB descriptor extractor
+    cv::FeatureDetector * detector = new cv::OrbFeatureDetector(numKeyPoints);       // instantiate ORB feature detector
+    cv::DescriptorExtractor * extractor = new cv::OrbDescriptorExtractor();          // instantiate ORB descriptor extractor
 
     rmatcher.setFeatureDetector(detector);                                           // set feature detector
     rmatcher.setDescriptorExtractor(extractor);                                      // set descriptor extractor
@@ -381,7 +385,7 @@ Here is explained in detail the code for the real time application:
     as not, there are false correspondences or also called *outliers*. The [Random Sample
     Consensus](http://en.wikipedia.org/wiki/RANSAC) or *Ransac* is a non-deterministic iterative
     method which estimate parameters of a mathematical model from observed data producing an
-    approximate result as the number of iterations increase. After appyling *Ransac* all the *outliers*
+    approximate result as the number of iterations increase. After applying *Ransac* all the *outliers*
     will be eliminated to then estimate the camera pose with a certain probability to obtain a good
     solution.
 
@@ -426,16 +430,16 @@ Here is explained in detail the code for the real time application:
     @endcode
     OpenCV provides four PnP methods: ITERATIVE, EPNP, P3P and DLS. Depending on the application type,
     the estimation method will be different. In the case that we want to make a real time application,
-    the more suitable methods are EPNP and P3P due to that are faster than ITERATIVE and DLS at
+    the more suitable methods are EPNP and P3P since they are faster than ITERATIVE and DLS at
     finding an optimal solution. However, EPNP and P3P are not especially robust in front of planar
-    surfaces and sometimes the pose estimation seems to have a mirror effect. Therefore, in this this
-    tutorial is used ITERATIVE method due to the object to be detected has planar surfaces.
+    surfaces and sometimes the pose estimation seems to have a mirror effect. Therefore, in this
+    tutorial an ITERATIVE method is used due to the object to be detected has planar surfaces.
 
-    The OpenCV RANSAC implementation wants you to provide three parameters: the maximum number of
-    iterations until stop the algorithm, the maximum allowed distance between the observed and
-    computed point projections to consider it an inlier and the confidence to obtain a good result.
+    The OpenCV RANSAC implementation wants you to provide three parameters: 1) the maximum number of
+    iterations until the algorithm stops, 2) the maximum allowed distance between the observed and
+    computed point projections to consider it an inlier and 3) the confidence to obtain a good result.
     You can tune these parameters in order to improve your algorithm performance. Increasing the
-    number of iterations you will have a more accurate solution, but will take more time to find a
+    number of iterations will have a more accurate solution, but will take more time to find a
     solution. Increasing the reprojection error will reduce the computation time, but your solution
     will be unaccurate. Decreasing the confidence your algorithm will be faster, but the obtained
     solution will be unaccurate.

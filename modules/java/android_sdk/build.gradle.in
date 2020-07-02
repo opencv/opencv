@@ -81,28 +81,48 @@
 //   splits {
 //       abi {
 //           enable true
+//           universalApk false
 //           reset()
 //           include 'armeabi-v7a' // , 'x86', 'x86_64', 'arm64-v8a'
-//           universalApk false
 //       }
 //   }
 //
 
 apply plugin: 'com.android.library'
 
-println "OpenCV: " + project.buildscript.sourceFile
+def openCVersionName = "@OPENCV_VERSION@"
+def openCVersionCode = ((@OPENCV_VERSION_MAJOR@ * 100 + @OPENCV_VERSION_MINOR@) * 100 + @OPENCV_VERSION_PATCH@) * 10 + 0
+
+println "OpenCV: " +openCVersionName + " " + project.buildscript.sourceFile
 
 android {
-    compileSdkVersion 27
-    //buildToolsVersion "27.0.3" // not needed since com.android.tools.build:gradle:3.0.0
+    compileSdkVersion @ANDROID_COMPILE_SDK_VERSION@
 
     defaultConfig {
-        minSdkVersion 14
-        targetSdkVersion 21
+        minSdkVersion @ANDROID_MIN_SDK_VERSION@
+        targetSdkVersion @ANDROID_TARGET_SDK_VERSION@
+
+        versionCode openCVersionCode
+        versionName openCVersionName
+
+        externalNativeBuild {
+            cmake {
+                arguments "-DANDROID_STL=@ANDROID_STL@"
+                targets "opencv_jni_shared"
+            }
+        }
     }
 
     buildTypes {
+        debug {
+            packagingOptions {
+                doNotStrip '**/*.so'  // controlled by OpenCV CMake scripts
+            }
+        }
         release {
+            packagingOptions {
+                doNotStrip '**/*.so'  // controlled by OpenCV CMake scripts
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
         }
@@ -119,6 +139,12 @@ android {
             aidl.srcDirs = ['java/src']
             res.srcDirs = ['java/res']
             manifest.srcFile 'java/AndroidManifest.xml'
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path (project.projectDir.toString() + '/libcxx_helper/CMakeLists.txt')
         }
     }
 }

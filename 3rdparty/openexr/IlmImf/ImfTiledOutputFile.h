@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2004, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -42,20 +42,24 @@
 //
 //-----------------------------------------------------------------------------
 
-#include <ImfHeader.h>
-#include <ImfFrameBuffer.h>
+#include "ImfHeader.h"
+#include "ImfFrameBuffer.h"
 #include "ImathBox.h"
-#include <ImfTileDescription.h>
-#include <ImfThreading.h>
+#include "ImfTileDescription.h"
+#include "ImfThreading.h"
+#include "ImfGenericOutputFile.h"
+#include "ImfForward.h"
+#include "ImfNamespace.h"
+#include "ImfExport.h"
 
-namespace Imf {
 
-class TiledInputFile;
-class InputFile;
+OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_ENTER
+
+
 struct PreviewRgba;
 
 
-class TiledOutputFile
+class TiledOutputFile : public GenericOutputFile
 {
   public:
 
@@ -80,9 +84,10 @@ class TiledOutputFile
     // faster than reading the tiles in random order (see writeTile,
     // below).
     //-------------------------------------------------------------------
-
+    
+    IMF_EXPORT
     TiledOutputFile (const char fileName[],
-             const Header &header,
+		     const Header &header,
                      int numThreads = globalThreadCount ());
 
 
@@ -93,8 +98,9 @@ class TiledOutputFile
     // close the corresponding files.
     // ----------------------------------------------------------------
 
-    TiledOutputFile (OStream &os,
-             const Header &header,
+    IMF_EXPORT
+    TiledOutputFile (OPENEXR_IMF_INTERNAL_NAMESPACE::OStream &os,
+		     const Header &header,
                      int numThreads = globalThreadCount ());
 
 
@@ -104,21 +110,24 @@ class TiledOutputFile
     // Destroying a TiledOutputFile object before all tiles
     // have been written results in an incomplete file.
     //-----------------------------------------------------
-
+    
+    IMF_EXPORT
     virtual ~TiledOutputFile ();
 
 
     //------------------------
     // Access to the file name
     //------------------------
-
+    
+    IMF_EXPORT
     const char *	fileName () const;
 
 
     //--------------------------
     // Access to the file header
     //--------------------------
-
+    
+    IMF_EXPORT
     const Header &	header () const;
 
 
@@ -132,14 +141,16 @@ class TiledOutputFile
     // called.  The current frame buffer can be changed
     // after each call to writeTile().
     //-------------------------------------------------------
-
+    
+    IMF_EXPORT
     void		setFrameBuffer (const FrameBuffer &frameBuffer);
 
 
     //-----------------------------------
     // Access to the current frame buffer
     //-----------------------------------
-
+    
+    IMF_EXPORT
     const FrameBuffer &	frameBuffer () const;
 
 
@@ -153,9 +164,13 @@ class TiledOutputFile
     // fields of the file header's TileDescriptionAttribute.
     //---------------------------------------------------------
 
+    IMF_EXPORT
     unsigned int	tileXSize () const;
+    IMF_EXPORT
     unsigned int	tileYSize () const;
+    IMF_EXPORT
     LevelMode		levelMode () const;
+    IMF_EXPORT
     LevelRoundingMode	levelRoundingMode () const;
 
 
@@ -195,16 +210,20 @@ class TiledOutputFile
     //      return value is the same as for numXLevels()
     //
     //	if levelMode() == RIPMAP_LEVELS:
-    //      an Iex::LogicExc exception is thrown
+    //      an IEX_NAMESPACE::LogicExc exception is thrown
     //
-    // isValidLevel(lx, ly) returns true if the file contains
+    // isValidLevel(lx, ly) returns true if the file contains 
     // a level with level number (lx, ly), false if not.
     //
     //--------------------------------------------------------------------
 
+    IMF_EXPORT
     int			numLevels () const;
+    IMF_EXPORT
     int			numXLevels () const;
+    IMF_EXPORT
     int			numYLevels () const;
+    IMF_EXPORT
     bool		isValidLevel (int lx, int ly) const;
 
 
@@ -226,7 +245,9 @@ class TiledOutputFile
     //
     //---------------------------------------------------------
 
+    IMF_EXPORT
     int			levelWidth  (int lx) const;
+    IMF_EXPORT
     int			levelHeight (int ly) const;
 
 
@@ -250,7 +271,9 @@ class TiledOutputFile
     //
     //----------------------------------------------------------
 
+    IMF_EXPORT
     int			numXTiles (int lx = 0) const;
+    IMF_EXPORT
     int			numYTiles (int ly = 0) const;
 
 
@@ -274,8 +297,10 @@ class TiledOutputFile
     //
     //---------------------------------------------------------
 
-    Imath::Box2i	dataWindowForLevel (int l = 0) const;
-    Imath::Box2i	dataWindowForLevel (int lx, int ly) const;
+    IMF_EXPORT
+    IMATH_NAMESPACE::Box2i	dataWindowForLevel (int l = 0) const;
+    IMF_EXPORT
+    IMATH_NAMESPACE::Box2i	dataWindowForLevel (int lx, int ly) const;
 
 
     //-------------------------------------------------------------------
@@ -299,11 +324,13 @@ class TiledOutputFile
     //
     //-------------------------------------------------------------------
 
-    Imath::Box2i	dataWindowForTile (int dx, int dy,
-                       int l = 0) const;
+    IMF_EXPORT
+    IMATH_NAMESPACE::Box2i	dataWindowForTile (int dx, int dy,
+					   int l = 0) const;
 
-    Imath::Box2i	dataWindowForTile (int dx, int dy,
-                       int lx, int ly) const;
+    IMF_EXPORT
+    IMATH_NAMESPACE::Box2i	dataWindowForTile (int dx, int dy,
+					   int lx, int ly) const;
 
     //------------------------------------------------------------------
     // Write pixel data:
@@ -343,10 +370,10 @@ class TiledOutputFile
     //	 		in a contiguous block.  The levels are ordered
     //	 		like this:
     //
-    //			    (0, 0)   (1, 0)   ... (nx-1, 0)
-    //			    (0, 1)   (1, 1)   ... (nx-1, 1)
+    //			    (0, 0)   (1, 0)   ... (nx-1, 0) 
+    //			    (0, 1)   (1, 1)   ... (nx-1, 1) 
     //			     ...
-    //			    (0,ny-1) (1,ny-1) ... (nx-1,ny-1)
+    //			    (0,ny-1) (1,ny-1) ... (nx-1,ny-1) 
     //
     //			where nx = numXLevels(), and ny = numYLevels().
     //			In an individual level, (lx, ly), the tiles
@@ -377,12 +404,16 @@ class TiledOutputFile
     //
     //------------------------------------------------------------------
 
+    IMF_EXPORT
     void		writeTile  (int dx, int dy, int l = 0);
+    IMF_EXPORT
     void		writeTile  (int dx, int dy, int lx, int ly);
 
+    IMF_EXPORT
     void		writeTiles (int dx1, int dx2, int dy1, int dy2,
                                     int lx, int ly);
 
+    IMF_EXPORT
     void		writeTiles (int dx1, int dx2, int dy1, int dy2,
                                     int l = 0);
 
@@ -394,10 +425,13 @@ class TiledOutputFile
     // header:  The two header's "dataWindow", "compression",
     // "lineOrder", "channels", and "tiles" attributes must be the same.
     //------------------------------------------------------------------
-
+    
+    IMF_EXPORT
     void		copyPixels (TiledInputFile &in);
-
-
+    IMF_EXPORT
+    void        copyPixels (TiledInputPart &in);
+    
+    
     //------------------------------------------------------------------
     // Shortcut to copy all pixels from an InputFile into this file,
     // without uncompressing and then recompressing the pixel data.
@@ -407,9 +441,13 @@ class TiledOutputFile
     //
     // To use this function, the InputFile must be tiled.
     //------------------------------------------------------------------
-
+    
+    IMF_EXPORT
     void		copyPixels (InputFile &in);
+    IMF_EXPORT
+    void        copyPixels (InputPart &in);
 
+    
 
     //--------------------------------------------------------------
     // Updating the preview image:
@@ -417,7 +455,7 @@ class TiledOutputFile
     // updatePreviewImage() supplies a new set of pixels for the
     // preview image attribute in the file's header.  If the header
     // does not contain a preview image, updatePreviewImage() throws
-    // an Iex::LogicExc.
+    // an IEX_NAMESPACE::LogicExc.
     //
     // Note: updatePreviewImage() is necessary because images are
     // often stored in a file incrementally, a few tiles at a time,
@@ -429,12 +467,13 @@ class TiledOutputFile
     //
     //--------------------------------------------------------------
 
+    IMF_EXPORT
     void		updatePreviewImage (const PreviewRgba newPixels[]);
 
 
     //-------------------------------------------------------------
     // Break a tile -- for testing and debugging only:
-    //
+    // 
     // breakTile(dx,dy,lx,ly,p,n,c) introduces an error into the
     // output file by writing n copies of character c, starting
     // p bytes from the beginning of the tile with tile coordinates
@@ -446,14 +485,23 @@ class TiledOutputFile
     //
     //-------------------------------------------------------------
 
+    IMF_EXPORT
     void		breakTile  (int dx, int dy,
-                    int lx, int ly,
-                    int offset,
-                    int length,
-                    char c);
+				    int lx, int ly,
+				    int offset,
+				    int length,
+				    char c);
     struct Data;
 
   private:
+
+    // ----------------------------------------------------------------
+    // A constructor attaches the OutputStreamMutex to the
+    // given one from MultiPartOutputFile. Set the previewPosition
+    // and lineOffsetsPosition which have been acquired from
+    // the constructor of MultiPartOutputFile as well.
+    // ----------------------------------------------------------------
+    TiledOutputFile (const OutputPartData* part);
 
     TiledOutputFile (const TiledOutputFile &);		    // not implemented
     TiledOutputFile & operator = (const TiledOutputFile &); // not implemented
@@ -461,15 +509,20 @@ class TiledOutputFile
     void		initialize (const Header &header);
 
     bool		isValidTile (int dx, int dy,
-                     int lx, int ly) const;
+				     int lx, int ly) const;
 
     size_t		bytesPerLineForTile (int dx, int dy,
-                         int lx, int ly) const;
+					     int lx, int ly) const;
 
     Data *		_data;
+
+    OutputStreamMutex*  _streamData;
+    bool                _deleteStream;
+
+    friend class MultiPartOutputFile;
 };
 
 
-} // namespace Imf
+OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_EXIT
 
 #endif

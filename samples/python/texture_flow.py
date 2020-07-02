@@ -16,14 +16,14 @@ from __future__ import print_function
 import numpy as np
 import cv2 as cv
 
-if __name__ == '__main__':
+def main():
     import sys
     try:
         fn = sys.argv[1]
     except:
-        fn = '../data/starry_night.jpg'
+        fn = 'starry_night.jpg'
 
-    img = cv.imread(fn)
+    img = cv.imread(cv.samples.findFile(fn))
     if img is None:
         print('Failed to load image file:', fn)
         sys.exit(1)
@@ -45,3 +45,11 @@ if __name__ == '__main__':
     cv.imshow('input', img)
     cv.imshow('flow', vis)
     cv.waitKey()
+
+    print('Done')
+
+
+if __name__ == '__main__':
+    print(__doc__)
+    main()
+    cv.destroyAllWindows()

@@ -66,7 +66,7 @@ if __name__ == "__main__":
             tbl.newColumn(m, metrix_table[m][0], align = "center")
 
     needNewRow = True
-    for case in sorted(tests):
+    for case in sorted(tests, key=lambda x: str(x)):
         if needNewRow:
             tbl.newRow()
             if not options.showall:

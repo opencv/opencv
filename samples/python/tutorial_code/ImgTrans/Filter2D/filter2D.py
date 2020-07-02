@@ -11,15 +11,15 @@ def main(argv):
     window_name = 'filter2D Demo'
 
     ## [load]
-    imageName = argv[0] if len(argv) > 0 else "../data/lena.jpg"
+    imageName = argv[0] if len(argv) > 0 else 'lena.jpg'
 
     # Loads an image
-    src = cv.imread(imageName, cv.IMREAD_COLOR)
+    src = cv.imread(cv.samples.findFile(imageName), cv.IMREAD_COLOR)
 
     # Check if image is loaded fine
     if src is None:
         print ('Error opening image!')
-        print ('Usage: filter2D.py [image_name -- default ../data/lena.jpg] \n')
+        print ('Usage: filter2D.py [image_name -- default lena.jpg] \n')
         return -1
     ## [load]
     ## [init_arguments]

@@ -1,11 +1,8 @@
 #include <iostream>
-#include <opencv2/opencv_modules.hpp>
-#ifdef HAVE_OPENCV_ARUCO
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/calib3d.hpp>
-#include <opencv2/aruco.hpp>
 
 using namespace std;
 using namespace cv;
@@ -68,8 +65,8 @@ void computeC2MC1(const Mat &R1, const Mat &tvec1, const Mat &R2, const Mat &tve
 void homographyFromCameraDisplacement(const string &img1Path, const string &img2Path, const Size &patternSize,
                                       const float squareSize, const string &intrinsicsPath)
 {
-    Mat img1 = imread(img1Path);
-    Mat img2 = imread(img2Path);
+    Mat img1 = imread( samples::findFile( img1Path ) );
+    Mat img2 = imread( samples::findFile( img2Path ) );
 
     //! [compute-poses]
     vector<Point2f> corners1, corners2;
@@ -85,7 +82,7 @@ void homographyFromCameraDisplacement(const string &img1Path, const string &img2
     vector<Point3f> objectPoints;
     calcChessboardCorners(patternSize, squareSize, objectPoints);
 
-    FileStorage fs(intrinsicsPath, FileStorage::READ);
+    FileStorage fs( samples::findFile( intrinsicsPath ), FileStorage::READ);
     Mat cameraMatrix, distCoeffs;
     fs["camera_matrix"] >> cameraMatrix;
     fs["distortion_coefficients"] >> distCoeffs;
@@ -98,8 +95,8 @@ void homographyFromCameraDisplacement(const string &img1Path, const string &img2
 
     Mat img1_copy_pose = img1.clone(), img2_copy_pose = img2.clone();
     Mat img_draw_poses;
-    aruco::drawAxis(img1_copy_pose, cameraMatrix, distCoeffs, rvec1, tvec1, 2*squareSize);
-    aruco::drawAxis(img2_copy_pose, cameraMatrix, distCoeffs, rvec2, tvec2, 2*squareSize);
+    drawFrameAxes(img1_copy_pose, cameraMatrix, distCoeffs, rvec1, tvec1, 2*squareSize);
+    drawFrameAxes(img2_copy_pose, cameraMatrix, distCoeffs, rvec2, tvec2, 2*squareSize);
     hconcat(img1_copy_pose, img2_copy_pose, img_draw_poses);
     imshow("Chessboard poses", img_draw_poses);
 
@@ -173,9 +170,9 @@ void homographyFromCameraDisplacement(const string &img1Path, const string &img2
 
 const char* params
     = "{ help h         |       | print usage }"
-      "{ image1         | ../data/left02.jpg | path to the source chessboard image }"
-      "{ image2         | ../data/left01.jpg | path to the desired chessboard image }"
-      "{ intrinsics     | ../data/left_intrinsics.yml | path to camera intrinsics }"
+      "{ image1         | left02.jpg | path to the source chessboard image }"
+      "{ image2         | left01.jpg | path to the desired chessboard image }"
+      "{ intrinsics     | left_intrinsics.yml | path to camera intrinsics }"
       "{ width bw       | 9     | chessboard width }"
       "{ height bh      | 6     | chessboard height }"
       "{ square_size    | 0.025 | chessboard square size }";
@@ -202,10 +199,3 @@ int main(int argc, char *argv[])
 
     return 0;
 }
-#else
-int main()
-{
-    std::cerr << "FATAL ERROR: This sample requires opencv_aruco module (from opencv_contrib)" << std::endl;
-    return 0;
-}
-#endif

@@ -15,13 +15,6 @@ else()
   ocv_list_filterout(lib_srcs jmemnobs.c)
 endif()
 
-if(WINRT)
-    add_definitions(-DNO_GETENV)
-    get_directory_property( DirDefs COMPILE_DEFINITIONS )
-    message(STATUS "Adding NO_GETENV to compiler definitions for WINRT:")
-    message(STATUS "   COMPILE_DEFINITIONS = ${DirDefs}")
-endif()
-
 # ----------------------------------------------------------------------------------
 #         Define the library target:
 # ----------------------------------------------------------------------------------

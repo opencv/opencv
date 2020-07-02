@@ -1,4 +1,12 @@
 #!/usr/bin/env python
+'''
+Digit recognition from video.
+
+Run digits.py before, to train and save the SVM.
+
+Usage:
+  digits_video.py [{camera_id|video_file}]
+'''
 
 # Python 2/3 compatibility
 from __future__ import print_function
@@ -28,11 +36,7 @@ def main():
         print('"%s" not found, run digits.py first' % classifier_fn)
         return
 
-    if True:
-        model = cv.ml.SVM_load(classifier_fn)
-    else:
-        model = cv.ml.SVM_create()
-        model.load_(classifier_fn) #Known bug: https://github.com/opencv/opencv/issues/4969
+    model = cv.ml.SVM_load(classifier_fn)
 
     while True:
         _ret, frame = cap.read()
@@ -41,7 +45,7 @@ def main():
 
         bin = cv.adaptiveThreshold(gray, 255, cv.ADAPTIVE_THRESH_MEAN_C, cv.THRESH_BINARY_INV, 31, 10)
         bin = cv.medianBlur(bin, 3)
-        _, contours, heirs = cv.findContours( bin.copy(), cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE)
+        contours, heirs = cv.findContours( bin.copy(), cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE)
         try:
             heirs = heirs[0]
         except:
@@ -86,7 +90,7 @@ def main():
                 frame[y:,x+w:][:SZ, :SZ] = bin_norm[...,np.newaxis]
 
             sample = preprocess_hog([bin_norm])
-            digit = model.predict(sample)[0]
+            digit = model.predict(sample)[1].ravel()
             cv.putText(frame, '%d'%digit, (x, y), cv.FONT_HERSHEY_PLAIN, 1.0, (200, 0, 0), thickness = 1)
 
 
@@ -96,6 +100,10 @@ def main():
         if ch == 27:
             break
 
+    print('Done')
+
+
 if __name__ == '__main__':
+    print(__doc__)
     main()
     cv.destroyAllWindows()

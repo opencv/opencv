@@ -69,7 +69,7 @@
 //
 
 if (typeof module !== 'undefined' && module.exports) {
-    // The envrionment is Node.js
+    // The environment is Node.js
     var cv = require('./opencv.js'); // eslint-disable-line no-var
 }
 
@@ -92,7 +92,7 @@ QUnit.test('test_imgProc', function(assert) {
         binView[0] = 10;
         cv.calcHist(source, channels, mask, hist, histSize, ranges, false);
 
-        // hist should contains a N X 1 arrary.
+        // hist should contains a N X 1 array.
         let size = hist.size();
         assert.equal(size.height, 256);
         assert.equal(size.width, 1);
@@ -146,6 +146,143 @@ QUnit.test('test_imgProc', function(assert) {
 
         dest.delete();
         source.delete();
+    }
+
+    // floodFill
+    {
+        let center = new cv.Point(5, 5);
+        let rect = new cv.Rect(0, 0, 0, 0);
+        let img = new cv.Mat.zeros(10, 10, cv.CV_8UC1);
+        let color = new cv.Scalar (255);
+        cv.circle(img, center, 3, color, 1);
+
+        let edge = new cv.Mat();
+        cv.Canny(img, edge, 100, 255);
+        cv.copyMakeBorder(edge, edge, 1, 1, 1, 1, cv.BORDER_REPLICATE);
+
+        let expected_img_data = new Uint8Array([
+            0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+            0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+            0,   0,   0,   0,   0, 255,   0,   0,   0,   0,
+            0,   0,   0, 255, 255, 255, 255, 255,   0,   0,
+            0,   0,   0, 255,   0, 255,   0, 255,   0,   0,
+            0,   0, 255, 255, 255, 255,   0,   0, 255,   0,
+            0,   0,   0, 255,   0,   0,   0, 255,   0,   0,
+            0,   0,   0, 255, 255,   0, 255, 255,   0,   0,
+            0,   0,   0,   0,   0, 255,   0,   0,   0,   0,
+            0,   0,   0,   0,   0,   0,   0,   0,   0,   0]);
+
+        let img_elem = 10*10*1;
+        let expected_img_data_ptr = cv._malloc(img_elem);
+        let expected_img_data_heap = new Uint8Array(cv.HEAPU8.buffer,
+                                                    expected_img_data_ptr,
+                                                    img_elem);
+        expected_img_data_heap.set(new Uint8Array(expected_img_data.buffer));
+
+        let expected_img = new cv.Mat(  10, 10, cv.CV_8UC1, expected_img_data_ptr, 0);
+
+        let expected_rect = new cv.Rect(3,3,3,3);
+
+        let compare_result = new cv.Mat(10, 10, cv.CV_8UC1);
+
+        cv.floodFill(img, edge, center, color, rect);
+
+        cv.compare (img, expected_img, compare_result, cv.CMP_EQ);
+
+        // expect every pixels are the same.
+        assert.equal (cv.countNonZero(compare_result), img.total());
+        assert.equal (rect.x, expected_rect.x);
+        assert.equal (rect.y, expected_rect.y);
+        assert.equal (rect.width, expected_rect.width);
+        assert.equal (rect.height, expected_rect.height);
+
+        img.delete();
+        edge.delete();
+        expected_img.delete();
+        compare_result.delete();
+    }
+
+    // fillPoly
+    {
+        let img_width = 6;
+        let img_height = 6;
+
+        let img = new cv.Mat.zeros(img_height, img_width, cv.CV_8UC1);
+
+        let npts = 4;
+        let square_point_data = new Uint8Array([
+            1, 1,
+            4, 1,
+            4, 4,
+            1, 4]);
+        let square_points = cv.matFromArray(npts, 1, cv.CV_32SC2, square_point_data);
+        let pts = new cv.MatVector();
+        pts.push_back (square_points);
+        let color = new cv.Scalar (255);
+
+        let expected_img_data = new Uint8Array([
+            0,   0,   0,   0,   0,   0,
+            0, 255, 255, 255, 255,   0,
+            0, 255, 255, 255, 255,   0,
+            0, 255, 255, 255, 255,   0,
+            0, 255, 255, 255, 255,   0,
+            0,   0,   0,   0,   0,   0]);
+        let expected_img = cv.matFromArray(img_height, img_width, cv.CV_8UC1, expected_img_data);
+
+        cv.fillPoly(img, pts, color);
+
+        let compare_result = new cv.Mat(img_height, img_width, cv.CV_8UC1);
+
+        cv.compare (img, expected_img, compare_result, cv.CMP_EQ);
+
+        // expect every pixels are the same.
+        assert.equal (cv.countNonZero(compare_result), img.total());
+
+        img.delete();
+        square_points.delete();
+        pts.delete();
+        expected_img.delete();
+        compare_result.delete();
+    }
+
+    // fillConvexPoly
+    {
+        let img_width = 6;
+        let img_height = 6;
+
+        let img = new cv.Mat.zeros(img_height, img_width, cv.CV_8UC1);
+
+        let npts = 4;
+        let square_point_data = new Uint8Array([
+            1, 1,
+            4, 1,
+            4, 4,
+            1, 4]);
+        let square_points = cv.matFromArray(npts, 1, cv.CV_32SC2, square_point_data);
+        let color = new cv.Scalar (255);
+
+        let expected_img_data = new Uint8Array([
+            0,   0,   0,   0,   0,   0,
+            0, 255, 255, 255, 255,   0,
+            0, 255, 255, 255, 255,   0,
+            0, 255, 255, 255, 255,   0,
+            0, 255, 255, 255, 255,   0,
+            0,   0,   0,   0,   0,   0]);
+        let expected_img = cv.matFromArray(img_height, img_width, cv.CV_8UC1, expected_img_data);
+
+        cv.fillConvexPoly(img, square_points, color);
+
+        let compare_result = new cv.Mat(img_height, img_width, cv.CV_8UC1);
+
+        cv.compare (img, expected_img, compare_result, cv.CMP_EQ);
+
+        // expect every pixels are the same.
+        assert.equal (cv.countNonZero(compare_result), img.total());
+
+        img.delete();
+        square_points.delete();
+        expected_img.delete();
+        compare_result.delete();
     }
 });
 
@@ -804,4 +941,39 @@ QUnit.test('test_filter', function(assert) {
         inv3.delete();
         inv4.delete();
     }
+    //Rotate
+    {
+        let dst = new cv.Mat();
+        let src = cv.matFromArray(3, 2, cv.CV_8U, [1,2,3,4,5,6]);
+
+        cv.rotate(src, dst, cv.ROTATE_90_CLOCKWISE);
+
+        size = dst.size();
+        assert.equal(size.height, 2, "ROTATE_HEIGHT");
+        assert.equal(size.width, 3, "ROTATE_WIGTH");
+
+        let expected = new Uint8Array([5,3,1,6,4,2]);
+
+        assert.deepEqual(dst.data, expected);
+
+        dst.delete();
+        src.delete();
+    }
+});
+
+QUnit.test('warpPolar', function(assert) {
+  const lines = new cv.Mat(255, 255, cv.CV_8U, new cv.Scalar(0));
+  for (let r = 0; r < lines.rows; r++) {
+    lines.row(r).setTo(new cv.Scalar(r));
+  }
+  cv.warpPolar(lines, lines, { width: 5, height: 5 }, new cv.Point(2, 2), 3,
+    cv.INTER_CUBIC | cv.WARP_FILL_OUTLIERS | cv.WARP_INVERSE_MAP);
+  assert.ok(lines instanceof cv.Mat);
+  assert.deepEqual(Array.from(lines.data), [
+    159, 172, 191, 210, 223,
+    146, 159, 191, 223, 236,
+    128, 128,   0,   0,   0,
+    109,  96,  64,  32,  19,
+     96,  83,  64,  45,  32
+  ]);
 });

@@ -17,6 +17,7 @@ import org.opencv.core.Mat;
 import org.opencv.core.Point;
 import org.opencv.core.Point3;
 import org.opencv.core.Rect;
+import org.opencv.core.RotatedRect;
 import org.opencv.core.Scalar;
 import org.opencv.core.Size;
 import org.opencv.core.DMatch;
@@ -98,6 +99,8 @@ public class OpenCVTestCase extends TestCase {
     protected Mat rgbLena;
     protected Mat grayChess;
 
+    protected Mat gray255_32f_3d;
+
     protected Mat v1;
     protected Mat v2;
 
@@ -148,6 +151,8 @@ public class OpenCVTestCase extends TestCase {
         rgbLena = Imgcodecs.imread(OpenCVTestRunner.LENA_PATH);
         grayChess = Imgcodecs.imread(OpenCVTestRunner.CHESS_PATH, 0);
 
+        gray255_32f_3d = new Mat(new int[]{matSize, matSize, matSize}, CvType.CV_32F, new Scalar(255.0));
+
         v1 = new Mat(1, 3, CvType.CV_32F);
         v1.put(0, 0, 1.0, 3.0, 2.0);
         v2 = new Mat(1, 3, CvType.CV_32F);
@@ -183,6 +188,7 @@ public class OpenCVTestCase extends TestCase {
         rgba128.release();
         rgbLena.release();
         grayChess.release();
+        gray255_32f_3d.release();
         v1.release();
         v2.release();
 
@@ -336,12 +342,30 @@ public class OpenCVTestCase extends TestCase {
             assertRectEquals(list1.get(i), list2.get(i));
     }
 
+    public static void assertListRotatedRectEquals(List<RotatedRect> list1, List<RotatedRect> list2) {
+        if (list1.size() != list2.size()) {
+            throw new UnsupportedOperationException();
+        }
+
+        for (int i = 0; i < list1.size(); i++)
+            assertRotatedRectEquals(list1.get(i), list2.get(i));
+    }
+
     public static void assertRectEquals(Rect expected, Rect actual) {
         String msg = "expected:<" + expected + "> but was:<" + actual + ">";
         assertEquals(msg, expected.x, actual.x);
         assertEquals(msg, expected.y, actual.y);
         assertEquals(msg, expected.width, actual.width);
         assertEquals(msg, expected.height, actual.height);
+    }
+
+    public static void assertRotatedRectEquals(RotatedRect expected, RotatedRect actual) {
+        String msg = "expected:<" + expected + "> but was:<" + actual + ">";
+        assertEquals(msg, expected.center.x, actual.center.x);
+        assertEquals(msg, expected.center.y, actual.center.y);
+        assertEquals(msg, expected.size.width, actual.size.width);
+        assertEquals(msg, expected.size.height, actual.size.height);
+        assertEquals(msg, expected.angle, actual.angle);
     }
 
     public static void assertMatEqual(Mat m1, Mat m2) {
@@ -423,8 +447,24 @@ public class OpenCVTestCase extends TestCase {
         assertEquals(msg, expected.z, actual.z, eps);
     }
 
+    static private boolean dimensionsEqual(Mat expected, Mat actual) {
+        if (expected.dims() != actual.dims()) {
+            return false;
+        }
+        if (expected.dims() > 2) {
+            for (int i = 0; i < expected.dims(); i++) {
+                if (expected.size(i) != actual.size(i)) {
+                    return false;
+                }
+            }
+            return true;
+        } else {
+            return expected.cols() == actual.cols() && expected.rows() == actual.rows();
+        }
+    }
+
     static private void compareMats(Mat expected, Mat actual, boolean isEqualityMeasured) {
-        if (expected.type() != actual.type() || expected.cols() != actual.cols() || expected.rows() != actual.rows()) {
+        if (expected.type() != actual.type() || !dimensionsEqual(expected, actual)) {
             throw new UnsupportedOperationException("Can not compare " + expected + " and " + actual);
         }
 
@@ -452,7 +492,7 @@ public class OpenCVTestCase extends TestCase {
     }
 
     static private void compareMats(Mat expected, Mat actual, double eps, boolean isEqualityMeasured) {
-        if (expected.type() != actual.type() || expected.cols() != actual.cols() || expected.rows() != actual.rows()) {
+        if (expected.type() != actual.type() || !dimensionsEqual(expected, actual)) {
             throw new UnsupportedOperationException("Can not compare " + expected + " and " + actual);
         }
 
@@ -461,10 +501,10 @@ public class OpenCVTestCase extends TestCase {
         double maxDiff = Core.norm(diff, Core.NORM_INF);
 
         if (isEqualityMeasured)
-            assertTrue("Max difference between expected and actiual Mats is "+ maxDiff + ", that bigger than " + eps,
+            assertTrue("Max difference between expected and actual Mats is "+ maxDiff + ", that bigger than " + eps,
                     maxDiff <= eps);
         else
-            assertFalse("Max difference between expected and actiual Mats is "+ maxDiff + ", that less than " + eps,
+            assertFalse("Max difference between expected and actual Mats is "+ maxDiff + ", that less than " + eps,
                     maxDiff <= eps);
     }
 
@@ -541,7 +581,7 @@ public class OpenCVTestCase extends TestCase {
             message = TAG + " :: " + "could not instantiate " + cname + "! Exception: " + ex.getMessage();
         }
 
-        assertTrue(message, instance!=null);
+        assertNotNull(message, instance);
 
         return instance;
     }

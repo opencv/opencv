@@ -373,8 +373,6 @@ void KAZEFeatures::Determinant_Hessian(std::vector<KeyPoint>& kpts)
                     is_out = true;
                 }
 
-                is_out = false;
-
                 if (is_out == false) {
                     if (is_repeated == false) {
                         kpts.push_back(kpts_par_[i][j]);

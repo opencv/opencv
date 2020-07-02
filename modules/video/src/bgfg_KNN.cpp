@@ -110,7 +110,7 @@ public:
     //set parameters
     // N - the number of samples stored in memory per model
     nN = defaultNsamples;
-    //kNN - k nearest neighbour - number on NN for detcting background - default K=[0.1*nN]
+    //kNN - k nearest neighbour - number on NN for detecting background - default K=[0.1*nN]
     nkNN=MAX(1,cvRound(0.1*nN*3+0.40));
 
     //Tb - Threshold Tb*kernelwidth
@@ -229,7 +229,7 @@ public:
     virtual bool getDetectShadows() const CV_OVERRIDE { return bShadowDetection; }
     virtual void setDetectShadows(bool detectshadows) CV_OVERRIDE
     {
-        if ((bShadowDetection && detectshadows) || (!bShadowDetection && !detectshadows))
+        if (bShadowDetection == detectshadows)
             return;
         bShadowDetection = detectshadows;
 #ifdef HAVE_OPENCL
@@ -292,7 +292,7 @@ protected:
     //less important parameters - things you might change but be careful
     ////////////////////////
     int nN;//totlal number of samples
-    int nkNN;//number on NN for detcting background - default K=[0.1*nN]
+    int nkNN;//number on NN for detecting background - default K=[0.1*nN]
 
     //shadow detection parameters
     bool bShadowDetection;//default 1 - do shadow detection
@@ -728,7 +728,7 @@ void BackgroundSubtractorKNNImpl::create_ocl_apply_kernel()
 
 void BackgroundSubtractorKNNImpl::apply(InputArray _image, OutputArray _fgmask, double learningRate)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
 #ifdef HAVE_OPENCL
     if (opencl_ON)
@@ -814,7 +814,7 @@ void BackgroundSubtractorKNNImpl::apply(InputArray _image, OutputArray _fgmask, 
 
 void BackgroundSubtractorKNNImpl::getBackgroundImage(OutputArray backgroundImage) const
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
 #ifdef HAVE_OPENCL
     if (opencl_ON)

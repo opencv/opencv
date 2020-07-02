@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2004, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -47,21 +47,19 @@
 //
 //-----------------------------------------------------------------------------
 
-#include <ImfHeader.h>
-#include <ImfFrameBuffer.h>
-#include <ImfRgba.h>
+#include "ImfHeader.h"
+#include "ImfFrameBuffer.h"
+#include "ImfRgba.h"
 #include "ImathVec.h"
 #include "ImathBox.h"
 #include "half.h"
-#include <ImfThreading.h>
+#include "ImfThreading.h"
 #include <string>
+#include "ImfNamespace.h"
+#include "ImfForward.h"
 
-namespace Imf {
+OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_ENTER
 
-
-class OutputFile;
-class InputFile;
-struct PreviewRgba;
 
 //
 // RGBA output file.
@@ -75,9 +73,10 @@ class RgbaOutputFile
     // Constructor -- header is constructed by the caller
     //---------------------------------------------------
 
+    IMF_EXPORT
     RgbaOutputFile (const char name[],
-            const Header &header,
-            RgbaChannels rgbaChannels = WRITE_RGBA,
+		    const Header &header,
+		    RgbaChannels rgbaChannels = WRITE_RGBA,
                     int numThreads = globalThreadCount());
 
 
@@ -87,9 +86,10 @@ class RgbaOutputFile
     // automatically close the file.
     //----------------------------------------------------
 
-    RgbaOutputFile (OStream &os,
-            const Header &header,
-            RgbaChannels rgbaChannels = WRITE_RGBA,
+    IMF_EXPORT
+    RgbaOutputFile (OPENEXR_IMF_INTERNAL_NAMESPACE::OStream &os,
+		    const Header &header,
+		    RgbaChannels rgbaChannels = WRITE_RGBA,
                     int numThreads = globalThreadCount());
 
 
@@ -98,15 +98,16 @@ class RgbaOutputFile
     // call arguments (empty dataWindow means "same as displayWindow")
     //----------------------------------------------------------------
 
+    IMF_EXPORT
     RgbaOutputFile (const char name[],
-            const Imath::Box2i &displayWindow,
-            const Imath::Box2i &dataWindow = Imath::Box2i(),
-            RgbaChannels rgbaChannels = WRITE_RGBA,
-            float pixelAspectRatio = 1,
-            const Imath::V2f screenWindowCenter = Imath::V2f (0, 0),
-            float screenWindowWidth = 1,
-            LineOrder lineOrder = INCREASING_Y,
-            Compression compression = PIZ_COMPRESSION,
+		    const IMATH_NAMESPACE::Box2i &displayWindow,
+		    const IMATH_NAMESPACE::Box2i &dataWindow = IMATH_NAMESPACE::Box2i(),
+		    RgbaChannels rgbaChannels = WRITE_RGBA,
+		    float pixelAspectRatio = 1,
+		    const IMATH_NAMESPACE::V2f screenWindowCenter = IMATH_NAMESPACE::V2f (0, 0),
+		    float screenWindowWidth = 1,
+		    LineOrder lineOrder = INCREASING_Y,
+		    Compression compression = PIZ_COMPRESSION,
                     int numThreads = globalThreadCount());
 
 
@@ -116,15 +117,16 @@ class RgbaOutputFile
     // Box2i (V2i (0, 0), V2i (width - 1, height -1))
     //-----------------------------------------------
 
+    IMF_EXPORT
     RgbaOutputFile (const char name[],
-            int width,
-            int height,
-            RgbaChannels rgbaChannels = WRITE_RGBA,
-            float pixelAspectRatio = 1,
-            const Imath::V2f screenWindowCenter = Imath::V2f (0, 0),
-            float screenWindowWidth = 1,
-            LineOrder lineOrder = INCREASING_Y,
-            Compression compression = PIZ_COMPRESSION,
+		    int width,
+		    int height,
+		    RgbaChannels rgbaChannels = WRITE_RGBA,
+		    float pixelAspectRatio = 1,
+		    const IMATH_NAMESPACE::V2f screenWindowCenter = IMATH_NAMESPACE::V2f (0, 0),
+		    float screenWindowWidth = 1,
+		    LineOrder lineOrder = INCREASING_Y,
+		    Compression compression = PIZ_COMPRESSION,
                     int numThreads = globalThreadCount());
 
 
@@ -132,6 +134,7 @@ class RgbaOutputFile
     // Destructor
     //-----------
 
+    IMF_EXPORT
     virtual ~RgbaOutputFile ();
 
 
@@ -143,16 +146,19 @@ class RgbaOutputFile
     //
     //------------------------------------------------
 
+    IMF_EXPORT
     void			setFrameBuffer (const Rgba *base,
-                        size_t xStride,
-                        size_t yStride);
+						size_t xStride,
+						size_t yStride);
 
 
     //---------------------------------------------
     // Write pixel data (see class Imf::OutputFile)
     //---------------------------------------------
 
+    IMF_EXPORT
     void			writePixels (int numScanLines = 1);
+    IMF_EXPORT
     int				currentScanLine () const;
 
 
@@ -160,15 +166,25 @@ class RgbaOutputFile
     // Access to the file header
     //--------------------------
 
+    IMF_EXPORT
     const Header &		header () const;
+    IMF_EXPORT
     const FrameBuffer &		frameBuffer () const;
-    const Imath::Box2i &	displayWindow () const;
-    const Imath::Box2i &	dataWindow () const;
+    IMF_EXPORT
+    const IMATH_NAMESPACE::Box2i &	displayWindow () const;
+    IMF_EXPORT
+    const IMATH_NAMESPACE::Box2i &	dataWindow () const;
+    IMF_EXPORT
     float			pixelAspectRatio () const;
-    const Imath::V2f		screenWindowCenter () const;
+    IMF_EXPORT
+    const IMATH_NAMESPACE::V2f		screenWindowCenter () const;
+    IMF_EXPORT
     float			screenWindowWidth () const;
+    IMF_EXPORT
     LineOrder			lineOrder () const;
+    IMF_EXPORT
     Compression			compression () const;
+    IMF_EXPORT
     RgbaChannels		channels () const;
 
 
@@ -176,6 +192,7 @@ class RgbaOutputFile
     // Update the preview image (see Imf::OutputFile::updatePreviewImage())
     // --------------------------------------------------------------------
 
+    IMF_EXPORT
     void			updatePreviewImage (const PreviewRgba[]);
 
 
@@ -193,8 +210,9 @@ class RgbaOutputFile
     // without chroma, then no rounding is performed.
     //-----------------------------------------------------------------------
 
+    IMF_EXPORT
     void			setYCRounding (unsigned int roundY,
-                           unsigned int roundC);
+					       unsigned int roundC);
 
 
     //----------------------------------------------------
@@ -207,10 +225,11 @@ class RgbaOutputFile
     //
     //----------------------------------------------------
 
+    IMF_EXPORT
     void			breakScanLine  (int y,
-                        int offset,
-                        int length,
-                        char c);
+						int offset,
+						int length,
+						char c);
   private:
 
     RgbaOutputFile (const RgbaOutputFile &);		  // not implemented
@@ -236,6 +255,7 @@ class RgbaInputFile
     // destructor will automatically close the file.
     //-------------------------------------------------------
 
+    IMF_EXPORT
     RgbaInputFile (const char name[], int numThreads = globalThreadCount());
 
 
@@ -246,7 +266,8 @@ class RgbaInputFile
     // close the file.
     //-----------------------------------------------------------
 
-    RgbaInputFile (IStream &is, int numThreads = globalThreadCount());
+    IMF_EXPORT
+    RgbaInputFile (OPENEXR_IMF_INTERNAL_NAMESPACE::IStream &is, int numThreads = globalThreadCount());
 
 
     //--------------------------------------------------------------
@@ -255,19 +276,22 @@ class RgbaInputFile
     // are expected to be layerName.R, layerName.G, etc.
     //--------------------------------------------------------------
 
+    IMF_EXPORT
     RgbaInputFile (const char name[],
-           const std::string &layerName,
-           int numThreads = globalThreadCount());
+		   const std::string &layerName,
+		   int numThreads = globalThreadCount());
 
-    RgbaInputFile (IStream &is,
-           const std::string &layerName,
-           int numThreads = globalThreadCount());
+    IMF_EXPORT
+    RgbaInputFile (OPENEXR_IMF_INTERNAL_NAMESPACE::IStream &is,
+		   const std::string &layerName,
+		   int numThreads = globalThreadCount());
 
 
     //-----------
     // Destructor
     //-----------
 
+    IMF_EXPORT
     virtual ~RgbaInputFile ();
 
 
@@ -279,9 +303,10 @@ class RgbaInputFile
     //
     //-----------------------------------------------------
 
+    IMF_EXPORT
     void			setFrameBuffer (Rgba *base,
-                        size_t xStride,
-                        size_t yStride);
+						size_t xStride,
+						size_t yStride);
 
 
     //----------------------------------------------------------------
@@ -291,6 +316,7 @@ class RgbaInputFile
     // called at least once before the next call to readPixels().
     //----------------------------------------------------------------
 
+    IMF_EXPORT
     void			setLayerName (const std::string &layerName);
 
 
@@ -298,7 +324,9 @@ class RgbaInputFile
     // Read pixel data (see class Imf::InputFile)
     //-------------------------------------------
 
+    IMF_EXPORT
     void			readPixels (int scanLine1, int scanLine2);
+    IMF_EXPORT
     void			readPixels (int scanLine);
 
 
@@ -306,17 +334,29 @@ class RgbaInputFile
     // Access to the file header
     //--------------------------
 
+    IMF_EXPORT
     const Header &		header () const;
+    IMF_EXPORT
     const FrameBuffer &		frameBuffer () const;
-    const Imath::Box2i &	displayWindow () const;
-    const Imath::Box2i &	dataWindow () const;
+    IMF_EXPORT
+    const IMATH_NAMESPACE::Box2i &	displayWindow () const;
+    IMF_EXPORT
+    const IMATH_NAMESPACE::Box2i &	dataWindow () const;
+    IMF_EXPORT
     float			pixelAspectRatio () const;
-    const Imath::V2f		screenWindowCenter () const;
+    IMF_EXPORT
+    const IMATH_NAMESPACE::V2f		screenWindowCenter () const;
+    IMF_EXPORT
     float			screenWindowWidth () const;
+    IMF_EXPORT
     LineOrder			lineOrder () const;
+    IMF_EXPORT
     Compression			compression () const;
+    IMF_EXPORT
     RgbaChannels		channels () const;
+    IMF_EXPORT
     const char *                fileName () const;
+    IMF_EXPORT
     bool			isComplete () const;
 
 
@@ -324,6 +364,7 @@ class RgbaInputFile
     // Access to the file format version
     //----------------------------------
 
+    IMF_EXPORT
     int				version () const;
 
   private:
@@ -339,6 +380,10 @@ class RgbaInputFile
 };
 
 
-} // namespace Imf
+OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_EXIT
+
+
+
+
 
 #endif

@@ -13,7 +13,7 @@ def thresh_callback(val):
     canny_output = cv.Canny(src_gray, threshold, threshold * 2)
 
     # Find contours
-    _, contours, _ = cv.findContours(canny_output, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+    contours, _ = cv.findContours(canny_output, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
 
     # Find the convex hull object for each contour
     hull_list = []
@@ -33,10 +33,10 @@ def thresh_callback(val):
 
 # Load source image
 parser = argparse.ArgumentParser(description='Code for Convex Hull tutorial.')
-parser.add_argument('--input', help='Path to input image.', default='../data/stuff.jpg')
+parser.add_argument('--input', help='Path to input image.', default='stuff.jpg')
 args = parser.parse_args()
 
-src = cv.imread(args.input)
+src = cv.imread(cv.samples.findFile(args.input))
 if src is None:
     print('Could not open or find the image:', args.input)
     exit(0)

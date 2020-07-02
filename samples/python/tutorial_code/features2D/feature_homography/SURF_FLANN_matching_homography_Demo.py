@@ -4,12 +4,12 @@ import numpy as np
 import argparse
 
 parser = argparse.ArgumentParser(description='Code for Feature Matching with FLANN tutorial.')
-parser.add_argument('--input1', help='Path to input image 1.', default='../data/box.png')
-parser.add_argument('--input2', help='Path to input image 2.', default='../data/box_in_scene.png')
+parser.add_argument('--input1', help='Path to input image 1.', default='box.png')
+parser.add_argument('--input2', help='Path to input image 2.', default='box_in_scene.png')
 args = parser.parse_args()
 
-img_object = cv.imread(args.input1, cv.IMREAD_GRAYSCALE)
-img_scene = cv.imread(args.input2, cv.IMREAD_GRAYSCALE)
+img_object = cv.imread(cv.samples.findFile(args.input1), cv.IMREAD_GRAYSCALE)
+img_scene = cv.imread(cv.samples.findFile(args.input2), cv.IMREAD_GRAYSCALE)
 if img_object is None or img_scene is None:
     print('Could not open or find the images!')
     exit(0)

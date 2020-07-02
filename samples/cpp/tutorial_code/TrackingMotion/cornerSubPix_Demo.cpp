@@ -29,8 +29,8 @@ void goodFeaturesToTrack_Demo( int, void* );
 int main( int argc, char** argv )
 {
     /// Load source image and convert it to gray
-    CommandLineParser parser( argc, argv, "{@input | ../data/pic3.png | input image}" );
-    src = imread( parser.get<String>( "@input" ) );
+    CommandLineParser parser( argc, argv, "{@input | pic3.png | input image}" );
+    src = imread( samples::findFile( parser.get<String>( "@input" ) ) );
     if( src.empty() )
     {
         cout << "Could not open or find the image!\n" << endl;

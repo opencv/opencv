@@ -44,9 +44,9 @@ void AddDescriptors();
 inline void InitDefaults() {
 }
 }  // namespace protobuf_types_2eproto
-namespace tensorflow {
-}  // namespace tensorflow
-namespace tensorflow {
+namespace opencv_tensorflow {
+}  // namespace opencv_tensorflow
+namespace opencv_tensorflow {
 
 enum DataType {
   DT_INVALID = 0,
@@ -124,15 +124,15 @@ inline bool DataType_Parse(
 
 // @@protoc_insertion_point(namespace_scope)
 
-}  // namespace tensorflow
+}  // namespace opencv_tensorflow
 
 namespace google {
 namespace protobuf {
 
-template <> struct is_proto_enum< ::tensorflow::DataType> : ::google::protobuf::internal::true_type {};
+template <> struct is_proto_enum< ::opencv_tensorflow::DataType> : ::google::protobuf::internal::true_type {};
 template <>
-inline const EnumDescriptor* GetEnumDescriptor< ::tensorflow::DataType>() {
-  return ::tensorflow::DataType_descriptor();
+inline const EnumDescriptor* GetEnumDescriptor< ::opencv_tensorflow::DataType>() {
+  return ::opencv_tensorflow::DataType_descriptor();
 }
 
 }  // namespace protobuf

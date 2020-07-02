@@ -54,7 +54,7 @@
 
 namespace cv {
 namespace dnn {
-CV__DNN_EXPERIMENTAL_NS_BEGIN
+CV__DNN_INLINE_NS_BEGIN
 
 #ifdef HAVE_PROTOBUF
 using ::google::protobuf::RepeatedField;
@@ -73,6 +73,17 @@ static cv::String toString(const T &v)
     std::ostringstream ss;
     ss << v;
     return ss.str();
+}
+
+static inline
+MatShape parseBlobShape(const caffe::BlobShape& _input_shape)
+{
+    MatShape shape;
+    for (int i = 0; i < _input_shape.dim_size(); i++)
+    {
+        shape.push_back((int)_input_shape.dim(i));
+    }
+    return shape;
 }
 
 class CaffeImporter
@@ -235,10 +246,7 @@ public:
         }
         else if (pbBlob.has_shape())
         {
-            const caffe::BlobShape &_shape = pbBlob.shape();
-
-            for (int i = 0; i < _shape.dim_size(); i++)
-                shape.push_back((int)_shape.dim(i));
+            shape = parseBlobShape(pbBlob.shape());
         }
         else
             shape.resize(1, 1);  // Is a scalar.
@@ -260,14 +268,23 @@ public:
         }
         else
         {
-            // Half precision floats.
-            CV_Assert(pbBlob.raw_data_type() == caffe::FLOAT16);
-            std::string raw_data = pbBlob.raw_data();
+            CV_Assert(pbBlob.has_raw_data());
+            const std::string& raw_data = pbBlob.raw_data();
+            if (pbBlob.raw_data_type() == caffe::FLOAT16)
+            {
+                // Half precision floats.
+                CV_Assert(raw_data.size() / 2 == (int)dstBlob.total());
 
-            CV_Assert(raw_data.size() / 2 == (int)dstBlob.total());
-
-            Mat halfs((int)shape.size(), &shape[0], CV_16SC1, (void*)raw_data.c_str());
-            convertFp16(halfs, dstBlob);
+                Mat halfs((int)shape.size(), &shape[0], CV_16SC1, (void*)raw_data.c_str());
+                convertFp16(halfs, dstBlob);
+            }
+            else if (pbBlob.raw_data_type() == caffe::FLOAT)
+            {
+                CV_Assert(raw_data.size() / 4 == (int)dstBlob.total());
+                Mat((int)shape.size(), &shape[0], CV_32FC1, (void*)raw_data.c_str()).copyTo(dstBlob);
+            }
+            else
+                CV_Error(Error::StsNotImplemented, "Unexpected blob data type");
         }
     }
 
@@ -278,11 +295,13 @@ public:
         int li;
         for (li = 0; li != netBinary.layer_size(); li++)
         {
-            if (netBinary.layer(li).name() == name)
+            const caffe::LayerParameter& binLayer = netBinary.layer(li);
+            // Break if the layer name is the same and the blobs are not cleared
+            if (binLayer.name() == name && binLayer.blobs_size() != 0)
                 break;
         }
 
-        if (li == netBinary.layer_size() || netBinary.layer(li).blobs_size() == 0)
+        if (li == netBinary.layer_size())
             return;
 
         caffe::LayerParameter* binLayer = netBinary.mutable_layer(li);
@@ -323,11 +342,48 @@ public:
 
         //setup input layer names
         std::vector<String> netInputs(net.input_size());
+        std::vector<MatShape> inp_shapes;
         {
-            for (int inNum = 0; inNum < net.input_size(); inNum++)
+            int net_input_size = net.input_size();
+            for (int inNum = 0; inNum < net_input_size; inNum++)
             {
                 addedBlobs.push_back(BlobNote(net.input(inNum), 0, inNum));
                 netInputs[inNum] = net.input(inNum);
+            }
+
+            if (net.input_dim_size() > 0)  // deprecated in Caffe proto
+            {
+                int net_input_dim_size = net.input_dim_size();
+                CV_Check(net_input_dim_size, net_input_dim_size % 4 == 0, "");
+                CV_CheckEQ(net_input_dim_size, net_input_size * 4, "");
+                for (int inp_id = 0; inp_id < net_input_size; inp_id++)
+                {
+                    int dim = inp_id * 4;
+                    MatShape shape(4);
+                    shape[0] = net.input_dim(dim);
+                    shape[1] = net.input_dim(dim+1);
+                    shape[2] = net.input_dim(dim+2);
+                    shape[3] = net.input_dim(dim+3);
+                    inp_shapes.push_back(shape);
+                }
+            }
+            else if (net.input_shape_size() > 0)  // deprecated in Caffe proto
+            {
+                int net_input_shape_size = net.input_shape_size();
+                CV_CheckEQ(net_input_shape_size, net_input_size, "");
+                for (int inp_id = 0; inp_id < net_input_shape_size; inp_id++)
+                {
+                    MatShape shape = parseBlobShape(net.input_shape(inp_id));
+                    inp_shapes.push_back(shape);
+                }
+            }
+            else
+            {
+                for (int inp_id = 0; inp_id < net_input_size; inp_id++)
+                {
+                    MatShape shape; // empty
+                    inp_shapes.push_back(shape);
+                }
             }
         }
 
@@ -353,13 +409,24 @@ public:
                     addedBlobs.back().outNum = netInputs.size();
                     netInputs.push_back(addedBlobs.back().name);
                 }
+                if (layer.has_input_param())
+                {
+                    const caffe::InputParameter &inputParameter = layer.input_param();
+                    int input_shape_size = inputParameter.shape_size();
+                    CV_CheckEQ(input_shape_size, layer.top_size(), "");
+                    for (int inp_id = 0; inp_id < input_shape_size; inp_id++)
+                    {
+                        MatShape shape = parseBlobShape(inputParameter.shape(inp_id));
+                        inp_shapes.push_back(shape);
+                    }
+                }
                 continue;
             }
             else if (type == "BatchNorm")
             {
                 if (!layerParams.get<bool>("use_global_stats", true))
                 {
-                    CV_Assert(layer.bottom_size() == 1, layer.top_size() == 1);
+                    CV_Assert_N(layer.bottom_size() == 1, layer.top_size() == 1);
 
                     LayerParams mvnParams;
                     mvnParams.set("eps", layerParams.get<float>("eps", 1e-5));
@@ -377,6 +444,60 @@ public:
                     layerParams.blobs[1].setTo(1);  // std
                 }
             }
+            else if (type == "Axpy")
+            {
+                CV_Assert_N(layer.bottom_size() == 3, layer.top_size() == 1);
+
+                std::string scaleName = name + "/scale";
+                int repetitions = layerCounter[scaleName]++;
+                if (repetitions) {
+                    scaleName += String("_") + toString(repetitions);
+                }
+
+                LayerParams scaleParams;
+                scaleParams.set("axis", 1);
+                scaleParams.set("has_bias", false);
+                int scaleId = dstNet.addLayer(scaleName, "Scale", scaleParams);
+                addInput(layer.bottom(2), scaleId, 0, dstNet);
+                addInput(layer.bottom(0), scaleId, 1, dstNet);
+                addOutput(layer, scaleId, 0);
+                net.mutable_layer(li)->set_bottom(0, layer.top(0));
+                net.mutable_layer(li)->mutable_bottom()->RemoveLast();
+                type = "Eltwise";
+            }
+            else if (type == "Resample")
+            {
+                CV_Assert(layer.bottom_size() == 1 || layer.bottom_size() == 2);
+                type = "Resize";
+                String interp = toLowerCase(layerParams.get<String>("type"));
+                layerParams.set("interpolation", interp == "linear" ? "bilinear" : interp);
+
+                if (layerParams.has("factor"))
+                {
+                    float factor = layerParams.get<float>("factor");
+                    CV_Assert(layer.bottom_size() != 2 || factor == 1.0);
+                    layerParams.set("zoom_factor", factor);
+
+                    if ((interp == "linear" && factor != 1.0) ||
+                        (interp == "nearest" && factor < 1.0))
+                        CV_Error(Error::StsNotImplemented, "Unsupported Resample mode");
+                }
+            }
+            else if ("Convolution" == type)
+            {
+                CV_Assert(layer.bottom_size() == layer.top_size());
+                for (int i = 0; i < layer.bottom_size(); i++)
+                {
+                    int conv_id = dstNet.addLayer(layer.top(i), type, layerParams);
+                    addInput(layer.bottom(i), conv_id, 0, dstNet);
+                    addedBlobs.push_back(BlobNote(layer.top(i), conv_id, 0));
+                }
+                continue;
+            }
+            else if ("ConvolutionDepthwise" == type)
+            {
+                type = "Convolution";
+            }
 
             int id = dstNet.addLayer(name, type, layerParams);
 
@@ -387,6 +508,13 @@ public:
                 addOutput(layer, id, outNum);
         }
         dstNet.setInputsNames(netInputs);
+
+        if (inp_shapes.size() > 0)
+        {
+            CV_CheckEQ(inp_shapes.size(), netInputs.size(), "");
+            for (int inp_id = 0; inp_id < inp_shapes.size(); inp_id++)
+                dstNet.setInputShape(netInputs[inp_id], inp_shapes[inp_id]);
+        }
 
         addedBlobs.clear();
     }
@@ -453,7 +581,16 @@ Net readNetFromCaffe(const char *bufferProto, size_t lenProto,
     return net;
 }
 
+Net readNetFromCaffe(const std::vector<uchar>& bufferProto, const std::vector<uchar>& bufferModel)
+{
+    const char* bufferProtoPtr = reinterpret_cast<const char*>(&bufferProto[0]);
+    const char* bufferModelPtr = bufferModel.empty() ? NULL :
+                                 reinterpret_cast<const char*>(&bufferModel[0]);
+    return readNetFromCaffe(bufferProtoPtr, bufferProto.size(),
+                            bufferModelPtr, bufferModel.size());
+}
+
 #endif //HAVE_PROTOBUF
 
-CV__DNN_EXPERIMENTAL_NS_END
+CV__DNN_INLINE_NS_END
 }} // namespace

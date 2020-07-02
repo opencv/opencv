@@ -105,12 +105,6 @@ TEST(Photo_Tonemap, regression)
     result.convertTo(result, CV_8UC3, 255);
     checkEqual(result, expected, 3, "Drago");
 
-    Ptr<TonemapDurand> durand = createTonemapDurand(gamma);
-    durand->process(img, result);
-    loadImage(test_path + "durand.png", expected);
-    result.convertTo(result, CV_8UC3, 255);
-    checkEqual(result, expected, 3, "Durand");
-
     Ptr<TonemapReinhard> reinhard = createTonemapReinhard(gamma);
     reinhard->process(img, result);
     loadImage(test_path + "reinhard.png", expected);
@@ -213,11 +207,7 @@ TEST(Photo_MergeRobertson, regression)
     loadImage(test_path + "merge/robertson.hdr", expected);
     merge->process(images, result, times);
 
-#if defined(__aarch64__) || defined(__PPC64__)
     const float eps = 6.f;
-#else
-    const float eps = 5.f;
-#endif
     checkEqual(expected, result, eps, "MergeRobertson");
 }
 

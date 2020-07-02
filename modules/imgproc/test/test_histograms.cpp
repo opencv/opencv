@@ -53,7 +53,7 @@ public:
     void clear();
 
 protected:
-    int read_params( CvFileStorage* fs );
+    int read_params( const cv::FileStorage& fs );
     void run_func(void);
     int prepare_test_case( int test_case_idx );
     int validate_test_results( int test_case_idx );
@@ -115,19 +115,19 @@ void CV_BaseHistTest::clear()
 }
 
 
-int CV_BaseHistTest::read_params( CvFileStorage* fs )
+int CV_BaseHistTest::read_params( const cv::FileStorage& fs )
 {
     int code = cvtest::BaseTest::read_params( fs );
     if( code < 0 )
         return code;
 
-    test_case_count = cvReadInt( find_param( fs, "struct_count" ), test_case_count );
-    max_log_size = cvReadInt( find_param( fs, "max_log_size" ), max_log_size );
+    read( find_param( fs, "struct_count" ), test_case_count, test_case_count );
+    read( find_param( fs, "max_log_size" ), max_log_size, max_log_size );
     max_log_size = cvtest::clipInt( max_log_size, 1, 20 );
-    img_max_log_size = cvReadInt( find_param( fs, "max_log_array_size" ), img_max_log_size );
+    read( find_param( fs, "max_log_array_size" ), img_max_log_size, img_max_log_size );
     img_max_log_size = cvtest::clipInt( img_max_log_size, 1, 9 );
 
-    max_cdims = cvReadInt( find_param( fs, "max_cdims" ), max_cdims );
+    read( find_param( fs, "max_cdims" ), max_cdims, max_cdims );
     max_cdims = cvtest::clipInt( max_cdims, 1, 6 );
 
     return 0;
@@ -1307,9 +1307,18 @@ cvTsCalcHist( const vector<Mat>& images, CvHistogram* hist, Mat mask, const vect
                 for( k = 0; k < cdims; k++ )
                 {
                     double v = val[k], lo = hist->thresh[k][0], hi = hist->thresh[k][1];
-                    idx[k] = cvFloor((v - lo)*dims[k]/(hi - lo));
-                    if( idx[k] < 0 || idx[k] >= dims[k] )
+                    if (v < lo || v >= hi)
                         break;
+                    double idx_ = (v - lo)*dims[k]/(hi - lo);
+                    idx[k] = cvFloor(idx_);
+                    if (idx[k] < 0)
+                    {
+                        idx[k] = 0;
+                    }
+                    if (idx[k] >= dims[k])
+                    {
+                        idx[k] = dims[k] - 1;
+                    }
                 }
             }
             else
@@ -1729,15 +1738,15 @@ int CV_CalcBackProjectPatchTest::prepare_test_case( int test_case_idx )
 
 void CV_CalcBackProjectPatchTest::run_func(void)
 {
-    CvMat dst(images[CV_MAX_DIM]);
+    CvMat dst = cvMat(images[CV_MAX_DIM]);
     vector<CvMat >  img(cdims);
     vector<CvMat*> pimg(cdims);
     for(int i = 0; i < cdims; i++)
     {
-        img[i] = CvMat(images[i]);
+        img[i] = cvMat(images[i]);
         pimg[i] = &img[i];
     }
-    cvCalcArrBackProjectPatch( (CvArr**)&pimg[0], &dst, patch_size, hist[0], method, factor );
+    cvCalcArrBackProjectPatch( (CvArr**)&pimg[0], &dst, cvSize(patch_size), hist[0], method, factor );
 }
 
 
@@ -1947,6 +1956,43 @@ TEST(Imgproc_Hist_Calc, calcHist_regression_11544)
         EXPECT_EQ(hist2.at<float>(i, 0), hist2_opt.at<float>(i, 0)) << i;
     }
 }
+
+TEST(Imgproc_Hist_Calc, badarg)
+{
+    const int channels[] = {0};
+    float range1[] = {0, 10};
+    float range2[] = {10, 20};
+    const float * ranges[] = {range1, range2};
+    Mat img = cv::Mat::zeros(10, 10, CV_8UC1);
+    Mat imgInt = cv::Mat::zeros(10, 10, CV_32SC1);
+    Mat hist;
+    const int hist_size[] = { 100, 100 };
+    // base run
+    EXPECT_NO_THROW(cv::calcHist(&img, 1, channels, noArray(), hist, 1, hist_size, ranges, true));
+    // bad parameters
+    EXPECT_THROW(cv::calcHist(NULL, 1, channels, noArray(), hist, 1, hist_size, ranges, true), cv::Exception);
+    EXPECT_THROW(cv::calcHist(&img, 0, channels, noArray(), hist, 1, hist_size, ranges, true), cv::Exception);
+    EXPECT_THROW(cv::calcHist(&img, 1, NULL, noArray(), hist, 2, hist_size, ranges, true), cv::Exception);
+    EXPECT_THROW(cv::calcHist(&img, 1, channels, noArray(), noArray(), 1, hist_size, ranges, true), cv::Exception);
+    EXPECT_THROW(cv::calcHist(&img, 1, channels, noArray(), hist, -1, hist_size, ranges, true), cv::Exception);
+    EXPECT_THROW(cv::calcHist(&img, 1, channels, noArray(), hist, 1, NULL, ranges, true), cv::Exception);
+    EXPECT_THROW(cv::calcHist(&imgInt, 1, channels, noArray(), hist, 1, hist_size, NULL, true), cv::Exception);
+    // special case
+    EXPECT_NO_THROW(cv::calcHist(&img, 1, channels, noArray(), hist, 1, hist_size, NULL, true));
+
+    Mat backProj;
+    // base run
+    EXPECT_NO_THROW(cv::calcBackProject(&img, 1, channels, hist, backProj, ranges, 1, true));
+    // bad parameters
+    EXPECT_THROW(cv::calcBackProject(NULL, 1, channels, hist, backProj, ranges, 1, true), cv::Exception);
+    EXPECT_THROW(cv::calcBackProject(&img, 0, channels, hist, backProj, ranges, 1, true), cv::Exception);
+    EXPECT_THROW(cv::calcBackProject(&img, 1, channels, noArray(), backProj, ranges, 1, true), cv::Exception);
+    EXPECT_THROW(cv::calcBackProject(&img, 1, channels, hist, noArray(), ranges, 1, true), cv::Exception);
+    EXPECT_THROW(cv::calcBackProject(&imgInt, 1, channels, hist, backProj, NULL, 1, true), cv::Exception);
+    // special case
+    EXPECT_NO_THROW(cv::calcBackProject(&img, 1, channels, hist, backProj, NULL, 1, true));
+}
+
 
 }} // namespace
 /* End Of File */

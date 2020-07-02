@@ -1,6 +1,9 @@
 Installation in Linux {#tutorial_linux_install}
 =====================
 
+@next_tutorial{tutorial_linux_gcc_cmake}
+
+
 The following steps have been tested for Ubuntu 10.04 but should work with other distros as well.
 
 Required Packages
@@ -96,6 +99,12 @@ Building OpenCV from Source Using CMake
     -   Unset parameter: BUILD_SHARED_LIBS
     -   It is useful also to unset BUILD_EXAMPLES, BUILD_TESTS, BUILD_PERF_TESTS - as they all
         will be statically linked with OpenCV and can take a lot of memory.
+
+-#  [optional] Generate pkg-config info
+    -   Add this flag when running CMake: `-DOPENCV_GENERATE_PKGCONFIG=ON`
+    -   Will generate the .pc file for pkg-config and install it.
+    -   Useful if not using CMake in projects that use OpenCV
+    -   Installed as `opencv4`, usage: `pkg-config --cflags --libs opencv4`
 
 -#  Build. From build directory execute *make*, it is recommended to do this in several threads
 

@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2004, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -40,17 +40,19 @@
 //
 //-----------------------------------------------------------------------------
 
-#include <ImfCompressor.h>
-#include <ImfRleCompressor.h>
-#include <ImfZipCompressor.h>
-#include <ImfPizCompressor.h>
-#include <ImfPxr24Compressor.h>
-#include <ImfB44Compressor.h>
-#include <ImfCheckedArithmetic.h>
+#include "ImfCompressor.h"
+#include "ImfRleCompressor.h"
+#include "ImfZipCompressor.h"
+#include "ImfPizCompressor.h"
+#include "ImfPxr24Compressor.h"
+#include "ImfB44Compressor.h"
+#include "ImfDwaCompressor.h"
+#include "ImfCheckedArithmetic.h"
+#include "ImfNamespace.h"
 
-namespace Imf {
+OPENEXR_IMF_INTERNAL_NAMESPACE_SOURCE_ENTER
 
-using Imath::Box2i;
+using IMATH_NAMESPACE::Box2i;
 
 
 Compressor::Compressor (const Header &hdr): _header (hdr) {}
@@ -68,25 +70,25 @@ Compressor::format () const
 
 int
 Compressor::compressTile (const char *inPtr,
-              int inSize,
-              Box2i range,
-              const char *&outPtr)
+			  int inSize,
+			  Box2i range,
+			  const char *&outPtr)
 {
     return compress (inPtr, inSize, range.min.y, outPtr);
 }
 
-
+             
 int
 Compressor::uncompressTile (const char *inPtr,
-                int inSize,
-                Box2i range,
-                const char *&outPtr)
+			    int inSize,
+			    Box2i range,
+			    const char *&outPtr)
 {
     return uncompress (inPtr, inSize, range.min.y, outPtr);
 }
 
 
-bool
+bool	
 isValidCompression (Compression c)
 {
     switch (c)
@@ -99,13 +101,28 @@ isValidCompression (Compression c)
       case PXR24_COMPRESSION:
       case B44_COMPRESSION:
       case B44A_COMPRESSION:
+      case DWAA_COMPRESSION:
+      case DWAB_COMPRESSION:
 
-    return true;
+	return true;
 
       default:
 
-    return false;
+	return false;
     }
+}
+
+bool isValidDeepCompression(Compression c)
+{
+  switch(c)
+  {
+      case NO_COMPRESSION:
+      case RLE_COMPRESSION:
+      case ZIPS_COMPRESSION:
+          return true;
+      default :
+          return false;
+  }
 }
 
 
@@ -116,77 +133,94 @@ newCompressor (Compression c, size_t maxScanLineSize, const Header &hdr)
     {
       case RLE_COMPRESSION:
 
-    return new RleCompressor (hdr, maxScanLineSize);
+	return new RleCompressor (hdr, maxScanLineSize);
 
       case ZIPS_COMPRESSION:
 
-    return new ZipCompressor (hdr, maxScanLineSize, 1);
+	return new ZipCompressor (hdr, maxScanLineSize, 1);
 
       case ZIP_COMPRESSION:
 
-    return new ZipCompressor (hdr, maxScanLineSize, 16);
+	return new ZipCompressor (hdr, maxScanLineSize, 16);
 
       case PIZ_COMPRESSION:
 
-    return new PizCompressor (hdr, maxScanLineSize, 32);
+	return new PizCompressor (hdr, maxScanLineSize, 32);
 
       case PXR24_COMPRESSION:
 
-    return new Pxr24Compressor (hdr, maxScanLineSize, 16);
+	return new Pxr24Compressor (hdr, maxScanLineSize, 16);
 
       case B44_COMPRESSION:
 
-    return new B44Compressor (hdr, maxScanLineSize, 32, false);
+	return new B44Compressor (hdr, maxScanLineSize, 32, false);
 
       case B44A_COMPRESSION:
 
-    return new B44Compressor (hdr, maxScanLineSize, 32, true);
+	return new B44Compressor (hdr, maxScanLineSize, 32, true);
+
+      case DWAA_COMPRESSION:
+
+	return new DwaCompressor (hdr, maxScanLineSize, 32, 
+                               DwaCompressor::STATIC_HUFFMAN);
+
+      case DWAB_COMPRESSION:
+
+	return new DwaCompressor (hdr, maxScanLineSize, 256, 
+                               DwaCompressor::STATIC_HUFFMAN);
 
       default:
 
-    return 0;
+	return 0;
     }
 }
 
 
 Compressor *
 newTileCompressor (Compression c,
-           size_t tileLineSize,
-           size_t numTileLines,
-           const Header &hdr)
+		   size_t tileLineSize,
+		   size_t numTileLines,
+		   const Header &hdr)
 {
     switch (c)
     {
       case RLE_COMPRESSION:
 
-    return new RleCompressor (hdr, uiMult (tileLineSize, numTileLines));
+	return new RleCompressor (hdr, uiMult (tileLineSize, numTileLines));
 
       case ZIPS_COMPRESSION:
       case ZIP_COMPRESSION:
 
-    return new ZipCompressor (hdr, tileLineSize, numTileLines);
+	return new ZipCompressor (hdr, tileLineSize, numTileLines);
 
       case PIZ_COMPRESSION:
 
-    return new PizCompressor (hdr, tileLineSize, numTileLines);
+	return new PizCompressor (hdr, tileLineSize, numTileLines);
 
       case PXR24_COMPRESSION:
 
-    return new Pxr24Compressor (hdr, tileLineSize, numTileLines);
+	return new Pxr24Compressor (hdr, tileLineSize, numTileLines);
 
       case B44_COMPRESSION:
 
-    return new B44Compressor (hdr, tileLineSize, numTileLines, false);
+	return new B44Compressor (hdr, tileLineSize, numTileLines, false);
 
       case B44A_COMPRESSION:
 
-    return new B44Compressor (hdr, tileLineSize, numTileLines, true);
+	return new B44Compressor (hdr, tileLineSize, numTileLines, true);
+
+      case DWAA_COMPRESSION:
+      case DWAB_COMPRESSION:
+
+	return new DwaCompressor (hdr, tileLineSize, numTileLines, 
+                               DwaCompressor::DEFLATE);
 
       default:
 
-    return 0;
+	return 0;
     }
 }
 
 
-} // namespace Imf
+OPENEXR_IMF_INTERNAL_NAMESPACE_SOURCE_EXIT
+

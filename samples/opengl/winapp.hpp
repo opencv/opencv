@@ -22,54 +22,6 @@
 
 #define SAFE_RELEASE(p) if (p) { p->Release(); p = NULL; }
 
-class Timer
-{
-public:
-    enum UNITS
-    {
-        USEC = 0,
-        MSEC,
-        SEC
-    };
-
-    Timer() : m_t0(0), m_diff(0)
-    {
-        m_tick_frequency = (float)cv::getTickFrequency();
-
-        m_unit_mul[USEC] = 1000000;
-        m_unit_mul[MSEC] = 1000;
-        m_unit_mul[SEC]  = 1;
-    }
-
-    void clear()
-    {
-        m_t0 = m_diff = 0;
-    }
-
-    void start()
-    {
-        m_t0 = cv::getTickCount();
-    }
-
-    void stop()
-    {
-        m_diff = cv::getTickCount() - m_t0;
-    }
-
-    float time(UNITS u = MSEC)
-    {
-        float sec = m_diff / m_tick_frequency;
-
-        return sec * m_unit_mul[u];
-    }
-
-public:
-    float m_tick_frequency;
-    int64 m_t0;
-    int64 m_diff;
-    int   m_unit_mul[3];
-};
-
 class WinApp
 {
 public:
@@ -253,18 +205,18 @@ protected:
     virtual void idle() = 0;
 
 #if defined(_WIN32)
-    HINSTANCE    m_hInstance;
-    HWND         m_hWnd;
+    HINSTANCE     m_hInstance;
+    HWND          m_hWnd;
 #elif defined(__linux__)
-    Display*     m_display;
-    XVisualInfo* m_visual_info;
-    Window       m_window;
-    long         m_event_mask;
-    Atom         m_WM_DELETE_WINDOW;
-    bool         m_end_loop;
+    Display*      m_display;
+    XVisualInfo*  m_visual_info;
+    Window        m_window;
+    long          m_event_mask;
+    Atom          m_WM_DELETE_WINDOW;
+    bool          m_end_loop;
 #endif
-    int          m_width;
-    int          m_height;
-    std::string  m_window_name;
-    Timer        m_timer;
+    int           m_width;
+    int           m_height;
+    std::string   m_window_name;
+    cv::TickMeter m_timer;
 };

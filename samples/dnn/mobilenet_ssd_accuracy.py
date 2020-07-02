@@ -26,12 +26,12 @@ parser.add_argument('--annotations', help='Path to COCO annotations file.', requ
 args = parser.parse_args()
 
 ### Get OpenCV predictions #####################################################
-net = cv.dnn.readNetFromTensorflow(args.weights, args.prototxt)
-net.setPreferableBackend(cv.dnn.DNN_BACKEND_OPENCV);
+net = cv.dnn.readNetFromTensorflow(cv.samples.findFile(args.weights), cv.samples.findFile(args.prototxt))
+net.setPreferableBackend(cv.dnn.DNN_BACKEND_OPENCV)
 
 detections = []
 for imgName in os.listdir(args.images):
-    inp = cv.imread(os.path.join(args.images, imgName))
+    inp = cv.imread(cv.samples.findFile(os.path.join(args.images, imgName)))
     rows = inp.shape[0]
     cols = inp.shape[1]
     inp = cv.resize(inp, (300, 300))

@@ -96,7 +96,7 @@ public class OpenCVTestRunner extends InstrumentationTestRunner {
         }
 
         context = getContext();
-        Assert.assertTrue("Context can't be 'null'", context != null);
+        Assert.assertNotNull("Context can't be 'null'", context);
         LENA_PATH = Utils.exportResource(context, R.drawable.lena);
         CHESS_PATH = Utils.exportResource(context, R.drawable.chessboard);
         LBPCASCADE_FRONTALFACE_PATH = Utils.exportResource(context, R.raw.lbpcascade_frontalface);

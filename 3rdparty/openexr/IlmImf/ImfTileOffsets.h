@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2004, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -42,66 +42,96 @@
 //
 //-----------------------------------------------------------------------------
 
-#include <ImfTileDescription.h>
-#include <ImfInt64.h>
+#include "ImfTileDescription.h"
+#include "ImfInt64.h"
 #include <vector>
+#include "ImfNamespace.h"
+#include "ImfForward.h"
+#include "ImfExport.h"
 
-namespace Imf {
-
-class IStream;
-class OStream;
+OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_ENTER
 
 
 class TileOffsets
 {
   public:
 
+    IMF_EXPORT
     TileOffsets (LevelMode mode = ONE_LEVEL,
-         int numXLevels = 0,
-         int numYLevels = 0,
-         const int *numXTiles = 0,
-         const int *numYTiles = 0);
+		 int numXLevels = 0,
+		 int numYLevels = 0,
+		 const int *numXTiles = 0,
+		 const int *numYTiles = 0);    
 
     // --------
     // File I/O
     // --------
 
-    void		readFrom (IStream &is, bool &complete);
-    Int64		writeTo (OStream &os) const;
+    IMF_EXPORT
+    void		readFrom (OPENEXR_IMF_INTERNAL_NAMESPACE::IStream &is,  bool &complete,bool isMultiPart,bool isDeep);
+    IMF_EXPORT
+    void        readFrom (std::vector<Int64> chunkOffsets,bool &complete);
+    IMF_EXPORT
+    Int64		writeTo (OPENEXR_IMF_INTERNAL_NAMESPACE::OStream &os) const;
 
 
     //-----------------------------------------------------------
     // Test if the tileOffsets array is empty (all entries are 0)
     //-----------------------------------------------------------
 
+    IMF_EXPORT
     bool		isEmpty () const;
-
-
+    
+    
+    
+    //-----------------------------------------------------------
+    // populate 'list' with tiles coordinates in the order they appear
+    // in the offset table (assumes full table!
+    // each array myst be at leat totalTiles long
+    //-----------------------------------------------------------
+    IMF_EXPORT
+    void getTileOrder(int dx_table[], int dy_table[], int lx_table[], int ly_table[]) const;
+    
+    
     //-----------------------
     // Access to the elements
     //-----------------------
 
+    IMF_EXPORT
     Int64 &		operator () (int dx, int dy, int lx, int ly);
+    IMF_EXPORT
     Int64 &		operator () (int dx, int dy, int l);
+    IMF_EXPORT
     const Int64 &	operator () (int dx, int dy, int lx, int ly) const;
+    IMF_EXPORT
     const Int64 &	operator () (int dx, int dy, int l) const;
-
+    IMF_EXPORT
+    bool        isValidTile (int dx, int dy, int lx, int ly) const;
+    IMF_EXPORT
+    const std::vector<std::vector<std::vector <Int64> > >& getOffsets() const;
+    
   private:
 
-    void		findTiles (IStream &is);
-    void		reconstructFromFile (IStream &is);
-    bool		readTile (IStream &is);
+    void		findTiles (OPENEXR_IMF_INTERNAL_NAMESPACE::IStream &is, bool isMultiPartFile,
+                                   bool isDeep,
+        		           bool skipOnly);
+    void		reconstructFromFile (OPENEXR_IMF_INTERNAL_NAMESPACE::IStream &is,bool isMultiPartFile,bool isDeep);
+    bool		readTile (OPENEXR_IMF_INTERNAL_NAMESPACE::IStream &is);
     bool		anyOffsetsAreInvalid () const;
-    bool		isValidTile (int dx, int dy, int lx, int ly) const;
 
     LevelMode		_mode;
     int			_numXLevels;
     int			_numYLevels;
 
     std::vector<std::vector<std::vector <Int64> > > _offsets;
+    
 };
 
 
-} // namespace Imf
+OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_EXIT
+
+
+
+
 
 #endif

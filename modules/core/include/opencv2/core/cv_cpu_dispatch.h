@@ -15,6 +15,7 @@
 #define CV_CPU_OPTIMIZATION_NAMESPACE cpu_baseline
 #define CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN namespace cpu_baseline {
 #define CV_CPU_OPTIMIZATION_NAMESPACE_END }
+#define CV_CPU_BASELINE_MODE 1
 #endif
 
 
@@ -71,7 +72,7 @@
 #  define CV_AVX 1
 #endif
 #ifdef CV_CPU_COMPILE_FP16
-#  if defined(__arm__) || defined(__aarch64__) || defined(_M_ARM)
+#  if defined(__arm__) || defined(__aarch64__) || defined(_M_ARM) || defined(_M_ARM64)
 #    include <arm_neon.h>
 #  else
 #    include <immintrin.h>
@@ -86,15 +87,53 @@
 #  include <immintrin.h>
 #  define CV_AVX_512F 1
 #endif
+#ifdef CV_CPU_COMPILE_AVX512_COMMON
+#  define CV_AVX512_COMMON 1
+#  define CV_AVX_512CD 1
+#endif
+#ifdef CV_CPU_COMPILE_AVX512_KNL
+#  define CV_AVX512_KNL 1
+#  define CV_AVX_512ER 1
+#  define CV_AVX_512PF 1
+#endif
+#ifdef CV_CPU_COMPILE_AVX512_KNM
+#  define CV_AVX512_KNM 1
+#  define CV_AVX_5124FMAPS 1
+#  define CV_AVX_5124VNNIW 1
+#  define CV_AVX_512VPOPCNTDQ 1
+#endif
 #ifdef CV_CPU_COMPILE_AVX512_SKX
-#  include <immintrin.h>
 #  define CV_AVX512_SKX 1
+#  define CV_AVX_512VL 1
+#  define CV_AVX_512BW 1
+#  define CV_AVX_512DQ 1
+#endif
+#ifdef CV_CPU_COMPILE_AVX512_CNL
+#  define CV_AVX512_CNL 1
+#  define CV_AVX_512IFMA 1
+#  define CV_AVX_512VBMI 1
+#endif
+#ifdef CV_CPU_COMPILE_AVX512_CLX
+#  define CV_AVX512_CLX 1
+#  define CV_AVX_512VNNI 1
+#endif
+#ifdef CV_CPU_COMPILE_AVX512_ICL
+#  define CV_AVX512_ICL 1
+#  undef CV_AVX_512IFMA
+#  define CV_AVX_512IFMA 1
+#  undef CV_AVX_512VBMI
+#  define CV_AVX_512VBMI 1
+#  undef CV_AVX_512VNNI
+#  define CV_AVX_512VNNI 1
+#  define CV_AVX_512VBMI2 1
+#  define CV_AVX_512BITALG 1
+#  define CV_AVX_512VPOPCNTDQ 1
 #endif
 #ifdef CV_CPU_COMPILE_FMA3
 #  define CV_FMA3 1
 #endif
 
-#if defined _WIN32 && defined(_M_ARM)
+#if defined _WIN32 && (defined(_M_ARM) || defined(_M_ARM64)) && (defined(CV_CPU_COMPILE_NEON) || !defined(_MSC_VER))
 # include <Intrin.h>
 # include <arm_neon.h>
 # define CV_NEON 1
@@ -107,12 +146,26 @@
 #  include <arm_neon.h>
 #endif
 
-#if defined(__VSX__) && defined(__PPC64__) && defined(__LITTLE_ENDIAN__)
+#ifdef CV_CPU_COMPILE_VSX
 #  include <altivec.h>
 #  undef vector
 #  undef pixel
 #  undef bool
 #  define CV_VSX 1
+#endif
+
+#ifdef CV_CPU_COMPILE_VSX3
+#  define CV_VSX3 1
+#endif
+
+#ifdef CV_CPU_COMPILE_MSA
+#  include "hal/msa_macros.h"
+#  define CV_MSA 1
+#endif
+
+#ifdef __EMSCRIPTEN__
+#  define CV_WASM_SIMD 1
+#  include <wasm_simd128.h>
 #endif
 
 #endif // CV_ENABLE_INTRINSICS && !CV_DISABLE_OPTIMIZATION && !__CUDACC__
@@ -122,9 +175,13 @@ struct VZeroUpperGuard {
 #ifdef __GNUC__
     __attribute__((always_inline))
 #endif
+    inline VZeroUpperGuard() { _mm256_zeroupper(); }
+#ifdef __GNUC__
+    __attribute__((always_inline))
+#endif
     inline ~VZeroUpperGuard() { _mm256_zeroupper(); }
 };
-#define __CV_AVX_GUARD VZeroUpperGuard __vzeroupper_guard; (void)__vzeroupper_guard;
+#define __CV_AVX_GUARD VZeroUpperGuard __vzeroupper_guard; CV_UNUSED(__vzeroupper_guard);
 #endif
 
 #ifdef __CV_AVX_GUARD
@@ -144,7 +201,7 @@ struct VZeroUpperGuard {
 #  define CV_MMX 1
 #  define CV_SSE 1
 #  define CV_SSE2 1
-#elif defined _WIN32 && defined(_M_ARM)
+#elif defined _WIN32 && (defined(_M_ARM) || defined(_M_ARM64)) && (defined(CV_CPU_COMPILE_NEON) || !defined(_MSC_VER))
 # include <Intrin.h>
 # include <arm_neon.h>
 # define CV_NEON 1
@@ -214,9 +271,10 @@ struct VZeroUpperGuard {
 #ifndef CV_AVX_512ER
 #  define CV_AVX_512ER 0
 #endif
-#ifndef CV_AVX_512IFMA512
-#  define CV_AVX_512IFMA512 0
+#ifndef CV_AVX_512IFMA
+#  define CV_AVX_512IFMA 0
 #endif
+#define CV_AVX_512IFMA512 CV_AVX_512IFMA // deprecated
 #ifndef CV_AVX_512PF
 #  define CV_AVX_512PF 0
 #endif
@@ -226,8 +284,44 @@ struct VZeroUpperGuard {
 #ifndef CV_AVX_512VL
 #  define CV_AVX_512VL 0
 #endif
+#ifndef CV_AVX_5124FMAPS
+#  define CV_AVX_5124FMAPS 0
+#endif
+#ifndef CV_AVX_5124VNNIW
+#  define CV_AVX_5124VNNIW 0
+#endif
+#ifndef CV_AVX_512VPOPCNTDQ
+#  define CV_AVX_512VPOPCNTDQ 0
+#endif
+#ifndef CV_AVX_512VNNI
+#  define CV_AVX_512VNNI 0
+#endif
+#ifndef CV_AVX_512VBMI2
+#  define CV_AVX_512VBMI2 0
+#endif
+#ifndef CV_AVX_512BITALG
+#  define CV_AVX_512BITALG 0
+#endif
+#ifndef CV_AVX512_COMMON
+#  define CV_AVX512_COMMON 0
+#endif
+#ifndef CV_AVX512_KNL
+#  define CV_AVX512_KNL 0
+#endif
+#ifndef CV_AVX512_KNM
+#  define CV_AVX512_KNM 0
+#endif
 #ifndef CV_AVX512_SKX
 #  define CV_AVX512_SKX 0
+#endif
+#ifndef CV_AVX512_CNL
+#  define CV_AVX512_CNL 0
+#endif
+#ifndef CV_AVX512_CLX
+#  define CV_AVX512_CLX 0
+#endif
+#ifndef CV_AVX512_ICL
+#  define CV_AVX512_ICL 0
 #endif
 
 #ifndef CV_NEON
@@ -236,4 +330,16 @@ struct VZeroUpperGuard {
 
 #ifndef CV_VSX
 #  define CV_VSX 0
+#endif
+
+#ifndef CV_VSX3
+#  define CV_VSX3 0
+#endif
+
+#ifndef CV_MSA
+#  define CV_MSA 0
+#endif
+
+#ifndef CV_WASM_SIMD
+#  define CV_WASM_SIMD 0
 #endif

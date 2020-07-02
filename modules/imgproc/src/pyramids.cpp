@@ -43,6 +43,7 @@
 
 #include "precomp.hpp"
 #include "opencl_kernels_imgproc.hpp"
+#include "opencv2/core/hal/intrin.hpp"
 
 #include "opencv2/core/openvx/ovx_defs.hpp"
 
@@ -63,854 +64,761 @@ template<typename T, int shift> struct FltCast
     rtype operator ()(type1 arg) const { return arg*(T)(1./(1 << shift)); }
 };
 
-template<typename T1, typename T2> struct PyrDownNoVec
+template<typename T1, typename T2, int cn> int PyrDownVecH(const T1*, T2*, int)
 {
-    int operator()(T1**, T2*, int, int) const { return 0; }
-};
+    //   row[x       ] = src[x * 2 + 2*cn  ] * 6 + (src[x * 2 +   cn  ] + src[x * 2 + 3*cn  ]) * 4 + src[x * 2       ] + src[x * 2 + 4*cn  ];
+    //   row[x +    1] = src[x * 2 + 2*cn+1] * 6 + (src[x * 2 +   cn+1] + src[x * 2 + 3*cn+1]) * 4 + src[x * 2 +    1] + src[x * 2 + 4*cn+1];
+    //   ....
+    //   row[x + cn-1] = src[x * 2 + 3*cn-1] * 6 + (src[x * 2 + 2*cn-1] + src[x * 2 + 4*cn-1]) * 4 + src[x * 2 + cn-1] + src[x * 2 + 5*cn-1];
+    return 0;
+}
 
-template<typename T1, typename T2> struct PyrUpNoVec
+template<typename T1, typename T2, int cn> int PyrUpVecH(const T1*, T2*, int)
 {
-    int operator()(T1**, T2**, int, int) const { return 0; }
-};
+    return 0;
+}
 
-#if CV_SSE2
+template<typename T1, typename T2> int PyrDownVecV(T1**, T2*, int) { return 0; }
 
-struct PyrDownVec_32s8u
+template<typename T1, typename T2> int PyrUpVecV(T1**, T2**, int) { return 0; }
+
+#if CV_SIMD
+
+template<> int PyrDownVecH<uchar, int, 1>(const uchar* src, int* row, int width)
 {
-    int operator()(int** src, uchar* dst, int, int width) const
+    int x = 0;
+    const uchar *src01 = src, *src23 = src + 2, *src4 = src + 3;
+
+    v_int16 v_1_4 = v_reinterpret_as_s16(vx_setall_u32(0x00040001));
+    v_int16 v_6_4 = v_reinterpret_as_s16(vx_setall_u32(0x00040006));
+    for (; x <= width - v_int32::nlanes; x += v_int32::nlanes, src01 += v_int16::nlanes, src23 += v_int16::nlanes, src4 += v_int16::nlanes, row += v_int32::nlanes)
+        v_store(row, v_dotprod(v_reinterpret_as_s16(vx_load_expand(src01)), v_1_4) +
+                     v_dotprod(v_reinterpret_as_s16(vx_load_expand(src23)), v_6_4) +
+                     (v_reinterpret_as_s32(vx_load_expand(src4)) >> 16));
+    vx_cleanup();
+
+    return x;
+}
+template<> int PyrDownVecH<uchar, int, 2>(const uchar* src, int* row, int width)
+{
+    int x = 0;
+    const uchar *src01 = src, *src23 = src + 4, *src4 = src + 6;
+
+    v_int16 v_1_4 = v_reinterpret_as_s16(vx_setall_u32(0x00040001));
+    v_int16 v_6_4 = v_reinterpret_as_s16(vx_setall_u32(0x00040006));
+    for (; x <= width - v_int32::nlanes; x += v_int32::nlanes, src01 += v_int16::nlanes, src23 += v_int16::nlanes, src4 += v_int16::nlanes, row += v_int32::nlanes)
+        v_store(row, v_dotprod(v_interleave_pairs(v_reinterpret_as_s16(vx_load_expand(src01))), v_1_4) +
+                     v_dotprod(v_interleave_pairs(v_reinterpret_as_s16(vx_load_expand(src23))), v_6_4) +
+                     (v_reinterpret_as_s32(v_interleave_pairs(vx_load_expand(src4))) >> 16));
+    vx_cleanup();
+
+    return x;
+}
+template<> int PyrDownVecH<uchar, int, 3>(const uchar* src, int* row, int width)
+{
+    int idx[v_int8::nlanes/2 + 4];
+    for (int i = 0; i < v_int8::nlanes/4 + 2; i++)
     {
-        if( !checkHardwareSupport(CV_CPU_SSE2) )
-            return 0;
-
-        int x = 0;
-        const int *row0 = src[0], *row1 = src[1], *row2 = src[2], *row3 = src[3], *row4 = src[4];
-        __m128i delta = _mm_set1_epi16(128);
-
-        for( ; x <= width - 16; x += 16 )
-        {
-            __m128i r0, r1, r2, r3, r4, t0, t1;
-            r0 = _mm_packs_epi32(_mm_load_si128((const __m128i*)(row0 + x)),
-                                 _mm_load_si128((const __m128i*)(row0 + x + 4)));
-            r1 = _mm_packs_epi32(_mm_load_si128((const __m128i*)(row1 + x)),
-                                 _mm_load_si128((const __m128i*)(row1 + x + 4)));
-            r2 = _mm_packs_epi32(_mm_load_si128((const __m128i*)(row2 + x)),
-                                 _mm_load_si128((const __m128i*)(row2 + x + 4)));
-            r3 = _mm_packs_epi32(_mm_load_si128((const __m128i*)(row3 + x)),
-                                 _mm_load_si128((const __m128i*)(row3 + x + 4)));
-            r4 = _mm_packs_epi32(_mm_load_si128((const __m128i*)(row4 + x)),
-                                 _mm_load_si128((const __m128i*)(row4 + x + 4)));
-            r0 = _mm_add_epi16(r0, r4);
-            r1 = _mm_add_epi16(_mm_add_epi16(r1, r3), r2);
-            r0 = _mm_add_epi16(r0, _mm_add_epi16(r2, r2));
-            t0 = _mm_add_epi16(r0, _mm_slli_epi16(r1, 2));
-            r0 = _mm_packs_epi32(_mm_load_si128((const __m128i*)(row0 + x + 8)),
-                                 _mm_load_si128((const __m128i*)(row0 + x + 12)));
-            r1 = _mm_packs_epi32(_mm_load_si128((const __m128i*)(row1 + x + 8)),
-                                 _mm_load_si128((const __m128i*)(row1 + x + 12)));
-            r2 = _mm_packs_epi32(_mm_load_si128((const __m128i*)(row2 + x + 8)),
-                                 _mm_load_si128((const __m128i*)(row2 + x + 12)));
-            r3 = _mm_packs_epi32(_mm_load_si128((const __m128i*)(row3 + x + 8)),
-                                 _mm_load_si128((const __m128i*)(row3 + x + 12)));
-            r4 = _mm_packs_epi32(_mm_load_si128((const __m128i*)(row4 + x + 8)),
-                                 _mm_load_si128((const __m128i*)(row4 + x + 12)));
-            r0 = _mm_add_epi16(r0, r4);
-            r1 = _mm_add_epi16(_mm_add_epi16(r1, r3), r2);
-            r0 = _mm_add_epi16(r0, _mm_add_epi16(r2, r2));
-            t1 = _mm_add_epi16(r0, _mm_slli_epi16(r1, 2));
-            t0 = _mm_srli_epi16(_mm_add_epi16(t0, delta), 8);
-            t1 = _mm_srli_epi16(_mm_add_epi16(t1, delta), 8);
-            _mm_storeu_si128((__m128i*)(dst + x), _mm_packus_epi16(t0, t1));
-        }
-
-        for( ; x <= width - 4; x += 4 )
-        {
-            __m128i r0, r1, r2, r3, r4, z = _mm_setzero_si128();
-            r0 = _mm_packs_epi32(_mm_load_si128((const __m128i*)(row0 + x)), z);
-            r1 = _mm_packs_epi32(_mm_load_si128((const __m128i*)(row1 + x)), z);
-            r2 = _mm_packs_epi32(_mm_load_si128((const __m128i*)(row2 + x)), z);
-            r3 = _mm_packs_epi32(_mm_load_si128((const __m128i*)(row3 + x)), z);
-            r4 = _mm_packs_epi32(_mm_load_si128((const __m128i*)(row4 + x)), z);
-            r0 = _mm_add_epi16(r0, r4);
-            r1 = _mm_add_epi16(_mm_add_epi16(r1, r3), r2);
-            r0 = _mm_add_epi16(r0, _mm_add_epi16(r2, r2));
-            r0 = _mm_add_epi16(r0, _mm_slli_epi16(r1, 2));
-            r0 = _mm_srli_epi16(_mm_add_epi16(r0, delta), 8);
-            *(int*)(dst + x) = _mm_cvtsi128_si32(_mm_packus_epi16(r0, r0));
-        }
-
-        return x;
-    }
-};
-
-struct PyrDownVec_32f
-{
-    int operator()(float** src, float* dst, int, int width) const
-    {
-        if( !checkHardwareSupport(CV_CPU_SSE) )
-            return 0;
-
-        int x = 0;
-        const float *row0 = src[0], *row1 = src[1], *row2 = src[2], *row3 = src[3], *row4 = src[4];
-        __m128 _4 = _mm_set1_ps(4.f), _scale = _mm_set1_ps(1.f/256);
-        for( ; x <= width - 8; x += 8 )
-        {
-            __m128 r0, r1, r2, r3, r4, t0, t1;
-            r0 = _mm_load_ps(row0 + x);
-            r1 = _mm_load_ps(row1 + x);
-            r2 = _mm_load_ps(row2 + x);
-            r3 = _mm_load_ps(row3 + x);
-            r4 = _mm_load_ps(row4 + x);
-            r0 = _mm_add_ps(r0, r4);
-            r1 = _mm_add_ps(_mm_add_ps(r1, r3), r2);
-            r0 = _mm_add_ps(r0, _mm_add_ps(r2, r2));
-            t0 = _mm_add_ps(r0, _mm_mul_ps(r1, _4));
-
-            r0 = _mm_load_ps(row0 + x + 4);
-            r1 = _mm_load_ps(row1 + x + 4);
-            r2 = _mm_load_ps(row2 + x + 4);
-            r3 = _mm_load_ps(row3 + x + 4);
-            r4 = _mm_load_ps(row4 + x + 4);
-            r0 = _mm_add_ps(r0, r4);
-            r1 = _mm_add_ps(_mm_add_ps(r1, r3), r2);
-            r0 = _mm_add_ps(r0, _mm_add_ps(r2, r2));
-            t1 = _mm_add_ps(r0, _mm_mul_ps(r1, _4));
-
-            t0 = _mm_mul_ps(t0, _scale);
-            t1 = _mm_mul_ps(t1, _scale);
-
-            _mm_storeu_ps(dst + x, t0);
-            _mm_storeu_ps(dst + x + 4, t1);
-        }
-
-        return x;
-    }
-};
-
-#if CV_SSE4_1
-
-struct PyrDownVec_32s16u
-{
-    PyrDownVec_32s16u()
-    {
-        haveSSE = checkHardwareSupport(CV_CPU_SSE4_1);
+        idx[i] = 6*i;
+        idx[i + v_int8::nlanes/4 + 2] = 6*i + 3;
     }
 
-    int operator()(int** src, ushort* dst, int, int width) const
+    int x = 0;
+    v_int16 v_6_4 = v_reinterpret_as_s16(vx_setall_u32(0x00040006));
+    for (; x <= width - v_int8::nlanes; x += 3*v_int8::nlanes/4, src += 6*v_int8::nlanes/4, row += 3*v_int8::nlanes/4)
     {
-        int x = 0;
+        v_uint16 r0l, r0h, r1l, r1h, r2l, r2h, r3l, r3h, r4l, r4h;
+        v_expand(vx_lut_quads(src, idx                       ), r0l, r0h);
+        v_expand(vx_lut_quads(src, idx + v_int8::nlanes/4 + 2), r1l, r1h);
+        v_expand(vx_lut_quads(src, idx + 1                   ), r2l, r2h);
+        v_expand(vx_lut_quads(src, idx + v_int8::nlanes/4 + 3), r3l, r3h);
+        v_expand(vx_lut_quads(src, idx + 2                   ), r4l, r4h);
 
-        if (!haveSSE)
-            return x;
+        v_zip(r2l, r1l + r3l, r1l, r3l);
+        v_zip(r2h, r1h + r3h, r1h, r3h);
+        r0l += r4l; r0h += r4h;
 
-        const int *row0 = src[0], *row1 = src[1], *row2 = src[2], *row3 = src[3], *row4 = src[4];
-        __m128i v_delta = _mm_set1_epi32(128);
-
-        for( ; x <= width - 8; x += 8 )
-        {
-            __m128i v_r00 = _mm_loadu_si128((__m128i const *)(row0 + x)),
-                    v_r01 = _mm_loadu_si128((__m128i const *)(row0 + x + 4));
-            __m128i v_r10 = _mm_loadu_si128((__m128i const *)(row1 + x)),
-                    v_r11 = _mm_loadu_si128((__m128i const *)(row1 + x + 4));
-            __m128i v_r20 = _mm_loadu_si128((__m128i const *)(row2 + x)),
-                    v_r21 = _mm_loadu_si128((__m128i const *)(row2 + x + 4));
-            __m128i v_r30 = _mm_loadu_si128((__m128i const *)(row3 + x)),
-                    v_r31 = _mm_loadu_si128((__m128i const *)(row3 + x + 4));
-            __m128i v_r40 = _mm_loadu_si128((__m128i const *)(row4 + x)),
-                    v_r41 = _mm_loadu_si128((__m128i const *)(row4 + x + 4));
-
-            v_r00 = _mm_add_epi32(_mm_add_epi32(v_r00, v_r40), _mm_add_epi32(v_r20, v_r20));
-            v_r10 = _mm_add_epi32(_mm_add_epi32(v_r10, v_r20), v_r30);
-
-            v_r10 = _mm_slli_epi32(v_r10, 2);
-            __m128i v_dst0 = _mm_srli_epi32(_mm_add_epi32(_mm_add_epi32(v_r00, v_r10), v_delta), 8);
-
-            v_r01 = _mm_add_epi32(_mm_add_epi32(v_r01, v_r41), _mm_add_epi32(v_r21, v_r21));
-            v_r11 = _mm_add_epi32(_mm_add_epi32(v_r11, v_r21), v_r31);
-            v_r11 = _mm_slli_epi32(v_r11, 2);
-            __m128i v_dst1 = _mm_srli_epi32(_mm_add_epi32(_mm_add_epi32(v_r01, v_r11), v_delta), 8);
-
-            _mm_storeu_si128((__m128i *)(dst + x), _mm_packus_epi32(v_dst0, v_dst1));
-        }
-
-        return x;
+        v_store(row                      , v_pack_triplets(v_dotprod(v_reinterpret_as_s16(r1l), v_6_4) + v_reinterpret_as_s32(v_expand_low( r0l))));
+        v_store(row + 3*v_int32::nlanes/4, v_pack_triplets(v_dotprod(v_reinterpret_as_s16(r3l), v_6_4) + v_reinterpret_as_s32(v_expand_high(r0l))));
+        v_store(row + 6*v_int32::nlanes/4, v_pack_triplets(v_dotprod(v_reinterpret_as_s16(r1h), v_6_4) + v_reinterpret_as_s32(v_expand_low( r0h))));
+        v_store(row + 9*v_int32::nlanes/4, v_pack_triplets(v_dotprod(v_reinterpret_as_s16(r3h), v_6_4) + v_reinterpret_as_s32(v_expand_high(r0h))));
     }
+    vx_cleanup();
 
-    bool haveSSE;
-};
-
-#else
-
-typedef PyrDownNoVec<int, ushort> PyrDownVec_32s16u;
-
-#endif // CV_SSE4_1
-
-struct PyrDownVec_32s16s
+    return x;
+}
+template<> int PyrDownVecH<uchar, int, 4>(const uchar* src, int* row, int width)
 {
-    PyrDownVec_32s16s()
-    {
-        haveSSE = checkHardwareSupport(CV_CPU_SSE2);
-    }
+    int x = 0;
+    const uchar *src01 = src, *src23 = src + 8, *src4 = src + 12;
 
-    int operator()(int** src, short* dst, int, int width) const
-    {
-        int x = 0;
+    v_int16 v_1_4 = v_reinterpret_as_s16(vx_setall_u32(0x00040001));
+    v_int16 v_6_4 = v_reinterpret_as_s16(vx_setall_u32(0x00040006));
+    for (; x <= width - v_int32::nlanes; x += v_int32::nlanes, src01 += v_int16::nlanes, src23 += v_int16::nlanes, src4 += v_int16::nlanes, row += v_int32::nlanes)
+        v_store(row, v_dotprod(v_interleave_quads(v_reinterpret_as_s16(vx_load_expand(src01))), v_1_4) +
+                     v_dotprod(v_interleave_quads(v_reinterpret_as_s16(vx_load_expand(src23))), v_6_4) +
+                     (v_reinterpret_as_s32(v_interleave_quads(vx_load_expand(src4))) >> 16));
+    vx_cleanup();
 
-        if (!haveSSE)
-            return x;
+    return x;
+}
 
-        const int *row0 = src[0], *row1 = src[1], *row2 = src[2], *row3 = src[3], *row4 = src[4];
-        __m128i v_delta = _mm_set1_epi32(128);
-
-        for( ; x <= width - 8; x += 8 )
-        {
-            __m128i v_r00 = _mm_loadu_si128((__m128i const *)(row0 + x)),
-                    v_r01 = _mm_loadu_si128((__m128i const *)(row0 + x + 4));
-            __m128i v_r10 = _mm_loadu_si128((__m128i const *)(row1 + x)),
-                    v_r11 = _mm_loadu_si128((__m128i const *)(row1 + x + 4));
-            __m128i v_r20 = _mm_loadu_si128((__m128i const *)(row2 + x)),
-                    v_r21 = _mm_loadu_si128((__m128i const *)(row2 + x + 4));
-            __m128i v_r30 = _mm_loadu_si128((__m128i const *)(row3 + x)),
-                    v_r31 = _mm_loadu_si128((__m128i const *)(row3 + x + 4));
-            __m128i v_r40 = _mm_loadu_si128((__m128i const *)(row4 + x)),
-                    v_r41 = _mm_loadu_si128((__m128i const *)(row4 + x + 4));
-
-            v_r00 = _mm_add_epi32(_mm_add_epi32(v_r00, v_r40), _mm_add_epi32(v_r20, v_r20));
-            v_r10 = _mm_add_epi32(_mm_add_epi32(v_r10, v_r20), v_r30);
-
-            v_r10 = _mm_slli_epi32(v_r10, 2);
-            __m128i v_dst0 = _mm_srai_epi32(_mm_add_epi32(_mm_add_epi32(v_r00, v_r10), v_delta), 8);
-
-            v_r01 = _mm_add_epi32(_mm_add_epi32(v_r01, v_r41), _mm_add_epi32(v_r21, v_r21));
-            v_r11 = _mm_add_epi32(_mm_add_epi32(v_r11, v_r21), v_r31);
-            v_r11 = _mm_slli_epi32(v_r11, 2);
-            __m128i v_dst1 = _mm_srai_epi32(_mm_add_epi32(_mm_add_epi32(v_r01, v_r11), v_delta), 8);
-
-            _mm_storeu_si128((__m128i *)(dst + x), _mm_packs_epi32(v_dst0, v_dst1));
-        }
-
-        return x;
-    }
-
-    bool haveSSE;
-};
-
-struct PyrUpVec_32s8u
+template<> int PyrDownVecH<short, int, 1>(const short* src, int* row, int width)
 {
-    int operator()(int** src, uchar** dst, int, int width) const
-    {
-        int x = 0;
+    int x = 0;
+    const short *src01 = src, *src23 = src + 2, *src4 = src + 3;
 
-        if (!checkHardwareSupport(CV_CPU_SSE2))
-            return x;
+    v_int16 v_1_4 = v_reinterpret_as_s16(vx_setall_u32(0x00040001));
+    v_int16 v_6_4 = v_reinterpret_as_s16(vx_setall_u32(0x00040006));
+    for (; x <= width - v_int32::nlanes; x += v_int32::nlanes, src01 += v_int16::nlanes, src23 += v_int16::nlanes, src4 += v_int16::nlanes, row += v_int32::nlanes)
+        v_store(row, v_dotprod(vx_load(src01), v_1_4) +
+                     v_dotprod(vx_load(src23), v_6_4) +
+                     (v_reinterpret_as_s32(vx_load(src4)) >> 16));
+    vx_cleanup();
 
-        uchar *dst0 = dst[0], *dst1 = dst[1];
-        const uint *row0 = (uint *)src[0], *row1 = (uint *)src[1], *row2 = (uint *)src[2];
-        __m128i v_delta = _mm_set1_epi16(32), v_zero = _mm_setzero_si128();
-
-        for( ; x <= width - 16; x += 16 )
-        {
-            __m128i v_r0 = _mm_packs_epi32(_mm_loadu_si128((__m128i const *)(row0 + x)),
-                                           _mm_loadu_si128((__m128i const *)(row0 + x + 4)));
-            __m128i v_r1 = _mm_packs_epi32(_mm_loadu_si128((__m128i const *)(row1 + x)),
-                                           _mm_loadu_si128((__m128i const *)(row1 + x + 4)));
-            __m128i v_r2 = _mm_packs_epi32(_mm_loadu_si128((__m128i const *)(row2 + x)),
-                                           _mm_loadu_si128((__m128i const *)(row2 + x + 4)));
-
-            __m128i v_2r1 = _mm_adds_epu16(v_r1, v_r1), v_4r1 = _mm_adds_epu16(v_2r1, v_2r1);
-            __m128i v_dst00 = _mm_adds_epu16(_mm_adds_epu16(v_r0, v_r2), _mm_adds_epu16(v_2r1, v_4r1));
-            __m128i v_dst10 = _mm_slli_epi16(_mm_adds_epu16(v_r1, v_r2), 2);
-
-            v_r0 = _mm_packs_epi32(_mm_loadu_si128((__m128i const *)(row0 + x + 8)),
-                                   _mm_loadu_si128((__m128i const *)(row0 + x + 12)));
-            v_r1 = _mm_packs_epi32(_mm_loadu_si128((__m128i const *)(row1 + x + 8)),
-                                   _mm_loadu_si128((__m128i const *)(row1 + x + 12)));
-            v_r2 = _mm_packs_epi32(_mm_loadu_si128((__m128i const *)(row2 + x + 8)),
-                                   _mm_loadu_si128((__m128i const *)(row2 + x + 12)));
-
-            v_2r1 = _mm_adds_epu16(v_r1, v_r1), v_4r1 = _mm_adds_epu16(v_2r1, v_2r1);
-            __m128i v_dst01 = _mm_adds_epu16(_mm_adds_epu16(v_r0, v_r2), _mm_adds_epu16(v_2r1, v_4r1));
-            __m128i v_dst11 = _mm_slli_epi16(_mm_adds_epu16(v_r1, v_r2), 2);
-
-            _mm_storeu_si128((__m128i *)(dst0 + x), _mm_packus_epi16(_mm_srli_epi16(_mm_adds_epu16(v_dst00, v_delta), 6),
-                                                                     _mm_srli_epi16(_mm_adds_epu16(v_dst01, v_delta), 6)));
-            _mm_storeu_si128((__m128i *)(dst1 + x), _mm_packus_epi16(_mm_srli_epi16(_mm_adds_epu16(v_dst10, v_delta), 6),
-                                                                     _mm_srli_epi16(_mm_adds_epu16(v_dst11, v_delta), 6)));
-        }
-
-        for( ; x <= width - 8; x += 8 )
-        {
-            __m128i v_r0 = _mm_packs_epi32(_mm_loadu_si128((__m128i const *)(row0 + x)),
-                                           _mm_loadu_si128((__m128i const *)(row0 + x + 4)));
-            __m128i v_r1 = _mm_packs_epi32(_mm_loadu_si128((__m128i const *)(row1 + x)),
-                                           _mm_loadu_si128((__m128i const *)(row1 + x + 4)));
-            __m128i v_r2 = _mm_packs_epi32(_mm_loadu_si128((__m128i const *)(row2 + x)),
-                                           _mm_loadu_si128((__m128i const *)(row2 + x + 4)));
-
-            __m128i v_2r1 = _mm_adds_epu16(v_r1, v_r1), v_4r1 = _mm_adds_epu16(v_2r1, v_2r1);
-            __m128i v_dst0 = _mm_adds_epu16(_mm_adds_epu16(v_r0, v_r2), _mm_adds_epu16(v_2r1, v_4r1));
-            __m128i v_dst1 = _mm_slli_epi16(_mm_adds_epu16(v_r1, v_r2), 2);
-
-            _mm_storel_epi64((__m128i *)(dst0 + x), _mm_packus_epi16(_mm_srli_epi16(_mm_adds_epu16(v_dst0, v_delta), 6), v_zero));
-            _mm_storel_epi64((__m128i *)(dst1 + x), _mm_packus_epi16(_mm_srli_epi16(_mm_adds_epu16(v_dst1, v_delta), 6), v_zero));
-        }
-
-        return x;
-    }
-};
-
-struct PyrUpVec_32s16s
+    return x;
+}
+template<> int PyrDownVecH<short, int, 2>(const short* src, int* row, int width)
 {
-    int operator()(int** src, short** dst, int, int width) const
-    {
-        int x = 0;
+    int x = 0;
+    const short *src01 = src, *src23 = src + 4, *src4 = src + 6;
 
-        if (!checkHardwareSupport(CV_CPU_SSE2))
-            return x;
+    v_int16 v_1_4 = v_reinterpret_as_s16(vx_setall_u32(0x00040001));
+    v_int16 v_6_4 = v_reinterpret_as_s16(vx_setall_u32(0x00040006));
+    for (; x <= width - v_int32::nlanes; x += v_int32::nlanes, src01 += v_int16::nlanes, src23 += v_int16::nlanes, src4 += v_int16::nlanes, row += v_int32::nlanes)
+        v_store(row, v_dotprod(v_interleave_pairs(vx_load(src01)), v_1_4) +
+                     v_dotprod(v_interleave_pairs(vx_load(src23)), v_6_4) +
+                     (v_reinterpret_as_s32(v_interleave_pairs(vx_load(src4))) >> 16));
+    vx_cleanup();
 
-        short *dst0 = dst[0], *dst1 = dst[1];
-        const uint *row0 = (uint *)src[0], *row1 = (uint *)src[1], *row2 = (uint *)src[2];
-        __m128i v_delta = _mm_set1_epi32(32), v_zero = _mm_setzero_si128();
-
-        for( ; x <= width - 8; x += 8 )
-        {
-            __m128i v_r0 = _mm_loadu_si128((__m128i const *)(row0 + x)),
-                    v_r1 = _mm_loadu_si128((__m128i const *)(row1 + x)),
-                    v_r2 = _mm_loadu_si128((__m128i const *)(row2 + x));
-            __m128i v_2r1 = _mm_slli_epi32(v_r1, 1), v_4r1 = _mm_slli_epi32(v_r1, 2);
-            __m128i v_dst00 = _mm_add_epi32(_mm_add_epi32(v_r0, v_r2), _mm_add_epi32(v_2r1, v_4r1));
-            __m128i v_dst10 = _mm_slli_epi32(_mm_add_epi32(v_r1, v_r2), 2);
-
-            v_r0 = _mm_loadu_si128((__m128i const *)(row0 + x + 4));
-            v_r1 = _mm_loadu_si128((__m128i const *)(row1 + x + 4));
-            v_r2 = _mm_loadu_si128((__m128i const *)(row2 + x + 4));
-            v_2r1 = _mm_slli_epi32(v_r1, 1);
-            v_4r1 = _mm_slli_epi32(v_r1, 2);
-            __m128i v_dst01 = _mm_add_epi32(_mm_add_epi32(v_r0, v_r2), _mm_add_epi32(v_2r1, v_4r1));
-            __m128i v_dst11 = _mm_slli_epi32(_mm_add_epi32(v_r1, v_r2), 2);
-
-            _mm_storeu_si128((__m128i *)(dst0 + x),
-                _mm_packs_epi32(_mm_srai_epi32(_mm_add_epi32(v_dst00, v_delta), 6),
-                                _mm_srai_epi32(_mm_add_epi32(v_dst01, v_delta), 6)));
-            _mm_storeu_si128((__m128i *)(dst1 + x),
-                _mm_packs_epi32(_mm_srai_epi32(_mm_add_epi32(v_dst10, v_delta), 6),
-                                _mm_srai_epi32(_mm_add_epi32(v_dst11, v_delta), 6)));
-        }
-
-        for( ; x <= width - 4; x += 4 )
-        {
-            __m128i v_r0 = _mm_loadu_si128((__m128i const *)(row0 + x)),
-                    v_r1 = _mm_loadu_si128((__m128i const *)(row1 + x)),
-                    v_r2 = _mm_loadu_si128((__m128i const *)(row2 + x));
-            __m128i v_2r1 = _mm_slli_epi32(v_r1, 1), v_4r1 = _mm_slli_epi32(v_r1, 2);
-
-            __m128i v_dst0 = _mm_add_epi32(_mm_add_epi32(v_r0, v_r2), _mm_add_epi32(v_2r1, v_4r1));
-            __m128i v_dst1 = _mm_slli_epi32(_mm_add_epi32(v_r1, v_r2), 2);
-
-            _mm_storel_epi64((__m128i *)(dst0 + x),
-                _mm_packs_epi32(_mm_srai_epi32(_mm_add_epi32(v_dst0, v_delta), 6), v_zero));
-            _mm_storel_epi64((__m128i *)(dst1 + x),
-                _mm_packs_epi32(_mm_srai_epi32(_mm_add_epi32(v_dst1, v_delta), 6), v_zero));
-        }
-
-        return x;
-    }
-};
-
-#if CV_SSE4_1
-
-struct PyrUpVec_32s16u
+    return x;
+}
+template<> int PyrDownVecH<short, int, 3>(const short* src, int* row, int width)
 {
-    int operator()(int** src, ushort** dst, int, int width) const
+    int idx[v_int16::nlanes/2 + 4];
+    for (int i = 0; i < v_int16::nlanes/4 + 2; i++)
     {
-        int x = 0;
-
-        if (!checkHardwareSupport(CV_CPU_SSE4_1))
-            return x;
-
-        ushort *dst0 = dst[0], *dst1 = dst[1];
-        const uint *row0 = (uint *)src[0], *row1 = (uint *)src[1], *row2 = (uint *)src[2];
-        __m128i v_delta = _mm_set1_epi32(32), v_zero = _mm_setzero_si128();
-
-        for( ; x <= width - 8; x += 8 )
-        {
-            __m128i v_r0 = _mm_loadu_si128((__m128i const *)(row0 + x)),
-                    v_r1 = _mm_loadu_si128((__m128i const *)(row1 + x)),
-                    v_r2 = _mm_loadu_si128((__m128i const *)(row2 + x));
-            __m128i v_2r1 = _mm_slli_epi32(v_r1, 1), v_4r1 = _mm_slli_epi32(v_r1, 2);
-            __m128i v_dst00 = _mm_add_epi32(_mm_add_epi32(v_r0, v_r2), _mm_add_epi32(v_2r1, v_4r1));
-            __m128i v_dst10 = _mm_slli_epi32(_mm_add_epi32(v_r1, v_r2), 2);
-
-            v_r0 = _mm_loadu_si128((__m128i const *)(row0 + x + 4));
-            v_r1 = _mm_loadu_si128((__m128i const *)(row1 + x + 4));
-            v_r2 = _mm_loadu_si128((__m128i const *)(row2 + x + 4));
-            v_2r1 = _mm_slli_epi32(v_r1, 1);
-            v_4r1 = _mm_slli_epi32(v_r1, 2);
-            __m128i v_dst01 = _mm_add_epi32(_mm_add_epi32(v_r0, v_r2), _mm_add_epi32(v_2r1, v_4r1));
-            __m128i v_dst11 = _mm_slli_epi32(_mm_add_epi32(v_r1, v_r2), 2);
-
-            _mm_storeu_si128((__m128i *)(dst0 + x),
-                _mm_packus_epi32(_mm_srli_epi32(_mm_add_epi32(v_dst00, v_delta), 6),
-                                 _mm_srli_epi32(_mm_add_epi32(v_dst01, v_delta), 6)));
-            _mm_storeu_si128((__m128i *)(dst1 + x),
-                _mm_packus_epi32(_mm_srli_epi32(_mm_add_epi32(v_dst10, v_delta), 6),
-                                 _mm_srli_epi32(_mm_add_epi32(v_dst11, v_delta), 6)));
-        }
-
-        for( ; x <= width - 4; x += 4 )
-        {
-            __m128i v_r0 = _mm_loadu_si128((__m128i const *)(row0 + x)),
-                    v_r1 = _mm_loadu_si128((__m128i const *)(row1 + x)),
-                    v_r2 = _mm_loadu_si128((__m128i const *)(row2 + x));
-            __m128i v_2r1 = _mm_slli_epi32(v_r1, 1), v_4r1 = _mm_slli_epi32(v_r1, 2);
-
-            __m128i v_dst0 = _mm_add_epi32(_mm_add_epi32(v_r0, v_r2), _mm_add_epi32(v_2r1, v_4r1));
-            __m128i v_dst1 = _mm_slli_epi32(_mm_add_epi32(v_r1, v_r2), 2);
-
-            _mm_storel_epi64((__m128i *)(dst0 + x),
-                _mm_packus_epi32(_mm_srli_epi32(_mm_add_epi32(v_dst0, v_delta), 6), v_zero));
-            _mm_storel_epi64((__m128i *)(dst1 + x),
-                _mm_packus_epi32(_mm_srli_epi32(_mm_add_epi32(v_dst1, v_delta), 6), v_zero));
-        }
-
-        return x;
+        idx[i] = 6*i;
+        idx[i + v_int16::nlanes/4 + 2] = 6*i + 3;
     }
-};
 
-#else
+    int x = 0;
+    v_int16 v_1_4 = v_reinterpret_as_s16(vx_setall_u32(0x00040001));
+    v_int16 v_6_4 = v_reinterpret_as_s16(vx_setall_u32(0x00040006));
+    for (; x <= width - v_int16::nlanes; x += 3*v_int16::nlanes/4, src += 6*v_int16::nlanes/4, row += 3*v_int16::nlanes/4)
+    {
+        v_int16 r0, r1, r2, r3, r4;
+        v_zip(vx_lut_quads(src, idx), vx_lut_quads(src, idx + v_int16::nlanes/4 + 2), r0, r1);
+        v_zip(vx_lut_quads(src, idx + 1), vx_lut_quads(src, idx + v_int16::nlanes/4 + 3), r2, r3);
+        r4 = vx_lut_quads(src, idx + 2);
+        v_store(row, v_pack_triplets(v_dotprod(r0, v_1_4) + v_dotprod(r2, v_6_4) + v_expand_low(r4)));
+        v_store(row + 3*v_int32::nlanes/4, v_pack_triplets(v_dotprod(r1, v_1_4) + v_dotprod(r3, v_6_4) + v_expand_high(r4)));
+    }
+    vx_cleanup();
 
-typedef PyrUpNoVec<int, ushort> PyrUpVec_32s16u;
-
-#endif // CV_SSE4_1
-
-struct PyrUpVec_32f
+    return x;
+}
+template<> int PyrDownVecH<short, int, 4>(const short* src, int* row, int width)
 {
-    int operator()(float** src, float** dst, int, int width) const
+    int idx[v_int16::nlanes/2 + 4];
+    for (int i = 0; i < v_int16::nlanes/4 + 2; i++)
     {
-        int x = 0;
-
-        if (!checkHardwareSupport(CV_CPU_SSE2))
-            return x;
-
-        const float *row0 = src[0], *row1 = src[1], *row2 = src[2];
-        float *dst0 = dst[0], *dst1 = dst[1];
-        __m128 v_6 = _mm_set1_ps(6.0f), v_scale = _mm_set1_ps(1.f/64.0f),
-               v_scale4 = _mm_mul_ps(v_scale, _mm_set1_ps(4.0f));
-
-        for( ; x <= width - 8; x += 8 )
-        {
-            __m128 v_r0 = _mm_loadu_ps(row0 + x);
-            __m128 v_r1 = _mm_loadu_ps(row1 + x);
-            __m128 v_r2 = _mm_loadu_ps(row2 + x);
-
-            _mm_storeu_ps(dst1 + x, _mm_mul_ps(v_scale4, _mm_add_ps(v_r1, v_r2)));
-            _mm_storeu_ps(dst0 + x, _mm_mul_ps(v_scale, _mm_add_ps(_mm_add_ps(v_r0, _mm_mul_ps(v_6, v_r1)), v_r2)));
-
-            v_r0 = _mm_loadu_ps(row0 + x + 4);
-            v_r1 = _mm_loadu_ps(row1 + x + 4);
-            v_r2 = _mm_loadu_ps(row2 + x + 4);
-
-            _mm_storeu_ps(dst1 + x + 4, _mm_mul_ps(v_scale4, _mm_add_ps(v_r1, v_r2)));
-            _mm_storeu_ps(dst0 + x + 4, _mm_mul_ps(v_scale, _mm_add_ps(_mm_add_ps(v_r0, _mm_mul_ps(v_6, v_r1)), v_r2)));
-        }
-
-        return x;
+        idx[i] = 8*i;
+        idx[i + v_int16::nlanes/4 + 2] = 8*i + 4;
     }
-};
 
-#elif CV_NEON
+    int x = 0;
+    v_int16 v_1_4 = v_reinterpret_as_s16(vx_setall_u32(0x00040001));
+    v_int16 v_6_4 = v_reinterpret_as_s16(vx_setall_u32(0x00040006));
+    for (; x <= width - v_int16::nlanes; x += v_int16::nlanes, src += 2*v_int16::nlanes, row += v_int16::nlanes)
+    {
+        v_int16 r0, r1, r2, r3, r4;
+        v_zip(vx_lut_quads(src, idx), vx_lut_quads(src, idx + v_int16::nlanes/4 + 2), r0, r1);
+        v_zip(vx_lut_quads(src, idx + 1), vx_lut_quads(src, idx + v_int16::nlanes/4 + 3), r2, r3);
+        r4 = vx_lut_quads(src, idx + 2);
+        v_store(row, v_dotprod(r0, v_1_4) + v_dotprod(r2, v_6_4) + v_expand_low(r4));
+        v_store(row + v_int32::nlanes, v_dotprod(r1, v_1_4) + v_dotprod(r3, v_6_4) + v_expand_high(r4));
+    }
+    vx_cleanup();
 
-struct PyrDownVec_32s8u
+    return x;
+}
+
+template<> int PyrDownVecH<ushort, int, 1>(const ushort* src, int* row, int width)
 {
-    int operator()(int** src, uchar* dst, int, int width) const
-    {
-        int x = 0;
-        const unsigned int *row0 = (unsigned int*)src[0], *row1 = (unsigned int*)src[1],
-                           *row2 = (unsigned int*)src[2], *row3 = (unsigned int*)src[3],
-                           *row4 = (unsigned int*)src[4];
-        uint16x8_t v_delta = vdupq_n_u16(128);
+    int x = 0;
+    const ushort *src01 = src, *src23 = src + 2, *src4 = src + 3;
 
-        for( ; x <= width - 16; x += 16 )
-        {
-            uint16x8_t v_r0 = vcombine_u16(vqmovn_u32(vld1q_u32(row0 + x)), vqmovn_u32(vld1q_u32(row0 + x + 4)));
-            uint16x8_t v_r1 = vcombine_u16(vqmovn_u32(vld1q_u32(row1 + x)), vqmovn_u32(vld1q_u32(row1 + x + 4)));
-            uint16x8_t v_r2 = vcombine_u16(vqmovn_u32(vld1q_u32(row2 + x)), vqmovn_u32(vld1q_u32(row2 + x + 4)));
-            uint16x8_t v_r3 = vcombine_u16(vqmovn_u32(vld1q_u32(row3 + x)), vqmovn_u32(vld1q_u32(row3 + x + 4)));
-            uint16x8_t v_r4 = vcombine_u16(vqmovn_u32(vld1q_u32(row4 + x)), vqmovn_u32(vld1q_u32(row4 + x + 4)));
+    v_int16 v_1_4 = v_reinterpret_as_s16(vx_setall_u32(0x00040001));
+    v_int16 v_6_4 = v_reinterpret_as_s16(vx_setall_u32(0x00040006));
+    v_uint16 v_half = vx_setall_u16(0x8000);
+    v_int32 v_half15 = vx_setall_s32(0x00078000);
+    for (; x <= width - v_int32::nlanes; x += v_int32::nlanes, src01 += v_int16::nlanes, src23 += v_int16::nlanes, src4 += v_int16::nlanes, row += v_int32::nlanes)
+        v_store(row, v_dotprod(v_reinterpret_as_s16(v_sub_wrap(vx_load(src01), v_half)), v_1_4) +
+                     v_dotprod(v_reinterpret_as_s16(v_sub_wrap(vx_load(src23), v_half)), v_6_4) +
+                     v_reinterpret_as_s32(v_reinterpret_as_u32(vx_load(src4)) >> 16) + v_half15);
+    vx_cleanup();
 
-            v_r0 = vaddq_u16(vaddq_u16(v_r0, v_r4), vaddq_u16(v_r2, v_r2));
-            v_r1 = vaddq_u16(vaddq_u16(v_r1, v_r2), v_r3);
-            uint16x8_t v_dst0 = vaddq_u16(v_r0, vshlq_n_u16(v_r1, 2));
-
-            v_r0 = vcombine_u16(vqmovn_u32(vld1q_u32(row0 + x + 8)), vqmovn_u32(vld1q_u32(row0 + x + 12)));
-            v_r1 = vcombine_u16(vqmovn_u32(vld1q_u32(row1 + x + 8)), vqmovn_u32(vld1q_u32(row1 + x + 12)));
-            v_r2 = vcombine_u16(vqmovn_u32(vld1q_u32(row2 + x + 8)), vqmovn_u32(vld1q_u32(row2 + x + 12)));
-            v_r3 = vcombine_u16(vqmovn_u32(vld1q_u32(row3 + x + 8)), vqmovn_u32(vld1q_u32(row3 + x + 12)));
-            v_r4 = vcombine_u16(vqmovn_u32(vld1q_u32(row4 + x + 8)), vqmovn_u32(vld1q_u32(row4 + x + 12)));
-
-            v_r0 = vaddq_u16(vaddq_u16(v_r0, v_r4), vaddq_u16(v_r2, v_r2));
-            v_r1 = vaddq_u16(vaddq_u16(v_r1, v_r2), v_r3);
-            uint16x8_t v_dst1 = vaddq_u16(v_r0, vshlq_n_u16(v_r1, 2));
-
-            vst1q_u8(dst + x, vcombine_u8(vqmovn_u16(vshrq_n_u16(vaddq_u16(v_dst0, v_delta), 8)),
-                                          vqmovn_u16(vshrq_n_u16(vaddq_u16(v_dst1, v_delta), 8))));
-        }
-
-        return x;
-    }
-};
-
-struct PyrDownVec_32s16u
+    return x;
+}
+template<> int PyrDownVecH<ushort, int, 2>(const ushort* src, int* row, int width)
 {
-    int operator()(int** src, ushort* dst, int, int width) const
-    {
-        int x = 0;
-        const int *row0 = src[0], *row1 = src[1], *row2 = src[2], *row3 = src[3], *row4 = src[4];
-        int32x4_t v_delta = vdupq_n_s32(128);
+    int x = 0;
+    const ushort *src01 = src, *src23 = src + 4, *src4 = src + 6;
 
-        for( ; x <= width - 8; x += 8 )
-        {
-            int32x4_t v_r00 = vld1q_s32(row0 + x), v_r01 = vld1q_s32(row0 + x + 4);
-            int32x4_t v_r10 = vld1q_s32(row1 + x), v_r11 = vld1q_s32(row1 + x + 4);
-            int32x4_t v_r20 = vld1q_s32(row2 + x), v_r21 = vld1q_s32(row2 + x + 4);
-            int32x4_t v_r30 = vld1q_s32(row3 + x), v_r31 = vld1q_s32(row3 + x + 4);
-            int32x4_t v_r40 = vld1q_s32(row4 + x), v_r41 = vld1q_s32(row4 + x + 4);
+    v_int16 v_1_4 = v_reinterpret_as_s16(vx_setall_u32(0x00040001));
+    v_int16 v_6_4 = v_reinterpret_as_s16(vx_setall_u32(0x00040006));
+    v_uint16 v_half = vx_setall_u16(0x8000);
+    v_int32 v_half15 = vx_setall_s32(0x00078000);
+    for (; x <= width - v_int32::nlanes; x += v_int32::nlanes, src01 += v_int16::nlanes, src23 += v_int16::nlanes, src4 += v_int16::nlanes, row += v_int32::nlanes)
+        v_store(row, v_dotprod(v_interleave_pairs(v_reinterpret_as_s16(v_sub_wrap(vx_load(src01), v_half))), v_1_4) +
+                     v_dotprod(v_interleave_pairs(v_reinterpret_as_s16(v_sub_wrap(vx_load(src23), v_half))), v_6_4) +
+                     v_reinterpret_as_s32(v_reinterpret_as_u32(v_interleave_pairs(vx_load(src4))) >> 16) + v_half15);
+    vx_cleanup();
 
-            v_r00 = vaddq_s32(vaddq_s32(v_r00, v_r40), vaddq_s32(v_r20, v_r20));
-            v_r10 = vaddq_s32(vaddq_s32(v_r10, v_r20), v_r30);
-
-            v_r10 = vshlq_n_s32(v_r10, 2);
-            int32x4_t v_dst0 = vshrq_n_s32(vaddq_s32(vaddq_s32(v_r00, v_r10), v_delta), 8);
-
-            v_r01 = vaddq_s32(vaddq_s32(v_r01, v_r41), vaddq_s32(v_r21, v_r21));
-            v_r11 = vaddq_s32(vaddq_s32(v_r11, v_r21), v_r31);
-            v_r11 = vshlq_n_s32(v_r11, 2);
-            int32x4_t v_dst1 = vshrq_n_s32(vaddq_s32(vaddq_s32(v_r01, v_r11), v_delta), 8);
-
-            vst1q_u16(dst + x, vcombine_u16(vqmovun_s32(v_dst0), vqmovun_s32(v_dst1)));
-        }
-
-        return x;
-    }
-};
-
-struct PyrDownVec_32s16s
+    return x;
+}
+template<> int PyrDownVecH<ushort, int, 3>(const ushort* src, int* row, int width)
 {
-    int operator()(int** src, short* dst, int, int width) const
+    int idx[v_int16::nlanes/2 + 4];
+    for (int i = 0; i < v_int16::nlanes/4 + 2; i++)
     {
-        int x = 0;
-        const int *row0 = src[0], *row1 = src[1], *row2 = src[2], *row3 = src[3], *row4 = src[4];
-        int32x4_t v_delta = vdupq_n_s32(128);
-
-        for( ; x <= width - 8; x += 8 )
-        {
-            int32x4_t v_r00 = vld1q_s32(row0 + x), v_r01 = vld1q_s32(row0 + x + 4);
-            int32x4_t v_r10 = vld1q_s32(row1 + x), v_r11 = vld1q_s32(row1 + x + 4);
-            int32x4_t v_r20 = vld1q_s32(row2 + x), v_r21 = vld1q_s32(row2 + x + 4);
-            int32x4_t v_r30 = vld1q_s32(row3 + x), v_r31 = vld1q_s32(row3 + x + 4);
-            int32x4_t v_r40 = vld1q_s32(row4 + x), v_r41 = vld1q_s32(row4 + x + 4);
-
-            v_r00 = vaddq_s32(vaddq_s32(v_r00, v_r40), vaddq_s32(v_r20, v_r20));
-            v_r10 = vaddq_s32(vaddq_s32(v_r10, v_r20), v_r30);
-            v_r10 = vshlq_n_s32(v_r10, 2);
-            int32x4_t v_dst0 = vshrq_n_s32(vaddq_s32(vaddq_s32(v_r00, v_r10), v_delta), 8);
-
-            v_r01 = vaddq_s32(vaddq_s32(v_r01, v_r41), vaddq_s32(v_r21, v_r21));
-            v_r11 = vaddq_s32(vaddq_s32(v_r11, v_r21), v_r31);
-            v_r11 = vshlq_n_s32(v_r11, 2);
-            int32x4_t v_dst1 = vshrq_n_s32(vaddq_s32(vaddq_s32(v_r01, v_r11), v_delta), 8);
-
-            vst1q_s16(dst + x, vcombine_s16(vqmovn_s32(v_dst0), vqmovn_s32(v_dst1)));
-        }
-
-        return x;
+        idx[i] = 6*i;
+        idx[i + v_int16::nlanes/4 + 2] = 6*i + 3;
     }
-};
 
-struct PyrDownVec_32f
+    int x = 0;
+    v_int16 v_1_4 = v_reinterpret_as_s16(vx_setall_u32(0x00040001));
+    v_int16 v_6_4 = v_reinterpret_as_s16(vx_setall_u32(0x00040006));
+    v_uint16 v_half = vx_setall_u16(0x8000);
+    v_int32 v_half15 = vx_setall_s32(0x00078000);
+    for (; x <= width - v_int16::nlanes; x += 3*v_int16::nlanes/4, src += 6*v_int16::nlanes/4, row += 3*v_int16::nlanes/4)
+    {
+        v_uint16 r0, r1, r2, r3, r4;
+        v_zip(vx_lut_quads(src, idx), vx_lut_quads(src, idx + v_int16::nlanes/4 + 2), r0, r1);
+        v_zip(vx_lut_quads(src, idx + 1), vx_lut_quads(src, idx + v_int16::nlanes/4 + 3), r2, r3);
+        r4 = vx_lut_quads(src, idx + 2);
+        v_store(row                      , v_pack_triplets(v_dotprod(v_reinterpret_as_s16(v_sub_wrap(r0, v_half)), v_1_4) +
+                                                           v_dotprod(v_reinterpret_as_s16(v_sub_wrap(r2, v_half)), v_6_4) +
+                                                           v_reinterpret_as_s32(v_expand_low(r4)) + v_half15));
+        v_store(row + 3*v_int32::nlanes/4, v_pack_triplets(v_dotprod(v_reinterpret_as_s16(v_sub_wrap(r1, v_half)), v_1_4) +
+                                                           v_dotprod(v_reinterpret_as_s16(v_sub_wrap(r3, v_half)), v_6_4) +
+                                                           v_reinterpret_as_s32(v_expand_high(r4)) + v_half15));
+    }
+    vx_cleanup();
+
+    return x;
+}
+template<> int PyrDownVecH<ushort, int, 4>(const ushort* src, int* row, int width)
 {
-    int operator()(float** src, float* dst, int, int width) const
+    int idx[v_int16::nlanes/2 + 4];
+    for (int i = 0; i < v_int16::nlanes/4 + 2; i++)
     {
-        int x = 0;
-        const float *row0 = src[0], *row1 = src[1], *row2 = src[2], *row3 = src[3], *row4 = src[4];
-        float32x4_t v_4 = vdupq_n_f32(4.0f), v_scale = vdupq_n_f32(1.f/256.0f);
-
-        for( ; x <= width - 8; x += 8 )
-        {
-            float32x4_t v_r0 = vld1q_f32(row0 + x);
-            float32x4_t v_r1 = vld1q_f32(row1 + x);
-            float32x4_t v_r2 = vld1q_f32(row2 + x);
-            float32x4_t v_r3 = vld1q_f32(row3 + x);
-            float32x4_t v_r4 = vld1q_f32(row4 + x);
-
-            v_r0 = vaddq_f32(vaddq_f32(v_r0, v_r4), vaddq_f32(v_r2, v_r2));
-            v_r1 = vaddq_f32(vaddq_f32(v_r1, v_r2), v_r3);
-            vst1q_f32(dst + x, vmulq_f32(vmlaq_f32(v_r0, v_4, v_r1), v_scale));
-
-            v_r0 = vld1q_f32(row0 + x + 4);
-            v_r1 = vld1q_f32(row1 + x + 4);
-            v_r2 = vld1q_f32(row2 + x + 4);
-            v_r3 = vld1q_f32(row3 + x + 4);
-            v_r4 = vld1q_f32(row4 + x + 4);
-
-            v_r0 = vaddq_f32(vaddq_f32(v_r0, v_r4), vaddq_f32(v_r2, v_r2));
-            v_r1 = vaddq_f32(vaddq_f32(v_r1, v_r2), v_r3);
-            vst1q_f32(dst + x + 4, vmulq_f32(vmlaq_f32(v_r0, v_4, v_r1), v_scale));
-        }
-
-        return x;
+        idx[i] = 8*i;
+        idx[i + v_int16::nlanes/4 + 2] = 8*i + 4;
     }
-};
 
-struct PyrUpVec_32s8u
+    int x = 0;
+    v_int16 v_1_4 = v_reinterpret_as_s16(vx_setall_u32(0x00040001));
+    v_int16 v_6_4 = v_reinterpret_as_s16(vx_setall_u32(0x00040006));
+    v_uint16 v_half = vx_setall_u16(0x8000);
+    v_int32 v_half15 = vx_setall_s32(0x00078000);
+    for (; x <= width - v_int16::nlanes; x += v_int16::nlanes, src += 2*v_int16::nlanes, row += v_int16::nlanes)
+    {
+        v_uint16 r0, r1, r2, r3, r4;
+        v_zip(vx_lut_quads(src, idx), vx_lut_quads(src, idx + v_int16::nlanes/4 + 2), r0, r1);
+        v_zip(vx_lut_quads(src, idx + 1), vx_lut_quads(src, idx + v_int16::nlanes/4 + 3), r2, r3);
+        r4 = vx_lut_quads(src, idx + 2);
+        v_store(row                  , v_dotprod(v_reinterpret_as_s16(v_sub_wrap(r0, v_half)), v_1_4) +
+                                       v_dotprod(v_reinterpret_as_s16(v_sub_wrap(r2, v_half)), v_6_4) +
+                                       v_reinterpret_as_s32(v_expand_low(r4)) + v_half15);
+        v_store(row + v_int32::nlanes, v_dotprod(v_reinterpret_as_s16(v_sub_wrap(r1, v_half)), v_1_4) +
+                                       v_dotprod(v_reinterpret_as_s16(v_sub_wrap(r3, v_half)), v_6_4) +
+                                       v_reinterpret_as_s32(v_expand_high(r4)) + v_half15);
+    }
+    vx_cleanup();
+
+    return x;
+}
+
+template<> int PyrDownVecH<float, float, 1>(const float* src, float* row, int width)
 {
-    int operator()(int** src, uchar** dst, int, int width) const
+    int x = 0;
+    const float *src01 = src, *src23 = src + 2, *src4 = src + 3;
+
+    v_float32 _4 = vx_setall_f32(4.f), _6 = vx_setall_f32(6.f);
+    for (; x <= width - v_float32::nlanes; x += v_float32::nlanes, src01 += 2*v_float32::nlanes, src23 += 2*v_float32::nlanes, src4 += 2*v_float32::nlanes, row+=v_float32::nlanes)
     {
-        int x = 0;
-        uchar *dst0 = dst[0], *dst1 = dst[1];
-        const uint *row0 = (uint *)src[0], *row1 = (uint *)src[1], *row2 = (uint *)src[2];
-        uint16x8_t v_delta = vdupq_n_u16(32);
-
-        for( ; x <= width - 16; x += 16 )
-        {
-            uint16x8_t v_r0 = vcombine_u16(vqmovn_u32(vld1q_u32(row0 + x)), vqmovn_u32(vld1q_u32(row0 + x + 4)));
-            uint16x8_t v_r1 = vcombine_u16(vqmovn_u32(vld1q_u32(row1 + x)), vqmovn_u32(vld1q_u32(row1 + x + 4)));
-            uint16x8_t v_r2 = vcombine_u16(vqmovn_u32(vld1q_u32(row2 + x)), vqmovn_u32(vld1q_u32(row2 + x + 4)));
-
-            uint16x8_t v_2r1 = vaddq_u16(v_r1, v_r1), v_4r1 = vaddq_u16(v_2r1, v_2r1);
-            uint16x8_t v_dst00 = vaddq_u16(vaddq_u16(v_r0, v_r2), vaddq_u16(v_2r1, v_4r1));
-            uint16x8_t v_dst10 = vshlq_n_u16(vaddq_u16(v_r1, v_r2), 2);
-
-            v_r0 = vcombine_u16(vqmovn_u32(vld1q_u32(row0 + x + 8)), vqmovn_u32(vld1q_u32(row0 + x + 12)));
-            v_r1 = vcombine_u16(vqmovn_u32(vld1q_u32(row1 + x + 8)), vqmovn_u32(vld1q_u32(row1 + x + 12)));
-            v_r2 = vcombine_u16(vqmovn_u32(vld1q_u32(row2 + x + 8)), vqmovn_u32(vld1q_u32(row2 + x + 12)));
-
-            v_2r1 = vaddq_u16(v_r1, v_r1), v_4r1 = vaddq_u16(v_2r1, v_2r1);
-            uint16x8_t v_dst01 = vaddq_u16(vaddq_u16(v_r0, v_r2), vaddq_u16(v_2r1, v_4r1));
-            uint16x8_t v_dst11 = vshlq_n_u16(vaddq_u16(v_r1, v_r2), 2);
-
-            vst1q_u8(dst0 + x, vcombine_u8(vqmovn_u16(vshrq_n_u16(vaddq_u16(v_dst00, v_delta), 6)),
-                                           vqmovn_u16(vshrq_n_u16(vaddq_u16(v_dst01, v_delta), 6))));
-            vst1q_u8(dst1 + x, vcombine_u8(vqmovn_u16(vshrq_n_u16(vaddq_u16(v_dst10, v_delta), 6)),
-                                           vqmovn_u16(vshrq_n_u16(vaddq_u16(v_dst11, v_delta), 6))));
-        }
-
-        for( ; x <= width - 8; x += 8 )
-        {
-            uint16x8_t v_r0 = vcombine_u16(vqmovn_u32(vld1q_u32(row0 + x)), vqmovn_u32(vld1q_u32(row0 + x + 4)));
-            uint16x8_t v_r1 = vcombine_u16(vqmovn_u32(vld1q_u32(row1 + x)), vqmovn_u32(vld1q_u32(row1 + x + 4)));
-            uint16x8_t v_r2 = vcombine_u16(vqmovn_u32(vld1q_u32(row2 + x)), vqmovn_u32(vld1q_u32(row2 + x + 4)));
-
-            uint16x8_t v_2r1 = vaddq_u16(v_r1, v_r1), v_4r1 = vaddq_u16(v_2r1, v_2r1);
-            uint16x8_t v_dst0 = vaddq_u16(vaddq_u16(v_r0, v_r2), vaddq_u16(v_2r1, v_4r1));
-            uint16x8_t v_dst1 = vshlq_n_u16(vaddq_u16(v_r1, v_r2), 2);
-
-            vst1_u8(dst0 + x, vqmovn_u16(vshrq_n_u16(vaddq_u16(v_dst0, v_delta), 6)));
-            vst1_u8(dst1 + x, vqmovn_u16(vshrq_n_u16(vaddq_u16(v_dst1, v_delta), 6)));
-        }
-
-        return x;
+        v_float32 r0, r1, r2, r3, r4, rtmp;
+        v_load_deinterleave(src01, r0, r1);
+        v_load_deinterleave(src23, r2, r3);
+        v_load_deinterleave(src4, rtmp, r4);
+        v_store(row, v_muladd(r2, _6, v_muladd(r1 + r3, _4, r0 + r4)));
     }
-};
+    vx_cleanup();
 
-struct PyrUpVec_32s16u
+    return x;
+}
+template<> int PyrDownVecH<float, float, 2>(const float* src, float* row, int width)
 {
-    int operator()(int** src, ushort** dst, int, int width) const
+    int x = 0;
+    const float *src01 = src, *src23 = src + 4, *src4 = src + 6;
+
+    v_float32 _4 = vx_setall_f32(4.f), _6 = vx_setall_f32(6.f);
+    for (; x <= width - 2*v_float32::nlanes; x += 2*v_float32::nlanes, src01 += 4*v_float32::nlanes, src23 += 4*v_float32::nlanes, src4 += 4*v_float32::nlanes, row += 2*v_float32::nlanes)
     {
-        int x = 0;
-        ushort *dst0 = dst[0], *dst1 = dst[1];
-        const uint *row0 = (uint *)src[0], *row1 = (uint *)src[1], *row2 = (uint *)src[2];
-        uint32x4_t v_delta = vdupq_n_u32(32);
-
-        for( ; x <= width - 8; x += 8 )
-        {
-            uint32x4_t v_r0 = vld1q_u32(row0 + x), v_r1 = vld1q_u32(row1 + x), v_r2 = vld1q_u32(row2 + x);
-            uint32x4_t v_2r1 = vshlq_n_u32(v_r1, 1), v_4r1 = vshlq_n_u32(v_r1, 2);
-            uint32x4_t v_dst00 = vaddq_u32(vaddq_u32(v_r0, v_r2), vaddq_u32(v_2r1, v_4r1));
-            uint32x4_t v_dst10 = vshlq_n_u32(vaddq_u32(v_r1, v_r2), 2);
-
-            v_r0 = vld1q_u32(row0 + x + 4);
-            v_r1 = vld1q_u32(row1 + x + 4);
-            v_r2 = vld1q_u32(row2 + x + 4);
-            v_2r1 = vshlq_n_u32(v_r1, 1);
-            v_4r1 = vshlq_n_u32(v_r1, 2);
-            uint32x4_t v_dst01 = vaddq_u32(vaddq_u32(v_r0, v_r2), vaddq_u32(v_2r1, v_4r1));
-            uint32x4_t v_dst11 = vshlq_n_u32(vaddq_u32(v_r1, v_r2), 2);
-
-            vst1q_u16(dst0 + x, vcombine_u16(vmovn_u32(vshrq_n_u32(vaddq_u32(v_dst00, v_delta), 6)),
-                                             vmovn_u32(vshrq_n_u32(vaddq_u32(v_dst01, v_delta), 6))));
-            vst1q_u16(dst1 + x, vcombine_u16(vmovn_u32(vshrq_n_u32(vaddq_u32(v_dst10, v_delta), 6)),
-                                             vmovn_u32(vshrq_n_u32(vaddq_u32(v_dst11, v_delta), 6))));
-        }
-
-        for( ; x <= width - 4; x += 4 )
-        {
-            uint32x4_t v_r0 = vld1q_u32(row0 + x), v_r1 = vld1q_u32(row1 + x), v_r2 = vld1q_u32(row2 + x);
-            uint32x4_t v_2r1 = vshlq_n_u32(v_r1, 1), v_4r1 = vshlq_n_u32(v_r1, 2);
-
-            uint32x4_t v_dst0 = vaddq_u32(vaddq_u32(v_r0, v_r2), vaddq_u32(v_2r1, v_4r1));
-            uint32x4_t v_dst1 = vshlq_n_u32(vaddq_u32(v_r1, v_r2), 2);
-
-            vst1_u16(dst0 + x, vmovn_u32(vshrq_n_u32(vaddq_u32(v_dst0, v_delta), 6)));
-            vst1_u16(dst1 + x, vmovn_u32(vshrq_n_u32(vaddq_u32(v_dst1, v_delta), 6)));
-        }
-
-        return x;
+        v_float32 r0a, r0b, r1a, r1b, r2a, r2b, r3a, r3b, r4a, r4b, rtmpa, rtmpb;
+        v_load_deinterleave(src01, r0a, r0b, r1a, r1b);
+        v_load_deinterleave(src23, r2a, r2b, r3a, r3b);
+        v_load_deinterleave(src4, rtmpa, rtmpb, r4a, r4b);
+        v_store_interleave(row, v_muladd(r2a, _6, v_muladd(r1a + r3a, _4, r0a + r4a)), v_muladd(r2b, _6, v_muladd(r1b + r3b, _4, r0b + r4b)));
     }
-};
+    vx_cleanup();
 
-struct PyrUpVec_32s16s
+    return x;
+}
+template<> int PyrDownVecH<float, float, 3>(const float* src, float* row, int width)
 {
-    int operator()(int** src, short** dst, int, int width) const
+    int idx[v_float32::nlanes/2 + 4];
+    for (int i = 0; i < v_float32::nlanes/4 + 2; i++)
     {
-        int x = 0;
-        short *dst0 = dst[0], *dst1 = dst[1];
-        const int *row0 = src[0], *row1 = src[1], *row2 = src[2];
-        int32x4_t v_delta = vdupq_n_s32(32);
-
-        for( ; x <= width - 8; x += 8 )
-        {
-            int32x4_t v_r0 = vld1q_s32(row0 + x), v_r1 = vld1q_s32(row1 + x), v_r2 = vld1q_s32(row2 + x);
-            int32x4_t v_2r1 = vshlq_n_s32(v_r1, 1), v_4r1 = vshlq_n_s32(v_r1, 2);
-            int32x4_t v_dst00 = vaddq_s32(vaddq_s32(v_r0, v_r2), vaddq_s32(v_2r1, v_4r1));
-            int32x4_t v_dst10 = vshlq_n_s32(vaddq_s32(v_r1, v_r2), 2);
-
-            v_r0 = vld1q_s32(row0 + x + 4);
-            v_r1 = vld1q_s32(row1 + x + 4);
-            v_r2 = vld1q_s32(row2 + x + 4);
-            v_2r1 = vshlq_n_s32(v_r1, 1);
-            v_4r1 = vshlq_n_s32(v_r1, 2);
-            int32x4_t v_dst01 = vaddq_s32(vaddq_s32(v_r0, v_r2), vaddq_s32(v_2r1, v_4r1));
-            int32x4_t v_dst11 = vshlq_n_s32(vaddq_s32(v_r1, v_r2), 2);
-
-            vst1q_s16(dst0 + x, vcombine_s16(vqmovn_s32(vshrq_n_s32(vaddq_s32(v_dst00, v_delta), 6)),
-                                             vqmovn_s32(vshrq_n_s32(vaddq_s32(v_dst01, v_delta), 6))));
-            vst1q_s16(dst1 + x, vcombine_s16(vqmovn_s32(vshrq_n_s32(vaddq_s32(v_dst10, v_delta), 6)),
-                                             vqmovn_s32(vshrq_n_s32(vaddq_s32(v_dst11, v_delta), 6))));
-        }
-
-        for( ; x <= width - 4; x += 4 )
-        {
-            int32x4_t v_r0 = vld1q_s32(row0 + x), v_r1 = vld1q_s32(row1 + x), v_r2 = vld1q_s32(row2 + x);
-            int32x4_t v_2r1 = vshlq_n_s32(v_r1, 1), v_4r1 = vshlq_n_s32(v_r1, 2);
-
-            int32x4_t v_dst0 = vaddq_s32(vaddq_s32(v_r0, v_r2), vaddq_s32(v_2r1, v_4r1));
-            int32x4_t v_dst1 = vshlq_n_s32(vaddq_s32(v_r1, v_r2), 2);
-
-            vst1_s16(dst0 + x, vqmovn_s32(vshrq_n_s32(vaddq_s32(v_dst0, v_delta), 6)));
-            vst1_s16(dst1 + x, vqmovn_s32(vshrq_n_s32(vaddq_s32(v_dst1, v_delta), 6)));
-        }
-
-        return x;
+        idx[i] = 6*i;
+        idx[i + v_float32::nlanes/4 + 2] = 6*i + 3;
     }
-};
 
-struct PyrUpVec_32f
+    int x = 0;
+    v_float32 _4 = vx_setall_f32(4.f), _6 = vx_setall_f32(6.f);
+    for (; x <= width - v_float32::nlanes; x += 3*v_float32::nlanes/4, src += 6*v_float32::nlanes/4, row += 3*v_float32::nlanes/4)
+    {
+        v_float32 r0 = vx_lut_quads(src, idx);
+        v_float32 r1 = vx_lut_quads(src, idx + v_float32::nlanes/4 + 2);
+        v_float32 r2 = vx_lut_quads(src, idx + 1);
+        v_float32 r3 = vx_lut_quads(src, idx + v_float32::nlanes/4 + 3);
+        v_float32 r4 = vx_lut_quads(src, idx + 2);
+        v_store(row, v_pack_triplets(v_muladd(r2, _6, v_muladd(r1 + r3, _4, r0 + r4))));
+    }
+    vx_cleanup();
+
+    return x;
+}
+template<> int PyrDownVecH<float, float, 4>(const float* src, float* row, int width)
 {
-    int operator()(float** src, float** dst, int, int width) const
+    int idx[v_float32::nlanes/2 + 4];
+    for (int i = 0; i < v_float32::nlanes/4 + 2; i++)
     {
-        int x = 0;
-        const float *row0 = src[0], *row1 = src[1], *row2 = src[2];
-        float *dst0 = dst[0], *dst1 = dst[1];
-        float32x4_t v_6 = vdupq_n_f32(6.0f), v_scale = vdupq_n_f32(1.f/64.0f), v_scale4 = vmulq_n_f32(v_scale, 4.0f);
-
-        for( ; x <= width - 8; x += 8 )
-        {
-            float32x4_t v_r0 = vld1q_f32(row0 + x);
-            float32x4_t v_r1 = vld1q_f32(row1 + x);
-            float32x4_t v_r2 = vld1q_f32(row2 + x);
-
-            vst1q_f32(dst1 + x, vmulq_f32(v_scale4, vaddq_f32(v_r1, v_r2)));
-            vst1q_f32(dst0 + x, vmulq_f32(v_scale, vaddq_f32(vmlaq_f32(v_r0, v_6, v_r1), v_r2)));
-
-            v_r0 = vld1q_f32(row0 + x + 4);
-            v_r1 = vld1q_f32(row1 + x + 4);
-            v_r2 = vld1q_f32(row2 + x + 4);
-
-            vst1q_f32(dst1 + x + 4, vmulq_f32(v_scale4, vaddq_f32(v_r1, v_r2)));
-            vst1q_f32(dst0 + x + 4, vmulq_f32(v_scale, vaddq_f32(vmlaq_f32(v_r0, v_6, v_r1), v_r2)));
-        }
-
-        return x;
+        idx[i] = 8*i;
+        idx[i + v_float32::nlanes/4 + 2] = 8*i + 4;
     }
-};
 
-#else
+    int x = 0;
+    v_float32 _4 = vx_setall_f32(4.f), _6 = vx_setall_f32(6.f);
+    for (; x <= width - v_float32::nlanes; x += v_float32::nlanes, src += 2*v_float32::nlanes, row += v_float32::nlanes)
+    {
+        v_float32 r0 = vx_lut_quads(src, idx);
+        v_float32 r1 = vx_lut_quads(src, idx + v_float32::nlanes/4 + 2);
+        v_float32 r2 = vx_lut_quads(src, idx + 1);
+        v_float32 r3 = vx_lut_quads(src, idx + v_float32::nlanes/4 + 3);
+        v_float32 r4 = vx_lut_quads(src, idx + 2);
+        v_store(row, v_muladd(r2, _6, v_muladd(r1 + r3, _4, r0 + r4)));
+    }
+    vx_cleanup();
 
-typedef PyrDownNoVec<int, uchar> PyrDownVec_32s8u;
-typedef PyrDownNoVec<int, ushort> PyrDownVec_32s16u;
-typedef PyrDownNoVec<int, short> PyrDownVec_32s16s;
-typedef PyrDownNoVec<float, float> PyrDownVec_32f;
+    return x;
+}
 
-typedef PyrUpNoVec<int, uchar> PyrUpVec_32s8u;
-typedef PyrUpNoVec<int, short> PyrUpVec_32s16s;
-typedef PyrUpNoVec<int, ushort> PyrUpVec_32s16u;
-typedef PyrUpNoVec<float, float> PyrUpVec_32f;
+#if CV_SIMD_64F
+template<> int PyrDownVecH<double, double, 1>(const double* src, double* row, int width)
+{
+    int x = 0;
+    const double *src01 = src, *src23 = src + 2, *src4 = src + 3;
+
+    v_float64 _4 = vx_setall_f64(4.f), _6 = vx_setall_f64(6.f);
+    for (; x <= width - v_float64::nlanes; x += v_float64::nlanes, src01 += 2*v_float64::nlanes, src23 += 2*v_float64::nlanes, src4 += 2*v_float64::nlanes, row += v_float64::nlanes)
+    {
+        v_float64 r0, r1, r2, r3, r4, rtmp;
+        v_load_deinterleave(src01, r0, r1);
+        v_load_deinterleave(src23, r2, r3);
+        v_load_deinterleave(src4, rtmp, r4);
+        v_store(row, v_muladd(r2, _6, v_muladd(r1 + r3, _4, r0 + r4)));
+    }
+    vx_cleanup();
+
+    return x;
+}
+#endif
+
+template<> int PyrDownVecV<int, uchar>(int** src, uchar* dst, int width)
+{
+    int x = 0;
+    const int *row0 = src[0], *row1 = src[1], *row2 = src[2], *row3 = src[3], *row4 = src[4];
+
+    for( ; x <= width - v_uint8::nlanes; x += v_uint8::nlanes )
+    {
+        v_uint16 r0, r1, r2, r3, r4, t0, t1;
+        r0 = v_reinterpret_as_u16(v_pack(vx_load(row0 + x), vx_load(row0 + x + v_int32::nlanes)));
+        r1 = v_reinterpret_as_u16(v_pack(vx_load(row1 + x), vx_load(row1 + x + v_int32::nlanes)));
+        r2 = v_reinterpret_as_u16(v_pack(vx_load(row2 + x), vx_load(row2 + x + v_int32::nlanes)));
+        r3 = v_reinterpret_as_u16(v_pack(vx_load(row3 + x), vx_load(row3 + x + v_int32::nlanes)));
+        r4 = v_reinterpret_as_u16(v_pack(vx_load(row4 + x), vx_load(row4 + x + v_int32::nlanes)));
+        t0 = r0 + r4 + (r2 + r2) + ((r1 + r3 + r2) << 2);
+        r0 = v_reinterpret_as_u16(v_pack(vx_load(row0 + x + 2*v_int32::nlanes), vx_load(row0 + x + 3*v_int32::nlanes)));
+        r1 = v_reinterpret_as_u16(v_pack(vx_load(row1 + x + 2*v_int32::nlanes), vx_load(row1 + x + 3*v_int32::nlanes)));
+        r2 = v_reinterpret_as_u16(v_pack(vx_load(row2 + x + 2*v_int32::nlanes), vx_load(row2 + x + 3*v_int32::nlanes)));
+        r3 = v_reinterpret_as_u16(v_pack(vx_load(row3 + x + 2*v_int32::nlanes), vx_load(row3 + x + 3*v_int32::nlanes)));
+        r4 = v_reinterpret_as_u16(v_pack(vx_load(row4 + x + 2*v_int32::nlanes), vx_load(row4 + x + 3*v_int32::nlanes)));
+        t1 = r0 + r4 + (r2 + r2) + ((r1 + r3 + r2) << 2);
+        v_store(dst + x, v_rshr_pack<8>(t0, t1));
+    }
+    if (x <= width - v_int16::nlanes)
+    {
+        v_uint16 r0, r1, r2, r3, r4, t0;
+        r0 = v_reinterpret_as_u16(v_pack(vx_load(row0 + x), vx_load(row0 + x + v_int32::nlanes)));
+        r1 = v_reinterpret_as_u16(v_pack(vx_load(row1 + x), vx_load(row1 + x + v_int32::nlanes)));
+        r2 = v_reinterpret_as_u16(v_pack(vx_load(row2 + x), vx_load(row2 + x + v_int32::nlanes)));
+        r3 = v_reinterpret_as_u16(v_pack(vx_load(row3 + x), vx_load(row3 + x + v_int32::nlanes)));
+        r4 = v_reinterpret_as_u16(v_pack(vx_load(row4 + x), vx_load(row4 + x + v_int32::nlanes)));
+        t0 = r0 + r4 + (r2 + r2) + ((r1 + r3 + r2) << 2);
+        v_rshr_pack_store<8>(dst + x, t0);
+        x += v_uint16::nlanes;
+    }
+    typedef int CV_DECL_ALIGNED(1) unaligned_int;
+    for ( ; x <= width - v_int32x4::nlanes; x += v_int32x4::nlanes)
+    {
+        v_int32x4 r0, r1, r2, r3, r4, t0;
+        r0 = v_load(row0 + x);
+        r1 = v_load(row1 + x);
+        r2 = v_load(row2 + x);
+        r3 = v_load(row3 + x);
+        r4 = v_load(row4 + x);
+        t0 = r0 + r4 + (r2 + r2) + ((r1 + r3 + r2) << 2);
+
+        *((unaligned_int*) (dst + x)) = v_reinterpret_as_s32(v_rshr_pack<8>(v_pack_u(t0, t0), v_setzero_u16())).get0();
+    }
+    vx_cleanup();
+
+    return x;
+}
+
+template <>
+int PyrDownVecV<float, float>(float** src, float* dst, int width)
+{
+    int x = 0;
+    const float *row0 = src[0], *row1 = src[1], *row2 = src[2], *row3 = src[3], *row4 = src[4];
+
+    v_float32 _4 = vx_setall_f32(4.f), _scale = vx_setall_f32(1.f/256);
+    for( ; x <= width - v_float32::nlanes; x += v_float32::nlanes)
+    {
+        v_float32 r0, r1, r2, r3, r4;
+        r0 = vx_load(row0 + x);
+        r1 = vx_load(row1 + x);
+        r2 = vx_load(row2 + x);
+        r3 = vx_load(row3 + x);
+        r4 = vx_load(row4 + x);
+        v_store(dst + x, v_muladd(r1 + r3 + r2, _4, r0 + r4 + (r2 + r2)) * _scale);
+    }
+    vx_cleanup();
+
+    return x;
+}
+
+template <> int PyrDownVecV<int, ushort>(int** src, ushort* dst, int width)
+{
+    int x = 0;
+    const int *row0 = src[0], *row1 = src[1], *row2 = src[2], *row3 = src[3], *row4 = src[4];
+
+    for( ; x <= width - v_uint16::nlanes; x += v_uint16::nlanes)
+    {
+        v_int32 r00 = vx_load(row0 + x),
+                r01 = vx_load(row0 + x + v_int32::nlanes),
+                r10 = vx_load(row1 + x),
+                r11 = vx_load(row1 + x + v_int32::nlanes),
+                r20 = vx_load(row2 + x),
+                r21 = vx_load(row2 + x + v_int32::nlanes),
+                r30 = vx_load(row3 + x),
+                r31 = vx_load(row3 + x + v_int32::nlanes),
+                r40 = vx_load(row4 + x),
+                r41 = vx_load(row4 + x + v_int32::nlanes);
+        v_store(dst + x, v_rshr_pack_u<8>(r00 + r40 + (r20 + r20) + ((r10 + r20 + r30) << 2),
+                                            r01 + r41 + (r21 + r21) + ((r11 + r21 + r31) << 2)));
+    }
+    if (x <= width - v_int32::nlanes)
+    {
+        v_int32 r00 = vx_load(row0 + x),
+                r10 = vx_load(row1 + x),
+                r20 = vx_load(row2 + x),
+                r30 = vx_load(row3 + x),
+                r40 = vx_load(row4 + x);
+        v_rshr_pack_u_store<8>(dst + x, r00 + r40 + (r20 + r20) + ((r10 + r20 + r30) << 2));
+        x += v_int32::nlanes;
+    }
+    vx_cleanup();
+
+    return x;
+}
+
+template <> int PyrDownVecV<int, short>(int** src, short* dst, int width)
+{
+    int x = 0;
+    const int *row0 = src[0], *row1 = src[1], *row2 = src[2], *row3 = src[3], *row4 = src[4];
+
+    for( ; x <= width - v_int16::nlanes; x += v_int16::nlanes)
+    {
+        v_int32 r00 = vx_load(row0 + x),
+                r01 = vx_load(row0 + x + v_int32::nlanes),
+                r10 = vx_load(row1 + x),
+                r11 = vx_load(row1 + x + v_int32::nlanes),
+                r20 = vx_load(row2 + x),
+                r21 = vx_load(row2 + x + v_int32::nlanes),
+                r30 = vx_load(row3 + x),
+                r31 = vx_load(row3 + x + v_int32::nlanes),
+                r40 = vx_load(row4 + x),
+                r41 = vx_load(row4 + x + v_int32::nlanes);
+        v_store(dst + x, v_rshr_pack<8>(r00 + r40 + (r20 + r20) + ((r10 + r20 + r30) << 2),
+                                        r01 + r41 + (r21 + r21) + ((r11 + r21 + r31) << 2)));
+    }
+    if (x <= width - v_int32::nlanes)
+    {
+        v_int32 r00 = vx_load(row0 + x),
+            r10 = vx_load(row1 + x),
+            r20 = vx_load(row2 + x),
+            r30 = vx_load(row3 + x),
+            r40 = vx_load(row4 + x);
+        v_rshr_pack_store<8>(dst + x, r00 + r40 + (r20 + r20) + ((r10 + r20 + r30) << 2));
+        x += v_int32::nlanes;
+    }
+    vx_cleanup();
+
+    return x;
+}
+
+template <> int PyrUpVecV<int, uchar>(int** src, uchar** dst, int width)
+{
+    int x = 0;
+    uchar *dst0 = dst[0], *dst1 = dst[1];
+    const int *row0 = src[0], *row1 = src[1], *row2 = src[2];
+
+    for( ; x <= width - v_uint8::nlanes; x += v_uint8::nlanes)
+    {
+        v_int16 v_r00 = v_pack(vx_load(row0 + x), vx_load(row0 + x + v_int32::nlanes)),
+                v_r01 = v_pack(vx_load(row0 + x + 2 * v_int32::nlanes), vx_load(row0 + x + 3 * v_int32::nlanes)),
+                v_r10 = v_pack(vx_load(row1 + x), vx_load(row1 + x + v_int32::nlanes)),
+                v_r11 = v_pack(vx_load(row1 + x + 2 * v_int32::nlanes), vx_load(row1 + x + 3 * v_int32::nlanes)),
+                v_r20 = v_pack(vx_load(row2 + x), vx_load(row2 + x + v_int32::nlanes)),
+                v_r21 = v_pack(vx_load(row2 + x + 2 * v_int32::nlanes), vx_load(row2 + x + 3 * v_int32::nlanes));
+        v_int16 v_2r10 = v_r10 + v_r10, v_2r11 = (v_r11 + v_r11);
+        v_store(dst0 + x, v_rshr_pack_u<6>(v_r00 + v_r20 + (v_2r10 + v_2r10 + v_2r10), v_r01 + v_r21 + (v_2r11 + v_2r11 + v_2r11)));
+        v_store(dst1 + x, v_rshr_pack_u<6>((v_r10 + v_r20) << 2, (v_r11 + v_r21) << 2));
+    }
+    if(x <= width - v_uint16::nlanes)
+    {
+        v_int16 v_r00 = v_pack(vx_load(row0 + x), vx_load(row0 + x + v_int32::nlanes)),
+                v_r10 = v_pack(vx_load(row1 + x), vx_load(row1 + x + v_int32::nlanes)),
+                v_r20 = v_pack(vx_load(row2 + x), vx_load(row2 + x + v_int32::nlanes));
+        v_int16 v_2r10 = v_r10 + v_r10;
+        v_rshr_pack_u_store<6>(dst0 + x, v_r00 + v_r20 + (v_2r10 + v_2r10 + v_2r10));
+        v_rshr_pack_u_store<6>(dst1 + x, (v_r10 + v_r20) << 2);
+        x += v_uint16::nlanes;
+    }
+    typedef int CV_DECL_ALIGNED(1) unaligned_int;
+    for (; x <= width - v_int32x4::nlanes; x += v_int32x4::nlanes)
+    {
+        v_int32 v_r00 = vx_load(row0 + x),
+                v_r10 = vx_load(row1 + x),
+                v_r20 = vx_load(row2 + x);
+        v_int32 v_2r10 = v_r10 + v_r10;
+        v_int16 d = v_pack(v_r00 + v_r20 + (v_2r10 + v_2r10 + v_2r10), (v_r10 + v_r20) << 2);
+        *(unaligned_int*)(dst0 + x) = v_reinterpret_as_s32(v_rshr_pack_u<6>(d, vx_setzero_s16())).get0();
+        *(unaligned_int*)(dst1 + x) = v_reinterpret_as_s32(v_rshr_pack_u<6>(v_combine_high(d, d), vx_setzero_s16())).get0();
+    }
+    vx_cleanup();
+
+    return x;
+}
+
+template <> int PyrUpVecV<int, short>(int** src, short** dst, int width)
+{
+    int x = 0;
+    short *dst0 = dst[0], *dst1 = dst[1];
+    const int *row0 = src[0], *row1 = src[1], *row2 = src[2];
+
+    for( ; x <= width - v_int16::nlanes; x += v_int16::nlanes)
+    {
+        v_int32 v_r00 = vx_load(row0 + x),
+                v_r01 = vx_load(row0 + x + v_int32::nlanes),
+                v_r10 = vx_load(row1 + x),
+                v_r11 = vx_load(row1 + x + v_int32::nlanes),
+                v_r20 = vx_load(row2 + x),
+                v_r21 = vx_load(row2 + x + v_int32::nlanes);
+        v_store(dst0 + x, v_rshr_pack<6>(v_r00 + v_r20 + ((v_r10 << 1) + (v_r10 << 2)), v_r01 + v_r21 + ((v_r11 << 1) + (v_r11 << 2))));
+        v_store(dst1 + x, v_rshr_pack<6>((v_r10 + v_r20) << 2, (v_r11 + v_r21) << 2));
+    }
+    if(x <= width - v_int32::nlanes)
+    {
+        v_int32 v_r00 = vx_load(row0 + x),
+                v_r10 = vx_load(row1 + x),
+                v_r20 = vx_load(row2 + x);
+        v_rshr_pack_store<6>(dst0 + x, v_r00 + v_r20 + ((v_r10 << 1) + (v_r10 << 2)));
+        v_rshr_pack_store<6>(dst1 + x, (v_r10 + v_r20) << 2);
+        x += v_int32::nlanes;
+    }
+    vx_cleanup();
+
+    return x;
+}
+
+template <> int PyrUpVecV<int, ushort>(int** src, ushort** dst, int width)
+{
+    int x = 0;
+    ushort *dst0 = dst[0], *dst1 = dst[1];
+    const int *row0 = src[0], *row1 = src[1], *row2 = src[2];
+
+    for( ; x <= width - v_uint16::nlanes; x += v_uint16::nlanes)
+    {
+        v_int32 v_r00 = vx_load(row0 + x),
+                v_r01 = vx_load(row0 + x + v_int32::nlanes),
+                v_r10 = vx_load(row1 + x),
+                v_r11 = vx_load(row1 + x + v_int32::nlanes),
+                v_r20 = vx_load(row2 + x),
+                v_r21 = vx_load(row2 + x + v_int32::nlanes);
+        v_store(dst0 + x, v_rshr_pack_u<6>(v_r00 + v_r20 + ((v_r10 << 1) + (v_r10 << 2)), v_r01 + v_r21 + ((v_r11 << 1) + (v_r11 << 2))));
+        v_store(dst1 + x, v_rshr_pack_u<6>((v_r10 + v_r20) << 2, (v_r11 + v_r21) << 2));
+    }
+    if(x <= width - v_int32::nlanes)
+    {
+        v_int32 v_r00 = vx_load(row0 + x),
+                v_r10 = vx_load(row1 + x),
+                v_r20 = vx_load(row2 + x);
+        v_rshr_pack_u_store<6>(dst0 + x, v_r00 + v_r20 + ((v_r10 << 1) + (v_r10 << 2)));
+        v_rshr_pack_u_store<6>(dst1 + x, (v_r10 + v_r20) << 2);
+        x += v_int32::nlanes;
+    }
+    vx_cleanup();
+
+    return x;
+}
+
+template <> int PyrUpVecV<float, float>(float** src, float** dst, int width)
+{
+    int x = 0;
+    const float *row0 = src[0], *row1 = src[1], *row2 = src[2];
+    float *dst0 = dst[0], *dst1 = dst[1];
+
+    v_float32 v_6 = vx_setall_f32(6.0f), v_scale = vx_setall_f32(1.f/64.f), v_scale4 = vx_setall_f32(1.f/16.f);
+    for( ; x <= width - v_float32::nlanes; x += v_float32::nlanes)
+    {
+        v_float32 v_r0 = vx_load(row0 + x),
+                  v_r1 = vx_load(row1 + x),
+                  v_r2 = vx_load(row2 + x);
+        v_store(dst1 + x, v_scale4 * (v_r1 + v_r2));
+        v_store(dst0 + x, v_scale * (v_muladd(v_6, v_r1, v_r0) + v_r2));
+    }
+    vx_cleanup();
+
+    return x;
+}
 
 #endif
 
-template<class CastOp, class VecOp> void
+template<class CastOp>
+struct PyrDownInvoker : ParallelLoopBody
+{
+    PyrDownInvoker(const Mat& src, const Mat& dst, int borderType, int **tabR, int **tabM, int **tabL)
+    {
+        _src = &src;
+        _dst = &dst;
+        _borderType = borderType;
+        _tabR = tabR;
+        _tabM = tabM;
+        _tabL = tabL;
+    }
+
+    void operator()(const Range& range) const CV_OVERRIDE;
+
+    int **_tabR;
+    int **_tabM;
+    int **_tabL;
+    const Mat *_src;
+    const Mat *_dst;
+    int _borderType;
+};
+
+template<class CastOp> void
 pyrDown_( const Mat& _src, Mat& _dst, int borderType )
 {
     const int PD_SZ = 5;
-    typedef typename CastOp::type1 WT;
-    typedef typename CastOp::rtype T;
-
     CV_Assert( !_src.empty() );
     Size ssize = _src.size(), dsize = _dst.size();
     int cn = _src.channels();
-    int bufstep = (int)alignSize(dsize.width*cn, 16);
-    AutoBuffer<WT> _buf(bufstep*PD_SZ + 16);
-    WT* buf = alignPtr((WT*)_buf.data(), 16);
+
     int tabL[CV_CN_MAX*(PD_SZ+2)], tabR[CV_CN_MAX*(PD_SZ+2)];
     AutoBuffer<int> _tabM(dsize.width*cn);
     int* tabM = _tabM.data();
-    WT* rows[PD_SZ];
-    CastOp castOp;
-    VecOp vecOp;
 
     CV_Assert( ssize.width > 0 && ssize.height > 0 &&
                std::abs(dsize.width*2 - ssize.width) <= 2 &&
                std::abs(dsize.height*2 - ssize.height) <= 2 );
-    int k, x, sy0 = -PD_SZ/2, sy = sy0, width0 = std::min((ssize.width-PD_SZ/2-1)/2 + 1, dsize.width);
+    int width0 = std::min((ssize.width-PD_SZ/2-1)/2 + 1, dsize.width);
 
-    for( x = 0; x <= PD_SZ+1; x++ )
+    for (int x = 0; x <= PD_SZ+1; x++)
     {
         int sx0 = borderInterpolate(x - PD_SZ/2, ssize.width, borderType)*cn;
         int sx1 = borderInterpolate(x + width0*2 - PD_SZ/2, ssize.width, borderType)*cn;
-        for( k = 0; k < cn; k++ )
+        for (int k = 0; k < cn; k++)
         {
             tabL[x*cn + k] = sx0 + k;
             tabR[x*cn + k] = sx1 + k;
         }
     }
 
+    for (int x = 0; x < dsize.width*cn; x++)
+        tabM[x] = (x/cn)*2*cn + x % cn;
+
+    int *tabLPtr = tabL;
+    int *tabRPtr = tabR;
+
+    cv::parallel_for_(Range(0,dsize.height), cv::PyrDownInvoker<CastOp>(_src, _dst, borderType, &tabRPtr, &tabM, &tabLPtr), cv::getNumThreads());
+}
+
+template<class CastOp>
+void PyrDownInvoker<CastOp>::operator()(const Range& range) const
+{
+    const int PD_SZ = 5;
+    typedef typename CastOp::type1 WT;
+    typedef typename CastOp::rtype T;
+    Size ssize = _src->size(), dsize = _dst->size();
+    int cn = _src->channels();
+    int bufstep = (int)alignSize(dsize.width*cn, 16);
+    AutoBuffer<WT> _buf(bufstep*PD_SZ + 16);
+    WT* buf = alignPtr((WT*)_buf.data(), 16);
+    WT* rows[PD_SZ];
+    CastOp castOp;
+
+    int sy0 = -PD_SZ/2, sy = range.start * 2 + sy0, width0 = std::min((ssize.width-PD_SZ/2-1)/2 + 1, dsize.width);
+
     ssize.width *= cn;
     dsize.width *= cn;
     width0 *= cn;
 
-    for( x = 0; x < dsize.width; x++ )
-        tabM[x] = (x/cn)*2*cn + x % cn;
-
-    for( int y = 0; y < dsize.height; y++ )
+    for (int y = range.start; y < range.end; y++)
     {
-        T* dst = _dst.ptr<T>(y);
+        T* dst = (T*)_dst->ptr<T>(y);
         WT *row0, *row1, *row2, *row3, *row4;
 
         // fill the ring buffer (horizontal convolution and decimation)
-        for( ; sy <= y*2 + 2; sy++ )
+        int sy_limit = y*2 + 2;
+        for( ; sy <= sy_limit; sy++ )
         {
             WT* row = buf + ((sy - sy0) % PD_SZ)*bufstep;
-            int _sy = borderInterpolate(sy, ssize.height, borderType);
-            const T* src = _src.ptr<T>(_sy);
-            int limit = cn;
-            const int* tab = tabL;
+            int _sy = borderInterpolate(sy, ssize.height, _borderType);
+            const T* src = _src->ptr<T>(_sy);
 
-            for( x = 0;;)
-            {
-                for( ; x < limit; x++ )
+            do {
+                int x = 0;
+                const int* tabL = *_tabL;
+                for( ; x < cn; x++ )
                 {
-                    row[x] = src[tab[x+cn*2]]*6 + (src[tab[x+cn]] + src[tab[x+cn*3]])*4 +
-                        src[tab[x]] + src[tab[x+cn*4]];
+                    row[x] = src[tabL[x+cn*2]]*6 + (src[tabL[x+cn]] + src[tabL[x+cn*3]])*4 +
+                        src[tabL[x]] + src[tabL[x+cn*4]];
                 }
 
                 if( x == dsize.width )
@@ -918,12 +826,25 @@ pyrDown_( const Mat& _src, Mat& _dst, int borderType )
 
                 if( cn == 1 )
                 {
+                    x += PyrDownVecH<T, WT, 1>(src + x * 2 - 2, row + x, width0 - x);
                     for( ; x < width0; x++ )
                         row[x] = src[x*2]*6 + (src[x*2 - 1] + src[x*2 + 1])*4 +
                             src[x*2 - 2] + src[x*2 + 2];
                 }
+                else if( cn == 2 )
+                {
+                    x += PyrDownVecH<T, WT, 2>(src + x * 2 - 4, row + x, width0 - x);
+                    for( ; x < width0; x += 2 )
+                    {
+                        const T* s = src + x*2;
+                        WT t0 = s[0] * 6 + (s[-2] + s[2]) * 4 + s[-4] + s[4];
+                        WT t1 = s[1] * 6 + (s[-1] + s[3]) * 4 + s[-3] + s[5];
+                        row[x] = t0; row[x + 1] = t1;
+                    }
+                }
                 else if( cn == 3 )
                 {
+                    x += PyrDownVecH<T, WT, 3>(src + x * 2 - 6, row + x, width0 - x);
                     for( ; x < width0; x += 3 )
                     {
                         const T* s = src + x*2;
@@ -935,6 +856,7 @@ pyrDown_( const Mat& _src, Mat& _dst, int borderType )
                 }
                 else if( cn == 4 )
                 {
+                    x += PyrDownVecH<T, WT, 4>(src + x * 2 - 8, row + x, width0 - x);
                     for( ; x < width0; x += 4 )
                     {
                         const T* s = src + x*2;
@@ -950,30 +872,35 @@ pyrDown_( const Mat& _src, Mat& _dst, int borderType )
                 {
                     for( ; x < width0; x++ )
                     {
-                        int sx = tabM[x];
+                        int sx = (*_tabM)[x];
                         row[x] = src[sx]*6 + (src[sx - cn] + src[sx + cn])*4 +
                             src[sx - cn*2] + src[sx + cn*2];
                     }
                 }
 
-                limit = dsize.width;
-                tab = tabR - x;
-            }
+                // tabR
+                const int* tabR = *_tabR;
+                for (int x_ = 0; x < dsize.width; x++, x_++)
+                {
+                    row[x] = src[tabR[x_+cn*2]]*6 + (src[tabR[x_+cn]] + src[tabR[x_+cn*3]])*4 +
+                        src[tabR[x_]] + src[tabR[x_+cn*4]];
+                }
+            } while (0);
         }
 
         // do vertical convolution and decimation and write the result to the destination image
-        for( k = 0; k < PD_SZ; k++ )
+        for (int k = 0; k < PD_SZ; k++)
             rows[k] = buf + ((y*2 - PD_SZ/2 + k - sy0) % PD_SZ)*bufstep;
         row0 = rows[0]; row1 = rows[1]; row2 = rows[2]; row3 = rows[3]; row4 = rows[4];
 
-        x = vecOp(rows, dst, (int)_dst.step, dsize.width);
-        for( ; x < dsize.width; x++ )
+        int x = PyrDownVecV<WT, T>(rows, dst, dsize.width);
+        for (; x < dsize.width; x++ )
             dst[x] = castOp(row2[x]*6 + (row1[x] + row3[x])*4 + row0[x] + row4[x]);
     }
 }
 
 
-template<class CastOp, class VecOp> void
+template<class CastOp> void
 pyrUp_( const Mat& _src, Mat& _dst, int)
 {
     const int PU_SZ = 3;
@@ -990,7 +917,7 @@ pyrUp_( const Mat& _src, Mat& _dst, int)
     WT* rows[PU_SZ];
     T* dsts[2];
     CastOp castOp;
-    VecOp vecOp;
+    //PyrUpVecH<T, WT> vecOpH;
 
     CV_Assert( std::abs(dsize.width - ssize.width*2) == dsize.width % 2 &&
                std::abs(dsize.height - ssize.height*2) == dsize.height % 2);
@@ -1056,7 +983,7 @@ pyrUp_( const Mat& _src, Mat& _dst, int)
         row0 = rows[0]; row1 = rows[1]; row2 = rows[2];
         dsts[0] = dst0; dsts[1] = dst1;
 
-        x = vecOp(rows, dsts, (int)_dst.step, dsize.width);
+        x = PyrUpVecV<WT, T>(rows, dsts, dsize.width);
         for( ; x < dsize.width; x++ )
         {
             T t1 = castOp((row1[x] + row2[x])*4);
@@ -1090,7 +1017,7 @@ static bool ocl_pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, in
         return false;
 
     Size ssize = _src.size();
-    Size dsize = _dsz.area() == 0 ? Size((ssize.width + 1) / 2, (ssize.height + 1) / 2) : _dsz;
+    Size dsize = _dsz.empty() ? Size((ssize.width + 1) / 2, (ssize.height + 1) / 2) : _dsz;
     if (dsize.height < 2 || dsize.width < 2)
         return false;
 
@@ -1142,7 +1069,7 @@ static bool ocl_pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int 
         return false;
 
     Size ssize = _src.size();
-    if ((_dsz.area() != 0) && (_dsz != Size(ssize.width * 2, ssize.height * 2)))
+    if (!_dsz.empty() && (_dsz != Size(ssize.width * 2, ssize.height * 2)))
         return false;
 
     UMat src = _src.getUMat();
@@ -1151,7 +1078,7 @@ static bool ocl_pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int 
     UMat dst = _dst.getUMat();
 
     int float_depth = depth == CV_64F ? CV_64F : CV_32F;
-    const int local_size = 16;
+    const int local_size = channels == 1 ? 16 : 8;
     char cvt[2][50];
     String buildOptions = format(
             "-D T=%s -D FT=%s -D convertToT=%s -D convertToFT=%s%s "
@@ -1165,22 +1092,17 @@ static bool ocl_pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int 
     size_t globalThreads[2] = { (size_t)dst.cols, (size_t)dst.rows };
     size_t localThreads[2] = { (size_t)local_size, (size_t)local_size };
     ocl::Kernel k;
-    if (ocl::Device::getDefault().isIntel() && channels == 1)
+    if (type == CV_8UC1 && src.cols % 2 == 0)
     {
-        if (type == CV_8UC1 && src.cols % 2 == 0)
-        {
-            buildOptions.clear();
-            k.create("pyrUp_cols2", ocl::imgproc::pyramid_up_oclsrc, buildOptions);
-            globalThreads[0] = dst.cols/4; globalThreads[1] = dst.rows/2;
-        }
-        else
-        {
-            k.create("pyrUp_unrolled", ocl::imgproc::pyr_up_oclsrc, buildOptions);
-            globalThreads[0] = dst.cols/2; globalThreads[1] = dst.rows/2;
-        }
+        buildOptions.clear();
+        k.create("pyrUp_cols2", ocl::imgproc::pyramid_up_oclsrc, buildOptions);
+        globalThreads[0] = dst.cols/4; globalThreads[1] = dst.rows/2;
     }
     else
-        k.create("pyrUp", ocl::imgproc::pyr_up_oclsrc, buildOptions);
+    {
+        k.create("pyrUp_unrolled", ocl::imgproc::pyr_up_oclsrc, buildOptions);
+        globalThreads[0] = dst.cols/2; globalThreads[1] = dst.rows/2;
+    }
 
     if (k.empty())
         return false;
@@ -1198,10 +1120,10 @@ namespace cv
 {
 static bool ipp_pyrdown( InputArray _src, OutputArray _dst, const Size& _dsz, int borderType )
 {
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
 #if IPP_VERSION_X100 >= 810 && !IPP_DISABLE_PYRAMIDS_DOWN
-    Size dsz = _dsz.area() == 0 ? Size((_src.cols() + 1)/2, (_src.rows() + 1)/2) : _dsz;
+    Size dsz = _dsz.empty() ? Size((_src.cols() + 1)/2, (_src.rows() + 1)/2) : _dsz;
     bool isolated = (borderType & BORDER_ISOLATED) != 0;
     int borderTypeNI = borderType & ~BORDER_ISOLATED;
 
@@ -1276,7 +1198,7 @@ static bool openvx_pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz,
     // OpenVX limitations
     if((srcMat.type() != CV_8U) ||
        (borderType != BORDER_REPLICATE) ||
-       (_dsz != acceptableSize && _dsz.area() != 0))
+       (_dsz != acceptableSize && !_dsz.empty()))
         return false;
 
     // The only border mode which is supported by both cv::pyrDown() and OpenVX
@@ -1320,11 +1242,11 @@ static bool openvx_pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz,
         srcImg.swapHandle(); dstImg.swapHandle();
 #endif
     }
-    catch (RuntimeError & e)
+    catch (const RuntimeError & e)
     {
         VX_DbgThrow(e.what());
     }
-    catch (WrapperError & e)
+    catch (const WrapperError & e)
     {
         VX_DbgThrow(e.what());
     }
@@ -1337,7 +1259,7 @@ static bool openvx_pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz,
 
 void cv::pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, int borderType )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert(borderType != BORDER_CONSTANT);
 
@@ -1348,7 +1270,7 @@ void cv::pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, int borde
                openvx_pyrDown(_src, _dst, _dsz, borderType))
 
     Mat src = _src.getMat();
-    Size dsz = _dsz.area() == 0 ? Size((src.cols + 1)/2, (src.rows + 1)/2) : _dsz;
+    Size dsz = _dsz.empty() ? Size((src.cols + 1)/2, (src.rows + 1)/2) : _dsz;
     _dst.create( dsz, src.type() );
     Mat dst = _dst.getMat();
     int depth = src.depth();
@@ -1365,15 +1287,15 @@ void cv::pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, int borde
 
     PyrFunc func = 0;
     if( depth == CV_8U )
-        func = pyrDown_<FixPtCast<uchar, 8>, PyrDownVec_32s8u>;
+        func = pyrDown_< FixPtCast<uchar, 8> >;
     else if( depth == CV_16S )
-        func = pyrDown_<FixPtCast<short, 8>, PyrDownVec_32s16s >;
+        func = pyrDown_< FixPtCast<short, 8> >;
     else if( depth == CV_16U )
-        func = pyrDown_<FixPtCast<ushort, 8>, PyrDownVec_32s16u >;
+        func = pyrDown_< FixPtCast<ushort, 8> >;
     else if( depth == CV_32F )
-        func = pyrDown_<FltCast<float, 8>, PyrDownVec_32f>;
+        func = pyrDown_< FltCast<float, 8> >;
     else if( depth == CV_64F )
-        func = pyrDown_<FltCast<double, 8>, PyrDownNoVec<double, double> >;
+        func = pyrDown_< FltCast<double, 8> >;
     else
         CV_Error( CV_StsUnsupportedFormat, "" );
 
@@ -1386,11 +1308,11 @@ namespace cv
 {
 static bool ipp_pyrup( InputArray _src, OutputArray _dst, const Size& _dsz, int borderType )
 {
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
 #if IPP_VERSION_X100 >= 810 && !IPP_DISABLE_PYRAMIDS_UP
     Size sz = _src.dims() <= 2 ? _src.size() : Size();
-    Size dsz = _dsz.area() == 0 ? Size(_src.cols()*2, _src.rows()*2) : _dsz;
+    Size dsz = _dsz.empty() ? Size(_src.cols()*2, _src.rows()*2) : _dsz;
 
     Mat src = _src.getMat();
     _dst.create( dsz, src.type() );
@@ -1444,7 +1366,7 @@ static bool ipp_pyrup( InputArray _src, OutputArray _dst, const Size& _dsz, int 
 
 void cv::pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int borderType )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert(borderType == BORDER_DEFAULT);
 
@@ -1453,7 +1375,7 @@ void cv::pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int borderT
 
 
     Mat src = _src.getMat();
-    Size dsz = _dsz.area() == 0 ? Size(src.cols*2, src.rows*2) : _dsz;
+    Size dsz = _dsz.empty() ? Size(src.cols*2, src.rows*2) : _dsz;
     _dst.create( dsz, src.type() );
     Mat dst = _dst.getMat();
     int depth = src.depth();
@@ -1468,15 +1390,15 @@ void cv::pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int borderT
 
     PyrFunc func = 0;
     if( depth == CV_8U )
-        func = pyrUp_<FixPtCast<uchar, 6>, PyrUpVec_32s8u >;
+        func = pyrUp_< FixPtCast<uchar, 6> >;
     else if( depth == CV_16S )
-        func = pyrUp_<FixPtCast<short, 6>, PyrUpVec_32s16s >;
+        func = pyrUp_< FixPtCast<short, 6> >;
     else if( depth == CV_16U )
-        func = pyrUp_<FixPtCast<ushort, 6>, PyrUpVec_32s16u >;
+        func = pyrUp_< FixPtCast<ushort, 6> >;
     else if( depth == CV_32F )
-        func = pyrUp_<FltCast<float, 6>, PyrUpVec_32f >;
+        func = pyrUp_< FltCast<float, 6> >;
     else if( depth == CV_64F )
-        func = pyrUp_<FltCast<double, 6>, PyrUpNoVec<double, double> >;
+        func = pyrUp_< FltCast<double, 6> >;
     else
         CV_Error( CV_StsUnsupportedFormat, "" );
 
@@ -1489,7 +1411,7 @@ namespace cv
 {
 static bool ipp_buildpyramid( InputArray _src, OutputArrayOfArrays _dst, int maxlevel, int borderType )
 {
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
 #if IPP_VERSION_X100 >= 810 && !IPP_DISABLE_PYRAMIDS_BUILD
     Mat src = _src.getMat();
@@ -1601,7 +1523,7 @@ static bool ipp_buildpyramid( InputArray _src, OutputArrayOfArrays _dst, int max
 
 void cv::buildPyramid( InputArray _src, OutputArrayOfArrays _dst, int maxlevel, int borderType )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert(borderType != BORDER_CONSTANT);
 
@@ -1673,7 +1595,7 @@ cvCreatePyramid( const CvArr* srcarr, int extra_layers, double rate,
         CV_Error( CV_StsOutOfRange, "The number of extra layers must be non negative" );
 
     int i, layer_step, elem_size = CV_ELEM_SIZE(src->type);
-    CvSize layer_size, size = cvGetMatSize(src);
+    cv::Size layer_size, size = cvGetMatSize(src);
 
     if( bufarr )
     {

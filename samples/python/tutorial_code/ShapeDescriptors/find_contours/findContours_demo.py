@@ -13,7 +13,7 @@ def thresh_callback(val):
     canny_output = cv.Canny(src_gray, threshold, threshold * 2)
 
     # Find contours
-    _, contours, hierarchy = cv.findContours(canny_output, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+    contours, hierarchy = cv.findContours(canny_output, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
 
     # Draw contours
     drawing = np.zeros((canny_output.shape[0], canny_output.shape[1], 3), dtype=np.uint8)
@@ -26,10 +26,10 @@ def thresh_callback(val):
 
 # Load source image
 parser = argparse.ArgumentParser(description='Code for Finding contours in your image tutorial.')
-parser.add_argument('--input', help='Path to input image.', default='../data/HappyFish.jpg')
+parser.add_argument('--input', help='Path to input image.', default='HappyFish.jpg')
 args = parser.parse_args()
 
-src = cv.imread(args.input)
+src = cv.imread(cv.samples.findFile(args.input))
 if src is None:
     print('Could not open or find the image:', args.input)
     exit(0)

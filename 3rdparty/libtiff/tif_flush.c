@@ -1,5 +1,3 @@
-/* $Id: tif_flush.c,v 1.9 2010-03-31 06:40:10 fwarmerdam Exp $ */
-
 /*
  * Copyright (c) 1988-1997 Sam Leffler
  * Copyright (c) 1991-1997 Silicon Graphics, Inc.

@@ -39,11 +39,19 @@
 //
 //M*////////////////////////////////////////////////////////////////////////////////////////
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 
 #include "precomp.hpp"
 #include "opencv2/imgproc.hpp"
 #include <stdio.h>
+#include <Availability.h>
 #import <AVFoundation/AVFoundation.h>
+
+#define CV_CAP_MODE_BGR CV_FOURCC_MACRO('B','G','R','3')
+#define CV_CAP_MODE_RGB CV_FOURCC_MACRO('R','G','B','3')
+#define CV_CAP_MODE_GRAY CV_FOURCC_MACRO('G','R','E','Y')
+#define CV_CAP_MODE_YUYV CV_FOURCC_MACRO('Y', 'U', 'Y', 'V')
 
 /********************** Declaration of class headers ************************/
 
@@ -154,7 +162,7 @@ private:
     uint8_t  *mOutImagedata;
     IplImage *mOutImage;
     size_t    currSize;
-    int       mMode;
+    uint32_t  mMode;
     int       mFormat;
 
     bool setupReadingAt(CMTime position);
@@ -177,11 +185,14 @@ private:
 
 class CvVideoWriter_AVFoundation : public CvVideoWriter {
     public:
-        CvVideoWriter_AVFoundation(const char* filename, int fourcc,
-                double fps, CvSize frame_size,
-                int is_color=1);
+        CvVideoWriter_AVFoundation(const std::string &filename, int fourcc, double fps, CvSize frame_size, int is_color);
         ~CvVideoWriter_AVFoundation();
-        bool writeFrame(const IplImage* image);
+        bool writeFrame(const IplImage* image) CV_OVERRIDE;
+        int getCaptureDomain() const CV_OVERRIDE { return cv::CAP_AVFOUNDATION; }
+        bool isOpened() const
+        {
+            return is_good;
+        }
     private:
         IplImage* argbimage;
 
@@ -196,31 +207,43 @@ class CvVideoWriter_AVFoundation : public CvVideoWriter {
         CvSize movieSize;
         int movieColor;
         unsigned long mFrameNum;
+        bool is_good;
 };
 
 /****************** Implementation of interface functions ********************/
 
-
-CvCapture* cvCreateFileCapture_AVFoundation(const char* filename) {
-    CvCaptureFile *retval = new CvCaptureFile(filename);
-
+cv::Ptr<cv::IVideoCapture> cv::create_AVFoundation_capture_file(const std::string &filename)
+{
+    CvCaptureFile *retval = new CvCaptureFile(filename.c_str());
     if(retval->didStart())
-        return retval;
+        return makePtr<LegacyCapture>(retval);
     delete retval;
     return NULL;
+
 }
 
-CvCapture* cvCreateCameraCapture_AVFoundation(int index ) {
-    CvCapture* retval = new CvCaptureCAM(index);
-    if (!((CvCaptureCAM *)retval)->didStart())
-        cvReleaseCapture(&retval);
-    return retval;
+cv::Ptr<cv::IVideoCapture> cv::create_AVFoundation_capture_cam(int index)
+{
+    CvCaptureCAM* retval = new CvCaptureCAM(index);
+    if (retval->didStart())
+        return cv::makePtr<cv::LegacyCapture>(retval);
+    delete retval;
+    return 0;
 }
 
-CvVideoWriter* cvCreateVideoWriter_AVFoundation(const char* filename, int fourcc,
-                                     double fps, CvSize frame_size,
-                                     int is_color) {
-    return new CvVideoWriter_AVFoundation(filename, fourcc, fps, frame_size,is_color);
+cv::Ptr<cv::IVideoWriter> cv::create_AVFoundation_writer(const std::string& filename, int fourcc,
+                                                         double fps, const cv::Size& frameSize,
+                                                         const cv::VideoWriterParameters& params)
+{
+    CvSize sz = { frameSize.width, frameSize.height };
+    const bool isColor = params.get(VIDEOWRITER_PROP_IS_COLOR, true);
+    CvVideoWriter_AVFoundation* wrt = new CvVideoWriter_AVFoundation(filename, fourcc, fps, sz, isColor);
+    if (wrt->isOpened())
+    {
+        return cv::makePtr<cv::LegacyWriter>(wrt);
+    }
+    delete wrt;
+    return NULL;
 }
 
 /********************** Implementation of Classes ****************************/
@@ -303,6 +326,49 @@ void CvCaptureCAM::stopCaptureDevice() {
 
 int CvCaptureCAM::startCaptureDevice(int cameraNum) {
     NSAutoreleasePool *localpool = [[NSAutoreleasePool alloc] init];
+
+#if defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 101400
+    if (@available(macOS 10.14, *))
+    {
+        AVAuthorizationStatus status = [AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeVideo];
+        if (status == AVAuthorizationStatusDenied)
+        {
+            fprintf(stderr, "OpenCV: camera access has been denied. Either run 'tccutil reset Camera' "
+                            "command in same terminal to reset application authorization status, "
+                            "either modify 'System Preferences -> Security & Privacy -> Camera' "
+                            "settings for your application.\n");
+            [localpool drain];
+            return 0;
+        }
+        else if (status != AVAuthorizationStatusAuthorized)
+        {
+            if (!cv::utils::getConfigurationParameterBool("OPENCV_AVFOUNDATION_SKIP_AUTH", false))
+            {
+                fprintf(stderr, "OpenCV: not authorized to capture video (status %ld), requesting...\n", status);
+                [AVCaptureDevice requestAccessForMediaType:AVMediaTypeVideo completionHandler:^(BOOL) { /* we don't care */}];
+                if ([NSThread isMainThread])
+                {
+                    // we run the main loop for 0.1 sec to show the message
+                    [[NSRunLoop mainRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.1]];
+                }
+                else
+                {
+                    fprintf(stderr, "OpenCV: can not spin main run loop from other thread, set "
+                                    "OPENCV_AVFOUNDATION_SKIP_AUTH=1 to disable authorization request "
+                                    "and perform it in your application.\n");
+                }
+            }
+            else
+            {
+                fprintf(stderr, "OpenCV: not authorized to capture video (status %ld), set "
+                                "OPENCV_AVFOUNDATION_SKIP_AUTH=0 to enable authorization request or "
+                                "perform it in your application.\n", status);
+            }
+            [localpool drain];
+            return 0;
+        }
+    }
+#endif
 
     // get capture device
     NSArray *devices = [[AVCaptureDevice devicesWithMediaType: AVMediaTypeVideo]
@@ -751,7 +817,7 @@ bool CvCaptureFile::setupReadingAt(CMTime position) {
     if (mMode == CV_CAP_MODE_BGR || mMode == CV_CAP_MODE_RGB) {
         // For CV_CAP_MODE_BGR, read frames as BGRA (AV Foundation's YUV->RGB conversion is slightly faster than OpenCV's CV_YUV2BGR_YV12)
         // kCVPixelFormatType_32ABGR is reportedly faster on OS X, but OpenCV doesn't have a CV_ABGR2BGR conversion.
-        // kCVPixelFormatType_24RGB is significanly slower than kCVPixelFormatType_32BGRA.
+        // kCVPixelFormatType_24RGB is significantly slower than kCVPixelFormatType_32BGRA.
         pixelFormat = kCVPixelFormatType_32BGRA;
         mFormat = CV_8UC3;
     } else if (mMode == CV_CAP_MODE_GRAY) {
@@ -792,9 +858,7 @@ bool CvCaptureFile::setupReadingAt(CMTime position) {
     mFrameTimestamp = position;
     mFrameNum = round((mFrameTimestamp.value * mAssetTrack.nominalFrameRate) / double(mFrameTimestamp.timescale));
     [mAssetReader addOutput: mTrackOutput];
-    [mAssetReader startReading];
-
-    return true;
+    return [mAssetReader startReading];
 }
 
 int CvCaptureFile::didStart() {
@@ -1012,7 +1076,7 @@ double CvCaptureFile::getProperty(int property_id) const{
         case CV_CAP_PROP_POS_MSEC:
             return mFrameTimestamp.value * 1000.0 / mFrameTimestamp.timescale;
         case CV_CAP_PROP_POS_FRAMES:
-            return  mFrameNum;
+            return mAssetTrack.nominalFrameRate > 0 ? mFrameNum : 0;
         case CV_CAP_PROP_POS_AVI_RATIO:
             t = [mAsset duration];
             return (mFrameTimestamp.value * t.timescale) / double(mFrameTimestamp.timescale * t.value);
@@ -1027,7 +1091,7 @@ double CvCaptureFile::getProperty(int property_id) const{
             return round((t.value * mAssetTrack.nominalFrameRate) / double(t.timescale));
         case CV_CAP_PROP_FORMAT:
             return mFormat;
-        case CV_CAP_PROP_MODE:
+        case CV_CAP_PROP_FOURCC:
             return mMode;
         default:
             break;
@@ -1048,21 +1112,18 @@ bool CvCaptureFile::setProperty(int property_id, double value) {
         case CV_CAP_PROP_POS_MSEC:
             t = mAsset.duration;
             t.value = value * t.timescale / 1000;
-            setupReadingAt(t);
-            retval = true;
+            retval = setupReadingAt(t);
             break;
         case CV_CAP_PROP_POS_FRAMES:
-            setupReadingAt(CMTimeMake(value, mAssetTrack.nominalFrameRate));
-            retval = true;
+            retval = mAssetTrack.nominalFrameRate > 0 ? setupReadingAt(CMTimeMake(value, mAssetTrack.nominalFrameRate)) : false;
             break;
         case CV_CAP_PROP_POS_AVI_RATIO:
             t = mAsset.duration;
             t.value = round(t.value * value);
-            setupReadingAt(t);
-            retval = true;
+            retval = setupReadingAt(t);
             break;
-        case CV_CAP_PROP_MODE:
-            int mode;
+        case CV_CAP_PROP_FOURCC:
+            uint32_t mode;
             mode = cvRound(value);
             if (mMode == mode) {
                 retval = true;
@@ -1073,8 +1134,7 @@ bool CvCaptureFile::setProperty(int property_id, double value) {
                     case CV_CAP_MODE_GRAY:
                     case CV_CAP_MODE_YUYV:
                         mMode = mode;
-                        setupReadingAt(mFrameTimestamp);
-                        retval = true;
+                        retval = setupReadingAt(mFrameTimestamp);
                         break;
                     default:
                         fprintf(stderr, "VIDEOIO ERROR: AVF Mac: Unsupported mode: %d\n", mode);
@@ -1101,38 +1161,20 @@ bool CvCaptureFile::setProperty(int property_id, double value) {
  *****************************************************************************/
 
 
-CvVideoWriter_AVFoundation::CvVideoWriter_AVFoundation(const char* filename, int fourcc,
-        double fps, CvSize frame_size,
-        int is_color) {
-
+CvVideoWriter_AVFoundation::CvVideoWriter_AVFoundation(const std::string &filename, int fourcc, double fps, CvSize frame_size, int is_color)
+    : argbimage(nil), mMovieWriter(nil), mMovieWriterInput(nil), mMovieWriterAdaptor(nil), path(nil),
+    codec(nil), fileType(nil), mMovieFPS(fps), movieSize(frame_size), movieColor(is_color), mFrameNum(0),
+    is_good(true)
+{
+    if (mMovieFPS <= 0 || movieSize.width <= 0 || movieSize.height <= 0)
+    {
+        is_good = false;
+        return;
+    }
     NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
 
-
-    mFrameNum = 0;
-    mMovieFPS = fps;
-    movieSize = frame_size;
-    movieColor = is_color;
     argbimage = cvCreateImage(movieSize, IPL_DEPTH_8U, 4);
-    path = [[[NSString stringWithCString:filename encoding:NSASCIIStringEncoding] stringByExpandingTildeInPath] retain];
-
-
-    /*
-         AVFileTypeQuickTimeMovie
-         UTI for the QuickTime movie file format.
-         The value of this UTI is com.apple.quicktime-movie. Files are identified with the .mov and .qt extensions.
-
-         AVFileTypeMPEG4
-         UTI for the MPEG-4 file format.
-         The value of this UTI is public.mpeg-4. Files are identified with the .mp4 extension.
-
-         AVFileTypeAppleM4V
-         UTI for the iTunes video file format.
-         The value of this UTI is com.apple.mpeg-4-video. Files are identified with the .m4v extension.
-
-         AVFileType3GPP
-         UTI for the 3GPP file format.
-         The value of this UTI is public.3gpp. Files are identified with the .3gp, .3gpp, and .sdv extensions.
-     */
+    path = [[[NSString stringWithUTF8String:filename.c_str()] stringByExpandingTildeInPath] retain];
 
     NSString *fileExt =[[[path pathExtension] lowercaseString] copy];
     if ([fileExt isEqualToString:@"mov"] || [fileExt isEqualToString:@"qt"]){
@@ -1141,12 +1183,8 @@ CvVideoWriter_AVFoundation::CvVideoWriter_AVFoundation(const char* filename, int
         fileType = [AVFileTypeMPEG4 copy];
     }else if ([fileExt isEqualToString:@"m4v"]){
         fileType = [AVFileTypeAppleM4V copy];
-#if TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR
-    }else if ([fileExt isEqualToString:@"3gp"] || [fileExt isEqualToString:@"3gpp"] || [fileExt isEqualToString:@"sdv"]  ){
-        fileType = [AVFileType3GPP copy];
-#endif
     } else{
-        fileType = [AVFileTypeMPEG4 copy];  //default mp4
+        is_good = false;
     }
     [fileExt release];
 
@@ -1158,8 +1196,7 @@ CvVideoWriter_AVFoundation::CvVideoWriter_AVFoundation(const char* filename, int
     cc[4] = 0;
     int cc2 = CV_FOURCC(cc[0], cc[1], cc[2], cc[3]);
     if (cc2!=fourcc) {
-        fprintf(stderr, "OpenCV: Didn't properly encode FourCC. Expected 0x%08X but got 0x%08X.\n", fourcc, cc2);
-        //exception;
+        is_good = false;
     }
 
     // Two codec supported AVVideoCodecH264 AVVideoCodecJPEG
@@ -1170,59 +1207,59 @@ CvVideoWriter_AVFoundation::CvVideoWriter_AVFoundation(const char* filename, int
     }else if(fourcc == CV_FOURCC('H','2','6','4') || fourcc == CV_FOURCC('a','v','c','1')){
             codec = [AVVideoCodecH264 copy];
     }else{
-        codec = [AVVideoCodecH264 copy]; // default canonical H264.
-
+        is_good = false;
     }
 
     //NSLog(@"Path: %@", path);
 
-    NSError *error = nil;
+    if (is_good)
+    {
+        NSError *error = nil;
 
 
-    // Make sure the file does not already exist. Necessary to overwirte??
-    /*
-    NSFileManager *fileManager = [NSFileManager defaultManager];
-    if ([fileManager fileExistsAtPath:path]){
-        [fileManager removeItemAtPath:path error:&error];
-    }
-    */
+        // Make sure the file does not already exist. Necessary to overwrite??
+        /*
+        NSFileManager *fileManager = [NSFileManager defaultManager];
+        if ([fileManager fileExistsAtPath:path]){
+            [fileManager removeItemAtPath:path error:&error];
+        }
+        */
 
-    // Wire the writer:
-    // Supported file types:
-    //      AVFileTypeQuickTimeMovie AVFileTypeMPEG4 AVFileTypeAppleM4V AVFileType3GPP
+        // Wire the writer:
+        // Supported file types:
+        //      AVFileTypeQuickTimeMovie AVFileTypeMPEG4 AVFileTypeAppleM4V AVFileType3GPP
 
-    mMovieWriter = [[AVAssetWriter alloc] initWithURL:[NSURL fileURLWithPath:path]
-        fileType:fileType
-        error:&error];
-    //NSParameterAssert(mMovieWriter);
+        mMovieWriter = [[AVAssetWriter alloc] initWithURL:[NSURL fileURLWithPath:path]
+            fileType:fileType
+            error:&error];
+        //NSParameterAssert(mMovieWriter);
 
-    NSDictionary *videoSettings = [NSDictionary dictionaryWithObjectsAndKeys:
-        codec, AVVideoCodecKey,
-        [NSNumber numberWithInt:movieSize.width], AVVideoWidthKey,
-        [NSNumber numberWithInt:movieSize.height], AVVideoHeightKey,
-        nil];
+        NSDictionary *videoSettings = [NSDictionary dictionaryWithObjectsAndKeys:
+            codec, AVVideoCodecKey,
+            [NSNumber numberWithInt:movieSize.width], AVVideoWidthKey,
+            [NSNumber numberWithInt:movieSize.height], AVVideoHeightKey,
+            nil];
 
-    mMovieWriterInput = [[AVAssetWriterInput
-        assetWriterInputWithMediaType:AVMediaTypeVideo
-        outputSettings:videoSettings] retain];
+        mMovieWriterInput = [[AVAssetWriterInput
+            assetWriterInputWithMediaType:AVMediaTypeVideo
+            outputSettings:videoSettings] retain];
 
-    //NSParameterAssert(mMovieWriterInput);
-    //NSParameterAssert([mMovieWriter canAddInput:mMovieWriterInput]);
+        //NSParameterAssert(mMovieWriterInput);
+        //NSParameterAssert([mMovieWriter canAddInput:mMovieWriterInput]);
 
-    [mMovieWriter addInput:mMovieWriterInput];
+        [mMovieWriter addInput:mMovieWriterInput];
 
-    mMovieWriterAdaptor = [[AVAssetWriterInputPixelBufferAdaptor alloc] initWithAssetWriterInput:mMovieWriterInput sourcePixelBufferAttributes:nil];
-
-
-    //Start a session:
-    [mMovieWriter startWriting];
-    [mMovieWriter startSessionAtSourceTime:kCMTimeZero];
+        mMovieWriterAdaptor = [[AVAssetWriterInputPixelBufferAdaptor alloc] initWithAssetWriterInput:mMovieWriterInput sourcePixelBufferAttributes:nil];
 
 
-    if(mMovieWriter.status == AVAssetWriterStatusFailed){
-        NSLog(@"AVF: AVAssetWriter status: %@", [mMovieWriter.error localizedDescription]);
-        // TODO: error handling, cleanup. Throw execption?
-        // return;
+        //Start a session:
+        [mMovieWriter startWriting];
+        [mMovieWriter startSessionAtSourceTime:kCMTimeZero];
+
+        if(mMovieWriter.status == AVAssetWriterStatusFailed){
+            NSLog(@"AVF: AVAssetWriter status: %@", [mMovieWriter.error localizedDescription]);
+            is_good = false;
+        }
     }
 
     [localpool drain];
@@ -1232,15 +1269,22 @@ CvVideoWriter_AVFoundation::CvVideoWriter_AVFoundation(const char* filename, int
 CvVideoWriter_AVFoundation::~CvVideoWriter_AVFoundation() {
     NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
 
-    [mMovieWriterInput markAsFinished];
-    [mMovieWriter finishWriting];
-    [mMovieWriter release];
-    [mMovieWriterInput release];
-    [mMovieWriterAdaptor release];
-    [path release];
-    [codec release];
-    [fileType release];
-    cvReleaseImage(&argbimage);
+    if (mMovieWriterInput && mMovieWriter && mMovieWriterAdaptor)
+    {
+        [mMovieWriterInput markAsFinished];
+        [mMovieWriter finishWriting];
+        [mMovieWriter release];
+        [mMovieWriterInput release];
+        [mMovieWriterAdaptor release];
+    }
+    if (path)
+        [path release];
+    if (codec)
+        [codec release];
+    if (fileType)
+        [fileType release];
+    if (argbimage)
+        cvReleaseImage(&argbimage);
 
     [localpool drain];
 
@@ -1291,7 +1335,7 @@ bool CvVideoWriter_AVFoundation::writeFrame(const IplImage* iplimage) {
             colorSpace, kCGImageAlphaLast|kCGBitmapByteOrderDefault,
             provider, NULL, false, kCGRenderingIntentDefault);
 
-    //CGImage -> CVPixelBufferRef coversion
+    //CGImage -> CVPixelBufferRef conversion
     CVPixelBufferRef pixelBuffer = NULL;
     CFDataRef cfData = CGDataProviderCopyData(CGImageGetDataProvider(cgImage));
     int status = CVPixelBufferCreateWithBytes(NULL,
@@ -1327,3 +1371,5 @@ bool CvVideoWriter_AVFoundation::writeFrame(const IplImage* iplimage) {
     }
 
 }
+
+#pragma clang diagnostic pop

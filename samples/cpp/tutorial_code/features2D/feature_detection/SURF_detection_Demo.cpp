@@ -12,8 +12,8 @@ using std::endl;
 
 int main( int argc, char* argv[] )
 {
-    CommandLineParser parser( argc, argv, "{@input | ../data/box.png | input image}" );
-    Mat src = imread( parser.get<String>( "@input" ), IMREAD_GRAYSCALE );
+    CommandLineParser parser( argc, argv, "{@input | box.png | input image}" );
+    Mat src = imread( samples::findFile( parser.get<String>( "@input" ) ), IMREAD_GRAYSCALE );
     if ( src.empty() )
     {
         cout << "Could not open or find the image!\n" << endl;

@@ -2,7 +2,7 @@
  * jdct.h
  *
  * Copyright (C) 1994-1996, Thomas G. Lane.
- * Modified 2002-2015 by Guido Vollbeding.
+ * Modified 2002-2019 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -79,13 +79,12 @@ typedef FAST_FLOAT FLOAT_MULT_TYPE; /* preferred floating type */
  * converting them to unsigned form (0..MAXJSAMPLE).  The raw outputs could
  * be quite far out of range if the input data is corrupt, so a bulletproof
  * range-limiting step is required.  We use a mask-and-table-lookup method
- * to do the combined operations quickly, assuming that MAXJSAMPLE+1
- * is a power of 2.  See the comments with prepare_range_limit_table
- * (in jdmaster.c) for more info.
+ * to do the combined operations quickly, assuming that RANGE_CENTER
+ * (defined in jpegint.h) is a power of 2.  See the comments with
+ * prepare_range_limit_table (in jdmaster.c) for more info.
  */
 
-#define RANGE_MASK  (MAXJSAMPLE * 4 + 3) /* 2 bits wider than legal samples */
-#define RANGE_CENTER  (MAXJSAMPLE * 2 + 2)
+#define RANGE_MASK  (RANGE_CENTER * 2 - 1)
 #define RANGE_SUBSET  (RANGE_CENTER - CENTERJSAMPLE)
 
 #define IDCT_range_limit(cinfo)  ((cinfo)->sample_range_limit - RANGE_SUBSET)
@@ -358,13 +357,6 @@ EXTERN(void) jpeg_idct_1x2
  */
 
 #define FIX(x)	((INT32) ((x) * CONST_SCALE + 0.5))
-
-/* Descale and correctly round an INT32 value that's scaled by N bits.
- * We assume RIGHT_SHIFT rounds towards minus infinity, so adding
- * the fudge factor is correct for either sign of X.
- */
-
-#define DESCALE(x,n)  RIGHT_SHIFT((x) + (ONE << ((n)-1)), n)
 
 /* Multiply an INT32 variable by an INT32 constant to yield an INT32 result.
  * This macro is used only when the two inputs will actually be no more than

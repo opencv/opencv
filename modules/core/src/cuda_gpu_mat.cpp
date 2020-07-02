@@ -345,8 +345,8 @@ void cv::cuda::ensureSizeIsEnough(int rows, int cols, int type, OutputArray arr)
 GpuMat cv::cuda::getInputMat(InputArray _src, Stream& stream)
 {
 #ifndef HAVE_CUDA
-    (void) _src;
-    (void) stream;
+    CV_UNUSED(_src);
+    CV_UNUSED(stream);
     throw_no_cuda();
 #else
     GpuMat src;
@@ -367,11 +367,11 @@ GpuMat cv::cuda::getInputMat(InputArray _src, Stream& stream)
 GpuMat cv::cuda::getOutputMat(OutputArray _dst, int rows, int cols, int type, Stream& stream)
 {
 #ifndef HAVE_CUDA
-    (void) _dst;
-    (void) rows;
-    (void) cols;
-    (void) type;
-    (void) stream;
+    CV_UNUSED(_dst);
+    CV_UNUSED(rows);
+    CV_UNUSED(cols);
+    CV_UNUSED(type);
+    CV_UNUSED(stream);
     throw_no_cuda();
 #else
     GpuMat dst;
@@ -392,9 +392,9 @@ GpuMat cv::cuda::getOutputMat(OutputArray _dst, int rows, int cols, int type, St
 void cv::cuda::syncOutput(const GpuMat& dst, OutputArray _dst, Stream& stream)
 {
 #ifndef HAVE_CUDA
-    (void) dst;
-    (void) _dst;
-    (void) stream;
+    CV_UNUSED(dst);
+    CV_UNUSED(_dst);
+    CV_UNUSED(stream);
     throw_no_cuda();
 #else
     if (_dst.kind() != _InputArray::CUDA_GPU_MAT)
@@ -416,15 +416,15 @@ GpuMat::Allocator* cv::cuda::GpuMat::defaultAllocator()
 
 void cv::cuda::GpuMat::setDefaultAllocator(Allocator* allocator)
 {
-    (void) allocator;
+    CV_UNUSED(allocator);
     throw_no_cuda();
 }
 
 void cv::cuda::GpuMat::create(int _rows, int _cols, int _type)
 {
-    (void) _rows;
-    (void) _cols;
-    (void) _type;
+    CV_UNUSED(_rows);
+    CV_UNUSED(_cols);
+    CV_UNUSED(_type);
     throw_no_cuda();
 }
 
@@ -434,81 +434,81 @@ void cv::cuda::GpuMat::release()
 
 void cv::cuda::GpuMat::upload(InputArray arr)
 {
-    (void) arr;
+    CV_UNUSED(arr);
     throw_no_cuda();
 }
 
 void cv::cuda::GpuMat::upload(InputArray arr, Stream& _stream)
 {
-    (void) arr;
-    (void) _stream;
+    CV_UNUSED(arr);
+    CV_UNUSED(_stream);
     throw_no_cuda();
 }
 
 void cv::cuda::GpuMat::download(OutputArray _dst) const
 {
-    (void) _dst;
+    CV_UNUSED(_dst);
     throw_no_cuda();
 }
 
 void cv::cuda::GpuMat::download(OutputArray _dst, Stream& _stream) const
 {
-    (void) _dst;
-    (void) _stream;
+    CV_UNUSED(_dst);
+    CV_UNUSED(_stream);
     throw_no_cuda();
 }
 
 void cv::cuda::GpuMat::copyTo(OutputArray _dst) const
 {
-    (void) _dst;
+    CV_UNUSED(_dst);
     throw_no_cuda();
 }
 
 void cv::cuda::GpuMat::copyTo(OutputArray _dst, Stream& _stream) const
 {
-    (void) _dst;
-    (void) _stream;
+    CV_UNUSED(_dst);
+    CV_UNUSED(_stream);
     throw_no_cuda();
 }
 
 void cv::cuda::GpuMat::copyTo(OutputArray _dst, InputArray _mask, Stream& _stream) const
 {
-    (void) _dst;
-    (void) _mask;
-    (void) _stream;
+    CV_UNUSED(_dst);
+    CV_UNUSED(_mask);
+    CV_UNUSED(_stream);
     throw_no_cuda();
 }
 
 GpuMat& cv::cuda::GpuMat::setTo(Scalar s, Stream& _stream)
 {
-    (void) s;
-    (void) _stream;
+    CV_UNUSED(s);
+    CV_UNUSED(_stream);
     throw_no_cuda();
 }
 
 GpuMat& cv::cuda::GpuMat::setTo(Scalar s, InputArray _mask, Stream& _stream)
 {
-    (void) s;
-    (void) _mask;
-    (void) _stream;
+    CV_UNUSED(s);
+    CV_UNUSED(_mask);
+    CV_UNUSED(_stream);
     throw_no_cuda();
 }
 
 void cv::cuda::GpuMat::convertTo(OutputArray _dst, int rtype, Stream& _stream) const
 {
-    (void) _dst;
-    (void) rtype;
-    (void) _stream;
+    CV_UNUSED(_dst);
+    CV_UNUSED(rtype);
+    CV_UNUSED(_stream);
     throw_no_cuda();
 }
 
 void cv::cuda::GpuMat::convertTo(OutputArray _dst, int rtype, double alpha, double beta, Stream& _stream) const
 {
-    (void) _dst;
-    (void) rtype;
-    (void) alpha;
-    (void) beta;
-    (void) _stream;
+    CV_UNUSED(_dst);
+    CV_UNUSED(rtype);
+    CV_UNUSED(alpha);
+    CV_UNUSED(beta);
+    CV_UNUSED(_stream);
     throw_no_cuda();
 }
 

@@ -49,7 +49,7 @@ int main(int , char** )
         return 1;
     }
 
-    std::string cascadeFrontalfilename = "../../data/lbpcascades/lbpcascade_frontalface.xml";
+    std::string cascadeFrontalfilename = samples::findFile("data/lbpcascades/lbpcascade_frontalface.xml");
     cv::Ptr<cv::CascadeClassifier> cascade = makePtr<cv::CascadeClassifier>(cascadeFrontalfilename);
     cv::Ptr<DetectionBasedTracker::IDetector> MainDetector = makePtr<CascadeDetectorAdapter>(cascade);
     if ( cascade->empty() )

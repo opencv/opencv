@@ -41,8 +41,7 @@ you need 256 values to show the above histogram. But consider, what if you need 
 of pixels for all pixel values separately, but number of pixels in a interval of pixel values? say
 for example, you need to find the number of pixels lying between 0 to 15, then 16 to 31, ..., 240 to 255.
 You will need only 16 values to represent the histogram. And that is what is shown in example
-given in [OpenCV Tutorials on
-histograms](http://docs.opencv.org/doc/tutorials/imgproc/histograms/histogram_calculation/histogram_calculation.html#histogram-calculation).
+given in @ref tutorial_histogram_calculation "OpenCV Tutorials on histograms".
 
 So what you do is simply split the whole histogram to 16 sub-parts and value of each sub-part is the
 sum of all pixel count in it. This each sub-part is called "BIN". In first case, number of bins
@@ -95,7 +94,7 @@ hist is same as we calculated before. But bins will have 257 elements, because N
 as 0-0.99, 1-1.99, 2-2.99 etc. So final range would be 255-255.99. To represent that, they also add
 256 at end of bins. But we don't need that 256. Upto 255 is sufficient.
 
-@sa Numpy has another function, **np.bincount()** which is much faster than (around 10X)
+@note Numpy has another function, **np.bincount()** which is much faster than (around 10X)
 np.histogram(). So for one-dimensional histograms, you can better try that. Don't forget to set
 minlength = 256 in np.bincount. For example, hist = np.bincount(img.ravel(),minlength=256)
 

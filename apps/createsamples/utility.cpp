@@ -54,6 +54,10 @@
 #include "opencv2/highgui.hpp"
 #include "opencv2/calib3d.hpp"
 
+#if defined __GNUC__ && __GNUC__ >= 8
+#pragma GCC diagnostic ignored "-Wclass-memaccess"
+#endif
+
 using namespace cv;
 
 #ifndef PATH_MAX
@@ -891,7 +895,7 @@ void icvGetNextFromBackgroundData( CvBackgroundData* data,
  * #pragma omp parallel
  * {
  *     ...
- *     icvGetBackgourndImage( cvbgdata, cvbgreader, img );
+ *     icvGetBackgroundImage( cvbgdata, cvbgreader, img );
  *     ...
  * }
  * ...
@@ -986,7 +990,7 @@ static int icvInitBackgroundReaders( const char* filename, Size winsize )
 /*
  * icvDestroyBackgroundReaders
  *
- * Finish backgournd reading process
+ * Finish background reading process
  */
 static
 void icvDestroyBackgroundReaders()
@@ -1040,12 +1044,10 @@ void cvCreateTrainingSamples( const char* filename,
         output = fopen( filename, "wb" );
         if( output != NULL )
         {
-            int hasbg;
             int i;
             int inverse;
 
-            hasbg = 0;
-            hasbg = (bgfilename != NULL && icvInitBackgroundReaders( bgfilename,
+            const int hasbg = (bgfilename != NULL && icvInitBackgroundReaders( bgfilename,
                      Size( winwidth,winheight ) ) );
 
             Mat sample( winheight, winwidth, CV_8UC1 );
@@ -1076,8 +1078,8 @@ void cvCreateTrainingSamples( const char* filename,
                 icvPlaceDistortedSample( sample, inverse, maxintensitydev,
                     maxxangle, maxyangle, maxzangle,
                     0   /* nonzero means placing image without cut offs */,
-                    0.0 /* nozero adds random shifting                  */,
-                    0.0 /* nozero adds random scaling                   */,
+                    0.0 /* nonzero adds random shifting                  */,
+                    0.0 /* nonzero adds random scaling                   */,
                     &data );
 
                 if( showsamples )

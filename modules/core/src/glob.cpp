@@ -57,10 +57,10 @@ namespace
 
     struct DIR
     {
-#ifdef WINRT
+#if defined(WINRT) || defined(_WIN32_WCE)
         WIN32_FIND_DATAW data;
 #else
-        WIN32_FIND_DATA data;
+        WIN32_FIND_DATAA data;
 #endif
         HANDLE handle;
         dirent ent;
@@ -78,7 +78,7 @@ namespace
     {
         DIR* dir = new DIR;
         dir->ent.d_name = 0;
-#ifdef WINRT
+#if defined(WINRT) || defined(_WIN32_WCE)
         cv::String full_path = cv::String(path) + "\\*";
         wchar_t wfull_path[MAX_PATH];
         size_t copied = mbstowcs(wfull_path, full_path.c_str(), MAX_PATH);
@@ -100,7 +100,7 @@ namespace
 
     dirent* readdir(DIR* dir)
     {
-#ifdef WINRT
+#if defined(WINRT) || defined(_WIN32_WCE)
         if (dir->ent.d_name != 0)
         {
             if (::FindNextFileW(dir->handle, &dir->data) != TRUE)
@@ -139,7 +139,7 @@ const char dir_separators[] = "/";
 
 static bool isDir(const cv::String& path, DIR* dir)
 {
-#if defined _WIN32 || defined WINCE
+#if defined _WIN32 || defined _WIN32_WCE
     DWORD attributes;
     BOOL status = TRUE;
     if (dir)
@@ -147,7 +147,7 @@ static bool isDir(const cv::String& path, DIR* dir)
     else
     {
         WIN32_FILE_ATTRIBUTE_DATA all_attrs;
-#ifdef WINRT
+#if defined WINRT || defined _WIN32_WCE
         wchar_t wpath[MAX_PATH];
         size_t copied = mbstowcs(wpath, path.c_str(), MAX_PATH);
         CV_Assert((copied != MAX_PATH) && (copied != (size_t)-1));
@@ -160,7 +160,7 @@ static bool isDir(const cv::String& path, DIR* dir)
 
     return status && ((attributes & FILE_ATTRIBUTE_DIRECTORY) != 0);
 #else
-    (void)dir;
+    CV_UNUSED(dir);
     struct stat stat_buf;
     if (0 != stat( path.c_str(), &stat_buf))
         return false;
@@ -171,7 +171,7 @@ static bool isDir(const cv::String& path, DIR* dir)
 
 bool cv::utils::fs::isDirectory(const cv::String& path)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
     return isDir(path, NULL);
 }
 
@@ -231,7 +231,7 @@ static void glob_rec(const cv::String& directory, const cv::String& wildchart, s
     if ((dir = opendir (directory.c_str())) != 0)
     {
         /* find all the files and directories within directory */
-        CV_TRY
+        try
         {
             struct dirent *ent;
             while ((ent = readdir (dir)) != 0)
@@ -255,10 +255,10 @@ static void glob_rec(const cv::String& directory, const cv::String& wildchart, s
                     result.push_back(entry);
             }
         }
-        CV_CATCH_ALL
+        catch (...)
         {
             closedir(dir);
-            CV_RETHROW();
+            throw;
         }
         closedir(dir);
     }
@@ -270,7 +270,7 @@ static void glob_rec(const cv::String& directory, const cv::String& wildchart, s
 
 void cv::glob(String pattern, std::vector<String>& result, bool recursive)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     result.clear();
     String path, wildchart;

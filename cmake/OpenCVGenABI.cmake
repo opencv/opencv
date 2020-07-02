@@ -2,6 +2,8 @@ if (NOT GENERATE_ABI_DESCRIPTOR)
   return()
 endif()
 
+set(OPENCV_ABI_SKIP_MODULES_LIST "" CACHE STRING "List of modules to exclude from ABI checker")
+
 set(filename "opencv_abi.xml")
 set(path1 "${CMAKE_BINARY_DIR}/${filename}")
 
@@ -22,12 +24,11 @@ set(OPENCV_ABI_HEADERS "{RELPATH}/${OPENCV_INCLUDE_INSTALL_PATH}")
 # Libraries
 set(OPENCV_ABI_LIBRARIES "{RELPATH}/${OPENCV_LIB_INSTALL_PATH}")
 
-set(OPENCV_ABI_SKIP_HEADERS "")
-set(OPENCV_ABI_SKIP_LIBRARIES "")
 foreach(mod ${OPENCV_MODULES_BUILD})
   string(REGEX REPLACE "^opencv_" "" mod "${mod}")
   if(NOT OPENCV_MODULE_opencv_${mod}_CLASS STREQUAL "PUBLIC"
       OR NOT "${OPENCV_MODULE_opencv_${mod}_LOCATION}" STREQUAL "${OpenCV_SOURCE_DIR}/modules/${mod}" # opencv_contrib
+      OR ";${mod};" MATCHES ";${OPENCV_ABI_SKIP_MODULES_LIST};"
   )
     # headers
     foreach(h ${OPENCV_MODULE_opencv_${mod}_HEADERS})
@@ -44,7 +45,7 @@ string(REPLACE ";" "\n    " OPENCV_ABI_SKIP_HEADERS "${OPENCV_ABI_SKIP_HEADERS}"
 string(REPLACE ";" "\n    " OPENCV_ABI_SKIP_LIBRARIES "${OPENCV_ABI_SKIP_LIBRARIES}")
 
 # Options
-set(OPENCV_ABI_GCC_OPTIONS "${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_RELEASE} -DOPENCV_ABI_CHECK=1")
+set(OPENCV_ABI_GCC_OPTIONS "${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_RELEASE} -DOPENCV_ABI_CHECK=1 -DCV_DNN_DONT_ADD_INLINE_NS=1")
 string(REGEX REPLACE "([^ ]) +([^ ])" "\\1\\n    \\2" OPENCV_ABI_GCC_OPTIONS "${OPENCV_ABI_GCC_OPTIONS}")
 
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/templates/opencv_abi.xml.in" "${path1}.base")

@@ -6,6 +6,7 @@
 #include "opencv2/core/base.hpp"
 #include "cap_mfx_common.hpp"
 #include "opencv2/imgproc/hal/hal.hpp"
+#include "cap_interface.hpp"
 
 using namespace cv;
 using namespace std;
@@ -214,7 +215,7 @@ bool VideoCapture_IntelMFX::grabFrame()
         else if (res == MFX_WRN_DEVICE_BUSY)
         {
             DBG(cout << "Waiting for device" << endl);
-            sleep(1);
+            sleep_ms(1000);
             continue;
         }
         else if (res == MFX_WRN_VIDEO_PARAM_CHANGED)
@@ -264,3 +265,8 @@ int VideoCapture_IntelMFX::getCaptureDomain()
 }
 
 //==================================================================================================
+
+cv::Ptr<IVideoCapture> cv::create_MFX_capture(const std::string &filename)
+{
+    return cv::makePtr<VideoCapture_IntelMFX>(filename);
+}

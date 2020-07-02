@@ -1,5 +1,3 @@
-/* $Id: tif_dirinfo.c,v 1.127 2017-06-01 12:44:04 erouault Exp $ */
-
 /*
  * Copyright (c) 1988-1997 Sam Leffler
  * Copyright (c) 1991-1997 Silicon Graphics, Inc.
@@ -979,6 +977,8 @@ _TIFFCheckFieldIsValidForCodec(TIFF *tif, ttag_t tag)
 	    case TIFFTAG_CONSECUTIVEBADFAXLINES:
 	    case TIFFTAG_GROUP3OPTIONS:
 	    case TIFFTAG_GROUP4OPTIONS:
+	    /* LERC */
+	    case TIFFTAG_LERC_PARAMETERS:
 		break;
 	    default:
 		return 1;
@@ -1054,7 +1054,18 @@ _TIFFCheckFieldIsValidForCodec(TIFF *tif, ttag_t tag)
 		if (tag == TIFFTAG_PREDICTOR)
 		    return 1;
 		break;
-
+	    case COMPRESSION_ZSTD:
+		if (tag == TIFFTAG_PREDICTOR)
+		    return 1;
+		break;
+	    case COMPRESSION_LERC:
+		if (tag == TIFFTAG_LERC_PARAMETERS)
+		    return 1;
+		break;
+		  case COMPRESSION_WEBP:
+		if (tag == TIFFTAG_PREDICTOR)
+				return 1;
+		break;
 	}
 	return 0;
 }

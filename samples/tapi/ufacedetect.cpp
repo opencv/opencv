@@ -28,9 +28,6 @@ void detectAndDraw( UMat& img, Mat& canvas, CascadeClassifier& cascade,
                     CascadeClassifier& nestedCascade,
                     double scale, bool tryflip );
 
-string cascadeName = "../../data/haarcascades/haarcascade_frontalface_alt.xml";
-string nestedCascadeName = "../../data/haarcascades/haarcascade_eye_tree_eyeglasses.xml";
-
 int main( int argc, const char** argv )
 {
     VideoCapture capture;
@@ -44,8 +41,8 @@ int main( int argc, const char** argv )
     double scale;
 
     cv::CommandLineParser parser(argc, argv,
-        "{cascade|../../data/haarcascades/haarcascade_frontalface_alt.xml|}"
-        "{nested-cascade|../../data/haarcascades/haarcascade_eye_tree_eyeglasses.xml|}"
+        "{cascade|data/haarcascades/haarcascade_frontalface_alt.xml|}"
+        "{nested-cascade|data/haarcascades/haarcascade_eye_tree_eyeglasses.xml|}"
         "{help h ||}{scale|1|}{try-flip||}{@filename||}"
     );
     if (parser.has("help"))
@@ -53,8 +50,8 @@ int main( int argc, const char** argv )
         help();
         return 0;
     }
-    cascadeName = parser.get<string>("cascade");
-    nestedCascadeName = parser.get<string>("nested-cascade");
+    string cascadeName = samples::findFile(parser.get<string>("cascade"));
+    string nestedCascadeName = samples::findFileOrKeep(parser.get<string>("nested-cascade"));
     scale = parser.get<double>("scale");
     tryflip = parser.has("try-flip");
     inputName = parser.get<string>("@filename");
@@ -66,10 +63,10 @@ int main( int argc, const char** argv )
     }
 
     if ( !nestedCascade.load( nestedCascadeName ) )
-        cerr << "WARNING: Could not load classifier cascade for nested objects" << endl;
+        cerr << "WARNING: Could not load classifier cascade for nested objects: " << nestedCascadeName << endl;
     if( !cascade.load( cascadeName ) )
     {
-        cerr << "ERROR: Could not load classifier cascade" << endl;
+        cerr << "ERROR: Could not load classifier cascade: " << cascadeName << endl;
         help();
         return -1;
     }
@@ -84,9 +81,8 @@ int main( int argc, const char** argv )
     }
     else
     {
-        if( inputName.empty() )
-            inputName = "../data/lena.jpg";
-        image = imread( inputName, 1 ).getUMat(ACCESS_READ);
+        inputName = samples::findFileOrKeep(inputName);
+        imread(inputName, IMREAD_COLOR).copyTo(image);
         if( image.empty() )
         {
             if(!capture.open( inputName ))
@@ -133,7 +129,7 @@ int main( int argc, const char** argv )
                         len--;
                     buf[len] = '\0';
                     cout << "file " << buf << endl;
-                    image = imread( buf, 1 ).getUMat(ACCESS_READ);
+                    imread(samples::findFile(buf), IMREAD_COLOR).copyTo(image);
                     if( !image.empty() )
                     {
                         detectAndDraw( image, canvas, cascade, nestedCascade, scale, tryflip );

@@ -1,6 +1,9 @@
 Remapping {#tutorial_remap}
 =========
 
+@prev_tutorial{tutorial_hough_circle}
+@next_tutorial{tutorial_warp_affine}
+
 Goal
 ----
 

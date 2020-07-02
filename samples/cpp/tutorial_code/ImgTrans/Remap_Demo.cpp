@@ -19,11 +19,11 @@ void update_map( int &ind, Mat &map_x, Mat &map_y );
  */
 int main(int argc, const char** argv)
 {
-    CommandLineParser parser(argc, argv, "{@image |../data/chicky_512.png|input image name}");
+    CommandLineParser parser(argc, argv, "{@image |chicky_512.png|input image name}");
     std::string filename = parser.get<std::string>(0);
     //! [Load]
     /// Load the image
-    Mat src = imread( filename, IMREAD_COLOR );
+    Mat src = imread( samples::findFile( filename ), IMREAD_COLOR );
     if (src.empty())
     {
         std::cout << "Cannot read image: " << filename << std::endl;

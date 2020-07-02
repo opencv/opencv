@@ -26,21 +26,25 @@ class NewOpenCVTests(unittest.TestCase):
     # github repository url
     repoUrl = 'https://raw.github.com/opencv/opencv/master'
 
-    def get_sample(self, filename, iscolor = cv.IMREAD_COLOR):
+    def find_file(self, filename, searchPaths=[], required=True):
+        searchPaths = searchPaths if searchPaths else [self.repoPath, self.extraTestDataPath]
+        for path in searchPaths:
+            if path is not None:
+                candidate = path + '/' + filename
+                if os.path.isfile(candidate):
+                    return candidate
+        if required:
+            self.fail('File ' + filename + ' not found')
+        return None
+
+
+    def get_sample(self, filename, iscolor = None):
+        if iscolor is None:
+            iscolor = cv.IMREAD_COLOR
         if not filename in self.image_cache:
-            filedata = None
-            if NewOpenCVTests.repoPath is not None:
-                candidate = NewOpenCVTests.repoPath + '/' + filename
-                if os.path.isfile(candidate):
-                    with open(candidate, 'rb') as f:
-                        filedata = f.read()
-            if NewOpenCVTests.extraTestDataPath is not None:
-                candidate = NewOpenCVTests.extraTestDataPath + '/' + filename
-                if os.path.isfile(candidate):
-                    with open(candidate, 'rb') as f:
-                        filedata = f.read()
-            if filedata is None:
-                return None#filedata = urlopen(NewOpenCVTests.repoUrl + '/' + filename).read()
+            filepath = self.find_file(filename)
+            with open(filepath, 'rb') as f:
+                filedata = f.read()
             self.image_cache[filename] = cv.imdecode(np.fromstring(filedata, dtype=np.uint8), iscolor)
         return self.image_cache[filename]
 

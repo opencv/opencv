@@ -107,3 +107,13 @@ __kernel void set_variance(const int nthreads,
         vstore4(var_vec, 0, dst + offset + index * 4);
     }
 }
+
+__kernel void clip(const int nthreads,
+                   __global Dtype* dst)
+{
+    for (int index = get_global_id(0); index < nthreads; index += get_global_size(0))
+    {
+        Dtype4 vec = vload4(index, dst);
+        vstore4(clamp(vec, 0.0f, 1.0f), index, dst);
+    }
+}

@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2004, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -43,8 +43,9 @@
 #include <ImfStringAttribute.h>
 
 
-namespace Imf {
+OPENEXR_IMF_INTERNAL_NAMESPACE_SOURCE_ENTER
 
+using namespace OPENEXR_IMF_INTERNAL_NAMESPACE;
 
 template <>
 const char *
@@ -56,24 +57,24 @@ StringAttribute::staticTypeName ()
 
 template <>
 void
-StringAttribute::writeValueTo (OStream &os, int) const
+StringAttribute::writeValueTo (OPENEXR_IMF_INTERNAL_NAMESPACE::OStream &os, int version) const
 {
     int size = _value.size();
 
     for (int i = 0; i < size; i++)
-    Xdr::write <StreamIO> (os, _value[i]);
+	Xdr::write <StreamIO> (os, _value[i]);
 }
 
 
 template <>
 void
-StringAttribute::readValueFrom (IStream &is, int size, int)
+StringAttribute::readValueFrom (OPENEXR_IMF_INTERNAL_NAMESPACE::IStream &is, int size, int version)
 {
     _value.resize (size);
 
     for (int i = 0; i < size; i++)
-    Xdr::read <StreamIO> (is, _value[i]);
+	Xdr::read <StreamIO> (is, _value[i]);
 }
 
 
-} // namespace Imf
+OPENEXR_IMF_INTERNAL_NAMESPACE_SOURCE_EXIT 

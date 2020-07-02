@@ -2,7 +2,7 @@
  * jidctfst.c
  *
  * Copyright (C) 1994-1998, Thomas G. Lane.
- * Modified 2015 by Guido Vollbeding.
+ * Modified 2015-2017 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -46,7 +46,7 @@
  */
 
 #if DCTSIZE != 8
-  Sorry, this code only copes with 8x8 DCTs. /* deliberate syntax err */
+  Sorry, this code only copes with 8x8 DCT blocks. /* deliberate syntax err */
 #endif
 
 

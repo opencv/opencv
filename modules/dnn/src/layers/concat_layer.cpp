@@ -42,11 +42,19 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../op_cuda.hpp"
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
+#include "../ie_ngraph.hpp"
+#include "../op_vkcom.hpp"
 
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
+#endif
+
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/concat.hpp"
+using namespace cv::dnn::cuda4dnn;
 #endif
 
 namespace cv
@@ -104,19 +112,22 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_OPENCV ||
-               backendId == DNN_BACKEND_HALIDE && haveHalide() && axis == 1 && !padding ||  // By channels
-               backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine() && !padding;
+               backendId == DNN_BACKEND_CUDA ||
+               (backendId == DNN_BACKEND_HALIDE && haveHalide() && axis == 1 && !padding) ||  // By channels
+               (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && haveInfEngine() && !padding) ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ||
+               (backendId == DNN_BACKEND_VKCOM && haveVulkan() && !padding);
     }
 
     class ChannelConcatInvoker : public ParallelLoopBody
     {
     public:
-        std::vector<Mat*>* inputs;
+        std::vector<Mat>* inputs;
         Mat* output;
         int nstripes;
         std::vector<const float*> chptrs;
 
-        static void run(std::vector<Mat*>& inputs, Mat& output, int nstripes)
+        static void run(std::vector<Mat>& inputs, Mat& output, int nstripes)
         {
             ChannelConcatInvoker cc;
             cc.inputs = &inputs;
@@ -127,7 +138,7 @@ public:
             int nchannels = 0, batchsz = output.size[0];
             for( i = 0; i < ninputs; i++ )
             {
-                Mat& inp = *inputs[i];
+                Mat& inp = inputs[i];
                 CV_Assert( inp.isContinuous() && (inp.type() == CV_32F || inp.type() == CV_16S) &&
                            inp.dims == 4 && inp.size[0] == output.size[0] &&
                            inp.size[2] == output.size[2] &&
@@ -142,7 +153,7 @@ public:
             int ofs = 0;
             for( i = 0; i < ninputs; i++)
             {
-                Mat& inp = *inputs[i];
+                Mat& inp = inputs[i];
                 for( int j = 0; j < batchsz; j++ )
                     for( int k = 0; k < inp.size[1]; k++ )
                     {
@@ -237,19 +248,14 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget) &&
-                   OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
+        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
-        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
-    }
+        std::vector<Mat> inputs, outputs;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
 
-    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals) CV_OVERRIDE
-    {
-        CV_TRACE_FUNCTION();
-        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
-
-        int cAxis = clamp(axis, inputs[0]->dims);
+        int cAxis = clamp(axis, inputs[0].dims);
         Mat& outMat = outputs[0];
 
         if (padding)
@@ -267,17 +273,43 @@ public:
             ranges[cAxis].start = 0;
             for (size_t i = 0; i < inputs.size(); i++)
             {
-                ranges[cAxis].end = ranges[cAxis].start + inputs[i]->size[cAxis];
+                ranges[cAxis].end = ranges[cAxis].start + inputs[i].size[cAxis];
                 for (int j = 0; j < outMat.dims; ++j)
                 {
                     if (j == cAxis) continue;
-                    ranges[j].start = (outMat.size[j] - inputs[i]->size[j]) / 2;
-                    ranges[j].end = ranges[j].start + inputs[i]->size[j];
+                    ranges[j].start = (outMat.size[j] - inputs[i].size[j]) / 2;
+                    ranges[j].end = ranges[j].start + inputs[i].size[j];
                 }
-                inputs[i]->copyTo(outMat(&ranges[0]));
+                inputs[i].copyTo(outMat(&ranges[0]));
                 ranges[cAxis].start = ranges[cAxis].end;
             }
         }
+    }
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
+    ) override
+    {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+
+        auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
+        auto concat_axis = clamp(axis, input_wrapper->getRank());
+        return make_cuda_node<cuda4dnn::ConcatOp>(preferableTarget, std::move(context->stream), concat_axis, padding);
+    }
+#endif
+
+    virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &input) CV_OVERRIDE
+    {
+#ifdef HAVE_VULKAN
+        vkcom::Tensor in = VkComTensor(input[0]);
+        int cAxis = clamp(axis, in.dimNum());
+        std::shared_ptr<vkcom::OpBase> op(new vkcom::OpConcat(cAxis));
+        return Ptr<BackendNode>(new VkComBackendNode(input, op));
+#endif // HAVE_VULKAN
+        return Ptr<BackendNode>();
     }
 
     virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &input) CV_OVERRIDE
@@ -303,20 +335,65 @@ public:
         return Ptr<BackendNode>();
     }
 
+#ifdef HAVE_DNN_IE_NN_BUILDER_2019
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >& inputs) CV_OVERRIDE
     {
-#ifdef HAVE_INF_ENGINE
         InferenceEngine::DataPtr input = infEngineDataNode(inputs[0]);
-        InferenceEngine::LayerParams lp;
-        lp.name = name;
-        lp.type = "Concat";
-        lp.precision = InferenceEngine::Precision::FP32;
-        std::shared_ptr<InferenceEngine::ConcatLayer> ieLayer(new InferenceEngine::ConcatLayer(lp));
-        ieLayer->_axis = clamp(axis, input->dims.size());
+
+        InferenceEngine::Builder::ConcatLayer ieLayer(name);
+        ieLayer.setAxis(clamp(axis, input->getDims().size()));
+        ieLayer.setInputPorts(std::vector<InferenceEngine::Port>(inputs.size()));
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-#endif  // HAVE_INF_ENGINE
-        return Ptr<BackendNode>();
     }
+#endif  // HAVE_DNN_IE_NN_BUILDER_2019
+
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
+                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        InferenceEngine::DataPtr data = ngraphDataNode(inputs[0]);
+        const int numDims = data->getDims().size();
+        const int cAxis = clamp(axis, numDims);
+        std::vector<size_t> maxDims(numDims, 0);
+
+        CV_Assert(inputs.size() == nodes.size());
+        ngraph::OutputVector inp_nodes;
+        for (int i = 0; i < nodes.size(); ++i)
+        {
+            inp_nodes.push_back(nodes[i].dynamicCast<InfEngineNgraphNode>()->node);
+
+            std::vector<size_t> inpShape = ngraphDataNode(inputs[i])->getDims();
+            for (int i = 0; i < numDims; ++i)
+                maxDims[i] = std::max(maxDims[i], inpShape[i]);
+        }
+        for (int i = 0; i < inp_nodes.size(); ++i)
+        {
+            bool needPadding = false;
+            std::vector<size_t> inpShape = ngraphDataNode(inputs[i])->getDims();
+            std::vector<int64_t> begins(inpShape.size(), 0), ends(inpShape.size(), 0);
+            for (int j = 0; j < inpShape.size(); ++j)
+            {
+                if (j != cAxis && inpShape[j] != maxDims[j])
+                {
+                    needPadding = true;
+                    begins[j] = static_cast<int64_t>((maxDims[j] - inpShape[j]) / 2);
+                    ends[j] = static_cast<int64_t>(maxDims[j] - inpShape[j] - begins[j]);
+                }
+            }
+            if (needPadding)
+            {
+                inp_nodes[i] = std::make_shared<ngraph::op::v1::Pad>(
+                    inp_nodes[i],
+                    std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{begins.size()}, begins.data()),
+                    std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{ends.size()}, ends.data()),
+                    ngraph::op::PadMode::CONSTANT);
+            }
+        }
+        auto concat = std::make_shared<ngraph::op::Concat>(inp_nodes, cAxis);
+        return Ptr<BackendNode>(new InfEngineNgraphNode(concat));
+    }
+#endif  // HAVE_DNN_NGRAPH
 };
 
 Ptr<ConcatLayer> ConcatLayer::create(const LayerParams& params)

@@ -146,6 +146,14 @@ inline Atomic64 NoBarrier_Load(volatile const Atomic64* ptr) {
   return __atomic_load_n(ptr, __ATOMIC_RELAXED);
 }
 
+inline Atomic64 Release_CompareAndSwap(volatile Atomic64* ptr,
+                                       Atomic64 old_value,
+                                       Atomic64 new_value) {
+  __atomic_compare_exchange_n(ptr, &old_value, new_value, false,
+                              __ATOMIC_RELEASE, __ATOMIC_ACQUIRE);
+  return old_value;
+}
+
 #endif // defined(__LP64__)
 
 }  // namespace internal

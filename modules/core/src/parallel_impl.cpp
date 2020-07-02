@@ -16,6 +16,8 @@
 //#define CV_LOG_STRIP_LEVEL CV_LOG_LEVEL_VERBOSE + 1
 #include <opencv2/core/utils/logger.hpp>
 
+#include <opencv2/core/utils/trace.private.hpp>
+
 //#define CV_PROFILE_THREADS 64
 //#define getTickCount getCPUTickCount  // use this if getTickCount() calls are expensive (and getCPUTickCount() is accurate)
 
@@ -38,7 +40,7 @@ DECLARE_CV_PAUSE
 #endif
 #ifndef CV_PAUSE
 # if defined __GNUC__ && (defined __i386__ || defined __x86_64__)
-#   if !defined(__SSE__)
+#   if !defined(__SSE2__)
       static inline void cv_non_sse_mm_pause() { __asm__ __volatile__ ("rep; nop"); }
 #     define _mm_pause cv_non_sse_mm_pause
 #   endif
@@ -47,8 +49,16 @@ DECLARE_CV_PAUSE
 #   define CV_PAUSE(v) do { for (int __delay = (v); __delay > 0; --__delay) { asm volatile("yield" ::: "memory"); } } while (0)
 # elif defined __GNUC__ && defined __arm__
 #   define CV_PAUSE(v) do { for (int __delay = (v); __delay > 0; --__delay) { asm volatile("" ::: "memory"); } } while (0)
+# elif defined __GNUC__ && defined __mips__ && __mips_isa_rev >= 2
+#   define CV_PAUSE(v) do { for (int __delay = (v); __delay > 0; --__delay) { asm volatile("pause" ::: "memory"); } } while (0)
 # elif defined __GNUC__ && defined __PPC64__
 #   define CV_PAUSE(v) do { for (int __delay = (v); __delay > 0; --__delay) { asm volatile("or 27,27,27" ::: "memory"); } } while (0)
+# elif defined __GNUC__ && defined __riscv
+// PAUSE HINT is not part of RISC-V ISA yet, but is under discussion now. For details see:
+// https://github.com/riscv/riscv-isa-manual/pull/398
+// https://github.com/riscv/riscv-isa-manual/issues/43
+// #   define CV_PAUSE(v) do { for (int __delay = (v); __delay > 0; --__delay) { asm volatile("pause"); } } while (0)
+#   define CV_PAUSE(v) do { for (int __delay = (v); __delay > 0; --__delay) { asm volatile("nop"); } } while (0)
 # else
 #   warning "Can't detect 'pause' (CPU-yield) instruction on the target platform. Specify CV_PAUSE() definition via compiler flags."
 #   define CV_PAUSE(...) do { /* no-op: works, but not effective */ } while (0)
@@ -186,9 +196,9 @@ public:
     pthread_t posix_thread;
     bool is_created;
 
-    volatile bool stop_thread;
+    std::atomic<bool> stop_thread;
 
-    volatile bool has_wake_signal;
+    std::atomic<bool> has_wake_signal;
 
     Ptr<ParallelJob> job;
 
@@ -262,6 +272,9 @@ public:
     void thread_body();
     static void* thread_loop_wrapper(void* thread_object)
     {
+#ifdef OPENCV_WITH_ITT
+        __itt_thread_set_name(cv::format("OpenCVThread-%03d", cv::utils::getThreadID()).c_str());
+#endif
         ((WorkerThread*)thread_object)->thread_body();
         return 0;
     }
@@ -337,7 +350,7 @@ public:
     std::atomic<int> completed_thread_count;  // number of threads completed any activities on this job
     int64 dummy2_[8];  // avoid cache-line reusing for the same atomics
 
-    volatile bool is_completed;  // std::atomic_flag ?
+    std::atomic<bool> is_completed;
 
     // TODO exception handling
 };
@@ -394,7 +407,7 @@ void WorkerThread::thread_body()
         if (CV_WORKER_ACTIVE_WAIT_THREADS_LIMIT == 0)
             allow_active_wait = true;
         Ptr<ParallelJob> j_ptr; swap(j_ptr, job);
-        has_wake_signal = false;    // TODO .store(false, std::memory_order_release)
+        has_wake_signal = false;
         pthread_mutex_unlock(&mutex);
 
         if (!stop_thread)

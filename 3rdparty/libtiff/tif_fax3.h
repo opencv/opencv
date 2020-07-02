@@ -1,5 +1,3 @@
-/* $Id: tif_fax3.h,v 1.13 2016-12-14 18:36:27 faxguy Exp $ */
-
 /*
  * Copyright (c) 1990-1997 Sam Leffler
  * Copyright (c) 1991-1997 Silicon Graphics, Inc.

@@ -44,7 +44,7 @@
 void cv::cornerSubPix( InputArray _image, InputOutputArray _corners,
                        Size win, Size zeroZone, TermCriteria criteria )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     const int MAX_ITERS = 100;
     int win_w = win.width * 2 + 1, win_h = win.height * 2 + 1;

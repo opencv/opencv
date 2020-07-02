@@ -19,15 +19,15 @@ import cv2 as cv
 
 from common import make_cmap
 
-if __name__ == '__main__':
+def main():
     import sys
     try:
         fn = sys.argv[1]
     except:
-        fn = '../data/fruits.jpg'
-    print(__doc__)
+        fn = 'fruits.jpg'
 
-    img = cv.imread(fn, 0)
+    fn = cv.samples.findFile(fn)
+    img = cv.imread(fn, cv.IMREAD_GRAYSCALE)
     if img is None:
         print('Failed to load fn:', fn)
         sys.exit(1)
@@ -68,4 +68,11 @@ if __name__ == '__main__':
             update()
         if need_update:
             update()
+
+    print('Done')
+
+
+if __name__ == '__main__':
+    print(__doc__)
+    main()
     cv.destroyAllWindows()

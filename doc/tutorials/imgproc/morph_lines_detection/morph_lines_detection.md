@@ -30,7 +30,7 @@ Two of the most basic morphological operations are dilation and erosion. Dilatio
 
     ![Dilation on a Grayscale Image](images/morph6.gif)
 
--   __Erosion__: The vise versa applies for the erosion operation. The value of the output pixel is the <b><em>minimum</em></b> value of all the pixels that fall within the structuring element's size and shape. Look the at the example figures below:
+-   __Erosion__: The vice versa applies for the erosion operation. The value of the output pixel is the <b><em>minimum</em></b> value of all the pixels that fall within the structuring element's size and shape. Look the at the example figures below:
 
     ![Erosion on a Binary Image](images/morph211.png)
 

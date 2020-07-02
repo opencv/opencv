@@ -230,4 +230,27 @@ PERF_TEST_P(Size_MatType_BorderType, blur5x5,
     SANITY_CHECK(dst, 1);
 }
 
+///////////// BlendLinear ////////////////////////
+PERF_TEST_P(Size_MatType, BlendLinear,
+            testing::Combine(
+                testing::Values(szVGA, sz720p, sz1080p, sz2160p),
+                testing::Values(CV_8UC1, CV_32FC1, CV_8UC3, CV_32FC3, CV_8UC4, CV_32FC4)
+                )
+           )
+{
+    const Size srcSize = get<0>(GetParam());
+    const int srcType = get<1>(GetParam());
+
+    Mat src1(srcSize, srcType), src2(srcSize, srcType), dst(srcSize, srcType);
+    Mat weights1(srcSize, CV_32FC1), weights2(srcSize, CV_32FC1);
+
+    declare.in(src1, src2, WARMUP_RNG).in(weights1, weights2, WARMUP_READ).out(dst);
+    randu(weights1, 0, 1);
+    randu(weights2, 0, 1);
+
+    TEST_CYCLE() blendLinear(src1, src2, weights1, weights2, dst);
+
+    SANITY_CHECK_NOTHING();
+}
+
 } // namespace

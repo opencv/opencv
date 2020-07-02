@@ -197,7 +197,8 @@ enum WindowPropertyFlags {
        WND_PROP_AUTOSIZE     = 1, //!< autosize property      (can be WINDOW_NORMAL or WINDOW_AUTOSIZE).
        WND_PROP_ASPECT_RATIO = 2, //!< window's aspect ration (can be set to WINDOW_FREERATIO or WINDOW_KEEPRATIO).
        WND_PROP_OPENGL       = 3, //!< opengl support.
-       WND_PROP_VISIBLE      = 4  //!< checks whether the window exists and is visible
+       WND_PROP_VISIBLE      = 4, //!< checks whether the window exists and is visible
+       WND_PROP_TOPMOST      = 5  //!< property to toggle normal window being topmost or not
      };
 
 //! Mouse Events see cv::MouseCallback
@@ -452,12 +453,13 @@ The function getWindowImageRect returns the client screen coordinates, width and
  */
 CV_EXPORTS_W Rect getWindowImageRect(const String& winname);
 
+/** @example samples/cpp/create_mask.cpp
+This program demonstrates using mouse events and how to make and use a mask image (black and white) .
+*/
 /** @brief Sets mouse handler for the specified window
 
 @param winname Name of the window.
-@param onMouse Mouse callback. See OpenCV samples, such as
-<https://github.com/opencv/opencv/tree/master/samples/cpp/ffilldemo.cpp>, on how to specify and
-use the callback.
+@param onMouse Callback function for mouse events. See OpenCV samples on how to specify and use the callback.
 @param userdata The optional parameter passed to the callback.
  */
 CV_EXPORTS void setMouseCallback(const String& winname, MouseCallback onMouse, void* userdata = 0);
@@ -531,7 +533,7 @@ displayed in the specified window winname.
 
 @note
 
-[__Qt Backend Only__] winname can be empty (or NULL) if the trackbar should be attached to the
+[__Qt Backend Only__] winname can be empty if the trackbar should be attached to the
 control panel.
 
 Clicking the label of each trackbar enables editing the trackbar values manually.
@@ -559,7 +561,7 @@ The function returns the current position of the specified trackbar.
 
 @note
 
-[__Qt Backend Only__] winname can be empty (or NULL) if the trackbar is attached to the control
+[__Qt Backend Only__] winname can be empty if the trackbar is attached to the control
 panel.
 
 @param trackbarname Name of the trackbar.
@@ -573,7 +575,7 @@ The function sets the position of the specified trackbar in the specified window
 
 @note
 
-[__Qt Backend Only__] winname can be empty (or NULL) if the trackbar is attached to the control
+[__Qt Backend Only__] winname can be empty if the trackbar is attached to the control
 panel.
 
 @param trackbarname Name of the trackbar.
@@ -588,7 +590,7 @@ The function sets the maximum position of the specified trackbar in the specifie
 
 @note
 
-[__Qt Backend Only__] winname can be empty (or NULL) if the trackbar is attached to the control
+[__Qt Backend Only__] winname can be empty if the trackbar is attached to the control
 panel.
 
 @param trackbarname Name of the trackbar.
@@ -603,7 +605,7 @@ The function sets the minimum position of the specified trackbar in the specifie
 
 @note
 
-[__Qt Backend Only__] winname can be empty (or NULL) if the trackbar is attached to the control
+[__Qt Backend Only__] winname can be empty if the trackbar is attached to the control
 panel.
 
 @param trackbarname Name of the trackbar.
@@ -810,7 +812,7 @@ QT_NEW_BUTTONBAR flag is added to the type.
 
 See below various examples of the cv::createButton function call: :
 @code
-    createButton(NULL,callbackButton);//create a push button "button 0", that will call callbackButton.
+    createButton("",callbackButton);//create a push button "button 0", that will call callbackButton.
     createButton("button2",callbackButton,NULL,QT_CHECKBOX,0);
     createButton("button3",callbackButton,&value);
     createButton("button5",callbackButton1,NULL,QT_RADIOBOX);

@@ -1,7 +1,7 @@
 set(the_description "Images stitching")
 
 if(HAVE_CUDA)
-  ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef -Wmissing-declarations -Wshadow)
+  ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef -Wmissing-declarations -Wshadow -Wstrict-aliasing)
 endif()
 
 set(STITCHING_CONTRIB_DEPS "opencv_xfeatures2d")

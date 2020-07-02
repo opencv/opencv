@@ -75,18 +75,36 @@ if(NOT MSVC)
   add_extra_compiler_option(-fsigned-char)
 endif()
 
-if(CV_ICC AND NOT ENABLE_FAST_MATH)
-  if(MSVC)
-    add_extra_compiler_option("/fp:precise")
-  else()
-    add_extra_compiler_option("-fp-model precise")
+if(MSVC)
+  if(NOT " ${CMAKE_CXX_FLAGS} ${OPENCV_EXTRA_FLAGS} ${OPENCV_EXTRA_CXX_FLAGS}" MATCHES " /fp:")
+    if(ENABLE_FAST_MATH)
+      add_extra_compiler_option("/fp:fast")
+    else()
+      add_extra_compiler_option("/fp:precise")
+    endif()
+  endif()
+elseif(CV_ICC)
+  if(NOT " ${CMAKE_CXX_FLAGS} ${OPENCV_EXTRA_FLAGS} ${OPENCV_EXTRA_CXX_FLAGS}" MATCHES " /fp:"
+      AND NOT " ${CMAKE_CXX_FLAGS} ${OPENCV_EXTRA_FLAGS} ${OPENCV_EXTRA_CXX_FLAGS}" MATCHES " -fp-model"
+  )
+    if(NOT ENABLE_FAST_MATH)
+      add_extra_compiler_option("-fp-model precise")
+    endif()
+  endif()
+elseif(CV_GCC OR CV_CLANG)
+  if(ENABLE_FAST_MATH)
+    add_extra_compiler_option(-ffast-math)
   endif()
 endif()
 
 if(CV_GCC OR CV_CLANG)
   # High level of warnings.
   add_extra_compiler_option(-W)
-  add_extra_compiler_option(-Wall)
+  if (NOT MSVC)
+    # clang-cl interprets -Wall as MSVC would: -Weverything, which is more than
+    # we want.
+    add_extra_compiler_option(-Wall)
+  endif()
   add_extra_compiler_option(-Werror=return-type)
   add_extra_compiler_option(-Werror=non-virtual-dtor)
   add_extra_compiler_option(-Werror=address)
@@ -99,10 +117,15 @@ if(CV_GCC OR CV_CLANG)
   add_extra_compiler_option(-Wundef)
   add_extra_compiler_option(-Winit-self)
   add_extra_compiler_option(-Wpointer-arith)
-  add_extra_compiler_option(-Wshadow)
+  if(NOT (CV_GCC AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS "5.0"))
+    add_extra_compiler_option(-Wshadow)  # old GCC emits warnings for variables + methods combination
+  endif()
   add_extra_compiler_option(-Wsign-promo)
   add_extra_compiler_option(-Wuninitialized)
   add_extra_compiler_option(-Winit-self)
+  if(CV_GCC AND (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 6.0) AND (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 7.0))
+    add_extra_compiler_option(-Wno-psabi)
+  endif()
   if(HAVE_CXX11)
     if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND NOT ENABLE_PRECOMPILED_HEADERS)
       add_extra_compiler_option(-Wsuggest-override)
@@ -115,7 +138,6 @@ if(CV_GCC OR CV_CLANG)
     add_extra_compiler_option(-Wcast-align)
     add_extra_compiler_option(-Wstrict-aliasing=2)
   else()
-    add_extra_compiler_option(-Wno-narrowing)
     add_extra_compiler_option(-Wno-delete-non-virtual-dtor)
     add_extra_compiler_option(-Wno-unnamed-type-template-args)
     add_extra_compiler_option(-Wno-comment)
@@ -125,8 +147,15 @@ if(CV_GCC OR CV_CLANG)
     )
       add_extra_compiler_option(-Wimplicit-fallthrough=3)
     endif()
-    if(CV_GCC AND CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL 7.2.0)
-      add_extra_compiler_option(-Wno-strict-overflow) # Issue is fixed in GCC 7.2.1
+    if(CV_GCC AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 7.0)
+      add_extra_compiler_option(-Wno-strict-overflow) # Issue appears when compiling surf.cpp from opencv_contrib/modules/xfeatures2d
+    endif()
+    if(CV_GCC AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 5.0)
+      add_extra_compiler_option(-Wno-missing-field-initializers)  # GCC 4.x emits warnings about {}, fixed in GCC 5+
+    endif()
+    if(CV_CLANG AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS 10.0)
+      add_extra_compiler_option(-Wno-deprecated-enum-enum-conversion)
+      add_extra_compiler_option(-Wno-deprecated-anon-enum-enum-conversion)
     endif()
   endif()
   add_extra_compiler_option(-fdiagnostics-show-option)
@@ -159,9 +188,6 @@ if(CV_GCC OR CV_CLANG)
   elseif(DEFINED ENABLE_OMIT_FRAME_POINTER)
     add_extra_compiler_option(-fno-omit-frame-pointer)
   endif()
-  if(ENABLE_FAST_MATH)
-    add_extra_compiler_option(-ffast-math)
-  endif()
 
   # Profiling?
   if(ENABLE_PROFILING)
@@ -173,12 +199,24 @@ if(CV_GCC OR CV_CLANG)
       string(REPLACE "-ffunction-sections" "" ${flags} "${${flags}}")
       string(REPLACE "-fdata-sections" "" ${flags} "${${flags}}")
     endforeach()
-  elseif(NOT ((IOS OR ANDROID) AND NOT BUILD_SHARED_LIBS))
-    # Remove unreferenced functions: function level linking
-    add_extra_compiler_option(-ffunction-sections)
-    add_extra_compiler_option(-fdata-sections)
-    if(NOT APPLE AND NOT OPENCV_SKIP_GC_SECTIONS)
-      set(OPENCV_EXTRA_EXE_LINKER_FLAGS "${OPENCV_EXTRA_EXE_LINKER_FLAGS} -Wl,--gc-sections")
+  else()
+    if(MSVC)
+      # TODO: Clang/C2 is not supported
+    elseif(((IOS OR ANDROID) AND NOT BUILD_SHARED_LIBS) AND NOT OPENCV_FORCE_FUNCTIONS_SECTIONS)
+      # don't create separate sections for functions/data, reduce package size
+    else()
+      # Remove unreferenced functions: function level linking
+      add_extra_compiler_option(-ffunction-sections)
+      add_extra_compiler_option(-fdata-sections)
+      if(NOT OPENCV_SKIP_GC_SECTIONS)
+        if(APPLE)
+          set(OPENCV_EXTRA_EXE_LINKER_FLAGS "${OPENCV_EXTRA_EXE_LINKER_FLAGS} -Wl,-dead_strip")
+          set(OPENCV_EXTRA_SHARED_LINKER_FLAGS "${OPENCV_EXTRA_SHARED_LINKER_FLAGS} -Wl,-dead_strip")
+        else()
+          set(OPENCV_EXTRA_EXE_LINKER_FLAGS "${OPENCV_EXTRA_EXE_LINKER_FLAGS} -Wl,--gc-sections")
+          set(OPENCV_EXTRA_SHARED_LINKER_FLAGS "${OPENCV_EXTRA_SHARED_LINKER_FLAGS} -Wl,--gc-sections")
+        endif()
+      endif()
     endif()
   endif()
 
@@ -251,11 +289,6 @@ if(MSVC)
   endif()
 endif()
 
-# Adding additional using directory for WindowsPhone 8.0 to get Windows.winmd properly
-if(WINRT_PHONE AND WINRT_8_0)
-  set(OPENCV_EXTRA_CXX_FLAGS "${OPENCV_EXTRA_CXX_FLAGS} /AI\$(WindowsSDK_MetadataPath)")
-endif()
-
 include(cmake/OpenCVCompilerOptimizations.cmake)
 if(COMMAND ocv_compiler_optimization_options)
   ocv_compiler_optimization_options()
@@ -266,10 +299,42 @@ endif()
 
 # set default visibility to hidden
 if((CV_GCC OR CV_CLANG)
+    AND NOT MSVC
     AND NOT OPENCV_SKIP_VISIBILITY_HIDDEN
     AND NOT " ${CMAKE_CXX_FLAGS} ${OPENCV_EXTRA_FLAGS} ${OPENCV_EXTRA_CXX_FLAGS}" MATCHES " -fvisibility")
   add_extra_compiler_option(-fvisibility=hidden)
   add_extra_compiler_option(-fvisibility-inlines-hidden)
+endif()
+
+# workaround gcc bug for aligned ld/st
+# https://github.com/opencv/opencv/issues/13211
+if((PPC64LE AND NOT CMAKE_CROSSCOMPILING) OR OPENCV_FORCE_COMPILER_CHECK_VSX_ALIGNED)
+  ocv_check_runtime_flag("${CPU_BASELINE_FLAGS}" OPENCV_CHECK_VSX_ALIGNED "${OpenCV_SOURCE_DIR}/cmake/checks/runtime/cpu_vsx_aligned.cpp")
+  if(NOT OPENCV_CHECK_VSX_ALIGNED)
+    add_extra_compiler_option_force(-DCV_COMPILER_VSX_BROKEN_ALIGNED)
+  endif()
+endif()
+# validate inline asm with fixes register number and constraints wa, wd, wf
+if(PPC64LE)
+  ocv_check_compiler_flag(CXX "${CPU_BASELINE_FLAGS}" OPENCV_CHECK_VSX_ASM "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_vsx_asm.cpp")
+  if(NOT OPENCV_CHECK_VSX_ASM)
+    add_extra_compiler_option_force(-DCV_COMPILER_VSX_BROKEN_ASM)
+  endif()
+endif()
+
+# Apply "-Wl,--as-needed" linker flags: https://github.com/opencv/opencv/issues/7001
+if(NOT OPENCV_SKIP_LINK_AS_NEEDED)
+  if(UNIX AND (NOT APPLE OR NOT CMAKE_VERSION VERSION_LESS "3.2"))
+    set(_option "-Wl,--as-needed")
+    set(_saved_CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${_option}")  # requires CMake 3.2+ and CMP0056
+    ocv_check_compiler_flag(CXX "" HAVE_LINK_AS_NEEDED)
+    set(CMAKE_EXE_LINKER_FLAGS "${_saved_CMAKE_EXE_LINKER_FLAGS}")
+    if(HAVE_LINK_AS_NEEDED)
+      set(OPENCV_EXTRA_EXE_LINKER_FLAGS "${OPENCV_EXTRA_EXE_LINKER_FLAGS} ${_option}")
+      set(OPENCV_EXTRA_SHARED_LINKER_FLAGS "${OPENCV_EXTRA_SHARED_LINKER_FLAGS} ${_option}")
+    endif()
+  endif()
 endif()
 
 # combine all "extra" options
@@ -339,6 +404,19 @@ if(MSVC)
   add_definitions(-D_VARIADIC_MAX=10)
 endif()
 
+if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+  get_directory_property(__DIRECTORY_COMPILE_DEFINITIONS COMPILE_DEFINITIONS)
+  if((NOT " ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_RELEASE} ${OPENCV_EXTRA_CXX_FLAGS} ${OPENCV_EXTRA_FLAGS_RELEASE} ${__DIRECTORY_COMPILE_DEFINITIONS}" MATCHES "_WIN32_WINNT"
+      AND NOT OPENCV_CMAKE_SKIP_MACRO_WIN32_WINNT)
+      OR OPENCV_CMAKE_FORCE_MACRO_WIN32_WINNT
+  )
+    # https://docs.microsoft.com/en-us/cpp/porting/modifying-winver-and-win32-winnt
+    # Target Windows 7 API
+    set(OPENCV_CMAKE_MACRO_WIN32_WINNT "0x0601" CACHE STRING "Value of _WIN32_WINNT macro")
+    add_definitions(-D_WIN32_WINNT=${OPENCV_CMAKE_MACRO_WIN32_WINNT})
+  endif()
+endif()
+
 # Enable compiler options for OpenCV modules/apps/samples only (ignore 3rdparty)
 macro(ocv_add_modules_compiler_options)
   if(MSVC AND NOT OPENCV_SKIP_MSVC_W4_OPTION)
@@ -346,4 +424,62 @@ macro(ocv_add_modules_compiler_options)
       string(REPLACE "/W3" "/W4" ${flags} "${${flags}}")
     endforeach()
   endif()
+  if(OPENCV_ENABLE_MEMORY_SANITIZER)
+    add_definitions(-DOPENCV_ENABLE_MEMORY_SANITIZER=1)
+  endif()
 endmacro()
+
+# adjust -Wl,-rpath-link
+if(CMAKE_SKIP_RPATH)
+  if((NOT CMAKE_CROSSCOMPILING OR OPENCV_ENABLE_LINKER_RPATH_LINK_ORIGIN) AND NOT OPENCV_SKIP_LINKER_RPATH_LINK_ORIGIN)
+    if(DEFINED CMAKE_SHARED_LIBRARY_RPATH_ORIGIN_TOKEN)
+      list(APPEND CMAKE_PLATFORM_RUNTIME_PATH "${CMAKE_SHARED_LIBRARY_RPATH_ORIGIN_TOKEN}")
+    else()
+      list(APPEND CMAKE_PLATFORM_RUNTIME_PATH "\$ORIGIN")
+    endif()
+  elseif(NOT OPENCV_SKIP_LINKER_RPATH_LINK_BINARY_LIB)
+    list(APPEND CMAKE_PLATFORM_RUNTIME_PATH "${LIBRARY_OUTPUT_PATH}")
+  endif()
+endif()
+if(OPENCV_EXTRA_RPATH_LINK_PATH)
+  string(REPLACE ":" ";" OPENCV_EXTRA_RPATH_LINK_PATH_ "${OPENCV_EXTRA_RPATH_LINK_PATH}")
+  list(APPEND CMAKE_PLATFORM_RUNTIME_PATH ${OPENCV_EXTRA_RPATH_LINK_PATH_})
+  if(NOT CMAKE_EXECUTABLE_RPATH_LINK_CXX_FLAG)
+    message(WARNING "OPENCV_EXTRA_RPATH_LINK_PATH may not work properly because CMAKE_EXECUTABLE_RPATH_LINK_CXX_FLAG is not defined (not supported)")
+  endif()
+endif()
+
+# Control MSVC /MP flag
+# Input variables: OPENCV_MSVC_PARALLEL (ON,1,2,3,...) + OPENCV_SKIP_MSVC_PARALLEL
+# Details:
+# - https://docs.microsoft.com/en-us/cpp/build/reference/mp-build-with-multiple-processes
+# - https://docs.microsoft.com/en-us/cpp/build/reference/cl-environment-variables
+# - https://gitlab.kitware.com/cmake/cmake/merge_requests/1718/diffs
+if(CMAKE_GENERATOR MATCHES "Visual Studio" AND CMAKE_CXX_COMPILER_ID MATCHES "MSVC|Intel")
+  ocv_check_environment_variables(OPENCV_SKIP_MSVC_PARALLEL)
+  if(OPENCV_SKIP_MSVC_PARALLEL)
+    # nothing
+  elseif(" ${CMAKE_CXX_FLAGS}" MATCHES "/MP")
+    # nothing, already defined in compiler flags
+  elseif(DEFINED ENV{CL} AND " $ENV{CL}" MATCHES "/MP")
+    # nothing, compiler will use CL environment variable
+  elseif(DEFINED ENV{_CL_} AND " $ENV{_CL_}" MATCHES "/MP")
+    # nothing, compiler will use _CL_ environment variable
+  else()
+    ocv_check_environment_variables(OPENCV_MSVC_PARALLEL)
+    set(_mp_value "ON")
+    if(DEFINED OPENCV_MSVC_PARALLEL)
+      set(_mp_value "${OPENCV_MSVC_PARALLEL}")
+    endif()
+    set(OPENCV_MSVC_PARALLEL "${_mp_value}" CACHE STRING "Control MSVC /MP flag")
+    if(_mp_value)
+      if(_mp_value GREATER 0)
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MP${_mp_value}")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP${_mp_value}")
+      else()
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MP")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
+      endif()
+    endif()
+  endif()
+endif()

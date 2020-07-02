@@ -31,10 +31,10 @@ def morphology_operations(val):
     cv.imshow(title_window, dst)
 
 parser = argparse.ArgumentParser(description='Code for More Morphology Transformations tutorial.')
-parser.add_argument('--input', help='Path to input image.', default='../data/LinuxLogo.jpg')
+parser.add_argument('--input', help='Path to input image.', default='LinuxLogo.jpg')
 args = parser.parse_args()
 
-src = cv.imread(args.input)
+src = cv.imread(cv.samples.findFile(args.input))
 if src is None:
     print('Could not open or find the image: ', args.input)
     exit(0)

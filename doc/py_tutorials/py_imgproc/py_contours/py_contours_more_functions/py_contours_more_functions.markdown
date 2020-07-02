@@ -39,7 +39,7 @@ import numpy as np
 img = cv.imread('star.jpg')
 img_gray = cv.cvtColor(img,cv.COLOR_BGR2GRAY)
 ret,thresh = cv.threshold(img_gray, 127, 255,0)
-im2,contours,hierarchy = cv.findContours(thresh,2,1)
+contours,hierarchy = cv.findContours(thresh,2,1)
 cnt = contours[0]
 
 hull = cv.convexHull(cnt,returnPoints = False)
@@ -93,9 +93,9 @@ img2 = cv.imread('star2.jpg',0)
 
 ret, thresh = cv.threshold(img1, 127, 255,0)
 ret, thresh2 = cv.threshold(img2, 127, 255,0)
-im2,contours,hierarchy = cv.findContours(thresh,2,1)
+contours,hierarchy = cv.findContours(thresh,2,1)
 cnt1 = contours[0]
-im2,contours,hierarchy = cv.findContours(thresh2,2,1)
+contours,hierarchy = cv.findContours(thresh2,2,1)
 cnt2 = contours[0]
 
 ret = cv.matchShapes(cnt1,cnt2,1,0.0)
@@ -113,7 +113,7 @@ I got following results:
 
 See, even image rotation doesn't affect much on this comparison.
 
-@sa [Hu-Moments](http://en.wikipedia.org/wiki/Image_moment#Rotation_invariant_moments) are seven
+@note [Hu-Moments](http://en.wikipedia.org/wiki/Image_moment#Rotation_invariant_moments) are seven
 moments invariant to translation, rotation and scale. Seventh one is skew-invariant. Those values
 can be found using **cv.HuMoments()** function.
 

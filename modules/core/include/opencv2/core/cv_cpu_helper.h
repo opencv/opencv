@@ -252,6 +252,69 @@
 #endif
 #define __CV_CPU_DISPATCH_CHAIN_AVX_512F(fn, args, mode, ...)  CV_CPU_CALL_AVX_512F(fn, args); __CV_EXPAND(__CV_CPU_DISPATCH_CHAIN_ ## mode(fn, args, __VA_ARGS__))
 
+#if !defined CV_DISABLE_OPTIMIZATION && defined CV_ENABLE_INTRINSICS && defined CV_CPU_COMPILE_AVX512_COMMON
+#  define CV_TRY_AVX512_COMMON 1
+#  define CV_CPU_FORCE_AVX512_COMMON 1
+#  define CV_CPU_HAS_SUPPORT_AVX512_COMMON 1
+#  define CV_CPU_CALL_AVX512_COMMON(fn, args) return (cpu_baseline::fn args)
+#  define CV_CPU_CALL_AVX512_COMMON_(fn, args) return (opt_AVX512_COMMON::fn args)
+#elif !defined CV_DISABLE_OPTIMIZATION && defined CV_ENABLE_INTRINSICS && defined CV_CPU_DISPATCH_COMPILE_AVX512_COMMON
+#  define CV_TRY_AVX512_COMMON 1
+#  define CV_CPU_FORCE_AVX512_COMMON 0
+#  define CV_CPU_HAS_SUPPORT_AVX512_COMMON (cv::checkHardwareSupport(CV_CPU_AVX512_COMMON))
+#  define CV_CPU_CALL_AVX512_COMMON(fn, args) if (CV_CPU_HAS_SUPPORT_AVX512_COMMON) return (opt_AVX512_COMMON::fn args)
+#  define CV_CPU_CALL_AVX512_COMMON_(fn, args) if (CV_CPU_HAS_SUPPORT_AVX512_COMMON) return (opt_AVX512_COMMON::fn args)
+#else
+#  define CV_TRY_AVX512_COMMON 0
+#  define CV_CPU_FORCE_AVX512_COMMON 0
+#  define CV_CPU_HAS_SUPPORT_AVX512_COMMON 0
+#  define CV_CPU_CALL_AVX512_COMMON(fn, args)
+#  define CV_CPU_CALL_AVX512_COMMON_(fn, args)
+#endif
+#define __CV_CPU_DISPATCH_CHAIN_AVX512_COMMON(fn, args, mode, ...)  CV_CPU_CALL_AVX512_COMMON(fn, args); __CV_EXPAND(__CV_CPU_DISPATCH_CHAIN_ ## mode(fn, args, __VA_ARGS__))
+
+#if !defined CV_DISABLE_OPTIMIZATION && defined CV_ENABLE_INTRINSICS && defined CV_CPU_COMPILE_AVX512_KNL
+#  define CV_TRY_AVX512_KNL 1
+#  define CV_CPU_FORCE_AVX512_KNL 1
+#  define CV_CPU_HAS_SUPPORT_AVX512_KNL 1
+#  define CV_CPU_CALL_AVX512_KNL(fn, args) return (cpu_baseline::fn args)
+#  define CV_CPU_CALL_AVX512_KNL_(fn, args) return (opt_AVX512_KNL::fn args)
+#elif !defined CV_DISABLE_OPTIMIZATION && defined CV_ENABLE_INTRINSICS && defined CV_CPU_DISPATCH_COMPILE_AVX512_KNL
+#  define CV_TRY_AVX512_KNL 1
+#  define CV_CPU_FORCE_AVX512_KNL 0
+#  define CV_CPU_HAS_SUPPORT_AVX512_KNL (cv::checkHardwareSupport(CV_CPU_AVX512_KNL))
+#  define CV_CPU_CALL_AVX512_KNL(fn, args) if (CV_CPU_HAS_SUPPORT_AVX512_KNL) return (opt_AVX512_KNL::fn args)
+#  define CV_CPU_CALL_AVX512_KNL_(fn, args) if (CV_CPU_HAS_SUPPORT_AVX512_KNL) return (opt_AVX512_KNL::fn args)
+#else
+#  define CV_TRY_AVX512_KNL 0
+#  define CV_CPU_FORCE_AVX512_KNL 0
+#  define CV_CPU_HAS_SUPPORT_AVX512_KNL 0
+#  define CV_CPU_CALL_AVX512_KNL(fn, args)
+#  define CV_CPU_CALL_AVX512_KNL_(fn, args)
+#endif
+#define __CV_CPU_DISPATCH_CHAIN_AVX512_KNL(fn, args, mode, ...)  CV_CPU_CALL_AVX512_KNL(fn, args); __CV_EXPAND(__CV_CPU_DISPATCH_CHAIN_ ## mode(fn, args, __VA_ARGS__))
+
+#if !defined CV_DISABLE_OPTIMIZATION && defined CV_ENABLE_INTRINSICS && defined CV_CPU_COMPILE_AVX512_KNM
+#  define CV_TRY_AVX512_KNM 1
+#  define CV_CPU_FORCE_AVX512_KNM 1
+#  define CV_CPU_HAS_SUPPORT_AVX512_KNM 1
+#  define CV_CPU_CALL_AVX512_KNM(fn, args) return (cpu_baseline::fn args)
+#  define CV_CPU_CALL_AVX512_KNM_(fn, args) return (opt_AVX512_KNM::fn args)
+#elif !defined CV_DISABLE_OPTIMIZATION && defined CV_ENABLE_INTRINSICS && defined CV_CPU_DISPATCH_COMPILE_AVX512_KNM
+#  define CV_TRY_AVX512_KNM 1
+#  define CV_CPU_FORCE_AVX512_KNM 0
+#  define CV_CPU_HAS_SUPPORT_AVX512_KNM (cv::checkHardwareSupport(CV_CPU_AVX512_KNM))
+#  define CV_CPU_CALL_AVX512_KNM(fn, args) if (CV_CPU_HAS_SUPPORT_AVX512_KNM) return (opt_AVX512_KNM::fn args)
+#  define CV_CPU_CALL_AVX512_KNM_(fn, args) if (CV_CPU_HAS_SUPPORT_AVX512_KNM) return (opt_AVX512_KNM::fn args)
+#else
+#  define CV_TRY_AVX512_KNM 0
+#  define CV_CPU_FORCE_AVX512_KNM 0
+#  define CV_CPU_HAS_SUPPORT_AVX512_KNM 0
+#  define CV_CPU_CALL_AVX512_KNM(fn, args)
+#  define CV_CPU_CALL_AVX512_KNM_(fn, args)
+#endif
+#define __CV_CPU_DISPATCH_CHAIN_AVX512_KNM(fn, args, mode, ...)  CV_CPU_CALL_AVX512_KNM(fn, args); __CV_EXPAND(__CV_CPU_DISPATCH_CHAIN_ ## mode(fn, args, __VA_ARGS__))
+
 #if !defined CV_DISABLE_OPTIMIZATION && defined CV_ENABLE_INTRINSICS && defined CV_CPU_COMPILE_AVX512_SKX
 #  define CV_TRY_AVX512_SKX 1
 #  define CV_CPU_FORCE_AVX512_SKX 1
@@ -272,6 +335,69 @@
 #  define CV_CPU_CALL_AVX512_SKX_(fn, args)
 #endif
 #define __CV_CPU_DISPATCH_CHAIN_AVX512_SKX(fn, args, mode, ...)  CV_CPU_CALL_AVX512_SKX(fn, args); __CV_EXPAND(__CV_CPU_DISPATCH_CHAIN_ ## mode(fn, args, __VA_ARGS__))
+
+#if !defined CV_DISABLE_OPTIMIZATION && defined CV_ENABLE_INTRINSICS && defined CV_CPU_COMPILE_AVX512_CNL
+#  define CV_TRY_AVX512_CNL 1
+#  define CV_CPU_FORCE_AVX512_CNL 1
+#  define CV_CPU_HAS_SUPPORT_AVX512_CNL 1
+#  define CV_CPU_CALL_AVX512_CNL(fn, args) return (cpu_baseline::fn args)
+#  define CV_CPU_CALL_AVX512_CNL_(fn, args) return (opt_AVX512_CNL::fn args)
+#elif !defined CV_DISABLE_OPTIMIZATION && defined CV_ENABLE_INTRINSICS && defined CV_CPU_DISPATCH_COMPILE_AVX512_CNL
+#  define CV_TRY_AVX512_CNL 1
+#  define CV_CPU_FORCE_AVX512_CNL 0
+#  define CV_CPU_HAS_SUPPORT_AVX512_CNL (cv::checkHardwareSupport(CV_CPU_AVX512_CNL))
+#  define CV_CPU_CALL_AVX512_CNL(fn, args) if (CV_CPU_HAS_SUPPORT_AVX512_CNL) return (opt_AVX512_CNL::fn args)
+#  define CV_CPU_CALL_AVX512_CNL_(fn, args) if (CV_CPU_HAS_SUPPORT_AVX512_CNL) return (opt_AVX512_CNL::fn args)
+#else
+#  define CV_TRY_AVX512_CNL 0
+#  define CV_CPU_FORCE_AVX512_CNL 0
+#  define CV_CPU_HAS_SUPPORT_AVX512_CNL 0
+#  define CV_CPU_CALL_AVX512_CNL(fn, args)
+#  define CV_CPU_CALL_AVX512_CNL_(fn, args)
+#endif
+#define __CV_CPU_DISPATCH_CHAIN_AVX512_CNL(fn, args, mode, ...)  CV_CPU_CALL_AVX512_CNL(fn, args); __CV_EXPAND(__CV_CPU_DISPATCH_CHAIN_ ## mode(fn, args, __VA_ARGS__))
+
+#if !defined CV_DISABLE_OPTIMIZATION && defined CV_ENABLE_INTRINSICS && defined CV_CPU_COMPILE_AVX512_CLX
+#  define CV_TRY_AVX512_CLX 1
+#  define CV_CPU_FORCE_AVX512_CLX 1
+#  define CV_CPU_HAS_SUPPORT_AVX512_CLX 1
+#  define CV_CPU_CALL_AVX512_CLX(fn, args) return (cpu_baseline::fn args)
+#  define CV_CPU_CALL_AVX512_CLX_(fn, args) return (opt_AVX512_CLX::fn args)
+#elif !defined CV_DISABLE_OPTIMIZATION && defined CV_ENABLE_INTRINSICS && defined CV_CPU_DISPATCH_COMPILE_AVX512_CLX
+#  define CV_TRY_AVX512_CLX 1
+#  define CV_CPU_FORCE_AVX512_CLX 0
+#  define CV_CPU_HAS_SUPPORT_AVX512_CLX (cv::checkHardwareSupport(CV_CPU_AVX512_CLX))
+#  define CV_CPU_CALL_AVX512_CLX(fn, args) if (CV_CPU_HAS_SUPPORT_AVX512_CLX) return (opt_AVX512_CLX::fn args)
+#  define CV_CPU_CALL_AVX512_CLX_(fn, args) if (CV_CPU_HAS_SUPPORT_AVX512_CLX) return (opt_AVX512_CLX::fn args)
+#else
+#  define CV_TRY_AVX512_CLX 0
+#  define CV_CPU_FORCE_AVX512_CLX 0
+#  define CV_CPU_HAS_SUPPORT_AVX512_CLX 0
+#  define CV_CPU_CALL_AVX512_CLX(fn, args)
+#  define CV_CPU_CALL_AVX512_CLX_(fn, args)
+#endif
+#define __CV_CPU_DISPATCH_CHAIN_AVX512_CLX(fn, args, mode, ...)  CV_CPU_CALL_AVX512_CLX(fn, args); __CV_EXPAND(__CV_CPU_DISPATCH_CHAIN_ ## mode(fn, args, __VA_ARGS__))
+
+#if !defined CV_DISABLE_OPTIMIZATION && defined CV_ENABLE_INTRINSICS && defined CV_CPU_COMPILE_AVX512_ICL
+#  define CV_TRY_AVX512_ICL 1
+#  define CV_CPU_FORCE_AVX512_ICL 1
+#  define CV_CPU_HAS_SUPPORT_AVX512_ICL 1
+#  define CV_CPU_CALL_AVX512_ICL(fn, args) return (cpu_baseline::fn args)
+#  define CV_CPU_CALL_AVX512_ICL_(fn, args) return (opt_AVX512_ICL::fn args)
+#elif !defined CV_DISABLE_OPTIMIZATION && defined CV_ENABLE_INTRINSICS && defined CV_CPU_DISPATCH_COMPILE_AVX512_ICL
+#  define CV_TRY_AVX512_ICL 1
+#  define CV_CPU_FORCE_AVX512_ICL 0
+#  define CV_CPU_HAS_SUPPORT_AVX512_ICL (cv::checkHardwareSupport(CV_CPU_AVX512_ICL))
+#  define CV_CPU_CALL_AVX512_ICL(fn, args) if (CV_CPU_HAS_SUPPORT_AVX512_ICL) return (opt_AVX512_ICL::fn args)
+#  define CV_CPU_CALL_AVX512_ICL_(fn, args) if (CV_CPU_HAS_SUPPORT_AVX512_ICL) return (opt_AVX512_ICL::fn args)
+#else
+#  define CV_TRY_AVX512_ICL 0
+#  define CV_CPU_FORCE_AVX512_ICL 0
+#  define CV_CPU_HAS_SUPPORT_AVX512_ICL 0
+#  define CV_CPU_CALL_AVX512_ICL(fn, args)
+#  define CV_CPU_CALL_AVX512_ICL_(fn, args)
+#endif
+#define __CV_CPU_DISPATCH_CHAIN_AVX512_ICL(fn, args, mode, ...)  CV_CPU_CALL_AVX512_ICL(fn, args); __CV_EXPAND(__CV_CPU_DISPATCH_CHAIN_ ## mode(fn, args, __VA_ARGS__))
 
 #if !defined CV_DISABLE_OPTIMIZATION && defined CV_ENABLE_INTRINSICS && defined CV_CPU_COMPILE_NEON
 #  define CV_TRY_NEON 1
@@ -294,6 +420,27 @@
 #endif
 #define __CV_CPU_DISPATCH_CHAIN_NEON(fn, args, mode, ...)  CV_CPU_CALL_NEON(fn, args); __CV_EXPAND(__CV_CPU_DISPATCH_CHAIN_ ## mode(fn, args, __VA_ARGS__))
 
+#if !defined CV_DISABLE_OPTIMIZATION && defined CV_ENABLE_INTRINSICS && defined CV_CPU_COMPILE_MSA
+#  define CV_TRY_MSA 1
+#  define CV_CPU_FORCE_MSA 1
+#  define CV_CPU_HAS_SUPPORT_MSA 1
+#  define CV_CPU_CALL_MSA(fn, args) return (cpu_baseline::fn args)
+#  define CV_CPU_CALL_MSA_(fn, args) return (opt_MSA::fn args)
+#elif !defined CV_DISABLE_OPTIMIZATION && defined CV_ENABLE_INTRINSICS && defined CV_CPU_DISPATCH_COMPILE_MSA
+#  define CV_TRY_MSA 1
+#  define CV_CPU_FORCE_MSA 0
+#  define CV_CPU_HAS_SUPPORT_MSA (cv::checkHardwareSupport(CV_CPU_MSA))
+#  define CV_CPU_CALL_MSA(fn, args) if (CV_CPU_HAS_SUPPORT_MSA) return (opt_MSA::fn args)
+#  define CV_CPU_CALL_MSA_(fn, args) if (CV_CPU_HAS_SUPPORT_MSA) return (opt_MSA::fn args)
+#else
+#  define CV_TRY_MSA 0
+#  define CV_CPU_FORCE_MSA 0
+#  define CV_CPU_HAS_SUPPORT_MSA 0
+#  define CV_CPU_CALL_MSA(fn, args)
+#  define CV_CPU_CALL_MSA_(fn, args)
+#endif
+#define __CV_CPU_DISPATCH_CHAIN_MSA(fn, args, mode, ...)  CV_CPU_CALL_MSA(fn, args); __CV_EXPAND(__CV_CPU_DISPATCH_CHAIN_ ## mode(fn, args, __VA_ARGS__))
+
 #if !defined CV_DISABLE_OPTIMIZATION && defined CV_ENABLE_INTRINSICS && defined CV_CPU_COMPILE_VSX
 #  define CV_TRY_VSX 1
 #  define CV_CPU_FORCE_VSX 1
@@ -314,6 +461,27 @@
 #  define CV_CPU_CALL_VSX_(fn, args)
 #endif
 #define __CV_CPU_DISPATCH_CHAIN_VSX(fn, args, mode, ...)  CV_CPU_CALL_VSX(fn, args); __CV_EXPAND(__CV_CPU_DISPATCH_CHAIN_ ## mode(fn, args, __VA_ARGS__))
+
+#if !defined CV_DISABLE_OPTIMIZATION && defined CV_ENABLE_INTRINSICS && defined CV_CPU_COMPILE_VSX3
+#  define CV_TRY_VSX3 1
+#  define CV_CPU_FORCE_VSX3 1
+#  define CV_CPU_HAS_SUPPORT_VSX3 1
+#  define CV_CPU_CALL_VSX3(fn, args) return (cpu_baseline::fn args)
+#  define CV_CPU_CALL_VSX3_(fn, args) return (opt_VSX3::fn args)
+#elif !defined CV_DISABLE_OPTIMIZATION && defined CV_ENABLE_INTRINSICS && defined CV_CPU_DISPATCH_COMPILE_VSX3
+#  define CV_TRY_VSX3 1
+#  define CV_CPU_FORCE_VSX3 0
+#  define CV_CPU_HAS_SUPPORT_VSX3 (cv::checkHardwareSupport(CV_CPU_VSX3))
+#  define CV_CPU_CALL_VSX3(fn, args) if (CV_CPU_HAS_SUPPORT_VSX3) return (opt_VSX3::fn args)
+#  define CV_CPU_CALL_VSX3_(fn, args) if (CV_CPU_HAS_SUPPORT_VSX3) return (opt_VSX3::fn args)
+#else
+#  define CV_TRY_VSX3 0
+#  define CV_CPU_FORCE_VSX3 0
+#  define CV_CPU_HAS_SUPPORT_VSX3 0
+#  define CV_CPU_CALL_VSX3(fn, args)
+#  define CV_CPU_CALL_VSX3_(fn, args)
+#endif
+#define __CV_CPU_DISPATCH_CHAIN_VSX3(fn, args, mode, ...)  CV_CPU_CALL_VSX3(fn, args); __CV_EXPAND(__CV_CPU_DISPATCH_CHAIN_ ## mode(fn, args, __VA_ARGS__))
 
 #define CV_CPU_CALL_BASELINE(fn, args) return (cpu_baseline::fn args)
 #define __CV_CPU_DISPATCH_CHAIN_BASELINE(fn, args, mode, ...)  CV_CPU_CALL_BASELINE(fn, args) /* last in sequence */

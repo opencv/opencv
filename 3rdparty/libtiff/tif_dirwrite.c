@@ -1,5 +1,3 @@
-/* $Id: tif_dirwrite.c,v 1.89 2017-08-23 13:33:42 erouault Exp $ */
-
 /*
  * Copyright (c) 1988-1997 Sam Leffler
  * Copyright (c) 1991-1997 Silicon Graphics, Inc.
@@ -30,7 +28,6 @@
  * Directory Write Support Routines.
  */
 #include "tiffiop.h"
-#include <float.h>
 
 #ifdef HAVE_IEEEFP
 #define TIFFCvtNativeToIEEEFloat(tif, n, fp)
@@ -697,8 +694,11 @@ TIFFWriteDirectorySec(TIFF* tif, int isimage, int imagedone, uint64* pdiroff)
 								}
 								break;
 							default:
-								assert(0);   /* we should never get here */
-								break;
+								TIFFErrorExt(tif->tif_clientdata,module,
+								            "Cannot write tag %d (%s)",
+								            TIFFFieldTag(o),
+                                                                            o->field_name ? o->field_name : "unknown");
+								goto bad;
 						}
 					}
 				}
@@ -945,15 +945,6 @@ bad:
 	return(0);
 }
 
-static float TIFFClampDoubleToFloat( double val )
-{
-    if( val > FLT_MAX )
-        return FLT_MAX;
-    if( val < -FLT_MAX )
-        return -FLT_MAX;
-    return (float)val;
-}
-
 static int8 TIFFClampDoubleToInt8( double val )
 {
     if( val > 127 )
@@ -1028,7 +1019,7 @@ TIFFWriteDirectoryTagSampleformatArray(TIFF* tif, uint32* ndir, TIFFDirEntry* di
 			if (tif->tif_dir.td_bitspersample<=32)
 			{
 				for (i = 0; i < count; ++i)
-					((float*)conv)[i] = TIFFClampDoubleToFloat(value[i]);
+					((float*)conv)[i] = _TIFFClampDoubleToFloat(value[i]);
 				ok = TIFFWriteDirectoryTagFloatArray(tif,ndir,dir,tag,count,(float*)conv);
 			}
 			else
@@ -1892,12 +1883,14 @@ TIFFWriteDirectoryTagTransferfunction(TIFF* tif, uint32* ndir, TIFFDirEntry* dir
 		n=3;
 	if (n==3)
 	{
-		if (!_TIFFmemcmp(tif->tif_dir.td_transferfunction[0],tif->tif_dir.td_transferfunction[2],m*sizeof(uint16)))
+		if (tif->tif_dir.td_transferfunction[2] == NULL ||
+		    !_TIFFmemcmp(tif->tif_dir.td_transferfunction[0],tif->tif_dir.td_transferfunction[2],m*sizeof(uint16)))
 			n=2;
 	}
 	if (n==2)
 	{
-		if (!_TIFFmemcmp(tif->tif_dir.td_transferfunction[0],tif->tif_dir.td_transferfunction[1],m*sizeof(uint16)))
+		if (tif->tif_dir.td_transferfunction[1] == NULL ||
+		    !_TIFFmemcmp(tif->tif_dir.td_transferfunction[0],tif->tif_dir.td_transferfunction[1],m*sizeof(uint16)))
 			n=1;
 	}
 	if (n==0)

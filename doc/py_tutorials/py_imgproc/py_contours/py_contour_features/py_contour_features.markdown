@@ -23,7 +23,7 @@ import cv2 as cv
 
 img = cv.imread('star.jpg',0)
 ret,thresh = cv.threshold(img,127,255,0)
-im2,contours,hierarchy = cv.findContours(thresh, 1, 2)
+contours,hierarchy = cv.findContours(thresh, 1, 2)
 
 cnt = contours[0]
 M = cv.moments(cnt)
@@ -144,7 +144,7 @@ cv.rectangle(img,(x,y),(x+w,y+h),(0,255,0),2)
 ### 7.b. Rotated Rectangle
 
 Here, bounding rectangle is drawn with minimum area, so it considers the rotation also. The function
-used is **cv.minAreaRect()**. It returns a Box2D structure which contains following detals - (
+used is **cv.minAreaRect()**. It returns a Box2D structure which contains following details - (
 center (x,y), (width, height), angle of rotation ). But to draw this rectangle, we need 4 corners of
 the rectangle. It is obtained by the function **cv.boxPoints()**
 @code{.py}

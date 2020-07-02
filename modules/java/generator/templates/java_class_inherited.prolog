@@ -5,8 +5,7 @@ package org.opencv.$module;
 
 $imports
 
-$docs
-$annotation
+$docs$annotation
 public class $jname extends $base {
 
     protected $jname(long addr) { super(addr); }

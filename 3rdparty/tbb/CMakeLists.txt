@@ -1,23 +1,19 @@
 #Cross compile TBB from source
-project(tbb)
+project(tbb CXX)
 
 if (WIN32 AND NOT ARM)
   message(FATAL_ERROR "BUILD_TBB option supports Windows on ARM only!\nUse regular official TBB build instead of the BUILD_TBB option!")
 endif()
 
-set(tbb_filename "2018_U1.tar.gz")
-set(tbb_subdir "tbb-2018_U1")
-set(tbb_md5 "b2f2fa09adf44a22f4024049907f774b")
-
-ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4702
-    -Wshadow
-    -Wunused-parameter
-    -Wmissing-prototypes  # MacOSX
-)
+ocv_update(OPENCV_TBB_RELEASE "v2020.2")
+ocv_update(OPENCV_TBB_RELEASE_MD5 "5af6f6c2a24c2043e62e47205e273b1f")
+ocv_update(OPENCV_TBB_FILENAME "${OPENCV_TBB_RELEASE}.tar.gz")
+string(REGEX REPLACE "^v" "" OPENCV_TBB_RELEASE_ "${OPENCV_TBB_RELEASE}")
+#ocv_update(OPENCV_TBB_SUBDIR ...)
 
 set(tbb_src_dir "${OpenCV_BINARY_DIR}/3rdparty/tbb")
-ocv_download(FILENAME ${tbb_filename}
-             HASH ${tbb_md5}
+ocv_download(FILENAME ${OPENCV_TBB_FILENAME}
+             HASH ${OPENCV_TBB_RELEASE_MD5}
              URL
                "${OPENCV_TBB_URL}"
                "$ENV{OPENCV_TBB_URL}"
@@ -29,7 +25,17 @@ ocv_download(FILENAME ${tbb_filename}
 if(NOT res)
   return()
 endif()
-set(tbb_src_dir "${tbb_src_dir}/${tbb_subdir}")
+if(OPENCV_TBB_SUBDIR)
+  # use current value
+  ocv_assert(EXISTS "${tbb_src_dir}/${OPENCV_TBB_SUBDIR}")
+elseif(EXISTS "${tbb_src_dir}/oneTBB-${OPENCV_TBB_RELEASE_}")
+  set(OPENCV_TBB_SUBDIR "oneTBB-${OPENCV_TBB_RELEASE_}")
+elseif(EXISTS "${tbb_src_dir}/tbb-${OPENCV_TBB_RELEASE_}")
+  set(OPENCV_TBB_SUBDIR "oneTBB-${OPENCV_TBB_RELEASE_}")
+else()
+  message(FATAL_ERROR "TBB: Can't configure TBB. Specify OPENCV_TBB_SUBDIR through command-line.")
+endif()
+set(tbb_src_dir "${tbb_src_dir}/${OPENCV_TBB_SUBDIR}")
 
 ocv_include_directories("${tbb_src_dir}/include"
                         "${tbb_src_dir}/src/"
@@ -39,6 +45,8 @@ ocv_include_directories("${tbb_src_dir}/include"
 file(GLOB lib_srcs "${tbb_src_dir}/src/tbb/*.cpp")
 file(GLOB lib_hdrs "${tbb_src_dir}/src/tbb/*.h")
 list(APPEND lib_srcs "${tbb_src_dir}/src/rml/client/rml_tbb.cpp")
+ocv_list_filterout(lib_srcs "${tbb_src_dir}/src/tbb/tbbbind.cpp")  # hwloc.h requirement
+ocv_list_filterout(lib_srcs "${tbb_src_dir}/src/tbb/tbb_bind.cpp")  # hwloc.h requirement 2020.1+
 
 if (WIN32)
   add_definitions(/D__TBB_DYNAMIC_LOAD_ENABLED=0
@@ -82,25 +90,30 @@ endif()
 
 if(ANDROID_COMPILER_IS_CLANG)
   add_definitions(-D__TBB_GCC_BUILTIN_ATOMICS_PRESENT=1)
-  ocv_warnings_disable(CMAKE_CXX_FLAGS -Wmissing-prototypes)
 endif()
+
+ocv_warnings_disable(CMAKE_CXX_FLAGS
+    /wd4702
+    -Wshadow
+    -Wunused-parameter
+    -Wclass-memaccess                  # TBB 2018 under GCC 8+
+    -Wimplicit-fallthrough             # TBB 2018 under GCC 7+
+    -Wmissing-prototypes               # MacOSX, Android/Clang
+    -Wundef -Wmissing-declarations     # TBB 2019
+)
 
 set(TBB_SOURCE_FILES ${lib_srcs} ${lib_hdrs})
-
-if (ARM AND NOT WIN32)
-  if (NOT ANDROID)
-    set(TBB_SOURCE_FILES ${TBB_SOURCE_FILES} "${CMAKE_CURRENT_SOURCE_DIR}/arm_linux_stub.cpp")
-  endif()
-  set(TBB_SOURCE_FILES ${TBB_SOURCE_FILES} "${CMAKE_CURRENT_SOURCE_DIR}/android_additional.h")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -include \"${CMAKE_CURRENT_SOURCE_DIR}/android_additional.h\"")
-endif()
 
 set(tbb_version_file "version_string.ver")
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/${tbb_version_file}.cmakein" "${CMAKE_CURRENT_BINARY_DIR}/${tbb_version_file}" @ONLY)
 list(APPEND TBB_SOURCE_FILES "${CMAKE_CURRENT_BINARY_DIR}/${tbb_version_file}")
 
 add_library(tbb ${TBB_SOURCE_FILES})
-target_compile_definitions(tbb PUBLIC TBB_USE_GCC_BUILTINS=1 __TBB_GCC_BUILTIN_ATOMICS_PRESENT=1)
+target_compile_definitions(tbb PUBLIC
+    TBB_USE_GCC_BUILTINS=1
+    __TBB_GCC_BUILTIN_ATOMICS_PRESENT=1
+    TBB_SUPPRESS_DEPRECATED_MESSAGES=1
+)
 target_include_directories(tbb SYSTEM PUBLIC $<BUILD_INTERFACE:${tbb_src_dir}/include>
     PRIVATE "${CMAKE_CURRENT_BINARY_DIR}"
 )
@@ -121,8 +134,6 @@ if (WIN32)
 else()
   target_link_libraries(tbb c m dl)
 endif()
-
-ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef -Wmissing-declarations)
 
 # filter out flags that are not handled well by the TBB code
 foreach(var CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_RELEASE CMAKE_CXX_FLAGS_DEBUG)

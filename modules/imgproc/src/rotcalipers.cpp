@@ -104,7 +104,7 @@ static void rotatingCalipers( const Point2f* points, int n, int mode, float* out
     /* rotating calipers sides will always have coordinates
      (a,b) (-b,a) (-a,-b) (b, -a)
      */
-    /* this is a first base bector (a,b) initialized by (1,0) */
+    /* this is a first base vector (a,b) initialized by (1,0) */
     float orientation = 0;
     float base_a;
     float base_b = 0;
@@ -346,7 +346,7 @@ static void rotatingCalipers( const Point2f* points, int n, int mode, float* out
 
 cv::RotatedRect cv::minAreaRect( InputArray _points )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat hull;
     Point2f out[3];
@@ -401,12 +401,12 @@ cvMinAreaRect2( const CvArr* array, CvMemStorage* /*storage*/ )
     cv::Mat points = cv::cvarrToMat(array, false, false, 0, &abuf);
 
     cv::RotatedRect rr = cv::minAreaRect(points);
-    return (CvBox2D)rr;
+    return cvBox2D(rr);
 }
 
 void cv::boxPoints(cv::RotatedRect box, OutputArray _pts)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     _pts.create(4, 2, CV_32F);
     Mat pts = _pts.getMat();

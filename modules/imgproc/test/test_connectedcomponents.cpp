@@ -136,4 +136,94 @@ void CV_ConnectedComponentsTest::run( int /* start_from */)
 
 TEST(Imgproc_ConnectedComponents, regression) { CV_ConnectedComponentsTest test; test.safe_run(); }
 
+TEST(Imgproc_ConnectedComponents, grana_buffer_overflow)
+{
+    cv::Mat darkMask;
+    darkMask.create(31, 87, CV_8U);
+    darkMask = 0;
+
+    cv::Mat labels;
+    cv::Mat stats;
+    cv::Mat centroids;
+
+    int nbComponents = cv::connectedComponentsWithStats(darkMask, labels, stats, centroids, 8, CV_32S, cv::CCL_GRANA);
+    EXPECT_EQ(1, nbComponents);
+}
+
+
+static cv::Mat createCrashMat(int numThreads) {
+    const int h = numThreads * 4 * 2 + 8;
+    const double nParallelStripes = std::max(1, std::min(h / 2, numThreads * 4));
+    const int w = 4;
+
+    const int nstripes = cvRound(nParallelStripes <= 0 ? h : MIN(MAX(nParallelStripes, 1.), h));
+    const cv::Range stripeRange(0, nstripes);
+    const cv::Range wholeRange(0, h);
+
+    cv::Mat m(h, w, CV_8U);
+    m = 0;
+
+    // Look for a range that starts with odd value and ends with even value
+    cv::Range bugRange;
+    for (int s = stripeRange.start; s < stripeRange.end; s++) {
+        cv::Range sr(s, s + 1);
+        cv::Range r;
+        r.start = (int) (wholeRange.start +
+                         ((uint64) sr.start * (wholeRange.end - wholeRange.start) + nstripes / 2) / nstripes);
+        r.end = sr.end >= nstripes ?
+                    wholeRange.end :
+                    (int) (wholeRange.start +
+                           ((uint64) sr.end * (wholeRange.end - wholeRange.start) + nstripes / 2) / nstripes);
+
+        if (r.start > 0 && r.start % 2 == 1 && r.end % 2 == 0 && r.end >= r.start + 2) {
+            bugRange = r;
+            break;
+        }
+    }
+
+    if (bugRange.empty()) { // Could not create a buggy range
+        return m;
+    }
+
+    // Fill in bug Range
+    for (int x = 1; x < w; x++) {
+        m.at<char>(bugRange.start - 1, x) = 1;
+    }
+
+    m.at<char>(bugRange.start + 0, 0) = 1;
+    m.at<char>(bugRange.start + 0, 1) = 1;
+    m.at<char>(bugRange.start + 0, 3) = 1;
+    m.at<char>(bugRange.start + 1, 1) = 1;
+    m.at<char>(bugRange.start + 2, 1) = 1;
+    m.at<char>(bugRange.start + 2, 3) = 1;
+    m.at<char>(bugRange.start + 3, 0) = 1;
+    m.at<char>(bugRange.start + 3, 1) = 1;
+
+    return m;
+}
+
+TEST(Imgproc_ConnectedComponents, parallel_wu_labels)
+{
+    cv::Mat mat = createCrashMat(cv::getNumThreads());
+    if(mat.empty()) {
+        return;
+    }
+
+    const int nbPixels = cv::countNonZero(mat);
+
+    cv::Mat labels;
+    cv::Mat stats;
+    cv::Mat centroids;
+    int nb = 0;
+    EXPECT_NO_THROW( nb = cv::connectedComponentsWithStats(mat, labels, stats, centroids, 8, CV_32S, cv::CCL_WU) );
+
+    int area = 0;
+    for(int i=1; i<nb; ++i) {
+        area += stats.at<int32_t>(i, cv::CC_STAT_AREA);
+    }
+
+    EXPECT_EQ(nbPixels, area);
+}
+
+
 }} // namespace

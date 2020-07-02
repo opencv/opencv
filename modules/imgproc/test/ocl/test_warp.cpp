@@ -289,7 +289,7 @@ PARAM_TEST_CASE(Resize, MatType, double, double, Interpolation, bool, int)
         dstRoiSize.width = cvRound(srcRoiSize.width * fx);
         dstRoiSize.height = cvRound(srcRoiSize.height * fy);
 
-        if (dstRoiSize.area() == 0)
+        if (dstRoiSize.empty())
         {
             random_roi();
             return;

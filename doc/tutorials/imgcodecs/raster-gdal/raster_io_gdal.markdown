@@ -15,7 +15,7 @@ The primary objectives for this tutorial:
 
 -   How to use OpenCV [imread](@ref imread) to load satellite imagery.
 -   How to use OpenCV [imread](@ref imread) to load SRTM Digital Elevation Models
--   Given the corner coordinates of both the image and DEM, correllate the elevation data to the
+-   Given the corner coordinates of both the image and DEM, correlate the elevation data to the
     image to find elevations for each pixel.
 -   Show a basic, easy-to-implement example of a terrain heat map.
 -   Show a basic use of DEM data coupled with ortho-rectified imagery.

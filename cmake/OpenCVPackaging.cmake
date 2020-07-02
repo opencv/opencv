@@ -89,7 +89,7 @@ set(CPACK_COMPONENT_TESTS_DEPENDS libs)
 
 if(HAVE_CUDA)
   string(REPLACE "." "-" cuda_version_suffix ${CUDA_VERSION})
-  if(${CUDA_VERSION} VERSION_LESS "6.5")
+  if(CUDA_VERSION VERSION_LESS "6.5")
     set(CPACK_DEB_libs_PACKAGE_DEPENDS "cuda-core-libs-${cuda_version_suffix}, cuda-extra-libs-${cuda_version_suffix}")
     set(CPACK_DEB_dev_PACKAGE_DEPENDS "cuda-headers-${cuda_version_suffix}")
   else()
@@ -99,9 +99,14 @@ if(HAVE_CUDA)
       set(CPACK_DEB_libs_PACKAGE_DEPENDS "${CPACK_DEB_libs_PACKAGE_DEPENDS}, cuda-cufft-${cuda_version_suffix}")
       set(CPACK_DEB_dev_PACKAGE_DEPENDS "${CPACK_DEB_dev_PACKAGE_DEPENDS}, cuda-cufft-dev-${cuda_version_suffix}")
     endif()
-    if(HAVE_HAVE_CUBLAS)
+    if(HAVE_CUBLAS)
       set(CPACK_DEB_libs_PACKAGE_DEPENDS "${CPACK_DEB_libs_PACKAGE_DEPENDS}, cuda-cublas-${cuda_version_suffix}")
       set(CPACK_DEB_dev_PACKAGE_DEPENDS "${CPACK_DEB_dev_PACKAGE_DEPENDS}, cuda-cublas-dev-${cuda_version_suffix}")
+    endif()
+    if(HAVE_CUDNN)
+      # TODO
+      #ex: libcudnn7_7.5.1.10-1+cuda10.1_amd64
+      #ex: libcudnn7-dev_7.5.1.10-1+cuda10.1_amd64
     endif()
   endif()
   set(CPACK_COMPONENT_dev_DEPENDS libs)
@@ -118,12 +123,11 @@ endif()
 set(STD_OPENCV_LIBS opencv-data)
 set(STD_OPENCV_DEV libopencv-dev)
 
-foreach(module calib3d core cudaarithm cudabgsegm cudacodec cudafeatures2d cudafilters
-               cudaimgproc cudalegacy cudaobjdetect cudaoptflow cudastereo cudawarping
-               cudev features2d flann hal highgui imgcodecs imgproc ml objdetect ocl
-               photo shape stitching superres ts video videoio videostab viz)
+foreach(module calib3d core dnn features2d flann gapi highgui
+               imgcodecs imgproc ml objdetect
+               photo stitching ts video videoio)
   if(HAVE_opencv_${module})
-    list(APPEND STD_OPENCV_LIBS "libopencv-${module}3.0")
+    list(APPEND STD_OPENCV_LIBS "libopencv-${module}4.0")
     list(APPEND STD_OPENCV_DEV "libopencv-${module}-dev")
   endif()
 endforeach()
@@ -140,9 +144,9 @@ set(CPACK_COMPONENT_PYTHON_CONFLICTS python-opencv)
 set(CPACK_COMPONENT_PYTHON_PROVIDES python-opencv)
 set(CPACK_COMPONENT_PYTHON_REPLACES python-opencv)
 
-set(CPACK_COMPONENT_JAVA_CONFLICTS "libopencv3.0-java, libopencv3.0-jni")
-set(CPACK_COMPONENT_JAVA_PROVIDES "libopencv3.0-java, libopencv3.0-jni")
-set(CPACK_COMPONENT_JAVA_REPLACES "libopencv3.0-java, libopencv3.0-jni")
+set(CPACK_COMPONENT_JAVA_CONFLICTS "libopencv4.0-java, libopencv4.0-jni")
+set(CPACK_COMPONENT_JAVA_PROVIDES "libopencv4.0-java, libopencv4.0-jni")
+set(CPACK_COMPONENT_JAVA_REPLACES "libopencv4.0-java, libopencv4.0-jni")
 
 set(CPACK_COMPONENT_DOCS_CONFLICTS opencv-doc)
 set(CPACK_COMPONENT_SAMPLES_CONFLICTS opencv-doc)

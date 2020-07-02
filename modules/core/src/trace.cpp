@@ -196,14 +196,27 @@ static __itt_domain* domain = NULL;
 
 static bool isITTEnabled()
 {
-    static bool isInitialized = false;
+    static volatile bool isInitialized = false;
     static bool isEnabled = false;
     if (!isInitialized)
     {
-        isEnabled = !!(__itt_api_version());
-        CV_LOG_ITT("ITT is " << (isEnabled ? "enabled" : "disabled"));
-        domain = __itt_domain_create("OpenCVTrace");
-        isInitialized = true;
+        cv::AutoLock lock(cv::getInitializationMutex());
+        if (!isInitialized)
+        {
+            bool param_traceITTEnable = utils::getConfigurationParameterBool("OPENCV_TRACE_ITT_ENABLE", true);
+            if (param_traceITTEnable)
+            {
+                isEnabled = !!(__itt_api_version());
+                CV_LOG_ITT("ITT is " << (isEnabled ? "enabled" : "disabled"));
+                domain = __itt_domain_create("OpenCVTrace");
+            }
+            else
+            {
+                CV_LOG_ITT("ITT is disabled through OpenCV parameter");
+                isEnabled = false;
+            }
+            isInitialized = true;
+        }
     }
     return isEnabled;
 }
@@ -801,10 +814,12 @@ TraceStorage* TraceManagerThreadLocal::getStorage() const
             const char* pos = strrchr(filepath.c_str(), '/'); // extract filename
 #ifdef _WIN32
             if (!pos)
-                strrchr(filepath.c_str(), '\\');
+                pos = strrchr(filepath.c_str(), '\\');
 #endif
             if (!pos)
                 pos = filepath.c_str();
+            else
+                pos += 1; // fix to skip extra slash in filename beginning
             msg.printf("#thread file: %s\n", pos);
             global->put(msg);
             storage.reset(new AsyncTraceStorage(filepath));
@@ -890,7 +905,7 @@ bool TraceManager::isActivated()
     if (!isInitialized)
     {
         TraceManager& m = getTraceManager();
-        (void)m; // TODO
+        CV_UNUSED(m); // TODO
     }
 
     return activated;

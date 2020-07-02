@@ -77,7 +77,7 @@ PARAM_TEST_CASE(Canny, Channels, ApertureSize, L2gradient, UseRoi)
     void generateTestData()
     {
         Mat img = readImageType("shared/fruits.png", CV_8UC(cn));
-        ASSERT_FALSE(img.empty()) << "cann't load shared/fruits.png";
+        ASSERT_FALSE(img.empty()) << "can't load shared/fruits.png";
 
         Size roiSize = img.size();
         int type = img.type();

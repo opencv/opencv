@@ -476,7 +476,7 @@ struct CopyOp : public BaseElemWiseOp
     }
     int getRandomType(RNG& rng)
     {
-        return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL, 1, ARITHM_MAX_CHANNELS);
+        return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL_16F, 1, ARITHM_MAX_CHANNELS);
     }
     double getMaxErr(int)
     {
@@ -498,7 +498,7 @@ struct SetOp : public BaseElemWiseOp
     }
     int getRandomType(RNG& rng)
     {
-        return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL, 1, ARITHM_MAX_CHANNELS);
+        return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL_16F, 1, ARITHM_MAX_CHANNELS);
     }
     double getMaxErr(int)
     {
@@ -2008,11 +2008,9 @@ TEST(Subtract, scalarc4_matc4)
 TEST(Compare, empty)
 {
     cv::Mat temp, dst1, dst2;
-    cv::compare(temp, temp, dst1, cv::CMP_EQ);
-    dst2 = temp > 5;
-
+    EXPECT_NO_THROW(cv::compare(temp, temp, dst1, cv::CMP_EQ));
     EXPECT_TRUE(dst1.empty());
-    EXPECT_TRUE(dst2.empty());
+    EXPECT_THROW(dst2 = temp > 5, cv::Exception);
 }
 
 TEST(Compare, regression_8999)
@@ -2020,9 +2018,15 @@ TEST(Compare, regression_8999)
     Mat_<double> A(4,1); A << 1, 3, 2, 4;
     Mat_<double> B(1,1); B << 2;
     Mat C;
-    ASSERT_ANY_THROW({
-        cv::compare(A, B, C, CMP_LT);
-    });
+    EXPECT_THROW(cv::compare(A, B, C, CMP_LT), cv::Exception);
+}
+
+TEST(Compare, regression_16F_do_not_crash)
+{
+    cv::Mat mat1(2, 2, CV_16F, cv::Scalar(1));
+    cv::Mat mat2(2, 2, CV_16F, cv::Scalar(2));
+    cv::Mat dst;
+    EXPECT_THROW(cv::compare(mat1, mat2, dst, cv::CMP_EQ), cv::Exception);
 }
 
 
@@ -2161,5 +2165,295 @@ TEST(Core_Norm, IPP_regression_NORM_L1_16UC3_small)
     EXPECT_EQ((double)9*4*cn, cv::norm(a, b, NORM_L1)); // without mask, IPP works well
     EXPECT_EQ((double)20*cn, cv::norm(a, b, NORM_L1, mask));
 }
+
+
+TEST(Core_ConvertTo, regression_12121)
+{
+    {
+        Mat src(4, 64, CV_32SC1, Scalar(-1));
+        Mat dst;
+        src.convertTo(dst, CV_8U);
+        EXPECT_EQ(0, dst.at<uchar>(0, 0)) << "src=" << src.at<int>(0, 0);
+    }
+
+    {
+        Mat src(4, 64, CV_32SC1, Scalar(INT_MIN));
+        Mat dst;
+        src.convertTo(dst, CV_8U);
+        EXPECT_EQ(0, dst.at<uchar>(0, 0)) << "src=" << src.at<int>(0, 0);
+    }
+
+    {
+        Mat src(4, 64, CV_32SC1, Scalar(INT_MIN + 32767));
+        Mat dst;
+        src.convertTo(dst, CV_8U);
+        EXPECT_EQ(0, dst.at<uchar>(0, 0)) << "src=" << src.at<int>(0, 0);
+    }
+
+    {
+        Mat src(4, 64, CV_32SC1, Scalar(INT_MIN + 32768));
+        Mat dst;
+        src.convertTo(dst, CV_8U);
+        EXPECT_EQ(0, dst.at<uchar>(0, 0)) << "src=" << src.at<int>(0, 0);
+    }
+
+    {
+        Mat src(4, 64, CV_32SC1, Scalar(32768));
+        Mat dst;
+        src.convertTo(dst, CV_8U);
+        EXPECT_EQ(255, dst.at<uchar>(0, 0)) << "src=" << src.at<int>(0, 0);
+    }
+
+    {
+        Mat src(4, 64, CV_32SC1, Scalar(INT_MIN));
+        Mat dst;
+        src.convertTo(dst, CV_16U);
+        EXPECT_EQ(0, dst.at<ushort>(0, 0)) << "src=" << src.at<int>(0, 0);
+    }
+
+    {
+        Mat src(4, 64, CV_32SC1, Scalar(INT_MIN + 32767));
+        Mat dst;
+        src.convertTo(dst, CV_16U);
+        EXPECT_EQ(0, dst.at<ushort>(0, 0)) << "src=" << src.at<int>(0, 0);
+    }
+
+    {
+        Mat src(4, 64, CV_32SC1, Scalar(INT_MIN + 32768));
+        Mat dst;
+        src.convertTo(dst, CV_16U);
+        EXPECT_EQ(0, dst.at<ushort>(0, 0)) << "src=" << src.at<int>(0, 0);
+    }
+
+    {
+        Mat src(4, 64, CV_32SC1, Scalar(65536));
+        Mat dst;
+        src.convertTo(dst, CV_16U);
+        EXPECT_EQ(65535, dst.at<ushort>(0, 0)) << "src=" << src.at<int>(0, 0);
+    }
+}
+
+TEST(Core_MeanStdDev, regression_multichannel)
+{
+    {
+        uchar buf[] = { 1, 2, 3, 4, 5, 6, 7, 8,
+                        3, 4, 5, 6, 7, 8, 9, 10 };
+        double ref_buf[] = { 2., 3., 4., 5., 6., 7., 8., 9.,
+                             1., 1., 1., 1., 1., 1., 1., 1. };
+        Mat src(1, 2, CV_MAKETYPE(CV_8U, 8), buf);
+        Mat ref_m(8, 1, CV_64FC1, ref_buf);
+        Mat ref_sd(8, 1, CV_64FC1, ref_buf + 8);
+        Mat dst_m, dst_sd;
+        meanStdDev(src, dst_m, dst_sd);
+        EXPECT_EQ(0, cv::norm(dst_m, ref_m, NORM_L1));
+        EXPECT_EQ(0, cv::norm(dst_sd, ref_sd, NORM_L1));
+    }
+}
+
+template <typename T> static inline
+void testDivideInitData(Mat& src1, Mat& src2)
+{
+    CV_StaticAssert(std::numeric_limits<T>::is_integer, "");
+    const static T src1_[] = {
+         0,  0,  0,  0,
+         8,  8,  8,  8,
+        -8, -8, -8, -8
+    };
+    Mat(3, 4, traits::Type<T>::value, (void*)src1_).copyTo(src1);
+    const static T src2_[] = {
+        1, 2, 0, std::numeric_limits<T>::max(),
+        1, 2, 0, std::numeric_limits<T>::max(),
+        1, 2, 0, std::numeric_limits<T>::max(),
+    };
+    Mat(3, 4, traits::Type<T>::value, (void*)src2_).copyTo(src2);
+}
+
+template <typename T> static inline
+void testDivideInitDataFloat(Mat& src1, Mat& src2)
+{
+    CV_StaticAssert(!std::numeric_limits<T>::is_integer, "");
+    const static T src1_[] = {
+         0,  0,  0,  0,
+         8,  8,  8,  8,
+        -8, -8, -8, -8
+    };
+    Mat(3, 4, traits::Type<T>::value, (void*)src1_).copyTo(src1);
+    const static T src2_[] = {
+        1, 2, 0, std::numeric_limits<T>::infinity(),
+        1, 2, 0, std::numeric_limits<T>::infinity(),
+        1, 2, 0, std::numeric_limits<T>::infinity(),
+    };
+    Mat(3, 4, traits::Type<T>::value, (void*)src2_).copyTo(src2);
+}
+
+template <> inline void testDivideInitData<float>(Mat& src1, Mat& src2) { testDivideInitDataFloat<float>(src1, src2); }
+template <> inline void testDivideInitData<double>(Mat& src1, Mat& src2) { testDivideInitDataFloat<double>(src1, src2); }
+
+
+template <typename T> static inline
+void testDivideChecks(const Mat& dst)
+{
+    ASSERT_FALSE(dst.empty());
+    CV_StaticAssert(std::numeric_limits<T>::is_integer, "");
+    for (int y = 0; y < dst.rows; y++)
+    {
+        for (int x = 0; x < dst.cols; x++)
+        {
+            if ((x % 4) == 2)
+            {
+                EXPECT_EQ(0, dst.at<T>(y, x)) << "dst(" << y << ", " << x << ") = " << dst.at<T>(y, x);
+            }
+            else
+            {
+                EXPECT_TRUE(0 == cvIsNaN((double)dst.at<T>(y, x))) << "dst(" << y << ", " << x << ") = " << dst.at<T>(y, x);
+                EXPECT_TRUE(0 == cvIsInf((double)dst.at<T>(y, x))) << "dst(" << y << ", " << x << ") = " << dst.at<T>(y, x);
+            }
+        }
+    }
+}
+
+template <typename T> static inline
+void testDivideChecksFP(const Mat& dst)
+{
+    ASSERT_FALSE(dst.empty());
+    CV_StaticAssert(!std::numeric_limits<T>::is_integer, "");
+    for (int y = 0; y < dst.rows; y++)
+    {
+        for (int x = 0; x < dst.cols; x++)
+        {
+            if ((y % 3) == 0 && (x % 4) == 2)
+            {
+                EXPECT_TRUE(cvIsNaN(dst.at<T>(y, x))) << "dst(" << y << ", " << x << ") = " << dst.at<T>(y, x);
+            }
+            else if ((x % 4) == 2)
+            {
+                EXPECT_TRUE(cvIsInf(dst.at<T>(y, x))) << "dst(" << y << ", " << x << ") = " << dst.at<T>(y, x);
+            }
+            else
+            {
+                EXPECT_FALSE(cvIsNaN(dst.at<T>(y, x))) << "dst(" << y << ", " << x << ") = " << dst.at<T>(y, x);
+                EXPECT_FALSE(cvIsInf(dst.at<T>(y, x))) << "dst(" << y << ", " << x << ") = " << dst.at<T>(y, x);
+            }
+        }
+    }
+}
+
+template <> inline void testDivideChecks<float>(const Mat& dst) { testDivideChecksFP<float>(dst); }
+template <> inline void testDivideChecks<double>(const Mat& dst) { testDivideChecksFP<double>(dst); }
+
+
+template <typename T> static inline
+void testDivide(bool isUMat, double scale, bool largeSize, bool tailProcessing, bool roi)
+{
+    Mat src1, src2;
+    testDivideInitData<T>(src1, src2);
+    ASSERT_FALSE(src1.empty()); ASSERT_FALSE(src2.empty());
+
+    if (largeSize)
+    {
+        repeat(src1.clone(), 1, 8, src1);
+        repeat(src2.clone(), 1, 8, src2);
+    }
+    if (tailProcessing)
+    {
+        src1 = src1(Rect(0, 0, src1.cols - 1, src1.rows));
+        src2 = src2(Rect(0, 0, src2.cols - 1, src2.rows));
+    }
+    if (!roi && tailProcessing)
+    {
+        src1 = src1.clone();
+        src2 = src2.clone();
+    }
+
+    Mat dst;
+    if (!isUMat)
+    {
+        cv::divide(src1, src2, dst, scale);
+    }
+    else
+    {
+        UMat usrc1, usrc2, udst;
+        src1.copyTo(usrc1);
+        src2.copyTo(usrc2);
+        cv::divide(usrc1, usrc2, udst, scale);
+        udst.copyTo(dst);
+    }
+
+    testDivideChecks<T>(dst);
+
+    if (::testing::Test::HasFailure())
+    {
+        std::cout << "src1 = " << std::endl << src1 << std::endl;
+        std::cout << "src2 = " << std::endl << src2 << std::endl;
+        std::cout << "dst = " << std::endl << dst << std::endl;
+    }
+}
+
+typedef tuple<bool, double, bool, bool, bool> DivideRulesParam;
+typedef testing::TestWithParam<DivideRulesParam> Core_DivideRules;
+
+TEST_P(Core_DivideRules, type_32s)
+{
+    DivideRulesParam param = GetParam();
+    testDivide<int>(get<0>(param), get<1>(param), get<2>(param), get<3>(param), get<4>(param));
+}
+TEST_P(Core_DivideRules, type_16s)
+{
+    DivideRulesParam param = GetParam();
+    testDivide<short>(get<0>(param), get<1>(param), get<2>(param), get<3>(param), get<4>(param));
+}
+TEST_P(Core_DivideRules, type_32f)
+{
+    DivideRulesParam param = GetParam();
+    testDivide<float>(get<0>(param), get<1>(param), get<2>(param), get<3>(param), get<4>(param));
+}
+TEST_P(Core_DivideRules, type_64f)
+{
+    DivideRulesParam param = GetParam();
+    testDivide<double>(get<0>(param), get<1>(param), get<2>(param), get<3>(param), get<4>(param));
+}
+
+
+INSTANTIATE_TEST_CASE_P(/* */, Core_DivideRules, testing::Combine(
+/* isMat */     testing::Values(false),
+/* scale */     testing::Values(1.0, 5.0),
+/* largeSize */ testing::Bool(),
+/* tail */      testing::Bool(),
+/* roi */       testing::Bool()
+));
+
+INSTANTIATE_TEST_CASE_P(UMat, Core_DivideRules, testing::Combine(
+/* isMat */     testing::Values(true),
+/* scale */     testing::Values(1.0, 5.0),
+/* largeSize */ testing::Bool(),
+/* tail */      testing::Bool(),
+/* roi */       testing::Bool()
+));
+
+
+TEST(Core_MinMaxIdx, rows_overflow)
+{
+    const int N = 65536 + 1;
+    const int M = 1;
+    {
+        setRNGSeed(123);
+        Mat m(N, M, CV_32FC1);
+        randu(m, -100, 100);
+        double minVal = 0, maxVal = 0;
+        int minIdx[CV_MAX_DIM] = { 0 }, maxIdx[CV_MAX_DIM] = { 0 };
+        cv::minMaxIdx(m, &minVal, &maxVal, minIdx, maxIdx);
+
+        double minVal0 = 0, maxVal0 = 0;
+        int minIdx0[CV_MAX_DIM] = { 0 }, maxIdx0[CV_MAX_DIM] = { 0 };
+        cv::ipp::setUseIPP(false);
+        cv::minMaxIdx(m, &minVal0, &maxVal0, minIdx0, maxIdx0);
+        cv::ipp::setUseIPP(true);
+
+        EXPECT_FALSE(fabs(minVal0 - minVal) > 1e-6 || fabs(maxVal0 - maxVal) > 1e-6) << "NxM=" << N << "x" << M <<
+            "    min=" << minVal0 << " vs " <<  minVal <<
+            "    max=" << maxVal0 << " vs " << maxVal;
+    }
+}
+
 
 }} // namespace

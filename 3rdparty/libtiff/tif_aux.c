@@ -1,5 +1,3 @@
-/* $Id: tif_aux.c,v 1.31 2017-11-17 20:21:00 erouault Exp $ */
-
 /*
  * Copyright (c) 1991-1997 Sam Leffler
  * Copyright (c) 1991-1997 Silicon Graphics, Inc.
@@ -32,6 +30,7 @@
 #include "tiffiop.h"
 #include "tif_predict.h"
 #include <math.h>
+#include <float.h>
 
 uint32
 _TIFFMultiply32(TIFF* tif, uint32 first, uint32 second, const char* where)
@@ -357,6 +356,15 @@ _TIFFUInt64ToDouble(uint64 ui64)
 		df += 18446744073709551616.0; /* adding 2**64 */
 		return (double)df;
 	}
+}
+
+float _TIFFClampDoubleToFloat( double val )
+{
+    if( val > FLT_MAX )
+        return FLT_MAX;
+    if( val < -FLT_MAX )
+        return -FLT_MAX;
+    return (float)val;
 }
 
 int _TIFFSeekOK(TIFF* tif, toff_t off)

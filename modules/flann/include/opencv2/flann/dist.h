@@ -31,6 +31,8 @@
 #ifndef OPENCV_FLANN_DIST_H_
 #define OPENCV_FLANN_DIST_H_
 
+//! @cond IGNORED
+
 #include <cmath>
 #include <cstdlib>
 #include <string.h>
@@ -43,11 +45,11 @@ typedef unsigned __int64 uint64_t;
 
 #include "defines.h"
 
-#if defined _WIN32 && defined(_M_ARM)
+#if defined _WIN32 && (defined(_M_ARM) || defined(_M_ARM64))
 # include <Intrin.h>
 #endif
 
-#ifdef __ARM_NEON__
+#if defined(__ARM_NEON__) && !defined(__CUDACC__)
 # include "arm_neon.h"
 #endif
 
@@ -114,7 +116,7 @@ struct L2_Simple
         ResultType result = ResultType();
         ResultType diff;
         for(size_t i = 0; i < size; ++i ) {
-            diff = *a++ - *b++;
+            diff = (ResultType)(*a++ - *b++);
             result += diff*diff;
         }
         return result;
@@ -425,7 +427,7 @@ struct Hamming
     ResultType operator()(Iterator1 a, Iterator2 b, size_t size, ResultType /*worst_dist*/ = -1) const
     {
         ResultType result = 0;
-#ifdef __ARM_NEON__
+#if defined(__ARM_NEON__) && !defined(__CUDACC__)
         {
             uint32x4_t bits = vmovq_n_u32(0);
             for (size_t i = 0; i < size; i += 16) {
@@ -441,7 +443,7 @@ struct Hamming
             result = vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),0);
             result += vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),2);
         }
-#elif __GNUC__
+#elif defined(__GNUC__)
         {
             //for portability just use unsigned long -- and use the __builtin_popcountll (see docs for __builtin_popcountll)
             typedef unsigned long long pop_t;
@@ -462,10 +464,9 @@ struct Hamming
             }
         }
 #else // NO NEON and NOT GNUC
-        typedef unsigned long long pop_t;
         HammingLUT lut;
         result = lut(reinterpret_cast<const unsigned char*> (a),
-                     reinterpret_cast<const unsigned char*> (b), size * sizeof(pop_t));
+                     reinterpret_cast<const unsigned char*> (b), size);
 #endif
         return result;
     }
@@ -707,7 +708,7 @@ struct KL_Divergence
         Iterator1 last = a + size;
 
         while (a < last) {
-            if (* b != 0) {
+            if ( *a != 0 && *b != 0 ) {
                 ResultType ratio = (ResultType)(*a / *b);
                 if (ratio>0) {
                     result += *a * log(ratio);
@@ -730,7 +731,7 @@ struct KL_Divergence
     inline ResultType accum_dist(const U& a, const V& b, int) const
     {
         ResultType result = ResultType();
-        if( *b != 0 ) {
+        if( a != 0 && b != 0 ) {
             ResultType ratio = (ResultType)(a / b);
             if (ratio>0) {
                 result = a * log(ratio);
@@ -901,5 +902,7 @@ typename Distance::ResultType ensureSimpleDistance( typename Distance::ResultTyp
 }
 
 }
+
+//! @endcond
 
 #endif //OPENCV_FLANN_DIST_H_

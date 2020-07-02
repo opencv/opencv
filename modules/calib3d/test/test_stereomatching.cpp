@@ -809,6 +809,55 @@ protected:
     }
 };
 
+TEST(Calib3d_StereoBM, regression) { CV_StereoBMTest test; test.safe_run(); }
+
+/* < preFilter, < preFilterCap, SADWindowSize > >*/
+typedef tuple < int, tuple < int, int > > BufferBM_Params_t;
+
+typedef testing::TestWithParam< BufferBM_Params_t > Calib3d_StereoBM_BufferBM;
+
+const int preFilters[] =
+{
+    StereoBM::PREFILTER_NORMALIZED_RESPONSE,
+    StereoBM::PREFILTER_XSOBEL
+};
+
+const tuple < int, int > useShortsConditions[] =
+{
+    make_tuple(30, 19),
+    make_tuple(32, 23)
+};
+
+TEST_P(Calib3d_StereoBM_BufferBM, memAllocsTest)
+{
+    const int preFilter     = get<0>(GetParam());
+    const int preFilterCap  = get<0>(get<1>(GetParam()));
+    const int SADWindowSize = get<1>(get<1>(GetParam()));
+
+    String path = cvtest::TS::ptr()->get_data_path() + "cv/stereomatching/datasets/teddy/";
+    Mat leftImg = imread(path + "im2.png", 0);
+    ASSERT_FALSE(leftImg.empty());
+    Mat rightImg = imread(path + "im6.png", 0);
+    ASSERT_FALSE(rightImg.empty());
+    Mat leftDisp;
+    {
+        Ptr<StereoBM> bm = StereoBM::create(16,9);
+        bm->setPreFilterType(preFilter);
+        bm->setPreFilterCap(preFilterCap);
+        bm->setBlockSize(SADWindowSize);
+        bm->compute( leftImg, rightImg, leftDisp);
+
+        ASSERT_FALSE(leftDisp.empty());
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Calib3d_StereoBM_BufferBM,
+        testing::Combine(
+            testing::ValuesIn(preFilters),
+            testing::ValuesIn(useShortsConditions)
+            )
+        );
+
 //----------------------------------- StereoSGBM test -----------------------------------------------------
 
 class CV_StereoSGBMTest : public CV_StereoMatchingTest
@@ -869,8 +918,6 @@ protected:
     }
 };
 
-
-TEST(Calib3d_StereoBM, regression) { CV_StereoBMTest test; test.safe_run(); }
 TEST(Calib3d_StereoSGBM, regression) { CV_StereoSGBMTest test; test.safe_run(); }
 
 TEST(Calib3d_StereoSGBM_HH4, regression)

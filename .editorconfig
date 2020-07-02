@@ -1,0 +1,31 @@
+# https://editorconfig.org/
+
+root = true
+
+[*]
+end_of_line = lf
+charset = utf-8
+trim_trailing_whitespace = true
+insert_final_newline = true
+indent_style = space
+indent_size = 4
+
+[{CMakeLists.*,*.cmake}]
+indent_style = space
+indent_size = 2
+
+[Makefile]
+indent_style = tab
+
+[*.{bat,cmd,cmd.*}]
+end_of_line = crlf
+indent_style = space
+indent_size = 2
+
+[*.{ps1,ps1.*}]
+end_of_line = crlf
+indent_style = space
+indent_size = 4
+
+[*.{md,markdown}]
+indent_size = 2

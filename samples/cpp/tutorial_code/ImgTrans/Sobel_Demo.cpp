@@ -19,10 +19,10 @@ using namespace std;
 int main( int argc, char** argv )
 {
   cv::CommandLineParser parser(argc, argv,
-                               "{@input   |../data/lena.jpg|input image}"
-                               "{ksize   k|1|ksize (hit 'K' to increase its value)}"
-                               "{scale   s|1|scale (hit 'S' to increase its value)}"
-                               "{delta   d|0|delta (hit 'D' to increase its value)}"
+                               "{@input   |lena.jpg|input image}"
+                               "{ksize   k|1|ksize (hit 'K' to increase its value at run time)}"
+                               "{scale   s|1|scale (hit 'S' to increase its value at run time)}"
+                               "{delta   d|0|delta (hit 'D' to increase its value at run time)}"
                                "{help    h|false|show help message}");
 
   cout << "The sample uses Sobel or Scharr OpenCV functions for edge detection\n\n";
@@ -43,13 +43,13 @@ int main( int argc, char** argv )
   //![load]
   String imageName = parser.get<String>("@input");
   // As usual we load our source image (src)
-  image = imread( imageName, IMREAD_COLOR ); // Load an image
+  image = imread( samples::findFile( imageName ), IMREAD_COLOR ); // Load an image
 
   // Check if image is loaded fine
   if( image.empty() )
   {
     printf("Error opening image: %s\n", imageName.c_str());
-    return 1;
+    return EXIT_FAILURE;
   }
   //![load]
 
@@ -95,7 +95,7 @@ int main( int argc, char** argv )
 
     if(key == 27)
     {
-      return 0;
+      return EXIT_SUCCESS;
     }
 
     if (key == 'k' || key == 'K')
@@ -120,5 +120,5 @@ int main( int argc, char** argv )
       delta =  0;
     }
   }
-  return 0;
+  return EXIT_SUCCESS;
 }

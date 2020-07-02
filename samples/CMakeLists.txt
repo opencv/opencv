@@ -1,38 +1,11 @@
-# Utility function: adds sample executable target with name "example_<group>_<file_name>"
-# Usage:
-#   ocv_define_sample(<output target> <relative filename> <group>)
-function(ocv_define_sample out_target source sub)
-  get_filename_component(name "${source}" NAME_WE)
-  set(the_target "example_${sub}_${name}")
-  add_executable(${the_target} "${source}")
-  set_target_properties(${the_target} PROPERTIES PROJECT_LABEL "(sample) ${name}")
-  if(ENABLE_SOLUTION_FOLDERS)
-    set_target_properties(${the_target} PROPERTIES FOLDER "samples/${sub}")
-  endif()
-  if(WIN32 AND MSVC AND NOT BUILD_SHARED_LIBS)
-    set_target_properties(${the_target} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:atlthunk.lib /NODEFAULTLIB:atlsd.lib /DEBUG")
-  endif()
-  if(WIN32)
-    install(TARGETS ${the_target} RUNTIME DESTINATION "samples/${sub}" COMPONENT samples)
-  endif()
-  # Add single target to build all samples in the group: 'make opencv_samples_cpp'
-  set(parent_target opencv_samples_${sub})
-  if(NOT TARGET ${parent_target})
-    add_custom_target(${parent_target})
-    if(TARGET opencv_samples)
-      add_dependencies(opencv_samples ${parent_target})
-    endif()
-  endif()
-  add_dependencies(${parent_target} ${the_target})
-  set(${out_target} ${the_target} PARENT_SCOPE)
-endfunction()
-
 if(NOT CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_LIST_DIR)
 #===================================================================================================
 #
 # Build as part of OpenCV
 #
 #===================================================================================================
+
+include("${CMAKE_CURRENT_LIST_DIR}/samples_utils.cmake")
 
 function(ocv_install_example_src relpath)
   if(INSTALL_C_EXAMPLES)
@@ -42,6 +15,10 @@ function(ocv_install_example_src relpath)
             COMPONENT samples)
   endif()
 endfunction()
+
+if((TARGET Threads::Threads OR HAVE_PTHREAD OR MSVC OR APPLE) AND NOT OPENCV_EXAMPLES_DISABLE_THREADS)
+  add_definitions(-DHAVE_THREADS=1)
+endif()
 
 add_subdirectory(cpp)
 add_subdirectory(java/tutorial_code)
@@ -61,18 +38,16 @@ endif()
 if(UNIX AND NOT ANDROID AND (HAVE_VA OR HAVE_VA_INTEL))
   add_subdirectory(va_intel)
 endif()
-if(ANDROID AND BUILD_ANDROID_EXAMPLES)
+if(ANDROID AND (BUILD_ANDROID_EXAMPLES OR INSTALL_ANDROID_EXAMPLES))
   add_subdirectory(android)
 endif()
 if(INSTALL_PYTHON_EXAMPLES)
   add_subdirectory(python)
 endif()
 
-ocv_install_example_src("." CMakeLists.txt)
+ocv_install_example_src("." CMakeLists.txt samples_utils.cmake)
 if(INSTALL_C_EXAMPLES)
-  install(DIRECTORY data
-          DESTINATION "${OPENCV_SAMPLES_SRC_INSTALL_PATH}/data"
-        COMPONENT samples_data)
+  install(DIRECTORY data DESTINATION "${OPENCV_SAMPLES_SRC_INSTALL_PATH}" COMPONENT samples_data)
 endif()
 
 else()
@@ -82,10 +57,6 @@ else()
 #
 #===================================================================================================
 cmake_minimum_required(VERSION 3.1)
-
-# Enable C++11
-set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 
 project(samples C CXX)
 option(BUILD_EXAMPLES "Build samples" ON)
@@ -99,6 +70,8 @@ option(BUILD_EXAMPLES "Build samples" ON)
 #     │   ├── CMakeLists.txt  <-- this file
 #     │   ├── cpp/
 find_package(OpenCV REQUIRED PATHS "..")
+
+include("${CMAKE_CURRENT_LIST_DIR}/samples_utils.cmake")
 
 function(ocv_install_example_src)
   # not used in this branch
@@ -130,6 +103,17 @@ if(MSVC)
 endif()
 
 add_definitions(-DDISABLE_OPENCV_24_COMPATIBILITY=1)  # Avoid C-like legacy API
+
+if(OPENCV_EXAMPLES_DISABLE_THREADS)
+  # nothing
+elseif(MSVC OR APPLE)
+  set(HAVE_THREADS 1)
+else()
+  find_package(Threads)
+endif()
+if((TARGET Threads::Threads OR HAVE_THREADS) AND NOT OPENCV_EXAMPLES_DISABLE_THREADS)
+  add_definitions(-DHAVE_THREADS=1)
+endif()
 
 add_subdirectory(cpp)
 if(WIN32)

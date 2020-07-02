@@ -442,7 +442,7 @@ OCL_TEST_P(Erode, Mat)
     for (int j = 0; j < test_loop_times; j++)
     {
         random_roi();
-        Mat kernel = ksize==0 ? Mat() : randomMat(kernelSize, CV_8UC1, 0, 3);
+        Mat kernel = ksize==0 ? Mat() : randomMat(kernelSize, CV_8UC1, 0, 2);
 
         OCL_OFF(cv::erode(src_roi, dst_roi, kernel, Point(-1, -1), iterations) );
         OCL_ON(cv::erode(usrc_roi, udst_roi, kernel, Point(-1, -1), iterations) );
@@ -464,7 +464,7 @@ OCL_TEST_P(Dilate, Mat)
     for (int j = 0; j < test_loop_times; j++)
     {
         random_roi();
-        Mat kernel = ksize==0 ? Mat() : randomMat(kernelSize, CV_8UC1, 0, 3);
+        Mat kernel = ksize==0 ? Mat() : randomMat(kernelSize, CV_8UC1, 0, 2);
 
         OCL_OFF(cv::dilate(src_roi, dst_roi, kernel, Point(-1, -1), iterations) );
         OCL_ON(cv::dilate(usrc_roi, udst_roi, kernel, Point(-1, -1), iterations) );
@@ -728,19 +728,19 @@ OCL_INSTANTIATE_TEST_CASE_P(Filter, GaussianBlur_multicols, Combine(
 
 OCL_INSTANTIATE_TEST_CASE_P(Filter, Erode, Combine(
                             Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4, CV_64FC1, CV_64FC4),
-                            Values(0, 3, 5, 7), // kernel size, 0 means kernel = Mat()
+                            Values(0, 5, 7, 9), // kernel size, 0 means kernel = Mat()
                             Values(Size(0, 0)), //not used
                             Values((BorderType)BORDER_CONSTANT),
-                            Values(1.0, 2.0, 3.0),
+                            Values(1.0, 2.0, 3.0, 4.0),
                             Bool(),
                             Values(1))); // not used
 
 OCL_INSTANTIATE_TEST_CASE_P(Filter, Dilate, Combine(
                             Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4, CV_64FC1, CV_64FC4),
-                            Values(0, 3, 5, 7), // kernel size, 0 means kernel = Mat()
+                            Values(0, 3, 5, 7, 9), // kernel size, 0 means kernel = Mat()
                             Values(Size(0, 0)), // not used
                             Values((BorderType)BORDER_CONSTANT),
-                            Values(1.0, 2.0, 3.0),
+                            Values(1.0, 2.0, 3.0, 4.0),
                             Bool(),
                             Values(1))); // not used
 

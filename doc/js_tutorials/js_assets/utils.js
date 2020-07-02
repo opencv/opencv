@@ -8,8 +8,19 @@ function Utils(errorOutputId) { // eslint-disable-line no-unused-vars
         script.setAttribute('async', '');
         script.setAttribute('type', 'text/javascript');
         script.addEventListener('load', () => {
-            console.log(cv.getBuildInformation());
-            onloadCallback();
+            if (cv.getBuildInformation)
+            {
+                console.log(cv.getBuildInformation());
+                onloadCallback();
+            }
+            else
+            {
+                // WASM
+                cv['onRuntimeInitialized']=()=>{
+                    console.log(cv.getBuildInformation());
+                    onloadCallback();
+                }
+            }
         });
         script.addEventListener('error', () => {
             self.printError('Failed to load ' + OPENCV_URL);

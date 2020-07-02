@@ -40,6 +40,9 @@ if __name__ == "__main__":
     parser.add_argument("--valgrind_supp", metavar="FILE", action='append', help="Path to valgrind suppression file (example: --valgrind_supp opencv/platforms/scripts/valgrind.supp)")
     parser.add_argument("--valgrind_opt", metavar="OPT", action="append", default=[], help="Add command line option to valgrind (example: --valgrind_opt=--leak-check=full)")
 
+    # QEMU
+    parser.add_argument("--qemu", default="", help="Specify qemu binary and base parameters")
+
     # Android
     parser.add_argument("--android", action="store_true", default=False, help="Android: force all tests to run on device")
     parser.add_argument("--android_sdk", metavar="PATH", help="Android: path to SDK to use adb and aapt tools")
@@ -47,7 +50,7 @@ if __name__ == "__main__":
     parser.add_argument("--android_env", action='append', help="Android: add environment variable (NAME=VALUE)")
     parser.add_argument("--android_propagate_opencv_env", action="store_true", default=False, help="Android: propagate OPENCV* environment variables")
     parser.add_argument("--serial", metavar="serial number", default="", help="Android: directs command to the USB device or emulator with the given serial number")
-    parser.add_argument("--package", metavar="package", default="", help="Android: run jUnit tests for specified package")
+    parser.add_argument("--package", metavar="package", default="", help="Java: run JUnit tests for specified module or Android package")
 
     parser.add_argument("--trace", action="store_true", default=False, help="Trace: enable OpenCV tracing")
     parser.add_argument("--trace_dump", metavar="trace_dump", default=-1, help="Trace: dump highlight calls (specify max entries count, 0 - dump all)")

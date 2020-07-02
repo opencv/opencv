@@ -19,7 +19,7 @@ VideoCapture_LibRealsense::VideoCapture_LibRealsense(int) : mAlign(RS2_STREAM_CO
         config.enable_stream(RS2_STREAM_DEPTH, 640, 480, RS2_FORMAT_Z16);
         config.enable_stream(RS2_STREAM_COLOR, 640, 480, RS2_FORMAT_BGR8);
         config.enable_stream(RS2_STREAM_INFRARED, 640, 480, RS2_FORMAT_Y8);
-        mPipe.start();
+        mPipe.start(config);
     }
     catch (const rs2::error&)
     {
@@ -27,15 +27,147 @@ VideoCapture_LibRealsense::VideoCapture_LibRealsense(int) : mAlign(RS2_STREAM_CO
 }
 VideoCapture_LibRealsense::~VideoCapture_LibRealsense(){}
 
-double VideoCapture_LibRealsense::getProperty(int prop) const
+double VideoCapture_LibRealsense::getProperty(int propIdx) const
 {
-    double propValue = 0;
+    double propValue = 0.0;
 
-    if (prop == CAP_PROP_INTELPERC_DEPTH_SATURATION_VALUE)
-        return mPipe.get_active_profile().get_device().first<rs2::depth_sensor>().get_depth_scale();
+    const int purePropIdx = propIdx & ~CAP_INTELPERC_GENERATORS_MASK;
+    if((propIdx & CAP_INTELPERC_GENERATORS_MASK) == CAP_INTELPERC_IMAGE_GENERATOR)
+    {
+        propValue = getImageGeneratorProperty(purePropIdx);
+    }
+    else if((propIdx & CAP_INTELPERC_GENERATORS_MASK) == CAP_INTELPERC_DEPTH_GENERATOR)
+    {
+        propValue = getDepthGeneratorProperty(purePropIdx);
+    }
+    else if((propIdx & CAP_INTELPERC_GENERATORS_MASK) == CAP_INTELPERC_IR_GENERATOR)
+    {
+        propValue = getIrGeneratorProperty(purePropIdx);
+    }
+    else
+    {
+        propValue = getCommonProperty(purePropIdx);
+    }
 
     return propValue;
 }
+
+double VideoCapture_LibRealsense::getImageGeneratorProperty(int propIdx) const
+{
+    double propValue = 0.0;
+    const rs2::video_stream_profile profile = mPipe.get_active_profile().get_stream(RS2_STREAM_COLOR).as<rs2::video_stream_profile>();
+    if(!profile)
+    {
+        return propValue;
+    }
+
+    switch(propIdx)
+    {
+    case CAP_PROP_FRAME_WIDTH:
+        propValue = static_cast<double>(profile.width());
+        break;
+    case CAP_PROP_FRAME_HEIGHT:
+        propValue = static_cast<double>(profile.height());
+        break;
+    case CAP_PROP_FPS:
+        propValue = static_cast<double>(profile.fps());
+        break;
+    }
+
+    return propValue;
+}
+
+double VideoCapture_LibRealsense::getDepthGeneratorProperty(int propIdx) const
+{
+    double propValue = 0.0;
+    const rs2::video_stream_profile profile = mPipe.get_active_profile().get_stream(RS2_STREAM_DEPTH).as<rs2::video_stream_profile>();
+    const rs2::depth_sensor sensor = mPipe.get_active_profile().get_device().first<rs2::depth_sensor>();
+    if(!profile || !sensor)
+    {
+        return propValue;
+    }
+
+    switch(propIdx)
+    {
+    case CAP_PROP_FRAME_WIDTH:
+        propValue = static_cast<double>(profile.width());
+        break;
+    case CAP_PROP_FRAME_HEIGHT:
+        propValue = static_cast<double>(profile.height());
+        break;
+    case CAP_PROP_FPS:
+        propValue = static_cast<double>(profile.fps());
+        break;
+    case CAP_PROP_INTELPERC_DEPTH_SATURATION_VALUE:
+        propValue = static_cast<double>(sensor.get_depth_scale());
+        break;
+    case CAP_PROP_INTELPERC_DEPTH_FOCAL_LENGTH_HORZ:
+        propValue = static_cast<double>(profile.get_intrinsics().fx);
+        break;
+    case CAP_PROP_INTELPERC_DEPTH_FOCAL_LENGTH_VERT:
+        propValue = static_cast<double>(profile.get_intrinsics().fy);
+        break;
+    }
+
+    return propValue;
+}
+
+double VideoCapture_LibRealsense::getIrGeneratorProperty(int propIdx) const
+{
+    double propValue = 0.0;
+    const rs2::video_stream_profile profile = mPipe.get_active_profile().get_stream(RS2_STREAM_INFRARED).as<rs2::video_stream_profile>();
+    if(!profile)
+    {
+        return propValue;
+    }
+
+    switch(propIdx)
+    {
+    case CAP_PROP_FRAME_WIDTH:
+        propValue = static_cast<double>(profile.width());
+        break;
+    case CAP_PROP_FRAME_HEIGHT:
+        propValue = static_cast<double>(profile.height());
+        break;
+    case CAP_PROP_FPS:
+        propValue = static_cast<double>(profile.fps());
+        break;
+    }
+
+    return propValue;
+}
+
+double VideoCapture_LibRealsense::getCommonProperty(int propIdx) const
+{
+    double propValue = 0.0;
+    const rs2::video_stream_profile profile = mPipe.get_active_profile().get_stream(RS2_STREAM_DEPTH).as<rs2::video_stream_profile>();
+    const rs2::depth_sensor sensor = mPipe.get_active_profile().get_device().first<rs2::depth_sensor>();
+    if(!profile || !sensor)
+    {
+        return propValue;
+    }
+
+    switch(propIdx)
+    {
+    case CAP_PROP_FRAME_WIDTH:
+    case CAP_PROP_FRAME_HEIGHT:
+    case CAP_PROP_FPS:
+        propValue = getDepthGeneratorProperty(propIdx);
+        break;
+    case CAP_PROP_INTELPERC_DEPTH_SATURATION_VALUE:
+        propValue = static_cast<double>(sensor.get_depth_scale());
+        break;
+    case CAP_PROP_INTELPERC_DEPTH_FOCAL_LENGTH_HORZ:
+        propValue = static_cast<double>(profile.get_intrinsics().fx);
+        break;
+    case CAP_PROP_INTELPERC_DEPTH_FOCAL_LENGTH_VERT:
+        propValue = static_cast<double>(profile.get_intrinsics().fy);
+        break;
+    }
+
+    return propValue;
+}
+
 bool VideoCapture_LibRealsense::setProperty(int, double)
 {
     bool isSet = false;
@@ -105,6 +237,12 @@ bool VideoCapture_LibRealsense::isOpened() const
 {
     return bool(std::shared_ptr<rs2_pipeline>(mPipe));
 }
+
+Ptr<IVideoCapture> create_RealSense_capture(int index)
+{
+    return makePtr<VideoCapture_LibRealsense>(index);
+}
+
 
 }
 

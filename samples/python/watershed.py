@@ -76,10 +76,10 @@ class App:
 
 
 if __name__ == '__main__':
+    print(__doc__)
     import sys
     try:
         fn = sys.argv[1]
     except:
-        fn = '../data/fruits.jpg'
-    print(__doc__)
-    App(fn).run()
+        fn = 'fruits.jpg'
+    App(cv.samples.findFile(fn)).run()

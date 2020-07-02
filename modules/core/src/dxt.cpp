@@ -1752,7 +1752,7 @@ private:
 
 static bool ippi_DFT_C_32F(const uchar * src, size_t src_step, uchar * dst, size_t dst_step, int width, int height, bool inv, int norm_flag)
 {
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
     IppStatus status;
     Ipp8u* pBuffer = 0;
@@ -1808,7 +1808,7 @@ static bool ippi_DFT_C_32F(const uchar * src, size_t src_step, uchar * dst, size
 
 static bool ippi_DFT_R_32F(const uchar * src, size_t src_step, uchar * dst, size_t dst_step, int width, int height, bool inv, int norm_flag)
 {
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
     IppStatus status;
     Ipp8u* pBuffer = 0;
@@ -3314,7 +3314,7 @@ Ptr<DFT2D> DFT2D::create(int width, int height, int depth,
 
 void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
 #ifdef HAVE_CLAMDFFT
     CV_OCL_RUN(ocl::haveAmdFft() && ocl::Device::getDefault().type() != ocl::Device::TYPE_CPU &&
@@ -3364,7 +3364,7 @@ void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
 
 void cv::idft( InputArray src, OutputArray dst, int flags, int nonzero_rows )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     dft( src, dst, flags | DFT_INVERSE, nonzero_rows );
 }
@@ -3529,7 +3529,7 @@ void mulSpectrums_Impl(const T* dataA, const T* dataB, T* dataC, size_t stepA, s
 void cv::mulSpectrums( InputArray _srcA, InputArray _srcB,
                        OutputArray _dst, int flags, bool conjB )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_OCL_RUN(_dst.isUMat() && _srcA.dims() <= 2 && _srcB.dims() <= 2,
             ocl_mulSpectrums(_srcA, _srcB, _dst, flags, conjB))
@@ -3941,7 +3941,7 @@ static bool DctIPPLoop(const uchar * src, size_t src_step, uchar * dst, size_t d
 
 static bool ippi_DCT_32f(const uchar * src, size_t src_step, uchar * dst, size_t dst_step, int width, int height, bool inv, bool row)
 {
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
     if(row)
         return DctIPPLoop(src, src_step, dst, dst_step, width, height, inv);
@@ -4236,7 +4236,7 @@ Ptr<DCT2D> DCT2D::create(int width, int height, int depth, int flags)
 
 void cv::dct( InputArray _src0, OutputArray _dst, int flags )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat src0 = _src0.getMat(), src = src0;
     int type = src.type(), depth = src.depth();
@@ -4260,7 +4260,7 @@ void cv::dct( InputArray _src0, OutputArray _dst, int flags )
 
 void cv::idct( InputArray src, OutputArray dst, int flags )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     dct( src, dst, flags | DCT_INVERSE );
 }

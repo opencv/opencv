@@ -1,5 +1,3 @@
-/* $Header: /cvs/maptools/cvsroot/libtiff/libtiff/tif_extension.c,v 1.8 2015-12-06 11:13:43 erouault Exp $ */
-
 /*
  * Copyright (c) 1988-1997 Sam Leffler
  * Copyright (c) 1991-1997 Silicon Graphics, Inc.

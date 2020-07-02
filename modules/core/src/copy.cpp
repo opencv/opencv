@@ -90,20 +90,21 @@ copyMask_<uchar>(const uchar* _src, size_t sstep, const uchar* mask, size_t mste
         const uchar* src = (const uchar*)_src;
         uchar* dst = (uchar*)_dst;
         int x = 0;
-        #if CV_SIMD128
+        #if CV_SIMD
         {
-            v_uint8x16 v_zero = v_setzero_u8();
+            v_uint8 v_zero = vx_setzero_u8();
 
-            for( ; x <= size.width - 16; x += 16 )
+            for( ; x <= size.width - v_uint8::nlanes; x += v_uint8::nlanes )
             {
-                v_uint8x16 v_src   = v_load(src  + x),
-                           v_dst   = v_load(dst  + x),
-                           v_nmask = v_load(mask + x) == v_zero;
+                v_uint8 v_src   = vx_load(src  + x),
+                        v_dst   = vx_load(dst  + x),
+                        v_nmask = vx_load(mask + x) == v_zero;
 
                 v_dst = v_select(v_nmask, v_dst, v_src);
                 v_store(dst + x, v_dst);
             }
         }
+        vx_cleanup();
         #endif
         for( ; x < size.width; x++ )
             if( mask[x] )
@@ -121,25 +122,26 @@ copyMask_<ushort>(const uchar* _src, size_t sstep, const uchar* mask, size_t mst
         const ushort* src = (const ushort*)_src;
         ushort* dst = (ushort*)_dst;
         int x = 0;
-        #if CV_SIMD128
+        #if CV_SIMD
         {
-            v_uint8x16 v_zero = v_setzero_u8();
+            v_uint8 v_zero = vx_setzero_u8();
 
-            for( ; x <= size.width - 16; x += 16 )
+            for( ; x <= size.width - v_uint8::nlanes; x += v_uint8::nlanes )
             {
-                v_uint16x8 v_src1 = v_load(src + x), v_src2 = v_load(src + x + 8),
-                           v_dst1 = v_load(dst + x), v_dst2 = v_load(dst + x + 8);
+                v_uint16 v_src1 = vx_load(src + x), v_src2 = vx_load(src + x + v_uint16::nlanes),
+                         v_dst1 = vx_load(dst + x), v_dst2 = vx_load(dst + x + v_uint16::nlanes);
 
-                v_uint8x16 v_nmask1, v_nmask2;
-                v_uint8x16 v_nmask = v_load(mask + x) == v_zero;
+                v_uint8 v_nmask1, v_nmask2;
+                v_uint8 v_nmask = vx_load(mask + x) == v_zero;
                 v_zip(v_nmask, v_nmask, v_nmask1, v_nmask2);
 
                 v_dst1 = v_select(v_reinterpret_as_u16(v_nmask1), v_dst1, v_src1);
                 v_dst2 = v_select(v_reinterpret_as_u16(v_nmask2), v_dst2, v_src2);
                 v_store(dst + x, v_dst1);
-                v_store(dst + x + 8, v_dst2);
+                v_store(dst + x + v_uint16::nlanes, v_dst2);
             }
         }
+        vx_cleanup();
         #endif
         for( ; x < size.width; x++ )
             if( mask[x] )
@@ -236,7 +238,15 @@ BinaryFunc getCopyMaskFunc(size_t esz)
 /* dst = src */
 void Mat::copyTo( OutputArray _dst ) const
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
+
+#ifdef HAVE_CUDA
+    if (_dst.isGpuMat())
+    {
+        _dst.getGpuMat().upload(*this);
+        return;
+    }
+#endif
 
     int dtype = _dst.type();
     if( _dst.fixedType() && dtype != type() )
@@ -258,7 +268,7 @@ void Mat::copyTo( OutputArray _dst ) const
         UMat dst = _dst.getUMat();
         CV_Assert(dst.u != NULL);
         size_t i, sz[CV_MAX_DIM] = {0}, dstofs[CV_MAX_DIM], esz = elemSize();
-        CV_Assert(dims >= 0 && dims < CV_MAX_DIM);
+        CV_Assert(dims > 0 && dims < CV_MAX_DIM);
         for( i = 0; i < (size_t)dims; i++ )
             sz[i] = size.p[i];
         sz[dims-1] *= esz;
@@ -277,23 +287,19 @@ void Mat::copyTo( OutputArray _dst ) const
 
         if( rows > 0 && cols > 0 )
         {
-            // For some cases (with vector) dst.size != src.size, so force to column-based form
-            // It prevents memory corruption in case of column-based src
-            if (_dst.isVector())
-                dst = dst.reshape(0, (int)dst.total());
+            Mat src = *this;
+            Size sz = getContinuousSize2D(src, dst, (int)elemSize());
+            CV_CheckGE(sz.width, 0, "");
 
-            const uchar* sptr = data;
+            const uchar* sptr = src.data;
             uchar* dptr = dst.data;
 
 #if IPP_VERSION_X100 >= 201700
-            CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippiCopy_8u_C1R_L, sptr, (int)step, dptr, (int)dst.step, ippiSizeL((int)(cols*elemSize()), rows)) >= 0)
+            CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippiCopy_8u_C1R_L, sptr, (int)src.step, dptr, (int)dst.step, ippiSizeL(sz.width, sz.height)) >= 0)
 #endif
 
-            Size sz = getContinuousSize(*this, dst);
-            size_t len = sz.width*elemSize();
-
-            for( ; sz.height--; sptr += step, dptr += dst.step )
-                memcpy( dptr, sptr, len );
+            for (; sz.height--; sptr += src.step, dptr += dst.step)
+                memcpy(dptr, sptr, sz.width);
         }
         return;
     }
@@ -306,7 +312,7 @@ void Mat::copyTo( OutputArray _dst ) const
     if( total() != 0 )
     {
         const Mat* arrays[] = { this, &dst };
-        uchar* ptrs[2];
+        uchar* ptrs[2] = {};
         NAryMatIterator it(arrays, ptrs, 2);
         size_t sz = it.size*elemSize();
 
@@ -318,8 +324,8 @@ void Mat::copyTo( OutputArray _dst ) const
 #ifdef HAVE_IPP
 static bool ipp_copyTo(const Mat &src, Mat &dst, const Mat &mask)
 {
-#ifdef HAVE_IPP_IW
-    CV_INSTRUMENT_REGION_IPP()
+#ifdef HAVE_IPP_IW_LL
+    CV_INSTRUMENT_REGION_IPP();
 
     if(mask.channels() > 1 || mask.depth() != CV_8U)
         return false;
@@ -353,7 +359,7 @@ static bool ipp_copyTo(const Mat &src, Mat &dst, const Mat &mask)
 
 void Mat::copyTo( OutputArray _dst, InputArray _mask ) const
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat mask = _mask.getMat();
     if( !mask.data )
@@ -393,13 +399,14 @@ void Mat::copyTo( OutputArray _dst, InputArray _mask ) const
 
     if( dims <= 2 )
     {
-        Size sz = getContinuousSize(*this, dst, mask, mcn);
-        copymask(data, step, mask.data, mask.step, dst.data, dst.step, sz, &esz);
+        Mat src = *this;
+        Size sz = getContinuousSize2D(src, dst, mask, mcn);
+        copymask(src.data, src.step, mask.data, mask.step, dst.data, dst.step, sz, &esz);
         return;
     }
 
     const Mat* arrays[] = { this, &dst, &mask, 0 };
-    uchar* ptrs[3];
+    uchar* ptrs[3] = {};
     NAryMatIterator it(arrays, ptrs);
     Size sz((int)(it.size*mcn), 1);
 
@@ -409,7 +416,10 @@ void Mat::copyTo( OutputArray _dst, InputArray _mask ) const
 
 Mat& Mat::operator = (const Scalar& s)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
+
+    if (this->empty())
+        return *this;
 
     const Mat* arrays[] = { this };
     uchar* dptr;
@@ -450,8 +460,8 @@ Mat& Mat::operator = (const Scalar& s)
 #ifdef HAVE_IPP
 static bool ipp_Mat_setTo_Mat(Mat &dst, Mat &_val, Mat &mask)
 {
-#ifdef HAVE_IPP_IW
-    CV_INSTRUMENT_REGION_IPP()
+#ifdef HAVE_IPP_IW_LL
+    CV_INSTRUMENT_REGION_IPP();
 
     if(mask.empty())
         return false;
@@ -508,7 +518,7 @@ static bool ipp_Mat_setTo_Mat(Mat &dst, Mat &_val, Mat &mask)
 
 Mat& Mat::setTo(InputArray _value, InputArray _mask)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     if( empty() )
         return *this;
@@ -553,25 +563,236 @@ Mat& Mat::setTo(InputArray _value, InputArray _mask)
     return *this;
 }
 
+#if CV_SIMD128
+template<typename V> CV_ALWAYS_INLINE void flipHoriz_single( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size size, size_t esz )
+{
+    typedef typename V::lane_type T;
+    int end = (int)(size.width*esz);
+    int width = (end + 1)/2;
+    int width_1 = width & -v_uint8x16::nlanes;
+    int i, j;
+
+#if CV_STRONG_ALIGNMENT
+    CV_Assert(isAligned<sizeof(T)>(src, dst));
+#endif
+
+    for( ; size.height--; src += sstep, dst += dstep )
+    {
+        for( i = 0, j = end; i < width_1; i += v_uint8x16::nlanes, j -= v_uint8x16::nlanes )
+        {
+            V t0, t1;
+
+            t0 = v_load((T*)((uchar*)src + i));
+            t1 = v_load((T*)((uchar*)src + j - v_uint8x16::nlanes));
+            t0 = v_reverse(t0);
+            t1 = v_reverse(t1);
+            v_store((T*)(dst + j - v_uint8x16::nlanes), t0);
+            v_store((T*)(dst + i), t1);
+        }
+        if (isAligned<sizeof(T)>(src, dst))
+        {
+            for ( ; i < width; i += sizeof(T), j -= sizeof(T) )
+            {
+                T t0, t1;
+
+                t0 = *((T*)((uchar*)src + i));
+                t1 = *((T*)((uchar*)src + j - sizeof(T)));
+                *((T*)(dst + j - sizeof(T))) = t0;
+                *((T*)(dst + i)) = t1;
+            }
+        }
+        else
+        {
+            for ( ; i < width; i += sizeof(T), j -= sizeof(T) )
+            {
+                for (int k = 0; k < (int)sizeof(T); k++)
+                {
+                    uchar t0, t1;
+
+                    t0 = *((uchar*)src + i + k);
+                    t1 = *((uchar*)src + j + k - sizeof(T));
+                    *(dst + j + k - sizeof(T)) = t0;
+                    *(dst + i + k) = t1;
+                }
+            }
+        }
+    }
+}
+
+template<typename T1, typename T2> CV_ALWAYS_INLINE void flipHoriz_double( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size size, size_t esz )
+{
+    int end = (int)(size.width*esz);
+    int width = (end + 1)/2;
+
+#if CV_STRONG_ALIGNMENT
+    CV_Assert(isAligned<sizeof(T1)>(src, dst));
+    CV_Assert(isAligned<sizeof(T2)>(src, dst));
+#endif
+
+    for( ; size.height--; src += sstep, dst += dstep )
+    {
+        for ( int i = 0, j = end; i < width; i += sizeof(T1) + sizeof(T2), j -= sizeof(T1) + sizeof(T2) )
+        {
+            T1 t0, t1;
+            T2 t2, t3;
+
+            t0 = *((T1*)((uchar*)src + i));
+            t2 = *((T2*)((uchar*)src + i + sizeof(T1)));
+            t1 = *((T1*)((uchar*)src + j - sizeof(T1) - sizeof(T2)));
+            t3 = *((T2*)((uchar*)src + j - sizeof(T2)));
+            *((T1*)(dst + j - sizeof(T1) - sizeof(T2))) = t0;
+            *((T2*)(dst + j - sizeof(T2))) = t2;
+            *((T1*)(dst + i)) = t1;
+            *((T2*)(dst + i + sizeof(T1))) = t3;
+        }
+    }
+}
+#endif
 
 static void
 flipHoriz( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size size, size_t esz )
 {
-    int i, j, limit = (int)(((size.width + 1)/2)*esz);
-    AutoBuffer<int> _tab(size.width*esz);
-    int* tab = _tab.data();
-
-    for( i = 0; i < size.width; i++ )
-        for( size_t k = 0; k < esz; k++ )
-            tab[i*esz + k] = (int)((size.width - i - 1)*esz + k);
-
-    for( ; size.height--; src += sstep, dst += dstep )
+#if CV_SIMD
+#if CV_STRONG_ALIGNMENT
+    size_t alignmentMark = ((size_t)src)|((size_t)dst)|sstep|dstep;
+#endif
+    if (esz == 2 * v_uint8x16::nlanes)
     {
-        for( i = 0; i < limit; i++ )
+        int end = (int)(size.width*esz);
+        int width = end/2;
+
+        for( ; size.height--; src += sstep, dst += dstep )
         {
-            j = tab[i];
-            uchar t0 = src[i], t1 = src[j];
-            dst[i] = t1; dst[j] = t0;
+            for( int i = 0, j = end - 2 * v_uint8x16::nlanes; i < width; i += 2 * v_uint8x16::nlanes, j -= 2 * v_uint8x16::nlanes )
+            {
+#if CV_SIMD256
+                v_uint8x32 t0, t1;
+
+                t0 = v256_load((uchar*)src + i);
+                t1 = v256_load((uchar*)src + j);
+                v_store(dst + j, t0);
+                v_store(dst + i, t1);
+#else
+                v_uint8x16 t0, t1, t2, t3;
+
+                t0 = v_load((uchar*)src + i);
+                t1 = v_load((uchar*)src + i + v_uint8x16::nlanes);
+                t2 = v_load((uchar*)src + j);
+                t3 = v_load((uchar*)src + j + v_uint8x16::nlanes);
+                v_store(dst + j, t0);
+                v_store(dst + j + v_uint8x16::nlanes, t1);
+                v_store(dst + i, t2);
+                v_store(dst + i + v_uint8x16::nlanes, t3);
+#endif
+            }
+        }
+    }
+    else if (esz == v_uint8x16::nlanes)
+    {
+        int end = (int)(size.width*esz);
+        int width = end/2;
+
+        for( ; size.height--; src += sstep, dst += dstep )
+        {
+            for( int i = 0, j = end - v_uint8x16::nlanes; i < width; i += v_uint8x16::nlanes, j -= v_uint8x16::nlanes )
+            {
+                v_uint8x16 t0, t1;
+
+                t0 = v_load((uchar*)src + i);
+                t1 = v_load((uchar*)src + j);
+                v_store(dst + j, t0);
+                v_store(dst + i, t1);
+            }
+        }
+    }
+    else if (esz == 8
+#if CV_STRONG_ALIGNMENT
+            && isAligned<sizeof(uint64)>(alignmentMark)
+#endif
+    )
+    {
+        flipHoriz_single<v_uint64x2>(src, sstep, dst, dstep, size, esz);
+    }
+    else if (esz == 4
+#if CV_STRONG_ALIGNMENT
+            && isAligned<sizeof(unsigned)>(alignmentMark)
+#endif
+    )
+    {
+        flipHoriz_single<v_uint32x4>(src, sstep, dst, dstep, size, esz);
+    }
+    else if (esz == 2
+#if CV_STRONG_ALIGNMENT
+            && isAligned<sizeof(ushort)>(alignmentMark)
+#endif
+    )
+    {
+        flipHoriz_single<v_uint16x8>(src, sstep, dst, dstep, size, esz);
+    }
+    else if (esz == 1)
+    {
+        flipHoriz_single<v_uint8x16>(src, sstep, dst, dstep, size, esz);
+    }
+    else if (esz == 24
+#if CV_STRONG_ALIGNMENT
+            && isAligned<sizeof(uint64_t)>(alignmentMark)
+#endif
+    )
+    {
+        int end = (int)(size.width*esz);
+        int width = (end + 1)/2;
+
+        for( ; size.height--; src += sstep, dst += dstep )
+        {
+            for ( int i = 0, j = end; i < width; i += v_uint8x16::nlanes + sizeof(uint64_t), j -= v_uint8x16::nlanes + sizeof(uint64_t) )
+            {
+                v_uint8x16 t0, t1;
+                uint64_t t2, t3;
+
+                t0 = v_load((uchar*)src + i);
+                t2 = *((uint64_t*)((uchar*)src + i + v_uint8x16::nlanes));
+                t1 = v_load((uchar*)src + j - v_uint8x16::nlanes - sizeof(uint64_t));
+                t3 = *((uint64_t*)((uchar*)src + j - sizeof(uint64_t)));
+                v_store(dst + j - v_uint8x16::nlanes - sizeof(uint64_t), t0);
+                *((uint64_t*)(dst + j - sizeof(uint64_t))) = t2;
+                v_store(dst + i, t1);
+                *((uint64_t*)(dst + i + v_uint8x16::nlanes)) = t3;
+            }
+        }
+    }
+#if !CV_STRONG_ALIGNMENT
+    else if (esz == 12)
+    {
+        flipHoriz_double<uint64_t,uint>(src, sstep, dst, dstep, size, esz);
+    }
+    else if (esz == 6)
+    {
+        flipHoriz_double<uint,ushort>(src, sstep, dst, dstep, size, esz);
+    }
+    else if (esz == 3)
+    {
+        flipHoriz_double<ushort,uchar>(src, sstep, dst, dstep, size, esz);
+    }
+#endif
+    else
+#endif // CV_SIMD
+    {
+        int i, j, limit = (int)(((size.width + 1)/2)*esz);
+        AutoBuffer<int> _tab(size.width*esz);
+        int* tab = _tab.data();
+
+        for( i = 0; i < size.width; i++ )
+            for( size_t k = 0; k < esz; k++ )
+                tab[i*esz + k] = (int)((size.width - i - 1)*esz + k);
+
+        for( ; size.height--; src += sstep, dst += dstep )
+        {
+            for( i = 0; i < limit; i++ )
+            {
+                j = tab[i];
+                uchar t0 = src[i], t1 = src[j];
+                dst[i] = t1; dst[j] = t0;
+            }
         }
     }
 }
@@ -587,7 +808,34 @@ flipVert( const uchar* src0, size_t sstep, uchar* dst0, size_t dstep, Size size,
                                                   dst0 += dstep, dst1 -= dstep )
     {
         int i = 0;
-        if( ((size_t)src0|(size_t)dst0|(size_t)src1|(size_t)dst1) % sizeof(int) == 0 )
+#if CV_SIMD
+#if CV_STRONG_ALIGNMENT
+        if (isAligned<sizeof(int)>(src0, src1, dst0, dst1))
+#endif
+        {
+            for (; i <= size.width - CV_SIMD_WIDTH; i += CV_SIMD_WIDTH)
+            {
+                v_int32 t0 = vx_load((int*)(src0 + i));
+                v_int32 t1 = vx_load((int*)(src1 + i));
+                vx_store((int*)(dst0 + i), t1);
+                vx_store((int*)(dst1 + i), t0);
+            }
+        }
+#if CV_STRONG_ALIGNMENT
+        else
+        {
+            for (; i <= size.width - CV_SIMD_WIDTH; i += CV_SIMD_WIDTH)
+            {
+                v_uint8 t0 = vx_load(src0 + i);
+                v_uint8 t1 = vx_load(src1 + i);
+                vx_store(dst0 + i, t1);
+                vx_store(dst1 + i, t0);
+            }
+        }
+#endif
+#endif
+
+        if (isAligned<sizeof(int)>(src0, src1, dst0, dst1))
         {
             for( ; i <= size.width - 16; i += 16 )
             {
@@ -668,9 +916,9 @@ static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
     kercn = (cn!=3 || flipType == FLIP_ROWS) ? std::max(kercn, cn) : cn;
 
     ocl::Kernel k(kernelName, ocl::core::flip_oclsrc,
-        format( "-D T=%s -D T1=%s -D cn=%d -D PIX_PER_WI_Y=%d -D kercn=%d",
+        format( "-D T=%s -D T1=%s -D DEPTH=%d -D cn=%d -D PIX_PER_WI_Y=%d -D kercn=%d",
                 kercn != cn ? ocl::typeToStr(CV_MAKE_TYPE(depth, kercn)) : ocl::vecopTypeToStr(CV_MAKE_TYPE(depth, kercn)),
-                kercn != cn ? ocl::typeToStr(depth) : ocl::vecopTypeToStr(depth), cn, pxPerWIy, kercn));
+                kercn != cn ? ocl::typeToStr(depth) : ocl::vecopTypeToStr(depth), depth, cn, pxPerWIy, kercn));
     if (k.empty())
         return false;
 
@@ -699,7 +947,14 @@ static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
 static bool ipp_flip(Mat &src, Mat &dst, int flip_mode)
 {
 #ifdef HAVE_IPP_IW
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
+
+    // Details: https://github.com/opencv/opencv/issues/12943
+    if (flip_mode <= 0 /* swap rows */
+        && cv::ipp::getIppTopFeatures() != ippCPUID_SSE42
+        && (int64_t)(src.total()) * src.elemSize() >= CV_BIG_INT(0x80000000)/*2Gb*/
+    )
+        return false;
 
     IppiAxis ippMode;
     if(flip_mode < 0)
@@ -716,7 +971,7 @@ static bool ipp_flip(Mat &src, Mat &dst, int flip_mode)
 
         CV_INSTRUMENT_FUN_IPP(::ipp::iwiMirror, iwSrc, iwDst, ippMode);
     }
-    catch(::ipp::IwException)
+    catch(const ::ipp::IwException &)
     {
         return false;
     }
@@ -732,7 +987,7 @@ static bool ipp_flip(Mat &src, Mat &dst, int flip_mode)
 
 void flip( InputArray _src, OutputArray _dst, int flip_mode )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert( _src.dims() <= 2 );
     Size size = _src.size();
@@ -772,35 +1027,9 @@ void flip( InputArray _src, OutputArray _dst, int flip_mode )
         flipHoriz( dst.ptr(), dst.step, dst.ptr(), dst.step, dst.size(), esz );
 }
 
-#ifdef HAVE_OPENCL
-
-static bool ocl_rotate(InputArray _src, OutputArray _dst, int rotateMode)
-{
-    switch (rotateMode)
-    {
-    case ROTATE_90_CLOCKWISE:
-        transpose(_src, _dst);
-        flip(_dst, _dst, 1);
-        break;
-    case ROTATE_180:
-        flip(_src, _dst, -1);
-        break;
-    case ROTATE_90_COUNTERCLOCKWISE:
-        transpose(_src, _dst);
-        flip(_dst, _dst, 0);
-        break;
-    default:
-        break;
-    }
-    return true;
-}
-#endif
-
 void rotate(InputArray _src, OutputArray _dst, int rotateMode)
 {
     CV_Assert(_src.dims() <= 2);
-
-    CV_OCL_RUN(_dst.isUMat(), ocl_rotate(_src, _dst, rotateMode))
 
     switch (rotateMode)
     {
@@ -852,7 +1081,7 @@ static bool ocl_repeat(InputArray _src, int ny, int nx, OutputArray _dst)
 
 void repeat(InputArray _src, int ny, int nx, OutputArray _dst)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert(_src.getObj() != _dst.getObj());
     CV_Assert( _src.dims() <= 2 );
@@ -908,7 +1137,13 @@ int cv::borderInterpolate( int p, int len, int borderType )
 {
     CV_TRACE_FUNCTION_VERBOSE();
 
+    CV_DbgAssert(len > 0);
+
+#ifdef CV_STATIC_ANALYSIS
+    if(p >= 0 && p < len)
+#else
     if( (unsigned)p < (unsigned)len )
+#endif
         ;
     else if( borderType == BORDER_REPLICATE )
         p = p < 0 ? 0 : len - 1;
@@ -924,7 +1159,11 @@ int cv::borderInterpolate( int p, int len, int borderType )
             else
                 p = len - 1 - (p - len) - delta;
         }
+#ifdef CV_STATIC_ANALYSIS
+        while(p < 0 || p >= len);
+#else
         while( (unsigned)p >= (unsigned)len );
+#endif
     }
     else if( borderType == BORDER_WRAP )
     {
@@ -1139,8 +1378,8 @@ namespace cv {
 static bool ipp_copyMakeBorder( Mat &_src, Mat &_dst, int top, int bottom,
                                 int left, int right, int _borderType, const Scalar& value )
 {
-#if defined HAVE_IPP_IW && !IPP_DISABLE_PERF_COPYMAKE
-    CV_INSTRUMENT_REGION_IPP()
+#if defined HAVE_IPP_IW_LL && !IPP_DISABLE_PERF_COPYMAKE
+    CV_INSTRUMENT_REGION_IPP();
 
     ::ipp::IwiBorderSize borderSize(left, top, right, bottom);
     ::ipp::IwiSize       size(_src.cols, _src.rows);
@@ -1171,11 +1410,11 @@ static bool ipp_copyMakeBorder( Mat &_src, Mat &_dst, int top, int bottom,
 void cv::copyMakeBorder( InputArray _src, OutputArray _dst, int top, int bottom,
                          int left, int right, int borderType, const Scalar& value )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
-    CV_Assert( top >= 0 && bottom >= 0 && left >= 0 && right >= 0 );
+    CV_Assert( top >= 0 && bottom >= 0 && left >= 0 && right >= 0 && _src.dims() <= 2);
 
-    CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2,
+    CV_OCL_RUN(_dst.isUMat(),
                ocl_copyMakeBorder(_src, _dst, top, bottom, left, right, borderType, value))
 
     Mat src = _src.getMat();

@@ -30,9 +30,15 @@ class TestInfo(object):
             self.status = xmlnode.getAttribute("status")
 
         if self.name.startswith("DISABLED_"):
-            self.status = "disabled"
+            if self.status == 'notrun':
+                self.status = "disabled"
             self.fixture = self.fixture.replace("DISABLED_", "")
             self.name = self.name.replace("DISABLED_", "")
+        self.properties = {
+            prop.getAttribute("name") : prop.getAttribute("value")
+            for prop in xmlnode.getElementsByTagName("property")
+            if prop.hasAttribute("name") and prop.hasAttribute("value")
+        }
         self.metrix = {}
         self.parseLongMetric(xmlnode, "bytesIn");
         self.parseLongMetric(xmlnode, "bytesOut");
@@ -46,35 +52,37 @@ class TestInfo(object):
         self.parseLongMetric(xmlnode, "stddev");
         self.parseFloatMetric(xmlnode, "gstddev");
         self.parseFloatMetric(xmlnode, "time");
+        self.parseLongMetric(xmlnode, "total_memory_usage");
 
     def parseLongMetric(self, xmlnode, name, default = 0):
-        if xmlnode.hasAttribute(name):
-            tmp = xmlnode.getAttribute(name)
-            val = long(tmp)
-            self.metrix[name] = val
+        if name in self.properties:
+            self.metrix[name] = long(self.properties[name])
+        elif xmlnode.hasAttribute(name):
+            self.metrix[name] = long(xmlnode.getAttribute(name))
         else:
             self.metrix[name] = default
 
     def parseIntMetric(self, xmlnode, name, default = 0):
-        if xmlnode.hasAttribute(name):
-            tmp = xmlnode.getAttribute(name)
-            val = int(tmp)
-            self.metrix[name] = val
+        if name in self.properties:
+            self.metrix[name] = int(self.properties[name])
+        elif xmlnode.hasAttribute(name):
+            self.metrix[name] = int(xmlnode.getAttribute(name))
         else:
             self.metrix[name] = default
 
     def parseFloatMetric(self, xmlnode, name, default = 0):
-        if xmlnode.hasAttribute(name):
-            tmp = xmlnode.getAttribute(name)
-            val = float(tmp)
-            self.metrix[name] = val
+        if name in self.properties:
+            self.metrix[name] = float(self.properties[name])
+        elif xmlnode.hasAttribute(name):
+            self.metrix[name] = float(xmlnode.getAttribute(name))
         else:
             self.metrix[name] = default
 
     def parseStringMetric(self, xmlnode, name, default = None):
-        if xmlnode.hasAttribute(name):
-            tmp = xmlnode.getAttribute(name)
-            self.metrix[name] = tmp.strip()
+        if name in self.properties:
+            self.metrix[name] = self.properties[name].strip()
+        elif xmlnode.hasAttribute(name):
+            self.metrix[name] = xmlnode.getAttribute(name).strip()
         else:
             self.metrix[name] = default
 
@@ -196,7 +204,7 @@ def parseLogFile(filename):
         if attr_name.startswith('cv_')
     }
 
-    tests = map(TestInfo, log.getElementsByTagName("testcase"))
+    tests = list(map(TestInfo, log.getElementsByTagName("testcase")))
 
     return TestRunInfo(properties, tests)
 

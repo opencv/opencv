@@ -1,7 +1,4 @@
 {
-    "class_ignore_list" : [
-        "SimpleBlobDetector"
-    ],
     "type_dict" : {
         "Feature2D": {
             "j_type": "Feature2D",

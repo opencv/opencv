@@ -31,6 +31,8 @@
 #ifndef OPENCV_FLANN_ALLOCATOR_H_
 #define OPENCV_FLANN_ALLOCATOR_H_
 
+//! @cond IGNORED
+
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -188,5 +190,7 @@ private:
 };
 
 }
+
+//! @endcond
 
 #endif //OPENCV_FLANN_ALLOCATOR_H_

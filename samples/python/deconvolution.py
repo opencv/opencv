@@ -15,15 +15,15 @@ Usage:
 
   Use sliders to adjust PSF paramitiers.
   Keys:
-    SPACE - switch btw linear/cirular PSF
+    SPACE - switch btw linear/circular PSF
     ESC   - exit
 
 Examples:
-  deconvolution.py --angle 135 --d 22  ../data/licenseplate_motion.jpg
+  deconvolution.py --angle 135 --d 22  licenseplate_motion.jpg
     (image source: http://www.topazlabs.com/infocus/_images/licenseplate_compare.jpg)
 
-  deconvolution.py --angle 86 --d 31  ../data/text_motion.jpg
-  deconvolution.py --circle --d 19  ../data/text_defocus.jpg
+  deconvolution.py --angle 86 --d 31  text_motion.jpg
+  deconvolution.py --circle --d 19  text_defocus.jpg
     (image source: compact digital photo camera, no artificial distortion)
 
 
@@ -65,19 +65,18 @@ def defocus_kernel(d, sz=65):
     return kern
 
 
-if __name__ == '__main__':
-    print(__doc__)
+def main():
     import sys, getopt
     opts, args = getopt.getopt(sys.argv[1:], '', ['circle', 'angle=', 'd=', 'snr='])
     opts = dict(opts)
     try:
         fn = args[0]
     except:
-        fn = '../data/licenseplate_motion.jpg'
+        fn = 'licenseplate_motion.jpg'
 
     win = 'deconvolution'
 
-    img = cv.imread(fn, 0)
+    img = cv.imread(cv.samples.findFile(fn), cv.IMREAD_GRAYSCALE)
     if img is None:
         print('Failed to load file:', fn)
         sys.exit(1)
@@ -128,3 +127,11 @@ if __name__ == '__main__':
         if ch == ord(' '):
             defocus = not defocus
             update(None)
+
+    print('Done')
+
+
+if __name__ == '__main__':
+    print(__doc__)
+    main()
+    cv.destroyAllWindows()

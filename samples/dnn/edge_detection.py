@@ -27,8 +27,8 @@ class CropLayer(object):
         batchSize, numChannels = inputShape[0], inputShape[1]
         height, width = targetShape[2], targetShape[3]
 
-        self.ystart = (inputShape[2] - targetShape[2]) / 2
-        self.xstart = (inputShape[3] - targetShape[3]) / 2
+        self.ystart = (inputShape[2] - targetShape[2]) // 2
+        self.xstart = (inputShape[3] - targetShape[3]) // 2
         self.yend = self.ystart + height
         self.xend = self.xstart + width
 
@@ -43,7 +43,7 @@ cv.dnn_registerLayer('Crop', CropLayer)
 #! [Register]
 
 # Load the model.
-net = cv.dnn.readNet(args.prototxt, args.caffemodel)
+net = cv.dnn.readNet(cv.samples.findFile(args.prototxt), cv.samples.findFile(args.caffemodel))
 
 kWinName = 'Holistically-Nested Edge Detection'
 cv.namedWindow('Input', cv.WINDOW_NORMAL)

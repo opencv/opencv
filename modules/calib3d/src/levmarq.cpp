@@ -80,12 +80,9 @@ namespace cv
 class LMSolverImpl CV_FINAL : public LMSolver
 {
 public:
-    LMSolverImpl() : maxIters(100) { init(); }
-    LMSolverImpl(const Ptr<LMSolver::Callback>& _cb, int _maxIters) : cb(_cb), maxIters(_maxIters) { init(); }
-
-    void init()
+    LMSolverImpl(const Ptr<LMSolver::Callback>& _cb, int _maxIters, double _eps = FLT_EPSILON)
+        : cb(_cb), epsx(_eps), epsf(_eps), maxIters(_maxIters)
     {
-        epsx = epsf = FLT_EPSILON;
         printInterval = 0;
     }
 
@@ -198,7 +195,8 @@ public:
         return iter;
     }
 
-    void setCallback(const Ptr<LMSolver::Callback>& _cb) CV_OVERRIDE { cb = _cb; }
+    void setMaxIters(int iters) CV_OVERRIDE { CV_Assert(iters > 0); maxIters = iters; }
+    int getMaxIters() const CV_OVERRIDE { return maxIters; }
 
     Ptr<LMSolver::Callback> cb;
 
@@ -209,9 +207,14 @@ public:
 };
 
 
-Ptr<LMSolver> createLMSolver(const Ptr<LMSolver::Callback>& cb, int maxIters)
+Ptr<LMSolver> LMSolver::create(const Ptr<LMSolver::Callback>& cb, int maxIters)
 {
     return makePtr<LMSolverImpl>(cb, maxIters);
+}
+
+Ptr<LMSolver> LMSolver::create(const Ptr<LMSolver::Callback>& cb, int maxIters, double eps)
+{
+    return makePtr<LMSolverImpl>(cb, maxIters, eps);
 }
 
 }

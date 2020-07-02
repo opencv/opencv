@@ -126,30 +126,30 @@ endif()
 if(SIZEOF_UNSIGNED_INT EQUAL SIZEOF_SIZE_T)
   set(TIFF_SIZE_T "unsigned int")
   set(TIFF_SIZE_FORMAT "%u")
+  set(TIFF_SSIZE_T "signed int")
+  set(TIFF_SSIZE_FORMAT "%d")
 elseif(SIZEOF_UNSIGNED_LONG EQUAL SIZEOF_SIZE_T)
   set(TIFF_SIZE_T "unsigned long")
   set(TIFF_SIZE_FORMAT "%lu")
+  set(TIFF_SSIZE_T "signed long")
+  set(TIFF_SSIZE_FORMAT "%ld")
 elseif(SIZEOF_UNSIGNED_LONG_LONG EQUAL SIZEOF_SIZE_T)
   set(TIFF_SIZE_T "unsigned long")
   if(MINGW)
     set(TIFF_SIZE_FORMAT "%I64u")
+    set(TIFF_SSIZE_FORMAT "%I64d")
   else()
     set(TIFF_SIZE_FORMAT "%llu")
+    set(TIFF_SSIZE_FORMAT "%lld")
   endif()
 endif()
 
 if(SIZEOF_SIGNED_INT EQUAL SIZEOF_UNSIGNED_CHAR_P)
-  set(TIFF_SSIZE_T "signed int")
-  set(TIFF_SSIZE_FORMAT "%d")
 elseif(SIZEOF_SIGNED_LONG EQUAL SIZEOF_UNSIGNED_CHAR_P)
-  set(TIFF_SSIZE_T "signed long")
-  set(TIFF_SSIZE_FORMAT "%ld")
 elseif(SIZEOF_SIGNED_LONG_LONG EQUAL SIZEOF_UNSIGNED_CHAR_P)
   set(TIFF_SSIZE_T "signed long long")
   if(MINGW)
-    set(TIFF_SSIZE_FORMAT "%I64d")
   else()
-    set(TIFF_SSIZE_FORMAT "%lld")
   endif()
 endif()
 
@@ -216,6 +216,8 @@ endif()
 set(fillorder FILLORDER_MSB2LSB)
 if(CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "i.*86.*" OR
    CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "amd64.*" OR
+   # AMD64 on Windows
+   CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "AMD64" OR
    CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "x86_64.*")
   set(fillorder FILLORDER_LSB2MSB)
 endif()
@@ -414,10 +416,11 @@ set(lib_srcs
     tif_tile.c
     tif_version.c
     tif_warning.c
+    tif_webp.c
     tif_write.c
     tif_zip.c
+    tif_zstd.c
     tif_stream.cxx
-    snprintf.c
     t4.h
     tif_dir.h
     tif_fax3.h
@@ -432,6 +435,10 @@ set(lib_srcs
     "${CMAKE_CURRENT_BINARY_DIR}/tiffconf.h"
     )
 
+if(WIN32 AND NOT HAVE_SNPRINTF)
+  list(APPEND lib_srcs snprintf.c libport.h)
+endif()
+
 if(WIN32 AND NOT WINRT)
   list(APPEND lib_srcs tif_win32.c)
 else()
@@ -444,7 +451,7 @@ ocv_warnings_disable(CMAKE_C_FLAGS -Wno-unused-but-set-variable -Wmissing-protot
                                    -Wimplicit-fallthrough
 )
 ocv_warnings_disable(CMAKE_C_FLAGS -Wunused-parameter) # clang
-ocv_warnings_disable(CMAKE_CXX_FLAGS -Wmissing-declarations -Wunused-parameter
+ocv_warnings_disable(CMAKE_CXX_FLAGS -Wmissing-declarations -Wunused-parameter -Wmissing-prototypes
     -Wundef  # tiffiop.h: #if __clang_major__ >= 4
 )
 ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4018 /wd4100 /wd4127 /wd4311 /wd4701 /wd4706) # vs2005

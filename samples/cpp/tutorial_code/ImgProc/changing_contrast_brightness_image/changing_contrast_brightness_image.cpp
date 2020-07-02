@@ -3,6 +3,8 @@
 #include "opencv2/highgui.hpp"
 
 // we're NOT "using namespace std;" here, to avoid collisions between the beta variable and std::beta in c++17
+using std::cout;
+using std::endl;
 using namespace cv;
 
 namespace
@@ -19,12 +21,13 @@ void basicLinearTransform(const Mat &img, const double alpha_, const int beta_)
     img.convertTo(res, -1, alpha_, beta_);
 
     hconcat(img, res, img_corrected);
+    imshow("Brightness and contrast adjustments", img_corrected);
 }
 
 void gammaCorrection(const Mat &img, const double gamma_)
 {
     CV_Assert(gamma_ >= 0);
-    //![changing-contrast-brightness-gamma-correction]
+    //! [changing-contrast-brightness-gamma-correction]
     Mat lookUpTable(1, 256, CV_8U);
     uchar* p = lookUpTable.ptr();
     for( int i = 0; i < 256; ++i)
@@ -32,9 +35,10 @@ void gammaCorrection(const Mat &img, const double gamma_)
 
     Mat res = img.clone();
     LUT(img, lookUpTable, res);
-    //![changing-contrast-brightness-gamma-correction]
+    //! [changing-contrast-brightness-gamma-correction]
 
     hconcat(img, res, img_gamma_corrected);
+    imshow("Gamma correction", img_gamma_corrected);
 }
 
 void on_linear_transform_alpha_trackbar(int, void *)
@@ -60,36 +64,32 @@ void on_gamma_correction_trackbar(int, void *)
 
 int main( int argc, char** argv )
 {
-
-    String imageName("../data/lena.jpg"); // by default
-    if (argc > 1)
+    CommandLineParser parser( argc, argv, "{@input | lena.jpg | input image}" );
+    img_original = imread( samples::findFile( parser.get<String>( "@input" ) ) );
+    if( img_original.empty() )
     {
-        imageName = argv[1];
+      cout << "Could not open or find the image!\n" << endl;
+      cout << "Usage: " << argv[0] << " <Input image>" << endl;
+      return -1;
     }
 
-    img_original = imread( imageName );
     img_corrected = Mat(img_original.rows, img_original.cols*2, img_original.type());
     img_gamma_corrected = Mat(img_original.rows, img_original.cols*2, img_original.type());
 
     hconcat(img_original, img_original, img_corrected);
     hconcat(img_original, img_original, img_gamma_corrected);
 
-    namedWindow("Brightness and contrast adjustments", WINDOW_AUTOSIZE);
-    namedWindow("Gamma correction", WINDOW_AUTOSIZE);
+    namedWindow("Brightness and contrast adjustments");
+    namedWindow("Gamma correction");
 
     createTrackbar("Alpha gain (contrast)", "Brightness and contrast adjustments", &alpha, 500, on_linear_transform_alpha_trackbar);
     createTrackbar("Beta bias (brightness)", "Brightness and contrast adjustments", &beta, 200, on_linear_transform_beta_trackbar);
     createTrackbar("Gamma correction", "Gamma correction", &gamma_cor, 200, on_gamma_correction_trackbar);
 
-    while (true)
-    {
-        imshow("Brightness and contrast adjustments", img_corrected);
-        imshow("Gamma correction", img_gamma_corrected);
+    on_linear_transform_alpha_trackbar(0, 0);
+    on_gamma_correction_trackbar(0, 0);
 
-        int c = waitKey(30);
-        if (c == 27)
-            break;
-    }
+    waitKey();
 
     imwrite("linear_transform_correction.png", img_corrected);
     imwrite("gamma_correction.png", img_gamma_corrected);

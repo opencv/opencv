@@ -17,10 +17,10 @@ def CannyThreshold(val):
     cv.imshow(window_name, dst)
 
 parser = argparse.ArgumentParser(description='Code for Canny Edge Detector tutorial.')
-parser.add_argument('--input', help='Path to input image.', default='../data/fruits.jpg')
+parser.add_argument('--input', help='Path to input image.', default='fruits.jpg')
 args = parser.parse_args()
 
-src = cv.imread(args.input)
+src = cv.imread(cv.samples.findFile(args.input))
 if src is None:
     print('Could not open or find the image: ', args.input)
     exit(0)

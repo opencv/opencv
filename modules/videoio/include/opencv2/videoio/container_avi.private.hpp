@@ -58,7 +58,7 @@ RIFF ('AVI '
      {xxdb|xxdc|xxpc|xxwb}
      xx - stream number: 00, 01, 02, ...
      db - uncompressed video frame
-     dc - commpressed video frame
+     dc - compressed video frame
      pc - palette change
      wb - audio frame
 
@@ -139,7 +139,7 @@ class BitStream;
 // {xxdb|xxdc|xxpc|xxwb}
 // xx - stream number: 00, 01, 02, ...
 // db - uncompressed video frame
-// dc - commpressed video frame
+// dc - compressed video frame
 // pc - palette change
 // wb - audio frame
 
@@ -153,7 +153,7 @@ public:
     bool initContainer(const String& filename, double fps, Size size, bool iscolor);
     void startWriteAVI(int stream_count);
     void writeStreamHeader(Codecs codec_);
-    void startWriteChunk(int fourcc);
+    void startWriteChunk(uint32_t fourcc);
     void endWriteChunk();
 
     int getAVIIndex(int stream_number, StreamType strm_type);

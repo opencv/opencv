@@ -52,7 +52,7 @@
 #include <stdio.h>
 #include <setjmp.h>
 
-// the following defines are a hack to avoid multiple problems with frame ponter handling and setjmp
+// the following defines are a hack to avoid multiple problems with frame pointer handling and setjmp
 // see http://gcc.gnu.org/ml/gcc/2011-10/msg00324.html for some details
 #define mingw_getsp(...) 0
 #define __builtin_frame_address(...) 0
@@ -74,6 +74,17 @@ typedef unsigned char boolean;
 extern "C" {
 #include "jpeglib.h"
 }
+
+#ifndef CV_MANUAL_JPEG_STD_HUFF_TABLES
+  #if defined(LIBJPEG_TURBO_VERSION_NUMBER) && LIBJPEG_TURBO_VERSION_NUMBER >= 1003090
+    #define CV_MANUAL_JPEG_STD_HUFF_TABLES 0  // libjpeg-turbo handles standard huffman tables itself (jstdhuff.c)
+  #else
+    #define CV_MANUAL_JPEG_STD_HUFF_TABLES 1
+  #endif
+#endif
+#if CV_MANUAL_JPEG_STD_HUFF_TABLES == 0
+  #undef CV_MANUAL_JPEG_STD_HUFF_TABLES
+#endif
 
 namespace cv
 {
@@ -252,6 +263,7 @@ bool  JpegDecoder::readHeader()
     return result;
 }
 
+#ifdef CV_MANUAL_JPEG_STD_HUFF_TABLES
 /***************************************************************************
  * following code is for supporting MJPEG image files
  * based on a message of Laurent Pinchart on the video4linux mailing list
@@ -385,6 +397,7 @@ int my_jpeg_load_dht (struct jpeg_decompress_struct *info, unsigned char *dht,
  * end of code for supportting MJPEG image files
  * based on a message of Laurent Pinchart on the video4linux mailing list
  ***************************************************************************/
+#endif  // CV_MANUAL_JPEG_STD_HUFF_TABLES
 
 bool  JpegDecoder::readData( Mat& img )
 {
@@ -400,6 +413,7 @@ bool  JpegDecoder::readData( Mat& img )
 
         if( setjmp( jerr->setjmp_buffer ) == 0 )
         {
+#ifdef CV_MANUAL_JPEG_STD_HUFF_TABLES
             /* check if this is a mjpeg image format */
             if ( cinfo->ac_huff_tbl_ptrs[0] == NULL &&
                 cinfo->ac_huff_tbl_ptrs[1] == NULL &&
@@ -413,6 +427,7 @@ bool  JpegDecoder::readData( Mat& img )
                     cinfo->ac_huff_tbl_ptrs,
                     cinfo->dc_huff_tbl_ptrs );
             }
+#endif
 
             if( color )
             {
@@ -453,16 +468,16 @@ bool  JpegDecoder::readData( Mat& img )
                 if( color )
                 {
                     if( cinfo->out_color_components == 3 )
-                        icvCvt_RGB2BGR_8u_C3R( buffer[0], 0, data, 0, cvSize(m_width,1) );
+                        icvCvt_RGB2BGR_8u_C3R( buffer[0], 0, data, 0, Size(m_width,1) );
                     else
-                        icvCvt_CMYK2BGR_8u_C4C3R( buffer[0], 0, data, 0, cvSize(m_width,1) );
+                        icvCvt_CMYK2BGR_8u_C4C3R( buffer[0], 0, data, 0, Size(m_width,1) );
                 }
                 else
                 {
                     if( cinfo->out_color_components == 1 )
                         memcpy( data, buffer[0], m_width );
                     else
-                        icvCvt_CMYK2Gray_8u_C4C1R( buffer[0], 0, data, 0, cvSize(m_width,1) );
+                        icvCvt_CMYK2Gray_8u_C4C1R( buffer[0], 0, data, 0, Size(m_width,1) );
                 }
             }
 
@@ -689,12 +704,12 @@ bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
 
             if( _channels == 3 )
             {
-                icvCvt_BGR2RGB_8u_C3R( data, 0, buffer, 0, cvSize(width,1) );
+                icvCvt_BGR2RGB_8u_C3R( data, 0, buffer, 0, Size(width,1) );
                 ptr = buffer;
             }
             else if( _channels == 4 )
             {
-                icvCvt_BGRA2BGR_8u_C4C3R( data, 0, buffer, 0, cvSize(width,1), 2 );
+                icvCvt_BGRA2BGR_8u_C4C3R( data, 0, buffer, 0, Size(width,1), 2 );
                 ptr = buffer;
             }
 

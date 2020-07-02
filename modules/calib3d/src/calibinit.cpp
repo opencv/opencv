@@ -76,6 +76,7 @@
 
 //#define ENABLE_TRIM_COL_ROW
 
+// Requires CMake flag: DEBUG_opencv_calib3d=ON
 //#define DEBUG_CHESSBOARD
 #define DEBUG_CHESSBOARD_TIMEOUT 0  // 0 - wait for 'q'
 
@@ -485,7 +486,7 @@ static void icvBinarizationHistogramBased(Mat & img)
 bool findChessboardCorners(InputArray image_, Size pattern_size,
                            OutputArray corners_, int flags)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     DPRINTF("==== findChessboardCorners(img=%dx%d, pattern=%dx%d, flags=%d)",
             image_.cols(), image_.rows(), pattern_size.width, pattern_size.height, flags);
@@ -513,10 +514,6 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
     {
         cvtColor(img, img, COLOR_BGR2GRAY);
     }
-    else
-    {
-        img.clone();
-    }
 
     int prev_sqr_size = 0;
 
@@ -530,7 +527,7 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
         //image is binarised using a threshold dependent on the image histogram
         if (checkChessboardBinary(thresh_img_new, pattern_size) <= 0) //fall back to the old method
         {
-            if (checkChessboard(img, pattern_size) <= 0)
+            if (!checkChessboard(img, pattern_size))
             {
                 corners_.release();
                 return false;
@@ -578,6 +575,7 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
     {
         if (flags & CALIB_CB_NORMALIZE_IMAGE)
         {
+            img = img.clone();
             equalizeHist(img, img);
         }
 
@@ -2186,7 +2184,7 @@ bool findCirclesGrid( InputArray _image, Size patternSize,
                           OutputArray _centers, int flags, const Ptr<FeatureDetector> &blobDetector,
                           const CirclesGridFinderParameters& parameters_)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CirclesGridFinderParameters parameters = parameters_; // parameters.gridType is amended below
 
@@ -2231,13 +2229,13 @@ bool findCirclesGrid( InputArray _image, Size patternSize,
       void* oldCbkData;
       ErrorCallback oldCbk = redirectError(quiet_error, 0, &oldCbkData); // FIXIT not thread safe
 #endif
-      CV_TRY
+      try
       {
         isFound = boxFinder.findHoles();
       }
-      CV_CATCH(Exception, e)
+      catch (const cv::Exception &)
       {
-          CV_UNUSED(e);
+
       }
 #if BE_QUIET
       redirectError(oldCbk, oldCbkData);

@@ -405,7 +405,7 @@ protected:
 cv::Mat cv::findEssentialMat( InputArray _points1, InputArray _points2, InputArray _cameraMatrix,
                               int method, double prob, double threshold, OutputArray _mask)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat points1, points2, cameraMatrix;
     _points1.getMat().convertTo(points1, CV_64F);
@@ -452,7 +452,7 @@ cv::Mat cv::findEssentialMat( InputArray _points1, InputArray _points2, InputArr
 cv::Mat cv::findEssentialMat( InputArray _points1, InputArray _points2, double focal, Point2d pp,
                               int method, double prob, double threshold, OutputArray _mask)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat cameraMatrix = (Mat_<double>(3,3) << focal, 0, pp.x, 0, focal, pp.y, 0, 0, 1);
     return cv::findEssentialMat(_points1, _points2, cameraMatrix, method, prob, threshold, _mask);
@@ -462,7 +462,7 @@ int cv::recoverPose( InputArray E, InputArray _points1, InputArray _points2,
                             InputArray _cameraMatrix, OutputArray _R, OutputArray _t, double distanceThresh,
                      InputOutputArray _mask, OutputArray triangulatedPoints)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat points1, points2, cameraMatrix;
     _points1.getMat().convertTo(points1, CV_64F);
@@ -506,7 +506,7 @@ int cv::recoverPose( InputArray E, InputArray _points1, InputArray _points2,
     // Do the cheirality check.
     // Notice here a threshold dist is used to filter
     // out far away points (i.e. infinite points) since
-    // their depth may vary between positive and negtive.
+    // their depth may vary between positive and negative.
     std::vector<Mat> allTriangulations(4);
     Mat Q;
 
@@ -571,7 +571,8 @@ int cv::recoverPose( InputArray E, InputArray _points1, InputArray _points2,
     if (!_mask.empty())
     {
         Mat mask = _mask.getMat();
-        CV_Assert(mask.size() == mask1.size());
+        CV_Assert(npoints == mask.checkVector(1));
+        mask = mask.reshape(1, npoints);
         bitwise_and(mask, mask1, mask1);
         bitwise_and(mask, mask2, mask2);
         bitwise_and(mask, mask3, mask3);
@@ -642,7 +643,7 @@ int cv::recoverPose( InputArray E, InputArray _points1, InputArray _points2, Out
 
 void cv::decomposeEssentialMat( InputArray _E, OutputArray _R1, OutputArray _R2, OutputArray _t )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat E = _E.getMat().reshape(1, 3);
     CV_Assert(E.cols == 3 && E.rows == 3);

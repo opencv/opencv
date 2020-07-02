@@ -13,7 +13,7 @@ namespace cv { namespace hal {
 
 void fastAtan32f(const float *Y, const float *X, float *angle, int len, bool angleInDegrees )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CALL_HAL(fastAtan32f, cv_hal_fastAtan32f, Y, X, angle, len, angleInDegrees);
 
@@ -23,7 +23,7 @@ void fastAtan32f(const float *Y, const float *X, float *angle, int len, bool ang
 
 void fastAtan64f(const double *Y, const double *X, double *angle, int len, bool angleInDegrees)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CALL_HAL(fastAtan64f, cv_hal_fastAtan64f, Y, X, angle, len, angleInDegrees);
 
@@ -34,14 +34,14 @@ void fastAtan64f(const double *Y, const double *X, double *angle, int len, bool 
 // deprecated
 void fastAtan2(const float *Y, const float *X, float *angle, int len, bool angleInDegrees )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     fastAtan32f(Y, X, angle, len, angleInDegrees);
 }
 
 void magnitude32f(const float* x, const float* y, float* mag, int len)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CALL_HAL(magnitude32f, cv_hal_magnitude32f, x, y, mag, len);
     // SSE42 performance issues
@@ -53,7 +53,7 @@ void magnitude32f(const float* x, const float* y, float* mag, int len)
 
 void magnitude64f(const double* x, const double* y, double* mag, int len)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CALL_HAL(magnitude64f, cv_hal_magnitude64f, x, y, mag, len);
     // SSE42 performance issues
@@ -66,7 +66,7 @@ void magnitude64f(const double* x, const double* y, double* mag, int len)
 
 void invSqrt32f(const float* src, float* dst, int len)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CALL_HAL(invSqrt32f, cv_hal_invSqrt32f, src, dst, len);
     CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippsInvSqrt_32f_A21, src, dst, len) >= 0);
@@ -78,7 +78,7 @@ void invSqrt32f(const float* src, float* dst, int len)
 
 void invSqrt64f(const double* src, double* dst, int len)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CALL_HAL(invSqrt64f, cv_hal_invSqrt64f, src, dst, len);
     CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippsInvSqrt_64f_A50, src, dst, len) >= 0);
@@ -90,7 +90,7 @@ void invSqrt64f(const double* src, double* dst, int len)
 
 void sqrt32f(const float* src, float* dst, int len)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CALL_HAL(sqrt32f, cv_hal_sqrt32f, src, dst, len);
 
@@ -101,7 +101,7 @@ void sqrt32f(const float* src, float* dst, int len)
 
 void sqrt64f(const double* src, double* dst, int len)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CALL_HAL(sqrt64f, cv_hal_sqrt64f, src, dst, len);
 
@@ -111,7 +111,7 @@ void sqrt64f(const double* src, double* dst, int len)
 
 void exp32f(const float *src, float *dst, int n)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CALL_HAL(exp32f, cv_hal_exp32f, src, dst, n);
     CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippsExp_32f_A21, src, dst, n) >= 0);
@@ -122,7 +122,7 @@ void exp32f(const float *src, float *dst, int n)
 
 void exp64f(const double *src, double *dst, int n)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CALL_HAL(exp64f, cv_hal_exp64f, src, dst, n);
     CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippsExp_64f_A50, src, dst, n) >= 0);
@@ -133,7 +133,7 @@ void exp64f(const double *src, double *dst, int n)
 
 void log32f(const float *src, float *dst, int n)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CALL_HAL(log32f, cv_hal_log32f, src, dst, n);
     CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippsLn_32f_A21, src, dst, n) >= 0);
@@ -144,7 +144,7 @@ void log32f(const float *src, float *dst, int n)
 
 void log64f(const double *src, double *dst, int n)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CALL_HAL(log64f, cv_hal_log64f, src, dst, n);
     CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippsLn_64f_A50, src, dst, n) >= 0);

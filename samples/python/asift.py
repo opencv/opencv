@@ -70,7 +70,7 @@ def affine_detect(detector, img, mask=None, pool=None):
     '''
     affine_detect(detector, img, mask=None, pool=None) -> keypoints, descrs
 
-    Apply a set of affine transormations to the image, detect keypoints and
+    Apply a set of affine transformations to the image, detect keypoints and
     reproject them into initial image coordinates.
     See http://www.ipol.im/pub/algo/my_affine_sift/ for the details.
 
@@ -106,9 +106,8 @@ def affine_detect(detector, img, mask=None, pool=None):
     print()
     return keypoints, np.array(descrs)
 
-if __name__ == '__main__':
-    print(__doc__)
 
+def main():
     import sys, getopt
     opts, args = getopt.getopt(sys.argv[1:], '', ['feature='])
     opts = dict(opts)
@@ -116,11 +115,11 @@ if __name__ == '__main__':
     try:
         fn1, fn2 = args
     except:
-        fn1 = '../data/aero1.jpg'
-        fn2 = '../data/aero3.jpg'
+        fn1 = 'aero1.jpg'
+        fn2 = 'aero3.jpg'
 
-    img1 = cv.imread(fn1, 0)
-    img2 = cv.imread(fn2, 0)
+    img1 = cv.imread(cv.samples.findFile(fn1), cv.IMREAD_GRAYSCALE)
+    img2 = cv.imread(cv.samples.findFile(fn2), cv.IMREAD_GRAYSCALE)
     detector, matcher = init_feature(feature_name)
 
     if img1 is None:
@@ -160,4 +159,10 @@ if __name__ == '__main__':
 
     match_and_draw('affine find_obj')
     cv.waitKey()
+    print('Done')
+
+
+if __name__ == '__main__':
+    print(__doc__)
+    main()
     cv.destroyAllWindows()

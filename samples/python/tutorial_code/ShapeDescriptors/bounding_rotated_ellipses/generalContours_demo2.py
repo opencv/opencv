@@ -16,28 +16,28 @@ def thresh_callback(val):
 
     ## [findContours]
     # Find contours
-    _, contours, _ = cv.findContours(canny_output, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+    contours, _ = cv.findContours(canny_output, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
     ## [findContours]
 
     # Find the rotated rectangles and ellipses for each contour
     minRect = [None]*len(contours)
     minEllipse = [None]*len(contours)
-    for i in range(len(contours)):
-        minRect[i] = cv.minAreaRect(contours[i])
-        if contours[i].shape[0] > 5:
-            minEllipse[i] = cv.fitEllipse(contours[i])
+    for i, c in enumerate(contours):
+        minRect[i] = cv.minAreaRect(c)
+        if c.shape[0] > 5:
+            minEllipse[i] = cv.fitEllipse(c)
 
     # Draw contours + rotated rects + ellipses
     ## [zeroMat]
     drawing = np.zeros((canny_output.shape[0], canny_output.shape[1], 3), dtype=np.uint8)
     ## [zeroMat]
     ## [forContour]
-    for i in range(len(contours)):
+    for i, c in enumerate(contours):
         color = (rng.randint(0,256), rng.randint(0,256), rng.randint(0,256))
         # contour
         cv.drawContours(drawing, contours, i, color)
         # ellipse
-        if contours[i].shape[0] > 5:
+        if c.shape[0] > 5:
             cv.ellipse(drawing, minEllipse[i], color, 2)
         # rotated rectangle
         box = cv.boxPoints(minRect[i])
@@ -53,10 +53,10 @@ def thresh_callback(val):
 ## [setup]
 # Load source image
 parser = argparse.ArgumentParser(description='Code for Creating Bounding rotated boxes and ellipses for contours tutorial.')
-parser.add_argument('--input', help='Path to input image.', default='../data/stuff.jpg')
+parser.add_argument('--input', help='Path to input image.', default='stuff.jpg')
 args = parser.parse_args()
 
-src = cv.imread(args.input)
+src = cv.imread(cv.samples.findFile(args.input))
 if src is None:
     print('Could not open or find the image:', args.input)
     exit(0)

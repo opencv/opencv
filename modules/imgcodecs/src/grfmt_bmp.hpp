@@ -73,9 +73,15 @@ public:
 
 protected:
 
+    enum Origin
+    {
+        ORIGIN_TL = 0,
+        ORIGIN_BL = 1
+    };
+
     RLByteStream    m_strm;
     PaletteEntry    m_palette[256];
-    int             m_origin;
+    Origin          m_origin;
     int             m_bpp;
     int             m_offset;
     BmpCompression  m_rle_code;

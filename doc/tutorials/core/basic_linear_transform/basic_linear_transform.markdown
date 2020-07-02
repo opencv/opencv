@@ -1,6 +1,9 @@
 Changing the contrast and brightness of an image! {#tutorial_basic_linear_transform}
 =================================================
 
+@prev_tutorial{tutorial_adding_images}
+@next_tutorial{tutorial_discrete_fourier_transform}
+
 Goal
 ----
 
@@ -53,48 +56,143 @@ Theory
 Code
 ----
 
+@add_toggle_cpp
+-   **Downloadable code**: Click
+    [here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/ImgProc/BasicLinearTransforms.cpp)
+
 -   The following code performs the operation \f$g(i,j) = \alpha \cdot f(i,j) + \beta\f$ :
-@include BasicLinearTransforms.cpp
+    @include samples/cpp/tutorial_code/ImgProc/BasicLinearTransforms.cpp
+@end_toggle
+
+@add_toggle_java
+-   **Downloadable code**: Click
+    [here](https://github.com/opencv/opencv/tree/master/samples/java/tutorial_code/ImgProc/changing_contrast_brightness_image/BasicLinearTransformsDemo.java)
+
+-   The following code performs the operation \f$g(i,j) = \alpha \cdot f(i,j) + \beta\f$ :
+    @include samples/java/tutorial_code/ImgProc/changing_contrast_brightness_image/BasicLinearTransformsDemo.java
+@end_toggle
+
+@add_toggle_python
+-   **Downloadable code**: Click
+    [here](https://github.com/opencv/opencv/tree/master/samples/python/tutorial_code/imgProc/changing_contrast_brightness_image/BasicLinearTransforms.py)
+
+-   The following code performs the operation \f$g(i,j) = \alpha \cdot f(i,j) + \beta\f$ :
+    @include samples/python/tutorial_code/imgProc/changing_contrast_brightness_image/BasicLinearTransforms.py
+@end_toggle
 
 Explanation
 -----------
 
--#  We begin by creating parameters to save \f$\alpha\f$ and \f$\beta\f$ to be entered by the user:
-    @snippet BasicLinearTransforms.cpp basic-linear-transform-parameters
+-   We load an image using @ref cv::imread and save it in a Mat object:
 
--#  We load an image using @ref cv::imread and save it in a Mat object:
-    @snippet BasicLinearTransforms.cpp basic-linear-transform-load
--#  Now, since we will make some transformations to this image, we need a new Mat object to store
+@add_toggle_cpp
+@snippet samples/cpp/tutorial_code/ImgProc/BasicLinearTransforms.cpp basic-linear-transform-load
+@end_toggle
+
+@add_toggle_java
+@snippet samples/java/tutorial_code/ImgProc/changing_contrast_brightness_image/BasicLinearTransformsDemo.java basic-linear-transform-load
+@end_toggle
+
+@add_toggle_python
+@snippet samples/python/tutorial_code/imgProc/changing_contrast_brightness_image/BasicLinearTransforms.py basic-linear-transform-load
+@end_toggle
+
+-   Now, since we will make some transformations to this image, we need a new Mat object to store
     it. Also, we want this to have the following features:
 
     -   Initial pixel values equal to zero
     -   Same size and type as the original image
-    @snippet BasicLinearTransforms.cpp basic-linear-transform-output
-    We observe that @ref cv::Mat::zeros returns a Matlab-style zero initializer based on
-    *image.size()* and *image.type()*
 
--#  Now, to perform the operation \f$g(i,j) = \alpha \cdot f(i,j) + \beta\f$ we will access to each
+@add_toggle_cpp
+@snippet samples/cpp/tutorial_code/ImgProc/BasicLinearTransforms.cpp basic-linear-transform-output
+@end_toggle
+
+@add_toggle_java
+@snippet samples/java/tutorial_code/ImgProc/changing_contrast_brightness_image/BasicLinearTransformsDemo.java basic-linear-transform-output
+@end_toggle
+
+@add_toggle_python
+@snippet samples/python/tutorial_code/imgProc/changing_contrast_brightness_image/BasicLinearTransforms.py basic-linear-transform-output
+@end_toggle
+
+We observe that @ref cv::Mat::zeros returns a Matlab-style zero initializer based on
+*image.size()* and *image.type()*
+
+-   We ask now the values of \f$\alpha\f$ and \f$\beta\f$ to be entered by the user:
+
+@add_toggle_cpp
+@snippet samples/cpp/tutorial_code/ImgProc/BasicLinearTransforms.cpp basic-linear-transform-parameters
+@end_toggle
+
+@add_toggle_java
+@snippet samples/java/tutorial_code/ImgProc/changing_contrast_brightness_image/BasicLinearTransformsDemo.java basic-linear-transform-parameters
+@end_toggle
+
+@add_toggle_python
+@snippet samples/python/tutorial_code/imgProc/changing_contrast_brightness_image/BasicLinearTransforms.py basic-linear-transform-parameters
+@end_toggle
+
+-   Now, to perform the operation \f$g(i,j) = \alpha \cdot f(i,j) + \beta\f$ we will access to each
     pixel in image. Since we are operating with BGR images, we will have three values per pixel (B,
     G and R), so we will also access them separately. Here is the piece of code:
-    @snippet BasicLinearTransforms.cpp basic-linear-transform-operation
-    Notice the following:
-    -   To access each pixel in the images we are using this syntax: *image.at\<Vec3b\>(y,x)[c]*
-        where *y* is the row, *x* is the column and *c* is R, G or B (0, 1 or 2).
-    -   Since the operation \f$\alpha \cdot p(i,j) + \beta\f$ can give values out of range or not
-        integers (if \f$\alpha\f$ is float), we use cv::saturate_cast to make sure the
-        values are valid.
 
--#  Finally, we create windows and show the images, the usual way.
-    @snippet BasicLinearTransforms.cpp basic-linear-transform-display
+@add_toggle_cpp
+@snippet samples/cpp/tutorial_code/ImgProc/BasicLinearTransforms.cpp basic-linear-transform-operation
+@end_toggle
+
+@add_toggle_java
+@snippet samples/java/tutorial_code/ImgProc/changing_contrast_brightness_image/BasicLinearTransformsDemo.java basic-linear-transform-operation
+@end_toggle
+
+@add_toggle_python
+@snippet samples/python/tutorial_code/imgProc/changing_contrast_brightness_image/BasicLinearTransforms.py basic-linear-transform-operation
+@end_toggle
+
+Notice the following (**C++ code only**):
+-   To access each pixel in the images we are using this syntax: *image.at\<Vec3b\>(y,x)[c]*
+    where *y* is the row, *x* is the column and *c* is B, G or R (0, 1 or 2).
+-   Since the operation \f$\alpha \cdot p(i,j) + \beta\f$ can give values out of range or not
+    integers (if \f$\alpha\f$ is float), we use cv::saturate_cast to make sure the
+    values are valid.
+
+-   Finally, we create windows and show the images, the usual way.
+
+@add_toggle_cpp
+@snippet samples/cpp/tutorial_code/ImgProc/BasicLinearTransforms.cpp basic-linear-transform-display
+@end_toggle
+
+@add_toggle_java
+@snippet samples/java/tutorial_code/ImgProc/changing_contrast_brightness_image/BasicLinearTransformsDemo.java basic-linear-transform-display
+@end_toggle
+
+@add_toggle_python
+@snippet samples/python/tutorial_code/imgProc/changing_contrast_brightness_image/BasicLinearTransforms.py basic-linear-transform-display
+@end_toggle
 
 @note
     Instead of using the **for** loops to access each pixel, we could have simply used this command:
-    @code{.cpp}
-    image.convertTo(new_image, -1, alpha, beta);
-    @endcode
-    where @ref cv::Mat::convertTo would effectively perform *new_image = a*image + beta\*. However, we
-    wanted to show you how to access each pixel. In any case, both methods give the same result but
-    convertTo is more optimized and works a lot faster.
+
+@add_toggle_cpp
+@code{.cpp}
+image.convertTo(new_image, -1, alpha, beta);
+@endcode
+@end_toggle
+
+@add_toggle_java
+@code{.java}
+image.convertTo(newImage, -1, alpha, beta);
+@endcode
+@end_toggle
+
+@add_toggle_python
+@code{.py}
+new_image = cv.convertScaleAbs(image, alpha=alpha, beta=beta)
+@endcode
+@end_toggle
+
+where @ref cv::Mat::convertTo would effectively perform *new_image = a*image + beta\*. However, we
+wanted to show you how to access each pixel. In any case, both methods give the same result but
+convertTo is more optimized and works a lot faster.
 
 Result
 ------
@@ -122,12 +220,12 @@ gamma correction.
 ### Brightness and contrast adjustments
 
 Increasing (/ decreasing) the \f$\beta\f$ value will add (/ subtract) a constant value to every pixel. Pixel values outside of the [0 ; 255]
-range will be saturated (i.e. a pixel value higher (/ lesser) than 255 (/ 0) will be clamp to 255 (/ 0)).
+range will be saturated (i.e. a pixel value higher (/ lesser) than 255 (/ 0) will be clamped to 255 (/ 0)).
 
 ![In light gray, histogram of the original image, in dark gray when brightness = 80 in Gimp](images/Basic_Linear_Transform_Tutorial_hist_beta.png)
 
 The histogram represents for each color level the number of pixels with that color level. A dark image will have many pixels with
-low color value and thus the histogram will present a peak in his left part. When adding a constant bias, the histogram is shifted to the
+low color value and thus the histogram will present a peak in its left part. When adding a constant bias, the histogram is shifted to the
 right as we have added a constant bias to all the pixels.
 
 The \f$\alpha\f$ parameter will modify how the levels spread. If \f$ \alpha < 1 \f$, the color levels will be compressed and the result
@@ -185,10 +283,31 @@ and are not intended to be used as a replacement of a raster graphics editor!**
 
 ### Code
 
+@add_toggle_cpp
 Code for the tutorial is [here](https://github.com/opencv/opencv/blob/master/samples/cpp/tutorial_code/ImgProc/changing_contrast_brightness_image/changing_contrast_brightness_image.cpp).
+@end_toggle
+
+@add_toggle_java
+Code for the tutorial is [here](https://github.com/opencv/opencv/blob/master/samples/java/tutorial_code/ImgProc/changing_contrast_brightness_image/ChangingContrastBrightnessImageDemo.java).
+@end_toggle
+
+@add_toggle_python
+Code for the tutorial is [here](https://github.com/opencv/opencv/blob/master/samples/python/tutorial_code/imgProc/changing_contrast_brightness_image/changing_contrast_brightness_image.py).
+@end_toggle
+
 Code for the gamma correction:
 
-@snippet changing_contrast_brightness_image.cpp changing-contrast-brightness-gamma-correction
+@add_toggle_cpp
+@snippet samples/cpp/tutorial_code/ImgProc/changing_contrast_brightness_image/changing_contrast_brightness_image.cpp changing-contrast-brightness-gamma-correction
+@end_toggle
+
+@add_toggle_java
+@snippet samples/java/tutorial_code/ImgProc/changing_contrast_brightness_image/ChangingContrastBrightnessImageDemo.java changing-contrast-brightness-gamma-correction
+@end_toggle
+
+@add_toggle_python
+@snippet samples/python/tutorial_code/imgProc/changing_contrast_brightness_image/changing_contrast_brightness_image.py changing-contrast-brightness-gamma-correction
+@end_toggle
 
 A look-up table is used to improve the performance of the computation as only 256 values needs to be calculated once.
 

@@ -31,6 +31,8 @@
 #ifndef OPENCV_FLANN_KDTREE_SINGLE_INDEX_H_
 #define OPENCV_FLANN_KDTREE_SINGLE_INDEX_H_
 
+//! @cond IGNORED
+
 #include <algorithm>
 #include <map>
 #include <cassert>
@@ -459,7 +461,7 @@ private:
             DistanceType span = bbox[i].high-bbox[i].low;
             if (span>(DistanceType)((1-EPS)*max_span)) {
                 ElementType min_elem, max_elem;
-                computeMinMax(ind, count, cutfeat, min_elem, max_elem);
+                computeMinMax(ind, count, (int)i, min_elem, max_elem);
                 DistanceType spread = (DistanceType)(max_elem-min_elem);
                 if (spread>max_spread) {
                     cutfeat = (int)i;
@@ -546,11 +548,19 @@ private:
         /* If this is a leaf node, then do check and return. */
         if ((node->child1 == NULL)&&(node->child2 == NULL)) {
             DistanceType worst_dist = result_set.worstDist();
-            for (int i=node->left; i<node->right; ++i) {
-                int index = reorder_ ? i : vind_[i];
-                DistanceType dist = distance_(vec, data_[index], dim_, worst_dist);
-                if (dist<worst_dist) {
-                    result_set.addPoint(dist,vind_[i]);
+            if (reorder_) {
+                for (int i=node->left; i<node->right; ++i) {
+                    DistanceType dist = distance_(vec, data_[i], dim_, worst_dist);
+                    if (dist<worst_dist) {
+                        result_set.addPoint(dist,vind_[i]);
+                    }
+                }
+            } else {
+                for (int i=node->left; i<node->right; ++i) {
+                    DistanceType dist = distance_(vec, data_[vind_[i]], dim_, worst_dist);
+                    if (dist<worst_dist) {
+                        result_set.addPoint(dist,vind_[i]);
+                    }
                 }
             }
             return;
@@ -631,5 +641,7 @@ private:
 };   // class KDTree
 
 }
+
+//! @endcond
 
 #endif //OPENCV_FLANN_KDTREE_SINGLE_INDEX_H_

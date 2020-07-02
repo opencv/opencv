@@ -1,6 +1,10 @@
 Installation in Windows {#tutorial_windows_install}
 =======================
 
+@prev_tutorial{tutorial_linux_eclipse}
+@next_tutorial{tutorial_windows_visual_studio_opencv}
+
+
 The description here was tested on Windows 7 SP1. Nevertheless, it should also work on any other
 relatively modern version of Windows OS. If you encounter errors after following the steps described
 below, feel free to contact us via our [OpenCV Q&A forum](http://answers.opencv.org). We'll do our
@@ -46,22 +50,19 @@ cd /c/lib
 myRepo=$(pwd)
 CMAKE_CONFIG_GENERATOR="Visual Studio 14 2015 Win64"
 if [  ! -d "$myRepo/opencv"  ]; then
-    echo "clonning opencv"
+    echo "cloning opencv"
     git clone https://github.com/opencv/opencv.git
-    mkdir Build
-    mkdir Build/opencv
-    mkdir Install
-    mkdir Install/opencv
+    mkdir -p Build/opencv
+    mkdir -p Install/opencv
 else
     cd opencv
     git pull --rebase
     cd ..
 fi
 if [  ! -d "$myRepo/opencv_contrib"  ]; then
-    echo "clonning opencv_contrib"
+    echo "cloning opencv_contrib"
     git clone https://github.com/opencv/opencv_contrib.git
-    mkdir Build
-    mkdir Build/opencv_contrib
+    mkdir -p Build/opencv_contrib
 else
     cd opencv_contrib
     git pull --rebase
@@ -142,8 +143,6 @@ of them, you need to download and install them on your system.
 -   [Intel Integrated Performance Primitives (*IPP*)](http://software.intel.com/en-us/articles/intel-ipp/) may be used to improve the performance
     of color conversion, Haar training and DFT functions of the OpenCV library. Watch out, since
     this is not a free service.
--   [Intel IPP Asynchronous C/C++](http://software.intel.com/en-us/intel-ipp-preview) is currently focused delivering Intel Graphics
-    support for advanced image processing and computer vision functions.
 -   OpenCV offers a somewhat fancier and more useful graphical user interface, than the default one
     by using the [Qt framework](http://qt.nokia.com/downloads). For a quick overview of what this has to offer, look into the
     documentations *highgui* module, under the *Qt New Functions* section. Version 4.6 or later of
@@ -156,7 +155,7 @@ of them, you need to download and install them on your system.
     image file format.
 -   The OpenNI Framework contains a set of open source APIs that provide support for natural interaction with devices via methods such as voice command recognition, hand gestures, and body
     motion tracking. Prebuilt binaries can be found [here](http://structure.io/openni). The source code of [OpenNI](https://github.com/OpenNI/OpenNI) and [OpenNI2](https://github.com/OpenNI/OpenNI2) are also available on Github.
--   [Doxygen](http://www.stack.nl/~dimitri/doxygen/) is a documentation generator and is the tool that will actually create the
+-   [Doxygen](http://www.doxygen.nl) is a documentation generator and is the tool that will actually create the
     *OpenCV documentation*.
 
 Now we will describe the steps to follow for a full build (using all the above frameworks, tools and
@@ -204,10 +203,6 @@ libraries). If you do not need the support for some of these, you can just freel
 
         ![](images/IntelTBB.png)
 
-    -#  For the [Intel IPP Asynchronous C/C++](http://software.intel.com/en-us/intel-ipp-preview) download the source files and set environment
-        variable **IPP_ASYNC_ROOT**. It should point to
-        `<your Program Files(x86) directory>/Intel/IPP Preview */ipp directory`. Here \* denotes the
-        particular preview name.
     -#  In case of the [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page#Download) library it is again a case of download and extract to the
         `D:/OpenCV/dep` directory.
     -#  Same as above with [OpenEXR](http://www.openexr.com/downloads.html).
@@ -319,6 +314,7 @@ libraries). If you do not need the support for some of these, you can just freel
         you are concerned about performance, build them and run.
     -   *BUILD_opencv_python* -\> Self-explanatory. Create the binaries to use OpenCV from the
         Python language.
+    -   *BUILD_opencv_world* -\> Generate a single "opencv_world" binary (a shared or static library, depending on *BUILD_SHARED_LIBS*) including all the modules instead of a collection of separate binaries, one binary per module.
 
     Press again the *Configure* button and ensure no errors are reported. If this is the case, you
     can tell CMake to create the project files by pushing the *Generate* button. Go to the build

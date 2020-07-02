@@ -185,6 +185,16 @@ public class MatTest extends OpenCVTestCase {
         assertEquals(CvType.CV_16U, dst.type());
     }
 
+    public void testCreateIntArrayInt() {
+        int[] dims = new int[] {5, 6, 7};
+        dst.create(dims, CvType.CV_16U);
+
+        assertEquals(5, dst.size(0));
+        assertEquals(6, dst.size(1));
+        assertEquals(7, dst.size(2));
+        assertEquals(CvType.CV_16U, dst.type());
+    }
+
     public void testCross() {
         Mat answer = new Mat(1, 3, CvType.CV_32F);
         answer.put(0, 0, 7.0, 1.0, -5.0);
@@ -256,7 +266,7 @@ public class MatTest extends OpenCVTestCase {
 
     public void testEmpty() {
         assertTrue(dst.empty());
-        assertTrue(!gray0.empty());
+        assertFalse(gray0.empty());
     }
 
     public void testEyeIntIntInt() {
@@ -569,6 +579,15 @@ public class MatTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
+    public void testMatMatRangeArray() {
+        dst = new Mat(gray255_32f_3d, new Range[]{new Range(0, 5), new Range(0, 5), new Range(0, 5)});
+
+        truth = new Mat(new int[] {5, 5, 5}, CvType.CV_32FC1, new Scalar(255));
+
+        assertFalse(dst.empty());
+        assertMatEqual(truth, dst, EPS);
+    }
+
     public void testMatMatRect() {
         Mat m = new Mat(7, 6, CvType.CV_32SC1);
         m.put(0,  0,
@@ -606,6 +625,13 @@ public class MatTest extends OpenCVTestCase {
         assertMatEqual(gray255_32f, dst, EPS);
     }
 
+    public void testMatIntArrayIntScalar() {
+        dst = new Mat(new int[]{10, 10, 10}, CvType.CV_32F, new Scalar(255));
+
+        assertFalse(dst.empty());
+        assertMatEqual(gray255_32f_3d, dst, EPS);
+    }
+
     public void testMulMat() {
         assertMatEqual(gray0, gray0.mul(gray255));
 
@@ -617,6 +643,16 @@ public class MatTest extends OpenCVTestCase {
         truth = new Mat(2, 2, CvType.CV_32F, new Scalar(6));
         assertMatEqual(truth, dst, EPS);
 
+    }
+
+    public void testMulMat3d() {
+        Mat m1 = new Mat(new int[] {2, 2, 2}, CvType.CV_32F, new Scalar(2));
+        Mat m2 = new Mat(new int[] {2, 2, 2}, CvType.CV_32F, new Scalar(3));
+
+        dst = m1.mul(m2);
+
+        truth = new Mat(new int[] {2, 2, 2}, CvType.CV_32F, new Scalar(6));
+        assertMatEqual(truth, dst, EPS);
     }
 
     public void testMulMatDouble() {
@@ -639,6 +675,12 @@ public class MatTest extends OpenCVTestCase {
     public void testOnesSizeInt() {
         dst = Mat.ones(new Size(2, 2), CvType.CV_16S);
         truth = new Mat(2, 2, CvType.CV_16S, new Scalar(1));
+        assertMatEqual(truth, dst);
+    }
+
+    public void testOnesIntArrayInt() {
+        dst = Mat.ones(new int[]{2, 2, 2}, CvType.CV_16S);
+        truth = new Mat(new int[]{2, 2, 2}, CvType.CV_16S, new Scalar(1));
         assertMatEqual(truth, dst);
     }
 
@@ -699,6 +741,46 @@ public class MatTest extends OpenCVTestCase {
         }
     }
 
+    public void testPutIntArrayByteArray() {
+        Mat m = new Mat(new int[]{5, 5, 5}, CvType.CV_8UC3, new Scalar(1, 2, 3));
+        Mat sm = m.submat(new Range[]{ new Range(0, 2), new Range(1, 3), new Range(2, 4)});
+        byte[] buff  = new byte[] { 0, 0, 0, 0, 0, 0 };
+        byte[] buff0 = new byte[] { 10, 20, 30, 40, 50, 60 };
+        byte[] buff1 = new byte[] { -1, -2, -3, -4, -5, -6 };
+
+        int bytesNum = m.put(new int[]{1, 2, 0}, buff0);
+
+        assertEquals(6, bytesNum);
+        bytesNum = m.get(new int[]{1, 2, 0}, buff);
+        assertEquals(6, bytesNum);
+        assertTrue(Arrays.equals(buff, buff0));
+
+        bytesNum = sm.put(new int[]{0, 0, 0}, buff1);
+
+        assertEquals(6, bytesNum);
+        bytesNum = sm.get(new int[]{0, 0, 0}, buff);
+        assertEquals(6, bytesNum);
+        assertTrue(Arrays.equals(buff, buff1));
+
+        bytesNum = m.get(new int[]{0, 1, 2}, buff);
+        assertEquals(6, bytesNum);
+        assertTrue(Arrays.equals(buff, buff1));
+
+        Mat m1 = m.submat(new Range[]{ new Range(1,2), Range.all(), Range.all() });
+        bytesNum = m1.get(new int[]{ 0, 2, 0}, buff);
+        assertEquals(6, bytesNum);
+        assertTrue(Arrays.equals(buff, buff0));
+
+        try {
+            byte[] bytes2 = new byte[] { 10, 20, 30, 40, 50 };
+            m.put(new int[]{ 2, 2, 0 }, bytes2);
+            fail("Expected UnsupportedOperationException (data.length % CvType.channels(t) != 0)");
+        } catch (UnsupportedOperationException e) {
+            // expected
+        }
+
+    }
+
     public void testPutIntIntDoubleArray() {
         Mat m = new Mat(5, 5, CvType.CV_8UC3, new Scalar(1, 2, 3));
         Mat sm = m.submat(2, 4, 3, 5);
@@ -722,6 +804,29 @@ public class MatTest extends OpenCVTestCase {
         assertTrue(Arrays.equals(buff, new byte[]{-1, -2, -3, -4, -5, -6}));
     }
 
+    public void testPutIntArrayDoubleArray() {
+        Mat m = new Mat(new int[]{5, 5, 5}, CvType.CV_8UC3, new Scalar(1, 2, 3));
+        Mat sm = m.submat(new Range[]{ new Range(0, 2), new Range(1, 3), new Range(2, 4)});
+        byte[] buff  = new byte[] { 0, 0, 0, 0, 0, 0 };
+
+        int bytesNum = m.put(new int[]{1, 2, 0}, 10, 20, 30, 40, 50, 60);
+
+        assertEquals(6, bytesNum);
+        bytesNum = m.get(new int[]{1, 2, 0}, buff);
+        assertEquals(6, bytesNum);
+        assertTrue(Arrays.equals(buff, new byte[]{10, 20, 30, 40, 50, 60}));
+
+        bytesNum = sm.put(new int[]{0, 0, 0}, 255, 254, 253, 252, 251, 250);
+
+        assertEquals(6, bytesNum);
+        bytesNum = sm.get(new int[]{0, 0, 0}, buff);
+        assertEquals(6, bytesNum);
+        assertTrue(Arrays.equals(buff, new byte[]{-1, -2, -3, -4, -5, -6}));
+        bytesNum = m.get(new int[]{0, 1, 2}, buff);
+        assertEquals(6, bytesNum);
+        assertTrue(Arrays.equals(buff, new byte[]{-1, -2, -3, -4, -5, -6}));
+    }
+
     public void testPutIntIntFloatArray() {
         Mat m = new Mat(5, 5, CvType.CV_32FC3, new Scalar(1, 2, 3));
         float[] elements = new float[] { 10, 20, 30, 40, 50, 60 };
@@ -739,6 +844,29 @@ public class MatTest extends OpenCVTestCase {
         try {
             float[] elements2 = new float[] { 10, 20, 30, 40, 50 };
             m.put(2, 2, elements2);
+            fail("Expected UnsupportedOperationException (data.length % CvType.channels(t) != 0)");
+        } catch (UnsupportedOperationException e) {
+            // expected
+        }
+    }
+
+    public void testPutIntArrayFloatArray() {
+        Mat m = new Mat(new int[]{5, 5, 5}, CvType.CV_32FC3, new Scalar(1, 2, 3));
+        float[] elements = new float[] { 10, 20, 30, 40, 50, 60 };
+
+        int bytesNum = m.put(new int[]{0, 4, 3}, elements);
+
+        assertEquals(elements.length * 4, bytesNum);
+        Mat m1 = m.submat(new Range[]{ Range.all(), new Range(4, 5), Range.all() });
+        float buff[] = new float[3];
+        bytesNum = m1.get(new int[]{ 0, 0, 4 }, buff);
+        assertEquals(buff.length * 4, bytesNum);
+        assertTrue(Arrays.equals(new float[]{40, 50, 60}, buff));
+        assertArrayEquals(new double[]{10, 20, 30}, m.get(new int[]{ 0, 4, 3 }), EPS);
+
+        try {
+            float[] elements2 = new float[] { 10, 20, 30, 40, 50 };
+            m.put(new int[]{4, 2, 2}, elements2);
             fail("Expected UnsupportedOperationException (data.length % CvType.channels(t) != 0)");
         } catch (UnsupportedOperationException e) {
             // expected
@@ -768,6 +896,29 @@ public class MatTest extends OpenCVTestCase {
         }
     }
 
+    public void testPutIntArrayIntArray() {
+        Mat m = new Mat(new int[]{5, 5, 5}, CvType.CV_32SC3, new Scalar(-1, -2, -3));
+        int[] elements = new int[] { 10, 20, 30, 40, 50, 60 };
+
+        int bytesNum = m.put(new int[]{ 0, 0, 4 }, elements);
+
+        assertEquals(elements.length * 4, bytesNum);
+        Mat m1 = m.submat(new Range[]{ Range.all(), Range.all(), new Range(4, 5)});
+        int buff[] = new int[3];
+        bytesNum = m1.get(new int[]{ 0, 0, 0 }, buff);
+        assertEquals(buff.length * 4, bytesNum);
+        assertTrue(Arrays.equals(new int[]{ 10, 20, 30 }, buff));
+        assertArrayEquals(new double[]{ 40, 50, 60 }, m.get(new int[]{ 0, 1, 0 }), EPS);
+
+        try {
+            int[] elements2 = new int[] { 10, 20, 30, 40, 50 };
+            m.put(new int[] { 2, 2, 0 }, elements2);
+            fail("Expected UnsupportedOperationException (data.length % CvType.channels(t) != 0)");
+        } catch (UnsupportedOperationException e) {
+            // expected
+        }
+    }
+
     public void testPutIntIntShortArray() {
         Mat m = new Mat(5, 5, CvType.CV_16SC3, new Scalar(-1, -2, -3));
         short[] elements = new short[] { 10, 20, 30, 40, 50, 60 };
@@ -784,6 +935,28 @@ public class MatTest extends OpenCVTestCase {
         try {
             short[] elements2 = new short[] { 10, 20, 30, 40, 50 };
             m.put(2, 2, elements2);
+            fail("Expected UnsupportedOperationException (data.length % CvType.channels(t) != 0)");
+        } catch (UnsupportedOperationException e) {
+            // expected
+        }
+    }
+
+    public void testPutIntArrayShortArray() {
+        Mat m = new Mat(new int[]{ 5, 5, 5}, CvType.CV_16SC3, new Scalar(-1, -2, -3));
+        short[] elements = new short[] { 10, 20, 30, 40, 50, 60 };
+
+        int bytesNum = m.put(new int[]{ 0, 2, 3 }, elements);
+
+        assertEquals(elements.length * 2, bytesNum);
+        Mat m1 = m.submat(new Range[]{ Range.all(), Range.all(), new Range(3, 4)});
+        short buff[] = new short[3];
+        bytesNum = m1.get(new int[]{ 0, 2, 0 }, buff);
+        assertTrue(Arrays.equals(new short[]{10, 20, 30}, buff));
+        assertArrayEquals(new double[]{40, 50, 60}, m.get(new int[]{ 0, 2, 4 }), EPS);
+
+        try {
+            short[] elements2 = new short[] { 10, 20, 30, 40, 50 };
+            m.put(new int[] { 2, 2, 0 }, elements2);
             fail("Expected UnsupportedOperationException (data.length % CvType.channels(t) != 0)");
         } catch (UnsupportedOperationException e) {
             // expected
@@ -815,6 +988,48 @@ public class MatTest extends OpenCVTestCase {
 
         truth = new Mat(5, 1, CvType.CV_8UC(7), new Scalar(0));
         assertMatEqual(truth, dst);
+    }
+
+    public void testReshapeIntIntArray() {
+        // 2D -> 4D
+        Mat src = new Mat(6, 5, CvType.CV_8UC3, new Scalar(0));
+        assertEquals(2, src.dims());
+        assertEquals(src.rows(), src.size(0));
+        assertEquals(src.cols(), src.size(1));
+
+        int[] newShape = {1, src.channels() * src.cols(), 1, src.rows()};
+        dst = src.reshape(1, newShape);
+        assertEquals(newShape.length, dst.dims());
+        for (int i = 0; i < newShape.length; ++i)
+            assertEquals(newShape[i], dst.size(i));
+
+        // 3D -> 2D
+        src = new Mat(new int[]{4, 6, 7}, CvType.CV_8UC3, new Scalar(0));
+        assertEquals(3, src.dims());
+        assertEquals(4, src.size(0));
+        assertEquals(6, src.size(1));
+        assertEquals(7, src.size(2));
+
+        int[] newShape2 = {src.channels() * src.size(2), src.size(0) * src.size(1)};
+        dst = src.reshape(1, newShape2);
+        assertEquals(newShape2.length, dst.dims());
+        for (int i = 0; i < newShape2.length; ++i)
+            assertEquals(newShape2[i], dst.size(i));
+    }
+
+    public void testCopySize() {
+        Mat src = new Mat(new int[]{1, 1, 10, 10}, CvType.CV_8UC1, new Scalar(1));
+        assertEquals(4, src.dims());
+        assertEquals(1, src.size(0));
+        assertEquals(1, src.size(1));
+        assertEquals(10, src.size(2));
+        assertEquals(10, src.size(3));
+        Mat other = new Mat(new int[]{10, 10}, src.type());
+
+        src.copySize(other);
+        assertEquals(other.dims(), src.dims());
+        for (int i = 0; i < other.dims(); ++i)
+            assertEquals(other.size(i), src.size(i));
     }
 
     public void testRow() {
@@ -936,6 +1151,16 @@ public class MatTest extends OpenCVTestCase {
         assertEquals(2, submat.cols());
     }
 
+    public void testSubmatRangeArray() {
+        Mat submat = gray255_32f_3d.submat(new Range[]{ new Range(2, 4), new Range(2, 4), new Range(3, 6) });
+        assertTrue(submat.isSubmatrix());
+        assertFalse(submat.isContinuous());
+
+        assertEquals(2, submat.size(0));
+        assertEquals(2, submat.size(1));
+        assertEquals(3, submat.size(2));
+    }
+
     public void testSubmatRect() {
         Mat submat = gray255.submat(new Rect(5, 5, gray255.cols() / 2, gray255.rows() / 2));
         assertTrue(submat.isSubmatrix());
@@ -969,7 +1194,7 @@ public class MatTest extends OpenCVTestCase {
     }
 
     public void testToString() {
-        assertTrue(null != gray0.toString());
+        assertNotNull(gray0.toString());
     }
 
     public void testTotal() {
@@ -1002,6 +1227,13 @@ public class MatTest extends OpenCVTestCase {
         assertMatEqual(truth, dst);
     }
 
+    public void testZerosIntArray() {
+        dst = Mat.zeros(new int[]{2, 3, 4}, CvType.CV_16S);
+
+        truth = new Mat(new int[]{2, 3, 4}, CvType.CV_16S, new Scalar(0));
+        assertMatEqual(truth, dst);
+    }
+
     public void testMatFromByteBuffer() {
         ByteBuffer bbuf = ByteBuffer.allocateDirect(64*64);
         bbuf.putInt(0x01010101);
@@ -1012,6 +1244,24 @@ public class MatTest extends OpenCVTestCase {
         m.release();
         assertEquals(2, bbuf.get(0));
         assertEquals(1, bbuf.get(4095));
+    }
+
+    public void testMatFromByteBufferWithStep() {
+        ByteBuffer bbuf = ByteBuffer.allocateDirect(80*64);
+        bbuf.putInt(0x01010101);
+        bbuf.putInt(64, 0x02020202);
+        bbuf.putInt(80, 0x03030303);
+        Mat m = new Mat(64, 64, CvType.CV_8UC1, bbuf, 80);
+        assertEquals(8, Core.countNonZero(m));
+        Core.add(m, new Scalar(5), m);
+        assertEquals(4096, Core.countNonZero(m));
+        m.release();
+        assertEquals(6, bbuf.get(0));
+        assertEquals(5, bbuf.get(63));
+        assertEquals(2, bbuf.get(64));
+        assertEquals(0, bbuf.get(79));
+        assertEquals(8, bbuf.get(80));
+        assertEquals(5, bbuf.get(63*80 + 63));
     }
 
 }

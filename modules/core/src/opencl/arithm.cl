@@ -71,7 +71,30 @@
 #pragma OPENCL FP_FAST_FMA ON
 #endif
 
-#if depth <= 5
+#if !defined(DEPTH_dst)
+#error "Kernel configuration error: DEPTH_dst value is required"
+#elif !(DEPTH_dst >= 0 && DEPTH_dst <= 7)
+#error "Kernel configuration error: invalid DEPTH_dst value"
+#endif
+#if defined(depth)
+#error "Kernel configuration error: ambiguous 'depth' value is defined, use 'DEPTH_dst' instead"
+#endif
+
+
+#if DEPTH_dst < 5 /* CV_32F */
+#define CV_DST_TYPE_IS_INTEGER
+#else
+#define CV_DST_TYPE_IS_FP
+#endif
+
+#if DEPTH_dst != 6 /* CV_64F */
+#define CV_DST_TYPE_FIT_32F 1
+#else
+#define CV_DST_TYPE_FIT_32F 0
+#endif
+
+
+#if CV_DST_TYPE_FIT_32F
 #define CV_PI M_PI_F
 #else
 #define CV_PI M_PI
@@ -204,9 +227,15 @@
 #define PROCESS_ELEM storedst(convertToDT(srcelem1 * scale * srcelem2))
 
 #elif defined OP_DIV
+#ifdef CV_DST_TYPE_IS_INTEGER
 #define PROCESS_ELEM \
         workT e2 = srcelem2, zero = (workT)(0); \
         storedst(convertToDT(e2 != zero ? srcelem1 / e2 : zero))
+#else
+#define PROCESS_ELEM \
+        workT e2 = srcelem2; \
+        storedst(convertToDT(srcelem1 / e2))
+#endif
 
 #elif defined OP_DIV_SCALE
 #undef EXTRA_PARAMS
@@ -217,9 +246,15 @@
 #else
 #define EXTRA_PARAMS , scaleT scale
 #endif
+#ifdef CV_DST_TYPE_IS_INTEGER
 #define PROCESS_ELEM \
         workT e2 = srcelem2, zero = (workT)(0); \
         storedst(convertToDT(e2 == zero ? zero : (srcelem1 * (workT)(scale) / e2)))
+#else
+#define PROCESS_ELEM \
+        workT e2 = srcelem2; \
+        storedst(convertToDT(srcelem1 * (workT)(scale) / e2))
+#endif
 
 #elif defined OP_RDIV_SCALE
 #undef EXTRA_PARAMS
@@ -230,16 +265,28 @@
 #else
 #define EXTRA_PARAMS , scaleT scale
 #endif
+#ifdef CV_DST_TYPE_IS_INTEGER
 #define PROCESS_ELEM \
         workT e1 = srcelem1, zero = (workT)(0); \
         storedst(convertToDT(e1 == zero ? zero : (srcelem2 * (workT)(scale) / e1)))
+#else
+#define PROCESS_ELEM \
+        workT e1 = srcelem1; \
+        storedst(convertToDT(srcelem2 * (workT)(scale) / e1))
+#endif
 
 #elif defined OP_RECIP_SCALE
 #undef EXTRA_PARAMS
 #define EXTRA_PARAMS , scaleT scale
+#ifdef CV_DST_TYPE_IS_INTEGER
 #define PROCESS_ELEM \
         workT e1 = srcelem1, zero = (workT)(0); \
         storedst(convertToDT(e1 != zero ? scale / e1 : zero))
+#else
+#define PROCESS_ELEM \
+        workT e1 = srcelem1; \
+        storedst(convertToDT(scale / e1))
+#endif
 
 #elif defined OP_ADDW
 #undef EXTRA_PARAMS
@@ -283,7 +330,7 @@
 #define PROCESS_ELEM storedst(pown(srcelem1, srcelem2))
 
 #elif defined OP_SQRT
-#if depth <= 5
+#if CV_DST_TYPE_FIT_32F
 #define PROCESS_ELEM storedst(native_sqrt(srcelem1))
 #else
 #define PROCESS_ELEM storedst(sqrt(srcelem1))
@@ -324,7 +371,7 @@
 #endif
 
 #elif defined OP_CTP_AD || defined OP_CTP_AR
-#if depth <= 5
+#if CV_DST_TYPE_FIT_32F
 #define CV_EPSILON FLT_EPSILON
 #else
 #define CV_EPSILON DBL_EPSILON

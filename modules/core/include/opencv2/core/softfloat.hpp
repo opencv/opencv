@@ -507,8 +507,8 @@ Special cases:
 */
 CV_EXPORTS softdouble cos( const softdouble& a );
 
-}
+//! @} core_utils_softfloat
 
-//! @}
+} // cv::
 
 #endif

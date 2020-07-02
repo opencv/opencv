@@ -76,22 +76,6 @@ namespace cv
  */
 int RANSACUpdateNumIters( double p, double ep, int modelPoints, int maxIters );
 
-class CV_EXPORTS LMSolver : public Algorithm
-{
-public:
-    class CV_EXPORTS Callback
-    {
-    public:
-        virtual ~Callback() {}
-        virtual bool compute(InputArray param, OutputArray err, OutputArray J) const = 0;
-    };
-
-    virtual void setCallback(const Ptr<LMSolver::Callback>& cb) = 0;
-    virtual int run(InputOutputArray _param0) const = 0;
-};
-
-CV_EXPORTS Ptr<LMSolver> createLMSolver(const Ptr<LMSolver::Callback>& cb, int maxIters);
-
 class CV_EXPORTS PointSetRegistrator : public Algorithm
 {
 public:
@@ -153,7 +137,6 @@ static inline bool haveCollinearPoints( const Mat& m, int count )
 
 } // namespace cv
 
-int checkChessboard(const cv::Mat & img, const cv::Size & size);
 int checkChessboardBinary(const cv::Mat & img, const cv::Size & size);
 
 #endif

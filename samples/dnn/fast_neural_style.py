@@ -13,8 +13,8 @@ parser.add_argument('--height', default=-1, type=int, help='Resize input to spec
 parser.add_argument('--median_filter', default=0, type=int, help='Kernel size of postprocessing blurring.')
 args = parser.parse_args()
 
-net = cv.dnn.readNetFromTorch(args.model)
-net.setPreferableBackend(cv.dnn.DNN_BACKEND_OPENCV);
+net = cv.dnn.readNetFromTorch(cv.samples.findFile(args.model))
+net.setPreferableBackend(cv.dnn.DNN_BACKEND_OPENCV)
 
 if args.input:
     cap = cv.VideoCapture(args.input)

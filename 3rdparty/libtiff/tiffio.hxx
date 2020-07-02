@@ -1,5 +1,3 @@
-/* $Id: tiffio.hxx,v 1.3 2010-06-08 18:55:15 bfriesen Exp $ */
-
 /*
  * Copyright (c) 1988-1997 Sam Leffler
  * Copyright (c) 1991-1997 Silicon Graphics, Inc.
@@ -33,6 +31,7 @@
 
 #include <iostream>
 #include "tiff.h"
+#include "tiffio.h"
 
 extern TIFF* TIFFStreamOpen(const char*, std::ostream *);
 extern TIFF* TIFFStreamOpen(const char*, std::istream *);

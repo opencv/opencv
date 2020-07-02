@@ -99,55 +99,60 @@ public:
         return nz;
     }
 
-    bool getSubset( const Mat& m1, const Mat& m2,
-                    Mat& ms1, Mat& ms2, RNG& rng,
-                    int maxAttempts=1000 ) const
+    bool getSubset( const Mat& m1, const Mat& m2, Mat& ms1, Mat& ms2, RNG& rng, int maxAttempts=1000 ) const
     {
         cv::AutoBuffer<int> _idx(modelPoints);
         int* idx = _idx.data();
-        int i = 0, j, k, iters = 0;
-        int d1 = m1.channels() > 1 ? m1.channels() : m1.cols;
-        int d2 = m2.channels() > 1 ? m2.channels() : m2.cols;
-        int esz1 = (int)m1.elemSize1()*d1, esz2 = (int)m2.elemSize1()*d2;
-        int count = m1.checkVector(d1), count2 = m2.checkVector(d2);
-        const int *m1ptr = m1.ptr<int>(), *m2ptr = m2.ptr<int>();
+
+        const int d1 = m1.channels() > 1 ? m1.channels() : m1.cols;
+        const int d2 = m2.channels() > 1 ? m2.channels() : m2.cols;
+
+        int esz1 = (int)m1.elemSize1() * d1;
+        int esz2 = (int)m2.elemSize1() * d2;
+        CV_Assert((esz1 % sizeof(int)) == 0 && (esz2 % sizeof(int)) == 0);
+        esz1 /= sizeof(int);
+        esz2 /= sizeof(int);
+
+        const int count = m1.checkVector(d1);
+        const int count2 = m2.checkVector(d2);
+        CV_Assert(count >= modelPoints && count == count2);
+
+        const int *m1ptr = m1.ptr<int>();
+        const int *m2ptr = m2.ptr<int>();
 
         ms1.create(modelPoints, 1, CV_MAKETYPE(m1.depth(), d1));
         ms2.create(modelPoints, 1, CV_MAKETYPE(m2.depth(), d2));
 
-        int *ms1ptr = ms1.ptr<int>(), *ms2ptr = ms2.ptr<int>();
+        int *ms1ptr = ms1.ptr<int>();
+        int *ms2ptr = ms2.ptr<int>();
 
-        CV_Assert( count >= modelPoints && count == count2 );
-        CV_Assert( (esz1 % sizeof(int)) == 0 && (esz2 % sizeof(int)) == 0 );
-        esz1 /= sizeof(int);
-        esz2 /= sizeof(int);
-
-        for(; iters < maxAttempts; iters++)
+        for( int iters = 0; iters < maxAttempts; ++iters )
         {
-            for( i = 0; i < modelPoints && iters < maxAttempts; )
+            int i;
+
+            for( i = 0; i < modelPoints; ++i )
             {
-                int idx_i = 0;
-                for(;;)
-                {
-                    idx_i = idx[i] = rng.uniform(0, count);
-                    for( j = 0; j < i; j++ )
-                        if( idx_i == idx[j] )
-                            break;
-                    if( j == i )
-                        break;
-                }
-                for( k = 0; k < esz1; k++ )
+                int idx_i;
+
+                for ( idx_i = rng.uniform(0, count);
+                    std::find(idx, idx + i, idx_i) != idx + i;
+                    idx_i = rng.uniform(0, count) )
+                {}
+
+                idx[i] = idx_i;
+
+                for( int k = 0; k < esz1; ++k )
                     ms1ptr[i*esz1 + k] = m1ptr[idx_i*esz1 + k];
-                for( k = 0; k < esz2; k++ )
+
+                for( int k = 0; k < esz2; ++k )
                     ms2ptr[i*esz2 + k] = m2ptr[idx_i*esz2 + k];
-                i++;
             }
-            if( i == modelPoints && !cb->checkSubset(ms1, ms2, i) )
-                continue;
-            break;
+
+            if( cb->checkSubset(ms1, ms2, i) )
+                return true;
         }
 
-        return i == modelPoints && iters < maxAttempts;
+        return false;
     }
 
     bool run(InputArray _m1, InputArray _m2, OutputArray _model, OutputArray _mask) const CV_OVERRIDE
@@ -483,13 +488,13 @@ public:
             for(j = 0; j < i; ++j)
             {
                 Point3f d1 = ptr[j] - ptr[i];
-                float n1 = d1.x*d1.x + d1.y*d1.y;
+                float n1 = d1.x*d1.x + d1.y*d1.y + d1.z*d1.z;
 
                 for(k = 0; k < j; ++k)
                 {
                     Point3f d2 = ptr[k] - ptr[i];
-                    float denom = (d2.x*d2.x + d2.y*d2.y)*n1;
-                    float num = d1.x*d2.x + d1.y*d2.y;
+                    float denom = (d2.x*d2.x + d2.y*d2.y + d2.z*d2.z)*n1;
+                    float num = d1.x*d2.x + d1.y*d2.y + d1.z*d2.z;
 
                     if( num*num > threshold*threshold*denom )
                         return false;
@@ -499,6 +504,86 @@ public:
         return true;
     }
 };
+
+
+/*
+ * Compute
+ *  x      X     t1
+ *  y  =   Y  +  t2
+ *  z      Z     t3
+ *
+ *  - every element in _m1 contains (X,Y,Z), which are called source points
+ *  - every element in _m2 contains (x,y,z), which are called destination points
+ *  - _model is of size 3x1, which contains
+ *      t1
+ *      t2
+ *      t3
+ */
+class Translation3DEstimatorCallback CV_FINAL : public PointSetRegistrator::Callback
+{
+public:
+    int runKernel( InputArray _m1, InputArray _m2, OutputArray _model ) const CV_OVERRIDE
+    {
+
+        Mat m1 = _m1.getMat(), m2 = _m2.getMat();
+        const Point3f* from = m1.ptr<Point3f>();
+        const Point3f* to   = m2.ptr<Point3f>();
+
+        Matx13d T;
+
+        // The optimal translation is the mean of the pointwise displacements
+        for(int i = 0; i < 4; i++)
+        {
+            const Point3f& f = from[i];
+            const Point3f& t = to[i];
+
+            T(0, 0) = T(0, 0) + t.x - f.x;
+            T(0, 1) = T(0, 1) + t.y - f.y;
+            T(0, 2) = T(0, 2) + t.z - f.z;
+        }
+        T *= (1.0f / 4);
+        Mat(T, false).copyTo(_model);
+        return 1;
+    }
+
+    void computeError( InputArray _m1, InputArray _m2, InputArray _model, OutputArray _err ) const CV_OVERRIDE
+    {
+        Mat m1 = _m1.getMat(), m2 = _m2.getMat(), model = _model.getMat();
+        const Point3f* from = m1.ptr<Point3f>();
+        const Point3f* to   = m2.ptr<Point3f>();
+        const double* F = model.ptr<double>();
+
+        int count = m1.checkVector(3);
+        CV_Assert( count > 0 );
+
+        _err.create(count, 1, CV_32F);
+        Mat err = _err.getMat();
+        float* errptr = err.ptr<float>();
+
+        for(int i = 0; i < count; i++ )
+        {
+            const Point3f& f = from[i];
+            const Point3f& t = to[i];
+
+            double a = F[0] + f.x - t.x;
+            double b = F[1] + f.y - t.y;
+            double c = F[2] + f.z - t.z;
+
+            errptr[i] = (float)(a*a + b*b + c*c);
+        }
+    }
+
+    // not doing SVD, no degeneracy concerns, can simply return true
+    bool checkSubset( InputArray _ms1, InputArray _ms2, int count ) const CV_OVERRIDE
+    {
+        // voids to suppress compiler warnings
+        (void)_ms1;
+        (void)_ms2;
+        (void)count;
+        return true;
+    }
+};
+
 
 /*
  * Compute
@@ -793,7 +878,7 @@ int estimateAffine3D(InputArray _from, InputArray _to,
                      OutputArray _out, OutputArray _inliers,
                      double ransacThreshold, double confidence)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat from = _from.getMat(), to = _to.getMat();
     int count = from.checkVector(3);
@@ -811,6 +896,30 @@ int estimateAffine3D(InputArray _from, InputArray _to,
     confidence = (confidence < epsilon) ? 0.99 : (confidence > 1 - epsilon) ? 0.99 : confidence;
 
     return createRANSACPointSetRegistrator(makePtr<Affine3DEstimatorCallback>(), 4, ransacThreshold, confidence)->run(dFrom, dTo, _out, _inliers);
+}
+
+int estimateTranslation3D(InputArray _from, InputArray _to,
+                          OutputArray _out, OutputArray _inliers,
+                          double ransacThreshold, double confidence)
+{
+    CV_INSTRUMENT_REGION();
+
+    Mat from = _from.getMat(), to = _to.getMat();
+    int count = from.checkVector(3);
+
+    CV_Assert( count >= 0 && to.checkVector(3) == count );
+
+    Mat dFrom, dTo;
+    from.convertTo(dFrom, CV_32F);
+    to.convertTo(dTo, CV_32F);
+    dFrom = dFrom.reshape(3, count);
+    dTo = dTo.reshape(3, count);
+
+    const double epsilon = DBL_EPSILON;
+    ransacThreshold = ransacThreshold <= 0 ? 3 : ransacThreshold;
+    confidence = (confidence < epsilon) ? 0.99 : (confidence > 1 - epsilon) ? 0.99 : confidence;
+
+    return createRANSACPointSetRegistrator(makePtr<Translation3DEstimatorCallback>(), 4, ransacThreshold, confidence)->run(dFrom, dTo, _out, _inliers);
 }
 
 Mat estimateAffine2D(InputArray _from, InputArray _to, OutputArray _inliers,
@@ -833,6 +942,13 @@ Mat estimateAffine2D(InputArray _from, InputArray _to, OutputArray _inliers,
         to.convertTo(tmp2, CV_32FC2);
         to = tmp2;
     }
+    else
+    {
+        // avoid changing of inputs in compressElems() call
+        from = from.clone();
+        to = to.clone();
+    }
+
     // convert to N x 1 vectors
     from = from.reshape(2, count);
     to = to.reshape(2, count);
@@ -863,7 +979,7 @@ Mat estimateAffine2D(InputArray _from, InputArray _to, OutputArray _inliers,
             Mat src = from.rowRange(0, inliers_count);
             Mat dst = to.rowRange(0, inliers_count);
             Mat Hvec = H.reshape(1, 6);
-            createLMSolver(makePtr<Affine2DRefineCallback>(src, dst), static_cast<int>(refineIters))->run(Hvec);
+            LMSolver::create(makePtr<Affine2DRefineCallback>(src, dst), static_cast<int>(refineIters))->run(Hvec);
         }
     }
 
@@ -900,6 +1016,13 @@ Mat estimateAffinePartial2D(InputArray _from, InputArray _to, OutputArray _inlie
         to.convertTo(tmp2, CV_32FC2);
         to = tmp2;
     }
+    else
+    {
+        // avoid changing of inputs in compressElems() call
+        from = from.clone();
+        to = to.clone();
+    }
+
     // convert to N x 1 vectors
     from = from.reshape(2, count);
     to = to.reshape(2, count);
@@ -937,7 +1060,7 @@ Mat estimateAffinePartial2D(InputArray _from, InputArray _to, OutputArray _inlie
             double *Hptr = H.ptr<double>();
             double Hvec_buf[4] = {Hptr[0], Hptr[3], Hptr[2], Hptr[5]};
             Mat Hvec (4, 1, CV_64F, Hvec_buf);
-            createLMSolver(makePtr<AffinePartial2DRefineCallback>(src, dst), static_cast<int>(refineIters))->run(Hvec);
+            LMSolver::create(makePtr<AffinePartial2DRefineCallback>(src, dst), static_cast<int>(refineIters))->run(Hvec);
             // update H with refined parameters
             Hptr[0] = Hptr[4] = Hvec_buf[0];
             Hptr[1] = -Hvec_buf[1];
