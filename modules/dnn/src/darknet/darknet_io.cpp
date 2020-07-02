@@ -363,6 +363,38 @@ namespace cv {
                     fused_layer_names.push_back(last_layer);
                 }
 
+                void setSlice(const std::vector<int>& input_indexes, int split_size, int split_id)
+                {
+                    cv::dnn::LayerParams slice_param;
+                    slice_param.name = "Slice-name";
+                    slice_param.type = "Slice";
+
+                    int begin[] = {0, split_size * split_id, 0, 0};
+                    cv::dnn::DictValue paramBegin = cv::dnn::DictValue::arrayInt(begin, 4);
+                    slice_param.set("begin", paramBegin);
+
+                    int end[] = {-1, begin[1] + split_size, -1, -1};
+                    cv::dnn::DictValue paramEnd = cv::dnn::DictValue::arrayInt(end, 4);
+                    slice_param.set("end", paramEnd);
+
+                    for (int i = 0; i < input_indexes.size(); ++i)
+                    {
+                        darknet::LayerParameter lp;
+                        lp.layer_name = cv::format("slice_%d_%d", layer_id, input_indexes[i]);
+                        lp.layer_type = slice_param.type;
+                        lp.layerParams = slice_param;
+                        lp.bottom_indexes.push_back(fused_layer_names.at(input_indexes[i]));
+                        net->layers.push_back(lp);
+                        fused_layer_names.push_back(lp.layer_name);
+                    }
+
+                    if (input_indexes.size() == 1)
+                    {
+                        last_layer = cv::format("slice_%d_%d", layer_id, input_indexes[0]);
+                        layer_id++;
+                    }
+                }
+
                 void setReorg(int stride)
                 {
                     cv::dnn::LayerParams reorg_params;
@@ -717,6 +749,7 @@ namespace cv {
                     {
                         std::string bottom_layers = getParam<std::string>(layer_params, "layers", "");
                         CV_Assert(!bottom_layers.empty());
+                        int num_splits = getParam<int>(layer_params, "groups", 1);
                         std::vector<int> layers_vec = getNumbers<int>(bottom_layers);
 
                         tensor_shape[0] = 0;
@@ -725,10 +758,27 @@ namespace cv {
                             tensor_shape[0] += net->out_channels_vec[layers_vec[k]];
                         }
 
-                        if (layers_vec.size() == 1)
-                            setParams.setIdentity(layers_vec.at(0));
+                        if (num_splits > 1)
+                        {
+                            int group_id = getParam<int>(layer_params, "group_id", 0);
+                            tensor_shape[0] /= num_splits;
+                            int split_size = tensor_shape[0] / layers_vec.size();
+                            setParams.setSlice(layers_vec, split_size, group_id);
+                            if (layers_vec.size() > 1)
+                            {
+                                for (size_t k = 0; k < layers_vec.size(); ++k)
+                                    layers_vec[k] += layers_vec.size();
+
+                                setParams.setConcat(layers_vec.size(), layers_vec.data());
+                            }
+                        }
                         else
-                            setParams.setConcat(layers_vec.size(), layers_vec.data());
+                        {
+                            if (layers_vec.size() == 1)
+                                setParams.setIdentity(layers_vec.at(0));
+                            else
+                                setParams.setConcat(layers_vec.size(), layers_vec.data());
+                        }
                     }
                     else if (layer_type == "dropout" || layer_type == "cost")
                     {
