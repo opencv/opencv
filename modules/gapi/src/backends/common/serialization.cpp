@@ -453,7 +453,7 @@ I::IStream& operator >> (I::IStream& is, cv::GRunArgP &arg) {
     case T::index_of<cv::UMat>() :
     {
         *cv::util::get<cv::UMat*>(arg) = cv::util::get<cv::UMat>(res_obj);
-    }
+    } break;
 #endif
     case T::index_of<cv::Mat>() :
     {
@@ -469,6 +469,37 @@ I::IStream& operator >> (I::IStream& is, cv::GRunArgP &arg) {
     return is;
 }
 
+GAPI_EXPORTS void bind(cv::GRunArg &res_obj, cv::GRunArgP &out_obj)
+{
+    // FIXME: this conversion should be unified
+    using T = cv::GRunArgP;
+    switch (out_obj.index())
+    {
+#if !defined(GAPI_STANDALONE)
+    case T::index_of<cv::UMat*>() :
+    {
+        *cv::util::get<cv::UMat*>(out_obj) = cv::util::get<cv::UMat>(res_obj);
+    }
+    break;
+#endif
+    case T::index_of<cv::Mat*>() :
+    {
+        *cv::util::get<cv::Mat*>(out_obj) = cv::util::get<cv::Mat>(res_obj);
+    } break;
+    case T::index_of<cv::Scalar*>() :
+        *cv::util::get<cv::Scalar*>(out_obj) = cv::util::get<cv::Scalar>(res_obj);
+        break;
+    case T::index_of<cv::detail::VectorRef>() :
+        cv::util::get<cv::detail::VectorRef>(out_obj).mov(cv::util::get<cv::detail::VectorRef>(res_obj));
+        break;
+    case T::index_of<cv::detail::OpaqueRef>() :
+        cv::util::get<cv::detail::OpaqueRef>(out_obj).mov(cv::util::get<cv::detail::OpaqueRef>(res_obj));
+        break;
+    default:
+        GAPI_Assert(false && "This value type is not supported!"); // ...maybe because of STANDALONE mode.
+        break;
+    }
+}
 
 I::OStream& operator<< (I::OStream& os, const cv::GKernel &k) {
     return os << k.name << k.tag << k.outShapes;
