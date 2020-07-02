@@ -449,6 +449,12 @@ I::IStream& operator >> (I::IStream& is, cv::GRunArgP &arg) {
     using T = cv::GRunArg;
     switch (res_obj.index())
     {
+#if !defined(GAPI_STANDALONE)
+    case T::index_of<cv::UMat>() :
+    {
+        *cv::util::get<cv::UMat*>(arg) = cv::util::get<cv::UMat>(res_obj);
+    }
+#endif
     case T::index_of<cv::Mat>() :
     {
         *cv::util::get<cv::Mat*>(arg) = cv::util::get<cv::Mat>(res_obj);
