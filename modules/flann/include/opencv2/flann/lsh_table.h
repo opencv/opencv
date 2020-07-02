@@ -162,8 +162,7 @@ public:
     {
         feature_size_ = feature_size;
         CV_UNUSED(key_size);
-        std::cerr << "LSH is not implemented for that type" << std::endl;
-        CV_Assert(0 && "LSH is not implemented for that type");
+        CV_Error(cv::Error::StsUnsupportedFormat, "LSH is not implemented for that type" );
     }
 
     /** Add a feature to the table
@@ -243,8 +242,7 @@ public:
      */
     size_t getKey(const ElementType* /*feature*/) const
     {
-        std::cerr << "LSH is not implemented for that type" << std::endl;
-        CV_Assert(0 && "LSH is not implemented for that type");
+        CV_Error(cv::Error::StsUnsupportedFormat, "LSH is not implemented for that type" );
         return 0;
     }
 
