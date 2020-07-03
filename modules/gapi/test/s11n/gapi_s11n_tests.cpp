@@ -246,4 +246,39 @@ TEST_F(S11N_Basic, Test_RunArgs_MatScalar) {
     }
 }
 
+TEST_F(S11N_Basic, Test_Bind_RunArgs_MatScalar) {
+    cv::Mat mat = cv::Mat::eye(cv::Size(128, 64), CV_8UC3);
+    cv::Scalar scalar = cv::Scalar(128, 33, 53);
+    GRunArgs v;
+    v.resize(2);
+    v[0] = cv::GRunArg{ mat };
+    v[1] = cv::GRunArg{ scalar };
+    GRunArgsP output = bind(v);
+    std::cout << "output size  " <<  output.size() << std::endl;
+    unsigned int i = 0;
+    for (auto it : output)
+    {
+        using T = cv::GRunArgP;
+        switch (it.index())
+        {
+        case T::index_of<cv::Mat*>() :
+        {
+            cv::Mat* out_mat = cv::util::get<cv::Mat*>(it);
+            EXPECT_EQ(mat.size(), out_mat->size());
+        } break;
+        case T::index_of<cv::Scalar*>() :
+        {
+            cv::Scalar* out_scalar = cv::util::get<cv::Scalar*>(it);
+            EXPECT_EQ(out_scalar->val[0], scalar.val[0]);
+            EXPECT_EQ(out_scalar->val[1], scalar.val[1]);
+            EXPECT_EQ(out_scalar->val[2], scalar.val[2]);
+        } break;
+        default:
+            GAPI_Assert(false && "This value type is not supported!"); // ...maybe because of STANDALONE mode.
+            break;
+        }
+        i++;
+    }
+}
+
 } // namespace opencv_test

@@ -139,26 +139,21 @@ inline cv::GRunArgsP bind(cv::GRunArgs &results)
     cv::GRunArgsP outputs;
     outputs.resize(results.size());
     unsigned int i = 0;
-    for (auto && res_obj : results)
+    for (GRunArg &res_obj : results)
     {
-        //auto &res_obj = std::get<0>(it);
-        // FIXME: this conversion should be unified
         using T = cv::GRunArg;
         switch (res_obj.index())
         {
 #if !defined(GAPI_STANDALONE)
         case T::index_of<cv::UMat>() :
-        {
-            outputs[i] = &(cv::util::get<cv::UMat>(res_obj));
-        }
-                                     break;
+            outputs[i] = (cv::UMat*)(&(cv::util::get<cv::UMat>(res_obj)));
+        break;
 #endif
-        case T::index_of<cv::Mat>() :
-        {
-            outputs[i] = &(cv::util::get<cv::Mat>(res_obj));
-        } break;
-        case T::index_of<cv::Scalar>() :
-            outputs[i] = &(cv::util::get<cv::Scalar>(res_obj));
+        case cv::GRunArg::index_of<cv::Mat>() :
+            outputs[i] = (cv::Mat*)(&(cv::util::get<cv::Mat>(res_obj)));
+            break;
+        case cv::GRunArg::index_of<cv::Scalar>() :
+            outputs[i] = (cv::Scalar*)(&(cv::util::get<cv::Scalar>(res_obj)));
             break;
         case T::index_of<cv::detail::VectorRef>() :
             outputs[i] = cv::util::get<cv::detail::VectorRef>(res_obj);
