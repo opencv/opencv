@@ -141,6 +141,108 @@ TEST_F(fisheyeTest, undistortImage)
     }
 }
 
+TEST_F(fisheyeTest, undistortAndDistortImage)
+{
+    cv::Matx33d K_src = this->K;
+    cv::Mat D_src = cv::Mat(this->D);
+    std::string file = combine(datasets_repository_path, "/calib-3_stereo_from_JY/left/stereo_pair_014.jpg");
+    cv::Matx33d K_dst = K_src;
+    cv::Mat image = cv::imread(file), image_projected;
+    cv::Vec4d D_dst_vec (-1.0, 0.0, 0.0, 0.0);
+    cv::Mat D_dst = cv::Mat(D_dst_vec);
+
+    int imageWidth = (int)this->imageSize.width;
+    int imageHeight = (int)this->imageSize.height;
+
+    cv::Mat imagePoints(imageHeight, imageWidth, CV_32FC2), undPoints, distPoints;
+    cv::Vec2f* pts = imagePoints.ptr<cv::Vec2f>();
+
+    for(int y = 0, k = 0; y < imageHeight; ++y)
+    {
+        for(int x = 0; x < imageWidth; ++x)
+        {
+            cv::Vec2f point((float)x, (float)y);
+            pts[k++] = point;
+        }
+    }
+
+    cv::fisheye::undistortPoints(imagePoints, undPoints, K_dst, D_dst);
+    cv::fisheye::distortPoints(undPoints, distPoints, K_src, D_src);
+    cv::remap(image, image_projected, distPoints, cv::noArray(), cv::INTER_LINEAR);
+
+    float dx, dy, r_sq;
+    float R_MAX = 250;
+    float imageCenterX = (float)imageWidth / 2;
+    float imageCenterY = (float)imageHeight / 2;
+
+    cv::Mat undPointsGt(imageHeight, imageWidth, CV_32FC2);
+    cv::Mat imageGt(imageHeight, imageWidth, CV_8UC3);
+
+    for(int y = 0, k = 0; y < imageHeight; ++y)
+    {
+        for(int x = 0; x < imageWidth; ++x)
+        {
+            dx = x - imageCenterX;
+            dy = y - imageCenterY;
+            r_sq = dy * dy + dx * dx;
+
+            Vec2f & und_vec = undPoints.at<Vec2f>(y,x);
+            Vec3b & pixel = image_projected.at<Vec3b>(y,x);
+
+            Vec2f & undist_vec_gt = undPointsGt.at<Vec2f>(y,x);
+            Vec3b & pixel_gt = imageGt.at<Vec3b>(y,x);
+
+            if (r_sq > R_MAX * R_MAX)
+            {
+
+                undist_vec_gt[0] = -1e6;
+                undist_vec_gt[1] = -1e6;
+
+                pixel_gt[0] = 0;
+                pixel_gt[1] = 0;
+                pixel_gt[2] = 0;
+            }
+            else
+            {
+                undist_vec_gt[0] = und_vec[0];
+                undist_vec_gt[1] = und_vec[1];
+
+                pixel_gt[0] = pixel[0];
+                pixel_gt[1] = pixel[1];
+                pixel_gt[2] = pixel[2];
+            }
+
+            k++;
+        }
+    }
+
+    EXPECT_MAT_NEAR(undPoints, undPointsGt, 1e-10);
+    EXPECT_MAT_NEAR(image_projected, imageGt, 1e-10);
+
+    Vec2f dist_point_1 = distPoints.at<Vec2f>(400, 640);
+    Vec2f dist_point_1_gt(640.044f, 400.041f);
+
+    Vec2f dist_point_2 = distPoints.at<Vec2f>(400, 440);
+    Vec2f dist_point_2_gt(409.731f, 403.029f);
+
+    Vec2f dist_point_3 = distPoints.at<Vec2f>(200, 640);
+    Vec2f dist_point_3_gt(643.341f, 168.896f);
+
+    Vec2f dist_point_4 = distPoints.at<Vec2f>(300, 480);
+    Vec2f dist_point_4_gt(463.402f, 290.317f);
+
+    Vec2f dist_point_5 = distPoints.at<Vec2f>(550, 750);
+    Vec2f dist_point_5_gt(797.51f, 611.637f);
+
+    EXPECT_MAT_NEAR(dist_point_1, dist_point_1_gt, 1e-2);
+    EXPECT_MAT_NEAR(dist_point_2, dist_point_2_gt, 1e-2);
+    EXPECT_MAT_NEAR(dist_point_3, dist_point_3_gt, 1e-2);
+    EXPECT_MAT_NEAR(dist_point_4, dist_point_4_gt, 1e-2);
+    EXPECT_MAT_NEAR(dist_point_5, dist_point_5_gt, 1e-2);
+
+    CV_Assert(cv::imwrite(combine(datasets_repository_path, "new_distortion.png"), image_projected));
+}
+
 TEST_F(fisheyeTest, jacobians)
 {
     int n = 10;
