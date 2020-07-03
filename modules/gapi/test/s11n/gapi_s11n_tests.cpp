@@ -140,6 +140,21 @@ TEST_F(S11N_Basic, Test_MetaArg_MatDesc) {
     EXPECT_EQ(desc, out_desc);
 }
 
+TEST_F(S11N_Basic, Test_MetaArgs_MatDesc) {
+    cv::GMatDesc desc1 = { CV_8U, 1,{ 320,240 } };
+    cv::GMatDesc desc2 = { CV_8U, 1,{ 640,480 } };
+    GMetaArgs v;
+    v.resize(2);
+    v[0] = cv::GMetaArg{ desc1 };
+    v[1] = cv::GMetaArg{ desc2 };
+    put(v);
+    cv::GMetaArgs out_v = get<cv::GMetaArgs>();
+    cv::GMatDesc out_desc1 = cv::util::get<cv::GMatDesc>(out_v[0]);
+    cv::GMatDesc out_desc2 = cv::util::get<cv::GMatDesc>(out_v[1]);
+    EXPECT_EQ(desc1, out_desc1);
+    EXPECT_EQ(desc2, out_desc2);
+}
+
 TEST_F(S11N_Basic, Test_MetaArg_Monostate) {
     GMetaArg v;
     put(v);
@@ -159,6 +174,21 @@ TEST_F(S11N_Basic, Test_RunArg_Mat) {
     EXPECT_EQ(0, cv::norm(mat, out_mat, cv::NORM_INF));
 }
 
+TEST_F(S11N_Basic, Test_RunArgs_Mat) {
+    cv::Mat mat1 = cv::Mat::eye(cv::Size(64, 64), CV_8UC3);
+    cv::Mat mat2 = cv::Mat::eye(cv::Size(128, 128), CV_8UC3);
+    GRunArgs v;
+    v.resize(2);
+    v[0] = cv::GRunArg{ mat1 };
+    v[1] = cv::GRunArg{ mat2 };
+    put(v);
+    cv::GRunArgs out_v = get<cv::GRunArgs>();
+    cv::Mat out_mat1 = cv::util::get<cv::Mat>(out_v[0]);
+    cv::Mat out_mat2 = cv::util::get<cv::Mat>(out_v[1]);
+    EXPECT_EQ(0, cv::norm(mat1, out_mat1, cv::NORM_INF));
+    EXPECT_EQ(0, cv::norm(mat2, out_mat2, cv::NORM_INF));
+}
+
 TEST_F(S11N_Basic, Test_RunArg_Scalar) {
     cv::Scalar scalar = cv::Scalar(128, 33, 53);
     auto v = cv::GRunArg{ scalar };
@@ -166,6 +196,54 @@ TEST_F(S11N_Basic, Test_RunArg_Scalar) {
     cv::GRunArg out_v = get<cv::GRunArg>();
     cv::Scalar out_scalar = cv::util::get<cv::Scalar>(out_v);
     EXPECT_EQ(scalar, out_scalar);
+}
+
+TEST_F(S11N_Basic, Test_RunArgs_Scalar) {
+    cv::Scalar scalar1 = cv::Scalar(128, 33, 53);
+    cv::Scalar scalar2 = cv::Scalar(64, 15, 23);
+    GRunArgs v;
+    v.resize(2);
+    v[0] = cv::GRunArg{ scalar1 };
+    v[1] = cv::GRunArg{ scalar2 };
+    put(v);
+    cv::GRunArgs out_v = get<cv::GRunArgs>();
+    cv::Scalar out_scalar1 = cv::util::get<cv::Scalar>(out_v[0]);
+    cv::Scalar out_scalar2 = cv::util::get<cv::Scalar>(out_v[1]);
+    EXPECT_EQ(scalar1, out_scalar1);
+    EXPECT_EQ(scalar2, out_scalar2);
+}
+
+TEST_F(S11N_Basic, Test_RunArgs_MatScalar) {
+    cv::Mat mat = cv::Mat::eye(cv::Size(64, 64), CV_8UC3);
+    cv::Scalar scalar = cv::Scalar(128, 33, 53);
+    GRunArgs v;
+    v.resize(2);
+    v[0] = cv::GRunArg{ mat };
+    v[1] = cv::GRunArg{ scalar };
+    put(v);
+    cv::GRunArgs out_v = get<cv::GRunArgs>();
+    unsigned int i = 0;
+    for (auto it : out_v)
+    {
+        using T = cv::GRunArg;
+        switch (it.index())
+        {
+        case T::index_of<cv::Mat>() :
+        {
+            cv::Mat out_mat = cv::util::get<cv::Mat>(out_v[i]);
+            EXPECT_EQ(0, cv::norm(mat, out_mat, cv::NORM_INF));
+        } break;
+        case T::index_of<cv::Scalar>() :
+        {
+            cv::Scalar out_scalar = cv::util::get<cv::Scalar>(out_v[i]);
+            EXPECT_EQ(scalar, out_scalar);
+        } break;
+        default:
+            GAPI_Assert(false && "This value type is not supported!"); // ...maybe because of STANDALONE mode.
+            break;
+        }
+        i++;
+    }
 }
 
 } // namespace opencv_test

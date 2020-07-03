@@ -113,15 +113,16 @@ GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::gimpl::Protocol &
 GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::GArg &arg);
 GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::GArg &arg);
 
-GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::GMetaArg &arg);
-GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::GMetaArg &arg);
+//GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::GMetaArg &arg);
+//GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::GMetaArg &arg);
 
 GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::GRunArg &arg);
 GAPI_EXPORTS I::IStream& operator>> (I::IStream& is, cv::GRunArg &arg);
 
-GAPI_EXPORTS I::IStream& operator >> (I::IStream& is, cv::GRunArgP &arg);
+//GAPI_EXPORTS I::IStream& operator >> (I::IStream& is, cv::GRunArgP &arg);
 
-GAPI_EXPORTS void bind(cv::GRunArg &res_obj, cv::GRunArgP &out_obj);
+//GAPI_EXPORTS void bind(cv::GRunArg &res_obj, cv::GRunArgP &out_obj);
+//GAPI_EXPORTS cv::GRunArgsP bind(cv::GRunArgs &results);
 
 GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::GKernel &k);
 GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::GKernel &k);
