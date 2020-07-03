@@ -599,13 +599,11 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     };
 
     /**
-     * @brief \f$ L_p \f$ - detection output layer.
+     * @brief detection output layer.
      *
-     * num() and channels() are 1.
-     * Since the number of bboxes to be kept is unknown before nms, we manually
-     * set it to maximal number of detections, [keep_top_k] parameter multiplied by batch size.
-     * Each row is a 7 dimension std::vector, which stores
-     * [image_id, label, confidence, xmin, ymin, xmax, ymax]
+     * The layer size is: @f$ (1 \times 1 \times N \times 7) @f$
+     *    where N is the number of detections after nms, and each row is:
+     *    [image_id, label, confidence, xmin, ymin, xmax, ymax]
      */
     class CV_EXPORTS DetectionOutputLayer : public Layer
     {
