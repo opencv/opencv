@@ -499,6 +499,7 @@ macro(ocv_check_compiler_flag LANG FLAG RESULT)
         LINK_LIBRARIES "${OCV_CHECK_CF_LINKER_FLAGS}"
         ${__link_libs}
         OUTPUT_VARIABLE OUTPUT)
+message("try_compile(${RESULT} \"${CMAKE_BINARY_DIR}\" \"${_fname}\" CMAKE_FLAGS ${__cmake_flags} COMPILE_DEFINITIONS ${FLAG} ${OCV_CHECK_CF_COMPILER_FLAGS} LINK_LIBRARIES \"${OCV_CHECK_CF_LINKER_FLAGS}\" ${__link_libs} OUTPUT_VARIABLE OUTPUT)")
 
       if(${RESULT})
         string(REPLACE ";" "," OUTPUT_LINES "${OUTPUT}")

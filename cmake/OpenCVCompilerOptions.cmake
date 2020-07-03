@@ -53,7 +53,7 @@ macro(add_extra_compiler_option option)
   cmake_parse_arguments(EXTRA_OPT "${options}" "${oneValueArgs}"
                         "${multiValueArgs}" ${ARGN} )
 
-  foreach(lang "CXX" "X")
+  foreach(lang "CXX" "C")
     # Compiler flags
     set(_compiler_flags "${OPENCV_EXTRA_${lang}_FLAGS}")
     if(EXTRA_OPT_TURN_OFF_COMPILER_FLAG)
@@ -224,6 +224,7 @@ if(CV_GCC OR CV_CLANG)
 
   # Profiling?
   if(ENABLE_PROFILING)
+unset(HAVE_CXX_PG_G CACHE)  #PFO
     add_extra_compiler_option("-pg -g"
       # turn off incompatible options
       TURN_OFF_COMPILER_FLAG "-fomit-frame-pointer" "-ffunction-sections" "-fdata-sections"
