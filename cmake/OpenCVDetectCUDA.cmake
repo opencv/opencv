@@ -375,4 +375,11 @@ if(HAVE_CUDA)
     set(CUDA_cufft_LIBRARY_ABS ${CUDA_cufft_LIBRARY})
     ocv_convert_to_lib_name(CUDA_cufft_LIBRARY ${CUDA_cufft_LIBRARY})
   endif()
+
+  if(CMAKE_GENERATOR MATCHES "Visual Studio"
+      AND NOT OPENCV_SKIP_CUDA_CMAKE_SUPPRESS_REGENERATION
+  )
+    message(WARNING "CUDA with MSVS generator is detected. Disabling CMake re-run checks (CMAKE_SUPPRESS_REGENERATION=ON). You need to run CMake manually if updates are required.")
+    set(CMAKE_SUPPRESS_REGENERATION ON)
+  endif()
 endif()
