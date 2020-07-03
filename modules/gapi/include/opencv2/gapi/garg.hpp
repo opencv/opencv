@@ -133,10 +133,18 @@ using GRunArgP = util::variant<
     >;
 using GRunArgsP = std::vector<GRunArgP>;
 
+inline std::vector<GRunArgP>& operator += (std::vector<GRunArgP> &lhs, const std::vector<GRunArgP> &rhs);
+
+inline std::vector<GRunArgP>& operator += (std::vector<GRunArgP> &lhs, const std::vector<GRunArgP> &rhs) {
+    lhs.reserve(lhs.size() + rhs.size());
+    lhs.insert(lhs.end(), rhs.begin(), rhs.end());
+    return lhs;
+}
+
 namespace gapi
 {
     GAPI_EXPORTS cv::GRunArgsP bind(cv::GRunArgs &results);
-}
+} // namespace gapi
 
 template<typename... Ts> inline GRunArgs gin(const Ts&... args)
 {
