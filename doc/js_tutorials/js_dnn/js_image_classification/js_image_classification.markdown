@@ -4,7 +4,7 @@ Image Classification example {#tutorial_js_image_classification}
 Goal
 ----
 
-- learn the basic pipeline of DNN module, like image processing, model import, inference, etc.
+- In this tutorial you will learn how to use OpenCV.js dnn module for image classification.
 
 \htmlonly
 <iframe src="../../js_image_classification.html" width="100%"

@@ -11,7 +11,7 @@
 <h2>Image Classification Example</h2>
 <p>
     This tutorial show you how to write an image classification example with OpenCV.js.<br>
-    Click <b>Try it</b> button to see the result. You can choose any other image.<br>
+    Click <b>Try it</b> button to see the result. You can choose any other images.<br>
     You can also change the parameters in the first code snippet to investigate more models.
 </p>    
 
@@ -66,15 +66,15 @@
 
 <div>
     <h3>Help function</h3>
-    <p>1.Main loop in which will read the image from canvas and do inference. You can modify the parameters to run different models.</p>
-    <textarea class="code" rows="30" cols="100" id="codeEditor" spellcheck="false"></textarea>
-    <p>2.Load labels from txt file and process it into an array.</p>
-    <textarea class="code" rows="30" cols="100" id="codeEditor1" spellcheck="false"></textarea>
-    <p>3.Get blob from image as input for net, and standardize it with <b>mean</b> and <b>std</b>.</p>
+    <p>1.The parameters for model inference which you can modify to investigate more models.</p>
+    <textarea class="code" rows="20" cols="100" id="codeEditor" spellcheck="false"></textarea>
+    <p>2.Main loop in which will read the image from canvas and do inference once.</p>
+    <textarea class="code" rows="25" cols="100" id="codeEditor1" spellcheck="false"></textarea>
+    <p>3.Load labels from txt file and process it into an array.</p>
     <textarea class="code" rows="10" cols="100" id="codeEditor2" spellcheck="false"></textarea>
-    <p>4.Fetch model from network and save to emscripten file system.</p>
-    <textarea class="code" rows="20" cols="100" id="codeEditor3" spellcheck="false"></textarea>
-    <p>5.Run the model to get the output vector and record the inference time.</p>
+    <p>4.Get blob from image as input for net, and standardize it with <b>mean</b> and <b>std</b>.</p>
+    <textarea class="code" rows="10" cols="100" id="codeEditor3" spellcheck="false"></textarea>
+    <p>5.Fetch model from network and save to emscripten file system.</p>
     <textarea class="code" rows="25" cols="100" id="codeEditor4" spellcheck="false"></textarea>
     <p>6.The post-processing, including softmax if needed and get the top classes from the output vector.</p>
     <textarea class="code" rows="35" cols="100" id="codeEditor5" spellcheck="false"></textarea>
@@ -88,133 +88,97 @@ inputSize = [224,224];
 mean = [104, 117, 123];
 std = 1;
 rgb = true;
-labels = labels1000;
 needSoftmax = false;
 
-input = getBlodFromImage(inputSize, mean, std, rgb);
-modelPath = "bvlc_googlenet.caffemodel";
+labelsUrl = "https://raw.githubusercontent.com/akineeic/opencv_model/master/image_classification/labels/labels1000.txt";
 modelUrl = "https://raw.githubusercontent.com/akineeic/opencv_model/master/image_classification/caffe/bvlc_googlenet.caffemodel";
-configPath = "bvlc_googlenet.prototxt";
 configUrl = "https://raw.githubusercontent.com/akineeic/opencv_model/master/image_classification/caffe/bvlc_googlenet.prototxt";
-modelInfo = {
-    modelPath: modelPath,
-    modelUrl: modelUrl,
-    configPath: configPath,
-    configUrl: configUrl
-}
-loadModel(() => {
-    runModel();
-});        
 </script>
 
 <script id="codeSnippet1" type="text/code-snippet">
-loadLables = function(labelsUrl){
-    document.getElementById('status').innerHTML = 'Loading classification labels';    
-    let request = new XMLHttpRequest();
-    request.open('GET', labelsUrl, true);
-    request.onload = function(ev) {
-        if (request.readyState ===4 ) {
-            if(request.status === 200) {
-                let label = request.response;
-                label = label.split('\n');
-                switch(label.length) {
-                    case 1000: {
-                        labels1000 = label;
-                    } break;                               
-                    case 1001: {
-                        labels1001 = label;
-                    } break;
-                    case 1002: {
-                        labels1002 = label;
-                    } break;
-                    default: {
-                        throw new Error(`Labels of length ${labels.length} is not supported`);
-                    }
-                }
-                document.getElementById('status').innerHTML = '';
-            };
-        };
-    };
-    request.send();            
-}
-
-let labels1000Url = "https://raw.githubusercontent.com/akineeic/opencv_model/master/image_classification/labels/labels1000.txt";
-let labels1001Url = "https://raw.githubusercontent.com/akineeic/opencv_model/master/image_classification/labels/labels1001.txt";
-let labels1002Url = "https://raw.githubusercontent.com/akineeic/opencv_model/master/image_classification/labels/labels1002.txt";
-loadLables(labels1000Url);
-loadLables(labels1001Url);
-loadLables(labels1002Url);
-</script>
-
-<script id="codeSnippet2" type="text/code-snippet">
-getBlodFromImage = function() {
-    let mat = cv.imread("canvasInput");
-    let matC3 = new cv.Mat(mat.matSize[0],mat.matSize[1],cv.CV_8UC3);
-    cv.cvtColor(mat, matC3, cv.COLOR_RGBA2RGB);
-    let input = cv.blobFromImage(matC3, std, new cv.Size(inputSize[0], inputSize[1]), 
-                                                new cv.Scalar(mean[0], mean[1], mean[2]), rgb);
-    return input;
-}
-</script>
-
-<script id="codeSnippet3" type="text/code-snippet">
-loadModel = function(callback) {
-    if(modelLoaded.indexOf(modelInfo.modelPath) == -1){
-        document.getElementById('status').innerHTML = 'Loading model';
-        utils.createFileFromUrl(modelInfo.modelPath, modelInfo.modelUrl, () => {
-            modelLoaded.push(modelInfo.modelPath);
-            if(modelInfo.configUrl !== "") {
-                utils.createFileFromUrl(modelInfo.configPath, modelInfo.configUrl, () => {
-                    callback();
-                });
-            } else {
-                callback();
-            }
-        });
-    } else {
-        callback();
-    }
-}
-</script>
-
-<script id="codeSnippet4" type="text/code-snippet">
-runModel = function() {
-    document.getElementById('status').innerHTML = 'Running model';
-
-    let net;
-    if(modelInfo.configUrl !== null){
-        net = cv.readNet(modelInfo.configPath, modelInfo.modelPath);   
-    } else {
-        net = cv.readNet(modelInfo.modelPath);
-    }
-                        
+main = async function() {
+    const url = {
+        modelUrl: modelUrl,
+        configUrl: configUrl
+    }; 
+    const path = await loadModel(url);
+    const labels = await loadLables(labelsUrl);
+    const input = getBlodFromImage(inputSize, mean, std, rgb);
+    const net = cv.readNet(path.configPath, path.modelPath);
     net.setInput(input);
-    let start = performance.now();
-    let result =net.forward();
-    let time  = performance.now()-start;
+    const start = performance.now();
+    const result =net.forward();
+    const time  = performance.now()-start;
+    const probs = softmax(result);
+    const classes = getTopClasses(probs, labels);
 
-    let classes = getTopClasses(result, labels, 3);            
     updateResult(classes, time);
     net.delete();
     result.delete();
 }
 </script>
 
+<script id="codeSnippet2" type="text/code-snippet">
+loadLables = async function(labelsUrl){
+    document.getElementById('status').innerHTML = 'Loading classification labels...';
+    let response = await fetch(labelsUrl);
+    let label = await response.text();
+    label = label.split('\n');
+    document.getElementById('status').innerHTML = '';
+    return label;
+}
+</script>
+
+<script id="codeSnippet3" type="text/code-snippet">
+getBlodFromImage = function() {
+    let mat = cv.imread("canvasInput");
+    let matC3 = new cv.Mat(mat.matSize[0],mat.matSize[1],cv.CV_8UC3);
+    cv.cvtColor(mat, matC3, cv.COLOR_RGBA2RGB);
+    let input = cv.blobFromImage(matC3, std, new cv.Size(inputSize[0], inputSize[1]), 
+                                 new cv.Scalar(mean[0], mean[1], mean[2]), rgb);
+    return input;
+}
+</script>
+
+<script id="codeSnippet4" type="text/code-snippet">
+loadModel = async function(url) {
+    path = getNameFromUrl(url);
+    return new Promise((resolve) => {
+        if(modelLoaded.indexOf(path.modelPath) == -1){
+            document.getElementById('status').innerHTML = 'Loading model...';
+            utils.createFileFromUrl(path.modelPath, url.modelUrl, () => {
+                modelLoaded.push(path.modelPath);
+                if(url.configUrl !== "") {
+                    utils.createFileFromUrl(path.configPath, url.configUrl, () => {
+                        resolve(path);
+                    });
+                } else {
+                    resolve(path);
+                }
+            });
+        } else {
+            resolve(path);
+        }
+    });
+}
+</script>
+
 <script id="codeSnippet5" type="text/code-snippet">
-softmax = function(arr) {
-    const maxNum = Math.max(...arr);
-    const expSum = arr.map((num) => Math.exp(num - maxNum)).reduce((a, b) => a + b);
-    return arr.map((value, index) => { 
-        return Math.exp(value - maxNum) / expSum;
-    })
+softmax = function(result) {
+    let arr = result.data32F;
+    if(needSoftmax) {
+        const maxNum = Math.max(...arr);
+        const expSum = arr.map((num) => Math.exp(num - maxNum)).reduce((a, b) => a + b);
+        return arr.map((value, index) => { 
+            return Math.exp(value - maxNum) / expSum;
+        });
+    } else {
+        return arr;
+    }        
 }
 
-getTopClasses = function(result, labels, k = 5) {
-    let initdata = result.data32F;
-    if(needSoftmax) {
-        initdata = softmax(initdata);
-    }
-    let probs = Array.from(initdata);
+getTopClasses = function(probs, labels, topK = 3) {
+    probs = Array.from(probs);
     let indexes = probs.map((prob, index) => [prob, index]);
     let sorted = indexes.sort((a, b) => {
     if (a[0] === b[0]) {return 0;}
@@ -222,7 +186,7 @@ getTopClasses = function(result, labels, k = 5) {
     });
     sorted.reverse();
     let classes = [];
-    for (let i = 0; i < k; ++i) {
+    for (let i = 0; i < topK; ++i) {
     let prob = sorted[i][0];
     let index = sorted[i][1];
     let c = {
@@ -236,18 +200,15 @@ getTopClasses = function(result, labels, k = 5) {
 </script>
 
 <script type="text/javascript">
-    let utils = new Utils('errorMessage');        
+    let utils = new Utils('errorMessage');
 
     utils.loadCode('codeSnippet', 'codeEditor');
-    utils.loadCode('codeSnippet1', 'codeEditor1');        
+    utils.loadCode('codeSnippet1', 'codeEditor1');
     utils.loadCode('codeSnippet2', 'codeEditor2');
     utils.loadCode('codeSnippet3', 'codeEditor3');
     utils.loadCode('codeSnippet4', 'codeEditor4');
     utils.loadCode('codeSnippet5', 'codeEditor5');
-
-    let modelLoaded = [];
-    let firstRun = true;
-
+    
     let canvas = document.getElementById('canvasInput');
     let ctx = canvas.getContext('2d');
     let img = new Image();
@@ -257,39 +218,37 @@ getTopClasses = function(result, labels, k = 5) {
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
     };
 
-    utils.addFileInputHandler('fileInput', 'canvasInput');
-
     let tryIt = document.getElementById('tryIt');
     tryIt.addEventListener('click', () => {
         initStatus();
         utils.executeCode('codeEditor');
+        utils.executeCode('codeEditor1');
+        main();
     });
 
     let imgInput = document.getElementById('fileInput');
-    imgInput.addEventListener('change', () => {
+    imgInput.addEventListener('change', (e) => {
         initStatus();
-        utils.executeCode('codeEditor');
+        loadImageToCanvas(e);
     });
 
-    utils.loadOpenCv(() => {            
+    utils.loadOpenCv(() => {
         tryIt.removeAttribute('disabled');
     });
 
-    let inputSize, mean, std, rgb, labels, needSoftmax, input, modelPath, modelUrl, configPath, configUrl, modelInfo, result;        
-    let labels1000, labels1001, labels1002;
-
-    var loadLables = function(labelsUrl){};        
+    let modelLoaded = [];
+    var main = async function() {};
+    var loadLables = async function(labelsUrl){};
     var getBlodFromImage = function(){};
-    var loadModel = function(callback){};
-    var runModel = function(){};
-    var softmax = function(arr){};
-    var getTopClasses = function(mat, labels, k = 5){};        
+    var loadModel = async function(url){};
+    var softmax = function(result){};
+    var getTopClasses = function(mat, labels, topK = 3){};
     
-    utils.executeCode('codeEditor1');        
+    utils.executeCode('codeEditor1');
     utils.executeCode('codeEditor2');
-    utils.executeCode('codeEditor3');   
-    utils.executeCode('codeEditor5');     
-    utils.executeCode('codeEditor4');        
+    utils.executeCode('codeEditor3');
+    utils.executeCode('codeEditor4');
+    utils.executeCode('codeEditor5');
 
     function updateResult(classes, time) {
         try{
@@ -299,7 +258,7 @@ getTopClasses = function(result, labels, k = 5) {
                 labelElement.innerHTML = c.label;
                 probElement.innerHTML = c.prob + '%';
             });
-            let parts = modelInfo.modelPath.split('.');
+            let parts = path.modelPath.split('.');
             let format = parts[parts.length-1];
             parts.pop();
             let modelType;
@@ -319,7 +278,7 @@ getTopClasses = function(result, labels, k = 5) {
             result.style.visibility = 'visible';
             document.getElementById('status').innerHTML = '';
             document.getElementById('time').innerHTML = `<b>Model:</b> ${parts.join('.')} ${'(' + modelType + ')'} <br>
-                                                            <b>Inference time:</b> ${time.toFixed(2)} ms`;
+                                                         <b>Inference time:</b> ${time.toFixed(2)} ms`;
         } catch(e) {
             console.log(e);
         }
@@ -329,6 +288,30 @@ getTopClasses = function(result, labels, k = 5) {
         document.getElementById('status').innerHTML = '';
         document.getElementById('result').style.visibility = 'hidden';
         document.getElementById('time').innerHTML = '';
+    }
+
+    function loadImageToCanvas(e) {
+        let files = e.target.files;
+        let imgUrl = URL.createObjectURL(files[0]);
+        let canvas = document.getElementById("canvasInput");
+        let ctx = canvas.getContext('2d');
+        let img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.src = imgUrl;
+        img.onload = function() {
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        };
+    }
+
+    function getNameFromUrl(url) {
+        let modelParts = url.modelUrl.split('/');
+        let modelPath = modelParts[modelParts.length-1];
+        let configParts = url.configUrl.split('/');
+        let configPath = configParts[configParts.length-1];
+        return {
+            modelPath: modelPath,
+            configPath: configPath
+        }
     }
 
 </script>
