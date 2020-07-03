@@ -598,6 +598,15 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         static Ptr<RegionLayer> create(const LayerParams& params);
     };
 
+    /**
+     * @brief \f$ L_p \f$ - detection output layer.
+     *
+     * num() and channels() are 1.
+     * Since the number of bboxes to be kept is unknown before nms, we manually
+     * set it to maximal number of detections, [keep_top_k] parameter multiplied by batch size.
+     * Each row is a 7 dimension std::vector, which stores
+     * [image_id, label, confidence, xmin, ymin, xmax, ymax]
+     */
     class CV_EXPORTS DetectionOutputLayer : public Layer
     {
     public:
