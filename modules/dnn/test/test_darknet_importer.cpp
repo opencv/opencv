@@ -627,6 +627,12 @@ TEST_P(Test_Darknet_layers, reorg)
     testDarknetLayer("reorg");
 }
 
+TEST_P(Test_Darknet_layers, route)
+{
+    testDarknetLayer("route");
+    testDarknetLayer("route_multi");
+}
+
 TEST_P(Test_Darknet_layers, maxpool)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2020020000)
