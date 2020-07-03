@@ -207,10 +207,6 @@ if(CV_GCC OR CV_CLANG)
     add_extra_compiler_option("-Qunused-arguments")
   endif()
 
-  if(OPENCV_WARNINGS_ARE_ERRORS)
-    add_extra_compiler_option("-Werror")
-  endif()
-
   if(APPLE)
     add_extra_compiler_option("-Wno-semicolon-before-method-body")
   endif()
@@ -224,7 +220,6 @@ if(CV_GCC OR CV_CLANG)
 
   # Profiling?
   if(ENABLE_PROFILING)
-unset(HAVE_CXX_PG_G CACHE)  #PFO
     add_extra_compiler_option("-pg -g"
       # turn off incompatible options
       TURN_OFF_COMPILER_FLAG "-fomit-frame-pointer" "-ffunction-sections" "-fdata-sections"
@@ -269,6 +264,10 @@ unset(HAVE_CXX_PG_G CACHE)  #PFO
   endif()
   if(ENABLE_THIN_LTO)
     add_extra_compiler_option("-flto=thin")
+  endif()
+
+  if(OPENCV_WARNINGS_ARE_ERRORS)
+    add_extra_compiler_option("-Werror")
   endif()
 
   set(OPENCV_EXTRA_FLAGS_RELEASE "${OPENCV_EXTRA_FLAGS_RELEASE} -DNDEBUG")
