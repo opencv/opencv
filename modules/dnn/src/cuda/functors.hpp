@@ -137,9 +137,16 @@ struct MishFunctor<float> {
 
 #if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
 template <>
-struct mish_functor<__half> {
-    __device__ __half operator()(__half value) {
-        return mish_functor<float>()(value);
+struct MishFunctor<__half> {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() { }
+    };
+
+    CUDA4DNN_DEVICE MishFunctor() { }
+    CUDA4DNN_DEVICE MishFunctor(const Params& params) { }
+
+    CUDA4DNN_DEVICE __half operator()(__half value) {
+        return MishFunctor<float>()(value);
     }
 };
 #endif
