@@ -113,16 +113,10 @@ GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::gimpl::Protocol &
 GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::GArg &arg);
 GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::GArg &arg);
 
-//GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::GMetaArg &arg);
-//GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::GMetaArg &arg);
+//GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::GRunArg &arg);
 
-GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::GRunArg &arg);
-GAPI_EXPORTS I::IStream& operator>> (I::IStream& is, cv::GRunArg &arg);
+//GAPI_EXPORTS I::IStream& operator>> (I::IStream& is, cv::GRunArg &arg);
 
-//GAPI_EXPORTS I::IStream& operator >> (I::IStream& is, cv::GRunArgP &arg);
-
-//GAPI_EXPORTS void bind(cv::GRunArg &res_obj, cv::GRunArgP &out_obj);
-//GAPI_EXPORTS cv::GRunArgsP bind(cv::GRunArgs &results);
 
 GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::GKernel &k);
 GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::GKernel &k);
@@ -323,6 +317,43 @@ public:
     virtual I::IStream& operator >> (uint32_t &) override;
     virtual I::IStream& operator>> (std::string &) override;
 };
+
+inline I::OStream& operator<< (I::OStream& os, const cv::GRunArg &arg) {
+    os << (uint32_t)arg.index();
+    switch (arg.index()) {
+#if !defined(GAPI_STANDALONE)
+    case cv::GRunArg::index_of<cv::UMat>() :
+        os << cv::util::get<cv::UMat>(arg);       break;
+#endif
+    case cv::GRunArg::index_of<cv::Mat>() :
+        os << cv::util::get<cv::Mat>(arg);        break;
+    case cv::GRunArg::index_of<cv::Scalar>() :
+        os << cv::util::get<cv::Scalar>(arg);     break;
+    default: GAPI_Assert(false && "GRunArg: Unsupported type for <<");
+    }
+    return os;
+}
+inline I::IStream& operator >> (I::IStream& is, cv::GRunArg &arg) {
+    uint32_t index;
+    is >> index;
+#if !defined(GAPI_STANDALONE)
+    cv::UMat  v0;
+#endif
+    cv::Mat v1;
+    cv::Scalar v2;
+    switch (index) {
+#if !defined(GAPI_STANDALONE)
+    case cv::GRunArg::index_of<cv::UMat>() :
+        is >> v0; arg = v0; break;
+#endif
+    case cv::GRunArg::index_of<cv::Mat>() :
+        is >> v1; arg = v1; break;
+    case cv::GRunArg::index_of<cv::Scalar>() :
+        is >> v2; arg = v2; break;
+    default: GAPI_Assert(false && "GRunArg: Unsupported type for >>");
+    }
+    return is;
+}
 
 
 } // namespace s11n
