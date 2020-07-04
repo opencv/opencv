@@ -181,10 +181,6 @@ GAPI_EXPORTS GSerialized deserialize(I::IStream& is);
 GAPI_EXPORTS void reconstruct(const GSerialized &s, ade::Graph &g);
 
 // Legacy //////////////////////////////////////////////////////////////////////
-
-
-
-
 // Generic: unordered_map serialization ////////////////////////////////////////
 template<typename K, typename V>
 I::OStream& operator<< (I::OStream& os, const std::unordered_map<K, V> &m) {
@@ -254,6 +250,8 @@ I::IStream& operator>> (I::IStream& is, cv::util::variant<Ts...> &v) {
 }
 
 // Generic: vector serialization ///////////////////////////////////////////////
+// Moved here to fix CLang issues https://clang.llvm.org/compatibility.html
+// Unqualified lookup in templates
 template<typename T>
 I::OStream& operator<< (I::OStream& os, const std::vector<T> &ts) {
     //const std::size_t sz = ts.size(); // explicitly specify type
