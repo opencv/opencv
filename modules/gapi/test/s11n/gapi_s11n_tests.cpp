@@ -253,7 +253,7 @@ TEST_F(S11N_Basic, Test_Bind_RunArgs_MatScalar) {
     v.resize(2);
     v[0] = cv::GRunArg{ mat };
     v[1] = cv::GRunArg{ scalar };
-    GRunArgsP output = bind(v);
+    GRunArgsP output = cv::gapi::bind(v);
     std::cout << "output size  " <<  output.size() << std::endl;
     unsigned int i = 0;
     for (auto it : output)

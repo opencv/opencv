@@ -133,41 +133,9 @@ using GRunArgP = util::variant<
     >;
 using GRunArgsP = std::vector<GRunArgP>;
 
-//GAPI_EXPORTS cv::GRunArgsP bind(cv::GRunArgs &results);
-inline cv::GRunArgsP bind(cv::GRunArgs &results)
+namespace gapi
 {
-    cv::GRunArgsP outputs;
-    outputs.resize(results.size());
-    unsigned int i = 0;
-    for (GRunArg &res_obj : results)
-    {
-        using T = cv::GRunArg;
-        switch (res_obj.index())
-        {
-#if !defined(GAPI_STANDALONE)
-        case T::index_of<cv::UMat>() :
-            outputs[i] = (cv::UMat*)(&(cv::util::get<cv::UMat>(res_obj)));
-        break;
-#endif
-        case cv::GRunArg::index_of<cv::Mat>() :
-            outputs[i] = (cv::Mat*)(&(cv::util::get<cv::Mat>(res_obj)));
-            break;
-        case cv::GRunArg::index_of<cv::Scalar>() :
-            outputs[i] = (cv::Scalar*)(&(cv::util::get<cv::Scalar>(res_obj)));
-            break;
-        case T::index_of<cv::detail::VectorRef>() :
-            outputs[i] = cv::util::get<cv::detail::VectorRef>(res_obj);
-            break;
-        case T::index_of<cv::detail::OpaqueRef>() :
-            outputs[i] = cv::util::get<cv::detail::OpaqueRef>(res_obj);
-            break;
-        default:
-            GAPI_Assert(false && "This value type is not supported!"); // ...maybe because of STANDALONE mode.
-            break;
-        }
-        i++;
-    }
-    return outputs;
+    GAPI_EXPORTS cv::GRunArgsP bind(cv::GRunArgs &results);
 }
 
 template<typename... Ts> inline GRunArgs gin(const Ts&... args)
