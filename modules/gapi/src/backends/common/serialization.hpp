@@ -183,28 +183,7 @@ GAPI_EXPORTS void reconstruct(const GSerialized &s, ade::Graph &g);
 // Legacy //////////////////////////////////////////////////////////////////////
 
 
-// Generic: vector serialization ///////////////////////////////////////////////
-template<typename T>
-I::OStream& operator<< (I::OStream& os, const std::vector<T> &ts) {
-    //const std::size_t sz = ts.size(); // explicitly specify type
-    const uint32_t sz = (uint32_t)ts.size(); // explicitly specify type
-    os << sz;
-    for (auto &&v : ts) os << v;
-    return os;
-}
-template<typename T>
-I::IStream& operator>> (I::IStream& is, std::vector<T> &ts) {
-    //std::size_t sz = 0u;
-    uint32_t sz = 0u;
-    is >> sz;
-    if (sz == 0u) {
-        ts.clear();
-    } else {
-        ts.resize(sz);
-        for (auto &&i : ade::util::iota(sz)) is >> ts[i];
-    }
-    return is;
-}
+
 
 // Generic: unordered_map serialization ////////////////////////////////////////
 template<typename K, typename V>
@@ -272,6 +251,30 @@ I::IStream& operator>> (I::IStream& is, cv::util::variant<Ts...> &v) {
     is >> idx;
     GAPI_Assert(idx >= 0 && idx < (int)sizeof...(Ts));
     return detail::get_v<cv::util::variant<Ts...>, Ts...>(is, v, 0u, idx);
+}
+
+// Generic: vector serialization ///////////////////////////////////////////////
+template<typename T>
+I::OStream& operator<< (I::OStream& os, const std::vector<T> &ts) {
+    //const std::size_t sz = ts.size(); // explicitly specify type
+    const uint32_t sz = (uint32_t)ts.size(); // explicitly specify type
+    os << sz;
+    for (auto &&v : ts) os << v;
+    return os;
+}
+template<typename T>
+I::IStream& operator >> (I::IStream& is, std::vector<T> &ts) {
+    //std::size_t sz = 0u;
+    uint32_t sz = 0u;
+    is >> sz;
+    if (sz == 0u) {
+        ts.clear();
+    }
+    else {
+        ts.resize(sz);
+        for (auto &&i : ade::util::iota(sz)) is >> ts[i];
+    }
+    return is;
 }
 
 // FIXME: Basic Stream implementaions //////////////////////////////////////////
