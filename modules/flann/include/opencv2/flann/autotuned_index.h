@@ -497,7 +497,7 @@ private:
         const int nn = 1;
         const size_t SAMPLE_COUNT = 1000;
 
-        assert(bestIndex_ != NULL); // must have a valid index
+        CV_Assert(bestIndex_ != NULL && "Requires a valid index"); // must have a valid index
 
         float speedup = 0;
 

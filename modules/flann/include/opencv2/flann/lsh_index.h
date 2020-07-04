@@ -38,7 +38,6 @@
 //! @cond IGNORED
 
 #include <algorithm>
-#include <cassert>
 #include <cstring>
 #include <map>
 #include <vector>
@@ -52,6 +51,11 @@
 #include "allocator.h"
 #include "random.h"
 #include "saving.h"
+
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 4702) //disable unreachable code
+#endif
 
 namespace cvflann
 {
@@ -191,11 +195,11 @@ public:
      */
     virtual void knnSearch(const Matrix<ElementType>& queries, Matrix<int>& indices, Matrix<DistanceType>& dists, int knn, const SearchParams& params) CV_OVERRIDE
     {
-        assert(queries.cols == veclen());
-        assert(indices.rows >= queries.rows);
-        assert(dists.rows >= queries.rows);
-        assert(int(indices.cols) >= knn);
-        assert(int(dists.cols) >= knn);
+        CV_Assert(queries.cols == veclen());
+        CV_Assert(indices.rows >= queries.rows);
+        CV_Assert(dists.rows >= queries.rows);
+        CV_Assert(int(indices.cols) >= knn);
+        CV_Assert(int(dists.cols) >= knn);
 
 
         KNNUniqueResultSet<DistanceType> resultSet(knn);
@@ -390,6 +394,10 @@ private:
     Distance distance_;
 };
 }
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 //! @endcond
 

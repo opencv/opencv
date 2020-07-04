@@ -35,7 +35,6 @@
 
 #include <algorithm>
 #include <map>
-#include <cassert>
 #include <limits>
 #include <cmath>
 
@@ -152,7 +151,7 @@ public:
         int n = indices_length;
 
         int rnd = rand_int(n);
-        assert(rnd >=0 && rnd < n);
+        CV_DbgAssert(rnd >=0 && rnd < n);
 
         centers[0] = indices[rnd];
 
@@ -207,7 +206,7 @@ public:
 
         // Choose one random center and set the closestDistSq values
         int index = rand_int(n);
-        assert(index >=0 && index < n);
+        CV_DbgAssert(index >=0 && index < n);
         centers[0] = indices[index];
 
         for (int i = 0; i < n; i++) {
@@ -502,9 +501,9 @@ public:
                 KMeansNodePtr node = branch.node;
                 findNN(node, result, vec, checks, maxChecks, heap);
             }
-            assert(result.full());
-
             delete heap;
+
+            CV_Assert(result.full());
         }
 
     }
