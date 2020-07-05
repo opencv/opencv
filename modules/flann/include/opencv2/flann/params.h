@@ -45,7 +45,7 @@ typedef std::map<cv::String, any> IndexParams;
 
 struct SearchParams : public IndexParams
 {
-    SearchParams(int checks = 32, float eps = 0, bool sorted = true, bool explore_all_trees = false )
+    SearchParams(int checks, float eps, bool sorted, bool explore_all_trees = false )
     {
         // how many leafs to visit when searching for neighbours (-1 for unlimited)
         (*this)["checks"] = checks;
@@ -57,6 +57,11 @@ struct SearchParams : public IndexParams
         // When true, we do a descent in each tree and. Like before the alternative paths
         // stored in the heap are not be processed further when max checks is reached.
         (*this)["explore_all_trees"] = explore_all_trees;
+    }
+
+    SearchParams(int checks = 32, float eps = 0, bool sorted = true )
+    {
+        SearchParams(checks, eps, sorted, false);
     }
 };
 
