@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2020 Intel Corporation
 
 #include "precomp.hpp"
 
@@ -165,17 +165,76 @@ inline void copyFromIE(const IE::Blob::Ptr &blob, MatType &mat) {
     }
 }
 
-// (taken from videoio module)
-static cv::Mutex& getInitializationMutex()
-{
-    static cv::Mutex initializationMutex;
-    return initializationMutex;
+#if INF_ENGINE_RELEASE < 2020000000  // < 2020.1
+// Load extensions (taken from DNN module)
+std::vector<std::string> getExtensions(const cv::gapi::ie::detail::ParamDesc& params) {
+    std::vector<std::string> candidates;
+    if (params.device_id == "CPU" || params.device_id == "FPGA")
+    {
+        const std::string suffixes[] = { "_avx2", "_sse4", ""};
+        const bool haveFeature[] = {
+            cv::checkHardwareSupport(CPU_AVX2),
+            cv::checkHardwareSupport(CPU_SSE4_2),
+            true
+        };
+        for (auto &&it : ade::util::zip(ade::util::toRange(suffixes),
+                                        ade::util::toRange(haveFeature)))
+        {
+            std::string suffix;
+            bool available = false;
+            std::tie(suffix, available) = it;
+            if (!available) continue;
+#ifdef _WIN32
+            candidates.push_back("cpu_extension" + suffix + ".dll");
+#elif defined(__APPLE__)
+            candidates.push_back("libcpu_extension" + suffix + ".so");  // built as loadable module
+            candidates.push_back("libcpu_extension" + suffix + ".dylib");  // built as shared library
+#else
+            candidates.push_back("libcpu_extension" + suffix + ".so");
+#endif  // _WIN32
+        }
+    }
+    return candidates;
+}
+#else // >= 2020.1
+std::vector<std::string> getExtensions(const cv::gapi::ie::detail::ParamDesc&) {
+    return std::vector<std::string>();
+}
+#endif // INF_ENGINE_RELEASE < 2020000000
+#if INF_ENGINE_RELEASE < 2019020000  // < 2019.R2
+IE::InferencePlugin getPlugin(const cv::gapi::ie::detail::ParamDesc& params) {
+    auto plugin = IE::PluginDispatcher().getPluginByDevice(params.device_id);
+    if (params.device_id == "CPU" || params.device_id == "FPGA")
+    {
+        for (auto &&extlib : getExtensions(params))
+        {
+            try
+            {
+                plugin.AddExtension(IE::make_so_pointer<IE::IExtension>(extlib));
+                CV_LOG_INFO(NULL, "DNN-IE: Loaded extension plugin: " << extlib);
+                break;
+            }
+            catch(...)
+            {
+                CV_LOG_INFO(NULL, "Failed to load IE extension: " << extlib);
+            }
+        }
+    }
+    return plugin;
 }
 
+inline IE::ExecutableNetwork loadNetwork(      IE::InferencePlugin& plugin,
+                                         const IE::CNNNetwork&      net,
+                                         const cv::gapi::ie::detail::ParamDesc&) {
+    return plugin.LoadNetwork(net, {}); // FIXME: 2nd parameter to be
+                                        // configurable via the API
+}
+#else // >= 2019.R2
 // (taken from DNN module)
-IE::Core& getCore(const std::string& id) {
-    static std::map<std::string, std::shared_ptr<IE::Core> > cores;
-    cv::AutoLock lock_unit(getInitializationMutex());
+IE::Core getCore(const std::string& id) {
+    static std::map<std::string, std::shared_ptr<IE::Core>> cores;
+    static cv::Mutex initializationMutex;
+    cv::AutoLock lockUnit(initializationMutex);
     std::map<std::string, std::shared_ptr<IE::Core> >::iterator i = cores.find(id);
     if (i == cores.end())
     {
@@ -185,6 +244,47 @@ IE::Core& getCore(const std::string& id) {
     }
     return *(i->second).get();
 }
+
+IE::Core getPlugin(const cv::gapi::ie::detail::ParamDesc& params) {
+    auto plugin = getCore(params.device_id);
+    if (params.device_id == "CPU" || params.device_id == "FPGA")
+    {
+        for (auto &&extlib : getExtensions(params))
+        {
+            try
+            {
+                plugin.AddExtension(IE::make_so_pointer<IE::IExtension>(extlib), params.device_id);
+                CV_LOG_INFO(NULL, "DNN-IE: Loaded extension plugin: " << extlib);
+                break;
+            }
+            catch(...)
+            {
+                CV_LOG_INFO(NULL, "Failed to load IE extension: " << extlib);
+            }
+        }
+    }
+    return plugin;
+}
+
+inline IE::ExecutableNetwork loadNetwork(      IE::Core&                        core,
+                                         const IE::CNNNetwork&                  net,
+                                         const cv::gapi::ie::detail::ParamDesc& params) {
+    return core.LoadNetwork(net, params.device_id);
+}
+#endif // INF_ENGINE_RELEASE < 2019020000
+#if INF_ENGINE_RELEASE < 2020000000  // < 2020.1
+IE::CNNNetwork readNetwork(const cv::gapi::ie::detail::ParamDesc& params) {
+    IE::CNNNetReader reader;
+    reader.ReadNetwork(params.model_path);
+    reader.ReadWeights(params.weights_path);
+    return reader.getNetwork();
+}
+#else // >= 2020.1
+IE::CNNNetwork readNetwork(const cv::gapi::ie::detail::ParamDesc& params) {
+    auto core = getCore(params.device_id);
+    return core.ReadNetwork(params.model_path, params.weights_path);
+}
+#endif // INF_ENGINE_RELEASE < 2020000000
 
 // IE-specific metadata, represents a network with its parameters
 struct IEUnit {
@@ -197,18 +297,9 @@ struct IEUnit {
 
     explicit IEUnit(const cv::gapi::ie::detail::ParamDesc &pp)
         : params(pp) {
-#if INF_ENGINE_RELEASE < 2020000000  // < 2020.1
-        IE::CNNNetReader reader;
-        reader.ReadNetwork(params.model_path);
-        reader.ReadWeights(params.weights_path);
-        net = reader.getNetwork();
-#else // >= 2020.1
-        InferenceEngine::Core& core = getCore(params.device_id);
-        net = core.ReadNetwork(params.model_path, params.weights_path);
-#endif
+        net = readNetwork(params);
         inputs = net.getInputsInfo();
         outputs = net.getOutputsInfo();
-
         // The practice shows that not all inputs and not all outputs
         // are mandatory to specify in IE model.
         // So what we're concerned here about is:
@@ -234,67 +325,8 @@ struct IEUnit {
 
     // This method is [supposed to be] called at Island compilation stage
     cv::gimpl::ie::IECompiled compile() const {
-#if INF_ENGINE_RELEASE < 2019020000  // < 2019.R2
-        auto this_plugin = IE::PluginDispatcher().getPluginByDevice(params.device_id);
-#else
-        InferenceEngine::Core& core = getCore(params.device_id);
-#endif
-
-#if INF_ENGINE_RELEASE < 2020000000  // <= 2019.R3
-        // Load extensions (taken from DNN module)
-        if (params.device_id == "CPU" || params.device_id == "FPGA")
-        {
-            const std::string suffixes[] = { "_avx2", "_sse4", ""};
-            const bool haveFeature[] = {
-                cv::checkHardwareSupport(CPU_AVX2),
-                cv::checkHardwareSupport(CPU_SSE4_2),
-                true
-            };
-            std::vector<std::string> candidates;
-            for (auto &&it : ade::util::zip(ade::util::toRange(suffixes),
-                                            ade::util::toRange(haveFeature)))
-            {
-                std::string suffix;
-                bool available = false;
-                std::tie(suffix, available) = it;
-                if (!available) continue;
-#ifdef _WIN32
-                candidates.push_back("cpu_extension" + suffix + ".dll");
-#elif defined(__APPLE__)
-                candidates.push_back("libcpu_extension" + suffix + ".so");  // built as loadable module
-                candidates.push_back("libcpu_extension" + suffix + ".dylib");  // built as shared library
-#else
-                candidates.push_back("libcpu_extension" + suffix + ".so");
-#endif  // _WIN32
-            }
-            for (auto &&extlib : candidates)
-            {
-                try
-                {
-                    std::shared_ptr<IE::IExtension> extension =
-                        IE::make_so_pointer<IE::IExtension>(extlib);
-#if INF_ENGINE_RELEASE < 2019020000  // < 2019.R2
-                    this_plugin.AddExtension(extension);
-#else
-                    core.AddExtension(extension, "CPU"); //CPU only?
-#endif
-                    CV_LOG_INFO(NULL, "DNN-IE: Loaded extension plugin: " << extlib);
-                    break;
-                }
-                catch(...)
-                {
-                    CV_LOG_INFO(NULL, "Failed to load IE extension: " << extlib);
-                }
-            }
-        }
-#endif // INF_ENGINE_RELEASE < 2020000000
-#if INF_ENGINE_RELEASE < 2019020000  // < 2019.R2
-        auto this_network = this_plugin.LoadNetwork(net, {}); // FIXME: 2nd parameter to be
-                                                              // configurable via the API
-#else
-        auto this_network = core.LoadNetwork(net, params.device_id);
-#endif // INF_ENGINE_RELEASE < 2019020000
-
+        auto plugin = getPlugin(params);
+        auto this_network = loadNetwork(plugin, net, params);
         auto this_request = this_network.CreateInferRequest();
 
         // Bind const data to infer request
@@ -305,11 +337,7 @@ struct IEUnit {
             // Still, constant data is to set only once.
             this_request.SetBlob(p.first, wrapIE(p.second.first, p.second.second));
         }
-#if INF_ENGINE_RELEASE < 2019020000  // < 2019.R2
-        return {this_plugin, this_network, this_request};
-#else
-        return {core, this_network, this_request};
-#endif
+        return {plugin, this_network, this_request};
     }
 };
 
@@ -837,18 +865,18 @@ cv::gapi::GBackend cv::gapi::ie::backend() {
     return this_backend;
 }
 
-cv::Mat cv::gapi::ie::util::to_ocv(InferenceEngine::Blob::Ptr blob) {
+cv::Mat cv::gapi::ie::util::to_ocv(IE::Blob::Ptr blob) {
     const auto& tdesc = blob->getTensorDesc();
     return cv::Mat(toCV(tdesc.getDims()),
                    toCV(tdesc.getPrecision()),
                    blob->buffer().as<uint8_t*>());
 }
 
-std::vector<int> cv::gapi::ie::util::to_ocv(const InferenceEngine::SizeVector &dims) {
+std::vector<int> cv::gapi::ie::util::to_ocv(const IE::SizeVector &dims) {
     return toCV(dims);
 }
 
-InferenceEngine::Blob::Ptr cv::gapi::ie::util::to_ie(cv::Mat &blob) {
+IE::Blob::Ptr cv::gapi::ie::util::to_ie(cv::Mat &blob) {
     return wrapIE(blob, cv::gapi::ie::TraitAs::IMAGE);
 }
 
