@@ -311,6 +311,23 @@ SearchParams::SearchParams( int checks, float eps, bool sorted, bool explore_all
 }
 
 
+SearchParams::SearchParams( int checks, float eps, bool sorted )
+{
+    ::cvflann::IndexParams& p = get_params(*this);
+
+    // how many leafs to visit when searching for neighbours (-1 for unlimited)
+    p["checks"] = checks;
+    // search for eps-approximate neighbours (default: 0)
+    p["eps"] = eps;
+    // only for radius search, require neighbours sorted by distance (default: true)
+    p["sorted"] = sorted;
+    // if false, search stops at the tree reaching the number of  max checks (original behavior).
+    // When true, we do a descent in each tree and. Like before the alternative paths
+    // stored in the heap are not be processed further when max checks is reached.
+    p["explore_all_trees"] = false;
+}
+
+
 template<typename Distance, typename IndexType> void
 buildIndex_(void*& index, const Mat& data, const IndexParams& params, const Distance& dist = Distance())
 {

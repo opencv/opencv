@@ -143,11 +143,8 @@ struct CV_EXPORTS SavedIndexParams : public IndexParams
 
 struct CV_EXPORTS SearchParams : public IndexParams
 {
-    SearchParams( int checks, float eps, bool sorted, bool explore_all_trees = false );
-
-    SearchParams( int checks = 32, float eps = 0, bool sorted = true ) {
-        SearchParams( checks, eps, sorted, false );
-    }
+    SearchParams( int checks, float eps, bool sorted, bool explore_all_trees );
+    SearchParams( int checks = 32, float eps = 0, bool sorted = true );
 };
 
 class CV_EXPORTS_W Index
