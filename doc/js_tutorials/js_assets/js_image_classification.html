@@ -67,18 +67,22 @@
 <div>
     <h3>Help function</h3>
     <p>1.The parameters for model inference which you can modify to investigate more models.</p>
-    <textarea class="code" rows="20" cols="100" id="codeEditor" spellcheck="false"></textarea>
+    <textarea class="code" rows="15" cols="100" id="codeEditor" spellcheck="false"></textarea>
     <p>2.Main loop in which will read the image from canvas and do inference once.</p>
-    <textarea class="code" rows="25" cols="100" id="codeEditor1" spellcheck="false"></textarea>
+    <textarea class="code" rows="27" cols="100" id="codeEditor1" spellcheck="false"></textarea>
     <p>3.Load labels from txt file and process it into an array.</p>
-    <textarea class="code" rows="10" cols="100" id="codeEditor2" spellcheck="false"></textarea>
+    <textarea class="code" rows="9" cols="100" id="codeEditor2" spellcheck="false"></textarea>
     <p>4.Get blob from image as input for net, and standardize it with <b>mean</b> and <b>std</b>.</p>
-    <textarea class="code" rows="10" cols="100" id="codeEditor3" spellcheck="false"></textarea>
+    <textarea class="code" rows="11" cols="100" id="codeEditor3" spellcheck="false"></textarea>
     <p>5.Fetch model from network and save to emscripten file system.</p>
-    <textarea class="code" rows="25" cols="100" id="codeEditor4" spellcheck="false"></textarea>
+    <textarea class="code" rows="35" cols="100" id="codeEditor4" spellcheck="false"></textarea>
     <p>6.The post-processing, including softmax if needed and get the top classes from the output vector.</p>
     <textarea class="code" rows="35" cols="100" id="codeEditor5" spellcheck="false"></textarea>
     <p class="err" id="errorMessage"></p>
+</div>
+
+<div id="appendix">
+    <h2>Model Info:</h2>
 </div>
 
 <script src="utils.js" type="text/javascript"></script>
@@ -88,11 +92,15 @@ inputSize = [224,224];
 mean = [104, 117, 123];
 std = 1;
 rgb = true;
-needSoftmax = false;
 
-labelsUrl = "https://raw.githubusercontent.com/akineeic/opencv_model/master/image_classification/labels/labels1000.txt";
-modelUrl = "https://raw.githubusercontent.com/akineeic/opencv_model/master/image_classification/caffe/bvlc_googlenet.caffemodel";
-configUrl = "https://raw.githubusercontent.com/akineeic/opencv_model/master/image_classification/caffe/bvlc_googlenet.prototxt";
+// record if need softmax function for post-processing
+needSoftmax = false; 
+
+// url for model, config and label files, can from native or Internet
+// for model type like onnx which doesn't need config file, just let configUrl = ""
+labelsUrl = "labels1000.txt";
+modelUrl = "bvlc_googlenet.caffemodel";
+configUrl = "bvlc_googlenet.prototxt";
 </script>
 
 <script id="codeSnippet1" type="text/code-snippet">
@@ -104,15 +112,21 @@ main = async function() {
     const path = await loadModel(url);
     const labels = await loadLables(labelsUrl);
     const input = getBlodFromImage(inputSize, mean, std, rgb);
-    const net = cv.readNet(path.configPath, path.modelPath);
+    let net;
+    if(path.configPath == "") {
+        net = cv.readNet(path.modelPath);
+    } else {
+        net = cv.readNet(path.configPath, path.modelPath);
+    }
     net.setInput(input);
     const start = performance.now();
-    const result =net.forward();
+    const result = net.forward();
     const time  = performance.now()-start;
     const probs = softmax(result);
     const classes = getTopClasses(probs, labels);
 
     updateResult(classes, time);
+    input.delete();
     net.delete();
     result.delete();
 }
@@ -136,18 +150,34 @@ getBlodFromImage = function() {
     cv.cvtColor(mat, matC3, cv.COLOR_RGBA2RGB);
     let input = cv.blobFromImage(matC3, std, new cv.Size(inputSize[0], inputSize[1]), 
                                  new cv.Scalar(mean[0], mean[1], mean[2]), rgb);
+    mat.delete();
+    matC3.delete();
     return input;
 }
 </script>
 
 <script id="codeSnippet4" type="text/code-snippet">
+// get name of model and config file from url
+function getNameFromUrl(url) {
+    let modelParts = url.modelUrl.split('/');
+    let modelPath = modelParts[modelParts.length-1];
+    let configParts = url.configUrl.split('/');
+    let configPath = configParts[configParts.length-1];
+    return {
+        modelPath: modelPath,
+        configPath: configPath
+    }
+}
+
 loadModel = async function(url) {
     path = getNameFromUrl(url);
     return new Promise((resolve) => {
+        // check if the model has been loaded before
         if(modelLoaded.indexOf(path.modelPath) == -1){
             document.getElementById('status').innerHTML = 'Loading model...';
             utils.createFileFromUrl(path.modelPath, url.modelUrl, () => {
                 modelLoaded.push(path.modelPath);
+                // check if need to load config file
                 if(url.configUrl !== "") {
                     utils.createFileFromUrl(path.configPath, url.configUrl, () => {
                         resolve(path);
@@ -181,19 +211,19 @@ getTopClasses = function(probs, labels, topK = 3) {
     probs = Array.from(probs);
     let indexes = probs.map((prob, index) => [prob, index]);
     let sorted = indexes.sort((a, b) => {
-    if (a[0] === b[0]) {return 0;}
-    return a[0] < b[0] ? -1 : 1;
+        if (a[0] === b[0]) {return 0;}
+        return a[0] < b[0] ? -1 : 1;
     });
     sorted.reverse();
     let classes = [];
     for (let i = 0; i < topK; ++i) {
-    let prob = sorted[i][0];
-    let index = sorted[i][1];
-    let c = {
-        label: labels[index],
-        prob: (prob * 100).toFixed(2)
-    }
-    classes.push(c);
+        let prob = sorted[i][0];
+        let index = sorted[i][1];
+        let c = {
+            label: labels[index],
+            prob: (prob * 100).toFixed(2)
+        }
+        classes.push(c);
     }
     return classes;
 }
@@ -236,6 +266,8 @@ getTopClasses = function(probs, labels, topK = 3) {
         tryIt.removeAttribute('disabled');
     });
 
+    drawInfoTable();
+
     let modelLoaded = [];
     var main = async function() {};
     var loadLables = async function(labelsUrl){};
@@ -243,6 +275,7 @@ getTopClasses = function(probs, labels, topK = 3) {
     var loadModel = async function(url){};
     var softmax = function(result){};
     var getTopClasses = function(mat, labels, topK = 3){};
+    var getNameFromUrl = function(url) {};
     
     utils.executeCode('codeEditor1');
     utils.executeCode('codeEditor2');
@@ -303,15 +336,45 @@ getTopClasses = function(probs, labels, topK = 3) {
         };
     }
 
-    function getNameFromUrl(url) {
-        let modelParts = url.modelUrl.split('/');
-        let modelPath = modelParts[modelParts.length-1];
-        let configParts = url.configUrl.split('/');
-        let configPath = configParts[configParts.length-1];
-        return {
-            modelPath: modelPath,
-            configPath: configPath
-        }
+    async function drawInfoTable() {
+        let jsonUrl = "js_image_classification_model_info.json";
+        let response = await fetch(jsonUrl);
+        let json = await response.json();
+
+        let appendix = document.getElementById('appendix');
+        for(key of Object.keys(json)) {
+            let h3 = document.createElement('h3');
+            h3.textContent = key + " model";
+            appendix.appendChild(h3);
+
+            let table = document.createElement('table');
+            let head_tr = document.createElement('tr');
+            for(head of Object.keys(json[key][0])) {
+                if(head !== "modelUrl" && head !== "configUrl") {
+                    let th = document.createElement('th');
+                    th.textContent = head;
+                    th.style.border = "1px solid black";
+                    head_tr.appendChild(th);
+                }
+            }
+            table.appendChild(head_tr)
+
+            for(model of json[key]) {
+                let tr = document.createElement('tr');
+                for(params of Object.keys(model)) {
+                    if(params !== "modelUrl" && params !== "configUrl") {
+                        let td = document.createElement('td');
+                        td.textContent = model[params];
+                        td.style.border = "1px solid black";
+                        tr.appendChild(td);
+                    }
+                }
+                table.appendChild(tr);
+            }
+            table.style.width = "800px";
+            table.style.borderCollapse = "collapse";
+            appendix.appendChild(table);
+        }        
     }
 
 </script>
