@@ -191,7 +191,6 @@ if(CV_GCC OR CV_CLANG)
 
   # Profiling?
   if(ENABLE_PROFILING)
-    add_extra_compiler_option("-pg -g")
     # turn off incompatible options
     foreach(flags CMAKE_CXX_FLAGS CMAKE_C_FLAGS CMAKE_CXX_FLAGS_RELEASE CMAKE_C_FLAGS_RELEASE CMAKE_CXX_FLAGS_DEBUG CMAKE_C_FLAGS_DEBUG
                   OPENCV_EXTRA_FLAGS_RELEASE OPENCV_EXTRA_FLAGS_DEBUG OPENCV_EXTRA_C_FLAGS OPENCV_EXTRA_CXX_FLAGS)
@@ -199,6 +198,9 @@ if(CV_GCC OR CV_CLANG)
       string(REPLACE "-ffunction-sections" "" ${flags} "${${flags}}")
       string(REPLACE "-fdata-sections" "" ${flags} "${${flags}}")
     endforeach()
+    # -pg should be placed both in the linker and in the compiler settings
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pg")
+    add_extra_compiler_option("-pg -g")
   else()
     if(MSVC)
       # TODO: Clang/C2 is not supported

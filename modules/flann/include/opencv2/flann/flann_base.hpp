@@ -34,7 +34,6 @@
 //! @cond IGNORED
 
 #include <vector>
-#include <cassert>
 #include <cstdio>
 
 #include "general.h"

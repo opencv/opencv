@@ -100,9 +100,12 @@ void normAssertDetections(
         const char *comment /*= ""*/, double confThreshold /*= 0.0*/,
         double scores_diff /*= 1e-5*/, double boxes_iou_diff /*= 1e-4*/)
 {
+    ASSERT_FALSE(testClassIds.empty()) << "No detections";
     std::vector<bool> matchedRefBoxes(refBoxes.size(), false);
+    std::vector<double> refBoxesIoUDiff(refBoxes.size(), 1.0);
     for (int i = 0; i < testBoxes.size(); ++i)
     {
+        //cout << "Test[i=" << i << "]: score=" << testScores[i] << " id=" << testClassIds[i] << " box " << testBoxes[i] << endl;
         double testScore = testScores[i];
         if (testScore < confThreshold)
             continue;
@@ -119,6 +122,7 @@ void normAssertDetections(
                 double interArea = (testBox & refBoxes[j]).area();
                 double iou = interArea / (testBox.area() + refBoxes[j].area() - interArea);
                 topIoU = std::max(topIoU, iou);
+                refBoxesIoUDiff[j] = std::min(refBoxesIoUDiff[j], 1.0f - iou);
                 if (1.0 - iou < boxes_iou_diff)
                 {
                     matched = true;
@@ -141,7 +145,9 @@ void normAssertDetections(
         if (!matchedRefBoxes[i] && refScores[i] > confThreshold)
         {
             std::cout << cv::format("Unmatched reference: class %d score %f box ",
-                                    refClassIds[i], refScores[i]) << refBoxes[i] << std::endl;
+                                    refClassIds[i], refScores[i]) << refBoxes[i]
+                << " IoU diff: " << refBoxesIoUDiff[i]
+                << std::endl;
             EXPECT_LE(refScores[i], confThreshold) << comment;
         }
     }
