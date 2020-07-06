@@ -230,23 +230,13 @@ inline IE::ExecutableNetwork loadNetwork(      IE::InferencePlugin& plugin,
                                         // configurable via the API
 }
 #else // >= 2019.R2
-// (taken from DNN module)
-IE::Core getCore(const std::string& id) {
-    static std::map<std::string, std::shared_ptr<IE::Core>> cores;
-    static cv::Mutex initializationMutex;
-    cv::AutoLock lockUnit(initializationMutex);
-    std::map<std::string, std::shared_ptr<IE::Core> >::iterator i = cores.find(id);
-    if (i == cores.end())
-    {
-        std::shared_ptr<IE::Core> core = std::make_shared<IE::Core>();
-        cores[id] = core;
-        return *core.get();
-    }
-    return *(i->second).get();
+IE::Core getCore() {
+    static IE::Core core;
+    return core;
 }
 
 IE::Core getPlugin(const cv::gapi::ie::detail::ParamDesc& params) {
-    auto plugin = getCore(params.device_id);
+    auto plugin = getCore();
     if (params.device_id == "CPU" || params.device_id == "FPGA")
     {
         for (auto &&extlib : getExtensions(params))
@@ -281,7 +271,7 @@ IE::CNNNetwork readNetwork(const cv::gapi::ie::detail::ParamDesc& params) {
 }
 #else // >= 2020.1
 IE::CNNNetwork readNetwork(const cv::gapi::ie::detail::ParamDesc& params) {
-    auto core = getCore(params.device_id);
+    auto core = getCore();
     return core.ReadNetwork(params.model_path, params.weights_path);
 }
 #endif // INF_ENGINE_RELEASE < 2020000000
