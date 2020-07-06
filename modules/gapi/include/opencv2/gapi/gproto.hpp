@@ -61,20 +61,22 @@ public:
     explicit GIOProtoArgs(GProtoArgs &&args)      : m_args(std::move(args)) {}
 
     GProtoArgs m_args;
-//    FIXME: Make it work
+
     template<typename Tg>
+    // TODO: Think about the addition operator
     friend GIOProtoArgs<Tg>& operator += (GIOProtoArgs<Tg> &lhs, const GIOProtoArgs<Tg> &rhs);
 };
 
-struct In_Tag{};
-struct Out_Tag{};
-
 template<typename Tg>
-GIOProtoArgs<Tg>& operator += (GIOProtoArgs<Tg> &lhs, const GIOProtoArgs<Tg> &rhs) {
+cv::GIOProtoArgs<Tg>& operator += (cv::GIOProtoArgs<Tg> &lhs, const cv::GIOProtoArgs<Tg> &rhs)
+{
     lhs.m_args.reserve(lhs.m_args.size() + rhs.m_args.size());
     lhs.m_args.insert(lhs.m_args.end(), rhs.m_args.begin(), rhs.m_args.end());
     return lhs;
 }
+
+struct In_Tag{};
+struct Out_Tag{};
 
 using GProtoInputArgs  = GIOProtoArgs<In_Tag>;
 using GProtoOutputArgs = GIOProtoArgs<Out_Tag>;

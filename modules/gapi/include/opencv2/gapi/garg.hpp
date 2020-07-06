@@ -133,9 +133,10 @@ using GRunArgP = util::variant<
     >;
 using GRunArgsP = std::vector<GRunArgP>;
 
-inline std::vector<GRunArgP>& operator += (std::vector<GRunArgP> &lhs, const std::vector<GRunArgP> &rhs);
-
-inline std::vector<GRunArgP>& operator += (std::vector<GRunArgP> &lhs, const std::vector<GRunArgP> &rhs) {
+// TODO: Think about the addition operator
+// TODO: Make it work for cv::gin() case
+inline GRunArgsP& operator += (GRunArgsP &lhs, const GRunArgsP &rhs);
+inline GRunArgsP& operator += (GRunArgsP &lhs, const GRunArgsP &rhs) {
     lhs.reserve(lhs.size() + rhs.size());
     lhs.insert(lhs.end(), rhs.begin(), rhs.end());
     return lhs;
