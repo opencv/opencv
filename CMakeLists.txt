@@ -1617,6 +1617,10 @@ if(ENABLE_CONFIG_VERIFICATION)
   ocv_verify_config()
 endif()
 
+if(HAVE_CUDA AND COMMAND CUDA_BUILD_CLEAN_TARGET)
+  CUDA_BUILD_CLEAN_TARGET()
+endif()
+
 ocv_cmake_hook(POST_FINALIZE)
 
 # ----------------------------------------------------------------------------

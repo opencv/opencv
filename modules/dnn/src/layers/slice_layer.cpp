@@ -209,6 +209,10 @@ public:
 #ifdef HAVE_OPENCL
     bool forward_ocl(InputArrayOfArrays inputs_, OutputArrayOfArrays outputs_, OutputArrayOfArrays internals_)
     {
+#if 1
+        // TODO fix that (brokes YOLOv4-tiny)
+        return false;
+#else
         std::vector<UMat> inputs;
         std::vector<UMat> outputs;
 
@@ -251,7 +255,8 @@ public:
         }
 
         return true;
-    }
+#endif
+        }
 #endif
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
