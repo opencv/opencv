@@ -12,7 +12,7 @@
 
 #ifdef HAVE_DNN_NGRAPH
 #include "../ie_ngraph.hpp"
-#include <ngraph/op/experimental/layers/interpolate.hpp>
+#include <ngraph/op/interpolate.hpp>
 #endif
 
 #ifdef HAVE_CUDA

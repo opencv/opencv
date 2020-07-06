@@ -47,8 +47,8 @@
 
 #ifdef HAVE_DNN_NGRAPH
 #include "../ie_ngraph.hpp"
-#include <ngraph/op/experimental/layers/prior_box.hpp>
-#include <ngraph/op/experimental/layers/prior_box_clustered.hpp>
+#include <ngraph/op/prior_box.hpp>
+#include <ngraph/op/prior_box_clustered.hpp>
 #endif
 
 #include "../op_vkcom.hpp"

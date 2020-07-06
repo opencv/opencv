@@ -10,7 +10,7 @@
 
 #ifdef HAVE_DNN_NGRAPH
 #include "../ie_ngraph.hpp"
-#include <ngraph/op/experimental/layers/proposal.hpp>
+#include <ngraph/op/proposal.hpp>
 #endif
 
 namespace cv { namespace dnn {

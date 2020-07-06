@@ -49,8 +49,8 @@
 
 #ifdef HAVE_DNN_NGRAPH
 #include "../ie_ngraph.hpp"
-#include <ngraph/op/experimental/layers/roi_pooling.hpp>
-#include <ngraph/op/experimental/layers/psroi_pooling.hpp>
+#include <ngraph/op/roi_pooling.hpp>
+#include <ngraph/op/psroi_pooling.hpp>
 #endif
 
 #include "../op_vkcom.hpp"

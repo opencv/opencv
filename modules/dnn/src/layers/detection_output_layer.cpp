@@ -54,7 +54,7 @@
 
 #ifdef HAVE_DNN_NGRAPH
 #include "../ie_ngraph.hpp"
-#include <ngraph/op/experimental/layers/detection_output.hpp>
+#include <ngraph/op/detection_output.hpp>
 #endif
 
 namespace cv
