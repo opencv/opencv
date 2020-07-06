@@ -7,6 +7,13 @@
 #ifndef OPENCV_GAPI_INFER_IE_UTIL_HPP
 #define OPENCV_GAPI_INFER_IE_UTIL_HPP
 
+////////////////////////////////////////////////////////////////////////////////
+// FIXME: Suppress deprecation warnings for OpenVINO < 2021
+#ifdef _MSC_VER
+#pragma warning(disable: 4996)  // was declared deprecated
+#endif
+////////////////////////////////////////////////////////////////////////////////
+
 #ifdef HAVE_INF_ENGINE
 
 // NOTE: This file is not included by default in infer/ie.hpp

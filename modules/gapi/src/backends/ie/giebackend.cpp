@@ -4,6 +4,13 @@
 //
 // Copyright (C) 2018-2020 Intel Corporation
 
+////////////////////////////////////////////////////////////////////////////////
+// FIXME: Suppress deprecation warnings for OpenVINO < 2021
+#ifdef _MSC_VER
+#pragma warning(disable: 4996)  // was declared deprecated
+#endif
+////////////////////////////////////////////////////////////////////////////////
+
 #include "precomp.hpp"
 
 // needs to be included regardless if IE is present or not
