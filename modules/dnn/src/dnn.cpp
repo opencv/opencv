@@ -2788,7 +2788,13 @@ struct Net::Impl : public detail::NetImplBase
                         if (preferableBackend == DNN_BACKEND_CUDA &&
                             (inp_i_data->layerInstance->supportBackend(DNN_BACKEND_CUDA) == false ||
                              (inp_i_data->layerInstance->type != "Convolution" &&
-                              inp_i_data->layerInstance->type != "Pooling")))
+                              inp_i_data->layerInstance->type != "Pooling" &&
+                              inp_i_data->layerInstance->type != "Resize"  &&
+                              inp_i_data->layerInstance->type != "Flatten" &&
+                              inp_i_data->layerInstance->type != "Permute" &&
+                              inp_i_data->layerInstance->type != "Reorg" &&
+                              inp_i_data->layerInstance->type != "Eltwise" &&
+                              inp_i_data->layerInstance.dynamicCast<ActivationLayer>().empty())))
                         {
                             break;
                         }
