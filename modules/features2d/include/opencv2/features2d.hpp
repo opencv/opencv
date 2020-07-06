@@ -261,6 +261,10 @@ public:
     @param contrastThreshold The contrast threshold used to filter out weak features in semi-uniform
     (low-contrast) regions. The larger the threshold, the less features are produced by the detector.
 
+    @note The contrast threshold will be divided by nOctaveLayers when the filtering is applied. When
+    nOctaveLayers is set to default and if you want to use the value used in D. Lowe paper, 0.03, set
+    this argument to 0.09.
+
     @param edgeThreshold The threshold used to filter out edge-like features. Note that the its meaning
     is different from the contrastThreshold, i.e. the larger the edgeThreshold, the less features are
     filtered out (more features are retained).
@@ -271,6 +275,8 @@ public:
     CV_WRAP static Ptr<SIFT> create(int nfeatures = 0, int nOctaveLayers = 3,
         double contrastThreshold = 0.04, double edgeThreshold = 10,
         double sigma = 1.6);
+
+    CV_WRAP virtual String getDefaultName() const CV_OVERRIDE;
 };
 
 typedef SIFT SiftFeatureDetector;
