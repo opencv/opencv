@@ -123,33 +123,53 @@ void setNetParameters(IE::CNNNetwork& net) {
 }
 
 #if INF_ENGINE_RELEASE < 2020000000  // < 2020.1
-IE::ExecutableNetwork loadNetwork(const std::string& topology_path,
-                                  const std::string& weights_path,
-                                  const std::string& device,
-                                        bool         setParams) {
+IE::CNNNetwork readNetwork(const std::string& topology_path,
+                           const std::string& weights_path) {
     IE::CNNNetReader reader;
     reader.ReadNetwork(topology_path);
     reader.ReadWeights(weights_path);
-    auto net = reader.getNetwork();
-    if (setParams) {
-        setNetParameters(net);
-    }
-    auto plugin = IE::PluginDispatcher().getPluginByDevice(device);
-    return plugin.LoadNetwork(net, {});
+    return reader.getNetwork();
+}
+
+IE::CNNNetwork readNetwork(IE::Core&,
+                           const std::string& topology_path,
+                           const std::string& weights_path) {
+    return readNetwork(topology_path, weights_path);
 }
 #else // >= 2020.1
-IE::ExecutableNetwork loadNetwork(const std::string& topology_path,
-                                  const std::string& weights_path,
-                                  const std::string& device,
-                                        bool         setParams) {
-    IE::Core core;
-    auto net = core.ReadNetwork(topology_path, weights_path);
-    if (setParams) {
-        setNetParameters(net);
-    }
-    return core.LoadNetwork(net, device);
+inline IE::CNNNetwork readNetwork(      IE::Core&    core,
+                                  const std::string& topology_path,
+                                  const std::string& weights_path) {
+    return core.ReadNetwork(topology_path, weights_path);
 }
 #endif // INF_ENGINE_RELEASE < 2020000000
+#if INF_ENGINE_RELEASE < 2019020000  // < 2019.R2
+inline IE::InferencePlugin getPlugin(const std::string& device) {
+    return IE::PluginDispatcher().getPluginByDevice(device);
+}
+
+IE::CNNNetwork readNetwork(IE::InferencePlugin&,
+                           const std::string& topology_path,
+                           const std::string& weights_path) {
+    return readNetwork(topology_path, weights_path);
+}
+
+inline IE::ExecutableNetwork loadNetwork(      IE::InferencePlugin& plugin,
+                                         const IE::CNNNetwork&      net,
+                                         const std::string&) {
+    return plugin.LoadNetwork(net, {});
+}
+#else // >= 2019.R2
+inline IE::Core getPlugin(const std::string&) {
+    return IE::Core();
+}
+
+inline IE::ExecutableNetwork loadNetwork(      IE::Core&       core,
+                                         const IE::CNNNetwork& net,
+                                         const std::string&    device) {
+    return core.LoadNetwork(net, device);
+}
+#endif // INF_ENGINE_RELEASE < 2019020000
 } // anonymous namespace
 
 // TODO: Probably DNN/IE part can be further parametrized with a template
@@ -168,10 +188,13 @@ TEST(TestAgeGenderIE, InferBasicTensor)
 
     IE::Blob::Ptr ie_age, ie_gender;
     {
-        auto plugin_net = loadNetwork(topology_path, weights_path, "CPU", false);
+        auto plugin        = getPlugin("CPU");
+        auto net           = readNetwork(plugin, topology_path, weights_path);
+        // setNetParameters(net);
+        auto plugin_net    = loadNetwork(plugin, net, "CPU");
         auto infer_request = plugin_net.CreateInferRequest();
 
-        const auto &iedims = plugin_net.GetInputsInfo().begin()->second->getTensorDesc().getDims();
+        const auto &iedims = net.getInputsInfo().begin()->second->getTensorDesc().getDims();
               auto  cvdims = cv::gapi::ie::util::to_ocv(iedims);
         in_mat.create(cvdims, CV_32F);
         cv::randu(in_mat, -1, 1);
@@ -220,7 +243,10 @@ TEST(TestAgeGenderIE, InferBasicImage)
     namespace IE = InferenceEngine;
     IE::Blob::Ptr ie_age, ie_gender;
     {
-        auto plugin_net = loadNetwork(topology_path, weights_path, "CPU", true);
+        auto plugin        = getPlugin("CPU");
+        auto net           = readNetwork(plugin, topology_path, weights_path);
+        setNetParameters(net);
+        auto plugin_net    = loadNetwork(plugin, net, "CPU");
         auto infer_request = plugin_net.CreateInferRequest();
         infer_request.SetBlob("data", cv::gapi::ie::util::to_ie(in_mat));
         infer_request.Infer();
@@ -281,7 +307,10 @@ struct ROIList: public ::testing::Test {
         // Load & run IE network
         namespace IE = InferenceEngine;
         {
-            auto plugin_net = loadNetwork(m_model_path, m_weights_path, "CPU", true);
+            auto plugin        = getPlugin("CPU");
+            auto net           = readNetwork(plugin, topology_path, weights_path);
+            setNetParameters(net);
+            auto plugin_net    = loadNetwork(plugin, net, "CPU");
             auto infer_request = plugin_net.CreateInferRequest();
             auto frame_blob = cv::gapi::ie::util::to_ie(m_in_mat);
 
