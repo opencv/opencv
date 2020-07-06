@@ -28,6 +28,11 @@ endif()
 
 if(CUDA_FOUND)
   set(HAVE_CUDA 1)
+  if(NOT CUDA_VERSION VERSION_LESS 11.0)
+    # CUDA 11.0 removes nppicom
+    ocv_list_filterout(CUDA_nppi_LIBRARY "nppicom")
+    ocv_list_filterout(CUDA_npp_LIBRARY "nppicom")
+  endif()
 
   if(WITH_CUFFT)
     set(HAVE_CUFFT 1)
@@ -369,5 +374,12 @@ if(HAVE_CUDA)
   if(HAVE_CUFFT)
     set(CUDA_cufft_LIBRARY_ABS ${CUDA_cufft_LIBRARY})
     ocv_convert_to_lib_name(CUDA_cufft_LIBRARY ${CUDA_cufft_LIBRARY})
+  endif()
+
+  if(CMAKE_GENERATOR MATCHES "Visual Studio"
+      AND NOT OPENCV_SKIP_CUDA_CMAKE_SUPPRESS_REGENERATION
+  )
+    message(WARNING "CUDA with MSVS generator is detected. Disabling CMake re-run checks (CMAKE_SUPPRESS_REGENERATION=ON). You need to run CMake manually if updates are required.")
+    set(CMAKE_SUPPRESS_REGENERATION ON)
   endif()
 endif()
