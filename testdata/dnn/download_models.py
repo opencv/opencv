@@ -838,6 +838,11 @@ models = [
         downloader=GDrive('1cewMfusmPjYWbrnuJRuKhPMwRe_b9PaT'),
         sha='0143deb6c46fcc7f74dd35bf3c14edc3784e99ee',
         filename='yolov4.weights'),
+    Model(
+        name='YOLOv4-tiny',  # https://github.com/opencv/opencv/issues/17148
+        url='https://github.com/AlexeyAB/darknet/releases/download/darknet_yolo_v4_pre/yolov4-tiny.weights',
+        sha='d110379b7b86899226b591ad4affc7115f707157',
+        filename='yolov4-tiny.weights'),
 ]
 
 # Note: models will be downloaded to current working directory
