@@ -860,7 +860,7 @@ enum
     BLEND_MODEL_DARKEN = 1,                //min(Target,Blend)
     BLEND_MODEL_MULTIPY = 2,               //Target * Blend
     BLEND_MODEL_COLOR_BURN = 3,            //1 - (1-Target) / Blend
-    BLEND_MODEL_LINEAR_BRUN = 4,            //Target + Blend - 1
+    BLEND_MODEL_LINEAR_BURN = 4,            //Target + Blend - 1
     BLEND_MODEL_LIGHTEN = 5,               //max(Target,Blend)
     BLEND_MODEL_SCREEN = 6,                //1 - (1-Target) * (1-Blend)
     BLEND_MODEL_COLOR_DODGE = 7,           //Target / (1-Blend)

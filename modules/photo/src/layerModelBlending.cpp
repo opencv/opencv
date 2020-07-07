@@ -62,7 +62,7 @@ namespace cv
                     dstData[i] = LayerModelBlend_ColorBurn(targetData[i], blendData[i]);
             }
         break;
-        case BLEND_MODEL_LINEAR_BRUN:
+        case BLEND_MODEL_LINEAR_BURN:
             for (int k = 0; k < nr; k++)
             {
                 const uchar* targetData = target.ptr<uchar>(k);
