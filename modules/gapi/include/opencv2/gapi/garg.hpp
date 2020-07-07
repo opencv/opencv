@@ -102,6 +102,14 @@ using GRunArg  = util::variant<
     >;
 using GRunArgs = std::vector<GRunArg>;
 
+// TODO: Think about the addition operator
+inline GRunArgs& operator += (GRunArgs &lhs, const GRunArgs &rhs);
+inline GRunArgs& operator += (GRunArgs &lhs, const GRunArgs &rhs) {
+    lhs.reserve(lhs.size() + rhs.size());
+    lhs.insert(lhs.end(), rhs.begin(), rhs.end());
+    return lhs;
+}
+
 namespace gapi
 {
 namespace wip
@@ -134,7 +142,6 @@ using GRunArgP = util::variant<
 using GRunArgsP = std::vector<GRunArgP>;
 
 // TODO: Think about the addition operator
-// TODO: Make it work for cv::gin() case
 inline GRunArgsP& operator += (GRunArgsP &lhs, const GRunArgsP &rhs);
 inline GRunArgsP& operator += (GRunArgsP &lhs, const GRunArgsP &rhs) {
     lhs.reserve(lhs.size() + rhs.size());

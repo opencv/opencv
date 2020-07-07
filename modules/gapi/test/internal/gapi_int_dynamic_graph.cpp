@@ -128,12 +128,16 @@ namespace opencv_test
         cv::randu(in_mat1, cv::Scalar::all(0), cv::Scalar::all(255));
         cv::randu(in_mat2, cv::Scalar::all(0), cv::Scalar::all(255));
 
+        cv::GRunArgs in_vector;
+        in_vector += cv::gin(in_mat1);
+        in_vector += cv::gin(in_mat2);
+
         cv::Mat out_mat1, out_mat2;
         cv::GRunArgsP out_vector;
         out_vector += cv::gout(out_mat1);
         out_vector += cv::gout(out_mat2);
 
-        cc.apply(cv::gin(in_mat1, in_mat2), std::move(out_vector));
+        cc.apply(std::move(in_vector), std::move(out_vector));
 
         // OCV ref code
         cv::Mat cv_out_mat1, cv_out_mat2;
@@ -192,13 +196,17 @@ namespace opencv_test
         cv::randu(in_mat1, cv::Scalar::all(0), cv::Scalar::all(255));
         cv::randu(in_mat2, cv::Scalar::all(0), cv::Scalar::all(255));
 
+        cv::GRunArgs in_vector;
+        in_vector += cv::gin(in_mat1);
+        in_vector += cv::gin(in_mat2);
+
         cv::Mat out_mat1, out_mat2;
         cv::GRunArgsP out_vector;
         out_vector += cv::gout(out_mat1);
         out_vector += cv::gout(out_mat2);
 
         auto stream = cc.compileStreaming(cv::compile_args(cv::gapi::core::cpu::kernels()));
-        stream.setSource(gin(in_mat1, in_mat2));
+        stream.setSource(std::move(in_vector));
 
         stream.start();
         stream.pull(std::move(out_vector));
