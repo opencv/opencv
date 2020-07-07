@@ -1033,6 +1033,7 @@ bool CvCaptureCAM_V4L::grabFrame()
             return false;
         }
 
+        // No need to skip this if the first read returns false
         /* preparation is ok */
         FirstCapture = false;
 
