@@ -7,13 +7,6 @@
 #ifndef OPENCV_GAPI_GIEBACKEND_HPP
 #define OPENCV_GAPI_GIEBACKEND_HPP
 
-////////////////////////////////////////////////////////////////////////////////
-// FIXME: Suppress deprecation warnings for OpenVINO < 2021
-#ifdef _MSC_VER
-#pragma warning(disable: 4996)  // was declared deprecated
-#endif
-////////////////////////////////////////////////////////////////////////////////
-
 // Include anyway - cv::gapi::ie::backend() still needs to be defined
 #include "opencv2/gapi/infer/ie.hpp"
 
