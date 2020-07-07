@@ -31,10 +31,16 @@ namespace opencv_test
 
     TEST(DynamicGraph, AddRunArgs)
     {
-        cv::Mat out_mat1, out_mat2;
+        cv::Mat in_mat;
+        cv::GRunArgs in_vector;
+        EXPECT_NO_THROW(in_vector += cv::gin(in_mat));
+    }
+
+    TEST(DynamicGraph, AddRunArgsP)
+    {
+        cv::Mat out_mat;
         cv::GRunArgsP out_vector;
-        EXPECT_NO_THROW(out_vector += cv::gout(out_mat1));
-        EXPECT_NO_THROW(out_vector += cv::gout(out_mat2));
+        EXPECT_NO_THROW(out_vector += cv::gout(out_mat));
     }
 
     TEST(DynamicGraph, ProtoInputArgsExecute)
