@@ -62,8 +62,23 @@ public:
 
     GProtoArgs m_args;
 
-    template<typename Tg>
     // TODO: Think about the addition operator
+    /**
+     * @brief This operator allow to complement proto vectors in runtime.
+     *
+     * Its a simple overload of addition assignment operator.
+     * Just use a constructions like
+     *
+     * cv::GMat inMat;
+     * GIOProtoArgs inProtoVec;
+     * inProtoVec += cv::GIn(inMat);
+     *
+     * cv::GMat outMat;
+     * GIOProtoArgs outProtoVec;
+     * outProtoVec += cv::GOut(outMat);
+     *
+     */
+    template<typename Tg>
     friend GIOProtoArgs<Tg>& operator += (GIOProtoArgs<Tg> &lhs, const GIOProtoArgs<Tg> &rhs);
 };
 

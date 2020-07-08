@@ -103,8 +103,20 @@ using GRunArg  = util::variant<
 using GRunArgs = std::vector<GRunArg>;
 
 // TODO: Think about the addition operator
+/**
+ * @brief This operator allow to complement input vector in runtime.
+ *
+ * Its a simple overload of addition assignment operator.
+ * Just use a construction like
+ *
+ * cv::Mat inMat;
+ * GRunArgs inVec;
+ * inVec += cv::gin(inMat);
+ *
+ */
 inline GRunArgs& operator += (GRunArgs &lhs, const GRunArgs &rhs);
-inline GRunArgs& operator += (GRunArgs &lhs, const GRunArgs &rhs) {
+inline GRunArgs& operator += (GRunArgs &lhs, const GRunArgs &rhs)
+{
     lhs.reserve(lhs.size() + rhs.size());
     lhs.insert(lhs.end(), rhs.begin(), rhs.end());
     return lhs;
@@ -142,8 +154,20 @@ using GRunArgP = util::variant<
 using GRunArgsP = std::vector<GRunArgP>;
 
 // TODO: Think about the addition operator
+/**
+ * @brief This operator allow to complement output vector in runtime.
+ *
+ * Its a simple overload of addition assignment operator.
+ * Just use a construction like
+ *
+ * cv::Mat outMat;
+ * GRunArgsP outVec;
+ * outVec += cv::gout(outMat);
+ *
+ */
 inline GRunArgsP& operator += (GRunArgsP &lhs, const GRunArgsP &rhs);
-inline GRunArgsP& operator += (GRunArgsP &lhs, const GRunArgsP &rhs) {
+inline GRunArgsP& operator += (GRunArgsP &lhs, const GRunArgsP &rhs)
+{
     lhs.reserve(lhs.size() + rhs.size());
     lhs.insert(lhs.end(), rhs.begin(), rhs.end());
     return lhs;
