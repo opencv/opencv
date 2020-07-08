@@ -547,7 +547,7 @@ public:
     void findNeighbors(ResultSet<DistanceType>& result, const ElementType* vec, const SearchParams& searchParams) CV_OVERRIDE
     {
 
-        int maxChecks = get_param(searchParams,"checks",32);
+        const int maxChecks = get_param(searchParams,"checks",32);
 
         // Priority queue storing intermediate branches in the best-bin-first search
         Heap<BranchSt>* heap = new Heap<BranchSt>((int)size_);
@@ -556,6 +556,8 @@ public:
         int checks = 0;
         for (int i=0; i<trees_; ++i) {
             findNN(root[i], result, vec, checks, maxChecks, heap, checked);
+            if ((checks >= maxChecks) && result.full())
+                break;
         }
 
         BranchSt branch;
@@ -747,8 +749,8 @@ private:
                 Heap<BranchSt>* heap, std::vector<bool>& checked)
     {
         if (node->childs==NULL) {
-            if (checks>=maxChecks) {
-                if (result.full()) return;
+            if ((checks>=maxChecks) && result.full()) {
+                return;
             }
             for (int i=0; i<node->size; ++i) {
                 int index = node->indices[i];
