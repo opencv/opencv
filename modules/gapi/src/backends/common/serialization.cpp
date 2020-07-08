@@ -269,16 +269,48 @@ I::IStream& operator>> (I::IStream& is,       cv::GArrayDesc &) {return is;}
 #if !defined(GAPI_STANDALONE)
 I::OStream& operator<< (I::OStream& os, const cv::UMat &)
 {
-    GAPI_Assert("Serialization: Unsupported << for UMat");
+    GAPI_Assert(false && "Serialization: Unsupported << for UMat");
     return os;
 }
 I::IStream& operator >> (I::IStream& is, cv::UMat &)
 {
-    GAPI_Assert("Serialization: Unsupported >> for UMat");
+    GAPI_Assert(false && "Serialization: Unsupported >> for UMat");
     return is;
 }
 #endif // !defined(GAPI_STANDALONE)
 
+I::OStream& operator<< (I::OStream& os, const cv::gapi::wip::IStreamSource::Ptr &)
+{
+    GAPI_Assert(false && "Serialization: Unsupported << for IStreamSource::Ptr");
+    return os;
+}
+I::IStream& operator >> (I::IStream& is, cv::gapi::wip::IStreamSource::Ptr &)
+{
+    GAPI_Assert("Serialization: Unsupported >> for IStreamSource::Ptr");
+    return is;
+}
+
+I::OStream& operator<< (I::OStream& os, const cv::detail::VectorRef &)
+{
+    GAPI_Assert(false && "Serialization: Unsupported << for cv::detail::VectorRef &");
+    return os;
+}
+I::IStream& operator >> (I::IStream& is, cv::detail::VectorRef &)
+{
+    GAPI_Assert(false && "Serialization: Unsupported >> for cv::detail::VectorRef &");
+    return is;
+}
+
+I::OStream& operator<< (I::OStream& os, const cv::detail::OpaqueRef &)
+{
+    GAPI_Assert(false && "Serialization: Unsupported << for cv::detail::OpaqueRef &");
+    return os;
+}
+I::IStream& operator >> (I::IStream& is, cv::detail::OpaqueRef &)
+{
+    GAPI_Assert(false && "Serialization: Unsupported >> for cv::detail::OpaqueRef &");
+    return is;
+}
 // Enums and structures
 
 namespace {

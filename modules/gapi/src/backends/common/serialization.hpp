@@ -114,8 +114,8 @@ GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::GArg &arg);
 GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::GArg &arg);
 
 //Forward declaration
-I::OStream& operator<< (I::OStream& os, const cv::GRunArg &arg);
-I::IStream& operator>> (I::IStream& is, cv::GRunArg &arg);
+//I::OStream& operator<< (I::OStream& os, const cv::GRunArg &arg);
+//I::IStream& operator>> (I::IStream& is, cv::GRunArg &arg);
 
 
 GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::GKernel &k);
@@ -135,8 +135,17 @@ GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::GArrayDesc &);
 
 #if !defined(GAPI_STANDALONE)
 GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::UMat &);
-GAPI_EXPORTS I::IStream& operator >> (I::IStream& is, cv::UMat &);
+GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::UMat &);
 #endif // !defined(GAPI_STANDALONE)
+
+GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::gapi::wip::IStreamSource::Ptr &);
+GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::gapi::wip::IStreamSource::Ptr &);
+
+GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::detail::VectorRef &);
+GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::detail::VectorRef &);
+
+GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::detail::OpaqueRef &);
+GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::detail::OpaqueRef &);
 
 GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::gimpl::RcDesc &rc);
 GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::gimpl::RcDesc &rc);
@@ -268,7 +277,7 @@ I::IStream& operator >> (I::IStream& is, std::vector<T> &ts) {
     }
     return is;
 }
-
+#if 0
 inline I::OStream& operator<< (I::OStream& os, const cv::GRunArg &arg) {
     os << (uint32_t)arg.index();
     switch (arg.index()) {
@@ -305,7 +314,7 @@ inline I::IStream& operator >> (I::IStream& is, cv::GRunArg &arg) {
     }
     return is;
 }
-
+#endif
 
 // FIXME: Basic Stream implementaions //////////////////////////////////////////
 

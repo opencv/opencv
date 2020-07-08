@@ -24,7 +24,6 @@ cv::GRunArgsP cv::gapi::bind(cv::GRunArgs &results)
 {
     cv::GRunArgsP outputs;
     outputs.reserve(results.size());
-    unsigned int i = 0;
     for (cv::GRunArg &res_obj : results)
     {
         using T = cv::GRunArg;
@@ -51,7 +50,6 @@ cv::GRunArgsP cv::gapi::bind(cv::GRunArgs &results)
             GAPI_Assert(false && "This value type is not supported!"); // ...maybe because of STANDALONE mode.
             break;
         }
-        i++;
     }
     return outputs;
 }
