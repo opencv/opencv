@@ -64,18 +64,23 @@ public:
 
     // TODO: Think about the addition operator
     /**
-     * @brief This operator allow to complement proto vectors in runtime.
+     * @brief This operator allows to complement proto vectors at runtime.
      *
-     * Its a simple overload of addition assignment operator.
-     * Just use a constructions like
+     * It's an ordinary overload of addition assignment operator.
      *
+     * Example of usage:
+     *
+     * @code
      * cv::GMat inMat;
      * GIOProtoArgs inProtoVec;
      * inProtoVec += cv::GIn(inMat);
+     * @endcode
      *
+     * @code
      * cv::GMat outMat;
      * GIOProtoArgs outProtoVec;
      * outProtoVec += cv::GOut(outMat);
+     * @endcode
      *
      */
     template<typename Tg>
