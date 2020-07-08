@@ -416,7 +416,11 @@ void BlocksCompensator::feed(const std::vector<Point> &corners, const std::vecto
             bl_idx += bl_per_img.width*bl_per_img.height;
 
             for (int i=0; i<nr_gain_filtering_iterations_; ++i)
-                sepFilter2D(gain_map, gain_map, CV_32F, ker, ker);
+            {
+                UMat tmp;
+                sepFilter2D(gain_map, tmp, CV_32F, ker, ker);
+                swap(gain_map, tmp);
+            }
 
             gain_maps_[img_idx] = gain_map;
         }
