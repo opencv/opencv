@@ -585,6 +585,13 @@ struct LayerData
     std::vector<Ptr<BackendWrapper> > inputBlobsWrappers;
     std::vector<Ptr<BackendWrapper> > internalBlobsWrappers;
 
+#ifdef HAVE_CUDA
+    /* output ids which must be transferred to the host in the background
+     * after the completion of the forward pass of the layer
+     */
+    std::vector<int> cudaD2HBackgroundTransfers;
+#endif
+
     Ptr<Layer> layerInstance;
     std::vector<Mat> outputBlobs;
     std::vector<Mat*> inputBlobs;
@@ -1187,7 +1194,8 @@ struct Net::Impl : public detail::NetImplBase
             context.cublas_handle = cuda4dnn::csl::cublas::Handle(context.stream);
             context.cudnn_handle = cuda4dnn::csl::cudnn::Handle(context.stream);
 
-            cudaInfo = std::unique_ptr<CudaInfo_t>(new CudaInfo_t(std::move(context)));
+            auto d2h_stream = cuda4dnn::csl::Stream(true); // stream for background D2H data transfers
+            cudaInfo = std::unique_ptr<CudaInfo_t>(new CudaInfo_t(std::move(context), std::move(d2h_stream)));
         }
 #endif
     }
@@ -1215,8 +1223,10 @@ struct Net::Impl : public detail::NetImplBase
 #ifdef HAVE_CUDA
     struct CudaInfo_t
     {
-        CudaInfo_t(cuda4dnn::csl::CSLContext ctxt) : context(std::move(ctxt)) { }
+        CudaInfo_t(cuda4dnn::csl::CSLContext ctxt, cuda4dnn::csl::Stream d2h_stream_)
+         : context(std::move(ctxt)), d2h_stream(std::move(d2h_stream_)) { }
         cuda4dnn::csl::CSLContext context;
+        cuda4dnn::csl::Stream d2h_stream;
         cuda4dnn::csl::Workspace workspace;
     };
 
@@ -1290,7 +1300,7 @@ struct Net::Impl : public detail::NetImplBase
         if (preferableBackend == DNN_BACKEND_CUDA)
         {
             auto cudaWrapper = wrapper.dynamicCast<CUDABackendWrapper>();
-            cudaWrapper->setStream(cudaInfo->context.stream);
+            cudaWrapper->setStream(cudaInfo->context.stream, cudaInfo->d2h_stream);
         }
 #endif
         backendWrappers[data] = wrapper;
@@ -1630,7 +1640,7 @@ struct Net::Impl : public detail::NetImplBase
         else if (preferableBackend == DNN_BACKEND_VKCOM)
             initVkComBackend();
         else if (preferableBackend == DNN_BACKEND_CUDA)
-            initCUDABackend();
+            initCUDABackend(blobsToKeep_);
         else
             CV_Error(Error::StsNotImplemented, "Unknown backend identifier");
     }
@@ -2360,7 +2370,7 @@ struct Net::Impl : public detail::NetImplBase
 #endif
     }
 
-    void initCUDABackend() {
+    void initCUDABackend(const std::vector<LayerPin>& blobsToKeep_) {
         CV_Assert(haveCUDA());
 
 #ifdef HAVE_CUDA
@@ -2385,6 +2395,15 @@ struct Net::Impl : public detail::NetImplBase
 
             auto cudaNode = node.dynamicCast<CUDABackendNode>();
             cudaInfo->workspace.require(cudaNode->get_workspace_memory_in_bytes());
+        }
+
+        if (blobsToKeep_.size() > 1)
+        {
+            for (const auto& pin : blobsToKeep_)
+            {
+                LayerData& ld = layers[pin.lid];
+                ld.cudaD2HBackgroundTransfers.push_back(pin.oid);
+            }
         }
 #endif
     }
@@ -3126,6 +3145,12 @@ struct Net::Impl : public detail::NetImplBase
                     CV_Assert(!cudaNode.empty());
 
                     cudaNode->forward(ld.inputBlobsWrappers, ld.outputBlobsWrappers, cudaInfo->workspace);
+
+                    for (auto id : ld.cudaD2HBackgroundTransfers)
+                    {
+                        auto wrapper = ld.outputBlobsWrappers[id].dynamicCast<CUDABackendWrapper>();
+                        wrapper->copyToHostInBackground();
+                    }
 #endif
                 }
                 else if (preferableBackend == DNN_BACKEND_HALIDE)

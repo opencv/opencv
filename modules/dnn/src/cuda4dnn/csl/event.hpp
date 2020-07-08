@@ -33,7 +33,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
         /** if \p create is `true`, a new event will be created; otherwise, an empty event object is created */
         Event(bool create, bool timing_event = false) : event{nullptr} {
             if (create) {
-                unsigned int flags = cudaEventBlockingSync | (timing_event ? 0 : cudaEventDisableTiming);
+                unsigned int flags = (timing_event ? 0 : cudaEventDisableTiming);
                 CUDA4DNN_CHECK_CUDA(cudaEventCreateWithFlags(&event, flags));
             }
         }
@@ -60,6 +60,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
 
         /** mark a point in \p stream */
         void record(const Stream& stream) {
+            CV_Assert(stream);
             CUDA4DNN_CHECK_CUDA(cudaEventRecord(event, stream.get()));
         }
 
@@ -85,12 +86,13 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
     };
 
     /** makes a stream wait on an event */
-    void StreamWaitOnEvent(const Stream& stream, const Event& event) {
+    inline void StreamWaitOnEvent(const Stream& stream, const Event& event) {
+        CV_Assert(stream);
         CUDA4DNN_CHECK_CUDA(cudaStreamWaitEvent(stream.get(), event.get(), 0));
     }
 
     /** returns the time elapsed between two events in milliseconds */
-    float TimeElapsedBetweenEvents(const Event& start, const Event& end) {
+    inline float TimeElapsedBetweenEvents(const Event& start, const Event& end) {
         float temp;
         CUDA4DNN_CHECK_CUDA(cudaEventElapsedTime(&temp, start.get(), end.get()));
         return temp;
