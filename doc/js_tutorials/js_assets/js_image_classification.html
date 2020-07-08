@@ -159,10 +159,10 @@ getBlodFromImage = function() {
 <script id="codeSnippet4" type="text/code-snippet">
 // get name of model and config file from url
 function getNameFromUrl(url) {
-    let modelParts = url.modelUrl.split('/');
-    let modelPath = modelParts[modelParts.length-1];
-    let configParts = url.configUrl.split('/');
-    let configPath = configParts[configParts.length-1];
+    const modelParts = url.modelUrl.split('/');
+    const modelPath = modelParts[modelParts.length-1];
+    const configParts = url.configUrl.split('/');
+    const configPath = configParts[configParts.length-1];
     return {
         modelPath: modelPath,
         configPath: configPath
