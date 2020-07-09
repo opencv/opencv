@@ -42,7 +42,7 @@ struct GAPI_EXPORTS GKernel
     const GSpecs      inSpecs;    // specs of kernel's inputs (FIXME: below)
     const GShapes     outShapes;  // types (shapes) kernel's outputs
 };
-// TODO: It's questionable if inSpecs shoul really be here. Instead,
+// TODO: It's questionable if inSpecs should really be here. Instead,
 // this information could come from meta.
 
 // GKernelImpl describes particular kernel implementation to the system

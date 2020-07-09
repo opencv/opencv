@@ -75,24 +75,42 @@ void normAssert(cv::InputArray ref, cv::InputArray test,
     EXPECT_LE(normInf, lInf) << comment;
 }
 
-std::string modelPathByName(const std::string &model_name) {
+std::vector<std::string> modelPathByName(const std::string &model_name) {
     // Handle OMZ model layout changes among OpenVINO versions here
-    static const std::unordered_map<std::string, std::string> map = {
-#if INF_ENGINE_RELEASE >= 2019030000
+    static const std::unordered_multimap<std::string, std::string> map = {
         {"age-gender-recognition-retail-0013",
          "intel/age-gender-recognition-retail-0013/FP32"},
-#else
         {"age-gender-recognition-retail-0013",
          "Retail/object_attributes/age_gender/dldt/age-gender-recognition-retail-0013"},
-#endif
     };
-    return map.at(model_name);
+    const auto range = map.equal_range(model_name);
+    std::vector<std::string> result;
+    for (auto it = range.first; it != range.second; ++it) {
+        result.emplace_back(it->second);
+    }
+    return result;
 }
 
 std::tuple<std::string, std::string> findModel(const std::string &model_name) {
-    const std::string path = modelPathByName(model_name);
-    return std::make_tuple(findDataFile(path + "/" + model_name + ".xml", false),
-                           findDataFile(path + "/" + model_name + ".bin", false));
+    const auto candidates = modelPathByName(model_name);
+    CV_Assert(!candidates.empty() && "No model path candidates found at all");
+
+    for (auto &&path : candidates) {
+        std::string model_xml, model_bin;
+        try {
+            model_xml = findDataFile(path + "/" + model_name + ".xml", false);
+            model_bin = findDataFile(path + "/" + model_name + ".bin", false);
+            // Return the first file which actually works
+            return std::make_tuple(model_xml, model_bin);
+        } catch (SkipTestException&) {
+            // This is quite ugly but it is a way for OpenCV to let us know
+            // this file wasn't found.
+            continue;
+        }
+    }
+
+    // Default behavior if reached here.
+    throw SkipTestException("Files for " + model_name + " were not found");
 }
 
 } // anonymous namespace

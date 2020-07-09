@@ -231,9 +231,8 @@ typename Net::ResultL infer(cv::GArray<cv::Rect> roi, Args&&... args) {
  * - If a cv::GArray<cv::Rect> is passed, the appropriate
  *   regions are taken from `image` and preprocessed to this particular
  *   network input;
- * - If a cv::GArray<cv::GMat> is passed, the underlying image data is
- *   preprocessed to this input; if the GMat is a tensor, it is passed
- *   as-is.
+ * - If a cv::GArray<cv::GMat> is passed, the underlying data traited
+ *   as tensor (no automatic preprocessing happen).
  * @return a list of objects of return type as defined in G_API_NET().
  *   If a network has multiple return values (defined with a tuple), a tuple of
  *   GArray<> objects is returned with the appropriate types inside.
