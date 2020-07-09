@@ -196,12 +196,10 @@ public:
 #endif
             {
                 // Check for duplicate indices
-                int j = i - 1;
-                while ((j >= 0) && (dists[j] == dist)) {
+                for (int j = i; dists[j] == dist && j--;) {
                     if (indices[j] == index) {
                         return;
                     }
-                    --j;
                 }
                 break;
             }

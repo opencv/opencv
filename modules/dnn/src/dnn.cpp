@@ -585,6 +585,13 @@ struct LayerData
     std::vector<Ptr<BackendWrapper> > inputBlobsWrappers;
     std::vector<Ptr<BackendWrapper> > internalBlobsWrappers;
 
+#ifdef HAVE_CUDA
+    /* output ids which must be transferred to the host in the background
+     * after the completion of the forward pass of the layer
+     */
+    std::vector<int> cudaD2HBackgroundTransfers;
+#endif
+
     Ptr<Layer> layerInstance;
     std::vector<Mat> outputBlobs;
     std::vector<Mat*> inputBlobs;
@@ -1187,7 +1194,8 @@ struct Net::Impl : public detail::NetImplBase
             context.cublas_handle = cuda4dnn::csl::cublas::Handle(context.stream);
             context.cudnn_handle = cuda4dnn::csl::cudnn::Handle(context.stream);
 
-            cudaInfo = std::unique_ptr<CudaInfo_t>(new CudaInfo_t(std::move(context)));
+            auto d2h_stream = cuda4dnn::csl::Stream(true); // stream for background D2H data transfers
+            cudaInfo = std::unique_ptr<CudaInfo_t>(new CudaInfo_t(std::move(context), std::move(d2h_stream)));
         }
 #endif
     }
@@ -1215,8 +1223,10 @@ struct Net::Impl : public detail::NetImplBase
 #ifdef HAVE_CUDA
     struct CudaInfo_t
     {
-        CudaInfo_t(cuda4dnn::csl::CSLContext ctxt) : context(std::move(ctxt)) { }
+        CudaInfo_t(cuda4dnn::csl::CSLContext ctxt, cuda4dnn::csl::Stream d2h_stream_)
+         : context(std::move(ctxt)), d2h_stream(std::move(d2h_stream_)) { }
         cuda4dnn::csl::CSLContext context;
+        cuda4dnn::csl::Stream d2h_stream;
         cuda4dnn::csl::Workspace workspace;
     };
 
@@ -1290,7 +1300,7 @@ struct Net::Impl : public detail::NetImplBase
         if (preferableBackend == DNN_BACKEND_CUDA)
         {
             auto cudaWrapper = wrapper.dynamicCast<CUDABackendWrapper>();
-            cudaWrapper->setStream(cudaInfo->context.stream);
+            cudaWrapper->setStream(cudaInfo->context.stream, cudaInfo->d2h_stream);
         }
 #endif
         backendWrappers[data] = wrapper;
@@ -1630,7 +1640,7 @@ struct Net::Impl : public detail::NetImplBase
         else if (preferableBackend == DNN_BACKEND_VKCOM)
             initVkComBackend();
         else if (preferableBackend == DNN_BACKEND_CUDA)
-            initCUDABackend();
+            initCUDABackend(blobsToKeep_);
         else
             CV_Error(Error::StsNotImplemented, "Unknown backend identifier");
     }
@@ -2158,6 +2168,7 @@ struct Net::Impl : public detail::NetImplBase
                         Ptr<BackendNode> inpNode = inpLd.backendNodes[preferableBackend];
                         if (!inpNode.empty()) {
                             Ptr<InfEngineNgraphNode> ieNode = inpNode.dynamicCast<InfEngineNgraphNode>();
+                            CV_Assert(!ieNode.empty());
                             ieNode->net->setUnconnectedNodes(ieNode);
                         }
                     }
@@ -2202,6 +2213,7 @@ struct Net::Impl : public detail::NetImplBase
                         int cons_inp = cons->oid;
                         Ptr<NgraphBackendWrapper> inpWrapper = inpLd.outputBlobsWrappers[cons_inp].
                                                                      dynamicCast<NgraphBackendWrapper>();
+                        CV_Assert(!inpWrapper.empty());
                         auto iter = std::find(inputNames.begin(), inputNames.end(),
                                               inpWrapper->dataPtr->getName());
                         if (iter == inputNames.end()) {
@@ -2246,7 +2258,7 @@ struct Net::Impl : public detail::NetImplBase
 
                     auto ieInpNode = inputNodes[i].dynamicCast<InfEngineNgraphNode>();
                     CV_Assert(oid < ieInpNode->node->get_output_size());
-#if INF_ENGINE_VER_MAJOR_GT(2020030000)
+#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2020_3)
                     inputNodes[i] = Ptr<BackendNode>(new InfEngineNgraphNode(ieInpNode->node->get_output_as_single_output_node(oid)));
 #else
                     inputNodes[i] = Ptr<BackendNode>(new InfEngineNgraphNode(ieInpNode->node->get_output_as_single_output_node(oid, false)));
@@ -2358,7 +2370,7 @@ struct Net::Impl : public detail::NetImplBase
 #endif
     }
 
-    void initCUDABackend() {
+    void initCUDABackend(const std::vector<LayerPin>& blobsToKeep_) {
         CV_Assert(haveCUDA());
 
 #ifdef HAVE_CUDA
@@ -2383,6 +2395,15 @@ struct Net::Impl : public detail::NetImplBase
 
             auto cudaNode = node.dynamicCast<CUDABackendNode>();
             cudaInfo->workspace.require(cudaNode->get_workspace_memory_in_bytes());
+        }
+
+        if (blobsToKeep_.size() > 1)
+        {
+            for (const auto& pin : blobsToKeep_)
+            {
+                LayerData& ld = layers[pin.lid];
+                ld.cudaD2HBackgroundTransfers.push_back(pin.oid);
+            }
         }
 #endif
     }
@@ -2723,8 +2744,7 @@ struct Net::Impl : public detail::NetImplBase
             // (and so we eliminate the concatenation layer, because the channels
             // are concatenated implicitly).
             Ptr<ConcatLayer> concatLayer = ld.layerInstance.dynamicCast<ConcatLayer>();
-            if( !concatLayer.empty() && concatLayer->axis == 1 && !concatLayer->padding &&
-                ld.outputBlobs.size() == 1 )
+            if( !concatLayer.empty() && !concatLayer->padding && ld.outputBlobs.size() == 1 )
             {
                 Mat& output = ld.outputBlobs[0];
                 UMat umat_output;
@@ -2761,7 +2781,8 @@ struct Net::Impl : public detail::NetImplBase
                 // the concatenation optimization is applied with batch_size > 1.
                 // so, for now, we only apply this optimization in the most popular
                 // case batch_size == 1.
-                if( output.dims == 4 && output.size[0] == 1 )
+                int axis = clamp(concatLayer->axis, output.dims);
+                if( output.total(0, axis) == 1 )
                 {
                     size_t i, ninputs = ld.inputBlobsId.size();
                     std::vector<LayerPin> realinputs(ninputs);
@@ -2786,7 +2807,13 @@ struct Net::Impl : public detail::NetImplBase
                         if (preferableBackend == DNN_BACKEND_CUDA &&
                             (inp_i_data->layerInstance->supportBackend(DNN_BACKEND_CUDA) == false ||
                              (inp_i_data->layerInstance->type != "Convolution" &&
-                              inp_i_data->layerInstance->type != "Pooling")))
+                              inp_i_data->layerInstance->type != "Pooling" &&
+                              inp_i_data->layerInstance->type != "Resize"  &&
+                              inp_i_data->layerInstance->type != "Flatten" &&
+                              inp_i_data->layerInstance->type != "Permute" &&
+                              inp_i_data->layerInstance->type != "Reorg" &&
+                              inp_i_data->layerInstance->type != "Eltwise" &&
+                              inp_i_data->layerInstance.dynamicCast<ActivationLayer>().empty())))
                         {
                             break;
                         }
@@ -2809,18 +2836,20 @@ struct Net::Impl : public detail::NetImplBase
                             OpenCLBackendWrapper::update(ld.outputBlobsWrappers, umats);
                         }
 #endif
+
 #ifdef HAVE_CUDA
                         if (preferableBackend == DNN_BACKEND_CUDA)
                             ld.outputBlobsWrappers[0] = wrap(output);
 #endif
-                        Range chrange[] = { Range::all(), Range::all(), Range::all(), Range::all() };
+                        std::vector<Range> chrange(output.dims, Range::all());
+
                         int ofs = 0;
                         for( i = 0; i < ninputs; i++ )
                         {
                             LayerPin pin = realinputs[i];
                             LayerData* inp_i_data = &layers[pin.lid];
-                            int channels_i = ld.inputBlobs[i]->size[1];
-                            chrange[1] = Range(ofs, ofs + channels_i);
+                            int channels_i = ld.inputBlobs[i]->size[axis];
+                            chrange[axis] = Range(ofs, ofs + channels_i);
                             printf_(("\toutput %s(%d) to channels (%d, %d)\n", inp_i_data->layerInstance->name.c_str(),
                                    pin.oid, ofs, ofs + channels_i));
                             ofs += channels_i;
@@ -3118,6 +3147,12 @@ struct Net::Impl : public detail::NetImplBase
                     CV_Assert(!cudaNode.empty());
 
                     cudaNode->forward(ld.inputBlobsWrappers, ld.outputBlobsWrappers, cudaInfo->workspace);
+
+                    for (auto id : ld.cudaD2HBackgroundTransfers)
+                    {
+                        auto wrapper = ld.outputBlobsWrappers[id].dynamicCast<CUDABackendWrapper>();
+                        wrapper->copyToHostInBackground();
+                    }
 #endif
                 }
                 else if (preferableBackend == DNN_BACKEND_HALIDE)
@@ -3541,6 +3576,9 @@ Net Net::Impl::createNetworkFromModelOptimizer(InferenceEngine::CNNNetwork& ieNe
                 }
                 else
                 {
+#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2020_4)
+                    CV_Error(Error::StsNotImplemented, "This OpenCV version is built with Inference Engine which has dropped IR v7 support");
+#else
                     CV_TRACE_REGION("legacy_cnn_layer");
                     try
                     {
@@ -3556,6 +3594,8 @@ Net Net::Impl::createNetworkFromModelOptimizer(InferenceEngine::CNNNetwork& ieNe
                         CV_LOG_DEBUG(NULL, "IE layer extraction failure: '" << name << "' - " << e.what());
                         return false;
                     }
+#endif
+
                 }
             };
 

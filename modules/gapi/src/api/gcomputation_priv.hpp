@@ -8,20 +8,37 @@
 #ifndef OPENCV_GAPI_GCOMPUTATION_PRIV_HPP
 #define OPENCV_GAPI_GCOMPUTATION_PRIV_HPP
 
+#include <ade/graph.hpp>
+
+#include "opencv2/gapi/util/variant.hpp"
+
 #include "opencv2/gapi.hpp"
 #include "opencv2/gapi/gcall.hpp"
 
 #include "opencv2/gapi/util/variant.hpp"
+
+#include "backends/common/serialization.hpp"
 
 namespace cv {
 
 class GComputation::Priv
 {
 public:
+    struct Expr {
+        cv::GProtoArgs m_ins;
+        cv::GProtoArgs m_outs;
+    };
+
+    using Dump = cv::gimpl::s11n::GSerialized;
+
+    using Shape = cv::util::variant
+        < Expr    // An expression-based graph
+        , Dump    // A deserialized graph
+        >;
+
     GCompiled   m_lastCompiled;
     GMetaArgs   m_lastMetas; // TODO: make GCompiled remember its metas?
-    GProtoArgs  m_ins;
-    GProtoArgs  m_outs;
+    Shape       m_shape;
 };
 
 }

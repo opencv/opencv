@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2020 Intel Corporation
 
 
 #include "precomp.hpp"
@@ -57,10 +57,10 @@ namespace
         }
 
         virtual EPtr compile(const ade::Graph &graph,
-                             const cv::GCompileArgs &,
+                             const cv::GCompileArgs &compileArgs,
                              const std::vector<ade::NodeHandle> &nodes) const override
         {
-            return EPtr{new cv::gimpl::GCPUExecutable(graph, nodes)};
+            return EPtr{new cv::gimpl::GCPUExecutable(graph, compileArgs, nodes)};
         }
    };
 }
@@ -73,8 +73,9 @@ cv::gapi::GBackend cv::gapi::cpu::backend()
 
 // GCPUExecutable implementation //////////////////////////////////////////////
 cv::gimpl::GCPUExecutable::GCPUExecutable(const ade::Graph &g,
+                                          const cv::GCompileArgs &compileArgs,
                                           const std::vector<ade::NodeHandle> &nodes)
-    : m_g(g), m_gm(m_g)
+    : m_g(g), m_gm(m_g), m_compileArgs(compileArgs)
 {
     // Convert list of operations (which is topologically sorted already)
     // into an execution script.
@@ -166,7 +167,8 @@ void cv::gimpl::GCPUExecutable::setupKernelStates()
         const GCPUKernel& kernel = gcm.metadata(kernelNode).get<CPUUnit>().k;
         kernel.m_setupF(GModel::collectInputMeta(m_gm, kernelNode),
                         m_gm.metadata(kernelNode).get<Op>().args,
-                        kernelState);
+                        kernelState,
+                        m_compileArgs);
     }
 }
 

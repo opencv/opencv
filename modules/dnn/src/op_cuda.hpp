@@ -7,11 +7,11 @@
 
 #ifdef HAVE_CUDA
 #include "cuda4dnn/csl/stream.hpp"
+#include "cuda4dnn/csl/event.hpp"
 #include "cuda4dnn/csl/cublas.hpp"
 #include "cuda4dnn/csl/cudnn.hpp"
 #include "cuda4dnn/csl/tensor.hpp"
 #include "cuda4dnn/csl/memory.hpp"
-#include "cuda4dnn/csl/fp16.hpp"
 #include "cuda4dnn/csl/workspace.hpp"
 #include "cuda4dnn/kernels/fp_conversion.hpp"
 #endif
@@ -207,6 +207,7 @@ namespace cv { namespace dnn {
         virtual ~CUDABackendWrapper() { }
 
         void copyToHost() override = 0;
+        virtual void copyToHostInBackground() = 0;
         void setHostDirty() override = 0;
 
         virtual void copyToDevice() = 0;
@@ -216,7 +217,7 @@ namespace cv { namespace dnn {
         virtual std::size_t getRank() const noexcept = 0;
 
         /** @note setting the stream updates the stream for all wrappers which use the same tensor */
-        virtual void setStream(cuda4dnn::csl::Stream stream) noexcept = 0;
+        virtual void setStream(cuda4dnn::csl::Stream stream, cuda4dnn::csl::Stream h2d_stream) noexcept = 0;
 
         virtual void update(const MatShape& shape, std::size_t offset) = 0;
     };
@@ -239,6 +240,36 @@ namespace cv { namespace dnn {
         template <> inline
         void convert_D2H<float>(const cv::Mat& mat, cuda4dnn::csl::View<float> view, cuda4dnn::csl::ManagedPtr<float>& device_temp, const cuda4dnn::csl::Stream& stream) {
             cuda4dnn::csl::memcpy<float>(reinterpret_cast<float*>(mat.data), view.data(), view.size(), stream);
+        }
+
+        template <class U>
+        void convert_D2H_background(const cv::Mat& mat, cuda4dnn::csl::View<U> view, cuda4dnn::csl::ManagedPtr<float>& device_temp, const cuda4dnn::csl::Stream& stream, const cuda4dnn::csl::Stream& d2h_stream, cuda4dnn::csl::Event& d2h_event);
+
+        template <> inline
+        void convert_D2H_background<half>(const cv::Mat& mat, cuda4dnn::csl::View<half> view, cuda4dnn::csl::ManagedPtr<float>& device_temp, const cuda4dnn::csl::Stream& stream, const cuda4dnn::csl::Stream& d2h_stream, cuda4dnn::csl::Event& d2h_event) {
+            if (device_temp.size() < view.size())
+                device_temp.reset(view.size());
+            auto temp_span = cuda4dnn::csl::Span<float>(device_temp.get(), view.size());
+
+            /* The conversion kernel should can be executed in the background stream for better
+             * performance. We do it in the inference stream to prevent an unexplained performance
+             * regression on RTX 2080 Ti. Executing conversion kernel in the background stream causes
+             * everything to slow down (even operations that appear before the background transfer).
+             *
+             * TODO: identify the cause and move conversion kernel to the background stream
+             */
+            cuda4dnn::kernels::fp16_to_fp32(stream, temp_span, view);
+
+            d2h_event.record(stream); // mark position in inference stream
+            cuda4dnn::csl::StreamWaitOnEvent(d2h_stream, d2h_event); // don't start transfer until data is available
+            cuda4dnn::csl::memcpy<float>(reinterpret_cast<float*>(mat.data), temp_span.data(), view.size(), d2h_stream);
+        }
+
+        template <> inline
+        void convert_D2H_background<float>(const cv::Mat& mat, cuda4dnn::csl::View<float> view, cuda4dnn::csl::ManagedPtr<float>& device_temp, const cuda4dnn::csl::Stream& stream, const cuda4dnn::csl::Stream& d2h_stream, cuda4dnn::csl::Event& d2h_event) {
+            d2h_event.record(stream);
+            cuda4dnn::csl::StreamWaitOnEvent(d2h_stream, d2h_event);
+            cuda4dnn::csl::memcpy<float>(reinterpret_cast<float*>(mat.data), view.data(), view.size(), d2h_stream);
         }
 
         template <class U>
@@ -350,6 +381,28 @@ namespace cv { namespace dnn {
 
                 cuda4dnn::detail::convert_D2H<T>(mat, view, shared_block->device_temp, shared_block->stream);
                 shared_block->stream.synchronize();
+            } else if(shared_block->d2h_event && shared_block->d2h_event.busy()) {
+                /* wait for the background copy to finish */
+                shared_block->d2h_event.synchronize();
+            }
+        }
+
+        void copyToHostInBackground() override {
+            CV_Assert(shared_block->d2h_stream);
+            if (shared_block->device_dirty) {
+                shared_block->host_dirty = false;
+                shared_block->device_dirty = false;
+
+                auto view = tensor_view_type(shared_block->device.get(), std::begin(shape), std::end(shape));
+
+                auto& mat = shared_block->host;
+                CV_Assert(mat.isContinuous());
+                CV_Assert(mat.type() == CV_32F);
+
+                if (!shared_block->d2h_event)
+                    shared_block->d2h_event = cuda4dnn::csl::Event(true);
+                cuda4dnn::detail::convert_D2H_background<T>(mat, view, shared_block->device_temp, shared_block->stream, shared_block->d2h_stream, shared_block->d2h_event);
+                shared_block->d2h_event.record(shared_block->d2h_stream); // record position so that we can check status later
             }
         }
 
@@ -384,8 +437,9 @@ namespace cv { namespace dnn {
 
         std::size_t getRank() const noexcept override { return shape.size(); }
 
-        void setStream(cuda4dnn::csl::Stream stream) noexcept override {
+        void setStream(cuda4dnn::csl::Stream stream, cuda4dnn::csl::Stream d2h_stream) noexcept override {
             shared_block->stream = std::move(stream);
+            shared_block->d2h_stream = std::move(d2h_stream);
         }
 
         void update(const MatShape& shape_, std::size_t offset_) override {
@@ -453,6 +507,9 @@ namespace cv { namespace dnn {
             cuda4dnn::csl::ManagedPtr<T> device;
             cuda4dnn::csl::ManagedPtr<float> device_temp; /* use for conversions */
             cuda4dnn::csl::Stream stream;
+
+            cuda4dnn::csl::Event d2h_event;
+            cuda4dnn::csl::Stream d2h_stream;
         };
 
         std::shared_ptr<shared_block_type> shared_block;

@@ -58,6 +58,8 @@ public:
     GCompiled   produceCompiled(GPtr &&pg);    // Produce GCompiled from processed GModel
     GStreamingCompiled  produceStreamingCompiled(GPtr &&pg); // Produce GStreamingCompiled from processed GMbodel
     static void runMetaPasses(ade::Graph &g, const cv::GMetaArgs &metas);
+
+    static GPtr makeGraph(const cv::GComputation::Priv &);
 };
 
 }}

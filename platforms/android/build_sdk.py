@@ -59,6 +59,8 @@ def check_executable(cmd):
     try:
         log.debug("Executing: %s" % cmd)
         result = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+        if not isinstance(result, str):
+            result = result.decode("utf-8")
         log.debug("Result: %s" % (result+'\n').split('\n')[0])
         return True
     except Exception as e:
@@ -223,7 +225,7 @@ class Builder:
             BUILD_PERF_TESTS="OFF",
             BUILD_DOCS="OFF",
             BUILD_ANDROID_EXAMPLES=("OFF" if self.no_samples_build else "ON"),
-            INSTALL_ANDROID_EXAMPLES="ON",
+            INSTALL_ANDROID_EXAMPLES=("OFF" if self.no_samples_build else "ON"),
         )
         if self.ninja_path != 'ninja':
             cmake_vars['CMAKE_MAKE_PROGRAM'] = self.ninja_path

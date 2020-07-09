@@ -108,6 +108,7 @@ struct GlobalLoggingInitCall
     GlobalLoggingInitCall()
     {
         getGlobalLoggingInitStruct();
+        (void)getGlobalLogTag();  // complete initialization of logger structures
     }
 };
 

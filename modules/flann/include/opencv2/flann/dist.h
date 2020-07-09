@@ -506,7 +506,7 @@ struct Hamming2
         const uint64_t* pa = reinterpret_cast<const uint64_t*>(a);
         const uint64_t* pb = reinterpret_cast<const uint64_t*>(b);
         ResultType result = 0;
-        size /= (sizeof(uint64_t)/sizeof(unsigned char));
+        size /= long_word_size_;
         for(size_t i = 0; i < size; ++i ) {
             result += popcnt64(*pa ^ *pb);
             ++pa;
@@ -516,7 +516,7 @@ struct Hamming2
         const uint32_t* pa = reinterpret_cast<const uint32_t*>(a);
         const uint32_t* pb = reinterpret_cast<const uint32_t*>(b);
         ResultType result = 0;
-        size /= (sizeof(uint32_t)/sizeof(unsigned char));
+        size /= long_word_size_;
         for(size_t i = 0; i < size; ++i ) {
             result += popcnt32(*pa ^ *pb);
             ++pa;
@@ -525,6 +525,13 @@ struct Hamming2
 #endif
         return result;
     }
+
+private:
+#ifdef FLANN_PLATFORM_64_BIT
+    static const size_t long_word_size_ = sizeof(uint64_t)/sizeof(unsigned char);
+#else
+    static const size_t long_word_size_ = sizeof(uint32_t)/sizeof(unsigned char);
+#endif
 };
 
 
@@ -708,7 +715,7 @@ struct KL_Divergence
         Iterator1 last = a + size;
 
         while (a < last) {
-            if (* b != 0) {
+            if ( *a != 0 && *b != 0 ) {
                 ResultType ratio = (ResultType)(*a / *b);
                 if (ratio>0) {
                     result += *a * log(ratio);
@@ -731,7 +738,7 @@ struct KL_Divergence
     inline ResultType accum_dist(const U& a, const V& b, int) const
     {
         ResultType result = ResultType();
-        if( *b != 0 ) {
+        if( a != 0 && b != 0 ) {
             ResultType ratio = (ResultType)(a / b);
             if (ratio>0) {
                 result = a * log(ratio);

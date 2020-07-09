@@ -49,8 +49,13 @@
 
 #ifdef HAVE_DNN_NGRAPH
 #include "../ie_ngraph.hpp"
+#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2020_4)
+#include <ngraph/op/roi_pooling.hpp>
+#include <ngraph/op/psroi_pooling.hpp>
+#else
 #include <ngraph/op/experimental/layers/roi_pooling.hpp>
 #include <ngraph/op/experimental/layers/psroi_pooling.hpp>
+#endif
 #endif
 
 #include "../op_vkcom.hpp"

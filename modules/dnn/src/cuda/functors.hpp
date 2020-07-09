@@ -54,16 +54,21 @@ struct mish_functor<float> {
         using csl::device::fast_exp;
 
         auto e = fast_exp(value);
-        if (value <= -18.0f)
-            return value * e;
-
         auto n = e * e + 2 * e;
-        if (value <= -5.0f)
+        if (value <= -0.6f)
             return value * fast_divide(n, n + 2);
-
         return value - 2 * fast_divide(value, n + 2);
     }
 };
+
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
+template <>
+struct mish_functor<__half> {
+    __device__ __half operator()(__half value) {
+        return mish_functor<float>()(value);
+    }
+};
+#endif
 
 template <class T>
 struct sigmoid_functor {

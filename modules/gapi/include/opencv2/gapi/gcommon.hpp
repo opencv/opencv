@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2020 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_GCOMMON_HPP
@@ -15,6 +15,7 @@
 #include <opencv2/gapi/opencv_includes.hpp>
 
 #include <opencv2/gapi/util/any.hpp>
+#include <opencv2/gapi/util/optional.hpp>
 #include <opencv2/gapi/own/exports.hpp>
 #include <opencv2/gapi/own/assert.hpp>
 
@@ -31,7 +32,7 @@ namespace detail
     {};
     struct TransformTag
     {};
-}
+} // namespace detail
 
 // This definition is here because it is reused by both public(?) and internal
 // modules. Keeping it here wouldn't expose public details (e.g., API-level)
@@ -52,7 +53,8 @@ struct GCompileArg;
 namespace detail {
     template<typename T>
     using is_compile_arg = std::is_same<GCompileArg, typename std::decay<T>::type>;
-}
+} // namespace detail
+
 // CompileArg is an unified interface over backend-specific compilation
 // information
 // FIXME: Move to a separate file?
@@ -121,13 +123,33 @@ private:
 using GCompileArgs = std::vector<GCompileArg>;
 
 /**
- * Wraps a list of arguments (a parameter pack) into a vector of
- * compilation arguments (cv::GCompileArg).
+ * @brief Wraps a list of arguments (a parameter pack) into a vector of
+ *        compilation arguments (cv::GCompileArg).
  */
 template<typename... Ts> GCompileArgs compile_args(Ts&&... args)
 {
     return GCompileArgs{ GCompileArg(args)... };
 }
+
+/**
+ * @brief Retrieves particular compilation argument by its type from
+ *        cv::GCompileArgs
+ */
+namespace gapi
+{
+template<typename T>
+inline cv::util::optional<T> getCompileArg(const cv::GCompileArgs &args)
+{
+    for (auto &compile_arg : args)
+    {
+        if (compile_arg.tag == cv::detail::CompileArgTag<T>::tag())
+        {
+            return cv::util::optional<T>(compile_arg.get<T>());
+        }
+    }
+    return cv::util::optional<T>();
+}
+} // namespace gapi
 
 /**
  * @brief Ask G-API to dump compiled graph in Graphviz format under

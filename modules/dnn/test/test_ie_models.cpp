@@ -136,12 +136,6 @@ void runIE(Target target, const std::string& xmlPath, const std::string& binPath
 {
     SCOPED_TRACE("runIE");
 
-    CNNNetReader reader;
-    reader.ReadNetwork(xmlPath);
-    reader.ReadWeights(binPath);
-
-    CNNNetwork net = reader.getNetwork();
-
     std::string device_name;
 
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GT(2019010000)
@@ -150,6 +144,17 @@ void runIE(Target target, const std::string& xmlPath, const std::string& binPath
     InferenceEnginePluginPtr enginePtr;
     InferencePlugin plugin;
 #endif
+
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GT(2019030000)
+    CNNNetwork net = ie.ReadNetwork(xmlPath, binPath);
+#else
+    CNNNetReader reader;
+    reader.ReadNetwork(xmlPath);
+    reader.ReadWeights(binPath);
+
+    CNNNetwork net = reader.getNetwork();
+#endif
+
     ExecutableNetwork netExec;
     InferRequest infRequest;
 

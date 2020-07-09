@@ -35,7 +35,6 @@
 
 #include <algorithm>
 #include <map>
-#include <cassert>
 #include <cstring>
 
 #include "general.h"
@@ -433,7 +432,7 @@ private:
         if (trees_>0) {
             searchLevelExact(result, vec, tree_roots_[0], 0.0, epsError);
         }
-        assert(result.full());
+        CV_Assert(result.full());
     }
 
     /**
@@ -462,7 +461,7 @@ private:
 
         delete heap;
 
-        assert(result.full());
+        CV_Assert(result.full());
     }
 
 
