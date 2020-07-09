@@ -19,19 +19,19 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
     void biasN_clipped_relu_inplace(const csl::Stream& stream, csl::Span<T> inplace_output, std::size_t inner_size, csl::View<T> bias, T floor, T ceiling);
 
     template <class T>
-    void biasN_power_inplace(const csl::Stream& stream, csl::Span<T> inplace_output, std::size_t inner_size, csl::View<T> bias, T exp, T scale, T shift);
-
-    template <class T>
     void biasN_tanh_inplace(const csl::Stream& stream, csl::Span<T> inplace_output, std::size_t inner_size, csl::View<T> bias);
-
-    template <class T>
-    void biasN_sigmoid_inplace(const csl::Stream& stream, csl::Span<T> inplace_output, std::size_t inner_size, csl::View<T> bias);
 
     template <class T>
     void biasN_swish_inplace(const csl::Stream& stream, csl::Span<T> inplace_output, std::size_t inner_size, csl::View<T> bias);
 
     template <class T>
     void biasN_mish_inplace(const csl::Stream& stream, csl::Span<T> inplace_output, std::size_t inner_size, csl::View<T> bias);
+
+    template <class T>
+    void biasN_sigmoid_inplace(const csl::Stream& stream, csl::Span<T> inplace_output, std::size_t inner_size, csl::View<T> bias);
+
+    template <class T>
+    void biasN_power_inplace(const csl::Stream& stream, csl::Span<T> inplace_output, std::size_t inner_size, csl::View<T> bias, T exp, T scale, T shift);
 
 }}}} /* namespace cv::dnn::cuda4dnn::kernels */
 

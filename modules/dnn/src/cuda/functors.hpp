@@ -9,27 +9,87 @@
 
 #include "math.hpp"
 
+#include "../cuda4dnn/csl/nvcc_defs.hpp"
+
 namespace cv { namespace dnn { namespace cuda4dnn  { namespace kernels {
 
 template <class T>
-struct abs_functor {
-    __device__ T operator()(T value) {
-        using csl::device::abs;
-        return abs(value);
-    }
+struct IdentityFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() { }
+    };
+
+    CUDA4DNN_DEVICE IdentityFunctor() { }
+    CUDA4DNN_DEVICE IdentityFunctor(const Params& params) { }
+
+    CUDA4DNN_DEVICE T operator()(T value) {
+        return value;
+    };
 };
 
 template <class T>
-struct tanh_functor {
-    __device__ T operator()(T value) {
+struct ReLUFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() : slope(0) { }
+        CUDA4DNN_HOST_DEVICE Params(T slope_) : slope(slope_) { }
+        T slope;
+    };
+
+    CUDA4DNN_DEVICE ReLUFunctor() : ReLUFunctor(Params{}) { }
+    CUDA4DNN_DEVICE ReLUFunctor(const Params& params) : slope(params.slope) { }
+
+    CUDA4DNN_DEVICE T operator()(T value) {
+        using csl::device::log1pexp;
+        return value >= T(0) ? value : slope * value;
+    }
+
+    T slope;
+};
+
+template <class T>
+struct ClippedReLUFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() : floor(0), ceiling(6) { }
+        CUDA4DNN_HOST_DEVICE Params(T floor_, T ceiling_) : floor(floor_), ceiling(ceiling_) { }
+        T floor, ceiling;
+    };
+
+    CUDA4DNN_DEVICE ClippedReLUFunctor() : ClippedReLUFunctor(Params{}) { }
+    CUDA4DNN_DEVICE ClippedReLUFunctor(const Params& params) : floor{params.floor}, ceiling{params.ceiling} { }
+
+    CUDA4DNN_DEVICE T operator()(T value) {
+        using csl::device::clamp;
+        return clamp(value, floor, ceiling);
+    }
+
+    T floor, ceiling;
+};
+
+template <class T>
+struct TanHFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() { }
+    };
+
+    CUDA4DNN_DEVICE TanHFunctor() { }
+    CUDA4DNN_DEVICE TanHFunctor(const Params& params) { }
+
+    CUDA4DNN_DEVICE T operator()(T value) {
         using csl::device::tanh;
         return tanh(value);
     }
 };
 
 template <class T>
-struct swish_functor {
-    __device__ T operator()(T value) {
+struct SwishFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() { }
+    };
+
+    CUDA4DNN_DEVICE SwishFunctor() { }
+    CUDA4DNN_DEVICE SwishFunctor(const Params& params) { }
+
+    CUDA4DNN_DEVICE T operator()(T value) {
         // f(x) = x * sigmoid(x)
         using csl::device::fast_divide;
         using csl::device::fast_exp;
@@ -38,8 +98,15 @@ struct swish_functor {
 };
 
 template <class T>
-struct mish_functor {
-    __device__ T operator()(T value) {
+struct MishFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() { }
+    };
+
+    CUDA4DNN_DEVICE MishFunctor() { }
+    CUDA4DNN_DEVICE MishFunctor(const Params& params) { }
+
+    CUDA4DNN_DEVICE T operator()(T value) {
         using csl::device::tanh;
         using csl::device::log1pexp;
         return value * tanh(log1pexp(value));
@@ -47,8 +114,15 @@ struct mish_functor {
 };
 
 template <>
-struct mish_functor<float> {
-    __device__ float operator()(float value) {
+struct MishFunctor<float> {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() { }
+    };
+
+    CUDA4DNN_DEVICE MishFunctor() { }
+    CUDA4DNN_DEVICE MishFunctor(const Params& params) { }
+
+    CUDA4DNN_DEVICE float operator()(float value) {
         // f(x) = x * tanh(log1pexp(x));
         using csl::device::fast_divide;
         using csl::device::fast_exp;
@@ -63,63 +137,90 @@ struct mish_functor<float> {
 
 #if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
 template <>
-struct mish_functor<__half> {
-    __device__ __half operator()(__half value) {
-        return mish_functor<float>()(value);
+struct MishFunctor<__half> {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() { }
+    };
+
+    CUDA4DNN_DEVICE MishFunctor() { }
+    CUDA4DNN_DEVICE MishFunctor(const Params& params) { }
+
+    CUDA4DNN_DEVICE __half operator()(__half value) {
+        return MishFunctor<float>()(value);
     }
 };
 #endif
 
 template <class T>
-struct sigmoid_functor {
-    __device__ T operator()(T value) {
+struct SigmoidFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() { }
+    };
+
+    CUDA4DNN_DEVICE SigmoidFunctor() { }
+    CUDA4DNN_DEVICE SigmoidFunctor(const Params& params) { }
+
+    CUDA4DNN_DEVICE T operator()(T value) {
         using csl::device::fast_sigmoid;
         return fast_sigmoid(value);
     }
 };
 
 template <class T>
-struct bnll_functor {
-    __device__ T operator()(T value) {
-        using csl::device::log1pexp;
-        return value > T(0) ? value + log1pexp(-value) : log1pexp(value);
-    }
-};
+struct ELUFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() { }
+    };
 
-template <class T>
-struct elu_functor {
-    __device__ T operator()(T value) {
+    CUDA4DNN_DEVICE ELUFunctor() { }
+    CUDA4DNN_DEVICE ELUFunctor(const Params& params) { }
+
+    CUDA4DNN_DEVICE T operator()(T value) {
         using csl::device::expm1;
         return value >= T(0) ? value : expm1(value);
     }
 };
 
 template <class T>
-struct relu_functor {
-    __device__ relu_functor(T slope_) : slope{slope_} { }
-    __device__ T operator()(T value) {
+struct AbsFunctor {
+    struct Params { };
+
+    CUDA4DNN_DEVICE AbsFunctor() { }
+    CUDA4DNN_DEVICE AbsFunctor(const Params& params) { }
+
+    CUDA4DNN_DEVICE T operator()(T value) {
+        using csl::device::abs;
+        return abs(value);
+    }
+};
+
+template <class T>
+struct BNLLFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() { }
+    };
+
+    CUDA4DNN_DEVICE BNLLFunctor() { }
+    CUDA4DNN_DEVICE BNLLFunctor(const Params& params) { }
+
+    CUDA4DNN_DEVICE T operator()(T value) {
         using csl::device::log1pexp;
-        return value >= T(0) ? value : slope * value;
+        return value > T(0) ? value + log1pexp(-value) : log1pexp(value);
     }
-
-    T slope;
 };
 
 template <class T>
-struct clipped_relu_functor {
-    __device__ clipped_relu_functor(T floor_, T ceiling_) : floor{floor_}, ceiling{ceiling_} { }
-    __device__ T operator()(T value) {
-        using csl::device::clamp;
-        return clamp(value, floor, ceiling);
-    }
+struct PowerFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() : exp(1), scale(1), shift(0) { }
+        CUDA4DNN_HOST_DEVICE Params(T exp_, T scale_, T shift_) : exp(exp_), scale(scale_), shift(shift_) { }
+        T exp, scale, shift;
+    };
 
-    T floor, ceiling;
-};
+    CUDA4DNN_DEVICE PowerFunctor() : PowerFunctor(Params{}) { }
+    CUDA4DNN_DEVICE PowerFunctor(const Params& params) : exp{params.exp}, scale{params.scale}, shift{params.shift} { }
 
-template <class T>
-struct power_functor {
-    __device__ power_functor(T exp_, T scale_, T shift_) : exp{exp_}, scale{scale_}, shift{shift_} { }
-    __device__ T operator()(T value) {
+    CUDA4DNN_DEVICE T operator()(T value) {
         using csl::device::pow;
         return pow(shift + scale * value, exp);
     }
@@ -128,36 +229,70 @@ struct power_functor {
 };
 
 template <class T>
-struct max_functor {
-    __device__ T operator()(T x, T y) {
+struct MaxFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() { }
+    };
+
+    CUDA4DNN_DEVICE MaxFunctor() { }
+    CUDA4DNN_DEVICE MaxFunctor(const Params& params) { }
+
+    CUDA4DNN_DEVICE T operator()(T x, T y) {
         using csl::device::max;
         return max(x, y);
     }
 };
 
 template <class T>
-struct sum_functor {
-    __device__ T operator()(T x, T y) { return x + y; }
+struct SumFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() { }
+    };
+
+    CUDA4DNN_DEVICE SumFunctor() { }
+    CUDA4DNN_DEVICE SumFunctor(const Params& params) { }
+
+    CUDA4DNN_DEVICE T operator()(T x, T y) { return x + y; }
 };
 
 template <class T>
-struct scaled_sum_functor {
-    __device__ scaled_sum_functor(T scale_x_, T scale_y_)
-        : scale_x{scale_x_}, scale_y{scale_y_} { }
+struct ScaledSumFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() : scale_x(1), scale_y(1) { }
+        CUDA4DNN_HOST_DEVICE Params(T scale_x_, T scale_y_) : scale_x(scale_x_), scale_y(scale_y_) { }
+        T scale_x, scale_y;
+    };
 
-    __device__ T operator()(T x, T y) { return scale_x * x + scale_y * y; }
+    CUDA4DNN_DEVICE ScaledSumFunctor() : scale_x(1), scale_y(1) { }
+    CUDA4DNN_DEVICE ScaledSumFunctor(const Params& params) : scale_x{params.scale_x}, scale_y{params.scale_y} { }
+
+    CUDA4DNN_DEVICE T operator()(T x, T y) { return scale_x * x + scale_y * y; }
 
     T scale_x, scale_y;
 };
 
 template <class T>
-struct product_functor {
-    __device__ T operator()(T x, T y) { return x * y; }
+struct ProductFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() { }
+    };
+
+    CUDA4DNN_DEVICE ProductFunctor() { }
+    CUDA4DNN_DEVICE ProductFunctor(const Params& params) { }
+
+    CUDA4DNN_DEVICE T operator()(T x, T y) { return x * y; }
 };
 
 template <class T>
-struct div_functor {
-    __device__ T operator()(T x, T y) { return x / y; }
+struct DivFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() { }
+    };
+
+    CUDA4DNN_DEVICE DivFunctor() { }
+    CUDA4DNN_DEVICE DivFunctor(const Params& params) { }
+
+    CUDA4DNN_DEVICE T operator()(T x, T y) { return x / y; }
 };
 
 }}}} /* namespace cv::dnn::cuda4dnn::kernels */

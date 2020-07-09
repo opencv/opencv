@@ -248,6 +248,7 @@ public:
 #endif
 
 #ifdef HAVE_CUDA
+    cuda4dnn::ConvolutionConfiguration::FusionMode cudaFusionMode;
     cuda4dnn::ConvolutionConfiguration::ActivationType cudaActType;
     float cuda_relu_slope, cuda_crelu_floor, cuda_crelu_ceil, cuda_power_exp;
 #endif
@@ -261,6 +262,7 @@ public:
 #endif
 
 #ifdef HAVE_CUDA
+        cudaFusionMode = cuda4dnn::ConvolutionConfiguration::FusionMode::NONE;
         cudaActType = cuda4dnn::ConvolutionConfiguration::ActivationType::IDENTITY;
 #endif
     }
@@ -425,10 +427,18 @@ public:
 #endif
 
 #ifdef HAVE_CUDA
-        cudaActType = cuda4dnn::ConvolutionConfiguration::ActivationType::IDENTITY;
+        if (activ.empty())
+        {
+            /* setActivation was called with empty argument => reset all fusions */
+            cudaFusionMode = cuda4dnn::ConvolutionConfiguration::FusionMode::NONE;
+            cudaActType = cuda4dnn::ConvolutionConfiguration::ActivationType::IDENTITY;
+        }
 
         if(IS_DNN_CUDA_TARGET(preferableTarget))
         {
+            CV_Assert(cudaFusionMode == ConvolutionConfiguration::FusionMode::NONE ||
+                      cudaFusionMode == ConvolutionConfiguration::FusionMode::ELTWISE_SUM);
+
             Ptr<ReLULayer> activ_relu = activ.dynamicCast<ReLULayer>();
             if(!activ_relu.empty())
             {
@@ -475,10 +485,51 @@ public:
                 cudaActType = cuda4dnn::ConvolutionConfiguration::ActivationType::MISH;
 
             if (cudaActType == cuda4dnn::ConvolutionConfiguration::ActivationType::IDENTITY)
+            {
+                /* no activation fused */
                 activ.reset();
+            }
+            else
+            {
+                /* activation was fused */
+                if (cudaFusionMode == ConvolutionConfiguration::FusionMode::NONE) /* no previous fusion */
+                    cudaFusionMode = ConvolutionConfiguration::FusionMode::ACTIVATION; /* now activation */
+                else if (cudaFusionMode == ConvolutionConfiguration::FusionMode::ELTWISE_SUM) /* previously eltwise was fused */
+                    cudaFusionMode = ConvolutionConfiguration::FusionMode::ELTWISE_SUM_THEN_ACTIVATION; /* now activation on eltwise output */
+            }
         }
 #endif
         return !activ.empty();
+    }
+
+    virtual bool tryFuse(Ptr<Layer>& top) CV_OVERRIDE
+    {
+#ifdef HAVE_CUDA
+        if(IS_DNN_CUDA_TARGET(preferableTarget))
+        {
+            Ptr<EltwiseLayer> eltwise = top.dynamicCast<EltwiseLayer>();
+            if (!eltwise.empty()) // && eltwise->op == EltwiseLayer::SUM && eltwise->coeffs.empty())
+            {
+                /* we also need to check that the eltwise input does not require shortcut mechanism
+                 * it's difficult to verify it here but we hope that `fuseLayers` has done the check already
+                 */
+                if (cudaFusionMode == ConvolutionConfiguration::FusionMode::NONE)
+                {
+                    /* no previous fusion */
+                    cudaFusionMode = ConvolutionConfiguration::FusionMode::ELTWISE_SUM; /* now eltwise */
+                    return true;
+                }
+                else if(cudaFusionMode == ConvolutionConfiguration::FusionMode::ACTIVATION)
+                {
+                    /* previously an activation was fused */
+                    cudaFusionMode = ConvolutionConfiguration::FusionMode::ACTIVATION_THEN_ELTWISE_SUM;
+                    return true;
+                }
+                return false;
+            }
+        }
+#endif
+        return BaseConvolutionLayerImpl::tryFuse(top);
     }
 
     void fuseWeights(const Mat& w_, const Mat& b_) CV_OVERRIDE
@@ -1493,7 +1544,7 @@ public:
     {
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
 
-        CV_Assert(inputs.size() == 1);
+        CV_Assert(inputs.size() == 1 || inputs.size() == 2);
         auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
         auto input_shape = input_wrapper->getShape();
 
@@ -1534,6 +1585,7 @@ public:
         config.output_shape.assign(std::begin(output_shape), std::end(output_shape));
         config.groups = groups;
 
+        config.fusion_mode = cudaFusionMode;
         config.activation_type = cudaActType;
         config.relu_negative_slope = cuda_relu_slope;
         config.crelu_floor = cuda_crelu_floor;
