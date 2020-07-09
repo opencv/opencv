@@ -64,23 +64,13 @@ public:
 
     // TODO: Think about the addition operator
     /**
-     * @brief This operator allows to complement proto vectors at runtime.
+     * @brief This operator allows to complement the proto vectors at runtime.
      *
      * It's an ordinary overload of addition assignment operator.
      *
      * Example of usage:
      *
-     * @code
-     * cv::GMat inMat;
-     * GIOProtoArgs inProtoVec;
-     * inProtoVec += cv::GIn(inMat);
-     * @endcode
-     *
-     * @code
-     * cv::GMat outMat;
-     * GIOProtoArgs outProtoVec;
-     * outProtoVec += cv::GOut(outMat);
-     * @endcode
+     * \snippet modules/gapi/test/internal/gapi_int_dynamic_graph.cpp GIOProtoArgs += usage
      *
      */
     template<typename Tg>

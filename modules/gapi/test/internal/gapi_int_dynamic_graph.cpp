@@ -32,14 +32,14 @@ namespace opencv_test
     TEST(DynamicGraph, AddRunArgs)
     {
         cv::Mat in_mat;
-        cv::GRunArgs in_vector;
+        auto in_vector = cv::gin();
         EXPECT_NO_THROW(in_vector += cv::gin(in_mat));
     }
 
     TEST(DynamicGraph, AddRunArgsP)
     {
         cv::Mat out_mat;
-        cv::GRunArgsP out_vector;
+        auto out_vector = cv::gout();
         EXPECT_NO_THROW(out_vector += cv::gout(out_mat));
     }
 
@@ -134,12 +134,12 @@ namespace opencv_test
         cv::randu(in_mat1, cv::Scalar::all(0), cv::Scalar::all(255));
         cv::randu(in_mat2, cv::Scalar::all(0), cv::Scalar::all(255));
 
-        cv::GRunArgs in_vector;
+        auto in_vector = cv::gin();
         in_vector += cv::gin(in_mat1);
         in_vector += cv::gin(in_mat2);
 
         cv::Mat out_mat1, out_mat2;
-        cv::GRunArgsP out_vector;
+        auto out_vector = cv::gout();
         out_vector += cv::gout(out_mat1);
         out_vector += cv::gout(out_mat2);
 
@@ -181,6 +181,7 @@ namespace opencv_test
     {
         cv::Size szOut(4, 4);
         cv::GComputation cc([&](){
+//! [GIOProtoArgs += usage]
             cv::GMat in1;
             cv::GProtoInputArgs ins = GIn(in1);
 
@@ -192,7 +193,7 @@ namespace opencv_test
 
             cv::GMat out2 = cv::gapi::resize(in2, szOut);
             outs += GOut(out2);
-
+//! [GIOProtoArgs += usage]
             return cv::GComputation(std::move(ins), std::move(outs));
         });
 
@@ -202,14 +203,18 @@ namespace opencv_test
         cv::randu(in_mat1, cv::Scalar::all(0), cv::Scalar::all(255));
         cv::randu(in_mat2, cv::Scalar::all(0), cv::Scalar::all(255));
 
-        cv::GRunArgs in_vector;
+//! [GRunArgs += usage]
+        auto in_vector = cv::gin();
         in_vector += cv::gin(in_mat1);
         in_vector += cv::gin(in_mat2);
+//! [GRunArgs += usage]
 
+//! [GRunArgsP += usage]
         cv::Mat out_mat1, out_mat2;
-        cv::GRunArgsP out_vector;
+        auto out_vector = cv::gout();
         out_vector += cv::gout(out_mat1);
         out_vector += cv::gout(out_mat2);
+//! [GRunArgsP += usage]
 
         auto stream = cc.compileStreaming(cv::compile_args(cv::gapi::core::cpu::kernels()));
         stream.setSource(std::move(in_vector));
