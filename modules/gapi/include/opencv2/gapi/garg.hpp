@@ -91,7 +91,6 @@ using GArgs = std::vector<GArg>;
 // FIXME: Express as M<GProtoArg...>::type
 // FIXME: Move to a separate file!
 using GRunArg  = util::variant<
-    util::monostate,
 #if !defined(GAPI_STANDALONE)
     cv::UMat,
 #endif // !defined(GAPI_STANDALONE)
