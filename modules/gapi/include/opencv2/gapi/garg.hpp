@@ -106,7 +106,7 @@ using GRunArgs = std::vector<GRunArg>;
 /**
  * @brief This operator allows to complement input vector at runtime.
  *
- * Its an ordinary overload of addition assignment operator.
+ * It's an ordinary overload of addition assignment operator.
  *
  * Example of usage:
  *
@@ -115,6 +115,7 @@ using GRunArgs = std::vector<GRunArg>;
  * GRunArgs inVec;
  * inVec += cv::gin(inMat);
  * @endcode
+ *
  */
 inline GRunArgs& operator += (GRunArgs &lhs, const GRunArgs &rhs);
 inline GRunArgs& operator += (GRunArgs &lhs, const GRunArgs &rhs)
@@ -161,13 +162,14 @@ using GRunArgsP = std::vector<GRunArgP>;
  *
  * It's an ordinary overload of addition assignment operator.
  *
- *  Example of usage:
+ * Example of usage:
  *
  * @code
  * cv::Mat outMat;
  * GRunArgsP outVec;
  * outVec += cv::gout(outMat);
  * @endcode
+ *
  */
 inline GRunArgsP& operator += (GRunArgsP &lhs, const GRunArgsP &rhs);
 inline GRunArgsP& operator += (GRunArgsP &lhs, const GRunArgsP &rhs)
