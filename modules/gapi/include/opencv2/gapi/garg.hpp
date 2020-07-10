@@ -110,7 +110,7 @@ using GRunArgs = std::vector<GRunArg>;
  *
  * Example of usage:
  *
- * \snippet modules/gapi/test/internal/gapi_int_dynamic_graph.cpp GRunArgs += usage
+ * \snippet ../modules/gapi/test/internal/gapi_int_dynamic_graph.cpp GRunArgs += usage
  *
  */
 inline GRunArgs& operator += (GRunArgs &lhs, const GRunArgs &rhs)
@@ -159,7 +159,7 @@ using GRunArgsP = std::vector<GRunArgP>;
  *
  * Example of usage:
  *
- * \snippet modules/gapi/test/internal/gapi_int_dynamic_graph.cpp GRunArgsP += usage
+ * \snippet ../modules/gapi/test/internal/gapi_int_dynamic_graph.cpp GRunArgsP += usage
  *
  */
 inline GRunArgsP& operator += (GRunArgsP &lhs, const GRunArgsP &rhs)

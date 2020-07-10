@@ -19,7 +19,7 @@ namespace opencv_test
 
     TYPED_TEST_CASE(DynamicGraphProtoArgs, VectorProtoTypes);
 
-    TYPED_TEST(DynamicGraphProtoArgs, AddProtoInputArgs)
+    TYPED_TEST(DynamicGraphProtoArgs, AddProtoInputArgsSmoke)
     {
         using T = typename TestFixture::Type;
         auto ins = GIn();
@@ -27,12 +27,40 @@ namespace opencv_test
         EXPECT_NO_THROW(ins += GIn(in));
     }
 
-    TYPED_TEST(DynamicGraphProtoArgs, AddProtoOutputArgs)
+    TYPED_TEST(DynamicGraphProtoArgs, AddProtoInputArgs)
+    {
+        using T = typename TestFixture::Type;
+        T in1, in2;
+
+        auto ins1 = GIn();
+        ins1 += GIn(in1);
+        ins1 += GIn(in2);
+
+        auto ins2 = GIn(in1, in2);
+
+        EXPECT_EQ(ins1.m_args.size(), ins2.m_args.size());
+    }
+
+    TYPED_TEST(DynamicGraphProtoArgs, AddProtoOutputArgsSmoke)
     {
         using T = typename TestFixture::Type;
         auto outs = GOut();
         T out;
         EXPECT_NO_THROW(outs += GOut(out));
+    }
+
+    TYPED_TEST(DynamicGraphProtoArgs, AddProtoOutputArgs)
+    {
+        using T = typename TestFixture::Type;
+        T out1, out2;
+
+        auto outs1 = GOut();
+        outs1 += GOut(out1);
+        outs1 += GOut(out2);
+
+        auto outs2 = GOut(out1, out2);
+
+        EXPECT_EQ(outs1.m_args.size(), outs2.m_args.size());
     }
 
     typedef ::testing::Types<cv::Mat,
@@ -47,7 +75,7 @@ namespace opencv_test
 
     TYPED_TEST_CASE(DynamicGraphRunArgs, VectorRunTypes);
 
-    TYPED_TEST(DynamicGraphRunArgs, AddRunArgs)
+    TYPED_TEST(DynamicGraphRunArgs, AddRunArgsSmoke)
     {
         auto in_vector = cv::gin();
 
@@ -56,7 +84,21 @@ namespace opencv_test
         EXPECT_NO_THROW(in_vector += cv::gin(in));
     }
 
-    TYPED_TEST(DynamicGraphRunArgs, AddRunArgsP)
+    TYPED_TEST(DynamicGraphRunArgs, AddRunArgs)
+    {
+        using T = typename TestFixture::Type;
+        T in1, in2;
+
+        auto in_vector1 = cv::gin();
+        in_vector1 += cv::gin(in1);
+        in_vector1 += cv::gin(in2);
+
+        auto in_vector2 = cv::gin(in1, in2);
+
+        EXPECT_EQ(in_vector1.size(), in_vector2.size());
+    }
+
+    TYPED_TEST(DynamicGraphRunArgs, AddRunArgsPSmoke)
     {
         auto out_vector = cv::gout();
 
@@ -65,11 +107,25 @@ namespace opencv_test
         EXPECT_NO_THROW(out_vector += cv::gout(out));
     }
 
+    TYPED_TEST(DynamicGraphRunArgs, AddRunArgsP)
+    {
+        using T = typename TestFixture::Type;
+        T out1, out2;
+
+        auto out_vector1 = cv::gout();
+        out_vector1 += cv::gout(out1);
+        out_vector1 += cv::gout(out2);
+
+        auto out_vector2 = cv::gout(out1, out2);
+
+        EXPECT_EQ(out_vector1.size(), out_vector2.size());
+    }
+
     TEST(DynamicGraph, ProtoInputArgsExecute)
     {
         cv::GComputation cc([]() {
             cv::GMat in1;
-            cv::GProtoInputArgs ins = GIn(in1);
+            auto ins = GIn(in1);
 
             cv::GMat in2;
             ins += GIn(in2);
@@ -91,7 +147,7 @@ namespace opencv_test
         cv::GComputation cc([]() {
             cv::GMat in;
             cv::GMat out1 = cv::gapi::copy(in);
-            cv::GProtoOutputArgs outs = GOut(out1);
+            auto outs = GOut(out1);
 
             cv::GMat out2 = cv::gapi::copy(in);
             outs += GOut(out2);
@@ -110,13 +166,13 @@ namespace opencv_test
     {
         cv::GComputation cc([]() {
             cv::GMat in1;
-            cv::GProtoInputArgs ins = GIn(in1);
+            auto ins = GIn(in1);
 
             cv::GMat in2;
             ins += GIn(in2);
 
             cv::GMat out1 = cv::gapi::copy(in1 + in2);
-            cv::GProtoOutputArgs outs = GOut(out1);
+            auto outs = GOut(out1);
 
             cv::GMat out2 = cv::gapi::copy(in1 + in2);
             outs += GOut(out2);
@@ -135,13 +191,13 @@ namespace opencv_test
     {
         cv::GComputation cc([]() {
             cv::GMat in1;
-            cv::GProtoInputArgs ins = GIn(in1);
+            auto ins = GIn(in1);
 
             cv::GMat in2;
             ins += GIn(in2);
 
             cv::GMat out1 = cv::gapi::copy(in1 + in2);
-            cv::GProtoOutputArgs outs = GOut(out1);
+            auto outs = GOut(out1);
 
             cv::GMat out2 = cv::gapi::copy(in1 + in2);
             outs += GOut(out2);
@@ -161,13 +217,13 @@ namespace opencv_test
         cv::Size szOut(4, 4);
         cv::GComputation cc([&](){
             cv::GMat in1;
-            cv::GProtoInputArgs ins = GIn(in1);
+            auto ins = GIn(in1);
 
             cv::GMat in2;
             ins += GIn(in2);
 
             cv::GMat out1 = cv::gapi::resize(in1, szOut);
-            cv::GProtoOutputArgs outs = GOut(out1);
+            auto outs = GOut(out1);
 
             cv::GMat out2 = cv::gapi::resize(in2, szOut);
             outs += GOut(out2);
@@ -207,13 +263,13 @@ namespace opencv_test
             cv::Size szOut(4, 4);
 
             cv::GMat in1;
-            cv::GProtoInputArgs ins = GIn(in1);
+            auto ins = GIn(in1);
 
             cv::GMat in2;
             ins += GIn(in2);
 
             cv::GMat out1 = cv::gapi::resize(in1, szOut);
-            cv::GProtoOutputArgs outs = GOut(out1);
+            auto outs = GOut(out1);
 
             cv::GMat out2 = cv::gapi::resize(in2, szOut);
             outs += GOut(out2);
@@ -230,7 +286,7 @@ namespace opencv_test
         cv::GComputation cc([&](){
 //! [GIOProtoArgs += usage]
             cv::GMat in1;
-            cv::GProtoInputArgs ins = GIn(in1);
+            auto ins = GIn(in1);
 
             cv::GMat in2;
             ins += GIn(in2);

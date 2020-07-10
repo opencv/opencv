@@ -70,7 +70,7 @@ public:
      *
      * Example of usage:
      *
-     * \snippet modules/gapi/test/internal/gapi_int_dynamic_graph.cpp GIOProtoArgs += usage
+     * \snippet ../modules/gapi/test/internal/gapi_int_dynamic_graph.cpp GIOProtoArgs += usage
      *
      */
     template<typename Tg>
