@@ -28,7 +28,7 @@ def main():
     if cmd_args.is_evaluate:
         from ...common.test_config import TestConfig
         from ...common.accuracy_eval import NormalizedValueFetch
-        from ...common.test.imagenet_cls_test_resnet50 import test_cls_models
+        from ...common.test.imagenet_cls_test import test_cls_models
 
         eval_params = TestConfig()
 
@@ -37,7 +37,7 @@ def main():
         dnn_model_name = model_names[1]
 
         data_fetcher = NormalizedValueFetch(
-            imgs_dir=eval_params.imgs_dir,
+            imgs_dir=eval_params.imgs_class_dir,
             frame_size=eval_params.frame_size,
             bgr_to_rgb=eval_params.bgr_to_rgb
         )

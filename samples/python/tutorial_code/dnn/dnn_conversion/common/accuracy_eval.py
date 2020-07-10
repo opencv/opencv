@@ -5,6 +5,7 @@ from abc import ABCMeta, abstractmethod
 
 import cv2
 import numpy as np
+from tensorflow.keras.applications.resnet import preprocess_input
 
 
 # https://github.com/opencv/opencv/blob/master/modules/dnn/test/imagenet_cls_test_alexnet.py#L98
@@ -35,7 +36,6 @@ class DataFetch(object):
         batch = np.zeros((len(imgs_names), 3, self.frame_size, self.frame_size)).astype(np.float32)
         for i in range(len(imgs_names)):
             img_name = imgs_names[i]
-            # changed to os.path.join
             img_file = os.path.join(self.imgs_dir, img_name)
             assert os.path.exists(img_file)
             img = cv2.imread(img_file, cv2.IMREAD_COLOR)
@@ -56,6 +56,13 @@ class DataFetch(object):
         return batch
 
 
+def normalize_imgs(img):
+    image_data = np.array(img).astype(np.float32)
+    image_data = np.expand_dims(image_data, 0)
+    image_data /= 255.0
+    return image_data
+
+
 class NormalizedValueFetch(DataFetch):
     def __init__(self, imgs_dir, frame_size, bgr_to_rgb):
         self.imgs_dir = imgs_dir
@@ -69,16 +76,14 @@ class NormalizedValueFetch(DataFetch):
         return image_data
 
 
-class MeanValueFetch(DataFetch):
+class TFPreprocessedFetch(DataFetch):
     def __init__(self, frame_size, imgs_dir, bgr_to_rgb):
         self.imgs_dir = imgs_dir
         self.frame_size = frame_size
-        self.mean_blob = np.ones((3, self.frame_size, self.frame_size)).astype(np.float32)
-        self.mean_blob *= 117
         self.bgr_to_rgb = bgr_to_rgb
 
     def preprocess(self, img):
-        return img - self.mean_blob
+        return preprocess_input(img)
 
 
 # https://github.com/opencv/opencv/blob/master/modules/dnn/test/imagenet_cls_test_alexnet.py#L159
