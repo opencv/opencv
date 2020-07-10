@@ -35,7 +35,6 @@
 
 #include <algorithm>
 #include <map>
-#include <cassert>
 #include <limits>
 #include <cmath>
 
@@ -152,7 +151,7 @@ public:
         int n = indices_length;
 
         int rnd = rand_int(n);
-        assert(rnd >=0 && rnd < n);
+        CV_DbgAssert(rnd >=0 && rnd < n);
 
         centers[0] = indices[rnd];
 
@@ -207,7 +206,7 @@ public:
 
         // Choose one random center and set the closestDistSq values
         int index = rand_int(n);
-        assert(index >=0 && index < n);
+        CV_DbgAssert(index >=0 && index < n);
         centers[0] = indices[index];
 
         for (int i = 0; i < n; i++) {
@@ -502,9 +501,9 @@ public:
                 KMeansNodePtr node = branch.node;
                 findNN(node, result, vec, checks, maxChecks, heap);
             }
-            assert(result.full());
-
             delete heap;
+
+            CV_Assert(result.full());
         }
 
     }
@@ -650,7 +649,8 @@ private:
      *
      * Params:
      *     node = the node to use
-     *     indices = the indices of the points belonging to the node
+     *     indices = array of indices of the points belonging to the node
+     *     indices_length = number of indices in the array
      */
     void computeNodeStatistics(KMeansNodePtr node, int* indices, int indices_length)
     {
@@ -662,7 +662,7 @@ private:
 
         memset(mean,0,veclen_*sizeof(DistanceType));
 
-        for (size_t i=0; i<size_; ++i) {
+        for (int i=0; i<indices_length; ++i) {
             ElementType* vec = dataset_[indices[i]];
             for (size_t j=0; j<veclen_; ++j) {
                 mean[j] += vec[j];
@@ -670,9 +670,9 @@ private:
             variance += distance_(vec, ZeroIterator<ElementType>(), veclen_);
         }
         for (size_t j=0; j<veclen_; ++j) {
-            mean[j] /= size_;
+            mean[j] /= indices_length;
         }
-        variance /= size_;
+        variance /= indices_length;
         variance -= distance_(mean, ZeroIterator<ElementType>(), veclen_);
 
         DistanceType tmp = 0;
@@ -725,15 +725,6 @@ private:
         }
 
 
-        cv::AutoBuffer<double> dcenters_buf(branching*veclen_);
-        Matrix<double> dcenters(dcenters_buf.data(), branching, veclen_);
-        for (int i=0; i<centers_length; ++i) {
-            ElementType* vec = dataset_[centers_idx[i]];
-            for (size_t k=0; k<veclen_; ++k) {
-                dcenters[i][k] = double(vec[k]);
-            }
-        }
-
         std::vector<DistanceType> radiuses(branching);
         cv::AutoBuffer<int> count_buf(branching);
         int* count = count_buf.data();
@@ -747,10 +738,10 @@ private:
         int* belongs_to = belongs_to_buf.data();
         for (int i=0; i<indices_length; ++i) {
 
-            DistanceType sq_dist = distance_(dataset_[indices[i]], dcenters[0], veclen_);
+            DistanceType sq_dist = distance_(dataset_[indices[i]], dataset_[centers_idx[0]], veclen_);
             belongs_to[i] = 0;
             for (int j=1; j<branching; ++j) {
-                DistanceType new_sq_dist = distance_(dataset_[indices[i]], dcenters[j], veclen_);
+                DistanceType new_sq_dist = distance_(dataset_[indices[i]], dataset_[centers_idx[j]], veclen_);
                 if (sq_dist>new_sq_dist) {
                     belongs_to[i] = j;
                     sq_dist = new_sq_dist;
@@ -760,6 +751,15 @@ private:
                 radiuses[belongs_to[i]] = sq_dist;
             }
             count[belongs_to[i]]++;
+        }
+
+        cv::AutoBuffer<double> dcenters_buf(branching*veclen_);
+        Matrix<double> dcenters(dcenters_buf.data(), branching, veclen_);
+        for (int i=0; i<centers_length; ++i) {
+            ElementType* vec = dataset_[centers_idx[i]];
+            for (size_t k=0; k<veclen_; ++k) {
+                dcenters[i][k] = double(vec[k]);
+            }
         }
 
         bool converged = false;
