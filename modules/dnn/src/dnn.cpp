@@ -2972,7 +2972,6 @@ struct Net::Impl : public detail::NetImplBase
                             ld.outputBlobsWrappers[0] = wrap(output);
 #endif
                         std::vector<Range> chrange(output.dims, Range::all());
-
                         int ofs = 0;
                         for( i = 0; i < ninputs; i++ )
                         {
@@ -3000,9 +2999,9 @@ struct Net::Impl : public detail::NetImplBase
                             if (preferableBackend == DNN_BACKEND_CUDA)
                             {
                                 auto cuda_wrapper = wrap(output).dynamicCast<CUDABackendWrapper>();
-                                auto offset = chrange[1].start * (output.size[2] * output.size[3]);
-                                auto shape = MatShape{1, chrange[1].size(), output.size[2], output.size[3]};
-                                cuda_wrapper->update(shape, offset);
+                                auto offset = chrange[axis].start * output_slice.total(axis + 1, output.dims);
+                                auto new_shape = shape(output_slice);
+                                cuda_wrapper->update(new_shape, offset);
                                 inp_i_data->outputBlobsWrappers[pin.oid] = cuda_wrapper.staticCast<BackendWrapper>();
                             }
 #endif
