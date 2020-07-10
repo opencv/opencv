@@ -1,4 +1,4 @@
-// SURF_FLANN_search_dataset_Demo.cpp
+// FLANN_search_dataset_Demo.cpp
 // Naive program to search a query picture in a dataset illustrating usage of FLANN
 
 #include <iostream>
@@ -84,7 +84,8 @@ int main( int argc, char* argv[] )
 #elif defined(_ORB_)
     Ptr<Feature2D> detector = ORB::create();
 #else
-    cout << "Missing or unknown defined descriptor" << endl;
+    cout << "Missing or unknown defined descriptor. "
+            "Only SURF and ORB are currently interfaced here" << endl;
     return -1;
 #endif
 
