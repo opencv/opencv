@@ -4,33 +4,27 @@
 //
 // Copyright (C) 2020 Intel Corporation
 
-#ifndef OPENCV_GAPI_IEAPI_HPP
-#define OPENCV_GAPI_IEAPI_HPP
-
 #ifdef HAVE_INF_ENGINE
 
-#include <inference_engine.hpp>
+#include <vector>
+#include <string>
+#include <tuple>
 
-#include <opencv2/core/utility.hpp>
-#include <opencv2/core/utils/logger.hpp>
+#include "backends/ie/giebackend/giewrapper.hpp"
 
 #include <ade/util/range.hpp>
 #include <ade/util/zip_range.hpp>
 
-#include "opencv2/gapi/infer/ie.hpp"
+#include <opencv2/core/utility.hpp>
+#include <opencv2/core/utils/logger.hpp>
 
 namespace IE = InferenceEngine;
-
-namespace cv {
-namespace gapi {
-namespace ie {
-namespace wrap {
-
-std::vector<std::string> getExtensions(const cv::gapi::ie::detail::ParamDesc& params);
+namespace giewrap = cv::gimpl::ie::wrap;
+using GIEParam = cv::gapi::ie::detail::ParamDesc;
 
 #if INF_ENGINE_RELEASE < 2020000000  // < 2020.1
 // Load extensions (taken from DNN module)
-std::vector<std::string> getExtensions(const cv::gapi::ie::detail::ParamDesc& params) {
+std::vector<std::string> giewrap::getExtensions(const GIEParam& params) {
     std::vector<std::string> candidates;
     if (params.device_id == "CPU" || params.device_id == "FPGA")
     {
@@ -59,23 +53,30 @@ std::vector<std::string> getExtensions(const cv::gapi::ie::detail::ParamDesc& pa
     }
     return candidates;
 }
+
+IE::CNNNetwork giewrap::readNetwork(const GIEParam& params) {
+    IE::CNNNetReader reader;
+    reader.ReadNetwork(params.model_path);
+    reader.ReadWeights(params.weights_path);
+    return reader.getNetwork();
+}
 #else // >= 2020.1
-std::vector<std::string> getExtensions(const cv::gapi::ie::detail::ParamDesc&) {
+std::vector<std::string> giewrap::getExtensions(const GIEParam&) {
     return std::vector<std::string>();
+}
+
+IE::CNNNetwork giewrap::readNetwork(const GIEParam& params) {
+    auto core = giewrap::getCore();
+    return core.ReadNetwork(params.model_path, params.weights_path);
 }
 #endif // INF_ENGINE_RELEASE < 2020000000
 
 #if INF_ENGINE_RELEASE < 2019020000  // < 2019.R2
-IE::InferencePlugin getPlugin(const cv::gapi::ie::detail::ParamDesc& params);
-inline IE::ExecutableNetwork loadNetwork(      IE::InferencePlugin& plugin,
-                                         const IE::CNNNetwork&      net,
-                                         const cv::gapi::ie::detail::ParamDesc&);
-
-IE::InferencePlugin getPlugin(const cv::gapi::ie::detail::ParamDesc& params) {
+IE::InferencePlugin giewrap::getPlugin(const GIEParam& params) {
     auto plugin = IE::PluginDispatcher().getPluginByDevice(params.device_id);
     if (params.device_id == "CPU" || params.device_id == "FPGA")
     {
-        for (auto &&extlib : getExtensions(params))
+        for (auto &&extlib : giewrap::getExtensions(params))
         {
             try
             {
@@ -91,30 +92,17 @@ IE::InferencePlugin getPlugin(const cv::gapi::ie::detail::ParamDesc& params) {
     }
     return plugin;
 }
-
-inline IE::ExecutableNetwork loadNetwork(      IE::InferencePlugin& plugin,
-                                         const IE::CNNNetwork&      net,
-                                         const cv::gapi::ie::detail::ParamDesc&) {
-    return plugin.LoadNetwork(net, {}); // FIXME: 2nd parameter to be
-                                        // configurable via the API
-}
 #else // >= 2019.R2
-IE::Core getCore();
-IE::Core getPlugin(const cv::gapi::ie::detail::ParamDesc& params);
-inline IE::ExecutableNetwork loadNetwork(      IE::Core&                        core,
-                                         const IE::CNNNetwork&                  net,
-                                         const cv::gapi::ie::detail::ParamDesc& params);
-
-IE::Core getCore() {
+IE::Core giewrap::getCore() {
     static IE::Core core;
     return core;
 }
 
-IE::Core getPlugin(const cv::gapi::ie::detail::ParamDesc& params) {
-    auto plugin = getCore();
+IE::Core giewrap::getPlugin(const GIEParam& params) {
+    auto plugin = giewrap::getCore();
     if (params.device_id == "CPU" || params.device_id == "FPGA")
     {
-        for (auto &&extlib : getExtensions(params))
+        for (auto &&extlib : giewrap::getExtensions(params))
         {
             try
             {
@@ -130,30 +118,6 @@ IE::Core getPlugin(const cv::gapi::ie::detail::ParamDesc& params) {
     }
     return plugin;
 }
-
-inline IE::ExecutableNetwork loadNetwork(      IE::Core&                        core,
-                                         const IE::CNNNetwork&                  net,
-                                         const cv::gapi::ie::detail::ParamDesc& params) {
-    return core.LoadNetwork(net, params.device_id);
-}
 #endif // INF_ENGINE_RELEASE < 2019020000
 
-IE::CNNNetwork readNetwork(const cv::gapi::ie::detail::ParamDesc& params);
-
-#if INF_ENGINE_RELEASE < 2020000000  // < 2020.1
-IE::CNNNetwork readNetwork(const cv::gapi::ie::detail::ParamDesc& params) {
-    IE::CNNNetReader reader;
-    reader.ReadNetwork(params.model_path);
-    reader.ReadWeights(params.weights_path);
-    return reader.getNetwork();
-}
-#else // >= 2020.1
-IE::CNNNetwork readNetwork(const cv::gapi::ie::detail::ParamDesc& params) {
-    auto core = getCore();
-    return core.ReadNetwork(params.model_path, params.weights_path);
-}
-#endif // INF_ENGINE_RELEASE < 2020000000
-}}}}
-
 #endif //HAVE_INF_ENGINE
-#endif // OPENCV_GAPI_IEAPI_HPP

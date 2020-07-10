@@ -41,7 +41,7 @@
 #include "compiler/gmodel.hpp"
 
 #include "backends/ie/util.hpp"
-#include "backends/ie/giebackend/gieapi.hpp"
+#include "backends/ie/giebackend/giewrapper.hpp"
 
 #include "api/gbackend_priv.hpp" // FIXME: Make it part of Backend SDK!
 
@@ -177,7 +177,7 @@ struct IEUnit {
 
     explicit IEUnit(const cv::gapi::ie::detail::ParamDesc &pp)
         : params(pp) {
-        net = cv::gapi::ie::wrap::readNetwork(params);
+        net = cv::gimpl::ie::wrap::readNetwork(params);
         inputs  = net.getInputsInfo();
         outputs = net.getOutputsInfo();
         // The practice shows that not all inputs and not all outputs
@@ -205,8 +205,8 @@ struct IEUnit {
 
     // This method is [supposed to be] called at Island compilation stage
     cv::gimpl::ie::IECompiled compile() const {
-        auto plugin       = cv::gapi::ie::wrap::getPlugin(params);
-        auto this_network = cv::gapi::ie::wrap::loadNetwork(plugin, net, params);
+        auto plugin       = cv::gimpl::ie::wrap::getPlugin(params);
+        auto this_network = cv::gimpl::ie::wrap::loadNetwork(plugin, net, params);
         auto this_request = this_network.CreateInferRequest();
 
         // Bind const data to infer request

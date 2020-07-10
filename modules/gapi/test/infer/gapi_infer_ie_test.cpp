@@ -17,7 +17,7 @@
 #include <opencv2/gapi/infer/ie.hpp>
 
 #include "backends/ie/util.hpp"
-#include "backends/ie/giebackend/gieapi.hpp"
+#include "backends/ie/giebackend/giewrapper.hpp"
 
 namespace opencv_test
 {
@@ -99,7 +99,6 @@ namespace IE = InferenceEngine;
 void setNetParameters(IE::CNNNetwork& net) {
     auto &ii = net.getInputsInfo().at("data");
     ii->setPrecision(IE::Precision::U8);
-    ii->setLayout(IE::Layout::NHWC);
     ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
 }
 } // anonymous namespace
@@ -115,15 +114,14 @@ TEST(TestAgeGenderIE, InferBasicTensor)
     params.device_id = "CPU";
 
     // Load IE network, initialize input data using that.
-    namespace IE = InferenceEngine;
     cv::Mat in_mat;
     cv::Mat gapi_age, gapi_gender;
 
     IE::Blob::Ptr ie_age, ie_gender;
     {
-        auto plugin        = cv::gapi::ie::wrap::getPlugin(params);
-        auto net           = cv::gapi::ie::wrap::readNetwork(params);
-        auto this_network  = cv::gapi::ie::wrap::loadNetwork(plugin, net, params);
+        auto plugin        = cv::gimpl::ie::wrap::getPlugin(params);
+        auto net           = cv::gimpl::ie::wrap::readNetwork(params);
+        auto this_network  = cv::gimpl::ie::wrap::loadNetwork(plugin, net, params);
         auto infer_request = this_network.CreateInferRequest();
 
         const auto &iedims = net.getInputsInfo().begin()->second->getTensorDesc().getDims();
@@ -173,13 +171,12 @@ TEST(TestAgeGenderIE, InferBasicImage)
     cv::Mat gapi_age, gapi_gender;
 
     // Load & run IE network
-    namespace IE = InferenceEngine;
     IE::Blob::Ptr ie_age, ie_gender;
     {
-        auto plugin        = cv::gapi::ie::wrap::getPlugin(params);
-        auto net           = cv::gapi::ie::wrap::readNetwork(params);
+        auto plugin        = cv::gimpl::ie::wrap::getPlugin(params);
+        auto net           = cv::gimpl::ie::wrap::readNetwork(params);
         setNetParameters(net);
-        auto this_network  = cv::gapi::ie::wrap::loadNetwork(plugin, net, params);
+        auto this_network  = cv::gimpl::ie::wrap::loadNetwork(plugin, net, params);
         auto infer_request = this_network.CreateInferRequest();
         infer_request.SetBlob("data", cv::gapi::ie::util::to_ie(in_mat));
         infer_request.Infer();
@@ -238,12 +235,11 @@ struct ROIList: public ::testing::Test {
         };
 
         // Load & run IE network
-        namespace IE = InferenceEngine;
         {
-            auto plugin        = cv::gapi::ie::wrap::getPlugin(params);
-            auto net           = cv::gapi::ie::wrap::readNetwork(params);
+            auto plugin        = cv::gimpl::ie::wrap::getPlugin(params);
+            auto net           = cv::gimpl::ie::wrap::readNetwork(params);
             setNetParameters(net);
-            auto this_network  = cv::gapi::ie::wrap::loadNetwork(plugin, net, params);
+            auto this_network  = cv::gimpl::ie::wrap::loadNetwork(plugin, net, params);
             auto infer_request = this_network.CreateInferRequest();
             auto frame_blob = cv::gapi::ie::util::to_ie(m_in_mat);
 

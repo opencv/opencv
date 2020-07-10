@@ -120,6 +120,7 @@ set(gapi_srcs
     # IE Backend. FIXME: should be included by CMake
     # if and only if IE support is enabled
     src/backends/ie/giebackend.cpp
+    src/backends/ie/giebackend/giewrapper.cpp
 
     # Render Backend.
     src/backends/render/grenderocvbackend.cpp
