@@ -30,14 +30,14 @@ cv::GRunArgs cv::gapi::detail::getRunArgs(const std::vector<char> &p) {
     return run_args_deserialize(is);
 }
 
-std::vector<char> serialize(const cv::GMetaArgs& ma)
+std::vector<char> cv::gapi::serialize(const cv::GMetaArgs& ma)
 {
     cv::gimpl::s11n::ByteMemoryOutStream os;
     serialize(os, ma);
     return os.data();
 }
 
-std::vector<char> serialize(const cv::GRunArgs& ra)
+std::vector<char> cv::gapi::serialize(const cv::GRunArgs& ra)
 {
     cv::gimpl::s11n::ByteMemoryOutStream os;
     serialize(os, ra);
