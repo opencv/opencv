@@ -79,9 +79,9 @@ std::vector<std::string> modelPathByName(const std::string &model_name) {
     // Handle OMZ model layout changes among OpenVINO versions here
     static const std::unordered_multimap<std::string, std::string> map = {
         {"age-gender-recognition-retail-0013",
-         "intel/age-gender-recognition-retail-0013/FP32"},
+         "2020.3.0/intel/age-gender-recognition-retail-0013/FP32"},
         {"age-gender-recognition-retail-0013",
-         "Retail/object_attributes/age_gender/dldt/age-gender-recognition-retail-0013"},
+         "Retail/object_attributes/age_gender/dldt"},
     };
     const auto range = map.equal_range(model_name);
     std::vector<std::string> result;
