@@ -650,6 +650,24 @@ I::IStream& ByteMemoryInStream::operator>> (std::string& str) {
     return *this;
 }
 
+GAPI_EXPORTS void serialize(I::OStream& os, const cv::GMetaArgs &ma) {
+    os << ma;
+}
+GAPI_EXPORTS void serialize(I::OStream& os, const cv::GRunArgs &ra) {
+    os << ra;
+}
+GAPI_EXPORTS GMetaArgs meta_args_deserialize(I::IStream& is) {
+    GMetaArgs s;
+    is >> s;
+    return s;
+}
+GAPI_EXPORTS GRunArgs run_args_deserialize(I::IStream& is) {
+    GRunArgs s;
+    is >> s;
+    return s;
+}
+
+
 } // namespace s11n
 } // namespace gimpl
 } // namespace cv

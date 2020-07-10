@@ -20,6 +20,30 @@ cv::GComputation cv::gapi::detail::getGraph(const std::vector<char> &p) {
     return cv::GComputation(is);
 }
 
+cv::GMetaArgs cv::gapi::detail::getMetaArgs(const std::vector<char> &p) {
+    cv::gimpl::s11n::ByteMemoryInStream is(p);
+    return meta_args_deserialize(is);
+}
+
+cv::GRunArgs cv::gapi::detail::getRunArgs(const std::vector<char> &p) {
+    cv::gimpl::s11n::ByteMemoryInStream is(p);
+    return run_args_deserialize(is);
+}
+
+std::vector<char> serialize(const cv::GMetaArgs& ma)
+{
+    cv::gimpl::s11n::ByteMemoryOutStream os;
+    serialize(os, ma);
+    return os.data();
+}
+
+std::vector<char> serialize(const cv::GRunArgs& ra)
+{
+    cv::gimpl::s11n::ByteMemoryOutStream os;
+    serialize(os, ra);
+    return os.data();
+}
+
 cv::GRunArgsP cv::gapi::bind(cv::GRunArgs &results)
 {
     cv::GRunArgsP outputs;
