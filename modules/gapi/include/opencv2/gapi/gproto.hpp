@@ -68,10 +68,6 @@ public:
      *
      * It's an ordinary overload of addition assignment operator.
      *
-     * Example of usage:
-     *
-     * \snippet ../modules/gapi/test/internal/gapi_int_dynamic_graph.cpp GIOProtoArgs += usage
-     *
      */
     template<typename Tg>
     friend GIOProtoArgs<Tg>& operator += (GIOProtoArgs<Tg> &lhs, const GIOProtoArgs<Tg> &rhs);

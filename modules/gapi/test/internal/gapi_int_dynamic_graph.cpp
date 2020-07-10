@@ -284,7 +284,6 @@ namespace opencv_test
     {
         cv::Size szOut(4, 4);
         cv::GComputation cc([&](){
-//! [GIOProtoArgs += usage]
             cv::GMat in1;
             auto ins = GIn(in1);
 
@@ -296,7 +295,6 @@ namespace opencv_test
 
             cv::GMat out2 = cv::gapi::resize(in2, szOut);
             outs += GOut(out2);
-//! [GIOProtoArgs += usage]
             return cv::GComputation(std::move(ins), std::move(outs));
         });
 
@@ -306,18 +304,14 @@ namespace opencv_test
         cv::randu(in_mat1, cv::Scalar::all(0), cv::Scalar::all(255));
         cv::randu(in_mat2, cv::Scalar::all(0), cv::Scalar::all(255));
 
-//! [GRunArgs += usage]
         auto in_vector = cv::gin();
         in_vector += cv::gin(in_mat1);
         in_vector += cv::gin(in_mat2);
-//! [GRunArgs += usage]
 
-//! [GRunArgsP += usage]
         cv::Mat out_mat1, out_mat2;
         auto out_vector = cv::gout();
         out_vector += cv::gout(out_mat1);
         out_vector += cv::gout(out_mat2);
-//! [GRunArgsP += usage]
 
         auto stream = cc.compileStreaming(cv::compile_args(cv::gapi::core::cpu::kernels()));
         stream.setSource(std::move(in_vector));
