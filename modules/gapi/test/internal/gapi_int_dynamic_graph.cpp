@@ -11,94 +11,58 @@
 
 namespace opencv_test
 {
-    TEST(DynamicGraph, AddProtoInputArgs)
+    typedef ::testing::Types<cv::GMat, cv::GMatP, cv::GFrame,
+                             cv::GScalar, cv::GOpaque<int>,
+                             cv::GArray<int>> VectorProtoTypes;
+
+    template<typename T> struct DynamicGraphProtoArgs: public ::testing::Test { using Type = T; };
+
+    TYPED_TEST_CASE(DynamicGraphProtoArgs, VectorProtoTypes);
+
+    TYPED_TEST(DynamicGraphProtoArgs, AddProtoInputArgs)
     {
+        using T = typename TestFixture::Type;
         auto ins = GIn();
-
-        cv::GMat in;
+        T in;
         EXPECT_NO_THROW(ins += GIn(in));
-
-        cv::GScalar inScalar;
-        EXPECT_NO_THROW(ins += GIn(inScalar));
-
-        cv::GMatP inGMatP;
-        EXPECT_NO_THROW(ins += GIn(inGMatP));
-
-        cv::GFrame inGFrame;
-        EXPECT_NO_THROW(ins += GIn(inGFrame));
-
-        cv::GArray<int> inGArray;
-        EXPECT_NO_THROW(ins += GIn(inGArray));
-
-        cv::GOpaque<int> inGOpaque;
-        EXPECT_NO_THROW(ins += GIn(inGOpaque));
     }
 
-    TEST(DynamicGraph, AddProtoOutputArgs)
+    TYPED_TEST(DynamicGraphProtoArgs, AddProtoOutputArgs)
     {
+        using T = typename TestFixture::Type;
         auto outs = GOut();
-
-        cv::GMat out;
+        T out;
         EXPECT_NO_THROW(outs += GOut(out));
-
-        cv::GScalar outScalar;
-        EXPECT_NO_THROW(outs += GOut(outScalar));
-
-        cv::GMatP outGMatP;
-        EXPECT_NO_THROW(outs += GOut(outGMatP));
-
-        cv::GFrame outGFrame;
-        EXPECT_NO_THROW(outs += GOut(outGFrame));
-
-        cv::GArray<int> outGArray;
-        EXPECT_NO_THROW(outs += GOut(outGArray));
-
-        cv::GOpaque<int> outGOpaque;
-        EXPECT_NO_THROW(outs += GOut(outGOpaque));
     }
 
-    TEST(DynamicGraph, AddRunArgs)
+    typedef ::testing::Types<cv::Mat,
+#if !defined(GAPI_STANDALONE)
+                             cv::UMat,
+#endif // !defined(GAPI_STANDALONE)
+                             cv::Scalar,
+                             cv::detail::VectorRef,
+                             cv::detail::OpaqueRef> VectorRunTypes;
+
+    template<typename T> struct DynamicGraphRunArgs: public ::testing::Test { using Type = T; };
+
+    TYPED_TEST_CASE(DynamicGraphRunArgs, VectorRunTypes);
+
+    TYPED_TEST(DynamicGraphRunArgs, AddRunArgs)
     {
         auto in_vector = cv::gin();
 
-        cv::Mat in_mat;
-        EXPECT_NO_THROW(in_vector += cv::gin(in_mat));
-
-#if !defined(GAPI_STANDALONE)
-        cv::UMat in_umat;
-        EXPECT_NO_THROW(in_vector += cv::gin(in_umat));
-#endif // !defined(GAPI_STANDALONE)
-
-        cv::Scalar in_scalar {1, 2, 3};
-        EXPECT_NO_THROW(in_vector += cv::gin(in_scalar));
-
-        cv::detail::VectorRef writer;
-        EXPECT_NO_THROW(in_vector += cv::gin(writer));
-
-        cv::detail::OpaqueRef opaque;
-        EXPECT_NO_THROW(in_vector += cv::gin(opaque));
+        using T = typename TestFixture::Type;
+        T in;
+        EXPECT_NO_THROW(in_vector += cv::gin(in));
     }
 
-    TEST(DynamicGraph, AddRunArgsP)
+    TYPED_TEST(DynamicGraphRunArgs, AddRunArgsP)
     {
         auto out_vector = cv::gout();
 
-        cv::Mat out_mat;
-        EXPECT_NO_THROW(out_vector += cv::gout(out_mat));
-
-#if !defined(GAPI_STANDALONE)
-        cv::UMat out_umat;
-        EXPECT_NO_THROW(out_vector += cv::gout(out_umat));
-#endif // !defined(GAPI_STANDALONE)
-
-        cv::Scalar out_scalar;
-        EXPECT_NO_THROW(out_vector += cv::gout(out_scalar));
-
-        cv::detail::VectorRef writer;
-        EXPECT_NO_THROW(out_vector += cv::gout(writer));
-
-        cv::detail::OpaqueRef opaque;
-        EXPECT_NO_THROW(out_vector += cv::gout(opaque));
+        using T = typename TestFixture::Type;
+        T out;
+        EXPECT_NO_THROW(out_vector += cv::gout(out));
     }
 
     TEST(DynamicGraph, ProtoInputArgsExecute)
