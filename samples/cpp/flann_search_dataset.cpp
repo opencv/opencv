@@ -1,25 +1,22 @@
-// FLANN_search_dataset_Demo.cpp
+// flann_search_dataset.cpp
 // Naive program to search a query picture in a dataset illustrating usage of FLANN
 
 #include <iostream>
 #include <vector>
 #include "opencv2/core.hpp"
 #include "opencv2/core/utils/filesystem.hpp"
-#ifdef HAVE_OPENCV_XFEATURES2D
 #include "opencv2/highgui.hpp"
 #include "opencv2/features2d.hpp"
-#include "opencv2/xfeatures2d.hpp"
 #include "opencv2/flann.hpp"
 
 using namespace cv;
-using namespace cv::xfeatures2d;
 using std::cout;
 using std::endl;
 
 #define _ORB_
 
 const char* keys =
-    "{ help h |  | Print help message. }"
+    "{ help h | | Print help message. }"
     "{ dataset | | Path to the images folder used as dataset. }"
     "{ image |   | Path to the image to search for in the dataset. }"
     "{ save |    | Path and filename where to save the flann structure to. }"
@@ -40,23 +37,18 @@ int main( int argc, char* argv[] )
 {
     //-- Test the program options
     CommandLineParser parser( argc, argv, keys );
-    const cv::String img_path = parser.get<String>("image");
-    if ((img_path != String()) && (!utils::fs::exists(img_path)))
+    if (parser.has("help"))
     {
-        cout << "Query image " << img_path.c_str() << " doesn't exist!" << endl;
+        parser.printMessage();
         return -1;
     }
 
-    Mat img;
-    if (img_path != String())
+    const cv::String img_path = parser.get<String>("image");
+    Mat img = imread( samples::findFile( img_path ), IMREAD_GRAYSCALE );
+    if (img.empty() )
     {
-        img = imread( samples::findFile( img_path ), IMREAD_GRAYSCALE );
-        if (img.empty() )
-        {
-            cout << "Could not open the image!" << endl;
-            parser.printMessage();
-            return -1;
-        }
+        cout << "Could not open the image "<< img_path << endl;
+        return -1;
     }
 
     const cv::String db_path = parser.get<String>("dataset");
@@ -78,14 +70,14 @@ int main( int argc, char* argv[] )
 
     //-- Step 1: Detect the keypoints using a detector, compute the descriptors
     //   in the folder containing the images of the dataset
-#ifdef _SURF_
+#ifdef _SIFT_
     int minHessian = 400;
-    Ptr<Feature2D> detector = SURF::create( minHessian );
+    Ptr<Feature2D> detector = SIFT::create( minHessian );
 #elif defined(_ORB_)
     Ptr<Feature2D> detector = ORB::create();
 #else
     cout << "Missing or unknown defined descriptor. "
-            "Only SURF and ORB are currently interfaced here" << endl;
+            "Only SIFT and ORB are currently interfaced here" << endl;
     return -1;
 #endif
 
@@ -126,25 +118,22 @@ int main( int argc, char* argv[] )
     }
 
     //-- Step 2: build the structure storing the descriptors
-#if defined(_SIFT_) || defined(_SURF_)
-
-    flann::GenericIndex<cvflann::L2<float> >* index;
+#if defined(_SIFT_)
+    cv::Ptr<flann::GenericIndex<cvflann::L2<float> > > index;
     if (load_db_path != String())
-        index = new flann::GenericIndex<cvflann::L2<float> >(db_descriptors,
+        index = cv::makePtr<flann::GenericIndex<cvflann::L2<float> > >(db_descriptors,
                                                              cvflann::SavedIndexParams(load_db_path));
     else
-        index = new flann::GenericIndex<cvflann::L2<float> >(db_descriptors,
+        index = cv::makePtr<flann::GenericIndex<cvflann::L2<float> > >(db_descriptors,
                                                              cvflann::KDTreeIndexParams(4));
 
-#elif defined(_ORB_) || defined(_BRISK_) || defined(_FREAK_) || defined(_AKAZE_)
-
-    /* /!\ in case of 'anyimpl::bad_any_cast', requires the get_param fix in LshIndex ctor */
-    flann::GenericIndex<cvflann::Hamming<unsigned char> >* index;
+#elif defined(_ORB_)
+    cv::Ptr<flann::GenericIndex<cvflann::Hamming<unsigned char> > > index;
     if (load_db_path != String())
-        index  = new flann::GenericIndex<cvflann::Hamming<unsigned char> >
+        index  = cv::makePtr<flann::GenericIndex<cvflann::Hamming<unsigned char> > >
                 (db_descriptors, cvflann::SavedIndexParams(load_db_path));
     else
-        index  = new flann::GenericIndex<cvflann::Hamming<unsigned char> >
+        index  = cv::makePtr<flann::GenericIndex<cvflann::Hamming<unsigned char> > >
                 (db_descriptors, cvflann::LshIndexParams());
 #else
     cout<< "Descriptor not listed. Set the proper FLANN distance for this descriptor" <<endl;
@@ -168,9 +157,11 @@ int main( int argc, char* argv[] )
     // /!\ knnSearch doesn't follow OpenCV standards by not initialising empty Mat properties
     const int knn = 2;
     Mat indices(img_descriptors.rows, knn, CV_32S);
-#if defined(_SIFT_) || defined(_SURF_)
+#if defined(_SIFT_)
+#define DIST_TYPE float
     Mat dists(img_descriptors.rows, knn, CV_32F);
-#elif defined(_ORB_) || defined(_BRISK_) || defined(_FREAK_) || defined(_AKAZE_)
+#elif defined(_ORB_)
+#define DIST_TYPE int
     Mat dists(img_descriptors.rows, knn, CV_32S);
 #endif
     index->knnSearch( img_descriptors, indices, dists, knn, cvflann::SearchParams(32) );
@@ -181,10 +172,11 @@ int main( int argc, char* argv[] )
     std::vector<unsigned int> matches_per_img_histogram( nbr_of_imgs, 0 );
     for (int i = 0; i < dists.rows; ++i)
     {
-        if (dists.at<float>(i,0) < ratio_thresh * dists.at<float>(i,1))
+        if (dists.at<DIST_TYPE>(i,0) < ratio_thresh * dists.at<DIST_TYPE>(i,1))
         {
             const int indice_in_db = indices.at<int>(i,0);
-            DMatch dmatch(i, indice_in_db, db_indice_2_image_lut[indice_in_db], dists.at<float>(i,0));
+            DMatch dmatch(i, indice_in_db, db_indice_2_image_lut[indice_in_db],
+                          static_cast<float>(dists.at<DIST_TYPE>(i,0)));
             good_matches.push_back( dmatch );
             matches_per_img_histogram[ db_indice_2_image_lut[indice_in_db] ]++;
         }
@@ -223,7 +215,7 @@ int main( int argc, char* argv[] )
 
     std::multimap<float, img_info>::iterator it = images_infos.begin();
     ++it;
-    while ((it->first < 1.1*best_matches_proportion) && (it!=images_infos.end()))
+    while ((it!=images_infos.end()) && (it->first < 1.1*best_matches_proportion))
     {
         const float ratio = new_matches_proportion / it->first;
         if( it->second.nbr_of_matches * (ratio * ratio) > best_img.nbr_of_matches)
@@ -252,20 +244,7 @@ int main( int argc, char* argv[] )
 
     //-- Show detected matches
     imshow("Good Matches", img_matches );
+    waitKey();
 
-    while(1)
-    {
-        int k = waitKey();
-        if (k == 27) // Esc key
-            break;
-    }
-    delete index;
     return 0;
 }
-#else
-int main()
-{
-    std::cout << "This tutorial code needs the xfeatures2d contrib module to be run." << std::endl;
-    return 0;
-}
-#endif
