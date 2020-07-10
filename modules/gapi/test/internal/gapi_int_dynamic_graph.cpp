@@ -13,34 +13,92 @@ namespace opencv_test
 {
     TEST(DynamicGraph, AddProtoInputArgs)
     {
-        cv::GMat in1;
-        cv::GProtoInputArgs ins = GIn(in1);
+        auto ins = GIn();
 
-        cv::GMat in2;
-        EXPECT_NO_THROW(ins += GIn(in2));
+        cv::GMat in;
+        EXPECT_NO_THROW(ins += GIn(in));
+
+        cv::GScalar inScalar;
+        EXPECT_NO_THROW(ins += GIn(inScalar));
+
+        cv::GMatP inGMatP;
+        EXPECT_NO_THROW(ins += GIn(inGMatP));
+
+        cv::GFrame inGFrame;
+        EXPECT_NO_THROW(ins += GIn(inGFrame));
+
+        cv::GArray<int> inGArray;
+        EXPECT_NO_THROW(ins += GIn(inGArray));
+
+        cv::GOpaque<int> inGOpaque;
+        EXPECT_NO_THROW(ins += GIn(inGOpaque));
     }
 
     TEST(DynamicGraph, AddProtoOutputArgs)
     {
-        cv::GMat out1;
-        cv::GProtoOutputArgs outs = GOut(out1);
+        auto outs = GOut();
 
-        cv::GMat out2;
-        EXPECT_NO_THROW(outs += GOut(out2));
+        cv::GMat out;
+        EXPECT_NO_THROW(outs += GOut(out));
+
+        cv::GScalar outScalar;
+        EXPECT_NO_THROW(outs += GOut(outScalar));
+
+        cv::GMatP outGMatP;
+        EXPECT_NO_THROW(outs += GOut(outGMatP));
+
+        cv::GFrame outGFrame;
+        EXPECT_NO_THROW(outs += GOut(outGFrame));
+
+        cv::GArray<int> outGArray;
+        EXPECT_NO_THROW(outs += GOut(outGArray));
+
+        cv::GOpaque<int> outGOpaque;
+        EXPECT_NO_THROW(outs += GOut(outGOpaque));
     }
 
     TEST(DynamicGraph, AddRunArgs)
     {
-        cv::Mat in_mat;
         auto in_vector = cv::gin();
+
+        cv::Mat in_mat;
         EXPECT_NO_THROW(in_vector += cv::gin(in_mat));
+
+#if !defined(GAPI_STANDALONE)
+        cv::UMat in_umat;
+        EXPECT_NO_THROW(in_vector += cv::gin(in_umat));
+#endif // !defined(GAPI_STANDALONE)
+
+        cv::Scalar in_scalar {1, 2, 3};
+        EXPECT_NO_THROW(in_vector += cv::gin(in_scalar));
+
+        cv::detail::VectorRef writer;
+        EXPECT_NO_THROW(in_vector += cv::gin(writer));
+
+        cv::detail::OpaqueRef opaque;
+        EXPECT_NO_THROW(in_vector += cv::gin(opaque));
     }
 
     TEST(DynamicGraph, AddRunArgsP)
     {
-        cv::Mat out_mat;
         auto out_vector = cv::gout();
+
+        cv::Mat out_mat;
         EXPECT_NO_THROW(out_vector += cv::gout(out_mat));
+
+#if !defined(GAPI_STANDALONE)
+        cv::UMat out_umat;
+        EXPECT_NO_THROW(out_vector += cv::gout(out_umat));
+#endif // !defined(GAPI_STANDALONE)
+
+        cv::Scalar out_scalar;
+        EXPECT_NO_THROW(out_vector += cv::gout(out_scalar));
+
+        cv::detail::VectorRef writer;
+        EXPECT_NO_THROW(out_vector += cv::gout(writer));
+
+        cv::detail::OpaqueRef opaque;
+        EXPECT_NO_THROW(out_vector += cv::gout(opaque));
     }
 
     TEST(DynamicGraph, ProtoInputArgsExecute)
@@ -85,6 +143,31 @@ namespace opencv_test
     }
 
     TEST(DynamicGraph, ProtoOutputInputArgsExecute)
+    {
+        cv::GComputation cc([]() {
+            cv::GMat in1;
+            cv::GProtoInputArgs ins = GIn(in1);
+
+            cv::GMat in2;
+            ins += GIn(in2);
+
+            cv::GMat out1 = cv::gapi::copy(in1 + in2);
+            cv::GProtoOutputArgs outs = GOut(out1);
+
+            cv::GMat out2 = cv::gapi::copy(in1 + in2);
+            outs += GOut(out2);
+
+            return cv::GComputation(std::move(ins), std::move(outs));
+        });
+
+        cv::Mat in_mat1 = cv::Mat::eye(32, 32, CV_8UC1);
+        cv::Mat in_mat2 = cv::Mat::eye(32, 32, CV_8UC1);
+        cv::Mat out_mat1, out_mat2;
+
+        EXPECT_NO_THROW(cc.apply(cv::gin(in_mat1, in_mat2), cv::gout(out_mat1, out_mat2)));
+    }
+
+    TEST(DynamicGraph, ProtoArgsExecute)
     {
         cv::GComputation cc([]() {
             cv::GMat in1;
