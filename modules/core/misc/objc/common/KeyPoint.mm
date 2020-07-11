@@ -6,6 +6,8 @@
 
 #import "KeyPoint.h"
 #import "Point2f.h"
+
+#define HASH_UTILS
 #import "CVObjcUtil.h"
 
 @implementation KeyPoint {

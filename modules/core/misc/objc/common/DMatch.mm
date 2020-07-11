@@ -5,6 +5,8 @@
 //
 
 #import "DMatch.h"
+
+#define HASH_UTILS
 #import "CVObjcUtil.h"
 
 @implementation DMatch {

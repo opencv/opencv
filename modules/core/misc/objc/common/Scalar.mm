@@ -5,6 +5,8 @@
 //
 
 #import "Scalar.h"
+
+#define HASH_UTILS
 #import "CVObjcUtil.h"
 
 double getVal(NSArray<NSNumber*>* vals, int index) {

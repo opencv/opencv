@@ -5,6 +5,8 @@
 //
 
 #import "TermCriteria.h"
+
+#define HASH_UTILS
 #import "CVObjcUtil.h"
 
 @implementation TermCriteria {

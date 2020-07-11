@@ -7,6 +7,8 @@
 #import "Rect2f.h"
 #import "Point2f.h"
 #import "Size2f.h"
+
+#define HASH_UTILS
 #import "CVObjcUtil.h"
 
 @implementation Rect2f {

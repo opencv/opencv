@@ -8,6 +8,8 @@
 #import "Point2f.h"
 #import "Size2f.h"
 #import "Rect2f.h"
+
+#define HASH_UTILS
 #import "CVObjcUtil.h"
 
 #include <math.h>

@@ -6,6 +6,8 @@
 
 #import "Point3d.h"
 #import "Point2d.h"
+
+#define HASH_UTILS
 #import "CVObjcUtil.h"
 
 @implementation Point3d {
