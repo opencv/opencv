@@ -82,6 +82,12 @@ template<>
 inline unsigned char round<unsigned char>(float x) { return static_cast<unsigned char>(x + 0.5f); }
 
 template<>
+inline long long round<long long>(float x) { return static_cast<long long>(x + 0.5f); }
+
+template<>
+inline long round<long>(float x) { return static_cast<long>(x + 0.5f); }
+
+template<>
 inline int round<int>(float x) { return static_cast<int>(x + 0.5f) - (x<0); }
 
 template<>
@@ -89,6 +95,34 @@ inline short round<short>(float x) { return static_cast<short>(x + 0.5f) - (x<0)
 
 template<>
 inline char round<char>(float x) { return static_cast<char>(x + 0.5f) - (x<0); }
+
+
+template<typename TargetType>
+inline TargetType round(double x) { return static_cast<TargetType>(x); }
+
+template<>
+inline unsigned int round<unsigned int>(double x) { return static_cast<unsigned int>(x + 0.5); }
+
+template<>
+inline unsigned short round<unsigned short>(double x) { return static_cast<unsigned short>(x + 0.5); }
+
+template<>
+inline unsigned char round<unsigned char>(double x) { return static_cast<unsigned char>(x + 0.5); }
+
+template<>
+inline long long round<long long>(double x) { return static_cast<long long>(x + 0.5); }
+
+template<>
+inline long round<long>(double x) { return static_cast<long>(x + 0.5); }
+
+template<>
+inline int round<int>(double x) { return static_cast<int>(x + 0.5) - (x<0); }
+
+template<>
+inline short round<short>(double x) { return static_cast<short>(x + 0.5) - (x<0); }
+
+template<>
+inline char round<char>(double x) { return static_cast<char>(x + 0.5) - (x<0); }
 
 
 template<typename T>

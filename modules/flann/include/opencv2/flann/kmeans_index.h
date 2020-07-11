@@ -685,7 +685,7 @@ private:
         }
         float length = static_cast<float>(indices_length);
         for (size_t j=0; j<veclen_; ++j) {
-            mean[j] /= static_cast<CentersType>( length );
+            mean[j] = cvflann::round<CentersType>( mean[j] / static_cast<double>(indices_length) );
         }
         variance /= static_cast<DistanceType>( length );
         variance -= distance_(mean, ZeroIterator<ElementType>(), veclen_);
