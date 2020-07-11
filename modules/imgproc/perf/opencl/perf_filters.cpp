@@ -313,6 +313,62 @@ OCL_PERF_TEST_P(Filter2DFixture, Filter2D,
     SANITY_CHECK(dst, eps);
 }
 
+///////////// SepFilter2D /////////////
+
+typedef FilterFixture OCL_SepFilter2D;
+
+PERF_TEST_P_(OCL_SepFilter2D, SepFilter2D)
+{
+    const FilterParams& params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params), ksize = get<2>(params);
+
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+
+    UMat src(srcSize, type), dst(srcSize, type);
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    Mat kernelX(1, ksize, CV_32FC1);
+    randu(kernelX, -3.0, 3.0);
+    Mat kernelY(1, ksize, CV_32FC1);
+    randu(kernelY, -3.0, 3.0);
+
+    OCL_TEST_CYCLE() cv::sepFilter2D(src, dst, -1, kernelX, kernelY, cv::Point(-1, -1), 1.0f, cv::BORDER_CONSTANT);
+
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P_(OCL_SepFilter2D, SepFilter2D_BitExact)
+{
+    const FilterParams& params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params), ksize = get<2>(params);
+
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+
+    UMat src(srcSize, type), dst(srcSize, type);
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    Mat kernelX(1, ksize, CV_32SC1);
+    randu(kernelX, -16.0, 16.0);
+    kernelX.convertTo(kernelX, CV_32FC1, 1/16.0f, 0);
+    Mat kernelY(1, ksize, CV_32SC1);
+    randu(kernelY, -16.0, 16.0);
+    kernelY.convertTo(kernelY, CV_32FC1, 1/16.0f, 0);
+
+    OCL_TEST_CYCLE() cv::sepFilter2D(src, dst, -1, kernelX, kernelY, cv::Point(-1, -1), 1.0f, cv::BORDER_CONSTANT);
+
+    SANITY_CHECK_NOTHING();
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, OCL_SepFilter2D,
+    ::testing::Combine(
+        ::testing::Values(sz1080p),
+        OCL_TEST_TYPES,
+        OCL_PERF_ENUM(3, 5, 7, 9, 11)
+    )
+);
+
 ///////////// Bilateral ////////////////////////
 
 typedef TestBaseWithParam<Size> BilateralFixture;

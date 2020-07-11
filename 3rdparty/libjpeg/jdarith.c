@@ -1,7 +1,7 @@
 /*
  * jdarith.c
  *
- * Developed 1997-2015 by Guido Vollbeding.
+ * Developed 1997-2019 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -280,7 +280,7 @@ decode_mcu_DC_first (j_decompress_ptr cinfo, JBLOCKROW *MCU_data)
       if ((m = arith_decode(cinfo, st)) != 0) {
 	st = entropy->dc_stats[tbl] + 20;	/* Table F.4: X1 = 20 */
 	while (arith_decode(cinfo, st)) {
-	  if ((m <<= 1) == 0x8000) {
+	  if ((m <<= 1) == (int) 0x8000U) {
 	    WARNMS(cinfo, JWRN_ARITH_BAD_CODE);
 	    entropy->ct = -1;			/* magnitude overflow */
 	    return TRUE;
@@ -370,7 +370,7 @@ decode_mcu_AC_first (j_decompress_ptr cinfo, JBLOCKROW *MCU_data)
 	st = entropy->ac_stats[tbl] +
 	     (k <= cinfo->arith_ac_K[tbl] ? 189 : 217);
 	while (arith_decode(cinfo, st)) {
-	  if ((m <<= 1) == 0x8000) {
+	  if ((m <<= 1) == (int) 0x8000U) {
 	    WARNMS(cinfo, JWRN_ARITH_BAD_CODE);
 	    entropy->ct = -1;			/* magnitude overflow */
 	    return TRUE;
@@ -404,7 +404,8 @@ decode_mcu_DC_refine (j_decompress_ptr cinfo, JBLOCKROW *MCU_data)
 {
   arith_entropy_ptr entropy = (arith_entropy_ptr) cinfo->entropy;
   unsigned char *st;
-  int p1, blkn;
+  JCOEF p1;
+  int blkn;
 
   /* Process restart marker if needed */
   if (cinfo->restart_interval) {
@@ -440,7 +441,7 @@ decode_mcu_AC_refine (j_decompress_ptr cinfo, JBLOCKROW *MCU_data)
   JCOEFPTR thiscoef;
   unsigned char *st;
   int tbl, k, kex;
-  int p1, m1;
+  JCOEF p1, m1;
   const int * natural_order;
 
   /* Process restart marker if needed */
@@ -459,7 +460,7 @@ decode_mcu_AC_refine (j_decompress_ptr cinfo, JBLOCKROW *MCU_data)
   tbl = cinfo->cur_comp_info[0]->ac_tbl_no;
 
   p1 = 1 << cinfo->Al;		/* 1 in the bit position being coded */
-  m1 = (-1) << cinfo->Al;	/* -1 in the bit position being coded */
+  m1 = -p1;			/* -1 in the bit position being coded */
 
   /* Establish EOBx (previous stage end-of-block) index */
   kex = cinfo->Se;
@@ -555,7 +556,7 @@ decode_mcu (j_decompress_ptr cinfo, JBLOCKROW *MCU_data)
       if ((m = arith_decode(cinfo, st)) != 0) {
 	st = entropy->dc_stats[tbl] + 20;	/* Table F.4: X1 = 20 */
 	while (arith_decode(cinfo, st)) {
-	  if ((m <<= 1) == 0x8000) {
+	  if ((m <<= 1) == (int) 0x8000U) {
 	    WARNMS(cinfo, JWRN_ARITH_BAD_CODE);
 	    entropy->ct = -1;			/* magnitude overflow */
 	    return TRUE;
@@ -612,7 +613,7 @@ decode_mcu (j_decompress_ptr cinfo, JBLOCKROW *MCU_data)
 	  st = entropy->ac_stats[tbl] +
 	       (k <= cinfo->arith_ac_K[tbl] ? 189 : 217);
 	  while (arith_decode(cinfo, st)) {
-	    if ((m <<= 1) == 0x8000) {
+	    if ((m <<= 1) == (int) 0x8000U) {
 	      WARNMS(cinfo, JWRN_ARITH_BAD_CODE);
 	      entropy->ct = -1;			/* magnitude overflow */
 	      return TRUE;
@@ -766,9 +767,8 @@ jinit_arith_decoder (j_decompress_ptr cinfo)
   arith_entropy_ptr entropy;
   int i;
 
-  entropy = (arith_entropy_ptr)
-    (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
-				SIZEOF(arith_entropy_decoder));
+  entropy = (arith_entropy_ptr) (*cinfo->mem->alloc_small)
+    ((j_common_ptr) cinfo, JPOOL_IMAGE, SIZEOF(arith_entropy_decoder));
   cinfo->entropy = &entropy->pub;
   entropy->pub.start_pass = start_pass;
   entropy->pub.finish_pass = finish_pass;
@@ -785,9 +785,9 @@ jinit_arith_decoder (j_decompress_ptr cinfo)
   if (cinfo->progressive_mode) {
     /* Create progression status table */
     int *coef_bit_ptr, ci;
-    cinfo->coef_bits = (int (*)[DCTSIZE2])
-      (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
-				  cinfo->num_components*DCTSIZE2*SIZEOF(int));
+    cinfo->coef_bits = (int (*)[DCTSIZE2]) (*cinfo->mem->alloc_small)
+      ((j_common_ptr) cinfo, JPOOL_IMAGE,
+       cinfo->num_components * DCTSIZE2 * SIZEOF(int));
     coef_bit_ptr = & cinfo->coef_bits[0][0];
     for (ci = 0; ci < cinfo->num_components; ci++) 
       for (i = 0; i < DCTSIZE2; i++)

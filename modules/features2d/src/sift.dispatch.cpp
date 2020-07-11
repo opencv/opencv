@@ -126,6 +126,11 @@ Ptr<SIFT> SIFT::create( int _nfeatures, int _nOctaveLayers,
     return makePtr<SIFT_Impl>(_nfeatures, _nOctaveLayers, _contrastThreshold, _edgeThreshold, _sigma);
 }
 
+String SIFT::getDefaultName() const
+{
+    return (Feature2D::getDefaultName() + ".SIFT");
+}
+
 static inline void
 unpackOctave(const KeyPoint& kpt, int& octave, int& layer, float& scale)
 {

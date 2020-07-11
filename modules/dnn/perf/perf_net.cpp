@@ -216,6 +216,19 @@ PERF_TEST_P_(DNNTestNetwork, YOLOv4)
     processNet("dnn/yolov4.weights", "dnn/yolov4.cfg", "", inp);
 }
 
+PERF_TEST_P_(DNNTestNetwork, YOLOv4_tiny)
+{
+    if (backend == DNN_BACKEND_HALIDE)
+        throw SkipTestException("");
+    if (target == DNN_TARGET_MYRIAD)
+        throw SkipTestException("");
+    Mat sample = imread(findDataFile("dnn/dog416.png"));
+    cvtColor(sample, sample, COLOR_BGR2RGB);
+    Mat inp;
+    sample.convertTo(inp, CV_32FC3, 1.0f / 255, 0);
+    processNet("dnn/yolov4-tiny.weights", "dnn/yolov4-tiny.cfg", "", inp);
+}
+
 PERF_TEST_P_(DNNTestNetwork, EAST_text_detection)
 {
     if (backend == DNN_BACKEND_HALIDE)
