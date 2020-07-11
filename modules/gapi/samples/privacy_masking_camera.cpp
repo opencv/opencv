@@ -21,7 +21,7 @@ const std::string keys =
     "{ input  |                                                  | Path to the input video file }"
     "{ platm  | vehicle-license-plate-detection-barrier-0106.xml | Path to OpenVINO IE vehicle/plate detection model (.xml) }"
     "{ platd  | CPU                                              | Target device for vehicle/plate detection model (e.g. CPU, GPU, VPU, ...) }"
-    "{ facem  | face-detection-adas-0001.xml                     | Path to OpenVINO IE face detection model (.xml) }"
+    "{ facem  | face-detection-retail-0005.xml                   | Path to OpenVINO IE face detection model (.xml) }"
     "{ faced  | CPU                                              | Target device for face detection model (e.g. CPU, GPU, VPU, ...) }"
     "{ trad   | false                                            | Run processing in a traditional (non-pipelined) way }"
     "{ noshow | false                                            | Don't display UI (improves performance) }";
