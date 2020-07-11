@@ -18,6 +18,11 @@
 #define QUIRC_H_
 
 #include <stdint.h>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/highgui.hpp>
+#include "opencv2/videoio.hpp"
+#include "opencv2/imgcodecs.hpp"
+#include <opencv2/objdetect.hpp>
 
 #ifdef __cplusplus
 extern "C" {
@@ -125,8 +130,16 @@ struct quirc_code {
 	 *
 	 * where i = (y * size) + x.
 	 */
+	/*长度而不是总大小*/
 	int			size;
 	uint8_t			cell_bitmap[QUIRC_MAX_BITMAP];
+};
+
+struct QR_Info {
+	/* The four corners of the QR-code, from top left, clockwise */
+	cv::Point corners[4];
+	int	size;
+	cv::Mat cell_bitmap;
 };
 
 /* This structure holds the decoded QR-code data */
@@ -146,6 +159,7 @@ struct quirc_data {
 	/* Data payload. For the Kanji datatype, payload is encoded as
 	 * Shift-JIS. For all other datatypes, payload is ASCII text.
 	 */
+	/*????*/
 	uint8_t			payload[QUIRC_MAX_PAYLOAD];
 	int			payload_len;
 
@@ -163,7 +177,7 @@ void quirc_extract(const struct quirc *q, int index,
 		   struct quirc_code *code);
 
 /* Decode a QR-code, returning the payload data. */
-quirc_decode_error_t quirc_decode(const struct quirc_code *code,
+quirc_decode_error_t quirc_decode(const struct quirc_code *code,const struct QR_Info*info,
 				  struct quirc_data *data);
 
 #ifdef __cplusplus
