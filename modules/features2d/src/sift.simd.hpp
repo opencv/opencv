@@ -73,6 +73,7 @@
 
 #include <opencv2/core/hal/hal.hpp>
 #include "opencv2/core/hal/intrin.hpp"
+#include <opencv2/core/utils/buffer_area.private.hpp>
 
 namespace cv {
 
@@ -167,23 +168,17 @@ float calcOrientationHist(
     int i, j, k, len = (radius*2+1)*(radius*2+1);
 
     float expf_scale = -1.f/(2.f * sigma * sigma);
-#if CV_SIMD
-    AutoBuffer<float> bufX(len + v_float32::nlanes);
-    AutoBuffer<float> bufY(len + v_float32::nlanes);
-    AutoBuffer<float> bufO(len + v_float32::nlanes);
-    AutoBuffer<float> bufW(len + v_float32::nlanes);
-    AutoBuffer<float> bufT(n+4 + v_float32::nlanes);
-    float *X = alignPtr(bufX.data(), CV_SIMD_WIDTH);
-    float *Y = alignPtr(bufY.data(), CV_SIMD_WIDTH);
-    float *Mag = X;
-    float *Ori = alignPtr(bufO.data(), CV_SIMD_WIDTH);
-    float *W = alignPtr(bufW.data(), CV_SIMD_WIDTH);
-    float *temphist = alignPtr(bufT.data(), CV_SIMD_WIDTH)+2;
-#else
-    AutoBuffer<float> buf(len*4 + n+4);
-    float *X = buf.data(), *Y = X + len, *Mag = X, *Ori = Y + len, *W = Ori + len;
-    float* temphist = W + len + 2;
-#endif
+
+    cv::utils::BufferArea area;
+    float *X = 0, *Y = 0, *Mag, *Ori = 0, *W = 0, *temphist = 0;
+    area.allocate(X, len, CV_SIMD_WIDTH);
+    area.allocate(Y, len, CV_SIMD_WIDTH);
+    area.allocate(Ori, len, CV_SIMD_WIDTH);
+    area.allocate(W, len, CV_SIMD_WIDTH);
+    area.allocate(temphist, n+4, CV_SIMD_WIDTH);
+    area.commit();
+    temphist += 2;
+    Mag = X;
 
     for( i = 0; i < n; i++ )
         temphist[i] = 0.f;
