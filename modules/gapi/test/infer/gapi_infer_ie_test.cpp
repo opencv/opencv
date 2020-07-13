@@ -247,7 +247,10 @@ struct ROIList: public ::testing::Test {
         initDLDTDataPath();
         std::tie(m_model_path, m_weights_path) = findModel("age-gender-recognition-retail-0013");
 
-        m_in_mat = cv::imread(findDataFile("../dnn/grace_hopper_227.png", false));
+        // FIXME: it must be cv::imread(findDataFile("../dnn/grace_hopper_227.png", false));
+        m_in_mat = cv::Mat(cv::Size(320, 240), CV_8UC3);
+        cv::randu(m_in_mat, 0, 255);
+
         // both ROIs point to the same face, with a slightly changed geometry
         m_roi_list = {
             cv::Rect(cv::Point{64, 60}, cv::Size{ 96,  96}),
