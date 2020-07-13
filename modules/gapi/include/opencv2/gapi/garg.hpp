@@ -107,6 +107,10 @@ using GRunArgs = std::vector<GRunArg>;
  * @brief This operator allows to complement the input vector at runtime.
  *
  * It's an ordinary overload of addition assignment operator.
+ *
+ * Example of usage:
+ * @snippet dynamic_graph.cpp GRunArgsP usage
+ *
  */
 inline GRunArgs& operator += (GRunArgs &lhs, const GRunArgs &rhs)
 {
@@ -151,6 +155,9 @@ using GRunArgsP = std::vector<GRunArgP>;
  * @brief This operator allows to complement the output vector at runtime.
  *
  * It's an ordinary overload of addition assignment operator.
+ *
+ * Example of usage:
+ * @snippet dynamic_graph.cpp GRunArgsP usage
  *
  */
 inline GRunArgsP& operator += (GRunArgsP &lhs, const GRunArgsP &rhs)
