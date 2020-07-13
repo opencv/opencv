@@ -33,6 +33,7 @@ int main(int argc, char *argv[])
 // ! [GIOProtoArgs usage]
         return cv::GComputation(std::move(ins), std::move(outs));
     });
+
 // ! [GRunArgs usage]
     auto in_vector = cv::gin();
 
