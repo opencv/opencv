@@ -651,7 +651,7 @@ void calcSIFTDescriptor(
             v_float32 v_rco011 = v_rc01*obin, v_rco010 = v_rc01 - v_rco011;
             v_float32 v_rco001 = v_rc00*obin, v_rco000 = v_rc00 - v_rco001;
 
-            v_int32 idx = v_fma(v_fma(r0+__1, __d_plus_2, c0+__1), __n_plus_2, o0);
+            v_int32 idx = v_muladd(v_muladd(r0+__1, __d_plus_2, c0+__1), __n_plus_2, o0);
             v_store_aligned(idx_buf, idx);
 
             v_store_aligned(rco_buf,           v_rco000);
