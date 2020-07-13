@@ -1048,15 +1048,16 @@ bool CvCaptureCAM_V4L::grabFrame()
             return false;
         }
 
+        // No need to skip this if the first read returns false
+        /* preparation is ok */
+        FirstCapture = false;
+
 #if defined(V4L_ABORT_BADJPEG)
         // skip first frame. it is often bad -- this is unnotied in traditional apps,
         //  but could be fatal if bad jpeg is enabled
         if (!read_frame_v4l2())
             return false;
 #endif
-
-        /* preparation is ok */
-        FirstCapture = false;
     }
     // In the case that the grab frame was without retrieveFrame
     if (bufferIndex >= 0)

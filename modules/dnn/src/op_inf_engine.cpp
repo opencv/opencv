@@ -831,18 +831,18 @@ void InfEngineBackendNet::initPlugin(InferenceEngine::CNNNetwork& net)
                 CV_LOG_INFO(NULL, "DNN-IE: Can't register OpenCV custom layers extension: " << e.what());
             }
 #endif
-#ifndef _WIN32
             // Limit the number of CPU threads.
 #if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
+#ifndef _WIN32
             enginePtr->SetConfig({{
                 InferenceEngine::PluginConfigParams::KEY_CPU_THREADS_NUM, format("%d", getNumThreads()),
             }}, 0);
+#endif  // _WIN32
 #else
             if (device_name == "CPU")
                 ie.SetConfig({{
                     InferenceEngine::PluginConfigParams::KEY_CPU_THREADS_NUM, format("%d", getNumThreads()),
                 }}, device_name);
-#endif
 #endif
         }
 #if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
