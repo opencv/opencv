@@ -268,6 +268,51 @@ I::IStream& operator>> (I::IStream& is,       cv::GOpaqueDesc &) {return is;}
 I::OStream& operator<< (I::OStream& os, const cv::GArrayDesc &) {return os;}
 I::IStream& operator>> (I::IStream& is,       cv::GArrayDesc &) {return is;}
 
+#if !defined(GAPI_STANDALONE)
+I::OStream& operator<< (I::OStream& os, const cv::UMat &)
+{
+    GAPI_Assert(false && "Serialization: Unsupported << for UMat");
+    return os;
+}
+I::IStream& operator >> (I::IStream& is, cv::UMat &)
+{
+    GAPI_Assert(false && "Serialization: Unsupported >> for UMat");
+    return is;
+}
+#endif // !defined(GAPI_STANDALONE)
+
+I::OStream& operator<< (I::OStream& os, const cv::gapi::wip::IStreamSource::Ptr &)
+{
+    GAPI_Assert(false && "Serialization: Unsupported << for IStreamSource::Ptr");
+    return os;
+}
+I::IStream& operator >> (I::IStream& is, cv::gapi::wip::IStreamSource::Ptr &)
+{
+    GAPI_Assert("Serialization: Unsupported >> for IStreamSource::Ptr");
+    return is;
+}
+
+I::OStream& operator<< (I::OStream& os, const cv::detail::VectorRef &)
+{
+    GAPI_Assert(false && "Serialization: Unsupported << for cv::detail::VectorRef &");
+    return os;
+}
+I::IStream& operator >> (I::IStream& is, cv::detail::VectorRef &)
+{
+    GAPI_Assert(false && "Serialization: Unsupported >> for cv::detail::VectorRef &");
+    return is;
+}
+
+I::OStream& operator<< (I::OStream& os, const cv::detail::OpaqueRef &)
+{
+    GAPI_Assert(false && "Serialization: Unsupported << for cv::detail::OpaqueRef &");
+    return os;
+}
+I::IStream& operator >> (I::IStream& is, cv::detail::OpaqueRef &)
+{
+    GAPI_Assert(false && "Serialization: Unsupported >> for cv::detail::OpaqueRef &");
+    return is;
+}
 // Enums and structures
 
 namespace {
@@ -362,7 +407,6 @@ I::IStream& operator>> (I::IStream& is, cv::GArg &arg) {
     }
     return is;
 }
-
 
 I::OStream& operator<< (I::OStream& os, const cv::GKernel &k) {
     return os << k.name << k.tag << k.outShapes;
@@ -607,6 +651,24 @@ I::IStream& ByteMemoryInStream::operator>> (std::string& str) {
     }
     return *this;
 }
+
+GAPI_EXPORTS void serialize(I::OStream& os, const cv::GMetaArgs &ma) {
+    os << ma;
+}
+GAPI_EXPORTS void serialize(I::OStream& os, const cv::GRunArgs &ra) {
+    os << ra;
+}
+GAPI_EXPORTS GMetaArgs meta_args_deserialize(I::IStream& is) {
+    GMetaArgs s;
+    is >> s;
+    return s;
+}
+GAPI_EXPORTS GRunArgs run_args_deserialize(I::IStream& is) {
+    GRunArgs s;
+    is >> s;
+    return s;
+}
+
 
 } // namespace s11n
 } // namespace gimpl

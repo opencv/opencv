@@ -133,6 +133,11 @@ using GRunArgP = util::variant<
     >;
 using GRunArgsP = std::vector<GRunArgP>;
 
+namespace gapi
+{
+    GAPI_EXPORTS cv::GRunArgsP bind(cv::GRunArgs &results);
+}
+
 template<typename... Ts> inline GRunArgs gin(const Ts&... args)
 {
     return GRunArgs{ GRunArg(detail::wrap_host_helper<Ts>::wrap_in(args))... };
