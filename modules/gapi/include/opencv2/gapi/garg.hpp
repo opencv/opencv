@@ -109,7 +109,7 @@ using GRunArgs = std::vector<GRunArg>;
  * It's an ordinary overload of addition assignment operator.
  *
  * Example of usage:
- * @snippet dynamic_graph.cpp GRunArgsP usage
+ * @snippet dynamic_graph.cpp GRunArgs usage
  *
  */
 inline GRunArgs& operator += (GRunArgs &lhs, const GRunArgs &rhs)
