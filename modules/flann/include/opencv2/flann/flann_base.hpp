@@ -282,7 +282,7 @@ private:
  * of the form (branching-1)*K+1 smaller than clusters.rows).
  */
 template <typename Distance>
-int hierarchicalClustering(const Matrix<typename Distance::ElementType>& points, Matrix<typename Distance::ResultType>& centers,
+int hierarchicalClustering(const Matrix<typename Distance::ElementType>& points, Matrix<typename Distance::CentersType>& centers,
                            const KMeansIndexParams& params, Distance d = Distance())
 {
     KMeansIndex<Distance> kmeans(points, params, d);
