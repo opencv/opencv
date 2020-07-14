@@ -1779,7 +1779,7 @@ TEST(Core_InputOutput, FileStorage_copy_constructor_17412)
     fs_orig << "string" << "wat";
     fs_orig.release();
 
-    // crash:
+    // no crash anymore
     cv::FileStorage fs;
     fs = cv::FileStorage(fname,  cv::FileStorage::READ);
     std::string s;
