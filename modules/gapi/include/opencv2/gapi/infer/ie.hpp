@@ -78,8 +78,8 @@ public:
            const std::string &weights,
            const std::string &device)
         : desc{ model, weights, device, {}, {}, {}
-              , std::tuple_size<typename Net::InArgs>::value
-              , std::tuple_size<typename Net::OutArgs>::value
+              , std::tuple_size<typename Net::InArgs>::value  // num_in
+              , std::tuple_size<typename Net::OutArgs>::value // num_out
               } {
     };
 

@@ -49,6 +49,31 @@ std::ostream& operator<<(std::ostream& os, const cv::GArrayDesc &desc);
 
 namespace detail
 {
+    // FIXME: This type spec needs to be:
+    // 1) shared with GOpaque (not needed right now)
+    // 2) unified with the serialization (S11N, not merged right now).
+    // Adding it to type traits is problematic due to our header deps
+    // (which also need to be fixed).
+    enum class TypeSpec: int {
+        OPAQUE_SPEC,
+        MAT,
+        RECT
+    };
+    // FIXME: Reuse the below from "opaque traits" of S11N!
+    template<typename T> struct GTypeSpec;
+    template<typename T> struct GTypeSpec
+    {
+        static constexpr const TypeSpec spec = TypeSpec::OPAQUE_SPEC;
+    };
+    template<>           struct GTypeSpec<cv::Mat>
+    {
+        static constexpr const TypeSpec spec = TypeSpec::MAT;
+    };
+    template<>           struct GTypeSpec<cv::Rect>
+    {
+        static constexpr const TypeSpec spec = TypeSpec::RECT;
+    };
+
     // ConstructVec is a callback which stores information about T and is used by
     // G-API runtime to construct arrays in host memory (T remains opaque for G-API).
     // ConstructVec is carried into G-API internals by GArrayU.
@@ -110,12 +135,15 @@ namespace detail
     class BasicVectorRef
     {
     public:
+        // These fields are set by the derived class(es)
         std::size_t    m_elemSize = 0ul;
         cv::GArrayDesc m_desc;
+        TypeSpec       m_spec;
         virtual ~BasicVectorRef() {}
 
         virtual void mov(BasicVectorRef &ref) = 0;
         virtual const void* ptr() const = 0;
+        virtual std::size_t size() const = 0;
     };
 
     template<typename T> class VectorRefT final: public BasicVectorRef
@@ -135,6 +163,7 @@ namespace detail
         {
             m_elemSize = sizeof(T);
             if (vec) m_desc = cv::descr_of(*vec);
+            m_spec = GTypeSpec<T>::spec;
         }
 
     public:
@@ -209,7 +238,9 @@ namespace detail
             wref() = std::move(tv->wref());
         }
 
+
         virtual const void* ptr() const override { return &rref(); }
+        virtual std::size_t size() const override { return rref().size(); }
     };
 
     // This class strips type information from VectorRefT<> and makes it usable
@@ -265,8 +296,18 @@ namespace detail
             return m_ref->m_desc;
         }
 
+        std::size_t size() const
+        {
+            return m_ref->size();
+        }
+
         // May be used to uniquely identify this object internally
         const void *ptr() const { return m_ref->ptr(); }
+
+        TypeSpec spec() const
+        {
+            return m_ref->m_spec;
+        }
     };
 
     // Helper (FIXME: work-around?)

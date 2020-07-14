@@ -187,4 +187,19 @@ TEST(GArray_VectorRef, TestMov)
     EXPECT_EQ(V{}, vref.rref<I>());
     EXPECT_EQ(V{}, vtest);
 }
+
+TEST(GArray_VectorRef, Spec)
+{
+    cv::detail::VectorRef v1(std::vector<cv::Rect>{});
+    EXPECT_EQ(cv::detail::TypeSpec::RECT, v1.spec());
+
+    cv::detail::VectorRef v2(std::vector<cv::Mat>{});
+    EXPECT_EQ(cv::detail::TypeSpec::MAT,  v2.spec());
+
+    cv::detail::VectorRef v3(std::vector<int>{});
+    EXPECT_EQ(cv::detail::TypeSpec::OPAQUE_SPEC, v3.spec());
+
+    cv::detail::VectorRef v4(std::vector<std::string>{});
+    EXPECT_EQ(cv::detail::TypeSpec::OPAQUE_SPEC, v4.spec());
+}
 } // namespace opencv_test

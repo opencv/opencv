@@ -8,7 +8,7 @@
 #include "../test_precomp.hpp"
 
 namespace opencv_test {
-// Tests on T/Kind matching ////////////////////////////////////////////////////
+// Tests on T/Spec/Kind matching ///////////////////////////////////////////////
 // {{
 
 template<class T, cv::detail::ArgKind Exp>
@@ -74,6 +74,60 @@ TYPED_TEST(GArgKind, RValue)
 {
     cv::GArg arg = cv::GArg(typename TestFixture::Type());
     EXPECT_EQ(TestFixture::Kind, arg.kind);
+}
+
+// Repeat the same for Spec
+
+template<class T, cv::detail::ArgSpec Exp>
+struct ExpectedS
+{
+    using type = T;
+    static const constexpr cv::detail::ArgSpec spec = Exp;
+};
+
+template<typename T>
+struct ArgSpec: public ::testing::Test
+{
+    using Type = typename T::type;
+    const cv::detail::ArgSpec Spec = T::spec;
+};
+
+using Arg_Spec_Types = ::testing::Types
+   <
+  // G-API types
+     ExpectedS<cv::GMat,                 cv::detail::ArgSpec::OPAQUE_SPEC>
+   , ExpectedS<cv::GMatP,                cv::detail::ArgSpec::OPAQUE_SPEC>
+   , ExpectedS<cv::GFrame,               cv::detail::ArgSpec::OPAQUE_SPEC>
+   , ExpectedS<cv::GScalar,              cv::detail::ArgSpec::OPAQUE_SPEC>
+   , ExpectedS<cv::GArray<int>,          cv::detail::ArgSpec::OPAQUE_SPEC>
+   , ExpectedS<cv::GArray<float>,        cv::detail::ArgSpec::OPAQUE_SPEC>
+   , ExpectedS<cv::GArray<cv::Point>,    cv::detail::ArgSpec::OPAQUE_SPEC>
+   , ExpectedS<cv::GArray<cv::Rect>,     cv::detail::ArgSpec::RECT>
+   , ExpectedS<cv::GArray<cv::GMat>,     cv::detail::ArgSpec::GMAT>
+   , ExpectedS<cv::GOpaque<int>,         cv::detail::ArgSpec::OPAQUE_SPEC>
+   , ExpectedS<cv::GOpaque<float>,       cv::detail::ArgSpec::OPAQUE_SPEC>
+   , ExpectedS<cv::GOpaque<cv::Point>,   cv::detail::ArgSpec::OPAQUE_SPEC>
+   , ExpectedS<cv::GOpaque<cv::Rect>,    cv::detail::ArgSpec::RECT>
+// FIXME: causes internal conflicts in GOpaque/descr_of
+// , ExpectedS<cv::GOpaque<cv::Mat>,     cv::detail::ArgSpec::GMAT>
+
+ // Built-in types
+   , ExpectedS<int,                      cv::detail::ArgSpec::OPAQUE_SPEC>
+   , ExpectedS<float,                    cv::detail::ArgSpec::OPAQUE_SPEC>
+   , ExpectedS<int*,                     cv::detail::ArgSpec::OPAQUE_SPEC>
+   , ExpectedS<cv::Point,                cv::detail::ArgSpec::OPAQUE_SPEC>
+   , ExpectedS<std::string,              cv::detail::ArgSpec::OPAQUE_SPEC>
+   , ExpectedS<cv::Mat,                  cv::detail::ArgSpec::OPAQUE_SPEC>
+   , ExpectedS<std::vector<int>,         cv::detail::ArgSpec::OPAQUE_SPEC>
+   , ExpectedS<std::vector<cv::Point>,   cv::detail::ArgSpec::OPAQUE_SPEC>
+   >;
+
+TYPED_TEST_CASE(ArgSpec, Arg_Spec_Types);
+
+TYPED_TEST(ArgSpec, Basic)
+{
+    const auto this_spec = cv::detail::GTypeTraits<typename TestFixture::Type>::spec;
+    EXPECT_EQ(TestFixture::Spec, this_spec);
 }
 
 // }}
