@@ -46,6 +46,7 @@ std::ostream& operator<<(std::ostream& os, const cv::GOpaqueDesc &desc);
 
 namespace detail
 {
+
     // ConstructOpaque is a callback which stores information about T and is used by
     // G-API runtime to construct an object in host memory (T remains opaque for G-API).
     // ConstructOpaque is carried into G-API internals by GOpaqueU.
