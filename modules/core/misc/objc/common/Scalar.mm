@@ -6,9 +6,6 @@
 
 #import "Scalar.h"
 
-#define HASH_UTILS
-#import "CVObjcUtil.h"
-
 double getVal(NSArray<NSNumber*>* vals, int index) {
     return [vals count] > index ? vals[index].doubleValue : 0;
 }
@@ -95,6 +92,8 @@ double getVal(NSArray<NSNumber*>* vals, int index) {
         return it.nativeRef.val[0] == self.nativeRef.val[0] && it.nativeRef.val[1] == self.nativeRef.val[1] && it.nativeRef.val[2] == self.nativeRef.val[2] && it.nativeRef.val[3] == self.nativeRef.val[3];
     }
 }
+
+#define DOUBLE_TO_BITS(x)  ((Cv64suf){ .f = x }).i
 
 - (NSUInteger)hash
 {

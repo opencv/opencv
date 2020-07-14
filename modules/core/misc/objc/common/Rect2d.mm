@@ -8,9 +8,6 @@
 #import "Point2d.h"
 #import "Size2d.h"
 
-#define HASH_UTILS
-#import "CVObjcUtil.h"
-
 @implementation Rect2d {
     cv::Rect2d native;
 }
@@ -135,6 +132,8 @@
         return self.x == rect.x && self.y == rect.y && self.width == rect.width && self.height == rect.height;
     }
 }
+
+#define DOUBLE_TO_BITS(x)  ((Cv64suf){ .f = x }).i
 
 - (NSUInteger)hash {
     int prime = 31;

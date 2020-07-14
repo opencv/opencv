@@ -6,9 +6,6 @@
 
 #import "DMatch.h"
 
-#define HASH_UTILS
-#import "CVObjcUtil.h"
-
 @implementation DMatch {
     cv::DMatch native;
 }
@@ -91,6 +88,8 @@
         return self.queryIdx == dMatch.queryIdx && self.trainIdx == dMatch.trainIdx && self.imgIdx == dMatch.imgIdx && self.distance == dMatch.distance;
     }
 }
+
+#define FLOAT_TO_BITS(x)  ((Cv32suf){ .f = x }).i
 
 - (NSUInteger)hash {
     int prime = 31;

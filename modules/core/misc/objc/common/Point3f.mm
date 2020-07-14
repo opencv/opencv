@@ -7,9 +7,6 @@
 #import "Point3f.h"
 #import "Point2f.h"
 
-#define HASH_UTILS
-#import "CVObjcUtil.h"
-
 @implementation Point3f {
     cv::Point3f native;
 }
@@ -96,6 +93,8 @@
         return self.x == point.x && self.y == point.y && self.z == point.z;
     }
 }
+
+#define FLOAT_TO_BITS(x)  ((Cv32suf){ .f = x }).i
 
 - (NSUInteger)hash {
     int prime = 31;

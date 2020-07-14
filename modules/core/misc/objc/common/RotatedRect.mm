@@ -9,9 +9,6 @@
 #import "Size2f.h"
 #import "Rect2f.h"
 
-#define HASH_UTILS
-#import "CVObjcUtil.h"
-
 #include <math.h>
 
 @implementation RotatedRect {
@@ -95,6 +92,9 @@
         return [self.center isEqual:rect.center] && [self.size isEqual:rect.size] && self.angle == rect.angle;
     }
 }
+
+#define FLOAT_TO_BITS(x)  ((Cv32suf){ .f = x }).i
+#define DOUBLE_TO_BITS(x)  ((Cv64suf){ .f = x }).i
 
 - (NSUInteger)hash {
     int prime = 31;
