@@ -1772,4 +1772,20 @@ TEST(Core_InputOutput, FileStorage_open_empty_16823)
     EXPECT_EQ(0, remove(fname.c_str()));
 }
 
+TEST(Core_InputOutput, FileStorage_copy_constructor_17412)
+{
+    std::string fname = tempfile("test.yml");
+    FileStorage fs_orig(fname, cv::FileStorage::WRITE);
+    fs_orig << "string" << "wat";
+    fs_orig.release();
+
+    // crash:
+    cv::FileStorage fs;
+    fs = cv::FileStorage(fname,  cv::FileStorage::READ);
+    std::string s;
+    fs["string"] >> s;
+    EXPECT_EQ(s, "wat");
+    EXPECT_EQ(0, remove(fname.c_str()));
+}
+
 }} // namespace
