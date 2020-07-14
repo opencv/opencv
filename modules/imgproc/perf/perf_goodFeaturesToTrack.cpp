@@ -30,7 +30,7 @@ PERF_TEST_P(Image_MaxCorners_QualityLevel_MinDistance_BlockSize_gradientSize_Use
     if (image.empty())
         FAIL() << "Unable to load source image" << filename;
 
-    std::vector<Point2f> corners;
+    std::vector<Point3f> corners;
 
     double minDistance = 1;
     TEST_CYCLE() goodFeaturesToTrack(image, corners, maxCorners, qualityLevel, minDistance, noArray(), blockSize, gradientSize, useHarrisDetector);

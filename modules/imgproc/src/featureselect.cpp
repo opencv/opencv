@@ -175,7 +175,7 @@ static bool ocl_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
     Corner* corner_ptr = tmpCorners.ptr<Corner>() + 1;
     std::sort(corner_ptr, corner_ptr + total);
 
-    std::vector<Point2f> corners;
+    std::vector<Point3f> corners;
     corners.reserve(total);
 
     if (minDistance >= 1)
@@ -236,7 +236,7 @@ static bool ocl_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
             {
                 grid[y_cell*grid_width + x_cell].push_back(Point2f((float)c.x, (float)c.y));
 
-                corners.push_back(Point2f((float)c.x, (float)c.y));
+                corners.push_back(Point3f((float)c.x, (float)c.y, eig.getMat(ACCESS_READ).at<float>(c.y, c.x)));
                 ++ncorners;
 
                 if( maxCorners > 0 && (int)ncorners == maxCorners )
@@ -250,7 +250,7 @@ static bool ocl_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
         {
             const Corner & c = corner_ptr[i];
 
-            corners.push_back(Point2f((float)c.x, (float)c.y));
+            corners.push_back(Point3f((float)c.x, (float)c.y, eig.getMat(ACCESS_READ).at<float>(c.y, c.x)));
             ++ncorners;
             if( maxCorners > 0 && (int)ncorners == maxCorners )
                 break;
@@ -409,7 +409,7 @@ void cv::goodFeaturesToTrack( InputArray _image, OutputArray _corners,
         }
     }
 
-    std::vector<Point2f> corners;
+    std::vector<Point3f> corners;
     size_t i, j, total = tmpCorners.size(), ncorners = 0;
 
     if (total == 0)
@@ -485,7 +485,7 @@ void cv::goodFeaturesToTrack( InputArray _image, OutputArray _corners,
             {
                 grid[y_cell*grid_width + x_cell].push_back(Point2f((float)x, (float)y));
 
-                corners.push_back(Point2f((float)x, (float)y));
+                corners.push_back(Point3f((float)x, (float)y, eig.at<float>(y,x)));
                 ++ncorners;
 
                 if( maxCorners > 0 && (int)ncorners == maxCorners )
@@ -501,7 +501,7 @@ void cv::goodFeaturesToTrack( InputArray _image, OutputArray _corners,
             int y = (int)(ofs / eig.step);
             int x = (int)((ofs - y*eig.step)/sizeof(float));
 
-            corners.push_back(Point2f((float)x, (float)y));
+            corners.push_back(Point3f((float)x, (float)y, eig.at<float>(y,x)));
             ++ncorners;
             if( maxCorners > 0 && (int)ncorners == maxCorners )
                 break;
@@ -513,13 +513,13 @@ void cv::goodFeaturesToTrack( InputArray _image, OutputArray _corners,
 
 CV_IMPL void
 cvGoodFeaturesToTrack( const void* _image, void*, void*,
-                       CvPoint2D32f* _corners, int *_corner_count,
+                       CvPoint3D32f* _corners, int *_corner_count,
                        double quality_level, double min_distance,
                        const void* _maskImage, int block_size,
                        int use_harris, double harris_k )
 {
     cv::Mat image = cv::cvarrToMat(_image), mask;
-    std::vector<cv::Point2f> corners;
+    std::vector<cv::Point3f> corners;
 
     if( _maskImage )
         mask = cv::cvarrToMat(_maskImage);
@@ -530,7 +530,7 @@ cvGoodFeaturesToTrack( const void* _image, void*, void*,
 
     size_t i, ncorners = corners.size();
     for( i = 0; i < ncorners; i++ )
-        _corners[i] = cvPoint2D32f(corners[i]);
+        _corners[i] = cvPoint3D32f(corners[i]);
     *_corner_count = (int)ncorners;
 }
 
