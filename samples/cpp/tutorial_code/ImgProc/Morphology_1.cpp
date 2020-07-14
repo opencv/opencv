@@ -25,6 +25,7 @@ int const max_kernel_size = 21;
 void Erosion( int, void* );
 void Dilation( int, void* );
 
+//![main]
 /**
  * @function main
  */
@@ -70,6 +71,7 @@ int main( int argc, char** argv )
   waitKey(0);
   return 0;
 }
+//![main]
 
 //![erosion]
 /**
