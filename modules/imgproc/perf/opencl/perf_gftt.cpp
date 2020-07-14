@@ -71,7 +71,7 @@ OCL_PERF_TEST_P(GoodFeaturesToTrackFixture, GoodFeaturesToTrack,
 
     checkDeviceMaxMemoryAllocSize(img.size(), img.type());
 
-    UMat src(img.size(), img.type()), dst(1, maxCorners, CV_32FC2);
+    UMat src(img.size(), img.type()), dst(1, maxCorners, CV_32FC3);
     img.copyTo(src);
 
     declare.in(src, WARMUP_READ).out(dst);

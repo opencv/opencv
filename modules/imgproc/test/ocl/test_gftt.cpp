@@ -82,10 +82,10 @@ PARAM_TEST_CASE(GoodFeaturesToTrack, double, bool)
         UMAT_UPLOAD_INPUT_PARAMETER(src);
     }
 
-    void UMatToVector(const UMat & um, std::vector<Point2f> & v) const
+    void UMatToVector(const UMat & um, std::vector<Point3f> & v) const
     {
         v.resize(um.size().area());
-        um.copyTo(Mat(um.size(), CV_32FC2, &v[0]));
+        um.copyTo(Mat(um.size(), CV_32FC3, &v[0]));
     }
 };
 
@@ -98,7 +98,7 @@ OCL_TEST_P(GoodFeaturesToTrack, Accuracy)
     {
         generateTestData();
 
-        std::vector<Point2f> upts, pts;
+        std::vector<Point3f> upts, pts;
 
         OCL_OFF(cv::goodFeaturesToTrack(src_roi, points, maxCorners, qualityLevel, minDistance, noArray()));
         ASSERT_FALSE(points.empty());
@@ -113,9 +113,9 @@ OCL_TEST_P(GoodFeaturesToTrack, Accuracy)
         int mistmatch = 0;
         for (size_t i = 0; i < pts.size(); ++i)
         {
-            Point2i a = upts[i], b = pts[i];
+            Point3f a = upts[i], b = pts[i];
 
-            bool eq = std::abs(a.x - b.x) < 1 && std::abs(a.y - b.y) < 1;
+            bool eq = std::abs(a.x - b.x) < 1 && std::abs(a.y - b.y) < 1 && std::abs(a.z - b.z) < 1;
 
             if (!eq)
                 ++mistmatch;
