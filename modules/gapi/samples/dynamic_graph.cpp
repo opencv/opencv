@@ -22,7 +22,7 @@ int main(int argc, char *argv[])
         if (need_second_conversion)
             ins += cv::GIn(in2);
 
-        cv::GProtoOutputArgs outs = cv::GOut();
+        auto outs = cv::GOut();
         cv::GMat out1 = cv::gapi::resize(in1, szOut);
         if (need_first_conversion)
             outs += cv::GOut(out1);
