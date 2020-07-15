@@ -1,0 +1,213 @@
+﻿/* Copyright (c) Microsoft Corporation. All rights reserved. */
+html
+{
+    cursor: default;
+}
+
+#featureLabel
+{
+    font: 20pt/24pt "Segoe UI Semilight";
+    margin:0;
+    padding:5px 0 10px 0;
+    font-weight: normal;
+}
+
+#inputLabel, #outputLabel
+{
+    font: 11pt/15pt "Segoe UI";
+    margin:0;
+    padding:0;
+    font-weight: normal;
+}
+
+#listLabel, #descLabel
+{
+    font: 11pt/15pt "Segoe UI Semilight";
+    font-weight:normal;
+}
+
+#rootGrid
+{
+    width: 100%;
+    height: 100%;
+    display: -ms-grid;
+    -ms-grid-columns: 100px 1fr 100px;
+    -ms-grid-rows: 20px auto 1fr auto 20px;
+}
+
+#header
+{
+    -ms-grid-column: 2;
+    -ms-grid-row: 2;
+}
+
+#content
+{
+    padding-right:20px;
+    padding-bottom:20px;
+    overflow:auto;
+    display:-ms-grid;
+    -ms-grid-columns:1fr;
+    -ms-grid-rows: auto 1fr;
+    -ms-grid-column: 2;
+    -ms-grid-row: 3;
+}
+
+#footer
+{
+    -ms-grid-column: 2;
+    -ms-grid-row: 4;
+    padding-bottom:10px;
+}
+
+#featureLabel
+{
+    -ms-grid-row: 1;
+}
+
+#contentHost
+{
+    display:-ms-grid;
+    -ms-grid-columns:1fr;
+    -ms-grid-rows: auto auto auto 1fr;
+    -ms-grid-row: 2;
+}
+
+#inputLabel
+{
+    -ms-grid-row: 1;
+}
+
+
+#input
+{
+    -ms-grid-row: 2;
+    display: -ms-grid;
+    -ms-grid-columns: auto auto;
+    -ms-grid-rows: auto;
+    margin-top:10px;
+}
+
+#outputLabel
+{
+    -ms-grid-row: 3;
+    padding-top:10px;
+    padding-bottom:10px;
+}
+
+#output
+{
+    height:100%;
+    -ms-grid-row: 4;
+    -ms-grid-row-align:stretch;
+}
+
+.clear
+{
+    clear:both;
+}
+
+
+#footer span
+{
+    font-size:12px;
+}
+
+#footer .company
+{
+    float:left;
+}
+
+#footer .links
+{
+    float:right;
+}
+
+#footer .links a
+{
+    font-size:12px;
+    margin-left:8px;
+    text-decoration:none;
+}
+
+#footer .links .pipe
+{
+    font-size:9px;
+    margin-left:8px;
+}
+
+#statusMessage
+{
+    margin-bottom:5px;
+}
+
+#input .options
+{
+    -ms-grid-row: 1;
+    -ms-grid-column: 1;
+}
+
+#input .details
+{
+    -ms-grid-row: 1;
+    -ms-grid-column: 2;
+    cursor:text;
+}
+
+.imageHolder
+{
+    max-width:382px;
+}
+
+.imageHolder.withText
+{
+     float:left;
+     margin-right:10px;
+}
+
+#scenarios
+{
+    margin-right:20px;
+}
+
+
+
+@media screen and (min-width: 800px) and (max-width: 1024px)
+{
+    #rootGrid
+    {
+        -ms-grid-columns: 40px 1fr 40px;
+    }
+}
+
+@media screen and (max-width: 799px)
+{
+    #rootGrid
+    {
+        -ms-grid-columns: 20px 1fr 20px;
+    }
+
+    #output
+    {
+        padding-bottom:20px;
+    }
+
+    #input
+    {
+        -ms-grid-columns: auto;
+        -ms-grid-rows: auto auto;
+    }
+
+    #input .options
+    {
+        -ms-grid-row: 1;
+        -ms-grid-column: 1;
+        margin-bottom:10px;
+    }
+
+    #input .details
+    {
+        -ms-grid-row: 2;
+        -ms-grid-column: 1;
+    }
+}

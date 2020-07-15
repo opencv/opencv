@@ -1,0 +1,22 @@
+diff --git a/3rdparty/libwebp/src/dsp/msa_macro.h b/3rdparty/libwebp/src/dsp/msa_macro.h
+index de026a1d9e..a16c0bb300 100644
+--- a/3rdparty/libwebp/src/dsp/msa_macro.h
++++ b/3rdparty/libwebp/src/dsp/msa_macro.h
+@@ -73,7 +73,7 @@
+   static inline TYPE FUNC_NAME(const void* const psrc) {  \
+     const uint8_t* const psrc_m = (const uint8_t*)psrc;   \
+     TYPE val_m;                                           \
+-    asm volatile (                                        \
++    __asm__ volatile (                                        \
+       "" #INSTR " %[val_m], %[psrc_m]  \n\t"              \
+       : [val_m] "=r" (val_m)                              \
+       : [psrc_m] "m" (*psrc_m));                          \
+@@ -86,7 +86,7 @@
+   static inline void FUNC_NAME(TYPE val, void* const pdst) { \
+     uint8_t* const pdst_m = (uint8_t*)pdst;                  \
+     TYPE val_m = val;                                        \
+-    asm volatile (                                           \
++    __asm__ volatile (                                           \
+       " " #INSTR "  %[val_m],  %[pdst_m]  \n\t"              \
+       : [pdst_m] "=m" (*pdst_m)                              \
+       : [val_m] "r" (val_m));                                \

@@ -1,0 +1,115 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|AnyCPU">
+      <Configuration>Debug</Configuration>
+      <Platform>AnyCPU</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|ARM">
+      <Configuration>Debug</Configuration>
+      <Platform>ARM</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x86">
+      <Configuration>Debug</Configuration>
+      <Platform>x86</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|AnyCPU">
+      <Configuration>Release</Configuration>
+      <Platform>AnyCPU</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|ARM">
+      <Configuration>Release</Configuration>
+      <Platform>ARM</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x86">
+      <Configuration>Release</Configuration>
+      <Platform>x86</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>d70a3790-48ce-4e58-af60-ebefc22e9c7a</ProjectGuid>
+  </PropertyGroup>
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup Condition="'$(VisualStudioVersion)' == '' or '$(VisualStudioVersion)' &lt; '12.0'">
+    <VisualStudioVersion>12.0</VisualStudioVersion>
+  </PropertyGroup>
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\$(WMSJSProjectDirectory)\Microsoft.VisualStudio.$(WMSJSProject).Default.props" />
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\$(WMSJSProjectDirectory)\Microsoft.VisualStudio.$(WMSJSProject).props" />
+  <PropertyGroup>
+    <TargetPlatformIdentifier>Windows</TargetPlatformIdentifier>
+    <TargetPlatformVersion>8.1</TargetPlatformVersion>
+    <RequiredPlatformVersion>8.1</RequiredPlatformVersion>
+    <MinimumVisualStudioVersion>$(VersionNumberMajor).$(VersionNumberMinor)</MinimumVisualStudioVersion>
+    <DefaultLanguage>en-US</DefaultLanguage>
+    <PackageCertificateKeyFile>MediaCaptureJavaScript_TemporaryKey.pfx</PackageCertificateKeyFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <AppxManifest Include="package.appxmanifest">
+      <SubType>Designer</SubType>
+    </AppxManifest>
+    <Content Include="default.html" />
+    <Content Include="html\AdvancedCapture.html" />
+    <Content Include="images\logo.scale-100.png" />
+    <Content Include="images\microsoft-sdk.png" />
+    <Content Include="images\smalllogo.scale-100.png" />
+    <Content Include="images\smallTile-sdk.png" />
+    <Content Include="images\splash-sdk.png" />
+    <Content Include="images\splashscreen.scale-100.png" />
+    <Content Include="images\squareTile-sdk.png" />
+    <Content Include="images\storeLogo-sdk.png" />
+    <Content Include="images\storelogo.scale-100.png" />
+    <Content Include="images\tile-sdk.png" />
+    <Content Include="images\windows-sdk.png" />
+    <Content Include="js\AdvancedCapture.js" />
+    <Content Include="js\default.js" />
+    <Content Include="css\default.css" />
+    <Content Include="sample-utils\sample-utils.css" />
+    <Content Include="sample-utils\sample-utils.js" />
+    <Content Include="sample-utils\scenario-select.html" />
+    <None Include="MediaCaptureJavaScript_TemporaryKey.pfx" />
+  </ItemGroup>
+  <ItemGroup>
+    <SDKReference Include="Microsoft.WinJS.2.0, Version=1.0" />
+  </ItemGroup>
+  <PropertyGroup Label="UserMacros">
+    <OpenCV_Bin>$(OPENCV_WINRT_INSTALL_DIR)\WS\8.1\$(PlatformTarget)\$(PlatformTarget)\vc12\bin\</OpenCV_Bin>
+    <OpenCV_Lib>$(OPENCV_WINRT_INSTALL_DIR)\WS\8.1\$(PlatformTarget)\$(PlatformTarget)\vc12\lib\</OpenCV_Lib>
+    <OpenCV_Include>$(OPENCV_WINRT_INSTALL_DIR)\WS\8.1\$(PlatformTarget)\include\</OpenCV_Include>
+    <!--debug suffix for OpenCV dlls and libs -->
+    <DebugSuffix Condition="'$(Configuration)'=='Debug'">d</DebugSuffix>
+    <DebugSuffix Condition="'$(Configuration)'!='Debug'">
+    </DebugSuffix>
+  </PropertyGroup>
+  <ItemGroup>
+    <!--Add required OpenCV dlls here-->
+    <Content Include="$(OpenCV_Bin)opencv_core300$(DebugSuffix).dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="$(OpenCV_Bin)opencv_imgproc300$(DebugSuffix).dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ImageManipulations\MediaExtensions\OcvTransform\OcvTransform.vcxproj" />
+  </ItemGroup>
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\$(WMSJSProjectDirectory)\Microsoft.VisualStudio.$(WMSJSProject).targets" />
+  <!-- To modify your build process, add your task inside one of the targets below then uncomment
+       that target and the DisableFastUpToDateCheck PropertyGroup.
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  <PropertyGroup>
+    <DisableFastUpToDateCheck>true</DisableFastUpToDateCheck>
+  </PropertyGroup>
+  -->
+</Project>

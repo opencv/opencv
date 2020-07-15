@@ -1,0 +1,167 @@
+#ifndef OPENCV_CVCONFIG_H_INCLUDED
+#define OPENCV_CVCONFIG_H_INCLUDED
+
+/* OpenCV compiled as static or dynamic libs */
+#cmakedefine BUILD_SHARED_LIBS
+
+/* OpenCV intrinsics optimized code */
+#cmakedefine CV_ENABLE_INTRINSICS
+
+/* OpenCV additional optimized code */
+#cmakedefine CV_DISABLE_OPTIMIZATION
+
+/* Compile for 'real' NVIDIA GPU architectures */
+#define CUDA_ARCH_BIN "${OPENCV_CUDA_ARCH_BIN}"
+
+/* NVIDIA GPU features are used */
+#define CUDA_ARCH_FEATURES "${OPENCV_CUDA_ARCH_FEATURES}"
+
+/* Compile for 'virtual' NVIDIA PTX architectures */
+#define CUDA_ARCH_PTX "${OPENCV_CUDA_ARCH_PTX}"
+
+/* AMD's Basic Linear Algebra Subprograms Library*/
+#cmakedefine HAVE_CLAMDBLAS
+
+/* AMD's OpenCL Fast Fourier Transform Library*/
+#cmakedefine HAVE_CLAMDFFT
+
+/* Clp support */
+#cmakedefine HAVE_CLP
+
+/* Cocoa API */
+#cmakedefine HAVE_COCOA
+
+/* NVIDIA CUDA Runtime API*/
+#cmakedefine HAVE_CUDA
+
+/* NVIDIA CUDA Basic Linear Algebra Subprograms (BLAS) API*/
+#cmakedefine HAVE_CUBLAS
+
+/* NVIDIA CUDA Deep Neural Network (cuDNN) API*/
+#cmakedefine HAVE_CUDNN
+
+/* NVIDIA CUDA Fast Fourier Transform (FFT) API*/
+#cmakedefine HAVE_CUFFT
+
+/* DirectX */
+#cmakedefine HAVE_DIRECTX
+#cmakedefine HAVE_DIRECTX_NV12
+#cmakedefine HAVE_D3D11
+#cmakedefine HAVE_D3D10
+#cmakedefine HAVE_D3D9
+
+/* Eigen Matrix & Linear Algebra Library */
+#cmakedefine HAVE_EIGEN
+
+/* Geospatial Data Abstraction Library */
+#cmakedefine HAVE_GDAL
+
+/* GTK+ 2.0 Thread support */
+#cmakedefine HAVE_GTHREAD
+
+/* GTK+ 2.x toolkit */
+#cmakedefine HAVE_GTK
+
+/* Halide support */
+#cmakedefine HAVE_HALIDE
+
+/* Vulkan support */
+#cmakedefine HAVE_VULKAN
+
+/* Define to 1 if you have the <inttypes.h> header file. */
+#cmakedefine HAVE_INTTYPES_H 1
+
+/* Intel Integrated Performance Primitives */
+#cmakedefine HAVE_IPP
+#cmakedefine HAVE_IPP_ICV
+#cmakedefine HAVE_IPP_IW
+#cmakedefine HAVE_IPP_IW_LL
+
+/* JPEG-2000 codec */
+#cmakedefine HAVE_OPENJPEG
+#cmakedefine HAVE_JASPER
+
+/* IJG JPEG codec */
+#cmakedefine HAVE_JPEG
+
+/* libpng/png.h needs to be included */
+#cmakedefine HAVE_LIBPNG_PNG_H
+
+/* GDCM DICOM codec */
+#cmakedefine HAVE_GDCM
+
+/* NVIDIA Video Decoding API*/
+#cmakedefine HAVE_NVCUVID
+#cmakedefine HAVE_NVCUVID_HEADER
+#cmakedefine HAVE_DYNLINK_NVCUVID_HEADER
+
+/* NVIDIA Video Encoding API*/
+#cmakedefine HAVE_NVCUVENC
+
+/* OpenCL Support */
+#cmakedefine HAVE_OPENCL
+#cmakedefine HAVE_OPENCL_STATIC
+#cmakedefine HAVE_OPENCL_SVM
+
+/* NVIDIA OpenCL D3D Extensions support */
+#cmakedefine HAVE_OPENCL_D3D11_NV
+
+/* OpenEXR codec */
+#cmakedefine HAVE_OPENEXR
+
+/* OpenGL support*/
+#cmakedefine HAVE_OPENGL
+
+/* PNG codec */
+#cmakedefine HAVE_PNG
+
+/* Posix threads (pthreads) */
+#cmakedefine HAVE_PTHREAD
+
+/* parallel_for with pthreads */
+#cmakedefine HAVE_PTHREADS_PF
+
+/* Qt support */
+#cmakedefine HAVE_QT
+
+/* Qt OpenGL support */
+#cmakedefine HAVE_QT_OPENGL
+
+/* Intel Threading Building Blocks */
+#cmakedefine HAVE_TBB
+
+/* Ste||ar Group High Performance ParallelX */
+#cmakedefine HAVE_HPX
+
+/* TIFF codec */
+#cmakedefine HAVE_TIFF
+
+/* Win32 UI */
+#cmakedefine HAVE_WIN32UI
+
+/* Define if your processor stores words with the most significant byte
+   first (like Motorola and SPARC, unlike Intel and VAX). */
+#cmakedefine WORDS_BIGENDIAN
+
+/* VA library (libva) */
+#cmakedefine HAVE_VA
+
+/* Intel VA-API/OpenCL */
+#cmakedefine HAVE_VA_INTEL
+
+/* Lapack */
+#cmakedefine HAVE_LAPACK
+
+/* Library was compiled with functions instrumentation */
+#cmakedefine ENABLE_INSTRUMENTATION
+
+/* OpenVX */
+#cmakedefine HAVE_OPENVX
+
+/* OpenCV trace utilities */
+#cmakedefine OPENCV_TRACE
+
+/* Library QR-code decoding */
+#cmakedefine HAVE_QUIRC
+
+#endif // OPENCV_CVCONFIG_H_INCLUDED

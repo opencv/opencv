@@ -1,0 +1,59 @@
+<?xml version="1.0"?>
+<opencv_storage>
+<Settings>
+  <!-- Number of inner corners per a item row and column. (square, circle) -->
+  <BoardSize_Width> 9</BoardSize_Width>
+  <BoardSize_Height>6</BoardSize_Height>
+  
+  <!-- The size of a square in some user defined metric system (pixel, millimeter)-->
+  <Square_Size>50</Square_Size>
+  
+  <!-- The type of input used for camera calibration. One of: CHESSBOARD CIRCLES_GRID ASYMMETRIC_CIRCLES_GRID -->
+  <Calibrate_Pattern>"CHESSBOARD"</Calibrate_Pattern>
+  
+  <!-- The input to use for calibration. 
+		To use an input camera -> give the ID of the camera, like "1"
+		To use an input video  -> give the path of the input video, like "/tmp/x.avi"
+		To use an image list   -> give the path to the XML or YAML file containing the list of the images, like "/tmp/circles_list.xml"
+		-->
+  <Input>"images/CameraCalibration/VID5/VID5.xml"</Input>
+  <!--  If true (non-zero) we flip the input images around the horizontal axis.-->
+  <Input_FlipAroundHorizontalAxis>0</Input_FlipAroundHorizontalAxis>
+  
+  <!-- Time delay between frames in case of camera. -->
+  <Input_Delay>100</Input_Delay>	
+  
+  <!-- How many frames to use, for calibration. -->
+  <Calibrate_NrOfFrameToUse>25</Calibrate_NrOfFrameToUse>
+  <!-- Consider only fy as a free parameter, the ratio fx/fy stays the same as in the input cameraMatrix. 
+	   Use or not setting. 0 - False Non-Zero - True-->
+  <Calibrate_FixAspectRatio> 1 </Calibrate_FixAspectRatio>
+  <!-- If true (non-zero) tangential distortion coefficients  are set to zeros and stay zero.-->
+  <Calibrate_AssumeZeroTangentialDistortion>1</Calibrate_AssumeZeroTangentialDistortion>
+  <!-- If true (non-zero) the principal point is not changed during the global optimization.-->
+  <Calibrate_FixPrincipalPointAtTheCenter> 1 </Calibrate_FixPrincipalPointAtTheCenter>
+  
+  <!-- The name of the output log file. -->
+  <Write_outputFileName>"out_camera_data.xml"</Write_outputFileName>
+  <!-- If true (non-zero) we write to the output file the feature points.-->
+  <Write_DetectedFeaturePoints>1</Write_DetectedFeaturePoints>
+  <!-- If true (non-zero) we write to the output file the extrinsic camera parameters.-->
+  <Write_extrinsicParameters>1</Write_extrinsicParameters>
+  <!-- If true (non-zero) we write to the output file the refined 3D target grid points.-->
+  <Write_gridPoints>1</Write_gridPoints>
+  <!-- If true (non-zero) we show after calibration the undistorted images.-->
+  <Show_UndistortedImage>1</Show_UndistortedImage>
+  <!-- If true (non-zero) will be used fisheye camera model.-->
+  <Calibrate_UseFisheyeModel>0</Calibrate_UseFisheyeModel>
+  <!-- If true (non-zero) distortion coefficient k1 will be equals to zero.-->
+  <Fix_K1>0</Fix_K1>
+  <!-- If true (non-zero) distortion coefficient k2 will be equals to zero.-->
+  <Fix_K2>0</Fix_K2>
+  <!-- If true (non-zero) distortion coefficient k3 will be equals to zero.-->
+  <Fix_K3>0</Fix_K3>
+  <!-- If true (non-zero) distortion coefficient k4 will be equals to zero.-->
+  <Fix_K4>1</Fix_K4>
+  <!-- If true (non-zero) distortion coefficient k5 will be equals to zero.-->
+  <Fix_K5>1</Fix_K5>
+</Settings>
+</opencv_storage>
