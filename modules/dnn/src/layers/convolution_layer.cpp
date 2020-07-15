@@ -1040,7 +1040,7 @@ public:
                     const float* wptr = wptr_orig + cn0*karea;
                     // we apply [Channels][P]ReLU (if any) during the final pass only.
                     const float* relu = cn1 == inpCn && reluptr_ ? reluptr_ + startOutCn : 0;
-                    const int blk_size = depthWiseConvolution ? outPlaneSize : BLK_SIZE;
+                    const int blk_size = depthWiseConvolution ? (int)outPlaneSize : (int)BLK_SIZE;
 
                     for( int ofs0 = stripeStart; ofs0 < stripeEnd; ofs0 += blk_size )
                     {

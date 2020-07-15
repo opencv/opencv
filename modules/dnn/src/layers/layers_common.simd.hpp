@@ -398,9 +398,9 @@ void fastBitwiseConv( const float* wptr,
                 }
                 if (stride_w == 2)
                 {
-                    __m256 hi = _mm256_zextps128_ps256 (_mm256_extractf128_ps (vout0, 1));
+                    __m256 hi = _mm256_castps128_ps256(_mm256_extractf128_ps (vout0, 1));
                     __m256 even = _mm256_shuffle_ps(vout0, hi, 0x88);
-                    _mm256_storeu_ps(outptr + out_j, even);
+                    _mm_storeu_ps(outptr + out_j, _mm256_castps256_ps128(even));
                 }
                 else
                     _mm256_storeu_ps(outptr + out_j, vout0);
