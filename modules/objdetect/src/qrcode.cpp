@@ -5,12 +5,15 @@
 // Copyright (C) 2018, Intel Corporation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 
-
 #include "precomp.hpp"
-#include <opencv2/highgui.hpp>
-#include <opencv2/imgproc.hpp>
-#include <opencv2/objdetect.hpp>
+#include "opencv2/objdetect.hpp"
 #include "opencv2/calib3d.hpp"
+
+//#include "precomp.hpp"
+//#include "opencv2/highgui.hpp"
+//#include "opencv2/imgproc.hpp"
+//#include "opencv2/objdetect.hpp"
+//#include "opencv2/calib3d.hpp"
 
 
 
@@ -40,8 +43,28 @@ namespace cv
 #define MAX_ALIGNMENT   7
 
 #define INVALID_REGION 110 /*for the reserved value when reading the data*/
+
+
     using std::vector;
     using std::cout;
+    using std::endl;
+
+    std::string D2B(uint16_t my_format);
+    int ecc_code2level(int code);
+
+    uint8_t gf_pow(uint8_t x , int power);
+    uint8_t gf_inverse(uint8_t x);
+    uint8_t gf_mul(uint8_t x,uint8_t y);
+
+    uint8_t gf_poly_eval(const Mat& poly,uint8_t x);
+    Mat gf_poly_scale(const Mat & p,int scalar);
+    Mat gf_poly_add(const Mat & p,const Mat & q);
+
+    int hamming_weight(uint16_t x);
+    int hamming_detect(uint16_t fmt);
+
+    int block_syndromes(const Mat & block, int synd_num,uint8_t *synd);
+
 
 /*total codewords are divided into two groups
  *The ecc_codewords are the same in two groups*/
@@ -59,12 +82,21 @@ namespace cv
         block_params ecc[4];
     };
 
-    const struct version_info version_db[MAX_VERSION + 1] = {
-            {0},
+    const version_info version_db[MAX_VERSION + 1] = {
+            { /* Version 0 */
+                    0,
+                    {0,0,0,0,0,0,0},
+                    .ecc =  {
+                            {0	,0	,0,0,0},
+                            {0	,0	,0,0,0},
+                            {0	,0	,0,0,0},
+                            {0	,0	,0 ,0,0}
+                    }
+            },
             { /* Version 1 */
              26,
-                    {0},
-                    .ecc = {
+                    {0,0,0,0,0,0,0},
+                    .ecc =  {
                             {7	,1	,19,0,0},
                             {10	,1	,16,0,0},
                             {13	,1	,13,0,0},
@@ -73,7 +105,7 @@ namespace cv
             },
             { /* Version 2 */
              44,
-                    {6, 18, 0},
+                    {6, 18, 0,0,0,0,0},
                     .ecc = {
                             { 10,	1,	34,0,0},
                             {  16,	1,	28,0,0},
@@ -83,7 +115,7 @@ namespace cv
             },
             { /* Version 3 */
              70,
-                    {6, 22, 0},
+                    {6, 22, 0,0,0,0,0},
                     .ecc = {
                             {  15,	1,	55,0,0},
                             {  26,	1,	44,0,0},
@@ -93,7 +125,7 @@ namespace cv
             },
             { /* Version 4 */
              100,
-                    {6, 26, 0},
+                    {6, 26, 0,0,0,0,0},
                     .ecc = {
                             {  20,	1,	80,0,0},
                             {  18,	2,	32,0,0},
@@ -103,7 +135,7 @@ namespace cv
             },
             { /* Version 5 */
              134,
-                    {6, 30, 0},
+                    {6, 30, 0,0,0,0,0},
                     .ecc = {
                             {  26,	1,	108,0,  0},
                             {  24,	2,	43, 0,  0},
@@ -113,7 +145,7 @@ namespace cv
             },
             { /* Version 6 */
              172,
-                    {6, 34, 0},
+                    {6, 34, 0,0,0,0,0},
                     .ecc = {
                             {  18,	2,	68,0,0},
                             {  16,	4,	27,0,0},
@@ -123,7 +155,7 @@ namespace cv
             },
             { /* Version 7 */
              196,
-                    {6, 22, 38, 0},
+                    {6, 22, 38, 0,0,0,0},
                     .ecc = {
                             {  20,	2,	78,0,0},
                             {  18,	4,	31,0,0},
@@ -133,7 +165,7 @@ namespace cv
             },
             { /* Version 8 */
              242,
-                    {6, 24, 42, 0},
+                    {6, 24, 42, 0,0,0,0},
                     .ecc = {
                             {  24,	2,	97,0,0},
                             {  22,	2,	38,	2,	39},
@@ -143,7 +175,7 @@ namespace cv
             },
             { /* Version 9 */
              292,
-                    {6, 26, 46, 0},
+                    {6, 26, 46, 0,0,0,0},
                     .ecc = {
                             {  30,	2,	116,0,0},
                             {  22,	3,	36,	2,	37},
@@ -153,7 +185,7 @@ namespace cv
             },
             { /* Version 10 */
              346,
-                    {6, 28, 50, 0},
+                    {6, 28, 50, 0,0,0,0},
                     .ecc = {
                             {  18,	2,	68,	2,	69},
                             {  26,	4,	43,	1,	44},
@@ -163,7 +195,7 @@ namespace cv
             },
             { /* Version 11 */
              404,
-                    {6, 30, 54, 0},
+                    {6, 30, 54, 0,0,0,0},
                     .ecc = {
                             {  20,	4,	81, 0,0},
                             {  30,	1,	50,	4,	51},
@@ -173,7 +205,7 @@ namespace cv
             },
             { /* Version 12 */
              466,
-                    {6, 32, 58, 0},
+                    {6, 32, 58, 0,0,0,0},
                     .ecc = {
                             {  24,	2,	92,	2,	93},
                             {  22,	6,	36,	2,	37},
@@ -183,7 +215,7 @@ namespace cv
             },
             { /* Version 13 */
              532,
-                    {6, 34, 62, 0},
+                    {6, 34, 62, 0,0,0,0},
                     .ecc = {
                             {  26,	4,	107,0,0},
                             {  22,	8,	37,	1,	38},
@@ -193,7 +225,7 @@ namespace cv
             },
             { /* Version 14 */
              581,
-                    {6, 26, 46, 66, 0},
+                    {6, 26, 46, 66, 0,0,0},
                     .ecc = {
                             {  30,	3,	115,1,	116},
                             {  24,	4,	40,	5,	41},
@@ -203,7 +235,7 @@ namespace cv
             },
             { /* Version 15 */
              655,
-                    {6, 26, 48, 70, 0},
+                    {6, 26, 48, 70, 0,0,0},
                     .ecc = {
                             {  22,	5,	87,	1,	88},
                             {  24,	5,	41,	5,	42},
@@ -213,7 +245,7 @@ namespace cv
             },
             { /* Version 16 */
              733,
-                    {6, 26, 50, 74, 0},
+                    {6, 26, 50, 74, 0,0,0},
                     .ecc = {
                             {  24,	5,	98,	1,	99},
                             {  28,	7,	45,	3,	46},
@@ -223,7 +255,7 @@ namespace cv
             },
             { /* Version 17 */
              815,
-                    {6, 30, 54, 78, 0},
+                    {6, 30, 54, 78, 0,0,0},
                     .ecc = {
                             { 28,	1,	107,5,	108},
                             { 28,	10,	46,	1,	47},
@@ -233,7 +265,7 @@ namespace cv
             },
             { /* Version 18 */
              901,
-                    {6, 30, 56, 82, 0},
+                    {6, 30, 56, 82, 0,0,0},
                     .ecc = {
                             {  30,	5,	120,1,	121},
                             {  26,	9,	43,	4,	44},
@@ -243,7 +275,7 @@ namespace cv
             },
             { /* Version 19 */
              991,
-                    {6, 30, 58, 86, 0},
+                    {6, 30, 58, 86, 0,0,0},
                     .ecc = {
                             {  28,	3,	113,4,	114},
                             {  26,	3,	44,	11,	45},
@@ -253,7 +285,7 @@ namespace cv
             },
             { /* Version 20 */
              1085,
-                    {6, 34, 62, 90, 0},
+                    {6, 34, 62, 90, 0,0,0},
                     .ecc = {
                             {  28,	3,	107,5,	108},
                             {  26,	3,	41,	13,	42},
@@ -263,7 +295,7 @@ namespace cv
             },
             { /* Version 21 */
              1156,
-                    {6, 28, 50, 72, 92, 0},
+                    {6, 28, 50, 72, 92, 0,0},
                     .ecc = {
                             {  28,	4,	116,4,  117},
                             {  26,	17,	42, 0,  0},
@@ -273,7 +305,7 @@ namespace cv
             },
             { /* Version 22 */
              1258,
-                    {6, 26, 50, 74, 98, 0},
+                    {6, 26, 50, 74, 98, 0,0},
                     .ecc = {
                             {  28,	2,	111, 7,	 112},
                             {  28,	17,	46,  0,  0},
@@ -283,7 +315,7 @@ namespace cv
             },
             { /* Version 23 */
              1364,
-                    {6, 30, 54, 78, 102, 0},
+                    {6, 30, 54, 78, 102, 0,0},
                     .ecc = {
                             {  30,	4,	121,5,	122},
                             {  28,	4,	47,	14,	48},
@@ -293,7 +325,7 @@ namespace cv
             },
             { /* Version 24 */
              1474,
-                    {6, 28, 54, 80, 106, 0},
+                    {6, 28, 54, 80, 106, 0,0},
                     .ecc = {
                             {  30,	6,	117,4,	118},
                             {  28,	6,	45,	14,	46},
@@ -303,7 +335,7 @@ namespace cv
             },
             { /* Version 25 */
              1588,
-                    {6, 32, 58, 84, 110, 0},
+                    {6, 32, 58, 84, 110, 0,0},
                     .ecc = {
                             {  26,	8,	106,4,	107},
                             {  28,	8,	47,	13,	48},
@@ -313,7 +345,7 @@ namespace cv
             },
             { /* Version 26 */
              1706,
-                    {6, 30, 58, 86, 114, 0},
+                    {6, 30, 58, 86, 114, 0,0},
                     .ecc = {
                             {  28,	10,	114,2,	115},
                             {  28,	19,	46,	4,	47},
@@ -323,7 +355,7 @@ namespace cv
             },
             { /* Version 27 */
              1828,
-                    {6, 34, 62, 90, 118, 0},
+                    {6, 34, 62, 90, 118, 0,0},
                     .ecc = {
                             {  30,	8,	122,4,	123},
                             {  28,	22,	45,	3,	46},
@@ -570,12 +602,14 @@ namespace cv
             case 0b10 ://H	10
                 return 3;
         }
+        return 0;
     }
 /*
  * params @ a number
  * func   @ convert a dec to bin
  * return @ a bin string for print
  * */
+
     std::string D2B(uint16_t my_format){
         std::string f;
         for(int i=my_format;i>0;i=i>>1){
@@ -606,6 +640,7 @@ namespace cv
  * params @ uint16_t fmt(input format)
  * return @ the index of matched component in the look-up table
 */
+
     int hamming_detect(uint16_t fmt){
         int best_fmt = -1;
         int best_dist = 15;
@@ -1601,7 +1636,7 @@ namespace cv
 
         int			version;
         int			ecc_level;
-        int			mask;
+        int			mask_type;
 
         int			data_type;
 
@@ -1613,6 +1648,8 @@ namespace cv
         std::string result_info;
         uint8_t size;
         float test_perspective_size;
+
+
     };
 
     QRDecode::QRDecode(){
@@ -1633,9 +1670,9 @@ namespace cv
 
         Mat mat_format(1,FORMAT_LENGTH,CV_8UC1,Scalar(0));
 
-        uint16_t fdata;
-        decode_error err;
-        decode_error my_err;
+        //uint16_t fdata;
+        //decode_error err;
+        //decode_error my_err;
         std::cout<<"format:";
         /*read from the left-bottom and upper-right */
         if (which) {
@@ -1668,7 +1705,7 @@ namespace cv
             std::cout<<std::endl;
         }
         /*unmask : 101010000010010*/
-        Mat mask=(Mat_<uint8_t >(1,FORMAT_LENGTH)<<1,0,1,0,1,0,0,0,0,0,1,0,0,1,0);
+        //Mat mask=(Mat_<uint8_t >(1,FORMAT_LENGTH)<<1,0,1,0,1,0,0,0,0,0,1,0,0,1,0);
 
         //cout<<"MASK : \n"<<mask<<endl;
         //	for(int i=0;i<FORMAT_LENGTH;i++){
@@ -1690,10 +1727,6 @@ namespace cv
         /*original format*/
         //std::cout<<"@@@correct_format@@@"<<endl;
         //cout<<"original:"<<D2B(format)<<endl;
-        int i;
-        uint8_t s[MAX_POLY];
-        uint8_t my_s[MAX_POLY];
-        uint8_t sigma[MAX_POLY];
 
         /*ori: 110101100100011*/
         /*adjust several bits to check the correcting ability*/
@@ -1744,7 +1777,7 @@ namespace cv
         count++;
     }
 
-/* exponentiation operator 幂
+/* exponentiation operator
  * params @  x , power
  * return x^power
  * EXP:
@@ -1754,6 +1787,9 @@ namespace cv
         return gf_exp[(gf_log[x] * power) % 255];
     }
 
+    uint8_t gf_inverse(uint8_t x){
+        return gf_exp[255 - gf_log[x]];
+    }
 /*multiplication in GF
  * params @ x , y
  * return x * y
@@ -1789,7 +1825,36 @@ namespace cv
         }
         return y;
     }
+/*
+ * func @  multiply a polynomial by a scalar
+ * */
+    Mat gf_poly_scale(const Mat & p,int scalar) {
+        int len = p.cols;
+        Mat r(1,len,CV_8UC1,Scalar(0));
 
+        for(int i = 0; i < len;i++){
+            r.ptr(0)[i] = gf_mul(p.ptr(0)[i], scalar);
+        }
+        return r;
+    }
+/*
+ * func @  "adds" two polynomials (using exclusive-or, as usual).
+ * */
+    Mat gf_poly_add(const Mat & p,const Mat & q){
+        int p_len=p.cols;
+        int q_len=q.cols;
+        Mat r (1,max(p_len,q_len),CV_8UC1,Scalar(0));
+
+        //int r_len=r.cols;
+
+        for (int i = 0; i< p_len ;i++){
+            r.ptr(0)[i] = p.ptr(0)[i];
+        }
+        for (int i = 0; i< q_len ;i++){
+            r.ptr(0)[i] ^= q.ptr(0)[i];//+r_len-q_len
+        }
+        return r;
+    }
 /*unmask_data
  *func @  unmask the data and make the pixels in the reserved area Scalar(INVALID_REGION)
  */
@@ -1797,7 +1862,7 @@ namespace cv
         const struct version_info *ver = &version_db[version];
         unmasked_data=straight.clone();
         /*get mask pattern according to the format*/
-        int mask_pattren=mask;
+        int mask_pattren=mask_type;
 
         for(int i= 0;i<size;i++){
             for(int j= 0;j<size;j++){
@@ -1819,14 +1884,14 @@ namespace cv
                         unmasked_data.ptr(i)[j]=INVALID_REGION;
                 }
                     /*unmask*/
-                else if((mask==0&&!((i + j) % 2)) ||
-                        (mask==1&&!(i % 2)) ||
-                        (mask==2&&!(j % 3)) ||
-                        (mask==3 && (i + j) % 3 != 0) ||
-                        (mask==4&&!(((i / 2) + (j / 3)) % 2)) ||
-                        (mask==5&&!((i * j) % 2 + (i * j) % 3))||
-                        (mask==6&&!(((i * j) % 2 + (i * j) % 3) % 2))||
-                        ((mask==7 && ((i * j) % 3 + (i + j) % 2) % 2 != 0))
+                else if((mask_pattren==0&&!((i + j) % 2)) ||
+                        (mask_pattren==1&&!(i % 2)) ||
+                        (mask_pattren==2&&!(j % 3)) ||
+                        (mask_pattren==3 && (i + j) % 3 != 0) ||
+                        (mask_pattren==4&&!(((i / 2) + (j / 3)) % 2)) ||
+                        (mask_pattren==5&&!((i * j) % 2 + (i * j) % 3))||
+                        (mask_pattren==6&&!(((i * j) % 2 + (i * j) % 3) % 2))||
+                        ((mask_pattren==7 && ((i * j) % 3 + (i + j) % 2) % 2 != 0))
                         ){
                     unmasked_data.ptr(i)[j]^=255;
                 }
@@ -1886,7 +1951,6 @@ namespace cv
         /*the original method*/
         cout<<"@s@ "<<endl;
         for (int i = 0; i < synd_num; i++) {
-            int j;
             /*get the syndromes by repalcing the x with pow(2,i) and evaluating the results of the equations*/
             synd[i]=gf_poly_eval(block, gf_pow(2,i));
             cout<<(int)synd[i]<<" ";
@@ -1894,7 +1958,61 @@ namespace cv
                 nonzero = 1;
         }
         cout<<endl;
+        return nonzero;
     }
+//    int find_error_locator(const uint8_t *synd,int synd_num){
+//        /*initialize two arrays b and c ,to be zeros , expcet b0<- 1 c0<- 1*/
+//
+//        /*err_loc & Sigma*/
+//        Mat C(1,synd_num,CV_8UC1,Scalar(0));
+//        /*old_loc */
+//        Mat B(1,synd_num,CV_8UC1,Scalar(0));
+//
+//        B.ptr(0)[0]=1;
+//        C.ptr(0)[0]=1;
+//
+//        uint8_t b=1;
+//        /*assign L <- 0,m <- 1.*/
+//        int L = 0;
+//        int m = 1;
+//        for(int i = 0; i < synd_num ;i++){
+//            uint8_t delta = synd[i];
+//            /*cal discrepancy =Sn+ C1*S(n-1) + ... + Cl*S(n-L)*/
+//            for(int j = 0;j<=L;j++)
+//                delta ^= gf_mul(C.ptr(0)[j], synd[i - j]);
+//            /*if delta == 0 c is the polynomial */
+//            if(delta == 0){
+//                m++;
+//            }
+//            else if(2 * L <= i){
+//                Mat t=C.clone();
+////                int border = synd_num+m-i-1;
+////                int begin = i+m;
+//
+//                Mat shift(1,synd_num,CV_8UC1,Scalar(0));
+//                shift.ptr(0)[m]=1;
+//
+//                Mat new_loc = gf_poly_scale(shift,gf_mul(delta,gf_inverse(b)));
+//
+//                C=gf_poly_add(C,gf_poly_mul(B,new_loc));
+//
+//                L = i + 1 - L;
+//
+//                B = t.clone();
+//                c = new_loc;
+//
+//                m = 1;
+//            }
+//            else{
+//                c = gf_poly_add(c, gf_poly_scale(b, delta));
+//            }
+//
+//        }
+//
+//
+//        cout<<"@@sigma@@"<<endl;
+//        cout<<c<<endl;
+//    }
 
     /* correct_block
      * params @
@@ -1903,7 +2021,7 @@ namespace cv
         const version_info *ver =&version_db[version];
         const  block_params *cur_ecc = &ver->ecc[ecc_code2level(ecc_level)];
 
-        int ecc_offset=0;
+        //int ecc_offset=0;
         int cur_length=0;
 
         int ecc_num=cur_ecc->ecc_codewords;
@@ -1931,7 +2049,8 @@ namespace cv
         if (!block_syndromes(cur_block,ecc_num,synd))
             return SUCCESS;
 
-
+        //find_error_locator(synd,ecc_num);
+        return SUCCESS;
     }
 
     /*
@@ -1985,7 +2104,7 @@ namespace cv
                 if(rearranged_data[index]==3)
                     rearranged_data[index]=30;
                 if(show)
-                    cout<<setw(3)<<(int)rearranged_data[index]<<" ";
+                    cout<<std::setw(3)<<(int)rearranged_data[index]<<" ";
                 index++;
 
             }
@@ -1993,21 +2112,23 @@ namespace cv
             if(i>=cur_ecc->num_blocks_in_G1){
                 rearranged_data[index++]=orignal_data[offset_one_more+i-cur_ecc->num_blocks_in_G1];
                 if(show)
-                    cout<<setw(3)<<(int)orignal_data[offset_one_more+i-cur_ecc->num_blocks_in_G1]<<" ";
+                    cout<<std::setw(3)<<(int)orignal_data[offset_one_more+i-cur_ecc->num_blocks_in_G1]<<" ";
             }
 
             if(show)
-                cout<<setw(3)<<"|"<<" ";
+                cout<<std::setw(3)<<"|"<<" ";
 
 
             /*get the ecc codeword*/
             for(int j = 0;j <cur_ecc->ecc_codewords;j++){
                 rearranged_data[index++]=orignal_data[offset_ecc+i+j*offset];
                 if(show)
-                    cout<<setw(3)<<(int)orignal_data[offset_ecc+i+j*offset]<<" ";
+                    cout<<std::setw(3)<<(int)orignal_data[offset_ecc+i+j*offset]<<" ";
             }
             decode_error err= correct_block(i,cur_block_head);
             cur_block_head=index;
+            if(err)
+                return;
         }
         cout<<endl;
 //        if(show) {
@@ -2217,7 +2338,7 @@ namespace cv
         Mat tmp;
         straight.copyTo(tmp);
         cv::resize(tmp,tmp,Size(600,600),0,0,INTER_AREA);
-        imshow("straight",tmp);
+        //imshow("straight",tmp);
 
         if ((size - 17) % 4)
             return ERROR_INVALID_GRID_SIZE;
@@ -2245,28 +2366,18 @@ namespace cv
         /*get rid of the ecc_code*/
         u_int8_t fdata = my_format >> 10;
         ecc_level = fdata >> 3;
-        mask = fdata & 7;
+        mask_type = fdata & 7;
 
         //cout<<"mask : \n"<<mask<<" \necc_level : \n"<<ecc_level<<endl;
 
         unmask_data();
 
-        Mat tmp2;
-        unmasked_data.copyTo(tmp2);
-        cv::resize(tmp2,tmp2,Size(600,600),0,0,INTER_AREA);
-        imshow("unmask_data",tmp2);
+
 
         read_data();
 
-//        for(int i=0;i<MAX_PAYLOAD;i++){
-//            cout<<(int)orignal_data[i]<<" ";
-//            if(i%10==0)
-//                cout<<'\n';
-//        }
-//        cout<<'\n';
-
         rearrange_blocks();
-        cv::waitKey();
+        //cv::waitKey();
 
 
 
@@ -3434,3 +3545,4 @@ namespace cv
     }
 
 }  // namespace
+
