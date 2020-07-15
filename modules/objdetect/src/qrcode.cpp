@@ -2342,7 +2342,61 @@ bool QRDecode::decodingProcess()
     }
     return true;
 #else
-    return false;
+    decode_error err;
+    uint16_t my_format=0;
+    if (straight.empty()) { return false; }
+    size=straight.size().width;
+
+    Mat tmp;
+    straight.copyTo(tmp);
+    cv::resize(tmp,tmp,Size(600,600),0,0,INTER_AREA);
+    //imshow("straight",tmp);
+
+    if ((size - 17) % 4)
+        return ERROR_INVALID_GRID_SIZE;
+
+    /*estimated version*/
+    version = (size - 17) / 4;
+
+    if (version < 1 ||
+        version > MAX_VERSION)
+        return ERROR_INVALID_VERSION;
+
+    /* Read format information -- try both locations */
+    err = read_format(my_format,0);
+    if (err)
+        err = read_format(my_format,1);
+    if (err)
+        return err;
+
+    /*ECC correction*/
+    err = correct_format(my_format);
+    if (err)
+        return err;
+
+    /*EC level （1-2）+Mask(3-5) + EC for this string( 6-15) */
+    /*get rid of the ecc_code*/
+    u_int8_t fdata = my_format >> 10;
+    ecc_level = fdata >> 3;
+    mask_type = fdata & 7;
+
+    //cout<<"mask : \n"<<mask<<" \necc_level : \n"<<ecc_level<<endl;
+
+    unmask_data();
+
+    read_data();
+
+    rearrange_blocks();
+    //cv::waitKey();
+
+    if (err != 0) { return false; }
+
+//    for (int i = 0; i < qr_code_data.payload_len; i++)
+//    {
+//        result_info += qr_code_data.payload[i];
+//    }
+    return true;
+
 #endif
 
 }
