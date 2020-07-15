@@ -73,7 +73,8 @@ struct OpenVINOModelTestCaseInfo
 static const std::map<std::string, OpenVINOModelTestCaseInfo>& getOpenVINOTestModels()
 {
     static std::map<std::string, OpenVINOModelTestCaseInfo> g_models {
-#if INF_ENGINE_RELEASE >= 2018050000
+#if INF_ENGINE_RELEASE >= 2018050000 && \
+    INF_ENGINE_RELEASE <= 2020999999  // don't use IRv5 models with 2020.1+
         // layout is defined by open_model_zoo/model_downloader
         // Downloaded using these parameters for Open Model Zoo downloader (2019R1):
         // ./downloader.py -o ${OPENCV_DNN_TEST_DATA_PATH}/omz_intel_models --cache_dir ${OPENCV_DNN_TEST_DATA_PATH}/.omz_cache/ \
@@ -293,6 +294,11 @@ TEST_P(DNNTestOpenVINO, models)
         if (modelName == "person-detection-retail-0013")  // IRv10
             applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
     }
+#endif
+
+#if INF_ENGINE_VER_MAJOR_EQ(2020040000)
+    if (targetId == DNN_TARGET_MYRIAD && modelName == "person-detection-retail-0002")  // IRv5, OpenVINO 2020.4 regression
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
 #endif
 
     if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
