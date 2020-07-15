@@ -150,7 +150,7 @@ def git_apply_patch(src_dir, patch_file):
     patch_file = str(patch_file)  # Python 3.5 may not handle Path
     assert os.path.exists(patch_file), patch_file
     execute(cmd=['git', 'apply', '--3way', '-v', '--ignore-space-change', str(patch_file)], cwd=src_dir)
-    execute(cmd=['git', 'diff', 'HEAD'], cwd=src_dir)
+    execute(cmd=['git', '--no-pager', 'diff', 'HEAD'], cwd=src_dir)
 
 
 #===================================================================================================
@@ -443,8 +443,8 @@ class Builder:
 def main():
 
     dldt_src_url = 'https://github.com/openvinotoolkit/openvino'
-    dldt_src_commit = '2020.3.0'
-    dldt_release = '2020030000'
+    dldt_src_commit = '2020.4'
+    dldt_release = '2020040000'
 
     build_cache_dir_default = os.environ.get('BUILD_CACHE_DIR', '.build_cache')
     build_subst_drive = os.environ.get('BUILD_SUBST_DRIVE', None)
