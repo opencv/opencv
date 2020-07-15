@@ -3558,6 +3558,4 @@ bool QRCodeDetector::detectAndDecodeMulti(
     ok = decodeMulti(inarr, points, decoded_info, straight_qrcode);
     return ok;
 }
-
 }  // namespace
-
