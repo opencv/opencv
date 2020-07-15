@@ -83,6 +83,8 @@ method_dict = {
     ("Mat", "dot") : "-dot:"
 }
 
+modules = []
+
 def read_contents(fname):
     with open(fname, 'r') as f:
         data = f.read()
@@ -124,7 +126,7 @@ class GeneralInfo():
 
             docstring += sanitize_documentation_string(doc, type)
         elif type == "class":
-            docstring += "/**\n* The " + self.name + " module\n*/\n"
+            docstring += "/**\n * The " + self.name + " module\n */\n"
 
         self.docstring = docstring
 
@@ -199,6 +201,19 @@ def cast_to(t):
         return type_dict[t]["cast_to"]
     return t
 
+def gen_class_doc(docstring, module, members, enums):
+    lines = docstring.splitlines()
+    lines.insert(len(lines)-1, " *")
+    if len(members) > 0:
+        lines.insert(len(lines)-1, " * Member classes: " + ", ".join([("`" + m + "`") for m in members]))
+        lines.insert(len(lines)-1, " *")
+    else:
+        lines.insert(len(lines)-1, " * Member of `" + module + "`")
+    if len(enums) > 0:
+        lines.insert(len(lines)-1, " * Member enums: " + ", ".join([("`" + m + "`") for m in enums]))
+
+    return "\n".join(lines)
+
 class ClassPropInfo():
     def __init__(self, decl): # [f_ctype, f_name, '', '/RW']
         self.ctype = decl[0]
@@ -232,6 +247,8 @@ class ClassInfo(GeneralInfo):
         self.base = ''
         self.is_base_class = True
         self.native_ptr_name = "nativePtr"
+        self.member_classes = [] # Only relevant for modules
+        self.member_enums = [] # Only relevant for modules
         if decl[1]:
             self.base = re.sub(r"^.*:", "", decl[1].split(",")[0]).strip().replace(self.objc_name, "")
             if self.base:
@@ -347,7 +364,7 @@ class ClassInfo(GeneralInfo):
                             objcName = self.objc_name,
                             cName = self.cname,
                             imports = "\n".join(self.getImports(M)),
-                            docs = self.docstring,
+                            docs = gen_class_doc(self.docstring, M, self.member_classes, self.member_enums),
                             base = self.base)
 
     def generateObjcBodyCode(self, m, M):
@@ -379,7 +396,7 @@ class ClassInfo(GeneralInfo):
                             objcName = self.objc_name,
                             cName = self.cname,
                             imports = "\n".join(self.getImports(M)),
-                            docs = self.docstring,
+                            docs = gen_class_doc(self.docstring, M, self.member_classes, self.member_enums),
                             base = self.base)
 
 class ArgInfo():
@@ -557,11 +574,13 @@ class ObjectiveCWrapperGenerator(object):
         self.skipped_func_list = []
         self.def_args_hist = {} # { def_args_cnt : funcs_cnt }
 
-    def add_class(self, decl):
+    def add_class(self, decl, module):
         classinfo = ClassInfo(decl, namespaces=self.namespaces)
         if classinfo.name in class_ignore_list:
             logging.info('ignored: %s', classinfo)
             return
+        if classinfo.name != module:
+            self.classes[module].member_classes.append(classinfo.name)
         name = classinfo.name
         if self.isWrapped(name) and not classinfo.base:
             logging.warning('duplicated: %s', classinfo)
@@ -620,7 +639,7 @@ class ObjectiveCWrapperGenerator(object):
                 ci.addConst(constinfo)
                 logging.info('ok: %s', constinfo)
 
-    def add_enum(self, decl, scope): # [ "enum cname", "", [], [] ]
+    def add_enum(self, decl): # [ "enum cname", "", [], [] ]
         enumType = decl[0].rsplit(" ", 1)[1]
         if enumType.endswith("<unnamed>"):
             enumType = None
@@ -641,10 +660,12 @@ class ObjectiveCWrapperGenerator(object):
                                      "objc_type": objc_type,
                                      "is_enum": True,
                                      "import_module": import_module}
+            self.classes[self.Module].member_enums.append(objc_type)
+
         const_decls = decl[3]
 
         for decl in const_decls:
-            self.add_const(decl, scope, enumType)
+            self.add_const(decl, self.Module, enumType)
 
     def add_func(self, decl):
         fi = FuncInfo(decl, namespaces=self.namespaces)
@@ -688,7 +709,7 @@ class ObjectiveCWrapperGenerator(object):
         # TODO: support UMat versions of declarations (implement UMat-wrapper for Java)
         parser = hdr_parser.CppHeaderParser(generate_umat_decls=False)
 
-        self.add_class( ['class ' + self.Module, '', [], []] ) # [ 'class/struct cname', ':bases', [modlist] [props] ]
+        self.add_class( ['class ' + self.Module, '', [], []], self.Module ) # [ 'class/struct cname', ':bases', [modlist] [props] ]
 
         # scan the headers and build more descriptive maps of classes, consts, functions
         includes = []
@@ -708,12 +729,12 @@ class ObjectiveCWrapperGenerator(object):
                 logging.info("\n--- Incoming ---\n%s", pformat(decl[:5], 4)) # without docstring
                 name = decl[0]
                 if name.startswith("struct") or name.startswith("class"):
-                    self.add_class(decl)
+                    self.add_class(decl, self.Module)
                 elif name.startswith("const"):
                     self.add_const(decl)
                 elif name.startswith("enum"):
                     # enum
-                    self.add_enum(decl, self.Module)
+                    self.add_enum(decl)
                 else: # function
                     self.add_func(decl)
 
@@ -1139,14 +1160,18 @@ typedef NS_ENUM(int, {2}) {{
 
     def finalize(self, output_objc_path):
         opencv_header_file = os.path.join(output_objc_path, framework_name + ".h")
-        self.save(opencv_header_file, '\n'.join(['#import "%s"' % os.path.basename(f) for f in self.header_files if os.path.basename(f) != "CVObjcUtil.h"]))
+        self.save(opencv_header_file, '\n'.join(['#import "%s"' % os.path.basename(f) for f in self.header_files]))
         cmakelist_template = read_contents(os.path.join(SCRIPT_DIR, 'templates/cmakelists.template'))
         cmakelist = Template(cmakelist_template).substitute(modules = ";".join(modules), framework = framework_name)
         self.save(os.path.join(dstdir, "CMakeLists.txt"), cmakelist)
         mkdir_p("./framework_build")
         mkdir_p("./test_build")
         mkdir_p("./doc_build")
-        copyfile(os.path.join(SCRIPT_DIR, '../doc/README.md'), "./doc_build/README.md")
+        with open(os.path.join(SCRIPT_DIR, '../doc/README.md')) as readme_in:
+            readme_body = readme_in.read()
+        readme_body += "\n\n\n##Modules\n\n" + ", ".join(["`" + m.capitalize() + "`" for m in modules])
+        with open("./doc_build/README.md", "w") as readme_out:
+            readme_out.write(readme_body)
         if framework_name != "OpenCV":
             for dirname, dirs, files in os.walk(os.path.join(testdir, "test")):
                 for filename in files:
@@ -1305,7 +1330,6 @@ if __name__ == "__main__":
     generator = ObjectiveCWrapperGenerator()
 
     gen_dict_files = []
-    modules = []
     framework_name = args.framework
 
     print("Objective-C: Processing OpenCV modules: %d" % len(config['modules']))

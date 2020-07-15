@@ -6,7 +6,6 @@
 
 #import "KeyPoint.h"
 #import "Point2f.h"
-#import "CVObjcUtil.h"
 
 @implementation KeyPoint {
     cv::KeyPoint native;
@@ -74,6 +73,8 @@
         return [self.pt isEqual:keyPoint.pt] && self.size == keyPoint.size && self.angle == keyPoint.angle && self.response == keyPoint.response && self.octave == keyPoint.octave && self.classId == keyPoint.classId;
     }
 }
+
+#define FLOAT_TO_BITS(x)  ((Cv32suf){ .f = x }).i
 
 - (NSUInteger)hash {
     int prime = 31;

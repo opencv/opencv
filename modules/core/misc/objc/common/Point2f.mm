@@ -6,7 +6,6 @@
 
 #import "Point2f.h"
 #import "Rect2f.h"
-#import "CVObjcUtil.h"
 
 @implementation Point2f {
     cv::Point2f native;
@@ -89,6 +88,8 @@
 - (BOOL)inside:(Rect2f *)rect {
     return [rect contains:self];
 }
+
+#define FLOAT_TO_BITS(x)  ((Cv32suf){ .f = x }).i
 
 - (NSUInteger)hash {
     int prime = 31;

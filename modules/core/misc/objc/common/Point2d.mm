@@ -6,7 +6,6 @@
 
 #import "Point2d.h"
 #import "Rect2d.h"
-#import "CVObjcUtil.h"
 
 @implementation Point2d {
     cv::Point2d native;
@@ -89,6 +88,8 @@
 - (BOOL)inside:(Rect2d*)rect {
     return [rect contains:self];
 }
+
+#define DOUBLE_TO_BITS(x)  ((Cv64suf){ .f = x }).i
 
 - (NSUInteger)hash {
     int prime = 31;

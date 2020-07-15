@@ -6,7 +6,6 @@
 
 #import "Size2d.h"
 #import "Point2d.h"
-#import "CVObjcUtil.h"
 
 @implementation Size2d {
     cv::Size2d native;
@@ -92,6 +91,8 @@
         return self.width == it.width && self.height == it.height;
     }
 }
+
+#define DOUBLE_TO_BITS(x)  ((Cv64suf){ .f = x }).i
 
 - (NSUInteger)hash {
     int prime = 31;

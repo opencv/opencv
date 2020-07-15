@@ -7,7 +7,6 @@
 #import "Rect2f.h"
 #import "Point2f.h"
 #import "Size2f.h"
-#import "CVObjcUtil.h"
 
 @implementation Rect2f {
     cv::Rect2f native;
@@ -133,6 +132,8 @@
         return self.x == rect.x && self.y == rect.y && self.width == rect.width && self.height == rect.height;
     }
 }
+
+#define FLOAT_TO_BITS(x)  ((Cv32suf){ .f = x }).i
 
 - (NSUInteger)hash {
     int prime = 31;

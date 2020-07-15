@@ -373,6 +373,7 @@ class Builder:
         doc_path = os.path.join(builddirs[0], "modules", "objc", "doc_build", "docs")
         if os.path.exists(doc_path):
             shutil.copytree(doc_path, os.path.join(outdir, "docs"))
+            shutil.copyfile(os.path.join(self.opencv, "doc", "opencv.ico"), os.path.join(outdir, "docs", "favicon.ico"))
 
     def copy_samples(self, outdir):
         return
