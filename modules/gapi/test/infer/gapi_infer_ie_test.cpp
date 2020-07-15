@@ -62,13 +62,9 @@ std::vector<std::string> modelPathByName(const std::string &model_name) {
 #if INF_ENGINE_RELEASE >= 2019040000  // >= 2019.R4
         {"age-gender-recognition-retail-0013",
          "2020.3.0/intel/age-gender-recognition-retail-0013/FP32"},
-        {"face-detection-adas-0001",
-         "2020.3.0/intel/face-detection-adas-0001/FP32"},
 #else // < 2019.R4
         {"age-gender-recognition-retail-0013",
          "Retail/object_attributes/age_gender/dldt"},
-        {"face-detection-adas-0001",
-         "Transportation/object_detection/face/pruned_mobilenet_reduced_ssd_shared_weights/dldt"},
 #endif // INF_ENGINE_RELEASE >= 2019040000
     };
     const auto range = map.equal_range(model_name);
@@ -322,67 +318,67 @@ TEST(TestTwoIENNPipeline, InferBasicImage)
 
     cv::gapi::ie::detail::ParamDesc AGparams;
     std::tie(AGparams.model_path, AGparams.weights_path) = findModel("age-gender-recognition-retail-0013");
-    AGparams.device_id = "CPU";
-
-    cv::gapi::ie::detail::ParamDesc FDparams;
-    std::tie(FDparams.model_path, FDparams.weights_path) = findModel("face-detection-adas-0001");
-    FDparams.device_id = "CPU";
+    AGparams.device_id = "MYRIAD";
 
     // FIXME: Ideally it should be an image from disk
     // cv::Mat in_mat = cv::imread(findDataFile("grace_hopper_227.png"));
     cv::Mat in_mat(cv::Size(320, 240), CV_8UC3);
     cv::randu(in_mat, 0, 255);
 
-    cv::Mat gapi_age, gapi_gender, gapi_faces;
+    cv::Mat gapi_age1, gapi_gender1, gapi_age2, gapi_gender2;
 
     // Load & run IE network
-    IE::Blob::Ptr ie_age, ie_gender, ie_face;
+    IE::Blob::Ptr ie_age1, ie_gender1, ie_age2, ie_gender2;
     {
-        auto AGplugin         = cv::gimpl::ie::wrap::getPlugin(AGparams);
-        auto AGnet            = cv::gimpl::ie::wrap::readNetwork(AGparams);
-        setNetParameters(AGnet);
-        auto AGplugin_network = cv::gimpl::ie::wrap::loadNetwork(AGplugin, AGnet, AGparams);
-        auto AGinfer_request  = AGplugin_network.CreateInferRequest();
-        AGinfer_request.SetBlob("data", cv::gapi::ie::util::to_ie(in_mat));
-        AGinfer_request.Infer();
-        ie_age    = AGinfer_request.GetBlob("age_conv3");
-        ie_gender = AGinfer_request.GetBlob("prob");
+        auto AGplugin1         = cv::gimpl::ie::wrap::getPlugin(AGparams);
+        auto AGnet1            = cv::gimpl::ie::wrap::readNetwork(AGparams);
+        setNetParameters(AGnet1);
+        auto AGplugin_network1 = cv::gimpl::ie::wrap::loadNetwork(AGplugin1, AGnet1, AGparams);
+        auto AGinfer_request1  = AGplugin_network1.CreateInferRequest();
+        AGinfer_request1.SetBlob("data", cv::gapi::ie::util::to_ie(in_mat));
+        AGinfer_request1.Infer();
+        ie_age1    = AGinfer_request1.GetBlob("age_conv3");
+        ie_gender1 = AGinfer_request1.GetBlob("prob");
 
-        auto FDplugin         = cv::gimpl::ie::wrap::getPlugin(FDparams);
-        auto FDnet            = cv::gimpl::ie::wrap::readNetwork(FDparams);
-        setNetParameters(FDnet);
-        auto FDplugin_network = cv::gimpl::ie::wrap::loadNetwork(FDplugin, FDnet, FDparams);
-        auto FDinfer_request  = FDplugin_network.CreateInferRequest();
-        FDinfer_request.SetBlob("data", cv::gapi::ie::util::to_ie(in_mat));
-        FDinfer_request.Infer();
-        ie_face = FDinfer_request.GetBlob("detection_out");
+        auto AGplugin2         = cv::gimpl::ie::wrap::getPlugin(AGparams);
+        auto AGnet2            = cv::gimpl::ie::wrap::readNetwork(AGparams);
+        setNetParameters(AGnet2);
+        auto AGplugin_network2 = cv::gimpl::ie::wrap::loadNetwork(AGplugin2, AGnet2, AGparams);
+        auto AGinfer_request2     = AGplugin_network2.CreateInferRequest();
+        AGinfer_request2.SetBlob("data", cv::gapi::ie::util::to_ie(in_mat));
+        AGinfer_request2.Infer();
+        ie_age2    = AGinfer_request2.GetBlob("age_conv3");
+        ie_gender2 = AGinfer_request2.GetBlob("prob");
     }
 
     // Configure & run G-API
     using AGInfo = std::tuple<cv::GMat, cv::GMat>;
-    G_API_NET(AgeGender, <AGInfo(cv::GMat)>, "test-age-gender");
-    G_API_NET(Faces, <cv::GMat(cv::GMat)>, "test-face-detection");
+    G_API_NET(AgeGender1, <AGInfo(cv::GMat)>,   "test-age-gender1");
+    G_API_NET(AgeGender2, <AGInfo(cv::GMat)>,   "test-age-gender2");
     cv::GMat in;
-    cv::GMat age, gender;
-    std::tie(age, gender) = cv::gapi::infer<AgeGender>(in);
-    // FIXME: "Multi-node inference is not supported!", workarounded 'till enabling proper tools
-    cv::GMat faces        = cv::gapi::infer<Faces>(cv::gapi::copy(in));
-    cv::GComputation comp(cv::GIn(in), cv::GOut(age, gender, faces));
+    cv::GMat age1, gender1;
+    std::tie(age1, gender1) = cv::gapi::infer<AgeGender1>(in);
 
-    auto age_net = cv::gapi::ie::Params<AgeGender> {
+    cv::GMat age2, gender2;
+    // FIXME: "Multi-node inference is not supported!", workarounded 'till enabling proper tools
+    std::tie(age2, gender2) = cv::gapi::infer<AgeGender2>(cv::gapi::copy(in));
+    cv::GComputation comp(cv::GIn(in), cv::GOut(age1, gender1, age2, gender2));
+
+    auto age_net1 = cv::gapi::ie::Params<AgeGender1> {
         AGparams.model_path, AGparams.weights_path, AGparams.device_id
     }.cfgOutputLayers({ "age_conv3", "prob" });
-    auto det_net = cv::gapi::ie::Params<Faces> {
-        FDparams.model_path, FDparams.weights_path, FDparams.device_id
-    };
+    auto age_net2 = cv::gapi::ie::Params<AgeGender2> {
+        AGparams.model_path, AGparams.weights_path, AGparams.device_id
+    }.cfgOutputLayers({ "age_conv3", "prob" });
 
-    comp.apply(cv::gin(in_mat), cv::gout(gapi_age, gapi_gender, gapi_faces),
-               cv::compile_args(cv::gapi::networks(age_net, det_net)));
+    comp.apply(cv::gin(in_mat), cv::gout(gapi_age1, gapi_gender1, gapi_age2, gapi_gender2),
+               cv::compile_args(cv::gapi::networks(age_net1, age_net2)));
 
     // Validate with IE itself (avoid DNN module dependency here)
-    normAssert(cv::gapi::ie::util::to_ocv(ie_age),    gapi_age,    "Test age output");
-    normAssert(cv::gapi::ie::util::to_ocv(ie_gender), gapi_gender, "Test gender output");
-    normAssert(cv::gapi::ie::util::to_ocv(ie_face),   gapi_faces,  "Test face detection output");
+    normAssert(cv::gapi::ie::util::to_ocv(ie_age1),    gapi_age1,    "Test age output 1");
+    normAssert(cv::gapi::ie::util::to_ocv(ie_gender1), gapi_gender1, "Test gender output 1");
+    normAssert(cv::gapi::ie::util::to_ocv(ie_age2),    gapi_age2,    "Test age output 2");
+    normAssert(cv::gapi::ie::util::to_ocv(ie_gender2), gapi_gender2, "Test gender output 2");
 }
 
 } // namespace opencv_test
