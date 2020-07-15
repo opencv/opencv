@@ -86,7 +86,7 @@ public:
             return;
         }
 
-        std::vector<Point2f> corners;
+        std::vector<Point3f> corners;
 
         if (_image.isUMat())
         {
@@ -110,10 +110,10 @@ public:
         }
 
         keypoints.resize(corners.size());
-        std::vector<Point2f>::const_iterator corner_it = corners.begin();
+        std::vector<Point3f>::const_iterator corner_it = corners.begin();
         std::vector<KeyPoint>::iterator keypoint_it = keypoints.begin();
         for( ; corner_it != corners.end() && keypoint_it != keypoints.end(); ++corner_it, ++keypoint_it )
-            *keypoint_it = KeyPoint( *corner_it, (float)blockSize );
+            *keypoint_it = KeyPoint( *corner_it, (float)blockSize);
 
     }
 
