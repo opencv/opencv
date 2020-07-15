@@ -714,6 +714,14 @@ public:
     //! the default constructor
     CV_WRAP KeyPoint();
     /**
+    @param _pt x & y coordinates of the keypoint while z is the response
+    @param _size keypoint diameter
+    @param _angle keypoint orientation
+    @param _octave pyramid octave in which the keypoint has been detected
+    @param _class_id object id
+ */
+    KeyPoint(Point3f _pt, float _size, float _angle=-1, int _octave=0, int _class_id=-1);
+    /**
     @param _pt x & y coordinates of the keypoint
     @param _size keypoint diameter
     @param _angle keypoint orientation
@@ -2426,6 +2434,10 @@ Scalar operator * (const Matx<double, 4, 4>& a, const Scalar& b)
 inline
 KeyPoint::KeyPoint()
     : pt(0,0), size(0), angle(-1), response(0), octave(0), class_id(-1) {}
+
+inline
+KeyPoint::KeyPoint(Point3f _pt, float _size, float _angle, int _octave, int _class_id)
+    : pt(_pt.x, _pt.y), size(_size), angle(_angle), response(_pt.z), octave(_octave), class_id(_class_id) {}
 
 inline
 KeyPoint::KeyPoint(Point2f _pt, float _size, float _angle, float _response, int _octave, int _class_id)
