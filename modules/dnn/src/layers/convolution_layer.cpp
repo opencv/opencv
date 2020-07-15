@@ -969,8 +969,16 @@ public:
             int stripesPerSample;
             size_t stripeSize;
             Range r = r0;
+            bool depthWiseConvolution = !is1x1 && isConv2D && ngroups > 1 && batchSize == ngroups && inpCn == 1 &&
+                outCn == 1 && kernel_d == 1 && dilation_d == 1 && stride_d == 0 && pad_d == 0 &&
+                width >= 16 + dilation_w*(kernel_w - 1);
+            // for now only 3x3 depth-wise convolutions are supported
+            depthWiseConvolution = depthWiseConvolution && kernel_w == 3 && kernel_h == 3 &&
+                // computing at most 1 pixel from each side can involve padding
+                max(stride_w, dilation_w) >= pad_l && max(stride_h, dilation_h) >= pad_t &&
+                pad_l <= 1 && pad_t <= 1;
 
-            if( nstripes >= batchSize*2 )
+            if( !depthWiseConvolution && nstripes >= batchSize*2 )
             {
                 stripesPerSample = nstripes/batchSize;
                 stripeSize = alignSize((outPlaneSize + stripesPerSample - 1)/stripesPerSample, valign);
@@ -996,16 +1004,20 @@ public:
             AutoBuffer<float> rowbuf0_(rowbufsz + valign);
             float* rowbuf0 = alignPtr(rowbuf0_.data(), (int)(valign*sizeof(float)));
 
-            // we clear the buffer once; ultimately, it lets us to avoid
-            // tail processing after running the unrolled/vectorized loop.
-            // the main idea is to make sure that the tail (a.k.a. padding) of each row
-            // (i.e. the elements with indices between vsz=karea*ncn and vsz_a)
-            // does not contain NaNs or Infs. Because the padding in the weights
-            // matrix is explicitly initialized with 0's, we handle all other
-            // cases nicely, i.e. we can skip expliciting re-initialization
-            // of the padding - we just retain elements from the previous iteration
-            // of the loop over channels (cn0).
-            memset(rowbuf0, 0, rowbufsz*sizeof(rowbuf0[0]) );
+            // im2row buffer is not used for depth-wise convolution
+            if(!depthWiseConvolution)
+            {
+                // we clear the buffer once; ultimately, it lets us to avoid
+                // tail processing after running the unrolled/vectorized loop.
+                // the main idea is to make sure that the tail (a.k.a. padding) of each row
+                // (i.e. the elements with indices between vsz=karea*ncn and vsz_a)
+                // does not contain NaNs or Infs. Because the padding in the weights
+                // matrix is explicitly initialized with 0's, we handle all other
+                // cases nicely, i.e. we can skip expliciting re-initialization
+                // of the padding - we just retain elements from the previous iteration
+                // of the loop over channels (cn0).
+                memset(rowbuf0, 0, rowbufsz*sizeof(rowbuf0[0]) );
+            }
 
             for( int stripe = r.start; stripe < r.end; stripe++ )
             {
@@ -1028,14 +1040,151 @@ public:
                     const float* wptr = wptr_orig + cn0*karea;
                     // we apply [Channels][P]ReLU (if any) during the final pass only.
                     const float* relu = cn1 == inpCn && reluptr_ ? reluptr_ + startOutCn : 0;
+                    const int blk_size = depthWiseConvolution ? outPlaneSize : BLK_SIZE;
 
-                    for( int ofs0 = stripeStart; ofs0 < stripeEnd; ofs0 += BLK_SIZE )
+                    for( int ofs0 = stripeStart; ofs0 < stripeEnd; ofs0 += blk_size )
                     {
-                        int ofs, ofs1 = std::min(ofs0 + BLK_SIZE, stripeEnd);
+                        int ofs, ofs1 = std::min(ofs0 + blk_size, stripeEnd);
 
                         int out_d = ofs0 / (outH * outW);
                         int out_i = (ofs0 - out_d * outH * outW) / outW;
                         int out_j = ofs0 % outW;
+
+                        if (depthWiseConvolution)
+                        {
+                            CV_Assert(out_i == 0 && out_j == 0);
+                            int in_d = out_d * stride_d - pad_d;
+                            const float* inptr_ = data_inp0 + (cn0*depth*height + in_d*height)*width;
+                            float* outptr_ = data_out0 + ofs0;
+
+                        #if CV_TRY_AVX2
+                            if(useAVX2)
+                                opt_AVX2::fastBitwiseConv(wptr, kernel_h, kernel_w,
+                                    stride_h, stride_w, dilation_h, dilation_w, pad_t, pad_l,
+                                    biasptr, relu, inptr_, height, width, outptr_, out_d, outH, outW);
+                            else
+                        #endif
+                        #if CV_TRY_AVX
+                            if(useAVX)
+                                opt_AVX::fastBitwiseConv(wptr, kernel_h, kernel_w,
+                                    stride_h, stride_w, dilation_h, dilation_w, pad_t, pad_l,
+                                    biasptr, relu, inptr_, height, width, outptr_, out_d, outH, outW);
+                            else
+                        #endif
+                            {
+                                const float w00_ = wptr[0], w01_ = wptr[1], w02_ = wptr[2],
+                                            w10 = wptr[3], w11 = wptr[4], w12 = wptr[5],
+                                            w20_ = wptr[6], w21_ = wptr[7], w22_ = wptr[8];
+                                int outW1 = min(outW, (width - dilation_w*(kernel_w - 1) + pad_l)/stride_w);
+                                float relu_coeff = relu ? relu[out_d] : 1.f, bias = biasptr[out_d];
+
+                                for (int out_i = 0; out_i < outH; out_i++)
+                                {
+                                    int in_i = out_i * stride_h - pad_t, out_j = 0;
+                                    const float* imgptr0 = inptr_ + in_i*width;
+                                    const float* imgptr1 = imgptr0 + dilation_h*width;
+                                    const float* imgptr2 = imgptr0 + (dilation_h*2)*width;
+                                    float out, w00 = w00_, w01 = w01_, w02 = w02_;
+                                    float w20 = w20_, w21 = w21_, w22 = w22_;
+                                    if (in_i < 0)
+                                    {
+                                        w00 = w01 = w02 = 0.f;
+                                        imgptr0 = imgptr1;
+                                    }
+                                    else if (in_i + dilation_h*(kernel_h-1) >= height)
+                                    {
+                                        w20 = w21 = w22 = 0.f;
+                                        imgptr2 = imgptr1;
+                                    }
+                                    float* outptr = outptr_ + out_i*outW;
+                                    if (pad_l > 0)
+                                    {
+                                        out = imgptr0[0]*w01 + imgptr0[dilation_w]*w02 +
+                                              imgptr1[0]*w11 + imgptr1[dilation_w]*w12 +
+                                              imgptr2[0]*w21 + imgptr2[dilation_w]*w22 + bias;
+                                        if (relu)
+                                            out = out > 0.f ? out : out*relu_coeff;
+                                        outptr[0] = out;
+                                        out_j = 1;
+                                    }
+
+                                #if CV_SIMD
+                                    // maybe with AVX or AVX512 strided depthwise convolution
+                                    // can be accelerated with vector code, but with 4xfloat vectors
+                                    // it's hardly the case
+                                    if( stride_w == 1 && stride_h == 1 )
+                                    {
+                                        const int VECSZ = v_float32::nlanes;
+                                        const int out_delta = VECSZ/stride_w;
+                                        v_float32 vw00 = vx_setall_f32(w00), vw01 = vx_setall_f32(w01), vw02 = vx_setall_f32(w02),
+                                                  vw10 = vx_setall_f32(w10), vw11 = vx_setall_f32(w11), vw12 = vx_setall_f32(w12),
+                                                  vw20 = vx_setall_f32(w20), vw21 = vx_setall_f32(w21), vw22 = vx_setall_f32(w22);
+                                        v_float32 z = vx_setzero_f32(), vbias = vx_setall_f32(bias), vrc = vx_setall_f32(relu_coeff);
+                                        for( ; out_j < outW1; out_j += out_delta )
+                                        {
+                                            if (out_j + out_delta > outW1 && out_j > pad_l)
+                                                out_j = outW1 - out_delta;
+                                            int in_j = out_j * stride_w - pad_l;
+                                            v_float32 v00 = vx_load(imgptr0 + in_j),
+                                                      v01 = vx_load(imgptr0 + in_j + dilation_w),
+                                                      v02 = vx_load(imgptr0 + in_j + dilation_w*2),
+                                                      v10 = vx_load(imgptr1 + in_j),
+                                                      v11 = vx_load(imgptr1 + in_j + dilation_w),
+                                                      v12 = vx_load(imgptr1 + in_j + dilation_w*2),
+                                                      v20 = vx_load(imgptr2 + in_j),
+                                                      v21 = vx_load(imgptr2 + in_j + dilation_w),
+                                                      v22 = vx_load(imgptr2 + in_j + dilation_w*2);
+
+                                            v_float32 vout = v00*vw00 + v01*vw01 + v02*vw02 +
+                                                             v10*vw10 + v11*vw11 + v12*vw12 +
+                                                             v20*vw20 + v21*vw21 + v22*vw22 + vbias;
+                                            if (relu)
+                                                vout = v_select(vout > z, vout, vout*vrc);
+                                            vx_store(outptr + out_j, vout);
+                                        }
+                                    }
+                                #endif
+                                    for (; out_j < outW1; out_j++)
+                                    {
+                                        int in_j = out_j * stride_w - pad_l;
+                                        out = imgptr0[in_j]*w00 + imgptr0[in_j + dilation_w]*w01 + imgptr0[in_j + dilation_w*2]*w02 +
+                                              imgptr1[in_j]*w10 + imgptr1[in_j + dilation_w]*w11 + imgptr1[in_j + dilation_w*2]*w12 +
+                                              imgptr2[in_j]*w20 + imgptr2[in_j + dilation_w]*w21 + imgptr2[in_j + dilation_w*2]*w22 + bias;
+                                        if (relu)
+                                            out = out > 0.f ? out : out*relu_coeff;
+                                        outptr[out_j] = out;
+                                    }
+
+                                    for (; out_j < outW; out_j++ )
+                                    {
+                                        int in_j0 = out_j * stride_w - pad_l, in_j1 = in_j0 + dilation_w, in_j2 = in_j0 + dilation_w*2;
+                                        float s0 = 1.f, s1 = 1.f, s2 = 1.f;
+                                        if (in_j0 >= width)
+                                        {
+                                            in_j0 = 0;
+                                            s0 = 0.f;
+                                        }
+                                        if (in_j1 >= width)
+                                        {
+                                            in_j1 = 0;
+                                            s1 = 0.f;
+                                        }
+                                        if (in_j2 >= width)
+                                        {
+                                            in_j2 = 0;
+                                            s2 = 0.f;
+                                        }
+                                        out = imgptr0[in_j0]*w00*s0 + imgptr0[in_j1]*w01*s1 + imgptr0[in_j2]*w02*s2 +
+                                              imgptr1[in_j0]*w10*s0 + imgptr1[in_j1]*w11*s1 + imgptr1[in_j2]*w12*s2 +
+                                              imgptr2[in_j0]*w20*s0 + imgptr2[in_j1]*w21*s1 + imgptr2[in_j2]*w22*s2 + bias;
+                                        if (relu)
+                                            out = out > 0.f ? out : out*relu_coeff;
+                                        outptr[out_j] = out;
+                                    }
+                                }
+                            }
+                            continue;
+                        }
 
                         // do im2row for a part of input tensor
                         float* rowbuf = rowbuf0;

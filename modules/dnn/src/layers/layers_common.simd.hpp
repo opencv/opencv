@@ -50,6 +50,16 @@ void fastConv( const float* weights, size_t wstep, const float* bias,
                const float* rowbuf, float* output, const int* outShape,
                int blockSize, int vecsize, int vecsize_aligned,
                const float* relu, bool initOutput );
+void fastBitwiseConv( const float* weights,
+                      int kernel_h, int kernel_w,
+                      int stride_h, int stride_w,
+                      int dilation_h, int dilation_w,
+                      int pad_t, int pad_l,
+                      const float* bias, const float* relu,
+                      const float* inptr,
+                      int height, int width,
+                      float* outptr,
+                      int out_d, int outH, int outW );
 void fastGEMM1T( const float* vec, const float* weights,
                  size_t wstep, const float* bias,
                  float* dst, int nvecs, int vecsize );
@@ -289,6 +299,150 @@ void fastConv( const float* weights, size_t wstep, const float* bias,
             outptr0[j] = s00;
             outptr1[j] = s10;
             outptr2[j] = s20;
+        }
+    }
+    _mm256_zeroupper();
+}
+
+
+void fastBitwiseConv( const float* wptr,
+                     int kernel_h, int kernel_w,
+                     int stride_h, int stride_w,
+                     int dilation_h, int dilation_w,
+                     int pad_t, int pad_l,
+                     const float* biasptr, const float* relu,
+                     const float* inptr_,
+                     int height, int width,
+                     float* outptr_,
+                     int out_d, int outH, int outW )
+{
+    const float w00_ = wptr[0], w01_ = wptr[1], w02_ = wptr[2],
+                w10 = wptr[3], w11 = wptr[4], w12 = wptr[5],
+                w20_ = wptr[6], w21_ = wptr[7], w22_ = wptr[8];
+    int outW1 = min(outW, (width - dilation_w*(kernel_w - 1) + pad_l)/stride_w);
+    float relu_coeff = relu ? relu[out_d] : 1.f, bias = biasptr[out_d];
+
+    for (int out_i = 0; out_i < outH; out_i++)
+    {
+        int in_i = out_i * stride_h - pad_t, out_j = 0;
+        const float* imgptr0 = inptr_ + in_i*width;
+        const float* imgptr1 = imgptr0 + dilation_h*width;
+        const float* imgptr2 = imgptr0 + (dilation_h*2)*width;
+        float out, w00 = w00_, w01 = w01_, w02 = w02_;
+        float w20 = w20_, w21 = w21_, w22 = w22_;
+        if (in_i < 0)
+        {
+            w00 = w01 = w02 = 0.f;
+            imgptr0 = imgptr1;
+        }
+        else if (in_i + dilation_h*(kernel_h-1) >= height)
+        {
+            w20 = w21 = w22 = 0.f;
+            imgptr2 = imgptr1;
+        }
+        float* outptr = outptr_ + out_i*outW;
+        if (pad_l > 0)
+        {
+            out = imgptr0[0]*w01 + imgptr0[dilation_w]*w02 +
+                  imgptr1[0]*w11 + imgptr1[dilation_w]*w12 +
+                  imgptr2[0]*w21 + imgptr2[dilation_w]*w22 + bias;
+            if (relu)
+                out = out > 0.f ? out : out*relu_coeff;
+            outptr[0] = out;
+            out_j = 1;
+        }
+
+        // maybe with AVX or AVX512 strided depthwise convolution
+        // can be accelerated with vector code, but with 4xfloat vectors
+        // it's hardly the case
+        if (stride_w == 1 || stride_w == 2)
+        {
+            const int VECSZ = 8;
+            const int out_delta = VECSZ/stride_w;
+            __m256 vw00 = _mm256_set1_ps(w00), vw01 = _mm256_set1_ps(w01), vw02 = _mm256_set1_ps(w02),
+                      vw10 = _mm256_set1_ps(w10), vw11 = _mm256_set1_ps(w11), vw12 = _mm256_set1_ps(w12),
+                      vw20 = _mm256_set1_ps(w20), vw21 = _mm256_set1_ps(w21), vw22 = _mm256_set1_ps(w22);
+            __m256 z = _mm256_setzero_ps(), vbias = _mm256_set1_ps(bias), vrc = _mm256_set1_ps(relu_coeff);
+            for( ; out_j < outW1; out_j += out_delta )
+            {
+                if (out_j + out_delta > outW1 && out_j > pad_l)
+                    out_j = outW1 - out_delta;
+                int in_j = out_j * stride_w - pad_l;
+                __m256 v00 = _mm256_loadu_ps(imgptr0 + in_j),
+                       v01 = _mm256_loadu_ps(imgptr0 + in_j + dilation_w),
+                       v02 = _mm256_loadu_ps(imgptr0 + in_j + dilation_w*2),
+                       v10 = _mm256_loadu_ps(imgptr1 + in_j),
+                       v11 = _mm256_loadu_ps(imgptr1 + in_j + dilation_w),
+                       v12 = _mm256_loadu_ps(imgptr1 + in_j + dilation_w*2),
+                       v20 = _mm256_loadu_ps(imgptr2 + in_j),
+                       v21 = _mm256_loadu_ps(imgptr2 + in_j + dilation_w),
+                       v22 = _mm256_loadu_ps(imgptr2 + in_j + dilation_w*2);
+
+                __m256 vout0 = _mm256_fmadd_ps(v00, vw00, vbias);
+                __m256 vout1 = _mm256_mul_ps(v01, vw01);
+                __m256 vout2 = _mm256_mul_ps(v02, vw02);
+
+                vout0 = _mm256_fmadd_ps(v10, vw10, vout0);
+                vout1 = _mm256_fmadd_ps(v11, vw11, vout1);
+                vout2 = _mm256_fmadd_ps(v12, vw12, vout2);
+
+                vout0 = _mm256_fmadd_ps(v20, vw20, vout0);
+                vout1 = _mm256_fmadd_ps(v21, vw21, vout1);
+                vout2 = _mm256_fmadd_ps(v22, vw22, vout2);
+
+                vout0 = _mm256_add_ps(_mm256_add_ps(vout0, vout1), vout2);
+                if (relu)
+                {
+                    __m256 m = _mm256_cmp_ps(vout0, z, _CMP_GT_OQ);
+                    vout0 = _mm256_blendv_ps(_mm256_mul_ps(vout0, vrc), vout0, m);
+                }
+                if (stride_w == 2)
+                {
+                    __m256 hi = _mm256_zextps128_ps256 (_mm256_extractf128_ps (vout0, 1));
+                    __m256 even = _mm256_shuffle_ps(vout0, hi, 0x88);
+                    _mm256_storeu_ps(outptr + out_j, even);
+                }
+                else
+                    _mm256_storeu_ps(outptr + out_j, vout0);
+            }
+        }
+
+        for (; out_j < outW1; out_j++)
+        {
+            int in_j = out_j * stride_w - pad_l;
+            out = imgptr0[in_j]*w00 + imgptr0[in_j + dilation_w]*w01 + imgptr0[in_j + dilation_w*2]*w02 +
+                  imgptr1[in_j]*w10 + imgptr1[in_j + dilation_w]*w11 + imgptr1[in_j + dilation_w*2]*w12 +
+                  imgptr2[in_j]*w20 + imgptr2[in_j + dilation_w]*w21 + imgptr2[in_j + dilation_w*2]*w22 + bias;
+            if (relu)
+                out = out > 0.f ? out : out*relu_coeff;
+            outptr[out_j] = out;
+        }
+
+        for (; out_j < outW; out_j++ )
+        {
+            int in_j0 = out_j * stride_w - pad_l, in_j1 = in_j0 + dilation_w, in_j2 = in_j0 + dilation_w*2;
+            float s0 = 1.f, s1 = 1.f, s2 = 1.f;
+            if (in_j0 >= width)
+            {
+                in_j0 = 0;
+                s0 = 0.f;
+            }
+            if (in_j1 >= width)
+            {
+                in_j1 = 0;
+                s1 = 0.f;
+            }
+            if (in_j2 >= width)
+            {
+                in_j2 = 0;
+                s2 = 0.f;
+            }
+            out = imgptr0[in_j0]*w00*s0 + imgptr0[in_j1]*w01*s1 + imgptr0[in_j2]*w02*s2 +
+                  imgptr1[in_j0]*w10*s0 + imgptr1[in_j1]*w11*s1 + imgptr1[in_j2]*w12*s2 +
+                  imgptr2[in_j0]*w20*s0 + imgptr2[in_j1]*w21*s1 + imgptr2[in_j2]*w22*s2 + bias;
+            if (relu)
+                out = out > 0.f ? out : out*relu_coeff;
+            outptr[out_j] = out;
         }
     }
     _mm256_zeroupper();
