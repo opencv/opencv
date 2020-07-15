@@ -1,5 +1,0 @@
-#ifndef OPENCV_CORE_OCL_RUNTIME_OPENCL_WRAPPERS_HPP
-#error "Invalid usage"
-#endif
-
-@CL_FN_INLINE_WRAPPERS@
