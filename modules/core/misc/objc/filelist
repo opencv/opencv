@@ -1,4 +1,0 @@
-include/opencv2/core/base.hpp
-include/opencv2/core.hpp
-include/opencv2/core/utility.hpp
-misc/objc/manual/core_manual.hpp

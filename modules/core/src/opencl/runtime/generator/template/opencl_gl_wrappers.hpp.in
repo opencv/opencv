@@ -1,9 +1,0 @@
-#ifndef OPENCV_CORE_OCL_RUNTIME_OPENCL_GL_WRAPPERS_HPP
-#error "Invalid usage"
-#endif
-
-#ifdef cl_khr_gl_sharing
-
-@CL_FN_INLINE_WRAPPERS@
-
-#endif // cl_khr_gl_sharing
