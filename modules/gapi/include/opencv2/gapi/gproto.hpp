@@ -61,7 +61,28 @@ public:
     explicit GIOProtoArgs(GProtoArgs &&args)      : m_args(std::move(args)) {}
 
     GProtoArgs m_args;
+
+    // TODO: Think about the addition operator
+    /**
+     * @brief This operator allows to complement the proto vectors at runtime.
+     *
+     * It's an ordinary overload of addition assignment operator.
+     *
+     * Example of usage:
+     * @snippet dynamic_graph.cpp  GIOProtoArgs usage
+     *
+     */
+    template<typename Tg>
+    friend GIOProtoArgs<Tg>& operator += (GIOProtoArgs<Tg> &lhs, const GIOProtoArgs<Tg> &rhs);
 };
+
+template<typename Tg>
+cv::GIOProtoArgs<Tg>& operator += (cv::GIOProtoArgs<Tg> &lhs, const cv::GIOProtoArgs<Tg> &rhs)
+{
+    lhs.m_args.reserve(lhs.m_args.size() + rhs.m_args.size());
+    lhs.m_args.insert(lhs.m_args.end(), rhs.m_args.begin(), rhs.m_args.end());
+    return lhs;
+}
 
 struct In_Tag{};
 struct Out_Tag{};
