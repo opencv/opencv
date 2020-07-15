@@ -9,13 +9,9 @@
 #include "opencv2/objdetect.hpp"
 #include "opencv2/calib3d.hpp"
 
-//#include "precomp.hpp"
-//#include "opencv2/highgui.hpp"
-//#include "opencv2/imgproc.hpp"
-//#include "opencv2/objdetect.hpp"
-//#include "opencv2/calib3d.hpp"
-
-
+#ifdef HAVE_QUIRC
+#include "quirc.h"
+#endif
 
 #include <limits>
 #include <cmath>
@@ -24,11 +20,9 @@
 #include <limits>
 #include <iomanip>
 
-
-
-
 namespace cv
 {
+
 
 /* Limits on the maximum size of QR-codes and their content. */
 #define  MAX_BITMAP	3917
@@ -49,6 +43,7 @@ using std::vector;
 using std::cout;
 using std::endl;
 
+
 std::string D2B(uint16_t my_format);
 int ecc_code2level(int code);
 
@@ -64,8 +59,6 @@ int hamming_weight(uint16_t x);
 int hamming_detect(uint16_t fmt);
 
 int block_syndromes(const Mat & block, int synd_num,uint8_t *synd);
-
-
 /*total codewords are divided into two groups
  *The ecc_codewords are the same in two groups*/
 struct block_params {
@@ -81,7 +74,6 @@ struct version_info {
     int	apat[MAX_ALIGNMENT];  //(location of alignment pattern)
     block_params ecc[4];
 };
-
 const version_info version_db[MAX_VERSION + 1] = {
         { /* Version 0 */
                 0,
@@ -494,10 +486,6 @@ const version_info version_db[MAX_VERSION + 1] = {
                 }
         }
 };
-
-
-
-
 static const uint16_t after_mask_format [32]={
         0x5412,0x5125,0x5e7c,0x5b4b,0x45f9,  0x40ce,0x4f97,0x4aa0,0x77c4,0x72f3,
         0x7daa,0x789d,0x662f,0x6318,0x6c41,  0x6976,0x1689,0x13be,0x1ce7,0x19d0,
@@ -585,7 +573,6 @@ typedef enum {
     ERROR_DATA_OVERFLOW,
     ERROR_DATA_UNDERFLOW
 }  decode_error ;
-
 /*
  * params @ ecc_level
  * func   @ make the ecc_level more direct
@@ -734,7 +721,7 @@ protected:
 
 void QRDetect::init(const Mat& src, double eps_vertical_, double eps_horizontal_)
 {
-    //CV_TRACE_FUNCTION();
+    CV_TRACE_FUNCTION();
     CV_Assert(!src.empty());
     barcode = src.clone();
     const double min_side = std::min(src.size().width, src.size().height);
@@ -778,7 +765,7 @@ void QRDetect::init(const Mat& src, double eps_vertical_, double eps_horizontal_
 
 vector<Vec3d> QRDetect::searchHorizontalLines()
 {
-    //CV_TRACE_FUNCTION();
+    CV_TRACE_FUNCTION();
     vector<Vec3d> result;
     const int height_bin_barcode = bin_barcode.rows;
     const int width_bin_barcode  = bin_barcode.cols;
@@ -843,7 +830,7 @@ vector<Vec3d> QRDetect::searchHorizontalLines()
 
 vector<Point2f> QRDetect::separateVerticalLines(const vector<Vec3d> &list_lines)
 {
-    //CV_TRACE_FUNCTION();
+    CV_TRACE_FUNCTION();
 
     for (int coeff_epsilon = 1; coeff_epsilon < 10; coeff_epsilon++)
     {
@@ -869,7 +856,7 @@ vector<Point2f> QRDetect::separateVerticalLines(const vector<Vec3d> &list_lines)
 
 vector<Point2f> QRDetect::extractVerticalLines(const vector<Vec3d> &list_lines, double eps)
 {
-    //CV_TRACE_FUNCTION();
+    CV_TRACE_FUNCTION();
     vector<Vec3d> result;
     vector<double> test_lines; test_lines.reserve(6);
 
@@ -960,7 +947,7 @@ vector<Point2f> QRDetect::extractVerticalLines(const vector<Vec3d> &list_lines, 
 
 void QRDetect::fixationPoints(vector<Point2f> &local_point)
 {
-    //CV_TRACE_FUNCTION();
+    CV_TRACE_FUNCTION();
     double cos_angles[3], norm_triangl[3];
 
     norm_triangl[0] = norm(local_point[1] - local_point[2]);
@@ -1059,7 +1046,7 @@ void QRDetect::fixationPoints(vector<Point2f> &local_point)
 
 bool QRDetect::localization()
 {
-    //CV_TRACE_FUNCTION();
+    CV_TRACE_FUNCTION();
     Point2f begin, end;
     vector<Vec3d> list_lines_x = searchHorizontalLines();
     if( list_lines_x.empty() ) { return false; }
@@ -1156,7 +1143,7 @@ bool QRDetect::localization()
 
 bool QRDetect::computeTransformationPoints()
 {
-    //CV_TRACE_FUNCTION();
+    CV_TRACE_FUNCTION();
     if (localization_points.size() != 3) { return false; }
 
     vector<Point> locations, non_zero_elem[3], newHull;
@@ -1302,7 +1289,7 @@ Point2f QRDetect::intersectionLines(Point2f a1, Point2f a2, Point2f b1, Point2f 
 // test function (if true then ------> else <------ )
 bool QRDetect::testBypassRoute(vector<Point2f> hull, int start, int finish)
 {
-    //CV_TRACE_FUNCTION();
+    CV_TRACE_FUNCTION();
     int index_hull = start, next_index_hull, hull_size = (int)hull.size();
     double test_length[2] = { 0.0, 0.0 };
     do
@@ -1329,7 +1316,7 @@ bool QRDetect::testBypassRoute(vector<Point2f> hull, int start, int finish)
 
 vector<Point2f> QRDetect::getQuadrilateral(vector<Point2f> angle_list)
 {
-    //CV_TRACE_FUNCTION();
+    CV_TRACE_FUNCTION();
     size_t angle_size = angle_list.size();
     uint8_t value, mask_value;
     Mat mask = Mat::zeros(bin_barcode.rows + 2, bin_barcode.cols + 2, CV_8UC1);
@@ -1649,101 +1636,99 @@ protected:
     uint8_t size;
     float test_perspective_size;
 
-
 };
+    QRDecode::QRDecode(){
+        memset(orignal_data,0,sizeof(uint8_t)*MAX_PAYLOAD);
+        memset(rearranged_data,0,sizeof(uint8_t)*MAX_PAYLOAD);
+        memset(final,0,sizeof(uint8_t)*MAX_PAYLOAD);
+        memset(payload,0,sizeof(uint8_t)*MAX_PAYLOAD);
 
-QRDecode::QRDecode(){
-    memset(orignal_data,0,sizeof(uint8_t)*MAX_PAYLOAD);
-    memset(rearranged_data,0,sizeof(uint8_t)*MAX_PAYLOAD);
-    memset(final,0,sizeof(uint8_t)*MAX_PAYLOAD);
-    memset(payload,0,sizeof(uint8_t)*MAX_PAYLOAD);
-
-}
-/*
+    }
+    /*
  * params @ format(uint16_t for returning the format bits) which(select from two different place)
  * return @ can be correct or not
  * */
-decode_error QRDecode::read_format(uint16_t& format , int which){
-    /*version<=6*/
-    int i;
-    uint16_t my_format = 0;
+    decode_error QRDecode::read_format(uint16_t& format , int which){
+        /*version<=6*/
+        int i;
+        uint16_t my_format = 0;
 
-    Mat mat_format(1,FORMAT_LENGTH,CV_8UC1,Scalar(0));
+        Mat mat_format(1,FORMAT_LENGTH,CV_8UC1,Scalar(0));
 
-    //uint16_t fdata;
-    //decode_error err;
-    //decode_error my_err;
-    std::cout<<"format:";
-    /*read from the left-bottom and upper-right */
-    if (which) {
-        /*left-bottom 0-7*/
-        for (i = 0; i < 7; i++){
-            /*read from pst (code->size - 1 - i,8)*/
-            my_format = (my_format << 1) |
-                        (straight.ptr<uint8_t>(size - 1 - i)[8]==0);
-            mat_format.ptr(0)[i]=(straight.ptr<uint8_t>(size - 1 - i)[8]==0);
-        }
-        /*upper-right 7-14*/
-        for (i = 0; i < 8; i++){
-            my_format = (my_format << 1) |
-                        (straight.ptr<uint8_t>(8)[size - 8 + i]==0);
-            mat_format.ptr(0)[7+i]=(straight.ptr<uint8_t>(8)[size - 8 + i]==0);
-        }
-    } else{/*read the second format from the upper-left*/
-        static const int xs[FORMAT_LENGTH] = {
-                8, 8, 8, 8, 8, 8, 8, 8, 7, 5, 4, 3, 2, 1, 0
-        };
-        static const int ys[FORMAT_LENGTH] = {
-                0, 1, 2, 3, 4, 5, 7, 8, 8, 8, 8, 8, 8, 8, 8
-        };
-        for (i = FORMAT_LENGTH-1; i >= 0; i--) {
-            my_format = (my_format << 1) |
-                        (straight.ptr<uint8_t>(ys[i])[xs[i]]==0);
+        //uint16_t fdata;
+        //decode_error err;
+        //decode_error my_err;
+        std::cout<<"format:";
+        /*read from the left-bottom and upper-right */
+        if (which) {
+            /*left-bottom 0-7*/
+            for (i = 0; i < 7; i++){
+                /*read from pst (code->size - 1 - i,8)*/
+                my_format = (my_format << 1) |
+                            (straight.ptr<uint8_t>(size - 1 - i)[8]==0);
+                mat_format.ptr(0)[i]=(straight.ptr<uint8_t>(size - 1 - i)[8]==0);
+            }
+            /*upper-right 7-14*/
+            for (i = 0; i < 8; i++){
+                my_format = (my_format << 1) |
+                            (straight.ptr<uint8_t>(8)[size - 8 + i]==0);
+                mat_format.ptr(0)[7+i]=(straight.ptr<uint8_t>(8)[size - 8 + i]==0);
+            }
+        } else{/*read the second format from the upper-left*/
+            static const int xs[FORMAT_LENGTH] = {
+                    8, 8, 8, 8, 8, 8, 8, 8, 7, 5, 4, 3, 2, 1, 0
+            };
+            static const int ys[FORMAT_LENGTH] = {
+                    0, 1, 2, 3, 4, 5, 7, 8, 8, 8, 8, 8, 8, 8, 8
+            };
+            for (i = FORMAT_LENGTH-1; i >= 0; i--) {
+                my_format = (my_format << 1) |
+                            (straight.ptr<uint8_t>(ys[i])[xs[i]]==0);
 
-            mat_format.ptr(0)[FORMAT_LENGTH-1-i]=(straight.ptr<uint8_t>(ys[i])[xs[i]]==0);
+                mat_format.ptr(0)[FORMAT_LENGTH-1-i]=(straight.ptr<uint8_t>(ys[i])[xs[i]]==0);
+            }
+            std::cout<<std::endl;
         }
-        std::cout<<std::endl;
+        /*unmask : 101010000010010*/
+        //Mat mask=(Mat_<uint8_t >(1,FORMAT_LENGTH)<<1,0,1,0,1,0,0,0,0,0,1,0,0,1,0);
+
+        //cout<<"MASK : \n"<<mask<<endl;
+        //	for(int i=0;i<FORMAT_LENGTH;i++){
+        //	    mat_format.ptr(0)[i]^=mask.ptr(0)[i];
+        //	}
+        //        std::cout <<"adj:"<<D2B(my_format)<<std::endl;std::cout<<"FINAL : \n"<<mat_format<<std::endl;
+        format=my_format;
+
+        return  SUCCESS;
     }
-    /*unmask : 101010000010010*/
-    //Mat mask=(Mat_<uint8_t >(1,FORMAT_LENGTH)<<1,0,1,0,1,0,0,0,0,0,1,0,0,1,0);
-
-    //cout<<"MASK : \n"<<mask<<endl;
-    //	for(int i=0;i<FORMAT_LENGTH;i++){
-    //	    mat_format.ptr(0)[i]^=mask.ptr(0)[i];
-    //	}
-    //        std::cout <<"adj:"<<D2B(my_format)<<std::endl;std::cout<<"FINAL : \n"<<mat_format<<std::endl;
-    format=my_format;
-
-    return  SUCCESS;
-}
 
 /*correct_format:
  *  error correct
  *  params @ uint16_t *f_ret,const Mat& my_f_ret(my format info)
  *  return @
  */
-decode_error QRDecode:: correct_format(uint16_t& format)
-{
-    /*original format*/
-    //std::cout<<"@@@correct_format@@@"<<endl;
-    //cout<<"original:"<<D2B(format)<<endl;
+    decode_error QRDecode:: correct_format(uint16_t& format)
+    {
+        /*original format*/
+        //std::cout<<"@@@correct_format@@@"<<endl;
+        //cout<<"original:"<<D2B(format)<<endl;
 
-    /*ori: 110101100100011*/
-    /*adjust several bits to check the correcting ability*/
-    format^=4;format^=8;
-    cout<<D2B(format)<<endl;
+        /*ori: 110101100100011*/
+        /*adjust several bits to check the correcting ability*/
+        format^=4;format^=8;
+        cout<<D2B(format)<<endl;
 
-    /*my method: using BCD ways*/
-    int format_index=hamming_detect(format);
+        /*my method: using BCD ways*/
+        int format_index=hamming_detect(format);
 
-    if (format_index==-1)
-        return ERROR_FORMAT_ECC;
+        if (format_index==-1)
+            return ERROR_FORMAT_ECC;
 
-    format=after_mask_format[format_index]^0x5412;
-    cout<<"format_index : "<<D2B(format)<<endl;
+        format=after_mask_format[format_index]^0x5412;
+        cout<<"format_index : "<<D2B(format)<<endl;
 
-    return SUCCESS;
-}
+        return SUCCESS;
+    }
 
 
 /*read_bit:
@@ -1751,31 +1736,31 @@ decode_error QRDecode:: correct_format(uint16_t& format)
  *  func @ read from (x,y) as the bitpos^th bit of the  bytepos^th codeword
  *  return @
  */
-void QRDecode::read_bit(int x, int y, int& count){
-    /*judge the reserved area*/
-    if (unmasked_data.ptr(y)[x]==INVALID_REGION)
-        return ;
+    void QRDecode::read_bit(int x, int y, int& count){
+        /*judge the reserved area*/
+        if (unmasked_data.ptr(y)[x]==INVALID_REGION)
+            return ;
 
-    /*the bitpos^th bit of the  bytepos^th codeword*/
-    int bytepos = count >> 3;/*equal to count/8 */
-    int bitpos  = count & 7 ;/*equal to count%8 */
-    //cout<<"bitpos : "<<bitpos<<"\nbytepos : "<<bytepos<<endl;
+        /*the bitpos^th bit of the  bytepos^th codeword*/
+        int bytepos = count >> 3;/*equal to count/8 */
+        int bitpos  = count & 7 ;/*equal to count%8 */
+        //cout<<"bitpos : "<<bitpos<<"\nbytepos : "<<bytepos<<endl;
 
-    int v = (unmasked_data.ptr(y)[x]==0);
+        int v = (unmasked_data.ptr(y)[x]==0);
 
-    //for test
-    //        unmasked_data.ptr(y)[x]=230;
-    //        Mat tmp=unmasked_data.clone();
-    //        cv::resize(tmp,tmp,Size(600,600),0,0,INTER_AREA);
-    //        imshow("unmask_data",tmp);
-    //        cout<<v<<endl;
-    //        waitKey();
+        //for test
+        //        unmasked_data.ptr(y)[x]=230;
+        //        Mat tmp=unmasked_data.clone();
+        //        cv::resize(tmp,tmp,Size(600,600),0,0,INTER_AREA);
+        //        imshow("unmask_data",tmp);
+        //        cout<<v<<endl;
+        //        waitKey();
 
-    /* first read,first lead*/
-    if (v)
-        orignal_data[bytepos] |= (0x80 >> bitpos);
-    count++;
-}
+        /* first read,first lead*/
+        if (v)
+            orignal_data[bytepos] |= (0x80 >> bitpos);
+        count++;
+    }
 
 /* exponentiation operator
  * params @  x , power
@@ -1783,24 +1768,24 @@ void QRDecode::read_bit(int x, int y, int& count){
  * EXP:
  *     (a^n)^x =a^(x+n)
  * */
-uint8_t gf_pow(uint8_t x , int power){
-    return gf_exp[(gf_log[x] * power) % 255];
-}
+    uint8_t gf_pow(uint8_t x , int power){
+        return gf_exp[(gf_log[x] * power) % 255];
+    }
 
-uint8_t gf_inverse(uint8_t x){
-    return gf_exp[255 - gf_log[x]];
-}
+    uint8_t gf_inverse(uint8_t x){
+        return gf_exp[255 - gf_log[x]];
+    }
 /*multiplication in GF
  * params @ x , y
  * return x * y
  * EXP:
  *     a^x * a^y =a^(x+y)
  */
-uint8_t gf_mul(uint8_t x,uint8_t y){
-    if (x==0 || y==0)
-        return 0;
-    return gf_exp[(gf_log[x] + gf_log[y])%255];
-}
+    uint8_t gf_mul(uint8_t x,uint8_t y){
+        if (x==0 || y==0)
+            return 0;
+        return gf_exp[(gf_log[x] + gf_log[y])%255];
+    }
 
 /* gf_poly_eval :
  *      evaluate a polynomial at a particular value of x, producing a scalar result
@@ -1811,134 +1796,134 @@ uint8_t gf_mul(uint8_t x,uint8_t y){
  * 01 x4 + 0f x3 + 36 x2 + 78 x + 40 = (((01 x + 0f) x + 36) x + 78) x + 40
  * doing this by simple addition and multiplication
  * */
-uint8_t gf_poly_eval(const Mat& poly,uint8_t x){
-    /*Note the calculation begins at the high times of items,
-     * That's to say , start from the large index in Mat
-     * */
-    int index=poly.cols-1;
-    uint8_t y=poly.ptr(0)[index];
-    //    cout<<"x : \n"<<(int)x<<endl;
-    //    cout<<"gf_poly_eval : \n"<<(int)y<<" ";
-    for(int i =index-1;i>=0;i--){
-        y = gf_mul(x,y) ^ poly.ptr(0)[i];
-        //        cout<<(int)poly.ptr(0)[i]<<" ";
+    uint8_t gf_poly_eval(const Mat& poly,uint8_t x){
+        /*Note the calculation begins at the high times of items,
+         * That's to say , start from the large index in Mat
+         * */
+        int index=poly.cols-1;
+        uint8_t y=poly.ptr(0)[index];
+        //    cout<<"x : \n"<<(int)x<<endl;
+        //    cout<<"gf_poly_eval : \n"<<(int)y<<" ";
+        for(int i =index-1;i>=0;i--){
+            y = gf_mul(x,y) ^ poly.ptr(0)[i];
+            //        cout<<(int)poly.ptr(0)[i]<<" ";
+        }
+        return y;
     }
-    return y;
-}
 /*
  * func @  multiply a polynomial by a scalar
  * */
-Mat gf_poly_scale(const Mat & p,int scalar) {
-    int len = p.cols;
-    Mat r(1,len,CV_8UC1,Scalar(0));
+    Mat gf_poly_scale(const Mat & p,int scalar) {
+        int len = p.cols;
+        Mat r(1,len,CV_8UC1,Scalar(0));
 
-    for(int i = 0; i < len;i++){
-        r.ptr(0)[i] = gf_mul(p.ptr(0)[i], scalar);
+        for(int i = 0; i < len;i++){
+            r.ptr(0)[i] = gf_mul(p.ptr(0)[i], scalar);
+        }
+        return r;
     }
-    return r;
-}
 /*
  * func @  "adds" two polynomials (using exclusive-or, as usual).
  * */
-Mat gf_poly_add(const Mat & p,const Mat & q){
-    int p_len=p.cols;
-    int q_len=q.cols;
-    Mat r (1,max(p_len,q_len),CV_8UC1,Scalar(0));
+    Mat gf_poly_add(const Mat & p,const Mat & q){
+        int p_len=p.cols;
+        int q_len=q.cols;
+        Mat r (1,max(p_len,q_len),CV_8UC1,Scalar(0));
 
-    //int r_len=r.cols;
+        //int r_len=r.cols;
 
-    for (int i = 0; i< p_len ;i++){
-        r.ptr(0)[i] = p.ptr(0)[i];
+        for (int i = 0; i< p_len ;i++){
+            r.ptr(0)[i] = p.ptr(0)[i];
+        }
+        for (int i = 0; i< q_len ;i++){
+            r.ptr(0)[i] ^= q.ptr(0)[i];//+r_len-q_len
+        }
+        return r;
     }
-    for (int i = 0; i< q_len ;i++){
-        r.ptr(0)[i] ^= q.ptr(0)[i];//+r_len-q_len
-    }
-    return r;
-}
 /*unmask_data
  *func @  unmask the data and make the pixels in the reserved area Scalar(INVALID_REGION)
  */
-void QRDecode:: unmask_data(){
-    const struct version_info *ver = &version_db[version];
-    unmasked_data=straight.clone();
-    /*get mask pattern according to the format*/
-    int mask_pattren=mask_type;
+    void QRDecode:: unmask_data(){
+        const struct version_info *ver = &version_db[version];
+        unmasked_data=straight.clone();
+        /*get mask pattern according to the format*/
+        int mask_pattren=mask_type;
 
-    for(int i= 0;i<size;i++){
-        for(int j= 0;j<size;j++){
+        for(int i= 0;i<size;i++){
+            for(int j= 0;j<size;j++){
 
-            if(unmasked_data.ptr(i)[j]==INVALID_REGION)
-                continue;
+                if(unmasked_data.ptr(i)[j]==INVALID_REGION)
+                    continue;
 
-            /*Finder*/
-            if ((i < 9 && j < 9)||/* Finder + format: top left */
-                (i + 8 >= size && j < 9)||/* Finder + format: bottom left */
-                (i < 9 && j + 8 >= size)||/* Finder + format: top right */
-                (i == 6 || j == 6))/* Exclude timing patterns */
-            {
-                unmasked_data.ptr(i)[j]=INVALID_REGION;
-            }
-                /*version information*/
-            else if (version >= 7) {
-                if ((i < 6 && j + 11 >= size)||(i + 11 >= size && j < 6))
+                /*Finder*/
+                if ((i < 9 && j < 9)||/* Finder + format: top left */
+                    (i + 8 >= size && j < 9)||/* Finder + format: bottom left */
+                    (i < 9 && j + 8 >= size)||/* Finder + format: top right */
+                    (i == 6 || j == 6))/* Exclude timing patterns */
+                {
                     unmasked_data.ptr(i)[j]=INVALID_REGION;
-            }
-                /*unmask*/
-            else if((mask_pattren==0&&!((i + j) % 2)) ||
-                    (mask_pattren==1&&!(i % 2)) ||
-                    (mask_pattren==2&&!(j % 3)) ||
-                    (mask_pattren==3 && (i + j) % 3 != 0) ||
-                    (mask_pattren==4&&!(((i / 2) + (j / 3)) % 2)) ||
-                    (mask_pattren==5&&!((i * j) % 2 + (i * j) % 3))||
-                    (mask_pattren==6&&!(((i * j) % 2 + (i * j) % 3) % 2))||
-                    ((mask_pattren==7 && ((i * j) % 3 + (i + j) % 2) % 2 != 0))
-                    ){
-                unmasked_data.ptr(i)[j]^=255;
+                }
+                    /*version information*/
+                else if (version >= 7) {
+                    if ((i < 6 && j + 11 >= size)||(i + 11 >= size && j < 6))
+                        unmasked_data.ptr(i)[j]=INVALID_REGION;
+                }
+                    /*unmask*/
+                else if((mask_pattren==0&&!((i + j) % 2)) ||
+                        (mask_pattren==1&&!(i % 2)) ||
+                        (mask_pattren==2&&!(j % 3)) ||
+                        (mask_pattren==3 && (i + j) % 3 != 0) ||
+                        (mask_pattren==4&&!(((i / 2) + (j / 3)) % 2)) ||
+                        (mask_pattren==5&&!((i * j) % 2 + (i * j) % 3))||
+                        (mask_pattren==6&&!(((i * j) % 2 + (i * j) % 3) % 2))||
+                        ((mask_pattren==7 && ((i * j) % 3 + (i + j) % 2) % 2 != 0))
+                        ){
+                    unmasked_data.ptr(i)[j]^=255;
+                }
             }
         }
-    }
 
-    /* Exclude alignment patterns */
-    for (int a = 0; a < MAX_ALIGNMENT && ver->apat[a]; a++) {
-        for (int p = a; p < MAX_ALIGNMENT && ver->apat[p]; p++) {
-            int x=ver->apat[a];
-            int y=ver->apat[p];
-            /*the alignment patterns MUST NOT overlap the finder patterns or separators*/
-            if(unmasked_data.ptr(x)[y]==INVALID_REGION)
-                continue;
-            for(int i=-2;i<=2;i++)
-                for(int j=-2;j<=2;j++)
-                    unmasked_data.ptr(x+i)[y+j]=INVALID_REGION;
+        /* Exclude alignment patterns */
+        for (int a = 0; a < MAX_ALIGNMENT && ver->apat[a]; a++) {
+            for (int p = a; p < MAX_ALIGNMENT && ver->apat[p]; p++) {
+                int x=ver->apat[a];
+                int y=ver->apat[p];
+                /*the alignment patterns MUST NOT overlap the finder patterns or separators*/
+                if(unmasked_data.ptr(x)[y]==INVALID_REGION)
+                    continue;
+                for(int i=-2;i<=2;i++)
+                    for(int j=-2;j<=2;j++)
+                        unmasked_data.ptr(x+i)[y+j]=INVALID_REGION;
+            }
         }
-    }
 
-}
+    }
 
 /*read_data
  * func @ read data from the image into codewords in a zig-zag way
  * */
-void QRDecode::read_data(){
-    int y = size - 1;
-    int x = size - 1;
-    int dir = -1;
-    int count = 0;
-    while (x > 0) {
-        if (x == 6)
-            x--;
-        /*read*/
-        read_bit( x,  y, count);
-        read_bit( x-1,  y, count);
+    void QRDecode::read_data(){
+        int y = size - 1;
+        int x = size - 1;
+        int dir = -1;
+        int count = 0;
+        while (x > 0) {
+            if (x == 6)
+                x--;
+            /*read*/
+            read_bit( x,  y, count);
+            read_bit( x-1,  y, count);
 
-        y += dir;
-
-        /*change direction when meets border*/
-        if (y < 0 || y >= size) {
-            dir = -dir;
-            x -= 2;
             y += dir;
+
+            /*change direction when meets border*/
+            if (y < 0 || y >= size) {
+                dir = -dir;
+                x -= 2;
+                y += dir;
+            }
         }
     }
-}
 
 /*block_syndromes
  * params @ const Mat & block(current block),
@@ -1946,20 +1931,20 @@ void QRDecode::read_data(){
  *          uint8_t *synd(syndromes for output)
  * func   @ calculate the syndromes for each block
  * */
-int block_syndromes(const Mat & block, int synd_num,uint8_t *synd){
-    int nonzero = 0;
-    /*the original method*/
-    cout<<"@s@ "<<endl;
-    for (int i = 0; i < synd_num; i++) {
-        /*get the syndromes by repalcing the x with pow(2,i) and evaluating the results of the equations*/
-        synd[i]=gf_poly_eval(block, gf_pow(2,i));
-        cout<<(int)synd[i]<<" ";
-        if (synd[i])
-            nonzero = 1;
+    int block_syndromes(const Mat & block, int synd_num,uint8_t *synd){
+        int nonzero = 0;
+        /*the original method*/
+        cout<<"@s@ "<<endl;
+        for (int i = 0; i < synd_num; i++) {
+            /*get the syndromes by repalcing the x with pow(2,i) and evaluating the results of the equations*/
+            synd[i]=gf_poly_eval(block, gf_pow(2,i));
+            cout<<(int)synd[i]<<" ";
+            if (synd[i])
+                nonzero = 1;
+        }
+        cout<<endl;
+        return nonzero;
     }
-    cout<<endl;
-    return nonzero;
-}
 //    int find_error_locator(const uint8_t *synd,int synd_num){
 //        /*initialize two arrays b and c ,to be zeros , expcet b0<- 1 c0<- 1*/
 //
@@ -2017,120 +2002,120 @@ int block_syndromes(const Mat & block, int synd_num,uint8_t *synd){
 /* correct_block
  * params @
  * */
-decode_error  QRDecode::correct_block(int num , int head){
-    const version_info *ver =&version_db[version];
-    const  block_params *cur_ecc = &ver->ecc[ecc_code2level(ecc_level)];
+    decode_error  QRDecode::correct_block(int num , int head){
+        const version_info *ver =&version_db[version];
+        const  block_params *cur_ecc = &ver->ecc[ecc_code2level(ecc_level)];
 
-    //int ecc_offset=0;
-    int cur_length=0;
+        //int ecc_offset=0;
+        int cur_length=0;
 
-    int ecc_num=cur_ecc->ecc_codewords;
+        int ecc_num=cur_ecc->ecc_codewords;
 
-    if(num<cur_ecc->num_blocks_in_G1){
-        //ecc_offset=cur_ecc->data_codewords_in_G1;
-        cur_length=cur_ecc->data_codewords_in_G1+ecc_num;
-    }
-    else{
-        //ecc_offset=cur_ecc->data_codewords_in_G2;
-        cur_length=cur_ecc->data_codewords_in_G2+ecc_num;
-    }
+        if(num<cur_ecc->num_blocks_in_G1){
+            //ecc_offset=cur_ecc->data_codewords_in_G1;
+            cur_length=cur_ecc->data_codewords_in_G1+ecc_num;
+        }
+        else{
+            //ecc_offset=cur_ecc->data_codewords_in_G2;
+            cur_length=cur_ecc->data_codewords_in_G2+ecc_num;
+        }
 
-    uint8_t synd[MAX_POLY];
-    memset(synd,0, sizeof(uint8_t)*MAX_POLY);
+        uint8_t synd[MAX_POLY];
+        memset(synd,0, sizeof(uint8_t)*MAX_POLY);
 
-    /*get the block for block_syndromes*/
-    Mat cur_block(1,cur_length,CV_8UC1,Scalar(0));
-    for(int i = 0 ;i<cur_length ; i++) {
-        cur_block.ptr(0)[cur_length-1-i]=rearranged_data[head+i];
-    }
+        /*get the block for block_syndromes*/
+        Mat cur_block(1,cur_length,CV_8UC1,Scalar(0));
+        for(int i = 0 ;i<cur_length ; i++) {
+            cur_block.ptr(0)[cur_length-1-i]=rearranged_data[head+i];
+        }
 
-    //cout<<"\n"<<(int)cur_block.ptr(0)[0]<<endl;
-    //cout<<"cur_length : "<<cur_length<<"\n"<<cur_block<<endl;
-    if (!block_syndromes(cur_block,ecc_num,synd))
+        //cout<<"\n"<<(int)cur_block.ptr(0)[0]<<endl;
+        //cout<<"cur_length : "<<cur_length<<"\n"<<cur_block<<endl;
+        if (!block_syndromes(cur_block,ecc_num,synd))
+            return SUCCESS;
+
+        //find_error_locator(synd,ecc_num);
         return SUCCESS;
-
-    //find_error_locator(synd,ecc_num);
-    return SUCCESS;
-}
+    }
 
 /*
  * params @
  * func   @ rearrange the interleaved blocks for later codewode correction
  * */
-void QRDecode::rearrange_blocks(){
-    int show=1;
-    //        if(show){
-    //        cout<<"before"<<endl;
-    //        for(int i=0;i<MAX_PAYLOAD;i++){
-    //            cout<<setw(3)<<(int)orignal_data[i]<<" ";
-    //            if(i%10==9)
-    //                cout<<"\n";
-    //        }
-    //        cout<<'\n';
-    //        }
-    const version_info *ver =&version_db[version];
-    const  block_params *cur_ecc = &ver->ecc[ecc_code2level(ecc_level)];
+    void QRDecode::rearrange_blocks(){
+        int show=1;
+        //        if(show){
+        //        cout<<"before"<<endl;
+        //        for(int i=0;i<MAX_PAYLOAD;i++){
+        //            cout<<setw(3)<<(int)orignal_data[i]<<" ";
+        //            if(i%10==9)
+        //                cout<<"\n";
+        //        }
+        //        cout<<'\n';
+        //        }
+        const version_info *ver =&version_db[version];
+        const  block_params *cur_ecc = &ver->ecc[ecc_code2level(ecc_level)];
 
-    //{  18,	2,	15,	2,	16},
-    int index=0;
+        //{  18,	2,	15,	2,	16},
+        int index=0;
 
-    int offset=cur_ecc->num_blocks_in_G1+cur_ecc->num_blocks_in_G2;
+        int offset=cur_ecc->num_blocks_in_G1+cur_ecc->num_blocks_in_G2;
 
-    /*the beginning of ecc*/
-    int offset_ecc= cur_ecc->data_codewords_in_G1*cur_ecc->num_blocks_in_G1
-                    +
-                    cur_ecc->data_codewords_in_G2*cur_ecc->num_blocks_in_G2;
+        /*the beginning of ecc*/
+        int offset_ecc= cur_ecc->data_codewords_in_G1*cur_ecc->num_blocks_in_G1
+                        +
+                        cur_ecc->data_codewords_in_G2*cur_ecc->num_blocks_in_G2;
 
-    /*total num of blocks*/
-    int total_blocks=cur_ecc->num_blocks_in_G1+cur_ecc->num_blocks_in_G2;
+        /*total num of blocks*/
+        int total_blocks=cur_ecc->num_blocks_in_G1+cur_ecc->num_blocks_in_G2;
 
-    /*the offset for one more col in G2*/
-    int offset_one_more=total_blocks*cur_ecc->data_codewords_in_G1;
-
-    if(show)
-        cout<<"offset_one_more+i-cur_ecc->num_blocks_in_G1:"<<offset_one_more+2-cur_ecc->num_blocks_in_G1<<endl;
-
-    int cur_block_head=0;
-    /*get block in group1*/
-    for(int i =0;i<total_blocks;i++){
-        if(show)
-            cout<<"\nblock "<<i << "  :  "<<endl;
-        /*get the data codeword*/
-        for(int j = 0;j <cur_ecc->data_codewords_in_G1;j++){
-            rearranged_data[index]=orignal_data[i+j*offset];
-
-            if(rearranged_data[index]==71)
-                rearranged_data[index]=7;
-            if(rearranged_data[index]==3)
-                rearranged_data[index]=30;
-            if(show)
-                cout<<std::setw(3)<<(int)rearranged_data[index]<<" ";
-            index++;
-
-        }
-        /*one more  col in G2*/
-        if(i>=cur_ecc->num_blocks_in_G1){
-            rearranged_data[index++]=orignal_data[offset_one_more+i-cur_ecc->num_blocks_in_G1];
-            if(show)
-                cout<<std::setw(3)<<(int)orignal_data[offset_one_more+i-cur_ecc->num_blocks_in_G1]<<" ";
-        }
+        /*the offset for one more col in G2*/
+        int offset_one_more=total_blocks*cur_ecc->data_codewords_in_G1;
 
         if(show)
-            cout<<std::setw(3)<<"|"<<" ";
+            cout<<"offset_one_more+i-cur_ecc->num_blocks_in_G1:"<<offset_one_more+2-cur_ecc->num_blocks_in_G1<<endl;
 
-
-        /*get the ecc codeword*/
-        for(int j = 0;j <cur_ecc->ecc_codewords;j++){
-            rearranged_data[index++]=orignal_data[offset_ecc+i+j*offset];
+        int cur_block_head=0;
+        /*get block in group1*/
+        for(int i =0;i<total_blocks;i++){
             if(show)
-                cout<<std::setw(3)<<(int)orignal_data[offset_ecc+i+j*offset]<<" ";
+                cout<<"\nblock "<<i << "  :  "<<endl;
+            /*get the data codeword*/
+            for(int j = 0;j <cur_ecc->data_codewords_in_G1;j++){
+                rearranged_data[index]=orignal_data[i+j*offset];
+
+                if(rearranged_data[index]==71)
+                    rearranged_data[index]=7;
+                if(rearranged_data[index]==3)
+                    rearranged_data[index]=30;
+                if(show)
+                    cout<<std::setw(3)<<(int)rearranged_data[index]<<" ";
+                index++;
+
+            }
+            /*one more  col in G2*/
+            if(i>=cur_ecc->num_blocks_in_G1){
+                rearranged_data[index++]=orignal_data[offset_one_more+i-cur_ecc->num_blocks_in_G1];
+                if(show)
+                    cout<<std::setw(3)<<(int)orignal_data[offset_one_more+i-cur_ecc->num_blocks_in_G1]<<" ";
+            }
+
+            if(show)
+                cout<<std::setw(3)<<"|"<<" ";
+
+
+            /*get the ecc codeword*/
+            for(int j = 0;j <cur_ecc->ecc_codewords;j++){
+                rearranged_data[index++]=orignal_data[offset_ecc+i+j*offset];
+                if(show)
+                    cout<<std::setw(3)<<(int)orignal_data[offset_ecc+i+j*offset]<<" ";
+            }
+            decode_error err= correct_block(i,cur_block_head);
+            cur_block_head=index;
+            if(err)
+                return;
         }
-        decode_error err= correct_block(i,cur_block_head);
-        cur_block_head=index;
-        if(err)
-            return;
-    }
-    cout<<endl;
+        cout<<endl;
 //        if(show) {
 //            cout << "after" << endl;
 //            for (int i = 0; i < MAX_PAYLOAD; i++) {
@@ -2140,13 +2125,12 @@ void QRDecode::rearrange_blocks(){
 //            }
 //            cout << '\n';
 //        }
-}
+    }
 
 
-
-void QRDecode::init(const Mat &src, const vector<Point2f> &points)
+    void QRDecode::init(const Mat &src, const vector<Point2f> &points)
 {
-    //CV_TRACE_FUNCTION();
+    CV_TRACE_FUNCTION();
     vector<Point2f> bbox = points;
     original = src.clone();
     intermediate = Mat::zeros(original.size(), CV_8UC1);
@@ -2159,7 +2143,7 @@ void QRDecode::init(const Mat &src, const vector<Point2f> &points)
 
 bool QRDecode::updatePerspective()
 {
-    //CV_TRACE_FUNCTION();
+    CV_TRACE_FUNCTION();
     const Point2f centerPt = QRDetect::intersectionLines(original_points[0], original_points[2],
                                                          original_points[1], original_points[3]);
     if (cvIsNaN(centerPt.x) || cvIsNaN(centerPt.y))
@@ -2208,7 +2192,7 @@ inline Point computeOffset(const vector<Point>& v)
 
 bool QRDecode::versionDefinition()
 {
-    //CV_TRACE_FUNCTION();
+    CV_TRACE_FUNCTION();
     LineIterator line_iter(intermediate, Point2f(0, 0), Point2f(test_perspective_size, test_perspective_size));
     Point black_point = Point(0, 0);
     for(int j = 0; j < line_iter.count; j++, ++line_iter)
@@ -2272,9 +2256,10 @@ bool QRDecode::versionDefinition()
     return true;
 }
 
+
 bool QRDecode::samplingForVersion()
 {
-    //CV_TRACE_FUNCTION();
+    CV_TRACE_FUNCTION();
     const double multiplyingFactor = (version < 3)  ? 1 :
                                      (version == 3) ? 1.5 :
                                      version * (5 + version - 4);
@@ -2330,74 +2315,50 @@ bool QRDecode::samplingForVersion()
 
 bool QRDecode::decodingProcess()
 {
-    decode_error err;
-    uint16_t my_format=0;
+#ifdef HAVE_QUIRC
     if (straight.empty()) { return false; }
-    size=straight.size().width;
 
-    Mat tmp;
-    straight.copyTo(tmp);
-    cv::resize(tmp,tmp,Size(600,600),0,0,INTER_AREA);
-    //imshow("straight",tmp);
+    quirc_code qr_code;
+    memset(&qr_code, 0, sizeof(qr_code));
 
-    if ((size - 17) % 4)
-        return ERROR_INVALID_GRID_SIZE;
+    qr_code.size = straight.size().width;
+    for (int x = 0; x < qr_code.size; x++)
+    {
+        for (int y = 0; y < qr_code.size; y++)
+        {
+            int position = y * qr_code.size + x;
+            qr_code.cell_bitmap[position >> 3]
+                |= straight.ptr<uint8_t>(y)[x] ? 0 : (1 << (position & 7));
+        }
+    }
 
-    /*estimated version*/
-    version = (size - 17) / 4;
+    quirc_data qr_code_data;
+    quirc_decode_error_t errorCode = quirc_decode(&qr_code, &qr_code_data);
+    if (errorCode != 0) { return false; }
 
-    if (version < 1 ||
-        version > MAX_VERSION)
-        return ERROR_INVALID_VERSION;
-
-    /* Read format information -- try both locations */
-    err = read_format(my_format,0);
-    if (err)
-        err = read_format(my_format,1);
-    if (err)
-        return err;
-
-    /*ECC correction*/
-    err = correct_format(my_format);
-    if (err)
-        return err;
-
-    /*EC level （1-2）+Mask(3-5) + EC for this string( 6-15) */
-    /*get rid of the ecc_code*/
-    u_int8_t fdata = my_format >> 10;
-    ecc_level = fdata >> 3;
-    mask_type = fdata & 7;
-
-    //cout<<"mask : \n"<<mask<<" \necc_level : \n"<<ecc_level<<endl;
-
-    unmask_data();
-
-
-
-    read_data();
-
-    rearrange_blocks();
-    //cv::waitKey();
-
-
-
-
-    if (err != 0) { return false; }
-
-//    for (int i = 0; i < qr_code_data.payload_len; i++)
-//    {
-//        result_info += qr_code_data.payload[i];
-//    }
+    for (int i = 0; i < qr_code_data.payload_len; i++)
+    {
+        result_info += qr_code_data.payload[i];
+    }
     return true;
+#else
+    return false;
+#endif
+
 }
 
 bool QRDecode::fullDecodingProcess()
 {
+#ifdef HAVE_QUIRC
     if (!updatePerspective())  { return false; }
     if (!versionDefinition())  { return false; }
     if (!samplingForVersion()) { return false; }
     if (!decodingProcess())    { return false; }
     return true;
+#else
+    std::cout << "Library QUIRC is not linked. No decoding is performed. Take it to the OpenCV repository." << std::endl;
+    return false;
+#endif
 }
 
 std::string QRCodeDetector::decode(InputArray in, InputArray points,
@@ -2602,7 +2563,7 @@ void QRDetectMulti::ParallelSearch::operator()(const Range& range) const
 
 void QRDetectMulti::init(const Mat& src, double eps_vertical_, double eps_horizontal_)
 {
-    //CV_TRACE_FUNCTION();
+    CV_TRACE_FUNCTION();
 
     CV_Assert(!src.empty());
     const double min_side = std::min(src.size().width, src.size().height);
@@ -2639,7 +2600,7 @@ void QRDetectMulti::init(const Mat& src, double eps_vertical_, double eps_horizo
 
 void QRDetectMulti::fixationPoints(vector<Point2f> &local_point)
 {
-    //CV_TRACE_FUNCTION();
+    CV_TRACE_FUNCTION();
 
     Point2f v0(local_point[1] - local_point[2]);
     Point2f v1(local_point[0] - local_point[2]);
@@ -3211,7 +3172,7 @@ void QRDetectMulti::deleteUsedPoints(vector<vector<Point2f> >& true_points_group
 
 bool QRDetectMulti::localization()
 {
-    //CV_TRACE_FUNCTION();
+    CV_TRACE_FUNCTION();
     vector<Point2f> tmp_localization_points;
     int num_points = findNumberLocalizationPoints(tmp_localization_points);
     if (num_points < 3)
@@ -3239,7 +3200,7 @@ bool QRDetectMulti::localization()
 
 bool QRDetectMulti::computeTransformationPoints(const size_t cur_ind)
 {
-    //CV_TRACE_FUNCTION();
+    CV_TRACE_FUNCTION();
 
     if (localization_points[cur_ind].size() != 3)
     {
