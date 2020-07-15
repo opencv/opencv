@@ -311,7 +311,7 @@ TEST_F(ROIList, TestInfer2)
     validate();
 }
 
-TEST(TestTwoIENNPipeline, InferBasicImage)
+TEST(DISABLED_TestTwoIENNPipeline, InferBasicImage)
 {
     initDLDTDataPath();
 
