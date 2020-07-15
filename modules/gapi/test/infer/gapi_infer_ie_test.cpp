@@ -62,10 +62,9 @@ std::vector<std::string> modelPathByName(const std::string &model_name) {
 #if INF_ENGINE_RELEASE >= 2019040000  // >= 2019.R4
         {"age-gender-recognition-retail-0013",
          "2020.3.0/intel/age-gender-recognition-retail-0013/FP32"},
-#else // < 2019.R4
+#endif // INF_ENGINE_RELEASE >= 2019040000
         {"age-gender-recognition-retail-0013",
          "Retail/object_attributes/age_gender/dldt"},
-#endif // INF_ENGINE_RELEASE >= 2019040000
     };
     const auto range = map.equal_range(model_name);
     std::vector<std::string> result;
