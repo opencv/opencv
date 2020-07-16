@@ -265,6 +265,54 @@ Here is how to read the file created by the code sample above:
     fs2.release();
 @endcode
 
+Modifying data read from a file storage.
+----------------------------------------
+Since 4.5.0 data read from XML, YAML or JSON file storage can be modified and written back to file:
+-#  Open the file storage using FileStorage::FileStorage constructor or FileStorage::open
+    in FileStorage::READ mode as shown above.
+
+-#  Address the data you want to modify via FileStorage::operator [], FileNode::operator []
+    and/or FileNodeIterator.
+
+-#  Use FileNode::write or FileNode::startWriteStruct / FileNode::endWriteStruct methods or
+    FileNode::operator << to assign new data to a FileNode;
+
+-#  Save data back to file at any time using FileStorage::save.
+
+-#  Close the storage using FileStorage::release or FileStorage::release WithoutSave depending on
+    whether you want changes to be written back to file or not on file storage release.
+
+Here is how to read and modify the file created by the code sample above:
+@code
+    FileStorage fs3("test.yml", FileStorage::READ);
+
+    // save original settings to backup file in XML format
+    fs3.save("test_backup.xml");
+
+    // Modify FileStorage
+    // first method: modify FileNode content via FileNode::write.
+    fs3["frameCount"].write(6);
+
+    // second method: use FileNode::operator <<
+    fs3["calibrationDate"] << asctime(localtime(&rawtime));
+    Mat newCameraMatrix = (Mat_<double>(3,3) << 2000, 0, 640, 0, 2000, 480, 0, 0, 1);
+    fs3["cameraMatrix"] << newCameraMatrix;
+
+    // read and modify
+    Mat newDistCoeffs;
+    fs3["distCoeffs"] >> newDistCoeffs;
+    newDistCoeffs.at<double>(2) += 0.002;
+    fs3["distCoeffs"] << newDistCoeffs;
+
+    // Create new nodes by assigning values or struct definitions
+    fs3["new_string"] << "New String";
+    fs3["new_map"] << "{:" << "value1" << 1 << "value2" << 2 << "}";
+
+    // release and auto-save changes back to file
+    // (use FileStorage::releaseWithoutSave to disregard changes).
+    fs3.release();
+@endcode
+
 Format specification    {#format_spec}
 --------------------
 `([count]{u|c|w|s|i|f|d})`... where the characters correspond to fundamental C++ types:
@@ -370,8 +418,15 @@ public:
     /** @brief Closes the file and releases all the memory buffers.
 
      Call this method after all I/O operations with the storage are finished.
+     Saves all changes made to FileNodes in READ mode.
      */
     CV_WRAP virtual void release();
+
+    /** @brief Closes the file and releases all the memory buffers.
+
+     Same as release(), but without saving changes made to FileNodes in READ mode.
+     */
+    CV_WRAP virtual void releaseWithoutSave();
 
     /** @brief Closes the file and releases all the memory buffers.
 
@@ -379,6 +434,14 @@ public:
      opened for writing data and FileStorage::WRITE was specified
      */
     CV_WRAP virtual String releaseAndGetString();
+
+    /** @brief Mark FileStorage as changed, irrespective whether any FileNodes have been modified.
+     */
+    CV_WRAP virtual void touch();
+
+    /** @brief Check if FileStorage has been changed.
+     */
+    CV_WRAP virtual bool isChanged() const;
 
     /** @brief Returns the first element of the top-level mapping.
      @returns The first element of the top-level mapping.
@@ -392,14 +455,32 @@ public:
      */
     CV_WRAP FileNode root(int streamidx=0) const;
 
-    /** @brief Returns the specified element of the top-level mapping.
+    //! Internal method returning a FileNode that represents the current write position
+    CV_WRAP FileNode getCurrentNode() const;
+
+    /** @brief READ mode: returns the specified element of the top-level mapping; WRITE mode: begins named entry.
      @param nodename Name of the file node.
      @returns Node with the given name.
      */
+    FileNode operator[](const String& nodename);
+
+    /** @overload */
     FileNode operator[](const String& nodename) const;
 
     /** @overload */
+    FileNode operator[](const char* nodename);
+
+    /** @overload */
     CV_WRAP_AS(getNode) FileNode operator[](const char* nodename) const;
+
+    //! Set FileNode that will be affected by next FileStorage operations
+    CV_WRAP void setActiveNode(FileNode& node);
+
+    //! Internal method to set this FileStorage as active
+    void setActive();
+
+    //! returns true, if FileStorage is busy writing a SEQ or MAP node
+    CV_WRAP bool isBusy() const;
 
     /**
      * @brief Simplified writing API to use with bindings.
@@ -447,6 +528,19 @@ public:
     */
     CV_WRAP void endWriteStruct();
 
+    /** @brief Finishes writing nested structure and all parent structures
+    */
+    CV_WRAP void endAllWriteStructs();
+
+    /** @brief Checks whether the FileStorage is in WRITE mode.
+     */
+    CV_WRAP virtual bool isWrite() const;
+
+    /** @brief Saves changes made to READ FileStorage back to file.
+    @param filename Name the file to save to. Default name is file read from.
+     */
+    CV_WRAP virtual void save(const String& filename = String());
+
     /** @brief Returns the normalized object name for the specified name of a file.
     @param filename Name of a file
     @returns The normalized object name.
@@ -465,7 +559,7 @@ public:
     Ptr<Impl> p;
 };
 
-/** @brief File Storage Node class.
+/** @brief File Storage %Node class.
 
 The node is used to store each and every element of the file storage opened for reading. When
 XML/YAML file is read, it is first parsed and stored in the memory as a hierarchical collection of
@@ -474,8 +568,10 @@ other nodes. There can be named collections (mappings) where each element has a 
 accessed by a name, and ordered collections (sequences) where elements do not have names but rather
 accessed by index. Type of the file node can be determined using FileNode::type method.
 
-Note that file nodes are only used for navigating file storages opened for reading. When a file
-storage is opened for writing, no data is stored in memory after it is written.
+Note that file nodes are only created when file storages are opened for reading. Since 4.5.0 their content
+can be modified and changes written back to file in bulk (via manual save or automatically when releasing).
+In contrast, when a file storage is opened explicitly for writing, no FileNodes are created, since no data
+is stored in memory, but gets streamed directly to the output file or buffer.
  */
 class CV_EXPORTS_W_SIMPLE FileNode
 {
@@ -497,7 +593,11 @@ public:
         UNIFORM   = 8,  //!< if set, means that all the collection elements are numbers of the same type (real's or int's).
         //!< UNIFORM is used only when reading FileStorage; FLOW is used only when writing. So they share the same bit
         EMPTY     = 16, //!< empty structure (sequence or mapping)
-        NAMED     = 32  //!< the node has a name (i.e. it is element of a mapping).
+        NAMED     = 32,  //!< the node has a name (i.e. it is element of a mapping).
+        RAW_DATA  = 64,  //!< the node stores raw data (usually encoded into base64 when serialized)
+        //!< (For future use; not implemented yet)
+        ATTRIBUTE = 128 //!< the node is an attribute of the parent node (e.g. gets encoded inside a XML tag)
+        //!< (For future use; not implemented yet)
     };
     /** @brief The constructors.
 
@@ -550,12 +650,16 @@ public:
 
     //! returns true if the node is empty
     CV_WRAP bool empty() const;
+    //! returns true if the node refers to existing data
+    CV_WRAP bool exists() const;
     //! returns true if the node is a "none" object
     CV_WRAP bool isNone() const;
     //! returns true if the node is a sequence
     CV_WRAP bool isSeq() const;
     //! returns true if the node is a mapping
     CV_WRAP bool isMap() const;
+    //! returns true if the node is a mapping
+    CV_WRAP bool isCollection() const;
     //! returns true if the node is an integer
     CV_WRAP bool isInt() const;
     //! returns true if the node is a floating-point number
@@ -570,6 +674,8 @@ public:
     CV_WRAP size_t size() const;
     //! returns raw size of the FileNode in bytes
     CV_WRAP size_t rawSize() const;
+    //! returns size of FileNode content in bytes ( rawSize - size of header)
+    CV_WRAP size_t capacity() const;
     //! returns the node content as an integer. If the node stores floating-point number, it is rounded.
     operator int() const;
     //! returns the node content as float
@@ -584,6 +690,11 @@ public:
     static bool isCollection(int flags);
     static bool isEmptyCollection(int flags);
     static bool isFlow(int flags);
+
+    //! Checks if two FileNodes are equal
+    bool operator == (const FileNode& node) const;
+    //! Checks if two FileNodes are not equal
+    inline bool operator != (const FileNode& node) const { return !operator==(node); }
 
     uchar* ptr();
     const uchar* ptr() const;
@@ -603,10 +714,73 @@ public:
      */
     void readRaw( const String& fmt, void* vec, size_t len ) const;
 
-    /** Internal method used when reading FileStorage.
-     Sets the type (int, real or string) and value of the previously created node.
+    /** @brief Internal method used when reading/modifying FileStorage.
+     Cannot assign a name to an unnamed FileNode.
      */
-    void setValue( int type, const void* value, int len=-1 );
+    void setName( const String& name );
+
+    /** @brief Internal method used when reading/modifying FileStorage.
+     Sets the type (int, real or string) and value of the previously created node.
+    @returns number of bytes stored
+     */
+    size_t setValue( int type, const void* value, int len=-1 );
+
+    /** @brief Writes to FileStorage in WRITE mode, FileNode::setValue / FileNode::addNode in READ mode.
+     */
+    template<typename _Tp>
+    FileNode& operator << (const _Tp& value)
+    {
+        return write(value);
+    }
+
+    /** @brief Writes to FileStorage in WRITE mode, FileNode::setValue / FileNode::addNode in READ mode.
+     */
+    template<typename _Tp>
+    FileNode& write(const _Tp& value)
+    {
+        FileStorage *fs_ext = getFS();
+        if( !fs_ext->isWrite() && !( fs_ext->isBusy() && *this == fs_ext->getCurrentNode() ) )
+            fs_ext->setActiveNode(*this);
+        *fs_ext << value;
+        const FileNode &current = fs_ext->getCurrentNode();
+        if( !current.empty() )
+            *this = current;
+        else if( !nodeName.empty() && parent && parent->parent )
+            updateDataRef();
+        return *this;
+    }
+
+    /** @brief Writes to FileStorage in WRITE mode, FileNode::setValue / FileNode::addNode in READ mode.
+     */
+    template<typename _Tp>
+    FileNode& write(const String& key, const _Tp& value)
+    {
+        FileNode node = (*this)[key];
+        node.write(value);
+        return *this;
+    }
+
+    /** @brief Starts to write a nested structure (sequence or a mapping).
+    @param flags type of the structure (FileNode::MAP or FileNode::SEQ (both with optional FileNode::FLOW)).
+    @param typeName usually an empty string
+    */
+    CV_WRAP void startWriteStruct(int flags = 0, const String& typeName=String());
+
+    //! Finalizes a nested structure (sequence or a mapping) started via startWriteStruct.
+    CV_WRAP void endWriteStruct();
+
+    /** Internal method used when reading/modifying FileStorage.
+     Equivalent to setValue, when busy writing struct     .
+    @returns Constructed FileNode
+     */
+    FileNode addNode(const std::string& key,
+        int elem_type, const void* value, int len = -1);
+
+    //! Resizes collection to given size
+    void resize(size_t sz);
+
+    //! Internal method to update blockIdx and ofs from node name
+    void updateDataRef();
 
     //! Simplified reading API to use with bindings.
     CV_WRAP double real() const;
@@ -614,13 +788,17 @@ public:
     CV_WRAP std::string string() const;
     //! Simplified reading API to use with bindings.
     CV_WRAP Mat mat() const;
+    //! Get pointer to underlying FileStorage
+    FileStorage* getFS() const;
 
     //protected:
     FileNode(FileStorage::Impl* fs, size_t blockIdx, size_t ofs);
 
     FileStorage::Impl* fs;
+    std::string nodeName;
     size_t blockIdx;
     size_t ofs;
+    Ptr<FileNode> parent;
 };
 
 
@@ -713,6 +891,7 @@ CV_EXPORTS void writeScalar( FileStorage& fs, int value );
 CV_EXPORTS void writeScalar( FileStorage& fs, float value );
 CV_EXPORTS void writeScalar( FileStorage& fs, double value );
 CV_EXPORTS void writeScalar( FileStorage& fs, const String& value );
+CV_EXPORTS void writeNode( FileStorage& fs, const FileNode& node );
 
 //! @}
 
@@ -1217,7 +1396,8 @@ void read( const FileNode& node, std::vector<DMatch>& vec, const std::vector<DMa
 template<typename _Tp> static inline
 FileStorage& operator << (FileStorage& fs, const _Tp& value)
 {
-    if( !fs.isOpened() )
+    fs.setActive();
+    if( fs.isWrite() && !fs.isOpened() )
         return fs;
     if( fs.state == FileStorage::NAME_EXPECTED + FileStorage::INSIDE_MAP )
         CV_Error( Error::StsError, "No element name has been given" );
@@ -1242,6 +1422,16 @@ FileStorage& operator << (FileStorage& fs, char* value)
 {
     return (fs << String(value));
 }
+
+/** @brief Writes a FileNode to a file storage.
+ */
+static inline
+FileStorage& operator << (FileStorage& fs, const FileNode& node)
+{
+    writeNode(fs, node);
+    return fs;
+}
+
 
 //! @} FileStorage
 

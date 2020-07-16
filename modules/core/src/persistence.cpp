@@ -349,8 +349,10 @@ public:
         bufofs = 0;
         state = UNDEFINED;
         is_opened = false;
+        is_changed = false;
         dummy_eof = false;
         write_mode = false;
+        save_mode = false;
         mem_mode = false;
         space = 0;
         wrap_margin = 71;
@@ -367,7 +369,9 @@ public:
         fs_data.clear();
         fs_data_ptrs.clear();
         fs_data_blksz.clear();
-        freeSpaceOfs = 0;
+        fs_data_insert_marks.clear();
+        end_block = makePtr<FileNode>(fs_ext, 0, 0);
+        current_block = end_block;
 
         str_hash.clear();
         str_hash_data.clear();
@@ -411,9 +415,13 @@ public:
             {
                 *out = cv::String(outbuf.begin(), outbuf.end());
             }
+            write_stack.clear();
         }
         closeFile();
-        init();
+        if ( !write_mode && is_changed )
+            fs_ext->save();
+        if ( !save_mode )
+            init();
     }
 
     void analyze_file_name( const std::string& file_name, std::vector<std::string>& params )
@@ -451,7 +459,8 @@ public:
         _flags &= ~FileStorage::BASE64;
 
         bool ok = true;
-        release();
+        if (!save_mode)
+            release();
 
         bool append = (_flags & 3) == FileStorage::APPEND;
         mem_mode = (_flags & FileStorage::MEMORY) != 0;
@@ -518,8 +527,11 @@ public:
             }
         }
 
-        roots.clear();
-        fs_data.clear();
+        if(!save_mode)
+        {
+            roots.clear();
+            fs_data.clear();
+        }
         wrap_margin = 71;
         fmt = FileStorage::FORMAT_AUTO;
 
@@ -691,6 +703,8 @@ public:
         }
         else
         {
+            emitter = createFileNodeEmitter(this);
+            state = NAME_EXPECTED;
             const size_t buf_size0 = 40;
             buffer.resize(buf_size0);
             if( mem_mode )
@@ -732,6 +746,9 @@ public:
                 *rptr = FileNode::SEQ;
                 writeInt(rptr + 1, 4);
                 writeInt(rptr + 5, 0);
+                FStructData fsd;
+                fsd.startNode = root_nodes;
+                write_stack.push_back(fsd);
 
                 roots.clear();
 
@@ -748,7 +765,7 @@ public:
                     ok = parser->parse(ptr);
                     if( ok )
                     {
-                        finalizeCollection(root_nodes);
+                        root_nodes.endWriteStruct();
 
                         CV_Assert( !fs_data_ptrs.empty() );
                         FileNode roots_node(fs_ext, 0, 0);
@@ -953,7 +970,7 @@ public:
             bufofs = 0;
         }
 
-        int indent = write_stack.back().indent;
+        int indent = ( write_stack.empty() ? 0 : write_stack.back().indent );
 
         if( space != indent )
         {
@@ -968,25 +985,44 @@ public:
 
     void endWriteStruct()
     {
-        CV_Assert( write_mode );
         CV_Assert( !write_stack.empty() );
 
         FStructData& current_struct = write_stack.back();
         if( fmt == FileStorage::FORMAT_JSON && !FileNode::isFlow(current_struct.flags) && write_stack.size() > 1 )
             current_struct.indent = write_stack[write_stack.size() - 2].indent;
 
+        const FileNode &collection = current_struct.startNode;
+        size_t orig_capacity = current_struct.startNode.capacity();
         emitter->endWriteStruct(current_struct);
 
         write_stack.pop_back();
+        const int sz_change = static_cast<int>(collection.capacity() - orig_capacity);
         if( !write_stack.empty() )
+        {
             write_stack.back().flags &= ~FileNode::EMPTY;
+        }
+        else
+        {
+            if( sz_change != 0 )
+            {
+                Ptr<FileNode> n = collection.parent;
+                while ( n )
+                {
+                    CV_Assert( n->isCollection() );
+                    uchar *ptr = n->ptr();
+                    ptr += ( n->isNamed() ? 5 : 1 );
+                    orig_capacity = readInt(ptr);
+                    writeInt(ptr, static_cast<int>(orig_capacity) + sz_change);
+                    n = n->parent;
+                }
+            }
+            current_block.reset();
+        }
     }
 
     void startWriteStruct( const char* key, int struct_flags,
                            const char* type_name )
     {
-        CV_Assert( write_mode );
-
         struct_flags = (struct_flags & (FileNode::TYPE_MASK|FileNode::FLOW)) | FileNode::EMPTY;
         if( !FileNode::isCollection(struct_flags))
             CV_Error( CV_StsBadArg,
@@ -995,7 +1031,8 @@ public:
         if( type_name && type_name[0] == '\0' )
             type_name = 0;
 
-        FStructData s = emitter->startWriteStruct( write_stack.back(), key, struct_flags, type_name );
+        FStructData s = emitter->startWriteStruct( write_stack.empty() ? FStructData() : write_stack.back(),
+                key, struct_flags, type_name );
         write_stack.push_back(s);
         size_t write_stack_size = write_stack.size();
         if( write_stack_size > 1 )
@@ -1026,33 +1063,28 @@ public:
             flush();
             emitter->startNextStream();
             empty_stream = true;
-            write_stack.push_back(FStructData("", FileNode::EMPTY, 0));
+            write_stack.push_back(FStructData("", FileNode::MAP | FileNode::EMPTY, 0));
             bufofs = 0;
         }
     }
 
     void write( const String& key, int value )
     {
-        CV_Assert(write_mode);
         emitter->write(key.c_str(), value);
     }
 
     void write( const String& key, double value )
     {
-        CV_Assert(write_mode);
         emitter->write(key.c_str(), value);
     }
 
     void write( const String& key, const String& value )
     {
-        CV_Assert(write_mode);
         emitter->write(key.c_str(), value.c_str(), false);
     }
 
     void writeRawData( const std::string& dt, const void* _data, size_t len )
     {
-        CV_Assert(write_mode);
-
         size_t elemSize = fs::calcStructSize(dt.c_str(), 0);
         CV_Assert( len % elemSize == 0 );
         len /= elemSize;
@@ -1091,46 +1123,115 @@ public:
 
                 for( i = 0; i < count; i++ )
                 {
-                    switch( elem_type )
+                    if (write_mode)
                     {
-                    case CV_8U:
-                        ptr = fs::itoa( *(uchar*)data, buf, 10 );
-                        data++;
-                        break;
-                    case CV_8S:
-                        ptr = fs::itoa( *(char*)data, buf, 10 );
-                        data++;
-                        break;
-                    case CV_16U:
-                        ptr = fs::itoa( *(ushort*)data, buf, 10 );
-                        data += sizeof(ushort);
-                        break;
-                    case CV_16S:
-                        ptr = fs::itoa( *(short*)data, buf, 10 );
-                        data += sizeof(short);
-                        break;
-                    case CV_32S:
-                        ptr = fs::itoa( *(int*)data, buf, 10 );
-                        data += sizeof(int);
-                        break;
-                    case CV_32F:
-                        ptr = fs::floatToString( buf, *(float*)data, false, explicitZero );
-                        data += sizeof(float);
-                        break;
-                    case CV_64F:
-                        ptr = fs::doubleToString( buf, *(double*)data, explicitZero );
-                        data += sizeof(double);
-                        break;
-                    case CV_16F: /* reference */
-                        ptr = fs::floatToString( buf, (float)*(float16_t*)data, true, explicitZero );
-                        data += sizeof(float16_t);
-                        break;
-                    default:
-                        CV_Error( CV_StsUnsupportedFormat, "Unsupported type" );
-                        return;
-                    }
+                        switch( elem_type )
+                        {
+                        case CV_8U:
+                            ptr = fs::itoa( *(uchar*)data, buf, 10 );
+                            data++;
+                            break;
+                        case CV_8S:
+                            ptr = fs::itoa( *(char*)data, buf, 10 );
+                            data++;
+                            break;
+                        case CV_16U:
+                            ptr = fs::itoa( *(ushort*)data, buf, 10 );
+                            data += sizeof(ushort);
+                            break;
+                        case CV_16S:
+                            ptr = fs::itoa( *(short*)data, buf, 10 );
+                            data += sizeof(short);
+                            break;
+                        case CV_32S:
+                            ptr = fs::itoa( *(int*)data, buf, 10 );
+                            data += sizeof(int);
+                            break;
+                        case CV_32F:
+                            ptr = fs::floatToString( buf, *(float*)data, false, explicitZero );
+                            data += sizeof(float);
+                            break;
+                        case CV_64F:
+                            ptr = fs::doubleToString( buf, *(double*)data, explicitZero );
+                            data += sizeof(double);
+                            break;
+                        case CV_16F: /* reference */
+                            ptr = fs::floatToString( buf, (float)*(float16_t*)data, true, explicitZero );
+                            data += sizeof(float16_t);
+                            break;
+                        default:
+                            CV_Error( CV_StsUnsupportedFormat, "Unsupported type" );
+                            return;
+                        }
 
-                    emitter->writeScalar(0, ptr);
+                        emitter->writeScalar(0, ptr);
+                    }
+                    else
+                    {
+                        int int_value;
+                        double real_value;
+                        int node_type;
+                        switch( elem_type )
+                        {
+                        case CV_8U:
+                            int_value = *(uchar*)data;
+                            node_type = FileNode::INT;
+                            data++;
+                            break;
+                        case CV_8S:
+                            int_value = *(char*)data;
+                            node_type = FileNode::INT;
+                            data++;
+                            break;
+                        case CV_16U:
+                            int_value = *(ushort*)data;
+                            node_type = FileNode::INT;
+                            data += sizeof(ushort);
+                            break;
+                        case CV_16S:
+                            int_value = *(short*)data;
+                            node_type = FileNode::INT;
+                            data += sizeof(short);
+                            break;
+                        case CV_32S:
+                            int_value = *data;
+                            node_type = FileNode::INT;
+                            data += sizeof(int);
+                            break;
+                        case CV_32F:
+                            real_value = *(float*)data;
+                            node_type = FileNode::REAL;
+                            data += sizeof(float);
+                            break;
+                        case CV_64F:
+                            real_value = *(double*)data;
+                            node_type = FileNode::REAL;
+                            data += sizeof(double);
+                            break;
+                        case CV_16F: /* reference */
+                            real_value = (float)*(float16_t*)data;
+                            node_type = FileNode::REAL;
+                            data += sizeof(float16_t);
+                            break;
+                        default:
+                            CV_Error( CV_StsUnsupportedFormat, "Unsupported type" );
+                            return;
+                        }
+                        if ( isBusy() )
+                        {
+                            if ( node_type == FileNode::INT )
+                                addNode(write_stack.back().startNode, "", node_type, &int_value);
+                            else
+                                addNode(write_stack.back().startNode, "", node_type, &real_value);
+                        }
+                        else
+                        {
+                            if ( node_type == FileNode::INT )
+                                current_block->setValue(node_type, &int_value);
+                            else
+                                current_block->setValue(node_type, &real_value);
+                        }
+                    }
                 }
 
                 offset = (int)(data - data0);
@@ -1155,16 +1256,6 @@ public:
         return streamIdx >= 0 && streamIdx < (int)roots.size() ? roots[streamIdx] : FileNode();
     }
 
-    FileNode operator[](const String& nodename) const
-    {
-        return this->operator[](nodename.c_str());
-    }
-
-    FileNode operator[](const char* /*nodename*/) const
-    {
-        return FileNode();
-    }
-
     int getFormat() const { return fmt; }
 
     char* bufferPtr() const { return (char*)(&buffer[0] + bufofs); }
@@ -1177,6 +1268,8 @@ public:
         bufofs = ptr - bufferstart;
     }
     int wrapMargin() const { return wrap_margin; }
+
+    bool isBusy() const { return !write_stack.empty(); }
 
     FStructData& getCurrentStruct()
     {
@@ -1239,11 +1332,15 @@ public:
 
     void convertToCollection(int type, FileNode& node)
     {
-        CV_Assert( type == FileNode::SEQ || type == FileNode::MAP );
+        const int plain_type = type & FileNode::TYPE_MASK;
+        CV_Assert( plain_type == FileNode::SEQ || plain_type == FileNode::MAP );
 
         int node_type = node.type();
-        if( node_type == type )
+        if( node_type == plain_type )
+        {
+            *( node.ptr() ) |= type;
             return;
+        }
 
         bool named = node.isNamed();
         uchar* ptr = node.ptr() + 1 + (named ? 4 : 0);
@@ -1285,7 +1382,7 @@ public:
         // name has been copied automatically
         if( named )
             ptr += 4;
-        // set raw_size(collection)==4, nelems(collection)==1
+        // set raw_size(collection)=4, nelems(collection)=0
         writeInt(ptr, 4);
         writeInt(ptr + 4, 0);
 
@@ -1297,7 +1394,38 @@ public:
                     -1);
     }
 
-    // a) allocates new FileNode (for that just set blockIdx to the last block and ofs to freeSpaceOfs) or
+    // update capacity of parent collections
+    void updateCollectionCapacities(const int& sz_change)
+    {
+        CV_Assert( isBusy() );
+        if( !sz_change )
+            return;
+        FileNode *collection;
+        uchar* capacity_ptr;
+        int capacity;
+        unsigned write_stack_hierarchy = 0;
+        while( write_stack.size() > write_stack_hierarchy )
+        {
+            write_stack_hierarchy++;
+            const int write_stack_idx = static_cast<int>(write_stack.size()) - write_stack_hierarchy;
+            collection = &write_stack[write_stack_idx].startNode;
+            capacity_ptr = collection->ptr() + ( collection->isNamed() ? 5 : 1 );
+            capacity = readInt(capacity_ptr);
+            capacity += sz_change;
+            writeInt(capacity_ptr, capacity);
+        }
+        collection = write_stack.front().startNode.parent.get();
+        while ( collection )
+        {
+            capacity_ptr = collection->ptr() + ( collection->isNamed() ? 5 : 1 );
+            capacity = readInt(capacity_ptr);
+            capacity += sz_change;
+            writeInt(capacity_ptr, capacity);
+            collection = collection->parent.get();
+        }
+    }
+
+    // a) allocates new FileNode (for that just set blockIdx and ofs to the current block values) or
     // b) reallocates just created new node (blockIdx and ofs must be taken from FileNode).
     //    If there is no enough space in the current block (it should be the last block added so far),
     //    the last block is shrunk so that it ends immediately before the reallocated node. Then,
@@ -1306,37 +1434,209 @@ public:
     // In the case (b) the existing tag and the name are copied automatically.
     uchar* reserveNodeSpace(FileNode& node, size_t sz)
     {
+        const bool is_reassign = ( !current_block || current_block != end_block );
         bool shrinkBlock = false;
         size_t shrinkBlockIdx = 0, shrinkSize = 0;
 
         uchar *ptr = 0, *blockEnd = 0;
+        size_t blockIdx = node.blockIdx;
 
         if( !fs_data_ptrs.empty() )
         {
-            size_t blockIdx = node.blockIdx;
             size_t ofs = node.ofs;
-            CV_Assert( blockIdx == fs_data_ptrs.size()-1 );
+            CV_Assert( blockIdx == current_block->blockIdx );
             CV_Assert( ofs <= fs_data_blksz[blockIdx] );
-            CV_Assert( freeSpaceOfs <= fs_data_blksz[blockIdx] );
-            //CV_Assert( freeSpaceOfs <= ofs + sz );
 
             ptr = fs_data_ptrs[blockIdx] + ofs;
+
+            if( is_reassign )
+            {
+                int sz_change = 0;
+                const size_t next_block_idx = nextBlockIdx(blockIdx);
+                const int node_type = node.type();
+                const bool is_pseudocollection = ( !isBusy() && node_type == FileNode::STRING );
+                FileNode node_end = node;
+                node_end.ofs += sz;
+                normalizeNodeOfs(node_end.blockIdx, node_end.ofs);
+
+                if( !isBusy() && !is_pseudocollection )
+                {
+                    CV_Assert( node.rawSize() == sz );
+                }
+                else
+                {
+                    if( is_pseudocollection )
+                    {
+                        FStructData fsd;
+                        fsd.startNode = node;
+                        fsd.startNode.nodeName = "<temp-string-struct>";
+                        write_stack.push_back(fsd);
+                    }
+                    FileNode &collection = write_stack.back().startNode;
+                    const size_t orig_collection_sz = collection.rawSize();
+                    FileNode orig_collection_end = collection;
+                    orig_collection_end.ofs += orig_collection_sz;
+
+                    normalizeNodeOfs(orig_collection_end.blockIdx, orig_collection_end.ofs, node_end.blockIdx);
+
+                    //fits already in allocated space
+                    if( node_end.blockIdx == orig_collection_end.blockIdx && node_end.ofs <= orig_collection_end.ofs )
+                    {
+                        normalizeNodeOfs(orig_collection_end.blockIdx, orig_collection_end.ofs);
+                        // ...and in current block
+                        if( blockIdx == node_end.blockIdx )
+                        {
+                            current_block->ofs += sz;
+                            if( is_pseudocollection )
+                            {
+                                sz_change -= static_cast<int>(orig_collection_sz - sz);
+                                finalizeCollection(collection);
+                                updateCollectionCapacities(sz_change);
+                                write_stack.pop_back();
+                            }
+                            return ptr;
+                        }
+                        // ...or in already allocated space of next block
+                        if( sz < fs_data_blksz[next_block_idx]
+                                && ( orig_collection_end.blockIdx != next_block_idx || orig_collection_end.ofs > sz ) )
+                        {
+                            CV_Assert( !is_pseudocollection );
+                            // allocate node in next block & shrink current block
+                            node.blockIdx = next_block_idx;
+                            node.ofs = 0;
+                            current_block->blockIdx = next_block_idx;
+                            current_block->ofs = sz;
+                            sz_change += static_cast<int>(ofs - fs_data_blksz[blockIdx]);
+                            fs_data[blockIdx]->resize(ofs);
+                            fs_data_blksz[blockIdx] = ofs;
+                            updateCollectionCapacities(sz_change);
+                            return node.ptr();
+                        }
+                    }
+
+                    size_t new_idx, blockSize;
+                    const size_t orig_blksz = fs_data_blksz[blockIdx];
+                    if( blockIdx == end_block->blockIdx && orig_blksz - end_block->ofs >= sz )
+                    {
+                        new_idx = blockIdx;
+                        blockSize = orig_blksz;
+                    }
+                    else if( fs_data_blksz[blockIdx] + sz < CV_FS_MAX_LEN*4 )
+                    {
+                        node_end.blockIdx = blockIdx;
+                        node_end.ofs = ofs + sz;
+                        blockSize = CV_FS_MAX_LEN*4;
+                        fs_data[blockIdx]->resize(blockSize);
+                        fs_data_ptrs[blockIdx] = &fs_data[blockIdx]->at(0);
+                        sz_change += static_cast<int>(blockSize - orig_blksz);
+                        fs_data_blksz[blockIdx] = blockSize;
+                        new_idx = blockIdx;
+                    }
+                    else
+                    {
+                        // otherwise insert new block
+                        new_idx = fs_data_ptrs.size();
+                        markDataInsert(blockIdx, new_idx);
+                        blockSize = std::max((size_t)CV_FS_MAX_LEN*4 - 256, sz) + 256;
+                        Ptr<std::vector<uchar> > pv = makePtr<std::vector<uchar> >(blockSize);
+                        fs_data.push_back(pv);
+                        ptr = &pv->at(0);
+                        fs_data_ptrs.push_back(ptr);
+                        fs_data_blksz.push_back(blockSize);
+                        sz_change += static_cast<int>(blockSize);
+                    }
+
+                    if( blockIdx == orig_collection_end.blockIdx )
+                    {
+                        //move data after collection
+                        uchar *orig_data_begin = orig_collection_end.ptr();
+                        const size_t orig_data_end_ofs = ( blockIdx == end_block->blockIdx ? end_block->ofs : orig_blksz );
+                        sz_change += static_cast<int>(orig_blksz - orig_data_end_ofs);
+                        const size_t data_length = orig_data_end_ofs - orig_collection_end.ofs;
+                        const size_t free_space = fs_data_blksz[new_idx] - ( node_end.blockIdx != blockIdx ? sz : 0 );
+                        if( free_space < data_length )
+                        {
+                            // insert new block for trailing data
+                            const size_t next_idx = fs_data_ptrs.size();
+                            markDataInsert(new_idx, next_idx);
+                            new_idx = next_idx;
+                            blockSize = std::max((size_t)CV_FS_MAX_LEN*4 - 256, data_length) + 256;
+                            Ptr<std::vector<uchar> > pv = makePtr<std::vector<uchar> >(blockSize);
+                            fs_data.push_back(pv);
+                            fs_data_ptrs.push_back(&pv->at(0));
+                            fs_data_blksz.push_back(blockSize);
+                            sz_change += static_cast<int>(blockSize);
+                        }
+                        uchar* data_begin = fs_data_ptrs[new_idx] + blockSize - data_length;
+                        std::memmove(data_begin, orig_data_begin, data_length);
+                    }
+                    if( node_end.blockIdx != blockIdx )
+                    {
+                        if( is_pseudocollection )
+                        {
+                            const bool is_named = ( (*node.ptr() & FileNode::NAMED) != 0 );
+                            collection.blockIdx = next_block_idx;
+                            collection.ofs = 0;
+                            std::memcpy(collection.ptr(), node.ptr(), ( is_named ? 9 : 5 ));
+                        }
+                        sz_change -= static_cast<int>(orig_blksz - ofs);
+                        fs_data[blockIdx]->resize(ofs);
+                        fs_data_blksz[blockIdx] = ofs;
+                        node.blockIdx = next_block_idx;
+                        node.ofs = 0;
+                    }
+                    if( orig_collection_end.blockIdx == end_block->blockIdx )
+                    {
+                        end_block->ofs = blockSize;
+                        end_block->blockIdx = new_idx;
+                    }
+                    updateCollectionCapacities(sz_change);
+                }
+                current_block->blockIdx = node.blockIdx;
+                current_block->ofs = node.ofs + sz;
+                normalizeNodeOfs(current_block->blockIdx, current_block->ofs);
+                if( is_pseudocollection )
+                {
+                    CV_Assert( node.parent );
+                    const size_t collection_sz = node.rawSize();
+                    finalizeCollection(node);
+                    //updateCollectionCapacities(collection.rawSize()-collection_sz);
+                    sz_change = static_cast<int>(node.rawSize() - collection_sz);
+                    FileNode *n = node.parent.get();
+                    uchar *parent_ptr;
+                    while (n)
+                    {
+                        parent_ptr = n->ptr();
+                        if (*parent_ptr & FileNode::NAMED)
+                            parent_ptr += 4;
+                        parent_ptr++;
+                        const int original_buffer_size = readInt(parent_ptr);
+                        writeInt(parent_ptr, original_buffer_size + sz_change);
+                        n = n->parent.get();
+                    }
+                    write_stack.clear();
+                }
+                return node.ptr();
+            }
+
             blockEnd = fs_data_ptrs[blockIdx] + fs_data_blksz[blockIdx];
 
             CV_Assert(ptr >= fs_data_ptrs[blockIdx] && ptr <= blockEnd);
+            // FileNode fits into current block
             if( ptr + sz <= blockEnd )
             {
-                freeSpaceOfs = ofs + sz;
+                current_block->ofs = ofs + sz;
                 return ptr;
             }
-
-            if (ofs == 0)  // FileNode is a first component of this block. Resize current block instead of allocation of new one.
+            // FileNode is first component of current block, but too big to fit.
+            // Resize current block instead of allocation of a new one.
+            else if (ofs == 0)
             {
                 fs_data[blockIdx]->resize(sz);
                 ptr = &fs_data[blockIdx]->at(0);
                 fs_data_ptrs[blockIdx] = ptr;
                 fs_data_blksz[blockIdx] = sz;
-                freeSpaceOfs = sz;
+                current_block->ofs = sz;
                 return ptr;
             }
 
@@ -1345,15 +1645,20 @@ public:
             shrinkSize = ofs;
         }
 
+        // Create new block
+        const size_t new_idx = fs_data_ptrs.size();
+        if( new_idx && blockIdx != new_idx - 1)
+            markDataInsert(blockIdx, new_idx);
         size_t blockSize = std::max((size_t)CV_FS_MAX_LEN*4 - 256, sz) + 256;
         Ptr<std::vector<uchar> > pv = makePtr<std::vector<uchar> >(blockSize);
         fs_data.push_back(pv);
         uchar* new_ptr = &pv->at(0);
         fs_data_ptrs.push_back(new_ptr);
         fs_data_blksz.push_back(blockSize);
-        node.blockIdx = fs_data_ptrs.size()-1;
+        node.blockIdx = new_idx;
         node.ofs = 0;
-        freeSpaceOfs = sz;
+        current_block->blockIdx = new_idx;
+        current_block->ofs = sz;
 
         if( ptr && ptr + 5 <= blockEnd )
         {
@@ -1382,9 +1687,32 @@ public:
         return it != str_hash.end() ? it->second : 0;
     }
 
-    FileNode addNode( FileNode& collection, const std::string& key,
-                       int elem_type, const void* value, int len )
+    unsigned addKey( const String& key )
     {
+        unsigned strofs = getStringOfs(key);
+        if( !strofs )
+        {
+            strofs = (unsigned)str_hash_data.size();
+            size_t keysize = key.size() + 1;
+            str_hash_data.resize(strofs + keysize);
+            strcpy(&str_hash_data[0] + strofs, key.c_str());
+            str_hash.insert(std::make_pair(key, strofs));
+        }
+        return strofs;
+    }
+
+    FileNode addNode( FileNode& collection, const std::string& key,
+                       int elem_type, const void* value, int len = -1 )
+    {
+        const bool is_reassign = ( !current_block || current_block != end_block );
+        if( is_reassign && !isBusy() )
+        {
+            FileNode node = *current_block.get();
+            CV_Assert( node.isCollection() );
+            current_block->ofs += ( current_block->isNamed() ? 13 : 9 );
+            normalizeNodeOfs(current_block->blockIdx, current_block->ofs);
+            return node;
+        }
         FileStorage_API* fs = this;
         bool noname = key.empty() || (fmt == FileStorage::FORMAT_XML && strcmp(key.c_str(), "_") == 0);
         convertToCollection( noname ? FileNode::SEQ : FileNode::MAP, collection );
@@ -1393,43 +1721,40 @@ public:
         if( noname != isseq )
             CV_PARSE_ERROR_CPP( noname ? "Map element should have a name" :
                                 "Sequence element should not have name (use <_></_>)" );
-        unsigned strofs = 0;
-        if( !noname )
-        {
-            strofs = getStringOfs(key);
-            if( !strofs )
-            {
-                strofs = (unsigned)str_hash_data.size();
-                size_t keysize = key.size() + 1;
-                str_hash_data.resize(strofs + keysize);
-                memcpy(&str_hash_data[0] + strofs, &key[0], keysize);
-                str_hash.insert(std::make_pair(key, strofs));
-            }
-        }
-
         uchar* cp = collection.ptr();
 
-        size_t blockIdx = fs_data_ptrs.size() - 1;
-        size_t ofs = freeSpaceOfs;
-        FileNode node(fs_ext, blockIdx, ofs);
+        FileNode node = *current_block.get();
+        node.nodeName = key;
 
         size_t sz0 = 1 + (noname ? 0 : 4) + 8;
         uchar* ptr = reserveNodeSpace(node, sz0);
 
         *ptr++ = (uchar)(elem_type | (noname ? 0 : FileNode::NAMED));
         if( elem_type == FileNode::NONE )
-            freeSpaceOfs -= 8;
+            current_block->ofs -= 8;
 
         if( !noname )
         {
-            writeInt(ptr, (int)strofs);
+            node.setName(key);
             ptr += 4;
         }
 
-        if( elem_type == FileNode::SEQ || elem_type == FileNode::MAP )
+        if( (elem_type & FileNode::TYPE_MASK) == FileNode::SEQ || (elem_type & FileNode::TYPE_MASK) == FileNode::MAP )
         {
-            writeInt(ptr, 4);
-            writeInt(ptr, 0);
+            if( !is_reassign )
+            {
+                writeInt(ptr, 4);
+            }
+            else
+            {
+                FileNode collection_end(this, collection.blockIdx,
+                        collection.ofs + collection.rawSize());
+                normalizeNodeOfs(collection_end.blockIdx, collection_end.ofs,
+                        current_block->blockIdx);
+                const size_t remaining_capacity = collection_end.ofs - current_block->ofs + 4;
+                writeInt(ptr, static_cast<int>(remaining_capacity));
+            }
+            writeInt(ptr + 4, 0);
         }
 
         if( value )
@@ -1445,40 +1770,54 @@ public:
 
     void finalizeCollection( FileNode& collection )
     {
-        if( !collection.isSeq() && !collection.isMap() )
+        const bool is_pseudocollection = ( collection.type() == FileNode::STRING );
+        if( !is_pseudocollection && !collection.isSeq() && !collection.isMap() )
             return;
-        uchar* ptr0 = collection.ptr(), *ptr = ptr0 + 1;
-        if( *ptr0 & FileNode::NAMED )
-            ptr += 4;
+        uchar* ptr0 = collection.ptr();
+        size_t header_size = ( collection.isNamed() ? 5 : 1 );
+        uchar* ptr = ptr0 + header_size;
         size_t blockIdx = collection.blockIdx;
-        size_t ofs = collection.ofs + (size_t)(ptr + 8 - ptr0);
-        size_t rawSize = 4;
-        unsigned sz = (unsigned)readInt(ptr + 4);
-        if( sz > 0 )
+        size_t ofs, collection_capacity;
+        if( is_pseudocollection )
         {
-            size_t lastBlockIdx = fs_data_ptrs.size() - 1;
+            ofs = collection.ofs + header_size + 4;
+            collection_capacity = 0;
+        }
+        else
+        {
+            ofs = collection.ofs + header_size + 8;
+            collection_capacity = 4;
+        }
+        if( is_pseudocollection || (unsigned)readInt(ptr + 4) > 0 )
+        {
+            size_t lastBlockIdx = current_block->blockIdx;
 
-            for( ; blockIdx < lastBlockIdx; blockIdx++ )
+            for( ; blockIdx < lastBlockIdx; blockIdx = nextBlockIdx(blockIdx) )
             {
-                rawSize += fs_data_blksz[blockIdx] - ofs;
+                collection_capacity += fs_data_blksz[blockIdx] - ofs;
                 ofs = 0;
             }
         }
-        rawSize += freeSpaceOfs - ofs;
-        writeInt(ptr, (int)rawSize);
+        collection_capacity += current_block->ofs - ofs;
+        size_t orig_capacity = readInt(ptr);
+        if ( write_stack.size() == 1 && collection == write_stack.back().startNode && orig_capacity > collection_capacity )
+            collection.resize(header_size + 4 + collection_capacity);
+        writeInt(ptr, (int)collection_capacity);
     }
 
-    void normalizeNodeOfs(size_t& blockIdx, size_t& ofs) const
+    FileNode getCurrentNode()
     {
-        while( ofs >= fs_data_blksz[blockIdx] )
+        return ( current_block ? *current_block : FileNode() );
+    }
+
+    void normalizeNodeOfs(size_t& blockIdx, size_t& ofs,
+            size_t ref_block_idx = std::numeric_limits<size_t>::max()) const
+    {
+        while( ofs >= offset(blockIdx) && blockIdx != ref_block_idx
+                && blockIdx != end_block->blockIdx )
         {
-            if( blockIdx == fs_data_blksz.size() - 1 )
-            {
-                CV_Assert( ofs == fs_data_blksz[blockIdx] );
-                break;
-            }
-            ofs -= fs_data_blksz[blockIdx];
-            blockIdx++;
+            ofs -= offset(blockIdx);
+            blockIdx = nextBlockIdx(blockIdx);
         }
     }
 
@@ -1727,7 +2066,7 @@ public:
     const uchar* getNodePtr(size_t blockIdx, size_t ofs) const
     {
         CV_Assert( blockIdx < fs_data_ptrs.size());
-        CV_Assert( ofs < fs_data_blksz[blockIdx]);
+        CV_Assert( ofs <= fs_data_blksz[blockIdx]);
 
         return fs_data_ptrs[blockIdx] + ofs;
     }
@@ -1742,6 +2081,29 @@ public:
 
     FileStorage* fs_ext;
 
+    size_t nextBlockIdx( const size_t& idx ) const
+    {
+        auto it = fs_data_insert_marks.find(idx);
+        return ( it != fs_data_insert_marks.end() ) ? it->second : idx + 1;
+    }
+
+    size_t offset( const size_t& idx ) const
+    {
+        CV_Assert( idx < fs_data_blksz.size() );
+        if ( idx == end_block->blockIdx )
+            return end_block->ofs;
+        else
+            return fs_data_blksz[idx];
+    }
+
+    size_t markDataInsert( const size_t& precursor_idx, const size_t& new_idx )
+    {
+        size_t old_next = nextBlockIdx(precursor_idx);
+        fs_data_insert_marks[precursor_idx] = new_idx;
+        fs_data_insert_marks[new_idx] = old_next;
+        return new_idx;
+    }
+
     std::string filename;
     int flags;
     bool empty_stream;
@@ -1750,9 +2112,11 @@ public:
     gzFile gzfile;
 
     bool is_opened;
+    bool is_changed;
     bool dummy_eof;
     bool write_mode;
     bool mem_mode;
+    bool save_mode;
     int fmt;
 
     State state; //!< current state of the FileStorage (used only for writing)
@@ -1769,9 +2133,11 @@ public:
 
     std::vector<FileNode> roots;
     std::vector<Ptr<std::vector<uchar> > > fs_data;
+    std::unordered_map<size_t, size_t> fs_data_insert_marks;
     std::vector<uchar*> fs_data_ptrs;
     std::vector<size_t> fs_data_blksz;
-    size_t freeSpaceOfs;
+    Ptr<FileNode> end_block;
+    Ptr<FileNode> current_block;
     typedef std::unordered_map<std::string, unsigned> str_hash_t;
     str_hash_t str_hash;
     std::vector<char> str_hash_data;
@@ -1800,6 +2166,7 @@ FileStorage::FileStorage(const String& filename, int flags, const String& encodi
 
 void FileStorage::startWriteStruct(const String& name, int struct_flags, const String& typeName)
 {
+    setActive();
     p->startWriteStruct(name.c_str(), struct_flags, typeName.c_str());
     elname = String();
     if ((struct_flags & FileNode::TYPE_MASK) == FileNode::SEQ)
@@ -1814,6 +2181,14 @@ void FileStorage::endWriteStruct()
     state = p->write_stack.empty() || FileNode::isMap(p->write_stack.back().flags) ?
         FileStorage::NAME_EXPECTED + FileStorage::INSIDE_MAP :
         FileStorage::VALUE_EXPECTED;
+    elname = String();
+}
+
+void FileStorage::endAllWriteStructs()
+{
+    while( !p->write_stack.empty() )
+        p->endWriteStruct();
+    state = FileStorage::NAME_EXPECTED + FileStorage::INSIDE_MAP;
     elname = String();
 }
 
@@ -1844,12 +2219,23 @@ void FileStorage::release()
     p->release();
 }
 
+void FileStorage::releaseWithoutSave()
+{
+    p->is_changed = false;
+    p->release();
+}
+
 FileNode FileStorage::root(int i) const
 {
     if( p.empty() || p->roots.empty() || i < 0 || i >= (int)p->roots.size() )
         return FileNode();
 
     return p->roots[i];
+}
+
+FileNode FileStorage::getCurrentNode() const
+{
+    return ( p->current_block ? *p->current_block : FileNode() );
 }
 
 FileNode FileStorage::getFirstTopLevelNode() const
@@ -1904,20 +2290,52 @@ int FileStorage::getFormat() const
     return p->fmt;
 }
 
+FileNode FileStorage::operator [](const char* key)
+{
+    return this->operator[](std::string(key));
+}
+
 FileNode FileStorage::operator [](const char* key) const
 {
     return this->operator[](std::string(key));
 }
 
+FileNode FileStorage::operator [](const std::string& key)
+{
+    setActive();
+    if(p->write_mode) {
+        CV_Assert( state & FileStorage::NAME_EXPECTED );
+        *this << key;
+        return FileNode(p.get(), std::numeric_limits<size_t>::max(), std::numeric_limits<size_t>::max());
+    }
+    else if( p->write_stack.empty() ) {
+        elname = key;
+        state = FileStorage::INSIDE_MAP + FileStorage::VALUE_EXPECTED;
+    }
+    return ((const FileStorage&)*this)[key];
+}
+
 FileNode FileStorage::operator [](const std::string& key) const
 {
+    CV_Assert( p->state != FileStorage::UNDEFINED );
+    CV_Assert( !p->write_mode );
     FileNode res;
     for (size_t i = 0; i < p->roots.size(); i++)
     {
         res = p->roots[i][key];
-        if (!res.empty())
+        if (res.exists())
+        {
+            res.parent->nodeName = std::to_string(i);
             break;
+        }
     }
+    if( !res.exists() ) {
+        res.fs = p.get();
+        res.parent = makePtr<FileNode>(p->roots[p->roots.size() - 1]);
+        res.parent->nodeName = std::to_string(p->roots.size() - 1);
+    }
+    res.nodeName = key;
+    res.parent->parent = makePtr<FileNode>(this, 0, 0);
     return res;
 }
 
@@ -1926,6 +2344,56 @@ String FileStorage::releaseAndGetString()
     String buf;
     p->release(&buf);
     return buf;
+}
+
+void FileStorage::touch()
+{
+    p->is_changed = true;
+}
+
+bool FileStorage::isChanged() const
+{
+    return p->is_changed;
+}
+
+void FileStorage::setActiveNode( FileNode& node )
+{
+    if( node.parent && node.parent->parent )
+        node.updateDataRef();
+    if( isBusy() )
+    {
+        CV_Assert( p && p->current_block && node != *p->current_block );
+        endAllWriteStructs();
+    }
+    elname = node.name();
+    state = FileStorage::VALUE_EXPECTED + FileStorage::INSIDE_MAP;
+    if( !node.exists() && !p->fs_data.empty() && !p->isBusy() )
+    {
+        FileNode *parent = node.parent.get();
+        CV_Assert( parent );
+        CV_Assert( parent->exists() );
+        CV_Assert( parent->isCollection() );
+        FStructData fsd;
+        fsd.startNode = *parent;
+        p->write_stack.push_back(fsd);
+        FileNode parent_end = *parent;
+        parent_end.ofs += parent->rawSize();
+        p->normalizeNodeOfs(parent_end.blockIdx, parent_end.ofs);
+        p->current_block = makePtr<FileNode>(parent_end);
+        return;
+    }
+    if( !p->current_block || *(p->current_block) != node )
+        p->current_block = makePtr<FileNode>(node);
+}
+
+void FileStorage::setActive()
+{
+    p->fs_ext = this;
+}
+
+bool FileStorage::isBusy() const
+{
+    return p->isBusy();
 }
 
 void FileStorage::writeRaw( const String& fmt, const void* vec, size_t len )
@@ -1956,6 +2424,58 @@ void writeScalar( FileStorage& fs, double value )
 void writeScalar( FileStorage& fs, const String& value )
 {
     fs.p->write(String(), value);
+}
+
+void writeNode( FileStorage& fs, const FileNode& node )
+{
+    const uchar *p0 = node.ptr();
+    const uchar *p = p0 + 1;
+    const uchar tag = *p0;
+    int type = node.type();
+    const bool is_named = ( (tag & FileNode::NAMED) != 0 );
+    if( is_named ) {
+        if( fs.p->write_mode || fs.isBusy() )
+            fs << node.name();
+        p += 4;
+    }
+    size_t raw_sz = node.rawSize();
+    switch(type) {
+    case FileNode::SEQ:
+        fs << (( tag & FileNode::FLOW ) ? "[:" : "[");
+        p += 8;
+        while (static_cast<unsigned>(p - p0) < raw_sz) {
+            FileNode sub_node(&fs, node.blockIdx, node.ofs + (p - p0));
+            fs.p->normalizeNodeOfs(sub_node.blockIdx, sub_node.ofs);
+            fs << sub_node;
+            p += sub_node.rawSize();
+        }
+        fs << "]";
+        break;
+    case FileNode::MAP:
+        fs << (( tag & FileNode::FLOW ) ? "{:" : "{");
+        //skip size + nr of elems tags
+        p += 8;
+        while (static_cast<unsigned>(p - p0) < raw_sz) {
+            FileNode sub_node(&fs, node.blockIdx, node.ofs + (p - p0));
+            fs.p->normalizeNodeOfs(sub_node.blockIdx, sub_node.ofs);
+            fs << sub_node;
+            p += sub_node.rawSize();
+        }
+        fs << "}";
+        break;
+    case FileNode::INT:
+        fs << (int)node;
+        break;
+    case FileNode::REAL:
+        fs << (double)node;
+        break;
+    case FileNode::STRING:
+        fs << (std::string)node;
+        break;
+    default:
+        CV_Error(Error::StsUnsupportedFormat, "Unsopported FileNode type");
+        break;
+    }
 }
 
 void write( FileStorage& fs, const String& name, int value )
@@ -1990,7 +2510,7 @@ FileStorage& operator << (FileStorage& fs, const String& str)
         VALUE_EXPECTED = FileStorage::VALUE_EXPECTED,
         INSIDE_MAP = FileStorage::INSIDE_MAP };
     const char* _str = str.c_str();
-    if( !fs.isOpened() || !_str )
+    if( (fs.isWrite() && !fs.isOpened()) || !_str )
         return fs;
     Ptr<FileStorage::Impl>& fs_impl = fs.p;
     char c = *_str;
@@ -2005,10 +2525,12 @@ FileStorage& operator << (FileStorage& fs, const String& str)
         if( c != expected_bracket )
             CV_Error_( CV_StsError, ("The closing '%c' does not match the opening '%c'", c, expected_bracket));
         fs_impl->endWriteStruct();
-        CV_Assert(!fs_impl->write_stack.empty());
-        struct_flags = fs_impl->write_stack.back().flags;
-        fs.state = FileNode::isMap(struct_flags) ? INSIDE_MAP + NAME_EXPECTED : VALUE_EXPECTED;
-        fs.elname = String();
+        if( !fs_impl->write_stack.empty() )
+        {
+            struct_flags = fs_impl->write_stack.back().flags;
+            fs.state = FileNode::isMap(struct_flags) ? INSIDE_MAP + NAME_EXPECTED : VALUE_EXPECTED;
+            fs.elname = String();
+        }
     }
     else if( fs.state == NAME_EXPECTED + INSIDE_MAP )
     {
@@ -2046,11 +2568,46 @@ FileStorage& operator << (FileStorage& fs, const String& str)
     return fs;
 }
 
+bool FileStorage::isWrite() const { return p->write_mode; }
+
+void FileStorage::save(const String& filename)
+{
+    String orig_filename = p->filename;
+    if( p->write_mode )
+    {
+        p->flush();
+        return;
+    }
+    if( isBusy() )
+        endAllWriteStructs();
+    if( filename != p->filename )
+        touch();
+    if( !p->is_changed )
+        return;
+    p->save_mode = true;
+    open((filename.empty() ? p->filename : filename), FileStorage::WRITE);
+    for (size_t i = 0; i < p->roots.size(); i++)
+    {
+        if( i > 0 )
+        {
+            p->setNonEmpty();
+            p->startNextStream();
+        }
+        FileNode root = p->roots[i];
+        for(auto it = root.begin(); it != root.end(); it++)
+            *this << *it;
+    }
+    p->release();
+    p->filename = orig_filename;
+    p->emitter = createFileNodeEmitter(p.get());
+    p->is_changed = p->save_mode = p->write_mode = false;
+}
+
 
 FileNode::FileNode()
     : fs(NULL)
 {
-    blockIdx = ofs = 0;
+    blockIdx = ofs = std::numeric_limits<size_t>::max();
 }
 
 FileNode::FileNode(FileStorage::Impl* _fs, size_t _blockIdx, size_t _ofs)
@@ -2071,6 +2628,8 @@ FileNode::FileNode(const FileNode& node)
     fs = node.fs;
     blockIdx = node.blockIdx;
     ofs = node.ofs;
+    parent = node.parent;
+    nodeName = node.nodeName;
 }
 
 FileNode& FileNode::operator=(const FileNode& node)
@@ -2078,30 +2637,52 @@ FileNode& FileNode::operator=(const FileNode& node)
     fs = node.fs;
     blockIdx = node.blockIdx;
     ofs = node.ofs;
+    parent = node.parent;
+    nodeName = node.nodeName;
     return *this;
 }
 
 FileNode FileNode::operator[](const std::string& nodename) const
 {
-    if(!fs)
+    if(!fs || fs->write_mode)
         return FileNode();
 
-    CV_Assert( isMap() );
+    FileNode res;
+    res.fs = fs;
+    res.parent = makePtr<FileNode>(*this);
+    res.nodeName = nodename;
 
-    unsigned key = fs->getStringOfs(nodename);
-    size_t i, sz = size();
-    FileNodeIterator it = begin();
-
-    for( i = 0; i < sz; i++, ++it )
+    if( exists() )
     {
-        FileNode n = *it;
-        const uchar* p = n.ptr();
-        unsigned key2 = (unsigned)readInt(p + 1);
-        CV_Assert( key2 < fs->str_hash_data.size() );
-        if( key == key2 )
-            return n;
+        CV_Assert( isMap() );
+        unsigned key = fs->getStringOfs(nodename);
+        if( key )
+        {
+            size_t i, sz = size();
+            FileNodeIterator it = begin();
+
+            for( i = 0; i < sz; i++, ++it )
+            {
+                const uchar* p = (*it).ptr();
+                unsigned key2 = (unsigned)readInt(p + 1);
+                CV_Assert( key2 < fs->str_hash_data.size() );
+                if( key == key2 )
+                {
+                    res.fs = (*it).fs;
+                    res.blockIdx = (*it).blockIdx;
+                    res.ofs = (*it).ofs;
+                    break;
+                }
+            }
+        }
+        if( fs->write_stack.empty() )
+        {
+            FileStorage *fs_ext = getFS();
+            fs_ext->elname = nodename;
+            fs_ext->state = FileStorage::INSIDE_MAP + FileStorage::VALUE_EXPECTED;
+        }
     }
-    return FileNode();
+    return res;
 }
 
 FileNode FileNode::operator[](const char* nodename) const
@@ -2152,15 +2733,19 @@ bool FileNode::isCollection(int flags) { return isMap(flags) || isSeq(flags); }
 bool FileNode::isFlow(int flags) { return (flags & FLOW) != 0; }
 bool FileNode::isEmptyCollection(int flags) { return (flags & EMPTY) != 0; }
 
-bool FileNode::empty() const   { return fs == 0; }
+bool FileNode::empty() const   { return !exists(); }
+bool FileNode::exists() const  { return fs != 0 && blockIdx < fs->fs_data_ptrs.size(); }
 bool FileNode::isNone() const  { return type() == NONE; }
 bool FileNode::isSeq() const   { return type() == SEQ; }
 bool FileNode::isMap() const   { return type() == MAP; }
+bool FileNode::isCollection() const   { return isSeq() || isMap(); }
 bool FileNode::isInt() const   { return type() == INT;  }
 bool FileNode::isReal() const  { return type() == REAL; }
 bool FileNode::isString() const { return type() == STRING;  }
 bool FileNode::isNamed() const
 {
+    if( !exists() )
+        return !nodeName.empty();
     const uchar* p = ptr();
     if(!p)
         return false;
@@ -2169,6 +2754,10 @@ bool FileNode::isNamed() const
 
 std::string FileNode::name() const
 {
+    if( !exists() )
+        return nodeName;
+    if( !isNamed() )
+        return std::string();
     const uchar* p = ptr();
     if(!p)
         return std::string();
@@ -2251,6 +2840,25 @@ std::string FileNode::string() const
 }
 Mat FileNode::mat() const { Mat value; read(*this, value, Mat()); return value; }
 
+bool FileNode::operator == (const FileNode& node) const
+{
+    if( exists() )
+    {
+        return fs == node.fs
+            && blockIdx == node.blockIdx
+            && ofs == node.ofs;
+    }
+    return nodeName == node.nodeName && (
+        ( !parent && !node.parent )
+        || ( parent && node.parent && *parent == *(node.parent) )
+    );
+}
+
+FileStorage* FileNode::getFS() const
+{
+    return fs->getFS();
+}
+
 FileNodeIterator FileNode::begin() const { return FileNodeIterator(*this, false); }
 FileNodeIterator FileNode::end() const   { return FileNodeIterator(*this, true); }
 
@@ -2296,28 +2904,73 @@ size_t FileNode::rawSize() const
     return sz0 + 4 + readInt(p);
 }
 
+size_t FileNode::capacity() const
+{
+    const uchar* p0 = ptr(), *p = p0;
+    if( !p )
+        return 0;
+    int tag = *p++;
+    int tp = tag & TYPE_MASK;
+    if( tp == INT )
+        return 4;
+    if( tp == REAL )
+        return 8;
+    if( tp == NONE )
+        return 0;
+    if( tag & NAMED )
+        p += 4;
+    CV_Assert( tp == STRING || tp == SEQ || tp == MAP );
+    return readInt(p);
+}
+
 uchar* FileNode::ptr()
 {
-    return !fs ? 0 : (uchar*)fs->getNodePtr(blockIdx, ofs);
+    return (!exists() || (fs->write_mode && !fs->save_mode) ) ? 0 : (uchar*)fs->getNodePtr(blockIdx, ofs);
 }
 
 const uchar* FileNode::ptr() const
 {
-    return !fs ? 0 : fs->getNodePtr(blockIdx, ofs);
+    return (!exists() || (fs->write_mode && !fs->save_mode) ) ? 0 : fs->getNodePtr(blockIdx, ofs);
 }
 
-void FileNode::setValue( int type, const void* value, int len )
+void FileNode::setName( const String& name )
 {
+    // if( !fs->isBusy() && parent && parent->parent )
+    //     updateDataRef();
+    //nodeName = name;
+    uchar* p = ptr();
+    if( exists() && (*p & FileNode::NAMED) != 0 )
+    {
+        unsigned strofs = fs->addKey(name);
+        writeInt(p + 1, (int)strofs);
+    }
+    else
+        CV_Error(Error::StsNotImplemented, "Cannot rename unnamed FileNode.");
+}
+
+size_t FileNode::setValue( int type, const void* value, int len )
+{
+    FileStorage& fs_ext = *getFS();
+    const bool is_reassign = ( !fs->current_block || *(fs->current_block) != *(fs->end_block) );
+    if ( is_reassign )
+    {
+        fs->is_changed = true;
+        if( !fs_ext.isBusy() )
+            fs_ext.setActiveNode(*this);
+        else
+            fs->current_block = makePtr<FileNode>(*this);
+    }
     uchar *p = ptr();
     CV_Assert(p != 0);
 
     int tag = *p;
     int current_type = tag & TYPE_MASK;
-    CV_Assert( current_type == NONE || current_type == type );
+    CV_Assert( fs->isBusy() || current_type == NONE || current_type == type );
 
-    int sz = 1;
+    const bool is_named = ( (tag & NAMED) != 0 );
+    size_t sz = 1;
 
-    if( tag & NAMED )
+    if( is_named )
         sz += 4;
 
     if( type == INT )
@@ -2331,12 +2984,19 @@ void FileNode::setValue( int type, const void* value, int len )
         sz += 4 + len + 1; // besides the string content,
                            // take the size (4 bytes) and the final '\0' into account
     }
+    else if( isCollection(type) )
+    {
+        if (len < 0)
+            len = readInt((uchar*)value + sz);
+        sz += 4;
+        sz += len;
+    }
     else
-        CV_Error(Error::StsNotImplemented, "Only scalar types can be dynamically assigned to a file node");
+        CV_Error(Error::StsUnsupportedFormat, "Unsupported node type for dynamical assignment");
 
     p = fs->reserveNodeSpace(*this, sz);
     *p++ = (uchar)(type | (tag & NAMED));
-    if( tag & NAMED )
+    if( is_named )
         p += 4;
 
     if( type == INT )
@@ -2356,7 +3016,135 @@ void FileNode::setValue( int type, const void* value, int len )
         memcpy(p + 4, str, len);
         p[4 + len] = (uchar)'\0';
     }
+    else if ( isCollection(type) )
+    {
+        writeInt(p, len);
+        p += 4;
+        memcpy(p, (uchar*)value + sz - len, len);
+    }
+    if( !fs->isBusy() )
+        fs->current_block.reset();
+    return sz;
 }
+
+void FileNode::startWriteStruct( int flags, const String& typeName )
+{
+    const bool is_reassign = *this != *(fs->end_block);
+    getFS()->setActiveNode(*this);
+    CV_Assert( isCollection(flags) );
+    if( exists() )
+    {
+        fs->convertToCollection(flags & TYPE_MASK, *this);
+        // undo fs->current_block shift in convertToCollection
+        getFS()->setActiveNode(*this);
+    }
+    if( isNamed() )
+        fs->addKey(name());
+    fs->startWriteStruct(name().c_str(), flags, typeName.c_str());
+    if( !is_reassign )
+    {
+        *(fs->end_block) = *(fs->current_block);
+        fs->current_block = fs->end_block;
+    }
+}
+
+void FileNode::endWriteStruct()
+{
+    CV_Assert( !fs->write_stack.empty() && *this == fs->write_stack.back().startNode );
+    fs->endWriteStruct();
+}
+
+FileNode FileNode::addNode( const std::string& key,
+    int elem_type, const void* value, int len )
+{
+    return fs->addNode(*this, key, elem_type, value, len);
+}
+
+void FileNode::resize(size_t sz)
+{
+    CV_Assert( isCollection() || type() == FileNode::STRING );
+    const size_t raw_size = rawSize();
+    if( raw_size == sz )
+        return;
+    if( raw_size < sz )
+        CV_Error(Error::StsNotImplemented, "Only shrinking of FileNode supported (i.e. rawSize() < sz)");
+    FileNode orig_collection_end = *this;
+    orig_collection_end.ofs += raw_size;
+    fs->normalizeNodeOfs(orig_collection_end.blockIdx, orig_collection_end.ofs);
+    FileNode new_collection_end = *this;
+    new_collection_end.ofs += sz;
+    fs->normalizeNodeOfs(new_collection_end.blockIdx, new_collection_end.ofs);
+    const size_t end_data_length = fs->fs_data_blksz[orig_collection_end.blockIdx] - orig_collection_end.ofs;
+    const size_t free_space = fs->fs_data_blksz[new_collection_end.blockIdx] - new_collection_end.ofs;
+    if( end_data_length <= free_space )
+    {
+        std::memmove(new_collection_end.ptr(), orig_collection_end.ptr(), end_data_length);
+        const size_t new_size = new_collection_end.ofs + end_data_length;
+        fs->fs_data[new_collection_end.blockIdx]->resize(new_size);
+        fs->fs_data_blksz[new_collection_end.blockIdx] = new_size;
+        if( new_collection_end.blockIdx != orig_collection_end.blockIdx )
+        {
+            fs->fs_data[orig_collection_end.blockIdx]->resize(0);
+            fs->fs_data_blksz[orig_collection_end.blockIdx] = 0;
+        }
+        if( orig_collection_end.blockIdx == fs->end_block->blockIdx )
+        {
+            fs->end_block->blockIdx = new_collection_end.blockIdx;
+            fs->end_block->ofs = fs->end_block->ofs - orig_collection_end.ofs + new_collection_end.ofs;
+        }
+    }
+    else
+    {
+        fs->fs_data[new_collection_end.blockIdx]->resize(new_collection_end.ofs);
+        fs->fs_data_blksz[new_collection_end.blockIdx] = new_collection_end.ofs;
+        std::memmove(fs->fs_data_ptrs[orig_collection_end.blockIdx], fs->fs_data_ptrs[orig_collection_end.blockIdx] + orig_collection_end.ofs, end_data_length);
+        if( orig_collection_end.blockIdx != fs->end_block->blockIdx )
+        {
+            fs->fs_data[orig_collection_end.blockIdx]->resize(end_data_length);
+            fs->fs_data_blksz[orig_collection_end.blockIdx] = end_data_length;
+        }
+        else
+        {
+            fs->end_block->ofs -= orig_collection_end.ofs;
+        }
+    }
+
+    if ( new_collection_end.blockIdx != orig_collection_end.blockIdx )
+    {
+        //std::vector<size_t> empty_blocks;
+        size_t next_block = fs->nextBlockIdx(new_collection_end.blockIdx);
+        while( next_block != orig_collection_end.blockIdx && next_block < fs->fs_data.size() )
+        {
+            //empty_blocks.push_back(next_block);
+            fs->fs_data[next_block]->resize(0);
+            fs->fs_data_blksz[next_block] = 0;
+            next_block = fs->nextBlockIdx(next_block);
+        }
+        // fs->fs_data.erase(std::remove_if(fs->fs_data.begin(), fs->fs_data.end(), [empty_blocks](const size_t elem) { return std::find(empty_blocks.begin(), empty_blocks.end(), elem) != empty_blocks.end(); }), fs->fs_data.end());
+        // fs->fs_data_ptrs.erase(std::remove_if(fs->fs_data_ptrs.begin(), fs->fs_data_ptrs.end(), [empty_blocks](const size_t elem) { return std::find(empty_blocks.begin(), empty_blocks.end(), elem) != empty_blocks.end(); }), fs->fs_data_ptrs.end());
+        // fs->fs_data_blksz.erase(std::remove_if(fs->fs_data_blksz.begin(), fs->fs_data_blksz.end(), [empty_blocks](const size_t elem) { return std::find(empty_blocks.begin(), empty_blocks.end(), elem) != empty_blocks.end(); }), fs->fs_data_blksz.end());
+        // fs->markDataInsert(new_collection_end.blockIdx, fs->nextBlockIdx(next_block));
+    }
+}
+
+void FileNode::updateDataRef()
+{
+    Ptr<FileNode> p = parent;
+    CV_Assert( p && p->parent && ( !nodeName.empty() || parent->isSeq() ) );
+    // node is not base node, i.e. has more than 2 parent nodes
+    if( p->parent->parent )
+    {
+        p->updateDataRef();
+    }
+    else
+    {
+        FileStorage& fs_ext = *getFS();
+        *this = fs_ext[nodeName];
+        return;
+    }
+    *this = (*p)[nodeName];
+}
+
 
 FileNodeIterator::FileNodeIterator()
 {
@@ -2372,7 +3160,7 @@ FileNodeIterator::FileNodeIterator( const FileNode& node, bool seekEnd )
 {
     fs = node.fs;
     idx = 0;
-    if( !fs )
+    if( !node.exists() )
         blockIdx = ofs = blockSize = nodeNElems = 0;
     else
     {

@@ -1811,4 +1811,108 @@ TEST(Core_InputOutput, FileStorage_copy_constructor_17412_heap)
     EXPECT_EQ(0, remove(fname.c_str()));
 }
 
+TEST(Core_InputOutput, FileStorage_dynamic_FileNodes)
+{
+    int x;
+    cv::FileStorage fs3;
+    std::string FILENAME = tempfile("test_cvFS.yml");
+
+    cv::FileStorage fs(FILENAME, cv::FileStorage::WRITE);
+    fs["TAGa"] << 101;
+    fs << "TAGb" << "{" << "TAGc" << 202 << "TAGd" << "{:" << "TAGe" << 213 << "TAGa" << 214 << "}" << "}";
+
+    fs << "TAGg" << 305;
+    cv::Mat mat1 = cv::Mat::eye(3, 3, CV_32FC1);
+    fs["mat1"] << mat1;
+    fs << "mat2" << cv::Mat(3, 3, CV_32FC1, cv::Scalar(5));
+    for (int i = 0; i < 10000; i++)
+        fs << "dummy" + std::to_string(i) << i;
+    fs.release();
+
+    cv::FileStorage fs2(FILENAME, cv::FileStorage::APPEND);
+    x = 99;
+    fs2 << "TAGh" << x;
+
+    fs2 << "TAGi" << "DummyString";
+    fs2 << "TAGj" << x;
+    fs2 << "MegaMat" << cv::Mat(300, 300, CV_32FC1, cv::Scalar(1.0f));
+    fs2 << "TAGk" << "AnotherDummyString";
+    fs2 << "TAGl" << "[" << 1 << 2 << 3 << 4 << "]";
+    fs2 << "TAGm" << "[:" << 5 << 6 << 7 << 8 << "]";
+    fs2.release();
+
+    fs3.open(FILENAME, cv::FileStorage::READ);
+
+    fs3["TAGi"] << "new_string";
+    fs3.save();
+
+    fs3["TAGa"] >> x;
+    EXPECT_EQ(x, 101);
+    int new_a = 999;
+    fs3["TAGa"].setValue(cv::FileNode::INT, &new_a);
+    fs3["TAGa"] >> x;
+    EXPECT_EQ(x, 999);
+
+    fs3["TAGe"] >> x;
+    EXPECT_EQ(x, 0);
+    fs3["TAGb"]["TAGd"]["TAGa"] >> x;
+    EXPECT_EQ(x, 214);
+    fs3["TAGb"]["TAGd"].write("TAGa", 1234);
+    EXPECT_EQ((int)fs3["TAGb"]["TAGd"]["TAGa"], 1234);
+    fs3["TAGh"] >> x;
+    EXPECT_EQ(x, 99);
+    cv::FileNode mat1_node = fs3["mat1"];
+    cv::FileNode mat2_node = fs3["mat2"];
+    cv::Mat mat1_orig;
+    mat1_node >> mat1_orig;
+    mat1_node.setValue(mat2_node.type(), mat2_node.ptr());
+    cv::Mat new_mat1;
+    fs3["mat1"] >> new_mat1;
+    std::string type_id;
+    mat1_node["type_id"] >> type_id;
+    fs3.save();
+    new_a = 1337;
+    fs3["TAGa"] << new_a;
+    fs3.save();
+    fs3.save();
+    fs3["TAGi"] << "new_strong";
+    fs3.save();
+    cv::Mat new_mat2 = cv::Mat(3, 3, CV_32FC1, cv::Scalar(9));
+    fs3["mat2"] << new_mat2;
+    cv::Mat new_mat2_cmp;
+    read(fs3["mat2"], new_mat2_cmp);
+    EXPECT_EQ(new_mat2_cmp.cols, new_mat2.cols);
+    //...
+    fs3["mat1"] << "{" << "rows" << 3 << "cols" << 3 << "dt" << "f" << "data" << "[:" << 1. << 2. << 3. << 4. << 5. << (double)fs3["TAGa"] << 7. << 8. << 9. << "]" << "}";
+    fs3["new_node"] >> x;
+    fs3["new_node"]["subnode"] >> x;
+    fs3.save();
+    fs3["new_node"] << "new_node";
+    std::string FILENAME_XML = tempfile("test_cvFS.xml");
+    fs3.save(FILENAME_XML);
+    fs3["MegaMat"] << fs3["mat1"];
+    mat1_node = fs3["mat1"];
+    fs3["TAGb"]["TAGd"]["TAGo"] << "{:" << "TAGp" << 333 << "TAGq" << 666 << "}";
+    fs3.save();
+
+    cv::Mat new_mat3 = cv::Mat({10, 10, 10, 10}, CV_32F, cv::Scalar(3));
+    fs3["MegaMat"] << new_mat3;
+    fs3.save();
+
+    fs3["TAGk"] << "AnotherDummyString + ExtraString";
+    fs3.releaseWithoutSave();
+    fs3.open(FILENAME, cv::FileStorage::READ);
+    EXPECT_EQ((int)fs3["TAGb"]["TAGd"]["TAGo"]["TAGq"], 666);
+    EXPECT_EQ((cv::String)fs3["TAGk"], "AnotherDummyString");
+    fs3["TAGk"] << "AnotherDummyString + ExtraString";
+    EXPECT_EQ((cv::String)fs3["TAGk"], "AnotherDummyString + ExtraString");
+    std::string FILENAME_JSON = tempfile("test_cvFS.json");
+    fs3.save(FILENAME_JSON);
+    fs3.release();
+    ASSERT_THROW(fs3["TAGj"] >> x, cv::Exception);
+    EXPECT_EQ(0, remove(FILENAME.c_str()));
+    EXPECT_EQ(0, remove(FILENAME_XML.c_str()));
+    EXPECT_EQ(0, remove(FILENAME_JSON.c_str()));
+}
+
 }} // namespace
