@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2019 Intel Corporation
+// Copyright (C) 2019-2020 Intel Corporation
 
 #include "../test_precomp.hpp"
 
@@ -10,33 +10,14 @@
 
 #include <stdexcept>
 
-////////////////////////////////////////////////////////////////////////////////
-// FIXME: Suppress deprecation warnings for OpenVINO 2019R2+
-// BEGIN {{{
-#if defined(__GNUC__)
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#endif
-#ifdef _MSC_VER
-#pragma warning(disable: 4996)  // was declared deprecated
-#endif
-
-#if defined(__GNUC__)
-#pragma GCC visibility push(default)
-#endif
-
 #include <inference_engine.hpp>
-
-#if defined(__GNUC__)
-#pragma GCC visibility pop
-#endif
-// END }}}
-////////////////////////////////////////////////////////////////////////////////
 
 #include <ade/util/iota_range.hpp>
 
 #include <opencv2/gapi/infer/ie.hpp>
 
 #include "backends/ie/util.hpp"
+#include "backends/ie/giebackend/giewrapper.hpp"
 
 namespace opencv_test
 {
@@ -78,8 +59,10 @@ void normAssert(cv::InputArray ref, cv::InputArray test,
 std::vector<std::string> modelPathByName(const std::string &model_name) {
     // Handle OMZ model layout changes among OpenVINO versions here
     static const std::unordered_multimap<std::string, std::string> map = {
+#if INF_ENGINE_RELEASE >= 2019040000  // >= 2019.R4
         {"age-gender-recognition-retail-0013",
          "2020.3.0/intel/age-gender-recognition-retail-0013/FP32"},
+#endif // INF_ENGINE_RELEASE >= 2019040000
         {"age-gender-recognition-retail-0013",
          "Retail/object_attributes/age_gender/dldt"},
     };
@@ -113,6 +96,13 @@ std::tuple<std::string, std::string> findModel(const std::string &model_name) {
     throw SkipTestException("Files for " + model_name + " were not found");
 }
 
+namespace IE = InferenceEngine;
+
+void setNetParameters(IE::CNNNetwork& net) {
+    auto &ii = net.getInputsInfo().at("data");
+    ii->setPrecision(IE::Precision::U8);
+    ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
+}
 } // anonymous namespace
 
 // TODO: Probably DNN/IE part can be further parametrized with a template
@@ -121,29 +111,25 @@ TEST(TestAgeGenderIE, InferBasicTensor)
 {
     initDLDTDataPath();
 
-    std::string topology_path, weights_path;
-    std::tie(topology_path, weights_path) = findModel("age-gender-recognition-retail-0013");
+    cv::gapi::ie::detail::ParamDesc params;
+    std::tie(params.model_path, params.weights_path) = findModel("age-gender-recognition-retail-0013");
+    params.device_id = "CPU";
 
     // Load IE network, initialize input data using that.
-    namespace IE = InferenceEngine;
     cv::Mat in_mat;
     cv::Mat gapi_age, gapi_gender;
 
     IE::Blob::Ptr ie_age, ie_gender;
     {
-        IE::CNNNetReader reader;
-        reader.ReadNetwork(topology_path);
-        reader.ReadWeights(weights_path);
-        auto net = reader.getNetwork();
+        auto plugin        = cv::gimpl::ie::wrap::getPlugin(params);
+        auto net           = cv::gimpl::ie::wrap::readNetwork(params);
+        auto this_network  = cv::gimpl::ie::wrap::loadNetwork(plugin, net, params);
+        auto infer_request = this_network.CreateInferRequest();
 
         const auto &iedims = net.getInputsInfo().begin()->second->getTensorDesc().getDims();
               auto  cvdims = cv::gapi::ie::util::to_ocv(iedims);
         in_mat.create(cvdims, CV_32F);
         cv::randu(in_mat, -1, 1);
-
-        auto plugin = IE::PluginDispatcher().getPluginByDevice("CPU");
-        auto plugin_net = plugin.LoadNetwork(net, {});
-        auto infer_request = plugin_net.CreateInferRequest();
 
         infer_request.SetBlob("data", cv::gapi::ie::util::to_ie(in_mat));
         infer_request.Infer();
@@ -161,7 +147,7 @@ TEST(TestAgeGenderIE, InferBasicTensor)
     cv::GComputation comp(cv::GIn(in), cv::GOut(age, gender));
 
     auto pp = cv::gapi::ie::Params<AgeGender> {
-        topology_path, weights_path, "CPU"
+        params.model_path, params.weights_path, params.device_id
     }.cfgOutputLayers({ "age_conv3", "prob" });
     comp.apply(cv::gin(in_mat), cv::gout(gapi_age, gapi_gender),
                cv::compile_args(cv::gapi::networks(pp)));
@@ -175,8 +161,9 @@ TEST(TestAgeGenderIE, InferBasicImage)
 {
     initDLDTDataPath();
 
-    std::string topology_path, weights_path;
-    std::tie(topology_path, weights_path) = findModel("age-gender-recognition-retail-0013");
+    cv::gapi::ie::detail::ParamDesc params;
+    std::tie(params.model_path, params.weights_path) = findModel("age-gender-recognition-retail-0013");
+    params.device_id = "CPU";
 
     // FIXME: Ideally it should be an image from disk
     // cv::Mat in_mat = cv::imread(findDataFile("grace_hopper_227.png"));
@@ -186,21 +173,13 @@ TEST(TestAgeGenderIE, InferBasicImage)
     cv::Mat gapi_age, gapi_gender;
 
     // Load & run IE network
-    namespace IE = InferenceEngine;
     IE::Blob::Ptr ie_age, ie_gender;
     {
-        IE::CNNNetReader reader;
-        reader.ReadNetwork(topology_path);
-        reader.ReadWeights(weights_path);
-        auto net = reader.getNetwork();
-        auto &ii = net.getInputsInfo().at("data");
-        ii->setPrecision(IE::Precision::U8);
-        ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
-
-        auto plugin = IE::PluginDispatcher().getPluginByDevice("CPU");
-        auto plugin_net = plugin.LoadNetwork(net, {});
-        auto infer_request = plugin_net.CreateInferRequest();
-
+        auto plugin        = cv::gimpl::ie::wrap::getPlugin(params);
+        auto net           = cv::gimpl::ie::wrap::readNetwork(params);
+        setNetParameters(net);
+        auto this_network  = cv::gimpl::ie::wrap::loadNetwork(plugin, net, params);
+        auto infer_request = this_network.CreateInferRequest();
         infer_request.SetBlob("data", cv::gapi::ie::util::to_ie(in_mat));
         infer_request.Infer();
         ie_age    = infer_request.GetBlob("age_conv3");
@@ -217,7 +196,7 @@ TEST(TestAgeGenderIE, InferBasicImage)
     cv::GComputation comp(cv::GIn(in), cv::GOut(age, gender));
 
     auto pp = cv::gapi::ie::Params<AgeGender> {
-        topology_path, weights_path, "CPU"
+        params.model_path, params.weights_path, params.device_id
     }.cfgOutputLayers({ "age_conv3", "prob" });
     comp.apply(cv::gin(in_mat), cv::gout(gapi_age, gapi_gender),
                cv::compile_args(cv::gapi::networks(pp)));
@@ -228,8 +207,7 @@ TEST(TestAgeGenderIE, InferBasicImage)
 }
 
 struct ROIList: public ::testing::Test {
-    std::string m_model_path;
-    std::string m_weights_path;
+    cv::gapi::ie::detail::ParamDesc params;
 
     cv::Mat m_in_mat;
     std::vector<cv::Rect> m_roi_list;
@@ -245,7 +223,8 @@ struct ROIList: public ::testing::Test {
 
     ROIList() {
         initDLDTDataPath();
-        std::tie(m_model_path, m_weights_path) = findModel("age-gender-recognition-retail-0013");
+        std::tie(params.model_path, params.weights_path) = findModel("age-gender-recognition-retail-0013");
+        params.device_id = "CPU";
 
         // FIXME: it must be cv::imread(findDataFile("../dnn/grace_hopper_227.png", false));
         m_in_mat = cv::Mat(cv::Size(320, 240), CV_8UC3);
@@ -258,19 +237,12 @@ struct ROIList: public ::testing::Test {
         };
 
         // Load & run IE network
-        namespace IE = InferenceEngine;
         {
-            IE::CNNNetReader reader;
-            reader.ReadNetwork(m_model_path);
-            reader.ReadWeights(m_weights_path);
-            auto net = reader.getNetwork();
-            auto &ii = net.getInputsInfo().at("data");
-            ii->setPrecision(IE::Precision::U8);
-            ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
-
-            auto plugin = IE::PluginDispatcher().getPluginByDevice("CPU");
-            auto plugin_net = plugin.LoadNetwork(net, {});
-            auto infer_request = plugin_net.CreateInferRequest();
+            auto plugin        = cv::gimpl::ie::wrap::getPlugin(params);
+            auto net           = cv::gimpl::ie::wrap::readNetwork(params);
+            setNetParameters(net);
+            auto this_network  = cv::gimpl::ie::wrap::loadNetwork(plugin, net, params);
+            auto infer_request = this_network.CreateInferRequest();
             auto frame_blob = cv::gapi::ie::util::to_ie(m_in_mat);
 
             for (auto &&rc : m_roi_list) {
@@ -314,7 +286,7 @@ TEST_F(ROIList, TestInfer)
     cv::GComputation comp(cv::GIn(in, rr), cv::GOut(age, gender));
 
     auto pp = cv::gapi::ie::Params<AgeGender> {
-        m_model_path, m_weights_path, "CPU"
+        params.model_path, params.weights_path, params.device_id
     }.cfgOutputLayers({ "age_conv3", "prob" });
     comp.apply(cv::gin(m_in_mat, m_roi_list),
                cv::gout(m_out_gapi_ages, m_out_gapi_genders),
@@ -331,12 +303,81 @@ TEST_F(ROIList, TestInfer2)
     cv::GComputation comp(cv::GIn(in, rr), cv::GOut(age, gender));
 
     auto pp = cv::gapi::ie::Params<AgeGender> {
-        m_model_path, m_weights_path, "CPU"
+        params.model_path, params.weights_path, params.device_id
     }.cfgOutputLayers({ "age_conv3", "prob" });
     comp.apply(cv::gin(m_in_mat, m_roi_list),
                cv::gout(m_out_gapi_ages, m_out_gapi_genders),
                cv::compile_args(cv::gapi::networks(pp)));
     validate();
+}
+
+TEST(DISABLED_TestTwoIENNPipeline, InferBasicImage)
+{
+    initDLDTDataPath();
+
+    cv::gapi::ie::detail::ParamDesc AGparams;
+    std::tie(AGparams.model_path, AGparams.weights_path) = findModel("age-gender-recognition-retail-0013");
+    AGparams.device_id = "MYRIAD";
+
+    // FIXME: Ideally it should be an image from disk
+    // cv::Mat in_mat = cv::imread(findDataFile("grace_hopper_227.png"));
+    cv::Mat in_mat(cv::Size(320, 240), CV_8UC3);
+    cv::randu(in_mat, 0, 255);
+
+    cv::Mat gapi_age1, gapi_gender1, gapi_age2, gapi_gender2;
+
+    // Load & run IE network
+    IE::Blob::Ptr ie_age1, ie_gender1, ie_age2, ie_gender2;
+    {
+        auto AGplugin1         = cv::gimpl::ie::wrap::getPlugin(AGparams);
+        auto AGnet1            = cv::gimpl::ie::wrap::readNetwork(AGparams);
+        setNetParameters(AGnet1);
+        auto AGplugin_network1 = cv::gimpl::ie::wrap::loadNetwork(AGplugin1, AGnet1, AGparams);
+        auto AGinfer_request1  = AGplugin_network1.CreateInferRequest();
+        AGinfer_request1.SetBlob("data", cv::gapi::ie::util::to_ie(in_mat));
+        AGinfer_request1.Infer();
+        ie_age1    = AGinfer_request1.GetBlob("age_conv3");
+        ie_gender1 = AGinfer_request1.GetBlob("prob");
+
+        auto AGplugin2         = cv::gimpl::ie::wrap::getPlugin(AGparams);
+        auto AGnet2            = cv::gimpl::ie::wrap::readNetwork(AGparams);
+        setNetParameters(AGnet2);
+        auto AGplugin_network2 = cv::gimpl::ie::wrap::loadNetwork(AGplugin2, AGnet2, AGparams);
+        auto AGinfer_request2     = AGplugin_network2.CreateInferRequest();
+        AGinfer_request2.SetBlob("data", cv::gapi::ie::util::to_ie(in_mat));
+        AGinfer_request2.Infer();
+        ie_age2    = AGinfer_request2.GetBlob("age_conv3");
+        ie_gender2 = AGinfer_request2.GetBlob("prob");
+    }
+
+    // Configure & run G-API
+    using AGInfo = std::tuple<cv::GMat, cv::GMat>;
+    G_API_NET(AgeGender1, <AGInfo(cv::GMat)>,   "test-age-gender1");
+    G_API_NET(AgeGender2, <AGInfo(cv::GMat)>,   "test-age-gender2");
+    cv::GMat in;
+    cv::GMat age1, gender1;
+    std::tie(age1, gender1) = cv::gapi::infer<AgeGender1>(in);
+
+    cv::GMat age2, gender2;
+    // FIXME: "Multi-node inference is not supported!", workarounded 'till enabling proper tools
+    std::tie(age2, gender2) = cv::gapi::infer<AgeGender2>(cv::gapi::copy(in));
+    cv::GComputation comp(cv::GIn(in), cv::GOut(age1, gender1, age2, gender2));
+
+    auto age_net1 = cv::gapi::ie::Params<AgeGender1> {
+        AGparams.model_path, AGparams.weights_path, AGparams.device_id
+    }.cfgOutputLayers({ "age_conv3", "prob" });
+    auto age_net2 = cv::gapi::ie::Params<AgeGender2> {
+        AGparams.model_path, AGparams.weights_path, AGparams.device_id
+    }.cfgOutputLayers({ "age_conv3", "prob" });
+
+    comp.apply(cv::gin(in_mat), cv::gout(gapi_age1, gapi_gender1, gapi_age2, gapi_gender2),
+               cv::compile_args(cv::gapi::networks(age_net1, age_net2)));
+
+    // Validate with IE itself (avoid DNN module dependency here)
+    normAssert(cv::gapi::ie::util::to_ocv(ie_age1),    gapi_age1,    "Test age output 1");
+    normAssert(cv::gapi::ie::util::to_ocv(ie_gender1), gapi_gender1, "Test gender output 1");
+    normAssert(cv::gapi::ie::util::to_ocv(ie_age2),    gapi_age2,    "Test age output 2");
+    normAssert(cv::gapi::ie::util::to_ocv(ie_gender2), gapi_gender2, "Test gender output 2");
 }
 
 } // namespace opencv_test

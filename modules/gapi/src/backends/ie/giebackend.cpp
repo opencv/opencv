@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2020 Intel Corporation
 
 #include "precomp.hpp"
 
@@ -41,6 +41,7 @@
 #include "compiler/gmodel.hpp"
 
 #include "backends/ie/util.hpp"
+#include "backends/ie/giebackend/giewrapper.hpp"
 
 #include "api/gbackend_priv.hpp" // FIXME: Make it part of Backend SDK!
 
@@ -176,14 +177,9 @@ struct IEUnit {
 
     explicit IEUnit(const cv::gapi::ie::detail::ParamDesc &pp)
         : params(pp) {
-
-        IE::CNNNetReader reader;
-        reader.ReadNetwork(params.model_path);
-        reader.ReadWeights(params.weights_path);
-        net = reader.getNetwork();
-        inputs = net.getInputsInfo();
+        net = cv::gimpl::ie::wrap::readNetwork(params);
+        inputs  = net.getInputsInfo();
         outputs = net.getOutputsInfo();
-
         // The practice shows that not all inputs and not all outputs
         // are mandatory to specify in IE model.
         // So what we're concerned here about is:
@@ -208,55 +204,9 @@ struct IEUnit {
     }
 
     // This method is [supposed to be] called at Island compilation stage
-    // TODO: Move to a new OpenVINO Core API!
     cv::gimpl::ie::IECompiled compile() const {
-        auto this_plugin = IE::PluginDispatcher().getPluginByDevice(params.device_id);
-
-#if INF_ENGINE_RELEASE < 2020000000  // <= 2019.R3
-        // Load extensions (taken from DNN module)
-        if (params.device_id == "CPU" || params.device_id == "FPGA")
-        {
-            const std::string suffixes[] = { "_avx2", "_sse4", ""};
-            const bool haveFeature[] = {
-                cv::checkHardwareSupport(CPU_AVX2),
-                cv::checkHardwareSupport(CPU_SSE4_2),
-                true
-            };
-            std::vector<std::string> candidates;
-            for (auto &&it : ade::util::zip(ade::util::toRange(suffixes),
-                                            ade::util::toRange(haveFeature)))
-            {
-                std::string suffix;
-                bool available = false;
-                std::tie(suffix, available) = it;
-                if (!available) continue;
-#ifdef _WIN32
-                candidates.push_back("cpu_extension" + suffix + ".dll");
-#elif defined(__APPLE__)
-                candidates.push_back("libcpu_extension" + suffix + ".so");  // built as loadable module
-                candidates.push_back("libcpu_extension" + suffix + ".dylib");  // built as shared library
-#else
-                candidates.push_back("libcpu_extension" + suffix + ".so");
-#endif  // _WIN32
-            }
-            for (auto &&extlib : candidates)
-            {
-                try
-                {
-                    this_plugin.AddExtension(IE::make_so_pointer<IE::IExtension>(extlib));
-                    CV_LOG_INFO(NULL, "DNN-IE: Loaded extension plugin: " << extlib);
-                    break;
-                }
-                catch(...)
-                {
-                    CV_LOG_INFO(NULL, "Failed to load IE extension: " << extlib);
-                }
-            }
-        }
-#endif
-
-        auto this_network = this_plugin.LoadNetwork(net, {}); // FIXME: 2nd parameter to be
-                                                              // configurable via the API
+        auto plugin       = cv::gimpl::ie::wrap::getPlugin(params);
+        auto this_network = cv::gimpl::ie::wrap::loadNetwork(plugin, net, params);
         auto this_request = this_network.CreateInferRequest();
 
         // Bind const data to infer request
@@ -267,8 +217,7 @@ struct IEUnit {
             // Still, constant data is to set only once.
             this_request.SetBlob(p.first, wrapIE(p.second.first, p.second.second));
         }
-
-        return {this_plugin, this_network, this_request};
+        return {plugin, this_network, this_request};
     }
 };
 
@@ -796,18 +745,18 @@ cv::gapi::GBackend cv::gapi::ie::backend() {
     return this_backend;
 }
 
-cv::Mat cv::gapi::ie::util::to_ocv(InferenceEngine::Blob::Ptr blob) {
+cv::Mat cv::gapi::ie::util::to_ocv(IE::Blob::Ptr blob) {
     const auto& tdesc = blob->getTensorDesc();
     return cv::Mat(toCV(tdesc.getDims()),
                    toCV(tdesc.getPrecision()),
                    blob->buffer().as<uint8_t*>());
 }
 
-std::vector<int> cv::gapi::ie::util::to_ocv(const InferenceEngine::SizeVector &dims) {
+std::vector<int> cv::gapi::ie::util::to_ocv(const IE::SizeVector &dims) {
     return toCV(dims);
 }
 
-InferenceEngine::Blob::Ptr cv::gapi::ie::util::to_ie(cv::Mat &blob) {
+IE::Blob::Ptr cv::gapi::ie::util::to_ie(cv::Mat &blob) {
     return wrapIE(blob, cv::gapi::ie::TraitAs::IMAGE);
 }
 
