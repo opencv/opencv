@@ -26,6 +26,7 @@ namespace detail
     template<> struct ProtoToParam<cv::GMat>    { using type = cv::Mat; };
     template<> struct ProtoToParam<cv::GScalar> { using type = cv::Scalar; };
     template<typename U> struct ProtoToParam<cv::GArray<U> >  { using type = std::vector<U>; };
+    template<> struct ProtoToParam<cv::GArray<cv::GMat>>      { using type = std::vector<cv::Mat>; };
     template<typename U> struct ProtoToParam<cv::GOpaque<U> > { using type = U; };
     template<typename T> using ProtoToParamT = typename ProtoToParam<T>::type;
 
