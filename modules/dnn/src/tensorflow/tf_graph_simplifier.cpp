@@ -31,7 +31,10 @@ public:
 
     virtual std::string getInputName(int idx) const CV_OVERRIDE
     {
-        return node->input(idx);
+        // If operation produces several tensors, they are specified by index
+        // after ':' character. In example, "input:0".
+        std::string name = node->input(idx);
+        return name.substr(0, name.rfind(':'));
     }
 
     virtual std::string getType() const CV_OVERRIDE
