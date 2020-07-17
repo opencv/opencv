@@ -380,7 +380,11 @@ void InfEngineNgraphNet::setNodePtr(std::shared_ptr<ngraph::Node>* ptr) {
 
  void InfEngineNgraphNet::release() {
      for (auto& node : components.back()) {
+#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2020_4)
+         if (!(ngraph::op::is_parameter(node) || ngraph::op::is_output(node) || ngraph::op::is_constant(node)) ) {
+#else
          if (!(node->is_parameter() || node->is_output() || node->is_constant()) ) {
+#endif
              auto it = all_nodes.find(node->get_friendly_name());
              if (it != all_nodes.end()) {
                  unconnectedNodes.erase(*(it->second));
@@ -447,11 +451,19 @@ void InfEngineNgraphNet::createNet(Target targetId) {
                 ngraph::ResultVector outputs;
                 ngraph::ParameterVector inps;
                 for (auto& node : components.back()) {
+#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2020_4)
+                    if (ngraph::op::is_parameter(node)) {
+#else
                     if (node->is_parameter()) {
+#endif
                         auto parameter = std::dynamic_pointer_cast<ngraph::op::Parameter>(node);
                         inps.push_back(parameter);
                     }
+#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2020_4)
+                    else if (ngraph::op::is_output(node)) {
+#else
                     else if (node->is_output()) {
+#endif
                         auto result = std::dynamic_pointer_cast<ngraph::op::Result>(node);
                         outputs.push_back(result);
                     }
