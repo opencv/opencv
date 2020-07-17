@@ -1819,7 +1819,6 @@ void FileStorage::endWriteStruct()
 
 FileStorage::~FileStorage()
 {
-    p.release();
 }
 
 bool FileStorage::open(const String& filename, int flags, const String& encoding)
