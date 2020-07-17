@@ -77,15 +77,6 @@ public:
 
     using ResultL = std::tuple< cv::GArray<R>... >;
     using APIList = std::function<ResultL(cv::GArray<cv::Rect>, Args...)>;
-
-    // APIList2 is also template to allow different calling options
-    // (GArray<cv::Rect> vs GArray<cv::GMat> per input)
-    template<class... Ts>
-    using APIList2 = typename std::enable_if
-        < cv::detail::valid_infer2_types< std::tuple<Args...>
-                                        , std::tuple<Ts...> >::value,
-          std::function<ResultL(cv::GMat, cv::GArray<Ts>...)>
-        >::type;
 };
 
 // Single-return-value network definition (specialized base class)
@@ -101,14 +92,16 @@ public:
 
     using ResultL = cv::GArray<R>;
     using APIList = std::function<ResultL(cv::GArray<cv::Rect>, Args...)>;
+};
 
-    // APIList2 is also template to allow different calling options
-    // (GArray<cv::Rect> vs GArray<cv::GMat> per input)
-    template<class... Ts>
-    using APIList2 = typename std::enable_if
-        < cv::detail::valid_infer2_types< std::tuple<Args...>
+// APIList2 is also template to allow different calling options
+// (GArray<cv::Rect> vs GArray<cv::GMat> per input)
+template<class Net, class... Ts>
+struct InferAPIList2 {
+    using type = typename std::enable_if
+        < cv::detail::valid_infer2_types< typename Net::InArgs
                                         , std::tuple<Ts...> >::value,
-          std::function<ResultL(cv::GMat, cv::GArray<Ts>...)>
+          std::function<typename Net::ResultL(cv::GMat, cv::GArray<Ts>...)>
         >::type;
 };
 
@@ -185,7 +178,7 @@ template<typename Net, typename... Args>
 struct GInferList2 final
     : public GInferList2Base
     , public detail::KernelTypeMedium< GInferList2<Net, Args...>
-                                     , typename Net::template APIList2<Args...> > {
+                                     , typename InferAPIList2<Net, Args...>::type > {
     using GInferList2Base::getOutMeta; // FIXME: name lookup conflict workaround?
 
     static constexpr const char* tag() { return Net::tag(); }
