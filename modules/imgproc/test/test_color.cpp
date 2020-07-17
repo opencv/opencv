@@ -3072,4 +3072,21 @@ TEST(ImgProc_RGB2YUV, regression_13668)
     EXPECT_EQ(res, ref);
 }
 
+TEST(ImgProc_cvtColorTwoPlane, missing_check_17036)  // test can be removed if required feature is implemented
+{
+    std::vector<uchar> y_data(700 * 480);
+    std::vector<uchar> uv_data(640 * 240);
+
+    Mat y_plane_padding(480, 640, CV_8UC1, y_data.data(), 700);  // with stride
+    Mat uv_plane(240, 320, CV_8UC2, uv_data.data());
+
+    Mat result;
+
+    EXPECT_THROW(
+        cvtColorTwoPlane(y_plane_padding, uv_plane, result, COLOR_YUV2RGB_NV21);
+        , cv::Exception
+    );
+}
+
+
 }} // namespace

@@ -406,6 +406,8 @@ void cvtColorTwoPlaneYUV2BGRpair( InputArray _ysrc, InputArray _uvsrc, OutputArr
 
     Mat ysrc = _ysrc.getMat(), uvsrc = _uvsrc.getMat();
 
+    CV_CheckEQ(ysrc.step, uvsrc.step, "");
+
     _dst.create( ysz, CV_MAKETYPE(depth, dcn));
     Mat dst = _dst.getMat();
 
