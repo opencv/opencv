@@ -510,6 +510,8 @@ public:
      @param fs Pointer to the file storage structure.
      @param blockIdx Index of the memory block where the file node is stored
      @param ofs Offset in bytes from the beginning of the serialized storage
+
+     @deprecated
      */
     FileNode(const FileStorage* fs, size_t blockIdx, size_t ofs);
 
@@ -614,7 +616,9 @@ public:
     CV_WRAP Mat mat() const;
 
     //protected:
-    const FileStorage* fs;
+    FileNode(FileStorage::Impl* fs, size_t blockIdx, size_t ofs);
+
+    FileStorage::Impl* fs;
     size_t blockIdx;
     size_t ofs;
 };
@@ -679,7 +683,7 @@ public:
     bool equalTo(const FileNodeIterator& it) const;
 
 protected:
-    const FileStorage* fs;
+    FileStorage::Impl* fs;
     size_t blockIdx;
     size_t ofs;
     size_t blockSize;
