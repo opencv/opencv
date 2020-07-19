@@ -495,8 +495,8 @@ macro(ocv_check_compiler_flag LANG FLAG RESULT)
         CMAKE_FLAGS ${__cmake_flags}
         COMPILE_DEFINITIONS ${FLAG} ${OCV_CHECK_CF_COMPILER_FLAGS}
         # should use LINK_OPTIONS instead of LINK_LIBRARIES, if we can use cmake v3.14+:
-        # LINK_OPTIONS "${OCV_CHECK_CF_LINKER_FLAGS}"
-        LINK_LIBRARIES "${OCV_CHECK_CF_LINKER_FLAGS}"
+        # LINK_OPTIONS ${OCV_CHECK_CF_LINKER_FLAGS}
+        LINK_LIBRARIES ${OCV_CHECK_CF_LINKER_FLAGS}
         ${__link_libs}
         OUTPUT_VARIABLE OUTPUT)
 
