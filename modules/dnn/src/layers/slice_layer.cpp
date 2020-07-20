@@ -160,6 +160,10 @@ public:
 
     void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
     {
+#ifdef HAVE_OPENCL
+        ocl_exec_cache.clear();
+#endif
+
         std::vector<Mat> inputs, outputs;
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
@@ -214,38 +218,32 @@ public:
     }
 
 #ifdef HAVE_OPENCL
-    bool forward_ocl(InputArrayOfArrays inputs_, OutputArrayOfArrays outputs_, OutputArrayOfArrays internals_)
+    struct OpenCLExecInfo
     {
-        std::vector<UMat> inputs;
-        std::vector<UMat> outputs;
+        std::string kernel_name;
+        std::string build_opts;
+        size_t local_size[2];
+        size_t global_size[2];
 
-        inputs_.getUMatVector(inputs);
-        outputs_.getUMatVector(outputs);
+        OpenCLExecInfo()
+        {
+            local_size[0] = local_size[1] = 0;
+            global_size[0] = global_size[1] = 0;
+        }
+    };
+    std::vector<OpenCLExecInfo> ocl_exec_cache;
+
+    void ocl_prepare(const std::vector<UMat>& inputs, const std::vector<UMat>& outputs)
+    {
+        CV_TRACE_FUNCTION();
 
         CV_Assert(outputs.size() == finalSliceRanges.size());
+        ocl_exec_cache.resize(outputs.size());
 
         const UMat& input = inputs[0];
         const int dims = input.dims;
-        if (dims > 5)
-        {
-            CV_LOG_INFO(NULL, "DNN/OpenCL/Slice: implementation doesn't support dims=" << dims << ". Fallback to CPU");
-            return false;
-        }
 
         size_t WSZ = 128;
-
-        std::ostringstream kernel_suffix0;  // DIMS__{SRC_SIZE<n>}__{SRC_STEP<n>}__
-        kernel_suffix0 << dims << "__src_";
-        for (int d = 0; d < dims; d++)
-        {
-            kernel_suffix0 << input.size[dims - 1 - d] << '_';
-        }
-        kernel_suffix0 << '_';
-        /*for (int d = 0; d < dims; d++)
-        {
-            kernel_suffix0 << input.step[dims - 1 - d] << '_';
-        }
-        kernel_suffix0 << '_';*/
 
         const int elemSize = (int)input.elemSize();
         String opts0 = cv::format(
@@ -258,29 +256,10 @@ public:
         }
         for (size_t i = 0; i < outputs.size(); i++)
         {
-            UMat& output = outputs[i];
-            const std::vector<Range>& range = finalSliceRanges[i];
+            OpenCLExecInfo& ocl = ocl_exec_cache[i];
 
-            std::ostringstream kernel_suffix(kernel_suffix0.str(), std::ostringstream::ate);
-            kernel_suffix << "dst_";
-            for (int d = 0; d < dims; d++)
-            {
-                kernel_suffix << output.size[dims - 1 - d] << '_';
-            }
-            /*kernel_suffix << '_';
-            for (int d = 0; d < dims; d++)
-            {
-                kernel_suffix << output.step[dims - 1 - d] << '_';
-            }*/
-            kernel_suffix << "_slice_";
-            for (int d = 0; d < dims; d++)
-            {
-                kernel_suffix << range[dims - 1 - d].start << '_';
-            }
-            for (int d = 0; d < dims; d++)
-            {
-                kernel_suffix << '_' << range[dims - 1 - d].end;
-            }
+            const UMat& output = outputs[i];
+            const std::vector<Range>& range = finalSliceRanges[i];
 
             String opts = opts0;
 
@@ -382,29 +361,98 @@ public:
 
             opts += cv::format(" -DWSZ=%d", (int)WSZ);
 
-            size_t local[] = { WSZ, 1 };
-            size_t global[] = { WSZ, num_blocks };
+            std::ostringstream kernel_suffix;
+            kernel_suffix << dims << 'x' << elemSize << "_bsz" << block_size;
+            kernel_suffix << "__src_";
+            for (int d = 0; d < dims; d++)
+            {
+                kernel_suffix << input.size[dims - 1 - d] << '_';
+            }
+            kernel_suffix << '_';
+            /*for (int d = 0; d < dims; d++)
+            {
+                kernel_suffix << input.step[dims - 1 - d] << '_';
+            }
+            kernel_suffix << '_';*/
 
-            kernel_suffix << "__bsz_" << block_size << "x" << elemSize;
+            kernel_suffix << "dst_";
+            for (int d = 0; d < dims; d++)
+            {
+                kernel_suffix << output.size[dims - 1 - d] << '_';
+            }
+            /*kernel_suffix << '_';
+            for (int d = 0; d < dims; d++)
+            {
+                kernel_suffix << output.step[dims - 1 - d] << '_';
+            }*/
+            kernel_suffix << "_slice_";
+            for (int d = 0; d < dims; d++)
+            {
+                kernel_suffix << range[dims - 1 - d].start << '_';
+            }
+            for (int d = 0; d < dims; d++)
+            {
+                kernel_suffix << '_' << range[dims - 1 - d].end;
+            }
 
             std::string kernel_suffix_str = kernel_suffix.str();
             opts += cv::format(" -DSLICE_KERNEL_SUFFIX=%s", kernel_suffix_str.c_str());
 
-            String kname = cv::format("slice_%s", kernel_suffix_str.c_str());
-            ocl::Kernel kernel(kname.c_str(), ocl::dnn::slice_oclsrc, opts);
+            ocl.kernel_name = cv::format("slice_%s", kernel_suffix_str.c_str());
+            ocl.build_opts = opts;
+            ocl.local_size[0] = WSZ;
+            ocl.local_size[1] = 1;
+            ocl.global_size[0] = WSZ;
+            ocl.global_size[1] = num_blocks;
+        }  // for outputs.size()
+    }  // ocl_prepare
+
+    bool forward_ocl(InputArrayOfArrays inputs_, OutputArrayOfArrays outputs_, OutputArrayOfArrays internals_)
+    {
+        CV_TRACE_FUNCTION();
+
+        std::vector<UMat> inputs;
+        std::vector<UMat> outputs;
+
+        inputs_.getUMatVector(inputs);
+        outputs_.getUMatVector(outputs);
+
+        CV_Assert(outputs.size() == finalSliceRanges.size());
+
+        const UMat& input = inputs[0];
+        const int dims = input.dims;
+        if (dims > 5)
+        {
+            CV_LOG_INFO(NULL, "DNN/OpenCL/Slice: implementation doesn't support dims=" << dims << ". Fallback to CPU");
+            return false;
+        }
+
+        if (ocl_exec_cache.empty())
+        {
+            ocl_prepare(inputs, outputs);
+        }
+        CV_CheckEQ(ocl_exec_cache.size(), outputs.size(), "");
+
+        for (size_t i = 0; i < outputs.size(); i++)
+        {
+            const OpenCLExecInfo& ocl = ocl_exec_cache[i];
+
+            UMat& output = outputs[i];
+
+            ocl::Kernel kernel(ocl.kernel_name.c_str(), ocl::dnn::slice_oclsrc, ocl.build_opts);
             if (kernel.empty())
                 return false;
             bool ret = kernel.args(
                     ocl::KernelArg::PtrReadOnly(input),
                     ocl::KernelArg::PtrWriteOnly(output)
                 )
-                .run(2, global, local, false);
+                .run(2, (size_t*)ocl.global_size, (size_t*)ocl.local_size, false);
             if (!ret)
                 return false;
         }  // for outputs.size()
 
         return true;
-        }
+    }  // forward_ocl
 #endif
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
