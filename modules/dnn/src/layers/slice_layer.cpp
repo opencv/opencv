@@ -225,15 +225,28 @@ public:
         CV_Assert(outputs.size() == finalSliceRanges.size());
 
         const UMat& input = inputs[0];
-        if (input.dims > 5)
+        const int dims = input.dims;
+        if (dims > 5)
         {
-            CV_LOG_INFO(NULL, "DNN/OpenCL/Slice: implementation doesn't support dims=" << input.dims << ". Fallback to CPU");
+            CV_LOG_INFO(NULL, "DNN/OpenCL/Slice: implementation doesn't support dims=" << dims << ". Fallback to CPU");
             return false;
         }
 
         size_t WSZ = 128;
 
-        const int dims = input.dims;
+        std::ostringstream kernel_suffix0;  // DIMS__{SRC_SIZE<n>}__{SRC_STEP<n>}__
+        kernel_suffix0 << dims << "__src_";
+        for (int d = 0; d < dims; d++)
+        {
+            kernel_suffix0 << input.size[dims - 1 - d] << '_';
+        }
+        kernel_suffix0 << '_';
+        /*for (int d = 0; d < dims; d++)
+        {
+            kernel_suffix0 << input.step[dims - 1 - d] << '_';
+        }
+        kernel_suffix0 << '_';*/
+
         const int elemSize = (int)input.elemSize();
         String opts0 = cv::format(
                 "-DDIMS=%d -DELEMSIZE=%d",
@@ -243,11 +256,31 @@ public:
         {
             opts0 += cv::format(" -DSRC_STEP_%d=%d", d, (int)input.step[dims - 1 - d]);
         }
-        String kname = cv::format("slice_%d", dims);
         for (size_t i = 0; i < outputs.size(); i++)
         {
             UMat& output = outputs[i];
             const std::vector<Range>& range = finalSliceRanges[i];
+
+            std::ostringstream kernel_suffix(kernel_suffix0.str(), std::ostringstream::ate);
+            kernel_suffix << "dst_";
+            for (int d = 0; d < dims; d++)
+            {
+                kernel_suffix << output.size[dims - 1 - d] << '_';
+            }
+            /*kernel_suffix << '_';
+            for (int d = 0; d < dims; d++)
+            {
+                kernel_suffix << output.step[dims - 1 - d] << '_';
+            }*/
+            kernel_suffix << "_slice_";
+            for (int d = 0; d < dims; d++)
+            {
+                kernel_suffix << range[dims - 1 - d].start << '_';
+            }
+            for (int d = 0; d < dims; d++)
+            {
+                kernel_suffix << '_' << range[dims - 1 - d].end;
+            }
 
             String opts = opts0;
 
@@ -348,6 +381,12 @@ public:
             size_t local[] = { WSZ, 1 };
             size_t global[] = { WSZ, num_blocks };
 
+            kernel_suffix << "__bsz_" << block_size << "x" << elemSize;
+
+            std::string kernel_suffix_str = kernel_suffix.str();
+            opts += cv::format(" -DSLICE_KERNEL_SUFFIX=%s", kernel_suffix_str.c_str());
+
+            String kname = cv::format("slice_%s", kernel_suffix_str.c_str());
             ocl::Kernel kernel(kname.c_str(), ocl::dnn::slice_oclsrc, opts);
             if (kernel.empty())
                 return false;
