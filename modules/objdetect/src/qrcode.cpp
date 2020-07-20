@@ -780,7 +780,7 @@ void QRDetect::init(const Mat& src, double eps_vertical_, double eps_horizontal_
 
 vector<Vec3d> QRDetect::searchHorizontalLines()
 {
-    //CV_TRACE_FUNCTION();
+    CV_TRACE_FUNCTION();
     vector<Vec3d> result;
     const int height_bin_barcode = bin_barcode.rows;
     const int width_bin_barcode  = bin_barcode.cols;
@@ -1246,7 +1246,7 @@ bool QRDetect::computeTransformationPoints()
     for (size_t i = 0; i < new_non_zero_elem[1].size(); i++)
     {
         double temp_norm_delta = norm(up_left_edge_point - new_non_zero_elem[1][i])
-                                 + norm(down_left_edge_point - new_non_zero_elem[1][i]);
+                               + norm(down_left_edge_point - new_non_zero_elem[1][i]);
         if (norm_down_max_delta < temp_norm_delta)
         {
             down_max_delta_point = new_non_zero_elem[1][i];
@@ -2538,12 +2538,12 @@ bool QRDecode::versionDefinition()
 bool QRDecode::samplingForVersion()
 {
     CV_TRACE_FUNCTION();
-  const double multiplyingFactor = (version < 3)  ? 1 :
+    const double multiplyingFactor = (version < 3)  ? 1 :
                                      (version == 3) ? 1.5 :
                                      version * (5 + version - 4);
     const Size newFactorSize(
-            cvRound(no_border_intermediate.size().width  * multiplyingFactor),
-            cvRound(no_border_intermediate.size().height * multiplyingFactor));
+                  cvRound(no_border_intermediate.size().width  * multiplyingFactor),
+                  cvRound(no_border_intermediate.size().height * multiplyingFactor));
     Mat postIntermediate(newFactorSize, CV_8UC1);
     resize(no_border_intermediate, postIntermediate, newFactorSize, 0, 0, INTER_AREA);
 
@@ -2556,8 +2556,8 @@ bool QRDecode::samplingForVersion()
         for (int c = 0; c < postIntermediate.cols; c += delta_cols)
         {
             Mat tile = postIntermediate(
-                    Range(r, min(r + delta_rows, postIntermediate.rows)),
-                    Range(c, min(c + delta_cols, postIntermediate.cols)));
+                           Range(r, min(r + delta_rows, postIntermediate.rows)),
+                           Range(c, min(c + delta_cols, postIntermediate.cols)));
             const double frequencyElem = (countNonZero(tile) * 1.0) / tile.total();
             listFrequencyElem.push_back(frequencyElem);
         }
@@ -2696,8 +2696,8 @@ bool QRDecode::fullDecodingProcess()
 #endif
 }
 
-std::string QRCodeDetector::decode(InputArray in, InputArray points,
-                                   OutputArray straight_qrcode)
+cv::String QRCodeDetector::decode(InputArray in, InputArray points,
+                                  OutputArray straight_qrcode)
 {
     Mat inarr;
     if (!checkQRInputImage(in, inarr))
@@ -2724,9 +2724,9 @@ std::string QRCodeDetector::decode(InputArray in, InputArray points,
     return ok ? decoded_info : std::string();
 }
 
-std::string QRCodeDetector::detectAndDecode(InputArray in,
-                                            OutputArray points_,
-                                            OutputArray straight_qrcode)
+cv::String QRCodeDetector::detectAndDecode(InputArray in,
+                                           OutputArray points_,
+                                           OutputArray straight_qrcode)
 {
     Mat inarr;
     if (!checkQRInputImage(in, inarr))
@@ -2746,7 +2746,6 @@ std::string QRCodeDetector::detectAndDecode(InputArray in,
     std::string decoded_info = decode(inarr, points, straight_qrcode);
     return decoded_info;
 }
-
 
 class QRDetectMulti : public QRDetect
 {
@@ -3054,7 +3053,7 @@ public:
     static BWCounter checkOnePair(const Point2f& tl, const Point2f& tr, const Point2f& bl, const Point2f& br, const Mat& img)
     {
         BWCounter res;
-        LineIterator li1(tl, tr), li2(bl, br);
+        LineIterator li1(img, tl, tr), li2(img, bl, br);
         for (int i = 0; i < li1.count && i < li2.count; i++, li1++, li2++)
         {
             LineIterator it(img, li1.pos(), li2.pos());
@@ -3841,3 +3840,4 @@ bool QRCodeDetector::detectAndDecodeMulti(
 }
 
 }  // namespace
+
