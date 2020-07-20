@@ -109,6 +109,12 @@ public:
         }
     }
 
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2020_4)
+    std::shared_ptr<ngraph::Node> clone_with_new_inputs(const ngraph::OutputVector& new_args) const override
+    {
+        return std::make_shared<NgraphCustomOp>(new_args, params);
+    }
+#else
     std::shared_ptr<ngraph::Node> copy_with_new_args(const ngraph::NodeVector& new_args) const override
     {
 #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2020_3)
@@ -117,6 +123,7 @@ public:
         return std::make_shared<NgraphCustomOp>(new_args, params);
 #endif
     }
+#endif
 
     bool visit_attributes(ngraph::AttributeVisitor& visitor) override
     {
