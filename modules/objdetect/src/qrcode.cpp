@@ -5,17 +5,16 @@
 // Copyright (C) 2018, Intel Corporation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 
+
 #include "precomp.hpp"
+//#include "opencv2/highgui.hpp"
+#include "opencv2/imgproc.hpp"
 #include "opencv2/objdetect.hpp"
 #include "opencv2/calib3d.hpp"
 
-//#include "precomp.hpp"
-//#include "opencv2/highgui.hpp"
-//#include "opencv2/imgproc.hpp"
-//#include "opencv2/objdetect.hpp"
-//#include "opencv2/calib3d.hpp"
-
-
+#ifdef HAVE_QUIRC
+#include "quirc.h"
+#endif
 
 #include <limits>
 #include <cmath>
@@ -23,8 +22,6 @@
 #include <queue>
 #include <limits>
 #include <iomanip>
-
-
 
 
 namespace cv
@@ -44,6 +41,9 @@ namespace cv
 
 #define INVALID_REGION 110 /*for the reserved value when reading the data*/
 
+enum OUTPUT{
+    HEX,OCT,ALPHA
+};
 
 using std::vector;
 using std::cout;
@@ -54,18 +54,25 @@ int ecc_code2level(int code);
 
 uint8_t gf_pow(uint8_t x , int power);
 uint8_t gf_inverse(uint8_t x);
-uint8_t gf_mul(uint8_t x,uint8_t y);
+uint8_t gf_mul(const uint8_t &x,const uint8_t& y);
+uint8_t gf_div(const uint8_t &x,const uint8_t& y);
 
 uint8_t gf_poly_eval(const Mat& poly,uint8_t x);
 Mat gf_poly_scale(const Mat & p,int scalar);
 Mat gf_poly_add(const Mat & p,const Mat & q);
+Mat gf_poly_mul(const Mat &p,const Mat &q);
+std::string show_poly(const Mat& p,OUTPUT o);
+Mat gf_poly_div(const Mat& dividend,const Mat& divisor,const int& ecc_num);
+
+Mat find_error_locator(const vector<uint8_t>&synd,int & errors_len);
+vector<int > find_errors(const Mat& sigma,const int &errors_len,const int & msg_len);
+Mat error_correct(const Mat & msg_in ,const vector<uint8_t>&synd,const Mat & e_loc_poly,const vector<int> &error_index);
+
 
 int hamming_weight(uint16_t x);
 int hamming_detect(uint16_t fmt);
 
-int block_syndromes(const Mat & block, int synd_num,uint8_t *synd);
-
-
+int block_syndromes(const Mat & block, int synd_num,vector<uint8_t>& synd);
 /*total codewords are divided into two groups
  *The ecc_codewords are the same in two groups*/
 struct block_params {
@@ -86,7 +93,7 @@ const version_info version_db[MAX_VERSION + 1] = {
         { /* Version 0 */
                 0,
                 {0,0,0,0,0,0,0},
-                .ecc =  {
+                {
                         {0	,0	,0,0,0},
                         {0	,0	,0,0,0},
                         {0	,0	,0,0,0},
@@ -96,7 +103,7 @@ const version_info version_db[MAX_VERSION + 1] = {
         { /* Version 1 */
                 26,
                 {0,0,0,0,0,0,0},
-                .ecc =  {
+                {
                         {7	,1	,19,0,0},
                         {10	,1	,16,0,0},
                         {13	,1	,13,0,0},
@@ -106,7 +113,7 @@ const version_info version_db[MAX_VERSION + 1] = {
         { /* Version 2 */
                 44,
                 {6, 18, 0,0,0,0,0},
-                .ecc = {
+                {
                         { 10,	1,	34,0,0},
                         {  16,	1,	28,0,0},
                         {  22,	1,	22,0,0},
@@ -116,7 +123,7 @@ const version_info version_db[MAX_VERSION + 1] = {
         { /* Version 3 */
                 70,
                 {6, 22, 0,0,0,0,0},
-                .ecc = {
+                {
                         {  15,	1,	55,0,0},
                         {  26,	1,	44,0,0},
                         {  18,	2,	17,0,0},
@@ -126,7 +133,7 @@ const version_info version_db[MAX_VERSION + 1] = {
         { /* Version 4 */
                 100,
                 {6, 26, 0,0,0,0,0},
-                .ecc = {
+                {
                         {  20,	1,	80,0,0},
                         {  18,	2,	32,0,0},
                         {  26,	2,	24,0,0},
@@ -136,7 +143,7 @@ const version_info version_db[MAX_VERSION + 1] = {
         { /* Version 5 */
                 134,
                 {6, 30, 0,0,0,0,0},
-                .ecc = {
+                {
                         {  26,	1,	108,0,  0},
                         {  24,	2,	43, 0,  0},
                         {  18,	2,	15,	2,	16},
@@ -146,7 +153,7 @@ const version_info version_db[MAX_VERSION + 1] = {
         { /* Version 6 */
                 172,
                 {6, 34, 0,0,0,0,0},
-                .ecc = {
+                {
                         {  18,	2,	68,0,0},
                         {  16,	4,	27,0,0},
                         {  24,	4,	19,0,0},
@@ -156,7 +163,7 @@ const version_info version_db[MAX_VERSION + 1] = {
         { /* Version 7 */
                 196,
                 {6, 22, 38, 0,0,0,0},
-                .ecc = {
+                {
                         {  20,	2,	78,0,0},
                         {  18,	4,	31,0,0},
                         {  18,	2,	14,	4,	15},
@@ -166,7 +173,7 @@ const version_info version_db[MAX_VERSION + 1] = {
         { /* Version 8 */
                 242,
                 {6, 24, 42, 0,0,0,0},
-                .ecc = {
+                {
                         {  24,	2,	97,0,0},
                         {  22,	2,	38,	2,	39},
                         {  22,	4,	18,	2,	19},
@@ -176,7 +183,7 @@ const version_info version_db[MAX_VERSION + 1] = {
         { /* Version 9 */
                 292,
                 {6, 26, 46, 0,0,0,0},
-                .ecc = {
+                {
                         {  30,	2,	116,0,0},
                         {  22,	3,	36,	2,	37},
                         {  20,	4,	16,	4,	17},
@@ -186,7 +193,7 @@ const version_info version_db[MAX_VERSION + 1] = {
         { /* Version 10 */
                 346,
                 {6, 28, 50, 0,0,0,0},
-                .ecc = {
+                {
                         {  18,	2,	68,	2,	69},
                         {  26,	4,	43,	1,	44},
                         {  24,	6,	19,	2,	20},
@@ -196,7 +203,7 @@ const version_info version_db[MAX_VERSION + 1] = {
         { /* Version 11 */
                 404,
                 {6, 30, 54, 0,0,0,0},
-                .ecc = {
+                {
                         {  20,	4,	81, 0,0},
                         {  30,	1,	50,	4,	51},
                         {  28,	4,	22,	4,	23},
@@ -206,7 +213,7 @@ const version_info version_db[MAX_VERSION + 1] = {
         { /* Version 12 */
                 466,
                 {6, 32, 58, 0,0,0,0},
-                .ecc = {
+                {
                         {  24,	2,	92,	2,	93},
                         {  22,	6,	36,	2,	37},
                         {  26,	4,	20,	6,	21},
@@ -216,7 +223,7 @@ const version_info version_db[MAX_VERSION + 1] = {
         { /* Version 13 */
                 532,
                 {6, 34, 62, 0,0,0,0},
-                .ecc = {
+                {
                         {  26,	4,	107,0,0},
                         {  22,	8,	37,	1,	38},
                         {  24,	8,	20,	4,	21},
@@ -226,7 +233,7 @@ const version_info version_db[MAX_VERSION + 1] = {
         { /* Version 14 */
                 581,
                 {6, 26, 46, 66, 0,0,0},
-                .ecc = {
+                {
                         {  30,	3,	115,1,	116},
                         {  24,	4,	40,	5,	41},
                         {  20,	11,	16,	5,	17},
@@ -236,7 +243,7 @@ const version_info version_db[MAX_VERSION + 1] = {
         { /* Version 15 */
                 655,
                 {6, 26, 48, 70, 0,0,0},
-                .ecc = {
+                {
                         {  22,	5,	87,	1,	88},
                         {  24,	5,	41,	5,	42},
                         {  30,	5,	24,	7,	25},
@@ -246,7 +253,7 @@ const version_info version_db[MAX_VERSION + 1] = {
         { /* Version 16 */
                 733,
                 {6, 26, 50, 74, 0,0,0},
-                .ecc = {
+                {
                         {  24,	5,	98,	1,	99},
                         {  28,	7,	45,	3,	46},
                         {  24,	15,	19,	2,	20},
@@ -256,7 +263,7 @@ const version_info version_db[MAX_VERSION + 1] = {
         { /* Version 17 */
                 815,
                 {6, 30, 54, 78, 0,0,0},
-                .ecc = {
+                {
                         { 28,	1,	107,5,	108},
                         { 28,	10,	46,	1,	47},
                         { 28,	1,	22,	15,	23},
@@ -266,7 +273,7 @@ const version_info version_db[MAX_VERSION + 1] = {
         { /* Version 18 */
                 901,
                 {6, 30, 56, 82, 0,0,0},
-                .ecc = {
+                {
                         {  30,	5,	120,1,	121},
                         {  26,	9,	43,	4,	44},
                         {  28,	17,	22,	1,	23},
@@ -276,7 +283,7 @@ const version_info version_db[MAX_VERSION + 1] = {
         { /* Version 19 */
                 991,
                 {6, 30, 58, 86, 0,0,0},
-                .ecc = {
+                {
                         {  28,	3,	113,4,	114},
                         {  26,	3,	44,	11,	45},
                         {  26,	17,	21,	4,	22},
@@ -286,7 +293,7 @@ const version_info version_db[MAX_VERSION + 1] = {
         { /* Version 20 */
                 1085,
                 {6, 34, 62, 90, 0,0,0},
-                .ecc = {
+                {
                         {  28,	3,	107,5,	108},
                         {  26,	3,	41,	13,	42},
                         {  30,	15,	24,	5,	25},
@@ -296,7 +303,7 @@ const version_info version_db[MAX_VERSION + 1] = {
         { /* Version 21 */
                 1156,
                 {6, 28, 50, 72, 92, 0,0},
-                .ecc = {
+                {
                         {  28,	4,	116,4,  117},
                         {  26,	17,	42, 0,  0},
                         {  28,	17,	22,	6,	23},
@@ -306,7 +313,7 @@ const version_info version_db[MAX_VERSION + 1] = {
         { /* Version 22 */
                 1258,
                 {6, 26, 50, 74, 98, 0,0},
-                .ecc = {
+                {
                         {  28,	2,	111, 7,	 112},
                         {  28,	17,	46,  0,  0},
                         {  30,	7,	24,	 16, 25},
@@ -316,7 +323,7 @@ const version_info version_db[MAX_VERSION + 1] = {
         { /* Version 23 */
                 1364,
                 {6, 30, 54, 78, 102, 0,0},
-                .ecc = {
+                {
                         {  30,	4,	121,5,	122},
                         {  28,	4,	47,	14,	48},
                         {  30,	11,	24,	14,	25},
@@ -326,7 +333,7 @@ const version_info version_db[MAX_VERSION + 1] = {
         { /* Version 24 */
                 1474,
                 {6, 28, 54, 80, 106, 0,0},
-                .ecc = {
+                {
                         {  30,	6,	117,4,	118},
                         {  28,	6,	45,	14,	46},
                         {  30,	11,	24,	16,	25},
@@ -336,7 +343,7 @@ const version_info version_db[MAX_VERSION + 1] = {
         { /* Version 25 */
                 1588,
                 {6, 32, 58, 84, 110, 0,0},
-                .ecc = {
+                {
                         {  26,	8,	106,4,	107},
                         {  28,	8,	47,	13,	48},
                         {  30,	7,	24,	22,	25},
@@ -346,7 +353,7 @@ const version_info version_db[MAX_VERSION + 1] = {
         { /* Version 26 */
                 1706,
                 {6, 30, 58, 86, 114, 0,0},
-                .ecc = {
+                {
                         {  28,	10,	114,2,	115},
                         {  28,	19,	46,	4,	47},
                         {  28,	28,	22,	6,	23},
@@ -356,7 +363,7 @@ const version_info version_db[MAX_VERSION + 1] = {
         { /* Version 27 */
                 1828,
                 {6, 34, 62, 90, 118, 0,0},
-                .ecc = {
+                {
                         {  30,	8,	122,4,	123},
                         {  28,	22,	45,	3,	46},
                         {  30,	8,	23,	26,	24},
@@ -366,7 +373,7 @@ const version_info version_db[MAX_VERSION + 1] = {
         { /* Version 28 */
                 1921,
                 {6, 26, 50, 74, 98, 122, 0},
-                .ecc = {
+                {
                         {  30,	3,	117,10,	118},
                         {  28,	3,	45,	23,	46},
                         {  30,	4,	24,	31,	25},
@@ -376,7 +383,7 @@ const version_info version_db[MAX_VERSION + 1] = {
         { /* Version 29 */
                 2051,
                 {6, 30, 54, 78, 102, 126, 0},
-                .ecc = {
+                {
                         {  30,	7,	116,7,	117},
                         {  28,	21,	45,	7,	46},
                         {  30,	1,	23,	37,	24},
@@ -386,7 +393,7 @@ const version_info version_db[MAX_VERSION + 1] = {
         { /* Version 30 */
                 2185,
                 {6, 26, 52, 78, 104, 130, 0},
-                .ecc = {
+                {
                         {  30,	5,	115,10,	116},
                         {  28,	19,	47,	10,	48},
                         {  30,	15,	24,	25,	25},
@@ -396,7 +403,7 @@ const version_info version_db[MAX_VERSION + 1] = {
         { /* Version 31 */
                 2323,
                 {6, 30, 56, 82, 108, 134, 0},
-                .ecc = {
+                {
                         {  30,	13,	115,3,	116},
                         {  28,	2,	46,	29,	47},
                         {  30,	42,	24,	1,	25},
@@ -406,7 +413,7 @@ const version_info version_db[MAX_VERSION + 1] = {
         { /* Version 32 */
                 2465,
                 {6, 34, 60, 86, 112, 138, 0},
-                .ecc = {
+                {
                         {  30,	17,	115, 0,     0},
                         {  28,	10,	46,	 23,	47},
                         {  30,	10,	24,	 35,	25},
@@ -416,7 +423,7 @@ const version_info version_db[MAX_VERSION + 1] = {
         { /* Version 33 */
                 2611,
                 {6, 30, 58, 86, 114, 142, 0},
-                .ecc = {
+                {
                         {  30,	17,	115,1,	116},
                         {  28,	14,	46,	21,	47},
                         {  30,	29,	24,	19,	25},
@@ -426,7 +433,7 @@ const version_info version_db[MAX_VERSION + 1] = {
         { /* Version 34 */
                 2761,
                 {6, 34, 62, 90, 118, 146, 0},
-                .ecc = {
+                {
                         {  30,	13,	115,6,	116},
                         {  28,	14,	46,	23,	47},
                         {  30,	44,	24,	7,	25},
@@ -436,7 +443,7 @@ const version_info version_db[MAX_VERSION + 1] = {
         { /* Version 35 */
                 2876,
                 {6, 30, 54, 78, 102, 126, 150},
-                .ecc = {
+                {
                         {  30,	12,	121,7,	122},
                         {  28,	12,	47,	26,	48},
                         {  30,	39,	24,	14,	25},
@@ -446,7 +453,7 @@ const version_info version_db[MAX_VERSION + 1] = {
         { /* Version 36 */
                 3034,
                 {6, 24, 50, 76, 102, 128, 154},
-                .ecc = {
+                {
                         {  30,	6,	121,14,	122},
                         {  28,	6,	47,	34,	48},
                         {  30,	46,	24,	10,	25},
@@ -456,7 +463,7 @@ const version_info version_db[MAX_VERSION + 1] = {
         { /* Version 37 */
                 3196,
                 {6, 28, 54, 80, 106, 132, 158},
-                .ecc = {
+                {
                         {  30,	17,	122,4,	123},
                         {  28,	29,	46,	14,	47},
                         {  30,	49,	24,	10,	25},
@@ -466,7 +473,7 @@ const version_info version_db[MAX_VERSION + 1] = {
         { /* Version 38 */
                 3362,
                 {6, 32, 58, 84, 110, 136, 162},
-                .ecc = {
+                {
                         {  30,	4,	122,18,	123},
                         {  28,	13,	46,	32,	47},
                         {  30,	48,	24,	14,	25},
@@ -476,7 +483,7 @@ const version_info version_db[MAX_VERSION + 1] = {
         { /* Version 39 */
                 3532,
                 {6, 26, 54, 82, 110, 138, 166},
-                .ecc = {
+                {
                         {  30,	20,	117,4,	118},
                         {  28,	40,	47,	7,	48},
                         {  30,	43,	24,	22,	25},
@@ -486,7 +493,7 @@ const version_info version_db[MAX_VERSION + 1] = {
         { /* Version 40 */
                 3706,
                 {6, 30, 58, 86, 114, 142, 170},
-                .ecc = {
+                {
                         {  30,	19,	118,6,	119},
                         {  28,	18,	47,	31,	48},
                         {  30,	34,	24,	34,	25},
@@ -494,10 +501,6 @@ const version_info version_db[MAX_VERSION + 1] = {
                 }
         }
 };
-
-
-
-
 static const uint16_t after_mask_format [32]={
         0x5412,0x5125,0x5e7c,0x5b4b,0x45f9,  0x40ce,0x4f97,0x4aa0,0x77c4,0x72f3,
         0x7daa,0x789d,0x662f,0x6318,0x6c41,  0x6976,0x1689,0x13be,0x1ce7,0x19d0,
@@ -585,7 +588,6 @@ typedef enum {
     ERROR_DATA_OVERFLOW,
     ERROR_DATA_UNDERFLOW
 }  decode_error ;
-
 /*
  * params @ ecc_level
  * func   @ make the ecc_level more direct
@@ -734,7 +736,7 @@ protected:
 
 void QRDetect::init(const Mat& src, double eps_vertical_, double eps_horizontal_)
 {
-    //CV_TRACE_FUNCTION();
+    CV_TRACE_FUNCTION();
     CV_Assert(!src.empty());
     barcode = src.clone();
     const double min_side = std::min(src.size().width, src.size().height);
@@ -843,7 +845,7 @@ vector<Vec3d> QRDetect::searchHorizontalLines()
 
 vector<Point2f> QRDetect::separateVerticalLines(const vector<Vec3d> &list_lines)
 {
-    //CV_TRACE_FUNCTION();
+    CV_TRACE_FUNCTION();
 
     for (int coeff_epsilon = 1; coeff_epsilon < 10; coeff_epsilon++)
     {
@@ -869,7 +871,7 @@ vector<Point2f> QRDetect::separateVerticalLines(const vector<Vec3d> &list_lines)
 
 vector<Point2f> QRDetect::extractVerticalLines(const vector<Vec3d> &list_lines, double eps)
 {
-    //CV_TRACE_FUNCTION();
+    CV_TRACE_FUNCTION();
     vector<Vec3d> result;
     vector<double> test_lines; test_lines.reserve(6);
 
@@ -951,8 +953,8 @@ vector<Point2f> QRDetect::extractVerticalLines(const vector<Vec3d> &list_lines, 
         for (size_t i = 0; i < result.size(); i++)
         {
             point2f_result.push_back(
-                    Point2f(static_cast<float>(result[i][0] + result[i][2] * 0.5),
-                            static_cast<float>(result[i][1])));
+                  Point2f(static_cast<float>(result[i][0] + result[i][2] * 0.5),
+                          static_cast<float>(result[i][1])));
         }
     }
     return point2f_result;
@@ -960,7 +962,7 @@ vector<Point2f> QRDetect::extractVerticalLines(const vector<Vec3d> &list_lines, 
 
 void QRDetect::fixationPoints(vector<Point2f> &local_point)
 {
-    //CV_TRACE_FUNCTION();
+    CV_TRACE_FUNCTION();
     double cos_angles[3], norm_triangl[3];
 
     norm_triangl[0] = norm(local_point[1] - local_point[2]);
@@ -968,11 +970,11 @@ void QRDetect::fixationPoints(vector<Point2f> &local_point)
     norm_triangl[2] = norm(local_point[1] - local_point[0]);
 
     cos_angles[0] = (norm_triangl[1] * norm_triangl[1] + norm_triangl[2] * norm_triangl[2]
-                     -  norm_triangl[0] * norm_triangl[0]) / (2 * norm_triangl[1] * norm_triangl[2]);
+                  -  norm_triangl[0] * norm_triangl[0]) / (2 * norm_triangl[1] * norm_triangl[2]);
     cos_angles[1] = (norm_triangl[0] * norm_triangl[0] + norm_triangl[2] * norm_triangl[2]
-                     -  norm_triangl[1] * norm_triangl[1]) / (2 * norm_triangl[0] * norm_triangl[2]);
+                  -  norm_triangl[1] * norm_triangl[1]) / (2 * norm_triangl[0] * norm_triangl[2]);
     cos_angles[2] = (norm_triangl[0] * norm_triangl[0] + norm_triangl[1] * norm_triangl[1]
-                     -  norm_triangl[2] * norm_triangl[2]) / (2 * norm_triangl[0] * norm_triangl[1]);
+                  -  norm_triangl[2] * norm_triangl[2]) / (2 * norm_triangl[0] * norm_triangl[1]);
 
     const double angle_barrier = 0.85;
     if (fabs(cos_angles[0]) > angle_barrier || fabs(cos_angles[1]) > angle_barrier || fabs(cos_angles[2]) > angle_barrier)
@@ -982,8 +984,8 @@ void QRDetect::fixationPoints(vector<Point2f> &local_point)
     }
 
     size_t i_min_cos =
-            (cos_angles[0] < cos_angles[1] && cos_angles[0] < cos_angles[2]) ? 0 :
-            (cos_angles[1] < cos_angles[0] && cos_angles[1] < cos_angles[2]) ? 1 : 2;
+       (cos_angles[0] < cos_angles[1] && cos_angles[0] < cos_angles[2]) ? 0 :
+       (cos_angles[1] < cos_angles[0] && cos_angles[1] < cos_angles[2]) ? 1 : 2;
 
     size_t index_max = 0;
     double max_area = std::numeric_limits<double>::min();
@@ -994,13 +996,13 @@ void QRDetect::fixationPoints(vector<Point2f> &local_point)
         const size_t right_index = (i + 2) % 3;
 
         const Point2f current_point(local_point[current_index]),
-                left_point(local_point[left_index]), right_point(local_point[right_index]),
-                central_point(intersectionLines(current_point,
-                                                Point2f(static_cast<float>((local_point[left_index].x + local_point[right_index].x) * 0.5),
-                                                        static_cast<float>((local_point[left_index].y + local_point[right_index].y) * 0.5)),
-                                                Point2f(0, static_cast<float>(bin_barcode.rows - 1)),
-                                                Point2f(static_cast<float>(bin_barcode.cols - 1),
-                                                        static_cast<float>(bin_barcode.rows - 1))));
+            left_point(local_point[left_index]), right_point(local_point[right_index]),
+            central_point(intersectionLines(current_point,
+                              Point2f(static_cast<float>((local_point[left_index].x + local_point[right_index].x) * 0.5),
+                                      static_cast<float>((local_point[left_index].y + local_point[right_index].y) * 0.5)),
+                              Point2f(0, static_cast<float>(bin_barcode.rows - 1)),
+                              Point2f(static_cast<float>(bin_barcode.cols - 1),
+                                      static_cast<float>(bin_barcode.rows - 1))));
 
 
         vector<Point2f> list_area_pnt;
@@ -1059,7 +1061,7 @@ void QRDetect::fixationPoints(vector<Point2f> &local_point)
 
 bool QRDetect::localization()
 {
-    //CV_TRACE_FUNCTION();
+    CV_TRACE_FUNCTION();
     Point2f begin, end;
     vector<Vec3d> list_lines_x = searchHorizontalLines();
     if( list_lines_x.empty() ) { return false; }
@@ -1086,8 +1088,8 @@ bool QRDetect::localization()
         triangle_perim = (triangle_sides[0] + triangle_sides[1] + triangle_sides[2]) / 2;
 
         square_area = sqrt((triangle_perim * (triangle_perim - triangle_sides[0])
-                            * (triangle_perim - triangle_sides[1])
-                            * (triangle_perim - triangle_sides[2]))) * 2;
+                                           * (triangle_perim - triangle_sides[1])
+                                           * (triangle_perim - triangle_sides[2]))) * 2;
         img_square_area = bin_barcode.cols * bin_barcode.rows;
 
         if (square_area > (img_square_area * 0.2))
@@ -1156,7 +1158,7 @@ bool QRDetect::localization()
 
 bool QRDetect::computeTransformationPoints()
 {
-    //CV_TRACE_FUNCTION();
+    CV_TRACE_FUNCTION();
     if (localization_points.size() != 3) { return false; }
 
     vector<Point> locations, non_zero_elem[3], newHull;
@@ -1256,7 +1258,7 @@ bool QRDetect::computeTransformationPoints()
     for (size_t i = 0; i < new_non_zero_elem[2].size(); i++)
     {
         double temp_norm_delta = norm(up_left_edge_point - new_non_zero_elem[2][i])
-                                 + norm(up_right_edge_point - new_non_zero_elem[2][i]);
+                               + norm(up_right_edge_point - new_non_zero_elem[2][i]);
         if (norm_up_max_delta < temp_norm_delta)
         {
             up_max_delta_point = new_non_zero_elem[2][i];
@@ -1268,8 +1270,8 @@ bool QRDetect::computeTransformationPoints()
     transformation_points.push_back(up_left_edge_point);
     transformation_points.push_back(up_right_edge_point);
     transformation_points.push_back(
-            intersectionLines(down_left_edge_point, down_max_delta_point,
-                              up_right_edge_point, up_max_delta_point));
+        intersectionLines(down_left_edge_point, down_max_delta_point,
+                          up_right_edge_point, up_max_delta_point));
 
     vector<Point2f> quadrilateral = getQuadrilateral(transformation_points);
     transformation_points = quadrilateral;
@@ -1287,22 +1289,22 @@ bool QRDetect::computeTransformationPoints()
 Point2f QRDetect::intersectionLines(Point2f a1, Point2f a2, Point2f b1, Point2f b2)
 {
     Point2f result_square_angle(
-            ((a1.x * a2.y  -  a1.y * a2.x) * (b1.x - b2.x) -
-             (b1.x * b2.y  -  b1.y * b2.x) * (a1.x - a2.x)) /
-            ((a1.x - a2.x) * (b1.y - b2.y) -
-             (a1.y - a2.y) * (b1.x - b2.x)),
-            ((a1.x * a2.y  -  a1.y * a2.x) * (b1.y - b2.y) -
-             (b1.x * b2.y  -  b1.y * b2.x) * (a1.y - a2.y)) /
-            ((a1.x - a2.x) * (b1.y - b2.y) -
-             (a1.y - a2.y) * (b1.x - b2.x))
-    );
+                              ((a1.x * a2.y  -  a1.y * a2.x) * (b1.x - b2.x) -
+                               (b1.x * b2.y  -  b1.y * b2.x) * (a1.x - a2.x)) /
+                              ((a1.x - a2.x) * (b1.y - b2.y) -
+                               (a1.y - a2.y) * (b1.x - b2.x)),
+                              ((a1.x * a2.y  -  a1.y * a2.x) * (b1.y - b2.y) -
+                               (b1.x * b2.y  -  b1.y * b2.x) * (a1.y - a2.y)) /
+                              ((a1.x - a2.x) * (b1.y - b2.y) -
+                               (a1.y - a2.y) * (b1.x - b2.x))
+                              );
     return result_square_angle;
 }
 
 // test function (if true then ------> else <------ )
 bool QRDetect::testBypassRoute(vector<Point2f> hull, int start, int finish)
 {
-    //CV_TRACE_FUNCTION();
+    CV_TRACE_FUNCTION();
     int index_hull = start, next_index_hull, hull_size = (int)hull.size();
     double test_length[2] = { 0.0, 0.0 };
     do
@@ -1329,7 +1331,7 @@ bool QRDetect::testBypassRoute(vector<Point2f> hull, int start, int finish)
 
 vector<Point2f> QRDetect::getQuadrilateral(vector<Point2f> angle_list)
 {
-    //CV_TRACE_FUNCTION();
+    CV_TRACE_FUNCTION();
     size_t angle_size = angle_list.size();
     uint8_t value, mask_value;
     Mat mask = Mat::zeros(bin_barcode.rows + 2, bin_barcode.cols + 2, CV_8UC1);
@@ -1337,7 +1339,7 @@ vector<Point2f> QRDetect::getQuadrilateral(vector<Point2f> angle_list)
     for (size_t i = 0; i < angle_size; i++)
     {
         LineIterator line_iter(bin_barcode, angle_list[ i      % angle_size],
-                               angle_list[(i + 1) % angle_size]);
+                                            angle_list[(i + 1) % angle_size]);
         for(int j = 0; j < line_iter.count; j++, ++line_iter)
         {
             Point p = line_iter.pos();
@@ -1418,11 +1420,11 @@ vector<Point2f> QRDetect::getQuadrilateral(vector<Point2f> angle_list)
         if (next_index_hull == -1) { next_index_hull = hull_size - 1; }
 
         Point angle_closest_pnt =  norm(hull[index_hull] - angle_list[1]) >
-                                   norm(hull[index_hull] - angle_list[2]) ? angle_list[2] : angle_list[1];
+        norm(hull[index_hull] - angle_list[2]) ? angle_list[2] : angle_list[1];
 
         Point intrsc_line_hull =
-                intersectionLines(hull[index_hull], hull[next_index_hull],
-                                  angle_list[1], angle_list[2]);
+        intersectionLines(hull[index_hull], hull[next_index_hull],
+                          angle_list[1], angle_list[2]);
         double temp_norm = getCosVectors(hull[index_hull], intrsc_line_hull, angle_closest_pnt);
         if (min_norm > temp_norm &&
             norm(hull[index_hull] - hull[next_index_hull]) >
@@ -1456,11 +1458,11 @@ vector<Point2f> QRDetect::getQuadrilateral(vector<Point2f> angle_list)
         if (next_index_hull == -1) { next_index_hull = hull_size - 1; }
 
         Point angle_closest_pnt =  norm(hull[index_hull] - angle_list[0]) >
-                                   norm(hull[index_hull] - angle_list[1]) ? angle_list[1] : angle_list[0];
+        norm(hull[index_hull] - angle_list[1]) ? angle_list[1] : angle_list[0];
 
         Point intrsc_line_hull =
-                intersectionLines(hull[index_hull], hull[next_index_hull],
-                                  angle_list[0], angle_list[1]);
+        intersectionLines(hull[index_hull], hull[next_index_hull],
+                          angle_list[0], angle_list[1]);
         double temp_norm = getCosVectors(hull[index_hull], intrsc_line_hull, angle_closest_pnt);
         if (min_norm > temp_norm &&
             norm(hull[index_hull] - hull[next_index_hull]) >
@@ -1488,8 +1490,8 @@ vector<Point2f> QRDetect::getQuadrilateral(vector<Point2f> angle_list)
     double min_diff_area = std::numeric_limits<double>::max();
     index_hull = start_line[0];
     const double standart_norm = std::max(
-            norm(result_side_begin[0] - result_side_end[0]),
-            norm(result_side_begin[1] - result_side_end[1]));
+        norm(result_side_begin[0] - result_side_end[0]),
+        norm(result_side_begin[1] - result_side_end[1]));
     do
     {
         if (bypass_orientation) { next_index_hull = index_hull + 1; }
@@ -1514,20 +1516,20 @@ vector<Point2f> QRDetect::getQuadrilateral(vector<Point2f> angle_list)
             { extra_index_hull = extra_next_index_hull; continue; }
 
             test_result_angle_list[0]
-                    = intersectionLines(result_side_begin[0], result_side_end[0],
-                                        result_side_begin[1], result_side_end[1]);
+            = intersectionLines(result_side_begin[0], result_side_end[0],
+                                result_side_begin[1], result_side_end[1]);
             test_result_angle_list[1]
-                    = intersectionLines(result_side_begin[1], result_side_end[1],
-                                        hull[extra_index_hull], hull[extra_next_index_hull]);
+            = intersectionLines(result_side_begin[1], result_side_end[1],
+                                hull[extra_index_hull], hull[extra_next_index_hull]);
             test_result_angle_list[2]
-                    = intersectionLines(hull[extra_index_hull], hull[extra_next_index_hull],
-                                        hull[index_hull], hull[next_index_hull]);
+            = intersectionLines(hull[extra_index_hull], hull[extra_next_index_hull],
+                                hull[index_hull], hull[next_index_hull]);
             test_result_angle_list[3]
-                    = intersectionLines(hull[index_hull], hull[next_index_hull],
-                                        result_side_begin[0], result_side_end[0]);
+            = intersectionLines(hull[index_hull], hull[next_index_hull],
+                                result_side_begin[0], result_side_end[0]);
 
             const double test_diff_area
-                    = fabs(fabs(contourArea(test_result_angle_list)) - experimental_area);
+                = fabs(fabs(contourArea(test_result_angle_list)) - experimental_area);
             if (min_diff_area > test_diff_area)
             {
                 min_diff_area = test_diff_area;
@@ -1552,8 +1554,8 @@ vector<Point2f> QRDetect::getQuadrilateral(vector<Point2f> angle_list)
 
     // check calculation point
     if (norm(result_angle_list[2] - angle_list[3]) >
-        (norm(result_angle_list[0] - result_angle_list[1]) +
-         norm(result_angle_list[0] - result_angle_list[3])) * 0.5 )
+       (norm(result_angle_list[0] - result_angle_list[1]) +
+        norm(result_angle_list[0] - result_angle_list[3])) * 0.5 )
     { result_angle_list[2] = angle_list[3]; }
 
     return result_angle_list;
@@ -1649,9 +1651,7 @@ protected:
     uint8_t size;
     float test_perspective_size;
 
-
 };
-
 QRDecode::QRDecode(){
     memset(orignal_data,0,sizeof(uint8_t)*MAX_PAYLOAD);
     memset(rearranged_data,0,sizeof(uint8_t)*MAX_PAYLOAD);
@@ -1659,10 +1659,12 @@ QRDecode::QRDecode(){
     memset(payload,0,sizeof(uint8_t)*MAX_PAYLOAD);
 
 }
+
 /*
  * params @ format(uint16_t for returning the format bits) which(select from two different place)
  * return @ can be correct or not
- * */
+ */
+
 decode_error QRDecode::read_format(uint16_t& format , int which){
     /*version<=6*/
     int i;
@@ -1790,18 +1792,56 @@ uint8_t gf_pow(uint8_t x , int power){
 uint8_t gf_inverse(uint8_t x){
     return gf_exp[255 - gf_log[x]];
 }
+
 /*multiplication in GF
  * params @ x , y
  * return x * y
  * EXP:
  *     a^x * a^y =a^(x+y)
  */
-uint8_t gf_mul(uint8_t x,uint8_t y){
+uint8_t gf_mul(const uint8_t &x,const uint8_t& y){
     if (x==0 || y==0)
         return 0;
     return gf_exp[(gf_log[x] + gf_log[y])%255];
 }
 
+/*division in GF
+ * params @ x , y
+ * return x / y
+ * EXP:
+ *     a^x / a^y =a^(x-y)=a^(x+255-y)
+ */
+uint8_t gf_div(const uint8_t &x,const uint8_t& y) {
+//        CV_Assert (y != 0);
+    if (x == 0)
+        return 0;
+    return gf_exp[(255 - gf_log[y] + gf_log[x]) % 255];
+}
+/* show_poly
+ * params : const Mat& p(polynomial),OUTPUT o(output pattern)
+ * return :output string
+ * */
+std::string show_poly(const Mat& p,OUTPUT o=HEX){
+    std::string s;
+    for(int i=0;i<p.cols;i++){
+        char tmp[10];
+        switch (o){
+            case HEX:
+                sprintf(tmp,"%02X",(int)p.ptr(0)[i]);//
+                break;
+            case OCT:
+                sprintf(tmp,"%d",(int)p.ptr(0)[i]);
+                break;
+            case ALPHA:
+                sprintf(tmp,"%d",gf_log[(int)p.ptr(0)[i]]%255);//%02X
+                break;
+        }
+        s=" "+s;
+        s=tmp+s;
+    }
+    s=s+'\n';
+    return  s;
+}
 /* gf_poly_eval :
  *      evaluate a polynomial at a particular value of x, producing a scalar result
  * params @ poly 15bit format_Info,  uint8_t x(a scalar)
@@ -1813,8 +1853,8 @@ uint8_t gf_mul(uint8_t x,uint8_t y){
  * */
 uint8_t gf_poly_eval(const Mat& poly,uint8_t x){
     /*Note the calculation begins at the high times of items,
-     * That's to say , start from the large index in Mat
-     * */
+         * That's to say , start from the large index in Mat
+         * */
     int index=poly.cols-1;
     uint8_t y=poly.ptr(0)[index];
     //    cout<<"x : \n"<<(int)x<<endl;
@@ -1855,6 +1895,89 @@ Mat gf_poly_add(const Mat & p,const Mat & q){
     }
     return r;
 }
+
+/* multiplication between two polys
+ * params @ poly p , poly q
+ * return @ result poly = p * q
+ */
+/*
+       10001001
+    *  00101010
+ ---------------
+      10001001
+^   10001001
+^ 10001001
+ ---------------
+  1010001111010*/
+Mat gf_poly_mul(const Mat &p,const Mat &q){
+
+    /* multiplication == addition among items*/
+    Mat r(1,p.cols+q.cols-1,CV_8UC1,Scalar(0));
+    int len_p=p.cols;
+    int len_q=q.cols;
+    for(int j = 0; j<len_q;j++) {
+        if(!q.ptr(0)[j])
+            continue;
+        //cout<<"round : "<<j<<endl;
+
+        for (int i = 0; i < len_p; i++) {
+            if(!p.ptr(0)[i])
+                continue;
+//            std::cout << "(p_i : " << p.coeffi[i] << " q_j : " << q.coeffi[j] ;
+//            std::cout << " )= " << D2B(gf_mul(p.coeffi[i]<<i, q.coeffi[j]<<j)) << std::endl;
+            r.ptr(0)[i+j] ^= gf_mul(p.ptr(0)[i], q.ptr(0)[j]);
+        }
+//            for(int i = 0; i < r.cols ; i++ ){
+//                cout<<(int)r.ptr(0)[i]<<" ";
+//            }
+//            cout<<endl;
+    }
+    return r;
+}
+
+/*gf_poly_div:
+ *   This function is for getting the ECC for the data string ,which is implemented by doing a poly division.
+ * params @ const Mat& dividend,const Mat& divisor
+ * return @ ECC code/remainder
+ *                             12 da df
+ *               -----------------------
+ *01 0f 36 78 40 ) 12 34 56 00 00 00 00
+ *               ^ 12 ee 2b 23 f4
+ *              -------------------------
+ *                   da 7d 23 f4 00
+ *                 ^ da a2 85 79 84
+ *                  ---------------------
+ *                      df a6 8d 84 00
+ *                    ^ df 91 6b fc d9
+ *                    -------------------
+ *                         37 e6 78 d9
+ */
+Mat gf_poly_div(const Mat& dividend,const Mat& divisor,const int& ecc_num) {
+    /* Note that the processing starts from the item with high number of times,
+         * so item [total-i] is processed for the i-th round */
+    int times=dividend.cols-(divisor.cols-1);
+    int dividend_len=dividend.cols-1;
+    int divisor_len=divisor.cols-1;
+    /*Mat.ptr(0)[i] stores the coeffient of the x^i*/
+    Mat r=dividend.clone();
+    for(int i =0;i<times;i++){
+        uint16_t coef=r.ptr(0)[dividend_len-i];
+        //cout<<"No."<<i<<" : "<<hex<<coef<<endl;
+        if(coef!=0){
+            for (int j = 0; j < divisor.cols; ++j) {
+                if(divisor.ptr(0)[divisor_len-j]!=0){
+                    r.ptr(0)[dividend_len-i-j]^=gf_mul(divisor.ptr(0)[divisor_len-j], coef);
+                }
+            }
+            //cout<<"r : "<<show_poly(r)<<endl;
+        }
+    }
+    //cout<<"whole : \n"<<r<<endl;
+    Mat ecc=r(Range(0,1),Range(0,ecc_num)).clone();
+    //cout<<"ecc : \n"<<ecc<<endl;
+    return ecc;
+}
+
 /*unmask_data
  *func @  unmask the data and make the pixels in the reserved area Scalar(INVALID_REGION)
  */
@@ -1946,76 +2069,206 @@ void QRDecode::read_data(){
  *          uint8_t *synd(syndromes for output)
  * func   @ calculate the syndromes for each block
  * */
-int block_syndromes(const Mat & block, int synd_num,uint8_t *synd){
+int block_syndromes(const Mat & block, int synd_num,vector <uint8_t>& synd){
     int nonzero = 0;
     /*the original method*/
-    cout<<"@s@ "<<endl;
+    cout<<"\n@s@ "<<endl;
     for (int i = 0; i < synd_num; i++) {
         /*get the syndromes by repalcing the x with pow(2,i) and evaluating the results of the equations*/
-        synd[i]=gf_poly_eval(block, gf_pow(2,i));
-        cout<<(int)synd[i]<<" ";
-        if (synd[i])
+        uint8_t tmp =gf_poly_eval(block, gf_pow(2,i));
+        /*print for debug*/
+        cout<<(int)tmp<<" ";
+        if (tmp)
             nonzero = 1;
+        synd.push_back(tmp);
     }
     cout<<endl;
     return nonzero;
 }
-//    int find_error_locator(const uint8_t *synd,int synd_num){
-//        /*initialize two arrays b and c ,to be zeros , expcet b0<- 1 c0<- 1*/
-//
-//        /*err_loc & Sigma*/
-//        Mat C(1,synd_num,CV_8UC1,Scalar(0));
-//        /*old_loc */
-//        Mat B(1,synd_num,CV_8UC1,Scalar(0));
-//
-//        B.ptr(0)[0]=1;
-//        C.ptr(0)[0]=1;
-//
-//        uint8_t b=1;
-//        /*assign L <- 0,m <- 1.*/
-//        int L = 0;
-//        int m = 1;
-//        for(int i = 0; i < synd_num ;i++){
-//            uint8_t delta = synd[i];
-//            /*cal discrepancy =Sn+ C1*S(n-1) + ... + Cl*S(n-L)*/
-//            for(int j = 0;j<=L;j++)
-//                delta ^= gf_mul(C.ptr(0)[j], synd[i - j]);
-//            /*if delta == 0 c is the polynomial */
-//            if(delta == 0){
-//                m++;
-//            }
-//            else if(2 * L <= i){
-//                Mat t=C.clone();
-////                int border = synd_num+m-i-1;
-////                int begin = i+m;
-//
-//                Mat shift(1,synd_num,CV_8UC1,Scalar(0));
-//                shift.ptr(0)[m]=1;
-//
-//                Mat new_loc = gf_poly_scale(shift,gf_mul(delta,gf_inverse(b)));
-//
-//                C=gf_poly_add(C,gf_poly_mul(B,new_loc));
-//
-//                L = i + 1 - L;
-//
-//                B = t.clone();
-//                c = new_loc;
-//
-//                m = 1;
-//            }
-//            else{
-//                c = gf_poly_add(c, gf_poly_scale(b, delta));
-//            }
-//
+
+
+/*find_error_locator
+ * params @ synd(the syndromes of current block),
+ *          errors_len(the number of the errors),
+ * func   @ using berlekamp_massey algorithm to calculate the error_locator
+ * return @ find_error_locator
+ * */
+Mat find_error_locator(const vector<uint8_t>&synd,int & errors_len){
+    /*initialize two arrays b and c ,to be zeros , expcet b0<- 1 c0<- 1*/
+    int synd_num =synd.size();
+    /*err_loc & Sigma*/
+    Mat C(1,synd_num,CV_8UC1,Scalar(0));
+    /*old_loc */
+    Mat B(1,synd_num,CV_8UC1,Scalar(0));//a copy of the last C
+
+    B.ptr(0)[0]=1;
+    C.ptr(0)[0]=1;
+
+    uint8_t b=1;//a copy of the last discrepancy delta
+    int L = 0;//the current number of assumed errors
+    int m = 1;//the number of iterations
+
+    for(int i = 0; i < synd_num ;i++){
+        uint8_t delta = synd[i];
+        /*cal discrepancy =Sn+ C1*S(n-1) + ... + CL*S(n-L)*/
+        for(int j = 1;j<=L;j++){
+            delta ^= gf_mul(C.ptr(0)[j], synd[i - j]);
+        }
+        /*shift = x^m*/
+        Mat shift(1,synd_num,CV_8UC1,Scalar(0));
+        shift.ptr(0)[m]=1;
+        /*scale_coeffi = d/b */
+        Mat scale_coeffi = gf_poly_scale(shift,gf_mul(delta,gf_inverse(b)));
+
+        /*if delta == 0 c is the polynomial */
+        if(delta == 0){
+            /*assumes that C(x) and L are correct for the moment, increments m, and continues*/
+            m++;
+
+        }
+            /*If delta !=0 , adjust C(x) so that a recalculation of d would be zero*/
+
+        else if(2 * L <= i){
+            /*L is updated and algorithm will update B(x), b, increase L, and reset m = 1*/
+            Mat t=C.clone();
+            /*C(t)=C(t)-(d/b)*x^m*B(t)    //t stands for the iteration times
+                 *    =C(t)-(d/b)*x^m*C(t-1)
+                 *delta = Sn+ C1*S(n-1) + ... -(d/b)(Sj+ B1*S(j-1) + ...)
+                 */
+            C=gf_poly_add(C,gf_poly_mul(B,scale_coeffi));
+
+            B = t.clone();
+            b=delta;
+
+            L = i + 1 - L;
+            m = 1;
+        }
+
+        else{
+            /*If L equals the actual number of errors, then during the iteration process,
+                 * the discrepancies will become zero before n becomes greater than or equal to 2L.*/
+
+            C = gf_poly_add(C, gf_poly_mul(B,scale_coeffi));
+            m++;
+        }
+
+    }
+    cout<<"len : "<< L<<endl;
+    errors_len=L;
+    /*L is the length of the minimal LFSR for the stream*/
+    cout<<"@@sigma@@"<<endl;
+    cout<<C<<endl;
+    return C;
+}
+
+/*
+     * params @ sigma(error locator) , errors_len(length of sigma -1) , msg_len(length of the block)
+     * return @ error index(the index of the error in current block)
+     * func   @ use Chien's search to calculate the the roots of error locator poly
+     *          and to calculate the index of the error in current block
+     * */
+vector<int > find_errors(const Mat& sigma,const int &errors_len,const int & msg_len){
+    vector <int> error_index;
+    /*optimize to just check the interesting symbols*/
+    for(int i = 0; i < msg_len ; i ++){
+        int index=msg_len-i-1;
+        /* if a^(n-i) is the error postion ,then a^-(n-i) is the root of the poly Sigma
+             * use Chien's search to evaluate the polynomial such that each evaluation only takes constant time
+             */
+        if(gf_poly_eval(sigma,gf_inverse(gf_pow(2,index)))==0){
+            error_index.push_back(index);
+        }
+    }
+    /*print out for debugging*/
+    cout<<"error index : "<<endl;
+    for(int i = 0 ; i<(int)error_index.size();i++)
+        cout<<msg_len-error_index[i]-1<<" ";
+    cout<<endl;
+
+    CV_Assert((int)error_index.size()==errors_len);
+
+    return error_index;
+
+}
+/*
+     * params @ msg_in(the orignial blcok) , synd(syndromes) ,
+     *          e_loc_poly(error locator poly) , error_index(the index of the error)
+     * return @ the corrected block
+     * func   @ use Forney algorithm to correct the errors
+     *  ps :
+     *  Error location polynomial (short for A(x)) = 1 + sigma{lambda(i) * x(i)}
+     *  A(x)'=sigma{i * lambda(i) * x(i-1)}
+     * */
+Mat error_correct(const Mat & msg_in ,const vector<uint8_t>&synd,const Mat & e_loc_poly,const vector<int> &error_index){
+
+    int border = synd.size();
+    Mat msg_out = msg_in.clone() ;
+    int err_len=error_index.size();
+    //int total_len = msg_out.cols;
+
+    Mat syndrome(1,synd.size(),CV_8UC1,Scalar(0));
+    /*change syndrom to mat from calculation*/
+    //cout<<"syndrome : "<<endl;
+    for(int i = 1 ; i < border ; i++){
+        syndrome.ptr(0)[i]=synd[i];//border-1-
+        //cout<<(int)synd[i]<<" ";
+    }
+    //cout<<endl;
+
+    /*First calculate the error evaluator polynomial*/
+    Mat Omega= gf_poly_mul(syndrome,e_loc_poly);
+    //cout<<"remainder1 : \n"<<show_poly(Omiga)<<endl;
+
+    /*get rid of the first zero ! */
+    Omega = Omega(Range(0,1),Range(1,synd.size()));
+
+//        cout<<"Omega : "<<endl;
+//        for(int i = 0 ; i < Omega.cols ; i++){
+//            cout<<(int)Omega.ptr(0)[i]<<" ";
 //        }
-//
-//
-//        cout<<"@@sigma@@"<<endl;
-//        cout<<c<<endl;
-//    }
+//        cout<<endl;
+
+    /*Second use Forney algorithm to compute the magnitudes*/
+
+    /* 1. calculate formal derivative as the denominator */
+    Mat err_location_poly_derivative(1,e_loc_poly.cols,CV_8UC1,Scalar(0));
+
+    /*The operator · represents ordinary multiplication (repeated addition in the finite field)!!!
+         * that's why the even items are always zero!*/
+    for(int i = 1;i < err_len; i++){
+        int tmp = e_loc_poly.ptr(0)[i];
+        err_location_poly_derivative.ptr(0)[i-1]=tmp;
+        for(int j = 1; j < i ; j++)
+            err_location_poly_derivative.ptr(0)[i-1]^=tmp;
+    }
+    /* 2. calculate Omega as the numerator*/
+    for (int i = 0; i < err_len; i++) {
+        //int root = total_len-error_index[i]-1;
+        uint8_t xinv = gf_inverse(gf_pow(2, error_index[i]));
+        cout<<" xinv : "<<int(xinv)<<endl;
+
+        uint8_t denominator = gf_poly_eval(err_location_poly_derivative,xinv);
+
+        uint8_t numerator = gf_poly_eval(Omega, xinv);
+
+        /*divded them to get the magnitude*/
+        uint8_t error_magnitude = gf_div(numerator,denominator);
+
+        cout<<(int)numerator<<"/"<<(int)denominator<<" = "<<(int)error_magnitude<<endl;
+
+        msg_out.ptr(0)[error_index[i]]^=error_magnitude;
+        //cout<<ecc->bs - i - 1<<" ";
+        //data[ecc->bs - i - 1] ^= error;
+    }
+    cout<<msg_in<<endl;
+    cout<<msg_out<<endl;
+
+    return msg_out;
+}
 
 /* correct_block
- * params @
+ * params @ num(the number of the current block)  head(the beginning index of NUM^th block)
+ * func   @ correct NUM^th block
  * */
 decode_error  QRDecode::correct_block(int num , int head){
     const version_info *ver =&version_db[version];
@@ -2034,9 +2287,9 @@ decode_error  QRDecode::correct_block(int num , int head){
         //ecc_offset=cur_ecc->data_codewords_in_G2;
         cur_length=cur_ecc->data_codewords_in_G2+ecc_num;
     }
-
-    uint8_t synd[MAX_POLY];
-    memset(synd,0, sizeof(uint8_t)*MAX_POLY);
+    vector<uint8_t>synd;
+    //uint8_t synd[MAX_POLY];
+    //memset(synd,0, sizeof(uint8_t)*MAX_POLY);
 
     /*get the block for block_syndromes*/
     Mat cur_block(1,cur_length,CV_8UC1,Scalar(0));
@@ -2048,8 +2301,16 @@ decode_error  QRDecode::correct_block(int num , int head){
     //cout<<"cur_length : "<<cur_length<<"\n"<<cur_block<<endl;
     if (!block_syndromes(cur_block,ecc_num,synd))
         return SUCCESS;
+    int errors_len=0;
+    Mat sigma=find_error_locator(synd,errors_len);
 
-    //find_error_locator(synd,ecc_num);
+    vector <int> error_index = find_errors(sigma,errors_len,cur_length);
+
+    Mat corrected_block = error_correct(cur_block ,synd, sigma, error_index);
+
+    /*check once again*/
+    if (block_syndromes(corrected_block,ecc_num,synd))
+        return ERROR_DATA_ECC;
     return SUCCESS;
 }
 
@@ -2125,11 +2386,14 @@ void QRDecode::rearrange_blocks(){
             if(show)
                 cout<<std::setw(3)<<(int)orignal_data[offset_ecc+i+j*offset]<<" ";
         }
+
         decode_error err= correct_block(i,cur_block_head);
+
         cur_block_head=index;
         if(err)
             return;
     }
+    //cv::waitKey();
     cout<<endl;
 //        if(show) {
 //            cout << "after" << endl;
@@ -2143,10 +2407,9 @@ void QRDecode::rearrange_blocks(){
 }
 
 
-
 void QRDecode::init(const Mat &src, const vector<Point2f> &points)
 {
-    //CV_TRACE_FUNCTION();
+    CV_TRACE_FUNCTION();
     vector<Point2f> bbox = points;
     original = src.clone();
     intermediate = Mat::zeros(original.size(), CV_8UC1);
@@ -2159,7 +2422,7 @@ void QRDecode::init(const Mat &src, const vector<Point2f> &points)
 
 bool QRDecode::updatePerspective()
 {
-    //CV_TRACE_FUNCTION();
+    CV_TRACE_FUNCTION();
     const Point2f centerPt = QRDetect::intersectionLines(original_points[0], original_points[2],
                                                          original_points[1], original_points[3]);
     if (cvIsNaN(centerPt.x) || cvIsNaN(centerPt.y))
@@ -2208,7 +2471,7 @@ inline Point computeOffset(const vector<Point>& v)
 
 bool QRDecode::versionDefinition()
 {
-    //CV_TRACE_FUNCTION();
+    CV_TRACE_FUNCTION();
     LineIterator line_iter(intermediate, Point2f(0, 0), Point2f(test_perspective_size, test_perspective_size));
     Point black_point = Point(0, 0);
     for(int j = 0; j < line_iter.count; j++, ++line_iter)
@@ -2274,8 +2537,8 @@ bool QRDecode::versionDefinition()
 
 bool QRDecode::samplingForVersion()
 {
-    //CV_TRACE_FUNCTION();
-    const double multiplyingFactor = (version < 3)  ? 1 :
+    CV_TRACE_FUNCTION();
+  const double multiplyingFactor = (version < 3)  ? 1 :
                                      (version == 3) ? 1.5 :
                                      version * (5 + version - 4);
     const Size newFactorSize(
@@ -2330,6 +2593,33 @@ bool QRDecode::samplingForVersion()
 
 bool QRDecode::decodingProcess()
 {
+#ifdef HAVE_QUIRC
+    if (straight.empty()) { return false; }
+
+    quirc_code qr_code;
+    memset(&qr_code, 0, sizeof(qr_code));
+
+    qr_code.size = straight.size().width;
+    for (int x = 0; x < qr_code.size; x++)
+    {
+        for (int y = 0; y < qr_code.size; y++)
+        {
+            int position = y * qr_code.size + x;
+            qr_code.cell_bitmap[position >> 3]
+                |= straight.ptr<uint8_t>(y)[x] ? 0 : (1 << (position & 7));
+        }
+    }
+
+    quirc_data qr_code_data;
+    quirc_decode_error_t errorCode = quirc_decode(&qr_code, &qr_code_data);
+    if (errorCode != 0) { return false; }
+
+    for (int i = 0; i < qr_code_data.payload_len; i++)
+    {
+        result_info += qr_code_data.payload[i];
+    }
+    return true;
+#else
     decode_error err;
     uint16_t my_format=0;
     if (straight.empty()) { return false; }
@@ -2372,15 +2662,10 @@ bool QRDecode::decodingProcess()
 
     unmask_data();
 
-
-
     read_data();
 
     rearrange_blocks();
     //cv::waitKey();
-
-
-
 
     if (err != 0) { return false; }
 
@@ -2389,15 +2674,26 @@ bool QRDecode::decodingProcess()
 //        result_info += qr_code_data.payload[i];
 //    }
     return true;
+#endif
 }
 
 bool QRDecode::fullDecodingProcess()
 {
+#ifdef HAVE_QUIRC
     if (!updatePerspective())  { return false; }
     if (!versionDefinition())  { return false; }
     if (!samplingForVersion()) { return false; }
     if (!decodingProcess())    { return false; }
     return true;
+#else
+    if (!updatePerspective())  { return false; }
+    if (!versionDefinition())  { return false; }
+    if (!samplingForVersion()) { return false; }
+    if (!decodingProcess())    { return false; }
+    return true;
+    std::cout << "Library QUIRC is not linked. No decoding is performed. Take it to the OpenCV repository." << std::endl;
+    return false;
+#endif
 }
 
 std::string QRCodeDetector::decode(InputArray in, InputArray points,
@@ -2494,16 +2790,16 @@ protected:
     {
     public:
         ParallelSearch(vector< vector< Point2f > >& true_points_group_,
-                       vector< vector< Point2f > >& loc_, int iter_, vector<int>& end_,
-                       vector< vector< Vec3i > >& all_points_,
-                       QRDetectMulti& cl_)
-                :
-                true_points_group(true_points_group_),
-                loc(loc_),
-                iter(iter_),
-                end(end_),
-                all_points(all_points_),
-                cl(cl_)
+                vector< vector< Point2f > >& loc_, int iter_, vector<int>& end_,
+                vector< vector< Vec3i > >& all_points_,
+                QRDetectMulti& cl_)
+        :
+            true_points_group(true_points_group_),
+            loc(loc_),
+            iter(iter_),
+            end(end_),
+            all_points(all_points_),
+            cl(cl_)
         {
         }
         void operator()(const Range& range) const CV_OVERRIDE;
@@ -2572,10 +2868,10 @@ void QRDetectMulti::ParallelSearch::operator()(const Range& range) const
                             break;
                     }
                     if ((!flag_for_break)
-                        && (cl.localization_points[x].size() == 3)
-                        && (cl.computeTransformationPoints(x))
-                        && (cl.checkPointsInsideQuadrangle(cl.transformation_points[x]))
-                        && (cl.checkPoints(cl.transformation_points[x])))
+                            && (cl.localization_points[x].size() == 3)
+                            && (cl.computeTransformationPoints(x))
+                            && (cl.checkPointsInsideQuadrangle(cl.transformation_points[x]))
+                            && (cl.checkPoints(cl.transformation_points[x])))
                     {
                         for (int l = 0; l < 3; l++)
                         {
@@ -2602,7 +2898,7 @@ void QRDetectMulti::ParallelSearch::operator()(const Range& range) const
 
 void QRDetectMulti::init(const Mat& src, double eps_vertical_, double eps_horizontal_)
 {
-    //CV_TRACE_FUNCTION();
+    CV_TRACE_FUNCTION();
 
     CV_Assert(!src.empty());
     const double min_side = std::min(src.size().width, src.size().height);
@@ -2639,7 +2935,7 @@ void QRDetectMulti::init(const Mat& src, double eps_vertical_, double eps_horizo
 
 void QRDetectMulti::fixationPoints(vector<Point2f> &local_point)
 {
-    //CV_TRACE_FUNCTION();
+    CV_TRACE_FUNCTION();
 
     Point2f v0(local_point[1] - local_point[2]);
     Point2f v1(local_point[0] - local_point[2]);
@@ -2663,7 +2959,7 @@ void QRDetectMulti::fixationPoints(vector<Point2f> &local_point)
 
     size_t i_min_cos =
             (cos_angles[0] < cos_angles[1] && cos_angles[0] < cos_angles[2]) ? 0 :
-            (cos_angles[1] < cos_angles[0] && cos_angles[1] < cos_angles[2]) ? 1 : 2;
+                    (cos_angles[1] < cos_angles[0] && cos_angles[1] < cos_angles[2]) ? 1 : 2;
 
     size_t index_max = 0;
     double max_area = std::numeric_limits<double>::min();
@@ -2810,8 +3106,8 @@ bool QRDetectMulti::checkPointsInsideTriangle(const vector<Point2f>& triangle_po
         if (pointPolygonTest( triangle_points, resized_loc_points[i], true ) > 0)
         {
             if ((abs(resized_loc_points[i].x - triangle_points[0].x) > eps)
-                && (abs(resized_loc_points[i].x - triangle_points[1].x) > eps)
-                && (abs(resized_loc_points[i].x - triangle_points[2].x) > eps))
+                    && (abs(resized_loc_points[i].x - triangle_points[1].x) > eps)
+                    && (abs(resized_loc_points[i].x - triangle_points[2].x) > eps))
             {
                 return false;
             }
@@ -2962,8 +3258,8 @@ int QRDetectMulti::findNumberLocalizationPoints(vector<Point2f>& tmp_localizatio
 
     Mat labels;
     kmeans(list_lines_y, num_points, labels,
-           TermCriteria( TermCriteria::EPS + TermCriteria::COUNT, 10, 0.1),
-           num_points, KMEANS_PP_CENTERS, tmp_localization_points);
+            TermCriteria( TermCriteria::EPS + TermCriteria::COUNT, 10, 0.1),
+            num_points, KMEANS_PP_CENTERS, tmp_localization_points);
     bin_barcode_temp = bin_barcode.clone();
     if (purpose == SHRINKING)
     {
@@ -2991,7 +3287,7 @@ int QRDetectMulti::findNumberLocalizationPoints(vector<Point2f>& tmp_localizatio
 }
 
 void QRDetectMulti::findQRCodeContours(vector<Point2f>& tmp_localization_points,
-                                       vector< vector< Point2f > >& true_points_group, const int& num_qrcodes)
+                                      vector< vector< Point2f > >& true_points_group, const int& num_qrcodes)
 {
     Mat gray, blur_image, threshold_output;
     Mat bar = barcode;
@@ -3019,8 +3315,8 @@ void QRDetectMulti::findQRCodeContours(vector<Point2f>& tmp_localization_points,
     if (all_contours_points.size() < size_t(num_qrcodes))
         count_contours = (int)all_contours_points.size();
     kmeans(all_contours_points, count_contours, qrcode_labels,
-           TermCriteria( TermCriteria::EPS + TermCriteria::COUNT, 10, 0.1),
-           count_contours, KMEANS_PP_CENTERS, clustered_localization_points);
+          TermCriteria( TermCriteria::EPS + TermCriteria::COUNT, 10, 0.1),
+          count_contours, KMEANS_PP_CENTERS, clustered_localization_points);
 
     vector< vector< Point2f > > qrcode_clusters(count_contours);
     for (int i = 0; i < count_contours; i++)
@@ -3068,7 +3364,7 @@ void QRDetectMulti::findQRCodeContours(vector<Point2f>& tmp_localization_points,
     vector<Point2f> copy;
     for (size_t j = 0; j < tmp_localization_points.size(); j++)
     {
-        if (tmp_localization_points[j].x != -1)
+       if (tmp_localization_points[j].x != -1)
             copy.push_back(tmp_localization_points[j]);
     }
     tmp_localization_points = copy;
@@ -3148,7 +3444,7 @@ bool QRDetectMulti::checkSets(vector<vector<Point2f> >& true_points_group, vecto
     for (size_t i = 0; i < true_points_group.size(); i++)
         end[i] = iter + set_size[i];
     ParallelSearch parallelSearch(true_points_group,
-                                  true_points_group_copy, iter, end, all_points, *this);
+            true_points_group_copy, iter, end, all_points, *this);
     parallel_for_(Range(0, (int)true_points_group.size()), parallelSearch);
 
     return true;
@@ -3211,7 +3507,7 @@ void QRDetectMulti::deleteUsedPoints(vector<vector<Point2f> >& true_points_group
 
 bool QRDetectMulti::localization()
 {
-    //CV_TRACE_FUNCTION();
+    CV_TRACE_FUNCTION();
     vector<Point2f> tmp_localization_points;
     int num_points = findNumberLocalizationPoints(tmp_localization_points);
     if (num_points < 3)
@@ -3221,25 +3517,25 @@ bool QRDetectMulti::localization()
     findQRCodeContours(tmp_localization_points, true_points_group, num_qrcodes);
     for (int q = 0; q < num_qrcodes; q++)
     {
-        vector<vector<Point2f> > loc;
-        size_t iter = localization_points.size();
+       vector<vector<Point2f> > loc;
+       size_t iter = localization_points.size();
 
-        if (!checkSets(true_points_group, loc, tmp_localization_points))
+       if (!checkSets(true_points_group, loc, tmp_localization_points))
             break;
-        deleteUsedPoints(true_points_group, loc, tmp_localization_points);
-        if ((localization_points.size() - iter) == 1)
-            q--;
-        if (((localization_points.size() - iter) == 0) && (tmp_localization_points.size() == 0) && (true_points_group.size() == 1) )
+       deleteUsedPoints(true_points_group, loc, tmp_localization_points);
+       if ((localization_points.size() - iter) == 1)
+           q--;
+       if (((localization_points.size() - iter) == 0) && (tmp_localization_points.size() == 0) && (true_points_group.size() == 1) )
             break;
     }
     if ((transformation_points.size() == 0) || (localization_points.size() == 0))
-        return false;
+       return false;
     return true;
 }
 
 bool QRDetectMulti::computeTransformationPoints(const size_t cur_ind)
 {
-    //CV_TRACE_FUNCTION();
+    CV_TRACE_FUNCTION();
 
     if (localization_points[cur_ind].size() != 3)
     {
@@ -3267,8 +3563,8 @@ bool QRDetectMulti::computeTransformationPoints(const size_t cur_ind)
                 {
                     // TODO avoid drawing functions
                     floodFill(bin_barcode, mask,
-                              Point(index + 1, localization_point_y), 255,
-                              0, Scalar(), Scalar(), FLOODFILL_MASK_ONLY);
+                            Point(index + 1, localization_point_y), 255,
+                            0, Scalar(), Scalar(), FLOODFILL_MASK_ONLY);
                     break;
                 }
             }
@@ -3363,8 +3659,8 @@ bool QRDetectMulti::computeTransformationPoints(const size_t cur_ind)
     tmp_transformation_points.push_back(up_left_edge_point);
     tmp_transformation_points.push_back(up_right_edge_point);
     tmp_transformation_points.push_back(intersectionLines(
-            down_left_edge_point, down_max_delta_point,
-            up_right_edge_point, up_max_delta_point));
+                    down_left_edge_point, down_max_delta_point,
+                    up_right_edge_point, up_max_delta_point));
     transformation_points[cur_ind] = tmp_transformation_points;
 
     vector<Point2f> quadrilateral = getQuadrilateral(transformation_points[cur_ind]);
@@ -3404,9 +3700,9 @@ class ParallelDecodeProcess : public ParallelLoopBody
 {
 public:
     ParallelDecodeProcess(Mat& inarr_, vector<QRDecode>& qrdec_, vector<std::string>& decoded_info_,
-                          vector<Mat>& straight_barcode_, vector< vector< Point2f > >& src_points_)
-            : inarr(inarr_), qrdec(qrdec_), decoded_info(decoded_info_)
-            , straight_barcode(straight_barcode_), src_points(src_points_)
+            vector<Mat>& straight_barcode_, vector< vector< Point2f > >& src_points_)
+        : inarr(inarr_), qrdec(qrdec_), decoded_info(decoded_info_)
+        , straight_barcode(straight_barcode_), src_points(src_points_)
     {
         // nothing
     }
@@ -3461,7 +3757,7 @@ bool QRCodeDetector::decodeMulti(
         InputArray points,
         CV_OUT std::vector<cv::String>& decoded_info,
         OutputArrayOfArrays straight_qrcode
-) const
+    ) const
 {
     Mat inarr;
     if (!checkQRInputImage(img, inarr))
@@ -3500,8 +3796,8 @@ bool QRCodeDetector::decodeMulti(
             Mat tmp_straight_qrcode;
             tmp_straight_qrcodes.push_back(tmp_straight_qrcode);
             straight_barcode[i].convertTo(((OutputArray)tmp_straight_qrcodes[i]),
-                                          ((OutputArray)tmp_straight_qrcodes[i]).fixedType() ?
-                                          ((OutputArray)tmp_straight_qrcodes[i]).type() : CV_32FC2);
+                                             ((OutputArray)tmp_straight_qrcodes[i]).fixedType() ?
+                                             ((OutputArray)tmp_straight_qrcodes[i]).type() : CV_32FC2);
         }
         straight_qrcode.createSameSize(tmp_straight_qrcodes, CV_32FC2);
         straight_qrcode.assign(tmp_straight_qrcodes);
@@ -3509,7 +3805,7 @@ bool QRCodeDetector::decodeMulti(
     decoded_info.clear();
     for (size_t i = 0; i < info.size(); i++)
     {
-        decoded_info.push_back(info[i]);
+       decoded_info.push_back(info[i]);
     }
     if (!decoded_info.empty())
         return true;
@@ -3522,7 +3818,7 @@ bool QRCodeDetector::detectAndDecodeMulti(
         CV_OUT std::vector<cv::String>& decoded_info,
         OutputArray points_,
         OutputArrayOfArrays straight_qrcode
-) const
+    ) const
 {
     Mat inarr;
     if (!checkQRInputImage(img, inarr))
@@ -3545,4 +3841,3 @@ bool QRCodeDetector::detectAndDecodeMulti(
 }
 
 }  // namespace
-
