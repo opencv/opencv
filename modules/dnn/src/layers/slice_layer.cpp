@@ -295,6 +295,8 @@ public:
                 CV_CheckEQ(range[d].size(), (int)output.size[d], "");
             }
 
+            const size_t param_LIMIT_BLOCK_SIZE_PER_WG = WSZ * 64;
+
             int block_dims = 0;
             size_t block_size = elemSize;
             for (int i = dims - 1; i >= 0; --i)
@@ -303,12 +305,14 @@ public:
                     break;
                 block_size *= output.size[i];
                 block_dims++;
+                if (block_size >= param_LIMIT_BLOCK_SIZE_PER_WG)
+                    break;
             }
 
             const size_t total = output.total() * elemSize;
             size_t num_blocks = total / block_size;
 
-            if ((num_blocks <= 8 && block_size >= WSZ * 4) || (block_size >= WSZ * 64))
+            if ((num_blocks <= 8 && block_size >= WSZ * 4) || (block_size >= param_LIMIT_BLOCK_SIZE_PER_WG))
             {
                 // use 1D copy mode
                 opts += cv::format(" -DUSE_COPY_1D=1");
