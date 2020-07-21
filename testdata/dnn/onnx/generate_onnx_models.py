@@ -831,3 +831,19 @@ save_data_and_model_multy_inputs("upsample_unfused_two_inputs_opset11_torch1.4",
 x = Variable(torch.randn(1, 2, 3, 4))
 model = FrozenBatchNorm2d(2)
 save_data_and_model("batch_norm_subgraph", x, model)
+
+ class GatherScalar(nn.Module):
+    def forward(self, x):
+        return x[1]
+
+x = Variable(torch.randn(2))
+model = GatherScalar()
+save_data_and_model("gather_scalar", x, model)
+
+ class Gather(nn.Module):
+    def forward(self, x):
+        return x[..., 1]
+
+x = Variable(torch.randn(2, 2, 2, 2))
+model = Gather()
+save_data_and_model("gather", x, model)
