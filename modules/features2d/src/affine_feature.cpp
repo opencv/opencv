@@ -145,7 +145,7 @@ public:
     skewedDetectAndCompute(
         const std::vector<float>& _tilts,
         const std::vector<float>& _rolls,
-        std::vector<std::vector<KeyPoint>>& _keypointsCollection,
+        std::vector< std::vector<KeyPoint> >& _keypointsCollection,
         std::vector<Mat>& _descriptorCollection,
         const Mat& _image,
         const Mat& _mask,
@@ -263,7 +263,7 @@ private:
 
     const std::vector<float>& tilts;
     const std::vector<float>& rolls;
-    std::vector<std::vector<KeyPoint>>& keypointsCollection;
+    std::vector< std::vector<KeyPoint> >& keypointsCollection;
     std::vector<Mat>& descriptorCollection;
     const Mat& image;
     const Mat& mask;
