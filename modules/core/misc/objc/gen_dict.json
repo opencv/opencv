@@ -55,27 +55,28 @@
         }
     },
     "func_arg_fix" : {
-        "randu"    : { "low"  : {"ctype" : "double"},
-                       "high" : {"ctype" : "double"} },
-        "randn"    : { "mean" : {"ctype" : "double"},
-                       "stddev" : {"ctype"  : "double"} },
-        "inRange"  : { "lowerb" : {"ctype" : "Scalar"},
-                       "upperb" : {"ctype" : "Scalar"} },
-        "boundingRect"   : { "points" : {"ctype" : "vector_Point"} },
-        "hconcat" : { "src" : {"ctype" : "vector_Mat"} },
-        "vconcat" : { "src" : {"ctype" : "vector_Mat"} },
-        "checkRange" : {"pos" : {"ctype" : "*"} },
-        "meanStdDev" : { "mean"   : {"ctype" : "vector_double"},
-                         "stddev" : {"ctype" : "vector_double"} },
-        "mixChannels" : { "dst" : {"attrib" : []} },
-        "rotate" : { "rotateCode" : {"ctype" : "RotateFlags"} },
-        "norm" : { "normType" : {"ctype" : "NormTypes"} },
-        "batchDistance" : { "normType" : {"ctype" : "NormTypes"} },
-        "normalize" : { "norm_type" : {"ctype" : "NormTypes"} },
-        "compare" : { "cmpop" : {"ctype" : "CmpTypes"} },
-        "copyMakeBorder" : { "borderType" : {"ctype" : "BorderTypes"} },
-        "borderInterpolate" : { "borderType" : {"ctype" : "BorderTypes"} },
-        "(void)divide:(double)scale src2:(Mat*)src2 dst:(Mat*)dst dtype:(int)dtype" : { "src2" : {"name" : "src"} }
+        "Core": {
+            "randu"    : { "low"  : {"ctype" : "double"},
+                           "high" : {"ctype" : "double"} },
+            "randn"    : { "mean" : {"ctype" : "double"},
+                           "stddev" : {"ctype"  : "double"} },
+            "inRange"  : { "lowerb" : {"ctype" : "Scalar"},
+                           "upperb" : {"ctype" : "Scalar"} },
+            "hconcat" : { "src" : {"ctype" : "vector_Mat"} },
+            "vconcat" : { "src" : {"ctype" : "vector_Mat"} },
+            "checkRange" : {"pos" : {"ctype" : "*"} },
+            "meanStdDev" : { "mean"   : {"ctype" : "vector_double"},
+                             "stddev" : {"ctype" : "vector_double"} },
+            "mixChannels" : { "dst" : {"attrib" : []} },
+            "rotate" : { "rotateCode" : {"ctype" : "RotateFlags"} },
+            "norm" : { "normType" : {"ctype" : "NormTypes"} },
+            "batchDistance" : { "normType" : {"ctype" : "NormTypes"} },
+            "normalize" : { "norm_type" : {"ctype" : "NormTypes"} },
+            "compare" : { "cmpop" : {"ctype" : "CmpTypes"} },
+            "copyMakeBorder" : { "borderType" : {"ctype" : "BorderTypes"} },
+            "borderInterpolate" : { "borderType" : {"ctype" : "BorderTypes"} },
+            "(void)divide:(double)scale src2:(Mat*)src2 dst:(Mat*)dst dtype:(int)dtype" : { "src2" : {"name" : "src"} }
+        }
     },
     "type_dict" : {
         "Algorithm": {
@@ -227,7 +228,9 @@
             "from_cpp": "[Double3 fromNative:%(n)s]"
         },
         "c_string": {
-            "objc_type": "NSString*"
+            "objc_type": "NSString*",
+            "to_cpp": "%(n)s.UTF8String",
+            "from_cpp": "[NSString stringWithUTF8String:%(n)s]"
         },
         "vector_DMatch": {
             "objc_type": "DMatch*",
@@ -354,6 +357,18 @@
         "vector_vector_char": {
             "objc_type": "ByteVector*",
             "v_type": "ByteVector"
+        },
+        "vector_vector_int": {
+            "objc_type": "IntVector*",
+            "v_type": "IntVector"
+        },
+        "vector_vector_float": {
+            "objc_type": "FloatVector*",
+            "v_type": "FloatVector"
+        },
+        "vector_vector_double": {
+            "objc_type": "DoubleVector*",
+            "v_type": "DoubleVector"
         },
         "ByteVector": {
             "objc_type": "ByteVector*",
