@@ -16,7 +16,8 @@ static void help(char** argv)
     << "And this is a C++ version of samples/python/asift.py\n"
     << "Usage: " << argv[0] << "\n"
     << "     [ --feature=<sift|orb|brisk> ]         # Feature to use.\n"
-    << "     [ --flann ]                                 # use Flann-based matcher instead of bruteforce.\n"
+    << "     [ --flann ]                            # use Flann-based matcher instead of bruteforce.\n"
+    << "     [ --maxlines=<number(50 as default)> ] # The maximum number of lines in visualizing the matching result.\n"
     << "     [ --image1=<image1(aero1.jpg as default)> ]\n"
     << "     [ --image2=<image2(aero3.jpg as default)> ] # Path to images to compare."
     << endl;
@@ -34,15 +35,25 @@ int main(int argc, char** argv)
         "{help h ||}"
         "{feature|brisk|}"
         "{flann||}"
-        "{@image1|aero1.jpg|}{@image2|aero3.jpg|}");
+        "{maxlines|50|}"
+        "{image1|aero1.jpg|}{image2|aero3.jpg|}");
     if (parser.has("help"))
     {
         help(argv);
         return 0;
     }
+    string feature = parser.get<string>("feature");
     bool useFlann = parser.has("flann");
-    fileName.push_back(samples::findFile(parser.get<string>(0)));
-    fileName.push_back(samples::findFile(parser.get<string>(1)));
+    int maxlines = parser.get<int>("maxlines");
+    fileName.push_back(samples::findFile(parser.get<string>("image1")));
+    fileName.push_back(samples::findFile(parser.get<string>("image2")));
+    if (!parser.check())
+    {
+        parser.printErrors();
+        cout << "See --help (or missing '=' between argument name and value?)" << endl;
+        return 1;
+    }
+
     Mat img1 = imread(fileName[0], IMREAD_GRAYSCALE);
     Mat img2 = imread(fileName[1], IMREAD_GRAYSCALE);
     if (img1.empty())
@@ -56,7 +67,6 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    string feature = parser.get<string>("feature");
     Ptr<Feature2D> backend;
     Ptr<DescriptorMatcher> matcher;
 
@@ -106,6 +116,7 @@ int main(int argc, char** argv)
     // match and draw
     vector< vector<DMatch> > rawMatches;
     vector<Point2f> p1, p2;
+    vector<float> distances;
     matcher->knnMatch(desc1, desc2, rawMatches, 2);
     // filter_matches
     for (size_t i = 0; i < rawMatches.size(); i++)
@@ -113,27 +124,34 @@ int main(int argc, char** argv)
         const vector<DMatch>& m = rawMatches[i];
         if (m.size() == 2 && m[0].distance < m[1].distance * 0.75)
         {
-            // matches.push_back(m[0]);
             p1.push_back(kp1[m[0].queryIdx].pt);
             p2.push_back(kp2[m[0].trainIdx].pt);
+            distances.push_back(m[0].distance);
         }
     }
     vector<uchar> status;
-    vector< pair<const Point2f&, const Point2f&> > pointPairs;
+    vector< pair<Point2f, Point2f> > pointPairs;
     Mat H = findHomography(p1, p2, status, RANSAC);
     int inliers = 0;
     for (size_t i = 0; i < status.size(); i++)
     {
         if (status[i])
         {
+            pointPairs.push_back(make_pair(p1[i], p2[i]));
+            distances[inliers] = distances[i];
+            // CV_Assert(inliers <= (int)i);
             inliers++;
-            pointPairs.emplace_back(p1[i], p2[i]);
         }
     }
+    distances.resize(inliers);
+
     cout << "execution time: " << fixed << setprecision(2) << (timer()-start)*1000 << " ms" << endl;
     cout << inliers << " / " << status.size() << " inliers/matched" << endl;
 
     cout << "visualizing..." << endl;
+    vector<int> indices(inliers);
+    cv::sortIdx(distances, indices, SORT_EVERY_ROW+SORT_ASCENDING);
+
     // explore_match
     int h1 = img1.size().height;
     int w1 = img1.size().width;
@@ -144,21 +162,28 @@ int main(int argc, char** argv)
     img2.copyTo(Mat(vis, Rect(w1, 0, w2, h2)));
     cvtColor(vis, vis, COLOR_GRAY2BGR);
 
-    vector<Point2f> corners{{0,0}, {(float)w1,0}, {(float)w1,(float)h1}, {0,(float)h1}};
+    vector<Point2f> corners(4);
+    corners[0] = Point2f(0, 0);
+    corners[1] = Point2f(w1, 0);
+    corners[2] = Point2f(w1, h1);
+    corners[3] = Point2f(0, h1);
     vector<Point2i> icorners;
     perspectiveTransform(corners, corners, H);
     transform(corners, corners, Matx23f(1,0,w1,0,1,0));
     Mat(corners).convertTo(icorners, CV_32S);
-    polylines(vis, {icorners}, true, Scalar(255,255,255));
+    polylines(vis, icorners, true, Scalar(255,255,255));
 
-    for (size_t i = 0; i < pointPairs.size(); i++)
+    for (int i = 0; i < min(inliers, maxlines); i++)
     {
-        const Point2f& p1 = pointPairs[i].first;
-        const Point2f& p2 = pointPairs[i].second;
-        circle(vis, p1, 2, Scalar(0,255,0), -1);
-        circle(vis, p2 + Point2f(w1,0), 2, Scalar(0,255,0), -1);
-        line(vis, p1, p2 + Point2f(w1,0), Scalar(0,255,0));
+        int idx = indices[i];
+        const Point2f& pi1 = pointPairs[idx].first;
+        const Point2f& pi2 = pointPairs[idx].second;
+        circle(vis, pi1, 2, Scalar(0,255,0), -1);
+        circle(vis, pi2 + Point2f(w1,0), 2, Scalar(0,255,0), -1);
+        line(vis, pi1, pi2 + Point2f(w1,0), Scalar(0,255,0));
     }
+    if (inliers > maxlines)
+        cout << "only " << maxlines << " inliers are visualized" << endl;
     imshow("affine find_obj", vis);
 
     // Mat vis2 = Mat::zeros(max(h1, h2), w1+w2, CV_8U);
