@@ -86,7 +86,8 @@ public:
             return;
         }
 
-        std::vector<Point3f> corners;
+        std::vector<Point2f> corners;
+        std::vector<float> corners_values;
 
         if (_image.isUMat())
         {
@@ -96,7 +97,7 @@ public:
             else
                 ugrayImage = _image.getUMat();
 
-            goodFeaturesToTrack( ugrayImage, corners, nfeatures, qualityLevel, minDistance, _mask,
+            goodFeaturesToTrack( ugrayImage, corners, corners_values, nfeatures, qualityLevel, minDistance, _mask,
                                  blockSize, gradSize, useHarrisDetector, k );
         }
         else
@@ -105,15 +106,16 @@ public:
             if( image.type() != CV_8U )
                 cvtColor( image, grayImage, COLOR_BGR2GRAY );
 
-            goodFeaturesToTrack( grayImage, corners, nfeatures, qualityLevel, minDistance, _mask,
+            goodFeaturesToTrack( grayImage, corners, corners_values, nfeatures, qualityLevel, minDistance, _mask,
                                 blockSize, gradSize, useHarrisDetector, k );
         }
 
         keypoints.resize(corners.size());
-        std::vector<Point3f>::const_iterator corner_it = corners.begin();
+        std::vector<Point2f>::const_iterator corner_it = corners.begin();
         std::vector<KeyPoint>::iterator keypoint_it = keypoints.begin();
-        for( ; corner_it != corners.end() && keypoint_it != keypoints.end(); ++corner_it, ++keypoint_it )
-            *keypoint_it = KeyPoint( *corner_it, (float)blockSize);
+        std::vector<float>::iterator corners_values_it = corners_values.begin();
+        for( ; corner_it != corners.end() && keypoint_it != keypoints.end() && corners_values_it != corners_values.end(); ++corner_it, ++keypoint_it, ++corners_values_it )
+            *keypoint_it = KeyPoint( *corner_it, (float)blockSize, -1, *corners_values_it);
 
     }
 
