@@ -66,7 +66,7 @@ static void
 test_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
                               int maxCorners, double qualityLevel, double minDistance,
                               InputArray _mask, int blockSize, int gradientSize,
-                              bool useHarrisDetector, double harrisK )
+                              bool useHarrisDetector, double harrisK, OutputArray _corners_values)
 {
 
     CV_Assert( qualityLevel > 0 && minDistance >= 0 && maxCorners >= 0 );
@@ -74,7 +74,6 @@ test_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
 
 
     Mat image = _image.getMat(), mask = _mask.getMat();
-    int aperture_size = gradientSize;
     int borderType = BORDER_DEFAULT;
 
     Mat eig, tmp, tt;
@@ -113,7 +112,8 @@ test_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
         }
     }
 
-    vector<Point3f> corners;
+    vector<Point2f> corners;
+    vector<float> corners_values;
     size_t i, j, total = tmpCorners.size(), ncorners = 0;
 
     std::sort( tmpCorners.begin(), tmpCorners.end(), greaterThanPtr() );
@@ -183,7 +183,8 @@ test_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
             {
                 grid[y_cell*grid_width + x_cell].push_back(Point2f((float)x, (float)y));
 
-                corners.push_back(Point3f((float)x, (float)y, eig.at<float>(y, x)));
+                corners.push_back(Point2f((float)x, (float)y));
+                corners_values.push_back(eig.at<float>(y, x));
                 ++ncorners;
 
                 if( maxCorners > 0 && (int)ncorners == maxCorners )
@@ -199,14 +200,17 @@ test_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
             int y = (int)(ofs / eig.step);
             int x = (int)((ofs - y*eig.step)/sizeof(float));
 
-            corners.push_back(Point3f((float)x, (float)y, eig.at<float>(y, x)));
+            corners.push_back(Point2f((float)x, (float)y));
+            corners_values.push_back(eig.at<float>(y, x));
             ++ncorners;
+
             if( maxCorners > 0 && (int)ncorners == maxCorners )
                 break;
         }
     }
 
     Mat(corners).convertTo(_corners, _corners.fixedType() ? _corners.type() : CV_32F);
+    Mat(corners_values).convertTo(_corners_values, _corners_values.fixedType() ? _corners_values.type() : CV_32F);
 
 }
 
@@ -229,8 +233,10 @@ protected:
     Mat mask;
 
     int maxCorners;
-    vector<Point3f> corners;
-    vector<Point3f> Refcorners;
+    vector<Point2f> corners;
+    vector<float> corners_values;
+    vector<Point2f> Refcorners;
+    vector<float> Refcorners_values;
     double qualityLevel;
     double minDistance;
     int blockSize;
@@ -305,7 +311,8 @@ void CV_GoodFeatureToTTest::run_func()
                blockSize,
                gradientSize,
                useHarrisDetector,
-               k );
+               k,
+               corners_values);
     }
     else
     {
@@ -323,7 +330,8 @@ void CV_GoodFeatureToTTest::run_func()
                blockSize,
                gradientSize,
                useHarrisDetector,
-               k );
+               k,
+               corners_values);
     }
 }
 
@@ -348,7 +356,8 @@ int CV_GoodFeatureToTTest::validate_test_results( int test_case_idx )
                blockSize,
                gradientSize,
                useHarrisDetector,
-               k );
+               k,
+               Refcorners_values);
     }
     else
     {
@@ -366,7 +375,8 @@ int CV_GoodFeatureToTTest::validate_test_results( int test_case_idx )
                blockSize,
                gradientSize,
                useHarrisDetector,
-               k );
+               k,
+               Refcorners_values);
     }
 
     double e = cv::norm(corners, Refcorners); // TODO cvtest
@@ -381,8 +391,8 @@ int CV_GoodFeatureToTTest::validate_test_results( int test_case_idx )
         ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
 
         for(int i = 0; i < (int)std::min((unsigned int)(corners.size()), (unsigned int)(Refcorners.size())); i++){
-            if ( (corners[i].x != Refcorners[i].x) || (corners[i].y != Refcorners[i].y) || (corners[i].z != Refcorners[i].z))
-                printf("i = %i X %2.6f Xref %2.6f Y %2.6f Yref %2.6f Z %2.6f Zref %2.6f\n",i,corners[i].x,Refcorners[i].x,corners[i].y,Refcorners[i].y,corners[i].z,Refcorners[i].z);
+            if ( (corners[i].x != Refcorners[i].x) || (corners[i].y != Refcorners[i].y) || (corners_values[i] != Refcorners_values[i]))
+                printf("i = %i X %2.6f Xref %2.6f Y %2.6f Yref %2.6f Values %2.6f Values ref %2.6f\n",i,corners[i].x,Refcorners[i].x,corners[i].y,Refcorners[i].y,corners_values[i],Refcorners_values[i]);
         }
     }
     else
