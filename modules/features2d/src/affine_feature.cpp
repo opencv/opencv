@@ -181,6 +181,9 @@ public:
             if( !do_keypoints )
             {
                 const std::vector<KeyPoint>& keypointsInView = keypointsCollection[a];
+                if( keypointsInView.size() == 0 ) // when there are no keypoints in this affine view
+                    continue;
+
                 std::vector<Point2f> pts_, pts;
                 KeyPoint::convert(keypointsInView, pts_);
                 transform(pts_, pts, pose);
@@ -195,6 +198,11 @@ public:
             if( do_keypoints )
             {
                 // KeyPointsFilter::runByPixelsMask( wKeypoints, warpedMask );
+                if( wKeypoints.size() == 0 )
+                {
+                    keypointsCollection[a].clear();
+                    continue;
+                }
                 std::vector<Point2f> pts_, pts;
                 KeyPoint::convert(wKeypoints, pts_);
                 transform(pts_, pts, invPose);
@@ -313,6 +321,8 @@ void AffineFeature_Impl::detectAndCompute(InputArray _image, InputArray _mask,
         for( size_t i = 0; i < descriptorCollection.size(); i++ )
         {
             const Mat& descs = descriptorCollection[i];
+            if( descs.empty() )
+                continue;
             Mat roi(descriptors, Rect(0, iter, descriptors.cols, descs.rows));
             descs.copyTo(roi);
             iter += descs.rows;
