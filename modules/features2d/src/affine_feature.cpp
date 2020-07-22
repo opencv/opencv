@@ -229,7 +229,7 @@ private:
 
         Mat mask0;
         if( mask.empty() )
-            mask0 = Mat::ones(h, w, CV_8UC1)*255;
+            mask0 = Mat(h, w, CV_8UC1, 255);
         else
             mask0 = mask;
         pose = Matx23f(1,0,0,
