@@ -71,15 +71,17 @@ OCL_PERF_TEST_P(GoodFeaturesToTrackFixture, GoodFeaturesToTrack,
 
     checkDeviceMaxMemoryAllocSize(img.size(), img.type());
 
-    UMat src(img.size(), img.type()), dst(1, maxCorners, CV_32FC3);
+    UMat src(img.size(), img.type()), dst(1, maxCorners, CV_32FC2);
+    std::vector<float> values;
     img.copyTo(src);
 
     declare.in(src, WARMUP_READ).out(dst);
 
     OCL_TEST_CYCLE() cv::goodFeaturesToTrack(src, dst, maxCorners, qualityLevel,
-                                             minDistance, noArray(), 3, 3, harrisDetector, 0.04);
+                                             minDistance, noArray(), 3, 3, harrisDetector, 0.04, values);
 
     SANITY_CHECK(dst);
+    SANITY_CHECK(values);
 }
 
 } } // namespace opencv_test::ocl

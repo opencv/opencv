@@ -896,13 +896,13 @@ CVAPI(void)  cvFindCornerSubPix( const CvArr* image, CvPoint2D32f* corners,
 @see cv::goodFeaturesToTrack
 */
 CVAPI(void)  cvGoodFeaturesToTrack( const CvArr* image, CvArr* eig_image,
-                                    CvArr* temp_image, CvPoint3D32f* corners,
+                                    CvArr* temp_image, CvPoint2D32f* corners,
                                     int* corner_count, double  quality_level,
                                     double  min_distance,
                                     const CvArr* mask CV_DEFAULT(NULL),
                                     int block_size CV_DEFAULT(3),
                                     int use_harris CV_DEFAULT(0),
-                                    double k CV_DEFAULT(0.04) );
+                                    double k CV_DEFAULT(0.04), float* corners_values CV_DEFAULT(NULL));
 
 /** @brief Finds lines on binary image using one of several methods.
 

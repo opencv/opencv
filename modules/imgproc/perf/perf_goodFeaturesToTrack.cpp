@@ -30,15 +30,20 @@ PERF_TEST_P(Image_MaxCorners_QualityLevel_MinDistance_BlockSize_gradientSize_Use
     if (image.empty())
         FAIL() << "Unable to load source image" << filename;
 
-    std::vector<Point3f> corners;
+    std::vector<Point2f> corners;
+    std::vector<float> corners_values;
 
     double minDistance = 1;
-    TEST_CYCLE() goodFeaturesToTrack(image, corners, maxCorners, qualityLevel, minDistance, noArray(), blockSize, gradientSize, useHarrisDetector);
+    TEST_CYCLE() goodFeaturesToTrack(image, corners, maxCorners, qualityLevel, minDistance, noArray(), blockSize, gradientSize, useHarrisDetector, corners_values);
 
     if (corners.size() > 50)
         corners.erase(corners.begin() + 50, corners.end());
 
+    if (corners_values.size() > 50)
+        corners_values.erase(corners_values.begin() + 50, corners_values.end());
+
     SANITY_CHECK(corners);
+    SANITY_CHECK(corners_values);
 }
 
 } // namespace
