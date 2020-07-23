@@ -135,10 +135,17 @@ public:
 
     void apply(detail::ProtoToParamT<Args>... inArgs,
                detail::ProtoToParamT<R> &outArg,
-               GCompileArgs &&args = {})
+               GCompileArgs &&args)
     {
         m_comp.apply(cv::gin(inArgs...), cv::gout(outArg), std::move(args));
     }
+
+    void apply(detail::ProtoToParamT<Args>... inArgs,
+               detail::ProtoToParamT<R> &outArg)
+    {
+        apply(inArgs..., outArg, GCompileArgs());
+    }
+
 
     GCompiledT compile(detail::ProtoToMetaT<Args>... inDescs)
     {
@@ -209,10 +216,17 @@ public:
 
     void apply(detail::ProtoToParamT<Args>... inArgs,
                detail::ProtoToParamT<R>&... outArgs,
-               GCompileArgs &&args = {})
+               GCompileArgs &&args)
     {
-        m_comp.apply(cv::gin(inArgs...), cv::gout(outArgs...),std::move(args));
+        m_comp.apply(cv::gin(inArgs...), cv::gout(outArgs...), std::move(args));
     }
+
+    void apply(detail::ProtoToParamT<Args>... inArgs,
+               detail::ProtoToParamT<R>&... outArgs)
+    {
+        apply(inArgs..., outArgs..., GCompileArgs());
+    }
+
 
     GCompiledT compile(detail::ProtoToMetaT<Args>... inDescs)
     {
