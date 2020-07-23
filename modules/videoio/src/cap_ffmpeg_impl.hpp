@@ -482,6 +482,7 @@ struct CvCapture_FFMPEG
     bool setProperty(int, double);
     bool grabFrame();
     bool retrieveFrame(int, unsigned char** data, int* step, int* width, int* height, int* cn);
+    void rotateFrame(cv::Mat &mat) const;
 
     void init();
 
@@ -497,6 +498,7 @@ struct CvCapture_FFMPEG
     double  r2d(AVRational r) const;
     int64_t dts_to_frame_number(int64_t dts);
     double  dts_to_sec(int64_t dts) const;
+    void    get_rotation_angle();
 
     AVFormatContext * ic;
     AVCodec         * avcodec;
@@ -512,6 +514,8 @@ struct CvCapture_FFMPEG
 
     int64_t frame_number, first_frame_number;
 
+    bool   rotation_auto;
+    int    rotation_angle; // valid 0, 90, 180, 270
     double eps_zero;
 /*
    'filename' contains the filename of the videosource,
@@ -560,8 +564,17 @@ void CvCapture_FFMPEG::init()
     frame_number = 0;
     eps_zero = 0.000025;
 
-#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(52, 111, 0)
+    rotation_angle = 0;
+
+#if (LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(52, 111, 0))
+#if (LIBAVUTIL_BUILD >= CALC_FFMPEG_VERSION(52, 92, 100))
+    rotation_auto = true;
+#else
+    rotation_auto = false;
+#endif
     dict = NULL;
+#else
+    rotation_auto = false;
 #endif
 
     rawMode = false;
@@ -1032,6 +1045,7 @@ bool CvCapture_FFMPEG::open( const char* _filename )
             frame.cn = 3;
             frame.step = 0;
             frame.data = NULL;
+            get_rotation_angle();
             break;
         }
     }
@@ -1290,7 +1304,6 @@ bool CvCapture_FFMPEG::grabFrame()
     return valid;
 }
 
-
 bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* width, int* height, int* cn)
 {
     if (!video_st)
@@ -1376,7 +1389,6 @@ bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* 
     return true;
 }
 
-
 double CvCapture_FFMPEG::getProperty( int property_id ) const
 {
     if( !video_st ) return 0;
@@ -1400,9 +1412,9 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
     case CV_FFMPEG_CAP_PROP_FRAME_COUNT:
         return (double)get_total_frames();
     case CV_FFMPEG_CAP_PROP_FRAME_WIDTH:
-        return (double)frame.width;
+        return (double)((rotation_auto && rotation_angle%180) ? frame.height : frame.width);
     case CV_FFMPEG_CAP_PROP_FRAME_HEIGHT:
-        return (double)frame.height;
+        return (double)((rotation_auto && rotation_angle%180) ? frame.width : frame.height);
     case CV_FFMPEG_CAP_PROP_FPS:
         return get_fps();
     case CV_FFMPEG_CAP_PROP_FOURCC:
@@ -1446,6 +1458,15 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
         break;
     case CV_FFMPEG_CAP_PROP_BITRATE:
         return static_cast<double>(get_bitrate());
+    case CV_FFMPEG_CAP_PROP_ORIENTATION_META:
+        return static_cast<double>(rotation_angle);
+    case CV_FFMPEG_CAP_PROP_ORIENTATION_AUTO:
+#if ((LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(52, 111, 0)) && \
+     (LIBAVUTIL_BUILD >= CALC_FFMPEG_VERSION(52, 94, 100)))
+        return static_cast<double>(rotation_auto);
+#else
+        return 0;
+#endif
     default:
         break;
     }
@@ -1522,6 +1543,17 @@ double CvCapture_FFMPEG::dts_to_sec(int64_t dts) const
 {
     return (double)(dts - ic->streams[video_stream]->start_time) *
         r2d(ic->streams[video_stream]->time_base);
+}
+
+void CvCapture_FFMPEG::get_rotation_angle()
+{
+    rotation_angle = 0;
+#if ((LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(52, 111, 0)) && \
+     (LIBAVUTIL_BUILD >= CALC_FFMPEG_VERSION(52, 94, 100)))
+    AVDictionaryEntry *rotate_tag = av_dict_get(video_st->metadata, "rotate", NULL, 0);
+    if (rotate_tag != NULL)
+        rotation_angle = atoi(rotate_tag->value);
+#endif
 }
 
 void CvCapture_FFMPEG::seek(int64_t _frame_number)
@@ -1619,6 +1651,16 @@ bool CvCapture_FFMPEG::setProperty( int property_id, double value )
         if (value == -1)
             return setRaw();
         return false;
+    case CV_FFMPEG_CAP_PROP_ORIENTATION_AUTO:
+#if ((LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(52, 111, 0)) && \
+     (LIBAVUTIL_BUILD >= CALC_FFMPEG_VERSION(52, 94, 100)))
+        rotation_auto = static_cast<bool>(value);
+        return true;
+#else
+        rotation_auto = 0;
+        return false;
+#endif
+        break;
     default:
         return false;
     }
