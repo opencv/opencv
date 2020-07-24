@@ -255,7 +255,7 @@ public:
     @param backend The detector/extractor you want to use as backend.
     @param maxTilt The highest power index of tilt factor. 5 is used in the paper as tilt sampling range n.
     @param minTilt The lowest power index of tilt factor. 0 is used in the paper.
-    @param tiltStep Tilt sampling step \delta_t in Algorithm 1 in the paper.
+    @param tiltStep Tilt sampling step \f$\delta_t\f$ in Algorithm 1 in the paper.
     @param rotateStepBase Rotation sampling step factor b in Algorithm 1 in the paper.
     */
     CV_WRAP static Ptr<AffineFeature> create(const Ptr<Feature2D>& backend,
