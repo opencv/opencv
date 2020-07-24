@@ -103,7 +103,7 @@ TEST(Features2d_AFFINE_FEATURE, regression)
     ASSERT_EQ(mclass_id.type(), CV_32S);
 
     validKeypoints.resize(mpt.rows);
-    for( size_t i = 0; i < validKeypoints.size(); i++ )
+    for( int i = 0; i < (int)validKeypoints.size(); i++ )
     {
         validKeypoints[i].pt.x = mpt.at<float>(i, 0);
         validKeypoints[i].pt.y = mpt.at<float>(i, 1);
@@ -169,7 +169,7 @@ TEST(Features2d_AFFINE_FEATURE, regression)
     int badDescriptorCount = 0;
     L1<float> distance;
 
-    for( size_t i = 0; i < validKeypoints.size(); i++ )
+    for( int i = 0; i < (int)validKeypoints.size(); i++ )
     {
         float dist = distance( validDescriptors.ptr<float>(i), calcDescriptors.ptr<float>(i), dim );
         if( dist > badDescriptorDist )

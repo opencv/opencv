@@ -97,7 +97,7 @@ AffineFeature_Impl::AffineFeature_Impl(const Ptr<FeatureDetector>& backend,
         rolls_.push_back(0);
         i++;
     }
-    double tilt = 1;
+    float tilt = 1;
     for( ; i <= maxTilt_; i++ )
     {
         tilt *= tiltStep_;
@@ -239,25 +239,25 @@ private:
             image.copyTo(rotImage);
         else
         {
-            phi = phi * CV_PI / 180;
+            phi = phi * (float)CV_PI / 180;
             float s = std::sin(phi);
             float c = std::cos(phi);
             Matx22f A(c, -s, s, c);
-            Matx<float, 4, 2> corners(0,0, w,0, w,h, 0,h);
+            Matx<float, 4, 2> corners(0, 0, (float)w, 0, (float)w,(float)h, 0, (float)h);
             Mat tf(corners * A.t());
             Mat tcorners;
             tf.convertTo(tcorners, CV_32S);
             Rect rect = boundingRect(tcorners);
             h = rect.height; w = rect.width;
-            pose = Matx23f(c, -s, -rect.x,
-                        s,  c, -rect.y);
+            pose = Matx23f(c, -s, -(float)rect.x,
+                        s,  c, -(float)rect.y);
             warpAffine(image, rotImage, pose, Size(w, h), INTER_LINEAR, BORDER_REPLICATE);
         }
         if( tilt == 1 )
             warpedImage = rotImage;
         else
         {
-            float s = 0.8 * sqrt(tilt * tilt - 1);
+            float s = 0.8f * sqrt(tilt * tilt - 1);
             GaussianBlur(rotImage, rotImage, Size(0, 0), s, 0.01);
             resize(rotImage, warpedImage, Size(0, 0), 1.0/tilt, 1.0, INTER_NEAREST);
             pose(0, 0) /= tilt;
@@ -303,7 +303,7 @@ void AffineFeature_Impl::detectAndCompute(InputArray _image, InputArray _mask,
     else
         splitKeypointsByView(keypoints, keypointsCollection);
 
-    parallel_for_(Range(0, tilts_.size()), skewedDetectAndCompute(tilts_, rolls_, keypointsCollection, descriptorCollection,
+    parallel_for_(Range(0, (int)tilts_.size()), skewedDetectAndCompute(tilts_, rolls_, keypointsCollection, descriptorCollection,
         image, mask, do_keypoints, do_descriptors, backend_));
 
     if( do_keypoints )
@@ -315,7 +315,7 @@ void AffineFeature_Impl::detectAndCompute(InputArray _image, InputArray _mask,
 
     if( do_descriptors )
     {
-        _descriptors.create(keypoints.size(), backend_->descriptorSize(), backend_->descriptorType());
+        _descriptors.create((int)keypoints.size(), backend_->descriptorSize(), backend_->descriptorType());
         descriptors = _descriptors.getMat();
         int iter = 0;
         for( size_t i = 0; i < descriptorCollection.size(); i++ )

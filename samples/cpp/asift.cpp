@@ -164,12 +164,12 @@ int main(int argc, char** argv)
 
     vector<Point2f> corners(4);
     corners[0] = Point2f(0, 0);
-    corners[1] = Point2f(w1, 0);
-    corners[2] = Point2f(w1, h1);
-    corners[3] = Point2f(0, h1);
+    corners[1] = Point2f((float)w1, 0);
+    corners[2] = Point2f((float)w1, (float)h1);
+    corners[3] = Point2f(0, (float)h1);
     vector<Point2i> icorners;
     perspectiveTransform(corners, corners, H);
-    transform(corners, corners, Matx23f(1,0,w1,0,1,0));
+    transform(corners, corners, Matx23f(1,0,(float)w1,0,1,0));
     Mat(corners).convertTo(icorners, CV_32S);
     polylines(vis, icorners, true, Scalar(255,255,255));
 
@@ -179,8 +179,8 @@ int main(int argc, char** argv)
         const Point2f& pi1 = pointPairs[idx].first;
         const Point2f& pi2 = pointPairs[idx].second;
         circle(vis, pi1, 2, Scalar(0,255,0), -1);
-        circle(vis, pi2 + Point2f(w1,0), 2, Scalar(0,255,0), -1);
-        line(vis, pi1, pi2 + Point2f(w1,0), Scalar(0,255,0));
+        circle(vis, pi2 + Point2f((float)w1,0), 2, Scalar(0,255,0), -1);
+        line(vis, pi1, pi2 + Point2f((float)w1,0), Scalar(0,255,0));
     }
     if (inliers > maxlines)
         cout << "only " << maxlines << " inliers are visualized" << endl;
