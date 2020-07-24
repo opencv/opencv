@@ -43,7 +43,7 @@ inline void initTrackingPointsArray(std::vector<cv::Point2f>& points, int width,
 
     points.clear();
     GAPI_Assert((nPointsX >= 0) && (nPointsY) >= 0);
-    points.reserve(static_cast<size_t>(nPointsX) * nPointsY);
+    points.reserve(nPointsX * nPointsY);
 
     for (int x = stepX / 2; x < width; x += stepX)
     {
