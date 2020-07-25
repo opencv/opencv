@@ -2778,7 +2778,7 @@ CUDA_TEST_P(PolarToCart, Accuracy)
 {
     cv::Mat magnitude = randomMat(size, type);
     cv::Mat angle = randomMat(size, type);
-    const double tol = (type == CV_32FC1 ? 1.6e-4 : 1e-4) * (angleInDegrees ? 1.0 : 19.0);
+    const double tol = (type == CV_32FC1 ? 1.6e-4 : 1e-4) * (angleInDegrees ? 1.0 : 19.47);
 
     cv::cuda::GpuMat x = createMat(size, type, useRoi);
     cv::cuda::GpuMat y = createMat(size, type, useRoi);
