@@ -8,15 +8,15 @@
 #ifndef OPENCV_GAPI_OWN_TYPES_HPP
 #define OPENCV_GAPI_OWN_TYPES_HPP
 
-#   define GAPI_WRAP
-
 #   if defined(__OPENCV_BUILD)
 #       include <opencv2/core/base.hpp>
 #       define GAPI_EXPORTS CV_EXPORTS
         /* special informative macros for wrapper generators */
+#       define GAPI_WRAP CV_WRAP
 #       define GAPI_EXPORTS_W_SIMPLE CV_EXPORTS_W_SIMPLE
 #       define GAPI_EXPORTS_W CV_EXPORTS_W
 #   else
+#       define GAPI_WRAP
 #       define GAPI_EXPORTS
 #       define GAPI_EXPORTS_W_SIMPLE
 #       define GAPI_EXPORTS_W
