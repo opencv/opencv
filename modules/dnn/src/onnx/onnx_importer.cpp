@@ -902,6 +902,19 @@ void ONNXImporter::populateNet(Net dstNet)
                 Mat bias = getBlob(node_proto, constBlobs, 2);
                 layerParams.blobs.push_back(bias);
             }
+            if (constBlobs.find(node_proto.input(0)) != constBlobs.end())
+            {
+                Mat inputBuf = getBlob(node_proto, constBlobs, 0);
+
+                LayerParams constParams;
+                constParams.name = node_proto.input(0);
+                constParams.type = "Const";
+                constParams.blobs.push_back(inputBuf);
+
+                opencv_onnx::NodeProto priorsProto;
+                priorsProto.add_output(constParams.name);
+                addLayer(dstNet, constParams, priorsProto, layer_id, outShapes);
+            }
 
             layerParams.set("num_output", layerParams.blobs[0].size[ind_num_out]);
             layerParams.set("bias_term", node_proto.input_size() == 3);
@@ -1220,6 +1233,7 @@ void ONNXImporter::populateNet(Net dstNet)
                 }
                 layerParams.set("axis", broadcast_axes[0]);
                 layerParams.type = "Concat";
+                node_proto.set_output(0, layerParams.name);
             }
             else
                 CV_Error(Error::StsNotImplemented, "Unsupported Expand op");
