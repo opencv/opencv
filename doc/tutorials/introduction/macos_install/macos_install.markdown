@@ -30,7 +30,7 @@ Installing CMake
 
 -# Install the dmg package and launch it from Applications. That will give you the UI app of CMake
 
--# From the CMake app window, choose menu Tools --> Install For Command Line Use.
+-# From the CMake app window, choose menu Tools --> How to Install For Command Line Use. Then, follow the instructions from the pop-up there.
 
 -# Install folder will be /usr/bin/ by default, submit it by choosing Install command line links.
 
@@ -66,7 +66,7 @@ git clone https://github.com/opencv/opencv_contrib.git
 Building OpenCV from Source Using CMake
 ---------------------------------------
 
--#  Create a temporary directory, which we denote as `<cmake_build_dir>`, where you want to put
+-#  Create a temporary directory, which we denote as `build_opencv`, where you want to put
     the generated Makefiles, project files as well the object files and output binaries and enter
     there.
 
@@ -87,8 +87,8 @@ Building OpenCV from Source Using CMake
 
     or cmake-gui
 
-    -   set full path to OpenCV source code, e.g. `/home/user/opencv`
-    -   set full path to `<cmake_build_dir>`, e.g. `/home/user/build_opencv`
+    -   set the OpenCV source code path to, e.g. `/home/user/opencv`
+    -   set the binary build path to your CMake build directory, e.g. `/home/user/build_opencv`
     -   set optional parameters
     -   run: "Configure"
     -   run: "Generate"

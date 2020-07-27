@@ -32,6 +32,10 @@ if(MSVC)
   # Disable obsollete warning C4503 popping up on MSVC <<2017
   # https://docs.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-1-c4503?view=vs-2019
   ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4503)
+  if (OPENCV_GAPI_INF_ENGINE AND NOT INF_ENGINE_RELEASE VERSION_GREATER "2021000000")
+    # Disable IE deprecated code warning C4996 for releases < 2021.1
+    ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4996)
+  endif()
 endif()
 
 file(GLOB gapi_ext_hdrs
@@ -118,6 +122,7 @@ set(gapi_srcs
     # IE Backend. FIXME: should be included by CMake
     # if and only if IE support is enabled
     src/backends/ie/giebackend.cpp
+    src/backends/ie/giebackend/giewrapper.cpp
 
     # Render Backend.
     src/backends/render/grenderocvbackend.cpp
@@ -130,6 +135,10 @@ set(gapi_srcs
     # Compound
     src/backends/common/gcompoundbackend.cpp
     src/backends/common/gcompoundkernel.cpp
+
+    # Serialization API and routines
+    src/api/s11n.cpp
+    src/backends/common/serialization.cpp
     )
 
 ocv_add_dispatched_file(backends/fluid/gfluidimgproc_func SSE4_1 AVX2)
@@ -158,6 +167,7 @@ if(OPENCV_GAPI_INF_ENGINE)
   list(APPEND __test_extra_deps ${INF_ENGINE_TARGET})
 endif()
 ocv_add_accuracy_tests(${__test_extra_deps})
+
 # FIXME: test binary is linked with ADE directly since ADE symbols
 # are not exported from libopencv_gapi.so in any form - thus
 # there're two copies of ADE code in memory when tests run (!)
@@ -183,6 +193,11 @@ if(HAVE_PLAIDML)
   endif()
   ocv_target_link_libraries(${the_module} PRIVATE ${PLAIDML_LIBRARIES})
   ocv_target_include_directories(${the_module} SYSTEM PRIVATE ${PLAIDML_INCLUDE_DIRS})
+endif()
+
+if(WIN32)
+  # Required for htonl/ntohl on Windows
+  ocv_target_link_libraries(${the_module} PRIVATE wsock32 ws2_32)
 endif()
 
 ocv_add_perf_tests()

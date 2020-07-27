@@ -517,6 +517,11 @@ TEST_P(Test_Caffe_nets, Colorization)
         l1 = 0.21;
         lInf = 4.5;
     }
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL_FP16)
+    {
+        l1 = 0.26; lInf = 6.5;
+    }
+
     normAssert(out, ref, "", l1, lInf);
     expectNoFallbacksFromIE(net);
 }
@@ -542,8 +547,8 @@ TEST_P(Test_Caffe_nets, DenseNet_121)
     float l1 = default_l1, lInf = default_lInf;
     if (target == DNN_TARGET_OPENCL_FP16)
     {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2019020000)
-        l1 = 0.04; lInf = 0.21;
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2019020000)
+        l1 = 0.045; lInf = 0.21;
 #else
         l1 = 0.017; lInf = 0.0795;
 #endif

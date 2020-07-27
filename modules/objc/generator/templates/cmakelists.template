@@ -1,0 +1,59 @@
+cmake_minimum_required(VERSION 3.15)
+
+project($framework)
+
+set(MODULES "$modules")
+
+# Enable C++11
+set (CMAKE_CXX_STANDARD 11)
+set (CMAKE_CXX_STANDARD_REQUIRED TRUE)
+
+set (OBJC_COMPILE_FLAGS "-fobjc-arc -fobjc-weak -fvisibility=hidden -fPIC -D__OPENCV_BUILD=1")
+set (SUPPRESS_WARNINGS_FLAGS "-Wno-incomplete-umbrella")
+set (CMAKE_CXX_FLAGS  "$${CMAKE_CXX_FLAGS} $${OBJC_COMPILE_FLAGS} $${SUPPRESS_WARNINGS_FLAGS}")
+
+# grab the files
+file(GLOB_RECURSE objc_sources "objc/*\.h" "objc/*\.m" "objc/*\.mm" "objc/*\.swift")
+file(GLOB_RECURSE objc_headers "*\.h")
+
+add_library(opencv_objc_framework STATIC $${objc_sources})
+
+set_target_properties(opencv_objc_framework PROPERTIES LINKER_LANGUAGE CXX)
+
+target_include_directories(opencv_objc_framework PRIVATE "$${BUILD_ROOT}")
+target_include_directories(opencv_objc_framework PRIVATE "$${BUILD_ROOT}/install/include")
+target_include_directories(opencv_objc_framework PRIVATE "$${BUILD_ROOT}/install/include/opencv2")
+foreach(m $${MODULES})
+  target_include_directories(opencv_objc_framework PRIVATE "$${BUILD_ROOT}/modules/objc/gen/objc/$${m}")
+endforeach()
+
+install(TARGETS opencv_objc_framework LIBRARY DESTINATION lib)
+
+enable_language(Swift)
+
+# Additional target properties
+set_target_properties(opencv_objc_framework PROPERTIES
+    OUTPUT_NAME "$framework"
+    ARCHIVE_OUTPUT_DIRECTORY "$${BUILD_ROOT}/lib"
+    XCODE_ATTRIBUTE_SWIFT_VERSION 5.0
+    XCODE_ATTRIBUTE_OTHER_SWIFT_FLAGS "-Xcc $${SUPPRESS_WARNINGS_FLAGS}"
+    FRAMEWORK TRUE
+    MACOSX_FRAMEWORK_IDENTIFIER org.opencv.$framework
+    PUBLIC_HEADER "$${objc_headers}"
+    DEFINE_SYMBOL CVAPI_EXPORTS
+    )
+
+find_program(JAZZY jazzy)
+
+if(JAZZY)
+    add_custom_command(
+        OUTPUT  "$${BUILD_ROOT}/modules/objc/doc_build/doc/index.html"
+        COMMAND $${JAZZY}  --objc --author OpenCV --author_url http://opencv.org --github_url https://github.com/opencv/opencv --umbrella-header "$${BUILD_ROOT}/lib/$${CMAKE_BUILD_TYPE}/$framework.framework/Headers/$framework.h" --framework-root "$${BUILD_ROOT}/lib/$${CMAKE_BUILD_TYPE}/$framework.framework" --module $framework --sdk iphonesimulator --undocumented-text \"\"
+        WORKING_DIRECTORY "$${BUILD_ROOT}/modules/objc/doc_build"
+        COMMENT "Generating Documentation"
+    )
+    add_custom_target(opencv_objc_doc ALL DEPENDS "$${BUILD_ROOT}/modules/objc/doc_build/doc/index.html")
+    add_dependencies(opencv_objc_doc opencv_objc_framework)
+else()
+    message("jazzy not found - documentation will not be generated!")
+endif()

@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018-2019 Intel Corporation
+// Copyright (C) 2018-2020 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_GCPUKERNEL_HPP
@@ -137,7 +137,8 @@ public:
     // This function is a kernel's execution entry point (does the processing work)
     using RunF = std::function<void(GCPUContext &)>;
     // This function is a stateful kernel's setup routine (configures state)
-    using SetupF = std::function<void(const GMetaArgs &, const GArgs &, GArg &)>;
+    using SetupF = std::function<void(const GMetaArgs &, const GArgs &,
+                                      GArg &, const GCompileArgs &)>;
 
     GCPUKernel();
     GCPUKernel(const RunF& runF, const SetupF& setupF = nullptr);
@@ -284,21 +285,56 @@ struct OCVSetupHelper;
 template<typename Impl, typename... Ins>
 struct OCVSetupHelper<Impl, std::tuple<Ins...>>
 {
+    // Using 'auto' return type and 'decltype' specifier in both 'setup_impl' versions
+    // to check existence of required 'Impl::setup' functions.
+    // While 'decltype' specifier accepts expression we pass expression with 'comma-operator'
+    // where first operand of comma-operator is call attempt to desired 'Impl::setup' and
+    // the second operand is 'void()' expression.
+    //
+    // SFINAE for 'Impl::setup' which accepts compile arguments.
     template<int... IIs>
-    static void setup_impl(const GMetaArgs &metaArgs, const GArgs &args, GArg &state,
-                           detail::Seq<IIs...>)
+    static auto setup_impl(const GMetaArgs &metaArgs, const GArgs &args,
+                           GArg &state, const GCompileArgs &compileArgs,
+                           detail::Seq<IIs...>) ->
+        decltype(Impl::setup(detail::get_in_meta<Ins>(metaArgs, args, IIs)...,
+                             std::declval<typename std::add_lvalue_reference<
+                                              std::shared_ptr<typename Impl::State>
+                                                                            >::type
+                                         >(),
+                            compileArgs)
+                 , void())
     {
         // TODO: unique_ptr <-> shared_ptr conversion ?
         // To check: Conversion is possible only if the state which should be passed to
         // 'setup' user callback isn't required to have previous value
         std::shared_ptr<typename Impl::State> stPtr;
+        Impl::setup(detail::get_in_meta<Ins>(metaArgs, args, IIs)..., stPtr, compileArgs);
+        state = GArg(stPtr);
+    }
+
+    // SFINAE for 'Impl::setup' which doesn't accept compile arguments.
+    template<int... IIs>
+    static auto setup_impl(const GMetaArgs &metaArgs, const GArgs &args,
+                           GArg &state, const GCompileArgs &/* compileArgs */,
+                           detail::Seq<IIs...>) ->
+        decltype(Impl::setup(detail::get_in_meta<Ins>(metaArgs, args, IIs)...,
+                             std::declval<typename std::add_lvalue_reference<
+                                              std::shared_ptr<typename Impl::State>
+                                                                            >::type
+                                         >()
+                            )
+                 , void())
+    {
+        // The same comment as in 'setup' above.
+        std::shared_ptr<typename Impl::State> stPtr;
         Impl::setup(detail::get_in_meta<Ins>(metaArgs, args, IIs)..., stPtr);
         state = GArg(stPtr);
     }
 
-    static void setup(const GMetaArgs &metaArgs, const GArgs &args, GArg& state)
+    static void setup(const GMetaArgs &metaArgs, const GArgs &args,
+                      GArg& state, const GCompileArgs &compileArgs)
     {
-        setup_impl(metaArgs, args, state,
+        setup_impl(metaArgs, args, state, compileArgs,
                    typename detail::MkSeq<sizeof...(Ins)>::type());
     }
 };
@@ -435,17 +471,18 @@ public:
 
 // TODO: Reuse Anatoliy's logic for support of types with commas in macro.
 //       Retrieve the common part from Anatoliy's logic to the separate place.
-#define GAPI_OCV_KERNEL_ST(Name, API, State)                  \
-    struct Name:public cv::GCPUStKernelImpl<Name, API, State> \
+#define GAPI_OCV_KERNEL_ST(Name, API, State)                   \
+    struct Name: public cv::GCPUStKernelImpl<Name, API, State> \
 
 
 class gapi::cpu::GOCVFunctor : public gapi::GFunctor
 {
 public:
     using Impl = std::function<void(GCPUContext &)>;
+    using Meta = cv::GKernel::M;
 
-    GOCVFunctor(const char* id, const Impl& impl)
-        : gapi::GFunctor(id), impl_{GCPUKernel(impl)}
+    GOCVFunctor(const char* id, const Meta &meta, const Impl& impl)
+        : gapi::GFunctor(id), impl_{GCPUKernel(impl), meta}
     {
     }
 
@@ -461,14 +498,20 @@ template<typename K, typename Callable>
 gapi::cpu::GOCVFunctor gapi::cpu::ocv_kernel(Callable& c)
 {
     using P = detail::OCVCallHelper<Callable, typename K::InArgs, typename K::OutArgs>;
-    return GOCVFunctor(K::id(), std::bind(&P::callFunctor, std::placeholders::_1, std::ref(c)));
+    return GOCVFunctor{ K::id()
+                      , &K::getOutMeta
+                      , std::bind(&P::callFunctor, std::placeholders::_1, std::ref(c))
+                      };
 }
 
 template<typename K, typename Callable>
 gapi::cpu::GOCVFunctor gapi::cpu::ocv_kernel(const Callable& c)
 {
     using P = detail::OCVCallHelper<Callable, typename K::InArgs, typename K::OutArgs>;
-    return GOCVFunctor(K::id(), std::bind(&P::callFunctor, std::placeholders::_1, c));
+    return GOCVFunctor{ K::id()
+                      , &K::getOutMeta
+                      , std::bind(&P::callFunctor, std::placeholders::_1, c)
+                      };
 }
 //! @endcond
 

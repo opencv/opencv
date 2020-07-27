@@ -2,7 +2,7 @@
  * jdmaster.c
  *
  * Copyright (C) 1991-1997, Thomas G. Lane.
- * Modified 2002-2017 by Guido Vollbeding.
+ * Modified 2002-2019 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -104,7 +104,7 @@ jpeg_calc_output_dimensions (j_decompress_ptr cinfo)
  */
 {
 #ifdef IDCT_SCALING_SUPPORTED
-  int ci;
+  int ci, ssize;
   jpeg_component_info *compptr;
 #endif
 
@@ -124,19 +124,23 @@ jpeg_calc_output_dimensions (j_decompress_ptr cinfo)
    */
   for (ci = 0, compptr = cinfo->comp_info; ci < cinfo->num_components;
        ci++, compptr++) {
-    int ssize = 1;
-    while (cinfo->min_DCT_h_scaled_size * ssize <=
-	   (cinfo->do_fancy_upsampling ? DCTSIZE : DCTSIZE / 2) &&
-	   (cinfo->max_h_samp_factor % (compptr->h_samp_factor * ssize * 2)) == 0) {
-      ssize = ssize * 2;
-    }
+    ssize = 1;
+    if (! cinfo->raw_data_out)
+      while (cinfo->min_DCT_h_scaled_size * ssize <=
+	     (cinfo->do_fancy_upsampling ? DCTSIZE : DCTSIZE / 2) &&
+	     (cinfo->max_h_samp_factor % (compptr->h_samp_factor * ssize * 2)) ==
+	     0) {
+	ssize = ssize * 2;
+      }
     compptr->DCT_h_scaled_size = cinfo->min_DCT_h_scaled_size * ssize;
     ssize = 1;
-    while (cinfo->min_DCT_v_scaled_size * ssize <=
-	   (cinfo->do_fancy_upsampling ? DCTSIZE : DCTSIZE / 2) &&
-	   (cinfo->max_v_samp_factor % (compptr->v_samp_factor * ssize * 2)) == 0) {
-      ssize = ssize * 2;
-    }
+    if (! cinfo->raw_data_out)
+      while (cinfo->min_DCT_v_scaled_size * ssize <=
+	     (cinfo->do_fancy_upsampling ? DCTSIZE : DCTSIZE / 2) &&
+	     (cinfo->max_v_samp_factor % (compptr->v_samp_factor * ssize * 2)) ==
+	     0) {
+	ssize = ssize * 2;
+      }
     compptr->DCT_v_scaled_size = cinfo->min_DCT_v_scaled_size * ssize;
 
     /* We don't support IDCT ratios larger than 2. */
@@ -144,13 +148,10 @@ jpeg_calc_output_dimensions (j_decompress_ptr cinfo)
 	compptr->DCT_h_scaled_size = compptr->DCT_v_scaled_size * 2;
     else if (compptr->DCT_v_scaled_size > compptr->DCT_h_scaled_size * 2)
 	compptr->DCT_v_scaled_size = compptr->DCT_h_scaled_size * 2;
-  }
 
-  /* Recompute downsampled dimensions of components;
-   * application needs to know these if using raw downsampled data.
-   */
-  for (ci = 0, compptr = cinfo->comp_info; ci < cinfo->num_components;
-       ci++, compptr++) {
+    /* Recompute downsampled dimensions of components;
+     * application needs to know these if using raw downsampled data.
+     */
     /* Size in samples, after IDCT scaling */
     compptr->downsampled_width = (JDIMENSION)
       jdiv_round_up((long) cinfo->image_width *
@@ -172,8 +173,10 @@ jpeg_calc_output_dimensions (j_decompress_ptr cinfo)
     break;
   case JCS_RGB:
   case JCS_BG_RGB:
+#if RGB_PIXELSIZE != 3
     cinfo->out_color_components = RGB_PIXELSIZE;
     break;
+#endif /* else share code with YCbCr */
   case JCS_YCbCr:
   case JCS_BG_YCC:
     cinfo->out_color_components = 3;
@@ -184,7 +187,6 @@ jpeg_calc_output_dimensions (j_decompress_ptr cinfo)
     break;
   default:			/* else must be same colorspace as in file */
     cinfo->out_color_components = cinfo->num_components;
-    break;
   }
   cinfo->output_components = (cinfo->quantize_colors ? 1 :
 			      cinfo->out_color_components);
@@ -525,9 +527,8 @@ jinit_master_decompress (j_decompress_ptr cinfo)
 {
   my_master_ptr master;
 
-  master = (my_master_ptr)
-      (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
-				  SIZEOF(my_decomp_master));
+  master = (my_master_ptr) (*cinfo->mem->alloc_small)
+    ((j_common_ptr) cinfo, JPOOL_IMAGE, SIZEOF(my_decomp_master));
   cinfo->master = &master->pub;
   master->pub.prepare_for_output_pass = prepare_for_output_pass;
   master->pub.finish_output_pass = finish_output_pass;
