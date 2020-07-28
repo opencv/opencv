@@ -74,9 +74,9 @@ void load_images( const String & dirname, vector< Mat > & img_lst, bool showImag
     for ( size_t i = 0; i < files.size(); ++i )
     {
         Mat img = imread( files[i] ); // load the image
-        if ( img.empty() )            // invalid image, skip it.
+        if ( img.empty() )
         {
-            cout << files[i] << " is invalid!" << endl;
+            cout << files[i] << " is invalid!" << endl; // invalid image, skip it.
             continue;
         }
 
@@ -95,16 +95,13 @@ void sample_neg( const vector< Mat > & full_neg_lst, vector< Mat > & neg_lst, co
     box.width = size.width;
     box.height = size.height;
 
-    const int size_x = box.width;
-    const int size_y = box.height;
-
     srand( (unsigned int)time( NULL ) );
 
     for ( size_t i = 0; i < full_neg_lst.size(); i++ )
         if ( full_neg_lst[i].cols > box.width && full_neg_lst[i].rows > box.height )
         {
-            box.x = rand() % ( full_neg_lst[i].cols - size_x );
-            box.y = rand() % ( full_neg_lst[i].rows - size_y );
+            box.x = rand() % ( full_neg_lst[i].cols - box.width );
+            box.y = rand() % ( full_neg_lst[i].rows - box.height );
             Mat roi = full_neg_lst[i]( box );
             neg_lst.push_back( roi.clone() );
         }
@@ -259,7 +256,7 @@ int main( int argc, char** argv )
     load_images( pos_dir, pos_lst, visualization );
     if ( pos_lst.size() > 0 )
     {
-        clog << "...[done]" << endl;
+        clog << "...[done] " << pos_lst.size() << " files." << endl;
     }
     else
     {
@@ -287,22 +284,25 @@ int main( int argc, char** argv )
     }
 
     clog << "Negative images are being loaded...";
-    load_images( neg_dir, full_neg_lst, false );
+    load_images( neg_dir, full_neg_lst, visualization );
+    clog << "...[done] " << full_neg_lst.size() << " files." << endl;
+
+    clog << "Negative images are being processed...";
     sample_neg( full_neg_lst, neg_lst, pos_image_size );
-    clog << "...[done]" << endl;
+    clog << "...[done] " << neg_lst.size() << " files." << endl;
 
     clog << "Histogram of Gradients are being calculated for positive images...";
     computeHOGs( pos_image_size, pos_lst, gradient_lst, flip_samples );
     size_t positive_count = gradient_lst.size();
     labels.assign( positive_count, +1 );
-    clog << "...[done] ( positive count : " << positive_count << " )" << endl;
+    clog << "...[done] ( positive images count : " << positive_count << " )" << endl;
 
     clog << "Histogram of Gradients are being calculated for negative images...";
     computeHOGs( pos_image_size, neg_lst, gradient_lst, flip_samples );
     size_t negative_count = gradient_lst.size() - positive_count;
     labels.insert( labels.end(), negative_count, -1 );
     CV_Assert( positive_count < labels.size() );
-    clog << "...[done] ( negative count : " << negative_count << " )" << endl;
+    clog << "...[done] ( negative images count : " << negative_count << " )" << endl;
 
     Mat train_data;
     convert_to_ml( gradient_lst, train_data );
@@ -324,7 +324,7 @@ int main( int argc, char** argv )
 
     if ( train_twice )
     {
-        clog << "Testing trained detector on negative images. This may take a few minutes...";
+        clog << "Testing trained detector on negative images. This might take a few minutes...";
         HOGDescriptor my_hog;
         my_hog.winSize = pos_image_size;
 
