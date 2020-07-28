@@ -11,11 +11,3 @@ PyObject* pyopencv_from(const std::vector<GCompileArg>& value)
 {
     return pyopencv_from_generic_vec(value);
 }
-
-namespace cv
-{
-    inline GCompileArgs compile_args(gapi::GKernelPackage pkg)
-    {
-        return GCompileArgs{ GCompileArg(std::move(pkg)) };
-    }
-} // namespace cv
