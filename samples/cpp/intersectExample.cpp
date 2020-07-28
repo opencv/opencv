@@ -50,9 +50,7 @@ static float drawIntersection(Mat &image, vector<Point> polygon1, vector<Point> 
         {
             fillColor = Scalar(0, 0, 255);
         }
-        vector<vector<Point> > pp;
-        pp.push_back(intersectionPolygon);
-        fillPoly(image, pp, fillColor);
+        fillPoly(image, intersectionPolygon, fillColor);
     }
     polylines(image, polygons, true, Scalar(0, 0, 0));
 
