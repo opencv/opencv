@@ -29,13 +29,14 @@ static bool isSimilarKeypoints( const KeyPoint& p1, const KeyPoint& p2 )
 TEST(Features2d_AFFINE_FEATURE, regression)
 {
     Mat image = imread(cvtest::findDataFile("features2d/tsukuba.png"));
-    string xml = cvtest::TS::ptr()->get_data_path() + "asift/regression_cpp.xml";
+    string xml = cvtest::TS::ptr()->get_data_path() + "asift/regression_cpp.xml.gz";
     ASSERT_FALSE(image.empty());
 
     Mat gray;
     cvtColor(image, gray, COLOR_BGR2GRAY);
 
-    Ptr<AffineFeature> ext = AffineFeature::create(SIFT::create());
+    // Default ASIFT generates too large descriptors. This test uses small maxTilt to suppress the size of testdata.
+    Ptr<AffineFeature> ext = AffineFeature::create(SIFT::create(), 2);
     Mat mpt, msize, mangle, mresponse, moctave, mclass_id;
 #ifdef GENERATE_DATA
     // calculate
