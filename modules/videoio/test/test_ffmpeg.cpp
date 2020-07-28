@@ -399,4 +399,64 @@ const ffmpeg_cap_properties_param_t videoio_ffmpeg_properties[] = {
 
 INSTANTIATE_TEST_CASE_P(videoio, ffmpeg_cap_properties, testing::ValuesIn(videoio_ffmpeg_properties));
 
+
+
+// related issue: https://github.com/opencv/opencv/issues/15499
+TEST(videoio, mp4_orientation_meta_auto)
+{
+    if (!videoio_registry::hasBackend(CAP_FFMPEG))
+        throw SkipTestException("FFmpeg backend was not found");
+
+    string video_file = string(cvtest::TS::ptr()->get_data_path()) + "video/big_buck_bunny_rotated.mp4";
+
+    VideoCapture cap;
+    EXPECT_NO_THROW(cap.open(video_file, CAP_FFMPEG));
+    ASSERT_TRUE(cap.isOpened()) << "Can't open the video: " << video_file << " with backend " << CAP_FFMPEG << std::endl;
+
+    cap.set(CAP_PROP_ORIENTATION_AUTO, true);
+    if (cap.get(CAP_PROP_ORIENTATION_AUTO) == 0)
+        throw SkipTestException("FFmpeg frame rotation metadata is not supported");
+
+    Size actual;
+    EXPECT_NO_THROW(actual = Size((int)cap.get(CAP_PROP_FRAME_WIDTH),
+                                    (int)cap.get(CAP_PROP_FRAME_HEIGHT)));
+    EXPECT_EQ(384, actual.width);
+    EXPECT_EQ(672, actual.height);
+
+    Mat frame;
+
+    cap >> frame;
+
+    ASSERT_EQ(384, frame.cols);
+    ASSERT_EQ(672, frame.rows);
+}
+
+// related issue: https://github.com/opencv/opencv/issues/15499
+TEST(videoio, mp4_orientation_no_rotation)
+{
+    if (!videoio_registry::hasBackend(CAP_FFMPEG))
+        throw SkipTestException("FFmpeg backend was not found");
+
+    string video_file = string(cvtest::TS::ptr()->get_data_path()) + "video/big_buck_bunny_rotated.mp4";
+
+    VideoCapture cap;
+    EXPECT_NO_THROW(cap.open(video_file, CAP_FFMPEG));
+    cap.set(CAP_PROP_ORIENTATION_AUTO, 0);
+    ASSERT_TRUE(cap.isOpened()) << "Can't open the video: " << video_file << " with backend " << CAP_FFMPEG << std::endl;
+    ASSERT_FALSE(cap.get(CAP_PROP_ORIENTATION_AUTO));
+
+    Size actual;
+    EXPECT_NO_THROW(actual = Size((int)cap.get(CAP_PROP_FRAME_WIDTH),
+                                    (int)cap.get(CAP_PROP_FRAME_HEIGHT)));
+    EXPECT_EQ(672, actual.width);
+    EXPECT_EQ(384, actual.height);
+
+    Mat frame;
+
+    cap >> frame;
+
+    ASSERT_EQ(672, frame.cols);
+    ASSERT_EQ(384, frame.rows);
+}
+
 }} // namespace
