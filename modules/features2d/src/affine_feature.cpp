@@ -50,6 +50,11 @@ public:
     explicit AffineFeature_Impl(const Ptr<Feature2D>& backend,
             int maxTilt, int minTilt, float tiltStep, float rotateStepBase);
 
+    int descriptorSize() const CV_OVERRIDE
+    {
+        return backend_->descriptorSize();
+    }
+
     int descriptorType() const CV_OVERRIDE
     {
         return backend_->descriptorType();
