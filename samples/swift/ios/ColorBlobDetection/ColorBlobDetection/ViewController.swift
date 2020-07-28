@@ -101,7 +101,7 @@ class ViewController: UIViewController, CvVideoCameraDelegate2 {
             let pointCount = touchedRect.width*touchedRect.height
             blobColorHsv = blobColorHsv.mul(Scalar.all(1.0/Double(pointCount)))
 
-            blobColorRgba = converScalarHsv2Rgba(hsvColor: blobColorHsv)
+            blobColorRgba = convertScalarHsv2Rgba(hsvColor: blobColorHsv)
 
             NSLog("Touched rgba color: (\(blobColorRgba.val[0]), \(blobColorRgba.val[1]), \( blobColorRgba.val[2]), \(blobColorRgba.val[3])")
 
@@ -113,7 +113,7 @@ class ViewController: UIViewController, CvVideoCameraDelegate2 {
         }
     }
 
-    func converScalarHsv2Rgba(hsvColor:Scalar) -> Scalar {
+    func convertScalarHsv2Rgba(hsvColor:Scalar) -> Scalar {
         let pointMatRgba = Mat()
         let pointMatHsv = Mat(rows: 1, cols: 1, type: CvType.CV_8UC3, scalar: hsvColor)
         Imgproc.cvtColor(src: pointMatHsv, dst: pointMatRgba, code: .COLOR_HSV2RGB_FULL, dstCn: 4)

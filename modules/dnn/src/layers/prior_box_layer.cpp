@@ -47,8 +47,13 @@
 
 #ifdef HAVE_DNN_NGRAPH
 #include "../ie_ngraph.hpp"
+#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2020_4)
+#include <ngraph/op/prior_box.hpp>
+#include <ngraph/op/prior_box_clustered.hpp>
+#else
 #include <ngraph/op/experimental/layers/prior_box.hpp>
 #include <ngraph/op/experimental/layers/prior_box_clustered.hpp>
+#endif
 #endif
 
 #include "../op_vkcom.hpp"

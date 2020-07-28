@@ -1,17 +1,15 @@
-if(WIN32 AND NOT MSVC)
+if((WIN32 AND NOT MSVC) OR OPENCV_CMAKE_FORCE_CUDA)
   message(STATUS "CUDA compilation is disabled (due to only Visual Studio compiler supported on your platform).")
   return()
 endif()
 
-if(NOT UNIX AND CV_CLANG)
+if((NOT UNIX AND CV_CLANG) OR OPENCV_CMAKE_FORCE_CUDA)
   message(STATUS "CUDA compilation is disabled (due to Clang unsupported on your platform).")
   return()
 endif()
 
-if(CUDA_HOST_COMPILER)
-  # respect the CUDA_HOST_COMPILER if specified manually
-  set(PREFERRED_CUDA_HOST_COMPILER "${CUDA_HOST_COMPILER}")
-endif()
+#set(OPENCV_CMAKE_CUDA_DEBUG 1)
+
 if(((NOT CMAKE_VERSION VERSION_LESS "3.9.0")  # requires https://gitlab.kitware.com/cmake/cmake/merge_requests/663
       OR OPENCV_CUDA_FORCE_EXTERNAL_CMAKE_MODULE)
     AND NOT OPENCV_CUDA_FORCE_BUILTIN_CMAKE_MODULE)
@@ -56,7 +54,7 @@ if(CUDA_FOUND)
   endif()
 
   if(WITH_NVCUVID)
-    macro(SEARCH_NVCUVID_HEADER _filename _result)
+    macro(ocv_cuda_SEARCH_NVCUVID_HEADER _filename _result)
       # place header file under CUDA_TOOLKIT_TARGET_DIR or CUDA_TOOLKIT_ROOT_DIR
       find_path(_header_result
         ${_filename}
@@ -73,8 +71,8 @@ if(CUDA_FOUND)
       endif()
       unset(_header_result CACHE)
     endmacro()
-    SEARCH_NVCUVID_HEADER("nvcuvid.h" HAVE_NVCUVID_HEADER)
-    SEARCH_NVCUVID_HEADER("dynlink_nvcuvid.h" HAVE_DYNLINK_NVCUVID_HEADER)
+    ocv_cuda_SEARCH_NVCUVID_HEADER("nvcuvid.h" HAVE_NVCUVID_HEADER)
+    ocv_cuda_SEARCH_NVCUVID_HEADER("dynlink_nvcuvid.h" HAVE_DYNLINK_NVCUVID_HEADER)
     find_cuda_helper_libs(nvcuvid)
     if(WIN32)
       find_cuda_helper_libs(nvcuvenc)
@@ -115,44 +113,100 @@ if(CUDA_FOUND)
     unset(CUDA_ARCH_PTX CACHE)
   endif()
 
-  if(PREFERRED_CUDA_HOST_COMPILER)
-    LIST(APPEND CUDA_NVCC_FLAGS -ccbin "${PREFERRED_CUDA_HOST_COMPILER}")
+  if(OPENCV_CUDA_DETECTION_NVCC_FLAGS MATCHES "-ccbin")
+    # already specified by user
+  elseif(CUDA_HOST_COMPILER AND EXISTS "${CUDA_HOST_COMPILER}")
+    get_filename_component(c_compiler_realpath "${CMAKE_C_COMPILER}" REALPATH)
+    # C compiler doesn't work with --run option, forcing C++ compiler instead
+    if(CUDA_HOST_COMPILER STREQUAL c_compiler_realpath OR CUDA_HOST_COMPILER STREQUAL CMAKE_C_COMPILER)
+      if(DEFINED CMAKE_CXX_COMPILER)
+        get_filename_component(cxx_compiler_realpath "${CMAKE_CXX_COMPILER}" REALPATH)
+        LIST(APPEND OPENCV_CUDA_DETECTION_NVCC_FLAGS -ccbin "${cxx_compiler_realpath}")
+      else()
+        message(STATUS "CUDA: CMAKE_CXX_COMPILER is not available. You may need to specify CUDA_HOST_COMPILER.")
+      endif()
+    else()
+      LIST(APPEND OPENCV_CUDA_DETECTION_NVCC_FLAGS -ccbin "${CUDA_HOST_COMPILER}")
+    endif()
+  elseif(WIN32 AND CMAKE_LINKER) # Workaround for VS cl.exe not being in the env. path
+    get_filename_component(host_compiler_bindir ${CMAKE_LINKER} DIRECTORY)
+    LIST(APPEND OPENCV_CUDA_DETECTION_NVCC_FLAGS -ccbin "${host_compiler_bindir}")
   else()
-    if(WIN32 AND CMAKE_LINKER) #Workaround for VS cl.exe not being in the env. path
-      get_filename_component(host_compiler_bindir ${CMAKE_LINKER} DIRECTORY)
-      LIST(APPEND CUDA_NVCC_FLAGS -ccbin ${host_compiler_bindir})
+    if(CUDA_HOST_COMPILER)
+      message(STATUS "CUDA: CUDA_HOST_COMPILER='${CUDA_HOST_COMPILER}' is not valid, autodetection may not work. Specify OPENCV_CUDA_DETECTION_NVCC_FLAGS with -ccbin option for fix that")
     endif()
   endif()
 
-  SET(DETECT_ARCHS_COMMAND "${CUDA_NVCC_EXECUTABLE}" ${CUDA_NVCC_FLAGS} "${OpenCV_SOURCE_DIR}/cmake/checks/OpenCVDetectCudaArch.cu" "--run")
-
   macro(ocv_filter_available_architecture result_list)
-    if(DEFINED CUDA_SUPPORTED_CC)
-      set(${result_list} "${CUDA_SUPPORTED_CC}")
+    set(__cache_key_check "${ARGN} : ${CUDA_NVCC_EXECUTABLE} ${OPENCV_CUDA_DETECTION_NVCC_FLAGS}")
+    if(DEFINED OPENCV_CACHE_CUDA_SUPPORTED_CC AND OPENCV_CACHE_CUDA_SUPPORTED_CC_check STREQUAL __cache_key_check)
+      set(${result_list} "${OPENCV_CACHE_CUDA_SUPPORTED_CC}")
     else()
       set(CC_LIST ${ARGN})
       foreach(target_arch ${CC_LIST})
         string(REPLACE "." "" target_arch_short "${target_arch}")
         set(NVCC_OPTION "-gencode;arch=compute_${target_arch_short},code=sm_${target_arch_short}")
-        execute_process( COMMAND "${CUDA_NVCC_EXECUTABLE}" ${NVCC_OPTION} "${OpenCV_SOURCE_DIR}/cmake/checks/OpenCVDetectCudaArch.cu"
-                         WORKING_DIRECTORY "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/"
-                         RESULT_VARIABLE _nvcc_res OUTPUT_VARIABLE _nvcc_out
-                         ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
+        set(_cmd "${CUDA_NVCC_EXECUTABLE}" ${OPENCV_CUDA_DETECTION_NVCC_FLAGS} ${NVCC_OPTION} "${OpenCV_SOURCE_DIR}/cmake/checks/OpenCVDetectCudaArch.cu" --compile)
+        execute_process(
+            COMMAND ${_cmd}
+            WORKING_DIRECTORY "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/"
+            RESULT_VARIABLE _nvcc_res
+            OUTPUT_VARIABLE _nvcc_out
+            ERROR_VARIABLE _nvcc_err
+            #ERROR_QUIET
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+        )
+        if(OPENCV_CMAKE_CUDA_DEBUG)
+          message(WARNING "COMMAND: ${_cmd}")
+          message(STATUS "Result: ${_nvcc_res}")
+          message(STATUS "Out: ${_nvcc_out}")
+          message(STATUS "Err: ${_nvcc_err}")
+        endif()
         if(_nvcc_res EQUAL 0)
-          set(${result_list} "${${result_list}} ${target_arch}")
+          LIST(APPEND ${result_list} "${target_arch}")
         endif()
       endforeach()
       string(STRIP "${${result_list}}" ${result_list})
-      set(CUDA_SUPPORTED_CC ${${result_list}} CACHE INTERNAL "List of supported compute capability")
+      if(" ${${result_list}}" STREQUAL " ")
+        message(WARNING "CUDA: Autodetection arch list is empty. Please enable OPENCV_CMAKE_CUDA_DEBUG=1 and check/specify OPENCV_CUDA_DETECTION_NVCC_FLAGS variable")
+      endif()
+
+      # cache detected values
+      set(OPENCV_CACHE_CUDA_SUPPORTED_CC ${${result_list}} CACHE INTERNAL "")
+      set(OPENCV_CACHE_CUDA_SUPPORTED_CC_check "${__cache_key_check}" CACHE INTERNAL "")
     endif()
   endmacro()
 
   macro(ocv_detect_native_cuda_arch status output)
-    execute_process( COMMAND ${DETECT_ARCHS_COMMAND}
-                     WORKING_DIRECTORY "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/"
-                     RESULT_VARIABLE ${status} OUTPUT_VARIABLE _nvcc_out
-                     ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
-    string(REGEX REPLACE ".*\n" "" ${output} "${_nvcc_out}") #Strip leading warning messages, if any
+    set(OPENCV_CUDA_DETECT_ARCHS_COMMAND "${CUDA_NVCC_EXECUTABLE}" ${OPENCV_CUDA_DETECTION_NVCC_FLAGS} "${OpenCV_SOURCE_DIR}/cmake/checks/OpenCVDetectCudaArch.cu" "--run")
+    set(__cache_key_check "${OPENCV_CUDA_DETECT_ARCHS_COMMAND}")
+    if(DEFINED OPENCV_CACHE_CUDA_ACTIVE_CC AND OPENCV_CACHE_CUDA_ACTIVE_CC_check STREQUAL __cache_key_check)
+      set(${output} "${OPENCV_CACHE_CUDA_ACTIVE_CC}")
+      set(${status} 0)
+    else()
+      execute_process(
+          COMMAND ${OPENCV_CUDA_DETECT_ARCHS_COMMAND}
+          WORKING_DIRECTORY "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/"
+          RESULT_VARIABLE ${status}
+          OUTPUT_VARIABLE _nvcc_out
+          ERROR_VARIABLE _nvcc_err
+          ERROR_QUIET
+          OUTPUT_STRIP_TRAILING_WHITESPACE
+      )
+      if(OPENCV_CMAKE_CUDA_DEBUG)
+        message(WARNING "COMMAND: ${OPENCV_CUDA_DETECT_ARCHS_COMMAND}")
+        message(STATUS "Result: ${${status}}")
+        message(STATUS "Out: ${_nvcc_out}")
+        message(STATUS "Err: ${_nvcc_err}")
+      endif()
+      string(REGEX REPLACE ".*\n" "" ${output} "${_nvcc_out}") #Strip leading warning messages, if any
+
+      if(${status} EQUAL 0)
+        # cache detected values
+        set(OPENCV_CACHE_CUDA_ACTIVE_CC ${${result_list}} CACHE INTERNAL "")
+        set(OPENCV_CACHE_CUDA_ACTIVE_CC_check "${__cache_key_check}" CACHE INTERNAL "")
+      endif()
+    endif()
   endmacro()
 
   macro(ocv_wipeout_deprecated _arch_bin_list)
@@ -181,6 +235,9 @@ if(CUDA_FOUND)
     else()
       string(REGEX MATCHALL "[0-9]+\\.[0-9]" __cuda_arch_bin "${_nvcc_out}")
     endif()
+  elseif(CUDA_ARCH_BIN)
+    message(STATUS "CUDA: Using CUDA_ARCH_BIN=${CUDA_ARCH_BIN}")
+    set(__cuda_arch_bin ${CUDA_ARCH_BIN})
   endif()
 
   if(NOT DEFINED __cuda_arch_bin)
@@ -188,7 +245,11 @@ if(CUDA_FOUND)
       set(__cuda_arch_bin "3.2")
       set(__cuda_arch_ptx "")
     elseif(AARCH64)
-      ocv_detect_native_cuda_arch(_nvcc_res _nvcc_out)
+      if(NOT CMAKE_CROSSCOMPILING)
+        ocv_detect_native_cuda_arch(_nvcc_res _nvcc_out)
+      else()
+        set(_nvcc_res -1)  # emulate error, see below
+      endif()
       if(NOT _nvcc_res EQUAL 0)
         message(STATUS "Automatic detection of CUDA generation failed. Going to build for all known architectures.")
         # TX1 (5.3) TX2 (6.2) Xavier (7.2) V100 (7.0)
@@ -222,11 +283,9 @@ if(CUDA_FOUND)
   string(REGEX REPLACE "\\." "" ARCH_BIN_NO_POINTS "${CUDA_ARCH_BIN}")
   string(REGEX REPLACE "\\." "" ARCH_PTX_NO_POINTS "${CUDA_ARCH_PTX}")
 
-  # Ckeck if user specified 1.0 compute capability: we don't support it
-  string(REGEX MATCH "1.0" HAS_ARCH_10 "${CUDA_ARCH_BIN} ${CUDA_ARCH_PTX}")
-  set(CUDA_ARCH_BIN_OR_PTX_10 0)
-  if(NOT ${HAS_ARCH_10} STREQUAL "")
-    set(CUDA_ARCH_BIN_OR_PTX_10 1)
+  # Check if user specified 1.0 compute capability: we don't support it
+  if(" ${CUDA_ARCH_BIN} ${CUDA_ARCH_PTX}" MATCHES " 1.0")
+    message(SEND_ERROR "CUDA: 1.0 compute capability is not supported - exclude it from ARCH/PTX list are re-run CMake")
   endif()
 
   # NVCC flags to be set
@@ -416,6 +475,13 @@ if(HAVE_CUDA)
   if(HAVE_CUFFT)
     set(CUDA_cufft_LIBRARY_ABS ${CUDA_cufft_LIBRARY})
     ocv_convert_to_lib_name(CUDA_cufft_LIBRARY ${CUDA_cufft_LIBRARY})
+  endif()
+
+  if(CMAKE_GENERATOR MATCHES "Visual Studio"
+      AND NOT OPENCV_SKIP_CUDA_CMAKE_SUPPRESS_REGENERATION
+  )
+    message(STATUS "CUDA: MSVS generator is detected. Disabling CMake re-run checks (CMAKE_SUPPRESS_REGENERATION=ON). You need to run CMake manually if updates are required.")
+    set(CMAKE_SUPPRESS_REGENERATION ON)
   endif()
 endif()
 

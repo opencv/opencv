@@ -6,7 +6,6 @@
 
 #import "Point3d.h"
 #import "Point2d.h"
-#import "CVObjcUtil.h"
 
 @implementation Point3d {
     cv::Point3d native;
@@ -94,6 +93,8 @@
         return self.x == point.x && self.y == point.y && self.z == point.z;
     }
 }
+
+#define DOUBLE_TO_BITS(x)  ((Cv64suf){ .f = x }).i
 
 - (NSUInteger)hash {
     int prime = 31;

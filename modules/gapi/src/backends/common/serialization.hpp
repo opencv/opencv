@@ -15,6 +15,10 @@
 
 #include "compiler/gmodel.hpp"
 
+#if (defined _WIN32 || defined _WIN64) && defined _MSC_VER
+#pragma warning(disable: 4702)
+#endif
+
 namespace cv {
 namespace gimpl {
 namespace s11n {
@@ -85,6 +89,8 @@ GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::Scalar &s);
 GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::Mat &m);
 GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::Mat &m);
 
+
+
 // G-API types /////////////////////////////////////////////////////////////////
 
 GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, cv::util::monostate  );
@@ -111,6 +117,11 @@ GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::gimpl::Protocol &
 GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::GArg &arg);
 GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::GArg &arg);
 
+//Forward declaration
+//I::OStream& operator<< (I::OStream& os, const cv::GRunArg &arg);
+//I::IStream& operator>> (I::IStream& is, cv::GRunArg &arg);
+
+
 GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::GKernel &k);
 GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::GKernel &k);
 
@@ -125,6 +136,20 @@ GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::GOpaqueDesc &);
 
 GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::GArrayDesc &);
 GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::GArrayDesc &);
+
+#if !defined(GAPI_STANDALONE)
+GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::UMat &);
+GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::UMat &);
+#endif // !defined(GAPI_STANDALONE)
+
+GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::gapi::wip::IStreamSource::Ptr &);
+GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::gapi::wip::IStreamSource::Ptr &);
+
+GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::detail::VectorRef &);
+GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::detail::VectorRef &);
+
+GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::detail::OpaqueRef &);
+GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::detail::OpaqueRef &);
 
 GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::gimpl::RcDesc &rc);
 GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::gimpl::RcDesc &rc);
@@ -163,31 +188,6 @@ GAPI_EXPORTS GSerialized deserialize(I::IStream& is);
 GAPI_EXPORTS void reconstruct(const GSerialized &s, ade::Graph &g);
 
 // Legacy //////////////////////////////////////////////////////////////////////
-
-
-// Generic: vector serialization ///////////////////////////////////////////////
-template<typename T>
-I::OStream& operator<< (I::OStream& os, const std::vector<T> &ts) {
-    //const std::size_t sz = ts.size(); // explicitly specify type
-    const uint32_t sz = (uint32_t)ts.size(); // explicitly specify type
-    os << sz;
-    for (auto &&v : ts) os << v;
-    return os;
-}
-template<typename T>
-I::IStream& operator>> (I::IStream& is, std::vector<T> &ts) {
-    //std::size_t sz = 0u;
-    uint32_t sz = 0u;
-    is >> sz;
-    if (sz == 0u) {
-        ts.clear();
-    } else {
-        ts.resize(sz);
-        for (auto &&i : ade::util::iota(sz)) is >> ts[i];
-    }
-    return is;
-}
-
 // Generic: unordered_map serialization ////////////////////////////////////////
 template<typename K, typename V>
 I::OStream& operator<< (I::OStream& os, const std::unordered_map<K, V> &m) {
@@ -256,6 +256,32 @@ I::IStream& operator>> (I::IStream& is, cv::util::variant<Ts...> &v) {
     return detail::get_v<cv::util::variant<Ts...>, Ts...>(is, v, 0u, idx);
 }
 
+// Generic: vector serialization ///////////////////////////////////////////////
+// Moved here to fix CLang issues https://clang.llvm.org/compatibility.html
+// Unqualified lookup in templates
+template<typename T>
+I::OStream& operator<< (I::OStream& os, const std::vector<T> &ts) {
+    //const std::size_t sz = ts.size(); // explicitly specify type
+    const uint32_t sz = (uint32_t)ts.size(); // explicitly specify type
+    os << sz;
+    for (auto &&v : ts) os << v;
+    return os;
+}
+template<typename T>
+I::IStream& operator >> (I::IStream& is, std::vector<T> &ts) {
+    //std::size_t sz = 0u;
+    uint32_t sz = 0u;
+    is >> sz;
+    if (sz == 0u) {
+        ts.clear();
+    }
+    else {
+        ts.resize(sz);
+        for (auto &&i : ade::util::iota(sz)) is >> ts[i];
+    }
+    return is;
+}
+
 // FIXME: Basic Stream implementaions //////////////////////////////////////////
 
 // Basic in-memory stream implementations.
@@ -305,6 +331,10 @@ public:
     virtual I::IStream& operator>> (std::string &) override;
 };
 
+GAPI_EXPORTS void serialize(I::OStream& os, const cv::GMetaArgs &ma);
+GAPI_EXPORTS void serialize(I::OStream& os, const cv::GRunArgs &ra);
+GAPI_EXPORTS GMetaArgs meta_args_deserialize(I::IStream& is);
+GAPI_EXPORTS GRunArgs run_args_deserialize(I::IStream& is);
 
 } // namespace s11n
 } // namespace gimpl

@@ -38,7 +38,6 @@
 //! @cond IGNORED
 
 #include <algorithm>
-#include <cassert>
 #include <cstring>
 #include <map>
 #include <vector>
@@ -53,20 +52,25 @@
 #include "random.h"
 #include "saving.h"
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 4702) //disable unreachable code
+#endif
+
 namespace cvflann
 {
 
 struct LshIndexParams : public IndexParams
 {
-    LshIndexParams(unsigned int table_number = 12, unsigned int key_size = 20, unsigned int multi_probe_level = 2)
+    LshIndexParams(int table_number = 12, int key_size = 20, int multi_probe_level = 2)
     {
         (*this)["algorithm"] = FLANN_INDEX_LSH;
         // The number of hash tables to use
-        (*this)["table_number"] = static_cast<int>(table_number);
+        (*this)["table_number"] = table_number;
         // The length of the key in the hash tables
-        (*this)["key_size"] = static_cast<int>(key_size);
+        (*this)["key_size"] = key_size;
         // Number of levels to use in multi-probe (0 for standard LSH)
-        (*this)["multi_probe_level"] = static_cast<int>(multi_probe_level);
+        (*this)["multi_probe_level"] = multi_probe_level;
     }
 };
 
@@ -191,11 +195,11 @@ public:
      */
     virtual void knnSearch(const Matrix<ElementType>& queries, Matrix<int>& indices, Matrix<DistanceType>& dists, int knn, const SearchParams& params) CV_OVERRIDE
     {
-        assert(queries.cols == veclen());
-        assert(indices.rows >= queries.rows);
-        assert(dists.rows >= queries.rows);
-        assert(int(indices.cols) >= knn);
-        assert(int(dists.cols) >= knn);
+        CV_Assert(queries.cols == veclen());
+        CV_Assert(indices.rows >= queries.rows);
+        CV_Assert(dists.rows >= queries.rows);
+        CV_Assert(int(indices.cols) >= knn);
+        CV_Assert(int(dists.cols) >= knn);
 
 
         KNNUniqueResultSet<DistanceType> resultSet(knn);
@@ -390,6 +394,10 @@ private:
     Distance distance_;
 };
 }
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 //! @endcond
 

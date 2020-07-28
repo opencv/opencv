@@ -369,6 +369,16 @@ TEST_P(Test_Caffe_layers, layer_prelu_fc)
     // Reference output values are in range [-0.0001, 10.3906]
     double l1 = (target == DNN_TARGET_MYRIAD) ? 0.005 : 0.0;
     double lInf = (target == DNN_TARGET_MYRIAD) ? 0.021 : 0.0;
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2020040000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL)
+    {
+        l1 = 0.006f; lInf = 0.05f;
+    }
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL_FP16)
+    {
+        l1 = 0.01f; lInf = 0.05f;
+    }
+#endif
     testLayerUsingCaffeModels("layer_prelu_fc", true, false, l1, lInf);
 }
 
@@ -1882,7 +1892,115 @@ TEST_P(Layer_Test_Resize, change_input)
 
 INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_Resize, dnnBackendsAndTargets());
 
-typedef testing::TestWithParam<tuple<Backend, Target> > Layer_Test_Slice;
+struct Layer_Test_Slice : public testing::TestWithParam<tuple<Backend, Target> >
+{
+    template<int DIMS>
+    void test_slice(const int* inputShape, const int* begin, const int* end)
+    {
+        int backendId = get<0>(GetParam());
+        int targetId = get<1>(GetParam());
+
+        Mat input(DIMS, inputShape, CV_32FC1, Scalar::all(0));
+        for (int i = 0; i < (int)input.total(); ++i)
+            input.ptr<float>()[i] = (float)i;
+
+        std::vector<Range> range(DIMS);
+        for (int i = 0; i < DIMS; ++i)
+            range[i] = Range(begin[i], end[i]);
+
+        Net net;
+        LayerParams lp;
+        lp.type = "Slice";
+        lp.name = "testLayer";
+        lp.set("begin", DictValue::arrayInt<int*>((int*)&begin[0], DIMS));
+        lp.set("end", DictValue::arrayInt<int*>((int*)&end[0], DIMS));
+        net.addLayerToPrev(lp.name, lp.type, lp);
+
+        {
+            net.setInput(input);
+            net.setPreferableBackend(backendId);
+            net.setPreferableTarget(targetId);
+            Mat out = net.forward();
+
+            EXPECT_GT(cv::norm(out, NORM_INF), 0);
+            normAssert(out, input(range));
+#if 0
+            cout << input(range).clone().reshape(1, 1) << endl;
+            cout << out.reshape(1, 1) << endl;
+#endif
+        }
+    }
+};
+
+TEST_P(Layer_Test_Slice, slice_channels_17762)
+{
+    const int inputShape[4] = {1, 16, 6, 8};
+    const int begin[] = {0, 4, 0, 0};
+    const int end[] = {1, 8, 6, 8};
+    test_slice<4>(inputShape, begin, end);
+}
+
+TEST_P(Layer_Test_Slice, slice_channels_with_batch_17762)
+{
+    const int inputShape[4] = {4, 4, 3, 4};
+    const int begin[] = {0, 1, 0, 0};
+    const int end[] = {4, 3, 3, 4};
+    test_slice<4>(inputShape, begin, end);
+}
+
+TEST_P(Layer_Test_Slice, slice_channels_and_batch_17762)
+{
+    int backend = get<0>(GetParam());
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+
+    const int inputShape[4] = {4, 4, 3, 4};
+    const int begin[] = {2, 1, 0, 0};
+    const int end[] = {4, 3, 3, 4};
+    test_slice<4>(inputShape, begin, end);
+}
+
+TEST_P(Layer_Test_Slice, slice_rows)
+{
+    const int inputShape[4] = {1, 2, 6, 4};
+    const int begin[] = {0, 0, 4, 0};
+    const int end[] = {1, 2, 6, 4};
+    test_slice<4>(inputShape, begin, end);
+}
+
+TEST_P(Layer_Test_Slice, slice_cols)
+{
+    const int inputShape[4] = {1, 2, 3, 8};
+    const int begin[] = {0, 0, 0, 4};
+    const int end[] = {1, 2, 3, 8};
+    test_slice<4>(inputShape, begin, end);
+}
+
+
+TEST_P(Layer_Test_Slice, slice_complex_1_unaligned)
+{
+    const int inputShape[4] = {1, 4, 2, 3};
+    const int begin[] = {0, 2, 1, 0};
+    const int end[] = {1, 3, 2, 2};
+    test_slice<4>(inputShape, begin, end);
+}
+
+TEST_P(Layer_Test_Slice, slice_complex_2_x4)
+{
+    const int inputShape[4] = {1, 3, 2, 4};
+    const int begin[] = {0, 2, 1, 0};
+    const int end[] = {1, 3, 2, 2};
+    test_slice<4>(inputShape, begin, end);
+}
+
+TEST_P(Layer_Test_Slice, slice_complex_3)
+{
+    const int inputShape[4] = {1, 6, 4, 8};
+    const int begin[] = {0, 2, 1, 4};
+    const int end[] = {1, 4, 3, 8};
+    test_slice<4>(inputShape, begin, end);
+}
+
 TEST_P(Layer_Test_Slice, variable_input_shape)
 {
     int backendId = get<0>(GetParam());

@@ -17,6 +17,14 @@ namespace detail {
     GAPI_EXPORTS cv::GComputation getGraph(const std::vector<char> &p);
 } // namespace detail
 
+namespace detail {
+    GAPI_EXPORTS cv::GMetaArgs getMetaArgs(const std::vector<char> &p);
+} // namespace detail
+
+namespace detail {
+    GAPI_EXPORTS cv::GRunArgs getRunArgs(const std::vector<char> &p);
+} // namespace detail
+
 GAPI_EXPORTS std::vector<char> serialize(const cv::GComputation &c);
 //namespace{
 
@@ -25,11 +33,23 @@ T deserialize(const std::vector<char> &p);
 
 //} //ananymous namespace
 
+GAPI_EXPORTS std::vector<char> serialize(const cv::GMetaArgs&);
+GAPI_EXPORTS std::vector<char> serialize(const cv::GRunArgs&);
+
 template<> inline
 cv::GComputation deserialize(const std::vector<char> &p) {
     return detail::getGraph(p);
 }
 
+template<> inline
+cv::GMetaArgs deserialize(const std::vector<char> &p) {
+    return detail::getMetaArgs(p);
+}
+
+template<> inline
+cv::GRunArgs deserialize(const std::vector<char> &p) {
+    return detail::getRunArgs(p);
+}
 
 
 } // namespace gapi
