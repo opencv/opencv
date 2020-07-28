@@ -106,10 +106,10 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
+        CV_Assert((inputs.size() > outputs.size() && blobs.empty()) ||
+                  (!inputs.empty() && (blobs.size() == 1 || blobs.size() == 2)));
         MatSize weightShape = blobs.empty() ? inputs[1].size : blobs[0].size;
-        CV_Assert(inputs.size() > 0);
 
-        CV_Assert((inputs.size() > outputs.size() && blobs.empty()) || blobs.size() == 1 || blobs.size() == 2);
         CV_Assert(inputs[0].dims == outputs[0].dims);
         CV_Assert(weightShape.dims() == kernel_size.size() + 2);
         for (int i = 0; i < kernel_size.size(); i++) {
@@ -1128,37 +1128,37 @@ public:
         for (int i = 0; i < inputs.size(); ++i)
             CV_Assert(inputs[i].u != outputs[0].u);
 
+        if (blobs.empty())
+        {
+            size_t n = inputs.size() - 1;
+            umat_blobs.resize(n);
+            for (size_t i = 0; i < n; i++)
+            {
+                if (use_half)
+                {
+                    Mat matFP32;
+                    convertFp16(inputs[i + 1], matFP32);
+                    matFP32.copyTo(umat_blobs[i]);
+                }
+                else
+                {
+                    inputs[i + 1].copyTo(umat_blobs[i]);
+                }
+            }
+            inputs.resize(1);
+        }
+
         if (umat_blobs.empty())
         {
-            size_t n = blobs.empty() ? inputs.size() - 1 : blobs.size();
+            size_t n = blobs.size();
             umat_blobs.resize(n);
-            if (blobs.empty())
+            for (size_t i = 0; i < n; i++)
             {
-                for (size_t i = 0; i < n; i++)
-                {
-                    if (use_half)
-                    {
-                        Mat matFP32;
-                        convertFp16(inputs[i + 1], matFP32);
-                        matFP32.copyTo(umat_blobs[i]);
-                    }
-                    else
-                    {
-                        inputs[i + 1].copyTo(umat_blobs[i]);
-                    }
-                }
-                inputs.resize(1);
-            }
-            else
-            {
-                for (size_t i = 0; i < n; i++)
-                {
-                    blobs[i].copyTo(umat_blobs[i]);
-                }
+                blobs[i].copyTo(umat_blobs[i]);
             }
         }
 
-        if (convolutionOp.empty())
+        if (convolutionOp.empty() || blobs.empty())
         {
             OCL4DNNConvConfig config;
             config.in_shape = shape(inputs[0]);

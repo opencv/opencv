@@ -117,7 +117,33 @@ TEST_P(Test_ONNX_layers, ConvolutionVariable)
          backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019) && target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
     testONNXModels("conv_variable_w", npy, 0, 0, false, false, 2);
-    testONNXModels("conv_depthwise_variable_w", npy, 0, 0, false, false, 3);
+
+    Net net = readNetFromONNX(_tf("models/conv_depthwise_variable_w.onnx"));
+    ASSERT_FALSE(net.empty());
+
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    Mat input = blobFromNPY(_tf("data/input_conv_depthwise_variable_w_0.npy"));
+    Mat weights = blobFromNPY(_tf("data/input_conv_depthwise_variable_w_1.npy"));
+    Mat bias = blobFromNPY(_tf("data/input_conv_depthwise_variable_w_2.npy"));
+    Mat ref = blobFromNPY(_tf("data/output_conv_depthwise_variable_w.npy"));
+    net.setInput(input, "0");
+    net.setInput(weights, "1");
+    net.setInput(bias, "bias");
+    Mat out = net.forward();
+    normAssert(ref, out, "", default_l1, default_lInf);
+
+    input = blobFromNPY(_tf("data/input_conv_depthwise_variable_wb_0.npy"));
+    weights = blobFromNPY(_tf("data/input_conv_depthwise_variable_wb_1.npy"));
+    bias = blobFromNPY(_tf("data/input_conv_depthwise_variable_wb_2.npy"));
+    ref = blobFromNPY(_tf("data/output_conv_depthwise_variable_wb.npy"));
+
+    net.setInput(input, "0");
+    net.setInput(weights, "1");
+    net.setInput(bias, "bias");
+    out = net.forward();
+    normAssert(ref, out, "", default_l1, default_lInf);
 }
 
 TEST_P(Test_ONNX_layers, Gather)
