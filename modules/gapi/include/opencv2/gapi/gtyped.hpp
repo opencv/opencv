@@ -26,6 +26,7 @@ namespace detail
     template<> struct ProtoToParam<cv::GMat>    { using type = cv::Mat; };
     template<> struct ProtoToParam<cv::GScalar> { using type = cv::Scalar; };
     template<typename U> struct ProtoToParam<cv::GArray<U> >  { using type = std::vector<U>; };
+    template<> struct ProtoToParam<cv::GArray<cv::GMat>>      { using type = std::vector<cv::Mat>; };
     template<typename U> struct ProtoToParam<cv::GOpaque<U> > { using type = U; };
     template<typename T> using ProtoToParamT = typename ProtoToParam<T>::type;
 
@@ -133,10 +134,18 @@ public:
     }
 
     void apply(detail::ProtoToParamT<Args>... inArgs,
+               detail::ProtoToParamT<R> &outArg,
+               GCompileArgs &&args)
+    {
+        m_comp.apply(cv::gin(inArgs...), cv::gout(outArg), std::move(args));
+    }
+
+    void apply(detail::ProtoToParamT<Args>... inArgs,
                detail::ProtoToParamT<R> &outArg)
     {
-        m_comp.apply(cv::gin(inArgs...), cv::gout(outArg));
+        apply(inArgs..., outArg, GCompileArgs());
     }
+
 
     GCompiledT compile(detail::ProtoToMetaT<Args>... inDescs)
     {
@@ -206,10 +215,18 @@ public:
     }
 
     void apply(detail::ProtoToParamT<Args>... inArgs,
+               detail::ProtoToParamT<R>&... outArgs,
+               GCompileArgs &&args)
+    {
+        m_comp.apply(cv::gin(inArgs...), cv::gout(outArgs...), std::move(args));
+    }
+
+    void apply(detail::ProtoToParamT<Args>... inArgs,
                detail::ProtoToParamT<R>&... outArgs)
     {
-        m_comp.apply(cv::gin(inArgs...), cv::gout(outArgs...));
+        apply(inArgs..., outArgs..., GCompileArgs());
     }
+
 
     GCompiledT compile(detail::ProtoToMetaT<Args>... inDescs)
     {
