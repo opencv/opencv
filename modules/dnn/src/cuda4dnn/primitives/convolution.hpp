@@ -68,7 +68,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             IDENTITY,
             RELU, /* uses value provided in `relu_negative_slope` */
             CLIPPED_RELU, /* uses values provided in `crelu_floor` and `crelu_ceil` */
-            POWER, /* scale and shift fused with weights and bias; only `power_exp` is handled here */
+            POWER,
             TANH,
             SIGMOID,
             SWISH,
@@ -76,7 +76,8 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         };
 
         ActivationType activation_type;
-        float relu_negative_slope, crelu_floor, crelu_ceil, power_exp;
+        float relu_negative_slope, crelu_floor, crelu_ceil;
+        float power_exp, power_scale, power_shift;
     };
 
     template <class T>
@@ -224,10 +225,8 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             crelu_floor = config.crelu_floor;
             crelu_ceil = config.crelu_ceil;
             power_exp = config.power_exp;
-
-            /* the scale and shift parameters of POWER have already been fused with weights and bias */
-            if (activation == ConvolutionConfiguration::ActivationType::POWER && power_exp == 1.0f)
-                activation = ConvolutionConfiguration::ActivationType::IDENTITY;
+            power_scale = config.power_scale;
+            power_shift = config.power_shift;
 
             /* we normally use cuDNN for convolution and perform bias, activation and eltwise ops ourselves
              * hence, the activation for cuDNN is IDENTITY by default
@@ -383,7 +382,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                             kernels::biasN_eltwise_sum_2_clipped_relu_inplace<T>(stream, output, inner_size, biasTensor, eltwise, crelu_floor, crelu_ceil);
                             break;
                         case ConvolutionConfiguration::ActivationType::POWER:
-                            kernels::biasN_eltwise_sum_2_power_inplace<T>(stream, output, inner_size, biasTensor, eltwise, power_exp, 1.0, 0.0);
+                            kernels::biasN_eltwise_sum_2_power_inplace<T>(stream, output, inner_size, biasTensor, eltwise, power_exp, power_scale, power_shift);
                             break;
                         case ConvolutionConfiguration::ActivationType::TANH:
                             kernels::biasN_eltwise_sum_2_tanh_inplace<T>(stream, output, inner_size, biasTensor, eltwise);
@@ -414,7 +413,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                             kernels::biasN_clipped_relu_eltwise_sum_2_inplace<T>(stream, output, inner_size, biasTensor, eltwise, crelu_floor, crelu_ceil);
                             break;
                         case ConvolutionConfiguration::ActivationType::POWER:
-                            kernels::biasN_power_eltwise_sum_2_inplace<T>(stream, output, inner_size, biasTensor, eltwise, power_exp, 1.0, 0.0);
+                            kernels::biasN_power_eltwise_sum_2_inplace<T>(stream, output, inner_size, biasTensor, eltwise, power_exp, power_scale, power_shift);
                             break;
                         case ConvolutionConfiguration::ActivationType::TANH:
                             kernels::biasN_tanh_eltwise_sum_2_inplace<T>(stream, output, inner_size, biasTensor, eltwise);
@@ -450,7 +449,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                             kernels::biasN_clipped_relu_inplace<T>(stream, output, inner_size, biasTensor, crelu_floor, crelu_ceil);
                             break;
                         case ConvolutionConfiguration::ActivationType::POWER:
-                            kernels::biasN_power_inplace<T>(stream, output, inner_size, biasTensor, power_exp, 1.0, 0.0);
+                            kernels::biasN_power_inplace<T>(stream, output, inner_size, biasTensor, power_exp, power_scale, power_shift);
                             break;
                         case ConvolutionConfiguration::ActivationType::TANH:
                             kernels::biasN_tanh_inplace<T>(stream, output, inner_size, biasTensor);
@@ -497,7 +496,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                             kernels::eltwise_sum_2_clipped_relu<T>(stream, output, output, eltwise, crelu_floor, crelu_ceil);
                             break;
                         case ConvolutionConfiguration::ActivationType::POWER:
-                            kernels::eltwise_sum_2_power<T>(stream, output, output, eltwise, power_exp, 1.0, 0.0);
+                            kernels::eltwise_sum_2_power<T>(stream, output, output, eltwise, power_exp, power_scale, power_shift);
                             break;
                         case ConvolutionConfiguration::ActivationType::TANH:
                             kernels::eltwise_sum_2_tanh<T>(stream, output, output, eltwise);
@@ -527,7 +526,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                             kernels::clipped_relu_eltwise_sum_2_inplace<T>(stream, output, eltwise, crelu_floor, crelu_ceil);
                             break;
                         case ConvolutionConfiguration::ActivationType::POWER:
-                            kernels::power_eltwise_sum_2_inplace<T>(stream, output, eltwise, power_exp, 1.0, 0.0);
+                            kernels::power_eltwise_sum_2_inplace<T>(stream, output, eltwise, power_exp, power_scale, power_shift);
                             break;
                         case ConvolutionConfiguration::ActivationType::TANH:
                             kernels::tanh_eltwise_sum_2_inplace<T>(stream, output, eltwise);
@@ -561,7 +560,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                             kernels::clipped_relu<T>(stream, output, output, crelu_floor, crelu_ceil);
                             break;
                         case ConvolutionConfiguration::ActivationType::POWER:
-                            kernels::power<T>(stream, output, output, power_exp, 1.0, 0.0);
+                            kernels::power<T>(stream, output, output, power_exp, power_scale, power_shift);
                             break;
                         case ConvolutionConfiguration::ActivationType::TANH:
                             kernels::tanh<T>(stream, output, output);
@@ -595,7 +594,8 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
         ConvolutionConfiguration::FusionMode fusion_mode;
         ConvolutionConfiguration::ActivationType activation;
-        float relu_negative_slope, crelu_floor, crelu_ceil, power_exp;
+        float relu_negative_slope, crelu_floor, crelu_ceil;
+        float power_exp, power_scale, power_shift;
 
         enum class InternalFusionLocation {
             CUDNN,
