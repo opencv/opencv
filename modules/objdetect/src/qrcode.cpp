@@ -1871,7 +1871,7 @@ Mat gf_poly_scale(const Mat & p,int scalar) {
     Mat r(1,len,CV_8UC1,Scalar(0));
 
     for(int i = 0; i < len;i++){
-        r.ptr(0)[i] = gf_mul(p.ptr(0)[i], scalar);
+        r.ptr(0)[i] = gf_mul(p.ptr(0)[i], (uint8_t)scalar);
     }
     return r;
 }
@@ -1955,7 +1955,7 @@ Mat gf_poly_div(const Mat& dividend,const Mat& divisor,const int& ecc_num) {
     /*Mat.ptr(0)[i] stores the coeffient of the x^i*/
     Mat r=dividend.clone();
     for(int i =0;i<times;i++){
-        uint16_t coef=r.ptr(0)[dividend_len-i];
+        uint8_t coef=r.ptr(0)[dividend_len-i];
         if(coef!=0){
             for (int j = 0; j < divisor.cols; ++j) {
                 if(divisor.ptr(0)[divisor_len-j]!=0){
@@ -2084,7 +2084,7 @@ int block_syndromes(const Mat & block, int synd_num,vector <uint8_t>& synd){
  * */
 Mat find_error_locator(const vector<uint8_t>&synd,int & errors_len){
     /*initialize two arrays b and c ,to be zeros , expcet b0<- 1 c0<- 1*/
-    int synd_num =synd.size();
+    int synd_num =(int)synd.size();
     /*err_loc & Sigma*/
     Mat C(1,synd_num,CV_8UC1,Scalar(0));
     /*old_loc */
@@ -2186,11 +2186,11 @@ vector<int > find_errors(const Mat& sigma,const int &errors_len,const int & msg_
      * */
 Mat error_correct(const Mat & msg_in ,const vector<uint8_t>&synd,const Mat & e_loc_poly,const vector<int> &error_index){
 
-    int border = synd.size();
+    int border = (int)synd.size();
     Mat msg_out = msg_in.clone() ;
-    int err_len=error_index.size();
+    int err_len= (int)error_index.size();
 
-    Mat syndrome(1,synd.size(),CV_8UC1,Scalar(0));
+    Mat syndrome(1,border,CV_8UC1,Scalar(0));
     /*change syndrom to mat from calculation*/
 
     for(int i = 1 ; i < border ; i++){
@@ -2202,7 +2202,7 @@ Mat error_correct(const Mat & msg_in ,const vector<uint8_t>&synd,const Mat & e_l
     Mat Omega= gf_poly_mul(syndrome,e_loc_poly);
 
     /*get rid of the first zero ! */
-    Omega = Omega(Range(0,1),Range(1,synd.size()));
+    Omega = Omega(Range(0,1),Range(1,border));
 
     /*Second use Forney algorithm to compute the magnitudes*/
 
@@ -2212,7 +2212,7 @@ Mat error_correct(const Mat & msg_in ,const vector<uint8_t>&synd,const Mat & e_l
     /*The operator · represents ordinary multiplication (repeated addition in the finite field)!!!
          * that's why the even items are always zero!*/
     for(int i = 1;i < err_len; i++){
-        int tmp = e_loc_poly.ptr(0)[i];
+        uint8_t tmp = e_loc_poly.ptr(0)[i];
         err_location_poly_derivative.ptr(0)[i-1]=tmp;
         for(int j = 1; j < i ; j++)
             err_location_poly_derivative.ptr(0)[i-1]^=tmp;
@@ -2484,7 +2484,7 @@ bool QRDecode::versionDefinition()
     }
     version = saturate_cast<uint8_t>((std::min(transition_x, transition_y) - 1) * 0.25 - 1);
     if ( !(  0 < version && version <= 40 ) ) { return false; }
-    size = 21 + (version - 1) * 4;
+    size = (uint8_t)(21 + (version - 1) * 4);
     return true;
 }
 
@@ -2565,7 +2565,7 @@ int get_bits(const int& bits,uint8_t * & ptr){
 int QRDecode::bits_remaining(const uint8_t *ptr)
 {
     uint8_t * tail = &final_data.ptr(0)[final_data.cols-1];
-    return tail - ptr;
+    return (int)(tail - ptr);
 }
 /* decode_numeric
  * params @ ptr(current bit postion)
@@ -2589,22 +2589,22 @@ decode_error QRDecode::decode_numeric(uint8_t * &ptr){
     /*divided 3 numerical char into a 10bit group*/
     while (count >= 3) {
         int num = get_bits(10,ptr);
-        payload[payload_len++]= num/100+'0';
-        payload[payload_len++]= (num%100)/10+'0';
-        payload[payload_len++]= num%10+'0';
+        payload[payload_len++]= uint8_t(num/100+'0');
+        payload[payload_len++]= uint8_t((num%100)/10+'0');
+        payload[payload_len++]= uint8_t(num%10+'0');
         count -= 3;
     }
     /*the final group*/
     if(count == 2){
         /*7 bit group*/
         int num = get_bits(7,ptr);
-        payload[payload_len++] = (num%100)/10+'0';
-        payload[payload_len++] =  num%10+'0';
+        payload[payload_len++] = uint8_t((num%100)/10+'0');
+        payload[payload_len++] =  uint8_t(num%10+'0');
     }
     else if (count == 1){
         /*4 bit group*/
         int num = get_bits(4,ptr);
-        payload[payload_len++] = num%10+'0';
+        payload[payload_len++] = uint8_t(num%10+'0');
     }
 
     return SUCCESS;
@@ -2633,7 +2633,7 @@ decode_error QRDecode::decode_byte(uint8_t * &ptr){
 
     for (int i = 0; i < count; i++){
         int tmp =get_bits(8,ptr);
-        payload[payload_len++]= tmp;
+        payload[payload_len++]= uint8_t(tmp);
     }
 
     return SUCCESS;
