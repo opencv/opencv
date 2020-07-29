@@ -427,7 +427,7 @@ public class ImgprocTest extends OpenCVTestCase {
         Imgproc.convexHull(points, hull);
 
         MatOfInt expHull = new MatOfInt(
-                1, 2, 3, 0
+                0, 1, 2, 3
         );
         assertMatEqual(expHull, hull, EPS);
     }
@@ -797,9 +797,13 @@ public class ImgprocTest extends OpenCVTestCase {
 
         rrect = Imgproc.fitEllipse(points);
 
-        assertPointEquals(new Point(0, 0), rrect.center, EPS);
-        assertEquals(2.828, rrect.size.width, EPS);
-        assertEquals(2.828, rrect.size.height, EPS);
+        double FIT_ELLIPSE_CENTER_EPS = 0.01;
+        double FIT_ELLIPSE_SIZE_EPS = 0.4;
+
+        assertEquals(0.0, rrect.center.x, FIT_ELLIPSE_CENTER_EPS);
+        assertEquals(0.0, rrect.center.y, FIT_ELLIPSE_CENTER_EPS);
+        assertEquals(2.828, rrect.size.width, FIT_ELLIPSE_SIZE_EPS);
+        assertEquals(2.828, rrect.size.height, FIT_ELLIPSE_SIZE_EPS);
     }
 
     public void testFitLine() {
@@ -807,7 +811,7 @@ public class ImgprocTest extends OpenCVTestCase {
         points.put(0, 0, 0, 0, 2, 3, 3, 4, 5, 8);
 
         Mat linePoints = new Mat(4, 1, CvType.CV_32FC1);
-        linePoints.put(0, 0, 0.53196341, 0.84676737, 2.496531, 3.7467217);
+        linePoints.put(0, 0, 0.53198653, 0.84675282, 2.5, 3.75);
 
         Imgproc.fitLine(points, dst, Imgproc.CV_DIST_L12, 0, 0.01, 0.01);
 

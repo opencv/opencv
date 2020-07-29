@@ -43,6 +43,7 @@ parser.add_argument('--target', choices=targets, default=cv.dnn.DNN_TARGET_CPU, 
                          '%d: OpenCL fp16 (half-float precision), '
                          '%d: VPU' % targets)
 parser.add_argument('--async', type=int, default=0,
+                    dest='asyncN',
                     help='Number of asynchronous forwards at the same time. '
                          'Choose 0 for synchronous mode')
 args, _ = parser.parse_known_args()
@@ -126,7 +127,7 @@ def postprocess(frame, outs):
                     bottom = int(detection[6])
                     width = right - left + 1
                     height = bottom - top + 1
-                    if width * height <= 1:
+                    if width <= 2 or height <= 2:
                         left = int(detection[3] * frameWidth)
                         top = int(detection[4] * frameHeight)
                         right = int(detection[5] * frameWidth)
@@ -140,9 +141,6 @@ def postprocess(frame, outs):
         # Network produces output blob with a shape NxC where N is a number of
         # detected objects and C is a number of classes + 4 where the first 4
         # numbers are [center_x, center_y, width, height]
-        classIds = []
-        confidences = []
-        boxes = []
         for out in outs:
             for detection in out:
                 scores = detection[5:]
@@ -162,9 +160,25 @@ def postprocess(frame, outs):
         print('Unknown output layer type: ' + lastLayer.type)
         exit()
 
-    indices = cv.dnn.NMSBoxes(boxes, confidences, confThreshold, nmsThreshold)
+    # NMS is used inside Region layer only on DNN_BACKEND_OPENCV for another backends we need NMS in sample
+    # or NMS is required if number of outputs > 1
+    if len(outNames) > 1 or lastLayer.type == 'Region' and args.backend != cv.dnn.DNN_BACKEND_OPENCV:
+        indices = []
+        classIds = np.array(classIds)
+        boxes = np.array(boxes)
+        confidences = np.array(confidences)
+        unique_classes = set(classIds)
+        for cl in unique_classes:
+            class_indices = np.where(classIds == cl)[0]
+            conf = confidences[class_indices]
+            box  = boxes[class_indices].tolist()
+            nms_indices = cv.dnn.NMSBoxes(box, conf, confThreshold, nmsThreshold)
+            nms_indices = nms_indices[:, 0] if len(nms_indices) else []
+            indices.extend(class_indices[nms_indices])
+    else:
+        indices = np.arange(0, len(classIds))
+
     for i in indices:
-        i = i[0]
         box = boxes[i]
         left = box[0]
         top = box[1]
@@ -231,8 +245,8 @@ def processingThreadBody():
         try:
             frame = framesQueue.get_nowait()
 
-            if args.async:
-                if len(futureOutputs) == args.async:
+            if args.asyncN:
+                if len(futureOutputs) == args.asyncN:
                     frame = None  # Skip the frame
             else:
                 framesQueue.queue.clear()  # Skip the rest of frames
@@ -256,7 +270,7 @@ def processingThreadBody():
                 frame = cv.resize(frame, (inpWidth, inpHeight))
                 net.setInput(np.array([[inpHeight, inpWidth, 1.6]], dtype=np.float32), 'im_info')
 
-            if args.async:
+            if args.asyncN:
                 futureOutputs.append(net.forwardAsync())
             else:
                 outs = net.forward(outNames)

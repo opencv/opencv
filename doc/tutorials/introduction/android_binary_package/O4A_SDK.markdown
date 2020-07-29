@@ -1,6 +1,10 @@
 OpenCV4Android SDK {#tutorial_O4A_SDK}
 ==================
 
+@prev_tutorial{tutorial_android_dev_intro}
+@next_tutorial{tutorial_dev_with_OCV_on_Android}
+
+
 This tutorial was designed to help you with installation and configuration of OpenCV4Android SDK.
 
 This guide was written with MS Windows 7 in mind, though it should work with GNU Linux and Apple Mac

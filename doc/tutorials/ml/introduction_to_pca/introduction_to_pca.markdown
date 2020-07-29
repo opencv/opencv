@@ -1,6 +1,8 @@
 Introduction to Principal Component Analysis (PCA) {#tutorial_introduction_to_pca}
 =======================================
 
+@prev_tutorial{tutorial_non_linear_svms}
+
 Goal
 ----
 
@@ -205,4 +207,4 @@ The code opens an image, finds the orientation of the detected objects of intere
 
 ![](images/pca_test1.jpg)
 
-![](images/output.png)
+![](images/pca_output.png)

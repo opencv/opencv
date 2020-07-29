@@ -374,8 +374,8 @@ namespace cv
         public:
             /** @brief Constructs a WCube.
 
-            @param min_point Specifies minimum point of the bounding box.
-            @param max_point Specifies maximum point of the bounding box.
+            @param min_point Specifies minimum (or maximum) point of the bounding box.
+            @param max_point Specifies maximum (or minimum) point of the bounding box, opposite to the first parameter.
             @param wire_frame If true, cube is represented as wireframe.
             @param color Color of the cube.
 

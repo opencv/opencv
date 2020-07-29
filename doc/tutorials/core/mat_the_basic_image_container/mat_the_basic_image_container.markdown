@@ -61,7 +61,7 @@ The last thing we want to do is further decrease the speed of your program by ma
 copies of potentially *large* images.
 
 To tackle this issue OpenCV uses a reference counting system. The idea is that each *Mat* object has
-its own header, however the matrix may be shared between two instance of them by having their matrix
+its own header, however a matrix may be shared between two *Mat* objects by having their matrix
 pointers point to the same address. Moreover, the copy operators **will only copy the headers** and
 the pointer to the large matrix, not the data itself.
 
@@ -74,32 +74,32 @@ Mat B(A);                                 // Use the copy constructor
 C = A;                                    // Assignment operator
 @endcode
 
-All the above objects, in the end, point to the same single data matrix. Their headers are
-different, however, and making a modification using any of them will affect all the other ones as
-well. In practice the different objects just provide different access method to the same underlying
-data. Nevertheless, their header parts are different. The real interesting part is that you can
-create headers which refer to only a subsection of the full data. For example, to create a region of
-interest (*ROI*) in an image you just create a new header with the new boundaries:
+All the above objects, in the end, point to the same single data matrix and making a modification
+using any of them will affect all the other ones as well. In practice the different objects just
+provide different access methods to the same underlying data. Nevertheless, their header parts are
+different. The real interesting part is that you can create headers which refer to only a subsection
+of the full data. For example, to create a region of interest (*ROI*) in an image you just create
+a new header with the new boundaries:
 @code{.cpp}
 Mat D (A, Rect(10, 10, 100, 100) ); // using a rectangle
 Mat E = A(Range::all(), Range(1,3)); // using row and column boundaries
 @endcode
-Now you may ask if the matrix itself may belong to multiple *Mat* objects who takes responsibility
+Now you may ask -- if the matrix itself may belong to multiple *Mat* objects who takes responsibility
 for cleaning it up when it's no longer needed. The short answer is: the last object that used it.
 This is handled by using a reference counting mechanism. Whenever somebody copies a header of a
-*Mat* object, a counter is increased for the matrix. Whenever a header is cleaned this counter is
-decreased. When the counter reaches zero the matrix too is freed. Sometimes you will want to copy
-the matrix itself too, so OpenCV provides the @ref cv::Mat::clone() and @ref cv::Mat::copyTo() functions.
+*Mat* object, a counter is increased for the matrix. Whenever a header is cleaned, this counter
+is decreased. When the counter reaches zero the matrix is freed. Sometimes you will want to copy
+the matrix itself too, so OpenCV provides @ref cv::Mat::clone() and @ref cv::Mat::copyTo() functions.
 @code{.cpp}
 Mat F = A.clone();
 Mat G;
 A.copyTo(G);
 @endcode
-Now modifying *F* or *G* will not affect the matrix pointed by the *Mat* header. What you need to
+Now modifying *F* or *G* will not affect the matrix pointed by the *A*'s header. What you need to
 remember from all this is that:
 
 -   Output image allocation for OpenCV functions is automatic (unless specified otherwise).
--   You do not need to think about memory management with OpenCVs C++ interface.
+-   You do not need to think about memory management with OpenCV's C++ interface.
 -   The assignment operator and the copy constructor only copies the header.
 -   The underlying matrix of an image may be copied using the @ref cv::Mat::clone() and @ref cv::Mat::copyTo()
     functions.
@@ -109,7 +109,7 @@ Storing methods
 
 This is about how you store the pixel values. You can select the color space and the data type used.
 The color space refers to how we combine color components in order to code a given color. The
-simplest one is the gray scale where the colors at our disposal are black and white. The combination
+simplest one is the grayscale where the colors at our disposal are black and white. The combination
 of these allows us to create many shades of gray.
 
 For *colorful* ways we have a lot more methods to choose from. Each of them breaks it down to three
@@ -121,15 +121,15 @@ added.
 There are, however, many other color systems each with their own advantages:
 
 -   RGB is the most common as our eyes use something similar, however keep in mind that OpenCV standard display
-    system composes colors using the BGR color space (a switch of the red and blue channel).
+    system composes colors using the BGR color space (red and blue channels are swapped places).
 -   The HSV and HLS decompose colors into their hue, saturation and value/luminance components,
     which is a more natural way for us to describe colors. You might, for example, dismiss the last
     component, making your algorithm less sensible to the light conditions of the input image.
 -   YCrCb is used by the popular JPEG image format.
--   CIE L\*a\*b\* is a perceptually uniform color space, which comes handy if you need to measure
+-   CIE L\*a\*b\* is a perceptually uniform color space, which comes in handy if you need to measure
     the *distance* of a given color to another color.
 
-Each of the building components has their own valid domains. This leads to the data type used. How
+Each of the building components has its own valid domains. This leads to the data type used. How
 we store a component defines the control we have over its domain. The smallest data type possible is
 *char*, which means one byte or 8 bits. This may be unsigned (so can store values from 0 to 255) or
 signed (values from -127 to +127). Although in case of three components this already gives 16
@@ -165,8 +165,8 @@ object in multiple ways:
     CV_[The number of bits per item][Signed or Unsigned][Type Prefix]C[The channel number]
     @endcode
     For instance, *CV_8UC3* means we use unsigned char types that are 8 bit long and each pixel has
-    three of these to form the three channels. This are predefined for up to four channel numbers. The
-    @ref cv::Scalar is four element short vector. Specify this and you can initialize all matrix
+    three of these to form the three channels. There are types predefined for up to four channels. The
+    @ref cv::Scalar is four element short vector. Specify it and you can initialize all matrix
     points with a custom value. If you need more you can create the type with the upper macro, setting
     the channel number in parenthesis as you can see below.
 
@@ -210,7 +210,7 @@ object in multiple ways:
 
     @note
     You can fill out a matrix with random values using the @ref cv::randu() function. You need to
-    give the lower and upper value for the random values:
+    give a lower and upper limit for the random values:
     @snippet mat_the_basic_image_container.cpp random
 
 

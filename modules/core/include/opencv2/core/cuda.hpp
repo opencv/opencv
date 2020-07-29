@@ -126,7 +126,7 @@ public:
     GpuMat(int rows, int cols, int type, Allocator* allocator = defaultAllocator());
     GpuMat(Size size, int type, Allocator* allocator = defaultAllocator());
 
-    //! constucts GpuMat and fills it with the specified value _s
+    //! constructs GpuMat and fills it with the specified value _s
     GpuMat(int rows, int cols, int type, Scalar s, Allocator* allocator = defaultAllocator());
     GpuMat(Size size, int type, Scalar s, Allocator* allocator = defaultAllocator());
 

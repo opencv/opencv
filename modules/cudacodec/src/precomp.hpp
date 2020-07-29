@@ -56,9 +56,9 @@
 #include "opencv2/core/private.cuda.hpp"
 
 #ifdef HAVE_NVCUVID
-    #if CUDA_VERSION >= 9000
+    #if defined(HAVE_DYNLINK_NVCUVID_HEADER)
         #include <dynlink_nvcuvid.h>
-    #else
+    #elif defined(HAVE_NVCUVID_HEADER)
         #include <nvcuvid.h>
     #endif
 

@@ -1,6 +1,9 @@
 Installation in Linux {#tutorial_linux_install}
 =====================
 
+@next_tutorial{tutorial_linux_gcc_cmake}
+
+
 The following steps have been tested for Ubuntu 10.04 but should work with other distros as well.
 
 Required Packages

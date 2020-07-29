@@ -27,7 +27,7 @@ if(ANT_EXECUTABLE)
     unset(ANT_EXECUTABLE CACHE)
   else()
     string(REGEX MATCH "[0-9]+.[0-9]+.[0-9]+" ANT_VERSION "${ANT_VERSION_FULL}")
-    set(ANT_VERSION "${ANT_VERSION}" CACHE INTERNAL "Detected ant vesion")
+    set(ANT_VERSION "${ANT_VERSION}" CACHE INTERNAL "Detected ant version")
 
     message(STATUS "Found apache ant: ${ANT_EXECUTABLE} (${ANT_VERSION})")
   endif()

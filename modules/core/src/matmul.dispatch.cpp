@@ -442,6 +442,12 @@ void transform(InputArray _src, OutputArray _dst, InputArray _mtx)
     _dst.create( src.size(), CV_MAKETYPE(depth, dcn) );
     Mat dst = _dst.getMat();
 
+    if (src.data == dst.data)  // inplace case
+    {
+        CV_Assert(scn == dcn);
+        src = src.clone();  // TODO Add performance warning
+    }
+
     int mtype = depth == CV_32S || depth == CV_64F ? CV_64F : CV_32F;
     AutoBuffer<double> _mbuf;
     double* mbuf;

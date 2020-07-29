@@ -1,6 +1,8 @@
 Cascade Classifier {#tutorial_cascade_classifier}
 ==================
 
+@next_tutorial{tutorial_traincascade}
+
 Goal
 ----
 
@@ -10,7 +12,7 @@ In this tutorial,
 -   We will see the basics of face detection and eye detection using the Haar Feature-based Cascade Classifiers
 -   We will use the @ref cv::CascadeClassifier class to detect objects in a video stream. Particularly, we
     will use the functions:
-    -   @ref cv::CascadeClassifier::load to load a .xml classifier file. It can be either a Haar or a LBP classifer
+    -   @ref cv::CascadeClassifier::load to load a .xml classifier file. It can be either a Haar or a LBP classifier
     -   @ref cv::CascadeClassifier::detectMultiScale to perform the detection.
 
 Theory
@@ -113,7 +115,7 @@ This tutorial code's is shown lines below. You can also download it from
 Result
 ------
 
--#  Here is the result of running the code above and using as input the video stream of a build-in
+-#  Here is the result of running the code above and using as input the video stream of a built-in
     webcam:
 
     ![](images/Cascade_Classifier_Tutorial_Result_Haar.jpg)

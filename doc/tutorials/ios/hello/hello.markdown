@@ -1,6 +1,8 @@
 OpenCV iOS Hello {#tutorial_hello}
 ================
 
+@next_tutorial{tutorial_image_manipulation}
+
 Goal
 ----
 
@@ -50,7 +52,7 @@ Now we will learn how to write a simple Hello World Application in Xcode using O
 Output
 ------
 
-![](images/output.png)
+![](images/ios_hello_output.png)
 
 Changes for XCode5+ and iOS8+
 -----------------------------

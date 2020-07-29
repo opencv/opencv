@@ -22,8 +22,8 @@ int main( int argc, char** argv )
 {
     /// Read image given by user
     //! [basic-linear-transform-load]
-    CommandLineParser parser( argc, argv, "{@input | ../data/lena.jpg | input image}" );
-    Mat image = imread( parser.get<String>( "@input" ) );
+    CommandLineParser parser( argc, argv, "{@input | lena.jpg | input image}" );
+    Mat image = imread( samples::findFile( parser.get<String>( "@input" ) ) );
     if( image.empty() )
     {
       cout << "Could not open or find the image!\n" << endl;
@@ -67,7 +67,7 @@ int main( int argc, char** argv )
     imshow("Original Image", image);
     imshow("New Image", new_image);
 
-    /// Wait until user press some key
+    /// Wait until the user press a key
     waitKey();
     //! [basic-linear-transform-display]
     return 0;

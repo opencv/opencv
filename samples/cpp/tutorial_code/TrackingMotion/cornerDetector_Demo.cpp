@@ -38,8 +38,8 @@ void myHarris_function( int, void* );
 int main( int argc, char** argv )
 {
     /// Load source image and convert it to gray
-    CommandLineParser parser( argc, argv, "{@input | ../data/building.jpg | input image}" );
-    src = imread( parser.get<String>( "@input" ) );
+    CommandLineParser parser( argc, argv, "{@input | building.jpg | input image}" );
+    src = imread( samples::findFile( parser.get<String>( "@input" ) ) );
     if ( src.empty() )
     {
         cout << "Could not open or find the image!\n" << endl;

@@ -15,6 +15,8 @@ In this section you will learn about the image processing (manipulation) functio
 
 -   @subpage tutorial_random_generator_and_text
 
+    *Languages:* C++
+
     *Compatibility:* \> OpenCV 2.0
 
     *Author:* Ana Huamán
@@ -241,65 +243,9 @@ In this section you will learn about the image processing (manipulation) functio
 
     Where we learn how to match templates in an image
 
--   @subpage tutorial_find_contours
+-   @subpage tutorial_table_of_contents_contours
 
-    *Languages:* C++, Java, Python
-
-    *Compatibility:* \> OpenCV 2.0
-
-    *Author:* Ana Huamán
-
-    Where we learn how to find contours of objects in our image
-
--    @subpage tutorial_hull
-
-    *Languages:* C++, Java, Python
-
-    *Compatibility:* \> OpenCV 2.0
-
-    *Author:* Ana Huamán
-
-    Where we learn how to get hull contours and draw them
-
--   @subpage tutorial_bounding_rects_circles
-
-    *Languages:* C++, Java, Python
-
-    *Compatibility:* \> OpenCV 2.0
-
-    *Author:* Ana Huamán
-
-    Where we learn how to obtain bounding boxes and circles for our contours
-
--   @subpage tutorial_bounding_rotated_ellipses
-
-    *Languages:* C++, Java, Python
-
-    *Compatibility:* \> OpenCV 2.0
-
-    *Author:* Ana Huamán
-
-    Where we learn how to obtain rotated bounding boxes and ellipses for our contours
-
--   @subpage tutorial_moments
-
-    *Languages:* C++, Java, Python
-
-    *Compatibility:* \> OpenCV 2.0
-
-    *Author:* Ana Huamán
-
-    Where we learn to calculate the moments of an image
-
--   @subpage tutorial_point_polygon_test
-
-    *Languages:* C++, Java, Python
-
-    *Compatibility:* \> OpenCV 2.0
-
-    *Author:* Ana Huamán
-
-    Where we learn how to calculate distances from the image to contours
+    Learn how to find contours in images and investigate their properties and features.
 
 -   @subpage tutorial_distance_transform
 
@@ -333,7 +279,7 @@ In this section you will learn about the image processing (manipulation) functio
 
 -   @subpage tutorial_anisotropic_image_segmentation_by_a_gst
 
-    *Languages:* C++
+    *Languages:* C++, Python
 
     *Compatibility:* \> OpenCV 2.0
 

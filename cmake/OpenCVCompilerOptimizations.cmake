@@ -5,13 +5,15 @@
 # AVX / AVX2 / AVX_512F
 # FMA3
 #
+# AVX512 details: https://en.wikipedia.org/wiki/AVX-512#CPUs_with_AVX-512
+#
 # CPU features groups:
 # AVX512_COMMON (Common instructions AVX-512F/CD for all CPUs that support AVX-512)
 # AVX512_KNL (Knights Landing with AVX-512F/CD/ER/PF)
 # AVX512_KNM (Knights Mill with AVX-512F/CD/ER/PF/4FMAPS/4VNNIW/VPOPCNTDQ)
 # AVX512_SKX (Skylake-X with AVX-512F/CD/BW/DQ/VL)
 # AVX512_CNL (Cannon Lake with AVX-512F/CD/BW/DQ/VL/IFMA/VBMI)
-# AVX512_CEL (Cascade Lake with AVX-512F/CD/BW/DQ/VL/IFMA/VBMI/VNNI)
+# AVX512_CLX (Cascade Lake with AVX-512F/CD/BW/DQ/VL/VNNI)
 # AVX512_ICL (Ice Lake with AVX-512F/CD/BW/DQ/VL/IFMA/VBMI/VNNI/VBMI2/BITALG/VPOPCNTDQ/VPCLMULQDQ*/GFNI*/VAES*)
 
 # ppc64le arch:
@@ -43,8 +45,9 @@
 # CPU_{opt}_ENABLED_DEFAULT=ON/OFF - has compiler support without additional flag (CPU_BASELINE_DETECT=ON only)
 
 set(CPU_ALL_OPTIMIZATIONS "SSE;SSE2;SSE3;SSSE3;SSE4_1;SSE4_2;POPCNT;AVX;FP16;AVX2;FMA3;AVX_512F")
-list(APPEND CPU_ALL_OPTIMIZATIONS "AVX512_COMMON;AVX512_KNL;AVX512_KNM;AVX512_SKX;AVX512_CNL;AVX512_CEL;AVX512_ICL")
+list(APPEND CPU_ALL_OPTIMIZATIONS "AVX512_COMMON;AVX512_KNL;AVX512_KNM;AVX512_SKX;AVX512_CNL;AVX512_CLX;AVX512_ICL")
 list(APPEND CPU_ALL_OPTIMIZATIONS NEON VFPV3 FP16)
+list(APPEND CPU_ALL_OPTIMIZATIONS MSA)
 list(APPEND CPU_ALL_OPTIMIZATIONS VSX VSX3)
 list(REMOVE_DUPLICATES CPU_ALL_OPTIMIZATIONS)
 
@@ -162,15 +165,15 @@ elseif(" ${CMAKE_CXX_FLAGS} " MATCHES " -march=native | -xHost | /QxHost ")
 endif()
 
 if(X86 OR X86_64)
-  ocv_update(CPU_KNOWN_OPTIMIZATIONS "SSE;SSE2;SSE3;SSSE3;SSE4_1;POPCNT;SSE4_2;FP16;FMA3;AVX;AVX2;AVX_512F;AVX512_COMMON;AVX512_KNL;AVX512_KNM;AVX512_SKX;AVX512_CNL;AVX512_CEL;AVX512_ICL")
+  ocv_update(CPU_KNOWN_OPTIMIZATIONS "SSE;SSE2;SSE3;SSSE3;SSE4_1;POPCNT;SSE4_2;FP16;FMA3;AVX;AVX2;AVX_512F;AVX512_COMMON;AVX512_KNL;AVX512_KNM;AVX512_SKX;AVX512_CNL;AVX512_CLX;AVX512_ICL")
 
   ocv_update(CPU_AVX512_COMMON_GROUP "AVX_512F;AVX_512CD")
   ocv_update(CPU_AVX512_KNL_GROUP "AVX512_COMMON;AVX512_KNL_EXTRA")
   ocv_update(CPU_AVX512_KNM_GROUP "AVX512_KNL;AVX512_KNM_EXTRA;AVX_512VPOPCNTDQ")
   ocv_update(CPU_AVX512_SKX_GROUP "AVX512_COMMON;AVX_512VL;AVX_512BW;AVX_512DQ")
   ocv_update(CPU_AVX512_CNL_GROUP "AVX512_SKX;AVX_512IFMA;AVX_512VBMI")
-  ocv_update(CPU_AVX512_CEL_GROUP "AVX512_CNL;AVX_512VNNI")
-  ocv_update(CPU_AVX512_ICL_GROUP "AVX512_CEL;AVX_512VBMI2;AVX_512BITALG;AVX_512VPOPCNTDQ") # ? VPCLMULQDQ, GFNI, VAES
+  ocv_update(CPU_AVX512_CLX_GROUP "AVX512_SKX;AVX_512VNNI")
+  ocv_update(CPU_AVX512_ICL_GROUP "AVX512_SKX;AVX_512IFMA;AVX_512VBMI;AVX_512VNNI;AVX_512VBMI2;AVX_512BITALG;AVX_512VPOPCNTDQ") # ? VPCLMULQDQ, GFNI, VAES
 
   ocv_update(CPU_SSE_TEST_FILE "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_sse.cpp")
   ocv_update(CPU_SSE2_TEST_FILE "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_sse2.cpp")
@@ -188,12 +191,12 @@ if(X86 OR X86_64)
   ocv_update(CPU_AVX512_KNM_TEST_FILE "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_avx512knm.cpp")
   ocv_update(CPU_AVX512_SKX_TEST_FILE "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_avx512skx.cpp")
   ocv_update(CPU_AVX512_CNL_TEST_FILE "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_avx512cnl.cpp")
-  ocv_update(CPU_AVX512_CEL_TEST_FILE "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_avx512cel.cpp")
+  ocv_update(CPU_AVX512_CLX_TEST_FILE "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_avx512clx.cpp")
   ocv_update(CPU_AVX512_ICL_TEST_FILE "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_avx512icl.cpp")
 
   if(NOT OPENCV_CPU_OPT_IMPLIES_IGNORE)
-    ocv_update(CPU_AVX512_ICL_IMPLIES "AVX512_CEL")
-    ocv_update(CPU_AVX512_CEL_IMPLIES "AVX512_CNL")
+    ocv_update(CPU_AVX512_ICL_IMPLIES "AVX512_SKX")
+    ocv_update(CPU_AVX512_CLX_IMPLIES "AVX512_SKX")
     ocv_update(CPU_AVX512_CNL_IMPLIES "AVX512_SKX")
     ocv_update(CPU_AVX512_SKX_IMPLIES "AVX512_COMMON")
     ocv_update(CPU_AVX512_KNM_IMPLIES "AVX512_KNL")
@@ -250,7 +253,7 @@ if(X86 OR X86_64)
     ocv_intel_compiler_optimization_option(AVX512_KNM "-xKNM" "/Qx:KNM")
     ocv_intel_compiler_optimization_option(AVX512_SKX "-xSKYLAKE-AVX512" "/Qx:SKYLAKE-AVX512")
     ocv_intel_compiler_optimization_option(AVX512_CNL "-xCANNONLAKE" "/Qx:CANNONLAKE")
-    ocv_intel_compiler_optimization_option(AVX512_CEL "-xCASCADELAKE" "/Qx:CASCADELAKE")
+    ocv_intel_compiler_optimization_option(AVX512_CLX "-xCASCADELAKE" "/Qx:CASCADELAKE")
     ocv_intel_compiler_optimization_option(AVX512_ICL "-xICELAKE-CLIENT" "/Qx:ICELAKE-CLIENT")
   elseif(CV_GCC OR CV_CLANG)
     ocv_update(CPU_AVX2_FLAGS_ON "-mavx2")
@@ -285,7 +288,7 @@ if(X86 OR X86_64)
     ocv_update(CPU_AVX2_FLAGS_ON "/arch:AVX2")
     ocv_update(CPU_AVX_FLAGS_ON "/arch:AVX")
     ocv_update(CPU_FP16_FLAGS_ON "/arch:AVX")
-    if(NOT MSVC64)
+    if(NOT X86_64)
       # 64-bit MSVC compiler uses SSE/SSE2 by default
       ocv_update(CPU_SSE_FLAGS_ON "/arch:SSE")
       ocv_update(CPU_SSE_SUPPORTED ON)
@@ -339,6 +342,11 @@ elseif(ARM OR AARCH64)
     ocv_update(CPU_FP16_IMPLIES "NEON")
     set(CPU_BASELINE "NEON;FP16" CACHE STRING "${HELP_CPU_BASELINE}")
   endif()
+elseif(MIPS)
+  ocv_update(CPU_MSA_TEST_FILE "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_msa.cpp")
+  ocv_update(CPU_KNOWN_OPTIMIZATIONS "MSA")
+  ocv_update(CPU_MSA_FLAGS_ON "-mmsa")
+  set(CPU_BASELINE "DETECT" CACHE STRING "${HELP_CPU_BASELINE}")
 elseif(PPC64LE)
   ocv_update(CPU_KNOWN_OPTIMIZATIONS "VSX;VSX3")
   ocv_update(CPU_VSX_TEST_FILE "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_vsx.cpp")
@@ -706,7 +714,10 @@ macro(ocv_compiler_optimization_process_sources SOURCES_VAR_NAME LIBS_VAR_NAME T
   foreach(OPT ${CPU_DISPATCH_FINAL})
     if(__result_${OPT})
 #message("${OPT}: ${__result_${OPT}}")
-      if(CMAKE_GENERATOR MATCHES "^Visual")
+      if(CMAKE_GENERATOR MATCHES "^Visual"
+          OR OPENCV_CMAKE_CPU_OPTIMIZATIONS_FORCE_TARGETS
+      )
+        # MSVS generator is not able to properly order compilation flags:
         # extra flags are added before common flags, so switching between optimizations doesn't work correctly
         # Also CMAKE_CXX_FLAGS doesn't work (it is directory-based, so add_subdirectory is required)
         add_library(${TARGET_BASE_NAME}_${OPT} OBJECT ${__result_${OPT}})
@@ -854,7 +865,7 @@ macro(__ocv_add_dispatched_file filename target_src_var src_directory dst_direct
 
       if(";${CPU_DISPATCH_FINAL};" MATCHES "${OPT}" OR __CPU_DISPATCH_INCLUDE_ALL)
         if(EXISTS "${src_directory}/${filename}.${OPT_LOWER}.cpp")
-          message(STATUS "Using overrided ${OPT} source: ${src_directory}/${filename}.${OPT_LOWER}.cpp")
+          message(STATUS "Using overridden ${OPT} source: ${src_directory}/${filename}.${OPT_LOWER}.cpp")
         else()
           list(APPEND ${target_src_var} "${__file}")
         endif()

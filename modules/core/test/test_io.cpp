@@ -795,10 +795,10 @@ static void test_filestorage_basic(int write_flags, const char* suffix_name, boo
         EXPECT_EQ(_em_in.depth(), _em_out.depth());
         EXPECT_TRUE(_em_in.empty());
 
-        EXPECT_EQ(_2d_in.rows   , _2d_out.rows);
-        EXPECT_EQ(_2d_in.cols   , _2d_out.cols);
-        EXPECT_EQ(_2d_in.dims   , _2d_out.dims);
-        EXPECT_EQ(_2d_in.depth(), _2d_out.depth());
+        ASSERT_EQ(_2d_in.rows   , _2d_out.rows);
+        ASSERT_EQ(_2d_in.cols   , _2d_out.cols);
+        ASSERT_EQ(_2d_in.dims   , _2d_out.dims);
+        ASSERT_EQ(_2d_in.depth(), _2d_out.depth());
 
         errors = 0;
         for(int i = 0; i < _2d_out.rows; ++i)
@@ -819,16 +819,16 @@ static void test_filestorage_basic(int write_flags, const char* suffix_name, boo
             }
         }
 
-        EXPECT_EQ(_nd_in.rows   , _nd_out.rows);
-        EXPECT_EQ(_nd_in.cols   , _nd_out.cols);
-        EXPECT_EQ(_nd_in.dims   , _nd_out.dims);
-        EXPECT_EQ(_nd_in.depth(), _nd_out.depth());
+        ASSERT_EQ(_nd_in.rows   , _nd_out.rows);
+        ASSERT_EQ(_nd_in.cols   , _nd_out.cols);
+        ASSERT_EQ(_nd_in.dims   , _nd_out.dims);
+        ASSERT_EQ(_nd_in.depth(), _nd_out.depth());
         EXPECT_EQ(0, cv::norm(_nd_in, _nd_out, NORM_INF));
 
-        EXPECT_EQ(_rd_in.rows   , _rd_out.rows);
-        EXPECT_EQ(_rd_in.cols   , _rd_out.cols);
-        EXPECT_EQ(_rd_in.dims   , _rd_out.dims);
-        EXPECT_EQ(_rd_in.depth(), _rd_out.depth());
+        ASSERT_EQ(_rd_in.rows   , _rd_out.rows);
+        ASSERT_EQ(_rd_in.cols   , _rd_out.cols);
+        ASSERT_EQ(_rd_in.dims   , _rd_out.dims);
+        ASSERT_EQ(_rd_in.depth(), _rd_out.depth());
         EXPECT_EQ(0, cv::norm(_rd_in, _rd_out, NORM_INF));
     }
 }
@@ -1672,6 +1672,96 @@ TEST(Core_InputOutput, FileStorage_free_file_after_exception)
     {
     }
     ASSERT_EQ(0, std::remove(fileName.c_str()));
+}
+
+TEST(Core_InputOutput, FileStorage_YAML_parse_multiple_documents)
+{
+    const std::string filename = "FileStorage_YAML_parse_multiple_documents.yml";
+    FileStorage fs;
+
+    fs.open(filename, FileStorage::WRITE);
+    fs << "a" << 42;
+    fs.release();
+
+    fs.open(filename, FileStorage::APPEND);
+    fs << "b" << 1988;
+    fs.release();
+
+    fs.open(filename, FileStorage::READ);
+
+    EXPECT_EQ(42, (int)fs["a"]);
+    EXPECT_EQ(1988, (int)fs["b"]);
+
+    EXPECT_EQ(42, (int)fs.root(0)["a"]);
+    EXPECT_TRUE(fs.root(0)["b"].empty());
+
+    EXPECT_TRUE(fs.root(1)["a"].empty());
+    EXPECT_EQ(1988, (int)fs.root(1)["b"]);
+
+    fs.release();
+
+    ASSERT_EQ(0, std::remove(filename.c_str()));
+}
+
+TEST(Core_InputOutput, FileStorage_empty_16823)
+{
+    std::string fname = tempfile("test_fs_empty.yml");
+    {
+        // create empty file
+        std::ofstream f(fname.c_str(), std::ios::out);
+    }
+
+    try
+    {
+        FileStorage fs(fname, FileStorage::READ);
+        ADD_FAILURE() << "Exception must be thrown for empty file.";
+    }
+    catch (const cv::Exception&)
+    {
+        // expected way
+        // closed files can be checked manually through 'strace'
+    }
+    catch (const std::exception& e)
+    {
+        ADD_FAILURE() << "Unexpected exception: " << e.what();
+    }
+    catch (...)
+    {
+        ADD_FAILURE() << "Unexpected unknown C++ exception";
+    }
+
+    EXPECT_EQ(0, remove(fname.c_str()));
+}
+
+TEST(Core_InputOutput, FileStorage_open_empty_16823)
+{
+    std::string fname = tempfile("test_fs_open_empty.yml");
+    {
+        // create empty file
+        std::ofstream f(fname.c_str(), std::ios::out);
+    }
+
+    FileStorage fs;
+    try
+    {
+        fs.open(fname, FileStorage::READ);
+        ADD_FAILURE() << "Exception must be thrown for empty file.";
+    }
+    catch (const cv::Exception&)
+    {
+        // expected way
+        // closed files can be checked manually through 'strace'
+    }
+    catch (const std::exception& e)
+    {
+        ADD_FAILURE() << "Unexpected exception: " << e.what();
+    }
+    catch (...)
+    {
+        ADD_FAILURE() << "Unexpected unknown C++ exception";
+    }
+
+    EXPECT_EQ(0, remove(fname.c_str()));
 }
 
 }} // namespace

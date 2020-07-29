@@ -603,7 +603,7 @@ HoughLinesProbabilistic( Mat& image,
             if( k > 0 )
                 dx = -dx, dy = -dy;
 
-            // walk along the line using fixed-point arithmetics,
+            // walk along the line using fixed-point arithmetic,
             // stop at the image border or in case of too big gap
             for( ;; x += dx, y += dy )
             {
@@ -651,7 +651,7 @@ HoughLinesProbabilistic( Mat& image,
             if( k > 0 )
                 dx = -dx, dy = -dy;
 
-            // walk along the line using fixed-point arithmetics,
+            // walk along the line using fixed-point arithmetic,
             // stop at the image border or in case of too big gap
             for( ;; x += dx, y += dy )
             {
@@ -968,7 +968,7 @@ void HoughLinesPointSet( InputArray _point, OutputArray _lines, int lines_max, i
     createTrigTable( numangle, min_theta, theta_step,
                      irho, tabSin, tabCos );
 
-    // stage 1. fill accumlator
+    // stage 1. fill accumulator
     for( i = 0; i < (int)point.size(); i++ )
         for(int n = 0; n < numangle; n++ )
         {

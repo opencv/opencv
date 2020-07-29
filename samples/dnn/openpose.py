@@ -88,7 +88,7 @@ while cv.waitKey(1) < 0:
 
     points = []
     for i in range(len(BODY_PARTS)):
-        # Slice heatmap of corresponging body's part.
+        # Slice heatmap of corresponding body's part.
         heatMap = out[0, i, :, :]
 
         # Originally, we try to find all the local maximums. To simplify a sample

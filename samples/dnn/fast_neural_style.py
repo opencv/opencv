@@ -14,7 +14,7 @@ parser.add_argument('--median_filter', default=0, type=int, help='Kernel size of
 args = parser.parse_args()
 
 net = cv.dnn.readNetFromTorch(cv.samples.findFile(args.model))
-net.setPreferableBackend(cv.dnn.DNN_BACKEND_OPENCV);
+net.setPreferableBackend(cv.dnn.DNN_BACKEND_OPENCV)
 
 if args.input:
     cap = cv.VideoCapture(args.input)

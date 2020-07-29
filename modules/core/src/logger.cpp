@@ -21,6 +21,8 @@ namespace logging {
 
 static LogLevel parseLogLevelConfiguration()
 {
+    (void)getInitializationMutex();  // ensure initialization of global objects
+
     static cv::String param_log_level = utils::getConfigurationParameterString("OPENCV_LOG_LEVEL",
 #if defined NDEBUG
             "WARNING"
@@ -81,8 +83,8 @@ void writeLogMessage(LogLevel logLevel, const char* message)
     case LOG_LEVEL_INFO:    ss << "[ INFO:" << threadID << "] " << message << std::endl; break;
     case LOG_LEVEL_DEBUG:   ss << "[DEBUG:" << threadID << "] " << message << std::endl; break;
     case LOG_LEVEL_VERBOSE: ss << message << std::endl; break;
-    default:
-        return;
+    case LOG_LEVEL_SILENT: return;  // avoid compiler warning about incomplete switch
+    case ENUM_LOG_LEVEL_FORCE_INT: return;  // avoid compiler warning about incomplete switch
     }
 #ifdef __ANDROID__
     int android_logLevel = ANDROID_LOG_INFO;

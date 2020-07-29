@@ -19,21 +19,21 @@ static void help( char* progName)
         << progName << " [image-name Default: ../data/lena.jpg]"                   << endl << endl;
 }
 
-//! [start]
-// comment out the define to use only the latest C++ API
-#define DEMO_MIXED_API_USE
+//#define USE_LEGACY_C_API 1  // not working with modern OpenCV
 
 #ifdef DEMO_MIXED_API_USE
 #  include <opencv2/highgui/highgui_c.h>
 #  include <opencv2/imgcodecs/imgcodecs_c.h>
 #endif
 
+//! [start]
+
 int main( int argc, char** argv )
 {
     help(argv[0]);
     const char* imagename = argc > 1 ? argv[1] : "../data/lena.jpg";
 
-#ifdef DEMO_MIXED_API_USE
+#ifdef USE_LEGACY_C_API
     Ptr<IplImage> IplI(cvLoadImage(imagename));      // Ptr<T> is a safe ref-counting pointer class
     if(!IplI)
     {
@@ -101,7 +101,7 @@ int main( int argc, char** argv )
     const double brightness_gain = 0;
     const double contrast_gain = 1.7;
 
-#ifdef DEMO_MIXED_API_USE
+#ifdef USE_LEGACY_C_API
     // To pass the new matrices to the functions that only work with IplImage or CvMat do:
     // step 1) Convert the headers (tip: data will not be copied).
     // step 2) call the function   (tip: to pass a pointer do not forget unary "&" to form pointers)
@@ -133,7 +133,7 @@ int main( int argc, char** argv )
 
     namedWindow("image with grain", WINDOW_AUTOSIZE);   // use this to create images
 
-#ifdef DEMO_MIXED_API_USE
+#ifdef USE_LEGACY_C_API
     // this is to demonstrate that I and IplI really share the data - the result of the above
     // processing is stored in I and thus in IplI too.
     cvShowImage("image with grain", IplI);

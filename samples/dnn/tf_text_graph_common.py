@@ -21,7 +21,7 @@ def tokenize(s):
                 elif token:
                     tokens.append(token)
                     token = ""
-            isString = (symbol == '\"' or symbol == '\'') ^ isString;
+            isString = (symbol == '\"' or symbol == '\'') ^ isString
 
         elif symbol == '{' or symbol == '}' or symbol == '[' or symbol == ']':
             if token:
@@ -269,7 +269,7 @@ def parseTextGraph(filePath):
 def removeIdentity(graph_def):
     identities = {}
     for node in graph_def.node:
-        if node.op == 'Identity':
+        if node.op == 'Identity' or node.op == 'IdentityN':
             identities[node.name] = node.input[0]
             graph_def.node.remove(node)
 

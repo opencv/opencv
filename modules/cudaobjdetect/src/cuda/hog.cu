@@ -448,7 +448,7 @@ namespace cv { namespace cuda { namespace device
            compute_confidence_hists_kernel_many_blocks<nthreads, nblocks><<<grid, threads>>>(
                    img_win_width, img_block_width, win_block_stride_x, win_block_stride_y,
                    block_hists, coefs, free_coef, threshold, confidences);
-           cudaSafeCall(cudaThreadSynchronize());
+           cudaSafeCall(cudaDeviceSynchronize());
        }
 
 

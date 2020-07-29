@@ -1,6 +1,10 @@
 Introduction to OpenCV Development with Clojure {#tutorial_clojure_dev_intro}
 ===============================================
 
+@prev_tutorial{tutorial_java_eclipse}
+@next_tutorial{tutorial_android_dev_intro}
+
+
 As of OpenCV 2.4.4, OpenCV supports desktop Java development using nearly the same interface as for
 Android development.
 
@@ -499,7 +503,7 @@ using the following OpenCV methods:
 -   the imwrite static method from the Highgui class to write an image to a file
 -   the GaussianBlur static method from the Imgproc class to apply to blur the original image
 
-We're also going to use the Mat class which is returned from the imread method and accpeted as the
+We're also going to use the Mat class which is returned from the imread method and accepted as the
 main argument to both the GaussianBlur and the imwrite methods.
 
 ### Add an image to the project

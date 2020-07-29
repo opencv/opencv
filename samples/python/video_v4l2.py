@@ -42,7 +42,7 @@ def main():
     cv.createTrackbar("Focus", "Video", focus, 100, lambda v: cap.set(cv.CAP_PROP_FOCUS, v / 100))
 
     while True:
-        status, img = cap.read()
+        _status, img = cap.read()
 
         fourcc = decode_fourcc(cap.get(cv.CAP_PROP_FOURCC))
 

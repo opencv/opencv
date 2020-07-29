@@ -78,10 +78,10 @@ if(NOT ${found})
         AND NOT DEFINED ${executable}
     )
       if(NOT OPENCV_SKIP_PYTHON_WARNING)
-        message(WARNING "CMake's 'find_host_package(PythonInterp ${__python_package_version})' founds wrong Python version:\n"
+        message(WARNING "CMake's 'find_host_package(PythonInterp ${__python_package_version})' found wrong Python version:\n"
                         "PYTHON_EXECUTABLE=${PYTHON_EXECUTABLE}\n"
                         "PYTHON_VERSION_STRING=${PYTHON_VERSION_STRING}\n"
-                        "Consider specify '${executable}' variable via CMake command line or environment variables\n")
+                        "Consider providing the '${executable}' variable via CMake command line or environment variables\n")
       endif()
       ocv_clear_vars(PYTHONINTERP_FOUND PYTHON_EXECUTABLE PYTHON_VERSION_STRING PYTHON_VERSION_MAJOR PYTHON_VERSION_MINOR PYTHON_VERSION_PATCH)
       if(NOT CMAKE_VERSION VERSION_LESS "3.12")
@@ -186,11 +186,7 @@ if(NOT ${found})
         else() #debian based assumed, install to the dist-packages.
           set(_packages_path "python${_version_major_minor}/dist-packages")
         endif()
-        if(EXISTS "${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}/${${packages_path}}")
-          set(_packages_path "lib${LIB_SUFFIX}/${_packages_path}")
-        else()
-          set(_packages_path "lib/${_packages_path}")
-        endif()
+        set(_packages_path "lib/${_packages_path}")
       elseif(CMAKE_HOST_WIN32)
         get_filename_component(_path "${_executable}" PATH)
         file(TO_CMAKE_PATH "${_path}" _path)
@@ -249,7 +245,7 @@ if(NOT ${found})
 
   # Export return values
   set(${found} "${_found}" CACHE INTERNAL "")
-  set(${executable} "${_executable}" CACHE FILEPATH "Path to Python interpretor")
+  set(${executable} "${_executable}" CACHE FILEPATH "Path to Python interpreter")
   set(${version_string} "${_version_string}" CACHE INTERNAL "")
   set(${version_major} "${_version_major}" CACHE INTERNAL "")
   set(${version_minor} "${_version_minor}" CACHE INTERNAL "")

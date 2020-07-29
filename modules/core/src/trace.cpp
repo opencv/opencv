@@ -72,9 +72,13 @@ static int64 getTimestamp()
     return (int64)((t - g_zero_timestamp) * tick_to_ns);
 }
 
-// TODO lazy configuration flags
-static bool param_traceEnable = utils::getConfigurationParameterBool("OPENCV_TRACE", false);
+static bool getParameterTraceEnable()
+{
+    static bool param_traceEnable = utils::getConfigurationParameterBool("OPENCV_TRACE", false);
+    return param_traceEnable;
+}
 
+// TODO lazy configuration flags
 static int param_maxRegionDepthOpenCV = (int)utils::getConfigurationParameterSizeT("OPENCV_TRACE_DEPTH_OPENCV", 1);
 static int param_maxRegionChildrenOpenCV = (int)utils::getConfigurationParameterSizeT("OPENCV_TRACE_MAX_CHILDREN_OPENCV", 1000);
 static int param_maxRegionChildren = (int)utils::getConfigurationParameterSizeT("OPENCV_TRACE_MAX_CHILDREN", 10000);
@@ -196,14 +200,27 @@ static __itt_domain* domain = NULL;
 
 static bool isITTEnabled()
 {
-    static bool isInitialized = false;
+    static volatile bool isInitialized = false;
     static bool isEnabled = false;
     if (!isInitialized)
     {
-        isEnabled = !!(__itt_api_version());
-        CV_LOG_ITT("ITT is " << (isEnabled ? "enabled" : "disabled"));
-        domain = __itt_domain_create("OpenCVTrace");
-        isInitialized = true;
+        cv::AutoLock lock(cv::getInitializationMutex());
+        if (!isInitialized)
+        {
+            bool param_traceITTEnable = utils::getConfigurationParameterBool("OPENCV_TRACE_ITT_ENABLE", true);
+            if (param_traceITTEnable)
+            {
+                isEnabled = !!(__itt_api_version());
+                CV_LOG_ITT("ITT is " << (isEnabled ? "enabled" : "disabled"));
+                domain = __itt_domain_create("OpenCVTrace");
+            }
+            else
+            {
+                CV_LOG_ITT("ITT is disabled through OpenCV parameter");
+                isEnabled = false;
+            }
+            isInitialized = true;
+        }
     }
     return isEnabled;
 }
@@ -828,7 +845,7 @@ TraceManager::TraceManager()
     CV_LOG("TraceManager ctor: " << (void*)this);
 
     CV_LOG("TraceManager configure()");
-    activated = param_traceEnable;
+    activated = getParameterTraceEnable();
 
     if (activated)
         trace_storage.reset(new SyncTraceStorage(std::string(param_traceLocation) + ".txt"));

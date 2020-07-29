@@ -429,7 +429,7 @@ public:
     /** @brief Writes the registered C structure (CvMat, CvMatND, CvSeq).
     @param name Name of the written object.
     @param obj Pointer to the object.
-    @see ocvWrite for details.
+    @see cvWrite for details.
      */
     void writeObj( const String& name, const void* obj );
 
@@ -455,6 +455,17 @@ public:
     line, the comment starts a new line.
      */
     CV_WRAP void writeComment(const String& comment, bool append = false);
+
+    /** @brief Starts to write a nested structure (sequence or a mapping).
+    @param name name of the structure (if it's a member of parent mapping, otherwise it should be empty
+    @param flags type of the structure (FileNode::MAP or FileNode::SEQ (both with optional FileNode::FLOW)).
+    @param typeName usually an empty string
+    */
+    CV_WRAP void startWriteStruct(const String& name, int flags, const String& typeName=String());
+
+    /** @brief Finishes writing nested structure (should pair startWriteStruct())
+    */
+    CV_WRAP void endWriteStruct();
 
     /** @brief Returns the normalized object name for the specified name of a file.
     @param filename Name of a file
@@ -525,6 +536,8 @@ public:
     @param node File node to be used as initialization for the created file node.
     */
     FileNode(const FileNode& node);
+
+    FileNode& operator=(const FileNode& node);
 
     /** @brief Returns element of a mapping node or a sequence node.
     @param nodename Name of an element in the mapping node.
@@ -644,6 +657,8 @@ public:
     @param it Iterator to be used as initialization for the created iterator.
     */
     FileNodeIterator(const FileNodeIterator& it);
+
+    FileNodeIterator& operator=(const FileNodeIterator& it);
 
     //! returns the currently observed element
     FileNode operator *() const;
@@ -1326,6 +1341,7 @@ inline FileNode FileStorage::getFirstTopLevelNode() const { FileNode r = root();
 inline FileNode::FileNode() : fs(0), node(0) {}
 inline FileNode::FileNode(const CvFileStorage* _fs, const CvFileNode* _node) : fs(_fs), node(_node) {}
 inline FileNode::FileNode(const FileNode& _node) : fs(_node.fs), node(_node.node) {}
+inline FileNode& FileNode::operator=(const FileNode& _node)  { fs = _node.fs; node = _node.node; return *this; }
 inline bool FileNode::empty() const    { return node   == 0;    }
 inline bool FileNode::isNone() const   { return type() == NONE; }
 inline bool FileNode::isSeq() const    { return type() == SEQ;  }

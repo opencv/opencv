@@ -90,7 +90,7 @@ static void image_jacobian_homo_ECC(const Mat& src1, const Mat& src2,
 
 
     //instead of dividing each block with den,
-    //just pre-devide the block of gradients (it's more efficient)
+    //just pre-divide the block of gradients (it's more efficient)
 
     Mat src1Divided_;
     Mat src2Divided_;

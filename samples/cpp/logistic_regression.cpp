@@ -157,7 +157,7 @@ int main()
     cout << responses.t() << endl;
     cout << "accuracy: " << calculateAccuracyPercent(labels_test, responses) << "%" << endl;
 
-    // save the classfier
+    // save the classifier
     const String saveFilename = "NewLR_Trained.xml";
     cout << "saving the classifier to " << saveFilename << endl;
     lr1->save(saveFilename);
@@ -167,7 +167,7 @@ int main()
     Ptr<LogisticRegression> lr2 = StatModel::load<LogisticRegression>(saveFilename);
 
     // predict using loaded classifier
-    cout << "predicting the dataset using the loaded classfier...";
+    cout << "predicting the dataset using the loaded classifier...";
     Mat responses2;
     lr2->predict(data_test, responses2);
     cout << "done!" << endl;

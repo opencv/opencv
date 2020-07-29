@@ -102,6 +102,34 @@ namespace
                 cudaSafeCall( cudaDeviceSynchronize() );
         }
     };
+
+    template <int DEPTH> struct NppMirrorIFunc
+    {
+        typedef typename NppTypeTraits<DEPTH>::npp_t npp_t;
+
+        typedef NppStatus (*func_t)(npp_t* pSrcDst, int nSrcDstStep, NppiSize oROI, NppiAxis flip);
+    };
+
+    template <int DEPTH, typename NppMirrorIFunc<DEPTH>::func_t func> struct NppMirrorI
+    {
+        typedef typename NppMirrorIFunc<DEPTH>::npp_t npp_t;
+
+        static void call(GpuMat& srcDst, int flipCode, cudaStream_t stream)
+        {
+            NppStreamHandler h(stream);
+
+            NppiSize sz;
+            sz.width  = srcDst.cols;
+            sz.height = srcDst.rows;
+
+            nppSafeCall( func(srcDst.ptr<npp_t>(), static_cast<int>(srcDst.step),
+                sz,
+                (flipCode == 0 ? NPP_HORIZONTAL_AXIS : (flipCode > 0 ? NPP_VERTICAL_AXIS : NPP_BOTH_AXIS))) );
+
+            if (stream == 0)
+                cudaSafeCall( cudaDeviceSynchronize() );
+        }
+    };
 }
 
 void cv::cuda::flip(InputArray _src, OutputArray _dst, int flipCode, Stream& stream)
@@ -117,6 +145,17 @@ void cv::cuda::flip(InputArray _src, OutputArray _dst, int flipCode, Stream& str
         {NppMirror<CV_32F, nppiMirror_32f_C1R>::call, 0, NppMirror<CV_32F, nppiMirror_32f_C3R>::call, NppMirror<CV_32F, nppiMirror_32f_C4R>::call}
     };
 
+    typedef void (*ifunc_t)(GpuMat& srcDst, int flipCode, cudaStream_t stream);
+    static const ifunc_t ifuncs[6][4] =
+    {
+        {NppMirrorI<CV_8U, nppiMirror_8u_C1IR>::call, 0, NppMirrorI<CV_8U, nppiMirror_8u_C3IR>::call, NppMirrorI<CV_8U, nppiMirror_8u_C4IR>::call},
+        {0,0,0,0},
+        {NppMirrorI<CV_16U, nppiMirror_16u_C1IR>::call, 0, NppMirrorI<CV_16U, nppiMirror_16u_C3IR>::call, NppMirrorI<CV_16U, nppiMirror_16u_C4IR>::call},
+        {0,0,0,0},
+        {NppMirrorI<CV_32S, nppiMirror_32s_C1IR>::call, 0, NppMirrorI<CV_32S, nppiMirror_32s_C3IR>::call, NppMirrorI<CV_32S, nppiMirror_32s_C4IR>::call},
+        {NppMirrorI<CV_32F, nppiMirror_32f_C1IR>::call, 0, NppMirrorI<CV_32F, nppiMirror_32f_C3IR>::call, NppMirrorI<CV_32F, nppiMirror_32f_C4IR>::call}
+    };
+
     GpuMat src = getInputMat(_src, stream);
 
     CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32S || src.depth() == CV_32F);
@@ -125,7 +164,10 @@ void cv::cuda::flip(InputArray _src, OutputArray _dst, int flipCode, Stream& str
     _dst.create(src.size(), src.type());
     GpuMat dst = getOutputMat(_dst, src.size(), src.type(), stream);
 
-    funcs[src.depth()][src.channels() - 1](src, dst, flipCode, StreamAccessor::getStream(stream));
+    if (src.refcount != dst.refcount)
+        funcs[src.depth()][src.channels() - 1](src, dst, flipCode, StreamAccessor::getStream(stream));
+    else // in-place
+        ifuncs[src.depth()][src.channels() - 1](src, flipCode, StreamAccessor::getStream(stream));
 
     syncOutput(dst, _dst, stream);
 }

@@ -16,10 +16,11 @@ using namespace cv;
 using namespace cv::dnn;
 using namespace testing;
 
-static void test(Mat& input, Net& net, Backend backendId, Target targetId, bool skipCheck = false)
+static void test(Mat& input, Net& net, Backend backendId, Target targetId, bool skipCheck = false, bool randInput = true)
 {
     DNNTestLayer::checkBackend(backendId, targetId);
-    randu(input, -1.0f, 1.0f);
+    if (randInput)
+        randu(input, -1.0f, 1.0f);
 
     net.setInput(input);
     net.setPreferableBackend(DNN_BACKEND_OPENCV);
@@ -165,7 +166,7 @@ TEST_P(Deconvolution, Accuracy)
     Target targetId = get<1>(get<7>(GetParam()));
 
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2019010000)
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE && targetId == DNN_TARGET_MYRIAD
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && targetId == DNN_TARGET_MYRIAD
             && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X
             && inChannels == 6 && outChannels == 4 && group == 1
             && kernel == Size(1, 3) && pad == Size(1, 0)
@@ -278,7 +279,7 @@ TEST_P(AvePooling, Accuracy)
     Target targetId = get<1>(get<4>(GetParam()));
 
 #if defined(INF_ENGINE_RELEASE)
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE && targetId == DNN_TARGET_MYRIAD
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && targetId == DNN_TARGET_MYRIAD
             && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X
             && kernel == Size(1, 1) && (stride == Size(1, 1) || stride == Size(2, 2)))
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X);
@@ -324,29 +325,34 @@ TEST_P(MaxPooling, Accuracy)
     Target targetId = get<1>(get<5>(GetParam()));
 
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LE(2018050000)
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE && targetId == DNN_TARGET_MYRIAD
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && targetId == DNN_TARGET_MYRIAD
             && inSize == Size(7, 6) && kernel == Size(3, 2)
             && (stride == Size(1, 1) || stride == Size(2, 2))
             && (pad == Size(0, 1) || pad == Size(1, 1))
     )
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_2018R5);
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
 #endif
 
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2018050000)
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE && targetId == DNN_TARGET_MYRIAD
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && targetId == DNN_TARGET_MYRIAD
             && (kernel == Size(2, 2) || kernel == Size(3, 2))
             && stride == Size(1, 1) && (pad == Size(0, 0) || pad == Size(0, 1))
     )
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_2018R5);
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
 #endif
 
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2019010000)
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE && targetId == DNN_TARGET_MYRIAD
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && targetId == DNN_TARGET_MYRIAD
             && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X
             && (stride == Size(1, 1) || stride == Size(2, 2))
             && (pad == Size(0, 1) || pad == Size(1, 1))
     )
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X, CV_TEST_TAG_DNN_SKIP_IE_2019R1, CV_TEST_TAG_DNN_SKIP_IE_2019R1_1);
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+#endif
+
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2020020000)
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && targetId == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
 #endif
 
     LayerParams lp;
@@ -386,8 +392,12 @@ TEST_P(FullyConnected, Accuracy)
     bool hasBias = get<3>(GetParam());
     Backend backendId = get<0>(get<4>(GetParam()));
     Target targetId = get<1>(get<4>(GetParam()));
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE);
+    if ((backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 ||
+         backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && (targetId == DNN_TARGET_OPENCL_FP16 ||
+       (targetId == DNN_TARGET_MYRIAD && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X))) {
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16);
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X);
+    }
 
     Mat weights(outChannels, inChannels * inSize.height * inSize.width, CV_32F);
     randu(weights, -1.0f, 1.0f);
@@ -426,7 +436,7 @@ TEST_P(SoftMax, Accuracy)
     Backend backendId = get<0>(get<1>(GetParam()));
     Target targetId = get<1>(get<1>(GetParam()));
     LayerParams lp;
-    lp.type = "SoftMax";
+    lp.type = "Softmax";
     lp.name = "testLayer";
 
     int sz[] = {1, inChannels, 1, 1};
@@ -444,8 +454,10 @@ INSTANTIATE_TEST_CASE_P(Layer_Test_Halide, SoftMax, Combine(
 //////////////////////////////////////////////////////////////////////////////
 TEST_P(Test_Halide_layers, MaxPoolUnpool)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
 
     LayerParams pool;
     pool.set("pool", "max");
@@ -551,6 +563,11 @@ TEST_P(ReLU, Accuracy)
     Backend backendId = get<0>(get<1>(GetParam()));
     Target targetId = get<1>(get<1>(GetParam()));
 
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2019020000)
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && targetId == DNN_TARGET_MYRIAD && negativeSlope < 0)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+#endif
+
     LayerParams lp;
     lp.set("negative_slope", negativeSlope);
     lp.type = "ReLU";
@@ -575,7 +592,7 @@ TEST_P(NoParamActivation, Accuracy)
     testInPlaceActivation(lp, backendId, targetId);
 }
 INSTANTIATE_TEST_CASE_P(Layer_Test_Halide, NoParamActivation, Combine(
-/*type*/ Values("TanH", "Sigmoid", "AbsVal", "BNLL"),
+/*type*/ Values("TanH", "Sigmoid", "AbsVal", "BNLL", "Swish", "Mish"),
          dnnBackendsAndTargetsWithHalide()
 ));
 
@@ -658,17 +675,17 @@ TEST_P(Concat, Accuracy)
     Target targetId = get<1>(get<2>(GetParam()));
 
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LE(2018050000)
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE && targetId == DNN_TARGET_MYRIAD
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && targetId == DNN_TARGET_MYRIAD
             && inSize == Vec3i(1, 4, 5) && numChannels == Vec3i(1, 6, 2)
     )
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_2018R5);  // crash
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER, CV_TEST_TAG_DNN_SKIP_IE_VERSION);  // crash
 #endif
 
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2019010000)
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE && targetId == DNN_TARGET_CPU
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && targetId == DNN_TARGET_CPU
             && inSize == Vec3i(1, 4, 5) && numChannels == Vec3i(1, 6, 2)
     )
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE, CV_TEST_TAG_DNN_SKIP_IE_2019R1, CV_TEST_TAG_DNN_SKIP_IE_2019R1_1);  // TODO: IE_CPU
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER, CV_TEST_TAG_DNN_SKIP_IE_VERSION);  // TODO: IE_CPU
 #endif
 
     Net net;
@@ -740,15 +757,34 @@ TEST_P(Eltwise, Accuracy)
     Target targetId = get<1>(get<4>(GetParam()));
 
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LE(2018050000)
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE && targetId == DNN_TARGET_MYRIAD &&
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && targetId == DNN_TARGET_MYRIAD &&
         inSize == Vec3i(1, 4, 5))
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_2018R5);
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
 #endif
 
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2019010000)
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE && numConv > 1)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE, CV_TEST_TAG_DNN_SKIP_IE_2019R1, CV_TEST_TAG_DNN_SKIP_IE_2019R1_1);
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && numConv > 1)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
 #endif
+
+#if defined(INF_ENGINE_RELEASE)
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && targetId == DNN_TARGET_OPENCL &&
+        op == "sum" && numConv == 1 && !weighted)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+#endif
+
+#if defined(INF_ENGINE_RELEASE)
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && numConv > 1)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+#endif
+
+    bool convInputShift = 1;
+    int numEltwiseInputs = numConv;
+    if (op == "div")
+    {
+        numConv = 1;
+        convInputShift = 0; // first input is convolution
+    }
 
     Net net;
 
@@ -789,20 +825,29 @@ TEST_P(Eltwise, Accuracy)
     eltwiseParam.type = "Eltwise";
     eltwiseParam.name = "testLayer";
     int eltwiseId = net.addLayer(eltwiseParam.name, eltwiseParam.type, eltwiseParam);
-    net.connect(0, 0, eltwiseId, 0);
+    if (convInputShift == 1)
+        net.connect(0, 0, eltwiseId, 0);
     for (int i = 0; i < numConv; ++i)
     {
-        net.connect(convLayerIds[i], 0, eltwiseId, i + 1);
+        net.connect(convLayerIds[i], 0, eltwiseId, i + convInputShift);
+    }
+    if (convInputShift == 0)
+        net.connect(0, 0, eltwiseId, numConv);
+    for (int i = numConv; i < numEltwiseInputs; ++i)
+    {
+        net.connect(0, 0, eltwiseId, i + 1);
     }
 
     int sz[] = {1, inSize[0], inSize[1], inSize[2]};
     Mat input(4, &sz[0], CV_32F);
-    test(input, net, backendId, targetId);
+    if (op == "div")
+        randu(input, 1.0f, 1.0f);  // ensure no divisor value has absouluate value of less than 0.5
+    test(input, net, backendId, targetId, /*skipCheck*/false, (op == "div") ? false : true);
 }
 
 INSTANTIATE_TEST_CASE_P(Layer_Test_Halide, Eltwise, Combine(
 /*input size*/ Values(Vec3i(1, 4, 5), Vec3i(2, 8, 6)),
-/*operation*/  Values("prod", "sum", "max"),
+/*operation*/  Values("prod", "sum", "div", "max"),
 /*num convs*/  Values(1, 2, 3),
 /*weighted(for sum only)*/ Bool(),
                dnnBackendsAndTargetsWithHalide()

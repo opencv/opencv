@@ -490,12 +490,47 @@ static int run7Point( const Mat& _m1, const Mat& _m2, Mat& _fmatrix )
     double* fmatrix = _fmatrix.ptr<double>();
     int i, k, n;
 
+    Point2d m1c(0, 0), m2c(0, 0);
+    double t, scale1 = 0, scale2 = 0;
+    const int count = 7;
+
+    // compute centers and average distances for each of the two point sets
+    for( i = 0; i < count; i++ )
+    {
+        m1c += Point2d(m1[i]);
+        m2c += Point2d(m2[i]);
+    }
+
+    // calculate the normalizing transformations for each of the point sets:
+    // after the transformation each set will have the mass center at the coordinate origin
+    // and the average distance from the origin will be ~sqrt(2).
+    t = 1./count;
+    m1c *= t;
+    m2c *= t;
+
+    for( i = 0; i < count; i++ )
+    {
+        scale1 += norm(Point2d(m1[i].x - m1c.x, m1[i].y - m1c.y));
+        scale2 += norm(Point2d(m2[i].x - m2c.x, m2[i].y - m2c.y));
+    }
+
+    scale1 *= t;
+    scale2 *= t;
+
+    if( scale1 < FLT_EPSILON || scale2 < FLT_EPSILON )
+        return 0;
+
+    scale1 = std::sqrt(2.)/scale1;
+    scale2 = std::sqrt(2.)/scale2;
+
     // form a linear system: i-th row of A(=a) represents
     // the equation: (m2[i], 1)'*F*(m1[i], 1) = 0
     for( i = 0; i < 7; i++ )
     {
-        double x0 = m1[i].x, y0 = m1[i].y;
-        double x1 = m2[i].x, y1 = m2[i].y;
+        double x0 = (m1[i].x - m1c.x)*scale1;
+        double y0 = (m1[i].y - m1c.y)*scale1;
+        double x1 = (m2[i].x - m2c.x)*scale2;
+        double y1 = (m2[i].y - m2c.y)*scale2;
 
         a[i*9+0] = x1*x0;
         a[i*9+1] = x1*y0;
@@ -559,6 +594,10 @@ static int run7Point( const Mat& _m1, const Mat& _m2, Mat& _fmatrix )
     if( n < 1 || n > 3 )
         return n;
 
+    // transformation matrices
+    Matx33d T1( scale1, 0, -scale1*m1c.x, 0, scale1, -scale1*m1c.y, 0, 0, 1 );
+    Matx33d T2( scale2, 0, -scale2*m2c.x, 0, scale2, -scale2*m2c.y, 0, 0, 1 );
+
     for( k = 0; k < n; k++, fmatrix += 9 )
     {
         // for each root form the fundamental matrix
@@ -577,6 +616,14 @@ static int run7Point( const Mat& _m1, const Mat& _m2, Mat& _fmatrix )
 
         for( i = 0; i < 8; i++ )
             fmatrix[i] = f1[i]*lambda + f2[i]*mu;
+
+        // de-normalize
+        Mat F(3, 3, CV_64F, fmatrix);
+        F = T2.t() * F * T1;
+
+        // make F(3,3) = 1
+        if(fabs(F.at<double>(8)) > FLT_EPSILON )
+            F *= 1. / F.at<double>(8);
     }
 
     return n;
@@ -762,7 +809,7 @@ public:
 
 cv::Mat cv::findFundamentalMat( InputArray _points1, InputArray _points2,
                                 int method, double ransacReprojThreshold, double confidence,
-                                OutputArray _mask )
+                                int maxIters, OutputArray _mask )
 {
     CV_INSTRUMENT_REGION();
 
@@ -814,7 +861,7 @@ cv::Mat cv::findFundamentalMat( InputArray _points1, InputArray _points2,
             confidence = 0.99;
 
         if( (method & ~3) == FM_RANSAC && npoints >= 15 )
-            result = createRANSACPointSetRegistrator(cb, 7, ransacReprojThreshold, confidence)->run(m1, m2, F, _mask);
+            result = createRANSACPointSetRegistrator(cb, 7, ransacReprojThreshold, confidence, maxIters)->run(m1, m2, F, _mask);
         else
             result = createLMeDSPointSetRegistrator(cb, 7, confidence)->run(m1, m2, F, _mask);
     }
@@ -825,11 +872,17 @@ cv::Mat cv::findFundamentalMat( InputArray _points1, InputArray _points2,
     return F;
 }
 
-cv::Mat cv::findFundamentalMat( InputArray _points1, InputArray _points2,
-                               OutputArray _mask, int method,
-                               double ransacReprojThreshold , double confidence)
+cv::Mat cv::findFundamentalMat( cv::InputArray points1, cv::InputArray points2,
+                                     int method, double ransacReprojThreshold, double confidence,
+                                     cv::OutputArray mask )
 {
-    return cv::findFundamentalMat(_points1, _points2, method, ransacReprojThreshold, confidence, _mask);
+    return cv::findFundamentalMat(points1, points2, method, ransacReprojThreshold, confidence, 1000, mask);
+}
+
+cv::Mat cv::findFundamentalMat( cv::InputArray points1, cv::InputArray points2, cv::OutputArray mask,
+                                int method, double ransacReprojThreshold, double confidence )
+{
+    return cv::findFundamentalMat(points1, points2, method, ransacReprojThreshold, confidence, 1000, mask);
 }
 
 

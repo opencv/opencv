@@ -22,6 +22,7 @@ private:
 public:
     typedef fixedpoint64 WT;
     CV_ALWAYS_INLINE fixedpoint64() { val = 0; }
+    CV_ALWAYS_INLINE fixedpoint64(const fixedpoint64& v) { val = v.val; }
     CV_ALWAYS_INLINE fixedpoint64(const int8_t& _val) { val = ((int64_t)_val) << fixedShift; }
     CV_ALWAYS_INLINE fixedpoint64(const uint8_t& _val) { val = ((int64_t)_val) << fixedShift; }
     CV_ALWAYS_INLINE fixedpoint64(const int16_t& _val) { val = ((int64_t)_val) << fixedShift; }
@@ -104,6 +105,7 @@ private:
 public:
     typedef ufixedpoint64 WT;
     CV_ALWAYS_INLINE ufixedpoint64() { val = 0; }
+    CV_ALWAYS_INLINE ufixedpoint64(const ufixedpoint64& v) { val = v.val; }
     CV_ALWAYS_INLINE ufixedpoint64(const uint8_t& _val) { val = ((uint64_t)_val) << fixedShift; }
     CV_ALWAYS_INLINE ufixedpoint64(const uint16_t& _val) { val = ((uint64_t)_val) << fixedShift; }
     CV_ALWAYS_INLINE ufixedpoint64(const uint32_t& _val) { val = ((uint64_t)_val) << fixedShift; }
@@ -169,6 +171,7 @@ private:
 public:
     typedef fixedpoint64 WT;
     CV_ALWAYS_INLINE fixedpoint32() { val = 0; }
+    CV_ALWAYS_INLINE fixedpoint32(const fixedpoint32& v) { val = v.val; }
     CV_ALWAYS_INLINE fixedpoint32(const int8_t& _val) { val = ((int32_t)_val) << fixedShift; }
     CV_ALWAYS_INLINE fixedpoint32(const uint8_t& _val) { val = ((int32_t)_val) << fixedShift; }
     CV_ALWAYS_INLINE fixedpoint32(const int16_t& _val) { val = ((int32_t)_val) << fixedShift; }
@@ -222,6 +225,7 @@ private:
 public:
     typedef ufixedpoint64 WT;
     CV_ALWAYS_INLINE ufixedpoint32() { val = 0; }
+    CV_ALWAYS_INLINE ufixedpoint32(const ufixedpoint32& v) { val = v.val; }
     CV_ALWAYS_INLINE ufixedpoint32(const uint8_t& _val) { val = ((uint32_t)_val) << fixedShift; }
     CV_ALWAYS_INLINE ufixedpoint32(const uint16_t& _val) { val = ((uint32_t)_val) << fixedShift; }
     CV_ALWAYS_INLINE ufixedpoint32(const cv::softdouble& _val) { val = _val.getSign() ? 0 : (uint32_t)cvRound(_val * cv::softdouble((1 << fixedShift))); }
@@ -271,6 +275,7 @@ private:
 public:
     typedef fixedpoint32 WT;
     CV_ALWAYS_INLINE fixedpoint16() { val = 0; }
+    CV_ALWAYS_INLINE fixedpoint16(const fixedpoint16& v) { val = v.val; }
     CV_ALWAYS_INLINE fixedpoint16(const int8_t& _val) { val = ((int16_t)_val) << fixedShift; }
     CV_ALWAYS_INLINE fixedpoint16(const cv::softdouble& _val) { val = (int16_t)cvRound(_val * cv::softdouble((1 << fixedShift))); }
     CV_ALWAYS_INLINE fixedpoint16& operator = (const int8_t& _val) { val = ((int16_t)_val) << fixedShift; return *this; }
@@ -317,6 +322,7 @@ private:
 public:
     typedef ufixedpoint32 WT;
     CV_ALWAYS_INLINE ufixedpoint16() { val = 0; }
+    CV_ALWAYS_INLINE ufixedpoint16(const ufixedpoint16& v) { val = v.val; }
     CV_ALWAYS_INLINE ufixedpoint16(const uint8_t& _val) { val = ((uint16_t)_val) << fixedShift; }
     CV_ALWAYS_INLINE ufixedpoint16(const cv::softdouble& _val) { val = _val.getSign() ? 0 : (uint16_t)cvRound(_val * cv::softdouble((int32_t)(1 << fixedShift))); }
     CV_ALWAYS_INLINE ufixedpoint16& operator = (const uint8_t& _val) { val = ((uint16_t)_val) << fixedShift; return *this; }
@@ -349,6 +355,9 @@ public:
     CV_ALWAYS_INLINE bool isZero() { return val == 0; }
     static CV_ALWAYS_INLINE ufixedpoint16 zero() { return ufixedpoint16(); }
     static CV_ALWAYS_INLINE ufixedpoint16 one() { return ufixedpoint16((uint16_t)(1 << fixedShift)); }
+
+    static CV_ALWAYS_INLINE ufixedpoint16 fromRaw(uint16_t v) { return ufixedpoint16(v); }
+    CV_ALWAYS_INLINE ufixedpoint16 raw() { return val; }
 };
 
 }

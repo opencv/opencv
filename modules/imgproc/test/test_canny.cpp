@@ -357,7 +357,7 @@ PARAM_TEST_CASE(CannyVX, ImagePath, ApertureSize, L2gradient)
     void loadImage()
     {
         src = cv::imread(cvtest::TS::ptr()->get_data_path() + imgPath, IMREAD_GRAYSCALE);
-        ASSERT_FALSE(src.empty()) << "cann't load image: " << imgPath;
+        ASSERT_FALSE(src.empty()) << "can't load image: " << imgPath;
     }
 };
 

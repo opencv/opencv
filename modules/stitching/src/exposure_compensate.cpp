@@ -275,8 +275,12 @@ void BlocksGainCompensator::feed(const std::vector<Point> &corners, const std::v
                     gain_map(by, bx) = static_cast<float>(gains[bl_idx]);
         }
 
-        sepFilter2D(gain_maps_[img_idx], gain_maps_[img_idx], CV_32F, ker, ker);
-        sepFilter2D(gain_maps_[img_idx], gain_maps_[img_idx], CV_32F, ker, ker);
+        // 2 smooth passes
+        UMat result;
+        sepFilter2D(gain_maps_[img_idx], result, CV_32F, ker, ker);
+        UMat result2;
+        sepFilter2D(result, result2, CV_32F, ker, ker);
+        swap(gain_maps_[img_idx], result2);
     }
 }
 

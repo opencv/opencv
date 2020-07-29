@@ -73,6 +73,7 @@ public:
 
     bool train( const Ptr<TrainData>& data, int flags )
     {
+        CV_Assert(!data.empty());
         Mat new_samples = data->getTrainSamples(ROW_SAMPLE);
         Mat new_responses;
         data->getTrainResponses().convertTo(new_responses, CV_32F);
@@ -494,6 +495,7 @@ public:
 
     bool train( const Ptr<TrainData>& data, int flags ) CV_OVERRIDE
     {
+        CV_Assert(!data.empty());
         return impl->train(data, flags);
     }
 

@@ -618,7 +618,7 @@ void OCL4DNNConvSpatial<Dtype>::calculateBenchmark(const UMat &bottom, UMat &ver
 // For large enough input size, we do not need to tune kernels for different
 // size. The reason is with large input size, there will be enough work items
 // to feed al the EUs.
-// FIXME for the gemm like convolution, switch back to eaxct image size.
+// FIXME for the gemm like convolution, switch back to exact image size.
 
 #define TUNING_SIZE(x) ((x) > 256 ? 256 : (alignSize(x, 16)))
 

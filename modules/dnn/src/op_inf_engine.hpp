@@ -22,10 +22,15 @@
 #define INF_ENGINE_RELEASE_2018R5 2018050000
 #define INF_ENGINE_RELEASE_2019R1 2019010000
 #define INF_ENGINE_RELEASE_2019R2 2019020000
+#define INF_ENGINE_RELEASE_2019R3 2019030000
+#define INF_ENGINE_RELEASE_2020_1 2020010000
+#define INF_ENGINE_RELEASE_2020_2 2020020000
+#define INF_ENGINE_RELEASE_2020_3 2020030000
+#define INF_ENGINE_RELEASE_2020_4 2020040000
 
 #ifndef INF_ENGINE_RELEASE
-#warning("IE version have not been provided via command-line. Using 2019R2 by default")
-#define INF_ENGINE_RELEASE INF_ENGINE_RELEASE_2019R2
+#warning("IE version have not been provided via command-line. Using 2020.4 by default")
+#define INF_ENGINE_RELEASE INF_ENGINE_RELEASE_2020_4
 #endif
 
 #define INF_ENGINE_VER_MAJOR_GT(ver) (((INF_ENGINE_RELEASE) / 10000) > ((ver) / 10000))
@@ -39,24 +44,28 @@
 #pragma GCC diagnostic ignored "-Wsuggest-override"
 #endif
 
+#if defined(HAVE_DNN_IE_NN_BUILDER_2019) || INF_ENGINE_VER_MAJOR_EQ(INF_ENGINE_RELEASE_2020_4)
 //#define INFERENCE_ENGINE_DEPRECATED  // turn off deprecation warnings from IE
-//there is no way to suppress warnigns from IE only at this moment, so we are forced to suppress warnings globally
+//there is no way to suppress warnings from IE only at this moment, so we are forced to suppress warnings globally
 #if defined(__GNUC__)
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #endif
 #ifdef _MSC_VER
 #pragma warning(disable: 4996)  // was declared deprecated
 #endif
+#endif
 
-#if defined(__GNUC__)
+#if defined(__GNUC__) && INF_ENGINE_VER_MAJOR_LT(INF_ENGINE_RELEASE_2020_1)
 #pragma GCC visibility push(default)
 #endif
 
 #include <inference_engine.hpp>
 
+#ifdef HAVE_DNN_IE_NN_BUILDER_2019
 #include <ie_builders.hpp>
+#endif
 
-#if defined(__GNUC__)
+#if defined(__GNUC__) && INF_ENGINE_VER_MAJOR_LT(INF_ENGINE_RELEASE_2020_1)
 #pragma GCC visibility pop
 #endif
 
@@ -69,6 +78,15 @@
 namespace cv { namespace dnn {
 
 #ifdef HAVE_INF_ENGINE
+
+Backend& getInferenceEngineBackendTypeParam();
+
+Mat infEngineBlobToMat(const InferenceEngine::Blob::Ptr& blob);
+
+void infEngineBlobsToMats(const std::vector<InferenceEngine::Blob::Ptr>& blobs,
+                          std::vector<Mat>& mats);
+
+#ifdef HAVE_DNN_IE_NN_BUILDER_2019
 
 class InfEngineBackendNet
 {
@@ -87,23 +105,29 @@ public:
 
     bool isInitialized();
 
-    void init(int targetId);
+    void init(Target targetId);
 
     void forward(const std::vector<Ptr<BackendWrapper> >& outBlobsWrappers,
                  bool isAsync);
 
-    void initPlugin(InferenceEngine::ICNNNetwork& net);
+    void initPlugin(InferenceEngine::CNNNetwork& net);
 
     void addBlobs(const std::vector<cv::Ptr<BackendWrapper> >& ptrs);
+
+    void reset();
 
 private:
     InferenceEngine::Builder::Network netBuilder;
 
-    InferenceEngine::InferenceEnginePluginPtr enginePtr;
-    InferenceEngine::InferencePlugin plugin;
     InferenceEngine::ExecutableNetwork netExec;
     InferenceEngine::BlobMap allBlobs;
-    InferenceEngine::TargetDevice targetDevice;
+    std::string device_name;
+#if INF_ENGINE_VER_MAJOR_LE(2019010000)
+    InferenceEngine::InferenceEnginePluginPtr enginePtr;
+    InferenceEngine::InferencePlugin plugin;
+#else
+    bool isInit = false;
+#endif
 
     struct InfEngineReqWrapper
     {
@@ -125,7 +149,7 @@ private:
     std::map<std::string, int> layers;
     std::vector<std::string> requestedOutputs;
 
-    std::set<int> unconnectedLayersIds;
+    std::set<std::pair<int, int> > unconnectedPorts;
 };
 
 class InfEngineBackendNode : public BackendNode
@@ -133,12 +157,17 @@ class InfEngineBackendNode : public BackendNode
 public:
     InfEngineBackendNode(const InferenceEngine::Builder::Layer& layer);
 
+    InfEngineBackendNode(Ptr<Layer>& layer, std::vector<Mat*>& inputs,
+                         std::vector<Mat>& outputs, std::vector<Mat>& internals);
+
     void connect(std::vector<Ptr<BackendWrapper> >& inputs,
                  std::vector<Ptr<BackendWrapper> >& outputs);
 
     // Inference Engine network object that allows to obtain the outputs of this layer.
     InferenceEngine::Builder::Layer layer;
     Ptr<InfEngineBackendNet> net;
+    // CPU fallback in case of unsupported Inference Engine layer.
+    Ptr<dnn::Layer> cvLayer;
 };
 
 class InfEngineBackendWrapper : public BackendWrapper
@@ -166,8 +195,6 @@ InferenceEngine::Blob::Ptr wrapToInfEngineBlob(const Mat& m, InferenceEngine::La
 InferenceEngine::Blob::Ptr wrapToInfEngineBlob(const Mat& m, const std::vector<size_t>& shape, InferenceEngine::Layout layout);
 
 InferenceEngine::DataPtr infEngineDataNode(const Ptr<BackendWrapper>& ptr);
-
-Mat infEngineBlobToMat(const InferenceEngine::Blob::Ptr& blob);
 
 // Convert Inference Engine blob with FP32 precision to FP16 precision.
 // Allocates memory for a new blob.
@@ -197,11 +224,47 @@ private:
     InferenceEngine::CNNNetwork t_net;
 };
 
+class InfEngineExtension : public InferenceEngine::IExtension
+{
+public:
+#if INF_ENGINE_VER_MAJOR_LT(INF_ENGINE_RELEASE_2020_2)
+    virtual void SetLogCallback(InferenceEngine::IErrorListener&) noexcept {}
+#endif
+    virtual void Unload() noexcept {}
+    virtual void Release() noexcept {}
+    virtual void GetVersion(const InferenceEngine::Version*&) const noexcept {}
+
+    virtual InferenceEngine::StatusCode getPrimitiveTypes(char**&, unsigned int&,
+                                                          InferenceEngine::ResponseDesc*) noexcept
+    {
+        return InferenceEngine::StatusCode::OK;
+    }
+
+    InferenceEngine::StatusCode getFactoryFor(InferenceEngine::ILayerImplFactory*& factory,
+                                              const InferenceEngine::CNNLayer* cnnLayer,
+                                              InferenceEngine::ResponseDesc* resp) noexcept;
+};
+
+#endif  // HAVE_DNN_IE_NN_BUILDER_2019
+
+
 CV__DNN_EXPERIMENTAL_NS_BEGIN
 
 bool isMyriadX();
 
 CV__DNN_EXPERIMENTAL_NS_END
+
+InferenceEngine::Core& getCore(const std::string& id);
+
+template<typename T = size_t>
+static inline std::vector<T> getShape(const Mat& mat)
+{
+    std::vector<T> result(mat.dims);
+    for (int i = 0; i < mat.dims; i++)
+        result[i] = (T)mat.size[i];
+    return result;
+}
+
 
 #endif  // HAVE_INF_ENGINE
 

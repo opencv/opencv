@@ -17,12 +17,12 @@ tracking and foreground extractions.
 
 -   @subpage tutorial_meanshift
 
-    *Languages:* C++, Python
+    *Languages:* C++, Java, Python
 
     Learn how to use the Meanshift and Camshift algorithms to track objects in videos.
 
 -   @subpage tutorial_optical_flow
 
-    *Languages:* C++, Python
+    *Languages:* C++, Java, Python
 
     We will learn how to use optical flow methods to track sparse features or to create a dense representation.

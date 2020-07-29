@@ -28,7 +28,7 @@ struct v_uint8x16
 
     explicit v_uint8x16(const vec_uchar16& v) : val(v)
     {}
-    v_uint8x16() : val(vec_uchar16_z)
+    v_uint8x16()
     {}
     v_uint8x16(vec_bchar16 v) : val(vec_uchar16_c(v))
     {}
@@ -36,6 +36,9 @@ struct v_uint8x16
                uchar v8, uchar v9, uchar v10, uchar v11, uchar v12, uchar v13, uchar v14, uchar v15)
         : val(vec_uchar16_set(v0, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15))
     {}
+
+    static inline v_uint8x16 zero() { return v_uint8x16(vec_uchar16_z); }
+
     uchar get0() const
     { return vec_extract(val, 0); }
 };
@@ -48,7 +51,7 @@ struct v_int8x16
 
     explicit v_int8x16(const vec_char16& v) : val(v)
     {}
-    v_int8x16() : val(vec_char16_z)
+    v_int8x16()
     {}
     v_int8x16(vec_bchar16 v) : val(vec_char16_c(v))
     {}
@@ -56,6 +59,9 @@ struct v_int8x16
               schar v8, schar v9, schar v10, schar v11, schar v12, schar v13, schar v14, schar v15)
         : val(vec_char16_set(v0, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15))
     {}
+
+    static inline v_int8x16 zero() { return v_int8x16(vec_char16_z); }
+
     schar get0() const
     { return vec_extract(val, 0); }
 };
@@ -68,13 +74,16 @@ struct v_uint16x8
 
     explicit v_uint16x8(const vec_ushort8& v) : val(v)
     {}
-    v_uint16x8() : val(vec_ushort8_z)
+    v_uint16x8()
     {}
     v_uint16x8(vec_bshort8 v) : val(vec_ushort8_c(v))
     {}
     v_uint16x8(ushort v0, ushort v1, ushort v2, ushort v3, ushort v4, ushort v5, ushort v6, ushort v7)
         : val(vec_ushort8_set(v0, v1, v2, v3, v4, v5, v6, v7))
     {}
+
+    static inline v_uint16x8 zero() { return v_uint16x8(vec_ushort8_z); }
+
     ushort get0() const
     { return vec_extract(val, 0); }
 };
@@ -87,13 +96,16 @@ struct v_int16x8
 
     explicit v_int16x8(const vec_short8& v) : val(v)
     {}
-    v_int16x8() : val(vec_short8_z)
+    v_int16x8()
     {}
     v_int16x8(vec_bshort8 v) : val(vec_short8_c(v))
     {}
     v_int16x8(short v0, short v1, short v2, short v3, short v4, short v5, short v6, short v7)
         : val(vec_short8_set(v0, v1, v2, v3, v4, v5, v6, v7))
     {}
+
+    static inline v_int16x8 zero() { return v_int16x8(vec_short8_z); }
+
     short get0() const
     { return vec_extract(val, 0); }
 };
@@ -106,12 +118,15 @@ struct v_uint32x4
 
     explicit v_uint32x4(const vec_uint4& v) : val(v)
     {}
-    v_uint32x4() : val(vec_uint4_z)
+    v_uint32x4()
     {}
     v_uint32x4(vec_bint4 v) : val(vec_uint4_c(v))
     {}
     v_uint32x4(unsigned v0, unsigned v1, unsigned v2, unsigned v3) : val(vec_uint4_set(v0, v1, v2, v3))
     {}
+
+    static inline v_uint32x4 zero() { return v_uint32x4(vec_uint4_z); }
+
     uint get0() const
     { return vec_extract(val, 0); }
 };
@@ -124,12 +139,15 @@ struct v_int32x4
 
     explicit v_int32x4(const vec_int4& v) : val(v)
     {}
-    v_int32x4() : val(vec_int4_z)
+    v_int32x4()
     {}
     v_int32x4(vec_bint4 v) : val(vec_int4_c(v))
     {}
     v_int32x4(int v0, int v1, int v2, int v3) : val(vec_int4_set(v0, v1, v2, v3))
     {}
+
+    static inline v_int32x4 zero() { return v_int32x4(vec_int4_z); }
+
     int get0() const
     { return vec_extract(val, 0); }
 };
@@ -142,12 +160,15 @@ struct v_float32x4
 
     explicit v_float32x4(const vec_float4& v) : val(v)
     {}
-    v_float32x4() : val(vec_float4_z)
+    v_float32x4()
     {}
     v_float32x4(vec_bint4 v) : val(vec_float4_c(v))
     {}
     v_float32x4(float v0, float v1, float v2, float v3) : val(vec_float4_set(v0, v1, v2, v3))
     {}
+
+    static inline v_float32x4 zero() { return v_float32x4(vec_float4_z); }
+
     float get0() const
     { return vec_extract(val, 0); }
 };
@@ -160,12 +181,15 @@ struct v_uint64x2
 
     explicit v_uint64x2(const vec_udword2& v) : val(v)
     {}
-    v_uint64x2() : val(vec_udword2_z)
+    v_uint64x2()
     {}
     v_uint64x2(vec_bdword2 v) : val(vec_udword2_c(v))
     {}
     v_uint64x2(uint64 v0, uint64 v1) : val(vec_udword2_set(v0, v1))
     {}
+
+    static inline v_uint64x2 zero() { return v_uint64x2(vec_udword2_z); }
+
     uint64 get0() const
     { return vec_extract(val, 0); }
 };
@@ -178,12 +202,15 @@ struct v_int64x2
 
     explicit v_int64x2(const vec_dword2& v) : val(v)
     {}
-    v_int64x2() : val(vec_dword2_z)
+    v_int64x2()
     {}
     v_int64x2(vec_bdword2 v) : val(vec_dword2_c(v))
     {}
     v_int64x2(int64 v0, int64 v1) : val(vec_dword2_set(v0, v1))
     {}
+
+    static inline v_int64x2 zero() { return v_int64x2(vec_dword2_z); }
+
     int64 get0() const
     { return vec_extract(val, 0); }
 };
@@ -196,15 +223,32 @@ struct v_float64x2
 
     explicit v_float64x2(const vec_double2& v) : val(v)
     {}
-    v_float64x2() : val(vec_double2_z)
+    v_float64x2()
     {}
     v_float64x2(vec_bdword2 v) : val(vec_double2_c(v))
     {}
     v_float64x2(double v0, double v1) : val(vec_double2_set(v0, v1))
     {}
+
+    static inline v_float64x2 zero() { return v_float64x2(vec_double2_z); }
+
     double get0() const
     { return vec_extract(val, 0); }
 };
+
+#define OPENCV_HAL_IMPL_VSX_EXTRACT_N(_Tpvec, _Tp) \
+template<int i> inline _Tp v_extract_n(VSX_UNUSED(_Tpvec v)) { return vec_extract(v.val, i); }
+
+OPENCV_HAL_IMPL_VSX_EXTRACT_N(v_uint8x16, uchar)
+OPENCV_HAL_IMPL_VSX_EXTRACT_N(v_int8x16, schar)
+OPENCV_HAL_IMPL_VSX_EXTRACT_N(v_uint16x8, ushort)
+OPENCV_HAL_IMPL_VSX_EXTRACT_N(v_int16x8, short)
+OPENCV_HAL_IMPL_VSX_EXTRACT_N(v_uint32x4, uint)
+OPENCV_HAL_IMPL_VSX_EXTRACT_N(v_int32x4, int)
+OPENCV_HAL_IMPL_VSX_EXTRACT_N(v_uint64x2, uint64)
+OPENCV_HAL_IMPL_VSX_EXTRACT_N(v_int64x2, int64)
+OPENCV_HAL_IMPL_VSX_EXTRACT_N(v_float32x4, float)
+OPENCV_HAL_IMPL_VSX_EXTRACT_N(v_float64x2, double)
 
 //////////////// Load and store operations ///////////////
 
@@ -215,7 +259,7 @@ struct v_float64x2
  * if vec_xxx_c defined as C++ cast, clang-5 will pass it
 */
 #define OPENCV_HAL_IMPL_VSX_INITVEC(_Tpvec, _Tp, suffix, cast)                        \
-inline _Tpvec v_setzero_##suffix() { return _Tpvec(); }                               \
+inline _Tpvec v_setzero_##suffix() { return _Tpvec(vec_splats((_Tp)0)); }             \
 inline _Tpvec v_setall_##suffix(_Tp v) { return _Tpvec(vec_splats((_Tp)v));}          \
 template<typename _Tpvec0> inline _Tpvec v_reinterpret_as_##suffix(const _Tpvec0 &a)  \
 { return _Tpvec((cast)a.val); }
@@ -332,11 +376,37 @@ OPENCV_HAL_IMPL_VSX_EXPAND(v_int16x8, v_int32x4, short, vec_unpackl, vec_unpackh
 OPENCV_HAL_IMPL_VSX_EXPAND(v_uint32x4, v_uint64x2, uint, vec_unpacklu, vec_unpackhu)
 OPENCV_HAL_IMPL_VSX_EXPAND(v_int32x4, v_int64x2, int, vec_unpackl, vec_unpackh)
 
+/* Load and zero expand a 4 byte value into the second dword, first is don't care. */
+#if !defined(CV_COMPILER_VSX_BROKEN_ASM)
+    #define _LXSIWZX(out, ptr, T) __asm__ ("lxsiwzx %x0, 0, %1\r\n" : "=wa"(out) : "r" (ptr) : "memory");
+#else
+    /* This is compiler-agnostic, but will introduce an unneeded splat on the critical path. */
+    #define _LXSIWZX(out, ptr, T) out = (T)vec_udword2_sp(*(uint32_t*)(ptr));
+#endif
+
 inline v_uint32x4 v_load_expand_q(const uchar* ptr)
-{ return v_uint32x4(vec_uint4_set(ptr[0], ptr[1], ptr[2], ptr[3])); }
+{
+    // Zero-extend the extra 24B instead of unpacking. Usually faster in small kernel
+    // Likewise note, value is zero extended and upper 4 bytes are zero'ed.
+    vec_uchar16 pmu = {8, 12, 12, 12, 9, 12, 12, 12, 10, 12, 12, 12, 11, 12, 12, 12};
+    vec_uchar16 out;
+
+    _LXSIWZX(out, ptr, vec_uchar16);
+    out = vec_perm(out, out, pmu);
+    return v_uint32x4((vec_uint4)out);
+}
 
 inline v_int32x4 v_load_expand_q(const schar* ptr)
-{ return v_int32x4(vec_int4_set(ptr[0], ptr[1], ptr[2], ptr[3])); }
+{
+    vec_char16 out;
+    vec_short8 outs;
+    vec_int4 outw;
+
+    _LXSIWZX(out, ptr, vec_char16);
+    outs = vec_unpackl(out);
+    outw = vec_unpackh(outs);
+    return v_int32x4(outw);
+}
 
 /* pack */
 #define OPENCV_HAL_IMPL_VSX_PACK(_Tpvec, _Tp, _Tpwvec, _Tpvn, _Tpdel, sfnc, pkfnc, addfnc, pack)    \
@@ -499,12 +569,6 @@ inline void v_mul_expand(const Tvec& a, const Tvec& b, Twvec& c, Twvec& d)
     v_zip(p0, p1, c, d);
 }
 
-inline void v_mul_expand(const v_uint32x4& a, const v_uint32x4& b, v_uint64x2& c, v_uint64x2& d)
-{
-    c.val = vec_mul(vec_unpackhu(a.val), vec_unpackhu(b.val));
-    d.val = vec_mul(vec_unpacklu(a.val), vec_unpacklu(b.val));
-}
-
 inline v_int16x8 v_mul_hi(const v_int16x8& a, const v_int16x8& b)
 {
     vec_int4 p0 = vec_mule(a.val, b.val);
@@ -626,7 +690,7 @@ inline _Tpvec v_rotate_##suffix(const _Tpvec& a)                                
 {                                                                               \
     const int wd = imm * sizeof(typename _Tpvec::lane_type);                    \
     if (wd > 15)                                                                \
-        return _Tpvec();                                                        \
+        return _Tpvec::zero();                                                  \
     return _Tpvec((cast)shf(vec_uchar16_c(a.val), vec_uchar16_sp(wd << 3)));    \
 }
 
@@ -683,6 +747,53 @@ OPENCV_IMPL_VSX_ROTATE_64_2RG(_Tpvec, right, a, b)
 OPENCV_IMPL_VSX_ROTATE_64_2RG_LR(v_float64x2)
 OPENCV_IMPL_VSX_ROTATE_64_2RG_LR(v_uint64x2)
 OPENCV_IMPL_VSX_ROTATE_64_2RG_LR(v_int64x2)
+
+/* Reverse */
+inline v_uint8x16 v_reverse(const v_uint8x16 &a)
+{
+    static const vec_uchar16 perm = {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0};
+    vec_uchar16 vec = (vec_uchar16)a.val;
+    return v_uint8x16(vec_perm(vec, vec, perm));
+}
+
+inline v_int8x16 v_reverse(const v_int8x16 &a)
+{ return v_reinterpret_as_s8(v_reverse(v_reinterpret_as_u8(a))); }
+
+inline v_uint16x8 v_reverse(const v_uint16x8 &a)
+{
+    static const vec_uchar16 perm = {14, 15, 12, 13, 10, 11, 8, 9, 6, 7, 4, 5, 2, 3, 0, 1};
+    vec_uchar16 vec = (vec_uchar16)a.val;
+    return v_reinterpret_as_u16(v_uint8x16(vec_perm(vec, vec, perm)));
+}
+
+inline v_int16x8 v_reverse(const v_int16x8 &a)
+{ return v_reinterpret_as_s16(v_reverse(v_reinterpret_as_u16(a))); }
+
+inline v_uint32x4 v_reverse(const v_uint32x4 &a)
+{
+    static const vec_uchar16 perm = {12, 13, 14, 15, 8, 9, 10, 11, 4, 5, 6, 7, 0, 1, 2, 3};
+    vec_uchar16 vec = (vec_uchar16)a.val;
+    return v_reinterpret_as_u32(v_uint8x16(vec_perm(vec, vec, perm)));
+}
+
+inline v_int32x4 v_reverse(const v_int32x4 &a)
+{ return v_reinterpret_as_s32(v_reverse(v_reinterpret_as_u32(a))); }
+
+inline v_float32x4 v_reverse(const v_float32x4 &a)
+{ return v_reinterpret_as_f32(v_reverse(v_reinterpret_as_u32(a))); }
+
+inline v_uint64x2 v_reverse(const v_uint64x2 &a)
+{
+    static const vec_uchar16 perm = {8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 7};
+    vec_uchar16 vec = (vec_uchar16)a.val;
+    return v_reinterpret_as_u64(v_uint8x16(vec_perm(vec, vec, perm)));
+}
+
+inline v_int64x2 v_reverse(const v_int64x2 &a)
+{ return v_reinterpret_as_s64(v_reverse(v_reinterpret_as_u64(a))); }
+
+inline v_float64x2 v_reverse(const v_float64x2 &a)
+{ return v_reinterpret_as_f64(v_reverse(v_reinterpret_as_u64(a))); }
 
 /* Extract */
 template<int s, typename _Tpvec>
@@ -764,10 +875,10 @@ inline scalartype v_reduce_##suffix(const _Tpvec& a)                            
     rs = func(rs, vec_sld(rs, rs, 2));                                             \
     return vec_extract(func(rs, vec_sld(rs, rs, 1)), 0);                           \
 }
-OPENCV_HAL_IMPL_VSX_REDUCE_OP_8(v_uint8x16, vec_uchar16, uchar, max, vec_max)
-OPENCV_HAL_IMPL_VSX_REDUCE_OP_8(v_uint8x16, vec_uchar16, uchar, min, vec_min)
-OPENCV_HAL_IMPL_VSX_REDUCE_OP_8(v_int8x16, vec_char16, schar, max, vec_max)
-OPENCV_HAL_IMPL_VSX_REDUCE_OP_8(v_int8x16, vec_char16, schar, min, vec_min)
+OPENCV_HAL_IMPL_VSX_REDUCE_OP_16(v_uint8x16, vec_uchar16, uchar, max, vec_max)
+OPENCV_HAL_IMPL_VSX_REDUCE_OP_16(v_uint8x16, vec_uchar16, uchar, min, vec_min)
+OPENCV_HAL_IMPL_VSX_REDUCE_OP_16(v_int8x16, vec_char16, schar, max, vec_max)
+OPENCV_HAL_IMPL_VSX_REDUCE_OP_16(v_int8x16, vec_char16, schar, min, vec_min)
 
 inline v_float32x4 v_reduce_sum4(const v_float32x4& a, const v_float32x4& b,
                                  const v_float32x4& c, const v_float32x4& d)
@@ -845,36 +956,24 @@ inline v_uint64x2 v_popcount(const v_int64x2& a)
 /** Mask **/
 inline int v_signmask(const v_uint8x16& a)
 {
-    vec_uchar16 sv  = vec_sr(a.val, vec_uchar16_sp(7));
-    static const vec_uchar16 slm = {0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7};
-    sv = vec_sl(sv, slm);
-    vec_uint4 sv4 = vec_sum4s(sv, vec_uint4_z);
-    static const vec_uint4 slm4 = {0, 0, 8, 8};
-    sv4 = vec_sl(sv4, slm4);
-    return vec_extract(vec_sums((vec_int4) sv4, vec_int4_z), 3);
+    static const vec_uchar16 qperm = {120, 112, 104, 96, 88, 80, 72, 64, 56, 48, 40, 32, 24, 16, 8, 0};
+    return vec_extract((vec_int4)vec_vbpermq(v_reinterpret_as_u8(a).val, qperm), 2);
 }
 inline int v_signmask(const v_int8x16& a)
 { return v_signmask(v_reinterpret_as_u8(a)); }
 
 inline int v_signmask(const v_int16x8& a)
 {
-    static const vec_ushort8 slm = {0, 1, 2, 3, 4, 5, 6, 7};
-    vec_short8 sv = vec_sr(a.val, vec_ushort8_sp(15));
-    sv = vec_sl(sv, slm);
-    vec_int4 svi = vec_int4_z;
-    svi = vec_sums(vec_sum4s(sv, svi), svi);
-    return vec_extract(svi, 3);
+    static const vec_uchar16 qperm = {112, 96, 80, 64, 48, 32, 16, 0, 128, 128, 128, 128, 128, 128, 128, 128};
+    return vec_extract((vec_int4)vec_vbpermq(v_reinterpret_as_u8(a).val, qperm), 2);
 }
 inline int v_signmask(const v_uint16x8& a)
 { return v_signmask(v_reinterpret_as_s16(a)); }
 
 inline int v_signmask(const v_int32x4& a)
 {
-    static const vec_uint4 slm = {0, 1, 2, 3};
-    vec_int4 sv = vec_sr(a.val, vec_uint4_sp(31));
-    sv = vec_sl(sv, slm);
-    sv = vec_sums(sv, vec_int4_z);
-    return vec_extract(sv, 3);
+    static const vec_uchar16 qperm = {96, 64, 32, 0, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128};
+    return vec_extract((vec_int4)vec_vbpermq(v_reinterpret_as_u8(a).val, qperm), 2);
 }
 inline int v_signmask(const v_uint32x4& a)
 { return v_signmask(v_reinterpret_as_s32(a)); }
@@ -904,13 +1003,15 @@ inline int v_scan_forward(const v_float64x2& a) { return trailingZeros32(v_signm
 
 template<typename _Tpvec>
 inline bool v_check_all(const _Tpvec& a)
-{ return vec_all_lt(a.val, _Tpvec().val); }
+{ return vec_all_lt(a.val, _Tpvec::zero().val); }
 inline bool v_check_all(const v_uint8x16& a)
 { return v_check_all(v_reinterpret_as_s8(a)); }
 inline bool v_check_all(const v_uint16x8& a)
 { return v_check_all(v_reinterpret_as_s16(a)); }
 inline bool v_check_all(const v_uint32x4& a)
 { return v_check_all(v_reinterpret_as_s32(a)); }
+inline bool v_check_all(const v_uint64x2& a)
+{ return v_check_all(v_reinterpret_as_s64(a)); }
 inline bool v_check_all(const v_float32x4& a)
 { return v_check_all(v_reinterpret_as_s32(a)); }
 inline bool v_check_all(const v_float64x2& a)
@@ -918,13 +1019,15 @@ inline bool v_check_all(const v_float64x2& a)
 
 template<typename _Tpvec>
 inline bool v_check_any(const _Tpvec& a)
-{ return vec_any_lt(a.val, _Tpvec().val); }
+{ return vec_any_lt(a.val, _Tpvec::zero().val); }
 inline bool v_check_any(const v_uint8x16& a)
 { return v_check_any(v_reinterpret_as_s8(a)); }
 inline bool v_check_any(const v_uint16x8& a)
 { return v_check_any(v_reinterpret_as_s16(a)); }
 inline bool v_check_any(const v_uint32x4& a)
 { return v_check_any(v_reinterpret_as_s32(a)); }
+inline bool v_check_any(const v_uint64x2& a)
+{ return v_check_any(v_reinterpret_as_s64(a)); }
 inline bool v_check_any(const v_float32x4& a)
 { return v_check_any(v_reinterpret_as_s32(a)); }
 inline bool v_check_any(const v_float64x2& a)
@@ -1050,6 +1153,9 @@ inline v_float64x2 v_cvt_f64(const v_float32x4& a)
 
 inline v_float64x2 v_cvt_f64_high(const v_float32x4& a)
 { return v_float64x2(vec_cvfo(vec_mergel(a.val, a.val))); }
+
+inline v_float64x2 v_cvt_f64(const v_int64x2& a)
+{ return v_float64x2(vec_ctd(a.val)); }
 
 ////////////// Lookup table access ////////////////////
 
@@ -1262,7 +1368,7 @@ inline v_float32x4 v_load_expand(const float16_t* ptr)
     return v_float32x4(vec_extract_fp_from_shorth(vf16));
 #elif CV_VSX3 && !defined(CV_COMPILER_VSX_BROKEN_ASM)
     vec_float4 vf32;
-    __asm__ __volatile__ ("xvcvhpsp %x0,%x1" : "=wf" (vf32) : "wa" (vec_mergeh(vf16, vf16)));
+    __asm__ __volatile__ ("xvcvhpsp %x0,%x1" : "=wa" (vf32) : "wa" (vec_mergeh(vf16, vf16)));
     return v_float32x4(vf32);
 #else
     const vec_int4 z = vec_int4_z, delta = vec_int4_sp(0x38000000);
@@ -1284,10 +1390,10 @@ inline v_float32x4 v_load_expand(const float16_t* ptr)
 
 inline void v_pack_store(float16_t* ptr, const v_float32x4& v)
 {
-// fixme: Is there any buitin op or intrinsic that cover "xvcvsphp"?
+// fixme: Is there any builtin op or intrinsic that cover "xvcvsphp"?
 #if CV_VSX3 && !defined(CV_COMPILER_VSX_BROKEN_ASM)
     vec_ushort8 vf16;
-    __asm__ __volatile__ ("xvcvsphp %x0,%x1" : "=wa" (vf16) : "wf" (v.val));
+    __asm__ __volatile__ ("xvcvsphp %x0,%x1" : "=wa" (vf16) : "wa" (v.val));
     vec_st_l8(vec_mergesqe(vf16, vf16), ptr);
 #else
     const vec_int4 signmask = vec_int4_sp(0x80000000);
@@ -1321,11 +1427,133 @@ inline void v_cleanup() {}
 
 ////////// Matrix operations /////////
 
+//////// Dot Product ////////
+// 16 >> 32
 inline v_int32x4 v_dotprod(const v_int16x8& a, const v_int16x8& b)
 { return v_int32x4(vec_msum(a.val, b.val, vec_int4_z)); }
-
 inline v_int32x4 v_dotprod(const v_int16x8& a, const v_int16x8& b, const v_int32x4& c)
 { return v_int32x4(vec_msum(a.val, b.val, c.val)); }
+
+// 32 >> 64
+inline v_int64x2 v_dotprod(const v_int32x4& a, const v_int32x4& b)
+{
+    vec_dword2 even = vec_mule(a.val, b.val);
+    vec_dword2 odd = vec_mulo(a.val, b.val);
+    return v_int64x2(vec_add(even, odd));
+}
+inline v_int64x2 v_dotprod(const v_int32x4& a, const v_int32x4& b, const v_int64x2& c)
+{ return v_dotprod(a, b) + c; }
+
+// 8 >> 32
+inline v_uint32x4 v_dotprod_expand(const v_uint8x16& a, const v_uint8x16& b, const v_uint32x4& c)
+{ return v_uint32x4(vec_msum(a.val, b.val, c.val)); }
+inline v_uint32x4 v_dotprod_expand(const v_uint8x16& a, const v_uint8x16& b)
+{ return v_uint32x4(vec_msum(a.val, b.val, vec_uint4_z)); }
+
+inline v_int32x4 v_dotprod_expand(const v_int8x16& a, const v_int8x16& b)
+{
+    const vec_ushort8 eight = vec_ushort8_sp(8);
+    vec_short8 a0 = vec_sra((vec_short8)vec_sld(a.val, a.val, 1), eight); // even
+    vec_short8 a1 = vec_sra((vec_short8)a.val, eight); // odd
+    vec_short8 b0 = vec_sra((vec_short8)vec_sld(b.val, b.val, 1), eight);
+    vec_short8 b1 = vec_sra((vec_short8)b.val, eight);
+    return v_int32x4(vec_msum(a0, b0, vec_msum(a1, b1, vec_int4_z)));
+}
+
+inline v_int32x4 v_dotprod_expand(const v_int8x16& a, const v_int8x16& b, const v_int32x4& c)
+{
+    const vec_ushort8 eight = vec_ushort8_sp(8);
+    vec_short8 a0 = vec_sra((vec_short8)vec_sld(a.val, a.val, 1), eight); // even
+    vec_short8 a1 = vec_sra((vec_short8)a.val, eight); // odd
+    vec_short8 b0 = vec_sra((vec_short8)vec_sld(b.val, b.val, 1), eight);
+    vec_short8 b1 = vec_sra((vec_short8)b.val, eight);
+    return v_int32x4(vec_msum(a0, b0, vec_msum(a1, b1, c.val)));
+}
+
+// 16 >> 64
+inline v_uint64x2 v_dotprod_expand(const v_uint16x8& a, const v_uint16x8& b)
+{
+    const vec_uint4 zero = vec_uint4_z;
+    vec_uint4 even = vec_mule(a.val, b.val);
+    vec_uint4 odd  = vec_mulo(a.val, b.val);
+    vec_udword2 e0 = (vec_udword2)vec_mergee(even, zero);
+    vec_udword2 e1 = (vec_udword2)vec_mergeo(even, zero);
+    vec_udword2 o0 = (vec_udword2)vec_mergee(odd, zero);
+    vec_udword2 o1 = (vec_udword2)vec_mergeo(odd, zero);
+    vec_udword2 s0 = vec_add(e0, o0);
+    vec_udword2 s1 = vec_add(e1, o1);
+    return v_uint64x2(vec_add(s0, s1));
+}
+inline v_uint64x2 v_dotprod_expand(const v_uint16x8& a, const v_uint16x8& b, const v_uint64x2& c)
+{ return v_dotprod_expand(a, b) + c; }
+
+inline v_int64x2 v_dotprod_expand(const v_int16x8& a, const v_int16x8& b)
+{
+    v_int32x4 prod = v_dotprod(a, b);
+    v_int64x2 c, d;
+    v_expand(prod, c, d);
+    return v_int64x2(vec_add(vec_mergeh(c.val, d.val), vec_mergel(c.val, d.val)));
+}
+inline v_int64x2 v_dotprod_expand(const v_int16x8& a, const v_int16x8& b, const v_int64x2& c)
+{ return v_dotprod_expand(a, b) + c; }
+
+// 32 >> 64f
+inline v_float64x2 v_dotprod_expand(const v_int32x4& a, const v_int32x4& b)
+{ return v_cvt_f64(v_dotprod(a, b)); }
+inline v_float64x2 v_dotprod_expand(const v_int32x4& a, const v_int32x4& b, const v_float64x2& c)
+{ return v_dotprod_expand(a, b) + c; }
+
+//////// Fast Dot Product ////////
+
+// 16 >> 32
+inline v_int32x4 v_dotprod_fast(const v_int16x8& a, const v_int16x8& b)
+{ return v_dotprod(a, b); }
+inline v_int32x4 v_dotprod_fast(const v_int16x8& a, const v_int16x8& b, const v_int32x4& c)
+{ return v_int32x4(vec_msum(a.val, b.val, vec_int4_z)) + c; }
+// 32 >> 64
+inline v_int64x2 v_dotprod_fast(const v_int32x4& a, const v_int32x4& b)
+{ return v_dotprod(a, b); }
+inline v_int64x2 v_dotprod_fast(const v_int32x4& a, const v_int32x4& b, const v_int64x2& c)
+{ return v_dotprod(a, b, c); }
+
+// 8 >> 32
+inline v_uint32x4 v_dotprod_expand_fast(const v_uint8x16& a, const v_uint8x16& b)
+{ return v_dotprod_expand(a, b); }
+inline v_uint32x4 v_dotprod_expand_fast(const v_uint8x16& a, const v_uint8x16& b, const v_uint32x4& c)
+{ return v_uint32x4(vec_msum(a.val, b.val, vec_uint4_z)) + c; }
+
+inline v_int32x4 v_dotprod_expand_fast(const v_int8x16& a, const v_int8x16& b)
+{
+    vec_short8 a0 = vec_unpackh(a.val);
+    vec_short8 a1 = vec_unpackl(a.val);
+    vec_short8 b0 = vec_unpackh(b.val);
+    vec_short8 b1 = vec_unpackl(b.val);
+    return v_int32x4(vec_msum(a0, b0, vec_msum(a1, b1, vec_int4_z)));
+}
+inline v_int32x4 v_dotprod_expand_fast(const v_int8x16& a, const v_int8x16& b, const v_int32x4& c)
+{ return v_dotprod_expand_fast(a, b) + c; }
+
+// 16 >> 64
+inline v_uint64x2 v_dotprod_expand_fast(const v_uint16x8& a, const v_uint16x8& b)
+{ return v_dotprod_expand(a, b); }
+inline v_uint64x2 v_dotprod_expand_fast(const v_uint16x8& a, const v_uint16x8& b, const v_uint64x2& c)
+{ return v_dotprod_expand(a, b, c); }
+
+inline v_int64x2 v_dotprod_expand_fast(const v_int16x8& a, const v_int16x8& b)
+{
+    v_int32x4 prod = v_dotprod(a, b);
+    v_int64x2 c, d;
+    v_expand(prod, c, d);
+    return c + d;
+}
+inline v_int64x2 v_dotprod_expand_fast(const v_int16x8& a, const v_int16x8& b, const v_int64x2& c)
+{ return v_dotprod_expand_fast(a, b) + c; }
+
+// 32 >> 64f
+inline v_float64x2 v_dotprod_expand_fast(const v_int32x4& a, const v_int32x4& b)
+{ return v_dotprod_expand(a, b); }
+inline v_float64x2 v_dotprod_expand_fast(const v_int32x4& a, const v_int32x4& b, const v_float64x2& c)
+{ return v_dotprod_expand(a, b, c); }
 
 inline v_float32x4 v_matmul(const v_float32x4& v, const v_float32x4& m0,
                             const v_float32x4& m1, const v_float32x4& m2,
@@ -1365,6 +1593,11 @@ inline void v_transpose4x4(const _Tpvec& a0, const _Tpvec& a1,                  
 OPENCV_HAL_IMPL_VSX_TRANSPOSE4x4(v_uint32x4, vec_uint4)
 OPENCV_HAL_IMPL_VSX_TRANSPOSE4x4(v_int32x4, vec_int4)
 OPENCV_HAL_IMPL_VSX_TRANSPOSE4x4(v_float32x4, vec_float4)
+
+template<int i, typename Tvec>
+inline Tvec v_broadcast_element(const Tvec& v)
+{ return Tvec(vec_splat(v.val, i)); }
+
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 

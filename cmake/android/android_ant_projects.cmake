@@ -49,7 +49,7 @@ macro(android_get_compatible_target VAR)
     list(GET ANDROID_SDK_TARGETS 0 __lvl)
     string(REGEX MATCH "[0-9]+$" __lvl "${__lvl}")
 
-    #find minimal level mathing to all provided levels
+    #find minimal level matching to all provided levels
     foreach(lvl ${ARGN})
       string(REGEX MATCH "[0-9]+$" __level "${lvl}")
       if(__level GREATER __lvl)
@@ -194,7 +194,7 @@ macro(add_android_project target path)
         add_library(${JNI_LIB_NAME} SHARED ${android_proj_jni_files})
         ocv_target_include_modules_recurse(${JNI_LIB_NAME} ${android_proj_NATIVE_DEPS})
         ocv_target_include_directories(${JNI_LIB_NAME} "${path}/jni")
-        ocv_target_link_libraries(${JNI_LIB_NAME} LINK_PRIVATE ${OPENCV_LINKER_LIBS} ${android_proj_NATIVE_DEPS})
+        ocv_target_link_libraries(${JNI_LIB_NAME} PRIVATE ${OPENCV_LINKER_LIBS} ${android_proj_NATIVE_DEPS})
 
         set_target_properties(${JNI_LIB_NAME} PROPERTIES
             OUTPUT_NAME "${JNI_LIB_NAME}"

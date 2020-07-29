@@ -13,11 +13,14 @@
 #   define Py_LIMITED_API 0x03030000
 #endif
 
-#include <math.h>
+#include <cmath>
 #include <Python.h>
+#include <limits>
 
 #if PY_MAJOR_VERSION < 3
 #undef CVPY_DYNAMIC_INIT
+#else
+#define CV_PYTHON_3 1
 #endif
 
 #if defined(_MSC_VER) && (_MSC_VER > 1800)
@@ -28,26 +31,62 @@
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 #include <numpy/ndarrayobject.h>
 
+#include "opencv2/core/utils/configuration.private.hpp"
+#include "opencv2/core/utils/logger.hpp"
+
 #include "pyopencv_generated_include.h"
 #include "opencv2/core/types_c.h"
 #include "opencv2/opencv_modules.hpp"
 #include "pycompat.hpp"
 #include <map>
 
+#define CV_HAS_CONVERSION_ERROR(x) (((x) == -1) && PyErr_Occurred())
+
+
+class ArgInfo
+{
+public:
+    const char* name;
+    bool outputarg;
+    // more fields may be added if necessary
+
+    ArgInfo(const char* name_, bool outputarg_) : name(name_), outputarg(outputarg_) {}
+
+private:
+    ArgInfo(const ArgInfo&); // = delete
+    ArgInfo& operator=(const ArgInfo&); // = delete
+};
+
 template<typename T, class TEnable = void>  // TEnable is used for SFINAE checks
 struct PyOpenCV_Converter
 {
-    //static inline bool to(PyObject* obj, T& p, const char* name);
+    //static inline bool to(PyObject* obj, T& p, const ArgInfo& info);
     //static inline PyObject* from(const T& src);
 };
 
 template<typename T> static
-bool pyopencv_to(PyObject* obj, T& p, const char* name = "<unknown>") { return PyOpenCV_Converter<T>::to(obj, p, name); }
+bool pyopencv_to(PyObject* obj, T& p, const ArgInfo& info) { return PyOpenCV_Converter<T>::to(obj, p, info); }
 
 template<typename T> static
 PyObject* pyopencv_from(const T& src) { return PyOpenCV_Converter<T>::from(src); }
 
 static PyObject* opencv_error = NULL;
+
+static bool isPythonBindingsDebugEnabled()
+{
+    static bool param_debug = cv::utils::getConfigurationParameterBool("OPENCV_PYTHON_DEBUG", false);
+    return param_debug;
+}
+
+static void emit_failmsg(PyObject * exc, const char *msg)
+{
+    static bool param_debug = isPythonBindingsDebugEnabled();
+    if (param_debug)
+    {
+        CV_LOG_WARNING(NULL, "Bindings conversion failed: " << msg);
+    }
+    PyErr_SetString(exc, msg);
+}
 
 static int failmsg(const char *fmt, ...)
 {
@@ -58,23 +97,22 @@ static int failmsg(const char *fmt, ...)
     vsnprintf(str, sizeof(str), fmt, ap);
     va_end(ap);
 
-    PyErr_SetString(PyExc_TypeError, str);
+    emit_failmsg(PyExc_TypeError, str);
     return 0;
 }
 
-struct ArgInfo
+static PyObject* failmsgp(const char *fmt, ...)
 {
-    const char * name;
-    bool outputarg;
-    // more fields may be added if necessary
+    char str[1000];
 
-    ArgInfo(const char * name_, bool outputarg_)
-        : name(name_)
-        , outputarg(outputarg_) {}
+    va_list ap;
+    va_start(ap, fmt);
+    vsnprintf(str, sizeof(str), fmt, ap);
+    va_end(ap);
 
-    // to match with older pyopencv_to function signature
-    operator const char *() const { return name; }
-};
+    emit_failmsg(PyExc_TypeError, str);
+    return 0;
+}
 
 class PyAllowThreads
 {
@@ -100,6 +138,17 @@ private:
     PyGILState_STATE _state;
 };
 
+static void pyRaiseCVException(const cv::Exception &e)
+{
+    PyObject_SetAttrString(opencv_error, "file", PyString_FromString(e.file.c_str()));
+    PyObject_SetAttrString(opencv_error, "func", PyString_FromString(e.func.c_str()));
+    PyObject_SetAttrString(opencv_error, "line", PyInt_FromLong(e.line));
+    PyObject_SetAttrString(opencv_error, "code", PyInt_FromLong(e.code));
+    PyObject_SetAttrString(opencv_error, "msg", PyString_FromString(e.msg.c_str()));
+    PyObject_SetAttrString(opencv_error, "err", PyString_FromString(e.err.c_str()));
+    PyErr_SetString(opencv_error, e.what());
+}
+
 #define ERRWRAP2(expr) \
 try \
 { \
@@ -108,17 +157,140 @@ try \
 } \
 catch (const cv::Exception &e) \
 { \
-    PyObject_SetAttrString(opencv_error, "file", PyString_FromString(e.file.c_str())); \
-    PyObject_SetAttrString(opencv_error, "func", PyString_FromString(e.func.c_str())); \
-    PyObject_SetAttrString(opencv_error, "line", PyInt_FromLong(e.line)); \
-    PyObject_SetAttrString(opencv_error, "code", PyInt_FromLong(e.code)); \
-    PyObject_SetAttrString(opencv_error, "msg", PyString_FromString(e.msg.c_str())); \
-    PyObject_SetAttrString(opencv_error, "err", PyString_FromString(e.err.c_str())); \
-    PyErr_SetString(opencv_error, e.what()); \
+    pyRaiseCVException(e); \
     return 0; \
 }
 
 using namespace cv;
+
+
+namespace {
+template<class T>
+NPY_TYPES asNumpyType()
+{
+    return NPY_OBJECT;
+}
+
+template<>
+NPY_TYPES asNumpyType<bool>()
+{
+    return NPY_BOOL;
+}
+
+#define CV_GENERATE_INTEGRAL_TYPE_NPY_CONVERSION(src, dst) \
+    template<>                                             \
+    NPY_TYPES asNumpyType<src>()                           \
+    {                                                      \
+        return NPY_##dst;                                  \
+    }                                                      \
+    template<>                                             \
+    NPY_TYPES asNumpyType<u##src>()                        \
+    {                                                      \
+        return NPY_U##dst;                                 \
+    }
+
+CV_GENERATE_INTEGRAL_TYPE_NPY_CONVERSION(int8_t, INT8);
+
+CV_GENERATE_INTEGRAL_TYPE_NPY_CONVERSION(int16_t, INT16);
+
+CV_GENERATE_INTEGRAL_TYPE_NPY_CONVERSION(int32_t, INT32);
+
+CV_GENERATE_INTEGRAL_TYPE_NPY_CONVERSION(int64_t, INT64);
+
+#undef CV_GENERATE_INTEGRAL_TYPE_NPY_CONVERSION
+
+template<>
+NPY_TYPES asNumpyType<float>()
+{
+    return NPY_FLOAT;
+}
+
+template<>
+NPY_TYPES asNumpyType<double>()
+{
+    return NPY_DOUBLE;
+}
+
+template <class T>
+PyArray_Descr* getNumpyTypeDescriptor()
+{
+    return PyArray_DescrFromType(asNumpyType<T>());
+}
+
+template <>
+PyArray_Descr* getNumpyTypeDescriptor<size_t>()
+{
+#if SIZE_MAX == ULONG_MAX
+    return PyArray_DescrFromType(NPY_ULONG);
+#elif SIZE_MAX == ULLONG_MAX
+    return PyArray_DescrFromType(NPY_ULONGLONG);
+#else
+    return PyArray_DescrFromType(NPY_UINT);
+#endif
+}
+
+template <class T, class U>
+bool isRepresentable(U value) {
+    return (std::numeric_limits<T>::min() <= value) && (value <= std::numeric_limits<T>::max());
+}
+
+template<class T>
+bool canBeSafelyCasted(PyObject* obj, PyArray_Descr* to)
+{
+    return PyArray_CanCastTo(PyArray_DescrFromScalar(obj), to) != 0;
+}
+
+
+template<>
+bool canBeSafelyCasted<size_t>(PyObject* obj, PyArray_Descr* to)
+{
+    PyArray_Descr* from = PyArray_DescrFromScalar(obj);
+    if (PyArray_CanCastTo(from, to))
+    {
+        return true;
+    }
+    else
+    {
+        // False negative scenarios:
+        // - Signed input is positive so it can be safely cast to unsigned output
+        // - Input has wider limits but value is representable within output limits
+        // - All the above
+        if (PyDataType_ISSIGNED(from))
+        {
+            int64_t input = 0;
+            PyArray_CastScalarToCtype(obj, &input, getNumpyTypeDescriptor<int64_t>());
+            return (input >= 0) && isRepresentable<size_t>(static_cast<uint64_t>(input));
+        }
+        else
+        {
+            uint64_t input = 0;
+            PyArray_CastScalarToCtype(obj, &input, getNumpyTypeDescriptor<uint64_t>());
+            return isRepresentable<size_t>(input);
+        }
+        return false;
+    }
+}
+
+
+template<class T>
+bool parseNumpyScalar(PyObject* obj, T& value)
+{
+    if (PyArray_CheckScalar(obj))
+    {
+        // According to the numpy documentation:
+        // There are 21 statically-defined PyArray_Descr objects for the built-in data-types
+        // So descriptor pointer is not owning.
+        PyArray_Descr* to = getNumpyTypeDescriptor<T>();
+        if (canBeSafelyCasted<T>(obj, to))
+        {
+            PyArray_CastScalarToCtype(obj, &value, to);
+            return true;
+        }
+    }
+    return false;
+}
+
+} // namespace
 
 typedef std::vector<uchar> vector_uchar;
 typedef std::vector<char> vector_char;
@@ -152,19 +324,6 @@ typedef std::vector<std::vector<Point2f> > vector_vector_Point2f;
 typedef std::vector<std::vector<Point3f> > vector_vector_Point3f;
 typedef std::vector<std::vector<DMatch> > vector_vector_DMatch;
 typedef std::vector<std::vector<KeyPoint> > vector_vector_KeyPoint;
-
-static PyObject* failmsgp(const char *fmt, ...)
-{
-  char str[1000];
-
-  va_list ap;
-  va_start(ap, fmt);
-  vsnprintf(str, sizeof(str), fmt, ap);
-  va_end(ap);
-
-  PyErr_SetString(PyExc_TypeError, str);
-  return 0;
-}
 
 class NumpyAllocator : public MatAllocator
 {
@@ -242,8 +401,13 @@ NumpyAllocator g_numpyAllocator;
 
 enum { ARG_NONE = 0, ARG_MAT = 1, ARG_SCALAR = 2 };
 
+static bool isBool(PyObject* obj) CV_NOEXCEPT
+{
+    return PyArray_IsScalar(obj, Bool) || PyBool_Check(obj);
+}
+
 // special case, when the converter needs full ArgInfo structure
-static bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo info)
+static bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
 {
     bool allowND = true;
     if(!o || o == Py_None)
@@ -422,14 +586,8 @@ static bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo info)
     return true;
 }
 
-template<>
-bool pyopencv_to(PyObject* o, Mat& m, const char* name)
-{
-    return pyopencv_to(o, m, ArgInfo(name, 0));
-}
-
 template<typename _Tp, int m, int n>
-bool pyopencv_to(PyObject* o, Matx<_Tp, m, n>& mx, const ArgInfo info)
+bool pyopencv_to(PyObject* o, Matx<_Tp, m, n>& mx, const ArgInfo& info)
 {
     Mat tmp;
     if (!pyopencv_to(o, tmp, info)) {
@@ -440,10 +598,10 @@ bool pyopencv_to(PyObject* o, Matx<_Tp, m, n>& mx, const ArgInfo info)
     return true;
 }
 
-template<typename _Tp, int m, int n>
-bool pyopencv_to(PyObject* o, Matx<_Tp, m, n>& mx, const char* name)
+template<typename _Tp, int cn>
+bool pyopencv_to(PyObject* o, Vec<_Tp, cn>& vec, const ArgInfo& info)
 {
-    return pyopencv_to(o, mx, ArgInfo(name, 0));
+    return pyopencv_to(o, (Matx<_Tp, cn, 1>&)vec, info);
 }
 
 template<>
@@ -478,19 +636,19 @@ struct PyOpenCV_Converter< cv::Ptr<T> >
             Py_RETURN_NONE;
         return pyopencv_from(*p);
     }
-    static bool to(PyObject *o, Ptr<T>& p, const char *name)
+    static bool to(PyObject *o, Ptr<T>& p, const ArgInfo& info)
     {
         if (!o || o == Py_None)
             return true;
         p = makePtr<T>();
-        return pyopencv_to(o, *p, name);
+        return pyopencv_to(o, *p, info);
     }
 };
 
 template<>
-bool pyopencv_to(PyObject* obj, void*& ptr, const char* name)
+bool pyopencv_to(PyObject* obj, void*& ptr, const ArgInfo& info)
 {
-    CV_UNUSED(name);
+    CV_UNUSED(info);
     if (!obj || obj == Py_None)
         return true;
 
@@ -512,7 +670,7 @@ struct SafeSeqItem
     ~SafeSeqItem() { Py_XDECREF(item); }
 };
 
-static bool pyopencv_to(PyObject *o, Scalar& s, const ArgInfo info)
+static bool pyopencv_to(PyObject *o, Scalar& s, const ArgInfo& info)
 {
     if(!o || o == Py_None)
         return true;
@@ -544,12 +702,6 @@ static bool pyopencv_to(PyObject *o, Scalar& s, const ArgInfo info)
 }
 
 template<>
-bool pyopencv_to(PyObject *o, Scalar& s, const char *name)
-{
-    return pyopencv_to(o, s, ArgInfo(name, 0));
-}
-
-template<>
 PyObject* pyopencv_from(const Scalar& src)
 {
     return Py_BuildValue("(dddd)", src[0], src[1], src[2], src[3]);
@@ -562,16 +714,24 @@ PyObject* pyopencv_from(const bool& value)
 }
 
 template<>
-bool pyopencv_to(PyObject* obj, bool& value, const char* name)
+bool pyopencv_to(PyObject* obj, bool& value, const ArgInfo& info)
 {
-    CV_UNUSED(name);
-    if(!obj || obj == Py_None)
+    if (!obj || obj == Py_None)
+    {
         return true;
-    int _val = PyObject_IsTrue(obj);
-    if(_val < 0)
-        return false;
-    value = _val > 0;
-    return true;
+    }
+    if (isBool(obj) || PyArray_IsIntegerScalar(obj))
+    {
+        npy_bool npy_value = NPY_FALSE;
+        const int ret_code = PyArray_BoolConverter(obj, &npy_value);
+        if (ret_code >= 0)
+        {
+            value = (npy_value == NPY_TRUE);
+            return true;
+        }
+    }
+    failmsg("Argument '%s' is not convertable to bool", info.name);
+    return false;
 }
 
 template<>
@@ -581,13 +741,64 @@ PyObject* pyopencv_from(const size_t& value)
 }
 
 template<>
-bool pyopencv_to(PyObject* obj, size_t& value, const char* name)
+bool pyopencv_to(PyObject* obj, size_t& value, const ArgInfo& info)
 {
-    CV_UNUSED(name);
-    if(!obj || obj == Py_None)
+    if (!obj || obj == Py_None)
+    {
         return true;
-    value = (int)PyLong_AsUnsignedLong(obj);
-    return value != (size_t)-1 || !PyErr_Occurred();
+    }
+    if (isBool(obj))
+    {
+        failmsg("Argument '%s' must be integer type, not bool", info.name);
+        return false;
+    }
+    if (PyArray_IsIntegerScalar(obj))
+    {
+        if (PyLong_Check(obj))
+        {
+#if defined(CV_PYTHON_3)
+            value = PyLong_AsSize_t(obj);
+#else
+    #if ULONG_MAX == SIZE_MAX
+            value = PyLong_AsUnsignedLong(obj);
+    #else
+            value = PyLong_AsUnsignedLongLong(obj);
+    #endif
+#endif
+        }
+#if !defined(CV_PYTHON_3)
+        // Python 2.x has PyIntObject which is not a subtype of PyLongObject
+        // Overflow check here is unnecessary because object will be converted to long on the
+        // interpreter side
+        else if (PyInt_Check(obj))
+        {
+            const long res = PyInt_AsLong(obj);
+            if (res < 0) {
+                failmsg("Argument '%s' can not be safely parsed to 'size_t'", info.name);
+                return false;
+            }
+    #if ULONG_MAX == SIZE_MAX
+            value = PyInt_AsUnsignedLongMask(obj);
+    #else
+            value = PyInt_AsUnsignedLongLongMask(obj);
+    #endif
+        }
+#endif
+        else
+        {
+            const bool isParsed = parseNumpyScalar<size_t>(obj, value);
+            if (!isParsed) {
+                failmsg("Argument '%s' can not be safely parsed to 'size_t'", info.name);
+                return false;
+            }
+        }
+    }
+    else
+    {
+        failmsg("Argument '%s' is required to be an integer", info.name);
+        return false;
+    }
+    return !PyErr_Occurred();
 }
 
 template<>
@@ -597,18 +808,27 @@ PyObject* pyopencv_from(const int& value)
 }
 
 template<>
-bool pyopencv_to(PyObject* obj, int& value, const char* name)
+bool pyopencv_to(PyObject* obj, int& value, const ArgInfo& info)
 {
-    CV_UNUSED(name);
-    if(!obj || obj == Py_None)
+    if (!obj || obj == Py_None)
+    {
         return true;
-    if(PyInt_Check(obj))
-        value = (int)PyInt_AsLong(obj);
-    else if(PyLong_Check(obj))
-        value = (int)PyLong_AsLong(obj);
-    else
+    }
+    if (isBool(obj))
+    {
+        failmsg("Argument '%s' must be integer, not bool", info.name);
         return false;
-    return value != -1 || !PyErr_Occurred();
+    }
+    if (PyArray_IsIntegerScalar(obj))
+    {
+        value = PyArray_PyIntAsInt(obj);
+    }
+    else
+    {
+        failmsg("Argument '%s' is required to be an integer", info.name);
+        return false;
+    }
+    return !CV_HAS_CONVERSION_ERROR(value);
 }
 
 template<>
@@ -618,9 +838,9 @@ PyObject* pyopencv_from(const uchar& value)
 }
 
 template<>
-bool pyopencv_to(PyObject* obj, uchar& value, const char* name)
+bool pyopencv_to(PyObject* obj, uchar& value, const ArgInfo& info)
 {
-    CV_UNUSED(name);
+    CV_UNUSED(info);
     if(!obj || obj == Py_None)
         return true;
     int ivalue = (int)PyInt_AsLong(obj);
@@ -635,15 +855,41 @@ PyObject* pyopencv_from(const double& value)
 }
 
 template<>
-bool pyopencv_to(PyObject* obj, double& value, const char* name)
+bool pyopencv_to(PyObject* obj, double& value, const ArgInfo& info)
 {
-    CV_UNUSED(name);
-    if(!obj || obj == Py_None)
+    if (!obj || obj == Py_None)
+    {
         return true;
-    if(!!PyInt_CheckExact(obj))
-        value = (double)PyInt_AS_LONG(obj);
+    }
+    if (isBool(obj))
+    {
+        failmsg("Argument '%s' must be double, not bool", info.name);
+        return false;
+    }
+    if (PyArray_IsPythonNumber(obj))
+    {
+        if (PyLong_Check(obj))
+        {
+            value = PyLong_AsDouble(obj);
+        }
+        else
+        {
+            value = PyFloat_AsDouble(obj);
+        }
+    }
+    else if (PyArray_CheckScalar(obj))
+    {
+        const bool isParsed = parseNumpyScalar<double>(obj, value);
+        if (!isParsed) {
+            failmsg("Argument '%s' can not be safely parsed to 'double'", info.name);
+            return false;
+        }
+    }
     else
-        value = PyFloat_AsDouble(obj);
+    {
+        failmsg("Argument '%s' can not be treated as a double", info.name);
+        return false;
+    }
     return !PyErr_Occurred();
 }
 
@@ -654,15 +900,43 @@ PyObject* pyopencv_from(const float& value)
 }
 
 template<>
-bool pyopencv_to(PyObject* obj, float& value, const char* name)
+bool pyopencv_to(PyObject* obj, float& value, const ArgInfo& info)
 {
-    CV_UNUSED(name);
-    if(!obj || obj == Py_None)
+    if (!obj || obj == Py_None)
+    {
         return true;
-    if(!!PyInt_CheckExact(obj))
-        value = (float)PyInt_AS_LONG(obj);
+    }
+    if (isBool(obj))
+    {
+        failmsg("Argument '%s' must be float, not bool", info.name);
+        return false;
+    }
+    if (PyArray_IsPythonNumber(obj))
+    {
+        if (PyLong_Check(obj))
+        {
+            double res = PyLong_AsDouble(obj);
+            value = static_cast<float>(res);
+        }
+        else
+        {
+            double res = PyFloat_AsDouble(obj);
+            value = static_cast<float>(res);
+        }
+    }
+    else if (PyArray_CheckScalar(obj))
+    {
+       const bool isParsed = parseNumpyScalar<float>(obj, value);
+        if (!isParsed) {
+            failmsg("Argument '%s' can not be safely parsed to 'float'", info.name);
+            return false;
+        }
+    }
     else
-        value = (float)PyFloat_AsDouble(obj);
+    {
+        failmsg("Argument '%s' can't be treated as a float", info.name);
+        return false;
+    }
     return !PyErr_Occurred();
 }
 
@@ -678,10 +952,18 @@ PyObject* pyopencv_from(const String& value)
     return PyString_FromString(value.empty() ? "" : value.c_str());
 }
 
+#if CV_VERSION_MAJOR == 3
 template<>
-bool pyopencv_to(PyObject* obj, String &value, const char* name)
+PyObject* pyopencv_from(const std::string& value)
 {
-    CV_UNUSED(name);
+    return PyString_FromString(value.empty() ? "" : value.c_str());
+}
+#endif
+
+template<>
+bool pyopencv_to(PyObject* obj, String &value, const ArgInfo& info)
+{
+    CV_UNUSED(info);
     if(!obj || obj == Py_None)
         return true;
     std::string str;
@@ -694,9 +976,9 @@ bool pyopencv_to(PyObject* obj, String &value, const char* name)
 }
 
 template<>
-bool pyopencv_to(PyObject* obj, Size& sz, const char* name)
+bool pyopencv_to(PyObject* obj, Size& sz, const ArgInfo& info)
 {
-    CV_UNUSED(name);
+    CV_UNUSED(info);
     if(!obj || obj == Py_None)
         return true;
     return PyArg_ParseTuple(obj, "ii", &sz.width, &sz.height) > 0;
@@ -709,9 +991,9 @@ PyObject* pyopencv_from(const Size& sz)
 }
 
 template<>
-bool pyopencv_to(PyObject* obj, Size_<float>& sz, const char* name)
+bool pyopencv_to(PyObject* obj, Size_<float>& sz, const ArgInfo& info)
 {
-    CV_UNUSED(name);
+    CV_UNUSED(info);
     if(!obj || obj == Py_None)
         return true;
     return PyArg_ParseTuple(obj, "ff", &sz.width, &sz.height) > 0;
@@ -724,9 +1006,9 @@ PyObject* pyopencv_from(const Size_<float>& sz)
 }
 
 template<>
-bool pyopencv_to(PyObject* obj, Rect& r, const char* name)
+bool pyopencv_to(PyObject* obj, Rect& r, const ArgInfo& info)
 {
-    CV_UNUSED(name);
+    CV_UNUSED(info);
     if(!obj || obj == Py_None)
         return true;
     return PyArg_ParseTuple(obj, "iiii", &r.x, &r.y, &r.width, &r.height) > 0;
@@ -739,9 +1021,9 @@ PyObject* pyopencv_from(const Rect& r)
 }
 
 template<>
-bool pyopencv_to(PyObject* obj, Rect2d& r, const char* name)
+bool pyopencv_to(PyObject* obj, Rect2d& r, const ArgInfo& info)
 {
-    CV_UNUSED(name);
+    CV_UNUSED(info);
     if(!obj || obj == Py_None)
         return true;
     return PyArg_ParseTuple(obj, "dddd", &r.x, &r.y, &r.width, &r.height) > 0;
@@ -754,16 +1036,16 @@ PyObject* pyopencv_from(const Rect2d& r)
 }
 
 template<>
-bool pyopencv_to(PyObject* obj, Range& r, const char* name)
+bool pyopencv_to(PyObject* obj, Range& r, const ArgInfo& info)
 {
-    CV_UNUSED(name);
+    CV_UNUSED(info);
     if(!obj || obj == Py_None)
         return true;
     while (PySequence_Check(obj))
     {
         if (2 != PySequence_Size(obj))
         {
-            failmsg("Range value for argument '%s' is longer than 2", name);
+            failmsg("Range value for argument '%s' is longer than 2", info.name);
             return false;
         }
         {
@@ -772,7 +1054,7 @@ bool pyopencv_to(PyObject* obj, Range& r, const char* name)
             if (PyInt_Check(item)) {
                 r.start = (int)PyInt_AsLong(item);
             } else {
-                failmsg("Range.start value for argument '%s' is not integer", name);
+                failmsg("Range.start value for argument '%s' is not integer", info.name);
                 break;
             }
         }
@@ -782,7 +1064,7 @@ bool pyopencv_to(PyObject* obj, Range& r, const char* name)
             if (PyInt_Check(item)) {
                 r.end = (int)PyInt_AsLong(item);
             } else {
-                failmsg("Range.end value for argument '%s' is not integer", name);
+                failmsg("Range.end value for argument '%s' is not integer", info.name);
                 break;
             }
         }
@@ -803,9 +1085,9 @@ PyObject* pyopencv_from(const Range& r)
 }
 
 template<>
-bool pyopencv_to(PyObject* obj, Point& p, const char* name)
+bool pyopencv_to(PyObject* obj, Point& p, const ArgInfo& info)
 {
-    CV_UNUSED(name);
+    CV_UNUSED(info);
     if(!obj || obj == Py_None)
         return true;
     if(PyComplex_Check(obj))
@@ -818,9 +1100,9 @@ bool pyopencv_to(PyObject* obj, Point& p, const char* name)
 }
 
 template<>
-bool pyopencv_to(PyObject* obj, Point2f& p, const char* name)
+bool pyopencv_to(PyObject* obj, Point2f& p, const ArgInfo& info)
 {
-    CV_UNUSED(name);
+    CV_UNUSED(info);
     if(!obj || obj == Py_None)
         return true;
     if (PyComplex_Check(obj))
@@ -833,9 +1115,9 @@ bool pyopencv_to(PyObject* obj, Point2f& p, const char* name)
 }
 
 template<>
-bool pyopencv_to(PyObject* obj, Point2d& p, const char* name)
+bool pyopencv_to(PyObject* obj, Point2d& p, const ArgInfo& info)
 {
-    CV_UNUSED(name);
+    CV_UNUSED(info);
     if(!obj || obj == Py_None)
         return true;
     if(PyComplex_Check(obj))
@@ -848,18 +1130,18 @@ bool pyopencv_to(PyObject* obj, Point2d& p, const char* name)
 }
 
 template<>
-bool pyopencv_to(PyObject* obj, Point3f& p, const char* name)
+bool pyopencv_to(PyObject* obj, Point3f& p, const ArgInfo& info)
 {
-    CV_UNUSED(name);
+    CV_UNUSED(info);
     if(!obj || obj == Py_None)
         return true;
     return PyArg_ParseTuple(obj, "fff", &p.x, &p.y, &p.z) > 0;
 }
 
 template<>
-bool pyopencv_to(PyObject* obj, Point3d& p, const char* name)
+bool pyopencv_to(PyObject* obj, Point3d& p, const ArgInfo& info)
 {
-    CV_UNUSED(name);
+    CV_UNUSED(info);
     if(!obj || obj == Py_None)
         return true;
     return PyArg_ParseTuple(obj, "ddd", &p.x, &p.y, &p.z) > 0;
@@ -883,121 +1165,76 @@ PyObject* pyopencv_from(const Point3f& p)
     return Py_BuildValue("(ddd)", p.x, p.y, p.z);
 }
 
-static bool pyopencv_to(PyObject* obj, Vec4d& v, ArgInfo info)
+static bool pyopencv_to(PyObject* obj, Vec4d& v, ArgInfo& info)
 {
     CV_UNUSED(info);
     if (!obj)
         return true;
     return PyArg_ParseTuple(obj, "dddd", &v[0], &v[1], &v[2], &v[3]) > 0;
 }
-template<>
-bool pyopencv_to(PyObject* obj, Vec4d& v, const char* name)
-{
-    return pyopencv_to(obj, v, ArgInfo(name, 0));
-}
 
-static bool pyopencv_to(PyObject* obj, Vec4f& v, ArgInfo info)
+static bool pyopencv_to(PyObject* obj, Vec4f& v, ArgInfo& info)
 {
     CV_UNUSED(info);
     if (!obj)
         return true;
     return PyArg_ParseTuple(obj, "ffff", &v[0], &v[1], &v[2], &v[3]) > 0;
 }
-template<>
-bool pyopencv_to(PyObject* obj, Vec4f& v, const char* name)
-{
-    return pyopencv_to(obj, v, ArgInfo(name, 0));
-}
 
-static bool pyopencv_to(PyObject* obj, Vec4i& v, ArgInfo info)
+static bool pyopencv_to(PyObject* obj, Vec4i& v, ArgInfo& info)
 {
     CV_UNUSED(info);
     if (!obj)
         return true;
     return PyArg_ParseTuple(obj, "iiii", &v[0], &v[1], &v[2], &v[3]) > 0;
 }
-template<>
-bool pyopencv_to(PyObject* obj, Vec4i& v, const char* name)
-{
-    return pyopencv_to(obj, v, ArgInfo(name, 0));
-}
 
-static bool pyopencv_to(PyObject* obj, Vec3d& v, ArgInfo info)
+static bool pyopencv_to(PyObject* obj, Vec3d& v, ArgInfo& info)
 {
     CV_UNUSED(info);
     if (!obj)
         return true;
     return PyArg_ParseTuple(obj, "ddd", &v[0], &v[1], &v[2]) > 0;
 }
-template<>
-bool pyopencv_to(PyObject* obj, Vec3d& v, const char* name)
-{
-    return pyopencv_to(obj, v, ArgInfo(name, 0));
-}
 
-static bool pyopencv_to(PyObject* obj, Vec3f& v, ArgInfo info)
+static bool pyopencv_to(PyObject* obj, Vec3f& v, ArgInfo& info)
 {
     CV_UNUSED(info);
     if (!obj)
         return true;
     return PyArg_ParseTuple(obj, "fff", &v[0], &v[1], &v[2]) > 0;
 }
-template<>
-bool pyopencv_to(PyObject* obj, Vec3f& v, const char* name)
-{
-    return pyopencv_to(obj, v, ArgInfo(name, 0));
-}
 
-static bool pyopencv_to(PyObject* obj, Vec3i& v, ArgInfo info)
+static bool pyopencv_to(PyObject* obj, Vec3i& v, ArgInfo& info)
 {
     CV_UNUSED(info);
     if (!obj)
         return true;
     return PyArg_ParseTuple(obj, "iii", &v[0], &v[1], &v[2]) > 0;
 }
-template<>
-bool pyopencv_to(PyObject* obj, Vec3i& v, const char* name)
-{
-    return pyopencv_to(obj, v, ArgInfo(name, 0));
-}
 
-static bool pyopencv_to(PyObject* obj, Vec2d& v, ArgInfo info)
+static bool pyopencv_to(PyObject* obj, Vec2d& v, ArgInfo& info)
 {
     CV_UNUSED(info);
     if (!obj)
         return true;
     return PyArg_ParseTuple(obj, "dd", &v[0], &v[1]) > 0;
 }
-template<>
-bool pyopencv_to(PyObject* obj, Vec2d& v, const char* name)
-{
-    return pyopencv_to(obj, v, ArgInfo(name, 0));
-}
 
-static bool pyopencv_to(PyObject* obj, Vec2f& v, ArgInfo info)
+static bool pyopencv_to(PyObject* obj, Vec2f& v, ArgInfo& info)
 {
     CV_UNUSED(info);
     if (!obj)
         return true;
     return PyArg_ParseTuple(obj, "ff", &v[0], &v[1]) > 0;
 }
-template<>
-bool pyopencv_to(PyObject* obj, Vec2f& v, const char* name)
-{
-    return pyopencv_to(obj, v, ArgInfo(name, 0));
-}
 
-static bool pyopencv_to(PyObject* obj, Vec2i& v, ArgInfo info)
+static bool pyopencv_to(PyObject* obj, Vec2i& v, ArgInfo& info)
 {
     CV_UNUSED(info);
     if (!obj)
         return true;
     return PyArg_ParseTuple(obj, "ii", &v[0], &v[1]) > 0;
-}
-template<>
-bool pyopencv_to(PyObject* obj, Vec2i& v, const char* name)
-{
-    return pyopencv_to(obj, v, ArgInfo(name, 0));
 }
 
 template<>
@@ -1101,7 +1338,7 @@ template<typename _Tp> struct pyopencvVecConverter
         }
         return true;
     }
-    static bool to(PyObject* obj, std::vector<_Tp>& value, const ArgInfo info)
+    static bool to(PyObject* obj, std::vector<_Tp>& value, const ArgInfo& info)
     {
         if(!obj || obj == Py_None)
             return true;
@@ -1181,7 +1418,7 @@ template<typename _Tp> struct pyopencvVecConverter
 };
 
 template<typename _Tp>
-bool pyopencv_to(PyObject* obj, std::vector<_Tp>& value, const ArgInfo info)
+bool pyopencv_to(PyObject* obj, std::vector<_Tp>& value, const ArgInfo& info)
 {
     return pyopencvVecConverter<_Tp>::to(obj, value, info);
 }
@@ -1192,7 +1429,7 @@ PyObject* pyopencv_from(const std::vector<_Tp>& value)
     return pyopencvVecConverter<_Tp>::from(value);
 }
 
-template<typename _Tp> static inline bool pyopencv_to_generic_vec(PyObject* obj, std::vector<_Tp>& value, const ArgInfo info)
+template<typename _Tp> static inline bool pyopencv_to_generic_vec(PyObject* obj, std::vector<_Tp>& value, const ArgInfo& info)
 {
     if(!obj || obj == Py_None)
        return true;
@@ -1236,7 +1473,7 @@ PyObject* pyopencv_from(const std::pair<int, double>& src)
 
 template<typename _Tp, typename _Tr> struct pyopencvVecConverter<std::pair<_Tp, _Tr> >
 {
-    static bool to(PyObject* obj, std::vector<std::pair<_Tp, _Tr> >& value, const ArgInfo info)
+    static bool to(PyObject* obj, std::vector<std::pair<_Tp, _Tr> >& value, const ArgInfo& info)
     {
         return pyopencv_to_generic_vec(obj, value, info);
     }
@@ -1249,7 +1486,7 @@ template<typename _Tp, typename _Tr> struct pyopencvVecConverter<std::pair<_Tp, 
 
 template<typename _Tp> struct pyopencvVecConverter<std::vector<_Tp> >
 {
-    static bool to(PyObject* obj, std::vector<std::vector<_Tp> >& value, const ArgInfo info)
+    static bool to(PyObject* obj, std::vector<std::vector<_Tp> >& value, const ArgInfo& info)
     {
         return pyopencv_to_generic_vec(obj, value, info);
     }
@@ -1262,7 +1499,7 @@ template<typename _Tp> struct pyopencvVecConverter<std::vector<_Tp> >
 
 template<> struct pyopencvVecConverter<Mat>
 {
-    static bool to(PyObject* obj, std::vector<Mat>& value, const ArgInfo info)
+    static bool to(PyObject* obj, std::vector<Mat>& value, const ArgInfo& info)
     {
         return pyopencv_to_generic_vec(obj, value, info);
     }
@@ -1275,7 +1512,7 @@ template<> struct pyopencvVecConverter<Mat>
 
 template<> struct pyopencvVecConverter<UMat>
 {
-    static bool to(PyObject* obj, std::vector<UMat>& value, const ArgInfo info)
+    static bool to(PyObject* obj, std::vector<UMat>& value, const ArgInfo& info)
     {
         return pyopencv_to_generic_vec(obj, value, info);
     }
@@ -1288,7 +1525,7 @@ template<> struct pyopencvVecConverter<UMat>
 
 template<> struct pyopencvVecConverter<KeyPoint>
 {
-    static bool to(PyObject* obj, std::vector<KeyPoint>& value, const ArgInfo info)
+    static bool to(PyObject* obj, std::vector<KeyPoint>& value, const ArgInfo& info)
     {
         return pyopencv_to_generic_vec(obj, value, info);
     }
@@ -1301,7 +1538,7 @@ template<> struct pyopencvVecConverter<KeyPoint>
 
 template<> struct pyopencvVecConverter<DMatch>
 {
-    static bool to(PyObject* obj, std::vector<DMatch>& value, const ArgInfo info)
+    static bool to(PyObject* obj, std::vector<DMatch>& value, const ArgInfo& info)
     {
         return pyopencv_to_generic_vec(obj, value, info);
     }
@@ -1314,7 +1551,7 @@ template<> struct pyopencvVecConverter<DMatch>
 
 template<> struct pyopencvVecConverter<String>
 {
-    static bool to(PyObject* obj, std::vector<String>& value, const ArgInfo info)
+    static bool to(PyObject* obj, std::vector<String>& value, const ArgInfo& info)
     {
         return pyopencv_to_generic_vec(obj, value, info);
     }
@@ -1327,7 +1564,7 @@ template<> struct pyopencvVecConverter<String>
 
 template<> struct pyopencvVecConverter<RotatedRect>
 {
-    static bool to(PyObject* obj, std::vector<RotatedRect>& value, const ArgInfo info)
+    static bool to(PyObject* obj, std::vector<RotatedRect>& value, const ArgInfo& info)
     {
         return pyopencv_to_generic_vec(obj, value, info);
     }
@@ -1338,9 +1575,9 @@ template<> struct pyopencvVecConverter<RotatedRect>
 };
 
 template<>
-bool pyopencv_to(PyObject *obj, TermCriteria& dst, const char *name)
+bool pyopencv_to(PyObject *obj, TermCriteria& dst, const ArgInfo& info)
 {
-    CV_UNUSED(name);
+    CV_UNUSED(info);
     if(!obj)
         return true;
     return PyArg_ParseTuple(obj, "iid", &dst.type, &dst.maxCount, &dst.epsilon) > 0;
@@ -1353,9 +1590,9 @@ PyObject* pyopencv_from(const TermCriteria& src)
 }
 
 template<>
-bool pyopencv_to(PyObject *obj, RotatedRect& dst, const char *name)
+bool pyopencv_to(PyObject *obj, RotatedRect& dst, const ArgInfo& info)
 {
-    CV_UNUSED(name);
+    CV_UNUSED(info);
     if(!obj)
         return true;
     return PyArg_ParseTuple(obj, "(ff)(ff)f", &dst.center.x, &dst.center.y, &dst.size.width, &dst.size.height, &dst.angle) > 0;
@@ -1595,7 +1832,7 @@ static PyObject *pycvCreateButton(PyObject*, PyObject *args, PyObject *kw)
 
 ///////////////////////////////////////////////////////////////////////////////////////
 
-static int convert_to_char(PyObject *o, char *dst, const char *name = "no_name")
+static int convert_to_char(PyObject *o, char *dst, const ArgInfo& info)
 {
     std::string str;
     if (getUnicodeString(o, str))
@@ -1604,7 +1841,7 @@ static int convert_to_char(PyObject *o, char *dst, const char *name = "no_name")
         return 1;
     }
     (*dst) = 0;
-    return failmsg("Expected single character string for argument '%s'", name);
+    return failmsg("Expected single character string for argument '%s'", info.name);
 }
 
 #ifdef __GNUC__
@@ -1773,7 +2010,7 @@ static bool init_body(PyObject * m)
 #pragma GCC visibility push(default)
 #endif
 
-#if PY_MAJOR_VERSION >= 3
+#if defined(CV_PYTHON_3)
 // === Python 3
 
 static struct PyModuleDef cv2_moduledef =

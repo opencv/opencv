@@ -12,6 +12,7 @@ import org.opencv.core.Point;
 import org.opencv.core.Scalar;
 import org.opencv.core.DMatch;
 import org.opencv.features2d.DescriptorMatcher;
+import org.opencv.features2d.FlannBasedMatcher;
 import org.opencv.core.KeyPoint;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
@@ -160,12 +161,21 @@ public class FlannBasedDescriptorMatcherTest extends OpenCVTestCase {
         matcher = DescriptorMatcher.create(DescriptorMatcher.FLANNBASED);
         matSize = 100;
         truth = new DMatch[] {
-                new DMatch(0, 0, 0, 0.6211397f),
+                new DMatch(0, 0, 0, 0.6159003f),
                 new DMatch(1, 1, 0, 0.9177120f),
                 new DMatch(2, 1, 0, 0.3112163f),
                 new DMatch(3, 1, 0, 0.2925075f),
-                new DMatch(4, 1, 0, 0.9309179f)
+                new DMatch(4, 1, 0, 0.26520672f)
                 };
+    }
+
+    // https://github.com/opencv/opencv/issues/11268
+    public void testConstructor()
+    {
+        FlannBasedMatcher self_created_matcher = new FlannBasedMatcher();
+        Mat train = new Mat(1, 1, CvType.CV_8U, new Scalar(123));
+        self_created_matcher.add(Arrays.asList(train));
+        assertTrue(!self_created_matcher.empty());
     }
 
     public void testAdd() {

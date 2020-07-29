@@ -43,7 +43,7 @@
 {
    OpenCV-getCoreTlsData
    Memcheck:Leak
-   fun:_Znwm
+   ...
    fun:_ZN2cv14getCoreTlsDataEv
 }
 

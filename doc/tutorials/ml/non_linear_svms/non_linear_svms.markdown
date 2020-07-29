@@ -1,6 +1,9 @@
 Support Vector Machines for Non-Linearly Separable Data {#tutorial_non_linear_svms}
 =======================================================
 
+@prev_tutorial{tutorial_introduction_to_svm}
+@next_tutorial{tutorial_introduction_to_pca}
+
 Goal
 ----
 
@@ -13,7 +16,7 @@ In this tutorial you will learn how to:
 Motivation
 ----------
 
-Why is it interesting to extend the SVM optimation problem in order to handle non-linearly separable
+Why is it interesting to extend the SVM optimization problem in order to handle non-linearly separable
 training data? Most of the applications in which SVMs are used in computer vision require a more
 powerful tool than a simple linear classifier. This stems from the fact that in these tasks __the
 training data can be rarely separated using an hyperplane__.
@@ -43,7 +46,7 @@ There are multiple ways in which this model can be modified so it takes into acc
 misclassification errors. For example, one could think of minimizing the same quantity plus a
 constant times the number of misclassification errors in the training data, i.e.:
 
-\f[\min ||\beta||^{2} + C \text{(\# misclassication errors)}\f]
+\f[\min ||\beta||^{2} + C \text{(misclassification errors)}\f]
 
 However, this one is not a very good solution since, among some other reasons, we do not distinguish
 between samples that are misclassified with a small distance to their appropriate decision region or

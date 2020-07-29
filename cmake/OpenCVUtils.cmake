@@ -16,7 +16,8 @@ function(ocv_cmake_dump_vars)
     string(TOLOWER "${__variableName}" __variableName_lower)
     if((__variableName MATCHES "${regex}" OR __variableName_lower MATCHES "${regex_lower}")
         AND NOT __variableName_lower MATCHES "^__")
-      set(__VARS "${__VARS}${__variableName}=${${__variableName}}\n")
+      get_property(__value VARIABLE PROPERTY "${__variableName}")
+      set(__VARS "${__VARS}${__variableName}=${__value}\n")
     endif()
   endforeach()
   if(DUMP_TOFILE)
@@ -97,6 +98,30 @@ macro(ocv_update VAR)
   else()
     #ocv_debug_message("Preserve old value for ${VAR}: ${${VAR}}")
   endif()
+endmacro()
+
+function(_ocv_access_removed_variable VAR ACCESS)
+  if(ACCESS STREQUAL "MODIFIED_ACCESS")
+    set(OPENCV_SUPPRESS_MESSAGE_REMOVED_VARIABLE_${VAR} 1 PARENT_SCOPE)
+    return()
+  endif()
+  if(ACCESS MATCHES "UNKNOWN_.*"
+      AND NOT OPENCV_SUPPRESS_MESSAGE_REMOVED_VARIABLE
+      AND NOT OPENCV_SUPPRESS_MESSAGE_REMOVED_VARIABLE_${VAR}
+  )
+    message(WARNING "OpenCV: Variable has been removed from CMake scripts: ${VAR}")
+    set(OPENCV_SUPPRESS_MESSAGE_REMOVED_VARIABLE_${VAR} 1 PARENT_SCOPE)  # suppress similar messages
+  endif()
+endfunction()
+macro(ocv_declare_removed_variable VAR)
+  if(NOT DEFINED ${VAR})  # don't hit external variables
+    variable_watch(${VAR} _ocv_access_removed_variable)
+  endif()
+endmacro()
+macro(ocv_declare_removed_variables)
+  foreach(_var ${ARGN})
+    ocv_declare_removed_variable(${_var})
+  endforeach()
 endmacro()
 
 # Search packages for the host system instead of packages for the target system
@@ -287,9 +312,22 @@ function(ocv_append_target_property target prop)
   endif()
 endfunction()
 
+if(DEFINED OPENCV_DEPENDANT_TARGETS_LIST)
+  foreach(v ${OPENCV_DEPENDANT_TARGETS_LIST})
+    unset(${v} CACHE)
+  endforeach()
+  unset(OPENCV_DEPENDANT_TARGETS_LIST CACHE)
+endif()
+
 function(ocv_append_dependant_targets target)
   #ocv_debug_message("ocv_append_dependant_targets(${target} ${ARGN})")
   _ocv_fix_target(target)
+  list(FIND OPENCV_DEPENDANT_TARGETS_LIST "OPENCV_DEPENDANT_TARGETS_${target}" __id)
+  if(__id EQUAL -1)
+    list(APPEND OPENCV_DEPENDANT_TARGETS_LIST "OPENCV_DEPENDANT_TARGETS_${target}")
+    list(SORT OPENCV_DEPENDANT_TARGETS_LIST)
+    set(OPENCV_DEPENDANT_TARGETS_LIST "${OPENCV_DEPENDANT_TARGETS_LIST}" CACHE INTERNAL "")
+  endif()
   set(OPENCV_DEPENDANT_TARGETS_${target} "${OPENCV_DEPENDANT_TARGETS_${target}};${ARGN}" CACHE INTERNAL "" FORCE)
 endfunction()
 
@@ -363,8 +401,9 @@ macro(ocv_clear_vars)
 endmacro()
 
 set(OCV_COMPILER_FAIL_REGEX
-    "command line option .* is valid for .* but not for C\\+\\+" # GNU
-    "command line option .* is valid for .* but not for C" # GNU
+    "argument .* is not valid"                  # GCC 9+ (including support of unicode quotes)
+    "command[- ]line option .* is valid for .* but not for C\\+\\+" # GNU
+    "command[- ]line option .* is valid for .* but not for C" # GNU
     "unrecognized .*option"                     # GNU
     "unknown .*option"                          # Clang
     "ignoring unknown option"                   # MSVC
@@ -414,12 +453,34 @@ MACRO(ocv_check_compiler_flag LANG FLAG RESULT)
       else()
         set(__msg "")
       endif()
+      if(CMAKE_REQUIRED_LIBRARIES)
+        set(__link_libs LINK_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES})
+      else()
+        set(__link_libs)
+      endif()
+      set(__cmake_flags "")
+      if(CMAKE_EXE_LINKER_FLAGS)  # CMP0056 do this on new CMake
+        list(APPEND __cmake_flags "-DCMAKE_EXE_LINKER_FLAGS=${CMAKE_EXE_LINKER_FLAGS}")
+      endif()
+
+      # CMP0067 do this on new CMake
+      if(DEFINED CMAKE_CXX_STANDARD)
+        list(APPEND __cmake_flags "-DCMAKE_CXX_STANDARD=${CMAKE_CXX_STANDARD}")
+      endif()
+      if(DEFINED CMAKE_CXX_STANDARD_REQUIRED)
+        list(APPEND __cmake_flags "-DCMAKE_CXX_STANDARD_REQUIRED=${CMAKE_CXX_STANDARD_REQUIRED}")
+      endif()
+      if(DEFINED CMAKE_CXX_EXTENSIONS)
+        list(APPEND __cmake_flags "-DCMAKE_CXX_EXTENSIONS=${CMAKE_CXX_EXTENSIONS}")
+      endif()
+
       MESSAGE(STATUS "Performing Test ${RESULT}${__msg}")
       TRY_COMPILE(${RESULT}
         "${CMAKE_BINARY_DIR}"
         "${_fname}"
-        CMAKE_FLAGS "-DCMAKE_EXE_LINKER_FLAGS=${CMAKE_EXE_LINKER_FLAGS}"   # CMP0056 do this on new CMake
+        CMAKE_FLAGS ${__cmake_flags}
         COMPILE_DEFINITIONS "${FLAG}"
+        ${__link_libs}
         OUTPUT_VARIABLE OUTPUT)
 
       if(${RESULT})
@@ -479,7 +540,7 @@ macro(ocv_check_flag_support lang flag varname base_options)
 
   string(TOUPPER "${flag}" ${varname})
   string(REGEX REPLACE "^(/|-)" "HAVE_${_lang}_" ${varname} "${${varname}}")
-  string(REGEX REPLACE " -|-|=| |\\." "_" ${varname} "${${varname}}")
+  string(REGEX REPLACE " -|-|=| |\\.|," "_" ${varname} "${${varname}}")
 
   ocv_check_compiler_flag("${_lang}" "${base_options} ${flag}" ${${varname}} ${ARGN})
 endmacro()
@@ -781,7 +842,7 @@ macro(ocv_check_modules define)
           if(pkgcfg_lib_${define}_${_lib})
             list(APPEND _libs "${pkgcfg_lib_${define}_${_lib}}")
           else()
-            message(WARNING "ocv_check_modules(${define}): can't find library '${_lib}'. Specify 'pkgcfg_lib_${define}_${_lib}' manualy")
+            message(WARNING "ocv_check_modules(${define}): can't find library '${_lib}'. Specify 'pkgcfg_lib_${define}_${_lib}' manually")
             list(APPEND _libs "${_lib}")
           endif()
         else()
@@ -1379,12 +1440,14 @@ endmacro()
 function(ocv_target_link_libraries target)
   set(LINK_DEPS ${ARGN})
   _ocv_fix_target(target)
-  set(LINK_MODE "LINK_PRIVATE")
+  set(LINK_MODE "PRIVATE")
   set(LINK_PENDING "")
   foreach(dep ${LINK_DEPS})
     if(" ${dep}" STREQUAL " ${target}")
       # prevent "link to itself" warning (world problem)
-    elseif(" ${dep}" STREQUAL " LINK_PRIVATE" OR " ${dep}" STREQUAL "LINK_PUBLIC")
+    elseif(" ${dep}" STREQUAL " LINK_PRIVATE" OR " ${dep}" STREQUAL " LINK_PUBLIC"  # deprecated
+        OR " ${dep}" STREQUAL " PRIVATE" OR " ${dep}" STREQUAL " PUBLIC" OR " ${dep}" STREQUAL " INTERFACE"
+    )
       if(NOT LINK_PENDING STREQUAL "")
         __ocv_push_target_link_libraries(${LINK_MODE} ${LINK_PENDING})
         set(LINK_PENDING "")
@@ -1523,7 +1586,10 @@ macro(ocv_get_all_libs _modules _extra _3rdparty)
         endif()
         if (TARGET ${dep})
           get_target_property(_type ${dep} TYPE)
-          if(_type STREQUAL "STATIC_LIBRARY" AND BUILD_SHARED_LIBS OR _type STREQUAL "INTERFACE_LIBRARY")
+          if((_type STREQUAL "STATIC_LIBRARY" AND BUILD_SHARED_LIBS)
+              OR _type STREQUAL "INTERFACE_LIBRARY"
+              OR DEFINED OPENCV_MODULE_${dep}_LOCATION  # OpenCV modules
+          )
             # nothing
           else()
             get_target_property(_output ${dep} IMPORTED_LOCATION)

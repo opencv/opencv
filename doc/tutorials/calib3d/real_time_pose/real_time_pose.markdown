@@ -1,6 +1,10 @@
 Real Time pose estimation of a textured object {#tutorial_real_time_pose}
 ==============================================
 
+@prev_tutorial{tutorial_camera_calibration}
+@next_tutorial{tutorial_interactive_calibration}
+
+
 Nowadays, augmented reality is one of the top research topic in computer vision and robotics fields.
 The most elemental problem in augmented reality is the estimation of the camera pose respect of an
 object in the case of computer vision area to do later some 3D rendering or in the case of robotics
@@ -253,8 +257,8 @@ Here is explained in detail the code for the real time application:
     @code{.cpp}
     RobustMatcher rmatcher;                                                          // instantiate RobustMatcher
 
-    cv::FeatureDetector * detector = new cv::OrbFeatureDetector(numKeyPoints);       // instatiate ORB feature detector
-    cv::DescriptorExtractor * extractor = new cv::OrbDescriptorExtractor();          // instatiate ORB descriptor extractor
+    cv::FeatureDetector * detector = new cv::OrbFeatureDetector(numKeyPoints);       // instantiate ORB feature detector
+    cv::DescriptorExtractor * extractor = new cv::OrbDescriptorExtractor();          // instantiate ORB descriptor extractor
 
     rmatcher.setFeatureDetector(detector);                                           // set feature detector
     rmatcher.setDescriptorExtractor(extractor);                                      // set descriptor extractor
@@ -381,7 +385,7 @@ Here is explained in detail the code for the real time application:
     as not, there are false correspondences or also called *outliers*. The [Random Sample
     Consensus](http://en.wikipedia.org/wiki/RANSAC) or *Ransac* is a non-deterministic iterative
     method which estimate parameters of a mathematical model from observed data producing an
-    approximate result as the number of iterations increase. After appyling *Ransac* all the *outliers*
+    approximate result as the number of iterations increase. After applying *Ransac* all the *outliers*
     will be eliminated to then estimate the camera pose with a certain probability to obtain a good
     solution.
 

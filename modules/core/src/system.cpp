@@ -50,13 +50,31 @@
 
 #include <opencv2/core/utils/logger.hpp>
 
+#include <opencv2/core/utils/tls.hpp>
+#include <opencv2/core/utils/instrumentation.hpp>
+
 namespace cv {
+
+static void _initSystem()
+{
+#ifdef __ANDROID__
+    // https://github.com/opencv/opencv/issues/14906
+    // "ios_base::Init" object is not a part of Android's "iostream" header (in case of clang toolchain, NDK 20).
+    // Ref1: https://en.cppreference.com/w/cpp/io/ios_base/Init
+    //       The header <iostream> behaves as if it defines (directly or indirectly) an instance of std::ios_base::Init with static storage duration
+    // Ref2: https://github.com/gcc-mirror/gcc/blob/gcc-8-branch/libstdc%2B%2B-v3/include/std/iostream#L73-L74
+    static std::ios_base::Init s_iostream_initializer;
+#endif
+}
 
 static Mutex* __initialization_mutex = NULL;
 Mutex& getInitializationMutex()
 {
     if (__initialization_mutex == NULL)
+    {
+        (void)_initSystem();
         __initialization_mutex = new Mutex();
+    }
     return *__initialization_mutex;
 }
 // force initialization (single-threaded environment)
@@ -128,6 +146,10 @@ void* allocSingletonNewBuffer(size_t size) { return malloc(size); }
 #if (_WIN32_WINNT >= 0x0602)
   #include <synchapi.h>
 #endif
+#if ((_WIN32_WINNT >= 0x0600) && !defined(CV_DISABLE_FLS)) || defined(CV_FORCE_FLS)
+  #include <fibersapi.h>
+  #define CV_USE_FLS
+#endif
 #undef small
 #undef min
 #undef max
@@ -139,7 +161,7 @@ void* allocSingletonNewBuffer(size_t size) { return malloc(size); }
 #ifndef __cplusplus_winrt
 #include <windows.storage.h>
 #pragma comment(lib, "runtimeobject.lib")
-#endif
+#endif // WINRT
 
 std::wstring GetTempPathWinRT()
 {
@@ -368,11 +390,14 @@ struct HWFeatures
         g_hwFeatureNames[CPU_VSX] = "VSX";
         g_hwFeatureNames[CPU_VSX3] = "VSX3";
 
+        g_hwFeatureNames[CPU_MSA] = "CPU_MSA";
+
+        g_hwFeatureNames[CPU_AVX512_COMMON] = "AVX512-COMMON";
         g_hwFeatureNames[CPU_AVX512_SKX] = "AVX512-SKX";
         g_hwFeatureNames[CPU_AVX512_KNL] = "AVX512-KNL";
         g_hwFeatureNames[CPU_AVX512_KNM] = "AVX512-KNM";
         g_hwFeatureNames[CPU_AVX512_CNL] = "AVX512-CNL";
-        g_hwFeatureNames[CPU_AVX512_CEL] = "AVX512-CEL";
+        g_hwFeatureNames[CPU_AVX512_CLX] = "AVX512-CLX";
         g_hwFeatureNames[CPU_AVX512_ICL] = "AVX512-ICL";
     }
 
@@ -483,9 +508,11 @@ struct HWFeatures
                                           have[CV_CPU_AVX_5124VNNIW] && have[CV_CPU_AVX_512VPOPCNTDQ];
                 have[CV_CPU_AVX512_SKX] = have[CV_CPU_AVX_512BW] && have[CV_CPU_AVX_512DQ] && have[CV_CPU_AVX_512VL];
                 have[CV_CPU_AVX512_CNL] = have[CV_CPU_AVX512_SKX] && have[CV_CPU_AVX_512IFMA] && have[CV_CPU_AVX_512VBMI];
-                have[CV_CPU_AVX512_CEL] = have[CV_CPU_AVX512_CNL] && have[CV_CPU_AVX_512VNNI];
-                have[CV_CPU_AVX512_ICL] = have[CV_CPU_AVX512_CEL] && have[CV_CPU_AVX_512VBMI2] &&
-                                          have[CV_CPU_AVX_512BITALG] && have[CV_CPU_AVX_512VPOPCNTDQ];
+                have[CV_CPU_AVX512_CLX] = have[CV_CPU_AVX512_SKX] && have[CV_CPU_AVX_512VNNI];
+                have[CV_CPU_AVX512_ICL] = have[CV_CPU_AVX512_SKX] &&
+                                          have[CV_CPU_AVX_512IFMA] && have[CV_CPU_AVX_512VBMI] &&
+                                          have[CV_CPU_AVX_512VNNI] &&
+                                          have[CV_CPU_AVX_512VBMI2] && have[CV_CPU_AVX_512BITALG] && have[CV_CPU_AVX_512VPOPCNTDQ];
             }
             else
             {
@@ -493,7 +520,7 @@ struct HWFeatures
                 have[CV_CPU_AVX512_KNM] = false;
                 have[CV_CPU_AVX512_SKX] = false;
                 have[CV_CPU_AVX512_CNL] = false;
-                have[CV_CPU_AVX512_CEL] = false;
+                have[CV_CPU_AVX512_CLX] = false;
                 have[CV_CPU_AVX512_ICL] = false;
             }
         }
@@ -554,7 +581,12 @@ struct HWFeatures
         have[CV_CPU_FP16] = true;
     #endif
     #endif
-
+    #if defined _ARM_ && (defined(_WIN32_WCE) && _WIN32_WCE >= 0x800)
+        have[CV_CPU_NEON] = true;
+    #endif
+    #ifdef __mips_msa
+        have[CV_CPU_MSA] = true;
+    #endif
     // there's no need to check VSX availability in runtime since it's always available on ppc64le CPUs
     have[CV_CPU_VSX] = (CV_VSX);
     // TODO: Check VSX3 availability in runtime for other platforms
@@ -565,8 +597,16 @@ struct HWFeatures
         have[CV_CPU_VSX3] = (CV_VSX3);
     #endif
 
+        bool skip_baseline_check = false;
+#ifndef NO_GETENV
+        if (getenv("OPENCV_SKIP_CPU_BASELINE_CHECK"))
+        {
+            skip_baseline_check = true;
+        }
+#endif
         int baseline_features[] = { CV_CPU_BASELINE_FEATURES };
-        if (!checkFeatures(baseline_features, sizeof(baseline_features) / sizeof(baseline_features[0])))
+        if (!checkFeatures(baseline_features, sizeof(baseline_features) / sizeof(baseline_features[0]))
+            && !skip_baseline_check)
         {
             fprintf(stderr, "\n"
                     "******************************************************************\n"
@@ -593,12 +633,12 @@ struct HWFeatures
             {
                 if (have[feature])
                 {
-                    if (dump) fprintf(stderr, "%s - OK\n", getHWFeatureNameSafe(feature));
+                    if (dump) fprintf(stderr, "    ID=%3d (%s) - OK\n", feature, getHWFeatureNameSafe(feature));
                 }
                 else
                 {
                     result = false;
-                    if (dump) fprintf(stderr, "%s - NOT AVAILABLE\n", getHWFeatureNameSafe(feature));
+                    if (dump) fprintf(stderr, "    ID=%3d (%s) - NOT AVAILABLE\n", feature, getHWFeatureNameSafe(feature));
                 }
             }
         }
@@ -1357,6 +1397,8 @@ bool Mutex::trylock() { return impl->trylock(); }
 
 //////////////////////////////// thread-local storage ////////////////////////////////
 
+namespace details {
+
 #ifdef _WIN32
 #ifdef _MSC_VER
 #pragma warning(disable:4505) // unreferenced local function has been removed
@@ -1366,16 +1408,44 @@ bool Mutex::trylock() { return impl->trylock(); }
 #endif
 #endif
 
+template <class T>
+class DisposedSingletonMark
+{
+private:
+    static bool mark;
+protected:
+    DisposedSingletonMark() {}
+    ~DisposedSingletonMark()
+    {
+        mark = true;
+    }
+public:
+    static bool isDisposed() { return mark; }
+};
+
 // TLS platform abstraction layer
-class TlsAbstraction
+class TlsAbstraction : public DisposedSingletonMark<TlsAbstraction>
 {
 public:
     TlsAbstraction();
     ~TlsAbstraction();
-    void* GetData() const;
-    void  SetData(void *pData);
+    void* getData() const
+    {
+        if (isDisposed())  // guard: static initialization order fiasco
+            return NULL;
+        return getData_();
+    }
+    void setData(void *pData)
+    {
+        if (isDisposed())  // guard: static initialization order fiasco
+            return;
+        return setData_(pData);
+    }
 
 private:
+    void* getData_() const;
+    void setData_(void *pData);
+
 #ifdef _WIN32
 #ifndef WINRT
     DWORD tlsKey;
@@ -1385,52 +1455,102 @@ private:
 #endif
 };
 
+template<> bool DisposedSingletonMark<TlsAbstraction>::mark = false;
+
+static TlsAbstraction& getTlsAbstraction_()
+{
+    static TlsAbstraction g_tls;  // disposed in atexit() handlers (required for unregistering our callbacks)
+    return g_tls;
+}
+static TlsAbstraction* getTlsAbstraction()
+{
+#ifdef CV_CXX11
+    static TlsAbstraction* instance = &getTlsAbstraction_();
+#else
+    static TlsAbstraction* volatile instance = NULL;
+    if (instance == NULL)
+    {
+        cv::AutoLock lock(cv::getInitializationMutex());
+        if (instance == NULL)
+            instance = &getTlsAbstraction_();
+    }
+#endif
+    return DisposedSingletonMark<TlsAbstraction>::isDisposed() ? NULL : instance;
+}
+
+
 #ifdef _WIN32
 #ifdef WINRT
 static __declspec( thread ) void* tlsData = NULL; // using C++11 thread attribute for local thread data
 TlsAbstraction::TlsAbstraction() {}
 TlsAbstraction::~TlsAbstraction() {}
-void* TlsAbstraction::GetData() const
+void* TlsAbstraction::getData_() const
 {
     return tlsData;
 }
-void  TlsAbstraction::SetData(void *pData)
+void TlsAbstraction::setData_(void *pData)
 {
     tlsData = pData;
 }
 #else //WINRT
+#ifdef CV_USE_FLS
+static void NTAPI opencv_fls_destructor(void* pData);
+#endif // CV_USE_FLS
 TlsAbstraction::TlsAbstraction()
 {
+#ifndef CV_USE_FLS
     tlsKey = TlsAlloc();
+#else // CV_USE_FLS
+    tlsKey = FlsAlloc(opencv_fls_destructor);
+#endif // CV_USE_FLS
     CV_Assert(tlsKey != TLS_OUT_OF_INDEXES);
 }
 TlsAbstraction::~TlsAbstraction()
 {
+#ifndef CV_USE_FLS
     TlsFree(tlsKey);
+#else // CV_USE_FLS
+    FlsFree(tlsKey);
+#endif // CV_USE_FLS
+    tlsKey = TLS_OUT_OF_INDEXES;
 }
-void* TlsAbstraction::GetData() const
+void* TlsAbstraction::getData_() const
 {
+#ifndef CV_USE_FLS
     return TlsGetValue(tlsKey);
+#else // CV_USE_FLS
+    return FlsGetValue(tlsKey);
+#endif // CV_USE_FLS
 }
-void  TlsAbstraction::SetData(void *pData)
+void TlsAbstraction::setData_(void *pData)
 {
+#ifndef CV_USE_FLS
     CV_Assert(TlsSetValue(tlsKey, pData) == TRUE);
+#else // CV_USE_FLS
+    CV_Assert(FlsSetValue(tlsKey, pData) == TRUE);
+#endif // CV_USE_FLS
 }
-#endif
+#endif // WINRT
 #else // _WIN32
+static void opencv_tls_destructor(void* pData);
 TlsAbstraction::TlsAbstraction()
 {
-    CV_Assert(pthread_key_create(&tlsKey, NULL) == 0);
+    CV_Assert(pthread_key_create(&tlsKey, opencv_tls_destructor) == 0);
 }
 TlsAbstraction::~TlsAbstraction()
 {
-    CV_Assert(pthread_key_delete(tlsKey) == 0);
+    if (pthread_key_delete(tlsKey) != 0)
+    {
+        // Don't use logging here
+        fprintf(stderr, "OpenCV ERROR: TlsAbstraction::~TlsAbstraction(): pthread_key_delete() call failed\n");
+        fflush(stderr);
+    }
 }
-void* TlsAbstraction::GetData() const
+void* TlsAbstraction::getData_() const
 {
     return pthread_getspecific(tlsKey);
 }
-void  TlsAbstraction::SetData(void *pData)
+void TlsAbstraction::setData_(void *pData)
 {
     CV_Assert(pthread_setspecific(tlsKey, pData) == 0);
 }
@@ -1461,42 +1581,54 @@ public:
     }
     ~TlsStorage()
     {
-        for(size_t i = 0; i < threads.size(); i++)
-        {
-            if(threads[i])
-            {
-                /* Current architecture doesn't allow proper global objects release, so this check can cause crashes
-
-                // Check if all slots were properly cleared
-                for(size_t j = 0; j < threads[i]->slots.size(); j++)
-                {
-                    CV_Assert(threads[i]->slots[j] == 0);
-                }
-                */
-                delete threads[i];
-            }
-        }
-        threads.clear();
+        // TlsStorage object should not be released
+        // There is no reliable way to avoid problems caused by static initialization order fiasco
+        // Don't use logging here
+        fprintf(stderr, "OpenCV FATAL: TlsStorage::~TlsStorage() call is not expected\n");
+        fflush(stderr);
     }
 
-    void releaseThread()
+    void releaseThread(void* tlsValue = NULL)
     {
+        TlsAbstraction* tls = getTlsAbstraction();
+        if (NULL == tls)
+            return;  // TLS singleton is not available (terminated)
+        ThreadData *pTD = tlsValue == NULL ? (ThreadData*)tls->getData() : (ThreadData*)tlsValue;
+        if (pTD == NULL)
+            return;  // no OpenCV TLS data for this thread
         AutoLock guard(mtxGlobalAccess);
-        ThreadData *pTD = (ThreadData*)tls.GetData();
-        for(size_t i = 0; i < threads.size(); i++)
+        for (size_t i = 0; i < threads.size(); i++)
         {
-            if(pTD == threads[i])
+            if (pTD == threads[i])
             {
-                threads[i] = 0;
-                break;
+                threads[i] = NULL;
+                if (tlsValue == NULL)
+                    tls->setData(0);
+                std::vector<void*>& thread_slots = pTD->slots;
+                for (size_t slotIdx = 0; slotIdx < thread_slots.size(); slotIdx++)
+                {
+                    void* pData = thread_slots[slotIdx];
+                    thread_slots[slotIdx] = NULL;
+                    if (!pData)
+                        continue;
+                    TLSDataContainer* container = tlsSlots[slotIdx].container;
+                    if (container)
+                        container->deleteDataInstance(pData);
+                    else
+                    {
+                        fprintf(stderr, "OpenCV ERROR: TLS: container for slotIdx=%d is NULL. Can't release thread data\n", (int)slotIdx);
+                        fflush(stderr);
+                    }
+                }
+                delete pTD;
+                return;
             }
         }
-        tls.SetData(0);
-        delete pTD;
+        fprintf(stderr, "OpenCV WARNING: TLS: Can't release thread TLS data (unknown pointer or data race): %p\n", (void*)pTD); fflush(stderr);
     }
 
     // Reserve TLS storage index
-    size_t reserveSlot()
+    size_t reserveSlot(TLSDataContainer* container)
     {
         AutoLock guard(mtxGlobalAccess);
         CV_Assert(tlsSlotsSize == tlsSlots.size());
@@ -1504,15 +1636,15 @@ public:
         // Find unused slots
         for(size_t slot = 0; slot < tlsSlotsSize; slot++)
         {
-            if(!tlsSlots[slot])
+            if (tlsSlots[slot].container == NULL)
             {
-                tlsSlots[slot] = 1;
+                tlsSlots[slot].container = container;
                 return slot;
             }
         }
 
         // Create new slot
-        tlsSlots.push_back(1); tlsSlotsSize++;
+        tlsSlots.push_back(TlsSlotInfo(container)); tlsSlotsSize++;
         return tlsSlotsSize - 1;
     }
 
@@ -1537,7 +1669,9 @@ public:
         }
 
         if (!keepSlot)
-            tlsSlots[slotIdx] = 0;
+        {
+            tlsSlots[slotIdx].container = NULL;  // mark slot as free (see reserveSlot() implementation)
+        }
     }
 
     // Get data by TLS storage index
@@ -1547,7 +1681,11 @@ public:
         CV_Assert(tlsSlotsSize > slotIdx);
 #endif
 
-        ThreadData* threadData = (ThreadData*)tls.GetData();
+        TlsAbstraction* tls = getTlsAbstraction();
+        if (NULL == tls)
+            return NULL;  // TLS singleton is not available (terminated)
+
+        ThreadData* threadData = (ThreadData*)tls->getData();
         if(threadData && threadData->slots.size() > slotIdx)
             return threadData->slots[slotIdx];
 
@@ -1579,15 +1717,37 @@ public:
         CV_Assert(tlsSlotsSize > slotIdx);
 #endif
 
-        ThreadData* threadData = (ThreadData*)tls.GetData();
+        TlsAbstraction* tls = getTlsAbstraction();
+        if (NULL == tls)
+            return;  // TLS singleton is not available (terminated)
+
+        ThreadData* threadData = (ThreadData*)tls->getData();
         if(!threadData)
         {
             threadData = new ThreadData;
-            tls.SetData((void*)threadData);
+            tls->setData((void*)threadData);
             {
                 AutoLock guard(mtxGlobalAccess);
-                threadData->idx = threads.size();
-                threads.push_back(threadData);
+
+                bool found = false;
+                // Find unused slots
+                for(size_t slot = 0; slot < threads.size(); slot++)
+                {
+                    if (threads[slot] == NULL)
+                    {
+                        threadData->idx = (int)slot;
+                        threads[slot] = threadData;
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (!found)
+                {
+                    // Create new slot
+                    threadData->idx = threads.size();
+                    threads.push_back(threadData);
+                }
             }
         }
 
@@ -1600,12 +1760,16 @@ public:
     }
 
 private:
-    TlsAbstraction tls; // TLS abstraction layer instance
-
     Mutex  mtxGlobalAccess;           // Shared objects operation guard
     size_t tlsSlotsSize;              // equal to tlsSlots.size() in synchronized sections
-                                      // without synchronization this counter doesn't desrease - it is used for slotIdx sanity checks
-    std::vector<int> tlsSlots;        // TLS keys state
+                                      // without synchronization this counter doesn't decrease - it is used for slotIdx sanity checks
+
+    struct TlsSlotInfo
+    {
+        TlsSlotInfo(TLSDataContainer* _container) : container(_container) {}
+        TLSDataContainer* container;  // attached container (to dispose data of terminated threads)
+    };
+    std::vector<struct TlsSlotInfo> tlsSlots;  // TLS keys state
     std::vector<ThreadData*> threads; // Array for all allocated data. Thread data pointers are placed here to allow data cleanup
 };
 
@@ -1615,9 +1779,26 @@ static TlsStorage &getTlsStorage()
     CV_SINGLETON_LAZY_INIT_REF(TlsStorage, new TlsStorage())
 }
 
+#ifndef _WIN32  // pthread key destructor
+static void opencv_tls_destructor(void* pData)
+{
+    getTlsStorage().releaseThread(pData);
+}
+#else // _WIN32
+#ifdef CV_USE_FLS
+static void WINAPI opencv_fls_destructor(void* pData)
+{
+    getTlsStorage().releaseThread(pData);
+}
+#endif // CV_USE_FLS
+#endif // _WIN32
+
+} // namespace details
+using namespace details;
+
 TLSDataContainer::TLSDataContainer()
 {
-    key_ = (int)getTlsStorage().reserveSlot(); // Reserve key from TLS storage
+    key_ = (int)getTlsStorage().reserveSlot(this); // Reserve key from TLS storage
 }
 
 TLSDataContainer::~TLSDataContainer()
@@ -1630,11 +1811,17 @@ void TLSDataContainer::gatherData(std::vector<void*> &data) const
     getTlsStorage().gather(key_, data);
 }
 
+void TLSDataContainer::detachData(std::vector<void*> &data)
+{
+    getTlsStorage().releaseSlot(key_, data, true);
+}
+
 void TLSDataContainer::release()
 {
-    std::vector<void*> data;
-    data.reserve(32);
-    getTlsStorage().releaseSlot(key_, data); // Release key and get stored data for proper destruction
+    if (key_ == -1)
+        return;  // already released
+    std::vector<void*> data; data.reserve(32);
+    getTlsStorage().releaseSlot(key_, data, false); // Release key and get stored data for proper destruction
     key_ = -1;
     for(size_t i = 0; i < data.size(); i++)  // Delete all associated data
         deleteDataInstance(data[i]);
@@ -1642,8 +1829,7 @@ void TLSDataContainer::release()
 
 void TLSDataContainer::cleanup()
 {
-    std::vector<void*> data;
-    data.reserve(32);
+    std::vector<void*> data; data.reserve(32);
     getTlsStorage().releaseSlot(key_, data, true); // Extract stored data with removal from TLS tables
     for(size_t i = 0; i < data.size(); i++)  // Delete all associated data
         deleteDataInstance(data[i]);
@@ -1662,9 +1848,14 @@ void* TLSDataContainer::getData() const
     return pData;
 }
 
-TLSData<CoreTLSData>& getCoreTlsData()
+static TLSData<CoreTLSData>& getCoreTlsDataTLS()
 {
     CV_SINGLETON_LAZY_INIT_REF(TLSData<CoreTLSData>, new TLSData<CoreTLSData>())
+}
+
+CoreTLSData& getCoreTlsData()
+{
+    return getCoreTlsDataTLS().getRef();
 }
 
 #if defined CVAPI_EXPORTS && defined _WIN32 && !defined WINCE
@@ -1697,6 +1888,15 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID lpReserved)
 
 
 namespace {
+
+#ifdef OPENCV_WITH_ITT
+bool overrideThreadName()
+{
+    static bool param = utils::getConfigurationParameterBool("OPENCV_TRACE_ITT_SET_THREAD_NAME", false);
+    return param;
+}
+#endif
+
 static int g_threadNum = 0;
 class ThreadID {
 public:
@@ -1705,7 +1905,8 @@ public:
         id(CV_XADD(&g_threadNum, 1))
     {
 #ifdef OPENCV_WITH_ITT
-        __itt_thread_set_name(cv::format("OpenCVThread-%03d", id).c_str());
+        if (overrideThreadName())
+            __itt_thread_set_name(cv::format("OpenCVThread-%03d", id).c_str());
 #endif
     }
 };
@@ -1760,7 +1961,11 @@ inline size_t parseOption(const std::string &value)
     }
     cv::String valueStr = value.substr(0, pos);
     cv::String suffixStr = value.substr(pos, value.length() - pos);
-    int v = atoi(valueStr.c_str());
+#ifdef CV_CXX11
+    size_t v = (size_t)std::stoull(valueStr);
+#else
+    size_t v = (size_t)atol(valueStr.c_str());
+#endif
     if (suffixStr.length() == 0)
         return v;
     else if (suffixStr == "MB" || suffixStr == "Mb" || suffixStr == "mb")
@@ -2320,12 +2525,12 @@ String getIppVersion()
 bool useIPP()
 {
 #ifdef HAVE_IPP
-    CoreTLSData* data = getCoreTlsData().get();
-    if(data->useIPP < 0)
+    CoreTLSData& data = getCoreTlsData();
+    if (data.useIPP < 0)
     {
-        data->useIPP = getIPPSingleton().useIPP;
+        data.useIPP = getIPPSingleton().useIPP;
     }
-    return (data->useIPP > 0);
+    return (data.useIPP > 0);
 #else
     return false;
 #endif
@@ -2333,24 +2538,24 @@ bool useIPP()
 
 void setUseIPP(bool flag)
 {
-    CoreTLSData* data = getCoreTlsData().get();
+    CoreTLSData& data = getCoreTlsData();
 #ifdef HAVE_IPP
-    data->useIPP = (getIPPSingleton().useIPP)?flag:false;
+    data.useIPP = (getIPPSingleton().useIPP)?flag:false;
 #else
     CV_UNUSED(flag);
-    data->useIPP = false;
+    data.useIPP = false;
 #endif
 }
 
 bool useIPP_NotExact()
 {
 #ifdef HAVE_IPP
-    CoreTLSData* data = getCoreTlsData().get();
-    if(data->useIPP_NE < 0)
+    CoreTLSData& data = getCoreTlsData();
+    if (data.useIPP_NE < 0)
     {
-        data->useIPP_NE = getIPPSingleton().useIPP_NE;
+        data.useIPP_NE = getIPPSingleton().useIPP_NE;
     }
-    return (data->useIPP_NE > 0);
+    return (data.useIPP_NE > 0);
 #else
     return false;
 #endif
@@ -2358,12 +2563,12 @@ bool useIPP_NotExact()
 
 void setUseIPP_NotExact(bool flag)
 {
-    CoreTLSData* data = getCoreTlsData().get();
+    CoreTLSData& data = getCoreTlsData();
 #ifdef HAVE_IPP
-    data->useIPP_NE = flag;
+    data.useIPP_NE = flag;
 #else
     CV_UNUSED(flag);
-    data->useIPP_NE = false;
+    data.useIPP_NE = false;
 #endif
 }
 
@@ -2389,7 +2594,7 @@ namespace tegra {
 
 bool useTegra()
 {
-    cv::CoreTLSData* data = cv::getCoreTlsData().get();
+    cv::CoreTLSData* data = cv::getCoreTlsData();
 
     if (data->useTegra < 0)
     {
@@ -2405,7 +2610,7 @@ bool useTegra()
 
 void setUseTegra(bool flag)
 {
-    cv::CoreTLSData* data = cv::getCoreTlsData().get();
+    cv::CoreTLSData* data = cv::getCoreTlsData();
     data->useTegra = flag;
 }
 

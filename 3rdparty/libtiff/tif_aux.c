@@ -30,6 +30,7 @@
 #include "tiffiop.h"
 #include "tif_predict.h"
 #include <math.h>
+#include <float.h>
 
 uint32
 _TIFFMultiply32(TIFF* tif, uint32 first, uint32 second, const char* where)
@@ -355,6 +356,15 @@ _TIFFUInt64ToDouble(uint64 ui64)
 		df += 18446744073709551616.0; /* adding 2**64 */
 		return (double)df;
 	}
+}
+
+float _TIFFClampDoubleToFloat( double val )
+{
+    if( val > FLT_MAX )
+        return FLT_MAX;
+    if( val < -FLT_MAX )
+        return -FLT_MAX;
+    return (float)val;
 }
 
 int _TIFFSeekOK(TIFF* tif, toff_t off)

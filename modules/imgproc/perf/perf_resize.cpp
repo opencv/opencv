@@ -7,6 +7,31 @@ namespace opencv_test {
 
 typedef tuple<MatType, Size, Size> MatInfo_Size_Size_t;
 typedef TestBaseWithParam<MatInfo_Size_Size_t> MatInfo_Size_Size;
+typedef tuple<Size,Size> Size_Size_t;
+typedef tuple<MatType, Size_Size_t> MatInfo_SizePair_t;
+typedef TestBaseWithParam<MatInfo_SizePair_t> MatInfo_SizePair;
+
+#define MATTYPE_NE_VALUES CV_8UC1, CV_8UC2, CV_8UC3, CV_8UC4,     \
+                          CV_16UC1, CV_16UC2, CV_16UC3, CV_16UC4, \
+                          CV_32FC1, CV_32FC2, CV_32FC3, CV_32FC4
+
+// For gradient-ish testing of the other matrix formats
+template<typename T>
+static void fillFPGradient(Mat& img)
+{
+    const int ch = img.channels();
+
+    int r, c, i;
+    for(r=0; r<img.rows; r++)
+    {
+        for(c=0; c<img.cols; c++)
+        {
+            T vals[] = {(T)r, (T)c, (T)(r*c), (T)(r*c/(r+c+1))};
+            T *p = (T*)img.ptr(r, c);
+            for(i=0; i<ch; i++) p[i] = (T)vals[i];
+        }
+    }
+}
 
 PERF_TEST_P(MatInfo_Size_Size, resizeUpLinear,
             testing::Values(
@@ -36,6 +61,33 @@ PERF_TEST_P(MatInfo_Size_Size, resizeUpLinear,
 #else
     SANITY_CHECK(dst, 1 + 1e-6);
 #endif
+}
+
+PERF_TEST_P(MatInfo_SizePair, resizeUpLinearNonExact,
+            testing::Combine
+                (
+                testing::Values( MATTYPE_NE_VALUES ),
+                testing::Values( Size_Size_t(szVGA, szqHD), Size_Size_t(szVGA, sz720p) )
+                )
+             )
+{
+    int matType = get<0>(GetParam());
+    Size_Size_t sizes = get<1>(GetParam());
+    Size from = get<0>(sizes);
+    Size to = get<1>(sizes);
+
+    cv::Mat src(from, matType), dst(to, matType);
+    switch(src.depth())
+    {
+        case CV_8U: cvtest::fillGradient(src); break;
+        case CV_16U: fillFPGradient<ushort>(src); break;
+        case CV_32F: fillFPGradient<float>(src); break;
+    }
+    declare.in(src).out(dst);
+
+    TEST_CYCLE_MULTIRUN(10) resize(src, dst, to, 0, 0, INTER_LINEAR);
+
+    SANITY_CHECK_NOTHING();
 }
 
 PERF_TEST_P(MatInfo_Size_Size, resizeDownLinear,
@@ -78,6 +130,40 @@ PERF_TEST_P(MatInfo_Size_Size, resizeDownLinear,
 #else
     SANITY_CHECK(dst, 1 + 1e-6);
 #endif
+}
+
+PERF_TEST_P(MatInfo_SizePair, resizeDownLinearNonExact,
+            testing::Combine
+                (
+                testing::Values( MATTYPE_NE_VALUES ),
+                testing::Values
+                    (
+                    Size_Size_t(szVGA, szQVGA),
+                    Size_Size_t(szqHD, szVGA),
+                    Size_Size_t(sz720p, Size(120 * sz720p.width / sz720p.height, 120)),
+                    Size_Size_t(sz720p, szVGA),
+                    Size_Size_t(sz720p, szQVGA)
+                    )
+                )
+            )
+{
+    int matType = get<0>(GetParam());
+    Size_Size_t sizes = get<1>(GetParam());
+    Size from = get<0>(sizes);
+    Size to = get<1>(sizes);
+
+    cv::Mat src(from, matType), dst(to, matType);
+    switch(src.depth())
+    {
+        case CV_8U: cvtest::fillGradient(src); break;
+        case CV_16U: fillFPGradient<ushort>(src); break;
+        case CV_32F: fillFPGradient<float>(src); break;
+    }
+    declare.in(src).out(dst);
+
+    TEST_CYCLE_MULTIRUN(10) resize(src, dst, to, 0, 0, INTER_LINEAR);
+
+    SANITY_CHECK_NOTHING();
 }
 
 

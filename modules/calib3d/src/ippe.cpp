@@ -650,7 +650,7 @@ void PoseSolver::makeCanonicalObjectPoints(InputArray _objectPoints, OutputArray
 
         if (!computeObjextSpaceR3Pts(objectPoints,R))
         {
-            //we could not compute R, problably because there is a duplicate point in {objectPoints(0),objectPoints(1),objectPoints(2)}.
+            //we could not compute R, probably because there is a duplicate point in {objectPoints(0),objectPoints(1),objectPoints(2)}.
             //So we compute it with the SVD (which is slower):
             computeObjextSpaceRSvD(UZero,R);
         }

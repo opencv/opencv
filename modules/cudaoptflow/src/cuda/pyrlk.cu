@@ -415,7 +415,7 @@ namespace pyrlk
 
                 I_patch[i][j] = Tex_I<cn, T>::read(x, y);
 
-                // Sharr Deriv
+                // Scharr Deriv
 
                 work_type dIdx = 3.0f * Tex_I<cn,T>::read(x+1, y-1) + 10.0f * Tex_I<cn, T>::read(x+1, y) + 3.0f * Tex_I<cn,T>::read(x+1, y+1) -
                                  (3.0f * Tex_I<cn,T>::read(x-1, y-1) + 10.0f * Tex_I<cn, T>::read(x-1, y) + 3.0f * Tex_I<cn,T>::read(x-1, y+1));
@@ -608,7 +608,7 @@ namespace pyrlk
 
                 I_patch[i][j] = ToFloat<T>(I(y, x));
 
-                // Sharr Deriv
+                // Scharr Deriv
 
                 work_type dIdx = 3.0f * I(y - 1, x + 1) + 10.0f * I(y, x + 1) + 3.0f * I(y + 1, x + 1) -
                     (3.0f * I(y - 1, x - 1) + 10.0f * I(y, x - 1) + 3.0f * I(y + 1 , x - 1));
@@ -927,7 +927,7 @@ namespace pyrlk
 
                 I_patch[i * patchWidth + j] = tex2D(tex_If, x, y);
 
-                // Sharr Deriv
+                // Scharr Deriv
 
                 dIdx_patch[i * patchWidth + j] = 3 * tex2D(tex_If, x+1, y-1) + 10 * tex2D(tex_If, x+1, y) + 3 * tex2D(tex_If, x+1, y+1) -
                                                 (3 * tex2D(tex_If, x-1, y-1) + 10 * tex2D(tex_If, x-1, y) + 3 * tex2D(tex_If, x-1, y+1));

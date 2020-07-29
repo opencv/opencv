@@ -1,6 +1,8 @@
 Introduction to Support Vector Machines {#tutorial_introduction_to_svm}
 =======================================
 
+@next_tutorial{tutorial_non_linear_svms}
+
 Goal
 ----
 
@@ -51,7 +53,7 @@ Let's introduce the notation used to define formally a hyperplane:
 
 where \f$\beta\f$ is known as the *weight vector* and \f$\beta_{0}\f$ as the *bias*.
 
-@sa A more in depth description of this and hyperplanes you can find in the section 4.5 (*Separating
+@note A more in depth description of this and hyperplanes you can find in the section 4.5 (*Separating
 Hyperplanes*) of the book: *Elements of Statistical Learning* by T. Hastie, R. Tibshirani and J. H.
 Friedman (@cite HTF01).
 

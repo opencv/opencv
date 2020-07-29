@@ -1679,7 +1679,7 @@ public:
 
     /** @brief This function returns the trained parameters arranged across rows.
 
-    For a two class classifcation problem, it returns a row matrix. It returns learnt parameters of
+    For a two class classification problem, it returns a row matrix. It returns learnt parameters of
     the Logistic Regression as a matrix of type CV_32F.
      */
     CV_WRAP virtual Mat get_learnt_thetas() const = 0;
@@ -1760,7 +1760,7 @@ Note that the parameters margin regularization, initial step size, and step decr
 
 To use SVMSGD algorithm do as follows:
 
-- first, create the SVMSGD object. The algoorithm will set optimal parameters by default, but you can set your own parameters via functions setSvmsgdType(),
+- first, create the SVMSGD object. The algorithm will set optimal parameters by default, but you can set your own parameters via functions setSvmsgdType(),
   setMarginType(), setMarginRegularization(), setInitialStepSize(), and setStepDecreasingPower().
 
 - then the SVM model can be trained using the train features and the correspondent labels by the method train().

@@ -256,8 +256,8 @@ public:
 
 /** @brief Implementation of the Zach, Pock and Bischof Dual TV-L1 Optical Flow method.
  *
- * @sa C. Zach, T. Pock and H. Bischof, "A Duality Based Approach for Realtime TV-L1 Optical Flow".
- * @sa Javier Sanchez, Enric Meinhardt-Llopis and Gabriele Facciolo. "TV-L1 Optical Flow Estimation".
+ * @note C. Zach, T. Pock and H. Bischof, "A Duality Based Approach for Realtime TV-L1 Optical Flow".
+ * @note Javier Sanchez, Enric Meinhardt-Llopis and Gabriele Facciolo. "TV-L1 Optical Flow Estimation".
  */
 class CV_EXPORTS OpticalFlowDual_TVL1 : public DenseOpticalFlow
 {

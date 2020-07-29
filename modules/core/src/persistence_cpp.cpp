@@ -166,27 +166,49 @@ void FileStorage::writeObj( const String& name, const void* obj )
 
 void FileStorage::write( const String& name, int val )
 {
-    *this << name << val;
+    cvWriteInt(fs, name.c_str(), val);
 }
 
 void FileStorage::write( const String& name, double val )
 {
-    *this << name << val;
+    cvWriteReal(fs, name.c_str(), val);
 }
 
 void FileStorage::write( const String& name, const String& val )
 {
-    *this << name << val;
+    cvWriteString(fs, name.c_str(), val.c_str());
 }
 
 void FileStorage::write( const String& name, InputArray val )
 {
-    *this << name << val.getMat();
+    if(state & INSIDE_MAP)
+        *this << name;
+    *this << val.getMat();
 }
 
 void FileStorage::writeComment( const String& comment, bool append )
 {
     cvWriteComment(fs, comment.c_str(), append ? 1 : 0);
+}
+
+void FileStorage::startWriteStruct(const String& name, int flags, const String& typeName)
+{
+    int struct_type = flags & FileNode::TYPE_MASK;
+    bool isflow = (flags & FileNode::FLOW) != 0;
+    CV_Assert(struct_type == FileNode::SEQ || struct_type == FileNode::MAP);
+    char strbegin_[] = { (struct_type == FileNode::SEQ ? '[' : '{'), (isflow ? ':' : '\0'), '\0' };
+    String strbegin = strbegin_;
+    if (!typeName.empty())
+        strbegin += typeName;
+    *this << name << strbegin;
+}
+
+void FileStorage::endWriteStruct()
+{
+    if( structs.empty() )
+        CV_Error( CV_StsError, "Extra endWriteStruct()" );
+    char openparen = structs.back();
+    *this << (openparen == '[' ? "]" : "}");
 }
 
 String FileStorage::getDefaultObjectName(const String& _filename)
@@ -326,6 +348,15 @@ FileNodeIterator::FileNodeIterator(const FileNodeIterator& it)
     container = it.container;
     reader = it.reader;
     remaining = it.remaining;
+}
+
+FileNodeIterator& FileNodeIterator::operator=(const FileNodeIterator& it)
+{
+    fs = it.fs;
+    container = it.container;
+    reader = it.reader;
+    remaining = it.remaining;
+    return *this;
 }
 
 FileNodeIterator& FileNodeIterator::operator ++()

@@ -83,6 +83,8 @@ public:
     {
         if (!isBackendAvailable(apiPref, cv::videoio_registry::getStreamBackends()))
             throw SkipTestException(cv::String("Backend is not available/disabled: ") + cv::videoio_registry::getBackendName(apiPref));
+        if (cvtest::skipUnstableTests && apiPref == CAP_MSMF && (ext == "h264" || ext == "h265" || ext == "mpg"))
+            throw SkipTestException("Unstable MSMF test");
         VideoCapture cap;
         ASSERT_NO_THROW(cap.open(video_file, apiPref));
         if (!cap.isOpened())
@@ -115,6 +117,8 @@ public:
             for (int k = 0; k < n_frames; ++k)
             {
                 checkFrameRead(k, cap);
+                if (::testing::Test::HasFailure() && k % 10 == 0)
+                    break;
             }
         }
         bool canSeek = false;
@@ -134,6 +138,8 @@ public:
             for (int k = 0; k < n_frames; k += 20)
             {
                 checkFrameSeek(k, cap);
+                if (::testing::Test::HasFailure() && k % 10 == 0)
+                    break;
             }
         }
 
@@ -146,6 +152,8 @@ public:
             for (int k = 0; k < 10; ++k)
             {
                 checkFrameSeek(cvtest::TS::ptr()->get_rng().uniform(0, n_frames), cap);
+                if (::testing::Test::HasFailure() && k % 10 == 0)
+                    break;
             }
         }
     }
@@ -168,6 +176,8 @@ public:
     {
         if (!isBackendAvailable(apiPref, cv::videoio_registry::getStreamBackends()))
             throw SkipTestException(cv::String("Backend is not available/disabled: ") + cv::videoio_registry::getBackendName(apiPref));
+        if (cvtest::skipUnstableTests && apiPref == CAP_MSMF && (ext == "h264" || ext == "h265" || ext == "mpg"))
+            throw SkipTestException("Unstable MSMF test");
         VideoCapture cap;
         EXPECT_NO_THROW(cap.open(video_file, apiPref));
         if (!cap.isOpened())
@@ -211,6 +221,8 @@ public:
             EXPECT_EQ(bunny_param.getWidth(), frame.cols);
             EXPECT_EQ(bunny_param.getHeight(), frame.rows);
             count_actual += 1;
+            if (::testing::Test::HasFailure() && count_actual % 10 == 0)
+                break;
         }
         if (count_prop > 0)
         {
@@ -262,6 +274,8 @@ public:
         {
             generateFrame(i, frame_count, img);
             EXPECT_NO_THROW(writer << img);
+            if (::testing::Test::HasFailure() && i % 10 == 0)
+                break;
         }
         EXPECT_NO_THROW(writer.release());
     }

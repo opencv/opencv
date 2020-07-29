@@ -1,6 +1,8 @@
 Optical Flow {#tutorial_optical_flow}
 ============
 
+@prev_tutorial{tutorial_meanshift}
+
 Goal
 ----
 
@@ -15,7 +17,7 @@ Optical Flow
 ------------
 
 Optical flow is the pattern of apparent motion of image objects between two consecutive frames
-caused by the movemement of object or camera. It is 2D vector field where each vector is a
+caused by the movement of object or camera. It is 2D vector field where each vector is a
 displacement vector showing the movement of points from first frame to second. Consider the image
 below (Image Courtesy: [Wikipedia article on Optical Flow](http://en.wikipedia.org/wiki/Optical_flow)).
 
@@ -109,6 +111,15 @@ below:
     @include samples/python/tutorial_code/video/optical_flow/optical_flow.py
 @end_toggle
 
+
+@add_toggle_java
+-   **Downloadable code**: Click
+    [here](https://github.com/opencv/opencv/tree/3.4/samples/java/tutorial_code/video/optical_flow/OpticalFlowDemo.java)
+
+-   **Code at glance:**
+    @include samples/java/tutorial_code/video/optical_flow/OpticalFlowDemo.java
+@end_toggle
+
 (This code doesn't check how correct are the next keypoints. So even if any feature point disappears
 in image, there is a chance that optical flow finds the next point which may look close to it. So
 actually for a robust tracking, corner points should be detected in particular intervals. OpenCV
@@ -148,6 +159,15 @@ corresponds to Value plane. See the code below:
 
 -   **Code at glance:**
     @include samples/python/tutorial_code/video/optical_flow/optical_flow_dense.py
+@end_toggle
+
+
+@add_toggle_java
+-   **Downloadable code**: Click
+    [here](https://github.com/opencv/opencv/tree/3.4/samples/java/tutorial_code/video/optical_flow/OpticalFlowDenseDemo.java)
+
+-   **Code at glance:**
+    @include samples/java/tutorial_code/video/optical_flow/OpticalFlowDenseDemo.java
 @end_toggle
 
 

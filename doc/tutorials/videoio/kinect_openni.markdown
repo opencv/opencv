@@ -1,6 +1,10 @@
 Using Kinect and other OpenNI compatible depth sensors {#tutorial_kinect_openni}
 ======================================================
 
+@prev_tutorial{tutorial_video_write}
+@next_tutorial{tutorial_intelperc}
+
+
 Depth sensors compatible with OpenNI (Kinect, XtionPRO, ...) are supported through VideoCapture
 class. Depth map, BGR image and some other formats of output can be retrieved by using familiar
 interface of VideoCapture.
@@ -43,7 +47,7 @@ VideoCapture can retrieve the following data:
     -   CAP_OPENNI_POINT_CLOUD_MAP - XYZ in meters (CV_32FC3)
     -   CAP_OPENNI_DISPARITY_MAP - disparity in pixels (CV_8UC1)
     -   CAP_OPENNI_DISPARITY_MAP_32F - disparity in pixels (CV_32FC1)
-    -   CAP_OPENNI_VALID_DEPTH_MASK - mask of valid pixels (not ocluded, not shaded etc.)
+    -   CAP_OPENNI_VALID_DEPTH_MASK - mask of valid pixels (not occluded, not shaded etc.)
         (CV_8UC1)
 
 -#  data given from BGR image generator:
