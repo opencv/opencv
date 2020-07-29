@@ -78,20 +78,20 @@
       {
         let dp;
         let dq;
-        let fG = gradient_magnitude.floatAt(q.x, q.y);
+        let fG = gradient_magnitude.data32F[q.x * gradient_magnitude.cols * gradient_magnitude.channels() + q.y * gradient_magnitude.channels()];
         let WEIGHT_LAP_ZERO_CROSS = 0.43;
         let WEIGHT_GRADIENT_MAGNITUDE = 0.14;
         let WEIGHT_GRADIENT_DIRECTION = 0.43;
         let isDiag = (p.x != q.x) && (p.y != q.y);
-        if ((Iy.floatAt(p.x, p.y) * (q.x - p.x) - Ix.floatAt(p.x, p.y) * (q.y - p.y)) >= 0)
+        if ((Iy.data32F[p.x * Iy.cols * Iy.channels() + p.y * Iy.channels()] * (q.x - p.x) - Ix.data32F[p.x * Ix.cols * Ix.channels() + p.y * Ix.channels()] * (q.y - p.y)) >= 0)
         {
-          dp = Iy.floatAt(p.x, p.y) * (q.x - p.x) - Ix.floatAt(p.x, p.y) * (q.y - p.y);
-          dq = Iy.floatAt(q.x, q.y) * (q.x - p.x) - Ix.floatAt(q.x, q.y) * (q.y - p.y);
+          dp = Iy.data32F[p.x * Iy.cols * Iy.channels() + p.y * Iy.channels()] * (q.x - p.x) - Ix.data32F[p.x * Ix.cols * Ix.channels() + p.y * Ix.channels()] * (q.y - p.y);
+          dq = Iy.data32F[q.x * Iy.cols * Iy.channels() + q.y * Iy.channels()] * (q.x - p.x) - Ix.data32F[q.x * Ix.cols * Ix.channels() + q.y * Ix.channels()] * (q.y - p.y);
         }
         else
         {
-          dp = Iy.floatAt(p.x, p.y) * (p.x - q.x) - Ix.floatAt(p.x, p.y) * (p.y - q.y);
-          dq = Iy.floatAt(q.x, q.y) * (p.x - q.x) - Ix.floatAt(q.x, q.y) * (p.y - q.y);
+          dp = Iy.data32F[p.x * Iy.cols * Iy.channels() + p.y * Iy.channels()] * (p.x - q.x) - Ix.data32F[p.x * Ix.cols * Ix.channels() + p.y * Ix.channels()] * (p.y - q.y);
+          dq = Iy.data32F[q.x * Iy.cols * Iy.channels() + q.y * Iy.channels()] * (p.x - q.x) - Ix.data32F[q.x * Ix.cols * Ix.channels() + q.y * Ix.channels()] * (p.y - q.y);
         }
         if (isDiag)
         {
@@ -103,7 +103,7 @@
           fG /= Math.sqrt(2);
         }
 
-        return WEIGHT_LAP_ZERO_CROSS * zero_crossing.floatAt(q.x, q.y) +  WEIGHT_GRADIENT_DIRECTION * (Math.cos(dp) + Math.cos(dq) / Math.PI) + WEIGHT_GRADIENT_MAGNITUDE *fG;
+        return WEIGHT_LAP_ZERO_CROSS * zero_crossing.data32F[q.x * zero_crossing.cols * zero_crossing.channels() + q.y * zero_crossing.channels()] +  WEIGHT_GRADIENT_DIRECTION * (Math.cos(dp) + Math.cos(dq) / Math.PI) + WEIGHT_GRADIENT_MAGNITUDE *fG;
       }
 
       function find_min_path(start)
@@ -117,8 +117,8 @@
         let L = new PriorityQueue();
         hit_map_x = new cv.Mat(src.rows, src.cols, cv.CV_32S, new cv.Scalar(0));
         hit_map_y = new cv.Mat(src.rows, src.cols, cv.CV_32S, new cv.Scalar(0));
-        cost_map.floatPtr(start.x, start.y)[0] = 0;
-        processed.ucharPtr(start.x, start.y)[0] = 1;
+        cost_map.data32F[start.x * cost_map.cols * cost_map.channels() + start.y * cost_map.channels()] = 0;
+        processed.data[start.x * processed.cols * processed.channels() + start.y * processed.channels()] = 1;
 
         begin = {cost: 0, next_point: start};
         L.enqueue(begin.next_point, begin.cost);
@@ -131,11 +131,11 @@
           console.log(P.level);
 
           let p = P.value;
-          processed.ucharPtr(p.x,p.y)[0] = 0;
+          processed.data[p.x * processed.cols * processed.channels() + p.y * processed.channels()] = 0;
 
-          if (removed.ucharAt(start.x, start.y) == 0)
+          if (removed.data[start.x * removed.cols * removed.channels() + start.y * removed.channels()] == 0)
           {
-            expandned.ucharPtr(p.x, p.y)[0] = 1;
+            expandned.data[p.x * expandned.cols * expandned.channels() + p.y * expandned.channels()] = 1;
             for(let i = -1; i <= 1; i++)
             {
               for(let j = -1; j <= 1; j++)
@@ -144,23 +144,22 @@
                 let ty = p.y + j;
                 if (tx < 0 || tx >= src.cols || ty < 0 || ty >= src.rows)
                   continue;
-                if (expandned.ucharPtr(tx,ty)[0]==0)
+                if (expandned.data[tx * expandned.cols * expandned.channels() + ty * expandned.channels()] == 0)
                 {
                   let q = {x: tx,y: ty};
 
-                  let cost = cost_map.floatPtr(p.x,p.y)[0]  +  local_cost(p, q);
-                  if (processed.ucharPtr(q.x,q.y)[0] == 1 && cost < cost_map.floatPtr(q.x,q.y)[0])
+                  let cost = cost_map.data32F[p.x * cost_map.cols * cost_map.channels() + p.y * cost_map.channels()]  +  local_cost(p, q);
+                  if (processed.data[q.x * processed.cols * processed.channels() + q.y * processed.channels()] == 1 && cost < cost_map.data32F[q.x * cost_map.cols * cost_map.channels() + q.y * cost_map.channels()])
                   {
-                    removed.ucharPtr(q.x,q.y)[0] = 1;
+                    removed.data[q.x * removed.cols * removed.channels() + q.y * removed.channels()] = 1;
                   }
-                  if (processed.ucharPtr(q.x,q.y)[0] == 0)
+                  if (processed.data[q.x * processed.cols * processed.channels() + q.y * processed.channels()] == 0)
                   {
-                    cost_map.floatPtr(q.x,q.y)[0]= cost;
-                    hit_map_x.intPtr(q.x, q.y)[0] = p.x;
-                    hit_map_y.intPtr(q.x, q.y)[0] = p.y;
-                    processed.ucharPtr(q.x,q.y)[0] = 1
-                    let val = {cost: cost_map.floatPtr(q.x,q.y), next_point: q}
-                    L.enqueue(q,cost_map.floatPtr(q.x,q.y));
+                    cost_map.data32F[q.x * cost_map.cols * cost_map.channels() + q.y * cost_map.channels()]= cost;
+                    hit_map_x.data32S[q.x * hit_map_x.cols * hit_map_x.channels() + q.y * hit_map_x.channels()] = p.x;
+                    hit_map_y.data32S[q.x * hit_map_y.cols * hit_map_y.channels() + q.y * hit_map_y.channels()] = p.y;
+                    processed.data[q.x * processed.cols * processed.channels() + q.y * processed.channels()] = 1
+                    L.enqueue(q,cost_map.data32F[q.x * cost_map.cols * cost_map.channels() + q.y * cost_map.channels()]);
                   }
                 }    
               }
@@ -180,7 +179,7 @@
         Iy = new cv.Mat();
         
         gradient_magnitude = new cv.Mat();
-        cv.cvtColor(src, grayscale, cv.COLOR_BGR2GRAY);
+        cv.cvtColor(src, grayscale, cv.COLOR_BGRA2GRAY);
         cv.Canny(grayscale, img_canny,  50, 100);  
         cv.threshold(img_canny, zero_crossing, 254, 1, cv.THRESH_BINARY_INV);
         cv.Sobel(grayscale, Ix, cv.CV_32FC1, 1, 0, 1);
