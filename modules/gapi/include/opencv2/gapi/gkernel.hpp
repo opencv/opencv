@@ -445,7 +445,7 @@ namespace gapi {
      * Finally, two kernel packages can be combined into a new one
      * with function cv::gapi::combine().
      */
-    class GAPI_EXPORTS GKernelPackage
+    class GAPI_EXPORTS_W_SIMPLE GKernelPackage
     {
 
         /// @private
@@ -712,6 +712,7 @@ namespace detail
         static const char* tag() { return "gapi.use_only"; }
     };
 } // namespace detail
+
 } // namespace cv
 
 #endif // OPENCV_GAPI_GKERNEL_HPP
