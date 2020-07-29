@@ -5,12 +5,13 @@
 // Copyright (C) 2018, Intel Corporation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 
-
 #include "precomp.hpp"
-//#include "opencv2/highgui.hpp"
-#include "opencv2/imgproc.hpp"
 #include "opencv2/objdetect.hpp"
 #include "opencv2/calib3d.hpp"
+#include <opencv2/highgui.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/imgproc/types_c.h>
+
 
 #ifdef HAVE_QUIRC
 #include "quirc.h"
@@ -21,666 +22,106 @@
 #include <iostream>
 #include <queue>
 #include <limits>
-#include <iomanip>
+namespace classifer{
+/*my classifier for determine the locator pattern*/
 
+class my_classifer{
+    cv::Mat sample;
+    int size ;
+    int thresh ;
+public:
+    my_classifer(const std::string & dir);
+    bool compare(const cv::Mat & t);
+
+};
+/* my_classifer
+ * @param : dir(the positive locator pattern sample's dir )
+ * @func  : initialize my classifier
+ * @return :
+ * */
+my_classifer::my_classifer(const std::string & dir){
+    sample = cv::imread(dir,CV_BGR2GRAY);
+    size = 64;
+    thresh = 1700;
+}
+/*
+ * @param : t(the target image)
+ * @func  : judge whether t is the locator pattern or not
+ * @return : t is a locator (true)
+ * */
+bool my_classifer::compare(const cv::Mat & t){
+    cv::Mat test = t.clone();
+    int score = 0;
+
+    for (uint32_t i = 0; i < (uint32_t)size; ++i)
+    {   /*compare by each pixel*/
+        const uchar* lhs = sample.ptr<uchar>(i);
+        const uchar* rhs = test.ptr<uchar>(i);
+        for (uint32_t j = 0; j < (uint32_t)size; ++j)
+        {
+            bool l = *lhs++, r = *rhs++;
+            if(!l && !r)
+                continue;
+            /*the same +3
+             *diff     -2 */
+            score += (l == r) ? 3 : -2;
+        }
+    }
+    std::cout<<"score : "<<score<<std::endl;
+    return score>thresh;
+
+}
+
+}
 namespace cv
 {
-
-/* Limits on the maximum size of QR-codes and their content. */
-#define  MAX_BITMAP	3917
-#define  MAX_PAYLOAD	8896
-
-#define FORMAT_LENGTH 15
-#define  MAX_VERSION     40
-#define  MAX_ALIGNMENT   7
-#define MAX_POLY       64
-
-#define MAX_VERSION     40
-#define MAX_ALIGNMENT   7
-
-#define INVALID_REGION 110 /*for the reserved value when reading the data*/
-#define  CODEWORD_LEN 8
-
-enum OUTPUT{
-    HEX,OCT,ALPHA
-};
-/**
- * Encoding mode.
- */
-typedef enum {
-    QR_MODE_NUL        = 0b0000,   ///< Terminator (NUL character). Internal use only
-    QR_MODE_ECI        = 0b0111,        ///< ECI mode
-    QR_MODE_NUM        = 0b0001,    ///< Numeric mode
-    QR_MODE_ALPHA      = 0b0010,         ///< Alphabet-numeric mode
-    QR_MODE_BYTE       = 0b0100,          ///< 8-bit data mode
-    QR_MODE_KANJI      = 0b1000,      ///< Kanji (shift-jis) mode
-    QR_MODE_STRUCTURE  = 0b0011,  ///< Internal use only
-    QR_MODE_FNC1FIRST  = 0b0101, ///< FNC1, first position
-    QR_MODE_FNC1SECOND = 0b1001, ///< FNC1, second position
-} QRencodeMode;
-
 using std::vector;
 using std::cout;
 using std::endl;
+using std::pair;
+bool check_Ratio_Of_Contours( const int &index,
+                              const vector<vector<Point> > &contours,
+                              const vector<Vec4i> &hierarchy);
+bool is_Possible_Corner(const vector<vector<Point> > &contours,
+                        const vector<Vec4i> &hierarchy,
+                        const int &index,const int &levelsNum);
+void getPossibleContours(const vector<vector<Point> > &contours,
+                         const vector<Vec4i> &hierarchy,
+                         const int &levelsNum,vector<pair<vector<Point>,int> > &patterns);
+float getLinesArctan(float line1_k, float line2_k, bool is_angle);
+void drawConvexhull(InputOutputArray img,  vector<Point> hull,const Scalar& color, int thickness,int lineType, int shift);
+void drawRotateRect(InputOutputArray img,  RotatedRect rect,const Scalar& color, int thickness,int lineType, int shift);
+Point getCenterOfMass(const vector<Point>& contour);
+Point getCenterOfMass(const vector<Point2f>& contour);
+Mat getSubMat(const Mat & ori_imge , const RotatedRect& boundingBox,const Size& size);
+void getPatternCenters(const Mat& bin_barcode,
+                       const vector<pair<vector<Point>,int> > &first_patterns,
+                       const vector<Vec4i> &hierarchy,
+                       vector<Point>& centers,vector<vector<Point> >& location_patterns,
+                       double &locator_size);
 
-std::string D2B(uint16_t my_format);
-int ecc_code2level(int code);
+void getTruePattern(const vector<Point>& centers ,const vector<vector<Point> >& location_patterns,
+                    vector<Point2f> &pattern_points,vector<vector<Point> >&pattern_hull);
+bool getLocatorPostion(const Mat& img,vector <Point2f> & localization_points,
+                       vector<vector<Point> > & localization_patterns,double & locator_size);
+void getFarPoints(const vector<Point>& hull1,
+                  const Point &point2 ,
+                  Point &point1 );
+void getFarPoints(const vector<Point>& hull1, const vector<Point>& hull2,Point &point1,Point &point2);
+void getFarPoints(const vector<Point>& hull1,
+                  const Point &point2 ,const Point &limit, const double &locator_size,
+                  Point &point1 );
 
-uint8_t gf_pow(uint8_t x , int power);
-uint8_t gf_inverse(uint8_t x);
-uint8_t gf_mul(const uint8_t &x,const uint8_t& y);
-uint8_t gf_div(const uint8_t &x,const uint8_t& y);
-
-uint8_t gf_poly_eval(const Mat& poly,uint8_t x);
-Mat gf_poly_scale(const Mat & p,int scalar);
-Mat gf_poly_add(const Mat & p,const Mat & q);
-Mat gf_poly_mul(const Mat &p,const Mat &q);
-std::string show_poly(const Mat& p,OUTPUT o);
-Mat gf_poly_div(const Mat& dividend,const Mat& divisor,const int& ecc_num);
-
-Mat find_error_locator(const vector<uint8_t>&synd,int & errors_len);
-vector<int > find_errors(const Mat& sigma,const int &errors_len,const int & msg_len);
-Mat error_correct(const Mat & msg_in ,const vector<uint8_t>&synd,const Mat & e_loc_poly,const vector<int> &error_index);
-
-
-int hamming_weight(uint16_t x);
-int hamming_detect(uint16_t fmt);
-
-int block_syndromes(const Mat & block, int synd_num,vector<uint8_t>& synd);
-int get_bits(const int& bits,uint8_t * & ptr);
-
-/*total codewords are divided into two groups
- *The ecc_codewords are the same in two groups*/
-struct block_params {
-    int ecc_codewords;           //Number of error correction blocks
-    int num_blocks_in_G1;
-    int data_codewords_in_G1;
-    int num_blocks_in_G2;
-    int data_codewords_in_G2;
-};
-
-struct version_info {
-    int	total_codewords;
-    int	apat[MAX_ALIGNMENT];  //(location of alignment pattern)
-    block_params ecc[4];
-};
-
-const version_info version_db[MAX_VERSION + 1] = {
-        { /* Version 0 */
-                0,
-                {0,0,0,0,0,0,0},
-                {
-                        {0	,0	,0,0,0},
-                        {0	,0	,0,0,0},
-                        {0	,0	,0,0,0},
-                        {0	,0	,0 ,0,0}
-                }
-        },
-        { /* Version 1 */
-                26,
-                {0,0,0,0,0,0,0},
-                {
-                        {7	,1	,19,0,0},
-                        {10	,1	,16,0,0},
-                        {13	,1	,13,0,0},
-                        {17	,1	,9 ,0,0}
-                }
-        },
-        { /* Version 2 */
-                44,
-                {6, 18, 0,0,0,0,0},
-                {
-                        { 10,	1,	34,0,0},
-                        {  16,	1,	28,0,0},
-                        {  22,	1,	22,0,0},
-                        {  28,	1,	16,0,0}
-                }
-        },
-        { /* Version 3 */
-                70,
-                {6, 22, 0,0,0,0,0},
-                {
-                        {  15,	1,	55,0,0},
-                        {  26,	1,	44,0,0},
-                        {  18,	2,	17,0,0},
-                        {  22,	2,	13,0,0}
-                }
-        },
-        { /* Version 4 */
-                100,
-                {6, 26, 0,0,0,0,0},
-                {
-                        {  20,	1,	80,0,0},
-                        {  18,	2,	32,0,0},
-                        {  26,	2,	24,0,0},
-                        {  16,	4,	9 ,0,0}
-                }
-        },
-        { /* Version 5 */
-                134,
-                {6, 30, 0,0,0,0,0},
-                {
-                        {  26,	1,	108,0,  0},
-                        {  24,	2,	43, 0,  0},
-                        {  18,	2,	15,	2,	16},
-                        {  22,	2,	11,	2,	12}
-                }
-        },
-        { /* Version 6 */
-                172,
-                {6, 34, 0,0,0,0,0},
-                {
-                        {  18,	2,	68,0,0},
-                        {  16,	4,	27,0,0},
-                        {  24,	4,	19,0,0},
-                        {  28,	4,	15,0,0}
-                }
-        },
-        { /* Version 7 */
-                196,
-                {6, 22, 38, 0,0,0,0},
-                {
-                        {  20,	2,	78,0,0},
-                        {  18,	4,	31,0,0},
-                        {  18,	2,	14,	4,	15},
-                        {  26,	4,	13,	1,	14}
-                }
-        },
-        { /* Version 8 */
-                242,
-                {6, 24, 42, 0,0,0,0},
-                {
-                        {  24,	2,	97,0,0},
-                        {  22,	2,	38,	2,	39},
-                        {  22,	4,	18,	2,	19},
-                        {  26,	4,	14,	2,	15}
-                }
-        },
-        { /* Version 9 */
-                292,
-                {6, 26, 46, 0,0,0,0},
-                {
-                        {  30,	2,	116,0,0},
-                        {  22,	3,	36,	2,	37},
-                        {  20,	4,	16,	4,	17},
-                        {  24,	4,	12,	4,	13}
-                }
-        },
-        { /* Version 10 */
-                346,
-                {6, 28, 50, 0,0,0,0},
-                {
-                        {  18,	2,	68,	2,	69},
-                        {  26,	4,	43,	1,	44},
-                        {  24,	6,	19,	2,	20},
-                        {  28,	6,	15,	2,	16}
-                }
-        },
-        { /* Version 11 */
-                404,
-                {6, 30, 54, 0,0,0,0},
-                {
-                        {  20,	4,	81, 0,0},
-                        {  30,	1,	50,	4,	51},
-                        {  28,	4,	22,	4,	23},
-                        {  24,	3,	12,	8,	13}
-                }
-        },
-        { /* Version 12 */
-                466,
-                {6, 32, 58, 0,0,0,0},
-                {
-                        {  24,	2,	92,	2,	93},
-                        {  22,	6,	36,	2,	37},
-                        {  26,	4,	20,	6,	21},
-                        {  28,	7,	14,	4,	15}
-                }
-        },
-        { /* Version 13 */
-                532,
-                {6, 34, 62, 0,0,0,0},
-                {
-                        {  26,	4,	107,0,0},
-                        {  22,	8,	37,	1,	38},
-                        {  24,	8,	20,	4,	21},
-                        {  22,	12,	11,	4,	12}
-                }
-        },
-        { /* Version 14 */
-                581,
-                {6, 26, 46, 66, 0,0,0},
-                {
-                        {  30,	3,	115,1,	116},
-                        {  24,	4,	40,	5,	41},
-                        {  20,	11,	16,	5,	17},
-                        {  24,	11,	12,	5,	13}
-                }
-        },
-        { /* Version 15 */
-                655,
-                {6, 26, 48, 70, 0,0,0},
-                {
-                        {  22,	5,	87,	1,	88},
-                        {  24,	5,	41,	5,	42},
-                        {  30,	5,	24,	7,	25},
-                        {  24,	11,	12,	7,	13}
-                }
-        },
-        { /* Version 16 */
-                733,
-                {6, 26, 50, 74, 0,0,0},
-                {
-                        {  24,	5,	98,	1,	99},
-                        {  28,	7,	45,	3,	46},
-                        {  24,	15,	19,	2,	20},
-                        {  30,	3,	15,	13,	16}
-                }
-        },
-        { /* Version 17 */
-                815,
-                {6, 30, 54, 78, 0,0,0},
-                {
-                        { 28,	1,	107,5,	108},
-                        { 28,	10,	46,	1,	47},
-                        { 28,	1,	22,	15,	23},
-                        { 28,	2,	14,	17,	15}
-                }
-        },
-        { /* Version 18 */
-                901,
-                {6, 30, 56, 82, 0,0,0},
-                {
-                        {  30,	5,	120,1,	121},
-                        {  26,	9,	43,	4,	44},
-                        {  28,	17,	22,	1,	23},
-                        {  28,	2,	14,	19,	15}
-                }
-        },
-        { /* Version 19 */
-                991,
-                {6, 30, 58, 86, 0,0,0},
-                {
-                        {  28,	3,	113,4,	114},
-                        {  26,	3,	44,	11,	45},
-                        {  26,	17,	21,	4,	22},
-                        {  26,	9,	13,	16,	14}
-                }
-        },
-        { /* Version 20 */
-                1085,
-                {6, 34, 62, 90, 0,0,0},
-                {
-                        {  28,	3,	107,5,	108},
-                        {  26,	3,	41,	13,	42},
-                        {  30,	15,	24,	5,	25},
-                        {  28,	15,	15,	10,	16}
-                }
-        },
-        { /* Version 21 */
-                1156,
-                {6, 28, 50, 72, 92, 0,0},
-                {
-                        {  28,	4,	116,4,  117},
-                        {  26,	17,	42, 0,  0},
-                        {  28,	17,	22,	6,	23},
-                        {  30,	19,	16,	6,	17}
-                }
-        },
-        { /* Version 22 */
-                1258,
-                {6, 26, 50, 74, 98, 0,0},
-                {
-                        {  28,	2,	111, 7,	 112},
-                        {  28,	17,	46,  0,  0},
-                        {  30,	7,	24,	 16, 25},
-                        {  24,	34,	13,  0,  0}
-                }
-        },
-        { /* Version 23 */
-                1364,
-                {6, 30, 54, 78, 102, 0,0},
-                {
-                        {  30,	4,	121,5,	122},
-                        {  28,	4,	47,	14,	48},
-                        {  30,	11,	24,	14,	25},
-                        {  30,	16,	15,	14,	16}
-                }
-        },
-        { /* Version 24 */
-                1474,
-                {6, 28, 54, 80, 106, 0,0},
-                {
-                        {  30,	6,	117,4,	118},
-                        {  28,	6,	45,	14,	46},
-                        {  30,	11,	24,	16,	25},
-                        {  30,	30,	16,	2,	17}
-                }
-        },
-        { /* Version 25 */
-                1588,
-                {6, 32, 58, 84, 110, 0,0},
-                {
-                        {  26,	8,	106,4,	107},
-                        {  28,	8,	47,	13,	48},
-                        {  30,	7,	24,	22,	25},
-                        {  30,	22,	15,	13,	16}
-                }
-        },
-        { /* Version 26 */
-                1706,
-                {6, 30, 58, 86, 114, 0,0},
-                {
-                        {  28,	10,	114,2,	115},
-                        {  28,	19,	46,	4,	47},
-                        {  28,	28,	22,	6,	23},
-                        {  30,	33,	16,	4,	17}
-                }
-        },
-        { /* Version 27 */
-                1828,
-                {6, 34, 62, 90, 118, 0,0},
-                {
-                        {  30,	8,	122,4,	123},
-                        {  28,	22,	45,	3,	46},
-                        {  30,	8,	23,	26,	24},
-                        {  30,	12,	15,	28,	16}
-                }
-        },
-        { /* Version 28 */
-                1921,
-                {6, 26, 50, 74, 98, 122, 0},
-                {
-                        {  30,	3,	117,10,	118},
-                        {  28,	3,	45,	23,	46},
-                        {  30,	4,	24,	31,	25},
-                        {  30,	11,	15,	31,	16}
-                }
-        },
-        { /* Version 29 */
-                2051,
-                {6, 30, 54, 78, 102, 126, 0},
-                {
-                        {  30,	7,	116,7,	117},
-                        {  28,	21,	45,	7,	46},
-                        {  30,	1,	23,	37,	24},
-                        {  30,	19,	15,	26,	16}
-                }
-        },
-        { /* Version 30 */
-                2185,
-                {6, 26, 52, 78, 104, 130, 0},
-                {
-                        {  30,	5,	115,10,	116},
-                        {  28,	19,	47,	10,	48},
-                        {  30,	15,	24,	25,	25},
-                        {  30,	23,	15,	25,	16}
-                }
-        },
-        { /* Version 31 */
-                2323,
-                {6, 30, 56, 82, 108, 134, 0},
-                {
-                        {  30,	13,	115,3,	116},
-                        {  28,	2,	46,	29,	47},
-                        {  30,	42,	24,	1,	25},
-                        {  30,	23,	15,	28,	16}
-                }
-        },
-        { /* Version 32 */
-                2465,
-                {6, 34, 60, 86, 112, 138, 0},
-                {
-                        {  30,	17,	115, 0,     0},
-                        {  28,	10,	46,	 23,	47},
-                        {  30,	10,	24,	 35,	25},
-                        {  30,	19,	15,	 35,	16}
-                }
-        },
-        { /* Version 33 */
-                2611,
-                {6, 30, 58, 86, 114, 142, 0},
-                {
-                        {  30,	17,	115,1,	116},
-                        {  28,	14,	46,	21,	47},
-                        {  30,	29,	24,	19,	25},
-                        {  30,	11,	15,	46,	16}
-                }
-        },
-        { /* Version 34 */
-                2761,
-                {6, 34, 62, 90, 118, 146, 0},
-                {
-                        {  30,	13,	115,6,	116},
-                        {  28,	14,	46,	23,	47},
-                        {  30,	44,	24,	7,	25},
-                        {  30,	59,	16,	1,	17}
-                }
-        },
-        { /* Version 35 */
-                2876,
-                {6, 30, 54, 78, 102, 126, 150},
-                {
-                        {  30,	12,	121,7,	122},
-                        {  28,	12,	47,	26,	48},
-                        {  30,	39,	24,	14,	25},
-                        {  30,	22,	15,	41,	16}
-                }
-        },
-        { /* Version 36 */
-                3034,
-                {6, 24, 50, 76, 102, 128, 154},
-                {
-                        {  30,	6,	121,14,	122},
-                        {  28,	6,	47,	34,	48},
-                        {  30,	46,	24,	10,	25},
-                        {  30,	2,	15,	64,	16}
-                }
-        },
-        { /* Version 37 */
-                3196,
-                {6, 28, 54, 80, 106, 132, 158},
-                {
-                        {  30,	17,	122,4,	123},
-                        {  28,	29,	46,	14,	47},
-                        {  30,	49,	24,	10,	25},
-                        {  30,	24,	15,	46,	16}
-                }
-        },
-        { /* Version 38 */
-                3362,
-                {6, 32, 58, 84, 110, 136, 162},
-                {
-                        {  30,	4,	122,18,	123},
-                        {  28,	13,	46,	32,	47},
-                        {  30,	48,	24,	14,	25},
-                        {  30,	42,	15,	32,	16}
-                }
-        },
-        { /* Version 39 */
-                3532,
-                {6, 26, 54, 82, 110, 138, 166},
-                {
-                        {  30,	20,	117,4,	118},
-                        {  28,	40,	47,	7,	48},
-                        {  30,	43,	24,	22,	25},
-                        {  30,	10,	15,	67,	16}
-                }
-        },
-        { /* Version 40 */
-                3706,
-                {6, 30, 58, 86, 114, 142, 170},
-                {
-                        {  30,	19,	118,6,	119},
-                        {  28,	18,	47,	31,	48},
-                        {  30,	34,	24,	34,	25},
-                        {  30,	20,	15,	61,	16}
-                }
-        }
-};
-static const uint16_t after_mask_format [32]={
-        0x5412,0x5125,0x5e7c,0x5b4b,0x45f9,  0x40ce,0x4f97,0x4aa0,0x77c4,0x72f3,
-        0x7daa,0x789d,0x662f,0x6318,0x6c41,  0x6976,0x1689,0x13be,0x1ce7,0x19d0,
-        0x0762,0x0255,0x0d0c,0x083b,0x355f,  0x3068,0x3f31,0x3a06,0x24b4,0x2183,
-        0x2eda,0x2bed
-};
-
-static const uint8_t gf_exp[256] = {
-        0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80,
-        0x1d, 0x3a, 0x74, 0xe8, 0xcd, 0x87, 0x13, 0x26,
-        0x4c, 0x98, 0x2d, 0x5a, 0xb4, 0x75, 0xea, 0xc9,
-        0x8f, 0x03, 0x06, 0x0c, 0x18, 0x30, 0x60, 0xc0,
-        0x9d, 0x27, 0x4e, 0x9c, 0x25, 0x4a, 0x94, 0x35,
-        0x6a, 0xd4, 0xb5, 0x77, 0xee, 0xc1, 0x9f, 0x23,
-        0x46, 0x8c, 0x05, 0x0a, 0x14, 0x28, 0x50, 0xa0,
-        0x5d, 0xba, 0x69, 0xd2, 0xb9, 0x6f, 0xde, 0xa1,
-        0x5f, 0xbe, 0x61, 0xc2, 0x99, 0x2f, 0x5e, 0xbc,
-        0x65, 0xca, 0x89, 0x0f, 0x1e, 0x3c, 0x78, 0xf0,
-        0xfd, 0xe7, 0xd3, 0xbb, 0x6b, 0xd6, 0xb1, 0x7f,
-        0xfe, 0xe1, 0xdf, 0xa3, 0x5b, 0xb6, 0x71, 0xe2,
-        0xd9, 0xaf, 0x43, 0x86, 0x11, 0x22, 0x44, 0x88,
-        0x0d, 0x1a, 0x34, 0x68, 0xd0, 0xbd, 0x67, 0xce,
-        0x81, 0x1f, 0x3e, 0x7c, 0xf8, 0xed, 0xc7, 0x93,
-        0x3b, 0x76, 0xec, 0xc5, 0x97, 0x33, 0x66, 0xcc,
-        0x85, 0x17, 0x2e, 0x5c, 0xb8, 0x6d, 0xda, 0xa9,
-        0x4f, 0x9e, 0x21, 0x42, 0x84, 0x15, 0x2a, 0x54,
-        0xa8, 0x4d, 0x9a, 0x29, 0x52, 0xa4, 0x55, 0xaa,
-        0x49, 0x92, 0x39, 0x72, 0xe4, 0xd5, 0xb7, 0x73,
-        0xe6, 0xd1, 0xbf, 0x63, 0xc6, 0x91, 0x3f, 0x7e,
-        0xfc, 0xe5, 0xd7, 0xb3, 0x7b, 0xf6, 0xf1, 0xff,
-        0xe3, 0xdb, 0xab, 0x4b, 0x96, 0x31, 0x62, 0xc4,
-        0x95, 0x37, 0x6e, 0xdc, 0xa5, 0x57, 0xae, 0x41,
-        0x82, 0x19, 0x32, 0x64, 0xc8, 0x8d, 0x07, 0x0e,
-        0x1c, 0x38, 0x70, 0xe0, 0xdd, 0xa7, 0x53, 0xa6,
-        0x51, 0xa2, 0x59, 0xb2, 0x79, 0xf2, 0xf9, 0xef,
-        0xc3, 0x9b, 0x2b, 0x56, 0xac, 0x45, 0x8a, 0x09,
-        0x12, 0x24, 0x48, 0x90, 0x3d, 0x7a, 0xf4, 0xf5,
-        0xf7, 0xf3, 0xfb, 0xeb, 0xcb, 0x8b, 0x0b, 0x16,
-        0x2c, 0x58, 0xb0, 0x7d, 0xfa, 0xe9, 0xcf, 0x83,
-        0x1b, 0x36, 0x6c, 0xd8, 0xad, 0x47, 0x8e, 0x01
-};
-static const uint8_t gf_log[256] = {
-        0x00, 0xff, 0x01, 0x19, 0x02, 0x32, 0x1a, 0xc6,
-        0x03, 0xdf, 0x33, 0xee, 0x1b, 0x68, 0xc7, 0x4b,
-        0x04, 0x64, 0xe0, 0x0e, 0x34, 0x8d, 0xef, 0x81,
-        0x1c, 0xc1, 0x69, 0xf8, 0xc8, 0x08, 0x4c, 0x71,
-        0x05, 0x8a, 0x65, 0x2f, 0xe1, 0x24, 0x0f, 0x21,
-        0x35, 0x93, 0x8e, 0xda, 0xf0, 0x12, 0x82, 0x45,
-        0x1d, 0xb5, 0xc2, 0x7d, 0x6a, 0x27, 0xf9, 0xb9,
-        0xc9, 0x9a, 0x09, 0x78, 0x4d, 0xe4, 0x72, 0xa6,
-        0x06, 0xbf, 0x8b, 0x62, 0x66, 0xdd, 0x30, 0xfd,
-        0xe2, 0x98, 0x25, 0xb3, 0x10, 0x91, 0x22, 0x88,
-        0x36, 0xd0, 0x94, 0xce, 0x8f, 0x96, 0xdb, 0xbd,
-        0xf1, 0xd2, 0x13, 0x5c, 0x83, 0x38, 0x46, 0x40,
-        0x1e, 0x42, 0xb6, 0xa3, 0xc3, 0x48, 0x7e, 0x6e,
-        0x6b, 0x3a, 0x28, 0x54, 0xfa, 0x85, 0xba, 0x3d,
-        0xca, 0x5e, 0x9b, 0x9f, 0x0a, 0x15, 0x79, 0x2b,
-        0x4e, 0xd4, 0xe5, 0xac, 0x73, 0xf3, 0xa7, 0x57,
-        0x07, 0x70, 0xc0, 0xf7, 0x8c, 0x80, 0x63, 0x0d,
-        0x67, 0x4a, 0xde, 0xed, 0x31, 0xc5, 0xfe, 0x18,
-        0xe3, 0xa5, 0x99, 0x77, 0x26, 0xb8, 0xb4, 0x7c,
-        0x11, 0x44, 0x92, 0xd9, 0x23, 0x20, 0x89, 0x2e,
-        0x37, 0x3f, 0xd1, 0x5b, 0x95, 0xbc, 0xcf, 0xcd,
-        0x90, 0x87, 0x97, 0xb2, 0xdc, 0xfc, 0xbe, 0x61,
-        0xf2, 0x56, 0xd3, 0xab, 0x14, 0x2a, 0x5d, 0x9e,
-        0x84, 0x3c, 0x39, 0x53, 0x47, 0x6d, 0x41, 0xa2,
-        0x1f, 0x2d, 0x43, 0xd8, 0xb7, 0x7b, 0xa4, 0x76,
-        0xc4, 0x17, 0x49, 0xec, 0x7f, 0x0c, 0x6f, 0xf6,
-        0x6c, 0xa1, 0x3b, 0x52, 0x29, 0x9d, 0x55, 0xaa,
-        0xfb, 0x60, 0x86, 0xb1, 0xbb, 0xcc, 0x3e, 0x5a,
-        0xcb, 0x59, 0x5f, 0xb0, 0x9c, 0xa9, 0xa0, 0x51,
-        0x0b, 0xf5, 0x16, 0xeb, 0x7a, 0x75, 0x2c, 0xd7,
-        0x4f, 0xae, 0xd5, 0xe9, 0xe6, 0xe7, 0xad, 0xe8,
-        0x74, 0xd6, 0xf4, 0xea, 0xa8, 0x50, 0x58, 0xaf
-};
-
-/* This enum describes the various decoder errors which may occur. */
-typedef enum {
-    SUCCESS = 0,
-    ERROR_INVALID_GRID_SIZE,
-    ERROR_INVALID_VERSION,
-    ERROR_FORMAT_ECC,
-    ERROR_DATA_ECC,
-    ERROR_UNKNOWN_DATA_TYPE,
-    ERROR_DATA_OVERFLOW,
-    ERROR_DATA_UNDERFLOW
-}  decode_error ;
-/*
- * params @ ecc_level
- * func   @ make the ecc_level more direct
- * return @ the actual value of ecc_level
- * */
-int ecc_code2level(int code){
-    switch (code){
-        case 0b01://L	01
-            return 0;
-        case 0b00 ://M	00
-            return 1;
-        case 0b11 ://Q	11
-            return 2;
-        case 0b10 ://H	10
-            return 3;
-    }
-    return 0;
-}
-/*
- * params @ a number
- * func   @ convert a dec to bin
- * return @ a bin string for print
- * */
-
-std::string D2B(uint16_t my_format){
-    std::string f;
-    for(int i=my_format;i>0;i=i>>1){
-        if(i%2==1)
-            f='1'+f;
-        else
-            f='0'+f;
-    }
-    return f;
-}
-
-/*hamming_weight:
- *      get the distance by counting the number of 1
- * params @ uint16_t x(input the XOR of two binary string)
- * return @ the distance
- */
-int hamming_weight(uint16_t x){
-    int weight=0;
-    while(x>0){
-        weight += x & 1;
-        x >>= 1;
-    }
-    return weight;
-}
-
-/*hamming_detect:
- *      find the best matched string
- * params @ uint16_t fmt(input format)
- * return @ the index of matched component in the look-up table
-*/
-
-int hamming_detect(uint16_t fmt){
-    int best_fmt = -1;
-    int best_dist = 15;
-    int test_dist;
-    int index=0;
-    for(;index<32;index++){
-        /*fetch out from the table*/
-        uint16_t test_code=after_mask_format[index];
-        test_dist=hamming_weight(fmt ^ test_code);
-        /* find the smallest distance*/
-        if (test_dist < best_dist){
-            best_dist = test_dist;
-            best_fmt = index;
-        }
-            /*can't match two components*/
-        else if(test_dist == best_dist) {
-            best_fmt = -1;
-        }
-    }
-    cout<<"best_fmt : "<<best_fmt<<" best_dist : "<<best_dist<<endl;
-    return best_fmt;
-}
+Point getCrossPoint(const Vec4i& LineA, const Vec4i& LineB);
+void getCornerPoints(const vector<Point2f> & localization_points,
+                     const vector<vector<Point> > & localization_patterns,
+                     const double &locator_size,
+                     vector<Point> & corners,
+                     vector<Point> & corner_in_clockwise
+);
+void subAdjust(const Mat & bin_barcode , const Point & shift , const int & size ,bool out_in , Point &p1 , Point &p2  );
+void adjustPoints(const Mat & bin_barcode , const Point & shift ,const double & locator_size ,  Point &p1 , Point &p2);
+Point2f getRotatedPoints(const Point2f & center, const Point2f & target , const double & angle );
 
 static bool checkQRInputImage(InputArray img, Mat& gray)
 {
@@ -743,8 +184,16 @@ protected:
     bool testBypassRoute(vector<Point2f> hull, int start, int finish);
     inline double getCosVectors(Point2f a, Point2f b, Point2f c);
 
-    Mat barcode, bin_barcode, resized_barcode, resized_bin_barcode, straight_barcode;
+
+    double QR_size;
+    double locator_size ;
+    Mat barcode, bin_barcode, straight_barcode;
+    Mat img_canny;
+
     vector<Point2f> localization_points, transformation_points;
+
+    vector<vector<Point> > localization_patterns;
+
     double eps_vertical, eps_horizontal, coeff_expansion;
     enum resize_direction { ZOOMING, SHRINKING, UNCHANGED } purpose;
 };
@@ -772,7 +221,7 @@ void QRDetect::init(const Mat& src, double eps_vertical_, double eps_horizontal_
         const int width  = cvRound(src.size().width  / coeff_expansion);
         const int height = cvRound(src.size().height  / coeff_expansion);
         Size new_size(width, height);
-        resize(src, resized_barcode, new_size, 0, 0, INTER_AREA);
+        resize(src, barcode, new_size, 0, 0, INTER_AREA);
     }
     else
     {
@@ -787,11 +236,6 @@ void QRDetect::init(const Mat& src, double eps_vertical_, double eps_horizontal_
         adaptiveThreshold(barcode, bin_barcode, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY, 83, 2);
     else
         bin_barcode.release();
-
-    if (!resized_barcode.empty())
-        adaptiveThreshold(resized_barcode, resized_bin_barcode, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY, 83, 2);
-    else
-        resized_bin_barcode.release();
 }
 
 vector<Vec3d> QRDetect::searchHorizontalLines()
@@ -1074,231 +518,720 @@ void QRDetect::fixationPoints(vector<Point2f> &local_point)
         std::swap(local_point[1], local_point[2]);
     }
 }
+ /* check_Ratio_Of_Contours
+ * @param : index(the index of the target contour)
+  *         contours(all possible contours ) hierarchy(all possible hierarchies )
+ * @func  : judge whether contours[index] is the locator pattern or not
+  *         (by judging the ratio of black and white in the pattern )
+ * @return :true / false
+ * */
+bool check_Ratio_Of_Contours( const int &index,
+                              const vector<vector<Point> > &contours,
+                              const vector<Vec4i> &hierarchy){
+    /*The parent are should be 1-10 times larger than its child */
+    int firstChildIndex = hierarchy[index][2];
+    int secondChildIndex = hierarchy[firstChildIndex][2];
 
-bool QRDetect::localization()
-{
-    CV_TRACE_FUNCTION();
-    Point2f begin, end;
-    vector<Vec3d> list_lines_x = searchHorizontalLines();
-    if( list_lines_x.empty() ) { return false; }
-    vector<Point2f> list_lines_y = separateVerticalLines(list_lines_x);
-    if( list_lines_y.empty() ) { return false; }
+    double  firstArea = contourArea(contours[index]) / (
+            contourArea(contours[firstChildIndex]) + 1e-5);
+    double  secondArea = contourArea(contours[firstChildIndex]) / (
+            contourArea(contours[secondChildIndex]) + 1e-5);
 
-    vector<Point2f> centers;
-    Mat labels;
-    kmeans(list_lines_y, 3, labels,
-           TermCriteria( TermCriteria::EPS + TermCriteria::COUNT, 10, 0.1),
-           3, KMEANS_PP_CENTERS, localization_points);
-
-    fixationPoints(localization_points);
-
-    bool suare_flag = false, local_points_flag = false;
-    double triangle_sides[3];
-    double triangle_perim, square_area, img_square_area;
-    if (localization_points.size() == 3)
-    {
-        triangle_sides[0] = norm(localization_points[0] - localization_points[1]);
-        triangle_sides[1] = norm(localization_points[1] - localization_points[2]);
-        triangle_sides[2] = norm(localization_points[2] - localization_points[0]);
-
-        triangle_perim = (triangle_sides[0] + triangle_sides[1] + triangle_sides[2]) / 2;
-
-        square_area = sqrt((triangle_perim * (triangle_perim - triangle_sides[0])
-                                           * (triangle_perim - triangle_sides[1])
-                                           * (triangle_perim - triangle_sides[2]))) * 2;
-        img_square_area = bin_barcode.cols * bin_barcode.rows;
-
-        if (square_area > (img_square_area * 0.2))
-        {
-            suare_flag = true;
+    return ((firstArea / (secondArea+ 1e-5)) > 1 &&
+            ((firstArea / (secondArea+ 1e-5)) < 10));
+}
+/* is_Possible_Corner
+* @param : index(the index of the target contour) levelsNum(the num of depth of hierarchy)
+*         contours(all possible contours ) hierarchy(all possible hierarchies )
+* @func  : judge whether contours[index] is the locator pattern or not
+* @return :true / false
+* */
+bool is_Possible_Corner(const vector<vector<Point> > &contours,
+                        const vector<Vec4i> &hierarchy,
+                        const int &index,
+                        const int &levelsNum
+){
+    /*check if it has child contour*/
+    int chirldIdx = hierarchy[index][2];
+    int level = 0;
+    while(chirldIdx != -1){
+        level++;
+        chirldIdx = hierarchy[chirldIdx][2];
+        if(level >= levelsNum){
+            /*check if its size is illegal*/
+            return check_Ratio_Of_Contours(index,contours,hierarchy);
         }
     }
-    else
-    {
-        local_points_flag = true;
-    }
-    if ((suare_flag || local_points_flag) && purpose == SHRINKING)
-    {
-        localization_points.clear();
-        bin_barcode = resized_bin_barcode.clone();
-        list_lines_x = searchHorizontalLines();
-        if( list_lines_x.empty() ) { return false; }
-        list_lines_y = separateVerticalLines(list_lines_x);
-        if( list_lines_y.empty() ) { return false; }
+    return false;
+}
 
-        kmeans(list_lines_y, 3, labels,
-               TermCriteria( TermCriteria::EPS + TermCriteria::COUNT, 10, 0.1),
-               3, KMEANS_PP_CENTERS, localization_points);
+/* getPossibleContours
+* @param : contours(all possible contours ) hierarchy(all possible hierarchies )
+*          levelsNum(the num of depth of hierarchy)
+*          patterns(the set of possible locator patterns <the contour point set , the index in the contour vector>)
+* @func  : get all the possible locator patterns from all contours
+* @return :true / false
+* */
 
-        fixationPoints(localization_points);
-        if (localization_points.size() != 3) { return false; }
+void getPossibleContours(const vector<vector<Point> > &contours,
+                         const vector<Vec4i> &hierarchy,
+                         const int &levelsNum,
+                         vector<pair<vector<Point>,int> > &patterns){
 
-        const int width  = cvRound(bin_barcode.size().width  * coeff_expansion);
-        const int height = cvRound(bin_barcode.size().height * coeff_expansion);
-        Size new_size(width, height);
-        Mat intermediate;
-        resize(bin_barcode, intermediate, new_size, 0, 0, INTER_LINEAR);
-        bin_barcode = intermediate.clone();
-        for (size_t i = 0; i < localization_points.size(); i++)
-        {
-            localization_points[i] *= coeff_expansion;
+    int len = hierarchy.size();
+    for(int i = 0 ; i < len ; i ++ ){
+        if(is_Possible_Corner(contours,hierarchy,i,levelsNum)){
+            patterns.push_back(pair<vector<Point>,int> (contours[i],i));
+
         }
     }
-    if (purpose == ZOOMING)
-    {
-        const int width  = cvRound(bin_barcode.size().width  / coeff_expansion);
-        const int height = cvRound(bin_barcode.size().height / coeff_expansion);
-        Size new_size(width, height);
-        Mat intermediate;
-        resize(bin_barcode, intermediate, new_size, 0, 0, INTER_LINEAR);
-        bin_barcode = intermediate.clone();
-        for (size_t i = 0; i < localization_points.size(); i++)
-        {
-            localization_points[i] /= coeff_expansion;
-        }
-    }
+}
 
-    for (size_t i = 0; i < localization_points.size(); i++)
-    {
-        for (size_t j = i + 1; j < localization_points.size(); j++)
-        {
-            if (norm(localization_points[i] - localization_points[j]) < 10)
-            {
-                return false;
+
+/* getLinesArctan
+* @param : line1_k(the slope of line1) line2_k(the slope of line2)
+*          is_angle(true for degree , false for radian)
+* @func  : get the intersection angle of two lines
+* @return :the intersection angle
+* */
+float getLinesArctan(float line1_k, float line2_k, bool is_angle){
+    bool is_rad = !is_angle;
+    float tan_k = 0;
+    float lines_arctan;
+    if (is_rad){/*radian measure*/
+        tan_k = (line2_k - line1_k) / (1 + line2_k*line1_k);
+        lines_arctan = atan(tan_k);
+
+    }
+    else if (is_angle){
+        tan_k = (line2_k - line1_k) / (1 + line2_k*line1_k);
+        lines_arctan = atan(tan_k)* 180.0 / 3.1415926;
+
+    }
+    return lines_arctan;
+}
+/* drawConvexhull
+* @param : img(orignal imgae)  hull(the convexhull )
+ *         ...
+* @func  : draw Convexhull(cornor points and connection of points) on $(img)
+* @return :
+* */
+void drawConvexhull(InputOutputArray img,  vector<Point> hull,
+                    const Scalar& color, int thickness = 1,
+                    int lineType = LINE_8, int shift = 0){
+
+    int  len = hull.size();
+    for(int i = 0 ; i < len ; i++){
+        line(img,hull[i],hull[(i+1)%len],color,thickness,lineType,shift);
+        circle(img,hull[i],3,Scalar(0,255,0));
+    }
+}
+/* drawRotateRect
+* @param : img(orignal imgae)  hull(the rect )
+ *         ...
+* @func  : draw RotateRect on $(img)
+* @return :
+* */
+
+void drawRotateRect(InputOutputArray img,  RotatedRect rect,
+                    const Scalar& color, int thickness = 1,
+                    int lineType = LINE_8, int shift = 0){
+    Point2f pts[4];
+    rect.points(pts);
+    for(int i = 0 ; i < 4 ; i++){
+        line(img,pts[i],pts[(i+1)%4],color,thickness,lineType,shift);
+    }
+    return ;
+}
+/* getCenterOfMass
+* @param : contour
+* @func  : get the mass center of the contour
+* @return :
+* */
+Point getCenterOfMass(const vector<Point>& contour){
+    Moments moment = moments(contour);
+    return Point(int(moment.m10/moment.m00),int(moment.m01/moment.m00));
+}
+Point getCenterOfMass(const vector<Point2f>& contour){
+    Moments moment = moments(contour);
+    return Point(int(moment.m10/moment.m00),int(moment.m01/moment.m00));
+}
+
+/* getSubMat
+* @param : ori_imge(orignal imgae) boundingBox  size
+* @func  : cut boundingBox area from ori_image and do a rotation correction
+* @return : the rotation corrected sub mat
+* */
+Mat getSubMat(const Mat & ori_imge , const RotatedRect& boundingBox,const Size& size = Size(64,64)){
+    /*The rotated QR-area*/
+    Mat results;
+    Mat border_ori_imge;
+    /*avoid distortion brought by warpAffine*/
+    RotatedRect tmp = boundingBox;
+
+    Size tmp_size = tmp.size;
+    int size_max =  max(tmp.size.height, tmp.size.width) ;
+    tmp.size.height=size_max;
+    tmp.size.width=size_max;
+
+    /*To get the exact locator*/
+    Rect boardRect = tmp.boundingRect();
+
+    int bottom_border =ori_imge.size().height/2;
+    int right_border  =ori_imge.size().width/2;
+
+    Point2f shift(right_border,bottom_border);
+    /*Extend image boundary in case the sub mat was rotated beyond the border*/
+    copyMakeBorder(ori_imge,border_ori_imge,bottom_border,bottom_border,right_border,right_border,BORDER_CONSTANT,Scalar(0));
+    /*shift the center after extended*/
+    boardRect.x+=shift.x;boardRect.y+=shift.y;
+    tmp.center+=shift;
+
+    /*It is faster to cut from the subMat */
+    Mat subMat = border_ori_imge(boardRect).clone();
+
+    /*let the center of sub mat same as the original image*/
+    tmp.center.x-=boardRect.x;
+    tmp.center.y-=boardRect.y;
+
+    /*get a rotation correction*/
+    Mat rot_m = getRotationMatrix2D(tmp.center, tmp.angle, 1);
+    warpAffine(subMat, subMat, rot_m, subMat.size());
+
+    getRectSubPix(subMat, tmp_size, tmp.center, results);
+
+    if(size ==  Size(64,64))
+        resize(results,results,size,0,0,INTER_LINEAR);
+
+    return results;
+
+}
+/* getPatternCenters
+* @param : bin_barcode(orignal imgae) first_patterns(the possible locator patterns)
+ *         hierarchy(the contours' hierarchy)
+ *         centers(the center of possible locator patterns)  location_patterns(the possible locator patterns)
+ *         locator_size(the size of locator patterns)
+* @func  : cut boundingBox area from ori_image and do a rotation correction
+* @return : the rotation corrected sub mat
+* */
+void getPatternCenters(const Mat& bin_barcode,
+                       const vector<pair<vector<Point>,int> > &first_patterns,
+                       const vector<Vec4i> &hierarchy,
+                       vector<Point>& centers,vector<vector<Point> >& location_patterns,
+                       double &locator_size){
+
+    /*initialize my classifier*/
+    classifer::my_classifer locator("../sample.png");
+    locator_size=0;
+    int len = first_patterns.size() ;
+    for(int i = 0 ; i <  len ; i++ ){
+        int is_patten;
+        for(int j = 0 ; j < len ; j++){
+            is_patten = 1;
+            /*check current contour's direct parents if in the list or not */
+            if(hierarchy[first_patterns[i].second][3] -1  == first_patterns[j].second){
+                /*if so ,can't be our interest pattern */
+                is_patten = 0;
+                break;
+            }
+        }
+        if(is_patten == 1){
+            /*get the possible locator*/
+            RotatedRect tmp = minAreaRect(first_patterns[i].first);
+
+            float ratio = (tmp.size.height)/tmp.size.width;
+
+            /*exclude by the shape (must be the square)*/
+            if(ratio < 2.5 && ratio > 0.5){
+                Mat results = getSubMat(bin_barcode , tmp);
+
+                if(!locator.compare(results))
+                    continue;
+
+                locator_size += (tmp.size.height+tmp.size.width)/2;
+
+
+                vector<Point> hull;
+                convexHull(first_patterns[i].first,hull, true);
+                /*get the center points of the locator*/
+                Point cur_center = getCenterOfMass(first_patterns[i].first);
+
+                centers.push_back(cur_center);
+                location_patterns.push_back(hull);
+
             }
         }
     }
+    locator_size=locator_size/centers.size();
+
+    return ;
+}
+/*
+ * @param  : centers(center of the location_patterns) location_patterns(the contour of the location_patterns)
+ *           pattern_points(rearranged centers )) pattern_hull(rearranged location_patterns)
+ * @func   : rearrange the sequence of location_patterns in the vector
+ * @return :
+ * */
+void getTruePattern(const vector<Point>& centers ,const vector<vector<Point> >& location_patterns,
+                    vector<Point2f> &pattern_points,vector<vector<Point> >&pattern_hull){
+    int len_2 =centers.size();
+    int dist_diff_min =INT_MAX;
+    /*line up two centers and compare the length of two line*/
+    for(int i = 0 ; i < len_2; i++ ){
+        for(int j = 0 ; j < len_2 ; j++){
+            if(i == j )
+                continue;
+            /*line1 : i -> j*/
+            Point p1=centers[i];
+            Point p2=centers[j];
+            int dist_1 = norm(p1-p2);
+            for(int p = 0 ; p < len_2 ; p++){
+                if(i == p || j == p)
+                    continue;
+                /*line2 : i -> p*/
+                Point p3 = centers[p];
+                double dist_2 = norm(p1-p3);
+                double line1_k = (p2.y-p1.y)/(p2.x-p1.x+0.0001);
+                double line2_k = (p3.y-p1.y)/(p3.x-p1.x+0.0001);
+
+                /*the angle between two lines*/
+                double angle = getLinesArctan(line1_k,line2_k, true);
+
+                double area_i =contourArea(location_patterns[i]);
+                double area_j =contourArea(location_patterns[j]);
+                double area_p =contourArea(location_patterns[p]);
+
+                double ratio_i_j = area_i/area_j;
+                double ratio_i_p = area_i/area_p;
+                cout<<" angle :"<<angle<<" ratio_i_j : "<<ratio_i_j<<" ratio_i_p : "<<ratio_i_p <<endl;
+
+
+                if(angle<0)
+                    continue;
+                /*the angle should be near 90 degree */
+                if(angle<120 && angle > 60 &&
+                   ratio_i_j < 1.4 && ratio_i_j >0.6 &&
+                   ratio_i_p < 1.4 && ratio_i_p >0.6){
+                    double dist_diff = abs(dist_1-dist_2);
+                    /*the least distance difference */
+                    if(dist_diff_min>dist_diff){
+                        dist_diff_min=dist_diff;
+                        pattern_points.clear();
+                        pattern_hull.clear();
+                        /* i is alawys the left-up  location_patterns */
+                        pattern_points.push_back(p1);
+                        pattern_points.push_back(p2);
+                        pattern_points.push_back(p3);
+
+                        pattern_hull.push_back(location_patterns[i]);
+                        pattern_hull.push_back(location_patterns[j]);
+                        pattern_hull.push_back(location_patterns[p]);
+                    }
+                }
+            }
+        }
+    }
+    return ;
+}
+#include <limits.h>
+
+/*
+ * @params : img(input image) ,localization_points() , localization_patterns()
+ *           locator_size(the average width of localization_patterns)
+ * @func   : find the localization_patterns
+ * @return : can be detect or not
+ * */
+bool getLocatorPostion(const Mat& img,
+                       vector <Point2f> & localization_points,
+                       vector<vector<Point> > & localization_patterns,
+                       double & locator_size){
+
+    Mat img_canny;
+    vector<vector<Point> > contours; vector<Vec4i> hierarchy;
+
+    vector<pair<vector<Point>, int> > first_patterns;
+    vector<Point> centers;
+    vector<vector<Point> > convex_patterns;
+    vector<Point> pattern_points;
+
+    int levelsNum = 2;
+
+    Canny(img, img_canny, 100, 200);
+
+    findContours(img_canny, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE);
+
+    getPossibleContours(contours, hierarchy, levelsNum, first_patterns);
+
+    while (first_patterns.size() < 3) {
+        levelsNum--;
+        getPossibleContours(contours, hierarchy, levelsNum, first_patterns);
+    }
+
+    /* */
+    if (first_patterns.size() < 3) {
+        cout << "No enough pattern" << endl;
+        return false;
+    } else if (first_patterns.size() >= 3) {
+        /* if have the direct parents in the vector ,then delete this */
+        getPatternCenters(img,first_patterns, hierarchy, centers, convex_patterns,locator_size);
+        /*exclude by */
+        getTruePattern(centers, convex_patterns, localization_points, localization_patterns);
+    }
     return true;
+}
+
+void getFarPoints(const vector<Point>& hull1, const vector<Point>& hull2,Point &point1,Point &point2){
+    double dist_max = 0;
+    int len_1 = hull1.size();
+    int len_2 = hull2.size();
+    for(int i = 0;i < len_1 ; i++){
+        Point p1=hull1[i];
+        for(int j = 0 ; j < len_2 ; j++){
+            Point p2=hull2[j];
+            double dist = norm(p1-p2);
+            if(dist>dist_max){
+                dist_max = dist;
+                point1 = p1;
+                point2 = p2;
+            }
+        }
+    }
+    return ;
+}
+
+/* @name  : getFarPoints
+ * @param : hull1 (a convexhull or a contour)  point2 (another point ) point1 ( the result point )
+ * @func  : get the fartherest point from the hull to the point
+ * */
+void getFarPoints(const vector<Point>& hull1,
+                  const Point &point2 ,
+                  Point &point1 ){
+    double dist_max = 0;
+    int len_1 = hull1.size();
+    /*tranverse points in the hull*/
+    for(int i = 0;i < len_1 ; i++){
+        Point p1=hull1[i];
+        double dist = norm(p1-point2);
+        /*find the fartherest points in the hull away from point2*/
+        if(dist>dist_max){
+            dist_max = dist;
+            point1 = p1;
+        }
+    }
+    return ;
+}
+/* @name  : getFarPoints
+ * @param : hull1 (a convexhull or a contour)  point2 (another point ) point1 ( the result point )
+ * @func  : get the fartherest point from the hull to the point
+ * */
+void getFarPoints(const vector<Point>& hull1,
+                  const Point &point2 ,const Point &limit, const double &locator_size,
+                  Point &point1 ){
+    double dist_max = 0;
+    int len_1 = hull1.size();
+    for(int i = 0;i < len_1 ; i++){
+        Point p1=hull1[i];
+
+        double dist = norm(p1-point2);
+        /*the distance should be not at the corner points*/
+        double dist_to_parent=norm(p1-limit);
+        /*find the fartherest points in the hull away from point2*/
+        if(dist_to_parent<locator_size/2)
+            continue;
+        if(dist>dist_max){
+            dist_max = dist;
+            point1 = p1;
+        }
+    }
+    return ;
+}
+/* @name   : getCrossPoint
+ * @param  : two lines
+ * @func   : get the intersection of two line .
+ * @return : the intersection point
+ */
+Point getCrossPoint(const Vec4i& LineA, const Vec4i& LineB){
+    double ka, kb;
+    ka = (double)(LineA[3] - LineA[1]) / (double)(LineA[2] - LineA[0]+0.0001);
+    kb = (double)(LineB[3] - LineB[1]) / (double)(LineB[2] - LineB[0]+0.0001);
+
+    Point2f crossPoint;
+    crossPoint.x = (ka*LineA[0] - LineA[1] - kb*LineB[0] + LineB[1]) / (ka - kb+0.0001);
+    crossPoint.y = (ka*kb*(LineA[0] - LineB[0]) + ka*LineB[1] - kb*LineA[1]) / (ka - kb+0.0001);
+    return crossPoint;
+}
+
+/* getCornerPoints
+ * @params : localization_points(center points of locator patterns) ,localization_patterns(point set of locator patterns) ,
+ *           locator_size(the average width of localization_patterns)
+ *           corners(the last four corner points) corner_in_clockwise(corner points in sequence from the left-up point)
+ * @func   : find the corner points from the locator patterns , which determines the sampling borders
+ * @return : can be detect or not
+ * */
+
+void getCornerPoints(const vector<Point2f> & localization_points,
+                     const vector<vector<Point> > & localization_patterns,
+                     const double &locator_size,
+                     vector<Point> & corners,
+                     vector<Point> & corner_in_clockwise
+){
+    /*get the mass center of the three locators' mass center*/
+    Point center = getCenterOfMass(localization_points);
+
+    Point left_up_corner , right_up_corner , left_bottom_corner,right_up_second,left_bottom_second,right_bottom_corner;
+
+    /*left_up_corner is certain ! */
+    getFarPoints(localization_patterns[0],center , left_up_corner);
+    getFarPoints(localization_patterns[1],center , right_up_corner);
+    getFarPoints(localization_patterns[2],center , left_bottom_corner);
+
+    corners.push_back(left_up_corner);
+    corners.push_back(right_up_corner);
+    corners.push_back(left_bottom_corner);
+
+    /*get other two side points to help find the final corner!*/
+    getFarPoints(localization_patterns[1],left_up_corner ,right_up_corner,locator_size, right_up_second);
+
+    getFarPoints(localization_patterns[2],left_up_corner ,left_bottom_corner,locator_size, left_bottom_second);
+
+    /*the final corner is the crossing point of two lines!*/
+    Vec4i line1 = Vec4i(right_up_corner.x,right_up_corner.y,right_up_second.x,right_up_second.y);
+    Vec4i line2 = Vec4i(left_bottom_corner.x,left_bottom_corner.y,left_bottom_second.x,left_bottom_second.y);
+
+    right_bottom_corner = getCrossPoint(line1,line2);
+
+    corners.push_back(right_bottom_corner);
+
+    /*get the four points in order by doing a convexHull*/
+    convexHull(corners,corner_in_clockwise);
+
+    return ;
+}
+/* subAdjust
+ * @params : bin_barcode(original image) ,shift(the shift direction EXP: + Point(0,1) => shift to down ) ,
+ *           size( the locator size )
+ *           out_in(shift towards the center or not)
+ *           p1(point1 ) p2(point2  ,which consist a sampling line)
+ * @func   : adjust p1 and p2 to let the sampling line more accuracy
+ * @return :
+ * */
+void subAdjust(const Mat & bin_barcode , const Point & shift , const int & size ,bool out_in , Point &p1 , Point &p2  ){
+    LineIterator iter = LineIterator(bin_barcode , p1 , p2);
+    Mat show;
+    int i = 0;
+    while(1){
+        /*only check pixels from corner points to another corner in the same locator*/
+        for(  i = 0 ; i < size ; i++, iter++ ){
+            Point p = iter.pos();
+            int pixel = bin_barcode.at<uint8_t>(p);
+            /*if meet the black points => meet the data info
+             * need to shift*/
+            if(pixel<200){
+                break;
+            }
+        }
+        if(out_in){//out
+            if(i == size){
+                break;
+            }
+            p1 += shift;
+            iter = LineIterator(bin_barcode,p1,p2);
+            //cvtColor(bin_barcode,for_show,COLOR_GRAY2BGR);
+        }
+        else { //in
+            if(i == size){
+                p1 -= shift;
+                iter = LineIterator(bin_barcode,p1,p2);
+                //cvtColor(bin_barcode,for_show,COLOR_GRAY2BGR);
+            }
+            else
+                break;
+        }
+    }
+}
+/* adjustPoints
+ * @params : bin_barcode(original image) ,shift(the shift direction EXP: + Point(0,1) => shift to down ) ,
+ *           locator_size( the locator size )
+ *           p1(point1 ) p2(point2  ,which consist a sampling line)
+ * @func   : adjust p1 and p2 to let the sampling line more accuracy
+ * @return :
+ * */
+
+void adjustPoints(const Mat & bin_barcode , const Point & shift ,const double & locator_size ,  Point &p1 , Point &p2){
+
+    int size = (int)locator_size;
+    //cout<<"LineIterator :" << size<<endl;
+
+    /*move out to avoid all data info*/
+    subAdjust(bin_barcode , shift ,size ,1 , p1,p2  );
+    subAdjust(bin_barcode , shift ,size ,1 , p2,p1  );
+    /*move in to minimize the whitespace*/
+    subAdjust(bin_barcode , shift ,size ,0 , p1,p2  );
+    subAdjust(bin_barcode , shift ,size ,0 , p2,p1  );
+
+    return ;
+}
+
+/* getRotatedPoints
+ * @params : center(the rotation center) ,target(the point needed to rotate ) ,
+ *           angle( the rotate angle )
+ * @func   : rotate the target point around center at $angle degree
+ * @return : the rotated points
+ * */
+Point2f getRotatedPoints(const Point2f & center, const Point2f & target , const double & angle ){
+    double x1 = center.x;
+    double y1 = center.y;
+    double x2 = target.x;
+    double y2 = target.y;
+    double rad_angle = angle / 180 * 3.1415926 ;
+
+    double dCosRot = cos(rad_angle);
+    double dSinRot = sin(rad_angle);
+
+    cout<<" getRotatedPoints : " << rad_angle << "  " <<cos(rad_angle)<<endl;
+
+    return Point2f((x1 + dCosRot * (x2 - x1) - dSinRot * (y2 - y1)),(y1 + dSinRot * (x2 - x1) + dCosRot * (y2 - y1)));//cvCeil
 
 }
 
-bool QRDetect::computeTransformationPoints()
-{
-    CV_TRACE_FUNCTION();
+bool QRDetect::localization() {
+    blur(bin_barcode, bin_barcode, Size(2, 2));
+    Canny(bin_barcode, img_canny, 100, 200);
+
+    if(!getLocatorPostion(bin_barcode,localization_points,localization_patterns,locator_size))
+        return false;
+
     if (localization_points.size() != 3) { return false; }
 
-    vector<Point> locations, non_zero_elem[3], newHull;
-    vector<Point2f> new_non_zero_elem[3];
-    for (size_t i = 0; i < 3; i++)
-    {
-        Mat mask = Mat::zeros(bin_barcode.rows + 2, bin_barcode.cols + 2, CV_8UC1);
-        uint8_t next_pixel, future_pixel = 255;
-        int count_test_lines = 0, index = cvRound(localization_points[i].x);
-        for (; index < bin_barcode.cols - 1; index++)
-        {
-            next_pixel = bin_barcode.ptr<uint8_t>(cvRound(localization_points[i].y))[index + 1];
-            if (next_pixel == future_pixel)
-            {
-                future_pixel = static_cast<uint8_t>(~future_pixel);
-                count_test_lines++;
-                if (count_test_lines == 2)
-                {
-                    floodFill(bin_barcode, mask,
-                              Point(index + 1, cvRound(localization_points[i].y)), 255,
-                              0, Scalar(), Scalar(), FLOODFILL_MASK_ONLY);
-                    break;
-                }
+    const int width  = cvRound(bin_barcode.size().width * coeff_expansion);
+    const int height = cvRound(bin_barcode.size().height * coeff_expansion);
+    Size new_size(width, height);
+    Mat intermediate;
+    resize(bin_barcode, intermediate, new_size, 0, 0, INTER_LINEAR);
+    resize(img_canny, img_canny, new_size, 0, 0, INTER_LINEAR);
+
+    return true;
+}
+
+
+/* computeTransformationPoints
+ * @params :
+ * @func   : get four Points for Transformation
+ * @return :
+ * */
+bool QRDetect::computeTransformationPoints()
+{
+    vector <Point2f>  localization_points_2;
+    vector<vector<Point> >  localization_patterns_2;
+    double  locator_size_2;
+
+    vector<Point> corners;
+    vector<Point> corner_in_clockwise;
+
+    if (localization_points.size() != 3) { return false; }
+
+    getCornerPoints(localization_points,localization_patterns,locator_size,corners,corner_in_clockwise);
+
+
+    /*get sub matrix which is more accuracy*/
+    RotatedRect bBox = minAreaRect(corner_in_clockwise);
+    /*extended the RotatedRect*/
+    bBox.size.width*=1.1;
+    bBox.size.height*=1.1;
+
+    /*do a rotate correction*/
+    Mat rotatedbBox = getSubMat(bin_barcode,bBox,bBox.size);
+
+    Mat new_barcode = rotatedbBox;
+
+    if(!getLocatorPostion(rotatedbBox,localization_points_2,localization_patterns_2,locator_size_2))
+        return false;
+
+    corners.clear();
+    corner_in_clockwise.clear();
+    getCornerPoints(localization_points_2,localization_patterns_2,locator_size_2,corners,corner_in_clockwise);
+
+    int min = INT_MAX;
+    int min_index = 0;
+    int max = 0;
+    int max_index = 0;
+
+    int left_up_index = 0;
+    /*get current four corner points in order */
+    for(int i = 0; i < 4 ; i++){
+        Point & cur = corner_in_clockwise[i] ;
+        cout<<(cur==corners[0])<<endl;
+        if(corner_in_clockwise[i]==corners[0]){
+            left_up_index = i;
+        }
+        int cur_sum = cur.x+cur.y;
+        if(cur_sum>max){
+            max = cur_sum;
+            max_index = i ;
+        }
+        else if(cur_sum < min){
+            min = cur_sum;
+            min_index = i;
+        }
+    }
+
+    int right = 0 ;
+    int right_index = 0;
+
+    for(int i = 0 ;i < 4 ; i++){
+        if(i!=max_index && i!=min_index){
+            Point & cur = corner_in_clockwise[i] ;
+            if(cur.x > right){
+                right = cur.x;
+                right_index = i;
             }
         }
-        Mat mask_roi = mask(Range(1, bin_barcode.rows - 1), Range(1, bin_barcode.cols - 1));
-        findNonZero(mask_roi, non_zero_elem[i]);
-        newHull.insert(newHull.end(), non_zero_elem[i].begin(), non_zero_elem[i].end());
-    }
-    convexHull(newHull, locations);
-    for (size_t i = 0; i < locations.size(); i++)
-    {
-        for (size_t j = 0; j < 3; j++)
-        {
-            for (size_t k = 0; k < non_zero_elem[j].size(); k++)
-            {
-                if (locations[i] == non_zero_elem[j][k])
-                {
-                    new_non_zero_elem[j].push_back(locations[i]);
-                }
-            }
-        }
     }
 
-    double pentagon_diag_norm = -1;
-    Point2f down_left_edge_point, up_right_edge_point, up_left_edge_point;
-    for (size_t i = 0; i < new_non_zero_elem[1].size(); i++)
-    {
-        for (size_t j = 0; j < new_non_zero_elem[2].size(); j++)
-        {
-            double temp_norm = norm(new_non_zero_elem[1][i] - new_non_zero_elem[2][j]);
-            if (temp_norm > pentagon_diag_norm)
-            {
-                down_left_edge_point = new_non_zero_elem[1][i];
-                up_right_edge_point  = new_non_zero_elem[2][j];
-                pentagon_diag_norm = temp_norm;
-            }
-        }
+    int left_index = 0+1+2+3 -(max_index+min_index+right_index);
+
+
+    Point &cur_up_left      = corner_in_clockwise[min_index];
+    Point &cur_up_right     = corner_in_clockwise[right_index];
+    Point &cur_right_bottom = corner_in_clockwise[max_index];
+    Point &cur_left_bottom  = corner_in_clockwise[left_index];
+
+    adjustPoints(new_barcode ,Point(0,-1) ,locator_size, cur_up_left , cur_up_right );
+    adjustPoints(new_barcode ,Point(1,0) , locator_size, cur_up_right, cur_right_bottom );
+    adjustPoints(new_barcode ,Point(0,1) , locator_size, cur_right_bottom , cur_left_bottom );
+    adjustPoints(new_barcode ,Point(-1,0) , locator_size, cur_left_bottom , cur_up_left );
+
+    for(int i = left_up_index, j = 0; j < 4 ; j++,i++){
+        transformation_points.push_back(corner_in_clockwise[i%4]);
+
     }
+    /*To get the exact locator*/
+    Point2f rotatedbBox_center(rotatedbBox.cols/2,rotatedbBox.rows/2);
 
-    if (down_left_edge_point == Point2f(0, 0) ||
-        up_right_edge_point  == Point2f(0, 0) ||
-        new_non_zero_elem[0].size() == 0) { return false; }
-
-    double max_area = -1;
-    up_left_edge_point = new_non_zero_elem[0][0];
-
-    for (size_t i = 0; i < new_non_zero_elem[0].size(); i++)
-    {
-        vector<Point2f> list_edge_points;
-        list_edge_points.push_back(new_non_zero_elem[0][i]);
-        list_edge_points.push_back(down_left_edge_point);
-        list_edge_points.push_back(up_right_edge_point);
-
-        double temp_area = fabs(contourArea(list_edge_points));
-        if (max_area < temp_area)
-        {
-            up_left_edge_point = new_non_zero_elem[0][i];
-            max_area = temp_area;
-        }
+    Point2f rotated_center = Point2f (  bBox.center.x - rotatedbBox_center.x , bBox.center.y - rotatedbBox_center.y);
+        /*SIZE ADJUST*/
+    if (purpose == SHRINKING) {
+        coeff_expansion = coeff_expansion;
+    } else if (purpose == ZOOMING) {
+        coeff_expansion = 1 / coeff_expansion;
     }
+    const int width = cvRound(bin_barcode.size().width * coeff_expansion);
+    const int height = cvRound(bin_barcode.size().height * coeff_expansion);
 
-    Point2f down_max_delta_point, up_max_delta_point;
-    double norm_down_max_delta = -1, norm_up_max_delta = -1;
-    for (size_t i = 0; i < new_non_zero_elem[1].size(); i++)
-    {
-        double temp_norm_delta = norm(up_left_edge_point - new_non_zero_elem[1][i])
-                               + norm(down_left_edge_point - new_non_zero_elem[1][i]);
-        if (norm_down_max_delta < temp_norm_delta)
-        {
-            down_max_delta_point = new_non_zero_elem[1][i];
-            norm_down_max_delta = temp_norm_delta;
-        }
-    }
+    for (size_t i = 0; i < transformation_points.size(); i++){
 
+        transformation_points[i] += rotated_center ;
+        transformation_points[i] = getRotatedPoints( bBox.center, transformation_points[i] , bBox.angle ) ;
 
-    for (size_t i = 0; i < new_non_zero_elem[2].size(); i++)
-    {
-        double temp_norm_delta = norm(up_left_edge_point - new_non_zero_elem[2][i])
-                               + norm(up_right_edge_point - new_non_zero_elem[2][i]);
-        if (norm_up_max_delta < temp_norm_delta)
-        {
-            up_max_delta_point = new_non_zero_elem[2][i];
-            norm_up_max_delta = temp_norm_delta;
-        }
-    }
+        transformation_points[i] *= coeff_expansion;
 
-    transformation_points.push_back(down_left_edge_point);
-    transformation_points.push_back(up_left_edge_point);
-    transformation_points.push_back(up_right_edge_point);
-    transformation_points.push_back(
-        intersectionLines(down_left_edge_point, down_max_delta_point,
-                          up_right_edge_point, up_max_delta_point));
-
-    vector<Point2f> quadrilateral = getQuadrilateral(transformation_points);
-    transformation_points = quadrilateral;
-
-    int width = bin_barcode.size().width;
-    int height = bin_barcode.size().height;
-    for (size_t i = 0; i < transformation_points.size(); i++)
-    {
         if ((cvRound(transformation_points[i].x) > width) ||
-            (cvRound(transformation_points[i].y) > height)) { return false; }
+            (cvRound(transformation_points[i].y) > height)) {
+            cout<<"outofBorder"<<endl;
+            return false;
+        }
     }
+
     return true;
 }
 
@@ -1617,748 +1550,35 @@ bool QRCodeDetector::detect(InputArray in, OutputArray points) const
     return true;
 }
 
+bool detectQRCode(InputArray in, vector<Point> &points, double eps_x, double eps_y)
+{
+    QRCodeDetector qrdetector;
+    qrdetector.setEpsX(eps_x);
+    qrdetector.setEpsY(eps_y);
+
+    return qrdetector.detect(in, points);
+}
+
 class QRDecode
 {
 public:
-    QRDecode();
     void init(const Mat &src, const vector<Point2f> &points);
     Mat getIntermediateBarcode() { return intermediate; }
     Mat getStraightBarcode() { return straight; }
     size_t getVersion() { return version; }
     std::string getDecodeInformation() { return result_info; }
     bool fullDecodingProcess();
-
 protected:
     bool updatePerspective();
     bool versionDefinition();
     bool samplingForVersion();
     bool decodingProcess();
-
-    decode_error read_format(uint16_t& format,int which);
-    decode_error correct_format(uint16_t& format);
-
-    void  unmask_data();
-    void  read_data();
-    void  read_bit(int x, int y,int& count);
-    void  rearrange_blocks();
-
-    decode_error  correct_block(int num , int head,Mat & corrected);
-
-    decode_error decode_payload();
-    decode_error decode_numeric(uint8_t * &ptr);
-
-    decode_error decode_byte( uint8_t * &ptr);
-
-    int bits_remaining(const uint8_t *ptr);
-
     Mat original, no_border_intermediate, intermediate, straight;
-    Mat unmasked_data;
     vector<Point2f> original_points;
-
-    uint8_t orignal_data[MAX_PAYLOAD];
-    uint8_t rearranged_data[MAX_PAYLOAD];
-
-    Mat final_data;// vector
-    uint8_t final[MAX_PAYLOAD];
-
-    int			version;
-    int			ecc_level;
-    int			mask_type;
-
-    int			data_type;
-
-    uint8_t			payload[ MAX_PAYLOAD];
-    int			payload_len;
-
-    uint32_t		eci;
-
     std::string result_info;
-    uint8_t size;
+    uint8_t version, version_size;
     float test_perspective_size;
-
 };
-QRDecode::QRDecode(){
-    memset(orignal_data,0,sizeof(uint8_t)*MAX_PAYLOAD);
-    memset(rearranged_data,0,sizeof(uint8_t)*MAX_PAYLOAD);
-    memset(final,0,sizeof(uint8_t)*MAX_PAYLOAD);
-    memset(payload,0,sizeof(uint8_t)*MAX_PAYLOAD);
-    payload_len=0;
-}
-
-/*
- * params @ format(uint16_t for returning the format bits) which(select from two different place)
- * return @ can be correct or not
- */
-
-decode_error QRDecode::read_format(uint16_t& format , int which){
-    /*version<=6*/
-    int i;
-    uint16_t my_format = 0;
-
-    Mat mat_format(1,FORMAT_LENGTH,CV_8UC1,Scalar(0));
-
-    /*read from the left-bottom and upper-right */
-    if (which) {
-        /*left-bottom 0-7*/
-        for (i = 0; i < 7; i++){
-            /*read from pst (code->size - 1 - i,8)*/
-            my_format = (my_format << 1) |
-                        (straight.ptr<uint8_t>(size - 1 - i)[8]==0);
-            mat_format.ptr(0)[i]=(straight.ptr<uint8_t>(size - 1 - i)[8]==0);
-        }
-        /*upper-right 7-14*/
-        for (i = 0; i < 8; i++){
-            my_format = (my_format << 1) |
-                        (straight.ptr<uint8_t>(8)[size - 8 + i]==0);
-            mat_format.ptr(0)[7+i]=(straight.ptr<uint8_t>(8)[size - 8 + i]==0);
-        }
-    } else{/*read the second format from the upper-left*/
-        static const int xs[FORMAT_LENGTH] = {
-                8, 8, 8, 8, 8, 8, 8, 8, 7, 5, 4, 3, 2, 1, 0
-        };
-        static const int ys[FORMAT_LENGTH] = {
-                0, 1, 2, 3, 4, 5, 7, 8, 8, 8, 8, 8, 8, 8, 8
-        };
-        for (i = FORMAT_LENGTH-1; i >= 0; i--) {
-            my_format = (my_format << 1) |
-                        (straight.ptr<uint8_t>(ys[i])[xs[i]]==0);
-
-            mat_format.ptr(0)[FORMAT_LENGTH-1-i]=(straight.ptr<uint8_t>(ys[i])[xs[i]]==0);
-        }
-        std::cout<<std::endl;
-    }
-
-    format=my_format;
-
-    return  SUCCESS;
-}
-
-/*correct_format:
- *  error correct
- *  params @ uint16_t *f_ret,const Mat& my_f_ret(my format info)
- *  return @
- */
-decode_error QRDecode:: correct_format(uint16_t& format)
-{
-    /*ori: 110101100100011*/
-    /*adjust several bits to check the correcting ability*/
-    format^=4;format^=8;
-    cout<<D2B(format)<<endl;
-
-    /*my method: using BCD ways*/
-    int format_index=hamming_detect(format);
-
-    if (format_index==-1)
-        return ERROR_FORMAT_ECC;
-
-    format=after_mask_format[format_index]^0x5412;
-
-    return SUCCESS;
-}
-
-
-/*read_bit:
- *  params @ (x,y)
- *  func @ read from (x,y) as the bitpos^th bit of the  bytepos^th codeword
- *  return @
- */
-void QRDecode::read_bit(int x, int y, int& count){
-    /*judge the reserved area*/
-    if (unmasked_data.ptr(y)[x]==INVALID_REGION)
-        return ;
-
-    /*the bitpos^th bit of the  bytepos^th codeword*/
-    int bytepos = count >> 3;/*equal to count/8 */
-    int bitpos  = count & 7 ;/*equal to count%8 */
-
-    int v = (unmasked_data.ptr(y)[x]==0);
-
-    /* first read,first lead*/
-    if (v)
-        orignal_data[bytepos] |= (0x80 >> bitpos);
-    count++;
-}
-
-/* exponentiation operator
- * params @  x , power
- * return x^power
- * EXP:
- *     (a^n)^x =a^(x+n)
- * */
-uint8_t gf_pow(uint8_t x , int power){
-    return gf_exp[(gf_log[x] * power) % 255];
-}
-
-uint8_t gf_inverse(uint8_t x){
-    return gf_exp[255 - gf_log[x]];
-}
-
-/*multiplication in GF
- * params @ x , y
- * return x * y
- * EXP:
- *     a^x * a^y =a^(x+y)
- */
-uint8_t gf_mul(const uint8_t &x,const uint8_t& y){
-    if (x==0 || y==0)
-        return 0;
-    return gf_exp[(gf_log[x] + gf_log[y])%255];
-}
-
-/*division in GF
- * params @ x , y
- * return x / y
- * EXP:
- *     a^x / a^y =a^(x-y)=a^(x+255-y)
- */
-uint8_t gf_div(const uint8_t &x,const uint8_t& y) {
-//        CV_Assert (y != 0);
-    if (x == 0)
-        return 0;
-    return gf_exp[(255 - gf_log[y] + gf_log[x]) % 255];
-}
-/* show_poly
- * params : const Mat& p(polynomial),OUTPUT o(output pattern)
- * return :output string
- * */
-std::string show_poly(const Mat& p,OUTPUT o=HEX){
-    std::string s;
-    for(int i=0;i<p.cols;i++){
-        char tmp[10];
-        switch (o){
-            case HEX:
-                sprintf(tmp,"%02X",(int)p.ptr(0)[i]);//
-                break;
-            case OCT:
-                sprintf(tmp,"%d",(int)p.ptr(0)[i]);
-                break;
-            case ALPHA:
-                sprintf(tmp,"%d",gf_log[(int)p.ptr(0)[i]]%255);//%02X
-                break;
-        }
-        s=" "+s;
-        s=tmp+s;
-    }
-    s=s+'\n';
-    return  s;
-}
-/* gf_poly_eval :
- *      evaluate a polynomial at a particular value of x, producing a scalar result
- * params @ poly 15bit format_Info,  uint8_t x(a scalar)
- * return @ result
-
- * using the Horner's method here:
- * 01 x4 + 0f x3 + 36 x2 + 78 x + 40 = (((01 x + 0f) x + 36) x + 78) x + 40
- * doing this by simple addition and multiplication
- * */
-uint8_t gf_poly_eval(const Mat& poly,uint8_t x){
-    /*Note the calculation begins at the high times of items,
-         * That's to say , start from the large index in Mat
-         * */
-    int index=poly.cols-1;
-    uint8_t y=poly.ptr(0)[index];
-
-    for(int i =index-1;i>=0;i--){
-        y = gf_mul(x,y) ^ poly.ptr(0)[i];
-    }
-    return y;
-}
-/*
- * func @  multiply a polynomial by a scalar
- * */
-Mat gf_poly_scale(const Mat & p,int scalar) {
-    int len = p.cols;
-    Mat r(1,len,CV_8UC1,Scalar(0));
-
-    for(int i = 0; i < len;i++){
-        r.ptr(0)[i] = gf_mul(p.ptr(0)[i], (uint8_t)scalar);
-    }
-    return r;
-}
-/*
- * func @  "adds" two polynomials (using exclusive-or, as usual).
- * */
-Mat gf_poly_add(const Mat & p,const Mat & q){
-    int p_len=p.cols;
-    int q_len=q.cols;
-    Mat r (1,max(p_len,q_len),CV_8UC1,Scalar(0));
-
-    //int r_len=r.cols;
-
-    for (int i = 0; i< p_len ;i++){
-        r.ptr(0)[i] = p.ptr(0)[i];
-    }
-    for (int i = 0; i< q_len ;i++){
-        r.ptr(0)[i] ^= q.ptr(0)[i];//+r_len-q_len
-    }
-    return r;
-}
-
-/* multiplication between two polys
- * params @ poly p , poly q
- * return @ result poly = p * q
- */
-/*
-       10001001
-    *  00101010
- ---------------
-      10001001
-^   10001001
-^ 10001001
- ---------------
-  1010001111010*/
-Mat gf_poly_mul(const Mat &p,const Mat &q){
-
-    /* multiplication == addition among items*/
-    Mat r(1,p.cols+q.cols-1,CV_8UC1,Scalar(0));
-    int len_p=p.cols;
-    int len_q=q.cols;
-    for(int j = 0; j<len_q;j++) {
-        if(!q.ptr(0)[j])
-            continue;
-        //cout<<"round : "<<j<<endl;
-
-        for (int i = 0; i < len_p; i++) {
-            if(!p.ptr(0)[i])
-                continue;
-
-            r.ptr(0)[i+j] ^= gf_mul(p.ptr(0)[i], q.ptr(0)[j]);
-        }
-
-    }
-    return r;
-}
-
-/*gf_poly_div:
- *   This function is for getting the ECC for the data string ,which is implemented by doing a poly division.
- * params @ const Mat& dividend,const Mat& divisor
- * return @ ECC code/remainder
- *                             12 da df
- *               -----------------------
- *01 0f 36 78 40 ) 12 34 56 00 00 00 00
- *               ^ 12 ee 2b 23 f4
- *              -------------------------
- *                   da 7d 23 f4 00
- *                 ^ da a2 85 79 84
- *                  ---------------------
- *                      df a6 8d 84 00
- *                    ^ df 91 6b fc d9
- *                    -------------------
- *                         37 e6 78 d9
- */
-Mat gf_poly_div(const Mat& dividend,const Mat& divisor,const int& ecc_num) {
-    /* Note that the processing starts from the item with high number of times,
-         * so item [total-i] is processed for the i-th round */
-    int times=dividend.cols-(divisor.cols-1);
-    int dividend_len=dividend.cols-1;
-    int divisor_len=divisor.cols-1;
-    /*Mat.ptr(0)[i] stores the coeffient of the x^i*/
-    Mat r=dividend.clone();
-    for(int i =0;i<times;i++){
-        uint8_t coef=r.ptr(0)[dividend_len-i];
-        if(coef!=0){
-            for (int j = 0; j < divisor.cols; ++j) {
-                if(divisor.ptr(0)[divisor_len-j]!=0){
-                    r.ptr(0)[dividend_len-i-j]^=gf_mul(divisor.ptr(0)[divisor_len-j], coef);
-                }
-            }
-        }
-    }
-    Mat ecc=r(Range(0,1),Range(0,ecc_num)).clone();
-    return ecc;
-}
-
-/*unmask_data
- *func @  unmask the data and make the pixels in the reserved area Scalar(INVALID_REGION)
- */
-void QRDecode:: unmask_data(){
-    const struct version_info *ver = &version_db[version];
-    unmasked_data=straight.clone();
-    /*get mask pattern according to the format*/
-    int mask_pattren=mask_type;
-
-    for(int i= 0;i<size;i++){
-        for(int j= 0;j<size;j++){
-
-            if(unmasked_data.ptr(i)[j]==INVALID_REGION)
-                continue;
-
-            /*Finder*/
-            if ((i < 9 && j < 9)||/* Finder + format: top left */
-                (i + 8 >= size && j < 9)||/* Finder + format: bottom left */
-                (i < 9 && j + 8 >= size)||/* Finder + format: top right */
-                (i == 6 || j == 6))/* Exclude timing patterns */
-            {
-                unmasked_data.ptr(i)[j]=INVALID_REGION;
-            }
-                /*version information*/
-            else if (version >= 7) {
-                if ((i < 6 && j + 11 >= size)||(i + 11 >= size && j < 6))
-                    unmasked_data.ptr(i)[j]=INVALID_REGION;
-            }
-                /*unmask*/
-            else if((mask_pattren==0&&!((i + j) % 2)) ||
-                    (mask_pattren==1&&!(i % 2)) ||
-                    (mask_pattren==2&&!(j % 3)) ||
-                    (mask_pattren==3 && (i + j) % 3 != 0) ||
-                    (mask_pattren==4&&!(((i / 2) + (j / 3)) % 2)) ||
-                    (mask_pattren==5&&!((i * j) % 2 + (i * j) % 3))||
-                    (mask_pattren==6&&!(((i * j) % 2 + (i * j) % 3) % 2))||
-                    ((mask_pattren==7 && ((i * j) % 3 + (i + j) % 2) % 2 != 0))
-                    ){
-                unmasked_data.ptr(i)[j]^=255;
-            }
-        }
-    }
-
-    /* Exclude alignment patterns */
-    for (int a = 0; a < MAX_ALIGNMENT && ver->apat[a]; a++) {
-        for (int p = a; p < MAX_ALIGNMENT && ver->apat[p]; p++) {
-            int x=ver->apat[a];
-            int y=ver->apat[p];
-            /*the alignment patterns MUST NOT overlap the finder patterns or separators*/
-            if(unmasked_data.ptr(x)[y]==INVALID_REGION)
-                continue;
-            for(int i=-2;i<=2;i++)
-                for(int j=-2;j<=2;j++)
-                    unmasked_data.ptr(x+i)[y+j]=INVALID_REGION;
-        }
-    }
-
-}
-
-/*read_data
- * func @ read data from the image into codewords in a zig-zag way
- * */
-void QRDecode::read_data(){
-    int y = size - 1;
-    int x = size - 1;
-    int dir = -1;
-    int count = 0;
-    while (x > 0) {
-        if (x == 6)
-            x--;
-        /*read*/
-        read_bit( x,  y, count);
-        read_bit( x-1,  y, count);
-
-        y += dir;
-        /*change direction when meets border*/
-        if (y < 0 || y >= size) {
-            dir = -dir;
-            x -= 2;
-            y += dir;
-        }
-    }
-}
-
-/*block_syndromes
- * params @ const Mat & block(current block),
- *          int synd_num(the num of the syndromes),
- *          uint8_t *synd(syndromes for output)
- * func   @ calculate the syndromes for each block
- * */
-int block_syndromes(const Mat & block, int synd_num,vector <uint8_t>& synd){
-    int nonzero = 0;
-    /*the original method*/
-    cout<<"\n@s@ "<<endl;
-    for (int i = 0; i < synd_num; i++) {
-        /*get the syndromes by repalcing the x with pow(2,i) and evaluating the results of the equations*/
-        uint8_t tmp =gf_poly_eval(block, gf_pow(2,i));
-        /*print for debug*/
-        cout<<(int)tmp<<" ";
-        if (tmp)
-            nonzero = 1;
-        synd.push_back(tmp);
-    }
-    cout<<endl;
-    return nonzero;
-}
-
-
-/*find_error_locator
- * params @ synd(the syndromes of current block),
- *          errors_len(the number of the errors),
- * func   @ using berlekamp_massey algorithm to calculate the error_locator
- * return @ find_error_locator
- * */
-Mat find_error_locator(const vector<uint8_t>&synd,int & errors_len){
-    /*initialize two arrays b and c ,to be zeros , expcet b0<- 1 c0<- 1*/
-    int synd_num =(int)synd.size();
-    /*err_loc & Sigma*/
-    Mat C(1,synd_num,CV_8UC1,Scalar(0));
-    /*old_loc */
-    Mat B(1,synd_num,CV_8UC1,Scalar(0));//a copy of the last C
-
-    B.ptr(0)[0]=1;
-    C.ptr(0)[0]=1;
-
-    uint8_t b=1;//a copy of the last discrepancy delta
-    int L = 0;//the current number of assumed errors
-    int m = 1;//the number of iterations
-
-    for(int i = 0; i < synd_num ;i++){
-        uint8_t delta = synd[i];
-        /*cal discrepancy =Sn+ C1*S(n-1) + ... + CL*S(n-L)*/
-        for(int j = 1;j<=L;j++){
-            delta ^= gf_mul(C.ptr(0)[j], synd[i - j]);
-        }
-        /*shift = x^m*/
-        Mat shift(1,synd_num,CV_8UC1,Scalar(0));
-        shift.ptr(0)[m]=1;
-        /*scale_coeffi = d/b */
-        Mat scale_coeffi = gf_poly_scale(shift,gf_mul(delta,gf_inverse(b)));
-
-        /*if delta == 0 c is the polynomial */
-        if(delta == 0){
-            /*assumes that C(x) and L are correct for the moment, increments m, and continues*/
-            m++;
-
-        }
-            /*If delta !=0 , adjust C(x) so that a recalculation of d would be zero*/
-
-        else if(2 * L <= i){
-            /*L is updated and algorithm will update B(x), b, increase L, and reset m = 1*/
-            Mat t=C.clone();
-            /*C(t)=C(t)-(d/b)*x^m*B(t)    //t stands for the iteration times
-                 *    =C(t)-(d/b)*x^m*C(t-1)
-                 *delta = Sn+ C1*S(n-1) + ... -(d/b)(Sj+ B1*S(j-1) + ...)
-                 */
-            C=gf_poly_add(C,gf_poly_mul(B,scale_coeffi));
-
-            B = t.clone();
-            b=delta;
-
-            L = i + 1 - L;
-            m = 1;
-        }
-
-        else{
-            /*If L equals the actual number of errors, then during the iteration process,
-                 * the discrepancies will become zero before n becomes greater than or equal to 2L.*/
-
-            C = gf_poly_add(C, gf_poly_mul(B,scale_coeffi));
-            m++;
-        }
-
-    }
-    cout<<"len : "<< L<<endl;
-    errors_len=L;
-    /*L is the length of the minimal LFSR for the stream*/
-    cout<<"@@sigma@@"<<endl;
-    cout<<C<<endl;
-    return C;
-}
-
-/*
-     * params @ sigma(error locator) , errors_len(length of sigma -1) , msg_len(length of the block)
-     * return @ error index(the index of the error in current block)
-     * func   @ use Chien's search to calculate the the roots of error locator poly
-     *          and to calculate the index of the error in current block
-     * */
-vector<int > find_errors(const Mat& sigma,const int &errors_len,const int & msg_len){
-    vector <int> error_index;
-    /*optimize to just check the interesting symbols*/
-    for(int i = 0; i < msg_len ; i ++){
-        int index=msg_len-i-1;
-        /* if a^(n-i) is the error postion ,then a^-(n-i) is the root of the poly Sigma
-             * use Chien's search to evaluate the polynomial such that each evaluation only takes constant time
-             */
-        if(gf_poly_eval(sigma,gf_inverse(gf_pow(2,index)))==0){
-            error_index.push_back(index);
-        }
-    }
-    /*print out for debugging*/
-
-    CV_Assert((int)error_index.size()==errors_len);
-
-    return error_index;
-
-}
-/*
-     * params @ msg_in(the orignial blcok) , synd(syndromes) ,
-     *          e_loc_poly(error locator poly) , error_index(the index of the error)
-     * return @ the corrected block
-     * func   @ use Forney algorithm to correct the errors
-     *  ps :
-     *  Error location polynomial (short for A(x)) = 1 + sigma{lambda(i) * x(i)}
-     *  A(x)'=sigma{i * lambda(i) * x(i-1)}
-     * */
-Mat error_correct(const Mat & msg_in ,const vector<uint8_t>&synd,const Mat & e_loc_poly,const vector<int> &error_index){
-
-    int border = (int)synd.size();
-    Mat msg_out = msg_in.clone() ;
-    int err_len= (int)error_index.size();
-
-    Mat syndrome(1,border,CV_8UC1,Scalar(0));
-    /*change syndrom to mat from calculation*/
-
-    for(int i = 1 ; i < border ; i++){
-        syndrome.ptr(0)[i]=synd[i];//border-1-
-    }
-
-
-    /*First calculate the error evaluator polynomial*/
-    Mat Omega= gf_poly_mul(syndrome,e_loc_poly);
-
-    /*get rid of the first zero ! */
-    Omega = Omega(Range(0,1),Range(1,border));
-
-    /*Second use Forney algorithm to compute the magnitudes*/
-
-    /* 1. calculate formal derivative as the denominator */
-    Mat err_location_poly_derivative(1,e_loc_poly.cols,CV_8UC1,Scalar(0));
-
-    /*The operator · represents ordinary multiplication (repeated addition in the finite field)!!!
-         * that's why the even items are always zero!*/
-    for(int i = 1;i < err_len; i++){
-        uint8_t tmp = e_loc_poly.ptr(0)[i];
-        err_location_poly_derivative.ptr(0)[i-1]=tmp;
-        for(int j = 1; j < i ; j++)
-            err_location_poly_derivative.ptr(0)[i-1]^=tmp;
-    }
-    /* 2. calculate Omega as the numerator*/
-    for (int i = 0; i < err_len; i++) {
-        //int root = total_len-error_index[i]-1;
-        uint8_t xinv = gf_inverse(gf_pow(2, error_index[i]));
-
-        uint8_t denominator = gf_poly_eval(err_location_poly_derivative,xinv);
-
-        uint8_t numerator = gf_poly_eval(Omega, xinv);
-
-        /*divded them to get the magnitude*/
-        uint8_t error_magnitude = gf_div(numerator,denominator);
-
-        msg_out.ptr(0)[error_index[i]]^=error_magnitude;
-
-    }
-    return msg_out;
-}
-
-/* correct_block
- * params @ num(the number of the current block)  head(the beginning index of NUM^th block)
- * func   @ correct NUM^th block
- * */
-decode_error  QRDecode::correct_block(int num , int head,Mat & corrected){
-    const version_info *ver =&version_db[version];
-    const  block_params *cur_ecc = &ver->ecc[ecc_code2level(ecc_level)];
-
-    int cur_length=0;
-
-    int ecc_num=cur_ecc->ecc_codewords;
-
-    if(num<cur_ecc->num_blocks_in_G1){
-        cur_length=cur_ecc->data_codewords_in_G1+ecc_num;
-    }
-    else{
-        cur_length=cur_ecc->data_codewords_in_G2+ecc_num;
-    }
-    vector<uint8_t>synd;
-
-    /*get the block for block_syndromes*/
-    Mat cur_block(1,cur_length,CV_8UC1,Scalar(0));
-    for(int i = 0 ;i<cur_length ; i++) {
-        cur_block.ptr(0)[cur_length-1-i]=rearranged_data[head+i];
-    }
-
-    corrected=cur_block.clone();
-
-    if (!block_syndromes(cur_block,ecc_num,synd))
-        return SUCCESS;
-
-    int errors_len=0;
-    Mat sigma=find_error_locator(synd,errors_len);
-
-    vector <int> error_index = find_errors(sigma,errors_len,cur_length);
-
-    Mat corrected_block = error_correct(cur_block ,synd, sigma, error_index);
-
-    /*check once again*/
-    if (block_syndromes(corrected_block,ecc_num,synd))
-        return ERROR_DATA_ECC;
-
-    corrected=corrected_block.clone();
-
-    return SUCCESS;
-}
-
-/*
- * params @
- * func   @ rearrange the interleaved blocks for later codewode correction
- * */
-void QRDecode::rearrange_blocks(){
-    const version_info *ver =&version_db[version];
-    const  block_params *cur_ecc = &ver->ecc[ecc_code2level(ecc_level)];
-
-    //{  18,	2,	15,	2,	16},
-    int index=0;
-    int count=0;
-    int my_count = 0;
-    int offset=cur_ecc->num_blocks_in_G1+cur_ecc->num_blocks_in_G2;
-
-    /*the beginning of ecc*/
-    int offset_ecc= cur_ecc->data_codewords_in_G1*cur_ecc->num_blocks_in_G1
-                    +
-                    cur_ecc->data_codewords_in_G2*cur_ecc->num_blocks_in_G2;
-
-    final_data=Mat(1,offset_ecc*8,CV_8UC1,Scalar(0)).clone();
-
-    /*total num of blocks*/
-    int total_blocks=cur_ecc->num_blocks_in_G1+cur_ecc->num_blocks_in_G2;
-
-    /*the offset for one more col in G2*/
-    int offset_one_more=total_blocks*cur_ecc->data_codewords_in_G1;
-
-
-    int cur_block_head=0;
-    /*get block in group1*/
-    for(int i =0;i<total_blocks;i++){
-
-        /*get the data codeword*/
-        for(int j = 0;j <cur_ecc->data_codewords_in_G1;j++){
-            rearranged_data[index]=orignal_data[i+j*offset];
-
-            if(rearranged_data[index]==71)
-                rearranged_data[index]=7;
-            if(rearranged_data[index]==3)
-                rearranged_data[index]=30;
-            index++;
-
-        }
-        /*one more  col in G2*/
-        if(i>=cur_ecc->num_blocks_in_G1){
-            rearranged_data[index++]=orignal_data[offset_one_more+i-cur_ecc->num_blocks_in_G1];
-        }
-
-        /*get the ecc codeword*/
-        for(int j = 0;j <cur_ecc->ecc_codewords;j++){
-            rearranged_data[index++]=orignal_data[offset_ecc+i+j*offset];
-        }
-
-        Mat  corrected;
-        decode_error err= correct_block(i,cur_block_head,corrected);
-
-        int border = (i>=cur_ecc->num_blocks_in_G1)?cur_ecc->data_codewords_in_G2:cur_ecc->data_codewords_in_G1;
-
-        int total =border +cur_ecc->ecc_codewords;
-
-        for(int j = 0 ;j < border ; j++){
-            final[count++]=corrected.ptr(0)[total-1-j];
-        }
-
-        std::string s =" " ;
-        for(int j = 0 ; j < border*CODEWORD_LEN; j++){
-            int cur_word=j>>3;
-            int cur_bit =CODEWORD_LEN-1-(j&7);
-            final_data.ptr(0)[my_count++]=(corrected.ptr(0)[total-1-cur_word]>>(cur_bit)) & (1);
-        }
-        cur_block_head=index;
-
-        if(err)
-            return;
-    }
-}
-
 
 void QRDecode::init(const Mat &src, const vector<Point2f> &points)
 {
@@ -2368,7 +1588,7 @@ void QRDecode::init(const Mat &src, const vector<Point2f> &points)
     intermediate = Mat::zeros(original.size(), CV_8UC1);
     original_points = bbox;
     version = 0;
-    size = 0;
+    version_size = 0;
     test_perspective_size = 251;
     result_info = "";
 }
@@ -2484,7 +1704,7 @@ bool QRDecode::versionDefinition()
     }
     version = saturate_cast<uint8_t>((std::min(transition_x, transition_y) - 1) * 0.25 - 1);
     if ( !(  0 < version && version <= 40 ) ) { return false; }
-    size = (uint8_t)(21 + (version - 1) * 4);
+    version_size = 21 + (version - 1) * 4;
     return true;
 }
 
@@ -2500,8 +1720,8 @@ bool QRDecode::samplingForVersion()
     Mat postIntermediate(newFactorSize, CV_8UC1);
     resize(no_border_intermediate, postIntermediate, newFactorSize, 0, 0, INTER_AREA);
 
-    const int delta_rows = cvRound((postIntermediate.rows * 1.0) / size);
-    const int delta_cols = cvRound((postIntermediate.cols * 1.0) / size);
+    const int delta_rows = cvRound((postIntermediate.rows * 1.0) / version_size);
+    const int delta_cols = cvRound((postIntermediate.cols * 1.0) / version_size);
 
     vector<double> listFrequencyElem;
     for (int r = 0; r < postIntermediate.rows; r += delta_rows)
@@ -2534,140 +1754,14 @@ bool QRDecode::samplingForVersion()
         }
     }
 
-    straight = Mat(Size(size, size), CV_8UC1, Scalar(0));
-    for (int r = 0; r < size * size; r++)
+    straight = Mat(Size(version_size, version_size), CV_8UC1, Scalar(0));
+    for (int r = 0; r < version_size * version_size; r++)
     {
         int i   = r / straight.cols;
         int j   = r % straight.cols;
         straight.ptr<uint8_t>(i)[j] = (listFrequencyElem[r] < experimentalFrequencyElem) ? 0 : 255;
     }
     return true;
-}
-/* get_bits
- * params @ bits(the number of bits you need) ptr(the starting position)
- * func   @ from the postion $PTR to get $BITS bits
- * */
-int get_bits(const int& bits,uint8_t * & ptr){
-    int result=0;
-    for(int i =0 ;i<bits;i++){
-
-        result=result<<1;
-        result+=*(ptr+i);//data.ptr(0)[ptr+i];
-    }
-    ptr+=bits;
-    return result;
-}
-
-/* bits_remaining
- * params @ ptr(current bit postion)
- * func   @ calculate the remaining number of bits
- * */
-int QRDecode::bits_remaining(const uint8_t *ptr)
-{
-    uint8_t * tail = &final_data.ptr(0)[final_data.cols-1];
-    return (int)(tail - ptr);
-}
-/* decode_numeric
- * params @ ptr(current bit postion)
- * func   @ decode the numerical mode
- * */
-decode_error QRDecode::decode_numeric(uint8_t * &ptr){
-    int count = 0;
-
-    /*check version to update the bit counter*/
-    int bits = 10;
-    if(version>=27)
-        bits=14;
-    else if(version>=10)
-        bits=12;
-
-    count = get_bits(bits,ptr);
-
-    if (payload_len + count + 1 > MAX_PAYLOAD){
-        return ERROR_DATA_OVERFLOW;
-    }
-    /*divided 3 numerical char into a 10bit group*/
-    while (count >= 3) {
-        int num = get_bits(10,ptr);
-        payload[payload_len++]= uint8_t(num/100+'0');
-        payload[payload_len++]= uint8_t((num%100)/10+'0');
-        payload[payload_len++]= uint8_t(num%10+'0');
-        count -= 3;
-    }
-    /*the final group*/
-    if(count == 2){
-        /*7 bit group*/
-        int num = get_bits(7,ptr);
-        payload[payload_len++] = uint8_t((num%100)/10+'0');
-        payload[payload_len++] =  uint8_t(num%10+'0');
-    }
-    else if (count == 1){
-        /*4 bit group*/
-        int num = get_bits(4,ptr);
-        payload[payload_len++] = uint8_t(num%10+'0');
-    }
-
-    return SUCCESS;
-
-}
-/* decode_byte
- * params @ ptr(current bit postion)
- * func   @ decode the byte mode
- * */
-decode_error QRDecode::decode_byte(uint8_t * &ptr){
-    int bits = 8;
-    int count = 0;
-    /*check version to update the bit counter*/
-    if(version>9)
-        bits=16;
-
-    count = get_bits(bits,ptr);
-
-    if (payload_len + count + 1 > MAX_PAYLOAD){
-        return ERROR_DATA_OVERFLOW;
-    }
-
-    if (bits_remaining(ptr) < count * 8){
-        return ERROR_DATA_UNDERFLOW;
-    }
-
-    for (int i = 0; i < count; i++){
-        int tmp =get_bits(8,ptr);
-        payload[payload_len++]= uint8_t(tmp);
-    }
-
-    return SUCCESS;
-}
-/* decode_payload
- * params @
- * func   @ decode the data according to its corresponding mode
- * */
-decode_error QRDecode::decode_payload(){
-    decode_error err = SUCCESS;
-    uint8_t * ptr = &final_data.ptr(0)[0];
-   /*test for output*/
-   // output_final_data(final_data);
-
-    while(bits_remaining(ptr)>=4){
-        int mode=get_bits(4,ptr);
-        /*select the corresponding decode mode */
-        switch (mode){
-            case QR_MODE_NUL:
-                ptr = &final_data.ptr(0)[final_data.cols-1];
-                break;
-            case QR_MODE_NUM:
-                err = decode_numeric(ptr);
-                break;
-            case QR_MODE_BYTE:
-                err = decode_byte(ptr);
-                break;
-
-
-        }
-    }
-    if(err)
-        return ERROR_UNKNOWN_DATA_TYPE;
-    return SUCCESS;
 }
 
 bool QRDecode::decodingProcess()
@@ -2699,50 +1793,9 @@ bool QRDecode::decodingProcess()
     }
     return true;
 #else
-    decode_error err;
-    uint16_t my_format=0;
-    if (straight.empty()) { return false; }
-    size=straight.size().width;
-
-
-    if ((size - 17) % 4)
-        return ERROR_INVALID_GRID_SIZE;
-
-    /*estimated version*/
-    version = (size - 17) / 4;
-
-    if (version < 1 ||
-        version > MAX_VERSION)
-        return ERROR_INVALID_VERSION;
-
-    /* Read format information -- try both locations */
-    err = read_format(my_format,0);
-    if (err)
-        err = read_format(my_format,1);
-    if (err)
-        return err;
-
-    /*ECC correction*/
-    err = correct_format(my_format);
-    if (err)
-        return err;
-
-    /*EC level （1-2）+Mask(3-5) + EC for this string( 6-15) */
-    /*get rid of the ecc_code*/
-    u_int8_t fdata = my_format >> 10;
-    ecc_level = fdata >> 3;
-    mask_type = fdata & 7;
-
-    unmask_data();
-
-    read_data();
-
-    rearrange_blocks();
-
-    if (err != 0) { return false; }
-
-    return true;
+    return false;
 #endif
+
 }
 
 bool QRDecode::fullDecodingProcess()
@@ -2754,11 +1807,6 @@ bool QRDecode::fullDecodingProcess()
     if (!decodingProcess())    { return false; }
     return true;
 #else
-    if (!updatePerspective())  { return false; }
-    if (!versionDefinition())  { return false; }
-    if (!samplingForVersion()) { return false; }
-    if (!decodingProcess())    { return false; }
-    return true;
     std::cout << "Library QUIRC is not linked. No decoding is performed. Take it to the OpenCV repository." << std::endl;
     return false;
 #endif
@@ -2820,15 +1868,6 @@ cv::String QRCodeDetector::detectAndDecode(InputArray in,
     updatePointsResult(points_, points);
     std::string decoded_info = decode(inarr, points, straight_qrcode);
     return decoded_info;
-}
-
-bool detectQRCode(InputArray in, vector<Point> &points, double eps_x, double eps_y)
-{
-    QRCodeDetector qrdetector;
-    qrdetector.setEpsX(eps_x);
-    qrdetector.setEpsY(eps_y);
-
-    return qrdetector.detect(in, points);
 }
 
 class QRDetectMulti : public QRDetect
@@ -3924,3 +2963,4 @@ bool QRCodeDetector::detectAndDecodeMulti(
 }
 
 }  // namespace
+
