@@ -27,14 +27,14 @@ gen_template_check_self = Template("""
 gen_template_call_constructor_prelude = Template("""new (&(self->v)) Ptr<$cname>(); // init Ptr with placement new
         if(self) """)
 
-gen_template_call_constructor = Template("""self->v.reset(new ${cname}${args})""")
+gen_template_call_constructor = Template("""self->v.reset(new ${cname}${py_args})""")
 
 gen_template_simple_call_constructor_prelude = Template("""if(self) """)
 
-gen_template_simple_call_constructor = Template("""new (&(self->v)) ${cname}${args}""")
+gen_template_simple_call_constructor = Template("""new (&(self->v)) ${cname}${py_args}""")
 
 gen_template_parse_args = Template("""const char* keywords[] = { $kw_list, NULL };
-    if( PyArg_ParseTupleAndKeywords(args, kw, "$fmtspec", (char**)keywords, $parse_arglist)$code_cvt )""")
+    if( PyArg_ParseTupleAndKeywords(py_args, kw, "$fmtspec", (char**)keywords, $parse_arglist)$code_cvt )""")
 
 gen_template_func_body = Template("""$code_decl
     $code_parse
@@ -362,6 +362,7 @@ class ArgInfo(object):
         self.inputarg = True
         self.outputarg = False
         self.returnarg = False
+        self.isrvalueref = False
         for m in arg_tuple[3]:
             if m == "/O":
                 self.inputarg = False
@@ -377,6 +378,8 @@ class ArgInfo(object):
             elif m.startswith("/CA"):
                 self.isarray = True
                 self.arraycvt = m[2:].strip()
+            elif m == "/RRef":
+                self.isrvalueref = True
         self.py_inputarg = False
         self.py_outputarg = False
 
@@ -529,14 +532,14 @@ class FuncInfo(object):
     def get_wrapper_prototype(self, codegen):
         full_fname = self.get_wrapper_name()
         if self.isconstructor:
-            return "static int {fn_name}(pyopencv_{type_name}_t* self, PyObject* args, PyObject* kw)".format(
+            return "static int {fn_name}(pyopencv_{type_name}_t* self, PyObject* py_args, PyObject* kw)".format(
                     fn_name=full_fname, type_name=codegen.classes[self.classname].name)
 
         if self.classname:
             self_arg = "self"
         else:
             self_arg = ""
-        return "static PyObject* %s(PyObject* %s, PyObject* args, PyObject* kw)" % (full_fname, self_arg)
+        return "static PyObject* %s(PyObject* %s, PyObject* py_args, PyObject* kw)" % (full_fname, self_arg)
 
     def get_tab_entry(self):
         prototype_list = []
@@ -682,6 +685,10 @@ class FuncInfo(object):
 
                 if not code_args.endswith("("):
                     code_args += ", "
+
+                if a.isrvalueref:
+                    a.name = 'std::move(' + a.name + ')'
+
                 code_args += amp + a.name
 
             code_args += ")"
@@ -695,7 +702,7 @@ class FuncInfo(object):
                     templ = gen_template_call_constructor
 
                 code_prelude = templ_prelude.substitute(name=selfinfo.name, cname=selfinfo.cname)
-                code_fcall = templ.substitute(name=selfinfo.name, cname=selfinfo.cname, args=code_args)
+                code_fcall = templ.substitute(name=selfinfo.name, cname=selfinfo.cname, py_args=code_args)
                 if v.isphantom:
                     code_fcall = code_fcall.replace("new " + selfinfo.cname, self.cname.replace("::", "_"))
             else:
@@ -744,7 +751,7 @@ class FuncInfo(object):
                     parse_arglist = ", ".join(["&" + all_cargs[argno][1] for aname, argno in v.py_arglist]),
                     code_cvt = " &&\n        ".join(code_cvt_list))
             else:
-                code_parse = "if(PyObject_Size(args) == 0 && (!kw || PyObject_Size(kw) == 0))"
+                code_parse = "if(PyObject_Size(py_args) == 0 && (!kw || PyObject_Size(kw) == 0))"
 
             if len(v.py_outlist) == 0:
                 code_ret = "Py_RETURN_NONE"

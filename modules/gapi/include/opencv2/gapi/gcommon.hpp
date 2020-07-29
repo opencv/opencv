@@ -93,9 +93,12 @@ namespace detail {
  * passed in (a variadic template parameter pack) into a vector of
  * cv::GCompileArg objects.
  */
-struct GAPI_EXPORTS GCompileArg
+struct GAPI_EXPORTS_W_SIMPLE GCompileArg
 {
 public:
+    // NB: Required for pythnon bindings
+    GCompileArg() = default;
+
     std::string tag;
 
     // FIXME: use decay in GArg/other trait-based wrapper before leg is shot!

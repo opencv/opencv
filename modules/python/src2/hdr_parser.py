@@ -111,6 +111,11 @@ class CppHeaderParser(object):
         if npos >= 0:
             modlist.append("/C")
 
+        npos = arg_str.find("&&")
+        if npos >= 0:
+            arg_str = arg_str.replace("&&", '')
+            modlist.append("/RRef")
+
         npos = arg_str.find("&")
         if npos >= 0:
             modlist.append("/Ref")
@@ -715,6 +720,8 @@ class CppHeaderParser(object):
                     return stmt_type, classname, True, decl
 
             if stmt.startswith("enum") or stmt.startswith("namespace"):
+                # NB: Drop inheritance syntax for enum
+                stmt = stmt.split(':')[0]
                 stmt_list = stmt.rsplit(" ", 1)
                 if len(stmt_list) < 2:
                     stmt_list.append("<unnamed>")
@@ -812,6 +819,15 @@ class CppHeaderParser(object):
 
             l = l0.strip()
 
+            # G-API specific aliases
+            l = self.batch_replace(l, [
+                    ("GAPI_EXPORTS", "CV_EXPORTS"),
+                    ("GAPI_EXPORTS_W", "CV_EXPORTS_W"),
+                    ("GAPI_EXPORTS_W_SIMPLE","CV_EXPORTS_W_SIMPLE"),
+                    ("GAPI_WRAP", "CV_WRAP"),
+                    ('defined(GAPI_STANDALONE)', '0'),
+                ])
+
             if state == SCAN and l.startswith("#"):
                 state = DIRECTIVE
                 # fall through to the if state == DIRECTIVE check
@@ -867,7 +883,12 @@ class CppHeaderParser(object):
                 sys.exit(-1)
 
             while 1:
-                token, pos = self.find_next_token(l, [";", "\"", "{", "}", "//", "/*"])
+                # NB: Avoid parsing '{' for case:
+                # foo(Obj&& = {});
+                if re.search(r'=\s*\{\s*\}', l):
+                    token, pos = ';', len(l)
+                else:
+                    token, pos = self.find_next_token(l, [";", "\"", "{", "}", "//", "/*"])
 
                 if not token:
                     block_head += " " + l
