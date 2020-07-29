@@ -2142,6 +2142,7 @@ TEST(CV_RecoverPoseTest, regression_15341)
 
     // camera matrix with both focal lengths = 1, and principal point = (0, 0)
     const Mat cameraMatrix = Mat::eye(3, 3, CV_64F);
+    const Mat zeroDistCoeffs = Mat::zeros(1, 5, CV_64F);
 
     int Inliers = 0;
 
@@ -2156,8 +2157,11 @@ TEST(CV_RecoverPoseTest, regression_15341)
             vector<Point2f> points2(_points2);
 
             // Estimation of fundamental matrix using the RANSAC algorithm
-            Mat E, R, t;
+            Mat E, E2, R, t;
             E = findEssentialMat(points1, points2, cameraMatrix, RANSAC, 0.999, 1.0, mask);
+            E2 = findEssentialMat(points1, points2, cameraMatrix, zeroDistCoeffs, cameraMatrix, zeroDistCoeffs, RANSAC, 0.999, 1.0, mask);
+            EXPECT_LT(cv::norm(E, E2, NORM_INF), 1e-4) <<
+                "Two big difference between the same essential matrices computed using different functions, testcase " << testcase;
             EXPECT_EQ(0, (int)mask[13]) << "Detecting outliers in function findEssentialMat failed, testcase " << testcase;
             points2[12] = Point2f(0.0f, 0.0f); // provoke another outlier detection for recover Pose
             Inliers = recoverPose(E, points1, points2, cameraMatrix, R, t, mask);
@@ -2180,8 +2184,11 @@ TEST(CV_RecoverPoseTest, regression_15341)
             }
 
             // Estimation of fundamental matrix using the RANSAC algorithm
-            Mat E, R, t;
+            Mat E, E2, R, t;
             E = findEssentialMat(points1, points2, cameraMatrix, RANSAC, 0.999, 1.0, mask);
+            E2 = findEssentialMat(points1, points2, cameraMatrix, zeroDistCoeffs, cameraMatrix, zeroDistCoeffs, RANSAC, 0.999, 1.0, mask);
+            EXPECT_LT(cv::norm(E, E2, NORM_INF), 1e-4) <<
+                "Two big difference between the same essential matrices computed using different functions, testcase " << testcase;
             EXPECT_EQ(0, (int)mask.at<unsigned char>(13)) << "Detecting outliers in function findEssentialMat failed, testcase " << testcase;
             points2.at<Point2f>(12) = Point2f(0.0f, 0.0f); // provoke an outlier detection
             Inliers = recoverPose(E, points1, points2, cameraMatrix, R, t, mask);

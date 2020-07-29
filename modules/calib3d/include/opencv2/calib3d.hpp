@@ -2522,6 +2522,57 @@ CV_EXPORTS_W Mat findEssentialMat( InputArray points1, InputArray points2,
                                  int method = RANSAC, double prob = 0.999,
                                  double threshold = 1.0, OutputArray mask = noArray() );
 
+/** @brief Calculates an essential matrix from the corresponding points in two images from potentially two different cameras.
+
+@param points1 Array of N (N \>= 5) 2D points from the first image. The point coordinates should
+be floating-point (single or double precision).
+@param points2 Array of the second image points of the same size and format as points1 .
+@param cameraMatrix1 Camera matrix \f$K = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
+Note that this function assumes that points1 and points2 are feature points from cameras with the
+same camera matrix. If this assumption does not hold for your use case, use
+`undistortPoints()` with `P = cv::NoArray()` for both cameras to transform image points
+to normalized image coordinates, which are valid for the identity camera matrix. When
+passing these coordinates, pass the identity matrix for this parameter.
+@param cameraMatrix2 Camera matrix \f$K = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
+Note that this function assumes that points1 and points2 are feature points from cameras with the
+same camera matrix. If this assumption does not hold for your use case, use
+`undistortPoints()` with `P = cv::NoArray()` for both cameras to transform image points
+to normalized image coordinates, which are valid for the identity camera matrix. When
+passing these coordinates, pass the identity matrix for this parameter.
+@param distCoeffs1 Input vector of distortion coefficients
+\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6[, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$
+of 4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion coefficients are assumed.
+@param distCoeffs2 Input vector of distortion coefficients
+\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6[, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$
+of 4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion coefficients are assumed.
+@param method Method for computing an essential matrix.
+-   **RANSAC** for the RANSAC algorithm.
+-   **LMEDS** for the LMedS algorithm.
+@param prob Parameter used for the RANSAC or LMedS methods only. It specifies a desirable level of
+confidence (probability) that the estimated matrix is correct.
+@param threshold Parameter used for RANSAC. It is the maximum distance from a point to an epipolar
+line in pixels, beyond which the point is considered an outlier and is not used for computing the
+final fundamental matrix. It can be set to something like 1-3, depending on the accuracy of the
+point localization, image resolution, and the image noise.
+@param mask Output array of N elements, every element of which is set to 0 for outliers and to 1
+for the other points. The array is computed only in the RANSAC and LMedS methods.
+
+This function estimates essential matrix based on the five-point algorithm solver in @cite Nister03 .
+@cite SteweniusCFS is also a related. The epipolar geometry is described by the following equation:
+
+\f[[p_2; 1]^T K^{-T} E K^{-1} [p_1; 1] = 0\f]
+
+where \f$E\f$ is an essential matrix, \f$p_1\f$ and \f$p_2\f$ are corresponding points in the first and the
+second images, respectively. The result of this function may be passed further to
+decomposeEssentialMat or recoverPose to recover the relative pose between cameras.
+ */
+CV_EXPORTS_W Mat findEssentialMat( InputArray points1, InputArray points2,
+                                 InputArray cameraMatrix1, InputArray distCoeffs1,
+                                 InputArray cameraMatrix2, InputArray distCoeffs2,
+                                 int method = RANSAC,
+                                 double prob = 0.999, double threshold = 1.0,
+                                 OutputArray mask = noArray() );
+
 /** @brief Decompose an essential matrix to possible rotations and translation.
 
 @param E The input essential matrix.
