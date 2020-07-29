@@ -2639,8 +2639,8 @@ decode_error QRDecode::decode_byte(uint8_t * &ptr){
     return SUCCESS;
 }
 /* decode_payload
- * params @  
- * func   @ decode the data according to its corresponding mode 
+ * params @
+ * func   @ decode the data according to its corresponding mode
  * */
 decode_error QRDecode::decode_payload(){
     decode_error err ;
@@ -2665,7 +2665,8 @@ decode_error QRDecode::decode_payload(){
 
         }
     }
-
+    if(err)
+	return ERROR_UNKNOWN_DATA_TYPE;
     return SUCCESS;
 }
 
