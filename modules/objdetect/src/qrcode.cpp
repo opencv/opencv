@@ -2643,7 +2643,7 @@ decode_error QRDecode::decode_byte(uint8_t * &ptr){
  * func   @ decode the data according to its corresponding mode
  * */
 decode_error QRDecode::decode_payload(){
-    decode_error err ;
+    decode_error err = SUCCESS;
     uint8_t * ptr = &final_data.ptr(0)[0];
    /*test for output*/
    // output_final_data(final_data);
@@ -2666,7 +2666,7 @@ decode_error QRDecode::decode_payload(){
         }
     }
     if(err)
-	return ERROR_UNKNOWN_DATA_TYPE;
+        return ERROR_UNKNOWN_DATA_TYPE;
     return SUCCESS;
 }
 
