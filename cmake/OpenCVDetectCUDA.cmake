@@ -78,7 +78,12 @@ if(CUDA_FOUND)
 
   message(STATUS "CUDA detected: " ${CUDA_VERSION})
 
-  set(_generations "Fermi" "Kepler" "Maxwell" "Pascal" "Volta" "Turing" "Ampere")
+  OCV_OPTION(CUDA_ENABLE_DEPRECATED_GENERATION "Enable deprecated generations in the list" OFF)
+  set(_generations "Maxwell" "Pascal" "Volta" "Turing" "Ampere")
+  if(CUDA_ENABLE_DEPRECATED_GENERATION)
+    set(_generations "Fermi" "${_generations}")
+    set(_generations "Kepler" "${_generations}")
+  endif()
   set(_arch_fermi   "2.0")
   set(_arch_kepler  "3.0;3.5;3.7")
   set(_arch_maxwell "5.0;5.2")
@@ -199,10 +204,6 @@ if(CUDA_FOUND)
     endif()
   endmacro()
 
-  macro(ocv_wipeout_deprecated _arch_bin_list)
-    string(REPLACE "2.1" "2.1(2.0)" ${_arch_bin_list} "${${_arch_bin_list}}")
-  endmacro()
-
   set(__cuda_arch_ptx "")
   if(CUDA_GENERATION STREQUAL "Fermi")
     set(__cuda_arch_bin ${_arch_fermi})
@@ -265,7 +266,6 @@ if(CUDA_FOUND)
       )
     endif()
   endif()
-  ocv_wipeout_deprecated(__cuda_arch_bin)
 
   set(CUDA_ARCH_BIN ${__cuda_arch_bin} CACHE STRING "Specify 'real' GPU architectures to build binaries for, BIN(PTX) format is supported")
   set(CUDA_ARCH_PTX ${__cuda_arch_ptx} CACHE STRING "Specify 'virtual' PTX architectures to build PTX intermediate code for")
@@ -273,10 +273,14 @@ if(CUDA_FOUND)
   string(REGEX REPLACE "\\." "" ARCH_BIN_NO_POINTS "${CUDA_ARCH_BIN}")
   string(REGEX REPLACE "\\." "" ARCH_PTX_NO_POINTS "${CUDA_ARCH_PTX}")
 
-  # Check if user specified 1.0 compute capability: we don't support it
-  if(" ${CUDA_ARCH_BIN} ${CUDA_ARCH_PTX}" MATCHES " 1.0")
-    message(SEND_ERROR "CUDA: 1.0 compute capability is not supported - exclude it from ARCH/PTX list are re-run CMake")
-  endif()
+  # Check if user specified 1.0/2.1 compute capability: we don't support it
+  macro(ocv_wipeout_deprecated_cc target_cc)
+    if(" ${CUDA_ARCH_BIN} ${CUDA_ARCH_PTX}" MATCHES " ${target_cc}")
+      message(SEND_ERROR "CUDA: ${target_cc} compute capability is not supported - exclude it from ARCH/PTX list and re-run CMake")
+    endif()
+  endmacro()
+  ocv_wipeout_deprecated_cc("1.0")
+  ocv_wipeout_deprecated_cc("2.1")
 
   # NVCC flags to be set
   set(NVCC_FLAGS_EXTRA "")
