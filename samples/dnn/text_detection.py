@@ -61,7 +61,7 @@ def decodeText(scores):
     text = ""
     alphabet = "0123456789abcdefghijklmnopqrstuvwxyz"
     for i in range(scores.shape[0]):
-        c = np.argmax(scores[i][0])
+        c = np.argmax(scores[i])
         if c != 0:
             text += alphabet[c - 1]
         else:
