@@ -565,7 +565,7 @@ public:
         }
         else
         {
-            std::vector<size_t> data = {(size_t)ieInpNode->get_shape()[0], (size_t)blobs[0].size[1]};
+            std::vector<int64_t> data = {(int64_t)ieInpNode->get_shape()[0], (int64_t)blobs[0].size[1]};
             auto new_shape = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{2}, data.data());
             auto inp = std::make_shared<ngraph::op::v1::Reshape>(ieInpNode, new_shape, true);
 
