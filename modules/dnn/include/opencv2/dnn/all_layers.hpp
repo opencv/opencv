@@ -599,11 +599,12 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     };
 
     /**
-     * @brief detection output layer.
+     * @brief Detection output layer.
      *
      * The layer size is: @f$ (1 \times 1 \times N \times 7) @f$
-     *    where N is the number of detections after nms, and each row is:
+     *    where N is [keep_top_k] parameter multiplied by batch size. Each row is:
      *    [image_id, label, confidence, xmin, ymin, xmax, ymax]
+     *    where image_id is the index of image input in the batch.
      */
     class CV_EXPORTS DetectionOutputLayer : public Layer
     {
