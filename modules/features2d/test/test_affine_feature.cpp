@@ -36,7 +36,7 @@ TEST(Features2d_AFFINE_FEATURE, regression)
     cvtColor(image, gray, COLOR_BGR2GRAY);
 
     // Default ASIFT generates too large descriptors. This test uses small maxTilt to suppress the size of testdata.
-    Ptr<AffineFeature> ext = AffineFeature::create(SIFT::create(), 2);
+    Ptr<AffineFeature> ext = AffineFeature::create(SIFT::create(), 2, 0, 1.4142135623730951f, 144.0f);
     Mat mpt, msize, mangle, mresponse, moctave, mclass_id;
 #ifdef GENERATE_DATA
     // calculate
