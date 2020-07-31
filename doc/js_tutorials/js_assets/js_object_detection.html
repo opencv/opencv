@@ -42,7 +42,7 @@
 <div>
     <h3>Help function</h3>
     <p>1.The parameters for model inference which you can modify to investigate more models.</p>
-    <textarea class="code" rows="14" cols="100" id="codeEditor" spellcheck="false"></textarea>
+    <textarea class="code" rows="16" cols="100" id="codeEditor" spellcheck="false"></textarea>
     <p>2.Main loop in which will read the image from canvas and do inference once.</p>
     <textarea class="code" rows="26" cols="100" id="codeEditor1" spellcheck="false"></textarea>
     <p>3.Load labels from txt file and process it into an array.</p>
@@ -63,8 +63,11 @@ inputSize = [416, 416];
 mean = [0, 0, 0];
 std = 0.00392;
 rgb = true;
-confThreshold = 0.5
-nmsThreshold = 0.4
+confThreshold = 0.5;
+nmsThreshold = 0.4;
+
+// The type of output, can be YOLO or SSD
+outType = "YOLO";
 
 // url for model, config and label files, can from native or Internet
 // for model type like onnx which doesn't need config file, just let configUrl = ""
@@ -163,64 +166,106 @@ loadModel = async function(url) {
 
 <script id="codeSnippet5" type="text/code-snippet">
 postProcess = function(result, labels) {
-    const inputWidth = inputSize[0];
-    const inputHeight = inputSize[1];
-    const vecNum = result.matSize[0];
-    const vecLength = result.matSize[1];
-    const classNum = vecLength - 5;
+    let canvasOutput = document.getElementById('canvasOutput');
+    const outputWidth = canvasOutput.width;
+    const outputHeight = canvasOutput.height;
     const resultData = result.data32F;
 
     // Get the boxes(with class and confidence) from the output
     let boxes = [];
-    for(let i = 0; i < vecNum; ++i){
-        let vector = resultData.slice(i*vecLength, (i+1)*vecLength);
-        let scores = vector.slice(5, vecLength);
-        let classId = scores.indexOf(Math.max(...scores));
-        let confidence = scores[classId];
-        if(confidence > confThreshold) {
-            let center_x = Math.round(vector[0] * inputWidth);
-            let center_y = Math.round(vector[1] * inputHeight);
-            let width = Math.round(vector[2] * inputWidth);
-            let height = Math.round(vector[3] * inputHeight);
-            let left = Math.round(center_x - width / 2);
-            let top = Math.round(center_y - height / 2);
+    switch(outType) {
+        case "YOLO": {
+            const vecNum = result.matSize[0];
+            const vecLength = result.matSize[1];
+            const classNum = vecLength - 5;
 
-            let box = {
-                scores: scores,
-                classId: classId,
-                confidence: confidence,
-                bounding: [left, top, width, height],
-                toDraw: true
+            for(let i = 0; i < vecNum; ++i) {
+                let vector = resultData.slice(i*vecLength, (i+1)*vecLength);
+                let scores = vector.slice(5, vecLength);
+                let classId = scores.indexOf(Math.max(...scores));
+                let confidence = scores[classId];
+                if(confidence > confThreshold) {
+                    let center_x = Math.round(vector[0] * outputWidth);
+                    let center_y = Math.round(vector[1] * outputHeight);
+                    let width = Math.round(vector[2] * outputWidth);
+                    let height = Math.round(vector[3] * outputHeight);
+                    let left = Math.round(center_x - width / 2);
+                    let top = Math.round(center_y - height / 2);
+
+                    let box = {
+                        scores: scores,
+                        classId: classId,
+                        confidence: confidence,
+                        bounding: [left, top, width, height],
+                        toDraw: true
+                    }
+                    boxes.push(box);
+                }
             }
-            boxes.push(box);
-        }
-    }
 
-    // NMS(Non Maximum Suppression) algorithm
-    let boxNum = boxes.length;
-    let tmp_boxes = [];
-    let sorted_boxes = [];
-    for(let c = 0; c < classNum; ++c) {
-        for(let i = 0; i < boxes.length; ++i) {
-            tmp_boxes[i] = [boxes[i], i];
-        }
-        sorted_boxes = tmp_boxes.sort((a, b) => { return (b[0].scores[c] - a[0].scores[c]); });        
-        for(let i = 0; i < boxNum; ++i) {
-            if (sorted_boxes[i][0].scores[c] === 0) continue;
-            else {
-                for(let j = i + 1; j < boxNum; ++j) {
-                    if(IOU(sorted_boxes[i][0], sorted_boxes[j][0]) >= nmsThreshold) {
-                        boxes[sorted_boxes[j][1]].toDraw = false;
+            // NMS(Non Maximum Suppression) algorithm
+            let boxNum = boxes.length;
+            let tmp_boxes = [];
+            let sorted_boxes = [];
+            for(let c = 0; c < classNum; ++c) {
+                for(let i = 0; i < boxes.length; ++i) {
+                    tmp_boxes[i] = [boxes[i], i];
+                }
+                sorted_boxes = tmp_boxes.sort((a, b) => { return (b[0].scores[c] - a[0].scores[c]); });        
+                for(let i = 0; i < boxNum; ++i) {
+                    if (sorted_boxes[i][0].scores[c] === 0) continue;
+                    else {
+                        for(let j = i + 1; j < boxNum; ++j) {
+                            if(IOU(sorted_boxes[i][0], sorted_boxes[j][0]) >= nmsThreshold) {
+                                boxes[sorted_boxes[j][1]].toDraw = false;
+                            }
+                        }
                     }
                 }
             }
-        }
+        } break;
+        case "SSD": {
+            const vecNum = result.matSize[2];
+            const vecLength = 7;
+
+            for(let i = 0; i < vecNum; ++i) {
+                let vector = resultData.slice(i*vecLength, (i+1)*vecLength);
+                let confidence = vector[2];
+                if(confidence > confThreshold) {
+                    let left, top, right, bottom, width, height;
+                    left = Math.round(vector[3]);
+                    top = Math.round(vector[4]);
+                    right = Math.round(vector[5]);
+                    bottom = Math.round(vector[6]);
+                    width = right - left + 1;
+                    height = bottom - top + 1;
+                    if(width <= 2 || height <= 2) {
+                        left = Math.round(vector[3] * outputWidth);
+                        top = Math.round(vector[4] * outputHeight);
+                        right = Math.round(vector[5] * outputWidth);
+                        bottom = Math.round(vector[6] * outputHeight);
+                        width = right - left + 1;
+                        height = bottom - top + 1;
+                    }
+                    let box = {
+                        classId: vector[1] - 1,
+                        confidence: confidence,
+                        bounding: [left, top, width, height],
+                        toDraw: true
+                    }
+                    boxes.push(box);
+                }
+            }
+        } break;
+        default:
+            console.error(`Unsupported output type ${outType}`)
     }
 
     // Draw the saved box into the image
     let image = cv.imread("canvasInput");
-    let output = new cv.Mat(inputWidth, inputHeight, cv.CV_8UC3);
+    let output = new cv.Mat(outputWidth, outputHeight, cv.CV_8UC3);
     cv.cvtColor(image, output, cv.COLOR_RGBA2RGB);
+    let boxNum = boxes.length;
     for(let i = 0; i < boxNum; ++i) {
         if(boxes[i].toDraw) {
             drawBox(boxes[i]);
@@ -229,7 +274,7 @@ postProcess = function(result, labels) {
 
     return output;
 
-    
+
     // Calculate the IOU(Intersection over Union) of two boxes
     function IOU(box1, box2) {
         let bounding1 = box1.bounding;
