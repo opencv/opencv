@@ -60,7 +60,7 @@ class TFModelProcessor(Framework):
     def get_output(self, input_blob):
         assert len(input_blob.shape) == 4
         batch_tf = input_blob.transpose(0, 2, 3, 1)
-        out = self._prepared_model(batch_tf)[..., 1:1001]
+        out = self._prepared_model(batch_tf)
         return out
 
     def get_name(self):
@@ -75,7 +75,7 @@ class TFDnnModelProcessor(Framework):
     def get_output(self, input_blob):
         layer_names = self._prepared_dnn_model.getLayerNames()
         self._prepared_dnn_model.setInput(input_blob, '')
-        return self._prepared_dnn_model.forward(layer_names[-1])[..., 1:1001]
+        return self._prepared_dnn_model.forward(layer_names[-1])
 
     def get_name(self):
         return DNN_LIB

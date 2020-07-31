@@ -10,20 +10,24 @@ from ...common.test.cls_model_test_pipeline import ClsModelTestPipeline
 from ...common.utils import set_pytorch_env
 
 
-class PyTorchResNet50(PyTorchModelPreparer):
+class PyTorchClsNet(PyTorchModelPreparer):
     def __init__(self, model_name, original_model):
-        super(PyTorchResNet50, self).__init__(model_name, original_model)
+        super(PyTorchClsNet, self).__init__(model_name, original_model)
 
 
 def main():
     set_pytorch_env()
 
-    resnets = PyTorchResNet50(
+    arg.net_name
+    arg.model
+    arg.is_pretrained
+
+    resnets = PyTorchClsNet(
         model_name="resnet50",
         original_model=models.resnet50(pretrained=True)
     )
 
-    pytorch_resnet50_pipeline = ClsModelTestPipeline(
+    pytorch_cls_pipeline = ClsModelTestPipeline(
         network_model=resnets,
         model_processor=PyTorchModelProcessor,
         dnn_model_processor=PyTorchDnnModelProcessor,
@@ -31,7 +35,7 @@ def main():
     )
 
     # Test the base process of model retrieval
-    pytorch_resnet50_pipeline.init_test_pipeline()
+    pytorch_cls_pipeline.init_test_pipeline()
 
 
 if __name__ == "__main__":

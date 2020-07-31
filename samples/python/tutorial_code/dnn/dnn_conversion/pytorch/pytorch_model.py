@@ -37,7 +37,8 @@ class PyTorchModelPreparer(AbstractModel):
                           self._onnx_model_path["full_path"],
                           verbose=True,
                           input_names=[self._default_input_name],
-                          output_names=[self._default_output_name])
+                          output_names=[self._default_output_name],
+                          opset_version=11)
 
         return cv2.dnn.readNetFromONNX(self._onnx_model_path["full_path"])
 
@@ -59,7 +60,11 @@ class PyTorchModelProcessor(Framework):
 
     def get_output(self, input_blob):
         tensor = torch.FloatTensor(input_blob)
-        out = self._prepared_model.forward(tensor).detach().numpy()
+        self._prepared_model.eval()
+        model_out = self._prepared_model(tensor)
+        if len(self._prepared_model(tensor)) == 2:
+            model_out = model_out['out']
+        out = model_out.detach().numpy()
         return out
 
     def get_name(self):

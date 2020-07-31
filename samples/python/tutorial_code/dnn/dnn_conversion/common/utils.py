@@ -8,15 +8,16 @@ import numpy as np
 import tensorflow as tf
 import torch
 
+from .test.test_config import CommonConfig
+
 SEED_VAL = 42
 DNN_LIB = "DNN"
 # common path for model savings
-MODEL_PATH_ROOT = os.path.join(DNN_LIB.lower() + "_conversion", "{}/models")
+MODEL_PATH_ROOT = os.path.join(CommonConfig().output_data_root_dir, "{}/models")
 
 
 def make_dir(dir_to_create):
     if not os.path.exists(dir_to_create):
-        # create defined directory
         try:
             os.makedirs(dir_to_create)
         except OSError as error_obj:
@@ -40,7 +41,8 @@ def plot_acc(accuracies_list, experiment_name):
     plt.ylabel("Accuracy", fontsize=15)
     plt.title(experiment_name, fontsize=15)
     plt.legend()
-    plt.savefig(experiment_name.replace(" ", "_") + ".png", bbox_inches="tight")
+    full_path_to_fig = os.path.join(CommonConfig().output_data_root_dir, experiment_name + ".png")
+    plt.savefig(full_path_to_fig, bbox_inches="tight")
     pass
 
 
@@ -87,7 +89,7 @@ def create_parser():
     parser.add_argument(
         "--is_evaluate",
         type=str_bool,
-        help="Set True if you want to run evaluation of the models (ex.: TF vs DNN)",
+        help="Set True if you want to run evaluation of the models (ex.: TF vs OpenCV Net)",
         required=True
     )
     return parser
