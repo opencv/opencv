@@ -250,7 +250,8 @@ public:
 #ifdef HAVE_CUDA
     cuda4dnn::ConvolutionConfiguration::FusionMode cudaFusionMode;
     cuda4dnn::ConvolutionConfiguration::ActivationType cudaActType;
-    float cuda_relu_slope, cuda_crelu_floor, cuda_crelu_ceil, cuda_power_exp;
+    float cuda_relu_slope, cuda_crelu_floor, cuda_crelu_ceil;
+    float cuda_power_exp, cuda_power_scale, cuda_power_shift;
 #endif
 
     ConvolutionLayerImpl(const LayerParams &params) : BaseConvolutionLayerImpl(params)
@@ -457,13 +458,8 @@ public:
             Ptr<PowerLayer> activ_power = activ.dynamicCast<PowerLayer>();
             if (!activ_power.empty())
             {
-                if (activ_power->scale != 1.f || activ_power->shift != 0.f)
-                {
-                    const int outCh = blobs[0].size[0];
-                    fuseWeights(Mat(1, outCh, CV_32F, Scalar(activ_power->scale)),
-                                Mat(1, outCh, CV_32F, Scalar(activ_power->shift)));
-                }
-
+                cuda_power_scale = activ_power->scale;
+                cuda_power_shift = activ_power->shift;
                 cuda_power_exp = activ_power->power;
                 cudaActType = cuda4dnn::ConvolutionConfiguration::ActivationType::POWER;
             }
@@ -1591,6 +1587,8 @@ public:
         config.crelu_floor = cuda_crelu_floor;
         config.crelu_ceil = cuda_crelu_ceil;
         config.power_exp = cuda_power_exp;
+        config.power_scale = cuda_power_scale;
+        config.power_shift = cuda_power_shift;
 
         Mat filtersMat = fusedWeights ? weightsMat : blobs[0];
         Mat biasMat = (hasBias() || fusedBias) ? Mat(output_feature_maps, 1, CV_32F, biasvec.data()) : Mat();
