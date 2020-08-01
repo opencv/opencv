@@ -2656,32 +2656,21 @@ struct Net::Impl : public detail::NetImplBase
                     Ptr<EltwiseLayer> nextEltwiseLayer;
                     if( nextData )
                         nextEltwiseLayer = nextData->layerInstance.dynamicCast<EltwiseLayer>();
-
 #ifdef HAVE_CUDA
                     // CUDA backend supports fusion with eltwise sum (without variable channels)
                     // `nextEltwiseLayer` is reset if eltwise layer doesn't have a compatible configuration for fusion
                     if (IS_DNN_CUDA_TARGET(preferableTarget) && !nextEltwiseLayer.empty())
                     {
                         // we create a temporary backend node for eltwise layer to obtain the eltwise configuration
-                        cuda4dnn::csl::CSLContext context; // assume that initCUDA and EltwiseOp does not use the context during init
+                        cuda4dnn::csl::CSLContext context; // assume that initCUDA and EltwiseOp do not use the context during init
                         const auto node = nextData->layerInstance->initCUDA(&context, nextData->inputBlobsWrappers, nextData->outputBlobsWrappers);
                         const auto eltwiseNode = node.dynamicCast<cuda4dnn::EltwiseOpBase>();
-                        if (eltwiseNode->op != cuda4dnn::EltwiseOpType::SUM || !eltwiseNode->coeffs.empty())
+                        // CUDA backend uses EltwiseOp when all operands have the same number of channels; otherwise, ShortcutOp is used.
+                        // Hence, a successful cast to EltwiseOp implies that the number of channels is same in all operand tensors.
+                        if (eltwiseNode.empty() || eltwiseNode->op != cuda4dnn::EltwiseOpType::SUM || !eltwiseNode->coeffs.empty())
                             nextEltwiseLayer = Ptr<EltwiseLayer>();
-
-                        // check for variable channels
-                        auto& inputs = nextData->inputBlobs;
-                        for (int i = 1; i < inputs.size(); ++i)
-                        {
-                            if (inputs[i]->size[1] != inputs[0]->size[1])
-                            {
-                                nextEltwiseLayer = Ptr<EltwiseLayer>();
-                                break;
-                            }
-                        }
                     }
 #endif
-
                     if (!nextEltwiseLayer.empty() && nextData && nextData->inputBlobsId.size() == 2)
                     {
                         LayerData *eltwiseData = nextData;
@@ -2725,7 +2714,8 @@ struct Net::Impl : public detail::NetImplBase
                                 {
                                     nextData = &layers[eltwiseData->consumers[0].lid];
                                     lpNext = LayerPin(eltwiseData->consumers[0].lid, 0);
-                                    if (pinsToKeep.count(lpNext) == 0 && nextData->outputBlobs.size() == 1)
+                                    CV_Assert(nextData);
+                                    if (nextData->outputBlobs.size() == 1)
                                         nextFusabeleActivLayer = nextData->layerInstance.dynamicCast<ActivationLayer>();
                                 }
                                 else
