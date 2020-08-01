@@ -2714,6 +2714,7 @@ struct Net::Impl : public detail::NetImplBase
                                 {
                                     nextData = &layers[eltwiseData->consumers[0].lid];
                                     lpNext = LayerPin(eltwiseData->consumers[0].lid, 0);
+                                    CV_Assert(nextData);
                                     if (nextData->outputBlobs.size() == 1)
                                         nextFusabeleActivLayer = nextData->layerInstance.dynamicCast<ActivationLayer>();
                                 }
