@@ -121,10 +121,13 @@ protected:
 };
 
 Ptr<SIFT> SIFT::create( int _nfeatures, int _nOctaveLayers,
-                     double _contrastThreshold, double _edgeThreshold, double _sigma, bool _useUcharDescriptors )
+                     double _contrastThreshold, double _edgeThreshold, double _sigma, int _descriptorType )
 {
     CV_TRACE_FUNCTION();
-    return makePtr<SIFT_Impl>(_nfeatures, _nOctaveLayers, _contrastThreshold, _edgeThreshold, _sigma, _useUcharDescriptors);
+
+    CV_Assert(_descriptorType == CV_32F || _descriptorType == CV_8U);
+    bool useUcharDescriptors = (_descriptorType == CV_8U);
+    return makePtr<SIFT_Impl>(_nfeatures, _nOctaveLayers, _contrastThreshold, _edgeThreshold, _sigma, useUcharDescriptors);
 }
 
 String SIFT::getDefaultName() const

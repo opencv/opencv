@@ -277,7 +277,7 @@ public:
     */
     CV_WRAP static Ptr<SIFT> create(int nfeatures = 0, int nOctaveLayers = 3,
         double contrastThreshold = 0.04, double edgeThreshold = 10,
-        double sigma = 1.6, bool useUcharDescriptors = false);
+        double sigma = 1.6, int descriptorType = CV_32F);
 
     CV_WRAP virtual String getDefaultName() const CV_OVERRIDE;
 };

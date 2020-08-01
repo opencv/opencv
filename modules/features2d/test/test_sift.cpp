@@ -16,11 +16,11 @@ TEST(Features2d_SIFT, descriptor_type)
 
     vector<KeyPoint> keypoints;
     Mat descriptorsFloat, descriptorsUchar;
-    Ptr<SIFT> siftFloat = cv::SIFT::create(0, 3, 0.04, 10, 1.6, false);
+    Ptr<SIFT> siftFloat = cv::SIFT::create(0, 3, 0.04, 10, 1.6, CV_32F);
     siftFloat->detectAndCompute(gray, Mat(), keypoints, descriptorsFloat, false);
     ASSERT_EQ(descriptorsFloat.type(), CV_32F) << "type mismatch";
 
-    Ptr<SIFT> siftUchar = cv::SIFT::create(0, 3, 0.04, 10, 1.6, true);
+    Ptr<SIFT> siftUchar = cv::SIFT::create(0, 3, 0.04, 10, 1.6, CV_8U);
     siftUchar->detectAndCompute(gray, Mat(), keypoints, descriptorsUchar, false);
     ASSERT_EQ(descriptorsUchar.type(), CV_8U) << "type mismatch";
 
