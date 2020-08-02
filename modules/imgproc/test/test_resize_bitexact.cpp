@@ -152,15 +152,33 @@ TEST(Resize_Bitexact, Linear8U)
         }
 }
 
-TEST(Resize_Bitexact, Nearest8U_vsNonExact)
+static int checkNearest8U_vsNonExact(const Mat& src)
 {
-    Mat src = imread(cvtest::findDataFile("shared/lena.png"));
-
     Mat dstExact; cv::resize(src, dstExact, Size(), 2, 1, INTER_NEAREST_EXACT);
     Mat dstNonExact; cv::resize(src, dstNonExact, Size(), 2, 1, INTER_NEAREST);
 
-    int normINF = cv::norm(dstExact, dstNonExact, NORM_INF);
-    EXPECT_LE(normINF, 1.0);
+    return cv::norm(dstExact, dstNonExact, NORM_INF);
+}
+TEST(Resize_Bitexact, Nearest8U_vsNonExact)
+{
+    int depths[] = {CV_8U, CV_16U, CV_32F, CV_64F};
+
+    Mat src_color = imread(cvtest::findDataFile("shared/lena.png"));
+    Mat src_gray; cv::cvtColor(src_color, src_gray, COLOR_BGR2GRAY);
+
+    int indices = sizeof(depths)/sizeof(depths[0]);
+    int normINF;
+    for (int i = 0; i < indices; i++)
+    {
+        Mat mat_color, mat_gray;
+        src_color.assignTo(mat_color, depths[i]);
+        normINF = checkNearest8U_vsNonExact(mat_color);
+        EXPECT_LE(normINF, 1.0) << "color, type: " << depths[i];
+
+        src_gray.assignTo(mat_gray, depths[i]);
+        normINF = checkNearest8U_vsNonExact(mat_gray);
+        EXPECT_LE(normINF, 1.0) << "gray, type: " << depths[i];
+    }
 }
 
 }} // namespace
