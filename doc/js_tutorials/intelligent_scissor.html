@@ -6,7 +6,7 @@
   <body>
     <p id="status">OpenCV.js is loading...</p>
     <canvas id="canvas" disabled=true></canvas>
-    <img id="src" src="fruits.jpg"/>
+    <img id="src" src="test.png"/>
     <input type="button" id="myButton" value="Test" onclick="" />
     <input type="button" id="startAlgo" value="Start" disabled=true onclick="main()">
 
@@ -177,7 +177,9 @@
         grayscale = new cv.Mat();
         Ix = new cv.Mat();
         Iy = new cv.Mat();
-        
+        let ptr_pix = src.ucharPtr(20,20)
+
+
         gradient_magnitude = new cv.Mat();
         cv.cvtColor(src, grayscale, cv.COLOR_BGRA2GRAY);
         cv.Canny(grayscale, img_canny,  50, 100);  
@@ -187,14 +189,19 @@
       
         Ix.convertTo(Ix, cv.CV_32F, 1.0/255);
         Iy.convertTo(Iy, cv.CV_32F, 1.0/255);
-
+        for(let i=0; i<10;i++)
+        {
+          console.log(i)
+        console.log(Ix.data32F[1 * Ix.cols * Ix.channels() + i * Ix.channels()]);
+        }
         let max_val;
+        cv.imshow("canvas", Ix);
         cv.magnitude(Iy, Ix, gradient_magnitude);
         let result = cv.minMaxLoc(gradient_magnitude);
         let maxPoint = result.maxVal;
         gradient_magnitude.convertTo(gradient_magnitude, cv.CV_32F, -1/maxPoint, 1.0);
         let pix = {x: 50, y: 50};
-        find_min_path(pix);
+
 
       }
 

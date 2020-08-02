@@ -204,13 +204,20 @@ int main( int argc, const char** argv )
     std::vector<std::vector<Point> > c(1);
     param.contours = c;
     std::string filename = parser.get<std::string>(0);
-
+ 
     Mat grayscale, img_canny;
-    param.img = imread(samples::findFile(filename));
+    // param.img = imread(samples::findFile(filename));
+
+    param.img = imread("/home/vlad/Desktop/test/test.png");
+    cvtColor(param.img, param.img, COLOR_BGR2BGRA);
+
+    Point test_point = Point(20, 20);
+   
     param.hit_map_x.create(param.img.rows, param.img.cols, CV_32SC1);
     param.hit_map_y.create(param.img.rows, param.img.cols, CV_32SC1);
 
-    cvtColor(param.img, grayscale, COLOR_BGR2GRAY);
+
+    cvtColor(param.img, grayscale, COLOR_BGRA2GRAY);
     Canny(grayscale, img_canny, EDGE_THRESHOLD_LOW, EDGE_THRESHOLD_HIGH);
 
     threshold(img_canny, param.zero_crossing, 254, 1, THRESH_BINARY_INV);
@@ -219,6 +226,10 @@ int main( int argc, const char** argv )
     param.Ix.convertTo(param.Ix, CV_32F, 1.0/255);
     param.Iy.convertTo(param.Iy, CV_32F, 1.0/255);
 
+    imshow("tr", param.Ix);
+    for( int i=0; i<10;i++)
+    std::cout<<i<<" "<<param.Ix.at<float>(1,i)<<std::endl;
+    
     // Compute gradients magnitude.
     double max_val = 0.0;
     magnitude(param.Iy, param.Ix, param.gradient_magnitude);
