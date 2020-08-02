@@ -8,7 +8,6 @@
 #include "opencv2/imgproc.hpp"
 #include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui.hpp"
-#include "opencv2/calib3d.hpp"
 #include <iostream>
 
 using namespace std;
@@ -36,6 +35,7 @@ Mat warping(Mat image, Size warped_image_size, vector< Point2f> srcPoints, vecto
 String windowTitle = "Perspective Transformation Demo";
 String labels[4] = { "TL","TR","BR","BL" };
 vector< Point2f> roi_corners;
+vector< Point2f> midpoints(4);
 vector< Point2f> dst_corners(4);
 int roiIndex = 0;
 bool dragging;
@@ -99,21 +99,26 @@ int main(int argc, char** argv)
 
             imshow( windowTitle, image );
 
+            midpoints[0] = (roi_corners[0] + roi_corners[1]) / 2;
+            midpoints[1] = (roi_corners[1] + roi_corners[2]) / 2;
+            midpoints[2] = (roi_corners[2] + roi_corners[3]) / 2;
+            midpoints[3] = (roi_corners[3] + roi_corners[0]) / 2;
+
             dst_corners[0].x = 0;
             dst_corners[0].y = 0;
-            dst_corners[1].x = (float)std::max(norm(roi_corners[0] - roi_corners[1]), norm(roi_corners[2] - roi_corners[3]));
+            dst_corners[1].x = (float)norm(midpoints[1] - midpoints[3]);
             dst_corners[1].y = 0;
-            dst_corners[2].x = (float)std::max(norm(roi_corners[0] - roi_corners[1]), norm(roi_corners[2] - roi_corners[3]));
-            dst_corners[2].y = (float)std::max(norm(roi_corners[1] - roi_corners[2]), norm(roi_corners[3] - roi_corners[0]));
+            dst_corners[2].x = dst_corners[1].x;
+            dst_corners[2].y = (float)norm(midpoints[0] - midpoints[2]);
             dst_corners[3].x = 0;
-            dst_corners[3].y = (float)std::max(norm(roi_corners[1] - roi_corners[2]), norm(roi_corners[3] - roi_corners[0]));
+            dst_corners[3].y = dst_corners[2].y;
 
             Size warped_image_size = Size(cvRound(dst_corners[2].x), cvRound(dst_corners[2].y));
 
-            Mat H = findHomography(roi_corners, dst_corners); //get homography
+            Mat M = getPerspectiveTransform(roi_corners, dst_corners);
 
             Mat warped_image;
-            warpPerspective(original_image, warped_image, H, warped_image_size); // do perspective transformation
+            warpPerspective(original_image, warped_image, M, warped_image_size); // do perspective transformation
 
             imshow("Warped Image", warped_image);
         }
