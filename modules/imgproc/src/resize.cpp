@@ -1159,7 +1159,7 @@ public:
             case 6:
                 for( ; x < dsize.width; x++, D += 6 )
                 {
-                    const ushort* _tS = (const ushort*)S + x_ofse[x];
+                    const ushort* _tS = (const ushort*)(S + x_ofse[x]*6);
                     ushort* _tD = (ushort*)D;
                     _tD[0] = _tS[0]; _tD[1] = _tS[1]; _tD[2] = _tS[2];
                 }
@@ -1175,7 +1175,7 @@ public:
             case 12:
                 for( ; x < dsize.width; x++, D += 12 )
                 {
-                    const int* _tS = (const int*)S + x_ofse[x];
+                    const int* _tS = (const int*)(S + x_ofse[x]*12);
                     int* _tD = (int*)D;
                     _tD[0] = _tS[0]; _tD[1] = _tS[1]; _tD[2] = _tS[2];
                 }
