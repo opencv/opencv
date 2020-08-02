@@ -152,4 +152,15 @@ TEST(Resize_Bitexact, Linear8U)
         }
 }
 
+TEST(Resize_Bitexact, Nearest8U_vsNonExact)
+{
+    Mat src = imread(cvtest::findDataFile("shared/lena.png"));
+
+    Mat dstExact; cv::resize(src, dstExact, Size(), 3, 1, INTER_NEAREST_EXACT);
+    Mat dstNonExact; cv::resize(src, dstNonExact, Size(), 3, 1, INTER_NEAREST);
+
+    int normINF = cv::norm(dstExact, dstNonExact, NORM_INF);
+    EXPECT_LE(normINF, 1.0);
+}
+
 }} // namespace
