@@ -57,8 +57,8 @@ namespace cvflann
 
 struct KMeansIndexParams : public IndexParams
 {
-    KMeansIndexParams(int branching = 32, int iterations = 11,
-                      flann_centers_init_t centers_init = FLANN_CENTERS_RANDOM, float cb_index = 0.2 )
+    void indexParams(int branching, int iterations,
+                     flann_centers_init_t centers_init, float cb_index, int trees)
     {
         (*this)["algorithm"] = FLANN_INDEX_KMEANS;
         // branching factor
@@ -69,6 +69,20 @@ struct KMeansIndexParams : public IndexParams
         (*this)["centers_init"] = centers_init;
         // cluster boundary index. Used when searching the kmeans tree
         (*this)["cb_index"] = cb_index;
+        // number of kmeans trees to search in
+        (*this)["trees"] = trees;
+    }
+
+    KMeansIndexParams(int branching = 32, int iterations = 11,
+                      flann_centers_init_t centers_init = FLANN_CENTERS_RANDOM, float cb_index = 0.2 )
+    {
+        indexParams(branching, iterations, centers_init, cb_index, 1);
+    }
+
+    KMeansIndexParams(int branching, int iterations,
+                      flann_centers_init_t centers_init, float cb_index, int trees)
+    {
+        indexParams(branching, iterations, centers_init, cb_index, trees);
     }
 };
 
@@ -347,6 +361,7 @@ public:
         veclen_ = dataset_.cols;
 
         branching_ = get_param(params,"branching",32);
+        trees_ = get_param(params,"trees",1);
         iterations_ = get_param(params,"iterations",11);
         if (iterations_<0) {
             iterations_ = (std::numeric_limits<int>::max)();
@@ -367,6 +382,13 @@ public:
         }
         cb_index_ = 0.4f;
 
+        root_ = new KMeansNodePtr[trees_];
+        indices_ = new int*[trees_];
+
+        for (int i=0; i<trees_; ++i) {
+            root_[i] = NULL;
+            indices_[i] = NULL;
+        }
     }
 
 
@@ -382,9 +404,11 @@ public:
     virtual ~KMeansIndex()
     {
         if (root_ != NULL) {
-            free_centers(root_);
+            free_centers();
+            delete[] root_;
         }
         if (indices_!=NULL) {
+            free_indices();
             delete[] indices_;
         }
     }
@@ -429,23 +453,24 @@ public:
             throw FLANNException("Branching factor must be at least 2");
         }
 
-        indices_ = new int[size_];
-        for (size_t i=0; i<size_; ++i) {
-            indices_[i] = int(i);
-        }
+        free_indices();
 
-        root_ = pool_.allocate<KMeansNode>();
-        std::memset(root_, 0, sizeof(KMeansNode));
+        for (int i=0; i<trees_; ++i) {
+            indices_[i] = new int[size_];
+            for (size_t j=0; j<size_; ++j) {
+                indices_[i][j] = int(j);
+            }
+            root_[i] = pool_.allocate<KMeansNode>();
+            std::memset(root_[i], 0, sizeof(KMeansNode));
 
-        if(is_kdtree_distance::val || is_vector_space_distance::val)
-        {
-            computeNodeStatistics(root_, indices_, (unsigned int)size_);
-            computeClustering(root_, indices_, (int)size_, branching_,0);
-        }
-        else
-        {
-            computeBitfieldNodeStatistics(root_, indices_, (unsigned int)size_);
-            computeBitfieldClustering(root_, indices_, (int)size_, branching_,0);
+            if(is_kdtree_distance::val || is_vector_space_distance::val) {
+                computeNodeStatistics(root_[i], indices_[i], (unsigned int)size_);
+                computeClustering(root_[i], indices_[i], (int)size_, branching_,0);
+            }
+            else {
+                computeBitfieldNodeStatistics(root_[i], indices_[i], (unsigned int)size_);
+                computeBitfieldClustering(root_[i], indices_[i], (int)size_, branching_,0);
+            }
         }
     }
 
@@ -456,35 +481,43 @@ public:
         save_value(stream, iterations_);
         save_value(stream, memoryCounter_);
         save_value(stream, cb_index_);
-        save_value(stream, *indices_, (int)size_);
-
-        save_tree(stream, root_);
+        save_value(stream, trees_);
+        for (int i=0; i<trees_; ++i) {
+            save_value(stream, *indices_[i], (int)size_);
+            save_tree(stream, root_[i], i);
+        }
     }
 
 
     void loadIndex(FILE* stream) CV_OVERRIDE
     {
+        if (indices_!=NULL) {
+            free_indices();
+            delete[] indices_;
+        }
+        if (root_!=NULL) {
+            free_centers();
+        }
+
         load_value(stream, branching_);
         load_value(stream, iterations_);
         load_value(stream, memoryCounter_);
         load_value(stream, cb_index_);
-        if (indices_!=NULL) {
-            delete[] indices_;
-        }
-        indices_ = new int[size_];
-        load_value(stream, *indices_, size_);
+        load_value(stream, trees_);
 
-        if (root_!=NULL) {
-            free_centers(root_);
+        indices_ = new int*[trees_];
+        for (int i=0; i<trees_; ++i) {
+            indices_[i] = new int[size_];
+            load_value(stream, *indices_[i], size_);
+            load_tree(stream, root_[i], i);
         }
-        load_tree(stream, root_);
 
         index_params_["algorithm"] = getType();
         index_params_["branching"] = branching_;
+        index_params_["trees"] = trees_;
         index_params_["iterations"] = iterations_;
         index_params_["centers_init"] = centers_init_;
         index_params_["cb_index"] = cb_index_;
-
     }
 
 
@@ -500,17 +533,21 @@ public:
     void findNeighbors(ResultSet<DistanceType>& result, const ElementType* vec, const SearchParams& searchParams) CV_OVERRIDE
     {
 
-        int maxChecks = get_param(searchParams,"checks",32);
+        const int maxChecks = get_param(searchParams,"checks",32);
 
         if (maxChecks==FLANN_CHECKS_UNLIMITED) {
-            findExactNN(root_, result, vec);
+            findExactNN(root_[0], result, vec);
         }
         else {
             // Priority queue storing intermediate branches in the best-bin-first search
             Heap<BranchSt>* heap = new Heap<BranchSt>((int)size_);
 
             int checks = 0;
-            findNN(root_, result, vec, checks, maxChecks, heap);
+            for (int i=0; i<trees_; ++i) {
+                findNN(root_[i], result, vec, checks, maxChecks, heap);
+                if ((checks >= maxChecks) && result.full())
+                    break;
+            }
 
             BranchSt branch;
             while (heap->popMin(branch) && (checks<maxChecks || !result.full())) {
@@ -521,7 +558,6 @@ public:
 
             CV_Assert(result.full());
         }
-
     }
 
     /**
@@ -541,7 +577,7 @@ public:
         DistanceType variance;
         KMeansNodePtr* clusters = new KMeansNodePtr[numClusters];
 
-        int clusterCount = getMinVarianceClusters(root_, clusters, numClusters, variance);
+        int clusterCount = getMinVarianceClusters(root_[0], clusters, numClusters, variance);
 
         Logger::info("Clusters requested: %d, returning %d\n",numClusters, clusterCount);
 
@@ -611,23 +647,23 @@ private:
 
 
 
-    void save_tree(FILE* stream, KMeansNodePtr node)
+    void save_tree(FILE* stream, KMeansNodePtr node, int num)
     {
         save_value(stream, *node);
         save_value(stream, *(node->pivot), (int)veclen_);
         if (node->childs==NULL) {
-            int indices_offset = (int)(node->indices - indices_);
+            int indices_offset = (int)(node->indices - indices_[num]);
             save_value(stream, indices_offset);
         }
         else {
             for(int i=0; i<branching_; ++i) {
-                save_tree(stream, node->childs[i]);
+                save_tree(stream, node->childs[i], num);
             }
         }
     }
 
 
-    void load_tree(FILE* stream, KMeansNodePtr& node)
+    void load_tree(FILE* stream, KMeansNodePtr& node, int num)
     {
         node = pool_.allocate<KMeansNode>();
         load_value(stream, *node);
@@ -636,12 +672,12 @@ private:
         if (node->childs==NULL) {
             int indices_offset;
             load_value(stream, indices_offset);
-            node->indices = indices_ + indices_offset;
+            node->indices = indices_[num] + indices_offset;
         }
         else {
             node->childs = pool_.allocate<KMeansNodePtr>(branching_);
             for(int i=0; i<branching_; ++i) {
-                load_tree(stream, node->childs[i]);
+                load_tree(stream, node->childs[i], num);
             }
         }
     }
@@ -656,6 +692,32 @@ private:
         if (node->childs!=NULL) {
             for (int k=0; k<branching_; ++k) {
                 free_centers(node->childs[k]);
+            }
+        }
+    }
+
+    void free_centers()
+    {
+       if (root_ != NULL) {
+           for(int i=0; i<trees_; ++i) {
+               if (root_[i] != NULL) {
+                   free_centers(root_[i]);
+               }
+           }
+       }
+    }
+
+    /**
+     * Release the inner elements of indices[]
+     */
+    void free_indices()
+    {
+        if (indices_!=NULL) {
+            for(int i=0; i<trees_; ++i) {
+                if (indices_[i]!=NULL) {
+                    delete[] indices_[i];
+                    indices_[i] = NULL;
+                }
             }
         }
     }
@@ -1195,8 +1257,8 @@ private:
         }
 
         if (node->childs==NULL) {
-            if (checks>=maxChecks) {
-                if (result.full()) return;
+            if ((checks>=maxChecks) && result.full()) {
+                return;
             }
             checks += node->size;
             for (int i=0; i<node->size; ++i) {
@@ -1397,6 +1459,9 @@ private:
     /** The branching factor used in the hierarchical k-means clustering */
     int branching_;
 
+    /** Number of kmeans trees (default is one) */
+    int trees_;
+
     /** Maximum number of iterations to use when performing k-means clustering */
     int iterations_;
 
@@ -1432,12 +1497,12 @@ private:
     /**
      * The root node in the tree.
      */
-    KMeansNodePtr root_;
+    KMeansNodePtr* root_;
 
     /**
      *  Array of indices to vectors in the dataset.
      */
-    int* indices_;
+    int** indices_;
 
     /**
      * The distance
