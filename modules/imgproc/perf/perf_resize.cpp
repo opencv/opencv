@@ -254,4 +254,30 @@ PERF_TEST_P(MatInfo_Size_Scale_NN, ResizeNN,
     SANITY_CHECK_NOTHING();
 }
 
+PERF_TEST_P(MatInfo_Size_Scale_NN, ResizeNNExact,
+    testing::Combine(
+        testing::Values(CV_8UC1, CV_8UC2, CV_8UC4),
+        testing::Values(szVGA, szqHD, sz720p, sz1080p, sz2160p),
+        testing::Values(2.4, 3.4, 1.3)
+    )
+)
+{
+    int matType = get<0>(GetParam());
+    Size from = get<1>(GetParam());
+    double scale = get<2>(GetParam());
+
+    cv::Mat src(from, matType);
+
+    Size to(cvRound(from.width * scale), cvRound(from.height * scale));
+    cv::Mat dst(to, matType);
+
+    declare.in(src, WARMUP_RNG).out(dst);
+    declare.time(100);
+
+    TEST_CYCLE() resize(src, dst, dst.size(), 0, 0, INTER_NEAREST_EXACT);
+
+    EXPECT_GT(countNonZero(dst.reshape(1)), 0);
+    SANITY_CHECK_NOTHING();
+}
+
 } // namespace
