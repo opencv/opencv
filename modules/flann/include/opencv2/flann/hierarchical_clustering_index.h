@@ -404,33 +404,15 @@ public:
      */
     virtual ~HierarchicalClusteringIndex()
     {
-        free_elements();
-
         if (root!=NULL) {
             delete[] root;
         }
 
         if (indices!=NULL) {
+            free_indices();
             delete[] indices;
         }
     }
-
-
-    /**
-     * Release the inner elements of indices[]
-     */
-    void free_elements()
-    {
-        if (indices!=NULL) {
-            for(int i=0; i<trees_; ++i) {
-                if (indices[i]!=NULL) {
-                    delete[] indices[i];
-                    indices[i] = NULL;
-                }
-            }
-        }
-    }
-
 
     /**
      *  Returns size of index.
@@ -467,7 +449,7 @@ public:
             throw FLANNException("Branching factor must be at least 2");
         }
 
-        free_elements();
+        free_indices();
 
         for (int i=0; i<trees_; ++i) {
             indices[i] = new int[size_];
@@ -503,13 +485,12 @@ public:
 
     void loadIndex(FILE* stream) CV_OVERRIDE
     {
-        free_elements();
-
         if (root!=NULL) {
             delete[] root;
         }
 
         if (indices!=NULL) {
+            free_indices();
             delete[] indices;
         }
 
@@ -649,6 +630,20 @@ private:
     }
 
 
+    /**
+     * Release the inner elements of indices[]
+     */
+    void free_indices()
+    {
+        if (indices!=NULL) {
+            for(int i=0; i<trees_; ++i) {
+                if (indices[i]!=NULL) {
+                    delete[] indices[i];
+                    indices[i] = NULL;
+                }
+            }
+        }
+    }
 
 
     void computeLabels(int* dsindices, int indices_length,  int* centers, int centers_length, int* labels, DistanceType& cost)
