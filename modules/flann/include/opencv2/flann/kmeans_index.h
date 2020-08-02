@@ -1022,7 +1022,45 @@ private:
     }
 
 
-
+    /**
+     * The method responsible with doing the recursive hierarchical clustering on
+     * binary vectors.
+     * As some might have heared that KMeans on binary data doesn't make sense,
+     * it's worth a little explanation why it actually fairly works. As
+     * with the Hierarchical Clustering algortihm, we seed several centers for the
+     * current node by picking some of its points. Then in a first pass each point
+     * of the node is then related to its closest center. Now let's have a look at
+     * the 5 central dimensions of the 9 following points:
+     *
+     * xxxxxx11100xxxxx (1)
+     * xxxxxx11010xxxxx (2)
+     * xxxxxx11001xxxxx (3)
+     * xxxxxx10110xxxxx (4)
+     * xxxxxx10101xxxxx (5)
+     * xxxxxx10011xxxxx (6)
+     * xxxxxx01110xxxxx (7)
+     * xxxxxx01101xxxxx (8)
+     * xxxxxx01011xxxxx (9)
+     * sum   _____
+     * of 1: 66555
+     *
+     * Even if the barycenter notion doesn't apply, we can set a center
+     * xxxxxx11111xxxxx that will better fit the five dimensions we are focusing
+     * on for these points.
+     *
+     * Note that convergence isn't ensured anymore. In practice, using Gonzales
+     * as seeding algorithm should be fine for getting convergence ("iterations"
+     * value can be set to -1). But with KMeans++ seeding you should definitely
+     * set a maximum number of iterations (but make it higher than the "iterations"
+     * default value of 11).
+     *
+     * Params:
+     *     node = the node to cluster
+     *     indices = indices of the points belonging to the current node
+     *     indices_length = number of points in the current node
+     *     branching = the branching factor to use in the clustering
+     *     level = 0 for the root node, it increases with the subdivision levels
+     */
     void computeBitfieldClustering(KMeansNodePtr node, int* indices,
                                    int indices_length, int branching, int level)
     {
