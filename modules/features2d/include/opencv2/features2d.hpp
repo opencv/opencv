@@ -272,8 +272,7 @@ public:
     @param sigma The sigma of the Gaussian applied to the input image at the octave \#0. If your image
     is captured with a weak camera with soft lenses, you might want to reduce the number.
 
-    @param useUcharDescriptors If true, the type of descriptors will be CV_8U. If false (default), it
-    will be CV_32F.
+    @param descriptorType The type of descriptors. Only CV_32F and CV_8U are supported.
     */
     CV_WRAP static Ptr<SIFT> create(int nfeatures = 0, int nOctaveLayers = 3,
         double contrastThreshold = 0.04, double edgeThreshold = 10,
