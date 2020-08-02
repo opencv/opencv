@@ -753,6 +753,11 @@ TEST_P(Test_Darknet_layers, connected)
     testDarknetLayer("connected", true);
 }
 
+TEST_P(Test_Darknet_layers, relu)
+{
+    testDarknetLayer("relu");
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Test_Darknet_layers, dnnBackendsAndTargets());
 
 }} // namespace
