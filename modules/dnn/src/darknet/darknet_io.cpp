@@ -222,6 +222,10 @@ namespace cv {
                     cv::dnn::LayerParams activation_param;
                     if (type == "relu")
                     {
+                        activation_param.type = "ReLU";
+                    }
+                    else if (type == "leaky")
+                    {
                         activation_param.set<float>("negative_slope", 0.1f);
                         activation_param.type = "ReLU";
                     }
@@ -862,9 +866,13 @@ namespace cv {
                     }
 
                     std::string activation = getParam<std::string>(layer_params, "activation", "linear");
-                    if (activation == "leaky")
+                    if (activation == "relu")
                     {
                         setParams.setActivation("relu");
+                    }
+                    if (activation == "leaky")
+                    {
+                        setParams.setActivation("leaky");
                     }
                     else if (activation == "swish")
                     {
