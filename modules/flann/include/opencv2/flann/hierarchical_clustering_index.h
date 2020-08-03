@@ -548,6 +548,7 @@ public:
     {
 
         const int maxChecks = get_param(searchParams,"checks",32);
+        const bool explore_all_trees = get_param(searchParams,"explore_all_trees",false);
 
         // Priority queue storing intermediate branches in the best-bin-first search
         Heap<BranchSt>* heap = new Heap<BranchSt>((int)size_);
@@ -555,15 +556,15 @@ public:
         std::vector<bool> checked(size_,false);
         int checks = 0;
         for (int i=0; i<trees_; ++i) {
-            findNN(root[i], result, vec, checks, maxChecks, heap, checked);
-            if ((checks >= maxChecks) && result.full())
+            findNN(root[i], result, vec, checks, maxChecks, heap, checked, explore_all_trees);
+            if (!explore_all_trees && (checks >= maxChecks) && result.full())
                 break;
         }
 
         BranchSt branch;
         while (heap->popMin(branch) && (checks<maxChecks || !result.full())) {
             NodePtr node = branch.node;
-            findNN(node, result, vec, checks, maxChecks, heap, checked);
+            findNN(node, result, vec, checks, maxChecks, heap, checked, false);
         }
 
         delete heap;
@@ -746,10 +747,10 @@ private:
 
 
     void findNN(NodePtr node, ResultSet<DistanceType>& result, const ElementType* vec, int& checks, int maxChecks,
-                Heap<BranchSt>* heap, std::vector<bool>& checked)
+                Heap<BranchSt>* heap, std::vector<bool>& checked, bool explore_all_trees = false)
     {
         if (node->childs==NULL) {
-            if ((checks>=maxChecks) && result.full()) {
+            if (!explore_all_trees && (checks>=maxChecks) && result.full()) {
                 return;
             }
             for (int i=0; i<node->size; ++i) {
@@ -778,7 +779,7 @@ private:
                 }
             }
             delete[] domain_distances;
-            findNN(node->childs[best_index],result,vec, checks, maxChecks, heap, checked);
+            findNN(node->childs[best_index],result,vec, checks, maxChecks, heap, checked, explore_all_trees);
         }
     }
 
