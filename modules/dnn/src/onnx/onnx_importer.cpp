@@ -1003,10 +1003,13 @@ void ONNXImporter::populateNet(Net dstNet)
             CV_Assert(node_proto.input_size() >= 2);
             layerParams.type = "Convolution";
             for (int j = 1; j < node_proto.input_size(); j++) {
-                layerParams.blobs.push_back(getBlob(node_proto, constBlobs, j));
+                if (constBlobs.find(node_proto.input(j)) != constBlobs.end())
+                {
+                    layerParams.blobs.push_back(getBlob(node_proto, constBlobs, j));
+                }
             }
-            layerParams.set("num_output", layerParams.blobs[0].size[0]);
-            layerParams.set("bias_term", node_proto.input_size() == 3);
+            int outCn = layerParams.blobs.empty() ? outShapes[node_proto.input(1)][0] : layerParams.blobs[0].size[0];
+            layerParams.set("num_output", outCn);
         }
         else if (layer_type == "ConvTranspose")
         {
