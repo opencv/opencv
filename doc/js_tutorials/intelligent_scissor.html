@@ -83,6 +83,7 @@
         let WEIGHT_GRADIENT_MAGNITUDE = 0.14;
         let WEIGHT_GRADIENT_DIRECTION = 0.43;
         let isDiag = (p.x != q.x) && (p.y != q.y);
+
         if ((Iy.data32F[p.x * Iy.cols * Iy.channels() + p.y * Iy.channels()] * (q.x - p.x) - Ix.data32F[p.x * Ix.cols * Ix.channels() + p.y * Ix.channels()] * (q.y - p.y)) >= 0)
         {
           dp = Iy.data32F[p.x * Iy.cols * Iy.channels() + p.y * Iy.channels()] * (q.x - p.x) - Ix.data32F[p.x * Ix.cols * Ix.channels() + p.y * Ix.channels()] * (q.y - p.y);
@@ -93,6 +94,7 @@
           dp = Iy.data32F[p.x * Iy.cols * Iy.channels() + p.y * Iy.channels()] * (p.x - q.x) - Ix.data32F[p.x * Ix.cols * Ix.channels() + p.y * Ix.channels()] * (p.y - q.y);
           dq = Iy.data32F[q.x * Iy.cols * Iy.channels() + q.y * Iy.channels()] * (p.x - q.x) - Ix.data32F[q.x * Ix.cols * Ix.channels() + q.y * Ix.channels()] * (p.y - q.y);
         }
+
         if (isDiag)
         {
           dp /= Math.sqrt(2);
@@ -103,7 +105,7 @@
           fG /= Math.sqrt(2);
         }
 
-        return WEIGHT_LAP_ZERO_CROSS * zero_crossing.data32F[q.x * zero_crossing.cols * zero_crossing.channels() + q.y * zero_crossing.channels()] +  WEIGHT_GRADIENT_DIRECTION * (Math.cos(dp) + Math.cos(dq) / Math.PI) + WEIGHT_GRADIENT_MAGNITUDE *fG;
+        return WEIGHT_LAP_ZERO_CROSS * zero_crossing.data[q.x * zero_crossing.cols * zero_crossing.channels() + q.y * zero_crossing.channels()] +  WEIGHT_GRADIENT_DIRECTION * (Math.acos(dp) + Math.acos(dq)) / Math.PI + WEIGHT_GRADIENT_MAGNITUDE *fG;
       }
 
       function find_min_path(start)
@@ -123,13 +125,15 @@
         begin = {cost: 0, next_point: start};
         L.enqueue(begin.next_point, begin.cost);
         
+        let iter = 0;
         while(!L.empty())
         {
           let P = L.top();
           console.log(P.value);
           L.dequeue(); 
           console.log(P.level);
-
+          if(iter >= 8)
+          {break;}
           let p = P.value;
           processed.data[p.x * processed.cols * processed.channels() + p.y * processed.channels()] = 0;
 
@@ -147,8 +151,8 @@
                 if (expandned.data[tx * expandned.cols * expandned.channels() + ty * expandned.channels()] == 0)
                 {
                   let q = {x: tx,y: ty};
-
                   let cost = cost_map.data32F[p.x * cost_map.cols * cost_map.channels() + p.y * cost_map.channels()]  +  local_cost(p, q);
+                  console.log(cost);
                   if (processed.data[q.x * processed.cols * processed.channels() + q.y * processed.channels()] == 1 && cost < cost_map.data32F[q.x * cost_map.cols * cost_map.channels() + q.y * cost_map.channels()])
                   {
                     removed.data[q.x * removed.cols * removed.channels() + q.y * removed.channels()] = 1;
@@ -165,6 +169,7 @@
               }
             }
           }
+          iter=iter+1;
           cv.imshow("canvas",  src);
         }
       }
@@ -177,11 +182,10 @@
         grayscale = new cv.Mat();
         Ix = new cv.Mat();
         Iy = new cv.Mat();
-        let ptr_pix = src.ucharPtr(20,20)
-
+        let ptr_pix = new cv.Point(20,20);
 
         gradient_magnitude = new cv.Mat();
-        cv.cvtColor(src, grayscale, cv.COLOR_BGRA2GRAY);
+        cv.cvtColor(src, grayscale, cv.COLOR_RGBA2GRAY);
         cv.Canny(grayscale, img_canny,  50, 100);  
         cv.threshold(img_canny, zero_crossing, 254, 1, cv.THRESH_BINARY_INV);
         cv.Sobel(grayscale, Ix, cv.CV_32FC1, 1, 0, 1);
@@ -189,20 +193,14 @@
       
         Ix.convertTo(Ix, cv.CV_32F, 1.0/255);
         Iy.convertTo(Iy, cv.CV_32F, 1.0/255);
-        for(let i=0; i<10;i++)
-        {
-          console.log(i)
-        console.log(Ix.data32F[1 * Ix.cols * Ix.channels() + i * Ix.channels()]);
-        }
         let max_val;
         cv.imshow("canvas", Ix);
         cv.magnitude(Iy, Ix, gradient_magnitude);
         let result = cv.minMaxLoc(gradient_magnitude);
         let maxPoint = result.maxVal;
         gradient_magnitude.convertTo(gradient_magnitude, cv.CV_32F, -1/maxPoint, 1.0);
-        let pix = {x: 50, y: 50};
 
-
+        find_min_path(ptr_pix)
       }
 
       document.getElementById("canvas").onmousedown = function(e)
