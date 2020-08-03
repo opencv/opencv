@@ -143,8 +143,6 @@ public:
         int nclasses = (int)classLabels.size();
         double eps = (rparams.termCrit.type & TermCriteria::EPS) != 0 &&
             rparams.termCrit.epsilon > 0 ? rparams.termCrit.epsilon : 0.;
-        vector<int> sidx(n);
-        vector<int> oobidx;
         vector<double> oobres(n, 0.);
         vector<int> oobcount(n, 0);
         vector<int> oobvotes(n*nclasses, 0);
@@ -182,7 +180,7 @@ public:
         {
             vector<uchar> oobmask(n, 1);
             vector<int> oobperm;
-
+            vector<int> sidx(n);
 
             for( i = 0; i < n; i++ )
             {
@@ -196,7 +194,7 @@ public:
 
             if( calcOOBError )
             {
-                oobidx.clear();
+                vector<int> oobidx;
                 for( i = 0; i < n; i++ )
                 {
                     if( oobmask[i] )
@@ -206,7 +204,7 @@ public:
                 // if there is no out-of-bag samples, we can not compute OOB error
                 // nor update the variable importance vector; so we proceed to the next tree
                 if( n_oob == 0 )
-                    continue;
+                    return true;
                 double ncorrect_responses = 0.;
 
                 oobError = 0.;
@@ -284,7 +282,7 @@ public:
                 }
             }
             if( calcOOBError && oobError < eps )
-                break;
+                return false;
         }
         return true;
         });
