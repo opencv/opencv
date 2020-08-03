@@ -35,3 +35,5 @@ genTestData('scale_channels', [1, 3, 3, 3], [1, 3, 3, 3])
 genTestData('mish', [1, 3, 4, 6], [1, 4, 4, 6])
 genTestData('route', [1, 4, 3, 6], [1, 2, 2, 3])
 genTestData('route_multi', [1, 6, 3, 6], [1, 4, 2, 3])
+genTestData('relu', [1, 2, 3, 4], [1, 2, 3, 4])
+
