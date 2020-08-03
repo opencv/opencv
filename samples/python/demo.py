@@ -24,7 +24,8 @@ try:
         import Tkinter as tk #Python2
         from ScrolledText import ScrolledText #Python2
 except ImportError as importerr:
-    print("Error while importing prerequisite ",importerr)
+    print("Error while importing prerequisite ",importer)
+    sys.exit()
 
 
 #from IPython.Shell import IPShellEmbed
