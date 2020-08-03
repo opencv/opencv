@@ -582,6 +582,10 @@ TEST( Features2d_FlannBasedMatcher, read_write )
     "      type: 5\n"
     "      value: 4.\n"// this line is changed!
     "   -\n"
+    "      name: explore_all_trees\n"
+    "      type: 8\n"
+    "      value: 0\n"
+    "   -\n"
     "      name: sorted\n"
     "      type: 8\n"    // FLANN_INDEX_TYPE_BOOL
     "      value: 1\n";
