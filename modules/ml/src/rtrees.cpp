@@ -144,9 +144,7 @@ public:
         double eps = (rparams.termCrit.type & TermCriteria::EPS) != 0 &&
             rparams.termCrit.epsilon > 0 ? rparams.termCrit.epsilon : 0.;
         vector<int> sidx(n);
-        vector<uchar> oobmask(n);
         vector<int> oobidx;
-        vector<int> oobperm;
         vector<double> oobres(n, 0.);
         vector<int> oobcount(n, 0);
         vector<int> oobvotes(n*nclasses, 0);
@@ -182,8 +180,9 @@ public:
         cv::parallel_for_(cv::Range(0, ntrees), [&](const Range& range) {
         for( treeidx = range.start; treeidx < range.end; treeidx++ )
         {
-            for( i = 0; i < n; i++ )
-                oobmask[i] = (uchar)1;
+            vector<uchar> oobmask(n, 1);
+            vector<int> oobperm;
+
 
             for( i = 0; i < n; i++ )
             {
