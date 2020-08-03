@@ -79,9 +79,13 @@ static void find_min_path(const Point& start, Parameters* param)
     begin.next_point = start;
 
     L.push(begin);
+    int iter=0;
     while (!L.empty())
     {
         Pix P = L.top();
+        std::cout<<P.next_point<<" "<<P.cost<<std::endl;
+        if (iter>8)
+        break;
         L.pop();
         Point p = P.next_point;
         processed.at<uchar>(p) = 0;
@@ -100,6 +104,7 @@ static void find_min_path(const Point& start, Parameters* param)
                     {
                         Point q = Point(tx, ty);
                         float cost = cost_map.at<float>(p) + local_cost(p, q, param->gradient_magnitude, param->Iy, param->Ix, param->zero_crossing);
+                        std::cout<<"loc "<< cost<<std::endl;
                         if (processed.at<uchar>(q) == 1 && cost < cost_map.at<float>(q))
                         {
                             removed.at<uchar>(q) = 1;
@@ -119,6 +124,7 @@ static void find_min_path(const Point& start, Parameters* param)
                 }
             }
         }
+        iter++;
     }
 }
 
@@ -209,7 +215,6 @@ int main( int argc, const char** argv )
     // param.img = imread(samples::findFile(filename));
 
     param.img = imread("/home/vlad/Desktop/test/test.png");
-    cvtColor(param.img, param.img, COLOR_BGR2BGRA);
 
     Point test_point = Point(20, 20);
    
@@ -217,7 +222,7 @@ int main( int argc, const char** argv )
     param.hit_map_y.create(param.img.rows, param.img.cols, CV_32SC1);
 
 
-    cvtColor(param.img, grayscale, COLOR_BGRA2GRAY);
+    cvtColor(param.img, grayscale, COLOR_BGR2GRAY);
     Canny(grayscale, img_canny, EDGE_THRESHOLD_LOW, EDGE_THRESHOLD_HIGH);
 
     threshold(img_canny, param.zero_crossing, 254, 1, THRESH_BINARY_INV);
@@ -227,9 +232,7 @@ int main( int argc, const char** argv )
     param.Iy.convertTo(param.Iy, CV_32F, 1.0/255);
 
     imshow("tr", param.Ix);
-    for( int i=0; i<10;i++)
-    std::cout<<i<<" "<<param.Ix.at<float>(1,i)<<std::endl;
-    
+
     // Compute gradients magnitude.
     double max_val = 0.0;
     magnitude(param.Iy, param.Ix, param.gradient_magnitude);
@@ -238,6 +241,7 @@ int main( int argc, const char** argv )
 
     param.img.copyTo(param.img_pre_render);
     param.img.copyTo(param.img_render);
+    find_min_path(test_point, &param);
 
     namedWindow("lasso");
     setMouseCallback("lasso", onMouse, &param);
