@@ -191,8 +191,28 @@ public:
             KDTreeIndexParams( int trees = 4 );
         };
         @endcode
+        - **HierarchicalClusteringIndexParams** When passing an object of this type the index constructed
+        will be a hierarchical tree of clusters, dividing each set of points into n clusters whose centers
+        are picked among the points without further refinement of their position.
+        This algorithm fits both floating, integer and binary vectors. :
+        @code
+        struct HierarchicalClusteringIndexParams : public IndexParams
+        {
+            HierarchicalClusteringIndexParams(
+                int branching = 32,
+                flann_centers_init_t centers_init = CENTERS_RANDOM,
+                int trees = 4,
+                int leaf_size = 100);
+
+        };
+        @endcode
         - **KMeansIndexParams** When passing an object of this type the index constructed will be a
-        hierarchical k-means tree. :
+        hierarchical k-means tree (one tree by default), dividing each set of points into n clusters
+        whose barycenters are refined iteratively.
+        Note that this algorithm has been extended to the support of binary vectors as an alternative
+        to LSH when knn search speed is the criterium. It will also outperform LSH when processing
+        directly (i.e. without the use of MCA/PCA) datasets whose points share mostly the same values
+        for most of the dimensions. It is recommended to set more than one tree with binary data. :
         @code
         struct KMeansIndexParams : public IndexParams
         {
@@ -201,6 +221,13 @@ public:
                 int iterations = 11,
                 flann_centers_init_t centers_init = CENTERS_RANDOM,
                 float cb_index = 0.2 );
+
+            KMeansIndexParams(
+                int branching,
+                int iterations,
+                flann_centers_init_t centers_init,
+                float cb_index,
+                int trees );
         };
         @endcode
         - **CompositeIndexParams** When using a parameters object of this type the index created
@@ -219,7 +246,8 @@ public:
         - **LshIndexParams** When using a parameters object of this type the index created uses
         multi-probe LSH (by Multi-Probe LSH: Efficient Indexing for High-Dimensional Similarity Search
         by Qin Lv, William Josephson, Zhe Wang, Moses Charikar, Kai Li., Proceedings of the 33rd
-        International Conference on Very Large Data Bases (VLDB). Vienna, Austria. September 2007) :
+        International Conference on Very Large Data Bases (VLDB). Vienna, Austria. September 2007).
+        This algorithm is designed for binary vectors. :
         @code
         struct LshIndexParams : public IndexParams
         {
