@@ -404,7 +404,6 @@ BRISK_Impl::generateKernel(const std::vector<float> &radiusList,
           {
             sizeList_[scale] = size;
           }
-
           // increment the iterator
           ++patternIterator;
         }
