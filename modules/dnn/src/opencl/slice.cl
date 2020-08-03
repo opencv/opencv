@@ -48,19 +48,85 @@ global: <WSZ, number_of_copy_blocks, 1>
 #define BLOCK_COLS_X4 (BLOCK_COLS / 4)
 #define BLOCK_COLS_X16 (BLOCK_COLS / 16)
 
-#ifdef USE_COPY_1D
-
-static inline
-__attribute__((always_inline))
-void copy_block_1d(
+__attribute__((reqd_work_group_size(WSZ, 1, 1)))
+__kernel void
+CONCAT(slice_, SLICE_KERNEL_SUFFIX)(
     __global const uchar* src0,
-    const uint src_offset,
-    __global uchar* dst0,
-    const uint dst_offset
+    __global uchar* dst0
 )
 {
-    __global const uchar* src = src0 + src_offset;
-    __global uchar* dst = dst0 + dst_offset;
+    uint block_id = get_global_id(1);
+    uint dst_offset0 = block_id * BLOCK_SIZE;
+    uint src_offset0 = 0;
+
+    {  // calculate src_offset0
+
+#define CALC_SRC_INDEX(dim) \
+    { \
+    uint plane_sz = CONCAT(DST_STEP_, dim) / BLOCK_SIZE; \
+    CONCAT(idx_, dim) = block_id / plane_sz; \
+    block_id = block_id - CONCAT(idx_, dim) * plane_sz; \
+    }
+#define UPDATE_SRC_OFFSET(dim) \
+    src_offset0 = mad24((uint)(CONCAT(idx_, dim) + CONCAT(SRC_START_, dim)), (uint)CONCAT(SRC_STEP_, dim), (uint)src_offset0);
+/*
+    if (get_global_id(0) == 0 && get_global_id(1) == 0) \
+        printf("(%d, %d): @%d src_offset0=%d   idx_dim=%d   block_id=%d\n", \
+            get_global_id(0), get_global_id(1), \
+            dim, src_offset0, CONCAT(idx_, dim), block_id \
+        );
+*/
+
+#if DIMS > 5
+#error "invalid configuration"
+#endif
+#if DIMS > 4
+    uint idx_4 = 0;
+#if BLOCK_DIMS <= 4
+    CALC_SRC_INDEX(4)
+#endif
+    UPDATE_SRC_OFFSET(4)
+#endif
+#if DIMS > 3
+    uint idx_3 = 0;
+#if BLOCK_DIMS <= 3
+    CALC_SRC_INDEX(3)
+#endif
+    UPDATE_SRC_OFFSET(3)
+#endif
+#if DIMS > 2
+    uint idx_2 = 0;
+#if BLOCK_DIMS <= 2
+    CALC_SRC_INDEX(2)
+#endif
+    UPDATE_SRC_OFFSET(2)
+#endif
+#if DIMS > 1
+    uint idx_1 = 0;
+#if BLOCK_DIMS <= 1
+    CALC_SRC_INDEX(1)
+#endif
+    UPDATE_SRC_OFFSET(1)
+#endif
+#if DIMS > 0
+    uint idx_0 = 0;
+    UPDATE_SRC_OFFSET(0)
+#endif
+
+/*
+    if (get_global_id(0) == 0)
+        printf("(%d, %d): src_offset0=%d dst_offset0=%d\n",
+            get_global_id(0), get_global_id(1),
+            src_offset0, dst_offset0
+        );
+*/
+
+    }  // calculate src_offset0
+
+#ifdef USE_COPY_1D
+    {  // copy_block_1d
+    __global const uchar* src = src0 + src_offset0;
+    __global uchar* dst = dst0 + dst_offset0;
 
     uint processed = 0;
 
@@ -70,8 +136,9 @@ void copy_block_1d(
         uint i = get_local_id(0) * 16;  // uchar16
         while (i < BLOCK_COLS_X16 * 16)
         {
-            uint4 idx = (uint4)(i, i + 16 * WSZ, i + 32 * WSZ, i + 48 * WSZ);
-            idx = select((uint4)i, idx, idx < (BLOCK_COLS_X16 * 16));
+            uint4 idx0 = (uint4)i;
+            uint4 idx = idx0 + (uint4)(0, 16 * WSZ, 32 * WSZ, 48 * WSZ);
+            idx = select(idx0, idx, idx < (BLOCK_COLS_X16 * 16));
 
             uchar16 a0 = vload16(0, src + idx.s0);
             uchar16 a1 = vload16(0, src + idx.s1);
@@ -97,8 +164,9 @@ void copy_block_1d(
         uint i = get_local_id(0) * 4 + processed;  // uchar4
         while (i < BLOCK_COLS_X4 * 4)
         {
-            uint4 idx = (uint4)(i, i + 4 * WSZ, i + 8 * WSZ, i + 12 * WSZ);
-            idx = select((uint4)i, idx, idx < (BLOCK_COLS_X4 * 4));
+            uint4 idx0 = (uint4)i;
+            uint4 idx = idx0 + (uint4)(0, 4 * WSZ, 8 * WSZ, 12 * WSZ);
+            idx = select(idx0, idx, idx < (BLOCK_COLS_X4 * 4));
 
             uchar4 a0 = vload4(0, src + idx.s0);
             uchar4 a1 = vload4(0, src + idx.s1);
@@ -130,19 +198,11 @@ void copy_block_1d(
         }
     }
 #endif
-}
+    }  // copy_block_1d
 
-#else  // USE_COPY_1D
+#else
 
-static inline
-__attribute__((always_inline))
-void copy_block_2d(
-    __global const uchar* src0,
-    const uint src_offset0,
-    __global uchar* dst0,
-    const uint dst_offset0
-)
-{
+    {  // copy_block_2d
     __global const uchar* src = src0 + src_offset0;
     __global uchar* dst = dst0 + dst_offset0;
 
@@ -199,85 +259,6 @@ void copy_block_2d(
 #endif  // BLOCK_COLS_FILL_X4 != BLOCK_COLS
         i += WSZ * 4;
     }
-}
-
-#endif  // USE_COPY_1D
-
-__kernel void
-CONCAT(slice_, DIMS)(
-    __global const uchar* src,
-    __global uchar* dst
-)
-{
-    uint block_id = get_global_id(1);
-
-    uint dst_offset = block_id * BLOCK_SIZE;
-
-    uint src_offset = 0;
-
-#define CALC_SRC_INDEX(dim) \
-    { \
-    uint plane_sz = CONCAT(DST_STEP_, dim) / BLOCK_SIZE; \
-    CONCAT(idx_, dim) = block_id / plane_sz; \
-    block_id = block_id - CONCAT(idx_, dim) * plane_sz; \
-    }
-#define UPDATE_SRC_OFFSET(dim) \
-    src_offset = mad24((uint)(CONCAT(idx_, dim) + CONCAT(SRC_START_, dim)), (uint)CONCAT(SRC_STEP_, dim), (uint)src_offset);
-/*
-    if (get_global_id(0) == 0 && get_global_id(1) == 0) \
-        printf("(%d, %d): @%d src_offset=%d   idx_dim=%d   block_id=%d\n", \
-            get_global_id(0), get_global_id(1), \
-            dim, src_offset, CONCAT(idx_, dim), block_id \
-        );
-*/
-
-#if DIMS > 5
-#error "invalid configuration"
-#endif
-#if DIMS > 4
-    uint idx_4 = 0;
-#if BLOCK_DIMS <= 4
-    CALC_SRC_INDEX(4)
-#endif
-    UPDATE_SRC_OFFSET(4)
-#endif
-#if DIMS > 3
-    uint idx_3 = 0;
-#if BLOCK_DIMS <= 3
-    CALC_SRC_INDEX(3)
-#endif
-    UPDATE_SRC_OFFSET(3)
-#endif
-#if DIMS > 2
-    uint idx_2 = 0;
-#if BLOCK_DIMS <= 2
-    CALC_SRC_INDEX(2)
-#endif
-    UPDATE_SRC_OFFSET(2)
-#endif
-#if DIMS > 1
-    uint idx_1 = 0;
-#if BLOCK_DIMS <= 1
-    CALC_SRC_INDEX(1)
-#endif
-    UPDATE_SRC_OFFSET(1)
-#endif
-#if DIMS > 0
-    uint idx_0 = 0;
-    UPDATE_SRC_OFFSET(0)
-#endif
-
-/*
-    if (get_global_id(0) == 0)
-        printf("(%d, %d): src_offset=%d dst_offset=%d\n",
-            get_global_id(0), get_global_id(1),
-            src_offset, dst_offset
-        );
-*/
-
-#ifdef USE_COPY_1D
-    copy_block_1d(src, src_offset, dst, dst_offset);
-#else
-    copy_block_2d(src, src_offset, dst, dst_offset);
+    }  // copy_block_2d
 #endif
 }
