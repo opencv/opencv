@@ -1,5 +1,7 @@
 {
     "func_arg_fix" : {
-        "findCirclesGrid" : { "blobDetector" : {"defval" : "cv::SimpleBlobDetector::create()"} }
+        "Calib3d" : {
+            "findCirclesGrid" : { "blobDetector" : {"defval" : "cv::SimpleBlobDetector::create()"} }
+        }
     }
 }

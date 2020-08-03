@@ -39,6 +39,11 @@ CV_EXPORTS @interface Point3d : NSObject
 - (instancetype)initWithPoint:(Point2d*)point;
 - (instancetype)initWithVals:(NSArray<NSNumber*>*)vals;
 
+#ifdef __cplusplus
++ (instancetype)fromNative:(cv::Point3d&)point;
+- (void)update:(cv::Point3d&)point;
+#endif
+
 # pragma mark - Methods
 
 /**

@@ -98,7 +98,7 @@
 }
 
 -(NSArray<NSNumber*>*)get {
-    return @[[NSNumber numberWithFloat:native[0]], [NSNumber numberWithFloat:native[1]], [NSNumber numberWithFloat:native[2]], [NSNumber numberWithFloat:native[3]]];
+    return @[[NSNumber numberWithFloat:native[0]], [NSNumber numberWithFloat:native[1]], [NSNumber numberWithFloat:native[2]], [NSNumber numberWithFloat:native[3]], [NSNumber numberWithFloat:native[4]], [NSNumber numberWithFloat:native[5]]];
 }
 
 - (BOOL)isEqual:(id)other {
