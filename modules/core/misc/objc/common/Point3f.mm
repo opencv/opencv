@@ -65,6 +65,16 @@
     return self;
 }
 
++ (instancetype)fromNative:(cv::Point3f&)point {
+    return [[Point3f alloc] initWithX:point.x y:point.y z:point.z];
+}
+
+- (void)update:(cv::Point3f&)point {
+    self.x = point.x;
+    self.y = point.y;
+    self.z = point.z;
+}
+
 - (void)set:(NSArray<NSNumber*>*)vals {
     self.x = (vals != nil && vals.count > 0) ? vals[0].floatValue : 0.0;
     self.y = (vals != nil && vals.count > 1) ? vals[1].floatValue : 0.0;
