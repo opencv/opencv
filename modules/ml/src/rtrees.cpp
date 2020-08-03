@@ -179,7 +179,8 @@ public:
         if( rparams.calcVarImportance )
             varImportance.resize(nallvars, 0.f);
 
-        for( treeidx = 0; treeidx < ntrees; treeidx++ )
+        cv::parallel_for_(cv::Range(0, ntrees), [&](const Range& range) {
+        for( treeidx = range.start; treeidx < range.end; treeidx++ )
         {
             for( i = 0; i < n; i++ )
                 oobmask[i] = (uchar)1;
@@ -286,6 +287,8 @@ public:
             if( calcOOBError && oobError < eps )
                 break;
         }
+        return true;
+        });
 
         if( rparams.calcVarImportance )
         {
