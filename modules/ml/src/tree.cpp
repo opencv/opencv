@@ -48,6 +48,47 @@ namespace ml {
 
 using std::vector;
 
+struct ParallelBestSplit
+{
+    ParallelBestSplit (const vector<int>& sidx, DTreesImpl * dtree)
+            : tree(dtree), _sidx(sidx)
+    {
+        best_split.quality = 0.;
+    }
+
+    void operator ()(const cv::BlockedRange& range)
+    {
+        DTreesImpl::WSplit split;
+        const std::vector<int> activeVars = tree->getActiveVars();
+
+        AutoBuffer<int> buf(tree->w->maxSubsetSize*2);
+        int *subset = buf.data();
+        best_subset = subset + tree->w->maxSubsetSize;
+        for (int vi_ = range.begin(); vi_ < range.end(); vi_++) {
+            int vi = activeVars[vi_];
+            if (tree->varType[vi] == VAR_CATEGORICAL) {
+                if (tree->_isClassifier)
+                    split = tree->findSplitCatClass(vi, _sidx, 0, subset);
+                else
+                    split = tree->findSplitCatReg(vi, _sidx, 0, subset);
+            } else {
+                if (tree->_isClassifier)
+                    split = tree->findSplitOrdClass(vi, _sidx, 0);
+                else
+                    split = tree->findSplitOrdReg(vi, _sidx, 0);
+            }
+            if (split.quality > best_split.quality) {
+                best_split = split;
+                std::swap(subset, best_subset);
+            }
+        }
+    }
+    DTreesImpl * tree;
+    vector<int> _sidx;
+    DTreesImpl::WSplit best_split;
+    int * best_subset;
+};
+
 TreeParams::TreeParams()
 {
     maxDepth = INT_MAX;
@@ -416,37 +457,14 @@ int DTreesImpl::addNodeAndTrySplit( int parent, const vector<int>& sidx )
 
 int DTreesImpl::findBestSplit( const vector<int>& _sidx )
 {
-    const vector<int>& activeVars = getActiveVars();
     int splitidx = -1;
-    int vi_, nv = (int)activeVars.size();
-    AutoBuffer<int> buf(w->maxSubsetSize*2);
-    int *subset = buf.data(), *best_subset = subset + w->maxSubsetSize;
-    WSplit split, best_split;
-    best_split.quality = 0.;
+    int nv = (int) getActiveVars().size();
 
-    for( vi_ = 0; vi_ < nv; vi_++ )
-    {
-        int vi = activeVars[vi_];
-        if( varType[vi] == VAR_CATEGORICAL )
-        {
-            if( _isClassifier )
-                split = findSplitCatClass(vi, _sidx, 0, subset);
-            else
-                split = findSplitCatReg(vi, _sidx, 0, subset);
-        }
-        else
-        {
-            if( _isClassifier )
-                split = findSplitOrdClass(vi, _sidx, 0);
-            else
-                split = findSplitOrdReg(vi, _sidx, 0);
-        }
-        if( split.quality > best_split.quality )
-        {
-            best_split = split;
-            std::swap(subset, best_subset);
-        }
-    }
+    ParallelBestSplit pbs(_sidx, this);
+
+    cv::parallel_reduce(cv::BlockedRange(0, nv), pbs);
+    WSplit best_split = pbs.best_split;
+    int* best_subset = pbs.best_subset;
 
     if( best_split.quality > 0 )
     {
