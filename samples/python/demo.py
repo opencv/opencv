@@ -17,15 +17,15 @@ from glob import glob
 from subprocess import Popen
 
 try:
-    if sys.version_info[0] == 3:
+    if sys.version_info[0] >= 3:
         import tkinter as tk  # Python 3
         from tkinter.scrolledtext import ScrolledText #Python3
     elif sys.version_info[0] == 2:
         import Tkinter as tk #Python2
         from ScrolledText import ScrolledText #Python2
 except ImportError as importerr:
-    print("Error while importing prerequisite ",importer)
-    sys.exit()
+    print("Error while importing prerequisite ",importerr)
+    sys.exit(2)
 
 
 #from IPython.Shell import IPShellEmbed
