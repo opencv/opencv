@@ -168,6 +168,10 @@
 #  include <wasm_simd128.h>
 #endif
 
+#if defined CV_CPU_COMPILE_RVV
+#  define CV_RVV 1
+#endif
+
 #endif // CV_ENABLE_INTRINSICS && !CV_DISABLE_OPTIMIZATION && !__CUDACC__
 
 #if defined CV_CPU_COMPILE_AVX && !defined CV_CPU_BASELINE_COMPILE_AVX
@@ -342,4 +346,8 @@ struct VZeroUpperGuard {
 
 #ifndef CV_WASM_SIMD
 #  define CV_WASM_SIMD 0
+#endif
+
+#ifndef CV_RVV
+#  define CV_RVV 0
 #endif

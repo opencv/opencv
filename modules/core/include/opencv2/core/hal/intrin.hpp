@@ -199,6 +199,7 @@ using namespace CV_CPU_OPTIMIZATION_HAL_NAMESPACE;
 #   undef CV_VSX
 #   undef CV_FP16
 #   undef CV_MSA
+#   undef CV_RVV
 #endif
 
 #if (CV_SSE2 || CV_NEON || CV_VSX || CV_MSA || CV_WASM_SIMD) && !defined(CV_FORCE_SIMD128_CPP)
@@ -225,6 +226,9 @@ using namespace CV_CPU_OPTIMIZATION_HAL_NAMESPACE;
 
 #elif CV_WASM_SIMD && !defined(CV_FORCE_SIMD128_CPP)
 #include "opencv2/core/hal/intrin_wasm.hpp"
+
+#elif CV_RVV && !defined(CV_FORCE_SIMD128_CPP)
+#include "opencv2/core/hal/intrin_rvv.hpp"
 
 #else
 
