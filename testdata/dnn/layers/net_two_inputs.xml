@@ -1,48 +1,104 @@
-<net name="default" version="2" batch="1">
-    <layers>
-        <layer name="second_input" type="Input" precision="FP32" id="1">
-            <output>
-                <port id="1">
-                    <dim>1</dim>
-                    <dim>2</dim>
-                    <dim>3</dim>
-                </port>
-            </output>
-        </layer>
-        <layer name="data" type="Input" precision="FP32" id="0">
-            <output>
-                <port id="0">
-                    <dim>1</dim>
-                    <dim>2</dim>
-                    <dim>3</dim>
-                </port>
-            </output>
-        </layer>
-        <layer name="output" type="Eltwise" precision="FP32" id="2">
-            <elementwise_data operation="sum"/>
-            <input>
-                <port id="2">
-                    <dim>1</dim>
-                    <dim>2</dim>
-                    <dim>3</dim>
-                </port>
-                <port id="3">
-                    <dim>1</dim>
-                    <dim>2</dim>
-                    <dim>3</dim>
-                </port>
-            </input>
-            <output>
-                <port id="4">
-                    <dim>1</dim>
-                    <dim>2</dim>
-                    <dim>3</dim>
-                </port>
-            </output>
-        </layer>
-    </layers>
-    <edges>
-        <edge from-layer="0" from-port="0" to-layer="2" to-port="2"/>
-        <edge from-layer="1" from-port="1" to-layer="2" to-port="3"/>
-    </edges>
+<?xml version="1.0" ?>
+<net name="net_two_inputs" version="10">
+	<layers>
+		<layer id="1" name="second_input" type="Parameter" version="opset1">
+			<data element_type="f32" shape="1,2,3"/>
+			<output>
+				<port id="0" precision="FP32">
+					<dim>1</dim>
+					<dim>2</dim>
+					<dim>3</dim>
+				</port>
+			</output>
+		</layer>
+    <layer id="0" name="data" type="Parameter" version="opset1">
+			<data element_type="f32" shape="1,2,3"/>
+			<output>
+				<port id="0" precision="FP32">
+					<dim>1</dim>
+					<dim>2</dim>
+					<dim>3</dim>
+				</port>
+			</output>
+		</layer>
+    <layer id="2" name="output" type="Add" version="opset1">
+      <input>
+        <port id="0">
+          <dim>1</dim>
+          <dim>2</dim>
+          <dim>3</dim>
+        </port>
+        <port id="1">
+          <dim>1</dim>
+          <dim>2</dim>
+          <dim>3</dim>
+        </port>
+      </input>
+      <output>
+        <port id="2" precision="FP32">
+          <dim>1</dim>
+          <dim>2</dim>
+          <dim>3</dim>
+        </port>
+      </output>
+    </layer>
+    <layer id="3" name="output/sink_port_0" type="Result" version="opset1">
+			<input>
+				<port id="0">
+					<dim>1</dim>
+					<dim>2</dim>
+					<dim>3</dim>
+				</port>
+			</input>
+		</layer>
+	</layers>
+	<edges>
+    <edge from-layer="0" from-port="0" to-layer="2" to-port="0"/>
+    <edge from-layer="1" from-port="0" to-layer="2" to-port="1"/>
+    <edge from-layer="2" from-port="2" to-layer="3" to-port="0"/>
+	</edges>
+	<meta_data>
+		<MO_version value=""/>
+		<cli_parameters>
+			<blobs_as_inputs value="True"/>
+			<caffe_parser_path value="DIR"/>
+			<data_type value="FP32"/>
+			<disable_nhwc_to_nchw value="False"/>
+			<disable_omitting_optional value="False"/>
+			<disable_resnet_optimization value="False"/>
+			<disable_weights_compression value="False"/>
+			<enable_concat_optimization value="False"/>
+			<enable_flattening_nested_params value="False"/>
+			<enable_ssd_gluoncv value="False"/>
+			<extensions value="DIR"/>
+			<framework value="caffe"/>
+			<freeze_placeholder_with_value value="{}"/>
+			<generate_deprecated_IR_V2 value="False"/>
+			<generate_deprecated_IR_V7 value="False"/>
+			<generate_experimental_IR_V10 value="True"/>
+			<input_model value="DIR/layer_convolution.caffemodel"/>
+			<input_model_is_text value="False"/>
+			<input_proto value="DIR/layer_convolution.prototxt"/>
+			<k value="DIR/CustomLayersMapping.xml"/>
+			<keep_quantize_ops_in_IR value="True"/>
+			<keep_shape_ops value="False"/>
+			<legacy_mxnet_model value="False"/>
+			<log_level value="ERROR"/>
+			<mean_scale_values value="{}"/>
+			<mean_values value="()"/>
+			<model_name value="layer_convolution"/>
+			<move_to_preprocess value="False"/>
+			<output_dir value="DIR"/>
+			<placeholder_data_types value="{}"/>
+			<progress value="False"/>
+			<remove_memory value="False"/>
+			<remove_output_softmax value="False"/>
+			<reverse_input_channels value="False"/>
+			<save_params_from_nd value="False"/>
+			<scale_values value="()"/>
+			<silent value="False"/>
+			<stream_output value="False"/>
+			<unset unset_cli_parameters="batch, counts, disable_fusing, disable_gfusing, finegrain_fusing, input, input_checkpoint, input_meta_graph, input_shape, input_symbol, mean_file, mean_file_offsets, nd_prefix_name, output, placeholder_shapes, pretrained_model_name, saved_model_dir, saved_model_tags, scale, tensorboard_logdir, tensorflow_custom_layer_libraries, tensorflow_custom_operations_config_update, tensorflow_object_detection_api_pipeline_config, tensorflow_use_custom_operations_config, transformations_config"/>
+		</cli_parameters>
+	</meta_data>
 </net>

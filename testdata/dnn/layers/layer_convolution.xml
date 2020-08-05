@@ -1,9 +1,10 @@
 <?xml version="1.0" ?>
-<net batch="1" name="test_Convolution" version="4">
+<net name="test_Convolution" version="10">
 	<layers>
-		<layer id="0" name="input" precision="FP32" type="Input">
+		<layer id="0" name="input" type="Parameter" version="opset1">
+			<data element_type="f32" shape="2,6,75,113"/>
 			<output>
-				<port id="0">
+				<port id="0" precision="FP32">
 					<dim>2</dim>
 					<dim>6</dim>
 					<dim>75</dim>
@@ -11,8 +12,20 @@
 				</port>
 			</output>
 		</layer>
-		<layer id="1" name="output" precision="FP32" type="Convolution">
-			<data dilations="1,1" group="3" kernel="4,5" output="12" pads_begin="0,1" pads_end="0,1" strides="2,3"/>
+		<layer id="1" name="147150_const" type="Const" version="opset1">
+			<data element_type="f32" offset="0" shape="3,4,2,4,5" size="1920"/>
+			<output>
+				<port id="1" precision="FP32">
+					<dim>3</dim>
+					<dim>4</dim>
+					<dim>2</dim>
+					<dim>4</dim>
+					<dim>5</dim>
+				</port>
+			</output>
+		</layer>
+		<layer id="2" name="output/WithoutBiases" type="GroupConvolution" version="opset1">
+			<data dilations="1,1" output_padding="0,0" pads_begin="0,1" pads_end="0,1" strides="2,3"/>
 			<input>
 				<port id="0">
 					<dim>2</dim>
@@ -20,48 +33,118 @@
 					<dim>75</dim>
 					<dim>113</dim>
 				</port>
+				<port id="1">
+					<dim>3</dim>
+					<dim>4</dim>
+					<dim>2</dim>
+					<dim>4</dim>
+					<dim>5</dim>
+				</port>
 			</input>
 			<output>
-				<port id="3">
+				<port id="2" precision="FP32">
 					<dim>2</dim>
 					<dim>12</dim>
 					<dim>36</dim>
 					<dim>37</dim>
 				</port>
 			</output>
-			<blobs>
-				<weights offset="0" size="1920"/>
-				<biases offset="1920" size="48"/>
-			</blobs>
+		</layer>
+		<layer id="3" name="output/Dims47/copy_const" type="Const" version="opset1">
+			<data element_type="f32" offset="1920" shape="1,12,1,1" size="48"/>
+			<output>
+				<port id="1" precision="FP32">
+					<dim>1</dim>
+					<dim>12</dim>
+					<dim>1</dim>
+					<dim>1</dim>
+				</port>
+			</output>
+		</layer>
+		<layer id="4" name="output" type="Add" version="opset1">
+			<input>
+				<port id="0">
+					<dim>2</dim>
+					<dim>12</dim>
+					<dim>36</dim>
+					<dim>37</dim>
+				</port>
+				<port id="1">
+					<dim>1</dim>
+					<dim>12</dim>
+					<dim>1</dim>
+					<dim>1</dim>
+				</port>
+			</input>
+			<output>
+				<port id="2" precision="FP32">
+					<dim>2</dim>
+					<dim>12</dim>
+					<dim>36</dim>
+					<dim>37</dim>
+				</port>
+			</output>
+		</layer>
+		<layer id="5" name="output/sink_port_0" type="Result" version="opset1">
+			<input>
+				<port id="0">
+					<dim>2</dim>
+					<dim>12</dim>
+					<dim>36</dim>
+					<dim>37</dim>
+				</port>
+			</input>
 		</layer>
 	</layers>
 	<edges>
-		<edge from-layer="0" from-port="0" to-layer="1" to-port="0"/>
+		<edge from-layer="0" from-port="0" to-layer="2" to-port="0"/>
+		<edge from-layer="1" from-port="1" to-layer="2" to-port="1"/>
+		<edge from-layer="2" from-port="2" to-layer="4" to-port="0"/>
+		<edge from-layer="3" from-port="1" to-layer="4" to-port="1"/>
+		<edge from-layer="4" from-port="2" to-layer="5" to-port="0"/>
 	</edges>
 	<meta_data>
-		<MO_version value="1.5.12.49d067a0"/>
+		<MO_version value=""/>
 		<cli_parameters>
-			<data_type value="FP32"/>
-			<disable_fusing value="False"/>
-			<disable_gfusing value="False"/>
+			<blobs_as_inputs value="True"/>
+			<caffe_parser_path value="DIR"/>
+			<data_type value="float"/>
+			<disable_nhwc_to_nchw value="False"/>
 			<disable_omitting_optional value="False"/>
 			<disable_resnet_optimization value="False"/>
+			<disable_weights_compression value="False"/>
+			<enable_concat_optimization value="False"/>
 			<enable_flattening_nested_params value="False"/>
+			<enable_ssd_gluoncv value="False"/>
 			<extensions value="DIR"/>
 			<framework value="caffe"/>
+			<freeze_placeholder_with_value value="{}"/>
 			<generate_deprecated_IR_V2 value="False"/>
+			<generate_deprecated_IR_V7 value="False"/>
+			<generate_experimental_IR_V10 value="True"/>
 			<input_model value="DIR/layer_convolution.caffemodel"/>
+			<input_model_is_text value="False"/>
 			<input_proto value="DIR/layer_convolution.prototxt"/>
 			<k value="DIR/CustomLayersMapping.xml"/>
+			<keep_quantize_ops_in_IR value="True"/>
+			<keep_shape_ops value="False"/>
+			<legacy_mxnet_model value="False"/>
 			<log_level value="ERROR"/>
+			<mean_scale_values value="{}"/>
 			<mean_values value="()"/>
+			<model_name value="layer_convolution"/>
 			<move_to_preprocess value="False"/>
 			<output_dir value="DIR"/>
+			<placeholder_data_types value="{}"/>
+			<progress value="False"/>
+			<remove_memory value="False"/>
+			<remove_output_softmax value="False"/>
 			<reverse_input_channels value="False"/>
+			<save_params_from_nd value="False"/>
 			<scale_values value="()"/>
 			<silent value="False"/>
-			<version value="False"/>
-			<unset unset_cli_parameters="batch, finegrain_fusing, freeze_placeholder_with_value, input, input_shape, mean_file, mean_file_offsets, model_name, output, scale"/>
+			<stream_output value="False"/>
+			<unset unset_cli_parameters="batch, counts, disable_fusing, disable_gfusing, finegrain_fusing, input, input_checkpoint, input_meta_graph, input_shape, input_symbol, mean_file, mean_file_offsets, nd_prefix_name, output, placeholder_shapes, pretrained_model_name, saved_model_dir, saved_model_tags, scale, tensorboard_logdir, tensorflow_custom_layer_libraries, tensorflow_custom_operations_config_update, tensorflow_object_detection_api_pipeline_config, tensorflow_use_custom_operations_config, transformations_config"/>
 		</cli_parameters>
 	</meta_data>
 </net>
