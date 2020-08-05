@@ -40,6 +40,7 @@ class DaSiamRPNTracker:
         elif self.windowing == "uniform":
             self.window = np.ones((self.score_size, self.score_size))
         self.window = np.tile(self.window.flatten(), self.anchor_num)
+        self.init_status = False
 
     def init(self, im, init_bb, net="dasiamrpn_model.onnx", \
         kernel_r1="dasiamrpn_kernel_r1.onnx", \
@@ -52,9 +53,11 @@ class DaSiamRPNTracker:
         self.target_sz = target_sz
         self.avg_chans = np.mean(im, axis=(0, 1))
         # Loading network`s and kernel`s models
-        net = cv.dnn.readNet(net)
-        kernel_r1 = cv.dnn.readNet(kernel_r1)
-        kernel_cls1 = cv.dnn.readNet(kernel_cls1)
+        if not self.init_status:
+            net = cv.dnn.readNet(net)
+            kernel_r1 = cv.dnn.readNet(kernel_r1)
+            kernel_cls1 = cv.dnn.readNet(kernel_cls1)
+            self.init_status = True
 
         # When we trying to generate ONNX model from the pre-trained .pth model
         # we are using only one state of the network. In our case used state
