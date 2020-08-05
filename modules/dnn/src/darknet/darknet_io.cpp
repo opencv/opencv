@@ -222,6 +222,10 @@ namespace cv {
                     cv::dnn::LayerParams activation_param;
                     if (type == "relu")
                     {
+                        activation_param.type = "ReLU";
+                    }
+                    else if (type == "leaky")
+                    {
                         activation_param.set<float>("negative_slope", 0.1f);
                         activation_param.type = "ReLU";
                     }
@@ -862,24 +866,8 @@ namespace cv {
                     }
 
                     std::string activation = getParam<std::string>(layer_params, "activation", "linear");
-                    if (activation == "leaky")
-                    {
-                        setParams.setActivation("relu");
-                    }
-                    else if (activation == "swish")
-                    {
-                        setParams.setActivation("swish");
-                    }
-                    else if (activation == "mish")
-                    {
-                        setParams.setActivation("mish");
-                    }
-                    else if (activation == "logistic")
-                    {
-                        setParams.setActivation("logistic");
-                    }
-                    else if (activation != "linear")
-                        CV_Error(cv::Error::StsParseError, "Unsupported activation: " + activation);
+                    if (activation != "linear")
+                        setParams.setActivation(activation);
 
                     net->out_channels_vec[layers_counter] = tensor_shape[0];
                 }
