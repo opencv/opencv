@@ -35,12 +35,9 @@ class DaSiamRPNTracker:
             self.window = np.ones((self.score_size, self.score_size))
         self.window = np.tile(self.window.flatten(), self.anchor_num)
         # Loading network`s and kernel`s models
-        if not self.init_status:
-            net = cv.dnn.readNet(net)
-            kernel_r1 = cv.dnn.readNet(kernel_r1)
-            kernel_cls1 = cv.dnn.readNet(kernel_cls1)
-            self.init_status = True
-        self.init_status = False
+        self.net = cv.dnn.readNet(net)
+        self.kernel_r1 = cv.dnn.readNet(kernel_r1)
+        self.kernel_cls1 = cv.dnn.readNet(kernel_cls1)
 
     def init(self, im, init_bb):
         target_pos, target_sz = np.array([init_bb[0], init_bb[1]]), np.array([init_bb[2], init_bb[3]])
@@ -63,14 +60,13 @@ class DaSiamRPNTracker:
         wc_z = self.target_sz[0] + self.context_amount * sum(self.target_sz)
         hc_z = self.target_sz[1] + self.context_amount * sum(self.target_sz)
         s_z = round(np.sqrt(wc_z * hc_z))
-        self.net = net
         z_crop = self.__get_subwindow_tracking(im, self.exemplar_size, s_z)
         z_crop = z_crop.transpose(2, 0, 1).reshape(1, 3, 127, 127).astype(np.float32)
         self.net.setInput(z_crop)
         z_f = self.net.forward('63')
-        kernel_r1.setInput(z_f)
+        self.kernel_r1.setInput(z_f)
         r1 = kernel_r1.forward()
-        kernel_cls1.setInput(z_f)
+        self.kernel_cls1.setInput(z_f)
         cls1 = kernel_cls1.forward()
         r1 = r1.reshape(20, 256, 4, 4)
         cls1 = cls1.reshape(10, 256 , 4, 4)
