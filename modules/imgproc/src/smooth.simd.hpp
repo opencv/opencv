@@ -59,6 +59,11 @@ void GaussianBlurFixedPoint(const Mat& src, /*const*/ Mat& dst,
                             const uint16_t/*ufixedpoint16*/* fky, int fky_size,
                             int borderType);
 
+void GaussianBlurFixedPoint(const Mat& src, /*const*/ Mat& dst,
+                            const uint32_t/*ufixedpoint32*/* fkx, int fkx_size,
+                            const uint32_t/*ufixedpoint32*/* fky, int fky_size,
+                            int borderType);
+
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
 #if defined(CV_CPU_BASELINE_MODE)
@@ -1376,6 +1381,12 @@ void vlineSmooth3N121<uint8_t, ufixedpoint16>(const ufixedpoint16* const * src, 
     for (; i < len; i++)
         dst[i] = (((uint32_t)(((uint16_t*)(src[0]))[i]) + (uint32_t)(((uint16_t*)(src[2]))[i]) + ((uint32_t)(((uint16_t*)(src[1]))[i]) << 1)) + (1 << 9)) >> 10;
 }
+template <>
+void vlineSmooth3N121<uint16_t, ufixedpoint32>(const ufixedpoint32* const * src, const ufixedpoint32*, int, uint16_t* dst, int len)
+{
+    for (int i = 0; i < len; i++)
+        dst[i] = (((uint64_t)((uint32_t*)(src[0]))[i]) + (uint64_t)(((uint32_t*)(src[2]))[i]) + ((uint64_t(((uint32_t*)(src[1]))[i]) << 1)) + (1 << 17)) >> 18;
+}
 template <typename ET, typename FT>
 void vlineSmooth5N(const FT* const * src, const FT* m, int, ET* dst, int len)
 {
@@ -1524,6 +1535,14 @@ void vlineSmooth5N14641<uint8_t, ufixedpoint16>(const ufixedpoint16* const * src
         dst[i] = ((uint32_t)(((uint16_t*)(src[2]))[i]) * 6 +
                   (((uint32_t)(((uint16_t*)(src[1]))[i]) + (uint32_t)(((uint16_t*)(src[3]))[i])) << 2) +
                   (uint32_t)(((uint16_t*)(src[0]))[i]) + (uint32_t)(((uint16_t*)(src[4]))[i]) + (1 << 11)) >> 12;
+}
+template <>
+void vlineSmooth5N14641<uint16_t, ufixedpoint32>(const ufixedpoint32* const * src, const ufixedpoint32*, int, uint16_t* dst, int len)
+{
+    for (int i=0; i < len; i++)
+        dst[i] = ((uint64_t)(((uint32_t*)(src[2]))[i]) * 6 +
+                  (((uint64_t)(((uint32_t*)(src[1]))[i]) + (uint64_t)(((uint32_t*)(src[3]))[i])) << 2) +
+                  (uint64_t)(((uint32_t*)(src[0]))[i]) + (uint64_t)(((uint32_t*)(src[4]))[i]) + (1 << 19)) >> 20;
 }
 template <typename ET, typename FT>
 void vlineSmooth(const FT* const * src, const FT* m, int n, ET* dst, int len)
@@ -2041,6 +2060,25 @@ void GaussianBlurFixedPoint(const Mat& src, /*const*/ Mat& dst,
             src.ptr<uint8_t>(), src.step1(),
             dst.ptr<uint8_t>(), dst.step1(), dst.cols, dst.rows, dst.channels(),
             (const ufixedpoint16*)fkx, fkx_size, (const ufixedpoint16*)fky, fky_size,
+            borderType & ~BORDER_ISOLATED);
+    {
+        // TODO AVX guard (external call)
+        parallel_for_(Range(0, dst.rows), invoker, std::max(1, std::min(getNumThreads(), getNumberOfCPUs())));
+    }
+}
+
+void GaussianBlurFixedPoint(const Mat& src, /*const*/ Mat& dst,
+                            const uint32_t/*ufixedpoint32*/* fkx, int fkx_size,
+                            const uint32_t/*ufixedpoint32*/* fky, int fky_size,
+                            int borderType)
+{
+    CV_INSTRUMENT_REGION();
+
+    CV_Assert(src.depth() == CV_16U && ((borderType & BORDER_ISOLATED) || !src.isSubmatrix()));
+    fixedSmoothInvoker<uint16_t, ufixedpoint32> invoker(
+            src.ptr<uint16_t>(), src.step1(),
+            dst.ptr<uint16_t>(), dst.step1(), dst.cols, dst.rows, dst.channels(),
+            (const ufixedpoint32*)fkx, fkx_size, (const ufixedpoint32*)fky, fky_size,
             borderType & ~BORDER_ISOLATED);
     {
         // TODO AVX guard (external call)

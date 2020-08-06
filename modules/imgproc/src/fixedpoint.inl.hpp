@@ -157,6 +157,9 @@ public:
     CV_ALWAYS_INLINE bool isZero() { return val == 0; }
     static CV_ALWAYS_INLINE ufixedpoint64 zero() { return ufixedpoint64(); }
     static CV_ALWAYS_INLINE ufixedpoint64 one() { return ufixedpoint64((uint64_t)(1ULL << fixedShift)); }
+
+    static CV_ALWAYS_INLINE ufixedpoint64 fromRaw(uint64_t v) { return ufixedpoint64(v); }
+    CV_ALWAYS_INLINE ufixedpoint64 raw() { return val; }
     friend class ufixedpoint32;
 };
 
@@ -261,6 +264,9 @@ public:
     CV_ALWAYS_INLINE bool isZero() { return val == 0; }
     static CV_ALWAYS_INLINE ufixedpoint32 zero() { return ufixedpoint32(); }
     static CV_ALWAYS_INLINE ufixedpoint32 one() { return ufixedpoint32((1U << fixedShift)); }
+
+    static CV_ALWAYS_INLINE ufixedpoint32 fromRaw(uint32_t v) { return ufixedpoint32(v); }
+    CV_ALWAYS_INLINE ufixedpoint32 raw() { return val; }
     friend class ufixedpoint16;
 };
 
