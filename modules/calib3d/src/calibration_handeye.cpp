@@ -712,7 +712,10 @@ void calibrateHandEye(InputArrayOfArrays R_gripper2base, InputArrayOfArrays t_gr
     {
         Mat m = Mat::eye(4, 4, CV_64FC1);
         Mat R = m(Rect(0, 0, 3, 3));
-        R_gripper2base_[i].convertTo(R, CV_64F);
+        if(R_gripper2base_[i].size() == Size(3, 3))
+            R_gripper2base_[i].convertTo(R, CV_64F);
+        else
+            Rodrigues(R_gripper2base_[i], R);
 
         Mat t = m(Rect(3, 0, 1, 3));
         t_gripper2base_[i].convertTo(t, CV_64F);
@@ -727,7 +730,10 @@ void calibrateHandEye(InputArrayOfArrays R_gripper2base, InputArrayOfArrays t_gr
     {
         Mat m = Mat::eye(4, 4, CV_64FC1);
         Mat R = m(Rect(0, 0, 3, 3));
-        R_target2cam_[i].convertTo(R, CV_64F);
+        if(R_target2cam_[i].size() == Size(3, 3))
+            R_target2cam_[i].convertTo(R, CV_64F);
+        else
+            Rodrigues(R_target2cam_[i], R);
 
         Mat t = m(Rect(3, 0, 1, 3));
         t_target2cam_[i].convertTo(t, CV_64F);

@@ -2310,7 +2310,7 @@ CV_EXPORTS_W void warpAffine( InputArray src, OutputArray dst,
                               const Scalar& borderValue = Scalar());
 
 /** @example samples/cpp/warpPerspective_demo.cpp
-An example program shows using cv::findHomography and cv::warpPerspective for image warping
+An example program shows using cv::getPerspectiveTransform and cv::warpPerspective for image warping
 */
 
 /** @brief Applies a perspective transformation to an image.

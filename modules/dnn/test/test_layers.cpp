@@ -1133,6 +1133,9 @@ TEST_P(Layer_Test_Convolution_DLDT, Accuracy)
     const Backend backendId = get<0>(GetParam());
     const Target targetId = get<1>(GetParam());
 
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && targetId == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+
     if (backendId != DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && backendId != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         throw SkipTestException("No support for async forward");
 
@@ -1143,9 +1146,8 @@ TEST_P(Layer_Test_Convolution_DLDT, Accuracy)
     else
         FAIL() << "Unknown backendId";
 
-    std::string suffix = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? "_fp16" : "";
     Net netDefault = readNet(_tf("layer_convolution.caffemodel"), _tf("layer_convolution.prototxt"));
-    Net net = readNet(_tf("layer_convolution" + suffix + ".xml"), _tf("layer_convolution" + suffix + ".bin"));
+    Net net = readNet(_tf("layer_convolution.xml"), _tf("layer_convolution.bin"));
 
     Mat inp = blobFromNPY(_tf("blob.npy"));
 
@@ -1165,13 +1167,19 @@ TEST_P(Layer_Test_Convolution_DLDT, Accuracy)
 
     std::vector<int> outLayers = net.getUnconnectedOutLayers();
     ASSERT_EQ(net.getLayer(outLayers[0])->name, "output");
-    ASSERT_EQ(net.getLayer(outLayers[0])->type, "Convolution");
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+        ASSERT_EQ(net.getLayer(outLayers[0])->type, "Convolution");
+    else
+        ASSERT_EQ(net.getLayer(outLayers[0])->type, "Add");
 }
 
 TEST_P(Layer_Test_Convolution_DLDT, setInput_uint8)
 {
     const Backend backendId = get<0>(GetParam());
     const Target targetId = get<1>(GetParam());
+
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && targetId == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
 
     if (backendId != DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && backendId != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         throw SkipTestException("No support for async forward");
@@ -1189,12 +1197,10 @@ TEST_P(Layer_Test_Convolution_DLDT, setInput_uint8)
     randu(inputs[0], 0, 255);
     inputs[0].convertTo(inputs[1], CV_32F);
 
-    std::string suffix = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? "_fp16" : "";
-
     Mat outs[2];
     for (int i = 0; i < 2; ++i)
     {
-        Net net = readNet(_tf("layer_convolution" + suffix + ".xml"), _tf("layer_convolution" + suffix + ".bin"));
+        Net net = readNet(_tf("layer_convolution.xml"), _tf("layer_convolution.bin"));
         net.setPreferableBackend(backendId);
         net.setPreferableTarget(targetId);
         net.setInput(inputs[i]);
@@ -1210,6 +1216,9 @@ TEST_P(Layer_Test_Convolution_DLDT, multithreading)
     const Backend backendId = get<0>(GetParam());
     const Target targetId = get<1>(GetParam());
 
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && targetId == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+
     if (backendId != DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && backendId != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         throw SkipTestException("No support for async forward");
 
@@ -1220,9 +1229,8 @@ TEST_P(Layer_Test_Convolution_DLDT, multithreading)
     else
         FAIL() << "Unknown backendId";
 
-    std::string suffix = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? "_fp16" : "";
-    std::string xmlPath = _tf("layer_convolution" + suffix + ".xml");
-    std::string binPath = _tf("layer_convolution" + suffix + ".bin");
+    std::string xmlPath = _tf("layer_convolution.xml");
+    std::string binPath = _tf("layer_convolution.bin");
     Net firstNet = readNet(xmlPath, binPath);
     Net secondNet = readNet(xmlPath, binPath);
     Mat inp = blobFromNPY(_tf("blob.npy"));
@@ -1281,8 +1289,7 @@ TEST_P(Test_DLDT_two_inputs_3dim, as_IR)
     int secondInpType = get<1>(GetParam());
     Target targetId = get<2>(GetParam());
 
-    std::string suffix = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? "_fp16" : "";
-    Net net = readNet(_tf("net_two_inputs" + suffix + ".xml"), _tf("net_two_inputs.bin"));
+    Net net = readNet(_tf("net_two_inputs.xml"), _tf("net_two_inputs.bin"));
     std::vector<int> inpSize = get<3>(GetParam());
     Mat firstInp(3, inpSize.data(), firstInpType);
     Mat secondInp(3, inpSize.data(), secondInpType);

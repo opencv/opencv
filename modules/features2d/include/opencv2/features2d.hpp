@@ -245,6 +245,31 @@ typedef Feature2D DescriptorExtractor;
 //! @{
 
 
+/** @brief Class for implementing the wrapper which makes detectors and extractors to be affine invariant,
+described as ASIFT in @cite YM11 .
+*/
+class CV_EXPORTS_W AffineFeature : public Feature2D
+{
+public:
+    /**
+    @param backend The detector/extractor you want to use as backend.
+    @param maxTilt The highest power index of tilt factor. 5 is used in the paper as tilt sampling range n.
+    @param minTilt The lowest power index of tilt factor. 0 is used in the paper.
+    @param tiltStep Tilt sampling step \f$\delta_t\f$ in Algorithm 1 in the paper.
+    @param rotateStepBase Rotation sampling step factor b in Algorithm 1 in the paper.
+    */
+    CV_WRAP static Ptr<AffineFeature> create(const Ptr<Feature2D>& backend,
+        int maxTilt = 5, int minTilt = 0, float tiltStep = 1.4142135623730951f, float rotateStepBase = 72);
+
+    CV_WRAP virtual void setViewParams(const std::vector<float>& tilts, const std::vector<float>& rolls) = 0;
+    CV_WRAP virtual void getViewParams(std::vector<float>& tilts, std::vector<float>& rolls) const = 0;
+    CV_WRAP virtual String getDefaultName() const CV_OVERRIDE;
+};
+
+typedef AffineFeature AffineFeatureDetector;
+typedef AffineFeature AffineDescriptorExtractor;
+
+
 /** @brief Class for extracting keypoints and computing descriptors using the Scale Invariant Feature Transform
 (SIFT) algorithm by D. Lowe @cite Lowe04 .
 */
