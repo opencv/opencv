@@ -756,6 +756,42 @@ TEST_P(Test_Caffe_nets, RFCN)
     testFaster("rfcn_pascal_voc_resnet50.prototxt", "resnet50_rfcn_final.caffemodel", ref, scoreDiff, iouDiff);
 }
 
+TEST_P(Test_Caffe_nets, VariableBatchSize)
+{
+    applyTestTag(CV_TEST_TAG_LONG, CV_TEST_TAG_MEMORY_2GB);
+
+    Net net;
+    {
+        const string proto = findDataFile("dnn/resnet_demo.prototxt");
+        const string model = findDataFile("dnn/resnet_demo.caffemodel", false);
+        net = readNetFromCaffe(proto, model);
+        ASSERT_FALSE(net.empty());
+    }
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    int batch_size = 4;
+    std::vector<Mat> batch_imgs;
+    Mat img(112, 112, CV_8UC3, cv::Scalar(0, 0, 0));
+    cv::Mat inp = cv::dnn::blobFromImage(img,  0.0078125, cv::Size(112, 112),cv::Scalar(127.5, 127.5, 127.5), true, false, CV_32F);
+    net.setInput(inp);
+    cv::Mat ref = net.forward("fc1");
+    for (int i = 0; i < batch_size; i++)
+    {
+        batch_imgs.push_back(img);
+    }
+    cv::Mat inputBlob =
+            cv::dnn::blobFromImages(batch_imgs, 0.0078125, cv::Size(112, 112),cv::Scalar(127.5, 127.5, 127.5), true, false, CV_32F);
+
+    net.setInput(inputBlob);
+
+    const std::vector<cv::String> outBlobNames{"fc1"};
+    std::vector<cv::Mat> outputBlobs;
+    net.forward(outputBlobs, outBlobNames);
+    Mat actual = outputBlobs[0].row(0);
+    normAssert(ref, actual);
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Test_Caffe_nets, dnnBackendsAndTargets());
+
+
 
 }} // namespace
