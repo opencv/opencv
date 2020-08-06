@@ -121,6 +121,14 @@ protected:
 };
 
 Ptr<SIFT> SIFT::create( int _nfeatures, int _nOctaveLayers,
+                     double _contrastThreshold, double _edgeThreshold, double _sigma )
+{
+    CV_TRACE_FUNCTION();
+
+    return makePtr<SIFT_Impl>(_nfeatures, _nOctaveLayers, _contrastThreshold, _edgeThreshold, _sigma, CV_32F);
+}
+
+Ptr<SIFT> SIFT::create( int _nfeatures, int _nOctaveLayers,
                      double _contrastThreshold, double _edgeThreshold, double _sigma, int _descriptorType )
 {
     CV_TRACE_FUNCTION();
