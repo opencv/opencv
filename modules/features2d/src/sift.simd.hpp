@@ -795,8 +795,8 @@ void calcSIFTDescriptor(
     k = 0;
 if( dstMat.type() == CV_32F )
 {
-#if CV_SIMD
     float* dst = dstMat.ptr<float>(row);
+#if CV_SIMD
     v_float32 __dst;
     v_float32 __min = vx_setzero_f32();
     v_float32 __max = vx_setall_f32(255.0f); // max of uchar
@@ -815,8 +815,8 @@ if( dstMat.type() == CV_32F )
 }
 else // CV_8U
 {
-#if CV_SIMD
     uint8_t* dst = dstMat.ptr<uint8_t>(row);
+#if CV_SIMD
     v_float32 __dst0, __dst1;
     v_uint16 __pack01;
     v_float32 __nrm2 = vx_setall_f32(nrm2);
