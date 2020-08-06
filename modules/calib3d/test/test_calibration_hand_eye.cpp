@@ -317,7 +317,10 @@ void CV_CalibrateHandEyeTest::simulateData(RNG& rng, int nPoses,
             t_gripper2base_noise.at<double>(2,0) += rng.gaussian(0.001);
         }
 
-        R_target2cam.push_back(T_target2cam(Rect(0, 0, 3, 3)));
+        // test rvec represenation
+        Mat rvec_target2cam;
+        cv::Rodrigues(T_target2cam(Rect(0, 0, 3, 3)), rvec_target2cam);
+        R_target2cam.push_back(rvec_target2cam);
         t_target2cam.push_back(T_target2cam(Rect(3, 0, 1, 3)));
     }
 }

@@ -378,7 +378,7 @@ bool  Jpeg2KDecoder::readComponent8u( uchar *data, void *_buffer,
 
     for( y = 0; y < yend - ystart; )
     {
-        jas_seqent_t* pix_row = &jas_matrix_get( buffer, y / ystep, 0 );
+        jas_seqent_t* pix_row = jas_matrix_getref( buffer, y / ystep, 0 );
         uchar* dst = data + (y - yoffset) * step - xoffset;
 
         if( xstep == 1 )
@@ -444,7 +444,7 @@ bool  Jpeg2KDecoder::readComponent16u( unsigned short *data, void *_buffer,
 
     for( y = 0; y < yend - ystart; )
     {
-        jas_seqent_t* pix_row = &jas_matrix_get( buffer, y / ystep, 0 );
+        jas_seqent_t* pix_row = jas_matrix_getref( buffer, y / ystep, 0 );
         ushort* dst = data + (y - yoffset) * step - xoffset;
 
         if( xstep == 1 )

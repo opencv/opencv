@@ -114,18 +114,19 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
-        CV_Assert(inputs.size() > 0);
+        CV_Assert((inputs.size() > outputs.size() && blobs.empty()) ||
+                  (!inputs.empty() && (blobs.size() == 1 || blobs.size() == 2)));
+        MatSize weightShape = blobs.empty() ? inputs[1].size : blobs[0].size;
 
-        CV_Assert(blobs.size() == 1 || blobs.size() == 2);
         CV_Assert(inputs[0].dims == outputs[0].dims);
-        CV_Assert(blobs[0].dims == kernel_size.size() + 2);
+        CV_Assert(weightShape.dims() == kernel_size.size() + 2);
         for (int i = 0; i < kernel_size.size(); i++) {
-            CV_Assert(blobs[0].size[i + 2] == kernel_size[i]);
+            CV_Assert(weightShape[i + 2] == kernel_size[i]);
         }
 
         const Mat &input = inputs[0];
         CV_Assert((input.dims == 4 || input.dims == 5) && (input.type() == CV_32F || input.type() == CV_16S));
-        for (size_t i = 0; i < inputs.size(); i++)
+        for (size_t i = 0; i < outputs.size(); i++)
         {
             CV_Assert(inputs[i].type() == input.type());
             CV_Assert((inputs[i].dims == 4 || inputs[i].dims == 5) && inputs[i].size[1] == input.size[1]);
@@ -270,6 +271,7 @@ public:
 
     MatShape computeColRowShape(const MatShape &inpShape, const MatShape &outShape) const CV_OVERRIDE
     {
+        CV_Assert(!blobs.empty());
         int dims = inpShape.size();
         int inpD = dims == 5 ? inpShape[2] : 1;
         int inpH = inpShape[dims - 2];
@@ -296,6 +298,8 @@ public:
         {
             if (kernel_size.size() == 3)
                 return preferableTarget == DNN_TARGET_CPU;
+            if ((backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || preferableTarget != DNN_TARGET_MYRIAD) && blobs.empty())
+                return false;
             return (preferableTarget != DNN_TARGET_MYRIAD || dilation.width == dilation.height);
         }
         else
@@ -305,7 +309,7 @@ public:
                 return (preferableTarget == DNN_TARGET_CPU && backendId == DNN_BACKEND_OPENCV);
             else if (kernel_size.size() == 2)
                 return backendId == DNN_BACKEND_OPENCV ||
-                       backendId == DNN_BACKEND_HALIDE ||
+                       (backendId == DNN_BACKEND_HALIDE && !blobs.empty()) ||
                        (backendId == DNN_BACKEND_VKCOM && haveVulkan());
             else
                 return false;
@@ -317,16 +321,16 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
-        CV_Assert(blobs.size() != 0);
-        CV_Assert(!hasBias() || blobs[1].total() == (size_t)blobs[0].size[0]);
-        CV_Assert(inputs.size() == (size_t)1);
+        CV_Assert(!blobs.empty() || inputs.size() > 1);
+        const int* weightShape = blobs.empty() ? &inputs[1][0] : blobs[0].size.p;
+        CV_Assert(!hasBias() || blobs[1].total() == (size_t)weightShape[0]);
 
         internals.clear();
 
         CV_Assert(inputs.size() != 0);
         std::vector<int> inpShape(inputs[0].begin() + 2, inputs[0].end());
 
-        int outCn = blobs[0].size[0];
+        int outCn = weightShape[0];
         std::vector<int> outShape;
         outShape.push_back(inputs[0][0]);
         outShape.push_back(outCn);
@@ -342,10 +346,10 @@ public:
             getConvPoolOutParams(inpShape, kernel_size, strides, padMode, dilations, outShape);
         }
 
-        int ngroups = inpCn / blobs[0].size[1];
-        if (ngroups == 0 || ngroups * blobs[0].size[1] != inpCn)
+        int ngroups = inpCn / weightShape[1];
+        if (ngroups == 0 || ngroups * weightShape[1] != inpCn)
             CV_Error(Error::StsError, format("Number of input channels should "
-                     "be multiple of %d but got %d", blobs[0].size[1], inpCn));
+                     "be multiple of %d but got %d", weightShape[1], inpCn));
         CV_Assert(ngroups > 0 && inpCn % ngroups == 0 && outCn % ngroups == 0);
 
         outputs.resize(1, outShape);
@@ -357,15 +361,15 @@ public:
     {
         BaseConvolutionLayerImpl::finalize(inputs_arr, outputs_arr);
 
-        CV_Assert(!blobs.empty());
-        const int outCn = blobs[0].size[0];
+        std::vector<Mat> inputs;
+        inputs_arr.getMatVector(inputs);
         // prepare weightsMat where each row is aligned and has enough zero padding on the right to
         // use vectorized (i.e. with intrinsics) loops without tail processing
-        Mat wm = blobs[0].reshape(1, outCn);
+        Mat wm = blobs.empty() ? inputs[1].reshape(1, numOutput) : blobs[0].reshape(1, numOutput);
         if( wm.step1() % VEC_ALIGN != 0 )
         {
             int newcols = (int)alignSize(wm.step1(), VEC_ALIGN);
-            Mat wm_buffer = Mat(outCn, newcols, wm.type());
+            Mat wm_buffer = Mat(numOutput, newcols, wm.type());
             Mat wm_padding = wm_buffer.colRange(wm.cols, newcols);
             wm_padding.setTo(Scalar::all(0.));
             Mat wm_aligned = wm_buffer.colRange(0, wm.cols);
@@ -373,18 +377,18 @@ public:
             wm = wm_aligned;
         }
         weightsMat = wm;
-        weightsMultipliers.assign(outCn, 1.0);
+        weightsMultipliers.assign(numOutput, 1.0);
 
-        Mat biasMat = hasBias() ? blobs[1].reshape(1, outCn) : Mat();
-        biasvec.resize(outCn+2);
+        Mat biasMat = hasBias() ? blobs[1].reshape(1, numOutput) : Mat();
+        biasvec.resize(numOutput+2);
         if( biasMat.empty() )
         {
-            for(int i = 0; i < outCn; i++ )
+            for(int i = 0; i < numOutput; i++ )
                 biasvec[i] = 0.f;
         }
         else
         {
-            for(int i = 0; i < outCn; i++ )
+            for(int i = 0; i < numOutput; i++ )
                 biasvec[i] = biasMat.at<float>(i);
         }
 #ifdef HAVE_OPENCL
@@ -394,7 +398,7 @@ public:
 
     bool setActivation(const Ptr<ActivationLayer>& layer) CV_OVERRIDE
     {
-        if (!activ.empty() && !layer.empty())
+        if ((!activ.empty() && !layer.empty()) || blobs.empty())
             return false;
 
         activ = layer;
@@ -743,36 +747,47 @@ public:
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> > &inputs,
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
-        CV_Assert_N(inputs.size() == 1, nodes.size() == 1);
+        CV_Assert_N(inputs.size() >= 1, nodes.size() >= 1);
         auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
         std::vector<size_t> dims = ieInpNode->get_shape();
         CV_Assert(dims.size() == 4 || dims.size() == 5);
+        std::shared_ptr<ngraph::Node> ieWeights = nodes.size() > 1 ? nodes[1].dynamicCast<InfEngineNgraphNode>()->node : nullptr;
         const int inpCn = dims[1];
-        const int outCn = blobs[0].size[0];
-        const int inpGroupCn = blobs[0].size[1];
+        const int inpGroupCn = nodes.size() > 1 ? ieWeights->get_shape()[1] : blobs[0].size[1];
         const int group = inpCn / inpGroupCn;
 
-        std::vector<size_t> kernel_shape = getShape<size_t>(blobs[0]);
+        std::vector<size_t> kernel_shape;
         if (group != 1)
         {
-            kernel_shape[0] /= group;
-            kernel_shape.insert(kernel_shape.begin(), group);
+            kernel_shape.push_back(group);
         }
+        kernel_shape.push_back(numOutput / group);
+        kernel_shape.push_back(inpCn / group);
+        std::copy(kernel_size.begin(), kernel_size.end(), back_inserter(kernel_shape));
 
-        auto ieWeights = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, kernel_shape, blobs[0].data);
-        if (fusedWeights)
+        if (nodes.size() == 1)
         {
-            if (weightsMat.isContinuous())
+            ieWeights = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, kernel_shape, blobs[0].data);
+            if (fusedWeights)
             {
-                ieWeights = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, kernel_shape, weightsMat.data);
+                if (weightsMat.isContinuous())
+                {
+                    ieWeights = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, kernel_shape, weightsMat.data);
+                }
+                else
+                {
+                    Mat newWeights;
+                    Mat cvWeights = weightsMat.colRange(0, blobs[0].total() / numOutput);
+                    cvWeights.copyTo(newWeights);
+                    ieWeights = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, kernel_shape, newWeights.data);
+                }
             }
-            else
-            {
-                Mat newWeights;
-                Mat cvWeights = weightsMat.colRange(0, blobs[0].total() / outCn);
-                cvWeights.copyTo(newWeights);
-                ieWeights = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, kernel_shape, newWeights.data);
-            }
+        }
+        else
+        {
+            auto shape = std::make_shared<ngraph::op::Constant>(ngraph::element::i64,
+                             ngraph::Shape{kernel_shape.size()}, kernel_shape.data());
+            ieWeights  = std::make_shared<ngraph::op::v1::Reshape>(ieWeights, shape, true);
         }
 
         ngraph::op::PadType pad_type = ngraph::op::PadType::EXPLICIT;
@@ -798,11 +813,21 @@ public:
                                 pad_type);
         }
 
-        if (hasBias() || fusedBias)
+        if (hasBias() || fusedBias || nodes.size() == 3)
         {
             std::vector<size_t> shape(conv_node->get_shape().size(), 1);
-            shape[1] = outCn;
-            auto bias = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape(shape), biasvec.data());
+            shape[1] = conv_node->get_shape()[1];
+            std::shared_ptr<ngraph::Node> bias;
+            if (nodes.size() == 3)
+            {
+                auto bias_shape = std::make_shared<ngraph::op::Constant>(ngraph::element::i64,
+                                    ngraph::Shape{shape.size()}, shape.data());
+                bias = std::make_shared<ngraph::op::v1::Reshape>(nodes[2].dynamicCast<InfEngineNgraphNode>()->node, bias_shape, true);
+            }
+            else
+            {
+                bias = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape(shape), biasvec.data());
+            }
             auto conv_bias = std::make_shared<ngraph::op::v1::Add>(conv_node, bias, ngraph::op::AutoBroadcastType::NUMPY);
             return Ptr<BackendNode>(new InfEngineNgraphNode(conv_bias));
         }
@@ -1516,6 +1541,26 @@ public:
         for (int i = 0; i < inputs.size(); ++i)
             CV_Assert(inputs[i].u != outputs[0].u);
 
+        if (blobs.empty())
+        {
+            size_t n = inputs.size() - 1;
+            umat_blobs.resize(n);
+            for (size_t i = 0; i < n; i++)
+            {
+                if (use_half)
+                {
+                    Mat matFP32;
+                    convertFp16(inputs[i + 1], matFP32);
+                    matFP32.copyTo(umat_blobs[i]);
+                }
+                else
+                {
+                    inputs[i + 1].copyTo(umat_blobs[i]);
+                }
+            }
+            inputs.resize(1);
+        }
+
         if (umat_blobs.empty())
         {
             size_t n = blobs.size();
@@ -1526,7 +1571,7 @@ public:
             }
         }
 
-        if (convolutionOp.empty())
+        if (convolutionOp.empty() || blobs.empty())
         {
             OCL4DNNConvConfig config;
             config.in_shape = shape(inputs[0]);
@@ -1536,7 +1581,7 @@ public:
             config.stride = stride;
             config.dilation = dilation;
             config.group = inputs[0].size[1] / umat_blobs[0].size[1];
-            config.bias_term = (hasBias()) ? true : false;
+            config.bias_term = umat_blobs.size() == 2;
             config.use_half = use_half;
 
             convolutionOp = Ptr<OCL4DNNConvSpatial<float> >(new OCL4DNNConvSpatial<float>(config));
@@ -1663,16 +1708,37 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
+        int outCn = blobs.empty() ? inputs[1].size[0] : blobs[0].size[0];
+        // Need to align non-const blobs
+        if (blobs.empty())
+        {
+            Mat wm = inputs[1].reshape(1, outCn);
+            if( wm.step1() % VEC_ALIGN != 0 )
+            {
+                wm.copyTo(weightsMat);
+                if (inputs.size() > 2)
+                {
+                    Mat biasMat = inputs[2].reshape(1, outCn);
+                    biasMat.col(0).copyTo(biasvec);
+                    biasvec.resize(outCn + 2);
+                }
+                else
+                {
+                    biasvec.resize(outCn + 2, 0);
+                }
+            }
+        }
+
         /*printf("conv %s: input (%d x %d x %d x %d), kernel (%d x %d), pad (%d x %d), stride (%d x %d), dilation (%d x %d)\n",
                name.c_str(), inputs[0].size[0], inputs[0].size[1], inputs[0].size[2], inputs[0].size[3],
                kernel.width, kernel.height, pad.width, pad.height,
                stride.width, stride.height, dilation.width, dilation.height);*/
-        CV_Assert_N(inputs.size() == (size_t)1, inputs[0].size[1] % blobs[0].size[1] == 0,
+        int inpGroupCn = blobs.empty() ? inputs[1].size[1] : blobs[0].size[1];
+        CV_Assert_N(inputs.size() >= (size_t)1, inputs[0].size[1] % inpGroupCn == 0,
                     outputs.size() == 1, inputs[0].data != outputs[0].data);
 
-        int ngroups = inputs[0].size[1]/blobs[0].size[1];
+        int ngroups = inputs[0].size[1] / inpGroupCn;
         CV_Assert(outputs[0].size[1] % ngroups == 0);
-        int outCn = blobs[0].size[0];
 
         reluslope.clear();
         if( activ )
@@ -1810,11 +1876,11 @@ public:
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
                            const std::vector<MatShape> &outputs) const CV_OVERRIDE
     {
-        CV_Assert(inputs.size() == outputs.size());
+        CV_Assert(inputs.size() == outputs.size() || inputs.size() == outputs.size() + blobs.size());
 
         int64 flops = 0;
         int karea = std::accumulate(kernel_size.begin(), kernel_size.end(), 1, std::multiplies<size_t>());
-        for (int i = 0; i < inputs.size(); i++)
+        for (int i = 0; i < outputs.size(); i++)
         {
             flops += total(outputs[i])*(CV_BIG_INT(2)*karea*inputs[i][1] + 1);
         }
