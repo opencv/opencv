@@ -1395,6 +1395,7 @@ void ONNXImporter::populateNet(Net dstNet)
 
                     inpShape.erase(inpShape.begin() + axis);
                     layerParams.type = "Reshape";
+                    layerParams.set("axis", 0);
                     layerParams.set("dim", DictValue::arrayInt(&inpShape[0], inpShape.size()));
                     node_proto.set_input(0, sliceLp.name);
                 }
