@@ -1,15 +1,11 @@
 """
 DaSiamRPN tracker.
-Original paper:
-https://arxiv.org/abs/1808.06048
-Link to original repo:
-https://github.com/foolwood/DaSiamRPN
-Link to the ONNX model of the network:
-https://www.dropbox.com/s/rr1lk9355vzolqv/dasiamrpn_model.onnx?dl=0
-Link to the ONNX model of the kernel_r1:
-https://www.dropbox.com/s/999cqx5zrfi7w4p/dasiamrpn_kernel_r1.onnx?dl=0
-Link to the ONNX model of the kernel_cls1:
-https://www.dropbox.com/s/qvmtszx5h339a0w/dasiamrpn_kernel_cls1.onnx?dl=0
+Original paper: https://arxiv.org/abs/1808.06048
+Link to original repo: https://github.com/foolwood/DaSiamRPN
+Links to onnx models:
+network:     https://www.dropbox.com/s/rr1lk9355vzolqv/dasiamrpn_model.onnx?dl=0
+kernel_r1:   https://www.dropbox.com/s/999cqx5zrfi7w4p/dasiamrpn_kernel_r1.onnx?dl=0
+kernel_cls1: https://www.dropbox.com/s/qvmtszx5h339a0w/dasiamrpn_kernel_cls1.onnx?dl=0
 """
 
 import numpy as np
@@ -19,13 +15,12 @@ import sys
 
 class DaSiamRPNTracker:
     # Initialization of used values, initial bounding box, used network
-    def __init__(self):
+    def __init__(self, net="dasiamrpn_model.onnx", kernel_r1="dasiamrpn_kernel_r1.onnx", kernel_cls1="dasiamrpn_kernel_cls1.onnx"):
         self.windowing = "cosine"
         self.exemplar_size = 127
         self.instance_size = 271
         self.total_stride = 8
-        self.score_size = (
-            self.instance_size - self.exemplar_size) // self.total_stride + 1
+        self.score_size = (self.instance_size - self.exemplar_size) // self.total_stride + 1
         self.context_amount = 0.5
         self.ratios = [0.33, 0.5, 1, 2, 3]
         self.scales = [8, ]
@@ -35,37 +30,32 @@ class DaSiamRPNTracker:
         self.lr = 0.295
         self.score = []
         if self.windowing == "cosine":
-            self.window = np.outer(
-                np.hanning(self.score_size), np.hanning(self.score_size))
+            self.window = np.outer(np.hanning(self.score_size), np.hanning(self.score_size))
         elif self.windowing == "uniform":
             self.window = np.ones((self.score_size, self.score_size))
         self.window = np.tile(self.window.flatten(), self.anchor_num)
-        self.init_status = False
-
-    def init(self, im, init_bb, net="dasiamrpn_model.onnx", \
-        kernel_r1="dasiamrpn_kernel_r1.onnx", \
-        kernel_cls1="dasiamrpn_kernel_cls1.onnx"):
-        target_pos, target_sz = np.array([init_bb[0], init_bb[1]]), np.array(
-            [init_bb[2], init_bb[3]])
-        self.im_h = im.shape[0]
-        self.im_w = im.shape[1]
-        self.target_pos = target_pos
-        self.target_sz = target_sz
-        self.avg_chans = np.mean(im, axis=(0, 1))
         # Loading network`s and kernel`s models
         if not self.init_status:
             net = cv.dnn.readNet(net)
             kernel_r1 = cv.dnn.readNet(kernel_r1)
             kernel_cls1 = cv.dnn.readNet(kernel_cls1)
             self.init_status = True
+        self.init_status = False
+
+    def init(self, im, init_bb):
+        target_pos, target_sz = np.array([init_bb[0], init_bb[1]]), np.array([init_bb[2], init_bb[3]])
+        self.im_h = im.shape[0]
+        self.im_w = im.shape[1]
+        self.target_pos = target_pos
+        self.target_sz = target_sz
+        self.avg_chans = np.mean(im, axis=(0, 1))
 
         # When we trying to generate ONNX model from the pre-trained .pth model
         # we are using only one state of the network. In our case used state
         # with big bounding box, so we were forced to add assertion for
         # too small bounding boxes - current state of the network can not
         # work properly with such small bounding boxes
-        if ((self.target_sz[0] * self.target_sz[1]) / float(
-            self.im_h * self.im_w)) < 0.004:
+        if ((self.target_sz[0] * self.target_sz[1]) / float(self.im_h * self.im_w)) < 0.004:
             raise AssertionError(
         "Initializing BB is too small-try to restart tracker with larger BB")
 
@@ -75,8 +65,7 @@ class DaSiamRPNTracker:
         s_z = round(np.sqrt(wc_z * hc_z))
         self.net = net
         z_crop = self.__get_subwindow_tracking(im, self.exemplar_size, s_z)
-        z_crop = z_crop.transpose(
-            2, 0, 1).reshape(1, 3, 127, 127).astype(np.float32)
+        z_crop = z_crop.transpose(2, 0, 1).reshape(1, 3, 127, 127).astype(np.float32)
         self.net.setInput(z_crop)
         z_f = self.net.forward('63')
         kernel_r1.setInput(z_f)
@@ -106,13 +95,9 @@ class DaSiamRPNTracker:
         score_sz = int(self.score_size)
         self.anchor = np.tile(self.anchor, score_sz * score_sz).reshape((-1, 4))
         ori = - (score_sz / 2) * self.total_stride
-        xx, yy = np.meshgrid([
-            ori + self.total_stride * dx for dx in range(score_sz)], [
-                ori + self.total_stride * dy for dy in range(score_sz)])
-        xx, yy = np.tile(xx.flatten(), (self.anchor_num, 1)).flatten(), np.tile(
-            yy.flatten(), (self.anchor_num, 1)).flatten()
-        self.anchor[:, 0], self.anchor[:, 1] = xx.astype(np.float32), yy.astype(
-            np.float32)
+        xx, yy = np.meshgrid([ori + self.total_stride * dx for dx in range(score_sz)], [ori + self.total_stride * dy for dy in range(score_sz)])
+        xx, yy = np.tile(xx.flatten(), (self.anchor_num, 1)).flatten(), np.tile(yy.flatten(), (self.anchor_num, 1)).flatten()
+        self.anchor[:, 0], self.anchor[:, 1] = xx.astype(np.float32), yy.astype(np.float32)
         return self.anchor
 
     # Function for updating tracker state
@@ -127,8 +112,7 @@ class DaSiamRPNTracker:
 
         # Region preprocessing part
         x_crop = self.__get_subwindow_tracking(im, self.instance_size, s_x)
-        x_crop = x_crop.transpose(
-            2, 0, 1).reshape(1, 3, 271, 271).astype(np.float32)
+        x_crop = x_crop.transpose(2, 0, 1).reshape(1, 3, 271, 271).astype(np.float32)
         self.score = self.__tracker_eval(x_crop, scale_z)
         self.target_pos[0] = max(0, min(self.im_w, self.target_pos[0]))
         self.target_pos[1] = max(0, min(self.im_h, self.target_pos[1]))
@@ -173,12 +157,10 @@ class DaSiamRPNTracker:
             return np.sqrt(sz2)
 
         s_c = __change(__sz(delta[2, :], delta[3, :]) / (__sz_wh(target_size)))
-        r_c = __change((
-            target_size[0] / target_size[1]) / (delta[2, :] / delta[3, :]))
+        r_c = __change((target_size[0] / target_size[1]) / (delta[2, :] / delta[3, :]))
         penalty = np.exp(-(r_c * s_c - 1.) * self.penalty_k)
         pscore = penalty * score
-        pscore = pscore * (
-            1 - self.window_influence) + self.window * self.window_influence
+        pscore = pscore * (1 - self.window_influence) + self.window * self.window_influence
         best_pscore_id = np.argmax(pscore)
         target = delta[:, best_pscore_id] / scale_z
         target_size /= scale_z
@@ -227,24 +209,18 @@ class DaSiamRPNTracker:
                 te_im[:, 0:left_pad, :] = self.avg_chans
             if right_pad:
                 te_im[:, c + left_pad:, :] = self.avg_chans
-            im_patch_original = te_im[int(
-                context_ymin):int(context_ymax + 1), int(
-                    context_xmin):int(context_xmax + 1), :]
+            im_patch_original = te_im[int(context_ymin):int(context_ymax + 1), int(context_xmin):int(context_xmax + 1), :]
         else:
-            im_patch_original = im[int(
-                context_ymin):int(context_ymax + 1), int(
-                    context_xmin):int(context_xmax + 1), :]
+            im_patch_original = im[int(context_ymin):int(context_ymax + 1), int(context_xmin):int(context_xmax + 1), :]
 
         if not np.array_equal(model_size, original_sz):
-            im_patch_original = cv.resize(
-                im_patch_original, (model_size, model_size))
+            im_patch_original = cv.resize(im_patch_original, (model_size, model_size))
         return im_patch_original
 
 # Sample for using DaSiamRPN tracker
 def main():
     parser = argparse.ArgumentParser(description="Run tracker")
-    parser.add_argument(
-        "--input", type=str, help="Full path to input (empty for camera)")
+    parser.add_argument("--input", type=str, help="Full path to input (empty for camera)")
     args = parser.parse_args()
     point1 = ()
     point2 = ()
@@ -303,9 +279,7 @@ def main():
             sys.exit(0)
         update_status, new_bb = tracker.update(frame)
         cx, cy, w, h = new_bb
-        cv.rectangle(frame, (int(cx - w // 2), int(cy - h // 2)), (
-            int(cx - w // 2) + int(w), int(cy - h // 2) + int(h)),(
-                0, 255, 255), 3)
+        cv.rectangle(frame, (int(cx - w // 2), int(cy - h // 2)), (int(cx - w // 2) + int(w), int(cy - h // 2) + int(h)),(0, 255, 255), 3)
         cv.imshow("DaSiamRPN", frame)
         key = cv.waitKey(1)
         if key == ord("q"):
