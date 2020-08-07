@@ -183,6 +183,16 @@ extern "C" {
 #endif
 #endif
 
+#ifndef USE_AV_SEND_FRAME_API
+// https://github.com/FFmpeg/FFmpeg/commit/7fc329e2dd6226dfecaa4a1d7adf353bf2773726
+#if LIBAVCODEC_VERSION_MICRO >= 100 \
+    && LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(57, 37, 100)
+#define USE_AV_SEND_FRAME_API 1
+#else
+#define USE_AV_SEND_FRAME_API 0
+#endif
+#endif
+
 #if USE_AV_INTERRUPT_CALLBACK
 #define LIBAVFORMAT_INTERRUPT_OPEN_TIMEOUT_MS 30000
 #define LIBAVFORMAT_INTERRUPT_READ_TIMEOUT_MS 30000
@@ -1999,6 +2009,26 @@ static int icv_av_write_frame_FFMPEG( AVFormatContext * oc, AVStream * video_st,
 #endif
     {
         /* encode the image */
+#if USE_AV_SEND_FRAME_API
+        ret = avcodec_send_frame(c, picture);
+        while (ret >= 0)
+        {
+            AVPacket* pkt = av_packet_alloc();
+            pkt->stream_index = video_st->index;
+            ret = avcodec_receive_packet(c, pkt);
+
+            if(!ret)
+            {
+                av_packet_rescale_ts(pkt, c->time_base, video_st->time_base);
+                ret = av_write_frame(oc, pkt);
+                av_packet_free(&pkt);
+                continue;
+            }
+
+            av_packet_free(&pkt);
+            break;
+        }
+#else
         AVPacket pkt;
         av_init_packet(&pkt);
 #if LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(54, 1, 0)
@@ -2040,6 +2070,7 @@ static int icv_av_write_frame_FFMPEG( AVFormatContext * oc, AVStream * video_st,
             /* write the compressed frame in the media file */
             ret = av_write_frame(oc, &pkt);
         }
+#endif
 #endif
     }
     return ret;
