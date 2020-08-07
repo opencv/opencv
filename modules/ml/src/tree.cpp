@@ -84,7 +84,7 @@ struct ParallelBestSplit
         }
     }
     DTreesImpl * tree;
-    vector<int> _sidx;
+    const vector<int>& _sidx;
     DTreesImpl::WSplit best_split;
     int * best_subset;
 };
