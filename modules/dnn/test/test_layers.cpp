@@ -2246,7 +2246,7 @@ INSTANTIATE_TEST_CASE_P(TestLayerFusion, ConvolutionActivationFusion, Combine(
                  TestLayerFusion::dnnBackendsAndTargetsForFusionTests()
 ));
 
-typedef TestWithParam<tuple<bool, std::string, tuple<Backend, Target> > > ConvolutionEltwiseFusion;
+typedef TestWithParam<tuple<bool, std::string, bool, tuple<Backend, Target> > > ConvolutionEltwiseFusion;
 TEST_P(ConvolutionEltwiseFusion, Accuracy)
 {
     //                 input
@@ -2274,8 +2274,11 @@ TEST_P(ConvolutionEltwiseFusion, Accuracy)
     TestLayerFusion::makeDefaultTestConvolutionLayer(convParams, in_channels, in_channels, bias_term);
 
     std::string eltwiseOp = get<1>(GetParam());
+    bool weightedEltwise = get<2>(GetParam());
+    if (eltwiseOp != "sum" && weightedEltwise)
+            throw SkipTestException("weighted eltwise not supported");
     LayerParams eltwiseParams;
-    TestLayerFusion::makeDefaultTestEltwiseLayer(eltwiseParams, eltwiseOp, false);
+    TestLayerFusion::makeDefaultTestEltwiseLayer(eltwiseParams, eltwiseOp, weightedEltwise);
 
     Net net;
     int convId = net.addLayer(convParams.name, convParams.type, convParams);
@@ -2284,65 +2287,18 @@ TEST_P(ConvolutionEltwiseFusion, Accuracy)
     net.connect(convId, 0, eltwiseId, 0);
     net.connect(0, 0, eltwiseId, 1);
 
-    Backend backendId = get<0>(get<2>(GetParam()));
-    Target targetId = get<1>(get<2>(GetParam()));
+    Backend backendId = get<0>(get<3>(GetParam()));
+    Target targetId = get<1>(get<3>(GetParam()));
     TestLayerFusion::test(input, net, backendId, targetId);
 }
 INSTANTIATE_TEST_CASE_P(TestLayerFusion, ConvolutionEltwiseFusion, Combine(
-/* bias */      testing::Bool(),
-/* operation */ TestLayerFusion::eltwiseOpList(),
-                TestLayerFusion::dnnBackendsAndTargetsForFusionTests()
+/* bias */              testing::Bool(),
+/* eltwise op */        TestLayerFusion::eltwiseOpList(),
+/* eltwise weighted */  testing::Bool(),
+                        TestLayerFusion::dnnBackendsAndTargetsForFusionTests()
 ));
 
-typedef TestWithParam<tuple<bool, std::string, tuple<Backend, Target> > > ConvolutionWeightedEltwiseFusion;
-TEST_P(ConvolutionWeightedEltwiseFusion, Accuracy)
-{
-    //                 input
-    //                   |
-    //    -------------------------------
-    //    |                             |
-    //    |                      ---------------
-    //    |                      | convolution |
-    //    |                      ---------------
-    //    |                             |
-    //    |       ----------------      |
-    //    --------|  eltwise op  |-------
-    //            ----------------
-    //                   |
-    //                 output
-
-    const int batch_size = 2, in_channels = 16;
-    const int in_height = 16, in_width = 16;
-    int inputShape[] = {batch_size, in_channels, in_height, in_width};
-    Mat input(4, &inputShape[0], CV_32F);
-    randu(input, 1.0f, 2.0f);
-
-    bool bias_term = get<0>(GetParam());
-    LayerParams convParams;
-    TestLayerFusion::makeDefaultTestConvolutionLayer(convParams, in_channels, in_channels, bias_term);
-
-    std::string eltwiseOp = get<1>(GetParam());
-    LayerParams eltwiseParams;
-    TestLayerFusion::makeDefaultTestEltwiseLayer(eltwiseParams, eltwiseOp, true);
-
-    Net net;
-    int convId = net.addLayer(convParams.name, convParams.type, convParams);
-    int eltwiseId = net.addLayer(eltwiseParams.name, eltwiseParams.type, eltwiseParams);
-    net.connect(0, 0, convId, 0);
-    net.connect(convId, 0, eltwiseId, 0);
-    net.connect(0, 0, eltwiseId, 1);
-
-    Backend backendId = get<0>(get<2>(GetParam()));
-    Target targetId = get<1>(get<2>(GetParam()));
-    TestLayerFusion::test(input, net, backendId, targetId);
-}
-INSTANTIATE_TEST_CASE_P(TestLayerFusion, ConvolutionWeightedEltwiseFusion, Combine(
-/* bias */      testing::Bool(),
-/* operation */ Values("sum"),
-                TestLayerFusion::dnnBackendsAndTargetsForFusionTests()
-));
-
-typedef TestWithParam<tuple<bool, std::string, std::string, tuple<Backend, Target> > > ConvolutionEltwiseActivationFusion;
+typedef TestWithParam<tuple<bool, std::string, bool, std::string, tuple<Backend, Target> > > ConvolutionEltwiseActivationFusion;
 TEST_P(ConvolutionEltwiseActivationFusion, Accuracy)
 {
     //                 input
@@ -2374,15 +2330,18 @@ TEST_P(ConvolutionEltwiseActivationFusion, Accuracy)
     TestLayerFusion::makeDefaultTestConvolutionLayer(convParams, in_channels, in_channels, bias_term);
 
     std::string eltwiseOp = get<1>(GetParam());
+    bool weightedEltwise = get<2>(GetParam());
+    if (eltwiseOp != "sum" && weightedEltwise)
+            throw SkipTestException("weighted eltwise not supported");
     LayerParams eltwiseParams;
     TestLayerFusion::makeDefaultTestEltwiseLayer(eltwiseParams, eltwiseOp, false);
 
-    std::string actType = get<2>(GetParam());
+    std::string actType = get<3>(GetParam());
     LayerParams activationParams;
     TestLayerFusion::makeDefaultTestActivationLayer(activationParams, actType, in_channels);
 
-    Backend backendId = get<0>(get<3>(GetParam()));
-    Target targetId = get<1>(get<3>(GetParam()));
+    Backend backendId = get<0>(get<4>(GetParam()));
+    Target targetId = get<1>(get<4>(GetParam()));
 
     // bug: https://github.com/opencv/opencv/issues/17945
     if (eltwiseOp != "sum" && backendId == DNN_BACKEND_OPENCV && (targetId == DNN_TARGET_OPENCL || targetId == DNN_TARGET_OPENCL_FP16))
@@ -2426,81 +2385,14 @@ TEST_P(ConvolutionEltwiseActivationFusion, Accuracy)
     TestLayerFusion::test(input, net, backendId, targetId, expectedFusedLayers);
 }
 INSTANTIATE_TEST_CASE_P(TestLayerFusion, ConvolutionEltwiseActivationFusion, Combine(
-/* bias */       testing::Bool(),
-/* operation */  TestLayerFusion::eltwiseOpList(),
-/* activation */ TestLayerFusion::activationLayersList(),
-                 TestLayerFusion::dnnBackendsAndTargetsForFusionTests()
+/* bias */              testing::Bool(),
+/* eltwise op */        TestLayerFusion::eltwiseOpList(),
+/* eltwise weighted */  testing::Bool(),
+/* activation */        TestLayerFusion::activationLayersList(),
+                        TestLayerFusion::dnnBackendsAndTargetsForFusionTests()
 ));
 
-typedef TestWithParam<tuple<bool, std::string, std::string, tuple<Backend, Target> > > ConvolutionWeightedEltwiseActivationFusion;
-TEST_P(ConvolutionWeightedEltwiseActivationFusion, Accuracy)
-{
-    //                 input
-    //                   |
-    //    -------------------------------
-    //    |                             |
-    //    |                      ---------------
-    //    |                      | convolution |
-    //    |                      ---------------
-    //    |                             |
-    //    |       ----------------      |
-    //    --------|  eltwise op  |-------
-    //            ----------------
-    //                   |
-    //            ----------------
-    //            |  activation  |
-    //            ----------------
-    //                   |
-    //                output
-
-    const int batch_size = 2, in_channels = 16;
-    const int in_height = 16, in_width = 16;
-    int inputShape[] = {batch_size, in_channels, in_height, in_width};
-    Mat input(4, &inputShape[0], CV_32F);
-    randu(input, 1.0f, 2.0f);
-
-    bool bias_term = get<0>(GetParam());
-    LayerParams convParams;
-    TestLayerFusion::makeDefaultTestConvolutionLayer(convParams, in_channels, in_channels, bias_term);
-
-    std::string eltwiseOp = get<1>(GetParam());
-    LayerParams eltwiseParams;
-    TestLayerFusion::makeDefaultTestEltwiseLayer(eltwiseParams, eltwiseOp, true);
-
-    std::string actType = get<2>(GetParam());
-    LayerParams activationParams;
-    TestLayerFusion::makeDefaultTestActivationLayer(activationParams, actType, in_channels);
-
-    Backend backendId = get<0>(get<3>(GetParam()));
-    Target targetId = get<1>(get<3>(GetParam()));
-
-    // bug: https://github.com/opencv/opencv/issues/17945
-    if (backendId == DNN_BACKEND_OPENCV && (targetId == DNN_TARGET_OPENCL || targetId == DNN_TARGET_OPENCL_FP16))
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL);
-
-    Net net;
-    int convId = net.addLayer(convParams.name, convParams.type, convParams);
-    int eltwiseId = net.addLayer(eltwiseParams.name, eltwiseParams.type, eltwiseParams);
-    int activId = net.addLayer(activationParams.name, activationParams.type, activationParams);
-    net.connect(0, 0, convId, 0);
-    net.connect(convId, 0, eltwiseId, 0);
-    net.connect(0, 0, eltwiseId, 1);
-    net.connect(eltwiseId, 0, activId, 0);
-
-    std::vector<int> expectedFusedLayers;
-    if (backendId == DNN_BACKEND_OPENCV && targetId == DNN_TARGET_CPU)
-        expectedFusedLayers.push_back(activId); // activation fused with eltwise layer
-
-    TestLayerFusion::test(input, net, backendId, targetId, expectedFusedLayers);
-}
-INSTANTIATE_TEST_CASE_P(TestLayerFusion, ConvolutionWeightedEltwiseActivationFusion, Combine(
-/* bias */       testing::Bool(),
-/* operation */  Values("sum"),
-/* activation */ TestLayerFusion::activationLayersList(),
-                 TestLayerFusion::dnnBackendsAndTargetsForFusionTests()
-));
-
-typedef TestWithParam<tuple<bool, std::string, std::string, tuple<Backend, Target> > > ConvolutionActivationEltwiseFusion;
+typedef TestWithParam<tuple<bool, std::string, std::string, bool, tuple<Backend, Target> > > ConvolutionActivationEltwiseFusion;
 TEST_P(ConvolutionActivationEltwiseFusion, Accuracy)
 {
     //                 input
@@ -2535,11 +2427,14 @@ TEST_P(ConvolutionActivationEltwiseFusion, Accuracy)
     TestLayerFusion::makeDefaultTestActivationLayer(activationParams, actType, in_channels);
 
     std::string eltwiseOp = get<2>(GetParam());
+    bool weightedEltwise = get<3>(GetParam());
+    if (eltwiseOp != "sum" && weightedEltwise)
+            throw SkipTestException("weighted eltwise not supported");
     LayerParams eltwiseParams;
     TestLayerFusion::makeDefaultTestEltwiseLayer(eltwiseParams, eltwiseOp, false);
 
-    Backend backendId = get<0>(get<3>(GetParam()));
-    Target targetId = get<1>(get<3>(GetParam()));
+    Backend backendId = get<0>(get<4>(GetParam()));
+    Target targetId = get<1>(get<4>(GetParam()));
 
     // bug: https://github.com/opencv/opencv/issues/17964
     if (actType == "Power" && backendId == DNN_BACKEND_OPENCV && (targetId == DNN_TARGET_OPENCL || targetId == DNN_TARGET_OPENCL_FP16))
@@ -2576,92 +2471,11 @@ TEST_P(ConvolutionActivationEltwiseFusion, Accuracy)
     TestLayerFusion::test(input, net, backendId, targetId, expectedFusedLayers);
 }
 INSTANTIATE_TEST_CASE_P(TestLayerFusion, ConvolutionActivationEltwiseFusion, Combine(
-/* bias */       testing::Bool(),
-/* activation */ TestLayerFusion::activationLayersList(),
-/* operation */  TestLayerFusion::eltwiseOpList(),
-                 TestLayerFusion::dnnBackendsAndTargetsForFusionTests()
-));
-
-typedef TestWithParam<tuple<bool, std::string, std::string, tuple<Backend, Target> > > ConvolutionActivationWeightedEltwiseFusion;
-TEST_P(ConvolutionActivationWeightedEltwiseFusion, Accuracy)
-{
-    //                 input
-    //                   |
-    //    -------------------------------
-    //    |                             |
-    //    |                     ----------------
-    //    |                     |  convolution |
-    //    |                     ----------------
-    //    |                             |
-    //    |                     ----------------
-    //    |                     |  activation  |
-    //    |                     ----------------
-    //    |                             |
-    //    |       ----------------      |
-    //    --------| eltwise sum  |-------
-    //            ----------------
-    //                   |
-
-    const int batch_size = 2, in_channels = 16;
-    const int in_height = 16, in_width = 16;
-    int inputShape[] = {batch_size, in_channels, in_height, in_width};
-    Mat input(4, &inputShape[0], CV_32F);
-    randu(input, -1.0f, 1.0f);
-
-    bool bias_term = get<0>(GetParam());
-    LayerParams convParams;
-    TestLayerFusion::makeDefaultTestConvolutionLayer(convParams, in_channels, in_channels, bias_term);
-
-    std::string actType = get<1>(GetParam());
-    LayerParams activationParams;
-    TestLayerFusion::makeDefaultTestActivationLayer(activationParams, actType, in_channels);
-
-    std::string eltwiseOp = get<2>(GetParam());
-    LayerParams eltwiseParams;
-    TestLayerFusion::makeDefaultTestEltwiseLayer(eltwiseParams, eltwiseOp, true);
-
-    Backend backendId = get<0>(get<3>(GetParam()));
-    Target targetId = get<1>(get<3>(GetParam()));
-
-    // bug: https://github.com/opencv/opencv/issues/17964
-    if (actType == "Power" && backendId == DNN_BACKEND_OPENCV && (targetId == DNN_TARGET_OPENCL || targetId == DNN_TARGET_OPENCL_FP16))
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL);
-
-    // bug: https://github.com/opencv/opencv/issues/17953
-    if (actType == "ChannelsPReLU" && bias_term == false &&
-        backendId == DNN_BACKEND_OPENCV && (targetId == DNN_TARGET_OPENCL || targetId == DNN_TARGET_OPENCL_FP16))
-    {
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL);
-    }
-
-    Net net;
-    int convId = net.addLayer(convParams.name, convParams.type, convParams);
-    int activId = net.addLayer(activationParams.name, activationParams.type, activationParams);
-    int eltwiseId = net.addLayer(eltwiseParams.name, eltwiseParams.type, eltwiseParams);
-    net.connect(0, 0, convId, 0);
-    net.connect(convId, 0, activId, 0);
-    net.connect(activId, 0, eltwiseId, 0);
-    net.connect(0, 0, eltwiseId, 1);
-
-    std::vector<int> expectedFusedLayers;
-    if (backendId == DNN_BACKEND_OPENCV)
-    {
-        if (targetId == DNN_TARGET_CPU)
-            expectedFusedLayers.push_back(activId); // activation fused with convolutio
-        else if (targetId == DNN_TARGET_OPENCL || targetId == DNN_TARGET_OPENCL_FP16)
-        {
-            if (actType == "ReLU" || actType == "ChannelsPReLU" || actType == "ReLU6" || actType == "TanH" || actType == "Power")
-                expectedFusedLayers.push_back(activId); // activation fused with convolution
-        }
-    }
-
-    TestLayerFusion::test(input, net, backendId, targetId, expectedFusedLayers);
-}
-INSTANTIATE_TEST_CASE_P(TestLayerFusion, ConvolutionActivationWeightedEltwiseFusion, Combine(
-/* bias */       testing::Bool(),
-/* activation */ TestLayerFusion::activationLayersList(),
-/* operation */  Values("sum"),
-                 TestLayerFusion::dnnBackendsAndTargetsForFusionTests()
+/* bias */              testing::Bool(),
+/* activation */        TestLayerFusion::activationLayersList(),
+/* eltwise op */        TestLayerFusion::eltwiseOpList(),
+/* eltwise weighted */  testing::Bool(),
+                        TestLayerFusion::dnnBackendsAndTargetsForFusionTests()
 ));
 
 }} // namespace
