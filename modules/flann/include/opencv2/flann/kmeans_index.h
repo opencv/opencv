@@ -57,8 +57,9 @@ namespace cvflann
 
 struct KMeansIndexParams : public IndexParams
 {
-    void indexParams(int branching, int iterations,
-                     flann_centers_init_t centers_init, float cb_index, int trees)
+    KMeansIndexParams(int branching = 32, int iterations = 11,
+                      flann_centers_init_t centers_init = FLANN_CENTERS_RANDOM,
+                      float cb_index = 0.2, int trees = 1 )
     {
         (*this)["algorithm"] = FLANN_INDEX_KMEANS;
         // branching factor
@@ -71,18 +72,6 @@ struct KMeansIndexParams : public IndexParams
         (*this)["cb_index"] = cb_index;
         // number of kmeans trees to search in
         (*this)["trees"] = trees;
-    }
-
-    KMeansIndexParams(int branching = 32, int iterations = 11,
-                      flann_centers_init_t centers_init = FLANN_CENTERS_RANDOM, float cb_index = 0.2 )
-    {
-        indexParams(branching, iterations, centers_init, cb_index, 1);
-    }
-
-    KMeansIndexParams(int branching, int iterations,
-                      flann_centers_init_t centers_init, float cb_index, int trees)
-    {
-        indexParams(branching, iterations, centers_init, cb_index, trees);
     }
 };
 
