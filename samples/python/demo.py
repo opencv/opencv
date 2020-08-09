@@ -7,14 +7,12 @@ Sample-launcher application.
 # Python 2/3 compatibility
 from __future__ import print_function
 import sys
-
-# local modules
-from common import splitfn
-
-# built-in modules
+#builtin modules
 import webbrowser
 from glob import glob
 from subprocess import Popen
+# local modules
+from common import splitfn
 
 try:
     if sys.version_info[0] >= 3:
@@ -24,7 +22,7 @@ try:
         import Tkinter as tk #Python2
         from ScrolledText import ScrolledText #Python2
 except ImportError as importerr:
-    print("Error while importing prerequisite ",importerr)
+    print("Error while importing prerequisite ", importerr)
     sys.exit(2)
 
 
@@ -34,7 +32,7 @@ except ImportError as importerr:
 exclude_list = ['demo', 'common']
 
 class LinkManager:
-    def __init__(self, text, url_callback = None):
+    def __init__(self, text, url_callback=None):
         self.text = text
         self.text.tag_config("link", foreground="blue", underline=1)
         self.text.tag_bind("link", "<Enter>", self._enter)
@@ -53,11 +51,11 @@ class LinkManager:
         self.links[tag] = action
         return "link", tag
 
-    def _enter(self, event):
+    def _enter(self):
         self.text.config(cursor="hand2")
-    def _leave(self, event):
+    def _leave(self):
         self.text.config(cursor="")
-    def _click(self, event):
+    def _click(self):
         for tag in self.text.tag_names(tk.CURRENT):
             if tag.startswith("link-"):
                 proc = self.links[tag]
@@ -72,7 +70,8 @@ class App:
         root = tk.Tk()
         root.title('OpenCV Demo')
 
-        self.win = win = tk.PanedWindow(root, orient=tk.HORIZONTAL, sashrelief=tk.RAISED, sashwidth=4)
+        self.win = win = tk.PanedWindow(root, orient=tk.HORIZONTAL,
+                                        sashrelief=tk.RAISED, sashwidth=4)
         self.win.pack(fill=tk.BOTH, expand=1)
 
         left = tk.Frame(win)
@@ -101,22 +100,23 @@ class App:
         cmd_entry.bind('<Return>', self.on_run)
         run_btn = tk.Button(right, command=self.on_run, text='Run', width=8)
 
-        self.text = text = ScrolledText(right, font=('arial', 12, 'normal'), width = 30, wrap='word')
+        self.text = text = ScrolledText(right, font=('arial', 12, 'normal'),
+                                        width=30, wrap='word')
         self.linker = _linker = LinkManager(text, self.on_link)
         self.text.tag_config("header1", font=('arial', 14, 'bold'))
         self.text.tag_config("header2", font=('arial', 12, 'bold'))
         text.config(state='disabled')
 
         text.pack(fill='both', expand=1, side=tk.BOTTOM)
-        cmd_entry.pack(fill='x', side='left' , expand=1)
+        cmd_entry.pack(fill='x', side='left', expand=1)
         run_btn.pack()
 
     def on_link(self, url):
         print(url)
         webbrowser.open(url)
 
-    def on_demo_select(self, evt):
-        name = self.demos_lb.get( self.demos_lb.curselection()[0] )
+    def on_demo_select(self):
+        name = self.demos_lb.get(self.demos_lb.curselection()[0])
         fn = self.samples[name]
 
         descr = ""
@@ -170,17 +170,18 @@ class App:
         text.mark_set('matchPos', '1.0')
         count = tk.IntVar()
         while True:
-            match_index = text.search(pattern, 'matchPos', count=count, regexp=regexp, stopindex='end')
+            match_index = text.search(pattern, 'matchPos', count=count,
+                                      regexp=regexp, stopindex='end')
             if not match_index:
                 break
-            end_index = text.index( "%s+%sc" % (match_index, count.get()) )
+            end_index = text.index("%s+%sc" % (match_index, count.get()))
             text.mark_set('matchPos', end_index)
             if callable(tag_proc):
                 tag_proc(match_index, end_index, text.get(match_index, end_index))
             else:
                 text.tag_add(tag_proc, match_index, end_index)
 
-    def on_run(self, *args):
+    def on_run(self):
         cmd = self.cmd_entry.get()
         print('running:', cmd)
         Popen(sys.executable + ' ' + cmd, shell=True)
