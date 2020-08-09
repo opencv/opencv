@@ -673,18 +673,22 @@ void launch_decode_boxes_kernel(const Stream& stream, Span<T> decoded_bboxes, Vi
     launch_kernel(kernel, policy, decoded_bboxes, locations, priors, transpose_location, normalized_bbox, num_loc_classes, background_class_id, clip_width, clip_height);
 }
 
-template <class T, std::size_t current, class ...Args> static
+template <class T, unsigned int current, class ...Args> static
 typename std::enable_if<current == 0, void>
 ::type dispatch_decode_bboxes(int selector, Args&& ...args) {
     if(selector == 0)
         launch_decode_boxes_kernel<T, 0, 0, 0, 0>(std::forward<Args>(args)...);
 }
 
-template <class T, std::size_t current, class ...Args> static
+template <class T, unsigned int current, class ...Args> static
 typename std::enable_if<current != 0, void>
 ::type dispatch_decode_bboxes(int selector, Args&& ...args) {
     if(selector == current)
-        launch_decode_boxes_kernel<T, current & 8, current & 4, current & 2, current & 1>(std::forward<Args>(args)...);
+        launch_decode_boxes_kernel<T,
+                static_cast<bool>(current & 8),
+                static_cast<bool>(current & 4),
+                static_cast<bool>(current & 2),
+                static_cast<bool>(current & 1)>(std::forward<Args>(args)...);
     else
         dispatch_decode_bboxes<T, current - 1, Args...>(selector, std::forward<Args>(args)...);
 }
