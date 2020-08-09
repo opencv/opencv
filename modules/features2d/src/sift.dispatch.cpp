@@ -160,10 +160,10 @@ static Mat createInitialImage( const Mat& img, bool doubleImageSize, float sigma
     if( img.channels() == 3 || img.channels() == 4 )
     {
         cvtColor(img, gray, COLOR_BGR2GRAY);
-        gray.convertTo(gray_fpt, DataType<sift_wt>::type, SIFT_FIXPT_SCALE, 0);
+        gray.convertTo(gray_fpt, DataType<sift_gwt>::type, SIFT_FIXPT_SCALE, 0);
     }
     else
-        img.convertTo(gray_fpt, DataType<sift_wt>::type, SIFT_FIXPT_SCALE, 0);
+        img.convertTo(gray_fpt, DataType<sift_gwt>::type, SIFT_FIXPT_SCALE, 0);
 
     float sig_diff;
 

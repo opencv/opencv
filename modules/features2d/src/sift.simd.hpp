@@ -116,12 +116,16 @@ static const float SIFT_DESCR_MAG_THR = 0.2f;
 // factor used to convert floating-point descriptor to unsigned char
 static const float SIFT_INT_DESCR_FCTR = 512.f;
 
-#define DoG_TYPE_SHORT 0
+#define DoG_TYPE_SHORT 1
 #if DoG_TYPE_SHORT
+// intermediate type used for Gaussian pyramids
+typedef unsigned short sift_gwt;
 // intermediate type used for DoG pyramids
-typedef short sift_wt;
-static const int SIFT_FIXPT_SCALE = 48;
+typedef int sift_wt;
+static const int SIFT_FIXPT_SCALE = 256;
 #else
+// intermediate type used for Gaussian pyramids
+typedef float sift_gwt;
 // intermediate type used for DoG pyramids
 typedef float sift_wt;
 static const int SIFT_FIXPT_SCALE = 1;
@@ -194,8 +198,8 @@ float calcOrientationHist(
             if( x <= 0 || x >= img.cols - 1 )
                 continue;
 
-            float dx = (float)(img.at<sift_wt>(y, x+1) - img.at<sift_wt>(y, x-1));
-            float dy = (float)(img.at<sift_wt>(y-1, x) - img.at<sift_wt>(y+1, x));
+            float dx = (float)((int)img.at<sift_gwt>(y, x+1) - img.at<sift_gwt>(y, x-1));
+            float dy = (float)((int)img.at<sift_gwt>(y-1, x) - img.at<sift_gwt>(y+1, x));
 
             X[k] = dx; Y[k] = dy; W[k] = (i*i + j*j)*expf_scale;
             k++;
@@ -296,7 +300,9 @@ bool adjustLocalExtrema(
 )
 {
     CV_TRACE_FUNCTION();
+// #ifdef DoG_TYPE_SHORT
 
+// #else
     const float img_scale = 1.f/(255*SIFT_FIXPT_SCALE);
     const float deriv_scale = img_scale*0.5f;
     const float second_deriv_scale = img_scale;
@@ -311,7 +317,22 @@ bool adjustLocalExtrema(
         const Mat& img = dog_pyr[idx];
         const Mat& prev = dog_pyr[idx-1];
         const Mat& next = dog_pyr[idx+1];
+#if DoG_TYPE_SHORT
+        Vec3f dD(((int)img.at<sift_wt>(r, c+1) - img.at<sift_wt>(r, c-1))*deriv_scale,
+                 ((int)img.at<sift_wt>(r+1, c) - img.at<sift_wt>(r-1, c))*deriv_scale,
+                 ((int)next.at<sift_wt>(r, c) - prev.at<sift_wt>(r, c))*deriv_scale);
 
+        float v2 = (float)img.at<sift_wt>(r, c)*2;
+        float dxx = ((int)img.at<sift_wt>(r, c+1) + img.at<sift_wt>(r, c-1) - v2)*second_deriv_scale;
+        float dyy = ((int)img.at<sift_wt>(r+1, c) + img.at<sift_wt>(r-1, c) - v2)*second_deriv_scale;
+        float dss = ((int)next.at<sift_wt>(r, c) + prev.at<sift_wt>(r, c) - v2)*second_deriv_scale;
+        float dxy = ((int)img.at<sift_wt>(r+1, c+1) - img.at<sift_wt>(r+1, c-1) -
+                     img.at<sift_wt>(r-1, c+1) + img.at<sift_wt>(r-1, c-1))*cross_deriv_scale;
+        float dxs = ((int)next.at<sift_wt>(r, c+1) - next.at<sift_wt>(r, c-1) -
+                     prev.at<sift_wt>(r, c+1) + prev.at<sift_wt>(r, c-1))*cross_deriv_scale;
+        float dys = ((int)next.at<sift_wt>(r+1, c) - next.at<sift_wt>(r-1, c) -
+                     prev.at<sift_wt>(r+1, c) + prev.at<sift_wt>(r-1, c))*cross_deriv_scale;
+#else
         Vec3f dD((img.at<sift_wt>(r, c+1) - img.at<sift_wt>(r, c-1))*deriv_scale,
                  (img.at<sift_wt>(r+1, c) - img.at<sift_wt>(r-1, c))*deriv_scale,
                  (next.at<sift_wt>(r, c) - prev.at<sift_wt>(r, c))*deriv_scale);
@@ -326,7 +347,7 @@ bool adjustLocalExtrema(
                      prev.at<sift_wt>(r, c+1) + prev.at<sift_wt>(r, c-1))*cross_deriv_scale;
         float dys = (next.at<sift_wt>(r+1, c) - next.at<sift_wt>(r-1, c) -
                      prev.at<sift_wt>(r+1, c) + prev.at<sift_wt>(r-1, c))*cross_deriv_scale;
-
+#endif
         Matx33f H(dxx, dxy, dxs,
                   dxy, dyy, dys,
                   dxs, dys, dss);
@@ -364,6 +385,23 @@ bool adjustLocalExtrema(
         const Mat& img = dog_pyr[idx];
         const Mat& prev = dog_pyr[idx-1];
         const Mat& next = dog_pyr[idx+1];
+#if DoG_TYPE_SHORT
+        Matx31f dD(((int)img.at<sift_wt>(r, c+1) - img.at<sift_wt>(r, c-1))*deriv_scale,
+                   ((int)img.at<sift_wt>(r+1, c) - img.at<sift_wt>(r-1, c))*deriv_scale,
+                   ((int)next.at<sift_wt>(r, c) - prev.at<sift_wt>(r, c))*deriv_scale);
+        float t = dD.dot(Matx31f(xc, xr, xi));
+
+        contr = img.at<sift_wt>(r, c)*img_scale + t * 0.5f;
+        if( std::abs( contr ) * nOctaveLayers < contrastThreshold )
+            return false;
+
+        // principal curvatures are computed using the trace and det of Hessian
+        float v2 = img.at<sift_wt>(r, c)*2.f;
+        float dxx = ((int)img.at<sift_wt>(r, c+1) + img.at<sift_wt>(r, c-1) - v2)*second_deriv_scale;
+        float dyy = ((int)img.at<sift_wt>(r+1, c) + img.at<sift_wt>(r-1, c) - v2)*second_deriv_scale;
+        float dxy = ((int)img.at<sift_wt>(r+1, c+1) - img.at<sift_wt>(r+1, c-1) -
+                     img.at<sift_wt>(r-1, c+1) + img.at<sift_wt>(r-1, c-1)) * cross_deriv_scale;
+#else
         Matx31f dD((img.at<sift_wt>(r, c+1) - img.at<sift_wt>(r, c-1))*deriv_scale,
                    (img.at<sift_wt>(r+1, c) - img.at<sift_wt>(r-1, c))*deriv_scale,
                    (next.at<sift_wt>(r, c) - prev.at<sift_wt>(r, c))*deriv_scale);
@@ -379,6 +417,7 @@ bool adjustLocalExtrema(
         float dyy = (img.at<sift_wt>(r+1, c) + img.at<sift_wt>(r-1, c) - v2)*second_deriv_scale;
         float dxy = (img.at<sift_wt>(r+1, c+1) - img.at<sift_wt>(r+1, c-1) -
                      img.at<sift_wt>(r-1, c+1) + img.at<sift_wt>(r-1, c-1)) * cross_deriv_scale;
+#endif
         float tr = dxx + dyy;
         float det = dxx * dyy - dxy * dxy;
 
@@ -393,6 +432,7 @@ bool adjustLocalExtrema(
     kpt.response = std::abs(contr);
 
     return true;
+// #endif
 }
 
 namespace {
@@ -610,8 +650,8 @@ void calcSIFTDescriptor(
             if( rbin > -1 && rbin < d && cbin > -1 && cbin < d &&
                 r > 0 && r < rows - 1 && c > 0 && c < cols - 1 )
             {
-                float dx = (float)(img.at<sift_wt>(r, c+1) - img.at<sift_wt>(r, c-1));
-                float dy = (float)(img.at<sift_wt>(r-1, c) - img.at<sift_wt>(r+1, c));
+                float dx = (float)(img.at<sift_gwt>(r, c+1) - img.at<sift_gwt>(r, c-1));
+                float dy = (float)(img.at<sift_gwt>(r-1, c) - img.at<sift_gwt>(r+1, c));
                 X[k] = dx; Y[k] = dy; RBin[k] = rbin; CBin[k] = cbin;
                 W[k] = (c_rot * c_rot + r_rot * r_rot)*exp_scale;
                 k++;
