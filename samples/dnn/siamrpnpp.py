@@ -1,3 +1,4 @@
+import argparse
 import cv2 as cv
 import glob
 import numpy as np
@@ -344,6 +345,12 @@ class SiamRPNTracker:
         return {'bbox': bbox, 'best_score': best_score}
 
 def get_frames(video_name):
+    """
+    Args:
+        Path to input video frame
+    Return:
+        Frame
+    """
     if not video_name:
         cap = cv.VideoCapture(0)
         while True:
@@ -372,20 +379,30 @@ def get_frames(video_name):
 def main():
     """ Sample SiamRPN Tracker
     """
-    backbone_search = cv.dnn.readNetFromONNX('resnet_search.onnx')
-    backbone_target = cv.dnn.readNetFromONNX('resnet_target.onnx')
-    neck_1 = cv.dnn.readNetFromONNX('neck_1.onnx')
-    neck_2 = cv.dnn.readNetFromONNX('neck_2.onnx')
-    rpn_head = cv.dnn.readNetFromONNX('rpn_head.onnx')
+    parser = argparse.ArgumentParser(description='Use this script to run SiamRPN++ Visual Tracker',
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('--input_video', type=str, required=True, help='Path to input video for tracking')
+    parser.add_argument('--backbone_target', type=str, default='resnet_target.onnx', help='Path to ResNet ONNX model for target')
+    parser.add_argument('--backbone_search', type=str, default='resnet_search.onnx', help='Path to ResNet ONNX model for search')
+    parser.add_argument('--neck_1', type=str, default='neck_1.onnx', help='Path to Adjusted Layer 1 ONNX model')
+    parser.add_argument('--neck_2', type=str, default='neck_2.onnx', help='Path to Adjusted Layer 2 ONNX model')
+    parser.add_argument('--rpn_head', type=str, default='rpn_head.onnx', help='Path to RPN Head ONNX model')
+    args, _ = parser.parse_known_args()
+
+    backbone_search = cv.dnn.readNetFromONNX(args.backbone_search)
+    backbone_target = cv.dnn.readNetFromONNX(args.backbone_target)
+    neck_1 = cv.dnn.readNetFromONNX(args.neck_1)
+    neck_2 = cv.dnn.readNetFromONNX(args.neck_2)
+    rpn_head = cv.dnn.readNetFromONNX(args.rpn_head)
     model = ModelBuilder(backbone_search, backbone_target, neck_1, neck_2, rpn_head)
     tracker = SiamRPNTracker(model)
+
     first_frame = True
-    video_name = 'bag.avi'
-    cv.namedWindow(video_name, cv.WND_PROP_FULLSCREEN)
-    for frame in get_frames(video_name):
+    cv.namedWindow('SiamRPN++ Tracker', cv.WINDOW_AUTOSIZE)
+    for frame in get_frames(args.input_video):
         if first_frame:
             try:
-                init_rect = cv.selectROI(video_name, frame, False, False)
+                init_rect = cv.selectROI('SiamRPN++ Tracker', frame, False, False)
             except:
                 exit()
             tracker.init(frame, init_rect)
@@ -393,8 +410,9 @@ def main():
         else:
             outputs = tracker.track(frame)
             bbox = list(map(int, outputs['bbox']))
-            cv.rectangle(frame, (bbox[0], bbox[1]), (bbox[0] + bbox[2], bbox[1] + bbox[3]), (0, 255, 0), 3)
-        cv.imshow(video_name, frame)
+            x,y,w,h = bbox
+            cv.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 3)
+        cv.imshow('SiamRPN++ Tracker', frame)
         cv.waitKey(40)
 
 if __name__ == '__main__':
