@@ -12,3 +12,7 @@ Deep Neural Networks (dnn module) example {#tutorial_js_table_of_contents_dnn}
 -   @subpage tutorial_js_semantic_segmentation
 
     Semantic segmentation example
+
+-   @subpage tutorial_js_object_detection
+
+    Object detection example
