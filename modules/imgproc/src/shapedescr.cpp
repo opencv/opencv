@@ -471,7 +471,7 @@ static RotatedRect fitEllipseNoDirect( InputArray _points )
 
     // store angle and radii
     rp[4] = -0.5 * atan2(gfp[2], gfp[1] - gfp[0]); // convert from APP angle usage
-    if( fabs(gfp[2]) > min_eps )
+    if (fabs(gfp[2]) / fabs(gfp[1] - gfp[0]) > min_eps)
         t = gfp[2]/sin(-2.0 * rp[4]);
     else // ellipse is rotated by an integer multiple of pi/2
         t = gfp[1] - gfp[0];
@@ -486,12 +486,14 @@ static RotatedRect fitEllipseNoDirect( InputArray _points )
     box.center.y = (float)(rp[1]/scale) + c.y;
     box.size.width = (float)(rp[2]*2/scale);
     box.size.height = (float)(rp[3]*2/scale);
+    double theta = rp[4] * 180 / CV_PI; // angle in degrees
     if( box.size.width > box.size.height )
     {
+        theta += 90;
         float tmp;
         CV_SWAP( box.size.width, box.size.height, tmp );
-        box.angle = (float)(90 + rp[4]*180/CV_PI);
     }
+    box.angle = (float) fmod(theta, 180.0);
     if( box.angle < -180 )
         box.angle += 360;
     if( box.angle > 360 )
