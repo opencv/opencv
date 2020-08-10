@@ -486,14 +486,13 @@ static RotatedRect fitEllipseNoDirect( InputArray _points )
     box.center.y = (float)(rp[1]/scale) + c.y;
     box.size.width = (float)(rp[2]*2/scale);
     box.size.height = (float)(rp[3]*2/scale);
-    double theta = rp[4] * 180 / CV_PI; // angle in degrees
+    box.angle = (float)(rp[4] * 180 / CV_PI);
     if( box.size.width > box.size.height )
     {
-        theta += 90;
         float tmp;
         CV_SWAP( box.size.width, box.size.height, tmp );
+        box.angle += 90;
     }
-    box.angle = (float) fmod(theta, 180.0);
     if( box.angle < -180 )
         box.angle += 360;
     if( box.angle > 360 )
