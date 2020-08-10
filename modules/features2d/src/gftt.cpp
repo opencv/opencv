@@ -97,8 +97,8 @@ public:
             else
                 ugrayImage = _image.getUMat();
 
-            goodFeaturesToTrack( ugrayImage, corners, corners_values, nfeatures, qualityLevel, minDistance, _mask,
-                                 blockSize, gradSize, useHarrisDetector, k );
+            goodFeaturesToTrack( ugrayImage, corners, nfeatures, qualityLevel, minDistance, _mask,
+                                 blockSize, gradSize, useHarrisDetector, k, corners_values);
         }
         else
         {
@@ -106,8 +106,8 @@ public:
             if( image.type() != CV_8U )
                 cvtColor( image, grayImage, COLOR_BGR2GRAY );
 
-            goodFeaturesToTrack( grayImage, corners, corners_values, nfeatures, qualityLevel, minDistance, _mask,
-                                blockSize, gradSize, useHarrisDetector, k );
+            goodFeaturesToTrack( grayImage, corners, nfeatures, qualityLevel, minDistance, _mask,
+                                blockSize, gradSize, useHarrisDetector, k, corners_values );
         }
 
         keypoints.resize(corners.size());
