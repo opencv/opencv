@@ -7,7 +7,7 @@ function Utils(errorOutputId) { // eslint-disable-line no-unused-vars
         let script = document.createElement('script');
         script.setAttribute('async', '');
         script.setAttribute('type', 'text/javascript');
-        script.addEventListener('load', () => {
+        script.addEventListener('load', async () => {
             if (cv.getBuildInformation)
             {
                 console.log(cv.getBuildInformation());
@@ -16,9 +16,15 @@ function Utils(errorOutputId) { // eslint-disable-line no-unused-vars
             else
             {
                 // WASM
-                cv['onRuntimeInitialized']=()=>{
+                if (cv instanceof Promise) {
+                    cv = await cv;
                     console.log(cv.getBuildInformation());
                     onloadCallback();
+                } else {
+                    cv['onRuntimeInitialized']=()=>{
+                        console.log(cv.getBuildInformation());
+                        onloadCallback();
+                    }
                 }
             }
         });
