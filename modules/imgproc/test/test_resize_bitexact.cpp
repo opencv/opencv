@@ -167,7 +167,7 @@ TEST(Resize_Bitexact, Nearest8U_vsNonExact)
     Mat src_gray; cv::cvtColor(src_color, src_gray, COLOR_BGR2GRAY);
 
     int indices = sizeof(depths)/sizeof(depths[0]);
-    int normINF;
+    double normINF;
     for (int i = 0; i < indices; i++)
     {
         Mat mat_color, mat_gray;
