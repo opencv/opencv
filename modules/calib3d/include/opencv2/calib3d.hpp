@@ -441,9 +441,15 @@ namespace cv
 //! @{
 
 //! type of the robust estimation algorithm
-enum { LMEDS  = 4, //!< least-median of squares algorithm
-       RANSAC = 8, //!< RANSAC algorithm
-       RHO    = 16 //!< RHO algorithm
+enum { LMEDS  = 4,  //!< least-median of squares algorithm
+       RANSAC = 8,  //!< RANSAC algorithm
+       RHO    = 16, //!< RHO algorithm
+       USAC_DEFAULT  = 32, //!< USAC algorithm, default settings
+       USAC_PARALLEL = 33, //!< USAC, parallel version
+       USAC_FM_8PTS = 34,  //!< USAC, fundamental matrix 8 points
+       USAC_FAST = 35,     //!< USAC, fast settings
+       USAC_ACCURATE = 36, //!< USAC, accurate settings
+       USAC_PROSAC = 37    //!< USAC, sorted points, runs PROSAC
      };
 
 enum SolvePnPMethod {
@@ -526,6 +532,27 @@ enum HandEyeCalibrationMethod
     CALIB_HAND_EYE_DANIILIDIS   = 4  //!< Hand-Eye Calibration Using Dual Quaternions @cite Daniilidis98
 };
 
+enum SamplingMethod { SAMPLING_UNIFORM, SAMPLING_PROGRESSIVE_NAPSAC, SAMPLING_NAPSAC,
+        SAMPLING_PROSAC };
+enum LocalOptimMethod {LOCAL_OPTIM_NULL, LOCAL_OPTIM_INNER_LO, LOCAL_OPTIM_INNER_AND_ITER_LO,
+        LOCAL_OPTIM_GC, LOCAL_OPTIM_SIGMA};
+enum ScoreMethod {SCORE_METHOD_RANSAC, SCORE_METHOD_MSAC, SCORE_METHOD_MAGSAC, SCORE_METHOD_LMEDS};
+enum NeighborSearchMethod { NEIGH_FLANN_KNN, NEIGH_GRID, NEIGH_FLANN_RADIUS };
+
+struct CV_EXPORTS_W_SIMPLE UsacParams
+{ // in alphabetical order
+    double confidence = 0.99;
+    bool isParallel = false;
+    int loIterations = 5;
+    LocalOptimMethod loMethod = LocalOptimMethod::LOCAL_OPTIM_INNER_LO;
+    int loSampleSize = 14;
+    int maxIterations = 5000;
+    NeighborSearchMethod neighborsSearch = NeighborSearchMethod::NEIGH_GRID;
+    int randomGeneratorState = 0;
+    SamplingMethod sampler = SamplingMethod::SAMPLING_UNIFORM;
+    ScoreMethod score = ScoreMethod::SCORE_METHOD_MSAC;
+    double threshold = 1.5;
+};
 
 /** @brief Converts a rotation matrix to a rotation vector or vice versa.
 
@@ -695,6 +722,10 @@ CV_EXPORTS_W Mat findHomography( InputArray srcPoints, InputArray dstPoints,
 /** @overload */
 CV_EXPORTS Mat findHomography( InputArray srcPoints, InputArray dstPoints,
                                OutputArray mask, int method = 0, double ransacReprojThreshold = 3 );
+
+
+CV_EXPORTS_W Mat findHomography(InputArray srcPoints, InputArray dstPoints, OutputArray mask,
+                   const UsacParams &params);
 
 /** @brief Computes an RQ decomposition of 3x3 matrices.
 
@@ -1082,6 +1113,16 @@ CV_EXPORTS_W bool solvePnPRansac( InputArray objectPoints, InputArray imagePoint
                                   bool useExtrinsicGuess = false, int iterationsCount = 100,
                                   float reprojectionError = 8.0, double confidence = 0.99,
                                   OutputArray inliers = noArray(), int flags = SOLVEPNP_ITERATIVE );
+
+/*
+The function estimates calibration matrix, rotation vector and tranlation vector using
+6-points PnP by RANSAC. Input is only object points and image points.
+Optionally distortion coefficients.
+*/
+CV_EXPORTS_W bool solvePnPRansac( InputArray objectPoints, InputArray imagePoints,
+                     InputOutputArray cameraMatrix, InputArray distCoeffs,
+                     OutputArray rvec, OutputArray tvec, OutputArray inliers,
+                     const UsacParams &params=UsacParams());
 
 /** @brief Finds an object pose from 3 3D-2D point correspondences.
 
@@ -2451,6 +2492,10 @@ CV_EXPORTS Mat findFundamentalMat( InputArray points1, InputArray points2,
                                    OutputArray mask, int method = FM_RANSAC,
                                    double ransacReprojThreshold = 3., double confidence = 0.99 );
 
+
+CV_EXPORTS_W Mat findFundamentalMat( InputArray points1, InputArray points2,
+                        OutputArray mask, const UsacParams &params);
+
 /** @brief Calculates an essential matrix from the corresponding points in two images.
 
 @param points1 Array of N (N \>= 5) 2D points from the first image. The point coordinates should
@@ -2572,6 +2617,12 @@ CV_EXPORTS_W Mat findEssentialMat( InputArray points1, InputArray points2,
                                  int method = RANSAC,
                                  double prob = 0.999, double threshold = 1.0,
                                  OutputArray mask = noArray() );
+
+
+CV_EXPORTS_W Mat findEssentialMat( InputArray points1, InputArray points2,
+                      InputArray cameraMatrix1, InputArray cameraMatrix2,
+                      InputArray dist_coeff1, InputArray dist_coeff2, OutputArray mask,
+                      const UsacParams &params);
 
 /** @brief Decompose an essential matrix to possible rotations and translation.
 
@@ -3036,6 +3087,10 @@ CV_EXPORTS_W cv::Mat estimateAffine2D(InputArray from, InputArray to, OutputArra
                                   int method = RANSAC, double ransacReprojThreshold = 3,
                                   size_t maxIters = 2000, double confidence = 0.99,
                                   size_t refineIters = 10);
+
+
+CV_EXPORTS_W cv::Mat estimateAffine2D(InputArray pts1, InputArray pts2, OutputArray inliers,
+                     const UsacParams &params);
 
 /** @brief Computes an optimal limited affine transformation with 4 degrees of freedom between
 two 2D point sets.
