@@ -157,6 +157,8 @@ public:
     CV_ALWAYS_INLINE bool isZero() { return val == 0; }
     static CV_ALWAYS_INLINE ufixedpoint64 zero() { return ufixedpoint64(); }
     static CV_ALWAYS_INLINE ufixedpoint64 one() { return ufixedpoint64((uint64_t)(1ULL << fixedShift)); }
+    CV_ALWAYS_INLINE uint64_t raw() { return val; }
+
     friend class ufixedpoint32;
 };
 
