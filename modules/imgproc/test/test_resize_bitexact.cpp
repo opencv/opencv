@@ -152,7 +152,7 @@ TEST(Resize_Bitexact, Linear8U)
         }
 }
 
-static int checkNearest8U_vsNonExact(const Mat& src)
+static double checkNearest8U_vsNonExact(const Mat& src)
 {
     Mat dstExact; cv::resize(src, dstExact, Size(), 2, 1, INTER_NEAREST_EXACT);
     Mat dstNonExact; cv::resize(src, dstNonExact, Size(), 2, 1, INTER_NEAREST);
@@ -173,11 +173,11 @@ TEST(Resize_Bitexact, Nearest8U_vsNonExact)
         Mat mat_color, mat_gray;
         src_color.assignTo(mat_color, depths[i]);
         normINF = checkNearest8U_vsNonExact(mat_color);
-        EXPECT_LE(normINF, 1.0) << "color, type: " << depths[i];
+        EXPECT_EQ(normINF, 0) << "color, type: " << depths[i];
 
         src_gray.assignTo(mat_gray, depths[i]);
         normINF = checkNearest8U_vsNonExact(mat_gray);
-        EXPECT_LE(normINF, 1.0) << "gray, type: " << depths[i];
+        EXPECT_EQ(normINF, 0) << "gray, type: " << depths[i];
     }
 }
 
