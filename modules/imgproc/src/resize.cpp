@@ -1183,7 +1183,7 @@ public:
             default:
                 for( x = 0; x < dsize.width; x++, D += pix_size )
                 {
-                    const uchar* _tS = S + x_ofse[x];
+                    const uchar* _tS = S + x_ofse[x] * pix_size;
                     for (int k = 0; k < pix_size; k++)
                         D[k] = _tS[k];
                 }
