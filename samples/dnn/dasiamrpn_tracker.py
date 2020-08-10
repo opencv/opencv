@@ -273,7 +273,7 @@ def main():
         has_frame, frame = cap.read()
         if not has_frame:
             sys.exit(0)
-        update_status, new_bb = tracker.update(frame)
+        _, new_bb = tracker.update(frame)
         cx, cy, w, h = new_bb
         cv.rectangle(frame, (int(cx - w // 2), int(cy - h // 2)), (int(cx - w // 2) + int(w), int(cy - h // 2) + int(h)),(0, 255, 255), 3)
         cv.imshow("DaSiamRPN", frame)
