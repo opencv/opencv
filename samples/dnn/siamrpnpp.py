@@ -329,7 +329,7 @@ def main():
     parser.add_argument('--search_net', type=str, default='search_net.onnx', help='Path to part of SiamRPN++ ran on search frame.')
     parser.add_argument('--rpn_head', type=str, default='rpn_head.onnx', help='Path to RPN Head ONNX model.')
     args, _ = parser.parse_known_args()
-    
+
     if not os.path.isfile(args.input_video):
         raise OSError("Input video file does not exist")
     if not os.path.isfile(args.target_net):
@@ -338,7 +338,7 @@ def main():
         raise OSError("Search Net does not exist")
     if not os.path.isfile(args.rpn_head):
         raise OSError("RPN Head Net does not exist")
-    
+
     #Load the Networks
     target_net = cv.dnn.readNetFromONNX(args.target_net)
     search_net = cv.dnn.readNetFromONNX(args.search_net)
