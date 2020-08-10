@@ -39,11 +39,7 @@ PERF_TEST_P(Image_MaxCorners_QualityLevel_MinDistance_BlockSize_gradientSize_Use
     if (corners.size() > 50)
         corners.erase(corners.begin() + 50, corners.end());
 
-    if (corners_values.size() > 50)
-        corners_values.erase(corners_values.begin() + 50, corners_values.end());
-
     SANITY_CHECK(corners);
-    SANITY_CHECK(corners_values);
 }
 
 } // namespace
