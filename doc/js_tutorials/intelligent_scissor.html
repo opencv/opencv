@@ -35,7 +35,7 @@
         enqueue(obj, level)
         {
           let i = 0;
-          while(i < this.queue.length && this.queue[i].level < level)
+          while(i < this.queue.length && this.queue[i].level <= level)
             ++i;
           this.queue.splice(i,0,{
             value : obj,
@@ -79,11 +79,14 @@
         let dp;
         let dq;
         let fG = gradient_magnitude.data32F[q.x * gradient_magnitude.cols * gradient_magnitude.channels() + q.y * gradient_magnitude.channels()];
+        // console.log("fG")
+        // console.log(fG)
         let WEIGHT_LAP_ZERO_CROSS = 0.43;
         let WEIGHT_GRADIENT_MAGNITUDE = 0.14;
         let WEIGHT_GRADIENT_DIRECTION = 0.43;
         let isDiag = (p.x != q.x) && (p.y != q.y);
-
+        // console.log("isDiag");
+        // console.log(isDiag);
         if ((Iy.data32F[p.x * Iy.cols * Iy.channels() + p.y * Iy.channels()] * (q.x - p.x) - Ix.data32F[p.x * Ix.cols * Ix.channels() + p.y * Ix.channels()] * (q.y - p.y)) >= 0)
         {
           dp = Iy.data32F[p.x * Iy.cols * Iy.channels() + p.y * Iy.channels()] * (q.x - p.x) - Ix.data32F[p.x * Ix.cols * Ix.channels() + p.y * Ix.channels()] * (q.y - p.y);
@@ -94,7 +97,10 @@
           dp = Iy.data32F[p.x * Iy.cols * Iy.channels() + p.y * Iy.channels()] * (p.x - q.x) - Ix.data32F[p.x * Ix.cols * Ix.channels() + p.y * Ix.channels()] * (p.y - q.y);
           dq = Iy.data32F[q.x * Iy.cols * Iy.channels() + q.y * Iy.channels()] * (p.x - q.x) - Ix.data32F[q.x * Ix.cols * Ix.channels() + q.y * Ix.channels()] * (p.y - q.y);
         }
-
+        // console.log("dp")
+        // console.log(dp)
+        // console.log("dq")
+        // console.log(dq)
         if (isDiag)
         {
           dp /= Math.sqrt(2);
@@ -104,8 +110,11 @@
         {
           fG /= Math.sqrt(2);
         }
-
-        return WEIGHT_LAP_ZERO_CROSS * zero_crossing.data[q.x * zero_crossing.cols * zero_crossing.channels() + q.y * zero_crossing.channels()] +  WEIGHT_GRADIENT_DIRECTION * (Math.acos(dp) + Math.acos(dq)) / Math.PI + WEIGHT_GRADIENT_MAGNITUDE *fG;
+        // console.log("zero", WEIGHT_GRADIENT_MAGNITUDE *fG)
+        // console.log("zero * WEIGHT", WEIGHT_GRADIENT_DIRECTION * (Math.cos(dp) + Math.cos(dq) / Math.PI) + WEIGHT_GRADIENT_MAGNITUDE *fG)
+        let total =(WEIGHT_LAP_ZERO_CROSS * zero_crossing.data[q.x * zero_crossing.cols * zero_crossing.channels() + q.y * zero_crossing.channels()] +  WEIGHT_GRADIENT_DIRECTION * (Math.acos(dp) + Math.acos(dq)) / Math.PI + WEIGHT_GRADIENT_MAGNITUDE *fG);
+        // return total - total * 1000000 % 1 / 1000000;
+        return total;
       }
 
       function find_min_path(start)
@@ -132,8 +141,6 @@
           console.log(P.value);
           L.dequeue(); 
           console.log(P.level);
-          if(iter >= 8)
-          {break;}
           let p = P.value;
           processed.data[p.x * processed.cols * processed.channels() + p.y * processed.channels()] = 0;
 
@@ -152,7 +159,8 @@
                 {
                   let q = {x: tx,y: ty};
                   let cost = cost_map.data32F[p.x * cost_map.cols * cost_map.channels() + p.y * cost_map.channels()]  +  local_cost(p, q);
-                  console.log(cost);
+                  console.log(tx, ty);
+                  // console.log(cost);
                   if (processed.data[q.x * processed.cols * processed.channels() + q.y * processed.channels()] == 1 && cost < cost_map.data32F[q.x * cost_map.cols * cost_map.channels() + q.y * cost_map.channels()])
                   {
                     removed.data[q.x * removed.cols * removed.channels() + q.y * removed.channels()] = 1;
@@ -162,6 +170,8 @@
                     cost_map.data32F[q.x * cost_map.cols * cost_map.channels() + q.y * cost_map.channels()]= cost;
                     hit_map_x.data32S[q.x * hit_map_x.cols * hit_map_x.channels() + q.y * hit_map_x.channels()] = p.x;
                     hit_map_y.data32S[q.x * hit_map_y.cols * hit_map_y.channels() + q.y * hit_map_y.channels()] = p.y;
+                    // console.log(q.x,q.y, "to")
+                    // console.log(hit_map_x.data32S[q.x * hit_map_x.cols * hit_map_x.channels() + q.y * hit_map_x.channels()],hit_map_y.data32S[q.x * hit_map_y.cols * hit_map_y.channels() + q.y * hit_map_y.channels()])
                     processed.data[q.x * processed.cols * processed.channels() + q.y * processed.channels()] = 1
                     L.enqueue(q,cost_map.data32F[q.x * cost_map.cols * cost_map.channels() + q.y * cost_map.channels()]);
                   }
@@ -170,6 +180,13 @@
             }
           }
           iter=iter+1;
+          if(iter>0)
+            while (!L.empty())
+            {
+              let P = L.top();
+              console.log(P.value, P.level);
+              L.dequeue();
+            }
           cv.imshow("canvas",  src);
         }
       }
@@ -183,6 +200,7 @@
         Ix = new cv.Mat();
         Iy = new cv.Mat();
         let ptr_pix = new cv.Point(20,20);
+
 
         gradient_magnitude = new cv.Mat();
         cv.cvtColor(src, grayscale, cv.COLOR_RGBA2GRAY);
@@ -199,8 +217,9 @@
         let result = cv.minMaxLoc(gradient_magnitude);
         let maxPoint = result.maxVal;
         gradient_magnitude.convertTo(gradient_magnitude, cv.CV_32F, -1/maxPoint, 1.0);
-
+  
         find_min_path(ptr_pix)
+        console.log("done")
       }
 
       document.getElementById("canvas").onmousedown = function(e)
@@ -217,7 +236,7 @@
           let x = e.pageX - this.offsetLeft;
           let y = e.pageY - this.offsetTop;
           
-          while(x!=50 && y!=50)
+          while(x!=20 && y!=20)
           {
             cv.line(src, new cv.Point(hit_map_x.intPtr(x,y)[0], hit_map_y.intPtr(x,y)[0]), new cv.Point(x, y),
             new cv.Scalar(255, 255, 255, 255), 2);

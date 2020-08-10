@@ -84,8 +84,6 @@ static void find_min_path(const Point& start, Parameters* param)
     {
         Pix P = L.top();
         std::cout<<P.next_point<<" "<<P.cost<<std::endl;
-        if (iter>8)
-        break;
         L.pop();
         Point p = P.next_point;
         processed.at<uchar>(p) = 0;
@@ -104,7 +102,8 @@ static void find_min_path(const Point& start, Parameters* param)
                     {
                         Point q = Point(tx, ty);
                         float cost = cost_map.at<float>(p) + local_cost(p, q, param->gradient_magnitude, param->Iy, param->Ix, param->zero_crossing);
-                        std::cout<<"loc "<< cost<<std::endl;
+                        std::cout<< " Point: "<<tx << " "<< ty<<std::endl;
+                        // std::cout<<"loc "<< cost<<std::endl;
                         if (processed.at<uchar>(q) == 1 && cost < cost_map.at<float>(q))
                         {
                             removed.at<uchar>(q) = 1;
@@ -114,6 +113,8 @@ static void find_min_path(const Point& start, Parameters* param)
                             cost_map.at<float>(q) = cost;
                             param->hit_map_x.at<int>(q)= p.x;
                             param->hit_map_y.at<int>(q) = p.y;
+                            // std::cout<< " Point: "<<q.x << " "<< q.y<<" to "<<std::endl;
+                            // std::cout<< p.x <<" "<<p.y<<std::endl;
                             processed.at<uchar>(q) = 1;
                             Pix val;
                             val.cost = cost_map.at<float>(q);
@@ -125,6 +126,13 @@ static void find_min_path(const Point& start, Parameters* param)
             }
         }
         iter++;
+        if(iter>0)
+        while (!L.empty())
+        {
+             Pix P = L.top();
+             std::cout<<P.next_point<<" "<<P.cost<<std::endl;
+             L.pop();
+        }
     }
 }
 
