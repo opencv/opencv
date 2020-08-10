@@ -217,6 +217,9 @@ class DaSiamRPNTracker:
 def main():
     parser = argparse.ArgumentParser(description="Run tracker")
     parser.add_argument("--input", type=str, help="Full path to input (empty for camera)")
+    parser.add_argument("--net", type=str, default="dasiamrpn_model.onnx", help="Full path to onnx model of net")
+    parser.add_argument("--kernel_r1", type=str, default="dasiamrpn_kernel_r1.onnx", help="Full path to onnx model of kernel_r1")
+    parser.add_argument("--kernel_cls1", type=str, default="dasiamrpn_kernel_cls1.onnx", help="Full path to onnx model of kernel_cls1")
     args = parser.parse_args()
     point1 = ()
     point2 = ()
@@ -265,7 +268,7 @@ def main():
         cv.waitKey(40)
 
     init_bb = (cx, cy, w, h)
-    tracker = DaSiamRPNTracker()
+    tracker = DaSiamRPNTracker(args.net, args.kernel_r1, args.kernel_cls1)
     tracker.init(frame, init_bb)
 
     # Tracking loop
