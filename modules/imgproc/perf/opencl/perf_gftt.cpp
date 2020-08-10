@@ -81,7 +81,6 @@ OCL_PERF_TEST_P(GoodFeaturesToTrackFixture, GoodFeaturesToTrack,
                                              minDistance, noArray(), 3, 3, harrisDetector, 0.04, values);
 
     SANITY_CHECK(dst);
-    SANITY_CHECK(values);
 }
 
 } } // namespace opencv_test::ocl
