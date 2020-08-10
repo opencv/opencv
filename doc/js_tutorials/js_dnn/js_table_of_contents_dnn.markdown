@@ -16,3 +16,7 @@ Deep Neural Networks (dnn module) example {#tutorial_js_table_of_contents_dnn}
 -   @subpage tutorial_js_style_transfer
 
     Style transfer example
+
+-   @subpage tutorial_js_object_detection
+
+    Object detection example
