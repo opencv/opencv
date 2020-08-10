@@ -391,8 +391,33 @@ int CV_GoodFeatureToTTest::validate_test_results( int test_case_idx )
         ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
 
         for(int i = 0; i < (int)std::min((unsigned int)(corners.size()), (unsigned int)(Refcorners.size())); i++){
-            if ( (corners[i].x != Refcorners[i].x) || (corners[i].y != Refcorners[i].y) || (corners_values[i] != Refcorners_values[i]))
-                printf("i = %i X %2.6f Xref %2.6f Y %2.6f Yref %2.6f Values %2.6f Values ref %2.6f\n",i,corners[i].x,Refcorners[i].x,corners[i].y,Refcorners[i].y,corners_values[i],Refcorners_values[i]);
+            if ( (corners[i].x != Refcorners[i].x) || (corners[i].y != Refcorners[i].y))
+                printf("i = %i X %2.6f Xref %2.6f Y %2.6f Yref %2.6f\n",i,corners[i].x,Refcorners[i].x,corners[i].y,Refcorners[i].y);
+        }
+    }
+    else
+    {
+        TEST_MESSAGEL (" Refcorners =  ", Refcorners.size())
+        TEST_MESSAGEL (" TestCorners = ", corners.size())
+        TEST_MESSAGE ("\n")
+
+        ts->set_failed_test_info(cvtest::TS::OK);
+    }
+
+    e = cv::norm(corners_values, Refcorners_values); // TODO cvtest
+
+    if (e > eps)
+    {
+        TEST_MESSAGEL ("Number of features: Refcorners =  ", Refcorners.size())
+        TEST_MESSAGEL ("                    TestCorners = ", corners.size())
+        TEST_MESSAGE ("\n")
+
+        ts->printf(cvtest::TS::CONSOLE, "actual error: %g, expected: %g", e, eps);
+        ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
+
+        for(int i = 0; i < (int)std::min((unsigned int)(corners_values.size()), (unsigned int)(Refcorners_values.size())); i++){
+            if (corners_values[i] != Refcorners_values[i])
+                printf("Values %2.6f Values ref %2.6f\n",corners_values[i],Refcorners_values[i]);
         }
     }
     else

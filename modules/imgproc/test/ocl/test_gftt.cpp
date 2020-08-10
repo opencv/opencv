@@ -111,7 +111,9 @@ OCL_TEST_P(GoodFeaturesToTrack, Accuracy)
         ASSERT_FALSE(uvalues.empty());
         UMatToVector(upoints, upts);
 
+        ASSERT_EQ(pts.size(), values.size());
         ASSERT_EQ(upts.size(), pts.size());
+        ASSERT_EQ(uvalues.size(), values.size());
 
         int mistmatch = 0;
         for (size_t i = 0; i < pts.size(); ++i)
