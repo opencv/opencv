@@ -1,10 +1,11 @@
 import argparse
 import cv2 as cv
-import glob
 import numpy as np
-import os
 
 """
+Link to original paper : https://arxiv.org/abs/1812.11703
+Link to original repo  : https://github.com/STVIR/pysot
+
 You can download the pre-trained weights of the Tracker Model from https://drive.google.com/file/d/1PBtRDiWAIaGthMKdzyJL9qYC6ODGnXk5/view?usp=sharing
 You can download the backbone model (ResNet50 with target input) from https://drive.google.com/file/d/1jwguUwfvBa-EbDXRDfuyCrvqLPZcFZo0/view?usp=sharing
 You can download the backbone model (ResNet50 with search input) from https://drive.google.com/file/d/1L6kxi_WkdH__kfrPC_R-ZsaPD4ky52tI/view?usp=sharing
@@ -16,41 +17,28 @@ You can download the head model (RPN Head) from https://drive.google.com/file/d/
 class ModelBuilder():
     """ This class generates the SiamRPN++ Tracker Model by using Imported ONNX Nets
     """
-    def __init__(self, backbone_search, backbone_target, neck_1, neck_2, rpn_head):
+    def __init__(self, target_net, search_net, rpn_head):
         super(ModelBuilder, self).__init__()
-        # Build Backbone Model
-        self.backbone_search = backbone_search
-        self.backbone_target = backbone_target
-        # Build Adjusted Layer
-        self.neck_1 = neck_1
-        self.neck_2 = neck_2
+        # Build the target branch
+        self.target_net = target_net
+        # Build the search branch
+        self.search_net = search_net
         # Build RPN_Head
         self.rpn_head = rpn_head
 
     def template(self, z):
         """ Takes the template of size (1, 1, 127, 127) as an input to generate kernel
         """
-        self.backbone_target.setInput(z)
+        self.target_net.setInput(z)
         outNames = ['output_1', 'output_2', 'output_3']
-        zf_1, zf_2, zf_3 = self.backbone_target.forward(outNames)
-        self.neck_1.setInput(zf_1, 'input_1')
-        self.neck_1.setInput(zf_2, 'input_2')
-        self.neck_1.setInput(zf_3, 'input_3')
-        zfs_1, zfs_2, zfs_3 = self.neck_1.forward(outNames)
-        self.zfs_1 = zfs_1
-        self.zfs_2 = zfs_2
-        self.zfs_3 = zfs_3
+        self.zfs_1, self.zfs_2, self.zfs_3 = self.target_net.forward(outNames)
 
     def track(self, x):
         """ Takes the search of size (1, 1, 255, 255) as an input to generate classification score and bounding box regression
         """
-        self.backbone_search.setInput(x)
+        self.search_net.setInput(x)
         outNames = ['output_1', 'output_2', 'output_3']
-        xf_1, xf_2, xf_3 = self.backbone_search.forward(outNames)
-        self.neck_2.setInput(xf_1, 'input_1')
-        self.neck_2.setInput(xf_2, 'input_2')
-        self.neck_2.setInput(xf_3, 'input_3')
-        xfs_1, xfs_2, xfs_3 = self.neck_2.forward(outNames)
+        xfs_1, xfs_2, xfs_3 = self.search_net.forward(outNames)
         self.rpn_head.setInput(np.stack([self.zfs_1, self.zfs_2, self.zfs_3]), 'input_1')
         self.rpn_head.setInput(np.stack([xfs_1, xfs_2, xfs_3]), 'input_2')
         outNames = ['output_1', 'output_2']
@@ -67,14 +55,13 @@ class Anchors:
         self.image_center = image_center
         self.size = size
         self.anchor_num = len(self.scales) * len(self.ratios)
-        self.anchors = None
-        self.generate_anchors()
+        self.anchors = self.generate_anchors()
 
     def generate_anchors(self):
         """
         generate anchors based on predefined configuration
         """
-        self.anchors = np.zeros((self.anchor_num, 4), dtype=np.float32)
+        anchors = np.zeros((self.anchor_num, 4), dtype=np.float32)
         size = self.stride**2
         count = 0
         for r in self.ratios:
@@ -84,36 +71,9 @@ class Anchors:
             for s in self.scales:
                 w = ws * s
                 h = hs * s
-                self.anchors[count][:] = [-w * 0.5, -h * 0.5, w * 0.5, h * 0.5][:]
+                anchors[count][:] = [-w * 0.5, -h * 0.5, w * 0.5, h * 0.5][:]
                 count += 1
-
-def corner2center(corner):
-    """ convert (x1, y1, x2, y2) to (cx, cy, w, h)
-    Args:
-        corner: np.array (4*N)
-    Return:
-        np.array (4 * N)
-    """
-    x1, y1, x2, y2 = corner[:4]
-    x = (x1 + x2) * 0.5
-    y = (y1 + y2) * 0.5
-    w = x2 - x1
-    h = y2 - y1
-    return x, y, w, h
-
-def center2corner(center):
-    """ convert (cx, cy, w, h) to (x1, y1, x2, y2)
-    Args:
-        center: np.array (4 * N)
-    Return:
-        np.array (4 * N)
-    """
-    x, y, w, h = center[0], center[1], center[2], center[3]
-    x1 = x - w * 0.5
-    y1 = y - h * 0.5
-    x2 = x + w * 0.5
-    y2 = y + h * 0.5
-    return x1, y1, x2, y2
+        return anchors
 
 class SiamRPNTracker:
     def __init__(self, model):
@@ -351,50 +311,39 @@ def get_frames(video_name):
     Return:
         Frame
     """
-    if not video_name:
-        cap = cv.VideoCapture(0)
-        while True:
-            ret, frame = cap.read()
-            if ret:
-                yield frame
-            else:
-                break
-    elif video_name.endswith('avi') or \
-        video_name.endswith('mp4'):
-        cap = cv.VideoCapture(video_name)
-        while True:
-            ret, frame = cap.read()
-            if ret:
-                yield frame
-            else:
-                break
-    else:
-        images = glob(os.path.join(video_name, '*.jp*'))
-        images = sorted(images,
-                        key=lambda x: int(x.split('/')[-1].split('.')[0]))
-        for img in images:
-            frame = cv.imread(img)
+    cap = cv.VideoCapture(video_name if video_name else 0)
+    while True:
+        ret, frame = cap.read()
+        if ret:
             yield frame
+        else:
+            break
 
 def main():
     """ Sample SiamRPN Tracker
     """
     parser = argparse.ArgumentParser(description='Use this script to run SiamRPN++ Visual Tracker',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--input_video', type=str, required=True, help='Path to input video for tracking')
-    parser.add_argument('--backbone_target', type=str, default='resnet_target.onnx', help='Path to ResNet ONNX model for target')
-    parser.add_argument('--backbone_search', type=str, default='resnet_search.onnx', help='Path to ResNet ONNX model for search')
-    parser.add_argument('--neck_1', type=str, default='neck_1.onnx', help='Path to Adjusted Layer 1 ONNX model')
-    parser.add_argument('--neck_2', type=str, default='neck_2.onnx', help='Path to Adjusted Layer 2 ONNX model')
-    parser.add_argument('--rpn_head', type=str, default='rpn_head.onnx', help='Path to RPN Head ONNX model')
+    parser.add_argument('--input_video', type=str, required=True, help='Path to input video file. Skip this argument to capture frames from a camera.')
+    parser.add_argument('--target_net', type=str, default='target_net.onnx', help='Path to part of SiamRPN++ ran on target frame.')
+    parser.add_argument('--search_net', type=str, default='search_net.onnx', help='Path to part of SiamRPN++ ran on search frame.')
+    parser.add_argument('--rpn_head', type=str, default='rpn_head.onnx', help='Path to RPN Head ONNX model.')
     args, _ = parser.parse_known_args()
-
-    backbone_search = cv.dnn.readNetFromONNX(args.backbone_search)
-    backbone_target = cv.dnn.readNetFromONNX(args.backbone_target)
-    neck_1 = cv.dnn.readNetFromONNX(args.neck_1)
-    neck_2 = cv.dnn.readNetFromONNX(args.neck_2)
+    
+    if not os.path.isfile(args.input_video):
+        raise OSError("Input video file does not exist")
+    if not os.path.isfile(args.target_net):
+        raise OSError("Target Net does not exist")
+    if not os.path.isfile(args.search_net):
+        raise OSError("Search Net does not exist")
+    if not os.path.isfile(args.rpn_head):
+        raise OSError("RPN Head Net does not exist")
+    
+    #Load the Networks
+    target_net = cv.dnn.readNetFromONNX(args.target_net)
+    search_net = cv.dnn.readNetFromONNX(args.search_net)
     rpn_head = cv.dnn.readNetFromONNX(args.rpn_head)
-    model = ModelBuilder(backbone_search, backbone_target, neck_1, neck_2, rpn_head)
+    model = ModelBuilder(target_net, search_net, rpn_head)
     tracker = SiamRPNTracker(model)
 
     first_frame = True
@@ -413,7 +362,9 @@ def main():
             x,y,w,h = bbox
             cv.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 3)
         cv.imshow('SiamRPN++ Tracker', frame)
-        cv.waitKey(40)
+        key = cv.waitKey(1)
+        if key == ord("q"):
+            break
 
 if __name__ == '__main__':
     main()
