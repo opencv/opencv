@@ -716,7 +716,7 @@ class ObjectiveCWrapperGenerator(object):
         namespace = self.classes[cname].namespace if self.classes.has_key(cname) else "cv"
         return namespace.replace(".", "::") + "::"
 
-    def gen(self, srcfiles, module, output_path, output_objc_path, common_headers):
+    def gen(self, srcfiles, module, output_path, output_objc_path, common_headers, manual_classes):
         self.clear()
         self.module = module
         self.Module = module.capitalize()
@@ -751,6 +751,7 @@ class ObjectiveCWrapperGenerator(object):
                     self.add_enum(decl)
                 else: # function
                     self.add_func(decl)
+        self.classes[self.Module].member_classes += manual_classes
 
         logging.info("\n\n===== Generating... =====")
         package_path = os.path.join(output_objc_path, module)
@@ -1243,6 +1244,7 @@ def copy_objc_files(objc_files_dir, objc_base_path, module_path, include = False
         if (not os.path.exists(dest)) or (os.stat(src).st_mtime - os.stat(dest).st_mtime > 1):
             copyfile(src, dest)
             updated_files += 1
+    return objc_files
 
 def unescape(str):
     return str.replace("&lt;", "<").replace("&gt;", ">").replace("&amp;", "&")
@@ -1298,6 +1300,7 @@ def sanitize_documentation_string(doc, type):
         .replace("@param[in]", "@param") \
         .replace("@param[out]", "@param") \
         .replace("@ref", "REF:") \
+        .replace("@note", "NOTE:") \
         .replace("@returns", "@return") \
         .replace("@sa ", "@see ") \
         .replace("@snippet", "SNIPPET:") \
@@ -1422,12 +1425,14 @@ if __name__ == "__main__":
             module_imports += gen_type_dict.get("module_imports", [])
 
         objc_files_dir = os.path.join(misc_location, 'common')
+        copied_files = []
         if os.path.exists(objc_files_dir):
-            copy_objc_files(objc_files_dir, objc_base_path, module, True)
+            copied_files += copy_objc_files(objc_files_dir, objc_base_path, module, True)
+
         if args.target == 'ios':
             ios_files_dir = os.path.join(misc_location, 'ios')
             if os.path.exists(ios_files_dir):
-                copy_objc_files(ios_files_dir, objc_base_path, module, True)
+                copied_files += copy_objc_files(ios_files_dir, objc_base_path, module, True)
 
         objc_test_files_dir = os.path.join(misc_location, 'test')
         if os.path.exists(objc_test_files_dir):
@@ -1436,8 +1441,12 @@ if __name__ == "__main__":
             if os.path.exists(objc_test_resources_dir):
                 copy_tree(objc_test_resources_dir, os.path.join(objc_test_base_path, 'test', 'resources'))
 
+        manual_classes = filter(lambda x:type_dict.has_key(x),
+                                map(lambda x: x[x.rfind('/')+1:-2],
+                                    filter(lambda x: x.endswith('.h'), copied_files)))
+
         if len(srcfiles) > 0:
-            generator.gen(srcfiles, module, dstdir, objc_base_path, common_headers)
+            generator.gen(srcfiles, module, dstdir, objc_base_path, common_headers, manual_classes)
         else:
             logging.info("No generated code for module: %s", module)
     generator.finalize(objc_base_path)

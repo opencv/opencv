@@ -19,6 +19,10 @@ Script will create <outputdir>, if it's missing, and a few its subdirectories:
                [cmake-generated build tree for iOS simulator]
         {framework_name}.framework/
             [the framework content]
+        samples/
+            [sample projects]
+        docs/
+            [documentation]
 
 The script should handle minor OpenCV updates efficiently
 - it does not recompile the library from scratch each time.
@@ -58,7 +62,7 @@ def getXCodeSetting(var, projectdir):
         raise Exception("Failed to parse Xcode settings")
 
 class Builder:
-    def __init__(self, opencv, contrib, dynamic, bitcodedisabled, exclude, disable, enablenonfree, targets, debug, debug_info, framework_name):
+    def __init__(self, opencv, contrib, dynamic, bitcodedisabled, exclude, disable, enablenonfree, targets, debug, debug_info, framework_name, run_tests, build_docs):
         self.opencv = os.path.abspath(opencv)
         self.contrib = None
         if contrib:
@@ -77,6 +81,8 @@ class Builder:
         self.debug = debug
         self.debug_info = debug_info
         self.framework_name = framework_name
+        self.run_tests = run_tests
+        self.build_docs = build_docs
 
     def getBD(self, parent, t):
 
@@ -128,8 +134,20 @@ class Builder:
                 self.makeDynamicLib(mainBD)
         self.makeFramework(outdir, dirs)
         if self.build_objc_wrapper:
-            print("To run tests call:")
-            print(sys.argv[0].replace("build_framework", "run_tests") + " --framework_dir=" + outdir + " --framework_name=" + self.framework_name + " " + dirs[0] +  "/modules/objc/test")
+            if self.run_tests:
+                check_call([sys.argv[0].replace("build_framework", "run_tests"), "--framework_dir=" + outdir, "--framework_name=" + self.framework_name, dirs[0] +  "/modules/objc/test"])
+            else:
+                print("To run tests call:")
+                print(sys.argv[0].replace("build_framework", "run_tests") + " --framework_dir=" + outdir + " --framework_name=" + self.framework_name + " " + dirs[0] +  "/modules/objc/test")
+            if self.build_docs:
+                check_call([sys.argv[0].replace("build_framework", "build_docs"), dirs[0] + "/modules/objc/framework_build"])
+                doc_path = os.path.join(dirs[0], "modules", "objc", "doc_build", "docs")
+                if os.path.exists(doc_path):
+                    shutil.copytree(doc_path, os.path.join(outdir, "docs"))
+                    shutil.copyfile(os.path.join(self.opencv, "doc", "opencv.ico"), os.path.join(outdir, "docs", "favicon.ico"))
+            else:
+                print("To build docs call:")
+                print(sys.argv[0].replace("build_framework", "build_docs") + " " + dirs[0] + "/modules/objc/framework_build")
             self.copy_samples(outdir)
 
     def build(self, outdir):
@@ -370,11 +388,6 @@ class Builder:
                 d = os.path.join(framework_dir, *l[1])
                 os.symlink(s, d)
 
-        doc_path = os.path.join(builddirs[0], "modules", "objc", "doc_build", "docs")
-        if os.path.exists(doc_path):
-            shutil.copytree(doc_path, os.path.join(outdir, "docs"))
-            shutil.copyfile(os.path.join(self.opencv, "doc", "opencv.ico"), os.path.join(outdir, "docs", "favicon.ico"))
-
     def copy_samples(self, outdir):
         return
 
@@ -431,6 +444,9 @@ if __name__ == "__main__":
     parser.add_argument('--debug_info', default=False, dest='debug_info', action='store_true', help='Build with debug information (useful for Release mode: BUILD_WITH_DEBUG_INFO=ON)')
     parser.add_argument('--framework_name', default='opencv2', dest='framework_name', help='Name of OpenCV framework (default: opencv2, will change to OpenCV in future version)')
     parser.add_argument('--legacy_build', default=False, dest='legacy_build', action='store_true', help='Build legacy opencv2 framework (default: False, equivalent to "--framework_name=opencv2 --without=objc")')
+    parser.add_argument('--run_tests', default=False, dest='run_tests', action='store_true', help='Run tests')
+    parser.add_argument('--build_docs', default=False, dest='build_docs', action='store_true', help='Build docs')
+
     args = parser.parse_args()
 
     os.environ['IPHONEOS_DEPLOYMENT_TARGET'] = args.iphoneos_deployment_target
@@ -451,6 +467,6 @@ if __name__ == "__main__":
         [
             (iphoneos_archs, "iPhoneOS"),
             (iphonesimulator_archs, "iPhoneSimulator"),
-        ], args.debug, args.debug_info, args.framework_name)
+        ], args.debug, args.debug_info, args.framework_name, args.run_tests, args.build_docs)
 
     b.build(args.out)
