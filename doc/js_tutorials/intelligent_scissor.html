@@ -138,9 +138,7 @@
         while(!L.empty())
         {
           let P = L.top();
-          console.log(P.value);
           L.dequeue(); 
-          console.log(P.level);
           let p = P.value;
           processed.data[p.x * processed.cols * processed.channels() + p.y * processed.channels()] = 0;
 
@@ -159,7 +157,7 @@
                 {
                   let q = {x: tx,y: ty};
                   let cost = cost_map.data32F[p.x * cost_map.cols * cost_map.channels() + p.y * cost_map.channels()]  +  local_cost(p, q);
-                  console.log(tx, ty);
+                  // console.log(tx, ty);
                   // console.log(cost);
                   if (processed.data[q.x * processed.cols * processed.channels() + q.y * processed.channels()] == 1 && cost < cost_map.data32F[q.x * cost_map.cols * cost_map.channels() + q.y * cost_map.channels()])
                   {
@@ -172,6 +170,7 @@
                     hit_map_y.data32S[q.x * hit_map_y.cols * hit_map_y.channels() + q.y * hit_map_y.channels()] = p.y;
                     // console.log(q.x,q.y, "to")
                     // console.log(hit_map_x.data32S[q.x * hit_map_x.cols * hit_map_x.channels() + q.y * hit_map_x.channels()],hit_map_y.data32S[q.x * hit_map_y.cols * hit_map_y.channels() + q.y * hit_map_y.channels()])
+                  
                     processed.data[q.x * processed.cols * processed.channels() + q.y * processed.channels()] = 1
                     L.enqueue(q,cost_map.data32F[q.x * cost_map.cols * cost_map.channels() + q.y * cost_map.channels()]);
                   }
@@ -180,13 +179,6 @@
             }
           }
           iter=iter+1;
-          if(iter>0)
-            while (!L.empty())
-            {
-              let P = L.top();
-              console.log(P.value, P.level);
-              L.dequeue();
-            }
           cv.imshow("canvas",  src);
         }
       }
@@ -199,7 +191,7 @@
         grayscale = new cv.Mat();
         Ix = new cv.Mat();
         Iy = new cv.Mat();
-        let ptr_pix = new cv.Point(20,20);
+        let ptr_pix = new cv.Point(20,70);
 
 
         gradient_magnitude = new cv.Mat();
@@ -233,20 +225,19 @@
       {
         if (lastX != undefined)
         {
-          let x = e.pageX - this.offsetLeft;
-          let y = e.pageY - this.offsetTop;
-          
-          while(x!=20 && y!=20)
+          let y = e.pageX - this.offsetLeft;
+          let x = e.pageY - this.offsetTop;
+          let start = new cv.Point(x,y)
+          console.log(start)
+
+          while((x!=20) || (y!=70))
           {
-            cv.line(src, new cv.Point(hit_map_x.intPtr(x,y)[0], hit_map_y.intPtr(x,y)[0]), new cv.Point(x, y),
-            new cv.Scalar(255, 255, 255, 255), 2);
-            x=hit_map_x.intPtr(x,y)[0];
-            y=hit_map_y.intPtr(x,y)[0];
+            cv.line(src, new cv.Point(hit_map_y.intPtr(x,y)[0], hit_map_x.intPtr(x,y)[0]), new cv.Point(y, x),new cv.Scalar(255, 255, 255, 255), 1);
+            let A = new cv.Point(hit_map_x.intPtr(x,y)[0], hit_map_y.intPtr(x,y)[0])
+            x=A.x
+            y=A.y
+            cv.imshow("canvas", src);
           }
-        
-          cv.imshow("canvas", src);
-          lastX = x;
-          lastY = y;
         }
       }
 
