@@ -7,12 +7,10 @@ import os
 Link to original paper : https://arxiv.org/abs/1812.11703
 Link to original repo  : https://github.com/STVIR/pysot
 
-You can download the pre-trained weights of the Tracker Model from https://drive.google.com/file/d/1PBtRDiWAIaGthMKdzyJL9qYC6ODGnXk5/view?usp=sharing
-You can download the backbone model (ResNet50 with target input) from https://drive.google.com/file/d/1jwguUwfvBa-EbDXRDfuyCrvqLPZcFZo0/view?usp=sharing
-You can download the backbone model (ResNet50 with search input) from https://drive.google.com/file/d/1L6kxi_WkdH__kfrPC_R-ZsaPD4ky52tI/view?usp=sharing
-You can download the neck model 1 (Adjusted Layers 1) from https://drive.google.com/file/d/1690vawz9b76Bwskg3CXtBb1Fd59qBsRw/view?usp=sharing
-You can download the neck model 2 (Adjusted Layers 2) from https://drive.google.com/file/d/1E7nX5MzSzVpw6a2Mm5krxp0reLrO1-je/view?usp=sharing
-You can download the head model (RPN Head) from https://drive.google.com/file/d/15Sgh1YwdH_fCnbTzhsU-HcFKpSMjPMLY/view?usp=sharing
+You can download the pre-trained weights of the Tracker Model from https://drive.google.com/file/d/11bwgPFVkps9AH2NOD1zBDdpF_tQghAB-/view?usp=sharing
+You can download the target net (target branch of SiamRPN++) from https://drive.google.com/file/d/1dw_Ne3UMcCnFsaD6xkZepwE4GEpqq7U_/view?usp=sharing
+You can download the search net (search branch of SiamRPN++) from https://drive.google.com/file/d/1Lt4oE43ZSucJvze3Y-Z87CVDreO-Afwl/view?usp=sharing
+You can download the head model (RPN Head) from https://drive.google.com/file/d/1zT1yu12mtj3JQEkkfKFJWiZ71fJ-dQTi/view?usp=sharing
 """
 
 class ModelBuilder():
@@ -325,19 +323,19 @@ def main():
     """
     parser = argparse.ArgumentParser(description='Use this script to run SiamRPN++ Visual Tracker',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--input_video', type=str, required=True, help='Path to input video file. Skip this argument to capture frames from a camera.')
+    parser.add_argument('--input_video', type=str, help='Path to input video file. Skip this argument to capture frames from a camera.')
     parser.add_argument('--target_net', type=str, default='target_net.onnx', help='Path to part of SiamRPN++ ran on target frame.')
     parser.add_argument('--search_net', type=str, default='search_net.onnx', help='Path to part of SiamRPN++ ran on search frame.')
     parser.add_argument('--rpn_head', type=str, default='rpn_head.onnx', help='Path to RPN Head ONNX model.')
     args, _ = parser.parse_known_args()
 
-    if not os.path.isfile(args.input_video):
+    if args.input_video and not os.path.isfile(args.input_video):
         raise OSError("Input video file does not exist")
-    if not os.path.isfile(args.target_net):
+    if args.target_net not os.path.isfile(args.target_net):
         raise OSError("Target Net does not exist")
-    if not os.path.isfile(args.search_net):
+    if args.search_net not os.path.isfile(args.search_net):
         raise OSError("Search Net does not exist")
-    if not os.path.isfile(args.rpn_head):
+    if args.rpn_head not os.path.isfile(args.rpn_head):
         raise OSError("RPN Head Net does not exist")
 
     #Load the Networks
