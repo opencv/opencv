@@ -11,8 +11,7 @@
 #include <fstream>
 
 using namespace cv;
-double getError2EpipLines (const Mat &F, const Mat &pts1, const Mat &pts2, const Mat &mask);
-double getError2EpipLines (const Mat &F, const Mat &pts1, const Mat &pts2, const Mat &mask) {
+static double getError2EpipLines (const Mat &F, const Mat &pts1, const Mat &pts2, const Mat &mask) {
     Mat points1, points2;
     vconcat(pts1, Mat::ones(1, pts1.cols, pts1.type()), points1);
     vconcat(pts2, Mat::ones(1, pts2.cols, pts2.type()), points2);
@@ -27,16 +26,14 @@ double getError2EpipLines (const Mat &F, const Mat &pts1, const Mat &pts2, const
         }
     return mean_error / mask.total();
 }
-int sgn(double val);
-int sgn(double val) { return (0 < val) - (val < 0); }
+static int sgn(double val) { return (0 < val) - (val < 0); }
 
 /*
  * @points3d - vector of Point3 or Mat of size Nx3
  * @planes - vector of found planes
  * @labels - vector of size point3d. Every point which has non-zero label is classified to this plane.
  */
-void getPlanes (InputArray points3d, std::vector<int> &labels, std::vector<Vec4d> &planes, int desired_num_planes, double thr_, double conf_=0.99, int max_iters_=10000);
-void getPlanes (InputArray points3d_, std::vector<int> &labels, std::vector<Vec4d> &planes, int desired_num_planes, double thr_, double conf_, int max_iters_) {
+static void getPlanes (InputArray points3d_, std::vector<int> &labels, std::vector<Vec4d> &planes, int desired_num_planes, double thr_, double conf_, int max_iters_) {
     Mat points3d = points3d_.getMat();
     points3d.convertTo(points3d, CV_64F); // convert points to have double precision
     if (points3d_.isVector())

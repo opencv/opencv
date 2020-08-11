@@ -195,7 +195,8 @@ public:
         maximum_sigma_2 = maximum_sigma * maximum_sigma;
         maximum_sigma_2_per_2 = maximum_sigma_2 / 2.f;
         maximum_sigma_2_times_2 = maximum_sigma_2 * 2.f;
-        outlier_loss = maximum_sigma * two_ad_dof_minus_one  * lower_gamma_value_of_k;
+        // penalization for outlier
+        outlier_loss = 10 * maximum_sigma * two_ad_dof_minus_one  * lower_gamma_value_of_k;
         two_ad_dof_plus_one_per_maximum_sigma = two_ad_dof_plus_one / maximum_sigma;
 
         if (DoF == 4) {

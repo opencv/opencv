@@ -18,23 +18,7 @@ enum TestSolver { Homogr, Fundam, Essen, PnP, Affine};
 * noise_std -- standard deviation of Gaussian noise of image points.
 * gt_inliers -- has size of number of inliers. Contains indices of inliers.
 */
-int generatePoints (cv::RNG &rng, cv::Mat &pts1, cv::Mat &pts2, cv::Mat &K1, cv::Mat &K2,
-                    bool two_calib, int pts_size, TestSolver test_case, double inlier_ratio,
-                    double noise_std, std::vector<int> &gt_inliers);
-/*
-* for test case = 0, 1, 2 (homography and epipolar geometry): pts1 and pts2 are 3xN
-* for test_case = 3 (PnP): pts1 are 3xN and pts2 are 4xN
-* all points are of the same type as model
-*/
-double getError (TestSolver test_case, int pt_idx, const cv::Mat &pts1, const cv::Mat &pts2, const cv::Mat &model);
-/*
-* inl_size -- number of ground truth inliers
-* pts1 and pts2 are of the same size as from function generatePoints(...)
-*/
-void checkInliersMask (TestSolver test_case, int inl_size, double thr,  const cv::Mat &pts1_,
-                       const cv::Mat &pts2_, const cv::Mat &model, const cv::Mat &mask);
-
-int generatePoints (cv::RNG &rng, cv::Mat &pts1, cv::Mat &pts2, cv::Mat &K1, cv::Mat &K2,
+static int generatePoints (cv::RNG &rng, cv::Mat &pts1, cv::Mat &pts2, cv::Mat &K1, cv::Mat &K2,
                     bool two_calib, int pts_size, TestSolver test_case, double inlier_ratio, double noise_std,
                     std::vector<int> &gt_inliers) {
 
@@ -177,7 +161,12 @@ int generatePoints (cv::RNG &rng, cv::Mat &pts1, cv::Mat &pts2, cv::Mat &K1, cv:
     return inl_size;
 }
 
-double getError (TestSolver test_case, int pt_idx, const cv::Mat &pts1, const cv::Mat &pts2, const cv::Mat &model) {
+/*
+* for test case = 0, 1, 2 (homography and epipolar geometry): pts1 and pts2 are 3xN
+* for test_case = 3 (PnP): pts1 are 3xN and pts2 are 4xN
+* all points are of the same type as model
+*/
+static double getError (TestSolver test_case, int pt_idx, const cv::Mat &pts1, const cv::Mat &pts2, const cv::Mat &model) {
     cv::Mat pt1 = pts1.col(pt_idx), pt2 = pts2.col(pt_idx);
     if (test_case == TestSolver::Homogr) { // reprojection error
         // compute Euclidean distance between given and reprojected points
@@ -205,7 +194,11 @@ double getError (TestSolver test_case, int pt_idx, const cv::Mat &pts1, const cv
         CV_Error(cv::Error::StsBadArg, "Undefined test case!");
 }
 
-void checkInliersMask (TestSolver test_case, int inl_size, double thr, const cv::Mat &pts1_,
+/*
+* inl_size -- number of ground truth inliers
+* pts1 and pts2 are of the same size as from function generatePoints(...)
+*/
+static void checkInliersMask (TestSolver test_case, int inl_size, double thr, const cv::Mat &pts1_,
                        const cv::Mat &pts2_, const cv::Mat &model, const cv::Mat &mask) {
     ASSERT_TRUE(!model.empty() && !mask.empty());
 
@@ -264,7 +257,7 @@ TEST(usac_Fundamental, accuracy) {
 
         for (auto flag : flags) {
             const int sample_size = flag == USAC_FM_8PTS ? 8 : 7;
-            const double max_iters = 1.2 * log(1 - conf) /
+            const double max_iters = 1.25 * log(1 - conf) /
                     log(1 - pow(inl_ratio, sample_size));
             cv::Mat mask, F = cv::findFundamentalMat(pts1, pts2,flag, thr, conf,
                                                            int(max_iters), mask);

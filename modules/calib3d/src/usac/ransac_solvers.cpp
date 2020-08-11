@@ -611,13 +611,13 @@ public:
                 avg_num_models = 1; time_for_model_est = 70;
                 sample_size = 4; est_error = ErrorMetric ::FORW_REPR_ERR; break;
             case (EstimationMethod::Fundamental):
-                avg_num_models = 2.38; time_for_model_est = 120; maximum_thr = 5;
+                avg_num_models = 2.38; time_for_model_est = 120; maximum_thr = 3;
                 sample_size = 7; est_error = ErrorMetric ::SAMPSON_ERR; break;
             case (EstimationMethod::Fundamental8):
-                avg_num_models = 1; time_for_model_est = 90; maximum_thr = 5;
+                avg_num_models = 1; time_for_model_est = 90; maximum_thr = 3;
                 sample_size = 8; est_error = ErrorMetric ::SAMPSON_ERR; break;
             case (EstimationMethod::Essential):
-                avg_num_models = 3.93; time_for_model_est = 300; maximum_thr = 5;
+                avg_num_models = 3.93; time_for_model_est = 300; maximum_thr = 3;
                 sample_size = 5; est_error = ErrorMetric ::SGD_ERR; break;
             case (EstimationMethod::P3P):
                 avg_num_models = 1.38; time_for_model_est = 200;
