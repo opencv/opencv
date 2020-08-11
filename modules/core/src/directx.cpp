@@ -458,9 +458,22 @@ Context& initializeContextFromD3D11Device(ID3D11Device* pD3D11Device)
         CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't create context for DirectX interop");
     }
 
-    Context& ctx = Context::getDefault(false);
-    initializeContextFromHandle(ctx, platforms[found], context, device);
-    return ctx;
+    cl_platform_id platform = platforms[found];
+    std::string platformName = PlatformInfo(platform).name();
+
+    OpenCLExecutionContext clExecCtx;
+    try
+    {
+        clExecCtx = OpenCLExecutionContext::create(platformName, platform, context, device);
+    }
+    catch (...)
+    {
+        clReleaseDevice(device);
+        clReleaseContext(context);
+        throw;
+    }
+    clExecCtx.bind();
+    return const_cast<Context&>(clExecCtx.getContext());
 #endif
 }
 
@@ -565,10 +578,22 @@ Context& initializeContextFromD3D10Device(ID3D10Device* pD3D10Device)
             CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't create context for DirectX interop");
     }
 
+    cl_platform_id platform = platforms[found];
+    std::string platformName = PlatformInfo(platform).name();
 
-    Context& ctx = Context::getDefault(false);
-    initializeContextFromHandle(ctx, platforms[found], context, device);
-    return ctx;
+    OpenCLExecutionContext clExecCtx;
+    try
+    {
+        clExecCtx = OpenCLExecutionContext::create(platformName, platform, context, device);
+    }
+    catch (...)
+    {
+        clReleaseDevice(device);
+        clReleaseContext(context);
+        throw;
+    }
+    clExecCtx.bind();
+    return const_cast<Context&>(clExecCtx.getContext());
 #endif
 }
 
@@ -675,10 +700,23 @@ Context& initializeContextFromDirect3DDevice9Ex(IDirect3DDevice9Ex* pDirect3DDev
             CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't create context for DirectX interop");
     }
 
-    Context& ctx = Context::getDefault(false);
-    initializeContextFromHandle(ctx, platforms[found], context, device);
+    cl_platform_id platform = platforms[found];
+    std::string platformName = PlatformInfo(platform).name();
+
+    OpenCLExecutionContext clExecCtx;
+    try
+    {
+        clExecCtx = OpenCLExecutionContext::create(platformName, platform, context, device);
+    }
+    catch (...)
+    {
+        clReleaseDevice(device);
+        clReleaseContext(context);
+        throw;
+    }
+    clExecCtx.bind();
     g_isDirect3DDevice9Ex = true;
-    return ctx;
+    return const_cast<Context&>(clExecCtx.getContext());
 #endif
 }
 
@@ -785,10 +823,23 @@ Context& initializeContextFromDirect3DDevice9(IDirect3DDevice9* pDirect3DDevice9
             CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't create context for DirectX interop");
     }
 
-    Context& ctx = Context::getDefault(false);
-    initializeContextFromHandle(ctx, platforms[found], context, device);
+    cl_platform_id platform = platforms[found];
+    std::string platformName = PlatformInfo(platform).name();
+
+    OpenCLExecutionContext clExecCtx;
+    try
+    {
+        clExecCtx = OpenCLExecutionContext::create(platformName, platform, context, device);
+    }
+    catch (...)
+    {
+        clReleaseDevice(device);
+        clReleaseContext(context);
+        throw;
+    }
+    clExecCtx.bind();
     g_isDirect3DDevice9Ex = false;
-    return ctx;
+    return const_cast<Context&>(clExecCtx.getContext());
 #endif
 }
 
