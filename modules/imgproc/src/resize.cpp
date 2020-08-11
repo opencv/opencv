@@ -1117,8 +1117,8 @@ public:
         int pix_size = (int)src.elemSize();
         for( int y = range.start; y < range.end; y++ )
         {
-            uchar* D = dst.data + dst.step*y;
-            int _sy = (ify * static_cast<uint32_t>(y)).raw() >> 32; // equivalent to cvFloor
+            uchar* D = dst.ptr(y);
+            int _sy = (ify * static_cast<uint32_t>(y)).cvFloor();
             int sy = std::min(_sy, ssize.height-1);
             const uchar* S = src.ptr(sy);
 
@@ -1209,7 +1209,7 @@ static void resizeNN_bitexact( const Mat& src, Mat& dst, double _fx, double _fy 
 
     for( int x = 0; x < dsize.width; x++ )
     {
-        int sx = (ifx * static_cast<uint32_t>(x)).raw() >> 32; // equivalent to cvFloor
+        int sx = (ifx * static_cast<uint32_t>(x)).cvFloor();
         x_ofse[x] = std::min(sx, ssize.width-1);    // offset in element (not byte)
     }
     Range range(0, dsize.height);
