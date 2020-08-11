@@ -1532,7 +1532,7 @@ void CV_FitEllipseParallelTest::generate_point_set( void* )
     {
         int t;
         CV_SWAP( width, height, t );
-        angle = (float)(fmod((90 + angle),180.0));
+        angle = (int)(fmod((90 + angle),180.0));
     }
 
     Mat image = Mat::zeros(dim*4, dim*4, CV_8UC1);
