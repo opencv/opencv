@@ -253,7 +253,7 @@ public:
         non_random_inliers = std::vector<int>(points_size, 0);
         std::vector<double> pn_i_arr(points_size);
         const double beta2compl_beta = beta / (1-beta);
-        const int step_n = 50, max_n = 1200;
+        const int step_n = 50, max_n = std::min(points_size, 1200);
         for (int n = sample_size; n <= points_size; n+=step_n) {
             if (n > max_n) {
                 // skip expensive calculation
@@ -290,7 +290,7 @@ public:
 
         // approximate values of binomial distribution
         for (int n = sample_size; n <= points_size; n+=step_n) {
-            if (n+step_n > max_n) {
+            if (n-1+step_n >= max_n) {
                 // copy rest of the values
                 std::fill(&non_random_inliers[0]+n-1, &non_random_inliers[0]+points_size, non_random_inliers[n-1]);
                 break;

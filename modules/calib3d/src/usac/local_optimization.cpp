@@ -13,14 +13,14 @@ protected:
     const Ptr<NeighborhoodGraph> neighborhood_graph;
     const Ptr<Estimator> estimator;
     const Ptr<Quality> quality;
-    const Ptr<Sampler> lo_sampler;
+    const Ptr<RandomGenerator> lo_sampler;
     const Ptr<Error> error;
 
     Score gc_temp_score;
     int gc_sample_size, lo_inner_iterations, points_size;
     double spatial_coherence, sqr_trunc_thr, one_minus_lambda;
 
-    std::vector<int> sample, labeling_inliers;
+    std::vector<int> labeling_inliers;
     std::vector<double> energies, weights;
     std::vector<bool> used_edges;
     std::vector<Mat> gc_models;
@@ -28,7 +28,7 @@ public:
 
     // In lo_sampler_ the sample size should be set and be equal gc_sample_size_
     GraphCutImpl (const Ptr<Estimator> &estimator_, const Ptr<Error> &error_, const Ptr<Quality> &quality_,
-              const Ptr<NeighborhoodGraph> &neighborhood_graph_, const Ptr<Sampler> &lo_sampler_,
+              const Ptr<NeighborhoodGraph> &neighborhood_graph_, const Ptr<RandomGenerator> &lo_sampler_,
               double threshold_, double spatial_coherence_term, int gc_inner_iteration_number_) :
               neighborhood_graph (neighborhood_graph_), estimator (estimator_), quality (quality_),
               lo_sampler (lo_sampler_), error (error_) {
@@ -36,13 +36,12 @@ public:
         points_size = quality_->getPointsSize();
         spatial_coherence = spatial_coherence_term;
         sqr_trunc_thr =  threshold_ * threshold_ * 2.25;
-        gc_sample_size = lo_sampler_->getSampleSize();
+        gc_sample_size = lo_sampler_->getSubsetSize();
         lo_inner_iterations = gc_inner_iteration_number_;
         one_minus_lambda = 1.0 - spatial_coherence;
 
         energies = std::vector<double>(points_size);
         labeling_inliers = std::vector<int>(points_size);
-        sample = std::vector<int>(gc_sample_size);
         used_edges = std::vector<bool>(points_size*points_size);
         gc_models = std::vector<Mat> (estimator->getMaxNumSolutionsNonMinimal());
     }
@@ -67,12 +66,9 @@ public:
                 int num_of_estimated_models;
                 if (labeling_inliers_size > gc_sample_size) {
                     // generate random subset in range <0; |I|>
-                    lo_sampler->generateSample (sample, labeling_inliers_size);
-                    // sample from inliers of labeling
-                    for (int smpl = 0; smpl < gc_sample_size; smpl++)
-                        sample[smpl] = labeling_inliers[sample[smpl]];
                     num_of_estimated_models = estimator->estimateModelNonMinimalSample
-                            (sample, gc_sample_size, gc_models, weights);
+                            (lo_sampler->generateUniqueRandomSubset(labeling_inliers,
+                                   labeling_inliers_size), gc_sample_size, gc_models, weights);
                     if (num_of_estimated_models == 0)
                         break; // break
                 } else {
@@ -191,7 +187,7 @@ private:
 };
 Ptr<GraphCut> GraphCut::create(const Ptr<Estimator> &estimator_, const Ptr<Error> &error_,
        const Ptr<Quality> &quality_, const Ptr<NeighborhoodGraph> &neighborhood_graph_,
-       const Ptr<Sampler> &lo_sampler_, double threshold_,
+       const Ptr<RandomGenerator> &lo_sampler_, double threshold_,
        double spatial_coherence_term, int gc_inner_iteration_number) {
     return makePtr<GraphCutImpl>(estimator_, error_, quality_, neighborhood_graph_, lo_sampler_,
         threshold_, spatial_coherence_term, gc_inner_iteration_number);
@@ -204,24 +200,23 @@ class InnerIterativeLocalOptimizationImpl : public InnerIterativeLocalOptimizati
 private:
     const Ptr<Estimator> estimator;
     const Ptr<Quality> quality;
-    const Ptr<Sampler> lo_sampler;
-    Ptr<UniformSampler> lo_iter_sampler;
+    const Ptr<RandomGenerator> lo_sampler;
+    Ptr<RandomGenerator> lo_iter_sampler;
 
-    Score lo_score, lo_iter_score;
     std::vector<Mat> lo_models, lo_iter_models;
 
-    std::vector<int> inliers_of_best_model, lo_sample, lo_iter_sample, virtual_inliers;
+    std::vector<int> inliers_of_best_model, virtual_inliers;
     int lo_inner_max_iterations, lo_iter_max_iterations, lo_sample_size, lo_iter_sample_size;
 
-    bool is_sample_limit;
+    bool is_iterative;
 
     double threshold, new_threshold, threshold_step;
     std::vector<double> weights;
 public:
 
     InnerIterativeLocalOptimizationImpl (const Ptr<Estimator> &estimator_, const Ptr<Quality> &quality_,
-         const Ptr<Sampler> &lo_sampler_, int pts_size,
-         double threshold_, bool is_sample_limit_, int lo_iter_sample_size_,
+         const Ptr<RandomGenerator> &lo_sampler_, int pts_size,
+         double threshold_, bool is_iterative_, int lo_iter_sample_size_,
          int lo_inner_iterations_=10, int lo_iter_max_iterations_=5,
          double threshold_multiplier_=4) : estimator (estimator_), quality (quality_),
                            lo_sampler (lo_sampler_) {
@@ -230,27 +225,25 @@ public:
         lo_iter_max_iterations = lo_iter_max_iterations_;
 
         threshold = threshold_;
-        new_threshold = threshold_multiplier_ * threshold;
-        // reduce multiplier threshold K·θ by this number in each iteration.
-        // In the last iteration there be original threshold θ.
-        threshold_step = (new_threshold - threshold) / lo_iter_max_iterations_;
 
-        lo_sample_size = lo_sampler->getSampleSize();
+        lo_sample_size = lo_sampler->getSubsetSize();
 
-        is_sample_limit = is_sample_limit_;
-        if (is_sample_limit_) {
+        is_iterative = is_iterative_;
+        if (is_iterative) {
             lo_iter_sample_size = lo_iter_sample_size_;
-            lo_iter_sampler = UniformSampler::create(0/*state*/, lo_iter_sample_size_, pts_size);
-            lo_iter_sample = std::vector<int>(lo_iter_sample_size_);
+            lo_iter_sampler = UniformRandomGenerator::create(0/*state*/, pts_size, lo_iter_sample_size_);
+            lo_iter_models = std::vector<Mat>(estimator->getMaxNumSolutionsNonMinimal());
+            virtual_inliers = std::vector<int>(pts_size);
+            new_threshold = threshold_multiplier_ * threshold;
+            // reduce multiplier threshold K·θ by this number in each iteration.
+            // In the last iteration there be original threshold θ.
+            threshold_step = (new_threshold - threshold) / lo_iter_max_iterations_;
         }
 
         lo_models = std::vector<Mat>(estimator->getMaxNumSolutionsNonMinimal());
-        lo_iter_models = std::vector<Mat>(estimator->getMaxNumSolutionsNonMinimal());
 
         // Allocate max memory to avoid reallocation
         inliers_of_best_model = std::vector<int>(pts_size);
-        virtual_inliers = std::vector<int>(pts_size);
-        lo_sample = std::vector<int>(lo_sample_size);
     }
 
     /*
@@ -262,29 +255,22 @@ public:
         if (best_model_score.inlier_number < lo_sample_size)
             return false;
 
-        new_model_score = Score(); // set score to inf (worst case)
+        so_far_the_best_model.copyTo(new_model);
+        new_model_score = best_model_score;
 
         // get inliers from so far the best model.
         int num_inliers_of_best_model = quality->getInliers(so_far_the_best_model,
                                                            inliers_of_best_model);
 
-        // temp score used to compare estimated models
-        Score temp_score;
-
         // Inner Local Optimization Ransac.
         for (int iters = 0; iters < lo_inner_max_iterations; iters++) {
-
             int num_estimated_models;
             // Generate sample of lo_sample_size from inliers from the best model.
             if (num_inliers_of_best_model > lo_sample_size) {
                 // if there are many inliers take limited number at random.
-                lo_sampler->generateSample (lo_sample, num_inliers_of_best_model);
-                // get inliers from maximum inliers from lo
-                for (int smpl = 0; smpl < lo_sample_size; smpl++)
-                    lo_sample[smpl] = inliers_of_best_model[lo_sample[smpl]];
-
                 num_estimated_models = estimator->estimateModelNonMinimalSample
-                        (lo_sample, lo_sample_size, lo_models, weights);
+                        (lo_sampler->generateUniqueRandomSubset(inliers_of_best_model,
+                                num_inliers_of_best_model), lo_sample_size, lo_models, weights);
                 if (num_estimated_models == 0) continue;
             } else {
                 // if model was not updated in first iteration, so break.
@@ -297,209 +283,85 @@ public:
             }
 
             //////// Choose the best lo_model from estimated lo_models.
-            Mat lo_model = lo_models[0];
-            lo_score = quality->getScore(lo_model);
-            for (int model_idx = 1; model_idx < num_estimated_models; model_idx++) {
-                temp_score = quality->getScore(lo_models[model_idx]);
-                if (temp_score.isBetter(lo_score)) {
-                    lo_score = temp_score;
-                    lo_model = lo_models[model_idx];
+            for (int model_idx = 0; model_idx < num_estimated_models; model_idx++) {
+                Score temp_score = quality->getScore(lo_models[model_idx]);
+                if (temp_score.isBetter(new_model_score)) {
+                    new_model_score = temp_score;
+                    lo_models[model_idx].copyTo(new_model);
                 }
             }
-            ////////////////////
 
-            double lo_threshold = new_threshold;
-            // get max virtual inliers. Note that they are nor real inliers,
-            // because we got them with bigger threshold.
-            int virtual_inliers_size = quality->getInliers
-                    (lo_model, virtual_inliers, lo_threshold);
+            if (is_iterative) {
+                double lo_threshold = new_threshold;
+                // get max virtual inliers. Note that they are nor real inliers,
+                // because we got them with bigger threshold.
+                int virtual_inliers_size = quality->getInliers
+                        (new_model, virtual_inliers, lo_threshold);
 
-            Mat lo_iter_model;
-            lo_iter_score = Score(); // set worst case
-            for (int iterations = 0; iterations < lo_iter_max_iterations; iterations++) {
-                lo_threshold -= threshold_step;
+                Mat lo_iter_model;
+                Score lo_iter_score = Score(); // set worst case
+                for (int iterations = 0; iterations < lo_iter_max_iterations; iterations++) {
+                    lo_threshold -= threshold_step;
 
-                if (is_sample_limit && virtual_inliers_size > lo_iter_sample_size) {
-                    // if there are more inliers than limit for sample size then generate at random
-                    // sample from LO model.
-
-                    lo_iter_sampler->generateSample (lo_iter_sample, virtual_inliers_size);
-                    for (int smpl = 0; smpl < lo_iter_sample_size; smpl++)
-                        lo_iter_sample[smpl] = virtual_inliers[lo_iter_sample[smpl]];
-
-                    num_estimated_models = estimator->estimateModelNonMinimalSample
-                            (lo_iter_sample, lo_iter_sample_size, lo_iter_models, weights);
+                    if (virtual_inliers_size > lo_iter_sample_size) {
+                        // if there are more inliers than limit for sample size then generate at random
+                        // sample from LO model.
+                        num_estimated_models = estimator->estimateModelNonMinimalSample
+                                (lo_iter_sampler->generateUniqueRandomSubset (virtual_inliers,
+                            virtual_inliers_size), lo_iter_sample_size, lo_iter_models, weights);
+                    } else {
+                        // break if failed, very low probability that it will not fail in next iterations
+                        // estimate model with all virtual inliers
+                        num_estimated_models = estimator->estimateModelNonMinimalSample
+                                (virtual_inliers, virtual_inliers_size, lo_iter_models, weights);
+                    }
                     if (num_estimated_models == 0) break;
 
-                } else {
-                    // break if failed, very low probability that it will not fail in next iterations
-                    // estimate model with all virtual inliers
-                    num_estimated_models = estimator->estimateModelNonMinimalSample
-                            (virtual_inliers, virtual_inliers_size, lo_iter_models, weights);
-                    if (num_estimated_models == 0) break;
+                    // Get score and update virtual inliers with current threshold
+                    //////// Choose the best lo_iter_model from estimated lo_iter_models.
+                    lo_iter_models[0].copyTo(lo_iter_model);
+                    lo_iter_score = quality->getScore(lo_iter_model);
+                    for (int model_idx = 1; model_idx < num_estimated_models; model_idx++) {
+                        Score temp_score = quality->getScore(lo_iter_models[model_idx]);
+                        if (temp_score.isBetter(lo_iter_score)) {
+                            lo_iter_score = temp_score;
+                            lo_iter_models[model_idx].copyTo(lo_iter_model);
+                        }
+                    }
+
+                    virtual_inliers_size = quality->getInliers(lo_iter_model, virtual_inliers, lo_threshold);
                 }
-
-                // Get score and update virtual inliers with current threshold
-                //////// Choose the best lo_iter_model from estimated lo_iter_models.
-                lo_iter_models[0].copyTo(lo_iter_model);
-                lo_iter_score = quality->getScore(lo_iter_model);
-                for (int model_idx = 1; model_idx < num_estimated_models; model_idx++) {
-                    temp_score = quality->getScore(lo_iter_models[model_idx]);
-                    if (temp_score.isBetter(lo_iter_score)) {
-                        lo_iter_score = temp_score;
-                        lo_iter_models[model_idx].copyTo(lo_iter_model);
+                if (fabs (lo_threshold - threshold) < FLT_EPSILON) {
+                    // Success, threshold does not differ
+                    // last score correspond to user-defined threshold. Inliers are real.
+                    if (lo_iter_score.isBetter(new_model_score)) {
+                        new_model_score = lo_iter_score;
+                        lo_iter_model.copyTo(new_model);
                     }
                 }
-                ////////////////////
-
-                virtual_inliers_size = quality->getInliers(lo_iter_model, virtual_inliers, lo_threshold);
-
-                // In case of unlimited sample:
-                // break if the best score is bigger, because after decreasing
-                // threshold lo score could not be bigger in next iterations.
-                if (! is_sample_limit && new_model_score.isBetter(lo_iter_score)) break;
             }
 
-            if (fabs (lo_threshold - threshold) < FLT_EPSILON) {
-                // Success, threshold does not differ
-                // last score correspond to user-defined threshold. Inliers are real.
-                if (lo_iter_score.isBetter(lo_score)) {
-                    lo_score = lo_iter_score;
-                    lo_model = lo_iter_model;
-                }
-            }
-
-            if (best_model_score.isBetter(lo_score))
-                continue;
-
-            if (lo_score.isBetter(new_model_score)) {
-                new_model_score = lo_score;
-                lo_model.copyTo(new_model);
-
-                if (num_inliers_of_best_model < new_model_score.inlier_number)
-                    num_inliers_of_best_model = quality->getInliers (new_model, inliers_of_best_model);
-            }
+            if (num_inliers_of_best_model < new_model_score.inlier_number && iters != lo_inner_max_iterations-1)
+                num_inliers_of_best_model = quality->getInliers (new_model, inliers_of_best_model);
         }
         return true;
     }
     Ptr<LocalOptimization> clone(int state) const override {
         return makePtr<InnerIterativeLocalOptimizationImpl>(estimator->clone(), quality->clone(),
-            lo_sampler->clone(state),(int)inliers_of_best_model.size(), threshold, is_sample_limit,
+            lo_sampler->clone(state),(int)inliers_of_best_model.size(), threshold, is_iterative,
             lo_iter_sample_size, lo_inner_max_iterations, lo_iter_max_iterations,
             new_threshold / threshold);
     }
 };
-
 Ptr<InnerIterativeLocalOptimization> InnerIterativeLocalOptimization::create
 (const Ptr<Estimator> &estimator_, const Ptr<Quality> &quality_,
-       const Ptr<Sampler> &lo_sampler_, int pts_size,
-       double threshold_, bool is_sample_limit_, int lo_iter_sample_size_,
+       const Ptr<RandomGenerator> &lo_sampler_, int pts_size,
+       double threshold_, bool is_iterative_, int lo_iter_sample_size_,
        int lo_inner_iterations_, int lo_iter_max_iterations_,
        double threshold_multiplier_) {
     return makePtr<InnerIterativeLocalOptimizationImpl>(estimator_, quality_, lo_sampler_,
-            pts_size, threshold_, is_sample_limit_, lo_iter_sample_size_,
+            pts_size, threshold_, is_iterative_, lo_iter_sample_size_,
             lo_inner_iterations_, lo_iter_max_iterations_, threshold_multiplier_);
-}
-
-/*
-* Reference:
-* http://cmp.felk.cvut.cz/~matas/papers/chum-dagm03.pdf
-*/
-class InnerLocalOptimizationImpl : public InnerLocalOptimization {
-private:
-    const Ptr<Estimator> estimator;
-    const Ptr<Quality> quality;
-    const Ptr<Sampler> lo_sampler;
-
-    Score lo_score;
-    std::vector<Mat> lo_models;
-    std::vector<int> inliers_of_best_model, lo_sample;
-    std::vector<double> weights;
-    int lo_inner_max_iterations, lo_sample_size;
-public:
-
-    InnerLocalOptimizationImpl (const Ptr<Estimator> &estimator_,
-            const Ptr<Quality> &quality_, const Ptr<Sampler> &lo_sampler_,
-            int lo_inner_iterations_)
-            : estimator (estimator_), quality (quality_), lo_sampler (lo_sampler_) {
-
-        lo_inner_max_iterations = lo_inner_iterations_;
-        lo_sample_size = lo_sampler->getSampleSize();
-
-        // Allocate max memory to avoid reallocation
-        inliers_of_best_model = std::vector<int>(quality_->getPointsSize());
-        lo_sample = std::vector<int>(lo_sample_size);
-        lo_models = std::vector<Mat> (estimator->getMaxNumSolutionsNonMinimal());
-    }
-
-    // Implementation of Inner Locally Optimized Ransac
-    bool refineModel (const Mat &so_far_the_best_model, const Score &best_model_score,
-                      Mat &new_model, Score &new_model_score) override {
-        if (best_model_score.inlier_number < lo_sample_size)
-            return false;
-
-        new_model_score = Score(); // set score to inf (worst case)
-
-        // get inliers from so far the best model.
-        int num_inliers_of_best_model = quality->getInliers(so_far_the_best_model,
-                                                           inliers_of_best_model);
-
-        // Inner Local Optimization Ransac.
-        for (int iters = 0; iters < lo_inner_max_iterations; iters++) {
-            // Generate sample of lo_sample_size from inliers from the best model.
-            int num_estimated_models;
-            if (num_inliers_of_best_model > lo_sample_size) {
-                // if there are many inliers take limited number at random.
-                lo_sampler->generateSample (lo_sample, num_inliers_of_best_model);
-                // get inliers from maximum inliers from lo
-                for (int smpl = 0; smpl < lo_sample_size; smpl++)
-                    lo_sample[smpl] = inliers_of_best_model[lo_sample[smpl]];
-
-                num_estimated_models = estimator->estimateModelNonMinimalSample
-                        (lo_sample, lo_sample_size, lo_models, weights);
-                if (num_estimated_models == 0) continue;
-            } else {
-                // if model was not updated in first iteration, so break.
-                if (iters > 0) break;
-                // if inliers are less than limited number of sample then take all of them for estimation
-                // if it fails -> end Lo.
-                num_estimated_models = estimator->estimateModelNonMinimalSample(
-                        inliers_of_best_model, num_inliers_of_best_model, lo_models, weights);
-                if (num_estimated_models == 0)
-                    return false;
-            }
-
-            for (int model_idx = 0; model_idx < num_estimated_models; model_idx++) {
-                // get score of new estimated model
-                lo_score = quality->getScore(lo_models[model_idx]);
-
-                if (best_model_score.isBetter(lo_score))
-                    continue;
-
-                if (lo_score.isBetter(new_model_score)) {
-                    // update best model
-                    lo_models[model_idx].copyTo(new_model);
-                    new_model_score = lo_score;
-                }
-            }
-
-            if (num_inliers_of_best_model < new_model_score.inlier_number)
-                // update inliers of the best model.
-                num_inliers_of_best_model = quality->getInliers(new_model,inliers_of_best_model);
-
-        }
-        return true;
-    }
-    Ptr<LocalOptimization> clone(int state) const override {
-        return makePtr<InnerLocalOptimizationImpl>(estimator->clone(), quality->clone(),
-           lo_sampler->clone(state), lo_inner_max_iterations);
-    }
-};
-Ptr<InnerLocalOptimization> InnerLocalOptimization::create
-(const Ptr<Estimator> &estimator_, const Ptr<Quality> &quality_,
-       const Ptr<Sampler> &lo_sampler_, int lo_inner_iterations_) {
-    return makePtr<InnerLocalOptimizationImpl>(estimator_, quality_, lo_sampler_,
-          lo_inner_iterations_);
 }
 
 class SigmaConsensusImpl : public SigmaConsensus {
@@ -508,7 +370,6 @@ private:
     const Ptr<Quality> quality;
     const Ptr<Error> error;
     const Ptr<ModelVerifier> verifier;
-
     // The degrees of freedom of the data from which the model is estimated.
     // E.g., for models coming from point correspondences (x1,y1,x2,y2), it is 4.
     const int degrees_of_freedom;
@@ -544,18 +405,20 @@ private:
     // Points used in the weighted least-squares fitting
     std::vector<int> sigma_inliers;
     // Weights used in the the weighted least-squares fitting
-
+    int max_lo_sample_size;
     double scale_of_stored_gammas;
+    RNG rng;
 public:
 
     SigmaConsensusImpl (const Ptr<Estimator> &estimator_, const Ptr<Error> &error_,
         const Ptr<Quality> &quality_, const Ptr<ModelVerifier> &verifier_,
-        int number_of_irwls_iters_, int DoF, double sigma_quantile,
-        double upper_incomplete_of_sigma_quantile, double C_, double maximum_thr) :
-        estimator (estimator_), quality(quality_),
-          error (error_), verifier(verifier_), degrees_of_freedom(DoF), k (sigma_quantile), C(C_),
-          sample_size(estimator_->getMinimalSampleSize()), gamma_k (upper_incomplete_of_sigma_quantile),
-          points_size (quality_->getPointsSize()), number_of_irwls_iters (number_of_irwls_iters_),
+        int max_lo_sample_size_, int number_of_irwls_iters_, int DoF,
+        double sigma_quantile, double upper_incomplete_of_sigma_quantile, double C_,
+        double maximum_thr) : estimator (estimator_), quality(quality_),
+          error (error_), verifier(verifier_), degrees_of_freedom(DoF),
+          k (sigma_quantile), C(C_), sample_size(estimator_->getMinimalSampleSize()),
+          gamma_k (upper_incomplete_of_sigma_quantile), points_size (quality_->getPointsSize()),
+          number_of_irwls_iters (number_of_irwls_iters_),
           maximum_threshold(maximum_thr), max_sigma (maximum_thr) {
 
         dof_minus_one_per_two = (degrees_of_freedom - 1.0) / 2.0;
@@ -571,6 +434,7 @@ public:
         residuals = std::vector<double>(points_size);
         residuals_idxs = std::vector<int>(points_size);
         sigma_inliers = std::vector<int>(points_size);
+        max_lo_sample_size = max_lo_sample_size_;
         sigma_weights = std::vector<double>(points_size);
         sigma_models = std::vector<Mat>(estimator->getMaxNumSolutionsNonMinimal());
 
@@ -677,10 +541,18 @@ public:
                 }
             }
 
+            if (sigma_inliers_cnt > max_lo_sample_size)
+                for (int i = sigma_inliers_cnt-1; i > 0; i--) {
+                    const int idx = rng.uniform(0, i+1);
+                    std::swap(sigma_inliers[i], sigma_inliers[idx]);
+                    std::swap(sigma_weights[i], sigma_weights[idx]);
+                }
+            int num_est_models = estimator->estimateModelNonMinimalSample
+                  (sigma_inliers, std::min(max_lo_sample_size, sigma_inliers_cnt),
+                          sigma_models, sigma_weights);
+
             // If there are fewer than the minimum point close to the model, terminate.
             // Estimate the model parameters using weighted least-squares fitting
-            int num_est_models = estimator->estimateModelNonMinimalSample
-                    (sigma_inliers, sigma_inliers_cnt, sigma_models, sigma_weights);
             if (num_est_models == 0) {
                 // If the estimation failed and the iteration was never successfull,
                 // terminate with failure.
@@ -718,16 +590,17 @@ public:
     }
     Ptr<LocalOptimization> clone(int state) const override {
         return makePtr<SigmaConsensusImpl>(estimator->clone(), error->clone(), quality->clone(),
-                verifier->clone(state), number_of_irwls_iters, degrees_of_freedom, k, gamma_k, C,
-                maximum_threshold);
+                verifier->clone(state), max_lo_sample_size, number_of_irwls_iters,
+                degrees_of_freedom, k, gamma_k, C, maximum_threshold);
     }
 };
 Ptr<SigmaConsensus>
 SigmaConsensus::create(const Ptr<Estimator> &estimator_, const Ptr<Error> &error_,
         const Ptr<Quality> &quality, const Ptr<ModelVerifier> &verifier_,
-        int number_of_irwls_iters_, int DoF, double sigma_quantile,
-        double upper_incomplete_of_sigma_quantile, double C_, double maximum_thr) {
-    return makePtr<SigmaConsensusImpl>(estimator_, error_, quality, verifier_,
+        int max_lo_sample_size, int number_of_irwls_iters_, int DoF,
+        double sigma_quantile, double upper_incomplete_of_sigma_quantile, double C_,
+        double maximum_thr) {
+    return makePtr<SigmaConsensusImpl>(estimator_, error_, quality, verifier_, max_lo_sample_size,
             number_of_irwls_iters_, DoF, sigma_quantile, upper_incomplete_of_sigma_quantile,
             C_, maximum_thr);
 }

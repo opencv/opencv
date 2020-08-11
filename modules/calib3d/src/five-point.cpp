@@ -409,7 +409,7 @@ cv::Mat cv::findEssentialMat( InputArray _points1, InputArray _points2, InputArr
 {
     CV_INSTRUMENT_REGION();
 
-    if (method >= 32 && method <= 37)
+    if (method >= 32 && method <= 38)
         return usac::findEssentialMat(_points1, _points2, _cameraMatrix,
             method, prob, threshold, _mask);
 

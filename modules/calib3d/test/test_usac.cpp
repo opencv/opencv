@@ -234,7 +234,7 @@ TEST(usac_Homography, accuracy) {
     const int pts_size = 1500;
     cv::RNG &rng = cv::theRNG();
     // do not test USAC_PARALLEL, because it is not deterministic
-    const std::vector<int> flags = {USAC_DEFAULT, USAC_ACCURATE, USAC_PROSAC, USAC_FAST};
+    const std::vector<int> flags = {USAC_DEFAULT, USAC_ACCURATE, USAC_PROSAC, USAC_FAST, USAC_MAGSAC};
     for (double inl_ratio = 0.1; inl_ratio < 0.91; inl_ratio += 0.1) {
         cv::Mat pts1, pts2, K1, K2;
         int inl_size = generatePoints(rng, pts1, pts2, K1, K2, false /*two calib*/,
@@ -255,7 +255,7 @@ TEST(usac_Fundamental, accuracy) {
     const int pts_size = 2000;
     cv::RNG &rng = cv::theRNG();
     // start from 20% otherwise max_iters will be too big
-    const std::vector<int> flags = {USAC_DEFAULT, USAC_FM_8PTS, USAC_ACCURATE, USAC_PROSAC, USAC_FAST};
+    const std::vector<int> flags = {USAC_DEFAULT, USAC_FM_8PTS, USAC_ACCURATE, USAC_PROSAC, USAC_FAST, USAC_MAGSAC};
     const double conf = 0.99, thr = 1.;
     for (double inl_ratio = 0.20; inl_ratio < 0.91; inl_ratio += 0.1) {
         cv::Mat pts1, pts2, K1, K2;
@@ -278,7 +278,7 @@ TEST(usac_Essential, accuracy) {
     cv::RNG &rng = cv::theRNG();
     // findEssentilaMat has by default number of maximum iterations equal to 1000.
     // It means that with 99% confidence we assume at least 34.08% of inliers
-    const std::vector<int> flags = {USAC_DEFAULT, USAC_ACCURATE, USAC_PROSAC, USAC_FAST};
+    const std::vector<int> flags = {USAC_DEFAULT, USAC_ACCURATE, USAC_PROSAC, USAC_FAST, USAC_MAGSAC};
     for (double inl_ratio = 0.35; inl_ratio < 0.91; inl_ratio += 0.1) {
         cv::Mat pts1, pts2, K1, K2;
         int inl_size = generatePoints(rng, pts1, pts2, K1, K2, false /*two calib*/,
@@ -310,7 +310,7 @@ TEST(usac_P3P, accuracy) {
     const int pts_size = 4000;
     cv::Mat img_pts, obj_pts, K1, K2;
     cv::RNG &rng = cv::theRNG();
-    const std::vector<int> flags = {USAC_DEFAULT, USAC_ACCURATE, USAC_PROSAC, USAC_FAST};
+    const std::vector<int> flags = {USAC_DEFAULT, USAC_ACCURATE, USAC_PROSAC, USAC_FAST, USAC_MAGSAC};
     for (double inl_ratio = 0.1; inl_ratio < 0.91; inl_ratio += 0.1) {
         int inl_size = generatePoints(rng, img_pts, obj_pts, K1, K2, false /*two calib*/,
                                       pts_size, TestSolver ::PnP, inl_ratio, 0.15 /*noise std*/, gt_inliers);
@@ -333,7 +333,7 @@ TEST (usac_Affine2D, accuracy) {
     const int pts_size = 2000;
     cv::Mat pts1, pts2, K1, K2;
     cv::RNG &rng = cv::theRNG();
-    const std::vector<int> flags = {USAC_DEFAULT, USAC_ACCURATE, USAC_PROSAC, USAC_FAST};
+    const std::vector<int> flags = {USAC_DEFAULT, USAC_ACCURATE, USAC_PROSAC, USAC_FAST, USAC_MAGSAC};
     for (double inl_ratio = 0.1; inl_ratio < 0.91; inl_ratio += 0.1) {
         int inl_size = generatePoints(rng, pts1, pts2, K1, K2, false /*two calib*/,
                   pts_size, TestSolver ::Affine, inl_ratio, 0.2 /*noise std*/, gt_inliers);
@@ -341,6 +341,7 @@ TEST (usac_Affine2D, accuracy) {
                 log(1 - pow(inl_ratio, 3 /* sample size */));
         for (auto flag : flags) {
             cv::Mat mask, A = cv::estimateAffine2D(pts1, pts2, mask, flag, thr, (size_t)max_iters, conf, 0);
+            cv::vconcat(A, cv::Mat(cv::Matx13d(0,0,1)), A);
             checkInliersMask(TestSolver::Homogr /*use homography error*/, inl_size, thr, pts1, pts2, A, mask);
         }
     }
@@ -407,6 +408,7 @@ TEST(usac_testUsacParams, accuracy) {
     inl_size = generatePoints(rng, pts1, pts2, K1, K2, false, pts_size, TestSolver::Affine,
     getInlierRatio(usac_params.maxIterations, 3, usac_params.confidence), 0.1, gt_inliers);
     model = cv::estimateAffine2D(pts1, pts2, mask, usac_params);
+    cv::vconcat(model, cv::Mat(cv::Matx13d(0,0,1)), model);
     checkInliersMask(TestSolver::Homogr, inl_size, usac_params.threshold, pts1, pts2, model, mask);
 }
 

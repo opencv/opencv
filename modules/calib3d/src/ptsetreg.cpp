@@ -930,7 +930,7 @@ Mat estimateAffine2D(InputArray _from, InputArray _to, OutputArray _inliers,
                      const size_t refineIters)
 {
 
-    if (method >= 32 && method <= 37)
+    if (method >= 32 && method <= 38)
         return cv::usac::estimateAffine2D(_from, _to, _inliers, method,
             ransacReprojThreshold, (int)maxIters, confidence, (int)refineIters);
 
@@ -1011,7 +1011,7 @@ Mat estimateAffine2D(InputArray _from, InputArray _to, OutputArray inliers,
     if (usac::run(model, _from, _to, model->getRandomGeneratorState(),
             ransac_output, noArray(), noArray(), noArray(), noArray())) {
         usac::saveMask(inliers, ransac_output->getInliersMask());
-        return ransac_output->getModel();
+        return ransac_output->getModel().rowRange(0,2);
     } else return Mat();
 }
 

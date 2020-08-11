@@ -203,7 +203,7 @@ bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
 {
     CV_INSTRUMENT_REGION();
 
-    if (flags >= 32 && flags <= 37)
+    if (flags >= 32 && flags <= 38)
         return usac::solvePnPRansac(_opoints, _ipoints, _cameraMatrix, _distCoeffs,
             _rvec, _tvec, useExtrinsicGuess, iterationsCount, reprojectionError,
             confidence, _inliers, flags);

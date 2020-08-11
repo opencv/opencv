@@ -81,7 +81,6 @@ void Utils::normalizeAndDecalibPointsPnP (const Mat &K_, Mat &pts, Mat &calib_no
     const auto * const K = (double *) K_.data;
     const auto k11 = (float)K[0], k12 = (float)K[1], k13 = (float)K[2],
                k22 = (float)K[4], k23 = (float)K[5];
-
     calib_norm_pts = Mat (pts.rows, 3, pts.type());
     auto * points = (float *) pts.data;
     auto * calib_norm_pts_ = (float *) calib_norm_pts.data;
@@ -162,6 +161,7 @@ void Math::eliminateUpperTriangular (std::vector<double> &a, int m, int n) {
 class UniformRandomGeneratorImpl : public UniformRandomGenerator {
 private:
     int subset_size = 0, max_range = 0;
+    std::vector<int> subset;
     RNG rng;
 public:
     explicit UniformRandomGeneratorImpl (int state) : rng(state) {}
@@ -172,6 +172,7 @@ public:
         CV_CheckLE(subset_size_, max_range_, "RandomGenerator. Subset size must be LE than range!");
         subset_size = subset_size_;
         max_range = max_range_;
+        subset = std::vector<int>(subset_size_);
     }
 
     int getRandomNumber () override {
@@ -235,19 +236,31 @@ public:
             if (j == -1) sample[i++] = num;
         }
     }
+    const std::vector<int> &generateUniqueRandomSubset (std::vector<int> &array1, int size1) override {
+        int temp_size1 = size1;
+        for (int i = 0; i < subset_size; i++) {
+            const int idx1 = rng.uniform(0, temp_size1);
+            subset[i] = array1[idx1];
+            std::swap(array1[idx1], array1[--temp_size1]);
+        }
+        return subset;
+    }
 
     void setSubsetSize (int subset_size_) override {
         subset_size = subset_size_;
     }
+    int getSubsetSize () const override { return subset_size; }
+    Ptr<RandomGenerator> clone (int state) const override {
+        return makePtr<UniformRandomGeneratorImpl>(state, max_range, subset_size);
+    }
 };
 
 Ptr<UniformRandomGenerator> UniformRandomGenerator::create (int state) {
-    return Ptr<UniformRandomGeneratorImpl>(new UniformRandomGeneratorImpl(state));
+    return makePtr<UniformRandomGeneratorImpl>(state);
 }
 Ptr<UniformRandomGenerator> UniformRandomGenerator::create
         (int state, int max_range, int subset_size_) {
-    return Ptr<UniformRandomGeneratorImpl>(
-            new UniformRandomGeneratorImpl(state, max_range, subset_size_));
+    return makePtr<UniformRandomGeneratorImpl>(state, max_range, subset_size_);
 }
 
 // @k_minth - desired k-th minimal element. For median is half of array

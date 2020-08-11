@@ -38,24 +38,6 @@ public:
                       points_random_pool[--random_pool_size]);
         }
     }
-    /*
-     * For different points size is better to not use array random generator
-     * to avoid filling array with points.
-     */
-    void generateSample (std::vector<int> &sample, int points_size_) override {
-        CV_Assert(sample_size <= points_size_);
-
-        int num, j;
-        sample[0] = rng.uniform(0, points_size_);
-        for (int i = 1; i < sample_size;) {
-            num = rng.uniform(0, points_size_);
-            for (j = i - 1; j >= 0; j--)
-                if (num == sample[j])
-                    break;
-            if (j == -1) sample[i++] = num;
-        }
-    }
-    int getSampleSize () const override { return sample_size; }
     Ptr<Sampler> clone (int state) const override {
         return makePtr<UniformSamplerImpl>(state, sample_size, points_size);
     }
@@ -75,7 +57,7 @@ private:
     }
 };
 Ptr<UniformSampler> UniformSampler::create(int state, int sample_size_, int points_size_) {
-    return Ptr<UniformSamplerImpl>(new UniformSamplerImpl(state, sample_size_, points_size_));
+    return makePtr<UniformSamplerImpl>(state, sample_size_, points_size_);
 }
 
 /////////////////////////////////// PROSAC (SIMPLE) SAMPLER ///////////////////////////////////////
@@ -158,12 +140,6 @@ public:
         CV_Assert(sample_size <= points_size_);
         points_size = points_size_;
         initialize ();
-    }
-
-    int getSampleSize () const override { return sample_size; }
-    void generateSample (std::vector<int> &sample, int points_size_) override {
-        setNewPointsSize (points_size_);
-        generateSample(sample);
     }
     Ptr<Sampler> clone (int state) const override {
         return makePtr<ProsacSimpleSamplerImpl>(state, points_size, sample_size,
@@ -330,12 +306,6 @@ public:
         CV_Error(cv::Error::StsError, "Changing points size in PROSAC requires to change also "
                     "termination criteria! Use PROSAC simpler version");
     }
-
-    int getSampleSize () const override { return sample_size; }
-    void generateSample (std::vector<int> &sample, int points_size_) override {
-        setNewPointsSize (points_size_);
-        generateSample(sample);
-    }
     Ptr<Sampler> clone (int state) const override {
         return makePtr<ProsacSamplerImpl>(state, points_size, sample_size,
                 growth_max_samples);
@@ -495,12 +465,6 @@ public:
         CV_Error(cv::Error::StsError, "Changing points size requires changing neighborhood graph! "
                     "You must reinitialize P-NAPSAC!");
     }
-
-    int getSampleSize () const override { return sample_size; }
-    void generateSample (std::vector<int> &sample, int points_size_) override {
-        setNewPointsSize (points_size_);
-        generateSample(sample);
-    }
     Ptr<Sampler> clone (int state) const override {
         return makePtr<ProgressiveNapsacImpl>(state, points_size, sample_size, *layers,
                 sampler_length);
@@ -572,12 +536,6 @@ public:
     void setNewPointsSize (int /*points_size_*/) override {
         CV_Error(cv::Error::StsError, "Changing points size requires changing neighborhood graph!"
                     " You must reinitialize NAPSAC!");
-    }
-
-    int getSampleSize () const override{ return sample_size; }
-    void generateSample (std::vector<int> &sample, int points_size_) override {
-        setNewPointsSize (points_size_);
-        generateSample(sample);
     }
     Ptr<Sampler> clone (int state) const override {
         return makePtr<NapsacSamplerImpl>(state, points_size, sample_size, neighborhood_graph);

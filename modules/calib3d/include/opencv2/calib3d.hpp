@@ -449,7 +449,8 @@ enum { LMEDS  = 4,  //!< least-median of squares algorithm
        USAC_FM_8PTS = 34,  //!< USAC, fundamental matrix 8 points
        USAC_FAST = 35,     //!< USAC, fast settings
        USAC_ACCURATE = 36, //!< USAC, accurate settings
-       USAC_PROSAC = 37    //!< USAC, sorted points, runs PROSAC
+       USAC_PROSAC = 37,   //!< USAC, sorted points, runs PROSAC
+       USAC_MAGSAC = 38    //!< USAC, sorted points, runs PROSAC
      };
 
 enum SolvePnPMethod {
@@ -1114,10 +1115,10 @@ CV_EXPORTS_W bool solvePnPRansac( InputArray objectPoints, InputArray imagePoint
                                   float reprojectionError = 8.0, double confidence = 0.99,
                                   OutputArray inliers = noArray(), int flags = SOLVEPNP_ITERATIVE );
 
+
 /*
-The function estimates calibration matrix, rotation vector and tranlation vector using
-6-points PnP by RANSAC. Input is only object points and image points.
-Optionally distortion coefficients.
+Finds rotation and translation vector.
+If cameraMatrix is given then run P3P. Otherwise run linear P6P and output cameraMatrix too.
 */
 CV_EXPORTS_W bool solvePnPRansac( InputArray objectPoints, InputArray imagePoints,
                      InputOutputArray cameraMatrix, InputArray distCoeffs,

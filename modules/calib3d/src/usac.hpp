@@ -477,10 +477,6 @@ public:
     virtual void setNewPointsSize (int points_size) = 0;
     // generate sample. Fill @sample with indices of points.
     virtual void generateSample (std::vector<int> &sample) = 0;
-    // generate sample for given points size
-    virtual void generateSample (std::vector<int> &sample, int points_size) = 0;
-    // return sample size
-    virtual int getSampleSize () const = 0;
     virtual Ptr<Sampler> clone (int state) const = 0;
 };
 
@@ -631,10 +627,14 @@ public:
     virtual void generateUniqueRandomSet (std::vector<int> &sample, int max_range) = 0;
     // return subset=sample size
     virtual void setSubsetSize (int subset_sz) = 0;
+    virtual int getSubsetSize () const = 0;
     // return random number from <0, max_range), where max_range is from constructor
     virtual int getRandomNumber () = 0;
     // return random number from <0, max_rng)
     virtual int getRandomNumber (int max_rng) = 0;
+    virtual const std::vector<int> &generateUniqueRandomSubset (std::vector<int> &array1,
+            int size1) = 0;
+    virtual Ptr<RandomGenerator> clone (int state) const = 0;
 };
 
 class UniformRandomGenerator : public RandomGenerator {
@@ -666,7 +666,7 @@ public:
     static Ptr<GraphCut>
     create(const Ptr<Estimator> &estimator_, const Ptr<Error> &error_,
            const Ptr<Quality> &quality_, const Ptr<NeighborhoodGraph> &neighborhood_graph_,
-           const Ptr<Sampler> &lo_sampler_, double threshold_,
+           const Ptr<RandomGenerator> &lo_sampler_, double threshold_,
            double spatial_coherence_term, int gc_iters);
 };
 
@@ -675,17 +675,9 @@ class InnerIterativeLocalOptimization : public LocalOptimization {
 public:
     static Ptr<InnerIterativeLocalOptimization>
     create(const Ptr<Estimator> &estimator_, const Ptr<Quality> &quality_,
-           const Ptr<Sampler> &lo_sampler_, int pts_size, double threshold_,
-           bool is_sample_limit_, int lo_iter_sample_size_, int lo_inner_iterations,
+           const Ptr<RandomGenerator> &lo_sampler_, int pts_size, double threshold_,
+           bool is_iterative_, int lo_iter_sample_size_, int lo_inner_iterations,
            int lo_iter_max_iterations, double threshold_multiplier);
-};
-
-//////////////////////////////////// INNER LO ///////////////////////////////////////
-class InnerLocalOptimization : public LocalOptimization {
-public:
-    static Ptr<InnerLocalOptimization>
-    create(const Ptr<Estimator> &estimator_, const Ptr<Quality> &quality_,
-           const Ptr<Sampler> &lo_sampler_, int lo_inner_iterations_);
 };
 
 class SigmaConsensus : public LocalOptimization {
@@ -693,8 +685,9 @@ public:
     static Ptr<SigmaConsensus>
     create(const Ptr<Estimator> &estimator_, const Ptr<Error> &error_,
            const Ptr<Quality> &quality, const Ptr<ModelVerifier> &verifier_,
-           int number_of_irwls_iters_, int DoF, double sigma_quantile,
-           double upper_incomplete_of_sigma_quantile, double C_, double maximum_thr);
+           int max_lo_sample_size, int number_of_irwls_iters_,
+           int DoF, double sigma_quantile, double upper_incomplete_of_sigma_quantile,
+           double C_, double maximum_thr);
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -767,7 +760,6 @@ public:
     virtual double getThreshold () const = 0;
     virtual VerificationMethod getVerifier () const = 0;
     virtual SamplingMethod getSampler () const = 0;
-    virtual int getMaxSampleSizeLO () const = 0;
     virtual double getTimeForModelEstimation () const = 0;
     virtual double getSPRTdelta () const = 0;
     virtual double getSPRTepsilon () const = 0;
@@ -806,6 +798,7 @@ public:
     virtual void setPolisher (PolishingMethod polisher_) = 0;
     virtual void setError (ErrorMetric error_) = 0;
     virtual void setLOIterations (int iters) = 0;
+    virtual void setLOIterativeIters (int iters) = 0;
     virtual void setLOSampleSize (int lo_sample_size) = 0;
     virtual void setRandomGeneratorState (int state) = 0;
 

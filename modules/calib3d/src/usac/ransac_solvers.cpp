@@ -119,7 +119,7 @@ public:
         // check if LO
         const bool LO = params->getLO() != LocalOptimMethod::LOCAL_OPTIM_NULL;
         const bool is_magsac = params->getLO() == LocalOptimMethod::LOCAL_OPTIM_SIGMA;
-        const int max_iters_before_LO = 10, repeat_magsac = 10; //params->getMaxItersBeforeLO();
+        const int repeat_magsac = 10;
         Score best_score;
         Mat best_model;
         int final_iters;
@@ -152,7 +152,6 @@ public:
                     } else continue;
 
                     if (current_score.isBetter(best_score)) {
-                        // if number of non degenerate models is zero then input model is good
                         if (_degeneracy->recoverIfDegenerate(sample, models[i],
                                 non_degenerate_model, non_denegenerate_model_score)) {
                             // check if best non degenerate model is better than so far the best model
@@ -176,7 +175,6 @@ public:
                         // update upper bound of iterations
                         max_iters = _termination_criteria->update
                                 (best_model, best_score.inlier_number);
-//                        std::cout << "update: current iter " << iters << " max iters " << max_iters << " inliers " << best_score.inlier_number << "\n";
                         if (iters > max_iters)
                             break;
 
@@ -194,7 +192,6 @@ public:
                                     _model_verifier->update(best_score.inlier_number);
                                     max_iters = _termination_criteria->update
                                             (best_model, best_score.inlier_number);
-//                                    std::cout << "lo update: current iter " << iters << " max iters " << max_iters << " inliers " << best_score.inlier_number << "\n";
                                     if (iters > max_iters)
                                         break;
                                 }
@@ -289,9 +286,7 @@ public:
                             }
                         } else continue;
 
-
                         if (current_score.isBetter(best_score_all_threads)) {
-                            // if number of non degenerate models is zero then input model is good
                             if (degeneracy->recoverIfDegenerate(sample, models[i],
                                         non_degenerate_model, non_denegenerate_model_score)) {
                                 // check if best non degenerate model is better than so far the best model
@@ -310,7 +305,7 @@ public:
                                 success = true; break;
                             }
 
-                            if (LO && iters >= max_iters_before_LO) {
+                            if (LO) {
                                 // do magsac if it wasn't already run
                                 if (is_magsac && iters % repeat_magsac == 0) continue;
                                 // update model by Local optimizaion
@@ -372,8 +367,6 @@ public:
                 static_cast<int>(std::chrono::duration_cast<std::chrono::microseconds>
                 (std::chrono::steady_clock::now() - begin_time).count()), best_score.score,
                 best_score.inlier_number, final_iters, -1, -1);
-
-//        std::cout << "final iters " << final_iters << " " << ransac_output->getTimeMicroSeconds() << " ransac time \n";
         return true;
     }
 };
@@ -437,11 +430,17 @@ void setParameters (int flag, Ptr<Model> &params, EstimationMethod estimator, do
     switch (flag) {
         case USAC_DEFAULT:
             params = Model::create(thr, estimator, SamplingMethod::SAMPLING_UNIFORM, conf, max_iters,
+                                   ScoreMethod::SCORE_METHOD_MSAC);
+            params->setLocalOptimization(LocalOptimMethod ::LOCAL_OPTIM_INNER_AND_ITER_LO);
+            break;
+        case USAC_MAGSAC:
+            params = Model::create(thr, estimator, SamplingMethod::SAMPLING_UNIFORM, conf, max_iters,
                                    ScoreMethod::SCORE_METHOD_MAGSAC);
             params->setLocalOptimization(LocalOptimMethod ::LOCAL_OPTIM_SIGMA);
+            params->setLOSampleSize(100);
             break;
         case USAC_PARALLEL:
-            params = Model::create(thr, estimator,SamplingMethod::SAMPLING_UNIFORM, conf, max_iters,
+            params = Model::create(thr, estimator, SamplingMethod::SAMPLING_UNIFORM, conf, max_iters,
                                    ScoreMethod::SCORE_METHOD_MSAC);
             params->setParallel(true);
             params->setLocalOptimization(LocalOptimMethod ::LOCAL_OPTIM_INNER_LO);
@@ -454,7 +453,9 @@ void setParameters (int flag, Ptr<Model> &params, EstimationMethod estimator, do
         case USAC_FAST:
             params = Model::create(thr, estimator, SamplingMethod::SAMPLING_UNIFORM, conf, max_iters,
                                    ScoreMethod::SCORE_METHOD_MSAC);
-            params->setLocalOptimization(LocalOptimMethod ::LOCAL_OPTIM_INNER_LO);
+            params->setLocalOptimization(LocalOptimMethod ::LOCAL_OPTIM_INNER_AND_ITER_LO);
+            params->setLOIterations(7);
+            params->setLOIterativeIters(4);
             break;
         case USAC_PROSAC:
             params = Model::create(thr, estimator, SamplingMethod::SAMPLING_PROSAC, conf, max_iters,
@@ -533,7 +534,7 @@ Mat estimateAffine2D(InputArray from, InputArray to, OutputArray mask, int metho
     if (run(params, from, to, params->getRandomGeneratorState(),
             ransac_output, noArray(), noArray(), noArray(), noArray())) {
         saveMask(mask, ransac_output->getInliersMask());
-        return ransac_output->getModel();
+        return ransac_output->getModel().rowRange(0,2);
     } else return Mat();
 }
 
@@ -554,9 +555,9 @@ private:
     NeighborSearchMethod neighborsType = NeighborSearchMethod::NEIGH_GRID;
 
     // Local Optimization parameters
-    LocalOptimMethod lo = LocalOptimMethod ::LOCAL_OPTIM_INNER_LO;
-    int lo_sample_size=14, lo_inner_iterations=10, lo_iterative_iterations=5,
-            lo_thr_multiplier=4, lo_iter_sample_size = 30;
+    LocalOptimMethod lo = LocalOptimMethod ::LOCAL_OPTIM_INNER_AND_ITER_LO;
+    int lo_sample_size=14, lo_inner_iterations=15, lo_iterative_iterations=5,
+            lo_thr_multiplier=3, lo_iter_sample_size = 30;
 
     // Graph cut parameters
     const double spatial_coherence_term = 0.975;
@@ -610,13 +611,13 @@ public:
                 avg_num_models = 1; time_for_model_est = 70;
                 sample_size = 4; est_error = ErrorMetric ::FORW_REPR_ERR; break;
             case (EstimationMethod::Fundamental):
-                avg_num_models = 2.38; time_for_model_est = 120;
+                avg_num_models = 2.38; time_for_model_est = 120; maximum_thr = 5;
                 sample_size = 7; est_error = ErrorMetric ::SAMPSON_ERR; break;
             case (EstimationMethod::Fundamental8):
-                avg_num_models = 1; time_for_model_est = 90;
+                avg_num_models = 1; time_for_model_est = 90; maximum_thr = 5;
                 sample_size = 8; est_error = ErrorMetric ::SAMPSON_ERR; break;
             case (EstimationMethod::Essential):
-                avg_num_models = 3.93; time_for_model_est = 300;
+                avg_num_models = 3.93; time_for_model_est = 300; maximum_thr = 5;
                 sample_size = 5; est_error = ErrorMetric ::SGD_ERR; break;
             case (EstimationMethod::P3P):
                 avg_num_models = 1.38; time_for_model_est = 200;
@@ -654,6 +655,7 @@ public:
     void setNeighborsType (NeighborSearchMethod neighbors) override { neighborsType = neighbors; }
     void setCellSize (int cell_size_) override { cell_size = cell_size_; }
     void setLOIterations (int iters) override { lo_inner_iterations = iters; }
+    void setLOIterativeIters (int iters) override {lo_iterative_iterations = iters; }
     void setLOSampleSize (int lo_sample_size_) override { lo_sample_size = lo_sample_size_; }
     void maskRequired (bool need_mask_) override { need_mask = need_mask_; }
     void setRandomGeneratorState (int state) override { random_generator_state = state; }
@@ -692,7 +694,6 @@ public:
     double getThreshold () const override { return threshold; }
     VerificationMethod getVerifier () const override { return verifier; }
     SamplingMethod getSampler () const override { return sampler; }
-    int getMaxSampleSizeLO () const override { return lo_inner_iterations; }
     int getMaxSampleSizeLOiterative () const override { return lo_iter_sample_size; }
     int getRandomGeneratorState () const override { return random_generator_state; }
     double getSPRTdelta () const override { return sprt_delta; }
@@ -730,7 +731,8 @@ bool run (const Ptr<const Model> &params, InputArray points1, InputArray points2
     Ptr<Degeneracy> degeneracy;
     Ptr<Quality> quality;
     Ptr<ModelVerifier> verifier;
-    Ptr<Sampler> sampler, lo_sampler;
+    Ptr<Sampler> sampler;
+    Ptr<RandomGenerator> lo_sampler;
     Ptr<TerminationCriteria> termination;
     Ptr<LocalOptimization> lo;
     Ptr<FinalModelPolisher> polisher;
@@ -856,7 +858,7 @@ bool run (const Ptr<const Model> &params, InputArray points1, InputArray points2
         non_min_solver = HomographyNonMinimalSolver::create(points);
         estimator = HomographyEstimator::create(min_solver, non_min_solver, degeneracy);
     } else if (params->isFundamental()) {
-        degeneracy = FundamentalDegeneracy::create(state, quality, points, min_sample_size, 5.);
+        degeneracy = FundamentalDegeneracy::create(state++, quality, points, min_sample_size, 5.);
         if(min_sample_size == 7) min_solver = FundamentalMinimalSolver7pts::create(points);
         else min_solver = FundamentalMinimalSolver8pts::create(points);
         non_min_solver = FundamentalNonMinimalSolver::create(points);
@@ -885,20 +887,20 @@ bool run (const Ptr<const Model> &params, InputArray points1, InputArray points2
 
     switch (params->getSampler()) {
         case SamplingMethod::SAMPLING_UNIFORM:
-            sampler = UniformSampler::create(state, min_sample_size, points_size); break;
+            sampler = UniformSampler::create(state++, min_sample_size, points_size); break;
         case SamplingMethod::SAMPLING_PROSAC:
-            sampler = ProsacSampler::create(state, points_size, min_sample_size, 200000); break;
+            sampler = ProsacSampler::create(state++, points_size, min_sample_size, 200000); break;
         case SamplingMethod::SAMPLING_PROGRESSIVE_NAPSAC:
-            sampler = ProgressiveNapsac::create(state, points_size, min_sample_size, layers, 20); break;
+            sampler = ProgressiveNapsac::create(state++, points_size, min_sample_size, layers, 20); break;
         case SamplingMethod::SAMPLING_NAPSAC:
-            sampler = NapsacSampler::create(state, points_size, min_sample_size, graph); break;
+            sampler = NapsacSampler::create(state++, points_size, min_sample_size, graph); break;
         default: CV_Error(cv::Error::StsNotImplemented, "Sampler is not implemented!");
     }
 
     switch (params->getVerifier()) {
         case VerificationMethod::NullVerifier: verifier = ModelVerifier::create(); break;
         case VerificationMethod::SprtVerifier:
-            verifier = SPRT::create(state, error, points_size, threshold,
+            verifier = SPRT::create(state++, error, points_size, params->getScore() == ScoreMethod ::SCORE_METHOD_MAGSAC ? max_thr : threshold,
              params->getSPRTepsilon(), params->getSPRTdelta(), params->getTimeForModelEstimation(),
              params->getSPRTavgNumModels(), params->getScore()); break;
         default: CV_Error(cv::Error::StsNotImplemented, "Verifier is not imeplemented!");
@@ -924,11 +926,13 @@ bool run (const Ptr<const Model> &params, InputArray points1, InputArray points2
             (params->getConfidence(), points_size, min_sample_size, params->getMaxIters());
 
     if (params->getLO() != LocalOptimMethod::LOCAL_OPTIM_NULL) {
-        lo_sampler = UniformSampler::create(state, params->getMaxSampleSizeLO(), points_size);
+        lo_sampler = UniformRandomGenerator::create(state++, points_size, params->getLOSampleSize());
         switch (params->getLO()) {
             case LocalOptimMethod::LOCAL_OPTIM_INNER_LO:
-                lo = InnerLocalOptimization::create(estimator, quality, lo_sampler,
-                      params->getLOInnerMaxIters()); break;
+                lo = InnerIterativeLocalOptimization::create(estimator, quality, lo_sampler,
+                     points_size, threshold, false, params->getLOIterativeSampleSize(),
+                     params->getLOInnerMaxIters(), params->getLOIterativeMaxIters(),
+                     params->getLOThresholdMultiplier()); break;
             case LocalOptimMethod::LOCAL_OPTIM_INNER_AND_ITER_LO:
                 lo = InnerIterativeLocalOptimization::create(estimator, quality, lo_sampler,
                      points_size, threshold, true, params->getLOIterativeSampleSize(),
@@ -938,7 +942,7 @@ bool run (const Ptr<const Model> &params, InputArray points1, InputArray points2
                 lo = GraphCut::create(estimator, error, quality, graph, lo_sampler, threshold,
                    params->getGraphCutSpatialCoherenceTerm(), params->getLOInnerMaxIters()); break;
             case LocalOptimMethod::LOCAL_OPTIM_SIGMA:
-                lo = SigmaConsensus::create(estimator, error, quality, verifier, 1,
+                lo = SigmaConsensus::create(estimator, error, quality, verifier, params->getLOSampleSize(), 1,
                      params->getDegreesOfFreedom(), params->getSigmaQuantile(),
                      params->getUpperIncompleteOfSigmaQuantile(), params->getC(), max_thr); break;
             default: CV_Error(cv::Error::StsNotImplemented , "Local Optimization is not implemented!");
@@ -950,7 +954,6 @@ bool run (const Ptr<const Model> &params, InputArray points1, InputArray points2
 
     Ransac ransac (params, points_size, estimator, quality, sampler,
           termination, verifier, degeneracy, lo, polisher, params->isParallel(), state);
-
     if (ransac.run(ransac_output)) {
         if (params->isPnP()) {
             // convert R to rodrigues and back and recalculate inliers which due to numerical
