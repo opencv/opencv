@@ -876,3 +876,7 @@ kernel = Variable(torch.randn(2, 2, 2, 2))
 bias = Variable(torch.randn(4))
 model = ConvBias()
 save_data_and_model_multy_inputs("conv_variable_wb", model, x, kernel, bias)
+
+x = Variable(torch.randn(1, 2, 2))
+model = nn.Linear(2, 2, bias=True)
+save_data_and_model("matmul_add", x, model)
