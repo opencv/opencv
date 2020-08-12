@@ -434,6 +434,59 @@ Mat& Mat::operator = (const Scalar& s)
     }
     else
     {
+        if (elemSize1() == 1 ) // CV_8U, CV_8S
+        {
+            /*
+                opencv interface.
+
+                1) Mat::operator = (Scalar)
+                    Mat m(1,1, CV_8UC3);
+                    m = 1;  // m = [ 1,0,0 ]
+
+                    Mat m(1,1, CV_8UC3);
+                    m = Scalar(1,1,1);  // m = [ 1,1,1 ]
+
+                2) Mat::ones ( little ambiguous )
+                    Mat m = Mat::ones(1,1, CV_8UC3);  // m = [ 1, 0, 0 ] 
+
+            */
+            bool apply_memset = false;  // memset faster than memcpy
+            switch (channels()) // ch
+            {
+            case 1:
+                apply_memset = true;
+                break;
+            case 2:
+                apply_memset = (is[0] == is[1]);
+                break;
+            case 3:
+                apply_memset = (is[0] == is[1] && is[1] == is[2] );
+                break;
+            case 4:
+                apply_memset = (is[0] == is[1] && is[1] == is[2] && is[2] == is[3]);
+                break;
+            default:
+                apply_memset = false;
+                break;
+            }
+            //apply_memset = false; // test for compare
+
+            if (apply_memset)
+            {
+                int val = 0;
+                switch (this->depth())
+                {
+                case CV_8U: val = saturate_cast<uchar>(is[0]); break;
+                case CV_8S: val = saturate_cast<schar>(is[0]); break;
+                default: CV_Error(CV_BadDepth, "Unsupported depth");
+                }
+
+                for (size_t i = 0; i < it.nplanes; i++, ++it)
+                    memset(dptr, val, elsize);
+                return *this;
+            }
+        }
+        
         if( it.nplanes > 0 )
         {
             double scalar[12];
