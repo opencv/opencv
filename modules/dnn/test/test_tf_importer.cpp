@@ -128,6 +128,13 @@ TEST_P(Test_TensorFlow_layers, reduce_mean)
     runTensorFlowNet("global_pool_by_axis");
 }
 
+TEST_P(Test_TensorFlow_layers, reduce_sum)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    runTensorFlowNet("sum_pool_by_axis");
+}
+
 TEST_P(Test_TensorFlow_layers, conv_single_conv)
 {
     runTensorFlowNet("single_conv");
@@ -338,6 +345,11 @@ TEST_P(Test_TensorFlow_layers, pooling_max_pool_odd_same)
 TEST_P(Test_TensorFlow_layers, pooling_reduce_mean)
 {
     runTensorFlowNet("reduce_mean");  // an average pooling over all spatial dimensions.
+}
+
+TEST_P(Test_TensorFlow_layers, pooling_reduce_sum)
+{
+    runTensorFlowNet("reduce_sum");  // a SUM pooling over all spatial dimensions.
 }
 
 TEST_P(Test_TensorFlow_layers, max_pool_grad)
