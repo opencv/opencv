@@ -181,11 +181,11 @@ static double getError (TestSolver test_case, int pt_idx, const cv::Mat &pts1, c
         cv::Mat l2 = model     * pt1;
         cv::Mat l1 = model.t() * pt2;
         if (test_case == TestSolver::Fundam) // sampson error
-            return pow(pt2.dot(l2),2) / (pow(l1.at<double>(0), 2) + pow(l1.at<double>(1), 2) +
-                                         pow(l2.at<double>(0), 2) + pow(l2.at<double>(1), 2));
+            return pt2.dot(l2) / sqrt(pow(l1.at<double>(0), 2) + pow(l1.at<double>(1), 2) +
+                                      pow(l2.at<double>(0), 2) + pow(l2.at<double>(1), 2));
         else // symmetric geometric distance
-            return (fabs(pt1.dot(l1)) / sqrt(pow(l1.at<double>(0),2) + pow(l1.at<double>(1),2)) +
-                    fabs(pt2.dot(l2)) / sqrt(pow(l2.at<double>(0),2) + pow(l2.at<double>(1),2)))/2;
+            return sqrt(pow(pt1.dot(l1),2) / (pow(l1.at<double>(0),2) + pow(l1.at<double>(1),2)) +
+                        pow(pt2.dot(l2),2) / (pow(l2.at<double>(0),2) + pow(l2.at<double>(1),2)));
     } else
     if (test_case == TestSolver::PnP) { // PnP, reprojection error
         cv::Mat img_pt = model * pt2; img_pt /= img_pt.at<double>(2);
@@ -211,6 +211,7 @@ static void checkInliersMask (TestSolver test_case, int inl_size, double thr, co
     cv::vconcat(pts1, cv::Mat::ones(1, pts1.cols, pts1.type()), pts1);
     cv::vconcat(pts2, cv::Mat::ones(1, pts2.cols, pts2.type()), pts2);
 
+    thr *= 1.001; // increase a little threshold due to numerical imprecisions
     const auto * const mask_ptr = mask.ptr<uchar>();
     int num_found_inliers = 0;
     for (int i = 0; i < pts1.cols; i++)
@@ -247,10 +248,10 @@ TEST(usac_Fundamental, accuracy) {
     std::vector<int> gt_inliers;
     const int pts_size = 2000;
     cv::RNG &rng = cv::theRNG();
-    // start from 20% otherwise max_iters will be too big
+    // start from 25% otherwise max_iters will be too big
     const std::vector<int> flags = {USAC_DEFAULT, USAC_FM_8PTS, USAC_ACCURATE, USAC_PROSAC, USAC_FAST, USAC_MAGSAC};
     const double conf = 0.99, thr = 1.;
-    for (double inl_ratio = 0.20; inl_ratio < 0.91; inl_ratio += 0.1) {
+    for (double inl_ratio = 0.25; inl_ratio < 0.91; inl_ratio += 0.1) {
         cv::Mat pts1, pts2, K1, K2;
         int inl_size = generatePoints(rng, pts1, pts2, K1, K2, false /*two calib*/,
           pts_size, TestSolver ::Fundam, inl_ratio, 0.1 /*noise std*/, gt_inliers);
@@ -267,7 +268,7 @@ TEST(usac_Fundamental, accuracy) {
 
 TEST(usac_Essential, accuracy) {
     std::vector<int> gt_inliers;
-    const int pts_size = 2000;
+    const int pts_size = 1500;
     cv::RNG &rng = cv::theRNG();
     // findEssentilaMat has by default number of maximum iterations equal to 1000.
     // It means that with 99% confidence we assume at least 34.08% of inliers
@@ -291,8 +292,7 @@ TEST(usac_Essential, accuracy) {
             cv::vconcat(pts1, cv::Mat::ones(1, pts1.cols, pts1.type()), cpts1_3d);
             cv::vconcat(pts2, cv::Mat::ones(1, pts2.cols, pts2.type()), cpts2_3d);
             cpts1_3d = K1.inv() * cpts1_3d; cpts2_3d = K1.inv() * cpts2_3d;
-            // increase a little threshold due to numerical issues when calibrating points
-            checkInliersMask(TestSolver::Essen, inl_size, 1.01*thr / ((K1.at<double>(0,0) + K1.at<double>(1,1)) / 2),
+            checkInliersMask(TestSolver::Essen, inl_size, thr / ((K1.at<double>(0,0) + K1.at<double>(1,1)) / 2),
                              cpts1_3d.rowRange(0,2), cpts2_3d.rowRange(0,2), E, mask);
         }
     }
@@ -300,7 +300,7 @@ TEST(usac_Essential, accuracy) {
 
 TEST(usac_P3P, accuracy) {
     std::vector<int> gt_inliers;
-    const int pts_size = 4000;
+    const int pts_size = 3000;
     cv::Mat img_pts, obj_pts, K1, K2;
     cv::RNG &rng = cv::theRNG();
     const std::vector<int> flags = {USAC_DEFAULT, USAC_ACCURATE, USAC_PROSAC, USAC_FAST, USAC_MAGSAC};
@@ -329,7 +329,7 @@ TEST (usac_Affine2D, accuracy) {
     const std::vector<int> flags = {USAC_DEFAULT, USAC_ACCURATE, USAC_PROSAC, USAC_FAST, USAC_MAGSAC};
     for (double inl_ratio = 0.1; inl_ratio < 0.91; inl_ratio += 0.1) {
         int inl_size = generatePoints(rng, pts1, pts2, K1, K2, false /*two calib*/,
-                  pts_size, TestSolver ::Affine, inl_ratio, 0.2 /*noise std*/, gt_inliers);
+                  pts_size, TestSolver ::Affine, inl_ratio, 0.15 /*noise std*/, gt_inliers);
         const double conf = 0.99, thr = 2., max_iters = 1.3 * log(1 - conf) /
                 log(1 - pow(inl_ratio, 3 /* sample size */));
         for (auto flag : flags) {

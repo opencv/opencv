@@ -18,6 +18,7 @@ public:
         points_mat(&points_), points ((float*) points_.data) {}
 
     int estimate (const std::vector<int>& sample, std::vector<Mat> &models) const override {
+        // OpenCV RHO:
         const int smpl0 = 4*sample[0], smpl1 = 4*sample[1], smpl2 = 4*sample[2], smpl3 = 4*sample[3];
         const auto x0 = points[smpl0], y0 = points[smpl0+1], X0 = points[smpl0+2], Y0 = points[smpl0+3];
         const auto x1 = points[smpl1], y1 = points[smpl1+1], X1 = points[smpl1+2], Y1 = points[smpl1+3];

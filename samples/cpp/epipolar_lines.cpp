@@ -11,10 +11,19 @@
 
 using namespace cv;
 
-int main(int /*argc*/, char** /*argv*/) {
-    const std::string folder = "/home/ivashmak/opencv/samples/data/";
-    Mat image1 = imread(folder+"left.jpg");
-    Mat image2 = imread(folder+"right.jpg");
+int main(int args, char** argv) {
+    std::string img_name1, img_name2;
+    if (args < 3) {
+       CV_Error(Error::StsBadArg,
+                "Path to two images \nFor example: "
+                "./epipolar_lines img1.jpg img2.jpg");
+    } else {
+       img_name1 = argv[1];
+       img_name2 = argv[2];
+    }
+
+    Mat image1 = imread(img_name1);
+    Mat image2 = imread(img_name2);
     Mat descriptors1, descriptors2;
     std::vector<KeyPoint> keypoints1, keypoints2;
 

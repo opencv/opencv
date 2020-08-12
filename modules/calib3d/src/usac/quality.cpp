@@ -223,11 +223,10 @@ public:
         double total_loss = 0.0;
         int num_tentative_inliers = 0;
         for (int point_idx = 0; point_idx < points_size; point_idx++) {
-            const float residual = error->getError(point_idx);
-            if (residual < tentative_inlier_threshold)
+            const float squared_residual = error->getError(point_idx);
+            if (squared_residual < tentative_inlier_threshold)
                 num_tentative_inliers++;
-            if (residual < maximum_threshold) { // consider point as inlier
-                const float squared_residual = residual * residual;
+            if (squared_residual < maximum_threshold) { // consider point as inlier
                 // Get the position of the gamma value in the lookup table
                 int x=(int)round(scale_of_stored_incomplete_gammas * squared_residual
                         / maximum_sigma_2_times_2);
@@ -250,11 +249,10 @@ public:
         double total_loss = 0.0;
         int num_tentative_inliers = 0;
         for (int point_idx = 0; point_idx < points_size; point_idx++) {
-            const float residual = errors[point_idx];
-            if (residual < tentative_inlier_threshold)
+            const float squared_residual = errors[point_idx];
+            if (squared_residual < tentative_inlier_threshold)
                 num_tentative_inliers++;
-            if (residual < maximum_threshold) {
-                const float squared_residual = residual * residual;
+            if (squared_residual < maximum_threshold) {
                 int x=(int)round(scale_of_stored_incomplete_gammas * squared_residual
                                  / maximum_sigma_2_times_2);
                 if (x >= stored_incomplete_gamma_number)

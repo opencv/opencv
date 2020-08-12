@@ -197,7 +197,7 @@ int main(int args, char** argv) {
                 " format:\n--------------\n image_name_1\nimage_name_2\nk11 k12 k13\n0   k22 k23\n"
                 "0   0   1\n--------------\nIf image_name_{1,2} are not in the same directory as "
                 "the data file then add argument with directory to image files.\nFor example: "
-                "python essential_mat_reconstr.py essential_mat_data.txt ./");
+                "./essential_mat_reconstr essential_mat_data.txt ./");
     } else {
        data_file = argv[1];
        image_dir = argv[2];

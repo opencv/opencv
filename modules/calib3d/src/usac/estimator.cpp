@@ -69,7 +69,6 @@ public:
     }
     int estimateModelNonMinimalSample(const std::vector<int> &sample, int sample_size,
             std::vector<Mat> &models, const std::vector<double> &weights) const override {
-//        return non_min_solver->estimate(sample, sample_size, models, weights);
         std::vector<Mat> Fs;
         const int num_est_models = non_min_solver->estimate(sample, sample_size, Fs, weights);
         int valid_models_count = 0;
@@ -259,13 +258,12 @@ public:
         const int smpl = 4*point_idx;
         const float x1=points[smpl], y1=points[smpl+1], x2=points[smpl+2], y2=points[smpl+3];
         const float est_z2 = 1 / (m31 * x1 + m32 * y1 + m33),
-                    est_x2 =     (m11 * x1 + m12 * y1 + m13) * est_z2,
-                    est_y2 =     (m21 * x1 + m22 * y1 + m23) * est_z2;
+                    dx2 =  x2 -  (m11 * x1 + m12 * y1 + m13) * est_z2,
+                    dy2 =  y2 -  (m21 * x1 + m22 * y1 + m23) * est_z2;
         const float est_z1 = 1 / (minv31 * x2 + minv32 * y2 + minv33),
-                    est_x1 =     (minv11 * x2 + minv12 * y2 + minv13) * est_z1,
-                    est_y1 =     (minv21 * x2 + minv22 * y2 + minv23) * est_z1;
-        return ((x2 - est_x2) * (x2 - est_x2) + (y2 - est_y2) * (y2 - est_y2) +
-                (x1 - est_x1) * (x1 - est_x1) + (y1 - est_y1) * (y1 - est_y1)) * .5f;
+                    dx1 =  x1 -  (minv11 * x2 + minv12 * y2 + minv13) * est_z1,
+                    dy1 =  y1 -  (minv21 * x2 + minv22 * y2 + minv23) * est_z1;
+        return (dx2 * dx2 + dy2 * dy2 + dx1 * dx1 + dy1 * dy1) * .5f;
     }
     const std::vector<float> &getErrors (const Mat &model) override {
         setModelParameters(model);
@@ -273,13 +271,12 @@ public:
             const int smpl = 4*point_idx;
             const float x1=points[smpl], y1=points[smpl+1], x2=points[smpl+2], y2=points[smpl+3];
             const float est_z2 = 1 / (m31 * x1 + m32 * y1 + m33),
-                        est_x2 =     (m11 * x1 + m12 * y1 + m13) * est_z2,
-                        est_y2 =     (m21 * x1 + m22 * y1 + m23) * est_z2;
+                    dx2 =  x2 -  (m11 * x1 + m12 * y1 + m13) * est_z2,
+                    dy2 =  y2 -  (m21 * x1 + m22 * y1 + m23) * est_z2;
             const float est_z1 = 1 / (minv31 * x2 + minv32 * y2 + minv33),
-                        est_x1 =     (minv11 * x2 + minv12 * y2 + minv13) * est_z1,
-                        est_y1 =     (minv21 * x2 + minv22 * y2 + minv23) * est_z1;
-            errors[point_idx] =((x2 - est_x2) * (x2 - est_x2) + (y2 - est_y2) * (y2 - est_y2) +
-                                (x1 - est_x1) * (x1 - est_x1) + (y1 - est_y1) * (y1 - est_y1))*.5f;
+                    dx1 =  x1 -  (minv11 * x2 + minv12 * y2 + minv13) * est_z1,
+                    dy1 =  y1 -  (minv21 * x2 + minv22 * y2 + minv23) * est_z1;
+            errors[point_idx] = (dx2 * dx2 + dy2 * dy2 + dx1 * dx1 + dy1 * dy1) * .5f;
         }
         return errors;
     }
@@ -313,9 +310,9 @@ public:
         const int smpl = 4*point_idx;
         const float x1 = points[smpl], y1 = points[smpl+1], x2 = points[smpl+2], y2 = points[smpl+3];
         const float est_z2 = 1 / (m31 * x1 + m32 * y1 + m33),
-                    est_x2 =     (m11 * x1 + m12 * y1 + m13) * est_z2,
-                    est_y2 =     (m21 * x1 + m22 * y1 + m23) * est_z2;
-        return (x2 - est_x2) * (x2 - est_x2) + (y2 - est_y2) * (y2 - est_y2);
+                    dx2 =  x2 -  (m11 * x1 + m12 * y1 + m13) * est_z2,
+                    dy2 =  y2 -  (m21 * x1 + m22 * y1 + m23) * est_z2;
+        return dx2 * dx2 + dy2 * dy2;
     }
     const std::vector<float> &getErrors (const Mat &model) override {
         setModelParameters(model);
@@ -323,9 +320,9 @@ public:
             const int smpl = 4*point_idx;
             const float x1=points[smpl], y1=points[smpl+1], x2=points[smpl+2], y2=points[smpl+3];
             const float est_z2 = 1 / (m31 * x1 + m32 * y1 + m33),
-                        est_x2 =     (m11 * x1 + m12 * y1 + m13) * est_z2,
-                        est_y2 =     (m21 * x1 + m22 * y1 + m23) * est_z2;
-            errors[point_idx] = (x2 - est_x2) * (x2 - est_x2) + (y2 - est_y2) * (y2 - est_y2);
+                        dx2 =  x2 -  (m11 * x1 + m12 * y1 + m13) * est_z2,
+                        dy2 =  y2 -  (m21 * x1 + m22 * y1 + m23) * est_z2;
+            errors[point_idx] = dx2 * dx2 + dy2 * dy2;
         }
         return errors;
     }
@@ -420,18 +417,17 @@ public:
     inline float getError (int point_idx) const override {
         const int smpl = 4*point_idx;
         const float x1=points[smpl], y1=points[smpl+1], x2=points[smpl+2], y2=points[smpl+3];
-        // pt2^T * E, line 1
+        // pt2^T * E, line 1 = [l1 l2]
         const float l1 = x2 * m11 + y2 * m21 + m31,
-                    l2 = x2 * m12 + y2 * m22 + m32,
-                    l3 = x2 * m13 + y2 * m23 + m33;
-        // E * pt1, line 2
+                    l2 = x2 * m12 + y2 * m22 + m32;
+        // E * pt1, line 2 = [t1 t2]
         const float t1 = m11 * x1 + m12 * y1 + m13,
-                    t2 = m21 * x1 + m22 * y1 + m23,
-                    t3 = m31 * x1 + m32 * y1 + m33;
-        return (fabsf(l1 * x1 + l2 * y1 + l3) / sqrtf(l1 * l1 + l2 * l2) // distance from pt1 to line 1
+                    t2 = m21 * x1 + m22 * y1 + m23;
+        float p2Ep1 = l1 * x1 + l2 * y1 + x2 * m13 + y2 * m23 + m33;
+        p2Ep1 *= p2Ep1;
+        return p2Ep1 / (l1 * l1 + l2 * l2)  // distance from pt1 to line 1
                 +
-                fabsf(t1 * x2 + t2 * y2 + t3) / sqrtf(t1 * t1 + t2 * t2) // distance from pt2 to line 2
-               ) * .5f; // error is average of distances to lines
+               p2Ep1 / (t1 * t1 + t2 * t2); // distance from pt2 to line 2
     }
     const std::vector<float> &getErrors (const Mat &model) override {
         setModelParameters(model);
@@ -439,10 +435,10 @@ public:
             const int smpl = 4*point_idx;
             const float x1=points[smpl], y1=points[smpl+1], x2=points[smpl+2], y2=points[smpl+3];
             const float l1 = x2 * m11 + y2 * m21 + m31, t1 = m11 * x1 + m12 * y1 + m13,
-                        l2 = x2 * m12 + y2 * m22 + m32, t2 = m21 * x1 + m22 * y1 + m23,
-                        l3 = x2 * m13 + y2 * m23 + m33, t3 = m31 * x1 + m32 * y1 + m33;
-            errors[point_idx] = (fabsf(l1 * x1 + l2 * y1 + l3) / sqrtf(l1 * l1 + l2 * l2) +
-                                 fabsf(t1 * x2 + t2 * y2 + t3) / sqrtf(t1 * t1 + t2 * t2)) *.5f;
+                        l2 = x2 * m12 + y2 * m22 + m32, t2 = m21 * x1 + m22 * y1 + m23;
+            float p2Ep1 = l1 * x1 + l2 * y1 + x2 * m13 + y2 * m23 + m33;
+            p2Ep1 *= p2Ep1;
+            errors[point_idx] = p2Ep1 / (l1 * l1 + l2 * l2) + p2Ep1 / (t1 * t1 + t2 * t2);
         }
         return errors;
     }
@@ -477,9 +473,9 @@ public:
         const float u = points[smpl  ], v = points[smpl+1],
                     x = points[smpl+2], y = points[smpl+3], z = points[smpl+4];
         const float depth = 1 / (p31 * x + p32 * y + p33 * z + p34);
-        const float u_est =     (p11 * x + p12 * y + p13 * z + p14) * depth;
-        const float v_est =     (p21 * x + p22 * y + p23 * z + p24) * depth;
-        return powf(u - u_est, 2) + powf(v - v_est, 2);
+        const float du =    u - (p11 * x + p12 * y + p13 * z + p14) * depth;
+        const float dv =    v - (p21 * x + p22 * y + p23 * z + p24) * depth;
+        return du * du + dv * dv;
     }
     const std::vector<float> &getErrors (const Mat &model) override {
         setModelParameters(model);
@@ -488,9 +484,9 @@ public:
             const float u = points[smpl  ], v = points[smpl+1],
                         x = points[smpl+2], y = points[smpl+3], z = points[smpl+4];
             const float depth = 1 / (p31 * x + p32 * y + p33 * z + p34);
-            const float u_est =     (p11 * x + p12 * y + p13 * z + p14) * depth;
-            const float v_est =     (p21 * x + p22 * y + p23 * z + p24) * depth;
-            errors[point_idx] = powf(u - u_est, 2) + powf(v - v_est, 2);
+            const float du =    u - (p11 * x + p12 * y + p13 * z + p14) * depth;
+            const float dv =    v - (p21 * x + p22 * y + p23 * z + p24) * depth;
+            errors[point_idx] = du * du + dv * dv;
         }
         return errors;
     }
@@ -527,16 +523,16 @@ public:
     inline float getError (int point_idx) const override {
         const int smpl = 4*point_idx;
         const float x1=points[smpl], y1=points[smpl+1], x2=points[smpl+2], y2=points[smpl+3];
-        const float est_x2 = (m11 * x1 + m12 * y1 + m13), est_y2 = (m21 * x1 + m22 * y1 + m23);
-        return (x2 - est_x2) * (x2 - est_x2) + (y2 - est_y2) * (y2 - est_y2);
+        const float dx2 = x2 - (m11 * x1 + m12 * y1 + m13), dy2 = y2 - (m21 * x1 + m22 * y1 + m23);
+        return dx2 * dx2 + dy2 * dy2;
     }
     const std::vector<float> &getErrors (const Mat &model) override {
         setModelParameters(model);
         for (int point_idx = 0; point_idx < points_mat->rows; point_idx++) {
             const int smpl = 4*point_idx;
             const float x1=points[smpl], y1=points[smpl+1], x2=points[smpl+2], y2=points[smpl+3];
-            const float est_x2 = (m11 * x1 + m12 * y1 + m13), est_y2 = (m21 * x1 + m22 * y1 + m23);
-            errors[point_idx] = (x2 - est_x2) * (x2 - est_x2) + (y2 - est_y2) * (y2 - est_y2);
+            const float dx2 = x2 - (m11 * x1 + m12 * y1 + m13), dy2 = y2 - (m21 * x1 + m22 * y1 + m23);
+            errors[point_idx] = dx2 * dx2 + dy2 * dy2;
         }
         return errors;
     }

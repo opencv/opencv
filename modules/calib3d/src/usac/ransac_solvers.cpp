@@ -617,7 +617,7 @@ public:
                 avg_num_models = 1; time_for_model_est = 90; maximum_thr = 3;
                 sample_size = 8; est_error = ErrorMetric ::SAMPSON_ERR; break;
             case (EstimationMethod::Essential):
-                avg_num_models = 3.93; time_for_model_est = 300; maximum_thr = 3;
+                avg_num_models = 3.93; time_for_model_est = 1500; maximum_thr = 3;
                 sample_size = 5; est_error = ErrorMetric ::SGD_ERR; break;
             case (EstimationMethod::P3P):
                 avg_num_models = 1.38; time_for_model_est = 200;
@@ -637,14 +637,7 @@ public:
             lower_incomplete_of_sigma_quantile = 1.96032;
             C = 0.13298;
         }
-        /*
-         * Measured reprojected error in homography is (x-x')^2 + (y-y)^2 (without squared root),
-         * so threshold must be squared.
-         */
         threshold = threshold_;
-        if (est_error == ErrorMetric::FORW_REPR_ERR || est_error == ErrorMetric::SYMM_REPR_ERR ||
-            est_error == ErrorMetric ::RERPOJ)
-            threshold *= threshold_;
     }
     void setVerifier (VerificationMethod verifier_) override { verifier = verifier_; }
     void setPolisher (PolishingMethod polisher_) override { polisher = polisher_; }
@@ -776,6 +769,8 @@ bool run (const Ptr<const Model> &params, InputArray points1, InputArray points2
         } else
             points_size = mergePoints(points1, points2, points, false);
     }
+
+    threshold *= threshold;
 
     if (params->getSampler() == SamplingMethod::SAMPLING_NAPSAC || params->getLO() == LocalOptimMethod::LOCAL_OPTIM_GC) {
         if (params->getNeighborsSearch() == NeighborSearchMethod::NEIGH_GRID) {

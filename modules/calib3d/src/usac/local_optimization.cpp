@@ -16,7 +16,6 @@ protected:
     const Ptr<RandomGenerator> lo_sampler;
     const Ptr<Error> error;
 
-    Score gc_temp_score;
     int gc_sample_size, lo_inner_iterations, points_size;
     double spatial_coherence, sqr_trunc_thr, one_minus_lambda;
 
@@ -35,7 +34,7 @@ public:
 
         points_size = quality_->getPointsSize();
         spatial_coherence = spatial_coherence_term;
-        sqr_trunc_thr =  threshold_ * threshold_ * 2.25;
+        sqr_trunc_thr =  threshold_ * 2.25; // threshold is already squared
         gc_sample_size = lo_sampler_->getSubsetSize();
         lo_inner_iterations = gc_inner_iteration_number_;
         one_minus_lambda = 1.0 - spatial_coherence;
@@ -69,20 +68,18 @@ public:
                     num_of_estimated_models = estimator->estimateModelNonMinimalSample
                             (lo_sampler->generateUniqueRandomSubset(labeling_inliers,
                                    labeling_inliers_size), gc_sample_size, gc_models, weights);
-                    if (num_of_estimated_models == 0)
-                        break; // break
                 } else {
                     if (iter > 0)
                         break; // break inliers are not updated
                     num_of_estimated_models = estimator->estimateModelNonMinimalSample
                             (labeling_inliers, labeling_inliers_size, gc_models, weights);
-                    if (num_of_estimated_models == 0)
-                        break;
                 }
+                if (num_of_estimated_models == 0)
+                    break;
 
                 bool zero_inliers = false;
                 for (int model_idx = 0; model_idx < num_of_estimated_models; model_idx++) {
-                    gc_temp_score = quality->getScore(gc_models[model_idx]);
+                    Score gc_temp_score = quality->getScore(gc_models[model_idx]);
                     if (gc_temp_score.inlier_number == 0){
                         zero_inliers = true; break;
                     }
@@ -122,8 +119,10 @@ private:
         // Estimate the vertex capacities
         for (int pt = 0; pt < points_size; pt++) {
             tmp_squared_distance = errors[pt];
-            if (std::isnan(tmp_squared_distance))
+            if (std::isnan(tmp_squared_distance)) {
+                energies[pt] = std::numeric_limits<float>::max();
                 continue;
+            }
             energy = tmp_squared_distance / sqr_trunc_thr; // Truncated quadratic cost
 
             if (tmp_squared_distance <= sqr_trunc_thr)
@@ -463,7 +462,7 @@ public:
                  const std::vector<float> &errors = verifier->getErrors();
                  for (int point_idx = 0; point_idx < points_size; ++point_idx) {
                      // Calculate the residual of the current point
-                     const auto residual = errors[point_idx];
+                     const auto residual = sqrtf(errors[point_idx]);
                      if (max_sigma > residual) {
                          // Store the residual of the current point and its index
                          residuals[residual_cnt] = residual;
@@ -478,7 +477,7 @@ public:
                 error->setModelParameters(in_model);
 
                 for (int point_idx = 0; point_idx < points_size; ++point_idx) {
-                    const double residual = error->getError(point_idx);
+                    const double residual = sqrtf(error->getError(point_idx));
                     if (max_sigma > residual) {
                         // Store the residual of the current point and its index
                         residuals[residual_cnt] = residual;
