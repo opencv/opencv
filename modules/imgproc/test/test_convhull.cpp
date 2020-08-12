@@ -1404,10 +1404,8 @@ int CV_FitEllipseTest::validate_test_results( int test_case_idx )
         goto _exit_;
     }
 
-    if(box.size.height > box.size.width) {
-        box.angle = (float)(90-box.angle);
-    }
-
+    // still figuring out why this needs to be done...
+    box.angle = (float)(90-box.angle);
 
     if( fabs(box.center.x - box0.center.x) > 3 ||
         fabs(box.center.y - box0.center.y) > 3 ||
