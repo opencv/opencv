@@ -683,6 +683,8 @@ struct Hamming2
     template <typename Iterator1, typename Iterator2>
     ResultType operator()(const Iterator1 a, const Iterator2 b, size_t size, ResultType /*worst_dist*/ = -1) const
     {
+        CV_DbgAssert(!(size % long_word_size_) && "vectors size must be multiple of long words size (i.e. 8)");
+
 #ifdef FLANN_PLATFORM_64_BIT
         const uint64_t* pa = reinterpret_cast<const uint64_t*>(a);
         const uint64_t* pb = reinterpret_cast<const uint64_t*>(b);
@@ -711,6 +713,8 @@ struct Hamming2
     template <typename Iterator1>
     ResultType operator()(const Iterator1 a, ZeroIterator<unsigned char> b, size_t size, ResultType /*worst_dist*/ = -1) const
     {
+        CV_DbgAssert(!(size % long_word_size_) && "vectors size must be multiple of long words size (i.e. 8)");
+
         (void)b;
 #ifdef FLANN_PLATFORM_64_BIT
         const uint64_t* pa = reinterpret_cast<const uint64_t*>(a);
