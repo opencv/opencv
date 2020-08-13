@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 
 from __future__ import print_function
+from future import standard_library
+standard_library.install_aliases()
+from builtins import zip
+from builtins import object
 import hdr_parser, sys, re, os
 from string import Template
 from pprint import pprint
@@ -9,7 +13,7 @@ from collections import namedtuple
 if sys.version_info[0] >= 3:
     from io import StringIO
 else:
-    from cStringIO import StringIO
+    from io import StringIO
 
 
 forbidden_arg_types = ["void*"]
@@ -174,7 +178,7 @@ gen_template_prop_init = Template("""
 gen_template_rw_prop_init = Template("""
     {(char*)"${member}", (getter)pyopencv_${name}_get_${member}, (setter)pyopencv_${name}_set_${member}, (char*)"${member}", NULL},""")
 
-class FormatStrings:
+class FormatStrings(object):
     string = 's'
     unsigned_char = 'b'
     short_int = 'h'
@@ -647,7 +651,7 @@ class FuncInfo(object):
                         defval0 = "0"
                         tp1 = tp.replace("*", "_ptr")
                 tp_candidates = [a.tp, normalize_class_name(self.namespace + "." + a.tp)]
-                if any(tp in codegen.enums.keys() for tp in tp_candidates):
+                if any(tp in list(codegen.enums.keys()) for tp in tp_candidates):
                     defval0 = "static_cast<%s>(%d)" % (a.tp, 0)
 
                 arg_type_info = simple_argtype_mapping.get(tp, ArgTypeInfo(tp, FormatStrings.object, defval0, True))
@@ -1028,7 +1032,7 @@ class PythonWrapperGenerator(object):
                     self.add_func(decl)
 
         # step 1.5 check if all base classes exist
-        for name, classinfo in self.classes.items():
+        for name, classinfo in list(self.classes.items()):
             if classinfo.base:
                 chunks = classinfo.base.split('_')
                 base = '_'.join(chunks)
@@ -1058,7 +1062,7 @@ class PythonWrapperGenerator(object):
                 res = classinfo.isalgorithm
             processed[classinfo] = True
             return res
-        for name, classinfo in self.classes.items():
+        for name, classinfo in list(self.classes.items()):
             process_isalgorithm(classinfo)
 
         # step 2: generate code for the classes and their methods

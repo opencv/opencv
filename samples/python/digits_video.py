@@ -10,7 +10,10 @@ Usage:
 
 # Python 2/3 compatibility
 from __future__ import print_function
+from __future__ import division
 
+from builtins import zip
+from past.utils import old_div
 import numpy as np
 import cv2 as cv
 
@@ -78,8 +81,8 @@ def main():
 
             s = 1.5*float(h)/SZ
             m = cv.moments(bin_roi)
-            c1 = np.float32([m['m10'], m['m01']]) / m['m00']
-            c0 = np.float32([SZ/2, SZ/2])
+            c1 = old_div(np.float32([m['m10'], m['m01']]), m['m00'])
+            c0 = np.float32([old_div(SZ,2), old_div(SZ,2)])
             t = c1 - s*c0
             A = np.zeros((2, 3), np.float32)
             A[:,:2] = np.eye(2)*s

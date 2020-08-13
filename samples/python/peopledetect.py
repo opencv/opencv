@@ -12,6 +12,7 @@ Press any key to continue, ESC to stop.
 # Python 2/3 compatibility
 from __future__ import print_function
 
+from builtins import map
 import numpy as np
 import cv2 as cv
 
@@ -40,7 +41,7 @@ def main():
 
     default = [cv.samples.findFile('basketball2.png')] if len(sys.argv[1:]) == 0 else []
 
-    for fn in it.chain(*map(glob, default + sys.argv[1:])):
+    for fn in it.chain(*list(map(glob, default + sys.argv[1:]))):
         print(fn, ' - ',)
         try:
             img = cv.imread(fn)

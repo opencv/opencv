@@ -11,6 +11,7 @@ Keys:
 # Python 2/3 compatibility
 from __future__ import print_function
 
+from builtins import object
 import numpy as np
 import cv2 as cv
 
@@ -20,7 +21,7 @@ import sys
 # local modules
 import video
 
-class App():
+class App(object):
 
     def set_scale(self, val):
         self.hist_scale = val

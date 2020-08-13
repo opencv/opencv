@@ -25,6 +25,7 @@ Use 'focal' slider to adjust to camera focal length for proper video augmentatio
 # Python 2/3 compatibility
 from __future__ import print_function
 
+from builtins import object
 import numpy as np
 import cv2 as cv
 import video
@@ -41,7 +42,7 @@ ar_edges = [(0, 1), (1, 2), (2, 3), (3, 0),
             (0, 4), (1, 5), (2, 6), (3, 7),
             (4, 8), (5, 8), (6, 9), (7, 9), (8, 9)]
 
-class App:
+class App(object):
     def __init__(self, src):
         self.cap = video.create_capture(src, presets['book'])
         self.frame = None

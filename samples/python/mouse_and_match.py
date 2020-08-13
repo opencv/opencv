@@ -14,6 +14,7 @@ Demonstrate using a mouse to interact with an image:
 # Python 2/3 compatibility
 from __future__ import print_function
 
+from builtins import object
 import numpy as np
 import cv2 as cv
 
@@ -25,7 +26,7 @@ import argparse
 from math import *
 
 
-class App():
+class App(object):
     drag_start = None
     sel = (0,0,0,0)
 

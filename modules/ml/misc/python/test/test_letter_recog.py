@@ -23,6 +23,7 @@ and the remaining 10000 - to test the classifier.
 # Python 2/3 compatibility
 from __future__ import print_function
 
+from builtins import object
 import numpy as np
 import cv2 as cv
 

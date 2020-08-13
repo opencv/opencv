@@ -8,7 +8,10 @@
 
 # Python 2/3 compatibility
 from __future__ import print_function
+from __future__ import division
 
+from builtins import range
+from past.utils import old_div
 import numpy as np
 import cv2 as cv
 
@@ -160,7 +163,7 @@ def string():
 
 def string1():
     textsize = cv.getTextSize("OpenCV forever!", cv.FONT_HERSHEY_COMPLEX, 3, 5)
-    org = (int((width - textsize[0][0])/2), int((height - textsize[0][1])/2))
+    org = (int(old_div((width - textsize[0][0]),2)), int(old_div((height - textsize[0][1]),2)))
     for i in range(0, 255, 2):
         image2 = np.array(image) - i
         cv.putText(image2, "OpenCV forever!", org, cv.FONT_HERSHEY_COMPLEX, 3, (i, i, 255), 5, lineType)
@@ -175,7 +178,7 @@ if __name__ == '__main__':
     DELAY = 5
     width, height = 1000, 700
     lineType = cv.LINE_AA  # change it to LINE_8 to see non-antialiased graphics
-    x1, x2, y1, y2 = -width/2, width*3/2, -height/2, height*3/2
+    x1, x2, y1, y2 = old_div(-width,2), old_div(width*3,2), old_div(-height,2), old_div(height*3,2)
     image = np.zeros((height, width, 3), dtype = np.uint8)
     cv.imshow(wndname, image)
     cv.waitKey(DELAY)

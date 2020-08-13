@@ -9,6 +9,7 @@ from __future__ import print_function
 #   --annotations=annotations/instances_val2017.json
 #
 # Tested on COCO 2017 object detection dataset, http://cocodataset.org/#download
+from builtins import range
 import os
 import cv2 as cv
 import json

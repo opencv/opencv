@@ -6,7 +6,12 @@ You can download the cloth segmentation model from https://www.dropbox.com/s/qag
 You can find the OpenPose proto in opencv_extra/testdata/dnn/openpose_pose_coco.prototxt
 and get .caffemodel using opencv_extra/testdata/dnn/download_models.py
 '''
+from __future__ import division
 
+from builtins import zip
+from builtins import range
+from builtins import object
+from past.utils import old_div
 import argparse
 import os.path
 import numpy as np
@@ -77,7 +82,7 @@ class BilinearFilter(object):
     image = image.resize((image_width // 16, image_height // 16), Image.BILINEAR)
     """
     def _precompute_coeffs(self, inSize, outSize):
-        filterscale = max(1.0, inSize / outSize)
+        filterscale = max(1.0, old_div(inSize, outSize))
         ksize = int(np.ceil(filterscale)) * 2 + 1
 
         kk = np.zeros(shape=(outSize * ksize, ), dtype=np.float32)
@@ -88,12 +93,12 @@ class BilinearFilter(object):
         bounds[1::2] = np.where(centers + filterscale > inSize, inSize, centers + filterscale) - bounds[::2]
         xmins = bounds[::2] - centers + 1
 
-        points = np.array([np.arange(row) + xmins[i] for i, row in enumerate(bounds[1::2])]) / filterscale
+        points = old_div(np.array([np.arange(row) + xmins[i] for i, row in enumerate(bounds[1::2])]), filterscale)
         for xx in range(0, outSize):
             point = points[xx]
             bilinear = np.where(point < 1.0, 1.0 - abs(point), 0.0)
             ww = np.sum(bilinear)
-            kk[xx * ksize : xx * ksize + bilinear.size] = np.where(ww == 0.0, bilinear, bilinear / ww)
+            kk[xx * ksize : xx * ksize + bilinear.size] = np.where(ww == 0.0, bilinear, old_div(bilinear, ww))
         return bounds, kk, ksize
 
     def _resample_horizontal(self, out, img, ksize, bounds, kk):
@@ -156,7 +161,7 @@ class CpVton(object):
             'Left-shoe'    : (255, 255, 0),
             'Right-shoe'   : (255, 170, 0)
         }
-        color2label = {val: key for key, val in palette.items()}
+        color2label = {val: key for key, val in list(palette.items())}
         head_labels = ['Hat', 'Hair', 'Sunglasses', 'Face', 'Pants', 'Skirt']
 
         segm_image = cv.cvtColor(segm_image, cv.COLOR_BGR2RGB)
@@ -205,11 +210,11 @@ class CpVton(object):
 
         p_rendered, m_composite = np.split(out, [3], axis=1)
         p_rendered = np.tanh(p_rendered)
-        m_composite = 1 / (1 + np.exp(-m_composite))
+        m_composite = old_div(1, (1 + np.exp(-m_composite)))
 
         p_tryon = warp_cloth * m_composite + p_rendered * (1 - m_composite)
         rgb_p_tryon = cv.cvtColor(p_tryon.squeeze(0).transpose(1, 2, 0), cv.COLOR_BGR2RGB)
-        rgb_p_tryon = (rgb_p_tryon + 1) / 2
+        rgb_p_tryon = old_div((rgb_p_tryon + 1), 2)
         return rgb_p_tryon
 
     def _compute_L_inverse(self, X, Y):
@@ -428,9 +433,9 @@ if __name__ == "__main__":
         raise OSError("OpenPose model not exist")
 
     person_img = cv.imread(args.input_image)
-    ratio = 256 / 192
+    ratio = old_div(256, 192)
     inp_h, inp_w, _ = person_img.shape
-    current_ratio = inp_h / inp_w
+    current_ratio = old_div(inp_h, inp_w)
     if current_ratio > ratio:
         center_h = inp_h // 2
         out_h = inp_w * ratio
@@ -439,7 +444,7 @@ if __name__ == "__main__":
         person_img = person_img[start:end, ...]
     else:
         center_w = inp_w // 2
-        out_w = inp_h / ratio
+        out_w = old_div(inp_h, ratio)
         start = int(center_w - out_w // 2)
         end = int(center_w + out_w // 2)
         person_img = person_img[:, start:end, :]

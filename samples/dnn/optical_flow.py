@@ -9,7 +9,10 @@ and .prototxt from https://drive.google.com/open?id=19bo6SWU2p8ZKvjXqMKiCPdK8mgh
 Otherwise download original model from https://lmb.informatik.uni-freiburg.de/resources/binaries/flownet2/flownet2-models.tar.gz,
 convert .h5 model to .caffemodel and modify original .prototxt using .prototxt from link above.
 '''
+from __future__ import division
 
+from builtins import object
+from past.utils import old_div
 import argparse
 import os.path
 import numpy as np
@@ -43,8 +46,8 @@ class OpticalFlow(object):
         maxrad = rad.max() if rad.max() != 0 else 1
 
         ncols = arr.size
-        rad = rad[..., np.newaxis] / maxrad
-        a = np.arctan2(-fy / maxrad, -fx / maxrad) / np.pi
+        rad = old_div(rad[..., np.newaxis], maxrad)
+        a = old_div(np.arctan2(old_div(-fy, maxrad), old_div(-fx, maxrad)), np.pi)
         fk = (a + 1) / 2.0 * (ncols - 1)
         k0 = fk.astype(np.int)
         k1 = (k0 + 1) % ncols

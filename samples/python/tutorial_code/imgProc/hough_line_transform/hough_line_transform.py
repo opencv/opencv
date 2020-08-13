@@ -1,3 +1,5 @@
+from __future__ import division
+from past.utils import old_div
 import cv2 as cv
 import numpy as np
 
@@ -5,7 +7,7 @@ img = cv.imread(cv.samples.findFile('sudoku.png'))
 gray = cv.cvtColor(img,cv.COLOR_BGR2GRAY)
 edges = cv.Canny(gray,50,150,apertureSize = 3)
 
-lines = cv.HoughLines(edges,1,np.pi/180,200)
+lines = cv.HoughLines(edges,1,old_div(np.pi,180),200)
 for line in lines:
     rho,theta = line[0]
     a = np.cos(theta)

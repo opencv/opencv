@@ -1,4 +1,9 @@
 #!/usr/bin/env python
+from __future__ import print_function
+from __future__ import division
+from builtins import range
+from builtins import object
+from past.utils import old_div
 import os
 import cv2 as cv
 import numpy as np
@@ -36,7 +41,7 @@ def normAssertDetections(test, refClassIds, refScores, refBoxes, testClassIds, t
             if (not matchedRefBoxes[j]) and testClassId == refClassIds[j] and \
                abs(testScore - refScores[j]) < scores_diff:
                 interArea = inter_area(testBox, refBoxes[j])
-                iou = interArea / (area(testBox) + area(refBoxes[j]) - interArea)
+                iou = old_div(interArea, (area(testBox) + area(refBoxes[j]) - interArea))
                 if abs(iou - 1.0) < boxes_iou_diff:
                     matched = True
                     matchedRefBoxes[j] = True
@@ -270,11 +275,11 @@ class dnn_test(NewOpenCVTests):
 
             # Run asynchronously. To make test more robust, process inputs in the reversed order.
             outs = []
-            for i in reversed(range(numInputs)):
+            for i in reversed(list(range(numInputs))):
                 netAsync.setInput(inputs[i])
                 outs.insert(0, netAsync.forwardAsync())
 
-            for i in reversed(range(numInputs)):
+            for i in reversed(list(range(numInputs))):
                 ret, result = outs[i].get(timeoutNs=float(timeout))
                 self.assertTrue(ret)
                 normAssert(self, refs[i], result, 'Index: %d' % i, 1e-10)

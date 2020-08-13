@@ -9,7 +9,10 @@ to estimate image texture flow direction.
 
 # Python 2/3 compatibility
 from __future__ import print_function
+from __future__ import division
 
+from builtins import range
+from past.utils import old_div
 import numpy as np
 import cv2 as cv
 import sys
@@ -31,9 +34,9 @@ class texture_flow_test(NewOpenCVTests):
         flow = eigen[:,:,2]
 
         d = 300
-        eps = d / 30
+        eps = old_div(d, 30)
 
-        points =  np.dstack( np.mgrid[d/2:w:d, d/2:h:d] ).reshape(-1, 2)
+        points =  np.dstack( np.mgrid[old_div(d,2):w:d, old_div(d,2):h:d] ).reshape(-1, 2)
 
         textureVectors = []
         for x, y in np.int32(points):

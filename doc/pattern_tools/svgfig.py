@@ -1,3 +1,4 @@
+from __future__ import division
 # svgfig.py copyright (C) 2008 Jim Pivarski <jpivarski@gmail.com>
 #
 # This program is free software; you can redistribute it and/or
@@ -16,6 +17,14 @@
 #
 # Full licence is in the file COPYING and at http://www.gnu.org/copyleft/gpl.html
 
+from future import standard_library
+standard_library.install_aliases()
+from builtins import next
+from builtins import str
+from builtins import range
+from past.builtins import basestring
+from past.utils import old_div
+from builtins import object
 import re, codecs, os, platform, copy, itertools, math, cmath, random, sys, copy
 _epsilon = 1e-5
 
@@ -25,9 +34,9 @@ if sys.version_info >= (3,0):
 
 # Fix Python 2.x.
 try:
-    UNICODE_EXISTS = bool(type(unicode))
+    UNICODE_EXISTS = bool(type(str))
 except NameError:
-    unicode = lambda s: str(s)
+    str = lambda s: str(s)
 
 try:
     xrange          # Python 2
@@ -37,8 +46,8 @@ except NameError:
 
 if re.search("windows", platform.system(), re.I):
     try:
-        import _winreg
-        _default_directory = _winreg.QueryValueEx(_winreg.OpenKey(_winreg.HKEY_CURRENT_USER,
+        import winreg
+        _default_directory = winreg.QueryValueEx(winreg.OpenKey(winreg.HKEY_CURRENT_USER,
                              r"Software\Microsoft\Windows\Current Version\Explorer\Shell Folders"), "Desktop")[0]
 #   tmpdir = _winreg.QueryValueEx(_winreg.OpenKey(_winreg.HKEY_CURRENT_USER, "Environment"), "TEMP")[0]
 #   if tmpdir[0:13] != "%USERPROFILE%":
@@ -63,7 +72,7 @@ def rgb(r, g, b, maximum=1.):
 
 def attr_preprocess(attr):
     attrCopy = attr.copy()
-    for name in attr.keys():
+    for name in list(attr.keys()):
         name_colon = re.sub("__", ":", name)
         if name_colon != name:
             attrCopy[name_colon] = attrCopy[name]
@@ -79,7 +88,7 @@ def attr_preprocess(attr):
     return attrCopy
 
 
-class SVG:
+class SVG(object):
     """A tree representation of an SVG image or image fragment.
 
     SVG(t, sub, sub, sub..., attribute=value)
@@ -162,7 +171,7 @@ class SVG:
                 obj = obj[i]
             ti = ti[-1]
 
-        if isinstance(ti, (int, long, slice)):
+        if isinstance(ti, (int, int, slice)):
             return obj.sub[ti]
         else:
             return obj.attr[ti]
@@ -176,7 +185,7 @@ class SVG:
                 obj = obj[i]
             ti = ti[-1]
 
-        if isinstance(ti, (int, long, slice)):
+        if isinstance(ti, (int, int, slice)):
             obj.sub[ti] = value
         else:
             obj.attr[ti] = value
@@ -190,7 +199,7 @@ class SVG:
                 obj = obj[i]
             ti = ti[-1]
 
-        if isinstance(ti, (int, long, slice)):
+        if isinstance(ti, (int, int, slice)):
             del obj.sub[ti]
         else:
             del obj.attr[ti]
@@ -232,7 +241,7 @@ class SVG:
             return copy.deepcopy(self)
 
     ### nested class
-    class SVGDepthIterator:
+    class SVGDepthIterator(object):
         """Manages SVG iteration."""
 
         def __init__(self, svg, ti, depth_limit):
@@ -244,7 +253,7 @@ class SVG:
         def __iter__(self):
             return self
 
-        def next(self):
+        def __next__(self):
             if not self.shown:
                 self.shown = True
                 if self.ti != ():
@@ -259,11 +268,11 @@ class SVG:
                 self.iterators = []
                 for i, s in enumerate(self.svg.sub):
                     self.iterators.append(self.__class__(s, self.ti + (i,), self.depth_limit))
-                for k, s in self.svg.attr.items():
+                for k, s in list(self.svg.attr.items()):
                     self.iterators.append(self.__class__(s, self.ti + (k,), self.depth_limit))
                 self.iterators = itertools.chain(*self.iterators)
 
-            return self.iterators.next()
+            return next(self.iterators)
     ### end nested class
 
     def depth_first(self, depth_limit=None):
@@ -291,7 +300,7 @@ class SVG:
         output = []
         for ti, s in self:
             show = False
-            if isinstance(ti[-1], (int, long)):
+            if isinstance(ti[-1], (int, int)):
                 if isinstance(s, basestring):
                     show = text
                 else:
@@ -346,7 +355,7 @@ class SVG:
 
         for ti, s in self.depth_first(depth_limit):
             show = False
-            if isinstance(ti[-1], (int, long)):
+            if isinstance(ti[-1], (int, int)):
                 if isinstance(s, basestring):
                     show = text
                 else:
@@ -372,9 +381,9 @@ class SVG:
         print svg.xml()
         """
         attrstr = []
-        for n, v in self.attr.items():
+        for n, v in list(self.attr.items()):
             if isinstance(v, dict):
-                v = u"; ".join([u"%s:%s" % (ni, vi) for ni, vi in v.items()])
+                v = u"; ".join([u"%s:%s" % (ni, vi) for ni, vi in list(v.items())])
             elif isinstance(v, (list, tuple)):
                 v = u", ".join(v)
             attrstr.append(u" %s=%s" % (n, repr(v)))
@@ -419,9 +428,9 @@ class SVG:
     def __standalone_xml(self, indent, newl):
         output = [u"<%s" % self.t]
 
-        for n, v in self.attr.items():
+        for n, v in list(self.attr.items()):
             if isinstance(v, dict):
-                v = u"; ".join([u"%s:%s" % (ni, vi) for ni, vi in v.items()])
+                v = u"; ".join([u"%s:%s" % (ni, vi) for ni, vi in list(v.items())])
             elif isinstance(v, (list, tuple)):
                 v = u", ".join(v)
             output.append(u' %s="%s"' % (n, v))
@@ -440,7 +449,7 @@ class SVG:
             if isinstance(s, SVG):
                 output.extend(s.__standalone_xml(indent, newl))
             else:
-                output.append(unicode(s))
+                output.append(str(s))
 
         if self.t == "tspan":
             output.append(u"</%s>" % self.t)
@@ -622,7 +631,7 @@ def load_stream(stream):
 
         def startElement(self, name, attr):
             s = SVG(name)
-            s.attr = dict(attr.items())
+            s.attr = dict(list(attr.items()))
             if len(self.stack) > 0:
                 last = self.stack[-1]
                 last.sub.append(s)
@@ -659,7 +668,7 @@ def load_stream(stream):
 def set_func_name(f, name):
     """try to patch the function name string into a function object"""
     try:
-        f.func_name = name
+        f.__name__ = name
     except TypeError:
         # py 2.3 raises: TypeError: readonly attribute
         pass
@@ -679,13 +688,13 @@ def totrans(expr, vars=("x", "y"), globals=None, locals=None):
         locals = {}  # python 2.3's eval() won't accept None
 
     if callable(expr):
-        if expr.func_code.co_argcount == 2:
+        if expr.__code__.co_argcount == 2:
             return expr
 
-        elif expr.func_code.co_argcount == 1:
+        elif expr.__code__.co_argcount == 1:
             split = lambda z: (z.real, z.imag)
             output = lambda x, y: split(expr(x + y*1j))
-            set_func_name(output, expr.func_name)
+            set_func_name(output, expr.__name__)
             return output
 
         else:
@@ -758,18 +767,18 @@ def window(xmin, xmax, ymin, ymax, x=0, y=0, width=100, height=100,
         if t <= 0.:
             return minusInfinity
         else:
-            return ot1 + 1.*(math.log(t, logbase) - math.log(it1, logbase))/(math.log(it2, logbase) - math.log(it1, logbase)) * (ot2 - ot1)
+            return ot1 + old_div(1.*(math.log(t, logbase) - math.log(it1, logbase)),(math.log(it2, logbase) - math.log(it1, logbase))) * (ot2 - ot1)
 
     xlogstr, ylogstr = "", ""
 
     if xlogbase is None:
-        xfunc = lambda x: ox1 + 1.*(x - ix1)/(ix2 - ix1) * (ox2 - ox1)
+        xfunc = lambda x: ox1 + old_div(1.*(x - ix1),(ix2 - ix1)) * (ox2 - ox1)
     else:
         xfunc = lambda x: maybelog(x, ix1, ix2, ox1, ox2, xlogbase)
         xlogstr = " xlog=%g" % xlogbase
 
     if ylogbase is None:
-        yfunc = lambda y: oy1 + 1.*(y - iy1)/(iy2 - iy1) * (oy2 - oy1)
+        yfunc = lambda y: oy1 + old_div(1.*(y - iy1),(iy2 - iy1)) * (oy2 - oy1)
     else:
         yfunc = lambda y: maybelog(y, iy1, iy2, oy1, oy2, ylogbase)
         ylogstr = " ylog=%g" % ylogbase
@@ -788,7 +797,7 @@ def rotate(angle, cx=0, cy=0):
     return lambda x, y: (cx + math.cos(angle)*(x - cx) - math.sin(angle)*(y - cy), cy + math.sin(angle)*(x - cx) + math.cos(angle)*(y - cy))
 
 
-class Fig:
+class Fig(object):
     """Stores graphics primitive objects and applies a single coordinate
     transformation to them. To compose coordinate systems, nest Fig
     objects.
@@ -817,7 +826,7 @@ class Fig:
         elif isinstance(self.trans, basestring):
             return "<Fig (%d items) x,y -> %s>" % (len(self.d), self.trans)
         else:
-            return "<Fig (%d items) %s>" % (len(self.d), self.trans.func_name)
+            return "<Fig (%d items) %s>" % (len(self.d), self.trans.__name__)
 
     def __init__(self, *d, **kwds):
         self.d = list(d)
@@ -827,7 +836,7 @@ class Fig:
 
         self.trans = kwds["trans"]; del kwds["trans"]
         if len(kwds) != 0:
-            raise TypeError ("Fig() got unexpected keyword arguments %s" % kwds.keys())
+            raise TypeError ("Fig() got unexpected keyword arguments %s" % list(kwds.keys()))
 
     def SVG(self, trans=None):
         """Apply the transformation "trans" and return an SVG object.
@@ -868,7 +877,7 @@ class Fig:
         return output
 
 
-class Plot:
+class Plot(object):
     """Acts like Fig, but draws a coordinate axis. You also need to supply plot ranges.
 
     Plot(xmin, xmax, ymin, ymax, obj, obj, obj..., keyword options...)
@@ -906,7 +915,7 @@ class Plot:
         if self.trans is None:
             return "<Plot (%d items)>" % len(self.d)
         else:
-            return "<Plot (%d items) %s>" % (len(self.d), self.trans.func_name)
+            return "<Plot (%d items) %s>" % (len(self.d), self.trans.__name__)
 
     def __init__(self, xmin, xmax, ymin, ymax, *d, **kwds):
         self.xmin, self.xmax, self.ymin, self.ymax = xmin, xmax, ymin, ymax
@@ -945,7 +954,7 @@ class Plot:
         self.text_attr = kwds["text_attr"]; del kwds["text_attr"]
         self.axis_attr = kwds["axis_attr"]; del kwds["axis_attr"]
         if len(kwds) != 0:
-            raise TypeError ("Plot() got unexpected keyword arguments %s" % kwds.keys())
+            raise TypeError ("Plot() got unexpected keyword arguments %s" % list(kwds.keys()))
 
     def SVG(self, trans=None):
         """Apply the transformation "trans" and return an SVG object."""
@@ -968,7 +977,7 @@ class Plot:
         return Fig(Fig(*d, **{"trans": trans})).SVG(self.last_window)
 
 
-class Frame:
+class Frame(object):
     text_defaults = {"stroke": "none", "fill": "black", "font-size": 5, }
     axis_defaults = {}
 
@@ -1053,7 +1062,7 @@ class Frame:
         self.axis_attr.update(kwds["axis_attr"]); del kwds["axis_attr"]
 
         if len(kwds) != 0:
-            raise TypeError( "Frame() got unexpected keyword arguments %s" % kwds.keys())
+            raise TypeError( "Frame() got unexpected keyword arguments %s" % list(kwds.keys()))
 
     def SVG(self):
         """Apply the window transformation and return an SVG object."""
@@ -1119,7 +1128,7 @@ def pathtoPath(svg):
     attr = dict(svg.attr)
     d = attr["d"]
     del attr["d"]
-    for key in attr.keys():
+    for key in list(attr.keys()):
         if not isinstance(key, str):
             value = attr[key]
             del attr[key]
@@ -1127,7 +1136,7 @@ def pathtoPath(svg):
     return Path(d, **attr)
 
 
-class Path:
+class Path(object):
     """Path represents an SVG path, an arbitrary set of curves and
     straight segments. Unlike SVG("path", d="..."), Path stores
     coordinates as a list of numbers, rather than a string, so that it is
@@ -1640,7 +1649,7 @@ def funcRtoR(expr, var="x", globals=None, locals=None):
     return output
 
 
-class Curve:
+class Curve(object):
     """Draws a parametric function as a path.
 
     Curve(f, low, high, loop, attribute=value)
@@ -1670,7 +1679,7 @@ class Curve:
         self.attr.update(attr)
 
     ### nested class Sample
-    class Sample:
+    class Sample(object):
         def __repr__(self):
             t, x, y, X, Y = self.t, self.x, self.y, self.X, self.Y
             if t is not None:
@@ -1700,7 +1709,7 @@ class Curve:
     ### end Sample
 
     ### nested class Samples
-    class Samples:
+    class Samples(object):
         def __repr__(self):
             return "<Curve.Samples (%d samples)>" % len(self)
 
@@ -1719,7 +1728,7 @@ class Curve:
             self.current = self.left
             return self
 
-        def next(self):
+        def __next__(self):
             current = self.current
             if current is None:
                 raise StopIteration
@@ -1759,7 +1768,7 @@ class Curve:
                     right.X is not None and right.Y is not None):
                     numer = left.X*(right.Y - mid.Y) + mid.X*(left.Y - right.Y) + right.X*(mid.Y - left.Y)
                     denom = math.sqrt((left.X - right.X)**2 + (left.Y - right.Y)**2)
-                    if denom != 0. and abs(numer/denom) < self.linearity_limit:
+                    if denom != 0. and abs(old_div(numer,denom)) < self.linearity_limit:
                         # drop mid (the garbage collector will get it)
                         left.right = right
                         right.left = left
@@ -1796,7 +1805,7 @@ class Curve:
         if (depth < 3 or
             (denom == 0 and left.t != right.t) or
             denom > self.discontinuity_limit or
-            (denom != 0. and abs(numer/denom) > self.linearity_limit)):
+            (denom != 0. and abs(old_div(numer,denom)) > self.linearity_limit)):
 
             # and we haven't sampled too many points
             if depth < self.recursion_limit:
@@ -1843,7 +1852,7 @@ class Curve:
 
 ######################################################################
 
-class Poly:
+class Poly(object):
     """Draws a curve specified by a sequence of points. The curve may be
     piecewise linear, like a polygon, or a Bezier curve.
 
@@ -1917,7 +1926,7 @@ class Poly:
             mode = "S"
 
             vx, vy = [0.]*len(self.d), [0.]*len(self.d)
-            for i in xrange(len(self.d)):
+            for i in range(len(self.d)):
                 inext = (i+1) % len(self.d)
                 iprev = (i-1) % len(self.d)
 
@@ -1977,7 +1986,7 @@ class Poly:
 
             elif mode == "V":
                 c1x, c1y = self.d[iprev][2]/3. + self.d[iprev][0], self.d[iprev][3]/3. + self.d[iprev][1]
-                c2x, c2y = self.d[i][2]/-3. + x, self.d[i][3]/-3. + y
+                c2x, c2y = old_div(self.d[i][2],-3.) + x, old_div(self.d[i][3],-3.) + y
 
                 if trans is None:
                     C1X, C1Y = c1x, c1y
@@ -1995,7 +2004,7 @@ class Poly:
 
             elif mode == "F":
                 c1x, c1y = self.d[iprev][4]/3. + self.d[iprev][0], self.d[iprev][5]/3. + self.d[iprev][1]
-                c2x, c2y = self.d[i][2]/-3. + x, self.d[i][3]/-3. + y
+                c2x, c2y = old_div(self.d[i][2],-3.) + x, old_div(self.d[i][3],-3.) + y
 
                 if trans is None:
                     C1X, C1Y = c1x, c1y
@@ -2013,7 +2022,7 @@ class Poly:
 
             elif mode == "S":
                 c1x, c1y = vx[iprev]/3. + self.d[iprev][0], vy[iprev]/3. + self.d[iprev][1]
-                c2x, c2y = vx[i]/-3. + x, vy[i]/-3. + y
+                c2x, c2y = old_div(vx[i],-3.) + x, old_div(vy[i],-3.) + y
 
                 if trans is None:
                     C1X, C1Y = c1x, c1y
@@ -2036,7 +2045,7 @@ class Poly:
 
 ######################################################################
 
-class Text:
+class Text(object):
     """Draws a text string at a specified point in local coordinates.
 
     x, y                   required      location of the point in local coordinates
@@ -2052,7 +2061,7 @@ class Text:
     def __init__(self, x, y, d, **attr):
         self.x = x
         self.y = y
-        self.d = unicode(d)
+        self.d = str(d)
         self.attr = dict(self.defaults)
         self.attr.update(attr)
 
@@ -2067,7 +2076,7 @@ class Text:
         return SVG("text", self.d, x=X, y=Y, **self.attr)
 
 
-class TextGlobal:
+class TextGlobal(object):
     """Draws a text string at a specified point in global coordinates.
 
     x, y                   required      location of the point in global coordinates
@@ -2082,7 +2091,7 @@ class TextGlobal:
     def __init__(self, x, y, d, **attr):
         self.x = x
         self.y = y
-        self.d = unicode(d)
+        self.d = str(d)
         self.attr = dict(self.defaults)
         self.attr.update(attr)
 
@@ -2114,7 +2123,7 @@ def make_symbol(id, shape="dot", **attr):
 _circular_dot = make_symbol("circular_dot")
 
 
-class Dots:
+class Dots(object):
     """Dots draws SVG symbols at a set of points.
 
     d                      required               list of (x,y) points
@@ -2265,7 +2274,7 @@ class Line(Curve):
             return Curve.Path(self, trans, local)
 
 
-class LineGlobal:
+class LineGlobal(object):
     """Draws a line between two points, one or both of which is in
     global coordinates.
 
@@ -2522,7 +2531,7 @@ def unumber(x):
 
     index = output.find(u"e")
     if index != -1:
-        uniout = unicode(output[:index]) + u"\u00d710"
+        uniout = str(output[:index]) + u"\u00d710"
         saw_nonzero = False
         for n in output[index+1:]:
             if n == u"+":
@@ -2555,7 +2564,7 @@ def unumber(x):
     return output
 
 
-class Ticks:
+class Ticks(object):
     """Superclass for all graphics primitives that draw ticks,
     miniticks, and tick labels.  This class only draws the ticks.
 
@@ -2662,11 +2671,11 @@ class Ticks:
 
         X, Y = f(t)
         Xprime, Yprime = f(t + eps)
-        xhatx, xhaty = (Xprime - X)/eps, (Yprime - Y)/eps
+        xhatx, xhaty = old_div((Xprime - X),eps), old_div((Yprime - Y),eps)
 
         norm = math.sqrt(xhatx**2 + xhaty**2)
         if norm != 0:
-            xhatx, xhaty = xhatx/norm, xhaty/norm
+            xhatx, xhaty = old_div(xhatx,norm), old_div(xhaty,norm)
         else:
             xhatx, xhaty = 1., 0.
 
@@ -2709,7 +2718,7 @@ class Ticks:
 
         eps = _epsilon * (self.high - self.low)
 
-        for t, label in self.last_ticks.items():
+        for t, label in list(self.last_ticks.items()):
             (X, Y), (xhatx, xhaty), (yhatx, yhaty), angle = self.orient_tickmark(t, trans)
 
             if ((not self.arrow_start or abs(t - self.low) > eps) and
@@ -2735,7 +2744,7 @@ class Ticks:
 
         for t in self.last_miniticks:
             skip = False
-            for tt in self.last_ticks.keys():
+            for tt in list(self.last_ticks.keys()):
                 if abs(t - tt) < eps:
                     skip = True
                     break
@@ -2781,7 +2790,7 @@ class Ticks:
             return {}, []
 
         # Case 2: ticks is the number of desired ticks
-        elif isinstance(ticks, (int, long)):
+        elif isinstance(ticks, (int, int)):
             if ticks == True:
                 ticks = -10
 
@@ -2797,7 +2806,7 @@ class Ticks:
                 else:
                     return ticks, self.compute_logminiticks(self.logbase)
 
-            elif isinstance(self.miniticks, (int, long)):
+            elif isinstance(self.miniticks, (int, int)):
                 return ticks, self.regular_miniticks(self.miniticks)
 
             elif getattr(self.miniticks, "__iter__", False):
@@ -2834,7 +2843,7 @@ class Ticks:
                 else:
                     return ticks, self.compute_logminiticks(self.logbase)
 
-            elif isinstance(self.miniticks, (int, long)):
+            elif isinstance(self.miniticks, (int, int)):
                 return ticks, self.regular_miniticks(self.miniticks)
 
             elif getattr(self.miniticks, "__iter__", False):
@@ -2864,21 +2873,21 @@ class Ticks:
         if N >= 0:
             output = {}
             x = self.low
-            for i in xrange(N):
+            for i in range(N):
                 if format == unumber and abs(x) < eps:
                     label = u"0"
                 else:
                     label = format(x)
                 output[x] = label
-                x += (self.high - self.low)/(N-1.)
+                x += old_div((self.high - self.low),(N-1.))
             return output
 
         N = -N
 
         counter = 0
         granularity = 10**math.ceil(math.log10(max(abs(self.low), abs(self.high))))
-        lowN = math.ceil(1.*self.low / granularity)
-        highN = math.floor(1.*self.high / granularity)
+        lowN = math.ceil(old_div(1.*self.low, granularity))
+        highN = math.floor(old_div(1.*self.high, granularity))
 
         while lowN > highN:
             countermod3 = counter % 3
@@ -2889,8 +2898,8 @@ class Ticks:
             else:
                 granularity *= 0.5
             counter += 1
-            lowN = math.ceil(1.*self.low / granularity)
-            highN = math.floor(1.*self.high / granularity)
+            lowN = math.ceil(old_div(1.*self.low, granularity))
+            highN = math.floor(old_div(1.*self.high, granularity))
 
         last_granularity = granularity
         last_trial = None
@@ -2911,14 +2920,14 @@ class Ticks:
                     return {v1: format(v1), v2: format(v2)}
                 else:
                     low_in_ticks, high_in_ticks = False, False
-                    for t in last_trial.keys():
-                        if 1.*abs(t - self.low)/last_granularity < _epsilon:
+                    for t in list(last_trial.keys()):
+                        if old_div(1.*abs(t - self.low),last_granularity) < _epsilon:
                             low_in_ticks = True
-                        if 1.*abs(t - self.high)/last_granularity < _epsilon:
+                        if old_div(1.*abs(t - self.high),last_granularity) < _epsilon:
                             high_in_ticks = True
 
-                    lowN = 1.*self.low / last_granularity
-                    highN = 1.*self.high / last_granularity
+                    lowN = old_div(1.*self.low, last_granularity)
+                    highN = old_div(1.*self.high, last_granularity)
                     if abs(lowN - round(lowN)) < _epsilon and not low_in_ticks:
                         last_trial[self.low] = format(self.low)
                     if abs(highN - round(highN)) < _epsilon and not high_in_ticks:
@@ -2936,8 +2945,8 @@ class Ticks:
             else:
                 granularity *= 0.5
             counter += 1
-            lowN = math.ceil(1.*self.low / granularity)
-            highN = math.floor(1.*self.high / granularity)
+            lowN = math.ceil(old_div(1.*self.low, granularity))
+            highN = math.floor(old_div(1.*self.high, granularity))
 
     def regular_miniticks(self, N):
         """Return exactly N linear ticks.
@@ -2946,9 +2955,9 @@ class Ticks:
         """
         output = []
         x = self.low
-        for i in xrange(N):
+        for i in range(N):
             output.append(x)
-            x += (self.high - self.low)/(N-1.)
+            x += old_div((self.high - self.low),(N-1.))
         return output
 
     def compute_miniticks(self, original_ticks):
@@ -2958,7 +2967,7 @@ class Ticks:
         """
         if len(original_ticks) < 2:
             original_ticks = ticks(self.low, self.high) # XXX ticks is undefined!
-        original_ticks = original_ticks.keys()
+        original_ticks = list(original_ticks.keys())
         original_ticks.sort()
 
         if self.low > original_ticks[0] + _epsilon or self.high < original_ticks[-1] - _epsilon:
@@ -2970,7 +2979,7 @@ class Ticks:
         spacing = 10**(math.ceil(math.log10(min(granularities)) - 1))
 
         output = []
-        x = original_ticks[0] - math.ceil(1.*(original_ticks[0] - self.low) / spacing) * spacing
+        x = original_ticks[0] - math.ceil(old_div(1.*(original_ticks[0] - self.low), spacing)) * spacing
 
         while x <= self.high:
             if x >= self.low:
@@ -2998,13 +3007,13 @@ class Ticks:
         if N >= 0:
             output = {}
             x = self.low
-            for i in xrange(N):
+            for i in range(N):
                 if format == unumber and abs(x) < eps:
                     label = u"0"
                 else:
                     label = format(x)
                 output[x] = label
-                x += (self.high - self.low)/(N-1.)
+                x += old_div((self.high - self.low),(N-1.))
             return output
 
         N = -N
@@ -3019,12 +3028,12 @@ class Ticks:
                 output[x] = label
 
         for i in range(1, len(output)):
-            keys = output.keys()
+            keys = list(output.keys())
             keys.sort()
             keys = keys[::i]
-            values = map(lambda k: output[k], keys)
+            values = [output[k] for k in keys]
             if len(values) <= N:
-                for k in output.keys():
+                for k in list(output.keys()):
                     if k not in keys:
                         output[k] = ""
                 break
@@ -3179,7 +3188,7 @@ class LineAxis(Line, Ticks):
 
     def interpret(self):
         if self.exclude is not None and not (isinstance(self.exclude, (tuple, list)) and len(self.exclude) == 2 and
-                                             isinstance(self.exclude[0], (int, long, float)) and isinstance(self.exclude[1], (int, long, float))):
+                                             isinstance(self.exclude[0], (int, int, float)) and isinstance(self.exclude[1], (int, int, float))):
             raise TypeError("exclude must either be None or (low, high)")
 
         ticks, miniticks = Ticks.interpret(self)
@@ -3187,7 +3196,7 @@ class LineAxis(Line, Ticks):
             return ticks, miniticks
 
         ticks2 = {}
-        for loc, label in ticks.items():
+        for loc, label in list(ticks.items()):
             if self.exclude[0] <= loc <= self.exclude[1]:
                 ticks2[loc] = ""
             else:
@@ -3200,7 +3209,7 @@ class LineAxis(Line, Ticks):
         line = Line.SVG(self, trans) # must be evaluated first, to set self.f, self.low, self.high
 
         f01 = self.f
-        self.f = lambda t: f01(1. * (t - self.start) / (self.end - self.start))
+        self.f = lambda t: f01(old_div(1. * (t - self.start), (self.end - self.start)))
         self.low = self.start
         self.high = self.end
 
@@ -3331,7 +3340,7 @@ class YAxis(LineAxis):
         return LineAxis.SVG(self, trans)
 
 
-class Axes:
+class Axes(object):
     """Draw a pair of intersecting x-y axes.
 
     Axes(xmin, xmax, ymin, ymax, atx, aty, xticks, xminiticks, xlabels, xlogbase,
@@ -3461,7 +3470,7 @@ class HGrid(Ticks):
         self.last_ticks, self.last_miniticks = Ticks.interpret(self)
 
         ticksd = []
-        for t in self.last_ticks.keys():
+        for t in list(self.last_ticks.keys()):
             ticksd += Line(self.xmin, t, self.xmax, t).Path(trans).d
 
         miniticksd = []
@@ -3513,7 +3522,7 @@ class VGrid(Ticks):
         self.last_ticks, self.last_miniticks = Ticks.interpret(self)
 
         ticksd = []
-        for t in self.last_ticks.keys():
+        for t in list(self.last_ticks.keys()):
             ticksd += Line(t, self.ymin, t, self.ymax).Path(trans).d
 
         miniticksd = []
@@ -3568,9 +3577,9 @@ class Grid(Ticks):
         self.last_yticks, self.last_yminiticks = Ticks.interpret(self)
 
         ticksd = []
-        for t in self.last_xticks.keys():
+        for t in list(self.last_xticks.keys()):
             ticksd += Line(t, self.ymin, t, self.ymax).Path(trans).d
-        for t in self.last_yticks.keys():
+        for t in list(self.last_yticks.keys()):
             ticksd += Line(self.xmin, t, self.xmax, t).Path(trans).d
 
         miniticksd = []
@@ -3583,7 +3592,7 @@ class Grid(Ticks):
 
 ######################################################################
 
-class XErrorBars:
+class XErrorBars(object):
     """Draws x error bars at a set of points. This is usually used
     before (under) a set of Dots at the same points.
 
@@ -3633,7 +3642,7 @@ class XErrorBars:
         return output
 
 
-class YErrorBars:
+class YErrorBars(object):
     """Draws y error bars at a set of points. This is usually used
     before (under) a set of Dots at the same points.
 

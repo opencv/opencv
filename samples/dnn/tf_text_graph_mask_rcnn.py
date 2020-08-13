@@ -1,3 +1,8 @@
+from __future__ import print_function
+from __future__ import division
+from builtins import str
+from builtins import range
+from past.utils import old_div
 import argparse
 import numpy as np
 from tf_text_graph_common import *
@@ -127,7 +132,7 @@ heights = []
 for a in aspect_ratios:
     for s in scales:
         ar = np.sqrt(a)
-        heights.append((height_stride**2) * s / ar)
+        heights.append(old_div((height_stride**2) * s, ar))
         widths.append((width_stride**2) * s * ar)
 
 proposals.addAttr('width', widths)
@@ -180,7 +185,7 @@ addReshape('SecondStageBoxPredictor/Reshape_1/slice',
           'SecondStageBoxPredictor/Reshape_1/Reshape', [1, -1], graph_def)
 
 # Replace Flatten subgraph onto a single node.
-for i in reversed(range(len(graph_def.node))):
+for i in reversed(list(range(len(graph_def.node)))):
     if graph_def.node[i].op == 'CropAndResize':
         graph_def.node[i].input.insert(1, 'detection_out')
 
@@ -264,7 +269,7 @@ for node in reversed(topNodes):
         assert(len(cropAndResizeNodesNames) == 1)
         node.input = [cropAndResizeNodesNames[0]]
 
-for i in reversed(range(len(graph_def.node))):
+for i in reversed(list(range(len(graph_def.node)))):
     if graph_def.node[i].op == 'CropAndResize':
         graph_def.node[i].input.insert(1, 'detection_out_final')
         break

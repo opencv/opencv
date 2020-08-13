@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from builtins import object
 import sys
 import os
 import platform
@@ -94,7 +95,7 @@ parse_patterns = (
 )
 
 
-class CMakeCache:
+class CMakeCache(object):
     def __init__(self, cfg=None):
         self.setDefaultAttrs()
         self.main_modules = []
@@ -135,7 +136,7 @@ class CMakeCache:
         if "Visual Studio" in self.cmake_generator:
             self.tests_dir = os.path.join(self.tests_dir, self.build_type)
 
-        for module, path in module_paths.items():
+        for module, path in list(module_paths.items()):
             rel = os.path.relpath(path, self.opencv_home)
             if ".." not in rel:
                 self.main_modules.append(module)
@@ -176,7 +177,7 @@ class CMakeCache:
             return hostos
 
 
-class TempEnvDir:
+class TempEnvDir(object):
     def __init__(self, envname, prefix):
         self.envname = envname
         self.prefix = prefix

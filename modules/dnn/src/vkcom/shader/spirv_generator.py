@@ -1,3 +1,5 @@
+from __future__ import print_function
+from __future__ import division
 # Iterate all GLSL shaders (with suffix '.comp') in current directory.
 #
 # Use glslangValidator to compile them to SPIR-V shaders and write them
@@ -5,6 +7,8 @@
 #
 # Also generate a header file 'spv_shader.hpp' to extern declare these shaders.
 
+from builtins import range
+from past.utils import old_div
 import re
 import os
 import sys
@@ -65,7 +69,7 @@ for i in range(0, len(list)):
     outfile.write(precomp)
     outfile.write(ns_head)
     # xxx.spv ==> xxx_spv.cpp
-    fmt = 'extern const unsigned int %s[%d] = {\n' % (array_name, size/4)
+    fmt = 'extern const unsigned int %s[%d] = {\n' % (array_name, old_div(size,4))
     outfile.write(fmt)
     for eachLine in infile:
         if(re.match(r'^.*\/\/', eachLine)):
@@ -77,7 +81,7 @@ for i in range(0, len(list)):
     outfile.write(ns_tail)
 
     # write a line into header file
-    fmt = 'extern const unsigned int %s[%d];\n' % (array_name, size/4)
+    fmt = 'extern const unsigned int %s[%d];\n' % (array_name, old_div(size,4))
     headfile.write(fmt)
 
     os.system(cmd_remove + ' ' + bin_file)

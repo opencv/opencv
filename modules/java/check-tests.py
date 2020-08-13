@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
 from __future__ import print_function
+from builtins import str
+from builtins import object
 import sys, os, re
 
 classes_ignore_list = (
@@ -16,7 +18,7 @@ funcs_ignore_list = (
     'Core--MinMaxLocResult',
 )
 
-class JavaParser:
+class JavaParser(object):
     def __init__(self):
         self.clear()
 
@@ -33,7 +35,7 @@ class JavaParser:
 
     def dict2set(self, d):
         s = set()
-        for f in d.keys():
+        for f in list(d.keys()):
             if len(d[f]) == 1:
                 s.add(f)
             else:

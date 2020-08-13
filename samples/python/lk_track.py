@@ -21,6 +21,8 @@ ESC - exit
 # Python 2/3 compatibility
 from __future__ import print_function
 
+from builtins import zip
+from builtins import object
 import numpy as np
 import cv2 as cv
 
@@ -36,7 +38,7 @@ feature_params = dict( maxCorners = 500,
                        minDistance = 7,
                        blockSize = 7 )
 
-class App:
+class App(object):
     def __init__(self, video_src):
         self.track_len = 10
         self.detect_interval = 5

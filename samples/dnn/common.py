@@ -1,3 +1,5 @@
+from __future__ import print_function
+from builtins import range
 import sys
 import os
 import cv2 as cv
@@ -52,7 +54,7 @@ def add_preproc_args(zoo, parser, sample):
     if os.path.isfile(zoo):
         fs = cv.FileStorage(zoo, cv.FILE_STORAGE_READ)
         root = fs.root()
-        for name in root.keys():
+        for name in list(root.keys()):
             model = root.getNode(name)
             if model.getNode('sample').string() == sample:
                 aliases.append(name)

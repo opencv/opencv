@@ -3,7 +3,10 @@
 
 # Python 2/3 compatibility
 from __future__ import print_function
+from __future__ import division
 
+from builtins import range
+from past.utils import old_div
 import numpy as np
 import cv2 as cv
 
@@ -33,7 +36,7 @@ def transform_to_matplotlib_frame(cMo, X, inverse=False):
 def create_camera_model(camera_matrix, width, height, scale_focal, draw_frame_axis=False):
     fx = camera_matrix[0,0]
     fy = camera_matrix[1,1]
-    focal = 2 / (fx + fy)
+    focal = old_div(2, (fx + fy))
     f_scale = scale_focal * focal
 
     # draw image plane
@@ -70,15 +73,15 @@ def create_camera_model(camera_matrix, width, height, scale_focal, draw_frame_ax
     # draw camera frame axis
     X_frame1 = np.ones((4,2))
     X_frame1[0:3,0] = [0, 0, 0]
-    X_frame1[0:3,1] = [f_scale/2, 0, 0]
+    X_frame1[0:3,1] = [old_div(f_scale,2), 0, 0]
 
     X_frame2 = np.ones((4,2))
     X_frame2[0:3,0] = [0, 0, 0]
-    X_frame2[0:3,1] = [0, f_scale/2, 0]
+    X_frame2[0:3,1] = [0, old_div(f_scale,2), 0]
 
     X_frame3 = np.ones((4,2))
     X_frame3[0:3,0] = [0, 0, 0]
-    X_frame3[0:3,1] = [0, 0, f_scale/2]
+    X_frame3[0:3,1] = [0, 0, old_div(f_scale,2)]
 
     if draw_frame_axis:
         return [X_img_plane, X_triangle, X_center1, X_center2, X_center3, X_center4, X_frame1, X_frame2, X_frame3]
@@ -101,15 +104,15 @@ def create_board_model(extrinsics, board_width, board_height, square_size, draw_
     # draw board frame axis
     X_frame1 = np.ones((4,2))
     X_frame1[0:3,0] = [0, 0, 0]
-    X_frame1[0:3,1] = [height/2, 0, 0]
+    X_frame1[0:3,1] = [old_div(height,2), 0, 0]
 
     X_frame2 = np.ones((4,2))
     X_frame2[0:3,0] = [0, 0, 0]
-    X_frame2[0:3,1] = [0, height/2, 0]
+    X_frame2[0:3,1] = [0, old_div(height,2), 0]
 
     X_frame3 = np.ones((4,2))
     X_frame3[0:3,0] = [0, 0, 0]
-    X_frame3[0:3,1] = [0, 0, height/2]
+    X_frame3[0:3,1] = [0, 0, old_div(height,2)]
 
     if draw_frame_axis:
         return [X_board, X_frame1, X_frame2, X_frame3]

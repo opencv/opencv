@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+from __future__ import print_function
+from __future__ import division
+from builtins import str
+from past.utils import old_div
 import sys
 import subprocess
 import re
@@ -90,8 +94,8 @@ with open(output_file, 'w') as csv:
             row += ",%f"    % table[Policy.Streaming,  UI.With,   f,p]    # Streaming/UI
             row += ",%f"    % table[Policy.Streaming,  UI.Without,f,p]    # Streaming/no UI
 
-            effect_ui   = table[Policy.Streaming,UI.With,   f,p] / table[Policy.Traditional,UI.With,   f,p]
-            effect_noui = table[Policy.Streaming,UI.Without,f,p] / table[Policy.Traditional,UI.Without,f,p]
+            effect_ui   = old_div(table[Policy.Streaming,UI.With,   f,p], table[Policy.Traditional,UI.With,   f,p])
+            effect_noui = old_div(table[Policy.Streaming,UI.Without,f,p], table[Policy.Traditional,UI.Without,f,p])
             row += ",%f,%f" % (effect_ui,effect_noui)
             row += "\n"
             csv.write(row)

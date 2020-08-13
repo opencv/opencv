@@ -11,7 +11,12 @@ PlaneTracker class in plane_tracker.py
 
 # Python 2/3 compatibility
 from __future__ import print_function
+from __future__ import division
 
+from builtins import zip
+from builtins import range
+from builtins import object
+from past.utils import old_div
 import numpy as np
 import cv2 as cv
 import sys
@@ -29,7 +34,7 @@ def intersectionRate(s1, s2):
     s1 = np.array([[x1, y1], [x2,y1], [x2, y2], [x1, y2]])
 
     area, _intersection = cv.intersectConvexConvex(s1, np.array(s2))
-    return 2 * area / (cv.contourArea(s1) + cv.contourArea(np.array(s2)))
+    return old_div(2 * area, (cv.contourArea(s1) + cv.contourArea(np.array(s2))))
 
 from tests_common import NewOpenCVTests
 
@@ -90,7 +95,7 @@ PlanarTarget = namedtuple('PlaneTarget', 'image, rect, keypoints, descrs, data')
 '''
 TrackedTarget = namedtuple('TrackedTarget', 'target, p0, p1, H, quad')
 
-class PlaneTracker:
+class PlaneTracker(object):
     def __init__(self):
         self.detector = cv.AKAZE_create(threshold = 0.003)
         self.matcher = cv.FlannBasedMatcher(flann_params, {})  # bug : need to pass empty dict (#1329)
@@ -126,7 +131,7 @@ class PlaneTracker:
         matches = [m[0] for m in matches if len(m) == 2 and m[0].distance < m[1].distance * 0.75]
         if len(matches) < MIN_MATCH_COUNT:
             return []
-        matches_by_id = [[] for _ in xrange(len(self.targets))]
+        matches_by_id = [[] for _ in range(len(self.targets))]
         for m in matches:
             matches_by_id[m.imgIdx].append(m)
         tracked = []

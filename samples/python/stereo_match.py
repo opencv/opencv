@@ -8,7 +8,9 @@ Resulting .ply file cam be easily viewed using MeshLab ( http://meshlab.sourcefo
 
 # Python 2/3 compatibility
 from __future__ import print_function
+from __future__ import division
 
+from past.utils import old_div
 import numpy as np
 import cv2 as cv
 
@@ -73,7 +75,7 @@ def main():
     print('%s saved' % out_fn)
 
     cv.imshow('left', imgL)
-    cv.imshow('disparity', (disp-min_disp)/num_disp)
+    cv.imshow('disparity', old_div((disp-min_disp),num_disp))
     cv.waitKey()
 
     print('Done')

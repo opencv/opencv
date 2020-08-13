@@ -1,7 +1,11 @@
 #!/usr/bin/env python
 
 from __future__ import print_function
+from __future__ import division
 
+from future import standard_library
+standard_library.install_aliases()
+from past.utils import old_div
 import os
 import sys
 import unittest
@@ -16,7 +20,7 @@ import cv2 as cv
 try:
     from urllib.request import urlopen
 except ImportError:
-    from urllib import urlopen
+    from urllib.request import urlopen
 
 class NewOpenCVTests(unittest.TestCase):
 
@@ -98,7 +102,7 @@ def intersectionRate(s1, s2):
     s2 = np.array([[x1, y1], [x2,y1], [x2, y2], [x1, y2]])
 
     area, _intersection = cv.intersectConvexConvex(s1, s2)
-    return 2 * area / (cv.contourArea(s1) + cv.contourArea(s2))
+    return old_div(2 * area, (cv.contourArea(s1) + cv.contourArea(s2)))
 
 def isPointInRect(p, rect):
     if rect[0] <= p[0] and rect[1] <=p[1] and p[0] <= rect[2] and p[1] <= rect[3]:

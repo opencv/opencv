@@ -1,3 +1,8 @@
+from __future__ import print_function
+from __future__ import division
+from future import standard_library
+standard_library.install_aliases()
+from past.utils import old_div
 import cv2 as cv
 import argparse
 import numpy as np
@@ -5,7 +10,7 @@ import sys
 import time
 from threading import Thread
 if sys.version_info[0] == 2:
-    import Queue as queue
+    import queue as queue
 else:
     import queue
 
@@ -151,8 +156,8 @@ def postprocess(frame, outs):
                     center_y = int(detection[1] * frameHeight)
                     width = int(detection[2] * frameWidth)
                     height = int(detection[3] * frameHeight)
-                    left = int(center_x - width / 2)
-                    top = int(center_y - height / 2)
+                    left = int(center_x - old_div(width, 2))
+                    top = int(center_y - old_div(height, 2))
                     classIds.append(classId)
                     confidences.append(float(confidence))
                     boxes.append([left, top, width, height])
@@ -211,7 +216,7 @@ class QueueFPS(queue.Queue):
             self.startTime = time.time()
 
     def getFPS(self):
-        return self.counter / (time.time() - self.startTime)
+        return old_div(self.counter, (time.time() - self.startTime))
 
 
 process = True

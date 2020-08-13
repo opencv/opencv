@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from builtins import range
 from itertools import product
 from functools import reduce
 
@@ -54,9 +55,8 @@ def norm_hamming2(x, y=None):
             binary_str = bin(element).split('b')[-1]
             if len(binary_str) % 2 == 1:
                 binary_str = '0' + binary_str
-            gen = filter(lambda p: p != '00',
-                         (binary_str[i:i+2]
-                          for i in range(0, len(binary_str), 2)))
+            gen = [p for p in (binary_str[i:i+2]
+                          for i in range(0, len(binary_str), 2)) if p != '00']
             return sum(1 for _ in gen)
 
         return sum(element_norm(element) for element in vec.flatten())
@@ -105,7 +105,7 @@ class norm_test(NewOpenCVTests):
 
     def test_norm_for_one_array(self):
         np.random.seed(123)
-        for norm_type, norm in norm_type_under_test.items():
+        for norm_type, norm in list(norm_type_under_test.items()):
             element_types = get_element_types(norm_type)
             for shape, element_type in product(shapes, element_types):
                 array = generate_vector(shape, element_type)
@@ -120,7 +120,7 @@ class norm_test(NewOpenCVTests):
 
     def test_norm_for_two_arrays(self):
         np.random.seed(456)
-        for norm_type, norm in norm_type_under_test.items():
+        for norm_type, norm in list(norm_type_under_test.items()):
             element_types = get_element_types(norm_type)
             for shape, element_type in product(shapes, element_types):
                 first = generate_vector(shape, element_type)

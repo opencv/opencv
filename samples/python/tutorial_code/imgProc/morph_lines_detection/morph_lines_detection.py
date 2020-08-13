@@ -2,6 +2,7 @@
 @file morph_lines_detection.py
 @brief Use morphology transformations for extracting horizontal and vertical lines sample code
 """
+from __future__ import print_function
 import numpy as np
 import sys
 import cv2 as cv

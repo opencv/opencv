@@ -12,7 +12,9 @@ Usage:
 
 # Python 2/3 compatibility
 from __future__ import print_function
+from __future__ import division
 
+from past.utils import old_div
 import numpy as np
 import cv2 as cv
 
@@ -36,9 +38,9 @@ def main():
     flow = eigen[:,:,2]
 
     vis = img.copy()
-    vis[:] = (192 + np.uint32(vis)) / 2
+    vis[:] = old_div((192 + np.uint32(vis)), 2)
     d = 12
-    points =  np.dstack( np.mgrid[d/2:w:d, d/2:h:d] ).reshape(-1, 2)
+    points =  np.dstack( np.mgrid[old_div(d,2):w:d, old_div(d,2):h:d] ).reshape(-1, 2)
     for x, y in np.int32(points):
         vx, vy = np.int32(flow[y, x]*d)
         cv.line(vis, (x-vx, y-vy), (x+vx, y+vy), (0, 0, 0), 1, cv.LINE_AA)

@@ -39,6 +39,7 @@ Follow these steps if you want to convert the original model yourself:
             f.write(output_graph_def.SerializeToString())'
 '''
 
+from builtins import range
 import argparse
 import os.path
 import numpy as np

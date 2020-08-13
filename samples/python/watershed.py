@@ -25,11 +25,13 @@ Keys
 # Python 2/3 compatibility
 from __future__ import print_function
 
+from builtins import map
+from builtins import object
 import numpy as np
 import cv2 as cv
 from common import Sketcher
 
-class App:
+class App(object):
     def __init__(self, fn):
         self.img = cv.imread(fn)
         if self.img is None:

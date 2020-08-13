@@ -1,6 +1,12 @@
 #!/usr/bin/env python
 
 from __future__ import print_function
+from __future__ import division
+from past.builtins import cmp
+from builtins import map
+from builtins import str
+from builtins import object
+from past.utils import old_div
 import collections
 import re
 import os.path
@@ -56,9 +62,9 @@ class TestInfo(object):
 
     def parseLongMetric(self, xmlnode, name, default = 0):
         if name in self.properties:
-            self.metrix[name] = long(self.properties[name])
+            self.metrix[name] = int(self.properties[name])
         elif xmlnode.hasAttribute(name):
-            self.metrix[name] = long(xmlnode.getAttribute(name))
+            self.metrix[name] = int(xmlnode.getAttribute(name))
         else:
             self.metrix[name] = default
 
@@ -114,9 +120,9 @@ class TestInfo(object):
             if units == "ns":
                 scale = 1000000000.0
             if units == "ticks":
-                frequency = long(1)
-                scale = long(1)
-            return val * scale / frequency
+                frequency = int(1)
+                scale = int(1)
+            return old_div(val * scale, frequency)
         return val
 
 
@@ -142,18 +148,18 @@ class TestInfo(object):
 
 
     def param(self):
-        return '::'.join(filter(None, [self.type_param, self.value_param]))
+        return '::'.join([_f for _f in [self.type_param, self.value_param] if _f])
 
     def shortName(self):
         name = self.getName()
         fixture = self.getFixture()
-        return '::'.join(filter(None, [name, fixture]))
+        return '::'.join([_f for _f in [name, fixture] if _f])
 
 
     def __str__(self):
         name = self.getName()
         fixture = self.getFixture()
-        return '::'.join(filter(None, [name, fixture, self.type_param, self.value_param]))
+        return '::'.join([_f for _f in [name, fixture, self.type_param, self.value_param] if _f])
 
 
     def __cmp__(self, other):
@@ -200,7 +206,7 @@ def parseLogFile(filename):
 
     properties = {
         attr_name[3:]: attr_value
-        for (attr_name, attr_value) in log.documentElement.attributes.items()
+        for (attr_name, attr_value) in list(log.documentElement.attributes.items())
         if attr_name.startswith('cv_')
     }
 
@@ -221,7 +227,7 @@ if __name__ == "__main__":
 
         print("Properties:")
 
-        for (prop_name, prop_value) in run.properties.items():
+        for (prop_name, prop_value) in list(run.properties.items()):
           print("\t{} = {}".format(prop_name, prop_value))
 
         print("Tests:")

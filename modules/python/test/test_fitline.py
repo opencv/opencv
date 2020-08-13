@@ -15,6 +15,10 @@ in case of ~50% of outliers.
 
 # Python 2/3 compatibility
 from __future__ import print_function
+from __future__ import division
+from builtins import map
+from builtins import range
+from past.utils import old_div
 import sys
 PY3 = sys.version_info[0] == 3
 
@@ -60,7 +64,7 @@ class fitline_test(NewOpenCVTests):
 
         eps = 0.05
 
-        refVec =  (np.float32(p1) - p0) / cv.norm(np.float32(p1) - p0)
+        refVec =  old_div((np.float32(p1) - p0), cv.norm(np.float32(p1) - p0))
 
         for i in range(len(lines)):
             self.assertLessEqual(cv.norm(refVec - lines[i][0:2], cv.NORM_L2), eps)

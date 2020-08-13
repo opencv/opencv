@@ -7,7 +7,10 @@ Show how to use Stitcher API from python.
 
 # Python 2/3 compatibility
 from __future__ import print_function
+from __future__ import division
 
+from builtins import range
+from past.utils import old_div
 import argparse
 from collections import OrderedDict
 
@@ -104,7 +107,7 @@ parser.add_argument(
 parser.add_argument(
     '--features', action='store', default=list(FEATURES_FIND_CHOICES.keys())[0],
     help="Type of features used for images matching. The default is '%s'." % list(FEATURES_FIND_CHOICES.keys())[0],
-    choices=FEATURES_FIND_CHOICES.keys(),
+    choices=list(FEATURES_FIND_CHOICES.keys()),
     type=str, dest='features'
 )
 parser.add_argument(
@@ -116,7 +119,7 @@ parser.add_argument(
 parser.add_argument(
     '--estimator', action='store', default=list(ESTIMATOR_CHOICES.keys())[0],
     help="Type of estimator used for transformation estimation. The default is '%s'." % list(ESTIMATOR_CHOICES.keys())[0],
-    choices=ESTIMATOR_CHOICES.keys(),
+    choices=list(ESTIMATOR_CHOICES.keys()),
     type=str, dest='estimator'
 )
 parser.add_argument(
@@ -132,7 +135,7 @@ parser.add_argument(
 parser.add_argument(
     '--ba', action='store', default=list(BA_COST_CHOICES.keys())[0],
     help="Bundle adjustment cost function. The default is '%s'." % list(BA_COST_CHOICES.keys())[0],
-    choices=BA_COST_CHOICES.keys(),
+    choices=list(BA_COST_CHOICES.keys()),
     type=str, dest='ba'
 )
 parser.add_argument(
@@ -170,7 +173,7 @@ parser.add_argument(
 parser.add_argument(
     '--seam', action='store', default=list(SEAM_FIND_CHOICES.keys())[0],
     help="Seam estimation method. The default is '%s'." % list(SEAM_FIND_CHOICES.keys())[0],
-    choices=SEAM_FIND_CHOICES.keys(),
+    choices=list(SEAM_FIND_CHOICES.keys()),
     type=str, dest='seam'
 )
 parser.add_argument(
@@ -181,7 +184,7 @@ parser.add_argument(
 parser.add_argument(
     '--expos_comp', action='store', default=list(EXPOS_COMP_CHOICES.keys())[0],
     help="Exposure compensation method. The default is '%s'." % list(EXPOS_COMP_CHOICES.keys())[0],
-    choices=EXPOS_COMP_CHOICES.keys(),
+    choices=list(EXPOS_COMP_CHOICES.keys()),
     type=str, dest='expos_comp'
 )
 parser.add_argument(
@@ -322,12 +325,12 @@ def main():
             is_work_scale_set = True
         else:
             if is_work_scale_set is False:
-                work_scale = min(1.0, np.sqrt(work_megapix * 1e6 / (full_img.shape[0] * full_img.shape[1])))
+                work_scale = min(1.0, np.sqrt(old_div(work_megapix * 1e6, (full_img.shape[0] * full_img.shape[1]))))
                 is_work_scale_set = True
             img = cv.resize(src=full_img, dsize=None, fx=work_scale, fy=work_scale, interpolation=cv.INTER_LINEAR_EXACT)
         if is_seam_scale_set is False:
-            seam_scale = min(1.0, np.sqrt(seam_megapix * 1e6 / (full_img.shape[0] * full_img.shape[1])))
-            seam_work_aspect = seam_scale / work_scale
+            seam_scale = min(1.0, np.sqrt(old_div(seam_megapix * 1e6, (full_img.shape[0] * full_img.shape[1]))))
+            seam_work_aspect = old_div(seam_scale, work_scale)
             is_seam_scale_set = True
         img_feat = cv.detail.computeImageFeatures2(finder, img)
         features.append(img_feat)
@@ -391,7 +394,7 @@ def main():
     if len(focals) % 2 == 1:
         warped_image_scale = focals[len(focals) // 2]
     else:
-        warped_image_scale = (focals[len(focals) // 2] + focals[len(focals) // 2 - 1]) / 2
+        warped_image_scale = old_div((focals[len(focals) // 2] + focals[len(focals) // 2 - 1]), 2)
     if do_wave_correct:
         rmats = []
         for cam in cameras:
@@ -443,9 +446,9 @@ def main():
         full_img = cv.imread(name)
         if not is_compose_scale_set:
             if compose_megapix > 0:
-                compose_scale = min(1.0, np.sqrt(compose_megapix * 1e6 / (full_img.shape[0] * full_img.shape[1])))
+                compose_scale = min(1.0, np.sqrt(old_div(compose_megapix * 1e6, (full_img.shape[0] * full_img.shape[1]))))
             is_compose_scale_set = True
-            compose_work_aspect = compose_scale / work_scale
+            compose_work_aspect = old_div(compose_scale, work_scale)
             warped_image_scale *= compose_work_aspect
             warper = cv.PyRotationWarper(warp_type, warped_image_scale)
             for i in range(0, len(img_names)):
@@ -475,12 +478,12 @@ def main():
         if blender is None and not timelapse:
             blender = cv.detail.Blender_createDefault(cv.detail.Blender_NO)
             dst_sz = cv.detail.resultRoi(corners=corners, sizes=sizes)
-            blend_width = np.sqrt(dst_sz[2] * dst_sz[3]) * blend_strength / 100
+            blend_width = old_div(np.sqrt(dst_sz[2] * dst_sz[3]) * blend_strength, 100)
             if blend_width < 1:
                 blender = cv.detail.Blender_createDefault(cv.detail.Blender_NO)
             elif blend_type == "multiband":
                 blender = cv.detail_MultiBandBlender()
-                blender.setNumBands((np.log(blend_width) / np.log(2.) - 1.).astype(np.int))
+                blender.setNumBands((old_div(np.log(blend_width), np.log(2.)) - 1.).astype(np.int))
             elif blend_type == "feather":
                 blender = cv.detail_FeatherBlender()
                 blender.setSharpness(1. / blend_width)

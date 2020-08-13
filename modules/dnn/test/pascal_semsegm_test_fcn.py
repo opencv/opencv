@@ -1,4 +1,9 @@
 from __future__ import print_function
+from __future__ import division
+from builtins import map
+from builtins import range
+from builtins import object
+from past.utils import old_div
 from abc import ABCMeta, abstractmethod
 import numpy as np
 import sys
@@ -6,6 +11,7 @@ import argparse
 import time
 
 from imagenet_cls_test_alexnet import CaffeModel, DnnCaffeModel
+from future.utils import with_metaclass
 try:
     import cv2 as cv
 except ImportError:
@@ -14,14 +20,14 @@ except ImportError:
 
 
 def get_metrics(conf_mat):
-    pix_accuracy = np.trace(conf_mat) / np.sum(conf_mat)
+    pix_accuracy = old_div(np.trace(conf_mat), np.sum(conf_mat))
     t = np.sum(conf_mat, 1)
     num_cl = np.count_nonzero(t)
     assert num_cl
-    mean_accuracy = np.sum(np.nan_to_num(np.divide(np.diagonal(conf_mat), t))) / num_cl
+    mean_accuracy = old_div(np.sum(np.nan_to_num(np.divide(np.diagonal(conf_mat), t))), num_cl)
     col_sum = np.sum(conf_mat, 0)
-    mean_iou = np.sum(
-        np.nan_to_num(np.divide(np.diagonal(conf_mat), (t + col_sum - np.diagonal(conf_mat))))) / num_cl
+    mean_iou = old_div(np.sum(
+        np.nan_to_num(np.divide(np.diagonal(conf_mat), (t + col_sum - np.diagonal(conf_mat))))), num_cl)
     return pix_accuracy, mean_accuracy, mean_iou
 
 
@@ -53,7 +59,7 @@ def get_conf_mat(gt, prob):
     return conf_mat
 
 
-class MeanChannelsPreproc:
+class MeanChannelsPreproc(object):
     def __init__(self):
         pass
 
@@ -69,8 +75,7 @@ class MeanChannelsPreproc:
         return image_data
 
 
-class DatasetImageFetch(object):
-    __metaclass__ = ABCMeta
+class DatasetImageFetch(with_metaclass(ABCMeta, object)):
     data_prepoc = object
 
     @abstractmethod
@@ -121,14 +126,14 @@ class PASCALDataFetch(DatasetImageFetch):
         result = []
         with open(img_classes_file) as f:
             for l in f.readlines():
-                color = np.array(map(int, l.split()[1:]))
+                color = np.array(list(map(int, l.split()[1:])))
                 result.append(DatasetImageFetch.pix_to_c(color))
         return result
 
     def __iter__(self):
         return self
 
-    def next(self):
+    def __next__(self):
         if self.i < len(self.names):
             name = self.names[self.i]
             self.i += 1
@@ -145,7 +150,7 @@ class PASCALDataFetch(DatasetImageFetch):
         return len(self.colors)
 
 
-class SemSegmEvaluation:
+class SemSegmEvaluation(object):
     log = sys.stdout
 
     def __init__(self, log_path,):
@@ -179,12 +184,12 @@ class SemSegmEvaluation:
                 print(samples_handled, 'Mean accuracy, %s:' % name, 100 * mean_acc, file=self.log)
                 print(samples_handled, 'Mean IOU, %s:' % name, 100 * miou, file=self.log)
                 print("Inference time, ms ", \
-                    frameworks[i].get_name(), inference_time[i] / samples_handled * 1000, file=self.log)
+                    frameworks[i].get_name(), old_div(inference_time[i], samples_handled) * 1000, file=self.log)
 
             for i in range(1, len(frameworks)):
                 log_str = frameworks[0].get_name() + " vs " + frameworks[i].get_name() + ':'
                 diff = np.abs(frameworks_out[0] - frameworks_out[i])
-                l1_diff = np.sum(diff) / diff.size
+                l1_diff = old_div(np.sum(diff), diff.size)
                 print(samples_handled, "L1 difference", log_str, l1_diff, file=self.log)
                 blobs_l1_diff[i] += l1_diff
                 blobs_l1_diff_count[i] += 1
@@ -196,7 +201,7 @@ class SemSegmEvaluation:
 
         for i in range(1, len(blobs_l1_diff)):
             log_str = frameworks[0].get_name() + " vs " + frameworks[i].get_name() + ':'
-            print('Final l1 diff', log_str, blobs_l1_diff[i] / blobs_l1_diff_count[i], file=self.log)
+            print('Final l1 diff', log_str, old_div(blobs_l1_diff[i], blobs_l1_diff_count[i]), file=self.log)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

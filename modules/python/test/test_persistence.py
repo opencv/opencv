@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 """"Core serialization tests."""
+from builtins import range
 import tempfile
 import os
 import cv2 as cv

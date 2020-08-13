@@ -6,6 +6,7 @@ The program takes as input a skewed source image and shows non skewed text.
 Usage:
         python text_skewness_correction.py --image "Image path"
 '''
+from __future__ import print_function
 
 import numpy as np
 import cv2 as cv

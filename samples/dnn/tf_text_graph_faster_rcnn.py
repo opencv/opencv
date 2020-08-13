@@ -1,3 +1,8 @@
+from __future__ import print_function
+from __future__ import division
+from builtins import str
+from builtins import range
+from past.utils import old_div
 import argparse
 import numpy as np
 from tf_text_graph_common import *
@@ -135,7 +140,7 @@ def createFasterRCNNGraph(modelPath, configPath, outputPath):
     for a in aspect_ratios:
         for s in scales:
             ar = np.sqrt(a)
-            heights.append((height_stride**2) * s / ar)
+            heights.append(old_div((height_stride**2) * s, ar))
             widths.append((width_stride**2) * s * ar)
 
     proposals.addAttr('width', widths)
@@ -189,7 +194,7 @@ def createFasterRCNNGraph(modelPath, configPath, outputPath):
 
     # Replace Flatten subgraph onto a single node.
     cropAndResizeNodeName = ''
-    for i in reversed(range(len(graph_def.node))):
+    for i in reversed(list(range(len(graph_def.node)))):
         if graph_def.node[i].op == 'CropAndResize':
             graph_def.node[i].input.insert(1, 'detection_out/clip_by_value')
             cropAndResizeNodeName = graph_def.node[i].name

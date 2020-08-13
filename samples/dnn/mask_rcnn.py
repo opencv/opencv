@@ -1,3 +1,6 @@
+from __future__ import division
+from builtins import range
+from past.utils import old_div
 import cv2 as cv
 import argparse
 import numpy as np
@@ -101,7 +104,7 @@ while cv.waitKey(1) < 0:
         # Generate colors
         colors = [np.array([0, 0, 0], np.uint8)]
         for i in range(1, numClasses + 1):
-            colors.append((colors[i - 1] + np.random.randint(0, 256, [3], np.uint8)) / 2)
+            colors.append(old_div((colors[i - 1] + np.random.randint(0, 256, [3], np.uint8)), 2))
         del colors[0]
 
     boxesToDraw = []

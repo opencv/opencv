@@ -1,4 +1,6 @@
 from __future__ import print_function
+from builtins import zip
+from builtins import range
 import sys
 import argparse
 import cv2 as cv
@@ -35,7 +37,7 @@ dtype = tf.float16 if args.fp16 else tf.float32
 cvNet = cv.dnn.readNetFromCaffe(args.proto, args.model)
 
 def dnnLayer(name):
-    return cvNet.getLayer(long(cvNet.getLayerId(name)))
+    return cvNet.getLayer(int(cvNet.getLayerId(name)))
 
 def scale(x, name):
     with tf.variable_scope(name):
@@ -260,7 +262,7 @@ def tensorMsg(values):
     return msg + '}'
 
 # Remove Const nodes and unused attributes.
-for i in reversed(range(len(graph_def.node))):
+for i in reversed(list(range(len(graph_def.node)))):
     if graph_def.node[i].op in ['Const', 'Dequantize']:
         del graph_def.node[i]
     for attr in ['T', 'data_format', 'Tshape', 'N', 'Tidx', 'Tdim',
@@ -322,7 +324,7 @@ text_format.Merge('f: 0.01', detectionOut.attr['confidence_threshold'])
 graph_def.node.extend([detectionOut])
 
 # Replace L2Normalization subgraph onto a single node.
-for i in reversed(range(len(graph_def.node))):
+for i in reversed(list(range(len(graph_def.node)))):
     if graph_def.node[i].name in ['conv4_3_norm/l2_normalize/Square',
                                   'conv4_3_norm/l2_normalize/Sum',
                                   'conv4_3_norm/l2_normalize/Maximum',

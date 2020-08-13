@@ -1,12 +1,15 @@
 #!/usr/bin/env python
 
 from __future__ import print_function
+from future import standard_library
+standard_library.install_aliases()
+from builtins import object
 import hashlib
 import time
 import sys
 import xml.etree.ElementTree as ET
 if sys.version_info[0] < 3:
-    from urllib2 import urlopen
+    from urllib.request import urlopen
 else:
     from urllib.request import urlopen
 

@@ -24,8 +24,13 @@ Following preprocessing is applied to the dataset:
 
 # Python 2/3 compatibility
 from __future__ import print_function
+from __future__ import division
 
 # built-in modules
+from builtins import map
+from builtins import zip
+from builtins import object
+from past.utils import old_div
 from multiprocessing.pool import ThreadPool
 
 import cv2 as cv
@@ -51,7 +56,7 @@ def deskew(img):
     m = cv.moments(img)
     if abs(m['mu02']) < 1e-2:
         return img.copy()
-    skew = m['mu11']/m['mu02']
+    skew = old_div(m['mu11'],m['mu02'])
     M = np.float32([[1, skew, -0.5*SZ*skew], [0, 1, 0]])
     img = cv.warpAffine(img, M, (SZ, SZ), flags=cv.WARP_INVERSE_MAP | cv.INTER_LINEAR)
     return img
@@ -109,7 +114,7 @@ def preprocess_hog(digits):
         gy = cv.Sobel(img, cv.CV_32F, 0, 1)
         mag, ang = cv.cartToPolar(gx, gy)
         bin_n = 16
-        bin = np.int32(bin_n*ang/(2*np.pi))
+        bin = np.int32(old_div(bin_n*ang,(2*np.pi)))
         bin_cells = bin[:10,:10], bin[10:,:10], bin[:10,10:], bin[10:,10:]
         mag_cells = mag[:10,:10], mag[10:,:10], mag[:10,10:], mag[10:,10:]
         hists = [np.bincount(b.ravel(), m.ravel(), bin_n) for b, m in zip(bin_cells, mag_cells)]
@@ -131,7 +136,7 @@ class digits_test(NewOpenCVTests):
     def load_digits(self, fn):
         digits_img = self.get_sample(fn, 0)
         digits = split2d(digits_img, (SZ, SZ))
-        labels = np.repeat(np.arange(CLASS_N), len(digits)/CLASS_N)
+        labels = np.repeat(np.arange(CLASS_N), old_div(len(digits),CLASS_N))
         return digits, labels
 
     def test_digits(self):

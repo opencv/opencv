@@ -1,6 +1,11 @@
 #!/usr/bin/env python
 
 from __future__ import print_function
+from __future__ import division
+from builtins import str
+from builtins import range
+from past.utils import old_div
+from builtins import object
 import sys, re, os.path, cgi, stat, math
 from optparse import OptionParser
 from color import getColorizer, dummyColorizer
@@ -77,7 +82,7 @@ class table(object):
         if isinstance(name, str):
             return self.columns.get(name, None)
         else:
-            vals = [v for v in self.columns.values() if v.index == name]
+            vals = [v for v in list(self.columns.values()) if v.index == name]
             if vals:
                 return vals[0]
         return None
@@ -97,7 +102,7 @@ class table(object):
         return cl
 
     def layoutTable(self):
-        columns = self.columns.values()
+        columns = list(self.columns.values())
         columns = sorted(columns, key=lambda c: c.index)
 
         colspanned = []
@@ -171,7 +176,7 @@ class table(object):
                 s = 0
                 for col in cols:
                     s += col.minwidth
-                    addition = s * budget / total - spent
+                    addition = old_div(s * budget, total) - spent
                     spent += addition
                     col.minwidth += addition
 
@@ -193,7 +198,7 @@ class table(object):
                 s = 0
                 for row in rows:
                     s += row.minheight
-                    addition = s * budget / total - spent
+                    addition = old_div(s * budget, total) - spent
                     spent += addition
                     row.minheight += addition
 
@@ -207,10 +212,10 @@ class table(object):
 
     def reformatTextValue(self, value):
         if sys.version_info >= (2,7):
-            unicode = str
+            str = str
         if isinstance(value, str):
             vstr = value
-        elif isinstance(value, unicode):
+        elif isinstance(value, str):
             vstr = str(value)
         else:
             try:
@@ -228,7 +233,7 @@ class table(object):
         s = 0
         for col in cols:
             s += col.minWidth
-            addition = s * budget / total - spent
+            addition = old_div(s * budget, total) - spent
             spent += addition
             col.minWidth += addition
 
@@ -667,7 +672,7 @@ def getScore(test, test0, metric):
     m1 = math.log(m1)
     if s == 0:
         return None
-    return (m0-m1)/s
+    return old_div((m0-m1),s)
 
 metrix_table = \
 {

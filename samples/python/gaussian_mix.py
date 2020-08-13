@@ -2,6 +2,10 @@
 
 # Python 2/3 compatibility
 from __future__ import print_function
+from __future__ import division
+from builtins import zip
+from builtins import range
+from past.utils import old_div
 import sys
 PY3 = sys.version_info[0] == 3
 
@@ -16,7 +20,7 @@ from numpy import random
 def make_gaussians(cluster_n, img_size):
     points = []
     ref_distrs = []
-    for _i in xrange(cluster_n):
+    for _i in range(cluster_n):
         mean = (0.1 + 0.8*random.rand(2)) * img_size
         a = (random.rand(2, 2)-0.5)*img_size*0.1
         cov = np.dot(a.T, a) + img_size*0.05*np.eye(2)
@@ -30,7 +34,7 @@ def make_gaussians(cluster_n, img_size):
 def draw_gaussain(img, mean, cov, color):
     x, y = np.int32(mean)
     w, u, _vt = cv.SVDecomp(cov)
-    ang = np.arctan2(u[1, 0], u[0, 0])*(180/np.pi)
+    ang = np.arctan2(u[1, 0], u[0, 0])*(old_div(180,np.pi))
     s1, s2 = np.sqrt(w)*3.0
     cv.ellipse(img, (x, y), (s1, s2), ang, 0, 360, color, 1, cv.LINE_AA)
 
@@ -52,7 +56,7 @@ def main():
         em.trainEM(points)
         means = em.getMeans()
         covs = em.getCovs()  # Known bug: https://github.com/opencv/opencv/pull/4232
-        found_distrs = zip(means, covs)
+        found_distrs = list(zip(means, covs))
         print('ready!\n')
 
         img = np.zeros((img_size, img_size, 3), np.uint8)

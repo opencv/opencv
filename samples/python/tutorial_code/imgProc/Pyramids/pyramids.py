@@ -1,3 +1,6 @@
+from __future__ import print_function
+from builtins import chr
+from builtins import map
 import sys
 import cv2 as cv
 
@@ -24,7 +27,7 @@ def main(argv):
     ## [load]
     ## [loop]
     while 1:
-        rows, cols, _channels = map(int, src.shape)
+        rows, cols, _channels = list(map(int, src.shape))
         ## [show_image]
         cv.imshow('Pyramids Demo', src)
         ## [show_image]

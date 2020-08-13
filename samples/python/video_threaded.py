@@ -18,6 +18,8 @@ Keyboard shortcuts:
 # Python 2/3 compatibility
 from __future__ import print_function
 
+from builtins import str
+from builtins import object
 import numpy as np
 import cv2 as cv
 
@@ -28,7 +30,7 @@ from common import clock, draw_str, StatValue
 import video
 
 
-class DummyTask:
+class DummyTask(object):
     def __init__(self, data):
         self.data = data
     def ready(self):

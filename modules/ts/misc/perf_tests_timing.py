@@ -1,6 +1,11 @@
 #!/usr/bin/env python
 
 from __future__ import print_function
+from __future__ import division
+from builtins import next
+from builtins import str
+from builtins import range
+from past.utils import old_div
 import testlog_parser, sys, os, xml, glob, re
 from table_formatter import *
 from optparse import OptionParser
@@ -78,13 +83,13 @@ if __name__ == "__main__":
             suit_time = 0
             suit_num = 0
             fails_num = 0
-            for name in sorted(test_cases.iterkeys(), key=alphanum_keyselector):
+            for name in sorted(iter(test_cases.keys()), key=alphanum_keyselector):
                 cases = test_cases[name]
 
                 groupName = next(c for c in cases if c).shortName()
                 if groupName != prevGroupName:
                     if prevGroupName != None:
-                        suit_time = suit_time/60 #from seconds to minutes
+                        suit_time = old_div(suit_time,60) #from seconds to minutes
                         testsuits.append({'module': module_name, 'name': prevGroupName, \
                             'time': suit_time, 'num': suit_num, 'failed': fails_num})
                         overall_time += suit_time
@@ -103,7 +108,7 @@ if __name__ == "__main__":
                             fails_num += 1
 
             # last testsuit processing
-            suit_time = suit_time/60
+            suit_time = old_div(suit_time,60)
             testsuits.append({'module': module_name, 'name': prevGroupName, \
                 'time': suit_time, 'num': suit_num, 'failed': fails_num})
             overall_time += suit_time

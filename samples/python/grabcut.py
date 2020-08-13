@@ -30,12 +30,13 @@ Key 's' - To save the results
 # Python 2/3 compatibility
 from __future__ import print_function
 
+from builtins import object
 import numpy as np
 import cv2 as cv
 
 import sys
 
-class App():
+class App(object):
     BLUE = [255,0,0]        # rectangle color
     RED = [0,0,255]         # PR BG
     GREEN = [0,255,0]       # PR FG

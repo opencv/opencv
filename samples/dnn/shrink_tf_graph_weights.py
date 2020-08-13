@@ -1,9 +1,11 @@
+from __future__ import division
 # This file is part of OpenCV project.
 # It is subject to the license terms in the LICENSE file found in the top-level directory
 # of this distribution and at http://opencv.org/license.html.
 #
 # Copyright (C) 2017, Intel Corporation, all rights reserved.
 # Third party copyrights are property of their respective owners.
+from past.utils import old_div
 import tensorflow as tf
 import struct
 import argparse
@@ -55,7 +57,7 @@ for node in graph_def.node:
 
         floats = node.attr['value'].tensor.tensor_content
 
-        floats = struct.unpack('f' * (len(floats) / 4), floats)
+        floats = struct.unpack('f' * (old_div(len(floats), 4)), floats)
         halfs = np.array(floats).astype(np.float16).view(np.uint16)
         node.attr['value'].tensor.tensor_content = struct.pack('H' * len(halfs), *halfs)
 

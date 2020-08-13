@@ -1,5 +1,9 @@
 #!/usr/bin/env python
 
+from __future__ import division
+from builtins import str
+from builtins import object
+from past.utils import old_div
 import os, sys
 import argparse
 import glob
@@ -128,7 +132,7 @@ def git_checkout(dst, url, branch, revision, clone_extra_args, noFetch=False):
     log.info("Git checkout: '%s' (%s @ %s)", dst, url, revision)
     if noFetch:
         pass
-    elif not os.path.exists(str(dst / '.git')):
+    elif not os.path.exists(str(old_div(dst, '.git'))):
         execute(cmd=['git', 'clone'] +
                 (['-b', branch] if branch else []) +
                 clone_extra_args + [url, '.'], cwd=dst)
@@ -155,7 +159,7 @@ def git_apply_patch(src_dir, patch_file):
 
 #===================================================================================================
 
-class BuilderDLDT:
+class BuilderDLDT(object):
     def __init__(self, config):
         self.config = config
 
@@ -184,9 +188,9 @@ class BuilderDLDT:
         log.info('DLDT directory: %s', dldt_dir_name)
         self.outdir = prepare_dir(os.path.join(self.config.build_cache_dir, dldt_dir_name))
         if self.srcdir is None:
-            self.srcdir = prepare_dir(self.outdir / 'sources', clean=clean_src_dir)
-        self.build_dir = prepare_dir(self.outdir / 'build', clean=self.config.clean_dldt)
-        self.sysrootdir = prepare_dir(self.outdir / 'sysroot', clean=self.config.clean_dldt)
+            self.srcdir = prepare_dir(old_div(self.outdir, 'sources'), clean=clean_src_dir)
+        self.build_dir = prepare_dir(old_div(self.outdir, 'build'), clean=self.config.clean_dldt)
+        self.sysrootdir = prepare_dir(old_div(self.outdir, 'sysroot'), clean=self.config.clean_dldt)
 
         if self.config.build_subst_drive:
             if os.path.exists(self.config.build_subst_drive + ':\\'):
@@ -201,7 +205,7 @@ class BuilderDLDT:
 
     def init_patchset(self):
         cpath = self.cpath
-        self.patch_file = str(cpath / 'patch.config.py')  # Python 3.5 may not handle Path
+        self.patch_file = str(old_div(cpath, 'patch.config.py'))  # Python 3.5 may not handle Path
         with open(self.patch_file, 'r') as f:
             self.patch_file_contents = f.read()
 
@@ -226,7 +230,7 @@ class BuilderDLDT:
                     noFetch=noFetch
             )
 
-        if not os.path.exists(str(self.srcdir / '.git')):
+        if not os.path.exists(str(old_div(self.srcdir, '.git'))):
             log.info('DLDT git checkout through "reference" copy.')
             reference_dir = self.config.dldt_reference_dir
             if reference_dir is None:
@@ -247,7 +251,7 @@ class BuilderDLDT:
                 log.info('Patching "%s": %s' % (subdir, patch_file))
             else:
                 log.info('Patching: %s' % (patch_file))
-            git_apply_patch(self.srcdir / subdir if subdir else self.srcdir, self.cpath / patch_file)
+            git_apply_patch(old_div(self.srcdir, subdir) if subdir else self.srcdir, old_div(self.cpath, patch_file))
 
         exec(compile(self.patch_file_contents, self.patch_file, 'exec'))
 
@@ -274,11 +278,11 @@ class BuilderDLDT:
             NGRAPH_UNIT_TEST_OPENVINO_ENABLE='OFF',
             NGRAPH_TEST_UTIL_ENABLE='OFF',
             NGRAPH_ONNX_IMPORT_ENABLE='OFF',
-            CMAKE_INSTALL_PREFIX=str(self.build_dir / 'install'),
+            CMAKE_INSTALL_PREFIX=str(old_div(self.build_dir, 'install')),
             OUTPUT_ROOT=str(self.build_dir),  # 2020.4+
         )
 
-        cmd += [ '-D%s=%s' % (k, v) for (k, v) in cmake_vars.items() if v is not None]
+        cmd += [ '-D%s=%s' % (k, v) for (k, v) in list(cmake_vars.items()) if v is not None]
         if self.config.cmake_option_dldt:
             cmd += self.config.cmake_option_dldt
 
@@ -296,7 +300,7 @@ class BuilderDLDT:
 
             # install ngraph only
             cmd = [self.cmake_path, '-DBUILD_TYPE=' + build_config, '-P', 'cmake_install.cmake']
-            execute(cmd, cwd=build_dir / 'ngraph')
+            execute(cmd, cwd=old_div(build_dir, 'ngraph'))
         except:
             raise
 
@@ -304,7 +308,7 @@ class BuilderDLDT:
 
 
     def make_sysroot(self):
-        cfg_file = str(self.cpath / 'sysroot.config.py')  # Python 3.5 may not handle Path
+        cfg_file = str(old_div(self.cpath, 'sysroot.config.py'))  # Python 3.5 may not handle Path
         with open(cfg_file, 'r') as f:
             cfg = f.read()
         exec(compile(cfg, cfg_file, 'exec'))
@@ -319,13 +323,13 @@ class BuilderDLDT:
 
 #===================================================================================================
 
-class Builder:
+class Builder(object):
     def __init__(self, config):
         self.config = config
         build_dir_name = 'opencv_build' if not self.config.build_debug else 'opencv_build_debug'
-        self.build_dir = prepare_dir(Path(self.config.output_dir) / build_dir_name, clean=self.config.clean_opencv)
-        self.package_dir = prepare_dir(Path(self.config.output_dir) / 'package/opencv', clean=True)
-        self.install_dir = prepare_dir(self.package_dir / 'build')
+        self.build_dir = prepare_dir(old_div(Path(self.config.output_dir), build_dir_name), clean=self.config.clean_opencv)
+        self.package_dir = prepare_dir(old_div(Path(self.config.output_dir), 'package/opencv'), clean=True)
+        self.install_dir = prepare_dir(old_div(self.package_dir, 'build'))
         self.src_dir = check_dir(self.config.opencv_dir)
 
 
@@ -369,10 +373,10 @@ class Builder:
             OPENCV_PYTHON_INSTALL_PATH='python',
         )
 
-        cmake_vars['INF_ENGINE_LIB_DIRS:PATH'] = str(builderDLDT.sysrootdir / 'deployment_tools/inference_engine/lib/intel64')
-        cmake_vars['INF_ENGINE_INCLUDE_DIRS:PATH'] = str(builderDLDT.sysrootdir / 'deployment_tools/inference_engine/include')
-        cmake_vars['ngraph_DIR:PATH'] = str(builderDLDT.sysrootdir / 'ngraph/cmake')
-        cmake_vars['TBB_DIR:PATH'] = str(builderDLDT.sysrootdir / 'tbb/cmake')
+        cmake_vars['INF_ENGINE_LIB_DIRS:PATH'] = str(old_div(builderDLDT.sysrootdir, 'deployment_tools/inference_engine/lib/intel64'))
+        cmake_vars['INF_ENGINE_INCLUDE_DIRS:PATH'] = str(old_div(builderDLDT.sysrootdir, 'deployment_tools/inference_engine/include'))
+        cmake_vars['ngraph_DIR:PATH'] = str(old_div(builderDLDT.sysrootdir, 'ngraph/cmake'))
+        cmake_vars['TBB_DIR:PATH'] = str(old_div(builderDLDT.sysrootdir, 'tbb/cmake'))
 
         if self.config.build_debug:
             cmake_vars['CMAKE_BUILD_TYPE'] = 'Debug'
@@ -393,7 +397,7 @@ class Builder:
             cmake_vars['OPENCV_BUILD_PERF_TEST_MODULES_LIST'] = 'dnn'
             cmake_vars['INSTALL_TESTS']='ON'
 
-        cmd += [ "-D%s=%s" % (k, v) for (k, v) in cmake_vars.items() if v is not None]
+        cmd += [ "-D%s=%s" % (k, v) for (k, v) in list(cmake_vars.items()) if v is not None]
         if self.config.cmake_option:
             cmd += self.config.cmake_option
 
@@ -417,21 +421,21 @@ class Builder:
     def copy_sysroot(self, builderDLDT):
         log.info('Copy sysroot files')
 
-        copytree(builderDLDT.sysrootdir / 'bin', self.install_dir / 'bin')
-        copytree(builderDLDT.sysrootdir / 'etc', self.install_dir / 'etc')
+        copytree(old_div(builderDLDT.sysrootdir, 'bin'), old_div(self.install_dir, 'bin'))
+        copytree(old_div(builderDLDT.sysrootdir, 'etc'), old_div(self.install_dir, 'etc'))
 
         log.info('Copy sysroot files - DONE')
 
 
     def package_sources(self):
-        package_opencv = prepare_dir(self.package_dir / 'src/opencv', clean=True)
+        package_opencv = prepare_dir(old_div(self.package_dir, 'src/opencv'), clean=True)
         package_opencv = str(package_opencv)  # Python 3.5 may not handle Path
         execute(cmd=['git', 'clone', '-s', str(self.src_dir), '.'], cwd=str(package_opencv))
         for item in os.listdir(package_opencv):
             if str(item).startswith('.git'):
                 rm_one(os.path.join(package_opencv, item))
 
-        with open(str(self.package_dir / 'README.md'), 'w') as f:
+        with open(str(old_div(self.package_dir, 'README.md')), 'w') as f:
             f.write('See licensing/copying statements in "build/etc/licenses"\n')
             f.write('Wiki page: https://github.com/opencv/opencv/wiki/Intel%27s-Deep-Learning-Inference-Engine-backend\n')
 

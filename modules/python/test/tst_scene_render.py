@@ -3,7 +3,10 @@
 
 # Python 2/3 compatibility
 from __future__ import print_function
+from __future__ import division
 
+from builtins import object
+from past.utils import old_div
 import numpy as np
 from numpy import pi, sin, cos
 
@@ -11,7 +14,7 @@ import cv2 as cv
 
 defaultSize = 512
 
-class TestSceneRender():
+class TestSceneRender(object):
 
     def __init__(self, bgImg = None, fgImg = None, deformation = False, noise = 0.0, speed = 0.25, **params):
         self.time = 0.0
@@ -31,13 +34,13 @@ class TestSceneRender():
 
         if fgImg is not None:
             self.foreground = fgImg.copy()
-            self.center = self.currentCenter = (int(self.w/2 - fgImg.shape[0]/2), int(self.h/2 - fgImg.shape[1]/2))
+            self.center = self.currentCenter = (int(old_div(self.w,2) - old_div(fgImg.shape[0],2)), int(old_div(self.h,2) - old_div(fgImg.shape[1],2)))
 
             self.xAmpl = self.sceneBg.shape[0] - (self.center[0] + fgImg.shape[0])
             self.yAmpl = self.sceneBg.shape[1] - (self.center[1] + fgImg.shape[1])
 
-        self.initialRect = np.array([ (self.h/2, self.w/2), (self.h/2, self.w/2 + self.w/10),
-         (self.h/2 + self.h/10, self.w/2 + self.w/10), (self.h/2 + self.h/10, self.w/2)]).astype(int)
+        self.initialRect = np.array([ (old_div(self.h,2), old_div(self.w,2)), (old_div(self.h,2), old_div(self.w,2) + old_div(self.w,10)),
+         (old_div(self.h,2) + old_div(self.h,10), old_div(self.w,2) + old_div(self.w,10)), (old_div(self.h,2) + old_div(self.h,10), old_div(self.w,2))]).astype(int)
         self.currentRect = self.initialRect
         np.random.seed(10)
 
@@ -85,9 +88,9 @@ class TestSceneRender():
             img[self.currentCenter[0]:self.currentCenter[0]+self.foreground.shape[0],
              self.currentCenter[1]:self.currentCenter[1]+self.foreground.shape[1]] = self.foreground
         else:
-            self.currentRect = self.initialRect + np.int( 30*cos(self.time) + 50*sin(self.time/3))
+            self.currentRect = self.initialRect + np.int( 30*cos(self.time) + 50*sin(old_div(self.time,3)))
             if self.deformation:
-                self.currentRect[1:3] += int(self.h/20*cos(self.time))
+                self.currentRect[1:3] += int(old_div(self.h,20)*cos(self.time))
             cv.fillConvexPoly(img, self.currentRect, (0, 0, 255))
 
         self.time += self.timeStep

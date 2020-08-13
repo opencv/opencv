@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from builtins import object
 import os
 import re
 import getpass
@@ -10,7 +11,7 @@ def exe(program):
     return program + ".exe" if hostos == 'nt' else program
 
 
-class ApkInfo:
+class ApkInfo(object):
     def __init__(self):
         self.pkg_name = None
         self.pkg_target = None
@@ -24,7 +25,7 @@ class ApkInfo:
                 self.pkg_target = package
 
 
-class Tool:
+class Tool(object):
     def __init__(self):
         self.cmd = []
 
@@ -151,7 +152,7 @@ class AndroidTestSuite(TestSuite):
             android_exe = android_dir + exename
             self.adb.run(["push", exe, android_exe])
             self.adb.run(["shell", "chmod 777 " + android_exe])
-            env_pieces = ["export %s=%s" % (a, b) for a, b in self.env.items()]
+            env_pieces = ["export %s=%s" % (a, b) for a, b in list(self.env.items())]
             pieces = ["cd %s" % android_dir, "./%s %s" % (exename, " ".join(args))]
             log.warning("Run: %s" % " && ".join(pieces))
             ret = self.adb.run(["shell", " && ".join(env_pieces + pieces)])

@@ -15,6 +15,9 @@ Usage:
 
 # Python 2/3 compatibility
 from __future__ import print_function
+from builtins import map
+from builtins import range
+from builtins import object
 import sys
 PY3 = sys.version_info[0] == 3
 
@@ -45,9 +48,9 @@ def cross_validate(model_class, params, samples, labels, kfold = 3, pool = None)
         print(".", end='')
         return score
     if pool is None:
-        scores = list(map(f, xrange(kfold)))
+        scores = list(map(f, range(kfold)))
     else:
-        scores = pool.map(f, xrange(kfold))
+        scores = pool.map(f, range(kfold))
     return np.mean(scores)
 
 
@@ -108,7 +111,7 @@ class App(object):
             err = cross_validate(KNearest, dict(k=k), samples, labels)
             return k, err
         best_err, best_k = np.inf, -1
-        for k, err in self.run_jobs(f, xrange(1, 9)):
+        for k, err in self.run_jobs(f, range(1, 9)):
             if err < best_err:
                 best_err, best_k = err, k
             print('k = %d, error: %.2f %%' % (k, err*100))

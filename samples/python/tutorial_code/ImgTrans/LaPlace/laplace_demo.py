@@ -2,6 +2,7 @@
 @file laplace_demo.py
 @brief Sample code showing how to detect edges using the Laplace operator
 """
+from __future__ import print_function
 import sys
 import cv2 as cv
 

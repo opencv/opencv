@@ -10,7 +10,11 @@ Usage:
 
 # Python 2/3 compatibility
 from __future__ import print_function
+from __future__ import division
 
+from builtins import range
+from builtins import object
+from past.utils import old_div
 import numpy as np
 import cv2 as cv
 
@@ -22,7 +26,7 @@ if PY3:
     xrange = range
 
 
-class QrSample:
+class QrSample(object):
     def __init__(self, args):
         self.fname = ''
         self.fext = ''
@@ -48,7 +52,7 @@ class QrSample:
     def drawQRCodeContours(self, image, cnt):
         if cnt.size != 0:
             rows, cols, _ = image.shape
-            show_radius = 2.813 * ((rows / cols) if rows > cols else (cols / rows))
+            show_radius = 2.813 * ((old_div(rows, cols)) if rows > cols else (old_div(cols, rows)))
             contour_radius = show_radius * 0.4
             cv.drawContours(image, [cnt], 0, (0, 255, 0), int(round(contour_radius)))
             tpl = cnt.reshape((-1, 2))
@@ -111,7 +115,7 @@ class QrSample:
             timer.start()
             points, decode_info = self.runQR(qrCode, inputimg)
             timer.stop()
-        fps = count / timer.getTimeSec()
+        fps = old_div(count, timer.getTimeSec())
         print('FPS: {}'.format(fps))
         result = inputimg
         self.drawQRCodeResults(result, points, decode_info, fps)
@@ -138,7 +142,7 @@ class QrSample:
         points, decode_info = self.runQR(qrcode, frame)
         timer.stop()
 
-        fps = 1 / timer.getTimeSec()
+        fps = old_div(1, timer.getTimeSec())
         self.drawQRCodeResults(result, points, decode_info, fps)
         return fps, result, points
 

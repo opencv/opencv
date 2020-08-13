@@ -76,6 +76,11 @@
 
 from __future__ import division
 
+from builtins import next
+from builtins import filter
+from builtins import str
+from builtins import map
+from builtins import object
 import ast
 import errno
 import fnmatch
@@ -86,7 +91,7 @@ import re
 
 from argparse import ArgumentParser
 from glob import glob
-from itertools import ifilter
+
 
 import xlwt
 
@@ -136,7 +141,7 @@ class Collector(object):
         properties = run.properties.copy()
         del properties['module_name']
 
-        props_key = tuple(sorted(properties.iteritems())) # dicts can't be keys
+        props_key = tuple(sorted(properties.items())) # dicts can't be keys
 
         if props_key in self.__config_cache:
             configuration = self.__config_cache[props_key]
@@ -156,7 +161,7 @@ class Collector(object):
                         Collector.__format_config_cache_key(props_key))
 
             else:
-                same_config_props = [it[0] for it in self.__config_cache.iteritems() if it[1] == configuration]
+                same_config_props = [it[0] for it in self.__config_cache.items() if it[1] == configuration]
                 if len(same_config_props) > 0:
                     logging.warning('property set %s matches the same configuration %r as property set %s',
                         Collector.__format_config_cache_key(props_key),
@@ -183,7 +188,7 @@ def make_match_func(matchers):
     def match_func(properties):
         for matcher in matchers:
             if all(properties.get(name) == value
-                   for (name, value) in matcher['properties'].iteritems()):
+                   for (name, value) in matcher['properties'].items()):
                 return matcher['name']
 
         return None
@@ -221,7 +226,7 @@ def main():
             sheet_conf = {}
             logging.debug('no sheet.conf for %s', sheet_path)
 
-        sheet_conf = dict(global_conf.items() + sheet_conf.items())
+        sheet_conf = dict(list(global_conf.items()) + list(sheet_conf.items()))
 
         config_names = sheet_conf.get('configurations', [])
         config_matchers = sheet_conf.get('configuration_matchers', [])
@@ -304,23 +309,23 @@ def main():
 
         module_colors = sheet_conf.get('module_colors', {})
         module_styles = {module: xlwt.easyxf('pattern: pattern solid, fore_color {}'.format(color))
-                         for module, color in module_colors.iteritems()}
+                         for module, color in module_colors.items()}
 
-        for module, tests in sorted(collector.tests.iteritems()):
-            for ((test, param), configs) in sorted(tests.iteritems()):
+        for module, tests in sorted(collector.tests.items()):
+            for ((test, param), configs) in sorted(tests.items()):
                 sheet.write(row, 0, module, module_styles.get(module, xlwt.Style.default_style))
                 sheet.write(row, 1, test)
 
                 param_list = param[1:-1].split(', ') if param.startswith('(') and param.endswith(')') else [param]
 
-                image_size = next(ifilter(re_image_size.match, param_list), None)
+                image_size = next(filter(re_image_size.match, param_list), None)
                 if image_size is not None:
-                    (image_width, image_height) = map(int, image_size.split('x', 1))
+                    (image_width, image_height) = list(map(int, image_size.split('x', 1)))
                     sheet.write(row, 2, image_width)
                     sheet.write(row, 3, image_height)
                     del param_list[param_list.index(image_size)]
 
-                data_type = next(ifilter(re_data_type.match, param_list), None)
+                data_type = next(filter(re_data_type.match, param_list), None)
                 if data_type is not None:
                     sheet.write(row, 4, data_type)
                     del param_list[param_list.index(data_type)]

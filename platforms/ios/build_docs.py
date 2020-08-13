@@ -4,6 +4,8 @@ This script builds OpenCV docs for iOS.
 """
 
 from __future__ import print_function
+from builtins import str
+from builtins import object
 import os, sys, multiprocessing, argparse, traceback
 from subprocess import check_call, check_output, CalledProcessError, Popen
 
@@ -20,7 +22,7 @@ def execute(cmd, cwd = None, output = None):
             p = Popen(cmd, cwd = cwd, stdout = f)
             os.waitpid(p.pid, 0)
 
-class DocBuilder:
+class DocBuilder(object):
     def __init__(self, script_dir, framework_dir, output_dir, framework_header, framework_name, arch, target):
         self.script_dir = script_dir
         self.framework_dir = framework_dir

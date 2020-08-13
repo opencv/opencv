@@ -15,7 +15,9 @@ Keys:
 
 # Python 2/3 compatibility
 from __future__ import print_function
+from __future__ import division
 
+from past.utils import old_div
 import numpy as np
 import cv2 as cv
 
@@ -24,7 +26,7 @@ import video
 
 def draw_flow(img, flow, step=16):
     h, w = img.shape[:2]
-    y, x = np.mgrid[step/2:h:step, step/2:w:step].reshape(2,-1).astype(int)
+    y, x = np.mgrid[old_div(step,2):h:step, old_div(step,2):w:step].reshape(2,-1).astype(int)
     fx, fy = flow[y,x].T
     lines = np.vstack([x, y, x+fx, y+fy]).T.reshape(-1, 2, 2)
     lines = np.int32(lines + 0.5)
@@ -41,7 +43,7 @@ def draw_hsv(flow):
     ang = np.arctan2(fy, fx) + np.pi
     v = np.sqrt(fx*fx+fy*fy)
     hsv = np.zeros((h, w, 3), np.uint8)
-    hsv[...,0] = ang*(180/np.pi/2)
+    hsv[...,0] = ang*(old_div(old_div(180,np.pi),2))
     hsv[...,1] = 255
     hsv[...,2] = np.minimum(v*4, 255)
     bgr = cv.cvtColor(hsv, cv.COLOR_HSV2BGR)

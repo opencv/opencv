@@ -1,4 +1,7 @@
 from __future__ import print_function
+from __future__ import division
+from builtins import range
+from past.utils import old_div
 import cv2 as cv
 import numpy as np
 import argparse
@@ -17,7 +20,7 @@ def myHarris_function(val):
 
     for i in range(src_gray.shape[0]):
         for j in range(src_gray.shape[1]):
-            if Mc[i,j] > myHarris_minVal + ( myHarris_maxVal - myHarris_minVal )*myHarris_qualityLevel/max_qualityLevel:
+            if Mc[i,j] > myHarris_minVal + old_div(( myHarris_maxVal - myHarris_minVal )*myHarris_qualityLevel,max_qualityLevel):
                 cv.circle(myHarris_copy, (j,i), 4, (rng.randint(0,256), rng.randint(0,256), rng.randint(0,256)), cv.FILLED)
 
     cv.imshow(myHarris_window, myHarris_copy)
@@ -28,7 +31,7 @@ def myShiTomasi_function(val):
 
     for i in range(src_gray.shape[0]):
         for j in range(src_gray.shape[1]):
-            if myShiTomasi_dst[i,j] > myShiTomasi_minVal + ( myShiTomasi_maxVal - myShiTomasi_minVal )*myShiTomasi_qualityLevel/max_qualityLevel:
+            if myShiTomasi_dst[i,j] > myShiTomasi_minVal + old_div(( myShiTomasi_maxVal - myShiTomasi_minVal )*myShiTomasi_qualityLevel,max_qualityLevel):
                 cv.circle(myShiTomasi_copy, (j,i), 4, (rng.randint(0,256), rng.randint(0,256), rng.randint(0,256)), cv.FILLED)
 
     cv.imshow(myShiTomasi_window, myShiTomasi_copy)

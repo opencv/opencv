@@ -31,7 +31,12 @@ Keys:
 
 # Python 2/3 compatibility
 from __future__ import print_function
+from __future__ import division
 
+from builtins import str
+from builtins import map
+from past.utils import old_div
+from builtins import object
 import numpy as np
 import cv2 as cv
 
@@ -53,7 +58,7 @@ class VideoSynthBase(object):
             self.frame_size = (w, h)
 
         if size is not None:
-            w, h = map(int, size.split('x'))
+            w, h = list(map(int, size.split('x')))
             self.frame_size = (w, h)
             self.bg = cv.resize(self.bg, self.frame_size)
 
@@ -140,7 +145,7 @@ class Chess(VideoSynthBase):
 
         sx, sy = self.grid_size
         center = np.array([0.5*sx, 0.5*sy, 0.0])
-        phi = pi/3 + sin(t*3)*pi/8
+        phi = old_div(pi,3) + old_div(sin(t*3)*pi,8)
         c, s = cos(phi), sin(phi)
         ofs = np.array([sin(1.2*t), cos(1.8*t), 0]) * sx * 0.2
         eye_pos = center + np.array([cos(t)*c, sin(t)*c, s]) * 15.0 + ofs
@@ -187,7 +192,7 @@ def create_capture(source = 0, fallback = presets['chess']):
     else:
         cap = cv.VideoCapture(source)
         if 'size' in params:
-            w, h = map(int, params['size'].split('x'))
+            w, h = list(map(int, params['size'].split('x')))
             cap.set(cv.CAP_PROP_FRAME_WIDTH, w)
             cap.set(cv.CAP_PROP_FRAME_HEIGHT, h)
     if cap is None or not cap.isOpened():

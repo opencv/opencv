@@ -1,4 +1,5 @@
 # flake8: noqa
+from past.builtins import execfile
 import sys
 
 if sys.version_info[:2] < (3, 0):

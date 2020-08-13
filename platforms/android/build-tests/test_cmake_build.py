@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
 import unittest
 import os, sys, subprocess, argparse, shutil, re
 import logging as log
@@ -100,7 +101,7 @@ class TestCmakeBuild(unittest.TestCase):
             "-DOpenCV_DIR=%s" % self.opencv_cmake_path,
             "-DCMAKE_TOOLCHAIN_FILE=%s" % self.getCMakeToolchain(),
             self.srcdir
-        ] + [ "-D{}={}".format(key, value) for key, value in self.cmake_vars.items() ]
+        ] + [ "-D{}={}".format(key, value) for key, value in list(self.cmake_vars.items()) ]
         log.info("Executing: %s" % cmd)
         retcode = subprocess.call(cmd)
         self.assertEqual(retcode, 0, "cmake failed")
@@ -120,7 +121,7 @@ def suite(workdir, opencv_cmake_path):
 
     suite = unittest.TestSuite()
     for libset in ["", "opencv_java"]:
-        for abi, cmake_vars in abis.items():
+        for abi, cmake_vars in list(abis.items()):
             suite.addTest(TestCmakeBuild(libset, abi, cmake_vars, opencv_cmake_path,
                     os.path.join(workdir, "{}-{}".format(abi, "static" if libset == "" else "shared"))))
     return suite

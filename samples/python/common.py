@@ -6,6 +6,13 @@ This module contains some common routines used by other samples.
 
 # Python 2/3 compatibility
 from __future__ import print_function
+from __future__ import division
+from builtins import next
+from builtins import str
+from builtins import zip
+from builtins import map
+from past.utils import old_div
+from builtins import object
 import sys
 PY3 = sys.version_info[0] == 3
 
@@ -42,7 +49,7 @@ def homotrans(H, x, y):
     xs = H[0, 0]*x + H[0, 1]*y + H[0, 2]
     ys = H[1, 0]*x + H[1, 1]*y + H[1, 2]
     s  = H[2, 0]*x + H[2, 1]*y + H[2, 2]
-    return xs/s, ys/s
+    return old_div(xs,s), old_div(ys,s)
 
 def to_rect(a):
     a = np.ravel(a)
@@ -52,7 +59,7 @@ def to_rect(a):
 
 def rect2rect_mtx(src, dst):
     src, dst = to_rect(src), to_rect(dst)
-    cx, cy = (dst[1] - dst[0]) / (src[1] - src[0])
+    cx, cy = old_div((dst[1] - dst[0]), (src[1] - src[0]))
     tx, ty = dst[0] - src[0] * (cx, cy)
     M = np.float64([[ cx,  0, tx],
                     [  0, cy, ty],
@@ -83,7 +90,7 @@ def draw_str(dst, target, s):
     cv.putText(dst, s, (x+1, y+1), cv.FONT_HERSHEY_PLAIN, 1.0, (0, 0, 0), thickness = 2, lineType=cv.LINE_AA)
     cv.putText(dst, s, (x, y), cv.FONT_HERSHEY_PLAIN, 1.0, (255, 255, 255), lineType=cv.LINE_AA)
 
-class Sketcher:
+class Sketcher(object):
     def __init__(self, windowname, dests, colors_func):
         self.prev_pt = None
         self.windowname = windowname
@@ -140,7 +147,7 @@ def nothing(*arg, **kw):
     pass
 
 def clock():
-    return cv.getTickCount() / cv.getTickFrequency()
+    return old_div(cv.getTickCount(), cv.getTickFrequency())
 
 @contextmanager
 def Timer(msg):
@@ -151,7 +158,7 @@ def Timer(msg):
     finally:
         print("%.2f ms" % ((clock()-start)*1000))
 
-class StatValue:
+class StatValue(object):
     def __init__(self, smooth_coef = 0.5):
         self.value = None
         self.smooth_coef = smooth_coef
@@ -162,7 +169,7 @@ class StatValue:
             c = self.smooth_coef
             self.value = c * self.value + (1.0-c) * v
 
-class RectSelector:
+class RectSelector(object):
     def __init__(self, win, callback):
         self.win = win
         self.callback = callback
@@ -218,11 +225,11 @@ def mosaic(w, imgs):
     if PY3:
         img0 = next(imgs)
     else:
-        img0 = imgs.next()
+        img0 = next(imgs)
     pad = np.zeros_like(img0)
     imgs = it.chain([img0], imgs)
     rows = grouper(w, imgs, pad)
-    return np.vstack(map(np.hstack, rows))
+    return np.vstack(list(map(np.hstack, rows)))
 
 def getsize(img):
     h, w = img.shape[:2]

@@ -2,6 +2,9 @@
 
 # Python 2/3 compatibility
 from __future__ import print_function
+from __future__ import division
+from builtins import range
+from past.utils import old_div
 import sys
 PY3 = sys.version_info[0] == 3
 
@@ -15,7 +18,7 @@ import cv2 as cv
 def make_gaussians(cluster_n, img_size):
     points = []
     ref_distrs = []
-    for _ in xrange(cluster_n):
+    for _ in range(cluster_n):
         mean = (0.1 + 0.8*random.rand(2)) * img_size
         a = (random.rand(2, 2)-0.5)*img_size*0.1
         cov = np.dot(a.T, a) + img_size*0.05*np.eye(2)
@@ -53,8 +56,8 @@ class gaussian_mix_test(NewOpenCVTests):
 
         for i in range(cluster_n):
             for j in range(cluster_n):
-                if (cv.norm(means[i] - ref_distrs[j][0], cv.NORM_L2) / cv.norm(ref_distrs[j][0], cv.NORM_L2) < meanEps and
-                    cv.norm(covs[i] - ref_distrs[j][1], cv.NORM_L2) / cv.norm(ref_distrs[j][1], cv.NORM_L2) < covEps):
+                if (old_div(cv.norm(means[i] - ref_distrs[j][0], cv.NORM_L2), cv.norm(ref_distrs[j][0], cv.NORM_L2)) < meanEps and
+                    old_div(cv.norm(covs[i] - ref_distrs[j][1], cv.NORM_L2), cv.norm(ref_distrs[j][1], cv.NORM_L2)) < covEps):
                     matches_count += 1
 
         self.assertEqual(matches_count, cluster_n)

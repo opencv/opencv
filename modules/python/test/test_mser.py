@@ -5,7 +5,10 @@ MSER detector test
 '''
 # Python 2/3 compatibility
 from __future__ import print_function
+from __future__ import division
 
+from builtins import range
+from past.utils import old_div
 import numpy as np
 import cv2 as cv
 
@@ -48,7 +51,7 @@ class mser_test(NewOpenCVTests):
             src = src0.copy()
 
             kMinArea = 256 if use_big_image else 10
-            kMaxArea = int(src.shape[0]*src.shape[1]/4)
+            kMaxArea = int(old_div(src.shape[0]*src.shape[1],4))
 
             mserExtractor.setMinArea(kMinArea)
             mserExtractor.setMaxArea(kMaxArea)

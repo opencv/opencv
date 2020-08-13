@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
+from builtins import str
+from builtins import object
 import sys, re, os.path, errno, fnmatch
 import json
 import logging
@@ -15,7 +18,7 @@ else:
     class StringIO(io.StringIO):
         def write(self, s):
             if isinstance(s, str):
-                s = unicode(s)  # noqa: F821
+                s = str(s)  # noqa: F821
             return super(StringIO, self).write(s)
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -121,7 +124,7 @@ T_JAVA_START_ORPHAN = read_contents(os.path.join(SCRIPT_DIR, 'templates/java_cla
 T_JAVA_START_MODULE = read_contents(os.path.join(SCRIPT_DIR, 'templates/java_module.prolog'))
 T_CPP_MODULE = Template(read_contents(os.path.join(SCRIPT_DIR, 'templates/cpp_module.template')))
 
-class GeneralInfo():
+class GeneralInfo(object):
     def __init__(self, type, decl, namespaces):
         self.namespace, self.classpath, self.classname, self.name = self.parseName(decl[0], namespaces)
 
@@ -215,7 +218,7 @@ def cast_to(t):
         return type_dict[t]["cast_to"]
     return t
 
-class ClassPropInfo():
+class ClassPropInfo(object):
     def __init__(self, decl): # [f_ctype, f_name, '', '/RW']
         self.ctype = decl[0]
         self.name = decl[1]
@@ -328,7 +331,7 @@ class ClassInfo(GeneralInfo):
     def generateCppCode(self):
         return self.cpp_code.getvalue()
 
-class ArgInfo():
+class ArgInfo(object):
     def __init__(self, arg_tuple): # [ ctype, name, def val, [mod], argno ]
         self.pointer = False
         ctype = arg_tuple[0]
@@ -554,7 +557,7 @@ class JavaWrapperGenerator(object):
         moduleCppCode = StringIO()
         package_path = os.path.join(output_java_path, module)
         mkdir_p(package_path)
-        for ci in self.classes.values():
+        for ci in list(self.classes.values()):
             if ci.name == "Mat":
                 continue
             ci.initCodeStreams(self.Module)
@@ -578,7 +581,7 @@ class JavaWrapperGenerator(object):
         report.write("\n".join(self.ported_func_list))
         report.write("\n\nSKIPPED FUNCs LIST (%i of %i):\n\n" % (len(self.skipped_func_list), total_count))
         report.write("".join(self.skipped_func_list))
-        for i in self.def_args_hist.keys():
+        for i in list(self.def_args_hist.keys()):
             report.write("\n%i def args - %i funcs" % (i, self.def_args_hist[i]))
         return report.getvalue()
 
@@ -1045,9 +1048,9 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
             %s;\n\n""" % (",\n"+" "*12).join(["%s = %s" % (c.name, const_value(c.value)) for c in ci.private_consts])
             )
         if ci.consts:
-            enumTypes = set(map(lambda c: c.enumType, ci.consts))
+            enumTypes = set([c.enumType for c in ci.consts])
             grouped_consts = {enumType: [c for c in ci.consts if c.enumType == enumType] for enumType in enumTypes}
-            for typeName, consts in grouped_consts.items():
+            for typeName, consts in list(grouped_consts.items()):
                 logging.info("%s", consts)
                 if typeName:
                     typeName = typeName.rsplit(".", 1)[-1]
@@ -1091,7 +1094,7 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
 
         # manual ports
         if ci.name in ManualFuncs:
-            for func in ManualFuncs[ci.name].keys():
+            for func in list(ManualFuncs[ci.name].keys()):
                 ci.j_code.write ( "\n".join(ManualFuncs[ci.name][func]["j_code"]) )
                 ci.jn_code.write( "\n".join(ManualFuncs[ci.name][func]["jn_code"]) )
                 ci.cpp_code.write( "\n".join(ManualFuncs[ci.name][func]["cpp_code"]) )
@@ -1247,7 +1250,7 @@ def sanitize_java_documentation_string(doc, type):
 
     lines = doc.splitlines()
 
-    lines = list(map(lambda x: x[x.find('*'):].strip() if x.lstrip().startswith("*") else x, lines))
+    lines = list([x[x.find('*'):].strip() if x.lstrip().startswith("*") else x for x in lines])
 
     listInd = [];
     indexDiff = 0;
@@ -1299,17 +1302,16 @@ def sanitize_java_documentation_string(doc, type):
         lines.append("  "*i + "</ul>")
         i -= 1;
 
-    lines = list(map(lambda x: "* " + x[1:].strip() if x.startswith("*") and x != "*" else x, lines))
-    lines = list(map(lambda x: x if x.startswith("*") else "* " + x if x and x != "*" else "*", lines))
+    lines = list(["* " + x[1:].strip() if x.startswith("*") and x != "*" else x for x in lines])
+    lines = list([x if x.startswith("*") else "* " + x if x and x != "*" else "*" for x in lines])
 
-    lines = list(map(lambda x: x
-        .replace("@note", "<b>Note:</b>")
-    , lines))
+    lines = list([x
+        .replace("@note", "<b>Note:</b>") for x in lines])
 
-    lines = list(map(lambda x: re.sub('@b ([\\w:]+?)\\b', '<b>' + r'\1' + '</b>', x), lines))
-    lines = list(map(lambda x: re.sub('@c ([\\w:]+?)\\b', '<tt>' + r'\1' + '</tt>', x), lines))
-    lines = list(map(lambda x: re.sub('`(.*?)`', "{@code " + r'\1' + '}', x), lines))
-    lines = list(map(lambda x: re.sub('@p ([\\w:]+?)\\b', '{@code ' + r'\1' + '}', x), lines))
+    lines = list([re.sub('@b ([\\w:]+?)\\b', '<b>' + r'\1' + '</b>', x) for x in lines])
+    lines = list([re.sub('@c ([\\w:]+?)\\b', '<tt>' + r'\1' + '</tt>', x) for x in lines])
+    lines = list([re.sub('`(.*?)`', "{@code " + r'\1' + '}', x) for x in lines])
+    lines = list([re.sub('@p ([\\w:]+?)\\b', '{@code ' + r'\1' + '}', x) for x in lines])
 
     hasValues = False
     for line in lines:

@@ -1,5 +1,8 @@
+from __future__ import division
 # To use Inference Engine backend, specify location of plugins:
 # source /opt/intel/computer_vision_sdk/bin/setupvars.sh
+from builtins import range
+from past.utils import old_div
 import cv2 as cv
 import numpy as np
 import argparse
@@ -95,8 +98,8 @@ while cv.waitKey(1) < 0:
         # we just find a global one. However only a single pose at the same time
         # could be detected this way.
         _, conf, _, point = cv.minMaxLoc(heatMap)
-        x = (frameWidth * point[0]) / out.shape[3]
-        y = (frameHeight * point[1]) / out.shape[2]
+        x = old_div((frameWidth * point[0]), out.shape[3])
+        y = old_div((frameHeight * point[1]), out.shape[2])
 
         # Add a point if it's confidence is higher than threshold.
         points.append((int(x), int(y)) if conf > args.thr else None)
@@ -116,7 +119,7 @@ while cv.waitKey(1) < 0:
             cv.ellipse(frame, points[idTo], (3, 3), 0, 0, 360, (0, 0, 255), cv.FILLED)
 
     t, _ = net.getPerfProfile()
-    freq = cv.getTickFrequency() / 1000
-    cv.putText(frame, '%.2fms' % (t / freq), (10, 20), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0))
+    freq = old_div(cv.getTickFrequency(), 1000)
+    cv.putText(frame, '%.2fms' % (old_div(t, freq)), (10, 20), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0))
 
     cv.imshow('OpenPose using OpenCV', frame)

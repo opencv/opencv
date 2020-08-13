@@ -16,7 +16,11 @@ Keys:
 
 # Python 2/3 compatibility
 from __future__ import print_function
+from __future__ import division
 
+from builtins import chr
+from builtins import range
+from past.utils import old_div
 import numpy as np
 import cv2 as cv
 
@@ -39,7 +43,7 @@ def main():
     focus = int(min(cap.get(cv.CAP_PROP_FOCUS) * 100, 2**31-1))  # ceil focus to C_LONG as Python3 int can go to +inf
 
     cv.createTrackbar("FPS", "Video", fps, 30, lambda v: cap.set(cv.CAP_PROP_FPS, v))
-    cv.createTrackbar("Focus", "Video", focus, 100, lambda v: cap.set(cv.CAP_PROP_FOCUS, v / 100))
+    cv.createTrackbar("Focus", "Video", focus, 100, lambda v: cap.set(cv.CAP_PROP_FOCUS, old_div(v, 100)))
 
     while True:
         _status, img = cap.read()

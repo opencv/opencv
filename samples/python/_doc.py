@@ -8,6 +8,7 @@ ones with missing __doc__ string.
 # Python 2/3 compatibility
 from __future__ import print_function
 
+from past.builtins import execfile
 from glob import glob
 
 if __name__ == '__main__':

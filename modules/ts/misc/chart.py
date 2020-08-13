@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
+from builtins import str
+from builtins import range
 import testlog_parser, sys, os, xml, re
 from table_formatter import *
 from optparse import OptionParser
@@ -116,7 +119,7 @@ if __name__ == "__main__":
     (options, args) = parser.parse_args()
 
     if len(args) != 1:
-        print >> sys.stderr, "Usage:\n", os.path.basename(sys.argv[0]), "<log_name1>.xml"
+        print("Usage:\n", os.path.basename(sys.argv[0]), "<log_name1>.xml", file=sys.stderr)
         exit(1)
 
     options.generateHtml = detectHtmlOutputType(options.format)
@@ -136,7 +139,7 @@ if __name__ == "__main__":
     args[0] = os.path.basename(args[0])
 
     if not tests:
-        print >> sys.stderr, "Error - no tests matched"
+        print("Error - no tests matched", file=sys.stderr)
         exit(1)
 
     argsnum = len(tests[0][1])
@@ -156,30 +159,30 @@ if __name__ == "__main__":
             names1.add(sn)
         if sn == sname:
             if len(pair[1]) != argsnum:
-                print >> sys.stderr, "Error - unable to create chart tables for functions having different argument numbers"
+                print("Error - unable to create chart tables for functions having different argument numbers", file=sys.stderr)
                 sys.exit(1)
             for i in range(argsnum):
                 arglists[i][pair[1][i]] = 1
 
     if names1 or len(names) != 1:
-        print >> sys.stderr, "Error - unable to create tables for functions from different test suits:"
+        print("Error - unable to create tables for functions from different test suits:", file=sys.stderr)
         i = 1
         for name in sorted(names):
-            print >> sys.stderr, "%4s:   %s" % (i, name)
+            print("%4s:   %s" % (i, name), file=sys.stderr)
             i += 1
         if names1:
-            print >> sys.stderr, "Other suits in this log (can not be chosen):"
+            print("Other suits in this log (can not be chosen):", file=sys.stderr)
             for name in sorted(names1):
-                print >> sys.stderr, "%4s:   %s" % (i, name)
+                print("%4s:   %s" % (i, name), file=sys.stderr)
                 i += 1
         sys.exit(1)
 
     if argsnum < 2:
-        print >> sys.stderr, "Error - tests from %s have less than 2 parameters" % sname
+        print("Error - tests from %s have less than 2 parameters" % sname, file=sys.stderr)
         exit(1)
 
     for i in range(argsnum):
-        arglists[i] = sorted([str(key) for key in arglists[i].iterkeys()], key=alphanum_keyselector)
+        arglists[i] = sorted([str(key) for key in arglists[i].keys()], key=alphanum_keyselector)
 
     if options.generateHtml and options.format != "moinwiki":
         htmlPrintHeader(sys.stdout, "Report %s for %s" % (args[0], sname))

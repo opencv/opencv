@@ -1,3 +1,4 @@
+from __future__ import print_function
 # This file is a part of OpenCV project.
 # It is a subject to the license terms in the LICENSE file found in the top-level directory
 # of this distribution and at http://opencv.org/license.html.
@@ -9,13 +10,17 @@
 # deep learning network trained in https://github.com/google/automl.
 # Then you can import it with a binary frozen graph (.pb) using readNetFromTensorflow() function.
 # See details and examples on the following wiki page: https://github.com/opencv/opencv/wiki/TensorFlow-Object-Detection-API
+from builtins import zip
+from builtins import str
+from builtins import range
+from builtins import object
 import argparse
 import re
 from math import sqrt
 from tf_text_graph_common import *
 
 
-class AnchorGenerator:
+class AnchorGenerator(object):
     def __init__(self, min_level, aspect_ratios, num_scales, anchor_scale):
         self.min_level = min_level
         self.aspect_ratios = aspect_ratios

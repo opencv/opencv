@@ -16,7 +16,9 @@ gabor_threads.py [image filename]
 
 # Python 2/3 compatibility
 from __future__ import print_function
+from __future__ import division
 
+from past.utils import old_div
 import numpy as np
 import cv2 as cv
 
@@ -26,7 +28,7 @@ from multiprocessing.pool import ThreadPool
 def build_filters():
     filters = []
     ksize = 31
-    for theta in np.arange(0, np.pi, np.pi / 16):
+    for theta in np.arange(0, np.pi, old_div(np.pi, 16)):
         kern = cv.getGaborKernel((ksize, ksize), 4.0, theta, 10.0, 0.5, 0, ktype=cv.CV_32F)
         kern /= 1.5*kern.sum()
         filters.append(kern)

@@ -1,4 +1,6 @@
 from __future__ import print_function
+from __future__ import division
+from past.utils import old_div
 import sys
 
 import cv2 as cv
@@ -52,8 +54,8 @@ def main(argv):
     magI_rows, magI_cols = magI.shape
     # crop the spectrum, if it has an odd number of rows or columns
     magI = magI[0:(magI_rows & -2), 0:(magI_cols & -2)]
-    cx = int(magI_rows/2)
-    cy = int(magI_cols/2)
+    cx = int(old_div(magI_rows,2))
+    cy = int(old_div(magI_cols,2))
 
     q0 = magI[0:cx, 0:cy]         # Top-Left - Create a ROI per quadrant
     q1 = magI[cx:cx+cx, 0:cy]     # Top-Right

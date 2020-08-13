@@ -1,3 +1,6 @@
+from __future__ import print_function
+from __future__ import division
+from past.utils import old_div
 import sys
 import cv2 as cv
 import numpy as np
@@ -30,7 +33,7 @@ def main(argv):
 
     ## [houghcircles]
     rows = gray.shape[0]
-    circles = cv.HoughCircles(gray, cv.HOUGH_GRADIENT, 1, rows / 8,
+    circles = cv.HoughCircles(gray, cv.HOUGH_GRADIENT, 1, old_div(rows, 8),
                                param1=100, param2=30,
                                minRadius=1, maxRadius=30)
     ## [houghcircles]

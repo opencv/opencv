@@ -23,6 +23,11 @@ Keys:
 
 # Python 2/3 compatibility
 from __future__ import print_function
+from __future__ import division
+from builtins import map
+from builtins import range
+from builtins import object
+from past.utils import old_div
 import sys
 PY3 = sys.version_info[0] == 3
 
@@ -42,23 +47,23 @@ def rnd_warp(a):
     c, s = np.cos(ang), np.sin(ang)
     T[:2, :2] = [[c,-s], [s, c]]
     T[:2, :2] += (np.random.rand(2, 2) - 0.5)*coef
-    c = (w/2, h/2)
+    c = (old_div(w,2), old_div(h,2))
     T[:,2] = c - np.dot(T[:2, :2], c)
     return cv.warpAffine(a, T, (w, h), borderMode = cv.BORDER_REFLECT)
 
 def divSpec(A, B):
     Ar, Ai = A[...,0], A[...,1]
     Br, Bi = B[...,0], B[...,1]
-    C = (Ar+1j*Ai)/(Br+1j*Bi)
+    C = old_div((Ar+1j*Ai),(Br+1j*Bi))
     C = np.dstack([np.real(C), np.imag(C)]).copy()
     return C
 
 eps = 1e-5
 
-class MOSSE:
+class MOSSE(object):
     def __init__(self, frame, rect):
         x1, y1, x2, y2 = rect
-        w, h = map(cv.getOptimalDFTSize, [x2-x1, y2-y1])
+        w, h = list(map(cv.getOptimalDFTSize, [x2-x1, y2-y1]))
         x1, y1 = (x1+x2-w)//2, (y1+y2-h)//2
         self.pos = x, y = x1+0.5*(w-1), y1+0.5*(h-1)
         self.size = w, h
@@ -73,7 +78,7 @@ class MOSSE:
         self.G = cv.dft(g, flags=cv.DFT_COMPLEX_OUTPUT)
         self.H1 = np.zeros_like(self.G)
         self.H2 = np.zeros_like(self.G)
-        for _i in xrange(128):
+        for _i in range(128):
             a = self.preprocess(rnd_warp(img))
             A = cv.dft(a, flags=cv.DFT_COMPLEX_OUTPUT)
             self.H1 += cv.mulSpectrums(self.G, A, 0, conjB=True)
@@ -107,9 +112,9 @@ class MOSSE:
         h, w = f.shape
         f = np.roll(f, -h//2, 0)
         f = np.roll(f, -w//2, 1)
-        kernel = np.uint8( (f-f.min()) / f.ptp()*255 )
+        kernel = np.uint8( old_div((f-f.min()), f.ptp())*255 )
         resp = self.last_resp
-        resp = np.uint8(np.clip(resp/resp.max(), 0, 1)*255)
+        resp = np.uint8(np.clip(old_div(resp,resp.max()), 0, 1)*255)
         vis = np.hstack([self.last_img, kernel, resp])
         return vis
 
@@ -126,7 +131,7 @@ class MOSSE:
 
     def preprocess(self, img):
         img = np.log(np.float32(img)+1.0)
-        img = (img-img.mean()) / (img.std()+eps)
+        img = old_div((img-img.mean()), (img.std()+eps))
         return img*self.win
 
     def correlate(self, img):
@@ -137,14 +142,14 @@ class MOSSE:
         side_resp = resp.copy()
         cv.rectangle(side_resp, (mx-5, my-5), (mx+5, my+5), 0, -1)
         smean, sstd = side_resp.mean(), side_resp.std()
-        psr = (mval-smean) / (sstd+eps)
+        psr = old_div((mval-smean), (sstd+eps))
         return resp, (mx-w//2, my-h//2), psr
 
     def update_kernel(self):
         self.H = divSpec(self.H1, self.H2)
         self.H[...,1] *= -1
 
-class App:
+class App(object):
     def __init__(self, video_src, paused = False):
         self.cap = video.create_capture(video_src)
         _, self.frame = self.cap.read()

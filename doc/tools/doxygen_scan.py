@@ -1,3 +1,4 @@
+from builtins import object
 import traceback
 
 class Symbol(object):

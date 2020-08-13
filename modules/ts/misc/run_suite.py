@@ -1,4 +1,8 @@
 #!/usr/bin/env python
+from __future__ import print_function
+from builtins import str
+from builtins import next
+from builtins import object
 import os
 import re
 import sys
@@ -93,9 +97,9 @@ class TestSuite(object):
         elif self.options.qemu:
             import shlex
             res = shlex.split(self.options.qemu)
-            for (name, value) in [entry for entry in os.environ.items() if entry[0].startswith('OPENCV') and not entry[0] in env]:
+            for (name, value) in [entry for entry in list(os.environ.items()) if entry[0].startswith('OPENCV') and not entry[0] in env]:
                 res += ['-E', '"{}={}"'.format(name, value)]
-            for (name, value) in env.items():
+            for (name, value) in list(env.items()):
                 res += ['-E', '"{}={}"'.format(name, value)]
             return res + ['--'] + cmd
         return cmd

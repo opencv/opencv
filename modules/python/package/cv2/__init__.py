@@ -1,6 +1,8 @@
 '''
 OpenCV Python binary extension loader
 '''
+from __future__ import print_function
+from builtins import str
 import os
 import sys
 

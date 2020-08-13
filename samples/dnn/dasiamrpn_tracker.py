@@ -7,13 +7,17 @@ network:     https://www.dropbox.com/s/rr1lk9355vzolqv/dasiamrpn_model.onnx?dl=0
 kernel_r1:   https://www.dropbox.com/s/999cqx5zrfi7w4p/dasiamrpn_kernel_r1.onnx?dl=0
 kernel_cls1: https://www.dropbox.com/s/qvmtszx5h339a0w/dasiamrpn_kernel_cls1.onnx?dl=0
 """
+from __future__ import division
 
+from builtins import range
+from builtins import object
+from past.utils import old_div
 import numpy as np
 import cv2 as cv
 import argparse
 import sys
 
-class DaSiamRPNTracker:
+class DaSiamRPNTracker(object):
     #initialization of used values, initial bounding box, used network
     def __init__(self, im, target_pos, target_sz, net, kernel_r1, kernel_cls1):
         self.windowing = "cosine"
@@ -70,7 +74,7 @@ class DaSiamRPNTracker:
         count = 0
 
         for ratio in self.ratios:
-            ws = int(np.sqrt(size / ratio))
+            ws = int(np.sqrt(old_div(size, ratio)))
             hs = int(ws * ratio)
             for scale in self.scales:
                 wws = ws * scale
@@ -80,7 +84,7 @@ class DaSiamRPNTracker:
 
         score_sz = int(self.score_size)
         self.anchor = np.tile(self.anchor, score_sz * score_sz).reshape((-1, 4))
-        ori = - (score_sz / 2) * self.total_stride
+        ori = - (old_div(score_sz, 2)) * self.total_stride
         xx, yy = np.meshgrid([ori + self.total_stride * dx for dx in range(score_sz)], [ori + self.total_stride * dy for dy in range(score_sz)])
         xx, yy = np.tile(xx.flatten(), (self.anchor_num, 1)).flatten(), np.tile(yy.flatten(), (self.anchor_num, 1)).flatten()
         self.anchor[:, 0], self.anchor[:, 1] = xx.astype(np.float32), yy.astype(np.float32)
@@ -91,9 +95,9 @@ class DaSiamRPNTracker:
         wc_z = self.target_sz[1] + self.context_amount * sum(self.target_sz)
         hc_z = self.target_sz[0] + self.context_amount * sum(self.target_sz)
         s_z = np.sqrt(wc_z * hc_z)
-        scale_z = self.exemplar_size / s_z
-        d_search = (self.instance_size - self.exemplar_size) / 2
-        pad = d_search / scale_z
+        scale_z = old_div(self.exemplar_size, s_z)
+        d_search = old_div((self.instance_size - self.exemplar_size), 2)
+        pad = old_div(d_search, scale_z)
         s_x = round(s_z + 2 * pad)
 
         #region preprocessing
@@ -137,13 +141,13 @@ class DaSiamRPNTracker:
             sz2 = (wh[0] + pad) * (wh[1] + pad)
             return np.sqrt(sz2)
 
-        s_c = __change(__sz(delta[2, :], delta[3, :]) / (__sz_wh(target_size)))
-        r_c = __change((target_size[0] / target_size[1]) / (delta[2, :] / delta[3, :]))
+        s_c = __change(old_div(__sz(delta[2, :], delta[3, :]), (__sz_wh(target_size))))
+        r_c = __change(old_div((old_div(target_size[0], target_size[1])), (old_div(delta[2, :], delta[3, :]))))
         penalty = np.exp(-(r_c * s_c - 1.) * self.penalty_k)
         pscore = penalty * score
         pscore = pscore * (1 - self.window_influence) + self.window * self.window_influence
         best_pscore_id = np.argmax(pscore)
-        target = delta[:, best_pscore_id] / scale_z
+        target = old_div(delta[:, best_pscore_id], scale_z)
         target_size /= scale_z
         lr = penalty[best_pscore_id] * score[best_pscore_id] * self.lr
         res_x = target[0] + self.target_pos[0]
@@ -157,13 +161,13 @@ class DaSiamRPNTracker:
     def __softmax(self, x):
         x_max = x.max(0)
         e_x = np.exp(x - x_max)
-        y = e_x / e_x.sum(axis = 0)
+        y = old_div(e_x, e_x.sum(axis = 0))
         return y
 
     #evaluations with cropped image
     def __get_subwindow_tracking(self, im, model_size, original_sz):
         im_sz = im.shape
-        c = (original_sz + 1) / 2
+        c = old_div((original_sz + 1), 2)
         context_xmin = round(self.target_pos[0] - c)
         context_xmax = context_xmin + original_sz - 1
         context_ymin = round(self.target_pos[1] - c)
@@ -227,8 +231,8 @@ def main():
                 point2 = (x, y)
 
         elif event == cv.EVENT_LBUTTONUP:
-            cx = point1[0] - (point1[0] - point2[0]) / 2
-            cy = point1[1] - (point1[1] - point2[1]) / 2
+            cx = point1[0] - old_div((point1[0] - point2[0]), 2)
+            cy = point1[1] - old_div((point1[1] - point2[1]), 2)
             w = abs(point1[0] - point2[0])
             h = abs(point1[1] - point2[1])
             mark = False

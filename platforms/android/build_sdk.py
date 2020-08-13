@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
+from builtins import object
 import os, sys
 import argparse
 import glob
@@ -117,7 +119,7 @@ def get_highest_version(subdirs):
 
 #===================================================================================================
 
-class ABI:
+class ABI(object):
     def __init__(self, platform_id, name, toolchain, ndk_api_level = None, cmake_vars = dict()):
         self.platform_id = platform_id # platform code to add to apk version (for cmake)
         self.name = name # general name (official Android ABI identifier)
@@ -142,7 +144,7 @@ class ABI:
 
 #===================================================================================================
 
-class Builder:
+class Builder(object):
     def __init__(self, workdir, opencvdir, config):
         self.workdir = check_dir(workdir, create=True)
         self.opencvdir = check_dir(opencvdir)
@@ -248,7 +250,7 @@ class Builder:
             cmd.extend(["-DBUILD_TESTS=ON", "-DINSTALL_TESTS=ON"])
 
         cmake_vars.update(abi.cmake_vars)
-        cmd += [ "-D%s='%s'" % (k, v) for (k, v) in cmake_vars.items() if v is not None]
+        cmd += [ "-D%s='%s'" % (k, v) for (k, v) in list(cmake_vars.items()) if v is not None]
         cmd.append(self.opencvdir)
         execute(cmd)
         # full parallelism for C++ compilation tasks

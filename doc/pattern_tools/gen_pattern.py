@@ -15,13 +15,17 @@ python gen_pattern.py -o out.svg -r 11 -c 8 -T circles -s 20.0 -R 5.0 -u mm -w 2
 -a, --page_size - page size (default A4), supersedes -h -w arguments
 -H, --help - show help
 """
+from __future__ import division
 
+from builtins import range
+from builtins import object
+from past.utils import old_div
 import argparse
 
 from svgfig import *
 
 
-class PatternMaker:
+class PatternMaker(object):
     def __init__(self, cols, rows, output, units, square_size, radius_rate, page_width, page_height):
         self.cols = cols
         self.rows = rows
@@ -35,7 +39,7 @@ class PatternMaker:
 
     def make_circles_pattern(self):
         spacing = self.square_size
-        r = spacing / self.radius_rate
+        r = old_div(spacing, self.radius_rate)
         for x in range(1, self.cols + 1):
             for y in range(1, self.rows + 1):
                 dot = SVG("circle", cx=x * spacing, cy=y * spacing, r=r, fill="black", stroke="none")
@@ -43,7 +47,7 @@ class PatternMaker:
 
     def make_acircles_pattern(self):
         spacing = self.square_size
-        r = spacing / self.radius_rate
+        r = old_div(spacing, self.radius_rate)
         for i in range(0, self.rows):
             for j in range(0, self.cols):
                 dot = SVG("circle", cx=((j * 2 + i % 2) * spacing) + spacing, cy=self.height - (i * spacing + spacing),

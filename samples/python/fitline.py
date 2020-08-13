@@ -24,6 +24,8 @@ ESC   - exit
 
 # Python 2/3 compatibility
 from __future__ import print_function
+from builtins import map
+from builtins import next
 import sys
 PY3 = sys.version_info[0] == 3
 
@@ -52,7 +54,7 @@ dist_func_names = it.cycle('DIST_L2 DIST_L1 DIST_L12 DIST_FAIR DIST_WELSCH DIST_
 if PY3:
     cur_func_name = next(dist_func_names)
 else:
-    cur_func_name = dist_func_names.next()
+    cur_func_name = next(dist_func_names)
 
 def update(_=None):
     noise = cv.getTrackbarPos('noise', 'fit line')
@@ -92,7 +94,7 @@ def main():
             if PY3:
                 cur_func_name = next(dist_func_names)
             else:
-                cur_func_name = dist_func_names.next()
+                cur_func_name = next(dist_func_names)
         if ch == 27:
             break
 

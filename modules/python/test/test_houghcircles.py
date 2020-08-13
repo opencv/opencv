@@ -6,7 +6,10 @@ This example illustrates how to use cv.HoughCircles() function.
 
 # Python 2/3 compatibility
 from __future__ import print_function
+from __future__ import division
 
+from builtins import range
+from past.utils import old_div
 import cv2 as cv
 import numpy as np
 import sys
@@ -17,7 +20,7 @@ from tests_common import NewOpenCVTests
 def circleApproximation(circle):
 
     nPoints = 30
-    dPhi = 2*pi / nPoints
+    dPhi = old_div(2*pi, nPoints)
     contour = []
     for i in range(nPoints):
         contour.append(([circle[0] + circle[2]*cos(i*dPhi),
@@ -32,7 +35,7 @@ def convContoursIntersectiponRate(c1, c2):
 
     s, _ = cv.intersectConvexConvex(c1, c2)
 
-    return 2*s/(s1+s2)
+    return old_div(2*s,(s1+s2))
 
 class houghcircles_test(NewOpenCVTests):
 

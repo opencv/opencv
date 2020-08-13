@@ -3,7 +3,9 @@
 
 # Python 2/3 compatibility
 from __future__ import print_function
+from __future__ import division
 
+from past.utils import old_div
 import numpy as np
 import cv2 as cv
 
@@ -41,7 +43,7 @@ def basicPanoramaStitching(img1Path, img2Path):
 
     # [compute-homography]
     H = cameraMatrix.dot(R_2to1).dot(np.linalg.inv(cameraMatrix))
-    H = H / H[2][2]
+    H = old_div(H, H[2][2])
     # [compute-homography]
 
     # [stitch]

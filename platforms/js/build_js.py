@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from builtins import str
+from builtins import object
 import os, sys, subprocess, argparse, shutil, glob, re, multiprocessing
 import logging as log
 
@@ -62,7 +64,7 @@ def find_file(name, path):
         if name in files:
             return os.path.join(root, name)
 
-class Builder:
+class Builder(object):
     def __init__(self, options):
         self.options = options
         self.build_dir = check_dir(options.build_dir, create=True)

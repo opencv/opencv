@@ -6,7 +6,9 @@ Utility for measuring python opencv API coverage by samples.
 
 # Python 2/3 compatibility
 from __future__ import print_function
+from __future__ import division
 
+from past.utils import old_div
 from glob import glob
 import cv2 as cv
 import re
@@ -25,5 +27,5 @@ if __name__ == '__main__':
     with open('unused_api.txt', 'w') as f:
         f.write('\n'.join(sorted(cv2_unused)))
 
-    r = 1.0 * len(cv2_used) / len(cv2_callable)
+    r = old_div(1.0 * len(cv2_used), len(cv2_callable))
     print('\ncv api coverage: %d / %d  (%.1f%%)' % ( len(cv2_used), len(cv2_callable), r*100 ))

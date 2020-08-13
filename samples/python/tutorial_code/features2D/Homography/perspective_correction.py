@@ -3,7 +3,10 @@
 
 # Python 2/3 compatibility
 from __future__ import print_function
+from __future__ import division
 
+from builtins import range
+from past.utils import old_div
 import numpy as np
 import cv2 as cv
 import sys
@@ -47,7 +50,7 @@ def  perspectiveCorrection(img1Path, img2Path ,patternSize ):
         pt1 = np.array([corners1[i][0], corners1[i][1], 1])
         pt1 = pt1.reshape(3, 1)
         pt2 = np.dot(H, pt1)
-        pt2 = pt2/pt2[2]
+        pt2 = old_div(pt2,pt2[2])
         end = (int(img1.shape[1] + pt2[0]), int(pt2[1]))
         cv.line(img_draw_matches, tuple([int(j) for j in corners1[i]]), end, randomColor(), 2)
 

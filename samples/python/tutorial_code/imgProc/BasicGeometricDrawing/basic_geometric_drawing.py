@@ -1,3 +1,5 @@
+from __future__ import division
+from past.utils import old_div
 import cv2 as cv
 import numpy as np
 
@@ -34,16 +36,16 @@ def my_polygon(img):
     line_type = 8
 
     # Create some points
-    ppt = np.array([[W / 4, 7 * W / 8], [3 * W / 4, 7 * W / 8],
-                    [3 * W / 4, 13 * W / 16], [11 * W / 16, 13 * W / 16],
-                    [19 * W / 32, 3 * W / 8], [3 * W / 4, 3 * W / 8],
-                    [3 * W / 4, W / 8], [26 * W / 40, W / 8],
-                    [26 * W / 40, W / 4], [22 * W / 40, W / 4],
-                    [22 * W / 40, W / 8], [18 * W / 40, W / 8],
-                    [18 * W / 40, W / 4], [14 * W / 40, W / 4],
-                    [14 * W / 40, W / 8], [W / 4, W / 8],
-                    [W / 4, 3 * W / 8], [13 * W / 32, 3 * W / 8],
-                    [5 * W / 16, 13 * W / 16], [W / 4, 13 * W / 16]], np.int32)
+    ppt = np.array([[old_div(W, 4), old_div(7 * W, 8)], [old_div(3 * W, 4), old_div(7 * W, 8)],
+                    [old_div(3 * W, 4), old_div(13 * W, 16)], [old_div(11 * W, 16), old_div(13 * W, 16)],
+                    [old_div(19 * W, 32), old_div(3 * W, 8)], [old_div(3 * W, 4), old_div(3 * W, 8)],
+                    [old_div(3 * W, 4), old_div(W, 8)], [old_div(26 * W, 40), old_div(W, 8)],
+                    [old_div(26 * W, 40), old_div(W, 4)], [old_div(22 * W, 40), old_div(W, 4)],
+                    [old_div(22 * W, 40), old_div(W, 8)], [old_div(18 * W, 40), old_div(W, 8)],
+                    [old_div(18 * W, 40), old_div(W, 4)], [old_div(14 * W, 40), old_div(W, 4)],
+                    [old_div(14 * W, 40), old_div(W, 8)], [old_div(W, 4), old_div(W, 8)],
+                    [old_div(W, 4), old_div(3 * W, 8)], [old_div(13 * W, 32), old_div(3 * W, 8)],
+                    [old_div(5 * W, 16), old_div(13 * W, 16)], [old_div(W, 4), old_div(13 * W, 16)]], np.int32)
     ppt = ppt.reshape((-1, 1, 2))
     cv.fillPoly(img, [ppt], (255, 255, 255), line_type)
     # Only drawind the lines would be:

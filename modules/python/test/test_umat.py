@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from __future__ import print_function
 
+from builtins import zip
 import numpy as np
 import cv2 as cv
 
@@ -87,9 +88,9 @@ class UMat(NewOpenCVTests):
 
         _p1_mask_err = cv.calcOpticalFlowPyrLK(img1, img2, p0, None)
 
-        _p1_mask_err_umat0 = list(map(lambda umat: umat.get(), cv.calcOpticalFlowPyrLK(img1, img2, p0_umat, None)))
-        _p1_mask_err_umat1 = list(map(lambda umat: umat.get(), cv.calcOpticalFlowPyrLK(cv.UMat(img1), img2, p0_umat, None)))
-        _p1_mask_err_umat2 = list(map(lambda umat: umat.get(), cv.calcOpticalFlowPyrLK(img1, cv.UMat(img2), p0_umat, None)))
+        _p1_mask_err_umat0 = list([umat.get() for umat in cv.calcOpticalFlowPyrLK(img1, img2, p0_umat, None)])
+        _p1_mask_err_umat1 = list([umat.get() for umat in cv.calcOpticalFlowPyrLK(cv.UMat(img1), img2, p0_umat, None)])
+        _p1_mask_err_umat2 = list([umat.get() for umat in cv.calcOpticalFlowPyrLK(img1, cv.UMat(img2), p0_umat, None)])
 
         for _p1_mask_err_umat in [_p1_mask_err_umat0, _p1_mask_err_umat1, _p1_mask_err_umat2]:
             for data, data_umat in zip(_p1_mask_err, _p1_mask_err_umat):

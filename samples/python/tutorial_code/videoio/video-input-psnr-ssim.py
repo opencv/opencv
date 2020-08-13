@@ -3,7 +3,9 @@
 
 # Python 2/3 compatibility
 from __future__ import print_function
+from __future__ import division
 
+from past.utils import old_div
 import numpy as np
 import cv2 as cv
 import argparse
@@ -19,8 +21,8 @@ def getPSNR(I1, I2):
         return 0            # for small values return zero
     else:
         shape = I1.shape
-        mse = 1.0 * sse / (shape[0] * shape[1] * shape[2])
-        psnr = 10.0 * np.log10((255 * 255) / mse)
+        mse = old_div(1.0 * sse, (shape[0] * shape[1] * shape[2]))
+        psnr = 10.0 * np.log10(old_div((255 * 255), mse))
         return psnr
 # [get-psnr]
 

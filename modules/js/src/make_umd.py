@@ -1,3 +1,4 @@
+from __future__ import print_function
 ###############################################################################
 #
 #  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.

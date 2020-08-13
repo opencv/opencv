@@ -1,4 +1,5 @@
 from __future__ import print_function
+from builtins import range
 from builtins import input
 import cv2 as cv
 import numpy as np

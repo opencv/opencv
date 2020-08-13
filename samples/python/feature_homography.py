@@ -25,6 +25,8 @@ Select a textured planar object to track by drawing a box with a mouse.
 # Python 2/3 compatibility
 from __future__ import print_function
 
+from builtins import zip
+from builtins import object
 import numpy as np
 import cv2 as cv
 
@@ -36,7 +38,7 @@ from common import getsize, draw_keypoints
 from plane_tracker import PlaneTracker
 
 
-class App:
+class App(object):
     def __init__(self, src):
         self.cap = video.create_capture(src, presets['book'])
         self.frame = None

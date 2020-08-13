@@ -1,5 +1,8 @@
 from __future__ import print_function
 
+from builtins import str
+from builtins import range
+from builtins import object
 import os
 import sys
 import csv
@@ -7,7 +10,7 @@ from pprint import pprint
 from collections import deque
 
 try:
-    long        # Python 2
+    int        # Python 2
 except NameError:
     long = int  # Python 3
 
@@ -39,7 +42,7 @@ def tryNum(s):
         pass
     if sys.version_info[0] < 3:
         try:
-            return long(s)
+            return int(s)
         except ValueError:
             pass
     return s
@@ -119,7 +122,7 @@ def getCXXFunctionName(spec):
 
 stack_size = 10
 
-class Trace:
+class Trace(object):
     def __init__(self, filename=None):
         self.tasks = {}
         self.tasks_list = []
@@ -129,7 +132,7 @@ class Trace:
         if filename:
             self.load(filename)
 
-    class TraceTask:
+    class TraceTask(object):
         def __init__(self, threadID, taskID, locationID, beginTimestamp):
             self.threadID = threadID
             self.taskID = taskID
@@ -150,7 +153,7 @@ class Trace:
                 self.beginTimestamp, self.endTimestamp, self.totalTimeIPP, self.selfTimeIPP, self.totalTimeOpenCL, self.selfTimeOpenCL)
 
 
-    class TraceLocation:
+    class TraceLocation(object):
         def __init__(self, locationID, filename, line, name, flags):
             self.locationID = locationID
             self.filename = os.path.split(filename)[1]
@@ -252,7 +255,7 @@ class Trace:
         self.tasks_list.sort(key=lambda x: x.beginTimestamp)
 
         parallel_for_location = None
-        for (id, l) in self.locations.items():
+        for (id, l) in list(self.locations.items()):
             if l.name == 'parallel_for':
                 parallel_for_location = l.locationID
                 break
@@ -330,7 +333,7 @@ class Trace:
     def dump(self, max_entries):
         assert isinstance(max_entries, int)
 
-        class CallInfo():
+        class CallInfo(object):
             def __init__(self, callID):
                 self.callID = callID
                 self.totalTimes = []
@@ -369,16 +372,16 @@ class Trace:
         dpprint(self.locations)
         dpprint(calls)
 
-        calls_self_sum = {k: sum(v.selfTimes) for (k, v) in calls.items()}
-        calls_total_sum = {k: sum(v.totalTimes) for (k, v) in calls.items()}
-        calls_median = {k: median(v.selfTimes) for (k, v) in calls.items()}
-        calls_sorted = sorted(calls.keys(), key=lambda x: calls_self_sum[x], reverse=True)
+        calls_self_sum = {k: sum(v.selfTimes) for (k, v) in list(calls.items())}
+        calls_total_sum = {k: sum(v.totalTimes) for (k, v) in list(calls.items())}
+        calls_median = {k: median(v.selfTimes) for (k, v) in list(calls.items())}
+        calls_sorted = sorted(list(calls.keys()), key=lambda x: calls_self_sum[x], reverse=True)
 
-        calls_self_sum_IPP = {k: sum(v.selfTimesIPP) for (k, v) in calls.items()}
-        calls_total_sum_IPP = {k: sum(v.totalTimesIPP) for (k, v) in calls.items()}
+        calls_self_sum_IPP = {k: sum(v.selfTimesIPP) for (k, v) in list(calls.items())}
+        calls_total_sum_IPP = {k: sum(v.totalTimesIPP) for (k, v) in list(calls.items())}
 
-        calls_self_sum_OpenCL = {k: sum(v.selfTimesOpenCL) for (k, v) in calls.items()}
-        calls_total_sum_OpenCL = {k: sum(v.totalTimesOpenCL) for (k, v) in calls.items()}
+        calls_self_sum_OpenCL = {k: sum(v.selfTimesOpenCL) for (k, v) in list(calls.items())}
+        calls_total_sum_OpenCL = {k: sum(v.totalTimesOpenCL) for (k, v) in list(calls.items())}
 
         if max_entries > 0 and len(calls_sorted) > max_entries:
             calls_sorted = calls_sorted[:max_entries]

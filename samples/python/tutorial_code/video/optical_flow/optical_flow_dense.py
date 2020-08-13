@@ -1,3 +1,5 @@
+from __future__ import division
+from past.utils import old_div
 import numpy as np
 import cv2 as cv
 cap = cv.VideoCapture(cv.samples.findFile("vtest.avi"))
@@ -10,7 +12,7 @@ while(1):
     next = cv.cvtColor(frame2,cv.COLOR_BGR2GRAY)
     flow = cv.calcOpticalFlowFarneback(prvs,next, None, 0.5, 3, 15, 3, 5, 1.2, 0)
     mag, ang = cv.cartToPolar(flow[...,0], flow[...,1])
-    hsv[...,0] = ang*180/np.pi/2
+    hsv[...,0] = old_div(old_div(ang*180,np.pi),2)
     hsv[...,2] = cv.normalize(mag,None,0,255,cv.NORM_MINMAX)
     bgr = cv.cvtColor(hsv,cv.COLOR_HSV2BGR)
     cv.imshow('frame2',bgr)

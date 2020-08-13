@@ -1,4 +1,6 @@
 from __future__ import print_function
+from __future__ import division
+from past.utils import old_div
 import cv2 as cv
 import numpy as np
 import argparse
@@ -44,8 +46,8 @@ while cv.waitKey(1) < 0:
     out = out.transpose(1, 2, 0)
 
     t, _ = net.getPerfProfile()
-    freq = cv.getTickFrequency() / 1000
-    print(t / freq, 'ms')
+    freq = old_div(cv.getTickFrequency(), 1000)
+    print(old_div(t, freq), 'ms')
 
     if args.median_filter:
         out = cv.medianBlur(out, args.median_filter)

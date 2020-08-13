@@ -14,6 +14,9 @@ browse.py [image filename]
 
 # Python 2/3 compatibility
 from __future__ import print_function
+from __future__ import division
+from builtins import range
+from past.utils import old_div
 import sys
 PY3 = sys.version_info[0] == 3
 
@@ -40,18 +43,18 @@ def main():
         print('generating %dx%d procedural image ...' % (sz, sz))
         img = np.zeros((sz, sz), np.uint8)
         track = np.cumsum(np.random.rand(500000, 2)-0.5, axis=0)
-        track = np.int32(track*10 + (sz/2, sz/2))
+        track = np.int32(track*10 + (old_div(sz,2), old_div(sz,2)))
         cv.polylines(img, [track], 0, 255, 1, cv.LINE_AA)
 
 
     small = img
-    for _i in xrange(3):
+    for _i in range(3):
         small = cv.pyrDown(small)
 
     def onmouse(event, x, y, flags, param):
         h, _w = img.shape[:2]
         h1, _w1 = small.shape[:2]
-        x, y = 1.0*x*h/h1, 1.0*y*h/h1
+        x, y = old_div(1.0*x*h,h1), old_div(1.0*y*h,h1)
         zoom = cv.getRectSubPix(img, (800, 600), (x+0.5, y+0.5))
         cv.imshow('zoom', zoom)
 

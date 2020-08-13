@@ -1,13 +1,15 @@
 #!/usr/bin/env python
 """Algorithm serialization test."""
 from __future__ import print_function
+from builtins import range
+from builtins import object
 import tempfile
 import os
 import cv2 as cv
 import numpy as np
 from tests_common import NewOpenCVTests
 
-class MyData:
+class MyData(object):
     def __init__(self):
         self.A = 97
         self.X = np.pi

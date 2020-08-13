@@ -12,7 +12,9 @@ Keys:
 
 # Python 2/3 compatibility
 from __future__ import print_function
+from __future__ import division
 
+from past.utils import old_div
 import numpy as np
 import cv2 as cv
 
@@ -28,8 +30,8 @@ def main():
         print('Failed to load image file:', fn)
         sys.exit(1)
 
-    img2 = cv.logPolar(img, (img.shape[0]/2, img.shape[1]/2), 40, cv.WARP_FILL_OUTLIERS)
-    img3 = cv.linearPolar(img, (img.shape[0]/2, img.shape[1]/2), 40, cv.WARP_FILL_OUTLIERS)
+    img2 = cv.logPolar(img, (old_div(img.shape[0],2), old_div(img.shape[1],2)), 40, cv.WARP_FILL_OUTLIERS)
+    img3 = cv.linearPolar(img, (old_div(img.shape[0],2), old_div(img.shape[1],2)), 40, cv.WARP_FILL_OUTLIERS)
 
     cv.imshow('before', img)
     cv.imshow('logpolar', img2)

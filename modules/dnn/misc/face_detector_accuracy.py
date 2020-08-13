@@ -1,6 +1,7 @@
 # This script is used to estimate an accuracy of different face detection models.
 # COCO evaluation tool is used to compute an accuracy metrics (Average Precision).
 # Script works with different face detection datasets.
+from builtins import range
 import os
 import json
 from fnmatch import fnmatch

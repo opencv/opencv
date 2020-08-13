@@ -1,3 +1,7 @@
+from __future__ import print_function
+from __future__ import division
+from builtins import range
+from past.utils import old_div
 import sys
 import cv2 as cv
 import numpy as np
@@ -74,7 +78,7 @@ def main(argv):
     ## [bilateralfilter]
     # Remember, bilateral is a bit slow, so as value go higher, it takes long time
     for i in range(1, MAX_KERNEL_LENGTH, 2):
-        dst = cv.bilateralFilter(src, i, i * 2, i / 2)
+        dst = cv.bilateralFilter(src, i, i * 2, old_div(i, 2))
         if display_dst(DELAY_BLUR) != 0:
             return 0
     ## [bilateralfilter]
@@ -90,7 +94,7 @@ def display_caption(caption):
     dst = np.zeros(src.shape, src.dtype)
     rows, cols, _ch = src.shape
     cv.putText(dst, caption,
-                (int(cols / 4), int(rows / 2)),
+                (int(old_div(cols, 4)), int(old_div(rows, 2))),
                 cv.FONT_HERSHEY_COMPLEX, 1, (255, 255, 255))
 
     return display_dst(DELAY_CAPTION)

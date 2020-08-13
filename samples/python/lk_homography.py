@@ -23,6 +23,8 @@ r     - toggle RANSAC
 # Python 2/3 compatibility
 from __future__ import print_function
 
+from builtins import zip
+from builtins import object
 import numpy as np
 import cv2 as cv
 
@@ -49,7 +51,7 @@ def checkedTrace(img0, img1, p0, back_threshold = 1.0):
 green = (0, 255, 0)
 red = (0, 0, 255)
 
-class App:
+class App(object):
     def __init__(self, video_src):
         self.cam = self.cam = video.create_capture(video_src, presets['book'])
         self.p0 = None

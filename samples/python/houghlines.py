@@ -11,6 +11,7 @@ Usage:
 # Python 2/3 compatibility
 from __future__ import print_function
 
+from builtins import range
 import cv2 as cv
 import numpy as np
 

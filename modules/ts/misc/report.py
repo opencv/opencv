@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
+from builtins import str
 import testlog_parser, sys, os, xml, re, glob
 from table_formatter import *
 from optparse import OptionParser
@@ -14,7 +16,7 @@ if __name__ == "__main__":
     (options, args) = parser.parse_args()
 
     if len(args) < 1:
-        print >> sys.stderr, "Usage:\n", os.path.basename(sys.argv[0]), "<log_name1>.xml"
+        print("Usage:\n", os.path.basename(sys.argv[0]), "<log_name1>.xml", file=sys.stderr)
         exit(0)
 
     options.generateHtml = detectHtmlOutputType(options.format)

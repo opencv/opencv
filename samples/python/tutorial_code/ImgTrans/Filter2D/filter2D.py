@@ -2,6 +2,7 @@
 @file filter2D.py
 @brief Sample code that shows how to implement your own linear filters by using filter2D function
 """
+from __future__ import print_function
 import sys
 import cv2 as cv
 import numpy as np

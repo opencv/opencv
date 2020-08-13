@@ -1,3 +1,6 @@
+from builtins import str
+from builtins import range
+from builtins import object
 def tokenize(s):
     tokens = []
     token = ""
@@ -168,7 +171,7 @@ def addFlatten(inp, out, graph_def):
     graph_def.node.extend([flatten])
 
 
-class NodeDef:
+class NodeDef(object):
     def __init__(self):
         self.input = []
         self.name = ""
@@ -197,7 +200,7 @@ class NodeDef:
         self.attr = {}
 
 
-class GraphDef:
+class GraphDef(object):
     def __init__(self):
         self.node = []
 
@@ -206,7 +209,7 @@ class GraphDef:
 
             def printAttr(d, indent):
                 indent = ' ' * indent
-                for key, value in sorted(d.items(), key=lambda x:x[0].lower()):
+                for key, value in sorted(list(d.items()), key=lambda x:x[0].lower()):
                     value = value if isinstance(value, list) else [value]
                     for v in value:
                         if isinstance(v, dict):
@@ -237,7 +240,7 @@ class GraphDef:
                 f.write('  op: \"%s\"\n' % node.op)
                 for inp in node.input:
                     f.write('  input: \"%s\"\n' % inp)
-                for key, value in sorted(node.attr.items(), key=lambda x:x[0].lower()):
+                for key, value in sorted(list(node.attr.items()), key=lambda x:x[0].lower()):
                     f.write('  attr {\n')
                     f.write('    key: \"%s\"\n' % key)
                     f.write('    value {\n')
@@ -285,7 +288,7 @@ def removeUnusedNodesAndAttrs(to_remove, graph_def):
 
     removedNodes = []
 
-    for i in reversed(range(len(graph_def.node))):
+    for i in reversed(list(range(len(graph_def.node)))):
         op = graph_def.node[i].op
         name = graph_def.node[i].name
 
@@ -301,7 +304,7 @@ def removeUnusedNodesAndAttrs(to_remove, graph_def):
 
     # Remove references to removed nodes except Const nodes.
     for node in graph_def.node:
-        for i in reversed(range(len(node.input))):
+        for i in reversed(list(range(len(node.input)))):
             if node.input[i] in removedNodes:
                 del node.input[i]
 

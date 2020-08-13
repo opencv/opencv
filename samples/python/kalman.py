@@ -11,7 +11,10 @@
    Pressing any key (except ESC) will reset the tracking with a different speed.
    Pressing ESC will stop the program.
 """
+from __future__ import print_function
+from __future__ import division
 # Python 2/3 compatibility
+from past.utils import old_div
 import sys
 PY3 = sys.version_info[0] == 3
 
@@ -29,7 +32,7 @@ def main():
     img_width = 500
     kalman = cv.KalmanFilter(2, 1, 0)
 
-    code = long(-1)
+    code = int(-1)
 
     cv.namedWindow("Kalman")
 
@@ -45,8 +48,8 @@ def main():
 
         while True:
             def calc_point(angle):
-                return (np.around(img_width/2 + img_width/3*cos(angle), 0).astype(int),
-                        np.around(img_height/2 - img_width/3*sin(angle), 1).astype(int))
+                return (np.around(old_div(img_width,2) + old_div(img_width,3)*cos(angle), 0).astype(int),
+                        np.around(old_div(img_height,2) - old_div(img_width,3)*sin(angle), 1).astype(int))
 
             state_angle = state[0, 0]
             state_pt = calc_point(state_angle)

@@ -1,3 +1,5 @@
+from __future__ import print_function
+from __future__ import division
 # This file is a part of OpenCV project.
 # It is a subject to the license terms in the LICENSE file found in the top-level directory
 # of this distribution and at http://opencv.org/license.html.
@@ -9,12 +11,16 @@
 # deep learning network trained in TensorFlow Object Detection API.
 # Then you can import it with a binary frozen graph (.pb) using readNetFromTensorflow() function.
 # See details and examples on the following wiki page: https://github.com/opencv/opencv/wiki/TensorFlow-Object-Detection-API
+from builtins import str
+from builtins import range
+from builtins import object
+from past.utils import old_div
 import argparse
 import re
 from math import sqrt
 from tf_text_graph_common import *
 
-class SSDAnchorGenerator:
+class SSDAnchorGenerator(object):
     def __init__(self, min_scale, max_scale, num_layers, aspect_ratios,
                  reduce_boxes_in_lowest_layer, image_width, image_height):
         self.min_scale = min_scale
@@ -22,16 +28,16 @@ class SSDAnchorGenerator:
         self.reduce_boxes_in_lowest_layer = reduce_boxes_in_lowest_layer
         self.image_width = image_width
         self.image_height = image_height
-        self.scales =  [min_scale + (max_scale - min_scale) * i / (num_layers - 1)
+        self.scales =  [min_scale + old_div((max_scale - min_scale) * i, (num_layers - 1))
                             for i in range(num_layers)] + [1.0]
 
     def get(self, layer_id):
         if layer_id == 0 and self.reduce_boxes_in_lowest_layer:
             widths = [0.1, self.min_scale * sqrt(2.0), self.min_scale * sqrt(0.5)]
-            heights = [0.1, self.min_scale / sqrt(2.0), self.min_scale / sqrt(0.5)]
+            heights = [0.1, old_div(self.min_scale, sqrt(2.0)), old_div(self.min_scale, sqrt(0.5))]
         else:
             widths = [self.scales[layer_id] * sqrt(ar) for ar in self.aspect_ratios]
-            heights = [self.scales[layer_id] / sqrt(ar) for ar in self.aspect_ratios]
+            heights = [old_div(self.scales[layer_id], sqrt(ar)) for ar in self.aspect_ratios]
 
             widths += [sqrt(self.scales[layer_id] * self.scales[layer_id + 1])]
             heights += [sqrt(self.scales[layer_id] * self.scales[layer_id + 1])]
@@ -41,7 +47,7 @@ class SSDAnchorGenerator:
         return widths, heights
 
 
-class MultiscaleAnchorGenerator:
+class MultiscaleAnchorGenerator(object):
     def __init__(self, min_level, aspect_ratios, scales_per_octave, anchor_scale):
         self.min_level = min_level
         self.aspect_ratios = aspect_ratios
@@ -55,7 +61,7 @@ class MultiscaleAnchorGenerator:
             for s in self.scales:
                 base_anchor_size = 2**(self.min_level + layer_id) * self.anchor_scale
                 ar = sqrt(a)
-                heights.append(base_anchor_size * s / ar)
+                heights.append(old_div(base_anchor_size * s, ar))
                 widths.append(base_anchor_size * s * ar)
         return widths, heights
 

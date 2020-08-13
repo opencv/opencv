@@ -17,6 +17,7 @@ USAGE
 # Python 2/3 compatibility
 from __future__ import print_function
 
+from builtins import zip
 import numpy as np
 import cv2 as cv
 
@@ -68,7 +69,7 @@ def filter_matches(kp1, kp2, matches, ratio = 0.75):
             mkp2.append( kp2[m.trainIdx] )
     p1 = np.float32([kp.pt for kp in mkp1])
     p2 = np.float32([kp.pt for kp in mkp2])
-    kp_pairs = zip(mkp1, mkp2)
+    kp_pairs = list(zip(mkp1, mkp2))
     return p1, p2, list(kp_pairs)
 
 def explore_match(win, img1, img2, kp_pairs, status = None, H = None):

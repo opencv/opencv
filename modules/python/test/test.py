@@ -7,6 +7,9 @@ Location of tests:
 
 from __future__ import print_function
 
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
 import sys
 sys.dont_write_bytecode = True  # Don't generate .pyc files / __pycache__ directories
 
@@ -17,7 +20,7 @@ import unittest
 try:
     from urllib.request import urlopen
 except ImportError:
-    from urllib import urlopen
+    from urllib.request import urlopen
 
 from tests_common import NewOpenCVTests
 

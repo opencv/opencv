@@ -1,3 +1,4 @@
+from builtins import object
 import numpy as np
 import sys
 import os
@@ -19,7 +20,7 @@ from pascal_semsegm_test_fcn import eval_segm_result, get_conf_mat, get_metrics,
 from imagenet_cls_test_alexnet import Framework, DnnCaffeModel
 
 
-class NormalizePreproc:
+class NormalizePreproc(object):
     def __init__(self):
         pass
 
@@ -61,7 +62,7 @@ class CityscapesDataFetch(DatasetImageFetch):
     def __iter__(self):
         return self
 
-    def next(self):
+    def __next__(self):
         if self.i < len(self.segm_files):
             segm_file = self.segm_files[self.i]
             segm = cv.imread(segm_file, cv.IMREAD_COLOR)[:, :, ::-1]

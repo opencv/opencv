@@ -6,6 +6,11 @@ Sample-launcher application.
 
 # Python 2/3 compatibility
 from __future__ import print_function
+from past.builtins import execfile
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import object
 import sys
 
 # local modules
@@ -20,8 +25,8 @@ try:
     import tkinter as tk  # Python 3
     from tkinter.scrolledtext import ScrolledText
 except ImportError:
-    import Tkinter as tk  # Python 2
-    from ScrolledText import ScrolledText
+    import tkinter as tk  # Python 2
+    from tkinter.scrolledtext import ScrolledText
 
 
 #from IPython.Shell import IPShellEmbed
@@ -29,7 +34,7 @@ except ImportError:
 
 exclude_list = ['demo', 'common']
 
-class LinkManager:
+class LinkManager(object):
     def __init__(self, text, url_callback = None):
         self.text = text
         self.text.tag_config("link", foreground="blue", underline=1)
@@ -63,7 +68,7 @@ class LinkManager:
                     if self.url_callback:
                         self.url_callback(proc)
 
-class App:
+class App(object):
     def __init__(self):
         root = tk.Tk()
         root.title('OpenCV Demo')

@@ -1,5 +1,6 @@
 from __future__ import print_function
 
+from builtins import input
 import cv2 as cv
 
 alpha = 0.5
@@ -12,7 +13,7 @@ except NameError:
 print(''' Simple Linear Blender
 -----------------------
 * Enter alpha [0.0-1.0]: ''')
-input_alpha = float(raw_input().strip())
+input_alpha = float(input().strip())
 if 0 <= alpha <= 1:
     alpha = input_alpha
 # [load]

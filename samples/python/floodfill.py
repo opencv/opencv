@@ -17,12 +17,13 @@ Keys:
 # Python 2/3 compatibility
 from __future__ import print_function
 
+from builtins import object
 import numpy as np
 import cv2 as cv
 
 import sys
 
-class App():
+class App(object):
 
     def update(self, dummy=None):
         if self.seed_pt is None:

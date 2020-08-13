@@ -1,10 +1,15 @@
 from __future__ import print_function
+from __future__ import division
+from builtins import range
+from builtins import object
+from past.utils import old_div
 from abc import ABCMeta, abstractmethod
 import numpy as np
 import sys
 import os
 import argparse
 import time
+from future.utils import with_metaclass
 
 try:
     import caffe
@@ -23,11 +28,10 @@ except NameError:
     xrange = range  # Python 3
 
 
-class DataFetch(object):
+class DataFetch(with_metaclass(ABCMeta, object)):
     imgs_dir = ''
     frame_size = 0
     bgr_to_rgb = False
-    __metaclass__ = ABCMeta
 
     @abstractmethod
     def preprocess(self, img):
@@ -46,9 +50,9 @@ class DataFetch(object):
             img = cv.resize(img, (0, 0), fx=resize_ratio, fy=resize_ratio)
             cols = img.shape[1]
             rows = img.shape[0]
-            y1 = (rows - self.frame_size) / 2
+            y1 = old_div((rows - self.frame_size), 2)
             y2 = y1 + self.frame_size
-            x1 = (cols - self.frame_size) / 2
+            x1 = old_div((cols - self.frame_size), 2)
             x2 = x1 + self.frame_size
             img = img[y1:y2, x1:x2]
             if self.bgr_to_rgb:
@@ -68,7 +72,7 @@ class MeanBlobFetch(DataFetch):
         data = open(mean_blob_path, 'rb').read()
         blob.ParseFromString(data)
         self.mean_blob = np.array(caffe.io.blobproto_to_array(blob))
-        start = (self.mean_blob.shape[2] - self.frame_size) / 2
+        start = old_div((self.mean_blob.shape[2] - self.frame_size), 2)
         stop = start + self.frame_size
         self.mean_blob = self.mean_blob[:, :, start:stop, start:stop][0]
 
@@ -105,11 +109,9 @@ def get_correct_answers(img_list, img_classes, net_output_blob):
     return correct_answers
 
 
-class Framework(object):
+class Framework(with_metaclass(ABCMeta, object)):
     in_blob_name = ''
     out_blob_name = ''
-
-    __metaclass__ = ABCMeta
 
     @abstractmethod
     def get_name(self):
@@ -156,7 +158,7 @@ class DnnCaffeModel(Framework):
         return self.net.forward(self.out_blob_name)
 
 
-class ClsAccEvaluation:
+class ClsAccEvaluation(object):
     log = sys.stdout
     img_classes = {}
     batch_size = 0
@@ -183,7 +185,7 @@ class ClsAccEvaluation:
         blobs_l_inf_diff = [sys.float_info.min] * len(frameworks)
         inference_time = [0.0] * len(frameworks)
 
-        for x in xrange(0, len(sorted_imgs_names), self.batch_size):
+        for x in range(0, len(sorted_imgs_names), self.batch_size):
             sublist = sorted_imgs_names[x:x + self.batch_size]
             batch = data_fetcher.get_batch(sublist)
 
@@ -201,12 +203,12 @@ class ClsAccEvaluation:
                 inference_time[i] += end - start
                 print(samples_handled, 'Accuracy for', frameworks[i].get_name() + ':', fw_accuracy[i], file=self.log)
                 print("Inference time, ms ", \
-                    frameworks[i].get_name(), inference_time[i] / samples_handled * 1000, file=self.log)
+                    frameworks[i].get_name(), old_div(inference_time[i], samples_handled) * 1000, file=self.log)
 
             for i in range(1, len(frameworks)):
                 log_str = frameworks[0].get_name() + " vs " + frameworks[i].get_name() + ':'
                 diff = np.abs(frameworks_out[0] - frameworks_out[i])
-                l1_diff = np.sum(diff) / diff.size
+                l1_diff = old_div(np.sum(diff), diff.size)
                 print(samples_handled, "L1 difference", log_str, l1_diff, file=self.log)
                 blobs_l1_diff[i] += l1_diff
                 blobs_l1_diff_count[i] += 1
@@ -218,7 +220,7 @@ class ClsAccEvaluation:
 
         for i in range(1, len(blobs_l1_diff)):
             log_str = frameworks[0].get_name() + " vs " + frameworks[i].get_name() + ':'
-            print('Final l1 diff', log_str, blobs_l1_diff[i] / blobs_l1_diff_count[i], file=self.log)
+            print('Final l1 diff', log_str, old_div(blobs_l1_diff[i], blobs_l1_diff_count[i]), file=self.log)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

@@ -2,6 +2,10 @@
 @file hough_lines.py
 @brief This program demonstrates line finding with the Hough transform
 """
+from __future__ import print_function
+from __future__ import division
+from builtins import range
+from past.utils import old_div
 import sys
 import math
 import cv2 as cv
@@ -34,7 +38,7 @@ def main(argv):
 
     ## [hough_lines]
     #  Standard Hough Line Transform
-    lines = cv.HoughLines(dst, 1, np.pi / 180, 150, None, 0, 0)
+    lines = cv.HoughLines(dst, 1, old_div(np.pi, 180), 150, None, 0, 0)
     ## [hough_lines]
     ## [draw_lines]
     # Draw the lines
@@ -54,7 +58,7 @@ def main(argv):
 
     ## [hough_lines_p]
     # Probabilistic Line Transform
-    linesP = cv.HoughLinesP(dst, 1, np.pi / 180, 50, None, 50, 10)
+    linesP = cv.HoughLinesP(dst, 1, old_div(np.pi, 180), 50, None, 50, 10)
     ## [hough_lines_p]
     ## [draw_lines_p]
     # Draw the lines

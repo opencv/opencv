@@ -68,13 +68,19 @@
 ###############################################################################
 
 from __future__ import print_function
+from future import standard_library
+standard_library.install_aliases()
+from builtins import zip
+from builtins import str
+from builtins import range
+from builtins import object
 import sys, re, os
 from templates import *
 
 if sys.version_info[0] >= 3:
     from io import StringIO
 else:
-    from cStringIO import StringIO
+    from io import StringIO
 
 
 func_table = {}
@@ -96,7 +102,7 @@ ignore_list = ['locate',  #int&
 def makeWhiteList(module_list):
     wl = {}
     for m in module_list:
-        for k in m.keys():
+        for k in list(m.keys()):
             if k in wl:
                 wl[k] += m[k]
             else:
@@ -786,7 +792,7 @@ class JSWrapperGenerator(object):
                 continue
 
             # Generate bindings for methods
-            for method_name, method in class_info.methods.items():
+            for method_name, method in list(class_info.methods.items()):
                 if method.cname in ignore_list:
                     continue
                 if not method.name in white_list[method.class_name]:

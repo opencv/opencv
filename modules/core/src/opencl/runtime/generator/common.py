@@ -1,4 +1,7 @@
 from __future__ import print_function
+from future import standard_library
+standard_library.install_aliases()
+from builtins import range
 import sys, os, re
 
 #
@@ -116,7 +119,7 @@ def readFunctionFilter(fns, fileName):
 
 def outputToString(f):
     def wrapped(*args, **kwargs):
-        from cStringIO import StringIO
+        from io import StringIO
         old_stdout = sys.stdout
         sys.stdout = str_stdout = StringIO()
         res = f(*args, **kwargs)

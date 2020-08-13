@@ -1,5 +1,8 @@
 from __future__ import print_function
 
+from builtins import str
+from builtins import range
+from builtins import object
 import numpy as np
 import cv2 as cv
 import sys
@@ -18,7 +21,7 @@ def help(filename):
         '''.format(filename)
     )
 
-class MyData:
+class MyData(object):
     A = 97
     X = np.pi
     name = 'mydata1234'

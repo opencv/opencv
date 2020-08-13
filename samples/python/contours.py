@@ -11,6 +11,9 @@ A trackbar is put up which controls the contour level from -3 to 3
 
 # Python 2/3 compatibility
 from __future__ import print_function
+from __future__ import division
+from builtins import range
+from past.utils import old_div
 import sys
 PY3 = sys.version_info[0] == 3
 
@@ -23,13 +26,13 @@ import cv2 as cv
 def make_image():
     img = np.zeros((500, 500), np.uint8)
     black, white = 0, 255
-    for i in xrange(6):
+    for i in range(6):
         dx = int((i%2)*250 - 30)
         dy = int((i/2.)*150)
 
         if i == 0:
-            for j in xrange(11):
-                angle = (j+5)*np.pi/21
+            for j in range(11):
+                angle = old_div((j+5)*np.pi,21)
                 c, s = np.cos(angle), np.sin(angle)
                 x1, y1 = np.int32([dx+100+j*10-80*c, dy+100-90*s])
                 x2, y2 = np.int32([dx+100+j*10-30*c, dy+100-30*s])

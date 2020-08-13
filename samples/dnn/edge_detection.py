@@ -1,3 +1,4 @@
+from builtins import object
 import cv2 as cv
 import argparse
 

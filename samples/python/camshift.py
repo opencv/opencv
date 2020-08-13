@@ -24,6 +24,10 @@ Keys:
 
 # Python 2/3 compatibility
 from __future__ import print_function
+from __future__ import division
+from builtins import range
+from builtins import object
+from past.utils import old_div
 import sys
 PY3 = sys.version_info[0] == 3
 
@@ -68,9 +72,9 @@ class App(object):
         bin_count = self.hist.shape[0]
         bin_w = 24
         img = np.zeros((256, bin_count*bin_w, 3), np.uint8)
-        for i in xrange(bin_count):
+        for i in range(bin_count):
             h = int(self.hist[i])
-            cv.rectangle(img, (i*bin_w+2, 255), ((i+1)*bin_w-2, 255-h), (int(180.0*i/bin_count), 255, 255), -1)
+            cv.rectangle(img, (i*bin_w+2, 255), ((i+1)*bin_w-2, 255-h), (int(old_div(180.0*i,bin_count)), 255, 255), -1)
         img = cv.cvtColor(img, cv.COLOR_HSV2BGR)
         cv.imshow('hist', img)
 

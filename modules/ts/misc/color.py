@@ -1,5 +1,10 @@
 #!/usr/bin/env python
 
+from __future__ import division
+from builtins import str
+from builtins import range
+from builtins import object
+from past.utils import old_div
 import math, os, sys
 
 webcolors = {
@@ -247,9 +252,9 @@ def colorDistance(r1,g1,b1 = None, r2 = None, g2 = None,b2 = None):
     K1 = 0.045
     K2 = 0.015
 
-    s1 = dl/Kl
-    s2 = dC/(1. + K1 * C1)
-    s3 = dH/(1. + K2 * C1)
+    s1 = old_div(dl,Kl)
+    s2 = old_div(dC,(1. + K1 * C1))
+    s3 = old_div(dH,(1. + K2 * C1))
     return math.sqrt(s1*s1 + s2*s2 + s3*s3)
 
 def parseHexColor(col):

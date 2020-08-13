@@ -71,7 +71,7 @@ if __name__ == "__main__":
     if args.android_env:
         android_env.extend([entry.split("=", 1) for entry in args.android_env])
     if args.android_propagate_opencv_env:
-        android_env.extend([entry for entry in os.environ.items() if entry[0].startswith('OPENCV')])
+        android_env.extend([entry for entry in list(os.environ.items()) if entry[0].startswith('OPENCV')])
     android_env = dict(android_env)
     if args.android_test_data_path:
         android_env['OPENCV_TEST_DATA_PATH'] = args.android_test_data_path
