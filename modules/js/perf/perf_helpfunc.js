@@ -119,6 +119,13 @@ function constructParamLog(params, kernel) {
     let borderMode = params.borderMode;
     paramLog = `params: (${parseInt(size.width)}x${parseInt(size.height)},`+
     `${ksize},${borderMode})`;
+  } else if (kernel == "scharr") {
+    let size = params.size;
+    let ddepth = params.ddepth;
+    let dxdy = params.dxdy;
+    let borderType = params.borderType;
+    paramLog = `params: (${parseInt(size[0])}x${parseInt(size[1])},`+
+    `${ddepth},${dxdy},${borderType})`;
   }
   return paramLog;
 }
