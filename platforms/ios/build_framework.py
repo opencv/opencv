@@ -235,12 +235,24 @@ class Builder:
     def getInfoPlist(self, builddirs):
         return os.path.join(builddirs[0], "ios", "Info.plist")
 
-    def makeCMakeCmd(self, arch, target, dir, cmakeargs = []):
-        toolchain = self.getToolchain(arch, target)
-        cmakecmd = self.getCMakeArgs(arch, target) + \
+    def makeCMakeCmd(self, archs, target, dir, cmakeargs = []):
+        toolchain = self.getToolchain(archs, target)
+        cmakecmd = self.getCMakeArgs(archs, target) + \
             (["-DCMAKE_TOOLCHAIN_FILE=%s" % toolchain] if toolchain is not None else [])
         if target.lower().startswith("iphoneos"):
             cmakecmd.append("-DCPU_BASELINE=DETECT")
+        arch = archs[0]
+        if target.lower() == "macosx":
+            current_arch = check_output(["uname", "-m"]).rstrip()
+            if current_arch != arch:
+                cmakecmd.append("-DCMAKE_SYSTEM_PROCESSOR=" + arch)
+                cmakecmd.append("-DCMAKE_OSX_ARCHITECTURES=" + arch)
+                cmakecmd.append("-DCPU_BASELINE=DETECT")
+            if arch != "x86_64":
+                cmakecmd.append("-DWITH_IPP=OFF")
+            if arch != "arm64":
+                cmakecmd.append("-DENABLE_NEON=OFF")
+
         cmakecmd.append(dir)
         cmakecmd.extend(cmakeargs)
         return cmakecmd
@@ -344,6 +356,7 @@ class Builder:
                     "x86_64": "x86_64-apple-ios-simulator",
                 } if builddirs[0].find("iphone") != -1 else {
                     "x86_64": "x86_64-apple-macos",
+                    "arm64": "arm64-apple-macos",
                 }
             for d in builddirs:
                 copy_tree(os.path.join(d, "install", "lib", name + ".framework", "Modules"), os.path.join(dstdir, "Modules"))
