@@ -6458,6 +6458,9 @@ struct Image2D::Impl
             CV_Error(Error::OpenCLApiCallError, "OpenCL runtime not found!");
 
         cl_context context = (cl_context)Context::getDefault().ptr();
+        if (!context)
+            return false;
+
         // Figure out how many formats are supported by this context.
         cl_uint numFormats = 0;
         cl_int err = clGetSupportedImageFormats(context, CL_MEM_READ_WRITE,
