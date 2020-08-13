@@ -447,8 +447,7 @@ Mat& Mat::operator = (const Scalar& s)
                     m = Scalar(1,1,1);  // m = [ 1,1,1 ]
 
                 2) Mat::ones ( little ambiguous )
-                    Mat m = Mat::ones(1,1, CV_8UC3);  // m = [ 1, 0, 0 ] 
-
+                    Mat m = Mat::ones(1,1, CV_8UC3);  // m = [ 1, 0, 0 ]
             */
             bool apply_memset = false;  // memset faster than memcpy
             switch (channels()) // ch
