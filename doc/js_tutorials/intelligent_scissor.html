@@ -6,12 +6,12 @@
   <body>
     <p id="status">OpenCV.js is loading...</p>
     <canvas id="canvas" disabled=true></canvas>
-    <img id="src" src="test.png"/>
+    <!-- <img id="src" src="test.png"/> -->
+    <img id="src" src="fr.jpg"/>
     <input type="button" id="myButton" value="Test" onclick="" />
     <input type="button" id="startAlgo" value="Start" disabled=true onclick="main()">
 
     <script type="text/javascript">
-
       var src;
       var zero_crossing;
       var img_canny;
@@ -79,28 +79,24 @@
         let dp;
         let dq;
         let fG = gradient_magnitude.data32F[q.x * gradient_magnitude.cols * gradient_magnitude.channels() + q.y * gradient_magnitude.channels()];
-        // console.log("fG")
-        // console.log(fG)
         let WEIGHT_LAP_ZERO_CROSS = 0.43;
         let WEIGHT_GRADIENT_MAGNITUDE = 0.14;
         let WEIGHT_GRADIENT_DIRECTION = 0.43;
+        let Iy_data = Iy.data32F;
+        let Ix_data = Ix.data32F;
+        
         let isDiag = (p.x != q.x) && (p.y != q.y);
-        // console.log("isDiag");
-        // console.log(isDiag);
-        if ((Iy.data32F[p.x * Iy.cols * Iy.channels() + p.y * Iy.channels()] * (q.x - p.x) - Ix.data32F[p.x * Ix.cols * Ix.channels() + p.y * Ix.channels()] * (q.y - p.y)) >= 0)
+
+        if ((Iy_data[p.x * Iy.cols * Iy.channels() + p.y * Iy.channels()] * (q.x - p.x) - Ix_data[p.x * Ix.cols * Ix.channels() + p.y * Ix.channels()] * (q.y - p.y)) >= 0)
         {
-          dp = Iy.data32F[p.x * Iy.cols * Iy.channels() + p.y * Iy.channels()] * (q.x - p.x) - Ix.data32F[p.x * Ix.cols * Ix.channels() + p.y * Ix.channels()] * (q.y - p.y);
-          dq = Iy.data32F[q.x * Iy.cols * Iy.channels() + q.y * Iy.channels()] * (q.x - p.x) - Ix.data32F[q.x * Ix.cols * Ix.channels() + q.y * Ix.channels()] * (q.y - p.y);
+          dp = Iy_data[p.x * Iy.cols * Iy.channels() + p.y * Iy.channels()] * (q.x - p.x) - Ix_data[p.x * Ix.cols * Ix.channels() + p.y * Ix.channels()] * (q.y - p.y);
+          dq = Iy_data[q.x * Iy.cols * Iy.channels() + q.y * Iy.channels()] * (q.x - p.x) - Ix_data[q.x * Ix.cols * Ix.channels() + q.y * Ix.channels()] * (q.y - p.y);
         }
         else
         {
-          dp = Iy.data32F[p.x * Iy.cols * Iy.channels() + p.y * Iy.channels()] * (p.x - q.x) - Ix.data32F[p.x * Ix.cols * Ix.channels() + p.y * Ix.channels()] * (p.y - q.y);
-          dq = Iy.data32F[q.x * Iy.cols * Iy.channels() + q.y * Iy.channels()] * (p.x - q.x) - Ix.data32F[q.x * Ix.cols * Ix.channels() + q.y * Ix.channels()] * (p.y - q.y);
+          dp = Iy_data[p.x * Iy.cols * Iy.channels() + p.y * Iy.channels()] * (p.x - q.x) - Ix_data[p.x * Ix.cols * Ix.channels() + p.y * Ix.channels()] * (p.y - q.y);
+          dq = Iy_data[q.x * Iy.cols * Iy.channels() + q.y * Iy.channels()] * (p.x - q.x) - Ix_data[q.x * Ix.cols * Ix.channels() + q.y * Ix.channels()] * (p.y - q.y);
         }
-        // console.log("dp")
-        // console.log(dp)
-        // console.log("dq")
-        // console.log(dq)
         if (isDiag)
         {
           dp /= Math.sqrt(2);
@@ -110,17 +106,12 @@
         {
           fG /= Math.sqrt(2);
         }
-        // console.log("zero", WEIGHT_GRADIENT_MAGNITUDE *fG)
-        // console.log("zero * WEIGHT", WEIGHT_GRADIENT_DIRECTION * (Math.cos(dp) + Math.cos(dq) / Math.PI) + WEIGHT_GRADIENT_MAGNITUDE *fG)
-        let total =(WEIGHT_LAP_ZERO_CROSS * zero_crossing.data[q.x * zero_crossing.cols * zero_crossing.channels() + q.y * zero_crossing.channels()] +  WEIGHT_GRADIENT_DIRECTION * (Math.acos(dp) + Math.acos(dq)) / Math.PI + WEIGHT_GRADIENT_MAGNITUDE *fG);
-        // return total - total * 1000000 % 1 / 1000000;
-        return total;
+        return WEIGHT_LAP_ZERO_CROSS * zero_crossing.data[q.x * zero_crossing.cols * zero_crossing.channels() + q.y * zero_crossing.channels()] +  WEIGHT_GRADIENT_DIRECTION * (Math.acos(dp) + Math.acos(dq)) / Math.PI + WEIGHT_GRADIENT_MAGNITUDE *fG;
       }
 
       function find_min_path(start)
       {
         let begin;
-        
         let cost_map = new cv.Mat(src.rows, src.cols, cv.CV_32F, new cv.Scalar(Number.MAX_VALUE));
         let expandned = new cv.Mat(src.rows, src.cols, cv.CV_8UC1, new cv.Scalar(0));
         let processed = new cv.Mat(src.rows, src.cols, cv.CV_8U, new cv.Scalar(0));
@@ -157,8 +148,7 @@
                 {
                   let q = {x: tx,y: ty};
                   let cost = cost_map.data32F[p.x * cost_map.cols * cost_map.channels() + p.y * cost_map.channels()]  +  local_cost(p, q);
-                  // console.log(tx, ty);
-                  // console.log(cost);
+
                   if (processed.data[q.x * processed.cols * processed.channels() + q.y * processed.channels()] == 1 && cost < cost_map.data32F[q.x * cost_map.cols * cost_map.channels() + q.y * cost_map.channels()])
                   {
                     removed.data[q.x * removed.cols * removed.channels() + q.y * removed.channels()] = 1;
@@ -168,9 +158,7 @@
                     cost_map.data32F[q.x * cost_map.cols * cost_map.channels() + q.y * cost_map.channels()]= cost;
                     hit_map_x.data32S[q.x * hit_map_x.cols * hit_map_x.channels() + q.y * hit_map_x.channels()] = p.x;
                     hit_map_y.data32S[q.x * hit_map_y.cols * hit_map_y.channels() + q.y * hit_map_y.channels()] = p.y;
-                    // console.log(q.x,q.y, "to")
-                    // console.log(hit_map_x.data32S[q.x * hit_map_x.cols * hit_map_x.channels() + q.y * hit_map_x.channels()],hit_map_y.data32S[q.x * hit_map_y.cols * hit_map_y.channels() + q.y * hit_map_y.channels()])
-                  
+
                     processed.data[q.x * processed.cols * processed.channels() + q.y * processed.channels()] = 1
                     L.enqueue(q,cost_map.data32F[q.x * cost_map.cols * cost_map.channels() + q.y * cost_map.channels()]);
                   }
@@ -204,25 +192,26 @@
         Ix.convertTo(Ix, cv.CV_32F, 1.0/255);
         Iy.convertTo(Iy, cv.CV_32F, 1.0/255);
         let max_val;
-        cv.imshow("canvas", Ix);
         cv.magnitude(Iy, Ix, gradient_magnitude);
         let result = cv.minMaxLoc(gradient_magnitude);
         let maxPoint = result.maxVal;
         gradient_magnitude.convertTo(gradient_magnitude, cv.CV_32F, -1/maxPoint, 1.0);
-  
-        find_min_path(ptr_pix)
-        console.log("done")
       }
 
       document.getElementById("canvas").onmousedown = function(e)
       {
-        lastX = e.pageX - this.offsetLeft;
-        lastY = e.pageY - this.offsetTop;
+        lastY = e.pageX - this.offsetLeft;
+        lastX = e.pageY - this.offsetTop;
+        console.log("start")
+        let ptr_pix = new cv.Point(lastX,lastY)
+        find_min_path(ptr_pix)
+        console.log("done")
       };
 
 
       document.getElementById("canvas").onmousemove = function(e)
       {
+        let dst = src.clone();
         if (lastX != undefined)
         {
           let y = e.pageX - this.offsetLeft;
@@ -230,18 +219,18 @@
           let start = new cv.Point(x,y)
           console.log(start)
 
-          while((x!=20) || (y!=70))
+          while((x!=lastX) || (y!=lastY))
           {
-            cv.line(src, new cv.Point(hit_map_y.intPtr(x,y)[0], hit_map_x.intPtr(x,y)[0]), new cv.Point(y, x),new cv.Scalar(255, 255, 255, 255), 1);
+            cv.line(dst, new cv.Point(hit_map_y.intPtr(x,y)[0], hit_map_x.intPtr(x,y)[0]), new cv.Point(y, x),new cv.Scalar(255, 255, 255, 255), 1);
             let A = new cv.Point(hit_map_x.intPtr(x,y)[0], hit_map_y.intPtr(x,y)[0])
+            console.log(A)
             x=A.x
             y=A.y
-            cv.imshow("canvas", src);
+            cv.imshow("canvas", dst);
           }
         }
       }
 
-      document.getElementById("canvas").onmouseup =
       document.getElementById("canvas").onmouseleave = function(e)
       {
           lastX = undefined;
