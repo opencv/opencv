@@ -170,11 +170,14 @@ static Mat createInitialImage( const Mat& img, bool doubleImageSize, float sigma
 
     if( doubleImageSize )
     {
-        sig_diff = sqrtf( std::max(sigma * sigma - SIFT_INIT_SIGMA * SIFT_INIT_SIGMA * 4, 0.01f) );
         Mat dbl;
 #if DoG_TYPE_SHORT
+        softfloat soft_sigma(sigma), soft_init(SIFT_INIT_SIGMA);
+        softfloat soft_sig_diff = cv::sqrt( cv::max(soft_sigma * soft_sigma - soft_init * soft_init * softfloat(4.0f), softfloat(0.01f)) );
+        sig_diff = (float)soft_sig_diff;
         resize(gray_fpt, dbl, Size(gray_fpt.cols*2, gray_fpt.rows*2), 0, 0, INTER_LINEAR_EXACT);
 #else
+        sig_diff = sqrtf( std::max(sigma * sigma - SIFT_INIT_SIGMA * SIFT_INIT_SIGMA * 4, 0.01f) );
         resize(gray_fpt, dbl, Size(gray_fpt.cols*2, gray_fpt.rows*2), 0, 0, INTER_LINEAR);
 #endif
         Mat result;
@@ -183,7 +186,13 @@ static Mat createInitialImage( const Mat& img, bool doubleImageSize, float sigma
     }
     else
     {
+#if DoG_TYPE_SHORT
+        softfloat soft_sigma(sigma), soft_init(SIFT_INIT_SIGMA);
+        softfloat soft_sig_diff = cv::sqrt( cv::max(soft_sigma * soft_sigma - soft_init * soft_init, softfloat(0.01f)) );
+        sig_diff = (float)soft_sig_diff;
+#else
         sig_diff = sqrtf( std::max(sigma * sigma - SIFT_INIT_SIGMA * SIFT_INIT_SIGMA, 0.01f) );
+#endif
         Mat result;
         GaussianBlur(gray_fpt, result, Size(), sig_diff, sig_diff);
         return result;
@@ -201,6 +210,16 @@ void SIFT_Impl::buildGaussianPyramid( const Mat& base, std::vector<Mat>& pyr, in
     // precompute Gaussian sigmas using the following formula:
     //  \sigma_{total}^2 = \sigma_{i}^2 + \sigma_{i-1}^2
     sig[0] = sigma;
+#if DoG_TYPE_SHORT
+    softdouble soft_sigma(sigma);
+    softdouble k = cv::pow( softdouble(2.0), softdouble::one() / softdouble(nOctaveLayers) );
+    for( int i = 1; i < nOctaveLayers + 3; i++ )
+    {
+        softdouble sig_prev = cv::pow(k, softdouble(i-1))*soft_sigma;
+        softdouble sig_total = sig_prev*k;
+        sig[i] = (double)cv::sqrt(sig_total*sig_total - sig_prev*sig_prev);
+    }
+#else
     double k = std::pow( 2., 1. / nOctaveLayers );
     for( int i = 1; i < nOctaveLayers + 3; i++ )
     {
@@ -208,7 +227,7 @@ void SIFT_Impl::buildGaussianPyramid( const Mat& base, std::vector<Mat>& pyr, in
         double sig_total = sig_prev*k;
         sig[i] = std::sqrt(sig_total*sig_total - sig_prev*sig_prev);
     }
-
+#endif
     for( int o = 0; o < nOctaves; o++ )
     {
         for( int i = 0; i < nOctaveLayers + 3; i++ )
