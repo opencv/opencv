@@ -468,7 +468,7 @@ Mat& Mat::operator = (const Scalar& s)
                 apply_memset = false;
                 break;
             }
-            //apply_memset = false; // test for compare
+            apply_memset = false; // test for compare
 
             if (apply_memset)
             {
