@@ -379,23 +379,19 @@ public:
  */
 int mergePoints (InputArray pts1_, InputArray pts2_, Mat &pts, bool ispnp) {
     Mat pts1 = pts1_.getMat(), pts2 = pts2_.getMat();
-    auto convertPoints = [] (Mat &points, bool is_vector, int pt_dim) {
+    auto convertPoints = [] (Mat &points, int pt_dim) {
         points.convertTo(points, CV_32F); // convert points to have float precision
-        if (is_vector)
-            points = Mat((int)points.total(), pt_dim, CV_32F, points.data);
-        else {
-            if (points.channels() > 1)
-                points = points.reshape(1, (int)points.total()); // convert point to have 1 channel
-            if (points.rows < points.cols)
-                transpose(points, points); // transpose so points will be in rows
-            CV_CheckGE(points.cols, pt_dim, "Invalid dimension of point");
-            if (points.cols != pt_dim) // in case when image points are 3D convert them to 2D
-                points = points.colRange(0, pt_dim);
-        }
+        if (points.channels() > 1)
+            points = points.reshape(1, (int)points.total()); // convert point to have 1 channel
+        if (points.rows < points.cols)
+            transpose(points, points); // transpose so points will be in rows
+        CV_CheckGE(points.cols, pt_dim, "Invalid dimension of point");
+        if (points.cols != pt_dim) // in case when image points are 3D convert them to 2D
+            points = points.colRange(0, pt_dim);
     };
 
-    convertPoints(pts1, pts1_.isVector(), 2); // pts1 are always image points
-    convertPoints(pts2, pts2_.isVector(), ispnp ? 3 : 2); // for PnP points are 3D
+    convertPoints(pts1, 2); // pts1 are always image points
+    convertPoints(pts2, ispnp ? 3 : 2); // for PnP points are 3D
 
     // points are of size [Nx2 Nx2] = Nx4 for H, F, E
     // points are of size [Nx2 Nx3] = Nx5 for PnP
@@ -452,7 +448,7 @@ void setParameters (int flag, Ptr<Model> &params, EstimationMethod estimator, do
             break;
         case USAC_FAST:
             params = Model::create(thr, estimator, SamplingMethod::SAMPLING_UNIFORM, conf, max_iters,
-                                   ScoreMethod::SCORE_METHOD_MSAC);
+                                   ScoreMethod::SCORE_METHOD_RANSAC);
             params->setLocalOptimization(LocalOptimMethod ::LOCAL_OPTIM_INNER_AND_ITER_LO);
             params->setLOIterations(7);
             params->setLOIterativeIters(4);
@@ -605,25 +601,25 @@ public:
             // time for model estimation is basically a ratio of time need to estimate a model to
             // time needed to verify if a point is consistent with this model
             case (EstimationMethod::Affine):
-                avg_num_models = 1; time_for_model_est = 40;
+                avg_num_models = 1; time_for_model_est = 50;
                 sample_size = 3; est_error = ErrorMetric ::FORW_REPR_ERR; break;
             case (EstimationMethod::Homography):
-                avg_num_models = 1; time_for_model_est = 70;
+                avg_num_models = 1; time_for_model_est = 90;
                 sample_size = 4; est_error = ErrorMetric ::FORW_REPR_ERR; break;
             case (EstimationMethod::Fundamental):
-                avg_num_models = 2.38; time_for_model_est = 120; maximum_thr = 3;
+                avg_num_models = 2.38; time_for_model_est = 150; maximum_thr = 3;
                 sample_size = 7; est_error = ErrorMetric ::SAMPSON_ERR; break;
             case (EstimationMethod::Fundamental8):
-                avg_num_models = 1; time_for_model_est = 90; maximum_thr = 3;
+                avg_num_models = 1; time_for_model_est = 100; maximum_thr = 3;
                 sample_size = 8; est_error = ErrorMetric ::SAMPSON_ERR; break;
             case (EstimationMethod::Essential):
-                avg_num_models = 3.93; time_for_model_est = 1500; maximum_thr = 3;
+                avg_num_models = 3.93; time_for_model_est = 2000; maximum_thr = 3;
                 sample_size = 5; est_error = ErrorMetric ::SGD_ERR; break;
             case (EstimationMethod::P3P):
-                avg_num_models = 1.38; time_for_model_est = 200;
+                avg_num_models = 1.38; time_for_model_est = 800;
                 sample_size = 3; est_error = ErrorMetric ::RERPOJ; break;
             case (EstimationMethod::P6P):
-                avg_num_models = 1; time_for_model_est = 100;
+                avg_num_models = 1; time_for_model_est = 300;
                 sample_size = 6; est_error = ErrorMetric ::RERPOJ; break;
             default: CV_Assert(0 && "Estimator has not implemented yet!");
         }
@@ -658,7 +654,6 @@ public:
     ErrorMetric getError () const override { return est_error; }
     EstimationMethod getEstimator () const override { return estimator; }
     int getSampleSize () const override { return sample_size; }
-    int getSamplerLengthPNAPSAC () const override { return sampler_length; }
     int getFinalLSQIterations () const override { return final_lsq_iters; }
     int getDegreesOfFreedom () const override { return DoF; }
     double getSigmaQuantile () const override { return sigma_quantile; }
@@ -687,7 +682,6 @@ public:
     double getThreshold () const override { return threshold; }
     VerificationMethod getVerifier () const override { return verifier; }
     SamplingMethod getSampler () const override { return sampler; }
-    int getMaxSampleSizeLOiterative () const override { return lo_iter_sample_size; }
     int getRandomGeneratorState () const override { return random_generator_state; }
     double getSPRTdelta () const override { return sprt_delta; }
     double getSPRTepsilon () const override { return sprt_eps; }
@@ -770,6 +764,8 @@ bool run (const Ptr<const Model> &params, InputArray points1, InputArray points2
             points_size = mergePoints(points1, points2, points, false);
     }
 
+    // Since error function output squared error distance, so make
+    // threshold squared as well
     threshold *= threshold;
 
     if (params->getSampler() == SamplingMethod::SAMPLING_NAPSAC || params->getLO() == LocalOptimMethod::LOCAL_OPTIM_GC) {
@@ -812,8 +808,12 @@ bool run (const Ptr<const Model> &params, InputArray points1, InputArray points2
     }
 
     // update points by calibrated for Essential matrix after graph is calculated
-    if (params->isEssential())
+    if (params->isEssential()) {
         points = calib_points;
+        // if maximum calibrated threshold significanlty differs threshold then set upper bound
+        if (max_thr > 10*threshold)
+            max_thr = 10*threshold;
+    }
 
     switch (params->getError()) {
         case ErrorMetric::SYMM_REPR_ERR:
@@ -853,7 +853,7 @@ bool run (const Ptr<const Model> &params, InputArray points1, InputArray points2
         non_min_solver = HomographyNonMinimalSolver::create(points);
         estimator = HomographyEstimator::create(min_solver, non_min_solver, degeneracy);
     } else if (params->isFundamental()) {
-        degeneracy = FundamentalDegeneracy::create(state++, quality, points, min_sample_size, 5.);
+        degeneracy = FundamentalDegeneracy::create(state++, quality, points, min_sample_size, 5. /*sqr homogr thr*/);
         if(min_sample_size == 7) min_solver = FundamentalMinimalSolver7pts::create(points);
         else min_solver = FundamentalMinimalSolver8pts::create(points);
         non_min_solver = FundamentalNonMinimalSolver::create(points);
@@ -866,11 +866,11 @@ bool run (const Ptr<const Model> &params, InputArray points1, InputArray points2
     } else if (params->isPnP()) {
         degeneracy = makePtr<Degeneracy>();
         if (min_sample_size == 3) {
-            non_min_solver = PnPNonMinimalSolver::create(points, true);
+            non_min_solver = DLSPnP::create(points, calib_points, K1);
             min_solver = P3PSolver::create(points, calib_points, K1);
         } else {
             min_solver = PnPMinimalSolver6Pts::create(points);
-            non_min_solver = PnPNonMinimalSolver::create(points, false);
+            non_min_solver = PnPNonMinimalSolver::create(points);
         }
         estimator = PnPEstimator::create(min_solver, non_min_solver);
     } else if (params->getEstimator() == EstimationMethod::Affine) {

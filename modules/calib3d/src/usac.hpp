@@ -159,7 +159,7 @@ public:
 //-------------------------- PNP -----------------------
 class PnPNonMinimalSolver : public NonMinimalSolver {
 public:
-    static Ptr<PnPNonMinimalSolver> create(const Mat &points_, bool has_calib);
+    static Ptr<PnPNonMinimalSolver> create(const Mat &points);
 };
 
 class DLSPnP : public NonMinimalSolver {
@@ -567,6 +567,8 @@ namespace Math {
     Matx33d getSkewSymmetric(const Vec3d &v_);
     // eliminate matrix with m rows and n columns to be upper triangular.
     void eliminateUpperTriangular (std::vector<double> &a, int m, int n);
+    Matx33d rotVec2RotMat (const Vec3d &v);
+    Vec3d rotMat2RotVec (const Matx33d &R);
 }
 
 ///////////////////////////////////////// RANDOM GENERATOR /////////////////////////////////////
@@ -727,7 +729,6 @@ public:
     virtual int getGraphRadius() const = 0;
     virtual double getRelaxCoef () const = 0;
 
-    virtual int getSamplerLengthPNAPSAC () const = 0;
     virtual int getFinalLSQIterations () const = 0;
     virtual int getDegreesOfFreedom () const = 0;
     virtual double getSigmaQuantile () const = 0;
@@ -741,7 +742,6 @@ public:
     virtual int getLOIterativeSampleSize() const = 0;
     virtual int getLOIterativeMaxIters() const = 0;
     virtual int getLOInnerMaxIters() const = 0;
-    virtual int getMaxSampleSizeLOiterative () const = 0;
     virtual const std::vector<int> &getGridCellNumber () const = 0;
     virtual int getRandomGeneratorState () const = 0;
 

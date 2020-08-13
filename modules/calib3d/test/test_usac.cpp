@@ -181,7 +181,7 @@ static double getError (TestSolver test_case, int pt_idx, const cv::Mat &pts1, c
         cv::Mat l2 = model     * pt1;
         cv::Mat l1 = model.t() * pt2;
         if (test_case == TestSolver::Fundam) // sampson error
-            return pt2.dot(l2) / sqrt(pow(l1.at<double>(0), 2) + pow(l1.at<double>(1), 2) +
+            return fabs(pt2.dot(l2)) / sqrt(pow(l1.at<double>(0), 2) + pow(l1.at<double>(1), 2) +
                                       pow(l2.at<double>(0), 2) + pow(l2.at<double>(1), 2));
         else // symmetric geometric distance
             return sqrt(pow(pt1.dot(l1),2) / (pow(l1.at<double>(0),2) + pow(l1.at<double>(1),2)) +

@@ -231,8 +231,7 @@ public:
                 int x=(int)round(scale_of_stored_incomplete_gammas * squared_residual
                         / maximum_sigma_2_times_2);
                 // If the sought gamma value is not stored in the lookup, return the closest element
-                // actual number of gamma values is 1 more, so use >=
-                if (x >= stored_incomplete_gamma_number)
+                if (x >= stored_incomplete_gamma_number || x < 0 /*overflow*/)
                     x  = stored_incomplete_gamma_number;
                 // Calculate the loss implied by the current point
                 total_loss += two_ad_dof_plus_one_per_maximum_sigma * (maximum_sigma_2_per_2 *
@@ -255,7 +254,7 @@ public:
             if (squared_residual < maximum_threshold) {
                 int x=(int)round(scale_of_stored_incomplete_gammas * squared_residual
                                  / maximum_sigma_2_times_2);
-                if (x >= stored_incomplete_gamma_number)
+                if (x >= stored_incomplete_gamma_number || x < 0 /*overflow*/)
                     x  = stored_incomplete_gamma_number;
                 total_loss += two_ad_dof_plus_one_per_maximum_sigma * (maximum_sigma_2_per_2 *
                         stored_lower_incomplete_gamma_values[x] + squared_residual * 0.25 *

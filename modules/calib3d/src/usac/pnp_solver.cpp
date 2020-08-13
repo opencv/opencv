@@ -152,13 +152,15 @@ class PnPNonMinimalSolverImpl : public PnPNonMinimalSolver {
 private:
     const Mat * points_mat;
     const float * const points;
-    const bool has_calib;
 public:
-    explicit PnPNonMinimalSolverImpl (const Mat &points_, bool has_calib_) :
-        points_mat(&points_), points ((float*)points_.data), has_calib(has_calib_) {}
+    explicit PnPNonMinimalSolverImpl (const Mat &points_) :
+        points_mat(&points_), points ((float*)points_.data){}
 
     int estimate (const std::vector<int> &sample, int sample_size,
           std::vector<Mat> &models, const std::vector<double> &weights) const override {
+        if (sample_size < 6)
+            return 0;
+
         double AtA [144] = {0}; // 12x12
         double a1[12] = {0, 0, 0, -1, 0, 0, 0,  0, 0, 0, 0, 0},
                a2[12] = {0, 0, 0,  0, 0, 0, 0, -1, 0, 0, 0, 0};
@@ -239,28 +241,17 @@ public:
         if (! eigen(Matx<double, 12, 12>(AtA), D, Vt)) return 0;
         models = std::vector<Mat>{ Mat(Vt.row(11).reshape<3,4>()) };
 #endif
-        if (has_calib) {
-            // decompose P which has norm 1 and is up-to-scale
-            // to P with known intrinsic matrix
-            Mat &P = models[0];
-            const Mat M = P.colRange(0,3);
-            double scale = norm(M.row(2)); scale *= scale;
-            Mat KR = M / sqrt(scale);
-            if (determinant(M) < 0) KR *= -1;
-            const Mat Kt = KR * M.inv() * P.col(3);
-            hconcat(KR, Kt, P);
-        }
         return 1;
     }
 
     int getMinimumRequiredSampleSize() const override { return 6; }
     int getMaxNumberOfSolutions () const override { return 1; }
     Ptr<NonMinimalSolver> clone () const override {
-        return makePtr<PnPNonMinimalSolverImpl>(*points_mat, has_calib);
+        return makePtr<PnPNonMinimalSolverImpl>(*points_mat);
     }
 };
-Ptr<PnPNonMinimalSolver> PnPNonMinimalSolver::create(const Mat &points_, bool has_calib) {
-    return makePtr<PnPNonMinimalSolverImpl>(points_, has_calib);
+Ptr<PnPNonMinimalSolver> PnPNonMinimalSolver::create(const Mat &points) {
+    return makePtr<PnPNonMinimalSolverImpl>(points);
 }
 
 class P3PSolverImpl : public P3PSolver {
@@ -366,7 +357,7 @@ public:
             zw[1] = Zw2(0);     zw[4] = Zw2(1);     zw[7] = Zw2(2);
             zw[2] = Z3crZ1w(0); zw[5] = Z3crZ1w(1); zw[8] = Z3crZ1w(2);
 
-            const Matx33d R = Z * Zw.inv();
+            const Matx33d R = Math::rotVec2RotMat(Math::rotMat2RotVec(Z * Zw.inv()));
 
             Mat P, KR = K * R;
             hconcat(KR, -KR * (X1 - R.t() * nX1), P);

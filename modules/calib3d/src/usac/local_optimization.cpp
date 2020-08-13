@@ -532,7 +532,7 @@ public:
                             / squared_sigma_max_2);
 
                     // If the sought gamma value is not stored in the lookup, return the closest element
-                    if (x >= stored_gamma_number) // actual number of gamma values is 1 more, so >=
+                    if (x >= stored_gamma_number || x < 0 /*overflow*/) // actual number of gamma values is 1 more, so >=
                         x  = stored_gamma_number;
 
                     sigma_inliers[sigma_inliers_cnt] = idx; // store index of point for LSQ
