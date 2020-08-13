@@ -342,7 +342,7 @@ TEST (usac_Affine2D, accuracy) {
 
 TEST(usac_testUsacParams, accuracy) {
     std::vector<int> gt_inliers;
-    const int pts_size = 2000;
+    const int pts_size = 1500;
     cv::RNG &rng = cv::theRNG();
     const cv::UsacParams usac_params = cv::UsacParams();
     cv::Mat pts1, pts2, K1, K2, mask, model, rvec, tvec, R;
@@ -373,7 +373,7 @@ TEST(usac_testUsacParams, accuracy) {
         cv::vconcat(pts1, cv::Mat::ones(1, pts1.cols, pts1.type()), cpts1_3d);
         cv::vconcat(pts2, cv::Mat::ones(1, pts2.cols, pts2.type()), cpts2_3d);
         cpts1_3d = K1.inv() * cpts1_3d; cpts2_3d = K2.inv() * cpts2_3d;
-        checkInliersMask(TestSolver::Essen, inl_size, 1.01*usac_params.threshold /
+        checkInliersMask(TestSolver::Essen, inl_size, usac_params.threshold /
         ((K1.at<double>(0,0) + K1.at<double>(1,1) + K2.at<double>(0,0) + K2.at<double>(1,1)) / 4),
         cpts1_3d.rowRange(0,2), cpts2_3d.rowRange(0,2), model, mask);
     } catch (cv::Exception &e) {
@@ -384,7 +384,7 @@ TEST(usac_testUsacParams, accuracy) {
 
     // P3P
     inl_size = generatePoints(rng, pts1, pts2, K1, K2, false, pts_size, TestSolver::PnP,
-    getInlierRatio(usac_params.maxIterations, 3, usac_params.confidence), 0.1, gt_inliers);
+    getInlierRatio(usac_params.maxIterations, 3, usac_params.confidence), 0.01, gt_inliers);
     CV_Assert(cv::solvePnPRansac(pts2, pts1, K1, dist_coeff, rvec, tvec, mask, usac_params));
     cv::Rodrigues(rvec, R); cv::hconcat(K1 * R, K1 * tvec, model);
     checkInliersMask(TestSolver::PnP, inl_size, usac_params.threshold, pts1, pts2, model, mask);

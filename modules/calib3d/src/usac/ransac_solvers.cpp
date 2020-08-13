@@ -574,7 +574,6 @@ private:
 
     // progressive napsac
     double relax_coef = 0.1;
-    int sampler_length = 20;
     // for building neighborhood graphs
     const std::vector<int> grid_cell_number = {16, 8, 4, 2};
 
