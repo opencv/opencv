@@ -78,7 +78,7 @@
       {
         let dp;
         let dq;
-        let fG = gradient_magnitude.data32F[q.x * gradient_magnitude.cols * gradient_magnitude.channels() + q.y * gradient_magnitude.channels()];
+        let fG = gradient_magnitude.data32F[q.y * gradient_magnitude.cols * gradient_magnitude.channels() + q.x * gradient_magnitude.channels()];
         let WEIGHT_LAP_ZERO_CROSS = 0.43;
         let WEIGHT_GRADIENT_MAGNITUDE = 0.14;
         let WEIGHT_GRADIENT_DIRECTION = 0.43;
@@ -87,15 +87,15 @@
         
         let isDiag = (p.x != q.x) && (p.y != q.y);
 
-        if ((Iy_data[p.x * Iy.cols * Iy.channels() + p.y * Iy.channels()] * (q.x - p.x) - Ix_data[p.x * Ix.cols * Ix.channels() + p.y * Ix.channels()] * (q.y - p.y)) >= 0)
+        if ((Iy_data[p.y * Iy.cols * Iy.channels() + p.x * Iy.channels()] * (q.x - p.x) - Ix_data[p.y * Ix.cols * Ix.channels() + p.x * Ix.channels()] * (q.y - p.y)) >= 0)
         {
-          dp = Iy_data[p.x * Iy.cols * Iy.channels() + p.y * Iy.channels()] * (q.x - p.x) - Ix_data[p.x * Ix.cols * Ix.channels() + p.y * Ix.channels()] * (q.y - p.y);
-          dq = Iy_data[q.x * Iy.cols * Iy.channels() + q.y * Iy.channels()] * (q.x - p.x) - Ix_data[q.x * Ix.cols * Ix.channels() + q.y * Ix.channels()] * (q.y - p.y);
+          dp = Iy_data[p.y * Iy.cols * Iy.channels() + p.x * Iy.channels()] * (q.x - p.x) - Ix_data[p.y * Ix.cols * Ix.channels() + p.x * Ix.channels()] * (q.y - p.y);
+          dq = Iy_data[q.y * Iy.cols * Iy.channels() + q.x * Iy.channels()] * (q.x - p.x) - Ix_data[q.y * Ix.cols * Ix.channels() + q.x * Ix.channels()] * (q.y - p.y);
         }
         else
         {
-          dp = Iy_data[p.x * Iy.cols * Iy.channels() + p.y * Iy.channels()] * (p.x - q.x) - Ix_data[p.x * Ix.cols * Ix.channels() + p.y * Ix.channels()] * (p.y - q.y);
-          dq = Iy_data[q.x * Iy.cols * Iy.channels() + q.y * Iy.channels()] * (p.x - q.x) - Ix_data[q.x * Ix.cols * Ix.channels() + q.y * Ix.channels()] * (p.y - q.y);
+          dp = Iy_data[p.y * Iy.cols * Iy.channels() + p.x * Iy.channels()] * (p.x - q.x) - Ix_data[p.y * Ix.cols * Ix.channels() + p.x * Ix.channels()] * (p.y - q.y);
+          dq = Iy_data[q.y * Iy.cols * Iy.channels() + q.x * Iy.channels()] * (p.x - q.x) - Ix_data[q.y * Ix.cols * Ix.channels() + q.x * Ix.channels()] * (p.y - q.y);
         }
         if (isDiag)
         {
@@ -106,7 +106,7 @@
         {
           fG /= Math.sqrt(2);
         }
-        return WEIGHT_LAP_ZERO_CROSS * zero_crossing.data[q.x * zero_crossing.cols * zero_crossing.channels() + q.y * zero_crossing.channels()] +  WEIGHT_GRADIENT_DIRECTION * (Math.acos(dp) + Math.acos(dq)) / Math.PI + WEIGHT_GRADIENT_MAGNITUDE *fG;
+        return WEIGHT_LAP_ZERO_CROSS * zero_crossing.data[q.y * zero_crossing.cols * zero_crossing.channels() + q.x * zero_crossing.channels()] +  WEIGHT_GRADIENT_DIRECTION * (Math.acos(dp) + Math.acos(dq)) / Math.PI + WEIGHT_GRADIENT_MAGNITUDE *fG;
       }
 
       function find_min_path(start)
@@ -119,8 +119,8 @@
         let L = new PriorityQueue();
         hit_map_x = new cv.Mat(src.rows, src.cols, cv.CV_32S, new cv.Scalar(0));
         hit_map_y = new cv.Mat(src.rows, src.cols, cv.CV_32S, new cv.Scalar(0));
-        cost_map.data32F[start.x * cost_map.cols * cost_map.channels() + start.y * cost_map.channels()] = 0;
-        processed.data[start.x * processed.cols * processed.channels() + start.y * processed.channels()] = 1;
+        cost_map.data32F[start.y * cost_map.cols * cost_map.channels() + start.x * cost_map.channels()] = 0;
+        processed.data[start.y * processed.cols * processed.channels() + start.x * processed.channels()] = 1;
 
         begin = {cost: 0, next_point: start};
         L.enqueue(begin.next_point, begin.cost);
@@ -131,11 +131,11 @@
           let P = L.top();
           L.dequeue(); 
           let p = P.value;
-          processed.data[p.x * processed.cols * processed.channels() + p.y * processed.channels()] = 0;
+          processed.data[p.y * processed.cols * processed.channels() + p.x * processed.channels()] = 0;
 
-          if (removed.data[start.x * removed.cols * removed.channels() + start.y * removed.channels()] == 0)
+          if (removed.data[start.y * removed.cols * removed.channels() + start.x * removed.channels()] == 0)
           {
-            expandned.data[p.x * expandned.cols * expandned.channels() + p.y * expandned.channels()] = 1;
+            expandned.data[p.y * expandned.cols * expandned.channels() + p.x * expandned.channels()] = 1;
             for(let i = -1; i <= 1; i++)
             {
               for(let j = -1; j <= 1; j++)
@@ -144,23 +144,23 @@
                 let ty = p.y + j;
                 if (tx < 0 || tx >= src.cols || ty < 0 || ty >= src.rows)
                   continue;
-                if (expandned.data[tx * expandned.cols * expandned.channels() + ty * expandned.channels()] == 0)
+                if (expandned.data[ty * expandned.cols * expandned.channels() + tx * expandned.channels()] == 0)
                 {
                   let q = {x: tx,y: ty};
-                  let cost = cost_map.data32F[p.x * cost_map.cols * cost_map.channels() + p.y * cost_map.channels()]  +  local_cost(p, q);
+                  let cost = cost_map.data32F[p.y * cost_map.cols * cost_map.channels() + p.x * cost_map.channels()]  +  local_cost(p, q);
 
-                  if (processed.data[q.x * processed.cols * processed.channels() + q.y * processed.channels()] == 1 && cost < cost_map.data32F[q.x * cost_map.cols * cost_map.channels() + q.y * cost_map.channels()])
+                  if (processed.data[q.y * processed.cols * processed.channels() + q.x * processed.channels()] == 1 && cost < cost_map.data32F[q.y * cost_map.cols * cost_map.channels() + q.x * cost_map.channels()])
                   {
-                    removed.data[q.x * removed.cols * removed.channels() + q.y * removed.channels()] = 1;
+                    removed.data[q.y * removed.cols * removed.channels() + q.x * removed.channels()] = 1;
                   }
-                  if (processed.data[q.x * processed.cols * processed.channels() + q.y * processed.channels()] == 0)
+                  if (processed.data[q.y * processed.cols * processed.channels() + q.x * processed.channels()] == 0)
                   {
-                    cost_map.data32F[q.x * cost_map.cols * cost_map.channels() + q.y * cost_map.channels()]= cost;
-                    hit_map_x.data32S[q.x * hit_map_x.cols * hit_map_x.channels() + q.y * hit_map_x.channels()] = p.x;
-                    hit_map_y.data32S[q.x * hit_map_y.cols * hit_map_y.channels() + q.y * hit_map_y.channels()] = p.y;
+                    cost_map.data32F[q.y * cost_map.cols * cost_map.channels() + q.x * cost_map.channels()]= cost;
+                    hit_map_x.data32S[q.y * hit_map_x.cols * hit_map_x.channels() + q.x * hit_map_x.channels()] = p.x;
+                    hit_map_y.data32S[q.y * hit_map_y.cols * hit_map_y.channels() + q.x * hit_map_y.channels()] = p.y;
 
-                    processed.data[q.x * processed.cols * processed.channels() + q.y * processed.channels()] = 1
-                    L.enqueue(q,cost_map.data32F[q.x * cost_map.cols * cost_map.channels() + q.y * cost_map.channels()]);
+                    processed.data[q.y * processed.cols * processed.channels() + q.x * processed.channels()] = 1
+                    L.enqueue(q,cost_map.data32F[q.y * cost_map.cols * cost_map.channels() + q.x * cost_map.channels()]);
                   }
                 }    
               }
@@ -200,8 +200,8 @@
 
       document.getElementById("canvas").onmousedown = function(e)
       {
-        lastY = e.pageX - this.offsetLeft;
-        lastX = e.pageY - this.offsetTop;
+        lastX = e.pageX - this.offsetLeft;
+        lastY = e.pageY - this.offsetTop;
         console.log("start")
         let ptr_pix = new cv.Point(lastX,lastY)
         find_min_path(ptr_pix)
@@ -212,16 +212,17 @@
       document.getElementById("canvas").onmousemove = function(e)
       {
         let dst = src.clone();
+
         if (lastX != undefined)
         {
-          let y = e.pageX - this.offsetLeft;
-          let x = e.pageY - this.offsetTop;
+          let x = e.pageX - this.offsetLeft;
+          let y = e.pageY - this.offsetTop;
           let start = new cv.Point(x,y)
           console.log(start)
 
           while((x!=lastX) || (y!=lastY))
           {
-            cv.line(dst, new cv.Point(hit_map_y.intPtr(x,y)[0], hit_map_x.intPtr(x,y)[0]), new cv.Point(y, x),new cv.Scalar(255, 255, 255, 255), 1);
+            cv.line(dst, new cv.Point(hit_map_x.intPtr(x,y)[0], hit_map_y.intPtr(x,y)[0]), new cv.Point(x, y),new cv.Scalar(255, 255, 255, 255), 1);
             let A = new cv.Point(hit_map_x.intPtr(x,y)[0], hit_map_y.intPtr(x,y)[0])
             console.log(A)
             x=A.x
