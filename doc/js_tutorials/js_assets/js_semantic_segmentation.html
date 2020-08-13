@@ -13,7 +13,7 @@
     This tutorial show you how to write an semantic segmentation example with OpenCV.js.<br>
     Click <b>Try it</b> button to see the result. You can choose any other images.<br>
     You can also change the parameters in the first code snippet to investigate more models.
-</p>    
+</p>
 
 <div class="control"><button id="tryIt">Try it</button></div>
 <div>
@@ -73,7 +73,7 @@ main = async function() {
     const url = {
         modelUrl: modelUrl,
         configUrl: configUrl
-    }; 
+    };
     const path = await loadModel(url);
     const input = getBlodFromImage(inputSize, mean, std, rgb);
     let net;
@@ -101,7 +101,7 @@ getBlodFromImage = function() {
     let mat = cv.imread("canvasInput");
     let matC3 = new cv.Mat(mat.matSize[0],mat.matSize[1],cv.CV_8UC3);
     cv.cvtColor(mat, matC3, cv.COLOR_RGBA2RGB);
-    let input = cv.blobFromImage(matC3, std, new cv.Size(inputSize[0], inputSize[1]), 
+    let input = cv.blobFromImage(matC3, std, new cv.Size(inputSize[0], inputSize[1]),
                                  new cv.Scalar(mean[0], mean[1], mean[2]), rgb);
     mat.delete();
     matC3.delete();
@@ -165,7 +165,7 @@ argmax = function(result, colors) {
 
     let classId = [];
     for (i = 0; i<imgSize; ++i){
-        id = 0;
+        let id = 0;
         for (j = 0; j < C; ++j){
             if(resultData[j*imgSize+i] > resultData[id*imgSize+i]){
                 id = j;
@@ -190,7 +190,7 @@ argmax = function(result, colors) {
     utils.loadCode('codeSnippet2', 'codeEditor2');
     utils.loadCode('codeSnippet3', 'codeEditor3');
     utils.loadCode('codeSnippet4', 'codeEditor4');
-    
+
     let canvas = document.getElementById('canvasInput');
     let ctx = canvas.getContext('2d');
     let img = new Image();
@@ -225,7 +225,7 @@ argmax = function(result, colors) {
     var generateColors = function(result) {};
     var argmax = function(result, colors) {};
     var getNameFromUrl = function(url) {};
-    
+
     utils.executeCode('codeEditor1');
     utils.executeCode('codeEditor2');
     utils.executeCode('codeEditor3');
@@ -283,7 +283,7 @@ argmax = function(result, colors) {
     }
 
 </script>
-    
+
 </body>
 
 </html>

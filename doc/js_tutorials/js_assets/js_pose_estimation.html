@@ -13,7 +13,7 @@
     This tutorial show you how to write an pose estimation example with OpenCV.js.<br>
     Click <b>Try it</b> button to see the result. You can choose any other images.<br>
     You can also change the parameters in the first code snippet to investigate more models.
-</p>    
+</p>
 
 <div class="control"><button id="tryIt" disabled>Try it</button></div>
 <div>
@@ -76,7 +76,7 @@ main = async function() {
     const url = {
         modelUrl: modelUrl,
         configUrl: configUrl
-    }; 
+    };
     const path = await loadModel(url);
     const input = getBlodFromImage();
     let net;
@@ -103,7 +103,7 @@ getBlodFromImage = function() {
     let mat = cv.imread("canvasInput");
     let matC3 = new cv.Mat(mat.matSize[0],mat.matSize[1],cv.CV_8UC3);
     cv.cvtColor(mat, matC3, cv.COLOR_RGBA2RGB);
-    let input = cv.blobFromImage(matC3, std, new cv.Size(inputSize[0], inputSize[1]), 
+    let input = cv.blobFromImage(matC3, std, new cv.Size(inputSize[0], inputSize[1]),
                                  new cv.Scalar(mean[0], mean[1], mean[2]), true);
     mat.delete();
     matC3.delete();
@@ -258,7 +258,7 @@ postProcess = function(result) {
         pointTo = points[idTo];
 
         if(points[idFrom] && points[idTo]) {
-            cv.line(output, new cv.Point(pointFrom[0], pointFrom[1]), 
+            cv.line(output, new cv.Point(pointFrom[0], pointFrom[1]),
                             new cv.Point(pointTo[0], pointTo[1]), new cv.Scalar(0, 255, 0), 3);
             cv.ellipse(output, new cv.Point(pointFrom[0], pointFrom[1]), new cv.Size(3, 3), 0, 0, 360,
                                new cv.Scalar(0, 0, 255), cv.FILLED);
@@ -280,7 +280,7 @@ postProcess = function(result) {
     utils.loadCode('codeSnippet3', 'codeEditor3');
     utils.loadCode('codeSnippet4', 'codeEditor4');
     utils.loadCode('codeSnippet5', 'codeEditor5');
-    
+
     let canvas = document.getElementById('canvasInput');
     let ctx = canvas.getContext('2d');
     let img = new Image();
@@ -314,7 +314,7 @@ postProcess = function(result) {
     var loadModel = async function(url) {};
     var postProcess = function(result) {};
     var getNameFromUrl = function(url) {};
-    
+
     utils.executeCode('codeEditor');
     utils.executeCode('codeEditor1');
     utils.executeCode('codeEditor2');
@@ -375,7 +375,7 @@ postProcess = function(result) {
     }
 
 </script>
-    
+
 </body>
 
 </html>

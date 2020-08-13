@@ -13,7 +13,7 @@
     This tutorial show you how to write an image classification example with camera.<br>
     Click <b>Start/Stop</b> button to start or stop the camera capture.<br>
     You can also change the parameters in the first code snippet to investigate more models.
-</p>    
+</p>
 
 <div class="control"><button id="startAndStop">Start</button></div>
 <div>
@@ -97,7 +97,7 @@ std = 1;
 rgb = true;
 
 // record if need softmax function for post-processing
-needSoftmax = false; 
+needSoftmax = false;
 
 // url for model, config and label files, can from native or Internet
 // for model type like onnx which doesn't need config file, just let configUrl = ""
@@ -114,7 +114,7 @@ main = async function(frame) {
     const url = {
         modelUrl: modelUrl,
         configUrl: configUrl
-    }; 
+    };
     const path = await loadModel(url);
     const labels = await loadLables(labelsUrl);
     const input = getBlodFromImage(frame);
@@ -168,7 +168,7 @@ loadLables = async function(labelsUrl){
 getBlodFromImage = function(frame) {
     let matC3 = new cv.Mat(frame.matSize[0],frame.matSize[1],cv.CV_8UC3);
     cv.cvtColor(frame, matC3, cv.COLOR_RGBA2RGB);
-    let input = cv.blobFromImage(matC3, std, new cv.Size(inputSize[0], inputSize[1]), 
+    let input = cv.blobFromImage(matC3, std, new cv.Size(inputSize[0], inputSize[1]),
                                  new cv.Scalar(mean[0], mean[1], mean[2]), rgb);
     matC3.delete();
     return input;
@@ -218,12 +218,12 @@ softmax = function(result) {
     if(needSoftmax) {
         const maxNum = Math.max(...arr);
         const expSum = arr.map((num) => Math.exp(num - maxNum)).reduce((a, b) => a + b);
-        return arr.map((value, index) => { 
+        return arr.map((value, index) => {
             return Math.exp(value - maxNum) / expSum;
         });
     } else {
         return arr;
-    }        
+    }
 }
 
 getTopClasses = function(probs, labels, topK = 3) {
@@ -273,7 +273,7 @@ getTopClasses = function(probs, labels, topK = 3) {
 
     utils.loadOpenCv(() => {
         startAndStop.removeAttribute('disabled');
-        
+
     });
 
     drawInfoTable();
@@ -286,7 +286,7 @@ getTopClasses = function(probs, labels, topK = 3) {
     var softmax = function(result){};
     var getTopClasses = function(mat, labels, topK = 3){};
     var getNameFromUrl = function(url) {};
-    
+
     utils.executeCode('codeEditor1');
     utils.executeCode('codeEditor2');
     utils.executeCode('codeEditor3');
@@ -399,11 +399,11 @@ getTopClasses = function(probs, labels, topK = 3) {
             table.style.width = "800px";
             table.style.borderCollapse = "collapse";
             appendix.appendChild(table);
-        }        
+        }
     }
 
 </script>
-    
+
 </body>
 
 </html>

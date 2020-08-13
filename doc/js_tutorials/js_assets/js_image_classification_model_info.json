@@ -29,7 +29,7 @@
             "softmax": "no",
             "modelUrl": "http://dl.caffe.berkeleyvision.org/bvlc_googlenet.caffemodel",
             "configUrl": "https://raw.githubusercontent.com/BVLC/caffe/master/models/bvlc_googlenet/deploy.prototxt"
-        },        
+        },
         {
             "model": "squeezenet",
             "mean": "104, 117, 123",

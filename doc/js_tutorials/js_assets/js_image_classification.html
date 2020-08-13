@@ -13,7 +13,7 @@
     This tutorial show you how to write an image classification example with OpenCV.js.<br>
     Click <b>Try it</b> button to see the result. You can choose any other images.<br>
     You can also change the parameters in the first code snippet to investigate more models.
-</p>    
+</p>
 
 <div class="control"><button id="tryIt">Try it</button></div>
 <div>
@@ -94,7 +94,7 @@ std = 1;
 rgb = true;
 
 // record if need softmax function for post-processing
-needSoftmax = false; 
+needSoftmax = false;
 
 // url for model, config and label files, can from native or Internet
 // for model type like onnx which doesn't need config file, just let configUrl = ""
@@ -108,7 +108,7 @@ main = async function() {
     const url = {
         modelUrl: modelUrl,
         configUrl: configUrl
-    }; 
+    };
     const path = await loadModel(url);
     const labels = await loadLables(labelsUrl);
     const input = getBlodFromImage(inputSize, mean, std, rgb);
@@ -148,7 +148,7 @@ getBlodFromImage = function() {
     let mat = cv.imread("canvasInput");
     let matC3 = new cv.Mat(mat.matSize[0],mat.matSize[1],cv.CV_8UC3);
     cv.cvtColor(mat, matC3, cv.COLOR_RGBA2RGB);
-    let input = cv.blobFromImage(matC3, std, new cv.Size(inputSize[0], inputSize[1]), 
+    let input = cv.blobFromImage(matC3, std, new cv.Size(inputSize[0], inputSize[1]),
                                  new cv.Scalar(mean[0], mean[1], mean[2]), rgb);
     mat.delete();
     matC3.delete();
@@ -199,12 +199,12 @@ softmax = function(result) {
     if(needSoftmax) {
         const maxNum = Math.max(...arr);
         const expSum = arr.map((num) => Math.exp(num - maxNum)).reduce((a, b) => a + b);
-        return arr.map((value, index) => { 
+        return arr.map((value, index) => {
             return Math.exp(value - maxNum) / expSum;
         });
     } else {
         return arr;
-    }        
+    }
 }
 
 getTopClasses = function(probs, labels, topK = 3) {
@@ -238,7 +238,7 @@ getTopClasses = function(probs, labels, topK = 3) {
     utils.loadCode('codeSnippet3', 'codeEditor3');
     utils.loadCode('codeSnippet4', 'codeEditor4');
     utils.loadCode('codeSnippet5', 'codeEditor5');
-    
+
     let canvas = document.getElementById('canvasInput');
     let ctx = canvas.getContext('2d');
     let img = new Image();
@@ -276,7 +276,7 @@ getTopClasses = function(probs, labels, topK = 3) {
     var softmax = function(result){};
     var getTopClasses = function(mat, labels, topK = 3){};
     var getNameFromUrl = function(url) {};
-    
+
     utils.executeCode('codeEditor1');
     utils.executeCode('codeEditor2');
     utils.executeCode('codeEditor3');
@@ -374,11 +374,11 @@ getTopClasses = function(probs, labels, topK = 3) {
             table.style.width = "800px";
             table.style.borderCollapse = "collapse";
             appendix.appendChild(table);
-        }        
+        }
     }
 
 </script>
-    
+
 </body>
 
 </html>

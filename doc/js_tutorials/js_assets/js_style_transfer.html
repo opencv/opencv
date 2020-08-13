@@ -13,7 +13,7 @@
     This tutorial show you how to write an style transfer example with OpenCV.js.<br>
     Click <b>Try it</b> button to see the result. You can choose any other images.<br>
     You can also change the parameters in the first code snippet to investigate more models.
-</p>    
+</p>
 
 <div class="control"><button id="tryIt" disabled>Try it</button></div>
 <div>
@@ -68,7 +68,7 @@ main = async function() {
     const url = {
         modelUrl: modelUrl,
         configUrl: configUrl
-    }; 
+    };
     const path = await loadModel(url);
     const input = getBlodFromImage();
     let net;
@@ -95,7 +95,7 @@ getBlodFromImage = function() {
     let mat = cv.imread("canvasInput");
     let matC3 = new cv.Mat(mat.matSize[0],mat.matSize[1],cv.CV_8UC3);
     cv.cvtColor(mat, matC3, cv.COLOR_RGBA2RGB);
-    let input = cv.blobFromImage(matC3, 1, new cv.Size(224, 224), 
+    let input = cv.blobFromImage(matC3, 1, new cv.Size(224, 224),
                                            new cv.Scalar(104, 117, 123), true);
     mat.delete();
     matC3.delete();
@@ -158,7 +158,7 @@ postProcess = function(result) {
         }
     }
 
-    let output = new cv.matFromArray(H, W, cv.CV_8UC4, normData);    
+    let output = new cv.matFromArray(H, W, cv.CV_8UC4, normData);
     return output;
 }
 </script>
@@ -171,7 +171,7 @@ postProcess = function(result) {
     utils.loadCode('codeSnippet2', 'codeEditor2');
     utils.loadCode('codeSnippet3', 'codeEditor3');
     utils.loadCode('codeSnippet4', 'codeEditor4');
-    
+
     let canvas = document.getElementById('canvasInput');
     let ctx = canvas.getContext('2d');
     let img = new Image();
@@ -205,7 +205,7 @@ postProcess = function(result) {
     var loadModel = async function(url) {};
     var postProcess = function(result) {};
     var getNameFromUrl = function(url) {};
-    
+
     utils.executeCode('codeEditor1');
     utils.executeCode('codeEditor2');
     utils.executeCode('codeEditor3');
@@ -264,7 +264,7 @@ postProcess = function(result) {
     }
 
 </script>
-    
+
 </body>
 
 </html>

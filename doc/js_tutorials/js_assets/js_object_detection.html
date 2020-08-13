@@ -13,7 +13,7 @@
     This tutorial show you how to write an object detection example with OpenCV.js.<br>
     Click <b>Try it</b> button to see the result. You can choose any other images.<br>
     You can also change the parameters in the first code snippet to investigate more models.
-</p>    
+</p>
 
 <div class="control"><button id="tryIt">Try it</button></div>
 <div>
@@ -81,7 +81,7 @@ main = async function() {
     const url = {
         modelUrl: modelUrl,
         configUrl: configUrl
-    }; 
+    };
     const path = await loadModel(url);
     const labels = await loadLables(labelsUrl);
     const input = getBlodFromImage(inputSize, mean, std, rgb);
@@ -119,7 +119,7 @@ getBlodFromImage = function() {
     let mat = cv.imread("canvasInput");
     let matC3 = new cv.Mat(mat.matSize[0], mat.matSize[1], cv.CV_8UC3);
     cv.cvtColor(mat, matC3, cv.COLOR_RGBA2RGB);
-    let input = cv.blobFromImage(matC3, std, new cv.Size(inputSize[0], inputSize[1]), 
+    let input = cv.blobFromImage(matC3, std, new cv.Size(inputSize[0], inputSize[1]),
                                  new cv.Scalar(mean[0], mean[1], mean[2]), rgb);
     mat.delete();
     matC3.delete();
@@ -211,7 +211,7 @@ postProcess = function(result, labels) {
                 for(let i = 0; i < boxes.length; ++i) {
                     tmp_boxes[i] = [boxes[i], i];
                 }
-                sorted_boxes = tmp_boxes.sort((a, b) => { return (b[0].scores[c] - a[0].scores[c]); });        
+                sorted_boxes = tmp_boxes.sort((a, b) => { return (b[0].scores[c] - a[0].scores[c]); });
                 for(let i = 0; i < boxNum; ++i) {
                     if (sorted_boxes[i][0].scores[c] === 0) continue;
                     else {
@@ -322,12 +322,12 @@ postProcess = function(result, labels) {
         let width = bounding[2];
         let height = bounding[3];
 
-        cv.rectangle(output, new cv.Point(left, top), new cv.Point(left + width, top + height), 
+        cv.rectangle(output, new cv.Point(left, top), new cv.Point(left + width, top + height),
                              new cv.Scalar(0, 255, 0));
-        cv.rectangle(output, new cv.Point(left, top), new cv.Point(left + width, top + 15), 
+        cv.rectangle(output, new cv.Point(left, top), new cv.Point(left + width, top + 15),
                              new cv.Scalar(255, 255, 255), cv.FILLED);
         let text = `${labels[box.classId]}: ${box.confidence.toFixed(4)}`;
-        cv.putText(output, text, new cv.Point(left, top + 10), cv.FONT_HERSHEY_SIMPLEX, 0.3, 
+        cv.putText(output, text, new cv.Point(left, top + 10), cv.FONT_HERSHEY_SIMPLEX, 0.3,
                                  new cv.Scalar(0, 0, 0));
     }
 }
@@ -342,7 +342,7 @@ postProcess = function(result, labels) {
     utils.loadCode('codeSnippet3', 'codeEditor3');
     utils.loadCode('codeSnippet4', 'codeEditor4');
     utils.loadCode('codeSnippet5', 'codeEditor5');
-    
+
     let canvas = document.getElementById('canvasInput');
     let ctx = canvas.getContext('2d');
     let img = new Image();
@@ -377,7 +377,7 @@ postProcess = function(result, labels) {
     var loadModel = async function(url) {};
     var postProcess = function(result, labels) {};
     var getNameFromUrl = function(url) {};
-    
+
     utils.executeCode('codeEditor1');
     utils.executeCode('codeEditor2');
     utils.executeCode('codeEditor3');
@@ -440,7 +440,7 @@ postProcess = function(result, labels) {
     }
 
 </script>
-    
+
 </body>
 
 </html>
