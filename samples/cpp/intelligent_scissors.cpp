@@ -114,7 +114,7 @@ static void find_min_path(const Point& start, Parameters* param)
                             param->hit_map_x.at<int>(q)= p.x;
                             param->hit_map_y.at<int>(q) = p.y;
                             // std::cout<< " Point: "<<q.x << " "<< q.y<<" to "<<std::endl;
-                            // std::cout<< p.x <<" "<<p.y<<std::endl;
+                            std::cout<< p.x <<" "<<p.y<<std::endl;
                             processed.at<uchar>(q) = 1;
                             Pix val;
                             val.cost = cost_map.at<float>(q);
