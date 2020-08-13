@@ -414,6 +414,45 @@ void Mat::copyTo( OutputArray _dst, InputArray _mask ) const
         copymask(ptrs[0], 0, ptrs[2], 0, ptrs[1], 0, sz, &esz);
 }
 
+// just 1 byte is valid
+#define CANT_APPLY_MEMSET 0xDEADBEEF
+
+static int check_apply_memset(const Mat *mat, const int64 *is)
+{
+    int fill_value = CANT_APPLY_MEMSET;
+    switch (mat->depth())
+    {
+    case CV_8U: fill_value = saturate_cast<uchar>(is[0]); break;
+    case CV_8S: fill_value = saturate_cast<schar>(is[0]); break;
+    default:
+        //CV_Error(CV_BadDepth, "Unsupported depth");
+        return CANT_APPLY_MEMSET;
+    }
+    
+    bool apply_memset = false;  
+    switch (mat->channels()) // ch
+    {
+    case 1:
+        apply_memset = true;
+        break;
+    case 2:
+        apply_memset = (is[0] == is[1]);
+        break;
+    case 3:
+        apply_memset = (is[0] == is[1] && is[1] == is[2]);
+        break;
+    case 4:
+        apply_memset = (is[0] == is[1] && is[1] == is[2] && is[2] == is[3]);
+        break;
+    default:
+        apply_memset = false;
+        break;
+    }
+
+    return apply_memset ? fill_value : CANT_APPLY_MEMSET;
+}
+
+
 Mat& Mat::operator = (const Scalar& s)
 {
     CV_INSTRUMENT_REGION();
@@ -434,56 +473,12 @@ Mat& Mat::operator = (const Scalar& s)
     }
     else
     {
-        if (elemSize1() == 1 ) // CV_8U, CV_8S
+        int fill_value = check_apply_memset(this, is);
+        if (fill_value != CANT_APPLY_MEMSET)
         {
-            /*
-                opencv interface.
-
-                1) Mat::operator = (Scalar)
-                    Mat m(1,1, CV_8UC3);
-                    m = 1;  // m = [ 1,0,0 ]
-
-                    Mat m(1,1, CV_8UC3);
-                    m = Scalar(1,1,1);  // m = [ 1,1,1 ]
-
-                2) Mat::ones ( little ambiguous )
-                    Mat m = Mat::ones(1,1, CV_8UC3);  // m = [ 1, 0, 0 ]
-            */
-            bool apply_memset = false;  // memset faster than memcpy
-            switch (channels()) // ch
-            {
-            case 1:
-                apply_memset = true;
-                break;
-            case 2:
-                apply_memset = (is[0] == is[1]);
-                break;
-            case 3:
-                apply_memset = (is[0] == is[1] && is[1] == is[2] );
-                break;
-            case 4:
-                apply_memset = (is[0] == is[1] && is[1] == is[2] && is[2] == is[3]);
-                break;
-            default:
-                apply_memset = false;
-                break;
-            }
-            apply_memset = false; // test for compare
-
-            if (apply_memset)
-            {
-                int val = 0;
-                switch (this->depth())
-                {
-                case CV_8U: val = saturate_cast<uchar>(is[0]); break;
-                case CV_8S: val = saturate_cast<schar>(is[0]); break;
-                default: CV_Error(CV_BadDepth, "Unsupported depth");
-                }
-
-                for (size_t i = 0; i < it.nplanes; i++, ++it)
-                    memset(dptr, val, elsize);
-                return *this;
-            }
+            for (size_t i = 0; i < it.nplanes; i++, ++it)
+                memset(dptr, fill_value, elsize);
+            return *this;
         }
 
         if( it.nplanes > 0 )
