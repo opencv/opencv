@@ -415,7 +415,7 @@ void Mat::copyTo( OutputArray _dst, InputArray _mask ) const
 }
 
 // just 1 byte is valid
-#define CANT_APPLY_MEMSET 0xDEADBEEF
+#define CANT_APPLY_MEMSET int(0xDEADBEEF)
 
 static int check_apply_memset(const Mat *mat, const int64 *is)
 {
@@ -429,8 +429,8 @@ static int check_apply_memset(const Mat *mat, const int64 *is)
         return CANT_APPLY_MEMSET;
     }
     
-    bool apply_memset = false;  
-    switch (mat->channels()) // ch
+    bool apply_memset = false;
+    switch (mat->channels())
     {
     case 1:
         apply_memset = true;
