@@ -417,19 +417,20 @@ void Mat::copyTo( OutputArray _dst, InputArray _mask ) const
 // just 1 byte is valid
 #define CANT_APPLY_MEMSET int(0xDEADBEEF)
 
-static int check_apply_memset(const Mat *mat, const int64 *is)
+static int check_apply_memset(const Mat *mat, const Scalar &s)
 {
     int fill_value = CANT_APPLY_MEMSET;
     switch (mat->depth())
     {
-    case CV_8U: fill_value = saturate_cast<uchar>(is[0]); break;
-    case CV_8S: fill_value = saturate_cast<schar>(is[0]); break;
+    case CV_8U: fill_value = saturate_cast<uchar>( s.val[0] ); break;
+    case CV_8S: fill_value = saturate_cast<schar>( s.val[0] ); break;
     default:
         //CV_Error(CV_BadDepth, "Unsupported depth");
         return CANT_APPLY_MEMSET;
     }
-    
+
     bool apply_memset = false;
+    const int64* is = (const int64*)&s.val[0];
     switch (mat->channels())
     {
     case 1:
@@ -473,7 +474,7 @@ Mat& Mat::operator = (const Scalar& s)
     }
     else
     {
-        int fill_value = check_apply_memset(this, is);
+        int fill_value = check_apply_memset(this, s);
         if (fill_value != CANT_APPLY_MEMSET)
         {
             for (size_t i = 0; i < it.nplanes; i++, ++it)
