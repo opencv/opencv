@@ -486,7 +486,7 @@ Mat& Mat::operator = (const Scalar& s)
                 return *this;
             }
         }
-        
+
         if( it.nplanes > 0 )
         {
             double scalar[12];
