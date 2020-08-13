@@ -75,6 +75,7 @@
 
 #include "sift.simd.hpp"
 #include "sift.simd_declarations.hpp" // defines CV_CPU_DISPATCH_MODES_ALL=AVX2,...,BASELINE based on CMakeLists.txt content
+#include "opencv2/core/softfloat.hpp"
 
 namespace cv {
 
@@ -500,7 +501,11 @@ void SIFT_Impl::detectAndCompute(InputArray _image, InputArray _mask,
 
     Mat base = createInitialImage(image, firstOctave < 0, (float)sigma);
     std::vector<Mat> gpyr;
+#if DoG_TYPE_SHORT
+    int nOctaves = actualNOctaves > 0 ? actualNOctaves : cvRound(cv::log( softdouble(std::min( base.cols, base.rows )) ) / cv::log(softdouble(2.0))) - 2 - firstOctave;
+#else
     int nOctaves = actualNOctaves > 0 ? actualNOctaves : cvRound(std::log( (double)std::min( base.cols, base.rows ) ) / std::log(2.) - 2) - firstOctave;
+#endif
 
     //double t, tf = getTickFrequency();
     //t = (double)getTickCount();
