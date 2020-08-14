@@ -414,6 +414,29 @@ void Mat::copyTo( OutputArray _dst, InputArray _mask ) const
         copymask(ptrs[0], 0, ptrs[2], 0, ptrs[1], 0, sz, &esz);
 }
 
+
+static bool can_apply_memset(const Mat &mat, const Scalar &s, int &fill_value)
+{
+    // check if depth is 1 byte.
+    switch (mat.depth())
+    {
+    case CV_8U: fill_value = saturate_cast<uchar>( s.val[0] ); break;
+    case CV_8S: fill_value = saturate_cast<schar>( s.val[0] ); break;
+    default: return false;
+    }
+
+    // check if all element is same.
+    const int64* is = (const int64*)&s.val[0];
+    switch (mat.channels())
+    {
+    case 1: return true;
+    case 2: return (is[0] == is[1]);
+    case 3: return (is[0] == is[1] && is[1] == is[2]);
+    case 4: return (is[0] == is[1] && is[1] == is[2] && is[2] == is[3]);
+    default: return false;
+    }
+}
+
 Mat& Mat::operator = (const Scalar& s)
 {
     CV_INSTRUMENT_REGION();
@@ -434,6 +457,14 @@ Mat& Mat::operator = (const Scalar& s)
     }
     else
     {
+        int fill_value = 0;
+        if ( can_apply_memset(*this, s, fill_value) )
+        {
+            for (size_t i = 0; i < it.nplanes; i++, ++it)
+                memset(dptr, fill_value, elsize);
+            return *this;
+        }
+
         if( it.nplanes > 0 )
         {
             double scalar[12];
