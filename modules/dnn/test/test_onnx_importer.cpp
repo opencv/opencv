@@ -606,6 +606,16 @@ TEST_P(Test_ONNX_layers, Pad2d_Unfused)
     testONNXModels("ZeroPad2d");
 }
 
+TEST_P(Test_ONNX_layers, LinearWithConstant)
+{
+    testONNXModels("lin_with_constant");
+}
+
+TEST_P(Test_ONNX_layers, MatmulWithTwoInputs)
+{
+    testONNXModels("matmul_with_two_inputs");
+}
+
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_ONNX_layers, dnnBackendsAndTargets());
 
 class Test_ONNX_nets : public Test_ONNX_layers
