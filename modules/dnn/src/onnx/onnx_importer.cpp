@@ -392,13 +392,19 @@ void ONNXImporter::populateNet(Net dstNet)
         {
             CV_Assert(node_proto.input_size() == 1);
             layerParams.type = "Pooling";
-            String pool =  layer_type == "GlobalMaxPool" ? "MAX" : layer_type == "ReduceSum" ? "SUM" : "AVE";
+            String pool;
+            if (layer_type == "GlobalMaxPool")
+                pool = "MAX";
+            else if (layer_type == "ReduceSum")
+                pool = "SUM";
+            else
+                pool = "AVE";
             layerParams.set("pool", pool);
             layerParams.set("global_pooling", layer_type == "GlobalAveragePool" || layer_type == "GlobalMaxPool");
             if (layer_type == "ReduceMean" || layer_type == "ReduceSum")
             {
                 if (!layerParams.has("axes"))
-                    CV_Error(Error::StsNotImplemented, "Unsupported mode of ReduceMean or ReduceSum operation.");
+                    CV_Error(Error::StsNotImplemented, "Unsupported mode of " + layer_type + " operation.");
 
                 MatShape inpShape = outShapes[node_proto.input(0)];
                 DictValue axes = layerParams.get("axes");
@@ -436,11 +442,11 @@ void ONNXImporter::populateNet(Net dstNet)
                     avgLp.name = layerParams.name + "/avg";
                     avgLp.type = "Pooling";
                     CV_Assert(layer_id.find(avgLp.name) == layer_id.end());
-                    avgLp.set("pool", layer_type == "ReduceMean" ? "ave": "sum");
+                    avgLp.set("pool", pool);
                     if (axes.size() == 2)
                     {
-                        CV_CheckEQ(clamp(axes.get<int>(0), inpShape.size()), 1, "Unsupported ReduceMean or ReduceSum mode");
-                        CV_CheckEQ(clamp(axes.get<int>(1), inpShape.size()), 2, "Unsupported ReduceMean or ReduceSum mode");
+                        CV_CheckEQ(clamp(axes.get<int>(0), inpShape.size()), 1, ("Unsupported " + layer_type  + " mode").c_str());
+                        CV_CheckEQ(clamp(axes.get<int>(1), inpShape.size()), 2, ("Unsupported " + layer_type  + " mode").c_str());
                         avgLp.set("global_pooling", true);
                     }
                     else
@@ -456,7 +462,7 @@ void ONNXImporter::populateNet(Net dstNet)
                 else
                 {
                     if (inpShape.size() != 4 && inpShape.size() != 5)
-                        CV_Error(Error::StsNotImplemented, "Unsupported input shape of ReduceMean or ReduceSum operation.");
+                        CV_Error(Error::StsNotImplemented, "Unsupported input shape of " + layer_type + " operation.");
 
                     CV_Assert(axes.size() <= inpShape.size() - 2);
                     std::vector<int> kernel_size(inpShape.size() - 2, 1);
