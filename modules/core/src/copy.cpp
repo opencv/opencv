@@ -417,6 +417,7 @@ void Mat::copyTo( OutputArray _dst, InputArray _mask ) const
 
 static bool can_apply_memset(const Mat &mat, const Scalar &s, int &fill_value)
 {
+    // check if depth is 1 byte.
     switch (mat.depth())
     {
     case CV_8U: fill_value = saturate_cast<uchar>( s.val[0] ); break;
@@ -424,6 +425,7 @@ static bool can_apply_memset(const Mat &mat, const Scalar &s, int &fill_value)
     default: return false;
     }
 
+    // check if all element is same.
     const int64* is = (const int64*)&s.val[0];
     switch (mat.channels())
     {
