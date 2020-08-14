@@ -175,7 +175,6 @@ GAPI_EXPORTS void serialize( I::OStream& os
                            , const cv::gimpl::Protocol &p
                            , const std::vector<ade::NodeHandle> &nodes);
 
-
 // The top-level deserialization routineS.
 // Unfortunately the deserialization is a two-step process:
 // 1. First we decode a stream into some intermediate representation
