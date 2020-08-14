@@ -262,9 +262,6 @@ There are three new sample files in opencv/samples directory.
     file, however instead of clustering points to plane the 3D map of
     object points is plot.
 
-References
-=======
-
 1\. Daniel Barath and Jiří Matas. 2018. Graph-Cut RANSAC. In *Proceedings
 of the iEEE conference on computer vision and pattern recognition*,
 6733–6741.
