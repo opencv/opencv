@@ -1,8 +1,8 @@
 ---
 author:
 - Maksym Ivashechkin
-bibliography:
-- 'bibs.bib'
+bibliography: 'bibs.bib'
+csl: 'acm-sigchi-proceedings.csl'
 date: August 2020
 title: 'Google Summer of Code: Improvement of Random Sample Consensus in OpenCV'
 ...
@@ -20,31 +20,30 @@ components:
 
 1.  Sampling method:
 
-    1.  Uniform – standard RANSAC sampling proposed in
-        @fischler1981random which draw minimal subset independently
-        uniformly at random. *The default option in proposed framework*.
+    1.  Uniform – standard RANSAC sampling proposed in \[8\] which draw
+        minimal subset independently uniformly at random. *The default
+        option in proposed framework*.
 
-    2.  PROSAC – method @chum2005matching that assumes input data points
-        sorted by quality so sampling can start from the most
-        promising points. Correspondences for this method can be sorted
-        e.g., by ratio of descriptor distances of the best to second
-        match obtained from SIFT detector. *This is method is
-        recommended to use because it can find good model and terminate
-        much earlier*.
+    2.  PROSAC – method \[4\] that assumes input data points sorted by
+        quality so sampling can start from the most promising points.
+        Correspondences for this method can be sorted e.g., by ratio of
+        descriptor distances of the best to second match obtained from
+        SIFT detector. *This is method is recommended to use because it
+        can find good model and terminate much earlier*.
 
-    3.  NAPSAC – sampling method @nasuto2002napsac which takes initial
-        point uniformly at random and the rest of points for minimal
-        sample in the neighborhood of initial point. This is method can
-        be potentially useful when models are localized. For example,
-        for plane fitting. However, in practise struggles from
-        degenerate issues and defining optimal neighborhood size.
+    3.  NAPSAC – sampling method \[10\] which takes initial point
+        uniformly at random and the rest of points for minimal sample in
+        the neighborhood of initial point. This is method can be
+        potentially useful when models are localized. For example, for
+        plane fitting. However, in practise struggles from degenerate
+        issues and defining optimal neighborhood size.
 
-    4.  Progressive-NAPSAC – sampler @barath2019progressive which is
-        similar to NAPSAC, although it starts from local and gradually
-        converges to global sampling. This method can be quite useful if
-        local models are expected but distribution of data can
-        be arbitrary. The implemented version assumes data points to be
-        sorted by quality as in PROSAC.
+    4.  Progressive-NAPSAC – sampler \[2\] which is similar to NAPSAC,
+        although it starts from local and gradually converges to
+        global sampling. This method can be quite useful if local models
+        are expected but distribution of data can be arbitrary. The
+        implemented version assumes data points to be sorted by quality
+        as in PROSAC.
 
 2.  Score Method. USAC as well as standard RANSAC finds model which
     minimizes total loss. Loss can be represented by following
@@ -57,16 +56,16 @@ components:
         default option in framework*. The model might not have as many
         inliers as using RANSAC score, however will be more accurate.
 
-    3.  MAGSAC – threshold-free method @Barath_2020_CVPR to
-        compute score. Using, although, maximum sigma (standard
-        deviation of noise) level to marginalize residual of point
-        over sigma. Score of the point represents likelihood of point
-        being inlier. *Recommended option when image noise is unknown
-        since method does not require threshold*. However, it is still
-        recommended to provide at least approximated threshold, because
-        termination itself is based on number of points which error is
-        less than threshold. By giving 0 threshold the method will
-        output model after maximum number of iterations reached.
+    3.  MAGSAC – threshold-free method \[3\] to compute score. Using,
+        although, maximum sigma (standard deviation of noise) level to
+        marginalize residual of point over sigma. Score of the point
+        represents likelihood of point being inlier. *Recommended option
+        when image noise is unknown since method does not require
+        threshold*. However, it is still recommended to provide at least
+        approximated threshold, because termination itself is based on
+        number of points which error is less than threshold. By giving 0
+        threshold the method will output model after maximum number of
+        iterations reached.
 
     4.  LMeds – the least median of squared error distances. In the
         framework finding median is efficiently implement with $O(n)$
@@ -87,9 +86,9 @@ components:
 
 4.  Degeneracy:
 
-    1.  DEGENSAC – method @chum2005two which for Fundamental matrix
-        estimation efficiently verifies and recovers model which has at
-        least 5 points in minimal sample lying on the dominant plane.
+    1.  DEGENSAC – method \[7\] which for Fundamental matrix estimation
+        efficiently verifies and recovers model which has at least 5
+        points in minimal sample lying on the dominant plane.
 
     2.  Collinearity test – for affine and homography matrix estimation
         checks if no 3 points lying on the line. For homography matrix
@@ -97,35 +96,33 @@ components:
         in minimal sample lie on the same side w.r.t. to any line
         crossing any two points in sample (does not assume reflection).
 
-    3.  Oriented epipolar constraint – method @chum2004epipolar for
-        epipolar geometry which verifies model (fundamental and
-        essential matrix) to have points visible in the front of
-        the camera.
+    3.  Oriented epipolar constraint – method \[6\] for epipolar
+        geometry which verifies model (fundamental and essential matrix)
+        to have points visible in the front of the camera.
 
-5.  SPRT verification – method @matas2005randomized which verifies model
-    by its evaluation on randomly shuffled points using statistical
-    properties given by probability of inlier, relative time for
-    estimation, average number of output models etc. Significantly
-    speeding up framework, because bad model can be rejected very
-    quickly without explicitly computing error for every point.
+5.  SPRT verification – method \[9\] which verifies model by its
+    evaluation on randomly shuffled points using statistical properties
+    given by probability of inlier, relative time for estimation,
+    average number of output models etc. Significantly speeding up
+    framework, because bad model can be rejected very quickly without
+    explicitly computing error for every point.
 
 6.  Local Optimization:
 
-    1.  Locally Optimized RANSAC – method @chum2003locally that
-        iteratively improves so-far-the-best model by
-        non-minimal estimation. *The default option in framework. This
-        procedure is the fastest and not worse than others local
-        optimization methods.*
+    1.  Locally Optimized RANSAC – method \[5\] that iteratively
+        improves so-far-the-best model by non-minimal estimation. *The
+        default option in framework. This procedure is the fastest and
+        not worse than others local optimization methods.*
 
-    2.  Graph-Cut RANSAC – method @barath2018graph that refine
-        so-far-the-best model, however, it exploits spatial coherence of
-        the data points. *This procedure is quite precise however
+    2.  Graph-Cut RANSAC – method \[1\] that refine so-far-the-best
+        model, however, it exploits spatial coherence of the
+        data points. *This procedure is quite precise however
         computationally slower.*
 
-    3.  Sigma Consensus – method @Barath_2020_CVPR which improves model
-        by applying non-minimal weighted estimation, where weights are
-        computed with the same logic as in MAGSAC score. This method is
-        better to use together with MAGSAC score.
+    3.  Sigma Consensus – method \[3\] which improves model by applying
+        non-minimal weighted estimation, where weights are computed with
+        the same logic as in MAGSAC score. This method is better to use
+        together with MAGSAC score.
 
 7.  Termination:
 
@@ -155,11 +152,11 @@ components:
 
     4.  Essential matrix – 4 null vectors are found using
         Gaussian elimination. Then the solver based on Gröbner basis
-        described in @stewenius2006 is used. Essential matrix can be
-        computed only if <span
-        style="font-variant:small-caps;">LAPACK</span> or <span
-        style="font-variant:small-caps;">Eigen</span> are installed as
-        it requires eigen decomposition with complex eigen values.
+        described in \[11\] is used. Essential matrix can be computed
+        only if <span style="font-variant:small-caps;">LAPACK</span> or
+        <span style="font-variant:small-caps;">Eigen</span> are
+        installed as it requires eigen decomposition with complex
+        eigen values.
 
     5.  Perspective-n-Point – the minimal solver is classical 3 points
         with up to 4 solutions. For RANSAC the low number of sample size
@@ -196,9 +193,8 @@ a neighborhood graph. In framework there are 3 options to do it:
     points which distance is less than 20 pixels.
 
 3.  `NEIGH_GRID` – for finding points’ neighborhood tiles points in
-    cells using hash-table. The method is described in
-    @barath2019progressive. Less accurate than `NEIGH_FLANN_RADIUS`,
-    although significantly faster.
+    cells using hash-table. The method is described in \[2\]. Less
+    accurate than `NEIGH_FLANN_RADIUS`, although significantly faster.
 
 Note, `NEIGH_FLANN_RADIUS` and `NEIGH_FLANN_RADIUS` are not able to PnP
 solver, since there are 3D object points.\
@@ -265,3 +261,49 @@ There are three new sample files in opencv/samples directory.
 3.  `essential_mat_reconstr.py` – the same functionality as in .cpp
     file, however instead of clustering points to plane the 3D map of
     object points is plot.
+
+References
+=======
+
+1\. Daniel Barath and Jiří Matas. 2018. Graph-Cut RANSAC. In *Proceedings
+of the iEEE conference on computer vision and pattern recognition*,
+6733–6741.
+
+2\. Daniel Barath, Maksym Ivashechkin, and Jiri Matas. 2019. Progressive
+NAPSAC: Sampling from gradually growing neighborhoods. *arXiv preprint
+arXiv:1906.02295*.
+
+3\. Daniel Barath, Jana Noskova, Maksym Ivashechkin, and Jiri Matas.
+2020. MAGSAC++, a fast, reliable and accurate robust estimator. In
+*Proceedings of the iEEE/CVF conference on computer vision and pattern
+recognition (cVPR)*.
+
+4\. O. Chum and J. Matas. 2005. Matching with PROSAC-progressive sample
+consensus. In *Computer vision and pattern recognition*.
+
+5\. O. Chum, J. Matas, and J. Kittler. 2003. Locally optimized RANSAC. In
+*Joint pattern recognition symposium*.
+
+6\. O. Chum, T. Werner, and J. Matas. 2004. Epipolar geometry estimation
+via RANSAC benefits from the oriented epipolar constraint. In
+*International conference on pattern recognition*.
+
+7\. Ondrej Chum, Tomas Werner, and Jiri Matas. 2005. Two-view geometry
+estimation unaffected by a dominant plane. In *2005 iEEE computer
+society conference on computer vision and pattern recognition
+(cVPR’05)*, 772–779.
+
+8\. M. A. Fischler and R. C. Bolles. 1981. Random sample consensus: A
+paradigm for model fitting with applications to image analysis and
+automated cartography. *Communications of the ACM*.
+
+9\. Jiri Matas and Ondrej Chum. 2005. Randomized RANSAC with sequential
+probability ratio test. In *Tenth iEEE international conference on
+computer vision (iCCV’05) volume 1*, 1727–1732.
+
+10\. D. R. Myatt, P. H. S. Torr, S. J. Nasuto, J. M. Bishop, and R.
+Craddock. 2002. NAPSAC: High noise, high dimensional robust estimation.
+In *In bMVC02*, 458–467.
+
+11\. Henrik Stewénius, Christopher Engels, and David Nistér. 2006. Recent
+developments on direct relative orientation.
