@@ -49,6 +49,8 @@
 #include "ippe.hpp"
 #include "calib3d_c_api.h"
 
+#include "usac.hpp"
+
 namespace cv
 {
 #if defined _DEBUG || defined CV_STATIC_ANALYSIS
@@ -201,6 +203,11 @@ bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
 {
     CV_INSTRUMENT_REGION();
 
+    if (flags >= 32 && flags <= 38)
+        return usac::solvePnPRansac(_opoints, _ipoints, _cameraMatrix, _distCoeffs,
+            _rvec, _tvec, useExtrinsicGuess, iterationsCount, reprojectionError,
+            confidence, _inliers, flags);
+
     Mat opoints0 = _opoints.getMat(), ipoints0 = _ipoints.getMat();
     Mat opoints, ipoints;
     if( opoints0.depth() == CV_64F || !opoints0.isContinuous() )
@@ -341,6 +348,28 @@ bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
     }
     return true;
 }
+
+
+bool solvePnPRansac( InputArray objectPoints, InputArray imagePoints,
+                     InputOutputArray cameraMatrix, InputArray distCoeffs,
+                     OutputArray rvec, OutputArray tvec, OutputArray inliers,
+                     const UsacParams &params) {
+    Ptr<usac::Model> model_params;
+    usac::setParameters(model_params, cameraMatrix.empty() ? usac::EstimationMethod::P6P :
+        usac::EstimationMethod::P3P, params, inliers.needed());
+    Ptr<usac::RansacOutput> ransac_output;
+    if (usac::run(model_params, imagePoints, objectPoints, model_params->getRandomGeneratorState(),
+            ransac_output, cameraMatrix, noArray(), distCoeffs, noArray())) {
+        usac::saveMask(inliers, ransac_output->getInliersMask());
+        const Mat &model = ransac_output->getModel();
+        model.col(0).copyTo(rvec);
+        model.col(1).copyTo(tvec);
+        if (cameraMatrix.empty())
+            model.colRange(2, 5).copyTo(cameraMatrix);
+        return true;
+    } else return false;
+}
+
 
 int solveP3P( InputArray _opoints, InputArray _ipoints,
               InputArray _cameraMatrix, InputArray _distCoeffs,

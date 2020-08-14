@@ -47,6 +47,8 @@
 #include <iterator>
 #include <limits>
 
+#include "usac.hpp"
+
 namespace cv
 {
 
@@ -927,6 +929,11 @@ Mat estimateAffine2D(InputArray _from, InputArray _to, OutputArray _inliers,
                      const size_t maxIters, const double confidence,
                      const size_t refineIters)
 {
+
+    if (method >= 32 && method <= 38)
+        return cv::usac::estimateAffine2D(_from, _to, _inliers, method,
+            ransacReprojThreshold, (int)maxIters, confidence, (int)refineIters);
+
     Mat from = _from.getMat(), to = _to.getMat();
     int count = from.checkVector(2);
     bool result = false;
@@ -994,6 +1001,18 @@ Mat estimateAffine2D(InputArray _from, InputArray _to, OutputArray _inliers,
     }
 
     return H;
+}
+
+Mat estimateAffine2D(InputArray _from, InputArray _to, OutputArray inliers,
+                     const UsacParams &params) {
+    Ptr<usac::Model> model;
+    usac::setParameters(model, usac::EstimationMethod::Affine, params, inliers.needed());
+    Ptr<usac::RansacOutput> ransac_output;
+    if (usac::run(model, _from, _to, model->getRandomGeneratorState(),
+            ransac_output, noArray(), noArray(), noArray(), noArray())) {
+        usac::saveMask(inliers, ransac_output->getInliersMask());
+        return ransac_output->getModel().rowRange(0,2);
+    } else return Mat();
 }
 
 Mat estimateAffinePartial2D(InputArray _from, InputArray _to, OutputArray _inliers,

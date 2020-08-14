@@ -31,6 +31,8 @@
 
 #include "precomp.hpp"
 
+#include "usac.hpp"
+
 namespace cv
 {
 
@@ -407,6 +409,10 @@ cv::Mat cv::findEssentialMat( InputArray _points1, InputArray _points2, InputArr
 {
     CV_INSTRUMENT_REGION();
 
+    if (method >= 32 && method <= 38)
+        return usac::findEssentialMat(_points1, _points2, _cameraMatrix,
+            method, prob, threshold, _mask);
+
     Mat points1, points2, cameraMatrix;
     _points1.getMat().convertTo(points1, CV_64F);
     _points2.getMat().convertTo(points2, CV_64F);
@@ -485,6 +491,20 @@ cv::Mat cv::findEssentialMat( InputArray _points1, InputArray _points2,
     transform(_pointsUntistorted2, _pointsUntistorted2, affine);
 
     return findEssentialMat(_pointsUntistorted1, _pointsUntistorted2, cm0, method, prob, threshold, _mask);
+}
+
+cv::Mat cv::findEssentialMat( InputArray points1, InputArray points2,
+                      InputArray cameraMatrix1, InputArray cameraMatrix2,
+                      InputArray dist_coeff1, InputArray dist_coeff2, OutputArray mask, const UsacParams &params) {
+    Ptr<usac::Model> model;
+    usac::setParameters(model, usac::EstimationMethod::Essential, params, mask.needed());
+    Ptr<usac::RansacOutput> ransac_output;
+    if (usac::run(model, points1, points2, model->getRandomGeneratorState(),
+            ransac_output, cameraMatrix1, cameraMatrix2, dist_coeff1, dist_coeff2)) {
+        usac::saveMask(mask, ransac_output->getInliersMask());
+        return ransac_output->getModel();
+    } else return Mat();
+
 }
 
 int cv::recoverPose( InputArray E, InputArray _points1, InputArray _points2,
