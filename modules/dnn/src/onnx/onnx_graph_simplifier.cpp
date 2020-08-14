@@ -262,6 +262,24 @@ public:
     }
 };
 
+class ExpandSubgraph : public Subgraph
+{
+public:
+    ExpandSubgraph()
+    {
+        int input = addNodeToMatch("");
+        int values = addNodeToMatch("");
+        int init = addNodeToMatch("ConstantOfShape", values);
+        int coeff = addNodeToMatch("Constant");
+        int mul = addNodeToMatch("Mul", init, coeff);
+        int shape = addNodeToMatch("Constant");
+        int condition = addNodeToMatch("Equal", shape, mul);
+        int where = addNodeToMatch("Where", condition, init, addNodeToMatch("Constant"));
+        addNodeToMatch("Expand", input, where);
+        setFusedNode("Expand", input, shape);
+    }
+};
+
 class MulCastSubgraph : public Subgraph
 {
 public:
@@ -459,6 +477,7 @@ void simplifySubgraphs(opencv_onnx::GraphProto& net)
     subgraphs.push_back(makePtr<NormalizeSubgraph3>());
     subgraphs.push_back(makePtr<BatchNormalizationSubgraph1>());
     subgraphs.push_back(makePtr<BatchNormalizationSubgraph2>());
+    subgraphs.push_back(makePtr<ExpandSubgraph>());
 
     simplifySubgraphs(Ptr<ImportGraphWrapper>(new ONNXGraphWrapper(net)), subgraphs);
 }
