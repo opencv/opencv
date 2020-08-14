@@ -75,7 +75,6 @@
 
 #include "sift.simd.hpp"
 #include "sift.simd_declarations.hpp" // defines CV_CPU_DISPATCH_MODES_ALL=AVX2,...,BASELINE based on CMakeLists.txt content
-#include "opencv2/core/softfloat.hpp"
 
 namespace cv {
 

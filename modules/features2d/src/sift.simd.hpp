@@ -74,6 +74,7 @@
 #include <opencv2/core/hal/hal.hpp>
 #include "opencv2/core/hal/intrin.hpp"
 #include <opencv2/core/utils/buffer_area.private.hpp>
+#include "opencv2/core/softfloat.hpp"
 
 namespace cv {
 
@@ -287,6 +288,36 @@ float calcOrientationHist(
     return maxval;
 }
 
+//
+// 3x3 matrix solver. This is equivalent to mat.solve(vec, DECOMP_LU).
+template<typename T>
+static Vec<T, 3> solve_LU(
+    const Matx<T, 3, 3>& mat, const Vec<T, 3> vec
+)
+{
+    T l10, l20, l21, u00, u01, u02, u11, u12, u22;
+    u00 = mat(0,0);
+    u01 = mat(0,1);
+    u02 = mat(0,2);
+    l10 = mat(1,0)/u00;
+    l20 = mat(2,0)/u00;
+    u11 = mat(1,1) - l10 * u01;
+    u12 = mat(1,2) - l10 * u02;
+    l21 = (mat(2,1) - l20 * u01) / u11;
+    u22 = (mat(2,2) - l20 * u02) - l21 * u12;
+
+    T v0, v1, v2;
+    v0 = vec(0);
+    v1 = vec(1) - l10 * v0;
+    v2 = vec(2) - l20 * v0 - l21 * v1;
+
+    Vec<T, 3> x;
+    x(2) = v2 / u22;
+    x(1) = (v1 - x(2) * u12) / u11;
+    x(0) = (v0 - x(2) * u02 - x(1) * u01) / u00;
+
+    return x;
+}
 
 //
 // Interpolates a scale-space extremum's location and scale to subpixel
@@ -300,15 +331,21 @@ bool adjustLocalExtrema(
 )
 {
     CV_TRACE_FUNCTION();
-// #ifdef DoG_TYPE_SHORT
+#if DoG_TYPE_SHORT
+    const softfloat img_scale = softfloat::one() / softfloat(255*SIFT_FIXPT_SCALE);
+    const softfloat deriv_scale = img_scale * softfloat(0.5f);
+    const softfloat second_deriv_scale = img_scale;
+    const softfloat cross_deriv_scale = img_scale * softfloat(0.25f);
 
-// #else
+    softfloat xi, xr, xc, contr;
+#else
     const float img_scale = 1.f/(255*SIFT_FIXPT_SCALE);
     const float deriv_scale = img_scale*0.5f;
     const float second_deriv_scale = img_scale;
     const float cross_deriv_scale = img_scale*0.25f;
 
     float xi=0, xr=0, xc=0, contr=0;
+#endif
     int i = 0;
 
     for( ; i < SIFT_MAX_INTERP_STEPS; i++ )
@@ -318,20 +355,24 @@ bool adjustLocalExtrema(
         const Mat& prev = dog_pyr[idx-1];
         const Mat& next = dog_pyr[idx+1];
 #if DoG_TYPE_SHORT
-        Vec3f dD(((int)img.at<sift_wt>(r, c+1) - img.at<sift_wt>(r, c-1))*deriv_scale,
-                 ((int)img.at<sift_wt>(r+1, c) - img.at<sift_wt>(r-1, c))*deriv_scale,
-                 ((int)next.at<sift_wt>(r, c) - prev.at<sift_wt>(r, c))*deriv_scale);
+        Vec<softfloat,3> dD( softfloat((int)img.at<sift_wt>(r, c+1) - img.at<sift_wt>(r, c-1))*deriv_scale,
+                             softfloat((int)img.at<sift_wt>(r+1, c) - img.at<sift_wt>(r-1, c))*deriv_scale,
+                             softfloat((int)next.at<sift_wt>(r, c) - prev.at<sift_wt>(r, c))*deriv_scale );
 
-        float v2 = (float)img.at<sift_wt>(r, c)*2;
-        float dxx = ((int)img.at<sift_wt>(r, c+1) + img.at<sift_wt>(r, c-1) - v2)*second_deriv_scale;
-        float dyy = ((int)img.at<sift_wt>(r+1, c) + img.at<sift_wt>(r-1, c) - v2)*second_deriv_scale;
-        float dss = ((int)next.at<sift_wt>(r, c) + prev.at<sift_wt>(r, c) - v2)*second_deriv_scale;
-        float dxy = ((int)img.at<sift_wt>(r+1, c+1) - img.at<sift_wt>(r+1, c-1) -
+        softfloat v2(img.at<sift_wt>(r, c)*2);
+        softfloat dxx = softfloat((int)img.at<sift_wt>(r, c+1) + img.at<sift_wt>(r, c-1) - v2)*second_deriv_scale;
+        softfloat dyy = softfloat((int)img.at<sift_wt>(r+1, c) + img.at<sift_wt>(r-1, c) - v2)*second_deriv_scale;
+        softfloat dss = softfloat((int)next.at<sift_wt>(r, c) + prev.at<sift_wt>(r, c) - v2)*second_deriv_scale;
+        softfloat dxy = softfloat((int)img.at<sift_wt>(r+1, c+1) - img.at<sift_wt>(r+1, c-1) -
                      img.at<sift_wt>(r-1, c+1) + img.at<sift_wt>(r-1, c-1))*cross_deriv_scale;
-        float dxs = ((int)next.at<sift_wt>(r, c+1) - next.at<sift_wt>(r, c-1) -
+        softfloat dxs = softfloat((int)next.at<sift_wt>(r, c+1) - next.at<sift_wt>(r, c-1) -
                      prev.at<sift_wt>(r, c+1) + prev.at<sift_wt>(r, c-1))*cross_deriv_scale;
-        float dys = ((int)next.at<sift_wt>(r+1, c) - next.at<sift_wt>(r-1, c) -
+        softfloat dys = softfloat((int)next.at<sift_wt>(r+1, c) - next.at<sift_wt>(r-1, c) -
                      prev.at<sift_wt>(r+1, c) + prev.at<sift_wt>(r-1, c))*cross_deriv_scale;
+        Matx<softfloat, 3, 3> H(dxx, dxy, dxs,
+                                dxy, dyy, dys,
+                                dxs, dys, dss);
+        Vec<softfloat, 3> X = solve_LU(H, dD);
 #else
         Vec3f dD((img.at<sift_wt>(r, c+1) - img.at<sift_wt>(r, c-1))*deriv_scale,
                  (img.at<sift_wt>(r+1, c) - img.at<sift_wt>(r-1, c))*deriv_scale,
@@ -347,23 +388,21 @@ bool adjustLocalExtrema(
                      prev.at<sift_wt>(r, c+1) + prev.at<sift_wt>(r, c-1))*cross_deriv_scale;
         float dys = (next.at<sift_wt>(r+1, c) - next.at<sift_wt>(r-1, c) -
                      prev.at<sift_wt>(r+1, c) + prev.at<sift_wt>(r-1, c))*cross_deriv_scale;
-#endif
         Matx33f H(dxx, dxy, dxs,
                   dxy, dyy, dys,
                   dxs, dys, dss);
-
         Vec3f X = H.solve(dD, DECOMP_LU);
-
+#endif
         xi = -X[2];
         xr = -X[1];
         xc = -X[0];
 
-        if( std::abs(xi) < 0.5f && std::abs(xr) < 0.5f && std::abs(xc) < 0.5f )
+        if( cv::abs(xi) < 0.5f && cv::abs(xr) < 0.5f && cv::abs(xc) < 0.5f )
             break;
 
-        if( std::abs(xi) > (float)(INT_MAX/3) ||
-            std::abs(xr) > (float)(INT_MAX/3) ||
-            std::abs(xc) > (float)(INT_MAX/3) )
+        if( (float)cv::abs(xi) > (float)(INT_MAX/3) ||
+            (float)cv::abs(xr) > (float)(INT_MAX/3) ||
+            (float)cv::abs(xc) > (float)(INT_MAX/3) )
             return false;
 
         c += cvRound(xc);
@@ -386,21 +425,27 @@ bool adjustLocalExtrema(
         const Mat& prev = dog_pyr[idx-1];
         const Mat& next = dog_pyr[idx+1];
 #if DoG_TYPE_SHORT
-        Matx31f dD(((int)img.at<sift_wt>(r, c+1) - img.at<sift_wt>(r, c-1))*deriv_scale,
-                   ((int)img.at<sift_wt>(r+1, c) - img.at<sift_wt>(r-1, c))*deriv_scale,
-                   ((int)next.at<sift_wt>(r, c) - prev.at<sift_wt>(r, c))*deriv_scale);
-        float t = dD.dot(Matx31f(xc, xr, xi));
+        Vec<softfloat, 3> dD(softfloat((int)img.at<sift_wt>(r, c+1) - img.at<sift_wt>(r, c-1))*deriv_scale,
+                             softfloat((int)img.at<sift_wt>(r+1, c) - img.at<sift_wt>(r-1, c))*deriv_scale,
+                             softfloat((int)next.at<sift_wt>(r, c) - prev.at<sift_wt>(r, c))*deriv_scale);
+        softfloat t = dD[0] * xc + dD[1] * xr + dD[2] * xi;
 
-        contr = img.at<sift_wt>(r, c)*img_scale + t * 0.5f;
-        if( std::abs( contr ) * nOctaveLayers < contrastThreshold )
+        contr = softfloat(img.at<sift_wt>(r, c))*img_scale + t * softfloat(0.5f);
+        if( (float)(cv::abs( contr ) * nOctaveLayers) < contrastThreshold )
             return false;
 
         // principal curvatures are computed using the trace and det of Hessian
-        float v2 = img.at<sift_wt>(r, c)*2.f;
-        float dxx = ((int)img.at<sift_wt>(r, c+1) + img.at<sift_wt>(r, c-1) - v2)*second_deriv_scale;
-        float dyy = ((int)img.at<sift_wt>(r+1, c) + img.at<sift_wt>(r-1, c) - v2)*second_deriv_scale;
-        float dxy = ((int)img.at<sift_wt>(r+1, c+1) - img.at<sift_wt>(r+1, c-1) -
+        softfloat v2( (int)img.at<sift_wt>(r, c)*2 );
+        softfloat dxx = softfloat((int)img.at<sift_wt>(r, c+1) + img.at<sift_wt>(r, c-1) - v2)*second_deriv_scale;
+        softfloat dyy = softfloat((int)img.at<sift_wt>(r+1, c) + img.at<sift_wt>(r-1, c) - v2)*second_deriv_scale;
+        softfloat dxy = softfloat((int)img.at<sift_wt>(r+1, c+1) - img.at<sift_wt>(r+1, c-1) -
                      img.at<sift_wt>(r-1, c+1) + img.at<sift_wt>(r-1, c-1)) * cross_deriv_scale;
+        softfloat tr = dxx + dyy;
+        softfloat det = dxx * dyy - dxy * dxy;
+        softfloat soft_edgeThreshold(edgeThreshold);
+        softfloat soft_edgeThreshold_p1 = soft_edgeThreshold + softfloat::one();
+        if( (float)det <= 0 || tr*tr*soft_edgeThreshold >= soft_edgeThreshold_p1*soft_edgeThreshold_p1*det )
+            return false;
 #else
         Matx31f dD((img.at<sift_wt>(r, c+1) - img.at<sift_wt>(r, c-1))*deriv_scale,
                    (img.at<sift_wt>(r+1, c) - img.at<sift_wt>(r-1, c))*deriv_scale,
@@ -417,22 +462,28 @@ bool adjustLocalExtrema(
         float dyy = (img.at<sift_wt>(r+1, c) + img.at<sift_wt>(r-1, c) - v2)*second_deriv_scale;
         float dxy = (img.at<sift_wt>(r+1, c+1) - img.at<sift_wt>(r+1, c-1) -
                      img.at<sift_wt>(r-1, c+1) + img.at<sift_wt>(r-1, c-1)) * cross_deriv_scale;
-#endif
         float tr = dxx + dyy;
         float det = dxx * dyy - dxy * dxy;
 
         if( det <= 0 || tr*tr*edgeThreshold >= (edgeThreshold + 1)*(edgeThreshold + 1)*det )
             return false;
+#endif
     }
 
+#if DoG_TYPE_SHORT
+    kpt.pt.x = (float)((softfloat(c) + xc) * softfloat(1 << octv));
+    kpt.pt.y = (float)((softfloat(r) + xr) * softfloat(1 << octv));
+    kpt.octave = octv + (layer << 8) + (cvRound((xi + softfloat(0.5f))*softfloat(255)) << 16);
+    kpt.size = (float)( softfloat(sigma)*cv::pow(softfloat(2.f), (softfloat(layer) + xi) / softfloat(nOctaveLayers))*softfloat((1 << octv)*2) );
+    kpt.response = (float)cv::abs(contr);
+#else
     kpt.pt.x = (c + xc) * (1 << octv);
     kpt.pt.y = (r + xr) * (1 << octv);
     kpt.octave = octv + (layer << 8) + (cvRound((xi + 0.5)*255) << 16);
     kpt.size = sigma*powf(2.f, (layer + xi) / nOctaveLayers)*(1 << octv)*2;
     kpt.response = std::abs(contr);
-
+#endif
     return true;
-// #endif
 }
 
 namespace {
