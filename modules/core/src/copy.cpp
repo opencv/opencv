@@ -414,45 +414,26 @@ void Mat::copyTo( OutputArray _dst, InputArray _mask ) const
         copymask(ptrs[0], 0, ptrs[2], 0, ptrs[1], 0, sz, &esz);
 }
 
-// just 1 byte is valid
-#define CANT_APPLY_MEMSET int(0xDEADBEEF)
 
-static int check_apply_memset(const Mat *mat, const Scalar &s)
+static bool can_apply_memset(const Mat &mat, const Scalar &s, int &fill_value)
 {
-    int fill_value = CANT_APPLY_MEMSET;
-    switch (mat->depth())
+    switch (mat.depth())
     {
     case CV_8U: fill_value = saturate_cast<uchar>( s.val[0] ); break;
     case CV_8S: fill_value = saturate_cast<schar>( s.val[0] ); break;
-    default:
-        //CV_Error(CV_BadDepth, "Unsupported depth");
-        return CANT_APPLY_MEMSET;
+    default: return false;
     }
 
-    bool apply_memset = false;
     const int64* is = (const int64*)&s.val[0];
-    switch (mat->channels())
+    switch (mat.channels())
     {
-    case 1:
-        apply_memset = true;
-        break;
-    case 2:
-        apply_memset = (is[0] == is[1]);
-        break;
-    case 3:
-        apply_memset = (is[0] == is[1] && is[1] == is[2]);
-        break;
-    case 4:
-        apply_memset = (is[0] == is[1] && is[1] == is[2] && is[2] == is[3]);
-        break;
-    default:
-        apply_memset = false;
-        break;
+    case 1: return true;
+    case 2: return (is[0] == is[1]);
+    case 3: return (is[0] == is[1] && is[1] == is[2]);
+    case 4: return (is[0] == is[1] && is[1] == is[2] && is[2] == is[3]);
+    default: return false;
     }
-
-    return apply_memset ? fill_value : CANT_APPLY_MEMSET;
 }
-
 
 Mat& Mat::operator = (const Scalar& s)
 {
@@ -474,8 +455,8 @@ Mat& Mat::operator = (const Scalar& s)
     }
     else
     {
-        int fill_value = check_apply_memset(this, s);
-        if (fill_value != CANT_APPLY_MEMSET)
+        int fill_value = 0;
+        if ( can_apply_memset(*this, s, fill_value) )
         {
             for (size_t i = 0; i < it.nplanes; i++, ++it)
                 memset(dptr, fill_value, elsize);
