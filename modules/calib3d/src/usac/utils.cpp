@@ -311,30 +311,24 @@ float quicksort_median (std::vector<float> &array, int k_minth, int left, int ri
     if (right - left == 0) return array[left];
 
     // get pivot, the rightest value in array
-    auto pivot = array[right];
-    int right_ = right - 1; // -1, because not including pivot
+    const auto pivot = array[right];
+    int right_ = right - 1; // -1, not including pivot
     // counter of values smaller equal than pivot
-    int j, values_less_eq_pivot = 1; // 1 because inludes pivot already
-    for (j = left; j <= right_;) {
+    int j = left, values_less_eq_pivot = 1; // 1, inludes pivot already
+    for (; j <= right_;) {
         if (array[j] <= pivot) {
             j++;
             values_less_eq_pivot++;
-        } else {
+        } else
             // value is bigger than pivot, swap with right_ value
-            // swap values in array
-            std::swap(array[j], array[right_]);
-            // decrease working interval
-            if (right_ > 0) right_--; // avoid overflow of int
-            else break;
-        }
+            // swap values in array and decrease interval
+            std::swap(array[j], array[right_--]);
     }
     if (values_less_eq_pivot == k_minth) return pivot;
-    if (k_minth > values_less_eq_pivot) {
+    if (k_minth > values_less_eq_pivot)
         return quicksort_median(array, k_minth - values_less_eq_pivot, j, right-1);
-    } else {
-        if (j == left) j++;
+    else
         return quicksort_median(array, k_minth, left, j-1);
-    }
 }
 
 // find median using quicksort with complexity O(log n)
@@ -343,7 +337,7 @@ float Utils::findMedian (std::vector<float> &array) {
     const int length = static_cast<int>(array.size());
     if (length % 2) {
         // odd number of values
-        return quicksort_median (array, length/2, 0, length-1);
+        return quicksort_median (array, length/2+1, 0, length-1);
     } else {
         // even: return average
         return (quicksort_median(array, length/2  , 0, length-1) +

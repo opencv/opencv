@@ -449,14 +449,11 @@ public:
             CV_Error(cv::Error::StsNotImplemented, "Sigma values are not generated");
     }
 
-    /*
-        this version correspond to https://github.com/danini/magsac with small technical changes.
-    */
+    // https://github.com/danini/magsac
     bool refineModel (const Mat &in_model, const Score &in_model_score,
                       Mat &new_model, Score &new_model_score) override {
         int residual_cnt = 0;
 
-        // todo: add magsac termination
          if (verifier->isModelGood(in_model)) {
              if (verifier->hasErrors()) {
                  const std::vector<float> &errors = verifier->getErrors();

@@ -217,7 +217,7 @@ public:
             CV_Error(cv::Error::StsNotImplemented, "Sigma values are not generated");
     }
 
-    // This version corresponds to https://github.com/danini/magsac with small technical modification.
+    // https://github.com/danini/magsac
     Score getScore (const Mat &model) const override {
         error->setModelParameters(model);
         double total_loss = 0.0;
