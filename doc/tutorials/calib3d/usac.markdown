@@ -239,8 +239,7 @@ A few other important parameters:
     However, it is recommended to keep value less than 100, because
     estimation on low number of points is faster and more robust.
 
-Samples
-=======
+Samples:
 
 There are three new sample files in opencv/samples directory.
 
@@ -261,6 +260,8 @@ There are three new sample files in opencv/samples directory.
 3.  `essential_mat_reconstr.py` – the same functionality as in .cpp
     file, however instead of clustering points to plane the 3D map of
     object points is plot.
+
+References:
 
 1\. Daniel Barath and Jiří Matas. 2018. Graph-Cut RANSAC. In *Proceedings
 of the iEEE conference on computer vision and pattern recognition*,
