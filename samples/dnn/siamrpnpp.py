@@ -331,11 +331,11 @@ def main():
 
     if args.input_video and not os.path.isfile(args.input_video):
         raise OSError("Input video file does not exist")
-    if args.target_net not os.path.isfile(args.target_net):
+    if not os.path.isfile(args.target_net):
         raise OSError("Target Net does not exist")
-    if args.search_net not os.path.isfile(args.search_net):
+    if not os.path.isfile(args.search_net):
         raise OSError("Search Net does not exist")
-    if args.rpn_head not os.path.isfile(args.rpn_head):
+    if not os.path.isfile(args.rpn_head):
         raise OSError("RPN Head Net does not exist")
 
     #Load the Networks
