@@ -478,6 +478,14 @@ void serialize( I::OStream& os
               , const ade::Graph &g
               , const std::vector<ade::NodeHandle> &nodes) {
     cv::gimpl::GModel::ConstGraph cg(g);
+    serialize(os, g, cg.metadata().get<cv::gimpl::Protocol>(), nodes);
+}
+
+void serialize( I::OStream& os
+              , const ade::Graph &g
+              , const cv::gimpl::Protocol &p
+              , const std::vector<ade::NodeHandle> &nodes) {
+    cv::gimpl::GModel::ConstGraph cg(g);
     GSerialized s;
     for (auto &nh : nodes) {
         switch (cg.metadata(nh).get<NodeType>().t)
@@ -488,7 +496,7 @@ void serialize( I::OStream& os
         }
     }
     s.m_counter = cg.metadata().get<cv::gimpl::DataObjectCounter>();
-    s.m_proto   = cg.metadata().get<cv::gimpl::Protocol>();
+    s.m_proto   = p;
     os << s.m_ops << s.m_datas << s.m_counter << s.m_proto;
 }
 

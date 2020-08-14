@@ -44,6 +44,8 @@ std::vector<char> cv::gapi::serialize(const cv::GRunArgs& ra)
     return os.data();
 }
 
+// FIXME: This file should move from S11N to GRunArg-related entities.
+// it has nothing to do with the S11N as it is
 cv::GRunArgsP cv::gapi::bind(cv::GRunArgs &results)
 {
     cv::GRunArgsP outputs;
@@ -76,4 +78,33 @@ cv::GRunArgsP cv::gapi::bind(cv::GRunArgs &results)
         }
     }
     return outputs;
+}
+
+// FIXME: move it out of s11n to api/
+// FIXME: don't we have such function already?
+cv::GRunArg cv::gapi::bind(cv::GRunArgP &out)
+{
+    using T = cv::GRunArgP;
+    switch (out.index())
+    {
+#if !defined(GAPI_STANDALONE)
+    case T::index_of<cv::UMat*>() :
+#endif
+    case T::index_of<cv::detail::VectorRef>() :
+    case T::index_of<cv::detail::OpaqueRef>() :
+        GAPI_Assert(false && "Please implement this!");
+        break;
+
+    case T::index_of<cv::Mat*>() :
+        return cv::GRunArg(*cv::util::get<cv::Mat*>(out));
+
+    case T::index_of<cv::Scalar*>() :
+        return cv::GRunArg(*cv::util::get<cv::Scalar*>(out));
+
+    default:
+        // ...maybe our types were extended
+        GAPI_Assert(false && "This value type is UNKNOWN!");
+        break;
+    }
+    return cv::GRunArg();
 }

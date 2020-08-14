@@ -170,6 +170,7 @@ inline GRunArgsP& operator += (GRunArgsP &lhs, const GRunArgsP &rhs)
 namespace gapi
 {
     GAPI_EXPORTS cv::GRunArgsP bind(cv::GRunArgs &results);
+    GAPI_EXPORTS cv::GRunArg   bind(cv::GRunArgP &out);     // FIXME: think more about it
 } // namespace gapi
 
 template<typename... Ts> inline GRunArgs gin(const Ts&... args)
