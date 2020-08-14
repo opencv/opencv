@@ -257,6 +257,11 @@ TEST_P(Test_ONNX_layers, ReduceMean)
     testONNXModels("reduce_mean_axis2");
 }
 
+TEST_P(Test_ONNX_layers, ReduceSum)
+{
+    testONNXModels("reduce_sum");
+}
+
 TEST_P(Test_ONNX_layers, ReduceMean3D)
 {
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target != DNN_TARGET_CPU)
@@ -408,6 +413,7 @@ TEST_P(Test_ONNX_layers, Expand)
 {
     testONNXModels("expand_batch");
     testONNXModels("expand_channels");
+    testONNXModels("expand_neg_batch");
 }
 
 TEST_P(Test_ONNX_layers, ExpandHW)
