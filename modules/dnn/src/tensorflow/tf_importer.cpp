@@ -2067,7 +2067,7 @@ void TFImporter::populateNet(Net dstNet)
             connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
             connect(layer_id, dstNet, parsePin(layer.input(1)), id, 1);
         }
-        else if (type == "Mean")
+        else if (type == "Mean" || type == "Sum")
         {
             // Computes the mean of elements across dimensions of a tensor.
             // If keepdims is false (default) reduces input_tensor along the dimensions given in axis,
@@ -2116,7 +2116,7 @@ void TFImporter::populateNet(Net dstNet)
                 LayerParams avgLp;
                 std::string avgName = name + "/avg";
                 CV_Assert(layer_id.find(avgName) == layer_id.end());
-                avgLp.set("pool", "ave");
+                avgLp.set("pool", type == "Mean" ? "ave" : "sum");
                 // pooling kernel H x 1
                 avgLp.set("global_pooling_h", true);
                 avgLp.set("kernel_w", 1);
@@ -2153,11 +2153,44 @@ void TFImporter::populateNet(Net dstNet)
                 layer_id[name] = id;
                 connect(layer_id, dstNet, Pin(avgName), id, 0);
                 connect(layer_id, dstNet, Pin(layerShapeName), id, 1);
+            } else if (indices.total() == 1) {
+                int axis = toNCHW(indices.at<int>(0));
+                if (axis == 2 || axis == 3)
+                {
+                    layerParams.set("pool", type == "Mean" ? "ave" : "sum");
+                    layerParams.set(axis == 2 ? "kernel_w" : "kernel_h", 1);
+                    layerParams.set(axis == 2 ? "global_pooling_h" : "global_pooling_w", true);
+                    int id = dstNet.addLayer(name, "Pooling", layerParams);
+                    layer_id[name] = id;
+                    connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
+
+                    if (!keepDims)
+                    {
+                        // To keep correct order after squeeze dims we first need to change layout from NCHW to NHWC
+                        LayerParams permLP;
+                        int order[] = {0, 2, 3, 1};  // From OpenCV's NCHW to NHWC.
+                        permLP.set("order", DictValue::arrayInt<int*>(order, 4));
+                        std::string permName = name + "/nchw";
+                        CV_Assert(layer_id.find(permName) == layer_id.end());
+                        int permId = dstNet.addLayer(permName, "Permute", permLP);
+                        layer_id[permName] = permId;
+                        connect(layer_id, dstNet, Pin(name), permId, 0);
+
+                        LayerParams squeezeLp;
+                        std::string squeezeName = name + "/squeeze";
+                        CV_Assert(layer_id.find(squeezeName) == layer_id.end());
+                        squeezeLp.set("axis", indices.at<int>(0));
+                        squeezeLp.set("end_axis", indices.at<int>(0) + 1);
+                        int squeezeId = dstNet.addLayer(squeezeName, "Flatten", squeezeLp);
+                        layer_id[squeezeName] = squeezeId;
+                        connect(layer_id, dstNet, Pin(permName), squeezeId, 0);
+                    }
+                }
             } else {
                 if (indices.total() != 2 || indices.at<int>(0) != 1 || indices.at<int>(1) != 2)
-                    CV_Error(Error::StsNotImplemented, "Unsupported mode of reduce_mean operation.");
+                    CV_Error(Error::StsNotImplemented, "Unsupported mode of reduce_mean or reduce_sum operation.");
 
-                layerParams.set("pool", "ave");
+                layerParams.set("pool", type == "Mean" ? "ave" : "sum");
                 layerParams.set("global_pooling", true);
                 int id = dstNet.addLayer(name, "Pooling", layerParams);
                 layer_id[name] = id;

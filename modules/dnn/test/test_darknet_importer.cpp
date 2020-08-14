@@ -786,6 +786,8 @@ TEST_P(Test_Darknet_layers, connected)
 
 TEST_P(Test_Darknet_layers, relu)
 {
+     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD);
     testDarknetLayer("relu");
 }
 
