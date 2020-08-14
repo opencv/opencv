@@ -256,9 +256,9 @@ PERF_TEST_P(MatInfo_Size_Scale_NN, ResizeNN,
 
 PERF_TEST_P(MatInfo_Size_Scale_NN, ResizeNNExact,
     testing::Combine(
-        testing::Values(CV_8UC1, CV_8UC2, CV_8UC4),
-        testing::Values(szVGA, szqHD, sz720p, sz1080p, sz2160p),
-        testing::Values(2.4, 3.4, 1.3)
+        testing::Values(CV_8UC1, CV_8UC3, CV_8UC4),
+        testing::Values(sz720p, sz1080p),
+        testing::Values(0.25, 0.5, 2.0)
     )
 )
 {
