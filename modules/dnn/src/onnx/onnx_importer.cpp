@@ -1006,21 +1006,7 @@ void ONNXImporter::populateNet(Net dstNet)
                 if (inp0.size != inp1.size && inp1.total() != 1)
                     CV_Error(Error::StsNotImplemented, "Constant multiply with different shapes");
 
-                Mat out;
-                if (inp1.total() == 1)
-                {
-                    if (inp1.type() == CV_32F)
-                        out = (isDiv ? 1.0 / inp1.at<float>(0) : inp1.at<float>(0)) * inp0;
-                    else if (inp1.type() == CV_32S)
-                        out = (isDiv ? 1.0 / inp1.at<int>(0) : inp1.at<int>(0)) * inp0;
-                    else
-                         CV_Error(Error::StsNotImplemented, "Unsupported datatype for constant multiply");
-                }
-                else if (isDiv)
-                    divide(inp0, inp1, out);
-                else
-                    multiply(inp0, inp1, out);
-
+                Mat out = isDiv ? inp0 / inp1 : inp0.mul(inp1);
                 out = out.reshape(1, inp0.dims, inp0.size);
                 out.dims = inp0.dims;  // to workaround dims == 1
                 addConstant(layerParams.name, out, constBlobs, outShapes);
