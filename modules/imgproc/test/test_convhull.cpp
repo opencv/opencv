@@ -1404,8 +1404,11 @@ int CV_FitEllipseTest::validate_test_results( int test_case_idx )
         goto _exit_;
     }
 
-    // still figuring out why this needs to be done...
     box.angle = (float)(90-box.angle);
+    if( box.angle < 0 )
+        box.angle += 360;
+    if( box.angle > 360 )
+        box.angle -= 360;
 
     if( fabs(box.center.x - box0.center.x) > 3 ||
         fabs(box.center.y - box0.center.y) > 3 ||
@@ -1424,7 +1427,7 @@ int CV_FitEllipseTest::validate_test_results( int test_case_idx )
     diff_angle = MIN( diff_angle, fabs(diff_angle - 360));
     diff_angle = MIN( diff_angle, fabs(diff_angle - 180));
 
-    if( box0.size.height >= 1.3*box0.size.width && diff_angle > 30 && abs(round(diff_angle)) != 90)
+    if( box0.size.height >= 1.3*box0.size.width && diff_angle > 30  && abs(round(diff_angle)) != 90)
     {
         ts->printf( cvtest::TS::LOG, "Incorrect ellipse angle (=%1.f, should be %1.f)\n",
             box.angle, box0.angle );
@@ -1522,7 +1525,7 @@ void CV_FitEllipseParallelTest::generate_point_set( void* )
     RNG& rng = ts->get_rng();
     int height = (int)(MAX(high.val[0] - low.val[0], min_ellipse_size));
     int width = (int)(MAX(high.val[1] - low.val[1], min_ellipse_size));
-    int angle = ( (cvtest::randInt(rng) % 5) - 2 ) * 90;
+    const int angle = ( (cvtest::randInt(rng) % 5) - 2 ) * 90;
     const int dim = max(height, width);
     const Point center = Point(dim*2, dim*2);
 
