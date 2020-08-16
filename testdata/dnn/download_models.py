@@ -2,6 +2,7 @@
 
 from __future__ import print_function
 import hashlib
+import os
 import sys
 import tarfile
 import requests
@@ -58,6 +59,11 @@ class Model:
         if self.verify():
             print('  hash match - skipping')
             return True
+
+        basedir = os.path.dirname(self.filename)
+        if not os.path.exists(basedir):
+            print('  creating directory: ' + basedir)
+            os.makedirs(basedir, exist_ok=True)
 
         if self.archive or self.member:
             assert(self.archive and self.member)
@@ -853,6 +859,11 @@ models = [
         url='https://github.com/AlexeyAB/darknet/releases/download/darknet_yolo_v4_pre/yolov4-tiny.weights',
         sha='d110379b7b86899226b591ad4affc7115f707157',
         filename='yolov4-tiny.weights'),
+    Model(
+        name='GSOC2016-GOTURN',  # https://github.com/opencv/opencv_contrib/issues/941
+        downloader=GDrive('1j4UTqVE4EGaUFiK7a5I_CYX7twO9c5br'),
+        sha='49776d262993c387542f84d9cd16566840404f26',
+        filename='gsoc2016-goturn/goturn.caffemodel'),
 ]
 
 # Note: models will be downloaded to current working directory
