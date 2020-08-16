@@ -1,0 +1,60 @@
+{
+    "caffe": [
+        {
+            "model": "mobilenet_SSD",
+            "inputSize": "300, 300",
+            "mean": "127.5, 127.5, 127.5",
+            "std": "0.007843",
+            "labels": "pascal_voc",
+            "rgb": "true",
+            "outType": "SSD",
+            "modelUrl": "https://drive.google.com/u/1/uc?id=0B3gersZ2cHIxVFI1Rjd5aDgwOG8&export=download",
+            "configUrl": "https://drive.google.com/u/1/uc?id=0B3gersZ2cHIxRm5PMWRoTkdHdHc&export=download"
+        },
+        {
+            "model": "VGG_SSD",
+            "inputSize": "300, 300",
+            "mean": "104, 117, 123",
+            "std": "1",
+            "labels": "pascal_voc",
+            "rgb": "true",
+            "outType": "SSD",
+            "modelUrl": "https://drive.google.com/uc?id=0BzKzrI_SkD1_WVVTSmQxU0dVRzA&export=download"
+        }
+    ],
+    "darknet": [
+        {
+            "model": "yolov2_tiny",
+            "inputSize": "416, 416",
+            "mean": "0, 0, 0",
+            "std": "0.00392",
+            "labels": "yolov3",
+            "rgb": "true",
+            "outType": "YOLO",
+            "modelUrl": "https://pjreddie.com/media/files/yolov2-tiny.weights",
+            "configUrl": "https://raw.githubusercontent.com/pjreddie/darknet/master/cfg/yolov2-tiny.cfg"
+        },
+        {
+            "model": "yolov3",
+            "inputSize": "416, 416",
+            "mean": "0, 0, 0",
+            "std": "0.00392",
+            "labels": "yolov3",
+            "rgb": "true",
+            "outType": "YOLO",
+            "modelUrl": "https://pjreddie.com/media/files/yolov3.weights",
+            "configUrl": "https://raw.githubusercontent.com/pjreddie/darknet/master/cfg/yolov3.cfg"
+        },
+        {
+            "model": "yolov3_tiny",
+            "inputSize": "416, 416",
+            "mean": "0, 0, 0",
+            "std": "0.00392",
+            "labels": "yolov3",
+            "rgb": "true",
+            "outType": "YOLO",
+            "modelUrl": "https://pjreddie.com/media/files/yolov3-tiny.weights",
+            "configUrl": "https://raw.githubusercontent.com/pjreddie/darknet/master/cfg/yolov3-tiny.cfg"
+        }
+    ]
+}

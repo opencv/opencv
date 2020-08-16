@@ -56,24 +56,28 @@
     <p class="err" id="errorMessage"></p>
 </div>
 
+<div id="appendix">
+    <h2>Model Info:</h2>
+</div>
+
 <script src="utils.js" type="text/javascript"></script>
 
 <script id="codeSnippet" type="text/code-snippet">
-inputSize = [416, 416];
-mean = [0, 0, 0];
-std = 0.00392;
+inputSize = [300, 300];
+mean = [127.5, 127.5, 127.5];
+std = 0.007843;
 rgb = true;
 confThreshold = 0.5;
 nmsThreshold = 0.4;
 
 // The type of output, can be YOLO or SSD
-outType = "YOLO";
+outType = "SSD";
 
 // url for model, config and label files, can from native or Internet
 // for model type like onnx which doesn't need config file, just let configUrl = ""
-labelsUrl = "object_detection_classes_yolov3.txt";
-modelUrl = "yolov2.weights";
-configUrl = "yolov2.cfg";
+labelsUrl = "object_detection_classes_pascal_voc.txt";
+modelUrl = "mobilenet-ssd.caffemodel";
+configUrl = "mobilenet-ssd.prototxt";
 </script>
 
 <script id="codeSnippet1" type="text/code-snippet">
@@ -334,8 +338,10 @@ postProcess = function(result, labels) {
 </script>
 
 <script type="text/javascript">
-    let utils = new Utils('errorMessage');
+    let jsonUrl = "js_object_detection_model_info.json";
+    drawInfoTable(jsonUrl);
 
+    let utils = new Utils('errorMessage');
     utils.loadCode('codeSnippet', 'codeEditor');
     utils.loadCode('codeSnippet1', 'codeEditor1');
     utils.loadCode('codeSnippet2', 'codeEditor2');
@@ -437,6 +443,46 @@ postProcess = function(result, labels) {
         img.onload = function() {
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
         };
+    }
+
+    async function drawInfoTable(jsonUrl) {
+        let response = await fetch(jsonUrl);
+        let json = await response.json();
+
+        let appendix = document.getElementById('appendix');
+        for(key of Object.keys(json)) {
+            let h3 = document.createElement('h3');
+            h3.textContent = key + " model";
+            appendix.appendChild(h3);
+
+            let table = document.createElement('table');
+            let head_tr = document.createElement('tr');
+            for(head of Object.keys(json[key][0])) {
+                if(head !== "modelUrl" && head !== "configUrl") {
+                    let th = document.createElement('th');
+                    th.textContent = head;
+                    th.style.border = "1px solid black";
+                    head_tr.appendChild(th);
+                }
+            }
+            table.appendChild(head_tr)
+
+            for(model of json[key]) {
+                let tr = document.createElement('tr');
+                for(params of Object.keys(model)) {
+                    if(params !== "modelUrl" && params !== "configUrl") {
+                        let td = document.createElement('td');
+                        td.textContent = model[params];
+                        td.style.border = "1px solid black";
+                        tr.appendChild(td);
+                    }
+                }
+                table.appendChild(tr);
+            }
+            table.style.width = "800px";
+            table.style.borderCollapse = "collapse";
+            appendix.appendChild(table);
+        }
     }
 
 </script>

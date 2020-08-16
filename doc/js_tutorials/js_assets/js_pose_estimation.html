@@ -56,6 +56,10 @@
     <p class="err" id="errorMessage"></p>
 </div>
 
+<div id="appendix">
+    <h2>Model Info:</h2>
+</div>
+
 <script src="utils.js" type="text/javascript"></script>
 
 <script id="codeSnippet" type="text/code-snippet">
@@ -64,11 +68,13 @@ mean = [0, 0, 0];
 std = 0.00392;
 threshold = 0.1;
 
+// the pairs of keypoint, can be "COCO", "MPI" and "BODY_25"
+dataset = "COCO";
+
 // url for model, config and label files, can from native or Internet
 // for model type like onnx which doesn't need config file, just let configUrl = ""
 modelUrl = "openpose_coco.caffemodel";
 configUrl = "openpose_coco.prototxt";
-dataset = "COCO";
 </script>
 
 <script id="codeSnippet1" type="text/code-snippet">
@@ -173,36 +179,26 @@ if(dataset === 'COCO') {
                    ["RElbow", "RWrist"], ["Neck", "LShoulder"], ["LShoulder", "LElbow"],
                    ["LElbow", "LWrist"], ["Neck", "Chest"], ["Chest", "RHip"], ["RHip", "RKnee"],
                    ["RKnee", "RAnkle"], ["Chest", "LHip"], ["LHip", "LKnee"], ["LKnee", "LAnkle"] ]
-} else if(dataset === 'HAND') {
-    BODY_PARTS = { "Wrist": 0, "ThumbMetacarpal": 1, "ThumbProximal": 2, "ThumbMiddle": 3,
-                   "ThumbDistal": 4, "IndexFingerMetacarpal": 5, "IndexFingerProximal": 6,
-                   "IndexFingerMiddle": 7, "IndexFingerDistal": 8, "MiddleFingerMetacarpal": 9,
-                   "MiddleFingerProximal": 10, "MiddleFingerMiddle": 11, "MiddleFingerDistal": 12,
-                   "RingFingerMetacarpal": 13, "RingFingerProximal": 14, "RingFingerMiddle": 15,
-                   "RingFingerDistal": 16, "LittleFingerMetacarpal": 17, "LittleFingerProximal": 18,
-                   "LittleFingerMiddle": 19, "LittleFingerDistal": 20,
-                 }
+} else if(dataset === 'BODY_25') {
+    BODY_PARTS = { "Nose": 0, "Neck": 1, "RShoulder": 2, "RElbow": 3, "RWrist": 4,
+                   "LShoulder": 5, "LElbow": 6, "LWrist": 7, "MidHip": 8, "RHip": 9,
+                   "RKnee": 10, "RAnkle": 11, "LHip": 12, "LKnee": 13, "LAnkle": 14,
+                   "REye": 15, "LEye": 16, "REar": 17, "LEar": 18, "LBigToe": 19,
+                   "LSmallToe": 20, "LHeel": 21, "RBigToe": 22, "RSmallToe": 23,
+                   "RHeel": 24, "Background": 25 } 
 
-    POSE_PAIRS = [ ["Wrist", "ThumbMetacarpal"],
-                   ["ThumbMetacarpal", "ThumbProximal"],
-                   ["ThumbProximal", "ThumbMiddle"],
-                   ["ThumbMiddle", "ThumbDistal"],
-                   ["Wrist", "IndexFingerMetacarpal"],
-                   ["IndexFingerMetacarpal", "IndexFingerProximal"],
-                   ["IndexFingerProximal", "IndexFingerMiddle"],
-                   ["IndexFingerMiddle", "IndexFingerDistal"],
-                   ["Wrist", "MiddleFingerMetacarpal"],
-                   ["MiddleFingerMetacarpal", "MiddleFingerProximal"],
-                   ["MiddleFingerProximal", "MiddleFingerMiddle"],
-                   ["MiddleFingerMiddle", "MiddleFingerDistal"],
-                   ["Wrist", "RingFingerMetacarpal"],
-                   ["RingFingerMetacarpal", "RingFingerProximal"],
-                   ["RingFingerProximal", "RingFingerMiddle"],
-                   ["RingFingerMiddle", "RingFingerDistal"],
-                   ["Wrist", "LittleFingerMetacarpal"],
-                   ["LittleFingerMetacarpal", "LittleFingerProximal"],
-                   ["LittleFingerProximal", "LittleFingerMiddle"],
-                   ["LittleFingerMiddle", "LittleFingerDistal"] ]
+    POSE_PAIRS = [ ["Neck", "Nose"], ["Neck", "RShoulder"],
+                   ["Neck", "LShoulder"], ["RShoulder", "RElbow"],
+                   ["RElbow", "RWrist"], ["LShoulder", "LElbow"],
+                   ["LElbow", "LWrist"], ["Nose", "REye"],
+                   ["REye", "REar"], ["Neck", "LEye"],
+                   ["LEye", "LEar"], ["Neck", "MidHip"],
+                   ["MidHip", "RHip"], ["RHip", "RKnee"],
+                   ["RKnee", "RAnkle"], ["RAnkle", "RBigToe"],
+                   ["RBigToe", "RSmallToe"], ["RAnkle", "RHeel"],
+                   ["MidHip", "LHip"], ["LHip", "LKnee"],
+                   ["LKnee", "LAnkle"], ["LAnkle", "LBigToe"],
+                   ["LBigToe", "LSmallToe"], ["LAnkle", "LHeel"] ]
 }
 </script>
 
@@ -272,8 +268,10 @@ postProcess = function(result) {
 </script>
 
 <script type="text/javascript">
-    let utils = new Utils('errorMessage');
+    let jsonUrl = "js_pose_estimation_model_info.json";
+    drawInfoTable(jsonUrl);
 
+    let utils = new Utils('errorMessage');
     utils.loadCode('codeSnippet', 'codeEditor');
     utils.loadCode('codeSnippet1', 'codeEditor1');
     utils.loadCode('codeSnippet2', 'codeEditor2');
@@ -372,6 +370,46 @@ postProcess = function(result) {
         img.onload = function() {
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
         };
+    }
+
+    async function drawInfoTable(jsonUrl) {
+        let response = await fetch(jsonUrl);
+        let json = await response.json();
+
+        let appendix = document.getElementById('appendix');
+        for(key of Object.keys(json)) {
+            let h3 = document.createElement('h3');
+            h3.textContent = key + " model";
+            appendix.appendChild(h3);
+
+            let table = document.createElement('table');
+            let head_tr = document.createElement('tr');
+            for(head of Object.keys(json[key][0])) {
+                if(head !== "modelUrl" && head !== "configUrl") {
+                    let th = document.createElement('th');
+                    th.textContent = head;
+                    th.style.border = "1px solid black";
+                    head_tr.appendChild(th);
+                }
+            }
+            table.appendChild(head_tr)
+
+            for(model of json[key]) {
+                let tr = document.createElement('tr');
+                for(params of Object.keys(model)) {
+                    if(params !== "modelUrl" && params !== "configUrl") {
+                        let td = document.createElement('td');
+                        td.textContent = model[params];
+                        td.style.border = "1px solid black";
+                        tr.appendChild(td);
+                    }
+                }
+                table.appendChild(tr);
+            }
+            table.style.width = "800px";
+            table.style.borderCollapse = "collapse";
+            appendix.appendChild(table);
+        }
     }
 
 </script>

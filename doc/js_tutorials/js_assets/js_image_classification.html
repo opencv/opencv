@@ -230,8 +230,10 @@ getTopClasses = function(probs, labels, topK = 3) {
 </script>
 
 <script type="text/javascript">
-    let utils = new Utils('errorMessage');
+    let jsonUrl = "js_image_classification_model_info.json";
+    drawInfoTable(jsonUrl);
 
+    let utils = new Utils('errorMessage');
     utils.loadCode('codeSnippet', 'codeEditor');
     utils.loadCode('codeSnippet1', 'codeEditor1');
     utils.loadCode('codeSnippet2', 'codeEditor2');
@@ -265,8 +267,6 @@ getTopClasses = function(probs, labels, topK = 3) {
     utils.loadOpenCv(() => {
         tryIt.removeAttribute('disabled');
     });
-
-    drawInfoTable();
 
     let modelLoaded = [];
     var main = async function() {};
@@ -336,8 +336,7 @@ getTopClasses = function(probs, labels, topK = 3) {
         };
     }
 
-    async function drawInfoTable() {
-        let jsonUrl = "js_image_classification_model_info.json";
+    async function drawInfoTable(jsonUrl) {
         let response = await fetch(jsonUrl);
         let json = await response.json();
 
