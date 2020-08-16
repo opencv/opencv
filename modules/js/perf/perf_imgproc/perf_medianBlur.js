@@ -25,28 +25,20 @@ function perf() {
     }
     let totalCaseNum, currentCaseId;
 
-    const GaussianBlurSize = [cvSize.szODD, cvSize.szQVGA, cvSize.szVGA, cvSize.sz720p];
-    const GaussianBlurType = ["CV_8UC1", "CV_8UC4", "CV_16UC1", "CV_16SC1", "CV_32FC1"];
-    const BorderType3x3 = ["BORDER_REPLICATE", "BORDER_CONSTANT"];
-    const BorderType3x3ROI = ["BORDER_REPLICATE", "BORDER_CONSTANT", "BORDER_REFLECT", "BORDER_REFLECT101"];
+    const MedianBlurSize = [cvSize.szODD, cvSize.szQVGA, cvSize.szVGA, cvSize.sz720p];
+    const MedianBlurType = ["CV_8UC1", "CV_8UC4", "CV_16UC1", "CV_16SC1", "CV_32FC1"];
+    const combiMedianBlur = combine(MedianBlurSize, MedianBlurType, [3,5]);
 
-    const combiGaussianBlurBorder3x3 = combine(GaussianBlurSize, GaussianBlurType, BorderType3x3);
-    const combiGaussianBlurBorder3x3ROI = combine(GaussianBlurSize, GaussianBlurType, BorderType3x3ROI);
-
-    function addGaussianBlurCase(suite, type) {
-        suite.add('gaussianBlur', function() {
-            cv.GaussianBlur(src, dst, ksize, 1, 0, borderType);
+    function addMedianBlurCase(suite, type) {
+        suite.add('medianBlur', function() {
+            cv.medianBlur(src, dst, ksize);
           }, {
               'setup': function() {
                 let size = this.params.size;
                 let matType = cv[this.params.matType];
-                let borderType = cv[this.params.borderType];
-                let type = this.params.type;
-                
+                let ksize = this.params.ksize;
                 let src = new cv.Mat(size, matType);
                 let dst = new cv.Mat(size, matType);
-                let ksizeNum = this.params.ksize;
-                let ksize = new cv.Size(ksizeNum, ksizeNum);
                 },
               'teardown': function() {
                 src.delete();
@@ -55,16 +47,15 @@ function perf() {
           });
     }
 
-    function addGaussianBlurModeCase(suite, combination, type) {
+    function addMedianBlurModeCase(suite, combination, type) {
       totalCaseNum += combination.length;
       for (let i = 0; i < combination.length; ++i) {
         let size =  combination[i][0];
         let matType = combination[i][1];
-        let borderType = combination[i][2];
-        let ksizeArray = [3, 5];
-        
-        let params = {size: size, matType:matType, ksize: ksizeArray[type], borderType:borderType};
-        addKernelCase(suite, params, type, addGaussianBlurCase);
+        let ksize = combination[i][2];
+
+        let params = {size: size, matType:matType, ksize: ksize};
+        addKernelCase(suite, params, type, addMedianBlurCase);
       }
     }
 
@@ -73,36 +64,35 @@ function perf() {
       totalCaseNum = 0;
       currentCaseId = 0;
 
-      if (/\([0-9]+x[0-9]+,[\ ]*\w+,[\ ]*\w+\)/g.test(paramsContent.toString())) {
-          let params = paramsContent.toString().match(/\([0-9]+x[0-9]+,[\ ]*\w+,[\ ]*\w+\)/g)[0];
+      if (/\([0-9]+x[0-9]+,[\ ]*\w+,[\ ]*(3|5)\)/g.test(paramsContent.toString())) {
+          let params = paramsContent.toString().match(/\([0-9]+x[0-9]+,[\ ]*\w+,[\ ]*(3|5)\)/g)[0];
           let paramObjs = [];
           paramObjs.push({name:"size", value:"", reg:[""], index:0});
           paramObjs.push({name:"matType", value:"", reg:["/CV\_[0-9]+[FSUfsu]C[0-9]/"], index:1});
-          paramObjs.push({name:"borderMode", value: "", reg:["/BORDER\_\\w+/"], index:2});
-          let locationList = decodeParams2Case(params, paramObjs,gaussianBlurCombinations);
+          paramObjs.push({name:"ksize", value: "", reg:["/\\b[0-9]\\b/"], index:2});
+          let locationList = decodeParams2Case(params, paramObjs, medianBlurCombinations);
 
           for (let i = 0; i < locationList.length; i++){
               let first = locationList[i][0];
               let second = locationList[i][1];
-              addGaussianBlurModeCase(suite, [gaussianBlurCombinations[first][second]], first);
+              addMedianBlurModeCase(suite, [medianBlurCombinations[first][second]], first);
             }
       } else {
         log("no filter or getting invalid params, run all the cases");
-        addGaussianBlurModeCase(suite, combiGaussianBlurBorder3x3, 0);
-        addGaussianBlurModeCase(suite, combiGaussianBlurBorder3x3ROI, 1);
+        addMedianBlurModeCase(suite, combiMedianBlur, 0);
       }
-      setBenchmarkSuite(suite, "gaussianBlur", currentCaseId);
-      log(`Running ${totalCaseNum} tests from gaussianBlur`);
+      setBenchmarkSuite(suite, "medianBlur", currentCaseId);
+      log(`Running ${totalCaseNum} tests from medianBlur`);
       suite.run({ 'async': true }); // run the benchmark
   }
 
-    let gaussianBlurCombinations = [combiGaussianBlurBorder3x3, combiGaussianBlurBorder3x3ROI];
+    let medianBlurCombinations = [combiMedianBlur];
 
     if (isNodeJs) {
       const args = process.argv.slice(2);
       let paramsContent = '';
-      if (/--test_param_filter=\([0-9]+x[0-9]+,[\ ]*\w+,[\ ]*\w+\)/g.test(args.toString())) {
-        paramsContent = args.toString().match(/\([0-9]+x[0-9]+,[\ ]*\w+,[\ ]*\w+\)/g)[0];
+      if (/--test_param_filter=\([0-9]+x[0-9]+,[\ ]*\w+,[\ ]*(3|5)\)/g.test(args.toString())) {
+        paramsContent = args.toString().match(/\([0-9]+x[0-9]+,[\ ]*\w+,[\ ]*(3|5)\)/g)[0];
       }
       genBenchmarkCase(paramsContent);
     } else {

@@ -24,8 +24,11 @@ var cvtStr2cvSize = function(strSize) {
     case "127,61": size = cvSize.szODD;break;
     case '320,240': size = cvSize.szQVGA;break;
     case '640,480': size = cvSize.szVGA;break;
+    case '800,600': size = cvSize.szSVGA;break;
     case '960,540': size = cvSize.szqHD;break;
+    case '1024,768': size = cvSize.szXGA;break;
     case '1280,720': size = cvSize.sz720p;break;
+    case '1280,1024': size = cvSize.szSXGA;break;
     case '1920,1080': size = cvSize.sz1080p;break;
     case "130,60": size = cvSize.sz130x60;break;
     case '213,120': size = cvSize.sz213x120;break;
@@ -126,6 +129,24 @@ function constructParamLog(params, kernel) {
     let borderType = params.borderType;
     paramLog = `params: (${parseInt(size[0])}x${parseInt(size[1])},`+
     `${ddepth},${dxdy},${borderType})`;
+  } else if (kernel == "gaussianBlur" || kernel == "blur") {
+    let size = params.size;
+    let matType = params.matType;
+    let borderType = params.borderType;
+    let ksize = params.ksize;
+    paramLog = `params: (${parseInt(size.width)}x${parseInt(size.height)},`+
+    `${matType},${borderType}, ksize: (${ksize}x${ksize}))`;
+  } else if (kernel == "medianBlur") {
+    let size = params.size;
+    let matType = params.matType;
+    let ksize = params.ksize;
+    paramLog = `params: (${parseInt(size.width)}x${parseInt(size.height)},`+
+    `${matType}, ksize: ${ksize})`;
+  } else if (kernel == "erode" || kernel == "dilate") {
+    let size = params.size;
+    let matType = params.matType;
+    paramLog = `params: (${parseInt(size.width)}x${parseInt(size.height)},`+
+    `${matType})`;
   }
   return paramLog;
 }
