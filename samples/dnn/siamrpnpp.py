@@ -321,12 +321,30 @@ def get_frames(video_name):
 def main():
     """ Sample SiamRPN Tracker
     """
+    # Computation backends supported by layers
+    backends = (cv.dnn.DNN_BACKEND_DEFAULT, cv.dnn.DNN_BACKEND_HALIDE, cv.dnn.DNN_BACKEND_INFERENCE, cv.dnn.DNN_BACKEND_OPENCV)
+    # Target Devices for computation
+    targets = (cv.dnn.DNN_TARGET_CPU, cv.dnn.DNN_TARGET_OPENCL, cv.dnn.DNN_TARGET_OPENCL, cv.dnn.DNN_TARGET_OPENCL_FP16, cv.dnn.DNN_TARGET_FPGA)
+
     parser = argparse.ArgumentParser(description='Use this script to run SiamRPN++ Visual Tracker',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--input_video', type=str, help='Path to input video file. Skip this argument to capture frames from a camera.')
     parser.add_argument('--target_net', type=str, default='target_net.onnx', help='Path to part of SiamRPN++ ran on target frame.')
     parser.add_argument('--search_net', type=str, default='search_net.onnx', help='Path to part of SiamRPN++ ran on search frame.')
     parser.add_argument('--rpn_head', type=str, default='rpn_head.onnx', help='Path to RPN Head ONNX model.')
+    parser.add_argument('--backend', choices=backends, default=cv.dnn.DNN_BACKEND_DEFAULT, type=int,
+                        help='Select a computation backend: '
+                        "%d: automatically (by default) "
+                        "%d: Halide"
+                        "%d: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit"
+                        "%d: OpenCV Implementation" % backends)
+    parser.add_argument('--target', choices=targets, default=cv.dnn.DNN_TARGET_CPU, type=int,
+                        help='Select a target device: '
+                        "%d: CPU target (by default)"
+                        "%d: OpenCL"
+                        "%d: OpenCL FP16"
+                        "%d: Myriad"
+                        "%d: FPGA" % targets)
     args, _ = parser.parse_known_args()
 
     if args.input_video and not os.path.isfile(args.input_video):
