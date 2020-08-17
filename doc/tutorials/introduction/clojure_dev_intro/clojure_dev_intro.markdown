@@ -587,4 +587,4 @@ the gap.
 
 Copyright © 2013 Giacomo (Mimmo) Cosenza aka Magomimmo
 
-Distributed under the BSD 3-clause License, the same of OpenCV.
+Distributed under the BSD 3-clause License.

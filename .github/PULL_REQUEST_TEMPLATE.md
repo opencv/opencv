@@ -2,7 +2,7 @@
 
 See details at https://github.com/opencv/opencv/wiki/How_to_contribute#making-a-good-pull-request
 
-- [ ] I agree to contribute to the project under OpenCV (BSD) License.
+- [ ] I agree to contribute to the project under Apache 2 License.
 - [ ] To the best of my knowledge, the proposed patch is not based on a code under GPL or other license that is incompatible with OpenCV
 - [ ] The PR is proposed to proper branch
 - [ ] There is reference to original bug report and related work
