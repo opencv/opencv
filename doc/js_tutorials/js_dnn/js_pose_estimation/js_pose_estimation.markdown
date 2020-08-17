@@ -1,4 +1,4 @@
-Pose Estimation example {#tutorial_js_pose_estimation}
+Pose Estimation Example {#tutorial_js_pose_estimation}
 =======================================
 
 Goal

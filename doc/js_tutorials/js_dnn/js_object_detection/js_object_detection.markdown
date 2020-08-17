@@ -1,4 +1,4 @@
-Object Detection example {#tutorial_js_object_detection}
+Object Detection Example {#tutorial_js_object_detection}
 =======================================
 
 Goal

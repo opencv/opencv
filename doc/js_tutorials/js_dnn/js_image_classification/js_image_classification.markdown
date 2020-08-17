@@ -1,4 +1,4 @@
-Image Classification example {#tutorial_js_image_classification}
+Image Classification Example {#tutorial_js_image_classification}
 =======================================
 
 Goal

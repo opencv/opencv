@@ -1,4 +1,4 @@
-Style Transfer example {#tutorial_js_style_transfer}
+Style Transfer Example {#tutorial_js_style_transfer}
 =======================================
 
 Goal

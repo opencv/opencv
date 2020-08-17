@@ -1,4 +1,4 @@
-Image Classification example with camera {#tutorial_js_image_classification_with_camera}
+Image Classification Example with Camera {#tutorial_js_image_classification_with_camera}
 =======================================
 
 Goal

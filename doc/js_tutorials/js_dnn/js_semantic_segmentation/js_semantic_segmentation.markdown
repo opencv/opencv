@@ -1,4 +1,4 @@
-Semantic Segmentation example {#tutorial_js_semantic_segmentation}
+Semantic Segmentation Example {#tutorial_js_semantic_segmentation}
 =======================================
 
 Goal

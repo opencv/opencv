@@ -5,7 +5,7 @@
             "inputSize": "368, 368",
             "mean": "0, 0, 0",
             "std": "0.00392",
-            "rgb": "true",
+            "swapRB": "true",
             "dataset": "BODY_25",
             "modelUrl": "http://posefs1.perception.cs.cmu.edu/OpenPose/models/pose/body_25/pose_iter_584000.caffemodel",
             "configUrl": "https://raw.githubusercontent.com/CMU-Perceptual-Computing-Lab/openpose/master/models/pose/body_25/pose_deploy.prototxt"
@@ -15,7 +15,7 @@
             "inputSize": "368, 368",
             "mean": "0, 0, 0",
             "std": "0.00392",
-            "rgb": "true",
+            "swapRB": "true",
             "dataset": "COCO",
             "modelUrl": "http://posefs1.perception.cs.cmu.edu/OpenPose/models/pose/coco/pose_iter_440000.caffemodel",
             "configUrl": "https://raw.githubusercontent.com/CMU-Perceptual-Computing-Lab/openpose/master/models/pose/coco/pose_deploy_linevec.prototxt"
@@ -25,7 +25,7 @@
             "inputSize": "368, 368",
             "mean": "0, 0, 0",
             "std": "0.00392",
-            "rgb": "true",
+            "swapRB": "true",
             "dataset": "MPI",
             "modelUrl": "http://posefs1.perception.cs.cmu.edu/OpenPose/models/pose/mpi/pose_iter_160000.caffemodel",
             "configUrl": "https://raw.githubusercontent.com/CMU-Perceptual-Computing-Lab/openpose/master/models/pose/mpi/pose_deploy_linevec.prototxt"

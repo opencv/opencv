@@ -1,4 +1,4 @@
-Object Detection example with camera{#tutorial_js_object_detection_with_camera}
+Object Detection Example with Camera{#tutorial_js_object_detection_with_camera}
 =======================================
 
 Goal
