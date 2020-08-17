@@ -1,19 +1,16 @@
-getBlodFromImage = function(inputSize, mean, std, swapRB, canvasId) {
-    let mat = cv.imread(canvasId);
+getBlobFromImage = function(inputSize, mean, std, swapRB, image) {
+    let mat;
+    if(typeof(image) === 'string') {
+        mat = cv.imread(image);
+    } else {
+        mat = image;
+    }
+
     let matC3 = new cv.Mat(mat.matSize[0], mat.matSize[1], cv.CV_8UC3);
     cv.cvtColor(mat, matC3, cv.COLOR_RGBA2RGB);
     let input = cv.blobFromImage(matC3, std, new cv.Size(inputSize[0], inputSize[1]),
                                  new cv.Scalar(mean[0], mean[1], mean[2]), swapRB);
-    mat.delete();
-    matC3.delete();
-    return input;
-}
 
-getBlodFromFrame = function(inputSize, mean, std, swapRB, frame) {
-    let matC3 = new cv.Mat(frame.matSize[0],frame.matSize[1],cv.CV_8UC3);
-    cv.cvtColor(frame, matC3, cv.COLOR_RGBA2RGB);
-    let input = cv.blobFromImage(matC3, std, new cv.Size(inputSize[0], inputSize[1]),
-                                 new cv.Scalar(mean[0], mean[1], mean[2]), swapRB);
     matC3.delete();
     return input;
 }
@@ -57,34 +54,6 @@ loadModel = async function(url) {
             resolve(path);
         }
     });
-}
-
-getModelType = function(modelPath) {
-    let parts = modelPath.split('.');
-    let format = parts[parts.length-1];
-    parts.pop();
-    let modelType;
-    switch(format) {
-        case "caffemodel": {
-            modelType = "Caffe";
-        } break;
-        case "onnx": {
-            modelType = "ONNX";
-        } break;
-        case "pb": {
-            modelType = "Tensorflow";
-        } break;
-        case "weights": {
-            modelType = "Darknet";
-        } break;
-        case "t7":
-        case "net": {
-            modelType = "Torch"
-        } break;
-        default: break;
-    }
-
-    return modelType;
 }
 
 loadImageToCanvas = function(e) {

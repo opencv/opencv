@@ -50,7 +50,7 @@
     <p>2.Main loop in which will read the image from canvas and do inference once.</p>
     <textarea class="code" rows="20" cols="100" id="codeEditor1" spellcheck="false"></textarea>
     <p>3.Get blob from image as input for net, and standardize it with <b>mean</b> and <b>std</b>.</p>
-    <textarea class="code" rows="11" cols="100" id="codeEditor2" spellcheck="false"></textarea>
+    <textarea class="code" rows="17" cols="100" id="codeEditor2" spellcheck="false"></textarea>
     <p>4.Fetch model from network and save to emscripten file system.</p>
     <textarea class="code" rows="34" cols="100" id="codeEditor3" spellcheck="false"></textarea>
     <p>5.The pairs of keypoints of different dataset.</p>
@@ -89,7 +89,7 @@ main = async function() {
         configUrl: configUrl
     };
     const path = await loadModel(url);
-    const input = getBlodFromImage(inputSize, mean, std, swapRB, 'canvasInput');
+    const input = getBlobFromImage(inputSize, mean, std, swapRB, 'canvasInput');
     let net = cv.readNet(path.configPath, path.modelPath);
     net.setInput(input);
     const start = performance.now();
@@ -225,8 +225,8 @@ postProcess = function(result) {
     utils.loadCode('codeSnippet', 'codeEditor');
     utils.loadCode('codeSnippet1', 'codeEditor1');
 
-    let getBlodFromImageCode = 'getBlodFromImage = ' + getBlodFromImage.toString();
-    document.getElementById('codeEditor2').value = getBlodFromImageCode;
+    let getBlobFromImageCode = 'getBlobFromImage = ' + getBlobFromImage.toString();
+    document.getElementById('codeEditor2').value = getBlobFromImageCode;
     let getNameFromUrlCode = 'getNameFromUrl = ' + getNameFromUrl.toString();
     let loadModelCode = 'loadModel = ' + loadModel.toString();
     document.getElementById('codeEditor3').value = getNameFromUrlCode + '\n' + '\n' + loadModelCode;
@@ -280,9 +280,8 @@ postProcess = function(result) {
             cv.resize(output, resized, new cv.Size(canvasOutput.width, canvasOutput.height));
             cv.imshow('canvasOutput', resized);
             let modelPath = path.modelPath;
-            let modelType = getModelType(modelPath);
             let modelName = modelPath.substring(0, modelPath.indexOf('.'));
-            document.getElementById('status').innerHTML = `<b>Model:</b> ${modelName} ${'(' + modelType + ')'} <br>
+            document.getElementById('status').innerHTML = `<b>Model:</b> ${modelName}<br>
                                                            <b>Inference time:</b> ${time.toFixed(2)} ms`;
         } catch(e) {
             console.log(e);

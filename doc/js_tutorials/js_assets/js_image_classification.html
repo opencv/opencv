@@ -77,7 +77,7 @@
     <p>3.Load labels from txt file and process it into an array.</p>
     <textarea class="code" rows="7" cols="100" id="codeEditor2" spellcheck="false"></textarea>
     <p>4.Get blob from image as input for net, and standardize it with <b>mean</b> and <b>std</b>.</p>
-    <textarea class="code" rows="11" cols="100" id="codeEditor3" spellcheck="false"></textarea>
+    <textarea class="code" rows="17" cols="100" id="codeEditor3" spellcheck="false"></textarea>
     <p>5.Fetch model from network and save to emscripten file system.</p>
     <textarea class="code" rows="34" cols="100" id="codeEditor4" spellcheck="false"></textarea>
     <p>6.The post-processing, including softmax if needed and get the top classes from the output vector.</p>
@@ -115,7 +115,7 @@ main = async function() {
     };
     const path = await loadModel(url);
     const labels = await loadLables(labelsUrl);
-    const input = getBlodFromImage(inputSize, mean, std, swapRB, 'canvasInput');
+    const input = getBlobFromImage(inputSize, mean, std, swapRB, 'canvasInput');
     let net = cv.readNet(path.configPath, path.modelPath);
     net.setInput(input);
     const start = performance.now();
@@ -177,8 +177,8 @@ getTopClasses = function(probs, labels, topK = 3) {
 
     let loadLablesCode = 'loadLables = ' + loadLables.toString();
     document.getElementById('codeEditor2').value = loadLablesCode;
-    let getBlodFromImageCode = 'getBlodFromImage = ' + getBlodFromImage.toString();
-    document.getElementById('codeEditor3').value = getBlodFromImageCode;
+    let getBlobFromImageCode = 'getBlobFromImage = ' + getBlobFromImage.toString();
+    document.getElementById('codeEditor3').value = getBlobFromImageCode;
     let getNameFromUrlCode = 'getNameFromUrl = ' + getNameFromUrl.toString();
     let loadModelCode = 'loadModel = ' + loadModel.toString();
     document.getElementById('codeEditor4').value = getNameFromUrlCode + '\n' + '\n' + loadModelCode;
@@ -232,12 +232,11 @@ getTopClasses = function(probs, labels, topK = 3) {
                 probElement.innerHTML = c.prob + '%';
             });
             let modelPath = path.modelPath;
-            let modelType = getModelType(modelPath);
             let modelName = modelPath.substring(0, modelPath.indexOf('.'));
             let result = document.getElementById('result');
             result.style.visibility = 'visible';
             document.getElementById('status').innerHTML = '';
-            document.getElementById('time').innerHTML = `<b>Model:</b> ${modelName} ${'(' + modelType + ')'} <br>
+            document.getElementById('time').innerHTML = `<b>Model:</b> ${modelName}<br>
                                                          <b>Inference time:</b> ${time.toFixed(2)} ms`;
         } catch(e) {
             console.log(e);
