@@ -324,7 +324,7 @@ def main():
     # Computation backends supported by layers
     backends = (cv.dnn.DNN_BACKEND_DEFAULT, cv.dnn.DNN_BACKEND_HALIDE, cv.dnn.DNN_BACKEND_INFERENCE, cv.dnn.DNN_BACKEND_OPENCV)
     # Target Devices for computation
-    targets = (cv.dnn.DNN_TARGET_CPU, cv.dnn.DNN_TARGET_OPENCL, cv.dnn.DNN_TARGET_OPENCL, cv.dnn.DNN_TARGET_OPENCL_FP16, cv.dnn.DNN_TARGET_FPGA)
+    targets = (cv.dnn.DNN_TARGET_CPU, cv.dnn.DNN_TARGET_OPENCL, cv.dnn.DNN_TARGET_OPENCL, cv.dnn.DNN_TARGET_OPENCL_FP16, cv.dnn.DNN_TARGET_MYRIAD)
 
     parser = argparse.ArgumentParser(description='Use this script to run SiamRPN++ Visual Tracker',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -336,15 +336,14 @@ def main():
                         help='Select a computation backend: '
                         "%d: automatically (by default) "
                         "%d: Halide"
-                        "%d: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit"
+                        "%d: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit)"
                         "%d: OpenCV Implementation" % backends)
     parser.add_argument('--target', choices=targets, default=cv.dnn.DNN_TARGET_CPU, type=int,
                         help='Select a target device: '
                         "%d: CPU target (by default)"
                         "%d: OpenCL"
                         "%d: OpenCL FP16"
-                        "%d: Myriad"
-                        "%d: FPGA" % targets)
+                        "%d: Myriad" % targets)
     args, _ = parser.parse_known_args()
 
     if args.input_video and not os.path.isfile(args.input_video):
