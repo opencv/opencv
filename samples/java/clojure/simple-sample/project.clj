@@ -5,8 +5,8 @@
 
   :description "A simple project to start REPLing with OpenCV"
   :url "http://example.com/FIXME"
-  :license {:name "BSD 3-Clause License"
-            :url "http://opensource.org/licenses/BSD-3-Clause"}
+  :license {:name "Apache 2.0 License"
+            :url "https://www.apache.org/licenses/LICENSE-2.0"}
   :dependencies [[org.clojure/clojure "1.5.1"]
                  [opencv/opencv "2.4.7"]
                  [opencv/opencv-native "2.4.7"]]
