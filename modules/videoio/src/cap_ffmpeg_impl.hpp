@@ -149,6 +149,8 @@ extern "C" {
 #define AV_PIX_FMT_BGR24 PIX_FMT_BGR24
 #define AV_PIX_FMT_RGB24 PIX_FMT_RGB24
 #define AV_PIX_FMT_GRAY8 PIX_FMT_GRAY8
+#define AV_PIX_FMT_BGRA PIX_FMT_BGRA
+#define AV_PIX_FMT_RGBA PIX_FMT_RGBA
 #define AV_PIX_FMT_YUV422P PIX_FMT_YUV422P
 #define AV_PIX_FMT_YUV420P PIX_FMT_YUV420P
 #define AV_PIX_FMT_YUV444P PIX_FMT_YUV444P
@@ -356,7 +358,7 @@ struct AVInterruptCallbackMetadata
 
 // https://github.com/opencv/opencv/pull/12693#issuecomment-426236731
 static
-inline const char* _opencv_avcodec_get_name(AVCodecID id)
+inline const char* _opencv_avcodec_get_name(CV_CODEC_ID id)
 {
 #if LIBAVCODEC_VERSION_MICRO >= 100 \
     && LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(53, 47, 100)
@@ -1087,11 +1089,11 @@ bool CvCapture_FFMPEG::processRawPacket()
     {
         rawModeInitialized = true;
 #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(58, 20, 100)
-        AVCodecID eVideoCodec = ic->streams[video_stream]->codecpar->codec_id;
+        CV_CODEC_ID eVideoCodec = ic->streams[video_stream]->codecpar->codec_id;
 #elif LIBAVFORMAT_BUILD > 4628
-        AVCodecID eVideoCodec = video_st->codec->codec_id;
+        CV_CODEC_ID eVideoCodec = video_st->codec->codec_id;
 #else
-        AVCodecID eVideoCodec = video_st->codec.codec_id;
+        CV_CODEC_ID eVideoCodec = video_st->codec.codec_id;
 #endif
         const char* filterName = NULL;
         if (eVideoCodec == CV_CODEC(CODEC_ID_H264)
@@ -1394,7 +1396,7 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
     if( !video_st ) return 0;
 
     double codec_tag = 0;
-    AVCodecID codec_id = AV_CODEC_ID_NONE;
+    CV_CODEC_ID codec_id = AV_CODEC_ID_NONE;
     const char* codec_fourcc = NULL;
 
     switch( property_id )
@@ -1858,7 +1860,7 @@ static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
 
 #if LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(54,25,0)
     // Set per-codec defaults
-    AVCodecID c_id = c->codec_id;
+    CV_CODEC_ID c_id = c->codec_id;
     avcodec_get_context_defaults3(c, codec);
     // avcodec_get_context_defaults3 erases codec_id for some reason
     c->codec_id = c_id;
