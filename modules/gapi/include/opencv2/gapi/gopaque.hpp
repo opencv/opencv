@@ -247,6 +247,18 @@ namespace detail
             return m_kind;
         }
 
+        template<typename T>
+        bool operator==(const OpaqueRef& other) const
+        {
+            return this->rref<T>() == other.rref<T>();
+        }
+
+        template<typename T>
+        bool holds() const
+        {
+            return dynamic_cast<OpaqueRefT<T>*>(m_ref.get()) != nullptr;
+        }
+
         template<typename T> void reset()
         {
             if (!m_ref) m_ref.reset(new OpaqueRefT<T>());

@@ -634,6 +634,10 @@ I::OStream& ByteMemoryOutStream::operator<< (bool atom) {
     m_storage.push_back(atom ? 1 : 0);
     return *this;
 }
+I::OStream& ByteMemoryOutStream::operator<< (std::vector<bool>::reference atom) {
+    m_storage.push_back(atom ? 1 : 0);
+    return *this;
+}
 I::OStream& ByteMemoryOutStream::operator<< (char atom) {
     m_storage.push_back(atom);
     return *this;
@@ -693,6 +697,11 @@ I::IStream& ByteMemoryInStream::operator>> (uint32_t &atom) {
     return *this;
 }
 I::IStream& ByteMemoryInStream::operator>> (bool& atom) {
+    check(sizeof(char));
+    atom = (m_storage[m_idx++] == 0) ? false : true;
+    return *this;
+}
+I::IStream& ByteMemoryInStream::operator>> (std::vector<bool>::reference atom) {
     check(sizeof(char));
     atom = (m_storage[m_idx++] == 0) ? false : true;
     return *this;

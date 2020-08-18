@@ -120,14 +120,12 @@ namespace detail
     class BasicVectorRef
     {
     public:
-        // These fields are set by the derived class(es)
         std::size_t    m_elemSize = 0ul;
         cv::GArrayDesc m_desc;
         virtual ~BasicVectorRef() {}
 
         virtual void mov(BasicVectorRef &ref) = 0;
         virtual const void* ptr() const = 0;
-        virtual std::size_t size() const = 0;
     };
 
     template<typename T> class VectorRefT final: public BasicVectorRef
@@ -222,7 +220,6 @@ namespace detail
         }
 
         virtual const void* ptr() const override { return &rref(); }
-        virtual std::size_t size() const override { return rref().size(); }
     };
 
     // This class strips type information from VectorRefT<> and makes it usable
@@ -255,6 +252,18 @@ namespace detail
         cv::detail::OpaqueKind getKind() const
         {
             return m_kind;
+        }
+        
+        template<typename T>
+        bool operator==(const VectorRef& other) const
+        {
+            return this->rref<T>() == other.rref<T>();
+        }
+
+        template<typename T>
+        bool holds() const
+        {
+            return dynamic_cast<VectorRefT<T>*>(m_ref.get()) != nullptr;
         }
 
         template<typename T> void reset()
@@ -291,11 +300,6 @@ namespace detail
         cv::GArrayDesc descr_of() const
         {
             return m_ref->m_desc;
-        }
-
-        std::size_t size() const
-        {
-            return m_ref->size();
         }
 
         // May be used to uniquely identify this object internally
