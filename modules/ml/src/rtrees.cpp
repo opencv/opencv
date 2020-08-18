@@ -216,13 +216,14 @@ public:
                     sample = Mat( nallvars, 1, CV_32F, psamples + sstep0*w->sidx[j], sstep1*sizeof(psamples[0]) );
 
                     double val = predictTrees(Range(treeidx, treeidx+1), sample, predictFlags);
+                    double sample_weight = w->sample_weights[w->sidx[j]];
                     if( !_isClassifier )
                     {
                         oobres[j] += val;
                         oobcount[j]++;
                         double true_val = w->ord_responses[w->sidx[j]];
                         double a = oobres[j]/oobcount[j] - true_val;
-                        oobError += a*a;
+                        oobError += sample_weight * a*a;
                         val = (val - true_val)/max_response;
                         ncorrect_responses += std::exp( -val*val );
                     }
@@ -237,7 +238,7 @@ public:
                             if( votes[best_class] < votes[k] )
                                 best_class = k;
                         int diff = best_class != w->cat_responses[w->sidx[j]];
-                        oobError += diff;
+                        oobError += sample_weight * diff;
                         ncorrect_responses += diff == 0;
                     }
                 }
@@ -456,6 +457,7 @@ public:
     inline void setRegressionAccuracy(float val) CV_OVERRIDE { impl.params.setRegressionAccuracy(val); }
     inline cv::Mat getPriors() const CV_OVERRIDE { return impl.params.getPriors(); }
     inline void setPriors(const cv::Mat& val) CV_OVERRIDE { impl.params.setPriors(val); }
+    inline double getOOBError() const CV_OVERRIDE { return impl.oobError;}
 
     RTreesImpl() {}
     virtual ~RTreesImpl() CV_OVERRIDE {}
