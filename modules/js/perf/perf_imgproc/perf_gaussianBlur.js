@@ -42,7 +42,6 @@ function perf() {
                 let matType = cv[this.params.matType];
                 let borderType = cv[this.params.borderType];
                 let type = this.params.type;
-                
                 let src = new cv.Mat(size, matType);
                 let dst = new cv.Mat(size, matType);
                 let ksizeNum = this.params.ksize;
@@ -62,7 +61,6 @@ function perf() {
         let matType = combination[i][1];
         let borderType = combination[i][2];
         let ksizeArray = [3, 5];
-        
         let params = {size: size, matType:matType, ksize: ksizeArray[type], borderType:borderType};
         addKernelCase(suite, params, type, addGaussianBlurCase);
       }

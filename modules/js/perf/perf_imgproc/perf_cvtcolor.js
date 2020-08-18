@@ -12,7 +12,7 @@ if (isNodeJs) {
 }
 
 function perf() {
-  
+
   console.log('opencv.js loaded');
   if (isNodeJs) {
     global.cv = cv;
@@ -90,7 +90,7 @@ function perf() {
     cvtMode16U = cvtMode16U.concat(constructMode("CX_", "YCrCb", ["BGRA", "RGBA"]));
     cvtMode16U = cvtMode16U.concat(constructMode("COLOR_", "YUV", ["BGR", "RGB"]));
     cvtMode16U = cvtMode16U.concat(constructMode("CX_", "YUV", ["BGRA", "RGBA"]));
-    
+
     return cvtMode16U;
   }
 
@@ -117,7 +117,7 @@ function perf() {
     cvtMode32F = cvtMode32F.concat(constructMode("CX_", "LRGBA", ["Lab", "Luv"]));
     cvtMode32F = cvtMode32F.concat(constructMode("COLOR_", "RGB", ["HLS", "HLS_FULL", "HSV", "HSV_FULL", "Lab", "Luv"]));
     cvtMode32F = cvtMode32F.concat(constructMode("CX_", "RGBA", ["HLS", "HLS_FULL", "HSV", "HSV_FULL", "Lab", "Luv"]));
-    
+
     return cvtMode32F;
   }
 
@@ -126,7 +126,7 @@ function perf() {
   const CvtMode32FSize = [cvSize.szODD, cvSize.szVGA, cvSize.sz1080p];
   const combiCvtMode32F = combine(CvtMode32FSize, CvtMode32F);
 
-  function constructeCvtMode(source) { 
+  function constructeCvtMode(source) {
     let cvtMode = source
     cvtMode = cvtMode.concat(constructMode("COLOR_", "BGR", ["BGR555", "BGR565"]));
     cvtMode = cvtMode.concat(constructMode("COLOR_", "BGR555", ["BGR", "BGRA", "GRAY", "RGB", "RGBA"]));
@@ -135,7 +135,7 @@ function perf() {
     cvtMode = cvtMode.concat(constructMode("COLOR_", "GRAY", ["BGR555", "BGR565"]));
     cvtMode = cvtMode.concat(constructMode("COLOR_", "RGB", ["BGR555", "BGR565"]));
     cvtMode = cvtMode.concat(constructMode("COLOR_", "RGBA", ["BGR555", "BGR565"]));
-    
+
     return cvtMode;
   }
 
@@ -353,7 +353,7 @@ function perf() {
       let paramObjs = [];
       paramObjs.push({name:"mode", value:"", reg:["/CX\_[A-z]+2[A-z]+/", "/COLOR\_[A-z]+2[A-z]+/"], index:1});
       paramObjs.push({name:"size", value:"", reg:[""], index:0});
-      
+
       let locationList = decodeParams2Case(params, paramObjs,combinations);
       for (let i = 0; i < locationList.length; i++){
         let first = locationList[i][0];

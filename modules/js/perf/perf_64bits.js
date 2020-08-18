@@ -10,7 +10,7 @@ if (isNodeJs) {
 }
 
 function perf() {
-  
+
   console.log('opencv.js loaded');
   if (isNodeJs) {
     global.cv = cv;
@@ -72,7 +72,7 @@ function perf() {
       'setup': function() {
         let size = this.params.size;
         let mat = new cv.Mat();
-        let mat1 = cv.Mat.ones(size[0], size[1], cv.CV_64FC3); 
+        let mat1 = cv.Mat.ones(size[0], size[1], cv.CV_64FC3);
         let planes = new cv.MatVector();
         cv.split(mat1, planes);
       }, 'teardown': function() {
@@ -131,7 +131,7 @@ function perf() {
     if (/\([0-9]+x[0-9]+\)/g.test(paramsContent.toString())) {
       let params = paramsContent.toString().match(/\([0-9]+x[0-9]+\)/g)[0];
       let sizeStrs = (params.match(/[0-9]+/g) || []).slice(0, 2).toString().split(",");
-      sizeArray = sizeStrs.map(Number); 
+      sizeArray = sizeStrs.map(Number);
     } else {
       log("no getting invalid params, run all the cases with Mat of shape (1000 x 1000)");
       sizeArray = [1000, 1000];

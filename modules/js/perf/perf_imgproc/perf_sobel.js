@@ -47,10 +47,8 @@ function perf() {
                 let ddepth = cv[this.params.ddepth];
                 let dxdy = this.params.dxdy;
                 let ksize = this.params.ksize;
-                
                 let type = this.params.type;
                 let src, dst;
-                
                 if (type %2 == 0) {
                   src = new cv.Mat(size[1], size[0], cv.CV_8U);
                   dst = new cv.Mat(size[1], size[0], ddepth);
@@ -118,7 +116,7 @@ function perf() {
             params = paramsContent.toString().match(/\([0-9]+x[0-9]+,[\ ]*\w+,[\ ]*\([0-2],[0-2]\),[\ ]*\w+\|\w+\)/g)[0];
             paramObjs.push({name:"boderType", value:"", reg:["/BORDER\_\\w+\\|BORDER\_\\w+/"], index:3});
         }
-        
+
         if (params != ""){
             let locationList = decodeParams2Case(params, paramObjs,sobelCombinations);
             for (let i = 0; i < locationList.length; i++){

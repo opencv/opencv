@@ -43,7 +43,6 @@ function perf() {
 
                 let src = new cv.Mat(size, cv.CV_8UC4);
                 let dst = new cv.Mat(size, cv.CV_8UC4);
-                
                 let kernelElement = [];
                 for (let i = 0; i < ksize*ksize; i++) {
                     let randNum = Math.random();

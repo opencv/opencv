@@ -12,7 +12,7 @@ if　(isNodeJs)　{
 }
 
 function perf() {
-  
+
   console.log('opencv.js loaded');
   if (isNodeJs) {
     global.cv = cv;
@@ -72,7 +72,7 @@ function perf() {
           let matType = cv[this.params.matType];
           let src = new cv.Mat(from, matType);
           let type = this.params.modeType;
-          let dst; 
+          let dst;
           if (type == "area") {
             dst = new cv.Mat(from.height/scale, from.width/scale, matType);
           } else {

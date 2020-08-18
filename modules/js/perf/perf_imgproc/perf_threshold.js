@@ -12,7 +12,7 @@ if　(isNodeJs)　{
 }
 
 function perf() {
-  
+
   console.log('opencv.js loaded');
   if (isNodeJs) {
     global.cv = cv;
