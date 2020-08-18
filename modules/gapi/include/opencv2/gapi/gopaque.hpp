@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2019 Intel Corporation
+// Copyright (C) 2019-2020 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_GOPAQUE_HPP
@@ -46,7 +46,6 @@ std::ostream& operator<<(std::ostream& os, const cv::GOpaqueDesc &desc);
 
 namespace detail
 {
-
     // ConstructOpaque is a callback which stores information about T and is used by
     // G-API runtime to construct an object in host memory (T remains opaque for G-API).
     // ConstructOpaque is carried into G-API internals by GOpaqueU.
@@ -81,6 +80,11 @@ namespace detail
         template <typename T>
         void specifyType();                       // Store type of initial GOpaque<T>
 
+        template <typename T>
+        void storeKind();
+
+        void setKind(cv::detail::OpaqueKind);
+
         std::shared_ptr<GOrigin> m_priv;
         std::shared_ptr<TypeHintBase> m_hint;
     };
@@ -95,6 +99,22 @@ namespace detail
     template <typename T>
     void GOpaqueU::specifyType(){
         m_hint.reset(new TypeHint<util::decay_t<T>>);
+    };
+
+    template <typename T>
+    void GOpaqueU::storeKind(){
+    if (std::is_same<util::decay_t<T>, bool>::value)
+        setKind(cv::detail::OpaqueKind::CV_BOOL);
+    else if (std::is_same<util::decay_t<T>, int>::value)
+        setKind(cv::detail::OpaqueKind::CV_INT);
+    else if (std::is_same<util::decay_t<T>, double>::value)
+        setKind(cv::detail::OpaqueKind::CV_DOUBLE);
+    else if (std::is_same<util::decay_t<T>, cv::Size>::value)
+        setKind(cv::detail::OpaqueKind::CV_SIZE);
+    else if (std::is_same<util::decay_t<T>, cv::Rect>::value)
+        setKind(cv::detail::OpaqueKind::CV_RECT);
+    else if (std::is_same<util::decay_t<T>, cv::Point>::value)
+        setKind(cv::detail::OpaqueKind::CV_POINT);
     };
 
     // This class represents a typed object reference.
@@ -222,13 +242,25 @@ namespace detail
     public:
         OpaqueRef() = default;
 
-
         template<
             typename T,
             typename = util::are_different_t<OpaqueRef, T>
         >
+        // FIXME: probably won't work with const object
         explicit OpaqueRef(T&& obj) :
             m_ref(new OpaqueRefT<util::decay_t<T>>(std::forward<T>(obj))) {}
+
+        template<typename T>
+        bool operator==(const OpaqueRef& other) const
+        {
+            return this->rref<T>() == other.rref<T>();
+        }
+
+        template<typename T>
+        bool holds() const
+        {
+            return dynamic_cast<OpaqueRefT<T>*>(m_ref.get()) != nullptr;
+        }
 
         template<typename T> void reset()
         {
@@ -289,6 +321,7 @@ private:
     void putDetails() {
         m_ref.setConstructFcn(&CTor);
         m_ref.specifyType<HT>();
+        m_ref.storeKind<HT>();
     }
 
     detail::GOpaqueU m_ref;

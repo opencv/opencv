@@ -27,7 +27,6 @@ namespace
         return cv::GCall(cv::GKernel{ "gapi.test.unaryop"
                                     , ""
                                     , nullptr
-                                    , { D::ArgSpec::OPAQUE_SPEC }
                                     , { GShape::GMAT } }).pass(m).yield(0);
     }
 
@@ -36,7 +35,6 @@ namespace
         return cv::GCall(cv::GKernel{ "gapi.test.binaryOp"
                                     , ""
                                     , nullptr
-                                    , { D::ArgSpec::OPAQUE_SPEC, D::ArgSpec::OPAQUE_SPEC }
                                     , { GShape::GMAT } }).pass(m1, m2).yield(0);
     }
 

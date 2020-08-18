@@ -213,6 +213,60 @@ TEST_F(S11N_Basic, Test_RunArgs_Scalar) {
     EXPECT_EQ(scalar2, out_scalar2);
 }
 
+TEST_F(S11N_Basic, Test_RunArg_Opaque) {
+    auto op = cv::detail::OpaqueRef(42);
+    auto v = cv::GRunArg{ op };
+    put(v);
+    cv::GRunArg out_v = get<cv::GRunArg>();
+    cv::detail::OpaqueRef out_op = cv::util::get<cv::detail::OpaqueRef>(out_v);
+    EXPECT_TRUE(op.operator==<int>(out_op));
+}
+
+TEST_F(S11N_Basic, Test_RunArgs_Opaque) {
+    cv::detail::OpaqueRef op1 = cv::detail::OpaqueRef(cv::Point(1, 2));
+    cv::detail::OpaqueRef op2 = cv::detail::OpaqueRef(cv::Size(12, 21));
+    GRunArgs v;
+    v.resize(2);
+    v[0] = cv::GRunArg{ op1 };
+    v[1] = cv::GRunArg{ op2 };
+    put(v);
+    cv::GRunArgs out_v = get<cv::GRunArgs>();
+    cv::detail::OpaqueRef out_op1 = cv::util::get<cv::detail::OpaqueRef>(out_v[0]);
+    cv::detail::OpaqueRef out_op2 = cv::util::get<cv::detail::OpaqueRef>(out_v[1]);
+    EXPECT_TRUE(op1.operator==<cv::Point>(out_op1));
+    EXPECT_TRUE(op2.operator==<cv::Size>(out_op2));
+}
+
+TEST_F(S11N_Basic, Test_RunArg_Array) {
+    auto op = cv::detail::VectorRef(std::vector<cv::Mat>{cv::Mat::eye(3, 3, CV_8UC1), cv::Mat::zeros(5, 5, CV_8UC3)});
+
+    auto v = cv::GRunArg{ op };
+    put(v);
+    cv::GRunArg out_v = get<cv::GRunArg>();
+    cv::detail::VectorRef out_op = cv::util::get<cv::detail::VectorRef>(out_v);
+    auto vec1 = op.rref<cv::Mat>();
+    auto vec2 = out_op.rref<cv::Mat>();
+    EXPECT_EQ(0, cv::norm(vec1[0], vec2[0], cv::NORM_INF));
+    EXPECT_EQ(0, cv::norm(vec1[1], vec2[1], cv::NORM_INF));
+}
+
+TEST_F(S11N_Basic, Test_RunArgs_Array) {
+    auto vec_sc = std::vector<cv::Scalar>{cv::Scalar(11), cv::Scalar(31)};
+    auto vec_d = std::vector<double>{0.4, 1.0, 123.55, 22.08};
+    cv::detail::VectorRef op1 = cv::detail::VectorRef(vec_sc);
+    cv::detail::VectorRef op2 = cv::detail::VectorRef(vec_d);
+    GRunArgs v;
+    v.resize(2);
+    v[0] = cv::GRunArg{ op1 };
+    v[1] = cv::GRunArg{ op2 };
+    put(v);
+    cv::GRunArgs out_v = get<cv::GRunArgs>();
+    cv::detail::VectorRef out_op1 = cv::util::get<cv::detail::VectorRef>(out_v[0]);
+    cv::detail::VectorRef out_op2 = cv::util::get<cv::detail::VectorRef>(out_v[1]);
+    EXPECT_TRUE(op1.operator==<cv::Scalar>(out_op1));
+    EXPECT_TRUE(op2.operator==<double>(out_op2));
+}
+
 TEST_F(S11N_Basic, Test_RunArgs_MatScalar) {
     cv::Mat mat = cv::Mat::eye(cv::Size(64, 64), CV_8UC3);
     cv::Scalar scalar = cv::Scalar(128, 33, 53);
@@ -254,7 +308,6 @@ TEST_F(S11N_Basic, Test_Bind_RunArgs_MatScalar) {
     v[0] = cv::GRunArg{ mat };
     v[1] = cv::GRunArg{ scalar };
     GRunArgsP output = cv::gapi::bind(v);
-    std::cout << "output size  " <<  output.size() << std::endl;
     unsigned int i = 0;
     for (auto it : output)
     {

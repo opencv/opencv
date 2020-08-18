@@ -282,4 +282,208 @@ TEST(S11N, Pipeline_CustomRGB2YUV)
     }
 }
 
+namespace ThisTest
+{
+    using GOpBool = GOpaque<bool>;
+    using GOpInt = GOpaque<int>;
+    using GOpDouble = GOpaque<double>;
+    using GOpPoint = GOpaque<cv::Point>;
+    using GOpSize = GOpaque<cv::Size>;
+    using GOpRect = GOpaque<cv::Rect>;
+
+    using GOpOut = std::tuple<GOpPoint, GOpSize, GOpRect>;
+
+    G_TYPED_KERNEL_M(OpGenerate, <GOpOut(GOpBool, GOpInt, GOpDouble)>, "test.s11n.gopaque")
+    {
+        static std::tuple<GOpaqueDesc, GOpaqueDesc, GOpaqueDesc> outMeta(const GOpaqueDesc&, const GOpaqueDesc&, const GOpaqueDesc&) {
+            return std::make_tuple(empty_gopaque_desc(), empty_gopaque_desc(), empty_gopaque_desc());
+        }
+    };
+
+    GAPI_OCV_KERNEL(OCVOpGenerate, OpGenerate)
+    {
+        static void run(const bool& b, const int& i, const double& d,
+                        cv::Point& p, cv::Size& s, cv::Rect& r)
+        {
+            p = cv::Point(i, i*2);
+            s = b ? cv::Size(42, 42) : cv::Size(7, 7);
+            int ii = static_cast<int>(d);
+            r = cv::Rect(ii, ii, ii, ii);
+        }
+    };
+
+    using GArrBool = GArray<bool>;
+    using GArrInt = GArray<int>;
+    using GArrDouble = GArray<double>;
+    using GArrPoint = GArray<cv::Point>;
+    using GArrSize = GArray<cv::Size>;
+    using GArrRect = GArray<cv::Rect>;
+    using GArrMat = GArray<cv::Mat>;
+    using GArrScalar = GArray<cv::Scalar>;
+
+    using GArrOut = std::tuple<GArrPoint, GArrSize, GArrRect, GArrMat>;
+
+    G_TYPED_KERNEL_M(ArrGenerate, <GArrOut(GArrBool, GArrInt, GArrDouble, GArrScalar)>, "test.s11n.garray")
+    {
+        static std::tuple<GArrayDesc, GArrayDesc, GArrayDesc, GArrayDesc> outMeta(const GArrayDesc&, const GArrayDesc&,
+                                                                                  const GArrayDesc&, const GArrayDesc&) {
+            return std::make_tuple(empty_array_desc(), empty_array_desc(), empty_array_desc(), empty_array_desc());
+        }
+    };
+
+    GAPI_OCV_KERNEL(OCVArrGenerate, ArrGenerate)
+    {
+        static void run(const std::vector<bool>& b, const std::vector<int>& i,
+                        const std::vector<double>& d, const std::vector<cv::Scalar>& sc,
+                        std::vector<cv::Point>& p, std::vector<cv::Size>& s,
+                        std::vector<cv::Rect>& r, std::vector<cv::Mat>& m)
+        {
+            p.clear(); p.resize(b.size());
+            s.clear(); s.resize(b.size());
+            r.clear(); r.resize(b.size());
+            m.clear(); m.resize(b.size());
+
+            for (std::size_t idx = 0; idx < b.size(); ++idx)
+            {
+                p[idx] = cv::Point(i[idx], i[idx]*2);
+                s[idx] = b[idx] ? cv::Size(42, 42) : cv::Size(7, 7);
+                int ii = static_cast<int>(d[idx]);
+                r[idx] = cv::Rect(ii, ii, ii, ii);
+                m[idx] = cv::Mat(3, 3, CV_8UC1, sc[idx]);
+            }
+        }
+    };
+
+    G_TYPED_KERNEL_M(OpArrK1, <std::tuple<GArrInt,GOpSize>(GOpInt, GArrSize)>, "test.s11n.oparrk1")
+    {
+        static std::tuple<GArrayDesc, GOpaqueDesc> outMeta(const GOpaqueDesc&, const GArrayDesc&) {
+            return std::make_tuple(empty_array_desc(), empty_gopaque_desc());
+        }
+    };
+
+    GAPI_OCV_KERNEL(OCVOpArrK1, OpArrK1)
+    {
+        static void run(const int& i, const std::vector<cv::Size>& vs,
+                        std::vector<int>& vi, cv::Size& s)
+        {
+            vi.clear(); vi.resize(vs.size());
+            s = cv::Size(i, i);
+            for (std::size_t idx = 0; idx < vs.size(); ++ idx)
+                vi[idx] = vs[idx].area();
+        }
+    };
+
+    G_TYPED_KERNEL_M(OpArrK2, <std::tuple<GOpDouble,GArrPoint>(GArrInt, GOpSize)>, "test.s11n.oparrk2")
+    {
+        static std::tuple<GOpaqueDesc, GArrayDesc> outMeta(const GArrayDesc&, const GOpaqueDesc&) {
+            return std::make_tuple(empty_gopaque_desc(), empty_array_desc());
+        }
+    };
+
+    GAPI_OCV_KERNEL(OCVOpArrK2, OpArrK2)
+    {
+        static void run(const std::vector<int>& vi, const cv::Size& s,
+                        double& d, std::vector<cv::Point>& vp)
+        {
+            vp.clear(); vp.resize(vi.size());
+            d = s.area() * 1.5;
+            for (std::size_t idx = 0; idx < vi.size(); ++ idx)
+                vp[idx] = cv::Point(vi[idx], vi[idx]);
+        }
+    };
+} // namespace ThisTest
+
+TEST(S11N, Pipeline_GOpaque)
+{
+    using namespace ThisTest;
+    GOpBool in1;
+    GOpInt in2;
+    GOpDouble in3;
+
+    auto out = OpGenerate::on(in1, in2, in3);
+    cv::GComputation c(cv::GIn(in1, in2, in3), cv::GOut(std::get<0>(out), std::get<1>(out), std::get<2>(out)));
+
+    auto p = cv::gapi::serialize(c);
+    auto dc = cv::gapi::deserialize<cv::GComputation>(p);
+
+    bool b = true;
+    int i = 33;
+    double d = 128.7;
+    cv::Point pp;
+    cv::Size s;
+    cv::Rect r;
+    dc.apply(cv::gin(b, i, d), cv::gout(pp, s, r), cv::compile_args(cv::gapi::kernels<OCVOpGenerate>()));
+
+    EXPECT_EQ(pp, cv::Point(i, i*2));
+    EXPECT_EQ(s, cv::Size(42, 42));
+    int ii = static_cast<int>(d);
+    EXPECT_EQ(r, cv::Rect(ii, ii, ii, ii));
+}
+
+TEST(S11N, Pipeline_GArray)
+{
+    using namespace ThisTest;
+    GArrBool in1;
+    GArrInt in2;
+    GArrDouble in3;
+    GArrScalar in4;
+
+    auto out = ArrGenerate::on(in1, in2, in3, in4);
+    cv::GComputation c(cv::GIn(in1, in2, in3, in4),
+                       cv::GOut(std::get<0>(out), std::get<1>(out),
+                                std::get<2>(out), std::get<3>(out)));
+
+    auto p = cv::gapi::serialize(c);
+    auto dc = cv::gapi::deserialize<cv::GComputation>(p);
+
+    std::vector<bool> b {true, false, false};
+    std::vector<int> i {3, 0 , 59};
+    std::vector<double> d {0.7, 120.5, 44.14};
+    std::vector<cv::Scalar> sc {cv::Scalar::all(10), cv::Scalar::all(15), cv::Scalar::all(99)};
+    std::vector<cv::Point> pp;
+    std::vector<cv::Size> s;
+    std::vector<cv::Rect> r;
+    std::vector<cv::Mat> m;
+    dc.apply(cv::gin(b, i, d, sc), cv::gout(pp, s, r, m), cv::compile_args(cv::gapi::kernels<OCVArrGenerate>()));
+
+    for (std::size_t idx = 0; idx < b.size(); ++idx)
+    {
+        EXPECT_EQ(pp[idx], cv::Point(i[idx], i[idx]*2));
+        EXPECT_EQ(s[idx], b[idx] ? cv::Size(42, 42) : cv::Size(7, 7));
+        int ii = static_cast<int>(d[idx]);
+        EXPECT_EQ(r[idx], cv::Rect(ii, ii, ii, ii));
+    }
+}
+
+TEST(S11N, Pipeline_GArray_GOpaque_Multinode)
+{
+    using namespace ThisTest;
+    GOpInt in1;
+    GArrSize in2;
+
+    auto tmp = OpArrK1::on(in1, in2);
+    auto out = OpArrK2::on(std::get<0>(tmp), std::get<1>(tmp));
+
+    cv::GComputation c(cv::GIn(in1, in2),
+                       cv::GOut(std::get<0>(out), std::get<1>(out)));
+
+    auto p = cv::gapi::serialize(c);
+    auto dc = cv::gapi::deserialize<cv::GComputation>(p);
+
+    int i = 42;
+    std::vector<cv::Size> s{cv::Size(11, 22), cv::Size(13, 18)};
+    double d;
+    std::vector<cv::Point> pp;
+
+    dc.apply(cv::gin(i, s), cv::gout(d, pp), cv::compile_args(cv::gapi::kernels<OCVOpArrK1, OCVOpArrK2>()));
+
+    auto st = cv::Size(i ,i);
+    EXPECT_EQ(d, st.area() * 1.5);
+
+    for (std::size_t idx = 0; idx < s.size(); ++idx)
+    {
+        EXPECT_EQ(pp[idx], cv::Point(s[idx].area(), s[idx].area()));
+    }
+}
+
 } // namespace opencv_test

@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2020 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_GARRAY_HPP
@@ -49,31 +49,6 @@ std::ostream& operator<<(std::ostream& os, const cv::GArrayDesc &desc);
 
 namespace detail
 {
-    // FIXME: This type spec needs to be:
-    // 1) shared with GOpaque (not needed right now)
-    // 2) unified with the serialization (S11N, not merged right now).
-    // Adding it to type traits is problematic due to our header deps
-    // (which also need to be fixed).
-    enum class TypeSpec: int {
-        OPAQUE_SPEC,
-        MAT,
-        RECT
-    };
-    // FIXME: Reuse the below from "opaque traits" of S11N!
-    template<typename T> struct GTypeSpec;
-    template<typename T> struct GTypeSpec
-    {
-        static constexpr const TypeSpec spec = TypeSpec::OPAQUE_SPEC;
-    };
-    template<>           struct GTypeSpec<cv::Mat>
-    {
-        static constexpr const TypeSpec spec = TypeSpec::MAT;
-    };
-    template<>           struct GTypeSpec<cv::Rect>
-    {
-        static constexpr const TypeSpec spec = TypeSpec::RECT;
-    };
-
     // ConstructVec is a callback which stores information about T and is used by
     // G-API runtime to construct arrays in host memory (T remains opaque for G-API).
     // ConstructVec is carried into G-API internals by GArrayU.
@@ -112,6 +87,11 @@ namespace detail
         template <typename T>
         void specifyType();                       // Store type of initial GArray<T>
 
+        template <typename T>
+        void storeKind();
+
+        void setKind(cv::detail::OpaqueKind);
+
         std::shared_ptr<GOrigin> m_priv;
         std::shared_ptr<TypeHintBase> m_hint;
     };
@@ -128,6 +108,26 @@ namespace detail
         m_hint.reset(new TypeHint<typename std::decay<T>::type>);
     };
 
+    template <typename T>
+    void GArrayU::storeKind(){
+    if (std::is_same<util::decay_t<T>, bool>::value)
+        setKind(cv::detail::OpaqueKind::CV_BOOL);
+    else if (std::is_same<util::decay_t<T>, int>::value)
+        setKind(cv::detail::OpaqueKind::CV_INT);
+    else if (std::is_same<util::decay_t<T>, double>::value)
+        setKind(cv::detail::OpaqueKind::CV_DOUBLE);
+    else if (std::is_same<util::decay_t<T>, cv::Size>::value)
+        setKind(cv::detail::OpaqueKind::CV_SIZE);
+    else if (std::is_same<util::decay_t<T>, cv::Rect>::value)
+        setKind(cv::detail::OpaqueKind::CV_RECT);
+    else if (std::is_same<util::decay_t<T>, cv::Point>::value)
+        setKind(cv::detail::OpaqueKind::CV_POINT);
+    else if (std::is_same<util::decay_t<T>, cv::Mat>::value)
+        setKind(cv::detail::OpaqueKind::CV_MAT);
+    else if (std::is_same<util::decay_t<T>, cv::Scalar>::value)
+        setKind(cv::detail::OpaqueKind::CV_SCALAR);
+    };
+
     // This class represents a typed STL vector reference.
     // Depending on origins, this reference may be either "just a" reference to
     // an object created externally, OR actually own the underlying object
@@ -135,15 +135,12 @@ namespace detail
     class BasicVectorRef
     {
     public:
-        // These fields are set by the derived class(es)
         std::size_t    m_elemSize = 0ul;
         cv::GArrayDesc m_desc;
-        TypeSpec       m_spec;
         virtual ~BasicVectorRef() {}
 
         virtual void mov(BasicVectorRef &ref) = 0;
         virtual const void* ptr() const = 0;
-        virtual std::size_t size() const = 0;
     };
 
     template<typename T> class VectorRefT final: public BasicVectorRef
@@ -163,7 +160,6 @@ namespace detail
         {
             m_elemSize = sizeof(T);
             if (vec) m_desc = cv::descr_of(*vec);
-            m_spec = GTypeSpec<T>::spec;
         }
 
     public:
@@ -238,9 +234,7 @@ namespace detail
             wref() = std::move(tv->wref());
         }
 
-
         virtual const void* ptr() const override { return &rref(); }
-        virtual std::size_t size() const override { return rref().size(); }
     };
 
     // This class strips type information from VectorRefT<> and makes it usable
@@ -264,7 +258,19 @@ namespace detail
         VectorRef() = default;
         template<typename T> explicit VectorRef(const std::vector<T>& vec) : m_ref(new VectorRefT<T>(vec)) {}
         template<typename T> explicit VectorRef(std::vector<T>& vec)       : m_ref(new VectorRefT<T>(vec)) {}
-        template<typename T> explicit VectorRef(std::vector<T>&& vec)      : m_ref(new VectorRefT<T>(vec)) {}
+        template<typename T> explicit VectorRef(std::vector<T>&& vec)      : m_ref(new VectorRefT<T>(std::move(vec))) {}
+
+        template<typename T>
+        bool operator==(const VectorRef& other) const
+        {
+            return this->rref<T>() == other.rref<T>();
+        }
+
+        template<typename T>
+        bool holds() const
+        {
+            return dynamic_cast<VectorRefT<T>*>(m_ref.get()) != nullptr;
+        }
 
         template<typename T> void reset()
         {
@@ -296,18 +302,8 @@ namespace detail
             return m_ref->m_desc;
         }
 
-        std::size_t size() const
-        {
-            return m_ref->size();
-        }
-
         // May be used to uniquely identify this object internally
         const void *ptr() const { return m_ref->ptr(); }
-
-        TypeSpec spec() const
-        {
-            return m_ref->m_spec;
-        }
     };
 
     // Helper (FIXME: work-around?)
@@ -353,6 +349,7 @@ private:
     void putDetails() {
         m_ref.setConstructFcn(&VCTor);
         m_ref.specifyType<HT>();
+        m_ref.storeKind<HT>();
     }
 
     detail::GArrayU m_ref;

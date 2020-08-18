@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2020 Intel Corporation
 
 
 #include "precomp.hpp"
@@ -33,6 +33,11 @@ const cv::GOrigin& cv::detail::GArrayU::priv() const
 void cv::detail::GArrayU::setConstructFcn(ConstructVec &&cv)
 {
     m_priv->ctor = std::move(cv);
+}
+
+void cv::detail::GArrayU::setKind(cv::detail::OpaqueKind kind)
+{
+    m_priv->kind = kind;
 }
 
 namespace cv {

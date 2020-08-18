@@ -32,6 +32,19 @@ namespace detail
     {};
     struct TransformTag
     {};
+
+    enum class OpaqueKind: int
+    {
+        CV_UNKNOWN,    // Unknown, generic, opaque-to-GAPI data type unsupported in graph seriallization
+        CV_BOOL,       // bool user G-API data
+        CV_INT,        // int user G-API data
+        CV_DOUBLE,     // double user G-API data
+        CV_POINT,      // cv::Point user G-API data
+        CV_SIZE,       // cv::Size user G-API data
+        CV_RECT,       // cv::Rect user G-API data
+        CV_SCALAR,     // cv::Scalar user G-API data
+        CV_MAT,        // cv::Mat user G-API data
+    };
 } // namespace detail
 
 // This definition is here because it is reused by both public(?) and internal
