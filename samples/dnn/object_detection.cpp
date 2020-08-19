@@ -248,18 +248,12 @@ int main(int argc, char** argv)
 
         postprocess(frame, outs, net, backend);
 
+        imshow(kWinName, frame);
         if (predictionsQueue.counter > 1)
         {
-            std::string label = format("Camera: %.2f FPS", framesQueue.getFPS());
-            putText(frame, label, Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
-
-            label = format("Network: %.2f FPS", predictionsQueue.getFPS());
-            putText(frame, label, Point(0, 30), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
-
-            label = format("Skipped frames: %d", framesQueue.counter - predictionsQueue.counter);
-            putText(frame, label, Point(0, 45), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
+            std::string label = format("Camera: %.2f FPS, Network: %.2f FPS, Skipped frames: %d", framesQueue.getFPS(),predictionsQueue.getFPS(),framesQueue.counter - predictionsQueue.counter);
+            displayOverlay(kWinName,label,2000);
         }
-        imshow(kWinName, frame);
     }
 
     process = false;
