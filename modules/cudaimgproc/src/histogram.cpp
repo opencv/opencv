@@ -102,7 +102,8 @@ void cv::cuda::calcHist(InputArray _src, InputArray _mask, OutputArray _hist, St
 
 namespace hist
 {
-    void equalizeHist(PtrStepSzb src, PtrStepSzb dst, const int* lut, cudaStream_t stream);
+    void equalizeHist(PtrStepSzb src, PtrStepSzb dst, const uchar* lut, cudaStream_t stream);
+    void buildLut(PtrStepSzi hist, PtrStepSzb lut, int size, cudaStream_t stream);
 }
 
 void cv::cuda::equalizeHist(InputArray _src, OutputArray _dst, Stream& _stream)
@@ -114,26 +115,21 @@ void cv::cuda::equalizeHist(InputArray _src, OutputArray _dst, Stream& _stream)
     _dst.create(src.size(), src.type());
     GpuMat dst = _dst.getGpuMat();
 
-    int intBufSize;
-    nppSafeCall( nppsIntegralGetBufferSize_32s(256, &intBufSize) );
-
-    size_t bufSize = intBufSize + 2 * 256 * sizeof(int);
+    size_t bufSize = 256 * sizeof(int) + 256 * sizeof(uchar);
 
     BufferPool pool(_stream);
     GpuMat buf = pool.getBuffer(1, static_cast<int>(bufSize), CV_8UC1);
 
     GpuMat hist(1, 256, CV_32SC1, buf.data);
-    GpuMat lut(1, 256, CV_32SC1, buf.data + 256 * sizeof(int));
-    GpuMat intBuf(1, intBufSize, CV_8UC1, buf.data + 2 * 256 * sizeof(int));
+    GpuMat lut(1, 256, CV_8UC1, buf.data + 256 * sizeof(int));
 
     cuda::calcHist(src, hist, _stream);
 
     cudaStream_t stream = StreamAccessor::getStream(_stream);
-    NppStreamHandler h(stream);
 
-    nppSafeCall( nppsIntegral_32s(hist.ptr<Npp32s>(), lut.ptr<Npp32s>(), 256, intBuf.ptr<Npp8u>()) );
+    hist::buildLut(hist, lut, src.rows * src.cols, stream);
 
-    hist::equalizeHist(src, dst, lut.ptr<int>(), stream);
+    hist::equalizeHist(src, dst, lut.data, stream);
 }
 
 ////////////////////////////////////////////////////////////////////////
