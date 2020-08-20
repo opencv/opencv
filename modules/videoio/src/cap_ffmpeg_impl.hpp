@@ -1019,7 +1019,7 @@ bool CvCapture_FFMPEG::open( const char* _filename )
                 codec = avcodec_find_decoder_by_name(av_dict_get(dict, "video_codec", NULL, 0)->value);
             }
             if (!codec ||
-#if LIBAVCODEC_VERSION_INT >= ((53<<16)+(8<<8)+0)
+#if LIBAVCODEC_VERSION_INT >= CALC_FFMPEG_VERSION(53, 8, 0)
                 avcodec_open2(enc, codec, NULL)
 #else
                 avcodec_open(enc, codec)
@@ -2183,8 +2183,8 @@ void CvVideoWriter_FFMPEG::close()
         {
             /* close the output file */
 
-#if LIBAVCODEC_VERSION_INT < ((52<<16)+(123<<8)+0)
-#if LIBAVCODEC_VERSION_INT >= ((51<<16)+(49<<8)+0)
+#if LIBAVCODEC_VERSION_INT < CALC_FFMPEG_VERSION(52, 123, 0)
+#if LIBAVCODEC_VERSION_INT >= CALCCALC_FFMPEG_VERSION(51, 49, 0)
             url_fclose(oc->pb);
 #else
             url_fclose(&oc->pb);
@@ -2296,7 +2296,7 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
     }
 
     /* Lookup codec_id for given fourcc */
-#if LIBAVCODEC_VERSION_INT<((51<<16)+(49<<8)+0)
+#if LIBAVCODEC_VERSION_INT < CALC_FFMPEG_VERSION(51, 49, 0)
     if( (codec_id = codec_get_bmp_id( fourcc )) == CV_CODEC(CODEC_ID_NONE) )
         return false;
 #else
@@ -2362,7 +2362,7 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
 
     // set a few optimal pixel formats for lossless codecs of interest..
     switch (codec_id) {
-#if LIBAVCODEC_VERSION_INT>((50<<16)+(1<<8)+0)
+#if LIBAVCODEC_VERSION_INT > CALC_FFMPEG_VERSION(50, 1, 0)
     case CV_CODEC(CODEC_ID_JPEGLS):
         // BGR24 or GRAY8 depending on is_color...
         // supported: bgr24 rgb24 gray gray16le
@@ -2523,7 +2523,7 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
 
     /* open the codec */
     if ((err=
-#if LIBAVCODEC_VERSION_INT >= ((53<<16)+(8<<8)+0)
+#if LIBAVCODEC_VERSION_INT >= CALC_FFMPEG_VERSION(53, 8, 0)
          avcodec_open2(c, codec, NULL)
 #else
          avcodec_open(c, codec)
