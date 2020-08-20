@@ -64,8 +64,8 @@ function perf() {
       totalCaseNum = 0;
       currentCaseId = 0;
 
-      if (/\([0-9]+x[0-9]+,[\ ]*\w+\)/g.test(paramsContent.toString())) {
-          let params = paramsContent.toString().match(/\([0-9]+x[0-9]+,[\ ]*\w+\)/g)[0];
+      if (/\([0-9]+x[0-9]+,[\ ]*CV\_\w+\)/g.test(paramsContent.toString())) {
+          let params = paramsContent.toString().match(/\([0-9]+x[0-9]+,[\ ]*CV\_\w+\)/g)[0];
           let paramObjs = [];
           paramObjs.push({name:"size", value:"", reg:[""], index:0});
           paramObjs.push({name:"matType", value:"", reg:["/CV\_[0-9]+[FSUfsu]C[0-9]/"], index:1});
@@ -90,8 +90,8 @@ function perf() {
     if (isNodeJs) {
       const args = process.argv.slice(2);
       let paramsContent = '';
-      if (/--test_param_filter=\([0-9]+x[0-9]+,[\ ]*\w+\)/g.test(args.toString())) {
-        paramsContent = args.toString().match(/\([0-9]+x[0-9]+,[\ ]*\w+\)/g)[0];
+      if (/--test_param_filter=\([0-9]+x[0-9]+,[\ ]*CV\_\w+\)/g.test(args.toString())) {
+        paramsContent = args.toString().match(/\([0-9]+x[0-9]+,[\ ]*CV\_\w+\)/g)[0];
       }
       genBenchmarkCase(paramsContent);
     } else {

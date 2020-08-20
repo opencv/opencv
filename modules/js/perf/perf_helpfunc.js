@@ -142,11 +142,24 @@ function constructParamLog(params, kernel) {
     let ksize = params.ksize;
     paramLog = `params: (${parseInt(size.width)}x${parseInt(size.height)},`+
     `${matType}, ksize: ${ksize})`;
-  } else if (kernel == "erode" || kernel == "dilate") {
+  } else if (kernel == "erode" || kernel == "dilate" || kernel == "pyrDown") {
     let size = params.size;
     let matType = params.matType;
     paramLog = `params: (${parseInt(size.width)}x${parseInt(size.height)},`+
     `${matType})`;
+  } else if (kernel == "remap") {
+    let size = params.size;
+    let matType = params.matType;
+    let mapType = params.mapType;
+    let interType = params.interType;
+    paramLog = `params: (${parseInt(size.width)}x${parseInt(size.height)},`+
+    `${matType}, ${mapType}, ${interType})`;
+  } else if (kernel == "warpAffine" || kernel == "warpPerspective") {
+    let size = params.size;
+    let interType = params.interType;
+    let borderMode = params.borderMode;
+    paramLog = `params: (${parseInt(size.width)}x${parseInt(size.height)},`+
+    `${interType}, ${borderMode})`;
   }
   return paramLog;
 }
