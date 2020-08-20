@@ -608,11 +608,17 @@ TEST_P(Test_ONNX_layers, Pad2d_Unfused)
 
 TEST_P(Test_ONNX_layers, LinearWithConstant)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2020040000)
+    applyTestTag(CV_TEST_TAG_DNN_SKIP_IE);
+#endif
     testONNXModels("lin_with_constant");
 }
 
 TEST_P(Test_ONNX_layers, MatmulWithTwoInputs)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2020040000)
+    applyTestTag(CV_TEST_TAG_DNN_SKIP_IE);
+#endif
     testONNXModels("matmul_with_two_inputs");
 }
 
