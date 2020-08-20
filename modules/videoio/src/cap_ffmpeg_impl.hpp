@@ -76,10 +76,7 @@ extern "C" {
 #include "ffmpeg_codecs.hpp"
 
 #include <libavutil/mathematics.h>
-
-#if LIBAVUTIL_BUILD > CALC_FFMPEG_VERSION(51,11,0)
-  #include <libavutil/opt.h>
-#endif
+#include <libavutil/opt.h>
 
 #if LIBAVUTIL_BUILD >= (LIBAVUTIL_VERSION_MICRO >= 100 \
     ? CALC_FFMPEG_VERSION(51, 63, 100) : CALC_FFMPEG_VERSION(54, 6, 0))
@@ -141,22 +138,6 @@ extern "C" {
 #else
 #  define CV_CODEC_ID CodecID
 #  define CV_CODEC(name) name
-#endif
-
-#if LIBAVUTIL_BUILD < (LIBAVUTIL_VERSION_MICRO >= 100 \
-    ? CALC_FFMPEG_VERSION(51, 74, 100) : CALC_FFMPEG_VERSION(51, 42, 0))
-#define AVPixelFormat PixelFormat
-#define AV_PIX_FMT_BGR24 PIX_FMT_BGR24
-#define AV_PIX_FMT_RGB24 PIX_FMT_RGB24
-#define AV_PIX_FMT_GRAY8 PIX_FMT_GRAY8
-#define AV_PIX_FMT_BGRA PIX_FMT_BGRA
-#define AV_PIX_FMT_RGBA PIX_FMT_RGBA
-#define AV_PIX_FMT_YUV422P PIX_FMT_YUV422P
-#define AV_PIX_FMT_YUV420P PIX_FMT_YUV420P
-#define AV_PIX_FMT_YUV444P PIX_FMT_YUV444P
-#define AV_PIX_FMT_YUVJ420P PIX_FMT_YUVJ420P
-#define AV_PIX_FMT_GRAY16LE PIX_FMT_GRAY16LE
-#define AV_PIX_FMT_GRAY16BE PIX_FMT_GRAY16BE
 #endif
 
 #ifndef PKT_FLAG_KEY
@@ -1823,7 +1804,6 @@ static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
         c->mb_decision=2;
     }
 
-#if LIBAVUTIL_BUILD > CALC_FFMPEG_VERSION(51,11,0)
     /* Some settings for libx264 encoding, restore dummy values for gop_size
      and qmin since they will be set to reasonable defaults by the libx264
      preset system. Also, use a crf encode with the default quality rating,
@@ -1835,7 +1815,6 @@ static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
       if (c->priv_data)
           av_opt_set(c->priv_data,"crf","23", 0);
     }
-#endif
 
     // some formats want stream headers to be separate
     if(oc->oformat->flags & AVFMT_GLOBALHEADER)
