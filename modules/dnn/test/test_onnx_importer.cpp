@@ -608,6 +608,7 @@ TEST_P(Test_ONNX_layers, Pad2d_Unfused)
 
 TEST_P(Test_ONNX_layers, LinearWithConstant)
 {
+    applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2020040000)
     applyTestTag(CV_TEST_TAG_DNN_SKIP_IE);
 #endif
@@ -616,6 +617,7 @@ TEST_P(Test_ONNX_layers, LinearWithConstant)
 
 TEST_P(Test_ONNX_layers, MatmulWithTwoInputs)
 {
+    applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2020040000)
     applyTestTag(CV_TEST_TAG_DNN_SKIP_IE);
 #endif
