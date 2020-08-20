@@ -67,10 +67,10 @@ int main(int argc, char* argv[])
     //! [trackbar]
     // Trackbars to set thresholds for HSV values
     createTrackbar("Low H", window_detection_name, &low_H, max_value_H, on_low_H_thresh_trackbar);
-    createTrackbar("High H", window_detection_name, &high_H, max_value_H, on_high_H_thresh_trackbar);
     createTrackbar("Low S", window_detection_name, &low_S, max_value, on_low_S_thresh_trackbar);
-    createTrackbar("High S", window_detection_name, &high_S, max_value, on_high_S_thresh_trackbar);
     createTrackbar("Low V", window_detection_name, &low_V, max_value, on_low_V_thresh_trackbar);
+    createTrackbar("High S", window_detection_name, &high_S, max_value, on_high_S_thresh_trackbar);
+    createTrackbar("High H", window_detection_name, &high_H, max_value_H, on_high_H_thresh_trackbar);
     createTrackbar("High V", window_detection_name, &high_V, max_value, on_high_V_thresh_trackbar);
     //! [trackbar]
 
