@@ -31,7 +31,7 @@ Scalar calcLargestArea(Mat mask, vector<vector<Point>> &contours)
     findContours(mask, contours, RETR_LIST, CHAIN_APPROX_NONE);
     for( int i = 0; i< contours.size(); i++ )
     {
-        a=contourArea( contours[i],false); 
+        a=contourArea( contours[i],false);
         if(a>largest_area)
         {
             largest_area=a;
@@ -61,7 +61,7 @@ int main(int argc, char** argv)
     Scalar obj2Upper = parser.get<Scalar>("obj2Upper");
     int minArea      = parser.get<int>("minArea");
 
-    bool testObj; 
+    bool testObj;
     Mat frame,image,OutputImageMask1,OutputImageMask2;
     vector<vector<Point>>  contours;
     float _x,_y,radius;
@@ -80,9 +80,9 @@ int main(int argc, char** argv)
 
         testObj = (countNonZero(OutputImageMask1)> countNonZero(OutputImageMask2));
         result = calcLargestArea((testObj == 1?OutputImageMask1:OutputImageMask2),contours);
-	
+
         if(result[1]>minArea)
-        {      
+        {
             minEnclosingCircle( contours[result[0]], center, radius);
             cv::Moments m=cv::moments(contours[result[0]]);
             _x = (m.m10/m.m00);
@@ -94,7 +94,7 @@ int main(int argc, char** argv)
                 circle(frame, _center, 5, Scalar(255,0,0), -1, LINE_AA);
             }
             imshow("image",frame);
-            cv::displayOverlay("image",labels[testObj],2000); 
+            cv::displayOverlay("image",labels[testObj],2000);
             }
             else
             imshow("image",frame);
