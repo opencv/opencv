@@ -1819,13 +1819,11 @@ static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
 
     c->codec_type = AVMEDIA_TYPE_VIDEO;
 
-#if LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(54,25,0)
     // Set per-codec defaults
     CV_CODEC_ID c_id = c->codec_id;
     avcodec_get_context_defaults3(c, codec);
     // avcodec_get_context_defaults3 erases codec_id for some reason
     c->codec_id = c_id;
-#endif
 
     /* put sample parameters */
     int64_t lbit_rate = (int64_t)bitrate;
@@ -1911,13 +1909,11 @@ static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
 #endif
     }
 
-#if LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(52, 42, 0)
 #if defined(_MSC_VER)
     AVRational avg_frame_rate = {frame_rate, frame_rate_base};
     st->avg_frame_rate = avg_frame_rate;
 #else
     st->avg_frame_rate = (AVRational){frame_rate, frame_rate_base};
-#endif
 #endif
 #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(55, 20, 0)
     st->time_base = c->time_base;
@@ -1929,11 +1925,7 @@ static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
 static const int OPENCV_NO_FRAMES_WRITTEN_CODE = 1000;
 
 static int icv_av_write_frame_FFMPEG( AVFormatContext * oc, AVStream * video_st,
-#if LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(54, 1, 0)
                                       uint8_t *, uint32_t,
-#else
-                                      uint8_t * outbuf, uint32_t outbuf_size,
-#endif
                                       AVFrame * picture )
 {
     AVCodecContext* c = video_st->codec;
@@ -1980,7 +1972,6 @@ static int icv_av_write_frame_FFMPEG( AVFormatContext * oc, AVStream * video_st,
 #else
         AVPacket pkt;
         av_init_packet(&pkt);
-#if LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(54, 1, 0)
         int got_output = 0;
         pkt.data = NULL;
         pkt.size = 0;
@@ -2000,22 +1991,6 @@ static int icv_av_write_frame_FFMPEG( AVFormatContext * oc, AVStream * video_st,
         }
         else
             ret = OPENCV_NO_FRAMES_WRITTEN_CODE;
-#else
-        int out_size = avcodec_encode_video(c, outbuf, outbuf_size, picture);
-        /* if zero size, it means the image was buffered */
-        if (out_size > 0) {
-            if(c->coded_frame->pts != (int64_t)AV_NOPTS_VALUE)
-                pkt.pts = av_rescale_q(c->coded_frame->pts, c->time_base, video_st->time_base);
-            if(c->coded_frame->key_frame)
-                pkt.flags |= PKT_FLAG_KEY;
-            pkt.stream_index= video_st->index;
-            pkt.data= outbuf;
-            pkt.size= out_size;
-
-            /* write the compressed frame in the media file */
-            ret = av_write_frame(oc, &pkt);
-        }
-#endif
 #endif
     }
     return ret;
@@ -2180,13 +2155,7 @@ void CvVideoWriter_FFMPEG::close()
         if (!(fmt->flags & AVFMT_NOFILE))
         {
             /* close the output file */
-
-#if LIBAVCODEC_VERSION_INT < CALC_FFMPEG_VERSION(52, 123, 0)
-            url_fclose(oc->pb);
-#else
             avio_close(oc->pb);
-#endif
-
         }
 
         /* free the stream */
@@ -2509,13 +2478,7 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
     c->bit_rate = (int)lbit_rate;
 
     /* open the codec */
-    if ((err=
-#if LIBAVCODEC_VERSION_INT >= CALC_FFMPEG_VERSION(53, 8, 0)
-         avcodec_open2(c, codec, NULL)
-#else
-         avcodec_open(c, codec)
-#endif
-         ) < 0) {
+    if ((err= avcodec_open2(c, codec, NULL)) < 0) {
         fprintf(stderr, "Could not open codec '%s': %s\n", codec->name, icvFFMPEGErrStr(err));
         return false;
     }
