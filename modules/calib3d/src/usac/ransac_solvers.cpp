@@ -745,7 +745,7 @@ bool run (const Ptr<const Model> &params, InputArray points1, InputArray points2
             points_size = mergePoints(points1, points2, points, true);
     } else {
         if (params->isEssential()) {
-            CV_CheckEQ(!K1_.empty() && !K2_.empty(), true, "Intrinsic matrix must not be empty!");
+            CV_CheckEQ((int)(!K1_.empty() && !K2_.empty()), 1, "Intrinsic matrix must not be empty!");
             K1 = K1_.getMat(); K1.convertTo(K1, CV_64F);
             K2 = K2_.getMat(); K2.convertTo(K2, CV_64F);
             if (! dist_coeff1.empty() || ! dist_coeff2.empty()) {
@@ -782,7 +782,7 @@ bool run (const Ptr<const Model> &params, InputArray points1, InputArray points2
 
     std::vector<Ptr<NeighborhoodGraph>> layers;
     if (params->getSampler() == SamplingMethod::SAMPLING_PROGRESSIVE_NAPSAC) {
-        CV_CheckEQ(params->isPnP(), false, "ProgressiveNAPSAC for PnP is not implemented!");
+        CV_CheckEQ((int)params->isPnP(), 0, "ProgressiveNAPSAC for PnP is not implemented!");
         const auto &cell_number_per_layer = params->getGridCellNumber();
         layers.reserve(cell_number_per_layer.size());
         const auto * const pts = (float *) points.data;
