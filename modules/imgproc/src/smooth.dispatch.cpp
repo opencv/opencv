@@ -258,41 +258,21 @@ softdouble getGaussianKernelFixedPoint_ED(CV_OUT std::vector<int64_t>& result, c
 }
 
 static void getGaussianKernel(int n, double sigma, int ktype, Mat& res) { res = getGaussianKernel(n, sigma, ktype); }
-template <typename T> static void getGaussianKernel(int n, double sigma, int, std::vector<T>& res);
-//{ res = getFixedpointGaussianKernel<T>(n, sigma); }
-
-template<> void getGaussianKernel<ufixedpoint16>(int n, double sigma, int, std::vector<ufixedpoint16>& res)
+template <typename FT> static void getGaussianKernel(int n, double sigma, int, std::vector<FT>& res)
+//{ res = getFixedpointGaussianKernel<FT>(n, sigma); }
 {
     std::vector<softdouble> res_sd;
     softdouble s0 = getGaussianKernelBitExact(res_sd, n, sigma);
     CV_UNUSED(s0);
 
     std::vector<int64_t> fixed_256;
-    softdouble approx_err = getGaussianKernelFixedPoint_ED(fixed_256, res_sd, 8);
+    softdouble approx_err = getGaussianKernelFixedPoint_ED(fixed_256, res_sd, FT::fixedShift);
     CV_UNUSED(approx_err);
 
     res.resize(n);
     for (int i = 0; i < n; i++)
     {
-        res[i] = ufixedpoint16::fromRaw((uint16_t)fixed_256[i]);
-        //printf("%03d: %d\n", i, res[i].raw());
-    }
-}
-
-template<> void getGaussianKernel<ufixedpoint32>(int n, double sigma, int, std::vector<ufixedpoint32>& res)
-{
-    std::vector<softdouble> res_sd;
-    softdouble s0 = getGaussianKernelBitExact(res_sd, n, sigma);
-    CV_UNUSED(s0);
-
-    std::vector<int64_t> fixed_256;
-    softdouble approx_err = getGaussianKernelFixedPoint_ED(fixed_256, res_sd, 16);
-    CV_UNUSED(approx_err);
-
-    res.resize(n);
-    for (int i = 0; i < n; i++)
-    {
-        res[i] = ufixedpoint32::fromRaw((uint32_t)fixed_256[i]);
+        res[i] = FT::fromRaw(fixed_256[i]);
         //printf("%03d: %d\n", i, res[i].raw());
     }
 }
