@@ -175,11 +175,7 @@ extern "C" {
 
 
 #ifndef USE_AV_INTERRUPT_CALLBACK
-#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 21, 0)
 #define USE_AV_INTERRUPT_CALLBACK 1
-#else
-#define USE_AV_INTERRUPT_CALLBACK 0
-#endif
 #endif
 
 #ifndef USE_AV_SEND_FRAME_API
@@ -311,9 +307,7 @@ inline double get_monotonic_time_diff_ms(timespec time1, timespec time2)
 
 static int get_number_of_cpus(void)
 {
-#if LIBAVFORMAT_BUILD < CALC_FFMPEG_VERSION(52, 111, 0)
-    return 1;
-#elif defined _WIN32
+#if defined _WIN32
     SYSTEM_INFO sysinfo;
     GetSystemInfo( &sysinfo );
 
@@ -538,9 +532,7 @@ struct CvCapture_FFMPEG
 */
     char              * filename;
 
-#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(52, 111, 0)
     AVDictionary *dict;
-#endif
 #if USE_AV_INTERRUPT_CALLBACK
     AVInterruptCallbackMetadata interrupt_metadata;
 #endif
@@ -578,16 +570,12 @@ void CvCapture_FFMPEG::init()
 
     rotation_angle = 0;
 
-#if (LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(52, 111, 0))
 #if (LIBAVUTIL_BUILD >= CALC_FFMPEG_VERSION(52, 92, 100))
     rotation_auto = true;
 #else
     rotation_auto = false;
 #endif
     dict = NULL;
-#else
-    rotation_auto = false;
-#endif
 
     rawMode = false;
     rawModeInitialized = false;
@@ -626,12 +614,7 @@ void CvCapture_FFMPEG::close()
 
     if( ic )
     {
-#if LIBAVFORMAT_BUILD < CALC_FFMPEG_VERSION(53, 24, 2)
-        av_close_input_file(ic);
-#else
         avformat_close_input(&ic);
-#endif
-
         ic = NULL;
     }
 
@@ -651,10 +634,8 @@ void CvCapture_FFMPEG::close()
         packet.data = NULL;
     }
 
-#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(52, 111, 0)
     if (dict != NULL)
        av_dict_free(&dict);
-#endif
 
     if (packet_filtered.data)
     {
@@ -874,9 +855,7 @@ public:
     }
     InternalFFMpegRegister()
     {
-#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 13, 0)
         avformat_network_init();
-#endif
 
         /* register all codecs, demux and protocols */
         av_register_all();
@@ -922,7 +901,6 @@ bool CvCapture_FFMPEG::open( const char* _filename )
     ic->interrupt_callback.opaque = &interrupt_metadata;
 #endif
 
-#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(52, 111, 0)
 #ifndef NO_GETENV
     char* options = getenv("OPENCV_FFMPEG_CAPTURE_OPTIONS");
     if(options == NULL)
@@ -948,9 +926,6 @@ bool CvCapture_FFMPEG::open( const char* _filename )
     }
 
     int err = avformat_open_input(&ic, _filename, input_format, &dict);
-#else
-    int err = av_open_input_file(&ic, _filename, NULL, 0, NULL);
-#endif
 
     if (err < 0)
     {
@@ -958,12 +933,7 @@ bool CvCapture_FFMPEG::open( const char* _filename )
         CV_WARN(_filename);
         goto exit_func;
     }
-    err =
-#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 6, 0)
-    avformat_find_stream_info(ic, NULL);
-#else
-    av_find_stream_info(ic);
-#endif
+    err = avformat_find_stream_info(ic, NULL);
     if (err < 0)
     {
         CV_WARN("Could not find codec parameters");
@@ -1000,10 +970,6 @@ bool CvCapture_FFMPEG::open( const char* _filename )
             else if (strcmp(avdiscard_entry->value, "nonref") == 0)
                 enc->skip_frame = AVDISCARD_NONREF;
         }
-#endif
-
-#if LIBAVFORMAT_BUILD < CALC_FFMPEG_VERSION(53, 2, 0)
-#define AVMEDIA_TYPE_VIDEO CODEC_TYPE_VIDEO
 #endif
 
         if( AVMEDIA_TYPE_VIDEO == enc->codec_type && video_stream < 0)
@@ -1246,11 +1212,7 @@ bool CvCapture_FFMPEG::grabFrame()
         }
 
         // Decode video frame
-        #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 2, 0)
-            avcodec_decode_video2(video_st->codec, picture, &got_picture, &packet);
-        #else
-            avcodec_decode_video(video_st->codec, picture, &got_picture, packet.data, packet.size);
-        #endif
+        avcodec_decode_video2(video_st->codec, picture, &got_picture, &packet);
 
         // Did we get a video frame?
         if(got_picture)
@@ -1432,8 +1394,7 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
     case CAP_PROP_ORIENTATION_META:
         return static_cast<double>(rotation_angle);
     case CAP_PROP_ORIENTATION_AUTO:
-#if ((LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(52, 111, 0)) && \
-     (LIBAVUTIL_BUILD >= CALC_FFMPEG_VERSION(52, 94, 100)))
+#if LIBAVUTIL_BUILD >= CALC_FFMPEG_VERSION(52, 94, 100)
         return static_cast<double>(rotation_auto);
 #else
         return 0;
@@ -1623,15 +1584,13 @@ bool CvCapture_FFMPEG::setProperty( int property_id, double value )
             return setRaw();
         return false;
     case CAP_PROP_ORIENTATION_AUTO:
-#if ((LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(52, 111, 0)) && \
-     (LIBAVUTIL_BUILD >= CALC_FFMPEG_VERSION(52, 94, 100)))
+#if LIBAVUTIL_BUILD >= CALC_FFMPEG_VERSION(52, 94, 100)
         rotation_auto = static_cast<bool>(value);
         return true;
 #else
         rotation_auto = 0;
         return false;
 #endif
-        break;
     default:
         return false;
     }
@@ -1670,7 +1629,6 @@ struct CvVideoWriter_FFMPEG
 
 static const char * icvFFMPEGErrStr(int err)
 {
-#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 2, 0)
     switch(err) {
     case AVERROR_BSF_NOT_FOUND:
         return "Bitstream filter not found";
@@ -1701,22 +1659,6 @@ static const char * icvFFMPEGErrStr(int err)
     default:
         break;
     }
-#else
-    switch(err) {
-    case AVERROR_NUMEXPECTED:
-        return "Incorrect filename syntax";
-    case AVERROR_INVALIDDATA:
-        return "Invalid data in header";
-    case AVERROR_NOFMT:
-        return "Unknown format";
-    case AVERROR_IO:
-        return "I/O error occurred";
-    case AVERROR_NOMEM:
-        return "Memory allocation error";
-    default:
-        break;
-    }
-#endif
 
     return "Unspecified error";
 }
@@ -1795,11 +1737,7 @@ static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
     int frame_rate, frame_rate_base;
     AVCodec *codec;
 
-#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 10, 0)
     st = avformat_new_stream(oc, 0);
-#else
-    st = av_new_stream(oc, 0);
-#endif
 
     if (!st) {
         CV_WARN("Could not allocate stream");
@@ -2234,11 +2172,7 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
 
     /* auto detect the output format from the name and fourcc code. */
 
-#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 2, 0)
     fmt = av_guess_format(NULL, filename, NULL);
-#else
-    fmt = guess_format(NULL, filename, NULL);
-#endif
 
     if (!fmt)
         return false;
@@ -2262,12 +2196,10 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
     if( (codec_id = av_codec_get_id(fmt->codec_tag, fourcc)) == CV_CODEC(CODEC_ID_NONE) )
     {
         const struct AVCodecTag * fallback_tags[] = {
-#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(54, 1, 0)
 // APIchanges:
 // 2012-01-31 - dd6d3b0 - lavf 54.01.0
 //   Add avformat_get_riff_video_tags() and avformat_get_riff_audio_tags().
                 avformat_get_riff_video_tags(),
-#endif
 #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(55, 25, 100) && defined LIBAVFORMAT_VERSION_MICRO && LIBAVFORMAT_VERSION_MICRO >= 100
 // APIchanges: ffmpeg only
 // 2014-01-19 - 1a193c4 - lavf 55.25.100 - avformat.h
@@ -2304,11 +2236,7 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
     }
 
     // alloc memory for context
-#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 2, 0)
     oc = avformat_alloc_context();
-#else
-    oc = av_alloc_format_context();
-#endif
     assert (oc);
 
     /* set file name */
@@ -2433,14 +2361,6 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
                                            width, height, (int)(bitrate + 0.5),
                                            fps, codec_pix_fmt);
 
-    /* set the output parameters (must be done even if no
-   parameters). */
-#if LIBAVFORMAT_BUILD < CALC_FFMPEG_VERSION(53, 2, 0)
-    if (av_set_parameters(oc, NULL) < 0) {
-        return false;
-    }
-#endif
-
 #if 0
 #if FF_API_DUMP_FORMAT
     dump_format(oc, 0, filename, 1);
@@ -2461,13 +2381,8 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
     /* find the video encoder */
     AVCodec* codec = avcodec_find_encoder(c->codec_id);
     if (!codec) {
-        fprintf(stderr, "Could not find encoder for codec id %d: %s\n", c->codec_id, icvFFMPEGErrStr(
-        #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 2, 0)
-                AVERROR_ENCODER_NOT_FOUND
-        #else
-                -1
-        #endif
-                ));
+        fprintf(stderr, "Could not find encoder for codec id %d: %s\n", c->codec_id,
+                icvFFMPEGErrStr(AVERROR_ENCODER_NOT_FOUND));
         return false;
     }
 
@@ -2517,23 +2432,16 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
     }
 
     /* open the output file, if needed */
-    if (!(fmt->flags & AVFMT_NOFILE)) {
-#if LIBAVFORMAT_BUILD < CALC_FFMPEG_VERSION(53, 2, 0)
-        if (url_fopen(&oc->pb, filename, URL_WRONLY) < 0)
-#else
-            if (avio_open(&oc->pb, filename, AVIO_FLAG_WRITE) < 0)
-#endif
-            {
+    if (!(fmt->flags & AVFMT_NOFILE))
+    {
+        if (avio_open(&oc->pb, filename, AVIO_FLAG_WRITE) < 0)
+        {
             return false;
         }
     }
 
-#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(52, 111, 0)
     /* write the stream header, if any */
     err=avformat_write_header(oc, NULL);
-#else
-    err=av_write_header( oc );
-#endif
 
     if(err < 0)
     {
