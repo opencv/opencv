@@ -35,7 +35,7 @@ Scalar calcLargestArea(Mat mask, vector<vector<Point>> &contours)
         if(a>largest_area)
         {
             largest_area=a;
-            largest_contour_index=i;               
+            largest_contour_index=i;
         }
     }
     return Scalar(largest_contour_index, largest_area,countNonZero(mask));
