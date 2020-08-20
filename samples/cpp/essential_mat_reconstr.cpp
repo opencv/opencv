@@ -203,14 +203,14 @@ int main(int args, char** argv) {
        image_dir = argv[2];
     }
     std::ifstream file(data_file, std::ios_base::in);
-    CV_CheckEQ(file.is_open(), true, "Data file is not found!");
+    CV_CheckEQ((int)file.is_open(), 1, "Data file is not found!");
     std::string filename1, filename2;
     std::getline(file, filename1);
     std::getline(file, filename2);
     Mat image1 = imread(image_dir+filename1);
     Mat image2 = imread(image_dir+filename2);
-    CV_CheckEQ(image1.empty(), false, "Image 1 is not found!");
-    CV_CheckEQ(image2.empty(), false, "Image 2 is not found!");
+    CV_CheckEQ((int)image1.empty(), 0, "Image 1 is not found!");
+    CV_CheckEQ((int)image2.empty(), 0, "Image 2 is not found!");
 
     // read calibration
     Matx33d K;
