@@ -1384,7 +1384,23 @@ void vlineSmooth3N121<uint8_t, ufixedpoint16>(const ufixedpoint16* const * src, 
 template <>
 void vlineSmooth3N121<uint16_t, ufixedpoint32>(const ufixedpoint32* const * src, const ufixedpoint32*, int, uint16_t* dst, int len)
 {
-    for (int i = 0; i < len; i++)
+    int i = 0;
+#if CV_SIMD
+    const int VECSZ = v_uint32::nlanes;
+    for (; i <= len - 2*VECSZ; i += 2*VECSZ)
+    {
+        v_uint64 v_src00, v_src01, v_src02, v_src03, v_src10, v_src11, v_src12, v_src13, v_src20, v_src21, v_src22, v_src23;
+        v_expand(vx_load((uint32_t*)(src[0]) + i), v_src00, v_src01);
+        v_expand(vx_load((uint32_t*)(src[0]) + i + VECSZ), v_src02, v_src03);
+        v_expand(vx_load((uint32_t*)(src[1]) + i), v_src10, v_src11);
+        v_expand(vx_load((uint32_t*)(src[1]) + i + VECSZ), v_src12, v_src13);
+        v_expand(vx_load((uint32_t*)(src[2]) + i), v_src20, v_src21);
+        v_expand(vx_load((uint32_t*)(src[2]) + i + VECSZ), v_src22, v_src23);
+        v_store(dst + i, v_pack(v_rshr_pack<18>(v_src00 + v_src20 + (v_src10 + v_src10), v_src01 + v_src21 + (v_src11 + v_src11)),
+                                v_rshr_pack<18>(v_src02 + v_src22 + (v_src12 + v_src12), v_src03 + v_src23 + (v_src13 + v_src13))));
+    }
+#endif
+    for (; i < len; i++)
         dst[i] = (((uint64_t)((uint32_t*)(src[0]))[i]) + (uint64_t)(((uint32_t*)(src[2]))[i]) + ((uint64_t(((uint32_t*)(src[1]))[i]) << 1)) + (1 << 17)) >> 18;
 }
 template <typename ET, typename FT>
@@ -1539,7 +1555,32 @@ void vlineSmooth5N14641<uint8_t, ufixedpoint16>(const ufixedpoint16* const * src
 template <>
 void vlineSmooth5N14641<uint16_t, ufixedpoint32>(const ufixedpoint32* const * src, const ufixedpoint32*, int, uint16_t* dst, int len)
 {
-    for (int i=0; i < len; i++)
+    int i = 0;
+#if CV_SIMD
+    const int VECSZ = v_uint32::nlanes;
+    for (; i <= len - 2*VECSZ; i += 2*VECSZ)
+    {
+        v_uint64 v_src00, v_src10, v_src20, v_src30, v_src40;
+        v_uint64 v_src01, v_src11, v_src21, v_src31, v_src41;
+        v_uint64 v_src02, v_src12, v_src22, v_src32, v_src42;
+        v_uint64 v_src03, v_src13, v_src23, v_src33, v_src43;
+        v_expand(vx_load((uint32_t*)(src[0]) + i), v_src00, v_src01);
+        v_expand(vx_load((uint32_t*)(src[0]) + i + VECSZ), v_src02, v_src03);
+        v_expand(vx_load((uint32_t*)(src[1]) + i), v_src10, v_src11);
+        v_expand(vx_load((uint32_t*)(src[1]) + i + VECSZ), v_src12, v_src13);
+        v_expand(vx_load((uint32_t*)(src[2]) + i), v_src20, v_src21);
+        v_expand(vx_load((uint32_t*)(src[2]) + i + VECSZ), v_src22, v_src23);
+        v_expand(vx_load((uint32_t*)(src[3]) + i), v_src30, v_src31);
+        v_expand(vx_load((uint32_t*)(src[3]) + i + VECSZ), v_src32, v_src33);
+        v_expand(vx_load((uint32_t*)(src[4]) + i), v_src40, v_src41);
+        v_expand(vx_load((uint32_t*)(src[4]) + i + VECSZ), v_src42, v_src43);
+        v_store(dst + i, v_pack(v_rshr_pack<20>((v_src20 << 2) + (v_src20 << 1) + ((v_src10 + v_src30) << 2) + v_src00 + v_src40,
+                                                (v_src21 << 2) + (v_src21 << 1) + ((v_src11 + v_src31) << 2) + v_src01 + v_src41),
+                                v_rshr_pack<20>((v_src22 << 2) + (v_src22 << 1) + ((v_src12 + v_src32) << 2) + v_src02 + v_src42,
+                                                (v_src23 << 2) + (v_src23 << 1) + ((v_src13 + v_src33) << 2) + v_src03 + v_src43)));
+    }
+#endif
+    for (; i < len; i++)
         dst[i] = ((uint64_t)(((uint32_t*)(src[2]))[i]) * 6 +
                   (((uint64_t)(((uint32_t*)(src[1]))[i]) + (uint64_t)(((uint32_t*)(src[3]))[i])) << 2) +
                   (uint64_t)(((uint32_t*)(src[0]))[i]) + (uint64_t)(((uint32_t*)(src[4]))[i]) + (1 << 19)) >> 20;
