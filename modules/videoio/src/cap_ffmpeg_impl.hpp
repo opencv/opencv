@@ -124,9 +124,6 @@ extern "C" {
 #endif
 #endif
 
-#ifndef MIN
-#define MIN(a, b) ((a) < (b) ? (a) : (b))
-#endif
 
 #if defined(__APPLE__)
 #define AV_NOPTS_VALUE_ ((int64_t)0x8000000000000000LL)
@@ -2473,7 +2470,7 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
         break;
     }
 
-    double bitrate = MIN(bitrate_scale*fps*width*height, (double)INT_MAX/2);
+    double bitrate = std::min(bitrate_scale*fps*width*height, (double)INT_MAX/2);
 
     // TODO -- safe to ignore output audio stream?
     video_st = icv_add_video_stream_FFMPEG(oc, codec_id,
