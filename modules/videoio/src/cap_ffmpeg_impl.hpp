@@ -376,12 +376,6 @@ inline const char* _opencv_avcodec_get_name(CV_CODEC_ID id)
 #endif
 }
 
-static
-inline void _opencv_ffmpeg_free(void** ptr)
-{
-    if(*ptr) free(*ptr);
-    *ptr = 0;
-}
 
 static
 inline int _opencv_ffmpeg_interrupt_callback(void *ptr)
