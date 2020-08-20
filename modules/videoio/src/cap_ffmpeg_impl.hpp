@@ -1901,7 +1901,6 @@ static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
     }
 #endif
 
-#if LIBAVCODEC_VERSION_INT>0x000409
     // some formats want stream headers to be separate
     if(oc->oformat->flags & AVFMT_GLOBALHEADER)
     {
@@ -1911,7 +1910,6 @@ static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
         c->flags |= CODEC_FLAG_GLOBAL_HEADER;
 #endif
     }
-#endif
 
 #if LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(52, 42, 0)
 #if defined(_MSC_VER)
@@ -2184,11 +2182,7 @@ void CvVideoWriter_FFMPEG::close()
             /* close the output file */
 
 #if LIBAVCODEC_VERSION_INT < CALC_FFMPEG_VERSION(52, 123, 0)
-#if LIBAVCODEC_VERSION_INT >= CALCCALC_FFMPEG_VERSION(51, 49, 0)
             url_fclose(oc->pb);
-#else
-            url_fclose(&oc->pb);
-#endif
 #else
             avio_close(oc->pb);
 #endif
@@ -2296,10 +2290,6 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
     }
 
     /* Lookup codec_id for given fourcc */
-#if LIBAVCODEC_VERSION_INT < CALC_FFMPEG_VERSION(51, 49, 0)
-    if( (codec_id = codec_get_bmp_id( fourcc )) == CV_CODEC(CODEC_ID_NONE) )
-        return false;
-#else
     if( (codec_id = av_codec_get_id(fmt->codec_tag, fourcc)) == CV_CODEC(CODEC_ID_NONE) )
     {
         const struct AVCodecTag * fallback_tags[] = {
@@ -2343,7 +2333,6 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
             fourcc = supported_tag;
         }
     }
-#endif
 
     // alloc memory for context
 #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 2, 0)
@@ -2362,14 +2351,12 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
 
     // set a few optimal pixel formats for lossless codecs of interest..
     switch (codec_id) {
-#if LIBAVCODEC_VERSION_INT > CALC_FFMPEG_VERSION(50, 1, 0)
     case CV_CODEC(CODEC_ID_JPEGLS):
         // BGR24 or GRAY8 depending on is_color...
         // supported: bgr24 rgb24 gray gray16le
         // as of version 3.4.1
         codec_pix_fmt = input_pix_fmt;
         break;
-#endif
     case CV_CODEC(CODEC_ID_HUFFYUV):
         // supported: yuv422p rgb24 bgra
         // as of version 3.4.1
