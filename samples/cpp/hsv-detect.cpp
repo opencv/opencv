@@ -67,7 +67,8 @@ int main(int argc, char** argv)
     bool testObj;
     Mat frame,image,OutputImageMask1,OutputImageMask2;
     vector<vector<Point>>  contours;
-    float _x,_y,radius;
+    double _x,_y;
+    float radius;
     Scalar result;
     Point2f center,_center;
 
