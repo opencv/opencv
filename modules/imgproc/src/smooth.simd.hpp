@@ -193,8 +193,9 @@ void hlineSmooth3N<uint8_t, ufixedpoint16>(const uint8_t* src, int cn, const ufi
         }
     }
 }
-template <typename ET, typename FT>
-void hlineSmooth3N121(const ET* src, int cn, const FT*, int, FT* dst, int len, int borderType)
+
+template <typename ET, typename FT, typename RFT, typename VFT>
+void hlineSmooth3N121Impl(const ET* src, int cn, const FT*, int, FT* dst, int len, int borderType)
 {
     if (len == 1)
     {
@@ -218,7 +219,13 @@ void hlineSmooth3N121(const ET* src, int cn, const FT*, int, FT* dst, int len, i
         }
 
         src += cn; dst += cn;
-        for (int i = cn; i < (len - 1)*cn; i++, src++, dst++)
+        int i = cn, lencn = (len - 1)*cn;
+#if CV_SIMD
+        const int VECSZ = VFT::nlanes;
+        for (; i <= lencn - VECSZ; i += VECSZ, src += VECSZ, dst += VECSZ)
+            v_store((RFT*)dst, (vx_load_expand(src - cn) + vx_load_expand(src + cn) + (vx_load_expand(src) << 1)) << (FT::fixedShift-2));
+#endif
+        for (; i < lencn; i++, src++, dst++)
             *dst = (FT(src[-cn])>>2) + (FT(src[cn])>>2) + (FT(src[0])>>1);
 
         // Point that fall right from border
@@ -232,51 +239,19 @@ void hlineSmooth3N121(const ET* src, int cn, const FT*, int, FT* dst, int len, i
         }
     }
 }
+template <typename ET, typename FT>
+void hlineSmooth3N121(const ET* src, int cn, const FT*, int, FT* dst, int len, int borderType);
 template <>
-void hlineSmooth3N121<uint8_t, ufixedpoint16>(const uint8_t* src, int cn, const ufixedpoint16*, int, ufixedpoint16* dst, int len, int borderType)
+void hlineSmooth3N121<uint8_t, ufixedpoint16>(const uint8_t* src, int cn, const ufixedpoint16* _m, int _n, ufixedpoint16* dst, int len, int borderType)
 {
-    if (len == 1)
-    {
-        if (borderType != BORDER_CONSTANT)
-            for (int k = 0; k < cn; k++)
-                dst[k] = ufixedpoint16(src[k]);
-        else
-            for (int k = 0; k < cn; k++)
-                dst[k] = ufixedpoint16(src[k]) >> 1;
-    }
-    else
-    {
-        // Point that fall left from border
-        for (int k = 0; k < cn; k++)
-            dst[k] = (ufixedpoint16(src[k])>>1) + (ufixedpoint16(src[cn + k])>>2);
-        if (borderType != BORDER_CONSTANT)// If BORDER_CONSTANT out of border values are equal to zero and could be skipped
-        {
-            int src_idx = borderInterpolate(-1, len, borderType);
-            for (int k = 0; k < cn; k++)
-                dst[k] = dst[k] + (ufixedpoint16(src[src_idx*cn + k])>>2);
-        }
-
-        src += cn; dst += cn;
-        int i = cn, lencn = (len - 1)*cn;
-#if CV_SIMD
-        const int VECSZ = v_uint16::nlanes;
-        for (; i <= lencn - VECSZ; i += VECSZ, src += VECSZ, dst += VECSZ)
-            v_store((uint16_t*)dst, (vx_load_expand(src - cn) + vx_load_expand(src + cn) + (vx_load_expand(src) << 1)) << 6);
-#endif
-        for (; i < lencn; i++, src++, dst++)
-            *((uint16_t*)dst) = (uint16_t(src[-cn]) + uint16_t(src[cn]) + (uint16_t(src[0]) << 1)) << 6;
-
-        // Point that fall right from border
-        for (int k = 0; k < cn; k++)
-            dst[k] = (ufixedpoint16(src[k - cn])>>2) + (ufixedpoint16(src[k])>>1);
-        if (borderType != BORDER_CONSTANT)// If BORDER_CONSTANT out of border values are equal to zero and could be skipped
-        {
-            int src_idx = (borderInterpolate(len, len, borderType) - (len - 1))*cn;
-            for (int k = 0; k < cn; k++)
-                dst[k] = dst[k] + (ufixedpoint16(src[src_idx + k])>>2);
-        }
-    }
+    hlineSmooth3N121Impl<uint8_t, ufixedpoint16, uint16_t, v_uint16>(src, cn, _m, _n, dst, len, borderType);
 }
+template <>
+void hlineSmooth3N121<uint16_t, ufixedpoint32>(const uint16_t* src, int cn, const ufixedpoint32* _m, int _n, ufixedpoint32* dst, int len, int borderType)
+{
+    hlineSmooth3N121Impl<uint16_t, ufixedpoint32, uint32_t, v_uint32>(src, cn, _m, _n, dst, len, borderType);
+}
+
 template <typename ET, typename FT>
 void hlineSmooth3Naba(const ET* src, int cn, const FT* m, int, FT* dst, int len, int borderType)
 {
