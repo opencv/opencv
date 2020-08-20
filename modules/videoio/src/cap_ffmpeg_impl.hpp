@@ -930,10 +930,9 @@ bool CvCapture_FFMPEG::open( const char* _filename )
         enc->thread_count = get_number_of_cpus();
 //#endif
 
-#if LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(52, 123, 0)
         AVDictionaryEntry* avdiscard_entry = av_dict_get(dict, "avdiscard", NULL, 0);
 
-        if (avdiscard_entry != 0) {
+        if (avdiscard_entry) {
             if(strcmp(avdiscard_entry->value, "all") == 0)
                 enc->skip_frame = AVDISCARD_ALL;
             else if (strcmp(avdiscard_entry->value, "bidir") == 0)
@@ -951,7 +950,6 @@ bool CvCapture_FFMPEG::open( const char* _filename )
             else if (strcmp(avdiscard_entry->value, "nonref") == 0)
                 enc->skip_frame = AVDISCARD_NONREF;
         }
-#endif
 
         if( AVMEDIA_TYPE_VIDEO == enc->codec_type && video_stream < 0)
         {
@@ -965,13 +963,7 @@ bool CvCapture_FFMPEG::open( const char* _filename )
             } else {
                 codec = avcodec_find_decoder_by_name(av_dict_get(dict, "video_codec", NULL, 0)->value);
             }
-            if (!codec ||
-#if LIBAVCODEC_VERSION_INT >= CALC_FFMPEG_VERSION(53, 8, 0)
-                avcodec_open2(enc, codec, NULL)
-#else
-                avcodec_open(enc, codec)
-#endif
-                < 0)
+            if (!codec || avcodec_open2(enc, codec, NULL) < 0)
                 goto exit_func;
 
             // checking width/height (since decoder can sometimes alter it, eg. vp6f)
@@ -1414,11 +1406,7 @@ double CvCapture_FFMPEG::get_fps() const
 #if 0 && LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(55, 1, 100) && LIBAVFORMAT_VERSION_MICRO >= 100
     double fps = r2d(av_guess_frame_rate(ic, ic->streams[video_stream], NULL));
 #else
-#if LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(54, 1, 0)
     double fps = r2d(ic->streams[video_stream]->avg_frame_rate);
-#else
-    double fps = r2d(ic->streams[video_stream]->r_frame_rate);
-#endif
 
 #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(52, 111, 0)
     if (fps < eps_zero)
@@ -1461,8 +1449,7 @@ double CvCapture_FFMPEG::dts_to_sec(int64_t dts) const
 void CvCapture_FFMPEG::get_rotation_angle()
 {
     rotation_angle = 0;
-#if ((LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(52, 111, 0)) && \
-     (LIBAVUTIL_BUILD >= CALC_FFMPEG_VERSION(52, 94, 100)))
+#if LIBAVUTIL_BUILD >= CALC_FFMPEG_VERSION(52, 94, 100)
     AVDictionaryEntry *rotate_tag = av_dict_get(video_st->metadata, "rotate", NULL, 0);
     if (rotate_tag != NULL)
         rotation_angle = atoi(rotate_tag->value);
