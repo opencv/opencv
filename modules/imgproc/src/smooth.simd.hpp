@@ -54,14 +54,10 @@
 namespace cv {
 CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 // forward declarations
+template <typename RFT>
 void GaussianBlurFixedPoint(const Mat& src, /*const*/ Mat& dst,
-                            const uint16_t/*ufixedpoint16*/* fkx, int fkx_size,
-                            const uint16_t/*ufixedpoint16*/* fky, int fky_size,
-                            int borderType);
-
-void GaussianBlurFixedPoint(const Mat& src, /*const*/ Mat& dst,
-                            const uint32_t/*ufixedpoint32*/* fkx, int fkx_size,
-                            const uint32_t/*ufixedpoint32*/* fky, int fky_size,
+                            const RFT/*FT*/* fkx, int fkx_size,
+                            const RFT/*FT*/* fky, int fky_size,
                             int borderType);
 
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
@@ -2089,44 +2085,42 @@ private:
 
 }  // namespace anon
 
-void GaussianBlurFixedPoint(const Mat& src, /*const*/ Mat& dst,
-                            const uint16_t/*ufixedpoint16*/* fkx, int fkx_size,
-                            const uint16_t/*ufixedpoint16*/* fky, int fky_size,
-                            int borderType)
+template <typename RFT, typename ET, typename FT>
+void GaussianBlurFixedPointImpl(const Mat& src, /*const*/ Mat& dst,
+                                const RFT* fkx, int fkx_size,
+                                const RFT* fky, int fky_size,
+                                int borderType)
 {
     CV_INSTRUMENT_REGION();
 
-    CV_Assert(src.depth() == CV_8U && ((borderType & BORDER_ISOLATED) || !src.isSubmatrix()));
-    fixedSmoothInvoker<uint8_t, ufixedpoint16> invoker(
-            src.ptr<uint8_t>(), src.step1(),
-            dst.ptr<uint8_t>(), dst.step1(), dst.cols, dst.rows, dst.channels(),
-            (const ufixedpoint16*)fkx, fkx_size, (const ufixedpoint16*)fky, fky_size,
+    CV_Assert(src.depth() == DataType<ET>::depth && ((borderType & BORDER_ISOLATED) || !src.isSubmatrix()));
+    fixedSmoothInvoker<ET, FT> invoker(
+            src.ptr<ET>(), src.step1(),
+            dst.ptr<ET>(), dst.step1(), dst.cols, dst.rows, dst.channels(),
+            (const FT*)fkx, fkx_size, (const FT*)fky, fky_size,
             borderType & ~BORDER_ISOLATED);
     {
         // TODO AVX guard (external call)
         parallel_for_(Range(0, dst.rows), invoker, std::max(1, std::min(getNumThreads(), getNumberOfCPUs())));
     }
 }
-
-void GaussianBlurFixedPoint(const Mat& src, /*const*/ Mat& dst,
-                            const uint32_t/*ufixedpoint32*/* fkx, int fkx_size,
-                            const uint32_t/*ufixedpoint32*/* fky, int fky_size,
-                            int borderType)
+template <>
+void GaussianBlurFixedPoint<uint16_t>(const Mat& src, /*const*/ Mat& dst,
+                                      const uint16_t/*ufixedpoint16*/* fkx, int fkx_size,
+                                      const uint16_t/*ufixedpoint16*/* fky, int fky_size,
+                                      int borderType)
 {
-    CV_INSTRUMENT_REGION();
-
-    CV_Assert(src.depth() == CV_16U && ((borderType & BORDER_ISOLATED) || !src.isSubmatrix()));
-    fixedSmoothInvoker<uint16_t, ufixedpoint32> invoker(
-            src.ptr<uint16_t>(), src.step1(),
-            dst.ptr<uint16_t>(), dst.step1(), dst.cols, dst.rows, dst.channels(),
-            (const ufixedpoint32*)fkx, fkx_size, (const ufixedpoint32*)fky, fky_size,
-            borderType & ~BORDER_ISOLATED);
-    {
-        // TODO AVX guard (external call)
-        parallel_for_(Range(0, dst.rows), invoker, std::max(1, std::min(getNumThreads(), getNumberOfCPUs())));
-    }
+    GaussianBlurFixedPointImpl<uint16_t, uint8_t, ufixedpoint16>(src, dst, fkx, fkx_size, fky, fky_size, borderType);
 }
 
+template <>
+void GaussianBlurFixedPoint<uint32_t>(const Mat& src, /*const*/ Mat& dst,
+                                      const uint32_t/*ufixedpoint32*/* fkx, int fkx_size,
+                                      const uint32_t/*ufixedpoint32*/* fky, int fky_size,
+                                      int borderType)
+{
+    GaussianBlurFixedPointImpl<uint32_t, uint16_t, ufixedpoint32>(src, dst, fkx, fkx_size, fky, fky_size, borderType);
+}
 #endif
 CV_CPU_OPTIMIZATION_NAMESPACE_END
 } // namespace
