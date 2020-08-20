@@ -28,10 +28,11 @@ Scalar calcLargestArea(Mat mask, vector<vector<Point>> &contours)
     int largest_contour_index = 0;
     int largest_area = 0;
     double a;
+    unsigned int i;
     dilate(mask,mask, Mat(), Point(-1,-1),1);
     erode(mask,mask, Mat(), Point(-1,-1), 3);
     findContours(mask, contours, RETR_LIST, CHAIN_APPROX_NONE);
-    for( int i = 0; i< contours.size(); i++ )
+    for( i = 0; i< contours.size(); i++ )
     {
         a=contourArea( contours[i],false);
         if(a>largest_area)
