@@ -422,6 +422,10 @@ public:
         }
     }
 
+    double getOOBError() const {
+        return oobError;
+    }
+
     RTreeParams rparams;
     double oobError;
     vector<float> varImportance;
@@ -457,7 +461,6 @@ public:
     inline void setRegressionAccuracy(float val) CV_OVERRIDE { impl.params.setRegressionAccuracy(val); }
     inline cv::Mat getPriors() const CV_OVERRIDE { return impl.params.getPriors(); }
     inline void setPriors(const cv::Mat& val) CV_OVERRIDE { impl.params.setPriors(val); }
-    inline double getOOBError() const CV_OVERRIDE { return impl.oobError;}
 
     RTreesImpl() {}
     virtual ~RTreesImpl() CV_OVERRIDE {}
@@ -507,6 +510,8 @@ public:
     const vector<Node>& getNodes() const CV_OVERRIDE { return impl.getNodes(); }
     const vector<Split>& getSplits() const CV_OVERRIDE { return impl.getSplits(); }
     const vector<int>& getSubsets() const CV_OVERRIDE { return impl.getSubsets(); }
+    double getOOBError() const CV_OVERRIDE { return impl.getOOBError(); }
+
 
     DTreesImplForRTrees impl;
 };
