@@ -41,6 +41,7 @@
 //M*/
 
 #include "test_precomp.hpp"
+#include "opencv2/imgproc/logo.hpp"
 
 namespace opencv_test { namespace {
 
@@ -629,6 +630,41 @@ TEST(Drawing, fillpoly_circle)
     fillPoly(img_fp3, vtx3, color);
     double diff_fp3 = cv::norm(img_c, img_fp3, NORM_L1)/(255*(radius+radius_small*2)*2*CV_PI);
     EXPECT_LT(diff_fp3, 1.);
+}
+
+TEST(Drawing, Logo_Invalid)
+{
+    EXPECT_ANY_THROW(Logo logo(0));
+    EXPECT_ANY_THROW(Logo logo(-1));
+    EXPECT_ANY_THROW(Logo logo(Size(0, 0), 10.f));
+    EXPECT_ANY_THROW(Logo logo(Size(-2, -3), 10.f));
+    EXPECT_ANY_THROW(Logo logo(Size(100, 100), 0));
+    EXPECT_ANY_THROW(Logo logo(0.01f)); // too small
+    EXPECT_ANY_THROW(Logo logo(Size(1, 1), 1));
+    {
+        Mat img;
+        Logo logo;
+        EXPECT_ANY_THROW(logo.draw(img));
+        EXPECT_ANY_THROW(logo.draw(img, Point(0, 0)));
+        EXPECT_ANY_THROW(Logo::drawBR(img));
+    }
+}
+
+TEST(Drawing, Logo_Basic)
+{
+    const Logo logo(1), logo10(10), logoH(0.5f);
+    Mat img(200, 200, CV_8UC3);
+    logo.draw(img, Logo::BottomLeft);
+    logo.draw(img, Logo::BottomRight);
+    logo.draw(img, Logo::TopLeft);
+    logo.draw(img, Logo::TopRight);
+    logo.draw(img, Point(0, 0));
+    Logo::drawBR(img);
+    Logo::drawBR(img, 1);
+    Logo::drawBR(img, 0.05f);
+    EXPECT_EQ(Size(53, 49), logo.size());
+    EXPECT_EQ(Size(530, 492), logo10.size());
+    EXPECT_EQ(Size(26, 24), logoH.size());
 }
 
 }} // namespace
