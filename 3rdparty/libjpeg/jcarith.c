@@ -1,7 +1,7 @@
 /*
  * jcarith.c
  *
- * Developed 1997-2013 by Guido Vollbeding.
+ * Developed 1997-2019 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -181,11 +181,11 @@ finish_pass (j_compress_ptr cinfo)
     if (e->zc)  /* output final pending zero bytes */
       do emit_byte(0x00, cinfo);
       while (--e->zc);
-    emit_byte((e->c >> 19) & 0xFF, cinfo);
+    emit_byte((int) ((e->c >> 19) & 0xFF), cinfo);
     if (((e->c >> 19) & 0xFF) == 0xFF)
       emit_byte(0x00, cinfo);
     if (e->c & 0x7F800L) {
-      emit_byte((e->c >> 11) & 0xFF, cinfo);
+      emit_byte((int) ((e->c >> 11) & 0xFF), cinfo);
       if (((e->c >> 11) & 0xFF) == 0xFF)
 	emit_byte(0x00, cinfo);
     }
@@ -280,7 +280,8 @@ arith_encode (j_compress_ptr cinfo, unsigned char *st, int val)
 	/* Note: The 3 spacer bits in the C register guarantee
 	 * that the new buffer byte can't be 0xFF here
 	 * (see page 160 in the P&M JPEG book). */
-	e->buffer = temp & 0xFF;  /* new output byte, might overflow later */
+	/* New output byte, might overflow later */
+	e->buffer = (int) (temp & 0xFF);
       } else if (temp == 0xFF) {
 	++e->sc;  /* stack 0xFF byte (which might overflow later) */
       } else {
@@ -302,7 +303,8 @@ arith_encode (j_compress_ptr cinfo, unsigned char *st, int val)
 	    emit_byte(0x00, cinfo);
 	  } while (--e->sc);
 	}
-	e->buffer = temp & 0xFF;  /* new output byte (can still overflow) */
+	/* New output byte (can still overflow) */
+	e->buffer = (int) (temp & 0xFF);
       }
       e->c &= 0x7FFFFL;
       e->ct += 8;
@@ -926,9 +928,8 @@ jinit_arith_encoder (j_compress_ptr cinfo)
   arith_entropy_ptr entropy;
   int i;
 
-  entropy = (arith_entropy_ptr)
-    (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
-				SIZEOF(arith_entropy_encoder));
+  entropy = (arith_entropy_ptr) (*cinfo->mem->alloc_small)
+    ((j_common_ptr) cinfo, JPOOL_IMAGE, SIZEOF(arith_entropy_encoder));
   cinfo->entropy = &entropy->pub;
   entropy->pub.start_pass = start_pass;
   entropy->pub.finish_pass = finish_pass;

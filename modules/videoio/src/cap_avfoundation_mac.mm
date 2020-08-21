@@ -231,9 +231,12 @@ cv::Ptr<cv::IVideoCapture> cv::create_AVFoundation_capture_cam(int index)
     return 0;
 }
 
-cv::Ptr<cv::IVideoWriter> cv::create_AVFoundation_writer(const std::string& filename, int fourcc, double fps, const cv::Size &frameSize, bool isColor)
+cv::Ptr<cv::IVideoWriter> cv::create_AVFoundation_writer(const std::string& filename, int fourcc,
+                                                         double fps, const cv::Size& frameSize,
+                                                         const cv::VideoWriterParameters& params)
 {
     CvSize sz = { frameSize.width, frameSize.height };
+    const bool isColor = params.get(VIDEOWRITER_PROP_IS_COLOR, true);
     CvVideoWriter_AVFoundation* wrt = new CvVideoWriter_AVFoundation(filename, fourcc, fps, sz, isColor);
     if (wrt->isOpened())
     {

@@ -43,7 +43,7 @@ inline void initTrackingPointsArray(std::vector<cv::Point2f>& points, int width,
 
     points.clear();
     GAPI_Assert((nPointsX >= 0) && (nPointsY) >= 0);
-    points.reserve(static_cast<size_t>(nPointsX * nPointsY));
+    points.reserve(nPointsX * nPointsY);
 
     for (int x = stepX / 2; x < width; x += stepX)
     {
@@ -80,9 +80,7 @@ struct OptFlowLKTestOutput
 
 struct BuildOpticalFlowPyramidTestParams
 {
-    BuildOpticalFlowPyramidTestParams(): fileName(""), winSize(-1), maxLevel(-1),
-                                         withDerivatives(false), pyrBorder(-1),
-                                         derivBorder(-1), tryReuseInputImage(false) { }
+    BuildOpticalFlowPyramidTestParams() = default;
 
     BuildOpticalFlowPyramidTestParams(const std::string& name, int winSz, int maxLvl,
                                       bool withDeriv, int pBorder, int dBorder,

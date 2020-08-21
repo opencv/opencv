@@ -1,6 +1,10 @@
 How to build applications with OpenCV inside the "Microsoft Visual Studio" {#tutorial_windows_visual_studio_opencv}
 ==========================================================================
 
+@prev_tutorial{tutorial_windows_install}
+@next_tutorial{tutorial_windows_visual_studio_image_watch}
+
+
 Everything I describe here will apply to the `C\C++` interface of OpenCV. I start out from the
 assumption that you have read and completed with success the @ref tutorial_windows_install tutorial.
 Therefore, before you go any further make sure you have an OpenCV directory that contains the OpenCV

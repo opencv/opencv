@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2020 Intel Corporation
 
 
 #include "precomp.hpp"
@@ -264,4 +264,12 @@ void cv::gimpl::GExecutor::reshape(const GMetaArgs& inMetas, const GCompileArgs&
     passes::initMeta(ctx, inMetas);
     passes::inferMeta(ctx, true);
     m_ops[0].isl_exec->reshape(g, args);
+}
+
+void cv::gimpl::GExecutor::prepareForNewStream()
+{
+    for (auto &op : m_ops)
+    {
+        op.isl_exec->handleNewStream();
+    }
 }

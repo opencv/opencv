@@ -1220,15 +1220,6 @@ static bool ocl_compute_hists(int nbins, int block_stride_x, int block_stride_y,
     ocl::Kernel k("compute_hists_lut_kernel", ocl::objdetect::objdetect_hog_oclsrc);
     if(k.empty())
         return false;
-    bool is_cpu = cv::ocl::Device::getDefault().type() == cv::ocl::Device::TYPE_CPU;
-    cv::String opts;
-    if(is_cpu)
-       opts = "-D CPU ";
-    else
-        opts = cv::format("-D WAVE_SIZE=%zu", k.preferedWorkGroupSizeMultiple());
-    k.create("compute_hists_lut_kernel", ocl::objdetect::objdetect_hog_oclsrc, opts);
-    if(k.empty())
-        return false;
 
     int img_block_width = (width - CELLS_PER_BLOCK_X * CELL_WIDTH + block_stride_x)/block_stride_x;
     int img_block_height = (height - CELLS_PER_BLOCK_Y * CELL_HEIGHT + block_stride_y)/block_stride_y;
@@ -1287,19 +1278,10 @@ static bool ocl_normalize_hists(int nbins, int block_stride_x, int block_stride_
     size_t localThreads[3] = { 1, 1, 1  };
 
     int idx = 0;
-    bool is_cpu = cv::ocl::Device::getDefault().type() == cv::ocl::Device::TYPE_CPU;
-    cv::String opts;
     ocl::Kernel k;
     if ( nbins == 9 )
     {
         k.create("normalize_hists_36_kernel", ocl::objdetect::objdetect_hog_oclsrc, "");
-        if(k.empty())
-            return false;
-        if(is_cpu)
-           opts = "-D CPU ";
-        else
-            opts = cv::format("-D WAVE_SIZE=%zu", k.preferedWorkGroupSizeMultiple());
-        k.create("normalize_hists_36_kernel", ocl::objdetect::objdetect_hog_oclsrc, opts);
         if(k.empty())
             return false;
 
@@ -1311,14 +1293,7 @@ static bool ocl_normalize_hists(int nbins, int block_stride_x, int block_stride_
     }
     else
     {
-        k.create("normalize_hists_kernel", ocl::objdetect::objdetect_hog_oclsrc, "-D WAVE_SIZE=32");
-        if(k.empty())
-            return false;
-        if(is_cpu)
-           opts = "-D CPU ";
-        else
-            opts = cv::format("-D WAVE_SIZE=%zu", k.preferedWorkGroupSizeMultiple());
-        k.create("normalize_hists_kernel", ocl::objdetect::objdetect_hog_oclsrc, opts);
+        k.create("normalize_hists_kernel", ocl::objdetect::objdetect_hog_oclsrc, "");
         if(k.empty())
             return false;
 
@@ -1736,7 +1711,6 @@ static bool ocl_classify_hists(int win_height, int win_width, int block_stride_y
                                float free_coef, float threshold, UMat& labels, Size descr_size, int block_hist_size)
 {
     int nthreads;
-    bool is_cpu = cv::ocl::Device::getDefault().type() == cv::ocl::Device::TYPE_CPU;
     cv::String opts;
 
     ocl::Kernel k;
@@ -1745,14 +1719,7 @@ static bool ocl_classify_hists(int win_height, int win_width, int block_stride_y
     {
     case 180:
         nthreads = 180;
-        k.create("classify_hists_180_kernel", ocl::objdetect::objdetect_hog_oclsrc, "-D WAVE_SIZE=32");
-        if(k.empty())
-            return false;
-        if(is_cpu)
-           opts = "-D CPU ";
-        else
-            opts = cv::format("-D WAVE_SIZE=%zu", k.preferedWorkGroupSizeMultiple());
-        k.create("classify_hists_180_kernel", ocl::objdetect::objdetect_hog_oclsrc, opts);
+        k.create("classify_hists_180_kernel", ocl::objdetect::objdetect_hog_oclsrc, "");
         if(k.empty())
             return false;
         idx = k.set(idx, descr_size.width);
@@ -1761,14 +1728,7 @@ static bool ocl_classify_hists(int win_height, int win_width, int block_stride_y
 
     case 252:
         nthreads = 256;
-        k.create("classify_hists_252_kernel", ocl::objdetect::objdetect_hog_oclsrc, "-D WAVE_SIZE=32");
-        if(k.empty())
-            return false;
-        if(is_cpu)
-           opts = "-D CPU ";
-        else
-            opts = cv::format("-D WAVE_SIZE=%zu", k.preferedWorkGroupSizeMultiple());
-        k.create("classify_hists_252_kernel", ocl::objdetect::objdetect_hog_oclsrc, opts);
+        k.create("classify_hists_252_kernel", ocl::objdetect::objdetect_hog_oclsrc, "");
         if(k.empty())
             return false;
         idx = k.set(idx, descr_size.width);
@@ -1777,14 +1737,7 @@ static bool ocl_classify_hists(int win_height, int win_width, int block_stride_y
 
     default:
         nthreads = 256;
-        k.create("classify_hists_kernel", ocl::objdetect::objdetect_hog_oclsrc, "-D WAVE_SIZE=32");
-        if(k.empty())
-            return false;
-        if(is_cpu)
-           opts = "-D CPU ";
-        else
-            opts = cv::format("-D WAVE_SIZE=%zu", k.preferedWorkGroupSizeMultiple());
-        k.create("classify_hists_kernel", ocl::objdetect::objdetect_hog_oclsrc, opts);
+        k.create("classify_hists_kernel", ocl::objdetect::objdetect_hog_oclsrc, "");
         if(k.empty())
             return false;
         idx = k.set(idx, descr_size.area());

@@ -6,6 +6,8 @@ understanding how to manipulate the images on a pixel level.
 
 -   @subpage tutorial_mat_the_basic_image_container
 
+    *Languages:* C++
+
     *Compatibility:* \> OpenCV 2.0
 
     *Author:* Bernát Gábor
@@ -14,6 +16,8 @@ understanding how to manipulate the images on a pixel level.
     console.
 
 -   @subpage tutorial_how_to_scan_images
+
+    *Languages:* C++
 
     *Compatibility:* \> OpenCV 2.0
 
@@ -75,6 +79,8 @@ understanding how to manipulate the images on a pixel level.
 
 -   @subpage tutorial_file_input_output_with_xml_yml
 
+    *Languages:* C++, Python
+
     *Compatibility:* \> OpenCV 2.0
 
     *Author:* Bernát Gábor
@@ -83,6 +89,8 @@ understanding how to manipulate the images on a pixel level.
     data to XML or YAML file format.
 
 -   @subpage tutorial_how_to_use_OpenCV_parallel_for_
+
+    *Languages:* C++
 
     *Compatibility:* \>= OpenCV 2.4.3
 

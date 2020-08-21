@@ -90,7 +90,11 @@ public:
         if (!ffmpegCapture ||
            !icvRetrieveFrame_FFMPEG_p(ffmpegCapture, &data, &step, &width, &height, &cn))
             return false;
-        cv::Mat(height, width, CV_MAKETYPE(CV_8U, cn), data, step).copyTo(frame);
+
+        cv::Mat tmp(height, width, CV_MAKETYPE(CV_8U, cn), data, step);
+        this->rotateFrame(tmp);
+        tmp.copyTo(frame);
+
         return true;
     }
     virtual bool open( const cv::String& filename )
@@ -113,6 +117,30 @@ public:
 
 protected:
     CvCapture_FFMPEG* ffmpegCapture;
+
+    void rotateFrame(cv::Mat &mat) const
+    {
+        bool rotation_auto = 0 != getProperty(CAP_PROP_ORIENTATION_AUTO);
+        int rotation_angle = static_cast<int>(getProperty(CAP_PROP_ORIENTATION_META));
+
+        if(!rotation_auto || rotation_angle%360 == 0)
+        {
+            return;
+        }
+
+        cv::RotateFlags flag;
+        if(rotation_angle == 90 || rotation_angle == -270) { // Rotate clockwise 90 degrees
+            flag = cv::ROTATE_90_CLOCKWISE;
+        } else if(rotation_angle == 270 || rotation_angle == -90) { // Rotate clockwise 270 degrees
+            flag = cv::ROTATE_90_COUNTERCLOCKWISE;
+        } else if(rotation_angle == 180 || rotation_angle == -180) { // Rotate clockwise 180 degrees
+            flag = cv::ROTATE_180;
+        } else { // Unsupported rotation
+            return;
+        }
+
+        cv::rotate(mat, mat, flag);
+    }
 };
 
 } // namespace
@@ -170,9 +198,12 @@ protected:
 
 } // namespace
 
-cv::Ptr<cv::IVideoWriter> cvCreateVideoWriter_FFMPEG_proxy(const std::string& filename, int fourcc, double fps, const cv::Size &frameSize, bool isColor)
+cv::Ptr<cv::IVideoWriter> cvCreateVideoWriter_FFMPEG_proxy(const std::string& filename, int fourcc,
+                                                           double fps, const cv::Size& frameSize,
+                                                           const VideoWriterParameters& params)
 {
-    cv::Ptr<CvVideoWriter_FFMPEG_proxy> writer = cv::makePtr<CvVideoWriter_FFMPEG_proxy>(filename, fourcc, fps, frameSize, isColor != 0);
+    const bool isColor = params.get(VIDEOWRITER_PROP_IS_COLOR, true);
+    cv::Ptr<CvVideoWriter_FFMPEG_proxy> writer = cv::makePtr<CvVideoWriter_FFMPEG_proxy>(filename, fourcc, fps, frameSize, isColor);
     if (writer && writer->isOpened())
         return writer;
     return cv::Ptr<cv::IVideoWriter>();

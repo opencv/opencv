@@ -47,20 +47,6 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
             CV_Assert(offsets.size() == outputs.size());
 
-            /* one output with the same shape as the input => direct copy */
-            if (outputs.size() == 1)
-            {
-                auto output_wrapper = outputs[0].dynamicCast<wrapper_type>();
-                auto output = output_wrapper->getSpan();
-
-                if (is_shape_same(output, input))
-                {
-                    CV_Assert(std::all_of(std::begin(offsets[0]), std::end(offsets[0]), [] (std::size_t x) { return x == 0; }));
-                    kernels::copy<T>(stream, output, input);
-                    return;
-                }
-            }
-
             for (int i = 0; i < outputs.size(); ++i)
             {
                 auto output_wrapper = outputs[i].dynamicCast<wrapper_type>();

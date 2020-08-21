@@ -1,6 +1,8 @@
 Build OpenCV.js {#tutorial_js_setup}
 ===============================
 
+@note
+You don't have to build your own copy if you simply want to start using it. Refer the Using Opencv.js tutorial for steps on getting a prebuilt copy from our releases or online documentation.
 
 Installing Emscripten
 -----------------------------

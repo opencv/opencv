@@ -19,7 +19,7 @@ ocv_add_dispatched_file_force_all(test_intrin512 TEST AVX512_SKX)
 
 ocv_add_module(core
                OPTIONAL opencv_cudev
-               WRAP java python js)
+               WRAP java objc python js)
 
 set(extra_libs "")
 

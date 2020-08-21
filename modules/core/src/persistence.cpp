@@ -1376,9 +1376,9 @@ public:
         return new_ptr;
     }
 
-    unsigned getStringOfs( const std::string& key )
+    unsigned getStringOfs( const std::string& key ) const
     {
-        str_hash_t::iterator it = str_hash.find(key);
+        str_hash_t::const_iterator it = str_hash.find(key);
         return it != str_hash.end() ? it->second : 0;
     }
 
@@ -1468,7 +1468,7 @@ public:
         writeInt(ptr, (int)rawSize);
     }
 
-    void normalizeNodeOfs(size_t& blockIdx, size_t& ofs)
+    void normalizeNodeOfs(size_t& blockIdx, size_t& ofs) const
     {
         while( ofs >= fs_data_blksz[blockIdx] )
         {
@@ -1819,7 +1819,6 @@ void FileStorage::endWriteStruct()
 
 FileStorage::~FileStorage()
 {
-    p.release();
 }
 
 bool FileStorage::open(const String& filename, int flags, const String& encoding)
@@ -2049,16 +2048,22 @@ FileStorage& operator << (FileStorage& fs, const String& str)
 
 
 FileNode::FileNode()
+    : fs(NULL)
 {
-    fs = 0;
     blockIdx = ofs = 0;
 }
 
-FileNode::FileNode(const FileStorage* _fs, size_t _blockIdx, size_t _ofs)
+FileNode::FileNode(FileStorage::Impl* _fs, size_t _blockIdx, size_t _ofs)
+    : fs(_fs)
 {
-    fs = _fs;
     blockIdx = _blockIdx;
     ofs = _ofs;
+}
+
+FileNode::FileNode(const FileStorage* _fs, size_t _blockIdx, size_t _ofs)
+    : FileNode(_fs->p.get(), _blockIdx, _ofs)
+{
+    // nothing
 }
 
 FileNode::FileNode(const FileNode& node)
@@ -2083,7 +2088,7 @@ FileNode FileNode::operator[](const std::string& nodename) const
 
     CV_Assert( isMap() );
 
-    unsigned key = fs->p->getStringOfs(nodename);
+    unsigned key = fs->getStringOfs(nodename);
     size_t i, sz = size();
     FileNodeIterator it = begin();
 
@@ -2092,7 +2097,7 @@ FileNode FileNode::operator[](const std::string& nodename) const
         FileNode n = *it;
         const uchar* p = n.ptr();
         unsigned key2 = (unsigned)readInt(p + 1);
-        CV_Assert( key2 < fs->p->str_hash_data.size() );
+        CV_Assert( key2 < fs->str_hash_data.size() );
         if( key == key2 )
             return n;
     }
@@ -2168,7 +2173,7 @@ std::string FileNode::name() const
     if(!p)
         return std::string();
     size_t nameofs = p[1] | (p[2]<<8) | (p[3]<<16) | (p[4]<<24);
-    return fs->p->getName(nameofs);
+    return fs->getName(nameofs);
 }
 
 FileNode::operator int() const
@@ -2293,12 +2298,12 @@ size_t FileNode::rawSize() const
 
 uchar* FileNode::ptr()
 {
-    return !fs ? 0 : (uchar*)fs->p->getNodePtr(blockIdx, ofs);
+    return !fs ? 0 : (uchar*)fs->getNodePtr(blockIdx, ofs);
 }
 
 const uchar* FileNode::ptr() const
 {
-    return !fs ? 0 : fs->p->getNodePtr(blockIdx, ofs);
+    return !fs ? 0 : fs->getNodePtr(blockIdx, ofs);
 }
 
 void FileNode::setValue( int type, const void* value, int len )
@@ -2329,7 +2334,7 @@ void FileNode::setValue( int type, const void* value, int len )
     else
         CV_Error(Error::StsNotImplemented, "Only scalar types can be dynamically assigned to a file node");
 
-    p = fs->p->reserveNodeSpace(*this, sz);
+    p = fs->reserveNodeSpace(*this, sz);
     *p++ = (uchar)(type | (tag & NAMED));
     if( tag & NAMED )
         p += 4;
@@ -2403,8 +2408,8 @@ FileNodeIterator::FileNodeIterator( const FileNode& node, bool seekEnd )
                 idx = nodeNElems;
             }
         }
-        fs->p->normalizeNodeOfs(blockIdx, ofs);
-        blockSize = fs->p->fs_data_blksz[blockIdx];
+        fs->normalizeNodeOfs(blockIdx, ofs);
+        blockSize = fs->fs_data_blksz[blockIdx];
     }
 }
 
@@ -2431,7 +2436,7 @@ FileNodeIterator& FileNodeIterator::operator=(const FileNodeIterator& it)
 
 FileNode FileNodeIterator::operator *() const
 {
-    return FileNode(idx < nodeNElems ? fs : 0, blockIdx, ofs);
+    return FileNode(idx < nodeNElems ? fs : NULL, blockIdx, ofs);
 }
 
 FileNodeIterator& FileNodeIterator::operator ++ ()
@@ -2443,8 +2448,8 @@ FileNodeIterator& FileNodeIterator::operator ++ ()
     ofs += n.rawSize();
     if( ofs >= blockSize )
     {
-        fs->p->normalizeNodeOfs(blockIdx, ofs);
-        blockSize = fs->p->fs_data_blksz[blockIdx];
+        fs->normalizeNodeOfs(blockIdx, ofs);
+        blockSize = fs->fs_data_blksz[blockIdx];
     }
     return *this;
 }

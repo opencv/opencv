@@ -225,7 +225,9 @@ class TextFormat::Parser::ParserImpl {
              bool allow_unknown_enum,
              bool allow_field_number,
              bool allow_relaxed_whitespace,
-             bool allow_partial)
+             bool allow_partial,
+             int recursion_limit  // backported from 3.8.0
+    )
     : error_collector_(error_collector),
       finder_(finder),
       parse_info_tree_(parse_info_tree),
@@ -238,7 +240,9 @@ class TextFormat::Parser::ParserImpl {
       allow_unknown_enum_(allow_unknown_enum),
       allow_field_number_(allow_field_number),
       allow_partial_(allow_partial),
-      had_errors_(false) {
+      had_errors_(false),
+      recursion_limit_(recursion_limit)  // backported from 3.8.0
+    {
     // For backwards-compatibility with proto1, we need to allow the 'f' suffix
     // for floats.
     tokenizer_.set_allow_f_after_float(true);
@@ -490,9 +494,9 @@ class TextFormat::Parser::ParserImpl {
       if (TryConsume(":") && !LookingAt("{") && !LookingAt("<")) {
         UnknownFieldSet* unknown_field = unknown_fields->AddGroup(unknown_fields->field_count());
         unknown_field->AddLengthDelimited(0, field_name);  // Add a field's name.
-        return SkipFieldValue(unknown_field);
+        return SkipFieldValue(unknown_field, recursion_limit_);
       } else {
-        return SkipFieldMessage(unknown_fields);
+        return SkipFieldMessage(unknown_fields, recursion_limit_);
       }
     }
 
@@ -575,7 +579,14 @@ label_skip_parsing:
   }
 
   // Skips the next field including the field's name and value.
-  bool SkipField(UnknownFieldSet* unknown_fields) {
+  bool SkipField(UnknownFieldSet* unknown_fields, int recursion_limit) {
+
+    // OpenCV specific
+    if (--recursion_limit < 0) {
+      ReportError("Message is too deep (SkipField)");
+      return false;
+    }
+
     string field_name;
     if (TryConsume("[")) {
       // Extension name.
@@ -594,9 +605,9 @@ label_skip_parsing:
     if (TryConsume(":") && !LookingAt("{") && !LookingAt("<")) {
       UnknownFieldSet* unknown_field = unknown_fields->AddGroup(unknown_fields->field_count());
       unknown_field->AddLengthDelimited(0, field_name);  // Add a field's name.
-      DO(SkipFieldValue(unknown_field));
+      DO(SkipFieldValue(unknown_field, recursion_limit));
     } else {
-      DO(SkipFieldMessage(unknown_fields));
+      DO(SkipFieldMessage(unknown_fields, recursion_limit));
     }
     // For historical reasons, fields may optionally be separated by commas or
     // semicolons.
@@ -607,6 +618,12 @@ label_skip_parsing:
   bool ConsumeFieldMessage(Message* message,
                            const Reflection* reflection,
                            const FieldDescriptor* field) {
+
+    // backported from 3.8.0
+    if (--recursion_limit_ < 0) {
+      ReportError("Message is too deep");
+      return false;
+    }
 
     // If the parse information tree is not NULL, create a nested one
     // for the nested message.
@@ -624,6 +641,9 @@ label_skip_parsing:
                         delimiter));
     }
 
+    // backported from 3.8.0
+    ++recursion_limit_;
+
     // Reset the parse information tree.
     parse_info_tree_ = parent;
     return true;
@@ -631,11 +651,17 @@ label_skip_parsing:
 
   // Skips the whole body of a message including the beginning delimiter and
   // the ending delimiter.
-  bool SkipFieldMessage(UnknownFieldSet* unknown_fields) {
+  bool SkipFieldMessage(UnknownFieldSet* unknown_fields, int recursion_limit) {
+    // OpenCV specific
+    if (--recursion_limit < 0) {
+      ReportError("Message is too deep (SkipFieldMessage)");
+      return false;
+    }
+
     string delimiter;
     DO(ConsumeMessageDelimiter(&delimiter));
     while (!LookingAt(">") &&  !LookingAt("}")) {
-      DO(SkipField(unknown_fields));
+      DO(SkipField(unknown_fields, recursion_limit));
     }
     DO(Consume(delimiter));
     return true;
@@ -775,7 +801,14 @@ label_skip_parsing:
     return true;
   }
 
-  bool SkipFieldValue(UnknownFieldSet* unknown_field) {
+  bool SkipFieldValue(UnknownFieldSet* unknown_field, int recursion_limit) {
+
+    // OpenCV specific
+    if (--recursion_limit < 0) {
+      ReportError("Message is too deep (SkipFieldValue)");
+      return false;
+    }
+
     if (LookingAtType(io::Tokenizer::TYPE_STRING)) {
       while (LookingAtType(io::Tokenizer::TYPE_STRING)) {
         tokenizer_.Next();
@@ -785,9 +818,9 @@ label_skip_parsing:
     if (TryConsume("[")) {
       while (true) {
         if (!LookingAt("{") && !LookingAt("<")) {
-          DO(SkipFieldValue(unknown_field));
+          DO(SkipFieldValue(unknown_field, recursion_limit));
         } else {
-          DO(SkipFieldMessage(unknown_field));
+          DO(SkipFieldMessage(unknown_field, recursion_limit));
         }
         if (TryConsume("]")) {
           break;
@@ -1156,6 +1189,7 @@ label_skip_parsing:
   const bool allow_field_number_;
   const bool allow_partial_;
   bool had_errors_;
+  int recursion_limit_;  // backported from 3.8.0
 };
 
 #undef DO
@@ -1306,17 +1340,19 @@ class TextFormat::Printer::TextGenerator
 TextFormat::Finder::~Finder() {
 }
 
-TextFormat::Parser::Parser(bool allow_unknown_field)
+TextFormat::Parser::Parser()
   : error_collector_(NULL),
     finder_(NULL),
     parse_info_tree_(NULL),
     allow_partial_(false),
     allow_case_insensitive_field_(false),
-    allow_unknown_field_(allow_unknown_field),
+    allow_unknown_field_(false),
     allow_unknown_enum_(false),
     allow_field_number_(false),
     allow_relaxed_whitespace_(false),
-    allow_singular_overwrites_(false) {
+    allow_singular_overwrites_(false),
+    recursion_limit_(std::numeric_limits<int>::max())
+{
 }
 
 TextFormat::Parser::~Parser() {}
@@ -1335,7 +1371,7 @@ bool TextFormat::Parser::Parse(io::ZeroCopyInputStream* input,
                     overwrites_policy,
                     allow_case_insensitive_field_, allow_unknown_field_,
                     allow_unknown_enum_, allow_field_number_,
-                    allow_relaxed_whitespace_, allow_partial_);
+                    allow_relaxed_whitespace_, allow_partial_, recursion_limit_);
   return MergeUsingImpl(input, output, &parser);
 }
 
@@ -1353,7 +1389,7 @@ bool TextFormat::Parser::Merge(io::ZeroCopyInputStream* input,
                     ParserImpl::ALLOW_SINGULAR_OVERWRITES,
                     allow_case_insensitive_field_, allow_unknown_field_,
                     allow_unknown_enum_, allow_field_number_,
-                    allow_relaxed_whitespace_, allow_partial_);
+                    allow_relaxed_whitespace_, allow_partial_, recursion_limit_);
   return MergeUsingImpl(input, output, &parser);
 }
 
@@ -1388,7 +1424,7 @@ bool TextFormat::Parser::ParseFieldValueFromString(
                     ParserImpl::ALLOW_SINGULAR_OVERWRITES,
                     allow_case_insensitive_field_, allow_unknown_field_,
                     allow_unknown_enum_, allow_field_number_,
-                    allow_relaxed_whitespace_, allow_partial_);
+                    allow_relaxed_whitespace_, allow_partial_, recursion_limit_);
   return parser.ParseField(field, output);
 }
 

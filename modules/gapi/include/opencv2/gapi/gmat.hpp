@@ -46,10 +46,10 @@ struct GOrigin;
  *    `cv::GArray<T>`    | std::vector<T>
  *    `cv::GOpaque<T>`   | T
  */
-class GAPI_EXPORTS GMat
+class GAPI_EXPORTS_W_SIMPLE GMat
 {
 public:
-    GMat();                                 // Empty constructor
+    GAPI_WRAP GMat();                       // Empty constructor
     GMat(const GNode &n, std::size_t out);  // Operation result constructor
 
     GOrigin& priv();                        // Internal use only
@@ -209,14 +209,19 @@ static inline GMatDesc empty_gmat_desc() { return GMatDesc{-1,-1,{-1,-1}}; }
 GAPI_EXPORTS GMatDesc descr_of(const cv::UMat &mat);
 #endif // !defined(GAPI_STANDALONE)
 
-GAPI_EXPORTS GMatDesc descr_of(const cv::Mat &mat);
-/** @} */
-
-// FIXME: WHY??? WHY it is under different namespace?
+//Fwd declarations
 namespace gapi { namespace own {
     class Mat;
     GAPI_EXPORTS GMatDesc descr_of(const Mat &mat);
 }}//gapi::own
+
+#if !defined(GAPI_STANDALONE)
+GAPI_EXPORTS GMatDesc descr_of(const cv::Mat &mat);
+#else
+using gapi::own::descr_of;
+#endif
+
+/** @} */
 
 GAPI_EXPORTS std::ostream& operator<<(std::ostream& os, const cv::GMatDesc &desc);
 

@@ -36,9 +36,8 @@ INSTANTIATE_TEST_CASE_P(AKAZE_DESCRIPTOR_KAZE, DescriptorRotationInvariance,
  * Descriptor's scale invariance check
  */
 
-// TODO: Expected: (descInliersRatio) >= (minInliersRatio), actual: 0.330378 vs 0.78
-INSTANTIATE_TEST_CASE_P(DISABLED_SIFT, DescriptorScaleInvariance,
-                        Value(IMAGE_BIKES, SIFT::create(), SIFT::create(), 0.78f));
+INSTANTIATE_TEST_CASE_P(SIFT, DescriptorScaleInvariance,
+                        Value(IMAGE_BIKES, SIFT::create(0, 3, 0.09), SIFT::create(0, 3, 0.09), 0.78f));
 
 INSTANTIATE_TEST_CASE_P(AKAZE, DescriptorScaleInvariance,
                         Value(IMAGE_BIKES, AKAZE::create(), AKAZE::create(), 0.6f));

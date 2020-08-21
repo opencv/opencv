@@ -221,9 +221,12 @@ cv::Ptr<cv::IVideoCapture> cv::create_AVFoundation_capture_cam(int index)
     return 0;
 }
 
-cv::Ptr<cv::IVideoWriter> cv::create_AVFoundation_writer(const std::string& filename, int fourcc, double fps, const cv::Size &frameSize, bool isColor)
+cv::Ptr<cv::IVideoWriter> cv::create_AVFoundation_writer(const std::string& filename, int fourcc,
+                                                         double fps, const cv::Size &frameSize,
+                                                         const cv::VideoWriterParameters& params)
 {
     CvSize sz = { frameSize.width, frameSize.height };
+    const bool isColor = params.get(VIDEOWRITER_PROP_IS_COLOR, true);
     CvVideoWriter_AVFoundation* wrt = new CvVideoWriter_AVFoundation(filename.c_str(), fourcc, fps, sz, isColor);
     return cv::makePtr<cv::LegacyWriter>(wrt);
 }
@@ -389,7 +392,7 @@ int CvCaptureCAM::startCaptureDevice(int cameraNum) {
         [mCaptureDecompressedVideoOutput setVideoSettings:pixelBufferOptions];
         mCaptureDecompressedVideoOutput.alwaysDiscardsLateVideoFrames = YES;
 
-#if TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR
+#if (TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR) && (!defined(TARGET_OS_MACCATALYST) || !TARGET_OS_MACCATALYST)
         mCaptureDecompressedVideoOutput.minFrameDuration = CMTimeMake(1, 30);
 #endif
 

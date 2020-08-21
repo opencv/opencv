@@ -347,7 +347,8 @@ public:
         htext(nstripes, NULL),
         cbuf0(nstripes, NULL),
         sad_short(nstripes, NULL),
-        hsad_short(nstripes, NULL)
+        hsad_short(nstripes, NULL),
+        prefilter()
     {
         const int wsz = params.SADWindowSize;
         const int ndisp = params.numDisparities;
@@ -379,7 +380,7 @@ public:
         if (params.useNormPrefilter())
         {
             for (size_t i = 0; i < 2; ++i)
-                area.allocate(prefilter[0], width + params.preFilterSize + 2);
+                area.allocate(prefilter[i], width + params.preFilterSize + 2);
         }
         area.commit();
 

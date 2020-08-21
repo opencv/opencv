@@ -1,6 +1,10 @@
 Transition guide {#tutorial_transition_guide}
 ================
 
+@prev_tutorial{tutorial_documentation}
+@next_tutorial{tutorial_cross_referencing}
+
+
 @tableofcontents
 
 Changes overview {#tutorial_transition_overview}

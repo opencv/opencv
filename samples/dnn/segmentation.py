@@ -65,7 +65,7 @@ def showLegend(classes):
         for i in range(len(classes)):
             block = legend[i * blockHeight:(i + 1) * blockHeight]
             block[:,:] = colors[i]
-            cv.putText(block, classes[i], (0, blockHeight/2), cv.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255))
+            cv.putText(block, classes[i], (0, blockHeight//2), cv.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255))
 
         cv.namedWindow('Legend', cv.WINDOW_NORMAL)
         cv.imshow('Legend', legend)
@@ -76,7 +76,7 @@ net = cv.dnn.readNet(args.model, args.config, args.framework)
 net.setPreferableBackend(args.backend)
 net.setPreferableTarget(args.target)
 
-winName = 'Deep learning image classification in OpenCV'
+winName = 'Deep learning semantic segmentation in OpenCV'
 cv.namedWindow(winName, cv.WINDOW_NORMAL)
 
 cap = cv.VideoCapture(args.input if args.input else 0)

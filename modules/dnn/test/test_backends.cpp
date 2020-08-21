@@ -462,6 +462,8 @@ TEST_P(DNNTestNetwork, DenseNet_121)
     {
         l1 = 2e-2;
         lInf = 9e-2;
+        if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+            lInf = 0.1f;
     }
     else if (target == DNN_TARGET_MYRIAD)
     {

@@ -36,6 +36,16 @@ namespace detail
     using last_type_t = typename last_type<Ts...>::type;
 }
 
+// Forward-declare the serialization objects
+namespace gimpl {
+namespace s11n {
+namespace I {
+    struct IStream;
+    struct OStream;
+} // namespace I
+} // namespace s11n
+} // namespace gimpl
+
 /**
  * \addtogroup gapi_main_classes
  * @{
@@ -108,7 +118,7 @@ namespace detail
  *
  * @sa GCompiled
  */
-class GAPI_EXPORTS GComputation
+class GAPI_EXPORTS_W GComputation
 {
 public:
     class Priv;
@@ -181,7 +191,7 @@ public:
      * @param in2 second input GMat of the defined binary computation
      * @param out output GMat of the defined binary computation
      */
-    GComputation(GMat in1, GMat in2, GMat out);        // Binary overload
+    GAPI_WRAP GComputation(GMat in1, GMat in2, GMat out);        // Binary overload
 
     /**
      * @brief Defines a binary (two inputs -- one output) computation
@@ -265,7 +275,7 @@ public:
      * @param args compilation arguments for underlying compilation
      * process.
      */
-    void apply(cv::Mat in, cv::Mat &out, GCompileArgs &&args = {});               // Unary overload
+    void apply(cv::Mat in, cv::Mat &out, GCompileArgs &&args = {}); // Unary overload
 
     /**
      * @brief Execute an unary computation (with compilation on the fly)
@@ -276,7 +286,7 @@ public:
      * @param args compilation arguments for underlying compilation
      * process.
      */
-    void apply(cv::Mat in, cv::Scalar &out, GCompileArgs &&args = {});            // Unary overload (scalar)
+    void apply(cv::Mat in, cv::Scalar &out, GCompileArgs &&args = {}); // Unary overload (scalar)
 
     /**
      * @brief Execute a binary computation (with compilation on the fly)
@@ -288,7 +298,7 @@ public:
      * @param args compilation arguments for underlying compilation
      * process.
      */
-    void apply(cv::Mat in1, cv::Mat in2, cv::Mat &out, GCompileArgs &&args = {}); // Binary overload
+    GAPI_WRAP void apply(cv::Mat in1, cv::Mat in2, CV_OUT cv::Mat &out, GCompileArgs &&args = {}); // Binary overload
 
     /**
      * @brief Execute an binary computation (with compilation on the fly)
@@ -495,6 +505,10 @@ public:
     Priv& priv();
     /// @private
     const Priv& priv() const;
+    /// @private
+    explicit GComputation(cv::gimpl::s11n::I::IStream &);
+    /// @private
+    void serialize(cv::gimpl::s11n::I::OStream &) const;
 
 protected:
 

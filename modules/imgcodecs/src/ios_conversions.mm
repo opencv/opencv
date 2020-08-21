@@ -112,6 +112,21 @@ void UIImageToMat(const UIImage* image,
                                            m.step[0], colorSpace,
                                            bitmapInfo);
     }
+    else if (CGColorSpaceGetModel(colorSpace) == kCGColorSpaceModelIndexed)
+    {
+        // CGBitmapContextCreate() does not support indexed color spaces.
+        colorSpace = CGColorSpaceCreateDeviceRGB();
+        m.create(rows, cols, CV_8UC4); // 8 bits per component, 4 channels
+        if (!alphaExist)
+            bitmapInfo = kCGImageAlphaNoneSkipLast |
+                                kCGBitmapByteOrderDefault;
+        else
+            m = cv::Scalar(0);
+        contextRef = CGBitmapContextCreate(m.data, m.cols, m.rows, 8,
+                                           m.step[0], colorSpace,
+                                           bitmapInfo);
+        CGColorSpaceRelease(colorSpace);
+    }
     else
     {
         m.create(rows, cols, CV_8UC4); // 8 bits per component, 4 channels

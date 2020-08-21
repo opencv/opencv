@@ -556,6 +556,30 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<Layer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS DataAugmentationLayer : public Layer
+    {
+    public:
+        static Ptr<DataAugmentationLayer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS CorrelationLayer : public Layer
+    {
+    public:
+        static Ptr<CorrelationLayer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS AccumLayer : public Layer
+    {
+    public:
+        static Ptr<AccumLayer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS FlowWarpLayer : public Layer
+    {
+    public:
+        static Ptr<FlowWarpLayer> create(const LayerParams& params);
+    };
+
     class CV_EXPORTS PriorBoxLayer : public Layer
     {
     public:
@@ -571,9 +595,19 @@ CV__DNN_INLINE_NS_BEGIN
     class CV_EXPORTS RegionLayer : public Layer
     {
     public:
+        float nmsThreshold;
+
         static Ptr<RegionLayer> create(const LayerParams& params);
     };
 
+    /**
+     * @brief Detection output layer.
+     *
+     * The layer size is: @f$ (1 \times 1 \times N \times 7) @f$
+     *    where N is [keep_top_k] parameter multiplied by batch size. Each row is:
+     *    [image_id, label, confidence, xmin, ymin, xmax, ymax]
+     *    where image_id is the index of image input in the batch.
+     */
     class CV_EXPORTS DetectionOutputLayer : public Layer
     {
     public:

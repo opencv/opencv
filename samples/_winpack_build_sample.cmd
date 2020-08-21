@@ -78,7 +78,7 @@ IF ERRORLEVEL 1 (
 POPD
 cl /? >NUL 2>NUL <NUL
 if %ERRORLEVEL% NEQ 0 (
-  set "MSG=Can't detect Microsoft Visial Studio C++ compiler (cl.exe). MSVS 2015/2017/2019 are supported only from standard locations"
+  set "MSG=Can't detect Microsoft Visual Studio C++ compiler (cl.exe). MSVS 2015/2017/2019 are supported only from standard locations"
   goto die
 )
 

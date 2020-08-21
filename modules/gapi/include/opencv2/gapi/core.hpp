@@ -392,10 +392,10 @@ namespace core {
             }
             else
             {
-                GAPI_Assert(fx != 0. && fy != 0.);
-                return in.withSize
-                    (Size(static_cast<int>(round(in.size.width  * fx)),
-                          static_cast<int>(round(in.size.height * fy))));
+                int outSz_w = static_cast<int>(round(in.size.width  * fx));
+                int outSz_h = static_cast<int>(round(in.size.height * fy));
+                GAPI_Assert(outSz_w > 0 && outSz_h > 0);
+                return in.withSize(Size(outSz_w, outSz_h));
             }
         }
     };
@@ -528,7 +528,7 @@ Supported matrix data types are @ref CV_8UC1, @ref CV_8UC3, @ref CV_16UC1, @ref 
 @param ddepth optional depth of the output matrix.
 @sa sub, addWeighted
 */
-GAPI_EXPORTS GMat add(const GMat& src1, const GMat& src2, int ddepth = -1);
+GAPI_EXPORTS_W GMat add(const GMat& src1, const GMat& src2, int ddepth = -1);
 
 /** @brief Calculates the per-element sum of matrix and given scalar.
 

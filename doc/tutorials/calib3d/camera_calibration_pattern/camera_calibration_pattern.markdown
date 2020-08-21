@@ -1,6 +1,9 @@
 Create calibration pattern {#tutorial_camera_calibration_pattern}
 =========================================
 
+@next_tutorial{tutorial_camera_calibration_square_chess}
+
+
 The goal of this tutorial is to learn how to create calibration pattern.
 
 You can find a chessboard pattern in https://github.com/opencv/opencv/blob/master/doc/pattern.png

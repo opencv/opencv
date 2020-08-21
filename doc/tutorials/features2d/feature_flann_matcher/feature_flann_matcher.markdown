@@ -1,6 +1,9 @@
 Feature Matching with FLANN {#tutorial_feature_flann_matcher}
 ===========================
 
+@prev_tutorial{tutorial_feature_description}
+@next_tutorial{tutorial_feature_homography}
+
 Goal
 ----
 

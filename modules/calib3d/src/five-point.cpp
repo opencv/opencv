@@ -31,6 +31,8 @@
 
 #include "precomp.hpp"
 
+#include "usac.hpp"
+
 namespace cv
 {
 
@@ -407,6 +409,10 @@ cv::Mat cv::findEssentialMat( InputArray _points1, InputArray _points2, InputArr
 {
     CV_INSTRUMENT_REGION();
 
+    if (method >= 32 && method <= 38)
+        return usac::findEssentialMat(_points1, _points2, _cameraMatrix,
+            method, prob, threshold, _mask);
+
     Mat points1, points2, cameraMatrix;
     _points1.getMat().convertTo(points1, CV_64F);
     _points2.getMat().convertTo(points2, CV_64F);
@@ -456,6 +462,49 @@ cv::Mat cv::findEssentialMat( InputArray _points1, InputArray _points2, double f
 
     Mat cameraMatrix = (Mat_<double>(3,3) << focal, 0, pp.x, 0, focal, pp.y, 0, 0, 1);
     return cv::findEssentialMat(_points1, _points2, cameraMatrix, method, prob, threshold, _mask);
+}
+
+cv::Mat cv::findEssentialMat( InputArray _points1, InputArray _points2,
+                              InputArray cameraMatrix1, InputArray distCoeffs1,
+                              InputArray cameraMatrix2, InputArray distCoeffs2,
+                              int method, double prob, double threshold, OutputArray _mask)
+{
+    CV_INSTRUMENT_REGION();
+
+    // Undistort image points, bring them to 3x3 identity "camera matrix"
+    Mat _pointsUntistorted1, _pointsUntistorted2;
+    undistortPoints(_points1, _pointsUntistorted1, cameraMatrix1, distCoeffs1);
+    undistortPoints(_points2, _pointsUntistorted2, cameraMatrix2, distCoeffs2);
+
+    // Scale the points back. We use "arithmetic mean" between the supplied two camera matrices.
+    // Thanks to such 2-stage procedure RANSAC threshold still makes sense, because the undistorted
+    // and rescaled points have a similar value range to the original ones.
+    Mat cm1 = cameraMatrix1.getMat(), cm2 = cameraMatrix2.getMat(), cm0;
+    Mat(cm1 + cm2).convertTo(cm0, CV_64F, 0.5);
+    CV_Assert(cm0.rows == 3 && cm0.cols == 3);
+    CV_Assert(std::abs(cm0.at<double>(2, 0)) < 1e-3 &&
+              std::abs(cm0.at<double>(2, 1)) < 1e-3 &&
+              std::abs(cm0.at<double>(2, 2) - 1.) < 1e-3);
+    Mat affine = cm0.rowRange(0, 2);
+
+    transform(_pointsUntistorted1, _pointsUntistorted1, affine);
+    transform(_pointsUntistorted2, _pointsUntistorted2, affine);
+
+    return findEssentialMat(_pointsUntistorted1, _pointsUntistorted2, cm0, method, prob, threshold, _mask);
+}
+
+cv::Mat cv::findEssentialMat( InputArray points1, InputArray points2,
+                      InputArray cameraMatrix1, InputArray cameraMatrix2,
+                      InputArray dist_coeff1, InputArray dist_coeff2, OutputArray mask, const UsacParams &params) {
+    Ptr<usac::Model> model;
+    usac::setParameters(model, usac::EstimationMethod::Essential, params, mask.needed());
+    Ptr<usac::RansacOutput> ransac_output;
+    if (usac::run(model, points1, points2, model->getRandomGeneratorState(),
+            ransac_output, cameraMatrix1, cameraMatrix2, dist_coeff1, dist_coeff2)) {
+        usac::saveMask(mask, ransac_output->getInliersMask());
+        return ransac_output->getModel();
+    } else return Mat();
+
 }
 
 int cv::recoverPose( InputArray E, InputArray _points1, InputArray _points2,

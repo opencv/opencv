@@ -86,12 +86,24 @@ namespace cv { namespace debug_build_guard { } using namespace debug_build_guard
 #define __CV_VA_NUM_ARGS_HELPER(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, N, ...) N
 #define __CV_VA_NUM_ARGS(...) __CV_EXPAND(__CV_VA_NUM_ARGS_HELPER(__VA_ARGS__, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0))
 
-#if defined __GNUC__
+#ifdef CV_Func
+// keep current value (through OpenCV port file)
+#elif defined __GNUC__ || (defined (__cpluscplus) && (__cpluscplus >= 201103))
+#define CV_Func __func__
+#elif defined __clang__ && (__clang_minor__ * 100 + __clang_major >= 305)
+#define CV_Func __func__
+#elif defined(__STDC_VERSION__) && (__STDC_VERSION >= 199901)
 #define CV_Func __func__
 #elif defined _MSC_VER
 #define CV_Func __FUNCTION__
+#elif defined(__INTEL_COMPILER) && (_INTEL_COMPILER >= 600)
+#define CV_Func __FUNCTION__
+#elif defined __IBMCPP__ && __IBMCPP__ >=500
+#define CV_Func __FUNCTION__
+#elif defined __BORLAND__ && (__BORLANDC__ >= 0x550)
+#define CV_Func __FUNC__
 #else
-#define CV_Func ""
+#define CV_Func "<unknown>"
 #endif
 
 //! @cond IGNORED
@@ -260,6 +272,8 @@ namespace cv {
 #define CV_CPU_VSX              200
 #define CV_CPU_VSX3             201
 
+#define CV_CPU_RVV              210
+
 // CPU features groups
 #define CV_CPU_AVX512_SKX       256
 #define CV_CPU_AVX512_COMMON    257
@@ -311,6 +325,8 @@ enum CpuFeatures {
 
     CPU_VSX             = 200,
     CPU_VSX3            = 201,
+
+    CPU_RVV             = 210,
 
     CPU_AVX512_SKX      = 256, //!< Skylake-X with AVX-512F/CD/BW/DQ/VL
     CPU_AVX512_COMMON   = 257, //!< Common instructions AVX-512F/CD for all CPUs that support AVX-512
