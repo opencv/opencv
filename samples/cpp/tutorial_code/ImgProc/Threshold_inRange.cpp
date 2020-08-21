@@ -60,8 +60,8 @@ int main(int argc, char* argv[])
     //! [cap]
 
     //! [window]
-    namedWindow(window_capture_name,WINDOW_NORMAL);
-    namedWindow(window_detection_name,WINDOW_NORMAL);
+    namedWindow(window_capture_name);
+    namedWindow(window_detection_name);
     //! [window]
 
     //! [trackbar]
