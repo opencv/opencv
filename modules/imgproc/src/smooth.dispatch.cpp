@@ -259,7 +259,6 @@ softdouble getGaussianKernelFixedPoint_ED(CV_OUT std::vector<int64_t>& result, c
 
 static void getGaussianKernel(int n, double sigma, int ktype, Mat& res) { res = getGaussianKernel(n, sigma, ktype); }
 template <typename FT> static void getGaussianKernel(int n, double sigma, int, std::vector<FT>& res)
-//{ res = getFixedpointGaussianKernel<FT>(n, sigma); }
 {
     std::vector<softdouble> res_sd;
     softdouble s0 = getGaussianKernelBitExact(res_sd, n, sigma);
