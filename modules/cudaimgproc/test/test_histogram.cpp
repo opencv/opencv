@@ -242,7 +242,7 @@ TEST(EqualizeHistIssue, Issue18035)
     imgPaths.push_back(std::string(cvtest::TS::ptr()->get_data_path()) + "../cv/shared/graffiti.png");
     imgPaths.push_back(std::string(cvtest::TS::ptr()->get_data_path()) + "../cv/shared/lena.png");
 
-    for (int i = 0; i < imgPaths.size(); ++i)
+    for (size_t i = 0; i < imgPaths.size(); ++i)
     {
         std::string imgPath = imgPaths[i];
         cv::Mat src = cv::imread(imgPath, cv::IMREAD_GRAYSCALE);
