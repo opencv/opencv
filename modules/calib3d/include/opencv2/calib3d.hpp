@@ -2265,23 +2265,23 @@ CV_EXPORTS_W Mat getOptimalNewCameraMatrix( InputArray cameraMatrix, InputArray 
 
 @param[in] R_gripper2base Rotation part extracted from the homogeneous matrix that transforms a point
 expressed in the gripper frame to the robot base frame (\f$_{}^{b}\textrm{T}_g\f$).
-This is a vector (`vector<Mat>`) that contains the rotation matrices for all the transformations
-from gripper frame to robot base frame.
+This is a vector (`vector<Mat>`) that contains the rotation, `(3x3)` rotation matrices or `(3x1)` rotation vectors,
+for all the transformations from gripper frame to robot base frame.
 @param[in] t_gripper2base Translation part extracted from the homogeneous matrix that transforms a point
 expressed in the gripper frame to the robot base frame (\f$_{}^{b}\textrm{T}_g\f$).
-This is a vector (`vector<Mat>`) that contains the translation vectors for all the transformations
+This is a vector (`vector<Mat>`) that contains the `(3x1)` translation vectors for all the transformations
 from gripper frame to robot base frame.
 @param[in] R_target2cam Rotation part extracted from the homogeneous matrix that transforms a point
 expressed in the target frame to the camera frame (\f$_{}^{c}\textrm{T}_t\f$).
-This is a vector (`vector<Mat>`) that contains the rotation matrices for all the transformations
-from calibration target frame to camera frame.
+This is a vector (`vector<Mat>`) that contains the rotation, `(3x3)` rotation matrices or `(3x1)` rotation vectors,
+for all the transformations from calibration target frame to camera frame.
 @param[in] t_target2cam Rotation part extracted from the homogeneous matrix that transforms a point
 expressed in the target frame to the camera frame (\f$_{}^{c}\textrm{T}_t\f$).
-This is a vector (`vector<Mat>`) that contains the translation vectors for all the transformations
+This is a vector (`vector<Mat>`) that contains the `(3x1)` translation vectors for all the transformations
 from calibration target frame to camera frame.
-@param[out] R_cam2gripper Estimated rotation part extracted from the homogeneous matrix that transforms a point
+@param[out] R_cam2gripper Estimated `(3x3)` rotation part extracted from the homogeneous matrix that transforms a point
 expressed in the camera frame to the gripper frame (\f$_{}^{g}\textrm{T}_c\f$).
-@param[out] t_cam2gripper Estimated translation part extracted from the homogeneous matrix that transforms a point
+@param[out] t_cam2gripper Estimated `(3x1)` translation part extracted from the homogeneous matrix that transforms a point
 expressed in the camera frame to the gripper frame (\f$_{}^{g}\textrm{T}_c\f$).
 @param[in] method One of the implemented Hand-Eye calibration method, see cv::HandEyeCalibrationMethod
 

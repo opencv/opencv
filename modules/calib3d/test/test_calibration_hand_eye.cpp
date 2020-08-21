@@ -7,6 +7,38 @@
 
 namespace opencv_test { namespace {
 
+static std::string getMethodName(HandEyeCalibrationMethod method)
+{
+    std::string method_name = "";
+    switch (method)
+    {
+    case CALIB_HAND_EYE_TSAI:
+        method_name = "Tsai";
+        break;
+
+    case CALIB_HAND_EYE_PARK:
+        method_name = "Park";
+        break;
+
+    case CALIB_HAND_EYE_HORAUD:
+        method_name = "Horaud";
+        break;
+
+    case CALIB_HAND_EYE_ANDREFF:
+        method_name = "Andreff";
+        break;
+
+    case CALIB_HAND_EYE_DANIILIDIS:
+        method_name = "Daniilidis";
+        break;
+
+    default:
+        break;
+    }
+
+    return method_name;
+}
+
 class CV_CalibrateHandEyeTest : public cvtest::BaseTest
 {
 public:
@@ -48,7 +80,6 @@ protected:
                       std::vector<Mat> &R_target2cam, std::vector<Mat> &t_target2cam,
                       bool noise, Mat& R_cam2gripper, Mat& t_cam2gripper);
     Mat homogeneousInverse(const Mat& T);
-    std::string getMethodName(HandEyeCalibrationMethod method);
     double sign_double(double val);
 
     double eps_rvec[5];
@@ -340,38 +371,6 @@ Mat CV_CalibrateHandEyeTest::homogeneousInverse(const Mat& T)
     return Tinv;
 }
 
-std::string CV_CalibrateHandEyeTest::getMethodName(HandEyeCalibrationMethod method)
-{
-    std::string method_name = "";
-    switch (method)
-    {
-    case CALIB_HAND_EYE_TSAI:
-        method_name = "Tsai";
-        break;
-
-    case CALIB_HAND_EYE_PARK:
-        method_name = "Park";
-        break;
-
-    case CALIB_HAND_EYE_HORAUD:
-        method_name = "Horaud";
-        break;
-
-    case CALIB_HAND_EYE_ANDREFF:
-        method_name = "Andreff";
-        break;
-
-    case CALIB_HAND_EYE_DANIILIDIS:
-        method_name = "Daniilidis";
-        break;
-
-    default:
-        break;
-    }
-
-    return method_name;
-}
-
 double CV_CalibrateHandEyeTest::sign_double(double val)
 {
     return (0 < val) - (val < 0);
@@ -380,5 +379,87 @@ double CV_CalibrateHandEyeTest::sign_double(double val)
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 TEST(Calib3d_CalibrateHandEye, regression) { CV_CalibrateHandEyeTest test; test.safe_run(); }
+
+TEST(Calib3d_CalibrateHandEye, regression_17986)
+{
+    const std::string camera_poses_filename = findDataFile("cv/hand_eye_calibration/cali.txt");
+    const std::string end_effector_poses = findDataFile("cv/hand_eye_calibration/robot_cali.txt");
+
+    std::vector<Mat> R_target2cam;
+    std::vector<Mat> t_target2cam;
+    // Parse camera poses
+    {
+        std::ifstream file(camera_poses_filename);
+        ASSERT_TRUE(file.is_open());
+
+        int ndata = 0;
+        file >> ndata;
+        R_target2cam.reserve(ndata);
+        t_target2cam.reserve(ndata);
+
+        std::string image_name;
+        Matx33d cameraMatrix;
+        Matx33d R;
+        Matx31d t;
+        Matx16d distCoeffs;
+        Matx13d distCoeffs2;
+        while (file >> image_name >>
+               cameraMatrix(0,0) >> cameraMatrix(0,1) >> cameraMatrix(0,2) >>
+               cameraMatrix(1,0) >> cameraMatrix(1,1) >> cameraMatrix(1,2) >>
+               cameraMatrix(2,0) >> cameraMatrix(2,1) >> cameraMatrix(2,2) >>
+               R(0,0) >> R(0,1) >> R(0,2) >>
+               R(1,0) >> R(1,1) >> R(1,2) >>
+               R(2,0) >> R(2,1) >> R(2,2) >>
+               t(0) >> t(1) >> t(2) >>
+               distCoeffs(0) >> distCoeffs(1) >> distCoeffs(2) >> distCoeffs(3) >> distCoeffs(4) >>
+               distCoeffs2(0) >> distCoeffs2(1) >> distCoeffs2(2)) {
+            R_target2cam.push_back(Mat(R));
+            t_target2cam.push_back(Mat(t));
+        }
+    }
+
+    std::vector<Mat> R_gripper2base;
+    std::vector<Mat> t_gripper2base;
+    // Parse end-effector poses
+    {
+        std::ifstream file(end_effector_poses);
+        ASSERT_TRUE(file.is_open());
+
+        int ndata = 0;
+        file >> ndata;
+        R_gripper2base.reserve(ndata);
+        t_gripper2base.reserve(ndata);
+
+        Matx33d R;
+        Matx31d t;
+        Matx14d last_row;
+        while (file >>
+               R(0,0) >> R(0,1) >> R(0,2) >> t(0) >>
+               R(1,0) >> R(1,1) >> R(1,2) >> t(1) >>
+               R(2,0) >> R(2,1) >> R(2,2) >> t(2) >>
+               last_row(0) >> last_row(1) >> last_row(2) >> last_row(3)) {
+            R_gripper2base.push_back(Mat(R));
+            t_gripper2base.push_back(Mat(t));
+        }
+    }
+
+    std::vector<HandEyeCalibrationMethod> methods;
+    methods.push_back(CALIB_HAND_EYE_TSAI);
+    methods.push_back(CALIB_HAND_EYE_PARK);
+    methods.push_back(CALIB_HAND_EYE_HORAUD);
+    methods.push_back(CALIB_HAND_EYE_ANDREFF);
+    methods.push_back(CALIB_HAND_EYE_DANIILIDIS);
+
+    for (size_t idx = 0; idx < methods.size(); idx++) {
+        SCOPED_TRACE(cv::format("method=%s", getMethodName(methods[idx]).c_str()));
+
+        Matx33d R_cam2gripper_est;
+        Matx31d t_cam2gripper_est;
+        calibrateHandEye(R_gripper2base, t_gripper2base, R_target2cam, t_target2cam, R_cam2gripper_est, t_cam2gripper_est, methods[idx]);
+
+        EXPECT_TRUE(checkRange(R_cam2gripper_est));
+        EXPECT_TRUE(checkRange(t_cam2gripper_est));
+    }
+}
 
 }} // namespace
