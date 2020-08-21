@@ -248,12 +248,15 @@ int main(int argc, char** argv)
 
         postprocess(frame, outs, net, backend);
 
-        imshow(kWinName, frame);
         if (predictionsQueue.counter > 1)
         {
+            int baseLine = 0;
             std::string label = format("Camera: %.2f FPS, Network: %.2f FPS, Skipped frames: %d", framesQueue.getFPS(),predictionsQueue.getFPS(),framesQueue.counter - predictionsQueue.counter);
-            displayOverlay(kWinName,label,2000);
+            cv::Size labelSize = getTextSize(label, FONT_HERSHEY_SIMPLEX, 0.5, 1, &baseLine);
+            rectangle(frame, Point( 0, 0), Point(labelSize.width, labelSize.height+baseLine), Scalar::all(0), FILLED);
+            putText(frame, label, Point(0,labelSize.height), FONT_HERSHEY_SIMPLEX, 0.5, Scalar::all(255));
         }
+        imshow(kWinName, frame);
     }
 
     process = false;
