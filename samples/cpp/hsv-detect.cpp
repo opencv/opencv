@@ -37,7 +37,7 @@ Scalar calcLargestArea(Mat mask, vector<vector<Point>> &contours)
         a=contourArea( contours[i],false);
         if(a>largest_area)
         {
-            largest_area=a;
+            largest_area=(int)a;
             largest_contour_index=i;
         }
     }
@@ -67,7 +67,7 @@ int main(int argc, char** argv)
     bool testObj;
     Mat frame,image,OutputImageMask1,OutputImageMask2;
     vector<vector<Point>>  contours;
-    double _x,_y;
+    float _x,_y;
     float radius;
     Scalar result;
     Point2f center,_center;
