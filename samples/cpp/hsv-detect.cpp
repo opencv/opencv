@@ -1,9 +1,3 @@
-/*
-  @file hsv-detect.cpp
-  @author Alessandro de Oliveira Faria (A.K.A. CABELO)
-  @brief Example of how to identify object with the HSV color space. With the example in /samples/cpp/tutorial_code/ImgProc/Threshold_inRange.cpp, we can use the values lowH, lowS, lowV, highH, highS, highV in the inRange function. See the example in this video: https://www.youtube.com/watch?v=oPOv4P1EqTI . Questions and suggestions email to: Alessandro de Oliveira Faria cabelo[at]opensuse[dot]org or OpenCV Team.
-  @date Aug 20, 2020
-*/
 #include <opencv2/dnn.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
