@@ -21,6 +21,8 @@ std::string keys =
 using namespace cv;
 using namespace std;
 
+Scalar calcLargestArea(Mat mask, vector<vector<Point>> &contours);
+
 Scalar calcLargestArea(Mat mask, vector<vector<Point>> &contours)
 {
     int largest_contour_index = 0;
