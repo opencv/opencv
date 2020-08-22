@@ -2,12 +2,16 @@
     Text detection model: https://github.com/argman/EAST
     Download link: https://www.dropbox.com/s/r2ingd0l3zt8hxs/frozen_east_text_detection.tar.gz?dl=1
 
-    Text recognition model taken from here: https://github.com/meijieru/crnn.pytorch
+    CRNN Text recognition model taken from here: https://github.com/meijieru/crnn.pytorch
     How to convert from pb to onnx:
     Using classes from here: https://github.com/meijieru/crnn.pytorch/blob/master/models/crnn.py
 
+    More converted onnx text recognition models can be downloaded directly here:
+    Download link: https://drive.google.com/drive/folders/1cTbQ3nuZG-EKWak6emD_s8_hHXWz7lAr?usp=sharing
+    And these models taken from here:https://github.com/clovaai/deep-text-recognition-benchmark
+
     import torch
-    import models.crnn as crnn
+    from models.crnn import CRNN
 
     model = CRNN(32, 1, 37, 256)
     model.load_state_dict(torch.load('crnn.pth'))
