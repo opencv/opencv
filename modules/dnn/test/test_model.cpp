@@ -131,6 +131,13 @@ TEST_P(Test_Model, DetectRegion)
 {
     applyTestTag(CV_TEST_TAG_LONG, CV_TEST_TAG_MEMORY_1GB);
 
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2020040000)  // nGraph compilation failure
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+#endif
+
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2019010000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16);
@@ -255,6 +262,7 @@ TEST_P(Test_Model, DetectionMobilenetSSD)
     else if (target == DNN_TARGET_CUDA_FP16)
     {
         scoreDiff = 4e-4;
+        iouDiff = 1e-2;
     }
     float confThreshold = FLT_MIN;
     double nmsThreshold = 0.0;
@@ -345,11 +353,22 @@ TEST_P(Test_Model, Detection_normalized)
     double scoreDiff = 1e-5, iouDiff = 1e-5;
     float confThreshold = FLT_MIN;
     double nmsThreshold = 0.0;
+    if (target == DNN_TARGET_CUDA)
+    {
+        scoreDiff = 3e-4;
+        iouDiff = 0.018;
+    }
     if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CUDA_FP16)
     {
         scoreDiff = 5e-3;
         iouDiff = 0.09;
     }
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2020040000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
+    {
+        iouDiff = 0.095f;
+    }
+#endif
     testDetectModel(weights_file, config_file, img_path, refClassIds, refConfidences, refBoxes,
                     scoreDiff, iouDiff, confThreshold, nmsThreshold, size, mean, scale);
 }

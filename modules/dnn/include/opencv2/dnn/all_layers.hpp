@@ -600,6 +600,14 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<RegionLayer> create(const LayerParams& params);
     };
 
+    /**
+     * @brief Detection output layer.
+     *
+     * The layer size is: @f$ (1 \times 1 \times N \times 7) @f$
+     *    where N is [keep_top_k] parameter multiplied by batch size. Each row is:
+     *    [image_id, label, confidence, xmin, ymin, xmax, ymax]
+     *    where image_id is the index of image input in the batch.
+     */
     class CV_EXPORTS DetectionOutputLayer : public Layer
     {
     public:

@@ -479,12 +479,12 @@ public:
         auto scale_x_y_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &scale_x_y);
         auto shift_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, std::vector<float>{0.5});
 
+        auto axis = ngraph::op::Constant::create<int64_t>(ngraph::element::i64, ngraph::Shape{}, {0});
+        auto splits = ngraph::op::Constant::create<int64_t>(ngraph::element::i64, ngraph::Shape{5}, {1, 1, 1, 1, rows - 4});
+        auto split = std::make_shared<ngraph::op::v1::VariadicSplit>(input2d, axis, splits);
         std::shared_ptr<ngraph::Node> box_x;
         {
-            auto lower_bounds = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{2}, std::vector<int64_t>{0, 0});
-            auto upper_bounds = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{2}, std::vector<int64_t>{1, cols});
-            box_x = std::make_shared<ngraph::op::v1::StridedSlice>(input2d, lower_bounds, upper_bounds, strides, std::vector<int64_t>{}, std::vector<int64_t>{});
-            box_x = std::make_shared<ngraph::op::Sigmoid>(box_x);
+            box_x = std::make_shared<ngraph::op::Sigmoid>(split->output(0));
             box_x = std::make_shared<ngraph::op::v1::Subtract>(box_x, shift_node, ngraph::op::AutoBroadcastType::NUMPY);
             box_x = std::make_shared<ngraph::op::v1::Multiply>(box_x, scale_x_y_node, ngraph::op::AutoBroadcastType::NUMPY);
             box_x = std::make_shared<ngraph::op::v1::Add>(box_x, shift_node, ngraph::op::AutoBroadcastType::NUMPY);
@@ -510,10 +510,7 @@ public:
 
         std::shared_ptr<ngraph::Node> box_y;
         {
-            auto lower_bounds = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{2}, std::vector<int64_t>{1, 0});
-            auto upper_bounds = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{2}, std::vector<int64_t>{2, cols});
-            box_y = std::make_shared<ngraph::op::v1::StridedSlice>(input2d, lower_bounds, upper_bounds, strides, std::vector<int64_t>{}, std::vector<int64_t>{});
-            box_y = std::make_shared<ngraph::op::Sigmoid>(box_y);
+            box_y = std::make_shared<ngraph::op::Sigmoid>(split->output(1));
             box_y = std::make_shared<ngraph::op::v1::Subtract>(box_y, shift_node, ngraph::op::AutoBroadcastType::NUMPY);
             box_y = std::make_shared<ngraph::op::v1::Multiply>(box_y, scale_x_y_node, ngraph::op::AutoBroadcastType::NUMPY);
             box_y = std::make_shared<ngraph::op::v1::Add>(box_y, shift_node, ngraph::op::AutoBroadcastType::NUMPY);
@@ -566,45 +563,32 @@ public:
                 std::copy(bias_h.begin(), bias_h.begin() + h * anchors, bias_h.begin() + i * h * anchors);
             }
 
-            auto lower_bounds = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{2}, std::vector<int64_t>{2, 0});
-            auto upper_bounds = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{2}, std::vector<int64_t>{3, cols});
-            box_w = std::make_shared<ngraph::op::v1::StridedSlice>(input2d, lower_bounds, upper_bounds, strides, std::vector<int64_t>{}, std::vector<int64_t>{});
-            box_w = std::make_shared<ngraph::op::v0::Exp>(box_w);
+            box_w = std::make_shared<ngraph::op::v0::Exp>(split->output(2));
             box_w = std::make_shared<ngraph::op::v1::Reshape>(box_w, shape_3d, true);
             auto anchor_w_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, box_broad_shape, bias_w.data());
             box_w = std::make_shared<ngraph::op::v1::Multiply>(box_w, anchor_w_node, ngraph::op::AutoBroadcastType::NUMPY);
 
-            lower_bounds = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{2}, std::vector<int64_t>{3, 0});
-            upper_bounds = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{2}, std::vector<int64_t>{4, cols});
-            box_h = std::make_shared<ngraph::op::v1::StridedSlice>(input2d, lower_bounds, upper_bounds, strides, std::vector<int64_t>{}, std::vector<int64_t>{});
-            box_h = std::make_shared<ngraph::op::v0::Exp>(box_h);
+            box_h = std::make_shared<ngraph::op::v0::Exp>(split->output(3));
             box_h = std::make_shared<ngraph::op::v1::Reshape>(box_h, shape_3d, true);
             auto anchor_h_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, box_broad_shape, bias_h.data());
             box_h = std::make_shared<ngraph::op::v1::Multiply>(box_h, anchor_h_node, ngraph::op::AutoBroadcastType::NUMPY);
         }
 
+        auto region_splits = ngraph::op::Constant::create<int64_t>(ngraph::element::i64, ngraph::Shape{3}, {4, 1, rows - 5});
+        auto region_split = std::make_shared<ngraph::op::v1::VariadicSplit>(region, axis, region_splits);
+
         std::shared_ptr<ngraph::Node> scale;
         {
-            auto lower_bounds = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{2}, std::vector<int64_t>{4, 0});
-            auto upper_bounds = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{2}, std::vector<int64_t>{5, cols});
-            scale = std::make_shared<ngraph::op::v1::StridedSlice>(region, lower_bounds, upper_bounds, strides, std::vector<int64_t>{}, std::vector<int64_t>{});
-
-            if (classfix == -1)
-            {
-                auto thresh_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, std::vector<float>{0.5});
-                auto mask = std::make_shared<ngraph::op::v1::Less>(scale, thresh_node);
-                auto zero_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, mask->get_shape(), std::vector<float>(b * cols, 0));
-                scale = std::make_shared<ngraph::op::v1::Select>(mask, scale, zero_node);
-            }
+            float thr = classfix == -1 ? 0.5 : 0;
+            auto thresh_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, std::vector<float>{thr});
+            auto mask = std::make_shared<ngraph::op::v1::Less>(region_split->output(1), thresh_node);
+            auto zero_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, mask->get_shape(), std::vector<float>(cols, 0));
+            scale = std::make_shared<ngraph::op::v1::Select>(mask, zero_node, region_split->output(1));
         }
 
         std::shared_ptr<ngraph::Node> probs;
         {
-            auto lower_bounds = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{2}, std::vector<int64_t>{5, 0});
-            auto upper_bounds = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{2}, std::vector<int64_t>{rows, cols});
-            auto classes = std::make_shared<ngraph::op::v1::StridedSlice>(region, lower_bounds, upper_bounds, strides, std::vector<int64_t>{}, std::vector<int64_t>{});
-            probs = std::make_shared<ngraph::op::v1::Multiply>(classes, scale, ngraph::op::AutoBroadcastType::NUMPY);
-
+            probs = std::make_shared<ngraph::op::v1::Multiply>(region_split->output(2), scale, ngraph::op::AutoBroadcastType::NUMPY);
             auto thresh_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &thresh);
             auto mask = std::make_shared<ngraph::op::v1::Greater>(probs, thresh_node);
             auto zero_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, mask->get_shape(), std::vector<float>((rows - 5) * cols, 0));

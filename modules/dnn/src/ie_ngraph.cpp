@@ -15,7 +15,6 @@
 
 #ifdef HAVE_DNN_NGRAPH
 #include <ie_extension.h>
-#include <ie_plugin_dispatcher.hpp>
 #endif  // HAVE_DNN_NGRAPH
 
 #include <opencv2/core/utils/configuration.private.hpp>
@@ -82,7 +81,7 @@ public:
         return type_info;
     }
 
-#if INF_ENGINE_VER_MAJOR_GT(2020020000)
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2020_3)
     NgraphCustomOp(const ngraph::OutputVector& inputs,
 #else
     NgraphCustomOp(const ngraph::NodeVector& inputs,
@@ -110,14 +109,21 @@ public:
         }
     }
 
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2020_4)
+    std::shared_ptr<ngraph::Node> clone_with_new_inputs(const ngraph::OutputVector& new_args) const override
+    {
+        return std::make_shared<NgraphCustomOp>(new_args, params);
+    }
+#else
     std::shared_ptr<ngraph::Node> copy_with_new_args(const ngraph::NodeVector& new_args) const override
     {
-#if INF_ENGINE_VER_MAJOR_GT(2020020000)
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2020_3)
         return std::make_shared<NgraphCustomOp>(ngraph::as_output_vector(new_args), params);
 #else
         return std::make_shared<NgraphCustomOp>(new_args, params);
 #endif
     }
+#endif
 
     bool visit_attributes(ngraph::AttributeVisitor& visitor) override
     {
@@ -129,7 +135,6 @@ public:
         return true;
     }
 
-private:
     std::map<std::string, InferenceEngine::Parameter> params;
 };
 
@@ -137,15 +142,28 @@ private:
 class InfEngineNgraphCustomLayer : public InferenceEngine::ILayerExecImpl
 {
 public:
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2020_2)
+    explicit InfEngineNgraphCustomLayer(const std::shared_ptr<ngraph::Node>& _node)
+    {
+        node = std::dynamic_pointer_cast<NgraphCustomOp>(_node);
+        CV_Assert(node);
+        std::string implStr = node->params["impl"];
+        std::istringstream iss(implStr);
+#else
     explicit InfEngineNgraphCustomLayer(const InferenceEngine::CNNLayer& layer) : cnnLayer(layer)
     {
         std::istringstream iss(layer.GetParamAsString("impl"));
+#endif
         size_t ptr;
         iss >> ptr;
         cvLayer = (Layer*)ptr;
 
         std::vector<std::vector<size_t> > shapes;
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2020_2)
+        strToShapes(node->params["internals"], shapes);
+#else
         strToShapes(layer.GetParamAsString("internals"), shapes);
+#endif
         internals.resize(shapes.size());
         for (int i = 0; i < shapes.size(); ++i)
             internals[i].create(std::vector<int>(shapes[i].begin(), shapes[i].end()), CV_32F);
@@ -181,6 +199,29 @@ public:
     {
         std::vector<InferenceEngine::DataConfig> inDataConfig;
         std::vector<InferenceEngine::DataConfig> outDataConfig;
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2020_2)
+        InferenceEngine::SizeVector order;
+        size_t offset = std::numeric_limits<size_t>::max();
+        for (int i = 0; i < node->get_input_size(); ++i)
+        {
+            InferenceEngine::DataConfig conf;
+            auto shape = node->input_value(i).get_shape();
+            order.resize(shape.size());
+            std::iota(order.begin(), order.end(), 0);
+            conf.desc = InferenceEngine::TensorDesc(InferenceEngine::Precision::FP32, shape, {shape, order, offset});
+            inDataConfig.push_back(conf);
+        }
+
+        for (int i = 0; i < node->get_output_size(); ++i)
+        {
+            InferenceEngine::DataConfig conf;
+            auto shape = node->output(i).get_shape();
+            order.resize(shape.size());
+            std::iota(order.begin(), order.end(), 0);
+            conf.desc = InferenceEngine::TensorDesc(InferenceEngine::Precision::FP32, shape, {shape, order, offset});
+            outDataConfig.push_back(conf);
+        }
+#else
         for (auto& it : cnnLayer.insData)
         {
             InferenceEngine::DataConfig conf;
@@ -194,6 +235,7 @@ public:
             conf.desc = it->getTensorDesc();
             outDataConfig.push_back(conf);
         }
+#endif
 
         InferenceEngine::LayerConfig layerConfig;
         layerConfig.inConfs = inDataConfig;
@@ -210,12 +252,16 @@ public:
     }
 
 private:
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2020_2)
+    std::shared_ptr<NgraphCustomOp> node;
+#else
     InferenceEngine::CNNLayer cnnLayer;
+#endif
     dnn::Layer* cvLayer;
     std::vector<Mat> internals;
 };
 
-
+#if INF_ENGINE_VER_MAJOR_LT(INF_ENGINE_RELEASE_2020_2)
 class InfEngineNgraphCustomLayerFactory : public InferenceEngine::ILayerImplFactory {
 public:
     explicit InfEngineNgraphCustomLayerFactory(const InferenceEngine::CNNLayer* layer) : cnnLayer(*layer)
@@ -234,15 +280,29 @@ public:
 private:
     InferenceEngine::CNNLayer cnnLayer;
 };
+#endif
 
 
 class InfEngineNgraphExtension : public InferenceEngine::IExtension
 {
 public:
+    void Unload() noexcept override {}
+    void Release() noexcept override { delete this; }
+    void GetVersion(const InferenceEngine::Version*&) const noexcept override {}
+
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2020_2)
+    std::vector<std::string> getImplTypes(const std::shared_ptr<ngraph::Node>& node) override {
+        return {"CPU"};
+    }
+
+    InferenceEngine::ILayerImpl::Ptr getImplementation(const std::shared_ptr<ngraph::Node>& node, const std::string& implType) override {
+        if (std::dynamic_pointer_cast<NgraphCustomOp>(node) && implType == "CPU") {
+            return std::make_shared<InfEngineNgraphCustomLayer>(node);
+        }
+        return nullptr;
+    }
+#else
     virtual void SetLogCallback(InferenceEngine::IErrorListener&) noexcept {}
-    virtual void Unload() noexcept {}
-    virtual void Release() noexcept {}
-    virtual void GetVersion(const InferenceEngine::Version*&) const noexcept {}
 
     virtual InferenceEngine::StatusCode getPrimitiveTypes(char**&, unsigned int&,
                                                           InferenceEngine::ResponseDesc*) noexcept
@@ -259,6 +319,7 @@ public:
         factory = new InfEngineNgraphCustomLayerFactory(cnnLayer);
         return InferenceEngine::StatusCode::OK;
     }
+#endif
 };
 
 
@@ -283,7 +344,7 @@ InfEngineNgraphNode::InfEngineNgraphNode(const std::vector<Ptr<BackendNode> >& n
         {"internals", shapesToStr(internals)}
     };
 
-#if INF_ENGINE_VER_MAJOR_GT(2020020000)
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2020_3)
     ngraph::OutputVector inp_nodes;
 #else
     ngraph::NodeVector inp_nodes;
@@ -326,7 +387,11 @@ void InfEngineNgraphNet::setNodePtr(std::shared_ptr<ngraph::Node>* ptr) {
 
  void InfEngineNgraphNet::release() {
      for (auto& node : components.back()) {
+#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2020_4)
+         if (!(ngraph::op::is_parameter(node) || ngraph::op::is_output(node) || ngraph::op::is_constant(node)) ) {
+#else
          if (!(node->is_parameter() || node->is_output() || node->is_constant()) ) {
+#endif
              auto it = all_nodes.find(node->get_friendly_name());
              if (it != all_nodes.end()) {
                  unconnectedNodes.erase(*(it->second));
@@ -393,11 +458,19 @@ void InfEngineNgraphNet::createNet(Target targetId) {
                 ngraph::ResultVector outputs;
                 ngraph::ParameterVector inps;
                 for (auto& node : components.back()) {
+#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2020_4)
+                    if (ngraph::op::is_parameter(node)) {
+#else
                     if (node->is_parameter()) {
+#endif
                         auto parameter = std::dynamic_pointer_cast<ngraph::op::Parameter>(node);
                         inps.push_back(parameter);
                     }
+#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2020_4)
+                    else if (ngraph::op::is_output(node)) {
+#else
                     else if (node->is_output()) {
+#endif
                         auto result = std::dynamic_pointer_cast<ngraph::op::Result>(node);
                         outputs.push_back(result);
                     }
@@ -611,7 +684,11 @@ void InfEngineNgraphNet::initPlugin(InferenceEngine::CNNNetwork& net)
         }
         std::map<std::string, std::string> config;
         if (device_name == "MYRIAD") {
+#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2020_4)
+            config.emplace("MYRIAD_DETECT_NETWORK_BATCH", CONFIG_VALUE(NO));
+#else
             config.emplace("VPU_DETECT_NETWORK_BATCH", CONFIG_VALUE(NO));
+#endif
         }
 
         bool isHetero = device_name == "FPGA";

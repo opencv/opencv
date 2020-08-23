@@ -7,6 +7,7 @@
 * Docs: <https://docs.opencv.org/master/>
 * Q&A forum: <http://answers.opencv.org>
 * Issue tracking: <https://github.com/opencv/opencv/issues>
+* Additional OpenCV functionality: <https://github.com/opencv/opencv_contrib> 
 
 
 ### Contributing

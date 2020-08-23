@@ -46,10 +46,10 @@ struct GOrigin;
  *    `cv::GArray<T>`    | std::vector<T>
  *    `cv::GOpaque<T>`   | T
  */
-class GAPI_EXPORTS GMat
+class GAPI_EXPORTS_W_SIMPLE GMat
 {
 public:
-    GMat();                                 // Empty constructor
+    GAPI_WRAP GMat();                       // Empty constructor
     GMat(const GNode &n, std::size_t out);  // Operation result constructor
 
     GOrigin& priv();                        // Internal use only

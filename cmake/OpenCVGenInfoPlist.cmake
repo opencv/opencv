@@ -2,7 +2,7 @@ set(OPENCV_APPLE_BUNDLE_NAME "OpenCV")
 set(OPENCV_APPLE_BUNDLE_ID "org.opencv")
 
 if(IOS)
-  if (APPLE_FRAMEWORK AND BUILD_SHARED_LIBS)
+  if (APPLE_FRAMEWORK AND DYNAMIC_PLIST)
     configure_file("${OpenCV_SOURCE_DIR}/platforms/ios/Info.Dynamic.plist.in"
                    "${CMAKE_BINARY_DIR}/ios/Info.plist")
   else()

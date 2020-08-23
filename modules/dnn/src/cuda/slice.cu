@@ -15,11 +15,14 @@
 #include "../cuda4dnn/csl/tensor.hpp"
 #include "../cuda4dnn/csl/span.hpp"
 
+#include "../cuda4dnn/kernels/fill_copy.hpp"
+
 #include <opencv2/core.hpp>
 
 #include <cstddef>
 #include <vector>
 #include <iostream>
+#include <algorithm>
 
 using namespace cv::dnn::cuda4dnn::csl;
 using namespace cv::dnn::cuda4dnn::csl::device;
@@ -78,6 +81,14 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
     {
         CV_Assert(output.rank() == input.rank());
         CV_Assert(output.rank() == offsets.size());
+
+        /* copy directly if no slicing is required */
+        if (is_shape_same(output, input))
+        {
+            CV_Assert(std::all_of(std::begin(offsets), std::end(offsets), [] (std::size_t x) { return x == 0; }));
+            kernels::copy<T>(stream, output, input);
+            return;
+        }
 
         /* squeezable axes at the beginning of both tensors can be eliminated
          *
@@ -145,6 +156,27 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         }
 
         auto rank = inShape.size();
+
+        /* We can do a copy if the reduced rank is two and only the first axis is sliced.
+         * The general requirement is that only one axis is sliced and all the axes that
+         * preceed the sliced axis are singleton. However, the reductions above will remove
+         * all the leading singleton axes and merge the trailing unsliced axes into one, or
+         * zero if there are no trailing unsliced axes. The latter is handled separately.
+         */
+        if (rank == 2 && offsets[0] != 0 && offsets[1] == 0)
+        {
+            auto stride = inShape[1];
+            auto sliced_input = View<T>(input.get() + offsets[0] * stride, output.size());
+            kernels::copy<T>(stream, output, sliced_input);
+            return;
+        }
+
+        if (rank == 1)
+        {
+            auto sliced_input = View<T>(input.get() + offsets[0], output.size());
+            kernels::copy<T>(stream, output, sliced_input);
+            return;
+        }
 
         std::vector<std::size_t> inStride(rank), outStride(rank);
         inStride.back() = 1;

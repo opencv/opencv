@@ -9,8 +9,6 @@
 #define OPENCV_GAPI_IMGPROC_PERF_TESTS_INL_HPP
 
 
-#include <iostream>
-
 #include "gapi_imgproc_perf_tests.hpp"
 
 namespace opencv_test

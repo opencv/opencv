@@ -245,6 +245,31 @@ typedef Feature2D DescriptorExtractor;
 //! @{
 
 
+/** @brief Class for implementing the wrapper which makes detectors and extractors to be affine invariant,
+described as ASIFT in @cite YM11 .
+*/
+class CV_EXPORTS_W AffineFeature : public Feature2D
+{
+public:
+    /**
+    @param backend The detector/extractor you want to use as backend.
+    @param maxTilt The highest power index of tilt factor. 5 is used in the paper as tilt sampling range n.
+    @param minTilt The lowest power index of tilt factor. 0 is used in the paper.
+    @param tiltStep Tilt sampling step \f$\delta_t\f$ in Algorithm 1 in the paper.
+    @param rotateStepBase Rotation sampling step factor b in Algorithm 1 in the paper.
+    */
+    CV_WRAP static Ptr<AffineFeature> create(const Ptr<Feature2D>& backend,
+        int maxTilt = 5, int minTilt = 0, float tiltStep = 1.4142135623730951f, float rotateStepBase = 72);
+
+    CV_WRAP virtual void setViewParams(const std::vector<float>& tilts, const std::vector<float>& rolls) = 0;
+    CV_WRAP virtual void getViewParams(std::vector<float>& tilts, std::vector<float>& rolls) const = 0;
+    CV_WRAP virtual String getDefaultName() const CV_OVERRIDE;
+};
+
+typedef AffineFeature AffineFeatureDetector;
+typedef AffineFeature AffineDescriptorExtractor;
+
+
 /** @brief Class for extracting keypoints and computing descriptors using the Scale Invariant Feature Transform
 (SIFT) algorithm by D. Lowe @cite Lowe04 .
 */
@@ -261,6 +286,10 @@ public:
     @param contrastThreshold The contrast threshold used to filter out weak features in semi-uniform
     (low-contrast) regions. The larger the threshold, the less features are produced by the detector.
 
+    @note The contrast threshold will be divided by nOctaveLayers when the filtering is applied. When
+    nOctaveLayers is set to default and if you want to use the value used in D. Lowe paper, 0.03, set
+    this argument to 0.09.
+
     @param edgeThreshold The threshold used to filter out edge-like features. Note that the its meaning
     is different from the contrastThreshold, i.e. the larger the edgeThreshold, the less features are
     filtered out (more features are retained).
@@ -271,6 +300,35 @@ public:
     CV_WRAP static Ptr<SIFT> create(int nfeatures = 0, int nOctaveLayers = 3,
         double contrastThreshold = 0.04, double edgeThreshold = 10,
         double sigma = 1.6);
+
+    /** @brief Create SIFT with specified descriptorType.
+    @param nfeatures The number of best features to retain. The features are ranked by their scores
+    (measured in SIFT algorithm as the local contrast)
+
+    @param nOctaveLayers The number of layers in each octave. 3 is the value used in D. Lowe paper. The
+    number of octaves is computed automatically from the image resolution.
+
+    @param contrastThreshold The contrast threshold used to filter out weak features in semi-uniform
+    (low-contrast) regions. The larger the threshold, the less features are produced by the detector.
+
+    @note The contrast threshold will be divided by nOctaveLayers when the filtering is applied. When
+    nOctaveLayers is set to default and if you want to use the value used in D. Lowe paper, 0.03, set
+    this argument to 0.09.
+
+    @param edgeThreshold The threshold used to filter out edge-like features. Note that the its meaning
+    is different from the contrastThreshold, i.e. the larger the edgeThreshold, the less features are
+    filtered out (more features are retained).
+
+    @param sigma The sigma of the Gaussian applied to the input image at the octave \#0. If your image
+    is captured with a weak camera with soft lenses, you might want to reduce the number.
+
+    @param descriptorType The type of descriptors. Only CV_32F and CV_8U are supported.
+    */
+    CV_WRAP static Ptr<SIFT> create(int nfeatures, int nOctaveLayers,
+        double contrastThreshold, double edgeThreshold,
+        double sigma, int descriptorType);
+
+    CV_WRAP virtual String getDefaultName() const CV_OVERRIDE;
 };
 
 typedef SIFT SiftFeatureDetector;

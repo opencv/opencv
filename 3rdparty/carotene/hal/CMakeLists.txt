@@ -82,7 +82,8 @@ set_property(DIRECTORY APPEND PROPERTY COMPILE_DEFINITIONS ${carotene_defs})
 #    set_source_files_properties(impl.cpp $<TARGET_OBJECTS:carotene_objs> COMPILE_FLAGS "--param ipcp-unit-growth=100000 --param inline-unit-growth=100000 --param large-stack-frame-growth=5000")
   endif()
 
-add_library(tegra_hal STATIC $<TARGET_OBJECTS:carotene_objs>)
+# we add dummy file to fix XCode build
+add_library(tegra_hal STATIC $<TARGET_OBJECTS:carotene_objs> "dummy.cpp")
 set_target_properties(tegra_hal PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${3P_LIBRARY_OUTPUT_PATH})
 set(OPENCV_SRC_DIR "${CMAKE_SOURCE_DIR}")
 if(NOT BUILD_SHARED_LIBS)

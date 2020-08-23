@@ -128,6 +128,13 @@ TEST_P(Test_TensorFlow_layers, reduce_mean)
     runTensorFlowNet("global_pool_by_axis");
 }
 
+TEST_P(Test_TensorFlow_layers, reduce_sum)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    runTensorFlowNet("sum_pool_by_axis");
+}
+
 TEST_P(Test_TensorFlow_layers, conv_single_conv)
 {
     runTensorFlowNet("single_conv");
@@ -352,6 +359,11 @@ TEST_P(Test_TensorFlow_layers, pooling_max_pool_odd_same)
 TEST_P(Test_TensorFlow_layers, pooling_reduce_mean)
 {
     runTensorFlowNet("reduce_mean");  // an average pooling over all spatial dimensions.
+}
+
+TEST_P(Test_TensorFlow_layers, pooling_reduce_sum)
+{
+    runTensorFlowNet("reduce_sum");  // a SUM pooling over all spatial dimensions.
 }
 
 TEST_P(Test_TensorFlow_layers, max_pool_grad)
@@ -691,6 +703,13 @@ TEST_P(Test_TensorFlow_nets, Faster_RCNN)
     checkBackend();
 
     double scoresDiff = backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 ? 2.9e-5 : 1e-5;
+    double iouDiff = 1e-4;
+    if (target == DNN_TARGET_CUDA)
+    {
+        // for faster_rcnn_resnet50_coco_2018_01_28
+        scoresDiff = 0.06;
+        iouDiff = 0.08;
+    }
     for (int i = 0; i < 2; ++i)
     {
         std::string proto = findDataFile("dnn/" + names[i] + ".pbtxt");
@@ -706,7 +725,7 @@ TEST_P(Test_TensorFlow_nets, Faster_RCNN)
         Mat out = net.forward();
 
         Mat ref = blobFromNPY(findDataFile("dnn/tensorflow/" + names[i] + ".detection_out.npy"));
-        normAssertDetections(ref, out, names[i].c_str(), 0.3, scoresDiff);
+        normAssertDetections(ref, out, names[i].c_str(), 0.3, scoresDiff, iouDiff);
     }
 }
 
@@ -1067,6 +1086,8 @@ TEST_P(Test_TensorFlow_layers, tf2_prelu)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    if (backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA); // not supported; only across channels is supported
     runTensorFlowNet("tf2_prelu");
 }
 
@@ -1220,7 +1241,7 @@ TEST_P(Test_TensorFlow_nets, EfficientDet)
     }
     checkBackend();
     std::string proto = findDataFile("dnn/efficientdet-d0.pbtxt");
-    std::string model = findDataFile("dnn/efficientdet-d0.pb");
+    std::string model = findDataFile("dnn/efficientdet-d0.pb", false);
 
     Net net = readNetFromTensorflow(model, proto);
     Mat img = imread(findDataFile("dnn/dog416.png"));
@@ -1239,6 +1260,11 @@ TEST_P(Test_TensorFlow_nets, EfficientDet)
                                     0, 7, 0.8039304, 0.6118435263633728, 0.13175517320632935, 0.9065558314323425, 0.2943994700908661);
     double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 4e-3 : 1e-5;
     double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 2e-3 : 1e-4;
+    if (target == DNN_TARGET_CUDA_FP16)
+    {
+        scoreDiff = 0.002;
+        iouDiff = 0.004;
+    }
     normAssertDetections(ref, out, "", 0.5, scoreDiff, iouDiff);
     expectNoFallbacksFromIE(net);
 }

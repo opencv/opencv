@@ -31,6 +31,7 @@ const tuple<string, Size> images[] =
 #ifdef HAVE_PNG
     make_tuple<string, Size>("../cv/shared/pic1.png", Size(400, 300)),
 #endif
+    make_tuple<string, Size>("../highgui/readwrite/ordinary.bmp", Size(480, 272)),
 };
 
 TEST_P(Imgcodecs_Resize, imread_reduce_flags)

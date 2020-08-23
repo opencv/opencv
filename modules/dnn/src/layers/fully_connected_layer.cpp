@@ -119,7 +119,6 @@ public:
             CV_CheckEQ(inputs.size(), (size_t)2, "");
             numOutput = inputs[1].back();
             cAxis = inputs[0].size() - 1;
-            CV_CheckEQ(numOutput, inputs[0][cAxis - 1], "");
             int dims = inputs[0].size();
             CV_CheckEQ(inputs[1].size(), (size_t)dims, "");
             CV_CheckGE(dims, 2, "");
@@ -587,7 +586,7 @@ public:
         }
         else
         {
-            std::vector<size_t> data = {(size_t)ieInpNode->get_shape()[0], (size_t)blobs[0].size[1]};
+            std::vector<int64_t> data = {(int64_t)ieInpNode->get_shape()[0], (int64_t)blobs[0].size[1]};
             auto new_shape = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{2}, data.data());
             auto inp = std::make_shared<ngraph::op::v1::Reshape>(ieInpNode, new_shape, true);
 

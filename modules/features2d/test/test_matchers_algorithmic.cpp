@@ -582,6 +582,10 @@ TEST( Features2d_FlannBasedMatcher, read_write )
     "      type: 5\n"
     "      value: 4.\n"// this line is changed!
     "   -\n"
+    "      name: explore_all_trees\n"
+    "      type: 8\n"
+    "      value: 0\n"
+    "   -\n"
     "      name: sorted\n"
     "      type: 8\n"    // FLANN_INDEX_TYPE_BOOL
     "      value: 1\n";
@@ -603,7 +607,6 @@ TEST(Features2d_DMatch, issue_11855)
                                         1, 1, 1);
     Mat targets = (Mat_<uchar>(2, 3) << 1, 1, 1,
                                         0, 0, 0);
-
     Ptr<BFMatcher> bf = BFMatcher::create(NORM_HAMMING, true);
     vector<vector<DMatch> > match;
     bf->knnMatch(sources, targets, match, 1, noArray(), true);
@@ -613,6 +616,20 @@ TEST(Features2d_DMatch, issue_11855)
     EXPECT_EQ(1, match[0][0].queryIdx);
     EXPECT_EQ(0, match[0][0].trainIdx);
     EXPECT_EQ(0.0f, match[0][0].distance);
+}
+
+TEST(Features2d_DMatch, issue_17771)
+{
+    Mat sources = (Mat_<uchar>(2, 3) << 1, 1, 0,
+                                        1, 1, 1);
+    Mat targets = (Mat_<uchar>(2, 3) << 1, 1, 1,
+                                        0, 0, 0);
+    UMat usources = sources.getUMat(ACCESS_READ);
+    UMat utargets = targets.getUMat(ACCESS_READ);
+    vector<vector<DMatch> > match;
+    Ptr<BFMatcher> ubf = BFMatcher::create(NORM_HAMMING);
+    Mat mask = (Mat_<uchar>(2, 2) << 1, 0, 0, 1);
+    EXPECT_NO_THROW(ubf->knnMatch(usources, utargets, match, 1, mask, true));
 }
 
 }} // namespace

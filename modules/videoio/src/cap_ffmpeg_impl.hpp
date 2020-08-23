@@ -152,6 +152,8 @@ extern "C" {
 #define AV_PIX_FMT_BGR24 PIX_FMT_BGR24
 #define AV_PIX_FMT_RGB24 PIX_FMT_RGB24
 #define AV_PIX_FMT_GRAY8 PIX_FMT_GRAY8
+#define AV_PIX_FMT_BGRA PIX_FMT_BGRA
+#define AV_PIX_FMT_RGBA PIX_FMT_RGBA
 #define AV_PIX_FMT_YUV422P PIX_FMT_YUV422P
 #define AV_PIX_FMT_YUV420P PIX_FMT_YUV420P
 #define AV_PIX_FMT_YUV444P PIX_FMT_YUV444P
@@ -180,6 +182,16 @@ extern "C" {
 #define USE_AV_INTERRUPT_CALLBACK 1
 #else
 #define USE_AV_INTERRUPT_CALLBACK 0
+#endif
+#endif
+
+#ifndef USE_AV_SEND_FRAME_API
+// https://github.com/FFmpeg/FFmpeg/commit/7fc329e2dd6226dfecaa4a1d7adf353bf2773726
+#if LIBAVCODEC_VERSION_MICRO >= 100 \
+    && LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(57, 37, 100)
+#define USE_AV_SEND_FRAME_API 1
+#else
+#define USE_AV_SEND_FRAME_API 0
 #endif
 #endif
 
@@ -359,7 +371,7 @@ struct AVInterruptCallbackMetadata
 
 // https://github.com/opencv/opencv/pull/12693#issuecomment-426236731
 static
-inline const char* _opencv_avcodec_get_name(AVCodecID id)
+inline const char* _opencv_avcodec_get_name(CV_CODEC_ID id)
 {
 #if LIBAVCODEC_VERSION_MICRO >= 100 \
     && LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(53, 47, 100)
@@ -485,6 +497,7 @@ struct CvCapture_FFMPEG
     bool setProperty(int, double);
     bool grabFrame();
     bool retrieveFrame(int, unsigned char** data, int* step, int* width, int* height, int* cn);
+    void rotateFrame(cv::Mat &mat) const;
 
     void init();
 
@@ -500,6 +513,7 @@ struct CvCapture_FFMPEG
     double  r2d(AVRational r) const;
     int64_t dts_to_frame_number(int64_t dts);
     double  dts_to_sec(int64_t dts) const;
+    void    get_rotation_angle();
 
     AVFormatContext * ic;
     AVCodec         * avcodec;
@@ -515,6 +529,8 @@ struct CvCapture_FFMPEG
 
     int64_t frame_number, first_frame_number;
 
+    bool   rotation_auto;
+    int    rotation_angle; // valid 0, 90, 180, 270
     double eps_zero;
 /*
    'filename' contains the filename of the videosource,
@@ -563,8 +579,17 @@ void CvCapture_FFMPEG::init()
     frame_number = 0;
     eps_zero = 0.000025;
 
-#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(52, 111, 0)
+    rotation_angle = 0;
+
+#if (LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(52, 111, 0))
+#if (LIBAVUTIL_BUILD >= CALC_FFMPEG_VERSION(52, 92, 100))
+    rotation_auto = true;
+#else
+    rotation_auto = false;
+#endif
     dict = NULL;
+#else
+    rotation_auto = false;
 #endif
 
     rawMode = false;
@@ -1033,6 +1058,7 @@ bool CvCapture_FFMPEG::open( const char* _filename )
             frame.cn = 3;
             frame.step = 0;
             frame.data = NULL;
+            get_rotation_angle();
             break;
         }
     }
@@ -1074,11 +1100,11 @@ bool CvCapture_FFMPEG::processRawPacket()
     {
         rawModeInitialized = true;
 #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(58, 20, 100)
-        AVCodecID eVideoCodec = ic->streams[video_stream]->codecpar->codec_id;
+        CV_CODEC_ID eVideoCodec = ic->streams[video_stream]->codecpar->codec_id;
 #elif LIBAVFORMAT_BUILD > 4628
-        AVCodecID eVideoCodec = video_st->codec->codec_id;
+        CV_CODEC_ID eVideoCodec = video_st->codec->codec_id;
 #else
-        AVCodecID eVideoCodec = video_st->codec.codec_id;
+        CV_CODEC_ID eVideoCodec = video_st->codec.codec_id;
 #endif
         const char* filterName = NULL;
         if (eVideoCodec == CV_CODEC(CODEC_ID_H264)
@@ -1208,9 +1234,20 @@ bool CvCapture_FFMPEG::grabFrame()
 #endif
 
         int ret = av_read_frame(ic, &packet);
-        if (ret == AVERROR(EAGAIN)) continue;
 
-        /* else if (ret < 0) break; */
+        if (ret == AVERROR(EAGAIN))
+            continue;
+
+        if (ret == AVERROR_EOF)
+        {
+            if (rawMode)
+                break;
+
+            // flush cached frames from video decoder
+            packet.data = NULL;
+            packet.size = 0;
+            packet.stream_index = video_stream;
+        }
 
         if( packet.stream_index != video_stream )
         {
@@ -1271,7 +1308,6 @@ bool CvCapture_FFMPEG::grabFrame()
     // return if we have a new frame or not
     return valid;
 }
-
 
 bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* width, int* height, int* cn)
 {
@@ -1363,7 +1399,7 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
     if( !video_st ) return 0;
 
     double codec_tag = 0;
-    AVCodecID codec_id = AV_CODEC_ID_NONE;
+    CV_CODEC_ID codec_id = AV_CODEC_ID_NONE;
     const char* codec_fourcc = NULL;
 
     switch( property_id )
@@ -1381,9 +1417,9 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
     case CAP_PROP_FRAME_COUNT:
         return (double)get_total_frames();
     case CAP_PROP_FRAME_WIDTH:
-        return (double)frame.width;
+        return (double)((rotation_auto && rotation_angle%180) ? frame.height : frame.width);
     case CAP_PROP_FRAME_HEIGHT:
-        return (double)frame.height;
+        return (double)((rotation_auto && rotation_angle%180) ? frame.width : frame.height);
     case CAP_PROP_FPS:
         return get_fps();
     case CAP_PROP_FOURCC:
@@ -1427,6 +1463,15 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
         break;
     case CAP_PROP_BITRATE:
         return static_cast<double>(get_bitrate());
+    case CAP_PROP_ORIENTATION_META:
+        return static_cast<double>(rotation_angle);
+    case CAP_PROP_ORIENTATION_AUTO:
+#if ((LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(52, 111, 0)) && \
+     (LIBAVUTIL_BUILD >= CALC_FFMPEG_VERSION(52, 94, 100)))
+        return static_cast<double>(rotation_auto);
+#else
+        return 0;
+#endif
     default:
         break;
     }
@@ -1503,6 +1548,17 @@ double CvCapture_FFMPEG::dts_to_sec(int64_t dts) const
 {
     return (double)(dts - ic->streams[video_stream]->start_time) *
         r2d(ic->streams[video_stream]->time_base);
+}
+
+void CvCapture_FFMPEG::get_rotation_angle()
+{
+    rotation_angle = 0;
+#if ((LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(52, 111, 0)) && \
+     (LIBAVUTIL_BUILD >= CALC_FFMPEG_VERSION(52, 94, 100)))
+    AVDictionaryEntry *rotate_tag = av_dict_get(video_st->metadata, "rotate", NULL, 0);
+    if (rotate_tag != NULL)
+        rotation_angle = atoi(rotate_tag->value);
+#endif
 }
 
 void CvCapture_FFMPEG::seek(int64_t _frame_number)
@@ -1600,6 +1656,16 @@ bool CvCapture_FFMPEG::setProperty( int property_id, double value )
         if (value == -1)
             return setRaw();
         return false;
+    case CAP_PROP_ORIENTATION_AUTO:
+#if ((LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(52, 111, 0)) && \
+     (LIBAVUTIL_BUILD >= CALC_FFMPEG_VERSION(52, 94, 100)))
+        rotation_auto = static_cast<bool>(value);
+        return true;
+#else
+        rotation_auto = 0;
+        return false;
+#endif
+        break;
     default:
         return false;
     }
@@ -1797,7 +1863,7 @@ static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
 
 #if LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(54,25,0)
     // Set per-codec defaults
-    AVCodecID c_id = c->codec_id;
+    CV_CODEC_ID c_id = c->codec_id;
     avcodec_get_context_defaults3(c, codec);
     // avcodec_get_context_defaults3 erases codec_id for some reason
     c->codec_id = c_id;
@@ -1945,6 +2011,26 @@ static int icv_av_write_frame_FFMPEG( AVFormatContext * oc, AVStream * video_st,
 #endif
     {
         /* encode the image */
+#if USE_AV_SEND_FRAME_API
+        ret = avcodec_send_frame(c, picture);
+        while (ret >= 0)
+        {
+            AVPacket* pkt = av_packet_alloc();
+            pkt->stream_index = video_st->index;
+            ret = avcodec_receive_packet(c, pkt);
+
+            if(!ret)
+            {
+                av_packet_rescale_ts(pkt, c->time_base, video_st->time_base);
+                ret = av_write_frame(oc, pkt);
+                av_packet_free(&pkt);
+                continue;
+            }
+
+            av_packet_free(&pkt);
+            break;
+        }
+#else
         AVPacket pkt;
         av_init_packet(&pkt);
 #if LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(54, 1, 0)
@@ -1986,6 +2072,7 @@ static int icv_av_write_frame_FFMPEG( AVFormatContext * oc, AVStream * video_st,
             /* write the compressed frame in the media file */
             ret = av_write_frame(oc, &pkt);
         }
+#endif
 #endif
     }
     return ret;

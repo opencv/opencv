@@ -397,8 +397,9 @@ public:
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+        std::vector<int64_t> order(_order.begin(), _order.end());
         auto tr_axes = std::make_shared<ngraph::op::Constant>(ngraph::element::i64,
-                       ngraph::Shape({_order.size()}), _order.data());
+                       ngraph::Shape({order.size()}), order.data());
         auto transpose = std::make_shared<ngraph::op::Transpose>(ieInpNode, tr_axes);
         return Ptr<BackendNode>(new InfEngineNgraphNode(transpose));
     }

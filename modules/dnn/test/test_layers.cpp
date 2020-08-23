@@ -369,6 +369,16 @@ TEST_P(Test_Caffe_layers, layer_prelu_fc)
     // Reference output values are in range [-0.0001, 10.3906]
     double l1 = (target == DNN_TARGET_MYRIAD) ? 0.005 : 0.0;
     double lInf = (target == DNN_TARGET_MYRIAD) ? 0.021 : 0.0;
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2020040000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL)
+    {
+        l1 = 0.006f; lInf = 0.05f;
+    }
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL_FP16)
+    {
+        l1 = 0.01f; lInf = 0.05f;
+    }
+#endif
     testLayerUsingCaffeModels("layer_prelu_fc", true, false, l1, lInf);
 }
 
@@ -1123,6 +1133,9 @@ TEST_P(Layer_Test_Convolution_DLDT, Accuracy)
     const Backend backendId = get<0>(GetParam());
     const Target targetId = get<1>(GetParam());
 
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && targetId == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+
     if (backendId != DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && backendId != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         throw SkipTestException("No support for async forward");
 
@@ -1133,9 +1146,8 @@ TEST_P(Layer_Test_Convolution_DLDT, Accuracy)
     else
         FAIL() << "Unknown backendId";
 
-    std::string suffix = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? "_fp16" : "";
     Net netDefault = readNet(_tf("layer_convolution.caffemodel"), _tf("layer_convolution.prototxt"));
-    Net net = readNet(_tf("layer_convolution" + suffix + ".xml"), _tf("layer_convolution" + suffix + ".bin"));
+    Net net = readNet(_tf("layer_convolution.xml"), _tf("layer_convolution.bin"));
 
     Mat inp = blobFromNPY(_tf("blob.npy"));
 
@@ -1155,13 +1167,19 @@ TEST_P(Layer_Test_Convolution_DLDT, Accuracy)
 
     std::vector<int> outLayers = net.getUnconnectedOutLayers();
     ASSERT_EQ(net.getLayer(outLayers[0])->name, "output");
-    ASSERT_EQ(net.getLayer(outLayers[0])->type, "Convolution");
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+        ASSERT_EQ(net.getLayer(outLayers[0])->type, "Convolution");
+    else
+        ASSERT_EQ(net.getLayer(outLayers[0])->type, "Add");
 }
 
 TEST_P(Layer_Test_Convolution_DLDT, setInput_uint8)
 {
     const Backend backendId = get<0>(GetParam());
     const Target targetId = get<1>(GetParam());
+
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && targetId == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
 
     if (backendId != DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && backendId != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         throw SkipTestException("No support for async forward");
@@ -1179,12 +1197,10 @@ TEST_P(Layer_Test_Convolution_DLDT, setInput_uint8)
     randu(inputs[0], 0, 255);
     inputs[0].convertTo(inputs[1], CV_32F);
 
-    std::string suffix = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? "_fp16" : "";
-
     Mat outs[2];
     for (int i = 0; i < 2; ++i)
     {
-        Net net = readNet(_tf("layer_convolution" + suffix + ".xml"), _tf("layer_convolution" + suffix + ".bin"));
+        Net net = readNet(_tf("layer_convolution.xml"), _tf("layer_convolution.bin"));
         net.setPreferableBackend(backendId);
         net.setPreferableTarget(targetId);
         net.setInput(inputs[i]);
@@ -1200,6 +1216,9 @@ TEST_P(Layer_Test_Convolution_DLDT, multithreading)
     const Backend backendId = get<0>(GetParam());
     const Target targetId = get<1>(GetParam());
 
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && targetId == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+
     if (backendId != DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && backendId != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         throw SkipTestException("No support for async forward");
 
@@ -1210,9 +1229,8 @@ TEST_P(Layer_Test_Convolution_DLDT, multithreading)
     else
         FAIL() << "Unknown backendId";
 
-    std::string suffix = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? "_fp16" : "";
-    std::string xmlPath = _tf("layer_convolution" + suffix + ".xml");
-    std::string binPath = _tf("layer_convolution" + suffix + ".bin");
+    std::string xmlPath = _tf("layer_convolution.xml");
+    std::string binPath = _tf("layer_convolution.bin");
     Net firstNet = readNet(xmlPath, binPath);
     Net secondNet = readNet(xmlPath, binPath);
     Mat inp = blobFromNPY(_tf("blob.npy"));
@@ -1271,8 +1289,7 @@ TEST_P(Test_DLDT_two_inputs_3dim, as_IR)
     int secondInpType = get<1>(GetParam());
     Target targetId = get<2>(GetParam());
 
-    std::string suffix = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? "_fp16" : "";
-    Net net = readNet(_tf("net_two_inputs" + suffix + ".xml"), _tf("net_two_inputs.bin"));
+    Net net = readNet(_tf("net_two_inputs.xml"), _tf("net_two_inputs.bin"));
     std::vector<int> inpSize = get<3>(GetParam());
     Mat firstInp(3, inpSize.data(), firstInpType);
     Mat secondInp(3, inpSize.data(), secondInpType);
@@ -1882,7 +1899,115 @@ TEST_P(Layer_Test_Resize, change_input)
 
 INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_Resize, dnnBackendsAndTargets());
 
-typedef testing::TestWithParam<tuple<Backend, Target> > Layer_Test_Slice;
+struct Layer_Test_Slice : public testing::TestWithParam<tuple<Backend, Target> >
+{
+    template<int DIMS>
+    void test_slice(const int* inputShape, const int* begin, const int* end)
+    {
+        int backendId = get<0>(GetParam());
+        int targetId = get<1>(GetParam());
+
+        Mat input(DIMS, inputShape, CV_32FC1, Scalar::all(0));
+        for (int i = 0; i < (int)input.total(); ++i)
+            input.ptr<float>()[i] = (float)i;
+
+        std::vector<Range> range(DIMS);
+        for (int i = 0; i < DIMS; ++i)
+            range[i] = Range(begin[i], end[i]);
+
+        Net net;
+        LayerParams lp;
+        lp.type = "Slice";
+        lp.name = "testLayer";
+        lp.set("begin", DictValue::arrayInt<int*>((int*)&begin[0], DIMS));
+        lp.set("end", DictValue::arrayInt<int*>((int*)&end[0], DIMS));
+        net.addLayerToPrev(lp.name, lp.type, lp);
+
+        {
+            net.setInput(input);
+            net.setPreferableBackend(backendId);
+            net.setPreferableTarget(targetId);
+            Mat out = net.forward();
+
+            EXPECT_GT(cv::norm(out, NORM_INF), 0);
+            normAssert(out, input(range));
+#if 0
+            cout << input(range).clone().reshape(1, 1) << endl;
+            cout << out.reshape(1, 1) << endl;
+#endif
+        }
+    }
+};
+
+TEST_P(Layer_Test_Slice, slice_channels_17762)
+{
+    const int inputShape[4] = {1, 16, 6, 8};
+    const int begin[] = {0, 4, 0, 0};
+    const int end[] = {1, 8, 6, 8};
+    test_slice<4>(inputShape, begin, end);
+}
+
+TEST_P(Layer_Test_Slice, slice_channels_with_batch_17762)
+{
+    const int inputShape[4] = {4, 4, 3, 4};
+    const int begin[] = {0, 1, 0, 0};
+    const int end[] = {4, 3, 3, 4};
+    test_slice<4>(inputShape, begin, end);
+}
+
+TEST_P(Layer_Test_Slice, slice_channels_and_batch_17762)
+{
+    int backend = get<0>(GetParam());
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+
+    const int inputShape[4] = {4, 4, 3, 4};
+    const int begin[] = {2, 1, 0, 0};
+    const int end[] = {4, 3, 3, 4};
+    test_slice<4>(inputShape, begin, end);
+}
+
+TEST_P(Layer_Test_Slice, slice_rows)
+{
+    const int inputShape[4] = {1, 2, 6, 4};
+    const int begin[] = {0, 0, 4, 0};
+    const int end[] = {1, 2, 6, 4};
+    test_slice<4>(inputShape, begin, end);
+}
+
+TEST_P(Layer_Test_Slice, slice_cols)
+{
+    const int inputShape[4] = {1, 2, 3, 8};
+    const int begin[] = {0, 0, 0, 4};
+    const int end[] = {1, 2, 3, 8};
+    test_slice<4>(inputShape, begin, end);
+}
+
+
+TEST_P(Layer_Test_Slice, slice_complex_1_unaligned)
+{
+    const int inputShape[4] = {1, 4, 2, 3};
+    const int begin[] = {0, 2, 1, 0};
+    const int end[] = {1, 3, 2, 2};
+    test_slice<4>(inputShape, begin, end);
+}
+
+TEST_P(Layer_Test_Slice, slice_complex_2_x4)
+{
+    const int inputShape[4] = {1, 3, 2, 4};
+    const int begin[] = {0, 2, 1, 0};
+    const int end[] = {1, 3, 2, 2};
+    test_slice<4>(inputShape, begin, end);
+}
+
+TEST_P(Layer_Test_Slice, slice_complex_3)
+{
+    const int inputShape[4] = {1, 6, 4, 8};
+    const int begin[] = {0, 2, 1, 4};
+    const int end[] = {1, 4, 3, 8};
+    test_slice<4>(inputShape, begin, end);
+}
+
 TEST_P(Layer_Test_Slice, variable_input_shape)
 {
     int backendId = get<0>(GetParam());
@@ -1972,5 +2097,437 @@ TEST_P(Layer_Test_BatchNorm, fusion)
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_BatchNorm, dnnBackendsAndTargets());
+
+class TestLayerFusion : public DNNTestLayer {
+public:
+    static void makeDefaultTestConvolutionLayer(LayerParams& convParams, int in_channels, int num_filters, bool bias_term)
+    {
+        const int kernel_h = 3, kernel_w = 3;
+        const int pad_h = kernel_h / 2, pad_w = kernel_w / 2;
+
+        convParams.set("kernel_h", kernel_h);
+        convParams.set("kernel_w", kernel_w);
+        convParams.set("pad_h", pad_h);
+        convParams.set("pad_w", pad_w);
+        convParams.set("num_output", num_filters);
+        convParams.set("bias_term", bias_term);
+        convParams.type = "Convolution";
+        convParams.name = "convolution";
+
+        float conv_init_magnitude = 1.0f / in_channels / kernel_h / kernel_w;
+        int weightsShape[] = {num_filters, in_channels, kernel_h, kernel_w};
+        Mat weights(4, &weightsShape[0], CV_32F);
+        randu(weights, -conv_init_magnitude, conv_init_magnitude);
+        convParams.blobs.push_back(weights);
+        if (bias_term)
+        {
+            Mat bias(1, num_filters, CV_32F);
+            randu(bias, -1.0f, 1.0f);
+            convParams.blobs.push_back(bias);
+        }
+    }
+
+    static void makeDefaultTestActivationLayer(LayerParams& activationParams, const std::string& type, int in_channels)
+    {
+        activationParams.type = type;
+        activationParams.name = "activation";
+        if (activationParams.type == "ReLU")
+            activationParams.set("negative_slope", 0.1f);
+        else if (activationParams.type == "Power")
+        {
+            activationParams.set("power", 2.0f);
+            activationParams.set("scale", 0.5f);
+            activationParams.set("shift", 0.3f);
+        }
+        else if (activationParams.type == "ReLU6")
+        {
+            activationParams.set("min_value", -1.0f);
+            activationParams.set("max_value", 1.0f);
+        }
+        else if (activationParams.type == "ChannelsPReLU")
+        {
+            Mat scales(1, in_channels, CV_32F);
+            randu(scales, -1.0f, 1.0f);
+            activationParams.blobs.push_back(scales);
+        }
+    }
+
+    static void makeDefaultTestEltwiseLayer(LayerParams& eltwiseParams, const std::string& op, bool withCoefficients)
+    {
+        eltwiseParams.type = "Eltwise";
+        eltwiseParams.name = "eltwise";
+        eltwiseParams.set("operation", op);
+        if (withCoefficients)
+        {
+            float coeff[] = {0.3f, 0.5f};
+            eltwiseParams.set("coeff", DictValue::arrayReal<float*>(coeff, 2));
+        }
+    }
+
+    static void test(Mat& input, Net& net, Backend backendId, Target targetId, std::vector<int> expectedFusedLayers = std::vector<int>(), double l1 = 0.0, double lInf = 0.0)
+    {
+        DNNTestLayer::checkBackend(backendId, targetId);
+
+        net.enableFusion(false);
+        net.setPreferableBackend(DNN_BACKEND_OPENCV);
+        net.setPreferableTarget(DNN_TARGET_CPU);
+        net.setInput(input);
+        Mat outputReference = net.forward().clone();
+        std::vector<double> refTimings;
+        net.getPerfProfile(refTimings);
+        for (int i = 0; i < refTimings.size(); i++)
+        {
+            CV_Assert(refTimings[i] != 0.0);
+        }
+
+        net.enableFusion(true);
+        net.setPreferableBackend(backendId);
+        net.setPreferableTarget(targetId);
+        net.setInput(input);
+        Mat outputTest = net.forward().clone();
+        std::vector<double> testTimings;
+        net.getPerfProfile(testTimings);
+        for (int i = 0; i < testTimings.size(); i++)
+        {
+            if(std::find(expectedFusedLayers.begin(), expectedFusedLayers.end(), i + 1) != expectedFusedLayers.end())
+            {
+                EXPECT_EQ(testTimings[i], 0.0);
+            }
+            else
+            {
+                EXPECT_NE(testTimings[i], 0.0);
+            }
+        }
+
+        // double ref_max_value, ref_min_value;
+        // minMaxLoc(outputReference.reshape(1, 1), &ref_min_value, &ref_max_value);
+        // std::cout << "reference range: " << ref_min_value << ' ' << ref_max_value << std::endl;
+
+        double default_l1, default_lInf;
+        DNNTestLayer::getDefaultThresholds(backendId, targetId, &default_l1, &default_lInf);
+        if (l1 == 0.0)
+            l1 = default_l1;
+        if (lInf == 0.0)
+            lInf = default_lInf;
+        normAssert(outputReference, outputTest, "", l1, lInf);
+    }
+
+    static testing::internal::ParamGenerator<std::string> eltwiseOpList()
+    {
+        // TODO: automate list generation
+        return Values("sum", "max", "prod", "div");
+    }
+
+    static testing::internal::ParamGenerator<std::string> activationLayersList()
+    {
+        // TODO: automate list generation
+        return Values("ReLU", "ReLU6", "ChannelsPReLU", "TanH", "Swish", "Mish", "Sigmoid", "ELU", "AbsVal", "BNLL", "Power");
+    }
+
+    static testing::internal::ParamGenerator<tuple<Backend, Target> > dnnBackendsAndTargetsForFusionTests()
+    {
+        return dnnBackendsAndTargets(false, false, true, false, false, false); // OCV OpenCL + OCV CPU
+    }
+};
+
+typedef TestWithParam<tuple<bool, std::string, tuple<Backend, Target> > > ConvolutionActivationFusion;
+TEST_P(ConvolutionActivationFusion, Accuracy)
+{
+    //          input
+    //            |
+    // -----------------------
+    // |     convolution     |
+    // -----------------------
+    //            |
+    // -----------------------
+    // |     activation      |
+    // -----------------------
+    //            |
+    //         output
+
+    const int batch_size = 2, in_channels = 16;
+    const int in_height = 16, in_width = 16;
+    int inputShape[] = {batch_size, in_channels, in_height, in_width};
+    Mat input(4, &inputShape[0], CV_32F);
+    randu(input, 1.0f, 2.0f);
+
+    bool bias_term = get<0>(GetParam());
+    LayerParams convParams;
+    TestLayerFusion::makeDefaultTestConvolutionLayer(convParams, in_channels, in_channels, bias_term);
+
+    std::string actType = get<1>(GetParam());
+    LayerParams activationParams;
+    TestLayerFusion::makeDefaultTestActivationLayer(activationParams, actType, in_channels);
+
+    Backend backendId = get<0>(get<2>(GetParam()));
+    Target targetId = get<1>(get<2>(GetParam()));
+
+    // bug: https://github.com/opencv/opencv/issues/17964
+    if (actType == "Power" && backendId == DNN_BACKEND_OPENCV && (targetId == DNN_TARGET_OPENCL || targetId == DNN_TARGET_OPENCL_FP16))
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL);
+
+    // bug: https://github.com/opencv/opencv/issues/17953
+    if (actType == "ChannelsPReLU" && bias_term == false &&
+        backendId == DNN_BACKEND_OPENCV && (targetId == DNN_TARGET_OPENCL || targetId == DNN_TARGET_OPENCL_FP16))
+    {
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL);
+    }
+
+    Net net;
+    int convId = net.addLayer(convParams.name, convParams.type, convParams);
+    int activId = net.addLayerToPrev(activationParams.name, activationParams.type, activationParams);
+    net.connect(0, 0, convId, 0);
+
+    std::vector<int> expectedFusedLayers;
+    if (backendId == DNN_BACKEND_OPENCV)
+    {
+        if (targetId == DNN_TARGET_CPU)
+            expectedFusedLayers.push_back(activId); // all activations are fused
+        else if (targetId == DNN_TARGET_OPENCL || targetId == DNN_TARGET_OPENCL_FP16)
+        {
+            if (actType == "ReLU" || actType == "ChannelsPReLU" || actType == "ReLU6" || actType == "TanH" || actType == "Power")
+                expectedFusedLayers.push_back(activId);
+        }
+    }
+
+    TestLayerFusion::test(input, net, backendId, targetId, expectedFusedLayers);
+}
+INSTANTIATE_TEST_CASE_P(TestLayerFusion, ConvolutionActivationFusion, Combine(
+/* bias */       testing::Bool(),
+/* activation */ TestLayerFusion::activationLayersList(),
+                 TestLayerFusion::dnnBackendsAndTargetsForFusionTests()
+));
+
+typedef TestWithParam<tuple<bool, std::string, bool, tuple<Backend, Target> > > ConvolutionEltwiseFusion;
+TEST_P(ConvolutionEltwiseFusion, Accuracy)
+{
+    //                 input
+    //                   |
+    //    -------------------------------
+    //    |                             |
+    //    |                      ---------------
+    //    |                      | convolution |
+    //    |                      ---------------
+    //    |                             |
+    //    |       ----------------      |
+    //    --------|  eltwise op  |-------
+    //            ----------------
+    //                   |
+    //                 output
+
+    const int batch_size = 2, in_channels = 16;
+    const int in_height = 16, in_width = 16;
+    int inputShape[] = {batch_size, in_channels, in_height, in_width};
+    Mat input(4, &inputShape[0], CV_32F);
+    randu(input, 1.0f, 2.0f); // avoid small values to test eltwise div
+
+    bool bias_term = get<0>(GetParam());
+    LayerParams convParams;
+    TestLayerFusion::makeDefaultTestConvolutionLayer(convParams, in_channels, in_channels, bias_term);
+
+    std::string eltwiseOp = get<1>(GetParam());
+    bool weightedEltwise = get<2>(GetParam());
+    if (eltwiseOp != "sum" && weightedEltwise)
+            throw SkipTestException("weighted eltwise not supported");
+    LayerParams eltwiseParams;
+    TestLayerFusion::makeDefaultTestEltwiseLayer(eltwiseParams, eltwiseOp, weightedEltwise);
+
+    Net net;
+    int convId = net.addLayer(convParams.name, convParams.type, convParams);
+    int eltwiseId = net.addLayer(eltwiseParams.name, eltwiseParams.type, eltwiseParams);
+    net.connect(0, 0, convId, 0);
+    net.connect(convId, 0, eltwiseId, 0);
+    net.connect(0, 0, eltwiseId, 1);
+
+    Backend backendId = get<0>(get<3>(GetParam()));
+    Target targetId = get<1>(get<3>(GetParam()));
+    TestLayerFusion::test(input, net, backendId, targetId);
+}
+INSTANTIATE_TEST_CASE_P(TestLayerFusion, ConvolutionEltwiseFusion, Combine(
+/* bias */              testing::Bool(),
+/* eltwise op */        TestLayerFusion::eltwiseOpList(),
+/* eltwise weighted */  testing::Bool(),
+                        TestLayerFusion::dnnBackendsAndTargetsForFusionTests()
+));
+
+typedef TestWithParam<tuple<bool, std::string, bool, std::string, tuple<Backend, Target> > > ConvolutionEltwiseActivationFusion;
+TEST_P(ConvolutionEltwiseActivationFusion, Accuracy)
+{
+    //                 input
+    //                   |
+    //    -------------------------------
+    //    |                             |
+    //    |                      ---------------
+    //    |                      | convolution |
+    //    |                      ---------------
+    //    |                             |
+    //    |       ----------------      |
+    //    --------|  eltwise op  |-------
+    //            ----------------
+    //                   |
+    //            ----------------
+    //            |  activation  |
+    //            ----------------
+    //                   |
+    //                output
+
+    const int batch_size = 2, in_channels = 16;
+    const int in_height = 16, in_width = 16;
+    int inputShape[] = {batch_size, in_channels, in_height, in_width};
+    Mat input(4, &inputShape[0], CV_32F);
+    randu(input, 1.0f, 2.0f); // avoid small values to test eltwise div
+
+    bool bias_term = get<0>(GetParam());
+    LayerParams convParams;
+    TestLayerFusion::makeDefaultTestConvolutionLayer(convParams, in_channels, in_channels, bias_term);
+
+    std::string eltwiseOp = get<1>(GetParam());
+    bool weightedEltwise = get<2>(GetParam());
+    if (eltwiseOp != "sum" && weightedEltwise)
+            throw SkipTestException("weighted eltwise not supported");
+    LayerParams eltwiseParams;
+    TestLayerFusion::makeDefaultTestEltwiseLayer(eltwiseParams, eltwiseOp, false);
+
+    std::string actType = get<3>(GetParam());
+    LayerParams activationParams;
+    TestLayerFusion::makeDefaultTestActivationLayer(activationParams, actType, in_channels);
+
+    Backend backendId = get<0>(get<4>(GetParam()));
+    Target targetId = get<1>(get<4>(GetParam()));
+
+    // bug: https://github.com/opencv/opencv/issues/17945
+    if (eltwiseOp != "sum" && backendId == DNN_BACKEND_OPENCV && (targetId == DNN_TARGET_OPENCL || targetId == DNN_TARGET_OPENCL_FP16))
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL);
+
+    // bug: https://github.com/opencv/opencv/issues/17953
+    if (eltwiseOp == "sum" && actType == "ChannelsPReLU" && bias_term == false &&
+        backendId == DNN_BACKEND_OPENCV && (targetId == DNN_TARGET_OPENCL || targetId == DNN_TARGET_OPENCL_FP16))
+    {
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL);
+    }
+
+    // bug: https://github.com/opencv/opencv/issues/17964
+    if (actType == "Power" && backendId == DNN_BACKEND_OPENCV && (targetId == DNN_TARGET_OPENCL || targetId == DNN_TARGET_OPENCL_FP16))
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL);
+
+    Net net;
+    int convId = net.addLayer(convParams.name, convParams.type, convParams);
+    int eltwiseId = net.addLayer(eltwiseParams.name, eltwiseParams.type, eltwiseParams);
+    int activId = net.addLayer(activationParams.name, activationParams.type, activationParams);
+    net.connect(0, 0, convId, 0);
+    net.connect(convId, 0, eltwiseId, 0);
+    net.connect(0, 0, eltwiseId, 1);
+    net.connect(eltwiseId, 0, activId, 0);
+
+    std::vector<int> expectedFusedLayers;
+    if (backendId == DNN_BACKEND_OPENCV)
+    {
+        if (targetId == DNN_TARGET_CPU)
+            expectedFusedLayers.push_back(activId); // activation is fused with eltwise layer
+        else if (targetId == DNN_TARGET_OPENCL || targetId == DNN_TARGET_OPENCL_FP16)
+        {
+            if (actType == "ReLU" || actType == "ChannelsPReLU" || actType == "Power")
+            {
+                expectedFusedLayers.push_back(eltwiseId);
+                expectedFusedLayers.push_back(activId);
+            }
+        }
+    }
+
+    TestLayerFusion::test(input, net, backendId, targetId, expectedFusedLayers);
+}
+INSTANTIATE_TEST_CASE_P(TestLayerFusion, ConvolutionEltwiseActivationFusion, Combine(
+/* bias */              testing::Bool(),
+/* eltwise op */        TestLayerFusion::eltwiseOpList(),
+/* eltwise weighted */  testing::Bool(),
+/* activation */        TestLayerFusion::activationLayersList(),
+                        TestLayerFusion::dnnBackendsAndTargetsForFusionTests()
+));
+
+typedef TestWithParam<tuple<bool, std::string, std::string, bool, tuple<Backend, Target> > > ConvolutionActivationEltwiseFusion;
+TEST_P(ConvolutionActivationEltwiseFusion, Accuracy)
+{
+    //                 input
+    //                   |
+    //    -------------------------------
+    //    |                             |
+    //    |                     ----------------
+    //    |                     |  convolution |
+    //    |                     ----------------
+    //    |                             |
+    //    |                     ----------------
+    //    |                     |  activation  |
+    //    |                     ----------------
+    //    |                             |
+    //    |       ----------------      |
+    //    --------| eltwise sum  |-------
+    //            ----------------
+    //                   |
+
+    const int batch_size = 2, in_channels = 16;
+    const int in_height = 16, in_width = 16;
+    int inputShape[] = {batch_size, in_channels, in_height, in_width};
+    Mat input(4, &inputShape[0], CV_32F);
+    randu(input, 1.0f, 2.0f); // avoid small values to test eltwise div
+
+    bool bias_term = get<0>(GetParam());
+    LayerParams convParams;
+    TestLayerFusion::makeDefaultTestConvolutionLayer(convParams, in_channels, in_channels, bias_term);
+
+    std::string actType = get<1>(GetParam());
+    LayerParams activationParams;
+    TestLayerFusion::makeDefaultTestActivationLayer(activationParams, actType, in_channels);
+
+    std::string eltwiseOp = get<2>(GetParam());
+    bool weightedEltwise = get<3>(GetParam());
+    if (eltwiseOp != "sum" && weightedEltwise)
+            throw SkipTestException("weighted eltwise not supported");
+    LayerParams eltwiseParams;
+    TestLayerFusion::makeDefaultTestEltwiseLayer(eltwiseParams, eltwiseOp, false);
+
+    Backend backendId = get<0>(get<4>(GetParam()));
+    Target targetId = get<1>(get<4>(GetParam()));
+
+    // bug: https://github.com/opencv/opencv/issues/17964
+    if (actType == "Power" && backendId == DNN_BACKEND_OPENCV && (targetId == DNN_TARGET_OPENCL || targetId == DNN_TARGET_OPENCL_FP16))
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL);
+
+    // bug: https://github.com/opencv/opencv/issues/17953
+    if (actType == "ChannelsPReLU" && bias_term == false &&
+        backendId == DNN_BACKEND_OPENCV && (targetId == DNN_TARGET_OPENCL || targetId == DNN_TARGET_OPENCL_FP16))
+    {
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL);
+    }
+
+    Net net;
+    int convId = net.addLayer(convParams.name, convParams.type, convParams);
+    int activId = net.addLayer(activationParams.name, activationParams.type, activationParams);
+    int eltwiseId = net.addLayer(eltwiseParams.name, eltwiseParams.type, eltwiseParams);
+    net.connect(0, 0, convId, 0);
+    net.connect(convId, 0, activId, 0);
+    net.connect(activId, 0, eltwiseId, 0);
+    net.connect(0, 0, eltwiseId, 1);
+
+    std::vector<int> expectedFusedLayers;
+    if (backendId == DNN_BACKEND_OPENCV)
+    {
+        if (targetId == DNN_TARGET_CPU)
+            expectedFusedLayers.push_back(activId); // activation fused with convolution
+        else if (targetId == DNN_TARGET_OPENCL || targetId == DNN_TARGET_OPENCL_FP16)
+        {
+            if (actType == "ReLU" || actType == "ChannelsPReLU" || actType == "ReLU6" || actType == "TanH" || actType == "Power")
+                expectedFusedLayers.push_back(activId); // activation fused with convolution
+        }
+    }
+
+    TestLayerFusion::test(input, net, backendId, targetId, expectedFusedLayers);
+}
+INSTANTIATE_TEST_CASE_P(TestLayerFusion, ConvolutionActivationEltwiseFusion, Combine(
+/* bias */              testing::Bool(),
+/* activation */        TestLayerFusion::activationLayersList(),
+/* eltwise op */        TestLayerFusion::eltwiseOpList(),
+/* eltwise weighted */  testing::Bool(),
+                        TestLayerFusion::dnnBackendsAndTargetsForFusionTests()
+));
 
 }} // namespace

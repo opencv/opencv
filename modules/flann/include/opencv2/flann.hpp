@@ -95,6 +95,8 @@ using ::cvflann::MaxDistance;
 using ::cvflann::HammingLUT;
 using ::cvflann::Hamming;
 using ::cvflann::Hamming2;
+using ::cvflann::DNAmmingLUT;
+using ::cvflann::DNAmming2;
 using ::cvflann::HistIntersectionDistance;
 using ::cvflann::HellingerDistance;
 using ::cvflann::ChiSquareDistance;
@@ -130,6 +132,14 @@ performed using library calls, if available. Lookup table implementation is used
 
 cv::flann::Hamming2 - %Hamming distance functor. Population count is
 implemented in 12 arithmetic operations (one of which is multiplication).
+
+cv::flann::DNAmmingLUT -  %Adaptation of the Hamming distance functor to DNA comparison.
+As the four bases A, C, G, T of the DNA (or A, G, C, U for RNA) can be coded on 2 bits,
+it counts the bits pairs differences between two sequences using a lookup table implementation.
+
+cv::flann::DNAmming2 - %Adaptation of the Hamming distance functor to DNA comparison.
+Bases differences count are vectorised thanks to arithmetic operations using standard
+registers (AVX2 and AVX-512 should come in a near future).
 
 cv::flann::HistIntersectionDistance - The histogram
 intersection distance functor.
@@ -191,8 +201,28 @@ public:
             KDTreeIndexParams( int trees = 4 );
         };
         @endcode
+        - **HierarchicalClusteringIndexParams** When passing an object of this type the index constructed
+        will be a hierarchical tree of clusters, dividing each set of points into n clusters whose centers
+        are picked among the points without further refinement of their position.
+        This algorithm fits both floating, integer and binary vectors. :
+        @code
+        struct HierarchicalClusteringIndexParams : public IndexParams
+        {
+            HierarchicalClusteringIndexParams(
+                int branching = 32,
+                flann_centers_init_t centers_init = CENTERS_RANDOM,
+                int trees = 4,
+                int leaf_size = 100);
+
+        };
+        @endcode
         - **KMeansIndexParams** When passing an object of this type the index constructed will be a
-        hierarchical k-means tree. :
+        hierarchical k-means tree (one tree by default), dividing each set of points into n clusters
+        whose barycenters are refined iteratively.
+        Note that this algorithm has been extended to the support of binary vectors as an alternative
+        to LSH when knn search speed is the criterium. It will also outperform LSH when processing
+        directly (i.e. without the use of MCA/PCA) datasets whose points share mostly the same values
+        for most of the dimensions. It is recommended to set more than one tree with binary data. :
         @code
         struct KMeansIndexParams : public IndexParams
         {
@@ -200,7 +230,8 @@ public:
                 int branching = 32,
                 int iterations = 11,
                 flann_centers_init_t centers_init = CENTERS_RANDOM,
-                float cb_index = 0.2 );
+                float cb_index = 0.2,
+                int trees = 1);
         };
         @endcode
         - **CompositeIndexParams** When using a parameters object of this type the index created
@@ -219,14 +250,15 @@ public:
         - **LshIndexParams** When using a parameters object of this type the index created uses
         multi-probe LSH (by Multi-Probe LSH: Efficient Indexing for High-Dimensional Similarity Search
         by Qin Lv, William Josephson, Zhe Wang, Moses Charikar, Kai Li., Proceedings of the 33rd
-        International Conference on Very Large Data Bases (VLDB). Vienna, Austria. September 2007) :
+        International Conference on Very Large Data Bases (VLDB). Vienna, Austria. September 2007).
+        This algorithm is designed for binary vectors. :
         @code
         struct LshIndexParams : public IndexParams
         {
             LshIndexParams(
-                unsigned int table_number,
-                unsigned int key_size,
-                unsigned int multi_probe_level );
+                int table_number,
+                int key_size,
+                int multi_probe_level );
         };
         @endcode
         - **AutotunedIndexParams** When passing an object of this type the index created is
@@ -536,7 +568,7 @@ private:
 @param features The points to be clustered. The matrix must have elements of type
 Distance::ElementType.
 @param centers The centers of the clusters obtained. The matrix must have type
-Distance::ResultType. The number of rows in this matrix represents the number of clusters desired,
+Distance::CentersType. The number of rows in this matrix represents the number of clusters desired,
 however, because of the way the cut in the hierarchical tree is chosen, the number of clusters
 computed will be the highest number of the form (branching-1)\*k+1 that's lower than the number of
 clusters desired, where branching is the tree's branching factor (see description of the
@@ -553,15 +585,15 @@ int hierarchicalClustering(const Mat& features, Mat& centers, const ::cvflann::K
                            Distance d = Distance())
 {
     typedef typename Distance::ElementType ElementType;
-    typedef typename Distance::ResultType DistanceType;
+    typedef typename Distance::CentersType CentersType;
 
     CV_Assert(features.type() == CvType<ElementType>::type());
     CV_Assert(features.isContinuous());
     ::cvflann::Matrix<ElementType> m_features((ElementType*)features.ptr<ElementType>(0), features.rows, features.cols);
 
-    CV_Assert(centers.type() == CvType<DistanceType>::type());
+    CV_Assert(centers.type() == CvType<CentersType>::type());
     CV_Assert(centers.isContinuous());
-    ::cvflann::Matrix<DistanceType> m_centers((DistanceType*)centers.ptr<DistanceType>(0), centers.rows, centers.cols);
+    ::cvflann::Matrix<CentersType> m_centers((CentersType*)centers.ptr<CentersType>(0), centers.rows, centers.cols);
 
     return ::cvflann::hierarchicalClustering<Distance>(m_features, m_centers, params, d);
 }
