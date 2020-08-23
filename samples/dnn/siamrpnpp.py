@@ -289,7 +289,7 @@ class SiamRPNTracker:
         best_idx = np.argmax(pscore)
         bbox = pred_bbox[:, best_idx] / scale_z
         lr = penalty[best_idx] * score[best_idx] * self.track_lr
-        
+
         cpx, cpy = self.center_pos
         x,y,w,h = bbox
         cx = x + cpx
