@@ -17,11 +17,11 @@ class OSXBuilder(Builder):
     def getToolchain(self, arch, target):
         return None
 
-    def getBuildCommand(self, archs, target):
+    def getBuildCommand(self, arch, target):
         buildcmd = [
             "xcodebuild",
             "MACOSX_DEPLOYMENT_TARGET=" + os.environ['MACOSX_DEPLOYMENT_TARGET'],
-            "ARCHS=%s" % archs[0],
+            "ARCHS=%s" % arch,
             "-sdk", target.lower(),
             "-configuration", "Debug" if self.debug else "Release",
             "-parallelizeTargets",
