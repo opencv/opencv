@@ -229,10 +229,8 @@ class Builder:
                 cmakecmd.append("-DCMAKE_SYSTEM_PROCESSOR=" + arch)
                 cmakecmd.append("-DCMAKE_OSX_ARCHITECTURES=" + arch)
                 cmakecmd.append("-DCPU_BASELINE=DETECT")
-            if arch != "x86_64":
-                cmakecmd.append("-DWITH_IPP=OFF")
-            if arch != "arm64":
-                cmakecmd.append("-DENABLE_NEON=OFF")
+                cmakecmd.append("-DCMAKE_CROSSCOMPILING=ON")
+                cmakecmd.append("-DOPENCV_WORKAROUND_CMAKE_20989=ON")
 
         cmakecmd.append(dir)
         cmakecmd.extend(cmakeargs)
