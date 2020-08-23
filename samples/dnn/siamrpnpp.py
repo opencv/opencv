@@ -29,18 +29,18 @@ class ModelBuilder():
         """ Takes the template of size (1, 1, 127, 127) as an input to generate kernel
         """
         self.target_net.setInput(z)
-        outNames = ['output_1', 'output_2', 'output_3']
+        outNames = self.target_net.getUnconnectedOutLayersNames()
         self.zfs_1, self.zfs_2, self.zfs_3 = self.target_net.forward(outNames)
 
     def track(self, x):
         """ Takes the search of size (1, 1, 255, 255) as an input to generate classification score and bounding box regression
         """
         self.search_net.setInput(x)
-        outNames = ['output_1', 'output_2', 'output_3']
+        outNames = self.search_net.getUnconnectedOutLayersNames()
         xfs_1, xfs_2, xfs_3 = self.search_net.forward(outNames)
         self.rpn_head.setInput(np.stack([self.zfs_1, self.zfs_2, self.zfs_3]), 'input_1')
         self.rpn_head.setInput(np.stack([xfs_1, xfs_2, xfs_3]), 'input_2')
-        outNames = ['output_1', 'output_2']
+        outNames = self.rpn_head.getUnconnectedOutLayersNames()
         cls, loc = self.rpn_head.forward(outNames)
         return {'cls': cls, 'loc': loc}
 
@@ -110,16 +110,18 @@ class SiamRPNTracker:
         if isinstance(pos, float):
             pos = [pos, pos]
         sz = original_sz
-        im_sz = im.shape
+        im_h = im.shape[0]
+        im_w = im.shape[1]
         c = (original_sz + 1) / 2
-        context_xmin = np.floor(pos[0] - c + 0.5)
+        cx, cy = pos
+        context_xmin = np.floor(cx - c + 0.5)
         context_xmax = context_xmin + sz - 1
-        context_ymin = np.floor(pos[1] - c + 0.5)
+        context_ymin = np.floor(cy - c + 0.5)
         context_ymax = context_ymin + sz - 1
         left_pad = int(max(0., -context_xmin))
         top_pad = int(max(0., -context_ymin))
-        right_pad = int(max(0., context_xmax - im_sz[1] + 1))
-        bottom_pad = int(max(0., context_ymax - im_sz[0] + 1))
+        right_pad = int(max(0., context_xmax - im_w + 1))
+        bottom_pad = int(max(0., context_ymax - im_h + 1))
         context_xmin += left_pad
         context_xmax += left_pad
         context_ymin += top_pad
@@ -167,7 +169,7 @@ class SiamRPNTracker:
         x1, y1, x2, y2 = anchor[:, 0], anchor[:, 1], anchor[:, 2], anchor[:, 3]
         anchor = np.stack([(x1 + x2) * 0.5, (y1 + y2) * 0.5, x2 - x1, y2 - y1], 1)
         total_stride = anchors.stride
-        anchor_num = anchor.shape[0]
+        anchor_num = anchors.anchor_num
         anchor = np.tile(anchor, score_size * score_size).reshape((-1, 4))
         ori = - (score_size // 2) * total_stride
         xx, yy = np.meshgrid([ori + total_stride * dx for dx in range(score_size)],
@@ -198,7 +200,7 @@ class SiamRPNTracker:
         """
         Softmax in the direction of the depth of the layer
         """
-        x.astype(dtype=np.float32)
+        x = x.astype(dtype=np.float32)
         x_max = x.max(axis=1)[:, np.newaxis]
         e_x = np.exp(x-x_max)
         div = np.sum(e_x, axis=1)[:, np.newaxis]
@@ -223,10 +225,11 @@ class SiamRPNTracker:
         """
         Adjusting the bounding box
         """
-        cx = max(0, min(cx, boundary[1]))
-        cy = max(0, min(cy, boundary[0]))
-        width = max(10, min(width, boundary[1]))
-        height = max(10, min(height, boundary[0]))
+        bbox_h, bbox_w = boundary
+        cx = max(0, min(cx, bbox_w))
+        cy = max(0, min(cy, bbox_h))
+        width = max(10, min(width, bbox_w))
+        height = max(10, min(height, bbox_h))
         return cx, cy, width, height
 
     def init(self, img, bbox):
@@ -237,9 +240,10 @@ class SiamRPNTracker:
         """
         x,y,h,w = bbox
         self.center_pos = np.array([x + (h - 1) / 2, y + (w - 1) / 2])
-        self.size = np.array([h, w])
-        w_z = self.size[0] + self.track_context_amount * np.sum(self.size)
-        h_z = self.size[1] + self.track_context_amount * np.sum(self.size)
+        self.h = h
+        self.w = w
+        w_z = self.w + self.track_context_amount * np.add(h, w)
+        h_z = self.h + self.track_context_amount * np.add(h, w)
         s_z = round(np.sqrt(w_z * h_z))
         self.channel_average = np.mean(img, axis=(0, 1))
         z_crop = self.get_subwindow(img, self.center_pos, self.track_exemplar_size, s_z, self.channel_average)
@@ -252,8 +256,8 @@ class SiamRPNTracker:
         Return:
             bbox(list):[x, y, width, height]
         """
-        w_z = self.size[0] + self.track_context_amount * np.sum(self.size)
-        h_z = self.size[1] + self.track_context_amount * np.sum(self.size)
+        w_z = self.w + self.track_context_amount * np.add(self.w, self.h)
+        h_z = self.h + self.track_context_amount * np.add(self.w, self.h)
         s_z = np.sqrt(w_z * h_z)
         scale_z = self.track_exemplar_size / s_z
         s_x = s_z * (self.track_instance_size / self.track_exemplar_size)
@@ -271,10 +275,10 @@ class SiamRPNTracker:
 
         # scale penalty
         s_c = change(sz(pred_bbox[2, :], pred_bbox[3, :]) /
-                     (sz(self.size[0] * scale_z, self.size[1] * scale_z)))
+                     (sz(self.w * scale_z, self.h * scale_z)))
 
         # aspect ratio penalty
-        r_c = change((self.size[0] / self.size[1]) /
+        r_c = change((self.w / self.h) /
                      (pred_bbox[2, :] / pred_bbox[3, :]))
         penalty = np.exp(-(r_c * s_c - 1) * self.track_penalty_k)
         pscore = penalty * score
@@ -285,20 +289,23 @@ class SiamRPNTracker:
         best_idx = np.argmax(pscore)
         bbox = pred_bbox[:, best_idx] / scale_z
         lr = penalty[best_idx] * score[best_idx] * self.track_lr
-
-        cx = bbox[0] + self.center_pos[0]
-        cy = bbox[1] + self.center_pos[1]
+        
+        cpx, cpy = self.center_pos
+        x,y,w,h = bbox
+        cx = x + cpx
+        cy = y + cpy
 
         # smooth bbox
-        width = self.size[0] * (1 - lr) + bbox[2] * lr
-        height = self.size[1] * (1 - lr) + bbox[3] * lr
+        width = self.w * (1 - lr) + w * lr
+        height = self.h * (1 - lr) + h * lr
 
         # clip boundary
         cx, cy, width, height = self._bbox_clip(cx, cy, width, height, img.shape[:2])
 
         # udpate state
         self.center_pos = np.array([cx, cy])
-        self.size = np.array([width, height])
+        self.w = width
+        self.h = height
         bbox = [cx - width / 2, cy - height / 2, width, height]
         best_score = score[best_idx]
         return {'bbox': bbox, 'best_score': best_score}
@@ -322,9 +329,9 @@ def main():
     """ Sample SiamRPN Tracker
     """
     # Computation backends supported by layers
-    backends = (cv.dnn.DNN_BACKEND_DEFAULT, cv.dnn.DNN_BACKEND_HALIDE, cv.dnn.DNN_BACKEND_INFERENCE, cv.dnn.DNN_BACKEND_OPENCV)
+    backends = (cv.dnn.DNN_BACKEND_DEFAULT, cv.dnn.DNN_BACKEND_HALIDE, cv.dnn.DNN_BACKEND_INFERENCE_ENGINE, cv.dnn.DNN_BACKEND_OPENCV)
     # Target Devices for computation
-    targets = (cv.dnn.DNN_TARGET_CPU, cv.dnn.DNN_TARGET_OPENCL, cv.dnn.DNN_TARGET_OPENCL, cv.dnn.DNN_TARGET_OPENCL_FP16, cv.dnn.DNN_TARGET_MYRIAD)
+    targets = (cv.dnn.DNN_TARGET_CPU, cv.dnn.DNN_TARGET_OPENCL, cv.dnn.DNN_TARGET_OPENCL_FP16, cv.dnn.DNN_TARGET_MYRIAD)
 
     parser = argparse.ArgumentParser(description='Use this script to run SiamRPN++ Visual Tracker',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -357,8 +364,14 @@ def main():
 
     #Load the Networks
     target_net = cv.dnn.readNetFromONNX(args.target_net)
+    target_net.setPreferableBackend(args.backend)
+    target_net.setPreferableTarget(args.target)
     search_net = cv.dnn.readNetFromONNX(args.search_net)
+    search_net.setPreferableBackend(args.backend)
+    search_net.setPreferableTarget(args.target)
     rpn_head = cv.dnn.readNetFromONNX(args.rpn_head)
+    rpn_head.setPreferableBackend(args.backend)
+    rpn_head.setPreferableTarget(args.target)
     model = ModelBuilder(target_net, search_net, rpn_head)
     tracker = SiamRPNTracker(model)
 
