@@ -887,3 +887,15 @@ save_onnx_data_and_model(input, output, 'reduce_sum', 'ReduceSum', axes=(-1), ke
 x = Variable(torch.randn(1, 2, 2))
 model = Expand(shape=[2, -1, -1, -1])
 save_data_and_model("expand_neg_batch", x, model)
+
+class Power(nn.Module):
+  def __init__(self, norm):
+    super(Power, self).__init__()
+    self.p = norm
+
+  def forward(self, x):
+    return x.pow(self.p)
+
+x = Variable(torch.randn(2, 2))
+model = Power(2)
+save_data_and_model("pow2", x, model)
