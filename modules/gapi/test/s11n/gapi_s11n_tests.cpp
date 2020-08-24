@@ -23,6 +23,21 @@ private:
     std::vector<char> m_buffer;
 };
 
+namespace
+{
+    template<typename T>
+    bool operator==(const cv::detail::VectorRef& a, const cv::detail::VectorRef& b)
+    {
+        return a.rref<T>() == b.rref<T>();
+    }
+
+    template<typename T>
+    bool operator==(const cv::detail::OpaqueRef& a, const cv::detail::OpaqueRef& b)
+    {
+        return a.rref<T>() == b.rref<T>();
+    }
+}
+
 TEST_F(S11N_Basic, Test_int_pos) {
     int x = 42;
     put(x);
@@ -219,7 +234,7 @@ TEST_F(S11N_Basic, Test_RunArg_Opaque) {
     put(v);
     cv::GRunArg out_v = get<cv::GRunArg>();
     cv::detail::OpaqueRef out_op = cv::util::get<cv::detail::OpaqueRef>(out_v);
-    EXPECT_TRUE(op.operator==<int>(out_op));
+    EXPECT_TRUE(operator==<int>(op, out_op));
 }
 
 TEST_F(S11N_Basic, Test_RunArgs_Opaque) {
@@ -233,8 +248,8 @@ TEST_F(S11N_Basic, Test_RunArgs_Opaque) {
     cv::GRunArgs out_v = get<cv::GRunArgs>();
     cv::detail::OpaqueRef out_op1 = cv::util::get<cv::detail::OpaqueRef>(out_v[0]);
     cv::detail::OpaqueRef out_op2 = cv::util::get<cv::detail::OpaqueRef>(out_v[1]);
-    EXPECT_TRUE(op1.operator==<cv::Point>(out_op1));
-    EXPECT_TRUE(op2.operator==<cv::Size>(out_op2));
+    EXPECT_TRUE(operator==<cv::Point>(op1, out_op1));
+    EXPECT_TRUE(operator==<cv::Size>(op2, out_op2));
 }
 
 TEST_F(S11N_Basic, Test_RunArg_Array) {
@@ -263,8 +278,8 @@ TEST_F(S11N_Basic, Test_RunArgs_Array) {
     cv::GRunArgs out_v = get<cv::GRunArgs>();
     cv::detail::VectorRef out_op1 = cv::util::get<cv::detail::VectorRef>(out_v[0]);
     cv::detail::VectorRef out_op2 = cv::util::get<cv::detail::VectorRef>(out_v[1]);
-    EXPECT_TRUE(op1.operator==<cv::Scalar>(out_op1));
-    EXPECT_TRUE(op2.operator==<double>(out_op2));
+    EXPECT_TRUE(operator==<cv::Scalar>(op1, out_op1));
+    EXPECT_TRUE(operator==<double>(op2, out_op2));
 }
 
 TEST_F(S11N_Basic, Test_RunArgs_MatScalar) {

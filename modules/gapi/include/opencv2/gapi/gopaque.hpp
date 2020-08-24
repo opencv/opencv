@@ -103,18 +103,8 @@ namespace detail
 
     template <typename T>
     void GOpaqueU::storeKind(){
-    if (std::is_same<util::decay_t<T>, bool>::value)
-        setKind(cv::detail::OpaqueKind::CV_BOOL);
-    else if (std::is_same<util::decay_t<T>, int>::value)
-        setKind(cv::detail::OpaqueKind::CV_INT);
-    else if (std::is_same<util::decay_t<T>, double>::value)
-        setKind(cv::detail::OpaqueKind::CV_DOUBLE);
-    else if (std::is_same<util::decay_t<T>, cv::Size>::value)
-        setKind(cv::detail::OpaqueKind::CV_SIZE);
-    else if (std::is_same<util::decay_t<T>, cv::Rect>::value)
-        setKind(cv::detail::OpaqueKind::CV_RECT);
-    else if (std::is_same<util::decay_t<T>, cv::Point>::value)
-        setKind(cv::detail::OpaqueKind::CV_POINT);
+        // FIXME: Add assert here on cv::Mat and cv::Scalar?
+        setKind(cv::detail::GOpaqueTraits<T>::kind);
     };
 
     // This class represents a typed object reference.
@@ -233,6 +223,7 @@ namespace detail
     class OpaqueRef
     {
         std::shared_ptr<BasicOpaqueRef> m_ref;
+        cv::detail::OpaqueKind m_kind;
 
         template<typename T> inline void check() const
         {
@@ -248,18 +239,19 @@ namespace detail
         >
         // FIXME: probably won't work with const object
         explicit OpaqueRef(T&& obj) :
-            m_ref(new OpaqueRefT<util::decay_t<T>>(std::forward<T>(obj))) {}
+            m_ref(new OpaqueRefT<util::decay_t<T>>(std::forward<T>(obj))),
+            m_kind(GOpaqueTraits<T>::kind) {}
 
         template<typename T>
-        bool operator==(const OpaqueRef& other) const
+        bool holds(cv::detail::OpaqueKind kind = cv::detail::OpaqueKind::CV_UNKNOWN) const
         {
-            return this->rref<T>() == other.rref<T>();
+            if (this->m_kind == kind) return true;
+            return dynamic_cast<OpaqueRefT<T>*>(m_ref.get()) != nullptr;
         }
 
-        template<typename T>
-        bool holds() const
+        cv::detail::OpaqueKind getKind() const
         {
-            return dynamic_cast<OpaqueRefT<T>*>(m_ref.get()) != nullptr;
+            return m_kind;
         }
 
         template<typename T> void reset()
@@ -268,6 +260,12 @@ namespace detail
 
             check<T>();
             static_cast<OpaqueRefT<T>&>(*m_ref).reset();
+        }
+
+        template <typename T>
+        void storeKind()
+        {
+            m_kind = cv::detail::GOpaqueTraits<T>::kind;
         }
 
         template<typename T> T& wref()
@@ -317,11 +315,12 @@ private:
 
     static void CTor(detail::OpaqueRef& ref) {
         ref.reset<HT>();
+        ref.storeKind<HT>();
     }
     void putDetails() {
         m_ref.setConstructFcn(&CTor);
-        m_ref.specifyType<HT>();
-        m_ref.storeKind<HT>();
+        m_ref.specifyType<HT>(); // FIXME: to unify those 2 to avoid excessive dynamic_cast
+        m_ref.storeKind<HT>();   //
     }
 
     detail::GOpaqueU m_ref;

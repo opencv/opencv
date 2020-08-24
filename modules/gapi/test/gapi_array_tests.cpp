@@ -187,4 +187,12 @@ TEST(GArray_VectorRef, TestMov)
     EXPECT_EQ(V{}, vref.rref<I>());
     EXPECT_EQ(V{}, vtest);
 }
+
+TEST(GArray_VectorRef, TestRvalue)
+{
+    // Warning: this test is testing some not-very-public APIs
+    cv::detail::VectorRef vref(std::vector<int>{3, 5, -4});
+    auto v = std::vector<int>{3, 5, -4};
+    EXPECT_EQ(vref.rref<int>(), v);
+}
 } // namespace opencv_test

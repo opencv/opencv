@@ -33,6 +33,8 @@ namespace detail
     struct TransformTag
     {};
 
+    // This enum is utilized mostly by GArray and GOpaque to store and recognize their internal data
+    // types (aka Host type). Also it is widely used during serialization routine.
     enum class OpaqueKind: int
     {
         CV_UNKNOWN,    // Unknown, generic, opaque-to-GAPI data type unsupported in graph seriallization
@@ -45,6 +47,20 @@ namespace detail
         CV_SCALAR,     // cv::Scalar user G-API data
         CV_MAT,        // cv::Mat user G-API data
     };
+
+    // Type traits helper which simplifies the extraction of kind from type
+    template<typename T> struct GOpaqueTraits;
+    template<typename T> struct GOpaqueTraits    { static constexpr const OpaqueKind kind = OpaqueKind::CV_UNKNOWN; };
+    template<> struct GOpaqueTraits<int>         { static constexpr const OpaqueKind kind = OpaqueKind::CV_INT; };
+    template<> struct GOpaqueTraits<double>      { static constexpr const OpaqueKind kind = OpaqueKind::CV_DOUBLE; };
+    template<> struct GOpaqueTraits<cv::Size>    { static constexpr const OpaqueKind kind = OpaqueKind::CV_SIZE; };
+    template<> struct GOpaqueTraits<bool>        { static constexpr const OpaqueKind kind = OpaqueKind::CV_BOOL; };
+    template<> struct GOpaqueTraits<cv::Scalar>  { static constexpr const OpaqueKind kind = OpaqueKind::CV_SCALAR; };
+    template<> struct GOpaqueTraits<cv::Point>   { static constexpr const OpaqueKind kind = OpaqueKind::CV_POINT; };
+    template<> struct GOpaqueTraits<cv::Mat>     { static constexpr const OpaqueKind kind = OpaqueKind::CV_MAT; };
+    template<> struct GOpaqueTraits<cv::Rect>    { static constexpr const OpaqueKind kind = OpaqueKind::CV_RECT; };
+    using GOpaqueTraitsArrayTypes = std::tuple<int, double, cv::Size, cv::Scalar, cv::Point, cv::Mat, cv::Rect>;
+    using GOpaqueTraitsOpaqueTypes = std::tuple<bool, int, double, cv::Size, cv::Point, cv::Rect>;
 } // namespace detail
 
 // This definition is here because it is reused by both public(?) and internal

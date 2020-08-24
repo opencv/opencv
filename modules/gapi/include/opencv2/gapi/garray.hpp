@@ -110,22 +110,7 @@ namespace detail
 
     template <typename T>
     void GArrayU::storeKind(){
-    if (std::is_same<util::decay_t<T>, bool>::value)
-        setKind(cv::detail::OpaqueKind::CV_BOOL);
-    else if (std::is_same<util::decay_t<T>, int>::value)
-        setKind(cv::detail::OpaqueKind::CV_INT);
-    else if (std::is_same<util::decay_t<T>, double>::value)
-        setKind(cv::detail::OpaqueKind::CV_DOUBLE);
-    else if (std::is_same<util::decay_t<T>, cv::Size>::value)
-        setKind(cv::detail::OpaqueKind::CV_SIZE);
-    else if (std::is_same<util::decay_t<T>, cv::Rect>::value)
-        setKind(cv::detail::OpaqueKind::CV_RECT);
-    else if (std::is_same<util::decay_t<T>, cv::Point>::value)
-        setKind(cv::detail::OpaqueKind::CV_POINT);
-    else if (std::is_same<util::decay_t<T>, cv::Mat>::value)
-        setKind(cv::detail::OpaqueKind::CV_MAT);
-    else if (std::is_same<util::decay_t<T>, cv::Scalar>::value)
-        setKind(cv::detail::OpaqueKind::CV_SCALAR);
+        setKind(cv::detail::GOpaqueTraits<T>::kind);
     };
 
     // This class represents a typed STL vector reference.
@@ -135,12 +120,14 @@ namespace detail
     class BasicVectorRef
     {
     public:
+        // These fields are set by the derived class(es)
         std::size_t    m_elemSize = 0ul;
         cv::GArrayDesc m_desc;
         virtual ~BasicVectorRef() {}
 
         virtual void mov(BasicVectorRef &ref) = 0;
         virtual const void* ptr() const = 0;
+        virtual std::size_t size() const = 0;
     };
 
     template<typename T> class VectorRefT final: public BasicVectorRef
@@ -235,6 +222,7 @@ namespace detail
         }
 
         virtual const void* ptr() const override { return &rref(); }
+        virtual std::size_t size() const override { return rref().size(); }
     };
 
     // This class strips type information from VectorRefT<> and makes it usable
@@ -247,6 +235,7 @@ namespace detail
     class VectorRef
     {
         std::shared_ptr<BasicVectorRef> m_ref;
+        cv::detail::OpaqueKind m_kind;
 
         template<typename T> inline void check() const
         {
@@ -256,20 +245,23 @@ namespace detail
 
     public:
         VectorRef() = default;
-        template<typename T> explicit VectorRef(const std::vector<T>& vec) : m_ref(new VectorRefT<T>(vec)) {}
-        template<typename T> explicit VectorRef(std::vector<T>& vec)       : m_ref(new VectorRefT<T>(vec)) {}
-        template<typename T> explicit VectorRef(std::vector<T>&& vec)      : m_ref(new VectorRefT<T>(std::move(vec))) {}
+        template<typename T> explicit VectorRef(const std::vector<T>& vec) :
+                                            m_ref(new VectorRefT<T>(vec)), m_kind(GOpaqueTraits<T>::kind) {}
+        template<typename T> explicit VectorRef(std::vector<T>& vec)       :
+                                            m_ref(new VectorRefT<T>(vec)), m_kind(GOpaqueTraits<T>::kind) {}
+        template<typename T> explicit VectorRef(std::vector<T>&& vec)      :
+                                            m_ref(new VectorRefT<T>(std::move(vec))), m_kind(GOpaqueTraits<T>::kind) {}
 
         template<typename T>
-        bool operator==(const VectorRef& other) const
+        bool holds(cv::detail::OpaqueKind kind = cv::detail::OpaqueKind::CV_UNKNOWN) const
         {
-            return this->rref<T>() == other.rref<T>();
+            if (this->m_kind == kind) return true;
+            return dynamic_cast<VectorRefT<T>*>(m_ref.get()) != nullptr;
         }
 
-        template<typename T>
-        bool holds() const
+        cv::detail::OpaqueKind getKind() const
         {
-            return dynamic_cast<VectorRefT<T>*>(m_ref.get()) != nullptr;
+            return m_kind;
         }
 
         template<typename T> void reset()
@@ -278,6 +270,12 @@ namespace detail
 
             check<T>();
             static_cast<VectorRefT<T>&>(*m_ref).reset();
+        }
+
+        template <typename T>
+        void storeKind()
+        {
+            m_kind = cv::detail::GOpaqueTraits<T>::kind;
         }
 
         template<typename T> std::vector<T>& wref()
@@ -300,6 +298,11 @@ namespace detail
         cv::GArrayDesc descr_of() const
         {
             return m_ref->m_desc;
+        }
+
+        std::size_t size() const
+        {
+            return m_ref->size();
         }
 
         // May be used to uniquely identify this object internally
@@ -345,11 +348,12 @@ private:
 
     static void VCTor(detail::VectorRef& vref) {
         vref.reset<HT>();
+        vref.storeKind<HT>();
     }
     void putDetails() {
         m_ref.setConstructFcn(&VCTor);
-        m_ref.specifyType<HT>();
-        m_ref.storeKind<HT>();
+        m_ref.specifyType<HT>();  // FIXME: to unify those 2 to avoid excessive dynamic_cast
+        m_ref.storeKind<HT>();    //
     }
 
     detail::GArrayU m_ref;

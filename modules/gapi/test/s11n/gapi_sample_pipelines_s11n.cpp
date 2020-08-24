@@ -312,7 +312,6 @@ namespace ThisTest
         }
     };
 
-    using GArrBool = GArray<bool>;
     using GArrInt = GArray<int>;
     using GArrDouble = GArray<double>;
     using GArrPoint = GArray<cv::Point>;
@@ -323,7 +322,7 @@ namespace ThisTest
 
     using GArrOut = std::tuple<GArrPoint, GArrSize, GArrRect, GArrMat>;
 
-    G_TYPED_KERNEL_M(ArrGenerate, <GArrOut(GArrBool, GArrInt, GArrDouble, GArrScalar)>, "test.s11n.garray")
+    G_TYPED_KERNEL_M(ArrGenerate, <GArrOut(GArrInt, GArrInt, GArrDouble, GArrScalar)>, "test.s11n.garray")
     {
         static std::tuple<GArrayDesc, GArrayDesc, GArrayDesc, GArrayDesc> outMeta(const GArrayDesc&, const GArrayDesc&,
                                                                                   const GArrayDesc&, const GArrayDesc&) {
@@ -333,7 +332,7 @@ namespace ThisTest
 
     GAPI_OCV_KERNEL(OCVArrGenerate, ArrGenerate)
     {
-        static void run(const std::vector<bool>& b, const std::vector<int>& i,
+        static void run(const std::vector<int>& b, const std::vector<int>& i,
                         const std::vector<double>& d, const std::vector<cv::Scalar>& sc,
                         std::vector<cv::Point>& p, std::vector<cv::Size>& s,
                         std::vector<cv::Rect>& r, std::vector<cv::Mat>& m)
@@ -346,7 +345,7 @@ namespace ThisTest
             for (std::size_t idx = 0; idx < b.size(); ++idx)
             {
                 p[idx] = cv::Point(i[idx], i[idx]*2);
-                s[idx] = b[idx] ? cv::Size(42, 42) : cv::Size(7, 7);
+                s[idx] = b[idx] == 1 ? cv::Size(42, 42) : cv::Size(7, 7);
                 int ii = static_cast<int>(d[idx]);
                 r[idx] = cv::Rect(ii, ii, ii, ii);
                 m[idx] = cv::Mat(3, 3, CV_8UC1, sc[idx]);
@@ -423,8 +422,7 @@ TEST(S11N, Pipeline_GOpaque)
 TEST(S11N, Pipeline_GArray)
 {
     using namespace ThisTest;
-    GArrBool in1;
-    GArrInt in2;
+    GArrInt in1, in2;
     GArrDouble in3;
     GArrScalar in4;
 
@@ -436,7 +434,7 @@ TEST(S11N, Pipeline_GArray)
     auto p = cv::gapi::serialize(c);
     auto dc = cv::gapi::deserialize<cv::GComputation>(p);
 
-    std::vector<bool> b {true, false, false};
+    std::vector<int> b {1, 0, -1};
     std::vector<int> i {3, 0 , 59};
     std::vector<double> d {0.7, 120.5, 44.14};
     std::vector<cv::Scalar> sc {cv::Scalar::all(10), cv::Scalar::all(15), cv::Scalar::all(99)};
@@ -449,7 +447,7 @@ TEST(S11N, Pipeline_GArray)
     for (std::size_t idx = 0; idx < b.size(); ++idx)
     {
         EXPECT_EQ(pp[idx], cv::Point(i[idx], i[idx]*2));
-        EXPECT_EQ(s[idx], b[idx] ? cv::Size(42, 42) : cv::Size(7, 7));
+        EXPECT_EQ(s[idx], b[idx] == 1 ? cv::Size(42, 42) : cv::Size(7, 7));
         int ii = static_cast<int>(d[idx]);
         EXPECT_EQ(r[idx], cv::Rect(ii, ii, ii, ii));
     }

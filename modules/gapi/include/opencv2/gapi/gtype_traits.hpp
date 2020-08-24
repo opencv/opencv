@@ -41,17 +41,6 @@ namespace detail
         GOPAQUE,      // a cv::GOpaqueU (note - exactly GOpaqueU, not GOpaque<T>!)
     };
 
-    template<typename T> struct GOpaqueTraits;
-    template<typename T> struct GOpaqueTraits    { static constexpr const OpaqueKind kind = OpaqueKind::CV_UNKNOWN; };
-    template<> struct GOpaqueTraits<int>         { static constexpr const OpaqueKind kind = OpaqueKind::CV_INT; };
-    template<> struct GOpaqueTraits<double>      { static constexpr const OpaqueKind kind = OpaqueKind::CV_DOUBLE; };
-    template<> struct GOpaqueTraits<cv::Size>    { static constexpr const OpaqueKind kind = OpaqueKind::CV_SIZE; };
-    template<> struct GOpaqueTraits<bool>        { static constexpr const OpaqueKind kind = OpaqueKind::CV_BOOL; };
-    template<> struct GOpaqueTraits<cv::Scalar>  { static constexpr const OpaqueKind kind = OpaqueKind::CV_SCALAR; };
-    template<> struct GOpaqueTraits<cv::Point>   { static constexpr const OpaqueKind kind = OpaqueKind::CV_POINT; };
-    template<> struct GOpaqueTraits<cv::Mat>     { static constexpr const OpaqueKind kind = OpaqueKind::CV_MAT; };
-    template<> struct GOpaqueTraits<cv::Rect>    { static constexpr const OpaqueKind kind = OpaqueKind::CV_RECT; };
-
     // Describe G-API types (G-types) with traits.  Mostly used by
     // cv::GArg to store meta information about types passed into
     // operation arguments. Please note that cv::GComputation is

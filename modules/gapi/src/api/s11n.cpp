@@ -44,7 +44,7 @@ std::vector<char> cv::gapi::serialize(const cv::GRunArgs& ra)
     return os.data();
 }
 
-// FIXME: This file should move from S11N to GRunArg-related entities.
+// FIXME: This function should move from S11N to GRunArg-related entities.
 // it has nothing to do with the S11N as it is
 cv::GRunArgsP cv::gapi::bind(cv::GRunArgs &results)
 {

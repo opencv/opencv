@@ -294,108 +294,81 @@ I::IStream& operator >> (I::IStream& is, cv::gapi::wip::IStreamSource::Ptr &)
 
 namespace
 {
-    template <typename T>
-    bool opaque_serialized(I::OStream& os, const cv::detail::OpaqueRef& ref, const cv::detail::OpaqueKind kind)
-    {
-        if (ref.holds<T>())
-        {
-            os << kind << ref.rref<T>();
-            return true;
-        }
-        return false;
-    }
+template<typename Ref, typename T, typename... Ts>
+struct putToStream;
 
-    template <typename T>
-    bool array_serialized(I::OStream& os, const cv::detail::VectorRef& ref, const cv::detail::OpaqueKind kind)
-    {
-        if (ref.holds<T>())
-        {
-            os << kind;
-            auto vec = ref.rref<T>();
-            // FIXME: add size to GArrayDesc
-            os << static_cast<int>(vec.size());
-            for (const auto& v : vec)
-                os << v;
-            return true;
-        }
-        return false;
-    }
+// FIXME: workaround to end the recursion
+template<typename Ref>
+struct putToStream<Ref, std::tuple<>>
+{
+    static void put(I::OStream&, const Ref &)
+    {}
+};
 
-    template <typename T>
-    void deserialize_array(I::IStream& is, cv::detail::VectorRef& ref, int sz)
+template<typename Ref, typename T, typename... Ts>
+struct putToStream<Ref, std::tuple<T, Ts...>>
+{
+    static void put(I::OStream& os, const Ref &r)
     {
-        ref.reset<T>();
-        ref.wref<T>() = std::vector<T>(sz);
-        auto& vec = ref.wref<T>();
-        for (typename std::vector<T>::reference v : vec)
-            is >> v;
+        if (r.template holds<T>()) {
+            os << r.template rref<T>();
+        } else {
+            putToStream<Ref, std::tuple<Ts...> >::put(os, r);
+        }
     }
-} // anonymous namespace
+};
+
+template<typename Ref, typename T, typename... Ts>
+struct getFromStream;
+
+// FIXME: workaround to end the recursion
+template<typename Ref>
+struct getFromStream<Ref, std::tuple<>>
+{
+    static void get(I::IStream&, Ref &, cv::detail::OpaqueKind)
+    {}
+};
+
+template<typename Ref, typename T, typename... Ts>
+struct getFromStream<Ref, std::tuple<T, Ts...>>
+{
+    static void get(I::IStream& is, Ref &r, cv::detail::OpaqueKind kind) {
+        if (kind == cv::detail::GOpaqueTraits<T>::kind) {
+            r.template reset<T>();
+            auto& val = r.template wref<T>();
+            is >> val;
+        } else {
+            getFromStream<Ref, std::tuple<Ts...> >::get(is, r, kind);
+        }
+    }
+};
+}
 
 I::OStream& operator<< (I::OStream& os, const cv::detail::VectorRef& ref)
 {
-    if (array_serialized<bool>(os, ref, cv::detail::OpaqueKind::CV_BOOL)) return os;
-    else if (array_serialized<int>(os, ref, cv::detail::OpaqueKind::CV_INT)) return os;
-    else if (array_serialized<double>(os, ref, cv::detail::OpaqueKind::CV_DOUBLE)) return os;
-    else if (array_serialized<cv::Point>(os, ref, cv::detail::OpaqueKind::CV_POINT)) return os;
-    else if (array_serialized<cv::Size>(os, ref, cv::detail::OpaqueKind::CV_SIZE)) return os;
-    else if (array_serialized<cv::Rect>(os, ref, cv::detail::OpaqueKind::CV_RECT)) return os;
-    else if (array_serialized<cv::Mat>(os, ref, cv::detail::OpaqueKind::CV_MAT)) return os;
-    else if (array_serialized<cv::Scalar>(os, ref, cv::detail::OpaqueKind::CV_SCALAR)) return os;
-    else GAPI_Assert(false && "Unsupported GArray type for serialization");
+    os << ref.getKind();
+    putToStream<cv::detail::VectorRef, cv::detail::GOpaqueTraitsArrayTypes>::put(os, ref);
     return os;
 }
 I::IStream& operator >> (I::IStream& is, cv::detail::VectorRef& ref)
 {
-    cv::detail::OpaqueKind type;
-    int sz;
-    is >> type >> sz;
-    switch (type)
-    {
-        case cv::detail::OpaqueKind::CV_BOOL   : { deserialize_array<bool>(is, ref, sz); break; }
-        case cv::detail::OpaqueKind::CV_INT    : { deserialize_array<int>(is, ref, sz); break; }
-        case cv::detail::OpaqueKind::CV_DOUBLE : { deserialize_array<double>(is, ref, sz); break; }
-        case cv::detail::OpaqueKind::CV_POINT  : { deserialize_array<cv::Point>(is, ref, sz); break; }
-        case cv::detail::OpaqueKind::CV_SIZE   : { deserialize_array<cv::Size>(is, ref, sz); break; }
-        case cv::detail::OpaqueKind::CV_RECT   : { deserialize_array<cv::Rect>(is, ref, sz); break; }
-        case cv::detail::OpaqueKind::CV_MAT    : { deserialize_array<cv::Mat>(is, ref, sz); break; }
-        case cv::detail::OpaqueKind::CV_SCALAR : { deserialize_array<cv::Scalar>(is, ref, sz); break; }
-        default:
-        {
-            GAPI_Assert(false && "Unsupported GArray type for deserialization");
-            break;
-        }
-    }
+    cv::detail::OpaqueKind kind;
+    is >> kind;
+    getFromStream<cv::detail::VectorRef, cv::detail::GOpaqueTraitsArrayTypes>::get(is, ref, kind);
     return is;
 }
 
 I::OStream& operator<< (I::OStream& os, const cv::detail::OpaqueRef& ref)
 {
-    if (opaque_serialized<bool>(os, ref, cv::detail::OpaqueKind::CV_BOOL)) return os;
-    else if (opaque_serialized<int>(os, ref, cv::detail::OpaqueKind::CV_INT)) return os;
-    else if (opaque_serialized<double>(os, ref, cv::detail::OpaqueKind::CV_DOUBLE)) return os;
-    else if (opaque_serialized<cv::Point>(os, ref, cv::detail::OpaqueKind::CV_POINT)) return os;
-    else if (opaque_serialized<cv::Size>(os, ref, cv::detail::OpaqueKind::CV_SIZE)) return os;
-    else if (opaque_serialized<cv::Rect>(os, ref, cv::detail::OpaqueKind::CV_RECT)) return os;
-    else GAPI_Assert(false && "Unsupported GOpaque type for serialization");
+    os << ref.getKind();
+    putToStream<cv::detail::OpaqueRef, cv::detail::GOpaqueTraitsOpaqueTypes>::put(os, ref);
     return os;
 }
 I::IStream& operator >> (I::IStream& is, cv::detail::OpaqueRef& ref)
 {
-    cv::detail::OpaqueKind type;
-    is >> type;
-    switch (type)
-    {
-        case cv::detail::OpaqueKind::CV_BOOL   : { ref.reset<bool>();      is >> ref.wref<bool>(); break; }
-        case cv::detail::OpaqueKind::CV_INT    : { ref.reset<int>();       is >> ref.wref<int>(); break; }
-        case cv::detail::OpaqueKind::CV_DOUBLE : { ref.reset<double>();    is >> ref.wref<double>(); break; }
-        case cv::detail::OpaqueKind::CV_POINT  : { ref.reset<cv::Point>(); is >> ref.wref<cv::Point>(); break; }
-        case cv::detail::OpaqueKind::CV_SIZE   : { ref.reset<cv::Size>();  is >> ref.wref<cv::Size>(); break; }
-        case cv::detail::OpaqueKind::CV_RECT   : { ref.reset<cv::Rect>();  is >> ref.wref<cv::Rect>(); break; }
-        default:
-            GAPI_Assert(false && "Unsupported GOpaque type for deserialization");
-            break;
-    }
+    cv::detail::OpaqueKind kind;
+    is >> kind;
+    getFromStream<cv::detail::OpaqueRef, cv::detail::GOpaqueTraitsOpaqueTypes>::get(is, ref, kind);
     return is;
 }
 // Enums and structures
@@ -537,18 +510,29 @@ I::OStream& operator<< (I::OStream& os, const cv::gimpl::Data &d) {
 
 namespace
 {
-    template <typename T>
-    void initCtorArr(cv::gimpl::Data &d)
+    template<typename Ref, typename T, typename... Ts>
+    struct initCtor;
+
+    // FIXME: workaround to end the recursion
+    template<typename Ref>
+    struct initCtor<Ref, std::tuple<>>
     {
-        static std::function<void(cv::detail::VectorRef&)> arr_ctor = [](cv::detail::VectorRef& ref){ref.reset<T>();};
-        d.ctor = arr_ctor;
-    }
-    template <typename T>
-    void initCtorOpaq(cv::gimpl::Data &d)
+        static void init(cv::gimpl::Data&)
+        {}
+    };
+
+    template<typename Ref, typename T, typename... Ts>
+    struct initCtor<Ref, std::tuple<T, Ts...>>
     {
-        static std::function<void(cv::detail::OpaqueRef&)> op_ctor = [](cv::detail::OpaqueRef& ref){ref.reset<T>();};
-        d.ctor = op_ctor;
-    }
+        static void init(cv::gimpl::Data& d) {
+            if (d.kind == cv::detail::GOpaqueTraits<T>::kind) {
+                static std::function<void(Ref&)> ctor = [](Ref& ref){ref.template reset<T>();};
+                d.ctor = ctor;
+            } else {
+                initCtor<Ref, std::tuple<Ts...> >::init(d);
+            }
+        }
+    };
 } // anonymous namespace
 
 I::IStream& operator>> (I::IStream& is, cv::gimpl::Data &d) {
@@ -557,31 +541,11 @@ I::IStream& operator>> (I::IStream& is, cv::gimpl::Data &d) {
     is >> d.shape >> d.rc >> d.meta >> d.storage >> d.kind;
     if (d.shape == cv::GShape::GARRAY)
     {
-        switch (d.kind)
-        {
-            case cv::detail::OpaqueKind::CV_BOOL:   initCtorArr<bool>(d); break;
-            case cv::detail::OpaqueKind::CV_INT:    initCtorArr<int>(d); break;
-            case cv::detail::OpaqueKind::CV_DOUBLE: initCtorArr<double>(d); break;
-            case cv::detail::OpaqueKind::CV_POINT:  initCtorArr<cv::Point>(d); break;
-            case cv::detail::OpaqueKind::CV_SIZE:   initCtorArr<cv::Size>(d); break;
-            case cv::detail::OpaqueKind::CV_RECT:   initCtorArr<cv::Rect>(d); break;
-            case cv::detail::OpaqueKind::CV_SCALAR: initCtorArr<cv::Scalar>(d); break;
-            case cv::detail::OpaqueKind::CV_MAT:    initCtorArr<cv::Mat>(d); break;
-            default : GAPI_Assert(false && "Unsupported GArray type for deserialization");
-        }
+        initCtor<cv::detail::VectorRef, cv::detail::GOpaqueTraitsArrayTypes>::init(d);
     }
     else if (d.shape == cv::GShape::GOPAQUE)
     {
-        switch (d.kind)
-        {
-            case cv::detail::OpaqueKind::CV_BOOL:   initCtorOpaq<bool>(d); break;
-            case cv::detail::OpaqueKind::CV_INT:    initCtorOpaq<int>(d); break;
-            case cv::detail::OpaqueKind::CV_DOUBLE: initCtorOpaq<double>(d); break;
-            case cv::detail::OpaqueKind::CV_POINT:  initCtorOpaq<cv::Point>(d); break;
-            case cv::detail::OpaqueKind::CV_SIZE:   initCtorOpaq<cv::Size>(d); break;
-            case cv::detail::OpaqueKind::CV_RECT:   initCtorOpaq<cv::Rect>(d); break;
-            default : GAPI_Assert(false && "Unsupported GOpaque type for deserialization");
-        }
+        initCtor<cv::detail::OpaqueRef, cv::detail::GOpaqueTraitsOpaqueTypes>::init(d);
     }
     return is;
 }
@@ -667,10 +631,6 @@ I::OStream& ByteMemoryOutStream::operator<< (bool atom) {
     m_storage.push_back(atom ? 1 : 0);
     return *this;
 }
-I::OStream& ByteMemoryOutStream::operator<< (std::vector<bool>::reference atom) {
-    m_storage.push_back(atom ? 1 : 0);
-    return *this;
-}
 I::OStream& ByteMemoryOutStream::operator<< (char atom) {
     m_storage.push_back(atom);
     return *this;
@@ -730,11 +690,6 @@ I::IStream& ByteMemoryInStream::operator>> (uint32_t &atom) {
     return *this;
 }
 I::IStream& ByteMemoryInStream::operator>> (bool& atom) {
-    check(sizeof(char));
-    atom = (m_storage[m_idx++] == 0) ? false : true;
-    return *this;
-}
-I::IStream& ByteMemoryInStream::operator>> (std::vector<bool>::reference atom) {
     check(sizeof(char));
     atom = (m_storage[m_idx++] == 0) ? false : true;
     return *this;
