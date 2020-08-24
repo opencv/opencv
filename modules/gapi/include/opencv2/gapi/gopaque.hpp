@@ -248,15 +248,15 @@ namespace detail
         }
 
         template<typename T>
-        bool operator==(const OpaqueRef& other) const
+        bool holds(cv::detail::OpaqueKind kind = cv::detail::OpaqueKind::CV_UNKNOWN) const
         {
-            return this->rref<T>() == other.rref<T>();
+            if (this->m_kind == kind) return true;
+            return dynamic_cast<OpaqueRefT<T>*>(m_ref.get()) != nullptr;
         }
 
-        template<typename T>
-        bool holds() const
+        cv::detail::OpaqueKind getKind() const
         {
-            return dynamic_cast<OpaqueRefT<T>*>(m_ref.get()) != nullptr;
+            return m_kind;
         }
 
         template<typename T> void reset()

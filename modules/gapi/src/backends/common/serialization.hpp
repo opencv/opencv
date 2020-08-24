@@ -38,7 +38,6 @@ namespace I {
 
         // Define the native support for basic C++ types at the API level:
         virtual OStream& operator<< (bool) = 0;
-        virtual OStream& operator<< (std::vector<bool>::reference) = 0;
         virtual OStream& operator<< (char) = 0;
         virtual OStream& operator<< (unsigned char) = 0;
         virtual OStream& operator<< (short) = 0;
@@ -55,7 +54,6 @@ namespace I {
         virtual ~IStream() = default;
 
         virtual IStream& operator>> (bool &) = 0;
-        virtual IStream& operator>> (std::vector<bool>::reference) = 0;
         virtual IStream& operator>> (char &) = 0;
         virtual IStream& operator>> (unsigned char &) = 0;
         virtual IStream& operator>> (short &) = 0;
@@ -303,7 +301,6 @@ public:
     const std::vector<char>& data() const;
 
     virtual I::OStream& operator<< (bool) override;
-    virtual I::OStream& operator<< (std::vector<bool>::reference) override;
     virtual I::OStream& operator<< (char) override;
     virtual I::OStream& operator<< (unsigned char) override;
     virtual I::OStream& operator<< (short) override;
@@ -329,7 +326,6 @@ public:
     explicit ByteMemoryInStream(const std::vector<char> &data);
 
     virtual I::IStream& operator>> (bool &) override;
-    virtual I::IStream& operator>> (std::vector<bool>::reference) override;
     virtual I::IStream& operator>> (char &) override;
     virtual I::IStream& operator>> (unsigned char &) override;
     virtual I::IStream& operator>> (short &) override;
