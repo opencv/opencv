@@ -170,6 +170,7 @@
 
 #if defined CV_CPU_COMPILE_RVV
 #  define CV_RVV 1
+#  include <riscv_vector.h>
 #endif
 
 #endif // CV_ENABLE_INTRINSICS && !CV_DISABLE_OPTIMIZATION && !__CUDACC__
