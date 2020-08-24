@@ -8,6 +8,8 @@
 
 #ifdef __cplusplus
 #import "opencv.hpp"
+#else
+#define CV_EXPORTS
 #endif
 
 #import <Foundation/Foundation.h>
@@ -21,9 +23,21 @@
 NS_ASSUME_NONNULL_BEGIN
 
 /**
-* The class Mat represents an n-dimensional dense numerical single-channel or multi-channel array.
+ The class Mat represents an n-dimensional dense numerical single-channel or multi-channel array.
+ ####Swift Example
+ ```swift
+ let mat = Mat(rows: 2, cols: 3, type: CvType.CV_8U)
+ try! mat.put(row: 0, col: 0, data: [2, 3, 4, 4, 5, 6] as [Int8])
+ print("mat: \(mat.dump())")
+ ```
+ ####Objective-C Example
+ ```objc
+ Mat* mat = [[Mat alloc] initWithRows:2 cols:3 type: CV_8U];
+ [m1 put:0 col:0 data:@[@2, @3, @4, @3, @4, @5]];
+ NSLog(@"mat: %@", [m1 dump]);
+ ```
 */
-@interface Mat : NSObject
+CV_EXPORTS @interface Mat : NSObject
 
 #ifdef __cplusplus
 @property(readonly) cv::Ptr<cv::Mat> nativePtr;
@@ -38,6 +52,12 @@ NS_ASSUME_NONNULL_BEGIN
 + (instancetype)fromNativePtr:(cv::Ptr<cv::Mat>)nativePtr;
 + (instancetype)fromNative:(cv::Mat&)nativeRef;
 #endif
+/**
+ Creates a Mat object with the specified number of rows and columns and Mat type
+ @param rows Number of rows
+ @param cols Number of columns
+ @param type Mat type (refer: `CvType`)
+*/
 - (instancetype)initWithRows:(int)rows cols:(int)cols type:(int)type;
 - (instancetype)initWithRows:(int)rows cols:(int)cols type:(int)type data:(NSData*)data;
 - (instancetype)initWithRows:(int)rows cols:(int)cols type:(int)type data:(NSData*)data step:(long)step;

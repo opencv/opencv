@@ -33,7 +33,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
             inner_size /= vector_type::size();
             for (auto i : grid_stride_range(output.size() / vector_type::size())) {
-                const index_type bias_idx = (i / inner_size) % static_cast<size_type>(bias.size());
+                const index_type bias_idx = (i / inner_size) % bias.size();
 
                 vector_type vec;
                 v_load(vec, input_vPtr[i]);
@@ -53,7 +53,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
             inner_size /= vector_type::size();
             for (auto i : grid_stride_range(output.size() / vector_type::size())) {
-                const index_type scale_idx = (i / inner_size) % static_cast<size_type>(weights.size());
+                const index_type scale_idx = (i / inner_size) % weights.size();
 
                 vector_type vec;
                 v_load(vec, input_vPtr[i]);
@@ -90,7 +90,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
             inner_size /= vector_type::size();
             for (auto i : grid_stride_range(output.size() / vector_type::size())) {
-                const index_type scale_idx = (i / inner_size) % static_cast<size_type>(weights.size());
+                const index_type scale_idx = (i / inner_size) % weights.size();
 
                 vector_type vec;
                 v_load(vec, input_vPtr[i]);

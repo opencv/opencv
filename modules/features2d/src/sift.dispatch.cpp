@@ -88,7 +88,7 @@ class SIFT_Impl : public SIFT
 public:
     explicit SIFT_Impl( int nfeatures = 0, int nOctaveLayers = 3,
                           double contrastThreshold = 0.04, double edgeThreshold = 10,
-                          double sigma = 1.6);
+                          double sigma = 1.6, int descriptorType = CV_32F );
 
     //! returns the descriptor size in floats (128)
     int descriptorSize() const CV_OVERRIDE;
@@ -117,13 +117,30 @@ protected:
     CV_PROP_RW double contrastThreshold;
     CV_PROP_RW double edgeThreshold;
     CV_PROP_RW double sigma;
+    CV_PROP_RW int descriptor_type;
 };
 
 Ptr<SIFT> SIFT::create( int _nfeatures, int _nOctaveLayers,
                      double _contrastThreshold, double _edgeThreshold, double _sigma )
 {
     CV_TRACE_FUNCTION();
-    return makePtr<SIFT_Impl>(_nfeatures, _nOctaveLayers, _contrastThreshold, _edgeThreshold, _sigma);
+
+    return makePtr<SIFT_Impl>(_nfeatures, _nOctaveLayers, _contrastThreshold, _edgeThreshold, _sigma, CV_32F);
+}
+
+Ptr<SIFT> SIFT::create( int _nfeatures, int _nOctaveLayers,
+                     double _contrastThreshold, double _edgeThreshold, double _sigma, int _descriptorType )
+{
+    CV_TRACE_FUNCTION();
+
+    // SIFT descriptor supports 32bit floating point and 8bit unsigned int.
+    CV_Assert(_descriptorType == CV_32F || _descriptorType == CV_8U);
+    return makePtr<SIFT_Impl>(_nfeatures, _nOctaveLayers, _contrastThreshold, _edgeThreshold, _sigma, _descriptorType);
+}
+
+String SIFT::getDefaultName() const
+{
+    return (Feature2D::getDefaultName() + ".SIFT");
 }
 
 static inline void
@@ -357,12 +374,12 @@ void SIFT_Impl::findScaleSpaceExtrema( const std::vector<Mat>& gauss_pyr, const 
 static
 void calcSIFTDescriptor(
         const Mat& img, Point2f ptf, float ori, float scl,
-        int d, int n, float* dst
+        int d, int n, Mat& dst, int row
 )
 {
     CV_TRACE_FUNCTION();
 
-    CV_CPU_DISPATCH(calcSIFTDescriptor, (img, ptf, ori, scl, d, n, dst),
+    CV_CPU_DISPATCH(calcSIFTDescriptor, (img, ptf, ori, scl, d, n, dst, row),
         CV_CPU_DISPATCH_MODES_ALL);
 }
 
@@ -403,7 +420,7 @@ public:
             float angle = 360.f - kpt.angle;
             if(std::abs(angle - 360.f) < FLT_EPSILON)
                 angle = 0.f;
-            calcSIFTDescriptor(img, ptf, angle, size*0.5f, d, n, descriptors.ptr<float>((int)i));
+            calcSIFTDescriptor(img, ptf, angle, size*0.5f, d, n, descriptors, i);
         }
     }
 private:
@@ -424,9 +441,9 @@ static void calcDescriptors(const std::vector<Mat>& gpyr, const std::vector<KeyP
 //////////////////////////////////////////////////////////////////////////////////////////
 
 SIFT_Impl::SIFT_Impl( int _nfeatures, int _nOctaveLayers,
-           double _contrastThreshold, double _edgeThreshold, double _sigma )
+           double _contrastThreshold, double _edgeThreshold, double _sigma, int _descriptorType )
     : nfeatures(_nfeatures), nOctaveLayers(_nOctaveLayers),
-    contrastThreshold(_contrastThreshold), edgeThreshold(_edgeThreshold), sigma(_sigma)
+    contrastThreshold(_contrastThreshold), edgeThreshold(_edgeThreshold), sigma(_sigma), descriptor_type(_descriptorType)
 {
 }
 
@@ -437,7 +454,7 @@ int SIFT_Impl::descriptorSize() const
 
 int SIFT_Impl::descriptorType() const
 {
-    return CV_32F;
+    return descriptor_type;
 }
 
 int SIFT_Impl::defaultNorm() const
@@ -528,9 +545,9 @@ void SIFT_Impl::detectAndCompute(InputArray _image, InputArray _mask,
     {
         //t = (double)getTickCount();
         int dsize = descriptorSize();
-        _descriptors.create((int)keypoints.size(), dsize, CV_32F);
-        Mat descriptors = _descriptors.getMat();
+        _descriptors.create((int)keypoints.size(), dsize, descriptor_type);
 
+        Mat descriptors = _descriptors.getMat();
         calcDescriptors(gpyr, keypoints, descriptors, nOctaveLayers, firstOctave);
         //t = (double)getTickCount() - t;
         //printf("descriptor extraction time: %g\n", t*1000./tf);

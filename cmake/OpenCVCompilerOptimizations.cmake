@@ -49,6 +49,7 @@ list(APPEND CPU_ALL_OPTIMIZATIONS "AVX512_COMMON;AVX512_KNL;AVX512_KNM;AVX512_SK
 list(APPEND CPU_ALL_OPTIMIZATIONS NEON VFPV3 FP16)
 list(APPEND CPU_ALL_OPTIMIZATIONS MSA)
 list(APPEND CPU_ALL_OPTIMIZATIONS VSX VSX3)
+list(APPEND CPU_ALL_OPTIMIZATIONS RVV)
 list(REMOVE_DUPLICATES CPU_ALL_OPTIMIZATIONS)
 
 ocv_update(CPU_VFPV3_FEATURE_ALIAS "")
@@ -101,6 +102,8 @@ ocv_optimization_process_obsolete_option(ENABLE_VFPV3 VFPV3 OFF)
 ocv_optimization_process_obsolete_option(ENABLE_NEON NEON OFF)
 
 ocv_optimization_process_obsolete_option(ENABLE_VSX VSX ON)
+
+ocv_optimization_process_obsolete_option(ENABLE_RVV RVV OFF)
 
 macro(ocv_is_optimization_in_list resultvar check_opt)
   set(__checked "")
@@ -366,6 +369,14 @@ elseif(PPC64LE)
 
   set(CPU_DISPATCH "VSX3" CACHE STRING "${HELP_CPU_DISPATCH}")
   set(CPU_BASELINE "VSX" CACHE STRING "${HELP_CPU_BASELINE}")
+
+elseif(RISCV)
+  ocv_update(CPU_RVV_TEST_FILE "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_rvv.cpp")
+  ocv_update(CPU_KNOWN_OPTIMIZATIONS "RVV")
+  ocv_update(CPU_RVV_FLAGS_ON "")
+  set(CPU_DISPATCH "RVV" CACHE STRING "${HELP_CPU_DISPATCH}")
+  set(CPU_BASELINE "RVV" CACHE STRING "${HELP_CPU_BASELINE}")
+
 endif()
 
 # Helper values for cmake-gui

@@ -178,6 +178,8 @@ enum VideoCaptureProperties {
        CAP_PROP_WB_TEMPERATURE=45, //!< white-balance color temperature
        CAP_PROP_CODEC_PIXEL_FORMAT =46,    //!< (read-only) codec's pixel format. 4-character code - see VideoWriter::fourcc . Subset of [AV_PIX_FMT_*](https://github.com/FFmpeg/FFmpeg/blob/master/libavcodec/raw.c) or -1 if unknown
        CAP_PROP_BITRATE       =47, //!< (read-only) Video bitrate in kbits/s
+       CAP_PROP_ORIENTATION_META=48, //!< (read-only) Frame rotation defined by stream meta (applicable for FFmpeg back-end only)
+       CAP_PROP_ORIENTATION_AUTO=49, //!< if true - rotates output frames of CvCapture considering video file's metadata  (applicable for FFmpeg back-end only) (https://github.com/opencv/opencv/issues/15499)
 #ifndef CV_DOXYGEN
        CV__CAP_PROP_LATEST
 #endif

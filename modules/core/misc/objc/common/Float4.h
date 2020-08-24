@@ -8,6 +8,8 @@
 
 #ifdef __cplusplus
 #import "opencv.hpp"
+#else
+#define CV_EXPORTS
 #endif
 
 #import <Foundation/Foundation.h>
@@ -19,7 +21,7 @@ NS_ASSUME_NONNULL_BEGIN
 /**
 * Simple wrapper for a vector of four `float`
 */
-@interface Float4 : NSObject
+CV_EXPORTS @interface Float4 : NSObject
 
 #pragma mark - Properties
 

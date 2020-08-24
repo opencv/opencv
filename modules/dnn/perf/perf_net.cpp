@@ -196,6 +196,13 @@ PERF_TEST_P_(DNNTestNetwork, YOLOv3)
 {
     if (backend == DNN_BACKEND_HALIDE)
         throw SkipTestException("");
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2020040000)  // nGraph compilation failure
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL)
+        throw SkipTestException("Test is disabled in OpenVINO 2020.4");
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL_FP16)
+        throw SkipTestException("Test is disabled in OpenVINO 2020.4");
+#endif
+
     Mat sample = imread(findDataFile("dnn/dog416.png"));
     cvtColor(sample, sample, COLOR_BGR2RGB);
     Mat inp;
@@ -209,11 +216,28 @@ PERF_TEST_P_(DNNTestNetwork, YOLOv4)
         throw SkipTestException("");
     if (target == DNN_TARGET_MYRIAD)
         throw SkipTestException("");
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2020040000)  // nGraph compilation failure
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL)
+        throw SkipTestException("Test is disabled in OpenVINO 2020.4");
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL_FP16)
+        throw SkipTestException("Test is disabled in OpenVINO 2020.4");
+#endif
     Mat sample = imread(findDataFile("dnn/dog416.png"));
     cvtColor(sample, sample, COLOR_BGR2RGB);
     Mat inp;
     sample.convertTo(inp, CV_32FC3, 1.0f / 255, 0);
     processNet("dnn/yolov4.weights", "dnn/yolov4.cfg", "", inp);
+}
+
+PERF_TEST_P_(DNNTestNetwork, YOLOv4_tiny)
+{
+    if (backend == DNN_BACKEND_HALIDE)
+        throw SkipTestException("");
+    Mat sample = imread(findDataFile("dnn/dog416.png"));
+    cvtColor(sample, sample, COLOR_BGR2RGB);
+    Mat inp;
+    sample.convertTo(inp, CV_32FC3, 1.0f / 255, 0);
+    processNet("dnn/yolov4-tiny.weights", "dnn/yolov4-tiny.cfg", "", inp);
 }
 
 PERF_TEST_P_(DNNTestNetwork, EAST_text_detection)

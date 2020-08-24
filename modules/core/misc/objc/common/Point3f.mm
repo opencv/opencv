@@ -6,7 +6,6 @@
 
 #import "Point3f.h"
 #import "Point2f.h"
-#import "CVObjcUtil.h"
 
 @implementation Point3f {
     cv::Point3f native;
@@ -66,6 +65,16 @@
     return self;
 }
 
++ (instancetype)fromNative:(cv::Point3f&)point {
+    return [[Point3f alloc] initWithX:point.x y:point.y z:point.z];
+}
+
+- (void)update:(cv::Point3f&)point {
+    self.x = point.x;
+    self.y = point.y;
+    self.z = point.z;
+}
+
 - (void)set:(NSArray<NSNumber*>*)vals {
     self.x = (vals != nil && vals.count > 0) ? vals[0].floatValue : 0.0;
     self.y = (vals != nil && vals.count > 1) ? vals[1].floatValue : 0.0;
@@ -94,6 +103,8 @@
         return self.x == point.x && self.y == point.y && self.z == point.z;
     }
 }
+
+#define FLOAT_TO_BITS(x)  ((Cv32suf){ .f = x }).i
 
 - (NSUInteger)hash {
     int prime = 31;

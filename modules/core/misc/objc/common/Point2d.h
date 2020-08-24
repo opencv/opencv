@@ -8,6 +8,8 @@
 
 #ifdef __cplusplus
 #import "opencv.hpp"
+#else
+#define CV_EXPORTS
 #endif
 
 #import <Foundation/Foundation.h>
@@ -19,7 +21,7 @@ NS_ASSUME_NONNULL_BEGIN
 /**
 * Represents a two dimensional point the coordinate values of which are of type `double`
 */
-@interface Point2d : NSObject
+CV_EXPORTS @interface Point2d : NSObject
 
 # pragma mark - Properties
 

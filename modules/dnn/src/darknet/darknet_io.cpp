@@ -222,6 +222,10 @@ namespace cv {
                     cv::dnn::LayerParams activation_param;
                     if (type == "relu")
                     {
+                        activation_param.type = "ReLU";
+                    }
+                    else if (type == "leaky")
+                    {
                         activation_param.set<float>("negative_slope", 0.1f);
                         activation_param.type = "ReLU";
                     }
@@ -360,6 +364,28 @@ namespace cv {
                     net->layers.push_back(lp);
 
                     layer_id++;
+                    fused_layer_names.push_back(last_layer);
+                }
+
+                void setSlice(int input_index, int split_size, int group_id)
+                {
+                    int begin[] = {0, split_size * group_id, 0, 0};
+                    cv::dnn::DictValue paramBegin = cv::dnn::DictValue::arrayInt(begin, 4);
+
+                    int end[] = {-1, begin[1] + split_size, -1, -1};
+                    cv::dnn::DictValue paramEnd = cv::dnn::DictValue::arrayInt(end, 4);
+
+                    darknet::LayerParameter lp;
+                    lp.layer_name = cv::format("slice_%d", layer_id);
+                    lp.layer_type = "Slice";
+                    lp.layerParams.set("begin", paramBegin);
+                    lp.layerParams.set("end", paramEnd);
+
+                    lp.bottom_indexes.push_back(fused_layer_names.at(input_index));
+                    net->layers.push_back(lp);
+
+                    layer_id++;
+                    last_layer = lp.layer_name;
                     fused_layer_names.push_back(last_layer);
                 }
 
@@ -717,6 +743,7 @@ namespace cv {
                     {
                         std::string bottom_layers = getParam<std::string>(layer_params, "layers", "");
                         CV_Assert(!bottom_layers.empty());
+                        int groups = getParam<int>(layer_params, "groups", 1);
                         std::vector<int> layers_vec = getNumbers<int>(bottom_layers);
 
                         tensor_shape[0] = 0;
@@ -725,10 +752,31 @@ namespace cv {
                             tensor_shape[0] += net->out_channels_vec[layers_vec[k]];
                         }
 
-                        if (layers_vec.size() == 1)
-                            setParams.setIdentity(layers_vec.at(0));
+                        if (groups > 1)
+                        {
+                            int group_id = getParam<int>(layer_params, "group_id", 0);
+                            tensor_shape[0] /= groups;
+                            int split_size = tensor_shape[0] / layers_vec.size();
+                            for (size_t k = 0; k < layers_vec.size(); ++k)
+                                setParams.setSlice(layers_vec[k], split_size, group_id);
+
+                            if (layers_vec.size() > 1)
+                            {
+                                // layer ids in layers_vec - inputs of Slice layers
+                                // after adding offset to layers_vec: layer ids - ouputs of Slice layers
+                                for (size_t k = 0; k < layers_vec.size(); ++k)
+                                    layers_vec[k] += layers_vec.size();
+
+                                setParams.setConcat(layers_vec.size(), layers_vec.data());
+                            }
+                        }
                         else
-                            setParams.setConcat(layers_vec.size(), layers_vec.data());
+                        {
+                            if (layers_vec.size() == 1)
+                                setParams.setIdentity(layers_vec.at(0));
+                            else
+                                setParams.setConcat(layers_vec.size(), layers_vec.data());
+                        }
                     }
                     else if (layer_type == "dropout" || layer_type == "cost")
                     {
@@ -797,7 +845,7 @@ namespace cv {
                         int classes = getParam<int>(layer_params, "classes", -1);
                         int num_of_anchors = getParam<int>(layer_params, "num", -1);
                         float thresh = getParam<float>(layer_params, "thresh", 0.2);
-                        float nms_threshold = getParam<float>(layer_params, "nms_threshold", 0.4);
+                        float nms_threshold = getParam<float>(layer_params, "nms_threshold", 0.0);
                         float scale_x_y = getParam<float>(layer_params, "scale_x_y", 1.0);
 
                         std::string anchors_values = getParam<std::string>(layer_params, "anchors", std::string());
@@ -818,24 +866,8 @@ namespace cv {
                     }
 
                     std::string activation = getParam<std::string>(layer_params, "activation", "linear");
-                    if (activation == "leaky")
-                    {
-                        setParams.setActivation("relu");
-                    }
-                    else if (activation == "swish")
-                    {
-                        setParams.setActivation("swish");
-                    }
-                    else if (activation == "mish")
-                    {
-                        setParams.setActivation("mish");
-                    }
-                    else if (activation == "logistic")
-                    {
-                        setParams.setActivation("logistic");
-                    }
-                    else if (activation != "linear")
-                        CV_Error(cv::Error::StsParseError, "Unsupported activation: " + activation);
+                    if (activation != "linear")
+                        setParams.setActivation(activation);
 
                     net->out_channels_vec[layers_counter] = tensor_shape[0];
                 }
