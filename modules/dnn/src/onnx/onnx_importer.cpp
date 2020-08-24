@@ -712,6 +712,19 @@ void ONNXImporter::populateNet(Net dstNet)
                 layerParams.set("bias_term", true);
             }
         }
+        else if (layer_type == "Pow")
+        {
+            if (layer_id.find(node_proto.input(1)) != layer_id.end())
+                CV_Error(Error::StsNotImplemented, "Unsupported Pow op with variable power");
+
+            Mat blob = getBlob(node_proto, constBlobs, 1);
+            if (blob.total() != 1)
+                CV_Error(Error::StsNotImplemented, "Pow op supports only scalar power");
+
+            blob.convertTo(blob, CV_32F);
+            layerParams.type = "Power";
+            layerParams.set("power", blob.at<float>(0));
+        }
         else if (layer_type == "Max")
         {
             layerParams.type = "Eltwise";
