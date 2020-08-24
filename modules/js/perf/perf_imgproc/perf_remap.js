@@ -69,7 +69,7 @@ function perf() {
                         break;
                       case cv.CV_32FC1:
                         view = src.floatPtr(j,i);
-                        view[0] = randNum1*256;
+                        view[0] = randNum*256;
                         break;
                       default:
                         console.error("Unknown conversion type 1");
