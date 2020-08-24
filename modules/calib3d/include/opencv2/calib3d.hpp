@@ -64,17 +64,17 @@ The distortion-free projective transformation given by a  pinhole camera model i
 \f[s \; p = A \begin{bmatrix} R|t \end{bmatrix} P_w,\f]
 
 where \f$P_w\f$ is a 3D point expressed with respect to the world coordinate system,
-\f$p\f$ is a 2D pixel in the image plane, \f$A\f$ is the intrinsic camera matrix,
+\f$p\f$ is a 2D pixel in the image plane, \f$A\f$ is the camera intrinsic matrix,
 \f$R\f$ and \f$t\f$ are the rotation and translation that describe the change of coordinates from
 world to camera coordinate systems (or camera frame) and \f$s\f$ is the projective transformation's
 arbitrary scaling and not part of the camera model.
 
-The intrinsic camera matrix \f$A\f$ (notation used as in @cite Zhang2000 and also generally notated
+The camera intrinsic matrix \f$A\f$ (notation used as in @cite Zhang2000 and also generally notated
 as \f$K\f$) projects 3D points given in the camera coordinate system to 2D pixel coordinates, i.e.
 
 \f[p = A P_c.\f]
 
-The camera matrix \f$A\f$ is composed of the focal lengths \f$f_x\f$ and \f$f_y\f$, which are
+The camera intrinsic matrix \f$A\f$ is composed of the focal lengths \f$f_x\f$ and \f$f_y\f$, which are
 expressed in pixel units, and the principal point \f$(c_x, c_y)\f$, that is usually close to the
 image center:
 
@@ -382,9 +382,9 @@ R & t \\
 \end{bmatrix} P_{h_0}.\f]
 
 @note
-    -   Many functions in this module take a camera matrix as an input parameter. Although all
+    -   Many functions in this module take a camera intrinsic matrix as an input parameter. Although all
         functions assume the same structure of this parameter, they may name it differently. The
-        parameter's description, however, will be clear in that a camera matrix with the structure
+        parameter's description, however, will be clear in that a camera intrinsic matrix with the structure
         shown above is required.
     -   A calibration sample for 3 cameras in a horizontal position can be found at
         opencv_source_code/samples/cpp/3calibration.cpp
@@ -648,10 +648,10 @@ CV_EXPORTS_W Vec3d RQDecomp3x3( InputArray src, OutputArray mtxR, OutputArray mt
                                 OutputArray Qy = noArray(),
                                 OutputArray Qz = noArray());
 
-/** @brief Decomposes a projection matrix into a rotation matrix and a camera matrix.
+/** @brief Decomposes a projection matrix into a rotation matrix and a camera intrinsic matrix.
 
 @param projMatrix 3x4 input projection matrix P.
-@param cameraMatrix Output 3x3 camera matrix K.
+@param cameraMatrix Output 3x3 camera intrinsic matrix \f$\cameramatrix{A}\f$.
 @param rotMatrix Output 3x3 external rotation matrix R.
 @param transVect Output 4x1 translation vector T.
 @param rotMatrixX Optional 3x3 rotation matrix around x-axis.
@@ -736,10 +736,9 @@ CV_EXPORTS_W void composeRT( InputArray rvec1, InputArray tvec1,
 @param rvec The rotation vector (@ref Rodrigues) that, together with tvec, performs a change of
 basis from world to camera coordinate system, see @ref calibrateCamera for details.
 @param tvec The translation vector, see parameter description above.
-@param cameraMatrix Camera matrix \f$A = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{_1}\f$ .
+@param cameraMatrix Camera intrinsic matrix \f$\cameramatrix{A}\f$ .
 @param distCoeffs Input vector of distortion coefficients
-\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6 [, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$ of
-4, 5, 8, 12 or 14 elements. If the vector is empty, the zero distortion coefficients are assumed.
+\f$\distcoeffs\f$ . If the vector is empty, the zero distortion coefficients are assumed.
 @param imagePoints Output array of image points, 1xN/Nx1 2-channel, or
 vector\<Point2f\> .
 @param jacobian Optional output 2Nx(10+\<numDistCoeffs\>) jacobian matrix of derivatives of image
@@ -793,10 +792,9 @@ Number of input points must be 4. Object points must be defined in the following
 1xN/Nx1 3-channel, where N is the number of points. vector\<Point3d\> can be also passed here.
 @param imagePoints Array of corresponding image points, Nx2 1-channel or 1xN/Nx1 2-channel,
 where N is the number of points. vector\<Point2d\> can be also passed here.
-@param cameraMatrix Input camera matrix \f$A = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
+@param cameraMatrix Input camera intrinsic matrix \f$\cameramatrix{A}\f$ .
 @param distCoeffs Input vector of distortion coefficients
-\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6 [, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$ of
-4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion coefficients are
+\f$\distcoeffs\f$. If the vector is NULL/empty, the zero distortion coefficients are
 assumed.
 @param rvec Output rotation vector (see @ref Rodrigues ) that, together with tvec, brings points from
 the model coordinate system to the camera coordinate system.
@@ -835,7 +833,7 @@ It requires 4 coplanar object points defined in the following order:
   - point 3: [-squareLength / 2, -squareLength / 2, 0]
 
 The function estimates the object pose given a set of object points, their corresponding image
-projections, as well as the camera matrix and the distortion coefficients, see the figure below
+projections, as well as the camera intrinsic matrix and the distortion coefficients, see the figure below
 (more precisely, the X-axis of the camera frame is pointing to the right, the Y-axis downward
 and the Z-axis forward).
 
@@ -968,10 +966,9 @@ CV_EXPORTS_W bool solvePnP( InputArray objectPoints, InputArray imagePoints,
 1xN/Nx1 3-channel, where N is the number of points. vector\<Point3d\> can be also passed here.
 @param imagePoints Array of corresponding image points, Nx2 1-channel or 1xN/Nx1 2-channel,
 where N is the number of points. vector\<Point2d\> can be also passed here.
-@param cameraMatrix Input camera matrix \f$A = \vecthreethree{fx}{0}{cx}{0}{fy}{cy}{0}{0}{1}\f$ .
+@param cameraMatrix Input camera intrinsic matrix \f$\cameramatrix{A}\f$ .
 @param distCoeffs Input vector of distortion coefficients
-\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6 [, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$ of
-4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion coefficients are
+\f$\distcoeffs\f$. If the vector is NULL/empty, the zero distortion coefficients are
 assumed.
 @param rvec Output rotation vector (see @ref Rodrigues ) that, together with tvec, brings points from
 the model coordinate system to the camera coordinate system.
@@ -988,7 +985,7 @@ an inlier.
 @param flags Method for solving a PnP problem (see @ref solvePnP ).
 
 The function estimates an object pose given a set of object points, their corresponding image
-projections, as well as the camera matrix and the distortion coefficients. This function finds such
+projections, as well as the camera intrinsic matrix and the distortion coefficients. This function finds such
 a pose that minimizes reprojection error, that is, the sum of squared distances between the observed
 projections imagePoints and the projected (using @ref projectPoints ) objectPoints. The use of RANSAC
 makes the function resistant to outliers.
@@ -1017,10 +1014,9 @@ CV_EXPORTS_W bool solvePnPRansac( InputArray objectPoints, InputArray imagePoint
 1x3/3x1 3-channel. vector\<Point3f\> can be also passed here.
 @param imagePoints Array of corresponding image points, 3x2 1-channel or 1x3/3x1 2-channel.
  vector\<Point2f\> can be also passed here.
-@param cameraMatrix Input camera matrix \f$A = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
+@param cameraMatrix Input camera intrinsic matrix \f$\cameramatrix{A}\f$ .
 @param distCoeffs Input vector of distortion coefficients
-\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6 [, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$ of
-4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion coefficients are
+\f$\distcoeffs\f$. If the vector is NULL/empty, the zero distortion coefficients are
 assumed.
 @param rvecs Output rotation vectors (see @ref Rodrigues ) that, together with tvecs, brings points from
 the model coordinate system to the camera coordinate system. A P3P problem has up to 4 solutions.
@@ -1032,7 +1028,7 @@ the model coordinate system to the camera coordinate system. A P3P problem has u
 "An Efficient Algebraic Solution to the Perspective-Three-Point Problem" (@cite Ke17).
 
 The function estimates the object pose given 3 object points, their corresponding image
-projections, as well as the camera matrix and the distortion coefficients.
+projections, as well as the camera intrinsic matrix and the distortion coefficients.
 
 @note
 The solutions are sorted by reprojection errors (lowest to highest).
@@ -1049,10 +1045,9 @@ to the camera coordinate frame) from a 3D-2D point correspondences and starting 
 where N is the number of points. vector\<Point3d\> can also be passed here.
 @param imagePoints Array of corresponding image points, Nx2 1-channel or 1xN/Nx1 2-channel,
 where N is the number of points. vector\<Point2d\> can also be passed here.
-@param cameraMatrix Input camera matrix \f$A = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
+@param cameraMatrix Input camera intrinsic matrix \f$\cameramatrix{A}\f$ .
 @param distCoeffs Input vector of distortion coefficients
-\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6 [, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$ of
-4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion coefficients are
+\f$\distcoeffs\f$. If the vector is NULL/empty, the zero distortion coefficients are
 assumed.
 @param rvec Input/Output rotation vector (see @ref Rodrigues ) that, together with tvec, brings points from
 the model coordinate system to the camera coordinate system. Input values are used as an initial solution.
@@ -1061,7 +1056,7 @@ the model coordinate system to the camera coordinate system. Input values are us
 
 The function refines the object pose given at least 3 object points, their corresponding image
 projections, an initial solution for the rotation and translation vector,
-as well as the camera matrix and the distortion coefficients.
+as well as the camera intrinsic matrix and the distortion coefficients.
 The function minimizes the projection error with respect to the rotation and the translation vectors, according
 to a Levenberg-Marquardt iterative minimization @cite Madsen04 @cite Eade13 process.
  */
@@ -1077,10 +1072,9 @@ to the camera coordinate frame) from a 3D-2D point correspondences and starting 
 where N is the number of points. vector\<Point3d\> can also be passed here.
 @param imagePoints Array of corresponding image points, Nx2 1-channel or 1xN/Nx1 2-channel,
 where N is the number of points. vector\<Point2d\> can also be passed here.
-@param cameraMatrix Input camera matrix \f$A = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
+@param cameraMatrix Input camera intrinsic matrix \f$\cameramatrix{A}\f$ .
 @param distCoeffs Input vector of distortion coefficients
-\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6 [, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$ of
-4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion coefficients are
+\f$\distcoeffs\f$. If the vector is NULL/empty, the zero distortion coefficients are
 assumed.
 @param rvec Input/Output rotation vector (see @ref Rodrigues ) that, together with tvec, brings points from
 the model coordinate system to the camera coordinate system. Input values are used as an initial solution.
@@ -1091,7 +1085,7 @@ gain in the Damped Gauss-Newton formulation.
 
 The function refines the object pose given at least 3 object points, their corresponding image
 projections, an initial solution for the rotation and translation vector,
-as well as the camera matrix and the distortion coefficients.
+as well as the camera intrinsic matrix and the distortion coefficients.
 The function minimizes the projection error with respect to the rotation and the translation vectors, using a
 virtual visual servoing (VVS) @cite Chaumette06 @cite Marchand16 scheme.
  */
@@ -1119,10 +1113,9 @@ Only 1 solution is returned.
 1xN/Nx1 3-channel, where N is the number of points. vector\<Point3d\> can be also passed here.
 @param imagePoints Array of corresponding image points, Nx2 1-channel or 1xN/Nx1 2-channel,
 where N is the number of points. vector\<Point2d\> can be also passed here.
-@param cameraMatrix Input camera matrix \f$A = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
+@param cameraMatrix Input camera intrinsic matrix \f$\cameramatrix{A}\f$ .
 @param distCoeffs Input vector of distortion coefficients
-\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6 [, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$ of
-4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion coefficients are
+\f$\distcoeffs\f$. If the vector is NULL/empty, the zero distortion coefficients are
 assumed.
 @param rvecs Vector of output rotation vectors (see @ref Rodrigues ) that, together with tvecs, brings points from
 the model coordinate system to the camera coordinate system.
@@ -1168,7 +1161,7 @@ and useExtrinsicGuess is set to true.
 and the 3D object points projected with the estimated pose.
 
 The function estimates the object pose given a set of object points, their corresponding image
-projections, as well as the camera matrix and the distortion coefficients, see the figure below
+projections, as well as the camera intrinsic matrix and the distortion coefficients, see the figure below
 (more precisely, the X-axis of the camera frame is pointing to the right, the Y-axis downward
 and the Z-axis forward).
 
@@ -1297,7 +1290,7 @@ CV_EXPORTS_W int solvePnPGeneric( InputArray objectPoints, InputArray imagePoint
                                   InputArray rvec = noArray(), InputArray tvec = noArray(),
                                   OutputArray reprojectionError = noArray() );
 
-/** @brief Finds an initial camera matrix from 3D-2D point correspondences.
+/** @brief Finds an initial camera intrinsic matrix from 3D-2D point correspondences.
 
 @param objectPoints Vector of vectors of the calibration pattern points in the calibration pattern
 coordinate space. In the old interface all the per-view vectors are concatenated. See
@@ -1308,7 +1301,7 @@ old interface all the per-view vectors are concatenated.
 @param aspectRatio If it is zero or negative, both \f$f_x\f$ and \f$f_y\f$ are estimated independently.
 Otherwise, \f$f_x = f_y * \texttt{aspectRatio}\f$ .
 
-The function estimates and returns an initial camera matrix for the camera calibration process.
+The function estimates and returns an initial camera intrinsic matrix for the camera calibration process.
 Currently, the function only supports planar calibration patterns, which are patterns where each
 object point has z-coordinate =0.
  */
@@ -1390,10 +1383,9 @@ CV_EXPORTS_W void drawChessboardCorners( InputOutputArray image, Size patternSiz
 
 @param image Input/output image. It must have 1 or 3 channels. The number of channels is not altered.
 @param cameraMatrix Input 3x3 floating-point matrix of camera intrinsic parameters.
-\f$A = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$
+\f$\cameramatrix{A}\f$
 @param distCoeffs Input vector of distortion coefficients
-\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6 [, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$ of
-4, 5, 8, 12 or 14 elements. If the vector is empty, the zero distortion coefficients are assumed.
+\f$\distcoeffs\f$. If the vector is empty, the zero distortion coefficients are assumed.
 @param rvec Rotation vector (see @ref Rodrigues ) that, together with tvec, brings points from
 the model coordinate system to the camera coordinate system.
 @param tvec Translation vector.
@@ -1503,14 +1495,13 @@ pattern points (e.g. std::vector<std::vector<cv::Vec2f>>). imagePoints.size() an
 objectPoints.size(), and imagePoints[i].size() and objectPoints[i].size() for each i, must be equal,
 respectively. In the old interface all the vectors of object points from different views are
 concatenated together.
-@param imageSize Size of the image used only to initialize the intrinsic camera matrix.
-@param cameraMatrix Input/output 3x3 floating-point camera matrix
-\f$A = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ . If CV\_CALIB\_USE\_INTRINSIC\_GUESS
+@param imageSize Size of the image used only to initialize the camera intrinsic matrix.
+@param cameraMatrix Input/output 3x3 floating-point camera intrinsic matrix
+\f$\cameramatrix{A}\f$ . If CV\_CALIB\_USE\_INTRINSIC\_GUESS
 and/or CALIB_FIX_ASPECT_RATIO are specified, some or all of fx, fy, cx, cy must be
 initialized before calling the function.
 @param distCoeffs Input/output vector of distortion coefficients
-\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6 [, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$ of
-4, 5, 8, 12 or 14 elements.
+\f$\distcoeffs\f$.
 @param rvecs Output vector of rotation vectors (@ref Rodrigues ) estimated for each pattern view
 (e.g. std::vector<cv::Mat>>). That is, each i-th rotation vector together with the corresponding
 i-th translation vector (see the next output parameter description) brings the calibration pattern
@@ -1628,9 +1619,9 @@ CV_EXPORTS_W double calibrateCamera( InputArrayOfArrays objectPoints,
                                      int flags = 0, TermCriteria criteria = TermCriteria(
                                         TermCriteria::COUNT + TermCriteria::EPS, 30, DBL_EPSILON) );
 
-/** @brief Computes useful camera characteristics from the camera matrix.
+/** @brief Computes useful camera characteristics from the camera intrinsic matrix.
 
-@param cameraMatrix Input camera matrix that can be estimated by calibrateCamera or
+@param cameraMatrix Input camera intrinsic matrix that can be estimated by calibrateCamera or
 stereoCalibrate .
 @param imageSize Input image size in pixels.
 @param apertureWidth Physical width in mm of the sensor.
@@ -1666,15 +1657,15 @@ be equal for each i.
 observed by the first camera. The same structure as in @ref calibrateCamera.
 @param imagePoints2 Vector of vectors of the projections of the calibration pattern points,
 observed by the second camera. The same structure as in @ref calibrateCamera.
-@param cameraMatrix1 Input/output camera matrix for the first camera, the same as in
+@param cameraMatrix1 Input/output camera intrinsic matrix for the first camera, the same as in
 @ref calibrateCamera. Furthermore, for the stereo case, additional flags may be used, see below.
 @param distCoeffs1 Input/output vector of distortion coefficients, the same as in
 @ref calibrateCamera.
-@param cameraMatrix2 Input/output second camera matrix for the second camera. See description for
+@param cameraMatrix2 Input/output second camera intrinsic matrix for the second camera. See description for
 cameraMatrix1.
 @param distCoeffs2 Input/output lens distortion coefficients for the second camera. See
 description for distCoeffs1.
-@param imageSize Size of the image used only to initialize the intrinsic camera matrices.
+@param imageSize Size of the image used only to initialize the camera intrinsic matrices.
 @param R Output rotation matrix. Together with the translation vector T, this matrix brings
 points given in the first camera's coordinate system to points in the second camera's
 coordinate system. In more technical terms, the tuple of R and T performs a change of basis
@@ -1795,9 +1786,9 @@ CV_EXPORTS_W double stereoCalibrate( InputArrayOfArrays objectPoints,
 
 /** @brief Computes rectification transforms for each head of a calibrated stereo camera.
 
-@param cameraMatrix1 First camera matrix.
+@param cameraMatrix1 First camera intrinsic matrix.
 @param distCoeffs1 First camera distortion parameters.
-@param cameraMatrix2 Second camera matrix.
+@param cameraMatrix2 Second camera intrinsic matrix.
 @param distCoeffs2 Second camera distortion parameters.
 @param imageSize Size of the image used for stereo calibration.
 @param R Rotation matrix from the coordinate system of the first camera to the second camera,
@@ -1953,12 +1944,11 @@ CV_EXPORTS_W float rectify3Collinear( InputArray cameraMatrix1, InputArray distC
                                       OutputArray Q, double alpha, Size newImgSize,
                                       CV_OUT Rect* roi1, CV_OUT Rect* roi2, int flags );
 
-/** @brief Returns the new camera matrix based on the free scaling parameter.
+/** @brief Returns the new camera intrinsic matrix based on the free scaling parameter.
 
-@param cameraMatrix Input camera matrix.
+@param cameraMatrix Input camera intrinsic matrix.
 @param distCoeffs Input vector of distortion coefficients
-\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6 [, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$ of
-4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion coefficients are
+\f$\distcoeffs\f$. If the vector is NULL/empty, the zero distortion coefficients are
 assumed.
 @param imageSize Original image size.
 @param alpha Free scaling parameter between 0 (when all the pixels in the undistorted image are
@@ -1967,17 +1957,17 @@ stereoRectify for details.
 @param newImgSize Image size after rectification. By default, it is set to imageSize .
 @param validPixROI Optional output rectangle that outlines all-good-pixels region in the
 undistorted image. See roi1, roi2 description in stereoRectify .
-@param centerPrincipalPoint Optional flag that indicates whether in the new camera matrix the
+@param centerPrincipalPoint Optional flag that indicates whether in the new camera intrinsic matrix the
 principal point should be at the image center or not. By default, the principal point is chosen to
 best fit a subset of the source image (determined by alpha) to the corrected image.
-@return new_camera_matrix Output new camera matrix.
+@return new_camera_matrix Output new camera intrinsic matrix.
 
-The function computes and returns the optimal new camera matrix based on the free scaling parameter.
+The function computes and returns the optimal new camera intrinsic matrix based on the free scaling parameter.
 By varying this parameter, you may retrieve only sensible pixels alpha=0 , keep all the original
 image pixels if there is valuable information in the corners alpha=1 , or get something in between.
 When alpha\>0 , the undistorted result is likely to have some black pixels corresponding to
-"virtual" pixels outside of the captured distorted image. The original camera matrix, distortion
-coefficients, the computed new camera matrix, and newImageSize should be passed to
+"virtual" pixels outside of the captured distorted image. The original camera intrinsic matrix, distortion
+coefficients, the computed new camera intrinsic matrix, and newImageSize should be passed to
 initUndistortRectifyMap to produce the maps for remap .
  */
 CV_EXPORTS_W Mat getOptimalNewCameraMatrix( InputArray cameraMatrix, InputArray distCoeffs,
@@ -2222,11 +2212,11 @@ CV_EXPORTS Mat findFundamentalMat( InputArray points1, InputArray points2,
 @param points1 Array of N (N \>= 5) 2D points from the first image. The point coordinates should
 be floating-point (single or double precision).
 @param points2 Array of the second image points of the same size and format as points1 .
-@param cameraMatrix Camera matrix \f$K = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
+@param cameraMatrix Camera intrinsic matrix \f$\cameramatrix{A}\f$ .
 Note that this function assumes that points1 and points2 are feature points from cameras with the
-same camera matrix. If this assumption does not hold for your use case, use
+same camera intrinsic matrix. If this assumption does not hold for your use case, use
 `undistortPoints()` with `P = cv::NoArray()` for both cameras to transform image points
-to normalized image coordinates, which are valid for the identity camera matrix. When
+to normalized image coordinates, which are valid for the identity camera intrinsic matrix. When
 passing these coordinates, pass the identity matrix for this parameter.
 @param method Method for computing an essential matrix.
 -   **RANSAC** for the RANSAC algorithm.
@@ -2273,10 +2263,10 @@ confidence (probability) that the estimated matrix is correct.
 @param mask Output array of N elements, every element of which is set to 0 for outliers and to 1
 for the other points. The array is computed only in the RANSAC and LMedS methods.
 
-This function differs from the one above that it computes camera matrix from focal length and
+This function differs from the one above that it computes camera intrinsic matrix from focal length and
 principal point:
 
-\f[K =
+\f[A =
 \begin{bmatrix}
 f & 0 & x_{pp}  \\
 0 & f & y_{pp}  \\
@@ -2316,9 +2306,9 @@ inliers that pass the check.
 @param points1 Array of N 2D points from the first image. The point coordinates should be
 floating-point (single or double precision).
 @param points2 Array of the second image points of the same size and format as points1 .
-@param cameraMatrix Camera matrix \f$A = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
+@param cameraMatrix Camera intrinsic matrix \f$\cameramatrix{A}\f$ .
 Note that this function assumes that points1 and points2 are feature points from cameras with the
-same camera matrix.
+same camera intrinsic matrix.
 @param R Output rotation matrix. Together with the translation vector, this matrix makes up a tuple
 that performs a change of basis from the first camera's coordinate system to the second camera's
 coordinate system. Note that, in general, t can not be used for this tuple, see the parameter
@@ -2381,7 +2371,7 @@ are feature points from cameras with same focal length and principal point.
 inliers in points1 and points2 for then given essential matrix E. Only these inliers will be used to
 recover pose. In the output mask only inliers which pass the cheirality check.
 
-This function differs from the one above that it computes camera matrix from focal length and
+This function differs from the one above that it computes camera intrinsic matrix from focal length and
 principal point:
 
 \f[A =
@@ -2401,9 +2391,9 @@ CV_EXPORTS_W int recoverPose( InputArray E, InputArray points1, InputArray point
 @param points1 Array of N 2D points from the first image. The point coordinates should be
 floating-point (single or double precision).
 @param points2 Array of the second image points of the same size and format as points1.
-@param cameraMatrix Camera matrix \f$A = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
+@param cameraMatrix Camera intrinsic matrix \f$\cameramatrix{A}\f$ .
 Note that this function assumes that points1 and points2 are feature points from cameras with the
-same camera matrix.
+same camera intrinsic matrix.
 @param R Output rotation matrix. Together with the translation vector, this matrix makes up a tuple
 that performs a change of basis from the first camera's coordinate system to the second camera's
 coordinate system. Note that, in general, t can not be used for this tuple, see the parameter
@@ -2762,7 +2752,7 @@ Check @ref tutorial_homography "the corresponding tutorial" for more details.
 /** @brief Decompose a homography matrix to rotation(s), translation(s) and plane normal(s).
 
 @param H The input homography matrix between two images.
-@param K The input intrinsic camera calibration matrix.
+@param K The input camera intrinsic matrix.
 @param rotations Array of rotation matrices.
 @param translations Array of translation matrices.
 @param normals Array of plane normal matrices.
@@ -3020,8 +3010,8 @@ namespace fisheye
     @param imagePoints Output array of image points, 2xN/Nx2 1-channel or 1xN/Nx1 2-channel, or
     vector\<Point2f\>.
     @param affine
-    @param K Camera matrix \f$K = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{_1}\f$.
-    @param D Input vector of distortion coefficients \f$(k_1, k_2, k_3, k_4)\f$.
+    @param K Camera intrinsic matrix \f$cameramatrix{K}\f$.
+    @param D Input vector of distortion coefficients \f$\distcoeffsfisheye\f$.
     @param alpha The skew coefficient.
     @param jacobian Optional output 2Nx15 jacobian matrix of derivatives of image points with respect
     to components of the focal lengths, coordinates of the principal point, distortion coefficients,
@@ -3044,12 +3034,12 @@ namespace fisheye
 
     @param undistorted Array of object points, 1xN/Nx1 2-channel (or vector\<Point2f\> ), where N is
     the number of points in the view.
-    @param K Camera matrix \f$K = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{_1}\f$.
-    @param D Input vector of distortion coefficients \f$(k_1, k_2, k_3, k_4)\f$.
+    @param K Camera intrinsic matrix \f$cameramatrix{K}\f$.
+    @param D Input vector of distortion coefficients \f$\distcoeffsfisheye\f$.
     @param alpha The skew coefficient.
     @param distorted Output array of image points, 1xN/Nx1 2-channel, or vector\<Point2f\> .
 
-    Note that the function assumes the camera matrix of the undistorted points to be identity.
+    Note that the function assumes the camera intrinsic matrix of the undistorted points to be identity.
     This means if you want to transform back points undistorted with undistortPoints() you have to
     multiply them with \f$P^{-1}\f$.
      */
@@ -3059,11 +3049,11 @@ namespace fisheye
 
     @param distorted Array of object points, 1xN/Nx1 2-channel (or vector\<Point2f\> ), where N is the
     number of points in the view.
-    @param K Camera matrix \f$K = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{_1}\f$.
-    @param D Input vector of distortion coefficients \f$(k_1, k_2, k_3, k_4)\f$.
+    @param K Camera intrinsic matrix \f$cameramatrix{K}\f$.
+    @param D Input vector of distortion coefficients \f$\distcoeffsfisheye\f$.
     @param R Rectification transformation in the object space: 3x3 1-channel, or vector: 3x1/1x3
     1-channel or 1x1 3-channel
-    @param P New camera matrix (3x3) or new projection matrix (3x4)
+    @param P New camera intrinsic matrix (3x3) or new projection matrix (3x4)
     @param undistorted Output array of image points, 1xN/Nx1 2-channel, or vector\<Point2f\> .
      */
     CV_EXPORTS_W void undistortPoints(InputArray distorted, OutputArray undistorted,
@@ -3072,11 +3062,11 @@ namespace fisheye
     /** @brief Computes undistortion and rectification maps for image transform by cv::remap(). If D is empty zero
     distortion is used, if R or P is empty identity matrixes are used.
 
-    @param K Camera matrix \f$K = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{_1}\f$.
-    @param D Input vector of distortion coefficients \f$(k_1, k_2, k_3, k_4)\f$.
+    @param K Camera intrinsic matrix \f$cameramatrix{K}\f$.
+    @param D Input vector of distortion coefficients \f$\distcoeffsfisheye\f$.
     @param R Rectification transformation in the object space: 3x3 1-channel, or vector: 3x1/1x3
     1-channel or 1x1 3-channel
-    @param P New camera matrix (3x3) or new projection matrix (3x4)
+    @param P New camera intrinsic matrix (3x3) or new projection matrix (3x4)
     @param size Undistorted image size.
     @param m1type Type of the first output map that can be CV_32FC1 or CV_16SC2 . See convertMaps()
     for details.
@@ -3090,9 +3080,9 @@ namespace fisheye
 
     @param distorted image with fisheye lens distortion.
     @param undistorted Output image with compensated fisheye lens distortion.
-    @param K Camera matrix \f$K = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{_1}\f$.
-    @param D Input vector of distortion coefficients \f$(k_1, k_2, k_3, k_4)\f$.
-    @param Knew Camera matrix of the distorted image. By default, it is the identity matrix but you
+    @param K Camera intrinsic matrix \f$cameramatrix{K}\f$.
+    @param D Input vector of distortion coefficients \f$\distcoeffsfisheye\f$.
+    @param Knew Camera intrinsic matrix of the distorted image. By default, it is the identity matrix but you
     may additionally scale and shift the result by using a different matrix.
     @param new_size the new size
 
@@ -3117,14 +3107,14 @@ namespace fisheye
     CV_EXPORTS_W void undistortImage(InputArray distorted, OutputArray undistorted,
         InputArray K, InputArray D, InputArray Knew = cv::noArray(), const Size& new_size = Size());
 
-    /** @brief Estimates new camera matrix for undistortion or rectification.
+    /** @brief Estimates new camera intrinsic matrix for undistortion or rectification.
 
-    @param K Camera matrix \f$K = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{_1}\f$.
+    @param K Camera intrinsic matrix \f$cameramatrix{K}\f$.
     @param image_size Size of the image
-    @param D Input vector of distortion coefficients \f$(k_1, k_2, k_3, k_4)\f$.
+    @param D Input vector of distortion coefficients \f$\distcoeffsfisheye\f$.
     @param R Rectification transformation in the object space: 3x3 1-channel, or vector: 3x1/1x3
     1-channel or 1x1 3-channel
-    @param P New camera matrix (3x3) or new projection matrix (3x4)
+    @param P New camera intrinsic matrix (3x3) or new projection matrix (3x4)
     @param balance Sets the new focal length in range between the min focal length and the max focal
     length. Balance is in range of [0, 1].
     @param new_size the new size
@@ -3140,12 +3130,12 @@ namespace fisheye
     @param imagePoints vector of vectors of the projections of calibration pattern points.
     imagePoints.size() and objectPoints.size() and imagePoints[i].size() must be equal to
     objectPoints[i].size() for each i.
-    @param image_size Size of the image used only to initialize the intrinsic camera matrix.
-    @param K Output 3x3 floating-point camera matrix
-    \f$A = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ . If
+    @param image_size Size of the image used only to initialize the camera intrinsic matrix.
+    @param K Output 3x3 floating-point camera intrinsic matrix
+    \f$\cameramatrix{A}\f$ . If
     fisheye::CALIB_USE_INTRINSIC_GUESS/ is specified, some or all of fx, fy, cx, cy must be
     initialized before calling the function.
-    @param D Output vector of distortion coefficients \f$(k_1, k_2, k_3, k_4)\f$.
+    @param D Output vector of distortion coefficients \f$\distcoeffsfisheye\f$.
     @param rvecs Output vector of rotation vectors (see Rodrigues ) estimated for each pattern view.
     That is, each k-th rotation vector together with the corresponding k-th translation vector (see
     the next output parameter description) brings the calibration pattern from the model coordinate
@@ -3172,9 +3162,9 @@ optimization. It stays at the center or at a different location specified when C
 
     /** @brief Stereo rectification for fisheye camera model
 
-    @param K1 First camera matrix.
+    @param K1 First camera intrinsic matrix.
     @param D1 First camera distortion parameters.
-    @param K2 Second camera matrix.
+    @param K2 Second camera intrinsic matrix.
     @param D2 Second camera distortion parameters.
     @param imageSize Size of the image used for stereo calibration.
     @param R Rotation matrix between the coordinate systems of the first and the second
@@ -3211,15 +3201,15 @@ optimization. It stays at the center or at a different location specified when C
     observed by the first camera.
     @param imagePoints2 Vector of vectors of the projections of the calibration pattern points,
     observed by the second camera.
-    @param K1 Input/output first camera matrix:
+    @param K1 Input/output first camera intrinsic matrix:
     \f$\vecthreethree{f_x^{(j)}}{0}{c_x^{(j)}}{0}{f_y^{(j)}}{c_y^{(j)}}{0}{0}{1}\f$ , \f$j = 0,\, 1\f$ . If
     any of fisheye::CALIB_USE_INTRINSIC_GUESS , fisheye::CALIB_FIX_INTRINSIC are specified,
     some or all of the matrix components must be initialized.
-    @param D1 Input/output vector of distortion coefficients \f$(k_1, k_2, k_3, k_4)\f$ of 4 elements.
-    @param K2 Input/output second camera matrix. The parameter is similar to K1 .
+    @param D1 Input/output vector of distortion coefficients \f$\distcoeffsfisheye\f$ of 4 elements.
+    @param K2 Input/output second camera intrinsic matrix. The parameter is similar to K1 .
     @param D2 Input/output lens distortion coefficients for the second camera. The parameter is
     similar to D1 .
-    @param imageSize Size of the image used only to initialize intrinsic camera matrix.
+    @param imageSize Size of the image used only to initialize camera intrinsic matrix.
     @param R Output rotation matrix between the 1st and the 2nd camera coordinate systems.
     @param T Output translation vector between the coordinate systems of the cameras.
     @param flags Different flags that may be zero or a combination of the following values:
