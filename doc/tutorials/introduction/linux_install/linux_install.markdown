@@ -4,7 +4,7 @@ Installation in Linux {#tutorial_linux_install}
 @next_tutorial{tutorial_linux_gcc_cmake}
 
 
-The following steps have been tested for Ubuntu 10.04, 16.04 LST, 18.04 LST, CentOS 8, Redhat 8  and openSUSE Leap 15.2 but should work with other distros as well.
+The following steps have been tested for Ubuntu 10.04, 16.04 LST, 18.04 LST, CentOS 8, Red Hat Enterprise Linux 8 and openSUSE Leap 15.2 but should work with other distros as well.
 
 Required Packages
 -----------------
@@ -21,34 +21,38 @@ Required Packages
 -   [optional] libjpeg-dev, libpng-dev, libtiff-dev, libjasper-dev, libdc1394-22-dev
 -   [optional] CUDA Toolkit 6.5 or higher
 
-The packages can be installed using a terminal and the following commands or by using Synaptic
-Manager in Ubuntu 10.04, 16.04 LST:
+The packages can be installed using a terminal and the following commands or by using Synaptic Manager in Ubuntu 10.04, 16.04 LST:
 @code{.bash}
 [compiler] sudo apt-get install build-essential
 [required] sudo apt-get install cmake git libgtk2.0-dev pkg-config libavcodec-dev libavformat-dev libswscale-dev
 [optional] sudo apt-get install python-dev python-numpy libtbb2 libtbb-dev libjpeg-dev libpng-dev libtiff-dev libjasper-dev libdc1394-22-dev
 @endcode
 
+The packages can be installed using a terminal and the following commands or by using Synaptic Manager in Ubuntu 18.04:
+@code{.bash}
+[compiler] sudo apt-get install build-essential
+[required] sudo apt-get install cmake git libgtk2.0-dev pkg-config libavcodec-dev libavformat-dev libswscale-dev
+[optional] sudo add-apt-repository "deb http://security.ubuntu.com/ubuntu xenial-security main"
+[optional] sudo apt update
+[optional] sudo apt-get install python-dev python-numpy libtbb2 libtbb-dev libjpeg-dev libpng-dev libtiff-dev libjasper-dev libdc1394-22-dev
+@endcode
+
 Use the following steps for openSUSE Leap 15.2 or by using Yast:
 @code{.bash}
 [compiler] sudo zypper in patterns-devel-C-C++-devel_C_C++
-[required] sudo zypper in gtk2-devel cmake pkgconfig ffmpeg-4-libavcodec-devel ffmpeg-4-libavformat-devel ffmpeg-4-libswscale-devel 
-[optional] sudo zypper in python3-numpy-devel python3-devel libtbb2 tbb-devel libjasper-devel libjpeg8-devel  libpng16-devel libtiff-devel libdc1394-devel 
+[required] sudo zypper in gtk2-devel cmake pkgconfig ffmpeg-4-libavcodec-devel ffmpeg-4-libavformat-devel ffmpeg-4-libswscale-devel
+[optional] sudo zypper in python3-numpy-devel python3-devel libtbb2 tbb-devel libjasper-devel libjpeg8-devel libpng16-devel libtiff-devel libdc1394-devel
 @endcode
 
-Use the following steps for CentOS 8 or Redhat 8:
+Use the following steps for CentOS 8 or Red Hat Enterprise Linux 8:
 @code{.bash}
 [compiler] sudo dnf -y install git gcc gcc-c++ cmake gtk2-devel pkgconfig make
 [required] sudo dnf -y install https://download.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
 [required] sudo dnf localinstall --nogpgcheck https://download1.rpmfusion.org/free/el/rpmfusion-free-release-8.noarch.rpm
-[required] sudo dnf install  ffmpeg-devel
+[required] sudo dnf install ffmpeg-devel
 [required] sudo dnf install http://rpmfind.net/linux/epel/7/x86_64/Packages/s/SDL2-2.0.10-1.el7.x86_64.rpm
 [optional] sudo dnf install libpng-devel libjpeg-turbo-devel libtiff-devel tbb-devel python38-numpy python38 python38-devel
 @endcode
-
-In the link below an example compilation for some flavors of Linux:
-https://software.opensuse.org//download.html?project=home%3Acabelo&package=opencv
-
 
 Getting OpenCV Source Code
 --------------------------
