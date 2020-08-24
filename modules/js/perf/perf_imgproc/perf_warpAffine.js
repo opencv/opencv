@@ -47,7 +47,7 @@ function perf() {
                 if (borderMode == cv.BORDER_CONSTANT) {
                   smoothBorder(cv, src, borderMode, 1);
                 }
-                
+
                 let point = new cv.Point(src.cols/2.0, src.rows/2.0);
                 let warpMat = cv.getRotationMatrix2D(point, 30.0, 2.2);
                 },
