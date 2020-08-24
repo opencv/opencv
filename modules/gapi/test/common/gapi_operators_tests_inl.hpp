@@ -77,6 +77,30 @@ TEST_P(NotOperatorTest, OperatorAccuracyTest)
         EXPECT_EQ(0, cvtest::norm(out_mat_ocv, out_mat_gapi, NORM_INF));
     }
 }
+
+namespace for_test
+{
+class Foo {};
+
+int operator|(Foo, int);
+int operator|(Foo, int) { return 1; }
+
+int operator&(Foo, int);
+int operator&(Foo, int) { return 1; }
+
+int operator+(Foo, int);
+int operator+(Foo, int) { return 1; }
+
+TEST(CVNamespaceOperatorsTest, OperatorCompilationTest)
+{
+    cv::GScalar sc1;
+    cv::GMat mat1, mat2;
+    cv::GMat mat3 = mat1 | mat2;
+    cv::GMat mat4 = mat1 & sc1;
+    cv::GMat mat5 = sc1 + mat2;
+    // No compilation errors expected
+}
+} // for_test
 } // opencv_test
 
 #endif // OPENCV_GAPI_OPERATOR_TESTS_INL_COMMON_HPP
