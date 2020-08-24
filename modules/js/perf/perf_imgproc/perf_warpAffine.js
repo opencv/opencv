@@ -43,70 +43,11 @@ function perf() {
                 let borderColor = new cv.Scalar.all(150);
                 let src = new cv.Mat(srcSize, cv.CV_8UC4);
                 let dst = new cv.Mat(sz, cv.CV_8UC4);
-                //fillGradient
-                let delta = 5;
-                let ch = 4;
-                let n = 255 / delta;
-                let r, c, i, view;
-                for(r=0; r<src.rows; r++)
-                {
-                    let kR = r % (2*n);
-                    let valR = (kR<=n) ? delta*kR : delta*(2*n-kR);
-                    for(c=0; c<src.cols; c++)
-                    {
-                        let kC = c % (2*n);
-                        let valC = (kC<=n) ? delta*kC : delta*(2*n-kC);
-                        let vals = [valR, valC, (200*r/src.rows), 255];
-                        view = src.ucharPtr(r, c);
-                        for(i=0; i<ch; i++) view[i] = vals[i];
-                    }
-                }
+                fillGradient(cv, src);
                 if (borderMode == cv.BORDER_CONSTANT) {
-                  //smoothBorder
-                  delta = 1;
-                  ch = 4;
-                  n = 100/delta;
-                  let nR = Math.min(n, (src.rows+1)/2);
-                  let nC = Math.min(n, (src.cols+1)/2);
-                  let index;
-
-                  for (r=0; r<nR; r++) {
-                    let k1 = r*delta/100.0, k2 = 1-k1;
-                    for(c=0; c<src.cols; c++) {
-                      view = src.ucharPtr(r, c);
-                      for(index = 0; index <4; index++) {
-                        temp = view[index]*k1 + borderColor[index] * k2;
-                        view[index] = temp;
-                      }
-                    }
-                    for(c=0; c<src.cols; c++) {
-                      view = src.ucharPtr(src.rows-r-1, c);
-                      for(index = 0; index <4; index++) {
-                        temp = view[index]*k1 + borderColor[index] * k2;
-                        view[index] = temp;
-                      }
-                    }
-                  }
-                  for (r=0; r<src.rows; r++) {
-                    for(c=0; c<nC; c++) {
-                      let k1 = c*delta/100.0, k2 = 1-k1;
-                      view = src.ucharPtr(r, c);
-                      for(index = 0; index <4; index++) {
-                        temp = view[index]*k1 + borderColor[index] * k2;
-                        view[index] = temp;
-                      }
-                    }
-                    for(c=0; c<n; c++) {
-                      let k1 = c*delta/100.0, k2 = 1-k1;
-                      view = src.ucharPtr(r, src.cols-c-1);
-                      for(index = 0; index <4; index++) {
-                        temp = view[index]*k1 + borderColor[index] * k2;
-                        view[index] = temp;
-                      }
-                    }
-                  }
-
+                  smoothBorder(cv, src, borderMode, 1);
                 }
+                
                 let point = new cv.Point(src.cols/2.0, src.rows/2.0);
                 let warpMat = cv.getRotationMatrix2D(point, 30.0, 2.2);
                 },

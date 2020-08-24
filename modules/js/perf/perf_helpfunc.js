@@ -16,6 +16,44 @@ var fillGradient = function(cv, img, delta=5) {
   }
 }
 
+var smoothBorder = function(cv, img, color, delta=5) {
+  let ch = img.channels();
+  console.assert(!img.empty() && img.depth() == cv.CV_8U && ch <= 4);
+
+  let n = 100/delta;
+  let nR = Math.min(n, (img.rows+1)/2);
+  let nC = Math.min(n, (img.cols+1)/2);
+  let s = new cv.Scalar();
+
+  for (let r = 0; r < nR; r++) {
+    let k1 = r*delta/100.0, k2 = 1-k1;
+    for(let c = 0; c < img.cols; c++) {
+      let view = img.ptr(r, c);
+      for(let i = 0; i < ch; i++) s[i] = view[i];
+      for(let i = 0; i < ch; i++) view[i] = s[i]*k1 + color[i] * k2;
+    }
+    for(let c=0; c < img.cols; c++) {
+      let view = img.ptr(img.rows-r-1, c);
+      for(let i = 0; i < ch; i++) s[i] = view[i];
+      for(let i = 0; i < ch; i++) view[i] = s[i]*k1 + color[i] * k2;
+    }
+  }
+  for (let r = 0; r < img.rows; r++) {
+    for(let c = 0; c < nC; c++) {
+      let k1 = c*delta/100.0, k2 = 1-k1;
+      let view = img.ptr(r, c);
+      for(let i = 0; i < ch; i++) s[i] = view[i];
+      for(let i = 0; i < ch; i++) view[i] = s[i]*k1 + color[i] * k2;
+    }
+    for(let c = 0; c < n; c++) {
+      let k1 = c*delta/100.0, k2 = 1-k1;
+      let view = img.ptr(r, img.cols-c-1);
+      for(let i = 0; i < ch; i++) s[i] = view[i];
+      for(let i = 0; i < ch; i++) view[i] = s[i]*k1 + color[i] * k2;
+    }
+  }
+}
+
 var cvtStr2cvSize = function(strSize) {
   let size;
 
@@ -254,6 +292,7 @@ if (typeof window === 'undefined') {
   exports.enableButton = enableButton;
   exports.disableButton = disableButton;
   exports.fillGradient = fillGradient;
+  exports.smoothBorder = smoothBorder;
   exports.cvtStr2cvSize = cvtStr2cvSize;
   exports.combine = combine;
   exports.constructMode = constructMode;
