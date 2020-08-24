@@ -1949,7 +1949,9 @@ static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
     // some formats want stream headers to be separate
     if(oc->oformat->flags & AVFMT_GLOBALHEADER)
     {
-#if LIBAVCODEC_BUILD > CALC_FFMPEG_VERSION(56, 35, 0)
+        // flags were renamed: https://github.com/libav/libav/commit/7c6eb0a1b7bf1aac7f033a7ec6d8cacc3b5c2615
+#if LIBAVCODEC_BUILD >= (LIBAVCODEC_VERSION_MICRO >= 100 \
+     ? CALC_FFMPEG_VERSION(56, 60, 100) : CALC_FFMPEG_VERSION(56, 35, 0))
         c->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
 #else
         c->flags |= CODEC_FLAG_GLOBAL_HEADER;
