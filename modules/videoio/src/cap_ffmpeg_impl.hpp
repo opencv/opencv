@@ -935,7 +935,9 @@ bool CvCapture_FFMPEG::open( const char* _filename )
                 enc->skip_frame = AVDISCARD_DEFAULT;
             else if (strcmp(avdiscard_entry->value, "none") == 0)
                 enc->skip_frame = AVDISCARD_NONE;
-#if LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(54, 59, 100)
+            // NONINTRA flag was introduced with version bump at revision:
+            // https://github.com/FFmpeg/FFmpeg/commit/b152152df3b778d0a86dcda5d4f5d065b4175a7b
+#if LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(55, 67, 100)
             else if (strcmp(avdiscard_entry->value, "nonintra") == 0)
                 enc->skip_frame = AVDISCARD_NONINTRA;
 #endif
