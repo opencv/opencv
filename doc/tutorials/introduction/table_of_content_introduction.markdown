@@ -8,7 +8,7 @@ Additionally you can find very basic sample source code to introduce you to the 
 
     _Compatibility:_ \> OpenCV 2.0
 
-    _Author:_ Ana Huamán
+    _Author:_ Ana Huamán and Alessandro de Oliveira Faria
 
     We will learn how to setup OpenCV in your computer!
 
