@@ -558,7 +558,7 @@ bool Jpeg2KOpjDecoder::readHeader()
             CV_Error(Error::StsNotImplemented, cv::format("OpenJPEG2000: Component %d/%d is duplicate alpha channel", i, numcomps));
         }
 
-        hasAlpha |= (bool)comp.alpha;
+        hasAlpha |= comp.alpha != 0;
 
         if (comp.prec > 64)
         {
