@@ -310,7 +310,7 @@ struct putToStream<Ref, std::tuple<T, Ts...>>
 {
     static void put(I::OStream& os, const Ref &r)
     {
-        if (r.template holds<T>()) {
+        if (r.getKind() == cv::detail::GOpaqueTraits<T>::kind) {
             os << r.template rref<T>();
         } else {
             putToStream<Ref, std::tuple<Ts...> >::put(os, r);

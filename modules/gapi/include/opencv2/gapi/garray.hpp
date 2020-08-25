@@ -252,13 +252,6 @@ namespace detail
         template<typename T> explicit VectorRef(std::vector<T>&& vec)      :
                                             m_ref(new VectorRefT<T>(std::move(vec))), m_kind(GOpaqueTraits<T>::kind) {}
 
-        template<typename T>
-        bool holds(cv::detail::OpaqueKind kind = cv::detail::OpaqueKind::CV_UNKNOWN) const
-        {
-            if (this->m_kind == kind) return true;
-            return dynamic_cast<VectorRefT<T>*>(m_ref.get()) != nullptr;
-        }
-
         cv::detail::OpaqueKind getKind() const
         {
             return m_kind;
