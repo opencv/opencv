@@ -32,7 +32,11 @@ cv::detail::GCompoundContext::GCompoundContext(const cv::GArgs& in_args)
             {
                 case GShape::GMAT   : m_args[i] = GArg(GMat());    break;
                 case GShape::GSCALAR: m_args[i] = GArg(GScalar()); break;
-                case GShape::GARRAY :/* do nothing - as handled in a special way, see gcompoundkernel.hpp for details */; break;
+                case GShape::GARRAY :
+                case GShape::GOPAQUE:
+                    // do nothing - as handled in a special way, see gcompoundkernel.hpp for details
+                    // same applies to GMatP
+                    break;
                 default: GAPI_Assert(false);
             }
         }

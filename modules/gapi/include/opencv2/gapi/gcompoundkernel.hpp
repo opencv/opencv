@@ -75,6 +75,16 @@ template<typename U> struct get_compound_in<cv::GOpaque<U>>
     }
 };
 
+template<> struct get_compound_in<cv::GMatP>
+{
+    static cv::GMatP get(GCompoundContext &ctx, int idx)
+    {
+        auto mat = cv::GMatP();
+        ctx.m_args[idx] = GArg(mat);
+        return mat;
+    }
+};
+
 template<typename, typename, typename>
 struct GCompoundCallHelper;
 
