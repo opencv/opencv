@@ -986,6 +986,7 @@ public:
     size_t getVersion() { return version; }
     std::string getDecodeInformation() { return result_info; }
     bool fullDecodingProcess();
+    bool curvedDecodingProcess();
 protected:
     bool updatePerspective();
     bool versionDefinition();
@@ -1012,7 +1013,6 @@ protected:
     vector<vector<Point2f>> divideIntoEvenSegments();
     bool straightenQRCodeInParts();
     bool preparingCurvedQRCodes();
-    bool isQRCodeCurved();
     Mat original, bin_barcode, no_border_intermediate, intermediate, straight, curved_to_straight, test_image, hull_image, closest_points_image, sides_points_image, markers_image, spline_image, cut_points_image;
     vector<Point2f> original_points;
     vector<Point2f> original_curved_points = vector<Point2f>(4);
@@ -1492,7 +1492,6 @@ Point QRDecode::findClosestZeroPoint(Point2f original_point)
 
 Mat QRDecode::getMarkersMask()
 {
-    uint8_t value, mask_value;
     Mat mask, markers_mask;
     mask = markers_mask = Mat::zeros(bin_barcode.rows + 2, bin_barcode.cols + 2, CV_8UC1);
     Mat fill_bin_barcode = bin_barcode.clone();
@@ -1993,11 +1992,12 @@ bool QRDecode::straightenQRCodeInParts()
     if (current_curved_side.size() != opposite_curved_side.size()) { return false; }
 
     size_t number_pnts_to_cut = current_curved_side.size();
+    if (number_pnts_to_cut == 0) { return false; }
 
     float perspective_curved_size = 251.0;
     const Size temporary_size(cvRound(perspective_curved_size), cvRound(perspective_curved_size));
 
-    int num_intervals_in_part = (number_pnts_to_cut - 1) / 2;
+    size_t num_intervals_in_part = (number_pnts_to_cut - 1) / 2;
     float first_line = norm(current_curved_side.front() - opposite_curved_side.front());
     float last_line = norm(current_curved_side.back() - opposite_curved_side.back());
     float ratio = 1.0 - first_line / last_line;
@@ -2007,10 +2007,10 @@ bool QRDecode::straightenQRCodeInParts()
     double min_edge_norm;
     vector<vector<Point>> markers_vertices_points, markers_contours;
     if(!findMarkersVerticesPoints(markers_vertices_points)) { return false; }
-    for (int i = 0; i < markers_vertices_points.size(); i++)
+    for (size_t i = 0; i < markers_vertices_points.size(); i++)
     {
         min_edge_norm = std::numeric_limits<double>::max();
-        for (int j = 0; j < markers_vertices_points[i].size(); j++)
+        for (size_t j = 0; j < markers_vertices_points[i].size(); j++)
         {
             double temp_norm = norm(markers_vertices_points[i][j]-markers_vertices_points[i][(j+1)%4]);
             if (temp_norm < min_edge_norm)
@@ -2022,7 +2022,7 @@ bool QRDecode::straightenQRCodeInParts()
     }
 
     float step = ratio / num_intervals_in_part;
-    int half = number_pnts_to_cut / 2;
+    size_t half = number_pnts_to_cut / 2;
 
     float first_dist = perspective_curved_size / (number_pnts_to_cut - 1);
     Mat perspective_result = Mat::zeros(temporary_size, CV_8UC1);
@@ -2158,7 +2158,18 @@ bool QRDecode::straightenQRCodeInParts()
 
 bool QRDecode::preparingCurvedQRCodes()
 {
-
+    vector<Point> result_integer_hull;
+    if(!getPointsInsideQRCode(original_points)) { return false; }
+    if (qrcode_locations.size() == 0) { return false; }
+    convexHull(qrcode_locations, result_integer_hull);
+    if (!computeClosestPoints(result_integer_hull)) { return false;}
+    if (!computeSidesPoints(result_integer_hull)) { return false; }
+    
+    if (approximate_unstable_point && !findAndAddStablePoint(result_integer_hull))
+    {
+        Point stable_point = original_points[unstable_pair.first];
+        closest_points[unstable_pair.first].second = stable_point;
+    }
     if (!findIndexesCurvedSides()) { return false; }
     if (findIncompleteIndexesCurvedSides())
     {
@@ -2193,52 +2204,6 @@ bool QRDecode::preparingCurvedQRCodes()
     if (!straightenQRCodeInParts()) { return false; }
 
     return true;
-}
-
-bool QRDecode::isQRCodeCurved()
-{
-    vector<Point> result_integer_hull;
-    if(!getPointsInsideQRCode(original_points)) { return false; }
-    if (qrcode_locations.size() == 0) { return false; }
-    convexHull(qrcode_locations, result_integer_hull);
-    if (!computeClosestPoints(result_integer_hull)) { return false;}
-    if (!computeSidesPoints(result_integer_hull)) { return false; }
-    
-    if (approximate_unstable_point && !findAndAddStablePoint(result_integer_hull))
-    {
-        Point stable_point = original_points[unstable_pair.first];
-        closest_points[unstable_pair.first].second = stable_point;
-    }
-
-    bool isCurved = false;
-    double max_dist_to_arc_side = 3.0;
-    size_t num_closest_points = closest_points.size();
-
-    for (size_t i = 0; i < num_closest_points; i++)
-    {
-        double dist_to_arc = 0.0;
-
-        Point arc_start = closest_points[i].second;
-        Point arc_end   = closest_points[(i + 1) % num_closest_points].second;
- 
-        double line_dist = norm(arc_start - arc_end);
-        for (size_t j = 1; j < sides_points[i].size() - 1; j++)
-        {
-            Point arc_point = sides_points[i][j];         
-            double dist = abs(distancePointToLine(arc_point, arc_start, arc_end));
-            dist_to_arc += dist;
-        }
-        dist_to_arc /= (sides_points[i].size() - 2);
-
-        if (dist_to_arc > max_dist_to_arc_side)
-        {
-            isCurved = true;
-            break;
-        }
-
-    }
-
-    return isCurved;
 }
 
 bool QRDecode::updatePerspective()
@@ -2449,14 +2414,21 @@ bool QRDecode::decodingProcess()
 bool QRDecode::fullDecodingProcess()
 {
 #ifdef HAVE_QUIRC
-    if (isQRCodeCurved())
-    {
-        if (!preparingCurvedQRCodes()) { return false; }
-    }
-    else
-    {
-        if (!updatePerspective())  { return false; }
-    }
+    if (!updatePerspective())  { return false; }
+    if (!versionDefinition())  { return false; }
+    if (!samplingForVersion()) { return false; }
+    if (!decodingProcess())    { return false; }
+    return true;
+#else
+    std::cout << "Library QUIRC is not linked. No decoding is performed. Take it to the OpenCV repository." << std::endl;
+    return false;
+#endif
+}
+
+bool QRDecode::curvedDecodingProcess()
+{
+#ifdef HAVE_QUIRC
+    if (!preparingCurvedQRCodes()) { return false; }
     if (!versionDefinition())  { return false; }
     if (!samplingForVersion()) { return false; }
     if (!decodingProcess())    { return false; }
@@ -2471,6 +2443,13 @@ bool decodeQRCode(InputArray in, InputArray points, std::string &decoded_info, O
 {
     QRCodeDetector qrcode;
     decoded_info = qrcode.decode(in, points, straight_qrcode);
+    return !decoded_info.empty();
+}
+
+bool decodeCurvedQRCode(InputArray in, InputArray points, std::string &decoded_info, OutputArray straight_qrcode)
+{
+    QRCodeDetector qrcode;
+    decoded_info = qrcode.decodeCurved(in, points, straight_qrcode);
     return !decoded_info.empty();
 }
 
@@ -2489,6 +2468,34 @@ cv::String QRCodeDetector::decode(InputArray in, InputArray points,
     QRDecode qrdec;
     qrdec.init(inarr, src_points);
     bool ok = qrdec.fullDecodingProcess();
+
+    std::string decoded_info = qrdec.getDecodeInformation();
+
+    if (ok && straight_qrcode.needed())
+    {
+        qrdec.getStraightBarcode().convertTo(straight_qrcode,
+                                             straight_qrcode.fixedType() ?
+                                             straight_qrcode.type() : CV_32FC2);
+    }
+
+    return ok ? decoded_info : std::string();
+}
+
+cv::String QRCodeDetector::decodeCurved(InputArray in, InputArray points,
+                                        OutputArray straight_qrcode)
+{
+    Mat inarr;
+    if (!checkQRInputImage(in, inarr))
+        return std::string();
+
+    vector<Point2f> src_points;
+    points.copyTo(src_points);
+    CV_Assert(src_points.size() == 4);
+    CV_CheckGT(contourArea(src_points), 0.0, "Invalid QR code source points");
+
+    QRDecode qrdec;
+    qrdec.init(inarr, src_points);
+    bool ok = qrdec.curvedDecodingProcess();
 
     std::string decoded_info = qrdec.getDecodeInformation();
 
@@ -2522,6 +2529,29 @@ cv::String QRCodeDetector::detectAndDecode(InputArray in,
     }
     updatePointsResult(points_, points);
     std::string decoded_info = decode(inarr, points, straight_qrcode);
+    return decoded_info;
+}
+
+cv::String QRCodeDetector::detectAndDecodeCurved(InputArray in,
+                                                 OutputArray points_,
+                                                 OutputArray straight_qrcode)
+{
+    Mat inarr;
+    if (!checkQRInputImage(in, inarr))
+    {
+        points_.release();
+        return std::string();
+    }
+
+    vector<Point2f> points;
+    bool ok = detect(inarr, points);
+    if (!ok)
+    {
+        points_.release();
+        return std::string();
+    }
+    updatePointsResult(points_, points);
+    std::string decoded_info = decodeCurved(inarr, points, straight_qrcode);
     return decoded_info;
 }
 
