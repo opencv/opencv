@@ -110,8 +110,7 @@ class SiamRPNTracker:
         if isinstance(pos, float):
             pos = [pos, pos]
         sz = original_sz
-        im_h = im.shape[0]
-        im_w = im.shape[1]
+        im_h, im_w, im_d = im.shape
         c = (original_sz + 1) / 2
         cx, cy = pos
         context_xmin = np.floor(cx - c + 0.5)
@@ -127,19 +126,18 @@ class SiamRPNTracker:
         context_ymin += top_pad
         context_ymax += top_pad
 
-        r, c, k = im.shape
         if any([top_pad, bottom_pad, left_pad, right_pad]):
-            size = (r + top_pad + bottom_pad, c + left_pad + right_pad, k)
+            size = (im_h + top_pad + bottom_pad, im_w + left_pad + right_pad, im_d)
             te_im = np.zeros(size, np.uint8)
-            te_im[top_pad:top_pad + r, left_pad:left_pad + c, :] = im
+            te_im[top_pad:top_pad + im_h, left_pad:left_pad + im_w, :] = im
             if top_pad:
-                te_im[0:top_pad, left_pad:left_pad + c, :] = avg_chans
+                te_im[0:top_pad, left_pad:left_pad + im_w, :] = avg_chans
             if bottom_pad:
-                te_im[r + top_pad:, left_pad:left_pad + c, :] = avg_chans
+                te_im[im_h + top_pad:, left_pad:left_pad + im_w, :] = avg_chans
             if left_pad:
                 te_im[:, 0:left_pad, :] = avg_chans
             if right_pad:
-                te_im[:, c + left_pad:, :] = avg_chans
+                te_im[:, im_w + left_pad:, :] = avg_chans
             im_patch = te_im[int(context_ymin):int(context_ymax + 1),
                        int(context_xmin):int(context_xmax + 1), :]
         else:
