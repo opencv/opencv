@@ -993,7 +993,10 @@ bool CvCapture_FFMPEG::open( const char* _filename )
                 enc->skip_frame = AVDISCARD_DEFAULT;
             else if (strcmp(avdiscard_entry->value, "none") == 0)
                 enc->skip_frame = AVDISCARD_NONE;
-#if LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(54, 59, 100)
+            // NONINTRA flag was introduced with version bump at revision:
+            // https://github.com/FFmpeg/FFmpeg/commit/b152152df3b778d0a86dcda5d4f5d065b4175a7b
+            // This key is supported only for FFMPEG version
+#if LIBAVCODEC_VERSION_MICRO >= 100 && LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(55, 67, 100)
             else if (strcmp(avdiscard_entry->value, "nonintra") == 0)
                 enc->skip_frame = AVDISCARD_NONINTRA;
 #endif
@@ -1949,7 +1952,9 @@ static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
     // some formats want stream headers to be separate
     if(oc->oformat->flags & AVFMT_GLOBALHEADER)
     {
-#if LIBAVCODEC_BUILD > CALC_FFMPEG_VERSION(56, 35, 0)
+        // flags were renamed: https://github.com/libav/libav/commit/7c6eb0a1b7bf1aac7f033a7ec6d8cacc3b5c2615
+#if LIBAVCODEC_BUILD >= (LIBAVCODEC_VERSION_MICRO >= 100 \
+     ? CALC_FFMPEG_VERSION(56, 60, 100) : CALC_FFMPEG_VERSION(56, 35, 0))
         c->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
 #else
         c->flags |= CODEC_FLAG_GLOBAL_HEADER;
