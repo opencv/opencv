@@ -85,6 +85,35 @@ Building OpenCV.js from Source
     python ./platforms/js/build_js.py build_wasm --build_wasm
     @endcode
 
+-#  [Optional] To build the OpenCV.js loader, append `--build_loader`.
+
+    For example:
+    @code{.bash}
+    python ./platforms/js/build_js.py build_js --build_loader
+    @endcode
+
+    @note
+    The loader is implemented as a js file in the path `<opencv_js_dir>/bin/loader.js`. The loader can detect the features of the broswer and load corresponding OpenCV.js automatically. To use it, you need to introduce it as a script in your Web application.
+    
+    Example Code:
+    @code{.javascipt}
+    // Create an instance 
+    loader = new Loader();
+
+    //Set paths configuration
+    pathsConfig = {
+        wasm: "../../build_wasm/opencv.js",
+        threads: "../../build_mt/opencv.js",
+        simd: "../../build_simd/opencv.js",
+        mtSIMD: "../../build_mtSIMD/opencv.js",
+    }
+    loader.setPaths(pathsConfig);
+
+    //Load OpenCV.js and use main function as the param
+    loader.loadOpenCV(main);
+    @endcode
+
+
 -#  [optional] To build documents, append `--build_doc` option.
 
     For example:

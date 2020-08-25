@@ -175,3 +175,22 @@ endforeach()
 
 add_custom_target(${PROJECT_NAME}_perf ALL
                   DEPENDS ${OCV_JS_PATH} ${opencv_perf_js_file_deps})
+
+#loader
+set(opencv_loader_js_bin_dir "${EXECUTABLE_OUTPUT_PATH}")
+set(loader_dir ${CMAKE_CURRENT_SOURCE_DIR}/src)
+
+set(opencv_loader_js_file_deps "")
+
+# make sure the build directory exists
+file(MAKE_DIRECTORY "${opencv_loader_js_bin_dir}")
+
+add_custom_command(
+        TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy
+                ${loader_dir}/loader.js
+                ${opencv_loader_js_bin_dir}/loader.js)
+list(APPEND opencv_loader_js_file_deps "${loader_dir}/loader.js" "${opencv_loader_js_bin_dir}/loader.js")
+
+add_custom_target(${PROJECT_NAME}_loader ALL
+                  DEPENDS ${OCV_JS_PATH} ${opencv_loader_js_file_deps})
