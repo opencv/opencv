@@ -159,7 +159,7 @@ public:
     static CV_ALWAYS_INLINE ufixedpoint64 one() { return ufixedpoint64((uint64_t)(1ULL << fixedShift)); }
 
     static CV_ALWAYS_INLINE ufixedpoint64 fromRaw(uint64_t v) { return ufixedpoint64(v); }
-    CV_ALWAYS_INLINE ufixedpoint64 raw() { return val; }
+    CV_ALWAYS_INLINE uint64_t raw() { return val; }
     friend class ufixedpoint32;
 };
 
