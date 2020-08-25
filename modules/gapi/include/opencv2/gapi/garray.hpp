@@ -256,18 +256,6 @@ namespace detail
         {
             return m_kind;
         }
-        
-        template<typename T>
-        bool holds(cv::detail::OpaqueKind kind = cv::detail::OpaqueKind::CV_UNKNOWN) const
-        {
-            if (this->m_kind == kind) return true;
-            return dynamic_cast<VectorRefT<T>*>(m_ref.get()) != nullptr;
-        }
-
-        cv::detail::OpaqueKind getKind() const
-        {
-            return m_kind;
-        }
 
         template<typename T> void reset()
         {
