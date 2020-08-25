@@ -1104,12 +1104,19 @@ GAPI_FLUID_KERNEL(GFluidConvertTo, cv::gapi::core::GConvertTo, false)
         //     DST     SRC     OP             __VA_ARGS__
         UNARY_(uchar , uchar , run_convertto, dst, src, alpha, beta);
         UNARY_(uchar , ushort, run_convertto, dst, src, alpha, beta);
+        UNARY_(uchar ,  short, run_convertto, dst, src, alpha, beta);
         UNARY_(uchar ,  float, run_convertto, dst, src, alpha, beta);
         UNARY_(ushort, uchar , run_convertto, dst, src, alpha, beta);
         UNARY_(ushort, ushort, run_convertto, dst, src, alpha, beta);
+        UNARY_(ushort,  short, run_convertto, dst, src, alpha, beta);
         UNARY_(ushort,  float, run_convertto, dst, src, alpha, beta);
+        UNARY_( short, uchar , run_convertto, dst, src, alpha, beta);
+        UNARY_( short, ushort, run_convertto, dst, src, alpha, beta);
+        UNARY_( short,  short, run_convertto, dst, src, alpha, beta);
+        UNARY_( short,  float, run_convertto, dst, src, alpha, beta);
         UNARY_( float, uchar , run_convertto, dst, src, alpha, beta);
         UNARY_( float, ushort, run_convertto, dst, src, alpha, beta);
+        UNARY_( float,  short, run_convertto, dst, src, alpha, beta);
         UNARY_( float,  float, run_convertto, dst, src, alpha, beta);
 
         CV_Error(cv::Error::StsBadArg, "unsupported combination of types");
