@@ -271,7 +271,7 @@ template <typename FT> static void getGaussianKernel(int n, double sigma, int, s
     res.resize(n);
     for (int i = 0; i < n; i++)
     {
-        res[i] = FT::fromRaw(fixed_256[i]);
+        res[i] = FT::fromRaw((typename FT::raw_t)fixed_256[i]);
         //printf("%03d: %d\n", i, res[i].raw());
     }
 }

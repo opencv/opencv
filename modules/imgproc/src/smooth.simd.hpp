@@ -55,9 +55,9 @@ namespace cv {
 CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 // forward declarations
 template <typename RFT>
-void GaussianBlurFixedPoint(const Mat& src, /*const*/ Mat& dst,
-                            const RFT/*FT*/* fkx, int fkx_size,
-                            const RFT/*FT*/* fky, int fky_size,
+void GaussianBlurFixedPoint(const Mat& src, Mat& dst,
+                            const RFT* fkx, int fkx_size,
+                            const RFT* fky, int fky_size,
                             int borderType);
 
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
@@ -194,7 +194,7 @@ void hlineSmooth3N<uint8_t, ufixedpoint16>(const uint8_t* src, int cn, const ufi
     }
 }
 
-template <typename ET, typename FT, typename RFT, typename VFT>
+template <typename ET, typename FT, typename VFT>
 void hlineSmooth3N121Impl(const ET* src, int cn, const FT*, int, FT* dst, int len, int borderType)
 {
     if (len == 1)
@@ -223,7 +223,7 @@ void hlineSmooth3N121Impl(const ET* src, int cn, const FT*, int, FT* dst, int le
 #if CV_SIMD
         const int VECSZ = VFT::nlanes;
         for (; i <= lencn - VECSZ; i += VECSZ, src += VECSZ, dst += VECSZ)
-            v_store((RFT*)dst, (vx_load_expand(src - cn) + vx_load_expand(src + cn) + (vx_load_expand(src) << 1)) << (FT::fixedShift-2));
+            v_store((typename FT::raw_t*)dst, (vx_load_expand(src - cn) + vx_load_expand(src + cn) + (vx_load_expand(src) << 1)) << (FT::fixedShift-2));
 #endif
         for (; i < lencn; i++, src++, dst++)
             *dst = (FT(src[-cn])>>2) + (FT(src[cn])>>2) + (FT(src[0])>>1);
@@ -244,12 +244,12 @@ void hlineSmooth3N121(const ET* src, int cn, const FT*, int, FT* dst, int len, i
 template <>
 void hlineSmooth3N121<uint8_t, ufixedpoint16>(const uint8_t* src, int cn, const ufixedpoint16* _m, int _n, ufixedpoint16* dst, int len, int borderType)
 {
-    hlineSmooth3N121Impl<uint8_t, ufixedpoint16, uint16_t, v_uint16>(src, cn, _m, _n, dst, len, borderType);
+    hlineSmooth3N121Impl<uint8_t, ufixedpoint16, v_uint16>(src, cn, _m, _n, dst, len, borderType);
 }
 template <>
 void hlineSmooth3N121<uint16_t, ufixedpoint32>(const uint16_t* src, int cn, const ufixedpoint32* _m, int _n, ufixedpoint32* dst, int len, int borderType)
 {
-    hlineSmooth3N121Impl<uint16_t, ufixedpoint32, uint32_t, v_uint32>(src, cn, _m, _n, dst, len, borderType);
+    hlineSmooth3N121Impl<uint16_t, ufixedpoint32, v_uint32>(src, cn, _m, _n, dst, len, borderType);
 }
 
 template <typename ET, typename FT>

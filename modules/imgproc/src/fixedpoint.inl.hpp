@@ -21,6 +21,7 @@ public:
     static const int fixedShift = 32;
 
     typedef fixedpoint64 WT;
+    typedef int64_t raw_t;
     CV_ALWAYS_INLINE fixedpoint64() { val = 0; }
     CV_ALWAYS_INLINE fixedpoint64(const fixedpoint64& v) { val = v.val; }
     CV_ALWAYS_INLINE fixedpoint64(const int8_t& _val) { val = ((int64_t)_val) << fixedShift; }
@@ -104,6 +105,7 @@ public:
     static const int fixedShift = 32;
 
     typedef ufixedpoint64 WT;
+    typedef uint64_t raw_t;
     CV_ALWAYS_INLINE ufixedpoint64() { val = 0; }
     CV_ALWAYS_INLINE ufixedpoint64(const ufixedpoint64& v) { val = v.val; }
     CV_ALWAYS_INLINE ufixedpoint64(const uint8_t& _val) { val = ((uint64_t)_val) << fixedShift; }
@@ -173,6 +175,7 @@ public:
     static const int fixedShift = 16;
 
     typedef fixedpoint64 WT;
+    typedef int32_t raw_t;
     CV_ALWAYS_INLINE fixedpoint32() { val = 0; }
     CV_ALWAYS_INLINE fixedpoint32(const fixedpoint32& v) { val = v.val; }
     CV_ALWAYS_INLINE fixedpoint32(const int8_t& _val) { val = ((int32_t)_val) << fixedShift; }
@@ -227,6 +230,7 @@ public:
     static const int fixedShift = 16;
 
     typedef ufixedpoint64 WT;
+    typedef uint32_t raw_t;
     CV_ALWAYS_INLINE ufixedpoint32() { val = 0; }
     CV_ALWAYS_INLINE ufixedpoint32(const ufixedpoint32& v) { val = v.val; }
     CV_ALWAYS_INLINE ufixedpoint32(const uint8_t& _val) { val = ((uint32_t)_val) << fixedShift; }
@@ -280,6 +284,7 @@ public:
     static const int fixedShift = 8;
 
     typedef fixedpoint32 WT;
+    typedef int16_t raw_t;
     CV_ALWAYS_INLINE fixedpoint16() { val = 0; }
     CV_ALWAYS_INLINE fixedpoint16(const fixedpoint16& v) { val = v.val; }
     CV_ALWAYS_INLINE fixedpoint16(const int8_t& _val) { val = ((int16_t)_val) << fixedShift; }
@@ -327,6 +332,7 @@ public:
     static const int fixedShift = 8;
 
     typedef ufixedpoint32 WT;
+    typedef uint16_t raw_t;
     CV_ALWAYS_INLINE ufixedpoint16() { val = 0; }
     CV_ALWAYS_INLINE ufixedpoint16(const ufixedpoint16& v) { val = v.val; }
     CV_ALWAYS_INLINE ufixedpoint16(const uint8_t& _val) { val = ((uint16_t)_val) << fixedShift; }
