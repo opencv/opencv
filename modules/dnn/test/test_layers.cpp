@@ -646,6 +646,8 @@ TEST_P(Test_Caffe_layers, DataAugmentation)
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
     testLayerUsingCaffeModels("data_augmentation", true, false);
+    testLayerUsingCaffeModels("data_augmentation_2x1", true, false);
+    testLayerUsingCaffeModels("data_augmentation_8x6", true, false);
 }
 
 TEST_P(Test_Caffe_layers, Resample)
