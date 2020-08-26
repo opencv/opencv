@@ -115,6 +115,4 @@ TEST(GArg, GOpaqueU)
     cv::GArg arg2 = cv::GArg(cv::GOpaque<cv::Point>());
     EXPECT_NO_THROW(arg2.get<cv::detail::GOpaqueU>());
 }
-
-
 } // namespace opencv_test

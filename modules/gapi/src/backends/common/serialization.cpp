@@ -302,7 +302,9 @@ template<typename Ref>
 struct putToStream<Ref, std::tuple<>>
 {
     static void put(I::OStream&, const Ref &)
-    {}
+    {
+        GAPI_Assert(false && "Unsupported type for GArray/GOpaque serialization");
+    }
 };
 
 template<typename Ref, typename T, typename... Ts>
@@ -326,7 +328,9 @@ template<typename Ref>
 struct getFromStream<Ref, std::tuple<>>
 {
     static void get(I::IStream&, Ref &, cv::detail::OpaqueKind)
-    {}
+    {
+        GAPI_Assert(false && "Unsupported type for GArray/GOpaque deserialization");
+    }
 };
 
 template<typename Ref, typename T, typename... Ts>
@@ -510,29 +514,31 @@ I::OStream& operator<< (I::OStream& os, const cv::gimpl::Data &d) {
 
 namespace
 {
-    template<typename Ref, typename T, typename... Ts>
-    struct initCtor;
+template<typename Ref, typename T, typename... Ts>
+struct initCtor;
 
-    // FIXME: workaround to end the recursion
-    template<typename Ref>
-    struct initCtor<Ref, std::tuple<>>
+// FIXME: workaround to end the recursion
+template<typename Ref>
+struct initCtor<Ref, std::tuple<>>
+{
+    static void init(cv::gimpl::Data&)
     {
-        static void init(cv::gimpl::Data&)
-        {}
-    };
+        GAPI_Assert(false && "Unsupported type for GArray/GOpaque deserialization");
+    }
+};
 
-    template<typename Ref, typename T, typename... Ts>
-    struct initCtor<Ref, std::tuple<T, Ts...>>
-    {
-        static void init(cv::gimpl::Data& d) {
-            if (d.kind == cv::detail::GOpaqueTraits<T>::kind) {
-                static std::function<void(Ref&)> ctor = [](Ref& ref){ref.template reset<T>();};
-                d.ctor = ctor;
-            } else {
-                initCtor<Ref, std::tuple<Ts...> >::init(d);
-            }
+template<typename Ref, typename T, typename... Ts>
+struct initCtor<Ref, std::tuple<T, Ts...>>
+{
+    static void init(cv::gimpl::Data& d) {
+        if (d.kind == cv::detail::GOpaqueTraits<T>::kind) {
+            static std::function<void(Ref&)> ctor = [](Ref& ref){ref.template reset<T>();};
+            d.ctor = ctor;
+        } else {
+            initCtor<Ref, std::tuple<Ts...> >::init(d);
         }
-    };
+    }
+};
 } // anonymous namespace
 
 I::IStream& operator>> (I::IStream& is, cv::gimpl::Data &d) {

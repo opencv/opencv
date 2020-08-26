@@ -59,7 +59,9 @@ namespace detail
     template<> struct GOpaqueTraits<cv::Point>   { static constexpr const OpaqueKind kind = OpaqueKind::CV_POINT; };
     template<> struct GOpaqueTraits<cv::Mat>     { static constexpr const OpaqueKind kind = OpaqueKind::CV_MAT; };
     template<> struct GOpaqueTraits<cv::Rect>    { static constexpr const OpaqueKind kind = OpaqueKind::CV_RECT; };
+    // GArray is not supporting bool type for now due to difference in std::vector<bool> implementation
     using GOpaqueTraitsArrayTypes = std::tuple<int, double, cv::Size, cv::Scalar, cv::Point, cv::Mat, cv::Rect>;
+    // GOpaque is not supporting cv::Mat and cv::Scalar since there are GScalar and GMat types
     using GOpaqueTraitsOpaqueTypes = std::tuple<bool, int, double, cv::Size, cv::Point, cv::Rect>;
 } // namespace detail
 
