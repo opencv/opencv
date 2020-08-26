@@ -20,6 +20,16 @@ cv::detail::GArrayU::GArrayU(const GNode &n, std::size_t out)
 {
 }
 
+cv::detail::GArrayU::GArrayU(const detail::VectorRef& vref)
+    : m_priv(new GOrigin(GShape::GARRAY, cv::gimpl::ConstVal(vref)))
+{
+}
+
+cv::detail::GArrayU::GArrayU(detail::VectorRef&& vref)
+    : m_priv(new GOrigin(GShape::GARRAY, cv::gimpl::ConstVal(std::move(vref))))
+{
+}
+
 cv::GOrigin& cv::detail::GArrayU::priv()
 {
     return *m_priv;
