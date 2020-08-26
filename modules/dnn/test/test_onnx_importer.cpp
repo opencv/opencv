@@ -611,6 +611,26 @@ TEST_P(Test_ONNX_layers, Pad2d_Unfused)
     testONNXModels("ZeroPad2d");
 }
 
+TEST_P(Test_ONNX_layers, LinearWithConstant)
+{
+    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2020040000)
+    applyTestTag(CV_TEST_TAG_DNN_SKIP_IE);
+#endif
+    testONNXModels("lin_with_constant");
+}
+
+TEST_P(Test_ONNX_layers, MatmulWithTwoInputs)
+{
+    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2020040000)
+    applyTestTag(CV_TEST_TAG_DNN_SKIP_IE);
+#endif
+    testONNXModels("matmul_with_two_inputs");
+}
+
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_ONNX_layers, dnnBackendsAndTargets());
 
 class Test_ONNX_nets : public Test_ONNX_layers
