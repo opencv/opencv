@@ -51,6 +51,8 @@
 
 #include "usac.hpp"
 
+#include <opencv2/core/utils/logger.hpp>
+
 namespace cv
 {
 #if defined _DEBUG || defined CV_STATIC_ANALYSIS
@@ -809,6 +811,15 @@ int solvePnPGeneric( InputArray _opoints, InputArray _ipoints,
     vector<Mat> vec_rvecs, vec_tvecs;
     if (flags == SOLVEPNP_EPNP || flags == SOLVEPNP_DLS || flags == SOLVEPNP_UPNP)
     {
+        if (flags == SOLVEPNP_DLS)
+        {
+            CV_LOG_DEBUG(NULL, "Broken implementation for SOLVEPNP_DLS. Fallback to EPnP.");
+        }
+        else if (flags == SOLVEPNP_UPNP)
+        {
+            CV_LOG_DEBUG(NULL, "Broken implementation for SOLVEPNP_UPNP. Fallback to EPnP.");
+        }
+
         Mat undistortedPoints;
         undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
         epnp PnP(cameraMatrix, opoints, undistortedPoints);
