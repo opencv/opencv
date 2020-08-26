@@ -18,7 +18,6 @@ opencv_fd:
 # YOLO4 object detection family from Darknet (https://github.com/AlexeyAB/darknet)
 # YOLO object detection family from Darknet (https://pjreddie.com/darknet/yolo/)
 # Might be used for all YOLOv2, TinyYolov2, YOLOv3, YOLOv4 and TinyYolov4
-
 yolo:
   model: "yolov3.weights"
   config: "yolov3.cfg"
