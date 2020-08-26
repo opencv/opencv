@@ -3,7 +3,6 @@ Installation in Linux {#tutorial_linux_install}
 
 @next_tutorial{tutorial_linux_gcc_cmake}
 
-
 The following steps have been tested for Ubuntu 10.04, 16.04 LST, 18.04 LST, CentOS 8, Red Hat Enterprise Linux 8 and openSUSE Leap 15.2 but should work with other distros as well.
 
 Required Packages
@@ -40,7 +39,7 @@ The packages can be installed using a terminal and the following commands or by 
 Use the following steps for openSUSE Leap 15.2 or by using Yast:
 @code{.bash}
 [compiler] sudo zypper in patterns-devel-C-C++-devel_C_C++
-[required] sudo zypper in gtk2-devel cmake pkgconfig ffmpeg-4-libavcodec-devel ffmpeg-4-libavformat-devel ffmpeg-4-libswscale-devel
+[required] sudo zypper in gtk3-devel cmake pkgconfig ffmpeg-4-libavcodec-devel ffmpeg-4-libavformat-devel ffmpeg-4-libswscale-devel
 [optional] sudo zypper in python3-numpy-devel python3-devel libtbb2 tbb-devel libjasper-devel libjpeg8-devel libpng16-devel libtiff-devel libdc1394-devel
 @endcode
 
