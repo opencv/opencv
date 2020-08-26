@@ -1805,20 +1805,23 @@ PERF_TEST_P_(LUTPerfTest, TestPerformance)
 
 PERF_TEST_P_(ConvertToPerfTest, TestPerformance)
 {
-    MatType type_mat = get<0>(GetParam());
-    int depth_to = get<1>(GetParam());
-    cv::Size sz_in = get<2>(GetParam());
-    cv::GCompileArgs compile_args = get<3>(GetParam());
+    int depth_to     = -1;
+    MatType type_mat = -1;
+    double alpha = 0., beta = 0.;
+    cv::Size sz_in;
+    compare_f cmpF;
+    cv::GCompileArgs compile_args;
+    std::tie(cmpF, type_mat, depth_to, sz_in, alpha, beta, compile_args) = GetParam();
     MatType type_out = CV_MAKETYPE(depth_to, CV_MAT_CN(type_mat));
 
     initMatrixRandU(type_mat, sz_in, type_out);
 
     // OpenCV code ///////////////////////////////////////////////////////////
-    in_mat1.convertTo(out_mat_ocv, depth_to);
+    in_mat1.convertTo(out_mat_ocv, depth_to, alpha, beta);
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;
-    auto out = cv::gapi::convertTo(in, depth_to);
+    auto out = cv::gapi::convertTo(in, depth_to, alpha, beta);
     cv::GComputation c(in, out);
 
     // Warm-up graph engine:
@@ -1832,7 +1835,7 @@ PERF_TEST_P_(ConvertToPerfTest, TestPerformance)
     }
 
     // Comparison ////////////////////////////////////////////////////////////
-    // FIXIT unrealiable check: EXPECT_EQ(0, cv::countNonZero(out_mat_ocv != out_mat_gapi));
+    EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
     EXPECT_EQ(out_mat_gapi.size(), sz_in);
 
     SANITY_CHECK_NOTHING();

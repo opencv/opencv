@@ -70,7 +70,7 @@ namespace opencv_test
     class ConcatVertPerfTest : public TestPerfParams<tuple<cv::Size, MatType, cv::GCompileArgs>> {};
     class ConcatVertVecPerfTest : public TestPerfParams<tuple<cv::Size, MatType, cv::GCompileArgs>> {};
     class LUTPerfTest : public TestPerfParams<tuple<MatType, MatType, cv::Size, cv::GCompileArgs>> {};
-    class ConvertToPerfTest : public TestPerfParams<tuple<MatType, int, cv::Size, cv::GCompileArgs>> {};
+    class ConvertToPerfTest : public TestPerfParams<tuple<compare_f, MatType, int, cv::Size, double, double, cv::GCompileArgs>> {};
     class ResizePerfTest : public TestPerfParams<tuple<compare_f, MatType, int, cv::Size, cv::Size, cv::GCompileArgs>> {};
     class ResizeFxFyPerfTest : public TestPerfParams<tuple<compare_f, MatType, int, cv::Size, double, double, cv::GCompileArgs>> {};
 }
