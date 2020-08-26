@@ -10720,11 +10720,11 @@
     <kind>65536</kind>
     <type>0</type>
     <min>0.</min>
-    <max>254.</max>
+    <max>255.</max>
     <last>
       <x>1279</x>
       <y>719</y>
-      <val>178.</val></last>
+      <val>179.</val></last>
     <rng1>
       <x>1078</x>
       <y>251</y>
@@ -10732,21 +10732,21 @@
     <rng2>
       <x>334</x>
       <y>145</y>
-      <val>199.</val></rng2></gpu_dst></Sz_EqualizeHist--EqualizeHist--1280x720>
+      <val>200.</val></rng2></gpu_dst></Sz_EqualizeHist--EqualizeHist--1280x720>
 <Sz_EqualizeHist--EqualizeHist--1280x1024>
   <gpu_dst>
     <kind>65536</kind>
     <type>0</type>
     <min>0.</min>
-    <max>254.</max>
+    <max>255.</max>
     <last>
       <x>1279</x>
       <y>1023</y>
-      <val>250.</val></last>
+      <val>251.</val></last>
     <rng1>
       <x>701</x>
       <y>985</y>
-      <val>234.</val></rng1>
+      <val>235.</val></rng1>
     <rng2>
       <x>1152</x>
       <y>715</y>
@@ -10756,7 +10756,7 @@
     <kind>65536</kind>
     <type>0</type>
     <min>0.</min>
-    <max>254.</max>
+    <max>255.</max>
     <last>
       <x>1919</x>
       <y>1079</y>
