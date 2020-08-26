@@ -71,7 +71,7 @@ namespace detail
     {
     public:
         GArrayU(const GNode &n, std::size_t out); // Operation result constructor
-        
+
         template <typename T>
         bool holds() const;                       // Check if was created from GArray<T>
 
