@@ -335,9 +335,9 @@ public:
     using HT = typename detail::flatten_g<typename std::decay<T>::type>::type;
 
     explicit GArray(const std::vector<HT>& v) // Constant value constructor
-        : m_ref(detail::GArrayU(detail::VectorRef(v))) { putDetails(); }                      
+        : m_ref(detail::GArrayU(detail::VectorRef(v))) { putDetails(); }
     explicit GArray(std::vector<HT>&& v)      // Constant value move-constructor
-        : m_ref(detail::GArrayU(std::move(detail::VectorRef(v)))) { putDetails(); }                      
+        : m_ref(detail::GArrayU(std::move(detail::VectorRef(v)))) { putDetails(); }
     GArray() { putDetails(); }             // Empty constructor
     explicit GArray(detail::GArrayU &&ref) // GArrayU-based constructor
         : m_ref(ref) { putDetails(); }     //   (used by GCall, not for users)
