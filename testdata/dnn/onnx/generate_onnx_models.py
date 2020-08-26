@@ -888,6 +888,50 @@ x = Variable(torch.randn(1, 2, 2))
 model = Expand(shape=[2, -1, -1, -1])
 save_data_and_model("expand_neg_batch", x, model)
 
+class LinearWithConstantInput(nn.Module):
+    def __init__(self, in_dim = 2, const_dim=2, out_dim = 2):
+        super(LinearWithConstantInput, self).__init__()
+        self.in_dim = in_dim
+        self.const_dim = const_dim
+        self.lin_const = nn.Linear(const_dim, out_dim)
+        self.lin_inp = nn.Linear(in_dim, out_dim)
+    def forward(self, x):
+        x = x.reshape(-1, self.in_dim)
+        const = torch.zeros(1, self.const_dim)
+        x_projected = self.lin_inp(x)
+        const_projected = self.lin_const(const)
+        return x_projected*const_projected
+
+x = Variable(torch.rand([1, 2, 2]))
+model = LinearWithConstantInput()
+save_data_and_model("lin_with_constant", x, model)
+
+class MatmulWithTwoInputs(nn.Module):
+    def __init__(self, in_dim = 2, const_dim=2, interm_dim = 2):
+        super(MatmulWithTwoInputs, self).__init__()
+        self.in_dim = in_dim
+        self.const_dim = const_dim
+        self.interm_dim = interm_dim
+        self.linear_for_const = nn.Linear(const_dim, interm_dim)
+        self.first_linear = nn.Linear(in_dim, interm_dim)
+        self.second_linear = nn.Linear(interm_dim, 1)
+    def forward(self, x):
+        x = x.reshape(-1, self.in_dim)
+        x_projected = self.first_linear(x)
+        const = torch.zeros(1, self.interm_dim)
+        const_projected = self.linear_for_const(const)
+        const_projected = const_projected.expand(2, self.interm_dim)
+        sum_tanh = torch.tanh(const_projected + x_projected) 
+        sum_tanh = sum_tanh.reshape(-1, self.interm_dim)
+        sum_tanh_projected = self.second_linear(sum_tanh)
+        sum_tanh_projected = sum_tanh_projected.reshape(1, 2)
+        after_softmax = F.softmax(sum_tanh_projected, dim=1)     
+        return torch.matmul(after_softmax, x)
+
+x = Variable(torch.rand([1, 2, 2]))
+model = MatmulWithTwoInputs()
+save_data_and_model("matmul_with_two_inputs", x, model)
+
 class Power(nn.Module):
   def __init__(self, norm):
     super(Power, self).__init__()
