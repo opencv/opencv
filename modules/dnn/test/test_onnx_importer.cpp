@@ -608,7 +608,7 @@ TEST_P(Test_ONNX_layers, Pad2d_Unfused)
 
 TEST_P(Test_ONNX_layers, LinearWithConstant)
 {
-    if (target == DNN_TARGET_OPENCL_FP16)
+    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2020040000)
     applyTestTag(CV_TEST_TAG_DNN_SKIP_IE);
@@ -618,7 +618,7 @@ TEST_P(Test_ONNX_layers, LinearWithConstant)
 
 TEST_P(Test_ONNX_layers, MatmulWithTwoInputs)
 {
-    if (target == DNN_TARGET_OPENCL_FP16)
+    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2020040000)
     applyTestTag(CV_TEST_TAG_DNN_SKIP_IE);
