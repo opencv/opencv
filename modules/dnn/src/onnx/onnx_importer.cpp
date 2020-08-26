@@ -946,6 +946,19 @@ void ONNXImporter::populateNet(Net dstNet)
                 Mat bias = getBlob(node_proto, constBlobs, 2);
                 layerParams.blobs.push_back(bias);
             }
+            if (constBlobs.find(node_proto.input(0)) != constBlobs.end())
+            {
+                Mat inputBuf = getBlob(node_proto, constBlobs, 0);
+
+                LayerParams constParams;
+                constParams.name = node_proto.input(0);
+                constParams.type = "Const";
+                constParams.blobs.push_back(inputBuf);
+
+                opencv_onnx::NodeProto proto;
+                proto.add_output(constParams.name);
+                addLayer(dstNet, constParams, proto, layer_id, outShapes);
+            }
 
             layerParams.set("num_output", layerParams.blobs[0].size[ind_num_out]);
             layerParams.set("bias_term", node_proto.input_size() == 3);
