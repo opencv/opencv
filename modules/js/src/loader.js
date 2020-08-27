@@ -1,108 +1,98 @@
-function Loader() {
-    let self = this;
+async function loadOpenCV(paths, onloadCallback) {
+    let OPENCV_URL = "";
     let asmPath = "";
     let wasmPath = "";
     let simdPath = "";
     let threadsPath = "";
-    let mtSIMDPath = "";
-    
-    
-    this.judgeWASM = function() {
-        try{
-            let test = WebAssembly;
-            return true;
-        } catch(e) {
-            return false;
-        }
+    let threadsSimdPath = "";
+
+    if(!(paths instanceof Object)) {
+        throw new Error("The first input should be a object that points the path to the OpenCV.js");
     }
 
-    this.judgeSIMD = function() {
-        return WebAssembly.validate(new Uint8Array([0,97,115,109,1,0,0,0,1,4,1,96,0,0,3,2,1,0,10,9,1,7,0,65,0,253,15,26,11]));
+    if ("asm" in paths) {
+        asmPath = paths["asm"];
     }
 
-    this.judgeThreads = function() {
-        try {
-            let test1 = (new MessageChannel).port1.postMessage(new SharedArrayBuffer(1));
-            let result = WebAssembly.validate(new Uint8Array([0,97,115,109,1,0,0,0,1,4,1,96,0,0,3,2,1,0,5,4,1,3,1,1,10,11,1,9,0,65,0,254,16,2,0,26,11]));
-            return result;
-        } catch(e) {
-            return !1
-        }
+    if ("wasm" in paths) {
+        wasmPath = paths["wasm"];
     }
 
-    this.setPaths = function(paths) {
-        if(!(paths instanceof Object)) {
-            throw new Error("The input should be a object that points the path to the OpenCV.js");
-        }
-
-        if ("asm" in paths) {
-            self.asmPath = paths["asm"];
-        }
-
-        if ("wasm" in paths) {
-            self.wasmPath = paths["wasm"];
-        }
-
-        if ("threads" in paths) {
-            self.threadsPath = paths["threads"];
-        }
-
-        if ("simd" in paths) {
-            self.simdPath = paths["simd"];
-        }
-
-        if ("mtSIMD" in paths) {
-            self.mtSIMDPath = paths["mtSIMD"];
-        }
+    if ("threads" in paths) {
+        threadsPath = paths["threads"];
     }
 
-    this.loadOpenCV = function (onloadCallback) {
-        let OPENCV_URL = "";
-        let wasmSupported = self.judgeWASM();
-        let simdSupported = self.judgeSIMD();
-        let threadsSupported = self.judgeThreads();
+    if ("simd" in paths) {
+        simdPath = paths["simd"];
+    }
 
-        if (!wasmSupported && OPENCV_URL == "" && self.asmPath != "") {
-            OPENCV_URL = asmPath;
-        } else if (!wasmSupported && self.asmPath == ""){
-            throw new Error("The browser supports the Asm.js only, but the path of OpenCV.js for Asm.js is empty");
+    if ("threadsSimd" in paths) {
+        threadsSimdPath = paths["threadsSimd"];
+    }
+
+    let wasmSupported = !(typeof WebAssembly === 'undefined');
+    if (!wasmSupported && OPENCV_URL == "" && asmPath != "") {
+        OPENCV_URL = asmPath;
+        console.log("The OpenCV.js for Asm.js is loaded now");
+    } else if (!wasmSupported && asmPath == ""){
+        throw new Error("The browser supports the Asm.js only, but the path of OpenCV.js for Asm.js is empty");
+    }
+
+    let simdSupported = wasmSupported ? await wasmFeatureDetect.simd() : false;
+    let threadsSupported = wasmSupported ? await wasmFeatureDetect.threads() : false;
+
+    if (simdSupported && threadsSupported && threadsSimdPath != "") {
+        OPENCV_URL = threadsSimdPath;
+        console.log("The OpenCV.js with simd and threads optimization is loaded now");
+    } else if (simdSupported && simdPath != "") {
+        if (threadsSupported && threadsSimdPath == "") {
+            console.log("The browser supports simd and threads, but the path of OpenCV.js with simd and threads optimization is empty");
+        }
+        OPENCV_URL = simdPath;
+        console.log("The OpenCV.js with simd optimization is loaded now.");
+    } else if (threadsSupported && threadsPath != "") {
+        if (simdSupported && threadsSupported) {
+            console.log("The browser supports simd and threads, but the path of OpenCV.js with simd and threads optimization is empty");
+        }
+        OPENCV_URL = threadsPath;
+        console.log("The OpenCV.js with threads optimization is loaded now");
+    } else if (threadsPath) {
+        console.log("The browser supports threads, but the path of OpenCV.js with threads optimization is empty");
+    } else if (wasmSupported && wasmPath != "") {
+        if(simdSupported && threadsSupported) {
+            console.log("The browser supports simd and threads, but the path of OpenCV.js with simd and threads optimization is empty");
         }
 
-        if (simdSupported && threadsSupported && OPENCV_URL == "" && self.mtSIMDPath != "") {
-            OPENCV_URL = self.mtSIMDPath;
-        } else if (simdSupported && threadsSupported && OPENCV_URL == "") {
-            throw new Error("The browser supports simd and threads, but the path of OpenCV.js with simd and threads optimization is empty");
+        if (simdSupported) {
+            console.log("The browser supports simd optimization, but the path of OpenCV.js with simd optimization is empty");
         }
 
-        if (simdSupported && OPENCV_URL == "" && self.simdPath != "") {
-            OPENCV_URL = self.simdPath;
-        } else if (simdSupported && OPENCV_URL == "") {
-            throw new Error("The browser supports simd, but the path of OpenCV.js with simd optimization is empty");
+        if (threadsSupported) {
+            console.log("The browser supports threads optimization, but the path of OpenCV.js with threads optimization is empty");
         }
 
-        if (threadsSupported && OPENCV_URL == "" && self.threadsPath != "") {
-            OPENCV_URL = self.threadsPath;
-        } else if (threadsSupported && OPENCV_URL == "") {
-            throw new Error("The browser supports threads, but the path of OpenCV.js with threads optimization is empty");
-        }
+        OPENCV_URL = wasmPath;
+        console.log("The OpenCV.js for wasm is loaded now");
+    } else if (wasmSupported) {
+        console.log("The browser supports wasm, but the path of OpenCV.js for wasm is empty");
+    }
 
-        if (wasmSupported && OPENCV_URL == "" && self.wasmPath != "") {
-            OPENCV_URL = self.wasmPath;
-        } else if (wasmSupported && OPENCV_URL == "") {
-            throw new Error("The browser supports wasm, but the path of OpenCV.js with wasm is empty");
-        }
+    if(OPENCV_URL == "") {
+        throw new Error("No available OpenCV.js, please check your paths");
+    }
 
-        let script = document.createElement('script');
-        script.setAttribute('async', '');
-        script.setAttribute('type', 'text/javascript');
-        script.addEventListener('load', () => {
-            onloadCallback();
-        });
-        script.addEventListener('error', () => {
-            console.log('Failed to load opencv.js');
-        });
-        script.src = OPENCV_URL;
-        let node = document.getElementsByTagName('script')[0];
+    let script = document.createElement('script');
+    script.setAttribute('async', '');
+    script.setAttribute('type', 'text/javascript');
+    script.addEventListener('load', () => {
+        onloadCallback();
+    });
+    script.addEventListener('error', () => {
+        console.log('Failed to load opencv.js');
+    });
+    script.src = OPENCV_URL;
+    let node = document.getElementsByTagName('script')[0];
+    if (node.src != OPENCV_URL) {
         node.parentNode.insertBefore(script, node);
     }
 }

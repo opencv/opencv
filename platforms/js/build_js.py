@@ -200,7 +200,7 @@ class Builder:
 
     def build_doc(self):
         execute(["make", "-j", str(multiprocessing.cpu_count()), "doxygen"])
-    
+
     def build_loader(self):
         execute(["make", "-j", str(multiprocessing.cpu_count()), "opencv_js_loader"])
 
@@ -277,7 +277,7 @@ if __name__ == "__main__":
     log.info("===== Building OpenCV.js")
     log.info("=====")
     builder.build_opencvjs()
-    
+
     if args.build_test:
         log.info("=====")
         log.info("===== Building OpenCV.js tests")
@@ -300,7 +300,7 @@ if __name__ == "__main__":
         log.info("=====")
         log.info("===== Building OpenCV.js loader")
         log.info("=====")
-        builder.build_loader()       
+        builder.build_loader()
 
     log.info("=====")
     log.info("===== Build finished")

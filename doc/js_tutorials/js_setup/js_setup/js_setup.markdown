@@ -93,13 +93,10 @@ Building OpenCV.js from Source
     @endcode
 
     @note
-    The loader is implemented as a js file in the path `<opencv_js_dir>/bin/loader.js`. The loader can detect the features of the broswer and load corresponding OpenCV.js automatically. To use it, you need to introduce it as a script in your Web application.
-    
+    The loader is implemented as a js file in the path `<opencv_js_dir>/bin/loader.js`. The loader utilizes the [WebAssembly Feature Detection](https://github.com/GoogleChromeLabs/wasm-feature-detect) to detect the features of the broswer and load corresponding OpenCV.js automatically. To use it, you need to use the UMD version of [WebAssembly Feature Detection](https://github.com/GoogleChromeLabs/wasm-feature-detect) and introduce the `loader.js` in your Web application.
+
     Example Code:
     @code{.javascipt}
-    // Create an instance 
-    loader = new Loader();
-
     //Set paths configuration
     pathsConfig = {
         wasm: "../../build_wasm/opencv.js",
@@ -107,10 +104,9 @@ Building OpenCV.js from Source
         simd: "../../build_simd/opencv.js",
         mtSIMD: "../../build_mtSIMD/opencv.js",
     }
-    loader.setPaths(pathsConfig);
 
-    //Load OpenCV.js and use main function as the param
-    loader.loadOpenCV(main);
+    //Load OpenCV.js and use the pathsConfiguration and main function as the params.
+    loadOpenCV(pathsConfig, main);
     @endcode
 
 
