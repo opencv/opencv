@@ -773,7 +773,7 @@ private:
         memoryCounter_ += int(veclen_*sizeof(CentersType));
         unsigned int* mean_accumulator = new unsigned int[accumulator_veclen];
 
-        memset(mean_accumulator, 0, accumulator_veclen);
+        memset(mean_accumulator, 0, sizeof(unsigned int)*accumulator_veclen);
 
         for (unsigned int i=0; i<indices_length; ++i) {
             variance += static_cast<unsigned long long>( ensureSquareDistance<Distance>(
