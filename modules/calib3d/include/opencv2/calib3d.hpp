@@ -535,6 +535,12 @@ enum HandEyeCalibrationMethod
     CALIB_HAND_EYE_DANIILIDIS   = 4  //!< Hand-Eye Calibration Using Dual Quaternions @cite Daniilidis98
 };
 
+enum RobotWorldHandEyeCalibrationMethod
+{
+    CALIB_ROBOT_WORLD_HAND_EYE_SHAH = 0, //!< Solving the robot-world/hand-eye calibration problem using the kronecker product @cite Shah2013SolvingTR
+    CALIB_ROBOT_WORLD_HAND_EYE_LI   = 1  //!< Simultaneous robot-world and hand-eye calibration using dual-quaternions and kronecker product @cite Li2010SimultaneousRA
+};
+
 enum SamplingMethod { SAMPLING_UNIFORM, SAMPLING_PROGRESSIVE_NAPSAC, SAMPLING_NAPSAC,
         SAMPLING_PROSAC };
 enum LocalOptimMethod {LOCAL_OPTIM_NULL, LOCAL_OPTIM_INNER_LO, LOCAL_OPTIM_INNER_AND_ITER_LO,
@@ -2288,12 +2294,16 @@ rotation then the translation (separable solutions) and the following methods ar
   - R. Horaud, F. Dornaika Hand-Eye Calibration \cite Horaud95
 
 Another approach consists in estimating simultaneously the rotation and the translation (simultaneous solutions),
-with the following implemented method:
+with the following implemented methods:
   - N. Andreff, R. Horaud, B. Espiau On-line Hand-Eye Calibration \cite Andreff99
   - K. Daniilidis Hand-Eye Calibration Using Dual Quaternions \cite Daniilidis98
 
 The following picture describes the Hand-Eye calibration problem where the transformation between a camera ("eye")
-mounted on a robot gripper ("hand") has to be estimated.
+mounted on a robot gripper ("hand") has to be estimated. This configuration is called eye-in-hand.
+
+The eye-to-hand configuration consists in a static camera observing a calibration pattern mounted on the robot
+end-effector. The transformation from the camera to the robot base frame can then be estimated by inputting
+the suitable transformations to the function, see below.
 
 ![](pics/hand-eye_figure.png)
 
@@ -2366,6 +2376,7 @@ The Hand-Eye calibration procedure returns the following homogeneous transformat
 \f]
 
 This problem is also known as solving the \f$\mathbf{A}\mathbf{X}=\mathbf{X}\mathbf{B}\f$ equation:
+  - for an eye-in-hand configuration
 \f[
     \begin{align*}
     ^{b}{\textrm{T}_g}^{(1)} \hspace{0.2em} ^{g}\textrm{T}_c \hspace{0.2em} ^{c}{\textrm{T}_t}^{(1)} &=
@@ -2373,6 +2384,19 @@ This problem is also known as solving the \f$\mathbf{A}\mathbf{X}=\mathbf{X}\mat
 
     (^{b}{\textrm{T}_g}^{(2)})^{-1} \hspace{0.2em} ^{b}{\textrm{T}_g}^{(1)} \hspace{0.2em} ^{g}\textrm{T}_c &=
     \hspace{0.1em} ^{g}\textrm{T}_c \hspace{0.2em} ^{c}{\textrm{T}_t}^{(2)} (^{c}{\textrm{T}_t}^{(1)})^{-1} \\
+
+    \textrm{A}_i \textrm{X} &= \textrm{X} \textrm{B}_i \\
+    \end{align*}
+\f]
+
+  - for an eye-to-hand configuration
+\f[
+    \begin{align*}
+    ^{g}{\textrm{T}_b}^{(1)} \hspace{0.2em} ^{b}\textrm{T}_c \hspace{0.2em} ^{c}{\textrm{T}_t}^{(1)} &=
+    \hspace{0.1em} ^{g}{\textrm{T}_b}^{(2)} \hspace{0.2em} ^{b}\textrm{T}_c \hspace{0.2em} ^{c}{\textrm{T}_t}^{(2)} \\
+
+    (^{g}{\textrm{T}_b}^{(2)})^{-1} \hspace{0.2em} ^{g}{\textrm{T}_b}^{(1)} \hspace{0.2em} ^{b}\textrm{T}_c &=
+    \hspace{0.1em} ^{b}\textrm{T}_c \hspace{0.2em} ^{c}{\textrm{T}_t}^{(2)} (^{c}{\textrm{T}_t}^{(1)})^{-1} \\
 
     \textrm{A}_i \textrm{X} &= \textrm{X} \textrm{B}_i \\
     \end{align*}
@@ -2389,6 +2413,150 @@ CV_EXPORTS_W void calibrateHandEye( InputArrayOfArrays R_gripper2base, InputArra
                                     InputArrayOfArrays R_target2cam, InputArrayOfArrays t_target2cam,
                                     OutputArray R_cam2gripper, OutputArray t_cam2gripper,
                                     HandEyeCalibrationMethod method=CALIB_HAND_EYE_TSAI );
+
+/** @brief Computes Robot-World/Hand-Eye calibration: \f$_{}^{w}\textrm{T}_b\f$ and \f$_{}^{c}\textrm{T}_g\f$
+
+@param[in] R_world2cam Rotation part extracted from the homogeneous matrix that transforms a point
+expressed in the world frame to the camera frame (\f$_{}^{c}\textrm{T}_w\f$).
+This is a vector (`vector<Mat>`) that contains the rotation, `(3x3)` rotation matrices or `(3x1)` rotation vectors,
+for all the transformations from world frame to the camera frame.
+@param[in] t_world2cam Translation part extracted from the homogeneous matrix that transforms a point
+expressed in the world frame to the camera frame (\f$_{}^{c}\textrm{T}_w\f$).
+This is a vector (`vector<Mat>`) that contains the `(3x1)` translation vectors for all the transformations
+from world frame to the camera frame.
+@param[in] R_base2gripper Rotation part extracted from the homogeneous matrix that transforms a point
+expressed in the robot base frame to the gripper frame (\f$_{}^{g}\textrm{T}_b\f$).
+This is a vector (`vector<Mat>`) that contains the rotation, `(3x3)` rotation matrices or `(3x1)` rotation vectors,
+for all the transformations from robot base frame to the gripper frame.
+@param[in] t_base2gripper Rotation part extracted from the homogeneous matrix that transforms a point
+expressed in the robot base frame to the gripper frame (\f$_{}^{g}\textrm{T}_b\f$).
+This is a vector (`vector<Mat>`) that contains the `(3x1)` translation vectors for all the transformations
+from robot base frame to the gripper frame.
+@param[out] R_base2world Estimated `(3x3)` rotation part extracted from the homogeneous matrix that transforms a point
+expressed in the robot base frame to the world frame (\f$_{}^{w}\textrm{T}_b\f$).
+@param[out] t_base2world Estimated `(3x1)` translation part extracted from the homogeneous matrix that transforms a point
+expressed in the robot base frame to the world frame (\f$_{}^{w}\textrm{T}_b\f$).
+@param[out] R_gripper2cam Estimated `(3x3)` rotation part extracted from the homogeneous matrix that transforms a point
+expressed in the gripper frame to the camera frame (\f$_{}^{c}\textrm{T}_g\f$).
+@param[out] t_gripper2cam Estimated `(3x1)` translation part extracted from the homogeneous matrix that transforms a point
+expressed in the gripper frame to the camera frame (\f$_{}^{c}\textrm{T}_g\f$).
+@param[in] method One of the implemented Robot-World/Hand-Eye calibration method, see cv::RobotWorldHandEyeCalibrationMethod
+
+The function performs the Robot-World/Hand-Eye calibration using various methods. One approach consists in estimating the
+rotation then the translation (separable solutions):
+  - M. Shah, Solving the robot-world/hand-eye calibration problem using the kronecker product \cite Shah2013SolvingTR
+
+Another approach consists in estimating simultaneously the rotation and the translation (simultaneous solutions),
+with the following implemented method:
+  - A. Li, L. Wang, and D. Wu, Simultaneous robot-world and hand-eye calibration using dual-quaternions and kronecker product \cite Li2010SimultaneousRA
+
+The following picture describes the Robot-World/Hand-Eye calibration problem where the transformations between a robot and a world frame
+and between a robot gripper ("hand") and a camera ("eye") mounted at the robot end-effector have to be estimated.
+
+![](pics/robot-world_hand-eye_figure.png)
+
+The calibration procedure is the following:
+  - a static calibration pattern is used to estimate the transformation between the target frame
+  and the camera frame
+  - the robot gripper is moved in order to acquire several poses
+  - for each pose, the homogeneous transformation between the gripper frame and the robot base frame is recorded using for
+  instance the robot kinematics
+\f[
+    \begin{bmatrix}
+    X_g\\
+    Y_g\\
+    Z_g\\
+    1
+    \end{bmatrix}
+    =
+    \begin{bmatrix}
+    _{}^{g}\textrm{R}_b & _{}^{g}\textrm{t}_b \\
+    0_{1 \times 3} & 1
+    \end{bmatrix}
+    \begin{bmatrix}
+    X_b\\
+    Y_b\\
+    Z_b\\
+    1
+    \end{bmatrix}
+\f]
+  - for each pose, the homogeneous transformation between the calibration target frame (the world frame) and the camera frame is recorded using
+  for instance a pose estimation method (PnP) from 2D-3D point correspondences
+\f[
+    \begin{bmatrix}
+    X_c\\
+    Y_c\\
+    Z_c\\
+    1
+    \end{bmatrix}
+    =
+    \begin{bmatrix}
+    _{}^{c}\textrm{R}_w & _{}^{c}\textrm{t}_w \\
+    0_{1 \times 3} & 1
+    \end{bmatrix}
+    \begin{bmatrix}
+    X_w\\
+    Y_w\\
+    Z_w\\
+    1
+    \end{bmatrix}
+\f]
+
+The Robot-World/Hand-Eye calibration procedure returns the following homogeneous transformations
+\f[
+    \begin{bmatrix}
+    X_w\\
+    Y_w\\
+    Z_w\\
+    1
+    \end{bmatrix}
+    =
+    \begin{bmatrix}
+    _{}^{w}\textrm{R}_b & _{}^{w}\textrm{t}_b \\
+    0_{1 \times 3} & 1
+    \end{bmatrix}
+    \begin{bmatrix}
+    X_b\\
+    Y_b\\
+    Z_b\\
+    1
+    \end{bmatrix}
+\f]
+\f[
+    \begin{bmatrix}
+    X_c\\
+    Y_c\\
+    Z_c\\
+    1
+    \end{bmatrix}
+    =
+    \begin{bmatrix}
+    _{}^{c}\textrm{R}_g & _{}^{c}\textrm{t}_g \\
+    0_{1 \times 3} & 1
+    \end{bmatrix}
+    \begin{bmatrix}
+    X_g\\
+    Y_g\\
+    Z_g\\
+    1
+    \end{bmatrix}
+\f]
+
+This problem is also known as solving the \f$\mathbf{A}\mathbf{X}=\mathbf{Z}\mathbf{B}\f$ equation, with:
+  - \f$\mathbf{A} \Leftrightarrow \hspace{0.1em} _{}^{c}\textrm{T}_w\f$
+  - \f$\mathbf{X} \Leftrightarrow \hspace{0.1em} _{}^{w}\textrm{T}_b\f$
+  - \f$\mathbf{Z} \Leftrightarrow \hspace{0.1em} _{}^{c}\textrm{T}_g\f$
+  - \f$\mathbf{B} \Leftrightarrow \hspace{0.1em} _{}^{g}\textrm{T}_b\f$
+
+\note
+At least 3 measurements are required (input vectors size must be greater or equal to 3).
+
+ */
+CV_EXPORTS_W void calibrateRobotWorldHandEye( InputArrayOfArrays R_world2cam, InputArrayOfArrays t_world2cam,
+                                              InputArrayOfArrays R_base2gripper, InputArrayOfArrays t_base2gripper,
+                                              OutputArray R_base2world, OutputArray t_base2world,
+                                              OutputArray R_gripper2cam, OutputArray t_gripper2cam,
+                                              RobotWorldHandEyeCalibrationMethod method=CALIB_ROBOT_WORLD_HAND_EYE_SHAH );
 
 /** @brief Converts points from Euclidean to homogeneous space.
 
