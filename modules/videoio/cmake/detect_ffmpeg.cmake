@@ -51,7 +51,7 @@ endif()
 #=================================
 # Versions check.
 if(HAVE_FFMPEG AND NOT HAVE_FFMPEG_WRAPPER)
-  set(_min_libavcodec_version 54.35.1)
+  set(_min_libavcodec_version 54.35.0)
   set(_min_libavformat_version 54.20.4)
   set(_min_libavutil_version 52.3.0)
   set(_min_libswscale_version 2.1.1)
