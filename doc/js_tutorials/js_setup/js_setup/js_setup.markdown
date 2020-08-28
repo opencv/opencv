@@ -97,15 +97,15 @@ Building OpenCV.js from Source
 
     Example Code:
     @code{.javascipt}
-    //Set paths configuration
-    pathsConfig = {
+    // Set paths configuration
+    let pathsConfig = {
         wasm: "../../build_wasm/opencv.js",
         threads: "../../build_mt/opencv.js",
         simd: "../../build_simd/opencv.js",
-        mtSIMD: "../../build_mtSIMD/opencv.js",
+        threadsSimd: "../../build_mtSIMD/opencv.js",
     }
 
-    //Load OpenCV.js and use the pathsConfiguration and main function as the params.
+    // Load OpenCV.js and use the pathsConfiguration and main function as the params.
     loadOpenCV(pathsConfig, main);
     @endcode
 

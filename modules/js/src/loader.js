@@ -31,7 +31,7 @@ async function loadOpenCV(paths, onloadCallback) {
     }
 
     let wasmSupported = !(typeof WebAssembly === 'undefined');
-    if (!wasmSupported && OPENCV_URL == "" && asmPath != "") {
+    if (!wasmSupported && OPENCV_URL === "" && asmPath != "") {
         OPENCV_URL = asmPath;
         console.log("The OpenCV.js for Asm.js is loaded now");
     } else if (!wasmSupported && asmPath == ""){
@@ -45,19 +45,17 @@ async function loadOpenCV(paths, onloadCallback) {
         OPENCV_URL = threadsSimdPath;
         console.log("The OpenCV.js with simd and threads optimization is loaded now");
     } else if (simdSupported && simdPath != "") {
-        if (threadsSupported && threadsSimdPath == "") {
+        if (threadsSupported && threadsSimdPath === "") {
             console.log("The browser supports simd and threads, but the path of OpenCV.js with simd and threads optimization is empty");
         }
         OPENCV_URL = simdPath;
         console.log("The OpenCV.js with simd optimization is loaded now.");
     } else if (threadsSupported && threadsPath != "") {
-        if (simdSupported && threadsSupported) {
+        if (simdSupported && threadsSimdPath === "") {
             console.log("The browser supports simd and threads, but the path of OpenCV.js with simd and threads optimization is empty");
         }
         OPENCV_URL = threadsPath;
         console.log("The OpenCV.js with threads optimization is loaded now");
-    } else if (threadsPath) {
-        console.log("The browser supports threads, but the path of OpenCV.js with threads optimization is empty");
     } else if (wasmSupported && wasmPath != "") {
         if(simdSupported && threadsSupported) {
             console.log("The browser supports simd and threads, but the path of OpenCV.js with simd and threads optimization is empty");
@@ -77,7 +75,7 @@ async function loadOpenCV(paths, onloadCallback) {
         console.log("The browser supports wasm, but the path of OpenCV.js for wasm is empty");
     }
 
-    if(OPENCV_URL == "") {
+    if (OPENCV_URL === "") {
         throw new Error("No available OpenCV.js, please check your paths");
     }
 
