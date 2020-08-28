@@ -346,14 +346,24 @@ protected:
 
 CV_ResizeExactTest::CV_ResizeExactTest() : CV_ResizeTest()
 {
-    max_interpolation = 1;
+    max_interpolation = 2;
 }
 
 
 void CV_ResizeExactTest::get_test_array_types_and_sizes(int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types)
 {
     CV_ResizeTest::get_test_array_types_and_sizes(test_case_idx, sizes, types);
-    interpolation = INTER_LINEAR_EXACT;
+    switch (interpolation)
+    {
+    case 0:
+        interpolation = INTER_LINEAR_EXACT;
+        break;
+    case 1:
+        interpolation = INTER_NEAREST_EXACT;
+        break;
+    default:
+        CV_Assert(interpolation < max_interpolation);
+    }
     if (CV_MAT_DEPTH(types[INPUT][0]) == CV_32F ||
         CV_MAT_DEPTH(types[INPUT][0]) == CV_64F)
         types[INPUT][0] = types[INPUT_OUTPUT][0] = types[REF_INPUT_OUTPUT][0] = CV_MAKETYPE(CV_8U, CV_MAT_CN(types[INPUT][0]));
