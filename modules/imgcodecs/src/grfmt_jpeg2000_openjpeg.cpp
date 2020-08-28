@@ -327,12 +327,14 @@ opj_cparameters setupEncoderParameters(const std::vector<int>& params)
 {
     opj_cparameters parameters;
     opj_set_default_encoder_parameters(&parameters);
+    bool rate_is_specified = false;
     for (size_t i = 0; i < params.size(); i += 2)
     {
         switch (params[i])
         {
         case cv::IMWRITE_JPEG2000_COMPRESSION_X1000:
             parameters.tcp_rates[0] = 1000.f / std::min(std::max(params[i + 1], 1), 1000);
+            rate_is_specified = true;
             break;
         default:
             CV_LOG_WARNING(NULL, "OpenJPEG2000(encoder): skip unsupported parameter: " << params[i]);
@@ -341,6 +343,10 @@ opj_cparameters setupEncoderParameters(const std::vector<int>& params)
     }
     parameters.tcp_numlayers = 1;
     parameters.cp_disto_alloc = 1;
+    if (!rate_is_specified)
+    {
+        parameters.tcp_rates[0] = 4;
+    }
     return parameters;
 }
 
