@@ -77,8 +77,7 @@ macro(add_extra_compiler_option option)
 
     ocv_check_flag_support(${lang} "${option}" _varname
                            COMPILER_FLAGS "${_compiler_flags}"
-                           LINKER_FLAGS   "${_linker_flags}"
-                           ${ARGN})
+                           LINKER_FLAGS   "${_linker_flags}")
 
     if(${_varname})
       set(OPENCV_EXTRA_${lang}_FLAGS    "${_compiler_flags} ${option}")
@@ -332,9 +331,7 @@ if((CV_GCC OR CV_CLANG)
     AND NOT MSVC
     AND NOT OPENCV_SKIP_VISIBILITY_HIDDEN
     AND NOT " ${CMAKE_CXX_FLAGS} ${OPENCV_EXTRA_FLAGS} ${OPENCV_EXTRA_CXX_FLAGS}" MATCHES " -fvisibility")
-  add_extra_compiler_option("-fvisibility=hidden"
-                            # turn off incompatible options
-                            EXCLUDE_LINKER_FLAG "-Wl,--gc-sections")
+  add_extra_compiler_option("-fvisibility=hidden")
   add_extra_compiler_option("-fvisibility-inlines-hidden")
 endif()
 

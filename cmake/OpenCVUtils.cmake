@@ -489,16 +489,18 @@ macro(ocv_check_compiler_flag LANG FLAG RESULT)
       endif()
 
       message(STATUS "Performing Test ${RESULT}${__msg}")
+      set(_saved_CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}")
+      set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OCV_CHECK_CF_LINKER_FLAGS}")  # requires CMake 3.2+ and CMP0056
       try_compile(${RESULT}
         "${CMAKE_BINARY_DIR}"
         "${_fname}"
         CMAKE_FLAGS ${__cmake_flags}
         COMPILE_DEFINITIONS ${FLAG} ${OCV_CHECK_CF_COMPILER_FLAGS}
-        # should use LINK_OPTIONS instead of LINK_LIBRARIES, if we can use cmake v3.14+:
+        # should use LINK_OPTIONS instead of the _saved_CMAKE_EXE_LINKER_FLAGS hack, if we can use cmake v3.14+:
         # LINK_OPTIONS ${OCV_CHECK_CF_LINKER_FLAGS}
-        LINK_LIBRARIES ${OCV_CHECK_CF_LINKER_FLAGS}
         ${__link_libs}
         OUTPUT_VARIABLE OUTPUT)
+      set(CMAKE_EXE_LINKER_FLAGS "${_saved_CMAKE_EXE_LINKER_FLAGS}")
 
       if(${RESULT})
         string(REPLACE ";" "," OUTPUT_LINES "${OUTPUT}")
@@ -522,10 +524,7 @@ macro(ocv_check_compiler_flag LANG FLAG RESULT)
 
       if(${RESULT})
         set(${RESULT} 1 CACHE INTERNAL "Test ${RESULT}")
-        message(STATUS "Performing Test ${RESULT} - Success")
       else(${RESULT})
-        message(STATUS "Performing Test ${RESULT} - Failed")
-        # message("${OUTPUT}")
         set(${RESULT} "" CACHE INTERNAL "Test ${RESULT}")
         file(APPEND ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeError.log
             "Compilation failed:\n"
