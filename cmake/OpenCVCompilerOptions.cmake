@@ -41,14 +41,14 @@ if((CV_CLANG AND NOT CMAKE_GENERATOR MATCHES "Xcode")  # PCH has no support for 
 endif()
 
 # add_extra_compiler_option(<option> [...]
-#                           [TURN_OFF_COMPILER_FLAG <flag> [<flag> ...]]
-#                           [TURN_OFF_LINKER_FLAG <flag> [<flag> ...]]
+#                           [EXCLUDE_COMPILER_FLAG <flag> [<flag> ...]]
+#                           [EXCLUDE_LINKER_FLAG <flag> [<flag> ...]]
 #                           [LINKER_FLAG <flag> [<flag> ...]])
 macro(add_extra_compiler_option option)
   set(options        "")
   set(oneValueArgs   "")
-  set(multiValueArgs TURN_OFF_COMPILER_FLAG
-                     TURN_OFF_LINKER_FLAG
+  set(multiValueArgs EXCLUDE_COMPILER_FLAG
+                     EXCLUDE_LINKER_FLAG
                      LINKER_FLAG)
   cmake_parse_arguments(EXTRA_OPT "${options}" "${oneValueArgs}"
                         "${multiValueArgs}" ${ARGN} )
@@ -56,8 +56,8 @@ macro(add_extra_compiler_option option)
   foreach(lang "CXX" "C")
     # Compiler flags
     set(_compiler_flags "${OPENCV_EXTRA_${lang}_FLAGS}")
-    if(EXTRA_OPT_TURN_OFF_COMPILER_FLAG)
-      foreach(_option ${EXTRA_OPT_TURN_OFF_COMPILER_FLAG})
+    if(EXTRA_OPT_EXCLUDE_COMPILER_FLAG)
+      foreach(_option ${EXTRA_OPT_EXCLUDE_COMPILER_FLAG})
         string(REPLACE ${_option} "" _compiler_flags "${_compiler_flags}")
       endforeach()
     endif()
@@ -65,8 +65,8 @@ macro(add_extra_compiler_option option)
 
     # Linker flags
     set(_linker_flags "${OPENCV_EXTRA_EXE_LINKER_FLAGS}")
-    if(EXTRA_OPT_TURN_OFF_LINKER_FLAG)
-      foreach(_option ${EXTRA_OPT_TURN_OFF_LINKER_FLAG})
+    if(EXTRA_OPT_EXCLUDE_LINKER_FLAG)
+      foreach(_option ${EXTRA_OPT_EXCLUDE_LINKER_FLAG})
         string(REPLACE ${_option} "" _linker_flags "${_linker_flags}")
       endforeach()
     endif()
@@ -81,7 +81,7 @@ macro(add_extra_compiler_option option)
                            ${ARGN})
 
     if(${_varname})
-      set(OPENCV_EXTRA_${lang}_FLAGS    "${option} ${_compiler_flags}")
+      set(OPENCV_EXTRA_${lang}_FLAGS    "${_compiler_flags} ${option}")
       set(OPENCV_EXTRA_EXE_LINKER_FLAGS "${_linker_flags}")
     endif()
   endforeach()
@@ -144,8 +144,8 @@ if(CV_GCC OR CV_CLANG)
   add_extra_compiler_option("-Werror=non-virtual-dtor")
   add_extra_compiler_option("-Werror=address")
   add_extra_compiler_option("-Werror=sequence-point")
+  add_extra_compiler_option("-Werror=format-security")
   add_extra_compiler_option("-Wformat")
-  add_extra_compiler_option("-Werror=format-security -Wformat")
   add_extra_compiler_option("-Wmissing-declarations")
   add_extra_compiler_option("-Wmissing-prototypes")
   add_extra_compiler_option("-Wstrict-prototypes")
@@ -222,7 +222,7 @@ if(CV_GCC OR CV_CLANG)
   if(ENABLE_PROFILING)
     add_extra_compiler_option("-pg -g"
       # turn off incompatible options
-      TURN_OFF_COMPILER_FLAG "-fomit-frame-pointer" "-ffunction-sections" "-fdata-sections"
+      EXCLUDE_COMPILER_FLAG "-fomit-frame-pointer" "-ffunction-sections" "-fdata-sections"
       # -pg should be placed both in the linker and in the compiler settings
       LINKER_FLAG "-pg")
   else()
@@ -334,7 +334,7 @@ if((CV_GCC OR CV_CLANG)
     AND NOT " ${CMAKE_CXX_FLAGS} ${OPENCV_EXTRA_FLAGS} ${OPENCV_EXTRA_CXX_FLAGS}" MATCHES " -fvisibility")
   add_extra_compiler_option("-fvisibility=hidden"
                             # turn off incompatible options
-                            TURN_OFF_LINKER_FLAG "-Wl,--gc-sections")
+                            EXCLUDE_LINKER_FLAG "-Wl,--gc-sections")
   add_extra_compiler_option("-fvisibility-inlines-hidden")
 endif()
 
