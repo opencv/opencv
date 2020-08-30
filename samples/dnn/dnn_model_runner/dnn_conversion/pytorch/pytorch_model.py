@@ -1,9 +1,11 @@
+import os
+
 import cv2
 import torch.onnx
 from torch.autograd import Variable
 
 from ..common.abstract_model import AbstractModel, Framework
-from ..common.utils import DNN_LIB, make_dir, get_full_model_path
+from ..common.utils import DNN_LIB, get_full_model_path
 
 CURRENT_LIB = "PyTorch"
 MODEL_FORMAT = ".onnx"
@@ -13,34 +15,41 @@ class PyTorchModelPreparer(AbstractModel):
 
     def __init__(
             self,
+            height,
+            width,
             model_name="default",
             original_model=object,
             batch_size=1,
             default_input_name="input",
             default_output_name="output"
     ):
+        self._height = height
+        self._width = width
         self._model_name = model_name
         self._original_model = original_model
         self._batch_size = batch_size
         self._default_input_name = default_input_name
         self._default_output_name = default_output_name
 
-        self._onnx_model_path = self._set_model_path()
+        self.model_path = self._set_model_path()
         self._dnn_model = self._set_dnn_model()
 
     def _set_dnn_model(self):
-        generated_input = Variable(torch.randn(self._batch_size, 3, 224, 224))
-        make_dir(self._onnx_model_path["path"])
+        generated_input = Variable(torch.randn(
+            self._batch_size, 3, self._height, self._width)
+        )
+        os.makedirs(self.model_path["path"], exist_ok=True)
+        torch.onnx.export(
+            self._original_model,
+            generated_input,
+            self.model_path["full_path"],
+            verbose=True,
+            input_names=[self._default_input_name],
+            output_names=[self._default_output_name],
+            opset_version=11
+        )
 
-        torch.onnx.export(self._original_model,
-                          generated_input,
-                          self._onnx_model_path["full_path"],
-                          verbose=True,
-                          input_names=[self._default_input_name],
-                          output_names=[self._default_output_name],
-                          opset_version=11)
-
-        return cv2.dnn.readNetFromONNX(self._onnx_model_path["full_path"])
+        return cv2.dnn.readNetFromONNX(self.model_path["full_path"])
 
     def _set_model_path(self):
         model_to_save = self._model_name + MODEL_FORMAT
@@ -61,9 +70,14 @@ class PyTorchModelProcessor(Framework):
     def get_output(self, input_blob):
         tensor = torch.FloatTensor(input_blob)
         self._prepared_model.eval()
-        model_out = self._prepared_model(tensor)
-        if len(self._prepared_model(tensor)) == 2:
+
+        with torch.no_grad():
+            model_out = self._prepared_model(tensor)
+
+        # segmentation case
+        if len(model_out) == 2: #self._prepared_model(tensor)) == 2:
             model_out = model_out['out']
+
         out = model_out.detach().numpy()
         return out
 
@@ -77,9 +91,8 @@ class PyTorchDnnModelProcessor(Framework):
         self._name = model_name
 
     def get_output(self, input_blob):
-        layer_names = self._prepared_dnn_model.getLayerNames()
         self._prepared_dnn_model.setInput(input_blob, '')
-        return self._prepared_dnn_model.forward(layer_names[-1])
+        return self._prepared_dnn_model.forward()
 
     def get_name(self):
         return self._name

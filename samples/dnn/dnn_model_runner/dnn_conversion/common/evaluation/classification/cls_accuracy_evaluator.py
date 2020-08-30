@@ -3,8 +3,9 @@ import time
 
 import numpy as np
 
+from ...utils import get_final_summary_info
 
-# https://github.com/opencv/opencv/blob/master/modules/dnn/test/imagenet_cls_test_alexnet.py#L159
+
 class ClsAccEvaluation:
     log = sys.stdout
     img_classes = {}
@@ -14,8 +15,10 @@ class ClsAccEvaluation:
         self.log = open(log_path, 'w')
         self.img_classes = self.read_classes(img_classes_file)
         self.batch_size = batch_size
+
         # collect the accuracies for both models
         self.general_quality_metric = []
+        self.general_inference_time = []
 
     @staticmethod
     def read_classes(img_classes_file):
@@ -25,7 +28,6 @@ class ClsAccEvaluation:
                 result[l.split()[0]] = int(l.split()[1])
         return result
 
-    # https://github.com/opencv/opencv/blob/master/modules/dnn/test/imagenet_cls_test_alexnet.py#L98
     def get_correct_answers(self, img_list, net_output_blob):
         correct_answers = 0
         for i in range(len(img_list)):
@@ -50,6 +52,7 @@ class ClsAccEvaluation:
 
             samples_handled += len(sublist)
             fw_accuracy = []
+            fw_time = []
             frameworks_out = []
             for i in range(len(frameworks)):
                 start = time.time()
@@ -59,11 +62,12 @@ class ClsAccEvaluation:
                 fw_accuracy.append(100 * correct_answers[i] / float(samples_handled))
                 frameworks_out.append(out)
                 inference_time[i] += end - start
+                fw_time.append(inference_time[i] / samples_handled * 1000)
                 print(samples_handled, 'Accuracy for', frameworks[i].get_name() + ':', fw_accuracy[i], file=self.log)
-                print("Inference time, ms ", frameworks[i].get_name(), inference_time[i] / samples_handled * 1000,
-                      file=self.log)
+                print("Inference time, ms ", frameworks[i].get_name(), fw_time[i], file=self.log)
 
                 self.general_quality_metric.append(fw_accuracy)
+                self.general_inference_time.append(fw_time)
 
             for i in range(1, len(frameworks)):
                 log_str = frameworks[0].get_name() + " vs " + frameworks[i].get_name() + ':'
@@ -81,3 +85,12 @@ class ClsAccEvaluation:
         for i in range(1, len(blobs_l1_diff)):
             log_str = frameworks[0].get_name() + " vs " + frameworks[i].get_name() + ':'
             print('Final l1 diff', log_str, blobs_l1_diff[i] / blobs_l1_diff_count[i], file=self.log)
+
+        print(
+            get_final_summary_info(
+                self.general_quality_metric,
+                self.general_inference_time,
+                "accuracy"
+            ),
+            file=self.log
+        )
