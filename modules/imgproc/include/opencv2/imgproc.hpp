@@ -256,6 +256,9 @@ enum InterpolationFlags{
     INTER_LANCZOS4       = 4,
     /** Bit exact bilinear interpolation */
     INTER_LINEAR_EXACT = 5,
+    /** PIL - like nearest neighbor interpolation. It differs from INTER_NEAREST in the way it calculates pixel coordinates:
+    center of the square instead of top left corner. For example, pixel (0, 0) will have coordinates (0.5, 0.5) */
+    INTER_NEAREST_PIL = 6,
     /** mask for interpolation codes */
     INTER_MAX            = 7,
     /** flag, fills all of the destination image pixels. If some of them correspond to outliers in the

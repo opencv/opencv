@@ -1104,6 +1104,77 @@ resizeNN( const Mat& src, Mat& dst, double fx, double fy )
     }
 }
 
+class resizeNNPILInvoker :
+    public ParallelLoopBody
+{
+public:
+    resizeNNPILInvoker(const Mat& _src, Mat &_dst, int *_x_ofs, double _ify) :
+        ParallelLoopBody(), src(_src), dst(_dst), x_ofs(_x_ofs),
+        ify(_ify)
+    {
+    }
+
+    virtual void operator() (const Range& range) const CV_OVERRIDE
+    {
+        Size ssize = src.size(), dsize = dst.size();
+        int y, x;
+        double yo = ify / 2;
+
+        for( y = range.start; y < range.end; y++ )
+        {
+            int yi;
+            if (yo < 0)
+                yi = -1;
+            else
+                yi = (int)yo;
+            if(yi >= 0 && yi < ssize.height)
+            {
+                for( x = 0; x < dsize.width; x++ )
+                {
+                    dst.at<char>(y, x) = src.at<char>(yi, x_ofs[x]);
+                }
+                yo += ify;
+            }
+        }
+    }
+
+private:
+    const Mat& src;
+    Mat& dst;
+    int* x_ofs;
+    double ify;
+
+    resizeNNPILInvoker(const resizeNNPILInvoker&);
+    resizeNNPILInvoker& operator=(const resizeNNPILInvoker&);
+};
+
+
+static void resizeNNPIL(const Mat& src, Mat& dst, double fx, double fy) {
+    Size ssize = src.size(), dsize = dst.size();
+    AutoBuffer<int> _x_ofs(dsize.width);
+    int* x_ofs = _x_ofs.data();
+    double ifx = 1. / fx, ify = 1. / fy;
+    int x;
+    double xo = ifx / 2;
+
+    int xmin = ssize.width;
+
+    for( x = 0; x < dsize.width; x++ )
+    {
+        if (xo < ssize.width)
+        {
+            if (x < xmin)
+                xmin = x;
+            x_ofs[x] = (int)xo;
+        }
+        xo += ifx;
+    }
+
+    Range range(0, dsize.height);
+
+    resizeNNPILInvoker invoker(src, dst, x_ofs, ify);
+    parallel_for_(range, invoker, dst.total() / (double)(1 << 16));
+}
 
 struct VResizeNoVec
 {
@@ -3723,6 +3794,11 @@ void resize(int src_type,
         return;
     }
 
+    if (interpolation == INTER_NEAREST_PIL) {
+      resizeNNPIL(src, dst, inv_scale_x, inv_scale_y);
+      return;
+    }
+
     int k, sx, sy, dx, dy;
 
 
@@ -3943,6 +4019,9 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
 
     if (interpolation == INTER_LINEAR_EXACT && (_src.depth() == CV_32F || _src.depth() == CV_64F))
         interpolation = INTER_LINEAR; // If depth isn't supported fallback to generic resize
+
+    if (interpolation == INTER_NEAREST_PIL && _src.depth() != CV_8UC1)
+        CV_Error(Error::StsNotImplemented, "INTER_NEAREST_PIL supports only CV_8UC1");
 
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat() && _src.cols() > 10 && _src.rows() > 10,
                ocl_resize(_src, _dst, dsize, inv_scale_x, inv_scale_y, interpolation))
