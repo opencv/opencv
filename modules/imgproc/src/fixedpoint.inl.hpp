@@ -270,7 +270,7 @@ public:
     static CV_ALWAYS_INLINE ufixedpoint32 one() { return ufixedpoint32((1U << fixedShift)); }
 
     static CV_ALWAYS_INLINE ufixedpoint32 fromRaw(uint32_t v) { return ufixedpoint32(v); }
-    CV_ALWAYS_INLINE ufixedpoint32 raw() { return val; }
+    CV_ALWAYS_INLINE uint32_t raw() { return val; }
     friend class ufixedpoint16;
 };
 
@@ -369,7 +369,7 @@ public:
     static CV_ALWAYS_INLINE ufixedpoint16 one() { return ufixedpoint16((uint16_t)(1 << fixedShift)); }
 
     static CV_ALWAYS_INLINE ufixedpoint16 fromRaw(uint16_t v) { return ufixedpoint16(v); }
-    CV_ALWAYS_INLINE ufixedpoint16 raw() { return val; }
+    CV_ALWAYS_INLINE uint16_t raw() { return val; }
 };
 
 }
