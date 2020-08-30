@@ -17,11 +17,11 @@ class OSXBuilder(Builder):
     def getToolchain(self, arch, target):
         return None
 
-    def getBuildCommand(self, archs, target):
+    def getBuildCommand(self, arch, target):
         buildcmd = [
             "xcodebuild",
             "MACOSX_DEPLOYMENT_TARGET=" + os.environ['MACOSX_DEPLOYMENT_TARGET'],
-            "ARCHS=%s" % archs[0],
+            "ARCHS=%s" % arch,
             "-sdk", target.lower(),
             "-configuration", "Debug" if self.debug else "Release",
             "-parallelizeTargets",
@@ -43,6 +43,7 @@ if __name__ == "__main__":
     parser.add_argument('--disable', metavar='FEATURE', default=[], action='append', help='OpenCV features to disable (add WITH_*=OFF)')
     parser.add_argument('--enable_nonfree', default=False, dest='enablenonfree', action='store_true', help='enable non-free modules (disabled by default)')
     parser.add_argument('--macosx_deployment_target', default=os.environ.get('MACOSX_DEPLOYMENT_TARGET', MACOSX_DEPLOYMENT_TARGET), help='specify MACOSX_DEPLOYMENT_TARGET')
+    parser.add_argument('--archs', default='x86_64', help='Select target ARCHS (set to "x86_64,arm64" to build Universal Binary for Big Sur and later)')
     parser.add_argument('--debug', action='store_true', help='Build "Debug" binaries (CMAKE_BUILD_TYPE=Debug)')
     parser.add_argument('--debug_info', action='store_true', help='Build with debug information (useful for Release mode: BUILD_WITH_DEBUG_INFO=ON)')
     parser.add_argument('--framework_name', default='opencv2', dest='framework_name', action='store_true', help='Name of OpenCV framework (default: opencv2, will change to OpenCV in future version)')
@@ -54,6 +55,9 @@ if __name__ == "__main__":
 
     os.environ['MACOSX_DEPLOYMENT_TARGET'] = args.macosx_deployment_target
     print('Using MACOSX_DEPLOYMENT_TARGET=' + os.environ['MACOSX_DEPLOYMENT_TARGET'])
+    archs = args.archs.split(',')
+    print('Using ARCHS=' + str(archs))
+
     if args.legacy_build:
         args.framework_name = "opencv2"
         if not "objc" in args.without:
@@ -61,6 +65,6 @@ if __name__ == "__main__":
 
     b = OSXBuilder(args.opencv, args.contrib, False, False, args.without, args.disable, args.enablenonfree,
         [
-            (["x86_64"], "MacOSX")
+            (archs, "MacOSX")
         ], args.debug, args.debug_info, args.framework_name, args.run_tests, args.build_docs)
     b.build(args.out)
