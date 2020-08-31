@@ -38,7 +38,6 @@ loadModel = async function(url) {
     return new Promise((resolve) => {
         // check if the model has been loaded before
         if(modelLoaded.indexOf(path.modelPath) == -1){
-            document.getElementById('status').innerHTML = 'Loading model...';
             utils.createFileFromUrl(path.modelPath, url.modelUrl, () => {
                 modelLoaded.push(path.modelPath);
                 // check if need to load config file
@@ -82,22 +81,27 @@ drawInfoTable = async function(jsonUrl, divId) {
         let table = document.createElement('table');
         let head_tr = document.createElement('tr');
         for(head of Object.keys(json[key][0])) {
-            if(head !== "modelUrl" && head !== "configUrl") {
-                let th = document.createElement('th');
-                th.textContent = head;
-                th.style.border = "1px solid black";
-                head_tr.appendChild(th);
-            }
+            let th = document.createElement('th');
+            th.textContent = head;
+            th.style.border = "1px solid black";
+            head_tr.appendChild(th);
         }
         table.appendChild(head_tr)
 
         for(model of json[key]) {
             let tr = document.createElement('tr');
             for(params of Object.keys(model)) {
+                let td = document.createElement('td');
+                td.style.border = "1px solid black";
                 if(params !== "modelUrl" && params !== "configUrl") {
-                    let td = document.createElement('td');
                     td.textContent = model[params];
-                    td.style.border = "1px solid black";
+                    tr.appendChild(td);
+                } else {
+                    let a = document.createElement('a');
+                    let link = document.createTextNode('link');
+                    a.append(link);
+                    a.href = model[params];
+                    td.appendChild(a);
                     tr.appendChild(td);
                 }
             }

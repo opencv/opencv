@@ -163,9 +163,10 @@ argmax = function(result, colors) {
     let tryIt = document.getElementById('tryIt');
     tryIt.addEventListener('click', () => {
         initStatus();
+        document.getElementById('status').innerHTML = 'Running function main()...';
         utils.executeCode('codeEditor');
         utils.executeCode('codeEditor1');
-        main();
+        setTimeout(main, 1);
     });
 
     let imgInput = document.getElementById('fileInput');
