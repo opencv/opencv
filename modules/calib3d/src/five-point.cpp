@@ -507,6 +507,31 @@ cv::Mat cv::findEssentialMat( InputArray points1, InputArray points2,
 
 }
 
+int cv::recoverPose( InputArray _points1, InputArray _points2,
+                            InputArray cameraMatrix1, InputArray distCoeffs1,
+                            InputArray cameraMatrix2, InputArray distCoeffs2,
+                            OutputArray E, OutputArray R, OutputArray t,
+                            int method, double prob, double threshold,
+                            InputOutputArray _mask)
+{
+    CV_INSTRUMENT_REGION();
+
+    Mat _E = findEssentialMat(_points1, _points2,
+                        cameraMatrix1, distCoeffs1, cameraMatrix2, distCoeffs2,
+                        method, prob, threshold, _mask);
+
+    CV_Assert(_E.cols == 3 && _E.rows == 3);
+    E.create(3, 3, _E.type());
+    _E.copyTo(E);
+
+    // Undistort image points, bring them to 3x3 identity "camera matrix"
+    Mat _pointsUntistorted1, _pointsUntistorted2;
+    undistortPoints(_points1, _pointsUntistorted1, cameraMatrix1, distCoeffs1);
+    undistortPoints(_points2, _pointsUntistorted2, cameraMatrix2, distCoeffs2);
+
+    return recoverPose(_E, _pointsUntistorted1, _pointsUntistorted2, Mat::eye(3,3, CV_64F), R, t, _mask);
+}
+
 int cv::recoverPose( InputArray E, InputArray _points1, InputArray _points2,
                             InputArray _cameraMatrix, OutputArray _R, OutputArray _t, double distanceThresh,
                      InputOutputArray _mask, OutputArray triangulatedPoints)

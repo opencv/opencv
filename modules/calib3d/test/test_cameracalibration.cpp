@@ -2145,6 +2145,7 @@ TEST(CV_RecoverPoseTest, regression_15341)
     const Mat zeroDistCoeffs = Mat::zeros(1, 5, CV_64F);
 
     int Inliers = 0;
+    int Inliers2 = 0;
 
     const int ntests = 3;
     for (int testcase = 1; testcase <= ntests; ++testcase)
@@ -2157,7 +2158,7 @@ TEST(CV_RecoverPoseTest, regression_15341)
             vector<Point2f> points2(_points2);
 
             // Estimation of fundamental matrix using the RANSAC algorithm
-            Mat E, E2, R, t;
+            Mat E, E2, E3, R, t;
             E = findEssentialMat(points1, points2, cameraMatrix, RANSAC, 0.999, 1.0, mask);
             E2 = findEssentialMat(points1, points2, cameraMatrix, zeroDistCoeffs, cameraMatrix, zeroDistCoeffs, RANSAC, 0.999, 1.0, mask);
             EXPECT_LT(cv::norm(E, E2, NORM_INF), 1e-4) <<
@@ -2165,6 +2166,10 @@ TEST(CV_RecoverPoseTest, regression_15341)
             EXPECT_EQ(0, (int)mask[13]) << "Detecting outliers in function findEssentialMat failed, testcase " << testcase;
             points2[12] = Point2f(0.0f, 0.0f); // provoke another outlier detection for recover Pose
             Inliers = recoverPose(E, points1, points2, cameraMatrix, R, t, mask);
+            EXPECT_EQ(0, (int)mask[12]) << "Detecting outliers in function failed, testcase " << testcase;
+            Inliers2 = recoverPose(points1, points2, cameraMatrix, zeroDistCoeffs, cameraMatrix, zeroDistCoeffs, E3, R, t, RANSAC, 0.999, 1.0, mask);
+            EXPECT_LT(cv::norm(E, E3, NORM_INF), 1e-4) <<
+                "Two big difference between the same essential matrices computed using different functions, testcase " << testcase;
             EXPECT_EQ(0, (int)mask[12]) << "Detecting outliers in function failed, testcase " << testcase;
         }
         else // testcase with mat input data
@@ -2184,7 +2189,7 @@ TEST(CV_RecoverPoseTest, regression_15341)
             }
 
             // Estimation of fundamental matrix using the RANSAC algorithm
-            Mat E, E2, R, t;
+            Mat E, E2, E3, R, t;
             E = findEssentialMat(points1, points2, cameraMatrix, RANSAC, 0.999, 1.0, mask);
             E2 = findEssentialMat(points1, points2, cameraMatrix, zeroDistCoeffs, cameraMatrix, zeroDistCoeffs, RANSAC, 0.999, 1.0, mask);
             EXPECT_LT(cv::norm(E, E2, NORM_INF), 1e-4) <<
@@ -2192,6 +2197,10 @@ TEST(CV_RecoverPoseTest, regression_15341)
             EXPECT_EQ(0, (int)mask.at<unsigned char>(13)) << "Detecting outliers in function findEssentialMat failed, testcase " << testcase;
             points2.at<Point2f>(12) = Point2f(0.0f, 0.0f); // provoke an outlier detection
             Inliers = recoverPose(E, points1, points2, cameraMatrix, R, t, mask);
+            EXPECT_EQ(0, (int)mask.at<unsigned char>(12)) << "Detecting outliers in function failed, testcase " << testcase;
+            Inliers2 = recoverPose(points1, points2, cameraMatrix, zeroDistCoeffs, cameraMatrix, zeroDistCoeffs, E3, R, t, RANSAC, 0.999, 1.0, mask);
+            EXPECT_LT(cv::norm(E, E3, NORM_INF), 1e-4) <<
+                "Two big difference between the same essential matrices computed using different functions, testcase " << testcase;
             EXPECT_EQ(0, (int)mask.at<unsigned char>(12)) << "Detecting outliers in function failed, testcase " << testcase;
         }
         EXPECT_EQ(Inliers, point_count - invalid_point_count) <<
