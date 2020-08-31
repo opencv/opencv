@@ -123,10 +123,10 @@ def main():
     print("OpenCV model was successfully read. Layer IDs: \n", opencv_net.getLayerNames())
 
     # get preprocessed image
-    input_img = get_preprocessed_img("test_data/cls/ILSVRC2012_val_00000502.JPEG")
+    input_img = get_preprocessed_img("../data/ILSVRC2012_val_00000502.JPEG")
 
     # get ImageNet labels
-    imagenet_labels = get_imagenet_labels("test_data/cls/imagenet_classes.txt")
+    imagenet_labels = get_imagenet_labels("../data/dnn/classification_classes_ILSVRC2012.txt")
 
     # obtain OpenCV DNN predictions
     get_opencv_dnn_prediction(opencv_net, input_img, imagenet_labels)

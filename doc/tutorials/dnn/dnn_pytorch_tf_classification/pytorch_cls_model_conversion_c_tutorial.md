@@ -128,7 +128,7 @@ For the label decoding of the obtained prediction, we also need ``imagenet_class
 In this tutorial we will run the inference process for the converted PyTorch ResNet-50 model from the build (``samples/build``) directory:
 
 ```
-./dnn/example_dnn_classification --model=../dnn/models/resnet50.onnx --input=../dnn/test_data/cls/ILSVRC2012_val_00000502.JPEG --width=224 --height=224 --rgb=true --scale="0.003921569" --mean="123.675 116.28 103.53" --std="0.229 0.224 0.225" --crop=true --initial_width=256 --initial_height=256 --classes=../dnn/test_data/cls/imagenet_classes.txt
+./dnn/example_dnn_classification --model=../dnn/models/resnet50.onnx --input=../data/ILSVRC2012_val_00000502.JPEG --width=224 --height=224 --rgb=true --scale="0.003921569" --mean="123.675 116.28 103.53" --std="0.229 0.224 0.225" --crop=true --initial_width=256 --initial_height=256 --classes=../data/dnn/classification_classes_ILSVRC2012.txt
 ```
 
 Let's explore ``classification.cpp`` key points step by step:

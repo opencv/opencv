@@ -3,22 +3,22 @@
 ## Goals
 In this tutorial you will learn how to:
 * obtain frozen graphs of TensorFlow (TF) classification models
-* run converted TensorFlow model with OpenCV Python API 
-* obtain an evaluation of the TensorFlow and OpenCV DNN models  
+* run converted TensorFlow model with OpenCV Python API
+* obtain an evaluation of the TensorFlow and OpenCV DNN models
 
 We will explore the above-listed points by the example of MobileNet architecture.
 
 ## Introduction
 Let's briefly view the key concepts involved in the pipeline of TensorFlow models transition with OpenCV API. The initial step in conversion of TensorFlow models into [cv.dnn_Net](https://docs.opencv.org/4.3.0/db/d30/classcv_1_1dnn_1_1Net.html#a82eb4d60b3c396cb85c79d267516cf15)
 is obtaining the frozen TF model graph. Frozen graph defines the combination of the model graph structure with kept values of the required variables, for example, weights. Usually the frozen graph is saved in [protobuf](https://en.wikipedia.org/wiki/Protocol_Buffers) (```.pb```) files.
-After the model ``.pb`` file was generated it can be read with [``cv.dnn.readNetFromTensorflow``](https://docs.opencv.org/4.3.0/d6/d0f/group__dnn.html#gad820b280978d06773234ba6841e77e8d) function. 
+After the model ``.pb`` file was generated it can be read with [``cv.dnn.readNetFromTensorflow``](https://docs.opencv.org/4.3.0/d6/d0f/group__dnn.html#gad820b280978d06773234ba6841e77e8d) function.
 
 ## Practise
 In this part we are going to cover the following points:
 1. create a TF classification model conversion pipeline and provide the inference
 2. evaluate and test TF classification models
 
-If you'd like merely to run evaluation or test model pipelines, the "Model Conversion Pipeline" tutorial part can be skipped.     
+If you'd like merely to run evaluation or test model pipelines, the "Model Conversion Pipeline" tutorial part can be skipped.
 
 ### Model Conversion Pipeline
 The code in this subchapter is located in the ``dnn_model_runner`` module and can be executed with the line:
@@ -28,7 +28,7 @@ python -m dnn_model_runner.dnn_conversion.tf.classification.py_to_py_mobilenet
 ```
 
 The following code contains the description of the below-listed steps:
-1. instantiate TF model 
+1. instantiate TF model
 2. create TF frozen graph
 3. read TF frozen graph with OpenCV API
 4. prepare input data
@@ -49,10 +49,10 @@ opencv_net = cv2.dnn.readNetFromTensorflow(full_pb_path)
 print("OpenCV model was successfully read. Model layers: \n", opencv_net.getLayerNames())
 
 # get preprocessed image
-input_img = get_preprocessed_img("test_data/cls/ILSVRC2012_val_00000502.JPEG")
+input_img = get_preprocessed_img("../data/ILSVRC2012_val_00000502.JPEG")
 
 # get ImageNet labels
-imagenet_labels = get_imagenet_labels("test_data/cls/imagenet_classes.txt")
+imagenet_labels = get_imagenet_labels("../data/dnn/classification_classes_ILSVRC2012.txt")
 
 # obtain OpenCV DNN predictions
 get_opencv_dnn_prediction(opencv_net, input_img, imagenet_labels)
@@ -65,7 +65,7 @@ To provide model inference we will use the below image of a squirrel from the Im
 
 ![ImageNet img](images/ILSVRC2012_val_00000502.JPEG)
 
-For the label decoding of the obtained prediction, we also need ``imagenet_classes.txt`` file, which contains the full list of the ImageNet classes. 
+For the label decoding of the obtained prediction, we also need ``imagenet_classes.txt`` file, which contains the full list of the ImageNet classes.
 
 Let's go deeper into each step by the example of pretrained TF MobileNet:
 * instantiate TF model:
@@ -109,9 +109,9 @@ tf.io.write_graph(graph_or_graph_def=frozen_tf_func.graph,
                   as_text=False)
 ```
 
-After the successful execution of the above code, we will get a frozen graph in ``models/mobilenet.pb``. 
+After the successful execution of the above code, we will get a frozen graph in ``models/mobilenet.pb``.
 
-* read TF frozen graph with with [``cv.dnn.readNetFromTensorflow``](https://docs.opencv.org/4.3.0/d6/d0f/group__dnn.html#gad820b280978d06773234ba6841e77e8d) passing the obtained in the previous step ``mobilenet.pb`` into it: 
+* read TF frozen graph with with [``cv.dnn.readNetFromTensorflow``](https://docs.opencv.org/4.3.0/d6/d0f/group__dnn.html#gad820b280978d06773234ba6841e77e8d) passing the obtained in the previous step ``mobilenet.pb`` into it:
 
 ```python
 # get TF frozen graph path
@@ -147,9 +147,9 @@ Please, pay attention at the preprocessing order in the ``cv2.dnn.blobFromImage`
 Therefore, to reproduce the image preprocessing pipeline from the TF [``mobilenet.preprocess_input``](https://github.com/tensorflow/tensorflow/blob/v2.3.0/tensorflow/python/keras/applications/mobilenet.py#L443-L445) function, we multiply ``mean`` by ``127.5``.
 
 As a result, 4-dimensional ``input_blob`` was obtained:
- 
+
  ``Input blob shape: (1, 3, 224, 224)``
- 
+
 * provide OpenCV ``cv.dnn_Net`` inference:
 
 ```python
@@ -173,7 +173,7 @@ print("* confidence: {:.4f}\n".format(confidence))
 After the above code execution we will get the following output:
 
 ```
-OpenCV DNN prediction: 
+OpenCV DNN prediction:
 * shape:  (1, 1000)
 * class ID: 335, label: fox squirrel, eastern fox squirrel, Sciurus niger
 * confidence: 0.9941
@@ -200,7 +200,7 @@ confidence = out[0][imagenet_class_id]
 print("* confidence: {:.4f}".format(confidence))
 ```
 
-To fit TF model input, ``input_blob`` was transposed:  
+To fit TF model input, ``input_blob`` was transposed:
 
 ```
 TF input blob shape: (1, 224, 224, 3)
@@ -209,34 +209,34 @@ TF input blob shape: (1, 224, 224, 3)
 TF inference results are the following:
 
 ```
-TensorFlow model prediction: 
+TensorFlow model prediction:
 * shape:  (1, 1000)
 * class ID: 335, label: fox squirrel, eastern fox squirrel, Sciurus niger
 * confidence: 0.9941
 ```
 
-As it can be seen from the experiments OpenCV and TF inference results are equal. 
+As it can be seen from the experiments OpenCV and TF inference results are equal.
 
 ### Evaluation of the Models
 
 The proposed in ``dnn/samples`` ``dnn_model_runner`` module allows to run the full evaluation pipeline on the ImageNet dataset and test execution for the following TensorFlow classification models:
-* vgg16 
-* vgg19 
-* resnet50 
-* resnet101 
-* resnet152 
-* densenet121 
-* densenet169 
-* densenet201 
-* inceptionresnetv2 
-* inceptionv3 
-* mobilenet 
-* mobilenetv2 
-* nasnetlarge 
-* nasnetmobile 
-* xception 
+* vgg16
+* vgg19
+* resnet50
+* resnet101
+* resnet152
+* densenet121
+* densenet169
+* densenet201
+* inceptionresnetv2
+* inceptionv3
+* mobilenet
+* mobilenetv2
+* nasnetlarge
+* nasnetmobile
+* xception
 
-This list can be also extended with further appropriate evaluation pipeline configuration.  
+This list can be also extended with further appropriate evaluation pipeline configuration.
 
 #### Evaluation Mode
 
@@ -267,7 +267,7 @@ To initiate the evaluation of the TensorFlow MobileNet, run the following line:
 
 ```
 python -m dnn_model_runner.dnn_conversion.tf.classification.py_to_py_cls --model_name mobilenet
-``` 
+```
 
 #### Test Mode
 
@@ -284,7 +284,7 @@ Test configuration is represented in [``test_config.py``](https://) ``TestClsMod
 ```python
 @dataclass
 class TestClsModuleConfig:
-    cls_test_data_dir: str = "test_data/cls"
+    cls_test_data_dir: str = "../data"
     test_module_name: str = "classification"
     test_module_path: str = "classification.py"
     input_img: str = os.path.join(cls_test_data_dir, "ILSVRC2012_val_00000502.JPEG")
@@ -299,7 +299,7 @@ class TestClsModuleConfig:
     rgb: str = "True"
     rsz_height: str = ""
     rsz_width: str = ""
-    classes: str = os.path.join(cls_test_data_dir, "imagenet_classes.txt")
+    classes: str = os.path.join(cls_test_data_dir, "dnn", "classification_classes_ILSVRC2012.txt")
 ```
 
 The default image preprocessing options are defined in ``default_preprocess_config.py``. For instance, for MobileNet:
@@ -320,7 +320,7 @@ To reproduce from scratch the described in "Model Conversion Pipeline" OpenCV st
 
 ```
 python -m dnn_model_runner.dnn_conversion.tf.classification.py_to_py_cls --model_name mobilenet --test True --default_img_preprocess True --evaluate False
-``` 
+```
 
 The network prediction is depicted in the top left corner of the output window:
 

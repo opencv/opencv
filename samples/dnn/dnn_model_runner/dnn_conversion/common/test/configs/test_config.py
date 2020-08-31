@@ -22,7 +22,7 @@ class TestClsConfig:
 
 @dataclass
 class TestClsModuleConfig:
-    cls_test_data_dir: str = "test_data/cls"
+    cls_test_data_dir: str = "../data"
     test_module_name: str = "classification"
     test_module_path: str = "classification.py"
     input_img: str = os.path.join(cls_test_data_dir, "ILSVRC2012_val_00000502.JPEG")
@@ -37,4 +37,4 @@ class TestClsModuleConfig:
     rgb: str = "True"
     rsz_height: str = ""
     rsz_width: str = ""
-    classes: str = os.path.join(cls_test_data_dir, "imagenet_classes.txt")
+    classes: str = os.path.join(cls_test_data_dir, "dnn", "classification_classes_ILSVRC2012.txt")
