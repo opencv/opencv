@@ -11,11 +11,12 @@
 <h2>Image Classification Example</h2>
 <p>
     This tutorial show you how to write an image classification example with OpenCV.js.<br>
-    Click <b>Try it</b> button to see the result. You can choose any other images.<br>
-    You can also change the parameters in the first code snippet to investigate more models.
+    To try the example you should click the <b>modelInput</b> button(and <b>configInput</b> button if needed) to upload inference model.
+    Then You should change the parameters in the first code snippet according to the uploaded model.
+    Finally click <b>Try it</b> button to see the result. You can choose any other images.<br>
 </p>
 
-<div class="control"><button id="tryIt">Try it</button></div>
+<div class="control"><button id="tryIt" disabled>Try it</button></div>
 <div>
     <table cellpadding="0" cellspacing="0" width="0" border="0">
         <tr>
@@ -23,7 +24,6 @@
                 <canvas id="canvasInput" width="400" height="400"></canvas>
             </td>
             <td>
-                <p id='status' align="left"></p>
                 <table style="visibility: hidden;" id="result">
                     <thead>
                         <tr>
@@ -50,16 +50,30 @@
                         </tr>
                     </tbody>
                 </table>
-                <p id='time' align="left"></p>
+                <p id='status' align="left"></p>
             </td>
         </tr>
         <tr>
             <td>
                 <div class="caption">
-                    canvasInput <input type="file" id="fileInput" name="file" accept="image/*">
+                    imageInput <input type="file" id="imageInput" name="file" accept="image/*">
                 </div>
             </td>
             <td></td>
+        </tr>
+        <tr>
+            <td>
+                <div class="caption">
+                    modelInput <input type="file" id="modelInput" name="file">
+                </div>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <div class="caption">
+                    configInput <input type="file" id="configInput">
+                </div>
+            </td>
         </tr>
     </table>
 </div>
@@ -71,15 +85,15 @@
 <div>
     <h3>Help function</h3>
     <p>1.The parameters for model inference which you can modify to investigate more models.</p>
-    <textarea class="code" rows="14" cols="100" id="codeEditor" spellcheck="false"></textarea>
+    <textarea class="code" rows="13" cols="100" id="codeEditor" spellcheck="false"></textarea>
     <p>2.Main loop in which will read the image from canvas and do inference once.</p>
-    <textarea class="code" rows="22" cols="100" id="codeEditor1" spellcheck="false"></textarea>
+    <textarea class="code" rows="17" cols="100" id="codeEditor1" spellcheck="false"></textarea>
     <p>3.Load labels from txt file and process it into an array.</p>
     <textarea class="code" rows="7" cols="100" id="codeEditor2" spellcheck="false"></textarea>
     <p>4.Get blob from image as input for net, and standardize it with <b>mean</b> and <b>std</b>.</p>
     <textarea class="code" rows="17" cols="100" id="codeEditor3" spellcheck="false"></textarea>
-    <p>5.Fetch model from network and save to emscripten file system.</p>
-    <textarea class="code" rows="34" cols="100" id="codeEditor4" spellcheck="false"></textarea>
+    <p>5.Fetch model file and save to emscripten file system once click the input button.</p>
+    <textarea class="code" rows="17" cols="100" id="codeEditor4" spellcheck="false"></textarea>
     <p>6.The post-processing, including softmax if needed and get the top classes from the output vector.</p>
     <textarea class="code" rows="34" cols="100" id="codeEditor5" spellcheck="false"></textarea>
 </div>
@@ -100,23 +114,15 @@ swapRB = true;
 // record if need softmax function for post-processing
 needSoftmax = false;
 
-// url for model, config and label files, can from native or Internet
-// for model type like onnx which doesn't need config file, just let configUrl = ""
-labelsUrl = "labels1000.txt";
-modelUrl = "bvlc_googlenet.caffemodel";
-configUrl = "bvlc_googlenet.prototxt";
+// url for label file, can from local or Internet
+labelsUrl = "https://raw.githubusercontent.com/opencv/opencv/master/samples/data/dnn/classification_classes_ILSVRC2012.txt";
 </script>
 
 <script id="codeSnippet1" type="text/code-snippet">
 main = async function() {
-    const url = {
-        modelUrl: modelUrl,
-        configUrl: configUrl
-    };
-    const path = await loadModel(url);
     const labels = await loadLables(labelsUrl);
     const input = getBlobFromImage(inputSize, mean, std, swapRB, 'canvasInput');
-    let net = cv.readNet(path.configPath, path.modelPath);
+    let net = cv.readNet(configPath, modelPath);
     net.setInput(input);
     const start = performance.now();
     const result = net.forward();
@@ -179,9 +185,8 @@ getTopClasses = function(probs, labels, topK = 3) {
     document.getElementById('codeEditor2').value = loadLablesCode;
     let getBlobFromImageCode = 'getBlobFromImage = ' + getBlobFromImage.toString();
     document.getElementById('codeEditor3').value = getBlobFromImageCode;
-    let getNameFromUrlCode = 'getNameFromUrl = ' + getNameFromUrl.toString();
     let loadModelCode = 'loadModel = ' + loadModel.toString();
-    document.getElementById('codeEditor4').value = getNameFromUrlCode + '\n' + '\n' + loadModelCode;
+    document.getElementById('codeEditor4').value = loadModelCode;
 
     utils.loadCode('codeSnippet5', 'codeEditor5');
 
@@ -203,17 +208,33 @@ getTopClasses = function(probs, labels, topK = 3) {
         setTimeout(main, 1);
     });
 
-    let imgInput = document.getElementById('fileInput');
-    imgInput.addEventListener('change', (e) => {
+    let imageInput = document.getElementById('imageInput');
+    imageInput.addEventListener('change', (e) => {
         initStatus();
         loadImageToCanvas(e);
+    });
+
+    let configPath = "";
+    let configInput = document.getElementById('configInput');
+    configInput.addEventListener('change', async (e) => {
+        initStatus();
+        configPath = await loadModel(e);
+        document.getElementById('status').innerHTML = `${configPath} successfully loaded.`;
+    });
+
+    let modelPath = "";
+    let modelInput = document.getElementById('modelInput');
+    modelInput.addEventListener('change', async (e) => {
+        initStatus();
+        modelPath = await loadModel(e);
+        document.getElementById('status').innerHTML = `${modelPath} successfully loaded.`;
+        configPath = "";
     });
 
     utils.loadOpenCv(() => {
         tryIt.removeAttribute('disabled');
     });
 
-    let modelLoaded = [];
     var main = async function() {};
     var softmax = function(result){};
     var getTopClasses = function(mat, labels, topK = 3){};
@@ -232,12 +253,9 @@ getTopClasses = function(probs, labels, topK = 3) {
                 labelElement.innerHTML = c.label;
                 probElement.innerHTML = c.prob + '%';
             });
-            let modelPath = path.modelPath;
-            let modelName = modelPath.substring(0, modelPath.indexOf('.'));
             let result = document.getElementById('result');
             result.style.visibility = 'visible';
-            document.getElementById('status').innerHTML = '';
-            document.getElementById('time').innerHTML = `<b>Model:</b> ${modelName}<br>
+            document.getElementById('status').innerHTML = `<b>Model:</b> ${modelPath}<br>
                                                          <b>Inference time:</b> ${time.toFixed(2)} ms`;
         } catch(e) {
             console.log(e);
@@ -247,7 +265,6 @@ getTopClasses = function(probs, labels, topK = 3) {
     function initStatus() {
         document.getElementById('status').innerHTML = '';
         document.getElementById('result').style.visibility = 'hidden';
-        document.getElementById('time').innerHTML = '';
     }
 
 </script>

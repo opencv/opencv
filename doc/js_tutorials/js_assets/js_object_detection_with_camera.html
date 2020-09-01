@@ -11,8 +11,9 @@
 <h2>Object Detection Example with Camera </h2>
 <p>
     This tutorial show you how to write an object detection example with camera.<br>
-    Click <b>Start/Stop</b> button to start or stop the camera capture.<br>
-    You can also change the parameters in the first code snippet to investigate more models.
+    To try the example you should click the <b>modelInput</b> button(and <b>configInput</b> button if needed) to upload inference model.
+    Then You should change the parameters in the first code snippet according to the uploaded model.
+    Finally click <b>Start/Stop</b> button to start or stop the camera capture.<br>
 </p>
 
 <div class="control"><button id="startAndStop" disabled>Start</button></div>
@@ -36,6 +37,20 @@
                 <p id='status' align="left"></p>
             </td>
         </tr>
+        <tr>
+            <td>
+                <div class="caption">
+                    modelInput <input type="file" id="modelInput" name="file">
+                </div>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <div class="caption">
+                    configInput <input type="file" id="configInput">
+                </div>
+            </td>
+        </tr>
     </table>
 </div>
 
@@ -46,15 +61,15 @@
 <div>
     <h3>Help function</h3>
     <p>1.The parameters for model inference which you can modify to investigate more models.</p>
-    <textarea class="code" rows="16" cols="100" id="codeEditor" spellcheck="false"></textarea>
+    <textarea class="code" rows="15" cols="100" id="codeEditor" spellcheck="false"></textarea>
     <p>2.The function to capture video from camera, and the main loop in which will do inference once.</p>
-    <textarea class="code" rows="39" cols="100" id="codeEditor1" spellcheck="false"></textarea>
+    <textarea class="code" rows="34" cols="100" id="codeEditor1" spellcheck="false"></textarea>
     <p>3.Load labels from txt file and process it into an array.</p>
     <textarea class="code" rows="7" cols="100" id="codeEditor2" spellcheck="false"></textarea>
     <p>4.Get blob from image as input for net, and standardize it with <b>mean</b> and <b>std</b>.</p>
     <textarea class="code" rows="17" cols="100" id="codeEditor3" spellcheck="false"></textarea>
-    <p>5.Fetch model from network and save to emscripten file system.</p>
-    <textarea class="code" rows="34" cols="100" id="codeEditor4" spellcheck="false"></textarea>
+    <p>5.Fetch model file and save to emscripten file system once click the input button.</p>
+    <textarea class="code" rows="17" cols="100" id="codeEditor4" spellcheck="false"></textarea>
     <p>6.The post-processing, including get boxes from output and draw boxes into the image.</p>
     <textarea class="code" rows="35" cols="100" id="codeEditor5" spellcheck="false"></textarea>
 </div>
@@ -77,11 +92,8 @@ nmsThreshold = 0.4;
 // the type of output, can be YOLO or SSD
 outType = "SSD";
 
-// url for model, config and label files, can from native or Internet
-// for model type like onnx which doesn't need config file, just let configUrl = ""
-labelsUrl = "object_detection_classes_pascal_voc.txt";
-modelUrl = "mobilenet-ssd.caffemodel";
-configUrl = "mobilenet-ssd.prototxt";
+// url for label file, can from local or Internet
+labelsUrl = "https://raw.githubusercontent.com/opencv/opencv/master/samples/data/dnn/object_detection_classes_pascal_voc.txt";
 </script>
 
 <script id="codeSnippet1" type="text/code-snippet">
@@ -89,14 +101,9 @@ let frame = new cv.Mat(videoInput.height, videoInput.width, cv.CV_8UC4);
 let cap = new cv.VideoCapture(videoInput);
 
 main = async function(frame) {
-    const url = {
-        modelUrl: modelUrl,
-        configUrl: configUrl
-    };
-    const path = await loadModel(url);
     const labels = await loadLables(labelsUrl);
     const input = getBlobFromImage(inputSize, mean, std, swapRB, frame);
-    let net = cv.readNet(path.configPath, path.modelPath);
+    let net = cv.readNet(configPath, modelPath);
     net.setInput(input);
     const start = performance.now();
     const result = net.forward();
@@ -305,9 +312,8 @@ postProcess = function(result, labels, frame) {
     document.getElementById('codeEditor2').value = loadLablesCode;
     let getBlobFromImageCode = 'getBlobFromImage = ' + getBlobFromImage.toString();
     document.getElementById('codeEditor3').value = getBlobFromImageCode;
-    let getNameFromUrlCode = 'getNameFromUrl = ' + getNameFromUrl.toString();
     let loadModelCode = 'loadModel = ' + loadModel.toString();
-    document.getElementById('codeEditor4').value = getNameFromUrlCode + '\n' + '\n' + loadModelCode;
+    document.getElementById('codeEditor4').value = loadModelCode;
 
     utils.loadCode('codeSnippet5', 'codeEditor5');
 
@@ -324,11 +330,27 @@ postProcess = function(result, labels, frame) {
         }
     });
 
+    let configPath = "";
+    let configInput = document.getElementById('configInput');
+    configInput.addEventListener('change', async (e) => {
+        initStatus();
+        configPath = await loadModel(e);
+        document.getElementById('status').innerHTML = `${configPath} successfully loaded.`;
+    });
+
+    let modelPath = "";
+    let modelInput = document.getElementById('modelInput');
+    modelInput.addEventListener('change', async (e) => {
+        initStatus();
+        modelPath = await loadModel(e);
+        document.getElementById('status').innerHTML = `${modelPath} successfully loaded.`;
+        configPath = "";
+    });
+
     utils.loadOpenCv(() => {
         startAndStop.removeAttribute('disabled');
     });
 
-    let modelLoaded = [];
     var main = async function(frame) {};
     var postProcess = function(result, labels, frame) {};
 
@@ -358,9 +380,7 @@ postProcess = function(result, labels, frame) {
             let canvasOutput = document.getElementById('canvasOutput');
             canvasOutput.style.visibility = "visible";
             cv.imshow('canvasOutput', output);
-            let modelPath = path.modelPath;
-            let modelName = modelPath.substring(0, modelPath.indexOf('.'));
-            document.getElementById('status').innerHTML = `<b>Model:</b> ${modelName}<br>
+            document.getElementById('status').innerHTML = `<b>Model:</b> ${modelPath}<br>
                                                            <b>Inference time:</b> ${time.toFixed(2)} ms`;
         } catch(e) {
             console.log(e);

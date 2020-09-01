@@ -22,43 +22,27 @@ loadLables = async function(labelsUrl) {
     return label;
 }
 
-getNameFromUrl = function(url) {
-    const modelParts = url.modelUrl.split('/');
-    const modelPath = modelParts[modelParts.length-1];
-    const configParts = url.configUrl.split('/');
-    const configPath = configParts[configParts.length-1];
-    return {
-        modelPath: modelPath,
-        configPath: configPath
-    };
-}
-
-loadModel = async function(url) {
-    path = getNameFromUrl(url);
+loadModel = async function(e) {
     return new Promise((resolve) => {
-        // check if the model has been loaded before
-        if(modelLoaded.indexOf(path.modelPath) == -1){
-            utils.createFileFromUrl(path.modelPath, url.modelUrl, () => {
-                modelLoaded.push(path.modelPath);
-                // check if need to load config file
-                if(url.configUrl !== "") {
-                    utils.createFileFromUrl(path.configPath, url.configUrl, () => {
-                        resolve(path);
-                    });
-                } else {
-                    resolve(path);
-                }
-            });
-        } else {
-            resolve(path);
+        let file = e.target.files[0];
+        let path = file.name;
+        let reader = new FileReader();
+        reader.readAsArrayBuffer(file);
+        reader.onload = function(ev) {
+            if(reader.readyState === 2){
+                let buffer = reader.result;
+                let data = new Uint8Array(buffer);
+                cv.FS_createDataFile('/', path, data, true, false, false);
+                resolve(path);
+            }
         }
     });
 }
 
-loadImageToCanvas = function(e) {
+loadImageToCanvas = function(e, canvasId) {
     let files = e.target.files;
     let imgUrl = URL.createObjectURL(files[0]);
-    let canvas = document.getElementById("canvasInput");
+    let canvas = document.getElementById(canvasId);
     let ctx = canvas.getContext('2d');
     let img = new Image();
     img.crossOrigin = 'anonymous';
@@ -93,7 +77,7 @@ drawInfoTable = async function(jsonUrl, divId) {
             for(params of Object.keys(model)) {
                 let td = document.createElement('td');
                 td.style.border = "1px solid black";
-                if(params !== "modelUrl" && params !== "configUrl") {
+                if(params !== "modelUrl" && params !== "configUrl" && params !== "labelsUrl") {
                     td.textContent = model[params];
                     tr.appendChild(td);
                 } else {

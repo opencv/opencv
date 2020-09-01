@@ -11,8 +11,9 @@
 <h2>Pose Estimation Example</h2>
 <p>
     This tutorial show you how to write an pose estimation example with OpenCV.js.<br>
-    Click <b>Try it</b> button to see the result. You can choose any other images.<br>
-    You can also change the parameters in the first code snippet to investigate more models.
+    To try the example you should click the <b>modelInput</b> button(and <b>configInput</b> button if needed) to upload inference model.
+    Then You should change the parameters in the first code snippet according to the uploaded model.
+    Finally click <b>Try it</b> button to see the result. You can choose any other images.<br>
 </p>
 
 <div class="control"><button id="tryIt" disabled>Try it</button></div>
@@ -29,11 +30,25 @@
         <tr>
             <td>
                 <div class="caption">
-                    canvasInput <input type="file" id="fileInput" name="file" accept="image/*">
+                    imageInput <input type="file" id="imageInput" name="file" accept="image/*">
                 </div>
             </td>
             <td>
                 <p id='status' align="left"></p>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <div class="caption">
+                    modelInput <input type="file" id="modelInput" name="file">
+                </div>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <div class="caption">
+                    configInput <input type="file" id="configInput">
+                </div>
             </td>
         </tr>
     </table>
@@ -46,13 +61,13 @@
 <div>
     <h3>Help function</h3>
     <p>1.The parameters for model inference which you can modify to investigate more models.</p>
-    <textarea class="code" rows="14" cols="100" id="codeEditor" spellcheck="false"></textarea>
+    <textarea class="code" rows="9" cols="100" id="codeEditor" spellcheck="false"></textarea>
     <p>2.Main loop in which will read the image from canvas and do inference once.</p>
-    <textarea class="code" rows="20" cols="100" id="codeEditor1" spellcheck="false"></textarea>
+    <textarea class="code" rows="15" cols="100" id="codeEditor1" spellcheck="false"></textarea>
     <p>3.Get blob from image as input for net, and standardize it with <b>mean</b> and <b>std</b>.</p>
     <textarea class="code" rows="17" cols="100" id="codeEditor2" spellcheck="false"></textarea>
-    <p>4.Fetch model from network and save to emscripten file system.</p>
-    <textarea class="code" rows="34" cols="100" id="codeEditor3" spellcheck="false"></textarea>
+    <p>4.Fetch model file and save to emscripten file system once click the input button.</p>
+    <textarea class="code" rows="17" cols="100" id="codeEditor3" spellcheck="false"></textarea>
     <p>5.The pairs of keypoints of different dataset.</p>
     <textarea class="code" rows="30" cols="100" id="codeEditor4" spellcheck="false"></textarea>
     <p>6.The post-processing, including get the predicted points and draw lines into the image.</p>
@@ -75,22 +90,12 @@ threshold = 0.1;
 
 // the pairs of keypoint, can be "COCO", "MPI" and "BODY_25"
 dataset = "COCO";
-
-// url for model, config and label files, can from native or Internet
-// for model type like onnx which doesn't need config file, just let configUrl = ""
-modelUrl = "openpose_coco.caffemodel";
-configUrl = "openpose_coco.prototxt";
 </script>
 
 <script id="codeSnippet1" type="text/code-snippet">
 main = async function() {
-    const url = {
-        modelUrl: modelUrl,
-        configUrl: configUrl
-    };
-    const path = await loadModel(url);
     const input = getBlobFromImage(inputSize, mean, std, swapRB, 'canvasInput');
-    let net = cv.readNet(path.configPath, path.modelPath);
+    let net = cv.readNet(configPath, modelPath);
     net.setInput(input);
     const start = performance.now();
     const result = net.forward();
@@ -227,9 +232,8 @@ postProcess = function(result) {
 
     let getBlobFromImageCode = 'getBlobFromImage = ' + getBlobFromImage.toString();
     document.getElementById('codeEditor2').value = getBlobFromImageCode;
-    let getNameFromUrlCode = 'getNameFromUrl = ' + getNameFromUrl.toString();
     let loadModelCode = 'loadModel = ' + loadModel.toString();
-    document.getElementById('codeEditor3').value = getNameFromUrlCode + '\n' + '\n' + loadModelCode;
+    document.getElementById('codeEditor3').value = loadModelCode;
 
     utils.loadCode('codeSnippet4', 'codeEditor4');
     utils.loadCode('codeSnippet5', 'codeEditor5');
@@ -252,17 +256,33 @@ postProcess = function(result) {
         setTimeout(main, 1);
     });
 
-    let imgInput = document.getElementById('fileInput');
-    imgInput.addEventListener('change', (e) => {
+    let imageInput = document.getElementById('imageInput');
+    imageInput.addEventListener('change', (e) => {
         initStatus();
         loadImageToCanvas(e);
+    });
+
+    let configPath = "";
+    let configInput = document.getElementById('configInput');
+    configInput.addEventListener('change', async (e) => {
+        initStatus();
+        configPath = await loadModel(e);
+        document.getElementById('status').innerHTML = `${configPath} successfully loaded.`;
+    });
+
+    let modelPath = "";
+    let modelInput = document.getElementById('modelInput');
+    modelInput.addEventListener('change', async (e) => {
+        initStatus();
+        modelPath = await loadModel(e);
+        document.getElementById('status').innerHTML = `${modelPath} successfully loaded.`;
+        configPath = "";
     });
 
     utils.loadOpenCv(() => {
         tryIt.removeAttribute('disabled');
     });
 
-    let modelLoaded = [];
     var main = async function() {};
     var postProcess = function(result) {};
 
@@ -280,9 +300,7 @@ postProcess = function(result) {
             let resized = new cv.Mat(canvasOutput.width, canvasOutput.height, cv.CV_8UC4);
             cv.resize(output, resized, new cv.Size(canvasOutput.width, canvasOutput.height));
             cv.imshow('canvasOutput', resized);
-            let modelPath = path.modelPath;
-            let modelName = modelPath.substring(0, modelPath.indexOf('.'));
-            document.getElementById('status').innerHTML = `<b>Model:</b> ${modelName}<br>
+            document.getElementById('status').innerHTML = `<b>Model:</b> ${modelPath}<br>
                                                            <b>Inference time:</b> ${time.toFixed(2)} ms`;
         } catch(e) {
             console.log(e);
