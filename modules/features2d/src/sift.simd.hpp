@@ -195,7 +195,7 @@ static inline softfloat atan2_bitexact(const softfloat& y, const softfloat& x)
 static
 softfloat calcOrientationHist_bitexact(
         const Mat& img, Point pt, int radius,
-        float _sigma, softfloat* hist, int n
+        float _sigma, std::vector<softfloat>& hist, int n
 )
 {
     CV_TRACE_FUNCTION();
@@ -206,6 +206,7 @@ softfloat calcOrientationHist_bitexact(
     softfloat expf_scale = -softfloat::one()/(softfloat(2) * sigma * sigma);
 
     std::vector<softfloat> Mag(len), Ori(len), W(len), temphist(n+4); // default constructor: 0
+    int ofs = 2;
 
     for( i = -radius, k = 0; i <= radius; i++ )
     {
@@ -242,21 +243,21 @@ softfloat calcOrientationHist_bitexact(
             bin -= n;
         if( bin < 0 )
             bin += n;
-        temphist[bin] += W[k]*Mag[k];
+        temphist[ofs+bin] += W[k]*Mag[k];
     }
 
     // smooth the histogram
-    temphist[-1] = temphist[n-1];
-    temphist[-2] = temphist[n-2];
-    temphist[n] = temphist[0];
-    temphist[n+1] = temphist[1];
+    temphist[ofs-1] = temphist[ofs+n-1];
+    temphist[ofs-2] = temphist[ofs+n-2];
+    temphist[ofs+n] = temphist[ofs];
+    temphist[ofs+n+1] = temphist[ofs+1];
 
     i = 0;
     for( ; i < n; i++ )
     {
-        hist[i] = (temphist[i-2] + temphist[i+2])*d_1_16 +
-            (temphist[i-1] + temphist[i+1])*d_4_16 +
-            temphist[i]*d_6_16;
+        hist[i] = (temphist[ofs+i-2] + temphist[ofs+i+2])*d_1_16 +
+            (temphist[ofs+i-1] + temphist[ofs+i+1])*d_4_16 +
+            temphist[ofs+i]*d_6_16;
     }
 
     softfloat maxval = hist[0];
@@ -636,7 +637,7 @@ public:
 
         static const int n = SIFT_ORI_HIST_BINS;
 #if DoG_TYPE_SHORT
-        softfloat hist[n];
+        std::vector<softfloat> hist(n);
         softfloat soft_n(n);
 #else
         float CV_DECL_ALIGNED(CV_SIMD_WIDTH) hist[n];
