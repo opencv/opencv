@@ -248,6 +248,11 @@ public:
     float power;
 #endif
 
+#ifdef HAVE_TENGINE
+    graph_t graph;
+    bool tengine_ret;
+#endif
+
 #ifdef HAVE_CUDA
     cuda4dnn::ConvolutionConfiguration::FusionMode cudaFusionMode;
     cuda4dnn::ConvolutionConfiguration::ActivationType cudaActType;
@@ -267,7 +272,21 @@ public:
         cudaFusionMode = cuda4dnn::ConvolutionConfiguration::FusionMode::NONE;
         cudaActType = cuda4dnn::ConvolutionConfiguration::ActivationType::IDENTITY;
 #endif
+#ifdef HAVE_TENGINE
+        graph=NULL;
+        tengine_ret = false ; //false = 0
+#endif
     }
+#ifdef HAVE_TENGINE
+    ~ConvolutionLayerImpl()
+    {
+        if(NULL != graph )
+        {
+            postrun_graph(graph);
+            destroy_graph(graph);
+        }
+    }
+#endif
 
     MatShape computeColRowShape(const MatShape &inpShape, const MatShape &outShape) const CV_OVERRIDE
     {
@@ -566,7 +585,53 @@ public:
         }
         biasvec[outCn] = biasvec[outCn+1] = biasvec[outCn-1];
     }
+    virtual Ptr<BackendNode> initTengine(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
+    {
+#ifdef HAVE_TENGINE
+        std::vector<Mat> inputs, outputs;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
 
+        int inch = inputs[0].size[1]; 		// inch
+        int in_h = inputs[0].size[2]; 		// in_h
+        int in_w = inputs[0].size[3]; 		// in_w
+
+        int out_b = outputs[0].size[0];     // out batch size
+        int outch = outputs[0].size[1]; 	// outch
+        int out_h = outputs[0].size[2]; 	// out_h
+        int out_w = outputs[0].size[3]; 	// out_w
+
+        float *input_  = inputs[0].ptr<float>();
+        float *output_ = outputs[0].ptr<float>();
+        float *kernel_ = weightsMat.ptr<float>();
+        float *teg_bias = &biasvec[0];
+
+        int ngroups = inputs[0].size[1]/blobs[0].size[1];
+        int nstripes = std::max(getNumThreads(), 1);
+
+        tengine_ret = tengine_init(name.c_str(),input_, inch, ngroups, in_h, in_w,
+                                       output_, out_b, outch, out_h, out_w,
+                                       kernel_, kernel_size.size(), kernel.height, kernel.width,
+                                       teg_bias, stride.height, stride.width,
+                                       pad.height,  pad.width, dilation.height, dilation.width,
+                                       weightsMat.step1(), padMode, graph, nstripes);
+        //printf("Tengine_init --tengine_ret = %d \n",tengine_ret);
+        if((true == tengine_ret) && activ )
+        {
+            return Ptr<BackendNode>();
+        }
+            /*
+              printf("Init:  input=%p(%d %d %d %d ),output=%p(%d %d %d %d ),kernel=%p(%d %d %d ), bias=%p ,"
+                     "stride(%d %d), pad(%d %d), dilation(%d %d) ,weightsMat=%d, pad=%s \n",
+                      input_, inch, ngroups, in_h, in_w,
+                      output_, out_b, outch, out_h, out_w,
+                      kernel_, kernel_size.size(), kernel.height, kernel.width,
+                      teg_bias, stride.height, stride.width,
+                      pad.height,  pad.width, dilation.height, dilation.width,
+                      weightsMat.step1(), padMode);*/
+#endif
+        return Ptr<BackendNode>();
+    }
     virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
     {
 #ifdef HAVE_VULKAN
@@ -1762,26 +1827,17 @@ public:
         }
 
 #ifdef HAVE_TENGINE
-        int inch = inputs[0].size[1]; 		// inch
-        int in_h = inputs[0].size[2]; 		// in_h
-        int in_w = inputs[0].size[3]; 		// in_w
 
-        int out_b = outputs[0].size[0];     // out batch size
         int outch = outputs[0].size[1]; 	// outch
         int out_h = outputs[0].size[2]; 	// out_h
         int out_w = outputs[0].size[3]; 	// out_w
 
-        float *input_  = inputs[0].ptr<float>();
         float *output_ = outputs[0].ptr<float>();
-        float *kernel_ = weightsMat.ptr<float>();
-        float *teg_bias = &biasvec[0];
 
-        bool tengine_ret = tengine_forward(input_, inch, ngroups, in_h, in_w,
-                                    output_, out_b, outch, out_h, out_w,
-                                    kernel_, kernel_size.size(), kernel.height, kernel.width,
-                                    teg_bias, stride.height, stride.width,
-                                    pad.height,  pad.width, dilation.height, dilation.width,
-                                    weightsMat.step1(), padMode);
+        if(true == tengine_ret)
+        {
+            tengine_ret = tengine_forward(graph);
+        }
         /* activation */
         if((true == tengine_ret) && activ )
         {
