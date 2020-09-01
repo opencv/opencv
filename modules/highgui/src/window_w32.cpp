@@ -442,6 +442,7 @@ icvSaveWindowPos( const char* name, CvRect rect )
 
 CvRect cvGetWindowRect_W32(const char* name)
 {
+    RECT rect = { 0 };
     CvRect result = cvRect(-1, -1, -1, -1);
 
     CV_FUNCNAME( "cvGetWindowRect_W32" );
@@ -456,7 +457,6 @@ CvRect cvGetWindowRect_W32(const char* name)
     if (!window)
         EXIT; // keep silence here
 
-    RECT rect;
     GetClientRect(window->hwnd, &rect);
     {
     POINT pt = {rect.left, rect.top};
@@ -526,7 +526,7 @@ void cvSetModeWindow_W32( const char* name, double prop_value)//Yannick Verdie
         if (window->status==CV_WINDOW_NORMAL && prop_value==CV_WINDOW_FULLSCREEN)
         {
             //save dimension
-            RECT rect;
+            RECT rect = { 0 };
             GetWindowRect(window->frame, &rect);
             CvRect RectCV = cvRect(rect.left, rect.top,rect.right - rect.left, rect.bottom - rect.top);
             icvSaveWindowPos(window->name,RectCV );
@@ -1119,7 +1119,7 @@ static void icvScreenToClient( HWND hwnd, RECT* rect )
 static RECT icvCalcWindowRect( CvWindow* window )
 {
     const int gutter = 1;
-    RECT crect, trect, rect;
+    RECT crect = { 0 }, trect = { 0 } , rect = { 0 };
 
     assert(window);
 
@@ -1175,7 +1175,7 @@ static bool icvGetBitmapData( CvWindow* window, SIZE* size, int* channels, void*
 
 static void icvUpdateWindowPos( CvWindow* window )
 {
-    RECT rect;
+    RECT rect = { 0 };
     assert(window);
 
     if( (window->flags & CV_WINDOW_AUTOSIZE) && window->image )
@@ -1188,7 +1188,7 @@ static void icvUpdateWindowPos( CvWindow* window )
         // toolbar may resize too
         for(i = 0; i < (window->toolbar.toolbar ? 2 : 1); i++)
         {
-            RECT rmw, rw = icvCalcWindowRect(window );
+            RECT rmw = { 0 }, rw = icvCalcWindowRect(window );
             MoveWindow(window->hwnd, rw.left, rw.top,
                 rw.right - rw.left, rw.bottom - rw.top, FALSE);
             GetClientRect(window->hwnd, &rw);
@@ -1294,7 +1294,7 @@ CV_IMPL void cvResizeWindow(const char* name, int width, int height )
 
     int i;
     CvWindow* window;
-    RECT rmw, rw, rect;
+    RECT rmw = { 0 }, rw = { 0 }, rect = { 0 };
 
     if( !name )
         CV_ERROR( CV_StsNullPtr, "NULL name" );
@@ -1333,7 +1333,7 @@ CV_IMPL void cvMoveWindow( const char* name, int x, int y )
     __BEGIN__;
 
     CvWindow* window;
-    RECT rect;
+    RECT rect = { 0 };
 
     if( !name )
         CV_ERROR( CV_StsNullPtr, "NULL name" );
@@ -1373,7 +1373,7 @@ MainWindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
         if( !(window->flags & CV_WINDOW_AUTOSIZE) )
         {
             MINMAXINFO* minmax = (MINMAXINFO*)lParam;
-            RECT rect;
+            RECT rect = { 0 };
             LRESULT retval = DefWindowProc(hwnd, uMsg, wParam, lParam);
 
             minmax->ptMinTrackSize.y = 100;
@@ -1396,7 +1396,7 @@ MainWindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
             // Update the toolbar pos/size
             if(window->toolbar.toolbar)
             {
-                RECT rect;
+                RECT rect = { 0 };
                 GetWindowRect(window->toolbar.toolbar, &rect);
                 MoveWindow(window->toolbar.toolbar, 0, 0, pos->cx, rect.bottom - rect.top, TRUE);
             }
@@ -1412,7 +1412,7 @@ MainWindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
           // Snap window to screen edges with multi-monitor support. // Adi Shavit
           LPWINDOWPOS pos = (LPWINDOWPOS)lParam;
 
-          RECT rect;
+          RECT rect = { 0 };
           GetWindowRect(window->frame, &rect);
 
           HMONITOR hMonitor;
@@ -1463,7 +1463,7 @@ MainWindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
           pt.y = GET_Y_LPARAM( lParam );
           ::ScreenToClient(hwnd, &pt); // Convert screen coordinates to client coordinates.
 
-          RECT rect;
+          RECT rect = { 0 };
           GetClientRect( window->hwnd, &rect );
 
           SIZE size = {0,0};
@@ -1490,7 +1490,7 @@ MainWindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 
     case WM_ERASEBKGND:
         {
-            RECT cr, tr, wrc;
+            RECT cr = { 0 }, tr = { 0 }, wrc = { 0 };
             HRGN rgn, rgn1, rgn2;
             int ret;
             HDC hdc = (HDC)wParam;
@@ -1670,7 +1670,7 @@ static LRESULT CALLBACK HighGUIProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
                 window->on_mouse( event, pt.x, pt.y, flags, window->on_mouse_param );
             } else {
                 // Full window is displayed using different size. Scale coordinates to match underlying positions.
-                RECT rect;
+                RECT rect = { 0 };
                 SIZE size = {0, 0};
 
                 GetClientRect( window->hwnd, &rect );
@@ -1730,7 +1730,7 @@ static LRESULT CALLBACK HighGUIProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
             }
             else
             {
-                RECT rect;
+                RECT rect = { 0 };
                 GetClientRect(window->hwnd, &rect);
                 StretchBlt( hdc, 0, 0, rect.right - rect.left, rect.bottom - rect.top,
                             window->dc, 0, 0, size.cx, size.cy, SRCCOPY );
@@ -1887,7 +1887,7 @@ static LRESULT CALLBACK HGToolbarProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPAR
 
                 for( ; trackbar != 0; trackbar = trackbar->next )
                 {
-                    RECT rect;
+                    RECT rect = { 0 };
                     SendMessage(window->toolbar.toolbar, TB_GETITEMRECT,
                                (WPARAM)trackbar->id, (LPARAM)&rect);
                     MoveWindow(trackbar->hwnd, rect.left + HG_BUDDY_WIDTH, rect.top,
@@ -2112,7 +2112,7 @@ icvCreateTrackbar( const char* trackbar_name, const char* window_name,
     {
         TBBUTTON tbs = {};
         TBBUTTONINFO tbis = {};
-        RECT rect;
+        RECT rect = { 0 };
         int bcount;
         int len = (int)strlen( trackbar_name );
 

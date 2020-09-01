@@ -14,11 +14,13 @@ namespace cv { namespace usac {
 class UniformSamplerImpl : public UniformSampler {
 private:
     std::vector<int> points_random_pool;
-    int sample_size, random_pool_size, points_size = 0;
+    int sample_size, points_size = 0;
     RNG rng;
 public:
 
-    UniformSamplerImpl (int state, int sample_size_, int points_size_) : rng(state) {
+    UniformSamplerImpl (int state, int sample_size_, int points_size_)
+        : rng(state)
+    {
         sample_size = sample_size_;
         setPointsSize (points_size_);
     }
@@ -26,7 +28,7 @@ public:
         setPointsSize(points_size_);
     }
     void generateSample (std::vector<int> &sample) override {
-        random_pool_size = points_size; // random points of entire range
+        int random_pool_size = points_size; // random points of entire range
         for (int i = 0; i < sample_size; i++) {
             // get random point index
             const int array_random_index = rng.uniform(0, random_pool_size);

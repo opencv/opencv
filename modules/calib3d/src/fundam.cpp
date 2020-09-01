@@ -911,6 +911,7 @@ cv::Mat cv::findFundamentalMat( InputArray points1, InputArray points2,
                         OutputArray mask, const UsacParams &params) {
     Ptr<usac::Model> model;
     setParameters(model, usac::EstimationMethod::Fundamental, params, mask.needed());
+    CV_Assert(model);
     Ptr<usac::RansacOutput> ransac_output;
     if (usac::run(model, points1, points2, model->getRandomGeneratorState(),
             ransac_output, noArray(), noArray(), noArray(), noArray())) {
