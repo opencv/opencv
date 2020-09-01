@@ -208,7 +208,7 @@ CUDA_TEST_P(EqualizeHist, Async)
     cv::Mat dst_gold;
     cv::equalizeHist(src, dst_gold);
 
-    EXPECT_MAT_NEAR(dst_gold, dst, 3.0);
+    EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
 
 CUDA_TEST_P(EqualizeHist, Accuracy)
@@ -221,12 +221,90 @@ CUDA_TEST_P(EqualizeHist, Accuracy)
     cv::Mat dst_gold;
     cv::equalizeHist(src, dst_gold);
 
-    EXPECT_MAT_NEAR(dst_gold, dst, 3.0);
+    EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
 
 INSTANTIATE_TEST_CASE_P(CUDA_ImgProc, EqualizeHist, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES));
+
+TEST(EqualizeHistIssue, Issue18035)
+{
+    std::vector<std::string> imgPaths;
+    imgPaths.push_back(std::string(cvtest::TS::ptr()->get_data_path()) + "../cv/shared/3MP.png");
+    imgPaths.push_back(std::string(cvtest::TS::ptr()->get_data_path()) + "../cv/shared/5MP.png");
+    imgPaths.push_back(std::string(cvtest::TS::ptr()->get_data_path()) + "../cv/shared/airplane.png");
+    imgPaths.push_back(std::string(cvtest::TS::ptr()->get_data_path()) + "../cv/shared/baboon.png");
+    imgPaths.push_back(std::string(cvtest::TS::ptr()->get_data_path()) + "../cv/shared/box.png");
+    imgPaths.push_back(std::string(cvtest::TS::ptr()->get_data_path()) + "../cv/shared/box_in_scene.png");
+    imgPaths.push_back(std::string(cvtest::TS::ptr()->get_data_path()) + "../cv/shared/fruits.png");
+    imgPaths.push_back(std::string(cvtest::TS::ptr()->get_data_path()) + "../cv/shared/fruits_ecc.png");
+    imgPaths.push_back(std::string(cvtest::TS::ptr()->get_data_path()) + "../cv/shared/graffiti.png");
+    imgPaths.push_back(std::string(cvtest::TS::ptr()->get_data_path()) + "../cv/shared/lena.png");
+
+    for (size_t i = 0; i < imgPaths.size(); ++i)
+    {
+        std::string imgPath = imgPaths[i];
+        cv::Mat src = cv::imread(imgPath, cv::IMREAD_GRAYSCALE);
+        src = src / 30;
+
+        cv::cuda::GpuMat d_src, dst;
+        d_src.upload(src);
+        cv::cuda::equalizeHist(d_src, dst);
+
+        cv::Mat dst_gold;
+        cv::equalizeHist(src, dst_gold);
+
+        EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+    }
+}
+
+PARAM_TEST_CASE(EqualizeHistExtreme, cv::cuda::DeviceInfo, cv::Size, int)
+{
+    cv::cuda::DeviceInfo devInfo;
+    cv::Size size;
+    int val;
+
+    virtual void SetUp()
+    {
+        devInfo = GET_PARAM(0);
+        size = GET_PARAM(1);
+        val = GET_PARAM(2);
+
+        cv::cuda::setDevice(devInfo.deviceID());
+    }
+};
+
+CUDA_TEST_P(EqualizeHistExtreme, Case1)
+{
+    cv::Mat src(size, CV_8UC1, val);
+
+    cv::cuda::GpuMat dst;
+    cv::cuda::equalizeHist(loadMat(src), dst);
+
+    cv::Mat dst_gold;
+    cv::equalizeHist(src, dst_gold);
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+}
+
+CUDA_TEST_P(EqualizeHistExtreme, Case2)
+{
+    cv::Mat src = randomMat(size, CV_8UC1, val);
+
+    cv::cuda::GpuMat dst;
+    cv::cuda::equalizeHist(loadMat(src), dst);
+
+    cv::Mat dst_gold;
+    cv::equalizeHist(src, dst_gold);
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+}
+
+INSTANTIATE_TEST_CASE_P(CUDA_ImgProc, EqualizeHistExtreme, testing::Combine(
+    ALL_DEVICES,
+    DIFFERENT_SIZES,
+    testing::Range(0, 256)));
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // CLAHE

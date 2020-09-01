@@ -5,7 +5,7 @@ Original paper: https://arxiv.org/abs/1612.01925.
 Original repo:  https://github.com/lmb-freiburg/flownet2.
 
 Download the converted .caffemodel model from https://drive.google.com/open?id=16qvE9VNmU39NttpZwZs81Ga8VYQJDaWZ
-and .prototxt from https://drive.google.com/open?id=19bo6SWU2p8ZKvjXqMKiCPdK8mghwDy9b.
+and .prototxt from https://drive.google.com/file/d/1RyNIUsan1ZOh2hpYIH36A-jofAvJlT6a/view?usp=sharing.
 Otherwise download original model from https://lmb.informatik.uni-freiburg.de/resources/binaries/flownet2/flownet2-models.tar.gz,
 convert .h5 model to .caffemodel and modify original .prototxt using .prototxt from link above.
 '''
@@ -18,7 +18,7 @@ import cv2 as cv
 
 class OpticalFlow(object):
     def __init__(self, proto, model, height, width):
-        self.net = cv.dnn.readNet(proto, model)
+        self.net = cv.dnn.readNetFromCaffe(proto, model)
         self.net.setPreferableBackend(cv.dnn.DNN_BACKEND_OPENCV)
         self.height = height
         self.width = width
@@ -62,9 +62,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Use this script to calculate optical flow using FlowNetv2',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-input', '-i', required=True, help='Path to input video file. Skip this argument to capture frames from a camera.')
-    parser.add_argument('--height', default=320, help='Input height')
-    parser.add_argument('--width',  default=448, help='Input width')
-    parser.add_argument('--proto', '-p', default='FlowNet2_deploy.prototxt', help='Path to prototxt.')
+    parser.add_argument('--height', default=320, type=int, help='Input height')
+    parser.add_argument('--width', default=448, type=int, help='Input width')
+    parser.add_argument('--proto', '-p', default='FlowNet2_deploy_anysize.prototxt', help='Path to prototxt.')
     parser.add_argument('--model', '-m', default='FlowNet2_weights.caffemodel', help='Path to caffemodel.')
     args, _ = parser.parse_known_args()
 
@@ -75,7 +75,25 @@ if __name__ == '__main__':
     cv.namedWindow(winName, cv.WINDOW_NORMAL)
     cap = cv.VideoCapture(args.input if args.input else 0)
     hasFrame, first_frame = cap.read()
-    opt_flow = OpticalFlow(args.proto, args.model, args.height, args.width)
+
+    divisor = 64.
+    var = {}
+    var['ADAPTED_WIDTH'] = int(np.ceil(args.width/divisor) * divisor)
+    var['ADAPTED_HEIGHT'] = int(np.ceil(args.height/divisor) * divisor)
+    var['SCALE_WIDTH'] = args.width / float(var['ADAPTED_WIDTH'])
+    var['SCALE_HEIGHT'] = args.height / float(var['ADAPTED_HEIGHT'])
+
+    config = ''
+    proto = open(args.proto).readlines()
+    for line in proto:
+        for key, value in var.items():
+            tag = "$%s$" % key
+            line = line.replace(tag, str(value))
+        config += line
+
+    caffemodel = open(args.model, 'rb').read()
+
+    opt_flow = OpticalFlow(bytearray(config.encode()), caffemodel, var['ADAPTED_HEIGHT'], var['ADAPTED_WIDTH'])
     while cv.waitKey(1) < 0:
         hasFrame, second_frame = cap.read()
         if not hasFrame:

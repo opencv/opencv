@@ -14,8 +14,8 @@ import argparse
 import sys
 
 class DaSiamRPNTracker:
-    #initialization of used values, initial bounding box, used network
-    def __init__(self, im, target_pos, target_sz, net, kernel_r1, kernel_cls1):
+    # Initialization of used values, initial bounding box, used network
+    def __init__(self, net="dasiamrpn_model.onnx", kernel_r1="dasiamrpn_kernel_r1.onnx", kernel_cls1="dasiamrpn_kernel_cls1.onnx"):
         self.windowing = "cosine"
         self.exemplar_size = 127
         self.instance_size = 271
@@ -28,42 +28,52 @@ class DaSiamRPNTracker:
         self.penalty_k = 0.055
         self.window_influence = 0.42
         self.lr = 0.295
-        self.im_h = im.shape[0]
-        self.im_w = im.shape[1]
-        self.target_pos = target_pos
-        self.target_sz = target_sz
-        self.avg_chans = np.mean(im, axis=(0, 1))
-        self.net = net
         self.score = []
-
-        if ((self.target_sz[0] * self.target_sz[1]) / float(self.im_h * self.im_w)) < 0.004:
-             raise AssertionError("Initializing BB is too small-try to restart tracker with larger BB")
-
-        self.anchor = self.__generate_anchor()
-        wc_z = self.target_sz[0] + self.context_amount * sum(self.target_sz)
-        hc_z = self.target_sz[1] + self.context_amount * sum(self.target_sz)
-        s_z = round(np.sqrt(wc_z * hc_z))
-
-        z_crop = self.__get_subwindow_tracking(im, self.exemplar_size, s_z)
-        z_crop = z_crop.transpose(2, 0, 1).reshape(1, 3, 127, 127).astype(np.float32)
-        self.net.setInput(z_crop)
-        z_f = self.net.forward('63')
-        kernel_r1.setInput(z_f)
-        r1 = kernel_r1.forward()
-        kernel_cls1.setInput(z_f)
-        cls1 = kernel_cls1.forward()
-        r1 = r1.reshape(20, 256, 4, 4)
-        cls1 = cls1.reshape(10, 256 , 4, 4)
-        self.net.setParam(self.net.getLayerId('65'), 0, r1)
-        self.net.setParam(self.net.getLayerId('68'), 0, cls1)
-
         if self.windowing == "cosine":
             self.window = np.outer(np.hanning(self.score_size), np.hanning(self.score_size))
         elif self.windowing == "uniform":
             self.window = np.ones((self.score_size, self.score_size))
         self.window = np.tile(self.window.flatten(), self.anchor_num)
+        # Loading network`s and kernel`s models
+        self.net = cv.dnn.readNet(net)
+        self.kernel_r1 = cv.dnn.readNet(kernel_r1)
+        self.kernel_cls1 = cv.dnn.readNet(kernel_cls1)
 
-    #creating anchor for tracking bounding box
+    def init(self, im, init_bb):
+        target_pos, target_sz = np.array([init_bb[0], init_bb[1]]), np.array([init_bb[2], init_bb[3]])
+        self.im_h = im.shape[0]
+        self.im_w = im.shape[1]
+        self.target_pos = target_pos
+        self.target_sz = target_sz
+        self.avg_chans = np.mean(im, axis=(0, 1))
+
+        # When we trying to generate ONNX model from the pre-trained .pth model
+        # we are using only one state of the network. In our case used state
+        # with big bounding box, so we were forced to add assertion for
+        # too small bounding boxes - current state of the network can not
+        # work properly with such small bounding boxes
+        if ((self.target_sz[0] * self.target_sz[1]) / float(self.im_h * self.im_w)) < 0.004:
+            raise AssertionError(
+        "Initializing BB is too small-try to restart tracker with larger BB")
+
+        self.anchor = self.__generate_anchor()
+        wc_z = self.target_sz[0] + self.context_amount * sum(self.target_sz)
+        hc_z = self.target_sz[1] + self.context_amount * sum(self.target_sz)
+        s_z = round(np.sqrt(wc_z * hc_z))
+        z_crop = self.__get_subwindow_tracking(im, self.exemplar_size, s_z)
+        z_crop = z_crop.transpose(2, 0, 1).reshape(1, 3, 127, 127).astype(np.float32)
+        self.net.setInput(z_crop)
+        z_f = self.net.forward('63')
+        self.kernel_r1.setInput(z_f)
+        r1 = self.kernel_r1.forward()
+        self.kernel_cls1.setInput(z_f)
+        cls1 = self.kernel_cls1.forward()
+        r1 = r1.reshape(20, 256, 4, 4)
+        cls1 = cls1.reshape(10, 256 , 4, 4)
+        self.net.setParam(self.net.getLayerId('65'), 0, r1)
+        self.net.setParam(self.net.getLayerId('68'), 0, cls1)
+
+    # Сreating anchor for tracking bounding box
     def __generate_anchor(self):
         self.anchor = np.zeros((self.anchor_num, 4),  dtype = np.float32)
         size = self.total_stride * self.total_stride
@@ -86,8 +96,8 @@ class DaSiamRPNTracker:
         self.anchor[:, 0], self.anchor[:, 1] = xx.astype(np.float32), yy.astype(np.float32)
         return self.anchor
 
-    #track function
-    def track(self, im):
+    # Function for updating tracker state
+    def update(self, im):
         wc_z = self.target_sz[1] + self.context_amount * sum(self.target_sz)
         hc_z = self.target_sz[0] + self.context_amount * sum(self.target_sz)
         s_z = np.sqrt(wc_z * hc_z)
@@ -96,7 +106,7 @@ class DaSiamRPNTracker:
         pad = d_search / scale_z
         s_x = round(s_z + 2 * pad)
 
-        #region preprocessing
+        # Region preprocessing part
         x_crop = self.__get_subwindow_tracking(im, self.instance_size, s_x)
         x_crop = x_crop.transpose(2, 0, 1).reshape(1, 3, 271, 271).astype(np.float32)
         self.score = self.__tracker_eval(x_crop, scale_z)
@@ -105,7 +115,12 @@ class DaSiamRPNTracker:
         self.target_sz[0] = max(10, min(self.im_w, self.target_sz[0]))
         self.target_sz[1] = max(10, min(self.im_h, self.target_sz[1]))
 
-    #update bounding box position
+        cx, cy = self.target_pos
+        w, h = self.target_sz
+        updated_bb = (cx, cy, w, h)
+        return True, updated_bb
+
+    # Function for updating position of the bounding box
     def __tracker_eval(self, x_crop, scale_z):
         target_size = self.target_sz * scale_z
         self.net.setInput(x_crop)
@@ -160,7 +175,7 @@ class DaSiamRPNTracker:
         y = e_x / e_x.sum(axis = 0)
         return y
 
-    #evaluations with cropped image
+    # Reshaping cropped image for using in the model
     def __get_subwindow_tracking(self, im, model_size, original_sz):
         im_sz = im.shape
         c = (original_sz + 1) / 2
@@ -171,19 +186,20 @@ class DaSiamRPNTracker:
         left_pad = int(max(0., -context_xmin))
         top_pad = int(max(0., -context_ymin))
         right_pad = int(max(0., context_xmax - im_sz[1] + 1))
-        bottom_pad = int(max(0., context_ymax - im_sz[0] + 1))
+        bot_pad = int(max(0., context_ymax - im_sz[0] + 1))
         context_xmin += left_pad
         context_xmax += left_pad
         context_ymin += top_pad
         context_ymax += top_pad
         r, c, k = im.shape
 
-        if any([top_pad, bottom_pad, left_pad, right_pad]):
-            te_im = np.zeros((r + top_pad + bottom_pad, c + left_pad + right_pad, k), np.uint8)
+        if any([top_pad, bot_pad, left_pad, right_pad]):
+            te_im = np.zeros((
+                r + top_pad + bot_pad, c + left_pad + right_pad, k), np.uint8)
             te_im[top_pad:top_pad + r, left_pad:left_pad + c, :] = im
             if top_pad:
                 te_im[0:top_pad, left_pad:left_pad + c, :] = self.avg_chans
-            if bottom_pad:
+            if bot_pad:
                 te_im[r + top_pad:, left_pad:left_pad + c, :] = self.avg_chans
             if left_pad:
                 te_im[:, 0:left_pad, :] = self.avg_chans
@@ -195,23 +211,22 @@ class DaSiamRPNTracker:
 
         if not np.array_equal(model_size, original_sz):
             im_patch_original = cv.resize(im_patch_original, (model_size, model_size))
-
         return im_patch_original
 
-#function for reading paths, bounding box drawing, showing results
+# Sample for using DaSiamRPN tracker
 def main():
     parser = argparse.ArgumentParser(description="Run tracker")
+    parser.add_argument("--input", type=str, help="Full path to input (empty for camera)")
     parser.add_argument("--net", type=str, default="dasiamrpn_model.onnx", help="Full path to onnx model of net")
     parser.add_argument("--kernel_r1", type=str, default="dasiamrpn_kernel_r1.onnx", help="Full path to onnx model of kernel_r1")
     parser.add_argument("--kernel_cls1", type=str, default="dasiamrpn_kernel_cls1.onnx", help="Full path to onnx model of kernel_cls1")
-    parser.add_argument("--input", type=str, help="Full path to input. Do not use if input is camera")
     args = parser.parse_args()
     point1 = ()
     point2 = ()
     mark = True
     drawing = False
     cx, cy, w, h = 0.0, 0.0, 0, 0
-
+    # Fucntion for drawing during videostream
     def get_bb(event, x, y, flag, param):
         nonlocal point1, point2, cx, cy, w, h, drawing, mark
 
@@ -233,12 +248,7 @@ def main():
             h = abs(point1[1] - point2[1])
             mark = False
 
-    #loading network`s and kernel`s models
-    net = cv.dnn.readNet(args.net)
-    kernel_r1 = cv.dnn.readNet(args.kernel_r1)
-    kernel_cls1 = cv.dnn.readNet(args.kernel_cls1)
-
-    #initializing bounding box
+    # Creating window for visualization
     cap = cv.VideoCapture(args.input if args.input else 0)
     cv.namedWindow("DaSiamRPN")
     cv.setMouseCallback("DaSiamRPN", get_bb)
@@ -257,17 +267,17 @@ def main():
         cv.imshow("DaSiamRPN", twin)
         cv.waitKey(40)
 
-    target_pos, target_sz = np.array([cx, cy]), np.array([w, h])
-    tracker = DaSiamRPNTracker(frame, target_pos, target_sz, net, kernel_r1, kernel_cls1)
+    init_bb = (cx, cy, w, h)
+    tracker = DaSiamRPNTracker(args.net, args.kernel_r1, args.kernel_cls1)
+    tracker.init(frame, init_bb)
 
-    #tracking loop
+    # Tracking loop
     while cap.isOpened():
         has_frame, frame = cap.read()
         if not has_frame:
             sys.exit(0)
-        tracker.track(frame)
-        w, h = tracker.target_sz
-        cx, cy = tracker.target_pos
+        _, new_bb = tracker.update(frame)
+        cx, cy, w, h = new_bb
         cv.rectangle(frame, (int(cx - w // 2), int(cy - h // 2)), (int(cx - w // 2) + int(w), int(cy - h // 2) + int(h)),(0, 255, 255), 3)
         cv.imshow("DaSiamRPN", frame)
         key = cv.waitKey(1)

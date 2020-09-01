@@ -162,6 +162,7 @@ public:
 
     static CV_ALWAYS_INLINE ufixedpoint64 fromRaw(uint64_t v) { return ufixedpoint64(v); }
     CV_ALWAYS_INLINE uint64_t raw() { return val; }
+    CV_ALWAYS_INLINE uint32_t cvFloor() const { return cv::saturate_cast<uint32_t>(val >> fixedShift); }
     friend class ufixedpoint32;
 };
 

@@ -116,15 +116,15 @@ namespace tvl1flow
     texture<float, cudaTextureType2D, cudaReadModeElementType> tex_I1y(false, cudaFilterModePoint, cudaAddressModeClamp);
     struct SrcTexRef : SrcTex
     {
-        __device__ __forceinline__ float I1(float x, float y) const override
+        __device__ __forceinline__ float I1(float x, float y) const CV_OVERRIDE
         {
             return tex2D(tex_I1, x, y);
         }
-        __device__ __forceinline__ float I1x(float x, float y) const override
+        __device__ __forceinline__ float I1x(float x, float y) const CV_OVERRIDE
         {
             return tex2D(tex_I1x, x, y);
         }
-        __device__ __forceinline__ float I1y(float x, float y) const override
+        __device__ __forceinline__ float I1y(float x, float y) const CV_OVERRIDE
         {
             return tex2D(tex_I1y, x, y);
         }
@@ -135,15 +135,15 @@ namespace tvl1flow
         __host__ SrcTexObj(cudaTextureObject_t tex_obj_I1_, cudaTextureObject_t tex_obj_I1x_, cudaTextureObject_t tex_obj_I1y_)
             : tex_obj_I1(tex_obj_I1_), tex_obj_I1x(tex_obj_I1x_), tex_obj_I1y(tex_obj_I1y_) {}
 
-        __device__ __forceinline__ float I1(float x, float y) const override
+        __device__ __forceinline__ float I1(float x, float y) const CV_OVERRIDE
         {
             return tex2D<float>(tex_obj_I1, x, y);
         }
-        __device__ __forceinline__ float I1x(float x, float y) const override
+        __device__ __forceinline__ float I1x(float x, float y) const CV_OVERRIDE
         {
             return tex2D<float>(tex_obj_I1x, x, y);
         }
-        __device__ __forceinline__ float I1y(float x, float y) const override
+        __device__ __forceinline__ float I1y(float x, float y) const CV_OVERRIDE
         {
             return tex2D<float>(tex_obj_I1y, x, y);
         }

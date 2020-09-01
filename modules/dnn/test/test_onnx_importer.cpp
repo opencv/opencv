@@ -257,6 +257,11 @@ TEST_P(Test_ONNX_layers, ReduceMean)
     testONNXModels("reduce_mean_axis2");
 }
 
+TEST_P(Test_ONNX_layers, ReduceSum)
+{
+    testONNXModels("reduce_sum");
+}
+
 TEST_P(Test_ONNX_layers, ReduceMean3D)
 {
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target != DNN_TARGET_CPU)
@@ -276,6 +281,11 @@ TEST_P(Test_ONNX_layers, MaxPooling_Sigmoid)
 TEST_P(Test_ONNX_layers, Cast)
 {
     testONNXModels("cast");
+}
+
+TEST_P(Test_ONNX_layers, Power)
+{
+    testONNXModels("pow2", npy, 0, 0, false, false);
 }
 
 TEST_P(Test_ONNX_layers, Concatenation)
@@ -404,10 +414,20 @@ TEST_P(Test_ONNX_layers, MatMul)
     testONNXModels("matmul_4d");
 }
 
+TEST_P(Test_ONNX_layers, MatMulAdd)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+    testONNXModels("matmul_add");
+}
+
 TEST_P(Test_ONNX_layers, Expand)
 {
     testONNXModels("expand_batch");
     testONNXModels("expand_channels");
+    testONNXModels("expand_neg_batch");
 }
 
 TEST_P(Test_ONNX_layers, ExpandHW)
@@ -589,6 +609,26 @@ TEST_P(Test_ONNX_layers, Pad2d_Unfused)
 {
     testONNXModels("ReflectionPad2d");
     testONNXModels("ZeroPad2d");
+}
+
+TEST_P(Test_ONNX_layers, LinearWithConstant)
+{
+    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2020040000)
+    applyTestTag(CV_TEST_TAG_DNN_SKIP_IE);
+#endif
+    testONNXModels("lin_with_constant");
+}
+
+TEST_P(Test_ONNX_layers, MatmulWithTwoInputs)
+{
+    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2020040000)
+    applyTestTag(CV_TEST_TAG_DNN_SKIP_IE);
+#endif
+    testONNXModels("matmul_with_two_inputs");
 }
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_ONNX_layers, dnnBackendsAndTargets());

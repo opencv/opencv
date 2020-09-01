@@ -2458,7 +2458,7 @@ struct Net::Impl : public detail::NetImplBase
                                     if( nextData )
                                         nextActivLayer = nextData->layerInstance.dynamicCast<ActivationLayer>();
 
-                                    if( !nextActivLayer.empty() && pinsToKeep.count(lpNext) == 0 &&
+                                    if( !nextActivLayer.empty() &&
                                             (!nextData->type.compare("ReLU") ||
                                              !nextData->type.compare("ChannelsPReLU") ||
                                              !nextData->type.compare("Power")) &&
