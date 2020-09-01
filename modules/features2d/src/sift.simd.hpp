@@ -161,7 +161,111 @@ void calcSIFTDescriptor(
 
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
+#if DoG_TYPE_SHORT
+// atan2 (angle is in degrees)
+static const softfloat atan2_p1(57.283627f);   // 0.9997878412794807f*(float)(180/CV_PI)
+static const softfloat atan2_p3(-18.667446f);  // -0.3258083974640975f*(float)(180/CV_PI)
+static const softfloat atan2_p5(8.914001f);    // 0.1555786518463281f*(float)(180/CV_PI)
+static const softfloat atan2_p7(-2.539725f);   // -0.04432655554792128f*(float)(180/CV_PI)
+static inline softfloat atan2_bitexact(const softfloat& y, const softfloat& x)
+{
+    softfloat eps((float)DBL_EPSILON);
+    softfloat ax = cv::abs(x), ay = cv::abs(y);
+    softfloat a, c, c2;
+    if( ax >= ay )
+    {
+        c = ay/(ax + eps);
+        c2 = c*c;
+        a = (((atan2_p7*c2 + atan2_p5)*c2 + atan2_p3)*c2 + atan2_p1)*c;
+    }
+    else
+    {
+        c = ax/(ay + eps);
+        c2 = c*c;
+        a = softfloat(90.f) - (((atan2_p7*c2 + atan2_p5)*c2 + atan2_p3)*c2 + atan2_p1)*c;
+    }
+    if( x < 0 )
+        a = softfloat(180.f) - a;
+    if( y < 0 )
+        a = softfloat(360.f) - a;
+    return a;
+}
+
 // Computes a gradient orientation histogram at a specified pixel
+static
+softfloat calcOrientationHist_bitexact(
+        const Mat& img, Point pt, int radius,
+        float _sigma, softfloat* hist, int n
+)
+{
+    CV_TRACE_FUNCTION();
+
+    int i, j, k, len = (radius*2+1)*(radius*2+1);
+    softfloat sigma(_sigma);
+
+    softfloat expf_scale = -softfloat::one()/(softfloat(2) * sigma * sigma);
+
+    std::vector<softfloat> Mag(len), Ori(len), W(len), temphist(n+4); // default constructor: 0
+
+    for( i = -radius, k = 0; i <= radius; i++ )
+    {
+        int y = pt.y + i;
+        if( y <= 0 || y >= img.rows - 1 )
+            continue;
+        for( j = -radius; j <= radius; j++ )
+        {
+            int x = pt.x + j;
+            if( x <= 0 || x >= img.cols - 1 )
+                continue;
+
+            int dx = (int)img.at<sift_gwt>(y, x+1) - (int)img.at<sift_gwt>(y, x-1);
+            int dy = (int)img.at<sift_gwt>(y-1, x) - (int)img.at<sift_gwt>(y+1, x);
+
+            W[k] = cv::exp(softfloat(i*i + j*j)*expf_scale);
+            Ori[k] = atan2_bitexact(softfloat(dy), softfloat(dx));
+            Mag[k] = cv::sqrt(softfloat(dx * dx + dy * dy));
+            k++;
+        }
+    }
+
+    len = k;
+
+    softfloat d_n_360 = softfloat(n) / softfloat(360.f);
+    softfloat d_1_16 = softfloat::one() / softfloat(16);
+    softfloat d_4_16 = softfloat(4) / softfloat(16);
+    softfloat d_6_16 = softfloat(6) / softfloat(16);
+    k = 0;
+    for( ; k < len; k++ )
+    {
+        int bin = cvRound(d_n_360*Ori[k]);
+        if( bin >= n )
+            bin -= n;
+        if( bin < 0 )
+            bin += n;
+        temphist[bin] += W[k]*Mag[k];
+    }
+
+    // smooth the histogram
+    temphist[-1] = temphist[n-1];
+    temphist[-2] = temphist[n-2];
+    temphist[n] = temphist[0];
+    temphist[n+1] = temphist[1];
+
+    i = 0;
+    for( ; i < n; i++ )
+    {
+        hist[i] = (temphist[i-2] + temphist[i+2])*d_1_16 +
+            (temphist[i-1] + temphist[i+1])*d_4_16 +
+            temphist[i]*d_6_16;
+    }
+
+    softfloat maxval = hist[0];
+    for( i = 1; i < n; i++ )
+        maxval = cv::max(maxval, hist[i]);
+
+    return maxval;
+}
+#else
 static
 float calcOrientationHist(
         const Mat& img, Point pt, int radius,
@@ -287,6 +391,7 @@ float calcOrientationHist(
 
     return maxval;
 }
+#endif
 
 //
 // 3x3 matrix solver. This is equivalent to mat.solve(vec, DECOMP_LU).
@@ -530,7 +635,12 @@ public:
         const int end = range.end;
 
         static const int n = SIFT_ORI_HIST_BINS;
+#if DoG_TYPE_SHORT
+        softfloat hist[n];
+        softfloat soft_n(n);
+#else
         float CV_DECL_ALIGNED(CV_SIMD_WIDTH) hist[n];
+#endif
 
         const Mat& img = dog_pyr[idx];
         const Mat& prev = dog_pyr[idx-1];
@@ -575,6 +685,33 @@ public:
                                             nOctaveLayers, (float)contrastThreshold,
                                             (float)edgeThreshold, (float)sigma) )
                         continue;
+#if DoG_TYPE_SHORT
+                    softfloat scl_octv = softfloat(kpt.size) / softfloat(1 << (o+1));
+                    softfloat omax = calcOrientationHist_bitexact(gauss_pyr[o*(nOctaveLayers+3) + layer],
+                                                                  Point(c1, r1),
+                                                                  cvRound(softfloat(SIFT_ORI_RADIUS) * scl_octv),
+                                                                  (float)(softfloat(SIFT_ORI_SIG_FCTR) * scl_octv),
+                                                                  hist, n);
+                    softfloat mag_thr = omax * softfloat(SIFT_ORI_PEAK_RATIO);
+                    softfloat soft360(360);
+                    for( int j = 0; j < n; j++ )
+                    {
+                        int l = j > 0 ? j - 1 : n - 1;
+                        int r2 = j < n-1 ? j + 1 : 0;
+
+                        if( hist[j] > hist[l]  &&  hist[j] > hist[r2]  &&  hist[j] >= mag_thr )
+                        {
+                            softfloat bin = softfloat(j) + softfloat(0.5f) * (hist[l]-hist[r2]) / (hist[l] - (hist[j] + hist[j]) + hist[r2]);
+                            bin = bin < softfloat::zero() ? soft_n + bin : bin >= soft_n ? bin - soft_n : bin;
+                            softfloat angle = soft360 - (soft360/soft_n * bin);
+                            kpt.angle = (float)angle;
+                            if(cv::abs(angle - soft360) < softfloat(FLT_EPSILON))
+                                kpt.angle = 0.f;
+
+                            kpts_.push_back(kpt);
+                        }
+                    }
+#else
                     float scl_octv = kpt.size*0.5f/(1 << o);
                     float omax = calcOrientationHist(gauss_pyr[o*(nOctaveLayers+3) + layer],
                                                      Point(c1, r1),
@@ -598,6 +735,7 @@ public:
                             kpts_.push_back(kpt);
                         }
                     }
+#endif
                 }
             }
         }
