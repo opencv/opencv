@@ -51,6 +51,7 @@
 #include "opencl_kernels_imgproc.hpp"
 #include "hal_replacement.hpp"
 #include "opencv2/core/hal/intrin.hpp"
+#include "opencv2/core/utils/buffer_area.private.hpp"
 
 #include "opencv2/core/openvx/ovx_defs.hpp"
 #include "resize.hpp"
@@ -1104,6 +1105,121 @@ resizeNN( const Mat& src, Mat& dst, double fx, double fy )
     }
 }
 
+class resizeNN_bitexactInvoker : public ParallelLoopBody
+{
+public:
+    resizeNN_bitexactInvoker(const Mat& _src, Mat& _dst, int* _x_ofse, int _ify, int _ify0)
+        : src(_src), dst(_dst), x_ofse(_x_ofse), ify(_ify), ify0(_ify0) {}
+
+    virtual void operator() (const Range& range) const CV_OVERRIDE
+    {
+        Size ssize = src.size(), dsize = dst.size();
+        int pix_size = (int)src.elemSize();
+        for( int y = range.start; y < range.end; y++ )
+        {
+            uchar* D = dst.ptr(y);
+            int _sy = (ify * y + ify0) >> 16;
+            int sy = std::min(_sy, ssize.height-1);
+            const uchar* S = src.ptr(sy);
+
+            int x = 0;
+            switch( pix_size )
+            {
+            case 1:
+#if CV_SIMD
+                for( ; x <= dsize.width - v_uint8::nlanes; x += v_uint8::nlanes )
+                    v_store(D + x, vx_lut(S, x_ofse + x));
+#endif
+                for( ; x < dsize.width; x++ )
+                    D[x] = S[x_ofse[x]];
+                break;
+            case 2:
+#if CV_SIMD
+                for( ; x <= dsize.width - v_uint16::nlanes; x += v_uint16::nlanes )
+                    v_store((ushort*)D + x, vx_lut((ushort*)S, x_ofse + x));
+#endif
+                for( ; x < dsize.width; x++ )
+                    *((ushort*)D + x) = *((ushort*)S + x_ofse[x]);
+                break;
+            case 3:
+                for( ; x < dsize.width; x++, D += 3 )
+                {
+                    const uchar* _tS = S + x_ofse[x] * 3;
+                    D[0] = _tS[0]; D[1] = _tS[1]; D[2] = _tS[2];
+                }
+                break;
+            case 4:
+#if CV_SIMD
+                for( ; x <= dsize.width - v_uint32::nlanes; x += v_uint32::nlanes )
+                    v_store((uint32_t*)D + x, vx_lut((uint32_t*)S, x_ofse + x));
+#endif
+                for( ; x < dsize.width; x++ )
+                    *((uint32_t*)D + x) = *((uint32_t*)S + x_ofse[x]);
+                break;
+            case 6:
+                for( ; x < dsize.width; x++, D += 6 )
+                {
+                    const ushort* _tS = (const ushort*)(S + x_ofse[x]*6);
+                    ushort* _tD = (ushort*)D;
+                    _tD[0] = _tS[0]; _tD[1] = _tS[1]; _tD[2] = _tS[2];
+                }
+                break;
+            case 8:
+#if CV_SIMD
+                for( ; x <= dsize.width - v_uint64::nlanes; x += v_uint64::nlanes )
+                    v_store((uint64_t*)D + x, vx_lut((uint64_t*)S, x_ofse + x));
+#endif
+                for( ; x < dsize.width; x++ )
+                    *((uint64_t*)D + x) = *((uint64_t*)S + x_ofse[x]);
+                break;
+            case 12:
+                for( ; x < dsize.width; x++, D += 12 )
+                {
+                    const int* _tS = (const int*)(S + x_ofse[x]*12);
+                    int* _tD = (int*)D;
+                    _tD[0] = _tS[0]; _tD[1] = _tS[1]; _tD[2] = _tS[2];
+                }
+                break;
+            default:
+                for( x = 0; x < dsize.width; x++, D += pix_size )
+                {
+                    const uchar* _tS = S + x_ofse[x] * pix_size;
+                    for (int k = 0; k < pix_size; k++)
+                        D[k] = _tS[k];
+                }
+            }
+        }
+    }
+private:
+    const Mat& src;
+    Mat& dst;
+    int* x_ofse;
+    const int ify;
+    const int ify0;
+};
+
+static void resizeNN_bitexact( const Mat& src, Mat& dst, double /*fx*/, double /*fy*/ )
+{
+    Size ssize = src.size(), dsize = dst.size();
+    int ifx = ((ssize.width << 16) + dsize.width / 2) / dsize.width; // 16bit fixed-point arithmetic
+    int ifx0 = ifx / 2 - 1;                                     // This method uses center pixel coordinate as Pillow and scikit-images do.
+    int ify = ((ssize.height << 16) + dsize.height / 2) / dsize.height;
+    int ify0 = ify / 2 - 1;
+
+    cv::utils::BufferArea area;
+    int* x_ofse = 0;
+    area.allocate(x_ofse, dsize.width, CV_SIMD_WIDTH);
+    area.commit();
+
+    for( int x = 0; x < dsize.width; x++ )
+    {
+        int sx = (ifx * x + ifx0) >> 16;
+        x_ofse[x] = std::min(sx, ssize.width-1);    // offset in element (not byte)
+    }
+    Range range(0, dsize.height);
+    resizeNN_bitexactInvoker invoker(src, dst, x_ofse, ify, ify0);
+    parallel_for_(range, invoker, dst.total()/(double)(1<<16));
+}
 
 struct VResizeNoVec
 {
@@ -3720,6 +3836,12 @@ void resize(int src_type,
     if( interpolation == INTER_NEAREST )
     {
         resizeNN( src, dst, inv_scale_x, inv_scale_y );
+        return;
+    }
+
+    if( interpolation == INTER_NEAREST_EXACT )
+    {
+        resizeNN_bitexact( src, dst, inv_scale_x, inv_scale_y );
         return;
     }
 
