@@ -54,9 +54,10 @@
 namespace cv {
 CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 // forward declarations
-void GaussianBlurFixedPoint(const Mat& src, /*const*/ Mat& dst,
-                            const uint16_t/*ufixedpoint16*/* fkx, int fkx_size,
-                            const uint16_t/*ufixedpoint16*/* fky, int fky_size,
+template <typename RFT>
+void GaussianBlurFixedPoint(const Mat& src, Mat& dst,
+                            const RFT* fkx, int fkx_size,
+                            const RFT* fky, int fky_size,
                             int borderType);
 
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
@@ -192,8 +193,9 @@ void hlineSmooth3N<uint8_t, ufixedpoint16>(const uint8_t* src, int cn, const ufi
         }
     }
 }
-template <typename ET, typename FT>
-void hlineSmooth3N121(const ET* src, int cn, const FT*, int, FT* dst, int len, int borderType)
+
+template <typename ET, typename FT, typename VFT>
+void hlineSmooth3N121Impl(const ET* src, int cn, const FT*, int, FT* dst, int len, int borderType)
 {
     if (len == 1)
     {
@@ -217,7 +219,13 @@ void hlineSmooth3N121(const ET* src, int cn, const FT*, int, FT* dst, int len, i
         }
 
         src += cn; dst += cn;
-        for (int i = cn; i < (len - 1)*cn; i++, src++, dst++)
+        int i = cn, lencn = (len - 1)*cn;
+#if CV_SIMD
+        const int VECSZ = VFT::nlanes;
+        for (; i <= lencn - VECSZ; i += VECSZ, src += VECSZ, dst += VECSZ)
+            v_store((typename FT::raw_t*)dst, (vx_load_expand(src - cn) + vx_load_expand(src + cn) + (vx_load_expand(src) << 1)) << (FT::fixedShift-2));
+#endif
+        for (; i < lencn; i++, src++, dst++)
             *dst = (FT(src[-cn])>>2) + (FT(src[cn])>>2) + (FT(src[0])>>1);
 
         // Point that fall right from border
@@ -231,51 +239,19 @@ void hlineSmooth3N121(const ET* src, int cn, const FT*, int, FT* dst, int len, i
         }
     }
 }
+template <typename ET, typename FT>
+void hlineSmooth3N121(const ET* src, int cn, const FT*, int, FT* dst, int len, int borderType);
 template <>
-void hlineSmooth3N121<uint8_t, ufixedpoint16>(const uint8_t* src, int cn, const ufixedpoint16*, int, ufixedpoint16* dst, int len, int borderType)
+void hlineSmooth3N121<uint8_t, ufixedpoint16>(const uint8_t* src, int cn, const ufixedpoint16* _m, int _n, ufixedpoint16* dst, int len, int borderType)
 {
-    if (len == 1)
-    {
-        if (borderType != BORDER_CONSTANT)
-            for (int k = 0; k < cn; k++)
-                dst[k] = ufixedpoint16(src[k]);
-        else
-            for (int k = 0; k < cn; k++)
-                dst[k] = ufixedpoint16(src[k]) >> 1;
-    }
-    else
-    {
-        // Point that fall left from border
-        for (int k = 0; k < cn; k++)
-            dst[k] = (ufixedpoint16(src[k])>>1) + (ufixedpoint16(src[cn + k])>>2);
-        if (borderType != BORDER_CONSTANT)// If BORDER_CONSTANT out of border values are equal to zero and could be skipped
-        {
-            int src_idx = borderInterpolate(-1, len, borderType);
-            for (int k = 0; k < cn; k++)
-                dst[k] = dst[k] + (ufixedpoint16(src[src_idx*cn + k])>>2);
-        }
-
-        src += cn; dst += cn;
-        int i = cn, lencn = (len - 1)*cn;
-#if CV_SIMD
-        const int VECSZ = v_uint16::nlanes;
-        for (; i <= lencn - VECSZ; i += VECSZ, src += VECSZ, dst += VECSZ)
-            v_store((uint16_t*)dst, (vx_load_expand(src - cn) + vx_load_expand(src + cn) + (vx_load_expand(src) << 1)) << 6);
-#endif
-        for (; i < lencn; i++, src++, dst++)
-            *((uint16_t*)dst) = (uint16_t(src[-cn]) + uint16_t(src[cn]) + (uint16_t(src[0]) << 1)) << 6;
-
-        // Point that fall right from border
-        for (int k = 0; k < cn; k++)
-            dst[k] = (ufixedpoint16(src[k - cn])>>2) + (ufixedpoint16(src[k])>>1);
-        if (borderType != BORDER_CONSTANT)// If BORDER_CONSTANT out of border values are equal to zero and could be skipped
-        {
-            int src_idx = (borderInterpolate(len, len, borderType) - (len - 1))*cn;
-            for (int k = 0; k < cn; k++)
-                dst[k] = dst[k] + (ufixedpoint16(src[src_idx + k])>>2);
-        }
-    }
+    hlineSmooth3N121Impl<uint8_t, ufixedpoint16, v_uint16>(src, cn, _m, _n, dst, len, borderType);
 }
+template <>
+void hlineSmooth3N121<uint16_t, ufixedpoint32>(const uint16_t* src, int cn, const ufixedpoint32* _m, int _n, ufixedpoint32* dst, int len, int borderType)
+{
+    hlineSmooth3N121Impl<uint16_t, ufixedpoint32, v_uint32>(src, cn, _m, _n, dst, len, borderType);
+}
+
 template <typename ET, typename FT>
 void hlineSmooth3Naba(const ET* src, int cn, const FT* m, int, FT* dst, int len, int borderType)
 {
@@ -1376,6 +1352,28 @@ void vlineSmooth3N121<uint8_t, ufixedpoint16>(const ufixedpoint16* const * src, 
     for (; i < len; i++)
         dst[i] = (((uint32_t)(((uint16_t*)(src[0]))[i]) + (uint32_t)(((uint16_t*)(src[2]))[i]) + ((uint32_t)(((uint16_t*)(src[1]))[i]) << 1)) + (1 << 9)) >> 10;
 }
+template <>
+void vlineSmooth3N121<uint16_t, ufixedpoint32>(const ufixedpoint32* const * src, const ufixedpoint32*, int, uint16_t* dst, int len)
+{
+    int i = 0;
+#if CV_SIMD
+    const int VECSZ = v_uint32::nlanes;
+    for (; i <= len - 2*VECSZ; i += 2*VECSZ)
+    {
+        v_uint64 v_src00, v_src01, v_src02, v_src03, v_src10, v_src11, v_src12, v_src13, v_src20, v_src21, v_src22, v_src23;
+        v_expand(vx_load((uint32_t*)(src[0]) + i), v_src00, v_src01);
+        v_expand(vx_load((uint32_t*)(src[0]) + i + VECSZ), v_src02, v_src03);
+        v_expand(vx_load((uint32_t*)(src[1]) + i), v_src10, v_src11);
+        v_expand(vx_load((uint32_t*)(src[1]) + i + VECSZ), v_src12, v_src13);
+        v_expand(vx_load((uint32_t*)(src[2]) + i), v_src20, v_src21);
+        v_expand(vx_load((uint32_t*)(src[2]) + i + VECSZ), v_src22, v_src23);
+        v_store(dst + i, v_pack(v_rshr_pack<18>(v_src00 + v_src20 + (v_src10 + v_src10), v_src01 + v_src21 + (v_src11 + v_src11)),
+                                v_rshr_pack<18>(v_src02 + v_src22 + (v_src12 + v_src12), v_src03 + v_src23 + (v_src13 + v_src13))));
+    }
+#endif
+    for (; i < len; i++)
+        dst[i] = (((uint64_t)((uint32_t*)(src[0]))[i]) + (uint64_t)(((uint32_t*)(src[2]))[i]) + ((uint64_t(((uint32_t*)(src[1]))[i]) << 1)) + (1 << 17)) >> 18;
+}
 template <typename ET, typename FT>
 void vlineSmooth5N(const FT* const * src, const FT* m, int, ET* dst, int len)
 {
@@ -1524,6 +1522,39 @@ void vlineSmooth5N14641<uint8_t, ufixedpoint16>(const ufixedpoint16* const * src
         dst[i] = ((uint32_t)(((uint16_t*)(src[2]))[i]) * 6 +
                   (((uint32_t)(((uint16_t*)(src[1]))[i]) + (uint32_t)(((uint16_t*)(src[3]))[i])) << 2) +
                   (uint32_t)(((uint16_t*)(src[0]))[i]) + (uint32_t)(((uint16_t*)(src[4]))[i]) + (1 << 11)) >> 12;
+}
+template <>
+void vlineSmooth5N14641<uint16_t, ufixedpoint32>(const ufixedpoint32* const * src, const ufixedpoint32*, int, uint16_t* dst, int len)
+{
+    int i = 0;
+#if CV_SIMD
+    const int VECSZ = v_uint32::nlanes;
+    for (; i <= len - 2*VECSZ; i += 2*VECSZ)
+    {
+        v_uint64 v_src00, v_src10, v_src20, v_src30, v_src40;
+        v_uint64 v_src01, v_src11, v_src21, v_src31, v_src41;
+        v_uint64 v_src02, v_src12, v_src22, v_src32, v_src42;
+        v_uint64 v_src03, v_src13, v_src23, v_src33, v_src43;
+        v_expand(vx_load((uint32_t*)(src[0]) + i), v_src00, v_src01);
+        v_expand(vx_load((uint32_t*)(src[0]) + i + VECSZ), v_src02, v_src03);
+        v_expand(vx_load((uint32_t*)(src[1]) + i), v_src10, v_src11);
+        v_expand(vx_load((uint32_t*)(src[1]) + i + VECSZ), v_src12, v_src13);
+        v_expand(vx_load((uint32_t*)(src[2]) + i), v_src20, v_src21);
+        v_expand(vx_load((uint32_t*)(src[2]) + i + VECSZ), v_src22, v_src23);
+        v_expand(vx_load((uint32_t*)(src[3]) + i), v_src30, v_src31);
+        v_expand(vx_load((uint32_t*)(src[3]) + i + VECSZ), v_src32, v_src33);
+        v_expand(vx_load((uint32_t*)(src[4]) + i), v_src40, v_src41);
+        v_expand(vx_load((uint32_t*)(src[4]) + i + VECSZ), v_src42, v_src43);
+        v_store(dst + i, v_pack(v_rshr_pack<20>((v_src20 << 2) + (v_src20 << 1) + ((v_src10 + v_src30) << 2) + v_src00 + v_src40,
+                                                (v_src21 << 2) + (v_src21 << 1) + ((v_src11 + v_src31) << 2) + v_src01 + v_src41),
+                                v_rshr_pack<20>((v_src22 << 2) + (v_src22 << 1) + ((v_src12 + v_src32) << 2) + v_src02 + v_src42,
+                                                (v_src23 << 2) + (v_src23 << 1) + ((v_src13 + v_src33) << 2) + v_src03 + v_src43)));
+    }
+#endif
+    for (; i < len; i++)
+        dst[i] = ((uint64_t)(((uint32_t*)(src[2]))[i]) * 6 +
+                  (((uint64_t)(((uint32_t*)(src[1]))[i]) + (uint64_t)(((uint32_t*)(src[3]))[i])) << 2) +
+                  (uint64_t)(((uint32_t*)(src[0]))[i]) + (uint64_t)(((uint32_t*)(src[4]))[i]) + (1 << 19)) >> 20;
 }
 template <typename ET, typename FT>
 void vlineSmooth(const FT* const * src, const FT* m, int n, ET* dst, int len)
@@ -2029,25 +2060,42 @@ private:
 
 }  // namespace anon
 
-void GaussianBlurFixedPoint(const Mat& src, /*const*/ Mat& dst,
-                            const uint16_t/*ufixedpoint16*/* fkx, int fkx_size,
-                            const uint16_t/*ufixedpoint16*/* fky, int fky_size,
-                            int borderType)
+template <typename RFT, typename ET, typename FT>
+void GaussianBlurFixedPointImpl(const Mat& src, /*const*/ Mat& dst,
+                                const RFT* fkx, int fkx_size,
+                                const RFT* fky, int fky_size,
+                                int borderType)
 {
     CV_INSTRUMENT_REGION();
 
-    CV_Assert(src.depth() == CV_8U && ((borderType & BORDER_ISOLATED) || !src.isSubmatrix()));
-    fixedSmoothInvoker<uint8_t, ufixedpoint16> invoker(
-            src.ptr<uint8_t>(), src.step1(),
-            dst.ptr<uint8_t>(), dst.step1(), dst.cols, dst.rows, dst.channels(),
-            (const ufixedpoint16*)fkx, fkx_size, (const ufixedpoint16*)fky, fky_size,
+    CV_Assert(src.depth() == DataType<ET>::depth && ((borderType & BORDER_ISOLATED) || !src.isSubmatrix()));
+    fixedSmoothInvoker<ET, FT> invoker(
+            src.ptr<ET>(), src.step1(),
+            dst.ptr<ET>(), dst.step1(), dst.cols, dst.rows, dst.channels(),
+            (const FT*)fkx, fkx_size, (const FT*)fky, fky_size,
             borderType & ~BORDER_ISOLATED);
     {
         // TODO AVX guard (external call)
         parallel_for_(Range(0, dst.rows), invoker, std::max(1, std::min(getNumThreads(), getNumberOfCPUs())));
     }
 }
+template <>
+void GaussianBlurFixedPoint<uint16_t>(const Mat& src, /*const*/ Mat& dst,
+                                      const uint16_t/*ufixedpoint16*/* fkx, int fkx_size,
+                                      const uint16_t/*ufixedpoint16*/* fky, int fky_size,
+                                      int borderType)
+{
+    GaussianBlurFixedPointImpl<uint16_t, uint8_t, ufixedpoint16>(src, dst, fkx, fkx_size, fky, fky_size, borderType);
+}
 
+template <>
+void GaussianBlurFixedPoint<uint32_t>(const Mat& src, /*const*/ Mat& dst,
+                                      const uint32_t/*ufixedpoint32*/* fkx, int fkx_size,
+                                      const uint32_t/*ufixedpoint32*/* fky, int fky_size,
+                                      int borderType)
+{
+    GaussianBlurFixedPointImpl<uint32_t, uint16_t, ufixedpoint32>(src, dst, fkx, fkx_size, fky, fky_size, borderType);
+}
 #endif
 CV_CPU_OPTIMIZATION_NAMESPACE_END
 } // namespace
