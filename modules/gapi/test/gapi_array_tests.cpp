@@ -177,7 +177,7 @@ TEST(GArray, TestIntermediateOutput)
     EXPECT_EQ(10,  out_count[0]);
 }
 
-TEST(GArray, GArrayInitialization)
+TEST(GArray, GArrayConstValInitialization)
 {
     std::vector<cv::Point> initial_vec {Point(0,0), Point(1,1), Point(2,2)};
     std::vector<cv::Point> ref_vec     {Point(1,1), Point(2,2), Point(3,3)};
