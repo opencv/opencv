@@ -63,6 +63,101 @@ struct greaterThanPtr
 };
 
 static void
+test_cornerEigenValsVecs( const Mat& src, Mat& eigenv, int block_size,
+                          int _aperture_size, double k, int mode, int borderType, const Scalar& _borderValue )
+{
+    int i, j;
+    Scalar borderValue = _borderValue;
+    int aperture_size = _aperture_size < 0 ? 3 : _aperture_size;
+    Point anchor( aperture_size/2, aperture_size/2 );
+
+    CV_Assert( src.type() == CV_8UC1 || src.type() == CV_32FC1 );
+    CV_Assert( eigenv.type() == CV_32FC1 );
+    CV_Assert( ( src.rows == eigenv.rows ) &&
+               (((mode == MINEIGENVAL)||(mode == HARRIS)) && (src.cols == eigenv.cols)) );
+
+    int type = src.type();
+    int ftype = CV_32FC1;
+    double kernel_scale = 1;
+
+    Mat dx2, dy2, dxdy(src.size(), CV_32F), kernel;
+
+    kernel = cvtest::calcSobelKernel2D( 1, 0, _aperture_size );
+    cvtest::filter2D( src, dx2, ftype, kernel*kernel_scale, anchor, 0, borderType, borderValue );
+    kernel = cvtest::calcSobelKernel2D( 0, 1, _aperture_size );
+    cvtest::filter2D( src, dy2, ftype, kernel*kernel_scale, anchor, 0, borderType,borderValue );
+
+    double denom = (1 << (aperture_size-1))*block_size;
+    denom = denom * denom;
+
+    if( _aperture_size < 0 )
+        denom *= 2.;
+    if(type != ftype )
+        denom *= 255.;
+
+    denom = 1./denom;
+
+    for( i = 0; i < src.rows; i++ )
+    {
+        float* dxdyp = dxdy.ptr<float>(i);
+        float* dx2p = dx2.ptr<float>(i);
+        float* dy2p = dy2.ptr<float>(i);
+
+        for( j = 0; j < src.cols; j++ )
+        {
+            double xval = dx2p[j], yval = dy2p[j];
+            dxdyp[j] = (float)(xval*yval*denom);
+            dx2p[j] = (float)(xval*xval*denom);
+            dy2p[j] = (float)(yval*yval*denom);
+        }
+    }
+
+    kernel = Mat::ones(block_size, block_size, CV_32F);
+    anchor = Point(block_size/2, block_size/2);
+
+    cvtest::filter2D( dx2, dx2, ftype, kernel, anchor, 0, borderType, borderValue );
+    cvtest::filter2D( dy2, dy2, ftype, kernel, anchor, 0, borderType, borderValue );
+    cvtest::filter2D( dxdy, dxdy, ftype, kernel, anchor, 0, borderType, borderValue );
+
+    if( mode == MINEIGENVAL )
+    {
+        for( i = 0; i < src.rows; i++ )
+        {
+            float* eigenvp = eigenv.ptr<float>(i);
+            const float* dxdyp = dxdy.ptr<float>(i);
+            const float* dx2p = dx2.ptr<float>(i);
+            const float* dy2p = dy2.ptr<float>(i);
+
+            for( j = 0; j < src.cols; j++ )
+            {
+                double a = dx2p[j]*0.5f, b = dxdyp[j], c = dy2p[j]*0.5f;
+                //double d = sqrt( ( a - c )*( a - c ) + 4*b*b );
+                //eigenvp[j] = (float)( 0.5*(a + c - d));
+                eigenvp[j] = (float)((a + c) - std::sqrt((a - c)*(a - c) + b*b));
+            }
+        }
+    }
+    else if( mode == HARRIS )
+    {
+
+        for( i = 0; i < src.rows; i++ )
+        {
+            float* eigenvp = eigenv.ptr<float>(i);
+            const float* dxdyp = dxdy.ptr<float>(i);
+            const float* dx2p = dx2.ptr<float>(i);
+            const float* dy2p = dy2.ptr<float>(i);
+
+            for( j = 0; j < src.cols; j++ )
+            {
+                double a = dx2p[j], b = dxdyp[j], c = dy2p[j];
+                eigenvp[j] = (float)(a*c - b*b - k*(a + c)*(a + c));
+            }
+        }
+    }
+}
+
+
+static void
 test_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
                               int maxCorners, double qualityLevel, double minDistance,
                               InputArray _mask, int blockSize, int gradientSize,
@@ -74,6 +169,7 @@ test_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
 
 
     Mat image = _image.getMat(), mask = _mask.getMat();
+    int aperture_size = gradientSize;
     int borderType = BORDER_DEFAULT;
 
     Mat eig, tmp, tt;
@@ -81,9 +177,9 @@ test_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
     eig.create( image.size(), CV_32F );
 
     if( useHarrisDetector )
-        cornerHarris( image, eig, blockSize, gradientSize, harrisK );
+        test_cornerEigenValsVecs( image, eig, blockSize, aperture_size, harrisK, HARRIS, borderType, 0 );
     else
-        cornerMinEigenVal( image, eig, blockSize, gradientSize );
+        test_cornerEigenValsVecs( image, eig, blockSize, aperture_size, 0, MINEIGENVAL, borderType, 0 );
 
     double maxVal = 0;
 
