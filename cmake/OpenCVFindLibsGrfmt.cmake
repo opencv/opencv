@@ -155,16 +155,29 @@ endif()
 
 # --- libopenjp2 (optional, check before libjasper) ---
 if(WITH_OPENJPEG)
-  find_package(OpenJPEG QUIET)
+  if(BUILD_OPENJPEG)
+    ocv_clear_vars(OpenJPEG_FOUND)
+  else()
+    find_package(OpenJPEG QUIET)
+  endif()
 
   if(NOT OpenJPEG_FOUND OR OPENJPEG_MAJOR_VERSION LESS 2)
-    set(HAVE_OPENJPEG NO)
     ocv_clear_vars(OPENJPEG_MAJOR_VERSION OPENJPEG_MINOR_VERSION OPENJPEG_BUILD_VERSION OPENJPEG_LIBRARIES OPENJPEG_INCLUDE_DIRS)
-    message(STATUS "Could NOT find OpenJPEG (minimal suitable version: 2.0, recommended version >= 2.3.1)")
+    message(STATUS "Could NOT find OpenJPEG (minimal suitable version: 2.0, "
+            "recommended version >= 2.3.1). OpenJPEG will be built from sources")
+    add_subdirectory("${OpenCV_SOURCE_DIR}/3rdparty/openjpeg")
+    if(OCV_CAN_BUILD_OPENJPEG)
+      set(HAVE_OPENJPEG YES)
+      message(STATUS "OpenJPEG libraries will be built from sources: ${OPENJPEG_LIBRARIES} "
+              "(version \"${OPENJPEG_VERSION}\")")
+    else()
+      set(HAVE_OPENJPEG NO)
+      message(STATUS "OpenJPEG libraries can't be built from sources. System requirements are not fulfilled.")
+    endif()
   else()
     set(HAVE_OPENJPEG YES)
-    message(STATUS "Found OpenJPEG: ${OPENJPEG_LIBRARIES} "
-            "(found version \"${OPENJPEG_MAJOR_VERSION}.${OPENJPEG_MINOR_VERSION}.${OPENJPEG_BUILD_VERSION}\")")
+    message(STATUS "Found system OpenJPEG: ${OPENJPEG_LIBRARIES} "
+            "(found version \"${OPENJPEG_VERSION}\")")
   endif()
 endif()
 
