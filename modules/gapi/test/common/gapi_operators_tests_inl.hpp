@@ -82,44 +82,22 @@ namespace for_test
 {
 class Foo {};
 
-int operator&(Foo, int);
-int operator&(Foo, int) { return 1; }
+inline int operator&(Foo, int) { return 1; }
+inline int operator|(Foo, int) { return 1; }
+inline int operator^(Foo, int) { return 1; }
+inline int operator~(Foo)      { return 1; }
 
-int operator|(Foo, int);
-int operator|(Foo, int) { return 1; }
+inline int operator+(Foo, int) { return 1; }
+inline int operator-(Foo, int) { return 1; }
+inline int operator*(Foo, int) { return 1; }
+inline int operator/(Foo, int) { return 1; }
 
-int operator^(Foo, int);
-int operator^(Foo, int) { return 1; }
-
-int operator+(Foo, int);
-int operator+(Foo, int) { return 1; }
-
-int operator-(Foo, int);
-int operator-(Foo, int) { return 1; }
-
-int operator*(Foo, int);
-int operator*(Foo, int) { return 1; }
-
-int operator/(Foo, int);
-int operator/(Foo, int) { return 1; }
-
-int operator>(Foo, int);
-int operator>(Foo, int) { return 1; }
-
-int operator>=(Foo, int);
-int operator>=(Foo, int) { return 1; }
-
-int operator<(Foo, int);
-int operator<(Foo, int) { return 1; }
-
-int operator<=(Foo, int);
-int operator<=(Foo, int) { return 1; }
-
-int operator==(Foo, int);
-int operator==(Foo, int) { return 1; }
-
-int operator!=(Foo, int);
-int operator!=(Foo, int) { return 1; }
+inline int operator> (Foo, int) { return 1; }
+inline int operator>=(Foo, int) { return 1; }
+inline int operator< (Foo, int) { return 1; }
+inline int operator<=(Foo, int) { return 1; }
+inline int operator==(Foo, int) { return 1; }
+inline int operator!=(Foo, int) { return 1; }
 
 TEST(CVNamespaceOperatorsTest, OperatorCompilationTest)
 {
