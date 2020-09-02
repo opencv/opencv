@@ -10,6 +10,7 @@
 #include <iostream>
 #include <tuple>
 #include <type_traits>
+#include <time.h>
 
 #include <opencv2/ts.hpp>
 #include <opencv2/gapi.hpp>
@@ -88,13 +89,25 @@ public:
 
     cv::Scalar sc;
 
+    // integral Scalar initialization
     cv::Scalar initScalarRandU(unsigned upper)
     {
-        auto& rng = cv::theRNG();
-        double s1 = rng(upper);  // FIXIT: RNG result is 'int', not double
+        cv::RNG rng(time(NULL));
+        double s1 = rng(upper);
         double s2 = rng(upper);
         double s3 = rng(upper);
         double s4 = rng(upper);
+        return cv::Scalar(s1, s2, s3, s4);
+    }
+
+    // floating-point Scalar initialization (cv::core)
+    cv::Scalar initScalarRandU()
+    {
+        cv::RNG rng(time(NULL));
+        double s1 = exp(rng.uniform(-1, 6) * 3.0 * CV_LOG2) * (rng.uniform(0, 2) ? 1. : -1.);
+        double s2 = exp(rng.uniform(-1, 6) * 3.0 * CV_LOG2) * (rng.uniform(0, 2) ? 1. : -1.);
+        double s3 = exp(rng.uniform(-1, 6) * 3.0 * CV_LOG2) * (rng.uniform(0, 2) ? 1. : -1.);
+        double s4 = exp(rng.uniform(-1, 6) * 3.0 * CV_LOG2) * (rng.uniform(0, 2) ? 1. : -1.);
         return cv::Scalar(s1, s2, s3, s4);
     }
 
@@ -112,7 +125,21 @@ public:
         in_mat1 = cv::Mat(sz_in, type);
         in_mat2 = cv::Mat(sz_in, type);
 
-        sc = initScalarRandU(100);
+        if (createOutputMatrices)
+        {
+            initOutMats(sz_in, dtype);
+        }
+
+        dtype = dtype >= 0 ? dtype : type; // dtype == -1 <=> dtype == SAME_TYPE
+
+        if ((CV_MAT_DEPTH(type) >= CV_32F) || (CV_MAT_DEPTH(dtype) >= CV_32F))
+        {
+            sc = initScalarRandU();
+        }
+        else
+        {
+            sc = initScalarRandU(USHRT_MAX + 1U);
+        }
 
         // Details: https://github.com/opencv/opencv/pull/16083
         //if (CV_MAT_DEPTH(type) < CV_32F)
@@ -131,18 +158,28 @@ public:
             cv::randu(in_mat32s, cv::Scalar::all(0), cv::Scalar::all(255 * fscale));
             in_mat32s.convertTo(in_mat2, type, 1.0f / fscale, 0);
         }
-
-        if (createOutputMatrices)
-        {
-            initOutMats(sz_in, dtype);
-        }
     }
 
     void initMatrixRandU(int type, cv::Size sz_in, int dtype, bool createOutputMatrices = true)
     {
         in_mat1 = cv::Mat(sz_in, type);
 
-        sc = initScalarRandU(100);
+        if (createOutputMatrices)
+        {
+            initOutMats(sz_in, dtype);
+        }
+
+        dtype = dtype >= 0 ? dtype : type; // dtype == -1 <=> dtype == SAME_TYPE
+
+        if ((CV_MAT_DEPTH(type) >= CV_32F) || (CV_MAT_DEPTH(dtype) >= CV_32F))
+        {
+            sc = initScalarRandU();
+        }
+        else
+        {
+            sc = initScalarRandU(USHRT_MAX + 1U);
+        }
+
         if (CV_MAT_DEPTH(type) < CV_32F)
         {
             cv::randu(in_mat1, cv::Scalar::all(0), cv::Scalar::all(255));
@@ -153,11 +190,6 @@ public:
             Mat in_mat32s(in_mat1.size(), CV_MAKE_TYPE(CV_32S, CV_MAT_CN(type)));
             cv::randu(in_mat32s, cv::Scalar::all(0), cv::Scalar::all(255 * fscale));
             in_mat32s.convertTo(in_mat1, type, 1.0f / fscale, 0);
-        }
-
-        if (createOutputMatrices)
-        {
-            initOutMats(sz_in, dtype);
         }
     }
 
