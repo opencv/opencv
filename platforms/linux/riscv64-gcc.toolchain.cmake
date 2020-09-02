@@ -10,6 +10,9 @@ set(CMAKE_CXX_COMPILER ${RISCV_GCC_INSTALL_ROOT}/bin/riscv64-unknown-linux-gnu-g
 # Don't run the linker on compiler check
 set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 
+set(CMAKE_C_FLAGS "-march=rv64gcv_zvqmac ${CMAKE_C_FLAGS}")
+set(CMAKE_CXX_FLAGS "-march=rv64gcv_zvqmac ${CXX_FLAGS}")
+
 set(CMAKE_FIND_ROOT_PATH ${CMAKE_SYSROOT})
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
