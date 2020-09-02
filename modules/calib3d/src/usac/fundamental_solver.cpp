@@ -79,8 +79,8 @@ public:
         }
 
         // OpenCV:
-        double c[4], r[3];
-        double t0, t1, t2;
+        double c[4] = { 0 }, r[3] = { 0 };
+        double t0 = 0, t1 = 0, t2 = 0;
         Mat_<double> coeffs (1, 4, c);
         Mat_<double> roots (1, 3, r);
 
@@ -158,7 +158,10 @@ private:
     const float * const points;
 public:
     explicit FundamentalMinimalSolver8ptsImpl (const Mat &points_) :
-            points_mat (&points_), points ((float*) points_.data) {}
+            points_mat (&points_), points ((float*) points_.data)
+    {
+        CV_DbgAssert(points);
+    }
 
     int estimate (const std::vector<int> &sample, std::vector<Mat> &models) const override {
         const int m = 8, n = 9; // rows, cols
