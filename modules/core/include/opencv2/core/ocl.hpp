@@ -229,8 +229,15 @@ public:
 
     CV_WRAP static const Device& getDefault();
 
-protected:
+    /**
+     * @param d OpenCL handle (cl_device_id). clRetainDevice() is called on success.
+     */
+    static Device fromHandle(void* d);
+
     struct Impl;
+    inline Impl* getImpl() const { return (Impl*)p; }
+    inline bool empty() const { return !p; }
+protected:
     Impl* p;
 };
 
@@ -239,33 +246,55 @@ class CV_EXPORTS Context
 {
 public:
     Context();
-    explicit Context(int dtype);
+    explicit Context(int dtype);  //!< @deprecated
     ~Context();
     Context(const Context& c);
-    Context& operator = (const Context& c);
+    Context& operator= (const Context& c);
 
+    /** @deprecated */
     bool create();
+    /** @deprecated */
     bool create(int dtype);
+
     size_t ndevices() const;
-    const Device& device(size_t idx) const;
+    Device& device(size_t idx) const;
     Program getProg(const ProgramSource& prog,
                     const String& buildopt, String& errmsg);
     void unloadProg(Program& prog);
 
+
+    /** Get thread-local OpenCL context (initialize if necessary) */
+#if 0  // OpenCV 5.0
+    static Context& getDefault();
+#else
     static Context& getDefault(bool initialize = true);
+#endif
+
+    /** @returns cl_context value */
     void* ptr() const;
 
-    friend void initializeContextFromHandle(Context& ctx, void* platform, void* context, void* device);
 
     bool useSVM() const;
     void setUseSVM(bool enabled);
 
+    /**
+     * @param context OpenCL handle (cl_context). clRetainContext() is called on success
+     */
+    static Context fromHandle(void* context);
+    static Context fromDevice(const ocl::Device& device);
+    static Context create(const std::string& configuration);
+
+    void release();
+
     struct Impl;
     inline Impl* getImpl() const { return (Impl*)p; }
+    inline bool empty() const { return !p; }
+// TODO OpenCV 5.0
 //protected:
     Impl* p;
 };
 
+/** @deprecated */
 class CV_EXPORTS Platform
 {
 public:
@@ -275,11 +304,14 @@ public:
     Platform& operator = (const Platform& p);
 
     void* ptr() const;
+
+    /** @deprecated */
     static Platform& getDefault();
 
-    friend void initializeContextFromHandle(Context& ctx, void* platform, void* context, void* device);
-protected:
     struct Impl;
+    inline Impl* getImpl() const { return (Impl*)p; }
+    inline bool empty() const { return !p; }
+protected:
     Impl* p;
 };
 
@@ -319,6 +351,7 @@ CV_EXPORTS void convertFromBuffer(void* cl_mem_buffer, size_t step, int rows, in
 CV_EXPORTS void convertFromImage(void* cl_mem_image, UMat& dst);
 
 // TODO Move to internal header
+/// @deprecated
 void initializeContextFromHandle(Context& ctx, void* platform, void* context, void* device);
 
 class CV_EXPORTS Queue
@@ -340,6 +373,7 @@ public:
 
     struct Impl; friend struct Impl;
     inline Impl* getImpl() const { return p; }
+    inline bool empty() const { return !p; }
 protected:
     Impl* p;
 };
@@ -490,6 +524,7 @@ public:
 
     struct Impl; friend struct Impl;
     inline Impl* getImpl() const { return (Impl*)p; }
+    inline bool empty() const { return !p; }
 protected:
     Impl* p;
 public:
@@ -571,6 +606,7 @@ public:
 
     struct Impl; friend struct Impl;
     inline Impl* getImpl() const { return (Impl*)p; }
+    inline bool empty() const { return !p; }
 protected:
     Impl* p;
 };
@@ -579,6 +615,9 @@ class CV_EXPORTS PlatformInfo
 {
 public:
     PlatformInfo();
+    /**
+     * @param id pointer cl_platform_id (cl_platform_id*)
+     */
     explicit PlatformInfo(void* id);
     ~PlatformInfo();
 
@@ -591,8 +630,9 @@ public:
     int deviceNumber() const;
     void getDevice(Device& device, int d) const;
 
-protected:
     struct Impl;
+    bool empty() const { return !p; }
+protected:
     Impl* p;
 };
 
@@ -688,6 +728,106 @@ private:
 
 CV_EXPORTS MatAllocator* getOpenCLAllocator();
 
+
+class CV_EXPORTS_W OpenCLExecutionContext
+{
+public:
+    OpenCLExecutionContext() = default;
+    ~OpenCLExecutionContext() = default;
+
+    OpenCLExecutionContext(const OpenCLExecutionContext& other) = default;
+    OpenCLExecutionContext(OpenCLExecutionContext&& other) = default;
+
+    OpenCLExecutionContext& operator=(const OpenCLExecutionContext& other) = default;
+    OpenCLExecutionContext& operator=(OpenCLExecutionContext&& other) = default;
+
+    /** Get associated ocl::Context */
+    Context& getContext() const;
+    /** Get associated ocl::Device */
+    Device& getDevice() const;
+    /** Get associated ocl::Queue */
+    Queue& getQueue() const;
+
+    bool useOpenCL() const;
+    void setUseOpenCL(bool flag);
+
+    /** Get OpenCL execution context of current thread.
+     *
+     * Initialize OpenCL execution context if it is empty
+     * - create new
+     * - reuse context of the main thread (threadID = 0)
+     */
+    static OpenCLExecutionContext& getCurrent();
+
+    /** Get OpenCL execution context of current thread (can be empty) */
+    static OpenCLExecutionContext& getCurrentRef();
+
+    /** Bind this OpenCL execution context to current thread.
+     *
+     * Context can't be empty.
+     *
+     * @note clFinish is not called for queue of previous execution context
+     */
+    void bind() const;
+
+    /** Creates new execution context with same OpenCV context and device
+     *
+     * @param q OpenCL queue
+     */
+    OpenCLExecutionContext cloneWithNewQueue(const ocl::Queue& q) const;
+    /** @overload */
+    OpenCLExecutionContext cloneWithNewQueue() const;
+
+    /** @brief Creates OpenCL execution context
+     * OpenCV will check if available OpenCL platform has platformName name, then assign context to
+     * OpenCV and call `clRetainContext` function. The deviceID device will be used as target device and
+     * new command queue will be created.
+     *
+     * @note Lifetime of passed handles is transferred to OpenCV wrappers on success
+     *
+     * @param platformName name of OpenCL platform to attach, this string is used to check if platform is available to OpenCV at runtime
+     * @param platformID ID of platform attached context was created for (cl_platform_id)
+     * @param context OpenCL context to be attached to OpenCV (cl_context)
+     * @param deviceID OpenCL device (cl_device_id)
+     */
+    static OpenCLExecutionContext create(const std::string& platformName, void* platformID, void* context, void* deviceID);
+
+    /** @brief Creates OpenCL execution context
+     *
+     * @param context non-empty OpenCL context
+     * @param device non-empty OpenCL device (must be a part of context)
+     * @param queue non-empty OpenCL queue for provided context and device
+     */
+    static OpenCLExecutionContext create(const Context& context, const Device& device, const ocl::Queue& queue);
+    /** @overload */
+    static OpenCLExecutionContext create(const Context& context, const Device& device);
+
+    struct Impl;
+    inline bool empty() const { return !p; }
+    void release();
+protected:
+    std::shared_ptr<Impl> p;
+};
+
+class OpenCLExecutionContextScope
+{
+    OpenCLExecutionContext ctx_;
+public:
+    inline OpenCLExecutionContextScope(const OpenCLExecutionContext& ctx)
+    {
+        CV_Assert(!ctx.empty());
+        ctx_ = OpenCLExecutionContext::getCurrentRef();
+        ctx.bind();
+    }
+
+    inline ~OpenCLExecutionContextScope()
+    {
+        if (!ctx_.empty())
+        {
+            ctx_.bind();
+        }
+    }
+};
 
 #ifdef __OPENCV_BUILD
 namespace internal {

@@ -144,6 +144,8 @@ const Device& Device::getDefault()
     return dummy;
 }
 
+/* static */ Device Device::fromHandle(void* d) { OCL_NOT_AVAILABLE(); }
+
 
 Context::Context() : p(NULL) { }
 Context::Context(int dtype) : p(NULL) { }
@@ -154,7 +156,7 @@ Context& Context::operator=(const Context& c) { return *this; }
 bool Context::create() { return false; }
 bool Context::create(int dtype) { return false; }
 size_t Context::ndevices() const { return 0; }
-const Device& Context::device(size_t idx) const { OCL_NOT_AVAILABLE(); }
+Device& Context::device(size_t idx) const { OCL_NOT_AVAILABLE(); }
 Program Context::getProg(const ProgramSource& prog, const String& buildopt, String& errmsg) { OCL_NOT_AVAILABLE(); }
 void Context::unloadProg(Program& prog) { }
 
@@ -168,6 +170,13 @@ void* Context::ptr() const { return NULL; }
 
 bool Context::useSVM() const { return false; }
 void Context::setUseSVM(bool enabled) { }
+
+/* static */ Context Context::fromHandle(void* context) { OCL_NOT_AVAILABLE(); }
+/* static */ Context Context::fromDevice(const ocl::Device& device) { OCL_NOT_AVAILABLE(); }
+/* static */ Context Context::create(const std::string& configuration) { OCL_NOT_AVAILABLE(); }
+
+void Context::release() { }
+
 
 Platform::Platform() : p(NULL) { }
 Platform::~Platform() { }
@@ -354,6 +363,43 @@ uint64 Timer::durationNS() const { OCL_NOT_AVAILABLE(); }
 MatAllocator* getOpenCLAllocator() { return NULL; }
 
 internal::ProgramEntry::operator ProgramSource&() const { OCL_NOT_AVAILABLE(); }
+
+
+struct OpenCLExecutionContext::Impl
+{
+    Impl() = default;
+};
+
+Context& OpenCLExecutionContext::getContext() const { OCL_NOT_AVAILABLE(); }
+Device& OpenCLExecutionContext::getDevice() const { OCL_NOT_AVAILABLE(); }
+Queue& OpenCLExecutionContext::getQueue() const { OCL_NOT_AVAILABLE(); }
+
+bool OpenCLExecutionContext::useOpenCL() const { return false; }
+void OpenCLExecutionContext::setUseOpenCL(bool flag) { }
+
+static
+OpenCLExecutionContext& getDummyOpenCLExecutionContext()
+{
+    static OpenCLExecutionContext dummy;
+    return dummy;
+}
+
+/* static */
+OpenCLExecutionContext& OpenCLExecutionContext::getCurrent() { return getDummyOpenCLExecutionContext(); }
+
+/* static */
+OpenCLExecutionContext& OpenCLExecutionContext::getCurrentRef() { return getDummyOpenCLExecutionContext(); }
+
+void OpenCLExecutionContext::bind() const { OCL_NOT_AVAILABLE(); }
+
+OpenCLExecutionContext OpenCLExecutionContext::cloneWithNewQueue(const ocl::Queue& q) const { OCL_NOT_AVAILABLE(); }
+OpenCLExecutionContext OpenCLExecutionContext::cloneWithNewQueue() const { OCL_NOT_AVAILABLE(); }
+
+/* static */ OpenCLExecutionContext OpenCLExecutionContext::create(const std::string& platformName, void* platformID, void* context, void* deviceID) { OCL_NOT_AVAILABLE(); }
+/* static */ OpenCLExecutionContext OpenCLExecutionContext::create(const Context& context, const Device& device, const ocl::Queue& queue) { OCL_NOT_AVAILABLE(); }
+/* static */ OpenCLExecutionContext OpenCLExecutionContext::create(const Context& context, const Device& device) { OCL_NOT_AVAILABLE(); }
+
+void OpenCLExecutionContext::release() { }
 
 }}
 

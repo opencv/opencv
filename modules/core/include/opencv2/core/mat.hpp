@@ -565,6 +565,7 @@ struct CV_EXPORTS UMatData
     int allocatorFlags_;
     int mapcount;
     UMatData* originalUMatData;
+    std::shared_ptr<void> allocatorContext;
 };
 CV_ENUM_FLAGS(UMatData::MemoryFlag)
 

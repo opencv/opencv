@@ -106,7 +106,7 @@ Context& initializeContextFromVA(VADisplay display, bool tryInterop)
                                                                CL_PREFERRED_DEVICES_FOR_VA_API_INTEL, 0, NULL, &numDevices);
             if ((status != CL_SUCCESS) || !(numDevices > 0))
                 continue;
-            numDevices = 1; // initializeContextFromHandle() expects only 1 device
+            numDevices = 1; // OpenCV expects only 1 device
             status = clGetDeviceIDsFromVA_APIMediaAdapterINTEL(platforms[i], CL_VA_API_DISPLAY_INTEL, display,
                                                                CL_PREFERRED_DEVICES_FOR_VA_API_INTEL, numDevices, &device, NULL);
             if (status != CL_SUCCESS)
@@ -135,9 +135,23 @@ Context& initializeContextFromVA(VADisplay display, bool tryInterop)
         if (found >= 0)
         {
             contextInitialized = true;
-            Context& ctx = Context::getDefault(false);
-            initializeContextFromHandle(ctx, platforms[found], context, device);
-            return ctx;
+
+            cl_platform_id platform = platforms[found];
+            std::string platformName = PlatformInfo(platform).name();
+
+            OpenCLExecutionContext clExecCtx;
+            try
+            {
+                clExecCtx = OpenCLExecutionContext::create(platformName, platform, context, device);
+            }
+            catch (...)
+            {
+                clReleaseDevice(device);
+                clReleaseContext(context);
+                throw;
+            }
+            clExecCtx.bind();
+            return const_cast<Context&>(clExecCtx.getContext());
         }
     }
 # endif // HAVE_VA_INTEL && HAVE_OPENCL
