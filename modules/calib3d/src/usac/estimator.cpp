@@ -239,8 +239,14 @@ private:
     float minv11, minv12, minv13, minv21, minv22, minv23, minv31, minv32, minv33;
     std::vector<float> errors;
 public:
-    explicit ReprojectedErrorSymmetricImpl (const Mat &points_) :
-            points_mat(&points_), points ((float *) points_.data), errors(points_.rows) {}
+    explicit ReprojectedErrorSymmetricImpl (const Mat &points_)
+        : points_mat(&points_), points ((float *) points_.data)
+        , m11(0), m12(0), m13(0), m21(0), m22(0), m23(0), m31(0), m32(0), m33(0)
+        , minv11(0), minv12(0), minv13(0), minv21(0), minv22(0), minv23(0), minv31(0), minv32(0), minv33(0)
+        , errors(points_.rows)
+    {
+        CV_DbgAssert(points);
+    }
 
     inline void setModelParameters (const Mat &model) override {
         const auto * const m = (double *) model.data;
@@ -298,7 +304,12 @@ private:
     std::vector<float> errors;
 public:
     explicit ReprojectedErrorForwardImpl (const Mat &points_)
-        : points_mat(&points_), points ((float *)points_.data), errors(points_.rows) {}
+        : points_mat(&points_), points ((float *)points_.data)
+        , m11(0), m12(0), m13(0), m21(0), m22(0), m23(0), m31(0), m32(0), m33(0)
+        , errors(points_.rows)
+    {
+        CV_DbgAssert(points);
+    }
 
     inline void setModelParameters (const Mat &model) override {
         const auto * const m = (double *) model.data;
@@ -342,8 +353,13 @@ private:
     float m11, m12, m13, m21, m22, m23, m31, m32, m33;
     std::vector<float> errors;
 public:
-    explicit SampsonErrorImpl (const Mat &points_) :
-            points_mat(&points_), points ((float *) points_.data), errors(points_.rows) {}
+    explicit SampsonErrorImpl (const Mat &points_)
+        : points_mat(&points_), points ((float *) points_.data)
+        , m11(0), m12(0), m13(0), m21(0), m22(0), m23(0), m31(0), m32(0), m33(0)
+        , errors(points_.rows)
+    {
+        CV_DbgAssert(points);
+    }
 
     inline void setModelParameters (const Mat &model) override {
         const auto * const m = (double *) model.data;
@@ -404,8 +420,13 @@ private:
     float m11, m12, m13, m21, m22, m23, m31, m32, m33;
     std::vector<float> errors;
 public:
-    explicit SymmetricGeometricDistanceImpl (const Mat &points_) :
-            points_mat(&points_), points ((float *) points_.data), errors(points_.rows) {}
+    explicit SymmetricGeometricDistanceImpl (const Mat &points_)
+        : points_mat(&points_), points ((float *) points_.data)
+        , m11(0), m12(0), m13(0), m21(0), m22(0), m23(0), m31(0), m32(0), m33(0)
+        , errors(points_.rows)
+    {
+        CV_DbgAssert(points);
+    }
 
     inline void setModelParameters (const Mat &model) override {
         const auto * const m = (double *) model.data;
@@ -458,8 +479,14 @@ private:
     float p11, p12, p13, p14, p21, p22, p23, p24, p31, p32, p33, p34;
     std::vector<float> errors;
 public:
-    explicit ReprojectionErrorPmatrixImpl (const Mat &points_) :
-        points_mat(&points_), points ((float *) points_.data), errors(points_.rows) {}
+    explicit ReprojectionErrorPmatrixImpl (const Mat &points_)
+        : points_mat(&points_), points ((float *) points_.data)
+        , p11(0), p12(0), p13(0), p14(0), p21(0), p22(0), p23(0), p24(0), p31(0), p32(0), p33(0), p34(0)
+        , errors(points_.rows)
+    {
+        CV_DbgAssert(points);
+    }
+
 
     inline void setModelParameters (const Mat &model) override {
         const auto * const p = (double *) model.data;
@@ -512,8 +539,13 @@ private:
     float m11, m12, m13, m21, m22, m23;
     std::vector<float> errors;
 public:
-    explicit ReprojectedDistanceAffineImpl (const Mat &points_) :
-            points_mat(&points_), points ((float*)points_.data), errors(points_.rows) {}
+    explicit ReprojectedDistanceAffineImpl (const Mat &points_)
+        : points_mat(&points_), points ((float *) points_.data)
+        , m11(0), m12(0), m13(0), m21(0), m22(0), m23(0)
+        , errors(points_.rows)
+    {
+        CV_DbgAssert(points);
+    }
 
     inline void setModelParameters (const Mat &model) override {
         const auto * const m = (double *) model.data;

@@ -108,6 +108,8 @@ struct HaarClassifier
 
 struct HaarStageClassifier
 {
+    HaarStageClassifier() : threshold(0) {}
+
     double threshold;
     std::vector<HaarClassifier> weaks;
 };
