@@ -322,7 +322,7 @@ struct CoreTLSData
 {
     CoreTLSData() :
 //#ifdef HAVE_OPENCL
-        device(0), useOpenCL(-1),
+        oclExecutionContextInitialized(false), useOpenCL(-1),
 //#endif
         useIPP(-1),
         useIPP_NE(-1)
@@ -333,8 +333,8 @@ struct CoreTLSData
 
     RNG rng;
 //#ifdef HAVE_OPENCL
-    int device; // device index of an array of devices in a context, see also Device::getDefault
-    ocl::Queue oclQueue; // the queue used for running a kernel, see also getQueue, Kernel::run
+    ocl::OpenCLExecutionContext oclExecutionContext;
+    bool oclExecutionContextInitialized;
     int useOpenCL; // 1 - use, 0 - do not use, -1 - auto/not initialized
 //#endif
     int useIPP;    // 1 - use, 0 - do not use, -1 - auto/not initialized
