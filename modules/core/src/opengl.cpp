@@ -1692,7 +1692,7 @@ Context& initializeContextFromGL()
     cl_platform_id platform = platforms[found];
     std::string platformName = PlatformInfo(platform).name();
 
-    OpenCLExecutionContext clExecCtx = OpenCLExecutionContext::create(platformName, platform, context, deviceID);
+    OpenCLExecutionContext clExecCtx = OpenCLExecutionContext::create(platformName, platform, context, device);
     clReleaseDevice(device);
     clReleaseContext(context);
     clExecCtx.bind();

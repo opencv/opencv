@@ -2316,8 +2316,9 @@ struct Context::Impl
     typedef std::deque<Context::Impl*> container_t;
     static container_t& getGlobalContainer()
     {
-        static container_t g_contexts;
-        return g_contexts;
+        // never delete this container (Impl lifetime is greater due to TLS storage)
+        static container_t* g_contexts = new container_t();
+        return *g_contexts;
     }
 
 protected:
@@ -2356,7 +2357,7 @@ protected:
         {
             cv::AutoLock lock(cv::getInitializationMutex());
             auto& container = getGlobalContainer();
-            CV_Assert((size_t)contextId < container.size());
+            CV_CheckLT((size_t)contextId, container.size(), "");
             container[contextId] = NULL;
         }
     }
@@ -2839,7 +2840,7 @@ bool Context::create()
     if (!haveOpenCL())
         return false;
     p = Impl::findOrCreateContext(std::string());
-    if (p->handle)
+    if (p && p->handle)
         return true;
     release();
     return false;
