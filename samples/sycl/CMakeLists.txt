@@ -2,7 +2,7 @@ if(OPENCV_SKIP_SAMPLES_SYCL)
   return()
 endif()
 
-ocv_install_example_src(opencl *.cpp *.hpp CMakeLists.txt)
+ocv_install_example_src(sycl *.cpp *.hpp CMakeLists.txt)
 
 set(OPENCV_SYCL_SAMPLES_REQUIRED_DEPS
   opencv_core
