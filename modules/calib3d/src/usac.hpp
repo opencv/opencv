@@ -405,7 +405,9 @@ struct SPRT_history {
     double epsilon, delta, A;
     // number of samples processed by test
     int tested_samples; // k
-    SPRT_history () {
+    SPRT_history ()
+        : epsilon(0), delta(0), A(0)
+    {
         tested_samples = 0;
     }
 };

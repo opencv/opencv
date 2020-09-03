@@ -2731,6 +2731,7 @@ struct Net::Impl : public detail::NetImplBase
                                 bool fuse_eltwise = false, fuse_activation = false;
 
                                 if (IS_DNN_OPENCL_TARGET(preferableTarget) && !nextFusabeleActivLayer.empty() &&
+                                    nextData &&
                                     (!nextData->type.compare("ReLU") ||
                                      !nextData->type.compare("ChannelsPReLU") ||
                                      !nextData->type.compare("Power")) &&
@@ -2753,7 +2754,7 @@ struct Net::Impl : public detail::NetImplBase
                                     if (currLayer->tryFuse(layer))
                                     {
                                         fuse_eltwise = true; /* eltwise was successfully fused */
-                                        if (!nextFusabeleActivLayer.empty())
+                                        if (!nextFusabeleActivLayer.empty() && nextData)
                                         {
                                             if ((!nextData->type.compare("ReLU") ||
                                                  !nextData->type.compare("ReLU6") ||
@@ -2774,6 +2775,7 @@ struct Net::Impl : public detail::NetImplBase
                                 CV_Assert(!fuse_activation || fuse_eltwise); /* cannot fuse activation without eltwise */
                                 if(fuse_eltwise && fuse_activation)
                                 {
+                                    CV_Assert(nextData);
                                     CV_Assert_N(biasLayerData->outputBlobsWrappers.size() == 1, ld.inputBlobsWrappers.size() == 1);
                                     ld.inputBlobsWrappers.push_back(biasLayerData->outputBlobsWrappers[0]);
                                     printf_(("\tfused with %s\n", nextEltwiseLayer->name.c_str()));
