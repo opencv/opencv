@@ -175,7 +175,7 @@ graph_t create_conv_graph(const char * layer_name, float *input_data, int inch, 
 
     if(graph == NULL)
     {
-        CV_LOG_ERROR(NULL,"Tengine :create_graph failed . " );
+        CV_LOG_WARNING(NULL,"Tengine :create_graph failed . " );
         ok = false;
     }
 
@@ -184,14 +184,14 @@ graph_t create_conv_graph(const char * layer_name, float *input_data, int inch, 
 
     if (ok && create_input_node(graph, input_name, inch, in_h, in_w) < 0)
     {
-        CV_LOG_ERROR(NULL,"Tengine :create_input_node failed. " );
+        CV_LOG_WARNING(NULL,"Tengine :create_input_node failed. " );
         ok = false;
     }
 
     if (ok && create_conv_node(graph, conv_name, input_name, in_h, in_w, out_h, out_w, kernel_h, kernel_w,
         stride_h, stride_w, pad_h, pad_w, inch, outch, group, dilation_h, dilation_w, activation, padMode) < 0)
     {
-        CV_LOG_ERROR(NULL,"Tengine :create conv node failed. " );
+        CV_LOG_WARNING(NULL,"Tengine :create conv node failed. " );
         ok = false;
     }
 
@@ -201,13 +201,13 @@ graph_t create_conv_graph(const char * layer_name, float *input_data, int inch, 
 
     if (ok && set_graph_input_node(graph, inputs_name, sizeof(inputs_name) / sizeof(char*)) < 0)
     {
-        CV_LOG_ERROR(NULL,"Tengine :set inputs failed . " );
+        CV_LOG_WARNING(NULL,"Tengine :set inputs failed . " );
         ok = false;
     }
 
     if (ok && set_graph_output_node(graph, outputs_name, sizeof(outputs_name) / sizeof(char*)) < 0)
     {
-        CV_LOG_ERROR(NULL,"Tengine :set outputs failed . " );
+        CV_LOG_WARNING(NULL,"Tengine :set outputs failed . " );
         ok = false;
     }
 
@@ -218,7 +218,7 @@ graph_t create_conv_graph(const char * layer_name, float *input_data, int inch, 
         buf_size     = get_tensor_buffer_size(input_tensor);
         if (buf_size != in_size * FLOAT_TO_REALSIZE)
         {
-            CV_LOG_ERROR(NULL,"Tengine :Input data size check failed . ");
+            CV_LOG_WARNING(NULL,"Tengine :Input data size check failed . ");
             ok = false;
         }
     }
@@ -261,10 +261,10 @@ graph_t create_conv_graph(const char * layer_name, float *input_data, int inch, 
     }
 
     /* prerun */
-    if (prerun_graph_multithread(graph, TENGINE_CLUSTER_BIG, nstripes) < 0)
+    if (ok && prerun_graph_multithread(graph, TENGINE_CLUSTER_BIG, nstripes) < 0)
     {
-        CV_LOG_ERROR(NULL, "Tengine :prerun_graph failed .");
-        return NULL ;
+        CV_LOG_WARNING(NULL, "Tengine :prerun_graph failed .");
+        ok = false;
     }
 
     if (ok)
@@ -275,13 +275,14 @@ graph_t create_conv_graph(const char * layer_name, float *input_data, int inch, 
         if(ret)
         {
             CV_LOG_WARNING(NULL,"Tengine :Set output tensor buffer failed . " );
+            ok = false;
         }
     }
 
-    if (!ok)
+    if (false == ok)
     {
-        destroy_graph(graph);
-        return NULL;
+        destroy_graph(graph) ;
+        return NULL ;
     }
     return graph;
 }
@@ -344,6 +345,10 @@ bool tengine_init(const char * layer_name, float *input_, int inch, int group, i
                                     kernel_h, kernel_w, stride_h,stride_w,
                                     pad_h, pad_w, dilation_h, dilation_w, activation,
                                     teg_weight , teg_bias , padMode, nstripes);
+        if(NULL == graph )
+        {
+            return false;
+        }
     }
     return true ;
 }

@@ -615,13 +615,7 @@ public:
                                        teg_bias, stride.height, stride.width,
                                        pad.height,  pad.width, dilation.height, dilation.width,
                                        weightsMat.step1(), padMode, graph, nstripes);
-        //printf("Tengine_init --tengine_ret = %d \n",tengine_ret);
-        if((true == tengine_ret) && activ )
-        {
-            return Ptr<BackendNode>();
-        }
-            /*
-              printf("Init:  input=%p(%d %d %d %d ),output=%p(%d %d %d %d ),kernel=%p(%d %d %d ), bias=%p ,"
+            /*printf("Init:  input=%p(%d %d %d %d ),output=%p(%d %d %d %d ),kernel=%p(%d %d %d ), bias=%p ,"
                      "stride(%d %d), pad(%d %d), dilation(%d %d) ,weightsMat=%d, pad=%s \n",
                       input_, inch, ngroups, in_h, in_w,
                       output_, out_b, outch, out_h, out_w,

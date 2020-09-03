@@ -26,6 +26,8 @@
 #define TENGINE_GRAPH_CONVOLUTION_HPP
 
 #define FLOAT_TO_REALSIZE (4)
+#ifdef HAVE_TENGINE
+
 #include "tengine_c_api.h"
 
 namespace cv
@@ -42,4 +44,5 @@ bool tengine_init(const char * name , float *input_, int inch, int group, int in
 bool tengine_forward(graph_t &graph) ;
 }
 }
+#endif
 #endif /* TENGINE_GRAPH_CONVOLUTION_HPP */
