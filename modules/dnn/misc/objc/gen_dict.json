@@ -13,6 +13,7 @@
         "Net": {
             "(void)forward:(NSMutableArray<Mat*>*)outputBlobs outputName:(NSString*)outputName" : { "forward" : {"name" : "forwardOutputBlobs"} },
             "(void)forward:(NSMutableArray<Mat*>*)outputBlobs outBlobNames:(NSArray<NSString*>*)outBlobNames" : { "forward" : {"name" : "forwardOutputBlobs"} },
+            "(void)forwardAndRetrieve:(NSMutableArray<NSMutableArray<Mat*>*>*)outputBlobs outBlobNames:(NSArray<NSString*>*)outBlobNames" : { "forward" : {"swift_name" : "forwardAndRetrieve"} },
             "(long)getFLOPS:(IntVector*)netInputShape" : { "getFLOPS" : {"name" : "getFLOPSWithNetInputShape"} },
             "(long)getFLOPS:(NSArray<IntVector*>*)netInputShapes" : { "getFLOPS" : {"name" : "getFLOPSWithNetInputShapes"} },
             "(long)getFLOPS:(int)layerId netInputShape:(IntVector*)netInputShape" : { "getFLOPS" : {"name" : "getFLOPSWithLayerId"} },
