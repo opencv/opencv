@@ -304,8 +304,8 @@ float calcOrientationHist(
             if( x <= 0 || x >= img.cols - 1 )
                 continue;
 
-            float dx = (float)((int)img.at<sift_gwt>(y, x+1) - img.at<sift_gwt>(y, x-1));
-            float dy = (float)((int)img.at<sift_gwt>(y-1, x) - img.at<sift_gwt>(y+1, x));
+            float dx = (float)(img.at<sift_gwt>(y, x+1) - img.at<sift_gwt>(y, x-1));
+            float dy = (float)(img.at<sift_gwt>(y-1, x) - img.at<sift_gwt>(y+1, x));
 
             X[k] = dx; Y[k] = dy; W[k] = (i*i + j*j)*expf_scale;
             k++;
