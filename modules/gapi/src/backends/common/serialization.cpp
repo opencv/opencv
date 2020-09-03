@@ -252,6 +252,62 @@ I::IStream& operator>> (I::IStream& is, cv::Mat& m) {
     return is;
 }
 
+I::OStream& operator<< (I::OStream& os, const cv::gapi::wip::draw::Text &t) {
+    return os << t.bottom_left_origin << t.color << t.ff << t.fs << t.lt << t.org << t.text << t.thick;
+}
+I::IStream& operator>> (I::IStream& is,       cv::gapi::wip::draw::Text &t) {
+    return is >> t.bottom_left_origin >> t.color >> t.ff >> t.fs >> t.lt >> t.org >> t.text >> t.thick;
+}
+
+I::OStream& operator<< (I::OStream& os, const cv::gapi::wip::draw::FText &ft) {
+    return os << ft.color << ft.fh << ft.org << ft.text;
+}
+I::IStream& operator>> (I::IStream& is,       cv::gapi::wip::draw::FText &ft) {
+    return is >> ft.color >> ft.fh >> ft.org >> ft.text;
+}
+
+I::OStream& operator<< (I::OStream& os, const cv::gapi::wip::draw::Circle &c) {
+    return os << c.center << c.color << c.lt << c.radius << c.shift << c.thick;
+}
+I::IStream& operator>> (I::IStream& is,       cv::gapi::wip::draw::Circle &c) {
+    return is >> c.center >> c.color >> c.lt >> c.radius >> c.shift >> c.thick;
+}
+
+I::OStream& operator<< (I::OStream& os, const cv::gapi::wip::draw::Rect &r) {
+    return os << r.color << r.lt << r.rect << r.shift << r.thick;
+}
+I::IStream& operator>> (I::IStream& is,       cv::gapi::wip::draw::Rect &r) {
+    return is >> r.color >> r.lt >> r.rect >> r.shift >> r.thick;
+}
+
+I::OStream& operator<< (I::OStream& os, const cv::gapi::wip::draw::Image &i) {
+    return os << i.org << i.alpha << i.img;
+}
+I::IStream& operator>> (I::IStream& is,       cv::gapi::wip::draw::Image &i) {
+    return is >> i.org >> i.alpha >> i.img;
+}
+
+I::OStream& operator<< (I::OStream& os, const cv::gapi::wip::draw::Mosaic &m) {
+    return os << m.cellSz << m.decim << m.mos;
+}
+I::IStream& operator>> (I::IStream& is,       cv::gapi::wip::draw::Mosaic &m) {
+    return is >> m.cellSz >> m.decim >> m.mos;
+}
+
+I::OStream& operator<< (I::OStream& os, const cv::gapi::wip::draw::Poly &p) {
+    return os << p.color << p.lt << p.points << p.shift << p.thick;
+}
+I::IStream& operator>> (I::IStream& is,       cv::gapi::wip::draw::Poly &p) {
+    return is >> p.color >> p.lt >> p.points >> p.shift >> p.thick;
+}
+
+I::OStream& operator<< (I::OStream& os, const cv::gapi::wip::draw::Line &l) {
+    return os << l.color << l.lt << l.pt1 << l.pt2 << l.shift << l.thick;
+}
+I::IStream& operator>> (I::IStream& is,       cv::gapi::wip::draw::Line &l) {
+    return is >> l.color >> l.lt >> l.pt1 >> l.pt2 >> l.shift >> l.thick;
+}
+
 // G-API types /////////////////////////////////////////////////////////////////
 
 // Stubs (empty types)
@@ -638,6 +694,10 @@ I::OStream& ByteMemoryOutStream::operator<< (char atom) {
     m_storage.push_back(atom);
     return *this;
 }
+I::OStream& ByteMemoryOutStream::operator<< (wchar_t atom) {
+    static_assert(sizeof(wchar_t) == 4, "Expecting sizeof(wchar_t) == 4");
+    return *this << static_cast<uint32_t>(atom);
+}
 I::OStream& ByteMemoryOutStream::operator<< (unsigned char atom) {
     return *this << static_cast<char>(atom);
 }
@@ -679,6 +739,12 @@ I::OStream& ByteMemoryOutStream::operator<< (const std::string &str) {
     return *this;
 }
 
+I::OStream& ByteMemoryOutStream::operator<< (const std::wstring &str) {
+    *this << static_cast<uint32_t>(str.size()); // N.B. Put type explicitly
+    for (auto c : str) *this << c;
+    return *this;
+}
+
 ByteMemoryInStream::ByteMemoryInStream(const std::vector<char> &data)
     : m_storage(data) {
 }
@@ -700,6 +766,11 @@ I::IStream& ByteMemoryInStream::operator>> (bool& atom) {
 I::IStream& ByteMemoryInStream::operator>> (char &atom) {
     check(sizeof(char));
     atom = m_storage[m_idx++];
+    return *this;
+}
+I::IStream& ByteMemoryInStream::operator>> (wchar_t &atom) {
+    static_assert(sizeof(wchar_t) == 4, "Expecting sizeof(wchar_t) == 4");
+    atom = static_cast<wchar_t>(getU32());
     return *this;
 }
 I::IStream& ByteMemoryInStream::operator>> (unsigned char &atom) {
@@ -747,6 +818,18 @@ I::IStream& ByteMemoryInStream::operator>> (double& atom) {
 }
 I::IStream& ByteMemoryInStream::operator>> (std::string& str) {
     //std::size_t sz = 0u;
+    uint32_t sz = 0u;
+    *this >> sz;
+    if (sz == 0u) {
+        str.clear();
+    } else {
+        str.resize(sz);
+        for (auto &&i : ade::util::iota(sz)) { *this >> str[i]; }
+    }
+    return *this;
+}
+
+I::IStream& ByteMemoryInStream::operator>> (std::wstring& str) {
     uint32_t sz = 0u;
     *this >> sz;
     if (sz == 0u) {

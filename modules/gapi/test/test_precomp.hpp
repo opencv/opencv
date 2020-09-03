@@ -28,6 +28,7 @@
 #include <opencv2/gapi/fluid/imgproc.hpp>
 #include <opencv2/gapi/fluid/core.hpp>
 #include <opencv2/gapi/infer.hpp>
+#include <opencv2/gapi/render/render.hpp>
 
 namespace cv {
 static inline void countNonZero_is_forbidden_in_tests_use_norm_instead() {}

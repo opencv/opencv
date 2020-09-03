@@ -8,8 +8,13 @@
 #include "../test_precomp.hpp"
 
 #include <ade/util/iota_range.hpp>
-
 #include <opencv2/gapi/s11n.hpp>
+#include "api/render_priv.hpp"
+#include "../common/gapi_render_tests.hpp"
+
+#ifdef HAVE_FREETYPE
+#include <codecvt>
+#endif // HAVE_FREETYPE
 
 namespace opencv_test
 {
@@ -483,5 +488,293 @@ TEST(S11N, Pipeline_GArray_GOpaque_Multinode)
         EXPECT_EQ(pp[idx], cv::Point(s[idx].area(), s[idx].area()));
     }
 }
+
+TEST(S11N, Pipeline_Render_NV12)
+{
+    cv::Size sz (100, 200);
+    int rects_num = 10;
+    int text_num  = 10;
+    int image_num = 10;
+
+    int thick = 2;
+    int lt = LINE_8;
+    cv::Scalar color(111, 222, 77);
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::gapi::wip::draw::Prims prims;
+
+    // Rects
+    int shift = 0;
+    for (int i = 0; i < rects_num; ++i) {
+        cv::Rect rect(200 + i, 200 + i, 200, 200);
+        prims.emplace_back(cv::gapi::wip::draw::Rect(rect, color, thick, lt, shift));
+    }
+
+    // Mosaic
+    int cellsz = 50;
+    int decim = 0;
+    for (int i = 0; i < rects_num; ++i) {
+        cv::Rect mos(200 + i, 200 + i, 200, 200);
+        prims.emplace_back(cv::gapi::wip::draw::Mosaic(mos, cellsz, decim));
+    }
+
+    // Text
+    std::string text = "Some text";
+    int ff = FONT_HERSHEY_SIMPLEX;
+    double fs = 2.0;
+    bool blo = false;
+    for (int i = 0; i < text_num; ++i) {
+        cv::Point org(200 + i, 200 + i);
+        prims.emplace_back(cv::gapi::wip::draw::Text(text, org, ff, fs, color, thick, lt, blo));
+    }
+
+    // Image
+    double transparency = 1.0;
+    cv::Rect rect_img(0 ,0 , 50, 50);
+    cv::Mat img(rect_img.size(), CV_8UC3, color);
+    cv::Mat alpha(rect_img.size(), CV_32FC1, transparency);
+    auto tl = rect_img.tl();
+    for (int i = 0; i < image_num; ++i) {
+        cv::Point org_img = {tl.x + i, tl.y + rect_img.size().height + i};
+
+        prims.emplace_back(cv::gapi::wip::draw::Image({org_img, img, alpha}));
+    }
+
+    // Circle
+    cv::Point center(300, 400);
+    int rad = 25;
+    prims.emplace_back(cv::gapi::wip::draw::Circle({center, rad, color, thick, lt, shift}));
+
+    // Line
+    cv::Point point_next(300, 425);
+    prims.emplace_back(cv::gapi::wip::draw::Line({center, point_next, color, thick, lt, shift}));
+
+    // Poly
+    std::vector<cv::Point> points = {{300, 400}, {290, 450}, {348, 410}, {300, 400}};
+    prims.emplace_back(cv::gapi::wip::draw::Poly({points, color, thick, lt, shift}));
+
+    cv::GMat y_in, uv_in, y_out, uv_out;
+    cv::GArray<cv::gapi::wip::draw::Prim> arr;
+    std::tie(y_out, uv_out) = cv::gapi::wip::draw::renderNV12(y_in, uv_in, arr);
+    cv::GComputation comp(cv::GIn(y_in, uv_in, arr), cv::GOut(y_out, uv_out));
+
+    auto serialized = cv::gapi::serialize(comp);
+    auto dc = cv::gapi::deserialize<cv::GComputation>(serialized);
+
+    cv::Mat y(1920, 1080, CV_8UC1);
+    cv::Mat uv(960, 540, CV_8UC2);
+    cv::randu(y, cv::Scalar(0), cv::Scalar(255));
+    cv::randu(uv, cv::Scalar::all(0), cv::Scalar::all(255));
+    cv::Mat y_ref_mat = y.clone(), uv_ref_mat = uv.clone();
+    dc.apply(cv::gin(y, uv, prims), cv::gout(y, uv));
+
+    // OpenCV code //////////////////////////////////////////////////////////////
+    cv::Mat yuv;
+    cv::gapi::wip::draw::cvtNV12ToYUV(y_ref_mat, uv_ref_mat, yuv);
+
+    for (int i = 0; i < rects_num; ++i) {
+        cv::Rect rect(200 + i, 200 + i, 200, 200);
+        cv::rectangle(yuv, rect, cvtBGRToYUVC(color), thick, lt, shift);
+    }
+
+    for (int i = 0; i < rects_num; ++i) {
+        cv::Rect mos(200 + i, 200 + i, 200, 200);
+         drawMosaicRef(yuv, mos, cellsz);
+    }
+
+    for (int i = 0; i < text_num; ++i) {
+        cv::Point org(200 + i, 200 + i);
+        cv::putText(yuv, text, org, ff, fs, cvtBGRToYUVC(color), thick, lt, blo);
+    }
+
+    for (int i = 0; i < image_num; ++i) {
+        cv::Point org_img = {tl.x + i, tl.y + rect_img.size().height + i};
+        cv::Mat yuv_img;
+        cv::cvtColor(img, yuv_img, cv::COLOR_BGR2YUV);
+        blendImageRef(yuv, org_img, yuv_img, alpha);
+    }
+
+    cv::circle(yuv, center, rad, cvtBGRToYUVC(color), thick, lt, shift);
+    cv::line(yuv, center, point_next, cvtBGRToYUVC(color), thick, lt, shift);
+    std::vector<std::vector<cv::Point>> pp{points};
+    cv::fillPoly(yuv, pp, cvtBGRToYUVC(color), lt, shift);
+
+    // YUV -> NV12
+    cv::gapi::wip::draw::cvtYUVToNV12(yuv, y_ref_mat, uv_ref_mat);
+
+    EXPECT_EQ(cv::norm( y,  y_ref_mat), 0);
+    EXPECT_EQ(cv::norm(uv, uv_ref_mat), 0);
+}
+
+TEST(S11N, Pipeline_Render_RGB)
+{
+    cv::Size sz (100, 200);
+    int rects_num = 10;
+    int text_num  = 10;
+    int image_num = 10;
+
+    int thick = 2;
+    int lt = LINE_8;
+    cv::Scalar color(111, 222, 77);
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::gapi::wip::draw::Prims prims;
+
+    // Rects
+    int shift = 0;
+    for (int i = 0; i < rects_num; ++i) {
+        cv::Rect rect(200 + i, 200 + i, 200, 200);
+        prims.emplace_back(cv::gapi::wip::draw::Rect(rect, color, thick, lt, shift));
+    }
+
+    // Mosaic
+    int cellsz = 50;
+    int decim = 0;
+    for (int i = 0; i < rects_num; ++i) {
+        cv::Rect mos(200 + i, 200 + i, 200, 200);
+        prims.emplace_back(cv::gapi::wip::draw::Mosaic(mos, cellsz, decim));
+    }
+
+    // Text
+    std::string text = "Some text";
+    int ff = FONT_HERSHEY_SIMPLEX;
+    double fs = 2.0;
+    bool blo = false;
+    for (int i = 0; i < text_num; ++i) {
+        cv::Point org(200 + i, 200 + i);
+        prims.emplace_back(cv::gapi::wip::draw::Text(text, org, ff, fs, color, thick, lt, blo));
+    }
+
+    // Image
+    double transparency = 1.0;
+    cv::Rect rect_img(0 ,0 , 50, 50);
+    cv::Mat img(rect_img.size(), CV_8UC3, color);
+    cv::Mat alpha(rect_img.size(), CV_32FC1, transparency);
+    auto tl = rect_img.tl();
+    for (int i = 0; i < image_num; ++i) {
+        cv::Point org_img = {tl.x + i, tl.y + rect_img.size().height + i};
+
+        prims.emplace_back(cv::gapi::wip::draw::Image({org_img, img, alpha}));
+    }
+
+    // Circle
+    cv::Point center(300, 400);
+    int rad = 25;
+    prims.emplace_back(cv::gapi::wip::draw::Circle({center, rad, color, thick, lt, shift}));
+
+    // Line
+    cv::Point point_next(300, 425);
+    prims.emplace_back(cv::gapi::wip::draw::Line({center, point_next, color, thick, lt, shift}));
+
+    // Poly
+    std::vector<cv::Point> points = {{300, 400}, {290, 450}, {348, 410}, {300, 400}};
+    prims.emplace_back(cv::gapi::wip::draw::Poly({points, color, thick, lt, shift}));
+
+    cv::GMat in, out;
+    cv::GArray<cv::gapi::wip::draw::Prim> arr;
+    out = cv::gapi::wip::draw::render3ch(in, arr);
+    cv::GComputation comp(cv::GIn(in, arr), cv::GOut(out));
+
+    auto serialized = cv::gapi::serialize(comp);
+    auto dc = cv::gapi::deserialize<cv::GComputation>(serialized);
+
+    cv::Mat input(1920, 1080, CV_8UC3);
+    cv::randu(input, cv::Scalar::all(0), cv::Scalar::all(255));
+    cv::Mat ref_mat = input.clone();
+    dc.apply(cv::gin(input, prims), cv::gout(input));
+
+    // OpenCV code //////////////////////////////////////////////////////////////
+    for (int i = 0; i < rects_num; ++i) {
+        cv::Rect rect(200 + i, 200 + i, 200, 200);
+        cv::rectangle(ref_mat, rect, color, thick, lt, shift);
+    }
+
+    for (int i = 0; i < rects_num; ++i) {
+        cv::Rect mos(200 + i, 200 + i, 200, 200);
+         drawMosaicRef(ref_mat, mos, cellsz);
+    }
+
+    for (int i = 0; i < text_num; ++i) {
+        cv::Point org(200 + i, 200 + i);
+        cv::putText(ref_mat, text, org, ff, fs, color, thick, lt, blo);
+    }
+
+    for (int i = 0; i < image_num; ++i) {
+        cv::Point org_img = {tl.x + i, tl.y + rect_img.size().height + i};
+        blendImageRef(ref_mat, org_img, img, alpha);
+    }
+
+    cv::circle(ref_mat, center, rad, color, thick, lt, shift);
+    cv::line(ref_mat, center, point_next, color, thick, lt, shift);
+    std::vector<std::vector<cv::Point>> pp{points};
+    cv::fillPoly(ref_mat, pp, color, lt, shift);
+
+    EXPECT_EQ(cv::norm(input,  ref_mat), 0);
+}
+
+#ifdef HAVE_FREETYPE
+namespace
+{
+static std::wstring to_wstring(const char* bytes)
+{
+    std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
+    return converter.from_bytes(bytes);
+}
+}
+
+TEST(S11N, Pipeline_Render_FText_NV12)
+{
+    std::wstring text = to_wstring("\xe4\xbd\xa0\xe5\xa5\xbd\xef\xbc\x8c\xe4\xb8\x96\xe7\x95\x8c");
+    cv::Point org(100, 100);
+    int fh = 64;
+    cv::Scalar color(200, 100, 25);
+
+    cv::gapi::wip::draw::Prims prims;
+    prims.emplace_back(cv::gapi::wip::draw::FText{text, org, fh, color});
+
+    cv::GMat y_in, uv_in, y_out, uv_out;
+    cv::GArray<cv::gapi::wip::draw::Prim> arr;
+    std::tie(y_out, uv_out) = cv::gapi::wip::draw::renderNV12(y_in, uv_in, arr);
+    cv::GComputation comp(cv::GIn(y_in, uv_in, arr), cv::GOut(y_out, uv_out));
+
+    auto serialized = cv::gapi::serialize(comp);
+    auto dc = cv::gapi::deserialize<cv::GComputation>(serialized);
+
+    cv::Mat y(1920, 1080, CV_8UC1);
+    cv::Mat uv(960, 540, CV_8UC2);
+
+    EXPECT_NO_THROW(dc.apply(cv::gin(y, uv, prims), cv::gout(y, uv),
+                             cv::compile_args(cv::gapi::wip::draw::freetype_font{
+                             "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc"
+                             })));
+}
+
+TEST(S11N, Pipeline_Render_FText_RGB)
+{
+    std::wstring text = to_wstring("\xe4\xbd\xa0\xe5\xa5\xbd\xef\xbc\x8c\xe4\xb8\x96\xe7\x95\x8c");
+    cv::Point org(100, 100);
+    int fh = 64;
+    cv::Scalar color(200, 100, 25);
+
+    cv::gapi::wip::draw::Prims prims;
+    prims.emplace_back(cv::gapi::wip::draw::FText{text, org, fh, color});
+
+    cv::GMat in, out;
+    cv::GArray<cv::gapi::wip::draw::Prim> arr;
+    out = cv::gapi::wip::draw::render3ch(in, arr);
+    cv::GComputation comp(cv::GIn(in, arr), cv::GOut(out));
+
+    auto serialized = cv::gapi::serialize(comp);
+    auto dc = cv::gapi::deserialize<cv::GComputation>(serialized);
+
+    cv::Mat input(1920, 1080, CV_8UC3);
+
+    EXPECT_NO_THROW(dc.apply(cv::gin(input, prims), cv::gout(input),
+                             cv::compile_args(cv::gapi::wip::draw::freetype_font{
+                             "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc"
+                             })));
+}
+
+#endif // HAVE_FREETYPE
 
 } // namespace opencv_test
