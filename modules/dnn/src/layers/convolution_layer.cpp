@@ -249,8 +249,7 @@ public:
 #endif
 
 #ifdef HAVE_TENGINE
-    graph_t graph;
-    bool tengine_ret;
+    graph_t tengine_graph;
 #endif
 
 #ifdef HAVE_CUDA
@@ -273,17 +272,15 @@ public:
         cudaActType = cuda4dnn::ConvolutionConfiguration::ActivationType::IDENTITY;
 #endif
 #ifdef HAVE_TENGINE
-        graph=NULL;
-        tengine_ret = false ; //false = 0
+        tengine_graph=NULL;
 #endif
     }
 #ifdef HAVE_TENGINE
     ~ConvolutionLayerImpl()
     {
-        if(NULL != graph )
+        if(NULL != tengine_graph )
         {
-            postrun_graph(graph);
-            destroy_graph(graph);
+            tengine_release(tengine_graph);
         }
     }
 #endif
@@ -609,12 +606,13 @@ public:
         int ngroups = inputs[0].size[1]/blobs[0].size[1];
         int nstripes = std::max(getNumThreads(), 1);
 
-        tengine_ret = tengine_init(name.c_str(),input_, inch, ngroups, in_h, in_w,
+        tengine_graph = tengine_init(name.c_str(),input_, inch, ngroups, in_h, in_w,
                                        output_, out_b, outch, out_h, out_w,
                                        kernel_, kernel_size.size(), kernel.height, kernel.width,
                                        teg_bias, stride.height, stride.width,
                                        pad.height,  pad.width, dilation.height, dilation.width,
-                                       weightsMat.step1(), padMode, graph, nstripes);
+                                       weightsMat.step1(), padMode, tengine_graph, nstripes);
+
             /*printf("Init:  input=%p(%d %d %d %d ),output=%p(%d %d %d %d ),kernel=%p(%d %d %d ), bias=%p ,"
                      "stride(%d %d), pad(%d %d), dilation(%d %d) ,weightsMat=%d, pad=%s \n",
                       input_, inch, ngroups, in_h, in_w,
@@ -1825,12 +1823,12 @@ public:
         int outch = outputs[0].size[1]; 	// outch
         int out_h = outputs[0].size[2]; 	// out_h
         int out_w = outputs[0].size[3]; 	// out_w
-
+        bool tengine_ret = false; ;
         float *output_ = outputs[0].ptr<float>();
 
-        if(true == tengine_ret)
+        if(NULL != tengine_graph)
         {
-            tengine_ret = tengine_forward(graph);
+            tengine_ret = tengine_forward(tengine_graph);
         }
         /* activation */
         if((true == tengine_ret) && activ )
