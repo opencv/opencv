@@ -1297,7 +1297,11 @@ public:
     /** Returns the OOB error value, computed at the training stage when calcOOBError is set to true.
      * If this flag was set to false, 0 is returned. The OOB error is also scaled by sample weighting.
      */
-    CV_WRAP virtual double getOOBError() const = 0;
+#if CV_VERSION_MAJOR == 3
+    CV_WRAP double getOOBError() const;
+#else
+    /*CV_WRAP*/ virtual double getOOBError() const = 0;
+#endif
 
     /** Creates the empty model.
     Use StatModel::train to train the model, StatModel::train to create and train the model,

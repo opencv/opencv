@@ -510,7 +510,11 @@ public:
     const vector<Node>& getNodes() const CV_OVERRIDE { return impl.getNodes(); }
     const vector<Split>& getSplits() const CV_OVERRIDE { return impl.getSplits(); }
     const vector<int>& getSubsets() const CV_OVERRIDE { return impl.getSubsets(); }
+#if CV_VERSION_MAJOR == 3
+    double getOOBError_() const { return impl.getOOBError(); }
+#else
     double getOOBError() const CV_OVERRIDE { return impl.getOOBError(); }
+#endif
 
 
     DTreesImplForRTrees impl;
@@ -538,6 +542,17 @@ void RTrees::getVotes(InputArray input, OutputArray output, int flags) const
         CV_Error(Error::StsNotImplemented, "the class is not RTreesImpl");
     return this_->getVotes_(input, output, flags);
 }
+
+#if CV_VERSION_MAJOR == 3
+double RTrees::getOOBError() const
+{
+    CV_TRACE_FUNCTION();
+    const RTreesImpl* this_ = dynamic_cast<const RTreesImpl*>(this);
+    if(!this_)
+        CV_Error(Error::StsNotImplemented, "the class is not RTreesImpl");
+    return this_->getOOBError_();
+}
+#endif
 
 }}
 
