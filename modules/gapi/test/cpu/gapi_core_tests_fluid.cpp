@@ -65,6 +65,14 @@ INSTANTIATE_TEST_CASE_P(DISABLED_MeanTestFluid, MeanTest,
                                 Values(-1),
                                 Values(CORE_FLUID)));
 
+INSTANTIATE_TEST_CASE_P(MaskTestFluid, MaskTest,
+                        Combine(Values(CV_8UC1, CV_16UC1, CV_16SC1),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480),
+                                       cv::Size(128, 128)),
+                                Values(-1),
+                                Values(CORE_FLUID)));
+
 INSTANTIATE_TEST_CASE_P(AbsDiffTestFluid, AbsDiffTest,
                         Combine(Values(CV_8UC1, CV_16UC1, CV_16SC1),
                                 Values(cv::Size(1280, 720),

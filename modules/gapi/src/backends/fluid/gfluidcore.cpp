@@ -797,6 +797,51 @@ GAPI_FLUID_KERNEL(GFluidDivRC, cv::gapi::core::GDivRC, false)
     }
 };
 
+//-------------------
+//
+// Fluid kernels: mask
+//
+//-------------------
+
+template<typename DST, typename SRC>
+static void run_mask(Buffer &dst, const View &src, const View &mask)
+{
+    static_assert(std::is_same<DST, SRC>::value, "wrong types");
+
+    int width  = dst.length();
+    int chan   = dst.meta().chan;
+    int length = width * chan;
+
+    if (mask.meta().chan != 1 || mask.meta().depth != CV_8U)
+        CV_Error(cv::Error::StsBadArg, "unsupported mask type");
+
+    const auto *in1 = src.InLine<SRC>(0);
+    const auto *in2 = mask.InLine<uchar>(0);
+          auto *out = dst.OutLine<DST>();
+
+    for (int l=0; l < length; l++)
+    {
+        out[l] = in2[l] ? in1[l] : 0;
+    }
+}
+
+GAPI_FLUID_KERNEL(GFluidMask, cv::gapi::core::GMask, false)
+{
+    static const int Window = 1;
+
+    static void run(const View &src, const View &mask, Buffer &dst)
+    {
+        //     DST     SRC     OP        __VA_ARGS__
+        UNARY_(uchar , uchar , run_mask, dst, src, mask);
+        // UNARY_( char ,  char , run_mask, dst, src, mask); // Not supported in OCV kernel
+        UNARY_( short,  short, run_mask, dst, src, mask);
+        UNARY_(ushort, ushort, run_mask, dst, src, mask);
+        // UNARY_( float,  float, run_mask, dst, src, mask); // Not supported in OCV kernel
+
+        CV_Error(cv::Error::StsBadArg, "unsupported combination of types");
+    }
+};
+
 //----------------------------
 //
 // Fluid math kernels: bitwise
@@ -2202,6 +2247,7 @@ cv::gapi::GKernelPackage cv::gapi::core::fluid::kernels()
             ,GFluidMulCOld
             ,GFluidDivC
             ,GFluidDivRC
+            ,GFluidMask
             ,GFluidAbsDiffC
             ,GFluidCmpGTScalar
             ,GFluidCmpGEScalar
