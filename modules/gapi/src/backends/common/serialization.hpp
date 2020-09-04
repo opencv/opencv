@@ -121,6 +121,9 @@ GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::GArg &arg);
 //I::OStream& operator<< (I::OStream& os, const cv::GRunArg &arg);
 //I::IStream& operator>> (I::IStream& is, cv::GRunArg &arg);
 
+// FIXME: is needed for streaming. Not supported yet!
+GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::GMat &m);
+GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::GMat &m);
 
 GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::GKernel &k);
 GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::GKernel &k);

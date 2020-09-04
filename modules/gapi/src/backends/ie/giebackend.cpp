@@ -614,7 +614,7 @@ struct InferList2: public cv::detail::KernelTag {
             GAPI_Assert(util::holds_alternative<cv::GArrayDesc>(mm)
                         && "Non-array inputs are not supported");
 
-            if (op.k.inSpecs[idx] == cv::detail::ArgSpec::RECT) {
+            if (op.k.inKinds[idx] == cv::detail::OpaqueKind::CV_RECT) {
                 // This is a cv::Rect -- configure the IE preprocessing
                 ii->setPrecision(toIE(meta_0.depth));
                 ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
@@ -622,7 +622,7 @@ struct InferList2: public cv::detail::KernelTag {
                 // This is a cv::GMat (equals to: cv::Mat)
                 // Just validate that it is really the type
                 // (other types are prohibited here)
-                GAPI_Assert(op.k.inSpecs[idx] == cv::detail::ArgSpec::GMAT);
+                GAPI_Assert(op.k.inKinds[idx] == cv::detail::OpaqueKind::CV_GMAT);
             }
             idx++; // NB: Never forget to increment the counter
         }
@@ -666,11 +666,11 @@ struct InferList2: public cv::detail::KernelTag {
                 GAPI_Assert(this_vec.size() == list_size);
                 // Prepare input {{{
                 IE::Blob::Ptr this_blob;
-                if (this_vec.spec() == cv::detail::TypeSpec::RECT) {
+                if (this_vec.getKind() == cv::detail::OpaqueKind::CV_RECT) {
                     // ROI case - create an ROI blob
                     const auto &vec = this_vec.rref<cv::Rect>();
                     this_blob = IE::make_shared_blob(blob_0, toIE(vec[list_idx]));
-                } else if (this_vec.spec() == cv::detail::TypeSpec::MAT) {
+                } else if (this_vec.getKind() == cv::detail::OpaqueKind::CV_MAT) {
                     // Mat case - create a regular blob
                     // FIXME: NOW Assume Mats are always BLOBS (not
                     // images)

@@ -27,6 +27,7 @@
 namespace cv {
 
 using GShapes = std::vector<GShape>;
+using GKinds = std::vector<cv::detail::OpaqueKind>;
 
 // GKernel describes kernel API to the system
 // FIXME: add attributes of a kernel, (e.g. number and types
@@ -39,7 +40,10 @@ struct GAPI_EXPORTS GKernel
     const std::string tag;        // some (implementation-specific) tag
     const M           outMeta;    // generic adaptor to API::outMeta(...)
     const GShapes     outShapes;  // types (shapes) kernel's outputs
+    const GKinds      inKinds;    // kinds of kernel's inputs (fixme: below)
 };
+// TODO: It's questionable if inKinds should really be here. Instead,
+// this information could come from meta.
 
 // GKernelImpl describes particular kernel implementation to the system
 struct GAPI_EXPORTS GKernelImpl
@@ -209,7 +213,8 @@ public:
         cv::GCall call(GKernel{ K::id()
                               , K::tag()
                               , &K::getOutMeta
-                              , {detail::GTypeTraits<R>::shape...}});
+                              , {detail::GTypeTraits<R>::shape...}
+                              , {detail::GOpaqueTraits<Args>::kind...}});
         call.pass(args...); // TODO: std::forward() here?
         return yield(call, typename detail::MkSeq<sizeof...(R)>::type());
     }
@@ -233,7 +238,8 @@ public:
         cv::GCall call(GKernel{ K::id()
                               , K::tag()
                               , &K::getOutMeta
-                              , {detail::GTypeTraits<R>::shape}});
+                              , {detail::GTypeTraits<R>::shape}
+                              , {detail::GOpaqueTraits<Args>::kind...}});
         call.pass(args...);
         return detail::Yield<R>::yield(call, 0);
     }

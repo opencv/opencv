@@ -21,6 +21,8 @@
 
 namespace cv {
 
+class GMat; // FIXME: forward declaration for GOpaqueTraits
+
 namespace detail
 {
     // This is a trait-like structure to mark backend-specific compile arguments
@@ -46,6 +48,7 @@ namespace detail
         CV_RECT,       // cv::Rect user G-API data
         CV_SCALAR,     // cv::Scalar user G-API data
         CV_MAT,        // cv::Mat user G-API data
+        CV_GMAT,       // cv::GMat G-API data
     };
 
     // Type traits helper which simplifies the extraction of kind from type
@@ -59,8 +62,9 @@ namespace detail
     template<> struct GOpaqueTraits<cv::Point>   { static constexpr const OpaqueKind kind = OpaqueKind::CV_POINT; };
     template<> struct GOpaqueTraits<cv::Mat>     { static constexpr const OpaqueKind kind = OpaqueKind::CV_MAT; };
     template<> struct GOpaqueTraits<cv::Rect>    { static constexpr const OpaqueKind kind = OpaqueKind::CV_RECT; };
+    template<> struct GOpaqueTraits<cv::GMat>    { static constexpr const OpaqueKind kind = OpaqueKind::CV_GMAT; };
     // GArray is not supporting bool type for now due to difference in std::vector<bool> implementation
-    using GOpaqueTraitsArrayTypes = std::tuple<int, double, cv::Size, cv::Scalar, cv::Point, cv::Mat, cv::Rect>;
+    using GOpaqueTraitsArrayTypes = std::tuple<int, double, cv::Size, cv::Scalar, cv::Point, cv::Mat, cv::Rect, cv::GMat>;
     // GOpaque is not supporting cv::Mat and cv::Scalar since there are GScalar and GMat types
     using GOpaqueTraitsOpaqueTypes = std::tuple<bool, int, double, cv::Size, cv::Point, cv::Rect>;
 } // namespace detail

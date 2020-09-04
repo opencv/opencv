@@ -268,6 +268,10 @@ I::IStream& operator>> (I::IStream& is,       cv::GOpaqueDesc &) {return is;}
 I::OStream& operator<< (I::OStream& os, const cv::GArrayDesc &) {return os;}
 I::IStream& operator>> (I::IStream& is,       cv::GArrayDesc &) {return is;}
 
+// FIXME: is needed for streaming. Not supported yet!
+I::OStream& operator<< (I::OStream& os, const cv::GMat &) {return os;}
+I::IStream& operator>> (I::IStream& is,       cv::GMat &) {return is;}
+
 #if !defined(GAPI_STANDALONE)
 I::OStream& operator<< (I::OStream& os, const cv::UMat &)
 {
