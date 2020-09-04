@@ -87,7 +87,8 @@ TEST(ML_KNearest, regression_12347)
     EXPECT_EQ(2, zBestLabels.at<float>(1,0));
 }
 
-TEST(ML_KNearest, bug_11877) {
+TEST(ML_KNearest, bug_11877)
+{
     Mat trainData = (Mat_<float>(5,2) << 3, 3, 3, 3, 4, 4, 4, 4, 4, 4);
     Mat trainLabels = (Mat_<float>(5,1) << 0, 0, 1, 1, 1);
 
@@ -103,9 +104,9 @@ TEST(ML_KNearest, bug_11877) {
 
     knnKdt->findNearest(testData, 1, result);
 
-    EXPECT_EQ(int(result.at<int>(0, 0)), 1);
-    EXPECT_EQ(int(result.at<int>(1, 0)), 2);
-    EXPECT_EQ(trainLabels.at<int>(result.at<int>(0, 0), 0), 0);
+    EXPECT_EQ(1, int(result.at<int>(0, 0)));
+    EXPECT_EQ(2, int(result.at<int>(1, 0)));
+    EXPECT_EQ(0, trainLabels.at<int>(result.at<int>(0, 0), 0));
 }
 
 }} // namespace
