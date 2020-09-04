@@ -37,18 +37,31 @@ TEST(ML_KNearest, accuracy)
         EXPECT_LE(err, 0.01f);
     }
     {
-        // TODO: broken
-#if 0
         SCOPED_TRACE("KDTree");
-        Mat bestLabels;
+        Mat neighborIndexes;
         float err = 1000;
         Ptr<KNearest> knn = KNearest::create();
         knn->setAlgorithmType(KNearest::KDTREE);
         knn->train(trainData, ml::ROW_SAMPLE, trainLabels);
-        knn->findNearest(testData, 4, bestLabels);
+        knn->findNearest(testData, 4, neighborIndexes);
+        Mat bestLabels;
+        // The output of the KDTree are the neighbor indexes, not actual class labels
+        // so we need to do some extra work to get actual predictions
+        for(int row_num = 0; row_num < neighborIndexes.rows; ++row_num){
+            vector<float> labels;
+            for(int index = 0; index < neighborIndexes.row(row_num).cols; ++index) {
+                labels.push_back(trainLabels.at<float>(neighborIndexes.row(row_num).at<int>(0, index) , 0));
+            }
+            // computing the mode of the output class predictions to determine overall prediction
+            std::vector<int> histogram(3,0);
+            for( int i=0; i<3; ++i )
+                ++histogram[ static_cast<int>(labels[i]) ];
+            int bestLabel = static_cast<int>(std::max_element( histogram.begin(), histogram.end() ) - histogram.begin());
+            bestLabels.push_back(bestLabel);
+        }
+        bestLabels.convertTo(bestLabels, testLabels.type());
         EXPECT_TRUE(calcErr( bestLabels, testLabels, sizes, err, true ));
         EXPECT_LE(err, 0.01f);
-#endif
     }
 }
 
@@ -72,6 +85,28 @@ TEST(ML_KNearest, regression_12347)
     knn->findNearest(xTestData, K, zBestLabels, neighbours, dist);
     EXPECT_EQ(1, zBestLabels.at<float>(0,0));
     EXPECT_EQ(2, zBestLabels.at<float>(1,0));
+}
+
+TEST(ML_KNearest, bug_11877)
+{
+    Mat trainData = (Mat_<float>(5,2) << 3, 3, 3, 3, 4, 4, 4, 4, 4, 4);
+    Mat trainLabels = (Mat_<float>(5,1) << 0, 0, 1, 1, 1);
+
+    Ptr<KNearest> knnKdt = KNearest::create();
+    knnKdt->setAlgorithmType(KNearest::KDTREE);
+    knnKdt->setIsClassifier(true);
+
+    knnKdt->train(trainData, ml::ROW_SAMPLE, trainLabels);
+
+    Mat testData = (Mat_<float>(2,2) << 3.1, 3.1, 4, 4.1);
+    Mat testLabels = (Mat_<int>(2,1) << 0, 1);
+    Mat result;
+
+    knnKdt->findNearest(testData, 1, result);
+
+    EXPECT_EQ(1, int(result.at<int>(0, 0)));
+    EXPECT_EQ(2, int(result.at<int>(1, 0)));
+    EXPECT_EQ(0, trainLabels.at<int>(result.at<int>(0, 0), 0));
 }
 
 }} // namespace

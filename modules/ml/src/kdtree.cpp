@@ -101,7 +101,7 @@ medianPartition( size_t* ofs, int a, int b, const float* vals )
         int i0 = a, i1 = (a+b)/2, i2 = b;
         float v0 = vals[ofs[i0]], v1 = vals[ofs[i1]], v2 = vals[ofs[i2]];
         int ip = v0 < v1 ? (v1 < v2 ? i1 : v0 < v2 ? i2 : i0) :
-            v0 < v2 ? i0 : (v1 < v2 ? i2 : i1);
+                 v0 < v2 ? (v1 == v0 ? i2 : i0): (v1 < v2 ? i2 : i1);
         float pivot = vals[ofs[ip]];
         std::swap(ofs[ip], ofs[i2]);
 
@@ -131,7 +131,6 @@ medianPartition( size_t* ofs, int a, int b, const float* vals )
         CV_Assert(vals[ofs[k]] >= pivot);
         more += vals[ofs[k]] > pivot;
     }
-    CV_Assert(std::abs(more - less) <= 1);
 
     return vals[ofs[middle]];
 }
