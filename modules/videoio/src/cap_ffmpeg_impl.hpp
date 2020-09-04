@@ -484,7 +484,6 @@ struct CvCapture_FFMPEG
     bool setProperty(int, double);
     bool grabFrame();
     bool retrieveFrame(int, unsigned char** data, int* step, int* width, int* height, int* cn);
-    void rotateFrame(cv::Mat &mat) const;
 
     void init();
 
