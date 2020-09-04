@@ -297,7 +297,6 @@ namespace
 template<typename Ref, typename T, typename... Ts>
 struct putToStream;
 
-// FIXME: workaround to end the recursion
 template<typename Ref>
 struct putToStream<Ref, std::tuple<>>
 {
@@ -323,7 +322,6 @@ struct putToStream<Ref, std::tuple<T, Ts...>>
 template<typename Ref, typename T, typename... Ts>
 struct getFromStream;
 
-// FIXME: workaround to end the recursion
 template<typename Ref>
 struct getFromStream<Ref, std::tuple<>>
 {
@@ -517,7 +515,6 @@ namespace
 template<typename Ref, typename T, typename... Ts>
 struct initCtor;
 
-// FIXME: workaround to end the recursion
 template<typename Ref>
 struct initCtor<Ref, std::tuple<>>
 {
