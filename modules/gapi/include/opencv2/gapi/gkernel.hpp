@@ -214,7 +214,7 @@ public:
                               , K::tag()
                               , &K::getOutMeta
                               , {detail::GTypeTraits<R>::shape...}
-                              , {detail::GOpaqueTraits<Args>::kind...}});
+                              , {detail::GTypeTraits<Args>::op_kind...}});
         call.pass(args...); // TODO: std::forward() here?
         return yield(call, typename detail::MkSeq<sizeof...(R)>::type());
     }
@@ -239,7 +239,7 @@ public:
                               , K::tag()
                               , &K::getOutMeta
                               , {detail::GTypeTraits<R>::shape}
-                              , {detail::GOpaqueTraits<Args>::kind...}});
+                              , {detail::GTypeTraits<Args>::op_kind...}});
         call.pass(args...);
         return detail::Yield<R>::yield(call, 0);
     }

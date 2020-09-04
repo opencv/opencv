@@ -49,31 +49,37 @@ namespace detail
     template<typename T> struct GTypeTraits
     {
         static constexpr const ArgKind kind = ArgKind::OPAQUE_VAL;
+        static constexpr const OpaqueKind op_kind = OpaqueKind::CV_UNKNOWN;
     };
     template<>           struct GTypeTraits<cv::GMat>
     {
         static constexpr const ArgKind kind = ArgKind::GMAT;
         static constexpr const GShape shape = GShape::GMAT;
+        static constexpr const OpaqueKind op_kind = OpaqueKind::CV_UNKNOWN;
     };
     template<>           struct GTypeTraits<cv::GMatP>
     {
         static constexpr const ArgKind kind = ArgKind::GMATP;
         static constexpr const GShape shape = GShape::GMAT;
+        static constexpr const OpaqueKind op_kind = OpaqueKind::CV_UNKNOWN;
     };
     template<>           struct GTypeTraits<cv::GFrame>
     {
         static constexpr const ArgKind kind = ArgKind::GFRAME;
         static constexpr const GShape shape = GShape::GMAT;
+        static constexpr const OpaqueKind op_kind = OpaqueKind::CV_UNKNOWN;
     };
     template<>           struct GTypeTraits<cv::GScalar>
     {
         static constexpr const ArgKind kind = ArgKind::GSCALAR;
         static constexpr const GShape shape = GShape::GSCALAR;
+        static constexpr const OpaqueKind op_kind = OpaqueKind::CV_UNKNOWN;
     };
     template<class T> struct GTypeTraits<cv::GArray<T> >
     {
         static constexpr const ArgKind kind = ArgKind::GARRAY;
         static constexpr const GShape shape = GShape::GARRAY;
+        static constexpr const OpaqueKind op_kind = GOpaqueTraits<T>::kind;
         using host_type  = std::vector<T>;
         using strip_type = cv::detail::VectorRef;
         static cv::detail::GArrayU   wrap_value(const cv::GArray<T>  &t) { return t.strip();}
@@ -84,6 +90,7 @@ namespace detail
     {
         static constexpr const ArgKind kind = ArgKind::GOPAQUE;
         static constexpr const GShape shape = GShape::GOPAQUE;
+        static constexpr const OpaqueKind op_kind = GOpaqueTraits<T>::kind;
         using host_type  = T;
         using strip_type = cv::detail::OpaqueRef;
         static cv::detail::GOpaqueU  wrap_value(const cv::GOpaque<T>  &t) { return t.strip();}
