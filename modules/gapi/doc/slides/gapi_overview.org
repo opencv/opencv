@@ -370,7 +370,7 @@ G_API_OP(GSqrt,<GMat(GMat)>,"org.opencv.core.math.sqrt") {
     :PROPERTIES:
     :BEAMER_opt: shrink=35
     :END:
-
+*** Automatic subgraph partitioning in G-API
 ***                                                           :B_block:BMCOL:
     :PROPERTIES:
     :BEAMER_env: block
@@ -731,15 +731,17 @@ Pipelined execution for the video analytics application
     :END:
 #+LaTeX: {\tiny
 #+BEGIN_SRC C++
-cv::VideoCapture cap(input);
+pipeline = cv::GComputation(...);
 
+cv::VideoCapture cap(input);
 cv::Mat in_frame;
 std::vector<cv::Rect> out_faces;
 
 while (cap.read(in_frame)) {
     pipeline.apply(cv::gin(in_frame),
                    cv::gout(out_faces),
-                   cv::compile_args(kernels, networks));
+                   cv::compile_args(kernels,
+                                    networks));
     // Process results
     ...
 }
@@ -754,6 +756,8 @@ Serial mode
     :END:
 #+LaTeX: {\tiny
 #+BEGIN_SRC C++
+pipeline = cv::GComputation(...);
+
 auto in_src = cv::gapi::wip::make_src
     <cv::gapi::wip::GCaptureSource>(input)
 auto cc = pipeline.compileStreaming
@@ -768,6 +772,37 @@ while (cc.pull(cv::gout(out_faces))) {
 }
 #+END_SRC
 Streaming mode
+#+LaTeX: }
+
+* Latest features
+** Latest features
+*** Python API
+
+- Initial Python3 binding is available now in ~master~ (future v4.5);
+- Only basic CV functionality is supported (~core~ & ~imgproc~ namespaces,
+  selecting backends);
+- Adding more programmability, inference, and streaming is next.
+
+** Latest features
+*** Python API
+
+#+LaTeX: {\footnotesize
+#+BEGIN_SRC Python
+import numpy as np
+import cv2 as cv
+
+sz  = (1280, 720)
+in1 = np.random.randint(0, 100, sz).astype(np.uint8)
+in2 = np.random.randint(0, 100, sz).astype(np.uint8)
+
+g_in1 = cv.GMat()
+g_in2 = cv.GMat()
+g_out = cv.gapi.add(g_in1, g_in2)
+gr    = cv.GComputation(g_in1, g_in2, g_out)
+
+pkg   = cv.gapi.core.fluid.kernels()
+out   = gr.apply(in1, in2, args=cv.compile_args(pkg))
+#+END_SRC
 #+LaTeX: }
 
 * Understanding the "G-Effect"
