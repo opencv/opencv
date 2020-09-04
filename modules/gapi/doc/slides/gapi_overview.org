@@ -21,7 +21,7 @@
 
 - OpenCV meets C++, ~cv::Mat~ replaces ~IplImage*~;
 
-*** Version 3.0: -- Welcome Transparent API (T-API)
+*** Version 3.0 -- Welcome Transparent API (T-API)
 
 - ~cv::UMat~ is introduced as a /transparent/ addition to
   ~cv::Mat~;
@@ -32,7 +32,7 @@
 ** OpenCV evolution in one slide (cont'd)
 # FIXME: Learn proper page-breaking!
 
-*** Version 4.0: -- Welcome Graph API (G-API)
+*** Version 4.0 -- Welcome Graph API (G-API)
 
 - A new separate module (not a full library rewrite);
 - A framework (or even a /meta/-framework);
@@ -44,6 +44,24 @@
 - More than Halide:
   - Kernels can be written in unconstrained platform-native code;
   - Halide can serve as a backend (one of many).
+
+** OpenCV evolution in one slide (cont'd)
+# FIXME: Learn proper page-breaking!
+
+*** Version 4.2 -- New horizons
+
+- Introduced in-graph inference via OpenVINO™ Toolkit;
+- Introduced video-oriented Streaming execution mode;
+- Extended focus from individual image processing to the full
+  application pipeline optimization.
+
+*** Version 4.4 -- More on video
+
+- Introduced a notion of stateful kernels;
+  - The road to object tracking, background subtraction, etc. in the
+    graph;
+- Added more video-oriented operations (feature detection, Optical
+  flow).
 
 ** Why G-API?
 
@@ -306,6 +324,33 @@ G_API_OP(GSqrt,<GMat(GMat)>,"org.opencv.core.math.sqrt") {
 
 ** On operations and kernels (cont'd)
 
+*** ~GSqrt~ vs. ~cv::gapi::sqrt()~
+
+- How a *type* relates to a *functions* from the example?
+- These functions are just wrappers over ~::on~:
+  #+LaTeX: {\scriptsize
+  #+BEGIN_SRC C++
+  G_API_OP(GSqrt,<GMat(GMat)>,"org.opencv.core.math.sqrt") {
+      static GMatDesc outMeta(GMatDesc in) { return in; }
+  };
+  GMat gapi::sqrt(const GMat& src) { return GSqrt::on(src); }
+  #+END_SRC
+  #+LaTeX: }
+- Why -- Doxygen, default parameters, 1:n mapping:
+  #+LaTeX: {\scriptsize
+  #+BEGIN_SRC C++
+  cv::GMat custom::unsharpMask(const cv::GMat &src,
+                               const int       sigma,
+                               const float     strength) {
+      cv::GMat blurred   = cv::gapi::medianBlur(src, sigma);
+      cv::GMat laplacian = cv::gapi::Laplacian(blurred, CV_8U);
+      return (src - (laplacian * strength));
+  }
+  #+END_SRC
+  #+LaTeX: }
+
+** On operations and kernels (cont'd)
+
 *** Implementing an operation
 
 - Depends on the backend and its API;
@@ -548,7 +593,7 @@ subgraph cluster_3 {style=filled;color=azure2; C};
 *** But how does it run?
 
 - Since ~infer~ is an *Operation*, backends may provide *Kernels* implenting it;
-- The only publicly available inference backend now is *OpenVINO*:
+- The only publicly available inference backend now is *OpenVINO™*:
   - Brings its ~infer~ kernel atop of the Inference Engine;
 - NN model data is passed through G-API compile arguments (like kernels);
 - Every NN backend provides its own structure to configure the network (like
@@ -556,7 +601,7 @@ subgraph cluster_3 {style=filled;color=azure2; C};
 
 ** Inference with G-API
 
-*** Passing OpenVINO parameters to G-API
+*** Passing OpenVINO™ parameters to G-API
 
 - ~ObjDetect~ example:
   #+LaTeX: {\footnotesize
@@ -722,9 +767,8 @@ digraph {
 Pipelined execution for the video analytics application
 
 ** Streaming with G-API: Example
-*** G-API enables a streaming execution mode since v4.2
 
-*****                                                         :B_block:BMCOL:
+**** Serial mode (4.0)                                        :B_block:BMCOL:
     :PROPERTIES:
     :BEAMER_env: block
     :BEAMER_col: 0.45
@@ -746,10 +790,9 @@ while (cap.read(in_frame)) {
     ...
 }
 #+END_SRC
-Serial mode
 #+LaTeX: }
 
-*****                                                         :B_block:BMCOL:
+**** Streaming mode (since 4.2)                               :B_block:BMCOL:
     :PROPERTIES:
     :BEAMER_env: block
     :BEAMER_col: 0.45
@@ -771,14 +814,19 @@ while (cc.pull(cv::gout(out_faces))) {
     ...
 }
 #+END_SRC
-Streaming mode
+#+LaTeX: }
+
+**** More information
+
+#+LaTeX: {\footnotesize
+https://opencv.org/hybrid-cv-dl-pipelines-with-opencv-4-4-g-api/
 #+LaTeX: }
 
 * Latest features
 ** Latest features
 *** Python API
 
-- Initial Python3 binding is available now in ~master~ (future v4.5);
+- Initial Python3 binding is available now in ~master~ (future 4.5);
 - Only basic CV functionality is supported (~core~ & ~imgproc~ namespaces,
   selecting backends);
 - Adding more programmability, inference, and streaming is next.
@@ -889,20 +937,19 @@ Intel\textregistered{} Core\texttrademark-i5 6600 CPU.
 The higher resolution is, the higher relative speed-up is (with
 speed-up on QVGA taken as 1.0).
 
-** Understanding the "G-Effect"
-
-*** Streaming and the heterogeneous execution
-
-- https://opencv.org/hybrid-cv-dl-pipelines-with-opencv-4-4-g-api/
-
 * Resources on G-API
 
 ** Resources on G-API
-
+   :PROPERTIES:
+   :BEAMER_opt: shrink
+   :END:
 *** Repository
 
 - https://github.com/opencv/opencv (see ~modules/gapi~)
-- Integral part of OpenCV starting version 4.0;
+
+*** Article
+
+- https://opencv.org/hybrid-cv-dl-pipelines-with-opencv-4-4-g-api/
 
 *** Documentation
 
