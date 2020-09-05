@@ -75,7 +75,7 @@ public:
             if (pnorm != 2)
                 return false;
 
-            if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && preferableTarget == DNN_TARGET_MYRIAD)
+            if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && (preferableTarget == DNN_TARGET_MYRIAD || preferableTarget == DNN_TARGET_HDDL))
                 return !acrossSpatial;
 
             return startAxis == 1;

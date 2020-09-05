@@ -251,7 +251,7 @@ public:
 
 CV__DNN_INLINE_NS_BEGIN
 
-bool isMyriadX();
+bool isMyriadX(std::string device);
 
 CV__DNN_INLINE_NS_END
 

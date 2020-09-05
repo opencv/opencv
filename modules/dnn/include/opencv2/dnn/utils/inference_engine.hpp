@@ -49,6 +49,8 @@ CV_EXPORTS_W void resetMyriadDevice();
 #define CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_2 "Myriad2"
 /// Intel(R) Neural Compute Stick 2, NCS2 (USB 03e7:2485), MyriadX (https://software.intel.com/ru-ru/neural-compute-stick)
 #define CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X "MyriadX"
+/// Intel(R) Movidius(TM) Myriad(TM) X Vision Processing Unit, HDDL (USB 03e7:2485), MyriadX (https://www.intel.com/content/www/us/en/products/processors/movidius-vpu/movidius-myriad-x.html)
+#define CV_DNN_INFERENCE_ENGINE_VPU_TYPE_HDDL "HDDL"
 
 
 /** @brief Returns Inference Engine VPU type.

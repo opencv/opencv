@@ -367,6 +367,7 @@ void InfEngineBackendNet::init(Target targetId)
 #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R1)
             // Inference Engine determines network precision by ports.
             InferenceEngine::Precision p = (targetId == DNN_TARGET_MYRIAD ||
+                                            targetId == DNN_TARGET_HDDL ||
                                             targetId == DNN_TARGET_OPENCL_FP16) ?
                                            InferenceEngine::Precision::FP16 :
                                            InferenceEngine::Precision::FP32;
@@ -390,6 +391,9 @@ void InfEngineBackendNet::init(Target targetId)
             break;
         case DNN_TARGET_MYRIAD:
             device_name = "MYRIAD";
+            break;
+        case DNN_TARGET_HDDL:
+            device_name = "HDDL";
             break;
         case DNN_TARGET_FPGA:
             device_name = "FPGA";
@@ -652,20 +656,24 @@ InferenceEngine::Core& getCore(const std::string& id)
 #endif
 
 #if !defined(OPENCV_DNN_IE_VPU_TYPE_DEFAULT)
-static bool detectMyriadX_()
+static bool detectMyriadX_(std::string device)
 {
     AutoLock lock(getInitializationMutex());
 #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R3)
     // Lightweight detection
-    InferenceEngine::Core& ie = getCore("MYRIAD");
+    InferenceEngine::Core& ie = getCore(device);
     const std::vector<std::string> devices = ie.GetAvailableDevices();
     for (std::vector<std::string>::const_iterator i = devices.begin(); i != devices.end(); ++i)
     {
-        if (i->find("MYRIAD") != std::string::npos)
+        if (i->find(device) != std::string::npos)
         {
             const std::string name = ie.GetMetric(*i, METRIC_KEY(FULL_DEVICE_NAME)).as<std::string>();
             CV_LOG_INFO(NULL, "Myriad device: " << name);
-            return name.find("MyriadX") != std::string::npos  || name.find("Myriad X") != std::string::npos;
+
+            if (device == "MYRIAD")
+                return name.find("MyriadX") != std::string::npos  || name.find("Myriad X") != std::string::npos;
+            else if (device == "HDDL")
+                return name.find("HDDL") != std::string::npos;
         }
     }
     return false;
@@ -702,13 +710,13 @@ static bool detectMyriadX_()
     InferenceEngine::InferenceEnginePluginPtr enginePtr;
     {
         auto& sharedPlugins = getSharedPlugins();
-        auto pluginIt = sharedPlugins.find("MYRIAD");
+        auto pluginIt = sharedPlugins.find(device);
         if (pluginIt != sharedPlugins.end()) {
             enginePtr = pluginIt->second;
         } else {
             auto dispatcher = InferenceEngine::PluginDispatcher({""});
-            enginePtr = dispatcher.getPluginByDevice("MYRIAD");
-            sharedPlugins["MYRIAD"] = enginePtr;
+            enginePtr = dispatcher.getPluginByDevice(device);
+            sharedPlugins[device] = enginePtr;
         }
     }
     auto plugin = InferenceEngine::InferencePlugin(enginePtr);
@@ -719,9 +727,9 @@ static bool detectMyriadX_()
     try
     {
 #if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R3)
-        auto netExec = getCore("MYRIAD").LoadNetwork(cnn, "MYRIAD", {{"VPU_PLATFORM", "VPU_2480"}});
+        auto netExec = getCore(device).LoadNetwork(cnn, device, {{"VPU_PLATFORM", "VPU_2480"}});
 #else
-        auto netExec = getCore("MYRIAD").LoadNetwork(cnn, "MYRIAD", {{"VPU_MYRIAD_PLATFORM", "VPU_MYRIAD_2480"}});
+        auto netExec = getCore(device).LoadNetwork(cnn, device, {{"VPU_MYRIAD_PLATFORM", "VPU_MYRIAD_2480"}});
 #endif
 #endif
         auto infRequest = netExec.CreateInferRequest();
@@ -1140,14 +1148,15 @@ void resetMyriadDevice()
 {
 #ifdef HAVE_INF_ENGINE
     AutoLock lock(getInitializationMutex());
+    std::string device = detectMyriadX_("MYRIAD") ? "MYRIAD" : "HDDL";
 #if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
-    getSharedPlugins().erase("MYRIAD");
+    getSharedPlugins().erase(device);
 #else
-    // Unregister both "MYRIAD" and "HETERO:MYRIAD,CPU" plugins
-    InferenceEngine::Core& ie = getCore("MYRIAD");
+    // Unregister "HDDL", or "MYRIAD" and "HETERO:MYRIAD,CPU" plugins
+    InferenceEngine::Core& ie = getCore(device);
     try
     {
-        ie.UnregisterPlugin("MYRIAD");
+        ie.UnregisterPlugin(device);
         ie.UnregisterPlugin("HETERO");
     }
     catch (...) {}
@@ -1156,9 +1165,9 @@ void resetMyriadDevice()
 }
 
 #ifdef HAVE_INF_ENGINE
-bool isMyriadX()
+bool isMyriadX(std::string device)
 {
-     static bool myriadX = getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X;
+     static bool myriadX = getInferenceEngineVPUType() == (device == "MYRIAD" ? CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X : CV_DNN_INFERENCE_ENGINE_VPU_TYPE_HDDL);
      return myriadX;
 }
 
@@ -1170,12 +1179,17 @@ static std::string getInferenceEngineVPUType_()
 #if defined(OPENCV_DNN_IE_VPU_TYPE_DEFAULT)
         param_vpu_type = OPENCV_DNN_IE_VPU_TYPE_DEFAULT;
 #else
-        CV_LOG_INFO(NULL, "OpenCV-DNN: running Inference Engine VPU autodetection: Myriad2/X. In case of other accelerator types specify 'OPENCV_DNN_IE_VPU_TYPE' parameter");
+        CV_LOG_INFO(NULL, "OpenCV-DNN: running Inference Engine VPU autodetection: Myriad2/X or HDDL. In case of other accelerator types specify 'OPENCV_DNN_IE_VPU_TYPE' parameter");
         try {
-            bool isMyriadX_ = detectMyriadX_();
+            bool isMyriadX_ = detectMyriadX_("MYRIAD");
+            bool isHDDL_ = detectMyriadX_("HDDL");
             if (isMyriadX_)
             {
                 param_vpu_type = CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X;
+            }
+            else if (isHDDL_)
+            {
+                param_vpu_type = CV_DNN_INFERENCE_ENGINE_VPU_TYPE_HDDL;
             }
             else
             {

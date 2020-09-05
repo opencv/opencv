@@ -202,10 +202,10 @@ public:
                 return false;
             if (kernel_size.size() == 3)
                 return preferableTarget == DNN_TARGET_CPU;
-            if (preferableTarget == DNN_TARGET_MYRIAD) {
+            if (preferableTarget == DNN_TARGET_MYRIAD || preferableTarget == DNN_TARGET_HDDL) {
 #if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
                 if (type == MAX && (pad_l == 1 && pad_t == 1) && stride == Size(2, 2) ) {
-                    return !isMyriadX();
+                    return !isMyriadX(preferableTarget == DNN_TARGET_MYRIAD ? "MYRIAD" : "HDDL");
                 }
 #endif
                 return type == MAX || type == AVE;

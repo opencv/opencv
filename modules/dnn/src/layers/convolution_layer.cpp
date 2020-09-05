@@ -298,9 +298,9 @@ public:
         {
             if (kernel_size.size() == 3)
                 return preferableTarget == DNN_TARGET_CPU;
-            if ((backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || preferableTarget != DNN_TARGET_MYRIAD) && blobs.empty())
+            if ((backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || preferableTarget != DNN_TARGET_MYRIAD && preferableTarget != DNN_TARGET_HDDL) && blobs.empty())
                 return false;
-            return (preferableTarget != DNN_TARGET_MYRIAD || dilation.width == dilation.height);
+            return (preferableTarget != DNN_TARGET_MYRIAD && preferableTarget != DNN_TARGET_HDDL || dilation.width == dilation.height);
         }
         else
 #endif

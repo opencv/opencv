@@ -122,6 +122,8 @@ public:
         {
             if (std::string::npos != i->find("MYRIAD") && target == DNN_TARGET_MYRIAD)
                 return true;
+            if (std::string::npos != i->find("HDDL") && target == DNN_TARGET_HDDL)
+                return true;
             else if (std::string::npos != i->find("FPGA") && target == DNN_TARGET_FPGA)
                 return true;
             else if (std::string::npos != i->find("CPU") && target == DNN_TARGET_CPU)
@@ -184,6 +186,14 @@ private:
 #endif
 #ifdef HAVE_DNN_NGRAPH
             backends.push_back(std::make_pair(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, DNN_TARGET_MYRIAD));
+#endif
+        }
+        if (checkIETarget(DNN_TARGET_HDDL)) {
+#ifdef HAVE_DNN_IE_NN_BUILDER_2019
+            backends.push_back(std::make_pair(DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019, DNN_TARGET_HDDL));
+#endif
+#ifdef HAVE_DNN_NGRAPH
+            backends.push_back(std::make_pair(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, DNN_TARGET_HDDL));
 #endif
         }
 #ifdef HAVE_DNN_IE_NN_BUILDER_2019
@@ -1379,6 +1389,7 @@ struct Net::Impl : public detail::NetImplBase
                   preferableTarget == DNN_TARGET_OPENCL ||
                   preferableTarget == DNN_TARGET_OPENCL_FP16 ||
                   preferableTarget == DNN_TARGET_MYRIAD ||
+                  preferableTarget == DNN_TARGET_HDDL ||
                   preferableTarget == DNN_TARGET_FPGA
             );
         }
@@ -1811,7 +1822,7 @@ struct Net::Impl : public detail::NetImplBase
                                     INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R2) &&
                                     supportsCPUFallback;
                 // TODO: there is a bug in Myriad plugin with custom layers shape infer.
-                if (preferableTarget == DNN_TARGET_MYRIAD)
+                if (preferableTarget == DNN_TARGET_MYRIAD || preferableTarget == DNN_TARGET_HDDL)
                 {
                     for (int i = 0; customizable && i < ld.inputBlobs.size(); ++i)
                     {
@@ -1821,6 +1832,7 @@ struct Net::Impl : public detail::NetImplBase
 
                 // TODO: fix these workarounds
                 if (preferableTarget == DNN_TARGET_MYRIAD ||
+                    preferableTarget == DNN_TARGET_HDDL ||
                     preferableTarget == DNN_TARGET_OPENCL ||
                     preferableTarget == DNN_TARGET_OPENCL_FP16)
                     customizable &= ld.type != "Concat";
@@ -1908,6 +1920,7 @@ struct Net::Impl : public detail::NetImplBase
             // Convert weights in FP16 for specific targets.
             if ((preferableTarget == DNN_TARGET_OPENCL_FP16 ||
                  preferableTarget == DNN_TARGET_MYRIAD ||
+                 preferableTarget == DNN_TARGET_HDDL ||
                  preferableTarget == DNN_TARGET_FPGA) && !fused)
             {
 #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R1)
@@ -2102,7 +2115,7 @@ struct Net::Impl : public detail::NetImplBase
                 bool customizable = ld.id != 0 && supportsCPUFallback;
 
                 // TODO: there is a bug in Myriad plugin with custom layers shape infer.
-                if (preferableTarget == DNN_TARGET_MYRIAD)
+                if (preferableTarget == DNN_TARGET_MYRIAD || preferableTarget == DNN_TARGET_HDDL)
                 {
                     for (int i = 0; customizable && i < ld.inputBlobs.size(); ++i)
                     {
@@ -2112,6 +2125,7 @@ struct Net::Impl : public detail::NetImplBase
 
                 // TODO: fix these workarounds
                 if (preferableTarget == DNN_TARGET_MYRIAD ||
+                    preferableTarget == DNN_TARGET_HDDL ||
                     preferableTarget == DNN_TARGET_OPENCL ||
                     preferableTarget == DNN_TARGET_OPENCL_FP16)
                     customizable &= ld.type != "Concat";
@@ -4483,6 +4497,7 @@ string Net::Impl::dump()
             case DNN_TARGET_OPENCL: out << "OCL"; colorId = 1; break;
             case DNN_TARGET_OPENCL_FP16: out << "OCL_FP16"; colorId = 2; break;
             case DNN_TARGET_MYRIAD: out << "MYRIAD"; colorId = 3; break;
+            case DNN_TARGET_HDDL: out << "HDDL"; colorId = 8; break;
             case DNN_TARGET_VULKAN: out << "VULKAN"; colorId = 7; break;
             case DNN_TARGET_FPGA: out << "FPGA"; colorId = 4; break;
             case DNN_TARGET_CUDA: out << "CUDA"; colorId = 5; break;
