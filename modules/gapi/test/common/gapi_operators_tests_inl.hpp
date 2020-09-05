@@ -77,6 +77,81 @@ TEST_P(NotOperatorTest, OperatorAccuracyTest)
         EXPECT_EQ(0, cvtest::norm(out_mat_ocv, out_mat_gapi, NORM_INF));
     }
 }
+
+namespace for_test
+{
+class Foo {};
+
+inline int operator&(Foo, int) { return 1; }
+inline int operator|(Foo, int) { return 1; }
+inline int operator^(Foo, int) { return 1; }
+inline int operator~(Foo)      { return 1; }
+
+inline int operator+(Foo, int) { return 1; }
+inline int operator-(Foo, int) { return 1; }
+inline int operator*(Foo, int) { return 1; }
+inline int operator/(Foo, int) { return 1; }
+
+inline int operator> (Foo, int) { return 1; }
+inline int operator>=(Foo, int) { return 1; }
+inline int operator< (Foo, int) { return 1; }
+inline int operator<=(Foo, int) { return 1; }
+inline int operator==(Foo, int) { return 1; }
+inline int operator!=(Foo, int) { return 1; }
+
+TEST(CVNamespaceOperatorsTest, OperatorCompilationTest)
+{
+    cv::GScalar sc;
+    cv::GMat mat_in1, mat_in2;
+
+    cv::GMat op_not = ~ mat_in1;
+
+    cv::GMat op_mat_mat1  = mat_in1 &  mat_in2;
+    cv::GMat op_mat_mat2  = mat_in1 |  mat_in2;
+    cv::GMat op_mat_mat3  = mat_in1 ^  mat_in2;
+    cv::GMat op_mat_mat4  = mat_in1 +  mat_in2;
+    cv::GMat op_mat_mat5  = mat_in1 -  mat_in2;
+    cv::GMat op_mat_mat6  = mat_in1 /  mat_in2;
+    cv::GMat op_mat_mat7  = mat_in1 >  mat_in2;
+    cv::GMat op_mat_mat8  = mat_in1 >= mat_in2;
+    cv::GMat op_mat_mat9  = mat_in1 <  mat_in2;
+    cv::GMat op_mat_mat10 = mat_in1 <= mat_in2;
+    cv::GMat op_mat_mat11 = mat_in1 == mat_in2;
+    cv::GMat op_mat_mat12 = mat_in1 != mat_in2;
+
+    cv::GMat op_mat_sc1  = mat_in1 &  sc;
+    cv::GMat op_mat_sc2  = mat_in1 |  sc;
+    cv::GMat op_mat_sc3  = mat_in1 ^  sc;
+    cv::GMat op_mat_sc4  = mat_in1 +  sc;
+    cv::GMat op_mat_sc5  = mat_in1 -  sc;
+    cv::GMat op_mat_sc6  = mat_in1 *  sc;
+    cv::GMat op_mat_sc7  = mat_in1 /  sc;
+    cv::GMat op_mat_sc8  = mat_in1 >  sc;
+    cv::GMat op_mat_sc9  = mat_in1 >= sc;
+    cv::GMat op_mat_sc10 = mat_in1 <  sc;
+    cv::GMat op_mat_sc11 = mat_in1 <= sc;
+    cv::GMat op_mat_sc12 = mat_in1 == sc;
+    cv::GMat op_mat_sc13 = mat_in1 != sc;
+
+    cv::GMat op_sc_mat1  = sc &  mat_in2;
+    cv::GMat op_sc_mat2  = sc |  mat_in2;
+    cv::GMat op_sc_mat3  = sc ^  mat_in2;
+    cv::GMat op_sc_mat4  = sc +  mat_in2;
+    cv::GMat op_sc_mat5  = sc -  mat_in2;
+    cv::GMat op_sc_mat6  = sc *  mat_in2;
+    cv::GMat op_sc_mat7  = sc /  mat_in2;
+    cv::GMat op_sc_mat8  = sc >  mat_in2;
+    cv::GMat op_sc_mat9  = sc >= mat_in2;
+    cv::GMat op_sc_mat10 = sc <  mat_in2;
+    cv::GMat op_sc_mat11 = sc <= mat_in2;
+    cv::GMat op_sc_mat12 = sc == mat_in2;
+    cv::GMat op_sc_mat13 = sc != mat_in2;
+
+    cv::GMat mul_mat_float1 = mat_in1 * 1.0f;
+    cv::GMat mul_mat_float2 = 1.0f * mat_in2;
+    // No compilation errors expected
+}
+} // for_test
 } // opencv_test
 
 #endif // OPENCV_GAPI_OPERATOR_TESTS_INL_COMMON_HPP
