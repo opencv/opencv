@@ -10,8 +10,9 @@
 <body>
 <h2>Object Detection Example with Camera </h2>
 <p>
-    This tutorial show you how to write an object detection example with camera.<br>
-    To try the example you should click the <b>modelInput</b> button(and <b>configInput</b> button if needed) to upload inference model.
+    This tutorial shows you how to write an object detection example with camera.<br>
+    To try the example you should click the <b>modelFile</b> button(and <b>configInput</b> button if needed) to upload inference model.
+    You can find the model URLs and parameters in the <a href="#appendix">model info</a> section.
     Then You should change the parameters in the first code snippet according to the uploaded model.
     Finally click <b>Start/Stop</b> button to start or stop the camera capture.<br>
 </p>
@@ -40,14 +41,14 @@
         <tr>
             <td>
                 <div class="caption">
-                    modelInput <input type="file" id="modelInput" name="file">
+                    modelFile <input type="file" id="modelFile" name="file">
                 </div>
             </td>
         </tr>
         <tr>
             <td>
                 <div class="caption">
-                    configInput <input type="file" id="configInput">
+                    configFile <input type="file" id="configFile">
                 </div>
             </td>
         </tr>
@@ -331,20 +332,21 @@ postProcess = function(result, labels, frame) {
     });
 
     let configPath = "";
-    let configInput = document.getElementById('configInput');
-    configInput.addEventListener('change', async (e) => {
+    let configFile = document.getElementById('configFile');
+    configFile.addEventListener('change', async (e) => {
         initStatus();
         configPath = await loadModel(e);
-        document.getElementById('status').innerHTML = `${configPath} successfully loaded.`;
+        document.getElementById('status').innerHTML = `The config file '${configPath}' is created successfully.`;
     });
 
     let modelPath = "";
-    let modelInput = document.getElementById('modelInput');
-    modelInput.addEventListener('change', async (e) => {
+    let modelFile = document.getElementById('modelFile');
+    modelFile.addEventListener('change', async (e) => {
         initStatus();
         modelPath = await loadModel(e);
-        document.getElementById('status').innerHTML = `${modelPath} successfully loaded.`;
+        document.getElementById('status').innerHTML = `The model file '${modelPath}' is created successfully.`;
         configPath = "";
+        configFile.value = "";
     });
 
     utils.loadOpenCv(() => {
@@ -390,6 +392,7 @@ postProcess = function(result, labels, frame) {
     function initStatus() {
         document.getElementById('status').innerHTML = '';
         document.getElementById('canvasOutput').style.visibility = "hidden";
+        utils.clearError();
     }
 
 </script>

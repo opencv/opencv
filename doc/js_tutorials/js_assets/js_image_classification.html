@@ -10,8 +10,9 @@
 <body>
 <h2>Image Classification Example</h2>
 <p>
-    This tutorial show you how to write an image classification example with OpenCV.js.<br>
-    To try the example you should click the <b>modelInput</b> button(and <b>configInput</b> button if needed) to upload inference model.
+    This tutorial shows you how to write an image classification example with OpenCV.js.<br>
+    To try the example you should click the <b>modelFile</b> button(and <b>configFile</b> button if needed) to upload inference model.
+    You can find the model URLs and parameters in the <a href="#appendix">model info</a> section.
     Then You should change the parameters in the first code snippet according to the uploaded model.
     Finally click <b>Try it</b> button to see the result. You can choose any other images.<br>
 </p>
@@ -56,7 +57,7 @@
         <tr>
             <td>
                 <div class="caption">
-                    imageInput <input type="file" id="imageInput" name="file" accept="image/*">
+                    canvasInput <input type="file" id="fileInput" name="file" accept="image/*">
                 </div>
             </td>
             <td></td>
@@ -64,14 +65,14 @@
         <tr>
             <td>
                 <div class="caption">
-                    modelInput <input type="file" id="modelInput" name="file">
+                    modelFile <input type="file" id="modelFile">
                 </div>
             </td>
         </tr>
         <tr>
             <td>
                 <div class="caption">
-                    configInput <input type="file" id="configInput">
+                    configFile <input type="file" id="configFile">
                 </div>
             </td>
         </tr>
@@ -205,30 +206,36 @@ getTopClasses = function(probs, labels, topK = 3) {
         document.getElementById('status').innerHTML = 'Running function main()...';
         utils.executeCode('codeEditor');
         utils.executeCode('codeEditor1');
-        setTimeout(main, 1);
+        if(modelPath === ""){
+            document.getElementById('status').innerHTML = 'Runing failed.';
+            utils.printError('Please upload model file by clicking the button first.');
+        } else {
+            setTimeout(main, 1);
+        }
     });
 
-    let imageInput = document.getElementById('imageInput');
-    imageInput.addEventListener('change', (e) => {
+    let fileInput = document.getElementById('fileInput');
+    fileInput.addEventListener('change', (e) => {
         initStatus();
-        loadImageToCanvas(e);
+        loadImageToCanvas(e, 'canvasInput');
     });
 
     let configPath = "";
-    let configInput = document.getElementById('configInput');
-    configInput.addEventListener('change', async (e) => {
+    let configFile = document.getElementById('configFile');
+    configFile.addEventListener('change', async (e) => {
         initStatus();
         configPath = await loadModel(e);
-        document.getElementById('status').innerHTML = `${configPath} successfully loaded.`;
+        document.getElementById('status').innerHTML = `The config file '${configPath}' is created successfully.`;
     });
 
     let modelPath = "";
-    let modelInput = document.getElementById('modelInput');
-    modelInput.addEventListener('change', async (e) => {
+    let modelFile = document.getElementById('modelFile');
+    modelFile.addEventListener('change', async (e) => {
         initStatus();
         modelPath = await loadModel(e);
-        document.getElementById('status').innerHTML = `${modelPath} successfully loaded.`;
+        document.getElementById('status').innerHTML = `The model file '${modelPath}' is created successfully.`;
         configPath = "";
+        configFile.value = "";
     });
 
     utils.loadOpenCv(() => {
@@ -265,6 +272,7 @@ getTopClasses = function(probs, labels, topK = 3) {
     function initStatus() {
         document.getElementById('status').innerHTML = '';
         document.getElementById('result').style.visibility = 'hidden';
+        utils.clearError();
     }
 
 </script>

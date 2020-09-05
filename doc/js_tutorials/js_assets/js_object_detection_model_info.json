@@ -8,8 +8,8 @@
             "swapRB": "true",
             "outType": "SSD",
             "labelsUrl": "https://raw.githubusercontent.com/opencv/opencv/master/samples/data/dnn/object_detection_classes_pascal_voc.txt",
-            "modelUrl": "https://drive.google.com/u/1/uc?id=0B3gersZ2cHIxVFI1Rjd5aDgwOG8&export=download",
-            "configUrl": "https://drive.google.com/u/1/uc?id=0B3gersZ2cHIxRm5PMWRoTkdHdHc&export=download"
+            "modelUrl": "https://raw.githubusercontent.com/chuanqi305/MobileNet-SSD/master/mobilenet_iter_73000.caffemodel",
+            "configUrl": "https://raw.githubusercontent.com/chuanqi305/MobileNet-SSD/master/deploy.prototxt"
         },
         {
             "model": "VGG_SSD",
