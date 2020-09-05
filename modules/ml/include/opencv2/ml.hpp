@@ -1294,6 +1294,15 @@ public:
     */
     CV_WRAP virtual void getVotes(InputArray samples, OutputArray results, int flags) const = 0;
 
+    /** Returns the OOB error value, computed at the training stage when calcOOBError is set to true.
+     * If this flag was set to false, 0 is returned. The OOB error is also scaled by sample weighting.
+     */
+#if CV_VERSION_MAJOR == 4
+    CV_WRAP virtual double getOOBError() const { return 0; }
+#else
+    /*CV_WRAP*/ virtual double getOOBError() const = 0;
+#endif
+
     /** Creates the empty model.
     Use StatModel::train to train the model, StatModel::train to create and train the model,
     Algorithm::load to load the pre-trained model.

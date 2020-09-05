@@ -335,6 +335,10 @@ void ONNXImporter::populateNet(Net dstNet)
         {
             inpShape[j] = tensorShape.dim(j).dim_value();
         }
+        if (!inpShape.empty())
+        {
+            inpShape[0] = std::max(inpShape[0], 1); // It's OK to have undetermined batch size
+        }
         outShapes[valueInfoProto.name()] = inpShape;
     }
 
