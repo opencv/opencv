@@ -54,8 +54,10 @@ The references are:
 namespace cv
 {
 
+typedef enum { DROP_NONE=0, DROP_FIRST=1, DROP_LAST=2 } fastSliceBoundaryType_t;
+
 template<int patternSize>
-void FAST_t(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool nonmax_suppression)
+void FAST_t(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool nonmax_suppression, int drop_type = DROP_NONE)
 {
     Mat img = _img.getMat();
     const int K = patternSize/2, N = patternSize + K + 1;
@@ -268,8 +270,13 @@ void FAST_t(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bo
 
         cornerpos[-1] = ncorners;
 
-        if( i == 3 )
+        if( i == 3 ) {
             continue;
+        } else if (drop_type != DROP_NONE) {
+            if (((i == 4) && (drop_type & DROP_FIRST)) ||
+                ((i == img.rows - 3) && (drop_type & DROP_LAST)) )
+                continue;
+        }
 
         const uchar* prev = buf[(i - 4 + 3)%3];
         const uchar* pprev = buf[(i - 5 + 3)%3];
@@ -493,6 +500,85 @@ static inline int hal_FAST(cv::Mat& src, std::vector<KeyPoint>& keypoints, int t
     return CV_HAL_ERROR_OK;
 }
 
+
+class FastInvoker : public ParallelLoopBody
+{
+public:
+    FastInvoker( Mat &img, int _nstripes, std::vector<std::vector<KeyPoint>>  *_keypoints, int _threshold, bool _nonmax_suppression,
+        FastFeatureDetector::DetectorType _type=FastFeatureDetector::TYPE_9_16)
+     : dropType(_nstripes), offset(_nstripes), nonmax_suppression(_nonmax_suppression), type(_type)
+    {
+        int w = img.cols;
+        int h = img.rows;
+        keypoints = _keypoints;
+        nstripes = _nstripes;
+        int stripe_sz = h / nstripes;
+        threshold = _threshold;
+        int padding;
+        switch(type) {
+            case FastFeatureDetector::TYPE_5_8:
+                padding = 1;
+                break;
+            case FastFeatureDetector::TYPE_7_12:
+                padding = 2;
+                break;
+            case FastFeatureDetector::TYPE_9_16:
+                padding = 3;
+                break;
+        }
+
+
+        int start_row = 0;
+        Mat m = Mat(img, Rect(0, 0, w, stripe_sz + padding + 1));
+        rois.push_back(m);
+        dropType[0] |= DROP_LAST;
+        offset[0] = 0;
+        for (int i = 1; i < nstripes - 1; i++) {
+            start_row += stripe_sz;
+            m = Mat(img, Rect(0, start_row - padding - 1, w, stripe_sz + (2 * (padding + 1))));
+            rois.push_back(m);
+            dropType[i] |= (DROP_FIRST | DROP_LAST);
+            offset[i] = start_row - padding - 1;
+        }
+        start_row += stripe_sz;
+        offset[nstripes - 1] = start_row - padding - 1;
+        m = Mat(img, Rect(0, start_row - padding - 1, w, h - start_row + (padding + 1)));
+        rois.push_back(m);
+        dropType[nstripes - 1] |= DROP_FIRST;
+    }
+
+    void operator()(const Range& range) const CV_OVERRIDE
+    {
+        CV_INSTRUMENT_REGION();
+        switch(type) {
+            case FastFeatureDetector::TYPE_5_8:
+                FAST_t<8>( rois[range.start], (*keypoints)[range.start], threshold, nonmax_suppression, dropType[range.start]);
+                break;
+            case FastFeatureDetector::TYPE_7_12:
+                FAST_t<12>( rois[range.start], (*keypoints)[range.start], threshold, nonmax_suppression, dropType[range.start]);
+                break;
+            case FastFeatureDetector::TYPE_9_16:
+                FAST_t<16>( rois[range.start], (*keypoints)[range.start], threshold, nonmax_suppression, dropType[range.start]);
+                break;
+        }
+        size_t off = offset[range.start];
+        for (int j = 0; j < (*keypoints)[range.start].size(); j++) {
+            (*keypoints)[range.start][j].pt.y += off;
+        }
+    }
+
+    int nstripes;
+    //std::vector<KeyPoint> *keypoints;
+    std::vector<std::vector<KeyPoint>> *keypoints;
+    std::vector<Mat> rois;
+    int threshold;
+    std::vector<size_t> offset;
+    std::vector<int> dropType;
+    FastFeatureDetector::DetectorType type;
+    bool nonmax_suppression;
+};
+
+
 void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool nonmax_suppression, FastFeatureDetector::DetectorType type)
 {
     CV_INSTRUMENT_REGION();
@@ -518,7 +604,20 @@ void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool
         FAST_t<12>(_img, keypoints, threshold, nonmax_suppression);
         break;
     case FastFeatureDetector::TYPE_9_16:
-        FAST_t<16>(_img, keypoints, threshold, nonmax_suppression);
+        int rows = _img.rows();
+        if ( rows > 640 ) {
+            int threads = cv::getNumThreads();
+            int stripes = std::min((threads * 3), (rows / 32));
+            std::vector<std::vector<KeyPoint>> vkeys(stripes);
+            FastInvoker invoker(img, stripes, &vkeys, threshold, true, FastFeatureDetector::TYPE_9_16);
+            parallel_for_(Range(0, stripes), invoker);
+            // wonder if we really need to merge vector?? is there a better way?
+            for (int i = 0; i < stripes; i++) {
+                keypoints.insert( keypoints.end(), vkeys[i].begin(), vkeys[i].end() );
+            }
+        } else {
+            FAST_t<16>(_img, keypoints, threshold, true);
+        }
         break;
     }
 }
