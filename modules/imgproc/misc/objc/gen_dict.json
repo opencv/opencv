@@ -1,4 +1,8 @@
 {
+    "enum_ignore_list" : [
+        "MorphShapes_c",
+        "SmoothMethod_c"
+    ],
     "module_imports": ["Size2i"],
     "const_ignore_list": [
         "CV_TM_.+",

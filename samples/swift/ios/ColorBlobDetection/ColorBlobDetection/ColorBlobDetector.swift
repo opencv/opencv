@@ -15,7 +15,7 @@ public class ColorBlobDetector {
     // Color radius for range checking in HSV color space
     var colorRadius = Scalar(25.0, 50.0, 50.0, 0.0)
     let spectrum = Mat()
-    let contours = NSMutableArray()
+    var contours = [[Point]]()
 
     // Cache
     let pyrDownMat = Mat()
@@ -50,25 +50,25 @@ public class ColorBlobDetector {
         Core.inRange(src: hsvMat, lowerb: lowerBound, upperb: upperBound, dst: mask)
         Imgproc.dilate(src: mask, dst: dilatedMask, kernel: Mat())
 
-        let contoursTmp = NSMutableArray()
+        var contoursTmp = [[Point]]()
 
-        Imgproc.findContours(image: dilatedMask, contours: contoursTmp, hierarchy: hierarchy, mode: .RETR_EXTERNAL, method: .CHAIN_APPROX_SIMPLE)
+        Imgproc.findContours(image: dilatedMask, contours: &contoursTmp, hierarchy: hierarchy, mode: .RETR_EXTERNAL, method: .CHAIN_APPROX_SIMPLE)
 
         // Find max contour area
         var maxArea = 0.0
         for contour in contoursTmp {
-            let contourMat = MatOfPoint(array: (contour as! NSMutableArray) as! [Point])
+            let contourMat = MatOfPoint(array: contour)
             let area = Imgproc.contourArea(contour: contourMat)
             maxArea = max(area, maxArea)
         }
 
         // Filter contours by area and resize to fit the original image size
-        contours.removeAllObjects()
+        contours.removeAll()
         for contour in contoursTmp {
-            let contourMat = MatOfPoint(array: (contour as! NSMutableArray) as! [Point])
+            let contourMat = MatOfPoint(array: contour)
             if (Imgproc.contourArea(contour: contourMat) > ColorBlobDetector.minContourArea * maxArea) {
                 Core.multiply(src1: contourMat, srcScalar: Scalar(4.0,4.0), dst: contourMat)
-                contours.add(NSMutableArray(array: contourMat.toArray()))
+                contours.append(contourMat.toArray())
             }
         }
     }
