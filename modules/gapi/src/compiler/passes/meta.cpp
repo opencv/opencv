@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2020 Intel Corporation
 
 
 #include "precomp.hpp"
@@ -94,18 +94,21 @@ void cv::gimpl::passes::inferMeta(ade::passes::PassContext &ctx, bool meta_is_in
                 GAPI_Assert(gr.metadata(output_nh).get<NodeType>().t == NodeType::DATA);
 
                 auto       &output_meta = gr.metadata(output_nh).get<Data>().meta;
-                if (!meta_is_initialized && !util::holds_alternative<util::monostate>(output_meta))
-                {
-                    GAPI_LOG_INFO(NULL,
-                                  "!!! Output object has an initialized meta - "
-                                  "how it is possible today?" << std::endl; );
-                    if (output_meta != out_metas.at(output_port))
-                    {
-                      util::throw_error(std::logic_error("Fatal: meta mismatch"));
-                        // FIXME: New exception type?
-                        // FIXME: More details!
-                    }
-                }
+
+                cv::util::suppress_unused_warning(meta_is_initialized);
+                // FIXME: calling compile() with meta the second time when cannot reshape will lead to error below
+                //if (!meta_is_initialized && !util::holds_alternative<util::monostate>(output_meta))
+                //{
+                //    GAPI_LOG_INFO(NULL,
+                //                  "!!! Output object has an initialized meta - "
+                //                  "how it is possible today?" << std::endl; );
+                //    if (output_meta != out_metas.at(output_port))
+                //    {
+                //      util::throw_error(std::logic_error("Fatal: meta mismatch"));
+                //        // FIXME: New exception type?
+                //        // FIXME: More details!
+                //    }
+                //}
                 // Store meta in graph
                 output_meta = out_metas.at(output_port);
             }

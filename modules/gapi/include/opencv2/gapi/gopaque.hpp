@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2019 Intel Corporation
+// Copyright (C) 2019-2020 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_GOPAQUE_HPP
@@ -46,7 +46,6 @@ std::ostream& operator<<(std::ostream& os, const cv::GOpaqueDesc &desc);
 
 namespace detail
 {
-
     // ConstructOpaque is a callback which stores information about T and is used by
     // G-API runtime to construct an object in host memory (T remains opaque for G-API).
     // ConstructOpaque is carried into G-API internals by GOpaqueU.
@@ -81,6 +80,11 @@ namespace detail
         template <typename T>
         void specifyType();                       // Store type of initial GOpaque<T>
 
+        template <typename T>
+        void storeKind();
+
+        void setKind(cv::detail::OpaqueKind);
+
         std::shared_ptr<GOrigin> m_priv;
         std::shared_ptr<TypeHintBase> m_hint;
     };
@@ -95,6 +99,12 @@ namespace detail
     template <typename T>
     void GOpaqueU::specifyType(){
         m_hint.reset(new TypeHint<util::decay_t<T>>);
+    };
+
+    template <typename T>
+    void GOpaqueU::storeKind(){
+        // FIXME: Add assert here on cv::Mat and cv::Scalar?
+        setKind(cv::detail::GOpaqueTraits<T>::kind);
     };
 
     // This class represents a typed object reference.
@@ -213,6 +223,7 @@ namespace detail
     class OpaqueRef
     {
         std::shared_ptr<BasicOpaqueRef> m_ref;
+        cv::detail::OpaqueKind m_kind;
 
         template<typename T> inline void check() const
         {
@@ -222,13 +233,19 @@ namespace detail
     public:
         OpaqueRef() = default;
 
-
         template<
             typename T,
             typename = util::are_different_t<OpaqueRef, T>
         >
+        // FIXME: probably won't work with const object
         explicit OpaqueRef(T&& obj) :
-            m_ref(new OpaqueRefT<util::decay_t<T>>(std::forward<T>(obj))) {}
+            m_ref(new OpaqueRefT<util::decay_t<T>>(std::forward<T>(obj))),
+            m_kind(GOpaqueTraits<T>::kind) {}
+
+        cv::detail::OpaqueKind getKind() const
+        {
+            return m_kind;
+        }
 
         template<typename T> void reset()
         {
@@ -236,6 +253,12 @@ namespace detail
 
             check<T>();
             static_cast<OpaqueRefT<T>&>(*m_ref).reset();
+        }
+
+        template <typename T>
+        void storeKind()
+        {
+            m_kind = cv::detail::GOpaqueTraits<T>::kind;
         }
 
         template<typename T> T& wref()
@@ -285,10 +308,12 @@ private:
 
     static void CTor(detail::OpaqueRef& ref) {
         ref.reset<HT>();
+        ref.storeKind<HT>();
     }
     void putDetails() {
         m_ref.setConstructFcn(&CTor);
-        m_ref.specifyType<HT>();
+        m_ref.specifyType<HT>(); // FIXME: to unify those 2 to avoid excessive dynamic_cast
+        m_ref.storeKind<HT>();   //
     }
 
     detail::GOpaqueU m_ref;

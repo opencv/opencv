@@ -10,6 +10,7 @@
 #include <ade/util/zip_range.hpp>   // util::indexed
 
 #include <opencv2/gapi/gkernel.hpp>
+#include <opencv2/gapi/gcommon.hpp>
 #include "compiler/gmodelbuilder.hpp"
 #include "compiler/gmodel.hpp" // RcDesc, GModel::init
 
@@ -27,8 +28,8 @@ namespace
         return cv::GCall(cv::GKernel{ "gapi.test.unaryop"
                                     , ""
                                     , nullptr
-                                    , { D::ArgSpec::OPAQUE_SPEC }
-                                    , { GShape::GMAT } }).pass(m).yield(0);
+                                    , { GShape::GMAT }
+                                    , { D::OpaqueKind::CV_UNKNOWN } }).pass(m).yield(0);
     }
 
     cv::GMat binaryOp(cv::GMat m1, cv::GMat m2)
@@ -36,8 +37,8 @@ namespace
         return cv::GCall(cv::GKernel{ "gapi.test.binaryOp"
                                     , ""
                                     , nullptr
-                                    , { D::ArgSpec::OPAQUE_SPEC, D::ArgSpec::OPAQUE_SPEC }
-                                    , { GShape::GMAT } }).pass(m1, m2).yield(0);
+                                    , { GShape::GMAT }
+                                    , { D::OpaqueKind::CV_UNKNOWN, D::OpaqueKind::CV_UNKNOWN } }).pass(m1, m2).yield(0);
     }
 
     std::vector<ade::NodeHandle> collectOperations(const cv::gimpl::GModel::Graph& gr)

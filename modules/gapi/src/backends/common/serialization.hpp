@@ -121,7 +121,6 @@ GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::GArg &arg);
 //I::OStream& operator<< (I::OStream& os, const cv::GRunArg &arg);
 //I::IStream& operator>> (I::IStream& is, cv::GRunArg &arg);
 
-
 GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::GKernel &k);
 GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::GKernel &k);
 
@@ -165,6 +164,14 @@ GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::gimpl::Data &op);
 // and writes the data to the stream (recursively)
 GAPI_EXPORTS void serialize( I::OStream& os
                            , const ade::Graph &g
+                           , const std::vector<ade::NodeHandle> &nodes);
+
+// The top-level serialization routine.
+// Note it is just a single function which takes a GModel and a list of nodes
+// and writes the data to the stream (recursively)
+GAPI_EXPORTS void serialize( I::OStream& os
+                           , const ade::Graph &g
+                           , const cv::gimpl::Protocol &p
                            , const std::vector<ade::NodeHandle> &nodes);
 
 // The top-level deserialization routineS.
