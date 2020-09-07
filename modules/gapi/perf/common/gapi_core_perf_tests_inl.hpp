@@ -1930,5 +1930,183 @@ PERF_TEST_P_(ResizeFxFyPerfTest, TestPerformance)
 
 //------------------------------------------------------------------------------
 
+PERF_TEST_P_(ParseSSDWLPerfTest, TestPerformance)
+{
+    cv::Size sz                   = get<0>(GetParam());
+    float confidence_threshold    = get<1>(GetParam());
+    int filter_label              = get<2>(GetParam());
+    cv::GCompileArgs compile_args = get<3>(GetParam());
+    cv::Mat in_mat = generateSSDoutput(sz);
+    std::vector<cv::Rect> boxes_gapi, boxes_ref;
+    std::vector<int> labels_gapi, labels_ref;
+
+    // Reference code //////////////////////////////////////////////////////////
+    parseSSDWLref(in_mat, sz, confidence_threshold, filter_label, boxes_ref, labels_ref);
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    cv::GOpaque<cv::Size> op_sz;
+    auto out = cv::gapi::parseSSD(in, op_sz, confidence_threshold, filter_label);
+    cv::GComputation c(cv::GIn(in, op_sz), cv::GOut(std::get<0>(out), std::get<1>(out)));
+
+    // Warm-up graph engine:
+    auto cc = c.compile(descr_of(in_mat), descr_of(sz), std::move(compile_args));
+    cc(cv::gin(in_mat, sz), cv::gout(boxes_gapi, labels_gapi));
+
+    TEST_CYCLE()
+    {
+        cc(cv::gin(in_mat, sz), cv::gout(boxes_gapi, labels_gapi));
+    }
+
+    // Comparison ////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(boxes_gapi == boxes_ref);
+        EXPECT_TRUE(labels_gapi == labels_ref);
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
+//------------------------------------------------------------------------------
+
+PERF_TEST_P_(ParseSSDPerfTest, TestPerformance)
+{
+    cv::Size sz                   = get<0>(GetParam());
+    float confidence_threshold    = get<1>(GetParam());
+    bool filter_out_of_bounds     = get<2>(GetParam());
+    cv::GCompileArgs compile_args = get<3>(GetParam());
+    cv::Mat in_mat = generateSSDoutput(sz);
+    std::vector<cv::Rect> boxes_gapi, boxes_ref;
+
+    // Reference code //////////////////////////////////////////////////////////
+    parseSSDref(in_mat, sz, confidence_threshold, filter_out_of_bounds, boxes_ref);
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    cv::GOpaque<cv::Size> op_sz;
+    auto out = cv::gapi::parseSSD(in, op_sz, confidence_threshold, filter_out_of_bounds);
+    cv::GComputation c(cv::GIn(in, op_sz), cv::GOut(out));
+
+    // Warm-up graph engine:
+    auto cc = c.compile(descr_of(in_mat), descr_of(sz), std::move(compile_args));
+    cc(cv::gin(in_mat, sz), cv::gout(boxes_gapi));
+
+    TEST_CYCLE()
+    {
+        cc(cv::gin(in_mat, sz), cv::gout(boxes_gapi));
+    }
+
+    // Comparison ////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(boxes_gapi == boxes_ref);
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
+//------------------------------------------------------------------------------
+
+PERF_TEST_P_(ParseYoloPerfTest, TestPerformance)
+{
+    cv::Size sz                   = get<0>(GetParam());
+    float confidence_threshold    = get<1>(GetParam());
+    float nms_threshold           = get<2>(GetParam());
+    int num_classes               = get<3>(GetParam());
+    cv::GCompileArgs compile_args = get<4>(GetParam());
+    cv::Mat in_mat = generateYoloOutput(num_classes);
+    auto anchors = cv::gapi::core::GParseYolo::defaultAnchors();
+    std::vector<cv::Rect> boxes_gapi, boxes_ref;
+    std::vector<int> labels_gapi, labels_ref;
+
+    // Reference code //////////////////////////////////////////////////////////
+    parseYoloRef(in_mat, sz, confidence_threshold, nms_threshold, num_classes, anchors, boxes_ref, labels_ref);
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    cv::GOpaque<cv::Size> op_sz;
+    auto out = cv::gapi::parseYolo(in, op_sz, confidence_threshold, nms_threshold, anchors);
+    cv::GComputation c(cv::GIn(in, op_sz), cv::GOut(std::get<0>(out), std::get<1>(out)));
+
+    // Warm-up graph engine:
+    auto cc = c.compile(descr_of(in_mat), descr_of(sz), std::move(compile_args));
+    cc(cv::gin(in_mat, sz), cv::gout(boxes_gapi, labels_gapi));
+
+    TEST_CYCLE()
+    {
+        cc(cv::gin(in_mat, sz), cv::gout(boxes_gapi, labels_gapi));
+    }
+
+    // Comparison ////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(boxes_gapi == boxes_ref);
+        EXPECT_TRUE(labels_gapi == labels_ref);
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
+//------------------------------------------------------------------------------
+
+PERF_TEST_P_(SizePerfTest, TestPerformance)
+{
+    MatType type                  = get<0>(GetParam());
+    cv::Size sz                   = get<1>(GetParam());
+    cv::GCompileArgs compile_args = get<2>(GetParam());
+    in_mat1 = cv::Mat(sz, type);
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    auto out = cv::gapi::size(in);
+    cv::GComputation c(cv::GIn(in), cv::GOut(out));
+    cv::Size out_sz;
+
+    // Warm-up graph engine:
+    auto cc = c.compile(descr_of(in_mat1), std::move(compile_args));
+    cc(cv::gin(in_mat1), cv::gout(out_sz));
+
+    TEST_CYCLE()
+    {
+        cc(cv::gin(in_mat1), cv::gout(out_sz));
+    }
+
+    // Comparison ////////////////////////////////////////////////////////////
+    {
+        EXPECT_EQ(out_sz, sz);
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
+//------------------------------------------------------------------------------
+
+PERF_TEST_P_(SizeRPerfTest, TestPerformance)
+{
+    cv::Size sz                   = get<0>(GetParam());
+    cv::GCompileArgs compile_args = get<1>(GetParam());
+    cv::Rect rect(cv::Point(0,0), sz);
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GOpaque<cv::Rect> op_rect;
+    auto out = cv::gapi::size(op_rect);
+    cv::GComputation c(cv::GIn(op_rect), cv::GOut(out));
+    cv::Size out_sz;
+
+    // Warm-up graph engine:
+    auto cc = c.compile(descr_of(rect), std::move(compile_args));
+    cc(cv::gin(rect), cv::gout(out_sz));
+
+    TEST_CYCLE()
+    {
+        cc(cv::gin(rect), cv::gout(out_sz));
+    }
+
+    // Comparison ////////////////////////////////////////////////////////////
+    {
+        EXPECT_EQ(out_sz, sz);
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
 }
 #endif // OPENCV_GAPI_CORE_PERF_TESTS_INL_HPP

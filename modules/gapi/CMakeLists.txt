@@ -105,6 +105,7 @@ set(gapi_srcs
     src/backends/cpu/gcpuimgproc.cpp
     src/backends/cpu/gcpuvideo.cpp
     src/backends/cpu/gcpucore.cpp
+    src/backends/cpu/gparsers.cpp
 
     # Fluid Backend (also built-in, FIXME:move away)
     src/backends/fluid/gfluidbuffer.cpp

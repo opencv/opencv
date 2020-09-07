@@ -6,6 +6,7 @@
 
 
 #include "precomp.hpp"
+#include "gparsers.hpp"
 
 #include <opencv2/gapi/core.hpp>
 #include <opencv2/gapi/cpu/core.hpp>
@@ -576,6 +577,62 @@ GAPI_OCV_KERNEL(GCPUWarpAffine, cv::gapi::core::GWarpAffine)
     }
 };
 
+GAPI_OCV_KERNEL(GCPUParseSSDWL, cv::gapi::core::GParseSSDWL)
+{
+    static void run(const cv::Mat&  in_ssd_result,
+                    const cv::Size& in_size,
+                    const float&    confidence_threshold,
+                    const int&      filter_label,
+                    std::vector<cv::Rect>& out_boxes,
+                    std::vector<int>&      out_labels)
+    {
+        cv::parseSSDWL(in_ssd_result, in_size, confidence_threshold, filter_label, out_boxes, out_labels);
+    }
+};
+
+GAPI_OCV_KERNEL(GOCVParseSSD, cv::gapi::core::GParseSSD)
+{
+    static void run(const cv::Mat&  in_ssd_result,
+                    const cv::Size& in_size,
+                    const float&    confidence_threshold,
+                    const bool&     filter_out_of_bounds,
+                    std::vector<cv::Rect>& out_boxes)
+    {
+        cv::parseSSD(in_ssd_result, in_size, confidence_threshold, filter_out_of_bounds, out_boxes);
+    }
+};
+
+GAPI_OCV_KERNEL(GCPUParseYolo, cv::gapi::core::GParseYolo)
+{
+    static void run(const cv::Mat&  in_yolo_result,
+                    const cv::Size& in_size,
+                    const float&    confidence_threshold,
+                    const float&    nms_threshold,
+                    const cv::gapi::core::YoloAnchors& anchors,
+                    std::vector<cv::Rect>& out_boxes,
+                    std::vector<int>&      out_labels)
+    {
+        cv::parseYolo(in_yolo_result, in_size, confidence_threshold, nms_threshold, anchors, out_boxes, out_labels);
+    }
+};
+
+GAPI_OCV_KERNEL(GCPUSize, cv::gapi::core::GSize)
+{
+    static void run(const cv::Mat& in, cv::Size& out)
+    {
+        out.width  = in.cols;
+        out.height = in.rows;
+    }
+};
+
+GAPI_OCV_KERNEL(GCPUSizeR, cv::gapi::core::GSizeR)
+{
+    static void run(const cv::Rect& in, cv::Size& out)
+    {
+        out.width  = in.width;
+        out.height = in.height;
+    }
+};
 
 cv::gapi::GKernelPackage cv::gapi::core::cpu::kernels()
 {
@@ -647,6 +704,11 @@ cv::gapi::GKernelPackage cv::gapi::core::cpu::kernels()
          , GCPUNormalize
          , GCPUWarpPerspective
          , GCPUWarpAffine
+         , GCPUParseSSDWL
+         , GOCVParseSSD
+         , GCPUParseYolo
+         , GCPUSize
+         , GCPUSizeR
          >();
     return pkg;
 }

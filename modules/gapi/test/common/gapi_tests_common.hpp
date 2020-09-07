@@ -353,6 +353,27 @@ struct TestWithParamsSpecific : public TestWithParamsBase<ParamsSpecific<Specifi
 
 /**
  * @private
+ * @brief Create G-API test fixture with TestWithParams base class and additional base class.
+ * @param Fixture   test fixture name.
+   @param ExtBase   additional base class.
+ * @param InitF     callable that will initialize default available members (from TestFunctional)
+ * @param API       base class API. Specifies types of user-defined parameters. If there are no such
+ *                  parameters, empty angle brackets ("<>") must be specified.
+ * @param Number    number of user-defined parameters (corresponds to the number of types in API).
+ *                  if there are no such parameters, 0 must be specified.
+ * @param ...       list of names of user-defined parameters. if there are no parameters, the list
+ *                  must be empty.
+ */
+#define GAPI_TEST_EXT_BASE_FIXTURE(Fixture, ExtBase, InitF, API, Number, ...) \
+    struct Fixture : public TestWithParams API, public ExtBase { \
+        static_assert(Number == AllParams::specific_params_size, \
+            "Number of user-defined parameters doesn't match size of __VA_ARGS__"); \
+        __WRAP_VAARGS(DEFINE_SPECIFIC_PARAMS_##Number(__VA_ARGS__)) \
+        Fixture() { InitF(type, sz, dtype); } \
+    };
+
+/**
+ * @private
  * @brief Create G-API test fixture with TestWithParamsSpecific base class
  *        This fixture has reduced number of common parameters and no initialization;
  *        it should be used if you don't need common parameters of GAPI_TEST_FIXTURE.

@@ -31,7 +31,10 @@ namespace core {
     using GMat2 = std::tuple<GMat,GMat>;
     using GMat3 = std::tuple<GMat,GMat,GMat>; // FIXME: how to avoid this?
     using GMat4 = std::tuple<GMat,GMat,GMat,GMat>;
-    using GMatScalar = std::tuple<GMat, GScalar>;
+    using GMatScalar  = std::tuple<GMat, GScalar>;
+    using GRects      = cv::GArray<cv::Rect>;
+    using GDetections = std::tuple<GArray<Rect>,GArray<int>>;
+    using YoloAnchors = std::vector<float>;
 
     G_TYPED_KERNEL(GAdd, <GMat(GMat, GMat, int)>, "org.opencv.core.math.add") {
         static GMatDesc outMeta(GMatDesc a, GMatDesc b, int ddepth) {
@@ -499,6 +502,42 @@ namespace core {
             GAPI_Assert(border_mode != cv::BORDER_TRANSPARENT &&
                         "cv::BORDER_TRANSPARENT mode is not supported in cv::gapi::warpAffine");
             return in.withType(in.depth, in.chan).withSize(dsize);
+        }
+    };
+
+    G_TYPED_KERNEL(GParseSSDWL, <GDetections(GMat, GOpaque<Size>, float, int)>, "org.opencv.core.parseSSDWL") {
+        static std::tuple<GArrayDesc,GArrayDesc> outMeta(const GMatDesc&, const GOpaqueDesc&, float, int) {
+            return std::make_tuple(empty_array_desc(), empty_array_desc());
+        }
+    };
+
+    G_TYPED_KERNEL(GParseSSD, <GRects(cv::GMat, cv::GOpaque<cv::Size>, float, bool)>, "org.opencv.core.parseSSD") {
+        static cv::GArrayDesc outMeta(const cv::GMatDesc&, const cv::GOpaqueDesc&, float, bool) {
+            return cv::empty_array_desc();
+        }
+    };
+
+    G_TYPED_KERNEL(GParseYolo, <GDetections(GMat, GOpaque<Size>, float, float, YoloAnchors)>, "org.opencv.core.parseYolo") {
+        static std::tuple<GArrayDesc, GArrayDesc> outMeta(const GMatDesc&, const GOpaqueDesc&, float, float, const YoloAnchors&) {
+            return std::make_tuple(empty_array_desc(), empty_array_desc());
+        }
+        static const YoloAnchors& defaultAnchors() {
+            static YoloAnchors anchors {
+                0.57273f, 0.677385f, 1.87446f, 2.06253f, 3.33843f, 5.47434f, 7.88282f, 3.52778f, 9.77052f, 9.16828f
+            };
+            return anchors;
+        }
+    };
+
+    G_TYPED_KERNEL(GSize, <GOpaque<Size>(GMat)>, "org.opencv.core.size") {
+        static GOpaqueDesc outMeta(const GMatDesc&) {
+            return empty_gopaque_desc();
+        }
+    };
+
+    G_TYPED_KERNEL(GSizeR, <GOpaque<Size>(GOpaque<Rect>)>, "org.opencv.core.sizeR") {
+        static GOpaqueDesc outMeta(const GOpaqueDesc&) {
+            return empty_gopaque_desc();
         }
     };
 }
@@ -1720,6 +1759,86 @@ GAPI_EXPORTS GMat warpAffine(const GMat& src, const Mat& M, const Size& dsize, i
                              int borderMode = cv::BORDER_CONSTANT, const Scalar& borderValue = Scalar());
 //! @} gapi_transform
 
+/** @brief Parses output of SSD network.
+Extracts detection information (box, confidence, label) from SSD output and
+filters it by given confidence and label.
+
+@note Function textual ID is "org.opencv.core.parseSSDWL"
+
+@param in Input CV_32F tensor with {1,1,N,7} dimensions.
+@param in_sz Size to project detected boxes to (size of the input image).
+@param confidence_threshold If confidence of the
+detection is smaller than confidence threshold, detection is rejected.
+@param filter_label If provided (!= -1), only detections with
+given label will get to the output.
+@return a vector of detected boxes and a vector of appropriate labels.
+*/
+GAPI_EXPORTS core::GDetections parseSSD(const GMat& in,
+                                        const GOpaque<Size>& in_sz,
+                                        const float& confidence_threshold = 0.5f,
+                                        const int&   filter_label = -1);
+
+/** @overload
+Extracts detection information (box, confidence) from SSD output and
+filters it by given confidence and by going out of bounds.
+
+@note Function textual ID is "org.opencv.core.parseSSD"
+
+@param in Input CV_32F tensor with {1,1,N,7} dimensions.
+@param in_sz Size to project detected boxes to (size of the input image).
+@param confidence_threshold If confidence of the
+detection is smaller than confidence threshold, detection is rejected.
+@param filter_out_of_bounds If provided true, out-of-bounds boxes are filtered.
+@return a vector of detected boxes.
+*/
+GAPI_EXPORTS core::GRects parseSSD(const GMat& in,
+                                   const GOpaque<Size>& in_sz,
+                                   const float& confidence_threshold = 0.5f,
+                                   const bool& filter_out_of_bounds = false);
+
+/** @brief Parses output of Yolo network.
+Extracts detection information (box, confidence, label) from Yolo output,
+filters it by confidence and performs non-maximum supression for overlapping boxes.
+
+@note Function textual ID is "org.opencv.core.parseYolo"
+
+@param in Input CV_32F tensor with {1,13,13,N} dimensions,
+N should satisfy
+\f[N = (\texttt{num_classes} + 5) * 5\f],
+where num_classes - a number of classes Yolo network was trained with.
+@param in_sz Size to project detected boxes to (size of the input image).
+@param confidence_threshold If confidence of the
+detection is smaller than confidence threshold, detection is rejected.
+@param nms_threshold Non-maximum supression threshold which controls minimum
+relative box intersection area required for rejecting the box with a smaller confidence.
+If 1.f, nms is not performed and no boxes are rejected.
+@param anchors Anchors Yolo network was trained with.
+@return a vector of detected boxes and a vector of matching labels.
+*/
+GAPI_EXPORTS core::GDetections parseYolo(const GMat& in,
+                                         const GOpaque<Size>& in_sz,
+                                         const float& confidence_threshold = 0.5f,
+                                         const float& nms_threshold = 0.5f,
+                                         const core::YoloAnchors& anchors = core::GParseYolo::defaultAnchors());
+
+/** @brief Gets dimensions from Mat.
+
+@note Function textual ID is "org.opencv.core.size"
+
+@param src Input tensor
+@return Size (tensor dimensions).
+*/
+GAPI_EXPORTS GOpaque<Size> size(const GMat& src);
+
+/** @overload
+Gets dimensions from rectangle.
+
+@note Function textual ID is "org.opencv.core.sizeR"
+
+@param r Input rectangle.
+@return Size (rectangle dimensions).
+*/
+GAPI_EXPORTS GOpaque<Size> size(const GOpaque<Rect>& r);
 } //namespace gapi
 } //namespace cv
 

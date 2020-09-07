@@ -496,4 +496,43 @@ INSTANTIATE_TEST_CASE_P(ReInitOutTestCPU, ReInitOutTest,
                                 Values(cv::Size(640, 400),
                                        cv::Size(10, 480))));
 
+INSTANTIATE_TEST_CASE_P(ParseTestCPU, ParseSSDWLTest,
+                        Combine(Values(CV_8UC1, CV_8UC3, CV_32FC1),
+                                Values(cv::Size(1920, 1080)),
+                                Values(-1),
+                                Values(CORE_CPU),
+                                Values(0.3f, 0.5f, 0.7f),
+                                Values(-1, 0, 1)));
+
+INSTANTIATE_TEST_CASE_P(ParseTestCPU, ParseSSDTest,
+                        Combine(Values(CV_8UC1, CV_8UC3, CV_32FC1),
+                                Values(cv::Size(1920, 1080)),
+                                Values(-1),
+                                Values(CORE_CPU),
+                                Values(0.3f, 0.5f, 0.7f),
+                                Values(true, false)));
+
+INSTANTIATE_TEST_CASE_P(ParseTestCPU, ParseYoloTest,
+                        Combine(Values(CV_8UC1, CV_8UC3, CV_32FC1),
+                                Values(cv::Size(1920, 1080)),
+                                Values(-1),
+                                Values(CORE_CPU),
+                                Values(0.3f, 0.5f, 0.7f),
+                                Values(0.5f, 1.0f),
+                                Values(80, 7)));
+
+
+INSTANTIATE_TEST_CASE_P(SizeTestCPU, SizeTest,
+                        Combine(Values(CV_8UC1, CV_8UC3, CV_32FC1),
+                                Values(cv::Size(32, 32),
+                                       cv::Size(640, 320)),
+                                Values(-1),
+                                Values(CORE_CPU)));
+
+INSTANTIATE_TEST_CASE_P(SizeRTestCPU, SizeRTest,
+                        Combine(Values(CV_8UC1, CV_8UC3, CV_32FC1),
+                                Values(cv::Size(32, 32),
+                                       cv::Size(640, 320)),
+                                Values(-1),
+                                Values(CORE_CPU)));
 }

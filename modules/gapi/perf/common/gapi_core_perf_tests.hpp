@@ -10,6 +10,7 @@
 
 
 #include "../../test/common/gapi_tests_common.hpp"
+#include "../../test/common/gapi_parsers_tests_common.hpp"
 #include <opencv2/gapi/core.hpp>
 
 namespace opencv_test
@@ -73,5 +74,10 @@ namespace opencv_test
     class ConvertToPerfTest : public TestPerfParams<tuple<MatType, int, cv::Size, cv::GCompileArgs>> {};
     class ResizePerfTest : public TestPerfParams<tuple<compare_f, MatType, int, cv::Size, cv::Size, cv::GCompileArgs>> {};
     class ResizeFxFyPerfTest : public TestPerfParams<tuple<compare_f, MatType, int, cv::Size, double, double, cv::GCompileArgs>> {};
+    class ParseSSDWLPerfTest : public TestPerfParams<tuple<cv::Size, float, int, cv::GCompileArgs>>, public ParserSSDTest {};
+    class ParseSSDPerfTest   : public TestPerfParams<tuple<cv::Size, float, bool, cv::GCompileArgs>>, public ParserSSDTest {};
+    class ParseYoloPerfTest  : public TestPerfParams<tuple<cv::Size, float, float, int, cv::GCompileArgs>>, public ParserYoloTest {};
+    class SizePerfTest       : public TestPerfParams<tuple<MatType, cv::Size, cv::GCompileArgs>> {};
+    class SizeRPerfTest      : public TestPerfParams<tuple<cv::Size, cv::GCompileArgs>> {};
 }
 #endif // OPENCV_GAPI_CORE_PERF_TESTS_HPP

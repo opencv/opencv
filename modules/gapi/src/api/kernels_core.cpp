@@ -383,5 +383,40 @@ GMat warpAffine(const GMat& src, const Mat& M, const Size& dsize, int flags,
     return core::GWarpAffine::on(src, M, dsize, flags, borderMode, borderValue);
 }
 
+core::GDetections parseSSD(const GMat& in,
+                           const GOpaque<Size>& in_sz,
+                           const float& confidence_threshold,
+                           const int& filter_label)
+{
+    return core::GParseSSDWL::on(in, in_sz, confidence_threshold, filter_label);
+}
+
+core::GRects parseSSD(const GMat& in,
+                      const GOpaque<Size>& in_sz,
+                      const float& confidence_threshold,
+                      const bool& filter_out_of_bounds)
+{
+    return core::GParseSSD::on(in, in_sz, confidence_threshold, filter_out_of_bounds);
+}
+
+core::GDetections parseYolo(const GMat& in,
+                            const GOpaque<Size>& in_sz,
+                            const float& confidence_threshold,
+                            const float& nms_threshold,
+                            const core::YoloAnchors& anchors)
+{
+    return core::GParseYolo::on(in, in_sz, confidence_threshold, nms_threshold, anchors);
+}
+
+GOpaque<Size> size(const GMat& src)
+{
+    return core::GSize::on(src);
+}
+
+GOpaque<Size> size(const GOpaque<Rect>& r)
+{
+    return core::GSizeR::on(r);
+}
+
 } //namespace gapi
 } //namespace cv
