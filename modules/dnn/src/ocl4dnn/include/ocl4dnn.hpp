@@ -433,7 +433,7 @@ class OCL4DNNInnerProduct
                      UMat& top_data);
     private:
         OCL4DNNInnerProductConfig config_;
-        int32_t axis_;
+        //int32_t axis_;
         int32_t num_output_;
         int32_t M_;
         int32_t N_;

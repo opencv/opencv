@@ -335,6 +335,10 @@ void ONNXImporter::populateNet(Net dstNet)
         {
             inpShape[j] = tensorShape.dim(j).dim_value();
         }
+        if (!inpShape.empty())
+        {
+            inpShape[0] = std::max(inpShape[0], 1); // It's OK to have undetermined batch size
+        }
         outShapes[valueInfoProto.name()] = inpShape;
     }
 
@@ -712,6 +716,19 @@ void ONNXImporter::populateNet(Net dstNet)
                 layerParams.set("bias_term", true);
             }
         }
+        else if (layer_type == "Pow")
+        {
+            if (layer_id.find(node_proto.input(1)) != layer_id.end())
+                CV_Error(Error::StsNotImplemented, "Unsupported Pow op with variable power");
+
+            Mat blob = getBlob(node_proto, constBlobs, 1);
+            if (blob.total() != 1)
+                CV_Error(Error::StsNotImplemented, "Pow op supports only scalar power");
+
+            blob.convertTo(blob, CV_32F);
+            layerParams.type = "Power";
+            layerParams.set("power", blob.at<float>(0));
+        }
         else if (layer_type == "Max")
         {
             layerParams.type = "Eltwise";
@@ -932,6 +949,19 @@ void ONNXImporter::populateNet(Net dstNet)
             if (node_proto.input_size() == 3) {
                 Mat bias = getBlob(node_proto, constBlobs, 2);
                 layerParams.blobs.push_back(bias);
+            }
+            if (constBlobs.find(node_proto.input(0)) != constBlobs.end())
+            {
+                Mat inputBuf = getBlob(node_proto, constBlobs, 0);
+
+                LayerParams constParams;
+                constParams.name = node_proto.input(0);
+                constParams.type = "Const";
+                constParams.blobs.push_back(inputBuf);
+
+                opencv_onnx::NodeProto proto;
+                proto.add_output(constParams.name);
+                addLayer(dstNet, constParams, proto, layer_id, outShapes);
             }
 
             layerParams.set("num_output", layerParams.blobs[0].size[ind_num_out]);

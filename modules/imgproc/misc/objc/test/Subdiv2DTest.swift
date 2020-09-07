@@ -15,8 +15,8 @@ class Subdiv2DTest: OpenCVTestCase {
         s2d.insert(pt: Point2f(x: 20, y: 10))
         s2d.insert(pt: Point2f(x: 20, y: 20))
         s2d.insert(pt: Point2f(x: 10, y: 20))
-        let triangles = NSMutableArray()
-        s2d.getTriangleList(triangleList: triangles)
+        var triangles = [Float6]()
+        s2d.getTriangleList(triangleList: &triangles)
         XCTAssertEqual(2, triangles.count)
     }
 

@@ -247,7 +247,8 @@ public:
             // find inliers from sample, points related to H, x' ~ Hx
             for (int s = 0; s < sample_size; s++)
                 if (h_reproj_error->getError(sample[s]) < homography_threshold)
-                    inliers_on_plane++;
+                    if (++inliers_on_plane >= 5)
+                        break;
 
             // if there are at least 5 points lying on plane then F is degenerate
             if (inliers_on_plane >= 5) {

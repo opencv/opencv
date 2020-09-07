@@ -37,7 +37,7 @@ J_{12} & J_{22}
 where \f$J_{11} = M[Z_{x}^{2}]\f$, \f$J_{22} = M[Z_{y}^{2}]\f$, \f$J_{12} = M[Z_{x}Z_{y}]\f$ - components of the tensor, \f$M[]\f$ is a symbol of mathematical expectation (we can consider this operation as averaging in a window w), \f$Z_{x}\f$ and \f$Z_{y}\f$ are partial derivatives of an image \f$Z\f$ with respect to \f$x\f$ and \f$y\f$.
 
 The eigenvalues of the tensor can be found in the below formula:
-\f[\lambda_{1,2} = J_{11} + J_{22} \pm \sqrt{(J_{11} - J_{22})^{2} + 4J_{12}^{2}}\f]
+\f[\lambda_{1,2} = \frac{1}{2} \left [ J_{11} + J_{22} \pm \sqrt{(J_{11} - J_{22})^{2} + 4J_{12}^{2}} \right ] \f]
 where \f$\lambda_1\f$ - largest eigenvalue, \f$\lambda_2\f$ - smallest eigenvalue.
 
 ### How to estimate orientation and coherency of an anisotropic image by gradient structure tensor?

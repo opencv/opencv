@@ -983,7 +983,11 @@ void ORB_Impl::detectAndCompute( InputArray _image, InputArray _mask,
     int descPatchSize = cvCeil(halfPatchSize*sqrt(2.0));
     int border = std::max(edgeThreshold, std::max(descPatchSize, HARRIS_BLOCK_SIZE/2))+1;
 
+#ifdef HAVE_OPENCL
     bool useOCL = ocl::isOpenCLActivated() && OCL_FORCE_CHECK(_image.isUMat() || _descriptors.isUMat());
+#else
+    bool useOCL = false;
+#endif
 
     Mat image = _image.getMat(), mask = _mask.getMat();
     if( image.type() != CV_8UC1 )

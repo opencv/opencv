@@ -24,15 +24,54 @@ if(NOT HAVE_FFMPEG AND WIN32 AND NOT ARM AND NOT OPENCV_FFMPEG_SKIP_DOWNLOAD)
   endif()
 endif()
 
+set(_required_ffmpeg_libraries libavcodec libavformat libavutil libswscale)
+set(_used_ffmpeg_libraries ${_required_ffmpeg_libraries})
 if(NOT HAVE_FFMPEG AND PKG_CONFIG_FOUND)
   ocv_check_modules(FFMPEG libavcodec libavformat libavutil libswscale)
   if(FFMPEG_FOUND)
     ocv_check_modules(FFMPEG_libavresample libavresample) # optional
     if(FFMPEG_libavresample_FOUND)
       list(APPEND FFMPEG_LIBRARIES ${FFMPEG_libavresample_LIBRARIES})
+      list(APPEND _used_ffmpeg_libraries libavresample)
     endif()
     set(HAVE_FFMPEG TRUE)
+  else()
+    set(_missing_ffmpeg_libraries "")
+    foreach (ffmpeg_lib ${_required_ffmpeg_libraries})
+      if (NOT FFMPEG_${ffmpeg_lib}_FOUND)
+        list(APPEND _missing_ffmpeg_libraries ${ffmpeg_lib})
+      endif()
+    endforeach ()
+    message(STATUS "FFMPEG is disabled. Required libraries: ${_required_ffmpeg_libraries}."
+            " Missing libraries: ${_missing_ffmpeg_libraries}")
+    unset(_missing_ffmpeg_libraries)
   endif()
+endif()
+
+#=================================
+# Versions check.
+if(HAVE_FFMPEG AND NOT HAVE_FFMPEG_WRAPPER)
+  set(_min_libavcodec_version 54.35.0)
+  set(_min_libavformat_version 54.20.4)
+  set(_min_libavutil_version 52.3.0)
+  set(_min_libswscale_version 2.1.1)
+  set(_min_libavresample_version 1.0.1)
+  foreach(ffmpeg_lib ${_used_ffmpeg_libraries})
+    if(FFMPEG_${ffmpeg_lib}_VERSION VERSION_LESS _min_${ffmpeg_lib}_version)
+      message(STATUS "FFMPEG is disabled. Can't find suitable ${ffmpeg_lib} library"
+              " (minimal ${_min_${ffmpeg_lib}_version}, found ${FFMPEG_${ffmpeg_lib}_VERSION}).")
+      set(HAVE_FFMPEG FALSE)
+    endif()
+  endforeach()
+  if(NOT HAVE_FFMPEG)
+    message(STATUS "FFMPEG libraries version check failed "
+            "(minimal libav release 9.20, minimal FFMPEG release 1.1.16).")
+  endif()
+  unset(_min_libavcodec_version)
+  unset(_min_libavformat_version)
+  unset(_min_libavutil_version)
+  unset(_min_libswscale_version)
+  unset(_min_libavresample_version)
 endif()
 
 #==================================
@@ -53,6 +92,8 @@ if(HAVE_FFMPEG AND NOT HAVE_FFMPEG_WRAPPER AND NOT OPENCV_FFMPEG_SKIP_BUILD_CHEC
 endif()
 
 #==================================
+unset(_required_ffmpeg_libraries)
+unset(_used_ffmpeg_libraries)
 
 if(HAVE_FFMPEG_WRAPPER)
   ocv_add_external_target(ffmpeg "" "" "HAVE_FFMPEG_WRAPPER")
