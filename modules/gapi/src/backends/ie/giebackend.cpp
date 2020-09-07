@@ -622,7 +622,7 @@ struct InferList2: public cv::detail::KernelTag {
                 // This is a cv::GMat (equals to: cv::Mat)
                 // Just validate that it is really the type
                 // (other types are prohibited here)
-                GAPI_Assert(op.k.inKinds[idx] == cv::detail::OpaqueKind::CV_GMAT);
+                GAPI_Assert(op.k.inKinds[idx] == cv::detail::OpaqueKind::CV_MAT);
             }
             idx++; // NB: Never forget to increment the counter
         }
