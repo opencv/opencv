@@ -188,18 +188,38 @@ TEST(GArray_VectorRef, TestMov)
     EXPECT_EQ(V{}, vtest);
 }
 
-TEST(GArray_VectorRef, Spec)
+TEST(GArray_VectorRef, Kind)
 {
     cv::detail::VectorRef v1(std::vector<cv::Rect>{});
-    EXPECT_EQ(cv::detail::TypeSpec::RECT, v1.spec());
+    EXPECT_EQ(cv::detail::OpaqueKind::CV_RECT, v1.getKind());
 
     cv::detail::VectorRef v2(std::vector<cv::Mat>{});
-    EXPECT_EQ(cv::detail::TypeSpec::MAT,  v2.spec());
+    EXPECT_EQ(cv::detail::OpaqueKind::CV_MAT,  v2.getKind());
 
     cv::detail::VectorRef v3(std::vector<int>{});
-    EXPECT_EQ(cv::detail::TypeSpec::OPAQUE_SPEC, v3.spec());
+    EXPECT_EQ(cv::detail::OpaqueKind::CV_INT, v3.getKind());
 
-    cv::detail::VectorRef v4(std::vector<std::string>{});
-    EXPECT_EQ(cv::detail::TypeSpec::OPAQUE_SPEC, v4.spec());
+    cv::detail::VectorRef v4(std::vector<double>{});
+    EXPECT_EQ(cv::detail::OpaqueKind::CV_DOUBLE, v4.getKind());
+
+    cv::detail::VectorRef v5(std::vector<cv::Scalar>{});
+    EXPECT_EQ(cv::detail::OpaqueKind::CV_SCALAR, v5.getKind());
+
+    cv::detail::VectorRef v6(std::vector<cv::Point>{});
+    EXPECT_EQ(cv::detail::OpaqueKind::CV_POINT, v6.getKind());
+
+    cv::detail::VectorRef v7(std::vector<cv::Size>{});
+    EXPECT_EQ(cv::detail::OpaqueKind::CV_SIZE, v7.getKind());
+
+    cv::detail::VectorRef v8(std::vector<std::string>{});
+    EXPECT_EQ(cv::detail::OpaqueKind::CV_UNKNOWN, v8.getKind());
+}
+
+TEST(GArray_VectorRef, TestRvalue)
+{
+    // Warning: this test is testing some not-very-public APIs
+    cv::detail::VectorRef vref(std::vector<int>{3, 5, -4});
+    auto v = std::vector<int>{3, 5, -4};
+    EXPECT_EQ(vref.rref<int>(), v);
 }
 } // namespace opencv_test

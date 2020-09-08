@@ -378,15 +378,15 @@ class Calib3dTest: OpenCVTestCase {
             try points3d.put(row: i, col: 0, data: [0, y, x]) // add(Point3(0, y, x))
         }
 
-        let rvecs = NSMutableArray()
-        let tvecs = NSMutableArray()
+        var rvecs = [Mat]()
+        var tvecs = [Mat]()
 
         let rvec = Mat()
         let tvec = Mat()
 
         let reprojectionError = Mat(rows: 2, cols: 1, type: CvType.CV_64FC1)
 
-        Calib3d.solvePnPGeneric(objectPoints: points3d, imagePoints: points2d, cameraMatrix: intrinsics, distCoeffs: MatOfDouble(), rvecs: rvecs, tvecs: tvecs, useExtrinsicGuess: false, flags: .SOLVEPNP_IPPE, rvec: rvec, tvec: tvec, reprojectionError: reprojectionError)
+        Calib3d.solvePnPGeneric(objectPoints: points3d, imagePoints: points2d, cameraMatrix: intrinsics, distCoeffs: MatOfDouble(), rvecs: &rvecs, tvecs: &tvecs, useExtrinsicGuess: false, flags: .SOLVEPNP_IPPE, rvec: rvec, tvec: tvec, reprojectionError: reprojectionError)
 
         let truth_rvec = Mat(rows: 3, cols: 1, type: CvType.CV_64F)
         try truth_rvec.put(row: 0, col: 0, data: [0, .pi / 2, 0] as [Double])
@@ -394,8 +394,8 @@ class Calib3dTest: OpenCVTestCase {
         let truth_tvec = Mat(rows: 3, cols: 1, type: CvType.CV_64F)
         try truth_tvec.put(row: 0, col: 0, data: [-320, -240, 400] as [Double])
 
-        try assertMatEqual(truth_rvec, rvecs[0] as! Mat, 10 * OpenCVTestCase.EPS)
-        try assertMatEqual(truth_tvec, tvecs[0] as! Mat, 1000 * OpenCVTestCase.EPS)
+        try assertMatEqual(truth_rvec, rvecs[0], 10 * OpenCVTestCase.EPS)
+        try assertMatEqual(truth_tvec, tvecs[0], 1000 * OpenCVTestCase.EPS)
     }
 
     func testGetDefaultNewCameraMatrixMat() {

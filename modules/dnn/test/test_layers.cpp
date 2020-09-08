@@ -2388,7 +2388,7 @@ TEST_P(ConvolutionEltwiseActivationFusion, Accuracy)
     if (eltwiseOp != "sum" && weightedEltwise)
             throw SkipTestException("weighted eltwise not supported");
     LayerParams eltwiseParams;
-    TestLayerFusion::makeDefaultTestEltwiseLayer(eltwiseParams, eltwiseOp, false);
+    TestLayerFusion::makeDefaultTestEltwiseLayer(eltwiseParams, eltwiseOp, weightedEltwise);
 
     std::string actType = get<3>(GetParam());
     LayerParams activationParams;
@@ -2398,7 +2398,7 @@ TEST_P(ConvolutionEltwiseActivationFusion, Accuracy)
     Target targetId = get<1>(get<4>(GetParam()));
 
     // bug: https://github.com/opencv/opencv/issues/17945
-    if (eltwiseOp != "sum" && backendId == DNN_BACKEND_OPENCV && (targetId == DNN_TARGET_OPENCL || targetId == DNN_TARGET_OPENCL_FP16))
+    if ((eltwiseOp != "sum" || weightedEltwise) && backendId == DNN_BACKEND_OPENCV && (targetId == DNN_TARGET_OPENCL || targetId == DNN_TARGET_OPENCL_FP16))
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL);
 
     // bug: https://github.com/opencv/opencv/issues/17953
@@ -2485,7 +2485,7 @@ TEST_P(ConvolutionActivationEltwiseFusion, Accuracy)
     if (eltwiseOp != "sum" && weightedEltwise)
             throw SkipTestException("weighted eltwise not supported");
     LayerParams eltwiseParams;
-    TestLayerFusion::makeDefaultTestEltwiseLayer(eltwiseParams, eltwiseOp, false);
+    TestLayerFusion::makeDefaultTestEltwiseLayer(eltwiseParams, eltwiseOp, weightedEltwise);
 
     Backend backendId = get<0>(get<4>(GetParam()));
     Target targetId = get<1>(get<4>(GetParam()));

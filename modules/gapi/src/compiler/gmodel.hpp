@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2020 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_GMODEL_HPP
@@ -26,6 +26,7 @@
 
 #include <opencv2/gapi/garg.hpp>
 #include <opencv2/gapi/gkernel.hpp>
+#include <opencv2/gapi/gcommon.hpp>
 
 #include "compiler/gobjref.hpp"
 #include "compiler/gislandmodel.hpp"
@@ -71,6 +72,7 @@ struct Data
     int      rc;
     GMetaArg meta;
     HostCtor ctor;  // T-specific helper to deal with unknown types in our code
+    cv::detail::OpaqueKind kind; // FIXME: is needed to store GArray/GOpaque type
     // FIXME: Why rc+shape+meta is not represented as RcDesc here?
 
     enum class Storage: int
