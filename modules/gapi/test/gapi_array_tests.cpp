@@ -28,7 +28,7 @@ G_TYPED_KERNEL(CountCorners,   <GScalar(GPointArray)>,  "test.array.in")
 {
     static GScalarDesc outMeta(const GArrayDesc &) { return empty_scalar_desc(); }
 };
-G_TYPED_KERNEL(PointIncrement, <GPointArray(GMat, GPointArray)>, "test.array.initialization")
+G_TYPED_KERNEL(PointIncrement, <GPointArray(GMat, GPointArray)>, "test.point_increment")
 {
     static GArrayDesc outMeta(const GMatDesc&, const GArrayDesc &) { return empty_array_desc(); }
 };
@@ -187,6 +187,25 @@ TEST(GArray, GArrayConstValInitialization)
     cv::GComputationT<ThisTest::GPointArray(cv::GMat)> c([&](cv::GMat in)
     {
         ThisTest::GPointArray test_garray(initial_vec); // Initialization
+        return ThisTest::PointIncrement::on(in, test_garray);
+    });
+    auto cc = c.compile(cv::descr_of(in_mat),
+                        cv::compile_args(cv::gapi::kernels<OCVPointIncrement>()));
+    cc(in_mat, out_vec);
+
+    EXPECT_EQ(ref_vec, out_vec);
+}
+
+TEST(GArray, GArrayConstRValInitialization)
+{
+    std::vector<cv::Point> ref_vec {Point(1,1), Point(2,2), Point(3,3)};
+    std::vector<cv::Point> out_vec;
+    cv::Mat in_mat;
+
+    cv::GComputationT<ThisTest::GPointArray(cv::GMat)> c([&](cv::GMat in)
+    {
+        ThisTest::GPointArray test_garray(
+            { Point(0,0), Point(1,1), Point(2,2) } ); // Rvalue initialization
         return ThisTest::PointIncrement::on(in, test_garray);
     });
     auto cc = c.compile(cv::descr_of(in_mat),

@@ -25,11 +25,6 @@ cv::detail::GArrayU::GArrayU(const detail::VectorRef& vref)
 {
 }
 
-cv::detail::GArrayU::GArrayU(detail::VectorRef&& vref)
-    : m_priv(new GOrigin(GShape::GARRAY, cv::gimpl::ConstVal(std::move(vref))))
-{
-}
-
 cv::GOrigin& cv::detail::GArrayU::priv()
 {
     return *m_priv;

@@ -81,7 +81,6 @@ namespace detail
     protected:
         GArrayU();                                // Default constructor
         GArrayU(const detail::VectorRef& vref);   // Constant value constructor
-        GArrayU(detail::VectorRef&& vref);        // Constant value move-constructor
         template<class> friend class cv::GArray;  //  (available to GArray<T> only)
 
         void setConstructFcn(ConstructVec &&cv);  // Store T-aware constructor
@@ -337,7 +336,7 @@ public:
     explicit GArray(const std::vector<HT>& v) // Constant value constructor
         : m_ref(detail::GArrayU(detail::VectorRef(v))) { putDetails(); }
     explicit GArray(std::vector<HT>&& v)      // Constant value move-constructor
-        : m_ref(detail::GArrayU(std::move(detail::VectorRef(v)))) { putDetails(); }
+        : m_ref(detail::GArrayU(detail::VectorRef(std::move(v)))) { putDetails(); }
     GArray() { putDetails(); }             // Empty constructor
     explicit GArray(detail::GArrayU &&ref) // GArrayU-based constructor
         : m_ref(ref) { putDetails(); }     //   (used by GCall, not for users)
