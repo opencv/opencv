@@ -14,7 +14,6 @@
 #include <opencv2/gapi/opencv_includes.hpp>
 #include <opencv2/gapi/util/variant.hpp>
 #include <opencv2/gapi/own/exports.hpp>
-#include <opencv2/imgproc.hpp>
 
 namespace cv
 {
@@ -62,7 +61,7 @@ struct Text
          double fs_,
          const cv::Scalar& color_,
          int thick_ = 1,
-         int lt_ = cv::LINE_8,
+         int lt_ = 8,
          bool bottom_left_origin_ = false) :
         text(text_), org(org_), ff(ff_), fs(fs_),
         color(color_), thick(thick_), lt(lt_), bottom_left_origin(bottom_left_origin_)
@@ -137,7 +136,7 @@ struct Rect
     Rect(const cv::Rect& rect_,
          const cv::Scalar& color_,
          int thick_ = 1,
-         int lt_ = cv::LINE_8,
+         int lt_ = 8,
          int shift_ = 0) :
         rect(rect_), color(color_), thick(thick_), lt(lt_), shift(shift_)
     {
@@ -175,7 +174,7 @@ struct Circle
            int radius_,
            const cv::Scalar& color_,
            int thick_ = 1,
-           int lt_ = cv::LINE_8,
+           int lt_ = 8,
            int shift_ = 0) :
         center(center_), radius(radius_), color(color_), thick(thick_), lt(lt_), shift(shift_)
     {
@@ -214,7 +213,7 @@ struct Line
          const cv::Point& pt2_,
          const cv::Scalar& color_,
          int thick_ = 1,
-         int lt_ = cv::LINE_8,
+         int lt_ = 8,
          int shift_ = 0) :
         pt1(pt1_), pt2(pt2_), color(color_), thick(thick_), lt(lt_), shift(shift_)
     {
@@ -309,7 +308,7 @@ struct Poly
     Poly(const std::vector<cv::Point>& points_,
          const cv::Scalar& color_,
          int thick_ = 1,
-         int lt_ = cv::LINE_8,
+         int lt_ = 8,
          int shift_ = 0) :
         points(points_), color(color_), thick(thick_), lt(lt_), shift(shift_)
     {
