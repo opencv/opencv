@@ -695,7 +695,7 @@ I::OStream& ByteMemoryOutStream::operator<< (char atom) {
     return *this;
 }
 I::OStream& ByteMemoryOutStream::operator<< (wchar_t atom) {
-    static_assert(sizeof(wchar_t) == 4, "Expecting sizeof(wchar_t) == 4");
+    static_assert(sizeof(wchar_t) == sizeof(uint32_t), "Expecting sizeof(wchar_t) == sizeof(uint32_t)");
     return *this << static_cast<uint32_t>(atom);
 }
 I::OStream& ByteMemoryOutStream::operator<< (unsigned char atom) {
@@ -769,7 +769,7 @@ I::IStream& ByteMemoryInStream::operator>> (char &atom) {
     return *this;
 }
 I::IStream& ByteMemoryInStream::operator>> (wchar_t &atom) {
-    static_assert(sizeof(wchar_t) == 4, "Expecting sizeof(wchar_t) == 4");
+    static_assert(sizeof(wchar_t) == sizeof(uint32_t), "Expecting sizeof(wchar_t) == sizeof(uint32_t)");
     atom = static_cast<wchar_t>(getU32());
     return *this;
 }
