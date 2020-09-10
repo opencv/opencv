@@ -12,23 +12,23 @@ class ImgcodecsTest: OpenCVTestCase {
     let LENA_PATH = Bundle(for: ImgcodecsTest.self).path(forResource:"lena", ofType:"png", inDirectory:"resources")!
 
     func testImencodeStringMatListOfByte() {
-        let buff = ByteVector()
-        XCTAssert(Imgcodecs.imencode(ext: ".jpg", img: gray127, buf: buff))
-        XCTAssertFalse(0 == buff.length)
+        var buff = [UInt8]()
+        XCTAssert(Imgcodecs.imencode(ext: ".jpg", img: gray127, buf: &buff))
+        XCTAssertFalse(0 == buff.count)
     }
 
     func testImencodeStringMatListOfByteListOfInteger() {
-        let params40 = IntVector([ImwriteFlags.IMWRITE_JPEG_QUALITY.rawValue, 40])
-        let params90 = IntVector([ImwriteFlags.IMWRITE_JPEG_QUALITY.rawValue, 90])
+        let params40:[Int32] = [ImwriteFlags.IMWRITE_JPEG_QUALITY.rawValue, 40]
+        let params90:[Int32] = [ImwriteFlags.IMWRITE_JPEG_QUALITY.rawValue, 90]
 
-        let buff40 = ByteVector()
-        let buff90 = ByteVector()
+        var buff40 = [UInt8]()
+        var buff90 = [UInt8]()
 
-        XCTAssert(Imgcodecs.imencode(ext: ".jpg", img: rgbLena, buf: buff40, params: params40))
-        XCTAssert(Imgcodecs.imencode(ext: ".jpg", img: rgbLena, buf: buff90, params: params90))
+        XCTAssert(Imgcodecs.imencode(ext: ".jpg", img: rgbLena, buf: &buff40, params: params40))
+        XCTAssert(Imgcodecs.imencode(ext: ".jpg", img: rgbLena, buf: &buff90, params: params90))
 
-        XCTAssert(buff40.length > 0)
-        XCTAssert(buff40.length < buff90.length)
+        XCTAssert(buff40.count > 0)
+        XCTAssert(buff40.count < buff90.count)
     }
 
     func testImreadString() {

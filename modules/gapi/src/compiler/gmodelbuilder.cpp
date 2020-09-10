@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2020 Intel Corporation
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -139,7 +139,7 @@ cv::gimpl::Unrolled cv::gimpl::unrollExpr(const GProtoArgs &ins,
                     std::size_t port  = ade::util::index(it);
                     GShape shape      = ade::util::value(it);
 
-                    GOrigin org { shape, node, port};
+                    GOrigin org { shape, node, port, {}, origin.kind };
                     origins.insert(org);
                 }
 
