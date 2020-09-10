@@ -181,7 +181,7 @@ public:
      * @param in input GMat of the defined unary computation
      * @param out output GScalar of the defined unary computation
      */
-    GComputation(GMat in, GScalar out);                // Unary overload (scalar)
+    GAPI_WRAP GComputation(GMat in, GScalar out);      // Unary overload (scalar)
 
     /**
      * @brief Defines a binary (two inputs -- one output) computation
@@ -286,7 +286,7 @@ public:
      * @param args compilation arguments for underlying compilation
      * process.
      */
-    void apply(cv::Mat in, cv::Scalar &out, GCompileArgs &&args = {}); // Unary overload (scalar)
+    GAPI_WRAP void apply(cv::Mat in, CV_OUT cv::Scalar &out, GCompileArgs &&args = {}); // Unary overload (scalar)
 
     /**
      * @brief Execute a binary computation (with compilation on the fly)
