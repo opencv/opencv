@@ -21,7 +21,7 @@
 #         qli@openailab.com
 #         sqfu@openailab.com
 #
-SET(TENGINE_COMMIT_VERSION "10a957a49a245cea88472bfa48803d6d460c8d29")
+SET(TENGINE_COMMIT_VERSION "394948b068f6e488e177d5aa6903727f4f053928")
 SET(OCV_TENGINE_DIR "${OpenCV_BINARY_DIR}/3rdparty/libtengine")
 SET(OCV_TENGINE_SOURCE_PATH "${OCV_TENGINE_DIR}/Tengine-${TENGINE_COMMIT_VERSION}")
 
@@ -34,7 +34,7 @@ ELSE()
 	SET(OCV_TENGINE_FILENAME "${TENGINE_COMMIT_VERSION}.zip")#name2
 	#SET(OCV_TENGINE_URL "https://github.com/OAID/Tengine/archive/") #url2
 	SET(OCV_TENGINE_URL "https://github.com/liqi-c/Tengine/archive/") #url2.  Tmp url
-	SET(tengine_md5sum 0195dcbc5459734e44b9f3791be3d4fb) #md5sum2
+	SET(tengine_md5sum 3d08395b66f7e21a5522317015439491) #md5sum2
 
 	#MESSAGE(STATUS "**** TENGINE DOWNLOAD BEGIN ****")
 	ocv_download(FILENAME ${OCV_TENGINE_FILENAME}

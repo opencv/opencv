@@ -249,7 +249,7 @@ public:
 #endif
 
 #ifdef HAVE_TENGINE
-    graph_t tengine_graph;
+    teng_graph_t tengine_graph;
 #endif
 
 #ifdef HAVE_CUDA
@@ -582,12 +582,12 @@ public:
         }
         biasvec[outCn] = biasvec[outCn+1] = biasvec[outCn-1];
     }
-    virtual Ptr<BackendNode> initTengine(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
+    virtual Ptr<BackendNode> initTengine(InputArrayOfArrays inputsAttr, OutputArrayOfArrays outputsAttr) CV_OVERRIDE
     {
 #ifdef HAVE_TENGINE
         std::vector<Mat> inputs, outputs;
-        inputs_arr.getMatVector(inputs);
-        outputs_arr.getMatVector(outputs);
+        inputsAttr.getMatVector(inputs);
+        outputsAttr.getMatVector(outputs);
 
         int inch = inputs[0].size[1]; 		// inch
         int in_h = inputs[0].size[2]; 		// in_h
