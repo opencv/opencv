@@ -631,6 +631,11 @@ TEST_P(Test_ONNX_layers, MatmulWithTwoInputs)
     testONNXModels("matmul_with_two_inputs");
 }
 
+TEST_P(Test_ONNX_layers, ResizeOpset11_Torch1_6)
+{
+    testONNXModels("resize_opset11_torch1.6");
+}
+
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_ONNX_layers, dnnBackendsAndTargets());
 
 class Test_ONNX_nets : public Test_ONNX_layers
