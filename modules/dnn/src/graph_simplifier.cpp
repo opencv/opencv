@@ -115,7 +115,7 @@ bool Subgraph::match(const Ptr<ImportGraphWrapper>& net, int nodeId,
             if ((inpNode->getType() == "Gather") && (node->getType() == "Cast"))
             {
                 int numNodes = net->getNumNodes();
-                auto inpNodeName = node->getInputName(j);
+                std::string inpNodeName = node->getInputName(j);
                 for (int nodeId = 0; nodeId < numNodes; ++nodeId) {
                     const Ptr<ImportNodeWrapper> node_to_check = net->getNode(nodeId);
                     int numInp = node_to_check->getNumInputs();
