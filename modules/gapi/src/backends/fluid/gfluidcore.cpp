@@ -806,22 +806,18 @@ GAPI_FLUID_KERNEL(GFluidDivRC, cv::gapi::core::GDivRC, false)
 template<typename DST, typename SRC>
 static void run_mask(Buffer &dst, const View &src, const View &mask)
 {
-    static_assert(std::is_same<DST, SRC>::value, "wrong types");
+    static_assert(std::is_same<DST, SRC>::value,
+        "Input and output types must match");
 
-    int width  = dst.length();
-    int chan   = dst.meta().chan;
-    int length = width * chan;
+    int length  = dst.length(); // dst, src and mask have the same size and are single-channel
 
-    if (mask.meta().chan != 1 || mask.meta().depth != CV_8U)
-        CV_Error(cv::Error::StsBadArg, "unsupported mask type");
-
-    const auto *in1 = src.InLine<SRC>(0);
-    const auto *in2 = mask.InLine<uchar>(0);
-          auto *out = dst.OutLine<DST>();
+    const auto *in      = src.InLine<SRC>(0);
+    const auto *in_mask = mask.InLine<uchar>(0);
+          auto *out     = dst.OutLine<DST>();
 
     for (int l=0; l < length; l++)
     {
-        out[l] = in2[l] ? in1[l] : 0;
+        out[l] = in_mask[l] ? in[l] : 0;
     }
 }
 
@@ -831,12 +827,15 @@ GAPI_FLUID_KERNEL(GFluidMask, cv::gapi::core::GMask, false)
 
     static void run(const View &src, const View &mask, Buffer &dst)
     {
+        if (src.meta().chan != 1 || dst.meta().chan != 1)
+            CV_Error(cv::Error::StsBadArg, "input and output must be single-channel");
+        if (mask.meta().chan != 1 || mask.meta().depth != CV_8U)
+            CV_Error(cv::Error::StsBadArg, "unsupported mask type");
+
         //     DST     SRC     OP        __VA_ARGS__
         UNARY_(uchar , uchar , run_mask, dst, src, mask);
-        // UNARY_( char ,  char , run_mask, dst, src, mask); // Not supported in OCV kernel
         UNARY_( short,  short, run_mask, dst, src, mask);
         UNARY_(ushort, ushort, run_mask, dst, src, mask);
-        // UNARY_( float,  float, run_mask, dst, src, mask); // Not supported in OCV kernel
 
         CV_Error(cv::Error::StsBadArg, "unsupported combination of types");
     }
