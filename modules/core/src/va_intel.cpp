@@ -25,13 +25,17 @@ using namespace cv;
 #  include "opencl_kernels_core.hpp"
 #endif // HAVE_OPENCL
 
-#if defined(HAVE_VA_INTEL) && defined(HAVE_OPENCL)
+#ifdef HAVE_VA_INTEL
+#ifdef HAVE_VA_INTEL_OLD_HEADER
 #  include <CL/va_ext.h>
-#endif // HAVE_VA_INTEL && HAVE_OPENCL
+#else
+#  include <CL/cl_va_api_media_sharing_intel.h>
+#endif
+#endif
 
 namespace cv { namespace va_intel {
 
-#if defined(HAVE_VA_INTEL) && defined(HAVE_OPENCL)
+#ifdef HAVE_VA_INTEL
 
 static clGetDeviceIDsFromVA_APIMediaAdapterINTEL_fn clGetDeviceIDsFromVA_APIMediaAdapterINTEL = NULL;
 static clCreateFromVA_APIMediaSurfaceINTEL_fn       clCreateFromVA_APIMediaSurfaceINTEL       = NULL;
@@ -40,7 +44,7 @@ static clEnqueueReleaseVA_APIMediaSurfacesINTEL_fn  clEnqueueReleaseVA_APIMediaS
 
 static bool contextInitialized = false;
 
-#endif // HAVE_VA_INTEL && HAVE_OPENCL
+#endif // HAVE_VA_INTEL
 
 namespace ocl {
 
@@ -50,7 +54,7 @@ Context& initializeContextFromVA(VADisplay display, bool tryInterop)
 #if !defined(HAVE_VA)
     NO_VA_SUPPORT_ERROR;
 #else  // !HAVE_VA
-# if (defined(HAVE_VA_INTEL) && defined(HAVE_OPENCL))
+#   ifdef HAVE_VA_INTEL
     contextInitialized = false;
     if (tryInterop)
     {
@@ -137,7 +141,13 @@ Context& initializeContextFromVA(VADisplay display, bool tryInterop)
             contextInitialized = true;
 
             cl_platform_id platform = platforms[found];
-            std::string platformName = PlatformInfo(platform).name();
+            char platformName[1024] = {0};
+            size_t sz = 0;
+            if (clGetPlatformInfo(platform, CL_PLATFORM_NAME, sizeof(platformName) - 16, platformName, &sz) != CL_SUCCESS
+                || sz >= sizeof(platformName))
+            {
+                CV_Error(cv::Error::OpenCLInitError, "OpenCL: Failed to get platform name");
+            }
 
             OpenCLExecutionContext clExecCtx;
             try
@@ -154,7 +164,7 @@ Context& initializeContextFromVA(VADisplay display, bool tryInterop)
             return const_cast<Context&>(clExecCtx.getContext());
         }
     }
-# endif // HAVE_VA_INTEL && HAVE_OPENCL
+# endif // HAVE_VA_INTEL
     {
         Context& ctx = Context::getDefault(true);
         return ctx;
@@ -162,7 +172,7 @@ Context& initializeContextFromVA(VADisplay display, bool tryInterop)
 #endif  // !HAVE_VA
 }
 
-#if defined(HAVE_VA_INTEL) && defined(HAVE_OPENCL)
+#ifdef HAVE_VA_INTEL
 static bool ocl_convert_nv12_to_bgr(cl_mem clImageY, cl_mem clImageUV, cl_mem clBuffer, int step, int cols, int rows)
 {
     ocl::Kernel k;
@@ -188,7 +198,7 @@ static bool ocl_convert_bgr_to_nv12(cl_mem clBuffer, int step, int cols, int row
     size_t globalsize[] = { (size_t)cols, (size_t)rows };
     return k.run(2, globalsize, 0, false);
 }
-#endif // HAVE_VA_INTEL && HAVE_OPENCL
+#endif // HAVE_VA_INTEL
 
 } // namespace cv::va_intel::ocl
 
@@ -511,7 +521,7 @@ void convertToVASurface(VADisplay display, InputArray src, VASurfaceID surface, 
     Size srcSize = src.size();
     CV_Assert(srcSize.width == size.width && srcSize.height == size.height);
 
-# if (defined(HAVE_VA_INTEL) && defined(HAVE_OPENCL))
+#ifdef HAVE_VA_INTEL
     if (contextInitialized)
     {
         UMat u = src.getUMat();
@@ -559,7 +569,7 @@ void convertToVASurface(VADisplay display, InputArray src, VASurfaceID surface, 
             CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clReleaseMem failed (UV plane)");
     }
     else
-# endif // HAVE_VA_INTEL && HAVE_OPENCL
+# endif // HAVE_VA_INTEL
     {
         Mat m = src.getMat();
 
@@ -612,7 +622,7 @@ void convertFromVASurface(VADisplay display, VASurfaceID surface, Size size, Out
     // TODO Need to specify ACCESS_WRITE here somehow to prevent useless data copying!
     dst.create(size, dtype);
 
-# if (defined(HAVE_VA_INTEL) && defined(HAVE_OPENCL))
+#ifdef HAVE_VA_INTEL
     if (contextInitialized)
     {
         UMat u = dst.getUMat();
@@ -660,7 +670,7 @@ void convertFromVASurface(VADisplay display, VASurfaceID surface, Size size, Out
             CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clReleaseMem failed (UV plane)");
     }
     else
-# endif // HAVE_VA_INTEL && HAVE_OPENCL
+# endif // HAVE_VA_INTEL
     {
         Mat m = dst.getMat();
 

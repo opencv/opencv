@@ -80,6 +80,9 @@ endif()
 if(HAVE_MEMALIGN)
   ocv_append_source_file_compile_definitions(${CMAKE_CURRENT_SOURCE_DIR}/src/alloc.cpp "HAVE_MEMALIGN=1")
 endif()
+if(HAVE_VA_INTEL_OLD_HEADER)
+  ocv_append_source_file_compile_definitions("${CMAKE_CURRENT_LIST_DIR}/src/va_intel.cpp" "HAVE_VA_INTEL_OLD_HEADER")
+endif()
 
 option(OPENCV_ENABLE_ALLOCATOR_STATS "Enable Allocator metrics" ON)
 

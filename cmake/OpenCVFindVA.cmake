@@ -1,5 +1,6 @@
-# Main variables:
-# HAVE_VA for conditional compilation OpenCV with/without libva
+# Output:
+#   HAVE_VA - libva is available
+#   HAVE_VA_INTEL - OpenCL/libva Intel interoperability extension is available
 
 if(UNIX AND NOT ANDROID)
     find_path(
