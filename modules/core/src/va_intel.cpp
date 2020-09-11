@@ -26,7 +26,7 @@ using namespace cv;
 #endif // HAVE_OPENCL
 
 #if defined(HAVE_VA_INTEL) && defined(HAVE_OPENCL)
-#  include <CL/va_ext.h>
+#  include <CL/cl_va_api_media_sharing_intel.h>
 #endif // HAVE_VA_INTEL && HAVE_OPENCL
 
 namespace cv { namespace va_intel {
