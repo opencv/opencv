@@ -92,7 +92,7 @@ public:
     // integral Scalar initialization
     cv::Scalar initScalarRandU(unsigned upper)
     {
-        cv::RNG rng(time(NULL));
+        cv::RNG rng(time(nullptr));
         double s1 = rng(upper);
         double s2 = rng(upper);
         double s3 = rng(upper);
@@ -103,7 +103,7 @@ public:
     // floating-point Scalar initialization (cv::core)
     cv::Scalar initScalarRandU()
     {
-        cv::RNG rng(time(NULL));
+        cv::RNG rng(time(nullptr));
         double s1 = exp(rng.uniform(-1, 6) * 3.0 * CV_LOG2) * (rng.uniform(0, 2) ? 1. : -1.);
         double s2 = exp(rng.uniform(-1, 6) * 3.0 * CV_LOG2) * (rng.uniform(0, 2) ? 1. : -1.);
         double s3 = exp(rng.uniform(-1, 6) * 3.0 * CV_LOG2) * (rng.uniform(0, 2) ? 1. : -1.);

@@ -18,9 +18,9 @@ TEST_P(MathOperatorMatScalarTest, OperatorAccuracyTest )
     auto fun_ocv = op.ocv_function ;
 
     if (op.name == "rev_operator/")
-        in_mat1.setTo(1, in_mat1 == 0);                               // avoid zeros in divide input data
+        in_mat1.setTo(1, in_mat1 == 0);                               // avoiding zeros in divide input data
     if (op.name == "operator/")
-        sc += Scalar(sc[0] == 0, sc[1] == 0, sc[2] == 0, sc[3] == 0); // avoid zeros in divide input data
+        sc += Scalar(sc[0] == 0, sc[1] == 0, sc[2] == 0, sc[3] == 0); // avoiding zeros in divide input data
 
     // G-API code & corresponding OpenCV code ////////////////////////////////
 
@@ -46,7 +46,7 @@ TEST_P(MathOperatorMatMatTest, OperatorAccuracyTest )
     auto fun_ocv = op.ocv_function ;
 
     if (op.name == "operator/")
-        in_mat2.setTo(1, in_mat2 == 0); // avoid zeros in divide input data
+        in_mat2.setTo(1, in_mat2 == 0); // avoiding zeros in divide input data
 
     // G-API code & corresponding OpenCV code ////////////////////////////////
 

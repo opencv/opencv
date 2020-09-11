@@ -928,8 +928,11 @@ GAPI_FLUID_KERNEL(GFluidNot, cv::gapi::core::GNot, false)
 //
 //--------------------------------------
 
-static void checkScalarForBitwise(const cv::Scalar &_scalar, const int scalarI[4])
+static void convertScalarForBitwise(const cv::Scalar &_scalar, int scalarI[4])
 {
+    for (int i = 0; i < 4; i++)
+        scalarI[i] = static_cast<int>(_scalar[i]);
+
     if (!((_scalar[0] == scalarI[0]) && (_scalar[1] == scalarI[1]) &&
           (_scalar[2] == scalarI[2]) && (_scalar[3] == scalarI[3])))
     {
@@ -956,7 +959,7 @@ static inline DST bw_xorS(DST x, int y)
 }
 
 // manually unroll the inner cycle by channels
-// (reuse arithmetics function above of the same purpose)
+// (reuse arithmetic function above of the same purpose)
 template<typename DST, typename FUNC>
 static inline void run_bitwise_s(DST out[], const DST in[], int width, int chan,
                                  const int scalar[4], FUNC func)
@@ -997,13 +1000,8 @@ GAPI_FLUID_KERNEL(GFluidAndS, cv::gapi::core::GAndS, false)
     static void run(const View &src, const cv::Scalar &_scalar, Buffer &dst)
     {
 
-        const int scalar[4] = {
-            static_cast<int>(_scalar[0]),
-            static_cast<int>(_scalar[1]),
-            static_cast<int>(_scalar[2]),
-            static_cast<int>(_scalar[3])
-        };
-        checkScalarForBitwise(_scalar, scalar);
+        int scalar[4];
+        convertScalarForBitwise(_scalar, scalar);
 
         //     DST     SRC     OP            __VA_ARGS__
         UNARY_(uchar , uchar , run_bitwise_s, dst, src, scalar, BW_AND);
@@ -1021,13 +1019,8 @@ GAPI_FLUID_KERNEL(GFluidOrS, cv::gapi::core::GOrS, false)
     static void run(const View &src, const cv::Scalar &_scalar, Buffer &dst)
     {
 
-        const int scalar[4] = {
-            static_cast<int>(_scalar[0]),
-            static_cast<int>(_scalar[1]),
-            static_cast<int>(_scalar[2]),
-            static_cast<int>(_scalar[3])
-        };
-        checkScalarForBitwise(_scalar, scalar);
+        int scalar[4];
+        convertScalarForBitwise(_scalar, scalar);
 
         //     DST     SRC     OP            __VA_ARGS__
         UNARY_(uchar , uchar , run_bitwise_s, dst, src, scalar, BW_OR);
@@ -1045,13 +1038,8 @@ GAPI_FLUID_KERNEL(GFluidXorS, cv::gapi::core::GXorS, false)
     static void run(const View &src, const cv::Scalar &_scalar, Buffer &dst)
     {
 
-        const int scalar[4] = {
-            static_cast<int>(_scalar[0]),
-            static_cast<int>(_scalar[1]),
-            static_cast<int>(_scalar[2]),
-            static_cast<int>(_scalar[3])
-        };
-        checkScalarForBitwise(_scalar, scalar);
+        int scalar[4];
+        convertScalarForBitwise(_scalar, scalar);
 
         //     DST     SRC     OP            __VA_ARGS__
         UNARY_(uchar , uchar , run_bitwise_s, dst, src, scalar, BW_XOR);
