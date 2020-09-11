@@ -1144,11 +1144,10 @@ void forwardInfEngine(const std::vector<Ptr<BackendWrapper> >& outBlobsWrappers,
 
 CV__DNN_INLINE_NS_BEGIN
 
-void resetMyriadDevice()
+void resetMyriadDevice(const std::string& device)
 {
 #ifdef HAVE_INF_ENGINE
     AutoLock lock(getInitializationMutex());
-    std::string device = detectMyriadX_("MYRIAD") ? "MYRIAD" : "HDDL";
 #if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
     getSharedPlugins().erase(device);
 #else
@@ -1165,10 +1164,10 @@ void resetMyriadDevice()
 }
 
 #ifdef HAVE_INF_ENGINE
-bool isMyriadX(std::string device)
+bool isMyriadX()
 {
-     static bool myriadX = getInferenceEngineVPUType() == (device == "MYRIAD" ? CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X : CV_DNN_INFERENCE_ENGINE_VPU_TYPE_HDDL);
-     return myriadX;
+    static bool myriadX = getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X;
+    return myriadX;
 }
 
 static std::string getInferenceEngineVPUType_()
@@ -1183,13 +1182,9 @@ static std::string getInferenceEngineVPUType_()
         try {
             bool isMyriadX_ = detectMyriadX_("MYRIAD");
             bool isHDDL_ = detectMyriadX_("HDDL");
-            if (isMyriadX_)
+            if (isMyriadX_ || isHDDL_)
             {
                 param_vpu_type = CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X;
-            }
-            else if (isHDDL_)
-            {
-                param_vpu_type = CV_DNN_INFERENCE_ENGINE_VPU_TYPE_HDDL;
             }
             else
             {

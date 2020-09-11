@@ -205,7 +205,7 @@ public:
             if (preferableTarget == DNN_TARGET_MYRIAD || preferableTarget == DNN_TARGET_HDDL) {
 #if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
                 if (type == MAX && (pad_l == 1 && pad_t == 1) && stride == Size(2, 2) ) {
-                    return !isMyriadX(preferableTarget == DNN_TARGET_MYRIAD ? "MYRIAD" : "HDDL");
+                    return !isMyriadX();
                 }
 #endif
                 return type == MAX || type == AVE;
