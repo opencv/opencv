@@ -11,6 +11,8 @@
 #include <array>
 #include <type_traits>
 
+#include <opencv2/gapi/own/exports.hpp>
+
 #include <opencv2/gapi/util/throw.hpp>
 #include <opencv2/gapi/util/util.hpp> // max_of_t
 #include <opencv2/gapi/util/type_traits.hpp>
@@ -18,8 +20,15 @@
 // A poor man's `variant` implementation, incompletely modeled against C++17 spec.
 namespace cv
 {
+
+template<typename T>
+class GAPI_EXPORTS_W_SIMPLE MYClass
+{
+};
+
 namespace util
 {
+
     namespace detail
     {
         template<std::size_t I, typename Target, typename First, typename... Remaining>

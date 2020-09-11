@@ -45,7 +45,6 @@
 
 #define CV_HAS_CONVERSION_ERROR(x) (((x) == -1) && PyErr_Occurred())
 
-
 class ArgInfo
 {
 public:
@@ -1899,10 +1898,16 @@ static int convert_to_char(PyObject *o, char *dst, const ArgInfo& info)
 #define CVPY_TYPE(NAME, STORAGE, SNAME, _1, _2) CVPY_TYPE_DECLARE(NAME, STORAGE, SNAME)
 #endif
 #include "pyopencv_generated_types.h"
+//CVPY_TYPE(GIOProtoArgs, Ptr<cv::GIOProtoArgs>, Ptr, NoBase, pyopencv_cv_GIOProtoArgs_GIOProtoArgs)
 #undef CVPY_TYPE
 
 #include "pyopencv_generated_types_content.h"
 #include "pyopencv_generated_funcs.h"
+
+//static int pyopencv_cv_GIOProtoArgs_GIOProtoArgs(pyopencv_GIOProtoArgs_t* self, PyObject* py_args, PyObject* kw)
+//{
+    //return -1;
+//}
 
 
 static PyMethodDef special_methods[] = {
@@ -1916,6 +1921,7 @@ static PyMethodDef special_methods[] = {
   {"dnn_registerLayer", CV_PY_FN_WITH_KW(pyopencv_cv_dnn_registerLayer), "registerLayer(type, class) -> None"},
   {"dnn_unregisterLayer", CV_PY_FN_WITH_KW(pyopencv_cv_dnn_unregisterLayer), "unregisterLayer(type) -> None"},
 #endif
+  {"GIn", CV_PY_FN_WITH_KW(pyopencv_cv_GIn), ""},
   {NULL, NULL},
 };
 
