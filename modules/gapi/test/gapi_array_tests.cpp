@@ -30,7 +30,7 @@ G_TYPED_KERNEL(CountCorners,   <GScalar(GPointArray)>,  "test.array.in")
 };
 G_TYPED_KERNEL(PointIncrement, <GPointArray(GMat, GPointArray)>, "test.point_increment")
 {
-    static GArrayDesc outMeta(const GMatDesc&, const GArrayDesc &) { return empty_array_desc(); }
+    static GArrayDesc outMeta(const GMatDesc&, const GArrayDesc&) { return empty_array_desc(); }
 };
 } // namespace ThisTest
 
@@ -63,7 +63,7 @@ GAPI_OCV_KERNEL(OCVCountCorners, ThisTest::CountCorners)
 
 GAPI_OCV_KERNEL(OCVPointIncrement, ThisTest::PointIncrement)
 {
-    static void run(cv::Mat, const std::vector<cv::Point> &in, std::vector<cv::Point> &out)
+    static void run(const cv::Mat&, const std::vector<cv::Point>& in, std::vector<cv::Point>& out)
     {
         for (const auto& el : in)
             out.emplace_back(el + Point(1,1));
@@ -186,7 +186,8 @@ TEST(GArray, GArrayConstValInitialization)
 
     cv::GComputationT<ThisTest::GPointArray(cv::GMat)> c([&](cv::GMat in)
     {
-        ThisTest::GPointArray test_garray(initial_vec); // Initialization
+        // Initialization
+        ThisTest::GPointArray test_garray(initial_vec);
         return ThisTest::PointIncrement::on(in, test_garray);
     });
     auto cc = c.compile(cv::descr_of(in_mat),
@@ -196,7 +197,7 @@ TEST(GArray, GArrayConstValInitialization)
     EXPECT_EQ(ref_vec, out_vec);
 }
 
-TEST(GArray, GArrayConstRValInitialization)
+TEST(GArray, GArrayRValInitialization)
 {
     std::vector<cv::Point> ref_vec {Point(1,1), Point(2,2), Point(3,3)};
     std::vector<cv::Point> out_vec;
@@ -204,8 +205,8 @@ TEST(GArray, GArrayConstRValInitialization)
 
     cv::GComputationT<ThisTest::GPointArray(cv::GMat)> c([&](cv::GMat in)
     {
-        ThisTest::GPointArray test_garray(
-            { Point(0,0), Point(1,1), Point(2,2) } ); // Rvalue initialization
+        // Rvalue initialization
+        ThisTest::GPointArray test_garray({Point(0,0), Point(1,1), Point(2,2)});
         return ThisTest::PointIncrement::on(in, test_garray);
     });
     auto cc = c.compile(cv::descr_of(in_mat),

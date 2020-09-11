@@ -335,7 +335,7 @@ public:
 
     explicit GArray(const std::vector<HT>& v) // Constant value constructor
         : m_ref(detail::GArrayU(detail::VectorRef(v))) { putDetails(); }
-    explicit GArray(std::vector<HT>&& v)      // Constant value move-constructor
+    explicit GArray(std::vector<HT>&& v)      // Move-constructor
         : m_ref(detail::GArrayU(detail::VectorRef(std::move(v)))) { putDetails(); }
     GArray() { putDetails(); }             // Empty constructor
     explicit GArray(detail::GArrayU &&ref) // GArrayU-based constructor
