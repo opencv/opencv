@@ -943,3 +943,12 @@ class Power(nn.Module):
 x = Variable(torch.randn(2, 2))
 model = Power(2)
 save_data_and_model("pow2", x, model)
+
+class ReduceMax(nn.Module):
+  def forward(self, x):
+    out = torch.max(x)
+    return torch.unsqueeze(out, 0)
+
+x = Variable(torch.randn(1, 3, 2, 2))
+model = ReduceMax()
+save_data_and_model("reduce_max", x, model)
