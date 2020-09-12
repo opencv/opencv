@@ -262,6 +262,11 @@ TEST_P(Test_ONNX_layers, ReduceSum)
     testONNXModels("reduce_sum");
 }
 
+TEST_P(Test_ONNX_layers, ReduceMaxGlobal)
+{
+    testONNXModels("reduce_max");
+}
+
 TEST_P(Test_ONNX_layers, ReduceMean3D)
 {
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target != DNN_TARGET_CPU)
