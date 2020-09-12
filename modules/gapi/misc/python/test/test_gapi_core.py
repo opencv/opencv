@@ -38,5 +38,23 @@ class gapi_core_test(NewOpenCVTests):
             self.assertEqual(0.0, cv.norm(expected, actual, cv.NORM_INF))
 
 
+    def test_mean(self):
+        sz = (1280, 720, 3)
+        in_mat = np.random.randint(0, 100, sz).astype(np.uint8)
+
+        # OpenCV
+        expected = cv.mean(in_mat)
+
+        # G-API
+        g_in = cv.GMat()
+        g_out = cv.gapi.mean(g_in)
+        comp = cv.GComputation(g_in, g_out)
+
+        for pkg in pkgs:
+            actual = comp.apply(in_mat, args=cv.compile_args(pkg))
+            # Comparison
+            self.assertEqual(0.0, cv.norm(expected, actual, cv.NORM_INF))
+
+
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()

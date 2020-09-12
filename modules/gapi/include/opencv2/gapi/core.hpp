@@ -744,7 +744,7 @@ Supported matrix data types are @ref CV_8UC1, @ref CV_8UC3, @ref CV_16UC1, @ref 
 @note Function textual ID is "org.opencv.core.math.mean"
 @param src input matrix.
 */
-GAPI_EXPORTS GScalar mean(const GMat& src);
+GAPI_EXPORTS_W GScalar mean(const GMat& src);
 
 /** @brief Calculates x and y coordinates of 2D vectors from their magnitude and angle.
 
