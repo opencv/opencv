@@ -36,11 +36,11 @@ struct GAPI_EXPORTS GKernel
 {
     using M = std::function<GMetaArgs(const GMetaArgs &, const GArgs &)>;
 
-    const std::string name;       // kernel ID, defined by its API (signature)
-    const std::string tag;        // some (implementation-specific) tag
-    const M           outMeta;    // generic adaptor to API::outMeta(...)
-    const GShapes     outShapes;  // types (shapes) kernel's outputs
-    const GKinds      inKinds;    // kinds of kernel's inputs (fixme: below)
+    std::string name;       // kernel ID, defined by its API (signature)
+    std::string tag;        // some (implementation-specific) tag
+    M           outMeta;    // generic adaptor to API::outMeta(...)
+    GShapes     outShapes;  // types (shapes) kernel's outputs
+    GKinds      inKinds;    // kinds of kernel's inputs (fixme: below)
 };
 // TODO: It's questionable if inKinds should really be here. Instead,
 // this information could come from meta.
