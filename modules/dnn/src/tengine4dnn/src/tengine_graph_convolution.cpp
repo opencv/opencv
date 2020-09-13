@@ -40,7 +40,7 @@ namespace cv
 {
 namespace dnn
 {
-static int create_input_node(graph_t graph, const char* node_name, int inch, int in_h, int in_w)
+static int create_input_node(teng_graph_t graph, const char* node_name, int inch, int in_h, int in_w)
 {
     node_t node     = teng_create_graph_node(graph, node_name, "InputOp");
     tensor_t tensor = teng_create_graph_tensor(graph, node_name, TENGINE_DT_FP32);
@@ -55,7 +55,7 @@ static int create_input_node(graph_t graph, const char* node_name, int inch, int
     return 0;
 }
 
-static int create_conv_node(graph_t graph, const char* node_name, const char* input_name, int in_h, int in_w, int out_h, int out_w,
+static int create_conv_node(teng_graph_t graph, const char* node_name, const char* input_name, int in_h, int in_w, int out_h, int out_w,
     int kernel_h, int kernel_w, int stride_h, int stride_w, int pad_h, int pad_w, int inch, int outch, int group,
     int dilation_h, int dilation_w, int activation, std::string padMode)
 {
@@ -145,7 +145,7 @@ static int create_conv_node(graph_t graph, const char* node_name, const char* in
     return 0;
 }
 
-static graph_t create_conv_graph(const char* layer_name, float* input_data, int inch, int group, int in_h, int in_w,
+static teng_graph_t create_conv_graph(const char* layer_name, float* input_data, int inch, int group, int in_h, int in_w,
                         float* output_data, int outch, int out_h, int out_w,
                         int kernel_h, int kernel_w,
                         int stride_h,int stride_w,
@@ -169,7 +169,7 @@ static graph_t create_conv_graph(const char* layer_name, float* input_data, int 
     int input_num = 0;
 
     /* create graph */
-    graph_t graph = teng_create_graph(NULL, NULL, NULL);
+    teng_graph_t graph = teng_create_graph(NULL, NULL, NULL);
     bool ok = true;
 
     if(graph == NULL)
@@ -286,12 +286,12 @@ static graph_t create_conv_graph(const char* layer_name, float* input_data, int 
     return graph;
 }
 static bool tengine_init_flag = false;
-graph_t tengine_init(const char* layer_name, float* input_, int inch, int group, int in_h, int in_w,
+teng_graph_t tengine_init(const char* layer_name, float* input_, int inch, int group, int in_h, int in_w,
                         float *output_, int out_b, int outch, int out_h, int out_w,
                         float *kernel_, int kernel_s ,int kernel_h, int kernel_w,
                         float *teg_bias, int stride_h,int stride_w,
                         int pad_h, int pad_w,  int dilation_h, int dilation_w,
-                        size_t wstep, const std::string padMode, graph_t &graph, int nstripes)
+                        size_t wstep, const std::string padMode, teng_graph_t &graph, int nstripes)
 {
     std::vector<float> teg_weight_vec;
     float *teg_weight = NULL;
@@ -352,7 +352,7 @@ graph_t tengine_init(const char* layer_name, float* input_, int inch, int group,
     return graph ;
 }
 
-bool tengine_forward(graph_t &graph)
+bool tengine_forward(teng_graph_t &graph)
 {
     /* run */
     if(teng_run_graph(graph, 1) < 0)
@@ -362,7 +362,7 @@ bool tengine_forward(graph_t &graph)
     }
     return true;
 }
-bool tengine_release(graph_t &graph)
+bool tengine_release(teng_graph_t &graph)
 {
     teng_postrun_graph(graph);
     teng_destroy_graph(graph);
