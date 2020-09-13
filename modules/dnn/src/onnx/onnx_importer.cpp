@@ -680,7 +680,7 @@ void ONNXImporter::populateNet(Net dstNet)
                         LayerParams constParams;
                         constParams.name = layerParams.name + "/const";
                         constParams.type = "Const";
-                        constParams.blobs.push_back(blob);
+                        constParams.blobs.push_back((isSub ? -1 : 1) * blob);
                         int id = dstNet.addLayer(constParams.name, constParams.type, constParams);
                         layer_id.insert(std::make_pair(constParams.name, LayerInfo(id, 0)));
                         outShapes[constParams.name] = shape(blob);
