@@ -742,11 +742,18 @@ TEST(S11N, Pipeline_Render_FText_NV12)
 
     cv::Mat y(1920, 1080, CV_8UC1);
     cv::Mat uv(960, 540, CV_8UC2);
+    cv::randu(y, cv::Scalar::all(0), cv::Scalar::all(255));
+    cv::randu(uv, cv::Scalar::all(0), cv::Scalar::all(255));
+    auto y_ref = y.clone();
+    auto uv_ref = uv.clone();
 
     EXPECT_NO_THROW(dc.apply(cv::gin(y, uv, prims), cv::gout(y, uv),
                              cv::compile_args(cv::gapi::wip::draw::freetype_font{
                              "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc"
                              })));
+    // Sanity check
+    EXPECT_NE(cv::norm(y, y_ref), 0);
+    EXPECT_NE(cv::norm(uv, uv_ref), 0);
 }
 
 TEST(S11N, Pipeline_Render_FText_RGB)
@@ -768,11 +775,15 @@ TEST(S11N, Pipeline_Render_FText_RGB)
     auto dc = cv::gapi::deserialize<cv::GComputation>(serialized);
 
     cv::Mat input(1920, 1080, CV_8UC3);
+    cv::randu(input, cv::Scalar::all(0), cv::Scalar::all(255));
+    auto input_ref = input.clone();
 
     EXPECT_NO_THROW(dc.apply(cv::gin(input, prims), cv::gout(input),
                              cv::compile_args(cv::gapi::wip::draw::freetype_font{
                              "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc"
                              })));
+    // Sanity check
+    EXPECT_NE(cv::norm(input, input_ref), 0);
 }
 
 #endif // HAVE_FREETYPE
