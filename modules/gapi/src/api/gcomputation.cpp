@@ -165,6 +165,36 @@ void cv::GComputation::apply(const std::vector<cv::Mat> &ins,
     apply(std::move(call_ins), std::move(call_outs), std::move(args));
 }
 
+cv::GRunArgs cv::GComputation::apply(GRunArgs &&ins, GCompileArgs &&args)
+{
+    auto& shape = m_priv->m_shape;
+    if (util::holds_alternative<cv::GComputation::Priv::Expr>(shape)) {
+        const auto& expr = cv::util::get<cv::GComputation::Priv::Expr>(shape);
+        std::vector<cv::Mat> mats;
+        GRunArgs run_args;
+        GRunArgsP outs;
+        for (auto&& p : expr.m_outs)
+        {
+            switch (p.index())
+            {
+                case GProtoArg::index_of<cv::GMat>():
+                {
+                    run_args.emplace_back(cv::Mat{});
+                    auto& m = cv::util::get<cv::Mat>(run_args.back());
+                    outs.emplace_back(&m);
+                    break;
+                }
+
+                default:
+                    GAPI_Assert(false);
+            }
+        }
+        apply(std::move(ins), std::move(outs), std::move(args));
+        return run_args;;
+    }
+    GAPI_Assert(false);
+}
+
 #if !defined(GAPI_STANDALONE)
 void cv::GComputation::apply(cv::Mat in, cv::Mat &out, GCompileArgs &&args)
 {

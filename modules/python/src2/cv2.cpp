@@ -83,7 +83,7 @@ static bool isPythonBindingsDebugEnabled()
 static void emit_failmsg(PyObject * exc, const char *msg)
 {
     static bool param_debug = isPythonBindingsDebugEnabled();
-    if (param_debug)
+     if (param_debug)
     {
         CV_LOG_WARNING(NULL, "Bindings conversion failed: " << msg);
     }
@@ -1898,17 +1898,95 @@ static int convert_to_char(PyObject *o, char *dst, const ArgInfo& info)
 #define CVPY_TYPE(NAME, STORAGE, SNAME, _1, _2) CVPY_TYPE_DECLARE(NAME, STORAGE, SNAME)
 #endif
 #include "pyopencv_generated_types.h"
-//CVPY_TYPE(GIOProtoArgs, Ptr<cv::GIOProtoArgs>, Ptr, NoBase, pyopencv_cv_GIOProtoArgs_GIOProtoArgs)
 #undef CVPY_TYPE
 
 #include "pyopencv_generated_types_content.h"
 #include "pyopencv_generated_funcs.h"
 
-//static int pyopencv_cv_GIOProtoArgs_GIOProtoArgs(pyopencv_GIOProtoArgs_t* self, PyObject* py_args, PyObject* kw)
-//{
-    //return -1;
-//}
+#ifdef HAVE_OPENCV_GAPI
 
+template <typename T>
+static PyObject* extract_proto_args(PyObject* py_args, PyObject* kw)
+{
+    using namespace cv;
+
+    GProtoArgs args;
+    Py_ssize_t size = PyTuple_Size(py_args);
+    for (int i = 0; i < size; ++i) {
+        PyObject* item = PyTuple_GetItem(py_args, i);
+        if (PyObject_TypeCheck(item, (PyTypeObject*)pyopencv_GScalar_TypePtr)) {
+            args.emplace_back((((pyopencv_GScalar_t*)item)->v));
+        } else if (PyObject_TypeCheck(item, (PyTypeObject*)pyopencv_GMat_TypePtr)) {
+            args.emplace_back((((pyopencv_GMat_t*)item)->v));
+        } else {
+            PyErr_SetString(PyExc_TypeError, "cv.GIn() supports only cv.GMat and cv.GScalar");
+            return NULL;
+        }
+    }
+
+    return pyopencv_from<T>(T{std::move(args)});
+}
+
+static PyObject* pyopencv_cv_GIn(PyObject* , PyObject* py_args, PyObject* kw)
+{
+    return extract_proto_args<GProtoInputArgs>(py_args, kw);
+}
+
+static PyObject* pyopencv_cv_GOut(PyObject* , PyObject* py_args, PyObject* kw)
+{
+    return extract_proto_args<GProtoOutputArgs>(py_args, kw);
+}
+
+static PyObject* pyopencv_cv_gin(PyObject* , PyObject* py_args, PyObject* kw)
+{
+    using namespace cv;
+
+    GRunArgs args;
+    Py_ssize_t size = PyTuple_Size(py_args);
+    for (int i = 0; i < size; ++i) {
+        PyObject* item = PyTuple_GetItem(py_args, i);
+        if (PyTuple_Check(item)) {
+            cv::Scalar s;
+            pyopencv_to(item, s, ArgInfo("scalar", i));
+            args.emplace_back(s);
+            // std::cout << "Scalar = " << s << std::endl;
+        } else if (PyArray_Check(item)) {
+            cv::Mat m;
+            pyopencv_to(item, m, ArgInfo("mat", i));
+            args.emplace_back(m);
+            // std::cout << "Mat = " << m << std::endl;
+        }
+    }
+
+    return pyopencv_from_generic_vec(args);
+}
+
+static PyObject* pyopencv_cv_gout(PyObject* o, PyObject* py_args, PyObject* kw)
+{
+    return pyopencv_cv_gin(o, py_args, kw);
+    //using namespace cv;
+
+    //GRunArgsP args;
+    //Py_ssize_t size = PyTuple_Size(py_args);
+    //for (int i = 0; i < size; ++i) {
+        //PyObject* item = PyTuple_GetItem(py_args, i);
+        //if (PyTuple_Check(item)) {
+            //cv::Scalar s;
+            //pyopencv_to(item, s, ArgInfo("scalar", i));
+            //args.emplace_back(&s);
+            //std::cout << "Scalar = " << s << std::endl;
+        //} else if (PyArray_Check(item)) {
+            //cv::Mat m;
+            //pyopencv_to(item, m, ArgInfo("mat", i));
+            //args.emplace_back(&m);
+            //std::cout << "Mat = " << m << std::endl;
+        //}
+    //}
+
+    //return pyopencv_from_generic_vec(args);
+}
+
+#endif
 
 static PyMethodDef special_methods[] = {
   {"redirectError", CV_PY_FN_WITH_KW(pycvRedirectError), "redirectError(onError) -> None"},
@@ -1921,7 +1999,12 @@ static PyMethodDef special_methods[] = {
   {"dnn_registerLayer", CV_PY_FN_WITH_KW(pyopencv_cv_dnn_registerLayer), "registerLayer(type, class) -> None"},
   {"dnn_unregisterLayer", CV_PY_FN_WITH_KW(pyopencv_cv_dnn_unregisterLayer), "unregisterLayer(type) -> None"},
 #endif
-  {"GIn", CV_PY_FN_WITH_KW(pyopencv_cv_GIn), ""},
+#ifdef HAVE_OPENCV_GAPI
+  {"GIn", CV_PY_FN_WITH_KW(pyopencv_cv_GIn), "GIn(...) -> GInputProtoArgs"},
+  {"GOut", CV_PY_FN_WITH_KW(pyopencv_cv_GOut), "GOut(...) -> GOutputProtoArgs"},
+  {"gin", CV_PY_FN_WITH_KW(pyopencv_cv_gin), "gin(...) -> GRunArgs"},
+  {"gout", CV_PY_FN_WITH_KW(pyopencv_cv_gout), "gout(...) -> GRunArgsP"},
+#endif
   {NULL, NULL},
 };
 

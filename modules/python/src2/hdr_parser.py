@@ -671,10 +671,6 @@ class CppHeaderParser(object):
             print("Error at %d: should not call parse_stmt inside blocks" % (self.lineno,))
             sys.exit(-1)
 
-        print('====================')
-        print('!stmst = ', stmt)
-        print('context = ', context)
-        print('====================')
         if context == "class" or context == "struct":
             while 1:
                 colon_pos = stmt.find(":")
