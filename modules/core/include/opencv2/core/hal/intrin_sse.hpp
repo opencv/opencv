@@ -360,6 +360,7 @@ inline v_float32x4 v_reinterpret_as_f32(const v_uint64x2& a)
 { return v_float32x4(_mm_castsi128_ps(a.val)); }
 inline v_float32x4 v_reinterpret_as_f32(const v_int64x2& a)
 { return v_float32x4(_mm_castsi128_ps(a.val)); }
+
 inline v_float64x2 v_reinterpret_as_f64(const v_uint64x2& a)
 { return v_float64x2(_mm_castsi128_pd(a.val)); }
 inline v_float64x2 v_reinterpret_as_f64(const v_int64x2& a)
@@ -1329,9 +1330,25 @@ inline v_int8x16 v_absdiffs(const v_int8x16& a, const v_int8x16& b)
     v_int8x16 m = a < b;
     return (d ^ m) - m;
  }
-inline v_int16x8 v_absdiffs(const v_int16x8& a, const v_int16x8& b)
-{ return v_max(a, b) - v_min(a, b); }
+static inline v_int16x8 v_absdiffs(const v_int16x8& a, const v_int16x8& b)
+{
+    return v_max(a, b) - v_min(a, b);
+}
 
+static inline v_uint16x8 v_absdiffs(const v_uint16x8& a, const v_uint16x8& b)
+{
+    return v_max(a, b) - v_min(a, b);
+}
+
+static inline v_uint8x16 v_absdiffs(const v_uint8x16& a, const v_uint8x16& b)
+{
+    return v_max(a, b) - v_min(a, b);
+}
+
+static inline v_float32x4 v_absdiffs(const v_float32x4& a, const v_float32x4& b)
+{
+    return v_max(a, b) - v_min(a, b);
+}
 
 inline v_int32x4 v_fma(const v_int32x4& a, const v_int32x4& b, const v_int32x4& c)
 {
@@ -2983,6 +3000,11 @@ OPENCV_HAL_IMPL_SSE_LOADSTORE_INTERLEAVE(v_int64x2, int64, s64, v_uint64x2, uint
 OPENCV_HAL_IMPL_SSE_LOADSTORE_INTERLEAVE(v_float64x2, double, f64, v_uint64x2, uint64, u64)
 
 inline v_float32x4 v_cvt_f32(const v_int32x4& a)
+{
+    return v_float32x4(_mm_cvtepi32_ps(a.val));
+}
+
+static inline v_float32x4 v_cvt_f32(const v_uint32x4& a)
 {
     return v_float32x4(_mm_cvtepi32_ps(a.val));
 }

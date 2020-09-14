@@ -1045,8 +1045,23 @@ OPENCV_HAL_IMPL_NEON_BIN_FUNC(v_float64x2, v_absdiff, vabdq_f64)
 /** Saturating absolute difference **/
 inline v_int8x16 v_absdiffs(const v_int8x16& a, const v_int8x16& b)
 { return v_int8x16(vqabsq_s8(vqsubq_s8(a.val, b.val))); }
-inline v_int16x8 v_absdiffs(const v_int16x8& a, const v_int16x8& b)
+static inline v_int16x8 v_absdiffs(const v_int16x8& a, const v_int16x8& b)
 { return v_int16x8(vqabsq_s16(vqsubq_s16(a.val, b.val))); }
+
+static inline v_float32x4 v_absdiffs(const v_float32x4& a, const v_float32x4& b)
+{
+    return v_float32x4(vabsq_f32(vsubq_f32(a.val, b.val)));
+}
+
+static inline v_uint8x16 v_absdiffs(const v_uint8x16& a, const v_uint8x16& b)
+{
+    return v_max(a, b) - v_min(a, b);
+}
+
+static inline v_uint16x8 v_absdiffs(const v_uint16x8& a, const v_uint16x8& b)
+{
+    return v_max(a, b) - v_min(a, b);
+}
 
 #define OPENCV_HAL_IMPL_NEON_BIN_FUNC2(_Tpvec, _Tpvec2, cast, func, intrin) \
 inline _Tpvec2 func(const _Tpvec& a, const _Tpvec& b) \
@@ -1944,6 +1959,11 @@ OPENCV_HAL_IMPL_NEON_INTERLEAVED_INT64(uint64, u64)
 inline v_float32x4 v_cvt_f32(const v_int32x4& a)
 {
     return v_float32x4(vcvtq_f32_s32(a.val));
+}
+
+static inline v_float32x4 v_cvt_f32(const v_uint32x4& a)
+{
+    return v_float32x4(vcvtq_f32_u32(a.val));
 }
 
 #if CV_SIMD128_64F

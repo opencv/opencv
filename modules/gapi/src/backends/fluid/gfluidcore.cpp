@@ -58,6 +58,339 @@ static inline DST add(SRC1 x, SRC2 y)
     return saturate<DST>(x + y, roundf);
 }
 
+enum Arithm { ARITHM_ABSDIFF, ARITHM_ADD, ARITHM_SUBTRACT, ARITHM_MULTIPLY, ARITHM_DIVIDE };
+
+#if CV_SIMD
+template<typename T, typename VT>
+static inline void absdiff_simd_sametype(const T in1[], const T in2[], T out[], int length, int& x)
+{
+    constexpr int nlanes = VT::nlanes;
+
+    for (; x < length; )
+    {
+        for (; x <= length - nlanes; x += nlanes)
+        {
+            VT a = vx_load(&in1[x]);
+            VT b = vx_load(&in2[x]);
+            vx_store(&out[x], v_absdiffs(a, b));
+        }
+
+        if (x < length && length >= nlanes)
+        {
+            x = length - nlanes;
+        }
+    }
+}
+
+template<typename SRC, typename DST>
+static inline void absdiff_simd(const SRC in1[], const SRC in2[], DST out[], int length, int& x)
+{
+    if (std::is_same<DST, uchar>::value)
+    {
+        absdiff_simd_sametype<uchar, v_uint8>(reinterpret_cast<const uchar*>(in1),
+                                              reinterpret_cast<const uchar*>(in2),
+                                              reinterpret_cast<uchar*>(out), length, x);
+    }
+    else if (std::is_same<DST, ushort>::value)
+    {
+        absdiff_simd_sametype<ushort, v_uint16>(reinterpret_cast<const ushort*>(in1),
+                                                reinterpret_cast<const ushort*>(in2),
+                                                reinterpret_cast<ushort*>(out), length, x);
+
+    }
+    else if (std::is_same<DST, short>::value)
+    {
+        absdiff_simd_sametype<short, v_int16>(reinterpret_cast<const short*>(in1),
+                                              reinterpret_cast<const short*>(in2),
+                                              reinterpret_cast<short*>(out), length, x);
+    }
+    else if (std::is_same<DST, float>::value)
+    {
+        absdiff_simd_sametype<float, v_float32>(reinterpret_cast<const float*>(in1),
+                                                reinterpret_cast<const float*>(in2),
+                                                reinterpret_cast<float*>(out), length, x);
+    }
+}
+
+template<typename T, typename VT>
+static inline void add_simd_sametype(const T in1[], const T in2[], T out[], int length, int& x)
+{
+    constexpr int nlanes = VT::nlanes;
+    for (; x < length; )
+    {
+        for (; x <= length - nlanes; x += nlanes)
+        {
+            VT a = vx_load(&in1[x]);
+            VT b = vx_load(&in2[x]);
+            vx_store(&out[x], a + b);
+        }
+
+        if (x < length && length >= nlanes)
+        {
+            x = length - nlanes;
+        }
+    }
+}
+
+template<typename SRC, typename DST>
+static inline void add_simd(const SRC in1[], const SRC in2[], DST out[], int length, int& x)
+{
+    if (std::is_same<DST, SRC>::value)
+    {
+        if (std::is_same<DST, uchar>::value)
+        {
+            add_simd_sametype<uchar, v_uint8>(reinterpret_cast<const uchar*>(in1),
+                                              reinterpret_cast<const uchar*>(in2),
+                                              reinterpret_cast<uchar*>(out), length, x);
+        }
+        else if (std::is_same<DST, short>::value)
+        {
+            add_simd_sametype<short, v_int16>(reinterpret_cast<const short*>(in1),
+                                              reinterpret_cast<const short*>(in2),
+                                              reinterpret_cast<short*>(out), length, x);
+        }
+        else if (std::is_same<DST, float>::value)
+        {
+            add_simd_sametype<float, v_float32>(reinterpret_cast<const float*>(in1),
+                                                reinterpret_cast<const float*>(in2),
+                                                reinterpret_cast<float*>(out), length, x);
+        }
+    }
+    else if (std::is_same<SRC, uchar>::value && std::is_same<DST, float>::value)
+    {
+        constexpr int nlanes = v_float32::nlanes;
+        for (; x < length; )
+        {
+            for (; x <= length - nlanes; x += nlanes)
+            {
+                v_uint32 a = vx_load_expand_q(reinterpret_cast<const uchar*>(&in1[x]));
+                v_uint32 b = vx_load_expand_q(reinterpret_cast<const uchar*>(&in2[x]));
+                vx_store(reinterpret_cast<float*>(&out[x]), v_cvt_f32(a + b));
+            }
+
+            if (x < length && length >= nlanes)
+            {
+                x = length - nlanes;
+            }
+        }
+    }
+    else if (std::is_same<SRC, short>::value && std::is_same<DST, float>::value)
+    {
+        constexpr int nlanes = v_float32::nlanes;
+        for (; x < length; )
+        {
+            for (; x <= length - nlanes; x += nlanes)
+            {
+                v_int32 a = vx_load_expand(reinterpret_cast<const short*>(&in1[x]));
+                v_int32 b = vx_load_expand(reinterpret_cast<const short*>(&in2[x]));
+                vx_store(reinterpret_cast<float*>(&out[x]), v_cvt_f32(a + b));
+            }
+
+            if (x < length && length >= nlanes)
+            {
+                x = length - nlanes;
+            }
+        }
+    }
+    else if (std::is_same<SRC, short>::value && std::is_same<DST, uchar>::value)
+    {
+        constexpr int nlanes = v_uint8::nlanes;
+        for (; x < length; )
+        {
+            for (; x <= length - nlanes; x += nlanes)
+            {
+                v_int16 a1 = vx_load(reinterpret_cast<const short*>(&in1[x]));
+                v_int16 a2 = vx_load(reinterpret_cast<const short*>(&in1[x + nlanes / 2]));
+                v_int16 b1 = vx_load(reinterpret_cast<const short*>(&in2[x]));
+                v_int16 b2 = vx_load(reinterpret_cast<const short*>(&in2[x + nlanes / 2]));
+
+                v_uint8 res = v_pack_u(a1 + b1, a2 + b2);
+                vx_store(reinterpret_cast<uchar*>(&out[x]), res);
+            }
+
+            if (x < length && length >= nlanes)
+            {
+                x = length - nlanes;
+            }
+        }
+    }
+    else if (std::is_same<SRC, float>::value && std::is_same<DST, uchar>::value)
+    {
+        constexpr int nlanes = v_uint8::nlanes;
+        for (; x < length; )
+        {
+            for (; x <= length - nlanes; x += nlanes)
+            {
+                v_float32 a1 = vx_load(reinterpret_cast<const float*>(&in1[x]));
+                v_float32 a2 = vx_load(reinterpret_cast<const float*>(&in1[x + nlanes / 4]));
+                v_float32 a3 = vx_load(reinterpret_cast<const float*>(&in1[x + 2 * nlanes / 4]));
+                v_float32 a4 = vx_load(reinterpret_cast<const float*>(&in1[x + 3 * nlanes / 4]));
+
+                v_float32 b1 = vx_load(reinterpret_cast<const float*>(&in2[x]));
+                v_float32 b2 = vx_load(reinterpret_cast<const float*>(&in2[x + nlanes / 4]));
+                v_float32 b3 = vx_load(reinterpret_cast<const float*>(&in2[x + 2 * nlanes / 4]));
+                v_float32 b4 = vx_load(reinterpret_cast<const float*>(&in2[x + 3 * nlanes / 4]));
+
+                v_int32 sum1 = v_round(a1 + b1),
+                        sum2 = v_round(a2 + b2),
+                        sum3 = v_round(a3 + b3),
+                        sum4 = v_round(a4 + b4);
+
+                v_int16 res1 = v_pack(sum1, sum2),
+                        res2 = v_pack(sum3, sum4);
+
+                v_uint8 res = v_pack_u(res1, res2);
+                vx_store(reinterpret_cast<uchar*>(&out[x]), res);
+            }
+
+            if (x < length && length >= nlanes)
+            {
+                x = length - nlanes;
+            }
+        }
+    }
+}
+
+template<typename T, typename VT>
+static inline void sub_simd_sametype(const T in1[], const T in2[], T out[], int length, int& x)
+{
+    constexpr int nlanes = VT::nlanes;
+    for (; x < length; )
+    {
+        for (; x <= length - nlanes; x += nlanes)
+        {
+            VT a = vx_load(&in1[x]);
+            VT b = vx_load(&in2[x]);
+            vx_store(&out[x], a - b);
+        }
+
+        if (x < length && length >= nlanes)
+        {
+            x = length - nlanes;
+        }
+    }
+}
+
+template<typename SRC, typename DST>
+static inline void sub_simd(const SRC in1[], const SRC in2[], DST out[], int length, int& x)
+{
+    if (std::is_same<DST, SRC>::value)
+    {
+        if (std::is_same<DST, uchar>::value)
+        {
+            sub_simd_sametype<uchar, v_uint8>(reinterpret_cast<const uchar*>(in1),
+                                         reinterpret_cast<const uchar*>(in2),
+                                         reinterpret_cast<uchar*>(out), length, x);
+        }
+        else if (std::is_same<DST, short>::value)
+        {
+            sub_simd_sametype<short, v_int16>(reinterpret_cast<const short*>(in1),
+                                         reinterpret_cast<const short*>(in2),
+                                         reinterpret_cast<short*>(out), length, x);
+        }
+        else if (std::is_same<DST, float>::value)
+        {
+            sub_simd_sametype<float, v_float32>(reinterpret_cast<const float*>(in1),
+                                           reinterpret_cast<const float*>(in2),
+                                           reinterpret_cast<float*>(out), length, x);
+        }
+    }
+    else if (std::is_same<SRC, uchar>::value && std::is_same<DST, float>::value)
+    {
+        constexpr int nlanes = v_float32::nlanes;
+        for (; x < length; )
+        {
+            for (; x <= length - nlanes; x += nlanes)
+            {
+                v_float32 a = v_cvt_f32(vx_load_expand_q(reinterpret_cast<const uchar*>(&in1[x])));
+                v_float32 b = v_cvt_f32(vx_load_expand_q(reinterpret_cast<const uchar*>(&in2[x])));
+                vx_store(reinterpret_cast<float*>(&out[x]), a - b);
+            }
+
+            if (x < length && length >= nlanes)
+            {
+                x = length - nlanes;
+            }
+        }
+    }
+    else if (std::is_same<SRC, short>::value && std::is_same<DST, float>::value)
+    {
+        constexpr int nlanes = v_float32::nlanes;
+        for (; x < length; )
+        {
+            for (; x <= length - nlanes; x += nlanes)
+            {
+                v_int32 a = vx_load_expand(reinterpret_cast<const short*>(&in1[x]));
+                v_int32 b = vx_load_expand(reinterpret_cast<const short*>(&in2[x]));
+                vx_store(reinterpret_cast<float*>(&out[x]), v_cvt_f32(a - b));
+            }
+
+            if (x < length && length >= nlanes)
+            {
+                x = length - nlanes;
+            }
+        }
+    }
+    else if (std::is_same<SRC, short>::value && std::is_same<DST, uchar>::value)
+    {
+        constexpr int nlanes = v_uint8::nlanes;
+        for (; x < length; )
+        {
+            for (; x <= length - nlanes; x += nlanes)
+            {
+                v_int16 a1 = vx_load(reinterpret_cast<const short*>(&in1[x]));
+                v_int16 a2 = vx_load(reinterpret_cast<const short*>(&in1[x + nlanes / 2]));
+                v_int16 b1 = vx_load(reinterpret_cast<const short*>(&in2[x]));
+                v_int16 b2 = vx_load(reinterpret_cast<const short*>(&in2[x + nlanes / 2]));
+
+                v_uint8 res = v_pack_u(a1 - b1, a2 - b2);
+                vx_store(reinterpret_cast<uchar*>(&out[x]), res);
+            }
+
+            if (x < length && length >= nlanes)
+            {
+                x = length - nlanes;
+            }
+        }
+    }
+    else if (std::is_same<SRC, float>::value && std::is_same<DST, uchar>::value)
+    {
+        constexpr int nlanes = v_uint8::nlanes;
+        for (; x < length; )
+        {
+            for (; x <= length - nlanes; x += nlanes)
+            {
+                v_float32 a1 = vx_load(reinterpret_cast<const float*>(&in1[x]));
+                v_float32 a2 = vx_load(reinterpret_cast<const float*>(&in1[x + nlanes / 4]));
+                v_float32 a3 = vx_load(reinterpret_cast<const float*>(&in1[x + 2 * nlanes / 4]));
+                v_float32 a4 = vx_load(reinterpret_cast<const float*>(&in1[x + 3 * nlanes / 4]));
+
+                v_float32 b1 = vx_load(reinterpret_cast<const float*>(&in2[x]));
+                v_float32 b2 = vx_load(reinterpret_cast<const float*>(&in2[x + nlanes / 4]));
+                v_float32 b3 = vx_load(reinterpret_cast<const float*>(&in2[x + 2 * nlanes / 4]));
+                v_float32 b4 = vx_load(reinterpret_cast<const float*>(&in2[x + 3 * nlanes / 4]));
+
+                v_int32 diff1 = v_round(a1 - b1),
+                        diff2 = v_round(a2 - b2),
+                        diff3 = v_round(a3 - b3),
+                        diff4 = v_round(a4 - b4);
+
+                v_int16 res1 = v_pack(diff1, diff2),
+                        res2 = v_pack(diff3, diff4);
+
+                v_uint8 res = v_pack_u(res1, res2);
+                vx_store(reinterpret_cast<uchar*>(&out[x]), res);
+            }
+
+            if (x < length && length >= nlanes)
+            {
+                x = length - nlanes;
+            }
+        }
+    }
+}
+#endif
+
 template<typename DST, typename SRC1, typename SRC2>
 static inline DST sub(SRC1 x, SRC2 y)
 {
