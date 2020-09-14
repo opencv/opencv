@@ -930,7 +930,7 @@ GAPI_FLUID_KERNEL(GFluidNot, cv::gapi::core::GNot, false)
 
 static void convertScalarForBitwise(const cv::Scalar &_scalar, int scalarI[4])
 {
-    CV_DbgAssert(scalarI != nullptr);
+    GAPI_DbgAssert(scalarI != nullptr);
     for (int i = 0; i < 4; i++)
         scalarI[i] = static_cast<int>(_scalar[i]);
 
