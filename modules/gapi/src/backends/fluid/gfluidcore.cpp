@@ -806,7 +806,7 @@ GAPI_FLUID_KERNEL(GFluidDivRC, cv::gapi::core::GDivRC, false)
 enum Bitwise { BW_AND, BW_OR, BW_XOR, BW_NOT };
 
 template<typename DST, typename SRC1, typename SRC2>
-static void run_bitwise2(Buffer &dst, const View &src1, const View &src2, Bitwise bitwise)
+static void run_bitwise2(Buffer &dst, const View &src1, const View &src2, Bitwise bitwise_op)
 {
     static_assert(std::is_same<DST, SRC1>::value, "wrong types");
     static_assert(std::is_same<DST, SRC2>::value, "wrong types");
@@ -819,7 +819,7 @@ static void run_bitwise2(Buffer &dst, const View &src1, const View &src2, Bitwis
     int chan   = dst.meta().chan;
     int length = width * chan;
 
-    switch (bitwise)
+    switch (bitwise_op)
     {
     case BW_AND:
         for (int l=0; l < length; l++)
@@ -838,7 +838,7 @@ static void run_bitwise2(Buffer &dst, const View &src1, const View &src2, Bitwis
 }
 
 template<typename DST, typename SRC>
-static void run_bitwise1(Buffer &dst, const View &src, Bitwise bitwise)
+static void run_bitwise1(Buffer &dst, const View &src, Bitwise bitwise_op)
 {
     static_assert(std::is_same<DST, SRC>::value, "wrong types");
 
@@ -849,7 +849,7 @@ static void run_bitwise1(Buffer &dst, const View &src, Bitwise bitwise)
     int chan   = dst.meta().chan;
     int length = width * chan;
 
-    switch (bitwise)
+    switch (bitwise_op)
     {
     case BW_NOT:
         for (int l=0; l < length; l++)
@@ -930,6 +930,7 @@ GAPI_FLUID_KERNEL(GFluidNot, cv::gapi::core::GNot, false)
 
 static void convertScalarForBitwise(const cv::Scalar &_scalar, int scalarI[4])
 {
+    CV_DbgAssert(scalarI != nullptr);
     for (int i = 0; i < 4; i++)
         scalarI[i] = static_cast<int>(_scalar[i]);
 
@@ -968,7 +969,7 @@ static inline void run_bitwise_s(DST out[], const DST in[], int width, int chan,
 }
 
 template<typename DST, typename SRC>
-static void run_bitwise_s(Buffer &dst, const View &src, const int scalar[4], Bitwise bitwise)
+static void run_bitwise_s(Buffer &dst, const View &src, const int scalar[4], Bitwise bitwise_op)
 {
     static_assert(std::is_same<DST, SRC>::value, "wrong types");
 
@@ -978,7 +979,7 @@ static void run_bitwise_s(Buffer &dst, const View &src, const int scalar[4], Bit
     int width  = dst.length();
     int chan   = dst.meta().chan;
 
-    switch (bitwise)
+    switch (bitwise_op)
     {
     case BW_AND:
         run_bitwise_s(out, in, width, chan, scalar, bw_andS<DST>);
