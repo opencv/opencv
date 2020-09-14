@@ -12,7 +12,7 @@ if(UNIX AND NOT ANDROID)
 
     find_path(
     VA_INTEL_IOCL_INCLUDE_DIR
-    NAMES CL/va_ext.h
+    NAMES CL/cl_va_api_media_sharing_intel.h
     PATHS ${VA_INTEL_IOCL_ROOT}
     PATH_SUFFIXES include
     DOC "Path to Intel OpenCL headers")
