@@ -1,5 +1,4 @@
 /*M///////////////////////////////////////////////////////////////////////////////////////
-/*M///////////////////////////////////////////////////////////////////////////////////////
 //
 //  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
 //
@@ -546,6 +545,94 @@ inline v_float64x2 operator ~ (const v_float64x2& a)
 {
     return v_float64x2((float64xm1_t)(vnotv_int64xm1((int64xm1_t)(a.val), 2)));
 }
+
+inline v_int16x8 v_mul_hi(const v_int16x8& a, const v_int16x8& b)
+{
+    return v_int16x8(vmulhvv_int16xm1(a.val, b.val, 8));
+}
+inline v_uint16x8 v_mul_hi(const v_uint16x8& a, const v_uint16x8& b)
+{
+    return v_uint16x8(vmulhuvv_uint16xm1(a.val, b.val, 8));
+}
+
+inline v_uint32x4 v_abs(v_int32x4 x)
+{
+    e32xm1_t mask=vmsltvx_e32xm1_int32xm1(x.val, 0, 4);
+    return v_uint32x4((uint32xm1_t)vrsubvx_mask_int32xm1(x.val, x.val, 0, mask, 4));
+}
+
+inline v_uint16x8 v_abs(v_int16x8 x)
+{
+    e16xm1_t mask=vmsltvx_e16xm1_int16xm1(x.val, 0, 8);
+    return v_uint16x8((uint16xm1_t)vrsubvx_mask_int16xm1(x.val, x.val, 0, mask, 8));
+}
+
+inline v_uint8x16 v_abs(v_int8x16 x)
+{
+    e8xm1_t mask=vmsltvx_e8xm1_int8xm1(x.val, 0, 16);
+    return v_uint8x16((uint8xm1_t)vrsubvx_mask_int8xm1(x.val, x.val, 0, mask, 16));
+}
+
+inline v_float32x4 v_abs(v_float32x4 x)
+{
+    e32xm1_t mask=vmfltvf_e32xm1_float32xm1(x.val, 0, 4);
+    return v_float32x4(vfrsubvf_mask_float32xm1(x.val, x.val, 0, mask, 4));
+}
+
+inline v_float64x2 v_abs(v_float64x2 x)
+{
+    e64xm1_t mask=vmfltvf_e64xm1_float64xm1(x.val, 0, 2);
+    return v_float64x2(vfrsubvf_mask_float64xm1(x.val, x.val, 0, mask, 2));
+}
+
+inline v_float32x4 v_absdiff(const v_float32x4& a, const v_float32x4& b)
+{
+    float32xm1_t vmax = vfmaxvv_float32xm1(a.val, b.val, 4);
+    float32xm1_t vmin = vfminvv_float32xm1(a.val, b.val, 4);
+    return v_float32x4(vfsubvv_float32xm1(vmax, vmin, 4));
+}
+
+inline v_float64x2 v_absdiff(const v_float64x2& a, const v_float64x2& b)
+{
+    float64xm1_t vmax = vfmaxvv_float64xm1(a.val, b.val, 2);
+    float64xm1_t vmin = vfminvv_float64xm1(a.val, b.val, 2);
+    return v_float64x2(vfsubvv_float64xm1(vmax, vmin, 2));
+}
+
+#define OPENCV_HAL_IMPL_RISCVV_ABSDIFF_U(bit, num) \
+inline v_uint##bit##x##num v_absdiff(v_uint##bit##x##num a, v_uint##bit##x##num b){ \
+    uint##bit##xm1_t vmax = vmaxuvv_uint##bit##xm1(a.val, b.val, num);  \
+    uint##bit##xm1_t vmin = vminuvv_uint##bit##xm1(a.val, b.val, num);  \
+    return v_uint##bit##x##num(vsubvv_uint##bit##xm1(vmax, vmin, num)); \
+}
+
+OPENCV_HAL_IMPL_RISCVV_ABSDIFF_U(8, 16)
+OPENCV_HAL_IMPL_RISCVV_ABSDIFF_U(16, 8)
+OPENCV_HAL_IMPL_RISCVV_ABSDIFF_U(32, 4)
+
+/** Saturating absolute difference **/
+inline v_int8x16 v_absdiffs(v_int8x16 a, v_int8x16 b){
+    int8xm1_t vmax = vmaxvv_int8xm1(a.val, b.val, 16);
+    int8xm1_t vmin = vminvv_int8xm1(a.val, b.val, 16);
+    return v_int8x16(vssubvv_int8xm1(vmax, vmin, 16));
+}
+inline v_int16x8 v_absdiffs(v_int16x8 a, v_int16x8 b){
+    int16xm1_t vmax = vmaxvv_int16xm1(a.val, b.val, 8);
+    int16xm1_t vmin = vminvv_int16xm1(a.val, b.val, 8);
+    return v_int16x8(vssubvv_int16xm1(vmax, vmin, 8));
+}
+
+#define OPENCV_HAL_IMPL_RISCVV_ABSDIFF(_Tpvec, _Tpvec2, _Tpv, num)  \
+inline v_uint##_Tpvec v_absdiff(v_int##_Tpvec a, v_int##_Tpvec b){  \
+    int##_Tpvec2##_t val = vwsubvv_int##_Tpvec2##_int##_Tpv(a.val, b.val, num); \
+    e##_Tpvec2##_t mask=vmsltvx_e##_Tpvec2##_int##_Tpvec2(val, 0.0, num);       \
+    val = vwsubvv_mask_int##_Tpvec2##_int##_Tpv(val, b.val, a.val, mask, num);  \
+    return v_uint##_Tpvec(vnclipuvx_uint##_Tpv##_uint##_Tpvec2 ((uint##_Tpvec2##_t)val, 0, num));\
+}
+
+OPENCV_HAL_IMPL_RISCVV_ABSDIFF(8x16, 16xm2, 8xm1, 16)
+OPENCV_HAL_IMPL_RISCVV_ABSDIFF(16x8, 32xm2, 16xm1, 8)
+OPENCV_HAL_IMPL_RISCVV_ABSDIFF(32x4, 64xm2, 32xm1, 4)
 
 inline void v_cleanup() {}
 
