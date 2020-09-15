@@ -257,6 +257,48 @@ struct v_float64x2
     float64xm1_t val;
 };
 
+#define OPENCV_HAL_IMPL_RISCVV_INIT(_Tpv, _Tp, suffix) \
+inline _Tp##xm1_t vreinterpretq_##suffix##_##suffix(_Tp##xm1_t v) { return v; } \
+inline v_uint8x16 v_reinterpret_as_u8(const v_##_Tpv& v) { return v_uint8x16((uint8xm1_t)(v.val)); } \
+inline v_int8x16 v_reinterpret_as_s8(const v_##_Tpv& v) { return v_int8x16((int8xm1_t)(v.val)); } \
+inline v_uint16x8 v_reinterpret_as_u16(const v_##_Tpv& v) { return v_uint16x8((uint16xm1_t)(v.val)); } \
+inline v_int16x8 v_reinterpret_as_s16(const v_##_Tpv& v) { return v_int16x8((int16xm1_t)(v.val)); } \
+inline v_uint32x4 v_reinterpret_as_u32(const v_##_Tpv& v) { return v_uint32x4((uint32xm1_t)(v.val)); } \
+inline v_int32x4 v_reinterpret_as_s32(const v_##_Tpv& v) { return v_int32x4((int32xm1_t)(v.val)); } \
+inline v_uint64x2 v_reinterpret_as_u64(const v_##_Tpv& v) { return v_uint64x2((uint64xm1_t)(v.val)); } \
+inline v_int64x2 v_reinterpret_as_s64(const v_##_Tpv& v) { return v_int64x2((int64xm1_t)(v.val)); } \
+inline v_float32x4 v_reinterpret_as_f32(const v_##_Tpv& v) { return v_float32x4((float32xm1_t)(v.val)); }\
+inline v_float64x2 v_reinterpret_as_f64(const v_##_Tpv& v) { return v_float64x2((float64xm1_t)(v.val)); }
+
+
+OPENCV_HAL_IMPL_RISCVV_INIT(uint8x16, uint8, u8)
+OPENCV_HAL_IMPL_RISCVV_INIT(int8x16, int8, s8)
+OPENCV_HAL_IMPL_RISCVV_INIT(uint16x8, uint16, u16)
+OPENCV_HAL_IMPL_RISCVV_INIT(int16x8, int16, s16)
+OPENCV_HAL_IMPL_RISCVV_INIT(uint32x4, uint32, u32)
+OPENCV_HAL_IMPL_RISCVV_INIT(int32x4, int32, s32)
+OPENCV_HAL_IMPL_RISCVV_INIT(uint64x2, uint64, u64)
+OPENCV_HAL_IMPL_RISCVV_INIT(int64x2, int64, s64)
+OPENCV_HAL_IMPL_RISCVV_INIT(float64x2, float64, f64)
+OPENCV_HAL_IMPL_RISCVV_INIT(float32x4, float32, f32)
+#define OPENCV_HAL_IMPL_RISCVV_INIT_SET(__Tp, _Tp, suffix, num) \
+inline v_##_Tp##x##num v_setzero_##suffix() { return v_##_Tp##x##num(vmvvx_##_Tp##xm1(0, num)); } 	\
+inline v_##_Tp##x##num v_setall_##suffix(__Tp v) { return v_##_Tp##x##num(vmvvx_##_Tp##xm1(v, num)); }
+
+OPENCV_HAL_IMPL_RISCVV_INIT_SET(uchar, uint8, u8, 16)
+OPENCV_HAL_IMPL_RISCVV_INIT_SET(char, int8, s8, 16)
+OPENCV_HAL_IMPL_RISCVV_INIT_SET(ushort, uint16, u16, 8)
+OPENCV_HAL_IMPL_RISCVV_INIT_SET(short, int16, s16, 8)
+OPENCV_HAL_IMPL_RISCVV_INIT_SET(unsigned int, uint32, u32, 4)
+OPENCV_HAL_IMPL_RISCVV_INIT_SET(int, int32, s32, 4)
+OPENCV_HAL_IMPL_RISCVV_INIT_SET(unsigned long, uint64, u64, 2)
+OPENCV_HAL_IMPL_RISCVV_INIT_SET(long, int64, s64, 2)
+inline v_float32x4 v_setzero_f32() { return v_float32x4(vfmvvf_float32xm1(0, 4)); }
+inline v_float32x4 v_setall_f32(float v) { return v_float32x4(vfmvvf_float32xm1(v, 4)); }
+
+inline v_float64x2 v_setzero_f64() { return v_float64x2(vfmvvf_float64xm1(0, 2)); }
+inline v_float64x2 v_setall_f64(double v) { return v_float64x2(vfmvvf_float64xm1(v, 2)); }
+
 inline void v_cleanup() {}
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
