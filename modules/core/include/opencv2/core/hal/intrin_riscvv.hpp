@@ -1731,7 +1731,7 @@ v_popcount(const v_uint16x8& a)
     uint8xm2_u tmp;
     tmp.m1[0] = vcnt_u8((uint8xm1_t)a.val);
     uint64xm2_t mask = (uint64xm2_t){0x0E0C0A0806040200, 0, 0x0F0D0B0907050301, 0};
-    tmp.v = vrgathervv_uint8xm2(tmp.v, (uint8xm2_t)mask, 32);	\
+    tmp.v = vrgathervv_uint8xm2(tmp.v, (uint8xm2_t)mask, 32);    \
     uint16xm2_u res;
     res.v = vwadduvv_uint16xm2_uint8xm1(tmp.m1[0], tmp.m1[1], 8);
     return v_uint16x8(res.m1[0]);
@@ -1743,7 +1743,7 @@ v_popcount(const v_int16x8& a)
     uint8xm2_u tmp;
     tmp.m1[0] = vcnt_u8((uint8xm1_t)a.val);
     uint64xm2_t mask = (uint64xm2_t){0x0E0C0A0806040200, 0, 0x0F0D0B0907050301, 0};
-    tmp.v = vrgathervv_uint8xm2(tmp.v, (uint8xm2_t)mask, 32);	\
+    tmp.v = vrgathervv_uint8xm2(tmp.v, (uint8xm2_t)mask, 32);    \
     uint16xm2_u res;
     res.v = vwadduvv_uint16xm2_uint8xm1(tmp.m1[0], tmp.m1[1], 8);
     return v_uint16x8(res.m1[0]);
@@ -1756,7 +1756,7 @@ v_popcount(const v_uint32x4& a)
     tmp.m1[0] = vcnt_u8((uint8xm1_t)a.val);
     uint64xm2_t mask = (uint64xm2_t){0xFFFFFFFF0C080400, 0xFFFFFFFF0D090501,
     0xFFFFFFFF0E0A0602, 0xFFFFFFFF0F0B0703};
-    tmp.v = vrgathervv_uint8xm2(tmp.v, (uint8xm2_t)mask, 32);	\
+    tmp.v = vrgathervv_uint8xm2(tmp.v, (uint8xm2_t)mask, 32);    \
     uint16xm2_u res_;
     res_.v = vwadduvv_uint16xm2_uint8xm1(tmp.m1[0], tmp.m1[1], 16);
     uint32xm2_u res;
@@ -1771,7 +1771,7 @@ v_popcount(const v_int32x4& a)
     tmp.m1[0] = vcnt_u8((uint8xm1_t)a.val);
     uint64xm2_t mask = (uint64xm2_t){0xFFFFFFFF0C080400, 0xFFFFFFFF0D090501,
     0xFFFFFFFF0E0A0602, 0xFFFFFFFF0F0B0703};
-    tmp.v = vrgathervv_uint8xm2(tmp.v, (uint8xm2_t)mask, 32);	\
+    tmp.v = vrgathervv_uint8xm2(tmp.v, (uint8xm2_t)mask, 32);    \
     uint16xm2_u res_;
     res_.v = vwadduvv_uint16xm2_uint8xm1(tmp.m1[0], tmp.m1[1], 16);
     uint32xm2_u res;
@@ -1786,7 +1786,7 @@ v_popcount(const v_uint64x2& a)
     tmp.m1[0] = vcnt_u8((uint8xm1_t)a.val);
     uint64xm2_t mask = (uint64xm2_t){0x0706050403020100, 0x0000000000000000,
     0x0F0E0D0C0B0A0908, 0x0000000000000000};
-    tmp.v = vrgathervv_uint8xm2(tmp.v, (uint8xm2_t)mask, 32);	\
+    tmp.v = vrgathervv_uint8xm2(tmp.v, (uint8xm2_t)mask, 32);    \
     uint8xm1_t zero = vmvvx_uint8xm1(0, 16);
     tmp.m1[0] = vredsumvs_uint8xm1(tmp.m1[0], zero, 8);
     tmp.m1[1] = vredsumvs_uint8xm1(tmp.m1[1], zero, 8);
@@ -1801,7 +1801,7 @@ v_popcount(const v_int64x2& a)
     tmp.m1[0] = vcnt_u8((uint8xm1_t)a.val);
     uint64xm2_t mask = (uint64xm2_t){0x0706050403020100, 0x0000000000000000,
     0x0F0E0D0C0B0A0908, 0x0000000000000000};
-    tmp.v = vrgathervv_uint8xm2(tmp.v, (uint8xm2_t)mask, 32);	\
+    tmp.v = vrgathervv_uint8xm2(tmp.v, (uint8xm2_t)mask, 32);    \
     uint8xm1_t zero = vmvvx_uint8xm1(0, 16);
     tmp.m1[0] = vredsumvs_uint8xm1(tmp.m1[0], zero, 8);
     tmp.m1[1] = vredsumvs_uint8xm1(tmp.m1[1], zero, 8);
@@ -2000,6 +2000,202 @@ inline v_float64x2 v_select(const v_float64x2& mask, const v_float64x2& a, const
     return v_float64x2((float64xm1_t)vmergevvm_mask_uint64xm1((uint64xm1_t)b.val, (uint64xm1_t)a.val, e64xm1_t(vfcvtxufv_uint64xm1_float64xm1(mask.val, 2)), 2));
 }
 
+#define OPENCV_HAL_IMPL_RISCVV_EXPAND(add, _Tpvec, _Tpwvec, _Tp, _Tp1, num1, _Tp2, num2) \
+inline void v_expand(const _Tpvec& a, v_##_Tpwvec& b0, v_##_Tpwvec& b1) \
+{ \
+    _Tp2##_u b;\
+    b.v = vw##add##vv_##_Tp2##_##_Tp1(a.val, vmvvx_##_Tp1(0, num1), num1);    \
+    b0.val = b.m1[0]; \
+    b1.val = b.m1[1]; \
+} \
+inline v_##_Tpwvec v_expand_low(const _Tpvec& a) \
+{ \
+    _Tp2##_u b;    \
+    b.v = vw##add##vv_##_Tp2##_##_Tp1(a.val, vmvvx_##_Tp1(0, num2), num2);    \
+    return v_##_Tpwvec(b.m1[0]); \
+} \
+inline v_##_Tpwvec v_expand_high(const _Tpvec& a) \
+{ \
+    _Tp2##_u b;\
+    b.v = vw##add##vv_##_Tp2##_##_Tp1(a.val, vmvvx_##_Tp1(0, num1), num1);    \
+    return v_##_Tpwvec(b.m1[1]); \
+} \
+inline v_##_Tpwvec v_load_expand(const _Tp* ptr) \
+{ \
+    _Tp2##_u b;    \
+    _Tp1##_t val = vlev_##_Tp1(ptr, num2);    \
+    b.v = vw##add##vv_##_Tp2##_##_Tp1(val, vmvvx_##_Tp1(0, num2), num2);    \
+    return v_##_Tpwvec(b.m1[0]); \
+}
+
+OPENCV_HAL_IMPL_RISCVV_EXPAND(addu, v_uint8x16, uint16x8, uchar, uint8xm1, 16, uint16xm2, 8)
+OPENCV_HAL_IMPL_RISCVV_EXPAND(addu, v_uint16x8, uint32x4, ushort,  uint16xm1, 8, uint32xm2, 4)
+OPENCV_HAL_IMPL_RISCVV_EXPAND(addu, v_uint32x4, uint64x2, uint,  uint32xm1, 4, uint64xm2, 2)
+OPENCV_HAL_IMPL_RISCVV_EXPAND(add, v_int8x16, int16x8, schar,  int8xm1, 16, int16xm2, 8)
+OPENCV_HAL_IMPL_RISCVV_EXPAND(add, v_int16x8, int32x4, short,  int16xm1, 8, int32xm2, 4)
+OPENCV_HAL_IMPL_RISCVV_EXPAND(add, v_int32x4, int64x2, int,  int32xm1, 4, int64xm2, 2)
+
+inline v_uint32x4 v_load_expand_q(const uchar* ptr)
+{
+    uint16xm2_u b;
+    uint32xm2_u c;
+    uint8xm1_t val = vlev_uint8xm1(ptr, 4);    \
+    b.v = vwadduvv_uint16xm2_uint8xm1(val, vmvvx_uint8xm1(0, 4), 4);    \
+    c.v = vwadduvv_uint32xm2_uint16xm1(b.m1[0], vmvvx_uint16xm1(0, 4), 4);    \
+    return v_uint32x4(c.m1[0]);
+}
+
+inline v_int32x4 v_load_expand_q(const schar* ptr)
+{
+    int16xm2_u b;
+    int32xm2_u c;
+    int8xm1_t val = vlev_int8xm1(ptr, 4);    \
+    b.v = vwaddvv_int16xm2_int8xm1(val, vmvvx_int8xm1(0, 4), 4);    \
+    c.v = vwaddvv_int32xm2_int16xm1(b.m1[0], vmvvx_int16xm1(0, 4), 4);    \
+    return v_int32x4(c.m1[0]);
+}
+#define VITL_16 (uint64xm2_t){0x1303120211011000, 0x1707160615051404, 0x1B0B1A0A19091808, 0x1F0F1E0E1D0D1C0C}
+#define VITL_8 (uint64xm2_t){0x0009000100080000, 0x000B0003000A0002, 0x000D0005000C0004, 0x000F0007000E0006}
+#define VITL_4 (uint64xm2_t){0x0000000400000000, 0x0000000500000001, 0x0000000600000002, 0x0000000700000003}
+#define VITL_2 (uint64xm2_t){0, 2, 1, 3}
+#define LOW_4  0x0000000100000000, 0x0000000500000004
+#define LOW_8  0x0003000200010000, 0x000B000A00090008
+#define LOW_16 0x0706050403020100, 0x1716151413121110
+#define HIGH_4  0x0000000300000002, 0x0000000700000006
+#define HIGH_8  0x0007000600050004, 0x000F000E000D000C
+#define HIGH_16 0x0F0E0D0C0B0A0908,  0x1F1E1D1C1B1A1918
+#define OPENCV_HAL_IMPL_RISCVV_UNPACKS(_Tpvec, _Tp, _UTp, num, num2, len, numh) \
+inline void v_zip(const v_##_Tpvec& a0, const v_##_Tpvec& a1, v_##_Tpvec& b0, v_##_Tpvec& b1) \
+{ \
+    _Tp##xm2_u tmp;\
+    tmp.m1[0] = a0.val;    \
+    tmp.m1[1] = a1.val;    \
+    uint64xm2_t mask = VITL_##num;    \
+    tmp.v = (_Tp##xm2_t)vrgathervv_##_UTp##xm2((_UTp##xm2_t)tmp.v, (_UTp##xm2_t)mask, num2);    \
+    b0.val = tmp.m1[0]; \
+    b1.val = tmp.m1[1]; \
+} \
+inline v_##_Tpvec v_combine_low(const v_##_Tpvec& a, const v_##_Tpvec& b) \
+{ \
+    _Tp##xm1_t b0 = vslideupvx_mask_##_Tp##xm1(a.val, b.val, numh, vmsetm_e##len##xm1(num), num);    \
+    return v_##_Tpvec(b0);\
+} \
+inline v_##_Tpvec v_combine_high(const v_##_Tpvec& a, const v_##_Tpvec& b) \
+{ \
+    _Tp##xm1_t b0 = vslidedownvx_##_Tp##xm1(b.val, numh, num);    \
+    _Tp##xm1_t a0 = vslidedownvx_##_Tp##xm1(a.val, numh, num);    \
+    _Tp##xm1_t b1 = vslideupvx_mask_##_Tp##xm1(a0, b0, numh, vmsetm_e##len##xm1(num), num);    \
+    return v_##_Tpvec(b1);\
+} \
+inline void v_recombine(const v_##_Tpvec& a, const v_##_Tpvec& b, v_##_Tpvec& c, v_##_Tpvec& d) \
+{ \
+    c.val = vslideupvx_mask_##_Tp##xm1(a.val, b.val, numh, vmsetm_e##len##xm1(num), num);    \
+    _Tp##xm1_t b0 = vslidedownvx_##_Tp##xm1(b.val, numh, num);    \
+    _Tp##xm1_t a0 = vslidedownvx_##_Tp##xm1(a.val, numh, num);    \
+    d.val = vslideupvx_mask_##_Tp##xm1(a0, b0, numh, vmsetm_e##len##xm1(num), num);    \
+}
+
+OPENCV_HAL_IMPL_RISCVV_UNPACKS(uint8x16, uint8, uint8, 16, 32, 8, 8)
+OPENCV_HAL_IMPL_RISCVV_UNPACKS(int8x16, int8, uint8, 16, 32, 8, 8)
+OPENCV_HAL_IMPL_RISCVV_UNPACKS(uint16x8, uint16, uint16, 8, 16, 16, 4)
+OPENCV_HAL_IMPL_RISCVV_UNPACKS(int16x8, int16, uint16, 8, 16, 16, 4)
+OPENCV_HAL_IMPL_RISCVV_UNPACKS(uint32x4, uint32, uint32, 4, 8, 32, 2)
+OPENCV_HAL_IMPL_RISCVV_UNPACKS(int32x4, int32, uint32, 4, 8, 32, 2)
+OPENCV_HAL_IMPL_RISCVV_UNPACKS(float32x4, float32, uint32, 4, 8, 32, 2)
+OPENCV_HAL_IMPL_RISCVV_UNPACKS(float64x2, float64, uint64, 2, 4, 64, 1)
+
+inline v_uint8x16 v_reverse(const v_uint8x16 &a)
+{
+    uint64xm1_t mask = (uint64xm1_t){0x08090A0B0C0D0E0F, 0x0001020304050607};
+    return v_uint8x16(vrgathervv_uint8xm1(a.val, (uint8xm1_t)mask, 16));
+}
+inline v_int8x16 v_reverse(const v_int8x16 &a)
+{
+    int64xm1_t mask = (int64xm1_t){0x08090A0B0C0D0E0F, 0x0001020304050607};
+    return v_int8x16(vrgathervv_int8xm1_uint8xm1(a.val, (uint8xm1_t)mask, 16));
+}
+
+inline v_uint16x8 v_reverse(const v_uint16x8 &a)
+{
+    uint64xm1_t mask = (uint64xm1_t){0x0004000500060007, 0x000000100020003};
+    return v_uint16x8(vrgathervv_uint16xm1(a.val, (uint16xm1_t)mask, 8));
+}
+
+inline v_int16x8 v_reverse(const v_int16x8 &a)
+{
+    int64xm1_t mask = (int64xm1_t){0x0004000500060007, 0x000000100020003};
+    return v_int16x8(vrgathervv_int16xm1_uint16xm1(a.val, (uint16xm1_t)mask, 8));
+}
+inline v_uint32x4 v_reverse(const v_uint32x4 &a)
+{
+    return v_uint32x4(vrgathervv_uint32xm1(a.val, (uint32xm1_t){3, 2, 1, 0}, 4));
+}
+
+inline v_int32x4 v_reverse(const v_int32x4 &a)
+{
+    return v_int32x4(vrgathervv_int32xm1_uint32xm1(a.val, (uint32xm1_t){3, 2, 1, 0}, 4));
+}
+
+inline v_float32x4 v_reverse(const v_float32x4 &a)
+{ return v_reinterpret_as_f32(v_reverse(v_reinterpret_as_u32(a))); }
+
+inline v_uint64x2 v_reverse(const v_uint64x2 &a)
+{
+    return v_uint64x2(a.val[1], a.val[0]);
+}
+
+inline v_int64x2 v_reverse(const v_int64x2 &a)
+{
+    return v_int64x2(a.val[1], a.val[0]);
+}
+
+inline v_float64x2 v_reverse(const v_float64x2 &a)
+{
+    return v_float64x2(a.val[1], a.val[0]);
+}
+
+#define OPENCV_HAL_IMPL_RISCVV_EXTRACT(_Tpvec, suffix, size) \
+template <int n> \
+inline _Tpvec v_extract(const _Tpvec& a, const _Tpvec& b) \
+{ return v_rotate_right<n>(a, b);}
+OPENCV_HAL_IMPL_RISCVV_EXTRACT(v_uint8x16, u8, 0)
+OPENCV_HAL_IMPL_RISCVV_EXTRACT(v_int8x16, s8, 0)
+OPENCV_HAL_IMPL_RISCVV_EXTRACT(v_uint16x8, u16, 1)
+OPENCV_HAL_IMPL_RISCVV_EXTRACT(v_int16x8, s16, 1)
+OPENCV_HAL_IMPL_RISCVV_EXTRACT(v_uint32x4, u32, 2)
+OPENCV_HAL_IMPL_RISCVV_EXTRACT(v_int32x4, s32, 2)
+OPENCV_HAL_IMPL_RISCVV_EXTRACT(v_uint64x2, u64, 3)
+OPENCV_HAL_IMPL_RISCVV_EXTRACT(v_int64x2, s64, 3)
+OPENCV_HAL_IMPL_RISCVV_EXTRACT(v_float32x4, f32, 2)
+OPENCV_HAL_IMPL_RISCVV_EXTRACT(v_float64x2, f64, 3)
+
+
+#define OPENCV_HAL_IMPL_RISCVV_EXTRACT_N(_Tpvec, _Tp, suffix) \
+template<int i> inline _Tp v_extract_n(_Tpvec v) { return v.val[i]; }
+
+OPENCV_HAL_IMPL_RISCVV_EXTRACT_N(v_uint8x16, uchar, u8)
+OPENCV_HAL_IMPL_RISCVV_EXTRACT_N(v_int8x16, schar, s8)
+OPENCV_HAL_IMPL_RISCVV_EXTRACT_N(v_uint16x8, ushort, u16)
+OPENCV_HAL_IMPL_RISCVV_EXTRACT_N(v_int16x8, short, s16)
+OPENCV_HAL_IMPL_RISCVV_EXTRACT_N(v_uint32x4, uint, u32)
+OPENCV_HAL_IMPL_RISCVV_EXTRACT_N(v_int32x4, int, s32)
+OPENCV_HAL_IMPL_RISCVV_EXTRACT_N(v_uint64x2, uint64, u64)
+OPENCV_HAL_IMPL_RISCVV_EXTRACT_N(v_int64x2, int64, s64)
+OPENCV_HAL_IMPL_RISCVV_EXTRACT_N(v_float32x4, float, f32)
+OPENCV_HAL_IMPL_RISCVV_EXTRACT_N(v_float64x2, double, f64)
+
+#define OPENCV_HAL_IMPL_RISCVV_BROADCAST(_Tpvec, _Tp, num) \
+template<int i> inline _Tpvec v_broadcast_element(_Tpvec v) { return _Tpvec(vrgathervi_##_Tp##xm1(v.val, i, num)); }
+
+OPENCV_HAL_IMPL_RISCVV_BROADCAST(v_uint8x16, uint8, 16)
+OPENCV_HAL_IMPL_RISCVV_BROADCAST(v_int8x16, int8, 16)
+OPENCV_HAL_IMPL_RISCVV_BROADCAST(v_uint16x8, uint16, 8)
+OPENCV_HAL_IMPL_RISCVV_BROADCAST(v_int16x8, int16, 8)
+OPENCV_HAL_IMPL_RISCVV_BROADCAST(v_uint32x4, uint32, 4)
+OPENCV_HAL_IMPL_RISCVV_BROADCAST(v_int32x4, int32, 4)
+OPENCV_HAL_IMPL_RISCVV_BROADCAST(v_uint64x2, uint64, 2)
+OPENCV_HAL_IMPL_RISCVV_BROADCAST(v_int64x2, int64, 2)
+OPENCV_HAL_IMPL_RISCVV_BROADCAST(v_float32x4, float32, 4)
 
 inline void v_cleanup() {}
 
