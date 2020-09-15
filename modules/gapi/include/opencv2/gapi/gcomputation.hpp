@@ -172,7 +172,7 @@ public:
      * @param in input GMat of the defined unary computation
      * @param out output GMat of the defined unary computation
      */
-    GComputation(GMat in, GMat out);                   // Unary overload
+    GAPI_WRAP GComputation(GMat in, GMat out);  // Unary overload
 
     /**
      * @brief Defines an unary (one input -- one output) computation
