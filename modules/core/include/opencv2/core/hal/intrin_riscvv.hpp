@@ -634,6 +634,74 @@ OPENCV_HAL_IMPL_RISCVV_ABSDIFF(8x16, 16xm2, 8xm1, 16)
 OPENCV_HAL_IMPL_RISCVV_ABSDIFF(16x8, 32xm2, 16xm1, 8)
 OPENCV_HAL_IMPL_RISCVV_ABSDIFF(32x4, 64xm2, 32xm1, 4)
 
+//  Multiply and expand
+inline void v_mul_expand(const v_int8x16& a, const v_int8x16& b,
+                         v_int16x8& c, v_int16x8& d)
+{
+    int16xm2_u res;
+    res.v = vwmulvv_int16xm2_int8xm1(a.val, b.val, 16);
+    c.val = res.m1[0];
+    d.val = res.m1[1];
+}
+
+inline void v_mul_expand(const v_uint8x16& a, const v_uint8x16& b,
+                         v_uint16x8& c, v_uint16x8& d)
+{
+    uint16xm2_u res;
+    res.v = vwmuluvv_uint16xm2_uint8xm1(a.val, b.val, 16);
+    c.val = res.m1[0];
+    d.val = res.m1[1];
+}
+
+inline void v_mul_expand(const v_int16x8& a, const v_int16x8& b,
+                         v_int32x4& c, v_int32x4& d)
+{
+    int32xm2_u res;
+    res.v = vwmulvv_int32xm2_int16xm1(a.val, b.val, 8);
+    c.val = res.m1[0];
+    d.val = res.m1[1];
+}
+
+inline void v_mul_expand(const v_uint16x8& a, const v_uint16x8& b,
+                         v_uint32x4& c, v_uint32x4& d)
+{
+    uint32xm2_u res;
+    res.v = vwmuluvv_uint32xm2_uint16xm1(a.val, b.val, 8);
+    c.val = res.m1[0];
+    d.val = res.m1[1];
+}
+
+inline void v_mul_expand(const v_int32x4& a, const v_int32x4& b,
+                         v_int64x2& c, v_int64x2& d)
+{
+    int64xm2_u res;
+    res.v = vwmulvv_int64xm2_int32xm1(a.val, b.val, 4);
+    c.val = res.m1[0];
+    d.val = res.m1[1];
+}
+
+inline void v_mul_expand(const v_uint32x4& a, const v_uint32x4& b,
+                         v_uint64x2& c, v_uint64x2& d)
+{
+    uint64xm2_u res;
+    res.v = vwmuluvv_uint64xm2_uint32xm1(a.val, b.val, 4);
+    c.val = res.m1[0];
+    d.val = res.m1[1];
+}
+
+OPENCV_HAL_IMPL_RISCVV_BINN_FUNC(v_uint8x16, v_add_wrap, vaddvv_uint8xm1, 16)
+OPENCV_HAL_IMPL_RISCVV_BINN_FUNC(v_int8x16, v_add_wrap, vaddvv_int8xm1, 16)
+OPENCV_HAL_IMPL_RISCVV_BINN_FUNC(v_uint16x8, v_add_wrap, vaddvv_uint16xm1, 8)
+OPENCV_HAL_IMPL_RISCVV_BINN_FUNC(v_int16x8, v_add_wrap, vaddvv_int16xm1, 8)
+OPENCV_HAL_IMPL_RISCVV_BINN_FUNC(v_uint8x16, v_sub_wrap, vsubvv_uint8xm1, 16)
+OPENCV_HAL_IMPL_RISCVV_BINN_FUNC(v_int8x16, v_sub_wrap, vsubvv_int8xm1, 16)
+OPENCV_HAL_IMPL_RISCVV_BINN_FUNC(v_uint16x8, v_sub_wrap, vsubvv_uint16xm1, 8)
+OPENCV_HAL_IMPL_RISCVV_BINN_FUNC(v_int16x8, v_sub_wrap, vsubvv_int16xm1, 8)
+OPENCV_HAL_IMPL_RISCVV_BINN_FUNC(v_uint8x16, v_mul_wrap, vmulvv_uint8xm1, 16)
+OPENCV_HAL_IMPL_RISCVV_BINN_FUNC(v_int8x16, v_mul_wrap, vmulvv_int8xm1, 16)
+OPENCV_HAL_IMPL_RISCVV_BINN_FUNC(v_uint16x8, v_mul_wrap, vmulvv_uint16xm1, 8)
+OPENCV_HAL_IMPL_RISCVV_BINN_FUNC(v_int16x8, v_mul_wrap, vmulvv_int16xm1, 8)
+
 inline void v_cleanup() {}
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
