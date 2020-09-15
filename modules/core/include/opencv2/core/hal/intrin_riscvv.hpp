@@ -1543,6 +1543,134 @@ inline void v_lut_deinterleave(const double* tab, const v_int32x4& idxvec, v_flo
     y = v_float64x2(tab[idx[0]+1], tab[idx[1]+1]);
 }
 
+
+#define OPENCV_HAL_IMPL_RISCVV_PACKS(_Tp2, num2, _Tp, num, pack, intrin, shr, _Type) \
+inline v_##_Tp##x##num v_##pack(const v_##_Tp2##x##num2& a, const v_##_Tp2##x##num2& b) \
+{ \
+    _Tp2##xm2_u tmp;    \
+    tmp.m1[0] = a.val;    \
+    tmp.m1[1] = b.val;    \
+    return v_##_Tp##x##num(shr##_##_Tp##xm1_##_Tp2##xm2(tmp.v, 0, num)); \
+}\
+template<int n> inline \
+v_##_Tp##x##num v_rshr_##pack(const v_##_Tp2##x##num2& a, const v_##_Tp2##x##num2& b) \
+{ \
+    _Tp2##xm2_u tmp;    \
+    tmp.m1[0] = a.val;    \
+    tmp.m1[1] = b.val;    \
+    return v_##_Tp##x##num(intrin##_##_Tp##xm1_##_Tp2##xm2(tmp.v, n, num)); \
+}\
+inline void v_##pack##_store(_Type* ptr, const v_##_Tp2##x##num2& a) \
+{ \
+    _Tp2##xm2_u tmp;    \
+    tmp.m1[0] = a.val;    \
+    tmp.m1[1] = vmvvx_##_Tp2##xm1(0, num2);    \
+    vsev_##_Tp##xm1(ptr, shr##_##_Tp##xm1_##_Tp2##xm2(tmp.v, 0, num), num2); \
+}\
+template<int n> inline \
+void v_rshr_##pack##_store(_Type* ptr, const v_##_Tp2##x##num2& a) \
+{ \
+    _Tp2##xm2_u tmp;    \
+    tmp.m1[0] = a.val;    \
+    tmp.m1[1] = vmvvx_##_Tp2##xm1(0, num2);    \
+    vsev_##_Tp##xm1(ptr, intrin##_##_Tp##xm1_##_Tp2##xm2(tmp.v, n, num), num2); \
+}
+OPENCV_HAL_IMPL_RISCVV_PACKS(int16, 8, int8, 16, pack, vnclipvx, vnclipvx, signed char)
+OPENCV_HAL_IMPL_RISCVV_PACKS(int32, 4, int16, 8, pack, vnclipvx, vnclipvx, signed short)
+OPENCV_HAL_IMPL_RISCVV_PACKS(int64, 2, int32, 4, pack, vnclipvx, vnsravx, int)
+OPENCV_HAL_IMPL_RISCVV_PACKS(uint16, 8, uint8, 16, pack, vnclipuvx, vnclipuvx, unsigned char)
+OPENCV_HAL_IMPL_RISCVV_PACKS(uint32, 4, uint16, 8, pack, vnclipuvx, vnclipuvx, unsigned short)
+OPENCV_HAL_IMPL_RISCVV_PACKS(uint64, 2, uint32, 4, pack, vnclipuvx, vnsrlvx, unsigned int)
+
+// pack boolean
+inline v_uint8x16 v_pack_b(const v_uint16x8& a, const v_uint16x8& b)
+{
+    uint16xm2_u tmp;    \
+    tmp.m1[0] = a.val;    \
+    tmp.m1[1] = b.val;    \
+    return v_uint8x16(vnsrlvi_uint8xm1_uint16xm2(tmp.v, 0, 16));
+}
+
+inline v_uint8x16 v_pack_b(const v_uint32x4& a, const v_uint32x4& b,
+                           const v_uint32x4& c, const v_uint32x4& d)
+{
+    uint32xm2_u vab;    \
+    uint32xm2_u vcd;    \
+    uint16xm2_u v16;    \
+    vab.m1[0] = a.val;    \
+    vab.m1[1] = b.val;    \
+    v16.m1[0] = vnsrlvi_uint16xm1_uint32xm2(vab.v, 0, 8);
+    vcd.m1[0] = c.val;    \
+    vcd.m1[1] = d.val;    \
+    v16.m1[1] = vnsrlvi_uint16xm1_uint32xm2(vcd.v, 0, 8);
+    return v_uint8x16(vnsrlvi_uint8xm1_uint16xm2(v16.v, 0, 16));
+}
+
+inline v_uint8x16 v_pack_b(const v_uint64x2& a, const v_uint64x2& b, const v_uint64x2& c,
+                           const v_uint64x2& d, const v_uint64x2& e, const v_uint64x2& f,
+                           const v_uint64x2& g, const v_uint64x2& h)
+{
+    uint64xm2_u vab;    \
+    uint64xm2_u vcd;    \
+    uint32xm2_u vabcd;    \
+    uint16xm2_u vres;    \
+    vab.m1[0] = a.val;    \
+    vab.m1[1] = b.val;    \
+    vabcd.m1[0] = vnsrlvi_uint32xm1_uint64xm2(vab.v, 0, 4);
+    vcd.m1[0] = c.val;    \
+    vcd.m1[1] = d.val;    \
+    vabcd.m1[1] = vnsrlvi_uint32xm1_uint64xm2(vcd.v, 0, 4);
+    vres.m1[0] = vnsrlvi_uint16xm1_uint32xm2(vabcd.v, 0, 8);
+    uint64xm2_u vef;    \
+    uint64xm2_u vgh;    \
+    uint32xm2_u vefgh;    \
+    vef.m1[0] = e.val;    \
+    vef.m1[1] = f.val;    \
+    vefgh.m1[0] = vnsrlvi_uint32xm1_uint64xm2(vef.v, 0, 4);
+    vgh.m1[0] = g.val;    \
+    vgh.m1[1] = h.val;    \
+    vefgh.m1[1] = vnsrlvi_uint32xm1_uint64xm2(vgh.v, 0, 4);
+    vres.m1[1] = vnsrlvi_uint16xm1_uint32xm2(vefgh.v, 0, 8);
+
+    return v_uint8x16(vnsrlvi_uint8xm1_uint16xm2(vres.v, 0, 16));
+}
+
+#define OPENCV_HAL_IMPL_RISCVV_PACK_U(tp1, num1, tp2, num2, _Tp) \
+inline v_uint##tp1##x##num1 v_pack_u(const v_int##tp2##x##num2& a, const v_int##tp2##x##num2& b) \
+{ \
+    int##tp2##xm2_u tmp;    \
+    tmp.m1[0] = (int##tp2##xm1_t)a.val;    \
+    tmp.m1[1] = (int##tp2##xm1_t)b.val;    \
+    int##tp2##xm2_t val = vmaxvx_int##tp2##xm2(tmp.v, 0, num1);\
+    return v_uint##tp1##x##num1(vnclipuvi_uint##tp1##xm1_uint##tp2##xm2((uint##tp2##xm2_t)val, 0, num1));    \
+} \
+inline void v_pack_u_store(_Tp* ptr, const v_int##tp2##x##num2& a) \
+{ \
+    int##tp2##xm2_u tmp;    \
+    tmp.m1[0] = (int##tp2##xm1_t)a.val;    \
+    int##tp2##xm2_t val = vmaxvx_int##tp2##xm2(tmp.v, 0, num1);\
+    return vsev_uint##tp1##xm1(ptr, vnclipuvi_uint##tp1##xm1_uint##tp2##xm2((uint##tp2##xm2_t)val, 0, num1), num2);    \
+} \
+template<int n> inline \
+v_uint##tp1##x##num1 v_rshr_pack_u(const v_int##tp2##x##num2& a, const v_int##tp2##x##num2& b) \
+{ \
+    int##tp2##xm2_u tmp;    \
+    tmp.m1[0] = (int##tp2##xm1_t)a.val;    \
+    tmp.m1[1] = (int##tp2##xm1_t)b.val;    \
+    int##tp2##xm2_t val = vmaxvx_int##tp2##xm2(tmp.v, 0, num1);\
+    return v_uint##tp1##x##num1(vnclipuvi_uint##tp1##xm1_uint##tp2##xm2((uint##tp2##xm2_t)val, n, num1));    \
+} \
+template<int n> inline \
+void v_rshr_pack_u_store(_Tp* ptr, const v_int##tp2##x##num2& a) \
+{ \
+    int##tp2##xm2_u tmp;    \
+    tmp.m1[0] = (int##tp2##xm1_t)a.val;    \
+    int##tp2##xm2_t val_ = vmaxvx_int##tp2##xm2(tmp.v, 0, num1);\
+    uint##tp1##xm1_t val = vnclipuvi_uint##tp1##xm1_uint##tp2##xm2((uint##tp2##xm2_t)val_, n, num1);    \
+    return vsev_uint##tp1##xm1(ptr, val, num2);\
+}
+OPENCV_HAL_IMPL_RISCVV_PACK_U(8, 16, 16, 8, unsigned char )
+OPENCV_HAL_IMPL_RISCVV_PACK_U(16, 8, 32, 4, unsigned short)
 inline void v_cleanup() {}
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
