@@ -1557,7 +1557,7 @@ void ONNXImporter::populateNet(Net dstNet)
             Mat shapes = getBlob(node_proto, constBlobs, node_proto.input_size() - 1);
             CV_CheckEQ(shapes.size[0], 4, "");
             CV_CheckEQ(shapes.size[1], 1, "");
-            CV_Check(shapes.depth(), shapes.depth() == CV_32S || shapes.depth() == CV_32F, "");
+            CV_CheckDepth(shapes.depth(), shapes.depth() == CV_32S || shapes.depth() == CV_32F, "");
             if (shapes.depth() == CV_32F)
                 shapes.convertTo(shapes, CV_32S);
             int height = shapes.at<int>(2);
