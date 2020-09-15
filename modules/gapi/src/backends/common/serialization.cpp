@@ -773,6 +773,7 @@ I::IStream& ByteMemoryInStream::operator>> (char &atom) {
 I::IStream& ByteMemoryInStream::operator>> (wchar_t &atom) {
     check(sizeof(wchar_t));
     uint8_t x[sizeof(wchar_t)];
+    atom = 0;
     for (std::size_t i = 0; i < sizeof(wchar_t); ++i) {
         x[i] = static_cast<uint8_t>(m_storage[m_idx++]);
         atom |= (x[i] << (i * 8));
