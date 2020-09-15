@@ -299,6 +299,73 @@ inline v_float32x4 v_setall_f32(float v) { return v_float32x4(vfmvvf_float32xm1(
 inline v_float64x2 v_setzero_f64() { return v_float64x2(vfmvvf_float64xm1(0, 2)); }
 inline v_float64x2 v_setall_f64(double v) { return v_float64x2(vfmvvf_float64xm1(v, 2)); }
 
+#define OPENCV_HAL_IMPL_RISCVV_BIN_OP(bin_op, _Tpvec, intrin) \
+inline _Tpvec operator bin_op (const _Tpvec& a, const _Tpvec& b) \
+{ \
+    return _Tpvec(intrin(a.val, b.val)); \
+} \
+inline _Tpvec& operator bin_op##= (_Tpvec& a, const _Tpvec& b) \
+{ \
+    a.val = intrin(a.val, b.val); \
+    return a; \
+}
+
+#define OPENCV_HAL_IMPL_RISCVV_BIN_OPN(bin_op, _Tpvec, intrin, num) \
+inline _Tpvec operator bin_op (const _Tpvec& a, const _Tpvec& b) \
+{ \
+    return _Tpvec(intrin(a.val, b.val, num)); \
+} \
+inline _Tpvec& operator bin_op##= (_Tpvec& a, const _Tpvec& b) \
+{ \
+    a.val = intrin(a.val, b.val, num); \
+    return a; \
+}
+
+OPENCV_HAL_IMPL_RISCVV_BIN_OPN(+, v_uint8x16, vsadduvv_uint8xm1, 16)
+OPENCV_HAL_IMPL_RISCVV_BIN_OPN(-, v_uint8x16, vssubuvv_uint8xm1, 16)
+OPENCV_HAL_IMPL_RISCVV_BIN_OPN(+, v_int8x16, vsaddvv_int8xm1, 16)
+OPENCV_HAL_IMPL_RISCVV_BIN_OPN(-, v_int8x16, vssubvv_int8xm1, 16)
+OPENCV_HAL_IMPL_RISCVV_BIN_OPN(+, v_uint16x8, vsadduvv_uint16xm1, 8)
+OPENCV_HAL_IMPL_RISCVV_BIN_OPN(-, v_uint16x8, vssubuvv_uint16xm1, 8)
+OPENCV_HAL_IMPL_RISCVV_BIN_OPN(+, v_int16x8, vsaddvv_int16xm1, 8)
+OPENCV_HAL_IMPL_RISCVV_BIN_OPN(-, v_int16x8, vssubvv_int16xm1, 8)
+OPENCV_HAL_IMPL_RISCVV_BIN_OPN(+, v_int32x4, vsaddvv_int32xm1, 4)
+OPENCV_HAL_IMPL_RISCVV_BIN_OPN(-, v_int32x4, vssubvv_int32xm1, 4)
+OPENCV_HAL_IMPL_RISCVV_BIN_OPN(*, v_int32x4, vmulvv_int32xm1, 4)
+OPENCV_HAL_IMPL_RISCVV_BIN_OPN(+, v_uint32x4, vaddvv_uint32xm1, 4)
+OPENCV_HAL_IMPL_RISCVV_BIN_OPN(-, v_uint32x4, vsubvv_uint32xm1, 4)
+OPENCV_HAL_IMPL_RISCVV_BIN_OPN(*, v_uint32x4, vmulvv_uint32xm1, 4)
+OPENCV_HAL_IMPL_RISCVV_BIN_OPN(+, v_int64x2, vsaddvv_int64xm1, 2)
+OPENCV_HAL_IMPL_RISCVV_BIN_OPN(-, v_int64x2, vssubvv_int64xm1, 2)
+OPENCV_HAL_IMPL_RISCVV_BIN_OPN(+, v_uint64x2, vaddvv_uint64xm1, 2)
+OPENCV_HAL_IMPL_RISCVV_BIN_OPN(-, v_uint64x2, vsubvv_uint64xm1, 2)
+OPENCV_HAL_IMPL_RISCVV_BIN_OPN(+, v_float32x4, vfaddvv_float32xm1, 4)
+OPENCV_HAL_IMPL_RISCVV_BIN_OPN(-, v_float32x4, vfsubvv_float32xm1, 4)
+OPENCV_HAL_IMPL_RISCVV_BIN_OPN(*, v_float32x4, vfmulvv_float32xm1, 4)
+inline v_float32x4 operator / (const v_float32x4& a, const v_float32x4& b)
+{
+    return v_float32x4(vfdivvv_float32xm1(a.val, b.val, 4));
+}
+inline v_float32x4& operator /= (v_float32x4& a, const v_float32x4& b)
+{
+    a.val = vfdivvv_float32xm1(a.val, b.val, 4);
+    return a;
+}
+
+OPENCV_HAL_IMPL_RISCVV_BIN_OPN(+, v_float64x2, vfaddvv_float64xm1, 2)
+OPENCV_HAL_IMPL_RISCVV_BIN_OPN(-, v_float64x2, vfsubvv_float64xm1, 2)
+OPENCV_HAL_IMPL_RISCVV_BIN_OPN(*, v_float64x2, vfmulvv_float64xm1, 2)
+inline v_float64x2 operator / (const v_float64x2& a, const v_float64x2& b)
+{
+    return v_float64x2(vfdivvv_float64xm1(a.val, b.val, 2));
+}
+inline v_float64x2& operator /= (v_float64x2& a, const v_float64x2& b)
+{
+    a.val = vfdivvv_float64xm1(a.val, b.val, 2);
+    return a;
+}
+// TODO: exp, log, sin, cos
+
 inline void v_cleanup() {}
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
