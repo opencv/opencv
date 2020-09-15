@@ -244,12 +244,9 @@ public:
                       std::vector<int>& out_labels)
     {
         YoloParams params;
-        constexpr auto side = 13;
-        constexpr auto side_square = side * side;
-        const auto output = in_yolo_result.ptr<float>();
-
-        this->m_out = output;
-        this->m_side = side;
+        constexpr auto side_square = 13 * 13;
+        this->m_out = in_yolo_result.ptr<float>();
+        this->m_side = 13;
         this->m_lcoords = params.coords;
         this->m_lclasses = num_classes;
 
