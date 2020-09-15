@@ -282,7 +282,7 @@ OPENCV_HAL_IMPL_RISCVV_INIT(int64x2, int64, s64)
 OPENCV_HAL_IMPL_RISCVV_INIT(float64x2, float64, f64)
 OPENCV_HAL_IMPL_RISCVV_INIT(float32x4, float32, f32)
 #define OPENCV_HAL_IMPL_RISCVV_INIT_SET(__Tp, _Tp, suffix, num) \
-inline v_##_Tp##x##num v_setzero_##suffix() { return v_##_Tp##x##num(vmvvx_##_Tp##xm1(0, num)); } 	\
+inline v_##_Tp##x##num v_setzero_##suffix() { return v_##_Tp##x##num(vmvvx_##_Tp##xm1(0, num)); }     \
 inline v_##_Tp##x##num v_setall_##suffix(__Tp v) { return v_##_Tp##x##num(vmvvx_##_Tp##xm1(v, num)); }
 
 OPENCV_HAL_IMPL_RISCVV_INIT_SET(uchar, uint8, u8, 16)
@@ -999,6 +999,135 @@ OPENCV_HAL_IMPL_RISCVV_REDUCE_SAD(v_int16x8, v_uint16x8)
 OPENCV_HAL_IMPL_RISCVV_REDUCE_SAD(v_uint16x8, v_uint16x8)
 OPENCV_HAL_IMPL_RISCVV_REDUCE_SAD(v_int32x4, v_uint32x4)
 OPENCV_HAL_IMPL_RISCVV_REDUCE_SAD(v_uint32x4, v_uint32x4)
+
+#define OPENCV_HAL_IMPL_RISCVV_INT_CMP_OP(_Tpvec, _Tp, _T, num, uv) \
+inline _Tpvec operator == (const _Tpvec& a, const _Tpvec& b) \
+{ \
+    e##_Tp##_t mask = vmseqvv_e##_Tp##_##_T(a.val, b.val, num);    \
+    return _Tpvec(vmergevxm_mask_##_T(vmvvx_##_T(0, num), -1, mask, num));    \
+} \
+inline _Tpvec operator != (const _Tpvec& a, const _Tpvec& b) \
+{ \
+    e##_Tp##_t mask = vmsnevv_e##_Tp##_##_T(a.val, b.val, num);    \
+    return _Tpvec(vmergevxm_mask_##_T(vmvvx_##_T(0, num), -1, mask, num));    \
+} \
+inline _Tpvec operator < (const _Tpvec& a, const _Tpvec& b) \
+{ \
+    e##_Tp##_t mask = vmslt##uv##_e##_Tp##_##_T(a.val, b.val, num);    \
+    return _Tpvec(vmergevxm_mask_##_T(vmvvx_##_T(0, num), -1, mask, num));    \
+} \
+inline _Tpvec operator > (const _Tpvec& a, const _Tpvec& b) \
+{ \
+    e##_Tp##_t mask = vmslt##uv##_e##_Tp##_##_T(b.val, a.val, num);    \
+    return _Tpvec(vmergevxm_mask_##_T(vmvvx_##_T(0, num), -1, mask, num));    \
+} \
+inline _Tpvec operator <= (const _Tpvec& a, const _Tpvec& b) \
+{ \
+    e##_Tp##_t mask = vmsle##uv##_e##_Tp##_##_T(a.val, b.val, num);    \
+    return _Tpvec(vmergevxm_mask_##_T(vmvvx_##_T(0, num), -1, mask, num));    \
+} \
+inline _Tpvec operator >= (const _Tpvec& a, const _Tpvec& b) \
+{ \
+    e##_Tp##_t mask = vmsle##uv##_e##_Tp##_##_T(b.val, a.val, num);    \
+    return _Tpvec(vmergevxm_mask_##_T(vmvvx_##_T(0, num), -1, mask, num));    \
+} \
+
+OPENCV_HAL_IMPL_RISCVV_INT_CMP_OP(v_int8x16, 8xm1, int8xm1, 16, vv)
+OPENCV_HAL_IMPL_RISCVV_INT_CMP_OP(v_int16x8, 16xm1, int16xm1, 8, vv)
+OPENCV_HAL_IMPL_RISCVV_INT_CMP_OP(v_int32x4, 32xm1, int32xm1, 4, vv)
+OPENCV_HAL_IMPL_RISCVV_INT_CMP_OP(v_int64x2, 64xm1, int64xm1, 2, vv)
+OPENCV_HAL_IMPL_RISCVV_INT_CMP_OP(v_uint8x16, 8xm1, uint8xm1, 16, uvv)
+OPENCV_HAL_IMPL_RISCVV_INT_CMP_OP(v_uint16x8, 16xm1, uint16xm1, 8, uvv)
+OPENCV_HAL_IMPL_RISCVV_INT_CMP_OP(v_uint32x4, 32xm1, uint32xm1, 4, uvv)
+OPENCV_HAL_IMPL_RISCVV_INT_CMP_OP(v_uint64x2, 64xm1, uint64xm1, 2, uvv)
+
+//TODO: ==
+inline v_float32x4 operator == (const v_float32x4& a, const v_float32x4& b)
+{
+    e32xm1_t mask = vmfeqvv_e32xm1_float32xm1(a.val, b.val, 4);
+    int32xm1_t res = vmergevxm_mask_int32xm1(vmvvx_int32xm1(0.0, 4), -1, mask, 4);
+    return v_float32x4((float32xm1_t)res);
+}
+inline v_float32x4 operator != (const v_float32x4& a, const v_float32x4& b)
+{
+    e32xm1_t mask = vmfnevv_e32xm1_float32xm1(a.val, b.val, 4);
+    int32xm1_t res = vmergevxm_mask_int32xm1(vmvvx_int32xm1(0.0, 4), -1, mask, 4);
+    return v_float32x4((float32xm1_t)res);
+}
+inline v_float32x4 operator < (const v_float32x4& a, const v_float32x4& b)
+{
+    e32xm1_t mask = vmfltvv_e32xm1_float32xm1(a.val, b.val, 4);
+    int32xm1_t res = vmergevxm_mask_int32xm1(vmvvx_int32xm1(0.0, 4), -1, mask, 4);
+    return v_float32x4((float32xm1_t)res);
+}
+inline v_float32x4 operator <= (const v_float32x4& a, const v_float32x4& b)
+{
+    e32xm1_t mask = vmflevv_e32xm1_float32xm1(a.val, b.val, 4);
+    int32xm1_t res = vmergevxm_mask_int32xm1(vmvvx_int32xm1(0.0, 4), -1, mask, 4);
+    return v_float32x4((float32xm1_t)res);
+}
+inline v_float32x4 operator > (const v_float32x4& a, const v_float32x4& b)
+{
+    e32xm1_t mask = vmfgtvv_e32xm1_float32xm1(a.val, b.val, 4);
+    int32xm1_t res = vmergevxm_mask_int32xm1(vmvvx_int32xm1(0.0, 4), -1, mask, 4);
+    return v_float32x4((float32xm1_t)res);
+}
+inline v_float32x4 operator >= (const v_float32x4& a, const v_float32x4& b)
+{
+    e32xm1_t mask = vmfgevv_e32xm1_float32xm1(a.val, b.val, 4);
+    int32xm1_t res = vmergevxm_mask_int32xm1(vmvvx_int32xm1(0.0, 4), -1, mask, 4);
+    return v_float32x4((float32xm1_t)res);
+}
+inline v_float32x4 v_not_nan(const v_float32x4& a)
+{
+    e32xm1_t mask = vmfordvv_e32xm1_float32xm1(a.val, a.val, 4);
+    int32xm1_t res = vmergevxm_mask_int32xm1(vmvvx_int32xm1(0.0, 4), -1, mask, 4);
+    return v_float32x4((float32xm1_t)res);
+}
+
+//TODO: ==
+inline v_float64x2 operator == (const v_float64x2& a, const v_float64x2& b)
+{
+    e64xm1_t mask = vmfeqvv_e64xm1_float64xm1(a.val, b.val, 2);
+    int64xm1_t res = vmergevxm_mask_int64xm1(vmvvx_int64xm1(0.0, 2), -1, mask, 2);
+    return v_float64x2((float64xm1_t)res);
+}
+inline v_float64x2 operator != (const v_float64x2& a, const v_float64x2& b)
+{
+    e64xm1_t mask = vmfnevv_e64xm1_float64xm1(a.val, b.val, 2);
+    int64xm1_t res = vmergevxm_mask_int64xm1(vmvvx_int64xm1(0.0, 2), -1, mask, 2);
+    return v_float64x2((float64xm1_t)res);
+}
+inline v_float64x2 operator < (const v_float64x2& a, const v_float64x2& b)
+{
+    e64xm1_t mask = vmfltvv_e64xm1_float64xm1(a.val, b.val, 2);
+    int64xm1_t res = vmergevxm_mask_int64xm1(vmvvx_int64xm1(0.0, 2), -1, mask, 2);
+    return v_float64x2((float64xm1_t)res);
+}
+inline v_float64x2 operator <= (const v_float64x2& a, const v_float64x2& b)
+{
+    e64xm1_t mask = vmflevv_e64xm1_float64xm1(a.val, b.val, 2);
+    int64xm1_t res = vmergevxm_mask_int64xm1(vmvvx_int64xm1(0.0, 2), -1, mask, 2);
+    return v_float64x2((float64xm1_t)res);
+}
+inline v_float64x2 operator > (const v_float64x2& a, const v_float64x2& b)
+{
+    e64xm1_t mask = vmfgtvv_e64xm1_float64xm1(a.val, b.val, 2);
+    int64xm1_t res = vmergevxm_mask_int64xm1(vmvvx_int64xm1(0.0, 2), -1, mask, 2);
+    return v_float64x2((float64xm1_t)res);
+}
+inline v_float64x2 operator >= (const v_float64x2& a, const v_float64x2& b)
+{
+    e64xm1_t mask = vmfgevv_e64xm1_float64xm1(a.val, b.val, 2);
+    int64xm1_t res = vmergevxm_mask_int64xm1(vmvvx_int64xm1(0.0, 2), -1, mask, 2);
+    return v_float64x2((float64xm1_t)res);
+}
+inline v_float64x2 v_not_nan(const v_float64x2& a)
+{
+    e64xm1_t mask = vmfordvv_e64xm1_float64xm1(a.val, a.val, 2);
+    int64xm1_t res = vmergevxm_mask_int64xm1(vmvvx_int64xm1(0.0, 2), -1, mask, 2);
+    return v_float64x2((float64xm1_t)res);
+}
 
 inline void v_cleanup() {}
 
