@@ -521,7 +521,6 @@ INSTANTIATE_TEST_CASE_P(ParseTestCPU, ParseYoloTest,
                                 Values(0.5f, 1.0f),
                                 Values(80, 7)));
 
-
 INSTANTIATE_TEST_CASE_P(SizeTestCPU, SizeTest,
                         Combine(Values(CV_8UC1, CV_8UC3, CV_32FC1),
                                 Values(cv::Size(32, 32),
