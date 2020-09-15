@@ -2197,6 +2197,130 @@ OPENCV_HAL_IMPL_RISCVV_BROADCAST(v_uint64x2, uint64, 2)
 OPENCV_HAL_IMPL_RISCVV_BROADCAST(v_int64x2, int64, 2)
 OPENCV_HAL_IMPL_RISCVV_BROADCAST(v_float32x4, float32, 4)
 
+
+inline void round_mode_set(int a){
+    asm volatile(
+    "fsrm %0\n\t"
+    :
+    :"r"(a)
+    :);
+}
+
+inline int round_mode_read(){
+    int a;
+    asm volatile(
+    "frrm %0\n\t"
+    :"=r"(a)
+    :
+    :);
+    return a;
+}
+inline v_int32x4 v_round(const v_float32x4& a)
+{
+    round_mode_set(0);
+    e32xm1_t nan = vmfordvv_e32xm1_float32xm1(a.val, a.val, 4);
+    int32xm1_t val = vfcvtxfv_mask_int32xm1_float32xm1(vmvvx_int32xm1(0, 4), a.val, nan, 4);
+    e32xm1_t mask = vmormm_e32xm1(vmfeqvf_e32xm1_float32xm1(a.val, INFINITY, 4), vmfeqvf_e32xm1_float32xm1(a.val, -INFINITY, 4), 4);
+    val = vmergevxm_mask_int32xm1(val, 0, mask, 4);
+    round_mode_set(0);
+    return v_int32x4(val);
+}
+inline v_int32x4 v_floor(const v_float32x4& a)
+{
+    round_mode_set(2);
+    e32xm1_t nan = vmfordvv_e32xm1_float32xm1(a.val, a.val, 4);
+    int32xm1_t val = vfcvtxfv_mask_int32xm1_float32xm1(vmvvx_int32xm1(0, 4), a.val, nan, 4);
+    e32xm1_t mask = vmormm_e32xm1(vmfeqvf_e32xm1_float32xm1(a.val, INFINITY, 4), vmfeqvf_e32xm1_float32xm1(a.val, -INFINITY, 4), 4);
+    val = vmergevxm_mask_int32xm1(val, 0, mask, 4);
+    round_mode_set(0);
+    return v_int32x4(val);
+}
+
+inline v_int32x4 v_ceil(const v_float32x4& a)
+{
+    round_mode_set(3);
+    e32xm1_t nan = vmfordvv_e32xm1_float32xm1(a.val, a.val, 4);
+    int32xm1_t val = vfcvtxfv_mask_int32xm1_float32xm1(vmvvx_int32xm1(0, 4), a.val, nan, 4);
+    e32xm1_t mask = vmormm_e32xm1(vmfeqvf_e32xm1_float32xm1(a.val, INFINITY, 4), vmfeqvf_e32xm1_float32xm1(a.val, -INFINITY, 4), 4);
+    val = vmergevxm_mask_int32xm1(val, 0, mask, 4);
+    round_mode_set(0);
+    return v_int32x4(val);
+}
+
+inline v_int32x4 v_trunc(const v_float32x4& a)
+{
+    round_mode_set(1);
+    e32xm1_t nan = vmfordvv_e32xm1_float32xm1(a.val, a.val, 4);
+    int32xm1_t val = vfcvtxfv_mask_int32xm1_float32xm1(vmvvx_int32xm1(0, 4), a.val, nan, 4);
+    e32xm1_t mask = vmormm_e32xm1(vmfeqvf_e32xm1_float32xm1(a.val, INFINITY, 4), vmfeqvf_e32xm1_float32xm1(a.val, -INFINITY, 4), 4);
+    val = vmergevxm_mask_int32xm1(val, 0, mask, 4);
+    round_mode_set(0);
+    return v_int32x4(val);
+}
+
+inline v_int32x4 v_round(const v_float64x2& a)
+{
+    round_mode_set(0);
+    float64xm2_u _val;
+    _val.m1[0] = a.val;
+    _val.m1[1] = vfmvvf_float64xm1(0, 2);
+    int32xm1_t val = vfncvtxfv_int32xm1_float64xm2(_val.v, 4);
+    round_mode_set(0);
+    return v_int32x4(val);
+}
+inline v_int32x4 v_round(const v_float64x2& a, const v_float64x2& b)
+{
+    round_mode_set(0);
+    float64xm2_u _val;
+    _val.m1[0] = a.val;
+    _val.m1[1] = b.val;
+    int32xm1_t val = vfncvtxfv_int32xm1_float64xm2(_val.v, 4);
+    round_mode_set(0);
+    return v_int32x4(val);
+}
+inline v_int32x4 v_floor(const v_float64x2& a)
+{
+    round_mode_set(2);
+    float64xm2_u _val;
+    _val.m1[0] = a.val;
+    float32xm1_t aval = vfncvtffv_float32xm1_float64xm2(_val.v, 2);
+    e32xm1_t nan = vmfordvv_e32xm1_float32xm1(aval, aval, 4);
+    int32xm1_t val = vfcvtxfv_mask_int32xm1_float32xm1(vmvvx_int32xm1(0, 4), aval, nan, 4);
+    e32xm1_t mask = vmormm_e32xm1(vmfeqvf_e32xm1_float32xm1(aval, INFINITY, 4), vmfeqvf_e32xm1_float32xm1(aval, -INFINITY, 4), 4);
+    val = vmergevxm_mask_int32xm1(val, 0, mask, 4);
+    round_mode_set(0);
+    return v_int32x4(val);
+}
+
+inline v_int32x4 v_ceil(const v_float64x2& a)
+{
+    round_mode_set(3);
+    float64xm2_u _val;
+    _val.m1[0] = a.val;
+    float32xm1_t aval = vfncvtffv_float32xm1_float64xm2(_val.v, 2);
+    e32xm1_t nan = vmfordvv_e32xm1_float32xm1(aval, aval, 4);
+    int32xm1_t val = vfcvtxfv_mask_int32xm1_float32xm1(vmvvx_int32xm1(0, 4), aval, nan, 4);
+    e32xm1_t mask = vmormm_e32xm1(vmfeqvf_e32xm1_float32xm1(aval, INFINITY, 4), vmfeqvf_e32xm1_float32xm1(aval, -INFINITY, 4), 4);
+    val = vmergevxm_mask_int32xm1(val, 0, mask, 4);
+    round_mode_set(0);
+    return v_int32x4(val);
+}
+
+inline v_int32x4 v_trunc(const v_float64x2& a)
+{
+    round_mode_set(1);
+    float64xm2_u _val;
+    _val.m1[0] = a.val;
+    float32xm1_t aval = vfncvtffv_float32xm1_float64xm2(_val.v, 2);
+    e32xm1_t nan = vmfordvv_e32xm1_float32xm1(aval, aval, 4);
+    int32xm1_t val = vfcvtxfv_mask_int32xm1_float32xm1(vmvvx_int32xm1(0, 4), aval, nan, 4);
+    e32xm1_t mask = vmormm_e32xm1(vmfeqvf_e32xm1_float32xm1(aval, INFINITY, 4), vmfeqvf_e32xm1_float32xm1(aval, -INFINITY, 4), 4);
+    val = vmergevxm_mask_int32xm1(val, 0, mask, 4);
+    round_mode_set(0);
+    return v_int32x4(val);
+}
+
+
 inline void v_cleanup() {}
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
