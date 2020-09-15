@@ -1809,6 +1809,132 @@ v_popcount(const v_int64x2& a)
     return v_uint64x2((unsigned long)tmp.m1[0][0], (unsigned long)tmp.m1[1][0]);
 }
 
+
+#define SMASK 1, 2, 4, 8, 16, 32, 64, 128
+inline int v_signmask(const v_uint8x16& a)
+{
+    uint8xm1_t t0 = vsrlvx_uint8xm1(a.val, 7, 16);
+    uint8xm1_t m1 = (uint8xm1_t){SMASK, SMASK};
+    uint16xm2_u t1;
+    t1.v = vwmuluvv_uint16xm2_uint8xm1(t0, m1, 16);
+    uint32xm2_t t2, res;
+    res = vmvvx_uint32xm2(0, 8);
+    t2 = vwmuluvx_uint32xm2_uint16xm1(t1.m1[1], 256, 8);
+    res = vredsumvs_uint32xm2(t2, res, 8);
+    res = vwredsumuvs_uint32xm2_uint16xm1(t1.m1[0], res, 8);
+    return res[0];
+}
+inline int v_signmask(const v_int8x16& a)
+{
+    uint8xm1_t t0 = vsrlvx_uint8xm1((uint8xm1_t)a.val, 7, 16);
+    uint8xm1_t m1 = (uint8xm1_t){SMASK, SMASK};
+    int16xm2_u t1;
+    t1.v = (int16xm2_t)vwmuluvv_uint16xm2_uint8xm1(t0, m1, 16);
+    int32xm2_t t2, res;
+    res = vmvvx_int32xm2(0, 8);
+    t2 = vwmulvx_int32xm2_int16xm1(t1.m1[1], 256, 8);
+    res = vredsumvs_int32xm2(t2, res, 8);
+    res = vwredsumvs_int32xm2_int16xm1(t1.m1[0], res, 8);
+    return res[0];
+}
+
+inline int v_signmask(const v_int16x8& a)
+{
+    int16xm1_t t0 = (int16xm1_t)vsrlvx_uint16xm1((uint16xm1_t)a.val, 15, 8);
+    int16xm1_t m1 = (int16xm1_t){SMASK};
+    int16xm1_t t1 = vmulvv_int16xm1(t0, m1, 8);
+    int16xm1_t res = vmvvx_int16xm1(0, 8);
+    res = vredsumvs_int16xm1(t1, res, 8);
+    return res[0];
+}
+inline int v_signmask(const v_uint16x8& a)
+{
+    int16xm1_t t0 = (int16xm1_t)vsrlvx_uint16xm1((uint16xm1_t)a.val, 15, 8);
+    int16xm1_t m1 = (int16xm1_t){SMASK};
+    int16xm1_t t1 = vmulvv_int16xm1(t0, m1, 8);
+    int16xm1_t res = vmvvx_int16xm1(0, 8);
+    res = vredsumvs_int16xm1(t1, res, 8);
+    return res[0];
+}
+inline int v_signmask(const v_int32x4& a)
+{
+    int32xm1_t t0 = (int32xm1_t)vsrlvx_uint32xm1((uint32xm1_t)a.val, 31, 4);
+    int32xm1_t m1 = (int32xm1_t){1, 2, 4, 8};
+    int32xm1_t res;
+    res = vmvvx_int32xm1(0, 8);
+    int32xm1_t t1 = vmulvv_int32xm1(t0, m1, 4);
+    res = vredsumvs_int32xm1(t1, res, 4);
+    return res[0];
+}
+inline int v_signmask(const v_uint32x4& a)
+{
+    int32xm1_t t0 = (int32xm1_t)vsrlvx_uint32xm1(a.val, 31, 4);
+    int32xm1_t m1 = (int32xm1_t){1, 2, 4, 8};
+    int32xm1_t res;
+    res = vmvvx_int32xm1(0, 8);
+    int32xm1_t t1 = vmulvv_int32xm1(t0, m1, 4);
+    res = vredsumvs_int32xm1(t1, res, 4);
+    return res[0];
+}
+inline int v_signmask(const v_uint64x2& a)
+{
+    uint64xm1_t v0 = vsrlvx_uint64xm1(a.val, 63, 2);
+    int res = (int)v0[0] + ((int)v0[1] << 1);
+    return res;
+}
+inline int v_signmask(const v_int64x2& a)
+{ return v_signmask(v_reinterpret_as_u64(a)); }
+inline int v_signmask(const v_float64x2& a)
+{ return v_signmask(v_reinterpret_as_u64(a)); }
+inline int v_signmask(const v_float32x4& a)
+{
+    int32xm1_t t0 = (int32xm1_t)vsrlvx_uint32xm1((uint32xm1_t)a.val, 31, 4);
+    int32xm1_t m1 = (int32xm1_t){1, 2, 4, 8};
+    int32xm1_t res;
+    res = vmvvx_int32xm1(0, 8);
+    int32xm1_t t1 = vmulvv_int32xm1(t0, m1, 4);
+    res = vredsumvs_int32xm1(t1, res, 4);
+    return res[0];
+}
+
+
+inline int v_scan_forward(const v_int8x16& a) {
+int val = v_signmask(a);
+if(val==0) return 0;
+else return trailingZeros32(val); }
+inline int v_scan_forward(const v_uint8x16& a) {
+int val = v_signmask(a);
+if(val==0) return 0;
+else return trailingZeros32(val); }
+inline int v_scan_forward(const v_int16x8& a) {
+int val = v_signmask(a);
+if(val==0) return 0;
+else return trailingZeros32(val); }
+inline int v_scan_forward(const v_uint16x8& a) {
+int val = v_signmask(a);
+if(val==0) return 0;
+else return trailingZeros32(val); }
+inline int v_scan_forward(const v_int32x4& a) {
+int val = v_signmask(a);
+if(val==0) return 0;
+else return trailingZeros32(val); }
+inline int v_scan_forward(const v_uint32x4& a) {
+int val = v_signmask(a);
+if(val==0) return 0;
+else return trailingZeros32(val); }
+inline int v_scan_forward(const v_float32x4& a) {
+int val = v_signmask(a);
+if(val==0) return 0;
+else return trailingZeros32(val); }
+inline int v_scan_forward(const v_int64x2& a) {
+int val = v_signmask(a);
+if(val==0) return 0;
+else return trailingZeros32(val); }
+inline int v_scan_forward(const v_uint64x2& a) {
+int val = v_signmask(a);
+if(val==0) return 0;
+else return trailingZeros32(val); }
+
 inline void v_cleanup() {}
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
