@@ -1671,6 +1671,144 @@ void v_rshr_pack_u_store(_Tp* ptr, const v_int##tp2##x##num2& a) \
 }
 OPENCV_HAL_IMPL_RISCVV_PACK_U(8, 16, 16, 8, unsigned char )
 OPENCV_HAL_IMPL_RISCVV_PACK_U(16, 8, 32, 4, unsigned short)
+
+// saturating multiply 8-bit, 16-bit
+#define OPENCV_HAL_IMPL_RISCVV_MUL_SAT(_Tpvec, _Tpwvec)            \
+    inline _Tpvec operator * (const _Tpvec& a, const _Tpvec& b)  \
+    {                                                            \
+        _Tpwvec c, d;                                            \
+        v_mul_expand(a, b, c, d);                                \
+        return v_pack(c, d);                                     \
+    }                                                            \
+    inline _Tpvec& operator *= (_Tpvec& a, const _Tpvec& b)      \
+    { a = a * b; return a; }
+
+OPENCV_HAL_IMPL_RISCVV_MUL_SAT(v_int8x16,  v_int16x8)
+OPENCV_HAL_IMPL_RISCVV_MUL_SAT(v_uint8x16, v_uint16x8)
+OPENCV_HAL_IMPL_RISCVV_MUL_SAT(v_int16x8,  v_int32x4)
+OPENCV_HAL_IMPL_RISCVV_MUL_SAT(v_uint16x8, v_uint32x4)
+
+static const signed char popCountTable[256] =
+{
+    0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4,
+    1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
+    1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
+    2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
+    1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
+    2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
+    2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
+    3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
+    1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
+    2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
+    2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
+    3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
+    2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
+    3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
+    3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
+    4, 5, 5, 6, 5, 6, 6, 7, 5, 6, 6, 7, 6, 7, 7, 8,
+};
+
+inline uint8xm1_t vcnt_u8(uint8xm1_t val){
+    uint8xm1_t v0 = val & 1;
+    return vlxbuv_uint8xm1((unsigned char*)popCountTable, val >> 1, 16)+v0;
+}
+
+inline v_uint8x16
+v_popcount(const v_uint8x16& a)
+{
+    return v_uint8x16(vcnt_u8(a.val));
+}
+
+inline v_uint8x16
+v_popcount(const v_int8x16& a)
+{
+    return v_uint8x16(vcnt_u8((uint8xm1_t)a.val));
+}
+
+inline v_uint16x8
+v_popcount(const v_uint16x8& a)
+{
+    uint8xm2_u tmp;
+    tmp.m1[0] = vcnt_u8((uint8xm1_t)a.val);
+    uint64xm2_t mask = (uint64xm2_t){0x0E0C0A0806040200, 0, 0x0F0D0B0907050301, 0};
+    tmp.v = vrgathervv_uint8xm2(tmp.v, (uint8xm2_t)mask, 32);	\
+    uint16xm2_u res;
+    res.v = vwadduvv_uint16xm2_uint8xm1(tmp.m1[0], tmp.m1[1], 8);
+    return v_uint16x8(res.m1[0]);
+}
+
+inline v_uint16x8
+v_popcount(const v_int16x8& a)
+{
+    uint8xm2_u tmp;
+    tmp.m1[0] = vcnt_u8((uint8xm1_t)a.val);
+    uint64xm2_t mask = (uint64xm2_t){0x0E0C0A0806040200, 0, 0x0F0D0B0907050301, 0};
+    tmp.v = vrgathervv_uint8xm2(tmp.v, (uint8xm2_t)mask, 32);	\
+    uint16xm2_u res;
+    res.v = vwadduvv_uint16xm2_uint8xm1(tmp.m1[0], tmp.m1[1], 8);
+    return v_uint16x8(res.m1[0]);
+}
+
+inline v_uint32x4
+v_popcount(const v_uint32x4& a)
+{
+    uint8xm2_u tmp;
+    tmp.m1[0] = vcnt_u8((uint8xm1_t)a.val);
+    uint64xm2_t mask = (uint64xm2_t){0xFFFFFFFF0C080400, 0xFFFFFFFF0D090501,
+    0xFFFFFFFF0E0A0602, 0xFFFFFFFF0F0B0703};
+    tmp.v = vrgathervv_uint8xm2(tmp.v, (uint8xm2_t)mask, 32);	\
+    uint16xm2_u res_;
+    res_.v = vwadduvv_uint16xm2_uint8xm1(tmp.m1[0], tmp.m1[1], 16);
+    uint32xm2_u res;
+    res.v = vwadduvv_uint32xm2_uint16xm1(res_.m1[0], res_.m1[1], 4);
+    return v_uint32x4(res.m1[0]);
+}
+
+inline v_uint32x4
+v_popcount(const v_int32x4& a)
+{
+    uint8xm2_u tmp;
+    tmp.m1[0] = vcnt_u8((uint8xm1_t)a.val);
+    uint64xm2_t mask = (uint64xm2_t){0xFFFFFFFF0C080400, 0xFFFFFFFF0D090501,
+    0xFFFFFFFF0E0A0602, 0xFFFFFFFF0F0B0703};
+    tmp.v = vrgathervv_uint8xm2(tmp.v, (uint8xm2_t)mask, 32);	\
+    uint16xm2_u res_;
+    res_.v = vwadduvv_uint16xm2_uint8xm1(tmp.m1[0], tmp.m1[1], 16);
+    uint32xm2_u res;
+    res.v = vwadduvv_uint32xm2_uint16xm1(res_.m1[0], res_.m1[1], 4);
+    return v_uint32x4(res.m1[0]);
+}
+
+inline v_uint64x2
+v_popcount(const v_uint64x2& a)
+{
+    uint8xm2_u tmp;
+    tmp.m1[0] = vcnt_u8((uint8xm1_t)a.val);
+    uint64xm2_t mask = (uint64xm2_t){0x0706050403020100, 0x0000000000000000,
+    0x0F0E0D0C0B0A0908, 0x0000000000000000};
+    tmp.v = vrgathervv_uint8xm2(tmp.v, (uint8xm2_t)mask, 32);	\
+    uint8xm1_t zero = vmvvx_uint8xm1(0, 16);
+    tmp.m1[0] = vredsumvs_uint8xm1(tmp.m1[0], zero, 8);
+    tmp.m1[1] = vredsumvs_uint8xm1(tmp.m1[1], zero, 8);
+
+    return v_uint64x2((unsigned long)tmp.m1[0][0], (unsigned long)tmp.m1[1][0]);
+}
+
+inline v_uint64x2
+v_popcount(const v_int64x2& a)
+{
+    uint8xm2_u tmp;
+    tmp.m1[0] = vcnt_u8((uint8xm1_t)a.val);
+    uint64xm2_t mask = (uint64xm2_t){0x0706050403020100, 0x0000000000000000,
+    0x0F0E0D0C0B0A0908, 0x0000000000000000};
+    tmp.v = vrgathervv_uint8xm2(tmp.v, (uint8xm2_t)mask, 32);	\
+    uint8xm1_t zero = vmvvx_uint8xm1(0, 16);
+    tmp.m1[0] = vredsumvs_uint8xm1(tmp.m1[0], zero, 8);
+    tmp.m1[1] = vredsumvs_uint8xm1(tmp.m1[1], zero, 8);
+
+    return v_uint64x2((unsigned long)tmp.m1[0][0], (unsigned long)tmp.m1[1][0]);
+}
+
 inline void v_cleanup() {}
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
