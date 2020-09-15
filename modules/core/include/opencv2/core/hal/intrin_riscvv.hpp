@@ -366,6 +366,34 @@ inline v_float64x2& operator /= (v_float64x2& a, const v_float64x2& b)
 }
 // TODO: exp, log, sin, cos
 
+#define OPENCV_HAL_IMPL_RISCVV_BIN_FUNC(_Tpvec, func, intrin) \
+inline _Tpvec func(const _Tpvec& a, const _Tpvec& b) \
+{ \
+    return _Tpvec(intrin(a.val, b.val)); \
+}
+
+#define OPENCV_HAL_IMPL_RISCVV_BINN_FUNC(_Tpvec, func, intrin, num) \
+inline _Tpvec func(const _Tpvec& a, const _Tpvec& b) \
+{ \
+    return _Tpvec(intrin(a.val, b.val, num)); \
+}
+OPENCV_HAL_IMPL_RISCVV_BINN_FUNC(v_uint8x16, v_min, vminuvv_uint8xm1, 16)
+OPENCV_HAL_IMPL_RISCVV_BINN_FUNC(v_uint8x16, v_max, vmaxuvv_uint8xm1, 16)
+OPENCV_HAL_IMPL_RISCVV_BINN_FUNC(v_int8x16, v_min, vminvv_int8xm1, 16)
+OPENCV_HAL_IMPL_RISCVV_BINN_FUNC(v_int8x16, v_max, vmaxvv_int8xm1, 16)
+OPENCV_HAL_IMPL_RISCVV_BINN_FUNC(v_uint16x8, v_min, vminuvv_uint16xm1, 8)
+OPENCV_HAL_IMPL_RISCVV_BINN_FUNC(v_uint16x8, v_max, vmaxuvv_uint16xm1, 8)
+OPENCV_HAL_IMPL_RISCVV_BINN_FUNC(v_int16x8, v_min, vminvv_int16xm1, 8)
+OPENCV_HAL_IMPL_RISCVV_BINN_FUNC(v_int16x8, v_max, vmaxvv_int16xm1, 8)
+OPENCV_HAL_IMPL_RISCVV_BINN_FUNC(v_uint32x4, v_min, vminuvv_uint32xm1, 4)
+OPENCV_HAL_IMPL_RISCVV_BINN_FUNC(v_uint32x4, v_max, vmaxuvv_uint32xm1, 4)
+OPENCV_HAL_IMPL_RISCVV_BINN_FUNC(v_int32x4, v_min, vminvv_int32xm1, 4)
+OPENCV_HAL_IMPL_RISCVV_BINN_FUNC(v_int32x4, v_max, vmaxvv_int32xm1, 4)
+OPENCV_HAL_IMPL_RISCVV_BINN_FUNC(v_float32x4, v_min, vfminvv_float32xm1, 4)
+OPENCV_HAL_IMPL_RISCVV_BINN_FUNC(v_float32x4, v_max, vfmaxvv_float32xm1, 4)
+OPENCV_HAL_IMPL_RISCVV_BINN_FUNC(v_float64x2, v_min, vfminvv_float64xm1, 2)
+OPENCV_HAL_IMPL_RISCVV_BINN_FUNC(v_float64x2, v_max, vfmaxvv_float64xm1, 2)
+
 inline void v_cleanup() {}
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
