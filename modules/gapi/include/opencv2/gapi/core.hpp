@@ -1798,7 +1798,7 @@ GAPI_EXPORTS core::GRects parseSSD(const GMat& in,
 
 /** @brief Parses output of Yolo network.
 Extracts detection information (box, confidence, label) from Yolo output,
-filters it by confidence and performs non-maximum supression for overlapping boxes.
+filters it by given confidence and performs non-maximum supression for overlapping boxes.
 
 @note Function textual ID is "org.opencv.core.parseYolo"
 
