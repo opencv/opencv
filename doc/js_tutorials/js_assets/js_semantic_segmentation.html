@@ -84,7 +84,7 @@
 inputSize = [513, 513];
 mean = [127.5, 127.5, 127.5];
 std = 0.007843;
-swapRB = true;
+swapRB = false;
 </script>
 
 <script id="codeSnippet1" type="text/code-snippet">
@@ -123,10 +123,10 @@ argmax = function(result, colors) {
     const imgSize = H*W;
 
     let classId = [];
-    for (i = 0; i<imgSize; ++i){
+    for (i = 0; i<imgSize; ++i) {
         let id = 0;
-        for (j = 0; j < C; ++j){
-            if(resultData[j*imgSize+i] > resultData[id*imgSize+i]){
+        for (j = 0; j < C; ++j) {
+            if (resultData[j*imgSize+i] > resultData[id*imgSize+i]) {
                 id = j;
             }
         }
@@ -171,7 +171,7 @@ argmax = function(result, colors) {
         document.getElementById('status').innerHTML = 'Running function main()...';
         utils.executeCode('codeEditor');
         utils.executeCode('codeEditor1');
-        if(modelPath === ""){
+        if (modelPath === "") {
             document.getElementById('status').innerHTML = 'Runing failed.';
             utils.printError('Please upload model file by clicking the button first.');
         } else {

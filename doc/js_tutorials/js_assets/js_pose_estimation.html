@@ -86,7 +86,7 @@
 inputSize = [368, 368];
 mean = [0, 0, 0];
 std = 0.00392;
-swapRB = true;
+swapRB = false;
 threshold = 0.1;
 
 // the pairs of keypoint, can be "COCO", "MPI" and "BODY_25"
@@ -114,7 +114,7 @@ main = async function() {
 BODY_PARTS = {};
 POSE_PAIRS = [];
 
-if(dataset === 'COCO') {
+if (dataset === 'COCO') {
     BODY_PARTS = { "Nose": 0, "Neck": 1, "RShoulder": 2, "RElbow": 3, "RWrist": 4,
                    "LShoulder": 5, "LElbow": 6, "LWrist": 7, "RHip": 8, "RKnee": 9,
                    "RAnkle": 10, "LHip": 11, "LKnee": 12, "LAnkle": 13, "REye": 14,
@@ -125,7 +125,7 @@ if(dataset === 'COCO') {
                    ["Neck", "RHip"], ["RHip", "RKnee"], ["RKnee", "RAnkle"], ["Neck", "LHip"],
                    ["LHip", "LKnee"], ["LKnee", "LAnkle"], ["Neck", "Nose"], ["Nose", "REye"],
                    ["REye", "REar"], ["Nose", "LEye"], ["LEye", "LEar"] ]
-} else if(dataset === 'MPI') {
+} else if (dataset === 'MPI') {
     BODY_PARTS = { "Head": 0, "Neck": 1, "RShoulder": 2, "RElbow": 3, "RWrist": 4,
                    "LShoulder": 5, "LElbow": 6, "LWrist": 7, "RHip": 8, "RKnee": 9,
                    "RAnkle": 10, "LHip": 11, "LKnee": 12, "LAnkle": 13, "Chest": 14,
@@ -135,7 +135,7 @@ if(dataset === 'COCO') {
                    ["RElbow", "RWrist"], ["Neck", "LShoulder"], ["LShoulder", "LElbow"],
                    ["LElbow", "LWrist"], ["Neck", "Chest"], ["Chest", "RHip"], ["RHip", "RKnee"],
                    ["RKnee", "RAnkle"], ["Chest", "LHip"], ["LHip", "LKnee"], ["LKnee", "LAnkle"] ]
-} else if(dataset === 'BODY_25') {
+} else if (dataset === 'BODY_25') {
     BODY_PARTS = { "Nose": 0, "Neck": 1, "RShoulder": 2, "RElbow": 3, "RWrist": 4,
                    "LShoulder": 5, "LElbow": 6, "LWrist": 7, "MidHip": 8, "RHip": 9,
                    "RKnee": 10, "RAnkle": 11, "LHip": 12, "LKnee": 13, "LAnkle": 14,
@@ -177,19 +177,19 @@ postProcess = function(result) {
 
     // get position of keypoints from output
     let points = [];
-    for(let i = 0; i < Object.keys(BODY_PARTS).length; ++i) {
+    for (let i = 0; i < Object.keys(BODY_PARTS).length; ++i) {
         heatMap = resultData.slice(i*mapSize, (i+1)*mapSize);
 
         let maxIndex = 0;
         let maxConf = heatMap[0];
-        for(index in heatMap) {
-            if(heatMap[index] > heatMap[maxIndex]) {
+        for (index in heatMap) {
+            if (heatMap[index] > heatMap[maxIndex]) {
                 maxIndex = index;
                 maxConf = heatMap[index];
             }
         }
 
-        if(maxConf > threshold) {
+        if (maxConf > threshold) {
             indexX = maxIndex % size3;
             indexY = maxIndex / size3;
 
@@ -201,7 +201,7 @@ postProcess = function(result) {
     }
 
     // draw the points and lines into the image
-    for(pair of POSE_PAIRS) {
+    for (pair of POSE_PAIRS) {
         partFrom = pair[0];
         partTo = pair[1];
         idFrom = BODY_PARTS[partFrom];
@@ -209,7 +209,7 @@ postProcess = function(result) {
         pointFrom = points[idFrom];
         pointTo = points[idTo];
 
-        if(points[idFrom] && points[idTo]) {
+        if (points[idFrom] && points[idTo]) {
             cv.line(output, new cv.Point(pointFrom[0], pointFrom[1]),
                             new cv.Point(pointTo[0], pointTo[1]), new cv.Scalar(0, 255, 0), 3);
             cv.ellipse(output, new cv.Point(pointFrom[0], pointFrom[1]), new cv.Size(3, 3), 0, 0, 360,
@@ -254,7 +254,7 @@ postProcess = function(result) {
         document.getElementById('status').innerHTML = 'Running function main()...';
         utils.executeCode('codeEditor');
         utils.executeCode('codeEditor1');
-        if(modelPath === ""){
+        if (modelPath === "") {
             document.getElementById('status').innerHTML = 'Runing failed.';
             utils.printError('Please upload model file by clicking the button first.');
         } else {

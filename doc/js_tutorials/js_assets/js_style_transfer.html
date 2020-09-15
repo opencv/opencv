@@ -84,7 +84,7 @@
 inputSize = [224, 224];
 mean = [104, 117, 123];
 std = 1;
-swapRB = true;
+swapRB = false;
 </script>
 
 <script id="codeSnippet1" type="text/code-snippet">
@@ -113,9 +113,9 @@ postProcess = function(result) {
     const mean = [104, 117, 123];
 
     let normData = [];
-    for(let h = 0; h < H; ++h) {
-        for(let w = 0; w < W; ++w) {
-            for(let c = 0; c < C; ++c) {
+    for (let h = 0; h < H; ++h) {
+        for (let w = 0; w < W; ++w) {
+            for (let c = 0; c < C; ++c) {
                 normData.push(resultData[c*H*W + h*W + w] + mean[c]);
             }
             normData.push(255);
@@ -157,7 +157,7 @@ postProcess = function(result) {
         document.getElementById('status').innerHTML = 'Running function main()...';
         utils.executeCode('codeEditor');
         utils.executeCode('codeEditor1');
-        if(modelPath === ""){
+        if (modelPath === "") {
             document.getElementById('status').innerHTML = 'Runing failed.';
             utils.printError('Please upload model file by clicking the button first.');
         } else {

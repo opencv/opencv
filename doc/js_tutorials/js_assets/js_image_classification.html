@@ -96,7 +96,7 @@
     <p>5.Fetch model file and save to emscripten file system once click the input button.</p>
     <textarea class="code" rows="17" cols="100" id="codeEditor4" spellcheck="false"></textarea>
     <p>6.The post-processing, including softmax if needed and get the top classes from the output vector.</p>
-    <textarea class="code" rows="34" cols="100" id="codeEditor5" spellcheck="false"></textarea>
+    <textarea class="code" rows="35" cols="100" id="codeEditor5" spellcheck="false"></textarea>
 </div>
 
 <div id="appendix">
@@ -110,7 +110,7 @@
 inputSize = [224,224];
 mean = [104, 117, 123];
 std = 1;
-swapRB = true;
+swapRB = false;
 
 // record if need softmax function for post-processing
 needSoftmax = false;
@@ -141,7 +141,7 @@ main = async function() {
 <script id="codeSnippet5" type="text/code-snippet">
 softmax = function(result) {
     let arr = result.data32F;
-    if(needSoftmax) {
+    if (needSoftmax) {
         const maxNum = Math.max(...arr);
         const expSum = arr.map((num) => Math.exp(num - maxNum)).reduce((a, b) => a + b);
         return arr.map((value, index) => {
@@ -150,27 +150,6 @@ softmax = function(result) {
     } else {
         return arr;
     }
-}
-
-getTopClasses = function(probs, labels, topK = 3) {
-    probs = Array.from(probs);
-    let indexes = probs.map((prob, index) => [prob, index]);
-    let sorted = indexes.sort((a, b) => {
-        if (a[0] === b[0]) {return 0;}
-        return a[0] < b[0] ? -1 : 1;
-    });
-    sorted.reverse();
-    let classes = [];
-    for (let i = 0; i < topK; ++i) {
-        let prob = sorted[i][0];
-        let index = sorted[i][1];
-        let c = {
-            label: labels[index],
-            prob: (prob * 100).toFixed(2)
-        }
-        classes.push(c);
-    }
-    return classes;
 }
 </script>
 
@@ -190,6 +169,8 @@ getTopClasses = function(probs, labels, topK = 3) {
     document.getElementById('codeEditor4').value = loadModelCode;
 
     utils.loadCode('codeSnippet5', 'codeEditor5');
+    let getTopClassesCode = 'getTopClasses = ' + getTopClasses.toString();
+    document.getElementById('codeEditor5').value  += '\n' + '\n' + getTopClassesCode;
 
     let canvas = document.getElementById('canvasInput');
     let ctx = canvas.getContext('2d');
@@ -206,7 +187,7 @@ getTopClasses = function(probs, labels, topK = 3) {
         document.getElementById('status').innerHTML = 'Running function main()...';
         utils.executeCode('codeEditor');
         utils.executeCode('codeEditor1');
-        if(modelPath === ""){
+        if (modelPath === "") {
             document.getElementById('status').innerHTML = 'Runing failed.';
             utils.printError('Please upload model file by clicking the button first.');
         } else {

@@ -86,7 +86,7 @@
 inputSize = [300, 300];
 mean = [127.5, 127.5, 127.5];
 std = 0.007843;
-swapRB = true;
+swapRB = false;
 confThreshold = 0.5;
 nmsThreshold = 0.4;
 
@@ -148,12 +148,12 @@ postProcess = function(result, labels, frame) {
             const vecLength = result.matSize[1];
             const classNum = vecLength - 5;
 
-            for(let i = 0; i < vecNum; ++i) {
+            for (let i = 0; i < vecNum; ++i) {
                 let vector = resultData.slice(i*vecLength, (i+1)*vecLength);
                 let scores = vector.slice(5, vecLength);
                 let classId = scores.indexOf(Math.max(...scores));
                 let confidence = scores[classId];
-                if(confidence > confThreshold) {
+                if (confidence > confThreshold) {
                     let center_x = Math.round(vector[0] * outputWidth);
                     let center_y = Math.round(vector[1] * outputHeight);
                     let width = Math.round(vector[2] * outputWidth);
@@ -176,16 +176,16 @@ postProcess = function(result, labels, frame) {
             let boxNum = boxes.length;
             let tmp_boxes = [];
             let sorted_boxes = [];
-            for(let c = 0; c < classNum; ++c) {
-                for(let i = 0; i < boxes.length; ++i) {
+            for (let c = 0; c < classNum; ++c) {
+                for (let i = 0; i < boxes.length; ++i) {
                     tmp_boxes[i] = [boxes[i], i];
                 }
                 sorted_boxes = tmp_boxes.sort((a, b) => { return (b[0].scores[c] - a[0].scores[c]); });
-                for(let i = 0; i < boxNum; ++i) {
+                for (let i = 0; i < boxNum; ++i) {
                     if (sorted_boxes[i][0].scores[c] === 0) continue;
                     else {
-                        for(let j = i + 1; j < boxNum; ++j) {
-                            if(IOU(sorted_boxes[i][0], sorted_boxes[j][0]) >= nmsThreshold) {
+                        for (let j = i + 1; j < boxNum; ++j) {
+                            if (IOU(sorted_boxes[i][0], sorted_boxes[j][0]) >= nmsThreshold) {
                                 boxes[sorted_boxes[j][1]].toDraw = false;
                             }
                         }
@@ -197,10 +197,10 @@ postProcess = function(result, labels, frame) {
             const vecNum = result.matSize[2];
             const vecLength = 7;
 
-            for(let i = 0; i < vecNum; ++i) {
+            for (let i = 0; i < vecNum; ++i) {
                 let vector = resultData.slice(i*vecLength, (i+1)*vecLength);
                 let confidence = vector[2];
-                if(confidence > confThreshold) {
+                if (confidence > confThreshold) {
                     let left, top, right, bottom, width, height;
                     left = Math.round(vector[3]);
                     top = Math.round(vector[4]);
@@ -208,7 +208,7 @@ postProcess = function(result, labels, frame) {
                     bottom = Math.round(vector[6]);
                     width = right - left + 1;
                     height = bottom - top + 1;
-                    if(width <= 2 || height <= 2) {
+                    if (width <= 2 || height <= 2) {
                         left = Math.round(vector[3] * outputWidth);
                         top = Math.round(vector[4] * outputHeight);
                         right = Math.round(vector[5] * outputWidth);
@@ -234,8 +234,8 @@ postProcess = function(result, labels, frame) {
     let output = new cv.Mat(outputWidth, outputHeight, cv.CV_8UC3);
     cv.cvtColor(frame, output, cv.COLOR_RGBA2RGB);
     let boxNum = boxes.length;
-    for(let i = 0; i < boxNum; ++i) {
-        if(boxes[i].toDraw) {
+    for (let i = 0; i < boxNum; ++i) {
+        if (boxes[i].toDraw) {
             drawBox(boxes[i]);
         }
     }
@@ -273,9 +273,9 @@ postProcess = function(result, labels, frame) {
         let min2 = range2[0];
         let max2 = range2[1];
 
-        if(min2 > min1 && min2 < max1){
+        if (min2 > min1 && min2 < max1) {
             return max1 - min2;
-        } else if(max2 > min1 && max2 < max1) {
+        } else if (max2 > min1 && max2 < max1) {
             return max2 - min1;
         } else {
             return 0;
