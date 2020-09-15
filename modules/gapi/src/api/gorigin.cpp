@@ -21,15 +21,11 @@ cv::GOrigin::GOrigin(GShape s,
 }
 
 cv::GOrigin::GOrigin(GShape s, cv::gimpl::ConstVal v)
-    : shape(s), node(cv::GNode::Const()), value(v), port(INVALID_PORT)
+    : shape(s), node(cv::GNode::Const()), value(v), port(INVALID_PORT),
+      kind(util::holds_alternative<detail::VectorRef>(v)
+               ? util::get<detail::VectorRef>(v).getKind()
+               : cv::detail::OpaqueKind::CV_UNKNOWN)
 {
-    switch (v.index())
-    {
-    case cv::gimpl::ConstVal::index_of<detail::VectorRef>():
-        kind = util::get<detail::VectorRef>(v).getKind();
-    default:
-        kind = cv::detail::OpaqueKind::CV_UNKNOWN;
-    }
 }
 
 bool cv::detail::GOriginCmp::operator() (const cv::GOrigin &lhs,
