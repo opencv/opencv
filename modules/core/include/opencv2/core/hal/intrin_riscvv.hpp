@@ -702,6 +702,124 @@ OPENCV_HAL_IMPL_RISCVV_BINN_FUNC(v_int8x16, v_mul_wrap, vmulvv_int8xm1, 16)
 OPENCV_HAL_IMPL_RISCVV_BINN_FUNC(v_uint16x8, v_mul_wrap, vmulvv_uint16xm1, 8)
 OPENCV_HAL_IMPL_RISCVV_BINN_FUNC(v_int16x8, v_mul_wrap, vmulvv_int16xm1, 8)
 
+//////// Dot Product ////////
+// 16 >> 32
+inline v_int32x4 v_dotprod(const v_int16x8& a, const v_int16x8& b)
+{
+    int32xm2_u res;
+    res.v = vwmulvv_int32xm2_int16xm1(a.val, b.val, 8);
+    res.v = vrgathervv_int32xm2_uint32xm2(res.v, (uint32xm2_t){0, 2, 4, 6, 1, 3, 5, 7}, 8);
+    return v_int32x4(vaddvv_int32xm1(res.m1[0], res.m1[1], 4));
+}
+inline v_int32x4 v_dotprod(const v_int16x8& a, const v_int16x8& b, const v_int32x4& c)
+{
+    int32xm2_u res;
+    res.v = vwmulvv_int32xm2_int16xm1(a.val, b.val, 8);
+    res.v = vrgathervv_int32xm2_uint32xm2(res.v, (uint32xm2_t){0, 2, 4, 6, 1, 3, 5, 7}, 8);
+    return v_int32x4(vaddvv_int32xm1(vaddvv_int32xm1(res.m1[0], res.m1[1], 4), c.val, 4));
+}
+
+// 32 >> 64
+inline v_int64x2 v_dotprod(const v_int32x4& a, const v_int32x4& b)
+{
+    int64xm2_u res;
+    res.v = vwmulvv_int64xm2_int32xm1(a.val, b.val, 4);
+    res.v = vrgathervv_int64xm2_uint64xm2(res.v, (uint64xm2_t){0, 2, 1, 3}, 4);
+    return v_int64x2(vaddvv_int64xm1(res.m1[0], res.m1[1], 2));
+}
+inline v_int64x2 v_dotprod(const v_int32x4& a, const v_int32x4& b, const v_int64x2& c)
+{
+    int64xm2_u res;
+    res.v = vwmulvv_int64xm2_int32xm1(a.val, b.val, 4);
+    res.v = vrgathervv_int64xm2_uint64xm2(res.v, (uint64xm2_t){0, 2, 1, 3}, 4);
+    return v_int64x2(vaddvv_int64xm1(vaddvv_int64xm1(res.m1[0], res.m1[1], 2), c.val, 2));
+}
+
+// 8 >> 32
+inline v_uint32x4 v_dotprod_expand(const v_uint8x16& a, const v_uint8x16& b)
+{
+    uint16xm2_u v1;
+    uint32xm2_u v2;
+    v1.v = vwmuluvv_uint16xm2_uint8xm1(a.val, b.val, 16);
+    v1.v = vrgathervv_uint16xm2(v1.v, (uint16xm2_t){0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15}, 16);
+    v2.v = vwadduvv_uint32xm2_uint16xm1(v1.m1[0], v1.m1[1], 8);
+    return v_uint32x4(vaddvv_uint32xm1(v2.m1[0], v2.m1[1], 4));
+}
+
+inline v_uint32x4 v_dotprod_expand(const v_uint8x16& a, const v_uint8x16& b,
+                                   const v_uint32x4& c)
+{
+    uint16xm2_u v1;
+    uint32xm2_u v2;
+    v1.v = vwmuluvv_uint16xm2_uint8xm1(a.val, b.val, 16);
+    v1.v = vrgathervv_uint16xm2(v1.v, (uint16xm2_t){0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15}, 16);
+    v2.v = vwadduvv_uint32xm2_uint16xm1(v1.m1[0], v1.m1[1], 8);
+    return v_uint32x4(vaddvv_uint32xm1(vaddvv_uint32xm1(v2.m1[0], v2.m1[1], 4), c.val, 4));
+}
+
+inline v_int32x4 v_dotprod_expand(const v_int8x16& a, const v_int8x16& b)
+{
+    int16xm2_u v1;
+    int32xm2_u v2;
+    v1.v = vwmulvv_int16xm2_int8xm1(a.val, b.val, 16);
+    v1.v = vrgathervv_int16xm2_uint16xm2(v1.v, (uint16xm2_t){0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15}, 16);
+    v2.v = vwaddvv_int32xm2_int16xm1(v1.m1[0], v1.m1[1], 8);
+    return v_int32x4(vaddvv_int32xm1(v2.m1[0], v2.m1[1], 4));
+}
+
+inline v_int32x4 v_dotprod_expand(const v_int8x16& a, const v_int8x16& b,
+                                   const v_int32x4& c)
+{
+    int16xm2_u v1;
+    int32xm2_u v2;
+    v1.v = vwmulvv_int16xm2_int8xm1(a.val, b.val, 16);
+    v1.v = vrgathervv_int16xm2_uint16xm2(v1.v, (uint16xm2_t){0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15}, 16);
+    v2.v = vwaddvv_int32xm2_int16xm1(v1.m1[0], v1.m1[1], 8);
+    return v_int32x4(vaddvv_int32xm1(vaddvv_int32xm1(v2.m1[0], v2.m1[1], 4), c.val, 4));
+}
+
+inline v_uint64x2 v_dotprod_expand(const v_uint16x8& a, const v_uint16x8& b)
+{
+    uint32xm2_u v1;
+    uint64xm2_u v2;
+    v1.v = vwmuluvv_uint32xm2_uint16xm1(a.val, b.val, 8);
+    v1.v = vrgathervv_uint32xm2(v1.v, (uint32xm2_t){0, 4, 1, 5, 2, 6, 3, 7}, 8);
+    v2.v = vwadduvv_uint64xm2_uint32xm1(v1.m1[0], v1.m1[1], 4);
+    return v_uint64x2(vaddvv_uint64xm1(v2.m1[0], v2.m1[1], 2));
+}
+
+inline v_uint64x2 v_dotprod_expand(const v_uint16x8& a, const v_uint16x8& b,
+                                   const v_uint64x2& c)
+{
+    uint32xm2_u v1;
+    uint64xm2_u v2;
+    v1.v = vwmuluvv_uint32xm2_uint16xm1(a.val, b.val, 8);
+    v1.v = vrgathervv_uint32xm2(v1.v, (uint32xm2_t){0, 4, 1, 5, 2, 6, 3, 7}, 8);
+    v2.v = vwadduvv_uint64xm2_uint32xm1(v1.m1[0], v1.m1[1], 4);
+    return v_uint64x2(vaddvv_uint64xm1(vaddvv_uint64xm1(v2.m1[0], v2.m1[1], 2), c.val, 2));
+}
+
+inline v_int64x2 v_dotprod_expand(const v_int16x8& a, const v_int16x8& b)
+{
+    int32xm2_u v1;
+    int64xm2_u v2;
+    v1.v = vwmulvv_int32xm2_int16xm1(a.val, b.val, 8);
+    v1.v = vrgathervv_int32xm2_uint32xm2(v1.v, (uint32xm2_t){0, 4, 1, 5, 2, 6, 3, 7}, 8);
+    v2.v = vwaddvv_int64xm2_int32xm1(v1.m1[0], v1.m1[1], 4);
+    return v_int64x2(vaddvv_int64xm1(v2.m1[0], v2.m1[1], 2));
+}
+
+inline v_int64x2 v_dotprod_expand(const v_int16x8& a, const v_int16x8& b,
+                                   const v_int64x2& c)
+{
+    int32xm2_u v1;
+    int64xm2_u v2;
+    v1.v = vwmulvv_int32xm2_int16xm1(a.val, b.val, 8);
+    v1.v = vrgathervv_int32xm2_uint32xm2(v1.v, (uint32xm2_t){0, 4, 1, 5, 2, 6, 3, 7}, 8);
+    v2.v = vwaddvv_int64xm2_int32xm1(v1.m1[0], v1.m1[1], 4);
+    return v_int64x2(vaddvv_int64xm1(vaddvv_int64xm1(v2.m1[0], v2.m1[1], 2), c.val, 2));
+}
+
 inline void v_cleanup() {}
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
