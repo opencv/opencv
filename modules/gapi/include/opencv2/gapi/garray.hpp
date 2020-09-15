@@ -260,8 +260,8 @@ namespace detail
         template<typename T> void reset()
         {
             if (!m_ref) m_ref.reset(new VectorRefT<T>());
-
             check<T>();
+            storeKind<T>();
             static_cast<VectorRefT<T>&>(*m_ref).reset();
         }
 

@@ -222,4 +222,13 @@ TEST(GArray_VectorRef, TestRvalue)
     auto v = std::vector<int>{3, 5, -4};
     EXPECT_EQ(vref.rref<int>(), v);
 }
+
+TEST(GArray_VectorRef, TestReset)
+{
+    // Warning: this test is testing some not-very-public APIs
+    cv::detail::VectorRef vref(std::vector<int>{3, 5, -4});
+    EXPECT_EQ(cv::detail::OpaqueKind::CV_INT, vref.getKind());
+    vref.reset<int>();
+    EXPECT_EQ(cv::detail::OpaqueKind::CV_INT, vref.getKind());
+}
 } // namespace opencv_test
