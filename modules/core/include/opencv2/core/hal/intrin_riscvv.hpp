@@ -2320,6 +2320,359 @@ inline v_int32x4 v_trunc(const v_float64x2& a)
     return v_int32x4(val);
 }
 
+#define LD_INTERLEAVE2_16 (uint64xm2_t){0x0E0C0A0806040200, 0x1E1C1A1816141210, 0x0F0D0B0907050301, 0x1F1D1B1917151311}
+#define LD_INTERLEAVE2_8 (uint64xm2_t){0x0D0C090805040100, 0x1D1C191815141110, 0x0F0E0B0A07060302, 0x1F1E1B1A17161312}
+#define LD_INTERLEAVE2_4  (uint64xm2_t){0x0B0A090803020100, 0x1B1A191813121110, 0x0F0E0D0C07060504, 0x1F1E1D1C17161514}
+#define LD_INTERLEAVE2_2  (uint64xm2_t){0x0706050403020100, 0x1716151413121110, 0x0F0E0D0C0B0A0908, 0x1F1E1D1C1B1A1918}
+
+#define LD_INTERLEAVE3_16 (uint64xm4_t){0x15120F0C09060300, \
+                    0x2D2A2724211E1B18, \
+                    0x1613100D0A070401, \
+                    0x2E2B2825221F1C19, \
+                    0x1714110E0B080502, \
+                    0x2F2C292623201D1A}
+#define LD_INTERLEAVE3_8 (uint64xm4_t){0x13120D0C07060100, 0x2B2A25241F1E1918, 0x15140F0E09080302, \
+                    0x2D2C272621201B1A, 0x171611100B0A0504, 0x2F2E292823221D1C}
+#define LD_INTERLEAVE3_4 (uint64xm4_t){0x0F0E0D0C03020100, 0x272625241B1A1918, 0x1312111007060504, \
+                    0x2B2A29281F1E1D1C, 0x171615140B0A0908, 0x2F2E2D2C23222120}
+#define LD_INTERLEAVE3_2  (uint64xm4_t){0x0706050403020100, 0x1F1E1D1C1B1A1918, 0x0F0E0D0C0B0A0908, \
+                    0x2726252423222120, 0x1716151413121110, 0x2F2E2D2C2B2A2928}
+
+#define LD_INTERLEAVE4_16 (uint64xm4_t){0x1C1814100C080400, \
+0x3C3834302C282420, \
+0x1D1915110D090501, \
+0x3D3935312D292521, \
+0x1E1A16120E0A0602, \
+0x3E3A36322E2A2622, \
+0x1F1B17130F0B0703, \
+0x3F3B37332F2B2723}
+#define LD_INTERLEAVE4_8 (uint64xm4_t){0x1918111009080100, \
+0x3938313029282120, \
+0x1B1A13120B0A0302, \
+0x3B3A33322B2A2322, \
+0x1D1C15140D0C0504, \
+0x3D3C35342D2C2524, \
+0x1F1E17160F0E0706, \
+0x3F3E37362F2E2726}
+#define LD_INTERLEAVE4_4 (uint64xm4_t){0x1312111003020100, \
+0x3332313023222120, \
+0x1716151407060504, \
+0x3736353427262524, \
+0x1B1A19180B0A0908, \
+0x3B3A39382B2A2928, \
+0x1F1E1D1C0F0E0D0C, \
+0x3F3E3D3C2F2E2D2C}
+#define LD_INTERLEAVE4_2 (uint64xm4_t){0x0706050403020100, \
+0x2726252423222120, \
+0x0F0E0D0C0B0A0908, \
+0x2F2E2D2C2B2A2928, \
+0x1716151413121110, \
+0x3736353433323130, \
+0x1F1E1D1C1B1A1918, \
+0x3F3E3D3C3B3A3938}
+
+#define ST_INTERLEAVE2_16 (uint64xm2_t){0x1303120211011000, 0x1707160615051404, 0x1B0B1A0A19091808, 0x1F0F1E0E1D0D1C0C}
+#define ST_INTERLEAVE2_8 (uint64xm2_t){0x1312030211100100, 0x1716070615140504, 0x1B1A0B0A19180908, 0x1F1E0F0E1D1C0D0C}
+#define ST_INTERLEAVE2_4 (uint64xm2_t){0x1312111003020100, 0x1716151407060504, 0x1B1A19180B0A0908, 0x1F1E1D1C0F0E0D0C}
+#define ST_INTERLEAVE2_2 (uint64xm2_t){0x0706050403020100, 0x1716151413121110, 0x0F0E0D0C0B0A0908, 0x1F1E1D1C1B1A1918}
+#define ST_INTERLEAVE3_16 (uint64xm4_t){0x1202211101201000, 0x0524140423130322, 0x2717072616062515, 0x1A0A291909281808, 0x0D2C1C0C2B1B0B2A, 0x2F1F0F2E1E0E2D1D}
+#define ST_INTERLEAVE3_8 (uint64xm4_t){0x0302212011100100, 0x1514050423221312, 0x2726171607062524, 0x0B0A292819180908, 0x1D1C0D0C2B2A1B1A, 0x2F2E1F1E0F0E2D2C}
+#define ST_INTERLEAVE3_4 (uint64xm4_t){0x1312111003020100, 0x0706050423222120, 0x2726252417161514, 0x1B1A19180B0A0908, 0x0F0E0D0C2B2A2928, 0x2F2E2D2C1F1E1D1C}
+#define ST_INTERLEAVE3_2 (uint64xm4_t){0x0706050403020100, 0x1716151413121110, 0x2726252423222120, 0x0F0E0D0C0B0A0908, 0x1F1E1D1C1B1A1918, 0x2F2E2D2C2B2A2928}
+#define ST_INTERLEAVE4_16 (uint64xm4_t){0x3121110130201000, 0x3323130332221202, 0x3525150534241404, 0x3727170736261606, 0x3929190938281808, 0x3B2B1B0B3A2A1A0A, 0x3D2D1D0D3C2C1C0C, 0x3F2F1F0F3E2E1E0E}
+#define ST_INTERLEAVE4_8 (uint64xm4_t){0x3130212011100100, 0x3332232213120302, 0x3534252415140504, 0x3736272617160706, 0x3938292819180908, 0x3B3A2B2A1B1A0B0A, 0x3D3C2D2C1D1C0D0C, 0x3F3E2F2E1F1E0F0E}
+#define ST_INTERLEAVE4_4 (uint64xm4_t){0x1312111003020100, 0x3332313023222120, 0x1716151407060504, 0x3736353427262524, 0x1B1A19180B0A0908, 0x3B3A39382B2A2928, 0x1F1E1D1C0F0E0D0C, 0x3F3E3D3C2F2E2D2C}
+#define ST_INTERLEAVE4_2 (uint64xm4_t){0x0706050403020100, 0x1716151413121110, 0x2726252423222120, 0x3736353433323130, 0x0F0E0D0C0B0A0908, 0x1F1E1D1C1B1A1918, 0x2F2E2D2C2B2A2928, 0x3F3E3D3C3B3A3938}
+
+//64bit:
+//{00~07, 08~0F, 10~17, 18~1F, 20~27, 28~2F, 30~37, 38~3F}
+//32bit:
+//{00~03, 04~07, 08~0B, 0C~0F;}
+//16bit:
+//{0001, 0203, 0405, 0607, 0809, 0A0B, 0C0D, 0E0F}
+
+
+#define OPENCV_HAL_IMPL_RISCVV_LOAD_DEINTERLEAVED(intrin, stride2, stride3, stride4, _Tpvec, num, _Tp)    \
+inline void v_load_deinterleave(const _Tp* ptr, v_##_Tpvec##x##num& a, v_##_Tpvec##x##num& b) \
+{ \
+    a.val = intrin##_##_Tpvec##xm1(ptr, stride2, num);\
+    b.val = intrin##_##_Tpvec##xm1(ptr+1, stride2, num);\
+} \
+inline void v_load_deinterleave(const _Tp* ptr, v_##_Tpvec##x##num& a, v_##_Tpvec##x##num& b, v_##_Tpvec##x##num& c) \
+{ \
+    a.val = intrin##_##_Tpvec##xm1(ptr, stride3, num);\
+    b.val = intrin##_##_Tpvec##xm1(ptr+1, stride3, num);\
+    c.val = intrin##_##_Tpvec##xm1(ptr+2, stride3, num);\
+}\
+inline void v_load_deinterleave(const _Tp* ptr, v_##_Tpvec##x##num& a, v_##_Tpvec##x##num& b, \
+                                v_##_Tpvec##x##num& c, v_##_Tpvec##x##num& d) \
+{ \
+    a.val = intrin##_##_Tpvec##xm1(ptr, stride4, num); \
+    b.val = intrin##_##_Tpvec##xm1(ptr+1, stride4, num); \
+    c.val = intrin##_##_Tpvec##xm1(ptr+2, stride4, num); \
+    d.val = intrin##_##_Tpvec##xm1(ptr+3, stride4, num); \
+} \
+
+#define OPENCV_HAL_IMPL_RISCVV_STORE_INTERLEAVED(intrin, stride2, stride3, stride4, _Tpvec, num, _Tp)    \
+inline void v_store_interleave( _Tp* ptr, const v_##_Tpvec##x##num& a, const v_##_Tpvec##x##num& b, \
+                                hal::StoreMode /*mode*/=hal::STORE_UNALIGNED) \
+{ \
+    intrin##_##_Tpvec##xm1(ptr,   stride2, a.val, num);\
+    intrin##_##_Tpvec##xm1(ptr+1, stride2, b.val, num);\
+} \
+inline void v_store_interleave( _Tp* ptr, const v_##_Tpvec##x##num& a, const v_##_Tpvec##x##num& b, \
+                                const v_##_Tpvec##x##num& c, hal::StoreMode /*mode*/=hal::STORE_UNALIGNED) \
+{ \
+    intrin##_##_Tpvec##xm1(ptr,   stride3, a.val, num);\
+    intrin##_##_Tpvec##xm1(ptr+1, stride3, b.val, num);\
+    intrin##_##_Tpvec##xm1(ptr+2, stride3, c.val, num);\
+} \
+inline void v_store_interleave( _Tp* ptr, const v_##_Tpvec##x##num& a, const v_##_Tpvec##x##num& b, \
+                                const v_##_Tpvec##x##num& c, const v_##_Tpvec##x##num& d, \
+                                hal::StoreMode /*mode*/=hal::STORE_UNALIGNED ) \
+{ \
+    intrin##_##_Tpvec##xm1(ptr,   stride4, a.val, num);\
+    intrin##_##_Tpvec##xm1(ptr+1, stride4, b.val, num);\
+    intrin##_##_Tpvec##xm1(ptr+2, stride4, c.val, num);\
+    intrin##_##_Tpvec##xm1(ptr+3, stride4, d.val, num);\
+}
+
+
+#define OPENCV_HAL_IMPL_RISCVV_INTERLEAVED(_Tpvec, _Tp, stride2, stride3, stride4, num, ld, st) \
+OPENCV_HAL_IMPL_RISCVV_LOAD_DEINTERLEAVED(ld, stride2, stride3, stride4, _Tpvec, num, _Tp)    \
+OPENCV_HAL_IMPL_RISCVV_STORE_INTERLEAVED(st, stride2, stride3, stride4, _Tpvec, num, _Tp)
+
+//OPENCV_HAL_IMPL_RISCVV_INTERLEAVED(uint8, uchar, )
+OPENCV_HAL_IMPL_RISCVV_INTERLEAVED(int8, schar, 2, 3, 4, 16, vlsev, vssev)
+OPENCV_HAL_IMPL_RISCVV_INTERLEAVED(int16, short, 4, 6, 8, 8, vlshv, vsshv)
+OPENCV_HAL_IMPL_RISCVV_INTERLEAVED(int32, int, 8, 12, 16, 4, vlswv, vsswv)
+
+OPENCV_HAL_IMPL_RISCVV_INTERLEAVED(uint8, unsigned char, 2, 3, 4, 16, vlsev, vssev)
+OPENCV_HAL_IMPL_RISCVV_INTERLEAVED(uint16, unsigned short, 4, 6, 8, 8, vlshuv, vsshv)
+OPENCV_HAL_IMPL_RISCVV_INTERLEAVED(uint32, unsigned int, 8, 12, 16, 4, vlswuv, vsswv)
+#define OPENCV_HAL_IMPL_RISCVV_INTERLEAVED_(_Tpvec, _Tp, num, num2, num4) \
+inline void v_load_deinterleave(const _Tp* ptr, v_##_Tpvec##x##num& a, v_##_Tpvec##x##num& b) \
+{ \
+    _Tpvec##xm2_u tmp;    \
+    tmp.m1[0] = vlev_##_Tpvec##xm1(ptr, num);    \
+    tmp.m1[1] = vlev_##_Tpvec##xm1(ptr+num, num);    \
+    tmp.v = (_Tpvec##xm2_t)vrgathervv_uint8xm2((uint8xm2_t)tmp.v, (uint8xm2_t)LD_INTERLEAVE2_##num, 32);    \
+    a.val = tmp.m1[0]; \
+    b.val = tmp.m1[1]; \
+} \
+inline void v_load_deinterleave(const _Tp* ptr, v_##_Tpvec##x##num& a, v_##_Tpvec##x##num& b, v_##_Tpvec##x##num& c) \
+{ \
+    _Tpvec##xm4_u tmp;    \
+    tmp.m1[0] = vlev_##_Tpvec##xm1(ptr, num);    \
+    tmp.m1[1] = vlev_##_Tpvec##xm1(ptr+num, num);    \
+    tmp.m1[2] = vlev_##_Tpvec##xm1(ptr+num2, num);    \
+    tmp.v = (_Tpvec##xm4_t)vrgathervv_uint8xm4((uint8xm4_t)tmp.v, (uint8xm4_t)LD_INTERLEAVE3_##num, 64);    \
+    a.val = tmp.m1[0]; \
+    b.val = tmp.m1[1]; \
+    c.val = tmp.m1[2]; \
+}\
+inline void v_load_deinterleave(const _Tp* ptr, v_##_Tpvec##x##num& a, v_##_Tpvec##x##num& b, \
+                                v_##_Tpvec##x##num& c, v_##_Tpvec##x##num& d) \
+{ \
+    _Tpvec##xm4_u tmp;    \
+    tmp.v = vlev_##_Tpvec##xm4(ptr, num4);    \
+    tmp.v = (_Tpvec##xm4_t)vrgathervv_uint8xm4((uint8xm4_t)tmp.v, (uint8xm4_t)LD_INTERLEAVE4_##num, 64);    \
+    a.val = tmp.m1[0]; \
+    b.val = tmp.m1[1]; \
+    c.val = tmp.m1[2]; \
+    d.val = tmp.m1[3]; \
+} \
+inline void v_store_interleave( _Tp* ptr, const v_##_Tpvec##x##num& a, const v_##_Tpvec##x##num& b, \
+                                hal::StoreMode /*mode*/=hal::STORE_UNALIGNED) \
+{ \
+    _Tpvec##xm2_u tmp;    \
+    tmp.m1[0] = a.val; \
+    tmp.m1[1] = b.val; \
+    tmp.v = (_Tpvec##xm2_t)vrgathervv_uint8xm2((uint8xm2_t)tmp.v, (uint8xm2_t)ST_INTERLEAVE2_##num, 32);    \
+    vsev_##_Tpvec##xm2(ptr, tmp.v, num2);    \
+} \
+inline void v_store_interleave( _Tp* ptr, const v_##_Tpvec##x##num& a, const v_##_Tpvec##x##num& b, \
+                                const v_##_Tpvec##x##num& c, hal::StoreMode /*mode*/=hal::STORE_UNALIGNED) \
+{ \
+    _Tpvec##xm4_u tmp;    \
+    tmp.m1[0] = a.val; \
+    tmp.m1[1] = b.val; \
+    tmp.m1[2] = c.val; \
+    tmp.v = (_Tpvec##xm4_t)vrgathervv_uint8xm4((uint8xm4_t)tmp.v, (uint8xm4_t)ST_INTERLEAVE3_##num, 64);    \
+    vsev_##_Tpvec##xm1(ptr,      tmp.m1[0], num);    \
+    vsev_##_Tpvec##xm1(ptr+num,  tmp.m1[1], num);    \
+    vsev_##_Tpvec##xm1(ptr+num2, tmp.m1[2], num);    \
+} \
+inline void v_store_interleave( _Tp* ptr, const v_##_Tpvec##x##num& a, const v_##_Tpvec##x##num& b, \
+                                const v_##_Tpvec##x##num& c, const v_##_Tpvec##x##num& d, \
+                                hal::StoreMode /*mode*/=hal::STORE_UNALIGNED ) \
+{ \
+    _Tpvec##xm4_u tmp;    \
+    tmp.m1[0] = a.val; \
+    tmp.m1[1] = b.val; \
+    tmp.m1[2] = c.val; \
+    tmp.m1[3] = d.val; \
+    tmp.v = (_Tpvec##xm4_t)vrgathervv_uint8xm4((uint8xm4_t)tmp.v, (uint8xm4_t)ST_INTERLEAVE4_##num, 64);    \
+    vsev_##_Tpvec##xm4(ptr, tmp.v, num4);    \
+}
+OPENCV_HAL_IMPL_RISCVV_INTERLEAVED_(float32, float, 4, 8, 16)
+OPENCV_HAL_IMPL_RISCVV_INTERLEAVED_(float64, double, 2, 4, 8)
+
+OPENCV_HAL_IMPL_RISCVV_INTERLEAVED_(uint64, unsigned long, 2, 4, 8)
+OPENCV_HAL_IMPL_RISCVV_INTERLEAVED_(int64, long, 2, 4, 8)
+
+
+
+inline v_float32x4 v_cvt_f32(const v_int32x4& a)
+{
+    return v_float32x4(vfcvtfxv_float32xm1_int32xm1(a.val, 4));
+}
+
+#if CV_SIMD128_64F
+inline v_float32x4 v_cvt_f32(const v_float64x2& a)
+{
+    float64xm2_u _val;
+    _val.m1[0] = a.val;
+    float32xm1_t aval = vfncvtffv_float32xm1_float64xm2(_val.v, 2);
+    return v_float32x4(aval);
+}
+
+inline v_float32x4 v_cvt_f32(const v_float64x2& a, const v_float64x2& b)
+{
+    float64xm2_u _val;
+    _val.m1[0] = a.val;
+    _val.m1[1] = b.val;
+    float32xm1_t aval = vfncvtffv_float32xm1_float64xm2(_val.v, 4);
+    return v_float32x4(aval);
+}
+
+inline v_float64x2 v_cvt_f64(const v_int32x4& a)
+{
+    float32xm1_t val = vfcvtfxv_float32xm1_int32xm1(a.val, 4);
+    float64xm2_u _val;
+    _val.v = vfwcvtffv_float64xm2_float32xm1(val, 4);
+    return v_float64x2(_val.m1[0]);
+}
+
+inline v_float64x2 v_cvt_f64_high(const v_int32x4& a)
+{
+    float32xm1_t val = vfcvtfxv_float32xm1_int32xm1(a.val, 4);
+    float64xm2_u _val;
+    _val.v = vfwcvtffv_float64xm2_float32xm1(val, 4);
+    return v_float64x2(_val.m1[1]);
+}
+
+inline v_float64x2 v_cvt_f64(const v_float32x4& a)
+{
+    float64xm2_u _val;
+    _val.v = vfwcvtffv_float64xm2_float32xm1(a.val, 4);
+    return v_float64x2(_val.m1[0]);
+}
+
+inline v_float64x2 v_cvt_f64_high(const v_float32x4& a)
+{
+    float64xm2_u _val;
+    _val.v = vfwcvtffv_float64xm2_float32xm1(a.val, 4);
+    return v_float64x2(_val.m1[1]);
+}
+
+inline v_float64x2 v_cvt_f64(const v_int64x2& a)
+{
+    return v_float64x2(vfcvtfxv_float64xm1_int64xm1(a.val, 2));
+}
+
+#endif
+inline v_int8x16 v_interleave_pairs(const v_int8x16& vec)
+{
+    uint64xm1_t m0 = {0x0705060403010200, 0x0F0D0E0C0B090A08};
+    return v_int8x16(vrgathervv_int8xm1_uint8xm1(vec.val, (uint8xm1_t)m0, 16));
+}
+inline v_uint8x16 v_interleave_pairs(const v_uint8x16& vec)
+{
+    return v_reinterpret_as_u8(v_interleave_pairs(v_reinterpret_as_s8(vec)));
+}
+
+inline v_int8x16 v_interleave_quads(const v_int8x16& vec)
+{
+    uint64xm1_t m0 = {0x0703060205010400, 0x0F0B0E0A0D090C08};
+    return v_int8x16(vrgathervv_int8xm1_uint8xm1(vec.val, (uint8xm1_t)m0, 16));
+}
+inline v_uint8x16 v_interleave_quads(const v_uint8x16& vec)
+{
+    return v_reinterpret_as_u8(v_interleave_quads(v_reinterpret_as_s8(vec)));
+}
+
+inline v_int16x8 v_interleave_pairs(const v_int16x8& vec)
+{
+    uint64xm1_t m0 = {0x0706030205040100, 0x0F0E0B0A0D0C0908};
+    return v_int16x8((int16xm1_t)vrgathervv_uint8xm1((uint8xm1_t)vec.val, (uint8xm1_t)m0, 16));
+}
+inline v_uint16x8 v_interleave_pairs(const v_uint16x8& vec) { return v_reinterpret_as_u16(v_interleave_pairs(v_reinterpret_as_s16(vec))); }
+inline v_int16x8 v_interleave_quads(const v_int16x8& vec)
+{
+    uint64xm1_t m0 = {0x0B0A030209080100, 0x0F0E07060D0C0504};
+    return v_int16x8((int16xm1_t)vrgathervv_uint8xm1((uint8xm1_t)(vec.val), (uint8xm1_t)m0, 16));
+}
+inline v_uint16x8 v_interleave_quads(const v_uint16x8& vec) { return v_reinterpret_as_u16(v_interleave_quads(v_reinterpret_as_s16(vec))); }
+
+inline v_int32x4 v_interleave_pairs(const v_int32x4& vec)
+{
+    uint64xm1_t m0 = {0x0B0A090803020100, 0x0F0E0D0C07060504};
+    return v_int32x4((int32xm1_t)vrgathervv_uint8xm1((uint8xm1_t)(vec.val), (uint8xm1_t)m0, 16));
+}
+inline v_uint32x4 v_interleave_pairs(const v_uint32x4& vec) { return v_reinterpret_as_u32(v_interleave_pairs(v_reinterpret_as_s32(vec))); }
+inline v_float32x4 v_interleave_pairs(const v_float32x4& vec) { return v_reinterpret_as_f32(v_interleave_pairs(v_reinterpret_as_s32(vec))); }
+inline v_int8x16 v_pack_triplets(const v_int8x16& vec)
+{
+    uint64xm1_t m0 = {0x0908060504020100, 0xFFFFFFFF0E0D0C0A};
+    return v_int8x16((int8xm1_t)vrgathervv_uint8xm1((uint8xm1_t)(vec.val), (uint8xm1_t)m0, 16));
+}
+inline v_uint8x16 v_pack_triplets(const v_uint8x16& vec) { return v_reinterpret_as_u8(v_pack_triplets(v_reinterpret_as_s8(vec))); }
+
+inline v_int16x8 v_pack_triplets(const v_int16x8& vec)
+{
+    uint64xm1_t m0 = {0x0908050403020100, 0xFFFFFFFF0D0C0B0A};
+    return v_int16x8((int16xm1_t)vrgathervv_uint8xm1((uint8xm1_t)(vec.val), (uint8xm1_t)m0, 16));
+}
+inline v_uint16x8 v_pack_triplets(const v_uint16x8& vec) { return v_reinterpret_as_u16(v_pack_triplets(v_reinterpret_as_s16(vec))); }
+
+inline v_int32x4 v_pack_triplets(const v_int32x4& vec) { return vec; }
+inline v_uint32x4 v_pack_triplets(const v_uint32x4& vec) { return vec; }
+inline v_float32x4 v_pack_triplets(const v_float32x4& vec) { return vec; }
+
+#if CV_SIMD128_64F
+inline v_float64x2 v_dotprod_expand(const v_int32x4& a, const v_int32x4& b)
+{ return v_cvt_f64(v_dotprod(a, b)); }
+inline v_float64x2 v_dotprod_expand(const v_int32x4& a,   const v_int32x4& b,
+                                    const v_float64x2& c)
+{ return v_dotprod_expand(a, b) + c; }
+inline v_float64x2 v_dotprod_expand_fast(const v_int32x4& a, const v_int32x4& b)
+{
+    int64xm2_u v1;
+    v1.v = vwmulvv_int64xm2_int32xm1(a.val, b.val, 4);
+    float64xm1_t res = vfcvtfxv_float64xm1_int64xm1(vaddvv_int64xm1(v1.m1[0], v1.m1[1], 2), 2);
+    return v_float64x2(res);
+}
+inline v_float64x2 v_dotprod_expand_fast(const v_int32x4& a, const v_int32x4& b, const v_float64x2& c)
+{ v_float64x2 res = v_dotprod_expand_fast(a, b);
+  return res + c; }
+#endif
+////// FP16 support ///////
+inline v_float32x4 v_load_expand(const float16_t* ptr)
+{
+    float16xm1_t v = vlev_float16xm1((__fp16*)ptr, 4);
+    float32xm2_u v32;
+    v32.v = vfwcvtffv_float32xm2_float16xm1(v, 4);
+    return v_float32x4(v32.m1[0]);
+}
+
+inline void v_pack_store(float16_t* ptr, const v_float32x4& v)
+{
+    float32xm2_u v32;
+    v32.m1[0] = v.val;
+    float16xm1_t hv = vfncvtffv_float16xm1_float32xm2(v32.v, 4);
+    vsev_float16xm1((__fp16*)ptr, hv, 4);
+}
 
 inline void v_cleanup() {}
 
