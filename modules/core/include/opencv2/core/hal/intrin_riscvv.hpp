@@ -1,4 +1,5 @@
 /*M///////////////////////////////////////////////////////////////////////////////////////
+/*M///////////////////////////////////////////////////////////////////////////////////////
 //
 //  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
 //
@@ -488,6 +489,63 @@ inline v_float64x2 v_muladd(const v_float64x2& a, const v_float64x2& b, const v_
     return v_fma(a, b, c);
 }
 
+#define OPENCV_HAL_IMPL_RISCVV_LOGIC_OPN(_Tpvec, suffix, num) \
+    OPENCV_HAL_IMPL_RISCVV_BIN_OPN(&, _Tpvec, vandvv_##suffix, num) \
+    OPENCV_HAL_IMPL_RISCVV_BIN_OPN(|, _Tpvec, vorvv_##suffix, num) \
+    OPENCV_HAL_IMPL_RISCVV_BIN_OPN(^, _Tpvec, vxorvv_##suffix, num) \
+    inline _Tpvec operator ~ (const _Tpvec & a) \
+    { \
+        return _Tpvec(vnotv_##suffix(a.val, num)); \
+    }
+
+OPENCV_HAL_IMPL_RISCVV_LOGIC_OPN(v_uint8x16, uint8xm1, 16)
+OPENCV_HAL_IMPL_RISCVV_LOGIC_OPN(v_uint16x8, uint16xm1, 8)
+OPENCV_HAL_IMPL_RISCVV_LOGIC_OPN(v_uint32x4, uint32xm1, 4)
+OPENCV_HAL_IMPL_RISCVV_LOGIC_OPN(v_uint64x2, uint64xm1, 2)
+OPENCV_HAL_IMPL_RISCVV_LOGIC_OPN(v_int8x16, int8xm1, 16)
+OPENCV_HAL_IMPL_RISCVV_LOGIC_OPN(v_int16x8, int16xm1, 8)
+OPENCV_HAL_IMPL_RISCVV_LOGIC_OPN(v_int32x4, int32xm1, 4)
+OPENCV_HAL_IMPL_RISCVV_LOGIC_OPN(v_int64x2, int64xm1, 2)
+
+#define OPENCV_HAL_IMPL_RISCVV_FLT_BIT_OP(bin_op, intrin) \
+inline v_float32x4 operator bin_op (const v_float32x4& a, const v_float32x4& b) \
+{ \
+    return v_float32x4(float32xm1_t(intrin(int32xm1_t(a.val), int32xm1_t(b.val), 4))); \
+} \
+inline v_float32x4& operator bin_op##= (v_float32x4& a, const v_float32x4& b) \
+{ \
+    a.val = float32xm1_t(intrin(int32xm1_t(a.val), int32xm1_t(b.val), 4)); \
+    return a; \
+}
+
+OPENCV_HAL_IMPL_RISCVV_FLT_BIT_OP(&, vandvv_int32xm1)
+OPENCV_HAL_IMPL_RISCVV_FLT_BIT_OP(|, vorvv_int32xm1)
+OPENCV_HAL_IMPL_RISCVV_FLT_BIT_OP(^, vxorvv_int32xm1)
+
+inline v_float32x4 operator ~ (const v_float32x4& a)
+{
+    return v_float32x4((float32xm1_t)(vnotv_int32xm1((int32xm1_t)(a.val), 4)));
+}
+
+#define OPENCV_HAL_IMPL_RISCVV_FLT_64BIT_OP(bin_op, intrin) \
+inline v_float64x2 operator bin_op (const v_float64x2& a, const v_float64x2& b) \
+{ \
+    return v_float64x2(float64xm1_t(intrin(int64xm1_t(a.val), int64xm1_t(b.val), 2))); \
+} \
+inline v_float64x2& operator bin_op##= (v_float64x2& a, const v_float64x2& b) \
+{ \
+    a.val = float64xm1_t(intrin(int64xm1_t(a.val), int64xm1_t(b.val), 2)); \
+    return a; \
+}
+
+OPENCV_HAL_IMPL_RISCVV_FLT_64BIT_OP(&, vandvv_int64xm1)
+OPENCV_HAL_IMPL_RISCVV_FLT_64BIT_OP(|, vorvv_int64xm1)
+OPENCV_HAL_IMPL_RISCVV_FLT_64BIT_OP(^, vxorvv_int64xm1)
+
+inline v_float64x2 operator ~ (const v_float64x2& a)
+{
+    return v_float64x2((float64xm1_t)(vnotv_int64xm1((int64xm1_t)(a.val), 2)));
+}
 
 inline void v_cleanup() {}
 
