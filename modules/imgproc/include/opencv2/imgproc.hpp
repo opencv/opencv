@@ -204,6 +204,10 @@ namespace cv
 //! @addtogroup imgproc_filter
 //! @{
 
+enum SpecialFilter {
+    FILTER_SCHARR = -1
+};
+
 //! type of morphological operation
 enum MorphTypes{
     MORPH_ERODE    = 0, //!< see #erode
@@ -332,12 +336,6 @@ enum AdaptiveThresholdTypes {
     #getGaussianKernel*/
     ADAPTIVE_THRESH_GAUSSIAN_C = 1
 };
-
-//! cv::undistort mode
-enum UndistortTypes {
-       PROJ_SPHERICAL_ORTHO  = 0,
-       PROJ_SPHERICAL_EQRECT = 1
-     };
 
 //! class of the pixel in GrabCut algorithm
 enum GrabCutClasses {
@@ -475,7 +473,8 @@ enum HoughModes {
     /** multi-scale variant of the classical Hough transform. The lines are encoded the same way as
     HOUGH_STANDARD. */
     HOUGH_MULTI_SCALE   = 2,
-    HOUGH_GRADIENT      = 3 //!< basically *21HT*, described in @cite Yuen90
+    HOUGH_GRADIENT      = 3, //!< basically *21HT*, described in @cite Yuen90
+    HOUGH_GRADIENT_ALT  = 4, //!< variation of HOUGH_GRADIENT to get better accuracy
 };
 
 //! Variants of Line Segment %Detector
@@ -797,6 +796,45 @@ enum RectanglesIntersectTypes {
     INTERSECT_NONE = 0, //!< No intersection
     INTERSECT_PARTIAL  = 1, //!< There is a partial intersection
     INTERSECT_FULL  = 2 //!< One of the rectangle is fully enclosed in the other
+};
+
+/** types of line
+@ingroup imgproc_draw
+*/
+enum LineTypes {
+    FILLED  = -1,
+    LINE_4  = 4, //!< 4-connected line
+    LINE_8  = 8, //!< 8-connected line
+    LINE_AA = 16 //!< antialiased line
+};
+
+/** Only a subset of Hershey fonts <https://en.wikipedia.org/wiki/Hershey_fonts> are supported
+@ingroup imgproc_draw
+*/
+enum HersheyFonts {
+    FONT_HERSHEY_SIMPLEX        = 0, //!< normal size sans-serif font
+    FONT_HERSHEY_PLAIN          = 1, //!< small size sans-serif font
+    FONT_HERSHEY_DUPLEX         = 2, //!< normal size sans-serif font (more complex than FONT_HERSHEY_SIMPLEX)
+    FONT_HERSHEY_COMPLEX        = 3, //!< normal size serif font
+    FONT_HERSHEY_TRIPLEX        = 4, //!< normal size serif font (more complex than FONT_HERSHEY_COMPLEX)
+    FONT_HERSHEY_COMPLEX_SMALL  = 5, //!< smaller version of FONT_HERSHEY_COMPLEX
+    FONT_HERSHEY_SCRIPT_SIMPLEX = 6, //!< hand-writing style font
+    FONT_HERSHEY_SCRIPT_COMPLEX = 7, //!< more complex variant of FONT_HERSHEY_SCRIPT_SIMPLEX
+    FONT_ITALIC                 = 16 //!< flag for italic font
+};
+
+/** Possible set of marker types used for the cv::drawMarker function
+@ingroup imgproc_draw
+*/
+enum MarkerTypes
+{
+    MARKER_CROSS = 0,           //!< A crosshair marker shape
+    MARKER_TILTED_CROSS = 1,    //!< A 45 degree tilted crosshair marker shape
+    MARKER_STAR = 2,            //!< A star marker shape, combination of cross and tilted cross
+    MARKER_DIAMOND = 3,         //!< A diamond marker shape
+    MARKER_SQUARE = 4,          //!< A square marker shape
+    MARKER_TRIANGLE_UP = 5,     //!< An upwards pointing triangle marker shape
+    MARKER_TRIANGLE_DOWN = 6    //!< A downwards pointing triangle marker shape
 };
 
 /** @brief finds arbitrary template in the grayscale image using Generalized Hough Transform
@@ -1318,14 +1356,14 @@ CV_EXPORTS_W Mat getGaussianKernel( int ksize, double sigma, int ktype = CV_64F 
 /** @brief Returns filter coefficients for computing spatial image derivatives.
 
 The function computes and returns the filter coefficients for spatial image derivatives. When
-`ksize=CV_SCHARR`, the Scharr \f$3 \times 3\f$ kernels are generated (see #Scharr). Otherwise, Sobel
+`ksize=FILTER_SCHARR`, the Scharr \f$3 \times 3\f$ kernels are generated (see #Scharr). Otherwise, Sobel
 kernels are generated (see #Sobel). The filters are normally passed to #sepFilter2D or to
 
 @param kx Output matrix of row filter coefficients. It has the type ktype .
 @param ky Output matrix of column filter coefficients. It has the type ktype .
 @param dx Derivative order in respect of x.
 @param dy Derivative order in respect of y.
-@param ksize Aperture size. It can be CV_SCHARR, 1, 3, 5, or 7.
+@param ksize Aperture size. It can be FILTER_SCHARR, 1, 3, 5, or 7.
 @param normalize Flag indicating whether to normalize (scale down) the filter coefficients or not.
 Theoretically, the coefficients should have the denominator \f$=2^{ksize*2-dx-dy-2}\f$. If you are
 going to filter floating-point images, you are likely to use the normalized kernels. But if you
@@ -1592,7 +1630,7 @@ calculate the derivative. When \f$\texttt{ksize = 1}\f$, the \f$3 \times 1\f$ or
 kernel is used (that is, no Gaussian smoothing is done). `ksize = 1` can only be used for the first
 or the second x- or y- derivatives.
 
-There is also the special value `ksize = #CV_SCHARR (-1)` that corresponds to the \f$3\times3\f$ Scharr
+There is also the special value `ksize = #FILTER_SCHARR (-1)` that corresponds to the \f$3\times3\f$ Scharr
 filter that may give more accurate results than the \f$3\times3\f$ Sobel. The Scharr aperture is
 
 \f[\vecthreethree{-3}{0}{3}{-10}{0}{10}{-3}{0}{3}\f]
@@ -1664,7 +1702,7 @@ call
 
 is equivalent to
 
-\f[\texttt{Sobel(src, dst, ddepth, dx, dy, CV_SCHARR, scale, delta, borderType)} .\f]
+\f[\texttt{Sobel(src, dst, ddepth, dx, dy, FILTER_SCHARR, scale, delta, borderType)} .\f]
 
 @param src input image.
 @param dst output image of the same size and the same number of channels as src.
@@ -2059,28 +2097,37 @@ Example: :
 
 @note Usually the function detects the centers of circles well. However, it may fail to find correct
 radii. You can assist to the function by specifying the radius range ( minRadius and maxRadius ) if
-you know it. Or, you may set maxRadius to a negative number to return centers only without radius
-search, and find the correct radius using an additional procedure.
+you know it. Or, in the case of #HOUGH_GRADIENT method you may set maxRadius to a negative number
+to return centers only without radius search, and find the correct radius using an additional procedure.
+
+It also helps to smooth image a bit unless it's already soft. For example,
+GaussianBlur() with 7x7 kernel and 1.5x1.5 sigma or similar blurring may help.
 
 @param image 8-bit, single-channel, grayscale input image.
 @param circles Output vector of found circles. Each vector is encoded as  3 or 4 element
 floating-point vector \f$(x, y, radius)\f$ or \f$(x, y, radius, votes)\f$ .
-@param method Detection method, see #HoughModes. Currently, the only implemented method is #HOUGH_GRADIENT
+@param method Detection method, see #HoughModes. The available methods are #HOUGH_GRADIENT and #HOUGH_GRADIENT_ALT.
 @param dp Inverse ratio of the accumulator resolution to the image resolution. For example, if
 dp=1 , the accumulator has the same resolution as the input image. If dp=2 , the accumulator has
-half as big width and height.
+half as big width and height. For #HOUGH_GRADIENT_ALT the recommended value is dp=1.5,
+unless some small very circles need to be detected.
 @param minDist Minimum distance between the centers of the detected circles. If the parameter is
 too small, multiple neighbor circles may be falsely detected in addition to a true one. If it is
 too large, some circles may be missed.
-@param param1 First method-specific parameter. In case of #HOUGH_GRADIENT , it is the higher
-threshold of the two passed to the Canny edge detector (the lower one is twice smaller).
-@param param2 Second method-specific parameter. In case of #HOUGH_GRADIENT , it is the
+@param param1 First method-specific parameter. In case of #HOUGH_GRADIENT and #HOUGH_GRADIENT_ALT,
+it is the higher threshold of the two passed to the Canny edge detector (the lower one is twice smaller).
+Note that #HOUGH_GRADIENT_ALT uses #Scharr algorithm to compute image derivatives, so the threshold value
+shough normally be higher, such as 300 or normally exposed and contrasty images.
+@param param2 Second method-specific parameter. In case of #HOUGH_GRADIENT, it is the
 accumulator threshold for the circle centers at the detection stage. The smaller it is, the more
 false circles may be detected. Circles, corresponding to the larger accumulator values, will be
-returned first.
+returned first. In the case of #HOUGH_GRADIENT_ALT algorithm, this is the circle "perfectness" measure.
+The closer it to 1, the better shaped circles algorithm selects. In most cases 0.9 should be fine.
+If you want get better detection of small circles, you may decrease it to 0.85, 0.8 or even less.
+But then also try to limit the search range [minRadius, maxRadius] to avoid many false circles.
 @param minRadius Minimum circle radius.
-@param maxRadius Maximum circle radius. If <= 0, uses the maximum image dimension. If < 0, returns
-centers without finding the radius.
+@param maxRadius Maximum circle radius. If <= 0, uses the maximum image dimension. If < 0, #HOUGH_GRADIENT returns
+centers without finding the radius. #HOUGH_GRADIENT_ALT always computes circle radiuses.
 
 @sa fitEllipse, minEnclosingCircle
  */
@@ -2384,10 +2431,16 @@ coordinate origin is assumed to be the top-left corner).
 
 @sa  getAffineTransform, warpAffine, transform
  */
-CV_EXPORTS_W Mat getRotationMatrix2D( Point2f center, double angle, double scale );
+CV_EXPORTS_W Mat getRotationMatrix2D(Point2f center, double angle, double scale);
 
-//! returns 3x3 perspective transformation for the corresponding 4 point pairs.
-CV_EXPORTS Mat getPerspectiveTransform( const Point2f src[], const Point2f dst[] );
+/** @sa getRotationMatrix2D */
+CV_EXPORTS Matx23d getRotationMatrix2D_(Point2f center, double angle, double scale);
+
+inline
+Mat getRotationMatrix2D(Point2f center, double angle, double scale)
+{
+    return Mat(getRotationMatrix2D_(center, angle, scale), true);
+}
 
 /** @brief Calculates an affine transform from three pairs of the corresponding points.
 
@@ -2431,10 +2484,15 @@ where
 
 @param src Coordinates of quadrangle vertices in the source image.
 @param dst Coordinates of the corresponding quadrangle vertices in the destination image.
+@param solveMethod method passed to cv::solve (#DecompTypes)
 
 @sa  findHomography, warpPerspective, perspectiveTransform
  */
-CV_EXPORTS_W Mat getPerspectiveTransform( InputArray src, InputArray dst );
+CV_EXPORTS_W Mat getPerspectiveTransform(InputArray src, InputArray dst, int solveMethod = DECOMP_LU);
+
+/** @overload */
+CV_EXPORTS Mat getPerspectiveTransform(const Point2f src[], const Point2f dst[], int solveMethod = DECOMP_LU);
+
 
 CV_EXPORTS_W Mat getAffineTransform( InputArray src, InputArray dst );
 
@@ -2957,193 +3015,6 @@ CV_EXPORTS void buildPyramid( InputArray src, OutputArrayOfArrays dst,
                               int maxlevel, int borderType = BORDER_DEFAULT );
 
 //! @} imgproc_filter
-
-//! @addtogroup imgproc_transform
-//! @{
-
-/** @brief Transforms an image to compensate for lens distortion.
-
-The function transforms an image to compensate radial and tangential lens distortion.
-
-The function is simply a combination of #initUndistortRectifyMap (with unity R ) and #remap
-(with bilinear interpolation). See the former function for details of the transformation being
-performed.
-
-Those pixels in the destination image, for which there is no correspondent pixels in the source
-image, are filled with zeros (black color).
-
-A particular subset of the source image that will be visible in the corrected image can be regulated
-by newCameraMatrix. You can use #getOptimalNewCameraMatrix to compute the appropriate
-newCameraMatrix depending on your requirements.
-
-The camera matrix and the distortion parameters can be determined using #calibrateCamera. If
-the resolution of images is different from the resolution used at the calibration stage, \f$f_x,
-f_y, c_x\f$ and \f$c_y\f$ need to be scaled accordingly, while the distortion coefficients remain
-the same.
-
-@param src Input (distorted) image.
-@param dst Output (corrected) image that has the same size and type as src .
-@param cameraMatrix Input camera matrix \f$A = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
-@param distCoeffs Input vector of distortion coefficients
-\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6[, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$
-of 4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion coefficients are assumed.
-@param newCameraMatrix Camera matrix of the distorted image. By default, it is the same as
-cameraMatrix but you may additionally scale and shift the result by using a different matrix.
- */
-CV_EXPORTS_W void undistort( InputArray src, OutputArray dst,
-                             InputArray cameraMatrix,
-                             InputArray distCoeffs,
-                             InputArray newCameraMatrix = noArray() );
-
-/** @brief Computes the undistortion and rectification transformation map.
-
-The function computes the joint undistortion and rectification transformation and represents the
-result in the form of maps for remap. The undistorted image looks like original, as if it is
-captured with a camera using the camera matrix =newCameraMatrix and zero distortion. In case of a
-monocular camera, newCameraMatrix is usually equal to cameraMatrix, or it can be computed by
-#getOptimalNewCameraMatrix for a better control over scaling. In case of a stereo camera,
-newCameraMatrix is normally set to P1 or P2 computed by #stereoRectify .
-
-Also, this new camera is oriented differently in the coordinate space, according to R. That, for
-example, helps to align two heads of a stereo camera so that the epipolar lines on both images
-become horizontal and have the same y- coordinate (in case of a horizontally aligned stereo camera).
-
-The function actually builds the maps for the inverse mapping algorithm that is used by remap. That
-is, for each pixel \f$(u, v)\f$ in the destination (corrected and rectified) image, the function
-computes the corresponding coordinates in the source image (that is, in the original image from
-camera). The following process is applied:
-\f[
-\begin{array}{l}
-x  \leftarrow (u - {c'}_x)/{f'}_x  \\
-y  \leftarrow (v - {c'}_y)/{f'}_y  \\
-{[X\,Y\,W]} ^T  \leftarrow R^{-1}*[x \, y \, 1]^T  \\
-x'  \leftarrow X/W  \\
-y'  \leftarrow Y/W  \\
-r^2  \leftarrow x'^2 + y'^2 \\
-x''  \leftarrow x' \frac{1 + k_1 r^2 + k_2 r^4 + k_3 r^6}{1 + k_4 r^2 + k_5 r^4 + k_6 r^6}
-+ 2p_1 x' y' + p_2(r^2 + 2 x'^2)  + s_1 r^2 + s_2 r^4\\
-y''  \leftarrow y' \frac{1 + k_1 r^2 + k_2 r^4 + k_3 r^6}{1 + k_4 r^2 + k_5 r^4 + k_6 r^6}
-+ p_1 (r^2 + 2 y'^2) + 2 p_2 x' y' + s_3 r^2 + s_4 r^4 \\
-s\vecthree{x'''}{y'''}{1} =
-\vecthreethree{R_{33}(\tau_x, \tau_y)}{0}{-R_{13}((\tau_x, \tau_y)}
-{0}{R_{33}(\tau_x, \tau_y)}{-R_{23}(\tau_x, \tau_y)}
-{0}{0}{1} R(\tau_x, \tau_y) \vecthree{x''}{y''}{1}\\
-map_x(u,v)  \leftarrow x''' f_x + c_x  \\
-map_y(u,v)  \leftarrow y''' f_y + c_y
-\end{array}
-\f]
-where \f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6[, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$
-are the distortion coefficients.
-
-In case of a stereo camera, this function is called twice: once for each camera head, after
-stereoRectify, which in its turn is called after #stereoCalibrate. But if the stereo camera
-was not calibrated, it is still possible to compute the rectification transformations directly from
-the fundamental matrix using #stereoRectifyUncalibrated. For each camera, the function computes
-homography H as the rectification transformation in a pixel domain, not a rotation matrix R in 3D
-space. R can be computed from H as
-\f[\texttt{R} = \texttt{cameraMatrix} ^{-1} \cdot \texttt{H} \cdot \texttt{cameraMatrix}\f]
-where cameraMatrix can be chosen arbitrarily.
-
-@param cameraMatrix Input camera matrix \f$A=\vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
-@param distCoeffs Input vector of distortion coefficients
-\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6[, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$
-of 4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion coefficients are assumed.
-@param R Optional rectification transformation in the object space (3x3 matrix). R1 or R2 ,
-computed by #stereoRectify can be passed here. If the matrix is empty, the identity transformation
-is assumed. In cvInitUndistortMap R assumed to be an identity matrix.
-@param newCameraMatrix New camera matrix \f$A'=\vecthreethree{f_x'}{0}{c_x'}{0}{f_y'}{c_y'}{0}{0}{1}\f$.
-@param size Undistorted image size.
-@param m1type Type of the first output map that can be CV_32FC1, CV_32FC2 or CV_16SC2, see #convertMaps
-@param map1 The first output map.
-@param map2 The second output map.
- */
-CV_EXPORTS_W void initUndistortRectifyMap( InputArray cameraMatrix, InputArray distCoeffs,
-                           InputArray R, InputArray newCameraMatrix,
-                           Size size, int m1type, OutputArray map1, OutputArray map2 );
-
-//! initializes maps for #remap for wide-angle
-CV_EXPORTS_W float initWideAngleProjMap( InputArray cameraMatrix, InputArray distCoeffs,
-                                         Size imageSize, int destImageWidth,
-                                         int m1type, OutputArray map1, OutputArray map2,
-                                         int projType = PROJ_SPHERICAL_EQRECT, double alpha = 0);
-
-/** @brief Returns the default new camera matrix.
-
-The function returns the camera matrix that is either an exact copy of the input cameraMatrix (when
-centerPrinicipalPoint=false ), or the modified one (when centerPrincipalPoint=true).
-
-In the latter case, the new camera matrix will be:
-
-\f[\begin{bmatrix} f_x && 0 && ( \texttt{imgSize.width} -1)*0.5  \\ 0 && f_y && ( \texttt{imgSize.height} -1)*0.5  \\ 0 && 0 && 1 \end{bmatrix} ,\f]
-
-where \f$f_x\f$ and \f$f_y\f$ are \f$(0,0)\f$ and \f$(1,1)\f$ elements of cameraMatrix, respectively.
-
-By default, the undistortion functions in OpenCV (see #initUndistortRectifyMap, #undistort) do not
-move the principal point. However, when you work with stereo, it is important to move the principal
-points in both views to the same y-coordinate (which is required by most of stereo correspondence
-algorithms), and may be to the same x-coordinate too. So, you can form the new camera matrix for
-each view where the principal points are located at the center.
-
-@param cameraMatrix Input camera matrix.
-@param imgsize Camera view image size in pixels.
-@param centerPrincipalPoint Location of the principal point in the new camera matrix. The
-parameter indicates whether this location should be at the image center or not.
- */
-CV_EXPORTS_W Mat getDefaultNewCameraMatrix( InputArray cameraMatrix, Size imgsize = Size(),
-                                            bool centerPrincipalPoint = false );
-
-/** @brief Computes the ideal point coordinates from the observed point coordinates.
-
-The function is similar to #undistort and #initUndistortRectifyMap but it operates on a
-sparse set of points instead of a raster image. Also the function performs a reverse transformation
-to projectPoints. In case of a 3D object, it does not reconstruct its 3D coordinates, but for a
-planar object, it does, up to a translation vector, if the proper R is specified.
-
-For each observed point coordinate \f$(u, v)\f$ the function computes:
-\f[
-\begin{array}{l}
-x^{"}  \leftarrow (u - c_x)/f_x  \\
-y^{"}  \leftarrow (v - c_y)/f_y  \\
-(x',y') = undistort(x^{"},y^{"}, \texttt{distCoeffs}) \\
-{[X\,Y\,W]} ^T  \leftarrow R*[x' \, y' \, 1]^T  \\
-x  \leftarrow X/W  \\
-y  \leftarrow Y/W  \\
-\text{only performed if P is specified:} \\
-u'  \leftarrow x {f'}_x + {c'}_x  \\
-v'  \leftarrow y {f'}_y + {c'}_y
-\end{array}
-\f]
-
-where *undistort* is an approximate iterative algorithm that estimates the normalized original
-point coordinates out of the normalized distorted point coordinates ("normalized" means that the
-coordinates do not depend on the camera matrix).
-
-The function can be used for both a stereo camera head or a monocular camera (when R is empty).
-@param src Observed point coordinates, 2xN/Nx2 1-channel or 1xN/Nx1 2-channel (CV_32FC2 or CV_64FC2) (or
-vector\<Point2f\> ).
-@param dst Output ideal point coordinates (1xN/Nx1 2-channel or vector\<Point2f\> ) after undistortion and reverse perspective
-transformation. If matrix P is identity or omitted, dst will contain normalized point coordinates.
-@param cameraMatrix Camera matrix \f$\vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
-@param distCoeffs Input vector of distortion coefficients
-\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6[, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$
-of 4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion coefficients are assumed.
-@param R Rectification transformation in the object space (3x3 matrix). R1 or R2 computed by
-#stereoRectify can be passed here. If the matrix is empty, the identity transformation is used.
-@param P New camera matrix (3x3) or new projection matrix (3x4) \f$\begin{bmatrix} {f'}_x & 0 & {c'}_x & t_x \\ 0 & {f'}_y & {c'}_y & t_y \\ 0 & 0 & 1 & t_z \end{bmatrix}\f$. P1 or P2 computed by
-#stereoRectify can be passed here. If the matrix is empty, the identity new camera matrix is used.
- */
-CV_EXPORTS_W void undistortPoints( InputArray src, OutputArray dst,
-                                   InputArray cameraMatrix, InputArray distCoeffs,
-                                   InputArray R = noArray(), InputArray P = noArray() );
-/** @overload
-    @note Default version of #undistortPoints does 5 iterations to compute undistorted points.
-
- */
-CV_EXPORTS_AS(undistortPointsIter) void undistortPoints( InputArray src, OutputArray dst,
-                                                         InputArray cameraMatrix, InputArray distCoeffs,
-                                                         InputArray R, InputArray P, TermCriteria criteria );
-
-//! @} imgproc_transform
 
 //! @addtogroup imgproc_hist
 //! @{
@@ -3935,12 +3806,12 @@ parent, or nested contours, the corresponding elements of hierarchy[i] will be n
 contours are extracted from the image ROI and then they should be analyzed in the whole image
 context.
  */
-CV_EXPORTS_W void findContours( InputOutputArray image, OutputArrayOfArrays contours,
+CV_EXPORTS_W void findContours( InputArray image, OutputArrayOfArrays contours,
                               OutputArray hierarchy, int mode,
                               int method, Point offset = Point());
 
 /** @overload */
-CV_EXPORTS void findContours( InputOutputArray image, OutputArrayOfArrays contours,
+CV_EXPORTS void findContours( InputArray image, OutputArrayOfArrays contours,
                               int mode, int method, Point offset = Point());
 
 /** @example samples/cpp/squares.cpp
@@ -4465,7 +4336,7 @@ CV_EXPORTS_W void rectangle(InputOutputArray img, Point pt1, Point pt2,
 use `rec` parameter as alternative specification of the drawn rectangle: `r.tl() and
 r.br()-Point(1,1)` are opposite corners
 */
-CV_EXPORTS void rectangle(CV_IN_OUT Mat& img, Rect rec,
+CV_EXPORTS_W void rectangle(InputOutputArray img, Rect rec,
                           const Scalar& color, int thickness = 1,
                           int lineType = LINE_8, int shift = 0);
 
@@ -4535,18 +4406,6 @@ CV_EXPORTS_W void ellipse(InputOutputArray img, const RotatedRect& box, const Sc
 /* ADDING A SET OF PREDEFINED MARKERS WHICH COULD BE USED TO HIGHLIGHT POSITIONS IN AN IMAGE */
 /* ----------------------------------------------------------------------------------------- */
 
-//! Possible set of marker types used for the cv::drawMarker function
-enum MarkerTypes
-{
-    MARKER_CROSS = 0,           //!< A crosshair marker shape
-    MARKER_TILTED_CROSS = 1,    //!< A 45 degree tilted crosshair marker shape
-    MARKER_STAR = 2,            //!< A star marker shape, combination of cross and tilted cross
-    MARKER_DIAMOND = 3,         //!< A diamond marker shape
-    MARKER_SQUARE = 4,          //!< A square marker shape
-    MARKER_TRIANGLE_UP = 5,     //!< An upwards pointing triangle marker shape
-    MARKER_TRIANGLE_DOWN = 6    //!< A downwards pointing triangle marker shape
-};
-
 /** @brief Draws a marker on a predefined position in an image.
 
 The function cv::drawMarker draws a marker on a given position in the image. For the moment several
@@ -4560,7 +4419,7 @@ marker types are supported, see #MarkerTypes for more information.
 @param line_type Type of the line, See #LineTypes
 @param markerSize The length of the marker axis [default = 20 pixels]
  */
-CV_EXPORTS_W void drawMarker(CV_IN_OUT Mat& img, Point position, const Scalar& color,
+CV_EXPORTS_W void drawMarker(InputOutputArray img, Point position, const Scalar& color,
                              int markerType = MARKER_CROSS, int markerSize=20, int thickness=1,
                              int line_type=8);
 
@@ -4569,7 +4428,7 @@ CV_EXPORTS_W void drawMarker(CV_IN_OUT Mat& img, Point position, const Scalar& c
 /* ----------------------------------------------------------------------------------------- */
 
 /** @overload */
-CV_EXPORTS void fillConvexPoly(Mat& img, const Point* pts, int npts,
+CV_EXPORTS void fillConvexPoly(InputOutputArray img, const Point* pts, int npts,
                                const Scalar& color, int lineType = LINE_8,
                                int shift = 0);
 
@@ -4591,7 +4450,7 @@ CV_EXPORTS_W void fillConvexPoly(InputOutputArray img, InputArray points,
                                  int shift = 0);
 
 /** @overload */
-CV_EXPORTS void fillPoly(Mat& img, const Point** pts,
+CV_EXPORTS void fillPoly(InputOutputArray img, const Point** pts,
                          const int* npts, int ncontours,
                          const Scalar& color, int lineType = LINE_8, int shift = 0,
                          Point offset = Point() );
@@ -4619,7 +4478,7 @@ CV_EXPORTS_W void fillPoly(InputOutputArray img, InputArrayOfArrays pts,
                            Point offset = Point() );
 
 /** @overload */
-CV_EXPORTS void polylines(Mat& img, const Point* const* pts, const int* npts,
+CV_EXPORTS void polylines(InputOutputArray img, const Point* const* pts, const int* npts,
                           int ncontours, bool isClosed, const Scalar& color,
                           int thickness = 1, int lineType = LINE_8, int shift = 0 );
 
@@ -4866,10 +4725,39 @@ public:
     the line is 8-connected or 4-connected
     If leftToRight=true, then the iteration is always done
     from the left-most point to the right most,
-    not to depend on the ordering of pt1 and pt2 parameters
+    not to depend on the ordering of pt1 and pt2 parameters;
     */
     LineIterator( const Mat& img, Point pt1, Point pt2,
-                  int connectivity = 8, bool leftToRight = false );
+                  int connectivity = 8, bool leftToRight = false )
+    {
+        init(&img, Rect(0, 0, img.cols, img.rows), pt1, pt2, connectivity, leftToRight);
+        ptmode = false;
+    }
+    LineIterator( Point pt1, Point pt2,
+                  int connectivity = 8, bool leftToRight = false )
+    {
+        init(0, Rect(std::min(pt1.x, pt2.x),
+                     std::min(pt1.y, pt2.y),
+                     std::max(pt1.x, pt2.x) - std::min(pt1.x, pt2.x) + 1,
+                     std::max(pt1.y, pt2.y) - std::min(pt1.y, pt2.y) + 1),
+             pt1, pt2, connectivity, leftToRight);
+        ptmode = true;
+    }
+    LineIterator( Size boundingAreaSize, Point pt1, Point pt2,
+                  int connectivity = 8, bool leftToRight = false )
+    {
+        init(0, Rect(0, 0, boundingAreaSize.width, boundingAreaSize.height),
+             pt1, pt2, connectivity, leftToRight);
+        ptmode = true;
+    }
+    LineIterator( Rect boundingAreaRect, Point pt1, Point pt2,
+                  int connectivity = 8, bool leftToRight = false )
+    {
+        init(0, boundingAreaRect, pt1, pt2, connectivity, leftToRight);
+        ptmode = true;
+    }
+    void init(const Mat* img, Rect boundingAreaRect, Point pt1, Point pt2, int connectivity, bool leftToRight);
+
     /** @brief returns pointer to the current pixel
     */
     uchar* operator *();
@@ -4889,6 +4777,9 @@ public:
     int err, count;
     int minusDelta, plusDelta;
     int minusStep, plusStep;
+    int minusShift, plusShift;
+    Point p;
+    bool ptmode;
 };
 
 //! @cond IGNORED
@@ -4898,7 +4789,7 @@ public:
 inline
 uchar* LineIterator::operator *()
 {
-    return ptr;
+    return ptmode ? 0 : ptr;
 }
 
 inline
@@ -4906,7 +4797,15 @@ LineIterator& LineIterator::operator ++()
 {
     int mask = err < 0 ? -1 : 0;
     err += minusDelta + (plusDelta & mask);
-    ptr += minusStep + (plusStep & mask);
+    if(!ptmode)
+    {
+        ptr += minusStep + (plusStep & mask);
+    }
+    else
+    {
+        p.x += minusShift + (plusShift & mask);
+        p.y += minusStep + (plusStep & mask);
+    }
     return *this;
 }
 
@@ -4921,9 +4820,13 @@ LineIterator LineIterator::operator ++(int)
 inline
 Point LineIterator::pos() const
 {
-    Point p;
-    p.y = (int)((ptr - ptr0)/step);
-    p.x = (int)(((ptr - ptr0) - p.y*step)/elemSize);
+    if(!ptmode)
+    {
+        size_t offset = (size_t)(ptr - ptr0);
+        int y = (int)(offset/step);
+        int x = (int)((offset - (size_t)y*step)/elemSize);
+        return Point(x, y);
+    }
     return p;
 }
 
@@ -4933,10 +4836,10 @@ Point LineIterator::pos() const
 
 //! @} imgproc
 
+CV_EXPORTS_W float local_cost(const Point& p, const Point& q, const Mat& gradient_magnitude, const Mat& Iy, const Mat& Ix, const Mat& zero_crossing);
+
+CV_EXPORTS_W void find_min_path(const Point& start, Mat img, Mat zero_crossing, Mat gradient_magnitude, Mat Ix, Mat Iy, Mat& hit_map_x, Mat& hit_map_y);
 } // cv
 
-#ifndef DISABLE_OPENCV_24_COMPATIBILITY
-#include "opencv2/imgproc/imgproc_c.h"
-#endif
 
 #endif
