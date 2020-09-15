@@ -1935,6 +1935,72 @@ int val = v_signmask(a);
 if(val==0) return 0;
 else return trailingZeros32(val); }
 
+#define OPENCV_HAL_IMPL_RISCVV_CHECK_ALLANY(_Tpvec, suffix, shift, num) \
+inline bool v_check_all(const v_##_Tpvec& a) \
+{ \
+    suffix##_t v0 = vsrlvx_##suffix(vnotv_##suffix(a.val, num), shift, num); \
+    uint64xm1_t v1 = uint64xm1_t(v0); \
+    return (v1[0] | v1[1]) == 0; \
+} \
+inline bool v_check_any(const v_##_Tpvec& a) \
+{ \
+    suffix##_t v0 = vsrlvx_##suffix(a.val, shift, num); \
+    uint64xm1_t v1 = uint64xm1_t(v0); \
+    return (v1[0] | v1[1]) != 0; \
+}
+
+OPENCV_HAL_IMPL_RISCVV_CHECK_ALLANY(uint8x16, uint8xm1, 7, 16)
+OPENCV_HAL_IMPL_RISCVV_CHECK_ALLANY(uint16x8, uint16xm1, 15, 8)
+OPENCV_HAL_IMPL_RISCVV_CHECK_ALLANY(uint32x4, uint32xm1, 31, 4)
+OPENCV_HAL_IMPL_RISCVV_CHECK_ALLANY(uint64x2, uint64xm1, 63, 2)
+inline bool v_check_all(const v_int8x16& a)
+{ return v_check_all(v_reinterpret_as_u8(a)); }
+inline bool v_check_all(const v_int16x8& a)
+{ return v_check_all(v_reinterpret_as_u16(a)); }
+inline bool v_check_all(const v_int32x4& a)
+{ return v_check_all(v_reinterpret_as_u32(a)); }
+inline bool v_check_all(const v_float32x4& a)
+{ return v_check_all(v_reinterpret_as_u32(a)); }
+inline bool v_check_all(const v_int64x2& a)
+{ return v_check_all(v_reinterpret_as_u64(a)); }
+inline bool v_check_all(const v_float64x2& a)
+{ return v_check_all(v_reinterpret_as_u64(a)); }
+
+inline bool v_check_any(const v_int8x16& a)
+{ return v_check_any(v_reinterpret_as_u8(a)); }
+inline bool v_check_any(const v_int16x8& a)
+{ return v_check_any(v_reinterpret_as_u16(a)); }
+inline bool v_check_any(const v_int32x4& a)
+{ return v_check_any(v_reinterpret_as_u32(a)); }
+inline bool v_check_any(const v_float32x4& a)
+{ return v_check_any(v_reinterpret_as_u32(a)); }
+inline bool v_check_any(const v_int64x2& a)
+{ return v_check_any(v_reinterpret_as_u64(a)); }
+inline bool v_check_any(const v_float64x2& a)
+{ return v_check_any(v_reinterpret_as_u64(a)); }
+
+#define OPENCV_HAL_IMPL_RISCVV_SELECT(_Tpvec, suffix, _Tpvec2, num) \
+inline _Tpvec v_select(const _Tpvec& mask, const _Tpvec& a, const _Tpvec& b) \
+{ \
+    return _Tpvec(vmergevvm_mask_##suffix(b.val, a.val, _Tpvec2(mask.val), num)); \
+}
+
+OPENCV_HAL_IMPL_RISCVV_SELECT(v_int8x16,  int8xm1, e8xm1_t, 16)
+OPENCV_HAL_IMPL_RISCVV_SELECT(v_int16x8,  int16xm1, e16xm1_t, 8)
+OPENCV_HAL_IMPL_RISCVV_SELECT(v_int32x4,  int32xm1, e32xm1_t, 4)
+OPENCV_HAL_IMPL_RISCVV_SELECT(v_uint8x16, uint8xm1, e8xm1_t, 16)
+OPENCV_HAL_IMPL_RISCVV_SELECT(v_uint16x8, uint16xm1, e16xm1_t, 8)
+OPENCV_HAL_IMPL_RISCVV_SELECT(v_uint32x4, uint32xm1, e32xm1_t, 4)
+inline v_float32x4 v_select(const v_float32x4& mask, const v_float32x4& a, const v_float32x4& b)
+{
+    return v_float32x4((float32xm1_t)vmergevvm_mask_uint32xm1((uint32xm1_t)b.val, (uint32xm1_t)a.val, e32xm1_t(vfcvtxufv_uint32xm1_float32xm1(mask.val, 4)), 4));
+}
+inline v_float64x2 v_select(const v_float64x2& mask, const v_float64x2& a, const v_float64x2& b)
+{
+    return v_float64x2((float64xm1_t)vmergevvm_mask_uint64xm1((uint64xm1_t)b.val, (uint64xm1_t)a.val, e64xm1_t(vfcvtxufv_uint64xm1_float64xm1(mask.val, 2)), 2));
+}
+
+
 inline void v_cleanup() {}
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
