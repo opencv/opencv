@@ -289,15 +289,16 @@ INSTANTIATE_TEST_CASE_P(ResizeFxFyPerfTestCPU, ResizeFxFyPerfTest,
         Values(0.5, 0.1),
         Values(cv::compile_args(CORE_CPU))));
 
-INSTANTIATE_TEST_CASE_P(ParseSSDWLPerfTestCPU, ParseSSDWLPerfTest,
+INSTANTIATE_TEST_CASE_P(ParseSSDBLPerfTestCPU, ParseSSDBLPerfTest,
                         Combine(Values(sz720p, sz1080p),
                                 Values(0.3f, 0.7f),
                                 Values(0, 1),
                                 Values(cv::compile_args(CORE_CPU))));
 
-INSTANTIATE_TEST_CASE_P(ParseSSDLPerfTestCPU, ParseSSDPerfTest,
+INSTANTIATE_TEST_CASE_P(ParseSSDPerfTestCPU, ParseSSDPerfTest,
                         Combine(Values(sz720p, sz1080p),
                                 Values(0.3f, 0.7f),
+                                Values(false, true),
                                 Values(false, true),
                                 Values(cv::compile_args(CORE_CPU))));
 

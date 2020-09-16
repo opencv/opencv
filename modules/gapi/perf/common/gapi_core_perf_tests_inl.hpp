@@ -1930,18 +1930,19 @@ PERF_TEST_P_(ResizeFxFyPerfTest, TestPerformance)
 
 //------------------------------------------------------------------------------
 
-PERF_TEST_P_(ParseSSDWLPerfTest, TestPerformance)
+PERF_TEST_P_(ParseSSDBLPerfTest, TestPerformance)
 {
-    cv::Size sz                   = get<0>(GetParam());
-    float confidence_threshold    = get<1>(GetParam());
-    int filter_label              = get<2>(GetParam());
-    cv::GCompileArgs compile_args = get<3>(GetParam());
+    cv::Size sz;
+    float confidence_threshold;
+    int filter_label;
+    cv::GCompileArgs compile_args;
+    std::tie(sz, confidence_threshold, filter_label, compile_args) = GetParam();
     cv::Mat in_mat = generateSSDoutput(sz);
     std::vector<cv::Rect> boxes_gapi, boxes_ref;
     std::vector<int> labels_gapi, labels_ref;
 
     // Reference code //////////////////////////////////////////////////////////
-    parseSSDWLref(in_mat, sz, confidence_threshold, filter_label, boxes_ref, labels_ref);
+    parseSSDBLref(in_mat, sz, confidence_threshold, filter_label, boxes_ref, labels_ref);
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;
@@ -1971,20 +1972,21 @@ PERF_TEST_P_(ParseSSDWLPerfTest, TestPerformance)
 
 PERF_TEST_P_(ParseSSDPerfTest, TestPerformance)
 {
-    cv::Size sz                   = get<0>(GetParam());
-    float confidence_threshold    = get<1>(GetParam());
-    bool filter_out_of_bounds     = get<2>(GetParam());
-    cv::GCompileArgs compile_args = get<3>(GetParam());
+    cv::Size sz;
+    float confidence_threshold;
+    bool alignment_to_square, filter_out_of_bounds;
+    cv::GCompileArgs compile_args;
+    std::tie(sz, confidence_threshold, alignment_to_square, filter_out_of_bounds, compile_args) = GetParam();
     cv::Mat in_mat = generateSSDoutput(sz);
     std::vector<cv::Rect> boxes_gapi, boxes_ref;
 
     // Reference code //////////////////////////////////////////////////////////
-    parseSSDref(in_mat, sz, confidence_threshold, filter_out_of_bounds, boxes_ref);
+    parseSSDref(in_mat, sz, confidence_threshold, alignment_to_square, filter_out_of_bounds, boxes_ref);
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;
     cv::GOpaque<cv::Size> op_sz;
-    auto out = cv::gapi::parseSSD(in, op_sz, confidence_threshold, filter_out_of_bounds);
+    auto out = cv::gapi::parseSSD(in, op_sz, confidence_threshold, alignment_to_square, filter_out_of_bounds);
     cv::GComputation c(cv::GIn(in, op_sz), cv::GOut(out));
 
     // Warm-up graph engine:
@@ -2008,13 +2010,13 @@ PERF_TEST_P_(ParseSSDPerfTest, TestPerformance)
 
 PERF_TEST_P_(ParseYoloPerfTest, TestPerformance)
 {
-    cv::Size sz                   = get<0>(GetParam());
-    float confidence_threshold    = get<1>(GetParam());
-    float nms_threshold           = get<2>(GetParam());
-    int num_classes               = get<3>(GetParam());
-    cv::GCompileArgs compile_args = get<4>(GetParam());
+    cv::Size sz;
+    float confidence_threshold, nms_threshold;
+    int num_classes;
+    cv::GCompileArgs compile_args;
+    std::tie(sz, confidence_threshold, nms_threshold, num_classes, compile_args) = GetParam();
     cv::Mat in_mat = generateYoloOutput(num_classes);
-    auto anchors = cv::gapi::core::GParseYolo::defaultAnchors();
+    auto anchors = cv::gapi::nn::GParseYolo::defaultAnchors();
     std::vector<cv::Rect> boxes_gapi, boxes_ref;
     std::vector<int> labels_gapi, labels_ref;
 
@@ -2049,9 +2051,10 @@ PERF_TEST_P_(ParseYoloPerfTest, TestPerformance)
 
 PERF_TEST_P_(SizePerfTest, TestPerformance)
 {
-    MatType type                  = get<0>(GetParam());
-    cv::Size sz                   = get<1>(GetParam());
-    cv::GCompileArgs compile_args = get<2>(GetParam());
+    MatType type;
+    cv::Size sz;
+    cv::GCompileArgs compile_args;
+    std::tie(type, sz, compile_args) = GetParam();
     in_mat1 = cv::Mat(sz, type);
 
     // G-API code //////////////////////////////////////////////////////////////

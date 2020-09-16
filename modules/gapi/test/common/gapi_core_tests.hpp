@@ -151,10 +151,10 @@ GAPI_TEST_FIXTURE(WarpAffineTest, initMatrixRandU,
         FIXTURE_API(CompareMats, double , double, int, int, cv::Scalar),
         6, cmpF, angle, scale, flags, border_mode, border_value)
 
-GAPI_TEST_EXT_BASE_FIXTURE(ParseSSDWLTest, ParserSSDTest, initNothing,
+GAPI_TEST_EXT_BASE_FIXTURE(ParseSSDBLTest, ParserSSDTest, initNothing,
     FIXTURE_API(float, int), 2, confidence_threshold, filter_label)
 GAPI_TEST_EXT_BASE_FIXTURE(ParseSSDTest, ParserSSDTest, initNothing,
-    FIXTURE_API(float, bool), 2, confidence_threshold, filter_out_of_bounds)
+    FIXTURE_API(float, bool, bool), 3, confidence_threshold, alignment_to_square, filter_out_of_bounds)
 GAPI_TEST_EXT_BASE_FIXTURE(ParseYoloTest, ParserYoloTest, initNothing,
     FIXTURE_API(float, float, int), 3, confidence_threshold, nms_threshold, num_classes)
 GAPI_TEST_FIXTURE(SizeTest, initMatrixRandU, <>, 0)

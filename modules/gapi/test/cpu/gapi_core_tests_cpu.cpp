@@ -496,7 +496,7 @@ INSTANTIATE_TEST_CASE_P(ReInitOutTestCPU, ReInitOutTest,
                                 Values(cv::Size(640, 400),
                                        cv::Size(10, 480))));
 
-INSTANTIATE_TEST_CASE_P(ParseTestCPU, ParseSSDWLTest,
+INSTANTIATE_TEST_CASE_P(ParseTestCPU, ParseSSDBLTest,
                         Combine(Values(CV_8UC1, CV_8UC3, CV_32FC1),
                                 Values(cv::Size(1920, 1080)),
                                 Values(-1),
@@ -510,6 +510,7 @@ INSTANTIATE_TEST_CASE_P(ParseTestCPU, ParseSSDTest,
                                 Values(-1),
                                 Values(CORE_CPU),
                                 Values(0.3f, 0.5f, 0.7f),
+                                Values(true, false),
                                 Values(true, false)));
 
 INSTANTIATE_TEST_CASE_P(ParseTestCPU, ParseYoloTest,

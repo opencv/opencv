@@ -4,60 +4,60 @@
 //
 // Copyright (C) 2020 Intel Corporation
 
-#include "gparsers.hpp"
+#include "gnnparsers.hpp"
 
 namespace cv
 {
 namespace gapi
 {
-namespace parsers
+namespace nn
 {
 class YoloParser
 {
 public:
-    YoloParser(const float* out, const int& side, const int& lcoords, const int& lclasses)
+    YoloParser(const float* out, const int side, const int lcoords, const int lclasses)
         : m_out(out), m_side(side), m_lcoords(lcoords), m_lclasses(lclasses)
     {}
 
-    float scale(const int& i, const int& b)
+    float scale(const int i, const int b)
     {
         int obj_index = index(i, b, m_lcoords);
         return m_out[obj_index];
     }
 
-    double x(const int& i, const int& b)
+    double x(const int i, const int b)
     {
         int box_index = index(i, b, 0);
         int col = i % m_side;
         return (col + m_out[box_index]) / m_side;
     }
 
-    double y(const int& i, const int& b)
+    double y(const int i, const int b)
     {
         int box_index = index(i, b, 0);
         int row = i / m_side;
         return (row + m_out[box_index + m_side * m_side]) / m_side;
     }
 
-    double width(const int& i, const int& b, const float& anchor)
+    double width(const int i, const int b, const float anchor)
     {
         int box_index = index(i, b, 0);
         return std::exp(m_out[box_index + 2 * m_side * m_side]) * anchor / m_side;
     }
 
-    double height(const int& i, const int& b, const float& anchor)
+    double height(const int i, const int b, const float anchor)
     {
         int box_index = index(i, b, 0);
         return std::exp(m_out[box_index + 3 * m_side * m_side]) * anchor / m_side;
     }
 
-    float classConf(const int& i, const int& b, const int& label)
+    float classConf(const int i, const int b, const int label)
     {
          int class_index = index(i, b, m_lcoords + 1 + label);
          return m_out[class_index];
     }
 
-    cv::Rect toBox(const double& x, const double& y, const double& h, const double& w, const cv::Size& in_sz)
+    cv::Rect toBox(const double x, const double y, const double h, const double w, const cv::Size& in_sz)
     {
         auto h_scale = in_sz.height;
         auto w_scale = in_sz.width;
@@ -73,7 +73,7 @@ private:
     const float* m_out = nullptr;
     int m_side = 0, m_lcoords = 0, m_lclasses = 0;
 
-    int index(const int& i, const int& b, const int& entry)
+    int index(const int i, const int b, const int entry)
     {
         return b * m_side * m_side * (m_lcoords + m_lclasses + 1) + entry * m_side * m_side + i;
     }
@@ -87,7 +87,7 @@ struct YoloParams
 
 struct Detection
 {
-    Detection(const cv::Rect& in_rect, const float& in_conf, const int& in_label)
+    Detection(const cv::Rect& in_rect, const float in_conf, const int in_label)
         : rect(in_rect), conf(in_conf), label(in_label)
     {}
     cv::Rect rect;
@@ -131,7 +131,7 @@ public:
         }
     }
 
-    std::tuple<cv::Rect, float, float, int> unitedParse(const size_t& step)
+    std::tuple<cv::Rect, float, float, int> extract(const size_t step)
     {
         const float* it = m_data + step * m_objSize;
         float image_id   = it[0];
@@ -167,17 +167,17 @@ private:
     const cv::Rect m_surface;
     const cv::Size m_size;
 };
-} // namespace parsers
+} // namespace nn
 } // namespace gapi
 
-void parseSSDWL(const cv::Mat&  in_ssd_result,
+void parseSSDBL(const cv::Mat&  in_ssd_result,
                 const cv::Size& in_size,
-                const float&    confidence_threshold,
-                const int&      filter_label,
+                const float     confidence_threshold,
+                const int       filter_label,
                 std::vector<cv::Rect>& out_boxes,
                 std::vector<int>&      out_labels)
 {
-    cv::gapi::parsers::SSDParser parser(in_ssd_result.size, in_size, in_ssd_result.ptr<float>());
+    cv::gapi::nn::SSDParser parser(in_ssd_result.size, in_size, in_ssd_result.ptr<float>());
     out_boxes.clear();
     out_labels.clear();
     cv::Rect rc;
@@ -186,7 +186,7 @@ void parseSSDWL(const cv::Mat&  in_ssd_result,
     const size_t range = parser.getMaxProposals();
     for (size_t i = 0; i < range; ++i)
     {
-        std::tie(rc, image_id, confidence, label) = parser.unitedParse(i);
+        std::tie(rc, image_id, confidence, label) = parser.extract(i);
 
         if (image_id < 0.f)
         {
@@ -205,11 +205,12 @@ void parseSSDWL(const cv::Mat&  in_ssd_result,
 
 void parseSSD(const cv::Mat&  in_ssd_result,
               const cv::Size& in_size,
-              const float&    confidence_threshold,
-              const bool&     filter_out_of_bounds,
+              const float     confidence_threshold,
+              const bool      alignment_to_square,
+              const bool      filter_out_of_bounds,
               std::vector<cv::Rect>& out_boxes)
 {
-    cv::gapi::parsers::SSDParser parser(in_ssd_result.size, in_size, in_ssd_result.ptr<float>());
+    cv::gapi::nn::SSDParser parser(in_ssd_result.size, in_size, in_ssd_result.ptr<float>());
     out_boxes.clear();
     cv::Rect rc;
     float image_id, confidence;
@@ -217,7 +218,7 @@ void parseSSD(const cv::Mat&  in_ssd_result,
     const size_t range = parser.getMaxProposals();
     for (size_t i = 0; i < range; ++i)
     {
-        std::tie(rc, image_id, confidence, label) = parser.unitedParse(i);
+        std::tie(rc, image_id, confidence, label) = parser.extract(i);
 
         if (image_id < 0.f)
         {
@@ -228,7 +229,10 @@ void parseSSD(const cv::Mat&  in_ssd_result,
             continue; // skip objects with low confidence
         }
 
-        parser.adjustBoundingBox(rc);
+        if (alignment_to_square)
+        {
+            parser.adjustBoundingBox(rc);
+        }
 
         const auto clipped_rc = rc & parser.getSurface();
         if (filter_out_of_bounds)
@@ -244,9 +248,9 @@ void parseSSD(const cv::Mat&  in_ssd_result,
 
 void parseYolo(const cv::Mat&  in_yolo_result,
                const cv::Size& in_size,
-               const float&    confidence_threshold,
-               const float&    nms_threshold,
-               const cv::gapi::core::YoloAnchors& anchors,
+               const float     confidence_threshold,
+               const float     nms_threshold,
+               const std::vector<float>& anchors,
                std::vector<cv::Rect>& out_boxes,
                std::vector<int>&      out_labels)
 {
@@ -256,19 +260,19 @@ void parseYolo(const cv::Mat&  in_yolo_result,
     GAPI_Assert(dims[1] == 13);
     GAPI_Assert(dims[2] == 13);
     GAPI_Assert(dims[3] % 5 == 0); // 5 boxes
-    const auto num_classes = dims[3] / 5-5;
+    const auto num_classes = dims[3] / 5 - 5;
     GAPI_Assert(num_classes > 0);
     GAPI_Assert(0 < nms_threshold && nms_threshold <= 1);
     out_boxes.clear();
     out_labels.clear();
-    gapi::parsers::YoloParams params;
+    gapi::nn::YoloParams params;
     constexpr auto side = 13;
     constexpr auto side_square = side * side;
     const auto output = in_yolo_result.ptr<float>();
 
-    gapi::parsers::YoloParser parser(output, side, params.coords, num_classes);
+    gapi::nn::YoloParser parser(output, side, params.coords, num_classes);
 
-    std::vector<gapi::parsers::Detection> detections;
+    std::vector<gapi::nn::Detection> detections;
 
     for (int i = 0; i < side_square; ++i)
     {
@@ -292,12 +296,12 @@ void parseYolo(const cv::Mat&  in_yolo_result,
                     continue;
                 }
                 auto box = parser.toBox(x, y, height, width, in_size);
-                detections.emplace_back(gapi::parsers::Detection(box, prob, label));
+                detections.emplace_back(gapi::nn::Detection(box, prob, label));
             }
         }
     }
     std::stable_sort(std::begin(detections), std::end(detections),
-                     [](const gapi::parsers::Detection& a, const gapi::parsers::Detection& b)
+                     [](const gapi::nn::Detection& a, const gapi::nn::Detection& b)
                      {
                          return a.conf > b.conf;
                      });

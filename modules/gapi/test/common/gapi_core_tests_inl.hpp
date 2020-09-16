@@ -9,6 +9,7 @@
 #define OPENCV_GAPI_CORE_TESTS_INL_HPP
 
 #include <opencv2/gapi/core.hpp>
+#include <opencv2/gapi/nnparsers.hpp>
 #include "gapi_core_tests.hpp"
 
 namespace opencv_test
@@ -1578,7 +1579,7 @@ TEST_P(ReInitOutTest, TestWithAdd)
     run_and_compare();
 }
 
-TEST_P(ParseSSDWLTest, ParseTest)
+TEST_P(ParseSSDBLTest, ParseTest)
 {
     cv::Mat in_mat = generateSSDoutput(sz);
     std::vector<cv::Rect> boxes_gapi, boxes_ref;
@@ -1592,7 +1593,7 @@ TEST_P(ParseSSDWLTest, ParseTest)
     c.apply(cv::gin(in_mat, sz), cv::gout(boxes_gapi, labels_gapi), getCompileArgs());
 
     // Reference code //////////////////////////////////////////////////////////
-    parseSSDWLref(in_mat, sz, confidence_threshold, filter_label, boxes_ref, labels_ref);
+    parseSSDBLref(in_mat, sz, confidence_threshold, filter_label, boxes_ref, labels_ref);
 
     // Comparison //////////////////////////////////////////////////////////////
     EXPECT_TRUE(boxes_gapi == boxes_ref);
@@ -1607,12 +1608,14 @@ TEST_P(ParseSSDTest, ParseTest)
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;
     cv::GOpaque<cv::Size> op_sz;
-    auto out = cv::gapi::parseSSD(in, op_sz, confidence_threshold, filter_out_of_bounds);
+    auto out = cv::gapi::parseSSD(in, op_sz, confidence_threshold,
+                                  alignment_to_square, filter_out_of_bounds);
     cv::GComputation c(cv::GIn(in, op_sz), cv::GOut(out));
     c.apply(cv::gin(in_mat, sz), cv::gout(boxes_gapi), getCompileArgs());
 
     // Reference code //////////////////////////////////////////////////////////
-    parseSSDref(in_mat, sz, confidence_threshold, filter_out_of_bounds, boxes_ref);
+    parseSSDref(in_mat, sz, confidence_threshold, alignment_to_square,
+                filter_out_of_bounds, boxes_ref);
 
     // Comparison //////////////////////////////////////////////////////////////
     EXPECT_TRUE(boxes_gapi == boxes_ref);
@@ -1621,7 +1624,7 @@ TEST_P(ParseSSDTest, ParseTest)
 TEST_P(ParseYoloTest, ParseTest)
 {
     cv::Mat in_mat = generateYoloOutput(num_classes);
-    auto anchors = cv::gapi::core::GParseYolo::defaultAnchors();
+    auto anchors = cv::gapi::nn::GParseYolo::defaultAnchors();
     std::vector<cv::Rect> boxes_gapi, boxes_ref;
     std::vector<int> labels_gapi, labels_ref;
 

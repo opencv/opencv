@@ -9,7 +9,7 @@
 #define OPENCV_GAPI_PARSERS_TESTS_COMMON_HPP
 
 #include "gapi_tests_common.hpp"
-#include "../../include/opencv2/gapi/core.hpp"
+#include "../../include/opencv2/gapi/nnparsers.hpp"
 
 namespace opencv_test
 {
@@ -41,8 +41,9 @@ public:
 
     void parseSSDref(const cv::Mat& in_ssd_result,
                      const cv::Size& in_size,
-                     const float& confidence_threshold,
-                     const bool& filter_out_of_bounds,
+                     const float confidence_threshold,
+                     const bool alignment_to_square,
+                     const bool filter_out_of_bounds,
                      std::vector<cv::Rect>& out_boxes)
     {
         out_boxes.clear();
@@ -60,7 +61,7 @@ public:
         for (int i = 0; i < MAX_PROPOSALS; ++i)
         {
             std::tie(rc, image_id, confidence, label)
-                = unitedParse(data + i*OBJECT_SIZE, in_size);
+                = extract(data + i*OBJECT_SIZE, in_size);
             if (image_id < 0.f)
             {
                 break;    // marks end-of-detections
@@ -70,7 +71,11 @@ public:
             {
                 continue; // skip objects with low confidence
             }
-            adjustBoundingBox(rc);
+
+            if (alignment_to_square)
+            {
+                adjustBoundingBox(rc);
+            }
 
             const auto clipped_rc = rc & surface;
             if (filter_out_of_bounds)
@@ -84,10 +89,10 @@ public:
         }
     }
 
-    void parseSSDWLref(const cv::Mat& in_ssd_result,
+    void parseSSDBLref(const cv::Mat& in_ssd_result,
                        const cv::Size& in_size,
-                       const float& confidence_threshold,
-                       const int& filter_label,
+                       const float confidence_threshold,
+                       const int filter_label,
                        std::vector<cv::Rect>& out_boxes,
                        std::vector<int>& out_labels)
     {
@@ -106,7 +111,7 @@ public:
         for (int i = 0; i < MAX_PROPOSALS; i++)
         {
             std::tie(rc, image_id, confidence, label)
-                = unitedParse(data + i*OBJECT_SIZE, in_size);
+                = extract(data + i*OBJECT_SIZE, in_size);
             if (image_id < 0.f)
             {
                 break;    // marks end-of-detections
@@ -149,8 +154,8 @@ private:
         }
     }
 
-    std::tuple<cv::Rect, float, float, int> unitedParse(const float* it,
-                                                        const cv::Size& in_size)
+    std::tuple<cv::Rect, float, float, int> extract(const float* it,
+                                                    const cv::Size& in_size)
     {
         float image_id   = it[0];
         int   label      = static_cast<int>(it[1]);
@@ -168,7 +173,7 @@ private:
         return std::make_tuple(rc, image_id, confidence, label);
     }
 
-    int randInRange(const int& start, const int& end)
+    int randInRange(const int start, const int end)
     {
         GAPI_Assert(start <= end);
         return start + std::rand() % (end - start + 1);
@@ -176,7 +181,7 @@ private:
 
     cv::Rect generateBox(const cv::Size& in_sz)
     {
-        // Generated rectangle can reside outside of the initial image by $border pixels
+        // Generated rectangle can reside outside of the initial image by border pixels
         constexpr int border = 10;
         constexpr int minW = 16;
         constexpr int minH = 16;
@@ -199,7 +204,7 @@ private:
         float rc_bottom = 0.0f;
     };
 
-    SSDitem generateItem(const int& i, const cv::Size& in_sz)
+    SSDitem generateItem(const int i, const cv::Size& in_sz)
     {
         const auto normalize = [](int v, int range) { return static_cast<float>(v) / range; };
 
@@ -220,7 +225,7 @@ private:
 class ParserYoloTest
 {
 public:
-    cv::Mat generateYoloOutput(const int& num_classes)
+    cv::Mat generateYoloOutput(const int num_classes)
     {
         std::vector<int> dims = { 1, 13, 13, (num_classes + 5) * 5 };
         cv::Mat mat(dims, CV_32FC1);
@@ -236,10 +241,10 @@ public:
 
     void parseYoloRef(const cv::Mat&  in_yolo_result,
                       const cv::Size& in_size,
-                      const float& confidence_threshold,
-                      const float& nms_threshold,
-                      const int& num_classes,
-                      const cv::gapi::core::YoloAnchors& anchors,
+                      const float confidence_threshold,
+                      const float nms_threshold,
+                      const int num_classes,
+                      const std::vector<float>& anchors,
                       std::vector<cv::Rect>& out_boxes,
                       std::vector<int>& out_labels)
     {
@@ -314,7 +319,7 @@ public:
 private:
     struct Detection
     {
-        Detection(const cv::Rect& in_rect, const float& in_conf, const int& in_label)
+        Detection(const cv::Rect& in_rect, const float in_conf, const int in_label)
             : rect(in_rect), conf(in_conf), label(in_label)
         {}
         cv::Rect rect;
@@ -328,45 +333,45 @@ private:
         int coords = 4;
     };
 
-    float scale(const int& i, const int& b)
+    float scale(const int i, const int b)
     {
         int obj_index = index(i, b, m_lcoords);
         return m_out[obj_index];
     }
 
-    double x(const int& i, const int& b)
+    double x(const int i, const int b)
     {
         int box_index = index(i, b, 0);
         int col = i % m_side;
         return (col + m_out[box_index]) / m_side;
     }
 
-    double y(const int& i, const int& b)
+    double y(const int i, const int b)
     {
         int box_index = index(i, b, 0);
         int row = i / m_side;
         return (row + m_out[box_index + m_side * m_side]) / m_side;
     }
 
-    double width(const int& i, const int& b, const float& anchor)
+    double width(const int i, const int b, const float anchor)
     {
         int box_index = index(i, b, 0);
         return std::exp(m_out[box_index + 2 * m_side * m_side]) * anchor / m_side;
     }
 
-    double height(const int& i, const int& b, const float& anchor)
+    double height(const int i, const int b, const float anchor)
     {
         int box_index = index(i, b, 0);
         return std::exp(m_out[box_index + 3 * m_side * m_side]) * anchor / m_side;
     }
 
-    float classConf(const int& i, const int& b, const int& label)
+    float classConf(const int i, const int b, const int label)
     {
          int class_index = index(i, b, m_lcoords + 1 + label);
          return m_out[class_index];
     }
 
-    cv::Rect toBox(const double& x, const double& y, const double& h, const double& w, const cv::Size& in_sz)
+    cv::Rect toBox(const double x, const double y, const double h, const double w, const cv::Size& in_sz)
     {
         auto h_scale = in_sz.height;
         auto w_scale = in_sz.width;
@@ -378,7 +383,7 @@ private:
         return r;
     }
 
-    int index(const int& i, const int& b, const int& entry)
+    int index(const int i, const int b, const int entry)
     {
         return b * m_side * m_side * (m_lcoords + m_lclasses + 1) + entry * m_side * m_side + i;
     }

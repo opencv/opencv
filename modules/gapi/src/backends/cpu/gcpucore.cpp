@@ -6,7 +6,7 @@
 
 
 #include "precomp.hpp"
-#include "gparsers.hpp"
+#include "gnnparsers.hpp"
 
 #include <opencv2/gapi/core.hpp>
 #include <opencv2/gapi/cpu/core.hpp>
@@ -577,38 +577,39 @@ GAPI_OCV_KERNEL(GCPUWarpAffine, cv::gapi::core::GWarpAffine)
     }
 };
 
-GAPI_OCV_KERNEL(GCPUParseSSDWL, cv::gapi::core::GParseSSDWL)
+GAPI_OCV_KERNEL(GCPUParseSSDBL, cv::gapi::nn::GParseSSDBL)
 {
     static void run(const cv::Mat&  in_ssd_result,
                     const cv::Size& in_size,
-                    const float&    confidence_threshold,
-                    const int&      filter_label,
+                    const float     confidence_threshold,
+                    const int       filter_label,
                     std::vector<cv::Rect>& out_boxes,
                     std::vector<int>&      out_labels)
     {
-        cv::parseSSDWL(in_ssd_result, in_size, confidence_threshold, filter_label, out_boxes, out_labels);
+        cv::parseSSDBL(in_ssd_result, in_size, confidence_threshold, filter_label, out_boxes, out_labels);
     }
 };
 
-GAPI_OCV_KERNEL(GOCVParseSSD, cv::gapi::core::GParseSSD)
+GAPI_OCV_KERNEL(GOCVParseSSD, cv::gapi::nn::GParseSSD)
 {
     static void run(const cv::Mat&  in_ssd_result,
                     const cv::Size& in_size,
-                    const float&    confidence_threshold,
-                    const bool&     filter_out_of_bounds,
+                    const float     confidence_threshold,
+                    const bool      alignment_to_square,
+                    const bool      filter_out_of_bounds,
                     std::vector<cv::Rect>& out_boxes)
     {
-        cv::parseSSD(in_ssd_result, in_size, confidence_threshold, filter_out_of_bounds, out_boxes);
+        cv::parseSSD(in_ssd_result, in_size, confidence_threshold, alignment_to_square, filter_out_of_bounds, out_boxes);
     }
 };
 
-GAPI_OCV_KERNEL(GCPUParseYolo, cv::gapi::core::GParseYolo)
+GAPI_OCV_KERNEL(GCPUParseYolo, cv::gapi::nn::GParseYolo)
 {
     static void run(const cv::Mat&  in_yolo_result,
                     const cv::Size& in_size,
-                    const float&    confidence_threshold,
-                    const float&    nms_threshold,
-                    const cv::gapi::core::YoloAnchors& anchors,
+                    const float     confidence_threshold,
+                    const float     nms_threshold,
+                    const std::vector<float>& anchors,
                     std::vector<cv::Rect>& out_boxes,
                     std::vector<int>&      out_labels)
     {
@@ -704,7 +705,7 @@ cv::gapi::GKernelPackage cv::gapi::core::cpu::kernels()
          , GCPUNormalize
          , GCPUWarpPerspective
          , GCPUWarpAffine
-         , GCPUParseSSDWL
+         , GCPUParseSSDBL
          , GOCVParseSSD
          , GCPUParseYolo
          , GCPUSize
