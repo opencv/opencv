@@ -15,6 +15,7 @@
 
 namespace cv { namespace gapi {
 namespace nn {
+namespace parsers {
     using GRects      = cv::GArray<cv::Rect>;
     using GDetections = std::tuple<GArray<Rect>, GArray<int>>;
 
@@ -41,6 +42,7 @@ namespace nn {
             return anchors;
         }
     };
+} // namespace parsers
 } // namespace nn
 
 /** @brief Parses output of SSD network.
@@ -106,7 +108,8 @@ GAPI_EXPORTS std::tuple<GArray<Rect>, GArray<int>> parseYolo(const GMat& in,
                                                              const GOpaque<Size>& in_sz,
                                                              const float confidence_threshold = 0.5f,
                                                              const float nms_threshold = 0.5f,
-                                                             const std::vector<float>& anchors = nn::GParseYolo::defaultAnchors());
+                                                             const std::vector<float>& anchors 
+                                                                 = nn::parsers::GParseYolo::defaultAnchors());
 
 } // namespace gapi
 } // namespace cv

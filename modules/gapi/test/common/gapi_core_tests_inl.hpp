@@ -1624,7 +1624,7 @@ TEST_P(ParseSSDTest, ParseTest)
 TEST_P(ParseYoloTest, ParseTest)
 {
     cv::Mat in_mat = generateYoloOutput(num_classes);
-    auto anchors = cv::gapi::nn::GParseYolo::defaultAnchors();
+    auto anchors = cv::gapi::nn::parsers::GParseYolo::defaultAnchors();
     std::vector<cv::Rect> boxes_gapi, boxes_ref;
     std::vector<int> labels_gapi, labels_ref;
 

@@ -577,7 +577,7 @@ GAPI_OCV_KERNEL(GCPUWarpAffine, cv::gapi::core::GWarpAffine)
     }
 };
 
-GAPI_OCV_KERNEL(GCPUParseSSDBL, cv::gapi::nn::GParseSSDBL)
+GAPI_OCV_KERNEL(GCPUParseSSDBL, cv::gapi::nn::parsers::GParseSSDBL)
 {
     static void run(const cv::Mat&  in_ssd_result,
                     const cv::Size& in_size,
@@ -590,7 +590,7 @@ GAPI_OCV_KERNEL(GCPUParseSSDBL, cv::gapi::nn::GParseSSDBL)
     }
 };
 
-GAPI_OCV_KERNEL(GOCVParseSSD, cv::gapi::nn::GParseSSD)
+GAPI_OCV_KERNEL(GOCVParseSSD, cv::gapi::nn::parsers::GParseSSD)
 {
     static void run(const cv::Mat&  in_ssd_result,
                     const cv::Size& in_size,
@@ -603,7 +603,7 @@ GAPI_OCV_KERNEL(GOCVParseSSD, cv::gapi::nn::GParseSSD)
     }
 };
 
-GAPI_OCV_KERNEL(GCPUParseYolo, cv::gapi::nn::GParseYolo)
+GAPI_OCV_KERNEL(GCPUParseYolo, cv::gapi::nn::parsers::GParseYolo)
 {
     static void run(const cv::Mat&  in_yolo_result,
                     const cv::Size& in_size,
