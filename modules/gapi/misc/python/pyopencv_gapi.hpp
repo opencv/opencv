@@ -21,10 +21,10 @@ static PyObject* extract_proto_args(PyObject* py_args, PyObject* kw)
     Py_ssize_t size = PyTuple_Size(py_args);
     for (int i = 0; i < size; ++i) {
         PyObject* item = PyTuple_GetItem(py_args, i);
-        if (PyObject_TypeCheck(item, (PyTypeObject*)pyopencv_GScalar_TypePtr)) {
-            args.emplace_back(((pyopencv_GScalar_t*)item)->v);
-        } else if (PyObject_TypeCheck(item, (PyTypeObject*)pyopencv_GMat_TypePtr)) {
-            args.emplace_back(((pyopencv_GMat_t*)item)->v);
+        if (PyObject_TypeCheck(item, reinterpret_cast<PyTypeObject*>(pyopencv_GScalar_TypePtr))) {
+            args.emplace_back(reinterpret_cast<pyopencv_GScalar_t*>(item)->v);
+        } else if (PyObject_TypeCheck(item, reinterpret_cast<PyTypeObject*>(pyopencv_GMat_TypePtr))) {
+            args.emplace_back(reinterpret_cast<pyopencv_GMat_t*>(item)->v);
         } else {
             PyErr_SetString(PyExc_TypeError, "cv.GIn() supports only cv.GMat and cv.GScalar");
             return NULL;
