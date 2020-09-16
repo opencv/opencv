@@ -928,17 +928,21 @@ GAPI_FLUID_KERNEL(GFluidNot, cv::gapi::core::GNot, false)
 //
 //--------------------------------------
 
-static void convertScalarForBitwise(const cv::Scalar &_scalar, int scalarI[4])
+static std::array<int,4> convertScalarForBitwise(const cv::Scalar &_scalar)
 {
-    GAPI_DbgAssert(scalarI != nullptr);
-    for (int i = 0; i < 4; i++)
-        scalarI[i] = static_cast<int>(_scalar[i]);
+    std::array<int,4> scalarI = {
+        static_cast<int>(_scalar[0]),
+        static_cast<int>(_scalar[1]),
+        static_cast<int>(_scalar[2]),
+        static_cast<int>(_scalar[3])
+    };
 
     if (!((_scalar[0] == scalarI[0]) && (_scalar[1] == scalarI[1]) &&
           (_scalar[2] == scalarI[2]) && (_scalar[3] == scalarI[3])))
     {
         CV_Error(cv::Error::StsBadArg, "Bitwise operations make sense with integral types only");
     }
+    return scalarI;
 }
 
 template<typename DST>
@@ -1000,14 +1004,12 @@ GAPI_FLUID_KERNEL(GFluidAndS, cv::gapi::core::GAndS, false)
 
     static void run(const View &src, const cv::Scalar &_scalar, Buffer &dst)
     {
-
-        int scalar[4];
-        convertScalarForBitwise(_scalar, scalar);
+        std::array<int,4> scalar = convertScalarForBitwise(_scalar);
 
         //     DST     SRC     OP            __VA_ARGS__
-        UNARY_(uchar , uchar , run_bitwise_s, dst, src, scalar, BW_AND);
-        UNARY_(ushort, ushort, run_bitwise_s, dst, src, scalar, BW_AND);
-        UNARY_( short,  short, run_bitwise_s, dst, src, scalar, BW_AND);
+        UNARY_(uchar , uchar , run_bitwise_s, dst, src, scalar.data(), BW_AND);
+        UNARY_(ushort, ushort, run_bitwise_s, dst, src, scalar.data(), BW_AND);
+        UNARY_( short,  short, run_bitwise_s, dst, src, scalar.data(), BW_AND);
 
         CV_Error(cv::Error::StsBadArg, "unsupported combination of types");
     }
@@ -1019,14 +1021,12 @@ GAPI_FLUID_KERNEL(GFluidOrS, cv::gapi::core::GOrS, false)
 
     static void run(const View &src, const cv::Scalar &_scalar, Buffer &dst)
     {
-
-        int scalar[4];
-        convertScalarForBitwise(_scalar, scalar);
+        std::array<int,4> scalar = convertScalarForBitwise(_scalar);
 
         //     DST     SRC     OP            __VA_ARGS__
-        UNARY_(uchar , uchar , run_bitwise_s, dst, src, scalar, BW_OR);
-        UNARY_(ushort, ushort, run_bitwise_s, dst, src, scalar, BW_OR);
-        UNARY_( short,  short, run_bitwise_s, dst, src, scalar, BW_OR);
+        UNARY_(uchar , uchar , run_bitwise_s, dst, src, scalar.data(), BW_OR);
+        UNARY_(ushort, ushort, run_bitwise_s, dst, src, scalar.data(), BW_OR);
+        UNARY_( short,  short, run_bitwise_s, dst, src, scalar.data(), BW_OR);
 
         CV_Error(cv::Error::StsBadArg, "unsupported combination of types");
     }
@@ -1038,14 +1038,12 @@ GAPI_FLUID_KERNEL(GFluidXorS, cv::gapi::core::GXorS, false)
 
     static void run(const View &src, const cv::Scalar &_scalar, Buffer &dst)
     {
-
-        int scalar[4];
-        convertScalarForBitwise(_scalar, scalar);
+        std::array<int,4> scalar = convertScalarForBitwise(_scalar);
 
         //     DST     SRC     OP            __VA_ARGS__
-        UNARY_(uchar , uchar , run_bitwise_s, dst, src, scalar, BW_XOR);
-        UNARY_(ushort, ushort, run_bitwise_s, dst, src, scalar, BW_XOR);
-        UNARY_( short,  short, run_bitwise_s, dst, src, scalar, BW_XOR);
+        UNARY_(uchar , uchar , run_bitwise_s, dst, src, scalar.data(), BW_XOR);
+        UNARY_(ushort, ushort, run_bitwise_s, dst, src, scalar.data(), BW_XOR);
+        UNARY_( short,  short, run_bitwise_s, dst, src, scalar.data(), BW_XOR);
 
         CV_Error(cv::Error::StsBadArg, "unsupported combination of types");
     }

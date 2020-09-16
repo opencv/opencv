@@ -419,27 +419,19 @@ TEST_P(BitwiseTest, AccuracyTest)
         switch(opType)
         {
             case AND:
-            {
                 out = cv::gapi::bitwise_and(in1, sc1);
                 cv::bitwise_and(in_mat1, sc, out_mat_ocv);
                 break;
-            }
             case OR:
-            {
                 out = cv::gapi::bitwise_or(in1, sc1);
                 cv::bitwise_or(in_mat1, sc, out_mat_ocv);
                 break;
-            }
             case XOR:
-            {
                 out = cv::gapi::bitwise_xor(in1, sc1);
                 cv::bitwise_xor(in_mat1, sc, out_mat_ocv);
                 break;
-            }
             default:
-            {
                 FAIL() << "no such bitwise operation type!";
-            }
         }
         cv::GComputation c(GIn(in1, sc1), GOut(out));
         c.apply(gin(in_mat1, sc), gout(out_mat_gapi), getCompileArgs());
@@ -449,27 +441,19 @@ TEST_P(BitwiseTest, AccuracyTest)
         switch(opType)
         {
             case AND:
-            {
                 out = cv::gapi::bitwise_and(in1, in2);
                 cv::bitwise_and(in_mat1, in_mat2, out_mat_ocv);
                 break;
-            }
             case OR:
-            {
                 out = cv::gapi::bitwise_or(in1, in2);
                 cv::bitwise_or(in_mat1, in_mat2, out_mat_ocv);
                 break;
-            }
             case XOR:
-            {
                 out = cv::gapi::bitwise_xor(in1, in2);
                 cv::bitwise_xor(in_mat1, in_mat2, out_mat_ocv);
                 break;
-            }
             default:
-            {
                 FAIL() << "no such bitwise operation type!";
-            }
         }
         cv::GComputation c(GIn(in1, in2), GOut(out));
         c.apply(gin(in_mat1, in_mat2), gout(out_mat_gapi), getCompileArgs());
