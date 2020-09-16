@@ -32,8 +32,6 @@ class gapi_sample_pipelines(NewOpenCVTests):
         g_out = cv.gapi.mean(r)
         comp = cv.GComputation(g_in, g_out)
 
-        actual = comp.apply(in_mat)
-
         for pkg in pkgs:
             actual = comp.apply(in_mat, args=cv.compile_args(pkg))
             # Comparison
