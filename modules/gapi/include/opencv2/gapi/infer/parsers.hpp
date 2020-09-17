@@ -16,7 +16,7 @@
 namespace cv { namespace gapi {
 namespace nn {
 namespace parsers {
-    using GRects      = cv::GArray<cv::Rect>;
+    using GRects      = GArray<Rect>;
     using GDetections = std::tuple<GArray<Rect>, GArray<int>>;
 
     G_TYPED_KERNEL(GParseSSDBL, <GDetections(GMat, GOpaque<Size>, float, int)>,
@@ -26,10 +26,10 @@ namespace parsers {
         }
     };
 
-    G_TYPED_KERNEL(GParseSSD, <GRects(cv::GMat, cv::GOpaque<cv::Size>, float, bool, bool)>,
+    G_TYPED_KERNEL(GParseSSD, <GRects(GMat, GOpaque<Size>, float, bool, bool)>,
                    "org.opencv.nn.parsers.parseSSD") {
-        static cv::GArrayDesc outMeta(const cv::GMatDesc&, const cv::GOpaqueDesc&, float, bool, bool) {
-            return cv::empty_array_desc();
+        static GArrayDesc outMeta(const GMatDesc&, const GOpaqueDesc&, float, bool, bool) {
+            return empty_array_desc();
         }
     };
 
@@ -85,11 +85,11 @@ the larger side of the rectangle.
 @param filterOutOfBounds If provided true, out-of-frame boxes are filtered.
 @return a vector of detected bounding boxes.
 */
-GAPI_EXPORTS cv::GArray<cv::Rect> parseSSD(const GMat& in,
-                                           const GOpaque<Size>& inSz,
-                                           const float confidenceThreshold = 0.5f,
-                                           const bool alignmentToSquare = false,
-                                           const bool filterOutOfBounds = false);
+GAPI_EXPORTS GArray<Rect> parseSSD(const GMat& in,
+                                   const GOpaque<Size>& inSz,
+                                   const float confidenceThreshold = 0.5f,
+                                   const bool alignmentToSquare = false,
+                                   const bool filterOutOfBounds = false);
 
 /** @brief Parses output of Yolo network.
 
