@@ -695,7 +695,7 @@ I::OStream& ByteMemoryOutStream::operator<< (char atom) {
     return *this;
 }
 I::OStream& ByteMemoryOutStream::operator<< (wchar_t atom) {
-    for (std::size_t i = 0; i < sizeof(wchar_t); ++i) {
+    for (std::size_t i = 0; i < 4; ++i) {
         m_storage.push_back(0xFF & (atom >> (i * 8)));
     }
     return *this;
@@ -771,10 +771,10 @@ I::IStream& ByteMemoryInStream::operator>> (char &atom) {
     return *this;
 }
 I::IStream& ByteMemoryInStream::operator>> (wchar_t &atom) {
-    check(sizeof(wchar_t));
-    uint8_t x[sizeof(wchar_t)];
+    check(4);
+    uint8_t x[4];
     atom = 0;
-    for (std::size_t i = 0; i < sizeof(wchar_t); ++i) {
+    for (std::size_t i = 0; i < 4; ++i) {
         x[i] = static_cast<uint8_t>(m_storage[m_idx++]);
         atom |= (x[i] << (i * 8));
     }
