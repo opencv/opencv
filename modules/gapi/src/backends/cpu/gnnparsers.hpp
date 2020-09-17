@@ -4,7 +4,7 @@
 //
 // Copyright (C) 2020 Intel Corporation
 
-#include <opencv2/gapi/nnparsers.hpp>
+#include <opencv2/gapi/infer/parsers.hpp>
 
 #ifndef OPENCV_NNPARSERS_OCV_HPP
 #define OPENCV_NNPARSERS_OCV_HPP

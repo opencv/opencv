@@ -7,7 +7,7 @@
 
 #include "precomp.hpp"
 
-#include <opencv2/gapi/nnparsers.hpp>
+#include <opencv2/gapi/infer/parsers.hpp>
 
 #include <tuple>
 #include <numeric>

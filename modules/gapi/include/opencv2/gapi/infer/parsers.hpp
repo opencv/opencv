@@ -5,8 +5,8 @@
 // Copyright (C) 2020 Intel Corporation
 
 
-#ifndef OPENCV_GAPI_NNPARSERS_HPP
-#define OPENCV_GAPI_NNPARSERS_HPP
+#ifndef OPENCV_GAPI_PARSERS_HPP
+#define OPENCV_GAPI_PARSERS_HPP
 
 #include <utility> // std::tuple
 
@@ -122,4 +122,4 @@ GAPI_EXPORTS std::tuple<GArray<Rect>, GArray<int>> parseYolo(const GMat& in,
 } // namespace gapi
 } // namespace cv
 
-#endif // OPENCV_GAPI_NNPARSERS_HPP
+#endif // OPENCV_GAPI_PARSERS_HPP

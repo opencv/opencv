@@ -9,7 +9,7 @@
 #define OPENCV_GAPI_PARSERS_TESTS_COMMON_HPP
 
 #include "gapi_tests_common.hpp"
-#include "../../include/opencv2/gapi/nnparsers.hpp"
+#include "../../include/opencv2/gapi/infer/parsers.hpp"
 
 namespace opencv_test
 {
