@@ -285,8 +285,6 @@ CV__DNN_INLINE_NS_BEGIN
 
         virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &inputs);
 
-        virtual Ptr<BackendNode> initTengine(InputArrayOfArrays inputs, OutputArrayOfArrays outputs);
-
         /**
          * @brief Returns a CUDA backend node
          *

@@ -407,6 +407,13 @@ public:
             for(int i = 0; i < numOutput; i++ )
                 biasvec[i] = biasMat.at<float>(i);
         }
+#ifdef HAVE_TENGINE
+        if(NULL != tengine_graph )
+        {
+            tengine_release(tengine_graph);
+            tengine_graph = NULL ;
+        }
+#endif
 #ifdef HAVE_OPENCL
         convolutionOp.release();
 #endif
@@ -582,48 +589,7 @@ public:
         }
         biasvec[outCn] = biasvec[outCn+1] = biasvec[outCn-1];
     }
-    virtual Ptr<BackendNode> initTengine(InputArrayOfArrays inputsAttr, OutputArrayOfArrays outputsAttr) CV_OVERRIDE
-    {
-#ifdef HAVE_TENGINE
-        std::vector<Mat> inputs, outputs;
-        inputsAttr.getMatVector(inputs);
-        outputsAttr.getMatVector(outputs);
 
-        int inch = inputs[0].size[1]; 		// inch
-        int in_h = inputs[0].size[2]; 		// in_h
-        int in_w = inputs[0].size[3]; 		// in_w
-
-        int out_b = outputs[0].size[0];     // out batch size
-        int outch = outputs[0].size[1]; 	// outch
-        int out_h = outputs[0].size[2]; 	// out_h
-        int out_w = outputs[0].size[3]; 	// out_w
-
-        float *input_  = inputs[0].ptr<float>();
-        float *output_ = outputs[0].ptr<float>();
-        float *kernel_ = weightsMat.ptr<float>();
-        float *teg_bias = &biasvec[0];
-
-        int ngroups = inputs[0].size[1]/blobs[0].size[1];
-        int nstripes = std::max(getNumThreads(), 1);
-
-        tengine_graph = tengine_init(name.c_str(),input_, inch, ngroups, in_h, in_w,
-                                       output_, out_b, outch, out_h, out_w,
-                                       kernel_, kernel_size.size(), kernel.height, kernel.width,
-                                       teg_bias, stride.height, stride.width,
-                                       pad.height,  pad.width, dilation.height, dilation.width,
-                                       weightsMat.step1(), padMode, tengine_graph, nstripes);
-
-            /*printf("Init:  input=%p(%d %d %d %d ),output=%p(%d %d %d %d ),kernel=%p(%d %d %d ), bias=%p ,"
-                     "stride(%d %d), pad(%d %d), dilation(%d %d) ,weightsMat=%d, pad=%s \n",
-                      input_, inch, ngroups, in_h, in_w,
-                      output_, out_b, outch, out_h, out_w,
-                      kernel_, kernel_size.size(), kernel.height, kernel.width,
-                      teg_bias, stride.height, stride.width,
-                      pad.height,  pad.width, dilation.height, dilation.width,
-                      weightsMat.step1(), padMode);*/
-#endif
-        return Ptr<BackendNode>();
-    }
     virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
     {
 #ifdef HAVE_VULKAN
@@ -1819,13 +1785,46 @@ public:
         }
 
 #ifdef HAVE_TENGINE
-
-        int outch = outputs[0].size[1]; 	// outch
-        int out_h = outputs[0].size[2]; 	// out_h
-        int out_w = outputs[0].size[3]; 	// out_w
         bool tengine_ret = false; ;
-        float *output_ = outputs[0].ptr<float>();
 
+        std::vector<Mat> teng_in, teng_out;
+        inputs_arr.getMatVector(teng_in);
+        outputs_arr.getMatVector(teng_out);
+
+        int inch = teng_in[0].size[1];    // inch
+        int in_h = teng_in[0].size[2];    // in_h
+        int in_w = teng_in[0].size[3];    // in_w
+
+        int out_b = teng_out[0].size[0];  // out batch size
+        int outch = teng_out[0].size[1];  // outch
+        int out_h = teng_out[0].size[2];  // out_h
+        int out_w = teng_out[0].size[3];  // out_w
+
+        float *input_  = teng_in[0].ptr<float>();
+        float *output_ = teng_out[0].ptr<float>();
+        float *kernel_ = weightsMat.ptr<float>();
+        float *teg_bias = &biasvec[0];
+
+        int nstripes = std::max(getNumThreads(), 1);
+
+        /* tengine_init will run when first time. */
+        if(NULL == tengine_graph)
+        {
+            tengine_graph = tengine_init(name.c_str(), input_, inch, ngroups, in_h, in_w,
+                                         output_, out_b, outch, out_h, out_w,
+                                         kernel_, kernel_size.size(), kernel.height, kernel.width,
+                                         teg_bias, stride.height, stride.width,
+                                         pad.height,  pad.width, dilation.height, dilation.width,
+                                         weightsMat.step1(), padMode, tengine_graph, nstripes);
+            /*printf("Init(%s):  input=%p(%d %d %d %d ),output=%p(%d %d %d %d ),kernel=%p(%ld %d %d ), bias=%p ,"
+                   "stride(%d %d), pad(%d %d), dilation(%d %d) ,weightsMat=%ld, padMode=%s ,tengine_graph = %p \n",
+                   name.c_str(),input_, inch, ngroups, in_h, in_w,
+                   output_, out_b, outch, out_h, out_w,
+                   kernel_, kernel_size.size(), kernel.height, kernel.width,
+                   teg_bias, stride.height, stride.width,
+                   pad.height,  pad.width, dilation.height, dilation.width,
+                   weightsMat.step1(), padMode.c_str() ,tengine_graph);*/
+        }
         if(NULL != tengine_graph)
         {
             tengine_ret = tengine_forward(tengine_graph);
