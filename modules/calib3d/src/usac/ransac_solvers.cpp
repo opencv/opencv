@@ -670,7 +670,7 @@ public:
     void setLOIterations (int iters) override { lo_inner_iterations = iters; }
     void setLOIterativeIters (int iters) override {lo_iterative_iterations = iters; }
     void setLOSampleSize (int lo_sample_size_) override { lo_sample_size = lo_sample_size_; }
-    void setThresholdMultiplierLO (double thr_mult) override { lo_thr_multiplier = thr_mult; }
+    void setThresholdMultiplierLO (double thr_mult) override { lo_thr_multiplier = (int) round(thr_mult); }
     void maskRequired (bool need_mask_) override { need_mask = need_mask_; }
     void setRandomGeneratorState (int state) override { random_generator_state = state; }
     bool isMaskRequired () const override { return need_mask; }
