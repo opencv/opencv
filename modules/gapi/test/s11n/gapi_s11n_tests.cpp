@@ -353,7 +353,7 @@ TEST_F(S11N_Basic, Test_Wchar_Size) {
     cv::gimpl::s11n::ByteMemoryOutStream os;
     const wchar_t a = '\xe4', b = '\xbd';
     os << a << b;
-    EXPECT_EQ(os.data().size(), 8U);
+    EXPECT_EQ(8U, os.data().size());
     cv::gimpl::s11n::ByteMemoryInStream is(os.data());
     wchar_t c, d;
     is >> c >> d;
