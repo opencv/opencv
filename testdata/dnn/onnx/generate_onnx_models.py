@@ -952,3 +952,28 @@ class ReduceMax(nn.Module):
 x = Variable(torch.randn(1, 3, 2, 2))
 model = ReduceMax()
 save_data_and_model("reduce_max", x, model)
+
+class ResizeConv(nn.Module):
+    def __init__(
+            self,
+            in_channels,
+            skip_channels,
+            out_channels,
+            use_batchnorm=True,
+            attention_type=None,
+    ):
+        super().__init__()
+        self.conv1 = conv = nn.Conv2d(
+            in_channels,
+            out_channels,
+            kernel_size=2,
+            bias=False)
+
+    def forward(self, x, skip=None):
+        x = F.interpolate(x, scale_factor=2, mode="nearest")
+        x = self.conv1(x)
+        return x
+
+x = Variable(torch.rand(1, 2, 2, 2))
+model = ResizeConv(2, 0, 2)
+save_data_and_model("resize_opset11_torch1.6", x, model, 11)
