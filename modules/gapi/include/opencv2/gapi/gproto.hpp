@@ -57,6 +57,8 @@ template<class Tag>
 struct GIOProtoArgs
 {
 public:
+    // NB: Used by python wrapper
+    GIOProtoArgs() = default;
     explicit GIOProtoArgs(const GProtoArgs& args) : m_args(args) {}
     explicit GIOProtoArgs(GProtoArgs &&args)      : m_args(std::move(args)) {}
 

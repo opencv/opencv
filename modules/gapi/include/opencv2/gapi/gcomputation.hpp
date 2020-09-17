@@ -161,8 +161,8 @@ public:
      *
      * @sa @ref gapi_data_objects
      */
-    GComputation(GProtoInputArgs &&ins,
-                 GProtoOutputArgs &&outs);             // Arg-to-arg overload
+    GAPI_WRAP GComputation(GProtoInputArgs &&ins,
+                           GProtoOutputArgs &&outs);             // Arg-to-arg overload
 
     // 2. Syntax sugar and compatibility overloads
     /**
