@@ -450,7 +450,7 @@ enum { LMEDS  = 4,  //!< least-median of squares algorithm
        USAC_FAST = 35,     //!< USAC, fast settings
        USAC_ACCURATE = 36, //!< USAC, accurate settings
        USAC_PROSAC = 37,   //!< USAC, sorted points, runs PROSAC
-       USAC_MAGSAC = 38    //!< USAC, sorted points, runs PROSAC
+       USAC_MAGSAC = 38    //!< USAC, runs MAGSAC++
      };
 
 enum SolvePnPMethod {

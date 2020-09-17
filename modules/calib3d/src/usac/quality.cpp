@@ -79,11 +79,13 @@ protected:
     const Ptr<Error> error;
     const int points_size;
     const double threshold;
-    double best_score;
+    double best_score, norm_thr, one_over_thr;
 public:
     MsacQualityImpl (int points_size_, double threshold_, const Ptr<Error> &error_)
             : error (error_), points_size (points_size_), threshold (threshold_) {
         best_score = std::numeric_limits<double>::max();
+        norm_thr = threshold*9/4;
+        one_over_thr = 1 / norm_thr;
     }
 
     inline Score getScore (const Mat &model) const override {
@@ -92,12 +94,12 @@ public:
         int inlier_number = 0;
         for (int point = 0; point < points_size; point++) {
             err = error->getError(point);
-            if (err < threshold) {
-                sum_errors += err;
-                inlier_number++;
-            } else
-                sum_errors += threshold;
-            if (sum_errors > best_score)
+            if (err < norm_thr) {
+                sum_errors -= (1 - err * one_over_thr);
+                if (err < threshold)
+                    inlier_number++;
+            }
+            if (sum_errors - points_size + point > best_score)
                 break;
         }
         return Score(inlier_number, sum_errors);
@@ -130,14 +132,12 @@ private:
     const int points_size;
 
     // for example, maximum standard deviation of noise.
-    const double maximum_threshold, tentative_inlier_threshold;
+    const double maximum_threshold_sqr, tentative_inlier_threshold;
     // The degrees of freedom of the data from which the model is estimated.
     // E.g., for models coming from point correspondences (x1,y1,x2,y2), it is 4.
     const int degrees_of_freedom;
     // A 0.99 quantile of the Chi^2-distribution to convert sigma values to residuals
     const double k;
-    // A multiplier to convert residual values to sigmas
-    float threshold_to_sigma_multiplier;
     // Calculating k^2 / 2 which will be used for the estimation and,
     // due to being constant, it is better to calculate it a priori.
     double squared_k_per_2;
@@ -167,12 +167,11 @@ private:
     float maximum_sigma_2_per_2;
     // Calculate 2 * \sigma_{max}^2
     float maximum_sigma_2_times_2;
-    // Calculate the loss implied by an outlier
-    double outlier_loss;
     // Calculating 2^(DoF + 1) / \sigma_{max} which will be used for the estimation and,
     // due to being constant, it is better to calculate it a priori.
     double two_ad_dof_plus_one_per_maximum_sigma;
     double scale_of_stored_incomplete_gammas;
+    double max_loss;
     std::vector<double> stored_complete_gamma_values, stored_lower_incomplete_gamma_values;
 public:
 
@@ -180,41 +179,46 @@ public:
                        double tentative_inlier_threshold_, int DoF, double sigma_quantile,
                        double upper_incomplete_of_sigma_quantile,
                        double lower_incomplete_of_sigma_quantile, double C_)
-            : error (error_), points_size(points_size_), maximum_threshold(maximum_thr),
+            : error (error_), points_size(points_size_), maximum_threshold_sqr(maximum_thr*maximum_thr),
             tentative_inlier_threshold(tentative_inlier_threshold_), degrees_of_freedom(DoF),
             k(sigma_quantile), C(C_), gamma_value_of_k (upper_incomplete_of_sigma_quantile),
             lower_gamma_value_of_k (lower_incomplete_of_sigma_quantile) {
         previous_best_loss = std::numeric_limits<double>::max();
-        threshold_to_sigma_multiplier = 1.f / (float)k;
         squared_k_per_2 = k * k / 2.0;
         dof_minus_one_per_two = (degrees_of_freedom - 1.0) / 2.0;
         dof_plus_one_per_two = (degrees_of_freedom + 1.0) / 2.0;
         two_ad_dof_minus_one = std::pow(2.0, dof_minus_one_per_two);
         two_ad_dof_plus_one = std::pow(2.0, dof_plus_one_per_two);
-        maximum_sigma = threshold_to_sigma_multiplier * (float)maximum_threshold;
+        maximum_sigma = (float)sqrt(maximum_threshold_sqr) / (float) k;
         maximum_sigma_2 = maximum_sigma * maximum_sigma;
         maximum_sigma_2_per_2 = maximum_sigma_2 / 2.f;
         maximum_sigma_2_times_2 = maximum_sigma_2 * 2.f;
-        // penalization for outlier
-        outlier_loss = 10 * maximum_sigma * two_ad_dof_minus_one  * lower_gamma_value_of_k;
         two_ad_dof_plus_one_per_maximum_sigma = two_ad_dof_plus_one / maximum_sigma;
-
-        if (DoF == 4) {
-            scale_of_stored_incomplete_gammas = scale_of_stored_incomplete_gammas_n4;
-            stored_complete_gamma_values = std::vector<double>(stored_complete_gamma_values_n4,
-                      stored_complete_gamma_values_n4+stored_incomplete_gamma_number+1);
+        if (DoF == 2) {
+            scale_of_stored_incomplete_gammas = scale_of_stored_incomplete_gammas_n2;
+            stored_complete_gamma_values = std::vector<double>(stored_complete_gamma_values_n2,
+                      stored_complete_gamma_values_n2+stored_incomplete_gamma_number+1);
             stored_lower_incomplete_gamma_values = std::vector<double>
-                    (stored_lower_incomplete_gamma_values_n4,
-                     stored_lower_incomplete_gamma_values_n4+stored_incomplete_gamma_number+1);
-        } else if (DoF == 5) {
-            scale_of_stored_incomplete_gammas = scale_of_stored_incomplete_gammas_n5;
-            stored_complete_gamma_values = std::vector<double>(stored_complete_gamma_values_n5,
-                 stored_complete_gamma_values_n5+stored_incomplete_gamma_number+1);
-            stored_lower_incomplete_gamma_values = std::vector<double>
-                    (stored_lower_incomplete_gamma_values_n5,
-                     stored_lower_incomplete_gamma_values_n5+stored_incomplete_gamma_number+1);
+                    (stored_lower_incomplete_gamma_values_n2,
+                     stored_lower_incomplete_gamma_values_n2+stored_incomplete_gamma_number+1);
         } else
             CV_Error(cv::Error::StsNotImplemented, "Sigma values are not generated");
+
+        max_loss = 1e-10;
+        // MAGSAC maximum / minimum loss does not have to be in extrumum residuals
+        // make 30 iterations to find maximum loss
+        const double step = maximum_threshold_sqr / 30;
+        for (double sqr_res = 0; sqr_res < maximum_threshold_sqr; sqr_res += step) {
+            int x=(int)round(scale_of_stored_incomplete_gammas * sqr_res
+                        / maximum_sigma_2_times_2);
+            if (x >= stored_incomplete_gamma_number || x < 0 /*overflow*/)
+                x  = stored_incomplete_gamma_number;
+            const double loss = two_ad_dof_plus_one_per_maximum_sigma * (maximum_sigma_2_per_2 *
+                    stored_lower_incomplete_gamma_values[x] + sqr_res * 0.25 *
+                    (stored_complete_gamma_values[x] - gamma_value_of_k));
+            if (max_loss < loss)
+                max_loss = loss;
+        }
     }
 
     // https://github.com/danini/magsac
@@ -226,7 +230,7 @@ public:
             const float squared_residual = error->getError(point_idx);
             if (squared_residual < tentative_inlier_threshold)
                 num_tentative_inliers++;
-            if (squared_residual < maximum_threshold) { // consider point as inlier
+            if (squared_residual < maximum_threshold_sqr) { // consider point as inlier
                 // Get the position of the gamma value in the lookup table
                 int x=(int)round(scale_of_stored_incomplete_gammas * squared_residual
                         / maximum_sigma_2_times_2);
@@ -234,12 +238,12 @@ public:
                 if (x >= stored_incomplete_gamma_number || x < 0 /*overflow*/)
                     x  = stored_incomplete_gamma_number;
                 // Calculate the loss implied by the current point
-                total_loss += two_ad_dof_plus_one_per_maximum_sigma * (maximum_sigma_2_per_2 *
+                total_loss -= (1 - two_ad_dof_plus_one_per_maximum_sigma * (maximum_sigma_2_per_2 *
                     stored_lower_incomplete_gamma_values[x] + squared_residual * 0.25 *
-                    (stored_complete_gamma_values[x] - gamma_value_of_k));
-            } else total_loss += outlier_loss; // outlier
-            if (total_loss > previous_best_loss)
-                break; // break if total loss is alreay higher than the best one
+                    (stored_complete_gamma_values[x] - gamma_value_of_k)) / max_loss);
+            }
+            if (total_loss - (points_size - point_idx) > previous_best_loss)
+                break;
         }
         return Score(num_tentative_inliers, total_loss);
     }
@@ -251,16 +255,16 @@ public:
             const float squared_residual = errors[point_idx];
             if (squared_residual < tentative_inlier_threshold)
                 num_tentative_inliers++;
-            if (squared_residual < maximum_threshold) {
+            if (squared_residual < maximum_threshold_sqr) {
                 int x=(int)round(scale_of_stored_incomplete_gammas * squared_residual
                                  / maximum_sigma_2_times_2);
                 if (x >= stored_incomplete_gamma_number || x < 0 /*overflow*/)
                     x  = stored_incomplete_gamma_number;
-                total_loss += two_ad_dof_plus_one_per_maximum_sigma * (maximum_sigma_2_per_2 *
+                total_loss -= (1 - two_ad_dof_plus_one_per_maximum_sigma * (maximum_sigma_2_per_2 *
                         stored_lower_incomplete_gamma_values[x] + squared_residual * 0.25 *
-                        (stored_complete_gamma_values[x] - gamma_value_of_k));
-            } else total_loss += outlier_loss;
-            if (total_loss > previous_best_loss)
+                        (stored_complete_gamma_values[x] - gamma_value_of_k)) / max_loss);
+            }
+            if (total_loss - (points_size - point_idx) > previous_best_loss)
                 break;
         }
         return Score(num_tentative_inliers, total_loss);
@@ -354,7 +358,7 @@ private:
     int highest_inlier_number, current_sprt_idx; // i
     // time t_M needed to instantiate a model hypothesis given a sample
     // Let m_S be the number of models that are verified per sample
-    const double inlier_threshold, t_M, m_S;
+    const double inlier_threshold, norm_thr, one_over_thr, t_M, m_S;
 
     double lowest_sum_errors, current_epsilon, current_delta, current_A,
             delta_to_epsilon, complement_delta_to_complement_epsilon;
@@ -371,7 +375,8 @@ public:
           double inlier_threshold_, double prob_pt_of_good_model, double prob_pt_of_bad_model,
           double time_sample, double avg_num_models, ScoreMethod score_type_) : rng(state), err(err_),
           points_size(points_size_), inlier_threshold (inlier_threshold_),
-          t_M (time_sample), m_S (avg_num_models), score_type (score_type_) {
+          norm_thr(inlier_threshold_*9/4), one_over_thr (1/norm_thr), t_M (time_sample),
+          m_S (avg_num_models), score_type (score_type_) {
 
         // Generate array of random points for randomized evaluation
         points_random_pool = std::vector<int> (points_size_);
@@ -439,8 +444,9 @@ public:
                     break;
             }
             if (score_type == ScoreMethod::SCORE_METHOD_MSAC) {
-                sum_errors += error < inlier_threshold ? error : inlier_threshold;
-                if (sum_errors > lowest_sum_errors)
+                if (error < norm_thr)
+                    sum_errors -= (1 - error * one_over_thr);
+                if (sum_errors - points_size + tested_point > lowest_sum_errors)
                     break;
             } else if (score_type == ScoreMethod::SCORE_METHOD_RANSAC) {
                 if (tested_inliers + points_size - tested_point < highest_inlier_number)
@@ -455,7 +461,8 @@ public:
             score.inlier_number = tested_inliers;
             if (score_type == ScoreMethod::SCORE_METHOD_MSAC) {
                 score.score = sum_errors;
-                lowest_sum_errors = sum_errors;
+                if (lowest_sum_errors > sum_errors)
+                    lowest_sum_errors = sum_errors;
             } else if (score_type == ScoreMethod::SCORE_METHOD_RANSAC)
                 score.score = -static_cast<double>(tested_inliers);
             else if (score_type == ScoreMethod::SCORE_METHOD_LMEDS)

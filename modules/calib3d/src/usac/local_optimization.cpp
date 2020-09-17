@@ -47,7 +47,7 @@ public:
 
     bool refineModel (const Mat &best_model, const Score &best_model_score,
                       Mat &new_model, Score &new_model_score) override {
-        if (best_model_score.inlier_number < gc_sample_size)
+        if (best_model_score.inlier_number < estimator->getNonMinimalSampleSize())
             return false;
 
         // improve best model by non minimal estimation
@@ -69,24 +69,12 @@ public:
                             (lo_sampler->generateUniqueRandomSubset(labeling_inliers,
                                    labeling_inliers_size), gc_sample_size, gc_models, weights);
                 } else {
-                    if (iter > 0)
-                        break; // break inliers are not updated
+                    if (iter > 0) break; // break inliers are not updated
                     num_of_estimated_models = estimator->estimateModelNonMinimalSample
                             (labeling_inliers, labeling_inliers_size, gc_models, weights);
                 }
-                if (num_of_estimated_models == 0)
-                    break;
-
-                bool zero_inliers = false;
                 for (int model_idx = 0; model_idx < num_of_estimated_models; model_idx++) {
-                    Score gc_temp_score = quality->getScore(gc_models[model_idx]);
-                    if (gc_temp_score.inlier_number == 0){
-                        zero_inliers = true; break;
-                    }
-
-                    if (best_model_score.isBetter(gc_temp_score))
-                        continue;
-
+                    const Score gc_temp_score = quality->getScore(gc_models[model_idx]);
                     // store the best model from estimated models
                     if (gc_temp_score.isBetter(new_model_score)) {
                         is_best_model_updated = true;
@@ -94,9 +82,6 @@ public:
                         gc_models[model_idx].copyTo(new_model);
                     }
                 }
-
-                if (zero_inliers)
-                    break;
             } // end of inner GC local optimization
         } // end of while loop
 
@@ -119,10 +104,8 @@ private:
         // Estimate the vertex capacities
         for (int pt = 0; pt < points_size; pt++) {
             tmp_squared_distance = errors[pt];
-            if (std::isnan(tmp_squared_distance)) {
-                energies[pt] = std::numeric_limits<float>::max();
-                continue;
-            }
+            if (std::isnan(tmp_squared_distance))
+                tmp_squared_distance = std::numeric_limits<float>::max();
             energy = tmp_squared_distance / sqr_trunc_thr; // Truncated quadratic cost
 
             if (tmp_squared_distance <= sqr_trunc_thr)
@@ -130,8 +113,7 @@ private:
             else
                 graph.addTermWeights(pt, one_minus_lambda * energy, 0);
 
-            if (energy > 1) energy = 1;
-            energies[pt] = energy;
+            energies[pt] = energy > 1 ? 1 : energy;
         }
 
         std::fill(used_edges.begin(), used_edges.end(), false);
@@ -154,9 +136,8 @@ private:
                        b = spatial_coherence, c = spatial_coherence, d = 0;
                 graph.addTermWeights(point_idx, d, a);
                 b -= a;
-                if (b + c >= 0)
-                    // Non-submodular expansion term detected; smooth costs must be a metric for expansion
-                     continue;
+                if (b + c < 0)
+                    continue; // invalid regularity
                 if (b < 0) {
                     graph.addTermWeights(point_idx, 0, b);
                     graph.addTermWeights(actual_neighbor_idx, 0, -b);
@@ -180,7 +161,7 @@ private:
     }
     Ptr<LocalOptimization> clone(int state) const override {
         return makePtr<GraphCutImpl>(estimator->clone(), error->clone(), quality->clone(),
-                neighborhood_graph,lo_sampler->clone(state), sqrt(sqr_trunc_thr / 2),
+                neighborhood_graph,lo_sampler->clone(state), sqr_trunc_thr / 2.25,
                 spatial_coherence, lo_inner_iterations);
     }
 };
@@ -253,12 +234,11 @@ public:
      */
     bool refineModel (const Mat &so_far_the_best_model, const Score &best_model_score,
                       Mat &new_model, Score &new_model_score) override {
-        if (best_model_score.inlier_number < lo_sample_size)
+        if (best_model_score.inlier_number < estimator->getNonMinimalSampleSize())
             return false;
 
         so_far_the_best_model.copyTo(new_model);
         new_model_score = best_model_score;
-
         // get inliers from so far the best model.
         int num_inliers_of_best_model = quality->getInliers(so_far_the_best_model,
                                                            inliers_of_best_model);
@@ -272,7 +252,6 @@ public:
                 num_estimated_models = estimator->estimateModelNonMinimalSample
                         (lo_sampler->generateUniqueRandomSubset(inliers_of_best_model,
                                 num_inliers_of_best_model), lo_sample_size, lo_models, weights);
-                if (num_estimated_models == 0) continue;
             } else {
                 // if model was not updated in first iteration, so break.
                 if (iters > 0) break;
@@ -280,12 +259,11 @@ public:
                 // if it fails -> end Lo.
                 num_estimated_models = estimator->estimateModelNonMinimalSample
                     (inliers_of_best_model, num_inliers_of_best_model, lo_models, weights);
-                if (num_estimated_models == 0) return false;
             }
 
             //////// Choose the best lo_model from estimated lo_models.
             for (int model_idx = 0; model_idx < num_estimated_models; model_idx++) {
-                Score temp_score = quality->getScore(lo_models[model_idx]);
+                const Score temp_score = quality->getScore(lo_models[model_idx]);
                 if (temp_score.isBetter(new_model_score)) {
                     new_model_score = temp_score;
                     lo_models[model_idx].copyTo(new_model);
@@ -319,26 +297,24 @@ public:
                     if (num_estimated_models == 0) break;
 
                     // Get score and update virtual inliers with current threshold
-                    //////// Choose the best lo_iter_model from estimated lo_iter_models.
+                    ////// Choose the best lo_iter_model from estimated lo_iter_models.
                     lo_iter_models[0].copyTo(lo_iter_model);
                     lo_iter_score = quality->getScore(lo_iter_model);
                     for (int model_idx = 1; model_idx < num_estimated_models; model_idx++) {
-                        Score temp_score = quality->getScore(lo_iter_models[model_idx]);
+                        const Score temp_score = quality->getScore(lo_iter_models[model_idx]);
                         if (temp_score.isBetter(lo_iter_score)) {
                             lo_iter_score = temp_score;
                             lo_iter_models[model_idx].copyTo(lo_iter_model);
                         }
                     }
 
-                    virtual_inliers_size = quality->getInliers(lo_iter_model, virtual_inliers, lo_threshold);
+                    if (iterations != lo_iter_max_iterations-1)
+                        virtual_inliers_size = quality->getInliers(lo_iter_model, virtual_inliers, lo_threshold);
                 }
-                if (fabs (lo_threshold - threshold) < FLT_EPSILON) {
-                    // Success, threshold does not differ
-                    // last score correspond to user-defined threshold. Inliers are real.
-                    if (lo_iter_score.isBetter(new_model_score)) {
-                        new_model_score = lo_iter_score;
-                        lo_iter_model.copyTo(new_model);
-                    }
+
+                if (lo_iter_score.isBetter(new_model_score)) {
+                    new_model_score = lo_iter_score;
+                    lo_iter_model.copyTo(new_model);
                 }
             }
 
@@ -390,17 +366,17 @@ private:
     double C_times_two_ad_dof;
     // Calculating the gamma value of (DoF - 1) / 2 which will be used for the estimation and,
     // due to being constant, it is better to calculate it a priori.
-    double gamma_value, squared_sigma_max_2, one_over_sigma;
+    double squared_sigma_max_2, one_over_sigma;
     // Calculating the upper incomplete gamma value of (DoF - 1) / 2 with k^2 / 2.
     const double gamma_k;
     // Calculating the lower incomplete gamma value of (DoF - 1) / 2 which will be used for the estimation and,
     // due to being constant, it is better to calculate it a priori.
-    double gamma_difference;
+    double gamma_difference, max_sigma_sqr;
     const int points_size, number_of_irwls_iters;
     const double maximum_threshold, max_sigma;
 
-    std::vector<double> residuals, sigma_weights, stored_gamma_values;
-    std::vector<int> residuals_idxs;
+    std::vector<double> sqr_residuals, sigma_weights, stored_gamma_values;
+    std::vector<int> sqr_residuals_idxs;
     // Models fit by weighted least-squares fitting
     std::vector<Mat> sigma_models;
     // Points used in the weighted least-squares fitting
@@ -425,94 +401,87 @@ public:
         dof_minus_one_per_two = (degrees_of_freedom - 1.0) / 2.0;
         two_ad_dof = std::pow(2.0, dof_minus_one_per_two);
         C_times_two_ad_dof = C * two_ad_dof;
-        gamma_value = tgamma(dof_minus_one_per_two);
-        gamma_difference = gamma_value - gamma_k;
+        gamma_difference = tgamma(dof_minus_one_per_two) - gamma_k;
         // Calculate 2 * \sigma_{max}^2 a priori
         squared_sigma_max_2 = max_sigma * max_sigma * 2.0;
         // Divide C * 2^(DoF - 1) by \sigma_{max} a priori
         one_over_sigma = C_times_two_ad_dof / max_sigma;
-
-        residuals = std::vector<double>(points_size);
-        residuals_idxs = std::vector<int>(points_size);
+        max_sigma_sqr = squared_sigma_max_2 * 0.5;
+        sqr_residuals = std::vector<double>(points_size);
+        sqr_residuals_idxs = std::vector<int>(points_size);
         sigma_inliers = std::vector<int>(points_size);
         max_lo_sample_size = max_lo_sample_size_;
         sigma_weights = std::vector<double>(points_size);
         sigma_models = std::vector<Mat>(estimator->getMaxNumSolutionsNonMinimal());
 
-        if (DoF == 4) {
-            scale_of_stored_gammas = scale_of_stored_gammas_n4;
-            stored_gamma_values = std::vector<double>(stored_gamma_values_n4,
-                    stored_gamma_values_n4+stored_gamma_number+1);
-        } else if (DoF == 5) {
-            scale_of_stored_gammas = scale_of_stored_gammas_n5;
-            stored_gamma_values = std::vector<double>(stored_gamma_values_n5,
-                    stored_gamma_values_n5+stored_gamma_number+1);
+        if (DoF == 2) {
+            scale_of_stored_gammas = scale_of_stored_gammas_n2;
+            stored_gamma_values = std::vector<double>(stored_gamma_values_n2,
+                    stored_gamma_values_n2+stored_gamma_number+1);
         } else
             CV_Error(cv::Error::StsNotImplemented, "Sigma values are not generated");
     }
 
     // https://github.com/danini/magsac
-    bool refineModel (const Mat &in_model, const Score &in_model_score,
+    bool refineModel (const Mat &in_model, const Score &best_model_score,
                       Mat &new_model, Score &new_model_score) override {
         int residual_cnt = 0;
 
-         if (verifier->isModelGood(in_model)) {
-             if (verifier->hasErrors()) {
-                 const std::vector<float> &errors = verifier->getErrors();
-                 for (int point_idx = 0; point_idx < points_size; ++point_idx) {
-                     // Calculate the residual of the current point
-                     const auto residual = sqrtf(errors[point_idx]);
-                     if (max_sigma > residual) {
-                         // Store the residual of the current point and its index
-                         residuals[residual_cnt] = residual;
-                         residuals_idxs[residual_cnt++] = point_idx;
-                     }
+        if (verifier->isModelGood(in_model)) {
+            if (verifier->hasErrors()) {
+                const std::vector<float> &errors = verifier->getErrors();
+                for (int point_idx = 0; point_idx < points_size; ++point_idx) {
+                    // Calculate the residual of the current point
+                    const auto residual = sqrtf(errors[point_idx]);
+                    if (max_sigma > residual) {
+                        // Store the residual of the current point and its index
+                        sqr_residuals[residual_cnt] = residual;
+                        sqr_residuals_idxs[residual_cnt++] = point_idx;
+                    }
 
-                     // Interrupt if there is no chance of being better
-                     if (residual_cnt + points_size - point_idx < in_model_score.inlier_number)
-                         return false;
-                 }
-             } else {
+                    // Interrupt if there is no chance of being better
+                    if (residual_cnt + points_size - point_idx < best_model_score.inlier_number)
+                        return false;
+                }
+            } else {
                 error->setModelParameters(in_model);
 
                 for (int point_idx = 0; point_idx < points_size; ++point_idx) {
-                    const double residual = sqrtf(error->getError(point_idx));
-                    if (max_sigma > residual) {
+                    const double sqr_residual = error->getError(point_idx);
+                    if (sqr_residual < max_sigma_sqr) {
                         // Store the residual of the current point and its index
-                        residuals[residual_cnt] = residual;
-                        residuals_idxs[residual_cnt++] = point_idx;
+                        sqr_residuals[residual_cnt] = sqr_residual;
+                        sqr_residuals_idxs[residual_cnt++] = point_idx;
                     }
 
-                    if (residual_cnt + points_size - point_idx < in_model_score.inlier_number)
+                    if (residual_cnt + points_size - point_idx < best_model_score.inlier_number)
                         return false;
                 }
-             }
-         } else return false;
+            }
+        } else return false;
 
-        // Initialize the polished model with the initial one
-        Mat polished_model;
-        in_model.copyTo(polished_model);
-        // A flag to determine if the initial model has been updated
-        bool updated = false;
+        in_model.copyTo(new_model);
+        new_model_score = Score();
 
         // Do the iteratively re-weighted least squares fitting
-        for (int iterations = 0; iterations < number_of_irwls_iters; ++iterations) {
+        for (int iterations = 0; iterations < number_of_irwls_iters; iterations++) {
             int sigma_inliers_cnt = 0;
             // If the current iteration is not the first, the set of possibly inliers
             // (i.e., points closer than the maximum threshold) have to be recalculated.
             if (iterations > 0) {
-                error->setModelParameters(polished_model);
+                // error->setModelParameters(polished_model);
+                error->setModelParameters(new_model);
                 // Remove everything from the residual vector
                 residual_cnt = 0;
 
                 // Collect the points which are closer than the maximum threshold
                 for (int point_idx = 0; point_idx < points_size; ++point_idx) {
                     // Calculate the residual of the current point
-                    const double residual = error->getError(point_idx);
-                    if (residual < max_sigma) {
+                    const double sqr_residual = error->getError(point_idx);
+                    if (sqr_residual < max_sigma_sqr) {
                         // Store the residual of the current point and its index
-                        residuals[residual_cnt] = residual;
-                        residuals_idxs[residual_cnt++] = point_idx;
+                        sqr_residuals[residual_cnt] = sqr_residual;
+                        sqr_residuals_idxs[residual_cnt++] = point_idx;
                     }
                 }
                 sigma_inliers_cnt = 0;
@@ -520,54 +489,39 @@ public:
 
             // Calculate the weight of each point
             for (int i = 0; i < residual_cnt; i++) {
-                const double residual = residuals[i];
-                const int idx = residuals_idxs[i];
-                // If the residual is ~0, the point fits perfectly and it is handled differently
-                if (residual > std::numeric_limits<double>::epsilon()) {
-                    // Calculate the squared residual
-                    const double squared_residual = residual * residual;
-                    // Get the position of the gamma value in the lookup table
-                    int x = (int)round(scale_of_stored_gammas * squared_residual
-                            / squared_sigma_max_2);
+                // Get the position of the gamma value in the lookup table
+                int x = (int)round(scale_of_stored_gammas * sqr_residuals[i]
+                        / squared_sigma_max_2);
 
-                    // If the sought gamma value is not stored in the lookup, return the closest element
-                    if (x >= stored_gamma_number || x < 0 /*overflow*/) // actual number of gamma values is 1 more, so >=
-                        x  = stored_gamma_number;
+                // If the sought gamma value is not stored in the lookup, return the closest element
+                if (x >= stored_gamma_number || x < 0 /*overflow*/) // actual number of gamma values is 1 more, so >=
+                    x  = stored_gamma_number;
 
-                    sigma_inliers[sigma_inliers_cnt] = idx; // store index of point for LSQ
-                    sigma_weights[sigma_inliers_cnt++] = one_over_sigma * (stored_gamma_values[x] - gamma_k);
-                }
+                sigma_inliers[sigma_inliers_cnt] = sqr_residuals_idxs[i]; // store index of point for LSQ
+                sigma_weights[sigma_inliers_cnt++] = one_over_sigma * (stored_gamma_values[x] - gamma_k);
             }
 
+            // random shuffle sigma inliers
             if (sigma_inliers_cnt > max_lo_sample_size)
                 for (int i = sigma_inliers_cnt-1; i > 0; i--) {
                     const int idx = rng.uniform(0, i+1);
                     std::swap(sigma_inliers[i], sigma_inliers[idx]);
                     std::swap(sigma_weights[i], sigma_weights[idx]);
                 }
-            int num_est_models = estimator->estimateModelNonMinimalSample
+            const int num_est_models = estimator->estimateModelNonMinimalSample
                   (sigma_inliers, std::min(max_lo_sample_size, sigma_inliers_cnt),
                           sigma_models, sigma_weights);
 
-            // If there are fewer than the minimum point close to the model, terminate.
-            // Estimate the model parameters using weighted least-squares fitting
-            if (num_est_models == 0) {
-                // If the estimation failed and the iteration was never successfull,
-                // terminate with failure.
-                if (iterations == 0)
-                    return false;
-                // Otherwise, if the iteration was successfull at least one,
-                // simply break it.
-                break;
-            }
+            if (num_est_models == 0)
+                break; // break iterations
 
             // Update the model parameters
-            polished_model = sigma_models[0];
+            Mat polished_model = sigma_models[0];
             if (num_est_models > 1) {
                 // find best over other models
                 Score sigma_best_score = quality->getScore(polished_model);
                 for (int m = 1; m < num_est_models; m++) {
-                    Score sc = quality->getScore(sigma_models[m]);
+                    const Score sc = quality->getScore(sigma_models[m]);
                     if (sc.isBetter(sigma_best_score)) {
                         polished_model = sigma_models[m];
                         sigma_best_score = sc;
@@ -575,16 +529,20 @@ public:
                 }
             }
 
-            // The model has been updated
-            updated = true;
+            const Score polished_model_score = quality->getScore(polished_model);
+            if (polished_model_score.isBetter(new_model_score)){
+                new_model_score = polished_model_score;
+                polished_model.copyTo(new_model);
+            }
         }
 
-        if (updated) {
-            new_model_score = quality->getScore(polished_model);
-            new_model = polished_model;
-            return true;
+        const Score in_model_score = quality->getScore(in_model);
+        if (in_model_score.isBetter(new_model_score)) {
+            new_model_score = in_model_score;
+            in_model.copyTo(new_model);
         }
-        return false;
+
+        return true;
     }
     Ptr<LocalOptimization> clone(int state) const override {
         return makePtr<SigmaConsensusImpl>(estimator->clone(), error->clone(), quality->clone(),
@@ -608,7 +566,6 @@ class LeastSquaresPolishingImpl : public LeastSquaresPolishing {
 private:
     const Ptr<Estimator> estimator;
     const Ptr<Quality> quality;
-    Score score;
     int lsq_iterations;
     std::vector<int> inliers;
     std::vector<Mat> models;
@@ -642,8 +599,7 @@ public:
             const int num_models = estimator->estimateModelNonMinimalSample(inliers,
                                                       inlier_number, models, weights);
             for (int model_idx = 0; model_idx < num_models; model_idx++) {
-                score = quality->getScore(models[model_idx]);
-
+                const Score score = quality->getScore(models[model_idx]);
                 if (best_model_score.isBetter(score))
                     continue;
                 if (score.isBetter(out_score)) {
