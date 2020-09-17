@@ -1933,8 +1933,8 @@ PERF_TEST_P_(ResizeFxFyPerfTest, TestPerformance)
 PERF_TEST_P_(ParseSSDBLPerfTest, TestPerformance)
 {
     cv::Size sz;
-    float confidence_threshold;
-    int filter_label;
+    float confidence_threshold = 0.0f;
+    int filter_label = 0;
     cv::GCompileArgs compile_args;
     std::tie(sz, confidence_threshold, filter_label, compile_args) = GetParam();
     cv::Mat in_mat = generateSSDoutput(sz);
@@ -1973,8 +1973,8 @@ PERF_TEST_P_(ParseSSDBLPerfTest, TestPerformance)
 PERF_TEST_P_(ParseSSDPerfTest, TestPerformance)
 {
     cv::Size sz;
-    float confidence_threshold;
-    bool alignment_to_square, filter_out_of_bounds;
+    float confidence_threshold = 0;
+    bool alignment_to_square = false, filter_out_of_bounds = false;
     cv::GCompileArgs compile_args;
     std::tie(sz, confidence_threshold, alignment_to_square, filter_out_of_bounds, compile_args) = GetParam();
     cv::Mat in_mat = generateSSDoutput(sz);
@@ -2011,8 +2011,8 @@ PERF_TEST_P_(ParseSSDPerfTest, TestPerformance)
 PERF_TEST_P_(ParseYoloPerfTest, TestPerformance)
 {
     cv::Size sz;
-    float confidence_threshold, nms_threshold;
-    int num_classes;
+    float confidence_threshold = 0.0f, nms_threshold = 0.0f;
+    int num_classes = 0;
     cv::GCompileArgs compile_args;
     std::tie(sz, confidence_threshold, nms_threshold, num_classes, compile_args) = GetParam();
     cv::Mat in_mat = generateYoloOutput(num_classes);
@@ -2084,8 +2084,9 @@ PERF_TEST_P_(SizePerfTest, TestPerformance)
 
 PERF_TEST_P_(SizeRPerfTest, TestPerformance)
 {
-    cv::Size sz                   = get<0>(GetParam());
-    cv::GCompileArgs compile_args = get<1>(GetParam());
+    cv::Size sz;
+    cv::GCompileArgs compile_args;
+    std::tie(sz, compile_args) = GetParam();
     cv::Rect rect(cv::Point(0,0), sz);
 
     // G-API code //////////////////////////////////////////////////////////////

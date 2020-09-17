@@ -298,8 +298,8 @@ INSTANTIATE_TEST_CASE_P(ParseSSDBLPerfTestCPU, ParseSSDBLPerfTest,
 INSTANTIATE_TEST_CASE_P(ParseSSDPerfTestCPU, ParseSSDPerfTest,
                         Combine(Values(sz720p, sz1080p),
                                 Values(0.3f, 0.7f),
-                                Values(false, true),
-                                Values(false, true),
+                                testing::Bool(),
+                                testing::Bool(),
                                 Values(cv::compile_args(CORE_CPU))));
 
 INSTANTIATE_TEST_CASE_P(ParseYoloPerfTestCPU, ParseYoloPerfTest,

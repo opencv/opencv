@@ -510,8 +510,8 @@ INSTANTIATE_TEST_CASE_P(ParseTestCPU, ParseSSDTest,
                                 Values(-1),
                                 Values(CORE_CPU),
                                 Values(0.3f, 0.5f, 0.7f),
-                                Values(true, false),
-                                Values(true, false)));
+                                testing::Bool(),
+                                testing::Bool()));
 
 INSTANTIATE_TEST_CASE_P(ParseTestCPU, ParseYoloTest,
                         Combine(Values(CV_8UC1, CV_8UC3, CV_32FC1),
