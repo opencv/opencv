@@ -1891,7 +1891,6 @@ static int convert_to_char(PyObject *o, char *dst, const ArgInfo& info)
 
 
 #include "pyopencv_generated_enums.h"
-#include "pyopencv_custom_headers.h"
 
 #ifdef CVPY_DYNAMIC_INIT
 #define CVPY_TYPE(NAME, STORAGE, SNAME, _1, _2) CVPY_TYPE_DECLARE_DYNAMIC(NAME, STORAGE, SNAME)
@@ -1900,6 +1899,7 @@ static int convert_to_char(PyObject *o, char *dst, const ArgInfo& info)
 #endif
 #include "pyopencv_generated_types.h"
 #undef CVPY_TYPE
+#include "pyopencv_custom_headers.h"
 
 #include "pyopencv_generated_types_content.h"
 #include "pyopencv_generated_funcs.h"
@@ -1915,6 +1915,10 @@ static PyMethodDef special_methods[] = {
 #ifdef HAVE_OPENCV_DNN
   {"dnn_registerLayer", CV_PY_FN_WITH_KW(pyopencv_cv_dnn_registerLayer), "registerLayer(type, class) -> None"},
   {"dnn_unregisterLayer", CV_PY_FN_WITH_KW(pyopencv_cv_dnn_unregisterLayer), "unregisterLayer(type) -> None"},
+#endif
+#ifdef HAVE_OPENCV_GAPI
+  {"GIn", CV_PY_FN_WITH_KW(pyopencv_cv_GIn), "GIn(...) -> GInputProtoArgs"},
+  {"GOut", CV_PY_FN_WITH_KW(pyopencv_cv_GOut), "GOut(...) -> GOutputProtoArgs"},
 #endif
   {NULL, NULL},
 };
