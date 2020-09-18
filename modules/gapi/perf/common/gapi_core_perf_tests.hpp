@@ -43,8 +43,8 @@ namespace opencv_test
     class Polar2CartPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs>> {};
     class Cart2PolarPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs>> {};
     class CmpPerfTest : public TestPerfParams<tuple<CmpTypes, cv::Size, MatType, cv::GCompileArgs>> {};
-    class CmpWithScalarPerfTest : public TestPerfParams<tuple<CmpTypes, cv::Size, MatType, cv::GCompileArgs>> {};
-    class BitwisePerfTest : public TestPerfParams<tuple<bitwiseOp, cv::Size, MatType, cv::GCompileArgs>> {};
+    class CmpWithScalarPerfTest : public TestPerfParams<tuple<compare_f, CmpTypes, cv::Size, MatType, cv::GCompileArgs>> {};
+    class BitwisePerfTest : public TestPerfParams<tuple<bitwiseOp, bool, cv::Size, MatType, cv::GCompileArgs>> {};
     class BitwiseNotPerfTest : public TestPerfParams<tuple<cv::Size, MatType, cv::GCompileArgs>> {};
     class SelectPerfTest : public TestPerfParams<tuple<cv::Size, MatType, cv::GCompileArgs>> {};
     class MinPerfTest : public TestPerfParams<tuple<cv::Size, MatType, cv::GCompileArgs>> {};

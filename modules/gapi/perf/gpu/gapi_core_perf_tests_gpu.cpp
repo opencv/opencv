@@ -108,13 +108,15 @@ INSTANTIATE_TEST_CASE_P(CmpPerfTestGPU, CmpPerfTest,
                                 Values(cv::compile_args(CORE_GPU))));
 
 INSTANTIATE_TEST_CASE_P(CmpWithScalarPerfTestGPU, CmpWithScalarPerfTest,
-                        Combine(Values(CMP_EQ, CMP_GE, CMP_NE, CMP_GT, CMP_LT, CMP_LE),
+                        Combine(Values(AbsExact().to_compare_f()),
+                                Values(CMP_EQ, CMP_GE, CMP_NE, CMP_GT, CMP_LT, CMP_LE),
                                 Values( szSmall128, szVGA, sz720p, sz1080p ),
                                 Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
                                 Values(cv::compile_args(CORE_GPU))));
 
 INSTANTIATE_TEST_CASE_P(BitwisePerfTestGPU, BitwisePerfTest,
                         Combine(Values(AND, OR, XOR),
+                                testing::Bool(),
                                 Values( szSmall128, szVGA, sz720p, sz1080p ),
                                 Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1),
                                 Values(cv::compile_args(CORE_GPU))));
