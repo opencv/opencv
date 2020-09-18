@@ -7,8 +7,8 @@ Test for copyto with mask
 # Python 2/3 compatibility
 from __future__ import print_function
 
-import cv2 as cv
 import numpy as np
+import cv2 as cv
 import sys
 
 from tests_common import NewOpenCVTests
