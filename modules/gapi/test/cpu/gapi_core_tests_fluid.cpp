@@ -65,6 +65,14 @@ INSTANTIATE_TEST_CASE_P(DISABLED_MeanTestFluid, MeanTest,
                                 Values(-1),
                                 Values(CORE_FLUID)));
 
+INSTANTIATE_TEST_CASE_P(MaskTestFluid, MaskTest,
+                        Combine(Values(CV_8UC1, CV_16UC1, CV_16SC1),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480),
+                                       cv::Size(128, 128)),
+                                Values(-1),
+                                Values(CORE_FLUID)));
+
 INSTANTIATE_TEST_CASE_P(AbsDiffTestFluid, AbsDiffTest,
                         Combine(Values(CV_8UC1, CV_16UC1, CV_16SC1),
                                 Values(cv::Size(1280, 720),
@@ -190,12 +198,11 @@ INSTANTIATE_TEST_CASE_P(LUTTestFluid, LUTTest,
                                 Values(CORE_FLUID)));
 
 INSTANTIATE_TEST_CASE_P(ConvertToFluid, ConvertToTest,
-                        Combine(Values(CV_8UC3, CV_8UC1, CV_16UC1, CV_32FC1),
-                                Values(cv::Size(1920, 1080),
-                                       cv::Size(1280, 720),
+                        Combine(Values(CV_8UC3, CV_8UC1, CV_16UC1, CV_16SC1, CV_32FC1),
+                                Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
-                                Values(CV_8U, CV_16U, CV_32F),
+                                Values(CV_8U, CV_16U, CV_16S, CV_32F),
                                 Values(CORE_FLUID),
                                 Values(Tolerance_FloatRel_IntAbs(1e-5, 2).to_compare_obj()),
                                 Values(2.5, 1.0, -1.0),
