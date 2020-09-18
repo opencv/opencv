@@ -31,7 +31,7 @@ namespace core {
     using GMat2 = std::tuple<GMat,GMat>;
     using GMat3 = std::tuple<GMat,GMat,GMat>; // FIXME: how to avoid this?
     using GMat4 = std::tuple<GMat,GMat,GMat,GMat>;
-    using GMatScalar = std::tuple<GMat, GScalar>;
+    using GMatScalar  = std::tuple<GMat, GScalar>;
 
     G_TYPED_KERNEL(GAdd, <GMat(GMat, GMat, int)>, "org.opencv.core.math.add") {
         static GMatDesc outMeta(GMatDesc a, GMatDesc b, int ddepth) {
@@ -499,6 +499,18 @@ namespace core {
             GAPI_Assert(border_mode != cv::BORDER_TRANSPARENT &&
                         "cv::BORDER_TRANSPARENT mode is not supported in cv::gapi::warpAffine");
             return in.withType(in.depth, in.chan).withSize(dsize);
+        }
+    };
+
+    G_TYPED_KERNEL(GSize, <GOpaque<Size>(GMat)>, "org.opencv.core.size") {
+        static GOpaqueDesc outMeta(const GMatDesc&) {
+            return empty_gopaque_desc();
+        }
+    };
+
+    G_TYPED_KERNEL(GSizeR, <GOpaque<Size>(GOpaque<Rect>)>, "org.opencv.core.sizeR") {
+        static GOpaqueDesc outMeta(const GOpaqueDesc&) {
+            return empty_gopaque_desc();
         }
     };
 }
@@ -1720,6 +1732,24 @@ GAPI_EXPORTS GMat warpAffine(const GMat& src, const Mat& M, const Size& dsize, i
                              int borderMode = cv::BORDER_CONSTANT, const Scalar& borderValue = Scalar());
 //! @} gapi_transform
 
+/** @brief Gets dimensions from Mat.
+
+@note Function textual ID is "org.opencv.core.size"
+
+@param src Input tensor
+@return Size (tensor dimensions).
+*/
+GAPI_EXPORTS GOpaque<Size> size(const GMat& src);
+
+/** @overload
+Gets dimensions from rectangle.
+
+@note Function textual ID is "org.opencv.core.sizeR"
+
+@param r Input rectangle.
+@return Size (rectangle dimensions).
+*/
+GAPI_EXPORTS GOpaque<Size> size(const GOpaque<Rect>& r);
 } //namespace gapi
 } //namespace cv
 

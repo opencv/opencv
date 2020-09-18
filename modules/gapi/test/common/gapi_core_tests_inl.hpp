@@ -9,6 +9,7 @@
 #define OPENCV_GAPI_CORE_TESTS_INL_HPP
 
 #include <opencv2/gapi/core.hpp>
+#include <opencv2/gapi/infer/parsers.hpp>
 #include "gapi_core_tests.hpp"
 
 namespace opencv_test
@@ -1576,6 +1577,95 @@ TEST_P(ReInitOutTest, TestWithAdd)
     // run for initialized output (can be initialized with a different size)
     initOutMats(out_sz, type);
     run_and_compare();
+}
+
+TEST_P(ParseSSDBLTest, ParseTest)
+{
+    cv::Mat in_mat = generateSSDoutput(sz);
+    std::vector<cv::Rect> boxes_gapi, boxes_ref;
+    std::vector<int> labels_gapi, labels_ref;
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    cv::GOpaque<cv::Size> op_sz;
+    auto out = cv::gapi::parseSSD(in, op_sz, confidence_threshold, filter_label);
+    cv::GComputation c(cv::GIn(in, op_sz), cv::GOut(std::get<0>(out), std::get<1>(out)));
+    c.apply(cv::gin(in_mat, sz), cv::gout(boxes_gapi, labels_gapi), getCompileArgs());
+
+    // Reference code //////////////////////////////////////////////////////////
+    parseSSDBLref(in_mat, sz, confidence_threshold, filter_label, boxes_ref, labels_ref);
+
+    // Comparison //////////////////////////////////////////////////////////////
+    EXPECT_TRUE(boxes_gapi == boxes_ref);
+    EXPECT_TRUE(labels_gapi == labels_ref);
+}
+
+TEST_P(ParseSSDTest, ParseTest)
+{
+    cv::Mat in_mat = generateSSDoutput(sz);
+    std::vector<cv::Rect> boxes_gapi, boxes_ref;
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    cv::GOpaque<cv::Size> op_sz;
+    auto out = cv::gapi::parseSSD(in, op_sz, confidence_threshold,
+                                  alignment_to_square, filter_out_of_bounds);
+    cv::GComputation c(cv::GIn(in, op_sz), cv::GOut(out));
+    c.apply(cv::gin(in_mat, sz), cv::gout(boxes_gapi), getCompileArgs());
+
+    // Reference code //////////////////////////////////////////////////////////
+    parseSSDref(in_mat, sz, confidence_threshold, alignment_to_square,
+                filter_out_of_bounds, boxes_ref);
+
+    // Comparison //////////////////////////////////////////////////////////////
+    EXPECT_TRUE(boxes_gapi == boxes_ref);
+}
+
+TEST_P(ParseYoloTest, ParseTest)
+{
+    cv::Mat in_mat = generateYoloOutput(num_classes);
+    auto anchors = cv::gapi::nn::parsers::GParseYolo::defaultAnchors();
+    std::vector<cv::Rect> boxes_gapi, boxes_ref;
+    std::vector<int> labels_gapi, labels_ref;
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    cv::GOpaque<cv::Size> op_sz;
+    auto out = cv::gapi::parseYolo(in, op_sz, confidence_threshold, nms_threshold, anchors);
+    cv::GComputation c(cv::GIn(in, op_sz), cv::GOut(std::get<0>(out), std::get<1>(out)));
+    c.apply(cv::gin(in_mat, sz), cv::gout(boxes_gapi, labels_gapi), getCompileArgs());
+
+    // Reference code //////////////////////////////////////////////////////////
+    parseYoloRef(in_mat, sz, confidence_threshold, nms_threshold, num_classes, anchors, boxes_ref, labels_ref);
+
+    // Comparison //////////////////////////////////////////////////////////////
+    EXPECT_TRUE(boxes_gapi == boxes_ref);
+    EXPECT_TRUE(labels_gapi == labels_ref);
+}
+
+TEST_P(SizeTest, ParseTest)
+{
+    cv::GMat in;
+    cv::Size out_sz;
+
+    auto out = cv::gapi::size(in);
+    cv::GComputation c(cv::GIn(in), cv::GOut(out));
+    c.apply(cv::gin(in_mat1), cv::gout(out_sz), getCompileArgs());
+
+    EXPECT_EQ(out_sz, sz);
+}
+
+TEST_P(SizeRTest, ParseTest)
+{
+    cv::Rect rect(cv::Point(0,0), sz);
+    cv::Size out_sz;
+
+    cv::GOpaque<cv::Rect> op_rect;
+    auto out = cv::gapi::size(op_rect);
+    cv::GComputation c(cv::GIn(op_rect), cv::GOut(out));
+    c.apply(cv::gin(rect), cv::gout(out_sz), getCompileArgs());
+
+    EXPECT_EQ(out_sz, sz);
 }
 
 } // opencv_test
