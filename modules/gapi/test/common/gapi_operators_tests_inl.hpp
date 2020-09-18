@@ -14,8 +14,14 @@ namespace opencv_test
 {
 TEST_P(MathOperatorMatScalarTest, OperatorAccuracyTest )
 {
-    auto fun_gapi = op.g_api_function;
-    auto fun_ocv = op.ocv_function ;
+    g_api_ocv_pair_mat_scalar funcs(op);
+    auto fun_gapi = funcs.g_api_function;
+    auto fun_ocv  = funcs.ocv_function;
+
+    if (op == DIVR)
+        in_mat1.setTo(1, in_mat1 == 0);                               // avoiding zeros in divide input data
+    if (op == DIV)
+        sc += Scalar(sc[0] == 0, sc[1] == 0, sc[2] == 0, sc[3] == 0); // avoiding zeros in divide input data
 
     // G-API code & corresponding OpenCV code ////////////////////////////////
 
@@ -37,8 +43,12 @@ TEST_P(MathOperatorMatScalarTest, OperatorAccuracyTest )
 
 TEST_P(MathOperatorMatMatTest, OperatorAccuracyTest )
 {
-    auto fun_gapi = op.g_api_function;
-    auto fun_ocv = op.ocv_function ;
+    g_api_ocv_pair_mat_mat funcs(op);
+    auto fun_gapi = funcs.g_api_function;
+    auto fun_ocv  = funcs.ocv_function;
+
+    if (op == DIV)
+        in_mat2.setTo(1, in_mat2 == 0); // avoiding zeros in divide input data
 
     // G-API code & corresponding OpenCV code ////////////////////////////////
 

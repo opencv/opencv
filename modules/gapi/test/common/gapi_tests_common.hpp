@@ -10,6 +10,7 @@
 #include <iostream>
 #include <tuple>
 #include <type_traits>
+#include <time.h>
 
 #include <opencv2/ts.hpp>
 #include <opencv2/gapi.hpp>
@@ -88,13 +89,25 @@ public:
 
     cv::Scalar sc;
 
+    // integral Scalar initialization
     cv::Scalar initScalarRandU(unsigned upper)
     {
-        auto& rng = cv::theRNG();
-        double s1 = rng(upper);  // FIXIT: RNG result is 'int', not double
+        cv::RNG rng(time(nullptr));
+        double s1 = rng(upper);
         double s2 = rng(upper);
         double s3 = rng(upper);
         double s4 = rng(upper);
+        return cv::Scalar(s1, s2, s3, s4);
+    }
+
+    // floating-point Scalar initialization (cv::core)
+    cv::Scalar initScalarRandU()
+    {
+        cv::RNG rng(time(nullptr));
+        double s1 = exp(rng.uniform(-1, 6) * 3.0 * CV_LOG2) * (rng.uniform(0, 2) ? 1. : -1.);
+        double s2 = exp(rng.uniform(-1, 6) * 3.0 * CV_LOG2) * (rng.uniform(0, 2) ? 1. : -1.);
+        double s3 = exp(rng.uniform(-1, 6) * 3.0 * CV_LOG2) * (rng.uniform(0, 2) ? 1. : -1.);
+        double s4 = exp(rng.uniform(-1, 6) * 3.0 * CV_LOG2) * (rng.uniform(0, 2) ? 1. : -1.);
         return cv::Scalar(s1, s2, s3, s4);
     }
 
@@ -112,7 +125,32 @@ public:
         in_mat1 = cv::Mat(sz_in, type);
         in_mat2 = cv::Mat(sz_in, type);
 
-        sc = initScalarRandU(100);
+        int sdepth = CV_MAT_DEPTH(type);
+        int ddepth = (dtype >= 0) ? CV_MAT_DEPTH(dtype)
+                                  : sdepth;             // dtype == -1 <=> dtype == SAME_TYPE
+
+        if ((sdepth >= CV_32F) || (ddepth >= CV_32F))
+        {
+            sc = initScalarRandU(); // initializing by floating-points
+        }
+        else
+        {
+            switch (sdepth)
+            {
+            case CV_8U:
+                sc = initScalarRandU(UCHAR_MAX + 1U);
+                break;
+            case CV_16U:
+                sc = initScalarRandU(USHRT_MAX + 1U);
+                break;
+            case CV_16S:
+                sc = initScalarRandU(SHRT_MAX + 1U);
+                break;
+            default:
+                sc = initScalarRandU(SCHAR_MAX + 1U);
+                break;
+            }
+        }
 
         // Details: https://github.com/opencv/opencv/pull/16083
         //if (CV_MAT_DEPTH(type) < CV_32F)
@@ -142,7 +180,33 @@ public:
     {
         in_mat1 = cv::Mat(sz_in, type);
 
-        sc = initScalarRandU(100);
+        int sdepth = CV_MAT_DEPTH(type);
+        int ddepth = (dtype >= 0) ? CV_MAT_DEPTH(dtype)
+                                  : sdepth;             // dtype == -1 <=> dtype == SAME_TYPE
+
+        if ((sdepth >= CV_32F) || (ddepth >= CV_32F))
+        {
+            sc = initScalarRandU();
+        }
+        else
+        {
+            switch (sdepth)
+            {
+            case CV_8U:
+                sc = initScalarRandU(UCHAR_MAX + 1U);
+                break;
+            case CV_16U:
+                sc = initScalarRandU(USHRT_MAX + 1U);
+                break;
+            case CV_16S:
+                sc = initScalarRandU(SHRT_MAX + 1U);
+                break;
+            default:
+                sc = initScalarRandU(SCHAR_MAX + 1U);
+                break;
+            }
+        }
+
         if (CV_MAT_DEPTH(type) < CV_32F)
         {
             cv::randu(in_mat1, cv::Scalar::all(0), cv::Scalar::all(255));
