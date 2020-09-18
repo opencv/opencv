@@ -79,6 +79,7 @@ cv::GRunArg cv::value_of(const cv::GOrigin &origin)
     switch (origin.shape)
     {
     case GShape::GSCALAR: return GRunArg(util::get<cv::Scalar>(origin.value));
+    case GShape::GARRAY:  return GRunArg(util::get<cv::detail::VectorRef>(origin.value));
     default: util::throw_error(std::logic_error("Unsupported shape for constant"));
     }
 }

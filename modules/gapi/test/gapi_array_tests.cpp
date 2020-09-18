@@ -28,6 +28,10 @@ G_TYPED_KERNEL(CountCorners,   <GScalar(GPointArray)>,  "test.array.in")
 {
     static GScalarDesc outMeta(const GArrayDesc &) { return empty_scalar_desc(); }
 };
+G_TYPED_KERNEL(PointIncrement, <GPointArray(GMat, GPointArray)>, "test.point_increment")
+{
+    static GArrayDesc outMeta(const GMatDesc&, const GArrayDesc&) { return empty_array_desc(); }
+};
 } // namespace ThisTest
 
 namespace
@@ -54,6 +58,15 @@ GAPI_OCV_KERNEL(OCVCountCorners, ThisTest::CountCorners)
     static void run(const std::vector<cv::Point> &in, cv::Scalar &out)
     {
         out[0] = static_cast<double>(in.size());
+    }
+};
+
+GAPI_OCV_KERNEL(OCVPointIncrement, ThisTest::PointIncrement)
+{
+    static void run(const cv::Mat&, const std::vector<cv::Point>& in, std::vector<cv::Point>& out)
+    {
+        for (const auto& el : in)
+            out.emplace_back(el + Point(1,1));
     }
 };
 
@@ -162,6 +175,45 @@ TEST(GArray, TestIntermediateOutput)
 
     EXPECT_EQ(10u, out_points.size());
     EXPECT_EQ(10,  out_count[0]);
+}
+
+TEST(GArray, GArrayConstValInitialization)
+{
+    std::vector<cv::Point> initial_vec {Point(0,0), Point(1,1), Point(2,2)};
+    std::vector<cv::Point> ref_vec     {Point(1,1), Point(2,2), Point(3,3)};
+    std::vector<cv::Point> out_vec;
+    cv::Mat in_mat;
+
+    cv::GComputationT<ThisTest::GPointArray(cv::GMat)> c([&](cv::GMat in)
+    {
+        // Initialization
+        ThisTest::GPointArray test_garray(initial_vec);
+        return ThisTest::PointIncrement::on(in, test_garray);
+    });
+    auto cc = c.compile(cv::descr_of(in_mat),
+                        cv::compile_args(cv::gapi::kernels<OCVPointIncrement>()));
+    cc(in_mat, out_vec);
+
+    EXPECT_EQ(ref_vec, out_vec);
+}
+
+TEST(GArray, GArrayRValInitialization)
+{
+    std::vector<cv::Point> ref_vec {Point(1,1), Point(2,2), Point(3,3)};
+    std::vector<cv::Point> out_vec;
+    cv::Mat in_mat;
+
+    cv::GComputationT<ThisTest::GPointArray(cv::GMat)> c([&](cv::GMat in)
+    {
+        // Rvalue initialization
+        ThisTest::GPointArray test_garray({Point(0,0), Point(1,1), Point(2,2)});
+        return ThisTest::PointIncrement::on(in, test_garray);
+    });
+    auto cc = c.compile(cv::descr_of(in_mat),
+                        cv::compile_args(cv::gapi::kernels<OCVPointIncrement>()));
+    cc(in_mat, out_vec);
+
+    EXPECT_EQ(ref_vec, out_vec);
 }
 
 TEST(GArray_VectorRef, TestMov)

@@ -114,6 +114,12 @@ void cv::gimpl::GExecutor::initResource(const ade::NodeHandle &orig_nh)
         break;
 
     case GShape::GARRAY:
+        if (d.storage == Data::Storage::CONST_VAL)
+        {
+            auto rc = RcDesc{d.rc, d.shape, d.ctor};
+            magazine::bindInArg(m_res, rc, m_gm.metadata(orig_nh).get<ConstValue>().arg);
+        }
+        break;
     case GShape::GOPAQUE:
         // Constructed on Reset, do nothing here
         break;
