@@ -1051,6 +1051,16 @@ void ONNXImporter::populateNet(Net dstNet)
             }
             else
             {
+                // Scale layer allocate output with the first input shape
+                if (total(outShapes[node_proto.input(0)]) < total(outShapes[node_proto.input(1)]))
+                {
+                    opencv_onnx::NodeProto proto;
+                    proto.add_input(node_proto.input(1));
+                    proto.add_input(node_proto.input(0));
+                    proto.add_output(layerParams.name);
+                    node_proto = proto;
+                }
+
                 if (isDiv)
                 {
                     LayerParams powerParams;
