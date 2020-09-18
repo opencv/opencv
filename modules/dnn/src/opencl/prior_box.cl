@@ -114,6 +114,6 @@ __kernel void clip(const int nthreads,
     for (int index = get_global_id(0); index < nthreads; index += get_global_size(0))
     {
         Dtype4 vec = vload4(index, dst);
-        vstore4(clamp(vec, 0.0f, 1.0f), index, dst);
+        vstore4(clamp(vec, (Dtype)0.0f, (Dtype)1.0f), index, dst);
     }
 }
