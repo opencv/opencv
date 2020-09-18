@@ -797,6 +797,50 @@ GAPI_FLUID_KERNEL(GFluidDivRC, cv::gapi::core::GDivRC, false)
     }
 };
 
+//-------------------
+//
+// Fluid kernels: mask
+//
+//-------------------
+
+template<typename DST, typename SRC>
+static void run_mask(Buffer &dst, const View &src, const View &mask)
+{
+    static_assert(std::is_same<DST, SRC>::value,
+        "Input and output types must match");
+
+    int length  = dst.length(); // dst, src and mask have the same size and are single-channel
+
+    const auto *in      = src.InLine<SRC>(0);
+    const auto *in_mask = mask.InLine<uchar>(0);
+          auto *out     = dst.OutLine<DST>();
+
+    for (int l=0; l < length; l++)
+    {
+        out[l] = in_mask[l] ? in[l] : 0;
+    }
+}
+
+GAPI_FLUID_KERNEL(GFluidMask, cv::gapi::core::GMask, false)
+{
+    static const int Window = 1;
+
+    static void run(const View &src, const View &mask, Buffer &dst)
+    {
+        if (src.meta().chan != 1 || dst.meta().chan != 1)
+            CV_Error(cv::Error::StsBadArg, "input and output must be single-channel");
+        if (mask.meta().chan != 1 || mask.meta().depth != CV_8U)
+            CV_Error(cv::Error::StsBadArg, "unsupported mask type");
+
+        //     DST     SRC     OP        __VA_ARGS__
+        UNARY_(uchar , uchar , run_mask, dst, src, mask);
+        UNARY_( short,  short, run_mask, dst, src, mask);
+        UNARY_(ushort, ushort, run_mask, dst, src, mask);
+
+        CV_Error(cv::Error::StsBadArg, "unsupported combination of types");
+    }
+};
+
 //----------------------------
 //
 // Fluid math kernels: bitwise
@@ -1186,12 +1230,19 @@ GAPI_FLUID_KERNEL(GFluidConvertTo, cv::gapi::core::GConvertTo, false)
         //     DST     SRC     OP             __VA_ARGS__
         UNARY_(uchar , uchar , run_convertto, dst, src, alpha, beta);
         UNARY_(uchar , ushort, run_convertto, dst, src, alpha, beta);
+        UNARY_(uchar ,  short, run_convertto, dst, src, alpha, beta);
         UNARY_(uchar ,  float, run_convertto, dst, src, alpha, beta);
         UNARY_(ushort, uchar , run_convertto, dst, src, alpha, beta);
         UNARY_(ushort, ushort, run_convertto, dst, src, alpha, beta);
+        UNARY_(ushort,  short, run_convertto, dst, src, alpha, beta);
         UNARY_(ushort,  float, run_convertto, dst, src, alpha, beta);
+        UNARY_( short, uchar , run_convertto, dst, src, alpha, beta);
+        UNARY_( short, ushort, run_convertto, dst, src, alpha, beta);
+        UNARY_( short,  short, run_convertto, dst, src, alpha, beta);
+        UNARY_( short,  float, run_convertto, dst, src, alpha, beta);
         UNARY_( float, uchar , run_convertto, dst, src, alpha, beta);
         UNARY_( float, ushort, run_convertto, dst, src, alpha, beta);
+        UNARY_( float,  short, run_convertto, dst, src, alpha, beta);
         UNARY_( float,  float, run_convertto, dst, src, alpha, beta);
 
         CV_Error(cv::Error::StsBadArg, "unsupported combination of types");
@@ -2332,6 +2383,7 @@ cv::gapi::GKernelPackage cv::gapi::core::fluid::kernels()
             ,GFluidMulCOld
             ,GFluidDivC
             ,GFluidDivRC
+            ,GFluidMask
             ,GFluidAbsDiffC
             ,GFluidCmpGTScalar
             ,GFluidCmpGEScalar
