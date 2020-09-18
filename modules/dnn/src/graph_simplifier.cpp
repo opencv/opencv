@@ -112,23 +112,6 @@ bool Subgraph::match(const Ptr<ImportGraphWrapper>& net, int nodeId,
                 continue;
             nodeId = getInputNodeId(net, node, j);
             const Ptr<ImportNodeWrapper> inpNode = net->getNode(nodeId);
-            if ((inpNode->getType() == "Gather") && (node->getType() == "Cast"))
-            {
-                int numNodes = net->getNumNodes();
-                std::string inpNodeName = node->getInputName(j);
-                for (int nodeId = 0; nodeId < numNodes; ++nodeId) {
-                    const Ptr<ImportNodeWrapper> node_to_check = net->getNode(nodeId);
-                    int numInp = node_to_check->getNumInputs();
-                    for (int inp = 0; inp < numInp; ++inp)
-                    {
-                        if (nodeId != nodeToMatch && inpNodeName == node_to_check->getInputName(j))
-                        {
-                            // Another node has the same input node, so it cannot be merged.
-                            return false;
-                        }
-                    }
-                }
-            }
             if (inpNode->getType() != "Const" && inpNode->getType() != "Constant")
             {
                 nodesToMatch.push(nodeId);
