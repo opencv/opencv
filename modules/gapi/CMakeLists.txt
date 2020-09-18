@@ -71,6 +71,7 @@ set(gapi_srcs
     src/api/kernels_core.cpp
     src/api/kernels_imgproc.cpp
     src/api/kernels_video.cpp
+    src/api/kernels_nnparsers.cpp
     src/api/render.cpp
     src/api/render_ocv.cpp
     src/api/ginfer.cpp
@@ -105,6 +106,7 @@ set(gapi_srcs
     src/backends/cpu/gcpuimgproc.cpp
     src/backends/cpu/gcpuvideo.cpp
     src/backends/cpu/gcpucore.cpp
+    src/backends/cpu/gnnparsers.cpp
 
     # Fluid Backend (also built-in, FIXME:move away)
     src/backends/fluid/gfluidbuffer.cpp

@@ -161,8 +161,8 @@ public:
      *
      * @sa @ref gapi_data_objects
      */
-    GComputation(GProtoInputArgs &&ins,
-                 GProtoOutputArgs &&outs);             // Arg-to-arg overload
+    GAPI_WRAP GComputation(GProtoInputArgs &&ins,
+                           GProtoOutputArgs &&outs);             // Arg-to-arg overload
 
     // 2. Syntax sugar and compatibility overloads
     /**
@@ -172,7 +172,7 @@ public:
      * @param in input GMat of the defined unary computation
      * @param out output GMat of the defined unary computation
      */
-    GComputation(GMat in, GMat out);                   // Unary overload
+    GAPI_WRAP GComputation(GMat in, GMat out);  // Unary overload
 
     /**
      * @brief Defines an unary (one input -- one output) computation

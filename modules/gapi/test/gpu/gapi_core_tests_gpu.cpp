@@ -138,7 +138,8 @@ INSTANTIATE_TEST_CASE_P(CompareTestGPU, CmpTest,
                                 Values(CV_8U),
                                 Values(CORE_GPU),
                                 Values(CMP_EQ, CMP_GE, CMP_NE, CMP_GT, CMP_LT, CMP_LE),
-                                testing::Bool()));
+                                testing::Bool(),
+                                Values(AbsExact().to_compare_obj())));
 
 INSTANTIATE_TEST_CASE_P(BitwiseTestGPU, BitwiseTest,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1),
@@ -147,7 +148,8 @@ INSTANTIATE_TEST_CASE_P(BitwiseTestGPU, BitwiseTest,
                                        cv::Size(128, 128)),
                                 Values(-1),
                                 Values(CORE_GPU),
-                                Values(AND, OR, XOR)));
+                                Values(AND, OR, XOR),
+                                testing::Bool()));
 
 INSTANTIATE_TEST_CASE_P(BitwiseNotTestGPU, NotTest,
                         Combine(Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1),

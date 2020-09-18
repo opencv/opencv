@@ -30,7 +30,7 @@ class gapi_core_test(NewOpenCVTests):
         g_in1 = cv.GMat()
         g_in2 = cv.GMat()
         g_out = cv.gapi.add(g_in1, g_in2)
-        comp = cv.GComputation(g_in1, g_in2, g_out)
+        comp = cv.GComputation(cv.GIn(g_in1, g_in2), cv.GOut(g_out))
 
         for pkg in pkgs:
             actual = comp.apply(in1, in2, args=cv.compile_args(pkg))
