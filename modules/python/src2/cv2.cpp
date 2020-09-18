@@ -1486,6 +1486,41 @@ template<typename _Tp> static inline PyObject* pyopencv_from_generic_vec(const s
     return seq;
 }
 
+template<std::size_t I = 0, typename... Tp>
+inline typename std::enable_if<I == sizeof...(Tp), void>::type
+convert_to_python_tuple(const std::tuple<Tp...>&, PyObject*) {  }
+
+template<std::size_t I = 0, typename... Tp>
+inline typename std::enable_if<I < sizeof...(Tp), void>::type
+convert_to_python_tuple(const std::tuple<Tp...>& cpp_tuple, PyObject* py_tuple)
+{
+    PyObject* item = pyopencv_from(std::get<I>(cpp_tuple));
+
+    if (!item)
+        return;
+
+    PyTuple_SET_ITEM(py_tuple, I, item);
+    convert_to_python_tuple<I + 1, Tp...>(cpp_tuple, py_tuple);
+}
+
+
+template<typename... Ts>
+PyObject* pyopencv_from(const std::tuple<Ts...>& cpp_tuple)
+{
+    size_t size = sizeof...(Ts);
+    PyObject* py_tuple = PyTuple_New(size);
+    convert_to_python_tuple(cpp_tuple, py_tuple);
+    size_t actual_size = PyTuple_Size(py_tuple);
+
+    if (actual_size < size)
+    {
+        Py_DECREF(py_tuple);
+        return NULL;
+    }
+
+    return py_tuple;
+}
+
 template<>
 PyObject* pyopencv_from(const std::pair<int, double>& src)
 {
