@@ -1841,7 +1841,7 @@ TEST(Core_InputOutput, FileStorage_dynamic_FileNodes)
     fs2 << "TAGm" << "[:" << 5 << 6 << 7 << 8 << "]";
     fs2.release();
 
-    fs3.open(FILENAME, cv::FileStorage::READ);
+    fs3.open(FILENAME, cv::FileStorage::READWRITE);
 
     fs3["TAGi"] << "new_string";
     fs3.save();
@@ -1901,7 +1901,7 @@ TEST(Core_InputOutput, FileStorage_dynamic_FileNodes)
 
     fs3["TAGk"] << "AnotherDummyString + ExtraString";
     fs3.releaseWithoutSave();
-    fs3.open(FILENAME, cv::FileStorage::READ);
+    fs3.open(FILENAME, cv::FileStorage::READWRITE);
     EXPECT_EQ((int)fs3["TAGb"]["TAGd"]["TAGo"]["TAGq"], 666);
     EXPECT_EQ((cv::String)fs3["TAGk"], "AnotherDummyString");
     fs3["TAGk"] << "AnotherDummyString + ExtraString";

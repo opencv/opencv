@@ -352,8 +352,10 @@ public:
         is_changed = false;
         dummy_eof = false;
         write_mode = false;
+        rw_mode = false;
         save_mode = false;
         mem_mode = false;
+        write_raw_base64 = false;
         space = 0;
         wrap_margin = 71;
         fmt = 0;
@@ -456,16 +458,18 @@ public:
 
     bool open( const char* filename_or_buf, int _flags, const char* encoding )
     {
-        _flags &= ~FileStorage::BASE64;
+        write_raw_base64 = (_flags & FileStorage::BASE64) != 0;
 
         bool ok = true;
         if (!save_mode)
             release();
 
-        bool append = (_flags & 3) == FileStorage::APPEND;
         mem_mode = (_flags & FileStorage::MEMORY) != 0;
 
-        write_mode = (_flags & 3) != 0;
+        const int rw_flags = (_flags & (FileStorage::WRITE | FileStorage::APPEND));
+        bool append = rw_flags == FileStorage::APPEND;
+        write_mode = rw_flags == FileStorage::WRITE || append;
+        rw_mode = rw_flags == FileStorage::READWRITE;
 
         bool isGZ = false;
         size_t fnamelen = 0;
@@ -510,8 +514,15 @@ public:
 
             if( !isGZ )
             {
-                file = fopen(filename.c_str(), !write_mode ? "rt" : !append ? "wt" : "a+t" );
-                if( !file )
+                String fopen_mode;
+                if( append )
+                    fopen_mode = "a+t";
+                else if( write_mode )
+                    fopen_mode = "wt";
+                else // READ or READWRITE mode
+                    fopen_mode = "rt";
+                file = fopen(filename.c_str(), fopen_mode.c_str());
+                if( !file && !rw_mode )
                     return false;
             }
             else
@@ -533,42 +544,48 @@ public:
             fs_data.clear();
         }
         wrap_margin = 71;
-        fmt = FileStorage::FORMAT_AUTO;
+
+        fmt = flags & FileStorage::FORMAT_MASK;
+        if( fmt == FileStorage::FORMAT_AUTO && !filename.empty() )
+        {
+            const char* dot_pos = NULL;
+            const char* dot_pos2 = NULL;
+            // like strrchr() implementation, but save two last positions simultaneously
+            for (const char* pos = &filename[0]; pos[0] != 0; pos++)
+            {
+                if( pos[0] == '.' )
+                {
+                    dot_pos2 = dot_pos;
+                    dot_pos = pos;
+                }
+            }
+            if (fs::strcasecmp(dot_pos, ".gz") == 0 && dot_pos2 != NULL)
+            {
+                dot_pos = dot_pos2;
+            }
+            if( fs::strcasecmp(dot_pos, ".xml") == 0 || fs::strcasecmp(dot_pos, ".xml.gz") == 0 )
+                fmt = FileStorage::FORMAT_XML;
+            else if ( fs::strcasecmp(dot_pos, ".json") == 0 || fs::strcasecmp(dot_pos, ".json.gz") == 0 )
+                fmt = FileStorage::FORMAT_JSON;
+            else if ( fs::strcasecmp(dot_pos, ".yml") == 0 || fs::strcasecmp(dot_pos, ".yml.gz") == 0
+                    || fs::strcasecmp(dot_pos, ".yaml") == 0 || fs::strcasecmp(dot_pos, ".yaml.gz") == 0 )
+            {
+                fmt = FileStorage::FORMAT_YAML;
+            }
+            // Write default for unknown filenames
+            if( write_mode && fmt == FORMAT_AUTO )
+                fmt = FileStorage::FORMAT_YAML;
+        }
+        else if( write_mode && fmt == FORMAT_AUTO )
+        {
+            // Write default for empty filename
+            fmt = FileStorage::FORMAT_XML;
+        }
 
         if( write_mode )
         {
-            fmt = flags & FileStorage::FORMAT_MASK;
-
             if( mem_mode )
                 outbuf.clear();
-
-            if( fmt == FileStorage::FORMAT_AUTO && !filename.empty() )
-            {
-                const char* dot_pos = NULL;
-                const char* dot_pos2 = NULL;
-                // like strrchr() implementation, but save two last positions simultaneously
-                for (const char* pos = &filename[0]; pos[0] != 0; pos++)
-                {
-                    if( pos[0] == '.' )
-                    {
-                        dot_pos2 = dot_pos;
-                        dot_pos = pos;
-                    }
-                }
-                if (fs::strcasecmp(dot_pos, ".gz") == 0 && dot_pos2 != NULL)
-                {
-                    dot_pos = dot_pos2;
-                }
-                fmt = (fs::strcasecmp(dot_pos, ".xml") == 0 || fs::strcasecmp(dot_pos, ".xml.gz") == 0 )
-                        ? FileStorage::FORMAT_XML
-                    : (fs::strcasecmp(dot_pos, ".json") == 0 || fs::strcasecmp(dot_pos, ".json.gz") == 0)
-                        ? FileStorage::FORMAT_JSON
-                    : FileStorage::FORMAT_YAML;
-            }
-            else if( fmt == FileStorage::FORMAT_AUTO )
-            {
-                fmt = FileStorage::FORMAT_XML;
-            }
 
             // we use factor=6 for XML (the longest characters (' and ") are encoded with 6 bytes (&apos; and &quot;)
             // and factor=4 for YAML ( as we use 4 bytes for non ASCII characters (e.g. \xAB))
@@ -713,27 +730,36 @@ public:
                 strbufsize = strlen(strbuf);
             }
 
-            const char* yaml_signature = "%YAML";
-            const char* json_signature = "{";
-            const char* xml_signature  = "<?xml";
-            char* buf = this->gets(16);
-            CV_Assert(buf);
-            char* bufPtr = cv_skip_BOM(buf);
-            size_t bufOffset = bufPtr - buf;
-
-            if(strncmp( bufPtr, yaml_signature, strlen(yaml_signature) ) == 0)
-                fmt = FileStorage::FORMAT_YAML;
-            else if(strncmp( bufPtr, json_signature, strlen(json_signature) ) == 0)
-                fmt = FileStorage::FORMAT_JSON;
-            else if(strncmp( bufPtr, xml_signature, strlen(xml_signature) ) == 0)
+            if( rw_mode && !file && !gzfile && fmt == FileStorage::FORMAT_AUTO )
+            {
                 fmt = FileStorage::FORMAT_XML;
-            else if(strbufsize  == bufOffset)
-                CV_Error(CV_BADARG_ERR, "Input file is invalid");
+            }
             else
-                CV_Error(CV_BADARG_ERR, "Unsupported file storage format");
+            {
+                char* buf = this->gets(16);
+                CV_Assert(buf);
+                char* bufPtr = cv_skip_BOM(buf);
+                size_t bufOffset = bufPtr - buf;
 
-            rewind();
-            strbufpos = bufOffset;
+                if( fmt == FileStorage::FORMAT_AUTO )
+                {
+                    const char* yaml_signature = "%YAML";
+                    const char* json_signature = "{";
+                    const char* xml_signature  = "<?xml";
+                    if(strncmp( bufPtr, yaml_signature, strlen(yaml_signature) ) == 0)
+                        fmt = FileStorage::FORMAT_YAML;
+                    else if(strncmp( bufPtr, json_signature, strlen(json_signature) ) == 0)
+                        fmt = FileStorage::FORMAT_JSON;
+                    else if(strncmp( bufPtr, xml_signature, strlen(xml_signature) ) == 0)
+                        fmt = FileStorage::FORMAT_XML;
+                    else if(strbufsize  == bufOffset)
+                        CV_Error(CV_BADARG_ERR, "Input file is invalid");
+                    else
+                        CV_Error(CV_BADARG_ERR, "Unsupported file storage format");
+                }
+                rewind();
+                strbufpos = bufOffset;
+            }
             bufofs = 0;
 
             try
@@ -762,10 +788,20 @@ public:
 
                 if( !parser.empty() )
                 {
-                    ok = parser->parse(ptr);
+                    if( rw_mode && !file && !gzfile )
+                    {
+                        FileNode top_level_map = addNode(root_nodes, std::string(), FileNode::MAP, nullptr, 0);
+                        finalizeCollection(top_level_map);
+                    }
+                    else
+                    {
+                        ok = parser->parse(ptr);
+                    }
                     if( ok )
                     {
-                        root_nodes.endWriteStruct();
+                        finalizeCollection(root_nodes);
+                        write_stack.clear();
+                        current_block.reset();
 
                         CV_Assert( !fs_data_ptrs.empty() );
                         FileNode roots_node(fs_ext, 0, 0);
@@ -985,6 +1021,7 @@ public:
 
     void endWriteStruct()
     {
+        CV_Assert( write_mode || rw_mode );
         CV_Assert( !write_stack.empty() );
 
         FStructData& current_struct = write_stack.back();
@@ -1023,6 +1060,7 @@ public:
     void startWriteStruct( const char* key, int struct_flags,
                            const char* type_name )
     {
+        CV_Assert( write_mode || rw_mode );
         struct_flags = (struct_flags & (FileNode::TYPE_MASK|FileNode::FLOW)) | FileNode::EMPTY;
         if( !FileNode::isCollection(struct_flags))
             CV_Error( CV_StsBadArg,
@@ -1070,21 +1108,25 @@ public:
 
     void write( const String& key, int value )
     {
+        CV_Assert( write_mode || rw_mode );
         emitter->write(key.c_str(), value);
     }
 
     void write( const String& key, double value )
     {
+        CV_Assert( write_mode || rw_mode );
         emitter->write(key.c_str(), value);
     }
 
     void write( const String& key, const String& value )
     {
+        CV_Assert( write_mode || rw_mode );
         emitter->write(key.c_str(), value.c_str(), false);
     }
 
     void writeRawData( const std::string& dt, const void* _data, size_t len )
     {
+        CV_Assert( write_mode || rw_mode );
         size_t elemSize = fs::calcStructSize(dt.c_str(), 0);
         CV_Assert( len % elemSize == 0 );
         len /= elemSize;
@@ -2116,7 +2158,9 @@ public:
     bool dummy_eof;
     bool write_mode;
     bool mem_mode;
+    bool rw_mode;
     bool save_mode;
+    bool write_raw_base64;
     int fmt;
 
     State state; //!< current state of the FileStorage (used only for writing)
@@ -2570,8 +2614,11 @@ FileStorage& operator << (FileStorage& fs, const String& str)
 
 bool FileStorage::isWrite() const { return p->write_mode; }
 
-void FileStorage::save(const String& filename)
+void FileStorage::save(const String& filename, int save_flags)
 {
+    CV_Assert( p->rw_mode );
+    CV_Assert( save_flags );
+    CV_Assert( (save_flags & FileStorage::READWRITE) != FileStorage::READWRITE );
     String orig_filename = p->filename;
     if( p->write_mode )
     {
@@ -2585,7 +2632,7 @@ void FileStorage::save(const String& filename)
     if( !p->is_changed )
         return;
     p->save_mode = true;
-    open((filename.empty() ? p->filename : filename), FileStorage::WRITE);
+    open((filename.empty() ? p->filename : filename), save_flags );
     for (size_t i = 0; i < p->roots.size(); i++)
     {
         if( i > 0 )
@@ -2601,6 +2648,7 @@ void FileStorage::save(const String& filename)
     p->filename = orig_filename;
     p->emitter = createFileNodeEmitter(p.get());
     p->is_changed = p->save_mode = p->write_mode = false;
+    p->rw_mode = true;
 }
 
 

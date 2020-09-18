@@ -267,9 +267,9 @@ Here is how to read the file created by the code sample above:
 
 Modifying data read from a file storage.
 ----------------------------------------
-Since 4.5.0 data read from XML, YAML or JSON file storage can be modified and written back to file:
+FileStorage::READWRITE lets you read, modify and resynchronize data back to file:
 -#  Open the file storage using FileStorage::FileStorage constructor or FileStorage::open
-    in FileStorage::READ mode as shown above.
+    in FileStorage::READWRITE mode.
 
 -#  Address the data you want to modify via FileStorage::operator [], FileNode::operator []
     and/or FileNodeIterator.
@@ -279,12 +279,12 @@ Since 4.5.0 data read from XML, YAML or JSON file storage can be modified and wr
 
 -#  Save data back to file at any time using FileStorage::save.
 
--#  Close the storage using FileStorage::release or FileStorage::release WithoutSave depending on
-    whether you want changes to be written back to file or not on file storage release.
+-#  Close the storage using FileStorage::release or FileStorage::releaseWithoutSave depending on
+    whether you want changes to be written back to file or not when releasing the file storage.
 
 Here is how to read and modify the file created by the code sample above:
 @code
-    FileStorage fs3("test.yml", FileStorage::READ);
+    FileStorage fs3("test.yml", FileStorage::READWRITE);
 
     // save original settings to backup file in XML format
     fs3.save("test_backup.xml");
@@ -357,6 +357,7 @@ public:
         READ        = 0, //!< value, open the file for reading
         WRITE       = 1, //!< value, open the file for writing
         APPEND      = 2, //!< value, open the file for appending
+        READWRITE   = 3, //!< value, open the file for reading, allowing changes to be synchronized back to file
         MEMORY      = 4, //!< flag, read data from source or write data to the internal buffer (which is
         //!< returned by FileStorage::release)
         FORMAT_MASK = (7<<3), //!< mask for format flags
@@ -538,8 +539,9 @@ public:
 
     /** @brief Saves changes made to READ FileStorage back to file.
     @param filename Name the file to save to. Default name is file read from.
+    @param save_flags FileStorage mode used for saving. Default is FileStorage::WRITE
      */
-    CV_WRAP virtual void save(const String& filename = String());
+    CV_WRAP virtual void save(const String& filename = String(), int save_flags = FileStorage::WRITE);
 
     /** @brief Returns the normalized object name for the specified name of a file.
     @param filename Name of a file
