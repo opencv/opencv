@@ -136,7 +136,7 @@ Explanation
     form an ill-posed problem, so the calibration will fail. For square images the positions of the
     corners are only approximate. We may improve this by calling the @ref cv::cornerSubPix function.
     (`winSize` is used to control the side length of the search window. Its default value is 11.
-    `winSzie` may be changed by command line parameter `--winSize=<number>`.)
+    `winSize` may be changed by command line parameter `--winSize=<number>`.)
     It will produce better calibration result. After this we add a valid inputs result to the
     *imagePoints* vector to collect all of the equations into a single container. Finally, for
     visualization feedback purposes we will draw the found points on the input image using @ref
