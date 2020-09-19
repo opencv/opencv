@@ -741,21 +741,24 @@ public:
                 char* bufPtr = cv_skip_BOM(buf);
                 size_t bufOffset = bufPtr - buf;
 
-                if( fmt == FileStorage::FORMAT_AUTO )
+                int fmt_by_filename = fmt;
+                const char* yaml_signature = "%YAML";
+                const char* json_signature = "{";
+                const char* xml_signature  = "<?xml";
+                if(strncmp( bufPtr, yaml_signature, strlen(yaml_signature) ) == 0)
+                    fmt = FileStorage::FORMAT_YAML;
+                else if(strncmp( bufPtr, json_signature, strlen(json_signature) ) == 0)
+                    fmt = FileStorage::FORMAT_JSON;
+                else if(strncmp( bufPtr, xml_signature, strlen(xml_signature) ) == 0)
+                    fmt = FileStorage::FORMAT_XML;
+                else if(strbufsize  == bufOffset)
+                    CV_Error(CV_BADARG_ERR, "Input file is invalid");
+                else
+                    CV_Error(CV_BADARG_ERR, "Unsupported file storage format");
+                if( fmt_by_filename != FileStorage::FORMAT_AUTO
+                        && fmt_by_filename != fmt )
                 {
-                    const char* yaml_signature = "%YAML";
-                    const char* json_signature = "{";
-                    const char* xml_signature  = "<?xml";
-                    if(strncmp( bufPtr, yaml_signature, strlen(yaml_signature) ) == 0)
-                        fmt = FileStorage::FORMAT_YAML;
-                    else if(strncmp( bufPtr, json_signature, strlen(json_signature) ) == 0)
-                        fmt = FileStorage::FORMAT_JSON;
-                    else if(strncmp( bufPtr, xml_signature, strlen(xml_signature) ) == 0)
-                        fmt = FileStorage::FORMAT_XML;
-                    else if(strbufsize  == bufOffset)
-                        CV_Error(CV_BADARG_ERR, "Input file is invalid");
-                    else
-                        CV_Error(CV_BADARG_ERR, "Unsupported file storage format");
+                    /* Filename / content format mismatch handling */
                 }
                 rewind();
                 strbufpos = bufOffset;
