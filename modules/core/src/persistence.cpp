@@ -2372,14 +2372,14 @@ FileNode FileStorage::operator [](const std::string& key) const
         res = p->roots[i][key];
         if (res.exists())
         {
-            res.parent->nodeName = std::to_string(i);
+            res.parent->nodeIdx = i;
             break;
         }
     }
     if( !res.exists() ) {
         res.fs = p.get();
         res.parent = makePtr<FileNode>(p->roots[p->roots.size() - 1]);
-        res.parent->nodeName = std::to_string(p->roots.size() - 1);
+        res.parent->nodeIdx = p->roots.size() - 1;
     }
     res.nodeName = key;
     res.parent->parent = makePtr<FileNode>(this, 0, 0);
@@ -2749,7 +2749,16 @@ FileNode FileNode::operator[](int i) const
     CV_Assert( isSeq() );
 
     int sz = (int)size();
-    CV_Assert( 0 <= i && i < sz );
+    CV_Assert( 0 <= i && i <= sz );
+
+    if( i == sz )
+    {
+        FileNode res;
+        res.fs = fs;
+        res.parent = makePtr<FileNode>(*this);
+        res.nodeIdx = i;
+        return res;
+    }
 
     FileNodeIterator it = begin();
     it += i;
@@ -3181,7 +3190,9 @@ void FileNode::resize(size_t sz)
 void FileNode::updateDataRef()
 {
     Ptr<FileNode> p = parent;
-    CV_Assert( p && p->parent && ( !nodeName.empty() || parent->isSeq() ) );
+    CV_Assert( p );
+    const bool in_seq = p->isSeq();
+    CV_Assert( p->parent && ( !nodeName.empty() || in_seq ) );
     // node is not base node, i.e. has more than 2 parent nodes
     if( p->parent->parent )
     {
@@ -3193,7 +3204,7 @@ void FileNode::updateDataRef()
         *this = fs_ext[nodeName];
         return;
     }
-    *this = (*p)[nodeName];
+    *this = ( in_seq ? (*p)[(int)nodeIdx] : (*p)[nodeName] );
 }
 
 
@@ -3209,6 +3220,7 @@ FileNodeIterator::FileNodeIterator()
 
 FileNodeIterator::FileNodeIterator( const FileNode& node, bool seekEnd )
 {
+    parent = makePtr<FileNode>(node);
     fs = node.fs;
     idx = 0;
     if( !node.exists() )
@@ -3260,6 +3272,7 @@ FileNodeIterator::FileNodeIterator(const FileNodeIterator& it)
     blockSize = it.blockSize;
     nodeNElems = it.nodeNElems;
     idx = it.idx;
+    parent = it.parent;
 }
 
 FileNodeIterator& FileNodeIterator::operator=(const FileNodeIterator& it)
@@ -3270,12 +3283,19 @@ FileNodeIterator& FileNodeIterator::operator=(const FileNodeIterator& it)
     blockSize = it.blockSize;
     nodeNElems = it.nodeNElems;
     idx = it.idx;
+    parent = it.parent;
     return *this;
 }
 
 FileNode FileNodeIterator::operator *() const
 {
-    return FileNode(idx < nodeNElems ? fs : NULL, blockIdx, ofs);
+    FileNode res = FileNode(fs, blockIdx, ofs);
+    res.nodeIdx = idx;
+    res.parent = parent;
+    // mark as non-existent, if idx invalid
+    if( idx >= nodeNElems )
+        res.blockIdx = res.ofs = std::numeric_limits<size_t>::max();
+    return res;
 }
 
 FileNodeIterator& FileNodeIterator::operator ++ ()

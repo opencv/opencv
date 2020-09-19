@@ -798,6 +798,7 @@ public:
 
     FileStorage::Impl* fs;
     std::string nodeName;
+    size_t nodeIdx;
     size_t blockIdx;
     size_t ofs;
     Ptr<FileNode> parent;
@@ -869,6 +870,7 @@ protected:
     size_t blockSize;
     size_t nodeNElems;
     size_t idx;
+    Ptr<FileNode> parent;
 };
 
 //! @} core_xml
