@@ -80,7 +80,7 @@ for the operating system. Thus you can't use  VideoCapture or VideoWriter with t
 To get access to their devices, manufactures provide their own C++ API and library that you have to
 include and link with your OpenCV application.
 
-Is common case that this libraries read/write images from/to a memory buffer. If it so, it is
+It is a common case that these libraries read/write images from/to a memory buffer. If it so, it is
 possible to make a `Mat` header for memory buffer (user-allocated data) and process it
 in-place using OpenCV functions. See cv::Mat::Mat() for more details.
 
@@ -88,9 +88,9 @@ The FFmpeg library
 ------------------
 
 OpenCV can use the FFmpeg library (http://ffmpeg.org/) as backend to record, convert and stream audio and video.
-FFMpeg is a complete, cross-reference solution. If you enable FFmpeg while configuring OpenCV than
+FFmpeg is a complete, cross-reference solution. If you enable FFmpeg while configuring OpenCV than
 CMake will download and install the binaries in `OPENCV_SOURCE_CODE/3rdparty/ffmpeg/`. To use
-FFMpeg at runtime, you must deploy the FFMepg binaries with your application.
+FFmpeg at runtime, you must deploy the FFMepg binaries with your application.
 
 @note FFmpeg is licensed under the GNU Lesser General Public License (LGPL) version 2.1 or later.
 See `OPENCV_SOURCE_CODE/3rdparty/ffmpeg/readme.txt` and http://ffmpeg.org/legal.html for details and

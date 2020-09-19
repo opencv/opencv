@@ -392,24 +392,21 @@ void ONNXImporter::populateNet(Net dstNet)
             layerParams.set("ave_pool_padded_area", framework_name == "pytorch");
         }
         else if (layer_type == "GlobalAveragePool" || layer_type == "GlobalMaxPool" ||
-                layer_type == "ReduceMean" || layer_type == "ReduceSum")
+                layer_type == "ReduceMean" || layer_type == "ReduceSum" || layer_type == "ReduceMax")
         {
             CV_Assert(node_proto.input_size() == 1);
             layerParams.type = "Pooling";
             String pool;
-            if (layer_type == "GlobalMaxPool")
+            if (layer_type == "GlobalMaxPool" || layer_type == "ReduceMax")
                 pool = "MAX";
             else if (layer_type == "ReduceSum")
                 pool = "SUM";
             else
                 pool = "AVE";
             layerParams.set("pool", pool);
-            layerParams.set("global_pooling", layer_type == "GlobalAveragePool" || layer_type == "GlobalMaxPool");
-            if (layer_type == "ReduceMean" || layer_type == "ReduceSum")
+            layerParams.set("global_pooling", !layerParams.has("axes"));
+            if (layerParams.has("axes") && (layer_type == "ReduceMean" || layer_type == "ReduceSum" || layer_type == "ReduceMax"))
             {
-                if (!layerParams.has("axes"))
-                    CV_Error(Error::StsNotImplemented, "Unsupported mode of " + layer_type + " operation.");
-
                 MatShape inpShape = outShapes[node_proto.input(0)];
                 DictValue axes = layerParams.get("axes");
                 bool keepdims = layerParams.get<int>("keepdims");
@@ -486,6 +483,36 @@ void ONNXImporter::populateNet(Net dstNet)
 
                 layerParams.type = "Reshape";
                 layerParams.set("dim", DictValue::arrayInt(&targetShape[0], targetShape.size()));
+
+                node_proto.set_input(0, node_proto.output(0));
+                node_proto.set_output(0, layerParams.name);
+            }
+            else if (!layerParams.has("axes") && (layer_type == "ReduceMean" || layer_type == "ReduceSum" || layer_type == "ReduceMax"))
+            {
+                CV_CheckEQ(layerParams.get<int>("keepdims"), 0, (layer_type + " layer only supports keepdims = false").c_str());
+                LayerParams reshapeLp;
+                reshapeLp.name = layerParams.name + "/reshape";
+                reshapeLp.type = "Reshape";
+                CV_Assert(layer_id.find(reshapeLp.name) == layer_id.end());
+                int newShape[] = {1, 1, 1, -1};
+                reshapeLp.set("dim", DictValue::arrayInt(&newShape[0], 4));
+
+                opencv_onnx::NodeProto proto;
+                proto.add_input(node_proto.input(0));
+                proto.add_output(reshapeLp.name);
+                addLayer(dstNet, reshapeLp, proto, layer_id, outShapes);
+
+                LayerParams poolLp = layerParams;
+                poolLp.name = layerParams.name + "/pool";
+                CV_Assert(layer_id.find(poolLp.name) == layer_id.end());
+
+                node_proto.set_input(0, reshapeLp.name);
+                node_proto.set_output(0, poolLp.name);
+                addLayer(dstNet, poolLp, node_proto, layer_id, outShapes);
+
+                layerParams.type = "Reshape";
+                int targetShape[] = {1};
+                layerParams.set("dim", DictValue::arrayInt(&targetShape[0], 1));
 
                 node_proto.set_input(0, node_proto.output(0));
                 node_proto.set_output(0, layerParams.name);
@@ -653,7 +680,7 @@ void ONNXImporter::populateNet(Net dstNet)
                         LayerParams constParams;
                         constParams.name = layerParams.name + "/const";
                         constParams.type = "Const";
-                        constParams.blobs.push_back(blob);
+                        constParams.blobs.push_back((isSub ? -1 : 1) * blob);
                         int id = dstNet.addLayer(constParams.name, constParams.type, constParams);
                         layer_id.insert(std::make_pair(constParams.name, LayerInfo(id, 0)));
                         outShapes[constParams.name] = shape(blob);
@@ -1024,6 +1051,16 @@ void ONNXImporter::populateNet(Net dstNet)
             }
             else
             {
+                // Scale layer allocate output with the first input shape
+                if (total(outShapes[node_proto.input(0)]) < total(outShapes[node_proto.input(1)]))
+                {
+                    opencv_onnx::NodeProto proto;
+                    proto.add_input(node_proto.input(1));
+                    proto.add_input(node_proto.input(0));
+                    proto.add_output(layerParams.name);
+                    node_proto = proto;
+                }
+
                 if (isDiv)
                 {
                     LayerParams powerParams;
@@ -1427,8 +1464,10 @@ void ONNXImporter::populateNet(Net dstNet)
                     case opencv_onnx::TensorProto_DataType_INT64:   type = CV_32S; break;
                     default: type = blob.type();
                 }
-                blob.convertTo(blob, type);
-                addConstant(layerParams.name, blob, constBlobs, outShapes);
+                Mat dst;
+                blob.convertTo(dst, type);
+                dst.dims = blob.dims;
+                addConstant(layerParams.name, dst, constBlobs, outShapes);
                 continue;
             }
             else
@@ -1477,6 +1516,8 @@ void ONNXImporter::populateNet(Net dstNet)
                 {
                     outShape.erase(outShape.begin() + axis);
                     out.reshape(0, outShape);
+                } else {
+                    out.dims = 1;
                 }
                 addConstant(layerParams.name, out, constBlobs, outShapes);
                 continue;
@@ -1557,7 +1598,9 @@ void ONNXImporter::populateNet(Net dstNet)
             Mat shapes = getBlob(node_proto, constBlobs, node_proto.input_size() - 1);
             CV_CheckEQ(shapes.size[0], 4, "");
             CV_CheckEQ(shapes.size[1], 1, "");
-            CV_CheckTypeEQ(shapes.depth(), CV_32S, "");
+            CV_CheckDepth(shapes.depth(), shapes.depth() == CV_32S || shapes.depth() == CV_32F, "");
+            if (shapes.depth() == CV_32F)
+                shapes.convertTo(shapes, CV_32S);
             int height = shapes.at<int>(2);
             int width  = shapes.at<int>(3);
             if (node_proto.input_size() == 3)

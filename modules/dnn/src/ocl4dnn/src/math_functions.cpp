@@ -46,6 +46,8 @@
 #include <vector>
 #include "opencl_kernels_dnn.hpp"
 
+#include "opencv2/core/utils/logger.hpp"
+
 namespace cv { namespace dnn { namespace ocl4dnn {
 
 enum gemm_data_type_t
@@ -238,10 +240,6 @@ static bool ocl4dnnFastImageGEMM(const CBLAS_TRANSPOSE TransA,
         kernel_name += "_float";
     }
 
-    ocl::Kernel oclk_gemm_float(kernel_name.c_str(), ocl::dnn::gemm_image_oclsrc, opts);
-    if (oclk_gemm_float.empty())
-        return false;
-
     while (C_start_y < M)
     {
         blockC_width = std::min(static_cast<int>(N) - C_start_x, blocksize);
@@ -348,6 +346,10 @@ static bool ocl4dnnFastImageGEMM(const CBLAS_TRANSPOSE TransA,
             }
             local[1] = 1;
 
+            ocl::Kernel oclk_gemm_float(kernel_name.c_str(), ocl::dnn::gemm_image_oclsrc, opts);
+            if (oclk_gemm_float.empty())
+                return false;
+
             cl_uint arg_idx = 0;
             if (is_image_a)
                 oclk_gemm_float.set(arg_idx++, ocl::KernelArg::PtrReadOnly(A));
@@ -378,7 +380,10 @@ static bool ocl4dnnFastImageGEMM(const CBLAS_TRANSPOSE TransA,
             oclk_gemm_float.set(arg_idx++, isFirstColBlock);
 
             if (!oclk_gemm_float.run(2, global, local, false))
+            {
+                CV_LOG_WARNING(NULL, "OpenCL kernel enqueue failed: " << kernel_name);
                 return false;
+            }
 
             if (TransA == CblasNoTrans)
                 A_start_x += blockA_width;
