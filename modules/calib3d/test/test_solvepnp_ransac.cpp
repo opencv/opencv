@@ -208,6 +208,7 @@ public:
         eps[SOLVEPNP_AP3P] = 1.0e-2;
         eps[SOLVEPNP_DLS] = 1.0e-2;
         eps[SOLVEPNP_UPNP] = 1.0e-2;
+        eps[SOLVEPNP_SQPNP] = 1.0e-2;
         totalTestsCount = 10;
         pointsCount = 500;
     }
