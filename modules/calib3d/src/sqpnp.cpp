@@ -55,8 +55,8 @@ const int PoseSolver::SQP_MAX_ITERATION = 15;
 
 //No checking done here for overflow, since this is not public all call instances
 //are assumed to be valid
-template <typename tp = double, int snrows, int sncols,
-    int dnrows, int dncols>
+template <typename tp = double, int snrows=1, int sncols=1,
+    int dnrows=1, int dncols=1>
     void set(int row, int col, cv::Matx<tp, dnrows, dncols>& dest,
         const cv::Matx<tp, snrows, sncols>& source)
 {
@@ -495,7 +495,7 @@ void PoseSolver::computeRowAndNullspace(const cv::Matx<double, 9, 1>& r,
 
     Matx<double, 9, 1> q4 = H.col(4);
     q4 /= cv::norm(q4);
-    set(0, 4, H, q4);
+    set<double, 9, 1, 9, 6>(0, 4, H, q4);
 
     K(4, 0) = 0;
     K(4, 1) = r(6) * H(3, 1) + r(7) * H(4, 1) + r(8) * H(5, 1);
@@ -524,7 +524,7 @@ void PoseSolver::computeRowAndNullspace(const cv::Matx<double, 9, 1>& r,
 
     Matx<double, 9, 1> q5 = H.col(5);
     q5 /= cv::norm(q5);
-    set(0, 5, H, q5);
+    set<double, 9, 1, 9, 6>(0, 5, H, q5);
 
     K(5, 0) = r(6) * H(0, 0) + r(7) * H(1, 0) + r(8) * H(2, 0);
     K(5, 1) = 0; K(5, 2) = r(0) * H(6, 2) + r(1) * H(7, 2) + r(2) * H(8, 2);
@@ -564,7 +564,7 @@ void PoseSolver::computeRowAndNullspace(const cv::Matx<double, 9, 1>& r,
 
     Matx<double, 9, 1> v1 = Pn.col(index1);
     v1 /= max_norm1;
-    set(0, 0, N, v1);
+    set<double, 9, 1, 9, 3>(0, 0, N, v1);
 
     for (int i = 0; i < 9; i++)
     {
@@ -585,7 +585,7 @@ void PoseSolver::computeRowAndNullspace(const cv::Matx<double, 9, 1>& r,
     Matx<double, 9, 1> n0 = N.col(0);
     v2 -= v2.dot(n0) * n0;
     v2 /= cv::norm(v2);
-    set(0, 1, N, v2);
+    set<double, 9, 1, 9, 3>(0, 1, N, v2);
 
     for (int i = 0; i < 9; i++)
     {
@@ -607,7 +607,7 @@ void PoseSolver::computeRowAndNullspace(const cv::Matx<double, 9, 1>& r,
     Matx<double, 9, 1> n1 = N.col(1);
     v3 -= (v3.dot(n1)) * n1 - (v3.dot(n0)) * n0;
     v3 /= cv::norm(v3);
-    set(0, 2, N, v3);
+    set<double, 9, 1, 9, 3>(0, 2, N, v3);
 
 }
 
