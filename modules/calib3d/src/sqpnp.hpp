@@ -160,7 +160,7 @@ private:
     * @param norm_threshold Threshold for column vector norm of Pn (the projection onto the null space
     *                       of the constraint Jacobian).
     */
-    void computeRowAndNullspace(const cv::Matx<double, 9, 1>& r, 
+    void computeRowAndNullspace(const cv::Matx<double, 9, 1>& r,
         cv::Matx<double, 9, 6>& H,
         cv::Matx<double, 9, 3>& N,
         cv::Matx<double, 6, 6>& K,

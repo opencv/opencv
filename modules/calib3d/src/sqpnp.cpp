@@ -437,7 +437,7 @@ void PoseSolver::computeRowAndNullspace(const cv::Matx<double, 9, 1>& r,
     H(2, 0) = r(2) * inv_norm_r1;
     K(0, 0) = 2 * norm_r1;
 
-    // 2. q2 
+    // 2. q2
     double norm_r2 = sqrt(r(3) * r(3) + r(4) * r(4) + r(5) * r(5));
     double inv_norm_r2 = 1.0 / norm_r2;
     H(3, 1) = r(3) * inv_norm_r2;
@@ -493,7 +493,7 @@ void PoseSolver::computeRowAndNullspace(const cv::Matx<double, 9, 1>& r,
     H(5, 4) = r(8) - dot_j5q2 * H(5, 1) - dot_j5q4 * H(5, 3);
     H(6, 4) = r(3) - dot_j5q3 * H(6, 2); H(7, 4) = r(4) - dot_j5q3 * H(7, 2); H(8, 4) = r(5) - dot_j5q3 * H(8, 2);
 
-    auto q4 = H.col(4);
+    Matx<double, 9, 1> q4 = H.col(4);
     q4 /= cv::norm(q4);
     set(0, 4, H, q4);
 
@@ -522,7 +522,7 @@ void PoseSolver::computeRowAndNullspace(const cv::Matx<double, 9, 1>& r,
     H(7, 5) = r(1) - dot_j6q3 * H(7, 2) - dot_j6q5 * H(7, 4);
     H(8, 5) = r(2) - dot_j6q3 * H(8, 2) - dot_j6q5 * H(8, 4);
 
-    auto q5 = H.col(5);
+    Matx<double, 9, 1> q5 = H.col(5);
     q5 /= cv::norm(q5);
     set(0, 5, H, q5);
 

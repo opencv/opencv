@@ -944,7 +944,6 @@ int solvePnPGeneric( InputArray _opoints, InputArray _ipoints,
         undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
 
         sqpnp::PoseSolver solver;
-        
         solver.solve(opoints, undistortedPoints, vec_rvecs, vec_tvecs);
     }
     /*else if (flags == SOLVEPNP_DLS)
