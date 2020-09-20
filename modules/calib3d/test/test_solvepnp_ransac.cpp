@@ -190,6 +190,8 @@ static std::string printMethod(int method)
         return "SOLVEPNP_IPPE";
     case 7:
         return "SOLVEPNP_IPPE_SQUARE";
+    case 8:
+        return "SOLVEPNP_SQPNP";
     default:
         return "Unknown value";
     }
@@ -436,6 +438,7 @@ public:
         eps[SOLVEPNP_UPNP] = 1.0e-6; //UPnP is remapped to EPnP, so we use the same threshold
         eps[SOLVEPNP_IPPE] = 1.0e-6;
         eps[SOLVEPNP_IPPE_SQUARE] = 1.0e-6;
+        eps[SOLVEPNP_SQPNP] = 1.0e-6;
 
         totalTestsCount = 1000;
 
