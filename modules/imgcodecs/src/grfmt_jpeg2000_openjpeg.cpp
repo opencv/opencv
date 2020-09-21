@@ -634,6 +634,23 @@ bool Jpeg2KOpjDecoder::readData( Mat& img )
                  cv::format("OpenJPEG2000: output precision > 16 not supported: target depth %d", depth));
     }();
     const uint8_t shift = outPrec > m_maxPrec ? 0 : (uint8_t)(m_maxPrec - outPrec); // prec <= 64
+
+    const int inChannels = image_->numcomps;
+
+    CV_Assert(inChannels > 0);
+    CV_Assert(image_->comps);
+    for (int c = 0; c < inChannels; c++)
+    {
+        const opj_image_comp_t& comp = image_->comps[c];
+        CV_CheckEQ((int)comp.dx, 1, "OpenJPEG2000: tiles are not supported");
+        CV_CheckEQ((int)comp.dy, 1, "OpenJPEG2000: tiles are not supported");
+        CV_CheckEQ((int)comp.x0, 0, "OpenJPEG2000: tiles are not supported");
+        CV_CheckEQ((int)comp.y0, 0, "OpenJPEG2000: tiles are not supported");
+        CV_CheckEQ((int)comp.w, img.cols, "OpenJPEG2000: tiles are not supported");
+        CV_CheckEQ((int)comp.h, img.rows, "OpenJPEG2000: tiles are not supported");
+        CV_Assert(comp.data && "OpenJPEG2000: missing component data (unsupported / broken input)");
+    }
+
     return decode(*image_, img, shift);
 }
 
