@@ -65,9 +65,9 @@ if(BUILD_TENGINE)
 	if(NOT ANDROID)
 		# linux system
 		if(CMAKE_SYSTEM_PROCESSOR STREQUAL arm)
-			   SET (TENGINE_TOOLCHAIN_FLAG "-march=armv7-a")
+			   SET(TENGINE_TOOLCHAIN_FLAG "-march=armv7-a")
 		elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL aarch64) ## AARCH64
-			   SET (TENGINE_TOOLCHAIN_FLAG "-march=armv8-a")
+			   SET(TENGINE_TOOLCHAIN_FLAG "-march=armv8-a")
 		endif()
 	endif()
 
