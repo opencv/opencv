@@ -128,12 +128,10 @@ else()
   set(sources_options ${sources_options} EXCLUDE_CUDA)
 endif()
 
-
 if(HAVE_TENGINE)
 	list(APPEND include_dirs ${TENGINE_INCLUDE_DIRS})
 	list(APPEND libs -Wl,--whole-archive ${TENGINE_LIBRARIES} -Wl,--no-whole-archive)
 endif()
-
 
 ocv_module_include_directories(${include_dirs})
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
