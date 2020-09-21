@@ -695,8 +695,11 @@ I::OStream& ByteMemoryOutStream::operator<< (char atom) {
     return *this;
 }
 I::OStream& ByteMemoryOutStream::operator<< (wchar_t atom) {
-    static_assert(sizeof(wchar_t) <= sizeof(uint32_t), "Expecting sizeof(wchar_t) <= sizeof(uint32_t)");
-    return *this << static_cast<uint32_t>(atom);
+    static_assert((sizeof(wchar_t) == 2) || (sizeof(wchar_t) == 4),
+                  "Expecting sizeof(wchar_t) be either 2 or 4");
+    m_storage.push_back(0xFF & (atom));
+    m_storage.push_back(0xFF & (atom >> 8));
+    return *this;
 }
 I::OStream& ByteMemoryOutStream::operator<< (unsigned char atom) {
     return *this << static_cast<char>(atom);
@@ -769,8 +772,17 @@ I::IStream& ByteMemoryInStream::operator>> (char &atom) {
     return *this;
 }
 I::IStream& ByteMemoryInStream::operator>> (wchar_t &atom) {
-    static_assert(sizeof(wchar_t) <= sizeof(uint32_t), "Expecting sizeof(wchar_t) <= sizeof(uint32_t)");
-    atom = static_cast<wchar_t>(getU32());
+    static_assert((sizeof(wchar_t) == 2) || (sizeof(wchar_t) == 4),
+                  "Expecting sizeof(wchar_t) be either 2 or 4");
+    check(2);
+    uint8_t x[2];
+    x[0] = static_cast<uint8_t>(m_storage[m_idx++]);
+    x[1] = static_cast<uint8_t>(m_storage[m_idx++]);
+    if (sizeof(wchar_t) == 2) {
+        atom = ((x[0]) | (x[1] << 8));
+    } else {
+        atom = ((x[0]) | (x[1] << 8) | (0xFF << 16) | (0xFF << 24));
+    }
     return *this;
 }
 I::IStream& ByteMemoryInStream::operator>> (unsigned char &atom) {
