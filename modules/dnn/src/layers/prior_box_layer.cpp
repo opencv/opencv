@@ -57,6 +57,7 @@
 #endif
 
 #include "../op_vkcom.hpp"
+#include "../op_webgpu.hpp"
 
 #include <float.h>
 #include <algorithm>
@@ -300,7 +301,8 @@ public:
                backendId == DNN_BACKEND_CUDA ||
                (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && haveInfEngine() &&
                    ( _explicitSizes || (_minSize.size() == 1 && _maxSize.size() <= 1)))
-               || (backendId == DNN_BACKEND_VKCOM && haveVulkan());
+               || (backendId == DNN_BACKEND_VKCOM && haveVulkan())
+               || (backendId == DNN_BACKEND_WEBGPU && haveWGPU());
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -686,6 +688,17 @@ public:
     }
 #endif // HAVE_VULKAN
 
+#ifdef HAVE_WEBGPU
+    virtual Ptr<BackendNode> initWGPU(const std::vector<Ptr<BackendWrapper> > &input) CV_OVERRIDE
+    {
+        std::shared_ptr<webgpu::OpBase> op(new webgpu::OpPriorBox(_stepX, _stepY,
+                                                                _clip, _numPriors,
+                                                                _variance, _offsetsX,
+                                                                _offsetsY, _boxWidths,
+                                                                _boxHeights));
+        return Ptr<BackendNode>(new WGPUBackendNode(input, op));
+    }
+#endif  // HAVE_WEBGPU
 
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
                            const std::vector<MatShape> &outputs) const CV_OVERRIDE

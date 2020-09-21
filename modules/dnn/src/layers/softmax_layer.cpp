@@ -47,7 +47,7 @@
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
 #include "../op_vkcom.hpp"
-
+#include "../op_webgpu.hpp"
 #include <algorithm>
 #include <stdlib.h>
 using std::max;
@@ -102,7 +102,8 @@ public:
                (backendId == DNN_BACKEND_HALIDE && haveHalide() && axisRaw == 1) ||
                backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ||
                (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && haveInfEngine() && !logSoftMax) ||
-               (backendId == DNN_BACKEND_VKCOM && haveVulkan());
+               (backendId == DNN_BACKEND_VKCOM && haveVulkan()) ||
+               (backendId == DNN_BACKEND_WEBGPU && haveWGPU());
     }
 
 #ifdef HAVE_OPENCL
@@ -322,6 +323,16 @@ public:
         return Ptr<BackendNode>();
     }
 
+    virtual Ptr<BackendNode> initWGPU(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
+    {
+#ifdef HAVE_WEBGPU
+        webgpu::Tensor in = WGPUTensor(inputs[0]);
+        int cAxis = clamp(axisRaw, in.dimNum());
+        std::shared_ptr<webgpu::OpBase> op(new webgpu::OpSoftmax(cAxis, logSoftMax));
+        return Ptr<BackendNode>(new WGPUBackendNode(inputs, op));
+#endif  // HAVE_WEBGPU
+        return Ptr<BackendNode>();
+    }
 
     virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
     {

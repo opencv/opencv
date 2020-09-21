@@ -47,6 +47,7 @@
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
 #include "../op_vkcom.hpp"
+#include "../op_webgpu.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
 #include <iostream>
@@ -189,6 +190,14 @@ public:
         return Ptr<BackendNode>();
     }
 
+    virtual Ptr<BackendNode> initWGPU(const std::vector<Ptr<BackendWrapper> >& inputs) CV_OVERRIDE
+    {
+#ifdef HAVE_WEBGPU
+        return Ptr<BackendNode>(new WGPUBackendNode(inputs, func.initWGPU()));
+#endif  // HAVE_WEBGPU
+        return Ptr<BackendNode>();
+    }
+
     virtual bool tryFuse(Ptr<dnn::Layer>& top) CV_OVERRIDE
     {
         return func.tryFuse(top);
@@ -310,7 +319,8 @@ struct ReLUFunctor : public BaseFunctor
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
                backendId == DNN_BACKEND_HALIDE ||
-               backendId == DNN_BACKEND_VKCOM;
+               backendId == DNN_BACKEND_VKCOM ||
+               backendId == DNN_BACKEND_WEBGPU;
     }
 
     void apply(const float* srcptr, float* dstptr, int len, size_t planeSize, int cn0, int cn1) const
@@ -436,6 +446,14 @@ struct ReLUFunctor : public BaseFunctor
     }
 #endif  // HAVE_VULKAN
 
+#ifdef HAVE_WEBGPU
+    std::shared_ptr<webgpu::OpBase> initWGPU()
+    {
+        std::shared_ptr<webgpu::OpBase> op(new webgpu::OpReLU(slope));
+        return op;
+    }
+#endif  // HAVE_WEBGPU
+
     int64 getFLOPSPerElement() const { return 1; }
 };
 
@@ -559,6 +577,14 @@ struct ReLU6Functor : public BaseFunctor
     }
 #endif  // HAVE_VULKAN
 
+#ifdef HAVE_WEBGPU
+    std::shared_ptr<webgpu::OpBase> initWGPU()
+    {
+        // TODO: add webgpu implementation
+        return std::shared_ptr<webgpu::OpBase>();
+    }
+#endif  // HAVE_WEBGPU
+
     int64 getFLOPSPerElement() const { return 2; }
 };
 
@@ -651,6 +677,14 @@ struct TanHFunctor : public BaseFunctor
     }
 #endif  // HAVE_VULKAN
 
+#ifdef HAVE_WEBGPU
+    std::shared_ptr<webgpu::OpBase> initWGPU()
+    {
+        // TODO: add webgpu implementation
+        return std::shared_ptr<webgpu::OpBase>();
+    }
+#endif  // HAVE_WEBGPU
+
     int64 getFLOPSPerElement() const { return 1; }
 };
 
@@ -742,6 +776,14 @@ struct SwishFunctor : public BaseFunctor
         return std::shared_ptr<vkcom::OpBase>();
     }
 #endif  // HAVE_VULKAN
+
+#ifdef HAVE_WEBGPU
+    std::shared_ptr<webgpu::OpBase> initWGPU()
+    {
+        // TODO: add webgpu implementation
+        return std::shared_ptr<webgpu::OpBase>();
+    }
+#endif  // HAVE_WEBGPU
 
     int64 getFLOPSPerElement() const { return 3; }
 };
@@ -848,6 +890,14 @@ struct MishFunctor : public BaseFunctor
     }
 #endif  // HAVE_VULKAN
 
+#ifdef HAVE_WEBGPU
+    std::shared_ptr<webgpu::OpBase> initWGPU()
+    {
+        // TODO: add webgpu implementation
+        return std::shared_ptr<webgpu::OpBase>();
+    }
+#endif  // HAVE_WEBGPU
+
     int64 getFLOPSPerElement() const { return 3; }
 };
 
@@ -940,6 +990,14 @@ struct SigmoidFunctor : public BaseFunctor
     }
 #endif  // HAVE_VULKAN
 
+#ifdef HAVE_WEBGPU
+    std::shared_ptr<webgpu::OpBase> initWGPU()
+    {
+        // TODO: add webgpu implementation
+        return std::shared_ptr<webgpu::OpBase>();
+    }
+#endif  // HAVE_WEBGPU
+
     int64 getFLOPSPerElement() const { return 3; }
 };
 
@@ -1031,6 +1089,14 @@ struct ELUFunctor : public BaseFunctor
         return std::shared_ptr<vkcom::OpBase>();
     }
 #endif  // HAVE_VULKAN
+
+#ifdef HAVE_WEBGPU
+    std::shared_ptr<webgpu::OpBase> initWGPU()
+    {
+        // TODO: add webgpu implementation
+        return std::shared_ptr<webgpu::OpBase>();
+    }
+#endif  // HAVE_WEBGPU
 
     int64 getFLOPSPerElement() const { return 2; }
 };
@@ -1130,6 +1196,14 @@ struct AbsValFunctor : public BaseFunctor
     }
 #endif  // HAVE_VULKAN
 
+#ifdef HAVE_WEBGPU
+    std::shared_ptr<webgpu::OpBase> initWGPU()
+    {
+        // TODO: add webgpu implementation
+        return std::shared_ptr<webgpu::OpBase>();
+    }
+#endif  // HAVE_WEBGPU
+
     int64 getFLOPSPerElement() const { return 1; }
 };
 
@@ -1222,6 +1296,14 @@ struct BNLLFunctor : public BaseFunctor
         return std::shared_ptr<vkcom::OpBase>();
     }
 #endif  // HAVE_VULKAN
+
+#ifdef HAVE_WEBGPU
+    std::shared_ptr<webgpu::OpBase> initWGPU()
+    {
+        // TODO: add webgpu implementation
+        return std::shared_ptr<webgpu::OpBase>();
+    }
+#endif  // HAVE_WEBGPU
 
     int64 getFLOPSPerElement() const { return 5; }
 };
@@ -1370,6 +1452,14 @@ struct PowerFunctor : public BaseFunctor
         return std::shared_ptr<vkcom::OpBase>();
     }
 #endif  // HAVE_VULKAN
+
+#ifdef HAVE_WEBGPU
+    std::shared_ptr<webgpu::OpBase> initWGPU()
+    {
+        // TODO: add webgpu implementation
+        return std::shared_ptr<webgpu::OpBase>();
+    }
+#endif  // HAVE_WEBGPU
 
     bool tryFuse(Ptr<dnn::Layer>& top)
     {
@@ -1533,6 +1623,14 @@ struct ChannelsPReLUFunctor : public BaseFunctor
         return std::shared_ptr<vkcom::OpBase>();
     }
 #endif  // HAVE_VULKAN
+
+#ifdef HAVE_WEBGPU
+    std::shared_ptr<webgpu::OpBase> initWGPU()
+    {
+        // TODO: add webgpu implementation
+        return std::shared_ptr<webgpu::OpBase>();
+    }
+#endif  // HAVE_WEBGPU
 
     int64 getFLOPSPerElement() const { return 1; }
 };

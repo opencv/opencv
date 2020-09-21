@@ -37,6 +37,7 @@
 #define CV_TEST_TAG_DNN_SKIP_IE_MYRIAD           CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_2, CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X
 
 #define CV_TEST_TAG_DNN_SKIP_VULKAN              "dnn_skip_vulkan"
+#define CV_TEST_TAG_DNN_SKIP_WGPU                "dnn_skip_webgpu"
 
 #define CV_TEST_TAG_DNN_SKIP_CUDA                "dnn_skip_cuda"
 #define CV_TEST_TAG_DNN_SKIP_CUDA_FP16           "dnn_skip_cuda_fp16"
@@ -124,6 +125,7 @@ testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTarget
         bool withHalide = false,
         bool withCpuOCV = true,
         bool withVkCom = true,
+        bool withWGPU = true,
         bool withCUDA = true,
         bool withNgraph = true
 );

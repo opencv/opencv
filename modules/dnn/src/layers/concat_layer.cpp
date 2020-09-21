@@ -47,6 +47,7 @@
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
 #include "../op_vkcom.hpp"
+#include "../op_webgpu.hpp"
 
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
@@ -116,7 +117,8 @@ public:
                (backendId == DNN_BACKEND_HALIDE && haveHalide() && axis == 1 && !padding) ||  // By channels
                (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && haveInfEngine() && !padding) ||
                backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ||
-               (backendId == DNN_BACKEND_VKCOM && haveVulkan() && !padding);
+               (backendId == DNN_BACKEND_VKCOM && haveVulkan() && !padding) ||
+               (backendId == DNN_BACKEND_WEBGPU && haveWGPU() && !padding);
     }
 
     class ChannelConcatInvoker : public ParallelLoopBody
@@ -311,6 +313,18 @@ public:
 #endif // HAVE_VULKAN
         return Ptr<BackendNode>();
     }
+
+    virtual Ptr<BackendNode> initWGPU(const std::vector<Ptr<BackendWrapper> > &input) CV_OVERRIDE
+    {
+#ifdef HAVE_WEBGPU
+        webgpu::Tensor in = WGPUTensor(input[0]);
+        int cAxis = clamp(axis, in.dimNum());
+        std::shared_ptr<webgpu::OpBase> op(new webgpu::OpConcat(cAxis));
+        return Ptr<BackendNode>(new WGPUBackendNode(input, op));
+#endif  // HAVE_WEBGPU
+        return Ptr<BackendNode>();
+    }
+
 
     virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &input) CV_OVERRIDE
     {
