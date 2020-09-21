@@ -252,6 +252,62 @@ I::IStream& operator>> (I::IStream& is, cv::Mat& m) {
     return is;
 }
 
+I::OStream& operator<< (I::OStream& os, const cv::gapi::wip::draw::Text &t) {
+    return os << t.bottom_left_origin << t.color << t.ff << t.fs << t.lt << t.org << t.text << t.thick;
+}
+I::IStream& operator>> (I::IStream& is,       cv::gapi::wip::draw::Text &t) {
+    return is >> t.bottom_left_origin >> t.color >> t.ff >> t.fs >> t.lt >> t.org >> t.text >> t.thick;
+}
+
+I::OStream& operator<< (I::OStream&, const cv::gapi::wip::draw::FText &) {
+    GAPI_Assert(false && "Serialization: Unsupported << for FText");
+}
+I::IStream& operator>> (I::IStream&,       cv::gapi::wip::draw::FText &) {
+    GAPI_Assert(false && "Serialization: Unsupported >> for FText");
+}
+
+I::OStream& operator<< (I::OStream& os, const cv::gapi::wip::draw::Circle &c) {
+    return os << c.center << c.color << c.lt << c.radius << c.shift << c.thick;
+}
+I::IStream& operator>> (I::IStream& is,       cv::gapi::wip::draw::Circle &c) {
+    return is >> c.center >> c.color >> c.lt >> c.radius >> c.shift >> c.thick;
+}
+
+I::OStream& operator<< (I::OStream& os, const cv::gapi::wip::draw::Rect &r) {
+    return os << r.color << r.lt << r.rect << r.shift << r.thick;
+}
+I::IStream& operator>> (I::IStream& is,       cv::gapi::wip::draw::Rect &r) {
+    return is >> r.color >> r.lt >> r.rect >> r.shift >> r.thick;
+}
+
+I::OStream& operator<< (I::OStream& os, const cv::gapi::wip::draw::Image &i) {
+    return os << i.org << i.alpha << i.img;
+}
+I::IStream& operator>> (I::IStream& is,       cv::gapi::wip::draw::Image &i) {
+    return is >> i.org >> i.alpha >> i.img;
+}
+
+I::OStream& operator<< (I::OStream& os, const cv::gapi::wip::draw::Mosaic &m) {
+    return os << m.cellSz << m.decim << m.mos;
+}
+I::IStream& operator>> (I::IStream& is,       cv::gapi::wip::draw::Mosaic &m) {
+    return is >> m.cellSz >> m.decim >> m.mos;
+}
+
+I::OStream& operator<< (I::OStream& os, const cv::gapi::wip::draw::Poly &p) {
+    return os << p.color << p.lt << p.points << p.shift << p.thick;
+}
+I::IStream& operator>> (I::IStream& is,       cv::gapi::wip::draw::Poly &p) {
+    return is >> p.color >> p.lt >> p.points >> p.shift >> p.thick;
+}
+
+I::OStream& operator<< (I::OStream& os, const cv::gapi::wip::draw::Line &l) {
+    return os << l.color << l.lt << l.pt1 << l.pt2 << l.shift << l.thick;
+}
+I::IStream& operator>> (I::IStream& is,       cv::gapi::wip::draw::Line &l) {
+    return is >> l.color >> l.lt >> l.pt1 >> l.pt2 >> l.shift >> l.thick;
+}
+
 // G-API types /////////////////////////////////////////////////////////////////
 
 // Stubs (empty types)

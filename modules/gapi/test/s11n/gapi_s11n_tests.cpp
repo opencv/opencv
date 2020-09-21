@@ -348,5 +348,4 @@ TEST_F(S11N_Basic, Test_Bind_RunArgs_MatScalar) {
         i++;
     }
 }
-
 } // namespace opencv_test
