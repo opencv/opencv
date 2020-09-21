@@ -259,11 +259,11 @@ I::IStream& operator>> (I::IStream& is,       cv::gapi::wip::draw::Text &t) {
     return is >> t.bottom_left_origin >> t.color >> t.ff >> t.fs >> t.lt >> t.org >> t.text >> t.thick;
 }
 
-I::OStream& operator<< (I::OStream& os, const cv::gapi::wip::draw::FText &ft) {
-    return os << ft.color << ft.fh << ft.org << ft.text;
+I::OStream& operator<< (I::OStream&, const cv::gapi::wip::draw::FText &) {
+    GAPI_Assert(false && "Serialization: Unsupported << for FText");
 }
-I::IStream& operator>> (I::IStream& is,       cv::gapi::wip::draw::FText &ft) {
-    return is >> ft.color >> ft.fh >> ft.org >> ft.text;
+I::IStream& operator>> (I::IStream&,       cv::gapi::wip::draw::FText &) {
+    GAPI_Assert(false && "Serialization: Unsupported >> for FText");
 }
 
 I::OStream& operator<< (I::OStream& os, const cv::gapi::wip::draw::Circle &c) {
@@ -694,13 +694,6 @@ I::OStream& ByteMemoryOutStream::operator<< (char atom) {
     m_storage.push_back(atom);
     return *this;
 }
-I::OStream& ByteMemoryOutStream::operator<< (wchar_t atom) {
-    static_assert((sizeof(wchar_t) == 2) || (sizeof(wchar_t) == 4),
-                  "Expecting sizeof(wchar_t) be either 2 or 4");
-    m_storage.push_back(0xFF & (atom));
-    m_storage.push_back(0xFF & (atom >> 8));
-    return *this;
-}
 I::OStream& ByteMemoryOutStream::operator<< (unsigned char atom) {
     return *this << static_cast<char>(atom);
 }
@@ -742,12 +735,6 @@ I::OStream& ByteMemoryOutStream::operator<< (const std::string &str) {
     return *this;
 }
 
-I::OStream& ByteMemoryOutStream::operator<< (const std::wstring &str) {
-    *this << static_cast<uint32_t>(str.size()); // N.B. Put type explicitly
-    for (auto c : str) *this << c;
-    return *this;
-}
-
 ByteMemoryInStream::ByteMemoryInStream(const std::vector<char> &data)
     : m_storage(data) {
 }
@@ -769,20 +756,6 @@ I::IStream& ByteMemoryInStream::operator>> (bool& atom) {
 I::IStream& ByteMemoryInStream::operator>> (char &atom) {
     check(sizeof(char));
     atom = m_storage[m_idx++];
-    return *this;
-}
-I::IStream& ByteMemoryInStream::operator>> (wchar_t &atom) {
-    static_assert((sizeof(wchar_t) == 2) || (sizeof(wchar_t) == 4),
-                  "Expecting sizeof(wchar_t) be either 2 or 4");
-    check(2);
-    uint8_t x[2];
-    x[0] = static_cast<uint8_t>(m_storage[m_idx++]);
-    x[1] = static_cast<uint8_t>(m_storage[m_idx++]);
-    if (sizeof(wchar_t) == 2) {
-        atom = ((x[0]) | (x[1] << 8));
-    } else {
-        atom = ((x[0]) | (x[1] << 8) | (0xFF << 16) | (0xFF << 24));
-    }
     return *this;
 }
 I::IStream& ByteMemoryInStream::operator>> (unsigned char &atom) {
@@ -830,18 +803,6 @@ I::IStream& ByteMemoryInStream::operator>> (double& atom) {
 }
 I::IStream& ByteMemoryInStream::operator>> (std::string& str) {
     //std::size_t sz = 0u;
-    uint32_t sz = 0u;
-    *this >> sz;
-    if (sz == 0u) {
-        str.clear();
-    } else {
-        str.resize(sz);
-        for (auto &&i : ade::util::iota(sz)) { *this >> str[i]; }
-    }
-    return *this;
-}
-
-I::IStream& ByteMemoryInStream::operator>> (std::wstring& str) {
     uint32_t sz = 0u;
     *this >> sz;
     if (sz == 0u) {

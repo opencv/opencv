@@ -348,17 +348,4 @@ TEST_F(S11N_Basic, Test_Bind_RunArgs_MatScalar) {
         i++;
     }
 }
-
-TEST_F(S11N_Basic, Test_Wchar_Size) {
-    cv::gimpl::s11n::ByteMemoryOutStream os;
-    const wchar_t a = '\xe4', b = '\xbd';
-    os << a << b;
-    EXPECT_EQ(4U, os.data().size());
-    cv::gimpl::s11n::ByteMemoryInStream is(os.data());
-    wchar_t c, d;
-    is >> c >> d;
-    EXPECT_EQ(a, c);
-    EXPECT_EQ(b, d);
-}
-
 } // namespace opencv_test

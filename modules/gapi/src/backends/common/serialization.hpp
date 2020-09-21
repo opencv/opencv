@@ -40,7 +40,6 @@ namespace I {
         // Define the native support for basic C++ types at the API level:
         virtual OStream& operator<< (bool) = 0;
         virtual OStream& operator<< (char) = 0;
-        virtual OStream& operator<< (wchar_t) = 0;
         virtual OStream& operator<< (unsigned char) = 0;
         virtual OStream& operator<< (short) = 0;
         virtual OStream& operator<< (unsigned short) = 0;
@@ -50,7 +49,6 @@ namespace I {
         virtual OStream& operator<< (float) = 0;
         virtual OStream& operator<< (double) = 0;
         virtual OStream& operator<< (const std::string&) = 0;
-        virtual OStream& operator<< (const std::wstring&) = 0;
     };
 
     struct GAPI_EXPORTS IStream {
@@ -58,7 +56,6 @@ namespace I {
 
         virtual IStream& operator>> (bool &) = 0;
         virtual IStream& operator>> (char &) = 0;
-        virtual IStream& operator>> (wchar_t &) = 0;
         virtual IStream& operator>> (unsigned char &) = 0;
         virtual IStream& operator>> (short &) = 0;
         virtual IStream& operator>> (unsigned short &) = 0;
@@ -68,7 +65,6 @@ namespace I {
         //virtual IStream& operator>> (std::size_t &) = 0;
         virtual IStream& operator >> (uint32_t &) = 0;
         virtual IStream& operator>> (std::string &) = 0;
-        virtual IStream& operator>> (std::wstring &) = 0;
     };
 } // namespace I
 
@@ -97,8 +93,8 @@ GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::Mat &m);
 GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::gapi::wip::draw::Text &t);
 GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::gapi::wip::draw::Text &t);
 
-GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::gapi::wip::draw::FText &ft);
-GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::gapi::wip::draw::FText &ft);
+GAPI_EXPORTS I::OStream& operator<< (I::OStream&, const cv::gapi::wip::draw::FText &);
+GAPI_EXPORTS I::IStream& operator>> (I::IStream&,       cv::gapi::wip::draw::FText &);
 
 GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::gapi::wip::draw::Circle &c);
 GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::gapi::wip::draw::Circle &c);
@@ -329,7 +325,6 @@ public:
 
     virtual I::OStream& operator<< (bool) override;
     virtual I::OStream& operator<< (char) override;
-    virtual I::OStream& operator<< (wchar_t) override;
     virtual I::OStream& operator<< (unsigned char) override;
     virtual I::OStream& operator<< (short) override;
     virtual I::OStream& operator<< (unsigned short) override;
@@ -338,7 +333,6 @@ public:
     virtual I::OStream& operator<< (float) override;
     virtual I::OStream& operator<< (double) override;
     virtual I::OStream& operator<< (const std::string&) override;
-    virtual I::OStream& operator<< (const std::wstring&) override;
     virtual I::OStream& operator<< (uint32_t) override;
 };
 
@@ -356,7 +350,6 @@ public:
 
     virtual I::IStream& operator>> (bool &) override;
     virtual I::IStream& operator>> (char &) override;
-    virtual I::IStream& operator>> (wchar_t &) override;
     virtual I::IStream& operator>> (unsigned char &) override;
     virtual I::IStream& operator>> (short &) override;
     virtual I::IStream& operator>> (unsigned short &) override;
@@ -366,7 +359,6 @@ public:
     //virtual I::IStream& operator>> (std::size_t &) override;
     virtual I::IStream& operator >> (uint32_t &) override;
     virtual I::IStream& operator>> (std::string &) override;
-    virtual I::IStream& operator>> (std::wstring &) override;
 };
 
 GAPI_EXPORTS void serialize(I::OStream& os, const cv::GMetaArgs &ma);

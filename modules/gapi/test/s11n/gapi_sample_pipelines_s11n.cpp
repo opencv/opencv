@@ -12,10 +12,6 @@
 #include "api/render_priv.hpp"
 #include "../common/gapi_render_tests.hpp"
 
-#ifdef HAVE_FREETYPE
-#include <codecvt>
-#endif // HAVE_FREETYPE
-
 namespace opencv_test
 {
 
@@ -711,81 +707,4 @@ TEST(S11N, Pipeline_Render_RGB)
 
     EXPECT_EQ(cv::norm(input,  ref_mat), 0);
 }
-
-#ifdef HAVE_FREETYPE
-namespace
-{
-static std::wstring to_wstring(const char* bytes)
-{
-    std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
-    return converter.from_bytes(bytes);
-}
-}
-
-TEST(S11N, Pipeline_Render_FText_NV12)
-{
-    std::wstring text = to_wstring("\xe4\xbd\xa0\xe5\xa5\xbd\xef\xbc\x8c\xe4\xb8\x96\xe7\x95\x8c");
-    cv::Point org(100, 100);
-    int fh = 64;
-    cv::Scalar color(200, 100, 25);
-
-    cv::gapi::wip::draw::Prims prims;
-    prims.emplace_back(cv::gapi::wip::draw::FText{text, org, fh, color});
-
-    cv::GMat y_in, uv_in, y_out, uv_out;
-    cv::GArray<cv::gapi::wip::draw::Prim> arr;
-    std::tie(y_out, uv_out) = cv::gapi::wip::draw::renderNV12(y_in, uv_in, arr);
-    cv::GComputation comp(cv::GIn(y_in, uv_in, arr), cv::GOut(y_out, uv_out));
-
-    auto serialized = cv::gapi::serialize(comp);
-    auto dc = cv::gapi::deserialize<cv::GComputation>(serialized);
-
-    cv::Mat y(1920, 1080, CV_8UC1);
-    cv::Mat uv(960, 540, CV_8UC2);
-    cv::randu(y, cv::Scalar::all(0), cv::Scalar::all(255));
-    cv::randu(uv, cv::Scalar::all(0), cv::Scalar::all(255));
-    auto y_ref = y.clone();
-    auto uv_ref = uv.clone();
-
-    EXPECT_NO_THROW(dc.apply(cv::gin(y, uv, prims), cv::gout(y, uv),
-                             cv::compile_args(cv::gapi::wip::draw::freetype_font{
-                             "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc"
-                             })));
-    // Sanity check
-    EXPECT_NE(cv::norm(y, y_ref), 0);
-    EXPECT_NE(cv::norm(uv, uv_ref), 0);
-}
-
-TEST(S11N, Pipeline_Render_FText_RGB)
-{
-    std::wstring text = to_wstring("\xe4\xbd\xa0\xe5\xa5\xbd\xef\xbc\x8c\xe4\xb8\x96\xe7\x95\x8c");
-    cv::Point org(100, 100);
-    int fh = 64;
-    cv::Scalar color(200, 100, 25);
-
-    cv::gapi::wip::draw::Prims prims;
-    prims.emplace_back(cv::gapi::wip::draw::FText{text, org, fh, color});
-
-    cv::GMat in, out;
-    cv::GArray<cv::gapi::wip::draw::Prim> arr;
-    out = cv::gapi::wip::draw::render3ch(in, arr);
-    cv::GComputation comp(cv::GIn(in, arr), cv::GOut(out));
-
-    auto serialized = cv::gapi::serialize(comp);
-    auto dc = cv::gapi::deserialize<cv::GComputation>(serialized);
-
-    cv::Mat input(1920, 1080, CV_8UC3);
-    cv::randu(input, cv::Scalar::all(0), cv::Scalar::all(255));
-    auto input_ref = input.clone();
-
-    EXPECT_NO_THROW(dc.apply(cv::gin(input, prims), cv::gout(input),
-                             cv::compile_args(cv::gapi::wip::draw::freetype_font{
-                             "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc"
-                             })));
-    // Sanity check
-    EXPECT_NE(cv::norm(input, input_ref), 0);
-}
-
-#endif // HAVE_FREETYPE
-
 } // namespace opencv_test
