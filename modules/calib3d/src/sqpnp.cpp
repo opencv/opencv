@@ -50,6 +50,7 @@ const double PoseSolver::SQP_DET_THRESHOLD = 1.001;
 const double PoseSolver::ORTHOGONALITY_SQUARED_ERROR_THRESHOLD = 1e-8;
 const double PoseSolver::EQUAL_VECTORS_SQUARED_DIFF = 1e-10;
 const double PoseSolver::EQUAL_SQUARED_ERRORS_DIFF = 1e-6;
+const double PoseSolver::POINT_VARIANCE_THRESHOLD = 1e-5;
 const double PoseSolver::SQRT3 = std::sqrt(3);
 const int PoseSolver::SQP_MAX_ITERATION = 15;
 
@@ -230,17 +231,14 @@ void PoseSolver::computeOmega(InputArray objectPoints, InputArray imagePoints)
     q(1, 0) = 0; q(1, 1) = n; q(1, 2) = -sum_img.y;
     q(2, 0) = -sum_img.x; q(2, 1) = -sum_img.y; q(2, 2) = sq_norm_sum;
 
-    double inv_detQ = 1.0 / (n * (n * sq_norm_sum - sum_img.y * sum_img.y - sum_img.x * sum_img.x));
-    // Removed from original source because of problems with edge cases
-    //CV_Assert(inv_detQ >= 1e-6);
+    double inv_n = 1.0 / n;
+    double detQ = n * (n * sq_norm_sum - sum_img.y * sum_img.y - sum_img.x * sum_img.x);
+    double point_coordinate_variance = detQ * inv_n * inv_n * inv_n;
 
-    cv::Matx<double, 3, 3> q_inv;
-    q_inv(0, 0) = inv_detQ * (n * sq_norm_sum - sum_img.y * sum_img.y);
-    q_inv(0, 1) = q_inv(1, 0) = inv_detQ * sum_img.x * sum_img.y;
-    q_inv(0, 2) = q_inv(2, 0) = inv_detQ * n * sum_img.x;
-    q_inv(1, 1) = inv_detQ * (n * sq_norm_sum - sum_img.x * sum_img.x);
-    q_inv(1, 2) = q_inv(2, 1) = inv_detQ * n * sum_img.y;
-    q_inv(2, 2) = inv_detQ * n * n;
+    CV_Assert(point_coordinate_variance >= POINT_VARIANCE_THRESHOLD);
+
+    Matx<double, 3, 3> q_inv;
+    analyticalInverse3x3Symm(q, q_inv);
 
     p_ = -q_inv * qa_sum;
 
@@ -252,7 +250,7 @@ void PoseSolver::computeOmega(InputArray objectPoints, InputArray imagePoints)
 
     CV_Assert(s_(0) >= 1e-7);
 
-    while (s_(7 - num_null_vectors_) / s_(0) < RANK_TOLERANCE) num_null_vectors_++;
+    while (s_(7 - num_null_vectors_) < RANK_TOLERANCE) num_null_vectors_++;
 
     CV_Assert(++num_null_vectors_ <= 6);
 

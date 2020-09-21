@@ -172,6 +172,7 @@ private:
     static const double ORTHOGONALITY_SQUARED_ERROR_THRESHOLD;
     static const double EQUAL_VECTORS_SQUARED_DIFF;
     static const double EQUAL_SQUARED_ERRORS_DIFF;
+    static const double POINT_VARIANCE_THRESHOLD;
     static const int SQP_MAX_ITERATION;
     static const double SQRT3;
 
