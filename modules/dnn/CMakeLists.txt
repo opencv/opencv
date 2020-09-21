@@ -131,12 +131,7 @@ endif()
 
 if(HAVE_TENGINE)
 	list(APPEND include_dirs ${TENGINE_INCLUDE_DIRS})
-    if(EXISTS ${TENGINE_LIBRARIES})
-		list(APPEND libs -Wl,--whole-archive ${TENGINE_LIBRARIES} -Wl,--no-whole-archive)
-	else()
-		ocv_add_dependencies(opencv_dnn tengine)
-		list(APPEND libs -Wl,--whole-archive ${TENGINE_LIBRARIES} -Wl,--no-whole-archive)
-	endif()
+	list(APPEND libs -Wl,--whole-archive ${TENGINE_LIBRARIES} -Wl,--no-whole-archive)
 endif()
 
 
