@@ -142,6 +142,12 @@
 #  define CV_NEON 1
 #endif
 
+#if defined(__riscv) && defined(__riscv_vector)
+# include<riscv-vector.h>
+# define CV_CPU_COMPILE_RVV
+# define CV_RVV 1
+#endif
+
 #if defined(__ARM_NEON__) || defined(__aarch64__)
 #  include <arm_neon.h>
 #endif
@@ -168,8 +174,10 @@
 #  include <wasm_simd128.h>
 #endif
 
+#if 0
 #if defined CV_CPU_COMPILE_RVV
 #  define CV_RVV 1
+#endif
 #endif
 
 #endif // CV_ENABLE_INTRINSICS && !CV_DISABLE_OPTIMIZATION && !__CUDACC__

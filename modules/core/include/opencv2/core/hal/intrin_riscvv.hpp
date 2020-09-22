@@ -957,14 +957,14 @@ inline int64 v_reduce_sum(const v_int64x2& a)
 OPENCV_HAL_IMPL_RISCVV_REDUCE_OP_(int8,  int, func, red##func, 16)  \
 OPENCV_HAL_IMPL_RISCVV_REDUCE_OP_(int16, int, func, red##func, 8)   \
 OPENCV_HAL_IMPL_RISCVV_REDUCE_OP_(int32, int, func, red##func, 4)   \
-OPENCV_HAL_IMPL_RISCVV_REDUCE_OP_(int64, int, func, red##func, 2)   \
 OPENCV_HAL_IMPL_RISCVV_REDUCE_OP_(uint8,  unsigned, func, red##func##u, 16) \
 OPENCV_HAL_IMPL_RISCVV_REDUCE_OP_(uint16, unsigned, func, red##func##u, 8)  \
 OPENCV_HAL_IMPL_RISCVV_REDUCE_OP_(uint32, unsigned, func, red##func##u, 4)  \
-OPENCV_HAL_IMPL_RISCVV_REDUCE_OP_(uint64, unsigned, func, red##func##u, 2)  \
 OPENCV_HAL_IMPL_RISCVV_REDUCE_OP_(float32, float, func, fred##func, 4)
 OPENCV_HAL_IMPL_RISCVV_REDUCE_OP(max)
 OPENCV_HAL_IMPL_RISCVV_REDUCE_OP(min)
+//OPENCV_HAL_IMPL_RISCVV_REDUCE_OP_(int64, int, func, red##func, 2)   \
+//OPENCV_HAL_IMPL_RISCVV_REDUCE_OP_(uint64, unsigned, func, red##func##u, 2)
 
 inline v_float32x4 v_reduce_sum4(const v_float32x4& a, const v_float32x4& b,
                                  const v_float32x4& c, const v_float32x4& d)
