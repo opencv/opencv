@@ -57,6 +57,9 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
     bool isDeviceCompatible()
     {
+        if (cv::cuda::getCudaEnabledDeviceCount() <= 0)
+            return false;
+
         int device_id = getDevice();
         if (device_id < 0)
             return false;
@@ -77,6 +80,9 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
     bool doesDeviceSupportFP16()
     {
+        if (cv::cuda::getCudaEnabledDeviceCount() <= 0)
+            return false;
+
         int device_id = getDevice();
         if (device_id < 0)
             return false;
