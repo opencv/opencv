@@ -250,8 +250,8 @@ namespace detail
         template<typename T> void reset()
         {
             if (!m_ref) m_ref.reset(new OpaqueRefT<T>());
-
             check<T>();
+            storeKind<T>();
             static_cast<OpaqueRefT<T>&>(*m_ref).reset();
         }
 

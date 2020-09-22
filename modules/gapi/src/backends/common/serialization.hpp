@@ -14,6 +14,7 @@
 #include <ade/util/iota_range.hpp> // used in the vector<</>>
 
 #include "compiler/gmodel.hpp"
+#include "opencv2/gapi/render/render_types.hpp"
 
 #if (defined _WIN32 || defined _WIN64) && defined _MSC_VER
 #pragma warning(disable: 4702)
@@ -89,7 +90,29 @@ GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::Scalar &s);
 GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::Mat &m);
 GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::Mat &m);
 
+GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::gapi::wip::draw::Text &t);
+GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::gapi::wip::draw::Text &t);
 
+GAPI_EXPORTS I::OStream& operator<< (I::OStream&, const cv::gapi::wip::draw::FText &);
+GAPI_EXPORTS I::IStream& operator>> (I::IStream&,       cv::gapi::wip::draw::FText &);
+
+GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::gapi::wip::draw::Circle &c);
+GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::gapi::wip::draw::Circle &c);
+
+GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::gapi::wip::draw::Rect &r);
+GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::gapi::wip::draw::Rect &r);
+
+GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::gapi::wip::draw::Image &i);
+GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::gapi::wip::draw::Image &i);
+
+GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::gapi::wip::draw::Mosaic &m);
+GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::gapi::wip::draw::Mosaic &m);
+
+GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::gapi::wip::draw::Poly &p);
+GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::gapi::wip::draw::Poly &p);
+
+GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::gapi::wip::draw::Line &l);
+GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::gapi::wip::draw::Line &l);
 
 // G-API types /////////////////////////////////////////////////////////////////
 

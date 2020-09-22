@@ -235,4 +235,13 @@ TEST(GOpaque_OpaqueRef, Kind)
     cv::detail::OpaqueRef v8(std::string{});
     EXPECT_EQ(cv::detail::OpaqueKind::CV_UNKNOWN, v8.getKind());
 }
+
+TEST(GOpaque_OpaqueRef, TestReset)
+{
+    // Warning: this test is testing some not-very-public APIs
+    cv::detail::OpaqueRef opref(int{42});
+    EXPECT_EQ(cv::detail::OpaqueKind::CV_INT, opref.getKind());
+    opref.reset<int>();
+    EXPECT_EQ(cv::detail::OpaqueKind::CV_INT, opref.getKind());
+}
 } // namespace opencv_test
