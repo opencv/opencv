@@ -4721,6 +4721,63 @@ CV_EXPORTS_W double getFontScaleFromHeight(const int fontFace,
                                            const int pixelHeight,
                                            const int thickness = 1);
 
+/* @brief Wrapper on top of a truetype/opentype/etc.
+
+The class is used to store the loaded fonts;
+the font can then be passed to the functions
+putText and getTextSize.
+*/
+class CV_EXPORTS_W Font
+{
+public:
+    enum { SizePt=0, SizePixels=1 };
+    CV_WRAP Font();
+    /** @brief
+       loads font at the specified path or with specified name.
+       Empty fontPathOrName means the default embedded font.
+    */
+    CV_WRAP Font(const String& fontPathOrName, double fontSize, int sizeUnits,
+                double fontWeight=400, bool italic=false);
+    /** @brief
+      loads a new font or changes the loaded font properties
+      (scale, thickness etc.)
+    */
+    CV_WRAP bool set(const String& fontPathOrName, double fontSize, int sizeUnits,
+                     double fontWeight=400, bool italic=false);
+    ~Font();
+    void* handle() const;
+protected:
+    class Impl;
+    Ptr<Impl> impl;
+};
+
+/** @brief Draws a text string using specified font.
+
+The function cv::putText renders the specified text string in the image. Symbols that cannot be rendered
+using the specified font are replaced by question marks. See #getTextSize for a text rendering code
+example.
+
+@param img Image.
+@param text Text string to be drawn.
+@param org Bottom-left corner of the text string in the image.
+@param font The font to use for the text
+@param color Text color.
+@param bottomLeftOrigin When true, the image data origin is at the bottom-left corner. Otherwise,
+it is at the top-left corner.
+*/
+CV_EXPORTS_W void putText( InputOutputArray img, const String& text,
+                           Point org, const Font& font, Scalar color,
+                           char textAlignment='L',
+                           bool bottomLeftOrigin=false );
+
+/** @brief Calculates the width and height of a text string.
+
+The function cv::getTextSize calculates and returns the size of a box that contains the specified text.
+That is, the following code renders some text, the tight box surrounding it, and the baseline: :
+*/
+CV_EXPORTS_W Size getTextSize( const String& text, const Font& font,
+                               CV_OUT int* baseLine );
+
 /** @brief Line iterator
 
 The class is used to iterate over all the pixels on the raster line

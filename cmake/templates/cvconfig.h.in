@@ -164,4 +164,7 @@
 /* Library QR-code decoding */
 #cmakedefine HAVE_QUIRC
 
+/* Freetype2 library */
+#cmakedefine HAVE_FREETYPE
+
 #endif // OPENCV_CVCONFIG_H_INCLUDED

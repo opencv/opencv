@@ -679,4 +679,21 @@ TEST(Drawing, fillpoly_circle)
     EXPECT_LT(diff_fp3, 1.);
 }
 
+TEST(Drawing, ttf_text)
+{
+    //Font font("/Users/vpisarev/work/ocv5_probe/Recursive_VF.ttf", 100, Font::SizePixels, 800, true);
+    Font ifont("/Users/vpisarev/Downloads/Inter.ttf", 50, Font::SizePixels, 500, true);
+    Font font("/Users/vpisarev/Downloads/WenQuanYiMicroHei.ttf", 50, Font::SizePixels, 400, true);
+    Mat img(1000, 1500, CV_8UC3, Scalar::all(255));
+    //putText(img, "Hello with Truetype!", Point(50, 500), font, Scalar(0, 150, 0), false);
+    putText(img, "Hello with Truetype; Здравствуйте! Ήταν απλώς θέμα χρόνου。 Der Urgroßvater, Friedrich Grimm der Ältere (1672–1748),"
+            , Point(50, 200), ifont, Scalar(0, 150, 0), false);
+    putText(img, "Hello with Truetype; Здравствуйте! 你好， 你好吗\n"
+    "彼らの機器や装置はすべて生命体だ。"
+    "그들의 장비와 기구는 모두 살아 있다."
+    , Point(50, 400), font, Scalar(0, 0, 150), false);
+    imshow("test", img);
+    waitKey();
+}
+
 }} // namespace

@@ -439,6 +439,9 @@ OCV_OPTION(WITH_ANDROID_MEDIANDK "Use Android Media NDK for Video I/O (Android)"
 OCV_OPTION(WITH_TENGINE "Include Arm Inference Tengine support" OFF
   VISIBLE_IF (ARM OR AARCH64) AND (UNIX OR ANDROID) AND NOT IOS
   VERIFY HAVE_TENGINE)
+OCV_OPTION(WITH_FREETYPE "Include library for truetype font rendering" ON
+  VISIBLE_IF TRUE
+  VERIFY HAVE_FREETYPE)  
 
 # OpenCV build components
 # ===================================================
@@ -775,6 +778,12 @@ if(WITH_QUIRC)
   add_subdirectory(3rdparty/quirc)
   set(HAVE_QUIRC TRUE)
 endif()
+
+if(WITH_FREETYPE)
+  add_subdirectory(3rdparty/freetype)
+  set(HAVE_FREETYPE TRUE)
+endif()
+
 # ----------------------------------------------------------------------------
 # OpenCV HAL
 # ----------------------------------------------------------------------------
@@ -1232,6 +1241,10 @@ endif()
 
 if(WITH_VTK OR HAVE_VTK)
   status("    VTK support:" HAVE_VTK THEN "YES (ver ${VTK_VERSION})" ELSE NO)
+endif()
+
+if(WITH_FREETYPE OR HAVE_FREETYPE)
+  status("    Freetype support:" HAVE_FREETYPE THEN "YES (ver ${FREETYPE_VERSION})" ELSE NO)
 endif()
 
 # ========================== MEDIA IO ==========================

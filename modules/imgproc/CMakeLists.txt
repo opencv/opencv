@@ -14,6 +14,13 @@ ocv_define_module(imgproc opencv_core WRAP java objc python js)
 
 ocv_check_environment_variables(OPENCV_IPP_GAUSSIAN_BLUR)
 option(OPENCV_IPP_GAUSSIAN_BLUR "Enable IPP optimizations for GaussianBlur (+8Mb in binary size)" OFF)
+
 if(OPENCV_IPP_GAUSSIAN_BLUR)
   ocv_append_source_file_compile_definitions(${CMAKE_CURRENT_SOURCE_DIR}/src/smooth.dispatch.cpp "ENABLE_IPP_GAUSSIAN_BLUR=1")
+endif()
+
+if(HAVE_FREETYPE)
+  message(STATUS "FREETYPE_INCLUDE_DIR: ${FREETYPE_INCLUDE_DIR}")  
+  include_directories("${FREETYPE_INCLUDE_DIR}")
+  ocv_target_link_libraries(${the_module} LINK_PRIVATE freetype)
 endif()
