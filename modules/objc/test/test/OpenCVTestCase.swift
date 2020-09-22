@@ -155,11 +155,11 @@ open class OpenCVTestCase: XCTestCase {
         XCTAssertEqual(expected.val[3] as! Double, actual.val[3] as! Double, accuracy:eps, msg, file:file, line:line)
     }
 
-    func assertArrayEquals(_ expected:[NSNumber], _ actual:[NSNumber], _ eps: Double, file: StaticString = #file, line: UInt = #line) {
+    func assertArrayEquals(_ expected:[Double], _ actual:[Double], _ eps: Double, file: StaticString = #file, line: UInt = #line) {
         XCTAssertEqual(expected.count, actual.count, "Arrays have different sizes.", file:file, line:line)
 
         for i in 0..<expected.count {
-            XCTAssertEqual(expected[i] as! Double, actual[i] as! Double, accuracy:eps, file:file, line:line)
+            XCTAssertEqual(expected[i], actual[i], accuracy:eps, file:file, line:line)
         }
     }
 

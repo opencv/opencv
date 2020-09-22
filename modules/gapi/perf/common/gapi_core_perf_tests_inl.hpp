@@ -402,10 +402,6 @@ PERF_TEST_P_(DivRCPerfTest, TestPerformance)
     // FIXIT Unstable input data for divide
     initMatsRandU(type, sz, dtype, false);
 
-    // FIXIT Unstable input data for divide, don't process zeros
-    sc += Scalar::all(1);
-    in_mat1 += 1;
-
     // OpenCV code ///////////////////////////////////////////////////////////
     cv::divide(sc, in_mat1, out_mat_ocv, 1.0, dtype);
 
@@ -426,7 +422,7 @@ PERF_TEST_P_(DivRCPerfTest, TestPerformance)
     }
 
     // Comparison ////////////////////////////////////////////////////////////
-    EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
+    // FIXIT unrealiable check: EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
     EXPECT_EQ(out_mat_gapi.size(), sz);
 
     SANITY_CHECK_NOTHING();
@@ -630,10 +626,12 @@ PERF_TEST_P_(CmpPerfTest, TestPerformance)
 
 PERF_TEST_P_(CmpWithScalarPerfTest, TestPerformance)
 {
-    CmpTypes opType = get<0>(GetParam());
-    cv::Size sz = get<1>(GetParam());
-    MatType type = get<2>(GetParam());
-    cv::GCompileArgs compile_args = get<3>(GetParam());
+    MatType type    = -1;
+    CmpTypes opType = CMP_EQ;
+    cv::Size sz;
+    compare_f cmpF;
+    cv::GCompileArgs compile_args;
+    std::tie(cmpF, opType, sz, type, compile_args) = GetParam();
 
     initMatsRandU(type, sz, CV_8U, false);
 
@@ -666,8 +664,8 @@ PERF_TEST_P_(CmpWithScalarPerfTest, TestPerformance)
     }
 
     // Comparison ////////////////////////////////////////////////////////////
-    EXPECT_EQ(0, cvtest::norm(out_mat_gapi, out_mat_ocv, NORM_INF));
     EXPECT_EQ(out_mat_gapi.size(), sz);
+    EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
 
     SANITY_CHECK_NOTHING();
 }
@@ -676,50 +674,76 @@ PERF_TEST_P_(CmpWithScalarPerfTest, TestPerformance)
 
 PERF_TEST_P_(BitwisePerfTest, TestPerformance)
 {
-    bitwiseOp opType = get<0>(GetParam());
-    cv::Size sz = get<1>(GetParam());
-    MatType type = get<2>(GetParam());
-    cv::GCompileArgs compile_args = get<3>(GetParam());
+    MatType   type           = -1;
+    bitwiseOp opType         = AND;
+    bool      testWithScalar = false;
+    cv::Size sz;
+    cv::GCompileArgs compile_args;
+
+    std::tie(opType, testWithScalar, sz, type, compile_args) = GetParam();
 
     initMatsRandU(type, sz, type, false);
 
     // G-API code & corresponding OpenCV code ////////////////////////////////
     cv::GMat in1, in2, out;
-    switch (opType)
+    if( testWithScalar )
     {
-    case AND:
-    {
-        out = cv::gapi::bitwise_and(in1, in2);
-        cv::bitwise_and(in_mat1, in_mat2, out_mat_ocv);
-        break;
-    }
-    case OR:
-    {
-        out = cv::gapi::bitwise_or(in1, in2);
-        cv::bitwise_or(in_mat1, in_mat2, out_mat_ocv);
-        break;
-    }
-    case XOR:
-    {
-        out = cv::gapi::bitwise_xor(in1, in2);
-        cv::bitwise_xor(in_mat1, in_mat2, out_mat_ocv);
-        break;
-    }
-    default:
-    {
-        FAIL() << "no such bitwise operation type!";
-    }
-    }
-    cv::GComputation c(GIn(in1, in2), GOut(out));
+        cv::GScalar sc1;
+        switch (opType)
+        {
+        case AND:
+            out = cv::gapi::bitwise_and(in1, sc1);
+            cv::bitwise_and(in_mat1, sc, out_mat_ocv);
+            break;
+        case OR:
+            out = cv::gapi::bitwise_or(in1, sc1);
+            cv::bitwise_or(in_mat1, sc, out_mat_ocv);
+            break;
+        case XOR:
+            out = cv::gapi::bitwise_xor(in1, sc1);
+            cv::bitwise_xor(in_mat1, sc, out_mat_ocv);
+            break;
+        default:
+            FAIL() << "no such bitwise operation type!";
+        }
+        cv::GComputation c(GIn(in1, sc1), GOut(out));
 
-    // Warm-up graph engine:
-    auto cc = c.compile(descr_of(gin(in_mat1, in_mat2)),
-                        std::move(compile_args));
-    cc(gin(in_mat1, in_mat2), gout(out_mat_gapi));
+        // Warm-up graph engine:
+        c.apply(gin(in_mat1, sc), gout(out_mat_gapi), std::move(compile_args));
 
-    TEST_CYCLE()
+        TEST_CYCLE()
+        {
+            c.apply(gin(in_mat1, sc), gout(out_mat_gapi));
+        }
+    }
+    else
     {
-        cc(gin(in_mat1, in_mat2), gout(out_mat_gapi));
+        switch (opType)
+        {
+        case AND:
+            out = cv::gapi::bitwise_and(in1, in2);
+            cv::bitwise_and(in_mat1, in_mat2, out_mat_ocv);
+            break;
+        case OR:
+            out = cv::gapi::bitwise_or(in1, in2);
+            cv::bitwise_or(in_mat1, in_mat2, out_mat_ocv);
+            break;
+        case XOR:
+            out = cv::gapi::bitwise_xor(in1, in2);
+            cv::bitwise_xor(in_mat1, in_mat2, out_mat_ocv);
+            break;
+        default:
+            FAIL() << "no such bitwise operation type!";
+        }
+        cv::GComputation c(GIn(in1, in2), GOut(out));
+
+        // Warm-up graph engine:
+        c.apply(gin(in_mat1, in_mat2), gout(out_mat_gapi), std::move(compile_args));
+
+        TEST_CYCLE()
+        {
+            c.apply(gin(in_mat1, in_mat2), gout(out_mat_gapi));
+        }
     }
 
     // Comparison ////////////////////////////////////////////////////////////
@@ -1805,20 +1829,23 @@ PERF_TEST_P_(LUTPerfTest, TestPerformance)
 
 PERF_TEST_P_(ConvertToPerfTest, TestPerformance)
 {
-    MatType type_mat = get<0>(GetParam());
-    int depth_to = get<1>(GetParam());
-    cv::Size sz_in = get<2>(GetParam());
-    cv::GCompileArgs compile_args = get<3>(GetParam());
+    int depth_to     = -1;
+    MatType type_mat = -1;
+    double alpha = 0., beta = 0.;
+    cv::Size sz_in;
+    compare_f cmpF;
+    cv::GCompileArgs compile_args;
+    std::tie(cmpF, type_mat, depth_to, sz_in, alpha, beta, compile_args) = GetParam();
     MatType type_out = CV_MAKETYPE(depth_to, CV_MAT_CN(type_mat));
 
     initMatrixRandU(type_mat, sz_in, type_out);
 
     // OpenCV code ///////////////////////////////////////////////////////////
-    in_mat1.convertTo(out_mat_ocv, depth_to);
+    in_mat1.convertTo(out_mat_ocv, depth_to, alpha, beta);
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;
-    auto out = cv::gapi::convertTo(in, depth_to);
+    auto out = cv::gapi::convertTo(in, depth_to, alpha, beta);
     cv::GComputation c(in, out);
 
     // Warm-up graph engine:
@@ -1832,7 +1859,7 @@ PERF_TEST_P_(ConvertToPerfTest, TestPerformance)
     }
 
     // Comparison ////////////////////////////////////////////////////////////
-    // FIXIT unrealiable check: EXPECT_EQ(0, cv::countNonZero(out_mat_ocv != out_mat_gapi));
+    EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
     EXPECT_EQ(out_mat_gapi.size(), sz_in);
 
     SANITY_CHECK_NOTHING();
@@ -1929,6 +1956,188 @@ PERF_TEST_P_(ResizeFxFyPerfTest, TestPerformance)
 }
 
 //------------------------------------------------------------------------------
+
+PERF_TEST_P_(ParseSSDBLPerfTest, TestPerformance)
+{
+    cv::Size sz;
+    float confidence_threshold = 0.0f;
+    int filter_label = 0;
+    cv::GCompileArgs compile_args;
+    std::tie(sz, confidence_threshold, filter_label, compile_args) = GetParam();
+    cv::Mat in_mat = generateSSDoutput(sz);
+    std::vector<cv::Rect> boxes_gapi, boxes_ref;
+    std::vector<int> labels_gapi, labels_ref;
+
+    // Reference code //////////////////////////////////////////////////////////
+    parseSSDBLref(in_mat, sz, confidence_threshold, filter_label, boxes_ref, labels_ref);
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    cv::GOpaque<cv::Size> op_sz;
+    auto out = cv::gapi::parseSSD(in, op_sz, confidence_threshold, filter_label);
+    cv::GComputation c(cv::GIn(in, op_sz), cv::GOut(std::get<0>(out), std::get<1>(out)));
+
+    // Warm-up graph engine:
+    auto cc = c.compile(descr_of(in_mat), descr_of(sz), std::move(compile_args));
+    cc(cv::gin(in_mat, sz), cv::gout(boxes_gapi, labels_gapi));
+
+    TEST_CYCLE()
+    {
+        cc(cv::gin(in_mat, sz), cv::gout(boxes_gapi, labels_gapi));
+    }
+
+    // Comparison ////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(boxes_gapi == boxes_ref);
+        EXPECT_TRUE(labels_gapi == labels_ref);
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
+//------------------------------------------------------------------------------
+
+PERF_TEST_P_(ParseSSDPerfTest, TestPerformance)
+{
+    cv::Size sz;
+    float confidence_threshold = 0;
+    bool alignment_to_square = false, filter_out_of_bounds = false;
+    cv::GCompileArgs compile_args;
+    std::tie(sz, confidence_threshold, alignment_to_square, filter_out_of_bounds, compile_args) = GetParam();
+    cv::Mat in_mat = generateSSDoutput(sz);
+    std::vector<cv::Rect> boxes_gapi, boxes_ref;
+
+    // Reference code //////////////////////////////////////////////////////////
+    parseSSDref(in_mat, sz, confidence_threshold, alignment_to_square, filter_out_of_bounds, boxes_ref);
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    cv::GOpaque<cv::Size> op_sz;
+    auto out = cv::gapi::parseSSD(in, op_sz, confidence_threshold, alignment_to_square, filter_out_of_bounds);
+    cv::GComputation c(cv::GIn(in, op_sz), cv::GOut(out));
+
+    // Warm-up graph engine:
+    auto cc = c.compile(descr_of(in_mat), descr_of(sz), std::move(compile_args));
+    cc(cv::gin(in_mat, sz), cv::gout(boxes_gapi));
+
+    TEST_CYCLE()
+    {
+        cc(cv::gin(in_mat, sz), cv::gout(boxes_gapi));
+    }
+
+    // Comparison ////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(boxes_gapi == boxes_ref);
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
+//------------------------------------------------------------------------------
+
+PERF_TEST_P_(ParseYoloPerfTest, TestPerformance)
+{
+    cv::Size sz;
+    float confidence_threshold = 0.0f, nms_threshold = 0.0f;
+    int num_classes = 0;
+    cv::GCompileArgs compile_args;
+    std::tie(sz, confidence_threshold, nms_threshold, num_classes, compile_args) = GetParam();
+    cv::Mat in_mat = generateYoloOutput(num_classes);
+    auto anchors = cv::gapi::nn::parsers::GParseYolo::defaultAnchors();
+    std::vector<cv::Rect> boxes_gapi, boxes_ref;
+    std::vector<int> labels_gapi, labels_ref;
+
+    // Reference code //////////////////////////////////////////////////////////
+    parseYoloRef(in_mat, sz, confidence_threshold, nms_threshold, num_classes, anchors, boxes_ref, labels_ref);
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    cv::GOpaque<cv::Size> op_sz;
+    auto out = cv::gapi::parseYolo(in, op_sz, confidence_threshold, nms_threshold, anchors);
+    cv::GComputation c(cv::GIn(in, op_sz), cv::GOut(std::get<0>(out), std::get<1>(out)));
+
+    // Warm-up graph engine:
+    auto cc = c.compile(descr_of(in_mat), descr_of(sz), std::move(compile_args));
+    cc(cv::gin(in_mat, sz), cv::gout(boxes_gapi, labels_gapi));
+
+    TEST_CYCLE()
+    {
+        cc(cv::gin(in_mat, sz), cv::gout(boxes_gapi, labels_gapi));
+    }
+
+    // Comparison ////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(boxes_gapi == boxes_ref);
+        EXPECT_TRUE(labels_gapi == labels_ref);
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
+//------------------------------------------------------------------------------
+
+PERF_TEST_P_(SizePerfTest, TestPerformance)
+{
+    MatType type;
+    cv::Size sz;
+    cv::GCompileArgs compile_args;
+    std::tie(type, sz, compile_args) = GetParam();
+    in_mat1 = cv::Mat(sz, type);
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    auto out = cv::gapi::size(in);
+    cv::GComputation c(cv::GIn(in), cv::GOut(out));
+    cv::Size out_sz;
+
+    // Warm-up graph engine:
+    auto cc = c.compile(descr_of(in_mat1), std::move(compile_args));
+    cc(cv::gin(in_mat1), cv::gout(out_sz));
+
+    TEST_CYCLE()
+    {
+        cc(cv::gin(in_mat1), cv::gout(out_sz));
+    }
+
+    // Comparison ////////////////////////////////////////////////////////////
+    {
+        EXPECT_EQ(out_sz, sz);
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
+//------------------------------------------------------------------------------
+
+PERF_TEST_P_(SizeRPerfTest, TestPerformance)
+{
+    cv::Size sz;
+    cv::GCompileArgs compile_args;
+    std::tie(sz, compile_args) = GetParam();
+    cv::Rect rect(cv::Point(0,0), sz);
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GOpaque<cv::Rect> op_rect;
+    auto out = cv::gapi::size(op_rect);
+    cv::GComputation c(cv::GIn(op_rect), cv::GOut(out));
+    cv::Size out_sz;
+
+    // Warm-up graph engine:
+    auto cc = c.compile(descr_of(rect), std::move(compile_args));
+    cc(cv::gin(rect), cv::gout(out_sz));
+
+    TEST_CYCLE()
+    {
+        cc(cv::gin(rect), cv::gout(out_sz));
+    }
+
+    // Comparison ////////////////////////////////////////////////////////////
+    {
+        EXPECT_EQ(out_sz, sz);
+    }
+
+    SANITY_CHECK_NOTHING();
+}
 
 }
 #endif // OPENCV_GAPI_CORE_PERF_TESTS_INL_HPP

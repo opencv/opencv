@@ -215,6 +215,7 @@ OCV_OPTION(OPENCV_ENABLE_NONFREE "Enable non-free algorithms" OFF)
 OCV_OPTION(OPENCV_FORCE_3RDPARTY_BUILD   "Force using 3rdparty code from source" OFF)
 OCV_OPTION(BUILD_ZLIB               "Build zlib from source"             (WIN32 OR APPLE OR OPENCV_FORCE_3RDPARTY_BUILD) )
 OCV_OPTION(BUILD_TIFF               "Build libtiff from source"          (WIN32 OR ANDROID OR APPLE OR OPENCV_FORCE_3RDPARTY_BUILD) )
+OCV_OPTION(BUILD_OPENJPEG           "Build OpenJPEG from source"         (WIN32 OR ANDRIOD OR APPLE OR OPENCV_FORCE_3RDPARTY_BUILD) )
 OCV_OPTION(BUILD_JASPER             "Build libjasper from source"        (WIN32 OR ANDROID OR APPLE OR OPENCV_FORCE_3RDPARTY_BUILD) )
 OCV_OPTION(BUILD_JPEG               "Build libjpeg from source"          (WIN32 OR ANDROID OR APPLE OR OPENCV_FORCE_3RDPARTY_BUILD) )
 OCV_OPTION(BUILD_PNG                "Build libpng from source"           (WIN32 OR ANDROID OR APPLE OR OPENCV_FORCE_3RDPARTY_BUILD) )
@@ -463,6 +464,7 @@ OCV_OPTION(BUILD_OBJC               "Enable Objective-C support"                
 # OpenCV installation options
 # ===================================================
 OCV_OPTION(INSTALL_CREATE_DISTRIB   "Change install rules to build the distribution package" OFF )
+OCV_OPTION(INSTALL_BIN_EXAMPLES     "Install prebuilt examples" WIN32 IF BUILD_EXAMPLES)
 OCV_OPTION(INSTALL_C_EXAMPLES       "Install C examples"        OFF )
 OCV_OPTION(INSTALL_PYTHON_EXAMPLES  "Install Python examples"   OFF )
 OCV_OPTION(INSTALL_ANDROID_EXAMPLES "Install Android examples"  OFF IF ANDROID )
@@ -1260,7 +1262,10 @@ if(WITH_TIFF OR HAVE_TIFF)
 endif()
 
 if(HAVE_OPENJPEG)
-  status("    JPEG 2000:" "OpenJPEG (ver ${OPENJPEG_MAJOR_VERSION}.${OPENJPEG_MINOR_VERSION}.${OPENJPEG_BUILD_VERSION})")
+  status("    JPEG 2000:" OpenJPEG_FOUND
+      THEN "OpenJPEG (ver ${OPENJPEG_MAJOR_VERSION}.${OPENJPEG_MINOR_VERSION}.${OPENJPEG_BUILD_VERSION})"
+      ELSE "build (ver ${OPENJPEG_VERSION})"
+  )
 elseif(HAVE_JASPER)
   status("    JPEG 2000:" JASPER_FOUND THEN "${JASPER_LIBRARY} (ver ${JASPER_VERSION_STRING})" ELSE "build Jasper (ver ${JASPER_VERSION_STRING})")
 elseif(WITH_OPENJPEG OR WITH_JASPER)

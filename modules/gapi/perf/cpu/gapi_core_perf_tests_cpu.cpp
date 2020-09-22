@@ -110,16 +110,18 @@ INSTANTIATE_TEST_CASE_P(CmpPerfTestCPU, CmpPerfTest,
         Values(cv::compile_args(CORE_CPU))));
 
 INSTANTIATE_TEST_CASE_P(CmpWithScalarPerfTestCPU, CmpWithScalarPerfTest,
-    Combine(Values(CMP_EQ, CMP_GE, CMP_NE, CMP_GT, CMP_LT, CMP_LE),
-        Values(szSmall128, szVGA, sz720p, sz1080p),
-        Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
-        Values(cv::compile_args(CORE_CPU))));
+    Combine(Values(AbsExact().to_compare_f()),
+            Values(CMP_EQ, CMP_GE, CMP_NE, CMP_GT, CMP_LT, CMP_LE),
+            Values(szSmall128, szVGA, sz720p, sz1080p),
+            Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
+            Values(cv::compile_args(CORE_CPU))));
 
 INSTANTIATE_TEST_CASE_P(BitwisePerfTestCPU, BitwisePerfTest,
     Combine(Values(AND, OR, XOR),
-        Values(szSmall128, szVGA, sz720p, sz1080p),
-        Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1),
-        Values(cv::compile_args(CORE_CPU))));
+            testing::Bool(),
+            Values(szSmall128, szVGA, sz720p, sz1080p),
+            Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1),
+            Values(cv::compile_args(CORE_CPU))));
 
 INSTANTIATE_TEST_CASE_P(BitwiseNotPerfTestCPU, BitwiseNotPerfTest,
     Combine(Values(szSmall128, szVGA, sz720p, sz1080p),
@@ -266,10 +268,13 @@ INSTANTIATE_TEST_CASE_P(LUTPerfTestCustomCPU, LUTPerfTest,
 
 
 INSTANTIATE_TEST_CASE_P(ConvertToPerfTestCPU, ConvertToPerfTest,
-    Combine(Values(CV_8UC3, CV_8UC1, CV_16UC1, CV_32FC1),
-        Values(CV_8U, CV_16U, CV_16S, CV_32F),
-        Values(szSmall128, szVGA, sz720p, sz1080p),
-        Values(cv::compile_args(CORE_CPU))));
+    Combine(Values(AbsExact().to_compare_f()),
+            Values(CV_8UC3, CV_8UC1, CV_16UC1, CV_16SC1, CV_32FC1),
+            Values(CV_8U, CV_16U, CV_16S, CV_32F),
+            Values(szSmall128, szVGA, sz720p, sz1080p),
+            Values(2.5, 1.0),
+            Values(0.0),
+            Values(cv::compile_args(CORE_CPU))));
 
 INSTANTIATE_TEST_CASE_P(ResizePerfTestCPU, ResizePerfTest,
     Combine(Values(AbsExact().to_compare_f()),
@@ -288,4 +293,33 @@ INSTANTIATE_TEST_CASE_P(ResizeFxFyPerfTestCPU, ResizeFxFyPerfTest,
         Values(0.5, 0.1),
         Values(0.5, 0.1),
         Values(cv::compile_args(CORE_CPU))));
+
+INSTANTIATE_TEST_CASE_P(ParseSSDBLPerfTestCPU, ParseSSDBLPerfTest,
+                        Combine(Values(sz720p, sz1080p),
+                                Values(0.3f, 0.7f),
+                                Values(0, 1),
+                                Values(cv::compile_args(CORE_CPU))));
+
+INSTANTIATE_TEST_CASE_P(ParseSSDPerfTestCPU, ParseSSDPerfTest,
+                        Combine(Values(sz720p, sz1080p),
+                                Values(0.3f, 0.7f),
+                                testing::Bool(),
+                                testing::Bool(),
+                                Values(cv::compile_args(CORE_CPU))));
+
+INSTANTIATE_TEST_CASE_P(ParseYoloPerfTestCPU, ParseYoloPerfTest,
+                        Combine(Values(sz720p, sz1080p),
+                                Values(0.3f, 0.7f),
+                                Values(0.5),
+                                Values(7, 80),
+                                Values(cv::compile_args(CORE_CPU))));
+
+INSTANTIATE_TEST_CASE_P(SizePerfTestCPU, SizePerfTest,
+                        Combine(Values(CV_8UC1, CV_8UC3, CV_32FC1),
+                                Values(szSmall128, szVGA, sz720p, sz1080p),
+                                Values(cv::compile_args(CORE_CPU))));
+
+INSTANTIATE_TEST_CASE_P(SizeRPerfTestCPU, SizeRPerfTest,
+                        Combine(Values(szSmall128, szVGA, sz720p, sz1080p),
+                                Values(cv::compile_args(CORE_CPU))));
 } // opencv_test

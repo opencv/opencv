@@ -10,6 +10,7 @@
 
 
 #include "../../test/common/gapi_tests_common.hpp"
+#include "../../test/common/gapi_parsers_tests_common.hpp"
 #include <opencv2/gapi/core.hpp>
 
 namespace opencv_test
@@ -42,8 +43,8 @@ namespace opencv_test
     class Polar2CartPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs>> {};
     class Cart2PolarPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs>> {};
     class CmpPerfTest : public TestPerfParams<tuple<CmpTypes, cv::Size, MatType, cv::GCompileArgs>> {};
-    class CmpWithScalarPerfTest : public TestPerfParams<tuple<CmpTypes, cv::Size, MatType, cv::GCompileArgs>> {};
-    class BitwisePerfTest : public TestPerfParams<tuple<bitwiseOp, cv::Size, MatType, cv::GCompileArgs>> {};
+    class CmpWithScalarPerfTest : public TestPerfParams<tuple<compare_f, CmpTypes, cv::Size, MatType, cv::GCompileArgs>> {};
+    class BitwisePerfTest : public TestPerfParams<tuple<bitwiseOp, bool, cv::Size, MatType, cv::GCompileArgs>> {};
     class BitwiseNotPerfTest : public TestPerfParams<tuple<cv::Size, MatType, cv::GCompileArgs>> {};
     class SelectPerfTest : public TestPerfParams<tuple<cv::Size, MatType, cv::GCompileArgs>> {};
     class MinPerfTest : public TestPerfParams<tuple<cv::Size, MatType, cv::GCompileArgs>> {};
@@ -70,8 +71,13 @@ namespace opencv_test
     class ConcatVertPerfTest : public TestPerfParams<tuple<cv::Size, MatType, cv::GCompileArgs>> {};
     class ConcatVertVecPerfTest : public TestPerfParams<tuple<cv::Size, MatType, cv::GCompileArgs>> {};
     class LUTPerfTest : public TestPerfParams<tuple<MatType, MatType, cv::Size, cv::GCompileArgs>> {};
-    class ConvertToPerfTest : public TestPerfParams<tuple<MatType, int, cv::Size, cv::GCompileArgs>> {};
+    class ConvertToPerfTest : public TestPerfParams<tuple<compare_f, MatType, int, cv::Size, double, double, cv::GCompileArgs>> {};
     class ResizePerfTest : public TestPerfParams<tuple<compare_f, MatType, int, cv::Size, cv::Size, cv::GCompileArgs>> {};
     class ResizeFxFyPerfTest : public TestPerfParams<tuple<compare_f, MatType, int, cv::Size, double, double, cv::GCompileArgs>> {};
+    class ParseSSDBLPerfTest : public TestPerfParams<tuple<cv::Size, float, int, cv::GCompileArgs>>, public ParserSSDTest {};
+    class ParseSSDPerfTest   : public TestPerfParams<tuple<cv::Size, float, bool, bool, cv::GCompileArgs>>, public ParserSSDTest {};
+    class ParseYoloPerfTest  : public TestPerfParams<tuple<cv::Size, float, float, int, cv::GCompileArgs>>, public ParserYoloTest {};
+    class SizePerfTest       : public TestPerfParams<tuple<MatType, cv::Size, cv::GCompileArgs>> {};
+    class SizeRPerfTest      : public TestPerfParams<tuple<cv::Size, cv::GCompileArgs>> {};
 }
 #endif // OPENCV_GAPI_CORE_PERF_TESTS_HPP

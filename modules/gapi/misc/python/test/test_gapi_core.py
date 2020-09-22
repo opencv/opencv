@@ -30,10 +30,28 @@ class gapi_core_test(NewOpenCVTests):
         g_in1 = cv.GMat()
         g_in2 = cv.GMat()
         g_out = cv.gapi.add(g_in1, g_in2)
-        comp = cv.GComputation(g_in1, g_in2, g_out)
+        comp = cv.GComputation(cv.GIn(g_in1, g_in2), cv.GOut(g_out))
 
         for pkg in pkgs:
             actual = comp.apply(in1, in2, args=cv.compile_args(pkg))
+            # Comparison
+            self.assertEqual(0.0, cv.norm(expected, actual, cv.NORM_INF))
+
+
+    def test_mean(self):
+        sz = (1280, 720, 3)
+        in_mat = np.random.randint(0, 100, sz).astype(np.uint8)
+
+        # OpenCV
+        expected = cv.mean(in_mat)
+
+        # G-API
+        g_in = cv.GMat()
+        g_out = cv.gapi.mean(g_in)
+        comp = cv.GComputation(g_in, g_out)
+
+        for pkg in pkgs:
+            actual = comp.apply(in_mat, args=cv.compile_args(pkg))
             # Comparison
             self.assertEqual(0.0, cv.norm(expected, actual, cv.NORM_INF))
 

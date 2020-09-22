@@ -752,6 +752,8 @@ public:
         std::vector<size_t> dims = ieInpNode->get_shape();
         CV_Assert(dims.size() == 4 || dims.size() == 5);
         std::shared_ptr<ngraph::Node> ieWeights = nodes.size() > 1 ? nodes[1].dynamicCast<InfEngineNgraphNode>()->node : nullptr;
+        if (nodes.size() > 1)
+            CV_Assert(ieWeights);  // dynamic_cast should not fail
         const int inpCn = dims[1];
         const int inpGroupCn = nodes.size() > 1 ? ieWeights->get_shape()[1] : blobs[0].size[1];
         const int group = inpCn / inpGroupCn;
@@ -859,6 +861,7 @@ public:
         ParallelConv()
             : input_(0), weights_(0), output_(0), ngroups_(0), nstripes_(0),
               biasvec_(0), reluslope_(0), activ_(0), is1x1_(false), useAVX(false), useAVX2(false), useAVX512(false)
+            , blk_size_cn(0)
         {}
 
         static void run( const Mat& input, Mat& output, const Mat& weights,

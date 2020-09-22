@@ -11,6 +11,7 @@
 #include <iostream>
 
 #include "gapi_tests_common.hpp"
+#include "gapi_parsers_tests_common.hpp"
 
 namespace opencv_test
 {
@@ -87,8 +88,8 @@ GAPI_TEST_FIXTURE(MeanTest, initMatrixRandU, <>, 0)
 GAPI_TEST_FIXTURE(MaskTest, initMatrixRandU, <>, 0)
 GAPI_TEST_FIXTURE(Polar2CartTest, initMatsRandU, <>, 0)
 GAPI_TEST_FIXTURE(Cart2PolarTest, initMatsRandU, <>, 0)
-GAPI_TEST_FIXTURE(CmpTest, initMatsRandU, FIXTURE_API(CmpTypes,bool), 2, opType, testWithScalar)
-GAPI_TEST_FIXTURE(BitwiseTest, initMatsRandU, FIXTURE_API(bitwiseOp), 1, opType)
+GAPI_TEST_FIXTURE(CmpTest, initMatsRandU, FIXTURE_API(CmpTypes,bool,CompareMats), 3, opType, testWithScalar, cmpF)
+GAPI_TEST_FIXTURE(BitwiseTest, initMatsRandU, FIXTURE_API(bitwiseOp,bool), 2, opType, testWithScalar)
 GAPI_TEST_FIXTURE(NotTest, initMatrixRandU, <>, 0)
 GAPI_TEST_FIXTURE(SelectTest, initMatsRandU, <>, 0)
 GAPI_TEST_FIXTURE(MinTest, initMatsRandU, <>, 0)
@@ -149,6 +150,15 @@ GAPI_TEST_FIXTURE(WarpPerspectiveTest, initMatrixRandU,
 GAPI_TEST_FIXTURE(WarpAffineTest, initMatrixRandU,
         FIXTURE_API(CompareMats, double , double, int, int, cv::Scalar),
         6, cmpF, angle, scale, flags, border_mode, border_value)
+
+GAPI_TEST_EXT_BASE_FIXTURE(ParseSSDBLTest, ParserSSDTest, initNothing,
+    FIXTURE_API(float, int), 2, confidence_threshold, filter_label)
+GAPI_TEST_EXT_BASE_FIXTURE(ParseSSDTest, ParserSSDTest, initNothing,
+    FIXTURE_API(float, bool, bool), 3, confidence_threshold, alignment_to_square, filter_out_of_bounds)
+GAPI_TEST_EXT_BASE_FIXTURE(ParseYoloTest, ParserYoloTest, initNothing,
+    FIXTURE_API(float, float, int), 3, confidence_threshold, nms_threshold, num_classes)
+GAPI_TEST_FIXTURE(SizeTest, initMatrixRandU, <>, 0)
+GAPI_TEST_FIXTURE(SizeRTest, initNothing, <>, 0)
 } // opencv_test
 
 #endif //OPENCV_GAPI_CORE_TESTS_HPP

@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2020 Intel Corporation
 
 
 #include "precomp.hpp"
@@ -54,7 +54,7 @@ ade::NodeHandle GModel::mkDataNode(GModel::Graph &g, const GOrigin& origin)
     // associated host-type constructor (e.g. when the array is
     // somewhere in the middle of the graph).
     auto ctor_copy = origin.ctor;
-    g.metadata(data_h).set(Data{origin.shape, id, meta, ctor_copy, storage});
+    g.metadata(data_h).set(Data{origin.shape, id, meta, ctor_copy, origin.kind, storage});
     return data_h;
 }
 
@@ -67,8 +67,9 @@ ade::NodeHandle GModel::mkDataNode(GModel::Graph &g, const GShape shape)
     GMetaArg meta;
     HostCtor ctor;
     Data::Storage storage = Data::Storage::INTERNAL; // By default, all objects are marked INTERNAL
+    cv::detail::OpaqueKind kind = cv::detail::OpaqueKind::CV_UNKNOWN;
 
-    g.metadata(data_h).set(Data{shape, id, meta, ctor, storage});
+    g.metadata(data_h).set(Data{shape, id, meta, ctor, kind, storage});
     return data_h;
 }
 

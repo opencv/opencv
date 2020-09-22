@@ -50,6 +50,9 @@
 #include "logger.h"
 
 #define BITS_PER_CHAR 8
+#define BITS_PER_BASE 2 // for DNA/RNA sequences
+#define BASE_PER_CHAR (BITS_PER_CHAR/BITS_PER_BASE)
+#define HISTOS_PER_BASE (1<<BITS_PER_BASE)
 
 
 namespace cvflann
@@ -762,7 +765,7 @@ private:
         memoryCounter_ += int(veclen_*sizeof(CentersType));
         unsigned int* mean_accumulator = new unsigned int[accumulator_veclen];
 
-        memset(mean_accumulator, 0, accumulator_veclen);
+        memset(mean_accumulator, 0, sizeof(unsigned int)*accumulator_veclen);
 
         for (unsigned int i=0; i<indices_length; ++i) {
             variance += static_cast<unsigned long long>( ensureSquareDistance<Distance>(
@@ -814,6 +817,73 @@ private:
     }
 
 
+    void computeDnaNodeStatistics(KMeansNodePtr node, int* indices,
+                                       unsigned int indices_length)
+    {
+        const unsigned int histos_veclen = static_cast<unsigned int>(
+                    veclen_*sizeof(CentersType)*(HISTOS_PER_BASE*BASE_PER_CHAR));
+
+        unsigned long long variance = 0ull;
+        unsigned int* histograms = new unsigned int[histos_veclen];
+        memset(histograms, 0, sizeof(unsigned int)*histos_veclen);
+
+        for (unsigned int i=0; i<indices_length; ++i) {
+            variance += static_cast<unsigned long long>( ensureSquareDistance<Distance>(
+                        distance_(dataset_[indices[i]], ZeroIterator<ElementType>(), veclen_)));
+
+            unsigned char* vec = (unsigned char*)dataset_[indices[i]];
+            for (size_t k=0, l=0; k<histos_veclen; k+=HISTOS_PER_BASE*BASE_PER_CHAR, ++l) {
+                histograms[k +     ((vec[l])    & 0x03)]++;
+                histograms[k + 4 + ((vec[l]>>2) & 0x03)]++;
+                histograms[k + 8 + ((vec[l]>>4) & 0x03)]++;
+                histograms[k +12 + ((vec[l]>>6) & 0x03)]++;
+            }
+        }
+
+        CentersType* mean = new CentersType[veclen_];
+        memoryCounter_ += int(veclen_*sizeof(CentersType));
+        unsigned char* char_mean = (unsigned char*)mean;
+        unsigned int* h = histograms;
+        for (size_t k=0, l=0; k<histos_veclen; k+=HISTOS_PER_BASE*BASE_PER_CHAR, ++l) {
+            char_mean[l] = (h[k] > h[k+1] ? h[k+2] > h[k+3] ? h[k]   > h[k+2] ? 0x00 : 0x10
+                                                            : h[k]   > h[k+3] ? 0x00 : 0x11
+                                          : h[k+2] > h[k+3] ? h[k+1] > h[k+2] ? 0x01 : 0x10
+                                                            : h[k+1] > h[k+3] ? 0x01 : 0x11)
+                         | (h[k+4]>h[k+5] ? h[k+6] > h[k+7] ? h[k+4] > h[k+6] ? 0x00   : 0x1000
+                                                            : h[k+4] > h[k+7] ? 0x00   : 0x1100
+                                          : h[k+6] > h[k+7] ? h[k+5] > h[k+6] ? 0x0100 : 0x1000
+                                                            : h[k+5] > h[k+7] ? 0x0100 : 0x1100)
+                         | (h[k+8]>h[k+9] ? h[k+10]>h[k+11] ? h[k+8] >h[k+10] ? 0x00   : 0x100000
+                                                            : h[k+8] >h[k+11] ? 0x00   : 0x110000
+                                          : h[k+10]>h[k+11] ? h[k+9] >h[k+10] ? 0x010000 : 0x100000
+                                                            : h[k+9] >h[k+11] ? 0x010000 : 0x110000)
+                         | (h[k+12]>h[k+13] ? h[k+14]>h[k+15] ? h[k+12] >h[k+14] ? 0x00   : 0x10000000
+                                                              : h[k+12] >h[k+15] ? 0x00   : 0x11000000
+                                            : h[k+14]>h[k+15] ? h[k+13] >h[k+14] ? 0x01000000 : 0x10000000
+                                                              : h[k+13] >h[k+15] ? 0x01000000 : 0x11000000);
+        }
+        variance = static_cast<unsigned long long>(
+                    0.5 + static_cast<double>(variance) / static_cast<double>(indices_length));
+        variance -= static_cast<unsigned long long>(
+                    ensureSquareDistance<Distance>(
+                        distance_(mean, ZeroIterator<ElementType>(), veclen_)));
+
+        DistanceType radius = 0;
+        for (unsigned int i=0; i<indices_length; ++i) {
+            DistanceType tmp = distance_(mean, dataset_[indices[i]], veclen_);
+            if (tmp>radius) {
+                radius = tmp;
+            }
+        }
+
+        node->variance = static_cast<DistanceType>(variance);
+        node->radius = radius;
+        node->pivot = mean;
+
+        delete[] histograms;
+    }
+
+
     template<typename DistType>
     void computeNodeStatistics(KMeansNodePtr node, int* indices,
                                unsigned int indices_length,
@@ -845,6 +915,22 @@ private:
     {
         (void)identifier;
         computeBitfieldNodeStatistics(node, indices, indices_length);
+    }
+
+    void computeNodeStatistics(KMeansNodePtr node, int* indices,
+                               unsigned int indices_length,
+                               const cvflann::DNAmmingLUT* identifier)
+    {
+        (void)identifier;
+        computeDnaNodeStatistics(node, indices, indices_length);
+    }
+
+    void computeNodeStatistics(KMeansNodePtr node, int* indices,
+                               unsigned int indices_length,
+                               const cvflann::DNAmming2<unsigned char>* identifier)
+    {
+        (void)identifier;
+        computeDnaNodeStatistics(node, indices, indices_length);
     }
 
 
@@ -1040,6 +1126,112 @@ private:
     }
 
 
+    void refineDnaClustering(int* indices, int indices_length, int branching, CentersType** centers,
+                                  std::vector<DistanceType>& radiuses, int* belongs_to, int* count)
+    {
+        for (int i=0; i<branching; ++i) {
+            centers[i] = new CentersType[veclen_];
+            memoryCounter_ += (int)(veclen_*sizeof(CentersType));
+        }
+
+        const unsigned int histos_veclen = static_cast<unsigned int>(
+                    veclen_*sizeof(CentersType)*(HISTOS_PER_BASE*BASE_PER_CHAR));
+        cv::AutoBuffer<unsigned int> histos_buf(branching*histos_veclen);
+        Matrix<unsigned int> histos(histos_buf.data(), branching, histos_veclen);
+
+        bool converged = false;
+        int iteration = 0;
+        while (!converged && iteration<iterations_) {
+            converged = true;
+            iteration++;
+
+            // compute the new cluster centers
+            for (int i=0; i<branching; ++i) {
+                memset(histos[i],0,sizeof(unsigned int)*histos_veclen);
+                radiuses[i] = 0;
+            }
+            for (int i=0; i<indices_length; ++i) {
+                unsigned char* vec = (unsigned char*)dataset_[indices[i]];
+                unsigned int* h = histos[belongs_to[i]];
+                for (size_t k=0, l=0; k<histos_veclen; k+=HISTOS_PER_BASE*BASE_PER_CHAR, ++l) {
+                    h[k +     ((vec[l])    & 0x03)]++;
+                    h[k + 4 + ((vec[l]>>2) & 0x03)]++;
+                    h[k + 8 + ((vec[l]>>4) & 0x03)]++;
+                    h[k +12 + ((vec[l]>>6) & 0x03)]++;
+                }
+            }
+            for (int i=0; i<branching; ++i) {
+                unsigned int* h = histos[i];
+                unsigned char* charCenter = (unsigned char*)centers[i];
+                for (size_t k=0, l=0; k<histos_veclen; k+=HISTOS_PER_BASE*BASE_PER_CHAR, ++l) {
+                    charCenter[l]= (h[k] > h[k+1] ? h[k+2] > h[k+3] ? h[k]   > h[k+2] ? 0x00 : 0x10
+                                                                    : h[k]   > h[k+3] ? 0x00 : 0x11
+                                                  : h[k+2] > h[k+3] ? h[k+1] > h[k+2] ? 0x01 : 0x10
+                                                                    : h[k+1] > h[k+3] ? 0x01 : 0x11)
+                                 | (h[k+4]>h[k+5] ? h[k+6] > h[k+7] ? h[k+4] > h[k+6] ? 0x00   : 0x1000
+                                                                    : h[k+4] > h[k+7] ? 0x00   : 0x1100
+                                                  : h[k+6] > h[k+7] ? h[k+5] > h[k+6] ? 0x0100 : 0x1000
+                                                                    : h[k+5] > h[k+7] ? 0x0100 : 0x1100)
+                                 | (h[k+8]>h[k+9] ? h[k+10]>h[k+11] ? h[k+8] >h[k+10] ? 0x00   : 0x100000
+                                                                    : h[k+8] >h[k+11] ? 0x00   : 0x110000
+                                                  : h[k+10]>h[k+11] ? h[k+9] >h[k+10] ? 0x010000 : 0x100000
+                                                                    : h[k+9] >h[k+11] ? 0x010000 : 0x110000)
+                                 | (h[k+12]>h[k+13] ? h[k+14]>h[k+15] ? h[k+12] >h[k+14] ? 0x00   : 0x10000000
+                                                                      : h[k+12] >h[k+15] ? 0x00   : 0x11000000
+                                                    : h[k+14]>h[k+15] ? h[k+13] >h[k+14] ? 0x01000000 : 0x10000000
+                                                                      : h[k+13] >h[k+15] ? 0x01000000 : 0x11000000);
+                }
+            }
+
+            std::vector<int> new_centroids(indices_length);
+            std::vector<DistanceType> dists(indices_length);
+
+            // reassign points to clusters
+            KMeansDistanceComputer<ElementType**> invoker(
+                        distance_, dataset_, branching, indices, centers, veclen_, new_centroids, dists);
+            parallel_for_(cv::Range(0, (int)indices_length), invoker);
+
+            for (int i=0; i < indices_length; ++i) {
+                DistanceType dist(dists[i]);
+                int new_centroid(new_centroids[i]);
+                if (dist > radiuses[new_centroid]) {
+                    radiuses[new_centroid] = dist;
+                }
+                if (new_centroid != belongs_to[i]) {
+                    count[belongs_to[i]]--;
+                    count[new_centroid]++;
+                    belongs_to[i] = new_centroid;
+                    converged = false;
+                }
+            }
+
+            for (int i=0; i<branching; ++i) {
+                // if one cluster converges to an empty cluster,
+                // move an element into that cluster
+                if (count[i]==0) {
+                    int j = (i+1)%branching;
+                    while (count[j]<=1) {
+                        j = (j+1)%branching;
+                    }
+
+                    for (int k=0; k<indices_length; ++k) {
+                        if (belongs_to[k]==j) {
+                            // for cluster j, we move the furthest element from the center to the empty cluster i
+                            if ( distance_(dataset_[indices[k]], centers[j], veclen_) == radiuses[j] ) {
+                                belongs_to[k] = i;
+                                count[j]--;
+                                count[i]++;
+                                break;
+                            }
+                        }
+                    }
+                    converged = false;
+                }
+            }
+        }
+    }
+
+
     void computeSubClustering(KMeansNodePtr node, int* indices, int indices_length,
                               int branching, int level, CentersType** centers,
                               std::vector<DistanceType>& radiuses, int* belongs_to, int* count)
@@ -1139,7 +1331,7 @@ private:
     /**
      * The methods responsible with doing the recursive hierarchical clustering on
      * binary vectors.
-     * As some might have heared that KMeans on binary data doesn't make sense,
+     * As some might have heard that KMeans on binary data doesn't make sense,
      * it's worth a little explanation why it actually fairly works. As
      * with the Hierarchical Clustering algortihm, we seed several centers for the
      * current node by picking some of its points. Then in a first pass each point
@@ -1215,6 +1407,34 @@ private:
     {
         (void)identifier;
         refineBitfieldClustering(
+                    indices, indices_length, branching, centers, radiuses, belongs_to, count);
+
+        computeAnyBitfieldSubClustering(node, indices, indices_length, branching,
+                                        level, centers, radiuses, belongs_to, count);
+    }
+
+
+    void refineAndSplitClustering(
+            KMeansNodePtr node, int* indices, int indices_length, int branching,
+            int level, CentersType** centers, std::vector<DistanceType>& radiuses,
+            int* belongs_to, int* count, const cvflann::DNAmmingLUT* identifier)
+    {
+        (void)identifier;
+        refineDnaClustering(
+                    indices, indices_length, branching, centers, radiuses, belongs_to, count);
+
+        computeAnyBitfieldSubClustering(node, indices, indices_length, branching,
+                                        level, centers, radiuses, belongs_to, count);
+    }
+
+
+    void refineAndSplitClustering(
+            KMeansNodePtr node, int* indices, int indices_length, int branching,
+            int level, CentersType** centers, std::vector<DistanceType>& radiuses,
+            int* belongs_to, int* count, const cvflann::DNAmming2<unsigned char>* identifier)
+    {
+        (void)identifier;
+        refineDnaClustering(
                     indices, indices_length, branching, centers, radiuses, belongs_to, count);
 
         computeAnyBitfieldSubClustering(node, indices, indices_length, branching,

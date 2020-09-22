@@ -194,7 +194,7 @@ void cv::gimpl::GCPUExecutable::run(std::vector<InObj>  &&input_objs,
     {
         const auto &desc = gm.metadata(nh).get<Data>();
 
-        if (   desc.storage == Data::Storage::INTERNAL
+        if (   desc.storage == Data::Storage::INTERNAL               // FIXME: to reconsider
             && !util::holds_alternative<util::monostate>(desc.ctor))
         {
             // FIXME: Note that compile-time constant data objects (like

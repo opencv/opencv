@@ -225,5 +225,19 @@ TEST(Imgproc_ConnectedComponents, parallel_wu_labels)
     EXPECT_EQ(nbPixels, area);
 }
 
+TEST(Imgproc_ConnectedComponents, missing_background_pixels)
+{
+    cv::Mat m = Mat::ones(10, 10, CV_8U);
+    cv::Mat labels;
+    cv::Mat stats;
+    cv::Mat centroids;
+    EXPECT_NO_THROW(cv::connectedComponentsWithStats(m, labels, stats, centroids, 8, CV_32S, cv::CCL_WU) );
+    EXPECT_EQ(stats.at<int32_t>(0, cv::CC_STAT_WIDTH), 0);
+    EXPECT_EQ(stats.at<int32_t>(0, cv::CC_STAT_HEIGHT), 0);
+    EXPECT_EQ(stats.at<int32_t>(0, cv::CC_STAT_LEFT), -1);
+    EXPECT_TRUE(std::isnan(centroids.at<double>(0, 0)));
+    EXPECT_TRUE(std::isnan(centroids.at<double>(0, 1)));
+}
+
 
 }} // namespace
