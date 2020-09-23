@@ -62,10 +62,44 @@ TEST_F(S11N_Basic, Test_fp64) {
     EXPECT_EQ(x, get<double>());
 }
 
+TEST_F(S11N_Basic, Test_uint64) {
+    uint64_t x = 2147483647374;
+    put(x);
+    EXPECT_EQ(x, get<uint64_t>());
+}
+
+TEST_F(S11N_Basic, Test_int32_pos) {
+    int32_t x = 2147483647;
+    put(x);
+    EXPECT_EQ(x, get<int32_t>());
+}
+
+TEST_F(S11N_Basic, Test_int32_neg) {
+    int32_t x = -2147483646;
+    put(x);
+    EXPECT_EQ(x, get<int32_t>());
+}
+
+TEST_F(S11N_Basic, Test_vector_bool) {
+    std::vector<bool> v = {false, true, false};
+    put(v);
+    EXPECT_EQ(v, get<std::vector<bool>>());
+}
+
+TEST_F(S11N_Basic, Test_map_string2string) {
+    using T = std::map<std::string, std::string>;
+    T v;
+    v["gapi"] = "cool";
+    v["42"] = "answer";
+    v["hi"] = "hello there";
+    put(v);
+    EXPECT_EQ(v, get<T>());
+}
+
 TEST_F(S11N_Basic, Test_vector_int) {
     std::vector<int> v = {1,2,3};
     put(v);
-    EXPECT_EQ(v, get<std::vector<int> >());
+    EXPECT_EQ(v, get<std::vector<int>>());
 }
 
 TEST_F(S11N_Basic, Test_vector_cvSize) {
@@ -74,7 +108,7 @@ TEST_F(S11N_Basic, Test_vector_cvSize) {
         cv::Size(1280, 1024),
     };
     put(v);
-    EXPECT_EQ(v, get<std::vector<cv::Size> >());
+    EXPECT_EQ(v, get<std::vector<cv::Size>>());
 }
 
 TEST_F(S11N_Basic, Test_vector_string) {
@@ -84,13 +118,13 @@ TEST_F(S11N_Basic, Test_vector_string) {
         "ok!"
     };
     put(v);
-    EXPECT_EQ(v, get<std::vector<std::string> >());
+    EXPECT_EQ(v, get<std::vector<std::string>>());
 }
 
 TEST_F(S11N_Basic, Test_vector_empty) {
     std::vector<char> v;
     put(v);
-    EXPECT_EQ(v, get<std::vector<char> >());
+    EXPECT_EQ(v, get<std::vector<char>>());
 }
 
 TEST_F(S11N_Basic, Test_variant) {

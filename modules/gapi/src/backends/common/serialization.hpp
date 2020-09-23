@@ -9,7 +9,8 @@
 
 #include <iostream>
 #include <fstream>
-#include <string.h>
+#include <string>
+#include <map>
 
 #include <ade/util/iota_range.hpp> // used in the vector<</>>
 
@@ -46,15 +47,18 @@ namespace I {
         virtual OStream& operator<< (int) = 0;
         //virtual OStream& operator<< (std::size_t) = 0;
         virtual OStream& operator<< (uint32_t) = 0;
+        virtual OStream& operator<< (uint64_t) = 0;
         virtual OStream& operator<< (float) = 0;
         virtual OStream& operator<< (double) = 0;
         virtual OStream& operator<< (const std::string&) = 0;
+        virtual OStream& operator<< (const std::map<std::string, std::string>&) = 0;
     };
 
     struct GAPI_EXPORTS IStream {
         virtual ~IStream() = default;
 
         virtual IStream& operator>> (bool &) = 0;
+        virtual IStream& operator>> (std::vector<bool>::reference) = 0;
         virtual IStream& operator>> (char &) = 0;
         virtual IStream& operator>> (unsigned char &) = 0;
         virtual IStream& operator>> (short &) = 0;
@@ -64,7 +68,9 @@ namespace I {
         virtual IStream& operator>> (double &) = 0;
         //virtual IStream& operator>> (std::size_t &) = 0;
         virtual IStream& operator >> (uint32_t &) = 0;
+        virtual IStream& operator >> (uint64_t &) = 0;
         virtual IStream& operator>> (std::string &) = 0;
+        virtual IStream& operator>> (std::map<std::string, std::string> &) = 0;
     };
 } // namespace I
 
@@ -294,7 +300,7 @@ I::OStream& operator<< (I::OStream& os, const std::vector<T> &ts) {
     //const std::size_t sz = ts.size(); // explicitly specify type
     const uint32_t sz = (uint32_t)ts.size(); // explicitly specify type
     os << sz;
-    for (auto &&v : ts) os << v;
+    for (auto&& v : ts) os << v;
     return os;
 }
 template<typename T>
@@ -333,7 +339,9 @@ public:
     virtual I::OStream& operator<< (float) override;
     virtual I::OStream& operator<< (double) override;
     virtual I::OStream& operator<< (const std::string&) override;
+    virtual I::OStream& operator<< (const std::map<std::string, std::string>&) override;
     virtual I::OStream& operator<< (uint32_t) override;
+    virtual I::OStream& operator<< (uint64_t) override;
 };
 
 class GAPI_EXPORTS ByteMemoryInStream final: public I::IStream {
@@ -349,6 +357,7 @@ public:
     explicit ByteMemoryInStream(const std::vector<char> &data);
 
     virtual I::IStream& operator>> (bool &) override;
+    virtual I::IStream& operator>> (std::vector<bool>::reference) override;
     virtual I::IStream& operator>> (char &) override;
     virtual I::IStream& operator>> (unsigned char &) override;
     virtual I::IStream& operator>> (short &) override;
@@ -358,7 +367,9 @@ public:
     virtual I::IStream& operator>> (double &) override;
     //virtual I::IStream& operator>> (std::size_t &) override;
     virtual I::IStream& operator >> (uint32_t &) override;
+    virtual I::IStream& operator >> (uint64_t &) override;
     virtual I::IStream& operator>> (std::string &) override;
+    virtual I::IStream& operator>> (std::map<std::string, std::string> &) override;
 };
 
 GAPI_EXPORTS void serialize(I::OStream& os, const cv::GMetaArgs &ma);
