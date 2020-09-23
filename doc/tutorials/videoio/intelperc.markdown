@@ -15,7 +15,7 @@ In order to use depth sensor with OpenCV you should do the following preliminary
 
 -#  Configure OpenCV with Intel RealSense SDK support by setting WITH_LIBREALSENSE flag in
     CMake. If Intel RealSense SDK is found in install folders OpenCV will be built with
-    Intel Realsense SDK library (see a status LIBREALSENSE in CMake log). 
+    Intel Realsense SDK library (see a status LIBREALSENSE in CMake log).
 
 -#  Build OpenCV.
 
