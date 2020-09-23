@@ -61,6 +61,7 @@ set(gapi_srcs
     src/api/garray.cpp
     src/api/gopaque.cpp
     src/api/gscalar.cpp
+    src/api/gframe.cpp
     src/api/gkernel.cpp
     src/api/gbackend.cpp
     src/api/gproto.cpp
