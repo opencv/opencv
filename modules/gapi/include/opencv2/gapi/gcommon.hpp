@@ -80,6 +80,7 @@ enum class GShape: int
     GSCALAR,
     GARRAY,
     GOPAQUE,
+    GFRAME,
 };
 
 struct GCompileArg;

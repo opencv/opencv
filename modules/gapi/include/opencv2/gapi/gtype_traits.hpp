@@ -15,6 +15,7 @@
 #include <opencv2/gapi/gscalar.hpp>
 #include <opencv2/gapi/garray.hpp>
 #include <opencv2/gapi/gopaque.hpp>
+#include <opencv2/gapi/gframe.hpp>
 #include <opencv2/gapi/streaming/source.hpp>
 #include <opencv2/gapi/gcommon.hpp>
 
