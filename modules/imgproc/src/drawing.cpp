@@ -2253,113 +2253,95 @@ inline void readCheck(int &c, int &i, const String &text, int fontFace)
 
 extern const char* g_HersheyGlyphs[];
 
-void putText( InputOutputArray _img, const String& text, Point org,
-              int fontFace, double fontScale, Scalar color,
-              int thickness, int line_type, bool bottomLeftOrigin )
-
+static void hersheyToTruetype(int fontFace, double fontScale, int thickness,
+                              String& ttname, double& ttsize, int& ttweight)
 {
-    CV_INSTRUMENT_REGION();
-
-    if ( text.empty() )
+    double sf = 0;
+    switch(fontFace)
     {
-        return;
+    case FONT_HERSHEY_PLAIN:
+        ttname = "sans";
+        sf = 6.6;
+        ttweight = thickness <= 1 ? 400 : 800;
+        break;
+    case FONT_HERSHEY_SIMPLEX:
+        ttname = "sans";
+        sf = 3.2;
+        ttweight = thickness <= 1 ? 400 : 600;
+        break;
+    case FONT_HERSHEY_DUPLEX:
+        ttname = "sans";
+        sf = 3.2;
+        ttweight = thickness <= 1 ? 600 : 800;
+        break;
+    case FONT_HERSHEY_COMPLEX:
+        ttname = "serif";
+        sf = 3.0;
+        ttweight = thickness <= 1 ? 400 : 800;
+        break;
+    case FONT_HERSHEY_TRIPLEX:
+        ttname = "serif";
+        sf = 3.2;
+        ttweight = thickness <= 1 ? 400 : 800;
+        break;
+    case FONT_HERSHEY_COMPLEX_SMALL:
+        ttname = "serif";
+        sf = 4.6;
+        ttweight = thickness <= 1 ? 400 : 800;
+        break;
+    case FONT_HERSHEY_SCRIPT_COMPLEX:
+        ttname = "italic";
+        sf = 3.4;
+        ttweight = thickness <= 1 ? 400 : 800;
+        break;
+    case FONT_HERSHEY_SCRIPT_SIMPLEX:
+        ttname = "italic";
+        sf = 3.2;
+        ttweight = thickness <= 1 ? 300 : 600;
+        break;
+    default:
+        CV_Error(Error::StsBadArg, "Unknown font");
     }
-    Mat img = _img.getMat();
-    const int* ascii = getFontData(fontFace);
 
-    double buf[4];
-    scalarToRawData(color, buf, img.type(), 0);
-
-    int base_line = -(ascii[0] & 15);
-    int hscale = cvRound(fontScale*XY_ONE), vscale = hscale;
-
-    if( line_type == CV_AA && img.depth() != CV_8U )
-        line_type = 8;
-
-    if( bottomLeftOrigin )
-        vscale = -vscale;
-
-    int64 view_x = (int64)org.x << XY_SHIFT;
-    int64 view_y = ((int64)org.y << XY_SHIFT) + base_line*vscale;
-    std::vector<Point2l> pts;
-    pts.reserve(1 << 10);
-    const char **faces = cv::g_HersheyGlyphs;
-
-    for( int i = 0; i < (int)text.size(); i++ )
-    {
-        int c = (uchar)text[i];
-        Point2l p;
-
-        readCheck(c, i, text, fontFace);
-
-        const char* ptr = faces[ascii[(c-' ')+1]];
-        p.x = (uchar)ptr[0] - 'R';
-        p.y = (uchar)ptr[1] - 'R';
-        int64 dx = p.y*hscale;
-        view_x -= p.x*hscale;
-        pts.resize(0);
-
-        for( ptr += 2;; )
-        {
-            if( *ptr == ' ' || !*ptr )
-            {
-                if( pts.size() > 1 )
-                    PolyLine( img, &pts[0], (int)pts.size(), false, buf, thickness, line_type, XY_SHIFT );
-                if( !*ptr++ )
-                    break;
-                pts.resize(0);
-            }
-            else
-            {
-                p.x = (uchar)ptr[0] - 'R';
-                p.y = (uchar)ptr[1] - 'R';
-                ptr += 2;
-                pts.push_back(Point2l(p.x*hscale + view_x, p.y*vscale + view_y));
-            }
-        }
-        view_x += dx;
-    }
+    ttsize = 100*fontScale/sf;
 }
 
-Size getTextSize( const String& text, int fontFace, double fontScale, int thickness, int* _base_line)
+void putText( InputOutputArray _img, const String& text, Point org,
+              int fontFace, double fontScale, Scalar color,
+              int thickness, int, bool bottomLeftOrigin )
+
 {
-    Size size;
-    double view_x = 0;
-    const char **faces = cv::g_HersheyGlyphs;
-    const int* ascii = getFontData(fontFace);
+    String ttname;
+    double ttsize = 0;
+    int ttweight = 0;
+    hersheyToTruetype(fontFace, fontScale, thickness, ttname, ttsize, ttweight);
+    FontFace fface(ttname);
+    int flags = bottomLeftOrigin ? PUT_TEXT_ORIGIN_BL : PUT_TEXT_ORIGIN_TL;
+    putText(_img, text, org, color, fface, ttsize, ttweight, flags);
+}
 
-    int base_line = (ascii[0] & 15);
-    int cap_line = (ascii[0] >> 4) & 15;
-    size.height = cvRound((cap_line + base_line)*fontScale + (thickness+1)/2);
+Size getTextSize(const String& text, int fontFace, double fontScale, int thickness, int* _base_line)
+{
+    String ttname;
+    double ttsize = 0;
+    int ttweight = 0;
+    hersheyToTruetype(fontFace, fontScale, thickness, ttname, ttsize, ttweight);
 
-    for( int i = 0; i < (int)text.size(); i++ )
-    {
-        int c = (uchar)text[i];
-        Point p;
+    FontFace fface(ttname);
+    Rect r = getTextSize(noArray(), text, Point(), fface, ttsize, ttweight, 0);
 
-        readCheck(c, i, text, fontFace);
-
-        const char* ptr = faces[ascii[(c-' ')+1]];
-        p.x = (uchar)ptr[0] - 'R';
-        p.y = (uchar)ptr[1] - 'R';
-        view_x += (p.y - p.x)*fontScale;
-    }
-
-    size.width = cvRound(view_x + thickness);
-    if( _base_line )
-        *_base_line = cvRound(base_line*fontScale + thickness*0.5);
-    return size;
+    if(_base_line)
+        *_base_line = r.y + r.height;
+    return r.size();
 }
 
 double getFontScaleFromHeight(const int fontFace, const int pixelHeight, const int thickness)
 {
-    // By https://stackoverflow.com/a/27898487/1531708
-    const int* ascii = getFontData(fontFace);
-
-    int base_line = (ascii[0] & 15);
-    int cap_line = (ascii[0] >> 4) & 15;
-
-    return static_cast<double>(pixelHeight - static_cast<double>((thickness + 1)) / 2.0) / static_cast<double>(cap_line + base_line);
+    String ttname;
+    double ttsize = 0;
+    int ttweight = 0;
+    hersheyToTruetype(fontFace, 1.0, thickness, ttname, ttsize, ttweight);
+    return pixelHeight/ttsize;
 }
 
 }

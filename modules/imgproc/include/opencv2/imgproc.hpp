@@ -4762,7 +4762,8 @@ enum
     PUT_TEXT_SIZE_POINTS=4,
     PUT_TEXT_SIZE_MASK=12,
     PUT_TEXT_ORIGIN_TL=0,
-    PUT_TEXT_ORIGIN_BL=32
+    PUT_TEXT_ORIGIN_BL=32,
+    PUT_TEXT_WRAP=128
 };
 
 /** @brief Draws a text string using specified font.
@@ -4790,10 +4791,9 @@ CV_EXPORTS_W Point putText( InputOutputArray img, const String& text,
 The function cv::getTextSize calculates and returns the size of a box that contains the specified text.
 That is, the following code renders some text, the tight box surrounding it, and the baseline: :
 */
-CV_EXPORTS_W Size getTextSize( const String& text,
+CV_EXPORTS_W Rect getTextSize( InputArray img, const String& text, Point org,
                                FontFace& fface, double size,
-                               int thickness=0, int flags=0,
-                               CV_OUT int* baseLine=0 );
+                               int thickness=0, int flags=0 );
 
 /** @brief Line iterator
 

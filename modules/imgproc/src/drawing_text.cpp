@@ -63,7 +63,7 @@ static thread_local FontFace def_font_uni, def_font_sans, def_font_serif, def_fo
 
 static bool inflate(const void* src, size_t srclen, std::vector<uchar>& dst)
 {
-    dst.resize(srclen*2);
+    dst.resize((size_t)(srclen*2.5));
     for(int attempts = 0; attempts < 5; attempts++)
     {
         z_stream strm = {0};
@@ -79,7 +79,6 @@ static bool inflate(const void* src, size_t srclen, std::vector<uchar>& dst)
             inflateEnd(&strm);
             if (err == Z_STREAM_END)
             {
-                printf("attempt=#%d\n", attempts);
                 dst.resize((size_t)strm.total_out);
                 return true;
             }
@@ -339,20 +338,13 @@ static void drawCharacter(
 }
 
 
-Point putText(InputOutputArray img_, const String& str,
-             Point org, Scalar color_,
-             FontFace& fontface, double size,
-             int thickness, int flags)
+static Point putText_( Mat& img, const String& str, Point org,
+                       const uchar* color, FontFace& fontface, double size,
+                       int thickness, int flags, bool render,
+                       Rect* brect )
 {
-    uchar color[] =
-    {
-        saturate_cast<uchar>(color_[0]), saturate_cast<uchar>(color_[1]),
-        saturate_cast<uchar>(color_[2]), saturate_cast<uchar>(color_[3])
-    };
-    Mat img = img_.getMat();
-    int nch = img.channels();
-    CV_Assert(img.depth() == CV_8U);
-    CV_Assert(nch == 1 || nch == 3 || nch == 4);
+    int load_glyph_flag = render ? FT_LOAD_RENDER : FT_LOAD_DEFAULT;
+
     FontFace& subst = def_font_uni;
     if(subst.get().empty())
         subst.set("uni");
@@ -369,6 +361,12 @@ Point putText(InputOutputArray img_, const String& str,
 
     int pen_x = org.x, pen_y = org.y;
     size_t i, len = str.size();
+    bool wrap = (flags & PUT_TEXT_WRAP) != 0;
+
+    // text size computing algorithm is adopted from G-API module, ft_render.cpp.
+    int max_dy = 0, max_baseline = 0;
+    int max_width = 0;
+    bool wrapped = false;
 
     for( i = 0; i < len; i++ )
     {
@@ -405,35 +403,82 @@ Point putText(InputOutputArray img_, const String& str,
             if(glyph_index == 0)
                 glyph_index = FT_Get_Char_Index( curr_ftface, 0xFFFD );
         }
-        int err = FT_Load_Glyph( curr_ftface, glyph_index, FT_LOAD_RENDER );
+        int err = FT_Load_Glyph( curr_ftface, glyph_index, load_glyph_flag );
         if( err != 0 )
             continue;
 
         FT_GlyphSlot slot = curr_ftface->glyph;
 
-        float dx_sf = charcode == ' ' ? 1.5f/64 : 1.f/64;
-        int dx = (int)(slot->metrics.horiAdvance*dx_sf+0.5f);
-        int new_pen_x = pen_x + dx;
-        if( new_pen_x > img.cols - 50 )
+        int dx_shift = 6, dx_scale = 1;
+        if(charcode == ' ')
         {
-            pen_y += (int)((slot->metrics.vertAdvance >> 6)*1.0);
+            dx_scale = 3;
+            dx_shift++;
+        }
+        int dx_delta = (1 << dx_shift) - 1;
+        int dx = (int)((slot->metrics.horiAdvance*dx_scale + dx_delta) >> dx_shift);
+        int new_pen_x = pen_x + dx;
+        if( wrap && img.cols > 0 && (new_pen_x > img.cols) )
+        {
+            pen_y += (int)((slot->metrics.vertAdvance + 32) >> 6);
+            max_width = max(max_width, pen_x - org.x);
             pen_x = org.x;
+            wrapped = true;
+            max_baseline = slot->bitmap_top;
             if(charcode == ' ') continue;
             new_pen_x = pen_x + dx;
         }
 
+        if(!wrapped)
+            max_dy = std::max(max_dy, slot->bitmap_top);
+        int baseline = (slot->metrics.height - slot->metrics.horiBearingY) >> 6;
+        max_baseline = std::max(max_baseline, baseline);
+
         int x = pen_x + slot->bitmap_left;
         int y = pen_y - slot->bitmap_top;
-        drawCharacter( img, color, &slot->bitmap, x, y );
+        if( render )
+            drawCharacter( img, color, &slot->bitmap, x, y );
         pen_x = new_pen_x;
     }
+    max_width = max(max_width, pen_x - org.x);
+
+    printf("pen_y - org.y = %d\n", pen_y - org.y);
+    if(brect)
+        *brect = Rect(org.x, org.y - max_dy, max_width, pen_y - org.y + max_dy + max_baseline);
+
     return Point(pen_x, pen_y);
 }
 
-Size getTextSize(const String& str, FontFace& fontface, double size,
-                 int thickness, int flags, int* baseline)
+
+Point putText(InputOutputArray img_, const String& str,
+             Point org, Scalar color_,
+             FontFace& fontface, double size,
+             int thickness, int flags)
 {
-    return Size();
+    uchar color[] =
+    {
+        saturate_cast<uchar>(color_[0]), saturate_cast<uchar>(color_[1]),
+        saturate_cast<uchar>(color_[2]), saturate_cast<uchar>(color_[3])
+    };
+    Mat img = img_.getMat();
+    int nch = img.channels();
+    CV_Assert(img.depth() == CV_8U);
+    CV_Assert(nch == 1 || nch == 3 || nch == 4);
+
+    return putText_(img, str, org, color, fontface, size,
+                    thickness, flags, true, 0);
+}
+
+
+Rect getTextSize(InputArray img_, const String& str, Point org,
+                 FontFace& fontface, double size,
+                 int thickness, int flags)
+{
+    Mat img = img_.getMat();
+    Rect brect;
+    putText_(img, str, org, 0, fontface, size,
+             thickness, flags, false, &brect);
+    return brect;
 }
 
 }
@@ -462,10 +507,10 @@ Point putText(InputOutputArray, const String&, Point org, Scalar,
     return org;
 }
 
-Size getTextSize(const String&, FontFace&, double, int, int, int*)
+Rect getTextSize(InputArray, const String&, Point, FontFace&, double, int, int)
 {
     CV_Error(Error::StsNotImplemented, "putText needs freetype2; recompile OpenCV with freetype2 enabled");
-    return Size();
+    return Rect();
 }
 
 }
