@@ -103,10 +103,14 @@ static const std::map<std::string, OpenVINOModelTestCaseInfo>& getOpenVINOTestMo
 #if INF_ENGINE_RELEASE >= 2020010000
         // Downloaded using these parameters for Open Model Zoo downloader (2020.1):
         // ./downloader.py -o ${OPENCV_DNN_TEST_DATA_PATH}/omz_intel_models --cache_dir ${OPENCV_DNN_TEST_DATA_PATH}/.omz_cache/ \
-        //     --name person-detection-retail-0013
+        //     --name person-detection-retail-0013,age-gender-recognition-retail-0013
         { "person-detection-retail-0013", {  // IRv10
             "intel/person-detection-retail-0013/FP32/person-detection-retail-0013",
             "intel/person-detection-retail-0013/FP16/person-detection-retail-0013"
+        }},
+        { "age-gender-recognition-retail-0013", {
+            "intel/age-gender-recognition-retail-0013/FP16/age-gender-recognition-retail-0013",
+            "intel/age-gender-recognition-retail-0013/FP32/age-gender-recognition-retail-0013"
         }},
 #endif
     };
@@ -121,6 +125,21 @@ static const std::vector<std::string> getOpenVINOTestModelsList()
     for (const auto& it : models)
         result.push_back(it.first);
     return result;
+}
+
+inline static std::string getOpenVINOModel(const std::string &modelName, bool isFP16)
+{
+    const std::map<std::string, OpenVINOModelTestCaseInfo>& models = getOpenVINOTestModels();
+    const auto it = models.find(modelName);
+    if (it != models.end())
+    {
+        OpenVINOModelTestCaseInfo modelInfo = it->second;
+        if (isFP16 && modelInfo.modelPathFP16)
+            return std::string(modelInfo.modelPathFP16);
+        else if (!isFP16 && modelInfo.modelPathFP32)
+            return std::string(modelInfo.modelPathFP32);
+    }
+    return std::string();
 }
 
 static inline void genData(const InferenceEngine::TensorDesc& desc, Mat& m, Blob::Ptr& dataPtr)
@@ -310,11 +329,8 @@ TEST_P(DNNTestOpenVINO, models)
 
     bool isFP16 = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD);
 
-    const std::map<std::string, OpenVINOModelTestCaseInfo>& models = getOpenVINOTestModels();
-    const auto it = models.find(modelName);
-    ASSERT_TRUE(it != models.end()) << modelName;
-    OpenVINOModelTestCaseInfo modelInfo = it->second;
-    std::string modelPath = isFP16 ? modelInfo.modelPathFP16 : modelInfo.modelPathFP32;
+    const std::string modelPath = getOpenVINOModel(modelName, isFP16);
+    ASSERT_FALSE(modelPath.empty()) << modelName;
 
     std::string xmlPath = findDataFile(modelPath + ".xml", false);
     std::string binPath = findDataFile(modelPath + ".bin", false);
@@ -358,10 +374,9 @@ TEST_P(DNNTestHighLevelAPI, predict)
 
     Target target = (dnn::Target)(int)GetParam();
     bool isFP16 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD);
-
-    OpenVINOModelTestCaseInfo modelInfo = getOpenVINOTestModels().find("age-gender-recognition-retail-0013")->second;
-
-    std::string modelPath = isFP16 ? modelInfo.modelPathFP16 : modelInfo.modelPathFP32;
+    const std::string modelName = "age-gender-recognition-retail-0013";
+    const std::string modelPath = getOpenVINOModel(modelName, isFP16);
+    ASSERT_FALSE(modelPath.empty()) << modelName;
 
     std::string xmlPath = findDataFile(modelPath + ".xml");
     std::string binPath = findDataFile(modelPath + ".bin");
