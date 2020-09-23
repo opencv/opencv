@@ -34,8 +34,7 @@ const cv::GOrigin& cv::GFrame::priv() const {
 }
 
 namespace cv {
-std::ostream& operator<<(std::ostream& os, const cv::GFrameDesc &desc) {
-    (void) desc;
+std::ostream& operator<<(std::ostream& os, const cv::GFrameDesc &) {
     return os;
 }
 
