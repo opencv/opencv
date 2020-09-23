@@ -248,6 +248,10 @@ public:
     float power;
 #endif
 
+#ifdef HAVE_TENGINE
+    teng_graph_t tengine_graph;
+#endif
+
 #ifdef HAVE_CUDA
     cuda4dnn::ConvolutionConfiguration::FusionMode cudaFusionMode;
     cuda4dnn::ConvolutionConfiguration::ActivationType cudaActType;
@@ -267,7 +271,19 @@ public:
         cudaFusionMode = cuda4dnn::ConvolutionConfiguration::FusionMode::NONE;
         cudaActType = cuda4dnn::ConvolutionConfiguration::ActivationType::IDENTITY;
 #endif
+#ifdef HAVE_TENGINE
+        tengine_graph=NULL;
+#endif
     }
+#ifdef HAVE_TENGINE
+    ~ConvolutionLayerImpl()
+    {
+        if(NULL != tengine_graph )
+        {
+            tengine_release(tengine_graph);
+        }
+    }
+#endif
 
     MatShape computeColRowShape(const MatShape &inpShape, const MatShape &outShape) const CV_OVERRIDE
     {
@@ -391,6 +407,13 @@ public:
             for(int i = 0; i < numOutput; i++ )
                 biasvec[i] = biasMat.at<float>(i);
         }
+#ifdef HAVE_TENGINE
+        if(NULL != tengine_graph )
+        {
+            tengine_release(tengine_graph);
+            tengine_graph = NULL ;
+        }
+#endif
 #ifdef HAVE_OPENCL
         convolutionOp.release();
 #endif
@@ -1765,26 +1788,50 @@ public:
         }
 
 #ifdef HAVE_TENGINE
-        int inch = inputs[0].size[1]; 		// inch
-        int in_h = inputs[0].size[2]; 		// in_h
-        int in_w = inputs[0].size[3]; 		// in_w
+        bool tengine_ret = false; ;
 
-        int out_b = outputs[0].size[0];     // out batch size
-        int outch = outputs[0].size[1]; 	// outch
-        int out_h = outputs[0].size[2]; 	// out_h
-        int out_w = outputs[0].size[3]; 	// out_w
+        std::vector<Mat> teng_in, teng_out;
+        inputs_arr.getMatVector(teng_in);
+        outputs_arr.getMatVector(teng_out);
 
-        float *input_  = inputs[0].ptr<float>();
-        float *output_ = outputs[0].ptr<float>();
+        int inch = teng_in[0].size[1];    // inch
+        int in_h = teng_in[0].size[2];    // in_h
+        int in_w = teng_in[0].size[3];    // in_w
+
+        int out_b = teng_out[0].size[0];  // out batch size
+        int outch = teng_out[0].size[1];  // outch
+        int out_h = teng_out[0].size[2];  // out_h
+        int out_w = teng_out[0].size[3];  // out_w
+
+        float *input_  = teng_in[0].ptr<float>();
+        float *output_ = teng_out[0].ptr<float>();
         float *kernel_ = weightsMat.ptr<float>();
         float *teg_bias = &biasvec[0];
 
-        bool tengine_ret = tengine_forward(input_, inch, ngroups, in_h, in_w,
-                                    output_, out_b, outch, out_h, out_w,
-                                    kernel_, kernel_size.size(), kernel.height, kernel.width,
-                                    teg_bias, stride.height, stride.width,
-                                    pad.height,  pad.width, dilation.height, dilation.width,
-                                    weightsMat.step1(), padMode);
+        int nstripes = std::max(getNumThreads(), 1);
+
+        /* tengine_init will run when first time. */
+        if(NULL == tengine_graph)
+        {
+            tengine_graph = tengine_init(name.c_str(), input_, inch, ngroups, in_h, in_w,
+                                         output_, out_b, outch, out_h, out_w,
+                                         kernel_, kernel_size.size(), kernel.height, kernel.width,
+                                         teg_bias, stride.height, stride.width,
+                                         pad.height,  pad.width, dilation.height, dilation.width,
+                                         weightsMat.step1(), padMode, tengine_graph, nstripes);
+            /*printf("Init(%s):  input=%p(%d %d %d %d ),output=%p(%d %d %d %d ),kernel=%p(%ld %d %d ), bias=%p ,"
+                   "stride(%d %d), pad(%d %d), dilation(%d %d) ,weightsMat=%ld, padMode=%s ,tengine_graph = %p \n",
+                   name.c_str(),input_, inch, ngroups, in_h, in_w,
+                   output_, out_b, outch, out_h, out_w,
+                   kernel_, kernel_size.size(), kernel.height, kernel.width,
+                   teg_bias, stride.height, stride.width,
+                   pad.height,  pad.width, dilation.height, dilation.width,
+                   weightsMat.step1(), padMode.c_str() ,tengine_graph);*/
+        }
+        if(NULL != tengine_graph)
+        {
+            tengine_ret = tengine_forward(tengine_graph);
+        }
         /* activation */
         if((true == tengine_ret) && activ )
         {
