@@ -786,7 +786,6 @@
     return FT_Err_Ok;
   }
 
-
 #else /* !FT_CONFIG_OPTION_USE_ZLIB */
 
   FT_EXPORT_DEF( FT_Error )
@@ -817,8 +816,5 @@
   }
 
 #endif /* !FT_CONFIG_OPTION_USE_ZLIB */
-
-void z_error(char* msg) {}
-int z_verbose = 0;
 
 /* END */

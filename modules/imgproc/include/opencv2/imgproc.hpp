@@ -4721,34 +4721,48 @@ CV_EXPORTS_W double getFontScaleFromHeight(const int fontFace,
                                            const int pixelHeight,
                                            const int thickness = 1);
 
-/* @brief Wrapper on top of a truetype/opentype/etc.
+/** @brief Wrapper on top of a truetype/opentype/etc font, i.e. Freetype's FT_Face.
 
 The class is used to store the loaded fonts;
 the font can then be passed to the functions
 putText and getTextSize.
 */
-class CV_EXPORTS_W Font
+class CV_EXPORTS_W FontFace
 {
 public:
-    enum { SizePt=0, SizePixels=1 };
-    CV_WRAP Font();
+    /** @brief loads default font */
+    CV_WRAP FontFace();
     /** @brief
        loads font at the specified path or with specified name.
        Empty fontPathOrName means the default embedded font.
     */
-    CV_WRAP Font(const String& fontPathOrName, double fontSize, int sizeUnits,
-                double fontWeight=400, bool italic=false);
-    /** @brief
-      loads a new font or changes the loaded font properties
-      (scale, thickness etc.)
-    */
-    CV_WRAP bool set(const String& fontPathOrName, double fontSize, int sizeUnits,
-                     double fontWeight=400, bool italic=false);
-    ~Font();
-    void* handle() const;
+    CV_WRAP FontFace(const String& fontPathOrName);
+
+    /** @brief loads new font face */
+    CV_WRAP bool set(const String& fontPathOrName);
+    CV_WRAP String get() const;
+
+    ~FontFace();
+
+    struct Impl;
+    /** @brief returns wrapper on top of FT_Face */
+    Impl* operator -> ();
+
 protected:
-    class Impl;
     Ptr<Impl> impl;
+};
+
+/** @brief Defines various put text flags */
+enum
+{
+    PUT_TEXT_ALIGN_LEFT=0,
+    PUT_TEXT_ALIGN_CENTER=1,
+    PUT_TEXT_ALIGN_RIGHT=2,
+    PUT_TEXT_SIZE_PIXELS=0,
+    PUT_TEXT_SIZE_POINTS=4,
+    PUT_TEXT_SIZE_MASK=12,
+    PUT_TEXT_ORIGIN_TL=0,
+    PUT_TEXT_ORIGIN_BL=32
 };
 
 /** @brief Draws a text string using specified font.
@@ -4760,23 +4774,26 @@ example.
 @param img Image.
 @param text Text string to be drawn.
 @param org Bottom-left corner of the text string in the image.
-@param font The font to use for the text
+@param fface The font to use for the text
+@param size Font size
 @param color Text color.
 @param bottomLeftOrigin When true, the image data origin is at the bottom-left corner. Otherwise,
 it is at the top-left corner.
 */
-CV_EXPORTS_W void putText( InputOutputArray img, const String& text,
-                           Point org, const Font& font, Scalar color,
-                           char textAlignment='L',
-                           bool bottomLeftOrigin=false );
+CV_EXPORTS_W Point putText( InputOutputArray img, const String& text,
+                            Point org, Scalar color,
+                            FontFace& fface, double size,
+                            int thickness=0, int flags=0 );
 
 /** @brief Calculates the width and height of a text string.
 
 The function cv::getTextSize calculates and returns the size of a box that contains the specified text.
 That is, the following code renders some text, the tight box surrounding it, and the baseline: :
 */
-CV_EXPORTS_W Size getTextSize( const String& text, const Font& font,
-                               CV_OUT int* baseLine );
+CV_EXPORTS_W Size getTextSize( const String& text,
+                               FontFace& fface, double size,
+                               int thickness=0, int flags=0,
+                               CV_OUT int* baseLine=0 );
 
 /** @brief Line iterator
 

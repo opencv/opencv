@@ -207,7 +207,7 @@ set(BASE_SRCS
   src/cache/ftcache.c
   src/cff/cff.c
   src/cid/type1cid.c
-  src/gzip/ftgzip.c
+  #src/gzip/ftgzip.c
   src/lzw/ftlzw.c
   src/pcf/pcf.c
   src/pfr/pfr.c

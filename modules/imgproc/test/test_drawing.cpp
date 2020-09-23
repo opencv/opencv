@@ -682,18 +682,58 @@ TEST(Drawing, fillpoly_circle)
 TEST(Drawing, ttf_text)
 {
     //Font font("/Users/vpisarev/work/ocv5_probe/Recursive_VF.ttf", 100, Font::SizePixels, 800, true);
-    Font ifont("/Users/vpisarev/Downloads/Inter.ttf", 50, Font::SizePixels, 500, true);
-    Font font("/Users/vpisarev/Downloads/WenQuanYiMicroHei.ttf", 50, Font::SizePixels, 400, true);
+    //FontFace uni("uni");
+    FontFace uni("/Users/vpisarev/work/fonts/NotoSansSC-Regular.otf");
+    FontFace sans;
+    FontFace sans2("sans");
+    FontFace itfont("italic");
+    FontFace serif("serif");
+    FontFace serif2("/Users/vpisarev/work/fonts/PlayfairDisplayVar.ttf");
+    //FontFace font("/Users/vpisarev/Downloads/WenQuanYiMicroHei.ttf");
     Mat img(1000, 1500, CV_8UC3, Scalar::all(255));
     //putText(img, "Hello with Truetype!", Point(50, 500), font, Scalar(0, 150, 0), false);
-    putText(img, "Hello with Truetype; Здравствуйте! Ήταν απλώς θέμα χρόνου。 Der Urgroßvater, Friedrich Grimm der Ältere (1672–1748),"
-            , Point(50, 200), ifont, Scalar(0, 150, 0), false);
+    /*Point org(50, 200);
+    org = putText(img, "Hello with Truetype; Здравствуйте! Ήταν απλώς θέμα χρόνου。 Der Urgroßvater, Friedrich Grimm der Ältere (1672–1748),",
+            Point(50, 200), Scalar(0, 150, 0), ifont, 50, 200,
+            PUT_TEXT_SLANTED);
     putText(img, "Hello with Truetype; Здравствуйте! 你好， 你好吗\n"
-    "彼らの機器や装置はすべて生命体だ。"
-    "그들의 장비와 기구는 모두 살아 있다."
-    , Point(50, 400), font, Scalar(0, 0, 150), false);
-    imshow("test", img);
-    waitKey();
+            "彼らの機器や装置はすべて生命体だ。"
+            "그들의 장비와 기구는 모두 살아 있다.",
+            org, Scalar(0, 0, 150), ifont, 50, 1000);*/
+    //String text = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    String text = "The quick brown fox jumps over lazy dog: detected object: face; fps=123.45. ";
+    //text += "Съешь еще этих мягких булок, да выпей же йаду! ";
+    text += "你吃饭了吗？";
+    text += "Françias: Demain, dès l’aube, à l’heure où blanchit la campagne, Je partirai. Vois-tu, je sais que tu m’attends. J’irai par la forêt, j’irai par la montagne. Je ne puis demeurer loin de toi plus longtemps.";
+    double thickness = 1;
+    for( int i = 0; i < 10; i++ )
+    {
+        img.setTo(Scalar::all(255));
+        Point org(50, 100);
+        double scale = 1 + i*0.33;
+
+        //double sf = 4.0; int th=thickness<=1 ? 300 : 800; putText(img, text, org, FONT_HERSHEY_PLAIN, scale, Scalar(150,0,150), thickness, 8);
+        double sf = 4.5; int th=600; putText(img, text, org, FONT_HERSHEY_SIMPLEX, scale, Scalar(150,0,150), thickness, CV_AA);
+        //double sf = 1.6; int th=600; putText(img, text, org, FONT_HERSHEY_DUPLEX, scale, Scalar(150,0,150), thickness, CV_AA);
+        //double sf = 1.5; int th=400; putText(img, text, org, FONT_HERSHEY_COMPLEX, scale, Scalar(150,0,150), thickness, CV_AA);
+        //double sf = 4.5; int th=400; putText(img, text, org, FONT_HERSHEY_TRIPLEX, scale, Scalar(150,0,150), thickness, CV_AA);
+        //double sf = 2.3; int th=400; putText(img, text, org, FONT_HERSHEY_COMPLEX_SMALL, scale, Scalar(150,0,150), thickness, CV_AA);
+        //double sf = 1.7; int th=600; putText(img, text, org, FONT_HERSHEY_SCRIPT_COMPLEX, scale, Scalar(150,0,150), thickness, CV_AA);
+        //double scale = 1.6; putText(img, text, org, FONT_HERSHEY_SCRIPT_COMPLEX, scale, Scalar(150,0,150), thickness, CV_AA);
+        double sz = 50*scale/sf;
+        //putText(img, text, org + Point(0, 120), Scalar(150,0,150), stdfont, sz, th);
+        //putText(img, text, org + Point(0, 120), Scalar(150,0,150), itfont, sz, th);
+        putText(img, text, org + Point(0, 120), Scalar(150,80,0), sans, sz, th);
+        putText(img, text, org + Point(0, 240), Scalar(150,80,0), sans2, sz, th);
+        putText(img, text, org + Point(0, 360), Scalar(150,80,0), serif, sz, th);
+        putText(img, text, org + Point(0, 480), Scalar(150,80,0), serif2, sz, th);
+        putText(img, text, org + Point(0, 600), Scalar(150,80,0), itfont, sz, 200);
+        putText(img, text, org + Point(0, 720), Scalar(150,80,0), uni, sz, th);
+
+        imshow("test", img);
+        if((waitKey() & 255) == 27)
+            break;
+    }
 }
 
 }} // namespace

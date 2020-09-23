@@ -1881,3 +1881,24 @@ function(ocv_update_file filepath content)
     file(WRITE "${filepath}" "${content}")
   endif()
 endfunction()
+
+# adopted from https://gist.github.com/amir-saniyan/de99cee82fa9d8d615bb69f3f53b6004
+function(ocv_blob2hdr blob_filename hdr_filename cpp_variable)
+    if(EXISTS "${hdr_filename}")
+        if("${hdr_filename}" IS_NEWER_THAN "${blob_filename}")
+            return()
+        endif()
+    endif()
+
+    file(READ "${blob_filename}" hex_content HEX)
+
+    string(REPEAT "[0-9a-f]" 32 pattern)
+    string(REGEX REPLACE "(${pattern})" "\\1\n" content "${hex_content}")
+    string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1, " content "${content}")
+    string(REGEX REPLACE ", $" "" content "${content}")
+
+    set(array_definition "static const unsigned char ${cpp_variable}[] =\n{\n${content}\n};")
+    set(source "// Auto generated file.\n${array_definition}\n")
+
+    file(WRITE "${hdr_filename}" "${source}")
+endfunction()
