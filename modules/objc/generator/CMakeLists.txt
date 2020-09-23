@@ -77,10 +77,8 @@ add_custom_command(
     COMMENT "Generate files for Objective-C bindings"
 )
 
-add_custom_target(gen_opencv_objc_source DEPENDS ${objc_generated_files}
+add_custom_target(gen_opencv_objc_source ALL DEPENDS ${objc_generated_files}
     SOURCES "${OBJC_SOURCE_DIR}/generator/gen_objc.py"
             "${OBJC_SOURCE_DIR}/generator/templates/cmakelists.template"
             "${CMAKE_CURRENT_BINARY_DIR}/gen_objc.json"
 )
-
-add_dependencies(opencv_world gen_opencv_objc_source)
