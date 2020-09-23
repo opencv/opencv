@@ -108,6 +108,10 @@ static const std::map<std::string, OpenVINOModelTestCaseInfo>& getOpenVINOTestMo
             "intel/person-detection-retail-0013/FP32/person-detection-retail-0013",
             "intel/person-detection-retail-0013/FP16/person-detection-retail-0013"
         }},
+        { "age-gender-recognition-retail-0013", {
+            "intel/age-gender-recognition-retail-0013/FP16/age-gender-recognition-retail-0013",
+            "intel/age-gender-recognition-retail-0013/FP32/age-gender-recognition-retail-0013"
+        }},
 #endif
     };
 
@@ -276,6 +280,21 @@ void runCV(Backend backendId, Target targetId, const std::string& xmlPath, const
     }
 }
 
+inline static std::string getOpenVINOModel(const std::string &modelName, bool isFP16)
+{
+    const std::map<std::string, OpenVINOModelTestCaseInfo>& models = getOpenVINOTestModels();
+    const auto it = models.find(modelName);
+    if (it != models.end())
+    {
+        OpenVINOModelTestCaseInfo modelInfo = it->second;
+        if (isFP16 && modelInfo.modelPathFP16)
+            return std::string(modelInfo.modelPathFP16);
+        else if (!isFP16 && modelInfo.modelPathFP32)
+            return std::string(modelInfo.modelPathFP32);
+    }
+    return std::string();
+}
+
 typedef TestWithParam<tuple< tuple<Backend, Target>, std::string> > DNNTestOpenVINO;
 TEST_P(DNNTestOpenVINO, models)
 {
@@ -310,11 +329,8 @@ TEST_P(DNNTestOpenVINO, models)
 
     bool isFP16 = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD);
 
-    const std::map<std::string, OpenVINOModelTestCaseInfo>& models = getOpenVINOTestModels();
-    const auto it = models.find(modelName);
-    ASSERT_TRUE(it != models.end()) << modelName;
-    OpenVINOModelTestCaseInfo modelInfo = it->second;
-    std::string modelPath = isFP16 ? modelInfo.modelPathFP16 : modelInfo.modelPathFP32;
+    const std::string modelPath = getOpenVINOModel(modelName, isFP16);
+    ASSERT_FALSE(modelPath.empty());
 
     std::string xmlPath = findDataFile(modelPath + ".xml", false);
     std::string binPath = findDataFile(modelPath + ".bin", false);
@@ -358,10 +374,8 @@ TEST_P(DNNTestHighLevelAPI, predict)
 
     Target target = (dnn::Target)(int)GetParam();
     bool isFP16 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD);
-
-    OpenVINOModelTestCaseInfo modelInfo = getOpenVINOTestModels().find("age-gender-recognition-retail-0013")->second;
-
-    std::string modelPath = isFP16 ? modelInfo.modelPathFP16 : modelInfo.modelPathFP32;
+    const std::string modelPath = getOpenVINOModel("age-gender-recognition-retail-0013", isFP16);
+    ASSERT_FALSE(modelPath.empty());
 
     std::string xmlPath = findDataFile(modelPath + ".xml");
     std::string binPath = findDataFile(modelPath + ".bin");
