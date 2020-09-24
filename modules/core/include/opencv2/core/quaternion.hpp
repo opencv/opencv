@@ -1,12 +1,12 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
-// of this distribution and at http://opencv.org/license.html.  
+// of this distribution and at http://opencv.org/license.html.
 //
 //
 //                          License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2020, Huawei Technologies Co., all rights reserved.
+// Copyright (C) 2020, Huawei Technologies Co., Ltd. All rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,14 +18,15 @@
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and 
-// limitations under the License. 
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //
 // Author: Liangqian Kong <chargerKong@126.com>
 //         Longbu Wang <riskiest@gmail.com>
+
 #include <opencv2/core.hpp>
 #include <iostream>
-namespace cv 
+namespace cv
 {
     #define CV_QUAT_EPS 1.e-6
     /**
@@ -95,7 +96,7 @@ namespace cv
          */
         template <typename T, typename _T>
         friend Quat<T> power(const Quat<T> &q, _T x, bool assumeUnit);
-        
+
         template <typename _T>
         Quat<_Tp> power(_T x, bool assumeUnit=false) const;
         /**
@@ -309,7 +310,7 @@ namespace cv
          @brief To calculate the interpolation between \f$q_0\f$ and \f$q_1\f$ by Spherical Linear Interpolation(Slerp).
          if \f$assumeUnit=true\f$, slerp will not normalize the input.
          it returns a normlized quaternion whether assumeUnit is true of false
-         
+
          @param q0 a quaternion used in Slerp
          @param q1 a quaternion used in Slerp
          @param t percent of angle between \f$q_0\f$ and \f$q_1\f$
@@ -343,7 +344,7 @@ namespace cv
          */
         static Quat<_Tp> interPoint(const Quat<_Tp> &q0, const Quat<_Tp> &q1,
                                     const Quat<_Tp> &q2, bool assumeUnit=false);
-        
+
         /**
          * @brief the spline curve is constructed by squad. The \f$C^1\f$ continuous
          * is composed of two quaternion \f$s_1\f$ and \f$s_2\f$, which can be calculated by
@@ -385,7 +386,7 @@ namespace cv
 
         _Tp w, x, y, z;
     };
-    
+
     template <typename T>
     Quat<T> inv(const Quat<T> &q1, bool assumeUnit=false);
 
@@ -403,10 +404,10 @@ namespace cv
 
     template <typename T>
     Quat<T> cos(const Quat<T> &q1);
-    
+
     template <typename T>
     Quat<T> tan(const Quat<T> &q1);
-    
+
     template <typename T>
     Quat<T> asinh(const Quat<T> &q1);
 

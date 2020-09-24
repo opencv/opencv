@@ -1,6 +1,7 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
+
 #include "test_precomp.hpp"
 //#include <opencv2/core/quaternion.hpp>
 #include "../src/quaternion.cpp"
@@ -9,7 +10,7 @@ using namespace cv;
 namespace opencv_test{ namespace {
 class QuatTest: public ::testing::Test {
 protected:
-    void SetUp() override 
+    void SetUp() override
     {
         q1 = {1,2,3,4};
         q2 = {2.5,-2,3.5,4};
@@ -45,7 +46,7 @@ TEST_F(QuatTest, constructor){
                                    2.0 / 3 , 2.0 / 3 , -1.0 / 3);
     Mat R2 = (Mat_<double>(3, 3) << -2.0 / 3, -2.0 / 3, -1.0 / 3,
                                     -2.0 / 3, 1.0 / 3, 2.0 / 3,
-                                    -1.0 / 3, 2.0 / 3, -2.0 / 3); 
+                                    -1.0 / 3, 2.0 / 3, -2.0 / 3);
     Mat R3 = (Mat_<double>(3, 3) << 0.818181818181, 0.181818181818, 0.54545455454,
                                     0.545454545545, -0.54545454545, -0.6363636364,
                                     0.181818181818, 0.818181818182, -0.5454545455);
@@ -148,7 +149,7 @@ TEST_F(QuatTest, opeartor){
     Quatd qMults{2.5, 5.0, 7.5, 10.0};
     Quatd qDvss{1.0 / 2.5, 2.0 / 2.5, 3.0 / 2.5, 4.0 / 2.5};
     Quatd qOrigin(q1);
-    
+
     EXPECT_EQ(-q1, minusQ);
     EXPECT_EQ(q1 + q2, qAdd);
     EXPECT_EQ(q1 - q2, qMinus);
@@ -174,12 +175,12 @@ TEST_F(QuatTest, opeartor){
     EXPECT_ANY_THROW(q1[4]);
     EXPECT_ANY_THROW(q1.at(4));
 }
- 
+
 TEST_F(QuatTest, quatAttrs){
     double angleQ1 = 2 * acos(1.0 / sqrt(30));
     Vec3d axis1{0.3713906763541037, 0.557086014, 0.742781352 };
     Vec<double, 3> q1axis1 = q1.getAxis();
-    
+
     EXPECT_EQ(angleQ1, q1.getAngle());
     EXPECT_EQ(angleQ1, q1Unit.getAngle());
     EXPECT_ANY_THROW(qIdentity.getAngle());
@@ -193,7 +194,6 @@ TEST_F(QuatTest, quatAttrs){
     EXPECT_NEAR(axis1[1], axis1[1], 1e-6);
     EXPECT_NEAR(axis1[2], axis1[2], 1e-6);
     EXPECT_ANY_THROW(Quat<double>(angle, axis1, 0));
-
 }
 
 TEST_F(QuatTest, interpolation){
@@ -232,9 +232,6 @@ TEST_F(QuatTest, interpolation){
 }
 
 
-} // namespace 
+} // namespace
 
 }// opencv_test
-
-
-
