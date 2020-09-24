@@ -264,7 +264,7 @@ TEST(GArray_VectorRef, Kind)
     EXPECT_EQ(cv::detail::OpaqueKind::CV_SIZE, v7.getKind());
 
     cv::detail::VectorRef v8(std::vector<std::string>{});
-    EXPECT_EQ(cv::detail::OpaqueKind::CV_UNKNOWN, v8.getKind());
+    EXPECT_EQ(cv::detail::OpaqueKind::CV_STRING, v8.getKind());
 }
 
 TEST(GArray_VectorRef, TestRvalue)

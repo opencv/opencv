@@ -233,7 +233,7 @@ TEST(GOpaque_OpaqueRef, Kind)
     EXPECT_EQ(cv::detail::OpaqueKind::CV_SIZE, v7.getKind());
 
     cv::detail::OpaqueRef v8(std::string{});
-    EXPECT_EQ(cv::detail::OpaqueKind::CV_UNKNOWN, v8.getKind());
+    EXPECT_EQ(cv::detail::OpaqueKind::CV_STRING, v8.getKind());
 }
 
 TEST(GOpaque_OpaqueRef, TestReset)
