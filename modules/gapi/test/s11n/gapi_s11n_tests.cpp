@@ -382,4 +382,58 @@ TEST_F(S11N_Basic, Test_Bind_RunArgs_MatScalar) {
         i++;
     }
 }
+
+namespace {
+    template <cv::detail::OpaqueKind K, typename T>
+    bool verifyOpaqueKind(T&& in) {
+        auto inObjs = cv::gin(in);
+        auto in_o_ref = cv::util::get<cv::detail::OpaqueRef>(inObjs[0]);
+        return K == in_o_ref.getKind();
+    }
+
+    template <cv::detail::OpaqueKind K, typename T>
+    bool verifyArrayKind(T&& in) {
+        auto inObjs = cv::gin(in);
+        auto in_o_ref = cv::util::get<cv::detail::VectorRef>(inObjs[0]);
+        return K == in_o_ref.getKind();
+    }
+}
+
+TEST_F(S11N_Basic, Test_Gin_GOpaque) {
+    int i; float f; double d;
+    std::uint64_t ui; bool b;
+    std::string s;
+    cv::Rect r; cv::Size sz;
+    cv::Point p;
+    EXPECT_TRUE(verifyOpaqueKind<cv::detail::OpaqueKind::CV_INT>(i));
+    EXPECT_TRUE(verifyOpaqueKind<cv::detail::OpaqueKind::CV_FLOAT>(f));
+    EXPECT_TRUE(verifyOpaqueKind<cv::detail::OpaqueKind::CV_DOUBLE>(d));
+    EXPECT_TRUE(verifyOpaqueKind<cv::detail::OpaqueKind::CV_UINT64>(ui));
+    EXPECT_TRUE(verifyOpaqueKind<cv::detail::OpaqueKind::CV_BOOL>(b));
+    EXPECT_TRUE(verifyOpaqueKind<cv::detail::OpaqueKind::CV_STRING>(s));
+    EXPECT_TRUE(verifyOpaqueKind<cv::detail::OpaqueKind::CV_RECT>(r));
+    EXPECT_TRUE(verifyOpaqueKind<cv::detail::OpaqueKind::CV_SIZE>(sz));
+    EXPECT_TRUE(verifyOpaqueKind<cv::detail::OpaqueKind::CV_POINT>(p));
+}
+
+TEST_F(S11N_Basic, Test_Gin_GArray) {
+    std::vector<int> i; std::vector<float> f; std::vector<double> d;
+    std::vector<std::uint64_t> ui; std::vector<bool> b;
+    std::vector<std::string> s;
+    std::vector<cv::Rect> r; std::vector<cv::Size> sz;
+    std::vector<cv::Point> p;
+    std::vector<cv::Mat> mat;
+    std::vector<cv::Scalar> sc;
+    EXPECT_TRUE(verifyArrayKind<cv::detail::OpaqueKind::CV_INT>(i));
+    EXPECT_TRUE(verifyArrayKind<cv::detail::OpaqueKind::CV_FLOAT>(f));
+    EXPECT_TRUE(verifyArrayKind<cv::detail::OpaqueKind::CV_DOUBLE>(d));
+    EXPECT_TRUE(verifyArrayKind<cv::detail::OpaqueKind::CV_UINT64>(ui));
+    EXPECT_TRUE(verifyArrayKind<cv::detail::OpaqueKind::CV_BOOL>(b));
+    EXPECT_TRUE(verifyArrayKind<cv::detail::OpaqueKind::CV_STRING>(s));
+    EXPECT_TRUE(verifyArrayKind<cv::detail::OpaqueKind::CV_RECT>(r));
+    EXPECT_TRUE(verifyArrayKind<cv::detail::OpaqueKind::CV_SIZE>(sz));
+    EXPECT_TRUE(verifyArrayKind<cv::detail::OpaqueKind::CV_POINT>(p));
+    EXPECT_TRUE(verifyArrayKind<cv::detail::OpaqueKind::CV_MAT>(mat));
+    EXPECT_TRUE(verifyArrayKind<cv::detail::OpaqueKind::CV_SCALAR>(sc));
+}
 } // namespace opencv_test
