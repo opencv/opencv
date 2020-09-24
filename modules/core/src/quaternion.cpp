@@ -1,12 +1,12 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
-// of this distribution and at http://opencv.org/license.html.  
+// of this distribution and at http://opencv.org/license.html.
 //
 //
 //                          License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2020, Huawei Technologies Co., all rights reserved.
+// Copyright (C) 2020, Huawei Technologies Co., Ltd. All rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,12 +18,12 @@
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and 
-// limitations under the License. 
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //
 // Author: Liangqian Kong <chargerKong@126.com>
 //         Longbu Wang <riskiest@gmail.com>
-   
+
 #include "precomp.hpp"
 #include <vector>
 
@@ -36,7 +36,7 @@ Quat<T>::Quat(const T qw, const T qx, const T qy, const T qz):w(qw), x(qx), y(qy
 
 template <typename T>
 Quat<T>::Quat(const T angle, const cv::Vec<T, 3> &axis, const T qNorm)
-{ 	
+{
     T vNorm = std::sqrt(axis.dot(axis));
     if (vNorm < CV_QUAT_EPS || qNorm < CV_QUAT_EPS)
     {
@@ -254,7 +254,7 @@ inline const T& Quat<T>::operator[](std::size_t n) const
 
 template <typename T>
 inline T& Quat<T>::operator[](std::size_t n)
-{	
+{
     switch (n) {
         case 0:
             return w;
@@ -328,7 +328,7 @@ Quat<T> Quat<T>::log(bool assumeUnit) const
     {
         T k = vNorm < CV_QUAT_EPS ? 1 : std::acos(w) / vNorm;
         return Quat<T>(0, v[0] * k, v[1] * k, v[2] * k);
-    }   
+    }
     T qNorm = norm();
     if (qNorm < CV_QUAT_EPS)
     {
@@ -348,7 +348,7 @@ template <typename T>
 template <typename _T>
 inline Quat<T> Quat<T>::power(_T alpha, bool assumeUnit) const
 {
-    if (x * x + y * y + z * z > CV_QUAT_EPS) 
+    if (x * x + y * y + z * z > CV_QUAT_EPS)
     {
         T angle = getAngle(assumeUnit);
         cv::Vec<T, 3> axis = getAxis(assumeUnit);
@@ -722,7 +722,7 @@ Quat<T> Quat<T>::slerp(const Quat<T> &q0, const Quat<T> &q1, const T t, bool ass
     {
         return nlerp(v0, v1, t, true);
     }
-    
+
     if (directChange && cosTheta < 0)
     {
         v0 = -v0;
@@ -773,7 +773,7 @@ inline void Quat<T>::assertNormal(T eps) const
 
 template <typename T>
 inline Quat<T> Quat<T>::squad(const Quat<T> &q0, const Quat<T> &q1,
-							  const Quat<T> &q2, const Quat<T> &q3, 
+                              const Quat<T> &q2, const Quat<T> &q3,
                               const T t, bool assumeUnit,
                               bool directChange)
 {
