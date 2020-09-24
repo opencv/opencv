@@ -59,7 +59,6 @@
 #include "opencv2/core/mat.hpp"
 #include "opencv2/core/persistence.hpp"
 
-
 /**
 @defgroup core Core functionality
 @{
