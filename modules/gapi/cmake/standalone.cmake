@@ -45,3 +45,8 @@ if(MSVC)
 endif()
 
 target_link_libraries(${FLUID_TARGET} PRIVATE ade)
+
+if(WIN32)
+  # Required for htonl/ntohl on Windows
+  target_link_libraries(${FLUID_TARGET} PRIVATE wsock32 ws2_32)
+endif()
