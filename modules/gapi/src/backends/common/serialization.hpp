@@ -300,7 +300,7 @@ I::OStream& operator<< (I::OStream& os, const std::vector<T> &ts) {
     //const std::size_t sz = ts.size(); // explicitly specify type
     const uint32_t sz = (uint32_t)ts.size(); // explicitly specify type
     os << sz;
-    for (auto&& v : ts) os << v;
+    for (auto &&v : ts) os << v;
     return os;
 }
 template<typename T>

@@ -478,16 +478,17 @@ I::OStream& operator<< (I::OStream& os, const cv::GArg &arg) {
         GAPI_Assert(arg.kind == cv::detail::ArgKind::OPAQUE_VAL);
         GAPI_Assert(arg.opaque_kind != cv::detail::OpaqueKind::CV_UNKNOWN);
         switch (arg.opaque_kind) {
-        case cv::detail::OpaqueKind::CV_BOOL:   os << arg.get<bool>();       break;
-        case cv::detail::OpaqueKind::CV_INT:    os << arg.get<int>();        break;
-        case cv::detail::OpaqueKind::CV_UINT64: os << arg.get<uint64_t>();   break;
-        case cv::detail::OpaqueKind::CV_DOUBLE: os << arg.get<double>();     break;
-        case cv::detail::OpaqueKind::CV_FLOAT:  os << arg.get<float>();      break;
-        case cv::detail::OpaqueKind::CV_POINT:  os << arg.get<cv::Point>();  break;
-        case cv::detail::OpaqueKind::CV_SIZE:   os << arg.get<cv::Size>();   break;
-        case cv::detail::OpaqueKind::CV_RECT:   os << arg.get<cv::Rect>();   break;
-        case cv::detail::OpaqueKind::CV_SCALAR: os << arg.get<cv::Scalar>(); break;
-        case cv::detail::OpaqueKind::CV_MAT:    os << arg.get<cv::Mat>();    break;
+        case cv::detail::OpaqueKind::CV_BOOL:   os << arg.get<bool>();         break;
+        case cv::detail::OpaqueKind::CV_INT:    os << arg.get<int>();          break;
+        case cv::detail::OpaqueKind::CV_UINT64: os << arg.get<uint64_t>();     break;
+        case cv::detail::OpaqueKind::CV_DOUBLE: os << arg.get<double>();       break;
+        case cv::detail::OpaqueKind::CV_FLOAT:  os << arg.get<float>();        break;
+        case cv::detail::OpaqueKind::CV_STRING: os << arg.get<std::string>();  break;
+        case cv::detail::OpaqueKind::CV_POINT:  os << arg.get<cv::Point>();    break;
+        case cv::detail::OpaqueKind::CV_SIZE:   os << arg.get<cv::Size>();     break;
+        case cv::detail::OpaqueKind::CV_RECT:   os << arg.get<cv::Rect>();     break;
+        case cv::detail::OpaqueKind::CV_SCALAR: os << arg.get<cv::Scalar>();   break;
+        case cv::detail::OpaqueKind::CV_MAT:    os << arg.get<cv::Mat>();      break;
         default: GAPI_Assert(false && "GArg: Unsupported (unknown?) opaque value type");
         }
     }
@@ -516,6 +517,7 @@ I::IStream& operator>> (I::IStream& is, cv::GArg &arg) {
             HANDLE_CASE(UINT64 , uint64_t);
             HANDLE_CASE(DOUBLE , double);
             HANDLE_CASE(FLOAT  , float);
+            HANDLE_CASE(STRING , std::string);
             HANDLE_CASE(POINT  , cv::Point);
             HANDLE_CASE(SIZE   , cv::Size);
             HANDLE_CASE(RECT   , cv::Rect);

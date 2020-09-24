@@ -416,6 +416,27 @@ namespace ThisTest
             }
         }
     };
+
+    using GK4Out = std::tuple<cv::GOpaque<int>, cv::GArray<std::string>>;
+    G_TYPED_KERNEL_M(OpArrK4, <GK4Out(cv::GOpaque<bool>, cv::GOpaque<std::string>)>, "test.s11n.oparrk4")
+    {
+        static std::tuple<GOpaqueDesc, GArrayDesc> outMeta(const GOpaqueDesc&, const GOpaqueDesc&) {
+            return std::make_tuple(empty_gopaque_desc(), empty_array_desc());
+        }
+    };
+
+    GAPI_OCV_KERNEL(OCVOpArrK4, OpArrK4)
+    {
+        static void run(const bool& b, const std::string& s,
+                        int& i, std::vector<std::string>& vs)
+        {
+            vs.clear();
+            vs.resize(2);
+            i = b ? 42 : 24;
+            auto s_copy = s + " world";
+            vs = std::vector<std::string>{s_copy, s_copy};
+        }
+    };
 } // namespace ThisTest
 
 TEST(S11N, Pipeline_GOpaque)
@@ -526,7 +547,7 @@ TEST(S11N, Pipeline_GArray_GOpaque_2)
 
     std::vector<bool> b {true, false, false};
     std::vector<int32_t> i {234324, -234252, 999};
-    float f = 0.85;
+    float f = 0.85f;
     std::vector<int32_t> out_i;
     std::vector<uint64_t> out_ui;
     dc.apply(cv::gin(b, i, f), cv::gout(out_ui, out_i), cv::compile_args(cv::gapi::kernels<OCVOpArrK3>()));
@@ -537,6 +558,30 @@ TEST(S11N, Pipeline_GArray_GOpaque_2)
         EXPECT_EQ(out_ui[idx], b[idx] ? static_cast<uint64_t>(i[idx] * f) :
                                         static_cast<uint64_t>(i[idx] / f));
     }
+}
+
+TEST(S11N, Pipeline_GArray_GOpaque_3)
+{
+    using namespace ThisTest;
+
+    cv::GOpaque<bool> in1;
+    cv::GOpaque<std::string> in2;
+    auto out = OpArrK4::on(in1, in2);
+    cv::GComputation c(cv::GIn(in1, in2),
+                       cv::GOut(std::get<0>(out), std::get<1>(out)));
+
+    auto p = cv::gapi::serialize(c);
+    auto dc = cv::gapi::deserialize<cv::GComputation>(p);
+
+    bool b = false;
+    std::string s("hello");
+    int i = 0;
+    std::vector<std::string> vs{};
+    dc.apply(cv::gin(b, s), cv::gout(i, vs), cv::compile_args(cv::gapi::kernels<OCVOpArrK4>()));
+
+    EXPECT_EQ(24, i);
+    std::vector<std::string> vs_ref{"hello world", "hello world"};
+    EXPECT_EQ(vs_ref, vs);
 }
 
 TEST(S11N, Pipeline_Render_NV12)

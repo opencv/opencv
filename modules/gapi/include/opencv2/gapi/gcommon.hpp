@@ -46,6 +46,7 @@ namespace detail
         CV_DOUBLE,     // double user G-API data
         CV_FLOAT,      // float user G-API data
         CV_UINT64,     // uint64_t user G-API data
+        CV_STRING,     // std::string user G-API data
         CV_POINT,      // cv::Point user G-API data
         CV_SIZE,       // cv::Size user G-API data
         CV_RECT,       // cv::Rect user G-API data
@@ -62,6 +63,7 @@ namespace detail
     template<> struct GOpaqueTraits<float>       { static constexpr const OpaqueKind kind = OpaqueKind::CV_FLOAT; };
     template<> struct GOpaqueTraits<uint64_t>    { static constexpr const OpaqueKind kind = OpaqueKind::CV_UINT64; };
     template<> struct GOpaqueTraits<bool>        { static constexpr const OpaqueKind kind = OpaqueKind::CV_BOOL; };
+    template<> struct GOpaqueTraits<std::string> { static constexpr const OpaqueKind kind = OpaqueKind::CV_STRING; };
     template<> struct GOpaqueTraits<cv::Size>    { static constexpr const OpaqueKind kind = OpaqueKind::CV_SIZE; };
     template<> struct GOpaqueTraits<cv::Scalar>  { static constexpr const OpaqueKind kind = OpaqueKind::CV_SCALAR; };
     template<> struct GOpaqueTraits<cv::Point>   { static constexpr const OpaqueKind kind = OpaqueKind::CV_POINT; };
@@ -70,10 +72,10 @@ namespace detail
     template<> struct GOpaqueTraits<cv::GMat>    { static constexpr const OpaqueKind kind = OpaqueKind::CV_MAT; };
     template<> struct GOpaqueTraits<cv::gapi::wip::draw::Prim>
                                                  { static constexpr const OpaqueKind kind = OpaqueKind::CV_DRAW_PRIM; };
-    using GOpaqueTraitsArrayTypes = std::tuple<int, double, float, uint64_t, bool, cv::Size, cv::Scalar, cv::Point,
+    using GOpaqueTraitsArrayTypes = std::tuple<int, double, float, uint64_t, bool, std::string, cv::Size, cv::Scalar, cv::Point,
                                                cv::Mat, cv::Rect, cv::gapi::wip::draw::Prim>;
     // GOpaque is not supporting cv::Mat and cv::Scalar since there are GScalar and GMat types
-    using GOpaqueTraitsOpaqueTypes = std::tuple<int, double, float, uint64_t, bool, cv::Size, cv::Point, cv::Rect,
+    using GOpaqueTraitsOpaqueTypes = std::tuple<int, double, float, uint64_t, bool, std::string, cv::Size, cv::Point, cv::Rect,
                                                 cv::gapi::wip::draw::Prim>;
 } // namespace detail
 
