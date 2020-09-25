@@ -4746,8 +4746,10 @@ public:
     ~FontFace();
 
     struct Impl;
+
     /** @brief returns wrapper on top of FT_Face */
     Impl* operator -> ();
+    static bool getBuiltinFontData(const String& fontName, const uchar*& data, size_t& datasize);
 
 protected:
     Ptr<Impl> impl;
@@ -4756,45 +4758,64 @@ protected:
 /** @brief Defines various put text flags */
 enum
 {
-    PUT_TEXT_ALIGN_LEFT=0,
-    PUT_TEXT_ALIGN_CENTER=1,
-    PUT_TEXT_ALIGN_RIGHT=2,
-    PUT_TEXT_SIZE_PIXELS=0,
-    PUT_TEXT_SIZE_POINTS=4,
+    PUT_TEXT_ALIGN_LEFT=0, // put the text to the right from the origin; the only supported alignment for now
+    PUT_TEXT_ALIGN_CENTER=1, // center the text at the origin; not implemented yet
+    PUT_TEXT_ALIGN_RIGHT=2, // put the text to the left of the origin; not implemented yet
+    PUT_TEXT_SIZE_PIXELS=0, // text size is specified in pixels
+    PUT_TEXT_SIZE_POINTS=4, // text size is specified in points (~120 pixel/inch pixel density is assumed)
     PUT_TEXT_SIZE_MASK=12,
     PUT_TEXT_ORIGIN_TL=0,
-    PUT_TEXT_ORIGIN_BL=32,
-    PUT_TEXT_WRAP=128
+    PUT_TEXT_ORIGIN_BL=32, // treat the target image as having bottom-left origin
+    PUT_TEXT_WRAP=128 // wrap text to the next line if it does not fit
 };
 
 /** @brief Draws a text string using specified font.
 
 The function cv::putText renders the specified text string in the image. Symbols that cannot be rendered
 using the specified font are replaced by question marks. See #getTextSize for a text rendering code
-example.
+example. The function returns the coordinates in pixels from where the text can be continued.
 
 @param img Image.
 @param text Text string to be drawn.
-@param org Bottom-left corner of the text string in the image.
-@param fface The font to use for the text
-@param size Font size
+@param org Bottom-left corner of the first character of the printed text
+           (see PUT_TEXT_ALIGN_... though)
 @param color Text color.
-@param bottomLeftOrigin When true, the image data origin is at the bottom-left corner. Otherwise,
-it is at the top-left corner.
+@param fface The font to use for the text
+@param size Font size in pixels (by default) or pts
+@param weight Font weight, 100..1000,
+       where 100 is "thin" font, 400 is "regular",
+       600 is "semibold", 800 is "bold" and beyond that is "black".
+       The default weight means "400" for variable-weight fonts or
+       whatever "default" weight the used font provides.
+@param flags Various flags, see PUT_TEXT_...
 */
 CV_EXPORTS_W Point putText( InputOutputArray img, const String& text,
                             Point org, Scalar color,
                             FontFace& fface, double size,
-                            int thickness=0, int flags=0 );
+                            int weight=0, int flags=0 );
 
-/** @brief Calculates the width and height of a text string.
+/** @brief Calculates the bounding rect for the text
 
 The function cv::getTextSize calculates and returns the size of a box that contains the specified text.
 That is, the following code renders some text, the tight box surrounding it, and the baseline: :
+
+@param img The target image, can be noArray()
+@param text Text string to be drawn.
+@param org Bottom-left corner of the first character of the printed text
+           (see PUT_TEXT_ALIGN_... though)
+@param color Text color.
+@param fface The font to use for the text
+@param size Font size in pixels (by default) or pts
+@param weight Font weight, 100..1000,
+        where 100 is "thin" font, 400 is "regular",
+        600 is "semibold", 800 is "bold" and beyond that is "black".
+        The default weight means "400" for variable-weight fonts or
+        whatever "default" weight the used font provides.
+@param flags Various flags, see PUT_TEXT_...
 */
 CV_EXPORTS_W Rect getTextSize( InputArray img, const String& text, Point org,
                                FontFace& fface, double size,
-                               int thickness=0, int flags=0 );
+                               int weight=0, int flags=0 );
 
 /** @brief Line iterator
 

@@ -1708,7 +1708,7 @@ class ImgprocTest: OpenCVTestCase {
 
         XCTAssert(Core.countNonZero(src: img) > 0)
         // check that border is not corrupted
-        Imgproc.rectangle(img: img, pt1: Point(x: 11, y: 11), pt2: Point(x: labelSize.width + 10, y: labelSize.height + 10), color: colorBlack, thickness: Core.FILLED)
+        Imgproc.rectangle(img: img, pt1: Point(x: 10, y: 10), pt2: Point(x: labelSize.width + 10, y: labelSize.height + 10), color: colorBlack, thickness: Core.FILLED)
         XCTAssertEqual(0, Core.countNonZero(src: img))
     }
 
@@ -1722,7 +1722,7 @@ class ImgprocTest: OpenCVTestCase {
 
         XCTAssert(Core.countNonZero(src: img) > 0)
         // check that border is not corrupted
-        Imgproc.rectangle(img: img, pt1: Point(x: 10, y: 10), pt2: Point(x: labelSize.width + 10 + 1, y: labelSize.height + 10 + 1), color: colorBlack, thickness: Core.FILLED)
+        Imgproc.rectangle(img: img, pt1: Point(x: 10, y: 10), pt2: Point(x: labelSize.width + 10, y: labelSize.height + 10), color: colorBlack, thickness: Core.FILLED)
         XCTAssertEqual(0, Core.countNonZero(src: img))
     }
 
@@ -1737,7 +1737,8 @@ class ImgprocTest: OpenCVTestCase {
 
         XCTAssert(Core.countNonZero(src: img) > 0)
         // check that border is not corrupted
-        Imgproc.rectangle(img: img, pt1: Point(x: 10, y: 10), pt2: Point(x: labelSize.width + 9, y: labelSize.height + 9), color: colorBlack, thickness: Core.FILLED)
+        
+        Imgproc.rectangle(img: img, pt1: Point(x: 10, y: 10), pt2: Point(x: labelSize.width + 10, y: labelSize.height + 10), color: colorBlack, thickness: Core.FILLED)
         XCTAssertEqual(0, Core.countNonZero(src: img))
     }
 

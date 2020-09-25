@@ -8,7 +8,7 @@
 #include "../perf_precomp.hpp"
 #include "../common/gapi_render_perf_tests.hpp"
 
-#define RENDER_OCV cv::gapi::render::ocv::kernels()
+#define RENDER_OCV cv::gapi::render::ocv::kernels(), cv::gapi::wip::draw::freetype_font{"uni"}
 
 namespace opencv_test
 {

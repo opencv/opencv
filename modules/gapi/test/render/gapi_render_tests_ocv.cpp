@@ -4,15 +4,14 @@
 //
 // Copyright (C) 2018 Intel Corporation
 
-
-#ifdef HAVE_FREETYPE
-#include <codecvt>
-#endif // HAVE_FREETYPE
-
 #include "../test_precomp.hpp"
 #include "../common/gapi_render_tests.hpp"
 
 #include "api/render_priv.hpp"
+
+#ifdef HAVE_FREETYPE
+#include <codecvt>
+#endif // HAVE_FREETYPE
 
 namespace opencv_test
 {
@@ -82,7 +81,7 @@ TEST_P(RenderBGROCVTestFTexts, AccuracyTest)
     prims.emplace_back(cv::gapi::wip::draw::FText{text, org, fh, color});
     EXPECT_NO_THROW(cv::gapi::wip::draw::render(gapi_mat, prims,
                                 cv::compile_args(cv::gapi::wip::draw::freetype_font{
-                                "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc"
+                                "uni"
                                 })));
 }
 
@@ -93,7 +92,7 @@ TEST_P(RenderNV12OCVTestFTexts, AccuracyTest)
     prims.emplace_back(cv::gapi::wip::draw::FText{text, org, fh, color});
     EXPECT_NO_THROW(cv::gapi::wip::draw::render(y_gapi_mat, uv_gapi_mat, prims,
                                 cv::compile_args(cv::gapi::wip::draw::freetype_font{
-                                "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc"
+                                "uni"
                                 })));
 
 }

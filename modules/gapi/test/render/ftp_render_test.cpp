@@ -19,8 +19,8 @@ namespace opencv_test
 {
     static std::string getFontPath()
     {
-        static std::string path = cv::utils::getConfigurationParameterString("OPENCV_TEST_FREETYPE_FONT_PATH",
-                                                                         "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc");
+        std::string path = "uni";
+        //cv::utils::getConfigurationParameterString("OPENCV_TEST_FREETYPE_FONT_PATH", "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc");
         return path;
     }
 
@@ -32,7 +32,7 @@ namespace opencv_test
         cv::gapi::wip::draw::FTTextRender ftpr(font);
 
         std::mt19937 gen{std::random_device()()};
-        std::uniform_int_distribution<int> dist(lower_char_code, upper_char_code);
+        std::uniform_int_distribution<int> dist((int)lower_char_code, (int)upper_char_code);
         std::uniform_int_distribution<int> dist_size(2, 200);
 
         for (size_t i = 0; i < num_iters; ++i)
@@ -42,7 +42,7 @@ namespace opencv_test
 
             for (size_t j = 0; j < text_size; ++j)
             {
-                wchar_t c = dist(gen);
+                wchar_t c = (wchar_t)dist(gen);
                 text += c;
             }
 

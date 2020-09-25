@@ -21,7 +21,18 @@ cv::gapi::wip::draw::FTTextRender::Priv::Priv(const std::string& path)
         cv::util::throw_error(std::runtime_error("Failed to initialize FT"));
     }
 
-    if (FT_New_Face(m_library, path.c_str(), 0, &m_face))
+    bool loadFromMemory = path.find('.') == std::string::npos &&
+                          path.find('/') == std::string::npos;
+    int err;
+    const uchar* data = 0;
+    size_t datasize = 0;
+    if (loadFromMemory)
+        err = !FontFace::getBuiltinFontData(path, data, datasize) ? -1 :
+            FT_New_Memory_Face(m_library, (const FT_Byte*)data, (FT_Long)datasize, 0, &m_face);
+    else
+        err = FT_New_Face(m_library, path.c_str(), 0, &m_face);
+
+    if (err)
     {
         FT_Done_FreeType(m_library);
         cv::util::throw_error(std::runtime_error("Failed to create a font face"));
@@ -160,13 +171,11 @@ void cv::gapi::wip::draw::FTTextRender::Priv::putText(cv::Mat& mat,
                 "Failed to set pixel size");
 
     cv::Point pen = org;
-    for (const auto& wc : text)
+    for (wchar_t wc : text)
     {
         GAPI_Assert(!FT_Load_Char(m_face, wc, FT_LOAD_RENDER) &&
                     "Failed to load char");
         FT_Bitmap *bitmap = &(m_face->glyph->bitmap);
-
-        cv::Mat glyph(bitmap->rows, bitmap->width, CV_8UC1, bitmap->buffer, bitmap->pitch);
 
         int left    = m_face->glyph->bitmap_left;
         int top     = m_face->glyph->bitmap_top;
@@ -177,10 +186,13 @@ void cv::gapi::wip::draw::FTTextRender::Priv::putText(cv::Mat& mat,
             left = 0;
         }
 
-        cv::Rect rect(pen.x + left, org.y - top, glyph.cols, glyph.rows);
-
-        auto roi = mat(rect);
-        roi += glyph;
+        if(bitmap->width > 0 && bitmap->rows > 0)
+        {
+            cv::Mat glyph(bitmap->rows, bitmap->width, CV_8UC1, bitmap->buffer, bitmap->pitch);
+            cv::Rect rect(pen.x + left, org.y - top, glyph.cols, glyph.rows);
+            auto roi = mat(rect);
+            roi += glyph;
+        }
         pen.x += advance;
     }
 }

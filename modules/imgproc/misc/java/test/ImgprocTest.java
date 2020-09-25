@@ -1818,9 +1818,9 @@ public class ImgprocTest extends OpenCVTestCase {
         Imgproc.getTextSize(text, Imgproc.FONT_HERSHEY_SCRIPT_SIMPLEX, fontScale, thickness, null);
         Size res = Imgproc.getTextSize(text, Imgproc.FONT_HERSHEY_SCRIPT_SIMPLEX, fontScale, thickness, baseLine);
 
-        assertEquals(543.0, res.width);
-        assertEquals(44.0, res.height);
-        assertEquals(20, baseLine[0]);
+        assertEquals(452.0, res.width, 3.0);
+        assertEquals(42.0, res.height, 3.0);
+        assertEquals(15, baseLine[0], 3.0);
     }
 
     public void testCircleMatPointIntScalar() {
@@ -2033,14 +2033,18 @@ public class ImgprocTest extends OpenCVTestCase {
     public void testPutTextMatStringPointIntDoubleScalar() {
         String text = "Hello World";
         Size labelSize = new Size(175, 22);
-        Mat img = new Mat(20 + (int) labelSize.height, 20 + (int) labelSize.width, CvType.CV_8U, colorBlack);
-        Point origin = new Point(10, labelSize.height + 10);
 
-        Imgproc.putText(img, text, origin, Imgproc.FONT_HERSHEY_SIMPLEX, 1.0, colorWhite);
+        Mat img = new Mat(20 + (int) labelSize.height, 20 + (int) labelSize.width, CvType.CV_8U, colorBlack);
+        Point origin = new Point(10, 32);
+
+        Imgproc.putText(img, text, origin, Imgproc.FONT_HERSHEY_SIMPLEX, 1.0, colorWhite, 1, Imgproc.LINE_AA);
 
         assertTrue(Core.countNonZero(img) > 0);
+        
         // check that border is not corrupted
-        Imgproc.rectangle(img, new Point(11, 11), new Point(labelSize.width + 10, labelSize.height + 10), colorBlack, Imgproc.FILLED);
+        Imgproc.rectangle(img, new Point(10, 10),
+                               new Point(labelSize.width + 10, labelSize.height + 10),
+                          colorBlack, Imgproc.FILLED);
         assertEquals(0, Core.countNonZero(img));
     }
 
@@ -2048,13 +2052,15 @@ public class ImgprocTest extends OpenCVTestCase {
         String text = "Hello World";
         Size labelSize = new Size(176, 22);
         Mat img = new Mat(20 + (int) labelSize.height, 20 + (int) labelSize.width, CvType.CV_8U, colorBlack);
-        Point origin = new Point(10, labelSize.height + 10);
+        Point origin = new Point(10, 32);
 
         Imgproc.putText(img, text, origin, Imgproc.FONT_HERSHEY_SIMPLEX, 1.0, colorWhite, 2);
 
         assertTrue(Core.countNonZero(img) > 0);
         // check that border is not corrupted
-        Imgproc.rectangle(img, new Point(10, 10), new Point(labelSize.width + 10 + 1, labelSize.height + 10 + 1), colorBlack, Imgproc.FILLED);
+        Imgproc.rectangle(img, new Point(10, 10),
+                               new Point(labelSize.width + 10, labelSize.height + 10),
+                          colorBlack, Imgproc.FILLED);
         assertEquals(0, Core.countNonZero(img));
     }
 
@@ -2069,7 +2075,9 @@ public class ImgprocTest extends OpenCVTestCase {
 
         assertTrue(Core.countNonZero(img) > 0);
         // check that border is not corrupted
-        Imgproc.rectangle(img, new Point(10, 10), new Point(labelSize.width + 9, labelSize.height + 9), colorBlack, Imgproc.FILLED);
+        Imgproc.rectangle(img, new Point(10, 10),
+                               new Point(labelSize.width + 10, labelSize.height + 10),
+                          colorBlack, Imgproc.FILLED);
         assertEquals(0, Core.countNonZero(img));
     }
 }

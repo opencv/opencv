@@ -14,31 +14,31 @@
 namespace cv
 {
 
-#include "default_font0.h"
-#include "default_font1.h"
-#include "default_font2.h"
-#include "default_font3.h"
+#include "builtin_font0.h"
+#include "builtin_font1.h"
+#include "builtin_font2.h"
+#include "builtin_font3.h"
 
-typedef struct DefaultFontData
+typedef struct BuiltinFontData
 {
     const uchar* gzdata;
     size_t size;
     const char* name;
     double sf;
-} DefaultFontData;
+} BuiltinFontData;
 
 enum
 {
-    DEFAULT_FONTS_NUM = 4
+    BUILTIN_FONTS_NUM = 4
 };
 
-static DefaultFontData defaultFontData[DEFAULT_FONTS_NUM+1] =
+static BuiltinFontData builtinFontData[BUILTIN_FONTS_NUM+1] =
 {
-    {OcvDefaultFontSans, sizeof(OcvDefaultFontSans), "sans", 1.0},
-    {OcvDefaultFontSerif, sizeof(OcvDefaultFontSerif), "serif", 1.0},
-    {OcvDefaultFontItalic, sizeof(OcvDefaultFontItalic), "italic", 1.3},
-    {OcvDefaultFontUni, sizeof(OcvDefaultFontUni), "uni", 1.05},
-    {0, 0, 0}
+    {OcvBuiltinFontSans, sizeof(OcvBuiltinFontSans), "sans", 1.0},
+    {OcvBuiltinFontSerif, sizeof(OcvBuiltinFontSerif), "serif", 1.0},
+    {OcvBuiltinFontItalic, sizeof(OcvBuiltinFontItalic), "italic", 1.3},
+    {OcvBuiltinFontUni, sizeof(OcvBuiltinFontUni), "uni", 1.0},
+    {0, 0, 0, 0.0}
 };
 
 struct FreeTypeLib
@@ -65,14 +65,14 @@ struct FreeTypeLib
 };
 
 static thread_local FreeTypeLib ftlib;
-static thread_local FontFace default_ffaces[DEFAULT_FONTS_NUM];
+static thread_local FontFace builtin_ffaces[BUILTIN_FONTS_NUM];
 
 static bool inflate(const void* src, size_t srclen, std::vector<uchar>& dst)
 {
     dst.resize((size_t)(srclen*2.5));
     for(int attempts = 0; attempts < 5; attempts++)
     {
-        z_stream strm = {0};
+        z_stream strm = {};
         strm.total_in = strm.avail_in  = (uInt)srclen;
         strm.total_out = strm.avail_out = (uInt)dst.size();
         strm.next_in = (Bytef*)src;
@@ -141,11 +141,11 @@ struct FontFace::Impl {
         deleteFont();
 
         int i = 0;
-        for(; defaultFontData[i].name != 0; i++)
+        for(; builtinFontData[i].name != 0; i++)
         {
-            if(defaultFontData[i].name == name)
+            if(builtinFontData[i].name == name)
             {
-                if(!inflate(defaultFontData[i].gzdata, defaultFontData[i].size, fontbuf))
+                if(!inflate(builtinFontData[i].gzdata, builtinFontData[i].size, fontbuf))
                     return false;
                 int err = FT_New_Memory_Face(library, &fontbuf[0], (FT_Long)fontbuf.size(), 0, &ftface);
                 if(err != 0)
@@ -153,7 +153,7 @@ struct FontFace::Impl {
                 break;
             }
         }
-        if(defaultFontData[i].name == 0)
+        if(builtinFontData[i].name == 0)
             return false;
         currname = name;
         scalefactor = sf;
@@ -267,21 +267,21 @@ bool FontFace::set(const String& fontname_, double sf)
     if(impl->ftface != 0 && impl->currname == fontname)
         return true;
     int i = 0;
-    for( ; i < DEFAULT_FONTS_NUM; i++ )
+    for( ; i < BUILTIN_FONTS_NUM; i++ )
     {
-        if( defaultFontData[i].name == fontname )
+        if( builtinFontData[i].name == fontname )
             break;
     }
-    if( i >= DEFAULT_FONTS_NUM )
+    if( i >= BUILTIN_FONTS_NUM )
         i = -1;
 
     bool ok;
     if( i >= 0 )
     {
-        FontFace& def_fface = default_ffaces[i];
-        ok = def_fface.impl->setStd(fontname, defaultFontData[i].sf);
+        FontFace& builtin_fface = builtin_ffaces[i];
+        ok = builtin_fface.impl->setStd(fontname, builtinFontData[i].sf);
         if(ok)
-            impl = def_fface.impl;
+            impl = builtin_fface.impl;
     }
     else
     {
@@ -293,6 +293,32 @@ bool FontFace::set(const String& fontname_, double sf)
     return ok;
 }
 
+bool FontFace::getBuiltinFontData(const String& fontname_,
+                                  const uchar*& data, size_t& size)
+{
+    String fontname = fontname_;
+    if(fontname.empty())
+        fontname = "sans";
+    data = 0;
+    size = 0;
+    for(int i = 0; i < BUILTIN_FONTS_NUM; i++)
+    {
+        if(builtinFontData[i].name == fontname)
+        {
+            FontFace& builtin_fface = builtin_ffaces[i];
+            if(builtin_fface.impl->setStd(fontname, builtinFontData[i].sf))
+            {
+                std::vector<uchar>& fbuf = builtin_fface.impl->fontbuf;
+                size = fbuf.size();
+                data = size > 0 ? &fbuf[0] : 0;
+                return size > 0;
+            }
+            return false;
+        }
+    }
+    return false;
+}
+
 String FontFace::getName() const { return impl->currname; }
 double FontFace::getScaleFactor() const { return impl->scalefactor; }
 FontFace::Impl* FontFace::operator -> () { return impl.get(); }
@@ -300,7 +326,8 @@ FontFace::~FontFace() {}
 
 static void drawCharacter(
     Mat& img, const uchar* color,
-    const FT_Bitmap* bitmap, int x0, int y0 )
+    const FT_Bitmap* bitmap, int x0, int y0,
+    bool bottom_left )
 {
     int nch = img.channels();
     int bw = (int)(bitmap->width), bh = (int)(bitmap->rows);
@@ -313,7 +340,7 @@ static void drawCharacter(
     // is `FT_PIXEL_MODE_GRAY' (i.e., not a bitmap font)
     for( int dy = 0; dy < bh; dy++ )
     {
-        int y = y0 + dy;
+        int y = y0 + dy*(bottom_left ? -1 : 1);
         if( y < 0 || y >= rows )
             continue;
         uchar* imgptr0 = img.ptr<uchar>(y);
@@ -393,6 +420,7 @@ static Point putText_( Mat& img, const String& str, Point org,
 {
     int load_glyph_flag = render ? FT_LOAD_RENDER : FT_LOAD_DEFAULT;
     bool subst_initialized = false;
+    bool bottom_left = (flags & PUT_TEXT_ORIGIN_BL) != 0;
 
     if(fontface.getName().empty())
         fontface.set("sans");
@@ -500,20 +528,20 @@ static Point putText_( Mat& img, const String& str, Point org,
             {
                 if(!subst_initialized)
                 {
-                    for(int j = 0; j < DEFAULT_FONTS_NUM; j++)
+                    for(int j = 0; j < BUILTIN_FONTS_NUM; j++)
                     {
-                        default_ffaces[j].set(defaultFontData[j].name);
-                        default_ffaces[j]->setParams(size, thickness, flags);
+                        builtin_ffaces[j].set(builtinFontData[j].name);
+                        builtin_ffaces[j]->setParams(size, thickness, flags);
                     }
                     subst_initialized = true;
                 }
-                for(int j = 0; j < DEFAULT_FONTS_NUM; j++)
+                for(int j = 0; j < BUILTIN_FONTS_NUM; j++)
                 {
-                    curr_ftface = default_ffaces[j]->ftface;
+                    curr_ftface = builtin_ffaces[j]->ftface;
                     glyph_index = FT_Get_Char_Index( curr_ftface, charcode );
                     if(glyph_index != 0)
                         break;
-                    if(j+1 == DEFAULT_FONTS_NUM)
+                    if(j+1 == BUILTIN_FONTS_NUM)
                         glyph_index = FT_Get_Char_Index( curr_ftface, 0xFFFD );
                 }
             }
@@ -549,16 +577,21 @@ static Point putText_( Mat& img, const String& str, Point org,
             max_baseline = std::max(max_baseline, baseline);
 
             int x = pen_x + slot->bitmap_left;
-            int y = pen_y - slot->bitmap_top;
+            int y = bottom_left ? pen_y + slot->bitmap_top : pen_y - slot->bitmap_top;
             if( render )
-                drawCharacter( img, color, &slot->bitmap, x, y );
+                drawCharacter( img, color, &slot->bitmap, x, y, bottom_left );
             pen_x = new_pen_x;
         }
     }
     max_width = max(max_width, pen_x - org.x);
 
     if(brect)
-        *brect = Rect(org.x, org.y - max_dy, max_width, pen_y - org.y + max_dy + max_baseline);
+    {
+        if(flags & PUT_TEXT_ORIGIN_BL)
+            *brect = Rect(org.x, org.y - max_baseline, max_width, pen_y - org.y + max_dy + max_baseline);
+        else
+            *brect = Rect(org.x, org.y - max_dy, max_width, pen_y - org.y + max_dy + max_baseline);
+    }
 
     return Point(pen_x, pen_y);
 }
@@ -599,7 +632,7 @@ Rect getTextSize(InputArray img_, const String& str, Point org,
 #else
 namespace cv
 {
-    
+
 struct Impl {
 public:
     Impl() {}
@@ -611,6 +644,13 @@ FontFace::FontFace(const String&, double) {}
 bool FontFace::set(const String&, double) { return false; }
 String FontFace::getName() const { return String(); }
 double FontFace::getScaleFactor() const { return 1.0; }
+bool FontFace::getBuiltinFontData(const String&,
+                                  const uchar*& data, size_t& size)
+{
+    data = 0;
+    size = 0;
+    return false;
+}
 
 FontFace::~FontFace() {}
 FontFace::Impl* FontFace::operator -> () { return impl.get(); }

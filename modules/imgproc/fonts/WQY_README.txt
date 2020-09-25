@@ -1,4 +1,3 @@
-
 ==========================================================
 
                  Wen Quan Yi Micro Hei
@@ -373,6 +372,3 @@ document might be covered by the GNU General Public License. If you
 modify this font, you may extend this exception to your version of
 the font, but you are not obligated to do so. If you do not wish to
 do so, delete this exception statement from your version.
-
-
-
