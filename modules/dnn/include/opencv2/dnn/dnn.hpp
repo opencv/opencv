@@ -1306,26 +1306,24 @@ CV__DNN_INLINE_NS_BEGIN
          CV_WRAP TextRecognitionModel(const Net& network);
 
          /**
+          * @brief Set the vocabulary for recognition.
+          * @param[in] inputVoc: the associated vocabulary of the network.
+          */
+         CV_WRAP void setVocabulary(const std::vector<String>& inputVoc);
+
+         /**
           * @brief Given the @p input frame, create input blob, run net and return recognition result.
           * @param[in] frame: The input image.
-          * @param[in] decodeType: The decoding method of translating the network output into string.
-          * @param[in] vocabulary: The vocabulary for decoding.
+          * @param[in] decodeType: The decoding method of translating the network output into string: {'CTC-greedy': greedy decoding for the output of CTC-based methods}
           * @param[out] results: A set of text recognition results.
-          * @param[in] roiPolygons: A set of text detection results.
+          * @param[in] roiPolygons: (Optional) A set of text detection results. If it is not empty, all the ROIs will be cropped as the network inputs.
           */
-         CV_WRAP void recognize(InputArray frame, String decodeType, const std::vector<String> & vocabulary,
-                                CV_OUT std::vector<String> & results,
-                                const std::vector<std::vector<Point>> & roiPolygons = std::vector<std::vector<Point>>());
+         CV_WRAP void recognize(InputArray frame, const String& decodeType, CV_OUT std::vector<String>& results,
+                                const std::vector<std::vector<Point>>& roiPolygons = {});
 
-     private:
-         /**
-          * @brief decode the output of the network.
-          * @param[in] prediction: The output of the network.
-          * @param[in] decodeType: The decoding method of translating the network output into string.
-          * @param[in] vocabulary: The vocabulary for decoding.
-          * @returns a string holding the decoded recognition result
-          */
-         CV_WRAP String decode(Mat prediction, String decodeType, const std::vector<String> & vocabulary);
+     protected:
+         struct Voc;
+         Ptr<Voc> voc;
      };
 
      /** @brief This class represents high-level API for text detection networks.
@@ -1333,7 +1331,7 @@ CV__DNN_INLINE_NS_BEGIN
       * TextDetectionModel allows to set params for preprocessing input image.
       * TextDetectionModel creates net from file with trained weights and config,
       * sets preprocessing input, runs forward pass and return detection results.
-      * For TextDetectionModel, "DB" is supported.
+      * For TextDetectionModel, "DB" and "EAST" are supported.
       */
      class CV_EXPORTS_W TextDetectionModel : public Model
      {
@@ -1353,37 +1351,29 @@ CV__DNN_INLINE_NS_BEGIN
          CV_WRAP TextDetectionModel(const Net& network);
 
          /**
-          * @brief Given the @p input frame, create input blob, run net and return detection results.
+          * @brief Given the @p input frame, create input blob, run net and return detection results by "Real-time Scene Text Detection with Differentiable Binarization"(DB).
+          * For more information about the hyper-parameters setting, please refer to https://github.com/MhLiao/DB.
           * @param[in] frame: The input image.
           * @param[out] results: A set of text detection results.
-          * @param[in] outputType: The output type: {0: multi-oriented quadrilateral; 1: polygon}
-          * @param[in] binThresh: The threshold of the binary map.
-          * @param[in] polyThresh: The threshold of text polygons.
-          * @param[in] unclipRatio: The unclip ratio of the detected text region.
-          * @param[in] maxCandidates: The max number of the output polygons.
+          * @param[in] outputType: The output shape type: {0: multi-oriented quadrilateral; 1: polygon}
+          * @param[in] binThresh: The threshold of the binary map. It is usually set to 0.3.
+          * @param[in] polyThresh: The threshold of text polygons. It is usually set to 0.5, 0.6, and 0.7.
+          * @param[in] unclipRatio: The unclip ratio of the detected text region, which determines the output size. It is usually set to 2.0.
+          * @param[in] maxCandidates: The max number of the output results.
           */
-         CV_WRAP void detect(InputArray frame, CV_OUT std::vector<std::vector<Point>>& results, int outputType,
-                             float binThresh, float polyThresh, double unclipRatio, uint maxCandidates);
-
-     private:
-         /**
-          * @brief calculate the score of the text contour.
-          * @param[in] binary: The output of the network.
-          * @param[in] contour: The contour of text.
-          * @returns a score of the input text contour
-          */
-         CV_WRAP double contourScore(const Mat & binary, std::vector<Point> & contour);
+         CV_WRAP void detect(InputArray frame, CV_OUT std::vector<std::vector<Point>>& results, const int& outputType,
+                             const float& binThresh, const float& polyThresh,
+                             const double& unclipRatio, const uint& maxCandidates);
 
          /**
-          * @brief Dialate the kernel polygon to the detection result
-          * @param[in] inPoly: A detected text polygon.
-          * @param[out] outPoly: The unclipped text polygon.
-          * @param[in] unclipRatio: The unclip ratio of the input text polygon.
-          * @param[in] scaleWidth: The rescale width ratio for the original image.
-          * @param[in] scaleHeight: The rescale height ratio for the original image.
+          * @brief Given the @p input frame, create input blob, run net and return detection results by "EAST: An Efficient and Accurate Scene Text Detector".
+          * @param[in] frame: The input image.
+          * @param[out] results: A set of text detection results.
+          * @param[in] confThreshold: The threshold for text scores. It is usually set to 0.5.
+          * @param[in] nmsThreshold: The threshold for NMS operation. It is usually set to 0.4.
           */
-         CV_WRAP void unclip(std::vector<Point> &inPoly, CV_OUT std::vector<Point> &outPoly, double unclipRatio,
-                             float scaleWidth, float scaleHeight);
+         CV_WRAP void detect(InputArray frame, CV_OUT std::vector<std::vector<Point>>& results, const float& confThreshold, const float& nmsThreshold);
+
      };
 
 //! @}

@@ -85,7 +85,7 @@ Deep Neural Networks (dnn module) {#tutorial_table_of_content_dnn}
 
     *Languages:* C++
 
-    *Compatibility:* \> OpenCV 4.3
+    *Compatibility:* \> OpenCV 4.5
 
     *Author:* Wenqing Zhang
 

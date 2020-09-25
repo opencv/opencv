@@ -1,18 +1,3 @@
-/*
- * Convolutional Recurrent Neural Network (CRNN):
- * An End-to-End Trainable Neural Network for Image-based SequenceRecognition and Its Application to Scene Text Recognition
- * Copyright (C) 2020,
- * Author List:
- *      Baoguang Shi    <Huazhong University of Science and Technology>
- *      Cong Yao        <Huazhong University of Science and Technology>
- *      Xiang Bai       <Huazhong University of Science and Technology>
- *
- * This script is written by Wenqing Zhang <Huazhong University of Science and Technology>.
- *
- * This code has been contributed to OpenCV under the terms of Apache 2 license:
- * https://www.apche.org/licenses/LICENSE-2.0
-*/
-
 #include <iostream>
 #include <fstream>
 
@@ -74,11 +59,12 @@ int main(int argc, char** argv)
     while (std::getline(vocFile, vocLine)) {
         vocabulary.push_back(vocLine);
     }
+    recognizer.setVocabulary(vocabulary);
 
     // Set parameters
     const String decodeType = "CTC-greedy";
     double scale = 1.0 / 127.5;
-    Scalar mean = Scalar(127.5);
+    Scalar mean = Scalar(127.5, 127.5, 127.5);
     Size inputSize = Size(100, 32);
     recognizer.setInputParams(scale, inputSize, mean);
 
@@ -103,10 +89,10 @@ int main(int argc, char** argv)
 
             // Inference
             timer.start();
-            Mat frame = imread(imgPath, imreadRGB);
+            Mat frame = imread(samples::findFile(imgPath), imreadRGB);
             CV_Assert(!frame.empty());
             std::vector<String> recResults;
-            recognizer.recognize(frame, decodeType, vocabulary, recResults);
+            recognizer.recognize(frame, decodeType, recResults);
             timer.stop();
 
             if (gt == convertForEval(recResults[0])) cntRight++;
@@ -122,12 +108,12 @@ int main(int argc, char** argv)
 
         // Open an image file
         CV_Assert(parser.has("inputImage"));
-        Mat frame = imread(parser.get<String>("inputImage"), imreadRGB);
+        Mat frame = imread(samples::findFile(parser.get<String>("inputImage")), imreadRGB);
         CV_Assert(!frame.empty());
 
         // Recognition
         std::vector<String> recResults;
-        recognizer.recognize(frame, decodeType, vocabulary, recResults);
+        recognizer.recognize(frame, decodeType, recResults);
 
         imshow(winName, frame);
         std::cout << "Predition: " << recResults[0] << std::endl;

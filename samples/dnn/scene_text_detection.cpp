@@ -1,19 +1,3 @@
-/*
- * Real-time Scene Text Detection with Differentiable Binarization
- * Copyright (C) 2020, The patent is owned by <Huazhong University of Science and Technology>
- * Author List:
- *      Minghui Liao    <Huazhong University of Science and Technology>
- *      Zhaoyi Wan      <Megvii>
- *      Cong Yao        <Megvii>
- *      Kai Chen        <Shanghai Jiao Tong University>
- *      Xiang Bai       <Huazhong University of Science and Technology>, Corresponding author
- *
- * This script is written by Wenqing Zhang <Huazhong University of Science and Technology>.
- *
- * This code has been contributed to OpenCV under the terms of Apache 2 license:
- * https://www.apche.org/licenses/LICENSE-2.0
-*/
-
 #include <iostream>
 #include <fstream>
 #include <regex>
@@ -47,7 +31,7 @@ int main(int argc, char** argv)
     CommandLineParser parser(argc, argv, keys);
     parser.about("Use this script to run the official PyTorch implementation (https://github.com/MhLiao/DB) of "
                  "Real-time Scene Text Detection with Differentiable Binarization (https://arxiv.org/abs/1911.08947)\n"
-                 "The current version of this script is a variant of the original network w/o deformable convolution");
+                 "The current version of this script is a variant of the original network without deformable convolution");
     if (argc == 1 || parser.has("help"))
     {
         parser.printMessage();
@@ -100,7 +84,7 @@ int main(int argc, char** argv)
             String imgPath = evalDataPath + "/test_images/" + testImgPath;
             // std::cout << "Image Path: " << imgPath << std::endl;
 
-            Mat frame = imread(imgPath, 1);
+            Mat frame = imread(samples::findFile(imgPath), IMREAD_COLOR);
             CV_Assert(!frame.empty());
             Mat src = frame.clone();
 
@@ -108,7 +92,7 @@ int main(int argc, char** argv)
             std::vector<std::vector<Point>> results;
             detector.detect(frame, results, outputType, binThresh, polyThresh, unclipRatio, maxCandidates);
 
-            polylines(frame, results, true, Scalar(0, 255, 0), 2);
+            polylines(frame, results, true, Scalar(0, 255, 0), 5);
             imshow(winName, frame);
 
             // load groundtruth
@@ -143,7 +127,7 @@ int main(int argc, char** argv)
                 }
                 gts.push_back(pts);
             }
-            polylines(src, gts, true, Scalar(0, 255, 0), 2);
+            polylines(src, gts, true, Scalar(0, 255, 0), 5);
             imshow(winNameGT, src);
 
             waitKey();
@@ -151,14 +135,14 @@ int main(int argc, char** argv)
     } else {
         // Open an image file
         CV_Assert(parser.has("inputImage"));
-        Mat frame = imread(parser.get<String>("inputImage"));
+        Mat frame = imread(samples::findFile(parser.get<String>("inputImage")));
         CV_Assert(!frame.empty());
 
         // Detect
         std::vector<std::vector<Point>> results;
         detector.detect(frame, results, outputType, binThresh, polyThresh, unclipRatio, maxCandidates);
 
-        polylines(frame, results, true, Scalar(0, 255, 0), 2);
+        polylines(frame, results, true, Scalar(0, 255, 0), 5);
         imshow(winName, frame);
         waitKey();
     }

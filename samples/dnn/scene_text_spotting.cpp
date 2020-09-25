@@ -73,6 +73,7 @@ int main(int argc, char** argv)
     while (std::getline(vocFile, vocLine)) {
         vocabulary.push_back(vocLine);
     }
+    recognizer.setVocabulary(vocabulary);
 
     // Parameters for Detection
     double detScale = 1.0 / 255.0;
@@ -92,7 +93,7 @@ int main(int argc, char** argv)
     namedWindow(winName, WINDOW_NORMAL);
 
     // Input data
-    Mat frame = imread(parser.get<String>("inputImage"));
+    Mat frame = imread(samples::findFile(parser.get<String>("inputImage")));
 
     // Inference
     std::vector<std::vector<Point>> detResults;
@@ -111,7 +112,7 @@ int main(int argc, char** argv)
     }
 
     // Recognize all ROIs at the same time
-    recognizer.recognize(recInput, decodeType, vocabulary, recResults, detResults);
+    recognizer.recognize(recInput, decodeType, recResults, detResults);
 
     // Visualization
     for (uint i = 0; i < detResults.size(); i++) {

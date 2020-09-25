@@ -205,12 +205,19 @@ void normAssertTextDetections(
                 }
             }
         }
+        if (!matched) {
+            std::cout << cv::format("Unmatched-det:") << testPoly << std::endl;
+            std::cout << "Highest IoU: " << topIoU << std::endl;
+        }
         EXPECT_TRUE(matched) << comment;
     }
 
     // Check unmatched groundtruth.
     for (uint i = 0; i < gtPolys.size(); ++i)
     {
+        if (!matchedRefBoxes[i]) {
+            std::cout << cv::format("Unmatched-gt:") << gtPolys[i] << std::endl;
+        }
         EXPECT_TRUE(matchedRefBoxes[i]);
     }
 }

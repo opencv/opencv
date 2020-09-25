@@ -125,17 +125,19 @@ public:
         model.setInputSize(size).setInputMean(mean).setInputScale(scale)
              .setInputSwapRB(swapRB).setInputCrop(crop);
 
+        model.setVocabulary(vocabulary);
+
         std::vector<std::string> results;
-        model.recognize(frame, decodeType, vocabulary, results);
+        model.recognize(frame, decodeType, results);
         ASSERT_STREQ(results[0].c_str(), seq.c_str());
     }
 
-    void testTextDetectionModel(const std::string& weights, const std::string& cfg,
-                                const std::string& imgPath, const std::vector<std::vector<Point>>& gt,
-                                int outputType, float binThresh, float polyThresh,
-                                uint maxCandidates, double unclipRatio,
-                                const Size& size = {-1, -1}, Scalar mean = Scalar(),
-                                double scale = 1.0, bool swapRB = false, bool crop = false)
+    void testTextDetectionModelByDB(const std::string& weights, const std::string& cfg,
+                                    const std::string& imgPath, const std::vector<std::vector<Point>>& gt,
+                                    int outputType, float binThresh, float polyThresh,
+                                    uint maxCandidates, double unclipRatio,
+                                    const Size& size = {-1, -1}, Scalar mean = Scalar(),
+                                    double scale = 1.0, bool swapRB = false, bool crop = false)
     {
         checkBackend();
 
@@ -147,6 +149,25 @@ public:
 
         std::vector<std::vector<Point>> results;
         model.detect(frame, results, outputType, binThresh, polyThresh, unclipRatio, maxCandidates);
+        normAssertTextDetections(gt, results);
+    }
+
+    void testTextDetectionModelByEAST(const std::string& weights, const std::string& cfg,
+                                        const std::string& imgPath, const std::vector<std::vector<Point>>& gt,
+                                        float confThresh, float nmsThresh,
+                                        const Size& size = {-1, -1}, Scalar mean = Scalar(),
+                                        double scale = 1.0, bool swapRB = false, bool crop = false)
+    {
+        checkBackend();
+
+        Mat frame = imread(imgPath);
+
+        TextDetectionModel model(weights, cfg);
+        model.setInputSize(size).setInputMean(mean).setInputScale(scale)
+             .setInputSwapRB(swapRB).setInputCrop(crop);
+
+        std::vector<std::vector<Point>> results;
+        model.detect(frame, results, confThresh, nmsThresh);
         normAssertTextDetections(gt, results);
     }
 };
@@ -444,14 +465,14 @@ TEST_P(Test_Model, TextRecognition)
     testTextRecognitionModel(weightPath, "", imgPath, seq, decodeType, vocabulary, size, mean, scale);
 }
 
-TEST_P(Test_Model, TextDetection)
+TEST_P(Test_Model, TextDetectionByDB)
 {
-    std::string imgPath = _tf("text_det_test.png");
+    std::string imgPath = _tf("text_det_test1.png");
     std::string weightPath = _tf("onnx/models/DB_TD500_resnet50.onnx", false);
 
     // GroundTruth
-    std::vector<std::vector<Point>> gt = {{Point(213, 150), Point(133, 165), Point(142, 191), Point(221, 177)},
-                                          {Point(318, 72), Point(116, 116), Point(134, 164), Point(337, 119)}};
+    std::vector<std::vector<Point>> gt = {{Point(213, 151), Point(133, 165), Point(142, 191), Point(221, 177)},
+                                          {Point(318, 71), Point(115, 116), Point(135, 164), Point(338, 120)}};
 
     Size size{736, 736};
     double scale = 1.0 / 255.0;
@@ -463,7 +484,26 @@ TEST_P(Test_Model, TextDetection)
     int outputType = 0;
     double unclipRatio = 2.0;
 
-    testTextDetectionModel(weightPath, "", imgPath, gt, outputType, binThresh, polyThresh, maxCandidates, unclipRatio, size, mean, scale);
+    testTextDetectionModelByDB(weightPath, "", imgPath, gt, outputType, binThresh, polyThresh, maxCandidates, unclipRatio, size, mean, scale);
+}
+
+TEST_P(Test_Model, TextDetectionByEAST)
+{
+    std::string imgPath = _tf("text_det_test2.jpg");
+    std::string weightPath = _tf("frozen_east_text_detection.pb", false);
+
+    // GroundTruth
+    std::vector<std::vector<Point>> gt = {{Point(508, 453), Point(497, 391), Point(806, 365), Point(818, 427)}};
+
+    Size size{320, 320};
+    double scale = 1.0;
+    Scalar mean = Scalar(123.68, 116.78, 103.94);
+
+    float confThresh = 0.5;
+    float nmsThresh = 0.4;
+    bool swapRB = true;
+
+    testTextDetectionModelByEAST(weightPath, "", imgPath, gt, confThresh, nmsThresh, size, mean, scale, swapRB);
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_Model, dnnBackendsAndTargets());
