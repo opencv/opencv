@@ -3102,7 +3102,7 @@ void initializeContextFromHandle(Context& ctx, void* _platform, void* _context, 
     cl_context context = (cl_context)_context;
     cl_device_id deviceID = (cl_device_id)_device;
 
-    std::string platformName = PlatformInfo(platformID).name();
+    std::string platformName = PlatformInfo(&platformID).name();
 
     auto clExecCtx = OpenCLExecutionContext::create(platformName, platformID, context, deviceID);
     CV_Assert(!clExecCtx.empty());
