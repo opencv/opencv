@@ -1499,7 +1499,7 @@ convert_to_python_tuple(const std::tuple<Tp...>& cpp_tuple, PyObject* py_tuple)
     if (!item)
         return;
 
-    PyTuple_SET_ITEM(py_tuple, I, item);
+    PyTuple_SetItem(py_tuple, I, item);
     convert_to_python_tuple<I + 1, Tp...>(cpp_tuple, py_tuple);
 }
 
