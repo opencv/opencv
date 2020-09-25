@@ -275,15 +275,16 @@ endif ()
 
 ocv_warnings_disable(CMAKE_C_FLAGS -Wunused-parameter -Wstrict-prototypes) # clang
 
-set(FREETYPE_INCLUDE_DIR
+set(FREETYPE_INCLUDE_DIRS
 "${CMAKE_CURRENT_BINARY_DIR}/include/freetype/config"
 "${CMAKE_CURRENT_BINARY_DIR}/include"
 "${CMAKE_CURRENT_SOURCE_DIR}/include" PARENT_SCOPE)
+set(FREETYPE_LIBRARIES freetype PARENT_SCOPE)
 
 # Pick up ftconfig.h and ftoption.h generated above, first.
 target_include_directories(
   ${PROJECT_NAME}
-  ${FREETYPE_INCLUDE_DIR}
+  ${FREETYPE_INCLUDE_DIRS}
     PUBLIC
       $<INSTALL_INTERFACE:include/freetype>
       $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>

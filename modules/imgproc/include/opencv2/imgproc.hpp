@@ -4727,7 +4727,7 @@ The class is used to store the loaded fonts;
 the font can then be passed to the functions
 putText and getTextSize.
 */
-class CV_EXPORTS_W FontFace
+class CV_EXPORTS_W_SIMPLE FontFace
 {
 public:
     /** @brief loads default font */
@@ -4736,11 +4736,12 @@ public:
        loads font at the specified path or with specified name.
        Empty fontPathOrName means the default embedded font.
     */
-    CV_WRAP FontFace(const String& fontPathOrName);
+    CV_WRAP FontFace(const String& fontPathOrName, double sf=0.);
 
     /** @brief loads new font face */
-    CV_WRAP bool set(const String& fontPathOrName);
-    CV_WRAP String get() const;
+    CV_WRAP bool set(const String& fontPathOrName, double sf=0.);
+    CV_WRAP String getName() const;
+    CV_WRAP double getScaleFactor() const;
 
     ~FontFace();
 

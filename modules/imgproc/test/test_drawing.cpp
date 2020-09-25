@@ -619,8 +619,8 @@ TEST(Drawing, putText_no_garbage)
 
     EXPECT_EQ(0, cv::countNonZero(mat(Rect(0, 0,           10, sz.height))));
     EXPECT_EQ(0, cv::countNonZero(mat(Rect(sz.width-10, 0, 10, sz.height))));
-    EXPECT_EQ(0, cv::countNonZero(mat(Rect(205, 0,         10, sz.height))));
-    EXPECT_EQ(0, cv::countNonZero(mat(Rect(405, 0,         10, sz.height))));
+    EXPECT_EQ(0, cv::countNonZero(mat(Rect(195, 0,         10, sz.height))));
+    EXPECT_EQ(0, cv::countNonZero(mat(Rect(385, 0,         10, sz.height))));
 }
 
 
@@ -681,19 +681,30 @@ TEST(Drawing, fillpoly_circle)
 
 TEST(Drawing, ttf_text)
 {
-    FontFace uni("uni");
+    //FontFace uni("uni");
     FontFace sans("sans");
-    FontFace itfont("italic");
+    //FontFace itfont("italic");
     FontFace serif("serif");
-    std::vector<FontFace> faces = {sans, serif, itfont, uni};
+    //FontFace uni("/Users/vpisarev/work/fonts/Rubik.ttf");
+    //FontFace itfont("/Users/vpisarev/work/fonts/Kufam-Italic.ttf", 1.0);
+    FontFace script("/Users/vpisarev/work/fonts/Neucha/Neucha-Regular.ttf", 1.2);
+    //FontFace script("/Users/vpisarev/work/fonts/MarkaziText.ttf", 1.4);
+    FontFace itfont("italic");
+    FontFace uni("uni");
+    std::vector<FontFace> faces = {sans, itfont, serif, script, uni};
     Mat img(1000, 1500, CV_8UC3, Scalar::all(255));
-    String text0 = "The quick brown fox jumps over lazy dog. ";
+    String text0 = "The quick brown fox jumps over lazy dog. fly, start, finish, shuffle. ";
     String text1 = "vechicle #5 detected; fps=123.45. ";
-    String text2 = "Съешь же ещё этих мягких французских булок да выпей чаю! ";
-    text2 += "Dès Noël où un zéphyr haï me vêt de glaçons würmiens je dîne d’exquis rôtis de bœuf au kir à l’aÿ d’âge mûr & cætera! ";
-    text2 += "千里之行，始于足下。あなたはそれが困難見つけた場合 — あなたは正しい方向に向かっている。넌 모든 꽃들을 다 꺾어버릴 수는 있겠지만, 봄이 오는 걸 막을 수는 없어.";
+    String text2 = "Съешь же ещё этих мягких французских булок да выпей чаю!";
+    text2 += " Dès Noël où un zéphyr haï me vêt de glaçons würmiens je dîne d’exquis rôtis de bœuf au kir à l’aÿ d’âge mûr & cætera!";
+    text2 += " “Falsches Üben von Xylophonmusik quält jeden größeren Zwerg”.";
+    text2 += " Extraño alijo hampón: güisqui; kiwi, vid y ... ¡¿bizc8?!";
+    text2 += " Ζαφείρι δέξου πάγκαλο, βαθῶν ψυχῆς τὸ σῆμα.";
+    text2 += " דג סקרן שט בים מאוכזב ולפתע מצא חברה";
+    text2 += "。千里之行，始于足下。あなたはそれが困難見つけた場合 — あなたは正しい方向に向かっている。넌 모든 꽃들을 다 꺾어버릴 수는 있겠지만, 봄이 오는 걸 막을 수는 없어.";
+    text2 += " الحب سماء لا تمطر غير الأحلام";
     int flags = PUT_TEXT_WRAP;
-    const int weight[] = { 400, 400, 300, 400 };
+    const int weight[] = { 400, 300, 400, 400, 400 };
 
     for( int i = 0; i < 8; i++ )
     {
