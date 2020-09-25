@@ -746,14 +746,6 @@ I::OStream& ByteMemoryOutStream::operator<< (const std::string &str) {
     for (auto c : str) *this << c;
     return *this;
 }
-I::OStream& ByteMemoryOutStream::operator<< (const std::map<std::string, std::string> &map_str) {
-    *this << static_cast<uint32_t>(map_str.size());
-    for (const auto& strs : map_str) {
-        *this << strs.first << strs.second;
-    }
-    return *this;
-}
-
 ByteMemoryInStream::ByteMemoryInStream(const std::vector<char> &data)
     : m_storage(data) {
 }
@@ -844,16 +836,6 @@ I::IStream& ByteMemoryInStream::operator>> (std::string& str) {
     } else {
         str.resize(sz);
         for (auto &&i : ade::util::iota(sz)) { *this >> str[i]; }
-    }
-    return *this;
-}
-I::IStream& ByteMemoryInStream::operator>> (std::map<std::string, std::string>& map_str) {
-    uint32_t sz = 0u;
-    *this >> sz;
-    for (std::size_t i = 0; i < sz; ++i) {
-        std::string k, v;
-        *this >> k >> v;
-        map_str[k] = v;
     }
     return *this;
 }

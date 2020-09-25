@@ -96,6 +96,40 @@ TEST_F(S11N_Basic, Test_map_string2string) {
     EXPECT_EQ(v, get<T>());
 }
 
+TEST_F(S11N_Basic, Test_map_int2int) {
+    using T = std::map<int, int32_t>;
+    T v;
+    v[1] = 23;
+    v[-100] = 0;
+    v[435346] = -12346;
+    put(v);
+    EXPECT_EQ(v, get<T>());
+}
+
+TEST_F(S11N_Basic, Test_map_float2cvsize) {
+    using T = std::map<float, cv::Size>;
+    T v;
+    v[0.4f] = cv::Size(4, 5);
+    v[234.43f] = cv::Size(3421, 321);
+    v[2223.f] = cv::Size(1920, 1080);
+    put(v);
+    EXPECT_EQ(v, get<T>());
+}
+
+TEST_F(S11N_Basic, Test_map_uint642cvmat) {
+    using T = std::map<uint64_t, cv::Mat>;
+    T v;
+    v[21304805324] = cv::Mat(3, 3, CV_8UC1, cv::Scalar::all(3));
+    v[4353245222] = cv::Mat(5, 5, CV_8UC3, cv::Scalar::all(7));
+    v[0] = cv::Mat(10, 10, CV_32FC2, cv::Scalar::all(-128.f));
+    put(v);
+    auto out_v = get<T>();
+    for (const auto& el : out_v) {
+        EXPECT_NE(v.end(), v.find(el.first));
+        EXPECT_EQ(0, cv::norm(el.second, v[el.first]));
+    }
+}
+
 TEST_F(S11N_Basic, Test_vector_int) {
     std::vector<int> v = {1,2,3};
     put(v);
