@@ -681,14 +681,12 @@ TEST(Drawing, fillpoly_circle)
 
 TEST(Drawing, ttf_text)
 {
-    //FontFace uni("uni");
+    string ts_data_path = TS::ptr()->get_data_path();
+    string custom_font_path = ts_data_path + "../highgui/drawing/Neucha.ttf";
+
     FontFace sans("sans");
-    //FontFace itfont("italic");
     FontFace serif("serif");
-    //FontFace uni("/Users/vpisarev/work/fonts/Rubik.ttf");
-    //FontFace itfont("/Users/vpisarev/work/fonts/Kufam-Italic.ttf", 1.0);
-    FontFace script("/Users/vpisarev/work/fonts/Neucha/Neucha-Regular.ttf", 1.2);
-    //FontFace script("/Users/vpisarev/work/fonts/MarkaziText.ttf", 1.4);
+    FontFace script(custom_font_path, 1.2);
     FontFace itfont("italic");
     FontFace uni("uni");
     std::vector<FontFace> faces = {sans, itfont, serif, script, uni};
@@ -702,17 +700,17 @@ TEST(Drawing, ttf_text)
     text2 += " Ζαφείρι δέξου πάγκαλο, βαθῶν ψυχῆς τὸ σῆμα.";
     text2 += " דג סקרן שט בים מאוכזב ולפתע מצא חברה";
     text2 += "。千里之行，始于足下。あなたはそれが困難見つけた場合 — あなたは正しい方向に向かっている。넌 모든 꽃들을 다 꺾어버릴 수는 있겠지만, 봄이 오는 걸 막을 수는 없어.";
-    text2 += " الحب سماء لا تمطر غير الأحلام";
+    text2 += " نصٌّ حكيمٌ لهُ سِرٌّ قاطِعٌ وَذُو شَأنٍ عَظيمٍ مكتوبٌ على ثوبٍ أخضرَ ومُغلفٌ بجلدٍ أزرق";
     int flags = PUT_TEXT_WRAP;
     const int weight[] = { 400, 300, 400, 400, 400 };
 
-    for( int i = 0; i < 8; i++ )
+    for( int i = 0; i < 4; i++ )
     {
         img.setTo(Scalar::all(255));
         double sz = 10 + i*3;
         int x0 = 50;
         Mat imgroi = img.colRange(0, img.cols - x0);
-        Point org(x0, 100);
+        Point org(x0, 50);
 
         int j = 0;
         for( auto& face: faces )
@@ -726,7 +724,7 @@ TEST(Drawing, ttf_text)
             putText(imgroi, text2, org, Scalar(150,80,0), face, sz, w, flags);
             brect = getTextSize(imgroi, text2, org, face, sz, w, flags);
             org.x = x0;
-            org.y = brect.y + brect.height + sz + 20;
+            org.y = brect.y + brect.height + sz + 15;
         }
         /*imshow("test", img);
         if((waitKey() & 255) == 27)
