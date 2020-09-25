@@ -252,6 +252,7 @@ if(NOT DEFINED IPPROOT)
   else()
     ocv_install_3rdparty_licenses(ippicv "${ICV_PACKAGE_ROOT}/EULA.txt")
   endif()
+  ocv_install_3rdparty_licenses(ippicv "${ICV_PACKAGE_ROOT}/third-party-programs.txt")
 endif()
 
 file(TO_CMAKE_PATH "${IPPROOT}" __IPPROOT)
