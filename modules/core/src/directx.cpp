@@ -459,7 +459,7 @@ Context& initializeContextFromD3D11Device(ID3D11Device* pD3D11Device)
     }
 
     cl_platform_id platform = platforms[found];
-    std::string platformName = PlatformInfo(platform).name();
+    std::string platformName = PlatformInfo(&platform).name();
 
     OpenCLExecutionContext clExecCtx;
     try
@@ -579,7 +579,7 @@ Context& initializeContextFromD3D10Device(ID3D10Device* pD3D10Device)
     }
 
     cl_platform_id platform = platforms[found];
-    std::string platformName = PlatformInfo(platform).name();
+    std::string platformName = PlatformInfo(&platform).name();
 
     OpenCLExecutionContext clExecCtx;
     try
@@ -701,7 +701,7 @@ Context& initializeContextFromDirect3DDevice9Ex(IDirect3DDevice9Ex* pDirect3DDev
     }
 
     cl_platform_id platform = platforms[found];
-    std::string platformName = PlatformInfo(platform).name();
+    std::string platformName = PlatformInfo(&platform).name();
 
     OpenCLExecutionContext clExecCtx;
     try
@@ -824,7 +824,7 @@ Context& initializeContextFromDirect3DDevice9(IDirect3DDevice9* pDirect3DDevice9
     }
 
     cl_platform_id platform = platforms[found];
-    std::string platformName = PlatformInfo(platform).name();
+    std::string platformName = PlatformInfo(&platform).name();
 
     OpenCLExecutionContext clExecCtx;
     try

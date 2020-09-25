@@ -141,13 +141,7 @@ Context& initializeContextFromVA(VADisplay display, bool tryInterop)
             contextInitialized = true;
 
             cl_platform_id platform = platforms[found];
-            char platformName[1024] = {0};
-            size_t sz = 0;
-            if (clGetPlatformInfo(platform, CL_PLATFORM_NAME, sizeof(platformName) - 16, platformName, &sz) != CL_SUCCESS
-                || sz >= sizeof(platformName))
-            {
-                CV_Error(cv::Error::OpenCLInitError, "OpenCL: Failed to get platform name");
-            }
+            std::string platformName = PlatformInfo(&platform).name();
 
             OpenCLExecutionContext clExecCtx;
             try
