@@ -1690,7 +1690,7 @@ Context& initializeContextFromGL()
         CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't create context for OpenGL interop");
 
     cl_platform_id platform = platforms[found];
-    std::string platformName = PlatformInfo(platform).name();
+    std::string platformName = PlatformInfo(&platform).name();
 
     OpenCLExecutionContext clExecCtx = OpenCLExecutionContext::create(platformName, platform, context, device);
     clReleaseDevice(device);
