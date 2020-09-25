@@ -1434,10 +1434,6 @@ if(WITH_VA OR HAVE_VA)
   status("    VA:"            HAVE_VA          THEN "YES" ELSE NO)
 endif()
 
-if(WITH_VA_INTEL OR HAVE_VA_INTEL)
-  status("    Intel VA-API/OpenCL:"  HAVE_VA_INTEL       THEN "YES (OpenCL: ${VA_INTEL_IOCL_ROOT})" ELSE NO)
-endif()
-
 if(WITH_TENGINE OR HAVE_TENGINE)
   status("    Tengine:"      HAVE_TENGINE     THEN "YES (${TENGINE_LIBRARIES})" ELSE NO)
 endif()
@@ -1550,6 +1546,7 @@ if(WITH_OPENCL OR HAVE_OPENCL)
     IF HAVE_CLAMDFFT THEN "AMDFFT"
     IF HAVE_CLAMDBLAS THEN "AMDBLAS"
     IF HAVE_OPENCL_D3D11_NV THEN "NVD3D11"
+    IF HAVE_VA_INTEL THEN "INTELVA"
     ELSE "no extra features")
   status("")
   status("  OpenCL:"     HAVE_OPENCL   THEN   "YES (${opencl_features})" ELSE "NO")
