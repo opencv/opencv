@@ -97,6 +97,7 @@ GAPI_TEST_FIXTURE(MaxTest, initMatsRandU, <>, 0)
 GAPI_TEST_FIXTURE(AbsDiffTest, initMatsRandU, <>, 0)
 GAPI_TEST_FIXTURE(AbsDiffCTest, initMatsRandU, <>, 0)
 GAPI_TEST_FIXTURE(SumTest, initMatrixRandU, FIXTURE_API(CompareScalars), 1, cmpF)
+GAPI_TEST_FIXTURE(CountNonZeroTest, initMatrixRandU, FIXTURE_API(CompareScalars), 1, cmpF)
 GAPI_TEST_FIXTURE(AddWeightedTest, initMatsRandU, FIXTURE_API(CompareMats), 1, cmpF)
 GAPI_TEST_FIXTURE(NormTest, initMatrixRandU, FIXTURE_API(CompareScalars,NormTypes), 2,
     cmpF, opType)

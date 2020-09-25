@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018-2019 Intel Corporation
+// Copyright (C) 2018-2020 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_CORE_TESTS_INL_HPP
@@ -613,6 +613,29 @@ TEST_P(SumTest, AccuracyTest)
         EXPECT_TRUE(cmpF(out_sum, out_sum_ocv));
     }
 }
+
+#pragma push_macro("countNonZero")
+#undef countNonZero
+TEST_P(CountNonZeroTest, AccuracyTest)
+{
+    int out_cnz_gapi, out_cnz_ocv;
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    auto out = cv::gapi::countNonZero(in);
+
+    cv::GComputation c(cv::GIn(in), cv::GOut(out));
+    c.apply(cv::gin(in_mat1), cv::gout(out_cnz_gapi), getCompileArgs());
+    // OpenCV code /////////////////////////////////////////////////////////////
+    {
+        out_cnz_ocv = cv::countNonZero(in_mat1);
+    }
+    // Comparison //////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(cmpF(out_cnz_gapi, out_cnz_ocv));
+    }
+}
+#pragma pop_macro("countNonZero")
 
 TEST_P(AddWeightedTest, AccuracyTest)
 {
