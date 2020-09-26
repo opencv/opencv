@@ -984,8 +984,8 @@ namespace cv {
                     }
 
                     std::string activation = getParam<std::string>(layer_params, "activation", "linear");
-                    if(activation == "leaky" || activation == "swish" || activation == "mish" || activation == "logistic")
-                        ++cv_layers_counter;  // For ReLU, Swish, Mish, Sigmoid
+                    if (activation != "linear")
+                        ++cv_layers_counter;  // For ReLU, Swish, Mish, Sigmoid, etc
 
                     if(!darknet_layers_counter)
                         tensor_shape.resize(1);
