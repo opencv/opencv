@@ -113,7 +113,7 @@ TEST_P(Test_Torch_layers, run_convolution)
 {
     // Output reference values are in range [23.4018, 72.0181]
     double l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.08 : default_l1;
-    double lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.42 : default_lInf;
+    double lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.43 : default_lInf;
     runTorchNet("net_conv", "", false, true, true, l1, lInf);
 }
 
@@ -165,7 +165,7 @@ TEST_P(Test_Torch_layers, run_concat)
 TEST_P(Test_Torch_layers, run_depth_concat)
 {
     runTorchNet("net_depth_concat", "", false, true, true, 0.0,
-                target == DNN_TARGET_OPENCL_FP16 ? 0.021 : 0.0);
+                target == DNN_TARGET_OPENCL_FP16 ? 0.032 : 0.0);
 }
 
 TEST_P(Test_Torch_layers, run_deconv)
