@@ -441,7 +441,7 @@ OCV_OPTION(WITH_TENGINE "Include Arm Inference Tengine support" OFF
   VERIFY HAVE_TENGINE)
 OCV_OPTION(WITH_FREETYPE "Include library for truetype font rendering" ON
   VISIBLE_IF TRUE
-  VERIFY HAVE_FREETYPE)  
+  VERIFY HAVE_FREETYPE)
 
 # OpenCV build components
 # ===================================================

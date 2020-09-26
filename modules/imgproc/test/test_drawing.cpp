@@ -84,7 +84,11 @@ void CV_DrawingTest::run( int )
         // image should match exactly
         float err = (float)cvtest::norm( testImg, valImg, NORM_L1 );
         float Eps =
-    #if defined __linux__ && defined __i386__
+    #if defined __linux__ && defined __SIZEOF_POINTER__ && __SIZEOF_POINTER__ < 8
+        // for some reason on 32-bit x86 and ARM platforms
+        // the rendered by freetype glyphs are slightly different.
+        // And yet on Win32 the results are similar to x64 and ARMv8.
+        // Need to test it more thoroughly
         2000;
     #else
         100;
