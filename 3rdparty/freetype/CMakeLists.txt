@@ -274,7 +274,7 @@ if (WIN32)
 endif ()
 
 ocv_warnings_disable(CMAKE_C_FLAGS -Wunused-parameter -Wstrict-prototypes) # clang
-ocv_warnings_disable(CMAKE_C_FLAGS /wd4018 /wd4244 /wd4267) # vs2005
+ocv_warnings_disable(CMAKE_C_FLAGS /wd4018 /wd4244 /wd4267 /Wd4312) # vs2005
 
 set(FREETYPE_INCLUDE_DIRS
 "${CMAKE_CURRENT_BINARY_DIR}/include/freetype/config"

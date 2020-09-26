@@ -2040,7 +2040,7 @@ public class ImgprocTest extends OpenCVTestCase {
         Imgproc.putText(img, text, origin, Imgproc.FONT_HERSHEY_SIMPLEX, 1.0, colorWhite, 1, Imgproc.LINE_AA);
 
         assertTrue(Core.countNonZero(img) > 0);
-        
+
         // check that border is not corrupted
         Imgproc.rectangle(img, new Point(10, 10),
                                new Point(labelSize.width + 10, labelSize.height + 10),

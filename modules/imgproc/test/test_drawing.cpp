@@ -83,7 +83,13 @@ void CV_DrawingTest::run( int )
     {
         // image should match exactly
         float err = (float)cvtest::norm( testImg, valImg, NORM_L1 );
-        float Eps = 100;
+        float Eps =
+    #if defined __linux__ && defined __i386__
+        2000;
+    #else
+        100;
+    #endif
+
         if( err > Eps)
         {
             ts->printf( ts->LOG, "NORM_L1 between testImg and valImg is equal %f (larger than %f)\n", err, Eps );
@@ -703,6 +709,7 @@ TEST(Drawing, ttf_text)
     text2 += " نصٌّ حكيمٌ لهُ سِرٌّ قاطِعٌ وَذُو شَأنٍ عَظيمٍ مكتوبٌ على ثوبٍ أخضرَ ومُغلفٌ بجلدٍ أزرق";
     int flags = PUT_TEXT_WRAP;
     const int weight[] = { 400, 300, 400, 400, 400 };
+    Scalar color(150, 80, 0);
 
     for( int i = 0; i < 4; i++ )
     {
@@ -716,13 +723,13 @@ TEST(Drawing, ttf_text)
         for( auto& face: faces )
         {
             int w = weight[j++];
-            org = putText(imgroi, text0, org, Scalar(150,80,0), face, sz, w, flags);
-            putText(imgroi, text1, org, Scalar(150,80,0), face, sz, 800, flags);
-            Rect brect = getTextSize(imgroi, text1, org, face, sz, w, flags);
+            org = putText(imgroi, text0, org, color, face, sz, w, flags);
+            putText(imgroi, text1, org, color, face, sz, 800, flags);
+            Rect brect = getTextSize(imgroi.size(), text1, org, face, sz, w, flags);
             org.x = x0;
             org.y = brect.y + brect.height*2;
-            putText(imgroi, text2, org, Scalar(150,80,0), face, sz, w, flags);
-            brect = getTextSize(imgroi, text2, org, face, sz, w, flags);
+            putText(imgroi, text2, org, color, face, sz, w, flags);
+            brect = getTextSize(imgroi.size(), text2, org, face, sz, w, flags);
             org.x = x0;
             org.y = cvRound(brect.y + brect.height + sz + 15);
         }

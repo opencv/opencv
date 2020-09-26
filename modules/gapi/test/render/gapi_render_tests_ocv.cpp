@@ -9,10 +9,6 @@
 
 #include "api/render_priv.hpp"
 
-#ifdef HAVE_FREETYPE
-#include <codecvt>
-#endif // HAVE_FREETYPE
-
 namespace opencv_test
 {
 
@@ -97,17 +93,11 @@ TEST_P(RenderNV12OCVTestFTexts, AccuracyTest)
 
 }
 
-static std::wstring to_wstring(const char* bytes)
-{
-    std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
-    return converter.from_bytes(bytes);
-}
-
 TEST(RenderFText, FontsNotPassedToCompileArgs)
 {
     cv::Mat in_mat(640, 480, CV_8UC3, cv::Scalar::all(0));
 
-    std::wstring text = to_wstring("\xe4\xbd\xa0\xe5\xa5\xbd");
+    std::wstring text = L"\x4f60\x597d";
     cv::Point org(100, 100);
     int fh = 60;
     cv::Scalar color(200, 100, 25);
@@ -477,16 +467,16 @@ INSTANTIATE_TEST_CASE_P(RenderNV12OCVTestTextsImpl, RenderNV12OCVTestTexts,
 
 INSTANTIATE_TEST_CASE_P(RenderBGROCVTestFTextsImpl, RenderBGROCVTestFTexts,
                         Combine(Values(cv::Size(1280, 720)),
-                            Values(to_wstring("\xe4\xbd\xa0\xe5\xa5\xbd\xef\xbc\x8c\xe4\xb8\x96\xe7\x95\x8c"),
-                                   to_wstring("\xe3\x80\xa4\xe3\x80\xa5\xe3\x80\xa6\xe3\x80\xa7\xe3\x80\xa8\xe3\x80\x85\xe3\x80\x86")),
+                            Values(L"\x4f60\x597d\xff0c\x4e16\x754c",
+                                   L"\x3024\x3025\x3026\x3027\x3028\x3005\x3006"),
                             Values(cv::Point(200, 200)),
                             Values(64),
                             Values(cv::Scalar(0, 255, 0))));
 
 INSTANTIATE_TEST_CASE_P(RenderNV12OCVTestFTextsImpl, RenderNV12OCVTestFTexts,
                         Combine(Values(cv::Size(1280, 720)),
-                            Values(to_wstring("\xe4\xbd\xa0\xe5\xa5\xbd\xef\xbc\x8c\xe4\xb8\x96\xe7\x95\x8c"),
-                                   to_wstring("\xe3\x80\xa4\xe3\x80\xa5\xe3\x80\xa6\xe3\x80\xa7\xe3\x80\xa8\xe3\x80\x85\xe3\x80\x86")),
+                            Values(L"\x4f60\x597d\xff0c\x4e16\x754c",
+                                   L"\x3024\x3025\x3026\x3027\x3028\x3005\x3006"),
                             Values(cv::Point(200, 200)),
                             Values(64),
                             Values(cv::Scalar(0, 255, 0))));

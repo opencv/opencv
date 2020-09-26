@@ -36,7 +36,7 @@ static BuiltinFontData builtinFontData[BUILTIN_FONTS_NUM+1] =
 {
     {OcvBuiltinFontSans, sizeof(OcvBuiltinFontSans), "sans", 1.0},
     {OcvBuiltinFontSerif, sizeof(OcvBuiltinFontSerif), "serif", 1.0},
-    {OcvBuiltinFontItalic, sizeof(OcvBuiltinFontItalic), "italic", 1.3},
+    {OcvBuiltinFontItalic, sizeof(OcvBuiltinFontItalic), "italic", 1.25},
     {OcvBuiltinFontUni, sizeof(OcvBuiltinFontUni), "uni", 1.0},
     {0, 0, 0, 0.0}
 };
@@ -103,7 +103,8 @@ static bool inflate(const void* src, size_t srclen, std::vector<uchar>& dst)
 struct FontFace::Impl {
     Impl()
     {
-        currsize = currthickness = -1.;
+        currsize = -1.0;
+        currthickness = -1;
         scalefactor = 1.0;
         currunits = -1;
         ftface = 0;
@@ -351,6 +352,8 @@ static void drawCharacter(
                 continue;
             uchar* imgptr = imgptr0 + x*nch;
             uchar alpha = bitmap_buf[dy*bitmap_pitch + dx];
+            if(alpha == 0)
+                continue;
             if( nch == 3 )
             {
                 uchar b1 = (uchar)((imgptr[0]*(255 - alpha) + b*alpha + 127)/255);
@@ -413,7 +416,7 @@ static bool isRightToLeft(int c)
     ((c>=0x1EE00)&&(c<=0x1EEBB)));
 }
 
-static Point putText_( Mat& img, const String& str, Point org,
+static Point putText_( Mat& img, Size imgsize, const String& str, Point org,
                        const uchar* color, FontFace& fontface, double size,
                        int thickness, int flags, bool render,
                        Rect* brect )
@@ -560,7 +563,7 @@ static Point putText_( Mat& img, const String& str, Point org,
             int dx_delta = 1 << (dx_shift - 1);
             int dx = (int)((slot->metrics.horiAdvance*dx_scale + dx_delta) >> dx_shift);
             int new_pen_x = pen_x + dx;
-            if( wrap && img.cols > 0 && (new_pen_x > img.cols) )
+            if( wrap && imgsize.width > 0 && (new_pen_x > imgsize.width) )
             {
                 pen_y += (int)((slot->metrics.vertAdvance + 32) >> 6);
                 max_width = max(max_width, pen_x - org.x);
@@ -612,18 +615,18 @@ Point putText(InputOutputArray img_, const String& str,
     CV_Assert(img.depth() == CV_8U);
     CV_Assert(nch == 1 || nch == 3 || nch == 4);
 
-    return putText_(img, str, org, color, fontface, size,
+    return putText_(img, img.size(), str, org, color, fontface, size,
                     thickness, flags, true, 0);
 }
 
 
-Rect getTextSize(InputArray img_, const String& str, Point org,
+Rect getTextSize(Size imgsize, const String& str, Point org,
                  FontFace& fontface, double size,
                  int thickness, int flags)
 {
-    Mat img = img_.getMat();
+    Mat img;
     Rect brect;
-    putText_(img, str, org, 0, fontface, size,
+    putText_(img, imgsize, str, org, 0, fontface, size,
              thickness, flags, false, &brect);
     return brect;
 }
@@ -662,7 +665,7 @@ Point putText(InputOutputArray, const String&, Point org, Scalar,
     return org;
 }
 
-Rect getTextSize(InputArray, const String&, Point, FontFace&, double, int, int)
+Rect getTextSize(Size, const String&, Point, FontFace&, double, int, int)
 {
     CV_Error(Error::StsNotImplemented, "putText needs freetype2; recompile OpenCV with freetype2 enabled.");
     return Rect();
@@ -751,7 +754,7 @@ Size getTextSize(const String& text, int fontFace, double fontScale, int thickne
     hersheyToTruetype(fontFace, fontScale, thickness, ttname, ttsize, ttweight);
 
     FontFace fface(ttname);
-    Rect r = getTextSize(noArray(), text, Point(), fface, ttsize, ttweight, 0);
+    Rect r = getTextSize(Size(), text, Point(), fface, ttsize, ttweight, 0);
 
     int baseline = r.y + r.height;
     if(_base_line)

@@ -1737,7 +1737,7 @@ class ImgprocTest: OpenCVTestCase {
 
         XCTAssert(Core.countNonZero(src: img) > 0)
         // check that border is not corrupted
-        
+
         Imgproc.rectangle(img: img, pt1: Point(x: 10, y: 10), pt2: Point(x: labelSize.width + 10, y: labelSize.height + 10), color: colorBlack, thickness: Core.FILLED)
         XCTAssertEqual(0, Core.countNonZero(src: img))
     }

@@ -4799,11 +4799,10 @@ CV_EXPORTS_W Point putText( InputOutputArray img, const String& text,
 The function cv::getTextSize calculates and returns the size of a box that contains the specified text.
 That is, the following code renders some text, the tight box surrounding it, and the baseline: :
 
-@param img The target image, can be noArray()
+@param imgsize Size of the target image, can be empty
 @param text Text string to be drawn.
 @param org Bottom-left corner of the first character of the printed text
            (see PUT_TEXT_ALIGN_... though)
-@param color Text color.
 @param fface The font to use for the text
 @param size Font size in pixels (by default) or pts
 @param weight Font weight, 100..1000,
@@ -4813,7 +4812,7 @@ That is, the following code renders some text, the tight box surrounding it, and
         whatever "default" weight the used font provides.
 @param flags Various flags, see PUT_TEXT_...
 */
-CV_EXPORTS_W Rect getTextSize( InputArray img, const String& text, Point org,
+CV_EXPORTS_W Rect getTextSize( Size imgsize, const String& text, Point org,
                                FontFace& fface, double size,
                                int weight=0, int flags=0 );
 
