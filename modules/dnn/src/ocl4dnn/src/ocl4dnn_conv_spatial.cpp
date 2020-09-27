@@ -607,6 +607,7 @@ void OCL4DNNConvSpatial<Dtype>::calculateBenchmark(const UMat &bottom, UMat &ver
 {
     options_.str(""); options_.clear(); // clear contents and state flags
     createBasicKernel(1, 1, 1);
+    CV_Assert(!kernelQueue.empty());  // basic kernel must be available
     kernel_index_ = kernelQueue.size() - 1;
     convolve(bottom, verifyTop, weight, bias, numImages, kernelQueue[kernel_index_]);
     CV_Assert(phash.find(kernelQueue[kernel_index_]->kernelName) != phash.end());
@@ -1713,6 +1714,7 @@ void OCL4DNNConvSpatial<float>::useFirstAvailable(const UMat &bottom,
                                     tunerItems[i]->blockHeight,
                                     tunerItems[i]->blockDepth))
         {
+            CV_Assert(!kernelQueue.empty());  // basic kernel must be available
             int kernelIdx = kernelQueue.size() - 1;
             kernelConfig* config = kernelQueue[kernelIdx].get();
             bool failed = false;
@@ -1883,6 +1885,7 @@ void OCL4DNNConvSpatial<float>::setupConvolution(const UMat &bottom,
         CV_LOG_INFO(NULL, "fallback to basic kernel");
         options_.str(""); options_.clear(); // clear contents and state flags
         createBasicKernel(1, 1, 1);
+        CV_Assert(!kernelQueue.empty());  // basic kernel must be available
         kernel_index_ = kernelQueue.size() - 1;
     }
     this->bestKernelConfig = kernelQueue[kernel_index_];
