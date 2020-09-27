@@ -27,6 +27,7 @@ xctest_add_bundle(OpenCVTestTests OpenCVTest ${test_sources} test/resources ${FR
 set_target_properties(OpenCVTestTests PROPERTIES
     XCODE_ATTRIBUTE_FRAMEWORK_SEARCH_PATHS "${FRAMEWORK_DIR}"
     XCODE_ATTRIBUTE_OTHER_SWIFT_FLAGS "-Xcc ${SUPPRESS_WARNINGS_FLAGS}"
+    XCODE_ATTRIBUTE_LD_RUNPATH_SEARCH_PATHS "${FRAMEWORK_DIR}"
     )
 
 # link necessary Frameworks
