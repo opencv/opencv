@@ -41,6 +41,7 @@
 //
 //M*/
 
+#include <cfloat>
 #include "precomp.hpp"
 
 namespace cv
@@ -196,7 +197,7 @@ Rect RotatedRect::boundingRect() const
            cvCeil(std::max(std::max(std::max(pt[0].y, pt[1].y), pt[2].y), pt[3].y)));
     
     // Modification of width and height is unnecessary if angle is 0
-    if ( angle != 0.0f )
+    if ( abs(angle) >= FLT_EPSILON )
     {
     r.width -= r.x - 1;
     r.height -= r.y - 1;
