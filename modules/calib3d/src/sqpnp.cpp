@@ -153,17 +153,16 @@ void PoseSolver::computeOmega(InputArray objectPoints, InputArray imagePoints)
 
     for (int i = 0; i < n; i++)
     {
-        cv::Point2d img_pt = _imagePoints.at<cv::Point2d>(i);
-        cv::Point3d obj_pt = _objectPoints.at<cv::Point3d>(i);
+        const cv::Point2d& img_pt = _imagePoints.at<cv::Point2d>(i);
+        const cv::Point3d& obj_pt = _objectPoints.at<cv::Point3d>(i);
 
         sum_img += img_pt;
         sum_obj += obj_pt;
 
-        double sq_norm = cv::norm(cv::Mat(img_pt), cv::NORM_L2SQR);
+        const double& x = img_pt.x, & y = img_pt.y;
+        const double& X = obj_pt.x, & Y = obj_pt.y, & Z = obj_pt.z;
+        double sq_norm = x * x + y * y;
         sq_norm_sum += sq_norm;
-
-        double x = img_pt.x, y = img_pt.y;
-        double X = obj_pt.x, Y = obj_pt.y, Z = obj_pt.z;
 
         double X2 = X * X,
             XY = X * Y,
@@ -609,15 +608,94 @@ void PoseSolver::computeRowAndNullspace(const cv::Matx<double, 9, 1>& r,
 
 }
 
+// faster nearest rotation computation based on FOAM (see: http://users.ics.forth.gr/~lourakis/publ/2018_iros.pdf )
+/* Solve the nearest orthogonal approximation problem
+    * i.e., given B, find R minimizing ||R-B||_F
+    *
+    * The computation borrows from Markley's FOAM algorithm
+    * "Attitude Determination Using Vector Observations: A Fast Optimal Matrix Algorithm", J. Astronaut. Sci.
+    *
+    * See also M. Lourakis: "An Efficient Solution to Absolute Orientation", ICPR 2016
+    *
+    *  Copyright (C) 2019 Manolis Lourakis (lourakis **at** ics forth gr)
+    *  Institute of Computer Science, Foundation for Research & Technology - Hellas
+    *  Heraklion, Crete, Greece.
+    */
 void PoseSolver::nearestRotationMatrix(const cv::Matx<double, 9, 1>& e,
     cv::Matx<double, 9, 1>& r)
 {
-    const cv::Matx<double, 3, 3> E = e.reshape<3, 3>();
-    cv::SVD rot_svd(E, cv::SVD::FULL_UV);
-    double det_uv = det3x3(rot_svd.u.reshape(1, 9)) * det3x3(rot_svd.vt.reshape(1, 9));
+    register int i;
+    double l, lprev, detB, Bsq, adjBsq, adjB[9];
 
-    r = cv::Mat(rot_svd.u * cv::Matx<double, 3, 3>::diag(cv::Matx31d(1, 1, det_uv))
-        * rot_svd.vt.t()).reshape(1, 9);
+    // B's adjoint
+    adjB[0] = e(4) * e(8) - e(5) * e(7); adjB[1] = e(2) * e(7) - e(1) * e(8); adjB[2] = e(1) * e(5) - e(2) * e(4);
+    adjB[3] = e(5) * e(6) - e(3) * e(8); adjB[4] = e(0) * e(8) - e(2) * e(6); adjB[5] = e(2) * e(3) - e(0) * e(5);
+    adjB[6] = e(3) * e(7) - e(4) * e(6); adjB[7] = e(1) * e(6) - e(0) * e(7); adjB[8] = e(0) * e(4) - e(1) * e(3);
+
+    // det(B), ||B||^2, ||adj(B)||^2
+    detB = e(0) * e(4) * e(8) - e(0) * e(5) * e(7) - e(1) * e(3) * e(8) + e(2) * e(3) * e(7) + e(1) * e(6) * e(5) - e(2) * e(6) * e(4);
+    Bsq = e(0) * e(0) + e(1) * e(1) + e(2) * e(2) + e(3) * e(3) + e(4) * e(4) + e(5) * e(5) + e(6) * e(6) + e(7) * e(7) + e(8) * e(8);
+    adjBsq = adjB[0] * adjB[0] + adjB[1] * adjB[1] + adjB[2] * adjB[2] + adjB[3] * adjB[3] + adjB[4] * adjB[4] + adjB[5] * adjB[5] + adjB[6] * adjB[6] + adjB[7] * adjB[7] + adjB[8] * adjB[8];
+
+    // compute l_max with Newton-Raphson from FOAM's characteristic polynomial, i.e. eq.(23) - (26)
+    for (i = 200, l = 2.0, lprev = 0.0; fabs(l - lprev) > 1E-12 * fabs(lprev) && i > 0; --i) {
+        double tmp, p, pp;
+
+        tmp = (l * l - Bsq);
+        p = (tmp * tmp - 8.0 * l * detB - 4.0 * adjBsq);
+        pp = 8.0 * (0.5 * tmp * l - detB);
+
+        lprev = l;
+        l -= p / pp;
+    }
+
+    // the rotation matrix equals ((l^2 + Bsq)*B + 2*l*adj(B') - 2*B*B'*B) / (l*(l*l-Bsq) - 2*det(B)), i.e. eq.(14) using (18), (19)
+    {
+        // compute (l^2 + Bsq)*B
+        double tmp[9], BBt[9], denom;
+        const double a = l * l + Bsq;
+
+        // BBt=B*B'
+        BBt[0] = e(0) * e(0) + e(1) * e(1) + e(2) * e(2);
+        BBt[1] = e(0) * e(3) + e(1) * e(4) + e(2) * e(5);
+        BBt[2] = e(0) * e(6) + e(1) * e(7) + e(2) * e(8);
+
+        BBt[3] = BBt[1];
+        BBt[4] = e(3) * e(3) + e(4) * e(4) + e(5) * e(5);
+        BBt[5] = e(3) * e(6) + e(4) * e(7) + e(5) * e(8);
+
+        BBt[6] = BBt[2];
+        BBt[7] = BBt[5];
+        BBt[8] = e(6) * e(6) + e(7) * e(7) + e(8) * e(8);
+
+        // tmp=BBt*B
+        tmp[0] = BBt[0] * e(0) + BBt[1] * e(3) + BBt[2] * e(6);
+        tmp[1] = BBt[0] * e(1) + BBt[1] * e(4) + BBt[2] * e(7);
+        tmp[2] = BBt[0] * e(2) + BBt[1] * e(5) + BBt[2] * e(8);
+
+        tmp[3] = BBt[3] * e(0) + BBt[4] * e(3) + BBt[5] * e(6);
+        tmp[4] = BBt[3] * e(1) + BBt[4] * e(4) + BBt[5] * e(7);
+        tmp[5] = BBt[3] * e(2) + BBt[4] * e(5) + BBt[5] * e(8);
+
+        tmp[6] = BBt[6] * e(0) + BBt[7] * e(3) + BBt[8] * e(6);
+        tmp[7] = BBt[6] * e(1) + BBt[7] * e(4) + BBt[8] * e(7);
+        tmp[8] = BBt[6] * e(2) + BBt[7] * e(5) + BBt[8] * e(8);
+
+        // compute R as (a*B + 2*(l*adj(B)' - tmp))*denom; note that adj(B')=adj(B)'
+        denom = l * (l * l - Bsq) - 2.0 * detB;
+        denom = 1.0 / denom;
+        r(0) = (a * e(0) + 2.0 * (l * adjB[0] - tmp[0])) * denom;
+        r(1) = (a * e(1) + 2.0 * (l * adjB[3] - tmp[1])) * denom;
+        r(2) = (a * e(2) + 2.0 * (l * adjB[6] - tmp[2])) * denom;
+
+        r(3) = (a * e(3) + 2.0 * (l * adjB[1] - tmp[3])) * denom;
+        r(4) = (a * e(4) + 2.0 * (l * adjB[4] - tmp[4])) * denom;
+        r(5) = (a * e(5) + 2.0 * (l * adjB[7] - tmp[5])) * denom;
+
+        r(6) = (a * e(6) + 2.0 * (l * adjB[2] - tmp[6])) * denom;
+        r(7) = (a * e(7) + 2.0 * (l * adjB[5] - tmp[7])) * denom;
+        r(8) = (a * e(8) + 2.0 * (l * adjB[8] - tmp[8])) * denom;
+    }
 }
 
 double PoseSolver::det3x3(const cv::Matx<double, 9, 1>& e)
