@@ -155,7 +155,8 @@ INSTANTIATE_TEST_CASE_P(CompareTestCPU, CmpTest,
                                 Values(CV_8U),
                                 Values(CORE_CPU),
                                 Values(CMP_EQ, CMP_GE, CMP_NE, CMP_GT, CMP_LT, CMP_LE),
-                                testing::Bool()));
+                                testing::Bool(),
+                                Values(AbsExact().to_compare_obj())));
 
 INSTANTIATE_TEST_CASE_P(BitwiseTestCPU, BitwiseTest,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1),
@@ -164,7 +165,8 @@ INSTANTIATE_TEST_CASE_P(BitwiseTestCPU, BitwiseTest,
                                        cv::Size(128, 128)),
                                 Values(-1),
                                 Values(CORE_CPU),
-                                Values(AND, OR, XOR)));
+                                Values(AND, OR, XOR),
+                                testing::Bool()));
 
 INSTANTIATE_TEST_CASE_P(BitwiseNotTestCPU, NotTest,
                         Combine(Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1),
@@ -496,4 +498,43 @@ INSTANTIATE_TEST_CASE_P(ReInitOutTestCPU, ReInitOutTest,
                                 Values(cv::Size(640, 400),
                                        cv::Size(10, 480))));
 
+INSTANTIATE_TEST_CASE_P(ParseTestCPU, ParseSSDBLTest,
+                        Combine(Values(CV_8UC1, CV_8UC3, CV_32FC1),
+                                Values(cv::Size(1920, 1080)),
+                                Values(-1),
+                                Values(CORE_CPU),
+                                Values(0.3f, 0.5f, 0.7f),
+                                Values(-1, 0, 1)));
+
+INSTANTIATE_TEST_CASE_P(ParseTestCPU, ParseSSDTest,
+                        Combine(Values(CV_8UC1, CV_8UC3, CV_32FC1),
+                                Values(cv::Size(1920, 1080)),
+                                Values(-1),
+                                Values(CORE_CPU),
+                                Values(0.3f, 0.5f, 0.7f),
+                                testing::Bool(),
+                                testing::Bool()));
+
+INSTANTIATE_TEST_CASE_P(ParseTestCPU, ParseYoloTest,
+                        Combine(Values(CV_8UC1, CV_8UC3, CV_32FC1),
+                                Values(cv::Size(1920, 1080)),
+                                Values(-1),
+                                Values(CORE_CPU),
+                                Values(0.3f, 0.5f, 0.7f),
+                                Values(0.5f, 1.0f),
+                                Values(80, 7)));
+
+INSTANTIATE_TEST_CASE_P(SizeTestCPU, SizeTest,
+                        Combine(Values(CV_8UC1, CV_8UC3, CV_32FC1),
+                                Values(cv::Size(32, 32),
+                                       cv::Size(640, 320)),
+                                Values(-1),
+                                Values(CORE_CPU)));
+
+INSTANTIATE_TEST_CASE_P(SizeRTestCPU, SizeRTest,
+                        Combine(Values(CV_8UC1, CV_8UC3, CV_32FC1),
+                                Values(cv::Size(32, 32),
+                                       cv::Size(640, 320)),
+                                Values(-1),
+                                Values(CORE_CPU)));
 }

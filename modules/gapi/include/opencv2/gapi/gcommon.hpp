@@ -18,6 +18,7 @@
 #include <opencv2/gapi/util/optional.hpp>
 #include <opencv2/gapi/own/exports.hpp>
 #include <opencv2/gapi/own/assert.hpp>
+#include <opencv2/gapi/render/render_types.hpp>
 
 namespace cv {
 
@@ -48,6 +49,7 @@ namespace detail
         CV_RECT,       // cv::Rect user G-API data
         CV_SCALAR,     // cv::Scalar user G-API data
         CV_MAT,        // cv::Mat user G-API data
+        CV_PRIM,       // cv::gapi::wip::draw::Prim user G-API data
     };
 
     // Type traits helper which simplifies the extraction of kind from type
@@ -62,10 +64,12 @@ namespace detail
     template<> struct GOpaqueTraits<cv::Mat>     { static constexpr const OpaqueKind kind = OpaqueKind::CV_MAT; };
     template<> struct GOpaqueTraits<cv::Rect>    { static constexpr const OpaqueKind kind = OpaqueKind::CV_RECT; };
     template<> struct GOpaqueTraits<cv::GMat>    { static constexpr const OpaqueKind kind = OpaqueKind::CV_MAT; };
+    template<> struct GOpaqueTraits<cv::gapi::wip::draw::Prim>
+                                                 { static constexpr const OpaqueKind kind = OpaqueKind::CV_PRIM; };
     // GArray is not supporting bool type for now due to difference in std::vector<bool> implementation
-    using GOpaqueTraitsArrayTypes = std::tuple<int, double, cv::Size, cv::Scalar, cv::Point, cv::Mat, cv::Rect>;
+    using GOpaqueTraitsArrayTypes = std::tuple<int, double, cv::Size, cv::Scalar, cv::Point, cv::Mat, cv::Rect, cv::gapi::wip::draw::Prim>;
     // GOpaque is not supporting cv::Mat and cv::Scalar since there are GScalar and GMat types
-    using GOpaqueTraitsOpaqueTypes = std::tuple<bool, int, double, cv::Size, cv::Point, cv::Rect>;
+    using GOpaqueTraitsOpaqueTypes = std::tuple<bool, int, double, cv::Size, cv::Point, cv::Rect, cv::gapi::wip::draw::Prim>;
 } // namespace detail
 
 // This definition is here because it is reused by both public(?) and internal
@@ -80,6 +84,7 @@ enum class GShape: int
     GSCALAR,
     GARRAY,
     GOPAQUE,
+    GFRAME,
 };
 
 struct GCompileArg;

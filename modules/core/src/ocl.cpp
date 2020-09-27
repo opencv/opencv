@@ -3102,7 +3102,7 @@ void initializeContextFromHandle(Context& ctx, void* _platform, void* _context, 
     cl_context context = (cl_context)_context;
     cl_device_id deviceID = (cl_device_id)_device;
 
-    std::string platformName = PlatformInfo(platformID).name();
+    std::string platformName = PlatformInfo(&platformID).name();
 
     auto clExecCtx = OpenCLExecutionContext::create(platformName, platformID, context, deviceID);
     CV_Assert(!clExecCtx.empty());
@@ -3311,7 +3311,7 @@ KernelArg KernelArg::Constant(const Mat& m)
 struct Kernel::Impl
 {
     Impl(const char* kname, const Program& prog) :
-        refcount(1), handle(NULL), isInProgress(false), nu(0)
+        refcount(1), handle(NULL), isInProgress(false), isAsyncRun(false), nu(0)
     {
         cl_program ph = (cl_program)prog.ptr();
         cl_int retval = 0;
@@ -3388,6 +3388,7 @@ struct Kernel::Impl
     enum { MAX_ARRS = 16 };
     UMatData* u[MAX_ARRS];
     bool isInProgress;
+    bool isAsyncRun;  // true if kernel was scheduled in async mode
     int nu;
     std::list<Image2D> images;
     bool haveTempDstUMats;
@@ -3667,13 +3668,45 @@ bool Kernel::run(int dims, size_t _globalsize[], size_t _localsize[],
 }
 
 
+static bool isRaiseErrorOnReuseAsyncKernel()
+{
+    static bool initialized = false;
+    static bool value = false;
+    if (!initialized)
+    {
+        value = cv::utils::getConfigurationParameterBool("OPENCV_OPENCL_RAISE_ERROR_REUSE_ASYNC_KERNEL", false);
+        initialized = true;
+    }
+    return value;
+}
+
 bool Kernel::Impl::run(int dims, size_t globalsize[], size_t localsize[],
         bool sync, int64* timeNS, const Queue& q)
 {
     CV_INSTRUMENT_REGION_OPENCL_RUN(name.c_str());
 
-    if (!handle || isInProgress)
+    if (!handle)
+    {
+        CV_LOG_ERROR(NULL, "OpenCL kernel has zero handle: " << name);
         return false;
+    }
+
+    if (isAsyncRun)
+    {
+        CV_LOG_ERROR(NULL, "OpenCL kernel can't be reused in async mode: " << name);
+        if (isRaiseErrorOnReuseAsyncKernel())
+            CV_Assert(0);
+        return false;  // OpenCV 5.0: raise error
+    }
+    isAsyncRun = !sync;
+
+    if (isInProgress)
+    {
+        CV_LOG_ERROR(NULL, "Previous OpenCL kernel launch is not finished: " << name);
+        if (isRaiseErrorOnReuseAsyncKernel())
+            CV_Assert(0);
+        return false;  // OpenCV 5.0: raise error
+    }
 
     cl_command_queue qq = getQueue(q);
     if (haveTempDstUMats)

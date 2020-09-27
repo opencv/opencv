@@ -44,6 +44,12 @@ static void initDLDTDataPath()
 #endif // WINRT
 }
 
+#if INF_ENGINE_RELEASE >= 2020010000
+static const std::string SUBDIR = "intel/age-gender-recognition-retail-0013/FP32/";
+#else
+static const std::string SUBDIR = "Retail/object_attributes/age_gender/dldt/";
+#endif
+
 // FIXME: taken from the DNN module
 void normAssert(cv::InputArray ref, cv::InputArray test,
                 const char *comment /*= ""*/,
@@ -54,46 +60,6 @@ void normAssert(cv::InputArray ref, cv::InputArray test,
 
     double normInf = cvtest::norm(ref, test, cv::NORM_INF);
     EXPECT_LE(normInf, lInf) << comment;
-}
-
-std::vector<std::string> modelPathByName(const std::string &model_name) {
-    // Handle OMZ model layout changes among OpenVINO versions here
-    static const std::unordered_multimap<std::string, std::string> map = {
-#if INF_ENGINE_RELEASE >= 2019040000  // >= 2019.R4
-        {"age-gender-recognition-retail-0013",
-         "2020.3.0/intel/age-gender-recognition-retail-0013/FP32"},
-#endif // INF_ENGINE_RELEASE >= 2019040000
-        {"age-gender-recognition-retail-0013",
-         "Retail/object_attributes/age_gender/dldt"},
-    };
-    const auto range = map.equal_range(model_name);
-    std::vector<std::string> result;
-    for (auto it = range.first; it != range.second; ++it) {
-        result.emplace_back(it->second);
-    }
-    return result;
-}
-
-std::tuple<std::string, std::string> findModel(const std::string &model_name) {
-    const auto candidates = modelPathByName(model_name);
-    CV_Assert(!candidates.empty() && "No model path candidates found at all");
-
-    for (auto &&path : candidates) {
-        std::string model_xml, model_bin;
-        try {
-            model_xml = findDataFile(path + "/" + model_name + ".xml", false);
-            model_bin = findDataFile(path + "/" + model_name + ".bin", false);
-            // Return the first file which actually works
-            return std::make_tuple(model_xml, model_bin);
-        } catch (SkipTestException&) {
-            // This is quite ugly but it is a way for OpenCV to let us know
-            // this file wasn't found.
-            continue;
-        }
-    }
-
-    // Default behavior if reached here.
-    throw SkipTestException("Files for " + model_name + " were not found");
 }
 
 namespace IE = InferenceEngine;
@@ -112,7 +78,8 @@ TEST(TestAgeGenderIE, InferBasicTensor)
     initDLDTDataPath();
 
     cv::gapi::ie::detail::ParamDesc params;
-    std::tie(params.model_path, params.weights_path) = findModel("age-gender-recognition-retail-0013");
+    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
+    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
     params.device_id = "CPU";
 
     // Load IE network, initialize input data using that.
@@ -162,7 +129,8 @@ TEST(TestAgeGenderIE, InferBasicImage)
     initDLDTDataPath();
 
     cv::gapi::ie::detail::ParamDesc params;
-    std::tie(params.model_path, params.weights_path) = findModel("age-gender-recognition-retail-0013");
+    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
+    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
     params.device_id = "CPU";
 
     // FIXME: Ideally it should be an image from disk
@@ -221,9 +189,10 @@ struct ROIList: public ::testing::Test {
     using AGInfo = std::tuple<cv::GMat, cv::GMat>;
     G_API_NET(AgeGender, <AGInfo(cv::GMat)>, "test-age-gender");
 
-    ROIList() {
+    void SetUp() {
         initDLDTDataPath();
-        std::tie(params.model_path, params.weights_path) = findModel("age-gender-recognition-retail-0013");
+        params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
+        params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
         params.device_id = "CPU";
 
         // FIXME: it must be cv::imread(findDataFile("../dnn/grace_hopper_227.png", false));
@@ -316,7 +285,8 @@ TEST(DISABLED_TestTwoIENNPipeline, InferBasicImage)
     initDLDTDataPath();
 
     cv::gapi::ie::detail::ParamDesc AGparams;
-    std::tie(AGparams.model_path, AGparams.weights_path) = findModel("age-gender-recognition-retail-0013");
+    AGparams.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml", false);
+    AGparams.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
     AGparams.device_id = "MYRIAD";
 
     // FIXME: Ideally it should be an image from disk
