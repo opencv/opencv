@@ -669,11 +669,7 @@ static bool detectMyriadX_(std::string device)
         {
             const std::string name = ie.GetMetric(*i, METRIC_KEY(FULL_DEVICE_NAME)).as<std::string>();
             CV_LOG_INFO(NULL, "Myriad device: " << name);
-
-            if (device == "MYRIAD")
-                return name.find("MyriadX") != std::string::npos  || name.find("Myriad X") != std::string::npos;
-            else if (device == "HDDL")
-                return name.find("HDDL") != std::string::npos;
+            return name.find("MyriadX") != std::string::npos || name.find("Myriad X") != std::string::npos || name.find("HDDL") != std::string::npos;
         }
     }
     return false;
