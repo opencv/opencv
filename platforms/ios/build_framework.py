@@ -150,7 +150,6 @@ class Builder:
         ] if self.debug_info else [])
 
         if len(self.exclude) > 0:
-            args += ["-DBUILD_opencv_world=OFF"] if not self.dynamic else []
             args += ["-DBUILD_opencv_%s=OFF" % m for m in self.exclude]
 
         if len(self.disable) > 0:
