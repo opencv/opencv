@@ -2,6 +2,38 @@
 
 #include "backends/common/serialization.hpp"
 
+namespace {
+    struct MyCustomType {
+        int val;
+        std::string name;
+        cv::Size sz;
+        bool operator==(const MyCustomType& other) const {
+            return val == other.val && name == other.name && sz == other.sz;
+        }
+    };
+}
+
+// FIXME: namespace conflicts
+namespace cv {
+namespace gimpl {
+namespace s11n {
+namespace detail {
+    template<> struct S11N<MyCustomType> {
+        static void serialize(I::OStream &os, const MyCustomType &p) {
+            os << p.val << p.name << p.sz;
+        }
+        static MyCustomType deserialize(I::IStream &is) {
+            MyCustomType p;
+            is >> p.val >> p.name >> p.sz;
+            return p;
+        }
+        static bool isSupported() { return true; }
+    };
+}
+}
+}
+}
+
 namespace opencv_test {
 
 struct S11N_Basic: public ::testing::Test {
@@ -469,5 +501,14 @@ TEST_F(S11N_Basic, Test_Gin_GArray) {
     EXPECT_TRUE(verifyArrayKind<cv::detail::OpaqueKind::CV_POINT>(p));
     EXPECT_TRUE(verifyArrayKind<cv::detail::OpaqueKind::CV_MAT>(mat));
     EXPECT_TRUE(verifyArrayKind<cv::detail::OpaqueKind::CV_SCALAR>(sc));
+}
+
+TEST_F(S11N_Basic, Test_Custom_Type) {
+    MyCustomType var{1324, "Hello", {1920, 1080}};
+    cv::gimpl::s11n::ByteMemoryOutStream os;
+    cv::gimpl::s11n::detail::S11N<MyCustomType>::serialize(os, var);
+    cv::gimpl::s11n::ByteMemoryInStream is(os.data());
+    MyCustomType new_var = cv::gimpl::s11n::detail::S11N<MyCustomType>::deserialize(is);
+    EXPECT_EQ(var, new_var);
 }
 } // namespace opencv_test

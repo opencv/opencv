@@ -69,6 +69,7 @@ namespace I {
         virtual OStream& operator<< (unsigned short) = 0;
         virtual OStream& operator<< (int) = 0;
         virtual OStream& operator<< (uint32_t) = 0;
+        virtual OStream& operator<< (uint64_t) = 0;
         virtual OStream& operator<< (float) = 0;
         virtual OStream& operator<< (double) = 0;
         virtual OStream& operator<< (const std::string&) = 0;
@@ -78,6 +79,7 @@ namespace I {
         virtual ~IStream() = default;
 
         virtual IStream& operator>> (bool &) = 0;
+        virtual IStream& operator>> (std::vector<bool>::reference) = 0;
         virtual IStream& operator>> (char &) = 0;
         virtual IStream& operator>> (unsigned char &) = 0;
         virtual IStream& operator>> (short &) = 0;
@@ -86,18 +88,21 @@ namespace I {
         virtual IStream& operator>> (float &) = 0;
         virtual IStream& operator>> (double &) = 0;
         virtual IStream& operator >> (uint32_t &) = 0;
+        virtual IStream& operator >> (uint64_t &) = 0;
         virtual IStream& operator>> (std::string &) = 0;
     };
 } // namespace I
 
+namespace detail {
     // Will be used along with default types if possible in specific cases (compile args, etc)
     // Note: header only, implementation is defined by user
     template<typename T>
     struct GAPI_EXPORTS S11N {
         static void serialize(I::OStream &os, const T &p);
-        static T deserialize(I::IStream &is, T &p);
+        static T deserialize(I::IStream &is);
         static bool isSupported() { return false; } // supports serialization for type T
     };
+} // namespace detail
 } // namespace s11n
 } // namespace gimpl
 } // namespace cv
