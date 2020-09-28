@@ -1,4 +1,4 @@
-Using Creative Senz3D and other Intel Perceptual Computing SDK compatible depth sensors {#tutorial_intelperc}
+Using Creative Senz3D and other Intel RealSense SDK compatible depth sensors {#tutorial_intelperc}
 =======================================================================================
 
 @prev_tutorial{tutorial_kinect_openni}
