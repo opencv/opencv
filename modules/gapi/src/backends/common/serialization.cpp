@@ -478,14 +478,17 @@ I::OStream& operator<< (I::OStream& os, const cv::GArg &arg) {
         GAPI_Assert(arg.kind == cv::detail::ArgKind::OPAQUE_VAL);
         GAPI_Assert(arg.opaque_kind != cv::detail::OpaqueKind::CV_UNKNOWN);
         switch (arg.opaque_kind) {
-        case cv::detail::OpaqueKind::CV_BOOL:   os << arg.get<bool>();       break;
-        case cv::detail::OpaqueKind::CV_INT:    os << arg.get<int>();        break;
-        case cv::detail::OpaqueKind::CV_DOUBLE: os << arg.get<double>();     break;
-        case cv::detail::OpaqueKind::CV_POINT:  os << arg.get<cv::Point>();  break;
-        case cv::detail::OpaqueKind::CV_SIZE:   os << arg.get<cv::Size>();   break;
-        case cv::detail::OpaqueKind::CV_RECT:   os << arg.get<cv::Rect>();   break;
-        case cv::detail::OpaqueKind::CV_SCALAR: os << arg.get<cv::Scalar>(); break;
-        case cv::detail::OpaqueKind::CV_MAT:    os << arg.get<cv::Mat>();    break;
+        case cv::detail::OpaqueKind::CV_BOOL:   os << arg.get<bool>();         break;
+        case cv::detail::OpaqueKind::CV_INT:    os << arg.get<int>();          break;
+        case cv::detail::OpaqueKind::CV_UINT64: os << arg.get<uint64_t>();     break;
+        case cv::detail::OpaqueKind::CV_DOUBLE: os << arg.get<double>();       break;
+        case cv::detail::OpaqueKind::CV_FLOAT:  os << arg.get<float>();        break;
+        case cv::detail::OpaqueKind::CV_STRING: os << arg.get<std::string>();  break;
+        case cv::detail::OpaqueKind::CV_POINT:  os << arg.get<cv::Point>();    break;
+        case cv::detail::OpaqueKind::CV_SIZE:   os << arg.get<cv::Size>();     break;
+        case cv::detail::OpaqueKind::CV_RECT:   os << arg.get<cv::Rect>();     break;
+        case cv::detail::OpaqueKind::CV_SCALAR: os << arg.get<cv::Scalar>();   break;
+        case cv::detail::OpaqueKind::CV_MAT:    os << arg.get<cv::Mat>();      break;
         default: GAPI_Assert(false && "GArg: Unsupported (unknown?) opaque value type");
         }
     }
@@ -511,7 +514,10 @@ I::IStream& operator>> (I::IStream& is, cv::GArg &arg) {
             { T t{}; is >> t; arg = (cv::GArg(t)); } break
             HANDLE_CASE(BOOL   , bool);
             HANDLE_CASE(INT    , int);
+            HANDLE_CASE(UINT64 , uint64_t);
             HANDLE_CASE(DOUBLE , double);
+            HANDLE_CASE(FLOAT  , float);
+            HANDLE_CASE(STRING , std::string);
             HANDLE_CASE(POINT  , cv::Point);
             HANDLE_CASE(SIZE   , cv::Size);
             HANDLE_CASE(RECT   , cv::Rect);
@@ -686,6 +692,12 @@ I::OStream& ByteMemoryOutStream::operator<< (uint32_t atom) {
     m_storage.push_back(0xFF & (atom >> 24));
     return *this;
 }
+I::OStream& ByteMemoryOutStream::operator<< (uint64_t atom) {
+    for (int i = 0; i < 8; ++i) {
+        m_storage.push_back(0xFF & (atom >> (i * 8)));;
+    }
+    return *this;
+}
 I::OStream& ByteMemoryOutStream::operator<< (bool atom) {
     m_storage.push_back(atom ? 1 : 0);
     return *this;
@@ -734,7 +746,6 @@ I::OStream& ByteMemoryOutStream::operator<< (const std::string &str) {
     for (auto c : str) *this << c;
     return *this;
 }
-
 ByteMemoryInStream::ByteMemoryInStream(const std::vector<char> &data)
     : m_storage(data) {
 }
@@ -753,9 +764,24 @@ I::IStream& ByteMemoryInStream::operator>> (bool& atom) {
     atom = (m_storage[m_idx++] == 0) ? false : true;
     return *this;
 }
+I::IStream& ByteMemoryInStream::operator>> (std::vector<bool>::reference atom) {
+    check(sizeof(char));
+    atom = (m_storage[m_idx++] == 0) ? false : true;
+    return *this;
+}
 I::IStream& ByteMemoryInStream::operator>> (char &atom) {
     check(sizeof(char));
     atom = m_storage[m_idx++];
+    return *this;
+}
+I::IStream& ByteMemoryInStream::operator>> (uint64_t &atom) {
+    check(sizeof(uint64_t));
+    uint8_t x[8];
+    atom = 0;
+    for (int i = 0; i < 8; ++i) {
+        x[i] = static_cast<uint8_t>(m_storage[m_idx++]);
+        atom |= (static_cast<uint64_t>(x[i]) << (i * 8));
+    }
     return *this;
 }
 I::IStream& ByteMemoryInStream::operator>> (unsigned char &atom) {

@@ -9,7 +9,8 @@
 
 #include <iostream>
 #include <fstream>
-#include <string.h>
+#include <string>
+#include <map>
 
 #include <ade/util/iota_range.hpp> // used in the vector<</>>
 
@@ -181,6 +182,28 @@ GAPI_EXPORTS void serialize( I::OStream& os
 GAPI_EXPORTS GSerialized deserialize(I::IStream& is);
 GAPI_EXPORTS void reconstruct(const GSerialized &s, ade::Graph &g);
 
+// Generic: map serialization ////////////////////////////////////////
+template<typename K, typename V>
+I::OStream& operator<< (I::OStream& os, const std::map<K, V> &m) {
+    const uint32_t sz = static_cast<uint32_t>(m.size()); // explicitly specify type
+    os << sz;
+    for (const auto& it : m) os << it.first << it.second;
+    return os;
+}
+template<typename K, typename V>
+I::IStream& operator>> (I::IStream& is, std::map<K, V> &m) {
+    m.clear();
+    uint32_t sz = 0u;
+    is >> sz;
+    for (std::size_t i = 0; i < sz; ++i) {
+        K k{};
+        V v{};
+        is >> k >> v;
+        m[k] = v;
+    }
+    return is;
+}
+
 // Legacy //////////////////////////////////////////////////////////////////////
 // Generic: unordered_map serialization ////////////////////////////////////////
 template<typename K, typename V>
@@ -298,6 +321,7 @@ public:
     virtual I::OStream& operator<< (double) override;
     virtual I::OStream& operator<< (const std::string&) override;
     virtual I::OStream& operator<< (uint32_t) override;
+    virtual I::OStream& operator<< (uint64_t) override;
 };
 
 class GAPI_EXPORTS ByteMemoryInStream final: public I::IStream {
@@ -313,6 +337,7 @@ public:
     explicit ByteMemoryInStream(const std::vector<char> &data);
 
     virtual I::IStream& operator>> (bool &) override;
+    virtual I::IStream& operator>> (std::vector<bool>::reference) override;
     virtual I::IStream& operator>> (char &) override;
     virtual I::IStream& operator>> (unsigned char &) override;
     virtual I::IStream& operator>> (short &) override;
@@ -322,6 +347,7 @@ public:
     virtual I::IStream& operator>> (double &) override;
     //virtual I::IStream& operator>> (std::size_t &) override;
     virtual I::IStream& operator >> (uint32_t &) override;
+    virtual I::IStream& operator >> (uint64_t &) override;
     virtual I::IStream& operator>> (std::string &) override;
 };
 

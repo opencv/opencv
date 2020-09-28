@@ -215,6 +215,14 @@ TEST(GOpaque_OpaqueRef, TestMov)
     EXPECT_NE(test, mov.rref<I>());         // ref lost the data
 }
 
+namespace {
+    struct MyTestStruct {
+        int i;
+        float f;
+        std::string name;
+    };
+}
+
 TEST(GOpaque_OpaqueRef, Kind)
 {
     cv::detail::OpaqueRef v1(cv::Rect{});
@@ -233,7 +241,10 @@ TEST(GOpaque_OpaqueRef, Kind)
     EXPECT_EQ(cv::detail::OpaqueKind::CV_SIZE, v7.getKind());
 
     cv::detail::OpaqueRef v8(std::string{});
-    EXPECT_EQ(cv::detail::OpaqueKind::CV_UNKNOWN, v8.getKind());
+    EXPECT_EQ(cv::detail::OpaqueKind::CV_STRING, v8.getKind());
+
+    cv::detail::OpaqueRef v9(MyTestStruct{});
+    EXPECT_EQ(cv::detail::OpaqueKind::CV_UNKNOWN, v9.getKind());
 }
 
 TEST(GOpaque_OpaqueRef, TestReset)
