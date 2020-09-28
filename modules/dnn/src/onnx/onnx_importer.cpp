@@ -446,8 +446,8 @@ void ONNXImporter::populateNet(Net dstNet)
                     avgLp.set("pool", pool);
                     if (axes.size() == 2)
                     {
-                        CV_CheckEQ(clamp(axes.get<int>(0), inpShape.size()), 1, ("Unsupported " + layer_type  + " mode").c_str());
-                        CV_CheckEQ(clamp(axes.get<int>(1), inpShape.size()), 2, ("Unsupported " + layer_type  + " mode").c_str());
+                        CV_CheckEQ(clamp(axes.get<int>(0), inpShape.size()), 1, "Unsupported mode");
+                        CV_CheckEQ(clamp(axes.get<int>(1), inpShape.size()), 2, "Unsupported mode");
                         avgLp.set("global_pooling", true);
                     }
                     else
@@ -489,7 +489,7 @@ void ONNXImporter::populateNet(Net dstNet)
             }
             else if (!layerParams.has("axes") && (layer_type == "ReduceMean" || layer_type == "ReduceSum" || layer_type == "ReduceMax"))
             {
-                CV_CheckEQ(layerParams.get<int>("keepdims"), 0, (layer_type + " layer only supports keepdims = false").c_str());
+                CV_CheckEQ(layerParams.get<int>("keepdims"), 0, "layer only supports keepdims = false");
                 LayerParams reshapeLp;
                 reshapeLp.name = layerParams.name + "/reshape";
                 reshapeLp.type = "Reshape";

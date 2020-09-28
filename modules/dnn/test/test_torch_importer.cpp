@@ -116,7 +116,7 @@ TEST_P(Test_Torch_layers, run_convolution)
     if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
     {
         l1 = 0.08;
-        lInf = 0.42;
+        lInf = 0.43;
     }
     else if (target == DNN_TARGET_CUDA_FP16)
     {
@@ -187,7 +187,7 @@ TEST_P(Test_Torch_layers, run_depth_concat)
     double lInf = 0.0;
     if (target == DNN_TARGET_OPENCL_FP16)
     {
-        lInf = 0.021;
+        lInf = 0.032;
     }
     else if (target == DNN_TARGET_CUDA_FP16)
     {
