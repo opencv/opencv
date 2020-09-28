@@ -240,6 +240,14 @@ TEST(GArray_VectorRef, TestMov)
     EXPECT_EQ(V{}, vtest);
 }
 
+namespace {
+    struct MyTestStruct {
+        int i;
+        float f;
+        std::string name;
+    };
+}
+
 TEST(GArray_VectorRef, Kind)
 {
     cv::detail::VectorRef v1(std::vector<cv::Rect>{});
@@ -264,7 +272,10 @@ TEST(GArray_VectorRef, Kind)
     EXPECT_EQ(cv::detail::OpaqueKind::CV_SIZE, v7.getKind());
 
     cv::detail::VectorRef v8(std::vector<std::string>{});
-    EXPECT_EQ(cv::detail::OpaqueKind::CV_UNKNOWN, v8.getKind());
+    EXPECT_EQ(cv::detail::OpaqueKind::CV_STRING, v8.getKind());
+
+    cv::detail::VectorRef v9(std::vector<MyTestStruct>{});
+    EXPECT_EQ(cv::detail::OpaqueKind::CV_UNKNOWN, v9.getKind());
 }
 
 TEST(GArray_VectorRef, TestRvalue)

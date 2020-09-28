@@ -240,7 +240,7 @@ namespace detail
         // FIXME: probably won't work with const object
         explicit OpaqueRef(T&& obj) :
             m_ref(new OpaqueRefT<util::decay_t<T>>(std::forward<T>(obj))),
-            m_kind(GOpaqueTraits<T>::kind) {}
+            m_kind(GOpaqueTraits<util::decay_t<T>>::kind) {}
 
         cv::detail::OpaqueKind getKind() const
         {
