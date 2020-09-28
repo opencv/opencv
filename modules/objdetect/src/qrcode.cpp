@@ -985,7 +985,7 @@ public:
     Mat getStraightBarcode() { return straight; }
     size_t getVersion() { return version; }
     std::string getDecodeInformation() { return result_info; }
-    bool fullDecodingProcess();
+    bool straightDecodingProcess();
     bool curvedDecodingProcess();
 protected:
     bool updatePerspective();
@@ -994,35 +994,35 @@ protected:
     bool decodingProcess();
     inline double pointPosition(Point2f a, Point2f b , Point2f c);
     float distancePointToLine(Point2f a, Point2f b , Point2f c);
-    bool getPointsInsideQRCode(vector<Point2f> angle_list);
-    bool computeClosestPoints(vector<Point> result_integer_hull);
-    bool computeSidesPoints(vector<Point> result_integer_hull);
-    vector<Point> getPointsNearUnstablePoint(vector<Point>&side, int start, int end, int step);
-    bool findAndAddStablePoint(vector<Point> result_integer_hull);
+    bool getPointsInsideQRCode(const vector<Point2f> &angle_list);
+    bool computeClosestPoints(const vector<Point> &result_integer_hull);
+    bool computeSidesPoints(const vector<Point> &result_integer_hull);
+    vector<Point> getPointsNearUnstablePoint(const vector<Point> &side, int start, int end, int step);
+    bool findAndAddStablePoint(const vector<Point> &result_integer_hull);
     bool findIndexesCurvedSides();
     bool findIncompleteIndexesCurvedSides();
-    Mat getMarkersMask();
-    Point findClosestZeroPoint(Point2f original_point);
-    bool findMarkersContours(vector<vector<Point>> &markers_contours);
-    bool findMarkersVerticesPoints(vector<vector<Point>> &markers_edge_points);
-    bool findTempMarkersAddingPoints(vector<std::pair<int,vector<Point>>> &temp_markers_add_points);
-    bool computeMarkersAddingPoints(std::map<int,vector<Point>> &markers_add_points);
+    Mat getPatternsMask();
+    Point2f findClosestZeroPoint(Point2f original_point);
+    bool findMarkersContours(vector<vector<Point2f> > &markers_contours);
+    bool findMarkersVerticesPoints(vector<vector<Point2f> > &markers_edge_points);
+    bool findTempMarkersAddingPoints(vector<std::pair<int, vector<Point2f> > > &temp_markers_add_points);
+    bool computeMarkersAddingPoints(std::map<int, vector<Point2f> > &markers_add_points);
     bool addPointsToSides();
-    vector<vector<float>> spline(vector<int> &x_arr, vector<int> &y_arr);
-    vector<vector<Point2f>> createSpline();
-    vector<vector<Point2f>> divideIntoEvenSegments();
+    vector<vector<float> > computeSpline(vector<float> &x_arr, vector<float> &y_arr);
+    vector<vector<Point2f> > createSpline();
+    vector<vector<Point2f> > divideIntoEvenSegments();
     bool straightenQRCodeInParts();
     bool preparingCurvedQRCodes();
     Mat original, bin_barcode, no_border_intermediate, intermediate, straight, curved_to_straight, test_image, hull_image, closest_points_image, sides_points_image, markers_image, spline_image, cut_points_image;
     vector<Point2f> original_points;
     vector<Point2f> original_curved_points = vector<Point2f>(4);
     vector<Point> qrcode_locations;
-    vector<std::pair<size_t,Point>> closest_points;
-    vector<vector<Point>> sides_points;
+    vector<std::pair<size_t,Point> > closest_points;
+    vector<vector<Point> > sides_points;
     std::pair<size_t,Point> unstable_pair;
     bool approximate_unstable_point = false;
     vector<int> curved_indexes, curved_incomplete_indexes;
-    std::map<int,vector<Point>> complete_curved_sides;
+    std::map<int, vector<Point> > complete_curved_sides;
 
     std::string result_info;
     uint8_t version, version_size;
