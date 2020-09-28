@@ -21,7 +21,7 @@ template <typename RMatAdapterT>
 struct RMatTest {
     using AdapterT = RMatAdapterT;
     RMatTest()
-        : m_deviceMat(8,8,CV_8UC1)
+        : m_deviceMat(cv::Mat::zeros(8,8,CV_8UC1))
         , m_rmat(make_rmat<RMatAdapterT>(m_deviceMat, m_callbackCalled)) {
         randomizeMat(m_deviceMat);
         expectNoCallbackCalled();
