@@ -205,7 +205,7 @@ __kernel void ConvolveBasic(
 #if APPLY_BIAS
                 ACTIVATION_FUNCTION(convolved_image, offset, sum[kern] + bias[biasIndex + kern], biasIndex + kern);
 #else
-                ACTIVATION_FUNCTION(convolved_image, offset, sum[kern], biasIndex + kern);
+                ACTIVATION_FUNCTION(convolved_image, offset, sum[kern], kernelNum + kern);
 #endif
             }
         }
