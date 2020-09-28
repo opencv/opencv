@@ -92,8 +92,8 @@ GAPI_OCL_KERNEL(OCLPaintPoint, ThisTest::PaintPoint)
     static void run(cv::Point a, int depth, int chan, cv::Size size, cv::UMat& out)
     {
         GAPI_Assert(chan == 1);
-        out = cv::UMat(size, CV_MAKETYPE(depth, chan), Scalar::all(0));
-        cv::drawMarker(out, a, cv::Scalar(129));
+        out.create(size, CV_MAKETYPE(depth, chan));
+        cv::drawMarker(out, a, cv::Scalar(77));
     }
 };
 
@@ -207,28 +207,55 @@ TEST(GOpaque, TestOpaqueCustomOut2)
     EXPECT_EQ(out2.s, str2);
 }
 
-TEST(GOpaque, TestOpaqueOCLBackend)
+TEST(GOpaque, TestOpaqueOCLBackendIn)
 {
-    using ThisTest::GPointOpaque;
-    using ThisTest::PaintPoint;
-    using ThisTest::GeneratePoint;
-    cv::Size sz = {50, 50};
-    int depth = CV_8U;
-    int chan = 1;
-    cv::Point p_in = {42, 42}, p_out;
+    cv::Point p_in = {42, 42};
+    cv::Mat mat_out;
 
-    GPointOpaque in;
-    cv::GMat     betw1 = PaintPoint::on(in, depth, chan, sz);    //  check Opaque as input
-    GPointOpaque betw2 = GeneratePoint::on(betw1);               //|
-    cv::GMat     betw3 = PaintPoint::on(betw2, depth, chan, sz); //| check Opaque in the middle
-    GPointOpaque out   = GeneratePoint::on(betw3);               //  check Opaque as output
+    ThisTest::GPointOpaque in;
+    cv::GMat out = ThisTest::PaintPoint::on(in, CV_8U, 1, {50, 50});
 
     cv::GComputation c(cv::GIn(in), cv::GOut(out));
-    c.apply(cv::gin(p_in), cv::gout(p_out),
+    c.apply(cv::gin(p_in), cv::gout(mat_out),
+            cv::compile_args(cv::gapi::kernels<OCLPaintPoint>()));
+
+    int painted = mat_out.at<uint8_t>(42, 42);
+    EXPECT_EQ(painted, 77);
+}
+
+TEST(GOpaque, TestOpaqueOCLBackendBetween)
+{
+    cv::Size sz = {50, 50};
+    int depth   = CV_8U;
+    int chan    = 1;
+    cv::Mat mat_in = cv::Mat::zeros(sz, CV_MAKETYPE(depth, chan));
+    cv::Mat mat_out;
+
+    cv::GMat in;
+    auto     betw = ThisTest::GeneratePoint::on(in);
+    cv::GMat out  = ThisTest::PaintPoint::on(betw, depth, chan, sz);
+
+    cv::GComputation c(cv::GIn(in), cv::GOut(out));
+    c.apply(cv::gin(mat_in), cv::gout(mat_out),
             cv::compile_args(cv::gapi::kernels<OCLGeneratePoint, OCLPaintPoint>()));
 
-    cv::Point generated { 42, 42 };
-    EXPECT_EQ(generated, p_out);
+    int painted = mat_out.at<uint8_t>(42, 42);
+    EXPECT_EQ(painted, 77);
+}
+
+TEST(GOpaque, TestOpaqueOCLBackendOut)
+{
+    cv::Mat input = cv::Mat(52, 52, CV_8U);
+    cv::Point p_out;
+
+    cv::GMat in;
+    ThisTest::GPointOpaque out = ThisTest::GeneratePoint::on(in);
+
+    cv::GComputation c(cv::GIn(in), cv::GOut(out));
+    c.apply(cv::gin(input), cv::gout(p_out),
+            cv::compile_args(cv::gapi::kernels<OCLGeneratePoint>()));
+
+    EXPECT_TRUE(p_out == cv::Point(42, 42));
 }
 
 TEST(GOpaque_OpaqueRef, TestMov)
