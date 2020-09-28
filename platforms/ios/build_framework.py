@@ -295,7 +295,7 @@ class Builder:
             "-Xlinker", "/usr/lib/swift",
             "-target", link_target,
             "-isysroot", sdk_dir,
-            "-install_name", ("@executable_path/Frameworks/" + self.framework_name + ".framework/" + self.framework_name) if is_device else res,
+            "-install_name", "@rpath/" + self.framework_name + ".framework/" + self.framework_name,
             "-dynamiclib", "-dead_strip", "-fobjc-link-runtime", "-all_load",
             "-o", res
         ] + swift_link_dirs + bitcode_flags + module + libs + libs3)
