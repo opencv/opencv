@@ -6,6 +6,9 @@
 
 
 #include "test_precomp.hpp"
+
+#include <opencv2/gapi/s11n.hpp>
+
 #include <opencv2/gapi/cpu/gcpukernel.hpp>
 #include <ade/util/zip_range.hpp>
 
@@ -87,6 +90,51 @@ namespace opencv_test
               }
           }
       };
+
+      // NB: Check an apply specifically designed to be called from Python,
+      // but can also be used from C++
+      struct GComputationPythonApplyTest: public ::testing::Test
+      {
+          cv::Size sz;
+          MatType type;
+          cv::Mat in_mat1, in_mat2, out_mat_ocv;
+          cv::GComputation m_c;
+
+          GComputationPythonApplyTest() : sz(cv::Size(300,300)), type(CV_8UC1),
+          in_mat1(sz, type), in_mat2(sz, type), out_mat_ocv(sz, type),
+          m_c([&](){
+                       cv::GMat in1, in2;
+                       cv::GMat out = in1 + in2;
+                       return cv::GComputation(cv::GIn(in1, in2), cv::GOut(out));
+                   })
+          {
+              cv::randu(in_mat1, cv::Scalar::all(0), cv::Scalar::all(255));
+              cv::randu(in_mat2, cv::Scalar::all(0), cv::Scalar::all(255));
+              out_mat_ocv = in_mat1 + in_mat2;
+          }
+
+      };
+  }
+
+  TEST_F(GComputationPythonApplyTest, WithoutSerialization)
+  {
+      auto output = m_c.apply(cv::gin(in_mat1, in_mat2));
+      EXPECT_EQ(1u, output.size());
+
+      const auto& out_mat_gapi = cv::util::get<cv::Mat>(output[0]);
+      EXPECT_EQ(0, cvtest::norm(out_mat_ocv, out_mat_gapi, NORM_INF));
+  }
+
+  TEST_F(GComputationPythonApplyTest, WithSerialization)
+  {
+      auto p = cv::gapi::serialize(m_c);
+      auto c = cv::gapi::deserialize<cv::GComputation>(p);
+
+      auto output = c.apply(cv::gin(in_mat1, in_mat2));
+      EXPECT_EQ(1u, output.size());
+
+      const auto& out_mat_gapi = cv::util::get<cv::Mat>(output[0]);
+      EXPECT_EQ(0, cvtest::norm(out_mat_ocv, out_mat_gapi, NORM_INF));
   }
 
   TEST_F(GComputationApplyTest, ThrowDontPassCustomKernel)
