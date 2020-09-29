@@ -4,9 +4,11 @@
 namespace cv
 {
    GAPI_EXPORTS_W GCompileArgs compile_args(gapi::GKernelPackage pkg);
+
    class GAPI_EXPORTS_W_SIMPLE GProtoArg { };
    class GAPI_EXPORTS_W_SIMPLE GProtoInputArgs { };
    class GAPI_EXPORTS_W_SIMPLE GProtoOutputArgs { };
+   class GAPI_EXPORTS_W_SIMPLE GRunArg {  };
 
    using GProtoInputArgs  = GIOProtoArgs<In_Tag>;
    using GProtoOutputArgs = GIOProtoArgs<Out_Tag>;
