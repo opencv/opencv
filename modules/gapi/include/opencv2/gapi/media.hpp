@@ -48,13 +48,13 @@ public:
     using Strides  = std::array<std::size_t, MAX_PLANES>; // in bytes
     using Callback = std::function<void()>;
 
-    View(Ptrs&& ptrs, Strides&& strs, Callback &&cb);
+    View(Ptrs&& ptrs, Strides&& strs, Callback &&cb = [](){});
     View(const View&) = delete;
     View(View&&) = default;
     ~View();
 
-    std::array<void*, MAX_PLANES> ptr;
-    std::array<std::size_t, MAX_PLANES> stride;
+    Ptrs    ptr;
+    Strides stride;
 
 private:
     Callback m_cb;

@@ -93,7 +93,7 @@ public:
         cv::MediaFrame::View::Strides ss = {
             m_y.step, m_uv.step, 0u, 0u
         };
-        return cv::MediaFrame::View(std::move(pp), std::move(ss), [](){});
+        return cv::MediaFrame::View(std::move(pp), std::move(ss));
     }
 };
 } // anonymous namespace
