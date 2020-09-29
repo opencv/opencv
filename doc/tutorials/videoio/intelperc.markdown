@@ -3,7 +3,7 @@ Using Creative Senz3D and other Intel RealSense SDK compatible depth sensors {#t
 
 @prev_tutorial{tutorial_kinect_openni}
 
-**Note**: this tutorial is partially obsolete since PerC SDK has been replaced with RealSense SDK
+**Note**: This tutorial is partially obsolete since PerC SDK has been replaced with RealSense SDK
 
 Depth sensors compatible with Intel® RealSense SDK are supported through VideoCapture
 class. Depth map, RGB image and some other formats of output can be retrieved by using familiar
