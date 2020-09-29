@@ -29,7 +29,7 @@ namespace detail {
             is >> p.val >> p.name >> p.vec >> p.mmap;
             return p;
         }
-        static bool isSupported() { return true; }
+        static constexpr const bool isSupported = true;
     };
 } // namespace detail
 } // namespace s11n
@@ -512,5 +512,7 @@ TEST_F(S11N_Basic, Test_Custom_Type) {
     cv::gapi::s11n::ByteMemoryInStream is(os.data());
     MyCustomType new_var = cv::gapi::s11n::detail::S11N<MyCustomType>::deserialize(is);
     EXPECT_EQ(var, new_var);
+    EXPECT_TRUE(cv::gapi::s11n::detail::S11N<MyCustomType>::isSupported);
+    EXPECT_FALSE(cv::gapi::s11n::detail::S11N<int>::isSupported);
 }
 } // namespace opencv_test
