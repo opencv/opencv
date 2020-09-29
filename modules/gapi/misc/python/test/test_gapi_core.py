@@ -33,7 +33,7 @@ class gapi_core_test(NewOpenCVTests):
         comp = cv.GComputation(cv.GIn(g_in1, g_in2), cv.GOut(g_out))
 
         for pkg in pkgs:
-            actual = comp.apply(in1, in2, args=cv.compile_args(pkg))
+            actual = comp.apply(cv.gin(in1, in2), args=cv.compile_args(pkg))
             # Comparison
             self.assertEqual(0.0, cv.norm(expected, actual, cv.NORM_INF))
 
@@ -51,9 +51,50 @@ class gapi_core_test(NewOpenCVTests):
         comp = cv.GComputation(g_in, g_out)
 
         for pkg in pkgs:
-            actual = comp.apply(in_mat, args=cv.compile_args(pkg))
+            actual = comp.apply(cv.gin(in_mat), args=cv.compile_args(pkg))
             # Comparison
             self.assertEqual(0.0, cv.norm(expected, actual, cv.NORM_INF))
+
+
+    def test_split3(self):
+        sz = (1280, 720, 3)
+        in_mat = np.random.randint(0, 100, sz).astype(np.uint8)
+
+        # OpenCV
+        expected = cv.split(in_mat)
+
+        # G-API
+        g_in = cv.GMat()
+        b, g, r = cv.gapi.split3(g_in)
+        comp = cv.GComputation(cv.GIn(g_in), cv.GOut(b, g, r))
+
+        for pkg in pkgs:
+            actual = comp.apply(cv.gin(in_mat), args=cv.compile_args(pkg))
+            # Comparison
+            for e, a in zip(expected, actual):
+                self.assertEqual(0.0, cv.norm(e, a, cv.NORM_INF))
+
+
+    def test_threshold(self):
+        sz = (1280, 720)
+        in_mat = np.random.randint(0, 100, sz).astype(np.uint8)
+        rand_int = np.random.randint(0, 50)
+        maxv = (rand_int, rand_int)
+
+        # OpenCV
+        expected_thresh, expected_mat = cv.threshold(in_mat, maxv[0], maxv[0], cv.THRESH_TRIANGLE)
+
+        # G-API
+        g_in = cv.GMat()
+        g_sc = cv.GScalar()
+        mat, threshold = cv.gapi.threshold(g_in, g_sc, cv.THRESH_TRIANGLE)
+        comp = cv.GComputation(cv.GIn(g_in, g_sc), cv.GOut(mat, threshold))
+
+        for pkg in pkgs:
+            actual_mat, actual_thresh = comp.apply(cv.gin(in_mat, maxv), args=cv.compile_args(pkg))
+            # Comparison
+            self.assertEqual(0.0, cv.norm(expected_mat, actual_mat, cv.NORM_INF))
+            self.assertEqual(expected_thresh, actual_thresh[0])
 
 
 if __name__ == '__main__':

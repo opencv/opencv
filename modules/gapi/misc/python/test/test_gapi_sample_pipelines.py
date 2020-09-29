@@ -33,7 +33,7 @@ class gapi_sample_pipelines(NewOpenCVTests):
         comp = cv.GComputation(g_in, g_out)
 
         for pkg in pkgs:
-            actual = comp.apply(in_mat, args=cv.compile_args(pkg))
+            actual = comp.apply(cv.gin(in_mat), args=cv.compile_args(pkg))
             # Comparison
             self.assertEqual(0.0, cv.norm(expected, actual, cv.NORM_INF))
 
