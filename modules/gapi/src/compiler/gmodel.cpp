@@ -23,12 +23,16 @@
 
 namespace cv { namespace gimpl {
 
-ade::NodeHandle GModel::mkOpNode(GModel::Graph &g, const GKernel &k, const std::vector<GArg> &args, const std::string &island)
+ade::NodeHandle GModel::mkOpNode(GModel::Graph &g,
+                                 const GKernel &k,
+                                 const std::vector<GArg> &args,
+                                 const cv::util::any& params,
+                                 const std::string &island)
 {
     ade::NodeHandle op_h = g.createNode();
     g.metadata(op_h).set(NodeType{NodeType::OP});
     //These extra empty {} are to please GCC (-Wmissing-field-initializers)
-    g.metadata(op_h).set(Op{k, args, {}, {}});
+    g.metadata(op_h).set(Op{k, args, {}, {}, params});
     if (!island.empty())
         g.metadata(op_h).set(Island{island});
     return op_h;

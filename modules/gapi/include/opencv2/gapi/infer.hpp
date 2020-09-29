@@ -21,6 +21,7 @@
 #include <opencv2/gapi/garg.hpp>      // GArg
 #include <opencv2/gapi/gcommon.hpp>   // CompileArgTag
 #include <opencv2/gapi/gmetaarg.hpp>  // GMetaArg
+#include <opencv2/gapi/infer/ie.hpp> // Generic
 
 namespace cv {
 
@@ -121,6 +122,48 @@ struct GInferBase {
     }
 };
 
+struct InOutInfo
+{
+    std::vector<std::string> in_names;
+    std::vector<std::string> out_names;
+};
+
+class GInferInputs
+{
+public:
+    cv::GMat& operator[](const std::string& name) { return in_blobs[name]; }
+    const std::unordered_map<std::string, cv::GMat>& getBlobs() const { return in_blobs; }
+
+private:
+    std::unordered_map<std::string, cv::GMat> in_blobs;
+};
+
+struct GInferOutputs
+{
+public:
+    GInferOutputs(std::shared_ptr<cv::GCall> call)
+        : m_call(std::move(call)), m_info(cv::util::any_cast<InOutInfo>(&m_call->params()))
+    {
+    };
+
+    cv::GMat at(const std::string& name)
+    {
+        auto it = out_blobs.find(name);
+        if (it == out_blobs.end()) {
+            m_call->kernel().outShapes.push_back(cv::GShape::GMAT);
+            it = out_blobs.emplace(name, m_call->yield(num_outs)).first;
+            m_info->out_names.push_back(name);
+            ++num_outs;
+        }
+        return it->second;
+    };
+
+private:
+    int num_outs = 0;
+    std::shared_ptr<cv::GCall> m_call;
+    InOutInfo* m_info = nullptr;
+    std::unordered_map<std::string, cv::GMat> out_blobs;
+};
 
 // Base "Infer list" kernel.
 // All notes from "Infer" kernel apply here as well.
@@ -254,6 +297,34 @@ typename Net::Result infer(Args&&... args) {
     return GInfer<Net>::on(std::forward<Args>(args)...);
 }
 
+template<typename Net, typename... Args>
+typename std::enable_if<std::is_same<Net, cv::gapi::ie::Generic>::value, GInferOutputs>::type
+infer(const std::string& name, const GInferInputs& inputs)
+{
+    std::vector<GArg> input_args;
+    std::vector<std::string> input_names;
+
+    const auto& blobs = inputs.getBlobs();
+    for (auto&& p : blobs)
+    {
+        input_names.push_back(p.first);
+        input_args.emplace_back(p.second);
+    }
+
+    GKinds kinds(blobs.size(), cv::detail::OpaqueKind::CV_MAT);
+    auto call = std::make_shared<cv::GCall>(GKernel{
+                GInferBase::id(),
+                name,
+                GInferBase::getOutMeta,
+                {}, // outShape will be filled later
+                std::move(kinds)
+            });
+
+    call->setArgs(std::move(input_args));
+    call->params() = InOutInfo{input_names, {}};
+
+    return GInferOutputs{std::move(call)};
+}
 
 } // namespace gapi
 } // namespace cv
