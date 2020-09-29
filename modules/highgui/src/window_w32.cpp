@@ -250,13 +250,13 @@ CV_IMPL int cvInitSystem( int, char** )
         wndc.lpszMenuName = highGUIclassName;
         wndc.hIcon = LoadIcon(0, IDI_APPLICATION);
         wndc.hCursor = (HCURSOR)LoadCursor(0, (LPSTR)(size_t)IDC_CROSS );
-        wndc.hbrBackground = (HBRUSH)GetStockObject(GRAY_BRUSH);
+        wndc.hbrBackground = (HBRUSH)GetStockObject(DKGRAY_BRUSH);
 
         RegisterClass(&wndc);
 
         wndc.lpszClassName = mainHighGUIclassName;
         wndc.lpszMenuName = mainHighGUIclassName;
-        wndc.hbrBackground = (HBRUSH)GetStockObject(GRAY_BRUSH);
+        wndc.hbrBackground = (HBRUSH)GetStockObject(DKGRAY_BRUSH);
         wndc.lpfnWndProc = MainWindowProc;
 
         RegisterClass(&wndc);
