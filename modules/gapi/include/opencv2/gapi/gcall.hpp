@@ -56,10 +56,13 @@ public:
     Priv& priv();
     const Priv& priv() const;
 
-protected:
-    std::shared_ptr<Priv> m_priv;
+    GKernel& kernel();
+    cv::util::any& params();
 
     void setArgs(std::vector<GArg> &&args);
+
+protected:
+    std::shared_ptr<Priv> m_priv;
 
     // Public versions return a typed array or opaque, those are implementation details
     detail::GArrayU yieldArray(int output = 0);
