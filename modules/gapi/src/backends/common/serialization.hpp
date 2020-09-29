@@ -23,7 +23,7 @@
 #endif
 
 namespace cv {
-namespace gimpl {
+namespace gapi {
 namespace s11n {
 
 struct GSerialized {
@@ -37,47 +37,6 @@ struct GSerialized {
 ////////////////////////////////////////////////////////////////////////////////
 // S11N operators
 // Note: operators for basic types are defined in IStream/OStream
-
-// OpenCV types ////////////////////////////////////////////////////////////////
-
-GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::Point &pt);
-GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::Point &pt);
-
-GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::Size &sz);
-GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::Size &sz);
-
-GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::Rect &rc);
-GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::Rect &rc);
-
-GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::Scalar &s);
-GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::Scalar &s);
-
-GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::Mat &m);
-GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::Mat &m);
-
-GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::gapi::wip::draw::Text &t);
-GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::gapi::wip::draw::Text &t);
-
-GAPI_EXPORTS I::OStream& operator<< (I::OStream&, const cv::gapi::wip::draw::FText &);
-GAPI_EXPORTS I::IStream& operator>> (I::IStream&,       cv::gapi::wip::draw::FText &);
-
-GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::gapi::wip::draw::Circle &c);
-GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::gapi::wip::draw::Circle &c);
-
-GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::gapi::wip::draw::Rect &r);
-GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::gapi::wip::draw::Rect &r);
-
-GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::gapi::wip::draw::Image &i);
-GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::gapi::wip::draw::Image &i);
-
-GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::gapi::wip::draw::Mosaic &m);
-GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::gapi::wip::draw::Mosaic &m);
-
-GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::gapi::wip::draw::Poly &p);
-GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::gapi::wip::draw::Poly &p);
-
-GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::gapi::wip::draw::Line &l);
-GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::gapi::wip::draw::Line &l);
 
 // G-API types /////////////////////////////////////////////////////////////////
 
@@ -182,57 +141,6 @@ GAPI_EXPORTS void serialize( I::OStream& os
 GAPI_EXPORTS GSerialized deserialize(I::IStream& is);
 GAPI_EXPORTS void reconstruct(const GSerialized &s, ade::Graph &g);
 
-// Generic: map serialization ////////////////////////////////////////
-template<typename K, typename V>
-I::OStream& operator<< (I::OStream& os, const std::map<K, V> &m) {
-    const uint32_t sz = static_cast<uint32_t>(m.size()); // explicitly specify type
-    os << sz;
-    for (const auto& it : m) os << it.first << it.second;
-    return os;
-}
-template<typename K, typename V>
-I::IStream& operator>> (I::IStream& is, std::map<K, V> &m) {
-    m.clear();
-    uint32_t sz = 0u;
-    is >> sz;
-    for (std::size_t i = 0; i < sz; ++i) {
-        K k{};
-        V v{};
-        is >> k >> v;
-        m[k] = v;
-    }
-    return is;
-}
-
-// Legacy //////////////////////////////////////////////////////////////////////
-// Generic: unordered_map serialization ////////////////////////////////////////
-template<typename K, typename V>
-I::OStream& operator<< (I::OStream& os, const std::unordered_map<K, V> &m) {
-    //const std::size_t sz = m.size(); // explicitly specify type
-    const uint32_t sz = (uint32_t)m.size(); // explicitly specify type
-    os << sz;
-    for (auto &&it : m) os << it.first << it.second;
-    return os;
-}
-template<typename K, typename V>
-I::IStream& operator>> (I::IStream& is, std::unordered_map<K, V> &m) {
-    m.clear();
-    //std::size_t sz = 0u;
-    uint32_t sz = 0u;
-    is >> sz;
-    if (sz != 0u) {
-        for (auto &&i : ade::util::iota(sz)) {
-            (void) i;
-            K k{};
-            V v{};
-            is >> k >> v;
-            m.insert({k,v});
-        }
-        GAPI_Assert(sz == m.size());
-    }
-    return is;
-}
-
 // Generic: variant serialization //////////////////////////////////////////////
 namespace detail { // FIXME: breaks old code
 template<typename V>
@@ -271,32 +179,6 @@ I::IStream& operator>> (I::IStream& is, cv::util::variant<Ts...> &v) {
     is >> idx;
     GAPI_Assert(idx >= 0 && idx < (int)sizeof...(Ts));
     return detail::get_v<cv::util::variant<Ts...>, Ts...>(is, v, 0u, idx);
-}
-
-// Generic: vector serialization ///////////////////////////////////////////////
-// Moved here to fix CLang issues https://clang.llvm.org/compatibility.html
-// Unqualified lookup in templates
-template<typename T>
-I::OStream& operator<< (I::OStream& os, const std::vector<T> &ts) {
-    //const std::size_t sz = ts.size(); // explicitly specify type
-    const uint32_t sz = (uint32_t)ts.size(); // explicitly specify type
-    os << sz;
-    for (auto &&v : ts) os << v;
-    return os;
-}
-template<typename T>
-I::IStream& operator >> (I::IStream& is, std::vector<T> &ts) {
-    //std::size_t sz = 0u;
-    uint32_t sz = 0u;
-    is >> sz;
-    if (sz == 0u) {
-        ts.clear();
-    }
-    else {
-        ts.resize(sz);
-        for (auto &&i : ade::util::iota(sz)) is >> ts[i];
-    }
-    return is;
 }
 
 // FIXME: Basic Stream implementaions //////////////////////////////////////////
@@ -357,7 +239,7 @@ GAPI_EXPORTS GMetaArgs meta_args_deserialize(I::IStream& is);
 GAPI_EXPORTS GRunArgs run_args_deserialize(I::IStream& is);
 
 } // namespace s11n
-} // namespace gimpl
+} // namespace gapi
 } // namespace cv
 
 #endif // OPENCV_GAPI_COMMON_SERIALIZATION_HPP

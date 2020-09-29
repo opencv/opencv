@@ -21,11 +21,11 @@
 #include "backends/common/serialization.hpp"
 
 namespace cv {
-namespace gimpl {
+namespace gapi {
 namespace s11n {
 namespace {
 
-void putData(GSerialized& s, const GModel::ConstGraph& cg, const ade::NodeHandle &nh) {
+void putData(GSerialized& s, const cv::gimpl::GModel::ConstGraph& cg, const ade::NodeHandle &nh) {
     const auto gdata = cg.metadata(nh).get<gimpl::Data>();
     const auto it = ade::util::find_if(s.m_datas, [&gdata](const cv::gimpl::Data &cd) {
             return cd.rc == gdata.rc && cd.shape == gdata.shape;
@@ -35,7 +35,7 @@ void putData(GSerialized& s, const GModel::ConstGraph& cg, const ade::NodeHandle
     }
 }
 
-void putOp(GSerialized& s, const GModel::ConstGraph& cg, const ade::NodeHandle &nh) {
+void putOp(GSerialized& s, const cv::gimpl::GModel::ConstGraph& cg, const ade::NodeHandle &nh) {
     const auto& op = cg.metadata(nh).get<gimpl::Op>();
     for (const auto &in_nh  : nh->inNodes())  { putData(s, cg, in_nh);  }
     for (const auto &out_nh : nh->outNodes()) { putData(s, cg, out_nh); }
@@ -43,25 +43,25 @@ void putOp(GSerialized& s, const GModel::ConstGraph& cg, const ade::NodeHandle &
 }
 
 void mkDataNode(ade::Graph& g, const cv::gimpl::Data& data) {
-    GModel::Graph gm(g);
+    cv::gimpl::GModel::Graph gm(g);
     auto nh = gm.createNode();
-    gm.metadata(nh).set(NodeType{NodeType::DATA});
+    gm.metadata(nh).set(cv::gimpl::NodeType{cv::gimpl::NodeType::DATA});
     gm.metadata(nh).set(data);
 }
 
 void mkOpNode(ade::Graph& g, const cv::gimpl::Op& op) {
-    GModel::Graph gm(g);
+    cv::gimpl::GModel::Graph gm(g);
     auto nh = gm.createNode();
-    gm.metadata(nh).set(NodeType{NodeType::OP});
+    gm.metadata(nh).set(cv::gimpl::NodeType{cv::gimpl::NodeType::OP});
     gm.metadata(nh).set(op);
 }
 
 void linkNodes(ade::Graph& g) {
     std::map<cv::gimpl::RcDesc, ade::NodeHandle> dataNodes;
-    GModel::Graph gm(g);
+    cv::gimpl::GModel::Graph gm(g);
 
     for (const auto& nh : g.nodes()) {
-        if (gm.metadata(nh).get<NodeType>().t == NodeType::DATA) {
+        if (gm.metadata(nh).get<cv::gimpl::NodeType>().t == cv::gimpl::NodeType::DATA) {
             const auto &d = gm.metadata(nh).get<gimpl::Data>();
             const auto rc = cv::gimpl::RcDesc{d.rc, d.shape, d.ctor};
             dataNodes[rc] = nh;
@@ -69,7 +69,7 @@ void linkNodes(ade::Graph& g) {
     }
 
     for (const auto& nh : g.nodes()) {
-        if (gm.metadata(nh).get<NodeType>().t == NodeType::OP) {
+        if (gm.metadata(nh).get<cv::gimpl::NodeType>().t == cv::gimpl::NodeType::OP) {
             const auto& op = gm.metadata(nh).get<gimpl::Op>();
             for (const auto& in : ade::util::indexed(op.args)) {
                 const auto& arg = ade::util::value(in);
@@ -78,7 +78,7 @@ void linkNodes(ade::Graph& g) {
                     const auto rc  = arg.get<gimpl::RcDesc>();
                     const auto& in_nh = dataNodes.at(rc);
                     const auto& in_eh = g.link(in_nh, nh);
-                    gm.metadata(in_eh).set(Input{idx});
+                    gm.metadata(in_eh).set(cv::gimpl::Input{idx});
                 }
             }
 
@@ -87,7 +87,7 @@ void linkNodes(ade::Graph& g) {
                 const auto rc  = ade::util::value(out);
                 const auto& out_nh = dataNodes.at(rc);
                 const auto& out_eh = g.link(nh, out_nh);
-                gm.metadata(out_eh).set(Output{idx});
+                gm.metadata(out_eh).set(cv::gimpl::Output{idx});
             }
         }
     }
@@ -100,7 +100,7 @@ void relinkProto(ade::Graph& g) {
     using M = std::map<cv::gimpl::RcDesc, ade::NodeHandle>; // FIXME: unordered!
 
     cv::gimpl::GModel::Graph gm(g);
-    auto &proto = gm.metadata().get<Protocol>();
+    auto &proto = gm.metadata().get<cv::gimpl::Protocol>();
 
     const S set_in(proto.inputs.begin(), proto.inputs.end());
     const S set_out(proto.outputs.begin(), proto.outputs.end());
@@ -648,10 +648,10 @@ void serialize( I::OStream& os
     cv::gimpl::GModel::ConstGraph cg(g);
     GSerialized s;
     for (auto &nh : nodes) {
-        switch (cg.metadata(nh).get<NodeType>().t)
+        switch (cg.metadata(nh).get<cv::gimpl::NodeType>().t)
         {
-        case NodeType::OP:   putOp  (s, cg, nh); break;
-        case NodeType::DATA: putData(s, cg, nh); break;
+        case cv::gimpl::NodeType::OP:   putOp  (s, cg, nh); break;
+        case cv::gimpl::NodeType::DATA: putData(s, cg, nh); break;
         default: util::throw_error(std::logic_error("Unknown NodeType"));
         }
     }
@@ -668,14 +668,14 @@ GSerialized deserialize(I::IStream &is) {
 
 void reconstruct(const GSerialized &s, ade::Graph &g) {
     GAPI_Assert(g.nodes().empty());
-    for (const auto& d  : s.m_datas) cv::gimpl::s11n::mkDataNode(g, d);
-    for (const auto& op : s.m_ops)   cv::gimpl::s11n::mkOpNode(g, op);
-    cv::gimpl::s11n::linkNodes(g);
+    for (const auto& d  : s.m_datas) cv::gapi::s11n::mkDataNode(g, d);
+    for (const auto& op : s.m_ops)   cv::gapi::s11n::mkOpNode(g, op);
+    cv::gapi::s11n::linkNodes(g);
 
     cv::gimpl::GModel::Graph gm(g);
     gm.metadata().set(s.m_counter);
     gm.metadata().set(s.m_proto);
-    cv::gimpl::s11n::relinkProto(g);
+    cv::gapi::s11n::relinkProto(g);
     gm.metadata().set(cv::gimpl::Deserialized{});
 }
 
@@ -859,5 +859,5 @@ GAPI_EXPORTS GRunArgs run_args_deserialize(I::IStream& is) {
 
 
 } // namespace s11n
-} // namespace gimpl
+} // namespace gapi
 } // namespace cv
