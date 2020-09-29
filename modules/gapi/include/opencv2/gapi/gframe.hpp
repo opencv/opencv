@@ -42,12 +42,20 @@ private:
 };
 /** @} */
 
+enum class MediaFormat
+{
+    BGR = 0,
+    NV12,
+};
+
 /**
  * \addtogroup gapi_meta_args
  * @{
  */
 struct GAPI_EXPORTS GFrameDesc
 {
+    MediaFormat fmt;
+    cv::Size size;
 };
 static inline GFrameDesc empty_gframe_desc() { return GFrameDesc{}; }
 /** @} */
