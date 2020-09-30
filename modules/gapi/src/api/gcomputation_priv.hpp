@@ -29,7 +29,7 @@ public:
         cv::GProtoArgs m_outs;
     };
 
-    using Dump = cv::gimpl::s11n::GSerialized;
+    using Dump = cv::gapi::s11n::GSerialized;
 
     using Shape = cv::util::variant
         < Expr    // An expression-based graph

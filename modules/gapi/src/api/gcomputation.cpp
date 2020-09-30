@@ -73,18 +73,18 @@ cv::GComputation::GComputation(cv::GProtoInputArgs &&ins,
     };
 }
 
-cv::GComputation::GComputation(cv::gimpl::s11n::I::IStream &is)
+cv::GComputation::GComputation(cv::gapi::s11n::I::IStream &is)
     : m_priv(new Priv())
 {
-    m_priv->m_shape = gimpl::s11n::deserialize(is);
+    m_priv->m_shape = gapi::s11n::deserialize(is);
 }
 
-void cv::GComputation::serialize(cv::gimpl::s11n::I::OStream &os) const
+void cv::GComputation::serialize(cv::gapi::s11n::I::OStream &os) const
 {
     // Build a basic GModel and write the whole thing to the stream
     auto pG = cv::gimpl::GCompiler::makeGraph(*m_priv);
     std::vector<ade::NodeHandle> nhs(pG->nodes().begin(), pG->nodes().end());
-    gimpl::s11n::serialize(os, *pG, nhs);
+    gapi::s11n::serialize(os, *pG, nhs);
 }
 
 
