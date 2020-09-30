@@ -95,6 +95,37 @@ enum class GShape: int
     GFRAME,
 };
 
+template<typename T> struct wrap_serialize
+{
+    std::function<void(I::OStream&, const uti::any&)> serialize =
+        decltype(serialize_impl(os, arg, 0))::value ? call_serialize : nullptr;
+
+private:
+    template<typename>
+    struct sfinae_true : std::true_type{};
+
+    template<typename Q=T>
+    static auto serialize_impl(I::OStream &os, util::any arg, int)
+        -> sfinae_true<decltype(os << std::declval<Q>())>
+    {
+        os << util::get<T>(arg);
+    }
+
+    template<typename Q=T>
+    static auto serialize_impl(I::OStream &os, util::any arg, long)
+        -> sfinae_true<decltype(S11N<Q>::serialize(os, std::declval<Q>()))>
+    {
+        S11N<Q>::serialize(os, util::get<T>(arg));
+    }
+
+    static std::false_type serialize_impl(I::OStream &os, util::any arg, long long);
+
+    static void call_serialize(I::OStream &os, util::any arg)
+    {
+        serialize_impl(os, arg, 0);
+    }
+};
+
 struct GCompileArg;
 
 namespace detail {
@@ -153,7 +184,7 @@ public:
     template<typename T, typename std::enable_if<!detail::is_compile_arg<T>::value, int>::type = 0>
     explicit GCompileArg(T &&t)
         : tag(detail::CompileArgTag<typename std::decay<T>::type>::tag())
-        , serialize(&wrap_serialize<T>::serialize)
+        , serialize(&wrap_serialize<typename std::decay<T>::type>::serialize)
         , arg(t)
     {
     }
