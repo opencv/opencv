@@ -150,7 +150,7 @@ public:
         auto it = out_blobs.find(name);
         if (it == out_blobs.end()) {
             m_call->kernel().outShapes.push_back(cv::GShape::GMAT);
-            size_t size = out_blobs.size();
+            int size = static_cast<int>(out_blobs.size());
             it = out_blobs.emplace(name, m_call->yield(size)).first;
             m_info->out_names.push_back(name);
         }
