@@ -5,19 +5,19 @@
 * Homepage: <https://opencv.org>
   * Courses: <https://opencv.org/courses>
 * Docs: <https://docs.opencv.org/master/>
-* Q&A forum: <http://answers.opencv.org>
-* Issue tracking: <https://github.com/opencv/opencv/issues>
+* Q&A Forum: <http://answers.opencv.org>
+* Issue Tracking: <https://github.com/opencv/opencv/issues>
 * Additional OpenCV functionality: <https://github.com/opencv/opencv_contrib> 
 
 
-### Contributing
+### Contributing:
 
-Please read the [contribution guidelines](https://github.com/opencv/opencv/wiki/How_to_contribute) before starting work on a pull request.
+Please Read The [Contribution Guidelines](https://github.com/opencv/opencv/wiki/How_to_contribute) Before Starting Work on A Pull Request.
 
-#### Summary of the guidelines:
+#### Summary of The Guidelines:
 
-* One pull request per issue;
-* Choose the right base branch;
-* Include tests and documentation;
-* Clean up "oops" commits before submitting;
-* Follow the [coding style guide](https://github.com/opencv/opencv/wiki/Coding_Style_Guide).
+* One Pull Request per Issue;
+* Choose The Right Base Branch;
+* Include Tests and Documentation;
+* Clean Up "Oops" Commits Before Submitting;
+* Follow The [Coding Style Guide](https://github.com/opencv/opencv/wiki/Coding_Style_Guide).
