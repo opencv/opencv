@@ -594,10 +594,10 @@ bool OCL4DNNConvSpatial<Dtype>::Forward(const UMat& bottom,
     if (use_half_ && weights_half.empty())
         convertFp16(weight, weights_half);
 
-    prepareKernel(bottom, top, weight, (use_half_) ? bias_half : bias, numImages);
+    prepareKernel(bottom, top, (use_half_) ? weights_half : weight, (use_half_) ? bias_half : bias, numImages);
     if (bestKernelConfig.empty())
         return false;
-    return convolve(bottom, top, weight, (use_half_) ? bias_half : bias, numImages, bestKernelConfig);
+    return convolve(bottom, top, (use_half_) ? weights_half : weight, (use_half_) ? bias_half : bias, numImages, bestKernelConfig);
 }
 
 template<typename Dtype>
