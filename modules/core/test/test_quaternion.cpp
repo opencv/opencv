@@ -89,11 +89,12 @@ TEST_F(QuatTest, basicfuns){
     Mat q1RotMat = q1.toRotMat3x3();
     EXPECT_MAT_NEAR(q1RotMat, R, 1e-6);
     EXPECT_ANY_THROW(qNull.toRodrigues());
-    Vec3d rodVec{q1[1] / q1[0], q1[2] / q1[0], q1[3] / q1[0]};
-    Vec3d q1Rod = q1.toRodrigues();
+    Vec3d rodVec{q1Unit[1] / q1Unit[0], q1Unit[2] / q1Unit[0], q1Unit[3] / q1Unit[0]};
+    Vec3d q1Rod = q1Unit.toRodrigues();
     EXPECT_EQ(q1Rod[0], rodVec[0]);
     EXPECT_EQ(q1Rod[1], rodVec[1]);
     EXPECT_EQ(q1Rod[2], rodVec[2]);
+    EXPECT_EQ(rvec2Quat(rodVec), q1Unit);
 
     EXPECT_EQ(log(q1Unit, true), log(q1Unit));
     EXPECT_EQ(log(qIdentity, true), qNull);
@@ -219,9 +220,9 @@ TEST_F(QuatTest, interpolation){
     EXPECT_EQ(Quatd::slerp(qNoRot, -q1, 0.5), -Quatd::slerp(-qNoRot, q1, 0.5));
 
     Quat<double> tr1(0, axis);
-	Quat<double> tr2(angle / 2, axis);
-	Quat<double> tr3(angle, axis);
-	Quat<double> tr4(angle, Vec3d{-1/sqrt(2),0,1/(sqrt(2))});
+    Quat<double> tr2(angle / 2, axis);
+    Quat<double> tr3(angle, axis);
+    Quat<double> tr4(angle, Vec3d{-1/sqrt(2),0,1/(sqrt(2))});
     EXPECT_ANY_THROW(Quatd::spline(qNull, tr1, tr2, tr3, 0));
     EXPECT_EQ(Quatd::spline(tr1, tr2, tr3, tr4, 0), tr2);
     EXPECT_EQ(Quatd::spline(tr1, tr2, tr3, tr4, 1), tr3);
