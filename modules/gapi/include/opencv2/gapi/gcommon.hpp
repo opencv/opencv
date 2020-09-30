@@ -19,7 +19,6 @@
 #include <opencv2/gapi/own/exports.hpp>
 #include <opencv2/gapi/own/assert.hpp>
 #include <opencv2/gapi/render/render_types.hpp>
-#include "/home/asyadev/Work/repositories/asyadev/opencv/modules/gapi/src/backends/common/serialization.hpp"
 
 namespace cv {
 

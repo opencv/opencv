@@ -120,7 +120,7 @@ GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::gapi::wip::draw::
 
 // G-API types /////////////////////////////////////////////////////////////////
 
-GAPI_EXPORTS I::IStream& operator<< (I::OStream& os, const cv::GCompileArg &);
+GAPI_EXPORTS I::IStream& operator<< (I::OStream& os, const cv::GCompileArg &arg);
 
 GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, cv::util::monostate  );
 GAPI_EXPORTS I::IStream& operator>> (I::IStream& is, cv::util::monostate &);
