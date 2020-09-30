@@ -122,6 +122,7 @@ protected:
 template<>
 class Params<cv::gapi::Generic> {
 public:
+    Params() = default;
     Params(const std::string& tag,
            const std::string &model,
            const std::string &weights,
@@ -139,6 +140,16 @@ protected:
     detail::ParamDesc desc;
     std::string m_tag;
 };
+
+// NB: For python bindings
+using GenParams = Params<Generic>;
+GAPI_EXPORTS_W inline GenParams params(const String& tag,
+                                       const String& model,
+                                       const String& weights,
+                                       const String& device)
+{
+    return GenParams(tag, model, weights, device);
+}
 
 } // namespace ie
 } // namespace gapi

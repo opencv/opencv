@@ -4,6 +4,8 @@
 #ifdef HAVE_OPENCV_GAPI
 
 using gapi_GKernelPackage = cv::gapi::GKernelPackage;
+using gapi_GNetPackage = cv::gapi::GNetPackage;
+using gapi_ie_GenParams = cv::gapi::ie::GenParams;
 
 template<>
 bool pyopencv_to(PyObject* obj, std::vector<GCompileArg>& value, const ArgInfo& info)
