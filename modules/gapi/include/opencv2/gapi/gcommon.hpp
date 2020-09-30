@@ -20,6 +20,8 @@
 #include <opencv2/gapi/own/assert.hpp>
 #include <opencv2/gapi/render/render_types.hpp>
 
+#include <opencv2/gapi/s11n.hpp>
+
 namespace cv {
 
 class GMat; // FIXME: forward declaration for GOpaqueTraits
