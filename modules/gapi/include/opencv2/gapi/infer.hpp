@@ -150,15 +150,14 @@ public:
         auto it = out_blobs.find(name);
         if (it == out_blobs.end()) {
             m_call->kernel().outShapes.push_back(cv::GShape::GMAT);
-            it = out_blobs.emplace(name, m_call->yield(num_outs)).first;
+            size_t size = out_blobs.size();
+            it = out_blobs.emplace(name, m_call->yield(size)).first;
             m_info->out_names.push_back(name);
-            ++num_outs;
         }
         return it->second;
     };
 
 private:
-    int num_outs = 0;
     std::shared_ptr<cv::GCall> m_call;
     InOutInfo* m_info = nullptr;
     std::unordered_map<std::string, cv::GMat> out_blobs;
