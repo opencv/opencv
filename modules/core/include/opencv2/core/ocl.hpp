@@ -735,11 +735,11 @@ public:
     OpenCLExecutionContext() = default;
     ~OpenCLExecutionContext() = default;
 
-    OpenCLExecutionContext(const OpenCLExecutionContext& other) = default;
-    OpenCLExecutionContext(OpenCLExecutionContext&& other) = default;
+    OpenCLExecutionContext(const OpenCLExecutionContext&) = default;
+    OpenCLExecutionContext(OpenCLExecutionContext&&) = default;
 
-    OpenCLExecutionContext& operator=(const OpenCLExecutionContext& other) = default;
-    OpenCLExecutionContext& operator=(OpenCLExecutionContext&& other) = default;
+    OpenCLExecutionContext& operator=(const OpenCLExecutionContext&) = default;
+    OpenCLExecutionContext& operator=(OpenCLExecutionContext&&) = default;
 
     /** Get associated ocl::Context */
     Context& getContext() const;
