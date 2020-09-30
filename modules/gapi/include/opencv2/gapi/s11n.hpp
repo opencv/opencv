@@ -12,6 +12,8 @@
 #include <unordered_map>
 #include <opencv2/gapi/gcomputation.hpp>
 #include <opencv2/gapi/render/render_types.hpp>
+#include <opencv2/gapi/util/variant.hpp>
+#include <opencv2/gapi/gkernel.hpp>
 
 namespace cv {
 namespace gapi {
@@ -55,6 +57,16 @@ cv::GRunArgs deserialize(const std::vector<char> &p) {
 }
 
 } // namespace gapi
+} // namespace cv
+
+// FIXME: forward declaration
+// FIXME moved here due to clang lookup issue: https://clang.llvm.org/compatibility.html
+namespace cv {
+namespace gimpl {
+    struct RcDesc;
+    struct Op;
+    struct Data;
+} // namespace gimpl
 } // namespace cv
 
 namespace cv {
@@ -142,7 +154,105 @@ namespace I {
     GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::gapi::wip::draw::Line &l);
     GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::gapi::wip::draw::Line &l);
 
-    // Generic stl structures
+    // G-API types /////////////////////////////////////////////////////////////////
+
+    GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, cv::util::monostate  );
+    GAPI_EXPORTS I::IStream& operator>> (I::IStream& is, cv::util::monostate &);
+
+    GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, cv::GShape  shape);
+    GAPI_EXPORTS I::IStream& operator>> (I::IStream& is, cv::GShape &shape);
+
+    GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, cv::detail::ArgKind  k);
+    GAPI_EXPORTS I::IStream& operator>> (I::IStream& is, cv::detail::ArgKind &k);
+
+    GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, cv::detail::OpaqueKind  k);
+    GAPI_EXPORTS I::IStream& operator>> (I::IStream& is, cv::detail::OpaqueKind &k);
+
+    GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::GArg &arg);
+    GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::GArg &arg);
+
+
+    GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::GKernel &k);
+    GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::GKernel &k);
+
+    GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::GMatDesc &d);
+    GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::GMatDesc &d);
+
+    GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::GScalarDesc &);
+    GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::GScalarDesc &);
+
+    GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::GOpaqueDesc &);
+    GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::GOpaqueDesc &);
+
+    GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::GArrayDesc &);
+    GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::GArrayDesc &);
+
+    #if !defined(GAPI_STANDALONE)
+    GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::UMat &);
+    GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::UMat &);
+    #endif // !defined(GAPI_STANDALONE)
+
+    GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::gapi::wip::IStreamSource::Ptr &);
+    GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::gapi::wip::IStreamSource::Ptr &);
+
+    GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::detail::VectorRef &);
+    GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::detail::VectorRef &);
+
+    GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::detail::OpaqueRef &);
+    GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::detail::OpaqueRef &);
+
+    // FIXME: moved here due to clang lookup issue (see the comment above)
+    GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::gimpl::RcDesc &rc);
+    GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::gimpl::RcDesc &rc);
+
+    GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::gimpl::Op &op);
+    GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::gimpl::Op &op);
+
+    GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::gimpl::Data &op);
+    GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::gimpl::Data &op);
+
+
+    // Generic: variant serialization //////////////////////////////////////////////
+    namespace detail {
+    template<typename V>
+    I::OStream& put_v(I::OStream&, const V&, std::size_t) {
+        GAPI_Assert(false && "variant>>: requested index is invalid");
+    };
+    template<typename V, typename X, typename... Xs>
+    I::OStream& put_v(I::OStream& os, const V& v, std::size_t x) {
+        return (x == 0u)
+            ? os << cv::util::get<X>(v)
+            : put_v<V, Xs...>(os, v, x-1);
+    }
+    template<typename V>
+    I::IStream& get_v(I::IStream&, V&, std::size_t, std::size_t) {
+        GAPI_Assert(false && "variant<<: requested index is invalid");
+    }
+    template<typename V, typename X, typename... Xs>
+    I::IStream& get_v(I::IStream& is, V& v, std::size_t i, std::size_t gi) {
+        if (i == gi) {
+            X x{};
+            is >> x;
+            v = std::move(x);
+            return is;
+        } else return get_v<V, Xs...>(is, v, i+1, gi);
+    }
+    } // namespace detail
+
+    template<typename... Ts>
+    I::OStream& operator<< (I::OStream& os, const cv::util::variant<Ts...> &v) {
+        os << (uint32_t)v.index();
+        return detail::put_v<cv::util::variant<Ts...>, Ts...>(os, v, v.index());
+    }
+    template<typename... Ts>
+    I::IStream& operator>> (I::IStream& is, cv::util::variant<Ts...> &v) {
+        int idx = -1;
+        is >> idx;
+        GAPI_Assert(idx >= 0 && idx < (int)sizeof...(Ts));
+        return detail::get_v<cv::util::variant<Ts...>, Ts...>(is, v, 0u, idx);
+    }
+
+    // Generic: stl structures serialization //////////////////////////////////////////////
     template<typename K, typename V>
     GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const std::map<K, V> &m) {
         const uint32_t sz = static_cast<uint32_t>(m.size());
@@ -165,7 +275,6 @@ namespace I {
         return os;
     }
 
-    // Generic stl structures
     template<typename K, typename V>
     GAPI_EXPORTS I::IStream& operator>> (I::IStream& is, std::map<K, V> &m) {
         m.clear();
@@ -211,8 +320,8 @@ namespace detail {
     // Note: actual implementation is defined by user
     template<typename T>
     struct GAPI_EXPORTS S11N {
-        static void serialize(I::OStream &os, const T &p) {}
-        static T deserialize(I::IStream &is) { T t; return t; }
+        static void serialize(I::OStream &, const T &) {}
+        static T deserialize(I::IStream &) { T t; return t; }
         static constexpr const bool isSupported = false; // type T can be serialized
     };
 } // namespace detail

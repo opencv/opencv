@@ -15,7 +15,6 @@ namespace {
     };
 }
 
-// FIXME: namespace conflicts
 namespace cv {
 namespace gapi {
 namespace s11n {
