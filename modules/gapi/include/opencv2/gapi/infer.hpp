@@ -21,7 +21,6 @@
 #include <opencv2/gapi/garg.hpp>      // GArg
 #include <opencv2/gapi/gcommon.hpp>   // CompileArgTag
 #include <opencv2/gapi/gmetaarg.hpp>  // GMetaArg
-#include <opencv2/gapi/infer/ie.hpp> // Generic
 
 namespace cv {
 
@@ -297,8 +296,10 @@ typename Net::Result infer(Args&&... args) {
     return GInfer<Net>::on(std::forward<Args>(args)...);
 }
 
+struct Generic { };
+
 template<typename Net, typename... Args>
-typename std::enable_if<std::is_same<Net, cv::gapi::ie::Generic>::value, GInferOutputs>::type
+typename std::enable_if<std::is_same<Net, Generic>::value, GInferOutputs>::type
 infer(const std::string& name, const GInferInputs& inputs)
 {
     std::vector<GArg> input_args;

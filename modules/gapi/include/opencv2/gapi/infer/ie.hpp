@@ -17,6 +17,7 @@
 
 #include <opencv2/core/cvdef.h>     // GAPI_EXPORTS
 #include <opencv2/gapi/gkernel.hpp> // GKernelPackage
+#include <opencv2/gapi/infer.hpp> // Generic
 
 namespace cv {
 namespace gapi {
@@ -116,10 +117,8 @@ protected:
     detail::ParamDesc desc;
 };
 
-struct Generic { };
-
 template<>
-class Params<Generic> {
+class Params<cv::gapi::Generic> {
 public:
     Params(const std::string& tag,
            const std::string &model,
