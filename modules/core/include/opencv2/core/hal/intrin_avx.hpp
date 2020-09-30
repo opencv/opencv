@@ -1503,13 +1503,8 @@ inline v_int16x16 v_absdiffs(const v_int16x16& a, const v_int16x16& b)
 ////////// Conversions /////////
 
 /** Rounding **/
-inline v_int32x8 v_round(const v_float32x8& a)
+static inline v_int32x8 v_round(const v_float32x8& a)
 { return v_int32x8(_mm256_cvtps_epi32(a.val)); }
-
-inline v_uint32x8 v_round(const v_float32x8& a)
-{
-    return v_uint32x8(_mm256_cvtps_epi32(a.val));
-}
 
 inline v_int32x8 v_round(const v_float64x4& a)
 { return v_int32x8(_mm256_castsi128_si256(_mm256_cvtpd_epi32(a.val))); }

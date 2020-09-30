@@ -1724,10 +1724,10 @@ inline v_int32x4 v_round(const v_float32x4& a)
     return v_int32x4(result);
 }
 #else
-inline v_int32x4 v_round(const v_float32x4& a)
+static inline v_int32x4 v_round(const v_float32x4& a)
 {
     static const int32x4_t v_sign = vdupq_n_s32(1 << 31),
-        v_05 = vreinterpretq_s32_f32(vdupq_n_f32(0.5f));
+                           v_05 = vreinterpretq_s32_f32(vdupq_n_f32(0.5f));
 
     int32x4_t v_addition = vorrq_s32(v_05, vandq_s32(v_sign, vreinterpretq_s32_f32(a.val)));
     return v_int32x4(vcvtq_s32_f32(vaddq_f32(a.val, vreinterpretq_f32_s32(v_addition))));
@@ -1961,7 +1961,7 @@ inline v_float32x4 v_cvt_f32(const v_int32x4& a)
     return v_float32x4(vcvtq_f32_s32(a.val));
 }
 
-static inline v_float32x4 v_cvt_f32(const v_uint32x4& a)
+inline v_float32x4 v_cvt_f32(const v_uint32x4& a)
 {
     return v_float32x4(vcvtq_f32_u32(a.val));
 }
