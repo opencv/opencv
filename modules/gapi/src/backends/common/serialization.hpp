@@ -120,6 +120,8 @@ GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::gapi::wip::draw::
 
 // G-API types /////////////////////////////////////////////////////////////////
 
+GAPI_EXPORTS I::IStream& operator<< (I::OStream& os, const cv::GCompileArg &);
+
 GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, cv::util::monostate  );
 GAPI_EXPORTS I::IStream& operator>> (I::IStream& is, cv::util::monostate &);
 
@@ -390,6 +392,7 @@ public:
     virtual I::IStream& operator>> (std::string &) override;
 };
 
+GAPI_EXPORTS void serialize(I::OStream& os, const cv::GCompileArgs &ca);
 GAPI_EXPORTS void serialize(I::OStream& os, const cv::GMetaArgs &ma);
 GAPI_EXPORTS void serialize(I::OStream& os, const cv::GRunArgs &ra);
 GAPI_EXPORTS GMetaArgs meta_args_deserialize(I::IStream& is);

@@ -310,6 +310,17 @@ I::IStream& operator>> (I::IStream& is,       cv::gapi::wip::draw::Line &l) {
 
 // G-API types /////////////////////////////////////////////////////////////////
 
+I::OStream& operator<< (I::OStream& os, cv::gapi::GCompileArg arg)
+{
+    if (arg.serialize)
+    {
+        os << arg.tag;
+        arg.serialize(os, arg.arg);
+    }
+
+    return os;
+}
+
 // Stubs (empty types)
 
 I::OStream& operator<< (I::OStream& os, cv::util::monostate  ) {return os;}
@@ -840,12 +851,18 @@ I::IStream& ByteMemoryInStream::operator>> (std::string& str) {
     return *this;
 }
 
+GAPI_EXPORTS void serialize(I::OStream& os, const cv::GCompileArgs &ca) {
+    os << ca;
+}
+
 GAPI_EXPORTS void serialize(I::OStream& os, const cv::GMetaArgs &ma) {
     os << ma;
 }
+
 GAPI_EXPORTS void serialize(I::OStream& os, const cv::GRunArgs &ra) {
     os << ra;
 }
+
 GAPI_EXPORTS GMetaArgs meta_args_deserialize(I::IStream& is) {
     GMetaArgs s;
     is >> s;

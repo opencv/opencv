@@ -44,6 +44,13 @@ std::vector<char> cv::gapi::serialize(const cv::GRunArgs& ra)
     return os.data();
 }
 
+std::vector<char> cv::gapi::serialize(const cv::GCompileArgs& ca)
+{
+    cv::gimpl::s11n::ByteMemoryOutStream os;
+    serialize(os, ca);
+    return os.data();
+}
+
 // FIXME: This function should move from S11N to GRunArg-related entities.
 // it has nothing to do with the S11N as it is
 cv::GRunArgsP cv::gapi::bind(cv::GRunArgs &results)

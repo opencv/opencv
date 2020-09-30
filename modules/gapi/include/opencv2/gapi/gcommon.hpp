@@ -19,6 +19,7 @@
 #include <opencv2/gapi/own/exports.hpp>
 #include <opencv2/gapi/own/assert.hpp>
 #include <opencv2/gapi/render/render_types.hpp>
+#include "/home/asyadev/Work/repositories/asyadev/opencv/modules/gapi/src/backends/common/serialization.hpp"
 
 namespace cv {
 
@@ -146,11 +147,13 @@ public:
     GCompileArg() = default;
 
     std::string tag;
+    std::function<void(I::OStream&, const uti::any&)> serialize;
 
     // FIXME: use decay in GArg/other trait-based wrapper before leg is shot!
     template<typename T, typename std::enable_if<!detail::is_compile_arg<T>::value, int>::type = 0>
     explicit GCompileArg(T &&t)
         : tag(detail::CompileArgTag<typename std::decay<T>::type>::tag())
+        , serialize(&wrap_serialize<T>::serialize)
         , arg(t)
     {
     }

@@ -51,7 +51,38 @@ cv::GRunArgs deserialize(const std::vector<char> &p) {
     return detail::getRunArgs(p);
 }
 
+namespace detail {
+template<typename T> struct S11N;
 
+template<typename T> struct wrap_serialize
+{
+    template<typename Q=T>
+    static auto serialize_impl(I::OStream &os, util::any arg, int)
+        -> decltype(os << std::declval<Q>(), void())
+    {
+        os << util::get<T>(arg);
+    }
+
+    template<typename Q=T>
+    static auto serialize_impl(I::OStream &os, util::any arg, long)
+        -> decltype(S11N<Q>::serialize(os, std::declval<Q>()), void())
+    {
+        S11N<Q>::serialize(os, util::get<T>(arg));
+    }
+
+    template<typename Q=T>
+    static void serialize_impl(I::OStream &os, util::any arg, long long)
+    {
+        throw std::runtime_error("No serialization available for this type!");
+    }
+
+    static void serialize(I::OStream &os, util::any arg)
+    {
+        serialize_impl(os, arg, 0);
+    }
+};
+
+} // namespace detail
 } // namespace gapi
 } // namespace cv
 
