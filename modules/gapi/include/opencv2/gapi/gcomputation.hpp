@@ -260,6 +260,9 @@ public:
     void apply(GRunArgs &&ins, GRunArgsP &&outs, GCompileArgs &&args = {});       // Arg-to-arg overload
 
     /// @private -- Exclude this function from OpenCV documentation
+    GAPI_WRAP GRunArgs apply(GRunArgs &&ins, GCompileArgs &&args = {});
+
+    /// @private -- Exclude this function from OpenCV documentation
     void apply(const std::vector<cv::Mat>& ins,                                   // Compatibility overload
                const std::vector<cv::Mat>& outs,
                GCompileArgs &&args = {});
@@ -286,7 +289,7 @@ public:
      * @param args compilation arguments for underlying compilation
      * process.
      */
-    GAPI_WRAP void apply(cv::Mat in, CV_OUT cv::Scalar &out, GCompileArgs &&args = {}); // Unary overload (scalar)
+    void apply(cv::Mat in, cv::Scalar &out, GCompileArgs &&args = {}); // Unary overload (scalar)
 
     /**
      * @brief Execute a binary computation (with compilation on the fly)
@@ -298,7 +301,7 @@ public:
      * @param args compilation arguments for underlying compilation
      * process.
      */
-    GAPI_WRAP void apply(cv::Mat in1, cv::Mat in2, CV_OUT cv::Mat &out, GCompileArgs &&args = {}); // Binary overload
+    void apply(cv::Mat in1, cv::Mat in2, cv::Mat &out, GCompileArgs &&args = {}); // Binary overload
 
     /**
      * @brief Execute an binary computation (with compilation on the fly)
@@ -528,6 +531,7 @@ protected:
         GCompileArgs comp_args = std::get<sizeof...(Ts)-1>(meta_and_compile_args);
         return compileStreaming(std::move(meta_args), std::move(comp_args));
     }
+    void recompile(GMetaArgs&& in_metas, GCompileArgs &&args);
     /// @private
     std::shared_ptr<Priv> m_priv;
 };

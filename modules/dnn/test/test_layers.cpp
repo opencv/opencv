@@ -2268,13 +2268,6 @@ TEST_P(ConvolutionActivationFusion, Accuracy)
     if (actType == "Power" && backendId == DNN_BACKEND_OPENCV && (targetId == DNN_TARGET_OPENCL || targetId == DNN_TARGET_OPENCL_FP16))
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL);
 
-    // bug: https://github.com/opencv/opencv/issues/17953
-    if (actType == "ChannelsPReLU" && bias_term == false &&
-        backendId == DNN_BACKEND_OPENCV && (targetId == DNN_TARGET_OPENCL || targetId == DNN_TARGET_OPENCL_FP16))
-    {
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL);
-    }
-
     Net net;
     int convId = net.addLayer(convParams.name, convParams.type, convParams);
     int activId = net.addLayerToPrev(activationParams.name, activationParams.type, activationParams);
