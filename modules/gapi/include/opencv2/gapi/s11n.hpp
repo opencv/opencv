@@ -322,7 +322,6 @@ namespace detail {
     struct GAPI_EXPORTS S11N {
         static void serialize(I::OStream &, const T &) {}
         static T deserialize(I::IStream &) { T t; return t; }
-        static constexpr const bool isSupported = false; // type T can be serialized
     };
 } // namespace detail
 } // namespace s11n
