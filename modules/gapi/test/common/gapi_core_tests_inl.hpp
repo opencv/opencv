@@ -1691,7 +1691,7 @@ TEST_P(SizeTest, ParseTest)
     cv::GMat in;
     cv::Size out_sz;
 
-    auto out = cv::gapi::size(in);
+    auto out = cv::gapi::streaming::size(in);
     cv::GComputation c(cv::GIn(in), cv::GOut(out));
     c.apply(cv::gin(in_mat1), cv::gout(out_sz), getCompileArgs());
 
@@ -1704,7 +1704,7 @@ TEST_P(SizeRTest, ParseTest)
     cv::Size out_sz;
 
     cv::GOpaque<cv::Rect> op_rect;
-    auto out = cv::gapi::size(op_rect);
+    auto out = cv::gapi::streaming::size(op_rect);
     cv::GComputation c(cv::GIn(op_rect), cv::GOut(out));
     c.apply(cv::gin(rect), cv::gout(out_sz), getCompileArgs());
 

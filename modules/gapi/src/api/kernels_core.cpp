@@ -388,14 +388,14 @@ GMat warpAffine(const GMat& src, const Mat& M, const Size& dsize, int flags,
     return core::GWarpAffine::on(src, M, dsize, flags, borderMode, borderValue);
 }
 
-GOpaque<Size> size(const GMat& src)
+GOpaque<Size> streaming::size(const GMat& src)
 {
-    return core::GSize::on(src);
+    return streaming::GSize::on(src);
 }
 
-GOpaque<Size> size(const GOpaque<Rect>& r)
+GOpaque<Size> streaming::size(const GOpaque<Rect>& r)
 {
-    return core::GSizeR::on(r);
+    return streaming::GSizeR::on(r);
 }
 
 } //namespace gapi
