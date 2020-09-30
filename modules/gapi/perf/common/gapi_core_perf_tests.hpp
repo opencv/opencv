@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2020 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_CORE_PERF_TESTS_HPP
@@ -52,6 +52,7 @@ namespace opencv_test
     class AbsDiffPerfTest : public TestPerfParams<tuple<cv::Size, MatType, cv::GCompileArgs>> {};
     class AbsDiffCPerfTest : public TestPerfParams<tuple<cv::Size, MatType, cv::GCompileArgs>> {};
     class SumPerfTest : public TestPerfParams<tuple<compare_scalar_f, cv::Size, MatType, cv::GCompileArgs>> {};
+    class CountNonZeroPerfTest : public TestPerfParams<tuple<compare_scalar_f, cv::Size, MatType, cv::GCompileArgs>> {};
     class AddWeightedPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, MatType, int, cv::GCompileArgs>> {};
     class NormPerfTest : public TestPerfParams<tuple<compare_scalar_f, NormTypes, cv::Size, MatType, cv::GCompileArgs>> {};
     class IntegralPerfTest : public TestPerfParams<tuple<cv::Size, MatType, cv::GCompileArgs>> {};

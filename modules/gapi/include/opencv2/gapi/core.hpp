@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2020 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_CORE_HPP
@@ -305,6 +305,13 @@ namespace core {
     G_TYPED_KERNEL(GSum, <GScalar(GMat)>, "org.opencv.core.matrixop.sum") {
         static GScalarDesc outMeta(GMatDesc) {
             return empty_scalar_desc();
+        }
+    };
+
+    G_TYPED_KERNEL(GCountNonZero, <GOpaque<int>(GMat)>, "org.opencv.core.matrixop.countNonZero") {
+        static GOpaqueDesc outMeta(GMatDesc in) {
+            GAPI_Assert(in.chan == 1);
+            return empty_gopaque_desc();
         }
     };
 
@@ -755,6 +762,7 @@ Supported matrix data types are @ref CV_8UC1, @ref CV_8UC3, @ref CV_16UC1, @ref 
 
 @note Function textual ID is "org.opencv.core.math.mean"
 @param src input matrix.
+@sa  countNonZero, min, max
 */
 GAPI_EXPORTS_W GScalar mean(const GMat& src);
 
@@ -856,7 +864,7 @@ Supported input matrix data types are @ref CV_8UC1, @ref CV_16UC1, @ref CV_16SC1
 @note Function textual ID is "org.opencv.core.pixelwise.compare.cmpGT"
 @param src1 first input matrix.
 @param src2 second input matrix/scalar of the same depth as first input matrix.
-@sa min, max, threshold, cmpLE, cmpGE, cmpLS
+@sa min, max, threshold, cmpLE, cmpGE, cmpLT
 */
 GAPI_EXPORTS GMat cmpGT(const GMat& src1, const GMat& src2);
 /** @overload
@@ -908,7 +916,7 @@ Supported input matrix data types are @ref CV_8UC1, @ref CV_8UC3, @ref CV_16UC1,
 @note Function textual ID is "org.opencv.core.pixelwise.compare.cmpGE"
 @param src1 first input matrix.
 @param src2 second input matrix/scalar of the same depth as first input matrix.
-@sa min, max, threshold, cmpLE, cmpGT, cmpLS
+@sa min, max, threshold, cmpLE, cmpGT, cmpLT
 */
 GAPI_EXPORTS GMat cmpGE(const GMat& src1, const GMat& src2);
 /** @overload
@@ -934,7 +942,7 @@ Supported input matrix data types are @ref CV_8UC1, @ref CV_8UC3, @ref CV_16UC1,
 @note Function textual ID is "org.opencv.core.pixelwise.compare.cmpLE"
 @param src1 first input matrix.
 @param src2 second input matrix/scalar of the same depth as first input matrix.
-@sa min, max, threshold, cmpGT, cmpGE, cmpLS
+@sa min, max, threshold, cmpGT, cmpGE, cmpLT
 */
 GAPI_EXPORTS GMat cmpLE(const GMat& src1, const GMat& src2);
 /** @overload
@@ -1012,7 +1020,7 @@ Supported matrix data types are @ref CV_8UC1, @ref CV_8UC3, @ref CV_16UC1, @ref 
 */
 GAPI_EXPORTS GMat bitwise_and(const GMat& src1, const GMat& src2);
 /** @overload
-@note Function textual ID is "org.opencv.core.pixelwise.compare.bitwise_andS"
+@note Function textual ID is "org.opencv.core.pixelwise.bitwise_andS"
 @param src1 first input matrix.
 @param src2 scalar, which will be per-lemenetly conjuncted with elements of src1.
 */
@@ -1036,7 +1044,7 @@ Supported matrix data types are @ref CV_8UC1, @ref CV_8UC3, @ref CV_16UC1, @ref 
 */
 GAPI_EXPORTS GMat bitwise_or(const GMat& src1, const GMat& src2);
 /** @overload
-@note Function textual ID is "org.opencv.core.pixelwise.compare.bitwise_orS"
+@note Function textual ID is "org.opencv.core.pixelwise.bitwise_orS"
 @param src1 first input matrix.
 @param src2 scalar, which will be per-lemenetly disjuncted with elements of src1.
 */
@@ -1061,7 +1069,7 @@ Supported matrix data types are @ref CV_8UC1, @ref CV_8UC3, @ref CV_16UC1, @ref 
 */
 GAPI_EXPORTS GMat bitwise_xor(const GMat& src1, const GMat& src2);
 /** @overload
-@note Function textual ID is "org.opencv.core.pixelwise.compare.bitwise_xorS"
+@note Function textual ID is "org.opencv.core.pixelwise.bitwise_xorS"
 @param src1 first input matrix.
 @param src2 scalar, for which per-lemenet "logical or" operation on elements of src1 will be performed.
 */
@@ -1121,7 +1129,7 @@ Supported input matrix data types are @ref CV_8UC1, @ref CV_8UC3, @ref CV_16UC1,
 @note Function textual ID is "org.opencv.core.matrixop.min"
 @param src1 first input matrix.
 @param src2 second input matrix of the same size and depth as src1.
-@sa max, compareEqual, compareLess, compareLessEqual
+@sa max, cmpEQ, cmpLT, cmpLE
 */
 GAPI_EXPORTS GMat min(const GMat& src1, const GMat& src2);
 
@@ -1138,7 +1146,7 @@ Supported matrix data types are @ref CV_8UC1, @ref CV_8UC3, @ref CV_16UC1, @ref 
 @note Function textual ID is "org.opencv.core.matrixop.max"
 @param src1 first input matrix.
 @param src2 second input matrix of the same size and depth as src1.
-@sa min, compare, compareEqual, compareGreater, compareGreaterEqual
+@sa min, compare, cmpEQ, cmpGT, cmpGE
 */
 GAPI_EXPORTS GMat max(const GMat& src1, const GMat& src2);
 
@@ -1184,9 +1192,22 @@ Supported matrix data types are @ref CV_8UC1, @ref CV_8UC3, @ref CV_16UC1, @ref 
 
 @note Function textual ID is "org.opencv.core.matrixop.sum"
 @param src input matrix.
-@sa min, max
+@sa countNonZero, mean, min, max
 */
 GAPI_EXPORTS GScalar sum(const GMat& src);
+
+/** @brief Counts non-zero array elements.
+
+The function returns the number of non-zero elements in src :
+\f[\sum _{I: \; \texttt{src} (I) \ne0 } 1\f]
+
+Supported matrix data types are @ref CV_8UC1, @ref CV_16UC1, @ref CV_16SC1, @ref CV_32FC1.
+
+@note Function textual ID is "org.opencv.core.matrixop.countNonZero"
+@param src input single-channel matrix.
+@sa  mean, min, max
+*/
+GAPI_EXPORTS GOpaque<int> countNonZero(const GMat& src);
 
 /** @brief Calculates the weighted sum of two matrices.
 
@@ -1324,7 +1345,7 @@ Output matrix must be of the same size and depth as src.
 types.
 @param type thresholding type (see the cv::ThresholdTypes).
 
-@sa min, max, cmpGT, cmpLE, cmpGE, cmpLS
+@sa min, max, cmpGT, cmpLE, cmpGE, cmpLT
  */
 GAPI_EXPORTS GMat threshold(const GMat& src, const GScalar& thresh, const GScalar& maxval, int type);
 /** @overload

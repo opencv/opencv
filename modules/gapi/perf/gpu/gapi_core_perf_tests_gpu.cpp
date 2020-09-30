@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2020 Intel Corporation
 
 
 #include "../perf_precomp.hpp"
@@ -155,6 +155,12 @@ INSTANTIATE_TEST_CASE_P(SumPerfTestGPU, SumPerfTest,
                         Combine(Values(AbsToleranceScalar(1e-5).to_compare_f()),
                                 Values( szSmall128, szVGA, sz720p, sz1080p ),
                                 Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
+                                Values(cv::compile_args(CORE_GPU))));
+
+INSTANTIATE_TEST_CASE_P(CountNonZeroPerfTestGPU, CountNonZeroPerfTest,
+                        Combine(Values(AbsToleranceScalar(0.0).to_compare_f()),
+                                Values(szSmall128, szVGA, sz720p, sz1080p),
+                                Values(CV_8UC1, CV_16UC1, CV_16SC1, CV_32FC1),
                                 Values(cv::compile_args(CORE_GPU))));
 
 INSTANTIATE_TEST_CASE_P(AddWeightedPerfTestGPU, AddWeightedPerfTest,
