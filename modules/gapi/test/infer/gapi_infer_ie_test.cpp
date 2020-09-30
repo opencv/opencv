@@ -383,17 +383,17 @@ TEST(TestAgeGenderIE, GenericInfer)
     GInferInputs inputs;
     inputs["data"] = in;
 
-    auto outputs = cv::gapi::infer<cv::gapi::ie::Generic>("age-gender-generic", inputs);
+    auto outputs = cv::gapi::infer<cv::gapi::Generic>("age-gender-generic", inputs);
 
     auto age    = outputs.at("age_conv3");
     auto gender = outputs.at("prob");
 
     cv::GComputation comp(cv::GIn(in), cv::GOut(age, gender));
 
-    cv::gapi::ie::Params<cv::gapi::ie::Generic> pp("age-gender-generic",
-                                                   params.model_path,
-                                                   params.weights_path,
-                                                   params.device_id);
+    cv::gapi::ie::Params<cv::gapi::Generic> pp("age-gender-generic",
+                                                params.model_path,
+                                                params.weights_path,
+                                                params.device_id);
 
     comp.apply(cv::gin(in_mat), cv::gout(gapi_age, gapi_gender),
                cv::compile_args(cv::gapi::networks(pp)));
