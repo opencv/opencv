@@ -2,18 +2,50 @@
 
 #include "backends/common/serialization.hpp"
 
+namespace {
+    struct MyCustomType {
+        int val;
+        std::string name;
+        std::vector<float> vec;
+        std::map<int, uint64_t> mmap;
+        bool operator==(const MyCustomType& other) const {
+            return val == other.val && name == other.name &&
+                   vec == other.vec && mmap == other.mmap;
+        }
+    };
+}
+
+namespace cv {
+namespace gapi {
+namespace s11n {
+namespace detail {
+    template<> struct S11N<MyCustomType> {
+        static void serialize(IOStream &os, const MyCustomType &p) {
+            os << p.val << p.name << p.vec << p.mmap;
+        }
+        static MyCustomType deserialize(IIStream &is) {
+            MyCustomType p;
+            is >> p.val >> p.name >> p.vec >> p.mmap;
+            return p;
+        }
+    };
+} // namespace detail
+} // namespace s11n
+} // namespace gapi
+} // namespace cv
+
 namespace opencv_test {
 
 struct S11N_Basic: public ::testing::Test {
     template<typename T> void put(T &&t) {
-        cv::gimpl::s11n::ByteMemoryOutStream os;
+        cv::gapi::s11n::ByteMemoryOutStream os;
         os << t;
         m_buffer = os.data();
     }
 
     template<typename T> T get() {
         // FIXME: This stream API needs a fix-up
-        cv::gimpl::s11n::ByteMemoryInStream is(m_buffer);
+        cv::gapi::s11n::ByteMemoryInStream is(m_buffer);
         T t{};
         is >> t;
         return t;
@@ -469,5 +501,14 @@ TEST_F(S11N_Basic, Test_Gin_GArray) {
     EXPECT_TRUE(verifyArrayKind<cv::detail::OpaqueKind::CV_POINT>(p));
     EXPECT_TRUE(verifyArrayKind<cv::detail::OpaqueKind::CV_MAT>(mat));
     EXPECT_TRUE(verifyArrayKind<cv::detail::OpaqueKind::CV_SCALAR>(sc));
+}
+
+TEST_F(S11N_Basic, Test_Custom_Type) {
+    MyCustomType var{1324, "Hello", {1920, 1080, 720}, {{1, 2937459432}, {42, 253245432}}};
+    cv::gapi::s11n::ByteMemoryOutStream os;
+    cv::gapi::s11n::detail::S11N<MyCustomType>::serialize(os, var);
+    cv::gapi::s11n::ByteMemoryInStream is(os.data());
+    MyCustomType new_var = cv::gapi::s11n::detail::S11N<MyCustomType>::deserialize(is);
+    EXPECT_EQ(var, new_var);
 }
 } // namespace opencv_test
