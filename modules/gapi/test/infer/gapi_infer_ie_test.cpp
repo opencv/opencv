@@ -390,10 +390,10 @@ TEST(TestAgeGenderIE, GenericInfer)
 
     cv::GComputation comp(cv::GIn(in), cv::GOut(age, gender));
 
-    cv::gapi::ie::Params<cv::gapi::Generic> pp("age-gender-generic",
+    cv::gapi::ie::Params<cv::gapi::Generic> pp{"age-gender-generic",
                                                 params.model_path,
                                                 params.weights_path,
-                                                params.device_id);
+                                                params.device_id};
 
     comp.apply(cv::gin(in_mat), cv::gout(gapi_age, gapi_gender),
                cv::compile_args(cv::gapi::networks(pp)));

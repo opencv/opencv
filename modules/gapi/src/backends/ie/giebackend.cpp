@@ -725,13 +725,13 @@ namespace {
             auto& op = model.metadata(nh).get<Op>();
 
             // NB: In case generic infer, info about in/out names is stored in operation (op.params)
-            auto* in_out_info = cv::util::any_cast<cv::InOutInfo>(&op.params);
-            if (in_out_info)
+            if (pp.is_generic)
             {
-                pp.input_names  = in_out_info->in_names;
-                pp.output_names = in_out_info->out_names;
-                pp.num_in  = in_out_info->in_names.size();
-                pp.num_out = in_out_info->out_names.size();
+                auto& info      = cv::util::any_cast<cv::InOutInfo>(op.params);
+                pp.input_names  = info.in_names;
+                pp.output_names = info.out_names;
+                pp.num_in       = info.in_names.size();
+                pp.num_out      = info.out_names.size();
             }
 
             gm.metadata(nh).set(IEUnit{pp});

@@ -61,7 +61,7 @@ struct Op
     std::vector<RcDesc> outs; // TODO: Introduce a new type for resource references
 
     cv::gapi::GBackend  backend;
-    cv::util::any params;
+    cv::util::any params; // Operation specific information
 };
 
 struct Data
