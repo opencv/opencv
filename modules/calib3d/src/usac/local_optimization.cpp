@@ -136,6 +136,7 @@ private:
 
         std::fill(used_edges.begin(), used_edges.end(), false);
 
+        bool has_edges = false;
         // Iterate through all points and set their edges
         for (int point_idx = 0; point_idx < points_size; ++point_idx) {
             energy = energies[point_idx];
@@ -154,9 +155,8 @@ private:
                        b = spatial_coherence, c = spatial_coherence, d = 0;
                 graph.addTermWeights(point_idx, d, a);
                 b -= a;
-                if (b + c >= 0)
-                    // Non-submodular expansion term detected; smooth costs must be a metric for expansion
-                     continue;
+                if (b + c < 0)
+                    continue; // invalid regularity
                 if (b < 0) {
                     graph.addTermWeights(point_idx, 0, b);
                     graph.addTermWeights(actual_neighbor_idx, 0, -b);
@@ -167,8 +167,12 @@ private:
                     graph.addEdges(point_idx, actual_neighbor_idx, b + c, 0);
                 } else
                     graph.addEdges(point_idx, actual_neighbor_idx, b, c);
+                has_edges = true;
             }
         }
+
+        if (!has_edges)
+            return quality->getInliers(model, labeling_inliers);
 
         graph.maxFlow();
 
