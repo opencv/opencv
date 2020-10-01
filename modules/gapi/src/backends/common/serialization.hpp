@@ -36,87 +36,113 @@ struct GSerialized {
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 // S11N operators
-// Note: operators for basic types are defined in IStream/OStream
+// Note: operators for basic types are defined in IIStream/IOStream
 
 // G-API types /////////////////////////////////////////////////////////////////
 
-GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, cv::util::monostate  );
-GAPI_EXPORTS I::IStream& operator>> (I::IStream& is, cv::util::monostate &);
+GAPI_EXPORTS IOStream& operator<< (IOStream& os, cv::util::monostate  );
+GAPI_EXPORTS IIStream& operator>> (IIStream& is, cv::util::monostate &);
 
-GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, cv::GShape  shape);
-GAPI_EXPORTS I::IStream& operator>> (I::IStream& is, cv::GShape &shape);
+GAPI_EXPORTS IOStream& operator<< (IOStream& os, cv::GShape  shape);
+GAPI_EXPORTS IIStream& operator>> (IIStream& is, cv::GShape &shape);
 
-GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, cv::detail::ArgKind  k);
-GAPI_EXPORTS I::IStream& operator>> (I::IStream& is, cv::detail::ArgKind &k);
+GAPI_EXPORTS IOStream& operator<< (IOStream& os, cv::detail::ArgKind  k);
+GAPI_EXPORTS IIStream& operator>> (IIStream& is, cv::detail::ArgKind &k);
 
-GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, cv::detail::OpaqueKind  k);
-GAPI_EXPORTS I::IStream& operator>> (I::IStream& is, cv::detail::OpaqueKind &k);
+GAPI_EXPORTS IOStream& operator<< (IOStream& os, cv::detail::OpaqueKind  k);
+GAPI_EXPORTS IIStream& operator>> (IIStream& is, cv::detail::OpaqueKind &k);
 
-GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, cv::gimpl::Data::Storage  s);
-GAPI_EXPORTS I::IStream& operator>> (I::IStream& is, cv::gimpl::Data::Storage &s);
+GAPI_EXPORTS IOStream& operator<< (IOStream& os, cv::gimpl::Data::Storage  s);
+GAPI_EXPORTS IIStream& operator>> (IIStream& is, cv::gimpl::Data::Storage &s);
 
-GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::gimpl::DataObjectCounter &c);
-GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::gimpl::DataObjectCounter &c);
+GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::gimpl::DataObjectCounter &c);
+GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::gimpl::DataObjectCounter &c);
 
-GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::gimpl::Protocol &p);
-GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::gimpl::Protocol &p);
+GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::gimpl::Protocol &p);
+GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::gimpl::Protocol &p);
 
-GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::GArg &arg);
-GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::GArg &arg);
+GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::GArg &arg);
+GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::GArg &arg);
 
 //Forward declaration
-//I::OStream& operator<< (I::OStream& os, const cv::GRunArg &arg);
-//I::IStream& operator>> (I::IStream& is, cv::GRunArg &arg);
+//IOStream& operator<< (IOStream& os, const cv::GRunArg &arg);
+//IIStream& operator>> (IIStream& is, cv::GRunArg &arg);
 
-GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::GKernel &k);
-GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::GKernel &k);
+GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::GKernel &k);
+GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::GKernel &k);
 
-GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::GMatDesc &d);
-GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::GMatDesc &d);
+GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::GMatDesc &d);
+GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::GMatDesc &d);
 
-GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::GScalarDesc &);
-GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::GScalarDesc &);
+GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::GScalarDesc &);
+GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::GScalarDesc &);
 
-GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::GOpaqueDesc &);
-GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::GOpaqueDesc &);
+GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::GOpaqueDesc &);
+GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::GOpaqueDesc &);
 
-GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::GArrayDesc &);
-GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::GArrayDesc &);
+GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::GArrayDesc &);
+GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::GArrayDesc &);
 
 #if !defined(GAPI_STANDALONE)
-GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::UMat &);
-GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::UMat &);
+GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::UMat &);
+GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::UMat &);
 #endif // !defined(GAPI_STANDALONE)
 
-GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::gapi::wip::IStreamSource::Ptr &);
-GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::gapi::wip::IStreamSource::Ptr &);
+GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::gapi::wip::IStreamSource::Ptr &);
+GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::gapi::wip::IStreamSource::Ptr &);
 
-GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::detail::VectorRef &);
-GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::detail::VectorRef &);
+GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::detail::VectorRef &);
+GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::detail::VectorRef &);
 
-GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::detail::OpaqueRef &);
-GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::detail::OpaqueRef &);
+GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::detail::OpaqueRef &);
+GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::detail::OpaqueRef &);
 
-GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::gimpl::RcDesc &rc);
-GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::gimpl::RcDesc &rc);
+GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::gimpl::RcDesc &rc);
+GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::gimpl::RcDesc &rc);
 
-GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::gimpl::Op &op);
-GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::gimpl::Op &op);
+GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::gimpl::Op &op);
+GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::gimpl::Op &op);
 
-GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::gimpl::Data &op);
-GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::gimpl::Data &op);
+GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::gimpl::Data &op);
+GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::gimpl::Data &op);
+
+// Render types ////////////////////////////////////////////////////////////////
+
+GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::gapi::wip::draw::Text &t);
+GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::gapi::wip::draw::Text &t);
+
+GAPI_EXPORTS IOStream& operator<< (IOStream&, const cv::gapi::wip::draw::FText &);
+GAPI_EXPORTS IIStream& operator>> (IIStream&,       cv::gapi::wip::draw::FText &);
+
+GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::gapi::wip::draw::Circle &c);
+GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::gapi::wip::draw::Circle &c);
+
+GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::gapi::wip::draw::Rect &r);
+GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::gapi::wip::draw::Rect &r);
+
+GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::gapi::wip::draw::Image &i);
+GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::gapi::wip::draw::Image &i);
+
+GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::gapi::wip::draw::Mosaic &m);
+GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::gapi::wip::draw::Mosaic &m);
+
+GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::gapi::wip::draw::Poly &p);
+GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::gapi::wip::draw::Poly &p);
+
+GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::gapi::wip::draw::Line &l);
+GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::gapi::wip::draw::Line &l);
 
 // The top-level serialization routine.
 // Note it is just a single function which takes a GModel and a list of nodes
 // and writes the data to the stream (recursively)
-GAPI_EXPORTS void serialize( I::OStream& os
+GAPI_EXPORTS void serialize( IOStream& os
                            , const ade::Graph &g
                            , const std::vector<ade::NodeHandle> &nodes);
 
 // The top-level serialization routine.
 // Note it is just a single function which takes a GModel and a list of nodes
 // and writes the data to the stream (recursively)
-GAPI_EXPORTS void serialize( I::OStream& os
+GAPI_EXPORTS void serialize( IOStream& os
                            , const ade::Graph &g
                            , const cv::gimpl::Protocol &p
                            , const std::vector<ade::NodeHandle> &nodes);
@@ -138,27 +164,27 @@ GAPI_EXPORTS void serialize( I::OStream& os
 // Summarizing, the `deserialize()` happens *once per GComputation* immediately
 // during the cv::gapi::deserialize<GComputation>(), and `reconstruct()` happens
 // on every compilation process issued for this GComputation.
-GAPI_EXPORTS GSerialized deserialize(I::IStream& is);
+GAPI_EXPORTS GSerialized deserialize(IIStream& is);
 GAPI_EXPORTS void reconstruct(const GSerialized &s, ade::Graph &g);
 
 // Generic: variant serialization //////////////////////////////////////////////
 namespace detail { // FIXME: breaks old code
 template<typename V>
-I::OStream& put_v(I::OStream&, const V&, std::size_t) {
+IOStream& put_v(IOStream&, const V&, std::size_t) {
     GAPI_Assert(false && "variant>>: requested index is invalid");
 };
 template<typename V, typename X, typename... Xs>
-I::OStream& put_v(I::OStream& os, const V& v, std::size_t x) {
+IOStream& put_v(IOStream& os, const V& v, std::size_t x) {
     return (x == 0u)
         ? os << cv::util::get<X>(v)
         : put_v<V, Xs...>(os, v, x-1);
 }
 template<typename V>
-I::IStream& get_v(I::IStream&, V&, std::size_t, std::size_t) {
+IIStream& get_v(IIStream&, V&, std::size_t, std::size_t) {
     GAPI_Assert(false && "variant<<: requested index is invalid");
 }
 template<typename V, typename X, typename... Xs>
-I::IStream& get_v(I::IStream& is, V& v, std::size_t i, std::size_t gi) {
+IIStream& get_v(IIStream& is, V& v, std::size_t i, std::size_t gi) {
     if (i == gi) {
         X x{};
         is >> x;
@@ -169,12 +195,12 @@ I::IStream& get_v(I::IStream& is, V& v, std::size_t i, std::size_t gi) {
 } // namespace detail FIXME: breaks old code
 
 template<typename... Ts>
-I::OStream& operator<< (I::OStream& os, const cv::util::variant<Ts...> &v) {
+IOStream& operator<< (IOStream& os, const cv::util::variant<Ts...> &v) {
     os << (uint32_t)v.index();
     return detail::put_v<cv::util::variant<Ts...>, Ts...>(os, v, v.index());
 }
 template<typename... Ts>
-I::IStream& operator>> (I::IStream& is, cv::util::variant<Ts...> &v) {
+IIStream& operator>> (IIStream& is, cv::util::variant<Ts...> &v) {
     int idx = -1;
     is >> idx;
     GAPI_Assert(idx >= 0 && idx < (int)sizeof...(Ts));
@@ -184,59 +210,59 @@ I::IStream& operator>> (I::IStream& is, cv::util::variant<Ts...> &v) {
 // FIXME: Basic Stream implementaions //////////////////////////////////////////
 
 // Basic in-memory stream implementations.
-class GAPI_EXPORTS ByteMemoryOutStream final: public I::OStream {
+class GAPI_EXPORTS ByteMemoryOutStream final: public IOStream {
     std::vector<char> m_storage;
 
-    //virtual I::OStream& operator << (uint32_t) override;
-    //virtual I::OStream& operator<< (uint32_t) final;
+    //virtual IOStream& operator << (uint32_t) override;
+    //virtual IOStream& operator<< (uint32_t) final;
 public:
     const std::vector<char>& data() const;
 
-    virtual I::OStream& operator<< (bool) override;
-    virtual I::OStream& operator<< (char) override;
-    virtual I::OStream& operator<< (unsigned char) override;
-    virtual I::OStream& operator<< (short) override;
-    virtual I::OStream& operator<< (unsigned short) override;
-    virtual I::OStream& operator<< (int) override;
-    //virtual I::OStream& operator<< (std::size_t) override;
-    virtual I::OStream& operator<< (float) override;
-    virtual I::OStream& operator<< (double) override;
-    virtual I::OStream& operator<< (const std::string&) override;
-    virtual I::OStream& operator<< (uint32_t) override;
-    virtual I::OStream& operator<< (uint64_t) override;
+    virtual IOStream& operator<< (bool) override;
+    virtual IOStream& operator<< (char) override;
+    virtual IOStream& operator<< (unsigned char) override;
+    virtual IOStream& operator<< (short) override;
+    virtual IOStream& operator<< (unsigned short) override;
+    virtual IOStream& operator<< (int) override;
+    //virtual IOStream& operator<< (std::size_t) override;
+    virtual IOStream& operator<< (float) override;
+    virtual IOStream& operator<< (double) override;
+    virtual IOStream& operator<< (const std::string&) override;
+    virtual IOStream& operator<< (uint32_t) override;
+    virtual IOStream& operator<< (uint64_t) override;
 };
 
-class GAPI_EXPORTS ByteMemoryInStream final: public I::IStream {
+class GAPI_EXPORTS ByteMemoryInStream final: public IIStream {
     const std::vector<char>& m_storage;
     size_t m_idx = 0u;
 
     void check(std::size_t n) { (void) n; GAPI_DbgAssert(m_idx+n-1 < m_storage.size()); }
     uint32_t getU32() { uint32_t v{}; *this >> v; return v; };
 
-    //virtual I::IStream& operator>> (uint32_t &) final;
+    //virtual IIStream& operator>> (uint32_t &) final;
 
 public:
     explicit ByteMemoryInStream(const std::vector<char> &data);
 
-    virtual I::IStream& operator>> (bool &) override;
-    virtual I::IStream& operator>> (std::vector<bool>::reference) override;
-    virtual I::IStream& operator>> (char &) override;
-    virtual I::IStream& operator>> (unsigned char &) override;
-    virtual I::IStream& operator>> (short &) override;
-    virtual I::IStream& operator>> (unsigned short &) override;
-    virtual I::IStream& operator>> (int &) override;
-    virtual I::IStream& operator>> (float &) override;
-    virtual I::IStream& operator>> (double &) override;
-    //virtual I::IStream& operator>> (std::size_t &) override;
-    virtual I::IStream& operator >> (uint32_t &) override;
-    virtual I::IStream& operator >> (uint64_t &) override;
-    virtual I::IStream& operator>> (std::string &) override;
+    virtual IIStream& operator>> (bool &) override;
+    virtual IIStream& operator>> (std::vector<bool>::reference) override;
+    virtual IIStream& operator>> (char &) override;
+    virtual IIStream& operator>> (unsigned char &) override;
+    virtual IIStream& operator>> (short &) override;
+    virtual IIStream& operator>> (unsigned short &) override;
+    virtual IIStream& operator>> (int &) override;
+    virtual IIStream& operator>> (float &) override;
+    virtual IIStream& operator>> (double &) override;
+    //virtual IIStream& operator>> (std::size_t &) override;
+    virtual IIStream& operator >> (uint32_t &) override;
+    virtual IIStream& operator >> (uint64_t &) override;
+    virtual IIStream& operator>> (std::string &) override;
 };
 
-GAPI_EXPORTS void serialize(I::OStream& os, const cv::GMetaArgs &ma);
-GAPI_EXPORTS void serialize(I::OStream& os, const cv::GRunArgs &ra);
-GAPI_EXPORTS GMetaArgs meta_args_deserialize(I::IStream& is);
-GAPI_EXPORTS GRunArgs run_args_deserialize(I::IStream& is);
+GAPI_EXPORTS void serialize(IOStream& os, const cv::GMetaArgs &ma);
+GAPI_EXPORTS void serialize(IOStream& os, const cv::GRunArgs &ra);
+GAPI_EXPORTS GMetaArgs meta_args_deserialize(IIStream& is);
+GAPI_EXPORTS GRunArgs run_args_deserialize(IIStream& is);
 
 } // namespace s11n
 } // namespace gapi

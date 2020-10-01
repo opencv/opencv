@@ -15,21 +15,19 @@ namespace {
     };
 }
 
-// FIXME: namespace conflicts
 namespace cv {
 namespace gapi {
 namespace s11n {
 namespace detail {
     template<> struct S11N<MyCustomType> {
-        static void serialize(I::OStream &os, const MyCustomType &p) {
+        static void serialize(IOStream &os, const MyCustomType &p) {
             os << p.val << p.name << p.vec << p.mmap;
         }
-        static MyCustomType deserialize(I::IStream &is) {
+        static MyCustomType deserialize(IIStream &is) {
             MyCustomType p;
             is >> p.val >> p.name >> p.vec >> p.mmap;
             return p;
         }
-        static constexpr const bool isSupported = true;
     };
 } // namespace detail
 } // namespace s11n
@@ -512,7 +510,5 @@ TEST_F(S11N_Basic, Test_Custom_Type) {
     cv::gapi::s11n::ByteMemoryInStream is(os.data());
     MyCustomType new_var = cv::gapi::s11n::detail::S11N<MyCustomType>::deserialize(is);
     EXPECT_EQ(var, new_var);
-    EXPECT_TRUE(cv::gapi::s11n::detail::S11N<MyCustomType>::isSupported);
-    EXPECT_FALSE(cv::gapi::s11n::detail::S11N<int>::isSupported);
 }
 } // namespace opencv_test

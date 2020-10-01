@@ -73,13 +73,13 @@ cv::GComputation::GComputation(cv::GProtoInputArgs &&ins,
     };
 }
 
-cv::GComputation::GComputation(cv::gapi::s11n::I::IStream &is)
+cv::GComputation::GComputation(cv::gapi::s11n::IIStream &is)
     : m_priv(new Priv())
 {
     m_priv->m_shape = gapi::s11n::deserialize(is);
 }
 
-void cv::GComputation::serialize(cv::gapi::s11n::I::OStream &os) const
+void cv::GComputation::serialize(cv::gapi::s11n::IOStream &os) const
 {
     // Build a basic GModel and write the whole thing to the stream
     auto pG = cv::gimpl::GCompiler::makeGraph(*m_priv);
