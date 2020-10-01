@@ -315,8 +315,7 @@ struct Generic { };
 /**
  * @brief Calculates response for generic network
  *
- * @tparam A network type - Generic
- * @param a network tag
+ * @param tag a network tag
  * @param inputs networks's inputs
  * @return a GInferOutputs
  */
