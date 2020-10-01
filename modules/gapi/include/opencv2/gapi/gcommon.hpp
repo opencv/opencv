@@ -11,6 +11,7 @@
 #include <functional>   // std::hash
 #include <vector>       // std::vector
 #include <type_traits>  // decay
+#include <iostream>
 
 #include <opencv2/gapi/opencv_includes.hpp>
 
@@ -19,8 +20,6 @@
 #include <opencv2/gapi/own/exports.hpp>
 #include <opencv2/gapi/own/assert.hpp>
 #include <opencv2/gapi/render/render_types.hpp>
-
-#include <opencv2/gapi/s11n.hpp>
 
 namespace cv {
 
@@ -96,36 +95,28 @@ enum class GShape: int
     GFRAME,
 };
 
-template<typename T> struct wrap_serialize
+namespace gapi {
+namespace s11n {
+namespace I {
+struct OStream;
+struct IStream;
+} // namespace I
+
+namespace detail
 {
-    std::function<void(I::OStream&, const uti::any&)> serialize =
-        decltype(serialize_impl(os, arg, 0))::value ? call_serialize : nullptr;
-
-private:
-    template<typename>
-    struct sfinae_true : std::true_type{};
-
-    template<typename Q=T>
-    static auto serialize_impl(I::OStream &os, util::any arg, int)
-        -> sfinae_true<decltype(os << std::declval<Q>())>
-    {
-        os << util::get<T>(arg);
-    }
-
-    template<typename Q=T>
-    static auto serialize_impl(I::OStream &os, util::any arg, long)
-        -> sfinae_true<decltype(S11N<Q>::serialize(os, std::declval<Q>()))>
-    {
-        S11N<Q>::serialize(os, util::get<T>(arg));
-    }
-
-    static std::false_type serialize_impl(I::OStream &os, util::any arg, long long);
-
-    static void call_serialize(I::OStream &os, util::any arg)
-    {
-        serialize_impl(os, arg, 0);
-    }
+template<typename T, typename U> struct wrap_serialize
+{
+    static std::function<void(gapi::s11n::I::OStream&, const util::any&)> serialize;
 };
+
+template<typename T, typename U>
+std::function<void(gapi::s11n::I::OStream&, const util::any&)>
+wrap_serialize<T, U>::serialize = nullptr;
+
+} // namespace detail
+} // namespace s11n
+} // namespace gapi
+
 
 struct GCompileArg;
 
@@ -179,16 +170,15 @@ public:
     GCompileArg() = default;
 
     std::string tag;
-    std::function<void(I::OStream&, const uti::any&)> serialize;
+    std::function<void(gapi::s11n::I::OStream&, const util::any&)> serialize;
+    util::any arg;
 
     // FIXME: use decay in GArg/other trait-based wrapper before leg is shot!
     template<typename T, typename std::enable_if<!detail::is_compile_arg<T>::value, int>::type = 0>
     explicit GCompileArg(T &&t)
         : tag(detail::CompileArgTag<typename std::decay<T>::type>::tag())
-        , serialize(&wrap_serialize<typename std::decay<T>::type>::serialize)
-        , arg(t)
-    {
-    }
+        , serialize(gapi::s11n::detail::wrap_serialize<typename std::decay<T>::type, cv::GCompileArg>::serialize)
+        , arg(t) { }
 
     template<typename T> T& get()
     {
@@ -199,9 +189,6 @@ public:
     {
         return util::any_cast<T>(arg);
     }
-
-private:
-    util::any arg;
 };
 
 using GCompileArgs = std::vector<GCompileArg>;

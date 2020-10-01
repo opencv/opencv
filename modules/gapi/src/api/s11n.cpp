@@ -46,7 +46,7 @@ std::vector<char> cv::gapi::serialize(const cv::GRunArgs& ra)
 
 std::vector<char> cv::gapi::serialize(const cv::GCompileArgs& ca)
 {
-    cv::gimpl::s11n::ByteMemoryOutStream os;
+    cv::gapi::s11n::ByteMemoryOutStream os;
     serialize(os, ca);
     return os.data();
 }

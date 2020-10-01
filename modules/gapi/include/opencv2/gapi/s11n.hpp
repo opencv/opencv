@@ -14,6 +14,7 @@
 #include <opencv2/gapi/render/render_types.hpp>
 #include <opencv2/gapi/util/variant.hpp>
 #include <opencv2/gapi/gkernel.hpp>
+#include <opencv2/gapi/gcommon.hpp>
 
 namespace cv {
 namespace gapi {
@@ -38,6 +39,7 @@ T deserialize(const std::vector<char> &p);
 
 //} //ananymous namespace
 
+GAPI_EXPORTS std::vector<char> serialize(const cv::GCompileArgs&);
 GAPI_EXPORTS std::vector<char> serialize(const cv::GMetaArgs&);
 GAPI_EXPORTS std::vector<char> serialize(const cv::GRunArgs&);
 
@@ -156,7 +158,7 @@ namespace I {
 
     // G-API types /////////////////////////////////////////////////////////////////
 
-    GAPI_EXPORTS I::IStream& operator<< (I::OStream& os, const cv::GCompileArg &arg);
+    GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::GCompileArg &arg);
 
     GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, cv::util::monostate  );
     GAPI_EXPORTS I::IStream& operator>> (I::IStream& is, cv::util::monostate &);
@@ -317,11 +319,53 @@ namespace I {
         return is;
     }
 
-namespace detail {
-    // Will be used along with default types if possible in specific cases (compile args, etc)
-    // Note: actual implementation is defined by user
-    template<typename T>
-    struct GAPI_EXPORTS S11N;
+namespace detail
+{
+// Note: actual implementation is defined by user
+template<typename T>
+struct GAPI_EXPORTS S11N;
+
+template<typename T> struct wrap_serialize<T, cv::GCompileArg>
+{
+    static std::function<void(gapi::s11n::I::OStream& os, const util::any& arg)> serialize;
+
+private:
+    template<typename> using sfinae_true = std::true_type;
+
+    template<typename Q = T>
+    static auto try_call_serialize(gapi::s11n::I::OStream& os, const util::any& arg, int)
+        -> sfinae_true<decltype(os << std::declval<const typename std::add_lvalue_reference<Q>::type>(), void())>
+    {
+        os << util::any_cast<Q>(arg);
+        return sfinae_true<void>{};
+    }
+
+//decltype for different errors.
+    template<typename Q = T>
+    static auto try_call_serialize(gapi::s11n::I::OStream& os, const util::any& arg, long)
+        -> sfinae_true<decltype(S11N<Q>::serialize(os, util::any_cast<Q>(arg)), void())>
+    {
+        S11N<Q>::serialize(os, util::any_cast<Q>(arg));
+        return sfinae_true<void>{};
+    }
+
+    template<typename Q = T>
+    static std::false_type try_call_serialize(gapi::s11n::I::OStream &os, const util::any& arg, ...);
+
+    static void call_serialize(gapi::s11n::I::OStream& os, const util::any& arg)
+    {
+        try_call_serialize<T>(os, arg, 0);
+    }
+};
+
+template<typename T>
+std::function<void(gapi::s11n::I::OStream& os, const util::any& arg)>
+wrap_serialize<T, cv::GCompileArg>::serialize =
+        decltype(try_call_serialize(std::declval<
+                                        typename std::add_lvalue_reference<gapi::s11n::I::OStream>::type>(),
+                                    std::declval<typename std::add_lvalue_reference<util::any>::type>(),
+                                    int()))::value ? &call_serialize : nullptr;
+
 } // namespace detail
 } // namespace s11n
 } // namespace gapi
