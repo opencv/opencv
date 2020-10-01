@@ -26,7 +26,7 @@ namespace cv { namespace gimpl {
 ade::NodeHandle GModel::mkOpNode(GModel::Graph &g,
                                  const GKernel &k,
                                  const std::vector<GArg> &args,
-                                 const cv::util::any& params,
+                                 const cv::util::any &params,
                                  const std::string &island)
 {
     ade::NodeHandle op_h = g.createNode();
