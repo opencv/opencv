@@ -355,7 +355,7 @@ cv::Mat cv::findHomography( InputArray _points1, InputArray _points2,
 {
     CV_INSTRUMENT_REGION();
 
-    if (method >= 32 && method <= 38)
+    if (method >= USAC_DEFAULT && method <= USAC_MAGSAC)
         return usac::findHomography(_points1, _points2, method, ransacReprojThreshold,
             _mask, maxIters, confidence);
 
@@ -831,7 +831,7 @@ cv::Mat cv::findFundamentalMat( InputArray _points1, InputArray _points2,
 {
     CV_INSTRUMENT_REGION();
 
-    if (method >= 32 && method <= 38)
+    if (method >= USAC_DEFAULT && method <= USAC_MAGSAC)
         return usac::findFundamentalMat(_points1, _points2, method,
             ransacReprojThreshold, confidence, maxIters, _mask);
 
