@@ -21,11 +21,11 @@
 #include "backends/common/serialization.hpp"
 
 namespace cv {
-namespace gimpl {
+namespace gapi {
 namespace s11n {
 namespace {
 
-void putData(GSerialized& s, const GModel::ConstGraph& cg, const ade::NodeHandle &nh) {
+void putData(GSerialized& s, const cv::gimpl::GModel::ConstGraph& cg, const ade::NodeHandle &nh) {
     const auto gdata = cg.metadata(nh).get<gimpl::Data>();
     const auto it = ade::util::find_if(s.m_datas, [&gdata](const cv::gimpl::Data &cd) {
             return cd.rc == gdata.rc && cd.shape == gdata.shape;
@@ -35,7 +35,7 @@ void putData(GSerialized& s, const GModel::ConstGraph& cg, const ade::NodeHandle
     }
 }
 
-void putOp(GSerialized& s, const GModel::ConstGraph& cg, const ade::NodeHandle &nh) {
+void putOp(GSerialized& s, const cv::gimpl::GModel::ConstGraph& cg, const ade::NodeHandle &nh) {
     const auto& op = cg.metadata(nh).get<gimpl::Op>();
     for (const auto &in_nh  : nh->inNodes())  { putData(s, cg, in_nh);  }
     for (const auto &out_nh : nh->outNodes()) { putData(s, cg, out_nh); }
@@ -43,25 +43,25 @@ void putOp(GSerialized& s, const GModel::ConstGraph& cg, const ade::NodeHandle &
 }
 
 void mkDataNode(ade::Graph& g, const cv::gimpl::Data& data) {
-    GModel::Graph gm(g);
+    cv::gimpl::GModel::Graph gm(g);
     auto nh = gm.createNode();
-    gm.metadata(nh).set(NodeType{NodeType::DATA});
+    gm.metadata(nh).set(cv::gimpl::NodeType{cv::gimpl::NodeType::DATA});
     gm.metadata(nh).set(data);
 }
 
 void mkOpNode(ade::Graph& g, const cv::gimpl::Op& op) {
-    GModel::Graph gm(g);
+    cv::gimpl::GModel::Graph gm(g);
     auto nh = gm.createNode();
-    gm.metadata(nh).set(NodeType{NodeType::OP});
+    gm.metadata(nh).set(cv::gimpl::NodeType{cv::gimpl::NodeType::OP});
     gm.metadata(nh).set(op);
 }
 
 void linkNodes(ade::Graph& g) {
     std::map<cv::gimpl::RcDesc, ade::NodeHandle> dataNodes;
-    GModel::Graph gm(g);
+    cv::gimpl::GModel::Graph gm(g);
 
     for (const auto& nh : g.nodes()) {
-        if (gm.metadata(nh).get<NodeType>().t == NodeType::DATA) {
+        if (gm.metadata(nh).get<cv::gimpl::NodeType>().t == cv::gimpl::NodeType::DATA) {
             const auto &d = gm.metadata(nh).get<gimpl::Data>();
             const auto rc = cv::gimpl::RcDesc{d.rc, d.shape, d.ctor};
             dataNodes[rc] = nh;
@@ -69,7 +69,7 @@ void linkNodes(ade::Graph& g) {
     }
 
     for (const auto& nh : g.nodes()) {
-        if (gm.metadata(nh).get<NodeType>().t == NodeType::OP) {
+        if (gm.metadata(nh).get<cv::gimpl::NodeType>().t == cv::gimpl::NodeType::OP) {
             const auto& op = gm.metadata(nh).get<gimpl::Op>();
             for (const auto& in : ade::util::indexed(op.args)) {
                 const auto& arg = ade::util::value(in);
@@ -78,7 +78,7 @@ void linkNodes(ade::Graph& g) {
                     const auto rc  = arg.get<gimpl::RcDesc>();
                     const auto& in_nh = dataNodes.at(rc);
                     const auto& in_eh = g.link(in_nh, nh);
-                    gm.metadata(in_eh).set(Input{idx});
+                    gm.metadata(in_eh).set(cv::gimpl::Input{idx});
                 }
             }
 
@@ -87,7 +87,7 @@ void linkNodes(ade::Graph& g) {
                 const auto rc  = ade::util::value(out);
                 const auto& out_nh = dataNodes.at(rc);
                 const auto& out_eh = g.link(nh, out_nh);
-                gm.metadata(out_eh).set(Output{idx});
+                gm.metadata(out_eh).set(cv::gimpl::Output{idx});
             }
         }
     }
@@ -100,7 +100,7 @@ void relinkProto(ade::Graph& g) {
     using M = std::map<cv::gimpl::RcDesc, ade::NodeHandle>; // FIXME: unordered!
 
     cv::gimpl::GModel::Graph gm(g);
-    auto &proto = gm.metadata().get<Protocol>();
+    auto &proto = gm.metadata().get<cv::gimpl::Protocol>();
 
     const S set_in(proto.inputs.begin(), proto.inputs.end());
     const S set_out(proto.outputs.begin(), proto.outputs.end());
@@ -138,31 +138,31 @@ void relinkProto(ade::Graph& g) {
 
 // OpenCV types ////////////////////////////////////////////////////////////////
 
-I::OStream& operator<< (I::OStream& os, const cv::Point &pt) {
+IOStream& operator<< (IOStream& os, const cv::Point &pt) {
     return os << pt.x << pt.y;
 }
-I::IStream& operator>> (I::IStream& is, cv::Point& pt) {
+IIStream& operator>> (IIStream& is, cv::Point& pt) {
     return is >> pt.x >> pt.y;
 }
 
-I::OStream& operator<< (I::OStream& os, const cv::Size &sz) {
+IOStream& operator<< (IOStream& os, const cv::Size &sz) {
     return os << sz.width << sz.height;
 }
-I::IStream& operator>> (I::IStream& is, cv::Size& sz) {
+IIStream& operator>> (IIStream& is, cv::Size& sz) {
     return is >> sz.width >> sz.height;
 }
 
-I::OStream& operator<< (I::OStream& os, const cv::Rect &rc) {
+IOStream& operator<< (IOStream& os, const cv::Rect &rc) {
     return os << rc.x << rc.y << rc.width << rc.height;
 }
-I::IStream& operator>> (I::IStream& is, cv::Rect& rc) {
+IIStream& operator>> (IIStream& is, cv::Rect& rc) {
     return is >> rc.x >> rc.y >> rc.width >> rc.height;
 }
 
-I::OStream& operator<< (I::OStream& os, const cv::Scalar &s) {
+IOStream& operator<< (IOStream& os, const cv::Scalar &s) {
     return os << s.val[0] << s.val[1] << s.val[2] << s.val[3];
 }
-I::IStream& operator>> (I::IStream& is, cv::Scalar& s) {
+IIStream& operator>> (IIStream& is, cv::Scalar& s) {
     return is >> s.val[0] >> s.val[1] >> s.val[2] >> s.val[3];
 }
 
@@ -171,43 +171,43 @@ namespace
 
 #if !defined(GAPI_STANDALONE)
 template<typename T>
-    void write_plain(I::OStream &os, const T *arr, std::size_t sz) {
+    void write_plain(IOStream &os, const T *arr, std::size_t sz) {
         for (auto &&it : ade::util::iota(sz)) os << arr[it];
 }
 template<typename T>
-    void read_plain(I::IStream &is, T *arr, std::size_t sz) {
+    void read_plain(IIStream &is, T *arr, std::size_t sz) {
         for (auto &&it : ade::util::iota(sz)) is >> arr[it];
 }
 template<typename T>
-void write_mat_data(I::OStream &os, const cv::Mat &m) {
+void write_mat_data(IOStream &os, const cv::Mat &m) {
     // Write every row individually (handles the case when Mat is a view)
     for (auto &&r : ade::util::iota(m.rows)) {
         write_plain(os, m.ptr<T>(r), m.cols*m.channels());
     }
 }
 template<typename T>
-void read_mat_data(I::IStream &is, cv::Mat &m) {
+void read_mat_data(IIStream &is, cv::Mat &m) {
     // Write every row individually (handles the case when Mat is aligned)
     for (auto &&r : ade::util::iota(m.rows)) {
         read_plain(is, m.ptr<T>(r), m.cols*m.channels());
     }
 }
 #else
-void write_plain(I::OStream &os, const uchar *arr, std::size_t sz) {
+void write_plain(IOStream &os, const uchar *arr, std::size_t sz) {
     for (auto &&it : ade::util::iota(sz)) os << arr[it];
 }
-void read_plain(I::IStream &is, uchar *arr, std::size_t sz) {
+void read_plain(IIStream &is, uchar *arr, std::size_t sz) {
     for (auto &&it : ade::util::iota(sz)) is >> arr[it];
 }
 template<typename T>
-void write_mat_data(I::OStream &os, const cv::Mat &m) {
+void write_mat_data(IOStream &os, const cv::Mat &m) {
     // Write every row individually (handles the case when Mat is a view)
     for (auto &&r : ade::util::iota(m.rows)) {
         write_plain(os, m.ptr(r), m.cols*m.channels()*sizeof(T));
     }
 }
 template<typename T>
-void read_mat_data(I::IStream &is, cv::Mat &m) {
+void read_mat_data(IIStream &is, cv::Mat &m) {
     // Write every row individually (handles the case when Mat is aligned)
     for (auto &&r : ade::util::iota(m.rows)) {
         read_plain(is, m.ptr(r), m.cols*m.channels()*sizeof(T));
@@ -216,7 +216,7 @@ void read_mat_data(I::IStream &is, cv::Mat &m) {
 #endif
 } // namespace
 
-I::OStream& operator<< (I::OStream& os, const cv::Mat &m) {
+IOStream& operator<< (IOStream& os, const cv::Mat &m) {
 #if !defined(GAPI_STANDALONE)
     GAPI_Assert(m.size.dims() == 2 && "Only 2D images are supported now");
 #else
@@ -235,7 +235,7 @@ I::OStream& operator<< (I::OStream& os, const cv::Mat &m) {
     }
     return os;
 }
-I::IStream& operator>> (I::IStream& is, cv::Mat& m) {
+IIStream& operator>> (IIStream& is, cv::Mat& m) {
     int rows = -1, cols = -1, type = 0;
     is >> rows >> cols >> type;
     m.create(cv::Size(cols, rows), type);
@@ -252,59 +252,59 @@ I::IStream& operator>> (I::IStream& is, cv::Mat& m) {
     return is;
 }
 
-I::OStream& operator<< (I::OStream& os, const cv::gapi::wip::draw::Text &t) {
+IOStream& operator<< (IOStream& os, const cv::gapi::wip::draw::Text &t) {
     return os << t.bottom_left_origin << t.color << t.ff << t.fs << t.lt << t.org << t.text << t.thick;
 }
-I::IStream& operator>> (I::IStream& is,       cv::gapi::wip::draw::Text &t) {
+IIStream& operator>> (IIStream& is,       cv::gapi::wip::draw::Text &t) {
     return is >> t.bottom_left_origin >> t.color >> t.ff >> t.fs >> t.lt >> t.org >> t.text >> t.thick;
 }
 
-I::OStream& operator<< (I::OStream&, const cv::gapi::wip::draw::FText &) {
+IOStream& operator<< (IOStream&, const cv::gapi::wip::draw::FText &) {
     GAPI_Assert(false && "Serialization: Unsupported << for FText");
 }
-I::IStream& operator>> (I::IStream&,       cv::gapi::wip::draw::FText &) {
+IIStream& operator>> (IIStream&,       cv::gapi::wip::draw::FText &) {
     GAPI_Assert(false && "Serialization: Unsupported >> for FText");
 }
 
-I::OStream& operator<< (I::OStream& os, const cv::gapi::wip::draw::Circle &c) {
+IOStream& operator<< (IOStream& os, const cv::gapi::wip::draw::Circle &c) {
     return os << c.center << c.color << c.lt << c.radius << c.shift << c.thick;
 }
-I::IStream& operator>> (I::IStream& is,       cv::gapi::wip::draw::Circle &c) {
+IIStream& operator>> (IIStream& is,       cv::gapi::wip::draw::Circle &c) {
     return is >> c.center >> c.color >> c.lt >> c.radius >> c.shift >> c.thick;
 }
 
-I::OStream& operator<< (I::OStream& os, const cv::gapi::wip::draw::Rect &r) {
+IOStream& operator<< (IOStream& os, const cv::gapi::wip::draw::Rect &r) {
     return os << r.color << r.lt << r.rect << r.shift << r.thick;
 }
-I::IStream& operator>> (I::IStream& is,       cv::gapi::wip::draw::Rect &r) {
+IIStream& operator>> (IIStream& is,       cv::gapi::wip::draw::Rect &r) {
     return is >> r.color >> r.lt >> r.rect >> r.shift >> r.thick;
 }
 
-I::OStream& operator<< (I::OStream& os, const cv::gapi::wip::draw::Image &i) {
+IOStream& operator<< (IOStream& os, const cv::gapi::wip::draw::Image &i) {
     return os << i.org << i.alpha << i.img;
 }
-I::IStream& operator>> (I::IStream& is,       cv::gapi::wip::draw::Image &i) {
+IIStream& operator>> (IIStream& is,       cv::gapi::wip::draw::Image &i) {
     return is >> i.org >> i.alpha >> i.img;
 }
 
-I::OStream& operator<< (I::OStream& os, const cv::gapi::wip::draw::Mosaic &m) {
+IOStream& operator<< (IOStream& os, const cv::gapi::wip::draw::Mosaic &m) {
     return os << m.cellSz << m.decim << m.mos;
 }
-I::IStream& operator>> (I::IStream& is,       cv::gapi::wip::draw::Mosaic &m) {
+IIStream& operator>> (IIStream& is,       cv::gapi::wip::draw::Mosaic &m) {
     return is >> m.cellSz >> m.decim >> m.mos;
 }
 
-I::OStream& operator<< (I::OStream& os, const cv::gapi::wip::draw::Poly &p) {
+IOStream& operator<< (IOStream& os, const cv::gapi::wip::draw::Poly &p) {
     return os << p.color << p.lt << p.points << p.shift << p.thick;
 }
-I::IStream& operator>> (I::IStream& is,       cv::gapi::wip::draw::Poly &p) {
+IIStream& operator>> (IIStream& is,       cv::gapi::wip::draw::Poly &p) {
     return is >> p.color >> p.lt >> p.points >> p.shift >> p.thick;
 }
 
-I::OStream& operator<< (I::OStream& os, const cv::gapi::wip::draw::Line &l) {
+IOStream& operator<< (IOStream& os, const cv::gapi::wip::draw::Line &l) {
     return os << l.color << l.lt << l.pt1 << l.pt2 << l.shift << l.thick;
 }
-I::IStream& operator>> (I::IStream& is,       cv::gapi::wip::draw::Line &l) {
+IIStream& operator>> (IIStream& is,       cv::gapi::wip::draw::Line &l) {
     return is >> l.color >> l.lt >> l.pt1 >> l.pt2 >> l.shift >> l.thick;
 }
 
@@ -312,37 +312,37 @@ I::IStream& operator>> (I::IStream& is,       cv::gapi::wip::draw::Line &l) {
 
 // Stubs (empty types)
 
-I::OStream& operator<< (I::OStream& os, cv::util::monostate  ) {return os;}
-I::IStream& operator>> (I::IStream& is, cv::util::monostate &) {return is;}
+IOStream& operator<< (IOStream& os, cv::util::monostate  ) {return os;}
+IIStream& operator>> (IIStream& is, cv::util::monostate &) {return is;}
 
-I::OStream& operator<< (I::OStream& os, const cv::GScalarDesc &) {return os;}
-I::IStream& operator>> (I::IStream& is,       cv::GScalarDesc &) {return is;}
+IOStream& operator<< (IOStream& os, const cv::GScalarDesc &) {return os;}
+IIStream& operator>> (IIStream& is,       cv::GScalarDesc &) {return is;}
 
-I::OStream& operator<< (I::OStream& os, const cv::GOpaqueDesc &) {return os;}
-I::IStream& operator>> (I::IStream& is,       cv::GOpaqueDesc &) {return is;}
+IOStream& operator<< (IOStream& os, const cv::GOpaqueDesc &) {return os;}
+IIStream& operator>> (IIStream& is,       cv::GOpaqueDesc &) {return is;}
 
-I::OStream& operator<< (I::OStream& os, const cv::GArrayDesc &) {return os;}
-I::IStream& operator>> (I::IStream& is,       cv::GArrayDesc &) {return is;}
+IOStream& operator<< (IOStream& os, const cv::GArrayDesc &) {return os;}
+IIStream& operator>> (IIStream& is,       cv::GArrayDesc &) {return is;}
 
 #if !defined(GAPI_STANDALONE)
-I::OStream& operator<< (I::OStream& os, const cv::UMat &)
+IOStream& operator<< (IOStream& os, const cv::UMat &)
 {
     GAPI_Assert(false && "Serialization: Unsupported << for UMat");
     return os;
 }
-I::IStream& operator >> (I::IStream& is, cv::UMat &)
+IIStream& operator >> (IIStream& is, cv::UMat &)
 {
     GAPI_Assert(false && "Serialization: Unsupported >> for UMat");
     return is;
 }
 #endif // !defined(GAPI_STANDALONE)
 
-I::OStream& operator<< (I::OStream& os, const cv::gapi::wip::IStreamSource::Ptr &)
+IOStream& operator<< (IOStream& os, const cv::gapi::wip::IStreamSource::Ptr &)
 {
     GAPI_Assert(false && "Serialization: Unsupported << for IStreamSource::Ptr");
     return os;
 }
-I::IStream& operator >> (I::IStream& is, cv::gapi::wip::IStreamSource::Ptr &)
+IIStream& operator >> (IIStream& is, cv::gapi::wip::IStreamSource::Ptr &)
 {
     GAPI_Assert("Serialization: Unsupported >> for IStreamSource::Ptr");
     return is;
@@ -356,7 +356,7 @@ struct putToStream;
 template<typename Ref>
 struct putToStream<Ref, std::tuple<>>
 {
-    static void put(I::OStream&, const Ref &)
+    static void put(IOStream&, const Ref &)
     {
         GAPI_Assert(false && "Unsupported type for GArray/GOpaque serialization");
     }
@@ -365,7 +365,7 @@ struct putToStream<Ref, std::tuple<>>
 template<typename Ref, typename T, typename... Ts>
 struct putToStream<Ref, std::tuple<T, Ts...>>
 {
-    static void put(I::OStream& os, const Ref &r)
+    static void put(IOStream& os, const Ref &r)
     {
         if (r.getKind() == cv::detail::GOpaqueTraits<T>::kind) {
             os << r.template rref<T>();
@@ -381,7 +381,7 @@ struct getFromStream;
 template<typename Ref>
 struct getFromStream<Ref, std::tuple<>>
 {
-    static void get(I::IStream&, Ref &, cv::detail::OpaqueKind)
+    static void get(IIStream&, Ref &, cv::detail::OpaqueKind)
     {
         GAPI_Assert(false && "Unsupported type for GArray/GOpaque deserialization");
     }
@@ -390,7 +390,7 @@ struct getFromStream<Ref, std::tuple<>>
 template<typename Ref, typename T, typename... Ts>
 struct getFromStream<Ref, std::tuple<T, Ts...>>
 {
-    static void get(I::IStream& is, Ref &r, cv::detail::OpaqueKind kind) {
+    static void get(IIStream& is, Ref &r, cv::detail::OpaqueKind kind) {
         if (kind == cv::detail::GOpaqueTraits<T>::kind) {
             r.template reset<T>();
             auto& val = r.template wref<T>();
@@ -402,13 +402,13 @@ struct getFromStream<Ref, std::tuple<T, Ts...>>
 };
 }
 
-I::OStream& operator<< (I::OStream& os, const cv::detail::VectorRef& ref)
+IOStream& operator<< (IOStream& os, const cv::detail::VectorRef& ref)
 {
     os << ref.getKind();
     putToStream<cv::detail::VectorRef, cv::detail::GOpaqueTraitsArrayTypes>::put(os, ref);
     return os;
 }
-I::IStream& operator >> (I::IStream& is, cv::detail::VectorRef& ref)
+IIStream& operator >> (IIStream& is, cv::detail::VectorRef& ref)
 {
     cv::detail::OpaqueKind kind;
     is >> kind;
@@ -416,13 +416,13 @@ I::IStream& operator >> (I::IStream& is, cv::detail::VectorRef& ref)
     return is;
 }
 
-I::OStream& operator<< (I::OStream& os, const cv::detail::OpaqueRef& ref)
+IOStream& operator<< (IOStream& os, const cv::detail::OpaqueRef& ref)
 {
     os << ref.getKind();
     putToStream<cv::detail::OpaqueRef, cv::detail::GOpaqueTraitsOpaqueTypes>::put(os, ref);
     return os;
 }
-I::IStream& operator >> (I::IStream& is, cv::detail::OpaqueRef& ref)
+IIStream& operator >> (IIStream& is, cv::detail::OpaqueRef& ref)
 {
     cv::detail::OpaqueKind kind;
     is >> kind;
@@ -432,41 +432,41 @@ I::IStream& operator >> (I::IStream& is, cv::detail::OpaqueRef& ref)
 // Enums and structures
 
 namespace {
-template<typename E> I::OStream& put_enum(I::OStream& os, E e) {
+template<typename E> IOStream& put_enum(IOStream& os, E e) {
     return os << static_cast<int>(e);
 }
-template<typename E> I::IStream& get_enum(I::IStream& is, E &e) {
+template<typename E> IIStream& get_enum(IIStream& is, E &e) {
     int x{}; is >> x; e = static_cast<E>(x);
     return is;
 }
 } // anonymous namespace
 
-I::OStream& operator<< (I::OStream& os, cv::GShape  sh) {
+IOStream& operator<< (IOStream& os, cv::GShape  sh) {
     return put_enum(os, sh);
 }
-I::IStream& operator>> (I::IStream& is, cv::GShape &sh) {
+IIStream& operator>> (IIStream& is, cv::GShape &sh) {
     return get_enum<cv::GShape>(is, sh);
 }
-I::OStream& operator<< (I::OStream& os, cv::detail::ArgKind  k) {
+IOStream& operator<< (IOStream& os, cv::detail::ArgKind  k) {
     return put_enum(os, k);
 }
-I::IStream& operator>> (I::IStream& is, cv::detail::ArgKind &k) {
+IIStream& operator>> (IIStream& is, cv::detail::ArgKind &k) {
     return get_enum<cv::detail::ArgKind>(is, k);
 }
-I::OStream& operator<< (I::OStream& os, cv::detail::OpaqueKind  k) {
+IOStream& operator<< (IOStream& os, cv::detail::OpaqueKind  k) {
     return put_enum(os, k);
 }
-I::IStream& operator>> (I::IStream& is, cv::detail::OpaqueKind &k) {
+IIStream& operator>> (IIStream& is, cv::detail::OpaqueKind &k) {
     return get_enum<cv::detail::OpaqueKind>(is, k);
 }
-I::OStream& operator<< (I::OStream& os, cv::gimpl::Data::Storage s) {
+IOStream& operator<< (IOStream& os, cv::gimpl::Data::Storage s) {
     return put_enum(os, s);
 }
-I::IStream& operator>> (I::IStream& is, cv::gimpl::Data::Storage &s) {
+IIStream& operator>> (IIStream& is, cv::gimpl::Data::Storage &s) {
     return get_enum<cv::gimpl::Data::Storage>(is, s);
 }
 
-I::OStream& operator<< (I::OStream& os, const cv::GArg &arg) {
+IOStream& operator<< (IOStream& os, const cv::GArg &arg) {
     // Only GOBJREF and OPAQUE_VAL kinds can be serialized/deserialized
     GAPI_Assert(   arg.kind == cv::detail::ArgKind::OPAQUE_VAL
                 || arg.kind == cv::detail::ArgKind::GOBJREF);
@@ -495,7 +495,7 @@ I::OStream& operator<< (I::OStream& os, const cv::GArg &arg) {
     return os;
 }
 
-I::IStream& operator>> (I::IStream& is, cv::GArg &arg) {
+IIStream& operator>> (IIStream& is, cv::GArg &arg) {
     is >> arg.kind >> arg.opaque_kind;
 
     // Only GOBJREF and OPAQUE_VAL kinds can be serialized/deserialized
@@ -530,43 +530,43 @@ I::IStream& operator>> (I::IStream& is, cv::GArg &arg) {
     return is;
 }
 
-I::OStream& operator<< (I::OStream& os, const cv::GKernel &k) {
+IOStream& operator<< (IOStream& os, const cv::GKernel &k) {
     return os << k.name << k.tag << k.outShapes;
 }
-I::IStream& operator>> (I::IStream& is, cv::GKernel &k) {
+IIStream& operator>> (IIStream& is, cv::GKernel &k) {
     return is >> const_cast<std::string&>(k.name)
               >> const_cast<std::string&>(k.tag)
               >> const_cast<cv::GShapes&>(k.outShapes);
 }
 
 
-I::OStream& operator<< (I::OStream& os, const cv::GMatDesc &d) {
+IOStream& operator<< (IOStream& os, const cv::GMatDesc &d) {
     return os << d.depth << d.chan << d.size << d.planar << d.dims;
 }
-I::IStream& operator>> (I::IStream& is, cv::GMatDesc &d) {
+IIStream& operator>> (IIStream& is, cv::GMatDesc &d) {
     return is >> d.depth >> d.chan >> d.size >> d.planar >> d.dims;
 }
 
 
-I::OStream& operator<< (I::OStream& os, const cv::gimpl::RcDesc &rc) {
+IOStream& operator<< (IOStream& os, const cv::gimpl::RcDesc &rc) {
     // FIXME: HostCtor is not serialized!
     return os << rc.id << rc.shape;
 }
-I::IStream& operator>> (I::IStream& is, cv::gimpl::RcDesc &rc) {
+IIStream& operator>> (IIStream& is, cv::gimpl::RcDesc &rc) {
     // FIXME: HostCtor is not deserialized!
     return is >> rc.id >> rc.shape;
 }
 
 
-I::OStream& operator<< (I::OStream& os, const cv::gimpl::Op &op) {
+IOStream& operator<< (IOStream& os, const cv::gimpl::Op &op) {
     return os << op.k << op.args << op.outs;
 }
-I::IStream& operator>> (I::IStream& is, cv::gimpl::Op &op) {
+IIStream& operator>> (IIStream& is, cv::gimpl::Op &op) {
     return is >> op.k >> op.args >> op.outs;
 }
 
 
-I::OStream& operator<< (I::OStream& os, const cv::gimpl::Data &d) {
+IOStream& operator<< (IOStream& os, const cv::gimpl::Data &d) {
     // FIXME: HostCtor is not stored here!!
     // FIXME: Storage may be incorrect for subgraph-to-graph process
     return os << d.shape << d.rc << d.meta << d.storage << d.kind;
@@ -600,7 +600,7 @@ struct initCtor<Ref, std::tuple<T, Ts...>>
 };
 } // anonymous namespace
 
-I::IStream& operator>> (I::IStream& is, cv::gimpl::Data &d) {
+IIStream& operator>> (IIStream& is, cv::gimpl::Data &d) {
     // FIXME: HostCtor is not stored here!!
     // FIXME: Storage may be incorrect for subgraph-to-graph process
     is >> d.shape >> d.rc >> d.meta >> d.storage >> d.kind;
@@ -616,42 +616,42 @@ I::IStream& operator>> (I::IStream& is, cv::gimpl::Data &d) {
 }
 
 
-I::OStream& operator<< (I::OStream& os, const cv::gimpl::DataObjectCounter &c) {
+IOStream& operator<< (IOStream& os, const cv::gimpl::DataObjectCounter &c) {
     return os << c.m_next_data_id;
 }
-I::IStream& operator>> (I::IStream& is,       cv::gimpl::DataObjectCounter &c) {
+IIStream& operator>> (IIStream& is,       cv::gimpl::DataObjectCounter &c) {
     return is >> c.m_next_data_id;
 }
 
 
-I::OStream& operator<< (I::OStream& os, const cv::gimpl::Protocol &p) {
+IOStream& operator<< (IOStream& os, const cv::gimpl::Protocol &p) {
     // NB: in_nhs/out_nhs are not written!
     return os << p.inputs << p.outputs;
 }
-I::IStream& operator>> (I::IStream& is,       cv::gimpl::Protocol &p) {
+IIStream& operator>> (IIStream& is,       cv::gimpl::Protocol &p) {
     // NB: in_nhs/out_nhs are reconstructed at a later phase
     return is >> p.inputs >> p.outputs;
 }
 
 
-void serialize( I::OStream& os
+void serialize( IOStream& os
               , const ade::Graph &g
               , const std::vector<ade::NodeHandle> &nodes) {
     cv::gimpl::GModel::ConstGraph cg(g);
     serialize(os, g, cg.metadata().get<cv::gimpl::Protocol>(), nodes);
 }
 
-void serialize( I::OStream& os
+void serialize( IOStream& os
               , const ade::Graph &g
               , const cv::gimpl::Protocol &p
               , const std::vector<ade::NodeHandle> &nodes) {
     cv::gimpl::GModel::ConstGraph cg(g);
     GSerialized s;
     for (auto &nh : nodes) {
-        switch (cg.metadata(nh).get<NodeType>().t)
+        switch (cg.metadata(nh).get<cv::gimpl::NodeType>().t)
         {
-        case NodeType::OP:   putOp  (s, cg, nh); break;
-        case NodeType::DATA: putData(s, cg, nh); break;
+        case cv::gimpl::NodeType::OP:   putOp  (s, cg, nh); break;
+        case cv::gimpl::NodeType::DATA: putData(s, cg, nh); break;
         default: util::throw_error(std::logic_error("Unknown NodeType"));
         }
     }
@@ -660,7 +660,7 @@ void serialize( I::OStream& os
     os << s.m_ops << s.m_datas << s.m_counter << s.m_proto;
 }
 
-GSerialized deserialize(I::IStream &is) {
+GSerialized deserialize(IIStream &is) {
     GSerialized s;
     is >> s.m_ops >> s.m_datas >> s.m_counter >> s.m_proto;
     return s;
@@ -668,14 +668,14 @@ GSerialized deserialize(I::IStream &is) {
 
 void reconstruct(const GSerialized &s, ade::Graph &g) {
     GAPI_Assert(g.nodes().empty());
-    for (const auto& d  : s.m_datas) cv::gimpl::s11n::mkDataNode(g, d);
-    for (const auto& op : s.m_ops)   cv::gimpl::s11n::mkOpNode(g, op);
-    cv::gimpl::s11n::linkNodes(g);
+    for (const auto& d  : s.m_datas) cv::gapi::s11n::mkDataNode(g, d);
+    for (const auto& op : s.m_ops)   cv::gapi::s11n::mkOpNode(g, op);
+    cv::gapi::s11n::linkNodes(g);
 
     cv::gimpl::GModel::Graph gm(g);
     gm.metadata().set(s.m_counter);
     gm.metadata().set(s.m_proto);
-    cv::gimpl::s11n::relinkProto(g);
+    cv::gapi::s11n::relinkProto(g);
     gm.metadata().set(cv::gimpl::Deserialized{});
 }
 
@@ -685,54 +685,54 @@ void reconstruct(const GSerialized &s, ade::Graph &g) {
 const std::vector<char>& ByteMemoryOutStream::data() const {
     return m_storage;
 }
-I::OStream& ByteMemoryOutStream::operator<< (uint32_t atom) {
+IOStream& ByteMemoryOutStream::operator<< (uint32_t atom) {
     m_storage.push_back(0xFF & (atom));
     m_storage.push_back(0xFF & (atom >> 8));
     m_storage.push_back(0xFF & (atom >> 16));
     m_storage.push_back(0xFF & (atom >> 24));
     return *this;
 }
-I::OStream& ByteMemoryOutStream::operator<< (uint64_t atom) {
+IOStream& ByteMemoryOutStream::operator<< (uint64_t atom) {
     for (int i = 0; i < 8; ++i) {
         m_storage.push_back(0xFF & (atom >> (i * 8)));;
     }
     return *this;
 }
-I::OStream& ByteMemoryOutStream::operator<< (bool atom) {
+IOStream& ByteMemoryOutStream::operator<< (bool atom) {
     m_storage.push_back(atom ? 1 : 0);
     return *this;
 }
-I::OStream& ByteMemoryOutStream::operator<< (char atom) {
+IOStream& ByteMemoryOutStream::operator<< (char atom) {
     m_storage.push_back(atom);
     return *this;
 }
-I::OStream& ByteMemoryOutStream::operator<< (unsigned char atom) {
+IOStream& ByteMemoryOutStream::operator<< (unsigned char atom) {
     return *this << static_cast<char>(atom);
 }
-I::OStream& ByteMemoryOutStream::operator<< (short atom) {
+IOStream& ByteMemoryOutStream::operator<< (short atom) {
     static_assert(sizeof(short) == 2, "Expecting sizeof(short) == 2");
     m_storage.push_back(0xFF & (atom));
     m_storage.push_back(0xFF & (atom >> 8));
     return *this;
 }
-I::OStream& ByteMemoryOutStream::operator<< (unsigned short atom) {
+IOStream& ByteMemoryOutStream::operator<< (unsigned short atom) {
     return *this << static_cast<short>(atom);
 }
-I::OStream& ByteMemoryOutStream::operator<< (int atom) {
+IOStream& ByteMemoryOutStream::operator<< (int atom) {
     static_assert(sizeof(int) == 4, "Expecting sizeof(int) == 4");
     return *this << static_cast<uint32_t>(atom);
 }
-//I::OStream& ByteMemoryOutStream::operator<< (std::size_t atom) {
+//IOStream& ByteMemoryOutStream::operator<< (std::size_t atom) {
 //    // NB: type truncated!
 //    return *this << static_cast<uint32_t>(atom);
 //}
-I::OStream& ByteMemoryOutStream::operator<< (float atom) {
+IOStream& ByteMemoryOutStream::operator<< (float atom) {
     static_assert(sizeof(float) == 4, "Expecting sizeof(float) == 4");
     uint32_t tmp = 0u;
     memcpy(&tmp, &atom, sizeof(float));
     return *this << static_cast<uint32_t>(htonl(tmp));
 }
-I::OStream& ByteMemoryOutStream::operator<< (double atom) {
+IOStream& ByteMemoryOutStream::operator<< (double atom) {
     static_assert(sizeof(double) == 8, "Expecting sizeof(double) == 8");
     uint32_t tmp[2] = {0u};
     memcpy(tmp, &atom, sizeof(double));
@@ -740,7 +740,7 @@ I::OStream& ByteMemoryOutStream::operator<< (double atom) {
     *this << static_cast<uint32_t>(htonl(tmp[1]));
     return *this;
 }
-I::OStream& ByteMemoryOutStream::operator<< (const std::string &str) {
+IOStream& ByteMemoryOutStream::operator<< (const std::string &str) {
     //*this << static_cast<std::size_t>(str.size()); // N.B. Put type explicitly
     *this << static_cast<uint32_t>(str.size()); // N.B. Put type explicitly
     for (auto c : str) *this << c;
@@ -749,7 +749,7 @@ I::OStream& ByteMemoryOutStream::operator<< (const std::string &str) {
 ByteMemoryInStream::ByteMemoryInStream(const std::vector<char> &data)
     : m_storage(data) {
 }
-I::IStream& ByteMemoryInStream::operator>> (uint32_t &atom) {
+IIStream& ByteMemoryInStream::operator>> (uint32_t &atom) {
     check(sizeof(uint32_t));
     uint8_t x[4];
     x[0] = static_cast<uint8_t>(m_storage[m_idx++]);
@@ -759,22 +759,22 @@ I::IStream& ByteMemoryInStream::operator>> (uint32_t &atom) {
     atom = ((x[0]) | (x[1] << 8) | (x[2] << 16) | (x[3] << 24));
     return *this;
 }
-I::IStream& ByteMemoryInStream::operator>> (bool& atom) {
+IIStream& ByteMemoryInStream::operator>> (bool& atom) {
     check(sizeof(char));
     atom = (m_storage[m_idx++] == 0) ? false : true;
     return *this;
 }
-I::IStream& ByteMemoryInStream::operator>> (std::vector<bool>::reference atom) {
+IIStream& ByteMemoryInStream::operator>> (std::vector<bool>::reference atom) {
     check(sizeof(char));
     atom = (m_storage[m_idx++] == 0) ? false : true;
     return *this;
 }
-I::IStream& ByteMemoryInStream::operator>> (char &atom) {
+IIStream& ByteMemoryInStream::operator>> (char &atom) {
     check(sizeof(char));
     atom = m_storage[m_idx++];
     return *this;
 }
-I::IStream& ByteMemoryInStream::operator>> (uint64_t &atom) {
+IIStream& ByteMemoryInStream::operator>> (uint64_t &atom) {
     check(sizeof(uint64_t));
     uint8_t x[8];
     atom = 0;
@@ -784,13 +784,13 @@ I::IStream& ByteMemoryInStream::operator>> (uint64_t &atom) {
     }
     return *this;
 }
-I::IStream& ByteMemoryInStream::operator>> (unsigned char &atom) {
+IIStream& ByteMemoryInStream::operator>> (unsigned char &atom) {
     char c{};
     *this >> c;
     atom = static_cast<unsigned char>(c);
     return *this;
 }
-I::IStream& ByteMemoryInStream::operator>> (short &atom) {
+IIStream& ByteMemoryInStream::operator>> (short &atom) {
     static_assert(sizeof(short) == 2, "Expecting sizeof(short) == 2");
     check(sizeof(short));
     uint8_t x[2];
@@ -799,35 +799,35 @@ I::IStream& ByteMemoryInStream::operator>> (short &atom) {
     atom = ((x[0]) | (x[1] << 8));
     return *this;
 }
-I::IStream& ByteMemoryInStream::operator>> (unsigned short &atom) {
+IIStream& ByteMemoryInStream::operator>> (unsigned short &atom) {
     short s{};
     *this >> s;
     atom = static_cast<unsigned short>(s);
     return *this;
 }
-I::IStream& ByteMemoryInStream::operator>> (int& atom) {
+IIStream& ByteMemoryInStream::operator>> (int& atom) {
     static_assert(sizeof(int) == 4, "Expecting sizeof(int) == 4");
     atom = static_cast<int>(getU32());
     return *this;
 }
-//I::IStream& ByteMemoryInStream::operator>> (std::size_t& atom) {
+//IIStream& ByteMemoryInStream::operator>> (std::size_t& atom) {
 //    // NB. Type was truncated!
 //    atom = static_cast<std::size_t>(getU32());
 //    return *this;
 //}
-I::IStream& ByteMemoryInStream::operator>> (float& atom) {
+IIStream& ByteMemoryInStream::operator>> (float& atom) {
     static_assert(sizeof(float) == 4, "Expecting sizeof(float) == 4");
     uint32_t tmp = ntohl(getU32());
     memcpy(&atom, &tmp, sizeof(float));
     return *this;
 }
-I::IStream& ByteMemoryInStream::operator>> (double& atom) {
+IIStream& ByteMemoryInStream::operator>> (double& atom) {
     static_assert(sizeof(double) == 8, "Expecting sizeof(double) == 8");
     uint32_t tmp[2] = {ntohl(getU32()), ntohl(getU32())};
     memcpy(&atom, tmp, sizeof(double));
     return *this;
 }
-I::IStream& ByteMemoryInStream::operator>> (std::string& str) {
+IIStream& ByteMemoryInStream::operator>> (std::string& str) {
     //std::size_t sz = 0u;
     uint32_t sz = 0u;
     *this >> sz;
@@ -840,18 +840,18 @@ I::IStream& ByteMemoryInStream::operator>> (std::string& str) {
     return *this;
 }
 
-GAPI_EXPORTS void serialize(I::OStream& os, const cv::GMetaArgs &ma) {
+GAPI_EXPORTS void serialize(IOStream& os, const cv::GMetaArgs &ma) {
     os << ma;
 }
-GAPI_EXPORTS void serialize(I::OStream& os, const cv::GRunArgs &ra) {
+GAPI_EXPORTS void serialize(IOStream& os, const cv::GRunArgs &ra) {
     os << ra;
 }
-GAPI_EXPORTS GMetaArgs meta_args_deserialize(I::IStream& is) {
+GAPI_EXPORTS GMetaArgs meta_args_deserialize(IIStream& is) {
     GMetaArgs s;
     is >> s;
     return s;
 }
-GAPI_EXPORTS GRunArgs run_args_deserialize(I::IStream& is) {
+GAPI_EXPORTS GRunArgs run_args_deserialize(IIStream& is) {
     GRunArgs s;
     is >> s;
     return s;
@@ -859,5 +859,5 @@ GAPI_EXPORTS GRunArgs run_args_deserialize(I::IStream& is) {
 
 
 } // namespace s11n
-} // namespace gimpl
+} // namespace gapi
 } // namespace cv

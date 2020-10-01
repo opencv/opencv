@@ -526,7 +526,7 @@ cv::gimpl::GCompiler::GPtr cv::gimpl::GCompiler::makeGraph(const cv::GComputatio
         gm.metadata().set(p);
     } else if (cv::util::holds_alternative<cv::GComputation::Priv::Dump>(priv.m_shape)) {
         auto c_dump = cv::util::get<cv::GComputation::Priv::Dump>(priv.m_shape);
-        cv::gimpl::s11n::reconstruct(c_dump, g);
+        cv::gapi::s11n::reconstruct(c_dump, g);
     }
     return pG;
 }
