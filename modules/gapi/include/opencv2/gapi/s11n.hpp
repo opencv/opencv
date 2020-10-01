@@ -11,7 +11,6 @@
 #include <map>
 #include <unordered_map>
 #include <opencv2/gapi/gcomputation.hpp>
-#include <opencv2/gapi/render/render_types.hpp>
 
 namespace cv {
 namespace gapi {
