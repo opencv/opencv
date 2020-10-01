@@ -181,6 +181,8 @@ ocv_add_accuracy_tests(${__test_extra_deps})
 if(TARGET opencv_test_gapi)
   target_include_directories(opencv_test_gapi PRIVATE "${CMAKE_CURRENT_LIST_DIR}/src")
   target_link_libraries(opencv_test_gapi PRIVATE ade)
+  target_link_libraries(opencv_test_gapi PUBLIC "/home/ruslan/coding/dldt/bin/aarch64/Debug/lib/libngraph.so")
+  target_link_libraries(opencv_test_gapi PUBLIC "/home/ruslan/coding/dldt/bin/aarch64/Debug/lib/libinference_engine_transformations.so")
 endif()
 
 if(HAVE_FREETYPE)

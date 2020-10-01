@@ -58,6 +58,9 @@ namespace detail {
         // (e.g. topology's partial execution)
         std::size_t num_in;  // How many inputs are defined in the operation
         std::size_t num_out; // How many outputs are defined in the operation
+
+        enum class Kind { Load, Import };
+        Kind kind;
     };
 } // namespace detail
 
@@ -76,10 +79,12 @@ template<typename Net> class Params {
 public:
     Params(const std::string &model,
            const std::string &weights,
-           const std::string &device)
+           const std::string &device,
+           detail::ParamDesc::Kind kind = detail::ParamDesc::Kind::Load)
         : desc{ model, weights, device, {}, {}, {}
               , std::tuple_size<typename Net::InArgs>::value  // num_in
               , std::tuple_size<typename Net::OutArgs>::value // num_out
+              , kind
               } {
     };
 
