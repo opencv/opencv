@@ -73,18 +73,18 @@ cv::GComputation::GComputation(cv::GProtoInputArgs &&ins,
     };
 }
 
-cv::GComputation::GComputation(cv::gimpl::s11n::I::IStream &is)
+cv::GComputation::GComputation(cv::gapi::s11n::IIStream &is)
     : m_priv(new Priv())
 {
-    m_priv->m_shape = gimpl::s11n::deserialize(is);
+    m_priv->m_shape = gapi::s11n::deserialize(is);
 }
 
-void cv::GComputation::serialize(cv::gimpl::s11n::I::OStream &os) const
+void cv::GComputation::serialize(cv::gapi::s11n::IOStream &os) const
 {
     // Build a basic GModel and write the whole thing to the stream
     auto pG = cv::gimpl::GCompiler::makeGraph(*m_priv);
     std::vector<ade::NodeHandle> nhs(pG->nodes().begin(), pG->nodes().end());
-    gimpl::s11n::serialize(os, *pG, nhs);
+    gapi::s11n::serialize(os, *pG, nhs);
 }
 
 
@@ -129,15 +129,14 @@ static bool formats_are_same(const cv::GMetaArgs& metas1, const cv::GMetaArgs& m
                      });
 }
 
-void cv::GComputation::apply(GRunArgs &&ins, GRunArgsP &&outs, GCompileArgs &&args)
+void cv::GComputation::recompile(GMetaArgs&& in_metas, GCompileArgs &&args)
 {
-    const auto in_metas = descr_of(ins);
     // FIXME Graph should be recompiled when GCompileArgs have changed
     if (m_priv->m_lastMetas != in_metas)
     {
         if (m_priv->m_lastCompiled &&
-            m_priv->m_lastCompiled.canReshape() &&
-            formats_are_same(m_priv->m_lastMetas, in_metas))
+                m_priv->m_lastCompiled.canReshape() &&
+                formats_are_same(m_priv->m_lastMetas, in_metas))
         {
             m_priv->m_lastCompiled.reshape(in_metas, args);
         }
@@ -148,6 +147,11 @@ void cv::GComputation::apply(GRunArgs &&ins, GRunArgsP &&outs, GCompileArgs &&ar
         }
         m_priv->m_lastMetas = in_metas;
     }
+}
+
+void cv::GComputation::apply(GRunArgs &&ins, GRunArgsP &&outs, GCompileArgs &&args)
+{
+    recompile(descr_of(ins), std::move(args));
     m_priv->m_lastCompiled(std::move(ins), std::move(outs));
 }
 
@@ -163,6 +167,41 @@ void cv::GComputation::apply(const std::vector<cv::Mat> &ins,
     for (      cv::Mat &m : tmp) { call_outs.emplace_back(&m); }
 
     apply(std::move(call_ins), std::move(call_outs), std::move(args));
+}
+
+// NB: This overload is called from python code
+cv::GRunArgs cv::GComputation::apply(GRunArgs &&ins, GCompileArgs &&args)
+{
+    recompile(descr_of(ins), std::move(args));
+
+    const auto& out_metas = m_priv->m_lastCompiled.outMetas();
+    GRunArgs run_args;
+    GRunArgsP outs;
+    run_args.reserve(out_metas.size());
+    outs.reserve(out_metas.size());
+
+    for (auto&& meta : out_metas)
+    {
+        switch (meta.index())
+        {
+            case cv::GMetaArg::index_of<cv::GMatDesc>():
+            {
+                run_args.emplace_back(cv::Mat{});
+                outs.emplace_back(&cv::util::get<cv::Mat>(run_args.back()));
+                break;
+            }
+            case cv::GMetaArg::index_of<cv::GScalarDesc>():
+            {
+                run_args.emplace_back(cv::Scalar{});
+                outs.emplace_back(&cv::util::get<cv::Scalar>(run_args.back()));
+                break;
+            }
+            default:
+                util::throw_error(std::logic_error("Only cv::GMat and cv::GScalar are supported for python output"));
+        }
+    }
+    m_priv->m_lastCompiled(std::move(ins), std::move(outs));
+    return run_args;
 }
 
 #if !defined(GAPI_STANDALONE)

@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2020 Intel Corporation
 
 
 #include "precomp.hpp"
@@ -232,6 +232,11 @@ GMat select(const GMat& src1, const GMat& src2, const GMat& mask)
 GScalar sum(const GMat& src)
 {
     return core::GSum::on(src);
+}
+
+GOpaque<int> countNonZero(const GMat& src)
+{
+    return core::GCountNonZero::on(src);
 }
 
 GMat addWeighted(const GMat& src1, double alpha, const GMat& src2, double beta, double gamma, int dtype)

@@ -1499,7 +1499,7 @@ convert_to_python_tuple(const std::tuple<Tp...>& cpp_tuple, PyObject* py_tuple)
     if (!item)
         return;
 
-    PyTuple_SET_ITEM(py_tuple, I, item);
+    PyTuple_SetItem(py_tuple, I, item);
     convert_to_python_tuple<I + 1, Tp...>(cpp_tuple, py_tuple);
 }
 
@@ -1954,6 +1954,7 @@ static PyMethodDef special_methods[] = {
 #ifdef HAVE_OPENCV_GAPI
   {"GIn", CV_PY_FN_WITH_KW(pyopencv_cv_GIn), "GIn(...) -> GInputProtoArgs"},
   {"GOut", CV_PY_FN_WITH_KW(pyopencv_cv_GOut), "GOut(...) -> GOutputProtoArgs"},
+  {"gin", CV_PY_FN_WITH_KW(pyopencv_cv_gin), "gin(...) -> GRunArgs"},
 #endif
   {NULL, NULL},
 };

@@ -22,7 +22,7 @@ function(ocv_create_builtin_videoio_plugin name target)
 
   foreach(mod opencv_videoio opencv_core opencv_imgproc opencv_imgcodecs)
     ocv_target_link_libraries(${name} LINK_PRIVATE ${mod})
-    ocv_target_include_directories(${name} PRIVATE "${OPENCV_MODULE_${mod}_LOCATION}/include")
+    ocv_target_include_directories(${name} "${OPENCV_MODULE_${mod}_LOCATION}/include")
   endforeach()
 
   if(WIN32)

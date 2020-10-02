@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018-2019 Intel Corporation
+// Copyright (C) 2018-2020 Intel Corporation
 
 
 #include "../test_precomp.hpp"
@@ -192,7 +192,16 @@ INSTANTIATE_TEST_CASE_P(SumTestGPU, SumTest,
                                        cv::Size(128, 128)),
                                 Values(-1),
                                 Values(CORE_GPU),
-                                Values(AbsToleranceScalar(1e-3).to_compare_obj())));//TODO: too relaxed?
+                                Values(AbsToleranceScalar(1e-5).to_compare_obj())));
+
+INSTANTIATE_TEST_CASE_P(CountNonZeroTestGPU, CountNonZeroTest,
+                        Combine(Values( CV_8UC1, CV_16UC1, CV_16SC1, CV_32FC1 ),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480),
+                                       cv::Size(128, 128)),
+                                Values(-1),
+                                Values(CORE_GPU),
+                                Values(AbsToleranceScalar(1e-5).to_compare_obj())));
 
 INSTANTIATE_TEST_CASE_P(AbsDiffTestGPU, AbsDiffTest,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
