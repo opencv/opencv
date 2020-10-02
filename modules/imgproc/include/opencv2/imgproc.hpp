@@ -4758,16 +4758,16 @@ protected:
 /** @brief Defines various put text flags */
 enum
 {
-    PUT_TEXT_ALIGN_LEFT=0, // put the text to the right from the origin; the only supported alignment for now
-    PUT_TEXT_ALIGN_CENTER=1, // center the text at the origin; not implemented yet
-    PUT_TEXT_ALIGN_RIGHT=2, // put the text to the left of the origin; not implemented yet
+    PUT_TEXT_ALIGN_LEFT=0,  // put the text to the right from the origin
+    PUT_TEXT_ALIGN_CENTER=1,// center the text at the origin; not implemented yet
+    PUT_TEXT_ALIGN_RIGHT=2, // put the text to the left of the origin
     PUT_TEXT_ALIGN_MASK=3,  // alignment mask
     PUT_TEXT_SIZE_PIXELS=0, // text size is specified in pixels
     PUT_TEXT_SIZE_POINTS=4, // text size is specified in points (~120 pixel/inch pixel density is assumed)
-    PUT_TEXT_SIZE_MASK=12,
+    PUT_TEXT_SIZE_UNITS=12, // mask for either pixel or points or maybe some future measurement units
     PUT_TEXT_ORIGIN_TL=0,
-    PUT_TEXT_ORIGIN_BL=32, // treat the target image as having bottom-left origin
-    PUT_TEXT_WRAP=128 // wrap text to the next line if it does not fit
+    PUT_TEXT_ORIGIN_BL=32,  // treat the target image as having bottom-left origin
+    PUT_TEXT_WRAP=128       // wrap text to the next line if it does not fit
 };
 
 /** @brief Draws a text string using specified font.

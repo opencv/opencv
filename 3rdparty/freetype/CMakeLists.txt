@@ -289,4 +289,4 @@ if(NOT BUILD_SHARED_LIBS)
   ocv_install_target(${PROJECT_NAME} EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev)
 endif()
 
-ocv_install_3rdparty_licenses(${PROJECT_NAME} freetype_LICENSE.txt)
+ocv_install_3rdparty_licenses(${PROJECT_NAME} freetype_COPYING.txt)

@@ -1818,9 +1818,9 @@ public class ImgprocTest extends OpenCVTestCase {
         Imgproc.getTextSize(text, Imgproc.FONT_HERSHEY_SCRIPT_SIMPLEX, fontScale, thickness, null);
         Size res = Imgproc.getTextSize(text, Imgproc.FONT_HERSHEY_SCRIPT_SIMPLEX, fontScale, thickness, baseLine);
 
-        assertEquals(436.0, res.width, 3.0);
-        assertEquals(41.0, res.height, 3.0);
-        assertEquals(14, baseLine[0], 3.0);
+        assertEquals(476.0, res.width, 3.0);
+        assertEquals(38.0, res.height, 3.0);
+        assertEquals(10, baseLine[0], 3.0);
     }
 
     public void testCircleMatPointIntScalar() {

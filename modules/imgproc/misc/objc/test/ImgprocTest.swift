@@ -1494,9 +1494,9 @@ class ImgprocTest: OpenCVTestCase {
         Imgproc.getTextSize(text: text, fontFace: .FONT_HERSHEY_SCRIPT_SIMPLEX, fontScale: Double(fontScale), thickness: thickness, baseLine: &baseLine)
         let res = Imgproc.getTextSize(text: text, fontFace: .FONT_HERSHEY_SCRIPT_SIMPLEX, fontScale: Double(fontScale), thickness: thickness, baseLine: &baseLine)
 
-        XCTAssertEqual(436, res.width)
-        XCTAssertEqual(41, res.height)
-        XCTAssertEqual(14, baseLine)
+        XCTAssertEqual(476, res.width)
+        XCTAssertEqual(38, res.height)
+        XCTAssertEqual(10, baseLine)
     }
 
     func testCircleMatPointIntScalar() {

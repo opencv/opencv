@@ -700,6 +700,42 @@ TEST(Drawing, fillpoly_circle)
     EXPECT_LT(diff_fp3, 1.);
 }
 
+
+TEST(Drawing, fromJava_getTextSize)
+{
+    String text = "Android all the way";
+    double fontScale = 2;
+    int thickness = 3;
+    int baseLine = 0;
+
+    Size res0 = getTextSize(text, FONT_HERSHEY_SCRIPT_SIMPLEX, fontScale, thickness, 0);
+    Size res = getTextSize(text, FONT_HERSHEY_SCRIPT_SIMPLEX, fontScale, thickness, &baseLine);
+
+    EXPECT_EQ(res0.width, res.width);
+    EXPECT_EQ(res0.height, res.height);
+    EXPECT_NEAR(476, res.width, 3.0);
+    EXPECT_NEAR(41, res.height, 3.0);
+    EXPECT_NEAR(10, baseLine, 3.0);
+}
+
+TEST(Drawing, fromJava_testPutTextMatStringPointIntDoubleScalarIntIntBoolean)
+{
+    String text = "Hello World";
+    Size labelSize(175, 22);
+
+    Mat img(20 + (int)labelSize.height, 20 + (int)labelSize.width, CV_8U, Scalar::all(0));
+    Point origin(10, 10);
+
+    putText(img, text, origin, FONT_HERSHEY_SIMPLEX, 1.0, Scalar::all(255), 1, LINE_8, true);
+
+    EXPECT_LT(0, countNonZero(img));
+    // check that border is not corrupted
+    rectangle(img, origin,
+                Point(origin.x + labelSize.width, origin.y + labelSize.height),
+                      Scalar::all(0), -1, 8);
+    EXPECT_EQ(0, countNonZero(img));
+}
+
 typedef struct TextProp
 {
     const char* str;
@@ -718,7 +754,7 @@ TEST(Drawing, ttf_text)
     FontFace italic("italic");
     FontFace uni("uni");
     std::vector<FontFace> faces = {script, sans};
-    Mat img(1000, 1500, CV_8UC3, Scalar::all(255));
+    Mat img(1000, 1500, CV_8UC3);
     TextProp text[] =
     {
         {"The quick brown fox jumps over lazy dog. Fly, start, finish, shuffle shuttle.", false, 400, false},
@@ -754,10 +790,12 @@ TEST(Drawing, ttf_text)
          "                                      -गौतम बुद्ध", false, 400, false}
     };
     Scalar color(150, 80, 0);
-    //Scalar color(0, 0, 0);
 
+    for(int iter = 0; iter < 2; iter++)
+    {
+    //double ts = (double)getTickCount();
     img.setTo(Scalar::all(255));
-    double sz = 20;
+    int sz = 20;
     int x0 = 50, y0 = 70;
     Point org(x0, y0);
 
@@ -807,6 +845,9 @@ TEST(Drawing, ttf_text)
     org.x += 60;
     putText(img, "打印文字", org, color2, sans, 100, 400,
             PUT_TEXT_ALIGN_LEFT, Range());
+    //ts = (double)getTickCount() - ts;
+    //printf("iter=%d. ts=%.2fms\n", iter, ts*1000./getTickFrequency());
+    }
 
 #if 0
     //imwrite(ts_data_path + "../highgui/drawing/text_test.png", img);

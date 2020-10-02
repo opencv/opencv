@@ -46,17 +46,6 @@ static BuiltinFontData builtinFontData[BUILTIN_FONTS_NUM+1] =
     {0, 0, 0, 0.0, false, 0}
 };
 
-struct FreeTypeLib
-{
-    FreeTypeLib() { library = 0; }
-    ~FreeTypeLib()
-    {
-
-    }
-
-    FT_Library  library;   /* handle to library     */
-};
-
 static bool inflate(const void* src, size_t srclen, std::vector<uchar>& dst)
 {
     dst.resize((size_t)(srclen*2.5));
@@ -165,8 +154,8 @@ struct FontFace::Impl {
 
     bool setParams(FT_Library library, double size0, int weight, int flags)
     {
-        flags &= PUT_TEXT_SIZE_MASK;
-        int sizeunits = flags & PUT_TEXT_SIZE_MASK;
+        flags &= PUT_TEXT_SIZE_UNITS;
+        int sizeunits = flags & PUT_TEXT_SIZE_UNITS;
         int size = cvRound(size0*scalefactor*(sizeunits == PUT_TEXT_SIZE_POINTS ? 64 : 1));
 
         if (ftface == 0)
@@ -252,15 +241,17 @@ struct GlyphCacheKey
         weight = 0;
         flags = 0;
     }
-    GlyphCacheKey(FT_Face ftface_, double size_, int weight_, int flags_)
+    GlyphCacheKey(FT_Face ftface_, int index_, double size_, int weight_, int flags_)
     {
         ftface = ftface_;
-        size = size_;
+        glyph_index = index_;
+        size = cvRound(size_*256);
         weight = weight_;
-        flags = flags_;
+        flags = flags_ & PUT_TEXT_SIZE_UNITS;
     }
 
     FT_Face ftface;
+    int glyph_index;
     int size;
     int weight;
     int flags;
@@ -268,7 +259,8 @@ struct GlyphCacheKey
 
 static bool operator == (const GlyphCacheKey& k1, const GlyphCacheKey& k2)
 {
-    return k1.ftface == k2.ftface && k1.size == k2.size && k1.weight == k2.weight && k1.flags == k2.flags;
+    return k1.ftface == k2.ftface && k1.glyph_index == k2.glyph_index &&
+           k1.size == k2.size && k1.weight == k2.weight && k1.flags == k2.flags;
 }
 
 static size_t hash_seq(const size_t* hashvals, size_t n)
@@ -286,7 +278,8 @@ struct GlyphCacheHash
 {
     size_t operator()(const GlyphCacheKey& key) const noexcept
     {
-        size_t hs[] = {(size_t)(void*)key.ftface, (size_t)key.size, (size_t)key.weight, (size_t)key.flags};
+        size_t hs[] = {(size_t)(void*)key.ftface, (size_t)key.glyph_index,
+            (size_t)key.size, (size_t)key.weight, (size_t)key.flags};
         return hash_seq(hs, sizeof(hs)/sizeof(hs[0]));
     }
 };
@@ -295,20 +288,20 @@ struct GlyphCacheVal
 {
     GlyphCacheVal()
     {
-    }
-
-    GlyphCacheVal(Rect brect_)
-    {
-        brect = brect_;
-    }
-
-    bool empty()
-    {
-        return brect.area() == 0;
+        crc = 0;
+        width = height = vertAdvance = bitmapTop = horiBearingX = horiBearingY = 0;
     }
 
     std::vector<uchar> rlebuf;
-    Rect brect;
+    Rect bbox;
+    unsigned crc;
+    int width;
+    int height;
+    Point advance;
+    int vertAdvance;
+    int bitmapTop;
+    int horiBearingX;
+    int horiBearingY;
 };
 
 typedef std::pair<GlyphCacheKey, GlyphCacheVal> GlyphCacheEntry;
@@ -357,6 +350,7 @@ struct FontGlyph
 class FontRenderEngine
 {
 public:
+    enum { MAX_CACHED_GLYPH_SIZE = 128 };
     FontRenderEngine()
     {
         ftlib = 0;
@@ -393,13 +387,13 @@ public:
         glyph_cache.insert(std::make_pair(first->first, first));
     }
 
-    const GlyphCacheVal& findCachedGlyph(const GlyphCacheKey& key)
+    GlyphCacheVal* findCachedGlyph(const GlyphCacheKey& key)
     {
         auto it = glyph_cache.find(key);
         if(it == glyph_cache.end())
-            return not_found;
+            return 0;
         all_cached.splice(all_cached.begin(), all_cached, it->second);
-        return (*it->second).second;
+        return &it->second->second;
     }
 
     FontFace& getStdFontFace(int i)
@@ -422,7 +416,7 @@ public:
     Point putText_( Mat& img, Size imgsize, const String& str_, Point org,
                     const uchar* color, FontFace& fontface, double size,
                     int weight, int flags, Range wrapRange, bool render,
-                    Rect* brect );
+                    Rect* bbox );
 
 protected:
     FT_Library ftlib;
@@ -432,7 +426,7 @@ protected:
     hb_unicode_funcs_t* hb_uni_funcs;
 
     // LRU cache of glyphs
-    GlyphCacheVal not_found;
+    GlyphCacheVal new_cached;
     std::list<GlyphCacheEntry> all_cached;
     std::unordered_map<GlyphCacheKey, GlyphCacheEntryIt, GlyphCacheHash> glyph_cache;
     size_t max_cache_size;
@@ -441,6 +435,7 @@ protected:
     std::vector<unsigned> u32buf;
     std::vector<TextSegment> segments;
     std::vector<FontGlyph> glyphs;
+    std::vector<uchar> pixbuf;
 };
 
 thread_local FontRenderEngine fontRenderEngine;
@@ -521,17 +516,230 @@ double FontFace::getScaleFactor() const { return impl->scalefactor; }
 FontFace::Impl* FontFace::operator -> () { return impl.get(); }
 FontFace::~FontFace() {}
 
+static unsigned calccrc(const std::vector<uchar>& buf)
+{
+    unsigned crc = (unsigned)-1;
+    size_t i, n = buf.size();
+    for(i = 0; i < n; i++)
+        crc = (crc << 5) ^ (crc >> 27) ^ buf[i];
+    return crc;
+}
+
+static void
+compressCharacter(const uchar* bitmap_buf,
+                  int bitmap_step, Size bitmap_size,
+                  std::vector<uchar>& rlebuf,
+                  Rect& roi, unsigned* crc)
+{
+    const int RLE_MAX = 255;
+    int width = bitmap_size.width, height = bitmap_size.height;
+    int left = width-1, right = 0, top = height-1, bottom = 0;
+    bool global_have_nz = false;
+    for( int i = 0; i < height; i++ )
+    {
+        bool have_nz = false;
+        for( int j = 0; j < width; j++ )
+        {
+            if(bitmap_buf[i*bitmap_step + j] != 0)
+            {
+                left = min(left, j);
+                right = max(right, j);
+                have_nz = true;
+            }
+        }
+        if( have_nz )
+        {
+            global_have_nz |= have_nz;
+            top = min(top, i);
+            bottom = max(bottom, i);
+        }
+    }
+    // all 0's
+    if(!global_have_nz)
+    {
+        roi = Rect(0, 0, 0, 0);
+        rlebuf.clear();
+        if(crc)
+            *crc = calccrc(rlebuf);
+        return;
+    }
+    roi = Rect(left, top, right - left + 1, bottom - top + 1);
+    bool rle_mode = true;
+    int k = 0, count = 0;
+    int count_pos = -1;
+    int bufsz = roi.width*roi.height*2+256;
+    rlebuf.resize(bufsz);
+    uchar* buf = &rlebuf[0];
+    int prev = 0, x = 0;
+
+    //  c b
+    //  a x
+    for( int i = top; i <= bottom; i++ )
+    {
+        for( int j = left; j <= right; j++ )
+        {
+            const uchar* ptr = bitmap_buf + i*bitmap_step + j;
+            prev = x;
+            x = *ptr;
+            int a = 0, b = 0, c = 0;
+            if( i > top )
+            {
+                b = ptr[-bitmap_step];
+                if( j > left )
+                {
+                    a = ptr[-1];
+                    c = ptr[-1-bitmap_step];
+                }
+            }
+            else if( j > left )
+                a = ptr[-1];
+            int predicted = a + b - c;
+            if( x == predicted )
+            {
+                if(rle_mode) ++count;
+                else
+                {
+                    if(count > 0)
+                        buf[count_pos] = count;
+                    count = 1;
+                    rle_mode = true;
+                }
+            }
+            else if( !rle_mode )
+            {
+                if(count == RLE_MAX)
+                {
+                    buf[count_pos] = count;
+                    buf[k++] = 0;
+                    count_pos = k++;
+                    count = 0;
+                }
+                buf[k++] = (uchar)x;
+                count++;
+            }
+            else if( count == 1 && count_pos >= 0 && buf[count_pos] < RLE_MAX-1 )
+            {
+                count = buf[count_pos] + 2;
+                buf[k++] = (uchar)prev;
+                buf[k++] = (uchar)x;
+                rle_mode = false;
+            }
+            else
+            {
+                if(count == 0)
+                    buf[k++] = 0;
+                while(count > 0)
+                {
+                    int dcount = min(count, RLE_MAX);
+                    count -= dcount;
+                    buf[k++] = (uchar)dcount;
+                    if(count > 0)
+                        buf[k++] = 0;
+                }
+                count_pos = k++;
+                buf[k++] = (uchar)x;
+                count = 1;
+                rle_mode = false;
+            }
+        }
+    }
+
+    if(rle_mode)
+    {
+        while(count > 0)
+        {
+            int dcount = min(count, RLE_MAX);
+            count -= dcount;
+            buf[k++] = (uchar)dcount;
+            if(count > 0)
+                buf[k++] = 0;
+        }
+    }
+    else buf[count_pos] = count;
+    rlebuf.resize(k);
+    if(crc)
+        *crc = calccrc(rlebuf);
+}
+
+static bool
+decompressCharacter(const std::vector<uchar>& rlebuf, Rect r,
+                    std::vector<uchar>& pixbuf, const unsigned* crc)
+{
+    if(crc)
+        CV_Assert(*crc == calccrc(rlebuf));
+
+    int width = r.width, height = r.height;
+    int i = 0, j = 0, k = 0;
+    int bufsz = (int)rlebuf.size();
+    const uchar* buf = bufsz > 0 ? &rlebuf[0] : 0;
+
+    pixbuf.resize(width*height);
+    uchar* pixels = width*height > 0 ? &pixbuf[0] : 0;
+
+    if(bufsz == 0)
+    {
+        if(width > 0 && height > 0)
+            memset(pixels, 0, width*height);
+        return true;
+    }
+
+    while( k < bufsz )
+    {
+        int rle_count = buf[k++];
+        for( ; rle_count > 0; rle_count-- )
+        {
+            int a = 0, b = 0, c = 0;
+            uchar* ptr = pixels + i*width + j;
+            if( i > 0 )
+            {
+                b = ptr[-width];
+                if( j > 0 )
+                {
+                    a = ptr[-1];
+                    c = ptr[-width-1];
+                }
+            }
+            else if( j > 0 )
+                a = ptr[-1];
+            int pred = a + b - c;
+            ptr[0] = (uchar)pred;
+            if( ++j >= width )
+            {
+                j = 0;
+                if( ++i >= height )
+                    return true;
+            }
+        }
+        if( k >= bufsz )
+            return false;
+        int nz_end = buf[k++];
+        nz_end += k;
+        if( nz_end > bufsz )
+            return false;
+        for( ; k < nz_end; k++ )
+        {
+            pixels[i*width + j] = buf[k];
+            if( ++j >= width )
+            {
+                j = 0;
+                if( ++i >= height )
+                    return true;
+            }
+        }
+    }
+    return false;
+}
+
 static void drawCharacter(
     Mat& img, const uchar* color,
-    const FT_Bitmap* bitmap, int x0, int y0,
-    bool bottom_left )
+    const uchar* bitmap_buf,
+    int bitmap_step, Size bitmap_size,
+    int x0, int y0, bool bottom_left )
 {
     int nch = img.channels();
-    int bw = (int)(bitmap->width), bh = (int)(bitmap->rows);
+    int bw = bitmap_size.width, bh = bitmap_size.height;
     int rows = img.rows, cols = img.cols;
     uchar b = color[0], g = color[1], r = color[2];
-    const uchar* bitmap_buf = bitmap->buffer;
-    int bitmap_pitch = bitmap->pitch;
 
     // for simplicity, we assume that `bitmap->pixel_mode'
     // is `FT_PIXEL_MODE_GRAY' (i.e., not a bitmap font)
@@ -547,7 +755,7 @@ static void drawCharacter(
             if( x < 0 || x >= cols )
                 continue;
             uchar* imgptr = imgptr0 + x*nch;
-            uchar alpha = bitmap_buf[dy*bitmap_pitch + dx];
+            uchar alpha = bitmap_buf[dy*bitmap_step + dx];
             if(alpha == 0)
                 continue;
             if( nch == 3 )
@@ -619,10 +827,10 @@ static bool isRightToLeft(unsigned c)
 Point FontRenderEngine::putText_(
     Mat& img, Size imgsize, const String& str_, Point org,
     const uchar* color, FontFace& fontface, double size,
-    int weight, int flags, Range wrapRange, bool render, Rect* brect )
+    int weight, int flags, Range wrapRange, bool render, Rect* bbox_ )
 {
+    size = cvRound(size*256)/256.;
     FT_Library ftlib_ = getLibrary();
-    int load_glyph_flag = render ? FT_LOAD_RENDER : FT_LOAD_DEFAULT;
     bool bottom_left = (flags & PUT_TEXT_ORIGIN_BL) != 0;
 
     if(fontface.getName().empty())
@@ -663,8 +871,8 @@ Point FontRenderEngine::putText_(
 
     if(x0 >= x1 || len == 0)
     {
-        if(brect)
-            *brect = Rect(org.x, org.y, 0, 0);
+        if(bbox_)
+            *bbox_ = Rect(org.x, org.y, 0, 0);
         return org;
     }
 
@@ -777,9 +985,8 @@ Point FontRenderEngine::putText_(
         #endif
 
             if(glyph_index != 0 ||
-               ((cat == HB_UNICODE_GENERAL_CATEGORY_FORMAT/* ||
-                 cat == HB_UNICODE_GENERAL_CATEGORY_CONTROL*/) &&
-                 dir == HB_DIRECTION_INVALID))
+               (cat == HB_UNICODE_GENERAL_CATEGORY_FORMAT &&
+                dir == HB_DIRECTION_INVALID))
             {
                 if(is_punct)
                 {
@@ -973,40 +1180,89 @@ Point FontRenderEngine::putText_(
                 curr_ftface = ftface;
                 space_glyph = (int)FT_Get_Char_Index(ftface, ' ');
             }
-            int err = FT_Load_Glyph(ftface, (FT_UInt)glyph.index, load_glyph_flag);
-            if(err != 0)
-                continue;
-            FT_GlyphSlot slot = glyph.ftface->glyph;
+
+            GlyphCacheKey key(curr_ftface, glyph.index, size, weight, flags);
+            GlyphCacheVal* cached = findCachedGlyph(key);
+            const uchar* bitmap_buf = 0;
+            int bitmap_step = 0;
+            Rect bbox;
+
+            if(!cached)
+            {
+                cached = &new_cached;
+                int err = FT_Load_Glyph(ftface, (FT_UInt)glyph.index, FT_LOAD_RENDER);
+                if(err != 0)
+                    continue;
+                FT_GlyphSlot slot = ftface->glyph;
+                cached->width = (int)slot->metrics.width;
+                cached->height = (int)slot->metrics.height;
+                cached->advance.x = (int)slot->advance.x;
+                cached->advance.y = (int)slot->advance.y;
+                cached->vertAdvance = (int)slot->metrics.vertAdvance;
+                cached->bitmapTop = (int)slot->bitmap_top;
+                cached->horiBearingX = (int)slot->metrics.horiBearingX;
+                cached->horiBearingY = (int)slot->metrics.horiBearingY;
+
+                bitmap_buf = slot->bitmap.buffer;
+                bitmap_step = (int)slot->bitmap.pitch;
+                bbox = Rect(0, 0, slot->bitmap.width, slot->bitmap.rows);
+
+                if(slot->bitmap.width <= MAX_CACHED_GLYPH_SIZE &&
+                   slot->bitmap.rows <= MAX_CACHED_GLYPH_SIZE)
+                {
+                    compressCharacter(bitmap_buf, bitmap_step, bbox.size(),
+                                      cached->rlebuf, cached->bbox,
+                                      0 //&cached->crc
+                                      );
+                    addToCache(key, *cached);
+                }
+            }
+            else
+            {
+                if(render)
+                {
+                    CV_Assert(decompressCharacter(cached->rlebuf, cached->bbox,
+                                                  pixbuf, 0 //&cached->crc
+                                                  ));
+                }
+                bitmap_buf = pixbuf.empty() ? 0 : &pixbuf[0];
+                bitmap_step = cached->bbox.width;
+                bbox = cached->bbox;
+            }
+
             const hb_glyph_position_t& pos = glyph.pos;
-            int dx = (int)(slot->advance.x >> 6);
-            int dy = (int)(slot->advance.y >> 6);
+            int dx = cached->advance.x >> 6;
+            int dy = cached->advance.y >> 6;
             int new_pen_x = pen.x + dx*alignSign;
-            nextline_dy = max(nextline_dy, (int)(slot->metrics.vertAdvance >> 6));
-            // TODO: this wrapping algorithm is quite dumb
+            nextline_dy = max(nextline_dy, cached->vertAdvance >> 6);
+            // TODO: this wrapping algorithm is quite dumb,
+            // preferably should split text at word boundary
             if( wrap && imgsize.width > 0 && new_pen_x*alignSign > x1*alignSign )
             {
                 pen.y += nextline_dy;
                 dy = 0;
                 pen.x = x0;
                 wrapped = true;
-                max_baseline = slot->bitmap_top;
+                //max_baseline = 0;
                 if(glyph.index == space_glyph) continue;
                 new_pen_x = pen.x + dx*alignSign;
             }
 
             if(!wrapped)
-                max_dy = std::max(max_dy, slot->bitmap_top);
-            int baseline = (slot->metrics.height - slot->metrics.horiBearingY) >> 6;
+                max_dy = std::max(max_dy, cached->bitmapTop);
+            int baseline = (cached->height - cached->horiBearingY) >> 6;
             max_baseline = std::max(max_baseline, baseline);
 
             if(alignment == PUT_TEXT_ALIGN_RIGHT)
                 pen.x = new_pen_x;
 
-            int x = pen.x + ((pos.x_offset + slot->metrics.horiBearingX) >> 6);
-            int y = pen.y - ((pos.y_offset + slot->metrics.horiBearingY) >> 6);
+            int x = pen.x + bbox.x + ((pos.x_offset + cached->horiBearingX) >> 6);
+            int y = pen.y + (bottom_left ? 1 : -1)*(((pos.y_offset + cached->horiBearingY) >> 6) - bbox.y);
 
             if( render )
-                drawCharacter( img, color, &slot->bitmap, x, y, bottom_left );
+            {
+                drawCharacter(img, color, bitmap_buf, bitmap_step, bbox.size(), x, y, bottom_left);
+            }
 
             pen.x = new_pen_x;
             pen.y += dy;
@@ -1022,12 +1278,12 @@ Point FontRenderEngine::putText_(
         }
     }
 
-    if(brect)
+    if(bbox_)
     {
         if(flags & PUT_TEXT_ORIGIN_BL)
-            *brect = Rect(min_x, org.y - max_baseline, max_x - min_x + 1, pen.y - org.y + max_dy + max_baseline);
+            *bbox_ = Rect(min_x, org.y - max_baseline, max_x - min_x + 1, pen.y - org.y + max_dy + max_baseline);
         else
-            *brect = Rect(min_x, org.y - max_dy, max_x - min_x + 1, pen.y - org.y + max_dy + max_baseline);
+            *bbox_ = Rect(min_x, org.y - max_dy, max_x - min_x + 1, pen.y - org.y + max_dy + max_baseline);
     }
 
     return pen;
@@ -1059,10 +1315,10 @@ Rect getTextSize(Size imgsize, const String& str, Point org,
                  int weight, int flags, Range wrap)
 {
     Mat img;
-    Rect brect;
+    Rect bbox;
     fontRenderEngine.putText_(img, imgsize, str, org, 0, fontface, size,
-                              weight, flags, wrap, false, &brect);
-    return brect;
+                              weight, flags, wrap, false, &bbox);
+    return bbox;
 }
 
 }
