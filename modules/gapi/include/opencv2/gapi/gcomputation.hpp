@@ -39,10 +39,8 @@ namespace detail
 // Forward-declare the serialization objects
 namespace gapi {
 namespace s11n {
-namespace I {
-    struct IStream;
-    struct OStream;
-} // namespace I
+    struct IIStream;
+    struct IOStream;
 } // namespace s11n
 } // namespace gapi
 
@@ -509,9 +507,15 @@ public:
     /// @private
     const Priv& priv() const;
     /// @private
+<<<<<<< HEAD
     explicit GComputation(cv::gapi::s11n::I::IStream &);
     /// @private
     void serialize(cv::gapi::s11n::I::OStream &) const;
+=======
+    explicit GComputation(cv::gapi::s11n::IIStream &);
+    /// @private
+    void serialize(cv::gapi::s11n::IOStream &) const;
+>>>>>>> a3e7c2d8e3ebb32a5ee58c8f3265dacead318572
 
 protected:
 

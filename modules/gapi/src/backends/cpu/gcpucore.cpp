@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2020 Intel Corporation
 
 
 #include "precomp.hpp"
@@ -339,6 +339,14 @@ GAPI_OCV_KERNEL(GCPUSum, cv::gapi::core::GSum)
     static void run(const cv::Mat& in, cv::Scalar& out)
     {
         out = cv::sum(in);
+    }
+};
+
+GAPI_OCV_KERNEL(GCPUCountNonZero, cv::gapi::core::GCountNonZero)
+{
+    static void run(const cv::Mat& in, int& out)
+    {
+        out = cv::countNonZero(in);
     }
 };
 
@@ -679,6 +687,7 @@ cv::gapi::GKernelPackage cv::gapi::core::cpu::kernels()
          , GCPUAbsDiff
          , GCPUAbsDiffC
          , GCPUSum
+         , GCPUCountNonZero
          , GCPUAddW
          , GCPUNormL1
          , GCPUNormL2

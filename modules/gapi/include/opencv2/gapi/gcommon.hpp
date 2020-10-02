@@ -97,15 +97,11 @@ enum class GShape: int
 
 namespace gapi {
 namespace s11n {
-namespace I {
 struct OStream;
 struct IStream;
-} // namespace I
-
-namespace detail
-{
-template<typename T, typename U> struct wrap_serialize
-{
+ 
+namespace detail {
+template<typename T, typename U> struct wrap_serialize {
     static std::function<void(gapi::s11n::I::OStream&, const util::any&)> serialize;
 };
 

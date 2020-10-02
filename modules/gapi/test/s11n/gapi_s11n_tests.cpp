@@ -18,20 +18,12 @@ namespace {
 namespace cv {
 namespace gapi {
 namespace s11n {
-
-// I::OStream& operator<< (I::OStream& os, const MyCustomType &arg)
-// {
-//     std::cout << "Called!" << std::endl;
-//     os << arg.val << arg.name << arg.vec << arg.mmap;
-//     return os;
-// }
-
 namespace detail {
     template<> struct S11N<MyCustomType> {
-        static void serialize(I::OStream &os, const MyCustomType &p) {
+        static void serialize(IOStream &os, const MyCustomType &p) {
             os << p.val << p.name << p.vec << p.mmap;
         }
-        static MyCustomType deserialize(I::IStream &is) {
+        static MyCustomType deserialize(IIStream &is) {
             MyCustomType p;
             is >> p.val >> p.name >> p.vec >> p.mmap;
             return p;
@@ -548,6 +540,7 @@ TEST_F(S11N_Basic, Test_Custom_Type) {
     MyCustomType new_var = cv::gapi::s11n::detail::S11N<MyCustomType>::deserialize(is);
     EXPECT_EQ(var, new_var);
 }
+<<<<<<< HEAD
 
 TEST_F(S11N_Basic, Test_Custom_CompileArg) {
     MyCustomType var{1324, "Hello", {1920, 1080, 720}, {{1, 2937459432}, {42, 253245432}}};
@@ -558,4 +551,6 @@ TEST_F(S11N_Basic, Test_Custom_CompileArg) {
 
     MyCustomType deserializedVar = cv::gapi::getCompileArg<MyCustomType>(deserializedArgs).value();
 }
+=======
+>>>>>>> a3e7c2d8e3ebb32a5ee58c8f3265dacead318572
 } // namespace opencv_test

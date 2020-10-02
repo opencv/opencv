@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2020 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_CORE_PERF_TESTS_INL_HPP
@@ -1011,6 +1011,44 @@ PERF_TEST_P_(SumPerfTest, TestPerformance)
     SANITY_CHECK_NOTHING();
 }
 
+//------------------------------------------------------------------------------
+#pragma push_macro("countNonZero")
+#undef countNonZero
+PERF_TEST_P_(CountNonZeroPerfTest, TestPerformance)
+{
+    compare_scalar_f cmpF;
+    cv::Size sz_in;
+    MatType type = -1;
+    cv::GCompileArgs compile_args;
+    std::tie(cmpF, sz_in, type, compile_args) = GetParam();
+
+    initMatrixRandU(type, sz_in, type, false);
+    int out_cnz_gapi, out_cnz_ocv;
+
+    // OpenCV code ///////////////////////////////////////////////////////////
+    out_cnz_ocv = cv::countNonZero(in_mat1);
+
+    // G-API code ////////////////////////////////////////////////////////////
+    cv::GMat in;
+    auto out = cv::gapi::countNonZero(in);
+    cv::GComputation c(cv::GIn(in), cv::GOut(out));
+
+    // Warm-up graph engine:
+    c.apply(cv::gin(in_mat1), cv::gout(out_cnz_gapi), std::move(compile_args));
+
+    TEST_CYCLE()
+    {
+        c.apply(cv::gin(in_mat1), cv::gout(out_cnz_gapi));
+    }
+
+    // Comparison ////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(cmpF(out_cnz_gapi, out_cnz_ocv));
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+#pragma pop_macro("countNonZero")
 //------------------------------------------------------------------------------
 
 PERF_TEST_P_(AddWeightedPerfTest, TestPerformance)
