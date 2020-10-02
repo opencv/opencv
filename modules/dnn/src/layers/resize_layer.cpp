@@ -45,7 +45,7 @@ public:
             CV_Assert(params.has("zoom_factor_x") && params.has("zoom_factor_y"));
         }
         interpolation = params.get<String>("interpolation");
-        CV_Assert(interpolation == "nearest" || interpolation == "opencv_linear" || interpolation == "bilinear");
+        CV_Check(interpolation, interpolation == "nearest" || interpolation == "opencv_linear" || interpolation == "bilinear", "");
 
         alignCorners = params.get<bool>("align_corners", false);
     }
