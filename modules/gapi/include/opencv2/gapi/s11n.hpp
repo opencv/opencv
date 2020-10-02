@@ -11,9 +11,6 @@
 #include <map>
 #include <unordered_map>
 #include <opencv2/gapi/gcomputation.hpp>
-#include <opencv2/gapi/render/render_types.hpp>
-#include <opencv2/gapi/util/variant.hpp>
-#include <opencv2/gapi/gkernel.hpp>
 #include <opencv2/gapi/gcommon.hpp>
 
 namespace cv {
@@ -214,7 +211,8 @@ private:
     }
 
     // FIXME: Add compile-time check that this can't be called for custom types.
-    //        Such can alternatively be implemented via S11N<> with std::enable_if.
+    //        Such behaviour can alternatively be implemented in S11N<T> with std::enable_if
+    //        contraining T to be types defined by framework.
     template<typename Q = T>
     static auto try_call_serialize(gapi::s11n::IOStream& os, const util::any& arg, long)
         -> sfinae_true<decltype(os << std::declval<const typename std::add_lvalue_reference<Q>::type>(), void())> {
@@ -250,7 +248,9 @@ private:
         return S11N<Q>::deserialize(is);
     }
 
-    // Add compile-time check that this can't be called for custom types.
+    // FIXME: Add compile-time check that this can't be called for custom types.
+    //        Such behaviour can alternatively be implemented in S11N<T> with std::enable_if
+    //        contraining T to be types defined by framework.
     template<typename Q = T>
     static auto call_deserialize(gapi::s11n::IIStream& is, long)
         -> decltype(is >> std::declval<typename std::add_lvalue_reference<Q>::type>(),
@@ -283,8 +283,9 @@ GAPI_EXPORTS GCompileArg deserialize_arg(cv::gapi::s11n::IIStream& is, const std
     }
     else {
         throw std::logic_error("No CompileArgTag<> specialization for some of passed types!");
-    } 
+    }
 }
+
 template<typename T1, typename T2, typename... Types>
 GAPI_EXPORTS GCompileArg deserialize_arg(cv::gapi::s11n::IIStream& is, const std::string& tag) {
     if (tag == cv::detail::CompileArgTag<T1>::tag()) {
@@ -292,7 +293,7 @@ GAPI_EXPORTS GCompileArg deserialize_arg(cv::gapi::s11n::IIStream& is, const std
     }
     else {
         return deserialize_arg<T2, Types...>(is, tag);
-    } 
+    }
 }
 
 template<typename... Types>

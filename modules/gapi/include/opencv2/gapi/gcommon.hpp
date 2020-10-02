@@ -11,7 +11,6 @@
 #include <functional>   // std::hash
 #include <vector>       // std::vector
 #include <type_traits>  // decay
-#include <iostream>
 
 #include <opencv2/gapi/opencv_includes.hpp>
 
@@ -99,7 +98,7 @@ namespace gapi {
 namespace s11n {
 struct IOStream;
 struct IIStream;
- 
+
 namespace detail {
 template<typename T, typename U> struct wrap_serialize {
     static std::function<void(gapi::s11n::IOStream&, const util::any&)> serialize;
@@ -173,7 +172,8 @@ public:
     template<typename T, typename std::enable_if<!detail::is_compile_arg<T>::value, int>::type = 0>
     explicit GCompileArg(T &&t)
         : tag(detail::CompileArgTag<typename std::decay<T>::type>::tag())
-        , serialize(gapi::s11n::detail::wrap_serialize<typename std::decay<T>::type, cv::GCompileArg>::serialize)
+        , serialize(gapi::s11n::detail::wrap_serialize<
+                        typename std::decay<T>::type, cv::GCompileArg>::serialize)
         , arg(t) { }
 
     template<typename T> T& get()

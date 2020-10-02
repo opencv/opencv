@@ -538,7 +538,7 @@ TEST_F(S11N_Basic, Test_Custom_CompileArg) {
     MyCustomType customVar{1248, "World", {1280, 720, 640, 480}, {{32434142342, 5}, {7, 34242432}}};
     int intVar{3};
     GCompileArgs args = cv::compile_args(customVar, intVar);
-    
+
     std::vector<char> sArgs = cv::gapi::serialize(args);
     GCompileArgs dArgs = cv::gapi::deserialize<GCompileArgs, MyCustomType, int>(sArgs);
 
