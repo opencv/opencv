@@ -455,7 +455,7 @@ The median filter uses cv::BORDER_REPLICATE internally to cope with border pixel
 @param ksize aperture linear size; it must be odd and greater than 1, for example: 3, 5, 7 ...
 @sa  boxFilter, gaussianBlur
  */
-GAPI_EXPORTS GMat medianBlur(const GMat& src, int ksize);
+GAPI_EXPORTS_W GMat medianBlur(const GMat& src, int ksize);
 
 /** @brief Erodes an image by using a specific structuring element.
 

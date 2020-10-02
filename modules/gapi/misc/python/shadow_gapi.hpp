@@ -8,8 +8,17 @@ namespace cv
    class GAPI_EXPORTS_W_SIMPLE GProtoArg { };
    class GAPI_EXPORTS_W_SIMPLE GProtoInputArgs { };
    class GAPI_EXPORTS_W_SIMPLE GProtoOutputArgs { };
-   class GAPI_EXPORTS_W_SIMPLE GRunArg {  };
+   class GAPI_EXPORTS_W_SIMPLE GRunArg  {  };
+   class GAPI_EXPORTS_W_SIMPLE GMetaArg {  };
 
    using GProtoInputArgs  = GIOProtoArgs<In_Tag>;
    using GProtoOutputArgs = GIOProtoArgs<Out_Tag>;
+
+   namespace gapi
+   {
+       namespace wip
+       {
+           class GAPI_EXPORTS_W_SIMPLE IStreamSourcePtr { };
+       }
+   }
 } // namespace cv

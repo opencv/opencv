@@ -103,6 +103,11 @@ protected:
     }
 };
 
+GAPI_EXPORTS_W IStreamSourcePtr inline make_capture_src(const String& path)
+{
+    return make_src<GCaptureSource>(path);
+}
+
 } // namespace wip
 } // namespace gapi
 } // namespace cv

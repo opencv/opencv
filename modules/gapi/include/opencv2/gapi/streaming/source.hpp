@@ -55,6 +55,8 @@ IStreamSource::Ptr inline make_src(Args&&... args)
     return src_ptr->ptr();
 }
 
+using IStreamSourcePtr = cv::gapi::wip::IStreamSource::Ptr;
+
 } // namespace wip
 } // namespace gapi
 } // namespace cv

@@ -4,6 +4,8 @@
 #ifdef HAVE_OPENCV_GAPI
 
 using gapi_GKernelPackage = cv::gapi::GKernelPackage;
+using IStreamSourcePtr = cv::gapi::wip::IStreamSource::Ptr;
+using gapi_wip_IStreamSource_Ptr = IStreamSourcePtr;
 
 template<>
 bool pyopencv_to(PyObject* obj, std::vector<GCompileArg>& value, const ArgInfo& info)
@@ -78,6 +80,18 @@ PyObject* pyopencv_from(const GRunArgs& value)
     return list;
 }
 
+template<>
+bool pyopencv_to(PyObject* obj, GMetaArgs& value, const ArgInfo& info)
+{
+    return pyopencv_to_generic_vec(obj, value, info);
+}
+
+template<>
+PyObject* pyopencv_from(const GMetaArgs& value)
+{
+    return pyopencv_from_generic_vec(value);
+}
+
 template <typename T>
 static PyObject* extract_proto_args(PyObject* py_args, PyObject* kw)
 {
@@ -150,6 +164,16 @@ static PyObject* pyopencv_cv_gin(PyObject* , PyObject* py_args, PyObject* kw)
                 PyErr_SetString(PyExc_TypeError, "Failed convert array to cv::Mat");
                 return NULL;
             }
+        }
+        else if (PyObject_TypeCheck(item, reinterpret_cast<PyTypeObject*>(pyopencv_gapi_wip_IStreamSourcePtr_TypePtr)))
+        {
+            auto source = reinterpret_cast<pyopencv_gapi_wip_IStreamSourcePtr_t*>(item)->v;
+            args.emplace_back(source);
+        }
+        else
+        {
+            PyErr_SetString(PyExc_TypeError, "cv.gin can works only with cv::Mat, cv::Scalar, cv::gapi::wip::IStreamSourcePtr");
+            return NULL;
         }
     }
 

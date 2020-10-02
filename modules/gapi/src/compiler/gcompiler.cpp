@@ -446,6 +446,14 @@ cv::GStreamingCompiled cv::gimpl::GCompiler::produceStreamingCompiled(GPtr &&pg)
         outMetas = GModel::ConstGraph(*pg).metadata().get<OutputMeta>().outMeta;
     }
 
+    auto out_desc = GModel::ConstGraph(*pg).metadata().get<cv::gimpl::Protocol>().outputs;
+    GShapes out_shapes;
+    for (auto&& desc : out_desc)
+    {
+        out_shapes.push_back(desc.shape);
+    }
+    compiled.priv().setOutShapes(std::move(out_shapes));
+
     std::unique_ptr<GStreamingExecutor> pE(new GStreamingExecutor(std::move(pg),
                                                                   m_args));
     if (!m_metas.empty() && !outMetas.empty())
