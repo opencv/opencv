@@ -3,13 +3,18 @@
 // of this distribution and at http://opencv.org/license.html
 
 #include "precomp.hpp"
-#ifdef HAVE_FREETYPE
+#if defined HAVE_FREETYPE && defined HAVE_HARFBUZZ
+
+#include <list>
+#include <tuple>
+#include <unordered_map>
 
 #include "zlib.h"
-
 #include "ft2build.h"
 #include FT_FREETYPE_H
 #include FT_MULTIPLE_MASTERS_H
+
+#include "hb-ft.h"
 
 namespace cv
 {
@@ -17,7 +22,6 @@ namespace cv
 #include "builtin_font0.h"
 #include "builtin_font1.h"
 #include "builtin_font2.h"
-#include "builtin_font3.h"
 
 typedef struct BuiltinFontData
 {
@@ -25,20 +29,21 @@ typedef struct BuiltinFontData
     size_t size;
     const char* name;
     double sf;
+    bool italic;
+    int dweight;
 } BuiltinFontData;
 
 enum
 {
-    BUILTIN_FONTS_NUM = 4
+    BUILTIN_FONTS_NUM = 3
 };
 
 static BuiltinFontData builtinFontData[BUILTIN_FONTS_NUM+1] =
 {
-    {OcvBuiltinFontSans, sizeof(OcvBuiltinFontSans), "sans", 1.0},
-    {OcvBuiltinFontSerif, sizeof(OcvBuiltinFontSerif), "serif", 1.0},
-    {OcvBuiltinFontItalic, sizeof(OcvBuiltinFontItalic), "italic", 1.25},
-    {OcvBuiltinFontUni, sizeof(OcvBuiltinFontUni), "uni", 1.0},
-    {0, 0, 0, 0.0}
+    {OcvBuiltinFontSans, sizeof(OcvBuiltinFontSans), "sans", 1.0, false, 0},
+    {OcvBuiltinFontItalic, sizeof(OcvBuiltinFontItalic), "italic", 1.0, true, 0},
+    {OcvBuiltinFontUni, sizeof(OcvBuiltinFontUni), "uni", 1.0, false, 0},
+    {0, 0, 0, 0.0, false, 0}
 };
 
 struct FreeTypeLib
@@ -46,26 +51,11 @@ struct FreeTypeLib
     FreeTypeLib() { library = 0; }
     ~FreeTypeLib()
     {
-        if(library)
-        {
-            FT_Done_FreeType(library);
-            library = 0;
-        }
+
     }
-    FT_Library getLibrary()
-    {
-        if(!library)
-        {
-            int err = FT_Init_FreeType( &library );
-            if(err != 0) { library = 0; return 0; }
-        }
-        return library;
-    }
+
     FT_Library  library;   /* handle to library     */
 };
-
-static thread_local FreeTypeLib ftlib;
-static thread_local FontFace builtin_ffaces[BUILTIN_FONTS_NUM];
 
 static bool inflate(const void* src, size_t srclen, std::vector<uchar>& dst)
 {
@@ -103,11 +93,12 @@ static bool inflate(const void* src, size_t srclen, std::vector<uchar>& dst)
 struct FontFace::Impl {
     Impl()
     {
-        currsize = -1.0;
-        currthickness = -1;
-        scalefactor = 1.0;
-        currunits = -1;
+        initParams();
         ftface = 0;
+        scalefactor = 1.0;
+        italic = false;
+        dweight = 0;
+        hb_font = 0;
     }
 
     ~Impl()
@@ -117,52 +108,42 @@ struct FontFace::Impl {
 
     void deleteFont()
     {
+        hb_font_destroy(hb_font);
+        hb_font = 0;
         if(ftface != 0)
             FT_Done_Face(ftface);
         ftface = 0;
         currname.clear();
+        initParams();
     }
 
     void initParams()
     {
-        currthickness = -1;
+        currweight = -1;
         currsize = -1;
-        currunits = -1;
+        currflags = 0;
     }
 
-    bool setStd(const String& name, double sf)
+    bool setStd(FT_Library library, const BuiltinFontData& fontdata)
     {
-        if(ftface != 0 && currname == name)
+        if(ftface == 0 || currname != fontdata.name)
         {
-            scalefactor = sf;
-            return true;
+            deleteFont();
+            if(!inflate(fontdata.gzdata, fontdata.size, fontbuf))
+                return false;
+            int err = FT_New_Memory_Face(library, &fontbuf[0], (FT_Long)fontbuf.size(), 0, &ftface);
+            if(err != 0)
+                return false;
         }
-        FT_Library library = ftlib.getLibrary();
-        if(library == 0) return false;
-        deleteFont();
-
-        int i = 0;
-        for(; builtinFontData[i].name != 0; i++)
-        {
-            if(builtinFontData[i].name == name)
-            {
-                if(!inflate(builtinFontData[i].gzdata, builtinFontData[i].size, fontbuf))
-                    return false;
-                int err = FT_New_Memory_Face(library, &fontbuf[0], (FT_Long)fontbuf.size(), 0, &ftface);
-                if(err != 0)
-                    return false;
-                break;
-            }
-        }
-        if(builtinFontData[i].name == 0)
-            return false;
-        currname = name;
-        scalefactor = sf;
+        currname = fontdata.name;
+        scalefactor = fontdata.sf;
+        italic = fontdata.italic;
+        dweight = fontdata.dweight;
         initParams();
         return true;
     }
 
-    bool set(const String& fontname, double sf)
+    bool set(FT_Library library, const String& fontname, double sf)
     {
         CV_Assert(!fontname.empty());
 
@@ -171,9 +152,6 @@ struct FontFace::Impl {
             scalefactor = sf;
             return true;
         }
-
-        FT_Library library = ftlib.getLibrary();
-        if(library == 0) return false;
 
         deleteFont();
 
@@ -185,23 +163,23 @@ struct FontFace::Impl {
         return true;
     }
 
-    bool setParams(double size, int thickness, int flags)
+    bool setParams(FT_Library library, double size0, int weight, int flags)
     {
+        flags &= PUT_TEXT_SIZE_MASK;
         int sizeunits = flags & PUT_TEXT_SIZE_MASK;
+        int size = cvRound(size0*scalefactor*(sizeunits == PUT_TEXT_SIZE_POINTS ? 64 : 1));
+
         if (ftface == 0)
             return false;
         if (std::abs(size - currsize) < 1e-3 &&
-            sizeunits == currunits &&
-            thickness == currthickness)
+            weight == currweight &&
+            flags == currflags)
             return true;
-
-        FT_Library library = ftlib.getLibrary();
-        if(library == 0) return false;
 
         FT_MM_Var* multimaster = 0;
 
         // retrieve the variable font information, if any
-        if( thickness != currthickness &&
+        if( weight != currweight &&
             FT_Get_MM_Var( ftface, &multimaster ) == 0 )
         {
             FT_Fixed design_pos[16];
@@ -214,9 +192,13 @@ struct FontFace::Impl {
                 const char* name = multimaster->axis[n].name;
                 if(strcmp(name, "Weight") == 0)
                 {
-                    FT_Fixed th = cvRound((thickness <= 0 ? 400 : thickness)*(1<<16));
-                    th = th < minval ? minval : th > maxval ? maxval : th;
-                    design_pos[n] = th;
+                    FT_Fixed w = cvRound(((weight <= 0 ? 400 : weight) + dweight)*(1<<16));
+                    w = w < minval ? minval : w > maxval ? maxval : w;
+                    design_pos[n] = w;
+                }
+                else if(italic && strcmp(name, "Slant") == 0)
+                {
+                    design_pos[n] = minval;
                 }
             }
             FT_Set_Var_Design_Coordinates(ftface, multimaster->num_axis, design_pos);
@@ -224,34 +206,244 @@ struct FontFace::Impl {
 
         if(multimaster)
             FT_Done_MM_Var(library, multimaster);
-        if(size != currsize || sizeunits != currunits)
+
+        if(size != currsize || flags != currflags)
         {
-            double actual_size = size*scalefactor;
             if(sizeunits == PUT_TEXT_SIZE_POINTS)
             {
-                FT_Fixed sz = cvRound(actual_size*64);
+                FT_Fixed sz = (FT_Fixed)size;
                 FT_Set_Char_Size(ftface, sz, sz, 120, 120);
             }
             else
             {
-                FT_Set_Pixel_Sizes(ftface, 0, cvRound(actual_size));
+                FT_Set_Pixel_Sizes(ftface, (FT_Fixed)size, (FT_Fixed)size);
             }
         }
 
-        currthickness = thickness;
+        if(!hb_font)
+            hb_font = hb_ft_font_create_referenced(ftface);
+        else
+            hb_ft_font_changed(hb_font);
+
+        currweight = weight;
         currsize = size;
-        currunits = sizeunits;
+        currflags = flags;
         return true;
     }
 
     String currname;
-    double currsize;
     double scalefactor;
-    int currunits;
-    int currthickness;
+    bool italic;
+    int dweight;
+    int currsize;
+    int currweight;
+    int currflags;
     FT_Face ftface;
+    hb_font_t* hb_font;
     std::vector<uchar> fontbuf;
 };
+
+struct GlyphCacheKey
+{
+    GlyphCacheKey()
+    {
+        ftface = 0;
+        size = 0;
+        weight = 0;
+        flags = 0;
+    }
+    GlyphCacheKey(FT_Face ftface_, double size_, int weight_, int flags_)
+    {
+        ftface = ftface_;
+        size = size_;
+        weight = weight_;
+        flags = flags_;
+    }
+
+    FT_Face ftface;
+    int size;
+    int weight;
+    int flags;
+};
+
+static bool operator == (const GlyphCacheKey& k1, const GlyphCacheKey& k2)
+{
+    return k1.ftface == k2.ftface && k1.size == k2.size && k1.weight == k2.weight && k1.flags == k2.flags;
+}
+
+static size_t hash_seq(const size_t* hashvals, size_t n)
+{
+    size_t h = (size_t)-1;
+    const int hsz = (int)(sizeof(h)*8);
+    for( size_t i = 0; i < n; i++ )
+    {
+        h = (h >> 5) ^ (h << (hsz - 5)) ^ hashvals[i];
+    }
+    return h;
+}
+
+struct GlyphCacheHash
+{
+    size_t operator()(const GlyphCacheKey& key) const noexcept
+    {
+        size_t hs[] = {(size_t)(void*)key.ftface, (size_t)key.size, (size_t)key.weight, (size_t)key.flags};
+        return hash_seq(hs, sizeof(hs)/sizeof(hs[0]));
+    }
+};
+
+struct GlyphCacheVal
+{
+    GlyphCacheVal()
+    {
+    }
+
+    GlyphCacheVal(Rect brect_)
+    {
+        brect = brect_;
+    }
+
+    bool empty()
+    {
+        return brect.area() == 0;
+    }
+
+    std::vector<uchar> rlebuf;
+    Rect brect;
+};
+
+typedef std::pair<GlyphCacheKey, GlyphCacheVal> GlyphCacheEntry;
+typedef std::list<GlyphCacheEntry>::iterator GlyphCacheEntryIt;
+
+struct TextSegment
+{
+    TextSegment()
+    {
+        ftface = 0;
+        fontidx = 0;
+        start = end = 0;
+        script = HB_SCRIPT_UNKNOWN;
+        dir = HB_DIRECTION_LTR;
+    }
+    TextSegment(FT_Face ftface_, int fontidx_, int start_, int end_, hb_script_t script_, hb_direction_t dir_)
+    {
+        ftface = ftface_;
+        fontidx = fontidx_;
+        start = start_;
+        end = end_;
+        script = script_;
+        dir = dir_;
+    }
+    FT_Face ftface;
+    int fontidx;
+    int start, end;
+    hb_script_t script;
+    hb_direction_t dir;
+};
+
+struct FontGlyph
+{
+    FontGlyph() { ftface = 0; index = -1; }
+    FontGlyph(FT_Face ftface_, int glyph_index_, const hb_glyph_position_t& pos_)
+    {
+        ftface = ftface_;
+        index = glyph_index_;
+        pos = pos_;
+    }
+    FT_Face ftface;
+    int index;
+    hb_glyph_position_t pos;
+};
+
+class FontRenderEngine
+{
+public:
+    FontRenderEngine()
+    {
+        ftlib = 0;
+        hb_buf = hb_buffer_create();
+        hb_buffer_guess_segment_properties(hb_buf);
+        hb_uni_funcs = hb_unicode_funcs_get_default();
+        max_cache_size = 1000;
+    }
+
+    ~FontRenderEngine()
+    {
+        hb_buffer_destroy(hb_buf);
+        for(int i = 0; i < BUILTIN_FONTS_NUM; i++)
+            builtin_ffaces[i] = FontFace();
+        if(ftlib)
+        {
+            FT_Done_FreeType(ftlib);
+            ftlib = 0;
+        }
+    }
+
+    void addToCache(const GlyphCacheKey& key, const GlyphCacheVal& val)
+    {
+        if(glyph_cache.size() == max_cache_size)
+        {
+            GlyphCacheEntryIt last = all_cached.end();
+            --last;
+            glyph_cache.erase(last->first);
+            all_cached.pop_back();
+        }
+
+        all_cached.push_front(std::make_pair(key, val));
+        GlyphCacheEntryIt first = all_cached.begin();
+        glyph_cache.insert(std::make_pair(first->first, first));
+    }
+
+    const GlyphCacheVal& findCachedGlyph(const GlyphCacheKey& key)
+    {
+        auto it = glyph_cache.find(key);
+        if(it == glyph_cache.end())
+            return not_found;
+        all_cached.splice(all_cached.begin(), all_cached, it->second);
+        return (*it->second).second;
+    }
+
+    FontFace& getStdFontFace(int i)
+    {
+        CV_Assert(i >= 0 && i < BUILTIN_FONTS_NUM);
+        builtin_ffaces[i]->setStd(getLibrary(), builtinFontData[i]);
+        return builtin_ffaces[i];
+    }
+
+    FT_Library getLibrary()
+    {
+        if(!ftlib)
+        {
+            int err = FT_Init_FreeType( &ftlib );
+            if(err != 0) { ftlib = 0; return 0; }
+        }
+        return ftlib;
+    }
+
+    Point putText_( Mat& img, Size imgsize, const String& str_, Point org,
+                    const uchar* color, FontFace& fontface, double size,
+                    int weight, int flags, Range wrapRange, bool render,
+                    Rect* brect );
+
+protected:
+    FT_Library ftlib;
+    FontFace builtin_ffaces[BUILTIN_FONTS_NUM];
+    bool builtin_ffaces_initialized;
+
+    hb_unicode_funcs_t* hb_uni_funcs;
+
+    // LRU cache of glyphs
+    GlyphCacheVal not_found;
+    std::list<GlyphCacheEntry> all_cached;
+    std::unordered_map<GlyphCacheKey, GlyphCacheEntryIt, GlyphCacheHash> glyph_cache;
+    size_t max_cache_size;
+
+    hb_buffer_t* hb_buf;
+    std::vector<unsigned> u32buf;
+    std::vector<TextSegment> segments;
+    std::vector<FontGlyph> glyphs;
+};
+
+thread_local FontRenderEngine fontRenderEngine;
 
 FontFace::FontFace() { impl = makePtr<Impl>(); }
 FontFace::FontFace(const String& fontname, double sf_ )
@@ -276,20 +468,24 @@ bool FontFace::set(const String& fontname_, double sf)
     if( i >= BUILTIN_FONTS_NUM )
         i = -1;
 
-    bool ok;
+    FontRenderEngine& engine = fontRenderEngine;
+
+    bool ok = false;
     if( i >= 0 )
     {
-        FontFace& builtin_fface = builtin_ffaces[i];
-        ok = builtin_fface.impl->setStd(fontname, builtinFontData[i].sf);
-        if(ok)
+        FontFace& builtin_fface = engine.getStdFontFace(i);
+        if(builtin_fface.impl->ftface)
+        {
             impl = builtin_fface.impl;
+            ok = true;
+        }
     }
     else
     {
         sf = sf > 0 ? sf : 1.0;
         if(impl->ftface != 0)
             impl = makePtr<Impl>();
-        ok = impl->set(fontname, sf);
+        ok = impl->set(engine.getLibrary(), fontname, sf);
     }
     return ok;
 }
@@ -306,8 +502,8 @@ bool FontFace::getBuiltinFontData(const String& fontname_,
     {
         if(builtinFontData[i].name == fontname)
         {
-            FontFace& builtin_fface = builtin_ffaces[i];
-            if(builtin_fface.impl->setStd(fontname, builtinFontData[i].sf))
+            FontFace& builtin_fface = fontRenderEngine.getStdFontFace(i);
+            if( builtin_fface.impl->ftface )
             {
                 std::vector<uchar>& fbuf = builtin_fface.impl->fontbuf;
                 size = fbuf.size();
@@ -383,8 +579,11 @@ static void drawCharacter(
 }
 
 //by amarullz from https://stackoverflow.com/questions/5423960/how-can-i-recognize-rtl-strings-in-c
-static bool isRightToLeft(int c)
+static bool isRightToLeft(unsigned c)
 {
+    if(c < 0x5BE)
+        return false;
+
     return
     ((c==0x05BE)||(c==0x05C0)||(c==0x05C3)||(c==0x05C6)||
     ((c>=0x05D0)&&(c<=0x05F4))||
@@ -416,58 +615,77 @@ static bool isRightToLeft(int c)
     ((c>=0x1EE00)&&(c<=0x1EEBB)));
 }
 
-static Point putText_( Mat& img, Size imgsize, const String& str, Point org,
-                       const uchar* color, FontFace& fontface, double size,
-                       int thickness, int flags, bool render,
-                       Rect* brect )
+
+Point FontRenderEngine::putText_(
+    Mat& img, Size imgsize, const String& str_, Point org,
+    const uchar* color, FontFace& fontface, double size,
+    int weight, int flags, Range wrapRange, bool render, Rect* brect )
 {
+    FT_Library ftlib_ = getLibrary();
     int load_glyph_flag = render ? FT_LOAD_RENDER : FT_LOAD_DEFAULT;
-    bool subst_initialized = false;
     bool bottom_left = (flags & PUT_TEXT_ORIGIN_BL) != 0;
 
     if(fontface.getName().empty())
         fontface.set("sans");
 
-    fontface->setParams(size, thickness, flags);
-    FT_Face ftface = fontface->ftface;
-    if(ftface == 0)
+    fontface->setParams(ftlib, size, weight, flags);
+    if(!fontface->ftface)
         return org;
 
-    int pen_x = org.x, pen_y = org.y;
-    size_t i, len = str.size();
+    for(int j = 0; j < BUILTIN_FONTS_NUM; j++)
+    {
+        if(!builtin_ffaces_initialized)
+            builtin_ffaces[j].set(builtinFontData[j].name);
+        builtin_ffaces[j]->setParams(ftlib_, size, weight, flags);
+    }
+    builtin_ffaces_initialized = true;
+
+    Point pen = org;
+    int i, j, k, len = (int)str_.size();
     bool wrap = (flags & PUT_TEXT_WRAP) != 0;
+    int alignment = flags & PUT_TEXT_ALIGN_MASK;
+    int x0 = std::min(wrapRange.start, wrapRange.end);
+    int x1 = std::max(wrapRange.start, wrapRange.end);
+
+    if(x0 == 0 && x1 == 0)
+    {
+        if(alignment == PUT_TEXT_ALIGN_RIGHT)
+        {
+            x0 = 0;
+            x1 = org.x;
+        }
+        else
+        {
+            x0 = org.x;
+            x1 = imgsize.width > 0 ? imgsize.width : INT_MAX;
+        }
+    }
+
+    if(x0 >= x1 || len == 0)
+    {
+        if(brect)
+            *brect = Rect(org.x, org.y, 0, 0);
+        return org;
+    }
+
+    if(alignment == PUT_TEXT_ALIGN_RIGHT)
+        std::swap(x0, x1);
+
+    int alignSign = alignment == PUT_TEXT_ALIGN_RIGHT ? -1 : 1;
 
     // text size computing algorithm is adopted from G-API module, ft_render.cpp.
+    const char* str = &str_[0];
     int max_dy = 0, max_baseline = 0;
-    int max_width = 0;
+    int max_x = INT_MIN, min_x = INT_MAX;
     bool wrapped = false;
 
-    int use_kerning = 0;//FT_HAS_KERNING(ftface);
-    int prev_glyph = 0;
-    bool rtl_mode = false;
-    std::vector<int> rtl;
-
+    // step 1. convert UTF8 to UTF32
+    u32buf.clear();
     for( i = 0; i < len; i++ )
     {
         uchar ch = (uchar)str[i];
-        int charcode = 0;
-        /*if( ch == 'f' )
-        {
-            uchar nch = (uchar)str[i+1];
-            if(nch == 'i')
-            {
-                charcode = 0xFB01;
-                i++;
-            }
-            else if(nch == 'l')
-            {
-                charcode = 0xFB02;
-                i++;
-            }
-            else
-                charcode = 'f';
-        }
-        else*/ if( ch <= 127 )
+        unsigned charcode;
+        if( ch <= 127 )
             charcode = ch;
         else if( ch <= 223 && i+1 < len && (str[i+1] & 0xc0) == 0x80) {
             charcode = ((ch & 31) << 6) | (str[i+1] & 63);
@@ -483,95 +701,297 @@ static Point putText_( Mat& img, Size imgsize, const String& str, Point org,
             charcode = val;
             i += 3;
         }
-        else {
+        else
+        {
             charcode = 65533;
             while(i+1 < len && (str[i+1] & 0xc0) == 0x80)
                 i++;
         }
-        bool is_rtl = charcode >= 0x05BE && isRightToLeft(charcode);
-        if(rtl_mode && (isspace(charcode) || ispunct(charcode)))
-            is_rtl = true;
-        const int* charcodes = &charcode;
-        int nchars = 1;
+        u32buf.push_back(charcode);
+    }
 
-        if(is_rtl || rtl_mode)
+    // step 2. form segments, for each segment find the proper font, direction and script.
+    len = (int)u32buf.size();
+    unsigned* chars = &u32buf[0];
+    int prev_dy = 0;
+    hb_direction_t glob_dir = HB_DIRECTION_INVALID;
+
+    while(len > 0)
+    {
+        int nextline_dy = 0;
+        int segstart = 0, punctstart = -1;
+        FT_Face ftface0 = fontface->ftface;
+        FT_Face curr_ftface = ftface0;
+        int curr_fontidx = -1;
+        hb_script_t curr_script = HB_SCRIPT_UNKNOWN;
+        hb_direction_t curr_dir = HB_DIRECTION_INVALID;
+
+        segments.clear();
+        glyphs.clear();
+
+        // TODO: possibly implement https://unicode.org/reports/tr9/ or find compact implementation of it
+        for(i = 0; i < len; i++)
         {
-            if(is_rtl)
+            unsigned c = chars[i];
+            if(c == '\n')
+                break;
+            hb_unicode_general_category_t cat = hb_unicode_general_category(hb_uni_funcs, c);
+            hb_script_t script = hb_unicode_script(hb_uni_funcs, c);
+            FT_UInt glyph_index = FT_Get_Char_Index(curr_ftface, c);
+            bool is_rtl = isRightToLeft(c);
+            hb_direction_t dir = HB_DIRECTION_INVALID;
+
+            if(script == HB_SCRIPT_ARABIC || script == HB_SCRIPT_HEBREW ||
+               script == HB_SCRIPT_SYRIAC || script == HB_SCRIPT_THAANA || is_rtl)
+                dir = HB_DIRECTION_RTL;
+            else if(script == HB_SCRIPT_LATIN || script == HB_SCRIPT_CYRILLIC || script == HB_SCRIPT_GREEK ||
+               (cat >= HB_UNICODE_GENERAL_CATEGORY_SURROGATE &&
+                cat <= HB_UNICODE_GENERAL_CATEGORY_CONNECT_PUNCTUATION) ||
+                cat == HB_UNICODE_GENERAL_CATEGORY_CURRENCY_SYMBOL)
+                dir = HB_DIRECTION_LTR;
+
+            bool is_punct = dir == HB_DIRECTION_INVALID &&
+                ((c < 128 && (ispunct((char)c) || isspace((char)c))) ||
+               (cat >= HB_UNICODE_GENERAL_CATEGORY_DASH_PUNCTUATION &&
+                cat <= HB_UNICODE_GENERAL_CATEGORY_OPEN_PUNCTUATION) ||
+               (cat >= HB_UNICODE_GENERAL_CATEGORY_MODIFIER_SYMBOL &&
+                cat <= HB_UNICODE_GENERAL_CATEGORY_SPACE_SEPARATOR) ||
+                 cat == HB_UNICODE_GENERAL_CATEGORY_FORMAT);
+
+            // when we switch to fallback (e.g. uni) font for some characters after quote or open paren,
+            // and when we meet the corresponding closing quote/closing paren, we would prefer to
+            // take it from the same font. this hack helps to achieve this effect in some cases
+            if (is_punct && c < 256 && cat != HB_UNICODE_GENERAL_CATEGORY_FORMAT &&
+                cat != HB_UNICODE_GENERAL_CATEGORY_SPACE_SEPARATOR && !isspace((char)c) &&
+                curr_script != HB_SCRIPT_LATIN && curr_script != HB_SCRIPT_CYRILLIC && curr_dir != HB_DIRECTION_RTL)
             {
-                if(!rtl_mode)
-                {
-                    rtl_mode = true;
-                    rtl.clear();
-                }
-                rtl.push_back(charcode);
-                if( i+1 < len )
-                    continue;
+                is_punct = false;
+                script = HB_SCRIPT_LATIN;
+                dir = HB_DIRECTION_LTR;
             }
-            rtl_mode = false;
-            std::reverse(rtl.begin(), rtl.end());
-            if(!is_rtl)
-                rtl.push_back(charcode);
-            nchars = (int)rtl.size();
-            charcodes = nchars > 0 ? &rtl[0] : 0;
+
+        #if 0
+            printf("%d. c=%d, scr=%c%c%c%c, cat=%d, is_rtl=%d, dir=%s, is_punct=%d\n", i, c,
+            (script>>24)&255, (script>>16)&255, (script>>8)&255, (script>>0)&255, (int)cat, (int)is_rtl,
+             (dir == HB_DIRECTION_INVALID? "invalid" : dir == HB_DIRECTION_LTR ? "left" : "right"), (int)is_punct);
+        #endif
+
+            if(glyph_index != 0 ||
+               ((cat == HB_UNICODE_GENERAL_CATEGORY_FORMAT/* ||
+                 cat == HB_UNICODE_GENERAL_CATEGORY_CONTROL*/) &&
+                 dir == HB_DIRECTION_INVALID))
+            {
+                if(is_punct)
+                {
+                    if(punctstart < 0)
+                        punctstart = i;
+                    continue;
+                }
+
+                if(cat == HB_UNICODE_GENERAL_CATEGORY_SURROGATE || cat == HB_UNICODE_GENERAL_CATEGORY_NON_SPACING_MARK ||
+                   ((script == curr_script || curr_script == HB_SCRIPT_UNKNOWN || curr_script == HB_SCRIPT_COMMON ||
+                    script == HB_SCRIPT_UNKNOWN || script == HB_SCRIPT_COMMON || script == HB_SCRIPT_INHERITED) &&
+                    (dir == curr_dir || curr_dir == HB_DIRECTION_INVALID || dir == HB_DIRECTION_INVALID)))
+                {
+                    punctstart = -1;
+                    if(curr_dir == HB_DIRECTION_INVALID)
+                        curr_dir = dir;
+                    if(curr_script == HB_SCRIPT_UNKNOWN || curr_script == HB_SCRIPT_INHERITED)
+                        curr_script = script;
+                    continue;
+                }
+            }
+
+            if(glob_dir == HB_DIRECTION_INVALID)
+            {
+                glob_dir = curr_dir;
+                if(glob_dir == HB_DIRECTION_INVALID)
+                    glob_dir = dir;
+            }
+
+            FT_Face ftface = 0;
+            for(j = -1; j < BUILTIN_FONTS_NUM; j++)
+            {
+                ftface = j < 0 ? ftface0 : builtin_ffaces[j]->ftface;
+                glyph_index = FT_Get_Char_Index(ftface, c);
+                if(glyph_index != 0)
+                    break;
+                if(j+1 == BUILTIN_FONTS_NUM)
+                {
+                    chars[i] = c = 0xFFFD; // replace the character with 'unknown' ~ <?>
+                    break;
+                }
+            }
+            int fontidx = j;
+            int seglen = i - segstart;
+            // if the current segment (if any) ends with 1 or more neutral/punctuation characters,
+            // we have 3 choices:
+            //   1. attach this "tail" to the current segment
+            //   2. make this "tail" the head of the new segment
+            //   3. split those characters somehow between the current and the new segment
+            // if the current segment direction matches the global direction, we choose the option 1.
+            // otherwise we choose the option 3, depending on which characters from the tail
+            // are available in the new font for the new segment.
+            // Unless they are some specific marks, they are all available, in which case
+            // the option 3 turns into the option 2.
+            if(seglen > 0 && punctstart >= 0 && glob_dir != curr_dir)
+            {
+                for(k = i; k > punctstart; k--)
+                {
+                    if(FT_Get_Char_Index(ftface, chars[k-1]) == 0)
+                        break;
+                }
+                seglen = k - segstart;
+            }
+
+            if(seglen > 0)
+            {
+                //printf("segment of %d characters pushed\n", seglen);
+                segments.push_back(TextSegment(curr_ftface, curr_fontidx,
+                    segstart, segstart + seglen, curr_script, curr_dir));
+            }
+            segstart += seglen;
+            punctstart = punctstart >= 0 && is_punct ? segstart : -1;
+            curr_ftface = ftface;
+            curr_fontidx = fontidx;
+            curr_script = script;
+            curr_dir = dir;
         }
 
-        for(int k = 0; k < nchars; k++)
+        if(i > segstart)
         {
-            charcode = charcodes[k];
-            FT_Face curr_ftface = ftface;
-            FT_UInt glyph_index = FT_Get_Char_Index( curr_ftface, charcode );
-            if (use_kerning && glyph_index > 0 && prev_glyph > 0)
+            segments.push_back(TextSegment(curr_ftface, curr_fontidx,
+                segstart, i, curr_script, curr_dir));
+        }
+
+        if(glob_dir == HB_DIRECTION_INVALID)
+            glob_dir = HB_DIRECTION_LTR;
+
+        int nsegments = (int)segments.size();
+        ftface0 = segments[0].ftface;
+
+        if(nsegments > 0)
+        {
+            TextSegment& seg = segments[0];
+            if(seg.dir == HB_DIRECTION_INVALID)
+                seg.dir = glob_dir;
+            if(seg.script == HB_SCRIPT_INVALID)
+                seg.script = HB_SCRIPT_COMMON;
+        }
+
+        // step 3. try to merge some segments
+        for(k = 0, j = 1; j < nsegments; j++)
+        {
+            TextSegment& seg = segments[j];
+            if(seg.dir == HB_DIRECTION_INVALID)
+                seg.dir = glob_dir;
+            hb_script_t script = seg.script;
+            if(script == HB_SCRIPT_INVALID)
+                seg.script = script = HB_SCRIPT_COMMON;
+            TextSegment& prev = segments[k];
+            if(seg.ftface == prev.ftface && seg.dir == prev.dir &&
+               (script == prev.script ||
+                ((script == HB_SCRIPT_COMMON || script == HB_SCRIPT_LATIN ||
+                  script == HB_SCRIPT_CYRILLIC || script == HB_SCRIPT_GREEK ||
+                  script == HB_SCRIPT_HAN || script == HB_SCRIPT_HIRAGANA) &&
+                 (prev.script == HB_SCRIPT_COMMON || prev.script == HB_SCRIPT_LATIN ||
+                  prev.script == HB_SCRIPT_CYRILLIC || prev.script == HB_SCRIPT_GREEK ||
+                  prev.script == HB_SCRIPT_HAN || prev.script == HB_SCRIPT_HIRAGANA))))
             {
-                FT_Vector delta;
-                FT_Get_Kerning( curr_ftface, prev_glyph, glyph_index, FT_KERNING_DEFAULT, &delta );
-                pen_x += delta.x >> 6;
+                prev.end = seg.end;
+                if(prev.script != script)
+                    prev.script = HB_SCRIPT_COMMON;
             }
-            prev_glyph = glyph_index;
-            if(glyph_index == 0)
+            else
             {
-                if(!subst_initialized)
-                {
-                    for(int j = 0; j < BUILTIN_FONTS_NUM; j++)
-                    {
-                        builtin_ffaces[j].set(builtinFontData[j].name);
-                        builtin_ffaces[j]->setParams(size, thickness, flags);
-                    }
-                    subst_initialized = true;
-                }
-                for(int j = 0; j < BUILTIN_FONTS_NUM; j++)
-                {
-                    curr_ftface = builtin_ffaces[j]->ftface;
-                    glyph_index = FT_Get_Char_Index( curr_ftface, charcode );
-                    if(glyph_index != 0)
-                        break;
-                    if(j+1 == BUILTIN_FONTS_NUM)
-                        glyph_index = FT_Get_Char_Index( curr_ftface, 0xFFFD );
-                }
+                k++;
+                if(j > k)
+                    segments[k] = seg;
             }
-            int err = FT_Load_Glyph( curr_ftface, glyph_index, load_glyph_flag );
-            if( err != 0 )
+        }
+
+        if(nsegments > 0)
+            segments.resize(k+1);
+        else
+            nextline_dy = prev_dy;
+        nsegments = (int)segments.size();
+
+        if(glob_dir == HB_DIRECTION_RTL)
+        {
+            std::reverse(segments.begin(), segments.end());
+        }
+        //printf("%s: nsegments=%d\n", str_.c_str(), nsegments);
+
+        // step 4. shape each text segment using Harfbuzz
+        for(j = 0; j < nsegments; j++)
+        {
+            const TextSegment& seg = segments[j];
+            int fontidx = seg.fontidx;
+            FontFace& fface = fontidx < 0 ? fontface : builtin_ffaces[fontidx];
+            FT_Face ftface = fface->ftface;
+            hb_font_t* hb_font = fface->hb_font;
+            hb_buffer_reset(hb_buf);
+            hb_buffer_add_utf32(hb_buf, chars, len, seg.start, seg.end - seg.start);
+            hb_buffer_set_direction(hb_buf, seg.dir);
+            hb_buffer_set_script(hb_buf, seg.script);
+            hb_shape(hb_font, hb_buf, 0, 0);
+
+            unsigned nglyphs = 0;
+            hb_glyph_info_t *ginfo = hb_buffer_get_glyph_infos(hb_buf, &nglyphs);
+            hb_glyph_position_t* gpos = hb_buffer_get_glyph_positions(hb_buf, &nglyphs);
+
+            for(k = 0; k < (int)nglyphs; k++)
+            {
+                FontGlyph glyph(ftface, ginfo[k].codepoint, gpos[k]);
+                glyphs.push_back(glyph);
+            }
+        }
+
+        chars += i;
+        len -= i;
+
+        if(len > 0 && chars[0] == '\n')
+        {
+            chars++;
+            len--;
+        }
+
+        // step 5. finally, let's render it
+        // (TODO: in the case of right alignment we need to render it from the right-most character)
+        int nglyphs = (int)glyphs.size();
+        int space_glyph = -1;
+        curr_ftface = 0;
+        min_x = std::min(min_x, pen.x);
+        max_x = std::max(max_x, pen.x);
+
+        for(j = 0; j < nglyphs; j++)
+        {
+            const FontGlyph& glyph = glyphs[alignment == PUT_TEXT_ALIGN_RIGHT ? nglyphs - j - 1 : j];
+            FT_Face ftface = glyph.ftface;
+            if(ftface != curr_ftface)
+            {
+                curr_ftface = ftface;
+                space_glyph = (int)FT_Get_Char_Index(ftface, ' ');
+            }
+            int err = FT_Load_Glyph(ftface, (FT_UInt)glyph.index, load_glyph_flag);
+            if(err != 0)
                 continue;
-
-            FT_GlyphSlot slot = curr_ftface->glyph;
-
-            int dx_shift = 6, dx_scale = 1;
-            /*if(charcode == ' ')
+            FT_GlyphSlot slot = glyph.ftface->glyph;
+            const hb_glyph_position_t& pos = glyph.pos;
+            int dx = (int)(slot->advance.x >> 6);
+            int dy = (int)(slot->advance.y >> 6);
+            int new_pen_x = pen.x + dx*alignSign;
+            nextline_dy = max(nextline_dy, (int)(slot->metrics.vertAdvance >> 6));
+            // TODO: this wrapping algorithm is quite dumb
+            if( wrap && imgsize.width > 0 && new_pen_x*alignSign > x1*alignSign )
             {
-                dx_scale = 3;
-                dx_shift++;
-            }*/
-            int dx_delta = 1 << (dx_shift - 1);
-            int dx = (int)((slot->metrics.horiAdvance*dx_scale + dx_delta) >> dx_shift);
-            int new_pen_x = pen_x + dx;
-            if( wrap && imgsize.width > 0 && (new_pen_x > imgsize.width) )
-            {
-                pen_y += (int)((slot->metrics.vertAdvance + 32) >> 6);
-                max_width = max(max_width, pen_x - org.x);
-                pen_x = org.x;
+                pen.y += nextline_dy;
+                dy = 0;
+                pen.x = x0;
                 wrapped = true;
                 max_baseline = slot->bitmap_top;
-                if(charcode == ' ') continue;
-                new_pen_x = pen_x + dx;
+                if(glyph.index == space_glyph) continue;
+                new_pen_x = pen.x + dx*alignSign;
             }
 
             if(!wrapped)
@@ -579,31 +999,45 @@ static Point putText_( Mat& img, Size imgsize, const String& str, Point org,
             int baseline = (slot->metrics.height - slot->metrics.horiBearingY) >> 6;
             max_baseline = std::max(max_baseline, baseline);
 
-            int x = pen_x + slot->bitmap_left;
-            int y = bottom_left ? pen_y + slot->bitmap_top : pen_y - slot->bitmap_top;
+            if(alignment == PUT_TEXT_ALIGN_RIGHT)
+                pen.x = new_pen_x;
+
+            int x = pen.x + ((pos.x_offset + slot->metrics.horiBearingX) >> 6);
+            int y = pen.y - ((pos.y_offset + slot->metrics.horiBearingY) >> 6);
+
             if( render )
                 drawCharacter( img, color, &slot->bitmap, x, y, bottom_left );
-            pen_x = new_pen_x;
+
+            pen.x = new_pen_x;
+            pen.y += dy;
+            min_x = std::min(min_x, pen.x);
+            max_x = std::max(max_x, pen.x);
+        }
+
+        if(len > 0 && (pen.x != x0 || segments.empty()))
+        {
+            pen.x = x0;
+            pen.y += nextline_dy;
+            prev_dy = nextline_dy;
         }
     }
-    max_width = max(max_width, pen_x - org.x);
 
     if(brect)
     {
         if(flags & PUT_TEXT_ORIGIN_BL)
-            *brect = Rect(org.x, org.y - max_baseline, max_width, pen_y - org.y + max_dy + max_baseline);
+            *brect = Rect(min_x, org.y - max_baseline, max_x - min_x + 1, pen.y - org.y + max_dy + max_baseline);
         else
-            *brect = Rect(org.x, org.y - max_dy, max_width, pen_y - org.y + max_dy + max_baseline);
+            *brect = Rect(min_x, org.y - max_dy, max_x - min_x + 1, pen.y - org.y + max_dy + max_baseline);
     }
 
-    return Point(pen_x, pen_y);
+    return pen;
 }
 
 
 Point putText(InputOutputArray img_, const String& str,
              Point org, Scalar color_,
              FontFace& fontface, double size,
-             int thickness, int flags)
+             int weight, int flags, Range wrap)
 {
     uchar color[] =
     {
@@ -615,19 +1049,19 @@ Point putText(InputOutputArray img_, const String& str,
     CV_Assert(img.depth() == CV_8U);
     CV_Assert(nch == 1 || nch == 3 || nch == 4);
 
-    return putText_(img, img.size(), str, org, color, fontface, size,
-                    thickness, flags, true, 0);
+    return fontRenderEngine.putText_(img, img.size(), str, org, color, fontface, size,
+                                     weight, flags, wrap, true, 0);
 }
 
 
 Rect getTextSize(Size imgsize, const String& str, Point org,
                  FontFace& fontface, double size,
-                 int thickness, int flags)
+                 int weight, int flags, Range wrap)
 {
     Mat img;
     Rect brect;
-    putText_(img, imgsize, str, org, 0, fontface, size,
-             thickness, flags, false, &brect);
+    fontRenderEngine.putText_(img, imgsize, str, org, 0, fontface, size,
+                              weight, flags, wrap, false, &brect);
     return brect;
 }
 
@@ -659,13 +1093,13 @@ FontFace::~FontFace() {}
 FontFace::Impl* FontFace::operator -> () { return impl.get(); }
 
 Point putText(InputOutputArray, const String&, Point org, Scalar,
-             FontFace&, double, int, int)
+             FontFace&, double, int, int, Range)
 {
     CV_Error(Error::StsNotImplemented, "putText needs freetype2; recompile OpenCV with freetype2 enabled.");
     return org;
 }
 
-Rect getTextSize(Size, const String&, Point, FontFace&, double, int, int)
+Rect getTextSize(Size, const String&, Point, FontFace&, double, int, int, Range)
 {
     CV_Error(Error::StsNotImplemented, "putText needs freetype2; recompile OpenCV with freetype2 enabled.");
     return Rect();
@@ -702,12 +1136,12 @@ static void hersheyToTruetype(int fontFace, double fontScale, int thickness,
         break;
     case FONT_HERSHEY_COMPLEX:
         ttname = "serif";
-        sf = 3.3;
+        sf = 3.4;
         ttweight = thickness <= 1 ? 400 : 800;
         break;
     case FONT_HERSHEY_TRIPLEX:
         ttname = "serif";
-        sf = 3.3;
+        sf = 3.4;
         ttweight = thickness <= 1 ? 600 : 800;
         break;
     case FONT_HERSHEY_COMPLEX_SMALL:
@@ -717,13 +1151,13 @@ static void hersheyToTruetype(int fontFace, double fontScale, int thickness,
         break;
     case FONT_HERSHEY_SCRIPT_COMPLEX:
         ttname = "italic";
-        sf = 4.2;
-        ttweight = thickness <= 1 ? 400 : 800;
+        sf = 3.9;
+        ttweight = thickness <= 1 ? 400 : 600;
         break;
     case FONT_HERSHEY_SCRIPT_SIMPLEX:
         ttname = "italic";
-        sf = 4.2;
-        ttweight = thickness <= 1 ? 300 : 600;
+        sf = 3.9;
+        ttweight = thickness <= 1 ? 300 : 500;
         break;
     default:
         CV_Error(Error::StsBadArg, "Unknown font");

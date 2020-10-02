@@ -1,0 +1,285 @@
+# Base and default-included sources and headers
+
+HB_BASE_sources = \
+	hb-aat-layout-ankr-table.hh \
+	hb-aat-layout-bsln-table.hh \
+	hb-aat-layout-common.hh \
+	hb-aat-layout-feat-table.hh \
+	hb-aat-layout-just-table.hh \
+	hb-aat-layout-kerx-table.hh \
+	hb-aat-layout-morx-table.hh \
+	hb-aat-layout-opbd-table.hh \
+	hb-aat-layout-trak-table.hh \
+	hb-aat-layout.cc \
+	hb-aat-layout.hh \
+	hb-aat-ltag-table.hh \
+	hb-aat-map.cc \
+	hb-aat-map.hh \
+	hb-algs.hh \
+	hb-array.hh \
+	hb-atomic.hh \
+	hb-bimap.hh \
+	hb-blob.cc \
+	hb-blob.hh \
+	hb-buffer-serialize.cc \
+	hb-buffer.cc \
+	hb-buffer.hh \
+	hb-cache.hh \
+	hb-cff-interp-common.hh \
+	hb-cff-interp-cs-common.hh \
+	hb-cff-interp-dict-common.hh \
+	hb-cff1-interp-cs.hh \
+	hb-cff2-interp-cs.hh \
+	hb-common.cc \
+	hb-config.hh \
+	hb-debug.hh \
+	hb-dispatch.hh \
+	hb-draw.cc \
+	hb-draw.hh \
+	hb-face.cc \
+	hb-face.hh \
+	hb-fallback-shape.cc \
+	hb-font.cc \
+	hb-font.hh \
+	hb-iter.hh \
+	hb-kern.hh \
+	hb-machinery.hh \
+	hb-map.cc \
+	hb-map.hh \
+	hb-meta.hh \
+	hb-mutex.hh \
+	hb-null.hh \
+	hb-number.cc \
+	hb-number.hh \
+	hb-object.hh \
+	hb-open-file.hh \
+	hb-open-type.hh \
+	hb-ot-cff-common.hh \
+	hb-ot-cff1-std-str.hh \
+	hb-ot-cff1-table.cc \
+	hb-ot-cff1-table.hh \
+	hb-ot-cff2-table.cc \
+	hb-ot-cff2-table.hh \
+	hb-ot-cmap-table.hh \
+	hb-ot-color-cbdt-table.hh \
+	hb-ot-color-colr-table.hh \
+	hb-ot-color-cpal-table.hh \
+	hb-ot-color-sbix-table.hh \
+	hb-ot-color-svg-table.hh \
+	hb-ot-color.cc \
+	hb-ot-face-table-list.hh \
+	hb-ot-face.cc \
+	hb-ot-face.hh \
+	hb-ot-font.cc \
+	hb-ot-gasp-table.hh \
+	hb-ot-glyf-table.hh \
+	hb-ot-hdmx-table.hh \
+	hb-ot-head-table.hh \
+	hb-ot-hhea-table.hh \
+	hb-ot-hmtx-table.hh \
+	hb-ot-kern-table.hh \
+	hb-ot-layout-base-table.hh \
+	hb-ot-layout-common.hh \
+	hb-ot-layout-gdef-table.hh \
+	hb-ot-layout-gpos-table.hh \
+	hb-ot-layout-gsub-table.hh \
+	hb-ot-layout-gsubgpos.hh \
+	hb-ot-layout-jstf-table.hh \
+	hb-ot-layout.cc \
+	hb-ot-layout.hh \
+	hb-ot-map.cc \
+	hb-ot-map.hh \
+	hb-ot-math-table.hh \
+	hb-ot-math.cc \
+	hb-ot-maxp-table.hh \
+	hb-ot-meta-table.hh \
+	hb-ot-meta.cc \
+	hb-ot-metrics.cc \
+	hb-ot-metrics.hh \
+	hb-ot-name-language-static.hh \
+	hb-ot-name-language.hh \
+	hb-ot-name-table.hh \
+	hb-ot-name.cc \
+	hb-ot-os2-table.hh \
+	hb-ot-os2-unicode-ranges.hh \
+	hb-ot-post-macroman.hh \
+	hb-ot-post-table.hh \
+	hb-ot-shape-complex-arabic-fallback.hh \
+	hb-ot-shape-complex-arabic-joining-list.hh \
+	hb-ot-shape-complex-arabic-table.hh \
+	hb-ot-shape-complex-arabic-win1256.hh \
+	hb-ot-shape-complex-arabic.cc \
+	hb-ot-shape-complex-arabic.hh \
+	hb-ot-shape-complex-default.cc \
+	hb-ot-shape-complex-hangul.cc \
+	hb-ot-shape-complex-hebrew.cc \
+	hb-ot-shape-complex-indic-table.cc \
+	hb-ot-shape-complex-indic.cc \
+	hb-ot-shape-complex-indic.hh \
+	hb-ot-shape-complex-khmer.cc \
+	hb-ot-shape-complex-khmer.hh \
+	hb-ot-shape-complex-myanmar.cc \
+	hb-ot-shape-complex-myanmar.hh \
+	hb-ot-shape-complex-thai.cc \
+	hb-ot-shape-complex-use-table.cc \
+	hb-ot-shape-complex-use.cc \
+	hb-ot-shape-complex-use.hh \
+	hb-ot-shape-complex-vowel-constraints.cc \
+	hb-ot-shape-complex-vowel-constraints.hh \
+	hb-ot-shape-complex.hh \
+	hb-ot-shape-fallback.cc \
+	hb-ot-shape-fallback.hh \
+	hb-ot-shape-normalize.cc \
+	hb-ot-shape-normalize.hh \
+	hb-ot-shape.cc \
+	hb-ot-shape.hh \
+	hb-ot-stat-table.hh \
+	hb-ot-tag-table.hh \
+	hb-ot-tag.cc \
+	hb-ot-var-avar-table.hh \
+	hb-ot-var-fvar-table.hh \
+	hb-ot-var-gvar-table.hh \
+	hb-ot-var-hvar-table.hh \
+	hb-ot-var-mvar-table.hh \
+	hb-ot-var.cc \
+	hb-ot-vorg-table.hh \
+	hb-pool.hh \
+	hb-sanitize.hh \
+	hb-serialize.hh \
+	hb-set-digest.hh \
+	hb-set.cc \
+	hb-set.hh \
+	hb-shape-plan.cc \
+	hb-shape-plan.hh \
+	hb-shape.cc \
+	hb-shaper-impl.hh \
+	hb-shaper-list.hh \
+	hb-shaper.cc \
+	hb-shaper.hh \
+	hb-static.cc \
+	hb-string-array.hh \
+	hb-style.cc \
+	hb-ucd-table.hh \
+	hb-ucd.cc \
+	hb-unicode-emoji-table.hh \
+	hb-unicode.cc \
+	hb-unicode.hh \
+	hb-utf.hh \
+	hb-vector.hh \
+	hb.hh \
+	$(NULL)
+
+HB_BASE_RAGEL_GENERATED_sources = \
+	hb-buffer-deserialize-json.hh \
+	hb-buffer-deserialize-text.hh \
+	hb-number-parser.hh \
+	hb-ot-shape-complex-indic-machine.hh \
+	hb-ot-shape-complex-khmer-machine.hh \
+	hb-ot-shape-complex-myanmar-machine.hh \
+	hb-ot-shape-complex-use-machine.hh \
+	$(NULL)
+HB_BASE_RAGEL_sources = \
+	hb-buffer-deserialize-json.rl \
+	hb-buffer-deserialize-text.rl \
+	hb-number-parser.rl \
+	hb-ot-shape-complex-indic-machine.rl \
+	hb-ot-shape-complex-khmer-machine.rl \
+	hb-ot-shape-complex-myanmar-machine.rl \
+	hb-ot-shape-complex-use-machine.rl \
+	$(NULL)
+
+HB_BASE_headers = \
+	hb-aat-layout.h \
+	hb-aat.h \
+	hb-blob.h \
+	hb-buffer.h \
+	hb-common.h \
+	hb-deprecated.h \
+	hb-draw.h \
+	hb-face.h \
+	hb-font.h \
+	hb-map.h \
+	hb-ot-color.h \
+	hb-ot-deprecated.h \
+	hb-ot-font.h \
+	hb-ot-layout.h \
+	hb-ot-math.h \
+	hb-ot-meta.h \
+	hb-ot-metrics.h \
+	hb-ot-name.h \
+	hb-ot-shape.h \
+	hb-ot-var.h \
+	hb-ot.h \
+	hb-set.h \
+	hb-shape-plan.h \
+	hb-shape.h \
+	hb-style.h \
+	hb-unicode.h \
+	hb-version.h \
+	hb.h \
+	$(NULL)
+
+# Optional Sources and Headers with external deps
+
+HB_FT_sources = hb-ft.cc
+HB_FT_headers = hb-ft.h
+
+HB_GLIB_sources = hb-glib.cc
+HB_GLIB_headers = hb-glib.h
+
+HB_GRAPHITE2_sources = hb-graphite2.cc
+HB_GRAPHITE2_headers = hb-graphite2.h
+
+# System-dependent sources and headers
+
+HB_CORETEXT_sources = hb-coretext.cc
+HB_CORETEXT_headers = hb-coretext.h
+
+HB_DIRECTWRITE_sources = hb-directwrite.cc
+HB_DIRECTWRITE_headers = hb-directwrite.h
+
+HB_GDI_sources = hb-gdi.cc
+HB_GDI_headers = hb-gdi.h
+
+HB_UNISCRIBE_sources = hb-uniscribe.cc
+HB_UNISCRIBE_headers = hb-uniscribe.h
+
+# Sources for libharfbuzz-gobject and libharfbuzz-icu
+HB_ICU_sources = hb-icu.cc
+HB_ICU_headers = hb-icu.h
+
+# Sources for libharfbuzz-subset
+HB_SUBSET_sources = \
+	hb-number.cc \
+	hb-number.hh \
+	hb-ot-cff1-table.cc \
+	hb-ot-cff2-table.cc \
+	hb-static.cc \
+	hb-subset-cff-common.cc \
+	hb-subset-cff-common.hh \
+	hb-subset-cff1.cc \
+	hb-subset-cff1.hh \
+	hb-subset-cff2.cc \
+	hb-subset-cff2.hh \
+	hb-subset-input.cc \
+	hb-subset-input.hh \
+	hb-subset-plan.cc \
+	hb-subset-plan.hh \
+	hb-subset-plan.hh \
+	hb-subset.cc \
+	hb-subset.hh \
+	hb-subset.hh \
+	$(NULL)
+
+HB_SUBSET_headers = \
+	hb-subset.h \
+	$(NULL)
+
+HB_GOBJECT_DIST_sources = hb-gobject-structs.cc
+HB_GOBJECT_DIST_headers = hb-gobject.h hb-gobject-structs.h
+HB_GOBJECT_ENUM_sources = hb-gobject-enums.cc
+HB_GOBJECT_ENUM_headers = hb-gobject-enums.h
+HB_GOBJECT_NODIST_sources = $(HB_GOBJECT_ENUM_sources)
+HB_GOBJECT_NODIST_headers = $(HB_GOBJECT_ENUM_headers)
+HB_GOBJECT_sources = $(HB_GOBJECT_DIST_sources) $(HB_GOBJECT_NODIST_sources)
+HB_GOBJECT_headers = $(HB_GOBJECT_DIST_headers) $(HB_GOBJECT_NODIST_headers)

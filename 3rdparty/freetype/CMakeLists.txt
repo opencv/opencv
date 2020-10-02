@@ -99,21 +99,6 @@ set(VERSION_MAJOR "2")
 set(VERSION_MINOR "10")
 set(VERSION_PATCH "2")
 
-# Generate LIBRARY_VERSION and LIBRARY_SOVERSION.
-set(LIBTOOL_REGEX "version_info='([0-9]+):([0-9]+):([0-9]+)'")
-file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/builds/unix/configure.raw"
-  VERSION_INFO
-  REGEX ${LIBTOOL_REGEX})
-string(REGEX REPLACE
-  ${LIBTOOL_REGEX} "\\1"
-  LIBTOOL_CURRENT "${VERSION_INFO}")
-string(REGEX REPLACE
-  ${LIBTOOL_REGEX} "\\2"
-  LIBTOOL_REVISION "${VERSION_INFO}")
-string(REGEX REPLACE
-  ${LIBTOOL_REGEX} "\\3"
-  LIBTOOL_AGE "${VERSION_INFO}")
-
 set(FREETYPE_VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}" PARENT_SCOPE)
 
 # External dependency library detection is automatic. See the notes at the top
@@ -304,4 +289,4 @@ if(NOT BUILD_SHARED_LIBS)
   ocv_install_target(${PROJECT_NAME} EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev)
 endif()
 
-ocv_install_3rdparty_licenses(${PROJECT_NAME} README)
+ocv_install_3rdparty_licenses(${PROJECT_NAME} freetype_LICENSE.txt)

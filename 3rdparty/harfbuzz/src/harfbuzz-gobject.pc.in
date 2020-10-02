@@ -1,0 +1,12 @@
+prefix=%prefix%
+exec_prefix=%exec_prefix%
+libdir=%libdir%
+includedir=%includedir%
+
+Name: harfbuzz
+Description: HarfBuzz text shaping library GObject integration
+Version: %VERSION%
+
+Requires: harfbuzz gobject-2.0 glib-2.0
+Libs: -L${libdir} -lharfbuzz-gobject
+Cflags: -I${includedir}/harfbuzz

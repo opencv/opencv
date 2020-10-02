@@ -1,0 +1,12 @@
+prefix=%prefix%
+exec_prefix=%exec_prefix%
+libdir=%libdir%
+includedir=%includedir%
+
+Name: harfbuzz
+Description: HarfBuzz font subsetter
+Version: %VERSION%
+
+Requires: harfbuzz
+Libs: -L${libdir} -lharfbuzz-subset
+Cflags: -I${includedir}/harfbuzz

@@ -1,0 +1,28 @@
+API issues:
+===========
+
+- API to accept a list of languages?
+
+- Remove hb_ot_shape_glyphs_closure()?
+
+
+API additions
+=============
+
+- Language to/from script.
+
+- Add hb-cairo glue
+
+- Add sanitize API.
+
+- Add query / enumeration API for aalt-like features?
+
+- Add segmentation API
+
+- Add hb-fribidi glue?
+
+
+hb-view / hb-shape enhancements:
+===============================
+
+- Add --width, --height, --auto-size, --ink-box, --align, etc?

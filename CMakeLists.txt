@@ -781,7 +781,9 @@ endif()
 
 if(WITH_FREETYPE)
   add_subdirectory(3rdparty/freetype)
+  add_subdirectory(3rdparty/harfbuzz)
   set(HAVE_FREETYPE TRUE)
+  set(HAVE_HARFBUZZ TRUE)
 endif()
 
 # ----------------------------------------------------------------------------

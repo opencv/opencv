@@ -4761,6 +4761,7 @@ enum
     PUT_TEXT_ALIGN_LEFT=0, // put the text to the right from the origin; the only supported alignment for now
     PUT_TEXT_ALIGN_CENTER=1, // center the text at the origin; not implemented yet
     PUT_TEXT_ALIGN_RIGHT=2, // put the text to the left of the origin; not implemented yet
+    PUT_TEXT_ALIGN_MASK=3,  // alignment mask
     PUT_TEXT_SIZE_PIXELS=0, // text size is specified in pixels
     PUT_TEXT_SIZE_POINTS=4, // text size is specified in points (~120 pixel/inch pixel density is assumed)
     PUT_TEXT_SIZE_MASK=12,
@@ -4792,7 +4793,8 @@ example. The function returns the coordinates in pixels from where the text can 
 CV_EXPORTS_W Point putText( InputOutputArray img, const String& text,
                             Point org, Scalar color,
                             FontFace& fface, double size,
-                            int weight=0, int flags=0 );
+                            int weight=0, int flags=0,
+                            Range wrap=Range() );
 
 /** @brief Calculates the bounding rect for the text
 
@@ -4814,7 +4816,7 @@ That is, the following code renders some text, the tight box surrounding it, and
 */
 CV_EXPORTS_W Rect getTextSize( Size imgsize, const String& text, Point org,
                                FontFace& fface, double size,
-                               int weight=0, int flags=0 );
+                               int weight=0, int flags=0, Range wrap=Range() );
 
 /** @brief Line iterator
 

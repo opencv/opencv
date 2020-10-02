@@ -96,6 +96,9 @@ void CV_DrawingTest::run( int )
 
         if( err > Eps)
         {
+            //imshow("reference", valImg);
+            //imshow("result", testImg);
+            //waitKey();
             ts->printf( ts->LOG, "NORM_L1 between testImg and valImg is equal %f (larger than %f)\n", err, Eps );
             ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
         }
@@ -626,6 +629,14 @@ TEST(Drawing, putText_no_garbage)
 
     mat = Scalar::all(0);
     putText(mat, "029", Point(10, 350), 0, 10, Scalar(128), 15);
+#if 0
+    rectangle(mat, Rect(0, 0,           10, sz.height), Scalar(255), 1, 8);
+    rectangle(mat, Rect(sz.width-10, 0, 10, sz.height), Scalar(255), 1, 8);
+    rectangle(mat, Rect(195, 0,         10, sz.height), Scalar(255), 1, 8);
+    rectangle(mat, Rect(385, 0,         10, sz.height), Scalar(255), 1, 8);
+    imshow("test", mat);
+    waitKey();
+#endif
 
     EXPECT_EQ(0, cv::countNonZero(mat(Rect(0, 0,           10, sz.height))));
     EXPECT_EQ(0, cv::countNonZero(mat(Rect(sz.width-10, 0, 10, sz.height))));
@@ -689,58 +700,128 @@ TEST(Drawing, fillpoly_circle)
     EXPECT_LT(diff_fp3, 1.);
 }
 
+typedef struct TextProp
+{
+    const char* str;
+    bool ralign;
+    int weight;
+    bool italic;
+} TextProp;
+
 TEST(Drawing, ttf_text)
 {
     string ts_data_path = TS::ptr()->get_data_path();
-    string custom_font_path = ts_data_path + "../highgui/drawing/Neucha.ttf";
+    string custom_font_path = ts_data_path + "../highgui/drawing/FiraGO.ttf";
 
     FontFace sans("sans");
-    FontFace serif("serif");
-    FontFace script(custom_font_path, 1.2);
-    FontFace itfont("italic");
+    FontFace script(custom_font_path, 1.0);
+    FontFace italic("italic");
     FontFace uni("uni");
-    std::vector<FontFace> faces = {sans, itfont, serif, script, uni};
+    std::vector<FontFace> faces = {script, sans};
     Mat img(1000, 1500, CV_8UC3, Scalar::all(255));
-    String text0 = "The quick brown fox jumps over lazy dog. fly, start, finish, shuffle. ";
-    String text1 = "vechicle #5 detected; fps=123.45. ";
-    String text2 = "Съешь же ещё этих мягких французских булок да выпей чаю!";
-    text2 += " Dès Noël où un zéphyr haï me vêt de glaçons würmiens je dîne d’exquis rôtis de bœuf au kir à l’aÿ d’âge mûr & cætera!";
-    text2 += " “Falsches Üben von Xylophonmusik quält jeden größeren Zwerg”.";
-    text2 += " Extraño alijo hampón: güisqui; kiwi, vid y ... ¡¿bizc8?!";
-    text2 += " Ζαφείρι δέξου πάγκαλο, βαθῶν ψυχῆς τὸ σῆμα.";
-    text2 += " דג סקרן שט בים מאוכזב ולפתע מצא חברה";
-    text2 += "。千里之行，始于足下。あなたはそれが困難見つけた場合 — あなたは正しい方向に向かっている。넌 모든 꽃들을 다 꺾어버릴 수는 있겠지만, 봄이 오는 걸 막을 수는 없어.";
-    text2 += " نصٌّ حكيمٌ لهُ سِرٌّ قاطِعٌ وَذُو شَأنٍ عَظيمٍ مكتوبٌ على ثوبٍ أخضرَ ومُغلفٌ بجلدٍ أزرق";
-    int flags = PUT_TEXT_WRAP;
-    const int weight[] = { 400, 300, 400, 400, 400 };
-    Scalar color(150, 80, 0);
-
-    for( int i = 0; i < 4; i++ )
+    TextProp text[] =
     {
-        img.setTo(Scalar::all(255));
-        double sz = 10 + i*3;
-        int x0 = 50;
-        Mat imgroi = img.colRange(0, img.cols - x0);
-        Point org(x0, 50);
+        {"The quick brown fox jumps over lazy dog. Fly, start, finish, shuffle shuttle.", false, 400, false},
+        {"vechicle #5 detected; fps=123.45.\n", false, 600, false},
+        {"Съешь же ещё этих мя́гких французских булок, да выпей чаю!\n"
+        "Dès Noël où un zéphyr haï me vêt de glaçons würmiens je dîne\nd’exquis rôtis de bœuf au kir à l’aÿ d’âge mûr & cætera!\n"
+        "“Falsches Üben von Xylophonmusik quält jeden größeren Zwerg”.", false, 400, true},
 
-        int j = 0;
-        for( auto& face: faces )
+        {"¡Oh tú, sabio encantador, quienquiera que seas,\n"
+         "a quien ha de tocar el ser coronista desta peregrina\n"
+         "historia, ruégote que no te olvides de mi buen Rocinante,\n"
+         "compañero eterno mío en todos mis caminos y carreras!.\n", false, 300, false},
+        {"Ταχίστη αλώπηξ βαφής ψημένη γη, δρασκελίζει υπέρ νωθρού κυνός.", false, 400, false},
+        {"春眠不觉晓，\n处处闻啼鸟。\n夜来风雨声，\n花落知多少。\n\n"
+        " あなたはそれが困難見つけた場合 — あなたは正しい方向に向かっている。\n"
+        " 넌 모든 꽃들을 다 꺾어버릴 수는 있겠지만, 봄이 오는 걸 막을 수는 없어。 ", false, 400, false},
+
+        {"דג סקרן שט בים מאוכזב ולפתע מצא חברה", true, 400, false},
+
+        {" ", false, 400, false},
+{
+        "اول و آخر بباید تا در آن                        در تصور گنجد اوسط یا میان\n"
+        "بی‌نهایت، چون ندارد دو طرف             کی بُوَد او را میانه منصرَف؟!\n"
+        "گفت راه اوسط ار چه حکمت است     لیک اوسط نیز هم با نسبت است\n",
+    true, 400, false},
+
+        {" ", false, 400, false},
+
+        {"“हम आपने विचारों से ही अच्छी तरह ढलते हैं;\n"
+         "हम वही बनते हैं जो हम सोचते हैं|\n"
+         "जब मन पवित्र होता है तो ख़ुशी परछाई\n"
+         "की तरह हमेशा हमारे साथ चलती है |”\n\n"
+         "                                      -गौतम बुद्ध", false, 400, false}
+    };
+    Scalar color(150, 80, 0);
+    //Scalar color(0, 0, 0);
+
+    img.setTo(Scalar::all(255));
+    double sz = 20;
+    int x0 = 50, y0 = 70;
+    Point org(x0, y0);
+
+    int j = 0, column = 1;
+    for( auto& face: faces )
+    {
+        for(const TextProp& t: text)
         {
-            int w = weight[j++];
-            org = putText(imgroi, text0, org, color, face, sz, w, flags);
-            putText(imgroi, text1, org, color, face, sz, 800, flags);
-            Rect brect = getTextSize(imgroi.size(), text1, org, face, sz, w, flags);
-            org.x = x0;
-            org.y = brect.y + brect.height*2;
-            putText(imgroi, text2, org, color, face, sz, w, flags);
-            brect = getTextSize(imgroi.size(), text2, org, face, sz, w, flags);
-            org.x = x0;
-            org.y = cvRound(brect.y + brect.height + sz + 15);
+            int flags = t.ralign ? PUT_TEXT_ALIGN_RIGHT : 0;
+            if(t.ralign)
+            {
+                if(j > 0)
+                    break;
+                if(column == 1)
+                {
+                    column = 2;
+                    org.y = y0;
+                }
+                org.x = img.cols - x0;
+            }
+            else
+            {
+                org.x = column == 1 ? x0 : img.cols/2;
+            }
+            //Rect r = getTextSize(img.size(), t.str, org, face, sz, t.weight, flags);
+            org = putText(img, t.str, org, color, t.italic && j == 1 ? italic : face, sz, t.weight,
+                          flags, Range());
+            //rectangle(img, r, Scalar(80, 0, 128), 1, LINE_AA);
+            org.y += sz + 10;
         }
-        /*imshow("test", img);
-        if((waitKey() & 255) == 27)
-            break;*/
+        org.x = x0;
+        org.y = y0 = org.y + 150;
+        column = 1;
+        j++;
     }
+
+    Scalar color2(80, 0, 128);
+
+    org = Point(img.cols - 550, img.rows/2+50);
+    putText(img, "Пробуем\n ", org, color2, italic, 80, 300,
+            PUT_TEXT_ALIGN_LEFT, Range());
+    org.x -= 90;
+    org.y += 130;
+    putText(img, "OpenCV", org, color2, italic, 120, 800,
+            PUT_TEXT_ALIGN_LEFT, Range());
+    org.y += 140;
+    org.x += 60;
+    putText(img, "打印文字", org, color2, sans, 100, 400,
+            PUT_TEXT_ALIGN_LEFT, Range());
+
+#if 0
+    //imwrite(ts_data_path + "../highgui/drawing/text_test.png", img);
+    imshow("test", img);
+    waitKey();
+#else
+    Mat refimg = imread(ts_data_path + "../highgui/drawing/text_test.png", IMREAD_UNCHANGED);
+    //imshow("ref", refimg);
+    //imshow("actual", img);
+    //absdiff(refimg, img, refimg);
+    //imshow("diff", refimg);
+    //waitKey();
+    EXPECT_EQ(refimg.size(), img.size());
+    EXPECT_LT(cv::norm(refimg, img, NORM_L1), 2000);
+#endif
 }
 
 }} // namespace

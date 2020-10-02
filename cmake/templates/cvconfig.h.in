@@ -167,4 +167,7 @@
 /* Freetype2 library */
 #cmakedefine HAVE_FREETYPE
 
+/* Harfbuzz library */
+#cmakedefine HAVE_HARFBUZZ
+
 #endif // OPENCV_CVCONFIG_H_INCLUDED
