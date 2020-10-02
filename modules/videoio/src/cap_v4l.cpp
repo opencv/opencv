@@ -1606,7 +1606,7 @@ void CvCaptureCAM_V4L::convertToRgb(const Buffer &currentBuffer)
     case V4L2_PIX_FMT_Y16_BE:
     {
         cv::Mat temp(imageSize, CV_8UC1, buffers2[MAX_V4L_BUFFERS].start);       
-        cv::Mat frame(imageSize, CV_16UC1, currentBuffer.start)
+        cv::Mat temp2(imageSize, CV_16UC1, currentBuffer.start)
             
         struct Operator {
             void operator ()(uint16_t &pixel, const int * position) {
@@ -1616,9 +1616,9 @@ void CvCaptureCAM_V4L::convertToRgb(const Buffer &currentBuffer)
                pixel = pixel | ptemp;
             }
         };        
-        frame.ForEach(<uint16_t>(Operator()); 
+        temp2.ForEach(<uint16_t>(Operator()); 
         
-        frame.convertTo(temp, CV_8U, 1.0 / 256);
+        temp2.convertTo(temp, CV_8U, 1.0 / 256);
         cv::cvtColor(temp, destination, COLOR_GRAY2BGR);
         return;
     }        
