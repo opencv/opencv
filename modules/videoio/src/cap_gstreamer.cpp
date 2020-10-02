@@ -54,6 +54,7 @@
 
 #include <iostream>
 #include <string.h>
+#include <thread>
 
 #include <gst/gst.h>
 #include <gst/gstbuffer.h>
@@ -107,6 +108,7 @@ template<> inline void GSafePtr_release<GstBuffer>(GstBuffer** pPtr) { if (pPtr)
 template<> inline void GSafePtr_release<GstSample>(GstSample** pPtr) { if (pPtr) { gst_sample_unref(*pPtr); *pPtr = NULL; } }
 template<> inline void GSafePtr_release<GstBus>(GstBus** pPtr) { if (pPtr) { gst_object_unref(G_OBJECT(*pPtr)); *pPtr = NULL; } }
 template<> inline void GSafePtr_release<GstMessage>(GstMessage** pPtr) { if (pPtr) { gst_message_unref(*pPtr); *pPtr = NULL; } }
+template<> inline void GSafePtr_release<GMainLoop>(GMainLoop** pPtr) { if (pPtr) { g_main_loop_unref(*pPtr); *pPtr = NULL; } }
 
 template<> inline void GSafePtr_release<GstEncodingVideoProfile>(GstEncodingVideoProfile** pPtr) { if (pPtr) { gst_encoding_profile_unref(*pPtr); *pPtr = NULL; } }
 template<> inline void GSafePtr_release<GstEncodingContainerProfile>(GstEncodingContainerProfile** pPtr) { if (pPtr) { gst_object_unref(G_OBJECT(*pPtr)); *pPtr = NULL; } }
@@ -194,10 +196,15 @@ public:
 private:
     bool isFailed;
     bool call_deinit;
+    bool start_loop;
+    GSafePtr<GMainLoop> loop;
+    std::thread thread;
+
     gst_initializer() :
         isFailed(false)
     {
         call_deinit = utils::getConfigurationParameterBool("OPENCV_VIDEOIO_GSTREAMER_CALL_DEINIT", false);
+        start_loop = utils::getConfigurationParameterBool("OPENCV_VIDEOIO_GSTREAMER_START_MAINLOOP", false);
 
         GSafePtr<GError> err;
         gst_init_check(NULL, NULL, err.getRef());
@@ -215,6 +222,14 @@ private:
             isFailed = true;
             return;
         }
+
+        if (start_loop)
+        {
+            loop.attach(g_main_loop_new (NULL, FALSE));
+            thread = std::thread([this](){
+                g_main_loop_run (loop);
+            });
+        }
     }
     ~gst_initializer()
     {
@@ -222,6 +237,12 @@ private:
         {
             // Debug leaks: GST_LEAKS_TRACER_STACK_TRACE=1 GST_DEBUG="GST_TRACER:7" GST_TRACERS="leaks"
             gst_deinit();
+        }
+
+        if (start_loop)
+        {
+            g_main_loop_quit(loop);
+            thread.join();
         }
     }
 };
