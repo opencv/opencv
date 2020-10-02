@@ -97,16 +97,16 @@ enum class GShape: int
 
 namespace gapi {
 namespace s11n {
-struct OStream;
-struct IStream;
+struct IOStream;
+struct IIStream;
  
 namespace detail {
 template<typename T, typename U> struct wrap_serialize {
-    static std::function<void(gapi::s11n::I::OStream&, const util::any&)> serialize;
+    static std::function<void(gapi::s11n::IOStream&, const util::any&)> serialize;
 };
 
 template<typename T, typename U>
-std::function<void(gapi::s11n::I::OStream&, const util::any&)>
+std::function<void(gapi::s11n::IOStream&, const util::any&)>
 wrap_serialize<T, U>::serialize = nullptr;
 
 } // namespace detail
@@ -166,7 +166,7 @@ public:
     GCompileArg() = default;
 
     std::string tag;
-    std::function<void(gapi::s11n::I::OStream&, const util::any&)> serialize;
+    std::function<void(gapi::s11n::IOStream&, const util::any&)> serialize;
     util::any arg;
 
     // FIXME: use decay in GArg/other trait-based wrapper before leg is shot!

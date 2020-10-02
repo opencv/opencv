@@ -540,7 +540,6 @@ TEST_F(S11N_Basic, Test_Custom_Type) {
     MyCustomType new_var = cv::gapi::s11n::detail::S11N<MyCustomType>::deserialize(is);
     EXPECT_EQ(var, new_var);
 }
-<<<<<<< HEAD
 
 TEST_F(S11N_Basic, Test_Custom_CompileArg) {
     MyCustomType var{1324, "Hello", {1920, 1080, 720}, {{1, 2937459432}, {42, 253245432}}};
@@ -551,6 +550,4 @@ TEST_F(S11N_Basic, Test_Custom_CompileArg) {
 
     MyCustomType deserializedVar = cv::gapi::getCompileArg<MyCustomType>(deserializedArgs).value();
 }
-=======
->>>>>>> a3e7c2d8e3ebb32a5ee58c8f3265dacead318572
 } // namespace opencv_test

@@ -40,7 +40,7 @@ struct GSerialized {
 
 // G-API types /////////////////////////////////////////////////////////////////
 
-GAPI_EXPORTS IOStream& operator<< (I::OStream& os, const cv::GCompileArg& arg)
+GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::GCompileArg& arg);
 
 GAPI_EXPORTS IOStream& operator<< (IOStream& os, cv::util::monostate  );
 GAPI_EXPORTS IIStream& operator>> (IIStream& is, cv::util::monostate &);
@@ -261,7 +261,7 @@ public:
     virtual IIStream& operator>> (std::string &) override;
 };
 
-GAPI_EXPORTS std::unique_ptr<I::IStream> getInStream(const std::vector<char> &p);
+GAPI_EXPORTS std::unique_ptr<IIStream> getInStream(const std::vector<char> &p);
 
 GAPI_EXPORTS void serialize(IOStream& os, const cv::GCompileArgs &ca);
 GAPI_EXPORTS void serialize(IOStream& os, const cv::GMetaArgs &ma);

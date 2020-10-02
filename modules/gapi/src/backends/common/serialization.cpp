@@ -310,7 +310,7 @@ IIStream& operator>> (IIStream& is,       cv::gapi::wip::draw::Line &l) {
 
 // G-API types /////////////////////////////////////////////////////////////////
 
-IOStream& operator<< (I::OStream& os, const cv::GCompileArg& arg)
+IOStream& operator<< (IOStream& os, const cv::GCompileArg& arg)
 {
     if (arg.serialize)
     {
