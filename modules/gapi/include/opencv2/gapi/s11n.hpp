@@ -19,10 +19,6 @@
 namespace cv {
 namespace gapi {
 
-namespace s11n {
-    GAPI_EXPORTS std::unique_ptr<IIStream> getInStream(const std::vector<char> &p);
-} // namespace s11n
-
 namespace detail {
     GAPI_EXPORTS cv::GComputation getGraph(const std::vector<char> &p);
 
@@ -109,6 +105,8 @@ struct GAPI_EXPORTS IIStream {
     virtual IIStream& operator >> (uint64_t &) = 0;
     virtual IIStream& operator>> (std::string &) = 0;
 };
+
+GAPI_EXPORTS std::unique_ptr<IIStream> getInStream(const std::vector<char> &p);
 
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
@@ -200,10 +198,6 @@ namespace detail
 template<typename T>
 struct GAPI_EXPORTS S11N;
 
-//Add implementation for default types via SFINAE!!
-//typename std::enable_if<can_be_serialized_by_framework<T>::value, T>::type
-// template<typename T>
-// struct GAPI_EXPORTS S11N { serialize, deserialize };
 
 template<typename T> struct wrap_serialize<T, cv::GCompileArg> {
     static std::function<void(gapi::s11n::IOStream& os, const util::any& arg)> serialize;
@@ -219,6 +213,8 @@ private:
         return sfinae_true<void>{};
     }
 
+    // FIXME: Add compile-time check that this can't be called for custom types.
+    //        Such can alternatively be implemented via S11N<> with std::enable_if.
     template<typename Q = T>
     static auto try_call_serialize(gapi::s11n::IOStream& os, const util::any& arg, long)
         -> sfinae_true<decltype(os << std::declval<const typename std::add_lvalue_reference<Q>::type>(), void())> {
@@ -238,10 +234,11 @@ private:
 template<typename T>
 std::function<void(gapi::s11n::IOStream& os, const util::any& arg)>
 wrap_serialize<T, cv::GCompileArg>::serialize =
-        decltype(try_call_serialize(std::declval<
-                                        typename std::add_lvalue_reference<gapi::s11n::IOStream>::type>(),
-                                    std::declval<typename std::add_lvalue_reference<util::any>::type>(),
-                                    int()))::value ? &call_serialize : nullptr;
+        decltype(try_call_serialize(
+                    std::declval<typename std::add_lvalue_reference<gapi::s11n::IOStream>::type>(),
+                    std::declval<typename std::add_lvalue_reference<util::any>::type>(),
+                    int()))::value
+        ? &call_serialize : nullptr;
 
 
 template<typename T> struct wrap_deserialize
@@ -249,15 +246,18 @@ template<typename T> struct wrap_deserialize
 private:
     template<typename Q = T>
     static auto call_deserialize(gapi::s11n::IIStream& is, int)
-        -> decltype(S11N<Q>::deserialize(is), S11N<Q>::deserialize(is)) {
-        return S11N<Q>::deserialize(is); // returning reference to temporary?
+        -> decltype(S11N<Q>::deserialize(is)) {
+        return S11N<Q>::deserialize(is);
     }
 
-    // FIXME: Add trait for basic types?
+    // Add compile-time check that this can't be called for custom types.
     template<typename Q = T>
     static auto call_deserialize(gapi::s11n::IIStream& is, long)
-        -> decltype(std::declval<typename std::add_lvalue_reference<Q>::type>() << is, std::declval<typename std::decay<Q>::type>()) {
-        return T() << is;
+        -> decltype(is >> std::declval<typename std::add_lvalue_reference<Q>::type>(),
+                    Q()) {
+        Q obj;
+        is >> obj;
+        return obj;
     }
 
     template<typename Q = T>
@@ -300,13 +300,13 @@ GAPI_EXPORTS cv::GCompileArgs getCompileArgs(const std::vector<char> &p) {
     std::unique_ptr<cv::gapi::s11n::IIStream> pIs = cv::gapi::s11n::getInStream(p);
     cv::gapi::s11n::IIStream& is = *pIs.get();
     cv::GCompileArgs args;
-    // FIXME: size_t should be here :)
-    int sz = 0u;
-    //is >> sz;
-    for (int i = 0; i < sz; ++i) {
+
+    uint32_t sz;
+    is >> sz;
+    for (uint32_t i = 0; i < sz; ++i) {
         std::string tag;
-        //is >> tag;
-        args.push_back(cv::gapi::detail::deserialize_arg<Types...>(is, tag)); // may be defined here.
+        is >> tag;
+        args.push_back(cv::gapi::detail::deserialize_arg<Types...>(is, tag));
     }
 
     return args;
