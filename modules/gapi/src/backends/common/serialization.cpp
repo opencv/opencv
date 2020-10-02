@@ -851,6 +851,12 @@ I::IStream& ByteMemoryInStream::operator>> (std::string& str) {
     return *this;
 }
 
+GAPI_EXPORTS std::unique_ptr<I::IStream> getInStream(const std::vector<char> &p)
+{
+    std::unique_ptr<ByteMemoryInStream> pIs(new ByteMemoryInStream(p));
+    return pIs;
+}
+
 GAPI_EXPORTS void serialize(I::OStream& os, const cv::GCompileArgs &ca) {
     os << ca;
 }
@@ -873,7 +879,6 @@ GAPI_EXPORTS GRunArgs run_args_deserialize(I::IStream& is) {
     is >> s;
     return s;
 }
-
 
 } // namespace s11n
 } // namespace gapi

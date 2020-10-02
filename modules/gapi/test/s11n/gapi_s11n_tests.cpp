@@ -18,6 +18,14 @@ namespace {
 namespace cv {
 namespace gapi {
 namespace s11n {
+
+// I::OStream& operator<< (I::OStream& os, const MyCustomType &arg)
+// {
+//     std::cout << "Called!" << std::endl;
+//     os << arg.val << arg.name << arg.vec << arg.mmap;
+//     return os;
+// }
+
 namespace detail {
     template<> struct S11N<MyCustomType> {
         static void serialize(I::OStream &os, const MyCustomType &p) {
@@ -42,6 +50,22 @@ template<> struct CompileArgTag<MyCustomType>
     static const char* tag()
     {
         return "org.opencv.test.mycustomtype";
+    }
+};
+
+template<> struct CompileArgTag<int>
+{
+    static const char* tag()
+    {
+        return "org.opencv.test.int";
+    }
+};
+
+template<> struct CompileArgTag<const char*>
+{
+    static const char* tag()
+    {
+        return "org.opencv.test.string";
     }
 };
 } // namespace detail
@@ -527,9 +551,11 @@ TEST_F(S11N_Basic, Test_Custom_Type) {
 
 TEST_F(S11N_Basic, Test_Custom_CompileArg) {
     MyCustomType var{1324, "Hello", {1920, 1080, 720}, {{1, 2937459432}, {42, 253245432}}};
-    GCompileArgs args = cv::compile_args(var);
+    GCompileArgs args = cv::compile_args(var, 3, "Hello");
+    
+    std::vector<char> serializedArgs = cv::gapi::serialize(args);
+    GCompileArgs deserializedArgs = cv::gapi::deserialize<GCompileArgs, MyCustomType, int, const char*>(serializedArgs);
 
-    std::vector<char> serializedArgs = cv::gapi::serialize(args);;
-    std::cout << "Serialized : " << std::string(serializedArgs.begin(), serializedArgs.end()) << std::endl;
+    MyCustomType deserializedVar = cv::gapi::getCompileArg<MyCustomType>(deserializedArgs).value();
 }
 } // namespace opencv_test

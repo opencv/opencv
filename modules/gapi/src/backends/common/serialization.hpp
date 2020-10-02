@@ -138,6 +138,8 @@ public:
     virtual I::IStream& operator>> (std::string &) override;
 };
 
+GAPI_EXPORTS std::unique_ptr<I::IStream> getInStream(const std::vector<char> &p);
+
 GAPI_EXPORTS void serialize(I::OStream& os, const cv::GCompileArgs &ca);
 GAPI_EXPORTS void serialize(I::OStream& os, const cv::GMetaArgs &ma);
 GAPI_EXPORTS void serialize(I::OStream& os, const cv::GRunArgs &ra);
