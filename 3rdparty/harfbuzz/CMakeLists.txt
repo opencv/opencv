@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 2.8.0)
 project(harfbuzz)
 
+if(POLICY CMP0075)
+  cmake_policy(SET CMP0075 OLD)
+endif()
+
 ## Limit framework build to Xcode generator
 if (BUILD_FRAMEWORK)
   # for a framework build on macOS, use:

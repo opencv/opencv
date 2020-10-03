@@ -4789,6 +4789,13 @@ example. The function returns the coordinates in pixels from where the text can 
        The default weight means "400" for variable-weight fonts or
        whatever "default" weight the used font provides.
 @param flags Various flags, see PUT_TEXT_...
+@param wrap The optional text wrapping range:
+       In the case of left-to-right (LTR) text if the printed character would cross wrap.end boundary,
+       the "cursor" is set to wrap.start.
+       In the case of right-to-left (RTL) text it's vice versa.
+       If the parameters is not set,
+       [org.x, img.cols] is used for LTR text and
+       [0, org.x] is for RTL one.
 */
 CV_EXPORTS_W Point putText( InputOutputArray img, const String& text,
                             Point org, Scalar color,
@@ -4813,6 +4820,7 @@ That is, the following code renders some text, the tight box surrounding it, and
         The default weight means "400" for variable-weight fonts or
         whatever "default" weight the used font provides.
 @param flags Various flags, see PUT_TEXT_...
+@param wrap The optional text wrapping range; see #putText.
 */
 CV_EXPORTS_W Rect getTextSize( Size imgsize, const String& text, Point org,
                                FontFace& fface, double size,

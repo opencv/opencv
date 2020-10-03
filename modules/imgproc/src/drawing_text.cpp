@@ -600,7 +600,7 @@ compressCharacter(const uchar* bitmap_buf,
                 else
                 {
                     if(count > 0)
-                        buf[count_pos] = count;
+                        buf[count_pos] = (uchar)count;
                     count = 1;
                     rle_mode = true;
                 }
@@ -609,7 +609,7 @@ compressCharacter(const uchar* bitmap_buf,
             {
                 if(count == RLE_MAX)
                 {
-                    buf[count_pos] = count;
+                    buf[count_pos] = (uchar)count;
                     buf[k++] = 0;
                     count_pos = k++;
                     count = 0;
@@ -655,7 +655,7 @@ compressCharacter(const uchar* bitmap_buf,
                 buf[k++] = 0;
         }
     }
-    else buf[count_pos] = count;
+    else buf[count_pos] = (uchar)count;
     rlebuf.resize(k);
     if(crc)
         *crc = calccrc(rlebuf);
@@ -740,6 +740,9 @@ static void drawCharacter(
     int bw = bitmap_size.width, bh = bitmap_size.height;
     int rows = img.rows, cols = img.cols;
     uchar b = color[0], g = color[1], r = color[2];
+
+    if(x0 >= cols || x0 + bw <= 0)
+        return;
 
     // for simplicity, we assume that `bitmap->pixel_mode'
     // is `FT_PIXEL_MODE_GRAY' (i.e., not a bitmap font)
