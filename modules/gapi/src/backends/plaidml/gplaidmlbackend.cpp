@@ -198,6 +198,9 @@ void cv::gimpl::GPlaidMLExecutable::run(std::vector<InObj>  &&input_objs,
     exec_->run();
 
     for (auto& it : output_objs) bindOutArg(it.first, it.second);
+
+    // FIXME:
+    // PlaidML backend haven't been updated with RMat support
 }
 
 void cv::gimpl::GPlaidMLExecutable::bindInArg(const RcDesc &rc, const GRunArg  &arg)

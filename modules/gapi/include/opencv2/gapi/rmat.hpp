@@ -8,6 +8,7 @@
 #define OPENCV_GAPI_RMAT_HPP
 
 #include <opencv2/gapi/gmat.hpp>
+#include <opencv2/gapi/own/exports.hpp>
 
 namespace cv {
 
@@ -31,7 +32,7 @@ namespace cv {
 //         performCalculations(in_view, out_view);
 //         // data from out_view is transferred to the device when out_view is destroyed
 //     }
-class RMat
+class GAPI_EXPORTS RMat
 {
 public:
     // A lightweight wrapper on image data:
@@ -39,20 +40,20 @@ public:
     // - Doesn't implement copy semantics (it's assumed that a view is created each time
     // wrapped data is being accessed);
     // - Has an optional callback which is called when the view is destroyed.
-    class View
+    class GAPI_EXPORTS View
     {
     public:
         using DestroyCallback = std::function<void()>;
 
         View() = default;
         View(const GMatDesc& desc, uchar* data, size_t step = 0u, DestroyCallback&& cb = nullptr)
-            : m_desc(desc), m_data(data), m_step(step == 0u ? elemSize()*cols() : step), m_cb(cb)
+            : m_desc(desc), m_data(data), m_step(step == 0u ? elemSize()*cols() : step), m_cb(std::move(cb))
         {}
 
         View(const View&) = delete;
-        View(View&&) = default;
         View& operator=(const View&) = delete;
-        View& operator=(View&&) = default;
+        View(View&&) = default;
+        View& operator=(View&& v);
         ~View() { if (m_cb) m_cb(); }
 
         cv::Size size() const { return m_desc.size; }
@@ -88,7 +89,7 @@ public:
         // Implementation is responsible for setting the appropriate callback to
         // the view when accessed for writing, to ensure that the data from the view
         // is transferred to the device when the view is destroyed
-        virtual View access(Access) const = 0;
+        virtual View access(Access) = 0;
     };
     using AdapterP = std::shared_ptr<Adapter>;
 

@@ -96,6 +96,10 @@ void cv::gimpl::render::ocv::GRenderExecutable::run(std::vector<InObj>  &&input_
     k.m_runF(context);
 
     for (auto &it : output_objs) magazine::writeBack(m_res, it.first, it.second);
+
+    // In/Out args clean-up is mandatory now with RMat
+    for (auto &it : input_objs) magazine::unbind(m_res, it.first);
+    for (auto &it : output_objs) magazine::unbind(m_res, it.first);
 }
 
 cv::GArg cv::gimpl::render::ocv::GRenderExecutable::packArg(const cv::GArg &arg) {

@@ -17,22 +17,22 @@ using View = cv::RMat::View;
 using cv::Mat;
 using namespace ::testing;
 
-static void expect_eq_desc(const View& view, const GMatDesc& desc) {
-    EXPECT_EQ(view.size(), desc.size);
-    EXPECT_EQ(view.dims(), desc.dims);
-    EXPECT_EQ(view.cols(), desc.size.width);
-    EXPECT_EQ(view.rows(), desc.size.height);
-    EXPECT_EQ(view.type(), CV_MAKE_TYPE(desc.depth,desc.chan));
-    EXPECT_EQ(view.depth(), desc.depth);
-    EXPECT_EQ(view.chan(), desc.chan);
+static void expect_eq_desc(const GMatDesc& desc, const View& view) {
+    EXPECT_EQ(desc.size, view.size());
+    EXPECT_EQ(desc.dims, view.dims());
+    EXPECT_EQ(desc.size.width, view.cols());
+    EXPECT_EQ(desc.size.height, view.rows());
+    EXPECT_EQ(CV_MAKE_TYPE(desc.depth,desc.chan), view.type());
+    EXPECT_EQ(desc.depth, view.depth());
+    EXPECT_EQ(desc.chan, view.chan());
 }
 
 TEST(RMatView, TestDefaultConstruction) {
     View view;
     GMatDesc desc{};
-    expect_eq_desc(view, desc);
-    EXPECT_EQ(view.ptr(), nullptr);
-    EXPECT_EQ(view.step(), 0u);
+    expect_eq_desc(desc, view);
+    EXPECT_EQ(nullptr, view.ptr());
+    EXPECT_EQ(0u, view.step());
 }
 
 struct RMatViewTest : public TestWithParam<int /*dataType*/>{};
@@ -41,9 +41,9 @@ TEST_P(RMatViewTest, ConstructionFromMat) {
     Mat mat(8,8,type);
     const auto desc = cv::descr_of(mat);
     View view(cv::descr_of(mat), mat.ptr(), mat.step1());
-    expect_eq_desc(view, desc);
-    EXPECT_EQ(view.ptr(), mat.ptr());
-    EXPECT_EQ(view.step(), mat.step1());
+    expect_eq_desc(desc, view);
+    EXPECT_EQ(mat.ptr(), view.ptr());
+    EXPECT_EQ(mat.step1(), view.step());
 }
 
 TEST(RMatView, TestConstructionFromMatND) {
@@ -51,8 +51,8 @@ TEST(RMatView, TestConstructionFromMatND) {
     Mat mat(dims, CV_8UC1);
     const auto desc = cv::descr_of(mat);
     View view(cv::descr_of(mat), mat.ptr());
-    expect_eq_desc(view, desc);
-    EXPECT_EQ(view.ptr(), mat.ptr());
+    expect_eq_desc(desc, view);
+    EXPECT_EQ(mat.ptr(), view.ptr());
 }
 
 TEST_P(RMatViewTest, DefaultStep) {
@@ -63,7 +63,7 @@ TEST_P(RMatViewTest, DefaultStep) {
     desc.size = {8,8};
     std::vector<unsigned char> data(desc.size.width*desc.size.height*CV_ELEM_SIZE(type));
     View view(desc, data.data());
-    EXPECT_EQ(view.step(), static_cast<size_t>(desc.size.width)*CV_ELEM_SIZE(type));
+    EXPECT_EQ(static_cast<size_t>(desc.size.width)*CV_ELEM_SIZE(type), view.step());
 }
 
 static Mat asMat(View& view) {
@@ -104,21 +104,31 @@ INSTANTIATE_TEST_CASE_P(Test, RMatViewTest,
 
 struct RMatViewCallbackTest : public ::testing::Test {
     RMatViewCallbackTest()
-        : mat(8,8,CV_8UC1), view(cv::descr_of(mat), mat.ptr(), mat.step1(), [this](){ callbackCalls++; }) {
+        : mat(8,8,CV_8UC1) {
         cv::randn(mat, cv::Scalar::all(127), cv::Scalar::all(40));
     }
+    View getView() { return {cv::descr_of(mat), mat.ptr(), mat.step1(), [this](){ callbackCalls++; }}; }
     int callbackCalls = 0;
     Mat mat;
-    View view;
 };
+
+TEST_F(RMatViewCallbackTest, MoveCtor) {
+    {
+        View copy(getView());
+        cv::util::suppress_unused_warning(copy);
+        EXPECT_EQ(0, callbackCalls);
+    }
+    EXPECT_EQ(1, callbackCalls);
+}
 
 TEST_F(RMatViewCallbackTest, MoveCopy) {
     {
-        View copy(std::move(view));
+        View copy;
+        copy = getView();
         cv::util::suppress_unused_warning(copy);
-        EXPECT_EQ(callbackCalls, 0);
+        EXPECT_EQ(0, callbackCalls);
     }
-    EXPECT_EQ(callbackCalls, 1);
+    EXPECT_EQ(1, callbackCalls);
 }
 
 static int firstElement(const View& view) { return *view.ptr(); }
@@ -128,20 +138,20 @@ TEST_F(RMatViewCallbackTest, MagazineInteraction) {
     cv::gimpl::magazine::Class<View> mag;
     constexpr int rc = 1;
     constexpr uchar value = 11;
-    mag.slot<View>()[rc] = std::move(view);
+    mag.slot<View>()[rc] = getView();
     {
         auto& mag_view = mag.slot<View>()[rc];
         setFirstElement(mag_view, value);
         auto mag_el = firstElement(mag_view);
-        EXPECT_EQ(mag_el, value);
+        EXPECT_EQ(value, mag_el);
     }
     {
         const auto& mag_view = mag.slot<View>()[rc];
         auto mag_el = firstElement(mag_view);
-        EXPECT_EQ(mag_el, value);
+        EXPECT_EQ(value, mag_el);
     }
-    EXPECT_EQ(callbackCalls, 0);
+    EXPECT_EQ(0, callbackCalls);
     mag.slot<View>().erase(rc);
-    EXPECT_EQ(callbackCalls, 1);
+    EXPECT_EQ(1, callbackCalls);
 }
 } // namespace opencv_test

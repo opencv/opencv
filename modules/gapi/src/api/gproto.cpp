@@ -119,6 +119,9 @@ cv::GMetaArg cv::descr_of(const cv::GRunArg &arg)
         case GRunArg::index_of<cv::gapi::wip::IStreamSource::Ptr>():
             return cv::util::get<cv::gapi::wip::IStreamSource::Ptr>(arg)->descr_of();
 
+        case GRunArg::index_of<cv::RMat>():
+            return cv::GMetaArg(cv::util::get<cv::RMat>(arg).desc());
+
         default: util::throw_error(std::logic_error("Unsupported GRunArg type"));
     }
 }
@@ -174,6 +177,8 @@ bool cv::can_describe(const GMetaArg& meta, const GRunArg& arg)
     case GRunArg::index_of<cv::detail::VectorRef>(): return meta == cv::GMetaArg(util::get<cv::detail::VectorRef>(arg).descr_of());
     case GRunArg::index_of<cv::detail::OpaqueRef>(): return meta == cv::GMetaArg(util::get<cv::detail::OpaqueRef>(arg).descr_of());
     case GRunArg::index_of<cv::gapi::wip::IStreamSource::Ptr>(): return util::holds_alternative<GMatDesc>(meta); // FIXME(?) may be not the best option
+    case GRunArg::index_of<cv::RMat>():              return util::holds_alternative<GMatDesc>(meta) &&
+                                                            util::get<GMatDesc>(meta).canDescribe(cv::util::get<cv::RMat>(arg));
     default: util::throw_error(std::logic_error("Unsupported GRunArg type"));
     }
 }
@@ -263,6 +268,8 @@ const void* cv::gimpl::proto::ptr(const GRunArgP &arg)
         return static_cast<const void*>(cv::util::get<cv::Mat*>(arg));
     case GRunArgP::index_of<cv::Scalar*>():
         return static_cast<const void*>(cv::util::get<cv::Scalar*>(arg));
+    case GRunArgP::index_of<cv::RMat*>():
+        return static_cast<const void*>(cv::util::get<cv::RMat*>(arg));
     case GRunArgP::index_of<cv::detail::VectorRef>():
         return cv::util::get<cv::detail::VectorRef>(arg).ptr();
     case GRunArgP::index_of<cv::detail::OpaqueRef>():

@@ -121,6 +121,7 @@ namespace detail
     template<>           struct GTypeOf<cv::UMat>              { using type = cv::GMat;      };
 #endif // !defined(GAPI_STANDALONE)
     template<>           struct GTypeOf<cv::Mat>               { using type = cv::GMat;      };
+    template<>           struct GTypeOf<cv::RMat>              { using type = cv::GMat;      };
     template<>           struct GTypeOf<cv::Scalar>            { using type = cv::GScalar;   };
     template<typename U> struct GTypeOf<std::vector<U> >       { using type = cv::GArray<U>; };
     template<typename U> struct GTypeOf                        { using type = cv::GOpaque<U>;};

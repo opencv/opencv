@@ -78,6 +78,7 @@ set(gapi_srcs
     src/api/ginfer.cpp
     src/api/ft_render.cpp
     src/api/media.cpp
+    src/api/rmat.cpp
 
     # Compiler part
     src/compiler/gmodel.cpp

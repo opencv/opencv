@@ -397,6 +397,10 @@ void cv::gimpl::ie::GIEExecutable::run(std::vector<InObj>  &&input_objs,
     kk.run(this_iec, uu, context);
 
     for (auto &it : output_objs) magazine::writeBack(m_res, it.first, it.second);
+
+    // In/Out args clean-up is mandatory now with RMat
+    for (auto &it : input_objs) magazine::unbind(m_res, it.first);
+    for (auto &it : output_objs) magazine::unbind(m_res, it.first);
 }
 
 namespace cv {

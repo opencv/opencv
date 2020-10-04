@@ -22,7 +22,6 @@
 
 namespace cv { namespace gimpl {
 
-
 // FIXME: GAPI_EXPORTS only because of tests!
 class GAPI_EXPORTS GIsland
 {
@@ -122,6 +121,8 @@ public:
 
     virtual bool canReshape() const = 0;
     virtual void reshape(ade::Graph& g, const GCompileArgs& args) = 0;
+    virtual bool allocatesOutputs() const { return false; }
+    virtual cv::RMat allocate(const cv::GMatDesc&) const { GAPI_Assert(false && "should never be called"); }
 
     // This method is called when the GStreamingCompiled gets a new
     // input source to process. Normally this method is called once

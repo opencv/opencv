@@ -276,4 +276,8 @@ void cv::gimpl::GCPUExecutable::run(std::vector<InObj>  &&input_objs,
     } // for(m_script)
 
     for (auto &it : output_objs) magazine::writeBack(m_res, it.first, it.second);
+
+    // In/Out args clean-up is mandatory now with RMat
+    for (auto &it : input_objs) magazine::unbind(m_res, it.first);
+    for (auto &it : output_objs) magazine::unbind(m_res, it.first);
 }
