@@ -94,8 +94,8 @@ struct hb_iter_t
   hb_remove_reference<item_t>* operator -> () const { return hb_addressof (**thiz()); }
   item_t operator * () const { return thiz()->__item__ (); }
   item_t operator * () { return thiz()->__item__ (); }
-  item_t operator [] (unsigned i) const { return thiz()->__item_at__ (i); }
-  item_t operator [] (unsigned i) { return thiz()->__item_at__ (i); }
+  item_t operator [] (int i) const { return thiz()->__item_at__ ((unsigned)i); }
+  item_t operator [] (int i) { return thiz()->__item_at__ ((unsigned)i); }
   iter_t& operator += (unsigned count) &  { thiz()->__forward__ (count); return *thiz(); }
   iter_t  operator += (unsigned count) && { thiz()->__forward__ (count); return *thiz(); }
   iter_t& operator ++ () &  { thiz()->__next__ (); return *thiz(); }

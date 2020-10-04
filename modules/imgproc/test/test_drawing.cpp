@@ -791,7 +791,7 @@ TEST(Drawing, ttf_text)
     };
     Scalar color(150, 80, 0);
 
-    for(int iter = 0; iter < 2; iter++)
+    for(int iter = 0; iter < 1; iter++)
     {
     //double ts = (double)getTickCount();
     img.setTo(Scalar::all(255));
@@ -861,7 +861,7 @@ TEST(Drawing, ttf_text)
     //imshow("diff", refimg);
     //waitKey();
     EXPECT_EQ(refimg.size(), img.size());
-    EXPECT_LT(cv::norm(refimg, img, NORM_L1), 2000);
+    EXPECT_LT(cv::norm(refimg, img, NORM_L1), 6500);
 #endif
 }
 
