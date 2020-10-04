@@ -22,7 +22,7 @@
     return native.getScaleFactor();
 }
 
--(instancetype)initWithName:(NSString*)name scaleFactor:(double)sf {
+-(instancetype)initWith:(NSString*)name scaleFactor:(double)sf {
     self = [super init];
     if (self) {
         self.nativeRef.set(std::string(name.UTF8String), sf);
@@ -33,7 +33,7 @@
     return [super init];
 }
 
--(instancetype)initWithName:(NSString*)name {
+-(instancetype)initWith:(NSString*)name {
     self = [super init];
     if (self) {
         self.nativeRef.set(std::string(name.UTF8String), 1.0);
@@ -48,7 +48,7 @@
 }
 
 - (NSString *)description {
-    return [NSString stringWithFormat:@"FontFace [ \nname=%s, \nscaleFactor=%lf\n]", self.name, self.scaleFactor];
+    return [NSString stringWithFormat:@"FontFace [ \nname=%s, \nscaleFactor=%lf\n]", self.nativeRef.getName().c_str(), self.scaleFactor];
 }
 
 @end

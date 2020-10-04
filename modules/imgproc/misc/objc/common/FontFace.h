@@ -18,8 +18,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 CV_EXPORTS @interface FontFace : NSObject
 
-@property NSString* name;
-@property double scaleFactor;
+@property(readonly) NSString* name;
+@property(readonly) double scaleFactor;
 
 #ifdef __cplusplus
 @property(readonly) cv::FontFace& nativeRef;
