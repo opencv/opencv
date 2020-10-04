@@ -54,7 +54,8 @@
 #endif
 
 #if defined __linux__ || defined __APPLE__ || defined __GLIBC__ \
-    || defined __HAIKU__ || defined __EMSCRIPTEN__ || defined __FreeBSD__
+    || defined __HAIKU__ || defined __EMSCRIPTEN__ || defined __FreeBSD__ \
+    || defined __OpenBSD__
     #include <unistd.h>
     #include <stdio.h>
     #include <sys/types.h>
