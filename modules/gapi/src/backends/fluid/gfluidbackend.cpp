@@ -1243,41 +1243,25 @@ void cv::gimpl::GFluidExecutable::reshape(ade::Graph &g, const GCompileArgs &arg
 // FIXME: Document what it does
 void cv::gimpl::GFluidExecutable::bindInArg(const cv::gimpl::RcDesc &rc, const GRunArg &arg)
 {
-    switch (rc.shape)
-    {
-    case GShape::GMAT:    m_buffers[m_id_map.at(rc.id)].priv().bindTo(util::get<cv::Mat>(arg), true); break;
-    case GShape::GSCALAR: m_res.slot<cv::Scalar>()[rc.id] = util::get<cv::Scalar>(arg); break;
-    case GShape::GARRAY:  m_res.slot<cv::detail::VectorRef>()[rc.id] = util::get<cv::detail::VectorRef>(arg); break;
-    case GShape::GOPAQUE: m_res.slot<cv::detail::OpaqueRef>()[rc.id] = util::get<cv::detail::OpaqueRef>(arg); break;
-    default: util::throw_error(std::logic_error("Unsupported input GShape type"));
+    magazine::bindInArg(m_res, rc, arg);
+    if (rc.shape == GShape::GMAT) {
+        auto& mat = m_res.slot<cv::Mat>()[rc.id];
+        // fluid::Buffer::bindTo() is not connected to magazine::bindIn/OutArg and unbind() calls,
+        // it's simply called each run() without any requirement to call some fluid-specific
+        // unbind() at the end of run()
+        m_buffers[m_id_map.at(rc.id)].priv().bindTo(mat, true);
     }
 }
 
 void cv::gimpl::GFluidExecutable::bindOutArg(const cv::gimpl::RcDesc &rc, const GRunArgP &arg)
 {
     // Only GMat is supported as return type
-    using T = GRunArgP;
-    switch (rc.shape)
-    {
-    case GShape::GMAT:
-        {
-            cv::GMatDesc desc = m_buffers[m_id_map.at(rc.id)].meta();
-            auto &bref = m_buffers[m_id_map.at(rc.id)].priv();
-
-            switch (arg.index()) {
-            // FIXME: See the bindInArg comment on Streaming-related changes
-            case T::index_of<cv::Mat*>(): {
-                auto &outMat = *util::get<cv::Mat*>(arg);
-                GAPI_Assert(outMat.data != nullptr);
-                GAPI_Assert(cv::descr_of(outMat) == desc && "Output argument was not preallocated as it should be ?");
-                bref.bindTo(outMat, false);
-            } break;
-            default: GAPI_Assert(false);
-            } // switch(arg.index())
-            break;
-        }
-    default: util::throw_error(std::logic_error("Unsupported return GShape type"));
+    if (rc.shape != GShape::GMAT) {
+        util::throw_error(std::logic_error("Unsupported return GShape type"));
     }
+    magazine::bindOutArg(m_res, rc, arg);
+    auto& mat = m_res.slot<cv::Mat>()[rc.id];
+    m_buffers[m_id_map.at(rc.id)].priv().bindTo(mat, false);
 }
 
 void cv::gimpl::GFluidExecutable::packArg(cv::GArg &in_arg, const cv::GArg &op_arg)
@@ -1383,6 +1367,10 @@ void cv::gimpl::GFluidExecutable::run(std::vector<InObj>  &input_objs,
             agent->doWork();
         }
     }
+
+    // In/Out args clean-up is mandatory now with RMat
+    for (auto &it : input_objs) magazine::unbind(m_res, it.first);
+    for (auto &it : output_objs) magazine::unbind(m_res, it.first);
 }
 
 cv::gimpl::GParallelFluidExecutable::GParallelFluidExecutable(const ade::Graph                      &g,

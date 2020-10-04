@@ -54,6 +54,7 @@ namespace gimpl {
 class GExecutor
 {
 protected:
+    Mag m_res;
     std::unique_ptr<ade::Graph> m_orig_graph;
     std::shared_ptr<ade::Graph> m_island_graph;
 
@@ -80,9 +81,7 @@ protected:
     class Input;
     class Output;
 
-    Mag m_res;
-
-    void initResource(const ade::NodeHandle &orig_nh); // FIXME: shouldn't it be RcDesc?
+    void initResource(const ade::NodeHandle &nh, const ade::NodeHandle &orig_nh); // FIXME: shouldn't it be RcDesc?
 
 public:
     explicit GExecutor(std::unique_ptr<ade::Graph> &&g_model);

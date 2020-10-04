@@ -109,7 +109,13 @@ void sync_data(cv::GRunArgs &results, cv::GRunArgsP &outputs)
         switch (out_obj.index())
         {
         case T::index_of<cv::Mat*>():
-            *cv::util::get<cv::Mat*>(out_obj) = std::move(cv::util::get<cv::Mat>(res_obj));
+        {
+            auto out_mat_p = cv::util::get<cv::Mat*>(out_obj);
+            auto view = cv::util::get<cv::RMat>(res_obj).access(cv::RMat::Access::R);
+            *out_mat_p = cv::gimpl::asMat(view).clone();
+        } break;
+        case T::index_of<cv::RMat*>():
+            *cv::util::get<cv::RMat*>(out_obj) = std::move(cv::util::get<cv::RMat>(res_obj));
             break;
         case T::index_of<cv::Scalar*>():
             *cv::util::get<cv::Scalar*>(out_obj) = std::move(cv::util::get<cv::Scalar>(res_obj));
@@ -408,6 +414,7 @@ class StreamingOutput final: public cv::gimpl::GIslandExecutable::IOutput
     // These objects are owned externally
     const cv::GMetaArgs &m_metas;
     std::vector< std::vector<Q*> > &m_out_queues;
+    std::shared_ptr<cv::gimpl::GIslandExecutable> m_island;
 
     // Allocate a new data object for output under idx
     // Prepare this object for posting
@@ -430,10 +437,19 @@ class StreamingOutput final: public cv::gimpl::GIslandExecutable::IOutput
             // FIXME: This is absolutely ugly but seem to work perfectly for its purpose.
         case cv::GShape::GMAT:
             {
-                MatType newMat;
-                cv::gimpl::createMat(cv::util::get<cv::GMatDesc>(m_metas[idx]), newMat);
-                out_arg = cv::GRunArg(std::move(newMat));
-                ret_val = cv::GRunArgP(&cv::util::get<MatType>(out_arg));
+                auto desc = cv::util::get<cv::GMatDesc>(m_metas[idx]);
+                if (m_island->allocatesOutputs())
+                {
+                    out_arg = cv::GRunArg(m_island->allocate(desc));
+                }
+                else
+                {
+                    MatType newMat;
+                    cv::gimpl::createMat(desc, newMat);
+                    auto rmat = cv::make_rmat<cv::gimpl::RMatAdapter>(newMat);
+                    out_arg = cv::GRunArg(std::move(rmat));
+                }
+                ret_val = cv::GRunArgP(&cv::util::get<cv::RMat>(out_arg));
             }
             break;
         case cv::GShape::GSCALAR:
@@ -538,9 +554,11 @@ class StreamingOutput final: public cv::gimpl::GIslandExecutable::IOutput
 public:
     explicit StreamingOutput(const cv::GMetaArgs &metas,
                              std::vector< std::vector<Q*> > &out_queues,
-                             const std::vector<cv::gimpl::RcDesc> &out_descs)
+                             const std::vector<cv::gimpl::RcDesc> &out_descs,
+                             std::shared_ptr<cv::gimpl::GIslandExecutable> island)
         : m_metas(metas)
         , m_out_queues(out_queues)
+        , m_island(island)
     {
         set(out_descs);
         m_postings.resize(out_descs.size());
@@ -573,7 +591,7 @@ void islandActorThread(std::vector<cv::gimpl::RcDesc> in_rcs,                // 
     GAPI_Assert(out_queues.size() == out_metas.size());
     QueueReader qr;
     StreamingInput input(qr, in_queues, in_constants, in_rcs);
-    StreamingOutput output(out_metas, out_queues, out_rcs);
+    StreamingOutput output(out_metas, out_queues, out_rcs, island);
     while (!output.done())
     {
         island->run(input, output);
