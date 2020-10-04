@@ -349,22 +349,20 @@ HB_FUNCOBJ (hb_second);
 struct
 {
   template <typename T, typename T2> constexpr auto
-  operator () (T&& a, T2&& b) const HB_AUTO_RETURN
-  (hb_forward<T> (a) <= hb_forward<T2> (b) ? hb_forward<T> (a) : hb_forward<T2> (b))
+  operator () (const T& a, const T2& b) const HB_AUTO_RETURN (a <= b ? a : b)
 }
 HB_FUNCOBJ (hb_min);
 struct
 {
   template <typename T, typename T2> constexpr auto
-  operator () (T&& a, T2&& b) const HB_AUTO_RETURN
-  (hb_forward<T> (a) >= hb_forward<T2> (b) ? hb_forward<T> (a) : hb_forward<T2> (b))
+  operator () (const T& a, const T2& b) const HB_AUTO_RETURN (a >= b ? a : b)
 }
 HB_FUNCOBJ (hb_max);
 struct
 {
   template <typename T, typename T2, typename T3> constexpr auto
-  operator () (T&& x, T2&& min, T3&& max) const HB_AUTO_RETURN
-  (hb_min (hb_max (hb_forward<T> (x), hb_forward<T2> (min)), hb_forward<T3> (max)))
+  operator () (const T& x, const T2& min, const T3& max) const HB_AUTO_RETURN
+  (hb_min (hb_max (x, min), max))
 }
 HB_FUNCOBJ (hb_clamp);
 

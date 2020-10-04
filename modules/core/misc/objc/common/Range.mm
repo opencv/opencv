@@ -6,7 +6,13 @@
 
 #import "Range.h"
 
-@implementation Range
+@implementation Range {
+    cv::Range native;
+}
+
+- (cv::Range&)nativeRef {
+    return native;
+}
 
 - (instancetype)init {
     return [self initWithStart:0 end: 0];
@@ -77,6 +83,10 @@
     result = prime * result + self.start;
     result = prime * result + self.end;
     return result;
+}
+
++ (instancetype)fromNative:(cv::Range&)range {
+    return [[Range alloc] initWithStart:range.start end:range.end];
 }
 
 - (NSString *)description {
