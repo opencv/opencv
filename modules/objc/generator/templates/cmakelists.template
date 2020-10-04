@@ -32,13 +32,27 @@ install(TARGETS opencv_objc_framework LIBRARY DESTINATION lib)
 enable_language(Swift)
 
 # Additional target properties
-set_target_properties(opencv_objc_framework PROPERTIES
-    OUTPUT_NAME "$framework"
-    ARCHIVE_OUTPUT_DIRECTORY "$${BUILD_ROOT}/lib"
-    XCODE_ATTRIBUTE_SWIFT_VERSION 5.0
-    XCODE_ATTRIBUTE_OTHER_SWIFT_FLAGS "-Xcc $${SUPPRESS_WARNINGS_FLAGS}"
-    FRAMEWORK TRUE
-    MACOSX_FRAMEWORK_IDENTIFIER org.opencv.$framework
-    PUBLIC_HEADER "$${objc_headers}"
-    DEFINE_SYMBOL CVAPI_EXPORTS
-    )
+if (CMAKE_XCODE_BUILD_SYSTEM GREATER_EQUAL 12)
+  set_target_properties(opencv_objc_framework PROPERTIES
+      OUTPUT_NAME "$framework"
+      ARCHIVE_OUTPUT_DIRECTORY "$${BUILD_ROOT}/lib"
+      XCODE_ATTRIBUTE_SWIFT_VERSION 5.0
+      XCODE_ATTRIBUTE_BUILD_LIBRARY_FOR_DISTRIBUTION YES
+      XCODE_ATTRIBUTE_OTHER_SWIFT_FLAGS "-Xcc $${SUPPRESS_WARNINGS_FLAGS}"
+      FRAMEWORK TRUE
+      MACOSX_FRAMEWORK_IDENTIFIER org.opencv.$framework
+      PUBLIC_HEADER "$${objc_headers}"
+      DEFINE_SYMBOL CVAPI_EXPORTS
+      )
+else()
+  set_target_properties(opencv_objc_framework PROPERTIES
+      OUTPUT_NAME "$framework"
+      ARCHIVE_OUTPUT_DIRECTORY "$${BUILD_ROOT}/lib"
+      XCODE_ATTRIBUTE_SWIFT_VERSION 5.0
+      XCODE_ATTRIBUTE_OTHER_SWIFT_FLAGS "-Xcc $${SUPPRESS_WARNINGS_FLAGS}"
+      FRAMEWORK TRUE
+      MACOSX_FRAMEWORK_IDENTIFIER org.opencv.$framework
+      PUBLIC_HEADER "$${objc_headers}"
+      DEFINE_SYMBOL CVAPI_EXPORTS
+      )
+endif()
