@@ -164,7 +164,7 @@ template<> struct get_in<cv::GMatP>
 };
 template<> struct get_in<cv::GFrame>
 {
-    static cv::Mat    get(GCPUContext &ctx, int idx) { return get_in<cv::GMat>::get(ctx, idx); }
+    static cv::MediaFrame get(GCPUContext &ctx, int idx) { return ctx.inArg<cv::MediaFrame>(idx); }
 };
 template<> struct get_in<cv::GScalar>
 {

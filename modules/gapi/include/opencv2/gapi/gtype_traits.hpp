@@ -17,6 +17,7 @@
 #include <opencv2/gapi/gopaque.hpp>
 #include <opencv2/gapi/gframe.hpp>
 #include <opencv2/gapi/streaming/source.hpp>
+#include <opencv2/gapi/media.hpp>
 #include <opencv2/gapi/gcommon.hpp>
 
 namespace cv
@@ -67,7 +68,7 @@ namespace detail
     template<>           struct GTypeTraits<cv::GFrame>
     {
         static constexpr const ArgKind kind = ArgKind::GFRAME;
-        static constexpr const GShape shape = GShape::GMAT;
+        static constexpr const GShape shape = GShape::GFRAME;
         static constexpr const OpaqueKind op_kind = OpaqueKind::CV_UNKNOWN;
     };
     template<>           struct GTypeTraits<cv::GScalar>
@@ -125,6 +126,7 @@ namespace detail
     template<>           struct GTypeOf<cv::Scalar>            { using type = cv::GScalar;   };
     template<typename U> struct GTypeOf<std::vector<U> >       { using type = cv::GArray<U>; };
     template<typename U> struct GTypeOf                        { using type = cv::GOpaque<U>;};
+    template<>           struct GTypeOf<cv::MediaFrame>        { using type = cv::GFrame;    };
     // FIXME: This is not quite correct since IStreamSource may produce not only Mat but also Scalar
     // and vector data. TODO: Extend the type dispatching on these types too.
     template<>           struct GTypeOf<cv::gapi::wip::IStreamSource::Ptr> { using type = cv::GMat;};
