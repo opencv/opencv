@@ -155,7 +155,8 @@ if (HB_HAVE_FREETYPE)
 endif ()
 
 ## Make Harfbuzz tiny
-add_definitions(-DHB_TINY)
+add_definitions(-DHB_MINI)
+add_definitions(-DHB_LEAN)
 
 ## Atomic ops availability detection
 file(WRITE "${PROJECT_BINARY_DIR}/try_compile_intel_atomic_primitives.c"
