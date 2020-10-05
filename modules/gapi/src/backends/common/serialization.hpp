@@ -88,6 +88,9 @@ GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::UMat &);
 GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::UMat &);
 #endif // !defined(GAPI_STANDALONE)
 
+GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::RMat &r);
+GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::RMat &r);
+
 GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::gapi::wip::IStreamSource::Ptr &);
 GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::gapi::wip::IStreamSource::Ptr &);
 

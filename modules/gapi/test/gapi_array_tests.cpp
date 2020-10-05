@@ -182,7 +182,7 @@ TEST(GArray, GArrayConstValInitialization)
     std::vector<cv::Point> initial_vec {Point(0,0), Point(1,1), Point(2,2)};
     std::vector<cv::Point> ref_vec     {Point(1,1), Point(2,2), Point(3,3)};
     std::vector<cv::Point> out_vec;
-    cv::Mat in_mat;
+    cv::Mat in_mat = cv::Mat::eye(32, 32, CV_8UC1);
 
     cv::GComputationT<ThisTest::GPointArray(cv::GMat)> c([&](cv::GMat in)
     {
@@ -201,7 +201,7 @@ TEST(GArray, GArrayRValInitialization)
 {
     std::vector<cv::Point> ref_vec {Point(1,1), Point(2,2), Point(3,3)};
     std::vector<cv::Point> out_vec;
-    cv::Mat in_mat;
+    cv::Mat in_mat = cv::Mat::eye(32, 32, CV_8UC1);
 
     cv::GComputationT<ThisTest::GPointArray(cv::GMat)> c([&](cv::GMat in)
     {
