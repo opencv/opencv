@@ -71,7 +71,6 @@ public:
  * \addtogroup gapi_meta_args
  * @{
  */
-//struct GAPI_EXPORTS_W_SIMPLE GMatDesc
 struct GAPI_EXPORTS GMatDesc
 {
     // FIXME: Default initializers in C++14

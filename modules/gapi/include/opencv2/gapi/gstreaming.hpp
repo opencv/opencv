@@ -150,6 +150,7 @@ public:
      */
     bool pull(cv::GRunArgsP &&outs);
 
+    // NB: Used from python
     GAPI_WRAP std::tuple<bool, cv::GRunArgs> pull();
 
     /**
