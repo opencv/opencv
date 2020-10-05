@@ -13,7 +13,6 @@
 #include "logger.hpp" // GAPI_LOG
 
 #include <tbb/task.h>
-#include <tbb/task_arena.h>
 #include <memory> //unique_ptr
 
 #include <atomic>
@@ -114,6 +113,18 @@ void batch_spawn(size_t count, tbb::task* root, body_t const& body, bool do_asse
 
 void cv::gimpl::parallel::execute(tbb::concurrent_priority_queue<tile_node* , tile_node_indirect_priority_comparator> & q)
 {
+    //get the reference to current task_arena (i.e. one we are running in)
+#if TBB_INTERFACE_VERSION > 9002
+    using attach_t = tbb::task_arena::attach;
+#else
+    using attach_t = tbb::internal::attach;
+#endif
+
+    tbb::task_arena arena{attach_t{}};
+    execute(q, arena);
+}
+void cv::gimpl::parallel::execute(tbb::concurrent_priority_queue<tile_node* , tile_node_indirect_priority_comparator> & q, tbb::task_arena& arena)
+{
     struct destroy_tbb_task{
         void operator()(tbb::task* t) const {tbb::task::destroy(*t);};
     };
@@ -126,33 +137,6 @@ void cv::gimpl::parallel::execute(tbb::concurrent_priority_queue<tile_node* , ti
 
     root.reset(new (tbb::task::allocate_root(m_context)) tbb::empty_task);
     root->set_ref_count(1); //required by wait_for_all, as it waits until counter drops to 1
-
-#if 0
-    unsigned int reserved_for_master_threads = 1;
-             int max_concurrency             = tbb::task_arena::automatic; // make equal to 1 for single thread debugging;
-
-    if (max_concurrency == 1)
-    {
-        //Leave no room for TBB worker threads, by reserving all to masters.
-        //TBB runtime guarantees that no worker threads will join the arena if max_concurrency is equal to reserved_for_master_threads
-        //except 1:1 + use of enqueued tasks for safety guarantee.
-        //So deliberately make it 2:2 to force TBB not to create extra thread.
-        //N.B. one slot will left empty as only one master thread(one that calls root->wait_for_all()) will join the arena
-        //FIXME: strictly speaking master can take any free slot, not the first one.
-        //However at the moment master seems to pick 0 slot all the time.
-        max_concurrency = 2;
-        reserved_for_master_threads = 2;
-    }
-    tbb::task_arena arena{max_concurrency, reserved_for_master_threads};
-#endif
-    //get the reference to current task_arena (i.e. one we are running in)
-#if TBB_INTERFACE_VERSION > 9002
-    using attach_t = tbb::task_arena::attach;
-#else
-    using attach_t = tbb::internal::attach;
-#endif
-
-    tbb::task_arena arena{attach_t{}};
 
     std::atomic<size_t>         executed {0};
 
@@ -232,11 +216,14 @@ void cv::gimpl::parallel::execute(tbb::concurrent_priority_queue<tile_node* , ti
         unlock_root_wait_t(unlock_root_wait_t const& src) : unlock_root_wait_t(std::move(const_cast<unlock_root_wait_t&>(src))) {}
     };
 
-//    arena.execute(
-//        [&](){
+    arena.execute(
+        [&](){
             //FIXME: avoid using std::function here due to extra indirection it impose
             //using std::function to allow self reference
             std::function<parallel::use_tbb_scheduler_bypass()> body = [&](){
+                if (q.empty()) {
+                    LOG_DEBUG(NULL, "Spawned task with no job to do ? ");
+                }
                 while(!q.empty()){
 
                     auto push_ready_dependees = [&q](tile_node* node) -> std::size_t
@@ -284,6 +271,8 @@ void cv::gimpl::parallel::execute(tbb::concurrent_priority_queue<tile_node* , ti
                         auto callback = [push_ready_dependees, node, &arena, &root, block_master, body] () mutable /*due to block_master.unlock()*/
                         {
                             LOG_DEBUG(NULL, "Async task callback is called ");
+                            //Implicitly unlock master after callback is call instead of destruction
+                            auto master_lock = std::move(block_master);
                             std::size_t ready_items = push_ready_dependees(node);
                             if (ready_items > 0)
                             {
@@ -312,7 +301,7 @@ void cv::gimpl::parallel::execute(tbb::concurrent_priority_queue<tile_node* , ti
                             }
                         };
 
-                        node->async_task_body(callback, node->total_order_index);
+                        node->async_task_body(std::move(callback), node->total_order_index);
                     }
 
                     executed++;
@@ -331,7 +320,7 @@ void cv::gimpl::parallel::execute(tbb::concurrent_priority_queue<tile_node* , ti
             //Spawn one less tasks and say TBB to reuse(recycle) current task.
             //As graph is starting and there has no task been spawned yet
             //assert_graph_is_running(root) will not hold, so spawn without assert
-            parallel::batch_spawn(num_start_tasks - 1,root.get(), body, /* assert_graph_is_running*/false);
+            parallel::batch_spawn(num_start_tasks - 1, root.get(), body, /* assert_graph_is_running*/false);
             root->spawn_and_wait_for_all(*parallel::allocate_task(root.get(), body));
 
             std::chrono::high_resolution_clock timer;
@@ -354,8 +343,8 @@ void cv::gimpl::parallel::execute(tbb::concurrent_priority_queue<tile_node* , ti
             while(!tbb_work_done() || !async_work_done());
 
             ASSERT(tbb_work_done() && async_work_done() && "Graph is still running?");
-//        }
-//    );
+        }
+    );
 
     LOG_INFO(NULL, "Done. Executed " <<executed<<" tasks");
 }

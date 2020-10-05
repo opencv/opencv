@@ -19,6 +19,7 @@
 #include <iostream>
 
 #include <tbb/concurrent_priority_queue.h>
+#include <tbb/task_arena.h>
 
 namespace cv { namespace gimpl { namespace parallel {
 
@@ -51,7 +52,7 @@ struct tile_node {
     //place in totally ordered queue of tasks to execute. Inverse to priority, i.e. lower index means higher priority
     size_t                                                                              total_order_index = 0;
     std::function<void()>                                                               task_body;
-    std::function<void(std::function<void()> callback, size_t total_order_index)>       async_task_body;
+    std::function<void(std::function<void()> && callback, size_t total_order_index)>       async_task_body;
     //number of dependencies according to a dependency graph (i.e. number of "input" edges).
     //Set only once during graph compilation. (Can not make it const due two two phase initialization of the tile_node objects)
     size_t                                                                              dependencies     = 0;
@@ -82,7 +83,9 @@ inline std::ostream& operator<<(std::ostream& o, tile_node const& n){
     return o;
 }
 
+
 void execute(tbb::concurrent_priority_queue<tile_node* , tile_node_indirect_priority_comparator> & q);
+void execute(tbb::concurrent_priority_queue<tile_node* , tile_node_indirect_priority_comparator> & q, tbb::task_arena& arena);
 
 }}} //cv::gimpl::parallel
 
