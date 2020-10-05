@@ -183,7 +183,7 @@ FT_BEGIN_HEADER
    *
    *   Define this macro if you want to enable this 'feature'.
    */
-#define FT_CONFIG_OPTION_USE_LZW
+//#define FT_CONFIG_OPTION_USE_LZW
 
 
   /**************************************************************************
@@ -243,7 +243,7 @@ FT_BEGIN_HEADER
    *   options set by those programs have precedence, overwriting the value
    *   here with the configured one.
    */
-#define FT_CONFIG_OPTION_USE_BZIP2
+//#define FT_CONFIG_OPTION_USE_BZIP2
 
 
   /**************************************************************************
@@ -272,7 +272,7 @@ FT_BEGIN_HEADER
    *   options set by those programs have precedence, overwriting the value
    *   here with the configured one.
    */
-#define FT_CONFIG_OPTION_USE_PNG
+//#define FT_CONFIG_OPTION_USE_PNG
 
 
   /**************************************************************************
@@ -289,7 +289,7 @@ FT_BEGIN_HEADER
    *   options set by those programs have precedence, overwriting the value
    *   here with the configured one.
    */
-#define FT_CONFIG_OPTION_USE_HARFBUZZ
+//#define FT_CONFIG_OPTION_USE_HARFBUZZ
 
 
   /**************************************************************************
@@ -305,7 +305,7 @@ FT_BEGIN_HEADER
    *   options set by those programs have precedence, overwriting the value
    *   here with the configured one.
    */
-#define FT_CONFIG_OPTION_USE_BROTLI
+//#define FT_CONFIG_OPTION_USE_BROTLI
 
 
   /**************************************************************************
@@ -360,7 +360,7 @@ FT_BEGIN_HEADER
    *
    *   Note that the 'FOND' resource isn't checked.
    */
-#define FT_CONFIG_OPTION_MAC_FONTS
+//#define FT_CONFIG_OPTION_MAC_FONTS
 
 
   /**************************************************************************

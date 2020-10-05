@@ -350,14 +350,14 @@ struct FontGlyph
 class FontRenderEngine
 {
 public:
-    enum { MAX_CACHED_GLYPH_SIZE = 128 };
+    enum { MAX_CACHED_GLYPH_SIZE = 128, MAX_CACHE_SIZE=2048 };
     FontRenderEngine()
     {
         ftlib = 0;
         hb_buf = hb_buffer_create();
         hb_buffer_guess_segment_properties(hb_buf);
         hb_uni_funcs = hb_unicode_funcs_get_default();
-        max_cache_size = 1000;
+        max_cache_size = (size_t)MAX_CACHE_SIZE;
     }
 
     ~FontRenderEngine()

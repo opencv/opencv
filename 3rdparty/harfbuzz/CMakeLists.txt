@@ -154,6 +154,9 @@ if (HB_HAVE_FREETYPE)
   list(APPEND project_headers ${PROJECT_SOURCE_DIR}/src/hb-ft.h)
 endif ()
 
+## Make Harfbuzz tiny
+add_definitions(-DHB_TINY)
+
 ## Atomic ops availability detection
 file(WRITE "${PROJECT_BINARY_DIR}/try_compile_intel_atomic_primitives.c"
 "		void memory_barrier (void) { __sync_synchronize (); }
