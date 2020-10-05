@@ -22,7 +22,7 @@ cv::GFrameDesc cv::MediaFrame::desc() const {
     return m->adapter->meta();
 }
 
-cv::MediaFrame::View cv::MediaFrame::access(Access code) {
+cv::MediaFrame::View cv::MediaFrame::access(Access code) const {
     return m->adapter->access(code);
 }
 

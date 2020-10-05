@@ -311,8 +311,10 @@ void cv::gimpl::GCompiler::validateInputMeta()
         // FIXME: Auto-generate methods like this from traits:
         case GProtoArg::index_of<cv::GMat>():
         case GProtoArg::index_of<cv::GMatP>():
-        case GProtoArg::index_of<cv::GFrame>():
             return util::holds_alternative<cv::GMatDesc>(meta);
+
+        case GProtoArg::index_of<cv::GFrame>():
+            return util::holds_alternative<cv::GFrameDesc>(meta);
 
         case GProtoArg::index_of<cv::GScalar>():
             return util::holds_alternative<cv::GScalarDesc>(meta);
