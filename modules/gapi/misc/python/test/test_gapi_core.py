@@ -20,8 +20,8 @@ class gapi_core_test(NewOpenCVTests):
     def test_add(self):
         # TODO: Extend to use any type and size here
         sz = (1280, 720)
-        in1 = np.random.randint(0, 100, sz).astype(np.uint8)
-        in2 = np.random.randint(0, 100, sz).astype(np.uint8)
+        in1 = np.random.randint(0, 100, sz)
+        in2 = np.random.randint(0, 100, sz)
 
         # OpenCV
         expected = in1 + in2
@@ -40,7 +40,7 @@ class gapi_core_test(NewOpenCVTests):
 
     def test_mean(self):
         sz = (1280, 720, 3)
-        in_mat = np.random.randint(0, 100, sz).astype(np.uint8)
+        in_mat = np.random.randint(0, 100, sz)
 
         # OpenCV
         expected = cv.mean(in_mat)
@@ -58,7 +58,7 @@ class gapi_core_test(NewOpenCVTests):
 
     def test_split3(self):
         sz = (1280, 720, 3)
-        in_mat = np.random.randint(0, 100, sz).astype(np.uint8)
+        in_mat = np.random.randint(0, 100, sz)
 
         # OpenCV
         expected = cv.split(in_mat)
