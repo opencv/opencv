@@ -71,7 +71,8 @@ public:
  * \addtogroup gapi_meta_args
  * @{
  */
-struct GAPI_EXPORTS_W_SIMPLE GMatDesc
+//struct GAPI_EXPORTS_W_SIMPLE GMatDesc
+struct GAPI_EXPORTS GMatDesc
 {
     // FIXME: Default initializers in C++14
     int depth;
@@ -89,7 +90,7 @@ struct GAPI_EXPORTS_W_SIMPLE GMatDesc
     GMatDesc(int d, std::vector<int> &&dd)
         : depth(d), chan(-1), size{-1,-1}, planar(false), dims(std::move(dd)) {}
 
-    GAPI_WRAP GMatDesc() : GMatDesc(-1, -1, {-1,-1}) {}
+    GMatDesc() : GMatDesc(-1, -1, {-1,-1}) {}
 
     inline bool operator== (const GMatDesc &rhs) const
     {

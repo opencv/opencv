@@ -3,9 +3,9 @@
 
 #ifdef HAVE_OPENCV_GAPI
 
+// NB: Python wrapper replaces :: with _ for classes
 using gapi_GKernelPackage = cv::gapi::GKernelPackage;
-using IStreamSourcePtr = cv::gapi::wip::IStreamSource::Ptr;
-using gapi_wip_IStreamSource_Ptr = IStreamSourcePtr;
+using gapi_wip_IStreamSource_Ptr = cv::gapi::wip::IStreamSourcePtr;
 
 template<>
 bool pyopencv_to(PyObject* obj, std::vector<GCompileArg>& value, const ArgInfo& info)
