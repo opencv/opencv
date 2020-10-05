@@ -75,7 +75,7 @@ TEST(TBBExecutor, SerialExecution)
         return str.str();
     };
     EXPECT_NE(thread_id[0], -10) << print_thread_ids();
-    EXPECT_EQ(thread_id.size(), std::count(thread_id.begin(), thread_id.end(), thread_id[0]))
+    EXPECT_EQ(thread_id.size(), static_cast<size_t>(std::count(thread_id.begin(), thread_id.end(), thread_id[0])))
         << print_thread_ids();
 }
 TEST(TBBExecutor, AsyncBasic)
@@ -163,7 +163,7 @@ TEST(TBBExecutor, Dependencies)
         <<"Not all "<< n <<" task executed ?\n"
         <<"execution order : " << print_execution_order();
 
-    for (int i=0; i <nodes.size(); i++){
+    for (size_t i=0; i <nodes.size(); i++){
         auto node_exec_order = tiles_exec_order[i];
         for (auto* dependee : nodes[i].dependees) {
             auto index = std::distance(&nodes.front(), dependee);

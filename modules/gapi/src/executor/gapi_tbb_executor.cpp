@@ -153,7 +153,7 @@ void cv::gimpl::parallel::execute(tbb::concurrent_priority_queue<tile_node* , ti
         async_tasks_t*         async_tasks_p  = nullptr;
 
        //C++11 does not allow explicit lambda capture initialization we need a copy constructor on this to capture it into lambda
-       master_thread_sleep_lock_t(master_thread_sleep_lock_t& src) : master_thread_sleep_lock_t(std::move(src)) {};
+       master_thread_sleep_lock_t(master_thread_sleep_lock_t const& src) : master_thread_sleep_lock_t(std::move(const_cast<master_thread_sleep_lock_t&>(src))) {};
        master_thread_sleep_lock_t(master_thread_sleep_lock_t&& source)             { std::swap(async_tasks_p, source.async_tasks_p);}
        master_thread_sleep_lock_t& operator=(master_thread_sleep_lock_t&& source)  { std::swap(async_tasks_p, source.async_tasks_p); return *this;}
 
@@ -297,7 +297,7 @@ void cv::gimpl::parallel::execute(tbb::concurrent_priority_queue<tile_node* , ti
                                 //unlock master thread waiting on conditional variable (if any) to pick up enqueued tasks
                                 //wake master only if there is new work and there were no work before (i.e. root->ref_count() was 1 and master was
                                 //waiting on cv for async tasks to complete)
-                                block_master.unlock((new_root_ref_count == 2) ? wake_tbb_master::yes : wake_tbb_master::no);
+                                master_lock.unlock((new_root_ref_count == 2) ? wake_tbb_master::yes : wake_tbb_master::no);
                             }
                         };
 
