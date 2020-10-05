@@ -50,6 +50,27 @@ namespace
             rgb2yuyv(in_line_p, out_line_p, in.cols);
         }
     }
+
+    // Draw random ellipses on given mat of given size and type
+    void initMatForFindingContours(cv::Mat& mat, const cv::Size& sz, int type)
+    {
+        cv::RNG rng(time(nullptr));
+        mat = cv::Mat(sz, type, cv::Scalar::all(0));
+        size_t numEllipses = rng.uniform(1, 10);
+
+        for( size_t i = 0; i < numEllipses; i++ )
+        {
+            cv::Point center;
+            cv::Size  axes;
+            center.x    = rng.uniform(0, sz.width);
+            center.y    = rng.uniform(0, sz.height);
+            axes.width  = rng.uniform(2, sz.width);
+            axes.height = rng.uniform(2, sz.height);
+            int angle   = rng.uniform(0, 180);
+            int color   = rng.uniform(1, 256);
+            cv::ellipse(mat, center, axes, angle, 0, 360, color, 1, FILLED);
+        }
+    }
 }
 
 TEST_P(Filter2DTest, AccuracyTest)
@@ -444,6 +465,52 @@ TEST_P(GoodFeaturesTest, AccuracyTest)
     // Comparison //////////////////////////////////////////////////////////////
     {
         EXPECT_TRUE(cmpF(outVecGAPI, outVecOCV));
+    }
+}
+
+TEST_P(FindContoursTest, AccuracyTest)
+{
+    std::vector<std::vector<cv::Point>> outCtsOCV,  outCtsGAPI;
+    std::vector<cv::Vec4i>              outHierOCV, outHierGAPI;
+
+    initMatForFindingContours(in_mat1, sz, type);
+    out_mat_gapi = cv::Mat(sz, type, cv::Scalar::all(0));
+    out_mat_ocv  = cv::Mat(sz, type, cv::Scalar::all(0));
+
+    // OpenCV code /////////////////////////////////////////////////////////////
+    {
+        if (calcHierarchy)
+            cv::findContours(in_mat1, outCtsOCV, outHierOCV, mode, method);
+        else
+            cv::findContours(in_mat1, outCtsOCV, mode, method);
+    }
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    cv::GArray<cv::GArray<cv::Point>> outCts;
+    if (calcHierarchy)
+    {
+        cv::GArray<cv::Vec4i> outHier;
+        std::tie(outCts, outHier) = cv::gapi::findContoursHierarchical(in, mode, method);
+        cv::GComputation c(GIn(in), GOut(outCts, outHier));
+        c.apply(gin(in_mat1), gout(outCtsGAPI, outHierGAPI), getCompileArgs());
+    }
+    else
+    {
+        outCts = cv::gapi::findContours(in, mode, method);
+        cv::GComputation c(GIn(in), GOut(outCts));
+        c.apply(gin(in_mat1), gout(outCtsGAPI), getCompileArgs());
+    }
+
+    // Comparison //////////////////////////////////////////////////////////////
+    EXPECT_TRUE(outCtsGAPI.size() == outCtsOCV.size());
+    cv::fillPoly(out_mat_ocv,  outCtsOCV,  cv::Scalar::all(1));
+    cv::fillPoly(out_mat_gapi, outCtsGAPI, cv::Scalar::all(1));
+    EXPECT_TRUE(AbsExact().to_compare_f()(out_mat_ocv, out_mat_gapi));
+    if (calcHierarchy)
+    {
+        EXPECT_TRUE(outCtsGAPI.size() == outCtsOCV.size());
+        EXPECT_TRUE(AbsExactVector<cv::Vec4i>().to_compare_f()(outHierOCV, outHierGAPI));
     }
 }
 

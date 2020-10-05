@@ -21,6 +21,8 @@
 @{
     @defgroup gapi_filters Graph API: Image filters
     @defgroup gapi_colorconvert Graph API: Converting image from one color space to another
+    @defgroup gapi_feature Graph API: Image Feature Detection
+    @defgroup gapi_shape Graph API: Image Structural Analysis and Shape Descriptors
 @}
  */
 
@@ -29,6 +31,7 @@ namespace cv { namespace gapi {
 namespace imgproc {
     using GMat2 = std::tuple<GMat,GMat>;
     using GMat3 = std::tuple<GMat,GMat,GMat>; // FIXME: how to avoid this?
+    using GFindContoursOutput = std::tuple<GArray<GArray<Point>>,GArray<Vec4i>>;
 
     G_TYPED_KERNEL(GFilter2D, <GMat(GMat,int,Mat,Point,Scalar,int,Scalar)>,"org.opencv.imgproc.filters.filter2D") {
         static GMatDesc outMeta(GMatDesc in, int ddepth, Mat, Point, Scalar, int, Scalar) {
@@ -110,7 +113,7 @@ namespace imgproc {
         }
     };
 
-    G_TYPED_KERNEL(GCanny, <GMat(GMat,double,double,int,bool)>, "org.opencv.imgproc.canny"){
+    G_TYPED_KERNEL(GCanny, <GMat(GMat,double,double,int,bool)>, "org.opencv.imgproc.feature.canny"){
         static GMatDesc outMeta(GMatDesc in, double, double, int, bool) {
             return in.withType(CV_8U, 1);
         }
@@ -118,17 +121,59 @@ namespace imgproc {
 
     G_TYPED_KERNEL(GGoodFeatures,
                    <cv::GArray<cv::Point2f>(GMat,int,double,double,Mat,int,bool,double)>,
-                   "org.opencv.imgproc.goodFeaturesToTrack") {
+                   "org.opencv.imgproc.feature.goodFeaturesToTrack") {
         static GArrayDesc outMeta(GMatDesc, int, double, double, const Mat&, int, bool, double) {
             return empty_array_desc();
+        }
+    };
+
+    G_TYPED_KERNEL(GFindContours,<GArray<GArray<Point>>(GMat,int,int,Point)>,
+                   "org.opencv.imgproc.shape.findContours")
+    {
+        static GArrayDesc outMeta(GMatDesc in, int mode, int, Point)
+        {
+            GAPI_Assert(in.chan == 1);
+            switch (mode)
+            {
+            case RETR_CCOMP:
+                GAPI_Assert(in.depth == CV_8U || in.depth == CV_32S);
+                break;
+            case RETR_FLOODFILL:
+                GAPI_Assert(in.depth == CV_32S);
+                break;
+            default:
+                GAPI_Assert(in.depth == CV_8U);
+                break;
+            }
+            return empty_array_desc();
+        }
+    };
+
+    G_TYPED_KERNEL(GFindContoursHierarchical,<GFindContoursOutput(GMat,int,int,Point)>,
+                   "org.opencv.imgproc.shape.findContoursHierarchical")
+    {
+        static std::tuple<GArrayDesc,GArrayDesc> outMeta(GMatDesc in, int mode, int, Point)
+        {
+            GAPI_Assert(in.chan == 1);
+            switch (mode)
+            {
+            case RETR_CCOMP:
+                GAPI_Assert(in.depth == CV_8U || in.depth == CV_32S);
+                break;
+            case RETR_FLOODFILL:
+                GAPI_Assert(in.depth == CV_32S);
+                break;
+            default:
+                GAPI_Assert(in.depth == CV_8U);
+                break;
+            }
+            return std::make_tuple(empty_array_desc(), empty_array_desc());
         }
     };
 
     G_TYPED_KERNEL(GBGR2RGB, <GMat(GMat)>, "org.opencv.imgproc.colorconvert.bgr2rgb") {
         static GMatDesc outMeta(GMatDesc in) {
             return in; // type still remains CV_8UC3;
-        }
-    };
 
     G_TYPED_KERNEL(GRGB2YUV, <GMat(GMat)>, "org.opencv.imgproc.colorconvert.rgb2yuv") {
         static GMatDesc outMeta(GMatDesc in) {
@@ -272,7 +317,7 @@ namespace imgproc {
         }
     };
 
-    G_TYPED_KERNEL(GNV12toRGBp, <GMatP(GMat,GMat)>, "org.opencv.colorconvert.imgproc.nv12torgbp") {
+    G_TYPED_KERNEL(GNV12toRGBp, <GMatP(GMat,GMat)>, "org.opencv.imgproc.colorconvert.nv12torgbp") {
         static GMatDesc outMeta(GMatDesc inY, GMatDesc inUV) {
             GAPI_Assert(inY.depth == CV_8U);
             GAPI_Assert(inUV.depth == CV_8U);
@@ -286,7 +331,7 @@ namespace imgproc {
         }
     };
 
-    G_TYPED_KERNEL(GNV12toGray, <GMat(GMat,GMat)>, "org.opencv.colorconvert.imgproc.nv12togray") {
+    G_TYPED_KERNEL(GNV12toGray, <GMat(GMat,GMat)>, "org.opencv.imgproc.colorconvert.nv12togray") {
         static GMatDesc outMeta(GMatDesc inY, GMatDesc inUV) {
             GAPI_Assert(inY.depth   == CV_8U);
             GAPI_Assert(inUV.depth  == CV_8U);
@@ -301,7 +346,7 @@ namespace imgproc {
         }
     };
 
-    G_TYPED_KERNEL(GNV12toBGRp, <GMatP(GMat,GMat)>, "org.opencv.colorconvert.imgproc.nv12tobgrp") {
+    G_TYPED_KERNEL(GNV12toBGRp, <GMatP(GMat,GMat)>, "org.opencv.imgproc.colorconvert.nv12tobgrp") {
         static GMatDesc outMeta(GMatDesc inY, GMatDesc inUV) {
             GAPI_Assert(inY.depth == CV_8U);
             GAPI_Assert(inUV.depth == CV_8U);
@@ -761,6 +806,10 @@ proportional to sigmaSpace.
 GAPI_EXPORTS GMat bilateralFilter(const GMat& src, int d, double sigmaColor, double sigmaSpace,
                                   int borderType = BORDER_DEFAULT);
 
+//! @} gapi_filters
+
+//! @addtogroup gapi_feature
+//! @{
 /** @brief Finds edges in an image using the Canny algorithm.
 
 The function finds edges in the input image and marks them in the output map edges using the
@@ -768,7 +817,7 @@ Canny algorithm. The smallest value between threshold1 and threshold2 is used fo
 largest value is used to find initial segments of strong edges. See
 <http://en.wikipedia.org/wiki/Canny_edge_detector>
 
-@note Function textual ID is "org.opencv.imgproc.filters.canny"
+@note Function textual ID is "org.opencv.imgproc.feature.canny"
 
 @param image 8-bit input image.
 @param threshold1 first threshold for the hysteresis procedure.
@@ -803,7 +852,7 @@ The function can be used to initialize a point-based tracker of an object.
 A \> B, the vector of returned corners with qualityLevel=A will be the prefix of the output vector
 with qualityLevel=B .
 
-@note Function textual ID is "org.opencv.imgproc.goodFeaturesToTrack"
+@note Function textual ID is "org.opencv.imgproc.feature.goodFeaturesToTrack"
 
 @param image Input 8-bit or floating-point 32-bit, single-channel image.
 @param maxCorners Maximum number of corners to return. If there are more corners than are found,
@@ -854,6 +903,72 @@ The algorithm normalizes the brightness and increases the contrast of the image.
  */
 GAPI_EXPORTS GMat equalizeHist(const GMat& src);
 
+//! @} gapi_feature
+
+//! @addtogroup gapi_shape
+//! @{
+/** @brief Finds contours in a binary image.
+
+The function retrieves contours from the binary image using the algorithm @cite Suzuki85 .
+The contours are a useful tool for shape analysis and object detection and recognition.
+See squares.cpp in the OpenCV sample directory.
+@note Since opencv 3.2 source image is not modified by this function.
+
+@note Function textual ID is "org.opencv.imgproc.shape.findContours"
+
+@param src Input gray-scale image @ref CV_8UC1. Non-zero pixels are treated as 1's. Zero
+pixels remain 0's, so the image is treated as binary . You can use #compare, #inRange, #threshold ,
+#adaptiveThreshold, #Canny, and others to create a binary image out of a grayscale or color one.
+If mode equals to #RETR_CCOMP, the input can also be a 32-bit integer
+image of labels ( @ref CV_32SC1 ). If #RETR_FLOODFILL then @ref CV_32SC1 is supported only.
+@param mode Contour retrieval mode, see #RetrievalModes
+@param method Contour approximation method, see #ContourApproximationModes
+@param offset Optional offset by which every contour point is shifted. This is useful if the
+contours are extracted from the image ROI and then they should be analyzed in the whole image
+context.
+
+@return GArray of detected contours. Each contour is stored as a GArray of points.
+ */
+GAPI_EXPORTS GArray<GArray<Point>>
+findContours(const GMat &src, const int mode, const int method, const Point &offset = Point());
+
+/** @brief Finds contours and their hierarchy in a binary image.
+
+The function retrieves contours from the binary image using the algorithm @cite Suzuki85
+and calculates their hierarchy.
+The contours are a useful tool for shape analysis and object detection and recognition.
+See squares.cpp in the OpenCV sample directory.
+@note Since opencv 3.2 source image is not modified by this function.
+
+@note Function textual ID is "org.opencv.imgproc.shape.findContoursHierarchical"
+
+@param src Input gray-scale image @ref CV_8UC1. Non-zero pixels are treated as 1's. Zero
+pixels remain 0's, so the image is treated as binary . You can use #compare, #inRange, #threshold ,
+#adaptiveThreshold, #Canny, and others to create a binary image out of a grayscale or color one.
+If mode equals to #RETR_CCOMP, the input can also be a 32-bit integer
+image of labels ( @ref CV_32SC1 ). If #RETR_FLOODFILL -- @ref CV_32SC1 supports only.
+@param mode Contour retrieval mode, see #RetrievalModes
+@param method Contour approximation method, see #ContourApproximationModes
+@param offset Optional offset by which every contour point is shifted. This is useful if the
+contours are extracted from the image ROI and then they should be analyzed in the whole image
+context.
+
+@return GArray of detected contours. Each contour is stored as a GArray of points.
+@return Optional output GArray of cv::Vec4i, containing information about the image topology.
+It has as many elements as the number of contours. For each i-th contour contours[i], the elements
+hierarchy[i][0] , hierarchy[i][1] , hierarchy[i][2] , and hierarchy[i][3] are set to 0-based
+indices in contours of the next and previous contours at the same hierarchical level, the first
+child contour and the parent contour, respectively. If for the contour i there are no next,
+previous, parent, or nested contours, the corresponding elements of hierarchy[i] will be negative.
+ */
+GAPI_EXPORTS std::tuple<GArray<GArray<Point>>,GArray<Vec4i>>
+findContoursHierarchical(const GMat &src, const int mode, const int method,
+                         const Point &offset = Point());
+
+//! @} gapi_shape
+
+//! @addtogroup gapi_colorconvert
+//! @{
 /** @brief Converts an image from BGR color space to RGB color space.
 
 The function converts an input image from BGR color space to RGB.
@@ -868,10 +983,6 @@ Output image is 8-bit unsigned 3-channel image @ref CV_8UC3.
 */
 GAPI_EXPORTS GMat BGR2RGB(const GMat& src);
 
-//! @} gapi_filters
-
-//! @addtogroup gapi_colorconvert
-//! @{
 /** @brief Converts an image from RGB color space to gray-scaled.
 The conventional ranges for R, G, and B channel values are 0 to 255.
 Resulting gray color value computed as

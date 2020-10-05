@@ -115,6 +115,18 @@ cv::GArray<cv::Point2f> goodFeaturesToTrack(const GMat& image, int maxCorners, d
                                       useHarrisDetector, k);
 }
 
+GArray<GArray<Point>>
+findContours(const GMat &src, const int mode, const int method, const Point &offset)
+{
+    return imgproc::GFindContours::on(src, mode, method, offset);
+}
+
+std::tuple<GArray<GArray<Point>>,GArray<Vec4i>>
+findContoursHierarchical(const GMat &src, const int mode, const int method, const Point &offset)
+{
+    return imgproc::GFindContoursHierarchical::on(src, mode, method, offset);
+}
+
 GMat BGR2RGB(const GMat& src)
 {
     return imgproc::GBGR2RGB::on(src);

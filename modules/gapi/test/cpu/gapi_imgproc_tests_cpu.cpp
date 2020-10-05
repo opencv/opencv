@@ -241,6 +241,34 @@ INSTANTIATE_TEST_CASE_P(GoodFeaturesInternalTestCPU, GoodFeaturesTest,
                                 Values(3),
                                 Values(true)));
 
+INSTANTIATE_TEST_CASE_P(FindContoursTestCPU, FindContoursTest,
+                        Combine(Values(IMGPROC_CPU),
+                                Values(cv::Size(1280, 720)),
+                                Values(CV_8UC1),
+                                Values(RETR_EXTERNAL),
+                                Values(CHAIN_APPROX_NONE),
+                                Values(false)));
+
+INSTANTIATE_TEST_CASE_P(FindContoursHierarchyTestCPU, FindContoursTest,
+                        Combine(Values(IMGPROC_CPU),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480)),
+                                Values(CV_8UC1),
+                                Values(RETR_EXTERNAL, RETR_LIST, RETR_CCOMP, RETR_TREE),
+                                Values(CHAIN_APPROX_NONE, CHAIN_APPROX_SIMPLE,
+                                       CHAIN_APPROX_TC89_L1, CHAIN_APPROX_TC89_KCOS),
+                                Values(true)));
+
+INSTANTIATE_TEST_CASE_P(FindContoursHierarchy32STestCPU, FindContoursTest,
+                        Combine(Values(IMGPROC_CPU),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480)),
+                                Values(CV_32SC1),
+                                Values(RETR_CCOMP, RETR_FLOODFILL),
+                                Values(CHAIN_APPROX_NONE, CHAIN_APPROX_SIMPLE,
+                                       CHAIN_APPROX_TC89_L1, CHAIN_APPROX_TC89_KCOS),
+                                Values(true)));
+
 INSTANTIATE_TEST_CASE_P(BGR2RGBTestCPU, BGR2RGBTest,
                         Combine(Values(CV_8UC3),
                                 Values(cv::Size(1280, 720),
