@@ -241,6 +241,13 @@ INSTANTIATE_TEST_CASE_P(GoodFeaturesInternalTestCPU, GoodFeaturesTest,
                                 Values(3),
                                 Values(true)));
 
+INSTANTIATE_TEST_CASE_P(BGR2RGBTestCPU, BGR2RGBTest,
+                        Combine(Values(CV_8UC3),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480)),
+                                Values(CV_8UC3),
+                                Values(IMGPROC_CPU),
+                                Values(AbsExact().to_compare_obj())));
 
 INSTANTIATE_TEST_CASE_P(RGB2GrayTestCPU, RGB2GrayTest,
                         Combine(Values(CV_8UC3),

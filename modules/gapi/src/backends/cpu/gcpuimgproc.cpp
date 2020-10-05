@@ -211,6 +211,14 @@ GAPI_OCV_KERNEL(GCPUGoodFeatures, cv::gapi::imgproc::GGoodFeatures)
     }
 };
 
+GAPI_OCV_KERNEL(GCPUBGR2RGB, cv::gapi::imgproc::GBGR2RGB)
+{
+    static void run(const cv::Mat& in, cv::Mat &out)
+    {
+        cv::cvtColor(in, out, cv::COLOR_BGR2RGB);
+    }
+};
+
 GAPI_OCV_KERNEL(GCPURGB2YUV, cv::gapi::imgproc::GRGB2YUV)
 {
     static void run(const cv::Mat& in, cv::Mat &out)
@@ -445,6 +453,7 @@ cv::gapi::GKernelPackage cv::gapi::imgproc::cpu::kernels()
         , GCPUCanny
         , GCPUGoodFeatures
         , GCPUEqualizeHist
+        , GCPUBGR2RGB
         , GCPURGB2YUV
         , GCPUYUV2RGB
         , GCPUNV12toRGB

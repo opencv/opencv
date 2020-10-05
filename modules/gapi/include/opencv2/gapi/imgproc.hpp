@@ -124,6 +124,12 @@ namespace imgproc {
         }
     };
 
+    G_TYPED_KERNEL(GBGR2RGB, <GMat(GMat)>, "org.opencv.imgproc.colorconvert.bgr2rgb") {
+        static GMatDesc outMeta(GMatDesc in) {
+            return in; // type still remains CV_8UC3;
+        }
+    };
+
     G_TYPED_KERNEL(GRGB2YUV, <GMat(GMat)>, "org.opencv.imgproc.colorconvert.rgb2yuv") {
         static GMatDesc outMeta(GMatDesc in) {
             return in; // type still remains CV_8UC3;
@@ -811,6 +817,20 @@ The algorithm normalizes the brightness and increases the contrast of the image.
 @param src Source 8-bit single channel image.
  */
 GAPI_EXPORTS GMat equalizeHist(const GMat& src);
+
+/** @brief Converts an image from BGR color space to RGB color space.
+
+The function converts an input image from BGR color space to RGB.
+The conventional ranges for B, G, and R channel values are 0 to 255.
+
+Output image must be 8-bit unsigned 3-channel image @ref CV_8UC3.
+
+@note Function textual ID is "org.opencv.imgproc.colorconvert.bgr2rgb"
+
+@param src input image: 8-bit unsigned 3-channel image @ref CV_8UC3.
+@sa BGR2RGB
+*/
+GAPI_EXPORTS GMat BGR2RGB(const GMat& src);
 
 //! @} gapi_filters
 

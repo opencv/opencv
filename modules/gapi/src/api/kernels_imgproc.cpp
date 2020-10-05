@@ -115,6 +115,11 @@ cv::GArray<cv::Point2f> goodFeaturesToTrack(const GMat& image, int maxCorners, d
                                       useHarrisDetector, k);
 }
 
+GMat BGR2RGB(const GMat& src)
+{
+    return imgproc::GBGR2RGB::on(src);
+}
+
 GMat RGB2Gray(const GMat& src)
 {
     return imgproc::GRGB2Gray::on(src);
