@@ -141,7 +141,7 @@ std::tuple<bool, cv::GRunArgs> cv::GStreamingCompiled::pull()
     }
 
     bool is_over = m_priv->pull(std::move(outs));
-    return {is_over, run_args};
+    return std::make_tuple(is_over, run_args);
 }
 
 bool cv::GStreamingCompiled::try_pull(cv::GRunArgsP &&outs)
