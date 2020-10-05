@@ -269,6 +269,23 @@ INSTANTIATE_TEST_CASE_P(FindContoursHierarchy32STestCPU, FindContoursTest,
                                        CHAIN_APPROX_TC89_L1, CHAIN_APPROX_TC89_KCOS),
                                 Values(true)));
 
+INSTANTIATE_TEST_CASE_P(BoundingRectMatTestCPU, BoundingRectMatTest,
+                        Combine(Values( CV_8UC1 ),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480),
+                                       cv::Size(128, 128)),
+                                Values(-1),
+                                Values(IMGPROC_CPU),
+                                Values(AbsToleranceRect(0).to_compare_obj())));
+
+INSTANTIATE_TEST_CASE_P(BoundingRectVectorTestCPU, BoundingRectVectorTest,
+                        Combine(Values( CV_32S, CV_32F ),
+                                Values(cv::Size(1280, 1),
+                                       cv::Size(128, 1)),
+                                Values(-1),
+                                Values(IMGPROC_CPU),
+                                Values(AbsToleranceRect(1e-5).to_compare_obj())));
+
 INSTANTIATE_TEST_CASE_P(BGR2RGBTestCPU, BGR2RGBTest,
                         Combine(Values(CV_8UC3),
                                 Values(cv::Size(1280, 720),

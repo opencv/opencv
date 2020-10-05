@@ -463,6 +463,7 @@ struct TestWithParamsSpecific : public TestWithParamsBase<ParamsSpecific<Specifi
 
 using compare_f = std::function<bool(const cv::Mat &a, const cv::Mat &b)>;
 using compare_scalar_f = std::function<bool(const cv::Scalar &a, const cv::Scalar &b)>;
+using compare_rect_f = std::function<bool(const cv::Rect &a, const cv::Rect &b)>;
 
 template<typename Elem>
 using compare_vector_f = std::function<bool(const std::vector<Elem> &a,
@@ -489,6 +490,7 @@ private:
 
 using CompareMats = CompareF<cv::Mat, cv::Mat>;
 using CompareScalars = CompareF<cv::Scalar, cv::Scalar>;
+using CompareRects = CompareF<cv::Rect, cv::Rect>;
 
 template<typename Elem>
 using CompareVectors = CompareF<std::vector<Elem>, std::vector<Elem>>;
@@ -532,6 +534,27 @@ struct WrappableScalar
         std::stringstream ss;
         ss << t;
         return CompareScalars(to_compare_f(), ss.str());
+    }
+};
+
+template<typename T>
+struct WrappableRect
+{
+    compare_rect_f to_compare_f()
+    {
+        T t = *static_cast<T*const>(this);
+        return [t](const cv::Rect &a, const cv::Rect &b)
+        {
+            return t(a, b);
+        };
+    }
+
+    CompareRects to_compare_obj()
+    {
+        T t = *static_cast<T*const>(this);
+        std::stringstream ss;
+        ss << t;
+        return CompareRects(to_compare_f(), ss.str());
     }
 };
 
@@ -719,13 +742,15 @@ public:
             double err_Inf = cv::norm(in1, in2, NORM_INF);
             if (err_Inf > _inf_tol)
             {
-                std::cout << "ToleranceColor error: err_Inf=" << err_Inf << "  tolerance=" << _inf_tol << std::endl;;
+                std::cout << "ToleranceColor error: err_Inf=" << err_Inf
+                          << "  tolerance=" << _inf_tol << std::endl;
                 return false;
             }
             double err = cv::norm(in1, in2, NORM_L1 | NORM_RELATIVE);
             if (err > _tol)
             {
-                std::cout << "ToleranceColor error: err=" << err << "  tolerance=" << _tol << std::endl;;
+                std::cout << "ToleranceColor error: err=" << err
+                          << "  tolerance=" << _tol << std::endl;
                 return false;
             }
         }
@@ -749,7 +774,8 @@ public:
         double abs_err = std::abs(in1[0] - in2[0]) / std::max(1.0, std::abs(in2[0]));
         if (abs_err > _tol)
         {
-            std::cout << "AbsToleranceScalar error: abs_err=" << abs_err << "  tolerance=" << _tol << " in1[0]" << in1[0] << " in2[0]" << in2[0] << std::endl;;
+            std::cout << "AbsToleranceScalar error: abs_err=" << abs_err << "  tolerance=" << _tol
+                      << " in1[0]" << in1[0] << " in2[0]" << in2[0] << std::endl;
             return false;
         }
         else
@@ -760,6 +786,42 @@ public:
     friend std::ostream& operator<<(std::ostream& os, const AbsToleranceScalar& obj)
     {
         return os << "AbsToleranceScalar(" << std::to_string(obj._tol) << ")";
+    }
+private:
+    double _tol;
+};
+
+class AbsToleranceRect : public WrappableRect<AbsToleranceRect>
+{
+public:
+    AbsToleranceRect(double tol) : _tol(tol) {}
+    bool operator() (const cv::Rect& in1, const cv::Rect& in2) const
+    {
+        double abs_err = (  static_cast<double>(std::abs(in1.x - in2.x))
+                                / std::max(1, std::abs(in2.x))
+                          + static_cast<double>(std::abs(in1.y - in2.y))
+                                / std::max(1, std::abs(in2.y))
+                          + static_cast<double>(std::abs(in1.width - in2.width))
+                                / std::max(1, std::abs(in2.width))
+                          + static_cast<double>(std::abs(in1.height - in2.height))
+                                / std::max(1, std::abs(in2.height))) / 4.0;
+        if (abs_err > _tol)
+        {
+            std::cout << "AbsToleranceRect error: abs_err=" << abs_err << "  tolerance=" << _tol
+                      << " in1.x="      << in1.x      << " in2.x="      << in2.x
+                      << " in1.y="      << in1.y      << " in2.y="      << in2.y
+                      << " in1.width="  << in1.width  << " in2.width="  << in2.width
+                      << " in1.height=" << in1.height << " in2.height=" << in2.height << std::endl;
+            return false;
+        }
+        else
+        {
+            return true;
+        }
+    }
+    friend std::ostream& operator<<(std::ostream& os, const AbsToleranceRect& obj)
+    {
+        return os << "AbsToleranceRect(" << std::to_string(obj._tol) << ")";
     }
 private:
     double _tol;
@@ -801,6 +863,11 @@ inline std::ostream& operator<<(std::ostream& os, const opencv_test::compare_f&)
 inline std::ostream& operator<<(std::ostream& os, const opencv_test::compare_scalar_f&)
 {
     return os << "compare_scalar_f";
+}
+
+inline std::ostream& operator<<(std::ostream& os, const opencv_test::compare_rect_f&)
+{
+    return os << "compare_rect_f";
 }
 
 template<typename Elem>

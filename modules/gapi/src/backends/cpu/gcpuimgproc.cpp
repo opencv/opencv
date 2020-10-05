@@ -229,6 +229,30 @@ GAPI_OCV_KERNEL(GCPUFindContoursHierarchical, cv::gapi::imgproc::GFindContoursHi
     }
 };
 
+GAPI_OCV_KERNEL(GCPUBoundingRectMat, cv::gapi::imgproc::GBoundingRectMat)
+{
+    static void run(const cv::Mat& in, cv::Rect& out)
+    {
+        out = cv::boundingRect(in);
+    }
+};
+
+GAPI_OCV_KERNEL(GCPUBoundingRectVector32S, cv::gapi::imgproc::GBoundingRectVector32S)
+{
+    static void run(const std::vector<cv::Point2i>& in, cv::Rect& out)
+    {
+        out = cv::boundingRect(in);
+    }
+};
+
+GAPI_OCV_KERNEL(GCPUBoundingRectVector32F, cv::gapi::imgproc::GBoundingRectVector32F)
+{
+    static void run(const std::vector<cv::Point2f>& in, cv::Rect& out)
+    {
+        out = cv::boundingRect(in);
+    }
+};
+
 GAPI_OCV_KERNEL(GCPUBGR2RGB, cv::gapi::imgproc::GBGR2RGB)
 {
     static void run(const cv::Mat& in, cv::Mat &out)
@@ -507,6 +531,9 @@ cv::gapi::GKernelPackage cv::gapi::imgproc::cpu::kernels()
         , GCPUFindContoursHierarchical
         , GCPUBGR2RGB
         , GCPURGB2YUV
+        , GCPUBoundingRectMat
+        , GCPUBoundingRectVector32S
+        , GCPUBoundingRectVector32F
         , GCPUYUV2RGB
         , GCPUBGR2I420
         , GCPURGB2I420

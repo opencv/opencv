@@ -514,6 +514,74 @@ TEST_P(FindContoursTest, AccuracyTest)
     }
 }
 
+TEST_P(BoundingRectMatTest, AccuracyTest)
+{
+    cv::Rect out_rect_gapi, out_rect_ocv;
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    auto out = cv::gapi::boundingRect(in);
+
+    cv::GComputation c(cv::GIn(in), cv::GOut(out));
+    c.apply(cv::gin(in_mat1), cv::gout(out_rect_gapi), getCompileArgs());
+    // OpenCV code /////////////////////////////////////////////////////////////
+    {
+        out_rect_ocv = cv::boundingRect(in_mat1);
+    }
+    // Comparison //////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(cmpF(out_rect_gapi, out_rect_ocv));
+    }
+}
+
+TEST_P(BoundingRectVectorTest, AccuracyTest)
+{
+    cv::RNG rng(time(nullptr));
+    cv::Rect out_rect_gapi, out_rect_ocv;
+
+    GAPI_Assert(type == CV_32S || type == CV_32F);
+    if (type == CV_32S)
+    {
+        std::vector<cv::Point2i> in_vectorS(sz.width);
+        for (int i = 0; i < sz.width; i++)
+            in_vectorS.push_back(cv::Point2i(rng(INT_MAX + 1U), rng(INT_MAX + 1U)));
+
+        // G-API code //////////////////////////////////////////////////////////////
+        cv::GArray<cv::Point2i> in;
+        auto out = cv::gapi::boundingRect(in);
+
+        cv::GComputation c(cv::GIn(in), cv::GOut(out));
+        c.apply(cv::gin(in_vectorS), cv::gout(out_rect_gapi), getCompileArgs());
+        // OpenCV code /////////////////////////////////////////////////////////////
+        {
+            out_rect_ocv = cv::boundingRect(in_vectorS);
+        }
+    }
+    else if (type == CV_32F)
+    {
+        std::vector<cv::Point2f> in_vectorF(sz.width);
+        for (int i = 0; i < sz.width; i++)
+            in_vectorF.push_back(cv::Point2f(exp(rng.uniform(-1, 6) * 3.0 * CV_LOG2),
+                                             exp(rng.uniform(-1, 6) * 3.0 * CV_LOG2)));
+
+        // G-API code //////////////////////////////////////////////////////////////
+        cv::GArray<cv::Point2f> in;
+        auto out = cv::gapi::boundingRect(in);
+
+        cv::GComputation c(cv::GIn(in), cv::GOut(out));
+        c.apply(cv::gin(in_vectorF), cv::gout(out_rect_gapi), getCompileArgs());
+        // OpenCV code /////////////////////////////////////////////////////////////
+        {
+            out_rect_ocv = cv::boundingRect(in_vectorF);
+        }
+    }
+
+    // Comparison //////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(cmpF(out_rect_gapi, out_rect_ocv));
+    }
+}
+
 TEST_P(BGR2RGBTest, AccuracyTest)
 {
     // G-API code //////////////////////////////////////////////////////////////

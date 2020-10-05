@@ -127,6 +127,21 @@ findContoursHierarchical(const GMat &src, const int mode, const int method, cons
     return imgproc::GFindContoursHierarchical::on(src, mode, method, offset);
 }
 
+GOpaque<Rect> boundingRect(const GMat& src)
+{
+    return imgproc::GBoundingRectMat::on(src);
+}
+
+GOpaque<Rect> boundingRect(const GArray<Point2i>& src)
+{
+    return imgproc::GBoundingRectVector32S::on(src);
+}
+
+GOpaque<Rect> boundingRect(const GArray<Point2f>& src)
+{
+    return imgproc::GBoundingRectVector32F::on(src);
+}
+
 GMat BGR2RGB(const GMat& src)
 {
     return imgproc::GBGR2RGB::on(src);

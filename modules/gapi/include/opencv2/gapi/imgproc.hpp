@@ -171,9 +171,33 @@ namespace imgproc {
         }
     };
 
+    G_TYPED_KERNEL(GBoundingRectMat, <GOpaque<Rect>(GMat)>,
+                   "org.opencv.imgproc.shape.boundingrectMat") {
+        static GOpaqueDesc outMeta(GMatDesc in) {
+            GAPI_Assert(in.depth == CV_8U && in.chan == 1);
+            return empty_gopaque_desc();
+        }
+    };
+
+    G_TYPED_KERNEL(GBoundingRectVector32S, <GOpaque<Rect>(GArray<Point2i>)>,
+                   "org.opencv.imgproc.shape.boundingrectVector32S") {
+        static GOpaqueDesc outMeta(GArrayDesc) {
+            return empty_gopaque_desc();
+        }
+    };
+
+    G_TYPED_KERNEL(GBoundingRectVector32F, <GOpaque<Rect>(GArray<Point2f>)>,
+                   "org.opencv.imgproc.shape.boundingrectVector32F") {
+        static GOpaqueDesc outMeta(GArrayDesc) {
+            return empty_gopaque_desc();
+        }
+    };
+
     G_TYPED_KERNEL(GBGR2RGB, <GMat(GMat)>, "org.opencv.imgproc.colorconvert.bgr2rgb") {
         static GMatDesc outMeta(GMatDesc in) {
             return in; // type still remains CV_8UC3;
+        }
+    };
 
     G_TYPED_KERNEL(GRGB2YUV, <GMat(GMat)>, "org.opencv.imgproc.colorconvert.rgb2yuv") {
         static GMatDesc outMeta(GMatDesc in) {
@@ -964,6 +988,32 @@ previous, parent, or nested contours, the corresponding elements of hierarchy[i]
 GAPI_EXPORTS std::tuple<GArray<GArray<Point>>,GArray<Vec4i>>
 findContoursHierarchical(const GMat &src, const int mode, const int method,
                          const Point &offset = Point());
+
+/** @brief Calculates the up-right bounding rectangle of a point set or non-zero pixels
+of gray-scale image.
+
+The function calculates and returns the minimal up-right bounding rectangle for the specified
+point set or non-zero pixels of gray-scale image.
+
+@note Function textual ID is "org.opencv.imgproc.shape.boundingrectMat"
+
+@param src Input gray-scale image @ref CV_8UC1.
+ */
+GAPI_EXPORTS GOpaque<Rect> boundingRect(const GMat& src);
+
+/** @overload
+@note Function textual ID is "org.opencv.imgproc.shape.boundingrectVector32S"
+
+@param src Input 2D point set, stored in std::vector<cv::Point2i>.
+ */
+GAPI_EXPORTS GOpaque<Rect> boundingRect(const GArray<Point2i>& src);
+
+/** @overload
+@note Function textual ID is "org.opencv.imgproc.shape.boundingrectVector32F"
+
+@param src Input 2D point set, stored in std::vector<cv::Point2f>.
+ */
+GAPI_EXPORTS GOpaque<Rect> boundingRect(const GArray<Point2f>& src);
 
 //! @} gapi_shape
 

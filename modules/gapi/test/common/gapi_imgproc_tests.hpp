@@ -66,6 +66,8 @@ GAPI_TEST_FIXTURE_SPEC_PARAMS(GoodFeaturesTest,
                               blockSize, useHarrisDetector)
 GAPI_TEST_FIXTURE_SPEC_PARAMS(FindContoursTest, FIXTURE_API(cv::Size,MatType2,int,int,bool),
                               5, sz, type, mode, method, calcHierarchy)
+GAPI_TEST_FIXTURE(BoundingRectMatTest, initMatrixRandU, FIXTURE_API(CompareRects), 1, cmpF)
+GAPI_TEST_FIXTURE(BoundingRectVectorTest, initNothing, FIXTURE_API(CompareRects), 1, cmpF)
 GAPI_TEST_FIXTURE(BGR2RGBTest, initMatrixRandN, FIXTURE_API(CompareMats), 1, cmpF)
 GAPI_TEST_FIXTURE(RGB2GrayTest, initMatrixRandN, FIXTURE_API(CompareMats), 1, cmpF)
 GAPI_TEST_FIXTURE(BGR2GrayTest, initMatrixRandN, FIXTURE_API(CompareMats), 1, cmpF)
