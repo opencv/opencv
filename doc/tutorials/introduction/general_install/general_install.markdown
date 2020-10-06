@@ -55,12 +55,12 @@ You can download a snapshot of repository in form of an archive or clone reposit
 
 To download snapshot archives:
 
-- Go to https://github.com/opencv/opencv/releases and download "Source code" archive from any release, e.g. 4.1.2.
+- Go to https://github.com/opencv/opencv/releases and download "Source code" archive from any release.
 - (optionally) Go to https://github.com/opencv/opencv_contrib/releases and download "Source code" archive for the same release as _opencv_
 - (optionally) Go to https://github.com/opencv/opencv_extra/releases and download "Source code" archive for the same release as _opencv_
 - Unpack all archives to some location
 
-To clone repositories run the following commands in console (_git_ must be installed):
+To clone repositories run the following commands in console (_git_ [must be installed](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)):
 
 ```.sh
 git clone https://github.com/opencv/opencv
@@ -78,6 +78,8 @@ git -C opencv_extra checkout <same-tag-as-opencv>
 @note
 If you want to build software using more than one repository, make sure all components are compatible with each other. For OpenCV it means that _opencv_ and _opencv_contrib_ repositories must be checked out at the same tag or that all snapshot archives are downloaded from the same release.
 
+@note
+When choosing which version to download take in account your target platform and development tools versions, latest versions of OpenCV can have build problems with very old compilers and vice versa. We recommend using latest release and fresh OS/compiler combination.
 
 ## Step 2: Configure {#tutorial_general_install_sources_2}
 
