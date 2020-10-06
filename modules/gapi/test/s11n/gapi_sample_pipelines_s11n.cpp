@@ -11,6 +11,7 @@
 #include <opencv2/gapi/s11n.hpp>
 #include "api/render_priv.hpp"
 #include "../common/gapi_render_tests.hpp"
+#include <opencv2/gapi/fluid/gfluidkernel.hpp>
 
 namespace opencv_test
 {
@@ -829,7 +830,7 @@ TEST(S11N, Pipeline_Add_FluidROI)
                                              cv::GFluidOutputRois>(s_comp_args);
 
     cv::Rect d_roi = cv::gapi::getCompileArg<cv::GFluidOutputRois>(d_comp_args).value().rois[0];
-    EXCPECT_EQ(roi, d_roi);
+    EXPECT_EQ(roi, d_roi);
 
     d_comp.apply(cv::gin(in_mat), cv::gout(out_mat_gapi),
                  cv::compile_args(cv::gapi::use_only{ cv::gapi::core::fluid::kernels() },

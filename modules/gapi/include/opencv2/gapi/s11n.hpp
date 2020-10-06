@@ -10,7 +10,6 @@
 #include <vector>
 #include <map>
 #include <unordered_map>
-#include <opencv2/gapi/s11n/base.hpp>
 #include <opencv2/gapi/gcomputation.hpp>
 
 namespace cv {
