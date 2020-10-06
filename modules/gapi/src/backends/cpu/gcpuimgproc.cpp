@@ -219,6 +219,22 @@ GAPI_OCV_KERNEL(GCPUBGR2RGB, cv::gapi::imgproc::GBGR2RGB)
     }
 };
 
+GAPI_OCV_KERNEL(GCPUBGR2I420, cv::gapi::imgproc::GBGR2I420)
+{
+    static void run(const cv::Mat& in, cv::Mat &out)
+    {
+        cv::cvtColor(in, out, cv::COLOR_BGR2YUV_I420);
+    }
+};
+
+GAPI_OCV_KERNEL(GCPURGB2I420, cv::gapi::imgproc::GRGB2I420)
+{
+    static void run(const cv::Mat& in, cv::Mat &out)
+    {
+        cv::cvtColor(in, out, cv::COLOR_RGB2YUV_I420);
+    }
+};
+
 GAPI_OCV_KERNEL(GCPURGB2YUV, cv::gapi::imgproc::GRGB2YUV)
 {
     static void run(const cv::Mat& in, cv::Mat &out)
@@ -456,6 +472,8 @@ cv::gapi::GKernelPackage cv::gapi::imgproc::cpu::kernels()
         , GCPUBGR2RGB
         , GCPURGB2YUV
         , GCPUYUV2RGB
+        , GCPUBGR2I420
+        , GCPURGB2I420
         , GCPUNV12toRGB
         , GCPUNV12toBGR
         , GCPURGB2Lab

@@ -165,6 +165,16 @@ GMat YUV2RGB(const GMat& src)
     return imgproc::GYUV2RGB::on(src);
 }
 
+GMat BGR2I420(const GMat& src)
+{
+    return imgproc::GBGR2I420::on(src);
+}
+
+GMat RGB2I420(const GMat& src)
+{
+    return imgproc::GRGB2I420::on(src);
+}
+
 GMat NV12toRGB(const GMat& src_y, const GMat& src_uv)
 {
     return imgproc::GNV12toRGB::on(src_y, src_uv);

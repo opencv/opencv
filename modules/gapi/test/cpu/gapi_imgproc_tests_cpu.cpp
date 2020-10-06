@@ -281,6 +281,22 @@ INSTANTIATE_TEST_CASE_P(YUV2RGBTestCPU, YUV2RGBTest,
                                 Values(IMGPROC_CPU),
                                 Values(AbsExact().to_compare_obj())));
 
+INSTANTIATE_TEST_CASE_P(BGR2I420TestCPU, BGR2I420Test,
+                        Combine(Values(CV_8UC3),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480)),
+                                Values(CV_8UC1),
+                                Values(IMGPROC_CPU),
+                                Values(AbsExact().to_compare_obj())));
+
+INSTANTIATE_TEST_CASE_P(RGB2I420TestCPU, RGB2I420Test,
+                        Combine(Values(CV_8UC3),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480)),
+                                Values(CV_8UC1),
+                                Values(IMGPROC_CPU),
+                                Values(AbsExact().to_compare_obj())));
+
 INSTANTIATE_TEST_CASE_P(NV12toRGBTestCPU, NV12toRGBTest,
                         Combine(Values(CV_8UC1),
                                 Values(cv::Size(1280, 720),
