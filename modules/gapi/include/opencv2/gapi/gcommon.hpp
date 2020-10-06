@@ -172,8 +172,8 @@ public:
         : tag(detail::CompileArgTag<typename std::decay<T>::type>::tag())
         , serialize(&cv::gapi::s11n::detail::wrap_serialize<T>::serialize)
         , arg(t)
-        {
-        }
+    {
+    }
 
     template<typename T> T& get()
     {
