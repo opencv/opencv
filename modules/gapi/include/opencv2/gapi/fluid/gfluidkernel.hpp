@@ -448,6 +448,7 @@ namespace detail {
         {
             os << r.rois;
         }
+
         static cv::GFluidOutputRois deserialize(IIStream &is)
         {
             cv::GFluidOutputRois r;

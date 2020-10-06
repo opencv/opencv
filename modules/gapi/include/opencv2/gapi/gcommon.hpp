@@ -173,7 +173,6 @@ public:
         , serialize(&cv::gapi::s11n::detail::wrap_serialize<T>::serialize)
         , arg(t)
         {
-
         }
 
     template<typename T> T& get()
