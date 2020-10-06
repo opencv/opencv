@@ -133,11 +133,11 @@ struct InOutInfo
  * @{
  * @brief G-API object used to collect network inputs
  */
-class GInferInputs
+class GAPI_EXPORTS GInferInputs
 {
 public:
-    cv::GMat operator[](const std::string& name) { return in_blobs[name]; }
-    const std::unordered_map<std::string, cv::GMat>& getBlobs() const { return in_blobs; }
+    cv::GMat operator[](const std::string& name);
+    const std::unordered_map<std::string, cv::GMat>& getBlobs() const;
 
 private:
     std::unordered_map<std::string, cv::GMat> in_blobs;
@@ -148,25 +148,11 @@ private:
  * @{
  * @brief G-API object used to collect network outputs
  */
-struct GInferOutputs
+struct GAPI_EXPORTS GInferOutputs
 {
 public:
-    GInferOutputs(std::shared_ptr<cv::GCall> call)
-        : m_call(std::move(call)), m_info(cv::util::any_cast<InOutInfo>(&m_call->params()))
-    {
-    };
-
-    cv::GMat at(const std::string& name)
-    {
-        auto it = out_blobs.find(name);
-        if (it == out_blobs.end()) {
-            m_call->kernel().outShapes.push_back(cv::GShape::GMAT);
-            int size = static_cast<int>(out_blobs.size());
-            it = out_blobs.emplace(name, m_call->yield(size)).first;
-            m_info->out_names.push_back(name);
-        }
-        return it->second;
-    };
+    GInferOutputs(std::shared_ptr<cv::GCall> call);
+    cv::GMat at(const std::string& name);
 
 private:
     std::shared_ptr<cv::GCall> m_call;
@@ -319,8 +305,7 @@ struct Generic { };
  * @param inputs networks's inputs
  * @return a GInferOutputs
  */
-template<typename Net, typename... Args>
-typename std::enable_if<std::is_same<Net, Generic>::value, GInferOutputs>::type
+template<typename T = Generic> GInferOutputs
 infer(const std::string& tag, const GInferInputs& inputs)
 {
     std::vector<GArg> input_args;
