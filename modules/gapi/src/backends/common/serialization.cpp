@@ -165,6 +165,25 @@ IOStream& operator<< (IOStream& os, const cv::Scalar &s) {
 IIStream& operator>> (IIStream& is, cv::Scalar& s) {
     return is >> s.val[0] >> s.val[1] >> s.val[2] >> s.val[3];
 }
+IOStream& operator<< (IOStream& os, const cv::RMat&) {
+    util::throw_error(std::logic_error("Serialization of RMat is not supported"));
+    return os;
+}
+IIStream& operator>> (IIStream& is, cv::RMat&) {
+    util::throw_error(std::logic_error("Serialization of RMat is not supported"));
+    return is;
+}
+
+IOStream& operator<< (IOStream& os, const cv::MediaFrame &) {
+    // Stub
+    GAPI_Assert(false && "cv::MediaFrame serialization is not supported!");
+    return os;
+}
+IIStream& operator>> (IIStream& is, cv::MediaFrame &) {
+    // Stub
+    GAPI_Assert(false && "cv::MediaFrame serialization is not supported!");
+    return is;
+}
 
 namespace
 {
@@ -555,6 +574,12 @@ IIStream& operator>> (IIStream& is, cv::GMatDesc &d) {
     return is >> d.depth >> d.chan >> d.size >> d.planar >> d.dims;
 }
 
+IOStream& operator<< (IOStream& os, const cv::GFrameDesc &d) {
+    return put_enum(os, d.fmt) << d.size;
+}
+IIStream& operator>> (IIStream& is,       cv::GFrameDesc &d) {
+    return get_enum(is, d.fmt) >> d.size;
+}
 
 IOStream& operator<< (IOStream& os, const cv::gimpl::RcDesc &rc) {
     // FIXME: HostCtor is not serialized!

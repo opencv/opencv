@@ -256,8 +256,6 @@ public:
     }
 
     void generateSample (std::vector<int> &sample) override {
-        // std::cout << "PROSAC sampler, termination length " << termination_length << "\n";
-
         if (kth_sample_number > growth_max_samples) {
             // if PROSAC has not converged to solution then do uniform sampling.
             random_gen->generateUniqueRandomSet(sample, sample_size, points_size);

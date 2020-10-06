@@ -42,7 +42,7 @@ private:
 };
 /** @} */
 
-enum class MediaFormat
+enum class MediaFormat: int
 {
     BGR = 0,
     NV12,
@@ -56,6 +56,8 @@ struct GAPI_EXPORTS GFrameDesc
 {
     MediaFormat fmt;
     cv::Size size;
+
+    bool operator== (const GFrameDesc &) const;
 };
 static inline GFrameDesc empty_gframe_desc() { return GFrameDesc{}; }
 /** @} */

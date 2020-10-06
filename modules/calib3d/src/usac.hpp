@@ -193,6 +193,26 @@ public:
     }
 };
 
+class GammaValues
+{
+    const double max_range_complete /*= 4.62*/, max_range_gamma /*= 1.52*/;
+    const int max_size_table /* = 3000 */;
+
+    std::vector<double> gamma_complete, gamma_incomplete, gamma;
+
+    GammaValues();  // use getSingleton()
+
+public:
+    static const GammaValues& getSingleton();
+
+    const std::vector<double>& getCompleteGammaValues() const;
+    const std::vector<double>& getIncompleteGammaValues() const;
+    const std::vector<double>& getGammaValues() const;
+    double getScaleOfGammaCompleteValues () const;
+    double getScaleOfGammaValues () const;
+    int getTableSize () const;
+};
+
 ////////////////////////////////////////// QUALITY ///////////////////////////////////////////
 class Quality : public Algorithm {
 public:
@@ -269,10 +289,6 @@ public:
     virtual bool isModelValid (const Mat &/*model*/, const std::vector<int> &/*sample*/) const {
         return true;
     }
-    virtual bool isModelValid (const Mat &/*model*/, const std::vector<int> &/*sample*/,
-            int /*sample_size*/) const {
-        return true;
-    }
     /*
      * Fix degenerate model.
      * Return true if model is degenerate, false - otherwise
@@ -286,7 +302,7 @@ public:
 
 class EpipolarGeometryDegeneracy : public Degeneracy {
 public:
-    static void recoverRank (Mat &model);
+    static void recoverRank (Mat &model, bool is_fundamental_mat);
     static Ptr<EpipolarGeometryDegeneracy> create (const Mat &points_, int sample_size_);
 };
 
@@ -405,9 +421,7 @@ struct SPRT_history {
     double epsilon, delta, A;
     // number of samples processed by test
     int tested_samples; // k
-    SPRT_history ()
-        : epsilon(0), delta(0), A(0)
-    {
+    SPRT_history () {
         tested_samples = 0;
     }
 };
@@ -465,7 +479,7 @@ class GridNeighborhoodGraph : public NeighborhoodGraph {
 public:
     static Ptr<GridNeighborhoodGraph> create(const Mat &points, int points_size,
             int cell_size_x_img1_, int cell_size_y_img1_,
-            int cell_size_x_img2_, int cell_size_y_img2_);
+            int cell_size_x_img2_, int cell_size_y_img2_, int max_neighbors);
 };
 
 ////////////////////////////////////// UNIFORM SAMPLER ////////////////////////////////////////////
@@ -568,7 +582,7 @@ namespace Math {
     // return skew symmetric matrix
     Matx33d getSkewSymmetric(const Vec3d &v_);
     // eliminate matrix with m rows and n columns to be upper triangular.
-    void eliminateUpperTriangular (std::vector<double> &a, int m, int n);
+    bool eliminateUpperTriangular (std::vector<double> &a, int m, int n);
     Matx33d rotVec2RotMat (const Vec3d &v);
     Vec3d rotMat2RotVec (const Matx33d &R);
 }
@@ -746,6 +760,7 @@ public:
     virtual int getLOInnerMaxIters() const = 0;
     virtual const std::vector<int> &getGridCellNumber () const = 0;
     virtual int getRandomGeneratorState () const = 0;
+    virtual int getMaxItersBeforeLO () const = 0;
 
     // setters
     virtual void setLocalOptimization (LocalOptimMethod lo_) = 0;
@@ -759,6 +774,7 @@ public:
     virtual void setLOIterations (int iters) = 0;
     virtual void setLOIterativeIters (int iters) = 0;
     virtual void setLOSampleSize (int lo_sample_size) = 0;
+    virtual void setThresholdMultiplierLO (double thr_mult) = 0;
     virtual void setRandomGeneratorState (int state) = 0;
 
     virtual void maskRequired (bool required) = 0;

@@ -128,9 +128,10 @@ cv::GArg cv::gimpl::GCPUExecutable::packArg(const GArg &arg)
     // No API placeholders allowed at this point
     // FIXME: this check has to be done somewhere in compilation stage.
     GAPI_Assert(   arg.kind != cv::detail::ArgKind::GMAT
-              && arg.kind != cv::detail::ArgKind::GSCALAR
-              && arg.kind != cv::detail::ArgKind::GARRAY
-              && arg.kind != cv::detail::ArgKind::GOPAQUE);
+                && arg.kind != cv::detail::ArgKind::GSCALAR
+                && arg.kind != cv::detail::ArgKind::GARRAY
+                && arg.kind != cv::detail::ArgKind::GOPAQUE
+                && arg.kind != cv::detail::ArgKind::GFRAME);
 
     if (arg.kind != cv::detail::ArgKind::GOBJREF)
     {
@@ -150,6 +151,7 @@ cv::GArg cv::gimpl::GCPUExecutable::packArg(const GArg &arg)
     //   (and constructed by either bindIn/Out or resetInternal)
     case GShape::GARRAY:  return GArg(m_res.slot<cv::detail::VectorRef>().at(ref.id));
     case GShape::GOPAQUE: return GArg(m_res.slot<cv::detail::OpaqueRef>().at(ref.id));
+    case GShape::GFRAME:  return GArg(m_res.slot<cv::MediaFrame>().at(ref.id));
     default:
         util::throw_error(std::logic_error("Unsupported GShape type"));
         break;
@@ -276,4 +278,8 @@ void cv::gimpl::GCPUExecutable::run(std::vector<InObj>  &&input_objs,
     } // for(m_script)
 
     for (auto &it : output_objs) magazine::writeBack(m_res, it.first, it.second);
+
+    // In/Out args clean-up is mandatory now with RMat
+    for (auto &it : input_objs) magazine::unbind(m_res, it.first);
+    for (auto &it : output_objs) magazine::unbind(m_res, it.first);
 }
