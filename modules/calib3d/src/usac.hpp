@@ -193,17 +193,24 @@ public:
     }
 };
 
-class GammaValues : public Algorithm {
+class GammaValues
+{
+    const double max_range_complete /*= 4.62*/, max_range_gamma /*= 1.52*/;
+    const int max_size_table /* = 3000 */;
+
+    std::vector<double> gamma_complete, gamma_incomplete, gamma;
+
+    GammaValues();  // use getSingleton()
+
 public:
-    virtual ~GammaValues() override = default;
-    static Ptr<GammaValues> create(int max_size_table=3000);
-    virtual const std::vector<double> &getCompleteGammaValues() const = 0;
-    virtual const std::vector<double> &getIncompleteGammaValues() const = 0;
-    virtual const std::vector<double> &getGammaValues() const = 0;
-    virtual double getScaleOfGammaCompleteValues () const = 0;
-    virtual double getScaleOfGammaValues () const = 0;
-    virtual int getTableSize () const = 0;
-    virtual Ptr<GammaValues> clone () const = 0;
+    static const GammaValues& getSingleton();
+
+    const std::vector<double>& getCompleteGammaValues() const;
+    const std::vector<double>& getIncompleteGammaValues() const;
+    const std::vector<double>& getGammaValues() const;
+    double getScaleOfGammaCompleteValues () const;
+    double getScaleOfGammaValues () const;
+    int getTableSize () const;
 };
 
 ////////////////////////////////////////// QUALITY ///////////////////////////////////////////
@@ -252,7 +259,6 @@ public:
 class MagsacQuality : public Quality {
 public:
     static Ptr<MagsacQuality> create(double maximum_thr, int points_size_,const Ptr<Error> &error_,
-                             const Ptr<GammaValues> &gamma_generator,
                              double tentative_inlier_threshold_, int DoF, double sigma_quantile,
                              double upper_incomplete_of_sigma_quantile,
                              double lower_incomplete_of_sigma_quantile, double C_);
@@ -654,7 +660,6 @@ public:
     static Ptr<SigmaConsensus>
     create(const Ptr<Estimator> &estimator_, const Ptr<Error> &error_,
            const Ptr<Quality> &quality, const Ptr<ModelVerifier> &verifier_,
-           const Ptr<GammaValues> &gamma_generator,
            int max_lo_sample_size, int number_of_irwls_iters_,
            int DoF, double sigma_quantile, double upper_incomplete_of_sigma_quantile,
            double C_, double maximum_thr);

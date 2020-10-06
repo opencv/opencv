@@ -351,7 +351,7 @@ private:
     const Ptr<Quality> quality;
     const Ptr<Error> error;
     const Ptr<ModelVerifier> verifier;
-    const Ptr<GammaValues> gamma_generator;
+    const GammaValues& gamma_generator;
     // The degrees of freedom of the data from which the model is estimated.
     // E.g., for models coming from point correspondences (x1,y1,x2,y2), it is 4.
     const int degrees_of_freedom;
@@ -395,18 +395,18 @@ public:
 
     SigmaConsensusImpl (const Ptr<Estimator> &estimator_, const Ptr<Error> &error_,
         const Ptr<Quality> &quality_, const Ptr<ModelVerifier> &verifier_,
-        const Ptr<GammaValues> &gamma_generator_,
         int max_lo_sample_size_, int number_of_irwls_iters_, int DoF,
         double sigma_quantile, double upper_incomplete_of_sigma_quantile, double C_,
         double maximum_thr) : estimator (estimator_), quality(quality_),
-          error (error_), verifier(verifier_), gamma_generator(gamma_generator_),
+          error (error_), verifier(verifier_),
+          gamma_generator(GammaValues::getSingleton()),
           degrees_of_freedom(DoF), k (sigma_quantile), C(C_),
           sample_size(estimator_->getMinimalSampleSize()),
           gamma_k (upper_incomplete_of_sigma_quantile), points_size (quality_->getPointsSize()),
           number_of_irwls_iters (number_of_irwls_iters_),
           maximum_threshold(maximum_thr), max_sigma (maximum_thr),
-          stored_gamma_values (gamma_generator_->getGammaValues()) {
-
+          stored_gamma_values(gamma_generator.getGammaValues())
+    {
         dof_minus_one_per_two = (degrees_of_freedom - 1.0) / 2.0;
         two_ad_dof = std::pow(2.0, dof_minus_one_per_two);
         C_times_two_ad_dof = C * two_ad_dof;
@@ -421,8 +421,8 @@ public:
         max_lo_sample_size = max_lo_sample_size_;
         sigma_weights = std::vector<double>(points_size);
         sigma_models = std::vector<Mat>(estimator->getMaxNumSolutionsNonMinimal());
-        stored_gamma_number_min1 = gamma_generator->getTableSize()-1;
-        scale_of_stored_gammas = gamma_generator->getScaleOfGammaValues();
+        stored_gamma_number_min1 = gamma_generator.getTableSize()-1;
+        scale_of_stored_gammas = gamma_generator.getScaleOfGammaValues();
     }
 
     // https://github.com/danini/magsac
@@ -549,18 +549,17 @@ public:
     }
     Ptr<LocalOptimization> clone(int state) const override {
         return makePtr<SigmaConsensusImpl>(estimator->clone(), error->clone(), quality->clone(),
-                verifier->clone(state), gamma_generator->clone(), max_lo_sample_size,
+                verifier->clone(state), max_lo_sample_size,
                 number_of_irwls_iters, degrees_of_freedom, k, gamma_k, C, maximum_threshold);
     }
 };
 Ptr<SigmaConsensus>
 SigmaConsensus::create(const Ptr<Estimator> &estimator_, const Ptr<Error> &error_,
         const Ptr<Quality> &quality, const Ptr<ModelVerifier> &verifier_,
-        const Ptr<GammaValues> &gamma_generator,
         int max_lo_sample_size, int number_of_irwls_iters_, int DoF,
         double sigma_quantile, double upper_incomplete_of_sigma_quantile, double C_,
         double maximum_thr) {
-    return makePtr<SigmaConsensusImpl>(estimator_, error_, quality, verifier_, gamma_generator,
+    return makePtr<SigmaConsensusImpl>(estimator_, error_, quality, verifier_,
             max_lo_sample_size, number_of_irwls_iters_, DoF, sigma_quantile,
             upper_incomplete_of_sigma_quantile, C_, maximum_thr);
 }

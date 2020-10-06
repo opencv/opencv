@@ -128,7 +128,7 @@ Ptr<MsacQuality> MsacQuality::create(int points_size_, double threshold_,
 class MagsacQualityImpl : public MagsacQuality {
 private:
     const Ptr<Error> error;
-    const Ptr<GammaValues> gamma_generator;
+    const GammaValues& gamma_generator;
     const int points_size;
 
     // for example, maximum standard deviation of noise.
@@ -177,17 +177,17 @@ private:
 public:
 
     MagsacQualityImpl (double maximum_thr, int points_size_, const Ptr<Error> &error_,
-                       const Ptr<GammaValues> &gamma_generator_,
                        double tentative_inlier_threshold_, int DoF, double sigma_quantile,
                        double upper_incomplete_of_sigma_quantile,
                        double lower_incomplete_of_sigma_quantile, double C_)
-            : error (error_), gamma_generator(gamma_generator_), points_size(points_size_),
+            : error (error_), gamma_generator(GammaValues::getSingleton()), points_size(points_size_),
             maximum_threshold_sqr(maximum_thr*maximum_thr),
             tentative_inlier_threshold(tentative_inlier_threshold_), degrees_of_freedom(DoF),
             k(sigma_quantile), C(C_), gamma_value_of_k (upper_incomplete_of_sigma_quantile),
             lower_gamma_value_of_k (lower_incomplete_of_sigma_quantile),
-            stored_complete_gamma_values (gamma_generator->getCompleteGammaValues()),
-            stored_lower_incomplete_gamma_values (gamma_generator->getIncompleteGammaValues()) {
+            stored_complete_gamma_values(gamma_generator.getCompleteGammaValues()),
+            stored_lower_incomplete_gamma_values(gamma_generator.getIncompleteGammaValues())
+    {
         previous_best_loss = std::numeric_limits<double>::max();
         squared_k_per_2 = k * k / 2.0;
         dof_minus_one_per_two = (degrees_of_freedom - 1.0) / 2.0;
@@ -199,8 +199,8 @@ public:
         maximum_sigma_2_per_2 = maximum_sigma_2 / 2.f;
         maximum_sigma_2_times_2 = maximum_sigma_2 * 2.f;
         two_ad_dof_plus_one_per_maximum_sigma = two_ad_dof_plus_one / maximum_sigma;
-        scale_of_stored_incomplete_gammas = gamma_generator->getScaleOfGammaCompleteValues();
-        stored_incomplete_gamma_number_min1 = gamma_generator->getTableSize()-1;
+        scale_of_stored_incomplete_gammas = gamma_generator.getScaleOfGammaCompleteValues();
+        stored_incomplete_gamma_number_min1 = gamma_generator.getTableSize()-1;
         max_loss = 1e-10;
         // MAGSAC maximum / minimum loss does not have to be in extrumum residuals
         // make 50 iterations to find maximum loss
@@ -282,16 +282,15 @@ public:
     int getPointsSize () const override { return points_size; }
     Ptr<Quality> clone () const override {
         return makePtr<MagsacQualityImpl>(maximum_sigma, points_size, error->clone(),
-                gamma_generator->clone(), tentative_inlier_threshold, degrees_of_freedom,
+                tentative_inlier_threshold, degrees_of_freedom,
                 k, gamma_value_of_k, lower_gamma_value_of_k, C);
     }
 };
 Ptr<MagsacQuality> MagsacQuality::create(double maximum_thr, int points_size_, const Ptr<Error> &error_,
-        const Ptr<GammaValues> &gamma_generator,
         double tentative_inlier_threshold_, int DoF, double sigma_quantile,
         double upper_incomplete_of_sigma_quantile,
         double lower_incomplete_of_sigma_quantile, double C_) {
-    return makePtr<MagsacQualityImpl>(maximum_thr, points_size_, error_, gamma_generator,
+    return makePtr<MagsacQualityImpl>(maximum_thr, points_size_, error_,
         tentative_inlier_threshold_, DoF, sigma_quantile, upper_incomplete_of_sigma_quantile,
         lower_incomplete_of_sigma_quantile, C_);
 }

@@ -884,17 +884,13 @@ bool run (const Ptr<const Model> &params, InputArray points1, InputArray points2
         default: CV_Error(cv::Error::StsNotImplemented , "Error metric is not implemented!");
     }
 
-    Ptr<GammaValues> gamma_generator;
-    if (params->getScore() == ScoreMethod::SCORE_METHOD_MAGSAC || params->getLO() == LocalOptimMethod::LOCAL_OPTIM_SIGMA)
-        gamma_generator = GammaValues::create();
-
     switch (params->getScore()) {
         case ScoreMethod::SCORE_METHOD_RANSAC :
             quality = RansacQuality::create(points_size, threshold, error); break;
         case ScoreMethod::SCORE_METHOD_MSAC :
             quality = MsacQuality::create(points_size, threshold, error); break;
         case ScoreMethod::SCORE_METHOD_MAGSAC :
-            quality = MagsacQuality::create(max_thr, points_size, error, gamma_generator,
+            quality = MagsacQuality::create(max_thr, points_size, error,
                 threshold, params->getDegreesOfFreedom(),  params->getSigmaQuantile(),
                 params->getUpperIncompleteOfSigmaQuantile(),
                 params->getLowerIncompleteOfSigmaQuantile(), params->getC()); break;
@@ -993,7 +989,7 @@ bool run (const Ptr<const Model> &params, InputArray points1, InputArray points2
                 lo = GraphCut::create(estimator, error, quality, graph, lo_sampler, threshold,
                    params->getGraphCutSpatialCoherenceTerm(), params->getLOInnerMaxIters()); break;
             case LocalOptimMethod::LOCAL_OPTIM_SIGMA:
-                lo = SigmaConsensus::create(estimator, error, quality, verifier, gamma_generator,
+                lo = SigmaConsensus::create(estimator, error, quality, verifier,
                      params->getLOSampleSize(), params->getLOInnerMaxIters(),
                      params->getDegreesOfFreedom(), params->getSigmaQuantile(),
                      params->getUpperIncompleteOfSigmaQuantile(), params->getC(), max_thr); break;
