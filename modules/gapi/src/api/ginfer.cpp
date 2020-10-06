@@ -26,6 +26,9 @@ std::vector<cv::gapi::GBackend> cv::gapi::GNetPackage::backends() const {
     return std::vector<cv::gapi::GBackend>(unique_set.begin(), unique_set.end());
 }
 
+// FIXME: Inference API is currently only available in full mode
+#if !defined(GAPI_STANDALONE)
+
 cv::GMat cv::GInferInputs::operator[](const std::string& name) {
     return in_blobs[name];
 }
@@ -51,3 +54,4 @@ cv::GMat cv::GInferOutputs::at(const std::string& name)
     }
     return it->second;
 };
+#endif // GAPI_STANDALONE
