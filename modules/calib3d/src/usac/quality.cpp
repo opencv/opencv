@@ -4,7 +4,6 @@
 
 #include "../precomp.hpp"
 #include "../usac.hpp"
-#include "gamma_values.hpp"
 
 namespace cv { namespace usac {
 int Quality::getInliers(const Ptr<Error> &error, const Mat &model, std::vector<int> &inliers, double threshold) {
@@ -129,6 +128,7 @@ Ptr<MsacQuality> MsacQuality::create(int points_size_, double threshold_,
 class MagsacQualityImpl : public MagsacQuality {
 private:
     const Ptr<Error> error;
+    const Ptr<GammaValues> gamma_generator;
     const int points_size;
 
     // for example, maximum standard deviation of noise.
@@ -172,17 +172,22 @@ private:
     double two_ad_dof_plus_one_per_maximum_sigma;
     double scale_of_stored_incomplete_gammas;
     double max_loss;
-    std::vector<double> stored_complete_gamma_values, stored_lower_incomplete_gamma_values;
+    const std::vector<double> &stored_complete_gamma_values, &stored_lower_incomplete_gamma_values;
+    int stored_incomplete_gamma_number_min1;
 public:
 
     MagsacQualityImpl (double maximum_thr, int points_size_, const Ptr<Error> &error_,
+                       const Ptr<GammaValues> &gamma_generator_,
                        double tentative_inlier_threshold_, int DoF, double sigma_quantile,
                        double upper_incomplete_of_sigma_quantile,
                        double lower_incomplete_of_sigma_quantile, double C_)
-            : error (error_), points_size(points_size_), maximum_threshold_sqr(maximum_thr*maximum_thr),
+            : error (error_), gamma_generator(gamma_generator_), points_size(points_size_),
+            maximum_threshold_sqr(maximum_thr*maximum_thr),
             tentative_inlier_threshold(tentative_inlier_threshold_), degrees_of_freedom(DoF),
             k(sigma_quantile), C(C_), gamma_value_of_k (upper_incomplete_of_sigma_quantile),
-            lower_gamma_value_of_k (lower_incomplete_of_sigma_quantile) {
+            lower_gamma_value_of_k (lower_incomplete_of_sigma_quantile),
+            stored_complete_gamma_values (gamma_generator->getCompleteGammaValues()),
+            stored_lower_incomplete_gamma_values (gamma_generator->getIncompleteGammaValues()) {
         previous_best_loss = std::numeric_limits<double>::max();
         squared_k_per_2 = k * k / 2.0;
         dof_minus_one_per_two = (degrees_of_freedom - 1.0) / 2.0;
@@ -194,30 +199,24 @@ public:
         maximum_sigma_2_per_2 = maximum_sigma_2 / 2.f;
         maximum_sigma_2_times_2 = maximum_sigma_2 * 2.f;
         two_ad_dof_plus_one_per_maximum_sigma = two_ad_dof_plus_one / maximum_sigma;
-        if (DoF == 2) {
-            scale_of_stored_incomplete_gammas = scale_of_stored_incomplete_gammas_n2;
-            stored_complete_gamma_values = std::vector<double>(stored_complete_gamma_values_n2,
-                      stored_complete_gamma_values_n2+stored_incomplete_gamma_number+1);
-            stored_lower_incomplete_gamma_values = std::vector<double>
-                    (stored_lower_incomplete_gamma_values_n2,
-                     stored_lower_incomplete_gamma_values_n2+stored_incomplete_gamma_number+1);
-        } else
-            CV_Error(cv::Error::StsNotImplemented, "Sigma values are not generated");
-
+        scale_of_stored_incomplete_gammas = gamma_generator->getScaleOfGammaCompleteValues();
+        stored_incomplete_gamma_number_min1 = gamma_generator->getTableSize()-1;
         max_loss = 1e-10;
         // MAGSAC maximum / minimum loss does not have to be in extrumum residuals
-        // make 30 iterations to find maximum loss
+        // make 50 iterations to find maximum loss
         const double step = maximum_threshold_sqr / 30;
-        for (double sqr_res = 0; sqr_res < maximum_threshold_sqr; sqr_res += step) {
+        double sqr_res = 0;
+        while (sqr_res < maximum_threshold_sqr) {
             int x=(int)round(scale_of_stored_incomplete_gammas * sqr_res
                         / maximum_sigma_2_times_2);
-            if (x >= stored_incomplete_gamma_number || x < 0 /*overflow*/)
-                x  = stored_incomplete_gamma_number;
+            if (x >= stored_incomplete_gamma_number_min1 || x < 0 /*overflow*/)
+                x  = stored_incomplete_gamma_number_min1;
             const double loss = two_ad_dof_plus_one_per_maximum_sigma * (maximum_sigma_2_per_2 *
                     stored_lower_incomplete_gamma_values[x] + sqr_res * 0.25 *
                     (stored_complete_gamma_values[x] - gamma_value_of_k));
             if (max_loss < loss)
                 max_loss = loss;
+            sqr_res += step;
         }
     }
 
@@ -235,8 +234,8 @@ public:
                 int x=(int)round(scale_of_stored_incomplete_gammas * squared_residual
                         / maximum_sigma_2_times_2);
                 // If the sought gamma value is not stored in the lookup, return the closest element
-                if (x >= stored_incomplete_gamma_number || x < 0 /*overflow*/)
-                    x  = stored_incomplete_gamma_number;
+                if (x >= stored_incomplete_gamma_number_min1 || x < 0 /*overflow*/)
+                    x  = stored_incomplete_gamma_number_min1;
                 // Calculate the loss implied by the current point
                 total_loss -= (1 - two_ad_dof_plus_one_per_maximum_sigma * (maximum_sigma_2_per_2 *
                     stored_lower_incomplete_gamma_values[x] + squared_residual * 0.25 *
@@ -258,8 +257,8 @@ public:
             if (squared_residual < maximum_threshold_sqr) {
                 int x=(int)round(scale_of_stored_incomplete_gammas * squared_residual
                                  / maximum_sigma_2_times_2);
-                if (x >= stored_incomplete_gamma_number || x < 0 /*overflow*/)
-                    x  = stored_incomplete_gamma_number;
+                if (x >= stored_incomplete_gamma_number_min1 || x < 0 /*overflow*/)
+                    x  = stored_incomplete_gamma_number_min1;
                 total_loss -= (1 - two_ad_dof_plus_one_per_maximum_sigma * (maximum_sigma_2_per_2 *
                         stored_lower_incomplete_gamma_values[x] + squared_residual * 0.25 *
                         (stored_complete_gamma_values[x] - gamma_value_of_k)) / max_loss);
@@ -283,15 +282,16 @@ public:
     int getPointsSize () const override { return points_size; }
     Ptr<Quality> clone () const override {
         return makePtr<MagsacQualityImpl>(maximum_sigma, points_size, error->clone(),
-                tentative_inlier_threshold, degrees_of_freedom, k, gamma_value_of_k,
-                lower_gamma_value_of_k, C);
+                gamma_generator->clone(), tentative_inlier_threshold, degrees_of_freedom,
+                k, gamma_value_of_k, lower_gamma_value_of_k, C);
     }
 };
 Ptr<MagsacQuality> MagsacQuality::create(double maximum_thr, int points_size_, const Ptr<Error> &error_,
+        const Ptr<GammaValues> &gamma_generator,
         double tentative_inlier_threshold_, int DoF, double sigma_quantile,
         double upper_incomplete_of_sigma_quantile,
         double lower_incomplete_of_sigma_quantile, double C_) {
-    return makePtr<MagsacQualityImpl>(maximum_thr, points_size_, error_,
+    return makePtr<MagsacQualityImpl>(maximum_thr, points_size_, error_, gamma_generator,
         tentative_inlier_threshold_, DoF, sigma_quantile, upper_incomplete_of_sigma_quantile,
         lower_incomplete_of_sigma_quantile, C_);
 }

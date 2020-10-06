@@ -5,7 +5,6 @@
 #include "../precomp.hpp"
 #include "../usac.hpp"
 #include "opencv2/imgproc/detail/gcgraph.hpp"
-#include "gamma_values.hpp"
 
 namespace cv { namespace usac {
 class GraphCutImpl : public GraphCut {
@@ -118,6 +117,7 @@ private:
 
         std::fill(used_edges.begin(), used_edges.end(), false);
 
+        bool has_edges = false;
         // Iterate through all points and set their edges
         for (int point_idx = 0; point_idx < points_size; ++point_idx) {
             energy = energies[point_idx];
@@ -148,9 +148,11 @@ private:
                     graph.addEdges(point_idx, actual_neighbor_idx, b + c, 0);
                 } else
                     graph.addEdges(point_idx, actual_neighbor_idx, b, c);
+                has_edges = true;
             }
         }
-
+        if (! has_edges)
+            return quality->getInliers(model, labeling_inliers);
         graph.maxFlow();
 
         int inlier_number = 0;
@@ -347,6 +349,7 @@ private:
     const Ptr<Quality> quality;
     const Ptr<Error> error;
     const Ptr<ModelVerifier> verifier;
+    const Ptr<GammaValues> gamma_generator;
     // The degrees of freedom of the data from which the model is estimated.
     // E.g., for models coming from point correspondences (x1,y1,x2,y2), it is 4.
     const int degrees_of_freedom;
@@ -371,37 +374,40 @@ private:
     const double gamma_k;
     // Calculating the lower incomplete gamma value of (DoF - 1) / 2 which will be used for the estimation and,
     // due to being constant, it is better to calculate it a priori.
-    double gamma_difference, max_sigma_sqr;
+    double max_sigma_sqr;
     const int points_size, number_of_irwls_iters;
     const double maximum_threshold, max_sigma;
 
-    std::vector<double> sqr_residuals, sigma_weights, stored_gamma_values;
+    std::vector<double> sqr_residuals, sigma_weights;
     std::vector<int> sqr_residuals_idxs;
     // Models fit by weighted least-squares fitting
     std::vector<Mat> sigma_models;
     // Points used in the weighted least-squares fitting
     std::vector<int> sigma_inliers;
     // Weights used in the the weighted least-squares fitting
-    int max_lo_sample_size;
+    int max_lo_sample_size, stored_gamma_number_min1;
     double scale_of_stored_gammas;
     RNG rng;
+    const std::vector<double> &stored_gamma_values;
 public:
 
     SigmaConsensusImpl (const Ptr<Estimator> &estimator_, const Ptr<Error> &error_,
         const Ptr<Quality> &quality_, const Ptr<ModelVerifier> &verifier_,
+        const Ptr<GammaValues> &gamma_generator_,
         int max_lo_sample_size_, int number_of_irwls_iters_, int DoF,
         double sigma_quantile, double upper_incomplete_of_sigma_quantile, double C_,
         double maximum_thr) : estimator (estimator_), quality(quality_),
-          error (error_), verifier(verifier_), degrees_of_freedom(DoF),
-          k (sigma_quantile), C(C_), sample_size(estimator_->getMinimalSampleSize()),
+          error (error_), verifier(verifier_), gamma_generator(gamma_generator_),
+          degrees_of_freedom(DoF), k (sigma_quantile), C(C_),
+          sample_size(estimator_->getMinimalSampleSize()),
           gamma_k (upper_incomplete_of_sigma_quantile), points_size (quality_->getPointsSize()),
           number_of_irwls_iters (number_of_irwls_iters_),
-          maximum_threshold(maximum_thr), max_sigma (maximum_thr) {
+          maximum_threshold(maximum_thr), max_sigma (maximum_thr),
+          stored_gamma_values (gamma_generator_->getGammaValues()) {
 
         dof_minus_one_per_two = (degrees_of_freedom - 1.0) / 2.0;
         two_ad_dof = std::pow(2.0, dof_minus_one_per_two);
         C_times_two_ad_dof = C * two_ad_dof;
-        gamma_difference = tgamma(dof_minus_one_per_two) - gamma_k;
         // Calculate 2 * \sigma_{max}^2 a priori
         squared_sigma_max_2 = max_sigma * max_sigma * 2.0;
         // Divide C * 2^(DoF - 1) by \sigma_{max} a priori
@@ -413,13 +419,8 @@ public:
         max_lo_sample_size = max_lo_sample_size_;
         sigma_weights = std::vector<double>(points_size);
         sigma_models = std::vector<Mat>(estimator->getMaxNumSolutionsNonMinimal());
-
-        if (DoF == 2) {
-            scale_of_stored_gammas = scale_of_stored_gammas_n2;
-            stored_gamma_values = std::vector<double>(stored_gamma_values_n2,
-                    stored_gamma_values_n2+stored_gamma_number+1);
-        } else
-            CV_Error(cv::Error::StsNotImplemented, "Sigma values are not generated");
+        stored_gamma_number_min1 = gamma_generator->getTableSize()-1;
+        scale_of_stored_gammas = gamma_generator->getScaleOfGammaValues();
     }
 
     // https://github.com/danini/magsac
@@ -494,8 +495,8 @@ public:
                         / squared_sigma_max_2);
 
                 // If the sought gamma value is not stored in the lookup, return the closest element
-                if (x >= stored_gamma_number || x < 0 /*overflow*/) // actual number of gamma values is 1 more, so >=
-                    x  = stored_gamma_number;
+                if (x >= stored_gamma_number_min1 || x < 0 /*overflow*/) // actual number of gamma values is 1 more, so >=
+                    x  = stored_gamma_number_min1;
 
                 sigma_inliers[sigma_inliers_cnt] = sqr_residuals_idxs[i]; // store index of point for LSQ
                 sigma_weights[sigma_inliers_cnt++] = one_over_sigma * (stored_gamma_values[x] - gamma_k);
@@ -546,19 +547,20 @@ public:
     }
     Ptr<LocalOptimization> clone(int state) const override {
         return makePtr<SigmaConsensusImpl>(estimator->clone(), error->clone(), quality->clone(),
-                verifier->clone(state), max_lo_sample_size, number_of_irwls_iters,
-                degrees_of_freedom, k, gamma_k, C, maximum_threshold);
+                verifier->clone(state), gamma_generator->clone(), max_lo_sample_size,
+                number_of_irwls_iters, degrees_of_freedom, k, gamma_k, C, maximum_threshold);
     }
 };
 Ptr<SigmaConsensus>
 SigmaConsensus::create(const Ptr<Estimator> &estimator_, const Ptr<Error> &error_,
         const Ptr<Quality> &quality, const Ptr<ModelVerifier> &verifier_,
+        const Ptr<GammaValues> &gamma_generator,
         int max_lo_sample_size, int number_of_irwls_iters_, int DoF,
         double sigma_quantile, double upper_incomplete_of_sigma_quantile, double C_,
         double maximum_thr) {
-    return makePtr<SigmaConsensusImpl>(estimator_, error_, quality, verifier_, max_lo_sample_size,
-            number_of_irwls_iters_, DoF, sigma_quantile, upper_incomplete_of_sigma_quantile,
-            C_, maximum_thr);
+    return makePtr<SigmaConsensusImpl>(estimator_, error_, quality, verifier_, gamma_generator,
+            max_lo_sample_size, number_of_irwls_iters_, DoF, sigma_quantile,
+            upper_incomplete_of_sigma_quantile, C_, maximum_thr);
 }
 
 /////////////////////////////////////////// FINAL MODEL POLISHER ////////////////////////

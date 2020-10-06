@@ -120,7 +120,7 @@ public:
         const bool LO = params->getLO() != LocalOptimMethod::LOCAL_OPTIM_NULL;
         const bool is_magsac = params->getLO() == LocalOptimMethod::LOCAL_OPTIM_SIGMA;
         const int max_hyp_test_before_ver = params->getMaxNumHypothesisToTestBeforeRejection();
-        const int repeat_magsac = 10;
+        const int repeat_magsac = 10, max_iters_before_LO = params->getMaxItersBeforeLO();
         Score best_score;
         Mat best_model;
         int final_iters;
@@ -137,7 +137,7 @@ public:
                 // update upper bound of iterations
                 return _termination_criteria->update(best_model, best_score.inlier_number);
             };
-
+            bool was_LO_run = false;
             Mat non_degenerate_model, lo_model;
             Score current_score, lo_score, non_denegenerate_model_score;
 
@@ -177,9 +177,10 @@ public:
                             else continue;
                         } else max_iters = update_best(models[i], current_score);
 
-                        if (LO) {
+                        if (LO && iters >= max_iters_before_LO) {
                             // do magsac if it wasn't already run
                             if (is_magsac && iters % repeat_magsac == 0 && iters >= max_hyp_test_before_ver) continue; // magsac has already run
+                            was_LO_run = true;
                             // update model by Local optimization
                             if (_local_optimization->refineModel
                                     (best_model, best_score, lo_model, lo_score)) {
@@ -192,6 +193,13 @@ public:
                             break;
                     } // end of if so far the best score
                 } // end loop of number of models
+                if (LO && !was_LO_run && iters >= max_iters_before_LO) {
+                    was_LO_run = true;
+                    if (_local_optimization->refineModel(best_model, best_score, lo_model, lo_score))
+                        if (lo_score.isBetter(best_score)){
+                            max_iters = update_best(lo_model, lo_score);
+                        }
+                }
             } // end main while loop
 
             final_iters = iters;
@@ -244,6 +252,7 @@ public:
                             (best_model_thread, best_score_thread.inlier_number);
                 };
 
+                bool was_LO_run = false;
                 for (iters = 0; iters < max_iters && !success; iters++) {
                     success = num_hypothesis_tested++ > max_iters;
 
@@ -299,9 +308,10 @@ public:
                             } else
                                 max_iters = update_best(current_score, models[i]);
 
-                            if (LO) {
+                            if (LO && iters >= max_iters_before_LO) {
                                 // do magsac if it wasn't already run
                                 if (is_magsac && iters % repeat_magsac == 0 && iters >= max_hyp_test_before_ver) continue;
+                                was_LO_run = true;
                                 // update model by Local optimizaion
                                 if (local_optimization->refineModel
                                        (best_model_thread, best_score_thread, lo_model, lo_score))
@@ -314,6 +324,13 @@ public:
                             }
                         } // end of if so far the best score
                     } // end loop of number of models
+                    if (LO && !was_LO_run && iters >= max_iters_before_LO) {
+                        was_LO_run = true;
+                        if (_local_optimization->refineModel(best_model, best_score, lo_model, lo_score))
+                            if (lo_score.isBetter(best_score)){
+                                max_iters = update_best(lo_score, lo_model);
+                            }
+                    }
                 } // end of loop over iters
             }}); // end parallel
             ///////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -576,7 +593,7 @@ private:
 
     // Local Optimization parameters
     LocalOptimMethod lo = LocalOptimMethod ::LOCAL_OPTIM_INNER_AND_ITER_LO;
-    int lo_sample_size=12, lo_inner_iterations=15, lo_iterative_iterations=8,
+    int lo_sample_size=16, lo_inner_iterations=15, lo_iterative_iterations=8,
             lo_thr_multiplier=15, lo_iter_sample_size = 30;
 
     // Graph cut parameters
@@ -591,7 +608,7 @@ private:
 
     // sprt parameters
     // lower bound estimate is 1% of inliers
-    double sprt_eps = 0.01, sprt_delta = 0.009, avg_num_models, time_for_model_est;
+    double sprt_eps = 0.01, sprt_delta = 0.008, avg_num_models, time_for_model_est;
 
     // estimator error
     ErrorMetric est_error;
@@ -606,6 +623,7 @@ private:
 
     bool need_mask = true, is_parallel = false;
     int random_generator_state = 0;
+    const int max_iters_before_LO = 100;
 
     // magsac parameters:
     int DoF = 2;
@@ -652,7 +670,7 @@ public:
             k_nearest_neighbors = 2;
         }
         if (estimator == EstimationMethod::Fundamental || estimator == EstimationMethod::Essential) {
-            lo_sample_size = 14;
+            lo_sample_size = 21;
             lo_thr_multiplier = 10;
         }
         if (estimator == EstimationMethod::Homography)
@@ -708,6 +726,7 @@ public:
     VerificationMethod getVerifier () const override { return verifier; }
     SamplingMethod getSampler () const override { return sampler; }
     int getRandomGeneratorState () const override { return random_generator_state; }
+    int getMaxItersBeforeLO () const override { return max_iters_before_LO; }
     double getSPRTdelta () const override { return sprt_delta; }
     double getSPRTepsilon () const override { return sprt_eps; }
     double getSPRTavgNumModels () const override { return avg_num_models; }
@@ -865,13 +884,17 @@ bool run (const Ptr<const Model> &params, InputArray points1, InputArray points2
         default: CV_Error(cv::Error::StsNotImplemented , "Error metric is not implemented!");
     }
 
+    Ptr<GammaValues> gamma_generator;
+    if (params->getScore() == ScoreMethod::SCORE_METHOD_MAGSAC || params->getLO() == LocalOptimMethod::LOCAL_OPTIM_SIGMA)
+        gamma_generator = GammaValues::create();
+
     switch (params->getScore()) {
         case ScoreMethod::SCORE_METHOD_RANSAC :
             quality = RansacQuality::create(points_size, threshold, error); break;
         case ScoreMethod::SCORE_METHOD_MSAC :
             quality = MsacQuality::create(points_size, threshold, error); break;
         case ScoreMethod::SCORE_METHOD_MAGSAC :
-            quality = MagsacQuality::create(max_thr, points_size, error,
+            quality = MagsacQuality::create(max_thr, points_size, error, gamma_generator,
                 threshold, params->getDegreesOfFreedom(),  params->getSigmaQuantile(),
                 params->getUpperIncompleteOfSigmaQuantile(),
                 params->getLowerIncompleteOfSigmaQuantile(), params->getC()); break;
@@ -970,8 +993,9 @@ bool run (const Ptr<const Model> &params, InputArray points1, InputArray points2
                 lo = GraphCut::create(estimator, error, quality, graph, lo_sampler, threshold,
                    params->getGraphCutSpatialCoherenceTerm(), params->getLOInnerMaxIters()); break;
             case LocalOptimMethod::LOCAL_OPTIM_SIGMA:
-                lo = SigmaConsensus::create(estimator, error, quality, verifier, params->getLOSampleSize(),
-                     params->getLOInnerMaxIters(), params->getDegreesOfFreedom(), params->getSigmaQuantile(),
+                lo = SigmaConsensus::create(estimator, error, quality, verifier, gamma_generator,
+                     params->getLOSampleSize(), params->getLOInnerMaxIters(),
+                     params->getDegreesOfFreedom(), params->getSigmaQuantile(),
                      params->getUpperIncompleteOfSigmaQuantile(), params->getC(), max_thr); break;
             default: CV_Error(cv::Error::StsNotImplemented , "Local Optimization is not implemented!");
         }
