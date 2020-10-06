@@ -69,13 +69,7 @@ public:
     }
     int estimateModelNonMinimalSample(const std::vector<int> &sample, int sample_size,
             std::vector<Mat> &models, const std::vector<double> &weights) const override {
-        std::vector<Mat> Fs;
-        const int num_est_models = non_min_solver->estimate(sample, sample_size, Fs, weights);
-        int valid_models_count = 0;
-        for (int i = 0; i < num_est_models; i++)
-            if (degeneracy->isModelValid (Fs[i], sample, sample_size))
-                models[valid_models_count++] = Fs[i];
-        return valid_models_count;
+        return non_min_solver->estimate(sample, sample_size, models, weights);
     }
     int getMaxNumSolutions () const override {
         return min_solver->getMaxNumberOfSolutions();
@@ -123,13 +117,7 @@ public:
 
     int estimateModelNonMinimalSample(const std::vector<int> &sample, int sample_size,
             std::vector<Mat> &models, const std::vector<double> &weights) const override {
-        std::vector<Mat> Es;
-        const int num_est_models = non_min_solver->estimate(sample, sample_size, Es, weights);
-        int valid_models_count = 0;
-        for (int i = 0; i < num_est_models; i++)
-            if (degeneracy->isModelValid (Es[i], sample, sample_size))
-                models[valid_models_count++] = Es[i];
-        return valid_models_count;
+        return non_min_solver->estimate(sample, sample_size, models, weights);
     };
     int getMaxNumSolutions () const override {
         return min_solver->getMaxNumberOfSolutions();
@@ -231,7 +219,7 @@ Ptr<PnPEstimator> PnPEstimator::create (const Ptr<MinimalSolver> &min_solver_,
 
 ///////////////////////////////////////////// ERROR /////////////////////////////////////////
 // Symmetric Reprojection Error
-class ReprojectedErrorSymmetricImpl : public ReprojectionErrorSymmetric {
+class ReprojectionErrorSymmetricImpl : public ReprojectionErrorSymmetric {
 private:
     const Mat * points_mat;
     const float * const points;
@@ -239,7 +227,7 @@ private:
     float minv11, minv12, minv13, minv21, minv22, minv23, minv31, minv32, minv33;
     std::vector<float> errors;
 public:
-    explicit ReprojectedErrorSymmetricImpl (const Mat &points_)
+    explicit ReprojectionErrorSymmetricImpl (const Mat &points_)
         : points_mat(&points_), points ((float *) points_.data)
         , m11(0), m12(0), m13(0), m21(0), m22(0), m23(0), m31(0), m32(0), m33(0)
         , minv11(0), minv12(0), minv13(0), minv21(0), minv22(0), minv23(0), minv31(0), minv32(0), minv33(0)
@@ -287,23 +275,23 @@ public:
         return errors;
     }
     Ptr<Error> clone () const override {
-        return makePtr<ReprojectedErrorSymmetricImpl>(*points_mat);
+        return makePtr<ReprojectionErrorSymmetricImpl>(*points_mat);
     }
 };
 Ptr<ReprojectionErrorSymmetric>
 ReprojectionErrorSymmetric::create(const Mat &points) {
-    return makePtr<ReprojectedErrorSymmetricImpl>(points);
+    return makePtr<ReprojectionErrorSymmetricImpl>(points);
 }
 
 // Forward Reprojection Error
-class ReprojectedErrorForwardImpl : public ReprojectionErrorForward {
+class ReprojectionErrorForwardImpl : public ReprojectionErrorForward {
 private:
     const Mat * points_mat;
     const float * const points;
     float m11, m12, m13, m21, m22, m23, m31, m32, m33;
     std::vector<float> errors;
 public:
-    explicit ReprojectedErrorForwardImpl (const Mat &points_)
+    explicit ReprojectionErrorForwardImpl (const Mat &points_)
         : points_mat(&points_), points ((float *)points_.data)
         , m11(0), m12(0), m13(0), m21(0), m22(0), m23(0), m31(0), m32(0), m33(0)
         , errors(points_.rows)
@@ -338,12 +326,12 @@ public:
         return errors;
     }
     Ptr<Error> clone () const override {
-        return makePtr<ReprojectedErrorForwardImpl>(*points_mat);
+        return makePtr<ReprojectionErrorForwardImpl>(*points_mat);
     }
 };
 Ptr<ReprojectionErrorForward>
 ReprojectionErrorForward::create(const Mat &points) {
-    return makePtr<ReprojectedErrorForwardImpl>(points);
+    return makePtr<ReprojectionErrorForwardImpl>(points);
 }
 
 class SampsonErrorImpl : public SampsonError {
@@ -527,7 +515,7 @@ Ptr<ReprojectionErrorPmatrix> ReprojectionErrorPmatrix::create(const Mat &points
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Computes forward reprojection error for affine transformation.
-class ReprojectedDistanceAffineImpl : public ReprojectionErrorAffine {
+class ReprojectionDistanceAffineImpl : public ReprojectionErrorAffine {
 private:
     /*
      * m11 m12 m13
@@ -539,7 +527,7 @@ private:
     float m11, m12, m13, m21, m22, m23;
     std::vector<float> errors;
 public:
-    explicit ReprojectedDistanceAffineImpl (const Mat &points_)
+    explicit ReprojectionDistanceAffineImpl (const Mat &points_)
         : points_mat(&points_), points ((float *) points_.data)
         , m11(0), m12(0), m13(0), m21(0), m22(0), m23(0)
         , errors(points_.rows)
@@ -569,12 +557,12 @@ public:
         return errors;
     }
     Ptr<Error> clone () const override {
-        return makePtr<ReprojectedDistanceAffineImpl>(*points_mat);
+        return makePtr<ReprojectionDistanceAffineImpl>(*points_mat);
     }
 };
 Ptr<ReprojectionErrorAffine>
 ReprojectionErrorAffine::create(const Mat &points) {
-    return makePtr<ReprojectedDistanceAffineImpl>(points);
+    return makePtr<ReprojectionDistanceAffineImpl>(points);
 }
 
 ////////////////////////////////////// NORMALIZING TRANSFORMATION /////////////////////////
