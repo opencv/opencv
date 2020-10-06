@@ -10,9 +10,8 @@
 #include <vector>
 #include <map>
 #include <unordered_map>
-#include <opencv2/gapi/gcomputation.hpp>
-
 #include <opencv2/gapi/s11n/base.hpp>
+#include <opencv2/gapi/gcomputation.hpp>
 
 namespace cv {
 namespace gapi {
@@ -193,7 +192,7 @@ template<typename T> struct deserialize_arg;
 
 template<> struct deserialize_arg<std::tuple<>> {
 static GCompileArg exec(cv::gapi::s11n::IIStream&, const std::string&) {
-        throw std::logic_error("Some passed arg can't be deserialized!");
+        throw std::logic_error("Passed arg can't be deserialized!");
     }
 };
 

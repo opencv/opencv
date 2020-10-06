@@ -19,7 +19,6 @@
 #include <opencv2/gapi/own/exports.hpp>
 #include <opencv2/gapi/own/assert.hpp>
 #include <opencv2/gapi/render/render_types.hpp>
-
 #include <opencv2/gapi/s11n/base.hpp>
 
 namespace cv {
@@ -98,17 +97,15 @@ enum class GShape: int
 
 namespace gapi {
 namespace s11n {
-struct IOStream;
-
 namespace detail {
-
-template<typename T> struct wrap_serialize {
-    static void serialize(gapi::s11n::IOStream& os, const util::any& arg) {
+template<typename T> struct wrap_serialize
+{
+    static void serialize(gapi::s11n::IOStream& os, const util::any& arg)
+    {
         using decayed_type = typename std::decay<T>::type;
         S11N<decayed_type>::serialize(os, util::any_cast<decayed_type>(arg));
     }
 };
-
 } // namespace detail
 } // namespace s11n
 } // namespace gapi
@@ -174,7 +171,10 @@ public:
     explicit GCompileArg(T &&t)
         : tag(detail::CompileArgTag<typename std::decay<T>::type>::tag())
         , serialize(&cv::gapi::s11n::detail::wrap_serialize<T>::serialize)
-        , arg(t) { }
+        , arg(t)
+        {
+
+        }
 
     template<typename T> T& get()
     {
