@@ -11,7 +11,8 @@
 #include <map>
 #include <unordered_map>
 #include <opencv2/gapi/gcomputation.hpp>
-#include <opencv2/gapi/gcommon.hpp>
+
+#include <opencv2/gapi/s11n/base.hpp>
 
 namespace cv {
 namespace gapi {
@@ -184,24 +185,6 @@ IIStream& operator>> (IIStream& is, std::vector<T> &ts) {
     }
     return is;
 }
-
-namespace detail {
-// Will be used along with default types if possible in specific cases (compile args, etc)
-// Note: actual implementation is defined by user
-template<typename T>
-struct S11N {
-    static void serialize(IOStream &, const T &) { throw 1; }
-    static T deserialize(IIStream &) { return T{ }; }
-};
-
-template<typename T> struct wrap_serialize<T, cv::GCompileArg> {
-    static void serialize(gapi::s11n::IOStream& os, const util::any& arg) {
-        using decayed_type = typename std::decay<T>::type;
-        S11N<decayed_type>::serialize(os, util::any_cast<decayed_type>(arg));
-    }
-};
-
-} // namespace detail
 } // namespace s11n
 
 namespace detail
@@ -210,7 +193,7 @@ template<typename T> struct deserialize_arg;
 
 template<> struct deserialize_arg<std::tuple<>> {
 static GCompileArg exec(cv::gapi::s11n::IIStream&, const std::string&) {
-        throw std::logic_error("No CompileArgTag<> specialization for some of passed types!");
+        throw std::logic_error("Some passed arg can't be deserialized!");
     }
 };
 

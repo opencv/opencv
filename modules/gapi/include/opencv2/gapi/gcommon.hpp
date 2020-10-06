@@ -20,6 +20,8 @@
 #include <opencv2/gapi/own/assert.hpp>
 #include <opencv2/gapi/render/render_types.hpp>
 
+#include <opencv2/gapi/s11n/base.hpp>
+
 namespace cv {
 
 class GMat; // FIXME: forward declaration for GOpaqueTraits
@@ -97,12 +99,13 @@ enum class GShape: int
 namespace gapi {
 namespace s11n {
 struct IOStream;
-struct IIStream;
 
 namespace detail {
-template<typename T, typename U> struct wrap_serialize {
-    static void serialize(cv::gapi::s11n::IOStream&, const util::any&) {
-        util::throw_error(std::logic_error("s11n.hpp is not included!"));
+
+template<typename T> struct wrap_serialize {
+    static void serialize(gapi::s11n::IOStream& os, const util::any& arg) {
+        using decayed_type = typename std::decay<T>::type;
+        S11N<decayed_type>::serialize(os, util::any_cast<decayed_type>(arg));
     }
 };
 
@@ -170,7 +173,7 @@ public:
     template<typename T, typename std::enable_if<!detail::is_compile_arg<T>::value, int>::type = 0>
     explicit GCompileArg(T &&t)
         : tag(detail::CompileArgTag<typename std::decay<T>::type>::tag())
-        , serialize(&cv::gapi::s11n::detail::wrap_serialize<T, cv::GCompileArg>::serialize)
+        , serialize(&cv::gapi::s11n::detail::wrap_serialize<T>::serialize)
         , arg(t) { }
 
     template<typename T> T& get()

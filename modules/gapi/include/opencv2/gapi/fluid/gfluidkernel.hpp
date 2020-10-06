@@ -20,6 +20,8 @@
 
 #include <opencv2/gapi/fluid/gfluidbuffer.hpp>
 
+#include <opencv2/gapi/s11n.hpp>
+
 // FIXME: namespace scheme for backends?
 namespace cv {
 
@@ -435,5 +437,29 @@ public:
 #define GAPI_FLUID_KERNEL(Name, API, Scratch) struct Name: public cv::GFluidKernelImpl<Name, API, Scratch>
 
 } // namespace cv
+
+namespace cv
+{
+namespace gapi
+{
+namespace s11n
+{
+namespace detail
+{
+    template<> struct S11N<cv::GFluidOutputRois> {
+        static void serialize(IOStream &os, const cv::GFluidOutputRois &r) {
+            os << r.rois;
+        }
+        static cv::GFluidOutputRois deserialize(IIStream &is) {
+            cv::GFluidOutputRois r;
+            is >> r.rois;
+            return r;
+        }
+    };
+} // namespace detail
+} // namespace s11n
+} // namespace gapi
+} // namespace cv
+
 
 #endif // OPENCV_GAPI_GCPUKERNEL_HPP

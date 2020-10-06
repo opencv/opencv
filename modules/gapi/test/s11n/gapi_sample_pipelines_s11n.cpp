@@ -7,75 +7,10 @@
 
 #include "../test_precomp.hpp"
 
-#include "backends/common/serialization.hpp"
-#include <opencv2/gapi/fluid/gfluidkernel.hpp>
 #include <ade/util/iota_range.hpp>
+#include <opencv2/gapi/s11n.hpp>
 #include "api/render_priv.hpp"
 #include "../common/gapi_render_tests.hpp"
-
-namespace my {
-    struct MyCustomType {
-        int val;
-        std::string name;
-        std::vector<float> vec;
-        std::map<int, uint64_t> mmap;
-        bool operator==(const MyCustomType& other) const {
-            return val == other.val && name == other.name &&
-                   vec == other.vec && mmap == other.mmap;
-        }
-    };
-}
-
-namespace cv {
-namespace gapi {
-namespace s11n {
-namespace detail {
-    template<> struct S11N<my::MyCustomType> {
-        static void serialize(IOStream &os, const my::MyCustomType &p) {
-            std::cout << "CALLED" << std::endl;
-            os << p.val << p.name << p.vec << p.mmap;
-        }
-        static my::MyCustomType deserialize(IIStream &is) {
-            my::MyCustomType p;
-            is >> p.val >> p.name >> p.vec >> p.mmap;
-            return p;
-        }
-    };
-} // namespace detail
-} // namespace s11n
-} // namespace gapi
-} // namespace cv
-
-
-namespace cv {
-namespace gapi {
-namespace s11n {
-namespace detail {
-    template<> struct S11N<cv::GFluidOutputRois> {
-        static void serialize(IOStream &os, const cv::GFluidOutputRois &r) {
-            std::cout << "CALLED FOR FLUID!" << std::endl;
-            os << r.rois;
-        }
-        static cv::GFluidOutputRois deserialize(IIStream &is) {
-            cv::GFluidOutputRois r;
-            is >> r.rois;
-            return r;
-        }
-    };
-} // namespace detail
-} // namespace s11n
-} // namespace gapi
-} // namespace cv
-
-namespace cv {
-namespace detail {
-template<> struct CompileArgTag<my::MyCustomType> {
-    static const char* tag() {
-        return "org.opencv.test.mycustomtype";
-    }
-};
-} // namespace detail
-} // namespace cv
 
 namespace opencv_test
 {
@@ -872,47 +807,38 @@ TEST(S11N, Pipeline_Render_RGB)
     EXPECT_EQ(cv::norm(input,  ref_mat), 0);
 }
 
-TEST(S11N, Pipeline_NV12toRGB_FluidROI)
+TEST(S11N, Pipeline_Add_FluidROI)
 {
-    cv::Rect roi{0, 0, 1920, 270};
+    cv::Rect roi { 0, 0, 32, 8 };
+    cv::Size roi_sz(32, 8);
 
-    cv::Size   y_sz(1920, 1080);
-    cv::Size   uv_sz(y_sz.width / 2, y_sz.height / 2);
-
-    cv::Size   nv12_sz(y_sz.width, y_sz.height * 3/2);
-    cv::Mat    nv12_mat(nv12_sz, CV_8UC1);
-    cv::Scalar mean(127.0f);
-    cv::Scalar stddev(40.f);
-    cv::randn(nv12_mat, mean, stddev);
-
-    cv::Mat y_mat(y_sz, CV_8UC1, nv12_mat.data);
-    cv::Mat uv_mat(uv_sz, CV_8UC2, nv12_mat.data + nv12_mat.step1() * y_sz.height);
-
-    cv::Mat out_mat_gapi, out_mat_ocv;
+    cv::Mat in_mat(cv::Size(32, 32), CV_8UC3);
+    cv::Mat out_mat_gapi(roi_sz, CV_8UC3),
+            out_mat_ocv(roi_sz, CV_8UC3);
+    cv::randu(in_mat, cv::Scalar::all(0), cv::Scalar::all(100));
 
     // G-API code //////////////////////////////////////////////////////////////
-    cv::GMat y, uv;
-    auto rgb = cv::gapi::NV12toRGB(y, uv);
-    auto s_comp = cv::gapi::serialize(cv::GComputation(cv::GIn(y, uv), cv::GOut(rgb)));
+    cv::GMat in;
+    cv::GMat out = cv::gapi::add(in, in);
 
-    util::any arg { cv::GFluidOutputRois { } };
-    cv::gapi::s11n::ByteMemoryOutStream os;
-    cv::gapi::s11n::detail::wrap_serialize<cv::GFluidOutputRois, cv::GCompileArg>::serialize(os, arg);
-    auto s_comp_args = cv::gapi::serialize(cv::compile_args(my::MyCustomType {}, cv::GFluidOutputRois{ { roi } }));
+    auto s_comp = cv::gapi::serialize(cv::GComputation(cv::GIn(in), cv::GOut(out)));
+    auto s_comp_args = cv::gapi::serialize(cv::compile_args(cv::GFluidOutputRois{ { roi } }));
 
     auto d_comp = cv::gapi::deserialize<cv::GComputation>(s_comp);
-    // auto d_comp_args = cv::gapi::deserialize<cv::GCompileArgs, MyCustomType, cv::GFluidOutputRois>(s_comp_args);
+    auto d_comp_args = cv::gapi::deserialize<cv::GCompileArgs,
+                                             cv::GFluidOutputRois>(s_comp_args);
 
-    d_comp.apply(cv::gin(y_mat, uv_mat), cv::gout(out_mat_gapi),
-                 cv::compile_args(cv::gapi::use_only{ cv::gapi::imgproc::fluid::kernels() }));
-                                  //d_comp_args[0]));
-    // auto d_roi = cv::gapi::getCompileArg<cv::GFluidOutputRois>(d_comp_args).value();
-    // std::cout << d_roi.rois[0] << std::endl;
+    cv::Rect d_roi = cv::gapi::getCompileArg<cv::GFluidOutputRois>(d_comp_args).value().rois[0];
+    EXCPECT_EQ(roi, d_roi);
 
-    // // OpenCV code /////////////////////////////////////////////////////////////
-    // cv::cvtColor(nv12_mat, out_mat_ocv, cv::COLOR_YUV2RGB_NV12);
+    d_comp.apply(cv::gin(in_mat), cv::gout(out_mat_gapi),
+                 cv::compile_args(cv::gapi::use_only{ cv::gapi::core::fluid::kernels() },
+                                  d_comp_args[0]));
 
-    // EXPECT_EQ(0, cvtest::norm(out_mat_gapi(roi), out_mat_ocv(roi), NORM_INF));
+    // OpenCV code /////////////////////////////////////////////////////////////
+    cv::add(in_mat, in_mat, out_mat_ocv);
+
+    // Comparison
+    EXPECT_EQ(0, cvtest::norm(out_mat_gapi(roi), out_mat_ocv(roi), NORM_INF));
 }
-
 } // namespace opencv_test
