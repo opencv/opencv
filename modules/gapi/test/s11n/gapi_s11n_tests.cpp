@@ -37,22 +37,11 @@ namespace detail {
 
 namespace cv {
 namespace detail {
-template<> struct CompileArgTag<MyCustomType>
-{
-    static const char* tag()
-    {
+template<> struct CompileArgTag<MyCustomType> {
+    static const char* tag() {
         return "org.opencv.test.mycustomtype";
     }
 };
-
-template<> struct CompileArgTag<int>
-{
-    static const char* tag()
-    {
-        return "org.opencv.test.int";
-    }
-};
-
 } // namespace detail
 } // namespace cv
 
@@ -536,15 +525,11 @@ TEST_F(S11N_Basic, Test_Custom_Type) {
 
 TEST_F(S11N_Basic, Test_Custom_CompileArg) {
     MyCustomType customVar{1248, "World", {1280, 720, 640, 480}, {{32434142342, 5}, {7, 34242432}}};
-    int intVar{3};
-    GCompileArgs args = cv::compile_args(customVar, intVar);
 
-    std::vector<char> sArgs = cv::gapi::serialize(args);
-    GCompileArgs dArgs = cv::gapi::deserialize<GCompileArgs, MyCustomType, int>(sArgs);
+    std::vector<char> sArgs = cv::gapi::serialize(cv::compile_args(customVar));
+    GCompileArgs dArgs = cv::gapi::deserialize<GCompileArgs, MyCustomType>(sArgs);
 
     MyCustomType dCustomVar = cv::gapi::getCompileArg<MyCustomType>(dArgs).value();
-    int dIntVar = cv::gapi::getCompileArg<int>(dArgs).value();
     EXPECT_EQ(customVar, dCustomVar);
-    EXPECT_EQ(intVar, dIntVar);
 }
 } // namespace opencv_test

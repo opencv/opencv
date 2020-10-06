@@ -23,14 +23,8 @@ namespace detail {
 
     GAPI_EXPORTS cv::GRunArgs getRunArgs(const std::vector<char> &p);
 
-    template<typename T>
-    GAPI_EXPORTS GCompileArg deserialize_arg(cv::gapi::s11n::IIStream& is, const std::string &tag);
-
-    template<typename T1, typename T2, typename... Types>
-    GAPI_EXPORTS GCompileArg deserialize_arg(cv::gapi::s11n::IIStream& is, const std::string &tag);
-
     template<typename... Types>
-    GAPI_EXPORTS cv::GCompileArgs getCompileArgs(const std::vector<char> &p);
+    cv::GCompileArgs getCompileArgs(const std::vector<char> &p);
 } // namespace detail
 
 GAPI_EXPORTS std::vector<char> serialize(const cv::GComputation &c);
@@ -103,7 +97,9 @@ struct GAPI_EXPORTS IIStream {
     virtual IIStream& operator>> (std::string &) = 0;
 };
 
+namespace detail {
 GAPI_EXPORTS std::unique_ptr<IIStream> getInStream(const std::vector<char> &p);
+} // namespace detail
 
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
@@ -189,125 +185,61 @@ IIStream& operator>> (IIStream& is, std::vector<T> &ts) {
     return is;
 }
 
-namespace detail
-{
+namespace detail {
+// Will be used along with default types if possible in specific cases (compile args, etc)
 // Note: actual implementation is defined by user
 template<typename T>
-struct GAPI_EXPORTS S11N;
-
+struct S11N {
+    static void serialize(IOStream &, const T &) { throw 1; }
+    static T deserialize(IIStream &) { return T{ }; }
+};
 
 template<typename T> struct wrap_serialize<T, cv::GCompileArg> {
-    static std::function<void(gapi::s11n::IOStream& os, const util::any& arg)> serialize;
-
-private:
-    template<typename> using sfinae_true = std::true_type;
-
-    template<typename Q = T>
-    static auto try_call_serialize(gapi::s11n::IOStream& os, const util::any& arg, int)
-        -> sfinae_true<decltype(S11N<Q>::serialize(os, util::any_cast<Q>(arg)), void())> {
-
-        S11N<Q>::serialize(os, util::any_cast<Q>(arg));
-        return sfinae_true<void>{};
-    }
-
-    // FIXME: Add compile-time check that this can't be called for custom types.
-    //        Such behaviour can alternatively be implemented in S11N<T> with std::enable_if
-    //        contraining T to be types defined by framework.
-    template<typename Q = T>
-    static auto try_call_serialize(gapi::s11n::IOStream& os, const util::any& arg, long)
-        -> sfinae_true<decltype(os << std::declval<const typename std::add_lvalue_reference<Q>::type>(), void())> {
-
-        os << util::any_cast<Q>(arg);
-        return sfinae_true<void>{};
-    }
-
-    template<typename Q = T>
-    static std::false_type try_call_serialize(gapi::s11n::IOStream &os, const util::any& arg, ...);
-
-    static void call_serialize(gapi::s11n::IOStream& os, const util::any& arg) {
-        try_call_serialize<T>(os, arg, 0);
+    static void serialize(gapi::s11n::IOStream& os, const util::any& arg) {
+        using decayed_type = typename std::decay<T>::type;
+        S11N<decayed_type>::serialize(os, util::any_cast<decayed_type>(arg));
     }
 };
 
-template<typename T>
-std::function<void(gapi::s11n::IOStream& os, const util::any& arg)>
-wrap_serialize<T, cv::GCompileArg>::serialize =
-        decltype(try_call_serialize(
-                    std::declval<typename std::add_lvalue_reference<gapi::s11n::IOStream>::type>(),
-                    std::declval<typename std::add_lvalue_reference<util::any>::type>(),
-                    int()))::value
-        ? &call_serialize : nullptr;
-
-
-template<typename T> struct wrap_deserialize
-{
-private:
-    template<typename Q = T>
-    static auto call_deserialize(gapi::s11n::IIStream& is, int)
-        -> decltype(S11N<Q>::deserialize(is)) {
-        return S11N<Q>::deserialize(is);
-    }
-
-    // FIXME: Add compile-time check that this can't be called for custom types.
-    //        Such behaviour can alternatively be implemented in S11N<T> with std::enable_if
-    //        contraining T to be types defined by framework.
-    template<typename Q = T>
-    static auto call_deserialize(gapi::s11n::IIStream& is, long)
-        -> decltype(is >> std::declval<typename std::add_lvalue_reference<Q>::type>(),
-                    Q()) {
-        Q obj;
-        is >> obj;
-        return obj;
-    }
-
-    template<typename Q = T>
-    static cv::GCompileArg call_deserialize(gapi::s11n::IIStream&, ...) {
-        return GCompileArg { };
-    }
-
-public:
-    static auto deserialize(gapi::s11n::IIStream& is)
-        -> decltype(call_deserialize<T>(is, 0)) {
-        return call_deserialize<T>(is, 0);
-    }
-};
 } // namespace detail
 } // namespace s11n
 
 namespace detail
 {
-template<typename T>
-GAPI_EXPORTS GCompileArg deserialize_arg(cv::gapi::s11n::IIStream& is, const std::string& tag) {
-    if (tag == cv::detail::CompileArgTag<T>::tag()) {
-        return GCompileArg { cv::gapi::s11n::detail::wrap_deserialize<T>::deserialize(is) };
-    }
-    else {
+template<typename T> struct deserialize_arg;
+
+template<> struct deserialize_arg<std::tuple<>> {
+static GCompileArg exec(cv::gapi::s11n::IIStream&, const std::string&) {
         throw std::logic_error("No CompileArgTag<> specialization for some of passed types!");
     }
-}
+};
 
-template<typename T1, typename T2, typename... Types>
-GAPI_EXPORTS GCompileArg deserialize_arg(cv::gapi::s11n::IIStream& is, const std::string& tag) {
-    if (tag == cv::detail::CompileArgTag<T1>::tag()) {
-        return GCompileArg { cv::gapi::s11n::detail::wrap_deserialize<T1>::deserialize(is) };
+template<typename T, typename... Types>
+struct deserialize_arg<std::tuple<T, Types...>> {
+static GCompileArg exec(cv::gapi::s11n::IIStream& is, const std::string& tag) {
+    if (tag == cv::detail::CompileArgTag<T>::tag()) {
+        return GCompileArg {
+            cv::gapi::s11n::detail::S11N<typename std::decay<T>::type>::deserialize(is)
+        };
     }
     else {
-        return deserialize_arg<T2, Types...>(is, tag);
+        return deserialize_arg<std::tuple<Types...>>::exec(is, tag);
     }
 }
+};
 
 template<typename... Types>
-GAPI_EXPORTS cv::GCompileArgs getCompileArgs(const std::vector<char> &p) {
-    std::unique_ptr<cv::gapi::s11n::IIStream> pIs = cv::gapi::s11n::getInStream(p);
+cv::GCompileArgs getCompileArgs(const std::vector<char> &p) {
+    std::unique_ptr<cv::gapi::s11n::IIStream> pIs = cv::gapi::s11n::detail::getInStream(p);
     cv::gapi::s11n::IIStream& is = *pIs.get();
     cv::GCompileArgs args;
 
-    uint32_t sz;
+    uint32_t sz = 0;
     is >> sz;
     for (uint32_t i = 0; i < sz; ++i) {
         std::string tag;
         is >> tag;
-        args.push_back(cv::gapi::detail::deserialize_arg<Types...>(is, tag));
+        args.push_back(cv::gapi::detail::deserialize_arg<std::tuple<Types...>>::exec(is, tag));
     }
 
     return args;

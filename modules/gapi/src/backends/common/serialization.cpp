@@ -312,11 +312,8 @@ IIStream& operator>> (IIStream& is,       cv::gapi::wip::draw::Line &l) {
 
 IOStream& operator<< (IOStream& os, const cv::GCompileArg& arg)
 {
-    if (arg.serialize)
-    {
-        os << arg.tag;
-        arg.serialize(os, arg.arg);
-    }
+    os << arg.tag;
+    arg.serialize(os, arg.arg);
 
     return os;
 }
@@ -851,7 +848,7 @@ IIStream& ByteMemoryInStream::operator>> (std::string& str) {
     return *this;
 }
 
-GAPI_EXPORTS std::unique_ptr<IIStream> getInStream(const std::vector<char> &p) {
+GAPI_EXPORTS std::unique_ptr<IIStream> detail::getInStream(const std::vector<char> &p) {
     std::unique_ptr<ByteMemoryInStream> pIs(new ByteMemoryInStream(p));
     return pIs;
 }

@@ -101,12 +101,10 @@ struct IIStream;
 
 namespace detail {
 template<typename T, typename U> struct wrap_serialize {
-    static std::function<void(gapi::s11n::IOStream&, const util::any&)> serialize;
+    static void serialize(cv::gapi::s11n::IOStream&, const util::any&) {
+        util::throw_error(std::logic_error("s11n.hpp is not included!"));
+    }
 };
-
-template<typename T, typename U>
-std::function<void(gapi::s11n::IOStream&, const util::any&)>
-wrap_serialize<T, U>::serialize = nullptr;
 
 } // namespace detail
 } // namespace s11n
@@ -165,15 +163,14 @@ public:
     GCompileArg() = default;
 
     std::string tag;
-    std::function<void(gapi::s11n::IOStream&, const util::any&)> serialize;
+    std::function<void(cv::gapi::s11n::IOStream&, const util::any&)> serialize;
     util::any arg;
 
     // FIXME: use decay in GArg/other trait-based wrapper before leg is shot!
     template<typename T, typename std::enable_if<!detail::is_compile_arg<T>::value, int>::type = 0>
     explicit GCompileArg(T &&t)
         : tag(detail::CompileArgTag<typename std::decay<T>::type>::tag())
-        , serialize(gapi::s11n::detail::wrap_serialize<
-                        typename std::decay<T>::type, cv::GCompileArg>::serialize)
+        , serialize(&cv::gapi::s11n::detail::wrap_serialize<T, cv::GCompileArg>::serialize)
         , arg(t) { }
 
     template<typename T> T& get()
