@@ -151,8 +151,10 @@ private:
                 has_edges = true;
             }
         }
+
         if (!has_edges)
             return quality->getInliers(model, labeling_inliers);
+
         graph.maxFlow();
 
         int inlier_number = 0;
