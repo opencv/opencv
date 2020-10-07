@@ -20,8 +20,6 @@
 
 #include <opencv2/gapi/fluid/gfluidbuffer.hpp>
 
-#include <opencv2/gapi/s11n.hpp>
-
 // FIXME: namespace scheme for backends?
 namespace cv {
 
