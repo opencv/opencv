@@ -873,8 +873,7 @@ IIStream& ByteMemoryInStream::operator>> (std::string& str) {
 }
 
 GAPI_EXPORTS std::unique_ptr<IIStream> detail::getInStream(const std::vector<char> &p) {
-    std::unique_ptr<ByteMemoryInStream> pIs(new ByteMemoryInStream(p));
-    return pIs;
+    return std::unique_ptr<ByteMemoryInStream>(new ByteMemoryInStream(p));
 }
 
 GAPI_EXPORTS void serialize(IOStream& os, const cv::GCompileArgs &ca) {
