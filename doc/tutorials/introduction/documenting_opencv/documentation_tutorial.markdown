@@ -4,6 +4,10 @@ Writing documentation for OpenCV {#tutorial_documentation}
 @prev_tutorial{tutorial_display_image}
 @next_tutorial{tutorial_transition_guide}
 
+|    |    |
+| -: | :- |
+| Original author | Maksim Shabunin |
+| Compatibility | OpenCV >= 3.0 |
 
 @tableofcontents
 

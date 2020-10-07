@@ -4,6 +4,13 @@ Building OpenCV for Tegra with CUDA {#tutorial_building_tegra_cuda}
 @prev_tutorial{tutorial_arm_crosscompile_with_cmake}
 @next_tutorial{tutorial_display_image}
 
+|    |    |
+| -: | :- |
+| Original author |  Randy J. Ray |
+| Compatibility | OpenCV >= 3.1.0 |
+
+@warning
+This tutorial is deprecated.
 
 @tableofcontents
 

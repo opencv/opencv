@@ -4,6 +4,14 @@ Installation in iOS {#tutorial_ios_install}
 @prev_tutorial{tutorial_macos_install}
 @next_tutorial{tutorial_arm_crosscompile_with_cmake}
 
+|    |    |
+| -: | :- |
+| Original author | Artem Myagkov, Eduard Feicho, Steve Nicholson |
+| Compatibility | OpenCV >= 3.0 |
+
+@warning
+This tutorial can contain obsolete information.
+
 Required Packages
 -----------------
 

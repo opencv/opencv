@@ -4,6 +4,13 @@ Introduction to OpenCV Development with Clojure {#tutorial_clojure_dev_intro}
 @prev_tutorial{tutorial_java_eclipse}
 @next_tutorial{tutorial_android_dev_intro}
 
+|    |    |
+| -: | :- |
+| Original author | Mimmo Cosenza |
+| Compatibility | OpenCV >= 3.0 |
+
+@warning
+This tutorial can contain obsolete information.
 
 As of OpenCV 2.4.4, OpenCV supports desktop Java development using nearly the same interface as for
 Android development.
