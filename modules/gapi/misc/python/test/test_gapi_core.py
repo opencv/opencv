@@ -24,7 +24,7 @@ class gapi_core_test(NewOpenCVTests):
         in2 = np.random.randint(0, 100, sz)
 
         # OpenCV
-        expected = in1 + in2
+        expected = cv.add(in1, in2)
 
         # G-API
         g_in1 = cv.GMat()
@@ -36,6 +36,28 @@ class gapi_core_test(NewOpenCVTests):
             actual = comp.apply(cv.gin(in1, in2), args=cv.compile_args(pkg))
             # Comparison
             self.assertEqual(0.0, cv.norm(expected, actual, cv.NORM_INF))
+            self.assertEqual(expected.dtype, actual.dtype)
+
+
+    def test_add_uint8(self):
+        sz = (1280, 720)
+        in1 = np.random.randint(0, 100, sz).astype(np.uint8)
+        in2 = np.random.randint(0, 100, sz).astype(np.uint8)
+
+        # OpenCV
+        expected = cv.add(in1, in2)
+
+        # G-API
+        g_in1 = cv.GMat()
+        g_in2 = cv.GMat()
+        g_out = cv.gapi.add(g_in1, g_in2)
+        comp = cv.GComputation(cv.GIn(g_in1, g_in2), cv.GOut(g_out))
+
+        for pkg in pkgs:
+            actual = comp.apply(cv.gin(in1, in2), args=cv.compile_args(pkg))
+            # Comparison
+            self.assertEqual(0.0, cv.norm(expected, actual, cv.NORM_INF))
+            self.assertEqual(expected.dtype, actual.dtype)
 
 
     def test_mean(self):
@@ -73,6 +95,7 @@ class gapi_core_test(NewOpenCVTests):
             # Comparison
             for e, a in zip(expected, actual):
                 self.assertEqual(0.0, cv.norm(e, a, cv.NORM_INF))
+                self.assertEqual(e.dtype, a.dtype)
 
 
     def test_threshold(self):
@@ -94,6 +117,7 @@ class gapi_core_test(NewOpenCVTests):
             actual_mat, actual_thresh = comp.apply(cv.gin(in_mat, maxv), args=cv.compile_args(pkg))
             # Comparison
             self.assertEqual(0.0, cv.norm(expected_mat, actual_mat, cv.NORM_INF))
+            self.assertEqual(expected_mat.dtype, actual_mat.dtype)
             self.assertEqual(expected_thresh, actual_thresh[0])
 
 
