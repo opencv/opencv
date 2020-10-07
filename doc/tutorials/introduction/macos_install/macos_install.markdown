@@ -6,7 +6,7 @@ Installation in MacOS {#tutorial_macos_install}
 
 |    |    |
 | -: | :- |
-| Original author | @sajarindider |
+| Original author | `@sajarindider` |
 | Compatibility | OpenCV >= 3.4 |
 
 The following steps have been tested for MacOSX (Mavericks) but should work with other versions as well.

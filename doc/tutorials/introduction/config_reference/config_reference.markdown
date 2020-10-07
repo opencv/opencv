@@ -201,6 +201,7 @@ cmake -DCV_DISABLE_OPTIMIZATION=ON ../opencv
 @note
 More details on CPU optimization options can be found in wiki: https://github.com/opencv/opencv/wiki/CPU-optimizations-build-options
 
+
 ## Profiling, coverage, sanitize, hardening, size optimization
 
 Following options can be used to produce special builds with instrumentation or improved security. All options are disabled by default.
@@ -227,7 +228,8 @@ There are many optional dependencies and features that can be turned on or off. 
 cmake -LH ../opencv
 ```
 
-## Options scheme
+
+## Options naming conventions
 
 There are three kinds of options used to control dependencies of the library, they have different prefixes:
 - Options starting with `WITH_` enable or disable a dependency
@@ -253,7 +255,7 @@ Some tutorials can be found in the corresponding section: @ref tutorial_table_of
 
 @see https://en.wikipedia.org/wiki/CUDA
 
-TODO: other options: `WITH_CUFFT`, `WITH_CUBLAS`, `WITH_CUDNN`, `WITH_NVCUVID`?
+TODO: other options: `WITH_CUFFT`, `WITH_CUBLAS`, WITH_NVCUVID`?
 
 ### OpenCL support
 
@@ -352,11 +354,13 @@ Enables MSMF backend which uses Windows' built-in [Media Foundation framework](h
 
 @note Older versions of Windows (prior to 10) can have incompatible versions of Media Foundation and are known to have problems when used from OpenCV.
 
+
 ### DirectShow
 
 `WITH_DSHOW` (Windows; default: _ON_)
 
 This backend uses older [DirectShow](https://en.wikipedia.org/wiki/DirectShow) framework. It can be used only to capture frames from camera. It is now deprecated in favor of MSMF backend, although both can be enabled in the same build.
+
 
 ### AVFoundation
 
@@ -364,12 +368,13 @@ This backend uses older [DirectShow](https://en.wikipedia.org/wiki/DirectShow) f
 
 [AVFoundation](https://en.wikipedia.org/wiki/AVFoundation) framework is part of Apple platforms and can be used to capture frames from camera, encode and decode video files.
 
+
 ### Other backends
 
 There are multiple less popular frameworks which can be used to read and write videos. Each requires corresponding library or SDK installed.
 
-| Option | Default | Info |
-| --------| ------ | ------- |
+| Option | Default | Description |
+| ------ | ------- | ----------- |
 | `WITH_1394` | _ON_ | [IIDC IEEE1394](https://en.wikipedia.org/wiki/IEEE_1394#IIDC) support using DC1394 library |
 | `WITH_OPENNI` | _OFF_ | [OpenNI](https://en.wikipedia.org/wiki/OpenNI) can be used to capture data from depth-sensing cameras. Deprecated. |
 | `WITH_OPENNI2` | _OFF_ | [OpenNI2](https://structure.io/openni) can be used to capture data from depth-sensing cameras. |
@@ -387,9 +392,11 @@ There are multiple less popular frameworks which can be used to read and write v
 
 Some _videoio_ backends can be built as plugins thus breaking strict dependency on third-party libraries and making them optional at runtime. Following options can be used to control this mechanism:
 
-- `VIDEOIO_ENABLE_PLUGINS`, default is _ON_ - enable or disable plugins completely
-- `VIDEOIO_PLUGIN_LIST`, default is _empty_ - comma- or semicolon-separated list of backend names to be compiled as plugins. Supported names are _ffmpeg_, _gstreamer_, _msmf_, _mfx_ and _all_.
-- `VIDEOIO_ENABLE_STRICT_PLUGIN_CHECK`, default is _ON_ - enable strict runtime version check to only allow plugins built with the same version of OpenCV
+| Option | Default | Description |
+| --------| ------ | ------- |
+| `VIDEOIO_ENABLE_PLUGINS` | _ON_ | Enable or disable plugins completely. |
+| `VIDEOIO_PLUGIN_LIST` | _empty_ | Comma- or semicolon-separated list of backend names to be compiled as plugins. Supported names are _ffmpeg_, _gstreamer_, _msmf_, _mfx_ and _all_. |
+| `VIDEOIO_ENABLE_STRICT_PLUGIN_CHECK` | _ON_ | Enable strict runtime version check to only allow plugins built with the same version of OpenCV. |
 
 
 ## Parallel processing {#tutorial_config_reference_func_core}
@@ -407,7 +414,8 @@ Some of OpenCV algorithms can use multithreading to accelerate processing. OpenC
 
 @note OpenCV can download and build TBB library from GitHub, this functionality can be enabled with the `BUILD_TBB` option.
 
-## GUI backend (highgui module) {#tutorial_config_reference_highgui}
+
+## GUI backends (highgui module) {#tutorial_config_reference_highgui}
 
 OpenCV relies on various GUI libraries for window drawing.
 
@@ -418,13 +426,33 @@ OpenCV relies on various GUI libraries for window drawing.
 | N/A | _ON_ | macOS | [Cocoa](https://en.wikipedia.org/wiki/Cocoa_(API)) is a framework used in macOS. |
 | `WITH_QT` | _OFF_ | Cross-platform | [Qt](https://en.wikipedia.org/wiki/Qt_(software)) is a cross-platform GUI framework. |
 
-@note OpenCV compiled with Qt support allows use of advanced _highgui_ interface, see @ref highgui_qt for details.
+@note OpenCV compiled with Qt support enables advanced _highgui_ interface, see @ref highgui_qt for details.
+
 
 ### OpenGL
 
 `WITH_OPENGL` (default: _OFF_)
 
 OpenGL integration can be used to draw HW-accelerated windows with following backends: GTK, WIN32 and Qt. And enables basic interoperability with OpenGL, see @ref core_opengl and @ref highgui_opengl for details.
+
+
+## Deep learning neural networks inference backends and options (dnn module) {#tutorial_config_reference_dnn}
+
+OpenCV have own DNN inference module which have own build-in engine, but can also use other libraries for optimized processing. Multiple backends can be enabled in single build. Selection happens at runtime automatically or manually.
+
+| Option | Default | Description |
+| ------ | ------- | ----------- |
+| `WITH_PROTOBUF` | _ON_ | Enables [protobuf](https://en.wikipedia.org/wiki/Protocol_Buffers) library search. OpenCV can either build own copy of the library or use external one. This dependency is required by the _dnn_ module, if it can't be found module will be disabled. |
+| `BUILD_PROTOBUF` | _ON_ | Build own copy of _protobuf_. Must be disabled if you want to use external library. |
+| `PROTOBUF_UPDATE_FILES` | _OFF_ | Re-generate all .proto files. _protoc_ compiler compatible with used version of _protobuf_ must be installed. |
+| `OPENCV_DNN_OPENCL` | _ON_ | Enable built-in OpenCL inference backend. |
+| `WITH_INF_ENGINE` | _OFF_ | Enables [Intel Inference Engine (IE)](https://github.com/openvinotoolkit/openvino) backend. Allows to execute networks in IE format (.xml + .bin). Inference Engine must be installed either as part of [OpenVINO toolkit](https://en.wikipedia.org/wiki/OpenVINO), either as a standalone library built from sources. |
+| `INF_ENGINE_RELEASE` | _2020040000_ | Defines version of Inference Engine library which is tied to OpenVINO toolkit version. Must be a 10-digit string, e.g. _2020040000_ for OpenVINO 2020.4. |
+| `WITH_NGRAPH` | _OFF_ | Enables Intel NGraph library support. This library is part of Inference Engine backend which allows executing arbitrary networks read from files in multiple formats supported by OpenCV: Caffe, TensorFlow, PyTorch, Darknet, etc.. NGraph library must be installed, it is included into Inference Engine. |
+| `OPENCV_DNN_CUDA` | _OFF_ | Enable CUDA backend. [CUDA](https://en.wikipedia.org/wiki/CUDA), CUBLAS and [CUDNN](https://developer.nvidia.com/cudnn) must be installed. |
+| `WITH_HALIDE` | _OFF_ | Use experimental [Halide](https://en.wikipedia.org/wiki/Halide_(programming_language)) backend which can generate optimized code for dnn-layers at runtime. Halide must be installed. |
+| `WITH_VULKAN` | _OFF_ | Enable experimental [Vulkan](https://en.wikipedia.org/wiki/Vulkan_(API)) backend. Does not require additional dependencies, but can use external Vulkan headers (`VULKAN_INCLUDE_DIRS`). |
+| `WITH_TENGINE` | _OFF_ | Enable experimental [Tengine](https://github.com/OAID/Tengine) backend for ARM CPUs. Tengine library must be installed. |
 
 
 # Installation layout {#tutorial_config_reference_install}
@@ -455,6 +483,7 @@ On some platforms (Linux) it is possible to remove symbol information during ins
 ```.sh
 cmake --build . --target install/strip
 ```
+
 
 ## Components and locations {#tutorial_config_reference_install_comp}
 
@@ -505,19 +534,33 @@ Following options can be used to change installation layout for common scenarios
 | ------ | ------- | ----------- |
 | `OPENCV_ENABLE_NONFREE` | _OFF_ | Some algorithms included in the library are known to be protected by patents and are disabled by default. |
 | `OPENCV_FORCE_3RDPARTY_BUILD`| _OFF_ | Enable all `BUILD_` options at once. |
-| `ENABLE_CCACHE` | _ON_ (on Unix-like platforms) | Enable [ccache](https://en.wikipedia.org/wiki/Ccache) auto-detection. This tool wraps compiler calls and caches results, can significantly improve re-compilation time.  |
+| `ENABLE_CCACHE` | _ON_ (on Unix-like platforms) | Enable [ccache](https://en.wikipedia.org/wiki/Ccache) auto-detection. This tool wraps compiler calls and caches results, can significantly improve re-compilation time. |
 | `ENABLE_PRECOMPILED_HEADERS` | _ON_ (for MSVC) | Enable precompiled headers support. Improves build time. |
 | `BUILD_DOCS` | _OFF_ | Enable documentation build (_doxygen_, _doxygen_cpp_, _doxygen_python_, _doxygen_javadoc_ targets). [Doxygen](http://www.doxygen.org/index.html) must be installed for C++ documentation build. Python and [BeautifulSoup4](https://en.wikipedia.org/wiki/Beautiful_Soup_(HTML_parser)) must be installed for Python documentation build. Javadoc and Ant must be installed for Java documentation build (part of Java SDK). |
 | `ENABLE_PYLINT` | _ON_ (when docs or examples are enabled) | Enable python scripts check with [Pylint](https://en.wikipedia.org/wiki/Pylint) (_check_pylint_ target). Pylint must be installed. |
 | `ENABLE_FLAKE8` | _ON_ (when docs or examples are enabled) | Enable python scripts check with [Flake8](https://flake8.pycqa.org/) (_check_flake8_ target). Flake8 must be installed. |
-| `BUILD_JAVA` | _ON_ | Enable Java wrappers build. |
+| `BUILD_JAVA` | _ON_ | Enable Java wrappers build. Java SDK and Ant must be installed. |
 | `BUILD_FAT_JAVA_LIB` | _ON_ (for static Android builds) | Build single _opencv_java_ dynamic library containing all library functionality bundled with Java bindings. |
-| `BUILD_opencv_python2` | _ON_ | Build python2 bindings (deprecated). |
-| `BUILD_opencv_python3` | _ON_ | Build python3 bindings. |
+| `BUILD_opencv_python2` | _ON_ | Build python2 bindings (deprecated). Python with development files and numpy must be installed. |
+| `BUILD_opencv_python3` | _ON_ | Build python3 bindings. Python with development files and numpy must be installed. |
 
 TODO: need separate tutorials covering bindings builds
 
-## Android
+
+## Automated builds
+
+Some features have been added specifically for automated build environments, like continuous integration and packaging systems.
+
+| Option | Default | Description |
+| ------ | ------- | ----------- |
+| `ENABLE_NOISY_WARNINGS` | _OFF_ | Enables several compiler warnings considered _noisy_, i.e. having less importance than others. These warnings are usually ignored but in some cases can be worth being checked for. |
+| `OPENCV_WARNINGS_ARE_ERRORS` | _OFF_ | Treat compiler warnings as errors. Build will be halted. |
+| `ENABLE_CONFIG_VERIFICATION` | _OFF_ | For each enabled dependency (`WITH_` option) verify that it has been found and enabled (`HAVE_` variable). By default feature will be silently turned off if dependency was not found, but with this option enabled cmake configuration will fail. Convenient for packaging systems which require stable library configuration not depending on environment fluctuations. |
+| `OPENCV_CMAKE_HOOKS_DIR` | _empty_ | OpenCV allows to customize configuration process by adding custom hook scripts at each stage and substage. cmake scripts with predefined names located in the directory set by this variable will be included before and after various configuration stages. Examples of file names: _CMAKE_INIT.cmake_, _PRE_CMAKE_BOOTSTRAP.cmake_, _POST_CMAKE_BOOTSTRAP.cmake_, etc.. Other names are not documented and can be found in the project cmake files by searching for the _ocv_cmake_hook_ macro calls. |
+| `OPENCV_DUMP_HOOKS_FLOW` | _OFF_ | Enables a debug message print on each cmake hook script call. |
+
+
+# Other non-documented options
 
 `BUILD_ANDROID_PROJECTS`
 `BUILD_ANDROID_EXAMPLES`
@@ -526,34 +569,16 @@ TODO: need separate tutorials covering bindings builds
 `ANDROID_NDK`
 `ANDROID_SDK_ROOT`
 
-
-## Cross-compilation
-
-CMAKE_TOOLCHAIN_FILE
-
-
-## Automated builds
-
-`ENABLE_NOISY_WARNINGS`
-`OPENCV_WARNINGS_ARE_ERRORS`
-`ENABLE_CONFIG_VERIFICATION`
-`OPENCV_CMAKE_HOOKS_DIR`
-`OPENCV_DUMP_HOOKS_FLOW`
-
-# TODO
+`CMAKE_TOOLCHAIN_FILE`
 
 `WITH_CAROTENE`
 `WITH_CPUFEATURES`
 `WITH_EIGEN`
-`WITH_HALIDE`
-`WITH_VULKAN`
-`WITH_INF_ENGINE`
 `WITH_OPENVX`
 `WITH_CLP`
 `WITH_DIRECTX`
 `WITH_VA`
 `WITH_LAPACK`
-`WITH_PROTOBUF`
 `WITH_QUIRC`
 `BUILD_ZLIB`
 `BUILD_ITT`
