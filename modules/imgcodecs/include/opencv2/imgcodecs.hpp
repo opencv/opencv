@@ -220,6 +220,14 @@ It also demonstrates how to save multiple images in a TIFF file:
 CV_EXPORTS_W bool imwrite( const String& filename, InputArray img,
               const std::vector<int>& params = std::vector<int>());
 
+/// @overload multi-image overload for bindings
+CV_WRAP static inline
+bool imwritemulti(const String& filename, InputArrayOfArrays img,
+                  const std::vector<int>& params = std::vector<int>())
+{
+    return imwrite(filename, img, params);
+}
+
 /** @brief Reads an image from a buffer in memory.
 
 The function imdecode reads an image from the specified buffer in the memory. If the buffer is too short or
