@@ -146,7 +146,7 @@ namespace imgproc {
         static GMatDesc outMeta(GMatDesc in) {
             GAPI_Assert(in.depth == CV_8U);
             GAPI_Assert(in.chan == 3);
-            GAPI_Assert(in.size.width % 2 == 0 && in.size.height % 2 == 0);
+            GAPI_Assert(in.size.height % 2 == 0);
             return in.withType(in.depth, 1).withSize(Size(in.size.width, in.size.height * 3 / 2));
         }
     };
@@ -155,8 +155,26 @@ namespace imgproc {
         static GMatDesc outMeta(GMatDesc in) {
             GAPI_Assert(in.depth == CV_8U);
             GAPI_Assert(in.chan == 3);
-            GAPI_Assert(in.size.width % 2 == 0 && in.size.height % 2 == 0);
+            GAPI_Assert(in.size.height % 2 == 0);
             return in.withType(in.depth, 1).withSize(Size(in.size.width, in.size.height * 3 / 2));
+        }
+    };
+
+    G_TYPED_KERNEL(GI4202BGR, <GMat(GMat)>, "org.opencv.imgproc.colorconvert.i4202bgr") {
+        static GMatDesc outMeta(GMatDesc in) {
+            GAPI_Assert(in.depth == CV_8U);
+            GAPI_Assert(in.chan == 1);
+            GAPI_Assert(in.size.height % 3 == 0);
+            return in.withType(in.depth, 3).withSize(Size(in.size.width, in.size.height * 2 / 3));
+        }
+    };
+
+    G_TYPED_KERNEL(GI4202RGB, <GMat(GMat)>, "org.opencv.imgproc.colorconvert.i4202rgb") {
+        static GMatDesc outMeta(GMatDesc in) {
+            GAPI_Assert(in.depth == CV_8U);
+            GAPI_Assert(in.chan == 1);
+            GAPI_Assert(in.size.height % 3 == 0);
+            return in.withType(in.depth, 3).withSize(Size(in.size.width, in.size.height * 2 / 3));
         }
     };
 
@@ -841,7 +859,7 @@ GAPI_EXPORTS GMat equalizeHist(const GMat& src);
 The function converts an input image from BGR color space to RGB.
 The conventional ranges for B, G, and R channel values are 0 to 255.
 
-Output image must be 8-bit unsigned 3-channel image @ref CV_8UC3.
+Output image is 8-bit unsigned 3-channel image @ref CV_8UC3.
 
 @note Function textual ID is "org.opencv.imgproc.colorconvert.bgr2rgb"
 
@@ -914,6 +932,10 @@ GAPI_EXPORTS GMat RGB2YUV(const GMat& src);
 The function converts an input image from BGR color space to I420.
 The conventional ranges for R, G, and B channel values are 0 to 255.
 
+Output image must be 8-bit unsigned 1-channel image. @ref CV_8UC1.
+Width of I420 output image must be the same as width of input image.
+Height of I420 output image must be equal 3/2 from height of input image.
+
 @note Function textual ID is "org.opencv.imgproc.colorconvert.bgr2i420"
 
 @param src input image: 8-bit unsigned 3-channel image @ref CV_8UC3.
@@ -926,12 +948,48 @@ GAPI_EXPORTS GMat BGR2I420(const GMat& src);
 The function converts an input image from RGB color space to I420.
 The conventional ranges for R, G, and B channel values are 0 to 255.
 
+Output image must be 8-bit unsigned 1-channel image. @ref CV_8UC1.
+Width of I420 output image must be the same as width of input image.
+Height of I420 output image must be equal 3/2 from height of input image.
+
 @note Function textual ID is "org.opencv.imgproc.colorconvert.rgb2i420"
 
 @param src input image: 8-bit unsigned 3-channel image @ref CV_8UC3.
 @sa I4202RGB
 */
 GAPI_EXPORTS GMat RGB2I420(const GMat& src);
+
+/** @brief Converts an image from I420 color space to BGR color space.
+
+The function converts an input image from I420 color space to BGR.
+The conventional ranges for B, G, and R channel values are 0 to 255.
+
+Output image must be 8-bit unsigned 3-channel image. @ref CV_8UC3.
+Width of BGR output image must be the same as width of input image.
+Height of BGR output image must be equal 2/3 from height of input image.
+
+@note Function textual ID is "org.opencv.imgproc.colorconvert.i4202bgr"
+
+@param src input image: 8-bit unsigned 1-channel image @ref CV_8UC1.
+@sa BGR2I420
+*/
+GAPI_EXPORTS GMat I4202BGR(const GMat& src);
+
+/** @brief Converts an image from I420 color space to BGR color space.
+
+The function converts an input image from I420 color space to BGR.
+The conventional ranges for B, G, and R channel values are 0 to 255.
+
+Output image must be 8-bit unsigned 3-channel image. @ref CV_8UC3.
+Width of RGB output image must be the same as width of input image.
+Height of RGB output image must be equal 2/3 from height of input image.
+
+@note Function textual ID is "org.opencv.imgproc.colorconvert.i4202rgb"
+
+@param src input image: 8-bit unsigned 1-channel image @ref CV_8UC1.
+@sa RGB2I420
+*/
+GAPI_EXPORTS GMat I4202RGB(const GMat& src);
 
 /** @brief Converts an image from BGR color space to LUV color space.
 

@@ -580,6 +580,44 @@ TEST_P(RGB2I420Test, AccuracyTest)
     }
 }
 
+TEST_P(I4202BGRTest, AccuracyTest)
+{
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    auto out = cv::gapi::I4202BGR(in);
+
+    cv::GComputation c(in, out);
+    c.apply(in_mat1, out_mat_gapi, getCompileArgs());
+    // OpenCV code /////////////////////////////////////////////////////////////
+    {
+        cv::cvtColor(in_mat1, out_mat_ocv, cv::COLOR_YUV2BGR_I420);
+    }
+    // Comparison //////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
+        EXPECT_EQ(out_mat_gapi.size(), Size(sz.width, sz.height * 2 / 3));
+    }
+}
+
+TEST_P(I4202RGBTest, AccuracyTest)
+{
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    auto out = cv::gapi::I4202RGB(in);
+
+    cv::GComputation c(in, out);
+    c.apply(in_mat1, out_mat_gapi, getCompileArgs());
+    // OpenCV code /////////////////////////////////////////////////////////////
+    {
+        cv::cvtColor(in_mat1, out_mat_ocv, cv::COLOR_YUV2RGB_I420);
+    }
+    // Comparison //////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
+        EXPECT_EQ(out_mat_gapi.size(), Size(sz.width, sz.height * 2 / 3));
+    }
+}
+
 TEST_P(NV12toRGBTest, AccuracyTest)
 {
     // G-API code //////////////////////////////////////////////////////////////
