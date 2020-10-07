@@ -284,9 +284,10 @@ namespace graph {
 
             auto result = parallel::use_tbb_scheduler_bypass::no;
             //execute the task
-            if (!node->async)
+
+            if (auto p = util::get_if<tile_node::sync_task_body>(&(node->task_body)))
             {
-                node->task_body();
+                p->body();
 
                 std::size_t ready_items = push_ready_dependees(node);
 
@@ -338,7 +339,8 @@ namespace graph {
                     }
                 };
 
-                node->async_task_body(std::move(callback), node->total_order_index);
+                auto& body = util::get<tile_node::async_task_body>(node->task_body).body;
+                body(std::move(callback), node->total_order_index);
             }
 
             ctx.executed++;

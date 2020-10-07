@@ -21,6 +21,8 @@
 #include <tbb/concurrent_priority_queue.h>
 #include <tbb/task_arena.h>
 
+#include <opencv2/gapi/util/variant.hpp>
+
 namespace cv { namespace gimpl { namespace parallel {
 
 //simple wrapper to allow copies of std::atomic
@@ -51,9 +53,16 @@ constexpr async_tag async;
 struct tile_node {
     //place in totally ordered queue of tasks to execute. Inverse to priority, i.e. lower index means higher priority
     size_t                                                                              total_order_index = 0;
+
     //FIXME: use templates here instead of std::function
-    std::function<void()>                                                               task_body;
-    std::function<void(std::function<void()> && callback, size_t total_order_index)>    async_task_body;
+    struct sync_task_body {
+        std::function<void()> body;
+    };
+    struct async_task_body {
+        std::function<void(std::function<void()> && callback, size_t total_order_index)> body;
+    };
+
+    util::variant<sync_task_body, async_task_body>                                       task_body;
     //number of dependencies according to a dependency graph (i.e. number of "input" edges).
     //Set only once during graph compilation. (Can not make it const due two two phase initialization of the tile_node objects)
     size_t                                                                              dependencies     = 0;
@@ -62,11 +71,8 @@ struct tile_node {
     atomic_copyable_wrapper<size_t>                                                     dependency_count = 0;
     std::vector<tile_node*>                                                             dependees;
 
-    //FIXME: use variant here
-    bool async = false;
-
-    tile_node(decltype(task_body) && f) : task_body(std::move(f)) {};
-    tile_node(async_tag, decltype(async_task_body) && f) : async_task_body(std::move(f)), async(true) {};
+    tile_node(decltype(sync_task_body::body) && f) : task_body(sync_task_body{std::move(f)}) {};
+    tile_node(async_tag, decltype(async_task_body::body) && f) : task_body(async_task_body{std::move(f)}) {};
 };
 
 struct tile_node_indirect_priority_comparator {
