@@ -218,7 +218,7 @@ inline cv::util::optional<T> getCompileArg(const cv::GCompileArgs &args)
 
 namespace s11n {
 namespace detail {
-template<typename T> struct wrap_serialize
+template<typename T> struct GAPI_EXPORTS_W_SIMPLE wrap_serialize
 {
     static void serialize(IOStream& os, const GCompileArg& arg)
     {
