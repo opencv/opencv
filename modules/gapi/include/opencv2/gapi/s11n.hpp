@@ -201,7 +201,7 @@ struct deserialize_arg<std::tuple<T, Types...>> {
 static GCompileArg exec(cv::gapi::s11n::IIStream& is, const std::string& tag) {
     if (tag == cv::detail::CompileArgTag<T>::tag()) {
         return GCompileArg {
-            cv::gapi::s11n::detail::S11N<typename std::decay<T>::type>::deserialize(is)
+            cv::gapi::s11n::detail::S11N<T>::deserialize(is)
         };
     }
 
