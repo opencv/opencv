@@ -149,7 +149,7 @@ namespace detail {
  * passed in (a variadic template parameter pack) into a vector of
  * cv::GCompileArg objects.
  */
-struct GAPI_EXPORTS_W_SIMPLE GCompileArg
+struct GCompileArg
 {
 public:
     // NB: Required for pythnon bindings
