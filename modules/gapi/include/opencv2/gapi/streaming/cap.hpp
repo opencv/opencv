@@ -104,7 +104,7 @@ protected:
 };
 
 // NB: Overload for using from python
-GAPI_EXPORTS_W IStreamSourcePtr inline make_capture_src(const String& path)
+GAPI_EXPORTS_W cv::Ptr<IStreamSource> inline make_capture_src(const std::string& path)
 {
     return make_src<GCaptureSource>(path);
 }

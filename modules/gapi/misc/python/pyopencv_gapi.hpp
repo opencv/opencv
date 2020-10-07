@@ -5,7 +5,12 @@
 
 // NB: Python wrapper replaces :: with _ for classes
 using gapi_GKernelPackage = cv::gapi::GKernelPackage;
-using gapi_wip_IStreamSource_Ptr = cv::gapi::wip::IStreamSourcePtr;
+using gapi_wip_IStreamSource_Ptr = cv::Ptr<cv::gapi::wip::IStreamSource>;
+
+// FIXME: Python wrapper generate code without namespace std,
+// so it cause error: "string wasn't declared"
+// WA: Create using
+using std::string;
 
 template<>
 bool pyopencv_to(PyObject* obj, std::vector<GCompileArg>& value, const ArgInfo& info)
@@ -165,14 +170,17 @@ static PyObject* pyopencv_cv_gin(PyObject* , PyObject* py_args, PyObject* kw)
                 return NULL;
             }
         }
-        else if (PyObject_TypeCheck(item, reinterpret_cast<PyTypeObject*>(pyopencv_gapi_wip_IStreamSourcePtr_TypePtr)))
+        else if (PyObject_TypeCheck(item,
+                    reinterpret_cast<PyTypeObject*>(pyopencv_gapi_wip_IStreamSource_TypePtr)))
         {
-            auto source = reinterpret_cast<pyopencv_gapi_wip_IStreamSourcePtr_t*>(item)->v;
+            cv::gapi::wip::IStreamSource::Ptr source =
+                reinterpret_cast<pyopencv_gapi_wip_IStreamSource_t*>(item)->v;
             args.emplace_back(source);
         }
         else
         {
-            PyErr_SetString(PyExc_TypeError, "cv.gin can works only with cv::Mat, cv::Scalar, cv::gapi::wip::IStreamSourcePtr");
+            PyErr_SetString(PyExc_TypeError, "cv.gin can works only with cv::Mat,"
+                                             "cv::Scalar, cv::gapi::wip::IStreamSource::Ptr");
             return NULL;
         }
     }

@@ -55,9 +55,6 @@ IStreamSource::Ptr inline make_src(Args&&... args)
     return src_ptr->ptr();
 }
 
-// NB: Python wrapper can't parse class::Ptr, so need to use using
-using IStreamSourcePtr = cv::gapi::wip::IStreamSource::Ptr;
-
 } // namespace wip
 } // namespace gapi
 } // namespace cv
