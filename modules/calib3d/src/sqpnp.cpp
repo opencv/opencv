@@ -92,6 +92,7 @@ void PoseSolver::solve(InputArray objectPoints, InputArray imagePoints, OutputAr
     CV_Assert(objectPoints.rows() == 1 || objectPoints.cols() == 1);
     CV_Assert(objectPoints.rows() >= 3 || objectPoints.cols() >= 3);
     CV_Assert(imagePoints.rows() == 1 || imagePoints.cols() == 1);
+    CV_Assert(imagePoints.rows() * imagePoints.cols() == objectPoints.rows() * objectPoints.cols());
 
     Mat _imagePoints;
     if (imgType == CV_32FC2)
@@ -243,7 +244,7 @@ void PoseSolver::computeOmega(InputArray objectPoints, InputArray imagePoints)
 
     omega_ += qa_sum.t() * p_;
 
-    cv::SVD omega_svd(omega_);
+    cv::SVD omega_svd(omega_, cv::SVD::FULL_UV);
     s_ = omega_svd.w;
     u_ = omega_svd.u;
 
@@ -277,14 +278,16 @@ void PoseSolver::solveInternal()
         }
         else
         {
-            for (int k = 0; k < 2; k++)
-            {
-                Matx<double, 9, 1> r;
-                nearestRotationMatrix((k == 0 ? 1 : -1) * e, r);
-                solutions[k] = runSQP(r);
-                solutions[k].t = p_ * solutions[k].r_hat;
-                checkSolution(solutions[k], min_sq_err);
-            }
+            Matx<double, 9, 1> r;
+            nearestRotationMatrix(e, r);
+            solutions[0] = runSQP(r);
+            solutions[0].t = p_ * solutions[0].r_hat;
+            checkSolution(solutions[0], min_sq_err);
+
+            nearestRotationMatrix(-e, r);
+            solutions[1] = runSQP(r);
+            solutions[1].t = p_ * solutions[1].r_hat;
+            checkSolution(solutions[1], min_sq_err);
         }
     }
 
@@ -297,14 +300,16 @@ void PoseSolver::solveInternal()
         const cv::Matx<double, 9, 1> e = u_.col(index);
         SQPSolution solutions[2];
 
-        for (int k = 0; k < 2; k++)
-        {
-            Matx<double, 9, 1> r;
-            nearestRotationMatrix((k == 0 ? 1 : -1) * e, r);
-            solutions[k] = runSQP(r);
-            solutions[k].t = p_ * solutions[k].r_hat;
-            checkSolution(solutions[k], min_sq_err);
-        }
+        Matx<double, 9, 1> r;
+        nearestRotationMatrix(e, r);
+        solutions[0] = runSQP(r);
+        solutions[0].t = p_ * solutions[0].r_hat;
+        checkSolution(solutions[0], min_sq_err);
+
+        nearestRotationMatrix(-e, r);
+        solutions[1] = runSQP(r);
+        solutions[1].t = p_ * solutions[1].r_hat;
+        checkSolution(solutions[1], min_sq_err);
 
         c++;
     }
@@ -384,38 +389,40 @@ void PoseSolver::solveSQPSystem(const cv::Matx<double, 9, 1>& r, cv::Matx<double
     delta += N * y;
 }
 
-void PoseSolver::analyticalInverse3x3Symm(const cv::Matx<double, 3, 3>& H,
+bool PoseSolver::analyticalInverse3x3Symm(const cv::Matx<double, 3, 3>& Q,
     cv::Matx<double, 3, 3>& Qinv,
     const double& threshold)
 {
-    const double& a = H(0, 0);
-    const double& b = H(1, 0);
-    const double& c = H(2, 0);
-    const double& d = H(1, 0);
-    const double& e = H(1, 1);
-    const double& f = H(2, 1);
-    const double& g = H(2, 0);
-    const double& h = H(2, 1);
-    const double& i = H(2, 2);
+    // 1. Get the elements of the matrix
+    double a = Q(0, 0),
+        b = Q(1, 0), d = Q(1, 1),
+        c = Q(2, 0), e = Q(2, 1), f = Q(2, 2);
 
     // 2. Determinant
-    double det = a * e * i + b * f * g + c * d * h - g * e * c - h * f * a - i * d * b;
+    double t2, t4, t7, t9, t12;
+    t2 = e * e;
+    t4 = a * d;
+    t7 = b * b;
+    t9 = b * c;
+    t12 = c * c;
+    double det = -t4 * f + a * t2 + t7 * f - 2.0 * t9 * e + t12 * d;
 
-    if (fabs(det) < threshold) return;
-    double invDet = 1.0 / det;
+    if (fabs(det) < threshold) return false;
 
-    // 3. Adjoint and inverse
-    Qinv(0, 0) = (e * i - f * h) * invDet;
-    Qinv(0, 1) = (h * c - i * b) * invDet;
-    Qinv(0, 2) = (b * f - c * e) * invDet;
+    // 3. Inverse
+    double t15, t20, t24, t30;
+    t15 = 1.0 / det;
+    t20 = (-b * f + c * e) * t15;
+    t24 = (b * e - c * d) * t15;
+    t30 = (a * e - t9) * t15;
+    Qinv(0, 0) = (-d * f + t2) * t15;
+    Qinv(0, 1) = Qinv(1, 0) = -t20;
+    Qinv(0, 2) = Qinv(2, 0) = -t24;
+    Qinv(1, 1) = -(a * f - t12) * t15;
+    Qinv(1, 2) = Qinv(2, 1) = t30;
+    Qinv(2, 2) = -(t4 - t7) * t15;
 
-    Qinv(1, 0) = Qinv(0, 1);
-    Qinv(1, 1) = (a * i - g * c) * invDet;
-    Qinv(1, 2) = (d * c - a * f) * invDet;
-
-    Qinv(2, 0) = Qinv(0, 2);
-    Qinv(2, 1) = Qinv(1, 2);
-    Qinv(2, 2) = (a * e - d * b) * invDet;
+    return true;
 }
 
 void PoseSolver::computeRowAndNullspace(const cv::Matx<double, 9, 1>& r,
@@ -610,7 +617,7 @@ void PoseSolver::computeRowAndNullspace(const cv::Matx<double, 9, 1>& r,
 
 // faster nearest rotation computation based on FOAM (see: http://users.ics.forth.gr/~lourakis/publ/2018_iros.pdf )
 /* Solve the nearest orthogonal approximation problem
-    * i.e., given B, find R minimizing ||R-B||_F
+    * i.e., given e, find R minimizing ||R-e||_F
     *
     * The computation borrows from Markley's FOAM algorithm
     * "Attitude Determination Using Vector Observations: A Fast Optimal Matrix Algorithm", J. Astronaut. Sci.
@@ -625,76 +632,76 @@ void PoseSolver::nearestRotationMatrix(const cv::Matx<double, 9, 1>& e,
     cv::Matx<double, 9, 1>& r)
 {
     register int i;
-    double l, lprev, detB, Bsq, adjBsq, adjB[9];
+    double l, lprev, det_e, e_sq, adj_e_sq, adj_e[9];
 
-    // B's adjoint
-    adjB[0] = e(4) * e(8) - e(5) * e(7); adjB[1] = e(2) * e(7) - e(1) * e(8); adjB[2] = e(1) * e(5) - e(2) * e(4);
-    adjB[3] = e(5) * e(6) - e(3) * e(8); adjB[4] = e(0) * e(8) - e(2) * e(6); adjB[5] = e(2) * e(3) - e(0) * e(5);
-    adjB[6] = e(3) * e(7) - e(4) * e(6); adjB[7] = e(1) * e(6) - e(0) * e(7); adjB[8] = e(0) * e(4) - e(1) * e(3);
+    // e's adjoint
+    adj_e[0] = e(4) * e(8) - e(5) * e(7); adj_e[1] = e(2) * e(7) - e(1) * e(8); adj_e[2] = e(1) * e(5) - e(2) * e(4);
+    adj_e[3] = e(5) * e(6) - e(3) * e(8); adj_e[4] = e(0) * e(8) - e(2) * e(6); adj_e[5] = e(2) * e(3) - e(0) * e(5);
+    adj_e[6] = e(3) * e(7) - e(4) * e(6); adj_e[7] = e(1) * e(6) - e(0) * e(7); adj_e[8] = e(0) * e(4) - e(1) * e(3);
 
-    // det(B), ||B||^2, ||adj(B)||^2
-    detB = e(0) * e(4) * e(8) - e(0) * e(5) * e(7) - e(1) * e(3) * e(8) + e(2) * e(3) * e(7) + e(1) * e(6) * e(5) - e(2) * e(6) * e(4);
-    Bsq = e(0) * e(0) + e(1) * e(1) + e(2) * e(2) + e(3) * e(3) + e(4) * e(4) + e(5) * e(5) + e(6) * e(6) + e(7) * e(7) + e(8) * e(8);
-    adjBsq = adjB[0] * adjB[0] + adjB[1] * adjB[1] + adjB[2] * adjB[2] + adjB[3] * adjB[3] + adjB[4] * adjB[4] + adjB[5] * adjB[5] + adjB[6] * adjB[6] + adjB[7] * adjB[7] + adjB[8] * adjB[8];
+    // det(e), ||e||^2, ||adj(e)||^2
+    det_e = e(0) * e(4) * e(8) - e(0) * e(5) * e(7) - e(1) * e(3) * e(8) + e(2) * e(3) * e(7) + e(1) * e(6) * e(5) - e(2) * e(6) * e(4);
+    e_sq = e(0) * e(0) + e(1) * e(1) + e(2) * e(2) + e(3) * e(3) + e(4) * e(4) + e(5) * e(5) + e(6) * e(6) + e(7) * e(7) + e(8) * e(8);
+    adj_e_sq = adj_e[0] * adj_e[0] + adj_e[1] * adj_e[1] + adj_e[2] * adj_e[2] + adj_e[3] * adj_e[3] + adj_e[4] * adj_e[4] + adj_e[5] * adj_e[5] + adj_e[6] * adj_e[6] + adj_e[7] * adj_e[7] + adj_e[8] * adj_e[8];
 
     // compute l_max with Newton-Raphson from FOAM's characteristic polynomial, i.e. eq.(23) - (26)
     for (i = 200, l = 2.0, lprev = 0.0; fabs(l - lprev) > 1E-12 * fabs(lprev) && i > 0; --i) {
         double tmp, p, pp;
 
-        tmp = (l * l - Bsq);
-        p = (tmp * tmp - 8.0 * l * detB - 4.0 * adjBsq);
-        pp = 8.0 * (0.5 * tmp * l - detB);
+        tmp = (l * l - e_sq);
+        p = (tmp * tmp - 8.0 * l * det_e - 4.0 * adj_e_sq);
+        pp = 8.0 * (0.5 * tmp * l - det_e);
 
         lprev = l;
         l -= p / pp;
     }
 
-    // the rotation matrix equals ((l^2 + Bsq)*B + 2*l*adj(B') - 2*B*B'*B) / (l*(l*l-Bsq) - 2*det(B)), i.e. eq.(14) using (18), (19)
+    // the rotation matrix equals ((l^2 + e_sq)*e + 2*l*adj(e') - 2*e*e'*e) / (l*(l*l-e_sq) - 2*det(e)), i.e. eq.(14) using (18), (19)
     {
-        // compute (l^2 + Bsq)*B
-        double tmp[9], BBt[9], denom;
-        const double a = l * l + Bsq;
+        // compute (l^2 + e_sq)*e
+        double tmp[9], e_et[9], denom;
+        const double a = l * l + e_sq;
 
-        // BBt=B*B'
-        BBt[0] = e(0) * e(0) + e(1) * e(1) + e(2) * e(2);
-        BBt[1] = e(0) * e(3) + e(1) * e(4) + e(2) * e(5);
-        BBt[2] = e(0) * e(6) + e(1) * e(7) + e(2) * e(8);
+        // e_et=e*e'
+        e_et[0] = e(0) * e(0) + e(1) * e(1) + e(2) * e(2);
+        e_et[1] = e(0) * e(3) + e(1) * e(4) + e(2) * e(5);
+        e_et[2] = e(0) * e(6) + e(1) * e(7) + e(2) * e(8);
 
-        BBt[3] = BBt[1];
-        BBt[4] = e(3) * e(3) + e(4) * e(4) + e(5) * e(5);
-        BBt[5] = e(3) * e(6) + e(4) * e(7) + e(5) * e(8);
+        e_et[3] = e_et[1];
+        e_et[4] = e(3) * e(3) + e(4) * e(4) + e(5) * e(5);
+        e_et[5] = e(3) * e(6) + e(4) * e(7) + e(5) * e(8);
 
-        BBt[6] = BBt[2];
-        BBt[7] = BBt[5];
-        BBt[8] = e(6) * e(6) + e(7) * e(7) + e(8) * e(8);
+        e_et[6] = e_et[2];
+        e_et[7] = e_et[5];
+        e_et[8] = e(6) * e(6) + e(7) * e(7) + e(8) * e(8);
 
-        // tmp=BBt*B
-        tmp[0] = BBt[0] * e(0) + BBt[1] * e(3) + BBt[2] * e(6);
-        tmp[1] = BBt[0] * e(1) + BBt[1] * e(4) + BBt[2] * e(7);
-        tmp[2] = BBt[0] * e(2) + BBt[1] * e(5) + BBt[2] * e(8);
+        // tmp=e_et*e
+        tmp[0] = e_et[0] * e(0) + e_et[1] * e(3) + e_et[2] * e(6);
+        tmp[1] = e_et[0] * e(1) + e_et[1] * e(4) + e_et[2] * e(7);
+        tmp[2] = e_et[0] * e(2) + e_et[1] * e(5) + e_et[2] * e(8);
 
-        tmp[3] = BBt[3] * e(0) + BBt[4] * e(3) + BBt[5] * e(6);
-        tmp[4] = BBt[3] * e(1) + BBt[4] * e(4) + BBt[5] * e(7);
-        tmp[5] = BBt[3] * e(2) + BBt[4] * e(5) + BBt[5] * e(8);
+        tmp[3] = e_et[3] * e(0) + e_et[4] * e(3) + e_et[5] * e(6);
+        tmp[4] = e_et[3] * e(1) + e_et[4] * e(4) + e_et[5] * e(7);
+        tmp[5] = e_et[3] * e(2) + e_et[4] * e(5) + e_et[5] * e(8);
 
-        tmp[6] = BBt[6] * e(0) + BBt[7] * e(3) + BBt[8] * e(6);
-        tmp[7] = BBt[6] * e(1) + BBt[7] * e(4) + BBt[8] * e(7);
-        tmp[8] = BBt[6] * e(2) + BBt[7] * e(5) + BBt[8] * e(8);
+        tmp[6] = e_et[6] * e(0) + e_et[7] * e(3) + e_et[8] * e(6);
+        tmp[7] = e_et[6] * e(1) + e_et[7] * e(4) + e_et[8] * e(7);
+        tmp[8] = e_et[6] * e(2) + e_et[7] * e(5) + e_et[8] * e(8);
 
-        // compute R as (a*B + 2*(l*adj(B)' - tmp))*denom; note that adj(B')=adj(B)'
-        denom = l * (l * l - Bsq) - 2.0 * detB;
+        // compute R as (a*e + 2*(l*adj(e)' - tmp))*denom; note that adj(e')=adj(e)'
+        denom = l * (l * l - e_sq) - 2.0 * det_e;
         denom = 1.0 / denom;
-        r(0) = (a * e(0) + 2.0 * (l * adjB[0] - tmp[0])) * denom;
-        r(1) = (a * e(1) + 2.0 * (l * adjB[3] - tmp[1])) * denom;
-        r(2) = (a * e(2) + 2.0 * (l * adjB[6] - tmp[2])) * denom;
+        r(0) = (a * e(0) + 2.0 * (l * adj_e[0] - tmp[0])) * denom;
+        r(1) = (a * e(1) + 2.0 * (l * adj_e[3] - tmp[1])) * denom;
+        r(2) = (a * e(2) + 2.0 * (l * adj_e[6] - tmp[2])) * denom;
 
-        r(3) = (a * e(3) + 2.0 * (l * adjB[1] - tmp[3])) * denom;
-        r(4) = (a * e(4) + 2.0 * (l * adjB[4] - tmp[4])) * denom;
-        r(5) = (a * e(5) + 2.0 * (l * adjB[7] - tmp[5])) * denom;
+        r(3) = (a * e(3) + 2.0 * (l * adj_e[1] - tmp[3])) * denom;
+        r(4) = (a * e(4) + 2.0 * (l * adj_e[4] - tmp[4])) * denom;
+        r(5) = (a * e(5) + 2.0 * (l * adj_e[7] - tmp[5])) * denom;
 
-        r(6) = (a * e(6) + 2.0 * (l * adjB[2] - tmp[6])) * denom;
-        r(7) = (a * e(7) + 2.0 * (l * adjB[5] - tmp[7])) * denom;
-        r(8) = (a * e(8) + 2.0 * (l * adjB[8] - tmp[8])) * denom;
+        r(6) = (a * e(6) + 2.0 * (l * adj_e[2] - tmp[6])) * denom;
+        r(7) = (a * e(7) + 2.0 * (l * adj_e[5] - tmp[7])) * denom;
+        r(8) = (a * e(8) + 2.0 * (l * adj_e[8] - tmp[8])) * denom;
     }
 }
 
@@ -712,16 +719,16 @@ inline bool PoseSolver::positiveDepth(const SQPSolution& solution) const
     return (r(6) * mean(0) + r(7) * mean(1) + r(8) * mean(2) + t(2) > 0);
 }
 
-void PoseSolver::checkSolution(SQPSolution& solution, double& error)
+void PoseSolver::checkSolution(SQPSolution& solution, double& min_error)
 {
     if (positiveDepth(solution))
     {
         solution.sq_error = (omega_ * solution.r_hat).ddot(solution.r_hat);
-        if (fabs(error - solution.sq_error) > EQUAL_SQUARED_ERRORS_DIFF)
+        if (fabs(min_error - solution.sq_error) > EQUAL_SQUARED_ERRORS_DIFF)
         {
-            if (error > solution.sq_error)
+            if (min_error > solution.sq_error)
             {
-                error = solution.sq_error;
+                min_error = solution.sq_error;
                 solutions_[0] = solution;
                 num_solutions_ = 1;
             }
@@ -746,7 +753,7 @@ void PoseSolver::checkSolution(SQPSolution& solution, double& error)
             {
                 solutions_[num_solutions_++] = solution;
             }
-            if (error > solution.sq_error) error = solution.sq_error;
+            if (min_error > solution.sq_error) min_error = solution.sq_error;
         }
     }
 }

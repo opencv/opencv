@@ -98,9 +98,9 @@ private:
     /*
     * @brief                Processes a solution and sorts it by error.
     * @param solution       The solution to evaluate.
-    * @param error          The current minimum error.
+    * @param min_error          The current minimum error.
     */
-    void checkSolution(SQPSolution& solution, double& error);
+    void checkSolution(SQPSolution& solution, double& min_error);
 
     /*
     * @brief                Computes the determinant of a matrix stored in row-major format.
@@ -145,7 +145,7 @@ private:
     * @param Qinv           The inverse of Q.
     * @param threshold      The threshold to determine if Q is singular and non-invertible.
     */
-    void analyticalInverse3x3Symm(const cv::Matx<double, 3, 3>& Q,
+    bool analyticalInverse3x3Symm(const cv::Matx<double, 3, 3>& Q,
         cv::Matx<double, 3, 3>& Qinv,
         const double& threshold = 1e-8);
 
