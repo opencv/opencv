@@ -329,6 +329,13 @@ IIStream& operator>> (IIStream& is,       cv::gapi::wip::draw::Line &l) {
 
 // G-API types /////////////////////////////////////////////////////////////////
 
+IOStream& operator<< (IOStream& os, const cv::GCompileArg& arg)
+{
+    os << arg.tag;
+    arg.serialize(os);
+    return os;
+}
+
 // Stubs (empty types)
 
 IOStream& operator<< (IOStream& os, cv::util::monostate  ) {return os;}
@@ -865,6 +872,14 @@ IIStream& ByteMemoryInStream::operator>> (std::string& str) {
     return *this;
 }
 
+GAPI_EXPORTS std::unique_ptr<IIStream> detail::getInStream(const std::vector<char> &p) {
+    return std::unique_ptr<ByteMemoryInStream>(new ByteMemoryInStream(p));
+}
+
+GAPI_EXPORTS void serialize(IOStream& os, const cv::GCompileArgs &ca) {
+    os << ca;
+}
+
 GAPI_EXPORTS void serialize(IOStream& os, const cv::GMetaArgs &ma) {
     os << ma;
 }
@@ -881,7 +896,6 @@ GAPI_EXPORTS GRunArgs run_args_deserialize(IIStream& is) {
     is >> s;
     return s;
 }
-
 
 } // namespace s11n
 } // namespace gapi

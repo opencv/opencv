@@ -3,6 +3,8 @@
 
 namespace cv
 {
+   struct GAPI_EXPORTS_W_SIMPLE GCompileArg { };
+
    GAPI_EXPORTS_W GCompileArgs compile_args(gapi::GKernelPackage pkg);
 
    class GAPI_EXPORTS_W_SIMPLE GProtoArg { };

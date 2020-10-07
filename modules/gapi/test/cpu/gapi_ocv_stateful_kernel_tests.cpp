@@ -21,7 +21,7 @@ namespace opencv_test
     {
         std::string method;
     };
-}
+} // namespace opencv_test
 
 namespace cv
 {
@@ -31,11 +31,11 @@ namespace cv
         {
             static const char* tag()
             {
-                return "org.opencv.test..background_substractor_state_params";
+                return "org.opencv.test.background_substractor_state_params";
             }
         };
-    }
-}
+    } // namespace detail
+} // namespace cv
 
 namespace opencv_test
 {

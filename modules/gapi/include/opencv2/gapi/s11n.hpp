@@ -10,6 +10,7 @@
 #include <vector>
 #include <map>
 #include <unordered_map>
+#include <opencv2/gapi/s11n/base.hpp>
 #include <opencv2/gapi/gcomputation.hpp>
 
 namespace cv {
@@ -17,14 +18,13 @@ namespace gapi {
 
 namespace detail {
     GAPI_EXPORTS cv::GComputation getGraph(const std::vector<char> &p);
-} // namespace detail
 
-namespace detail {
     GAPI_EXPORTS cv::GMetaArgs getMetaArgs(const std::vector<char> &p);
-} // namespace detail
 
-namespace detail {
     GAPI_EXPORTS cv::GRunArgs getRunArgs(const std::vector<char> &p);
+
+    template<typename... Types>
+    cv::GCompileArgs getCompileArgs(const std::vector<char> &p);
 } // namespace detail
 
 GAPI_EXPORTS std::vector<char> serialize(const cv::GComputation &c);
@@ -35,6 +35,7 @@ T deserialize(const std::vector<char> &p);
 
 //} //ananymous namespace
 
+GAPI_EXPORTS std::vector<char> serialize(const cv::GCompileArgs&);
 GAPI_EXPORTS std::vector<char> serialize(const cv::GMetaArgs&);
 GAPI_EXPORTS std::vector<char> serialize(const cv::GRunArgs&);
 
@@ -53,6 +54,11 @@ cv::GRunArgs deserialize(const std::vector<char> &p) {
     return detail::getRunArgs(p);
 }
 
+template<typename T, typename... Types> inline
+typename std::enable_if<std::is_same<T, GCompileArgs>::value, GCompileArgs>::
+type deserialize(const std::vector<char> &p) {
+    return detail::getCompileArgs<Types...>(p);
+}
 } // namespace gapi
 } // namespace cv
 
@@ -90,6 +96,10 @@ struct GAPI_EXPORTS IIStream {
     virtual IIStream& operator >> (uint64_t &) = 0;
     virtual IIStream& operator>> (std::string &) = 0;
 };
+
+namespace detail {
+GAPI_EXPORTS std::unique_ptr<IIStream> getInStream(const std::vector<char> &p);
+} // namespace detail
 
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
@@ -174,17 +184,48 @@ IIStream& operator>> (IIStream& is, std::vector<T> &ts) {
     }
     return is;
 }
-
-namespace detail {
-    // Will be used along with default types if possible in specific cases (compile args, etc)
-    // Note: actual implementation is defined by user
-    template<typename T>
-    struct GAPI_EXPORTS S11N {
-        static void serialize(IOStream &, const T &) {}
-        static T deserialize(IIStream &) { T t; return t; }
-    };
-} // namespace detail
 } // namespace s11n
+
+namespace detail
+{
+template<typename T> struct deserialize_arg;
+
+template<> struct deserialize_arg<std::tuple<>> {
+static GCompileArg exec(cv::gapi::s11n::IIStream&, const std::string&) {
+        throw std::logic_error("Passed arg can't be deserialized!");
+    }
+};
+
+template<typename T, typename... Types>
+struct deserialize_arg<std::tuple<T, Types...>> {
+static GCompileArg exec(cv::gapi::s11n::IIStream& is, const std::string& tag) {
+    if (tag == cv::detail::CompileArgTag<T>::tag()) {
+        return GCompileArg {
+            cv::gapi::s11n::detail::S11N<T>::deserialize(is)
+        };
+    }
+
+    return deserialize_arg<std::tuple<Types...>>::exec(is, tag);
+}
+};
+
+template<typename... Types>
+cv::GCompileArgs getCompileArgs(const std::vector<char> &p) {
+    std::unique_ptr<cv::gapi::s11n::IIStream> pIs = cv::gapi::s11n::detail::getInStream(p);
+    cv::gapi::s11n::IIStream& is = *pIs;
+    cv::GCompileArgs args;
+
+    uint32_t sz = 0;
+    is >> sz;
+    for (uint32_t i = 0; i < sz; ++i) {
+        std::string tag;
+        is >> tag;
+        args.push_back(cv::gapi::detail::deserialize_arg<std::tuple<Types...>>::exec(is, tag));
+    }
+
+    return args;
+}
+} // namespace detail
 } // namespace gapi
 } // namespace cv
 
