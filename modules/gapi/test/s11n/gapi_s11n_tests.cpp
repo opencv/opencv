@@ -524,7 +524,7 @@ TEST_F(S11N_Basic, Test_Custom_Type) {
 }
 
 TEST_F(S11N_Basic, Test_Custom_CompileArg) {
-    MyCustomType customVar{1248, "World", {1280, 720, 640, 480}, {{32434142342, 5}, {7, 34242432}}};
+    MyCustomType customVar{1248, "World", {1280, 720, 640, 480}, {{5, 32434142342}, {7, 34242432}}};
 
     std::vector<char> sArgs = cv::gapi::serialize(cv::compile_args(customVar));
 
