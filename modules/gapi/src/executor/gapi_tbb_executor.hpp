@@ -51,8 +51,9 @@ constexpr async_tag async;
 struct tile_node {
     //place in totally ordered queue of tasks to execute. Inverse to priority, i.e. lower index means higher priority
     size_t                                                                              total_order_index = 0;
+    //FIXME: use templates here instead of std::function
     std::function<void()>                                                               task_body;
-    std::function<void(std::function<void()> && callback, size_t total_order_index)>       async_task_body;
+    std::function<void(std::function<void()> && callback, size_t total_order_index)>    async_task_body;
     //number of dependencies according to a dependency graph (i.e. number of "input" edges).
     //Set only once during graph compilation. (Can not make it const due two two phase initialization of the tile_node objects)
     size_t                                                                              dependencies     = 0;
@@ -61,7 +62,7 @@ struct tile_node {
     atomic_copyable_wrapper<size_t>                                                     dependency_count = 0;
     std::vector<tile_node*>                                                             dependees;
 
-    //FIXME: do not use bool flag - instead generate different task graph for async tasks
+    //FIXME: use variant here
     bool async = false;
 
     tile_node(decltype(task_body) && f) : task_body(std::move(f)) {};
@@ -83,9 +84,10 @@ inline std::ostream& operator<<(std::ostream& o, tile_node const& n){
     return o;
 }
 
+using prio_items_queue_t = tbb::concurrent_priority_queue<tile_node* , tile_node_indirect_priority_comparator>;
 
-void execute(tbb::concurrent_priority_queue<tile_node* , tile_node_indirect_priority_comparator> & q);
-void execute(tbb::concurrent_priority_queue<tile_node* , tile_node_indirect_priority_comparator> & q, tbb::task_arena& arena);
+void execute(prio_items_queue_t& q);
+void execute(prio_items_queue_t& q, tbb::task_arena& arena);
 
 }}} //cv::gimpl::parallel
 
