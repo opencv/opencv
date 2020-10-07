@@ -204,16 +204,15 @@ static GCompileArg exec(cv::gapi::s11n::IIStream& is, const std::string& tag) {
             cv::gapi::s11n::detail::S11N<typename std::decay<T>::type>::deserialize(is)
         };
     }
-    else {
-        return deserialize_arg<std::tuple<Types...>>::exec(is, tag);
-    }
+
+    return deserialize_arg<std::tuple<Types...>>::exec(is, tag);
 }
 };
 
 template<typename... Types>
 cv::GCompileArgs getCompileArgs(const std::vector<char> &p) {
     std::unique_ptr<cv::gapi::s11n::IIStream> pIs = cv::gapi::s11n::detail::getInStream(p);
-    cv::gapi::s11n::IIStream& is = *pIs.get();
+    cv::gapi::s11n::IIStream& is = *pIs;
     cv::GCompileArgs args;
 
     uint32_t sz = 0;

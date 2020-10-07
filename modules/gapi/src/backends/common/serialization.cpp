@@ -333,7 +333,6 @@ IOStream& operator<< (IOStream& os, const cv::GCompileArg& arg)
 {
     os << arg.tag;
     arg.serialize(os);
-
     return os;
 }
 
