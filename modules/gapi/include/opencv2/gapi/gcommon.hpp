@@ -163,14 +163,12 @@ public:
     GCompileArg() = default;
 
     std::string tag;
-    std::function<void(cv::gapi::s11n::IOStream&, const util::any&)> serialize;
-    util::any arg;
 
     // FIXME: use decay in GArg/other trait-based wrapper before leg is shot!
     template<typename T, typename std::enable_if<!detail::is_compile_arg<T>::value, int>::type = 0>
     explicit GCompileArg(T &&t)
         : tag(detail::CompileArgTag<typename std::decay<T>::type>::tag())
-        , serialize(&cv::gapi::s11n::detail::wrap_serialize<T>::serialize)
+        , serializeF(&cv::gapi::s11n::detail::wrap_serialize<T>::serialize)
         , arg(t)
     {
     }
@@ -184,6 +182,15 @@ public:
     {
         return util::any_cast<T>(arg);
     }
+
+    void serialize(cv::gapi::s11n::IOStream& os) const
+    {
+        serializeF(os, arg);
+    }
+
+private:
+    std::function<void(cv::gapi::s11n::IOStream&, const util::any&)> serializeF;
+    util::any arg;
 };
 
 using GCompileArgs = std::vector<GCompileArg>;

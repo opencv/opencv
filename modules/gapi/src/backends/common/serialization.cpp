@@ -332,7 +332,7 @@ IIStream& operator>> (IIStream& is,       cv::gapi::wip::draw::Line &l) {
 IOStream& operator<< (IOStream& os, const cv::GCompileArg& arg)
 {
     os << arg.tag;
-    arg.serialize(os, arg.arg);
+    arg.serialize(os);
 
     return os;
 }

@@ -7,7 +7,7 @@
 #ifndef OPENCV_GAPI_S11N_BASE_HPP
 #define OPENCV_GAPI_S11N_BASE_HPP
 
-#include <opencv2/gapi/util/throw.hpp>
+#include <opencv2/gapi/own/assert.hpp>
 
 namespace cv {
 namespace gapi {
