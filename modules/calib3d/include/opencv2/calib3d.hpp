@@ -2607,7 +2607,7 @@ final fundamental matrix. It can be set to something like 1-3, depending on the 
 point localization, image resolution, and the image noise.
 @param confidence Parameter used for the RANSAC and LMedS methods only. It specifies a desirable level
 of confidence (probability) that the estimated matrix is correct.
-@param mask
+@param[out] mask optional output mask
 @param maxIters The maximum number of robust method iterations.
 
 The epipolar geometry is described by the following equation:

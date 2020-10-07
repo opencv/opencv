@@ -58,11 +58,13 @@
 #pragma warning( disable: 4244 ) //conversion from '__int64' to 'int', possible loss of data
 #endif
 
+#if !defined(OPENCV_DISABLE_EIGEN_TENSOR_SUPPORT)
 #if EIGEN_WORLD_VERSION == 3 && EIGEN_MAJOR_VERSION >= 3 \
     && defined(CV_CXX11) && defined(CV_CXX_STD_ARRAY)
 #include <unsupported/Eigen/CXX11/Tensor>
-#define OPENCV_EIGEN_TENSOR_SUPPORT
-#endif // EIGEN_WORLD_VERSION == 3 && EIGEN_MAJOR_VERSION >= 3
+#define OPENCV_EIGEN_TENSOR_SUPPORT 1
+#endif  // EIGEN_WORLD_VERSION == 3 && EIGEN_MAJOR_VERSION >= 3
+#endif  // !defined(OPENCV_DISABLE_EIGEN_TENSOR_SUPPORT)
 
 namespace cv
 {
