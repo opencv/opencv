@@ -98,14 +98,7 @@ enum class GShape: int
 namespace gapi {
 namespace s11n {
 namespace detail {
-template<typename T> struct wrap_serialize
-{
-    static void serialize(gapi::s11n::IOStream& os, const util::any& arg)
-    {
-        using decayed_type = typename std::decay<T>::type;
-        S11N<decayed_type>::serialize(os, util::any_cast<decayed_type>(arg));
-    }
-};
+template<typename T> struct wrap_serialize;
 } // namespace detail
 } // namespace s11n
 } // namespace gapi
@@ -185,11 +178,11 @@ public:
 
     void serialize(cv::gapi::s11n::IOStream& os) const
     {
-        serializeF(os, arg);
+        serializeF(os, *this);
     }
 
 private:
-    std::function<void(cv::gapi::s11n::IOStream&, const util::any&)> serializeF;
+    std::function<void(cv::gapi::s11n::IOStream&, const GCompileArg&)> serializeF;
     util::any arg;
 };
 
@@ -222,6 +215,19 @@ inline cv::util::optional<T> getCompileArg(const cv::GCompileArgs &args)
     }
     return cv::util::optional<T>();
 }
+
+namespace s11n {
+namespace detail {
+template<typename T> struct wrap_serialize
+{
+    static void serialize(IOStream& os, const GCompileArg& arg)
+    {
+        using decayed_type = typename std::decay<T>::type;
+        S11N<decayed_type>::serialize(os, arg.get<decayed_type>());
+    }
+};
+} // namespace detail
+} // namespace s11n
 } // namespace gapi
 
 /**

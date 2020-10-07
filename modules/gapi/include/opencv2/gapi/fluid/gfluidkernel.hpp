@@ -438,28 +438,4 @@ public:
 
 } // namespace cv
 
-namespace cv {
-namespace gapi {
-namespace s11n {
-namespace detail {
-    template<> struct S11N<cv::GFluidOutputRois>
-    {
-        static void serialize(IOStream &os, const cv::GFluidOutputRois &r)
-        {
-            os << r.rois;
-        }
-
-        static cv::GFluidOutputRois deserialize(IIStream &is)
-        {
-            cv::GFluidOutputRois r;
-            is >> r.rois;
-            return r;
-        }
-    };
-} // namespace detail
-} // namespace s11n
-} // namespace gapi
-} // namespace cv
-
-
 #endif // OPENCV_GAPI_GCPUKERNEL_HPP

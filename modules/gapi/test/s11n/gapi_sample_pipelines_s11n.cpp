@@ -11,7 +11,6 @@
 #include <opencv2/gapi/s11n.hpp>
 #include "api/render_priv.hpp"
 #include "../common/gapi_render_tests.hpp"
-#include <opencv2/gapi/fluid/gfluidkernel.hpp>
 
 namespace opencv_test
 {
@@ -806,40 +805,5 @@ TEST(S11N, Pipeline_Render_RGB)
     cv::fillPoly(ref_mat, pp, color, lt, shift);
 
     EXPECT_EQ(cv::norm(input,  ref_mat), 0);
-}
-
-TEST(S11N, Pipeline_Add_FluidROI)
-{
-    cv::Rect roi { 0, 0, 32, 8 };
-    cv::Size roi_sz(32, 8);
-
-    cv::Mat in_mat(cv::Size(32, 32), CV_8UC3);
-    cv::Mat out_mat_gapi(roi_sz, CV_8UC3),
-            out_mat_ocv(roi_sz, CV_8UC3);
-    cv::randu(in_mat, cv::Scalar::all(0), cv::Scalar::all(100));
-
-    // G-API code //////////////////////////////////////////////////////////////
-    cv::GMat in;
-    cv::GMat out = cv::gapi::add(in, in);
-
-    auto s_comp = cv::gapi::serialize(cv::GComputation(cv::GIn(in), cv::GOut(out)));
-    auto s_comp_args = cv::gapi::serialize(cv::compile_args(cv::GFluidOutputRois{ { roi } }));
-
-    auto d_comp = cv::gapi::deserialize<cv::GComputation>(s_comp);
-    auto d_comp_args = cv::gapi::deserialize<cv::GCompileArgs,
-                                             cv::GFluidOutputRois>(s_comp_args);
-
-    cv::Rect d_roi = cv::gapi::getCompileArg<cv::GFluidOutputRois>(d_comp_args).value().rois[0];
-    EXPECT_EQ(roi, d_roi);
-
-    d_comp.apply(cv::gin(in_mat), cv::gout(out_mat_gapi),
-                 cv::compile_args(cv::gapi::use_only{ cv::gapi::core::fluid::kernels() },
-                                  d_comp_args[0]));
-
-    // OpenCV code /////////////////////////////////////////////////////////////
-    cv::add(in_mat, in_mat, out_mat_ocv);
-
-    // Comparison
-    EXPECT_EQ(0, cvtest::norm(out_mat_gapi(roi), out_mat_ocv(roi), NORM_INF));
 }
 } // namespace opencv_test
