@@ -2349,13 +2349,6 @@ TEST_P(ConvolutionEltwiseActivationFusion, Accuracy)
     if ((eltwiseOp != "sum" || weightedEltwise) && backendId == DNN_BACKEND_OPENCV && (targetId == DNN_TARGET_OPENCL || targetId == DNN_TARGET_OPENCL_FP16))
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL);
 
-    // bug: https://github.com/opencv/opencv/issues/17953
-    if (eltwiseOp == "sum" && actType == "ChannelsPReLU" && bias_term == false &&
-        backendId == DNN_BACKEND_OPENCV && (targetId == DNN_TARGET_OPENCL || targetId == DNN_TARGET_OPENCL_FP16))
-    {
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL);
-    }
-
     // bug: https://github.com/opencv/opencv/issues/17964
     if (actType == "Power" && backendId == DNN_BACKEND_OPENCV && (targetId == DNN_TARGET_OPENCL || targetId == DNN_TARGET_OPENCL_FP16))
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL);
@@ -2441,13 +2434,6 @@ TEST_P(ConvolutionActivationEltwiseFusion, Accuracy)
     // bug: https://github.com/opencv/opencv/issues/17964
     if (actType == "Power" && backendId == DNN_BACKEND_OPENCV && (targetId == DNN_TARGET_OPENCL || targetId == DNN_TARGET_OPENCL_FP16))
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL);
-
-    // bug: https://github.com/opencv/opencv/issues/17953
-    if (actType == "ChannelsPReLU" && bias_term == false &&
-        backendId == DNN_BACKEND_OPENCV && (targetId == DNN_TARGET_OPENCL || targetId == DNN_TARGET_OPENCL_FP16))
-    {
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL);
-    }
 
     Net net;
     int convId = net.addLayer(convParams.name, convParams.type, convParams);
