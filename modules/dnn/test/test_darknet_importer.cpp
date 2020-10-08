@@ -625,6 +625,11 @@ TEST_P(Test_Darknet_nets, YOLOv4_tiny)
         target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB
     );
 
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021010000)  // nGraph compilation failure
+    if (target == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+#endif
+
     const double confThreshold = 0.5;
     // batchId, classId, confidence, left, top, right, bottom
     const int N0 = 2;
