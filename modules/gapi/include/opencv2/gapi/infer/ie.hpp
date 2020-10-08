@@ -88,6 +88,16 @@ public:
               } {
     };
 
+    Params(const std::string &model,
+           const std::string &device,
+           detail::ParamDesc::Kind kind = detail::ParamDesc::Kind::Import)
+        : desc{ model, {}, device, {}, {}, {}
+              , std::tuple_size<typename Net::InArgs>::value  // num_in
+              , std::tuple_size<typename Net::OutArgs>::value // num_out
+              , kind
+              } {
+    };
+
     Params<Net>& cfgInputLayers(const typename PortCfg<Net>::In &ll) {
         desc.input_names.clear();
         desc.input_names.reserve(ll.size());

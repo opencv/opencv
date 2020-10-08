@@ -172,85 +172,62 @@ struct IEUnit {
 
     cv::gapi::ie::detail::ParamDesc params;
     IE::CNNNetwork net;
-    IE::ConstInputsDataMap inputs;
-    IE::ConstOutputsDataMap outputs;
-    cv::gimpl::ie::IECompiled compiled;
+    IE::InputsDataMap inputs;
+    IE::OutputsDataMap outputs;
 
-    IE::Core plugin;
-    IE::ExecutableNetwork network;
+    // FIXME: In case importNetwork for fill inputs/outputs need to obtain ExecutableNetwork, but
+    // for loadNetwork they can be obtained by using readNetwork
+    mutable IE::ExecutableNetwork this_network;
+    mutable cv::gimpl::ie::wrap::Plugin this_plugin;
 
     explicit IEUnit(const cv::gapi::ie::detail::ParamDesc &pp)
         : params(pp) {
         if (params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Load) {
-//            net = cv::gimpl::ie::wrap::readNetwork(params);
-//            inputs  = net.getInputsInfo();
-//            outputs = net.getOutputsInfo();
-//            // The practice shows that not all inputs and not all outputs
-//            // are mandatory to specify in IE model.
-//            // So what we're concerned here about is:
-//            // if operation's (not topology's) input/output number is
-//            // greater than 1, then we do care about input/output layer
-//            // names. Otherwise, names are picked up automatically.
-//            // TODO: Probably this check could be done at the API entry point? (gnet)
-//            if (params.num_in > 1u && params.num_in != params.input_names.size()) {
-//                cv::util::throw_error(std::logic_error("Please specify input layer names for "
-//                                                       + params.model_path));
-//            }
-//            if (params.num_out > 1u && params.num_out != params.output_names.size()) {
-//                cv::util::throw_error(std::logic_error("Please specify output layer names for "
-//                                                       + params.model_path));
-//            }
-//            if (params.num_in == 1u && params.input_names.empty()) {
-//                params.input_names = { inputs.begin()->first };
-//            }
-//            if (params.num_out == 1u && params.output_names.empty()) {
-//                params.output_names = { outputs.begin()->first };
-//            }
-//            auto plugin = cv::gimpl::ie::wrap::getPlugin(params);
-//            auto this_network = cv::gimpl::ie::wrap::loadNetwork(plugin, net, params);
-//            auto this_request = this_network.CreateInferRequest();
-//            // Bind const data to infer request
-//            for (auto &&p : params.const_inputs) {
-//                // FIXME: SetBlob is known to be inefficient,
-//                // it is worth to make a customizable "initializer" and pass the
-//                // cv::Mat-wrapped blob there to support IE's optimal "GetBlob idiom"
-//                // Still, constant data is to set only once.
-//                this_request.SetBlob(p.first, wrapIE(p.second.first, p.second.second));
-//            }
-//            compiled = cv::gimpl::ie::IECompiled{plugin, this_network, this_request};
+            net = cv::gimpl::ie::wrap::readNetwork(params);
+            inputs  = net.getInputsInfo();
+            outputs = net.getOutputsInfo();
+        } else if (params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Import) {
+            this_plugin  = cv::gimpl::ie::wrap::getPlugin(params);
+            this_network = cv::gimpl::ie::wrap::importNetwork(this_plugin, params);
+            // FIXME: ICNNetwork returns InputsDataMap/OutputsDataMap,
+            // but ExecutableNetwork returns ConstInputsDataMap/ConstOutputsDataMap
+            inputs  = cv::gimpl::ie::wrap::toInputsDataMap(this_network.GetInputsInfo());
+            outputs = cv::gimpl::ie::wrap::toOutputsDataMap(this_network.GetOutputsInfo());
         } else {
-            plugin = cv::gimpl::ie::wrap::getPlugin(params);
-            network = cv::gimpl::ie::wrap::importNetwork(plugin, params);
+            cv::util::throw_error(std::logic_error("Unsupported ParamDesc::Kind"));
+        }
 
-            inputs  = network.GetInputsInfo();
-            outputs = network.GetOutputsInfo();
-            // The practice shows that not all inputs and not all outputs
-            // are mandatory to specify in IE model.
-            // So what we're concerned here about is:
-            // if operation's (not topology's) input/output number is
-            // greater than 1, then we do care about input/output layer
-            // names. Otherwise, names are picked up automatically.
-            // TODO: Probably this check could be done at the API entry point? (gnet)
-            if (params.num_in > 1u && params.num_in != params.input_names.size()) {
-                cv::util::throw_error(std::logic_error("Please specify input layer names for "
-                                                       + params.model_path));
-            }
-            if (params.num_out > 1u && params.num_out != params.output_names.size()) {
-                cv::util::throw_error(std::logic_error("Please specify output layer names for "
-                                                       + params.model_path));
-            }
-            if (params.num_in == 1u && params.input_names.empty()) {
-                params.input_names = { inputs.begin()->first };
-            }
-            if (params.num_out == 1u && params.output_names.empty()) {
-                params.output_names = { outputs.begin()->first };
-            }
+        // The practice shows that not all inputs and not all outputs
+        // are mandatory to specify in IE model.
+        // So what we're concerned here about is:
+        // if operation's (not topology's) input/output number is
+        // greater than 1, then we do care about input/output layer
+        // names. Otherwise, names are picked up automatically.
+        // TODO: Probably this check could be done at the API entry point? (gnet)
+        if (params.num_in > 1u && params.num_in != params.input_names.size()) {
+            cv::util::throw_error(std::logic_error("Please specify input layer names for "
+                                                   + params.model_path));
+        }
+        if (params.num_out > 1u && params.num_out != params.output_names.size()) {
+            cv::util::throw_error(std::logic_error("Please specify output layer names for "
+                                                   + params.model_path));
+        }
+        if (params.num_in == 1u && params.input_names.empty()) {
+            params.input_names = { inputs.begin()->first };
+        }
+        if (params.num_out == 1u && params.output_names.empty()) {
+            params.output_names = { outputs.begin()->first };
         }
     }
 
     // This method is [supposed to be] called at Island compilation stage
     cv::gimpl::ie::IECompiled compile() const {
-        auto this_request = const_cast<IE::ExecutableNetwork*>(&network)->CreateInferRequest();
+        if (params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Load) {
+            this_plugin = cv::gimpl::ie::wrap::getPlugin(params);
+            this_network = cv::gimpl::ie::wrap::loadNetwork(this_plugin, net, params);
+        }
+
+        auto this_request = this_network.CreateInferRequest();
         // Bind const data to infer request
         for (auto &&p : params.const_inputs) {
             // FIXME: SetBlob is known to be inefficient,
@@ -259,7 +236,16 @@ struct IEUnit {
             // Still, constant data is to set only once.
             this_request.SetBlob(p.first, wrapIE(p.second.first, p.second.second));
         }
-        return cv::gimpl::ie::IECompiled{plugin, network, this_request};
+        // Bind const data to infer request
+        for (auto &&p : params.const_inputs) {
+            // FIXME: SetBlob is known to be inefficient,
+            // it is worth to make a customizable "initializer" and pass the
+            // cv::Mat-wrapped blob there to support IE's optimal "GetBlob idiom"
+            // Still, constant data is to set only once.
+            this_request.SetBlob(p.first, wrapIE(p.second.first, p.second.second));
+        }
+
+        return {this_plugin, this_network, this_request};
     }
 };
 
@@ -483,10 +469,8 @@ struct Infer: public cv::detail::KernelTag {
                         && "Non-GMat inputs are not supported");
 
             const auto &meta = util::get<cv::GMatDesc>(mm);
-            const_cast<InferenceEngine::InputInfo*>(ii.get())->setPrecision(toIE(meta.depth));
-            const_cast<InferenceEngine::InputInfo*>(ii.get())->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
-            std::cout << "RESIZE_BILINEAR is set" << std::endl;
-            std::cout << "to " << ii.get() << std::endl;
+            ii->setPrecision(toIE(meta.depth));
+            ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
         }
 
         // FIXME: It would be nice here to have an exact number of network's
@@ -495,7 +479,7 @@ struct Infer: public cv::detail::KernelTag {
         for (const auto &out_name : uu.params.output_names) {
             // NOTE: our output_names vector follows the API order
             // of this operation's outputs
-            const auto& ie_out = uu.outputs.at(out_name);
+            const IE::DataPtr& ie_out = uu.outputs.at(out_name);
             const IE::SizeVector dims = ie_out->getTensorDesc().getDims();
 
             cv::GMatDesc outm(toCV(ie_out->getPrecision()),
@@ -517,8 +501,6 @@ struct Infer: public cv::detail::KernelTag {
             // FIXME: By default here we trait our inputs as images.
             // May be we need to make some more intelligence here about it
             IE::Blob::Ptr this_blob = wrapIE(this_mat, cv::gapi::ie::TraitAs::IMAGE);
-            std::cout << "setting blob for " << uu.params.input_names[i] << std::endl;
-            std::cout << "this_mat: " << this_mat.cols << "x" << this_mat.rows << std::endl;
             iec.this_request.SetBlob(uu.params.input_names[i], this_blob);
         }
         iec.this_request.Infer();
@@ -567,8 +549,8 @@ struct InferList: public cv::detail::KernelTag {
                         && "Non-GMat inputs are not supported");
 
             const auto &meta = util::get<cv::GMatDesc>(mm);
-            const_cast<InferenceEngine::InputInfo*>(ii.get())->setPrecision(toIE(meta.depth));
-            const_cast<InferenceEngine::InputInfo*>(ii.get())->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
+            ii->setPrecision(toIE(meta.depth));
+            ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
         }
 
         // roi-list version is much easier at the moment.
@@ -593,7 +575,7 @@ struct InferList: public cv::detail::KernelTag {
         // FIXME: This could be done ONCE at graph compile stage!
         std::vector< std::vector<int> > cached_dims(uu.params.num_out);
         for (auto i : ade::util::iota(uu.params.num_out)) {
-            const auto& ie_out = uu.outputs.at(uu.params.output_names[i]);
+            const IE::DataPtr& ie_out = uu.outputs.at(uu.params.output_names[i]);
             cached_dims[i] = toCV(ie_out->getTensorDesc().getDims());
             ctx.outVecR<cv::Mat>(i).clear();
             // FIXME: Isn't this should be done automatically
@@ -666,8 +648,8 @@ struct InferList2: public cv::detail::KernelTag {
 
             if (op.k.inKinds[idx] == cv::detail::OpaqueKind::CV_RECT) {
                 // This is a cv::Rect -- configure the IE preprocessing
-                const_cast<InferenceEngine::InputInfo*>(ii.get())->setPrecision(toIE(meta_0.depth));
-                const_cast<InferenceEngine::InputInfo*>(ii.get())->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
+                ii->setPrecision(toIE(meta_0.depth));
+                ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
             } else {
                 // This is a cv::GMat (equals to: cv::Mat)
                 // Just validate that it is really the type
@@ -701,7 +683,7 @@ struct InferList2: public cv::detail::KernelTag {
         // FIXME: This could be done ONCE at graph compile stage!
         std::vector< std::vector<int> > cached_dims(uu.params.num_out);
         for (auto i : ade::util::iota(uu.params.num_out)) {
-            const auto& ie_out = uu.outputs.at(uu.params.output_names[i]);
+            const IE::DataPtr& ie_out = uu.outputs.at(uu.params.output_names[i]);
             cached_dims[i] = toCV(ie_out->getTensorDesc().getDims());
             ctx.outVecR<cv::Mat>(i).clear();
             // FIXME: Isn't this should be done automatically

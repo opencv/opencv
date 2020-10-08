@@ -17,6 +17,7 @@
 # INF_ENGINE_TARGET - set to name of imported library target representing InferenceEngine
 #
 
+
 macro(ocv_ie_find_extra_libraries find_prefix find_suffix)
   file(GLOB libraries "${INF_ENGINE_LIB_DIRS}/${find_prefix}inference_engine*${find_suffix}")
   foreach(full_path IN LISTS libraries)
@@ -90,8 +91,6 @@ if(InferenceEngine_FOUND)
   set(INF_ENGINE_TARGET ${InferenceEngine_LIBRARIES})
   set(INF_ENGINE_VERSION "${InferenceEngine_VERSION}" CACHE STRING "")
   message(STATUS "Detected InferenceEngine: cmake package (${InferenceEngine_VERSION})")
-else()
-    message(FATAL_ERROR "can't find IE")
 endif()
 
 if(NOT INF_ENGINE_TARGET AND INF_ENGINE_LIB_DIRS AND INF_ENGINE_INCLUDE_DIRS)
