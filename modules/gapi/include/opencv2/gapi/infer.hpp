@@ -136,7 +136,7 @@ struct InOutInfo
 class GAPI_EXPORTS GInferInputs
 {
 public:
-    cv::GMat operator[](const std::string& name);
+    cv::GMat& operator[](const std::string& name);
     const std::unordered_map<std::string, cv::GMat>& getBlobs() const;
 
 private:
