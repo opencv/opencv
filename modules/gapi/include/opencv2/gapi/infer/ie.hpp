@@ -17,6 +17,7 @@
 
 #include <opencv2/core/cvdef.h>     // GAPI_EXPORTS
 #include <opencv2/gapi/gkernel.hpp> // GKernelPackage
+#include <opencv2/gapi/infer.hpp>   // Generic
 
 namespace cv {
 namespace gapi {
@@ -58,6 +59,8 @@ namespace detail {
         // (e.g. topology's partial execution)
         std::size_t num_in;  // How many inputs are defined in the operation
         std::size_t num_out; // How many outputs are defined in the operation
+
+        bool is_generic;
     };
 } // namespace detail
 
@@ -80,7 +83,7 @@ public:
         : desc{ model, weights, device, {}, {}, {}
               , std::tuple_size<typename Net::InArgs>::value  // num_in
               , std::tuple_size<typename Net::OutArgs>::value // num_out
-              } {
+              , false} {
     };
 
     Params<Net>& cfgInputLayers(const typename PortCfg<Net>::In &ll) {
@@ -107,13 +110,34 @@ public:
     }
 
     // BEGIN(G-API's network parametrization API)
-    GBackend      backend() const { return cv::gapi::ie::backend();  }
-    std::string   tag()     const { return Net::tag(); }
-    cv::util::any params()  const { return { desc }; }
+    GBackend      backend()    const { return cv::gapi::ie::backend();  }
+    std::string   tag()        const { return Net::tag(); }
+    cv::util::any params()     const { return { desc }; }
     // END(G-API's network parametrization API)
 
 protected:
     detail::ParamDesc desc;
+};
+
+template<>
+class Params<cv::gapi::Generic> {
+public:
+    Params(const std::string& tag,
+           const std::string &model,
+           const std::string &weights,
+           const std::string &device)
+        : desc{ model, weights, device, {}, {}, {}, 0u, 0u, true}, m_tag(tag) {
+    };
+
+    // BEGIN(G-API's network parametrization API)
+    GBackend      backend()    const { return cv::gapi::ie::backend();  }
+    std::string   tag()        const { return m_tag; }
+    cv::util::any params()     const { return { desc }; }
+    // END(G-API's network parametrization API)
+
+protected:
+    detail::ParamDesc desc;
+    std::string m_tag;
 };
 
 } // namespace ie

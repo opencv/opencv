@@ -350,6 +350,59 @@ TEST(DISABLED_TestTwoIENNPipeline, InferBasicImage)
     normAssert(cv::gapi::ie::util::to_ocv(ie_gender2), gapi_gender2, "Test gender output 2");
 }
 
+TEST(TestAgeGenderIE, GenericInfer)
+{
+    initDLDTDataPath();
+
+    cv::gapi::ie::detail::ParamDesc params;
+    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
+    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    params.device_id = "CPU";
+
+    cv::Mat in_mat(cv::Size(320, 240), CV_8UC3);
+    cv::randu(in_mat, 0, 255);
+
+    cv::Mat gapi_age, gapi_gender;
+
+    // Load & run IE network
+    IE::Blob::Ptr ie_age, ie_gender;
+    {
+        auto plugin = cv::gimpl::ie::wrap::getPlugin(params);
+        auto net    = cv::gimpl::ie::wrap::readNetwork(params);
+        setNetParameters(net);
+        auto this_network  = cv::gimpl::ie::wrap::loadNetwork(plugin, net, params);
+        auto infer_request = this_network.CreateInferRequest();
+        infer_request.SetBlob("data", cv::gapi::ie::util::to_ie(in_mat));
+        infer_request.Infer();
+        ie_age    = infer_request.GetBlob("age_conv3");
+        ie_gender = infer_request.GetBlob("prob");
+    }
+
+    // Configure & run G-API
+    cv::GMat in;
+    GInferInputs inputs;
+    inputs["data"] = in;
+
+    auto outputs = cv::gapi::infer<cv::gapi::Generic>("age-gender-generic", inputs);
+
+    auto age    = outputs.at("age_conv3");
+    auto gender = outputs.at("prob");
+
+    cv::GComputation comp(cv::GIn(in), cv::GOut(age, gender));
+
+    cv::gapi::ie::Params<cv::gapi::Generic> pp{"age-gender-generic",
+                                                params.model_path,
+                                                params.weights_path,
+                                                params.device_id};
+
+    comp.apply(cv::gin(in_mat), cv::gout(gapi_age, gapi_gender),
+               cv::compile_args(cv::gapi::networks(pp)));
+
+    // Validate with IE itself (avoid DNN module dependency here)
+    normAssert(cv::gapi::ie::util::to_ocv(ie_age),    gapi_age,    "Test age output"   );
+    normAssert(cv::gapi::ie::util::to_ocv(ie_gender), gapi_gender, "Test gender output");
+}
+
 } // namespace opencv_test
 
 #endif //  HAVE_INF_ENGINE
