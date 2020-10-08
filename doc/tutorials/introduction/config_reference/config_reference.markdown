@@ -247,15 +247,18 @@ When `WITH_` option is enabled:
 
 `WITH_CUDA` (default: _OFF_)
 
-Many algorithms have been implemented using CUDA acceleration, these functions are located in separate modules: @ref cuda. CUDA toolkit must be installed from the official NVIDIA site as a prerequisite. For cmake versions older than 3.9 OpenCV uses own `cmake/FindCUDA.cmake` script, for newer versions - the one packaged with CMake. Additional options can be used to control build process, e.g. `CUDA_GENERATION` or `CUDA_ARCH_BIN`. These parameters are not documented yet, please consult with the `cmake/OpenCVDetectCUDA.cmake` script for details.
-
-Some tutorials can be found in the corresponding section: @ref tutorial_table_of_content_gpu
+Many algorithms have been implemented using CUDA acceleration, these functions are located in separate modules. CUDA toolkit must be installed from the official NVIDIA site as a prerequisite. For cmake versions older than 3.9 OpenCV uses own `cmake/FindCUDA.cmake` script, for newer versions - the one packaged with CMake. Additional options can be used to control build process, e.g. `CUDA_GENERATION` or `CUDA_ARCH_BIN`. These parameters are not documented yet, please consult with the `cmake/OpenCVDetectCUDA.cmake` script for details.
 
 @note Since OpenCV version 4.0 all CUDA-accelerated algorithm implementations have been moved to the _opencv_contrib_ repository. To build _opencv_ and _opencv_contrib_ together check @ref tutorial_config_reference_general_contrib.
 
+@cond CUDA_MODULES
+@note Some tutorials can be found in the corresponding section: @ref tutorial_table_of_content_gpu
+@see @ref cuda
+@endcond
+
 @see https://en.wikipedia.org/wiki/CUDA
 
-TODO: other options: `WITH_CUFFT`, `WITH_CUBLAS`, WITH_NVCUVID`?
+TODO: other options: `WITH_CUFFT`, `WITH_CUBLAS`, `WITH_NVCUVID`?
 
 ### OpenCL support
 
