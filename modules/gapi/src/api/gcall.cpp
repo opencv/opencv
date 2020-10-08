@@ -78,3 +78,13 @@ const cv::GCall::Priv& cv::GCall::priv() const
 {
     return *m_priv;
 }
+
+cv::GKernel& cv::GCall::kernel()
+{
+    return m_priv->m_k;
+}
+
+cv::util::any& cv::GCall::params()
+{
+    return m_priv->m_params;
+}
