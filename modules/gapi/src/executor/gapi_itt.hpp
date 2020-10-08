@@ -32,6 +32,7 @@ namespace util {
     }
 }  //namespace util
 
+//FIXME: make more reusable (move to other place and other namespace)
 namespace gimpl { namespace parallel {
     #ifdef OPENCV_WITH_ITT
     extern const __itt_domain* gapi_itt_domain;

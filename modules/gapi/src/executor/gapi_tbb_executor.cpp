@@ -10,7 +10,7 @@
 #include "gapi_itt.hpp"
 
 #include <opencv2/gapi/own/assert.hpp>
-#include <opencv2/gapi/util/type_traits.hpp> //decay_t
+#include <opencv2/gapi/util/copy_through_move.hpp>
 #include "logger.hpp" // GAPI_LOG
 
 #include <tbb/task.h>
@@ -32,24 +32,16 @@
 const __itt_domain* cv::gimpl::parallel::gapi_itt_domain = __itt_domain_create("GAPI Context");
 #endif
 
-namespace cv{ namespace detail {
-    //This is a tool to move initialize captures of a lambda in C++11
-    template<typename T>
-    struct copy_through_move_t{
-       T value;
-       const T& get() const {return value;}
-       T&       get()       {return value;}
-       copy_through_move_t(T&& g) : value(std::move(g)) {}
-       copy_through_move_t(copy_through_move_t&&) = default;
-       copy_through_move_t(copy_through_move_t const& lhs) : copy_through_move_t(std::move(const_cast<copy_through_move_t&>(lhs))) {}
-    };
-
-    template<typename T>
-    copy_through_move_t<util::decay_t<T>> copy_through_move(T&& t){
-        return std::forward<T>(t);
-    }
-}}
 namespace cv{ namespace gimpl { namespace parallel {
+
+namespace detail {
+//some helper staff to deal with tbb::task related entities
+namespace tasking {
+
+enum class use_tbb_scheduler_bypass {
+   yes,
+   no
+};
 
 inline void assert_graph_is_running(tbb::task* root)
 {
@@ -58,16 +50,6 @@ inline void assert_graph_is_running(tbb::task* root)
    //according wait_for_all() has not yet returned
    ASSERT(root->ref_count() > 1);
 }
-
-enum class use_tbb_scheduler_bypass {
-   yes,
-   no
-};
-
-enum class wake_tbb_master {
-   yes,
-   no
-};
 
 //made template to break circular dependencies
 template<typename body_t>
@@ -126,21 +108,21 @@ void batch_spawn(size_t count, tbb::task* root, body_t const& body, bool do_asse
    }
 }
 
-//some helper staf to deal with tbb::task related entities
-namespace tasking {
-    struct destroy_tbb_task{
-        void operator()(tbb::task* t) const { if (t) tbb::task::destroy(*t);};
-    };
-    using root_t = std::unique_ptr<tbb::task, destroy_tbb_task>;
 
-    root_t inline create_root(tbb::task_group_context& ctx) {
-        root_t  root{new (tbb::task::allocate_root(ctx)) tbb::empty_task};
-        root->set_ref_count(1); //required by wait_for_all, as it waits until counter drops to 1
-        return root;
-    }
+struct destroy_tbb_task{
+    void operator()(tbb::task* t) const { if (t) tbb::task::destroy(*t);};
+};
+
+using root_t = std::unique_ptr<tbb::task, destroy_tbb_task>;
+
+root_t inline create_root(tbb::task_group_context& ctx) {
+    root_t  root{new (tbb::task::allocate_root(ctx)) tbb::empty_task};
+    root->set_ref_count(1); //required by wait_for_all, as it waits until counter drops to 1
+    return root;
 }
 
-namespace detail {
+} // namespace tasking
+
 namespace async {
 struct async_tasks_t {
     std::atomic<size_t>         count {0};
@@ -148,80 +130,92 @@ struct async_tasks_t {
     std::mutex                  mtx;
 };
 
-struct master_thread_sleep_lock_t
-{
-    async_tasks_t*         async_tasks_p  = nullptr;
-
-   master_thread_sleep_lock_t(master_thread_sleep_lock_t&& source)             { std::swap(async_tasks_p, source.async_tasks_p);}
-   master_thread_sleep_lock_t& operator=(master_thread_sleep_lock_t&& source)  { std::swap(async_tasks_p, source.async_tasks_p); return *this;}
-
-   master_thread_sleep_lock_t() = default;
-   master_thread_sleep_lock_t(async_tasks_t*  async_tasks_p_ ) : async_tasks_p(async_tasks_p_)
-   {
-      //TODO: seems that this can be relaxed
-      ++(async_tasks_p->count);
-   }
-
-   void unlock(wake_tbb_master wake_master)
-   {
-      if (async_tasks_p)
-      {
-         //TODO: seems that this can be relaxed
-         auto active_async_tasks = --(async_tasks_p->count);
-
-         auto is_not_wrapped_around = [](decltype(active_async_tasks) r ){
-             using counter_limits_t =  std::numeric_limits<decltype(active_async_tasks)>;
-             return r < counter_limits_t::max() && !counter_limits_t::is_signed;
-         };
-         ASSERT(is_not_wrapped_around(active_async_tasks));
-         //TODO: checks performance gains of minimizing number of call to notify (i.e. only if this is the last one async node or there are new tbb task to execute)
-         if ((active_async_tasks == 0) || (wake_master == wake_tbb_master::yes) )//was the last or there is the new TBB tasks to execute
-         {
-             ITT_AUTO_TRACE_GUARD(ittTbbUnlockMasterThread);
-            //Wile decrement of async_tasks_t::count is atomic it might be done after waiting thread checked it value but _before_ it actually start waiting on the condition variable.
-            //So, lock acquire is needed to guarantee that current condition check (if any) in waiting thread (possibly ran in parallel to async_tasks_t::count decrement above) is completed _before_
-            //signal is issued. Therefore when notify_one is called, waiting thread is either sleeping on the condition variable or running a new check which is guaranteed to pick the new value and return
-            //from wait().
-            //There is no need to _hold_ the lock while signaling, only to acquire it.
-            std::unique_lock<std::mutex> {async_tasks_p->mtx};   //Acquire and release the lock.
-            (async_tasks_p->cv).notify_one();
-         }
-         async_tasks_p = nullptr;
-      }
-   }
-
-   ~master_thread_sleep_lock_t()
-   {
-      unlock(wake_tbb_master::no);
-   }
+enum class wake_tbb_master {
+   yes,
+   no
 };
 
-struct root_wait_lock_t {
-    struct root_decrement_ref_count{
-       void operator()(tbb::task* t) const{
-          auto result = t->decrement_ref_count();
-          ASSERT(result >= 1);
+void inline wake_master(async_tasks_t& async_tasks, wake_tbb_master wake_master)
+{
+    //TODO: seems that this can be relaxed
+    auto active_async_tasks = --async_tasks.count;
+
+    auto is_not_wrapped_around = [](decltype(active_async_tasks) r ){
+        using counter_limits_t =  std::numeric_limits<decltype(active_async_tasks)>;
+        return r < counter_limits_t::max() && !counter_limits_t::is_signed;
+    };
+    ASSERT(is_not_wrapped_around(active_async_tasks));
+    if ((active_async_tasks == 0) || (wake_master == wake_tbb_master::yes) )//was the last or there are new TBB tasks to execute
+    {
+        ITT_AUTO_TRACE_GUARD(ittTbbUnlockMasterThread);
+        //While decrement of async_tasks_t::count is atomic it might be done after waiting thread checked it value but _before_ it actually start waiting on the condition variable.
+        //So, lock acquire is needed to guarantee that current condition check (if any) in waiting thread (possibly ran in parallel to async_tasks_t::count decrement above) is completed _before_
+        //signal is issued. Therefore when notify_one is called, waiting thread is either sleeping on the condition variable or running a new check which is guaranteed to pick the new value and return
+        //from wait().
+        //There is no need to _hold_ the lock while signaling, only to acquire it.
+        std::unique_lock<std::mutex> {async_tasks.mtx};   //Acquire and release the lock.
+        async_tasks.cv.notify_one();
+    }
+}
+
+struct master_thread_sleep_lock_t
+{
+    struct sleep_unlock{
+       void operator()(async_tasks_t* t) const{
+          ASSERT(t);
+          wake_master(*t, wake_tbb_master::no);
        }
     };
 
-    std::unique_ptr<tbb::task, root_decrement_ref_count> guard;
+    std::unique_ptr<async_tasks_t, sleep_unlock>  guard;
 
-    root_wait_lock_t() = default;
-    root_wait_lock_t(tbb::task* root):guard{root} {}
-    root_wait_lock_t(root_wait_lock_t&&) = default;
+    master_thread_sleep_lock_t() = default;
+    master_thread_sleep_lock_t(async_tasks_t*  async_tasks_p_ ) : guard(async_tasks_p_)
+    {
+        //TODO: seems that this can be relaxed
+        ++(guard->count);
+    }
+
+    void unlock(wake_tbb_master wake)
+    {
+        if (auto* p = guard.release())
+        {
+            wake_master(*p, wake);
+        }
+    }
 };
+
+master_thread_sleep_lock_t inline lock_sleep_master(async_tasks_t& async_tasks){
+    return {&async_tasks};
+}
 
 enum class is_tbb_work_present {
    yes,
    no
 };
 
-root_wait_lock_t inline lock_wait_master(tasking::root_t& root, is_tbb_work_present& previous_state) {
-    auto new_root_ref_count = root->add_ref_count(1);
-    previous_state = (new_root_ref_count == 2) ? is_tbb_work_present::no : is_tbb_work_present::yes;
-    return root_wait_lock_t{root.get()};
-}
+struct root_wait_lock_t {
+    struct root_decrement_ref_count{
+        void operator()(tbb::task* t) const{
+            ASSERT(t);
+            auto result = t->decrement_ref_count();
+            ASSERT(result >= 1);
+        }
+    };
 
+    std::unique_ptr<tbb::task, root_decrement_ref_count> guard;
+
+    root_wait_lock_t() = default;
+    root_wait_lock_t(tasking::root_t& root, is_tbb_work_present& previous_state) : guard{root.get()} {
+        auto new_root_ref_count = root->add_ref_count(1);
+        previous_state = (new_root_ref_count == 2) ? is_tbb_work_present::no : is_tbb_work_present::yes;
+    }
+
+};
+
+root_wait_lock_t inline lock_wait_master(tasking::root_t& root, is_tbb_work_present& previous_state) {
+    return root_wait_lock_t{root, previous_state};
+}
 
 } // namespace async
 
@@ -272,21 +266,21 @@ namespace graph {
         }
 
         void spawn_clones(std::size_t items) const {
-            parallel::batch_spawn(items, ctx.root.get(), *this);
+            tasking::batch_spawn(items, ctx.root.get(), *this);
         }
 
         task_body(exec_ctx& ctx_) : ctx(ctx_) {}
-        use_tbb_scheduler_bypass operator()() const
+        tasking::use_tbb_scheduler_bypass operator()() const
         {
             ASSERT(!ctx.q.empty() && "Spawned task with no job to do ? ");
 
             tile_node* node = detail::pop(ctx.q);
 
-            auto result = parallel::use_tbb_scheduler_bypass::no;
+            auto result = tasking::use_tbb_scheduler_bypass::no;
             //execute the task
 
             if (auto p = util::get_if<tile_node::sync_task_body>(&(node->task_body)))
-            {
+            {   //synchronous task
                 p->body();
 
                 std::size_t ready_items = push_ready_dependees(node);
@@ -294,7 +288,7 @@ namespace graph {
                 if (ready_items > 0){
                     //spawn one less tasks and say TBB to reuse(recycle) current task
                     spawn_clones(ready_items - 1);
-                    result = parallel::use_tbb_scheduler_bypass::yes;
+                    result = tasking::use_tbb_scheduler_bypass::yes;
                 }
             }
             else
@@ -302,7 +296,7 @@ namespace graph {
                 LOG_DEBUG(NULL, "Async task ");
                 using namespace detail::async;
 
-                auto block_master = cv::detail::copy_through_move(master_thread_sleep_lock_t{&ctx.async_tasks});
+                auto block_master = util::copy_through_move(lock_sleep_master(ctx.async_tasks));
 
                 auto self_copy = *this;
                 auto callback = [node, block_master, self_copy] () mutable /*due to block_master.unlock()*/
@@ -313,13 +307,14 @@ namespace graph {
                     std::size_t ready_items = self_copy.push_ready_dependees(node);
                     if (ready_items > 0)
                     {
-                        //force master thread (one that do wait_for_all()) to (actively) wait for enqueued tasks
-                        //and unlock it right after all dependee tasks are spawn (and therefore ref_count of root has been increased accordingly)
-
                         is_tbb_work_present master_was_active = is_tbb_work_present::no;
-                        auto root_wait_lock = cv::detail::copy_through_move(detail::async::lock_wait_master(self_copy.ctx.root, master_was_active));
                         {
                             ITT_AUTO_TRACE_GUARD(ittTbbEnqueueSpawnReadyBlocks);
+                            //force master thread (one that does wait_for_all()) to (actively) wait for enqueued tasks
+                            //and unlock it right after all dependee tasks are spawn (and therefore ref_count of root has been increased accordingly)
+
+                            auto root_wait_lock = util::copy_through_move(lock_wait_master(self_copy.ctx.root, master_was_active));
+
                             //TODO: add test to cover proper holding of root_wait_lock
                             //As the calling thread most likely is not TBB one, instead of spawning tbb tasks directly we
                             //enqueue a task which will spawn them.
@@ -350,8 +345,6 @@ namespace graph {
             return result;
         }
     };
-
-
 }
 } // namespace detail
 }}}  // namespace cv::gimpl::parallel
@@ -374,6 +367,7 @@ void cv::gimpl::parallel::execute(prio_items_queue_t& q, tbb::task_arena& arena)
     //As the traits is last argument explicitly specify (default) value for first argument
     tbb::task_group_context tg_ctx = {tbb::task_group_context::bound, tbb::task_group_context::default_traits | tbb::task_group_context::concurrent_wait};
 
+    using namespace detail;
     auto  root = tasking::create_root(tg_ctx);
 
     std::atomic<size_t>         executed {0};
@@ -382,16 +376,15 @@ void cv::gimpl::parallel::execute(prio_items_queue_t& q, tbb::task_arena& arena)
 
     arena.execute(
         [&](){
-
-            detail::graph::exec_ctx ctx{arena, q, root, async_tasks, executed};
-            auto body = detail::graph::task_body{ctx};
+            graph::exec_ctx ctx{arena, q, root, async_tasks, executed};
+            auto body = graph::task_body{ctx};
 
             auto num_start_tasks = q.size();
 
             //TODO: use recursive spawning and task soft affinity for faster task distribution
             //As graph is starting and there has no task been spawned yet
             //assert_graph_is_running(root) will not hold, so spawn without assert
-            parallel::batch_spawn(num_start_tasks, root.get(), body, /* assert_graph_is_running*/false);
+            tasking::batch_spawn(num_start_tasks, root.get(), body, /* assert_graph_is_running*/false);
 
 
             std::chrono::high_resolution_clock timer;

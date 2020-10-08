@@ -42,7 +42,7 @@ TEST(TBBExecutor, Basic)
 {
     using namespace cv::gimpl::parallel;
     bool executed = false;
-    tbb::concurrent_priority_queue<tile_node* , tile_node_indirect_priority_comparator> q;
+    prio_items_queue_t q;
     tile_node n([&](){
         executed = true;
     });
@@ -55,7 +55,7 @@ TEST(TBBExecutor, SerialExecution)
 {
     using namespace cv::gimpl::parallel;
     const int n = 10;
-    tbb::concurrent_priority_queue<tile_node* , tile_node_indirect_priority_comparator> q;
+    prio_items_queue_t q;
     std::vector<tile_node> nodes; nodes.reserve(n+1);
     std::vector<int> thread_id(n, -10);
     for (int i=0; i <n; i++) {
@@ -109,7 +109,7 @@ TEST(TBBExecutor, AsyncBasic)
     };
     tile_node n(async, std::move(async_task_body));
 
-    tbb::concurrent_priority_queue<tile_node* , tile_node_indirect_priority_comparator> q;
+    prio_items_queue_t q;
     q.push(&n);
     execute(q);
     master_is_waiting = false;
@@ -126,7 +126,7 @@ TEST(TBBExecutor, Dependencies)
     const int n = 10;
     bool serial = true;
     std::atomic<int> counter {0};
-    tbb::concurrent_priority_queue<tile_node* , tile_node_indirect_priority_comparator> q;
+    prio_items_queue_t q;
     std::vector<tile_node> nodes; nodes.reserve(n+1);
     const int invalid_order = -10;
     std::vector<int> tiles_exec_order(n, invalid_order);
@@ -168,7 +168,7 @@ TEST(TBBExecutor, Dependencies)
         for (auto* dependee : nodes[i].dependees) {
             auto index = std::distance(&nodes.front(), dependee);
             auto dependee_execution_order = tiles_exec_order[index];
-            ASSERT_LT(node_exec_order, dependee_execution_order) << "node number " << index <<" is executed earlier than it dependency " << i;
+            ASSERT_LT(node_exec_order, dependee_execution_order) << "node number " << index <<" is executed earlier than it's dependency " << i;
         }
     }
 }
