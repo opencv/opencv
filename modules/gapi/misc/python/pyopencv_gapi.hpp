@@ -128,7 +128,7 @@ static PyObject* pyopencv_cv_gin(PyObject* , PyObject* py_args, PyObject* kw)
         if (PyTuple_Check(item))
         {
             cv::Scalar s;
-            if (pyopencv_to(item, s, ArgInfo("scalar", true)))
+            if (pyopencv_to(item, s, ArgInfo("scalar", false)))
             {
                 args.emplace_back(s);
             }
@@ -141,7 +141,7 @@ static PyObject* pyopencv_cv_gin(PyObject* , PyObject* py_args, PyObject* kw)
         else if (PyArray_Check(item))
         {
             cv::Mat m;
-            if (pyopencv_to(item, m, ArgInfo("mat", true)))
+            if (pyopencv_to(item, m, ArgInfo("mat", false)))
             {
                 args.emplace_back(m);
             }

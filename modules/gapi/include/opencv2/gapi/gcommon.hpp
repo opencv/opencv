@@ -19,6 +19,7 @@
 #include <opencv2/gapi/own/exports.hpp>
 #include <opencv2/gapi/own/assert.hpp>
 #include <opencv2/gapi/render/render_types.hpp>
+#include <opencv2/gapi/s11n/base.hpp>
 
 namespace cv {
 
@@ -94,6 +95,15 @@ enum class GShape: int
     GFRAME,
 };
 
+namespace gapi {
+namespace s11n {
+namespace detail {
+template<typename T> struct wrap_serialize;
+} // namespace detail
+} // namespace s11n
+} // namespace gapi
+
+
 struct GCompileArg;
 
 namespace detail {
@@ -139,7 +149,7 @@ namespace detail {
  * passed in (a variadic template parameter pack) into a vector of
  * cv::GCompileArg objects.
  */
-struct GAPI_EXPORTS_W_SIMPLE GCompileArg
+struct GCompileArg
 {
 public:
     // NB: Required for pythnon bindings
@@ -151,6 +161,7 @@ public:
     template<typename T, typename std::enable_if<!detail::is_compile_arg<T>::value, int>::type = 0>
     explicit GCompileArg(T &&t)
         : tag(detail::CompileArgTag<typename std::decay<T>::type>::tag())
+        , serializeF(&cv::gapi::s11n::detail::wrap_serialize<T>::serialize)
         , arg(t)
     {
     }
@@ -165,7 +176,13 @@ public:
         return util::any_cast<T>(arg);
     }
 
+    void serialize(cv::gapi::s11n::IOStream& os) const
+    {
+        serializeF(os, *this);
+    }
+
 private:
+    std::function<void(cv::gapi::s11n::IOStream&, const GCompileArg&)> serializeF;
     util::any arg;
 };
 
@@ -198,6 +215,19 @@ inline cv::util::optional<T> getCompileArg(const cv::GCompileArgs &args)
     }
     return cv::util::optional<T>();
 }
+
+namespace s11n {
+namespace detail {
+template<typename T> struct wrap_serialize
+{
+    static void serialize(IOStream& os, const GCompileArg& arg)
+    {
+        using decayed_type = typename std::decay<T>::type;
+        S11N<decayed_type>::serialize(os, arg.get<decayed_type>());
+    }
+};
+} // namespace detail
+} // namespace s11n
 } // namespace gapi
 
 /**

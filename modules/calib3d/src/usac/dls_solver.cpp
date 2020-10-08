@@ -214,7 +214,6 @@ public:
 
             if (all_points_in_front_of_camera) {
                 Mat model;
-//                hconcat(rot_mat, soln_translation, model);
                 hconcat(Math::rotVec2RotMat(Math::rotMat2RotVec(rot_mat)), soln_translation, model);
                 models_.emplace_back(K * model);
             }

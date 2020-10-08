@@ -150,6 +150,10 @@ void bindInArg(Mag& mag, const RcDesc &rc, const GRunArg &arg, HandleRMat handle
         mag.template slot<cv::detail::OpaqueRef>()[rc.id] = util::get<cv::detail::OpaqueRef>(arg);
         break;
 
+    case GShape::GFRAME:
+        mag.template slot<cv::MediaFrame>()[rc.id] = util::get<cv::MediaFrame>(arg);
+        break;
+
     default:
         util::throw_error(std::logic_error("Unsupported GShape type"));
     }
@@ -216,6 +220,7 @@ void resetInternalData(Mag& mag, const Data &d)
         break;
 
     case GShape::GMAT:
+    case GShape::GFRAME:
         // Do nothing here - FIXME unify with initInternalData?
         break;
 
@@ -236,6 +241,7 @@ cv::GRunArg getArg(const Mag& mag, const RcDesc &ref)
     //   (and constructed by either bindIn/Out or resetInternal)
     case GShape::GARRAY:  return GRunArg(mag.template slot<cv::detail::VectorRef>().at(ref.id));
     case GShape::GOPAQUE: return GRunArg(mag.template slot<cv::detail::OpaqueRef>().at(ref.id));
+    case GShape::GFRAME:  return GRunArg(mag.template slot<cv::MediaFrame>().at(ref.id));
     default:
         util::throw_error(std::logic_error("Unsupported GShape type"));
         break;
@@ -327,6 +333,12 @@ void unbind(Mag& mag, const RcDesc &rc)
 #endif
         mag.slot<cv::RMat::View>().erase(rc.id);
         mag.slot<cv::RMat>().erase(rc.id);
+        break;
+
+    case GShape::GFRAME:
+        // MediaFrame can also be associated with external memory,
+        // so requires a special handling here.
+        mag.slot<cv::MediaFrame>().erase(rc.id);
         break;
 
     default:

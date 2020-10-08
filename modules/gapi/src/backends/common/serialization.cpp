@@ -174,6 +174,17 @@ IIStream& operator>> (IIStream& is, cv::RMat&) {
     return is;
 }
 
+IOStream& operator<< (IOStream& os, const cv::MediaFrame &) {
+    // Stub
+    GAPI_Assert(false && "cv::MediaFrame serialization is not supported!");
+    return os;
+}
+IIStream& operator>> (IIStream& is, cv::MediaFrame &) {
+    // Stub
+    GAPI_Assert(false && "cv::MediaFrame serialization is not supported!");
+    return is;
+}
+
 namespace
 {
 
@@ -317,6 +328,13 @@ IIStream& operator>> (IIStream& is,       cv::gapi::wip::draw::Line &l) {
 }
 
 // G-API types /////////////////////////////////////////////////////////////////
+
+IOStream& operator<< (IOStream& os, const cv::GCompileArg& arg)
+{
+    os << arg.tag;
+    arg.serialize(os);
+    return os;
+}
 
 // Stubs (empty types)
 
@@ -555,6 +573,12 @@ IIStream& operator>> (IIStream& is, cv::GMatDesc &d) {
     return is >> d.depth >> d.chan >> d.size >> d.planar >> d.dims;
 }
 
+IOStream& operator<< (IOStream& os, const cv::GFrameDesc &d) {
+    return put_enum(os, d.fmt) << d.size;
+}
+IIStream& operator>> (IIStream& is,       cv::GFrameDesc &d) {
+    return get_enum(is, d.fmt) >> d.size;
+}
 
 IOStream& operator<< (IOStream& os, const cv::gimpl::RcDesc &rc) {
     // FIXME: HostCtor is not serialized!
@@ -848,6 +872,14 @@ IIStream& ByteMemoryInStream::operator>> (std::string& str) {
     return *this;
 }
 
+GAPI_EXPORTS std::unique_ptr<IIStream> detail::getInStream(const std::vector<char> &p) {
+    return std::unique_ptr<ByteMemoryInStream>(new ByteMemoryInStream(p));
+}
+
+GAPI_EXPORTS void serialize(IOStream& os, const cv::GCompileArgs &ca) {
+    os << ca;
+}
+
 GAPI_EXPORTS void serialize(IOStream& os, const cv::GMetaArgs &ma) {
     os << ma;
 }
@@ -864,7 +896,6 @@ GAPI_EXPORTS GRunArgs run_args_deserialize(IIStream& is) {
     is >> s;
     return s;
 }
-
 
 } // namespace s11n
 } // namespace gapi

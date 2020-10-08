@@ -60,11 +60,18 @@ namespace magazine {
     };
 
 } // namespace magazine
+
+using Mag = magazine::Class< cv::Mat
+                           , cv::Scalar
+                           , cv::detail::VectorRef
+                           , cv::detail::OpaqueRef
+                           , cv::RMat
+                           , cv::RMat::View
+                           , cv::MediaFrame
 #if !defined(GAPI_STANDALONE)
-using Mag = magazine::Class<cv::Mat, cv::UMat, cv::Scalar, cv::detail::VectorRef, cv::detail::OpaqueRef, cv::RMat, cv::RMat::View>;
-#else
-using Mag = magazine::Class<cv::Mat, cv::Scalar, cv::detail::VectorRef, cv::detail::OpaqueRef, cv::RMat, cv::RMat::View>;
+                           , cv::UMat
 #endif
+                           >;
 
 namespace magazine
 {

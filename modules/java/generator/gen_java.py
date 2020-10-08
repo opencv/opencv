@@ -787,6 +787,7 @@ class JavaWrapperGenerator(object):
                             inCode = True
                         if "</code>" in line:
                             inCode = False
+                        line = line.replace('@result ', '@return ')  # @result is valid in Doxygen, but invalid in Javadoc
                         if "@return " in line:
                             returnTag = True
 

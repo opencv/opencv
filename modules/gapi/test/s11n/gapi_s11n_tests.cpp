@@ -34,6 +34,17 @@ namespace detail {
 } // namespace gapi
 } // namespace cv
 
+
+namespace cv {
+namespace detail {
+template<> struct CompileArgTag<MyCustomType> {
+    static const char* tag() {
+        return "org.opencv.test.mycustomtype";
+    }
+};
+} // namespace detail
+} // namespace cv
+
 namespace opencv_test {
 
 struct S11N_Basic: public ::testing::Test {
@@ -510,5 +521,16 @@ TEST_F(S11N_Basic, Test_Custom_Type) {
     cv::gapi::s11n::ByteMemoryInStream is(os.data());
     MyCustomType new_var = cv::gapi::s11n::detail::S11N<MyCustomType>::deserialize(is);
     EXPECT_EQ(var, new_var);
+}
+
+TEST_F(S11N_Basic, Test_Custom_CompileArg) {
+    MyCustomType customVar{1248, "World", {1280, 720, 640, 480}, {{5, 32434142342}, {7, 34242432}}};
+
+    std::vector<char> sArgs = cv::gapi::serialize(cv::compile_args(customVar));
+
+    GCompileArgs dArgs = cv::gapi::deserialize<GCompileArgs, MyCustomType>(sArgs);
+
+    MyCustomType dCustomVar = cv::gapi::getCompileArg<MyCustomType>(dArgs).value();
+    EXPECT_EQ(customVar, dCustomVar);
 }
 } // namespace opencv_test

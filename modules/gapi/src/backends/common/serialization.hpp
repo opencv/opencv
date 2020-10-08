@@ -40,6 +40,8 @@ struct GSerialized {
 
 // G-API types /////////////////////////////////////////////////////////////////
 
+GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::GCompileArg& arg);
+
 GAPI_EXPORTS IOStream& operator<< (IOStream& os, cv::util::monostate  );
 GAPI_EXPORTS IIStream& operator>> (IIStream& is, cv::util::monostate &);
 
@@ -83,6 +85,9 @@ GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::GOpaqueDesc &);
 GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::GArrayDesc &);
 GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::GArrayDesc &);
 
+GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::GFrameDesc &);
+GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::GFrameDesc &);
+
 #if !defined(GAPI_STANDALONE)
 GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::UMat &);
 GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::UMat &);
@@ -99,6 +104,9 @@ GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::detail::VectorRef &);
 
 GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::detail::OpaqueRef &);
 GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::detail::OpaqueRef &);
+
+GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::MediaFrame &);
+GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::MediaFrame &);
 
 GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::gimpl::RcDesc &rc);
 GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::gimpl::RcDesc &rc);
@@ -262,6 +270,11 @@ public:
     virtual IIStream& operator>> (std::string &) override;
 };
 
+namespace detail {
+GAPI_EXPORTS std::unique_ptr<IIStream> getInStream(const std::vector<char> &p);
+} // namespace detail
+
+GAPI_EXPORTS void serialize(IOStream& os, const cv::GCompileArgs &ca);
 GAPI_EXPORTS void serialize(IOStream& os, const cv::GMetaArgs &ma);
 GAPI_EXPORTS void serialize(IOStream& os, const cv::GRunArgs &ra);
 GAPI_EXPORTS GMetaArgs meta_args_deserialize(IIStream& is);
