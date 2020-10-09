@@ -40,24 +40,11 @@
 //
 //M*/
 
-#import <UIKit/UIKit.h>
-#include "apple_conversions.h"
+#import <Accelerate/Accelerate.h>
+#import <AVFoundation/AVFoundation.h>
+#import <ImageIO/ImageIO.h>
+#include "opencv2/core.hpp"
+#include "precomp.hpp"
 
-CV_EXPORTS UIImage* MatToUIImage(const cv::Mat& image);
-CV_EXPORTS void UIImageToMat(const UIImage* image, cv::Mat& m, bool alphaExist);
-
-UIImage* MatToUIImage(const cv::Mat& image) {
-    // Creating CGImage from cv::Mat
-    CGImageRef imageRef = MatToCGImage(image);
-
-    // Getting UIImage from CGImage
-    UIImage *uiImage = [UIImage imageWithCGImage:imageRef];
-    CGImageRelease(imageRef);
-
-    return uiImage;
-}
-
-void UIImageToMat(const UIImage* image, cv::Mat& m, bool alphaExist) {
-    CGImageRef imageRef = image.CGImage;
-    CGImageToMat(imageRef, m, alphaExist);
-}
+CV_EXPORTS CGImageRef MatToCGImage(const cv::Mat& image);
+CV_EXPORTS void CGImageToMat(const CGImageRef image, cv::Mat& m, bool alphaExist);

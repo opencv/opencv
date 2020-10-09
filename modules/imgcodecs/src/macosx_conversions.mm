@@ -40,24 +40,24 @@
 //
 //M*/
 
-#import <UIKit/UIKit.h>
+#import <AppKit/AppKit.h>
 #include "apple_conversions.h"
 
-CV_EXPORTS UIImage* MatToUIImage(const cv::Mat& image);
-CV_EXPORTS void UIImageToMat(const UIImage* image, cv::Mat& m, bool alphaExist);
+CV_EXPORTS NSImage* MatToNSImage(const cv::Mat& image);
+CV_EXPORTS void NSImageToMat(const NSImage* image, cv::Mat& m, bool alphaExist);
 
-UIImage* MatToUIImage(const cv::Mat& image) {
+NSImage* MatToNSImage(const cv::Mat& image) {
     // Creating CGImage from cv::Mat
     CGImageRef imageRef = MatToCGImage(image);
 
-    // Getting UIImage from CGImage
-    UIImage *uiImage = [UIImage imageWithCGImage:imageRef];
+    // Getting NSImage from CGImage
+    NSImage *nsImage = [[NSImage alloc] initWithCGImage:imageRef size:CGSizeMake(CGImageGetWidth(imageRef), CGImageGetHeight(imageRef))];
     CGImageRelease(imageRef);
 
-    return uiImage;
+    return nsImage;
 }
 
-void UIImageToMat(const UIImage* image, cv::Mat& m, bool alphaExist) {
-    CGImageRef imageRef = image.CGImage;
+void NSImageToMat(const NSImage* image, cv::Mat& m, bool alphaExist) {
+    CGImageRef imageRef = [image CGImageForProposedRect:NULL context:NULL hints:NULL];
     CGImageToMat(imageRef, m, alphaExist);
 }
