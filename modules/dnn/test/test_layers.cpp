@@ -2341,10 +2341,6 @@ TEST_P(ConvolutionEltwiseActivationFusion, Accuracy)
     Backend backendId = get<0>(get<4>(GetParam()));
     Target targetId = get<1>(get<4>(GetParam()));
 
-    // bug: https://github.com/opencv/opencv/issues/17945
-    if ((eltwiseOp != "sum" || weightedEltwise) && backendId == DNN_BACKEND_OPENCV && (targetId == DNN_TARGET_OPENCL || targetId == DNN_TARGET_OPENCL_FP16))
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL);
-
     Net net;
     int convId = net.addLayer(convParams.name, convParams.type, convParams);
     int eltwiseId = net.addLayer(eltwiseParams.name, eltwiseParams.type, eltwiseParams);
@@ -2361,7 +2357,9 @@ TEST_P(ConvolutionEltwiseActivationFusion, Accuracy)
             expectedFusedLayers.push_back(activId); // activation is fused with eltwise layer
         else if (targetId == DNN_TARGET_OPENCL || targetId == DNN_TARGET_OPENCL_FP16)
         {
-            if (actType == "ReLU" || actType == "ChannelsPReLU" /*|| actType == "Power"*/)
+            if (eltwiseOp == "sum" && !weightedEltwise &&
+                (actType == "ReLU" || actType == "ChannelsPReLU" /*|| actType == "Power"*/)
+            )
             {
                 expectedFusedLayers.push_back(eltwiseId);
                 expectedFusedLayers.push_back(activId);
