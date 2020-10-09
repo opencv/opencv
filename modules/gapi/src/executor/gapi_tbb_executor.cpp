@@ -323,8 +323,8 @@ namespace graph {
                             self_copy.ctx.arena.enqueue([ready_items, self_copy, root_wait_lock](){
                                 self_copy.spawn_clones(ready_items);
                                 //TODO: why we need this? Either write a descriptive comment or remove it
-                                volatile auto p = root_wait_lock.get().guard.get();
-                                util::suppress_unused_warning(p);
+                                volatile auto unused = root_wait_lock.get().guard.get();
+                                util::suppress_unused_warning(unused);
                             });
                         }
                         //unlock master thread waiting on conditional variable (if any) to pick up enqueued tasks

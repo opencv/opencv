@@ -57,10 +57,10 @@ TEST(TBBExecutor, SerialExecution)
     const int n = 10;
     prio_items_queue_t q;
     std::vector<tile_node> nodes; nodes.reserve(n+1);
-    std::vector<int> thread_id(n, -10);
+    std::vector<std::thread::id> thread_id(n);
     for (int i=0; i <n; i++) {
         nodes.push_back( tile_node([&, i](){
-                thread_id[i] = tbb::this_task_arena::current_thread_index();
+                thread_id[i] = std::this_thread::get_id();
                 std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
         }));
@@ -74,7 +74,7 @@ TEST(TBBExecutor, SerialExecution)
         for ( auto & i : thread_id) { str << i <<" ";}
         return str.str();
     };
-    EXPECT_NE(thread_id[0], -10) << print_thread_ids();
+    EXPECT_NE(thread_id[0], std::thread::id{}) << print_thread_ids();
     EXPECT_EQ(thread_id.size(), static_cast<size_t>(std::count(thread_id.begin(), thread_id.end(), thread_id[0])))
         << print_thread_ids();
 }
@@ -131,10 +131,10 @@ TEST(TBBExecutor, Dependencies)
     const int invalid_order = -10;
     std::vector<int> tiles_exec_order(n, invalid_order);
 
-    auto add_dependency_to = [](tile_node& n, tile_node& dependency) {
-        dependency.dependees.push_back(&n);
-        n.dependencies++;
-        n.dependency_count.fetch_add(1);
+    auto add_dependency_to = [](tile_node& node, tile_node& dependency) {
+        dependency.dependees.push_back(&node);
+        node.dependencies++;
+        node.dependency_count.fetch_add(1);
     };
     for (int i=0; i <n; i++) {
         nodes.push_back( tile_node([&, i](){
