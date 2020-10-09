@@ -376,7 +376,7 @@ public:
                 if (activ_power->scale != 1.0f)  // not supported well by implementation, #17964
                 {
                     // FIXIT no way to check number of blobs (like, eltwise input)
-                    CV_LOG_INFO(NULL, "DNN/OpenCL: can't configure Power activation (scale != 1.0f)");
+                    CV_LOG_DEBUG(NULL, "DNN/OpenCL: can't configure Power activation (scale != 1.0f)");
                     activ.release();
                     newActiv = false;
                     return false;
