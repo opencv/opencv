@@ -524,7 +524,7 @@ Following options can be used to change installation layout for common scenarios
 | Option | Default | Description |
 | ------ | ------- | ----------- |
 | `INSTALL_CREATE_DISTRIB` | _OFF_ | Tune multiple things to produce Windows and Android distributions. |
-| `INSTALL_TO_MANGLED_PATHS` | _OFF_ | Adds one level to several installation locations to allow side-by-side installations. For example, headers will be installed to _/usr/include/opencv-4.4.0_ instead of _/usr/include/opencv4_ with this option enabled. |
+| `INSTALL_TO_MANGLED_PATHS` | _OFF_ | Adds one level to several installation locations to allow side-by-side installations. For example, headers will be installed to _/usr/include/opencv-5.x.y_ instead of _/usr/include/opencv5_ with this option enabled. |
 
 
 # Miscellaneous features {#tutorial_config_reference_misc}
