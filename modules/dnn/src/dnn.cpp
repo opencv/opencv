@@ -2654,12 +2654,15 @@ struct Net::Impl : public detail::NetImplBase
 
                 // OpenCL: fuse convolution layer followed by eltwise + relu
                 // CUDA: fuse convolution layer followed by eltwise (and optional activation)
-                if ((IS_DNN_OPENCL_TARGET(preferableTarget) || IS_DNN_CUDA_TARGET(preferableTarget)) &&
-                    ld.layerInstance->type == "Convolution" )
+                while (nextData &&
+                    (IS_DNN_OPENCL_TARGET(preferableTarget) || IS_DNN_CUDA_TARGET(preferableTarget)) &&
+                    ld.layerInstance->type == "Convolution"
+                )  // semantic of 'if'
                 {
-                    Ptr<EltwiseLayer> nextEltwiseLayer;
-                    if( nextData )
-                        nextEltwiseLayer = nextData->layerInstance.dynamicCast<EltwiseLayer>();
+                    Ptr<EltwiseLayer> nextEltwiseLayer = nextData->layerInstance.dynamicCast<EltwiseLayer>();
+                    if (nextEltwiseLayer.empty())
+                        break;
+
 #ifdef HAVE_CUDA
                     // CUDA backend supports fusion with eltwise sum (without variable channels)
                     // `nextEltwiseLayer` is reset if eltwise layer doesn't have a compatible configuration for fusion
@@ -2675,7 +2678,37 @@ struct Net::Impl : public detail::NetImplBase
                             nextEltwiseLayer = Ptr<EltwiseLayer>();
                     }
 #endif
-                    if (!nextEltwiseLayer.empty() && nextData && nextData->inputBlobsId.size() == 2)
+
+                    if (pinsToKeep.count(lpNext) != 0)
+                        break;
+                    if (nextData->inputBlobsId.size() != 2)
+                        break;
+
+                    if (!nextData->params.has("operation") || toLowerCase(nextData->params.get<String>("operation")) == "sum")
+                    {
+                        if (nextData->params.has("coeff"))
+                        {
+                            DictValue paramCoeff = nextData->params.get("coeff");
+                            int n = paramCoeff.size();
+                            bool isCoeffOneOne = (n == 2);
+                            for (int i = 0; isCoeffOneOne && i < n; i++)
+                            {
+                                float c = paramCoeff.get<float>(i);
+                                isCoeffOneOne &= (c == 1.0f);
+                            }
+                            if (!isCoeffOneOne)
+                            {
+                                CV_LOG_DEBUG(NULL, "DNN/OpenCL: fusion of 'Sum' without coeffs (or {1.0, 1.0}) is supported only");
+                                break;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        CV_LOG_DEBUG(NULL, "DNN/OpenCL: fusion with eltwise operation is not supported: " << nextData->params.get<String>("operation"));
+                        break;
+                    }
+
                     {
                         LayerData *eltwiseData = nextData;
 
@@ -2732,11 +2765,13 @@ struct Net::Impl : public detail::NetImplBase
                                 // we need to check them separately; hence, the fuse variables
                                 bool fuse_eltwise = false, fuse_activation = false;
 
+                                Ptr<PowerLayer> activ_power;
                                 if (IS_DNN_OPENCL_TARGET(preferableTarget) && !nextFusabeleActivLayer.empty() &&
                                     nextData &&
                                     (!nextData->type.compare("ReLU") ||
                                      !nextData->type.compare("ChannelsPReLU") ||
-                                     !nextData->type.compare("Power")) &&
+                                     (!nextData->type.compare("Power") && (activ_power = nextFusabeleActivLayer.dynamicCast<PowerLayer>()) && activ_power->scale == 1.0f)
+                                    ) &&
                                     currLayer->setActivation(nextFusabeleActivLayer))
                                 {
                                     fuse_eltwise = true;
@@ -2868,6 +2903,8 @@ struct Net::Impl : public detail::NetImplBase
                             }
                         }
                     }
+
+                    break;
                 }
             }
 
@@ -3107,11 +3144,11 @@ struct Net::Impl : public detail::NetImplBase
 
         Ptr<Layer> layer = ld.layerInstance;
 
-        TickMeter tm;
-        tm.start();
-
         if( !ld.skip )
         {
+            TickMeter tm;
+            tm.start();
+
             std::map<int, Ptr<BackendNode> >::iterator it = ld.backendNodes.find(preferableBackend);
             if (preferableBackend == DNN_BACKEND_OPENCV || it == ld.backendNodes.end() || it->second.empty())
             {
@@ -3320,12 +3357,15 @@ struct Net::Impl : public detail::NetImplBase
                     CV_Error(Error::StsNotImplemented, "Unknown backend identifier");
                 }
             }
+
+            tm.stop();
+            int64 t = tm.getTimeTicks();
+            layersTimings[ld.id] = (t > 0) ? t : t + 1;  // zero for skipped layers only
         }
         else
-            tm.reset();
-
-        tm.stop();
-        layersTimings[ld.id] = tm.getTimeTicks();
+        {
+            layersTimings[ld.id] = 0;
+        }
 
         ld.flag = 1;
     }
