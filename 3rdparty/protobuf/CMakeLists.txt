@@ -141,7 +141,7 @@ append_if_exist(Protobuf_SRCS
 )
 
 add_library(libprotobuf STATIC ${Protobuf_SRCS})
-target_include_directories(libprotobuf SYSTEM PUBLIC $<BUILD_INTERFACE:${PROTOBUF_ROOT}/src>)
+target_include_directories(libprotobuf PUBLIC $<BUILD_INTERFACE:${PROTOBUF_ROOT}/src>)
 set_target_properties(libprotobuf
     PROPERTIES
     FOLDER "3rdparty"
