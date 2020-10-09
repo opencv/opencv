@@ -48,6 +48,8 @@
 #include "../ie_ngraph.hpp"
 #include "../op_vkcom.hpp"
 
+#include <opencv2/core/utils/logger.hpp>
+
 #include "opencv2/core/hal/hal.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 #include <iostream>
@@ -436,6 +438,14 @@ public:
             Ptr<PowerLayer> activ_power = activ.dynamicCast<PowerLayer>();
             if (!activ_power.empty())
             {
+                if (activ_power->scale != 1.0f)  // not supported well by implementation, #17964
+                {
+                    // FIXIT no way to check number of blobs (like, eltwise input)
+                    CV_LOG_DEBUG(NULL, "DNN/OpenCL: can't configure Power activation (scale != 1.0f)");
+                    activ.release();
+                    newActiv = false;
+                    return false;
+                }
                 if (activ_power->scale != 1.f || activ_power->shift != 0.f)
                 {
                     const int outCh = blobs[0].size[0];
