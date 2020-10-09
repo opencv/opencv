@@ -8,9 +8,6 @@
 #endif
 
 #import <AppKit/AppKit.h>
-#import <Accelerate/Accelerate.h>
-#import <AVFoundation/AVFoundation.h>
-#import <ImageIO/ImageIO.h>
 #include "opencv2/core.hpp"
 
 //! @addtogroup imgcodecs_macosx
