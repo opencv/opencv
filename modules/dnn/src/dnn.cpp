@@ -2460,10 +2460,12 @@ struct Net::Impl : public detail::NetImplBase
                                     if( nextData )
                                         nextActivLayer = nextData->layerInstance.dynamicCast<ActivationLayer>();
 
+                                    Ptr<PowerLayer> activ_power;
                                     if( !nextActivLayer.empty() &&
                                             (!nextData->type.compare("ReLU") ||
                                              !nextData->type.compare("ChannelsPReLU") ||
-                                             !nextData->type.compare("Power")) &&
+                                             (!nextData->type.compare("Power") && (activ_power = nextActivLayer.dynamicCast<PowerLayer>()) && activ_power->scale == 1.0f)
+                                            ) &&
                                             currLayer->setActivation(nextActivLayer) )
                                     {
                                         CV_Assert_N(biasLayerData->outputBlobsWrappers.size() == 1, ld.inputBlobsWrappers.size() == 1);
