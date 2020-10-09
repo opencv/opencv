@@ -2413,14 +2413,42 @@ struct Net::Impl : public detail::NetImplBase
                 }
 
                 // fuse convolution layer followed by eltwise + relu
-                if ( IS_DNN_OPENCL_TARGET(preferableTarget) && ld.layerInstance->type == "Convolution" )
+                while (nextData && IS_DNN_OPENCL_TARGET(preferableTarget) && ld.layerInstance->type == "Convolution")  // semantic of 'if'
                 {
-                    Ptr<EltwiseLayer> nextEltwiseLayer;
-                    if( nextData )
-                        nextEltwiseLayer = nextData->layerInstance.dynamicCast<EltwiseLayer>();
+                    Ptr<EltwiseLayer> nextEltwiseLayer = nextData->layerInstance.dynamicCast<EltwiseLayer>();
+                    if (nextEltwiseLayer.empty())
+                        break;
 
-                    if( !nextEltwiseLayer.empty() && pinsToKeep.count(lpNext) == 0 &&
-                        nextData && nextData->inputBlobsId.size() == 2 )
+                    if (pinsToKeep.count(lpNext) != 0)
+                        break;
+                    if (nextData->inputBlobsId.size() != 2)
+                        break;
+
+                    if (!nextData->params.has("operation") || nextData->params.get<String>("operation").toLowerCase() == "sum")
+                    {
+                        if (nextData->params.has("coeff"))
+                        {
+                            DictValue paramCoeff = nextData->params.get("coeff");
+                            int n = paramCoeff.size();
+                            bool isCoeffOneOne = (n == 2);
+                            for (int i = 0; isCoeffOneOne && i < n; i++)
+                            {
+                                float c = paramCoeff.get<float>(i);
+                                isCoeffOneOne &= (c == 1.0f);
+                            }
+                            if (!isCoeffOneOne)
+                            {
+                                CV_LOG_DEBUG(NULL, "DNN/OpenCL: fusion of 'Sum' without coeffs (or {1.0, 1.0}) is supported only");
+                                break;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        CV_LOG_DEBUG(NULL, "DNN/OpenCL: fusion with eltwise operation is not supported: " << nextData->params.get<String>("operation"));
+                        break;
+                    }
+
                     {
                         LayerData *eltwiseData = nextData;
 
@@ -2517,6 +2545,8 @@ struct Net::Impl : public detail::NetImplBase
                             }
                         }
                     }
+
+                    break;
                 }
             }
 
@@ -2698,11 +2728,11 @@ struct Net::Impl : public detail::NetImplBase
 
         Ptr<Layer> layer = ld.layerInstance;
 
-        TickMeter tm;
-        tm.start();
-
         if( !ld.skip )
         {
+            TickMeter tm;
+            tm.start();
+
             std::map<int, Ptr<BackendNode> >::iterator it = ld.backendNodes.find(preferableBackend);
             if (preferableBackend == DNN_BACKEND_OPENCV || it == ld.backendNodes.end() || it->second.empty())
             {
@@ -2881,12 +2911,15 @@ struct Net::Impl : public detail::NetImplBase
                     CV_Error(Error::StsNotImplemented, "Unknown backend identifier");
                 }
             }
+
+            tm.stop();
+            int64 t = tm.getTimeTicks();
+            layersTimings[ld.id] = (t > 0) ? t : t + 1;  // zero for skipped layers only
         }
         else
-            tm.reset();
-
-        tm.stop();
-        layersTimings[ld.id] = tm.getTimeTicks();
+        {
+            layersTimings[ld.id] = 0;
+        }
 
         ld.flag = 1;
     }
