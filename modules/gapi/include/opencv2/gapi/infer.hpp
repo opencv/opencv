@@ -137,7 +137,7 @@ class GAPI_EXPORTS_W_SIMPLE GInferInputs
 {
 public:
     GAPI_WRAP GInferInputs() = default;
-    cv::GMat operator[](const std::string& name);
+    cv::GMat& operator[](const std::string& name);
     GAPI_WRAP void setInput(const String& name, const cv::GMat& value) { in_blobs.emplace(name, value); }
     const std::unordered_map<std::string, cv::GMat>& getBlobs() const;
 
