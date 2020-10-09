@@ -42,9 +42,6 @@
 
 #include "apple_conversions.h"
 
-CV_EXPORTS CGImageRef MatToCGImage(const cv::Mat& image);
-CV_EXPORTS void CGImageToMat(const CGImageRef image, cv::Mat& m, bool alphaExist);
-
 CGImageRef MatToCGImage(const cv::Mat& image) {
     NSData *data = [NSData dataWithBytes:image.data
                                   length:image.step.p[0] * image.rows];
