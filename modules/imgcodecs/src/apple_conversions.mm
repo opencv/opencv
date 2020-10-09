@@ -41,6 +41,7 @@
 //M*/
 
 #include "apple_conversions.h"
+#include "precomp.hpp"
 
 CGImageRef MatToCGImage(const cv::Mat& image) {
     NSData *data = [NSData dataWithBytes:image.data

@@ -44,7 +44,6 @@
 #import <AVFoundation/AVFoundation.h>
 #import <ImageIO/ImageIO.h>
 #include "opencv2/core.hpp"
-#include "precomp.hpp"
 
 CV_EXPORTS CGImageRef MatToCGImage(const cv::Mat& image);
 CV_EXPORTS void CGImageToMat(const CGImageRef image, cv::Mat& m, bool alphaExist);
