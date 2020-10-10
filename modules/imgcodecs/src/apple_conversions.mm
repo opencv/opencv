@@ -38,7 +38,6 @@ CGImageRef MatToCGImage(const cv::Mat& image) {
                                         kCGRenderingIntentDefault
                                         );
 
-    //CGImageRelease(imageRef);
     CGDataProviderRelease(provider);
     CGColorSpaceRelease(colorSpace);
 
