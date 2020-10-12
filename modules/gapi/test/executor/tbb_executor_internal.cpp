@@ -4,32 +4,32 @@
 //
 // Copyright (C) 2020 Intel Corporation
 
+// Deliberately include .cpp file instead of header as we use non exported function (execute)
 #include "executor/gapi_tbb_executor.cpp"
 
 #if defined(HAVE_TBB)
 
 #include "../test_precomp.hpp"
 #include <tbb/task_arena.h>
-#include <iostream>
 #include <thread>
 
 namespace {
-    tbb::task_arena create_task_arena(int max_concurrency  = tbb::task_arena::automatic) // make equal to 1 for single thread debugging;
+    tbb::task_arena create_task_arena(int max_concurrency  = tbb::task_arena::automatic) // set to 1 for single thread
     {
         unsigned int reserved_for_master_threads = 1;
         if (max_concurrency == 1)
         {
-            //Leave no room for TBB worker threads, by reserving all to masters.
-            //TBB runtime guarantees that no worker threads will join the arena
-            //if max_concurrency is equal to reserved_for_master_threads
-            //except 1:1 + use of enqueued tasks for safety guarantee.
-            //So deliberately make it 2:2 to force TBB not to create extra thread.
+            // Leave no room for TBB worker threads, by reserving all to masters.
+            // TBB runtime guarantees that no worker threads will join the arena
+            // if max_concurrency is equal to reserved_for_master_threads
+            // except 1:1 + use of enqueued tasks for safety guarantee.
+            // So deliberately make it 2:2 to force TBB not to create extra thread.
             //
-            //N.B. one slot will left empty as only one master thread(one that
-            //calls root->wait_for_all()) will join the arena.
+            // N.B. one slot will left empty as only one master thread(one that
+            // calls root->wait_for_all()) will join the arena.
 
-            //FIXME: strictly speaking master can take any free slot, not the first one.
-            //However at the moment master seems to pick 0 slot all the time.
+            // FIXME: strictly speaking master can take any free slot, not the first one.
+            // However at the moment master seems to pick 0 slot all the time.
             max_concurrency = 2;
             reserved_for_master_threads = 2;
         }
@@ -48,7 +48,7 @@ TEST(TBBExecutor, Basic)
     });
     q.push(&n);
     execute(q);
-    EXPECT_EQ(true,executed);
+    EXPECT_EQ(true, executed);
 }
 
 TEST(TBBExecutor, SerialExecution)
@@ -132,7 +132,7 @@ TEST(TBBExecutor, Dependencies)
     std::vector<int> tiles_exec_order(n, invalid_order);
 
     auto add_dependency_to = [](tile_node& node, tile_node& dependency) {
-        dependency.dependees.push_back(&node);
+        dependency.dependants.push_back(&node);
         node.dependencies++;
         node.dependency_count.fetch_add(1);
     };
@@ -165,7 +165,7 @@ TEST(TBBExecutor, Dependencies)
 
     for (size_t i=0; i <nodes.size(); i++){
         auto node_exec_order = tiles_exec_order[i];
-        for (auto* dependee : nodes[i].dependees) {
+        for (auto* dependee : nodes[i].dependants) {
             auto index = std::distance(&nodes.front(), dependee);
             auto dependee_execution_order = tiles_exec_order[index];
             ASSERT_LT(node_exec_order, dependee_execution_order) << "node number " << index <<" is executed earlier than it's dependency " << i;

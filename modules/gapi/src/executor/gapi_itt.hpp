@@ -11,6 +11,7 @@
 #include <type_traits>
 #include <memory>
 
+//FIXME: It seems that this macro is not propagated here by the OpenCV cmake (as this is not core module)
 #ifdef OPENCV_WITH_ITT
 #include <ittnotify.h>
 #endif
@@ -32,7 +33,7 @@ namespace util {
     }
 }  //namespace util
 
-//FIXME: make more reusable (move to other place and other namespace)
+//FIXME: make it more reusable (and move to other place and other namespace)
 namespace gimpl { namespace parallel {
     #ifdef OPENCV_WITH_ITT
     extern const __itt_domain* gapi_itt_domain;

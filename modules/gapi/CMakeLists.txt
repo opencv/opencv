@@ -188,10 +188,8 @@ if(TARGET opencv_test_gapi)
   target_link_libraries(opencv_test_gapi PRIVATE ade)
 endif()
 
-if(HAVE_TBB)
-  if(TARGET opencv_test_gapi)
-    ocv_target_link_libraries(opencv_test_gapi PRIVATE tbb)
-  endif()
+if(HAVE_TBB AND TARGET opencv_test_gapi)
+  ocv_target_link_libraries(opencv_test_gapi PRIVATE tbb)
 endif()
 
 if(HAVE_FREETYPE)
