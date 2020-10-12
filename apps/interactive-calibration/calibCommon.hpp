@@ -53,7 +53,7 @@ namespace calib
 
         cv::Mat undistMap1, undistMap2;
 
-        calibrationData()
+        calibrationData() //Not all members of a class are initialized inside the constructor.
         {
             imageSize = cv::Size(IMAGE_MAX_WIDTH, IMAGE_MAX_HEIGHT);
         }
