@@ -122,27 +122,6 @@ protected:
 template<>
 class Params<cv::gapi::Generic> {
 public:
-    Params(const std::string& tag,
-           const std::string &model,
-           const std::string &weights,
-           const std::string &device)
-        : desc{ model, weights, device, {}, {}, {}, 0u, 0u, true}, m_tag(tag) {
-    };
-
-    // BEGIN(G-API's network parametrization API)
-    GBackend      backend()    const { return cv::gapi::ie::backend();  }
-    std::string   tag()        const { return m_tag; }
-    cv::util::any params()     const { return { desc }; }
-    // END(G-API's network parametrization API)
-
-protected:
-    detail::ParamDesc desc;
-    std::string m_tag;
-};
-
-template<>
-class Params<cv::gapi::Generic> {
-public:
     Params() = default;
     Params(const std::string& tag,
            const std::string &model,
