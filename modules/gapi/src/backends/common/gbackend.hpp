@@ -27,6 +27,7 @@ namespace gimpl {
                                 : cv::Mat(v.dims(), v.type(), v.ptr());
     }
     inline RMat::View asView(const Mat& m, RMat::View::DestroyCallback&& cb = nullptr) {
+        // FIXME: View doesn't support multidimensional cv::Mat's
         return RMat::View(cv::descr_of(m), m.data, m.step, std::move(cb));
     }
 
