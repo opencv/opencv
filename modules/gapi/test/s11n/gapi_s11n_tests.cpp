@@ -1,6 +1,7 @@
 #include "../test_precomp.hpp"
 
 #include "backends/common/serialization.hpp"
+#include <opencv2/gapi/rmat.hpp>
 
 namespace {
     struct MyCustomType {
@@ -43,6 +44,49 @@ template<> struct CompileArgTag<MyCustomType> {
     }
 };
 } // namespace detail
+} // namespace cv
+
+namespace {
+    class MyRMatAdapter : public cv::RMat::Adapter {
+    cv::Mat m_mat;
+    int m_value;
+    std::string m_str;
+public:
+    MyRMatAdapter(cv::Mat m, int value, const std::string& str)
+        : m_mat(m), m_value(value), m_str(str)
+    {}
+    virtual cv::RMat::View access(cv::RMat::Access access) override {
+        if (access == cv::RMat::Access::W) {
+            return cv::RMat::View(cv::descr_of(m_mat), m_mat.data, m_mat.step);
+        } else {
+            return cv::RMat::View(cv::descr_of(m_mat), m_mat.data, m_mat.step);
+        }
+    }
+    virtual cv::GMatDesc desc() const override { return cv::descr_of(m_mat); }
+    virtual void serialize(cv::gapi::s11n::IOStream& os) override {
+        os << m_value << m_str;
+    }
+    int getVal() { return m_value; }
+    std::string getStr() { return m_str; }
+};
+}
+
+namespace cv {
+namespace gapi {
+namespace s11n {
+namespace detail {
+    template<> struct S11N<MyRMatAdapter> {
+        static MyRMatAdapter deserialize(IIStream &is) {
+            int val;
+            std::string str;
+            is >> val >> str;
+            MyRMatAdapter p(cv::Mat(), val, str);
+            return p;
+        }
+    };
+} // namespace detail
+} // namespace s11n
+} // namespace gapi
 } // namespace cv
 
 namespace opencv_test {
@@ -458,6 +502,19 @@ TEST_F(S11N_Basic, Test_Bind_RunArgs_MatScalar) {
         }
         i++;
     }
+}
+
+TEST_F(S11N_Basic, Test_RunArg_RMat) {
+    cv::Mat mat = cv::Mat::eye(cv::Size(128, 64), CV_8UC3);
+    cv::RMat rmat = cv::make_rmat<MyRMatAdapter>(mat, 42, "It actually works");
+    auto v = cv::GRunArgs{ cv::GRunArg{ rmat } };
+
+    const std::vector<char> sargsin = cv::gapi::serialize(v);
+    cv::GRunArgs out = cv::gapi::deserialize<cv::GRunArgs, MyRMatAdapter>(sargsin);
+    cv::RMat out_mat = cv::util::get<cv::RMat>(out[0]);
+    auto adapter = out_mat.get<MyRMatAdapter>();
+    EXPECT_EQ(42, adapter->getVal());
+    EXPECT_EQ("It actually works", adapter->getStr());
 }
 
 namespace {
