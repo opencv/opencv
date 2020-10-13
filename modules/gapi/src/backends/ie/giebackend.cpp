@@ -721,9 +721,23 @@ namespace {
             // FIXME: Introduce a DNNBackend interface which'd specify
             // the framework for this???
             GIEModel gm(gr);
-            const auto &np = gm.metadata(nh).get<NetworkParams>();
-            const auto &pp = cv::util::any_cast<cv::gapi::ie::detail::ParamDesc>(np.opaque);
+            auto &np = gm.metadata(nh).get<NetworkParams>();
+            auto &pp = cv::util::any_cast<cv::gapi::ie::detail::ParamDesc>(np.opaque);
             const auto &ki = cv::util::any_cast<KImpl>(ii.opaque);
+
+            GModel::Graph model(gr);
+            auto& op = model.metadata(nh).get<Op>();
+
+            // NB: In case generic infer, info about in/out names is stored in operation (op.params)
+            if (pp.is_generic)
+            {
+                auto& info      = cv::util::any_cast<cv::InOutInfo>(op.params);
+                pp.input_names  = info.in_names;
+                pp.output_names = info.out_names;
+                pp.num_in       = info.in_names.size();
+                pp.num_out      = info.out_names.size();
+            }
+
             gm.metadata(nh).set(IEUnit{pp});
             gm.metadata(nh).set(IECallable{ki.run});
             gm.metadata(nh).set(CustomMetaFunction{ki.customMetaFunc});
