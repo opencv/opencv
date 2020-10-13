@@ -32,7 +32,7 @@
 const __itt_domain* cv::gimpl::parallel::gapi_itt_domain = __itt_domain_create("GAPI Context");
 #endif
 
-namespace cv{ namespace gimpl { namespace parallel {
+namespace cv { namespace gimpl { namespace parallel {
 
 namespace detail {
 // some helper staff to deal with tbb::task related entities
@@ -121,7 +121,7 @@ root_t inline create_root(tbb::task_group_context& ctx) {
     return root;
 }
 
-std::size_t inline tg_cotext_traits(){
+std::size_t inline tg_context_traits(){
     // Specify tbb::task_group_context::concurrent_wait in the traits to ask TBB scheduler not to change
     // ref_count of the task we wait on (root) when wait is complete.
     return tbb::task_group_context::default_traits | tbb::task_group_context::concurrent_wait;
@@ -180,7 +180,7 @@ struct master_thread_sleep_lock_t
     std::unique_ptr<async_tasks_t, sleep_unlock>  guard;
 
     master_thread_sleep_lock_t() = default;
-    master_thread_sleep_lock_t(async_tasks_t*  async_tasks_p_ ) : guard(async_tasks_p_)
+    master_thread_sleep_lock_t(async_tasks_t*  async_tasks_ptr ) : guard(async_tasks_ptr)
     {
         // TODO: seems that this can be relaxed
         ++(guard->count);
@@ -267,11 +267,35 @@ namespace graph {
         exec_ctx(tbb::task_arena& arena_, prio_items_queue_t& q_)
             : arena(arena_), q(q_),
               // As the traits is last argument, explicitly specify (default) value for first argument
-              tg_ctx{tbb::task_group_context::bound, tasking::tg_cotext_traits()},
+              tg_ctx{tbb::task_group_context::bound, tasking::tg_context_traits()},
               root(tasking::create_root(tg_ctx))
         {}
     };
 
+    // At the moment there are no suitable tools to  manage TBB priorities on task by task basis.
+    // Instead priority queue is used to respect tile_node priorities.
+    // As well, TBB task is not bound to any particular tile_node until actually executed.
+
+    // Strictly speaking there are two graphs here:
+    // - G-API one, described by the connected tile_node instances.
+    //   This graph is :
+    //    - Known beforehand, and do not change during the execution (i.e. static)
+    //    - Contains both TBB non-TBB parts
+    //    - prioritized, (i.e. all nodes has assigned priority of execution)
+    //
+    // - TBB task tree, which is :
+    //    - flat (Has only two levels : root and leaves)
+    //    - dynamic, i.e. new leaves are added on demand when new tbb tasks are spawned
+    //    - describes only TBB/CPU part of the whole graph
+    //    - non-prioritized (i.e. all tasks are created equal)
+
+    // Class below represents TBB task payload.
+    //
+    // Each instance basically does the three things :
+    // 1. Gets the tile_node item from the top of the queue
+    // 2. Executes its body
+    // 3. Push dependent tile_nodes to the queue once they are ready
+    //
     struct task_body {
         exec_ctx& ctx;
 
@@ -359,7 +383,7 @@ namespace graph {
             }
 
             ctx.executed++;
-            // reset dependecy_count to initial state
+            // reset dependecy_count to initial state to simplify re-execution of the same graph
             node->dependency_count = node->dependencies;
 
             return result;
@@ -389,6 +413,7 @@ void cv::gimpl::parallel::execute(prio_items_queue_t& q, tbb::task_arena& arena)
 
     arena.execute(
         [&](){
+            // Passed in queue is assumed to contain starting tasks, i.e. ones with no (or resolved) dependencies
             auto num_start_tasks = q.size();
 
             // TODO: use recursive spawning and task soft affinity for faster task distribution
