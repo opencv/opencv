@@ -10,23 +10,22 @@ from tests_common import NewOpenCVTests
 class test_gapi_infer(NewOpenCVTests):
 
     def test_age_gender_infer(self):
-        root_path    = 'dnn/omz_intel_models/intel/age-gender-recognition-retail-0013/FP32/age-gender-recognition-retail-0013'
-        search_path  = [os.environ.get('OPENCV_DNN_TEST_DATA_PATH')]
+        root_path    = '/omz_intel_models/intel/age-gender-recognition-retail-0013/FP32/age-gender-recognition-retail-0013'
 
-        model_path   = self.find_file(root_path + '.xml', search_path)
-        weights_path = self.find_file(root_path + '.bin', search_path)
-        img_path     = self.find_file('cv/face/david2.jpg', search_path)
+        model_path   = self.find_file(root_path + '.xml',   [os.environ.get('OPENCV_DNN_TEST_DATA_PATH')])
+        weights_path = self.find_file(root_path + '.bin',   [os.environ.get('OPENCV_DNN_TEST_DATA_PATH')])
+        img_path     = self.find_file('cv/face/david2.jpg', [os.environ.get('OPENCV_TEST_DATA_PATH')])
         device_id    = 'CPU'
         img          = cv.resize(cv.imread(img_path), (62,62))
 
-        # OpenCV DNN
-        net = cv.dnn.readNetFromModelOptimizer(model_path, weights_path)
-        net.setPreferableBackend(cv.dnn.DNN_BACKEND_INFERENCE_ENGINE)
-        net.setPreferableTarget(cv.dnn.DNN_TARGET_CPU)
-
-        blob = cv.dnn.blobFromImage(img)
-
         try:
+            # OpenCV DNN
+            net = cv.dnn.readNetFromModelOptimizer(model_path, weights_path)
+            net.setPreferableBackend(cv.dnn.DNN_BACKEND_INFERENCE_ENGINE)
+            net.setPreferableTarget(cv.dnn.DNN_TARGET_CPU)
+
+            blob = cv.dnn.blobFromImage(img)
+
             net.setInput(blob)
             dnn_age, dnn_gender = net.forward(net.getUnconnectedOutLayersNames())
         except BaseException as e:

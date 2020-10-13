@@ -208,7 +208,7 @@ if(CUDA_FOUND)
 
       if(${status} EQUAL 0)
         # cache detected values
-        set(OPENCV_CACHE_CUDA_ACTIVE_CC ${${result_list}} CACHE INTERNAL "")
+        set(OPENCV_CACHE_CUDA_ACTIVE_CC ${${output}} CACHE INTERNAL "")
         set(OPENCV_CACHE_CUDA_ACTIVE_CC_check "${__cache_key_check}" CACHE INTERNAL "")
       endif()
     endif()
