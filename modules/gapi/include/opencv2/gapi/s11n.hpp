@@ -234,6 +234,12 @@ IIStream& operator>> (IIStream& is, cv::util::variant<Ts...> &v) {
     GAPI_Assert(idx >= 0 && idx < (int)sizeof...(Ts));
     return detail::get_v<cv::util::variant<Ts...>, Ts...>(is, v, 0u, idx);
 }
+
+// FIXME: consider a better solution
+template<typename... Ts>
+void getRunArgByIdx (IIStream& is, cv::util::variant<Ts...> &v, uint32_t idx) {
+    is = detail::get_v<cv::util::variant<Ts...>, Ts...>(is, v, 0u, idx);
+}
 } // namespace s11n
 
 namespace detail
@@ -270,7 +276,7 @@ static GRunArg exec(cv::gapi::s11n::IIStream& is, uint32_t idx) {
         return GRunArg {rmat};
     } else { // non-RMat arg - use default deserialization
         GRunArg arg;
-        is >> arg;
+        getRunArgByIdx(is, arg, idx);
         return arg;
     }
 }

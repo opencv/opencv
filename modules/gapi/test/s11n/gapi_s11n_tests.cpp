@@ -517,6 +517,26 @@ TEST_F(S11N_Basic, Test_RunArg_RMat) {
     EXPECT_EQ("It actually works", adapter->getStr());
 }
 
+TEST_F(S11N_Basic, Test_RunArg_RMat_Scalar_Mat) {
+    cv::Mat mat = cv::Mat::eye(cv::Size(128, 64), CV_8UC3);
+    cv::RMat rmat = cv::make_rmat<MyRMatAdapter>(mat, 42, "It actually works");
+    cv::Scalar sc(111);
+    auto v = cv::GRunArgs{ cv::GRunArg{ rmat }, cv::GRunArg{ sc }, cv::GRunArg{ mat } };
+
+    const std::vector<char> sargsin = cv::gapi::serialize(v);
+    cv::GRunArgs out = cv::gapi::deserialize<cv::GRunArgs, MyRMatAdapter>(sargsin);
+    cv::RMat out_rmat = cv::util::get<cv::RMat>(out[0]);
+    auto adapter = out_rmat.get<MyRMatAdapter>();
+    EXPECT_EQ(42, adapter->getVal());
+    EXPECT_EQ("It actually works", adapter->getStr());
+
+    cv::Scalar out_sc = cv::util::get<cv::Scalar>(out[1]);
+    EXPECT_EQ(sc, out_sc);
+
+    cv::Mat out_mat = cv::util::get<cv::Mat>(out[2]);
+    EXPECT_EQ(0, cv::norm(mat, out_mat));
+}
+
 namespace {
     template <cv::detail::OpaqueKind K, typename T>
     bool verifyOpaqueKind(T&& in) {
