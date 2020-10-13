@@ -144,9 +144,9 @@ set(CPACK_COMPONENT_PYTHON_CONFLICTS python-opencv)
 set(CPACK_COMPONENT_PYTHON_PROVIDES python-opencv)
 set(CPACK_COMPONENT_PYTHON_REPLACES python-opencv)
 
-set(CPACK_COMPONENT_JAVA_CONFLICTS "libopencv4.0-java, libopencv4.0-jni")
-set(CPACK_COMPONENT_JAVA_PROVIDES "libopencv4.0-java, libopencv4.0-jni")
-set(CPACK_COMPONENT_JAVA_REPLACES "libopencv4.0-java, libopencv4.0-jni")
+set(CPACK_COMPONENT_JAVA_CONFLICTS "libopencv5.0-java, libopencv5.0-jni")
+set(CPACK_COMPONENT_JAVA_PROVIDES "libopencv5.0-java, libopencv5.0-jni")
+set(CPACK_COMPONENT_JAVA_REPLACES "libopencv5.0-java, libopencv5.0-jni")
 
 set(CPACK_COMPONENT_DOCS_CONFLICTS opencv-doc)
 set(CPACK_COMPONENT_SAMPLES_CONFLICTS opencv-doc)

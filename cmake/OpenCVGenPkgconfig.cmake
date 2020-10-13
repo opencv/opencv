@@ -45,7 +45,7 @@ if(NOT DEFINED CMAKE_HELPER_SCRIPT)
 if(INSTALL_TO_MANGLED_PATHS)
   ocv_update(OPENCV_PC_FILE_NAME "opencv-${OPENCV_VERSION}.pc")
 else()
-  ocv_update(OPENCV_PC_FILE_NAME opencv4.pc)
+  ocv_update(OPENCV_PC_FILE_NAME opencv5.pc)
 endif()
 
 # build the list of opencv libs and dependencies for all modules

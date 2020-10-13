@@ -211,6 +211,7 @@ public:
                 CV_LOG_INFO(NULL, "Video I/O: plugin is incompatible: " << lib->getName());
                 return;
             }
+#if 0  // FIXIT: OpenCV 5.0
             if (plugin_api_->api_header.opencv_version_major != CV_VERSION_MAJOR)
             {
                 CV_LOG_ERROR(NULL, "Video I/O: wrong OpenCV major version used by plugin '" << plugin_api_->api_header.api_description << "': " <<
@@ -232,6 +233,7 @@ public:
                 plugin_api_ = NULL;
                 return;
             }
+#endif
             // TODO Preview: add compatibility API/ABI checks
             CV_LOG_INFO(NULL, "Video I/O: loaded plugin '" << plugin_api_->api_header.api_description << "'");
         }

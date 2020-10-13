@@ -113,9 +113,9 @@ Installation process only copies files to predefined locations and do minor patc
 By default OpenCV will be installed to the `/usr/local` directory, all files will be copied to following locations:
 * `/usr/local/bin` - executable files
 * `/usr/local/lib` - libraries (.so)
-* `/usr/local/cmake/opencv4` - cmake package
-* `/usr/local/include/opencv4` - headers
-* `/usr/local/share/opencv4` - other files (e.g. trained cascades in XML format)
+* `/usr/local/cmake/opencv5` - cmake package
+* `/usr/local/include/opencv5` - headers
+* `/usr/local/share/opencv5` - other files (e.g. trained cascades in XML format)
 
 Since `/usr/local` is owned by the root user, the installation should be performed with elevated privileges (`sudo`):
 @snippet linux_install_a.sh install
