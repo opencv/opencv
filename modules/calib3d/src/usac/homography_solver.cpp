@@ -335,4 +335,5 @@ public:
 Ptr<AffineNonMinimalSolver> AffineNonMinimalSolver::create(const Mat &points_) {
     return makePtr<AffineNonMinimalSolverImpl>(points_);
 }
-}}
+}
+}
