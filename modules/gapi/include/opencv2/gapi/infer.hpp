@@ -135,14 +135,16 @@ struct InOutInfo
  */
 class GAPI_EXPORTS_W_SIMPLE GInferInputs
 {
+using Map = std::unordered_map<std::string, GMat>;
 public:
-    GAPI_WRAP GInferInputs() = default;
+    GAPI_WRAP GInferInputs();
+    GAPI_WRAP void setInput(const std::string& name, const cv::GMat& value);
+
     cv::GMat& operator[](const std::string& name);
-    GAPI_WRAP void setInput(const String& name, const cv::GMat& value) { in_blobs.emplace(name, value); }
-    const std::unordered_map<std::string, cv::GMat>& getBlobs() const;
+    const Map& getBlobs() const;
 
 private:
-    std::unordered_map<std::string, cv::GMat> in_blobs;
+    std::shared_ptr<Map> in_blobs;
 };
 /** @} */
 
@@ -155,12 +157,11 @@ struct GAPI_EXPORTS_W_SIMPLE GInferOutputs
 public:
     GAPI_WRAP GInferOutputs() = default;
     GInferOutputs(std::shared_ptr<cv::GCall> call);
-    GAPI_WRAP cv::GMat at(const String& name);
+    GAPI_WRAP cv::GMat at(const std::string& name);
 
 private:
-    std::shared_ptr<cv::GCall> m_call;
-    InOutInfo* m_info = nullptr;
-    std::unordered_map<std::string, cv::GMat> out_blobs;
+    struct Priv;
+    std::shared_ptr<Priv> m_priv;
 };
 /** @} */
 
