@@ -286,6 +286,10 @@ static bool updateIdx(cv::Mat* mat, std::vector<int>& indices, int inc) {
     return [[Mat alloc] initWithNativeMat:new cv::Mat(_nativePtr->cross(*(cv::Mat*)mat.nativePtr))];
 }
 
+- (unsigned char*)dataPtr {
+    return _nativePtr->data;
+}
+
 - (int)depth {
     return _nativePtr->depth();
 }

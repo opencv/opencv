@@ -97,6 +97,7 @@ CV_EXPORTS @interface Mat : NSObject
 - (void)createEx:(NSArray<NSNumber*>*)sizes type:(int)type  NS_SWIFT_NAME(create(sizes:type:));
 - (void)copySize:(Mat*)mat;
 - (Mat*)cross:(Mat*)mat;
+- (unsigned char*)dataPtr NS_SWIFT_NAME(dataPointer());
 - (int)depth;
 - (Mat*)diag:(int)diagonal;
 - (Mat*)diag;
