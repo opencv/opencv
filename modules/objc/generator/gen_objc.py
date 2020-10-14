@@ -1584,6 +1584,11 @@ if __name__ == "__main__":
             if os.path.exists(ios_files_dir):
                 copied_files += copy_objc_files(ios_files_dir, objc_base_path, module, True)
 
+        if args.target == 'osx':
+            osx_files_dir = os.path.join(misc_location, 'macosx')
+            if os.path.exists(osx_files_dir):
+                copied_files += copy_objc_files(osx_files_dir, objc_base_path, module, True)
+
         objc_test_files_dir = os.path.join(misc_location, 'test')
         if os.path.exists(objc_test_files_dir):
             copy_objc_files(objc_test_files_dir, objc_test_base_path, 'test', False)

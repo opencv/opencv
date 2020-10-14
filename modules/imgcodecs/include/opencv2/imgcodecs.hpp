@@ -50,6 +50,7 @@
   @{
     @defgroup imgcodecs_c C API
     @defgroup imgcodecs_ios iOS glue
+    @defgroup imgcodecs_macosx MacOS(OSX) glue
   @}
 */
 
