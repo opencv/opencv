@@ -727,7 +727,7 @@ public:
      @param straight_qrcode The optional output image containing rectified and binarized QR code
      */
     CV_WRAP cv::String detectAndDecodeCurved(InputArray img, OutputArray points=noArray(),
-                                             OutputArray straight_qrcode = noArray());       
+                                             OutputArray straight_qrcode = noArray());
 
     /** @brief Detects QR codes in image and returns the vector of the quadrangles containing the codes.
      @param img grayscale or color (BGR) image containing (or not) QR codes.
@@ -819,6 +819,13 @@ CV_EXPORTS bool detectQRCode(InputArray in, std::vector<Point> &points, double e
     @param straight_qrcode Matrix of the type CV_8UC1 containing an binary straight QR code.
     */
 CV_EXPORTS bool decodeQRCode(InputArray in, InputArray points, std::string &decoded_info, OutputArray straight_qrcode = noArray());
+
+/** @brief Decode QR code on a curved surface in image and return text that is encrypted in QR code.
+    @param in  Matrix of the type CV_8UC1 containing an image where QR code are detected.
+    @param points Input vector of vertices of a quadrangle of minimal area that describes QR code.
+    @param decoded_info String information that is encrypted in QR code.
+    @param straight_qrcode Matrix of the type CV_8UC1 containing an binary straight QR code.
+    */
 CV_EXPORTS bool decodeCurvedQRCode(InputArray in, InputArray points, std::string &decoded_info, OutputArray straight_qrcode = noArray());
 
 //! @} objdetect
