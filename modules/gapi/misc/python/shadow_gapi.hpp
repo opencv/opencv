@@ -18,11 +18,6 @@ namespace cv
 
    namespace gapi
    {
-       GAPI_EXPORTS_W gapi::GNetPackage networks(cv::gapi::ie::GenParams params);
-
-       namespace ie
-       {
-           class GAPI_EXPORTS_W_SIMPLE GenParams { };
-       }  // namespace ie
+      GAPI_EXPORTS_W gapi::GNetPackage networks(const cv::gapi::ie::PyParams& params);
    }  // namespace gapi
 }  // namespace cv

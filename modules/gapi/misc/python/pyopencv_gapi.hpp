@@ -5,7 +5,12 @@
 
 using gapi_GKernelPackage = cv::gapi::GKernelPackage;
 using gapi_GNetPackage = cv::gapi::GNetPackage;
-using gapi_ie_GenParams = cv::gapi::ie::GenParams;
+using gapi_ie_PyParams = cv::gapi::ie::PyParams;
+
+// FIXME: Python wrapper generate code without namespace std,
+// so it cause error: "string wasn't declared"
+// WA: Create using
+using std::string;
 
 template<>
 bool pyopencv_to(PyObject* obj, std::vector<GCompileArg>& value, const ArgInfo& info)

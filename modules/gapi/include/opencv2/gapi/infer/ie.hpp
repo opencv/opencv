@@ -123,7 +123,7 @@ template<>
 class Params<cv::gapi::Generic> {
 public:
     Params() = default;
-    Params(const std::string& tag,
+    Params(const std::string &tag,
            const std::string &model,
            const std::string &weights,
            const std::string &device)
@@ -141,14 +141,32 @@ protected:
     std::string m_tag;
 };
 
-// NB: For python bindings
-using GenParams = Params<Generic>;
-GAPI_EXPORTS_W inline GenParams params(const String& tag,
-                                       const String& model,
-                                       const String& weights,
-                                       const String& device)
-{
-    return GenParams(tag, model, weights, device);
+// NB: Used by python wrapper
+// This class can be marked as SIMPLE, because it's implemented as pimpl
+class GAPI_EXPORTS_W_SIMPLE PyParams {
+public:
+    PyParams() = default;
+
+    PyParams(const std::string &tag,
+             const std::string &model,
+             const std::string &weights,
+             const std::string &device)
+        : m_priv(std::make_shared<Params<cv::gapi::Generic>>(tag, model, weights, device)) {
+    }
+
+    GBackend      backend()    const { return m_priv->backend(); }
+    std::string   tag()        const { return m_priv->tag();     }
+    cv::util::any params()     const { return m_priv->params();  }
+
+private:
+    std::shared_ptr<Params<cv::gapi::Generic>> m_priv;
+};
+
+GAPI_EXPORTS_W inline PyParams params(const std::string &tag,
+                                      const std::string &model,
+                                      const std::string &weights,
+                                      const std::string &device) {
+    return {tag, model, weights, device};
 }
 
 } // namespace ie
