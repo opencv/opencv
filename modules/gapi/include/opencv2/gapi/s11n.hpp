@@ -271,9 +271,9 @@ template<typename RMatAdapterType>
 struct deserialize_runarg {
 static GRunArg exec(cv::gapi::s11n::IIStream& is, uint32_t idx) {
     if (idx == GRunArg::index_of<RMat>()) {
-        RMatAdapterType adapter = cv::gapi::s11n::detail::S11N<RMatAdapterType>::deserialize(is);
-        RMat rmat = make_rmat<RMatAdapterType>(adapter);
-        return GRunArg {rmat};
+        auto ptr = std::make_shared<RMatAdapterType>();
+        ptr->deserialize(is);
+        return GRunArg { RMat(std::move(ptr)) };
     } else { // non-RMat arg - use default deserialization
         GRunArg arg;
         getRunArgByIdx(is, arg, idx);

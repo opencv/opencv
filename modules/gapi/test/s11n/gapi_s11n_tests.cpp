@@ -47,11 +47,12 @@ template<> struct CompileArgTag<MyCustomType> {
 } // namespace cv
 
 namespace {
-    class MyRMatAdapter : public cv::RMat::Adapter {
+class MyRMatAdapter : public cv::RMat::Adapter {
     cv::Mat m_mat;
     int m_value;
     std::string m_str;
 public:
+    MyRMatAdapter() = default;
     MyRMatAdapter(cv::Mat m, int value, const std::string& str)
         : m_mat(m), m_value(value), m_str(str)
     {}
@@ -66,28 +67,13 @@ public:
     virtual void serialize(cv::gapi::s11n::IOStream& os) override {
         os << m_value << m_str;
     }
+    virtual void deserialize(cv::gapi::s11n::IIStream& is) override {
+        is >> m_value >> m_str;
+    }
     int getVal() { return m_value; }
     std::string getStr() { return m_str; }
 };
 }
-
-namespace cv {
-namespace gapi {
-namespace s11n {
-namespace detail {
-    template<> struct S11N<MyRMatAdapter> {
-        static MyRMatAdapter deserialize(IIStream &is) {
-            int val;
-            std::string str;
-            is >> val >> str;
-            MyRMatAdapter p(cv::Mat(), val, str);
-            return p;
-        }
-    };
-} // namespace detail
-} // namespace s11n
-} // namespace gapi
-} // namespace cv
 
 namespace opencv_test {
 
