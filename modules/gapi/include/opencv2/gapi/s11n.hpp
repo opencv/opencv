@@ -133,6 +133,27 @@ GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::Scalar &s);
 GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::Mat &m);
 GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::Mat &m);
 
+// FIXME: for GRunArgs serailization
+#if !defined(GAPI_STANDALONE)
+GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::UMat &);
+GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::UMat &);
+#endif // !defined(GAPI_STANDALONE)
+
+GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::RMat &r);
+GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::RMat &r);
+
+GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::gapi::wip::IStreamSource::Ptr &);
+GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::gapi::wip::IStreamSource::Ptr &);
+
+GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::detail::VectorRef &);
+GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::detail::VectorRef &);
+
+GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::detail::OpaqueRef &);
+GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::detail::OpaqueRef &);
+
+GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::MediaFrame &);
+GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::MediaFrame &);
+
 // Generic STL types ////////////////////////////////////////////////////////////////
 template<typename K, typename V>
 IOStream& operator<< (IOStream& os, const std::map<K, V> &m) {
