@@ -71,12 +71,12 @@ namespace
 
         all.insert(src_g.nodes().begin(), src_g.nodes().end());
 
-        for (const auto nh : proto.in_nhs)
+        for (const auto& nh : proto.in_nhs)
         {
             all.erase(nh);
             in_ops.insert(nh->outNodes().begin(), nh->outNodes().end());
         }
-        for (const auto nh : proto.out_nhs)
+        for (const auto& nh : proto.out_nhs)
         {
             all.erase(nh);
             out_ops.insert(nh->inNodes().begin(), nh->inNodes().end());
@@ -90,12 +90,12 @@ namespace
 
         auto ih = GIslandModel::mkIslandNode(g, std::move(isl));
 
-        for (const auto nh : proto.in_nhs)
+        for (const auto& nh : proto.in_nhs)
         {
             auto slot = GIslandModel::mkSlotNode(g, nh);
             g.link(slot, ih);
         }
-        for (const auto nh : proto.out_nhs)
+        for (const auto& nh : proto.out_nhs)
         {
             auto slot = GIslandModel::mkSlotNode(g, nh);
             g.link(ih, slot);
