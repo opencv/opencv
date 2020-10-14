@@ -49,11 +49,11 @@ namespace cv {
  *
  * @sa GCompiled
  */
-class GAPI_EXPORTS GStreamingCompiled
+class GAPI_EXPORTS_W_SIMPLE GStreamingCompiled
 {
 public:
     class GAPI_EXPORTS Priv;
-    GStreamingCompiled();
+    GAPI_WRAP GStreamingCompiled();
 
     // FIXME: More overloads?
     /**
@@ -96,7 +96,7 @@ public:
      * @param ins vector of inputs to process.
      * @sa gin
      */
-    void setSource(GRunArgs &&ins);
+    GAPI_WRAP void setSource(GRunArgs &&ins);
 
     /**
      * @brief Specify an input video stream for a single-input
@@ -109,7 +109,7 @@ public:
      * @param s a shared pointer to IStreamSource representing the
      * input video stream.
      */
-    void setSource(const gapi::wip::IStreamSource::Ptr& s);
+    GAPI_WRAP void setSource(const gapi::wip::IStreamSource::Ptr& s);
 
     /**
      * @brief Start the pipeline execution.
@@ -126,7 +126,7 @@ public:
      * start()/stop()/setSource() may be called on the same object in
      * multiple threads in your application.
      */
-    void start();
+    GAPI_WRAP void start();
 
     /**
      * @brief Get the next processed frame from the pipeline.
@@ -150,6 +150,9 @@ public:
      */
     bool pull(cv::GRunArgsP &&outs);
 
+    // NB: Used from python
+    GAPI_WRAP std::tuple<bool, cv::GRunArgs> pull();
+
     /**
      * @brief Try to get the next processed frame from the pipeline.
      *
@@ -172,7 +175,7 @@ public:
      *
      * Throws if the pipeline is not running.
      */
-    void stop();
+    GAPI_WRAP void stop();
 
     /**
      * @brief Test if the pipeline is running.
@@ -184,7 +187,7 @@ public:
      *
      * @return true if the current stream is not over yet.
      */
-    bool running() const;
+    GAPI_WRAP bool running() const;
 
     /// @private
     Priv& priv();

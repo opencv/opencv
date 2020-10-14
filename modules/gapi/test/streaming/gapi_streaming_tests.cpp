@@ -983,4 +983,39 @@ TEST_F(GAPI_Streaming_Unit, SetSource_After_Completion)
     EXPECT_EQ(0., cv::norm(out, out_ref, cv::NORM_INF));
 }
 
+// NB: Check pull overload for python
+TEST(Streaming, Python_Pull_Overload)
+{
+    cv::GMat in;
+    auto out = cv::gapi::copy(in);
+    cv::GComputation c(in, out);
+
+    cv::Size sz(3,3);
+    cv::Mat in_mat(sz, CV_8UC3);
+    cv::randu(in_mat, cv::Scalar::all(0), cv::Scalar(255));
+
+    auto ccomp = c.compileStreaming(cv::descr_of(in_mat));
+
+    EXPECT_TRUE(ccomp);
+    EXPECT_FALSE(ccomp.running());
+
+    ccomp.setSource(cv::gin(in_mat));
+
+    ccomp.start();
+    EXPECT_TRUE(ccomp.running());
+
+    bool has_output;
+    cv::GRunArgs outputs;
+    std::tie(has_output, outputs) = ccomp.pull();
+
+    EXPECT_TRUE(has_output);
+    EXPECT_EQ(1u, outputs.size());
+
+    auto out_mat = cv::util::get<cv::Mat>(outputs[0]);
+    EXPECT_EQ(0., cv::norm(in_mat, out_mat, cv::NORM_INF));
+
+    ccomp.stop();
+    EXPECT_FALSE(ccomp.running());
+}
+
 } // namespace opencv_test
