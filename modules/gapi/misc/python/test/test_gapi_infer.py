@@ -10,8 +10,8 @@ from tests_common import NewOpenCVTests
 class test_gapi_infer(NewOpenCVTests):
 
     def checkIETarget(self, backend, target):
-        proto = self.find_file('layers/layer_convolution.prototxt',   [os.environ.get('OPENCV_DNN_TEST_DATA_PATH')])
-        model = self.find_file('layers/layer_convolution.caffemodel', [os.environ.get('OPENCV_DNN_TEST_DATA_PATH')])
+        proto = self.find_file('dnn/layers/layer_convolution.prototxt',   [os.environ.get('OPENCV_TEST_DATA_PATH')])
+        model = self.find_file('dnn/layers/layer_convolution.caffemodel', [os.environ.get('OPENCV_TEST_DATA_PATH')])
         net = cv.dnn.readNet(proto, model)
         net.setPreferableBackend(backend)
         net.setPreferableTarget(target)
