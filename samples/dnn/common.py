@@ -1,5 +1,16 @@
-import sys
+from __future__ import print_function
+import hashlib
+import time
 import os
+import sys
+import tarfile
+import requests
+import xml.etree.ElementTree as ET
+if sys.version_info[0] < 3:
+    from urllib2 import urlopen
+else:
+    from urllib.request import urlopen
+
 import cv2 as cv
 
 
@@ -110,3 +121,196 @@ def findFile(filename):
               '/opencv_extra/testdata in OPENCV_DNN_TEST_DATA_PATH environment '
               'variable or pass a full path to model.')
         exit(0)
+
+class HashMismatchException(Exception):
+        def __init__(self, expected, actual):
+            Exception.__init__(self)
+            self.expected = expected
+            self.actual = actual
+        def __str__(self):
+            return 'Hash mismatch: expected {} vs actual of {}'.format(self.expected, self.actual)
+
+def checkHashsum(expected_sha, filepath, silent=True):
+    print('  expected SHA1: {}'.format(expected_sha))
+    sha = hashlib.sha1()
+    if os.path.exists(filepath):
+        print('  there is already a file with the same name')
+        with open(filepath, 'rb') as f:
+            while True:
+                buf = f.read(10*1024*1024)
+                if not buf:
+                    break
+                sha.update(buf)
+    actual_sha = sha.hexdigest()
+    print('  actual SHA1:{}'.format(actual_sha))
+    hashes_matched = expected_sha == actual_sha
+    if not hashes_matched and not silent:
+        raise HashMismatchException(expected_sha, actual_sha)
+    return hashes_matched
+
+def isArchive(filepath):
+    type_dict = {
+    "\x1f\x8b\x08": "gz",
+    "\x42\x5a\x68": "bz2",
+    "\x50\x4b\x03\x04": "zip"
+    }
+    max_len = max(len(x) for x in type_dict)
+    with open(filepath) as f:
+        file_start = f.read(max_len)
+    for sequence, _ in type_dict.items():
+        if file_start.startswith(sequence):
+            return True
+    return False
+
+class Model:
+    def __init__(self, **kwargs):
+        self.name = kwargs.pop('name')
+        self.filenames = kwargs.pop('filenames')
+        self.loader = kwargs.pop('loader', None)
+        self.save_dir = kwargs.pop('save_dir')
+        self.shas = kwargs.pop('shas', None)
+        
+    def get(self):
+        print("  Working on " + self.name)
+        for filename, sha in zip(self.filenames, self.shas):
+            print("  Getting file " + filename)
+            filepath = os.path.join(self.save_dir, filename)
+            if checkHashsum(sha, filepath):
+                print('  hash match - file already exists, skipping')
+                continue
+            else:
+                print('  hash didn\'t match, loading file')
+
+            if not os.path.exists(self.save_dir):
+                print('  creating directory: ' + self.save_dir)
+                os.makedirs(self.save_dir, exist_ok=True)
+            
+
+            print('  hash check failed - loading')
+            assert self.loader
+            try:
+                self.loader.load(filename, self.save_dir)
+                print(' done')
+                print(' file {}'.format(filename))
+                checkHashsum(sha, filepath, silent=False)
+            except Exception as e:
+                print("  There was some problem with loading file {} for {}".format(filename, self.name))
+                print("  Exception {}".format(e))
+                continue
+
+        print("  Finished " + self.name)
+
+class Loader(object):
+    MB = 1024*1024
+    BUFSIZE = 10*MB
+    def __init__(self, download_name, download_sha):
+        self.download_name = download_name
+        self.download_sha = download_sha
+
+    def load(self, requested_file, save_dir):
+        filepath = os.path.join(save_dir, self.download_name)
+        print("  Preparing to download file " + self.download_name)
+        if checkHashsum(self.download_sha, filepath):
+            print('  hash match - file already exists, no need to download')
+        else:
+            filesize = self.download(filepath)
+            print('  Downloaded {} if size {} Mb'.format(self.download_name, filesize))
+        if self.download_name == requested_file:
+            return
+        else:
+            if checkHashsum(self.download_sha, filepath, silent=False):
+                if isArchive(filepath):
+                    self.extract(requested_file, filepath, save_dir)
+                else:
+                    raise Exception("Downloaded file has different name")
+    
+    def download(self, filepath):
+        print("Warning: download is not implemented, this is a base class")
+        return 0
+    
+    def extract(self, requested_file, archive_path, save_dir):
+        filepath = os.path.join(save_dir, requested_file)
+        try:
+            with tarfile.open(archive_path) as f:
+                pathDict = dict((os.path.split(elem)[1], os.path.split(elem)[0]) for elem in f.getnames())
+                assert requested_file in pathDict
+                self.save(filepath, f.extractfile(pathDict[requested_file]))
+        except Exception as e:
+            print('  catch {}'.format(e))
+    
+    def save(self, filepath, r):
+        with open(filepath, 'wb') as f:
+            print('  progress ', end='')
+            sys.stdout.flush()
+            while True:
+                buf = r.read(self.BUFSIZE)
+                if not buf:
+                    break
+                f.write(buf)
+                print('>', end='')
+                sys.stdout.flush()
+
+class URLLoader(Loader):
+    def __init__(self, download_name, download_sha, url):
+        super().__init__(download_name, download_sha)
+        self.download_name = download_name
+        self.download_sha = download_sha
+        self.url = url
+
+    def download(self, filepath):
+        r = urlopen(self.url, timeout=60)
+        self.printRequest(r)
+        self.save(filepath, r)
+        return os.path.getsize(filepath)
+    
+    def printRequest(self, r):
+        def getMB(r):
+            d = dict(r.info())
+            for c in ['content-length', 'Content-Length']:
+                if c in d:
+                    return int(d[c]) / self.MB
+            return '<unknown>'
+        print('  {} {} [{} Mb]'.format(r.getcode(), r.msg, getMB(r)))
+
+class GDriveLoader(Loader):
+    def __init__(self, download_name, download_sha, gid):
+        super().__init__(download_name, download_sha)
+        self.download_name = download_name
+        self.download_sha = download_sha
+        self.gid = gid
+
+    def download(self, filepath):
+        session = requests.Session()  # re-use cookies
+
+        URL = "https://docs.google.com/uc?export=download"
+        response = session.get(URL, params = { 'id' : self.gid }, stream = True)
+
+        def get_confirm_token(response):  # in case of large files
+            for key, value in response.cookies.items():
+                if key.startswith('download_warning'):
+                    return value
+            return None
+        token = get_confirm_token(response)
+
+        if token:
+            params = { 'id' : self.gid, 'confirm' : token }
+            response = session.get(URL, params = params, stream = True)
+
+        BUFSIZE = 1024 * 1024
+        PROGRESS_SIZE = 10 * 1024 * 1024
+
+        sz = 0
+        progress_sz = PROGRESS_SIZE
+        with open(filepath, "wb") as f:
+            for chunk in response.iter_content(BUFSIZE):
+                if not chunk:
+                    continue  # keep-alive
+
+                f.write(chunk)
+                sz += len(chunk)
+                if sz >= progress_sz:
+                    progress_sz += PROGRESS_SIZE
+                    print('>', end='')
+                    sys.stdout.flush()
+        print('')
+        return sz
