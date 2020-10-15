@@ -5,7 +5,6 @@ import os
 import sys
 import tarfile
 import requests
-import xml.etree.ElementTree as ET
 if sys.version_info[0] < 3:
     from urllib2 import urlopen
 else:
@@ -273,6 +272,8 @@ class URLLoader(Loader):
         print('  {} {} [{} Mb]'.format(r.getcode(), r.msg, getMB(r)))
 
 class GDriveLoader(Loader):
+    BUFSIZE = 1024 * 1024
+    PROGRESS_SIZE = 10 * 1024 * 1024
     def __init__(self, download_name, download_sha, gid):
         super().__init__(download_name, download_sha)
         self.download_name = download_name
@@ -296,20 +297,17 @@ class GDriveLoader(Loader):
             params = { 'id' : self.gid, 'confirm' : token }
             response = session.get(URL, params = params, stream = True)
 
-        BUFSIZE = 1024 * 1024
-        PROGRESS_SIZE = 10 * 1024 * 1024
-
         sz = 0
-        progress_sz = PROGRESS_SIZE
+        progress_sz = self.PROGRESS_SIZE
         with open(filepath, "wb") as f:
-            for chunk in response.iter_content(BUFSIZE):
+            for chunk in response.iter_content(self.BUFSIZE):
                 if not chunk:
                     continue  # keep-alive
 
                 f.write(chunk)
                 sz += len(chunk)
                 if sz >= progress_sz:
-                    progress_sz += PROGRESS_SIZE
+                    progress_sz += self.PROGRESS_SIZE
                     print('>', end='')
                     sys.stdout.flush()
         print('')
