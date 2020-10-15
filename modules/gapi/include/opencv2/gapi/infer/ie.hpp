@@ -90,8 +90,7 @@ public:
     };
 
     Params(const std::string &model,
-           const std::string &device,
-           detail::ParamDesc::Kind kind = detail::ParamDesc::Kind::Load)
+           const std::string &device)
         : desc{ model, {}, device, {}, {}, {}
               , std::tuple_size<typename Net::InArgs>::value  // num_in
               , std::tuple_size<typename Net::OutArgs>::value // num_out
@@ -142,7 +141,7 @@ public:
         : desc{ model, weights, device, {}, {}, {}, 0u, 0u, detail::ParamDesc::Kind::Load, true}, m_tag(tag) {
     };
 
-    Params(const std::string& tag,
+    Params(const std::string &tag,
            const std::string &model,
            const std::string &device)
         : desc{ model, {}, device, {}, {}, {}, 0u, 0u, detail::ParamDesc::Kind::Import, true}, m_tag(tag) {
