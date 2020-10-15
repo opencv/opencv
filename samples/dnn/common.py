@@ -148,18 +148,7 @@ def checkHashsum(expected_sha, filepath, silent=True):
     return hashes_matched
 
 def isArchive(filepath):
-    type_dict = {
-    "\x1f\x8b\x08": "gz",
-    "\x42\x5a\x68": "bz2",
-    "\x50\x4b\x03\x04": "zip"
-    }
-    max_len = max(len(x) for x in type_dict)
-    with open(filepath) as f:
-        file_start = f.read(max_len)
-    for sequence, _ in type_dict.items():
-        if file_start.startswith(sequence):
-            return True
-    return False
+    return tarfile.is_tarfile(filepath)
 
 class Model:
     def __init__(self, **kwargs):
@@ -206,9 +195,10 @@ class Model:
 class Loader(object):
     MB = 1024*1024
     BUFSIZE = 10*MB
-    def __init__(self, download_name, download_sha):
+    def __init__(self, download_name, download_sha, archive_member = None):
         self.download_name = download_name
         self.download_sha = download_sha
+        self.archive_member = archive_member
 
     def load(self, requested_file, save_dir):
         filepath = os.path.join(save_dir, self.download_name)
@@ -218,14 +208,14 @@ class Loader(object):
         else:
             filesize = self.download(filepath)
             print('  Downloaded {} with size {} Mb'.format(self.download_name, filesize/self.MB))
+            checkHashsum(self.download_sha, filepath, silent=False)
         if self.download_name == requested_file:
             return
         else:
-            if checkHashsum(self.download_sha, filepath, silent=False):
-                if isArchive(filepath):
-                    self.extract(requested_file, filepath, save_dir)
-                else:
-                    raise Exception("Downloaded file has different name")
+            if isArchive(filepath):
+                self.extract(requested_file, filepath, save_dir)
+            else:
+                raise Exception("Downloaded file has different name")
     
     def download(self, filepath):
         print("Warning: download is not implemented, this is a base class")
@@ -235,9 +225,11 @@ class Loader(object):
         filepath = os.path.join(save_dir, requested_file)
         try:
             with tarfile.open(archive_path) as f:
-                pathDict = dict((os.path.split(elem)[1], os.path.split(elem)[0]) for elem in f.getnames())
-                assert requested_file in pathDict
-                self.save(filepath, f.extractfile(pathDict[requested_file]))
+                if self.archive_member is None:
+                    pathDict = dict((os.path.split(elem)[1], os.path.split(elem)[0]) for elem in f.getnames())
+                    self.archive_member = pathDict[requested_file]
+                assert self.archive_member in f.getnames()
+                self.save(filepath, f.extractfile(self.archive_member))
         except Exception as e:
             print('  catch {}'.format(e))
     
@@ -254,8 +246,8 @@ class Loader(object):
                 sys.stdout.flush()
 
 class URLLoader(Loader):
-    def __init__(self, download_name, download_sha, url):
-        super().__init__(download_name, download_sha)
+    def __init__(self, download_name, download_sha, url, archive_member = None):
+        super().__init__(download_name, download_sha, archive_member)
         self.download_name = download_name
         self.download_sha = download_sha
         self.url = url
@@ -278,8 +270,8 @@ class URLLoader(Loader):
 class GDriveLoader(Loader):
     BUFSIZE = 1024 * 1024
     PROGRESS_SIZE = 10 * 1024 * 1024
-    def __init__(self, download_name, download_sha, gid):
-        super().__init__(download_name, download_sha)
+    def __init__(self, download_name, download_sha, gid, archive_member = None):
+        super().__init__(download_name, download_sha, archive_member)
         self.download_name = download_name
         self.download_sha = download_sha
         self.gid = gid

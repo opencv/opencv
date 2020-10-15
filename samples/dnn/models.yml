@@ -71,6 +71,7 @@ ssd_tf:
     sha: "9e4bcdd98f4c6572747679e4ce570de4f03a70e2"
     download_sha: "6157ddb6da55db2da89dd561eceb7f944928e317"
     download_name: "ssd_mobilenet_v1_coco_2017_11_17.tar.gz"
+    member: "ssd_mobilenet_v1_coco_2017_11_17/frozen_inference_graph.pb"
   model: "ssd_mobilenet_v1_coco_2017_11_17.pb"
   config: "ssd_mobilenet_v1_coco_2017_11_17.pbtxt"
   mean: [0, 0, 0]
