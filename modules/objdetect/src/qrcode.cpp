@@ -8,7 +8,6 @@
 #include "precomp.hpp"
 #include "opencv2/objdetect.hpp"
 #include "opencv2/calib3d.hpp"
-#include "opencv2/highgui.hpp"
 
 #ifdef HAVE_QUIRC
 #include "quirc.h"
@@ -1004,6 +1003,7 @@ protected:
     bool findTempPatternsAddingPoints(vector<std::pair<int, vector<Point> > > &temp_patterns_add_points);
     bool computePatternsAddingPoints(std::map<int, vector<Point> > &patterns_add_points);
     bool addPointsToSides();
+    void completeAndSortSides();
     vector<vector<float> > computeSpline(const vector<int> &x_arr, const vector<int> &y_arr);
     bool createSpline(vector<vector<Point2f> > &spline_lines);
     bool divideIntoEvenSegments(vector<vector<Point2f> > &segments_points);
@@ -1114,7 +1114,7 @@ void QRDecode::getPointsInsideQRCode(const vector<Point2f> &angle_list)
     uint8_t value, mask_value;
     for(size_t i = 0; i < locations.size(); i++)
     {
-        value = bin_barcode.at<uint8_t>(locations.[i]);
+        value = bin_barcode.at<uint8_t>(locations[i]);
         mask_value = qrcode_mask.at<uint8_t>(locations[i] + Point(1, 1));
         if (value == 0 && mask_value == 0)
         {
@@ -1436,18 +1436,18 @@ bool QRDecode::findIndexesCurvedSides()
 
 bool QRDecode::findIncompleteIndexesCurvedSides()
 {
-    size_t num_closest_points = closest_points.size();
+    int num_closest_points = (int)closest_points.size();
 
-    for (size_t i = 0; i < NUM_SIDES; i++)
+    for (int i = 0; i < NUM_SIDES; i++)
     {
-        size_t idx_side = curved_indexes[i];
-        size_t side_size = sides_points[idx_side].size();
+        int idx_side = curved_indexes[i];
+        int side_size = (int)sides_points[idx_side].size();
 
         double max_norm = norm(closest_points[idx_side].second -
                                closest_points[(idx_side + 1) % num_closest_points].second);
         double real_max_norm = 0;
 
-        for (size_t j = 0; j < side_size - 1; j++)
+        for (int j = 0; j < side_size - 1; j++)
         {
             double temp_norm = norm(sides_points[idx_side][j] -
                                     sides_points[idx_side][j + 1]);
@@ -1748,7 +1748,7 @@ bool QRDecode::addPointsToSides()
         vector<int> sides_points_indexes;
 
         const int num_points_at_side_to_add = (int)sides_points[idx].size();
-        for (size_t j = 0; j < num_points_at_side_to_add; j++)
+        for (int j = 0; j < num_points_at_side_to_add; j++)
         {
             bool not_too_close = true;
             const size_t num_points_at_side_exist = complete_curved_sides[idx].size();
@@ -1786,6 +1786,35 @@ bool QRDecode::addPointsToSides()
     }
 
     return true;
+}
+
+void QRDecode::completeAndSortSides()
+{
+    if (complete_curved_sides.size() < 2)
+    {
+        for (int i = 0; i < NUM_SIDES; i++)
+        {
+            if(complete_curved_sides.count(curved_indexes[i]) == 0)
+            {
+                int idx_second_cur_side = curved_indexes[i];
+                complete_curved_sides.insert(std::pair<int,vector<Point> >(idx_second_cur_side, sides_points[idx_second_cur_side]));
+            }
+        }
+    }
+    std::map<int,vector<Point> >::iterator it;
+    for (it = complete_curved_sides.begin(); it != complete_curved_sides.end(); ++it)
+    {
+        Point p1 = it->second.front();
+        Point p2 = it->second.back();
+        if (abs(p1.x - p2.x) > abs(p1.y - p2.y))
+        {
+            sort(it->second.begin(), it->second.end(), sortPointsByX());
+        }
+        else
+        {
+            sort(it->second.begin(), it->second.end(), sortPointsByY());
+        }
+    }
 }
 
 vector<vector<float> > QRDecode::computeSpline(const vector<int> &x_arr, const vector<int> &y_arr)
@@ -1840,7 +1869,7 @@ bool QRDecode::createSpline(vector<vector<Point2f> > &spline_lines)
     int start, end;
     vector<vector<float> > S;
 
-    for (size_t idx = 0; idx < NUM_SIDES; idx++)
+    for (int idx = 0; idx < NUM_SIDES; idx++)
     {
         int idx_curved_side = curved_indexes[idx];
 
@@ -1883,16 +1912,13 @@ bool QRDecode::createSpline(vector<vector<Point2f> > &spline_lines)
             {
                 if ((index > second_arr[i]) && (index <= second_arr[i + 1]))
                 {
-                    float val = S[i][0] + S[i][1] * (index - second_arr[i]) + S[i][2] * pow((index - second_arr[i]), 2)
-                                                                    + S[i][3] * pow((index - second_arr[i]), 3);
+                    float val = S[i][0] + S[i][1] * (index - second_arr[i]) + S[i][2] * (index - second_arr[i]) * (index - second_arr[i])
+                                                                            + S[i][3] * (index - second_arr[i]) * (index - second_arr[i]) * (index - second_arr[i]);
                     spline_lines[idx].push_back(horizontal_order ? Point2f(index, val) : Point2f(val, index));
                 }
-
             }
         }
-
     }
-
     return true;
 }
 
@@ -1902,7 +1928,7 @@ bool QRDecode::divideIntoEvenSegments(vector<vector<Point2f> > &segments_points)
     if (!createSpline(spline_lines)) { return false; }
 
     float mean_num_points_in_line = 0.0;
-    for (size_t i = 0; i < NUM_SIDES; i++)
+    for (int i = 0; i < NUM_SIDES; i++)
     {
         mean_num_points_in_line += spline_lines[i].size();
     }
@@ -1911,7 +1937,7 @@ bool QRDecode::divideIntoEvenSegments(vector<vector<Point2f> > &segments_points)
     float linear_threshold = 0.5f;
     for (int num = min_num_points; num < max_num_points; num++)
     {
-        for (size_t i = 0; i < NUM_SIDES; i++)
+        for (int i = 0; i < NUM_SIDES; i++)
         {
             segments_points[i].clear();
 
@@ -1926,7 +1952,7 @@ bool QRDecode::divideIntoEvenSegments(vector<vector<Point2f> > &segments_points)
             segments_points[i].push_back(spline_lines[i].back());
         }
         float mean_of_two_sides = 0.0;
-        for (size_t i = 0; i < NUM_SIDES; i++)
+        for (int i = 0; i < NUM_SIDES; i++)
         {
             float mean_dist_in_segment = 0.0;
             for (size_t j = 0; j < segments_points[i].size() - 1; j++)
@@ -1966,26 +1992,21 @@ bool QRDecode::straightenQRCodeInParts()
     if (!divideIntoEvenSegments(segments_points)) { return false; }
     vector<Point2f> current_curved_side, opposite_curved_side;
 
-    for (size_t i = 0; i < NUM_SIDES; i++)
+    for (int i = 0; i < NUM_SIDES; i++)
     {
         Point2f temp_point_start = segments_points[i].front();
         Point2f temp_point_end   = segments_points[i].back();
-        if (abs(temp_point_start.x - temp_point_end.x) >
-            abs(temp_point_start.y - temp_point_end.y))
+        bool horizontal_order = (abs(temp_point_start.x - temp_point_end.x) >
+                                 abs(temp_point_start.y - temp_point_end.y));
+        float compare_point_current  = horizontal_order ? segments_points[i].front().y 
+                                                        : segments_points[(i + 1) % 2].front().x;
+        float compare_point_opposite = horizontal_order ? segments_points[(i + 1) % 2].front().y 
+                                                        : segments_points[i].front().x;
+        
+        if (compare_point_current > compare_point_opposite)
         {
-            if(segments_points[i].front().y > segments_points[(i+1)%2].front().y)
-            {
-                current_curved_side  = segments_points[i];
-                opposite_curved_side = segments_points[(i+1)%2];
-            }
-        }
-        else
-        {
-            if(segments_points[i].front().x < segments_points[(i+1)%2].front().x)
-            {
-                current_curved_side  = segments_points[i];
-                opposite_curved_side = segments_points[(i+1)%2];
-            }
+            current_curved_side  = segments_points[i];
+            opposite_curved_side = segments_points[(i + 1) % 2];            
         }
     }
 
@@ -2136,32 +2157,7 @@ bool QRDecode::preparingCurvedQRCodes()
     {
         if(!addPointsToSides()) { return false; }
     }
-    if (complete_curved_sides.size() < 2)
-    {
-        for (size_t i = 0; i < NUM_SIDES; i++)
-        {
-            if(complete_curved_sides.count(curved_indexes[i]) == 0)
-            {
-                int idx_second_cur_side = curved_indexes[i];
-                complete_curved_sides.insert(std::pair<int,vector<Point> >(idx_second_cur_side, sides_points[idx_second_cur_side]));
-            }
-        }
-    }
-    std::map<int,vector<Point> >::iterator it;
-    for (it = complete_curved_sides.begin(); it != complete_curved_sides.end(); ++it)
-    {
-        Point p1 = it->second.front();
-        Point p2 = it->second.back();
-        if (abs(p1.x - p2.x) > abs(p1.y - p2.y))
-        {
-            sort(it->second.begin(), it->second.end(), sortPointsByX());
-        }
-        else
-        {
-            sort(it->second.begin(), it->second.end(), sortPointsByY());
-        }
-    }
-
+    completeAndSortSides();
     if (!straightenQRCodeInParts()) { return false; }
 
     return true;
@@ -2287,7 +2283,7 @@ bool QRDecode::samplingForVersion()
     CV_TRACE_FUNCTION();
     const double multiplyingFactor = (version < 3)  ? 1 :
                                      (version == 3) ? 1.5 :
-                                     version * (5 + version - 4);
+                                     version * (version + 1);
     const Size newFactorSize(
                   cvRound(no_border_intermediate.size().width  * multiplyingFactor),
                   cvRound(no_border_intermediate.size().height * multiplyingFactor));
