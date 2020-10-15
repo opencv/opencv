@@ -175,10 +175,8 @@ struct IEUnit {
     IE::InputsDataMap inputs;
     IE::OutputsDataMap outputs;
 
-    // FIXME: In case importNetwork for fill inputs/outputs need to obtain ExecutableNetwork, but
-    // for loadNetwork they can be obtained by using readNetwork
-    mutable IE::ExecutableNetwork this_network;
-    mutable cv::gimpl::ie::wrap::Plugin this_plugin;
+    IE::ExecutableNetwork this_network;
+    cv::gimpl::ie::wrap::Plugin this_plugin;
 
     explicit IEUnit(const cv::gapi::ie::detail::ParamDesc &pp)
         : params(pp) {
@@ -222,12 +220,15 @@ struct IEUnit {
 
     // This method is [supposed to be] called at Island compilation stage
     cv::gimpl::ie::IECompiled compile() const {
+        IEUnit* non_const_this = const_cast<IEUnit*>(this);
         if (params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Load) {
-            this_plugin = cv::gimpl::ie::wrap::getPlugin(params);
-            this_network = cv::gimpl::ie::wrap::loadNetwork(this_plugin, net, params);
+            // FIXME: In case importNetwork for fill inputs/outputs need to obtain ExecutableNetwork, but
+            // for loadNetwork they can be obtained by using readNetwork
+            non_const_this->this_plugin  = cv::gimpl::ie::wrap::getPlugin(params);
+            non_const_this->this_network = cv::gimpl::ie::wrap::loadNetwork(non_const_this->this_plugin, net, params);
         }
 
-        auto this_request = this_network.CreateInferRequest();
+        auto this_request = non_const_this->this_network.CreateInferRequest();
         // Bind const data to infer request
         for (auto &&p : params.const_inputs) {
             // FIXME: SetBlob is known to be inefficient,

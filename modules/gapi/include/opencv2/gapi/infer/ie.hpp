@@ -81,12 +81,21 @@ template<typename Net> class Params {
 public:
     Params(const std::string &model,
            const std::string &weights,
-           const std::string &device,
-           detail::ParamDesc::Kind kind = detail::ParamDesc::Kind::Load)
+           const std::string &device)
         : desc{ model, weights, device, {}, {}, {}
               , std::tuple_size<typename Net::InArgs>::value  // num_in
               , std::tuple_size<typename Net::OutArgs>::value // num_out
-              , kind
+              , detail::ParamDesc::Kind::Load
+              , false} {
+    };
+
+    Params(const std::string &model,
+           const std::string &device,
+           detail::ParamDesc::Kind kind = detail::ParamDesc::Kind::Load)
+        : desc{ model, {}, device, {}, {}, {}
+              , std::tuple_size<typename Net::InArgs>::value  // num_in
+              , std::tuple_size<typename Net::OutArgs>::value // num_out
+              , detail::ParamDesc::Kind::Import
               , false} {
     };
 
@@ -126,12 +135,17 @@ protected:
 template<>
 class Params<cv::gapi::Generic> {
 public:
-    Params(const std::string& tag,
+    Params(const std::string &tag,
            const std::string &model,
            const std::string &weights,
-           const std::string &device,
-           detail::ParamDesc::Kind kind = detail::ParamDesc::Kind::Load)
-        : desc{ model, weights, device, {}, {}, {}, 0u, 0u, kind, true}, m_tag(tag) {
+           const std::string &device)
+        : desc{ model, weights, device, {}, {}, {}, 0u, 0u, detail::ParamDesc::Kind::Load, true}, m_tag(tag) {
+    };
+
+    Params(const std::string& tag,
+           const std::string &model,
+           const std::string &device)
+        : desc{ model, {}, device, {}, {}, {}, 0u, 0u, detail::ParamDesc::Kind::Import, true}, m_tag(tag) {
     };
 
     // BEGIN(G-API's network parametrization API)
