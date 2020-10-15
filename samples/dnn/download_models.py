@@ -1,8 +1,11 @@
 '''
 Helper module to download extra data from Internet
 '''
-from common import Model, GDriveLoader, URLLoader
+import os
+import sys
+import yaml
 import xml.etree.ElementTree as ET
+from common import Model, GDriveLoader, URLLoader
 
 # Models for samples that should be downloaded by default
 
@@ -45,8 +48,34 @@ def parseMetalinkFile(metalink_filepath, save_dir):
         models.append(produceModel(name, fname, hash_sum, url, save_dir))
     return models
 
+def parseYAMLFile(yaml_filepath, save_dir):
+    models = []
+    with open(yaml_filepath, 'r') as stream:
+        data_loaded = yaml.safe_load(stream)
+        for name, params in data_loaded.items():
+            load_info = params.get("load_info", None)
+            if load_info:
+                fname = os.path.basename(params.get("model"))
+                hash_sum = load_info.get("sha")
+                url = load_info.get("url")
+                download_sha = load_info.get("download_sha")
+                download_name = load_info.get("download_name")
+                models.append(produceModel(name, fname, hash_sum, url, save_dir, 
+                                download_name=download_name, download_sha=download_sha))
+
+    return models
+
 if __name__ == '__main__':
     models = []
-    models.extend(parseMetalinkFile('face_detector/weights.meta4', "."))
-    for model in models:
-        model.get()
+    save_dir = "."
+    models.extend(parseMetalinkFile('face_detector/weights.meta4', save_dir))
+    models.extend(parseYAMLFile('models.yml', save_dir))
+    selected_model_name = None
+    if len(sys.argv) > 1:
+        selected_model_name = sys.argv[1]
+        print('Model: ' + selected_model_name)
+    for m in models:
+        print(m)
+        if selected_model_name is not None and not m.name.startswith(selected_model_name):
+            continue
+        m.get()

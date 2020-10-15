@@ -168,6 +168,10 @@ class Model:
         self.loader = kwargs.pop('loader', None)
         self.save_dir = kwargs.pop('save_dir')
         self.shas = kwargs.pop('shas', None)
+    
+
+    def __str__(self):
+        return 'Model <{}>'.format(self.name)
         
     def get(self):
         print("  Working on " + self.name)
@@ -194,7 +198,7 @@ class Model:
                 checkHashsum(sha, filepath, silent=False)
             except Exception as e:
                 print("  There was some problem with loading file {} for {}".format(filename, self.name))
-                print("  Exception {}".format(e))
+                print("  Exception: {}".format(e))
                 continue
 
         print("  Finished " + self.name)
@@ -213,7 +217,7 @@ class Loader(object):
             print('  hash match - file already exists, no need to download')
         else:
             filesize = self.download(filepath)
-            print('  Downloaded {} if size {} Mb'.format(self.download_name, filesize))
+            print('  Downloaded {} with size {} Mb'.format(self.download_name, filesize/self.MB))
         if self.download_name == requested_file:
             return
         else:
