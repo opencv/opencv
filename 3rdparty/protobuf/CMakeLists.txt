@@ -140,6 +140,7 @@ append_if_exist(Protobuf_SRCS
   ${PROTOBUF_ROOT}/src/google/protobuf/wrappers.pb.cc
 )
 
+include_directories(BEFORE "${PROTOBUF_ROOT}/src")  # ensure using if own headers: https://github.com/opencv/opencv/issues/13328
 add_library(libprotobuf STATIC ${Protobuf_SRCS})
 target_include_directories(libprotobuf SYSTEM PUBLIC $<BUILD_INTERFACE:${PROTOBUF_ROOT}/src>)
 set_target_properties(libprotobuf
