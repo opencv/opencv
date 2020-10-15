@@ -89,6 +89,7 @@ faster_rcnn_tf:
     sha: "f2e4bf386b9bb3e25ddfcbbd382c20f417e444f3"
     download_sha: "c710f25e5c6a3ce85fe793d5bf266d581ab1c230"
     download_name: "faster_rcnn_inception_v2_coco_2018_01_28.tar.gz"
+    member: "faster_rcnn_inception_v2_coco_2018_01_28/frozen_inference_graph.pb"
   model: "faster_rcnn_inception_v2_coco_2018_01_28.pb"
   config: "faster_rcnn_inception_v2_coco_2018_01_28.pbtxt"
   mean: [0, 0, 0]
