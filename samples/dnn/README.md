@@ -19,6 +19,17 @@ Check `-h` option to know which values are used by default:
 python object_detection.py opencv_fd -h
 ```
 
+### Sample models
+
+You can download sample models using ```download_models.py```. For example, the following command will download network weights for OpenCV Face Detector model and store them in FaceDetector folder:
+
+```bash
+python download_models.py --save_dir FaceDetector opencv_fd
+```
+
+You can use default configuration files adopted for OpenCV from [here](https://github.com/opencv/opencv_extra/tree/master/testdata/dnn).
+
+
 #### Face detection
 [An origin model](https://github.com/opencv/opencv/tree/3.4/samples/dnn/face_detector)
 with single precision floating point weights has been quantized using [TensorFlow framework](https://www.tensorflow.org/).
@@ -48,7 +59,7 @@ AR @[ IoU=0.50:0.95 | area= large | maxDets=100 ] | 0.528     | 0.528          |
 ```
 
 ## References
-* [Models downloading script](https://github.com/opencv/opencv_extra/blob/master/testdata/dnn/download_models.py)
+* [Models downloading script](https://github.com/opencv/opencv/samples/dnn/download_models.py)
 * [Configuration files adopted for OpenCV](https://github.com/opencv/opencv_extra/tree/master/testdata/dnn)
 * [How to import models from TensorFlow Object Detection API](https://github.com/opencv/opencv/wiki/TensorFlow-Object-Detection-API)
 * [Names of classes from different datasets](https://github.com/opencv/opencv/tree/3.4/samples/data/dnn)
