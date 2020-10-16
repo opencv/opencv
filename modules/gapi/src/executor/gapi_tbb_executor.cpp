@@ -21,7 +21,7 @@
 
 #include <chrono>
 
-#define ASSERT(expr)          GAPI_Assert(expr)
+#define ASSERT(expr)          GAPI_DbgAssert(expr)
 
 #define LOG_INFO(tag, ...)    GAPI_LOG_INFO(tag, __VA_ARGS__)
 #define LOG_WARNING(tag, ...) GAPI_LOG_WARNING(tag, __VA_ARGS__)

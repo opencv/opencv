@@ -8,10 +8,17 @@
 #ifndef OPENCV_GAPI_OWN_ASSERT_HPP
 #define OPENCV_GAPI_OWN_ASSERT_HPP
 
+#include <opencv2/gapi/util/compiler_hints.hpp>
+
 #if !defined(GAPI_STANDALONE)
 #include <opencv2/core/base.hpp>
 #define GAPI_Assert CV_Assert
-#define GAPI_DbgAssert CV_DbgAssert
+
+#if defined _DEBUG || defined CV_STATIC_ANALYSIS
+#  define GAPI_DbgAssert CV_DbgAssert
+#else
+#  define GAPI_DbgAssert(expr) cv::util::suppress_unused_warning(expr)
+#endif
 
 #else
 #include <stdexcept>
@@ -33,7 +40,7 @@ namespace detail
 
 
 #ifdef NDEBUG
-#  define GAPI_DbgAssert(expr)
+#  define GAPI_DbgAssert(expr) cv::util::suppress_unused_warning(expr)
 #else
 #  define GAPI_DbgAssert(expr) GAPI_Assert(expr)
 #endif
