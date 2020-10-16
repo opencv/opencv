@@ -97,7 +97,7 @@ namespace {
 template<typename body_t>
 void batch_spawn(size_t count, tbb::task* root, body_t const& body, bool do_assert_graph_is_running = true)
 {
-   ITT_AUTO_TRACE_GUARD(ittTbbSpawnReadyBlocks);
+   GAPI_ITT_AUTO_TRACE_GUARD(ittTbbSpawnReadyBlocks);
    if (do_assert_graph_is_running){
        assert_graph_is_running(root);
    }
@@ -154,7 +154,7 @@ void inline wake_master(async_tasks_t& async_tasks, wake_tbb_master wake_master)
     if ((active_async_tasks == 0) || (wake_master == wake_tbb_master::yes) )
     {
         // Was the last async task or asked to wake TBB master up(e.g. there are new TBB tasks to execute)
-        ITT_AUTO_TRACE_GUARD(ittTbbUnlockMasterThread);
+        GAPI_ITT_AUTO_TRACE_GUARD(ittTbbUnlockMasterThread);
         // While decrement of async_tasks_t::count is atomic, it might occur after the waiting
         // thread has read its value but _before_ it actually starts waiting on the condition variable.
         // So, lock acquire is needed to guarantee that current condition check (if any) in the waiting thread
@@ -240,7 +240,7 @@ namespace graph {
     // Returns : number of items actually pushed into the q
     std::size_t inline push_ready_dependants(prio_items_queue_t& q, tile_node* node)
     {
-        ITT_AUTO_TRACE_GUARD(ittTbbAddReadyBlocksToQueue);
+        GAPI_ITT_AUTO_TRACE_GUARD(ittTbbAddReadyBlocksToQueue);
         std::size_t ready_items = 0;
         // then enable task dependees
         for (auto* dependant : node->dependants)
@@ -348,7 +348,7 @@ namespace graph {
                     {
                         auto master_was_active = is_tbb_work_present::no;
                         {
-                            ITT_AUTO_TRACE_GUARD(ittTbbEnqueueSpawnReadyBlocks);
+                            GAPI_ITT_AUTO_TRACE_GUARD(ittTbbEnqueueSpawnReadyBlocks);
                             // Force master thread (one that does wait_for_all()) to (actively) wait for enqueued tasks
                             // and unlock it right after all dependee tasks are spawned
                             // (and therefore ref_count of root has been increased accordingly, thus blocking

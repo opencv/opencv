@@ -11,7 +11,8 @@
 #include <type_traits>
 #include <memory>
 
-//FIXME: It seems that this macro is not propagated here by the OpenCV cmake (as this is not core module)
+// FIXME: It seems that this macro is not propagated here by the OpenCV cmake (as this is not core module).
+// (Consider using OpenCV's trace.hpp )
 #ifdef OPENCV_WITH_ITT
 #include <ittnotify.h>
 #endif
@@ -23,17 +24,17 @@ namespace util {
     template< class T >
     using remove_reference_t = typename std::remove_reference<T>::type;
 
-    //Home brew ScopeGuard
-    //D will be called automatically with p as argument when ScopeGuard goes out of scope.
-    //call release() on the ScopeGuard object to revoke guard action
+    // Home brew ScopeGuard
+    // D will be called automatically with p as argument when ScopeGuard goes out of scope.
+    // call release() on the ScopeGuard object to revoke guard action
     template<typename T, typename D>
     auto make_ptr_guard(T* p, D&& d) -> std::unique_ptr<T, util::remove_reference_t<D>>
     {
         return {p, std::forward<D>(d)};
     }
-}  //namespace util
+}  // namespace util
 
-//FIXME: make it more reusable (and move to other place and other namespace)
+// FIXME: make it more reusable (and move to other place and other namespace)
 namespace gimpl { namespace parallel {
     #ifdef OPENCV_WITH_ITT
     extern const __itt_domain* gapi_itt_domain;
@@ -45,15 +46,15 @@ namespace gimpl { namespace parallel {
         };
     }  // namespace
 
-    #define ITT_NAMED_TRACE_GUARD(name, h)  auto name =  cv::gimpl::parallel::make_itt_guard(h); cv::util::suppress_unused_warning(name)
+    #define GAPI_ITT_NAMED_TRACE_GUARD(name, h)  auto name =  cv::gimpl::parallel::make_itt_guard(h); cv::util::suppress_unused_warning(name)
     #else
     struct dumb_guard {void reset(){}};
-    #define ITT_NAMED_TRACE_GUARD(name, h)  cv::gimpl::parallel::dumb_guard name; cv::util::suppress_unused_warning(name)
+    #define GAPI_ITT_NAMED_TRACE_GUARD(name, h)  cv::gimpl::parallel::dumb_guard name; cv::util::suppress_unused_warning(name)
     #endif
 
-    #define ITT_AUTO_TRACE_GUARD_IMPL_(LINE, h)        ITT_NAMED_TRACE_GUARD(itt_trace_guard_##LINE , h)
-    #define ITT_AUTO_TRACE_GUARD_IMPL(LINE, h)         ITT_AUTO_TRACE_GUARD_IMPL_(LINE, h)
-    #define ITT_AUTO_TRACE_GUARD(h)                    ITT_AUTO_TRACE_GUARD_IMPL(__LINE__ , h)
+    #define GAPI_ITT_AUTO_TRACE_GUARD_IMPL_(LINE, h)        GAPI_ITT_NAMED_TRACE_GUARD(itt_trace_guard_##LINE, h)
+    #define GAPI_ITT_AUTO_TRACE_GUARD_IMPL(LINE, h)         GAPI_ITT_AUTO_TRACE_GUARD_IMPL_(LINE, h)
+    #define GAPI_ITT_AUTO_TRACE_GUARD(h)                    GAPI_ITT_AUTO_TRACE_GUARD_IMPL(__LINE__, h)
 }} //gimpl::parallel
 }  //namespace cv
 
