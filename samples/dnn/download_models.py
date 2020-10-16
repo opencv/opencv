@@ -260,7 +260,7 @@ def parseYAMLFile(yaml_filepath, save_dir):
     return models
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Process some integers.')
+    parser = argparse.ArgumentParser(description='This is a utility script for downloading DNN models for samples.')
 
     parser.add_argument('--save_dir', action="store", default=os.getcwd(),
                         help='Path to the directory to store downloaded files')
