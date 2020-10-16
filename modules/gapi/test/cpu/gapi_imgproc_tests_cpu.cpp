@@ -241,6 +241,13 @@ INSTANTIATE_TEST_CASE_P(GoodFeaturesInternalTestCPU, GoodFeaturesTest,
                                 Values(3),
                                 Values(true)));
 
+INSTANTIATE_TEST_CASE_P(BGR2RGBTestCPU, BGR2RGBTest,
+                        Combine(Values(CV_8UC3),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480)),
+                                Values(CV_8UC3),
+                                Values(IMGPROC_CPU),
+                                Values(AbsExact().to_compare_obj())));
 
 INSTANTIATE_TEST_CASE_P(RGB2GrayTestCPU, RGB2GrayTest,
                         Combine(Values(CV_8UC3),
@@ -268,6 +275,38 @@ INSTANTIATE_TEST_CASE_P(RGB2YUVTestCPU, RGB2YUVTest,
 
 INSTANTIATE_TEST_CASE_P(YUV2RGBTestCPU, YUV2RGBTest,
                         Combine(Values(CV_8UC3),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480)),
+                                Values(CV_8UC3),
+                                Values(IMGPROC_CPU),
+                                Values(AbsExact().to_compare_obj())));
+
+INSTANTIATE_TEST_CASE_P(BGR2I420TestCPU, BGR2I420Test,
+                        Combine(Values(CV_8UC3),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480)),
+                                Values(CV_8UC1),
+                                Values(IMGPROC_CPU),
+                                Values(AbsExact().to_compare_obj())));
+
+INSTANTIATE_TEST_CASE_P(RGB2I420TestCPU, RGB2I420Test,
+                        Combine(Values(CV_8UC3),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480)),
+                                Values(CV_8UC1),
+                                Values(IMGPROC_CPU),
+                                Values(AbsExact().to_compare_obj())));
+
+INSTANTIATE_TEST_CASE_P(I4202BGRTestCPU, I4202BGRTest,
+                        Combine(Values(CV_8UC1),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480)),
+                                Values(CV_8UC3),
+                                Values(IMGPROC_CPU),
+                                Values(AbsExact().to_compare_obj())));
+
+INSTANTIATE_TEST_CASE_P(I4202RGBTestCPU, I4202RGBTest,
+                        Combine(Values(CV_8UC1),
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
                                 Values(CV_8UC3),

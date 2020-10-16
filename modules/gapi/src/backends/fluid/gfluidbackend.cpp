@@ -952,7 +952,7 @@ namespace
         using namespace cv::gimpl;
         GModel::Graph g(graph);
         GFluidModel fg(graph);
-        for (const auto node : g.nodes())
+        for (const auto& node : g.nodes())
         {
             if (g.metadata(node).get<NodeType>().t == NodeType::DATA)
             {
@@ -1440,7 +1440,7 @@ void GFluidBackendImpl::addMetaSensitiveBackendPasses(ade::ExecutionEngineSetupC
                 {
                     // Add FluidData to all data nodes inside island,
                     // set internal = true if node is not a slot in terms of higher-level GIslandModel
-                    for (const auto node : isl->contents())
+                    for (const auto& node : isl->contents())
                     {
                         if (g.metadata(node).get<NodeType>().t == NodeType::DATA &&
                             !fg.metadata(node).contains<FluidData>())

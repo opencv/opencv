@@ -27,6 +27,7 @@ class GAPI_EXPORTS GStreamingCompiled::Priv
     GMetaArgs  m_metas;    // passed by user
     GMetaArgs  m_outMetas; // inferred by compiler
     std::unique_ptr<cv::gimpl::GStreamingExecutor> m_exec;
+    GShapes m_out_shapes;
 
 public:
     void setup(const GMetaArgs &metaArgs,
@@ -45,6 +46,11 @@ public:
     void stop();
 
     bool running() const;
+
+    // NB: std::tuple<bool, cv::GRunArgs> pull() creates GRunArgs for outputs,
+    // so need to know out shapes to create corresponding GRunArg
+    void setOutShapes(GShapes shapes) { m_out_shapes = std::move(shapes); }
+    const GShapes& outShapes() const { return m_out_shapes; }
 };
 
 } // namespace cv

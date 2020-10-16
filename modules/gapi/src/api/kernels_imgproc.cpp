@@ -115,6 +115,11 @@ cv::GArray<cv::Point2f> goodFeaturesToTrack(const GMat& image, int maxCorners, d
                                       useHarrisDetector, k);
 }
 
+GMat BGR2RGB(const GMat& src)
+{
+    return imgproc::GBGR2RGB::on(src);
+}
+
 GMat RGB2Gray(const GMat& src)
 {
     return imgproc::GRGB2Gray::on(src);
@@ -158,6 +163,26 @@ GMat YUV2BGR(const GMat& src)
 GMat YUV2RGB(const GMat& src)
 {
     return imgproc::GYUV2RGB::on(src);
+}
+
+GMat BGR2I420(const GMat& src)
+{
+    return imgproc::GBGR2I420::on(src);
+}
+
+GMat RGB2I420(const GMat& src)
+{
+    return imgproc::GRGB2I420::on(src);
+}
+
+GMat I4202BGR(const GMat& src)
+{
+    return imgproc::GI4202BGR::on(src);
+}
+
+GMat I4202RGB(const GMat& src)
+{
+    return imgproc::GI4202RGB::on(src);
 }
 
 GMat NV12toRGB(const GMat& src_y, const GMat& src_uv)
