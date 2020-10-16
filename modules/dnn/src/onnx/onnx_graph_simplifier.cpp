@@ -268,13 +268,15 @@ public:
         bool retVal = Subgraph::match(net, nodeId, matchedNodesIds, targetNodesIds);
         size_t matchedNodesNum = matchedNodesIds.size();
         // Now we check if merging can be made for these Gather and Cast nodes
-        if (retVal && matchedNodesNum >= 2) {
+        if (!retVal || matchedNodesNum < 2)
+            return retVal;
+        else {
             int nodeToMatch = matchedNodesIds[matchedNodesNum - 1];
             const Ptr<ImportNodeWrapper> node = net->getNode(nodeToMatch);
             if (node->getType() == "Cast") {
                 int inpNodeId = matchedNodesIds[matchedNodesNum - 2];
                 const Ptr<ImportNodeWrapper> inpNode = net->getNode(inpNodeId);
-                if ((inpNode->getType() == "Gather")) {
+                if (inpNode->getType() == "Gather") {
                     int numNodes = net->getNumNodes();
                     std::string inpNodeName = node->getInputName(0);
                     for (int i = 0; i < numNodes; ++i) {
