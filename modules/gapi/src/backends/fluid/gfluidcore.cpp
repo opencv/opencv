@@ -181,8 +181,7 @@ CV_ALWAYS_INLINE int absdiff_impl(const T in1[], const T in2[], T out[], int len
         return 0;
 
     int x = 0;
-
-    for (; x < length; )
+    for (;;)
     {
         for (; x <= length - nlanes; x += nlanes)
         {
@@ -192,7 +191,11 @@ CV_ALWAYS_INLINE int absdiff_impl(const T in1[], const T in2[], T out[], int len
         }
 
         if (x < length)
+        {
             x = length - nlanes;
+            continue;  // process one more time (unaligned tail)
+        }
+        break;
     }
 
     return x;
@@ -238,8 +241,7 @@ CV_ALWAYS_INLINE int add_simd_sametype(const T in1[], const T in2[], T out[], in
         return 0;
 
     int x = 0;
-
-    for (; x < length; )
+    for (;;)
     {
         for (; x <= length - nlanes; x += nlanes)
         {
@@ -249,7 +251,11 @@ CV_ALWAYS_INLINE int add_simd_sametype(const T in1[], const T in2[], T out[], in
         }
 
         if (x < length)
+        {
             x = length - nlanes;
+            continue;  // process one more time (unaligned tail)
+        }
+        break;
     }
 
     return x;
@@ -290,8 +296,7 @@ CV_ALWAYS_INLINE int add_simd(const SRC in1[], const SRC in2[], DST out[], int l
             return 0;
 
         int x = 0;
-
-        for (; x < length; )
+        for (;;)
         {
             for (; x <= length - nlanes; x += nlanes)
             {
@@ -304,7 +309,11 @@ CV_ALWAYS_INLINE int add_simd(const SRC in1[], const SRC in2[], DST out[], int l
             }
 
             if (x < length)
+            {
                 x = length - nlanes;
+                continue;  // process one more time (unaligned tail)
+            }
+            break;
         }
 
         return x;
@@ -317,8 +326,7 @@ CV_ALWAYS_INLINE int add_simd(const SRC in1[], const SRC in2[], DST out[], int l
             return 0;
 
         int x = 0;
-
-        for (; x < length; )
+        for (;;)
         {
             for (; x <= length - nlanes; x += nlanes)
             {
@@ -337,7 +345,11 @@ CV_ALWAYS_INLINE int add_simd(const SRC in1[], const SRC in2[], DST out[], int l
             }
 
             if (x < length)
+            {
                 x = length - nlanes;
+                continue;  // process one more time (unaligned tail)
+            }
+            break;
         }
 
         return x;
@@ -355,8 +367,7 @@ CV_ALWAYS_INLINE int sub_simd_sametype(const T in1[], const T in2[], T out[], in
         return 0;
 
     int x = 0;
-
-    for (; x < length; )
+    for (;;)
     {
         for (; x <= length - nlanes; x += nlanes)
         {
@@ -366,7 +377,11 @@ CV_ALWAYS_INLINE int sub_simd_sametype(const T in1[], const T in2[], T out[], in
         }
 
         if (x < length)
+        {
             x = length - nlanes;
+            continue;  // process one more time (unaligned tail)
+        }
+        break;
     }
 
     return x;
@@ -407,8 +422,7 @@ CV_ALWAYS_INLINE int sub_simd(const SRC in1[], const SRC in2[], DST out[], int l
             return 0;
 
         int x = 0;
-
-        for (; x < length; )
+        for (;;)
         {
             for (; x <= length - nlanes; x += nlanes)
             {
@@ -421,7 +435,11 @@ CV_ALWAYS_INLINE int sub_simd(const SRC in1[], const SRC in2[], DST out[], int l
             }
 
             if (x < length)
+            {
                 x = length - nlanes;
+                continue;  // process one more time (unaligned tail)
+            }
+            break;
         }
 
         return x;
@@ -434,8 +452,7 @@ CV_ALWAYS_INLINE int sub_simd(const SRC in1[], const SRC in2[], DST out[], int l
             return 0;
 
         int x = 0;
-
-        for (; x < length; )
+        for (;;)
         {
             for (; x <= length - nlanes; x += nlanes)
             {
@@ -454,7 +471,11 @@ CV_ALWAYS_INLINE int sub_simd(const SRC in1[], const SRC in2[], DST out[], int l
             }
 
             if (x < length)
+            {
                 x = length - nlanes;
+                continue;  // process one more time (unaligned tail)
+            }
+            break;
         }
 
         return x;
