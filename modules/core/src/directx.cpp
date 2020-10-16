@@ -408,7 +408,6 @@ void deleteDirectXImpl(OpenCLDirectXImpl** p)
         *p = NULL;
     }
 }
-OpenCLDirectXImpl* getDirectXImpl(ocl::Context& ctx);
 OpenCLDirectXImpl& getImpl()
 {
     OpenCLDirectXImpl* i = getDirectXImpl(ocl::Context::getDefault());
