@@ -5,7 +5,7 @@
 // Copyright (C) 2020 Intel Corporation
 
 // Deliberately include .cpp file instead of header as we use non exported function (execute)
-#include "executor/gapi_tbb_executor.cpp"
+#include <executor/gtbbexecutor.cpp>
 
 #if defined(HAVE_TBB)
 

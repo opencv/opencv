@@ -4,7 +4,7 @@
 //
 // Copyright (C) 2020 Intel Corporation
 
-#include "gapi_tbb_executor.hpp"
+#include "gtbbexecutor.hpp"
 
 #if defined(HAVE_TBB)
 #include "gapi_itt.hpp"
