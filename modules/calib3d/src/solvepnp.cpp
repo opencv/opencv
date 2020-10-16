@@ -197,6 +197,21 @@ public:
     Mat tvec;
 };
 
+UsacParams::UsacParams()
+{
+    confidence = 0.99;
+    isParallel = false;
+    loIterations = 5;
+    loMethod = LocalOptimMethod::LOCAL_OPTIM_INNER_LO;
+    loSampleSize = 14;
+    maxIterations = 5000;
+    neighborsSearch = NeighborSearchMethod::NEIGH_GRID;
+    randomGeneratorState = 0;
+    sampler = SamplingMethod::SAMPLING_UNIFORM;
+    score = ScoreMethod::SCORE_METHOD_MSAC;
+    threshold = 1.5;
+}
+
 bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
                     InputArray _cameraMatrix, InputArray _distCoeffs,
                     OutputArray _rvec, OutputArray _tvec, bool useExtrinsicGuess,
