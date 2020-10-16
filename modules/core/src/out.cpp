@@ -80,6 +80,15 @@ namespace cv
         void valueToStr16f() { sprintf(buf, floatFormat, (float)mtx.ptr<float16_t>(row, col)[cn]); }
         void valueToStrOther() { buf[0] = 0; }
 
+        void valueToStr8u_1D()  { sprintf(buf, "%3d", (int)mtx.ptr<uchar>(col)[cn]); }
+        void valueToStr8s_1D()  { sprintf(buf, "%3d", (int)mtx.ptr<schar>(col)[cn]); }
+        void valueToStr16u_1D() { sprintf(buf, "%d", (int)mtx.ptr<ushort>(col)[cn]); }
+        void valueToStr16s_1D() { sprintf(buf, "%d", (int)mtx.ptr<short>(col)[cn]); }
+        void valueToStr32s_1D() { sprintf(buf, "%d", mtx.ptr<int>(col)[cn]); }
+        void valueToStr32f_1D() { sprintf(buf, floatFormat, mtx.ptr<float>(col)[cn]); }
+        void valueToStr64f_1D() { sprintf(buf, floatFormat, mtx.ptr<double>(col)[cn]); }
+        void valueToStr16f_1D() { sprintf(buf, floatFormat, (float)mtx.ptr<float16_t>(col)[cn]); }
+
     public:
 
         FormattedImpl(String pl, String el, Mat m, char br[5], bool sLine, bool aOrder, int precision)
@@ -107,17 +116,18 @@ namespace cv
                 cv_snprintf(floatFormat, sizeof(floatFormat), "%%.%dg", std::min(precision, 20));
             }
 
+            int d = mtx.dims;
             switch(mtx.depth())
             {
-                case CV_8U:  valueToStr = &FormattedImpl::valueToStr8u; break;
-                case CV_8S:  valueToStr = &FormattedImpl::valueToStr8s; break;
-                case CV_16U: valueToStr = &FormattedImpl::valueToStr16u; break;
-                case CV_16S: valueToStr = &FormattedImpl::valueToStr16s; break;
-                case CV_32S: valueToStr = &FormattedImpl::valueToStr32s; break;
-                case CV_32F: valueToStr = &FormattedImpl::valueToStr32f; break;
-                case CV_64F: valueToStr = &FormattedImpl::valueToStr64f; break;
+                case CV_8U:  valueToStr = d > 1 ? &FormattedImpl::valueToStr8u : &FormattedImpl::valueToStr8u_1D; break;
+                case CV_8S:  valueToStr = d > 1 ? &FormattedImpl::valueToStr8s : &FormattedImpl::valueToStr8s_1D; break;
+                case CV_16U: valueToStr = d > 1 ? &FormattedImpl::valueToStr16u : &FormattedImpl::valueToStr16u_1D; break;
+                case CV_16S: valueToStr = d > 1 ? &FormattedImpl::valueToStr16s : &FormattedImpl::valueToStr16s_1D; break;
+                case CV_32S: valueToStr = d > 1 ? &FormattedImpl::valueToStr32s : &FormattedImpl::valueToStr32s_1D; break;
+                case CV_32F: valueToStr = d > 1 ? &FormattedImpl::valueToStr32f : &FormattedImpl::valueToStr32f_1D; break;
+                case CV_64F: valueToStr = d > 1 ? &FormattedImpl::valueToStr64f : &FormattedImpl::valueToStr64f_1D; break;
                 default:     CV_Assert(mtx.depth() == CV_16F);
-                             valueToStr = &FormattedImpl::valueToStr16f;
+                             valueToStr = d > 1 ? &FormattedImpl::valueToStr16f : &FormattedImpl::valueToStr16f_1D;
             }
         }
 

@@ -88,8 +88,8 @@ public:
         const float* weightsData = hasWeights ? blobs[weightsBlobIndex].ptr<float>() : 0;
         const float* biasData = hasBias ? blobs[biasBlobIndex].ptr<float>() : 0;
 
-        weights_.create(1, (int)n, CV_32F);
-        bias_.create(1, (int)n, CV_32F);
+        weights_.create({(int)n}, CV_32F);
+        bias_.create({(int)n}, CV_32F);
 
         float* dstWeightsData = weights_.ptr<float>();
         float* dstBiasData = bias_.ptr<float>();
@@ -101,8 +101,8 @@ public:
             dstBiasData[i] = (hasBias ? biasData[i] : 0.0f) - w * meanData[i] * varMeanScale;
         }
         // We will use blobs to store origin weights and bias to restore them in case of reinitialization.
-        weights_.copyTo(blobs[0].reshape(1, 1));
-        bias_.copyTo(blobs[1].reshape(1, 1));
+        weights_.copyTo(blobs[0]);
+        bias_.copyTo(blobs[1]);
     }
 
     virtual void finalize(InputArrayOfArrays, OutputArrayOfArrays) CV_OVERRIDE

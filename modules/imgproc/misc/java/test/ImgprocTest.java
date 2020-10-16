@@ -259,9 +259,9 @@ public class ImgprocTest extends OpenCVTestCase {
 
         Imgproc.calcHist(images, channels, new Mat(), hist, histSize, ranges);
 
-        truth = new Mat(10, 1, CvType.CV_32F, Scalar.all(0)) {
+        truth = new Mat(new int[]{10}, CvType.CV_32F, Scalar.all(0)) {
             {
-                put(5, 0, 100);
+                put(5, 0, 100);  // FIXIT: correct expression for 1D is: put(0, 5, 100)
             }
         };
         assertMatEqual(truth, hist, EPS);
@@ -305,7 +305,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertEquals(CvType.CV_32FC3, hist3D.type());
         assertEquals(10, hist3D.checkVector(3));
 
-        Mat truth = new Mat(10, 1, CvType.CV_32FC3);
+        Mat truth = new Mat(new int[]{10}, CvType.CV_32FC3);
         truth.put(0, 0,
                  0, 24870, 0,
                  1863, 31926, 1,

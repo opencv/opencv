@@ -374,7 +374,6 @@ size_t UMat::total() const
     return p;
 }
 
-
 UMat::UMat(UMat&& m)
 : flags(m.flags), dims(m.dims), rows(m.rows), cols(m.cols), allocator(m.allocator),
   usageFlags(m.usageFlags), u(m.u), offset(m.offset), size(&rows)
@@ -411,7 +410,7 @@ UMat& UMat::operator=(UMat&& m)
     {
         fastFree(step.p);
         step.p = step.buf;
-        size.p = &rows;
+        size.p = dims == 1 ? &cols : &rows;
     }
     if (m.dims <= 2) // move new step/size info
     {

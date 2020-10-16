@@ -4,6 +4,8 @@
 
 #include "opencv2/core.hpp"
 
+#include <opencv2/core/utils/logger.hpp>
+
 #define LOG_TAG "org.opencv.core.Mat"
 #include "common.h"
 
@@ -2344,7 +2346,7 @@ JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutFIdx
 }
 
 // unlike other nPut()-s this one (with double[]) should convert input values to correct type
-#define PUT_ITEM(T, R, C) { T*dst = (T*)me->ptr(R, C); for(int ch=0; ch<me->channels() && count>0; count--,ch++,src++,dst++) *dst = cv::saturate_cast<T>(*src); }
+#define PUT_ITEM(T, R, C) { T*dst = me->dims == 1 ? (T*)me->ptr(C) : (T*)me->ptr(R, C); for(int ch=0; ch<me->channels() && count>0; count--,ch++,src++,dst++) *dst = cv::saturate_cast<T>(*src); }
 
 JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutD
     (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jdoubleArray vals);
@@ -2357,6 +2359,17 @@ JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutD
         LOGD("%s", method_name);
         cv::Mat* me = (cv::Mat*) self;
         if(!me || !me->data) return 0;  // no native object behind
+        if (me->dims == 1)  // TODO drop compatibility shim
+        {
+            if (row > 0)
+            {
+                CV_LOG_ONCE_WARNING(NULL, LOG_TAG << ": fixing row/col index mess in .put() call for 1D Mat: row=" << row << " col=" << col);
+                if (col > 0)
+                    return 0;  // invalid index
+                col = row;
+                row = 0;
+            }
+        }
         if(me->rows<=row || me->cols<=col) return 0; // indexes out of range
 
         int rest = ((me->rows - row) * me->cols - col) * me->channels();
@@ -2467,7 +2480,7 @@ template<typename T> static int mat_get(cv::Mat* m, int row, int col, int count,
 
     if( m->isContinuous() )
     {
-        memcpy(buff, m->ptr(row, col), bytesToCopy);
+        memcpy(buff, m->dims == 1 ? m->ptr(col) : m->ptr(row, col), bytesToCopy);
     } else {
         // row by row
         int bytesInRow = (m->cols - col) * (int)m->elemSize(); // 1st partial row
@@ -2669,20 +2682,32 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Mat_nGet
         LOGD("%s", method_name);
         cv::Mat* me = (cv::Mat*) self;
         if(! self) return 0; // no native object behind
+        if (me->dims == 1)  // TODO drop compatibility shim
+        {
+            if (row > 0)
+            {
+                CV_LOG_ONCE_WARNING(NULL, LOG_TAG << ": fixing row/col index mess in .get() call for 1D Mat: row=" << row << " col=" << col);
+                if (col > 0)
+                    return 0;  // invalid index
+                col = row;
+                row = 0;
+            }
+        }
         if(me->rows<=row || me->cols<=col) return 0; // indexes out of range
 
         jdoubleArray res = env->NewDoubleArray(me->channels());
         if(res){
             jdouble buff[CV_CN_MAX];//me->channels()
             int i;
+            uchar* p = me->dims == 1 ? me->ptr(col) : me->ptr(row, col);
             switch(me->depth()){
-                case CV_8U:  for(i=0; i<me->channels(); i++) buff[i] = *((unsigned char*) me->ptr(row, col) + i); break;
-                case CV_8S:  for(i=0; i<me->channels(); i++) buff[i] = *((signed char*)   me->ptr(row, col) + i); break;
-                case CV_16U: for(i=0; i<me->channels(); i++) buff[i] = *((unsigned short*)me->ptr(row, col) + i); break;
-                case CV_16S: for(i=0; i<me->channels(); i++) buff[i] = *((signed short*)  me->ptr(row, col) + i); break;
-                case CV_32S: for(i=0; i<me->channels(); i++) buff[i] = *((int*)           me->ptr(row, col) + i); break;
-                case CV_32F: for(i=0; i<me->channels(); i++) buff[i] = *((float*)         me->ptr(row, col) + i); break;
-                case CV_64F: for(i=0; i<me->channels(); i++) buff[i] = *((double*)        me->ptr(row, col) + i); break;
+                case CV_8U:  for(i=0; i<me->channels(); i++) buff[i] = *((unsigned char*)p  + i); break;
+                case CV_8S:  for(i=0; i<me->channels(); i++) buff[i] = *((signed char*)p    + i); break;
+                case CV_16U: for(i=0; i<me->channels(); i++) buff[i] = *((unsigned short*)p + i); break;
+                case CV_16S: for(i=0; i<me->channels(); i++) buff[i] = *((signed short*)p   + i); break;
+                case CV_32S: for(i=0; i<me->channels(); i++) buff[i] = *((int*)p            + i); break;
+                case CV_32F: for(i=0; i<me->channels(); i++) buff[i] = *((float*)p          + i); break;
+                case CV_64F: for(i=0; i<me->channels(); i++) buff[i] = *((double*)p         + i); break;
             }
             env->SetDoubleArrayRegion(res, 0, me->channels(), buff);
         }

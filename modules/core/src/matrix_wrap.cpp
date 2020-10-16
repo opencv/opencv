@@ -36,7 +36,12 @@ Mat _InputArray::getMat_(int i) const
     if( k == MATX || k == STD_ARRAY )
     {
         CV_Assert( i < 0 );
-        return Mat(sz, flags, obj);
+        if (flags & SIZE_1D)
+        {
+            int sizes[1] = { sz.width };
+            return Mat(1, sizes, CV_MAT_TYPE(flags), obj);
+        }
+        return Mat(sz, CV_MAT_TYPE(flags), obj);
     }
 
     if( k == STD_VECTOR )
@@ -1225,14 +1230,6 @@ void _OutputArray::create(int _rows, int _cols, int mtype, int i, bool allowTran
 void _OutputArray::create(int d, const int* sizes, int mtype, int i,
                           bool allowTransposed, _OutputArray::DepthMask fixedDepthMask) const
 {
-    int sizebuf[2];
-    if(d == 1)
-    {
-        d = 2;
-        sizebuf[0] = sizes[0];
-        sizebuf[1] = 1;
-        sizes = sizebuf;
-    }
     _InputArray::KindFlag k = kind();
     mtype = CV_MAT_TYPE(mtype);
 
@@ -1310,14 +1307,24 @@ void _OutputArray::create(int d, const int* sizes, int mtype, int i,
     {
         int type0 = CV_MAT_TYPE(flags);
         CV_Assert( mtype == type0 || (CV_MAT_CN(mtype) == 1 && ((1 << type0) & fixedDepthMask) != 0) );
-        CV_Assert( d == 2 && sz.area() == sizes[0]*sizes[1]);
+        if (d == 2)
+            CV_Assert(d == 2 && sz.area() == sizes[0]*sizes[1]);
+        else
+            CV_Check(d, d == 1 || d == 2, "");
         return;
     }
 
     if( k == STD_VECTOR || k == STD_VECTOR_VECTOR )
     {
-        CV_Assert( d == 2 && (sizes[0] == 1 || sizes[1] == 1 || sizes[0]*sizes[1] == 0) );
-        size_t len = sizes[0]*sizes[1] > 0 ? sizes[0] + sizes[1] - 1 : 0;
+        if (d == 2)
+            CV_Assert(d == 2 && (sizes[0] == 1 || sizes[1] == 1 || sizes[0]*sizes[1] == 0) );
+        else
+            CV_Check(d, d == 1 || d == 2, "");
+        size_t len = 0;
+        if (d == 1)
+            len = sizes[0];
+        else
+            len = sizes[0]*sizes[1] > 0 ? sizes[0] + sizes[1] - 1 : 0;
         std::vector<uchar>* v = (std::vector<uchar>*)obj;
 
         if( k == STD_VECTOR_VECTOR )

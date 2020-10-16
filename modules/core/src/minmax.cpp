@@ -1562,11 +1562,22 @@ void cv::minMaxLoc( InputArray _img, double* minVal, double* maxVal,
 {
     CV_INSTRUMENT_REGION();
 
-    CV_Assert(_img.dims() <= 2);
+    int dims = _img.dims();
+    CV_Assert(dims <= 2);
 
     minMaxIdx(_img, minVal, maxVal, (int*)minLoc, (int*)maxLoc, mask);
-    if( minLoc )
-        std::swap(minLoc->x, minLoc->y);
-    if( maxLoc )
-        std::swap(maxLoc->x, maxLoc->y);
+    if (minLoc)
+    {
+        if (dims == 2)
+            std::swap(minLoc->x, minLoc->y);
+        else
+            minLoc->y = 0;
+    }
+    if (maxLoc)
+    {
+        if (dims == 2)
+            std::swap(maxLoc->x, maxLoc->y);
+        else
+            maxLoc->y = 0;
+    }
 }

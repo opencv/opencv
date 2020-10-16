@@ -142,7 +142,7 @@ _InputArray::_InputArray(const Mat_<_Tp>& m)
 { init(FIXED_TYPE + MAT + traits::Type<_Tp>::value + ACCESS_READ, &m); }
 
 inline _InputArray::_InputArray(const double& val)
-{ init(FIXED_TYPE + FIXED_SIZE + MATX + CV_64F + ACCESS_READ, &val, Size(1,1)); }
+{ init(FIXED_TYPE + FIXED_SIZE + MATX + CV_64F + ACCESS_READ + SIZE_1D, &val, Size(1,1)); }
 
 inline _InputArray::_InputArray(const cuda::GpuMat& d_mat)
 { init(CUDA_GPU_MAT + ACCESS_READ, &d_mat); }
@@ -480,7 +480,8 @@ Mat::Mat(const std::initializer_list<_Tp> list)
     : Mat()
 {
     CV_Assert(list.size() != 0);
-    Mat((int)list.size(), 1, traits::Type<_Tp>::value, (uchar*)list.begin()).copyTo(*this);
+    const int sz = (int)list.size();
+    Mat(/*dims*/1, &sz, traits::Type<_Tp>::value, (uchar*)list.begin()).copyTo(*this);
 }
 
 template<typename _Tp> inline
@@ -1112,25 +1113,11 @@ void Mat::push_back(const std::vector<_Tp>& v)
     push_back(Mat(v));
 }
 
-
 ///////////////////////////// MatSize ////////////////////////////
 
 inline
 MatSize::MatSize(int* _p)
     : p(_p) {}
-
-inline
-int MatSize::dims() const
-{
-    return (p - 1)[0];
-}
-
-inline
-Size MatSize::operator()() const
-{
-    CV_DbgAssert(dims() <= 2);
-    return Size(p[1], p[0]);
-}
 
 inline
 const int& MatSize::operator[](int i) const

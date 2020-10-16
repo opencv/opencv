@@ -162,6 +162,7 @@ public:
         KIND_SHIFT = 16,
         FIXED_TYPE = 0x8000 << KIND_SHIFT,
         FIXED_SIZE = 0x4000 << KIND_SHIFT,
+        SIZE_1D = 0x2000 << KIND_SHIFT,
         KIND_MASK = 31 << KIND_SHIFT,
 
         NONE              = 0 << KIND_SHIFT,
@@ -577,7 +578,7 @@ struct CV_EXPORTS MatSize
     Size operator()() const;
     const int& operator[](int i) const;
     int& operator[](int i);
-    operator const int*() const;  // TODO OpenCV 4.0: drop this
+    operator const int*() const;  // TODO OpenCV 4.0 / OpenCV 5.0: drop this
     bool operator == (const MatSize& sz) const;
     bool operator != (const MatSize& sz) const;
 

@@ -44,7 +44,7 @@ static std::vector<int> getShape(const std::string& header)
 
     std::string shapeStr = header.substr(from, to - from);
     if (shapeStr.empty())
-        return std::vector<int>(1, 1);
+        return std::vector<int>(1, 1);  // FIXIT support scalar
 
     // Remove all commas.
     shapeStr.erase(std::remove(shapeStr.begin(), shapeStr.end(), ','),

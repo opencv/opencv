@@ -188,6 +188,25 @@ void Mat::convertTo(OutputArray _dst, int _type, double alpha, double beta) cons
     else
         _type = CV_MAKETYPE(CV_MAT_DEPTH(_type), channels());
 
+    Mat src = *this;
+    if (_dst.fixedSize())
+    {
+        CV_CheckEQ(_dst.total(), src.total(), "");
+        if (src.dims == 1 && _dst.dims() == 2)  // allow to copy 1D into 2D row/cols
+        {
+            Size dstSize = _dst.size();
+            if (dstSize.width == 1 || dstSize.height == 1)
+            {
+                int new_src_dims[2] = {dstSize.height, dstSize.width};
+                src = src.reshape(1, 2, new_src_dims);
+            }
+            else
+            {
+                CV_Error(Error::StsBadArg, "Unable to convert 1D input into 2D array");
+            }
+        }
+    }
+
     int sdepth = depth(), ddepth = CV_MAT_DEPTH(_type);
     if( sdepth == ddepth && noScale )
     {
@@ -195,11 +214,7 @@ void Mat::convertTo(OutputArray _dst, int _type, double alpha, double beta) cons
         return;
     }
 
-    Mat src = *this;
-    if( dims <= 2 )
-        _dst.create( size(), _type );
-    else
-        _dst.create( dims, size, _type );
+    _dst.create(src.dims, src.size, _type);
     Mat dst = _dst.getMat();
 
     BinaryFunc func = noScale ? getConvertFunc(sdepth, ddepth) : getConvertScaleFunc(sdepth, ddepth);

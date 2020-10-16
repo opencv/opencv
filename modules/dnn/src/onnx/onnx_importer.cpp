@@ -1205,7 +1205,7 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
                 }
 
                 if (inp0.dims == 1 && inp1.dims == 1)
-                    out.dims = 1;  // to workaround dims == 1
+                    CV_CheckEQ(out.dims, 1, "");
                 addConstant(layerParams.name, out);
                 return;
             }
@@ -1365,7 +1365,6 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
             {
                 Mat inp = getBlob(node_proto, 0);
                 Mat out = inp.reshape(1, outShape);
-                out.dims = outShape.size();  // to workaround dims == 1
                 addConstant(layerParams.name, out);
                 return;
             }
@@ -1617,10 +1616,9 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
             CV_Assert(shapeIt != outShapes.end());
             const MatShape& inpShape = shapeIt->second;
 
-            Mat shapeMat(inpShape.size(), 1, CV_32S);
+            Mat shapeMat({(int)inpShape.size()}, CV_32S);
             for (int j = 0; j < inpShape.size(); ++j)
                 shapeMat.at<int>(j) = inpShape[j];
-            shapeMat.dims = 1;
 
             addConstant(layerParams.name, shapeMat);
             return;
@@ -1645,7 +1643,6 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
                 }
                 Mat dst;
                 blob.convertTo(dst, type);
-                dst.dims = blob.dims;
                 addConstant(layerParams.name, dst);
                 return;
             }
@@ -1695,8 +1692,6 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
                 {
                     outShape.erase(outShape.begin() + axis);
                     out.reshape(0, outShape);
-                } else {
-                    out.dims = 1;
                 }
                 addConstant(layerParams.name, out);
                 return;

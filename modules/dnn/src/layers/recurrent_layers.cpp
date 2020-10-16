@@ -281,9 +281,11 @@ public:
         const int numDirs = 1 + static_cast<int>(bidirectional);
         for (int i = 0; i < numDirs; ++i)
         {
-            const Mat &Wh = blobs[0].rowRange(i * blobs[0].rows / numDirs, (i + 1) * blobs[0].rows / numDirs);
-            const Mat &Wx = blobs[1].rowRange(i * blobs[1].rows / numDirs, (i + 1) * blobs[1].rows / numDirs);
-            const Mat &bias = blobs[2].colRange(i * blobs[2].cols / numDirs, (i + 1) * blobs[2].cols / numDirs);
+            const Mat Wh = blobs[0].rowRange(i * blobs[0].rows / numDirs, (i + 1) * blobs[0].rows / numDirs);
+            const Mat Wx = blobs[1].rowRange(i * blobs[1].rows / numDirs, (i + 1) * blobs[1].rows / numDirs);
+            Mat bias = blobs[2].colRange(i * blobs[2].cols / numDirs, (i + 1) * blobs[2].cols / numDirs);
+            if (bias.dims == 1)
+                bias = bias.reshape(1, {bias.rows, bias.cols});  // convert to 2D
 
             int numOut = Wh.size[1];
 

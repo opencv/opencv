@@ -262,9 +262,29 @@ void Mat::copyTo( OutputArray _dst ) const
         return;
     }
 
+    if (_dst.fixedSize())
+    {
+        CV_CheckEQ(_dst.total(), total(), "");
+        if (dims == 1 && _dst.dims() == 2)  // allow to copy 1D into 2D row/cols
+        {
+            Size dstSize = _dst.size();
+            if (dstSize.width == 1 || dstSize.height == 1)
+            {
+                int new_src_dims[2] = {dstSize.height, dstSize.width};
+                Mat src = this->reshape(1, 2, new_src_dims);
+                return src.copyTo(_dst);
+            }
+            else
+            {
+                CV_Error(Error::StsBadArg, "Unable to convert 1D input into 2D array");
+            }
+        }
+    }
+
+    _dst.create(dims, size, type());
+
     if( _dst.isUMat() )
     {
-        _dst.create( dims, size.p, type() );
         UMat dst = _dst.getUMat();
         CV_Assert(dst.u != NULL);
         size_t i, sz[CV_MAX_DIM] = {0}, dstofs[CV_MAX_DIM], esz = elemSize();
@@ -278,13 +298,12 @@ void Mat::copyTo( OutputArray _dst ) const
         return;
     }
 
+    Mat dst = _dst.getMat();
+    if( data == dst.data )
+        return;
+
     if( dims <= 2 )
     {
-        _dst.create( rows, cols, type() );
-        Mat dst = _dst.getMat();
-        if( data == dst.data )
-            return;
-
         if( rows > 0 && cols > 0 )
         {
             Mat src = *this;
@@ -303,11 +322,6 @@ void Mat::copyTo( OutputArray _dst ) const
         }
         return;
     }
-
-    _dst.create( dims, size, type() );
-    Mat dst = _dst.getMat();
-    if( data == dst.data )
-        return;
 
     if( total() != 0 )
     {

@@ -258,7 +258,7 @@ public:
                 }
                 else
                 {
-                    // _scale: _channels x 1
+                    scale = scale.t(); // _scale: _channels x 1
                     CV_Assert(scale.total() == numPlanes);
                     repeat(scale, 1, dst.cols, buffer);
                     multiply(dst, buffer, dst);

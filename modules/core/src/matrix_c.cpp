@@ -7,10 +7,23 @@
 CvMatND cvMatND(const cv::Mat& m)
 {
     CvMatND self;
-    cvInitMatNDHeader(&self, m.dims, m.size, m.type(), m.data );
-    int i, d = m.dims;
-    for( i = 0; i < d; i++ )
-        self.dim[i].step = (int)m.step[i];
+    int dims = m.dims;
+    const int* sizes = m.size;
+    int sizes_[CV_MAX_DIM] = {0};
+    size_t steps[CV_MAX_DIM] = {0};
+    for (int i = 0; i < dims; ++i)
+        steps[i] = m.step[i];
+    if (dims == 1)
+    {
+        sizes_[0] = sizes[0];
+        sizes_[1] = 1;
+        sizes = sizes_;
+        steps[1] = steps[0] = m.elemSize();
+        dims = 2;
+    }
+    cvInitMatNDHeader(&self, dims, sizes, m.type(), m.data );
+    for(int i = 0; i < dims; ++i)
+        self.dim[i].step = (int)steps[i];
     self.type |= m.flags & cv::Mat::CONTINUOUS_FLAG;
     return self;
 }

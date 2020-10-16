@@ -131,7 +131,7 @@ PERF_TEST_P(Dim_Cmpmethod, compareHist,
     randu(hist1, 0, 256);
     randu(hist2, 0, 256);
 
-    declare.in(hist1.reshape(1, 256), hist2.reshape(1, 256));
+    declare.in(hist1, hist2);
 
     TEST_CYCLE()
     {

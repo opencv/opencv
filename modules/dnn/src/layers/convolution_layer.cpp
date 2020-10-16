@@ -419,7 +419,14 @@ public:
 
         weightsMultipliers.assign(numOutput, 1.0);
 
-        Mat biasMat = hasBias() ? blobs[1].reshape(1, numOutput) : Mat();
+        Mat biasMat;
+        if (hasBias())
+        {
+            if (blobs[1].dims == 1)
+                biasMat = blobs[1];
+            else
+                biasMat = blobs[1].reshape(1, numOutput);
+        }
         biasvec.resize(numOutput+2);
         if( biasMat.empty() )
         {

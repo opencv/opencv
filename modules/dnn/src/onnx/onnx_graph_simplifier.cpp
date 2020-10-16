@@ -642,7 +642,7 @@ Mat getMatFromTensor(opencv_onnx::TensorProto& tensor_proto)
         CV_Error(Error::StsUnsupportedFormat, "Unsupported data type: " +
                         opencv_onnx::TensorProto_DataType_Name(datatype));
     if (tensor_proto.dims_size() == 0)
-        blob.dims = 1;  // To force 1-dimensional cv::Mat for scalars.
+        CV_CheckEQ(blob.dims, 1, "Tensor is scalar");  // ensure 1-dimensional cv::Mat for scalars
     return blob;
 }
 

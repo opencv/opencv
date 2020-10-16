@@ -548,7 +548,7 @@ CV_INLINE CvMat cvMat( int rows, int cols, int type, void* data CV_DEFAULT(NULL)
 {
     CvMat m;
 
-    assert( (unsigned)CV_MAT_DEPTH(type) <= CV_64F );
+    CV_Assert((unsigned)CV_MAT_DEPTH(type) <= CV_64F);
     type = CV_MAT_TYPE(type);
     m.type = CV_MAT_MAGIC_VAL | CV_MAT_CONT_FLAG | type;
     m.cols = cols;
@@ -566,9 +566,10 @@ CV_INLINE CvMat cvMat( int rows, int cols, int type, void* data CV_DEFAULT(NULL)
 CV_INLINE CvMat cvMat(const cv::Mat& m)
 {
     CvMat self;
-    CV_DbgAssert(m.dims <= 2);
-    self = cvMat(m.rows, m.dims == 1 ? 1 : m.cols, m.type(), m.data);
-    self.step = (int)m.step[0];
+    CV_Assert(m.dims >= 0 && m.dims <= 2);  // result is assumed as 2D Mat (empty or not)
+    self = cvMat(m.rows, m.cols, m.type(), m.data);
+    if (m.dims != 1)
+        self.step = (int)m.step[0];
     self.type = (self.type & ~cv::Mat::CONTINUOUS_FLAG) | (m.flags & cv::Mat::CONTINUOUS_FLAG);
     return self;
 }

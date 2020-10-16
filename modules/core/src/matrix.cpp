@@ -5,6 +5,11 @@
 #include "precomp.hpp"
 #include "bufferpool.impl.hpp"
 
+#include <opencv2/core/utils/logger.defines.hpp>
+#undef CV_LOG_STRIP_LEVEL
+#define CV_LOG_STRIP_LEVEL CV_LOG_LEVEL_DEBUG + 1
+#include <opencv2/core/utils/logger.hpp>
+
 namespace cv {
 
 void MatAllocator::map(UMatData*, AccessFlag) const
@@ -228,14 +233,18 @@ void setSize( Mat& m, int _dims, const int* _sz, const size_t* _steps, bool auto
         {
             fastFree(m.step.p);
             m.step.p = m.step.buf;
-            m.size.p = &m.rows;
         }
+        m.size.p = _dims == 1 ? &m.cols : &m.rows;
         if( _dims > 2 )
         {
             m.step.p = (size_t*)fastMalloc(_dims*sizeof(m.step.p[0]) + (_dims+1)*sizeof(m.size.p[0]));
             m.size.p = (int*)(m.step.p + _dims) + 1;
             m.size.p[-1] = _dims;
             m.rows = m.cols = -1;
+        }
+        else if (_dims == 1)
+        {
+            m.rows = 1;
         }
     }
 
@@ -278,11 +287,28 @@ void setSize( Mat& m, int _dims, const int* _sz, const size_t* _steps, bool auto
 
     if( _dims == 1 )
     {
-        m.dims = 2;
-        m.cols = 1;
-        m.step[1] = esz;
+        CV_LOG_ONCE_WARNING(NULL, "Mat: Creating 1D Mat. It is not represented as 2D Mat anymore. Required updates of used access methods");
+        // not anymore:
+        // m.dims = 2;
+        // m.cols = 1;
+        m.step[0] = esz;
     }
 }
+
+int MatSize::dims() const
+{
+    return (p - 1)[0];
+}
+
+Size MatSize::operator()() const
+{
+    const int d = dims();
+    CV_DbgAssert(d <= 2);
+    if (d == 1)
+        return Size(p[0], 1);
+    return Size(p[1], p[0]);
+}
+
 
 int updateContinuityFlag(int flags, int dims, const int* size, const size_t* step)
 {
@@ -412,6 +438,8 @@ Mat::Mat(const Mat& m)
     if( m.dims <= 2 )
     {
         step[0] = m.step[0]; step[1] = m.step[1];
+        if (m.dims == 1)
+            size.p = &cols;
     }
     else
     {
@@ -463,7 +491,7 @@ Mat::Mat(Size _sz, int _type, void* _data, size_t _step)
     }
     else
     {
-        CV_Assert(_step >= minstep);
+        CV_Assert( _step >= minstep );
 
         if (_step % esz1 != 0)
         {
@@ -476,7 +504,6 @@ Mat::Mat(Size _sz, int _type, void* _data, size_t _step)
     dataend = datalimit - _step + minstep;
     updateContinuityFlag();
 }
-
 
 Mat::~Mat()
 {
@@ -500,6 +527,7 @@ Mat& Mat::operator=(const Mat& m)
             cols = m.cols;
             step[0] = m.step[0];
             step[1] = m.step[1];
+            size.p = dims == 1 ? &cols : &rows;
         }
         else
             copySize(m);
@@ -563,8 +591,8 @@ void Mat::release()
     {
         fastFree(step.p);
         step.p = step.buf;
-        size.p = &rows;
     }
+    size.p = &rows;
 #endif
 }
 
@@ -598,7 +626,6 @@ size_t Mat::total(int startDim, int endDim) const
     return p;
 }
 
-
 Mat::Mat(Mat&& m)
     : flags(m.flags), dims(m.dims), rows(m.rows), cols(m.cols), data(m.data),
       datastart(m.datastart), dataend(m.dataend), datalimit(m.datalimit), allocator(m.allocator),
@@ -608,10 +635,12 @@ Mat::Mat(Mat&& m)
     {
         step[0] = m.step[0];
         step[1] = m.step[1];
+        if (dims == 1)
+            size.p = &cols;
     }
     else
     {
-        CV_Assert(m.step.p != m.step.buf);
+        CV_DbgAssert(m.step.p != m.step.buf);
         step.p = m.step.p;
         size.p = m.size.p;
         m.step.p = m.step.buf;
@@ -622,7 +651,6 @@ Mat::Mat(Mat&& m)
     m.allocator = NULL;
     m.u = NULL;
 }
-
 
 Mat& Mat::operator=(Mat&& m)
 {
@@ -637,8 +665,9 @@ Mat& Mat::operator=(Mat&& m)
     {
         fastFree(step.p);
         step.p = step.buf;
-        size.p = &rows;
     }
+    size.p = dims == 1 ? &cols : &rows;
+
     if (m.dims <= 2) // move new step/size info
     {
         step[0] = m.step[0];
@@ -646,7 +675,7 @@ Mat& Mat::operator=(Mat&& m)
     }
     else
     {
-        CV_Assert(m.step.p != m.step.buf);
+        CV_DbgAssert(m.step.p != m.step.buf);
         step.p = m.step.p;
         size.p = m.size.p;
         m.step.p = m.step.buf;
@@ -659,7 +688,6 @@ Mat& Mat::operator=(Mat&& m)
     return *this;
 }
 
-
 void Mat::create(int d, const int* _sizes, int _type)
 {
     int i;
@@ -668,8 +696,18 @@ void Mat::create(int d, const int* _sizes, int _type)
 
     if( data && (d == dims || (d == 1 && dims <= 2)) && _type == type() )
     {
-        if( d == 2 && rows == _sizes[0] && cols == _sizes[1] )
+        if (d == 2 && rows == _sizes[0] && cols == _sizes[1])
+        {
+            if (d != dims)
+                dims = 2;
             return;
+        }
+        if (d == 1 && rows == 1 && cols == _sizes[0])
+        {
+            if (d != dims)
+                dims = 1;
+            return;
+        }
         for( i = 0; i < d; i++ )
             if( size[i] != _sizes[i] )
                 break;
@@ -748,7 +786,7 @@ Mat::Mat(const Mat& m, const Range& _rowRange, const Range& _colRange)
     : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
       datalimit(0), allocator(0), u(0), size(&rows)
 {
-    CV_Assert( m.dims >= 2 );
+    CV_Assert(m.dims > 0);
     if( m.dims > 2 )
     {
         AutoBuffer<Range> rs(m.dims);
@@ -1164,6 +1202,15 @@ Mat Mat::reshape(int new_cn, int new_rows) const
     if( new_cn == 0 )
         new_cn = cn;
 
+    CV_Check(new_rows, dims != 1 || (new_rows <= 1 || new_rows == cols * cn / new_cn), "1D reshape misused");
+
+    if (dims == 1 && new_rows > 1)
+    {
+        int sz2d[2] = { 1, cols };
+        CV_LOG_DEBUG(NULL, "Mat/reshape: convert 1D to 2D");
+        setSize(hdr, 2, sz2d, nullptr, true);
+    }
+
     int total_width = cols * cn;
 
     if( (new_cn > total_width || total_width % new_cn != 0) && new_rows == 0 )
@@ -1197,7 +1244,7 @@ Mat Mat::reshape(int new_cn, int new_rows) const
 
     hdr.cols = new_width;
     hdr.flags = (hdr.flags & ~CV_MAT_CN_MASK) | ((new_cn-1) << CV_CN_SHIFT);
-    hdr.step[1] = CV_ELEM_SIZE(hdr.flags);
+    hdr.step[dims == 1 ? 0 : 1] = CV_ELEM_SIZE(hdr.flags);
     return hdr;
 }
 
@@ -1208,7 +1255,11 @@ Mat Mat::reshape(int _cn, int _newndims, const int* _newsz) const
         if(_newsz == 0)
             return reshape(_cn);
         if(_newndims == 2)
+        {
+            int cn = (_cn == 0 ? channels() : _cn);
+            CV_Check(_newsz[1], (size_t)_newsz[0] * (size_t)_newsz[1] * (size_t)cn == total() * (size_t)channels(), "");
             return reshape(_cn, _newsz[0]);
+        }
     }
 
     if (isContinuous())
@@ -1281,7 +1332,8 @@ int Mat::checkVector(int _elemChannels, int _depth, bool _requireContinuous) con
 {
     return data && (depth() == _depth || _depth <= 0) &&
         (isContinuous() || !_requireContinuous) &&
-        ((dims == 2 && (((rows == 1 || cols == 1) && channels() == _elemChannels) ||
+        (dims == 1 ||
+        (dims == 2 && (((rows == 1 || cols == 1) && channels() == _elemChannels) ||
                         (cols == _elemChannels && channels() == 1))) ||
         (dims == 3 && channels() == 1 && size.p[2] == _elemChannels && (size.p[0] == 1 || size.p[1] == 1) &&
          (isContinuous() || step.p[1] == step.p[2]*size.p[2])))
