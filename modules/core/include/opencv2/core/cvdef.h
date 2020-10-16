@@ -90,7 +90,7 @@ namespace cv { namespace debug_build_guard { } using namespace debug_build_guard
 // keep current value (through OpenCV port file)
 #elif defined __GNUC__ || (defined (__cpluscplus) && (__cpluscplus >= 201103))
 #define CV_Func __func__
-#elif defined __clang__ && (__clang_minor__ * 100 + __clang_major >= 305)
+#elif defined __clang__ && (__clang_minor__ * 100 + __clang_major__ >= 305)
 #define CV_Func __func__
 #elif defined(__STDC_VERSION__) && (__STDC_VERSION >= 199901)
 #define CV_Func __func__
