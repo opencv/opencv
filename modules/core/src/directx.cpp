@@ -235,6 +235,7 @@ int getTypeFromD3DFORMAT(const int iD3DFORMAT)
 }
 
 #if defined(HAVE_DIRECTX) && defined(HAVE_OPENCL)
+namespace internal {
 struct OpenCLDirectXImpl
 {
     cl_platform_id platform;
@@ -271,53 +272,127 @@ public:
     {
         if (!platform)
         {
-            cl_device_id current_device = (cl_device_id)ocl::Device::getDefault().ptr();
-            CV_Assert(current_device);
+            CV_Assert(cv::ocl::haveOpenCL());
 
-            cl_uint numPlatforms;
-            cl_int status = clGetPlatformIDs(0, NULL, &numPlatforms);
+            cl_device_id device = (cl_device_id)ocl::Device::getDefault().ptr();
+            CV_Assert(device);
+            cl_int status = clGetDeviceInfo(device, CL_DEVICE_PLATFORM, sizeof(platform), &platform, NULL);
             if (status != CL_SUCCESS)
-                CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't get number of platforms");
-            if (numPlatforms == 0)
-                CV_Error(cv::Error::OpenCLInitError, "OpenCL: No available platforms");
-
-            std::vector<cl_platform_id> platforms(numPlatforms);
-            status = clGetPlatformIDs(numPlatforms, &platforms[0], NULL);
-            if (status != CL_SUCCESS)
-                CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't get platforms");
-
-            bool found = false;
-            for (int i = 0; !found && i < (int)numPlatforms; i++)
-            {
-                cl_uint numDevices;
-                status = clGetDeviceIDs(platforms[i], CL_DEVICE_TYPE_ALL, 0, NULL, &numDevices);
-                if (status != CL_SUCCESS && status != CL_DEVICE_NOT_FOUND)
-                    CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't get number of devices");
-                if (numDevices == 0)
-                    continue;
-
-                std::vector<cl_device_id> devices(numDevices);
-                status = clGetDeviceIDs(platforms[i], CL_DEVICE_TYPE_ALL, numDevices, &devices[0], 0);
-                if (status != CL_SUCCESS)
-                    CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't get devices");
-
-                for (int j = 0; !found && j < (int)numDevices; j++)
-                {
-                    if (current_device == devices[j])
-                    {
-                        platform = platforms[i];
-                        found = true;
-                    }
-                }
-            }
-
-            if (!found)
-            {
-                CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't found corresponding platform");
-            }
+                CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't get platform corresponding to device");
         }
 
         return platform;
+    }
+
+
+    bool initializeD3D11()
+    {
+        using namespace cv::ocl;
+        cl_platform_id platform = getPlatform();
+
+        bool useCLNVEXT = false;
+        size_t exts_len;
+        cl_int status = clGetPlatformInfo(platform, CL_PLATFORM_EXTENSIONS, 0, NULL, &exts_len);
+        if (status != CL_SUCCESS)
+            CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't get length of CL_PLATFORM_EXTENSIONS");
+        cv::AutoBuffer<char> extensions(exts_len);
+        status = clGetPlatformInfo(platform, CL_PLATFORM_EXTENSIONS, exts_len, static_cast<void*>(extensions.data()), NULL);
+        if (status != CL_SUCCESS)
+            CV_Error(cv::Error::OpenCLInitError, "OpenCL: No available CL_PLATFORM_EXTENSIONS");
+        bool is_support_cl_khr_d3d11_sharing = false;
+        if (strstr(extensions.data(), "cl_khr_d3d11_sharing"))
+            is_support_cl_khr_d3d11_sharing = true;
+#ifdef HAVE_OPENCL_D3D11_NV
+        bool is_support_cl_nv_d3d11_sharing = false;
+        if (strstr(extensions.data(), "cl_nv_d3d11_sharing"))
+            is_support_cl_nv_d3d11_sharing = true;
+        if (!is_support_cl_nv_d3d11_sharing && !is_support_cl_khr_d3d11_sharing)
+            CV_Error(cv::Error::OpenCLInitError, "OpenCL: No supported extensions");
+#else
+        if (!is_support_cl_khr_d3d11_sharing)
+            CV_Error(cv::Error::OpenCLInitError, "OpenCL: No supported extensions");
+#endif
+
+#ifdef HAVE_OPENCL_D3D11_NV
+        if (is_support_cl_nv_d3d11_sharing)
+        {
+            if (initializedPlatform11 != platform)
+            {
+                clCreateFromD3D11Texture2DNV = (clCreateFromD3D11Texture2DNV_fn)
+                    clGetExtensionFunctionAddressForPlatform(platform, "clCreateFromD3D11Texture2DNV");
+                clEnqueueAcquireD3D11ObjectsNV = (clEnqueueAcquireD3D11ObjectsNV_fn)
+                    clGetExtensionFunctionAddressForPlatform(platform, "clEnqueueAcquireD3D11ObjectsNV");
+                clEnqueueReleaseD3D11ObjectsNV = (clEnqueueReleaseD3D11ObjectsNV_fn)
+                    clGetExtensionFunctionAddressForPlatform(platform, "clEnqueueReleaseD3D11ObjectsNV");
+                initializedPlatform11 = platform;
+            }
+            if (clCreateFromD3D11Texture2DNV && clEnqueueAcquireD3D11ObjectsNV && clEnqueueReleaseD3D11ObjectsNV)
+            {
+                useCLNVEXT = true;
+            }
+        }
+        else
+#endif
+        {
+            if (is_support_cl_khr_d3d11_sharing)
+            {
+                if (initializedPlatform11 != platform)
+                {
+                    clCreateFromD3D11Texture2DKHR = (clCreateFromD3D11Texture2DKHR_fn)
+                        clGetExtensionFunctionAddressForPlatform(platform, "clCreateFromD3D11Texture2DKHR");
+                    clEnqueueAcquireD3D11ObjectsKHR = (clEnqueueAcquireD3D11ObjectsKHR_fn)
+                        clGetExtensionFunctionAddressForPlatform(platform, "clEnqueueAcquireD3D11ObjectsKHR");
+                    clEnqueueReleaseD3D11ObjectsKHR = (clEnqueueReleaseD3D11ObjectsKHR_fn)
+                        clGetExtensionFunctionAddressForPlatform(platform, "clEnqueueReleaseD3D11ObjectsKHR");
+                    initializedPlatform11 = platform;
+                }
+                if (!clCreateFromD3D11Texture2DKHR || !clEnqueueAcquireD3D11ObjectsKHR || !clEnqueueReleaseD3D11ObjectsKHR)
+                {
+                    CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't find functions for D3D11");
+                }
+            }
+        }
+        return useCLNVEXT;
+    }
+
+    void initializeD3D9()
+    {
+        using namespace cv::ocl;
+        cl_platform_id platform = getPlatform();
+        if (initializedPlatform9 != platform)
+        {
+            clCreateFromDX9MediaSurfaceKHR = (clCreateFromDX9MediaSurfaceKHR_fn)
+                clGetExtensionFunctionAddressForPlatform(platform, "clCreateFromDX9MediaSurfaceKHR");
+            clEnqueueAcquireDX9MediaSurfacesKHR = (clEnqueueAcquireDX9MediaSurfacesKHR_fn)
+                clGetExtensionFunctionAddressForPlatform(platform, "clEnqueueAcquireDX9MediaSurfacesKHR");
+            clEnqueueReleaseDX9MediaSurfacesKHR = (clEnqueueReleaseDX9MediaSurfacesKHR_fn)
+                clGetExtensionFunctionAddressForPlatform(platform, "clEnqueueReleaseDX9MediaSurfacesKHR");
+            initializedPlatform9 = platform;
+        }
+        if (!clCreateFromDX9MediaSurfaceKHR || !clEnqueueAcquireDX9MediaSurfacesKHR || !clEnqueueReleaseDX9MediaSurfacesKHR)
+        {
+            CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't find functions for D3D9");
+        }
+    }
+
+    void initializeD3D10()
+    {
+        using namespace cv::ocl;
+        cl_platform_id platform = getPlatform();
+        if (initializedPlatform10 != platform)
+        {
+            clCreateFromD3D10Texture2DKHR = (clCreateFromD3D10Texture2DKHR_fn)
+                clGetExtensionFunctionAddressForPlatform(platform, "clCreateFromD3D10Texture2DKHR");
+            clEnqueueAcquireD3D10ObjectsKHR = (clEnqueueAcquireD3D10ObjectsKHR_fn)
+                clGetExtensionFunctionAddressForPlatform(platform, "clEnqueueAcquireD3D10ObjectsKHR");
+            clEnqueueReleaseD3D10ObjectsKHR = (clEnqueueReleaseD3D10ObjectsKHR_fn)
+                clGetExtensionFunctionAddressForPlatform(platform, "clEnqueueReleaseD3D10ObjectsKHR");
+            initializedPlatform10 = platform;
+        }
+        if (!clCreateFromD3D10Texture2DKHR || !clEnqueueAcquireD3D10ObjectsKHR || !clEnqueueReleaseD3D10ObjectsKHR)
+        {
+            CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't find functions for D3D10");
+        }
     }
 };
 
@@ -340,6 +415,8 @@ OpenCLDirectXImpl& getImpl()
     CV_Assert(i);
     return *i;
 }
+}
+using namespace internal;
 #endif
 
 namespace ocl {
@@ -949,80 +1026,6 @@ Context& initializeContextFromDirect3DDevice9(IDirect3DDevice9* pDirect3DDevice9
 
 } // namespace cv::ocl
 
-#if defined(HAVE_DIRECTX) && defined(HAVE_OPENCL)
-
-static bool __OpenCLinitializeD3D11()
-{
-    using namespace cv::ocl;
-    OpenCLDirectXImpl& impl = getImpl();
-    cl_platform_id platform = impl.getPlatform();
-
-    bool useCLNVEXT = false;
-    size_t exts_len;
-    cl_int status = clGetPlatformInfo(platform, CL_PLATFORM_EXTENSIONS, 0, NULL, &exts_len);
-    if (status != CL_SUCCESS)
-        CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't get length of CL_PLATFORM_EXTENSIONS");
-    cv::AutoBuffer<char> extensions(exts_len);
-    status = clGetPlatformInfo(platform, CL_PLATFORM_EXTENSIONS, exts_len, static_cast<void*>(extensions.data()), NULL);
-    if (status != CL_SUCCESS)
-        CV_Error(cv::Error::OpenCLInitError, "OpenCL: No available CL_PLATFORM_EXTENSIONS");
-    bool is_support_cl_khr_d3d11_sharing = false;
-    if (strstr(extensions.data(), "cl_khr_d3d11_sharing"))
-        is_support_cl_khr_d3d11_sharing = true;
-#ifdef HAVE_OPENCL_D3D11_NV
-    bool is_support_cl_nv_d3d11_sharing = false;
-    if (strstr(extensions.data(), "cl_nv_d3d11_sharing"))
-        is_support_cl_nv_d3d11_sharing = true;
-    if (!is_support_cl_nv_d3d11_sharing && !is_support_cl_khr_d3d11_sharing)
-        CV_Error(cv::Error::OpenCLInitError, "OpenCL: No supported extensions");
-#else
-    if (!is_support_cl_khr_d3d11_sharing)
-        CV_Error(cv::Error::OpenCLInitError, "OpenCL: No supported extensions");
-#endif
-
-#ifdef HAVE_OPENCL_D3D11_NV
-    if (is_support_cl_nv_d3d11_sharing)
-    {
-        if (impl.initializedPlatform11 != platform)
-        {
-            impl.clCreateFromD3D11Texture2DNV = (clCreateFromD3D11Texture2DNV_fn)
-                    clGetExtensionFunctionAddressForPlatform(platform, "clCreateFromD3D11Texture2DNV");
-            impl.clEnqueueAcquireD3D11ObjectsNV = (clEnqueueAcquireD3D11ObjectsNV_fn)
-                    clGetExtensionFunctionAddressForPlatform(platform, "clEnqueueAcquireD3D11ObjectsNV");
-            impl.clEnqueueReleaseD3D11ObjectsNV = (clEnqueueReleaseD3D11ObjectsNV_fn)
-                    clGetExtensionFunctionAddressForPlatform(platform, "clEnqueueReleaseD3D11ObjectsNV");
-            impl.initializedPlatform11 = platform;
-        }
-        if (impl.clCreateFromD3D11Texture2DNV && impl.clEnqueueAcquireD3D11ObjectsNV && impl.clEnqueueReleaseD3D11ObjectsNV)
-        {
-            useCLNVEXT = true;
-        }
-    }
-    else
-#endif
-    {
-        if (is_support_cl_khr_d3d11_sharing)
-        {
-            if (impl.initializedPlatform11 != platform)
-            {
-                impl.clCreateFromD3D11Texture2DKHR = (clCreateFromD3D11Texture2DKHR_fn)
-                        clGetExtensionFunctionAddressForPlatform(platform, "clCreateFromD3D11Texture2DKHR");
-                impl.clEnqueueAcquireD3D11ObjectsKHR = (clEnqueueAcquireD3D11ObjectsKHR_fn)
-                        clGetExtensionFunctionAddressForPlatform(platform, "clEnqueueAcquireD3D11ObjectsKHR");
-                impl.clEnqueueReleaseD3D11ObjectsKHR = (clEnqueueReleaseD3D11ObjectsKHR_fn)
-                        clGetExtensionFunctionAddressForPlatform(platform, "clEnqueueReleaseD3D11ObjectsKHR");
-                impl.initializedPlatform11 = platform;
-            }
-            if (!impl.clCreateFromD3D11Texture2DKHR || !impl.clEnqueueAcquireD3D11ObjectsKHR || !impl.clEnqueueReleaseD3D11ObjectsKHR)
-            {
-                CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't find functions for D3D11");
-            }
-        }
-    }
-    return useCLNVEXT;
-}
-#endif // defined(HAVE_DIRECTX) && defined(HAVE_OPENCL)
-
 } // namespace directx
 
 
@@ -1476,7 +1479,7 @@ void convertToD3D11Texture2D(InputArray src, ID3D11Texture2D* pD3D11Texture2D)
     NO_OPENCL_SUPPORT_ERROR;
 #else
 
-    bool useCLNVEXT = __OpenCLinitializeD3D11();
+    bool useCLNVEXT = getImpl().initializeD3D11();
     if(!useCLNVEXT){
         __convertToD3D11Texture2DKHR(src,pD3D11Texture2D);
     }
@@ -1498,7 +1501,7 @@ void convertFromD3D11Texture2D(ID3D11Texture2D* pD3D11Texture2D, OutputArray dst
     NO_OPENCL_SUPPORT_ERROR;
 #else
 
-    bool useCLNVEXT = __OpenCLinitializeD3D11();
+    bool useCLNVEXT = getImpl().initializeD3D11();
     if(!useCLNVEXT){
         __convertFromD3D11Texture2DKHR(pD3D11Texture2D,dst);
     }
@@ -1511,37 +1514,14 @@ void convertFromD3D11Texture2D(ID3D11Texture2D* pD3D11Texture2D, OutputArray dst
 #endif
 }
 
-#if defined(HAVE_DIRECTX) && defined(HAVE_OPENCL)
-
-static void __OpenCLinitializeD3D10()
-{
-    using namespace cv::ocl;
-    OpenCLDirectXImpl& impl = getImpl();
-    cl_platform_id platform = impl.getPlatform();
-    if (impl.initializedPlatform10 != platform)
-    {
-        impl.clCreateFromD3D10Texture2DKHR = (clCreateFromD3D10Texture2DKHR_fn)
-                clGetExtensionFunctionAddressForPlatform(platform, "clCreateFromD3D10Texture2DKHR");
-        impl.clEnqueueAcquireD3D10ObjectsKHR = (clEnqueueAcquireD3D10ObjectsKHR_fn)
-                clGetExtensionFunctionAddressForPlatform(platform, "clEnqueueAcquireD3D10ObjectsKHR");
-        impl.clEnqueueReleaseD3D10ObjectsKHR = (clEnqueueReleaseD3D10ObjectsKHR_fn)
-                clGetExtensionFunctionAddressForPlatform(platform, "clEnqueueReleaseD3D10ObjectsKHR");
-        impl.initializedPlatform10 = platform;
-    }
-    if (!impl.clCreateFromD3D10Texture2DKHR || !impl.clEnqueueAcquireD3D10ObjectsKHR || !impl.clEnqueueReleaseD3D10ObjectsKHR)
-    {
-        CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't find functions for D3D10");
-    }
-}
-#endif // defined(HAVE_DIRECTX) && defined(HAVE_OPENCL)
-
 void convertToD3D10Texture2D(InputArray src, ID3D10Texture2D* pD3D10Texture2D)
 {
     CV_UNUSED(src); CV_UNUSED(pD3D10Texture2D);
 #if !defined(HAVE_DIRECTX)
     NO_DIRECTX_SUPPORT_ERROR;
 #elif defined(HAVE_OPENCL)
-    __OpenCLinitializeD3D10();
+    OpenCLDirectXImpl& impl = getImpl();
+    impl.initializeD3D10();
 
     D3D10_TEXTURE2D_DESC desc = { 0 };
     pD3D10Texture2D->GetDesc(&desc);
@@ -1556,7 +1536,6 @@ void convertToD3D10Texture2D(InputArray src, ID3D10Texture2D* pD3D10Texture2D)
     using namespace cv::ocl;
     Context& ctx = Context::getDefault();
     cl_context context = (cl_context)ctx.ptr();
-    OpenCLDirectXImpl& impl = getImpl();
 
     UMat u = src.getUMat();
 
@@ -1603,7 +1582,8 @@ void convertFromD3D10Texture2D(ID3D10Texture2D* pD3D10Texture2D, OutputArray dst
 #if !defined(HAVE_DIRECTX)
     NO_DIRECTX_SUPPORT_ERROR;
 #elif defined(HAVE_OPENCL)
-    __OpenCLinitializeD3D10();
+    OpenCLDirectXImpl& impl = getImpl();
+    impl.initializeD3D10();
 
     D3D10_TEXTURE2D_DESC desc = { 0 };
     pD3D10Texture2D->GetDesc(&desc);
@@ -1614,7 +1594,6 @@ void convertFromD3D10Texture2D(ID3D10Texture2D* pD3D10Texture2D, OutputArray dst
     using namespace cv::ocl;
     Context& ctx = Context::getDefault();
     cl_context context = (cl_context)ctx.ptr();
-    OpenCLDirectXImpl& impl = getImpl();
 
     // TODO Need to specify ACCESS_WRITE here somehow to prevent useless data copying!
     dst.create(Size(desc.Width, desc.Height), textureType);
@@ -1658,29 +1637,6 @@ void convertFromD3D10Texture2D(ID3D10Texture2D* pD3D10Texture2D, OutputArray dst
 #endif
 }
 
-#if defined(HAVE_DIRECTX) && defined(HAVE_OPENCL)
-
-static void __OpenCLinitializeD3D9()
-{
-    using namespace cv::ocl;
-    OpenCLDirectXImpl& impl = getImpl();
-    cl_platform_id platform = impl.getPlatform();
-    if (impl.initializedPlatform9 != platform)
-    {
-        impl.clCreateFromDX9MediaSurfaceKHR = (clCreateFromDX9MediaSurfaceKHR_fn)
-                clGetExtensionFunctionAddressForPlatform(platform, "clCreateFromDX9MediaSurfaceKHR");
-        impl.clEnqueueAcquireDX9MediaSurfacesKHR = (clEnqueueAcquireDX9MediaSurfacesKHR_fn)
-                clGetExtensionFunctionAddressForPlatform(platform, "clEnqueueAcquireDX9MediaSurfacesKHR");
-        impl.clEnqueueReleaseDX9MediaSurfacesKHR = (clEnqueueReleaseDX9MediaSurfacesKHR_fn)
-                clGetExtensionFunctionAddressForPlatform(platform, "clEnqueueReleaseDX9MediaSurfacesKHR");
-        impl.initializedPlatform9 = platform;
-    }
-    if (!impl.clCreateFromDX9MediaSurfaceKHR || !impl.clEnqueueAcquireDX9MediaSurfacesKHR || !impl.clEnqueueReleaseDX9MediaSurfacesKHR)
-    {
-        CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't find functions for D3D9");
-    }
-}
-#endif // defined(HAVE_DIRECTX) && defined(HAVE_OPENCL)
 
 void convertToDirect3DSurface9(InputArray src, IDirect3DSurface9* pDirect3DSurface9, void* surfaceSharedHandle)
 {
@@ -1688,7 +1644,8 @@ void convertToDirect3DSurface9(InputArray src, IDirect3DSurface9* pDirect3DSurfa
 #if !defined(HAVE_DIRECTX)
     NO_DIRECTX_SUPPORT_ERROR;
 #elif defined(HAVE_OPENCL)
-    __OpenCLinitializeD3D9();
+    OpenCLDirectXImpl& impl = getImpl();
+    impl.initializeD3D9();
 
     D3DSURFACE_DESC desc;
     if (FAILED(pDirect3DSurface9->GetDesc(&desc)))
@@ -1706,7 +1663,6 @@ void convertToDirect3DSurface9(InputArray src, IDirect3DSurface9* pDirect3DSurfa
     using namespace cv::ocl;
     Context& ctx = Context::getDefault();
     cl_context context = (cl_context)ctx.ptr();
-    OpenCLDirectXImpl& impl = getImpl();
 
     UMat u = src.getUMat();
 
@@ -1757,7 +1713,8 @@ void convertFromDirect3DSurface9(IDirect3DSurface9* pDirect3DSurface9, OutputArr
 #if !defined(HAVE_DIRECTX)
     NO_DIRECTX_SUPPORT_ERROR;
 #elif defined(HAVE_OPENCL)
-    __OpenCLinitializeD3D9();
+    OpenCLDirectXImpl& impl = getImpl();
+    impl.initializeD3D9();
 
     D3DSURFACE_DESC desc;
     if (FAILED(pDirect3DSurface9->GetDesc(&desc)))
@@ -1771,7 +1728,6 @@ void convertFromDirect3DSurface9(IDirect3DSurface9* pDirect3DSurface9, OutputArr
     using namespace cv::ocl;
     Context& ctx = Context::getDefault();
     cl_context context = (cl_context)ctx.ptr();
-    OpenCLDirectXImpl& impl = getImpl();
 
     // TODO Need to specify ACCESS_WRITE here somehow to prevent useless data copying!
     dst.create(Size(desc.Width, desc.Height), surfaceType);

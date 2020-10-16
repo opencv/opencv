@@ -114,11 +114,7 @@
 #include "opencv2/core/opencl/runtime/opencl_core.hpp"
 
 #ifdef HAVE_DIRECTX
-namespace cv { namespace directx {
-struct OpenCLDirectXImpl;
-OpenCLDirectXImpl* createDirectXImpl();
-void deleteDirectXImpl(OpenCLDirectXImpl**);
-}} // namespace cv::directx
+#include "opencv2/core/directx.hpp"
 #endif
 
 #ifdef HAVE_OPENCL_SVM
@@ -2364,7 +2360,7 @@ protected:
             }
             devices.clear();
 #ifdef HAVE_DIRECTX
-            directx::deleteDirectXImpl(&p_directx_impl);
+            directx::internal::deleteDirectXImpl(&p_directx_impl);
 #endif
         }
 
@@ -2673,13 +2669,13 @@ public:
     }
 
 #ifdef HAVE_DIRECTX
-    directx::OpenCLDirectXImpl* p_directx_impl;
+    directx::internal::OpenCLDirectXImpl* p_directx_impl;
 
-    directx::OpenCLDirectXImpl* getDirectXImpl()
+    directx::internal::OpenCLDirectXImpl* getDirectXImpl()
     {
         if (!p_directx_impl)
         {
-            p_directx_impl = directx::createDirectXImpl();
+            p_directx_impl = directx::internal::createDirectXImpl();
         }
         return p_directx_impl;
     }
@@ -7314,14 +7310,14 @@ uint64 Timer::durationNS() const
 }} // namespace
 
 #ifdef HAVE_DIRECTX
-namespace cv { namespace directx {
+namespace cv { namespace directx { namespace internal {
 OpenCLDirectXImpl* getDirectXImpl(ocl::Context& ctx)
 {
     ocl::Context::Impl* i = ctx.getImpl();
     CV_Assert(i);
     return i->getDirectXImpl();
 }
-}} // namespace cv::directx
+}}} // namespace cv::directx::internal
 #endif
 
 #endif // HAVE_OPENCL
