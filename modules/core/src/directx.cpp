@@ -238,10 +238,14 @@ int getTypeFromD3DFORMAT(const int iD3DFORMAT)
 namespace internal {
 struct OpenCLDirectXImpl
 {
-    cl_platform_id platform;
+    cl_platform_id platform_;
+
+    cl_platform_id initializedPlatform9 = NULL;
+    cl_platform_id initializedPlatform10 = NULL;
+    cl_platform_id initializedPlatform11 = NULL;
 public:
     OpenCLDirectXImpl()
-        : platform(0)
+        : platform_(0)
     {
     }
 
@@ -264,24 +268,20 @@ public:
     clEnqueueAcquireDX9MediaSurfacesKHR_fn clEnqueueAcquireDX9MediaSurfacesKHR = NULL;
     clEnqueueReleaseDX9MediaSurfacesKHR_fn clEnqueueReleaseDX9MediaSurfacesKHR = NULL;
 
-    cl_platform_id initializedPlatform9 = NULL;
-    cl_platform_id initializedPlatform10 = NULL;
-    cl_platform_id initializedPlatform11 = NULL;
-
     cl_platform_id getPlatform()
     {
-        if (!platform)
+        if (!platform_)
         {
             CV_Assert(cv::ocl::haveOpenCL());
 
             cl_device_id device = (cl_device_id)ocl::Device::getDefault().ptr();
             CV_Assert(device);
-            cl_int status = clGetDeviceInfo(device, CL_DEVICE_PLATFORM, sizeof(platform), &platform, NULL);
+            cl_int status = clGetDeviceInfo(device, CL_DEVICE_PLATFORM, sizeof(platform_), &platform_, NULL);
             if (status != CL_SUCCESS)
                 CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't get platform corresponding to device");
         }
 
-        return platform;
+        return platform_;
     }
 
 
