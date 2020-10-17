@@ -274,8 +274,9 @@ class ClassInfo(GeneralInfo):
 
     def getForwardDeclarations(self, module):
         enum_decl = filter(lambda x:self.isEnum(x) and type_dict[x]["import_module"] != module, self.imports)
+        enum_imports = list(set(map(lambda m: type_dict[m]["import_module"], enum_decl)))
         class_decl = filter(lambda x: not self.isEnum(x), self.imports)
-        return ["#import \"%s.h\"" % type_dict[c]["import_module"] for c in enum_decl] + [""] + ["@class %s;" % c for c in sorted(class_decl)]
+        return ["#import \"%s.h\"" % c for c in enum_imports] + [""] + ["@class %s;" % c for c in sorted(class_decl)]
 
     def addImports(self, ctype, is_out_type):
         if ctype == self.cname:
@@ -721,10 +722,7 @@ class ObjectiveCWrapperGenerator(object):
 
         # class props
         for p in decl[3]:
-            if True: #"vector" not in p[0]:
-                classinfo.props.append( ClassPropInfo(p) )
-            else:
-                logging.warning("Skipped property: [%s]" % name, p)
+            classinfo.props.append( ClassPropInfo(p) )
 
         if name != self.Module:
             type_dict.setdefault("Ptr_"+name, {}).update(
@@ -786,7 +784,8 @@ class ObjectiveCWrapperGenerator(object):
             type_dict[objc_type] = { "cast_to" : get_cname(enumType),
                                      "objc_type": objc_type,
                                      "is_enum": True,
-                                     "import_module": import_module}
+                                     "import_module": import_module,
+                                     "from_cpp": "(" + objc_type + ")%(n)s"}
             self.classes[self.Module].member_enums.append(objc_type)
 
         const_decls = decl[3]
@@ -1301,7 +1300,7 @@ typedef NS_ENUM(int, {2}) {{
                     ci.method_implementations.write("\t" + ("\n\t".join(prologue)) + "\n")
                     ci.method_implementations.write("\t" + ptr_ref + pi.name + " = valVector;\n}\n\n")
                 else:
-                    to_cpp = type_data.get("to_cpp", "%(n)s")
+                    to_cpp = type_data.get("to_cpp", ("(" + type_data.get("cast_to") + ")%(n)s") if type_data.has_key("cast_to") else "%(n)s")
                     val = to_cpp % {"n": pi.name}
                     ci.method_implementations.write("-(void)set" + pi.name[0].upper() + pi.name[1:] + ":(" + objc_type + ")" + pi.name + " {\n\t" + ptr_ref + pi.name + " = " + val + ";\n}\n\n")
 
