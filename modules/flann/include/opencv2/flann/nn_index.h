@@ -31,7 +31,6 @@
 #ifndef OPENCV_FLANN_NNINDEX_H
 #define OPENCV_FLANN_NNINDEX_H
 
-#include "general.h"
 #include "matrix.h"
 #include "result_set.h"
 #include "params.h"
