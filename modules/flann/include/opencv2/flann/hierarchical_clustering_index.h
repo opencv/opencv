@@ -382,7 +382,7 @@ public:
             chooseCenters = &HierarchicalClusteringIndex::GroupWiseCenterChooser;
         }
         else {
-            throw FLANNException("Unknown algorithm for choosing initial centers.");
+            FLANN_THROW(cv::Error::StsError, "Unknown algorithm for choosing initial centers.");
         }
 
         root = new NodePtr[trees_];
@@ -446,7 +446,7 @@ public:
     void buildIndex() CV_OVERRIDE
     {
         if (branching_<2) {
-            throw FLANNException("Branching factor must be at least 2");
+            FLANN_THROW(cv::Error::StsError, "Branching factor must be at least 2");
         }
 
         free_indices();
