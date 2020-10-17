@@ -175,11 +175,26 @@ struct IEUnit {
     IE::InputsDataMap inputs;
     IE::OutputsDataMap outputs;
 
+    IE::ExecutableNetwork this_network;
+    cv::gimpl::ie::wrap::Plugin this_plugin;
+
     explicit IEUnit(const cv::gapi::ie::detail::ParamDesc &pp)
         : params(pp) {
-        net = cv::gimpl::ie::wrap::readNetwork(params);
-        inputs  = net.getInputsInfo();
-        outputs = net.getOutputsInfo();
+        if (params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Load) {
+            net = cv::gimpl::ie::wrap::readNetwork(params);
+            inputs  = net.getInputsInfo();
+            outputs = net.getOutputsInfo();
+        } else if (params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Import) {
+            this_plugin  = cv::gimpl::ie::wrap::getPlugin(params);
+            this_network = cv::gimpl::ie::wrap::importNetwork(this_plugin, params);
+            // FIXME: ICNNetwork returns InputsDataMap/OutputsDataMap,
+            // but ExecutableNetwork returns ConstInputsDataMap/ConstOutputsDataMap
+            inputs  = cv::gimpl::ie::wrap::toInputsDataMap(this_network.GetInputsInfo());
+            outputs = cv::gimpl::ie::wrap::toOutputsDataMap(this_network.GetOutputsInfo());
+        } else {
+            cv::util::throw_error(std::logic_error("Unsupported ParamDesc::Kind"));
+        }
+
         // The practice shows that not all inputs and not all outputs
         // are mandatory to specify in IE model.
         // So what we're concerned here about is:
@@ -205,10 +220,15 @@ struct IEUnit {
 
     // This method is [supposed to be] called at Island compilation stage
     cv::gimpl::ie::IECompiled compile() const {
-        auto plugin       = cv::gimpl::ie::wrap::getPlugin(params);
-        auto this_network = cv::gimpl::ie::wrap::loadNetwork(plugin, net, params);
-        auto this_request = this_network.CreateInferRequest();
+        IEUnit* non_const_this = const_cast<IEUnit*>(this);
+        if (params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Load) {
+            // FIXME: In case importNetwork for fill inputs/outputs need to obtain ExecutableNetwork, but
+            // for loadNetwork they can be obtained by using readNetwork
+            non_const_this->this_plugin  = cv::gimpl::ie::wrap::getPlugin(params);
+            non_const_this->this_network = cv::gimpl::ie::wrap::loadNetwork(non_const_this->this_plugin, net, params);
+        }
 
+        auto this_request = non_const_this->this_network.CreateInferRequest();
         // Bind const data to infer request
         for (auto &&p : params.const_inputs) {
             // FIXME: SetBlob is known to be inefficient,
@@ -217,7 +237,16 @@ struct IEUnit {
             // Still, constant data is to set only once.
             this_request.SetBlob(p.first, wrapIE(p.second.first, p.second.second));
         }
-        return {plugin, this_network, this_request};
+        // Bind const data to infer request
+        for (auto &&p : params.const_inputs) {
+            // FIXME: SetBlob is known to be inefficient,
+            // it is worth to make a customizable "initializer" and pass the
+            // cv::Mat-wrapped blob there to support IE's optimal "GetBlob idiom"
+            // Still, constant data is to set only once.
+            this_request.SetBlob(p.first, wrapIE(p.second.first, p.second.second));
+        }
+
+        return {this_plugin, this_network, this_request};
     }
 };
 

@@ -124,6 +124,12 @@ namespace imgproc {
         }
     };
 
+    G_TYPED_KERNEL(GBGR2RGB, <GMat(GMat)>, "org.opencv.imgproc.colorconvert.bgr2rgb") {
+        static GMatDesc outMeta(GMatDesc in) {
+            return in; // type still remains CV_8UC3;
+        }
+    };
+
     G_TYPED_KERNEL(GRGB2YUV, <GMat(GMat)>, "org.opencv.imgproc.colorconvert.rgb2yuv") {
         static GMatDesc outMeta(GMatDesc in) {
             return in; // type still remains CV_8UC3;
@@ -133,6 +139,42 @@ namespace imgproc {
     G_TYPED_KERNEL(GYUV2RGB, <GMat(GMat)>, "org.opencv.imgproc.colorconvert.yuv2rgb") {
         static GMatDesc outMeta(GMatDesc in) {
             return in; // type still remains CV_8UC3;
+        }
+    };
+
+    G_TYPED_KERNEL(GBGR2I420, <GMat(GMat)>, "org.opencv.imgproc.colorconvert.bgr2i420") {
+        static GMatDesc outMeta(GMatDesc in) {
+            GAPI_Assert(in.depth == CV_8U);
+            GAPI_Assert(in.chan == 3);
+            GAPI_Assert(in.size.height % 2 == 0);
+            return in.withType(in.depth, 1).withSize(Size(in.size.width, in.size.height * 3 / 2));
+        }
+    };
+
+    G_TYPED_KERNEL(GRGB2I420, <GMat(GMat)>, "org.opencv.imgproc.colorconvert.rgb2i420") {
+        static GMatDesc outMeta(GMatDesc in) {
+            GAPI_Assert(in.depth == CV_8U);
+            GAPI_Assert(in.chan == 3);
+            GAPI_Assert(in.size.height % 2 == 0);
+            return in.withType(in.depth, 1).withSize(Size(in.size.width, in.size.height * 3 / 2));
+        }
+    };
+
+    G_TYPED_KERNEL(GI4202BGR, <GMat(GMat)>, "org.opencv.imgproc.colorconvert.i4202bgr") {
+        static GMatDesc outMeta(GMatDesc in) {
+            GAPI_Assert(in.depth == CV_8U);
+            GAPI_Assert(in.chan == 1);
+            GAPI_Assert(in.size.height % 3 == 0);
+            return in.withType(in.depth, 3).withSize(Size(in.size.width, in.size.height * 2 / 3));
+        }
+    };
+
+    G_TYPED_KERNEL(GI4202RGB, <GMat(GMat)>, "org.opencv.imgproc.colorconvert.i4202rgb") {
+        static GMatDesc outMeta(GMatDesc in) {
+            GAPI_Assert(in.depth == CV_8U);
+            GAPI_Assert(in.chan == 1);
+            GAPI_Assert(in.size.height % 3 == 0);
+            return in.withType(in.depth, 3).withSize(Size(in.size.width, in.size.height * 2 / 3));
         }
     };
 
@@ -455,7 +497,7 @@ The median filter uses cv::BORDER_REPLICATE internally to cope with border pixel
 @param ksize aperture linear size; it must be odd and greater than 1, for example: 3, 5, 7 ...
 @sa  boxFilter, gaussianBlur
  */
-GAPI_EXPORTS GMat medianBlur(const GMat& src, int ksize);
+GAPI_EXPORTS_W GMat medianBlur(const GMat& src, int ksize);
 
 /** @brief Erodes an image by using a specific structuring element.
 
@@ -812,6 +854,20 @@ The algorithm normalizes the brightness and increases the contrast of the image.
  */
 GAPI_EXPORTS GMat equalizeHist(const GMat& src);
 
+/** @brief Converts an image from BGR color space to RGB color space.
+
+The function converts an input image from BGR color space to RGB.
+The conventional ranges for B, G, and R channel values are 0 to 255.
+
+Output image is 8-bit unsigned 3-channel image @ref CV_8UC3.
+
+@note Function textual ID is "org.opencv.imgproc.colorconvert.bgr2rgb"
+
+@param src input image: 8-bit unsigned 3-channel image @ref CV_8UC3.
+@sa RGB2BGR
+*/
+GAPI_EXPORTS GMat BGR2RGB(const GMat& src);
+
 //! @} gapi_filters
 
 //! @addtogroup gapi_colorconvert
@@ -870,6 +926,70 @@ Output image must be 8-bit unsigned 3-channel image @ref CV_8UC3.
 @sa YUV2RGB, RGB2Lab
 */
 GAPI_EXPORTS GMat RGB2YUV(const GMat& src);
+
+/** @brief Converts an image from BGR color space to I420 color space.
+
+The function converts an input image from BGR color space to I420.
+The conventional ranges for R, G, and B channel values are 0 to 255.
+
+Output image must be 8-bit unsigned 1-channel image. @ref CV_8UC1.
+Width of I420 output image must be the same as width of input image.
+Height of I420 output image must be equal 3/2 from height of input image.
+
+@note Function textual ID is "org.opencv.imgproc.colorconvert.bgr2i420"
+
+@param src input image: 8-bit unsigned 3-channel image @ref CV_8UC3.
+@sa I4202BGR
+*/
+GAPI_EXPORTS GMat BGR2I420(const GMat& src);
+
+/** @brief Converts an image from RGB color space to I420 color space.
+
+The function converts an input image from RGB color space to I420.
+The conventional ranges for R, G, and B channel values are 0 to 255.
+
+Output image must be 8-bit unsigned 1-channel image. @ref CV_8UC1.
+Width of I420 output image must be the same as width of input image.
+Height of I420 output image must be equal 3/2 from height of input image.
+
+@note Function textual ID is "org.opencv.imgproc.colorconvert.rgb2i420"
+
+@param src input image: 8-bit unsigned 3-channel image @ref CV_8UC3.
+@sa I4202RGB
+*/
+GAPI_EXPORTS GMat RGB2I420(const GMat& src);
+
+/** @brief Converts an image from I420 color space to BGR color space.
+
+The function converts an input image from I420 color space to BGR.
+The conventional ranges for B, G, and R channel values are 0 to 255.
+
+Output image must be 8-bit unsigned 3-channel image. @ref CV_8UC3.
+Width of BGR output image must be the same as width of input image.
+Height of BGR output image must be equal 2/3 from height of input image.
+
+@note Function textual ID is "org.opencv.imgproc.colorconvert.i4202bgr"
+
+@param src input image: 8-bit unsigned 1-channel image @ref CV_8UC1.
+@sa BGR2I420
+*/
+GAPI_EXPORTS GMat I4202BGR(const GMat& src);
+
+/** @brief Converts an image from I420 color space to BGR color space.
+
+The function converts an input image from I420 color space to BGR.
+The conventional ranges for B, G, and R channel values are 0 to 255.
+
+Output image must be 8-bit unsigned 3-channel image. @ref CV_8UC3.
+Width of RGB output image must be the same as width of input image.
+Height of RGB output image must be equal 2/3 from height of input image.
+
+@note Function textual ID is "org.opencv.imgproc.colorconvert.i4202rgb"
+
+@param src input image: 8-bit unsigned 1-channel image @ref CV_8UC1.
+@sa RGB2I420
+*/
+GAPI_EXPORTS GMat I4202RGB(const GMat& src);
 
 /** @brief Converts an image from BGR color space to LUV color space.
 

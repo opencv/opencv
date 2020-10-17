@@ -60,6 +60,8 @@ namespace detail {
         std::size_t num_in;  // How many inputs are defined in the operation
         std::size_t num_out; // How many outputs are defined in the operation
 
+        enum class Kind { Load, Import };
+        Kind kind;
         bool is_generic;
     };
 } // namespace detail
@@ -83,6 +85,16 @@ public:
         : desc{ model, weights, device, {}, {}, {}
               , std::tuple_size<typename Net::InArgs>::value  // num_in
               , std::tuple_size<typename Net::OutArgs>::value // num_out
+              , detail::ParamDesc::Kind::Load
+              , false} {
+    };
+
+    Params(const std::string &model,
+           const std::string &device)
+        : desc{ model, {}, device, {}, {}, {}
+              , std::tuple_size<typename Net::InArgs>::value  // num_in
+              , std::tuple_size<typename Net::OutArgs>::value // num_out
+              , detail::ParamDesc::Kind::Import
               , false} {
     };
 
@@ -122,11 +134,17 @@ protected:
 template<>
 class Params<cv::gapi::Generic> {
 public:
-    Params(const std::string& tag,
+    Params(const std::string &tag,
            const std::string &model,
            const std::string &weights,
            const std::string &device)
-        : desc{ model, weights, device, {}, {}, {}, 0u, 0u, true}, m_tag(tag) {
+        : desc{ model, weights, device, {}, {}, {}, 0u, 0u, detail::ParamDesc::Kind::Load, true}, m_tag(tag) {
+    };
+
+    Params(const std::string &tag,
+           const std::string &model,
+           const std::string &device)
+        : desc{ model, {}, device, {}, {}, {}, 0u, 0u, detail::ParamDesc::Kind::Import, true}, m_tag(tag) {
     };
 
     // BEGIN(G-API's network parametrization API)
