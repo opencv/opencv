@@ -32,6 +32,15 @@ source ./emsdk_env.sh
 echo ${EMSCRIPTEN}
 @endcode
 
+The version 1.39.16 of emscripten is verified for latest WebAssembly. Please check the version of emscripten to use the newest features of WebAssembly.
+
+For example:
+@code{.bash}
+./emsdk update
+./emsdk install 1.39.16
+./emsdk activate 1.39.16
+@endcode
+
 Obtaining OpenCV Source Code
 --------------------------
 
@@ -75,6 +84,31 @@ Building OpenCV.js from Source
     @code{.bash}
     python ./platforms/js/build_js.py build_wasm --build_wasm
     @endcode
+
+-#  [Optional] To build the OpenCV.js loader, append `--build_loader`.
+
+    For example:
+    @code{.bash}
+    python ./platforms/js/build_js.py build_js --build_loader
+    @endcode
+
+    @note
+    The loader is implemented as a js file in the path `<opencv_js_dir>/bin/loader.js`. The loader utilizes the [WebAssembly Feature Detection](https://github.com/GoogleChromeLabs/wasm-feature-detect) to detect the features of the broswer and load corresponding OpenCV.js automatically. To use it, you need to use the UMD version of [WebAssembly Feature Detection](https://github.com/GoogleChromeLabs/wasm-feature-detect) and introduce the `loader.js` in your Web application.
+
+    Example Code:
+    @code{.javascipt}
+    // Set paths configuration
+    let pathsConfig = {
+        wasm: "../../build_wasm/opencv.js",
+        threads: "../../build_mt/opencv.js",
+        simd: "../../build_simd/opencv.js",
+        threadsSimd: "../../build_mtSIMD/opencv.js",
+    }
+
+    // Load OpenCV.js and use the pathsConfiguration and main function as the params.
+    loadOpenCV(pathsConfig, main);
+    @endcode
+
 
 -#  [optional] To build documents, append `--build_doc` option.
 
