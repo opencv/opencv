@@ -201,6 +201,9 @@ class Builder:
     def build_doc(self):
         execute(["make", "-j", str(multiprocessing.cpu_count()), "doxygen"])
 
+    def build_loader(self):
+        execute(["make", "-j", str(multiprocessing.cpu_count()), "opencv_js_loader"])
+
 
 #===================================================================================================
 
@@ -221,6 +224,7 @@ if __name__ == "__main__":
     parser.add_argument('--build_test', action="store_true", help="Build tests")
     parser.add_argument('--build_perf', action="store_true", help="Build performance tests")
     parser.add_argument('--build_doc', action="store_true", help="Build tutorials")
+    parser.add_argument('--build_loader', action="store_true", help="Build OpenCV.js loader")
     parser.add_argument('--clean_build_dir', action="store_true", help="Clean build dir")
     parser.add_argument('--skip_config', action="store_true", help="Skip cmake config")
     parser.add_argument('--config_only', action="store_true", help="Only do cmake config")
@@ -292,6 +296,11 @@ if __name__ == "__main__":
         log.info("=====")
         builder.build_doc()
 
+    if args.build_loader:
+        log.info("=====")
+        log.info("===== Building OpenCV.js loader")
+        log.info("=====")
+        builder.build_loader()
 
     log.info("=====")
     log.info("===== Build finished")
@@ -316,3 +325,8 @@ if __name__ == "__main__":
         opencvjs_tutorial_path = find_file("tutorial_js_root.html", os.path.join(builder.build_dir, "doc", "doxygen", "html"))
         if check_file(opencvjs_tutorial_path):
             log.info("OpenCV.js tutorials location: %s", opencvjs_tutorial_path)
+
+    if args.build_loader:
+        opencvjs_loader_path = os.path.join(builder.build_dir, "bin", "loader.js")
+        if check_file(opencvjs_loader_path):
+            log.info("OpenCV.js loader location: %s", opencvjs_loader_path)
