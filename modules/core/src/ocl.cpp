@@ -114,7 +114,7 @@
 #include "opencv2/core/opencl/runtime/opencl_core.hpp"
 
 #ifdef HAVE_DIRECTX
-#include "opencv2/core/directx.hpp"
+#include "directx.hpp"
 #endif
 
 #ifdef HAVE_OPENCL_SVM

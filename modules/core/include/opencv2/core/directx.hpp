@@ -177,17 +177,6 @@ CV_EXPORTS int getTypeFromDXGI_FORMAT(const int iDXGI_FORMAT); // enum DXGI_FORM
 //! @return OpenCV type or -1 if there is no equivalent
 CV_EXPORTS int getTypeFromD3DFORMAT(const int iD3DFORMAT); // enum D3DTYPE for D3D9
 
-#ifdef __OPENCV_BUILD
-namespace internal {
-
-    struct OpenCLDirectXImpl;
-    OpenCLDirectXImpl* createDirectXImpl();
-    void deleteDirectXImpl(OpenCLDirectXImpl**);
-    OpenCLDirectXImpl* getDirectXImpl(ocl::Context& ctx);
-
-} // namespace internal
-#endif
-
 //! @}
 
 } } // namespace cv::directx

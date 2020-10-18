@@ -49,6 +49,7 @@
 #ifdef HAVE_DIRECTX
 #include <vector>
 #include "directx.inc.hpp"
+#include "directx.hpp"
 #else // HAVE_DIRECTX
 #define NO_DIRECTX_SUPPORT_ERROR CV_Error(cv::Error::StsBadFunc, "OpenCV was build without DirectX support")
 #endif
