@@ -301,6 +301,8 @@ Ptr<IVideoCapture> create_PvAPI_capture( int index );
 Ptr<IVideoCapture> create_XIMEA_capture_cam( int index );
 Ptr<IVideoCapture> create_XIMEA_capture_file( const std::string &serialNumber );
 
+Ptr<IVideoCapture> create_ueye_camera(int camera);
+
 Ptr<IVideoCapture> create_Aravis_capture( int index );
 
 Ptr<IVideoCapture> createMotionJpegCapture(const std::string& filename);
