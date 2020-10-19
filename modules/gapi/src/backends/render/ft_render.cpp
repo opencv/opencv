@@ -166,6 +166,11 @@ void cv::gapi::wip::draw::FTTextRender::Priv::putText(cv::Mat& mat,
                     "Failed to load char");
         FT_Bitmap *bitmap = &(m_face->glyph->bitmap);
 
+        // FIXME: Skip glyph, if size is 0
+        if (bitmap->rows == 0 || bitmap->width == 0) {
+            continue;
+        }
+
         cv::Mat glyph(bitmap->rows, bitmap->width, CV_8UC1, bitmap->buffer, bitmap->pitch);
 
         int left    = m_face->glyph->bitmap_left;
