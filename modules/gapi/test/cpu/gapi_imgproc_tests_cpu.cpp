@@ -246,28 +246,25 @@ INSTANTIATE_TEST_CASE_P(FindContoursTestCPU, FindContoursTest,
                                 Values(cv::Size(1280, 720)),
                                 Values(CV_8UC1),
                                 Values(RETR_EXTERNAL),
-                                Values(CHAIN_APPROX_NONE),
-                                Values(false)));
+                                Values(CHAIN_APPROX_NONE)));
 
-INSTANTIATE_TEST_CASE_P(FindContoursHierarchyTestCPU, FindContoursTest,
+INSTANTIATE_TEST_CASE_P(FindContoursHierarchyTestCPU, FindContoursHierarchicalTest,
                         Combine(Values(IMGPROC_CPU),
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
                                 Values(CV_8UC1),
                                 Values(RETR_EXTERNAL, RETR_LIST, RETR_CCOMP, RETR_TREE),
                                 Values(CHAIN_APPROX_NONE, CHAIN_APPROX_SIMPLE,
-                                       CHAIN_APPROX_TC89_L1, CHAIN_APPROX_TC89_KCOS),
-                                Values(true)));
+                                       CHAIN_APPROX_TC89_L1, CHAIN_APPROX_TC89_KCOS)));
 
-INSTANTIATE_TEST_CASE_P(FindContoursHierarchy32STestCPU, FindContoursTest,
+INSTANTIATE_TEST_CASE_P(FindContoursHierarchy32STestCPU, FindContoursHierarchicalTest,
                         Combine(Values(IMGPROC_CPU),
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
                                 Values(CV_32SC1),
                                 Values(RETR_CCOMP, RETR_FLOODFILL),
                                 Values(CHAIN_APPROX_NONE, CHAIN_APPROX_SIMPLE,
-                                       CHAIN_APPROX_TC89_L1, CHAIN_APPROX_TC89_KCOS),
-                                Values(true)));
+                                       CHAIN_APPROX_TC89_L1, CHAIN_APPROX_TC89_KCOS)));
 
 INSTANTIATE_TEST_CASE_P(BoundingRectMatTestCPU, BoundingRectMatTest,
                         Combine(Values( CV_8UC1 ),
@@ -278,13 +275,21 @@ INSTANTIATE_TEST_CASE_P(BoundingRectMatTestCPU, BoundingRectMatTest,
                                 Values(IMGPROC_CPU),
                                 Values(AbsToleranceRect(0).to_compare_obj())));
 
-INSTANTIATE_TEST_CASE_P(BoundingRectVectorTestCPU, BoundingRectVectorTest,
-                        Combine(Values( CV_32S, CV_32F ),
+INSTANTIATE_TEST_CASE_P(BoundingRectVector32STestCPU, BoundingRectVector32STest,
+                        Combine(Values(-1),
                                 Values(cv::Size(1280, 1),
                                        cv::Size(128, 1)),
                                 Values(-1),
                                 Values(IMGPROC_CPU),
-                                Values(AbsToleranceRect(1e-5).to_compare_obj())));
+                                Values(AbsToleranceRect(0).to_compare_obj())));
+
+ INSTANTIATE_TEST_CASE_P(BoundingRectVectorTestCPU, BoundingRectVector32FTest,
+                         Combine(Values(-1),
+                                 Values(cv::Size(1280, 1),
+                                        cv::Size(128, 1)),
+                                 Values(-1),
+                                 Values(IMGPROC_CPU),
+                                 Values(AbsToleranceRect(1e-5).to_compare_obj())));
 
 INSTANTIATE_TEST_CASE_P(BGR2RGBTestCPU, BGR2RGBTest,
                         Combine(Values(CV_8UC3),
