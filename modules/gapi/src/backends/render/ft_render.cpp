@@ -5,11 +5,11 @@
 // Copyright (C) 2019 Intel Corporation
 
 #include "precomp.hpp"
+#include "ft_render.hpp"
 
 #ifdef HAVE_FREETYPE
 
-#include "api/ft_render.hpp"
-#include "api/ft_render_priv.hpp"
+#include "ft_render_priv.hpp"
 
 #include <opencv2/gapi/util/throw.hpp>
 #include <opencv2/gapi/own/assert.hpp>
@@ -209,6 +209,23 @@ void cv::gapi::wip::draw::FTTextRender::putText(cv::Mat& mat,
                                                  int fh)
 {
     m_priv->putText(mat, text, org, fh);
+}
+
+#else
+
+cv::Size cv::gapi::wip::draw::FTTextRender::getTextSize(const std::wstring&, int, int*)
+{
+    cv::util::throw_error(std::runtime_error("Freetype not found"));
+}
+
+void cv::gapi::wip::draw::FTTextRender::putText(cv::Mat&, const std::wstring&, const cv::Point&, int)
+{
+    cv::util::throw_error(std::runtime_error("Freetype not found"));
+}
+
+cv::gapi::wip::draw::FTTextRender::FTTextRender(const std::string&)
+{
+    cv::util::throw_error(std::runtime_error("Freetype not found"));
 }
 
 #endif // HAVE_FREETYPE
