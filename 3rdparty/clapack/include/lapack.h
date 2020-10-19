@@ -533,12 +533,138 @@ int iladlr_(int *m, int *n, double *a, int *lda);
 int ilaenv_(int *ispec, char *name__, char *opts, int *n1, int *n2, int *n3, 
 	int *n4);
 
+int ilaslc_(int *m, int *n, float *a, int *lda);
+
+int ilaslr_(int *m, int *n, float *a, int *lda);
+
 int iparmq_(int *ispec, char *name__, char *opts, int *n, int *ilo, int *ihi, 
 	int *lwork);
+
+int isamax_(int *n, float *sx, int *incx);
+
+int scombssq_(float *v1, float *v2);
+
+int scopy_(int *n, float *sx, int *incx, float *sy, int *
+	incy);
+
+int sgelq2_(int *m, int *n, float *a, int *lda, float *tau, 
+	float *work, int *info);
+
+int sgelqf_(int *m, int *n, float *a, int *lda, float *tau, 
+	float *work, int *lwork, int *info);
+
+int sgels_(char *trans, int *m, int *n, int *nrhs, float *a, 
+	int *lda, float *b, int *ldb, float *work, int *lwork, int *info);
 
 int sgemm_(char *transa, char *transb, int *m, int *n, int *
 	k, float *alpha, float *a, int *lda, float *b, int *ldb, float *beta, 
 	float *c__, int *ldc);
+
+int sgemv_(char *trans, int *m, int *n, float *alpha, float *
+	a, int *lda, float *x, int *incx, float *beta, float *y, int *incy);
+
+int sgeqr2_(int *m, int *n, float *a, int *lda, float *tau, 
+	float *work, int *info);
+
+int sgeqrf_(int *m, int *n, float *a, int *lda, float *tau, 
+	float *work, int *lwork, int *info);
+
+int sger_(int *m, int *n, float *alpha, float *x, int *incx, 
+	float *y, int *incy, float *a, int *lda);
+
+int sgesv_(int *n, int *nrhs, float *a, int *lda, int *ipiv, 
+	float *b, int *ldb, int *info);
+
+int sgetrf2_(int *m, int *n, float *a, int *lda, int *ipiv, 
+	int *info);
+
+int sgetrf_(int *m, int *n, float *a, int *lda, int *ipiv, 
+	int *info);
+
+int sgetrs_(char *trans, int *n, int *nrhs, float *a, int *
+	lda, int *ipiv, float *b, int *ldb, int *info);
+
+int sisnan_(float *sin__);
+
+int slabad_(float *small, float *large);
+
+int slaisnan_(float *sin1, float *sin2);
+
+double slange_(char *norm, int *m, int *n, float *a, int *lda, float *work);
+
+double slapy2_(float *x, float *y);
+
+int slarf_(char *side, int *m, int *n, float *v, int *incv, 
+	float *tau, float *c__, int *ldc, float *work);
+
+int slarfb_(char *side, char *trans, char *direct, char *
+	storev, int *m, int *n, int *k, float *v, int *ldv, float *t, int *
+	ldt, float *c__, int *ldc, float *work, int *ldwork);
+
+int slarfg_(int *n, float *alpha, float *x, int *incx, float 
+	*tau);
+
+int slarft_(char *direct, char *storev, int *n, int *k, 
+	float *v, int *ldv, float *tau, float *t, int *ldt);
+
+int slascl_(char *type__, int *kl, int *ku, float *cfrom, 
+	float *cto, int *m, int *n, float *a, int *lda, int *info);
+
+int slaset_(char *uplo, int *m, int *n, float *alpha, float *
+	beta, float *a, int *lda);
+
+int slassq_(int *n, float *x, int *incx, float *scale, float 
+	*sumsq);
+
+int slaswp_(int *n, float *a, int *lda, int *k1, int *k2, 
+	int *ipiv, int *incx);
+
+double snrm2_(int *n, float *x, int *incx);
+
+int sorm2r_(char *side, char *trans, int *m, int *n, int *k, 
+	float *a, int *lda, float *tau, float *c__, int *ldc, float *work, 
+	int *info);
+
+int sorml2_(char *side, char *trans, int *m, int *n, int *k, 
+	float *a, int *lda, float *tau, float *c__, int *ldc, float *work, 
+	int *info);
+
+int sormlq_(char *side, char *trans, int *m, int *n, int *k, 
+	float *a, int *lda, float *tau, float *c__, int *ldc, float *work, 
+	int *lwork, int *info);
+
+int sormqr_(char *side, char *trans, int *m, int *n, int *k, 
+	float *a, int *lda, float *tau, float *c__, int *ldc, float *work, 
+	int *lwork, int *info);
+
+int sposv_(char *uplo, int *n, int *nrhs, float *a, int *lda,
+	 float *b, int *ldb, int *info);
+
+int spotrf2_(char *uplo, int *n, float *a, int *lda, int *
+	info);
+
+int spotrf_(char *uplo, int *n, float *a, int *lda, int *
+	info);
+
+int spotrs_(char *uplo, int *n, int *nrhs, float *a, int *
+	lda, float *b, int *ldb, int *info);
+
+int sscal_(int *n, float *sa, float *sx, int *incx);
+
+int ssyrk_(char *uplo, char *trans, int *n, int *k, float *
+	alpha, float *a, int *lda, float *beta, float *c__, int *ldc);
+
+int strmm_(char *side, char *uplo, char *transa, char *diag, 
+	int *m, int *n, float *alpha, float *a, int *lda, float *b, int *ldb);
+
+int strmv_(char *uplo, char *trans, char *diag, int *n, 
+	float *a, int *lda, float *x, int *incx);
+
+int strsm_(char *side, char *uplo, char *transa, char *diag, 
+	int *m, int *n, float *alpha, float *a, int *lda, float *b, int *ldb);
+
+int strtrs_(char *uplo, char *trans, char *diag, int *n, int 
+	*nrhs, float *a, int *lda, float *b, int *ldb, int *info);
 
 int zgemm_(char *transa, char *transb, int *m, int *n, int *
 	k, lapack_doublecomplex *alpha, lapack_doublecomplex *a, int *lda, lapack_doublecomplex *b,

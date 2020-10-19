@@ -24,8 +24,12 @@ appdoc = """
 
 import glob, re, os, shutil, subprocess, sys
 
-roots = ["cgemm_", "dgemm_", "sgemm_", "zgemm_", "dgeev_", "dgesdd_", "dgesv_", "dgetrf_", "dposv_", "dpotrf_", "dgels_", "dgeqrf_", "dsyevr_"]
-banlist = ["dlamch_", "dlamc3_", "lsame_", "xerbla_"]
+roots = ["cgemm_", "dgemm_", "sgemm_", "zgemm_",
+         "dgeev_", "dgesdd_", "dsyevr_",
+         "dgesv_", "dgetrf_", "dposv_", "dpotrf_", "dgels_", "dgeqrf_",
+         "sgesv_", "sgetrf_", "sposv_", "spotrf_", "sgels_", "sgeqrf_"
+         ]
+banlist = ["slamch_", "slamc3_", "dlamch_", "dlamc3_", "lsame_", "xerbla_"]
 
 if len(sys.argv) < 2:
     print(appdoc)

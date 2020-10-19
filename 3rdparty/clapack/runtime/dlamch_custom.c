@@ -4,10 +4,10 @@
 
 /* *********************************************************************** */
 
-doublereal dlamc3_(doublereal *a, doublereal *b)
+double dlamc3_(double *a, double *b)
 {
     /* System generated locals */
-    doublereal ret_val;
+    double ret_val;
     
     
     /*  -- LAPACK auxiliary routine (version 3.1) -- */

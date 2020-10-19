@@ -227,7 +227,7 @@ OCV_OPTION(BUILD_ITT                "Build Intel ITT from source"
     (NOT MINGW OR OPENCV_FORCE_3RDPARTY_BUILD)
     IF (X86_64 OR X86 OR ARM OR AARCH64 OR PPC64 OR PPC64LE) AND NOT WINRT AND NOT APPLE_FRAMEWORK
 )
-OCV_OPTION(BUILD_CLAPACK            "Build CLapack from source"          ON) #(NOT APPLE))
+OCV_OPTION(BUILD_CLAPACK            "Build CLapack from source"          (NOT APPLE))
 
 # Optional 3rd party components
 # ===================================================

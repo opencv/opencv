@@ -49,8 +49,14 @@ void cblas_zgemm(CBLAS_LAYOUT layout, CBLAS_TRANSPOSE TransA,
 
 int xerbla_(char *, int *);
 int lsame_(char *, char *);
+double slamch_(char* cmach);
+double slamc3_(float *a, float *b);
 double dlamch_(char* cmach);
 double dlamc3_(double *a, double *b);
+
+int sgesdd_(char *jobz, int *m, int *n, float *a, int *lda, 
+	float *s, float *u, int *ldu, float *vt, int *ldvt, float *work, 
+	int *lwork, int *iwork, int *info);
 
 #ifdef __cplusplus
 }

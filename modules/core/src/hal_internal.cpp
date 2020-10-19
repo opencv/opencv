@@ -109,8 +109,7 @@ lapack_LU(fptype* a, size_t a_step, int m, fptype* b, size_t b_step, int n, int*
         if(n == 1 && b_step == sizeof(fptype))
         {
             if(typeid(fptype) == typeid(float))
-                //sgesv_(&m, &n, (float*)a, &lda, piv, (float*)b, &m, info);
-                return CV_HAL_ERROR_NOT_IMPLEMENTED;
+                sgesv_(&m, &n, (float*)a, &lda, piv, (float*)b, &m, info);
             else if(typeid(fptype) == typeid(double))
                 dgesv_(&m, &n, (double*)a, &lda, piv, (double*)b, &m, info);
         }
@@ -122,8 +121,7 @@ lapack_LU(fptype* a, size_t a_step, int m, fptype* b, size_t b_step, int n, int*
             transpose(b, ldb, tmpB, m, m, n);
 
             if(typeid(fptype) == typeid(float))
-                //sgesv_(&m, &n, (float*)a, &lda, piv, (float*)tmpB, &m, info);
-                return CV_HAL_ERROR_NOT_IMPLEMENTED;
+                sgesv_(&m, &n, (float*)a, &lda, piv, (float*)tmpB, &m, info);
             else if(typeid(fptype) == typeid(double))
                 dgesv_(&m, &n, (double*)a, &lda, piv, (double*)tmpB, &m, info);
 
@@ -134,8 +132,7 @@ lapack_LU(fptype* a, size_t a_step, int m, fptype* b, size_t b_step, int n, int*
     else
     {
         if(typeid(fptype) == typeid(float))
-            //sgetrf_(&m, &m, (float*)a, &lda, piv, info);
-            return CV_HAL_ERROR_NOT_IMPLEMENTED;
+            sgetrf_(&m, &m, (float*)a, &lda, piv, info);
         else if(typeid(fptype) == typeid(double))
             dgetrf_(&m, &m, (double*)a, &lda, piv, info);
     }
@@ -165,8 +162,7 @@ lapack_Cholesky(fptype* a, size_t a_step, int m, fptype* b, size_t b_step, int n
         if(n == 1 && b_step == sizeof(fptype))
         {
             if(typeid(fptype) == typeid(float))
-                //sposv_(L, &m, &n, (float*)a, &lda, (float*)b, &m, &lapackStatus);
-                return CV_HAL_ERROR_NOT_IMPLEMENTED;
+                sposv_(L, &m, &n, (float*)a, &lda, (float*)b, &m, &lapackStatus);
             else if(typeid(fptype) == typeid(double))
                 dposv_(L, &m, &n, (double*)a, &lda, (double*)b, &m, &lapackStatus);
         }
@@ -177,8 +173,7 @@ lapack_Cholesky(fptype* a, size_t a_step, int m, fptype* b, size_t b_step, int n
             transpose(b, ldb, tmpB, m, m, n);
 
             if(typeid(fptype) == typeid(float))
-                //sposv_(L, &m, &n, (float*)a, &lda, (float*)tmpB, &m, &lapackStatus);
-                return CV_HAL_ERROR_NOT_IMPLEMENTED;
+                sposv_(L, &m, &n, (float*)a, &lda, (float*)tmpB, &m, &lapackStatus);
             else if(typeid(fptype) == typeid(double))
                 dposv_(L, &m, &n, (double*)a, &lda, (double*)tmpB, &m, &lapackStatus);
 
@@ -189,8 +184,7 @@ lapack_Cholesky(fptype* a, size_t a_step, int m, fptype* b, size_t b_step, int n
     else
     {
         if(typeid(fptype) == typeid(float))
-            //spotrf_(L, &m, (float*)a, &lda, &lapackStatus);
-            return CV_HAL_ERROR_NOT_IMPLEMENTED;
+            spotrf_(L, &m, (float*)a, &lda, &lapackStatus);
         else if(typeid(fptype) == typeid(double))
             dpotrf_(L, &m, (double*)a, &lda, &lapackStatus);
     }
@@ -208,7 +202,8 @@ lapack_SVD(fptype* a, size_t a_step, fptype *w, fptype* u, size_t u_step, fptype
     int ldv = (int)(v_step / sizeof(fptype));
     int ldu = (int)(u_step / sizeof(fptype));
     int lwork = -1;
-    int* iworkBuf = new int[8*std::min(m, n)];
+    std::vector<int> iworkBuf(8*std::min(m, n));
+    std::vector<fptype> ubuf;
     fptype work1 = 0;
 
     //A already transposed and m>=n
@@ -227,24 +222,30 @@ lapack_SVD(fptype* a, size_t a_step, fptype *w, fptype* u, size_t u_step, fptype
 
     if((flags & CV_HAL_SVD_MODIFY_A) && (flags & CV_HAL_SVD_FULL_UV)) //U stored in a
     {
-        u = new fptype[m*m];
+        ubuf.resize(m*m);
+        u = &ubuf[0];
         ldu = m;
     }
 
     if(typeid(fptype) == typeid(float))
-        //sgesdd_(mode, &m, &n, (float*)a, &lda, (float*)w, (float*)u, &ldu, (float*)vt, &ldv, (float*)&work1, &lwork, iworkBuf, info);
-        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+        sgesdd_(mode, &m, &n, (float*)a, &lda, (float*)w, (float*)u, &ldu,
+                (float*)vt, &ldv, (float*)&work1, &lwork, &iworkBuf[0], info);
     else if(typeid(fptype) == typeid(double))
-        dgesdd_(mode, &m, &n, (double*)a, &lda, (double*)w, (double*)u, &ldu, (double*)vt, &ldv, (double*)&work1, &lwork, iworkBuf, info);
+        dgesdd_(mode, &m, &n, (double*)a, &lda, (double*)w, (double*)u, &ldu,
+                (double*)vt, &ldv, (double*)&work1, &lwork, &iworkBuf[0], info);
+
+    if(*info < 0)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
     lwork = (int)round(work1); //optimal buffer size
-    fptype* buffer = new fptype[lwork + 1];
+    std::vector<fptype> buffer(lwork + 1);
 
     if(typeid(fptype) == typeid(float))
-        //sgesdd_(mode, &m, &n, (float*)a, &lda, (float*)w, (float*)u, &ldu, (float*)vt, &ldv, (float*)buffer, &lwork, iworkBuf, info);
-        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+        sgesdd_(mode, &m, &n, (float*)a, &lda, (float*)w, (float*)u, &ldu,
+                (float*)vt, &ldv, (float*)&buffer[0], &lwork, &iworkBuf[0], info);
     else if(typeid(fptype) == typeid(double))
-        dgesdd_(mode, &m, &n, (double*)a, &lda, (double*)w, (double*)u, &ldu, (double*)vt, &ldv, (double*)buffer, &lwork, iworkBuf, info);
+        dgesdd_(mode, &m, &n, (double*)a, &lda, (double*)w, (double*)u, &ldu,
+                (double*)vt, &ldv, (double*)&buffer[0], &lwork, &iworkBuf[0], info);
 
     if(!(flags & CV_HAL_SVD_NO_UV))
         transpose_square_inplace(vt, ldv, n);
@@ -254,11 +255,10 @@ lapack_SVD(fptype* a, size_t a_step, fptype *w, fptype* u, size_t u_step, fptype
         for(int i = 0; i < m; i++)
             for(int j = 0; j < m; j++)
                 a[i*lda + j] = u[i*m + j];
-        delete[] u;
     }
 
-    delete[] iworkBuf;
-    delete[] buffer;
+    if(*info < 0)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
     return CV_HAL_ERROR_OK;
 }
 
@@ -295,8 +295,7 @@ lapack_QR(fptype* a, size_t a_step, int m, int n, int k, fptype* b, size_t b_ste
         if (k == 1 && b_step == sizeof(fptype))
         {
             if (typeid(fptype) == typeid(float))
-                //sgels_(mode, &m, &n, &k, (float*)tmpA, &ldtmpA, (float*)b, &m, (float*)&work1, &lwork, info);
-                return CV_HAL_ERROR_NOT_IMPLEMENTED;
+                sgels_(mode, &m, &n, &k, (float*)tmpA, &ldtmpA, (float*)b, &m, (float*)&work1, &lwork, info);
             else if (typeid(fptype) == typeid(double))
                 dgels_(mode, &m, &n, &k, (double*)tmpA, &ldtmpA, (double*)b, &m, (double*)&work1, &lwork, info);
 
@@ -305,8 +304,7 @@ lapack_QR(fptype* a, size_t a_step, int m, int n, int k, fptype* b, size_t b_ste
             fptype* buffer = &workBufMemHolder.front();
 
             if (typeid(fptype) == typeid(float))
-                //sgels_(mode, &m, &n, &k, (float*)tmpA, &ldtmpA, (float*)b, &m, (float*)buffer, &lwork, info);
-                return CV_HAL_ERROR_NOT_IMPLEMENTED;
+                sgels_(mode, &m, &n, &k, (float*)tmpA, &ldtmpA, (float*)b, &m, (float*)buffer, &lwork, info);
             else if (typeid(fptype) == typeid(double))
                 dgels_(mode, &m, &n, &k, (double*)tmpA, &ldtmpA, (double*)b, &m, (double*)buffer, &lwork, info);
         }
@@ -318,8 +316,7 @@ lapack_QR(fptype* a, size_t a_step, int m, int n, int k, fptype* b, size_t b_ste
             transpose(b, ldb, tmpB, m, m, k);
 
             if (typeid(fptype) == typeid(float))
-                //sgels_(mode, &m, &n, &k, (float*)tmpA, &ldtmpA, (float*)tmpB, &m, (float*)&work1, &lwork, info);
-                return CV_HAL_ERROR_NOT_IMPLEMENTED;
+                sgels_(mode, &m, &n, &k, (float*)tmpA, &ldtmpA, (float*)tmpB, &m, (float*)&work1, &lwork, info);
             else if (typeid(fptype) == typeid(double))
                 dgels_(mode, &m, &n, &k, (double*)tmpA, &ldtmpA, (double*)tmpB, &m, (double*)&work1, &lwork, info);
 
@@ -328,8 +325,7 @@ lapack_QR(fptype* a, size_t a_step, int m, int n, int k, fptype* b, size_t b_ste
             fptype* buffer = &workBufMemHolder.front();
 
             if (typeid(fptype) == typeid(float))
-                //sgels_(mode, &m, &n, &k, (float*)tmpA, &ldtmpA, (float*)tmpB, &m, (float*)buffer, &lwork, info);
-                return CV_HAL_ERROR_NOT_IMPLEMENTED;
+                sgels_(mode, &m, &n, &k, (float*)tmpA, &ldtmpA, (float*)tmpB, &m, (float*)buffer, &lwork, info);
             else if (typeid(fptype) == typeid(double))
                 dgels_(mode, &m, &n, &k, (double*)tmpA, &ldtmpA, (double*)tmpB, &m, (double*)buffer, &lwork, info);
 
@@ -339,8 +335,7 @@ lapack_QR(fptype* a, size_t a_step, int m, int n, int k, fptype* b, size_t b_ste
     else
     {
         if (typeid(fptype) == typeid(float))
-            //sgeqrf_(&m, &n, (float*)tmpA, &ldtmpA, (float*)dst, (float*)&work1, &lwork, info);
-            return CV_HAL_ERROR_NOT_IMPLEMENTED;
+            sgeqrf_(&m, &n, (float*)tmpA, &ldtmpA, (float*)dst, (float*)&work1, &lwork, info);
         else if (typeid(fptype) == typeid(double))
             dgeqrf_(&m, &n, (double*)tmpA, &ldtmpA, (double*)dst, (double*)&work1, &lwork, info);
 
@@ -349,8 +344,7 @@ lapack_QR(fptype* a, size_t a_step, int m, int n, int k, fptype* b, size_t b_ste
         fptype* buffer = &workBufMemHolder.front();
 
         if (typeid(fptype) == typeid(float))
-            //sgeqrf_(&m, &n, (float*)tmpA, &ldtmpA, (float*)dst, (float*)buffer, &lwork, info);
-            return CV_HAL_ERROR_NOT_IMPLEMENTED;
+            sgeqrf_(&m, &n, (float*)tmpA, &ldtmpA, (float*)dst, (float*)buffer, &lwork, info);
         else if (typeid(fptype) == typeid(double))
             dgeqrf_(&m, &n, (double*)tmpA, &ldtmpA, (double*)dst, (double*)buffer, &lwork, info);
     }
@@ -552,19 +546,17 @@ int lapack_Cholesky64f(double* a, size_t a_step, int m, double* b, size_t b_step
 
 int lapack_SVD32f(float* a, size_t a_step, float *w, float* u, size_t u_step, float* vt, size_t v_step, int m, int n, int flags)
 {
-
-    if(m < HAL_SVD_SMALL_MATRIX_THRESH)
+    if(m < HAL_SVD_SMALL_MATRIX_THRESH || n <= 0)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
-    int info;
+    int info = 0;
     return lapack_SVD(a, a_step, w, u, u_step, vt, v_step, m, n, flags, &info);
 }
 
 int lapack_SVD64f(double* a, size_t a_step, double *w, double* u, size_t u_step, double* vt, size_t v_step, int m, int n, int flags)
 {
-
-    if(m < HAL_SVD_SMALL_MATRIX_THRESH)
+    if(m < HAL_SVD_SMALL_MATRIX_THRESH || n <= 0)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
-    int info;
+    int info = 0;
     return lapack_SVD(a, a_step, w, u, u_step, vt, v_step, m, n, flags, &info);
 }
 
