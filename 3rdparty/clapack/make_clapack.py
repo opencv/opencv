@@ -159,6 +159,8 @@ for iters in range(100):
                 if p1 != p0:
                     func_home[func] = p1
                     homes_changed = True
+    if not homes_changed:
+        break
 
 res_files = {}
 for (func, h) in func_home.items():

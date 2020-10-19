@@ -47,4 +47,4 @@ if(NOT BUILD_SHARED_LIBS)
   ocv_install_target(${the_target} EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev)
 endif()
 
-ocv_install_3rdparty_licenses(${the_target} clapack_LICENSE)
+ocv_install_3rdparty_licenses(${the_target} lapack_LICENSE)
