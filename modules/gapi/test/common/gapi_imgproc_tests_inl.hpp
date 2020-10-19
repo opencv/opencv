@@ -580,8 +580,8 @@ TEST_P(BoundingRectVector32FTest, AccuracyTest)
 
     std::vector<cv::Point2f> in_vectorF(sz.width);
     for (int i = 0; i < sz.width; i++)
-        in_vectorF.push_back(cv::Point2f(expf(rng.uniform(-1, 6) * 3.0f * CV_LOG2),
-                                         expf(rng.uniform(-1, 6) * 3.0f * CV_LOG2)));
+        in_vectorF.push_back(cv::Point2f(expf(rng.uniform(-1, 6) * 3.0f * static_cast<float>(CV_LOG2)),
+                                         expf(rng.uniform(-1, 6) * 3.0f * static_cast<float>(CV_LOG2))));
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GArray<cv::Point2f> in;
