@@ -1,7 +1,6 @@
 #include <opencv2/imgproc.hpp>
 
 #include "api/render_ocv.hpp"
-#include "backends/render/grenderocv.hpp"
 
 #include <opencv2/gapi/cpu/gcpukernel.hpp>
 #include <opencv2/gapi/fluid/core.hpp>

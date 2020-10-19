@@ -2,7 +2,7 @@
 #include <opencv2/gapi/render/render.hpp> // Kernel API's
 
 #include "api/render_ocv.hpp"
-#include "api/ft_render.hpp"
+#include "backends/render/ft_render.hpp"
 
 namespace cv
 {

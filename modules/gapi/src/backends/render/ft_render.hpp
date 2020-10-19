@@ -23,17 +23,26 @@ namespace wip
 namespace draw
 {
 
+#ifdef HAVE_FREETYPE
+
 class GAPI_EXPORTS FTTextRender
 {
 public:
+    class Priv;
     explicit FTTextRender(const std::string& path);
+
     cv::Size getTextSize(const std::wstring& text, int fh, int* baseline);
     void putText(cv::Mat& mat, const std::wstring& text, const cv::Point& org, int fh);
 
 private:
-    class Priv;
     std::shared_ptr<Priv> m_priv;
 };
+
+#else
+
+class GAPI_EXPORTS FTTextRender {};
+
+#endif // HAVE_FREETYPE
 
 } // namespace draw
 } // namespace wip

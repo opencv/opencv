@@ -77,7 +77,6 @@ set(gapi_srcs
     src/api/render.cpp
     src/api/render_ocv.cpp
     src/api/ginfer.cpp
-    src/api/ft_render.cpp
     src/api/media.cpp
     src/api/rmat.cpp
 
@@ -132,6 +131,7 @@ set(gapi_srcs
 
     # Render Backend.
     src/backends/render/grenderocv.cpp
+    src/backends/render/ft_render.cpp
 
     #PlaidML Backend
     src/backends/plaidml/gplaidmlcore.cpp
