@@ -1,9 +1,5 @@
-import argparse
-import cv2 as cv
-import numpy as np
-import os
-
 """
+SiamRPN++ tracker.
 Link to original paper : https://arxiv.org/abs/1812.11703
 Link to original repo  : https://github.com/STVIR/pysot
 
@@ -13,7 +9,13 @@ You can download the search net (search branch of SiamRPN++) from https://drive.
 You can download the head model (RPN Head) from https://drive.google.com/file/d/1zT1yu12mtj3JQEkkfKFJWiZ71fJ-dQTi/view?usp=sharing
 """
 
-class ModelBuilder():
+import argparse
+import cv2 as cv
+import numpy as np
+import os
+
+
+class ModelBuilder:
     """ This class generates the SiamRPN++ Tracker Model by using Imported ONNX Nets
     """
     def __init__(self, target_net, search_net, rpn_head):
@@ -43,6 +45,7 @@ class ModelBuilder():
         outNames = self.rpn_head.getUnconnectedOutLayersNames()
         cls, loc = self.rpn_head.forward(outNames)
         return {'cls': cls, 'loc': loc}
+
 
 class Anchors:
     """ This class generate anchors.
@@ -74,25 +77,29 @@ class Anchors:
                 count += 1
         return anchors
 
+
 class SiamRPNTracker:
     def __init__(self, model):
         super(SiamRPNTracker, self).__init__()
+        windowing = "cosine"
+        self.base_size = 8
+        self.exemplar_size = 127
+        self.instance_size = 255
         self.anchor_stride = 8
         self.anchor_ratios = [0.33, 0.5, 1, 2, 3]
         self.anchor_scales = [8]
-        self.track_base_size = 8
-        self.track_context_amount = 0.5
-        self.track_exemplar_size = 127
-        self.track_instance_size = 255
-        self.track_lr = 0.4
-        self.track_penalty_k = 0.04
-        self.track_window_influence = 0.44
-        self.score_size = (self.track_instance_size - self.track_exemplar_size) // \
-                          self.anchor_stride + 1 + self.track_base_size
         self.anchor_num = len(self.anchor_ratios) * len(self.anchor_scales)
-        hanning = np.hanning(self.score_size)
-        window = np.outer(hanning, hanning)
-        self.window = np.tile(window.flatten(), self.anchor_num)
+        self.context_amount = 0.5
+        self.score_size = (self.instance_size - self.exemplar_size) // \
+                          self.anchor_stride + 1 + self.base_size
+        self.penalty_k = 0.04
+        self.window_influence = 0.44
+        self.lr = 0.4
+        if windowing == "cosine":
+            self.window = np.outer(np.hanning(self.score_size), np.hanning(self.score_size))
+        elif windowing == "uniform":
+            self.window = np.ones((self.score_size, self.score_size))
+        self.window = np.tile(self.window.flatten(), self.anchor_num)
         self.anchors = self.generate_anchor(self.score_size)
         self.model = model
 
@@ -240,11 +247,11 @@ class SiamRPNTracker:
         self.center_pos = np.array([x + (w - 1) / 2, y + (h - 1) / 2])
         self.h = h
         self.w = w
-        w_z = self.w + self.track_context_amount * np.add(h, w)
-        h_z = self.h + self.track_context_amount * np.add(h, w)
+        w_z = self.w + self.context_amount * np.add(h, w)
+        h_z = self.h + self.context_amount * np.add(h, w)
         s_z = round(np.sqrt(w_z * h_z))
         self.channel_average = np.mean(img, axis=(0, 1))
-        z_crop = self.get_subwindow(img, self.center_pos, self.track_exemplar_size, s_z, self.channel_average)
+        z_crop = self.get_subwindow(img, self.center_pos, self.exemplar_size, s_z, self.channel_average)
         self.model.template(z_crop)
 
     def track(self, img):
@@ -254,12 +261,12 @@ class SiamRPNTracker:
         Return:
             bbox(list):[x, y, width, height]
         """
-        w_z = self.w + self.track_context_amount * np.add(self.w, self.h)
-        h_z = self.h + self.track_context_amount * np.add(self.w, self.h)
+        w_z = self.w + self.context_amount * np.add(self.w, self.h)
+        h_z = self.h + self.context_amount * np.add(self.w, self.h)
         s_z = np.sqrt(w_z * h_z)
-        scale_z = self.track_exemplar_size / s_z
-        s_x = s_z * (self.track_instance_size / self.track_exemplar_size)
-        x_crop = self.get_subwindow(img, self.center_pos, self.track_instance_size, round(s_x), self.channel_average)
+        scale_z = self.exemplar_size / s_z
+        s_x = s_z * (self.instance_size / self.exemplar_size)
+        x_crop = self.get_subwindow(img, self.center_pos, self.instance_size, round(s_x), self.channel_average)
         outputs = self.model.track(x_crop)
         score = self._convert_score(outputs['cls'])
         pred_bbox = self._convert_bbox(outputs['loc'], self.anchors)
@@ -278,15 +285,15 @@ class SiamRPNTracker:
         # aspect ratio penalty
         r_c = change((self.w / self.h) /
                      (pred_bbox[2, :] / pred_bbox[3, :]))
-        penalty = np.exp(-(r_c * s_c - 1) * self.track_penalty_k)
+        penalty = np.exp(-(r_c * s_c - 1) * self.penalty_k)
         pscore = penalty * score
 
         # window penalty
-        pscore = pscore * (1 - self.track_window_influence) + \
-                 self.window * self.track_window_influence
+        pscore = pscore * (1 - self.window_influence) + \
+                 self.window * self.window_influence
         best_idx = np.argmax(pscore)
         bbox = pred_bbox[:, best_idx] / scale_z
-        lr = penalty[best_idx] * score[best_idx] * self.track_lr
+        lr = penalty[best_idx] * score[best_idx] * self.lr
 
         cpx, cpy = self.center_pos
         x,y,w,h = bbox

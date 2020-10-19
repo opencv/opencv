@@ -1,6 +1,6 @@
 """
 DaSiamRPN tracker.
-Original paper: https://arxiv.org/abs/1808.06048
+Link to original paper: https://arxiv.org/abs/1808.06048
 Link to original repo: https://github.com/foolwood/DaSiamRPN
 Links to onnx models:
 network:     https://www.dropbox.com/s/rr1lk9355vzolqv/dasiamrpn_model.onnx?dl=0
@@ -8,32 +8,33 @@ kernel_r1:   https://www.dropbox.com/s/999cqx5zrfi7w4p/dasiamrpn_kernel_r1.onnx?
 kernel_cls1: https://www.dropbox.com/s/qvmtszx5h339a0w/dasiamrpn_kernel_cls1.onnx?dl=0
 """
 
-import numpy as np
-import cv2 as cv
 import argparse
+import cv2 as cv
+import numpy as np
 import sys
+
 
 class DaSiamRPNTracker:
     # Initialization of used values, initial bounding box, used network
     def __init__(self, net="dasiamrpn_model.onnx", kernel_r1="dasiamrpn_kernel_r1.onnx", kernel_cls1="dasiamrpn_kernel_cls1.onnx"):
-        self.windowing = "cosine"
+        windowing = "cosine"
         self.exemplar_size = 127
         self.instance_size = 271
-        self.total_stride = 8
-        self.score_size = (self.instance_size - self.exemplar_size) // self.total_stride + 1
+        self.anchor_stride = 8
+        self.anchor_ratios = [0.33, 0.5, 1, 2, 3]
+        self.anchor_scales = [8]
+        self.anchor_num = len(self.anchor_ratios) * len(self.anchor_scales)
         self.context_amount = 0.5
-        self.ratios = [0.33, 0.5, 1, 2, 3]
-        self.scales = [8, ]
-        self.anchor_num = len(self.ratios) * len(self.scales)
+        self.score_size = (self.instance_size - self.exemplar_size) // self.anchor_stride + 1
         self.penalty_k = 0.055
         self.window_influence = 0.42
         self.lr = 0.295
-        self.score = []
-        if self.windowing == "cosine":
+        if windowing == "cosine":
             self.window = np.outer(np.hanning(self.score_size), np.hanning(self.score_size))
         elif self.windowing == "uniform":
             self.window = np.ones((self.score_size, self.score_size))
         self.window = np.tile(self.window.flatten(), self.anchor_num)
+        self.score = []
         # Loading network`s and kernel`s models
         self.net = cv.dnn.readNet(net)
         self.kernel_r1 = cv.dnn.readNet(kernel_r1)
@@ -54,7 +55,7 @@ class DaSiamRPNTracker:
         # work properly with such small bounding boxes
         if ((self.target_sz[0] * self.target_sz[1]) / float(self.im_h * self.im_w)) < 0.004:
             raise AssertionError(
-        "Initializing BB is too small-try to restart tracker with larger BB")
+                "Initializing BB is too small-try to restart tracker with larger BB")
 
         self.anchor = self.__generate_anchor()
         wc_z = self.target_sz[0] + self.context_amount * sum(self.target_sz)
@@ -76,13 +77,13 @@ class DaSiamRPNTracker:
     # Сreating anchor for tracking bounding box
     def __generate_anchor(self):
         self.anchor = np.zeros((self.anchor_num, 4),  dtype = np.float32)
-        size = self.total_stride * self.total_stride
+        size = self.anchor_stride * self.anchor_stride
         count = 0
 
-        for ratio in self.ratios:
+        for ratio in self.anchor_ratios:
             ws = int(np.sqrt(size / ratio))
             hs = int(ws * ratio)
-            for scale in self.scales:
+            for scale in self.anchor_scales:
                 wws = ws * scale
                 hhs = hs * scale
                 self.anchor[count] = [0, 0, wws, hhs]
@@ -90,8 +91,8 @@ class DaSiamRPNTracker:
 
         score_sz = int(self.score_size)
         self.anchor = np.tile(self.anchor, score_sz * score_sz).reshape((-1, 4))
-        ori = - (score_sz / 2) * self.total_stride
-        xx, yy = np.meshgrid([ori + self.total_stride * dx for dx in range(score_sz)], [ori + self.total_stride * dy for dy in range(score_sz)])
+        ori = - (score_sz / 2) * self.anchor_stride
+        xx, yy = np.meshgrid([ori + self.anchor_stride * dx for dx in range(score_sz)], [ori + self.anchor_stride * dy for dy in range(score_sz)])
         xx, yy = np.tile(xx.flatten(), (self.anchor_num, 1)).flatten(), np.tile(yy.flatten(), (self.anchor_num, 1)).flatten()
         self.anchor[:, 0], self.anchor[:, 1] = xx.astype(np.float32), yy.astype(np.float32)
         return self.anchor
