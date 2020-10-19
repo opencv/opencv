@@ -83,16 +83,12 @@ static __inline int i_nint(float *x)
 }
 
 int pow_ii(int *ap, int *bp);
+double pow_di(double *ap, int *bp);
 static __inline double pow_ri(float *ap, int *bp)
 {
-    return pow((double)*ap, (double)*bp);
+    double apd = *ap;
+    return pow_di(&apd, bp);
 }
-
-static __inline double pow_di(double *ap, int *bp)
-{
-    return pow(*ap, (double)*bp);
-}
-
 static __inline double pow_dd(double *ap, double *bp)
 {
     return pow(*ap, *bp);
