@@ -353,7 +353,7 @@ int ieeeck_(int *ispec, float *zero, float *one)
 //> \endverbatim
 //>
 // =====================================================================
-int ilaenv_(int *ispec, char *name__, char *opts, int *n1, int *n2, int *n3, 
+int ilaenv_(int *ispec, char *name__, char *opts, int *n1, int *n2, int *n3,
 	int *n4)
 {
     // Table of constant values
@@ -364,10 +364,6 @@ int ilaenv_(int *ispec, char *name__, char *opts, int *n1, int *n2, int *n3,
 
     // System generated locals
     int ret_val;
-
-    // Builtin functions
-    /* Subroutine */ int s_copy(char *, char *);
-    int i_len(char *), s_cmp(char *, char *);
 
     // Local variables
     int twostage;
@@ -449,12 +445,12 @@ L10:
 	//
 	//       EBCDIC character set
 	//
-	if (ic >= 129 && ic <= 137 || ic >= 145 && ic <= 153 || ic >= 162 && 
+	if (ic >= 129 && ic <= 137 || ic >= 145 && ic <= 153 || ic >= 162 &&
 		ic <= 169) {
 	    *(unsigned char *)subnam = (char) (ic + 64);
 	    for (i__ = 2; i__ <= 6; ++i__) {
 		ic = *(unsigned char *)&subnam[i__ - 1];
-		if (ic >= 129 && ic <= 137 || ic >= 145 && ic <= 153 || ic >= 
+		if (ic >= 129 && ic <= 137 || ic >= 145 && ic <= 153 || ic >=
 			162 && ic <= 169) {
 		    *(unsigned char *)&subnam[i__ - 1] = (char) (ic + 64);
 		}
@@ -630,28 +626,28 @@ L50:
 	}
     } else if (sname && s_cmp(c2, "OR") == 0) {
 	if (*(unsigned char *)c3 == 'G') {
-	    if (s_cmp(c4, "QR") == 0 || s_cmp(c4, "RQ") == 0 || s_cmp(c4, 
-		    "LQ") == 0 || s_cmp(c4, "QL") == 0 || s_cmp(c4, "HR") == 
+	    if (s_cmp(c4, "QR") == 0 || s_cmp(c4, "RQ") == 0 || s_cmp(c4,
+		    "LQ") == 0 || s_cmp(c4, "QL") == 0 || s_cmp(c4, "HR") ==
 		    0 || s_cmp(c4, "TR") == 0 || s_cmp(c4, "BR") == 0) {
 		nb = 32;
 	    }
 	} else if (*(unsigned char *)c3 == 'M') {
-	    if (s_cmp(c4, "QR") == 0 || s_cmp(c4, "RQ") == 0 || s_cmp(c4, 
-		    "LQ") == 0 || s_cmp(c4, "QL") == 0 || s_cmp(c4, "HR") == 
+	    if (s_cmp(c4, "QR") == 0 || s_cmp(c4, "RQ") == 0 || s_cmp(c4,
+		    "LQ") == 0 || s_cmp(c4, "QL") == 0 || s_cmp(c4, "HR") ==
 		    0 || s_cmp(c4, "TR") == 0 || s_cmp(c4, "BR") == 0) {
 		nb = 32;
 	    }
 	}
     } else if (cname && s_cmp(c2, "UN") == 0) {
 	if (*(unsigned char *)c3 == 'G') {
-	    if (s_cmp(c4, "QR") == 0 || s_cmp(c4, "RQ") == 0 || s_cmp(c4, 
-		    "LQ") == 0 || s_cmp(c4, "QL") == 0 || s_cmp(c4, "HR") == 
+	    if (s_cmp(c4, "QR") == 0 || s_cmp(c4, "RQ") == 0 || s_cmp(c4,
+		    "LQ") == 0 || s_cmp(c4, "QL") == 0 || s_cmp(c4, "HR") ==
 		    0 || s_cmp(c4, "TR") == 0 || s_cmp(c4, "BR") == 0) {
 		nb = 32;
 	    }
 	} else if (*(unsigned char *)c3 == 'M') {
-	    if (s_cmp(c4, "QR") == 0 || s_cmp(c4, "RQ") == 0 || s_cmp(c4, 
-		    "LQ") == 0 || s_cmp(c4, "QL") == 0 || s_cmp(c4, "HR") == 
+	    if (s_cmp(c4, "QR") == 0 || s_cmp(c4, "RQ") == 0 || s_cmp(c4,
+		    "LQ") == 0 || s_cmp(c4, "QL") == 0 || s_cmp(c4, "HR") ==
 		    0 || s_cmp(c4, "TR") == 0 || s_cmp(c4, "BR") == 0) {
 		nb = 32;
 	    }
@@ -774,28 +770,28 @@ L60:
 	}
     } else if (sname && s_cmp(c2, "OR") == 0) {
 	if (*(unsigned char *)c3 == 'G') {
-	    if (s_cmp(c4, "QR") == 0 || s_cmp(c4, "RQ") == 0 || s_cmp(c4, 
-		    "LQ") == 0 || s_cmp(c4, "QL") == 0 || s_cmp(c4, "HR") == 
+	    if (s_cmp(c4, "QR") == 0 || s_cmp(c4, "RQ") == 0 || s_cmp(c4,
+		    "LQ") == 0 || s_cmp(c4, "QL") == 0 || s_cmp(c4, "HR") ==
 		    0 || s_cmp(c4, "TR") == 0 || s_cmp(c4, "BR") == 0) {
 		nbmin = 2;
 	    }
 	} else if (*(unsigned char *)c3 == 'M') {
-	    if (s_cmp(c4, "QR") == 0 || s_cmp(c4, "RQ") == 0 || s_cmp(c4, 
-		    "LQ") == 0 || s_cmp(c4, "QL") == 0 || s_cmp(c4, "HR") == 
+	    if (s_cmp(c4, "QR") == 0 || s_cmp(c4, "RQ") == 0 || s_cmp(c4,
+		    "LQ") == 0 || s_cmp(c4, "QL") == 0 || s_cmp(c4, "HR") ==
 		    0 || s_cmp(c4, "TR") == 0 || s_cmp(c4, "BR") == 0) {
 		nbmin = 2;
 	    }
 	}
     } else if (cname && s_cmp(c2, "UN") == 0) {
 	if (*(unsigned char *)c3 == 'G') {
-	    if (s_cmp(c4, "QR") == 0 || s_cmp(c4, "RQ") == 0 || s_cmp(c4, 
-		    "LQ") == 0 || s_cmp(c4, "QL") == 0 || s_cmp(c4, "HR") == 
+	    if (s_cmp(c4, "QR") == 0 || s_cmp(c4, "RQ") == 0 || s_cmp(c4,
+		    "LQ") == 0 || s_cmp(c4, "QL") == 0 || s_cmp(c4, "HR") ==
 		    0 || s_cmp(c4, "TR") == 0 || s_cmp(c4, "BR") == 0) {
 		nbmin = 2;
 	    }
 	} else if (*(unsigned char *)c3 == 'M') {
-	    if (s_cmp(c4, "QR") == 0 || s_cmp(c4, "RQ") == 0 || s_cmp(c4, 
-		    "LQ") == 0 || s_cmp(c4, "QL") == 0 || s_cmp(c4, "HR") == 
+	    if (s_cmp(c4, "QR") == 0 || s_cmp(c4, "RQ") == 0 || s_cmp(c4,
+		    "LQ") == 0 || s_cmp(c4, "QL") == 0 || s_cmp(c4, "HR") ==
 		    0 || s_cmp(c4, "TR") == 0 || s_cmp(c4, "BR") == 0) {
 		nbmin = 2;
 	    }
@@ -844,16 +840,16 @@ L70:
 	}
     } else if (sname && s_cmp(c2, "OR") == 0) {
 	if (*(unsigned char *)c3 == 'G') {
-	    if (s_cmp(c4, "QR") == 0 || s_cmp(c4, "RQ") == 0 || s_cmp(c4, 
-		    "LQ") == 0 || s_cmp(c4, "QL") == 0 || s_cmp(c4, "HR") == 
+	    if (s_cmp(c4, "QR") == 0 || s_cmp(c4, "RQ") == 0 || s_cmp(c4,
+		    "LQ") == 0 || s_cmp(c4, "QL") == 0 || s_cmp(c4, "HR") ==
 		    0 || s_cmp(c4, "TR") == 0 || s_cmp(c4, "BR") == 0) {
 		nx = 128;
 	    }
 	}
     } else if (cname && s_cmp(c2, "UN") == 0) {
 	if (*(unsigned char *)c3 == 'G') {
-	    if (s_cmp(c4, "QR") == 0 || s_cmp(c4, "RQ") == 0 || s_cmp(c4, 
-		    "LQ") == 0 || s_cmp(c4, "QL") == 0 || s_cmp(c4, "HR") == 
+	    if (s_cmp(c4, "QR") == 0 || s_cmp(c4, "RQ") == 0 || s_cmp(c4,
+		    "LQ") == 0 || s_cmp(c4, "QL") == 0 || s_cmp(c4, "HR") ==
 		    0 || s_cmp(c4, "TR") == 0 || s_cmp(c4, "BR") == 0) {
 		nx = 128;
 	    }
@@ -1159,18 +1155,12 @@ L160:
 //> \endverbatim
 //>
 // =====================================================================
-int iparmq_(int *ispec, char *name__, char *opts, int *n, int *ilo, int *ihi, 
+int iparmq_(int *ispec, char *name__, char *opts, int *n, int *ilo, int *ihi,
 	int *lwork)
 {
     // System generated locals
     int ret_val, i__1, i__2;
     float r__1;
-
-    // Builtin functions
-    double log(double);
-    int i_nint(float *);
-    /* Subroutine */ int s_copy(char *, char *);
-    int s_cmp(char *, char *);
 
     // Local variables
     int i__, ic, nh, ns, iz;
@@ -1285,12 +1275,12 @@ int iparmq_(int *ispec, char *name__, char *opts, int *n, int *ilo, int *ihi,
 	    //
 	    //          EBCDIC character set
 	    //
-	    if (ic >= 129 && ic <= 137 || ic >= 145 && ic <= 153 || ic >= 162 
+	    if (ic >= 129 && ic <= 137 || ic >= 145 && ic <= 153 || ic >= 162
 		    && ic <= 169) {
 		*(unsigned char *)subnam = (char) (ic + 64);
 		for (i__ = 2; i__ <= 6; ++i__) {
 		    ic = *(unsigned char *)&subnam[i__ - 1];
-		    if (ic >= 129 && ic <= 137 || ic >= 145 && ic <= 153 || 
+		    if (ic >= 129 && ic <= 137 || ic >= 145 && ic <= 153 ||
 			    ic >= 162 && ic <= 169) {
 			*(unsigned char *)&subnam[i__ - 1] = (char) (ic + 64);
 		    }
@@ -1310,7 +1300,7 @@ int iparmq_(int *ispec, char *name__, char *opts, int *n, int *ilo, int *ihi,
 		}
 	    }
 	}
-	if (s_cmp(subnam + 1, "GGHRD") == 0 || s_cmp(subnam + 1, "GGHD3") == 
+	if (s_cmp(subnam + 1, "GGHRD") == 0 || s_cmp(subnam + 1, "GGHD3") ==
 		0) {
 	    ret_val = 1;
 	    if (nh >= 14) {

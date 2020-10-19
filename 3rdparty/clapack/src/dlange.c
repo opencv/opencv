@@ -125,9 +125,6 @@ double dlange_(char *norm, int *m, int *n, double *a, int *lda, double *work)
     int a_dim1, a_offset, i__1, i__2;
     double ret_val, d__1;
 
-    // Builtin functions
-    double sqrt(double);
-
     // Local variables
     extern /* Subroutine */ int dcombssq_(double *, double *);
     int i__, j;
@@ -135,7 +132,7 @@ double dlange_(char *norm, int *m, int *n, double *a, int *lda, double *work)
     extern int lsame_(char *, char *);
     double value;
     extern int disnan_(double *);
-    extern /* Subroutine */ int dlassq_(int *, double *, int *, double *, 
+    extern /* Subroutine */ int dlassq_(int *, double *, int *, double *,
 	    double *);
     double colssq[2];
 

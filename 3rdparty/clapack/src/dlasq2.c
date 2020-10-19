@@ -128,9 +128,6 @@
     int i__1, i__2, i__3;
     double d__1, d__2;
 
-    // Builtin functions
-    double sqrt(double);
-
     // Local variables
     double d__, e, g;
     int k;
@@ -153,9 +150,9 @@
     int iinfo;
     double tempe, tempq;
     int ttype;
-    extern /* Subroutine */ int dlasq3_(int *, int *, double *, int *, double 
+    extern /* Subroutine */ int dlasq3_(int *, int *, double *, int *, double
 	    *, double *, double *, double *, int *, int *, int *, int *, int *
-	    , double *, double *, double *, double *, double *, double *, 
+	    , double *, double *, double *, double *, double *, double *,
 	    double *);
     extern double dlamch_(char *);
     double deemin;
@@ -316,7 +313,7 @@
     //
     //    Check whether the machine is IEEE conformable.
     //
-    ieee = ilaenv_(&c__10, "DLASQ2", "N", &c__1, &c__2, &c__3, &c__4) == 1 && 
+    ieee = ilaenv_(&c__10, "DLASQ2", "N", &c__1, &c__2, &c__3, &c__4) == 1 &&
 	    ilaenv_(&c__11, "DLASQ2", "N", &c__1, &c__2, &c__3, &c__4) == 1;
     //
     //    Rearrange data for locality: Z=(q1,qq1,e1,ee1,q2,qq2,e2,ee2,...).
@@ -375,7 +372,7 @@
 		z__[i4 - (pp << 1) - 2] = d__;
 		z__[i4 - (pp << 1)] = 0.;
 		d__ = z__[i4 + 1];
-	    } else if (safmin * z__[i4 + 1] < z__[i4 - (pp << 1) - 2] && 
+	    } else if (safmin * z__[i4 + 1] < z__[i4 - (pp << 1) - 2] &&
 		    safmin * z__[i4 - (pp << 1) - 2] < z__[i4 + 1]) {
 		temp = z__[i4 + 1] / z__[i4 - (pp << 1) - 2];
 		z__[i4 - (pp << 1)] = z__[i4 - 1] * temp;
@@ -492,7 +489,7 @@ L100:
 		}
 // L110:
 	    }
-	    if (kmin - i0 << 1 < n0 - kmin && deemin <= z__[(n0 << 2) - 3] * 
+	    if (kmin - i0 << 1 < n0 - kmin && deemin <= z__[(n0 << 2) - 3] *
 		    .5) {
 		ipn4 = i0 + n0 << 2;
 		pp = 2;
@@ -552,7 +549,7 @@ L100:
 		    oldemn = z__[i0 * 4];
 		    i__3 = n0 - 3 << 2;
 		    for (i4 = i0 << 2; i4 <= i__3; i4 += 4) {
-			if (z__[i4] <= tol2 * z__[i4 - 3] || z__[i4 - 1] <= 
+			if (z__[i4] <= tol2 * z__[i4 - 3] || z__[i4 - 1] <=
 				tol2 * sigma) {
 			    z__[i4 - 1] = -sigma;
 			    splt = i4 / 4;
@@ -595,7 +592,7 @@ L145:
 	    tempe = z__[(k << 2) - 5];
 	    z__[(k << 2) - 5] *= tempq / z__[(k << 2) - 7];
 	    tempq = z__[(k << 2) - 3];
-	    z__[(k << 2) - 3] = z__[(k << 2) - 3] + sigma + tempe - z__[(k << 
+	    z__[(k << 2) - 3] = z__[(k << 2) - 3] + sigma + tempe - z__[(k <<
 		    2) - 5];
 	}
 	//
@@ -854,15 +851,12 @@ L170:
 // =====================================================================
 /* Subroutine */ int dlasq3_(int *i0, int *n0, double *z__, int *pp, double *
 	dmin__, double *sigma, double *desig, double *qmax, int *nfail, int *
-	iter, int *ndiv, int *ieee, int *ttype, double *dmin1, double *dmin2, 
+	iter, int *ndiv, int *ieee, int *ttype, double *dmin1, double *dmin2,
 	double *dn, double *dn1, double *dn2, double *g, double *tau)
 {
     // System generated locals
     int i__1;
     double d__1, d__2;
-
-    // Builtin functions
-    double sqrt(double);
 
     // Local variables
     double s, t;
@@ -870,11 +864,11 @@ L170:
     double eps, tol;
     int n0in, ipn4;
     double tol2, temp;
-    extern /* Subroutine */ int dlasq4_(int *, int *, double *, int *, int *, 
-	    double *, double *, double *, double *, double *, double *, 
+    extern /* Subroutine */ int dlasq4_(int *, int *, double *, int *, int *,
+	    double *, double *, double *, double *, double *, double *,
 	    double *, int *, double *), dlasq5_(int *, int *, double *, int *,
-	     double *, double *, double *, double *, double *, double *, 
-	    double *, double *, int *, double *), dlasq6_(int *, int *, 
+	     double *, double *, double *, double *, double *, double *,
+	    double *, double *, int *, double *), dlasq6_(int *, int *,
 	    double *, int *, double *, double *, double *, double *, double *,
 	     double *);
     extern double dlamch_(char *);
@@ -932,7 +926,7 @@ L10:
     //
     //    Check whether E(N0-1) is negligible, 1 eigenvalue.
     //
-    if (z__[nn - 5] > tol2 * (*sigma + z__[nn - 3]) && z__[nn - (*pp << 1) - 
+    if (z__[nn - 5] > tol2 * (*sigma + z__[nn - 3]) && z__[nn - (*pp << 1) -
 	    4] > tol2 * z__[nn - 7]) {
 	goto L30;
     }
@@ -1021,13 +1015,13 @@ L50:
     //
     //    Choose a shift.
     //
-    dlasq4_(i0, n0, &z__[1], pp, &n0in, dmin__, dmin1, dmin2, dn, dn1, dn2, 
+    dlasq4_(i0, n0, &z__[1], pp, &n0in, dmin__, dmin1, dmin2, dn, dn1, dn2,
 	    tau, ttype, g);
     //
     //    Call dqds until DMIN > 0.
     //
 L70:
-    dlasq5_(i0, n0, &z__[1], pp, tau, sigma, dmin__, dmin1, dmin2, dn, dn1, 
+    dlasq5_(i0, n0, &z__[1], pp, tau, sigma, dmin__, dmin1, dmin2, dn, dn1,
 	    dn2, ieee, &eps);
     *ndiv += *n0 - *i0 + 2;
     ++(*iter);
@@ -1039,7 +1033,7 @@ L70:
 	//       Success.
 	//
 	goto L90;
-    } else if (*dmin__ < 0. && *dmin1 > 0. && z__[(*n0 - 1 << 2) - *pp] < tol 
+    } else if (*dmin__ < 0. && *dmin1 > 0. && z__[(*n0 - 1 << 2) - *pp] < tol
 	    * (*sigma + *dn1) && abs(*dn) < tol * *sigma) {
 	//
 	//       Convergence hidden by negative DN.
@@ -1264,15 +1258,12 @@ L90:
 //>
 // =====================================================================
 /* Subroutine */ int dlasq4_(int *i0, int *n0, double *z__, int *pp, int *
-	n0in, double *dmin__, double *dmin1, double *dmin2, double *dn, 
+	n0in, double *dmin__, double *dmin1, double *dmin2, double *dn,
 	double *dn1, double *dn2, double *tau, int *ttype, double *g)
 {
     // System generated locals
     int i__1;
     double d__1, d__2;
-
-    // Builtin functions
-    double sqrt(double);
 
     // Local variables
     double s, a2, b1, b2;
@@ -1732,7 +1723,7 @@ L80:
 //
 // =====================================================================
 /* Subroutine */ int dlasq5_(int *i0, int *n0, double *z__, int *pp, double *
-	tau, double *sigma, double *dmin__, double *dmin1, double *dmin2, 
+	tau, double *sigma, double *dmin__, double *dmin1, double *dmin2,
 	double *dn, double *dnm1, double *dnm2, int *ieee, double *eps)
 {
     // System generated locals
@@ -2157,7 +2148,7 @@ L80:
 //
 // =====================================================================
 /* Subroutine */ int dlasq6_(int *i0, int *n0, double *z__, int *pp, double *
-	dmin__, double *dmin1, double *dmin2, double *dn, double *dnm1, 
+	dmin__, double *dmin1, double *dmin2, double *dn, double *dnm1,
 	double *dnm2)
 {
     // System generated locals
@@ -2215,7 +2206,7 @@ L80:
 		d__ = z__[j4 + 1];
 		*dmin__ = d__;
 		emin = 0.;
-	    } else if (safmin * z__[j4 + 1] < z__[j4 - 2] && safmin * z__[j4 
+	    } else if (safmin * z__[j4 + 1] < z__[j4 - 2] && safmin * z__[j4
 		    - 2] < z__[j4 + 1]) {
 		temp = z__[j4 + 1] / z__[j4 - 2];
 		z__[j4] = z__[j4 - 1] * temp;
@@ -2239,7 +2230,7 @@ L80:
 		d__ = z__[j4 + 2];
 		*dmin__ = d__;
 		emin = 0.;
-	    } else if (safmin * z__[j4 + 2] < z__[j4 - 3] && safmin * z__[j4 
+	    } else if (safmin * z__[j4 + 2] < z__[j4 - 3] && safmin * z__[j4
 		    - 3] < z__[j4 + 2]) {
 		temp = z__[j4 + 2] / z__[j4 - 3];
 		z__[j4 - 1] = z__[j4] * temp;
@@ -2268,7 +2259,7 @@ L80:
 	*dnm1 = z__[j4p2 + 2];
 	*dmin__ = *dnm1;
 	emin = 0.;
-    } else if (safmin * z__[j4p2 + 2] < z__[j4 - 2] && safmin * z__[j4 - 2] < 
+    } else if (safmin * z__[j4p2 + 2] < z__[j4 - 2] && safmin * z__[j4 - 2] <
 	    z__[j4p2 + 2]) {
 	temp = z__[j4p2 + 2] / z__[j4 - 2];
 	z__[j4] = z__[j4p2] * temp;
@@ -2287,7 +2278,7 @@ L80:
 	*dn = z__[j4p2 + 2];
 	*dmin__ = *dn;
 	emin = 0.;
-    } else if (safmin * z__[j4p2 + 2] < z__[j4 - 2] && safmin * z__[j4 - 2] < 
+    } else if (safmin * z__[j4p2 + 2] < z__[j4 - 2] && safmin * z__[j4 - 2] <
 	    z__[j4p2 + 2]) {
 	temp = z__[j4p2 + 2] / z__[j4 - 2];
 	z__[j4] = z__[j4p2] * temp;

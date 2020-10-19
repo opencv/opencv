@@ -91,7 +91,7 @@
 //> \endverbatim
 //>
 // =====================================================================
-/* Subroutine */ int daxpy_(int *n, double *da, double *dx, int *incx, double 
+/* Subroutine */ int daxpy_(int *n, double *da, double *dx, int *incx, double
 	*dy, int *incy)
 {
     // System generated locals

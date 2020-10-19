@@ -183,7 +183,7 @@
 //> \endverbatim
 //>
 // =====================================================================
-/* Subroutine */ int strsm_(char *side, char *uplo, char *transa, char *diag, 
+/* Subroutine */ int strsm_(char *side, char *uplo, char *transa, char *diag,
 	int *m, int *n, float *alpha, float *a, int *lda, float *b, int *ldb)
 {
     // System generated locals
@@ -484,7 +484,7 @@
 			    temp = a[j + k * a_dim1];
 			    i__2 = *m;
 			    for (i__ = 1; i__ <= i__2; ++i__) {
-				b[i__ + j * b_dim1] -= temp * b[i__ + k * 
+				b[i__ + j * b_dim1] -= temp * b[i__ + k *
 					b_dim1];
 // L280:
 			    }
@@ -518,7 +518,7 @@
 			    temp = a[j + k * a_dim1];
 			    i__3 = *m;
 			    for (i__ = 1; i__ <= i__3; ++i__) {
-				b[i__ + j * b_dim1] -= temp * b[i__ + k * 
+				b[i__ + j * b_dim1] -= temp * b[i__ + k *
 					b_dim1];
 // L330:
 			    }

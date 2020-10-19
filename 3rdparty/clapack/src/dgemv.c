@@ -158,8 +158,8 @@
 //> \endverbatim
 //>
 // =====================================================================
-/* Subroutine */ int dgemv_(char *trans, int *m, int *n, double *alpha, 
-	double *a, int *lda, double *x, int *incx, double *beta, double *y, 
+/* Subroutine */ int dgemv_(char *trans, int *m, int *n, double *alpha,
+	double *a, int *lda, double *x, int *incx, double *beta, double *y,
 	int *incy)
 {
     // System generated locals
@@ -207,7 +207,7 @@
 
     // Function Body
     info = 0;
-    if (! lsame_(trans, "N") && ! lsame_(trans, "T") && ! lsame_(trans, "C")) 
+    if (! lsame_(trans, "N") && ! lsame_(trans, "T") && ! lsame_(trans, "C"))
 	    {
 	info = 1;
     } else if (*m < 0) {

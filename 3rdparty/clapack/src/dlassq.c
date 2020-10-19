@@ -105,7 +105,7 @@
 //> \ingroup OTHERauxiliary
 //
 // =====================================================================
-/* Subroutine */ int dlassq_(int *n, double *x, int *incx, double *scale, 
+/* Subroutine */ int dlassq_(int *n, double *x, int *incx, double *scale,
 	double *sumsq)
 {
     // System generated locals

@@ -78,9 +78,6 @@
 // =====================================================================
 /* Subroutine */ int dlabad_(double *small, double *large)
 {
-    // Builtin functions
-    double d_lg10(double *), sqrt(double);
-
     //
     // -- LAPACK auxiliary routine (version 3.7.0) --
     // -- LAPACK is a software package provided by Univ. of Tennessee,    --

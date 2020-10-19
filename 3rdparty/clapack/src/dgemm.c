@@ -194,7 +194,7 @@
 	beta, double *c__, int *ldc)
 {
     // System generated locals
-    int a_dim1, a_offset, b_dim1, b_offset, c_dim1, c_offset, i__1, i__2, 
+    int a_dim1, a_offset, b_dim1, b_offset, c_dim1, c_offset, i__1, i__2,
 	    i__3;
 
     // Local variables

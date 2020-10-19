@@ -160,7 +160,7 @@
 //> \ingroup doubleOTHERcomputational
 //
 // =====================================================================
-/* Subroutine */ int dorm2r_(char *side, char *trans, int *m, int *n, int *k, 
+/* Subroutine */ int dorm2r_(char *side, char *trans, int *m, int *n, int *k,
 	double *a, int *lda, double *tau, double *c__, int *ldc, double *work,
 	 int *info)
 {
@@ -174,7 +174,7 @@
     int i__, i1, i2, i3, ic, jc, mi, ni, nq;
     double aii;
     int left;
-    extern /* Subroutine */ int dlarf_(char *, int *, int *, double *, int *, 
+    extern /* Subroutine */ int dlarf_(char *, int *, int *, double *, int *,
 	    double *, double *, int *, double *);
     extern int lsame_(char *, char *);
     extern /* Subroutine */ int xerbla_(char *, int *);
@@ -471,7 +471,7 @@
 //> \ingroup doubleOTHERcomputational
 //
 // =====================================================================
-/* Subroutine */ int dormqr_(char *side, char *trans, int *m, int *n, int *k, 
+/* Subroutine */ int dormqr_(char *side, char *trans, int *m, int *n, int *k,
 	double *a, int *lda, double *tau, double *c__, int *ldc, double *work,
 	 int *lwork, int *info)
 {
@@ -486,17 +486,14 @@
     int a_dim1, a_offset, c_dim1, c_offset, i__1, i__2, i__3[2], i__4, i__5;
     char ch__1[2+1]={'\0'};
 
-    // Builtin functions
-    /* Subroutine */ int s_cat(char *, char **, int *, int *);
-
     // Local variables
     int i__, i1, i2, i3, ib, ic, jc, nb, mi, ni, nq, nw, iwt;
     int left;
     extern int lsame_(char *, char *);
     int nbmin, iinfo;
-    extern /* Subroutine */ int dorm2r_(char *, char *, int *, int *, int *, 
-	    double *, int *, double *, double *, int *, double *, int *), 
-	    dlarfb_(char *, char *, char *, char *, int *, int *, int *, 
+    extern /* Subroutine */ int dorm2r_(char *, char *, int *, int *, int *,
+	    double *, int *, double *, double *, int *, double *, int *),
+	    dlarfb_(char *, char *, char *, char *, int *, int *, int *,
 	    double *, int *, double *, int *, double *, int *, double *, int *
 	    ), dlarft_(char *, char *, int *, int *, double *, int *, double *
 	    , double *, int *), xerbla_(char *, int *);
@@ -654,7 +651,7 @@
 	    //          H = H(i) H(i+1) . . . H(i+ib-1)
 	    //
 	    i__4 = nq - i__ + 1;
-	    dlarft_("Forward", "Columnwise", &i__4, &ib, &a[i__ + i__ * 
+	    dlarft_("Forward", "Columnwise", &i__4, &ib, &a[i__ + i__ *
 		    a_dim1], lda, &tau[i__], &work[iwt], &c__65);
 	    if (left) {
 		//
@@ -673,7 +670,7 @@
 	    //          Apply H or H**T
 	    //
 	    dlarfb_(side, trans, "Forward", "Columnwise", &mi, &ni, &ib, &a[
-		    i__ + i__ * a_dim1], lda, &work[iwt], &c__65, &c__[ic + 
+		    i__ + i__ * a_dim1], lda, &work[iwt], &c__65, &c__[ic +
 		    jc * c_dim1], ldc, &work[1], &ldwork);
 // L10:
 	}

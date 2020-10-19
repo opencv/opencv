@@ -105,7 +105,7 @@
 //> \ingroup OTHERauxiliary
 //
 // =====================================================================
-/* Subroutine */ int dlacpy_(char *uplo, int *m, int *n, double *a, int *lda, 
+/* Subroutine */ int dlacpy_(char *uplo, int *m, int *n, double *a, int *lda,
 	double *b, int *ldb)
 {
     // System generated locals

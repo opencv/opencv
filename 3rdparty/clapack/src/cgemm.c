@@ -190,7 +190,7 @@
 //>
 // =====================================================================
 /* Subroutine */ int cgemm_(char *transa, char *transb, int *m, int *n, int *
-	k, complex *alpha, complex *a, int *lda, complex *b, int *ldb, 
+	k, complex *alpha, complex *a, int *lda, complex *b, int *ldb,
 	complex *beta, complex *c__, int *ldc)
 {
     // Table of constant values
@@ -198,12 +198,9 @@
     complex c_b2 = {0.f,0.f};
 
     // System generated locals
-    int a_dim1, a_offset, b_dim1, b_offset, c_dim1, c_offset, i__1, i__2, 
+    int a_dim1, a_offset, b_dim1, b_offset, c_dim1, c_offset, i__1, i__2,
 	    i__3, i__4, i__5, i__6;
     complex q__1, q__2, q__3, q__4;
-
-    // Builtin functions
-    void r_cnjg(complex *, complex *);
 
     // Local variables
     int i__, j, l, info;
@@ -301,7 +298,7 @@
     //
     //    Quick return if possible.
     //
-    if (*m == 0 || *n == 0 || (alpha->r == 0.f && alpha->i == 0.f || *k == 0) 
+    if (*m == 0 || *n == 0 || (alpha->r == 0.f && alpha->i == 0.f || *k == 0)
 	    && (beta->r == 1.f && beta->i == 0.f)) {
 	return 0;
     }
@@ -327,7 +324,7 @@
 		for (i__ = 1; i__ <= i__2; ++i__) {
 		    i__3 = i__ + j * c_dim1;
 		    i__4 = i__ + j * c_dim1;
-		    q__1.r = beta->r * c__[i__4].r - beta->i * c__[i__4].i, 
+		    q__1.r = beta->r * c__[i__4].r - beta->i * c__[i__4].i,
 			    q__1.i = beta->r * c__[i__4].i + beta->i * c__[
 			    i__4].r;
 		    c__[i__3].r = q__1.r, c__[i__3].i = q__1.i;
@@ -370,7 +367,7 @@
 		i__2 = *k;
 		for (l = 1; l <= i__2; ++l) {
 		    i__3 = l + j * b_dim1;
-		    q__1.r = alpha->r * b[i__3].r - alpha->i * b[i__3].i, 
+		    q__1.r = alpha->r * b[i__3].r - alpha->i * b[i__3].i,
 			    q__1.i = alpha->r * b[i__3].i + alpha->i * b[i__3]
 			    .r;
 		    temp.r = q__1.r, temp.i = q__1.i;
@@ -379,10 +376,10 @@
 			i__4 = i__ + j * c_dim1;
 			i__5 = i__ + j * c_dim1;
 			i__6 = i__ + l * a_dim1;
-			q__2.r = temp.r * a[i__6].r - temp.i * a[i__6].i, 
+			q__2.r = temp.r * a[i__6].r - temp.i * a[i__6].i,
 				q__2.i = temp.r * a[i__6].i + temp.i * a[i__6]
 				.r;
-			q__1.r = c__[i__5].r + q__2.r, q__1.i = c__[i__5].i + 
+			q__1.r = c__[i__5].r + q__2.r, q__1.i = c__[i__5].i +
 				q__2.i;
 			c__[i__4].r = q__1.r, c__[i__4].i = q__1.i;
 // L70:
@@ -404,7 +401,7 @@
 		    for (l = 1; l <= i__3; ++l) {
 			r_cnjg(&q__3, &a[l + i__ * a_dim1]);
 			i__4 = l + j * b_dim1;
-			q__2.r = q__3.r * b[i__4].r - q__3.i * b[i__4].i, 
+			q__2.r = q__3.r * b[i__4].r - q__3.i * b[i__4].i,
 				q__2.i = q__3.r * b[i__4].i + q__3.i * b[i__4]
 				.r;
 			q__1.r = temp.r + q__2.r, q__1.i = temp.i + q__2.i;
@@ -413,14 +410,14 @@
 		    }
 		    if (beta->r == 0.f && beta->i == 0.f) {
 			i__3 = i__ + j * c_dim1;
-			q__1.r = alpha->r * temp.r - alpha->i * temp.i, 
-				q__1.i = alpha->r * temp.i + alpha->i * 
+			q__1.r = alpha->r * temp.r - alpha->i * temp.i,
+				q__1.i = alpha->r * temp.i + alpha->i *
 				temp.r;
 			c__[i__3].r = q__1.r, c__[i__3].i = q__1.i;
 		    } else {
 			i__3 = i__ + j * c_dim1;
-			q__2.r = alpha->r * temp.r - alpha->i * temp.i, 
-				q__2.i = alpha->r * temp.i + alpha->i * 
+			q__2.r = alpha->r * temp.r - alpha->i * temp.i,
+				q__2.i = alpha->r * temp.i + alpha->i *
 				temp.r;
 			i__4 = i__ + j * c_dim1;
 			q__3.r = beta->r * c__[i__4].r - beta->i * c__[i__4]
@@ -455,14 +452,14 @@
 		    }
 		    if (beta->r == 0.f && beta->i == 0.f) {
 			i__3 = i__ + j * c_dim1;
-			q__1.r = alpha->r * temp.r - alpha->i * temp.i, 
-				q__1.i = alpha->r * temp.i + alpha->i * 
+			q__1.r = alpha->r * temp.r - alpha->i * temp.i,
+				q__1.i = alpha->r * temp.i + alpha->i *
 				temp.r;
 			c__[i__3].r = q__1.r, c__[i__3].i = q__1.i;
 		    } else {
 			i__3 = i__ + j * c_dim1;
-			q__2.r = alpha->r * temp.r - alpha->i * temp.i, 
-				q__2.i = alpha->r * temp.i + alpha->i * 
+			q__2.r = alpha->r * temp.r - alpha->i * temp.i,
+				q__2.i = alpha->r * temp.i + alpha->i *
 				temp.r;
 			i__4 = i__ + j * c_dim1;
 			q__3.r = beta->r * c__[i__4].r - beta->i * c__[i__4]
@@ -505,7 +502,7 @@
 		i__2 = *k;
 		for (l = 1; l <= i__2; ++l) {
 		    r_cnjg(&q__2, &b[j + l * b_dim1]);
-		    q__1.r = alpha->r * q__2.r - alpha->i * q__2.i, q__1.i = 
+		    q__1.r = alpha->r * q__2.r - alpha->i * q__2.i, q__1.i =
 			    alpha->r * q__2.i + alpha->i * q__2.r;
 		    temp.r = q__1.r, temp.i = q__1.i;
 		    i__3 = *m;
@@ -513,10 +510,10 @@
 			i__4 = i__ + j * c_dim1;
 			i__5 = i__ + j * c_dim1;
 			i__6 = i__ + l * a_dim1;
-			q__2.r = temp.r * a[i__6].r - temp.i * a[i__6].i, 
+			q__2.r = temp.r * a[i__6].r - temp.i * a[i__6].i,
 				q__2.i = temp.r * a[i__6].i + temp.i * a[i__6]
 				.r;
-			q__1.r = c__[i__5].r + q__2.r, q__1.i = c__[i__5].i + 
+			q__1.r = c__[i__5].r + q__2.r, q__1.i = c__[i__5].i +
 				q__2.i;
 			c__[i__4].r = q__1.r, c__[i__4].i = q__1.i;
 // L180:
@@ -553,7 +550,7 @@
 		i__2 = *k;
 		for (l = 1; l <= i__2; ++l) {
 		    i__3 = j + l * b_dim1;
-		    q__1.r = alpha->r * b[i__3].r - alpha->i * b[i__3].i, 
+		    q__1.r = alpha->r * b[i__3].r - alpha->i * b[i__3].i,
 			    q__1.i = alpha->r * b[i__3].i + alpha->i * b[i__3]
 			    .r;
 		    temp.r = q__1.r, temp.i = q__1.i;
@@ -562,10 +559,10 @@
 			i__4 = i__ + j * c_dim1;
 			i__5 = i__ + j * c_dim1;
 			i__6 = i__ + l * a_dim1;
-			q__2.r = temp.r * a[i__6].r - temp.i * a[i__6].i, 
+			q__2.r = temp.r * a[i__6].r - temp.i * a[i__6].i,
 				q__2.i = temp.r * a[i__6].i + temp.i * a[i__6]
 				.r;
-			q__1.r = c__[i__5].r + q__2.r, q__1.i = c__[i__5].i + 
+			q__1.r = c__[i__5].r + q__2.r, q__1.i = c__[i__5].i +
 				q__2.i;
 			c__[i__4].r = q__1.r, c__[i__4].i = q__1.i;
 // L230:
@@ -589,7 +586,7 @@
 		    for (l = 1; l <= i__3; ++l) {
 			r_cnjg(&q__3, &a[l + i__ * a_dim1]);
 			r_cnjg(&q__4, &b[j + l * b_dim1]);
-			q__2.r = q__3.r * q__4.r - q__3.i * q__4.i, q__2.i = 
+			q__2.r = q__3.r * q__4.r - q__3.i * q__4.i, q__2.i =
 				q__3.r * q__4.i + q__3.i * q__4.r;
 			q__1.r = temp.r + q__2.r, q__1.i = temp.i + q__2.i;
 			temp.r = q__1.r, temp.i = q__1.i;
@@ -597,14 +594,14 @@
 		    }
 		    if (beta->r == 0.f && beta->i == 0.f) {
 			i__3 = i__ + j * c_dim1;
-			q__1.r = alpha->r * temp.r - alpha->i * temp.i, 
-				q__1.i = alpha->r * temp.i + alpha->i * 
+			q__1.r = alpha->r * temp.r - alpha->i * temp.i,
+				q__1.i = alpha->r * temp.i + alpha->i *
 				temp.r;
 			c__[i__3].r = q__1.r, c__[i__3].i = q__1.i;
 		    } else {
 			i__3 = i__ + j * c_dim1;
-			q__2.r = alpha->r * temp.r - alpha->i * temp.i, 
-				q__2.i = alpha->r * temp.i + alpha->i * 
+			q__2.r = alpha->r * temp.r - alpha->i * temp.i,
+				q__2.i = alpha->r * temp.i + alpha->i *
 				temp.r;
 			i__4 = i__ + j * c_dim1;
 			q__3.r = beta->r * c__[i__4].r - beta->i * c__[i__4]
@@ -630,7 +627,7 @@
 		    for (l = 1; l <= i__3; ++l) {
 			r_cnjg(&q__3, &a[l + i__ * a_dim1]);
 			i__4 = j + l * b_dim1;
-			q__2.r = q__3.r * b[i__4].r - q__3.i * b[i__4].i, 
+			q__2.r = q__3.r * b[i__4].r - q__3.i * b[i__4].i,
 				q__2.i = q__3.r * b[i__4].i + q__3.i * b[i__4]
 				.r;
 			q__1.r = temp.r + q__2.r, q__1.i = temp.i + q__2.i;
@@ -639,14 +636,14 @@
 		    }
 		    if (beta->r == 0.f && beta->i == 0.f) {
 			i__3 = i__ + j * c_dim1;
-			q__1.r = alpha->r * temp.r - alpha->i * temp.i, 
-				q__1.i = alpha->r * temp.i + alpha->i * 
+			q__1.r = alpha->r * temp.r - alpha->i * temp.i,
+				q__1.i = alpha->r * temp.i + alpha->i *
 				temp.r;
 			c__[i__3].r = q__1.r, c__[i__3].i = q__1.i;
 		    } else {
 			i__3 = i__ + j * c_dim1;
-			q__2.r = alpha->r * temp.r - alpha->i * temp.i, 
-				q__2.i = alpha->r * temp.i + alpha->i * 
+			q__2.r = alpha->r * temp.r - alpha->i * temp.i,
+				q__2.i = alpha->r * temp.i + alpha->i *
 				temp.r;
 			i__4 = i__ + j * c_dim1;
 			q__3.r = beta->r * c__[i__4].r - beta->i * c__[i__4]
@@ -674,8 +671,8 @@
 		    for (l = 1; l <= i__3; ++l) {
 			i__4 = l + i__ * a_dim1;
 			r_cnjg(&q__3, &b[j + l * b_dim1]);
-			q__2.r = a[i__4].r * q__3.r - a[i__4].i * q__3.i, 
-				q__2.i = a[i__4].r * q__3.i + a[i__4].i * 
+			q__2.r = a[i__4].r * q__3.r - a[i__4].i * q__3.i,
+				q__2.i = a[i__4].r * q__3.i + a[i__4].i *
 				q__3.r;
 			q__1.r = temp.r + q__2.r, q__1.i = temp.i + q__2.i;
 			temp.r = q__1.r, temp.i = q__1.i;
@@ -683,14 +680,14 @@
 		    }
 		    if (beta->r == 0.f && beta->i == 0.f) {
 			i__3 = i__ + j * c_dim1;
-			q__1.r = alpha->r * temp.r - alpha->i * temp.i, 
-				q__1.i = alpha->r * temp.i + alpha->i * 
+			q__1.r = alpha->r * temp.r - alpha->i * temp.i,
+				q__1.i = alpha->r * temp.i + alpha->i *
 				temp.r;
 			c__[i__3].r = q__1.r, c__[i__3].i = q__1.i;
 		    } else {
 			i__3 = i__ + j * c_dim1;
-			q__2.r = alpha->r * temp.r - alpha->i * temp.i, 
-				q__2.i = alpha->r * temp.i + alpha->i * 
+			q__2.r = alpha->r * temp.r - alpha->i * temp.i,
+				q__2.i = alpha->r * temp.i + alpha->i *
 				temp.r;
 			i__4 = i__ + j * c_dim1;
 			q__3.r = beta->r * c__[i__4].r - beta->i * c__[i__4]
@@ -725,14 +722,14 @@
 		    }
 		    if (beta->r == 0.f && beta->i == 0.f) {
 			i__3 = i__ + j * c_dim1;
-			q__1.r = alpha->r * temp.r - alpha->i * temp.i, 
-				q__1.i = alpha->r * temp.i + alpha->i * 
+			q__1.r = alpha->r * temp.r - alpha->i * temp.i,
+				q__1.i = alpha->r * temp.i + alpha->i *
 				temp.r;
 			c__[i__3].r = q__1.r, c__[i__3].i = q__1.i;
 		    } else {
 			i__3 = i__ + j * c_dim1;
-			q__2.r = alpha->r * temp.r - alpha->i * temp.i, 
-				q__2.i = alpha->r * temp.i + alpha->i * 
+			q__2.r = alpha->r * temp.r - alpha->i * temp.i,
+				q__2.i = alpha->r * temp.i + alpha->i *
 				temp.r;
 			i__4 = i__ + j * c_dim1;
 			q__3.r = beta->r * c__[i__4].r - beta->i * c__[i__4]

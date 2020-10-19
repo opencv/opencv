@@ -198,8 +198,9 @@ verstr = subprocess.check_output(f2c_getver_cmd.split(' ')).decode("utf-8")
 if "for_lapack" not in verstr:
     error("invalid version of f2c\n" + appdoc)
 
-f2c_cmd0 = f2c_appname + " -ctypes -localconst"
-f2c_cmd1 = f2c_appname + " -hdr none -ctypes -localconst"
+f2c_flags = "-ctypes -localconst -no-proto"
+f2c_cmd0 = f2c_appname + " " + f2c_flags
+f2c_cmd1 = f2c_appname + " -hdr none " + f2c_flags
 
 lapack_protos = {}
 extract_fn_regexp = re.compile(r'.+?(\w+)\s*\(')
@@ -236,6 +237,8 @@ for (filename, funcs) in sorted(res_files.items()):
         ffile = open(ffilename, 'rt')
         delta_out = subprocess.check_output(f2c_cmd.split(' '), stdin=ffile).decode("utf-8")
         extract_proto(func, delta_out)
+        # remove trailing whitespaces
+        delta_out = '\n'.join([l.rstrip() for l in delta_out.split('\n')])
         out += delta_out
         ffile.close()
         f2c_cmd = f2c_cmd1

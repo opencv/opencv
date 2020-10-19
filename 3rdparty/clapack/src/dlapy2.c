@@ -70,9 +70,6 @@ double dlapy2_(double *x, double *y)
     // System generated locals
     double ret_val, d__1;
 
-    // Builtin functions
-    double sqrt(double);
-
     // Local variables
     int x_is_nan__, y_is_nan__;
     double w, z__, xabs, yabs;

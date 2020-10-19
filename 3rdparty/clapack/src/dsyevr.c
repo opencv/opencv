@@ -104,14 +104,11 @@
 //> \endverbatim
 //>
 // =====================================================================
-/* Subroutine */ int dlae2_(double *a, double *b, double *c__, double *rt1, 
+/* Subroutine */ int dlae2_(double *a, double *b, double *c__, double *rt1,
 	double *rt2)
 {
     // System generated locals
     double d__1;
-
-    // Builtin functions
-    double sqrt(double);
 
     // Local variables
     double ab, df, tb, sm, rt, adf, acmn, acmx;
@@ -512,12 +509,12 @@
 //>
 // =====================================================================
 /* Subroutine */ int dlaebz_(int *ijob, int *nitmax, int *n, int *mmax, int *
-	minp, int *nbmin, double *abstol, double *reltol, double *pivmin, 
+	minp, int *nbmin, double *abstol, double *reltol, double *pivmin,
 	double *d__, double *e, double *e2, int *nval, double *ab, double *
 	c__, int *mout, int *nab, double *work, int *iwork, int *info)
 {
     // System generated locals
-    int nab_dim1, nab_offset, ab_dim1, ab_offset, i__1, i__2, i__3, i__4, 
+    int nab_dim1, nab_offset, ab_dim1, ab_offset, i__1, i__2, i__3, i__4,
 	    i__5, i__6;
     double d__1, d__2, d__3, d__4;
 
@@ -703,9 +700,9 @@
 			    //                      Eigenvalue in both intervals -- add upper to
 			    //                      queue.
 			    //
-			    ab[klnew + (ab_dim1 << 1)] = ab[ji + (ab_dim1 << 
+			    ab[klnew + (ab_dim1 << 1)] = ab[ji + (ab_dim1 <<
 				    1)];
-			    nab[klnew + (nab_dim1 << 1)] = nab[ji + (nab_dim1 
+			    nab[klnew + (nab_dim1 << 1)] = nab[ji + (nab_dim1
 				    << 1)];
 			    ab[klnew + ab_dim1] = c__[ji];
 			    nab[klnew + nab_dim1] = iwork[ji];
@@ -804,7 +801,7 @@
 			//
 			++klnew;
 			ab[klnew + (ab_dim1 << 1)] = ab[ji + (ab_dim1 << 1)];
-			nab[klnew + (nab_dim1 << 1)] = nab[ji + (nab_dim1 << 
+			nab[klnew + (nab_dim1 << 1)] = nab[ji + (nab_dim1 <<
 				1)];
 			ab[klnew + ab_dim1] = tmp1;
 			nab[klnew + nab_dim1] = itmp1;
@@ -1028,14 +1025,11 @@ L140:
 //> \endverbatim
 //>
 // =====================================================================
-/* Subroutine */ int dlaev2_(double *a, double *b, double *c__, double *rt1, 
+/* Subroutine */ int dlaev2_(double *a, double *b, double *c__, double *rt1,
 	double *rt2, double *cs1, double *sn1)
 {
     // System generated locals
     double d__1;
-
-    // Builtin functions
-    double sqrt(double);
 
     // Local variables
     double ab, df, cs, ct, tb, sm, tn, rt, adf, acs;
@@ -1309,7 +1303,7 @@ L140:
 //> \ingroup auxOTHERcomputational
 //
 // =====================================================================
-/* Subroutine */ int dlagtf_(int *n, double *a, double *lambda, double *b, 
+/* Subroutine */ int dlagtf_(int *n, double *a, double *lambda, double *b,
 	double *c__, double *tol, double *d__, int *in, int *info)
 {
     // System generated locals
@@ -1603,9 +1597,6 @@ L140:
     int i__1;
     double d__1, d__2, d__3, d__4, d__5;
 
-    // Builtin functions
-    double d_sign(double *, double *);
-
     // Local variables
     int k;
     double ak, eps, temp, pert, absak, sfmin;
@@ -1669,7 +1660,7 @@ L140:
 	    *tol = abs(a[1]);
 	    if (*n > 1) {
 		// Computing MAX
-		d__1 = *tol, d__2 = abs(a[2]), d__1 = max(d__1,d__2), d__2 = 
+		d__1 = *tol, d__2 = abs(a[2]), d__1 = max(d__1,d__2), d__2 =
 			abs(b[1]);
 		*tol = max(d__1,d__2);
 	    }
@@ -1677,7 +1668,7 @@ L140:
 	    for (k = 3; k <= i__1; ++k) {
 		// Computing MAX
 		d__4 = *tol, d__5 = (d__1 = a[k], abs(d__1)), d__4 = max(d__4,
-			d__5), d__5 = (d__2 = b[k - 1], abs(d__2)), d__4 = 
+			d__5), d__5 = (d__2 = b[k - 1], abs(d__2)), d__4 =
 			max(d__4,d__5), d__5 = (d__3 = d__[k - 2], abs(d__3));
 		*tol = max(d__4,d__5);
 // L10:
@@ -1965,7 +1956,7 @@ L70:
 //>     Jason Riedy, University of California, Berkeley, USA \n
 //>
 // =====================================================================
-int dlaneg_(int *n, double *d__, double *lld, double *sigma, double *pivmin, 
+int dlaneg_(int *n, double *d__, double *lld, double *sigma, double *pivmin,
 	int *r__)
 {
     // System generated locals
@@ -2250,9 +2241,6 @@ double dlansy_(char *norm, char *uplo, int *n, double *a, int *lda, double *
     int a_dim1, a_offset, i__1, i__2;
     double ret_val, d__1;
 
-    // Builtin functions
-    double sqrt(double);
-
     // Local variables
     extern /* Subroutine */ int dcombssq_(double *, double *);
     int i__, j;
@@ -2260,7 +2248,7 @@ double dlansy_(char *norm, char *uplo, int *n, double *a, int *lda, double *
     extern int lsame_(char *, char *);
     double value;
     extern int disnan_(double *);
-    extern /* Subroutine */ int dlassq_(int *, double *, int *, double *, 
+    extern /* Subroutine */ int dlassq_(int *, double *, int *, double *,
 	    double *);
     double colssq[2];
 
@@ -2664,7 +2652,7 @@ double dlansy_(char *norm, char *uplo, int *n, double *a, int *lda, double *
 //> Christof Voemel, University of California, Berkeley, USA
 //
 // =====================================================================
-/* Subroutine */ int dlar1v_(int *n, int *b1, int *bn, double *lambda, double 
+/* Subroutine */ int dlar1v_(int *n, int *b1, int *bn, double *lambda, double
 	*d__, double *l, double *ld, double *lld, double *pivmin, double *
 	gaptol, double *z__, int *wantnc, int *negcnt, double *ztz, double *
 	mingma, int *r__, int *isuppz, double *nrminv, double *resid, double *
@@ -2673,9 +2661,6 @@ double dlansy_(char *norm, char *uplo, int *n, double *a, int *lda, double *
     // System generated locals
     int i__1;
     double d__1, d__2, d__3;
-
-    // Builtin functions
-    double sqrt(double);
 
     // Local variables
     int i__;
@@ -3080,9 +3065,6 @@ L280:
     // System generated locals
     int i__1, i__2, i__3;
 
-    // Builtin functions
-    double log(double), sqrt(double), cos(double);
-
     // Local variables
     int i__;
     double u[128];
@@ -3308,15 +3290,12 @@ L280:
 //> Christof Voemel, University of California, Berkeley, USA
 //
 // =====================================================================
-/* Subroutine */ int dlarra_(int *n, double *d__, double *e, double *e2, 
+/* Subroutine */ int dlarra_(int *n, double *d__, double *e, double *e2,
 	double *spltol, double *tnrm, int *nsplit, int *isplit, int *info)
 {
     // System generated locals
     int i__1;
     double d__1, d__2;
-
-    // Builtin functions
-    double sqrt(double);
 
     // Local variables
     int i__;
@@ -3592,17 +3571,14 @@ L280:
 //> Christof Voemel, University of California, Berkeley, USA
 //
 // =====================================================================
-/* Subroutine */ int dlarrb_(int *n, double *d__, double *lld, int *ifirst, 
-	int *ilast, double *rtol1, double *rtol2, int *offset, double *w, 
-	double *wgap, double *werr, double *work, int *iwork, double *pivmin, 
+/* Subroutine */ int dlarrb_(int *n, double *d__, double *lld, int *ifirst,
+	int *ilast, double *rtol1, double *rtol2, int *offset, double *w,
+	double *wgap, double *werr, double *work, int *iwork, double *pivmin,
 	double *spdiam, int *twist, int *info)
 {
     // System generated locals
     int i__1;
     double d__1, d__2;
-
-    // Builtin functions
-    double log(double);
 
     // Local variables
     int i__, k, r__, i1, ii, ip;
@@ -3975,7 +3951,7 @@ L100:
 //> Christof Voemel, University of California, Berkeley, USA
 //
 // =====================================================================
-/* Subroutine */ int dlarrc_(char *jobt, int *n, double *vl, double *vu, 
+/* Subroutine */ int dlarrc_(char *jobt, int *n, double *vl, double *vu,
 	double *d__, double *e, double *pivmin, int *eigcnt, int *lcnt, int *
 	rcnt, int *info)
 {
@@ -4425,10 +4401,10 @@ L100:
 //> \ingroup OTHERauxiliary
 //
 // =====================================================================
-/* Subroutine */ int dlarrd_(char *range, char *order, int *n, double *vl, 
+/* Subroutine */ int dlarrd_(char *range, char *order, int *n, double *vl,
 	double *vu, int *il, int *iu, double *gers, double *reltol, double *
-	d__, double *e, double *e2, double *pivmin, int *nsplit, int *isplit, 
-	int *m, double *w, double *werr, double *wl, double *wu, int *iblock, 
+	d__, double *e, double *e2, double *pivmin, int *nsplit, int *isplit,
+	int *m, double *w, double *werr, double *wl, double *wu, int *iblock,
 	int *indexw, double *work, int *iwork, int *info)
 {
     // Table of constant values
@@ -4441,9 +4417,6 @@ L100:
     // System generated locals
     int i__1, i__2, i__3;
     double d__1, d__2;
-
-    // Builtin functions
-    double log(double);
 
     // Local variables
     int i__, j, ib, ie, je, nb;
@@ -4464,7 +4437,7 @@ L100:
     double wkill, rtoli, uflow, tnorm;
     extern double dlamch_(char *);
     int ibegin;
-    extern /* Subroutine */ int dlaebz_(int *, int *, int *, int *, int *, 
+    extern /* Subroutine */ int dlaebz_(int *, int *, int *, int *, int *,
 	    int *, double *, double *, double *, double *, double *, double *,
 	     int *, double *, double *, int *, int *, double *, int *, int *);
     int irange, idiscl, idumma[1];
@@ -4572,7 +4545,7 @@ L100:
     //    Special Case when N=1
     //    Treat case of 1x1 matrix for quick return
     if (*n == 1) {
-	if (irange == 1 || irange == 2 && d__[1] > *vl && d__[1] <= *vu || 
+	if (irange == 1 || irange == 2 && d__[1] > *vl && d__[1] <= *vu ||
 		irange == 3 && *il == 1 && *iu == 1) {
 	    *m = 1;
 	    w[1] = d__[1];
@@ -4794,7 +4767,7 @@ L100:
 	    //          Find negcount of initial interval boundaries GL and GU
 	    work[*n + 1] = gl;
 	    work[*n + in + 1] = gu;
-	    dlaebz_(&c__1, &c__0, &in, &in, &c__1, &nb, &atoli, &rtoli, 
+	    dlaebz_(&c__1, &c__0, &in, &in, &c__1, &nb, &atoli, &rtoli,
 		    pivmin, &d__[ibegin], &e[ibegin], &e2[ibegin], idumma, &
 		    work[*n + 1], &work[*n + (in << 1) + 1], &im, &iwork[1], &
 		    w[*m + 1], &iblock[*m + 1], &iinfo);
@@ -4806,9 +4779,9 @@ L100:
 	    nwu += iwork[in + 1];
 	    iwoff = *m - iwork[1];
 	    //          Compute Eigenvalues
-	    itmax = (int) ((log(gu - gl + *pivmin) - log(*pivmin)) / log(2.)) 
+	    itmax = (int) ((log(gu - gl + *pivmin) - log(*pivmin)) / log(2.))
 		    + 2;
-	    dlaebz_(&c__2, &itmax, &in, &in, &c__1, &nb, &atoli, &rtoli, 
+	    dlaebz_(&c__2, &itmax, &in, &in, &c__1, &nb, &atoli, &rtoli,
 		    pivmin, &d__[ibegin], &e[ibegin], &e2[ibegin], idumma, &
 		    work[*n + 1], &work[*n + (in << 1) + 1], &iout, &iwork[1],
 		     &w[*m + 1], &iblock[*m + 1], &iinfo);
@@ -4825,7 +4798,7 @@ L100:
 		//             eigenvalue approximation is middle point of interval
 		tmp1 = (work[j + *n] + work[j + in + *n]) * .5;
 		//             semi length of error interval
-		tmp2 = (d__1 = work[j + *n] - work[j + in + *n], abs(d__1)) * 
+		tmp2 = (d__1 = work[j + *n] - work[j + in + *n], abs(d__1)) *
 			.5;
 		if (j > iout - iinfo) {
 		    //                Flag non-convergence.
@@ -5313,10 +5286,10 @@ L70:
 //>     Christof Voemel, University of California, Berkeley, USA \n
 //>
 // =====================================================================
-/* Subroutine */ int dlarre_(char *range, int *n, double *vl, double *vu, int 
-	*il, int *iu, double *d__, double *e, double *e2, double *rtol1, 
-	double *rtol2, double *spltol, int *nsplit, int *isplit, int *m, 
-	double *w, double *werr, double *wgap, int *iblock, int *indexw, 
+/* Subroutine */ int dlarre_(char *range, int *n, double *vl, double *vu, int
+	*il, int *iu, double *d__, double *e, double *e2, double *rtol1,
+	double *rtol2, double *spltol, int *nsplit, int *isplit, int *m,
+	double *w, double *werr, double *wgap, int *iblock, int *indexw,
 	double *gers, double *pivmin, double *work, int *iwork, int *info)
 {
     // Table of constant values
@@ -5326,9 +5299,6 @@ L70:
     // System generated locals
     int i__1, i__2;
     double d__1, d__2, d__3;
-
-    // Builtin functions
-    double sqrt(double), log(double);
 
     // Local variables
     int i__, j;
@@ -5360,19 +5330,19 @@ L70:
     int forceb;
     int irange;
     double sgndef;
-    extern /* Subroutine */ int dlarra_(int *, double *, double *, double *, 
+    extern /* Subroutine */ int dlarra_(int *, double *, double *, double *,
 	    double *, double *, int *, int *, int *), dlarrb_(int *, double *,
-	     double *, int *, int *, double *, double *, int *, double *, 
-	    double *, double *, double *, int *, double *, double *, int *, 
-	    int *), dlarrc_(char *, int *, double *, double *, double *, 
+	     double *, int *, int *, double *, double *, int *, double *,
+	    double *, double *, double *, int *, double *, double *, int *,
+	    int *), dlarrc_(char *, int *, double *, double *, double *,
 	    double *, double *, int *, int *, int *, int *);
     int wbegin;
-    extern /* Subroutine */ int dlarrd_(char *, char *, int *, double *, 
-	    double *, int *, int *, double *, double *, double *, double *, 
-	    double *, double *, int *, int *, int *, double *, double *, 
+    extern /* Subroutine */ int dlarrd_(char *, char *, int *, double *,
+	    double *, int *, int *, double *, double *, double *, double *,
+	    double *, double *, int *, int *, int *, double *, double *,
 	    double *, double *, int *, int *, double *, int *, int *);
     double safmin, spdiam;
-    extern /* Subroutine */ int dlarrk_(int *, int *, double *, double *, 
+    extern /* Subroutine */ int dlarrk_(int *, int *, double *, double *,
 	    double *, double *, double *, double *, double *, double *, int *)
 	    ;
     int usedqd;
@@ -5448,7 +5418,7 @@ L70:
     bsrtol = sqrt(eps);
     //    Treat case of 1x1 matrix for quick return
     if (*n == 1) {
-	if (irange == 1 || irange == 3 && d__[1] > *vl && d__[1] <= *vu || 
+	if (irange == 1 || irange == 3 && d__[1] > *vl && d__[1] <= *vu ||
 		irange == 2 && *il == 1 && *iu == 1) {
 	    *m = 1;
 	    w[1] = d__[1];
@@ -5523,7 +5493,7 @@ L70:
 	//       RIGHT-LEFT.LT.RTOL*MAX(ABS(LEFT),ABS(RIGHT))
 	//       DLARRD needs a WORK of size 4*N, IWORK of size 3*N
 	dlarrd_(range, "B", n, vl, vu, il, iu, &gers[1], &bsrtol, &d__[1], &e[
-		1], &e2[1], pivmin, nsplit, &isplit[1], &mm, &w[1], &werr[1], 
+		1], &e2[1], pivmin, nsplit, &isplit[1], &mm, &w[1], &werr[1],
 		vl, vu, &iblock[1], &indexw[1], &work[1], &iwork[1], &iinfo);
 	if (iinfo != 0) {
 	    *info = -1;
@@ -5616,7 +5586,7 @@ L21:
 		i__2 = wend - 1;
 		for (i__ = wbegin; i__ <= i__2; ++i__) {
 		    // Computing MAX
-		    d__1 = 0., d__2 = w[i__ + 1] - werr[i__ + 1] - (w[i__] + 
+		    d__1 = 0., d__2 = w[i__ + 1] - werr[i__ + 1] - (w[i__] +
 			    werr[i__]);
 		    wgap[i__] = max(d__1,d__2);
 // L30:
@@ -5639,7 +5609,7 @@ L21:
 		return 0;
 	    }
 	    // Computing MAX
-	    d__2 = gl, d__3 = tmp - tmp1 - eps * 100. * (d__1 = tmp - tmp1, 
+	    d__2 = gl, d__3 = tmp - tmp1 - eps * 100. * (d__1 = tmp - tmp1,
 		    abs(d__1));
 	    isleft = max(d__2,d__3);
 	    dlarrk_(&in, &in, &gl, &gu, &d__[ibegin], &e2[ibegin], pivmin, &
@@ -5649,7 +5619,7 @@ L21:
 		return 0;
 	    }
 	    // Computing MIN
-	    d__2 = gu, d__3 = tmp + tmp1 + eps * 100. * (d__1 = tmp + tmp1, 
+	    d__2 = gu, d__3 = tmp + tmp1 + eps * 100. * (d__1 = tmp + tmp1,
 		    abs(d__1));
 	    isrght = min(d__2,d__3);
 	    //          Improve the estimate of the spectral diameter
@@ -5658,7 +5628,7 @@ L21:
 	    //          Case of bisection
 	    //          Find approximations to the wanted extremal eigenvalues
 	    // Computing MAX
-	    d__2 = gl, d__3 = w[wbegin] - werr[wbegin] - eps * 100. * (d__1 = 
+	    d__2 = gl, d__3 = w[wbegin] - werr[wbegin] - eps * 100. * (d__1 =
 		    w[wbegin] - werr[wbegin], abs(d__1));
 	    isleft = max(d__2,d__3);
 	    // Computing MIN
@@ -5891,7 +5861,7 @@ L83:
 	    }
 	    //          use bisection to find EV from INDL to INDU
 	    i__2 = indl - 1;
-	    dlarrb_(&in, &d__[ibegin], &work[ibegin], &indl, &indu, rtol1, 
+	    dlarrb_(&in, &d__[ibegin], &work[ibegin], &indl, &indu, rtol1,
 		    rtol2, &i__2, &w[wbegin], &wgap[wbegin], &werr[wbegin], &
 		    work[(*n << 1) + 1], &iwork[1], pivmin, &spdiam, &in, &
 		    iinfo);
@@ -6206,12 +6176,9 @@ L170:
     int i__1;
     double d__1, d__2, d__3;
 
-    // Builtin functions
-    double sqrt(double);
-
     // Local variables
     int i__;
-    double s, bestshift, smlgrowth, eps, tmp, max1, max2, rrr1, rrr2, znm2, 
+    double s, bestshift, smlgrowth, eps, tmp, max1, max2, rrr1, rrr2, znm2,
 	    growthbound, fail, fact, oldp;
     int indx;
     double prod;
@@ -6428,7 +6395,7 @@ L5:
     //    we may still accept the representation, if it passes a
     //    refined test for RRR. This test supposes that no NaN occurred.
     //    Moreover, we use the refined RRR test only for isolated clusters.
-    if (clwdth < mingap / 128. && min(max1,max2) < fail2 && ! sawnan1 && ! 
+    if (clwdth < mingap / 128. && min(max1,max2) < fail2 && ! sawnan1 && !
 	    sawnan2) {
 	dorrr1 = TRUE_;
     } else {
@@ -6470,7 +6437,7 @@ L5:
 	    oldp = 1.;
 	    for (i__ = *n - 1; i__ >= 1; --i__) {
 		if (prod <= eps) {
-		    prod = work[i__ + 1] * lplus[i__ + 1] / (work[i__] * 
+		    prod = work[i__ + 1] * lplus[i__ + 1] / (work[i__] *
 			    lplus[i__]) * oldp;
 		} else {
 		    prod *= (d__1 = lplus[i__], abs(d__1));
@@ -6701,16 +6668,13 @@ L100:
 //> Christof Voemel, University of California, Berkeley, USA
 //
 // =====================================================================
-/* Subroutine */ int dlarrj_(int *n, double *d__, double *e2, int *ifirst, 
-	int *ilast, double *rtol, int *offset, double *w, double *werr, 
+/* Subroutine */ int dlarrj_(int *n, double *d__, double *e2, int *ifirst,
+	int *ilast, double *rtol, int *offset, double *w, double *werr,
 	double *work, int *iwork, double *pivmin, double *spdiam, int *info)
 {
     // System generated locals
     int i__1, i__2;
     double d__1, d__2;
-
-    // Builtin functions
-    double log(double);
 
     // Local variables
     int i__, j, k, p;
@@ -7108,9 +7072,6 @@ L100:
     int i__1;
     double d__1, d__2;
 
-    // Builtin functions
-    double log(double);
-
     // Local variables
     int i__, it;
     double mid, eps, tmp1, tmp2, left, atoli, right;
@@ -7326,9 +7287,6 @@ L30:
     // System generated locals
     int i__1;
     double d__1;
-
-    // Builtin functions
-    double sqrt(double);
 
     // Local variables
     int i__;
@@ -7744,10 +7702,10 @@ L11:
 //> Christof Voemel, University of California, Berkeley, USA
 //
 // =====================================================================
-/* Subroutine */ int dlarrv_(int *n, double *vl, double *vu, double *d__, 
-	double *l, double *pivmin, int *isplit, int *m, int *dol, int *dou, 
+/* Subroutine */ int dlarrv_(int *n, double *vl, double *vu, double *d__,
+	double *l, double *pivmin, int *isplit, int *m, int *dol, int *dou,
 	double *minrgp, double *rtol1, double *rtol2, double *w, double *werr,
-	 double *wgap, int *iblock, int *indexw, double *gers, double *z__, 
+	 double *wgap, int *iblock, int *indexw, double *gers, double *z__,
 	int *ldz, int *isuppz, double *work, int *iwork, int *info)
 {
     // Table of constant values
@@ -7759,9 +7717,6 @@ L11:
     int z_dim1, z_offset, i__1, i__2, i__3, i__4, i__5;
     double d__1, d__2;
     int L__1;
-
-    // Builtin functions
-    double log(double);
 
     // Local variables
     int minwsize, i__, j, k, p, q, miniwsize, ii;
@@ -7791,8 +7746,8 @@ L11:
     int nclus, zfrom;
     double rqtol;
     int iindc1, iindc2;
-    extern /* Subroutine */ int dlar1v_(int *, int *, int *, double *, double 
-	    *, double *, double *, double *, double *, double *, double *, 
+    extern /* Subroutine */ int dlar1v_(int *, int *, int *, double *, double
+	    *, double *, double *, double *, double *, double *, double *,
 	    int *, int *, double *, double *, int *, int *, double *, double *
 	    , double *, double *);
     int stp2ii;
@@ -7802,21 +7757,21 @@ L11:
     int needbs;
     int indlld;
     double sgndef, mingma;
-    extern /* Subroutine */ int dlarrb_(int *, double *, double *, int *, int 
-	    *, double *, double *, int *, double *, double *, double *, 
+    extern /* Subroutine */ int dlarrb_(int *, double *, double *, int *, int
+	    *, double *, double *, int *, double *, double *, double *,
 	    double *, int *, double *, double *, int *, int *);
     int oldien, oldncl, wbegin;
     double spdiam;
     int negcnt;
-    extern /* Subroutine */ int dlarrf_(int *, double *, double *, double *, 
-	    int *, int *, double *, double *, double *, double *, double *, 
+    extern /* Subroutine */ int dlarrf_(int *, double *, double *, double *,
+	    int *, int *, double *, double *, double *, double *, double *,
 	    double *, double *, double *, double *, double *, double *, int *)
 	    ;
     int oldcls;
     double savgap;
     int ndepth;
     double ssigma;
-    extern /* Subroutine */ int dlaset_(char *, int *, int *, double *, 
+    extern /* Subroutine */ int dlaset_(char *, int *, int *, double *,
 	    double *, double *, int *);
     int usedbs;
     int iindwk, offset;
@@ -8079,7 +8034,7 @@ L40:
 			    ibegin], &c__1);
 		    sigma = z__[iend + (j + 1) * z_dim1];
 		    //                Set the corresponding entries in Z to zero
-		    dlaset_("Full", &in, &c__2, &c_b5, &c_b5, &z__[ibegin + j 
+		    dlaset_("Full", &in, &c__2, &c_b5, &c_b5, &z__[ibegin + j
 			    * z_dim1], ldz);
 		}
 		//             Compute DL and DLL of current RRR
@@ -8118,16 +8073,16 @@ L40:
 		    //                this is what should happen when we decrease WERR
 		    if (oldfst > 1) {
 			// Computing MAX
-			d__1 = wgap[wbegin + oldfst - 2], d__2 = w[wbegin + 
+			d__1 = wgap[wbegin + oldfst - 2], d__2 = w[wbegin +
 				oldfst - 1] - werr[wbegin + oldfst - 1] - w[
-				wbegin + oldfst - 2] - werr[wbegin + oldfst - 
+				wbegin + oldfst - 2] - werr[wbegin + oldfst -
 				2];
 			wgap[wbegin + oldfst - 2] = max(d__1,d__2);
 		    }
 		    if (wbegin + oldlst - 1 < wend) {
 			// Computing MAX
-			d__1 = wgap[wbegin + oldlst - 1], d__2 = w[wbegin + 
-				oldlst] - werr[wbegin + oldlst] - w[wbegin + 
+			d__1 = wgap[wbegin + oldlst - 1], d__2 = w[wbegin +
+				oldlst] - werr[wbegin + oldlst] - w[wbegin +
 				oldlst - 1] - werr[wbegin + oldlst - 1];
 			wgap[wbegin + oldlst - 1] = max(d__1,d__2);
 		    }
@@ -8212,14 +8167,14 @@ L40:
 				p = indexw[wbegin - 1 + newlst];
 			    }
 			    offset = indexw[wbegin] - 1;
-			    dlarrb_(&in, &d__[ibegin], &work[indlld + ibegin 
+			    dlarrb_(&in, &d__[ibegin], &work[indlld + ibegin
 				    - 1], &p, &p, &rqtol, &rqtol, &offset, &
 				    work[wbegin], &wgap[wbegin], &werr[wbegin]
 				    , &work[indwrk], &iwork[iindwk], pivmin, &
 				    spdiam, &in, &iinfo);
 // L55:
 			}
-			if (wbegin + newlst - 1 < *dol || wbegin + newfst - 1 
+			if (wbegin + newlst - 1 < *dol || wbegin + newfst - 1
 				> *dou) {
 			    //                      if the cluster contains no desired eigenvalues
 			    //                      skip the computation of that branch of the rep. tree
@@ -8236,10 +8191,10 @@ L40:
 			//                   Note that the new RRR is stored in Z
 			//
 			//                   DLARRF needs LWORK = 2*N
-			dlarrf_(&in, &d__[ibegin], &l[ibegin], &work[indld + 
-				ibegin - 1], &newfst, &newlst, &work[wbegin], 
-				&wgap[wbegin], &werr[wbegin], &spdiam, &lgap, 
-				&rgap, pivmin, &tau, &z__[ibegin + newftt * 
+			dlarrf_(&in, &d__[ibegin], &l[ibegin], &work[indld +
+				ibegin - 1], &newfst, &newlst, &work[wbegin],
+				&wgap[wbegin], &werr[wbegin], &spdiam, &lgap,
+				&rgap, pivmin, &tau, &z__[ibegin + newftt *
 				z_dim1], &z__[ibegin + (newftt + 1) * z_dim1],
 				 &work[indwrk], &iinfo);
 			if (iinfo == 0) {
@@ -8251,10 +8206,10 @@ L40:
 			    //                      Note that the entries in W are unchanged.
 			    i__4 = newlst;
 			    for (k = newfst; k <= i__4; ++k) {
-				fudge = eps * 3. * (d__1 = work[wbegin + k - 
+				fudge = eps * 3. * (d__1 = work[wbegin + k -
 					1], abs(d__1));
 				work[wbegin + k - 1] -= tau;
-				fudge += eps * 4. * (d__1 = work[wbegin + k - 
+				fudge += eps * 4. * (d__1 = work[wbegin + k -
 					1], abs(d__1));
 				//                         Fudge errors
 				werr[wbegin + k - 1] += fudge;
@@ -8368,7 +8323,7 @@ L120:
 			    itmp1 = iwork[iindr + windex];
 			    offset = indexw[wbegin] - 1;
 			    d__1 = eps * 2.;
-			    dlarrb_(&in, &d__[ibegin], &work[indlld + ibegin 
+			    dlarrb_(&in, &d__[ibegin], &work[indlld + ibegin
 				    - 1], &indeig, &indeig, &c_b5, &d__1, &
 				    offset, &work[wbegin], &wgap[wbegin], &
 				    werr[wbegin], &work[indwrk], &iwork[
@@ -8389,7 +8344,7 @@ L120:
 				indlld + ibegin - 1], pivmin, &gaptol, &z__[
 				ibegin + windex * z_dim1], &L__1, &negcnt, &
 				ztz, &mingma, &iwork[iindr + windex], &isuppz[
-				(windex << 1) - 1], &nrminv, &resid, &rqcorr, 
+				(windex << 1) - 1], &nrminv, &resid, &rqcorr,
 				&work[indwrk]);
 			if (iter == 0) {
 			    bstres = resid;
@@ -8427,7 +8382,7 @@ L120:
 			    }
 			    //                      We only use the RQCORR if it improves the
 			    //                      the iterate reasonably.
-			    if (rqcorr * sgndef >= 0. && lambda + rqcorr <= 
+			    if (rqcorr * sgndef >= 0. && lambda + rqcorr <=
 				    right && lambda + rqcorr >= left) {
 				usedrq = TRUE_;
 				//                         Store new midpoint of bisection interval in WORK
@@ -8482,9 +8437,9 @@ L120:
 				//                         improve error angle by second step
 				L__1 = ! usedbs;
 				dlar1v_(&in, &c__1, &in, &lambda, &d__[ibegin]
-					, &l[ibegin], &work[indld + ibegin - 
-					1], &work[indlld + ibegin - 1], 
-					pivmin, &gaptol, &z__[ibegin + windex 
+					, &l[ibegin], &work[indld + ibegin -
+					1], &work[indlld + ibegin - 1],
+					pivmin, &gaptol, &z__[ibegin + windex
 					* z_dim1], &L__1, &negcnt, &ztz, &
 					mingma, &iwork[iindr + windex], &
 					isuppz[(windex << 1) - 1], &nrminv, &
@@ -8517,7 +8472,7 @@ L120:
 			    }
 			}
 			i__4 = zto - zfrom + 1;
-			dscal_(&i__4, &nrminv, &z__[zfrom + windex * z_dim1], 
+			dscal_(&i__4, &nrminv, &z__[zfrom + windex * z_dim1],
 				&c__1);
 L125:
 			//                   Update W
@@ -8761,18 +8716,18 @@ L20:
 	it3 = it3 + i3 * mm[i__ + 383] + i4 * mm[i__ + 255];
 	it2 = it3 / 4096;
 	it3 -= it2 << 12;
-	it2 = it2 + i2 * mm[i__ + 383] + i3 * mm[i__ + 255] + i4 * mm[i__ + 
+	it2 = it2 + i2 * mm[i__ + 383] + i3 * mm[i__ + 255] + i4 * mm[i__ +
 		127];
 	it1 = it2 / 4096;
 	it2 -= it1 << 12;
-	it1 = it1 + i1 * mm[i__ + 383] + i2 * mm[i__ + 255] + i3 * mm[i__ + 
+	it1 = it1 + i1 * mm[i__ + 383] + i2 * mm[i__ + 255] + i3 * mm[i__ +
 		127] + i4 * mm[i__ - 1];
 	it1 %= 4096;
 	//
 	//       Convert 48-bit integer to a real number in the interval (0,1)
 	//
-	x[i__] = ((double) it1 + ((double) it2 + ((double) it3 + (double) it4 
-		* 2.44140625e-4) * 2.44140625e-4) * 2.44140625e-4) * 
+	x[i__] = ((double) it1 + ((double) it2 + ((double) it3 + (double) it4
+		* 2.44140625e-4) * 2.44140625e-4) * 2.44140625e-4) *
 		2.44140625e-4;
 	if (x[i__] == 1.) {
 	    //          If a real number has n bits of precision, and the first
@@ -9022,11 +8977,11 @@ L20:
     double alpha;
     extern /* Subroutine */ int dscal_(int *, double *, double *, int *);
     extern int lsame_(char *, char *);
-    extern /* Subroutine */ int dgemv_(char *, int *, int *, double *, double 
-	    *, int *, double *, int *, double *, double *, int *), daxpy_(int 
-	    *, double *, double *, int *, double *, int *), dsymv_(char *, 
-	    int *, double *, double *, int *, double *, int *, double *, 
-	    double *, int *), dlarfg_(int *, double *, double *, int *, 
+    extern /* Subroutine */ int dgemv_(char *, int *, int *, double *, double
+	    *, int *, double *, int *, double *, double *, int *), daxpy_(int
+	    *, double *, double *, int *, double *, int *), dsymv_(char *,
+	    int *, double *, double *, int *, double *, int *, double *,
+	    double *, int *), dlarfg_(int *, double *, double *, int *,
 	    double *);
 
     //
@@ -9082,11 +9037,11 @@ L20:
 		//             Update A(1:i,i)
 		//
 		i__2 = *n - i__;
-		dgemv_("No transpose", &i__, &i__2, &c_b5, &a[(i__ + 1) * 
+		dgemv_("No transpose", &i__, &i__2, &c_b5, &a[(i__ + 1) *
 			a_dim1 + 1], lda, &w[i__ + (iw + 1) * w_dim1], ldw, &
 			c_b6, &a[i__ * a_dim1 + 1], &c__1);
 		i__2 = *n - i__;
-		dgemv_("No transpose", &i__, &i__2, &c_b5, &w[(iw + 1) * 
+		dgemv_("No transpose", &i__, &i__2, &c_b5, &w[(iw + 1) *
 			w_dim1 + 1], ldw, &a[i__ + (i__ + 1) * a_dim1], lda, &
 			c_b6, &a[i__ * a_dim1 + 1], &c__1);
 	    }
@@ -9096,7 +9051,7 @@ L20:
 		//             A(1:i-2,i)
 		//
 		i__2 = i__ - 1;
-		dlarfg_(&i__2, &a[i__ - 1 + i__ * a_dim1], &a[i__ * a_dim1 + 
+		dlarfg_(&i__2, &a[i__ - 1 + i__ * a_dim1], &a[i__ * a_dim1 +
 			1], &c__1, &tau[i__ - 1]);
 		e[i__ - 1] = a[i__ - 1 + i__ * a_dim1];
 		a[i__ - 1 + i__ * a_dim1] = 1.;
@@ -9104,13 +9059,13 @@ L20:
 		//             Compute W(1:i-1,i)
 		//
 		i__2 = i__ - 1;
-		dsymv_("Upper", &i__2, &c_b6, &a[a_offset], lda, &a[i__ * 
+		dsymv_("Upper", &i__2, &c_b6, &a[a_offset], lda, &a[i__ *
 			a_dim1 + 1], &c__1, &c_b16, &w[iw * w_dim1 + 1], &
 			c__1);
 		if (i__ < *n) {
 		    i__2 = i__ - 1;
 		    i__3 = *n - i__;
-		    dgemv_("Transpose", &i__2, &i__3, &c_b6, &w[(iw + 1) * 
+		    dgemv_("Transpose", &i__2, &i__3, &c_b6, &w[(iw + 1) *
 			    w_dim1 + 1], ldw, &a[i__ * a_dim1 + 1], &c__1, &
 			    c_b16, &w[i__ + 1 + iw * w_dim1], &c__1);
 		    i__2 = i__ - 1;
@@ -9120,12 +9075,12 @@ L20:
 			    c__1, &c_b6, &w[iw * w_dim1 + 1], &c__1);
 		    i__2 = i__ - 1;
 		    i__3 = *n - i__;
-		    dgemv_("Transpose", &i__2, &i__3, &c_b6, &a[(i__ + 1) * 
+		    dgemv_("Transpose", &i__2, &i__3, &c_b6, &a[(i__ + 1) *
 			    a_dim1 + 1], lda, &a[i__ * a_dim1 + 1], &c__1, &
 			    c_b16, &w[i__ + 1 + iw * w_dim1], &c__1);
 		    i__2 = i__ - 1;
 		    i__3 = *n - i__;
-		    dgemv_("No transpose", &i__2, &i__3, &c_b5, &w[(iw + 1) * 
+		    dgemv_("No transpose", &i__2, &i__3, &c_b5, &w[(iw + 1) *
 			    w_dim1 + 1], ldw, &w[i__ + 1 + iw * w_dim1], &
 			    c__1, &c_b6, &w[iw * w_dim1 + 1], &c__1);
 		}
@@ -9135,7 +9090,7 @@ L20:
 		alpha = tau[i__ - 1] * -.5 * ddot_(&i__2, &w[iw * w_dim1 + 1],
 			 &c__1, &a[i__ * a_dim1 + 1], &c__1);
 		i__2 = i__ - 1;
-		daxpy_(&i__2, &alpha, &a[i__ * a_dim1 + 1], &c__1, &w[iw * 
+		daxpy_(&i__2, &alpha, &a[i__ * a_dim1 + 1], &c__1, &w[iw *
 			w_dim1 + 1], &c__1);
 	    }
 // L10:
@@ -9167,7 +9122,7 @@ L20:
 		i__2 = *n - i__;
 		// Computing MIN
 		i__3 = i__ + 2;
-		dlarfg_(&i__2, &a[i__ + 1 + i__ * a_dim1], &a[min(i__3,*n) + 
+		dlarfg_(&i__2, &a[i__ + 1 + i__ * a_dim1], &a[min(i__3,*n) +
 			i__ * a_dim1], &c__1, &tau[i__]);
 		e[i__] = a[i__ + 1 + i__ * a_dim1];
 		a[i__ + 1 + i__ * a_dim1] = 1.;
@@ -9185,7 +9140,7 @@ L20:
 			i__ * w_dim1 + 1], &c__1);
 		i__2 = *n - i__;
 		i__3 = i__ - 1;
-		dgemv_("No transpose", &i__2, &i__3, &c_b5, &a[i__ + 1 + 
+		dgemv_("No transpose", &i__2, &i__3, &c_b5, &a[i__ + 1 +
 			a_dim1], lda, &w[i__ * w_dim1 + 1], &c__1, &c_b6, &w[
 			i__ + 1 + i__ * w_dim1], &c__1);
 		i__2 = *n - i__;
@@ -9195,13 +9150,13 @@ L20:
 			i__ * w_dim1 + 1], &c__1);
 		i__2 = *n - i__;
 		i__3 = i__ - 1;
-		dgemv_("No transpose", &i__2, &i__3, &c_b5, &w[i__ + 1 + 
+		dgemv_("No transpose", &i__2, &i__3, &c_b5, &w[i__ + 1 +
 			w_dim1], ldw, &w[i__ * w_dim1 + 1], &c__1, &c_b6, &w[
 			i__ + 1 + i__ * w_dim1], &c__1);
 		i__2 = *n - i__;
 		dscal_(&i__2, &tau[i__], &w[i__ + 1 + i__ * w_dim1], &c__1);
 		i__2 = *n - i__;
-		alpha = tau[i__] * -.5 * ddot_(&i__2, &w[i__ + 1 + i__ * 
+		alpha = tau[i__] * -.5 * ddot_(&i__2, &w[i__ + 1 + i__ *
 			w_dim1], &c__1, &a[i__ + 1 + i__ * a_dim1], &c__1);
 		i__2 = *n - i__;
 		daxpy_(&i__2, &alpha, &a[i__ + 1 + i__ * a_dim1], &c__1, &w[
@@ -9376,7 +9331,7 @@ L20:
 //> \ingroup doubleOTHERcomputational
 //
 // =====================================================================
-/* Subroutine */ int dorm2l_(char *side, char *trans, int *m, int *n, int *k, 
+/* Subroutine */ int dorm2l_(char *side, char *trans, int *m, int *n, int *k,
 	double *a, int *lda, double *tau, double *c__, int *ldc, double *work,
 	 int *info)
 {
@@ -9390,7 +9345,7 @@ L20:
     int i__, i1, i2, i3, mi, ni, nq;
     double aii;
     int left;
-    extern /* Subroutine */ int dlarf_(char *, int *, int *, double *, int *, 
+    extern /* Subroutine */ int dlarf_(char *, int *, int *, double *, int *,
 	    double *, double *, int *, double *);
     extern int lsame_(char *, char *);
     extern /* Subroutine */ int xerbla_(char *, int *);
@@ -9683,7 +9638,7 @@ L20:
 //> \ingroup doubleOTHERcomputational
 //
 // =====================================================================
-/* Subroutine */ int dormql_(char *side, char *trans, int *m, int *n, int *k, 
+/* Subroutine */ int dormql_(char *side, char *trans, int *m, int *n, int *k,
 	double *a, int *lda, double *tau, double *c__, int *ldc, double *work,
 	 int *lwork, int *info)
 {
@@ -9698,17 +9653,14 @@ L20:
     int a_dim1, a_offset, c_dim1, c_offset, i__1, i__2, i__3[2], i__4, i__5;
     char ch__1[2+1]={'\0'};
 
-    // Builtin functions
-    /* Subroutine */ int s_cat(char *, char **, int *, int *);
-
     // Local variables
     int i__, i1, i2, i3, ib, nb, mi, ni, nq, nw, iwt;
     int left;
     extern int lsame_(char *, char *);
     int nbmin, iinfo;
-    extern /* Subroutine */ int dorm2l_(char *, char *, int *, int *, int *, 
-	    double *, int *, double *, double *, int *, double *, int *), 
-	    dlarfb_(char *, char *, char *, char *, int *, int *, int *, 
+    extern /* Subroutine */ int dorm2l_(char *, char *, int *, int *, int *,
+	    double *, int *, double *, double *, int *, double *, int *),
+	    dlarfb_(char *, char *, char *, char *, int *, int *, int *,
 	    double *, int *, double *, int *, double *, int *, double *, int *
 	    ), dlarft_(char *, char *, int *, int *, double *, int *, double *
 	    , double *, int *), xerbla_(char *, int *);
@@ -10068,7 +10020,7 @@ L20:
 //> \ingroup doubleOTHERcomputational
 //
 // =====================================================================
-/* Subroutine */ int dormtr_(char *side, char *uplo, char *trans, int *m, int 
+/* Subroutine */ int dormtr_(char *side, char *uplo, char *trans, int *m, int
 	*n, double *a, int *lda, double *tau, double *c__, int *ldc, double *
 	work, int *lwork, int *info)
 {
@@ -10082,9 +10034,6 @@ L20:
     int a_dim1, a_offset, c_dim1, c_offset, i__1[2], i__2, i__3;
     char ch__1[2+1]={'\0'};
 
-    // Builtin functions
-    /* Subroutine */ int s_cat(char *, char **, int *, int *);
-
     // Local variables
     int i1, i2, nb, mi, ni, nq, nw;
     int left;
@@ -10093,9 +10042,9 @@ L20:
     int upper;
     extern /* Subroutine */ int xerbla_(char *, int *);
     extern int ilaenv_(int *, char *, char *, int *, int *, int *, int *);
-    extern /* Subroutine */ int dormql_(char *, char *, int *, int *, int *, 
+    extern /* Subroutine */ int dormql_(char *, char *, int *, int *, int *,
 	    double *, int *, double *, double *, int *, double *, int *, int *
-	    ), dormqr_(char *, char *, int *, int *, int *, double *, int *, 
+	    ), dormqr_(char *, char *, int *, int *, int *, double *, int *,
 	    double *, double *, int *, double *, int *, int *);
     int lwkopt;
     int lquery;
@@ -10531,8 +10480,8 @@ L20:
 //> \ingroup auxOTHERcomputational
 //
 // =====================================================================
-/* Subroutine */ int dstebz_(char *range, char *order, int *n, double *vl, 
-	double *vu, int *il, int *iu, double *abstol, double *d__, double *e, 
+/* Subroutine */ int dstebz_(char *range, char *order, int *n, double *vl,
+	double *vu, int *il, int *iu, double *abstol, double *d__, double *e,
 	int *m, int *nsplit, double *w, int *iblock, int *isplit, double *
 	work, int *iwork, int *info)
 {
@@ -10546,9 +10495,6 @@ L20:
     // System generated locals
     int i__1, i__2, i__3;
     double d__1, d__2, d__3, d__4, d__5;
-
-    // Builtin functions
-    double sqrt(double), log(double);
 
     // Local variables
     int j, ib, jb, ie, je, nb;
@@ -10571,7 +10517,7 @@ L20:
     double wkill, rtoli, tnorm;
     extern double dlamch_(char *);
     int ibegin;
-    extern /* Subroutine */ int dlaebz_(int *, int *, int *, int *, int *, 
+    extern /* Subroutine */ int dlaebz_(int *, int *, int *, int *, int *,
 	    int *, double *, double *, double *, double *, double *, double *,
 	     int *, double *, double *, int *, int *, double *, int *, int *);
     int irange, idiscl;
@@ -10726,7 +10672,7 @@ L20:
 	tmp1 = d__1 * d__1;
 	// Computing 2nd power
 	d__2 = ulp;
-	if ((d__1 = d__[j] * d__[j - 1], abs(d__1)) * (d__2 * d__2) + safemn 
+	if ((d__1 = d__[j] * d__[j - 1], abs(d__1)) * (d__2 * d__2) + safemn
 		> tmp1) {
 	    isplit[*nsplit] = j - 1;
 	    ++(*nsplit);
@@ -10798,8 +10744,8 @@ L20:
 	iwork[4] = *n + 1;
 	iwork[5] = *il - 1;
 	iwork[6] = *iu;
-	dlaebz_(&c__3, &itmax, n, &c__2, &c__2, &nb, &atoli, &rtoli, &pivmin, 
-		&d__[1], &e[1], &work[1], &iwork[5], &work[*n + 1], &work[*n 
+	dlaebz_(&c__3, &itmax, n, &c__2, &c__2, &nb, &atoli, &rtoli, &pivmin,
+		&d__[1], &e[1], &work[1], &iwork[5], &work[*n + 1], &work[*n
 		+ 5], &iout, &iwork[1], &w[1], &iblock[1], &iinfo);
 	if (iwork[6] == *iu) {
 	    wl = work[*n + 1];
@@ -10875,7 +10821,7 @@ L20:
 	    if (irange == 1 || wu >= d__[ibegin] - pivmin) {
 		++nwu;
 	    }
-	    if (irange == 1 || wl < d__[ibegin] - pivmin && wu >= d__[ibegin] 
+	    if (irange == 1 || wl < d__[ibegin] - pivmin && wu >= d__[ibegin]
 		    - pivmin) {
 		++(*m);
 		w[*m] = d__[ibegin];
@@ -10952,7 +10898,7 @@ L20:
 	    //
 	    //          Compute Eigenvalues
 	    //
-	    itmax = (int) ((log(gu - gl + pivmin) - log(pivmin)) / log(2.)) + 
+	    itmax = (int) ((log(gu - gl + pivmin) - log(pivmin)) / log(2.)) +
 		    2;
 	    dlaebz_(&c__2, &itmax, &in, &in, &c__1, &nb, &atoli, &rtoli, &
 		    pivmin, &d__[ibegin], &e[ibegin], &work[ibegin], idumma, &
@@ -11290,7 +11236,7 @@ L70:
 //
 // =====================================================================
 /* Subroutine */ int dstein_(int *n, double *d__, double *e, int *m, double *
-	w, int *iblock, int *isplit, double *z__, int *ldz, double *work, int 
+	w, int *iblock, int *isplit, double *z__, int *ldz, double *work, int
 	*iwork, int *ifail, int *info)
 {
     // Table of constant values
@@ -11301,9 +11247,6 @@ L70:
     // System generated locals
     int z_dim1, z_offset, i__1, i__2, i__3;
     double d__1, d__2, d__3, d__4, d__5;
-
-    // Builtin functions
-    double sqrt(double);
 
     // Local variables
     int i__, j, b1, j1, bn;
@@ -11321,10 +11264,10 @@ L70:
     double ortol;
     int indrv1, indrv2, indrv3, indrv4, indrv5;
     extern double dlamch_(char *);
-    extern /* Subroutine */ int dlagtf_(int *, double *, double *, double *, 
+    extern /* Subroutine */ int dlagtf_(int *, double *, double *, double *,
 	    double *, double *, double *, int *, int *);
     extern int idamax_(int *, double *, int *);
-    extern /* Subroutine */ int xerbla_(char *, int *), dlagts_(int *, int *, 
+    extern /* Subroutine */ int xerbla_(char *, int *), dlagts_(int *, int *,
 	    double *, double *, double *, double *, int *, double *, double *,
 	     int *);
     int nrmchk;
@@ -11540,7 +11483,7 @@ L70:
 	    jmax = idamax_(&blksiz, &work[indrv1 + 1], &c__1);
 	    // Computing MAX
 	    d__3 = eps, d__4 = (d__1 = work[indrv4 + blksiz], abs(d__1));
-	    scl = blksiz * onenrm * max(d__3,d__4) / (d__2 = work[indrv1 + 
+	    scl = blksiz * onenrm * max(d__3,d__4) / (d__2 = work[indrv1 +
 		    jmax], abs(d__2));
 	    dscal_(&blksiz, &scl, &work[indrv1 + 1], &c__1);
 	    //
@@ -11562,7 +11505,7 @@ L70:
 	    if (gpind != j) {
 		i__3 = j - 1;
 		for (i__ = gpind; i__ <= i__3; ++i__) {
-		    ztr = -ddot_(&blksiz, &work[indrv1 + 1], &c__1, &z__[b1 + 
+		    ztr = -ddot_(&blksiz, &work[indrv1 + 1], &c__1, &z__[b1 +
 			    i__ * z_dim1], &c__1);
 		    daxpy_(&blksiz, &ztr, &z__[b1 + i__ * z_dim1], &c__1, &
 			    work[indrv1 + 1], &c__1);
@@ -11952,7 +11895,7 @@ L160:
 //> Christof Voemel, University of California, Berkeley, USA
 //
 // =====================================================================
-/* Subroutine */ int dstemr_(char *jobz, char *range, int *n, double *d__, 
+/* Subroutine */ int dstemr_(char *jobz, char *range, int *n, double *d__,
 	double *e, double *vl, double *vu, int *il, int *iu, int *m, double *
 	w, double *z__, int *ldz, int *nzc, int *isuppz, int *tryrac, double *
 	work, int *lwork, int *iwork, int *liwork, int *info)
@@ -11964,9 +11907,6 @@ L160:
     // System generated locals
     int z_dim1, z_offset, i__1, i__2;
     double d__1, d__2;
-
-    // Builtin functions
-    double sqrt(double);
 
     // Local variables
     int i__, j;
@@ -12002,25 +11942,25 @@ L160:
     int indeig;
     int iindbl;
     int valeig;
-    extern /* Subroutine */ int dlarrc_(char *, int *, double *, double *, 
-	    double *, double *, double *, int *, int *, int *, int *), 
+    extern /* Subroutine */ int dlarrc_(char *, int *, double *, double *,
+	    double *, double *, double *, int *, int *, int *, int *),
 	    dlarre_(char *, int *, double *, double *, int *, int *, double *,
-	     double *, double *, double *, double *, double *, int *, int *, 
-	    int *, double *, double *, double *, int *, int *, double *, 
+	     double *, double *, double *, double *, double *, int *, int *,
+	    int *, double *, double *, double *, int *, int *, double *,
 	    double *, double *, int *, int *);
     int wbegin;
     double safmin;
-    extern /* Subroutine */ int dlarrj_(int *, double *, double *, int *, int 
+    extern /* Subroutine */ int dlarrj_(int *, double *, double *, int *, int
 	    *, double *, int *, double *, double *, double *, int *, double *,
 	     double *, int *), xerbla_(char *, int *);
     double bignum;
     int inderr, iindwk, indgrs, offset;
     extern double dlanst_(char *, int *, double *, double *);
-    extern /* Subroutine */ int dlarrr_(int *, double *, double *, int *), 
-	    dlarrv_(int *, double *, double *, double *, double *, double *, 
+    extern /* Subroutine */ int dlarrr_(int *, double *, double *, int *),
+	    dlarrv_(int *, double *, double *, double *, double *, double *,
 	    int *, int *, int *, int *, double *, double *, double *, double *
-	    , double *, double *, int *, int *, double *, double *, int *, 
-	    int *, double *, int *, int *), dlasrt_(char *, int *, double *, 
+	    , double *, double *, int *, int *, double *, double *, int *,
+	    int *, double *, int *, int *), dlasrt_(char *, int *, double *,
 	    int *);
     double thresh;
     int iinspl, ifirst, indwrk, liwmin, nzcmin;
@@ -12321,7 +12261,7 @@ L160:
 	    d__1 = sqrt(eps) * .005, d__2 = eps * 4.;
 	    rtol2 = max(d__1,d__2);
 	}
-	dlarre_(range, n, &wl, &wu, &iil, &iiu, &d__[1], &e[1], &work[inde2], 
+	dlarre_(range, n, &wl, &wu, &iil, &iiu, &d__[1], &e[1], &work[inde2],
 		&rtol1, &rtol2, &thresh, &nsplit, &iwork[iinspl], m, &w[1], &
 		work[inderr], &work[indgp], &iwork[iindbl], &iwork[iindw], &
 		work[indgrs], &pivmin, &work[indwrk], &iwork[iindwk], &iinfo);
@@ -12385,7 +12325,7 @@ L36:
 		ifirst = iwork[iindw + wbegin - 1];
 		ilast = iwork[iindw + wend - 1];
 		rtol2 = eps * 4.;
-		dlarrj_(&in, &work[indd + ibegin - 1], &work[inde2 + ibegin - 
+		dlarrj_(&in, &work[indd + ibegin - 1], &work[inde2 + ibegin -
 			1], &ifirst, &ilast, &rtol2, &offset, &w[wbegin], &
 			work[inderr + wbegin - 1], &work[indwrk], &iwork[
 			iindwk], &pivmin, &tnrm, &iinfo);
@@ -12431,7 +12371,7 @@ L39:
 		    w[i__] = w[j];
 		    w[j] = tmp;
 		    if (wantz) {
-			dswap_(n, &z__[i__ * z_dim1 + 1], &c__1, &z__[j * 
+			dswap_(n, &z__[i__ * z_dim1 + 1], &c__1, &z__[j *
 				z_dim1 + 1], &c__1);
 			itmp = isuppz[(i__ << 1) - 1];
 			isuppz[(i__ << 1) - 1] = isuppz[(j << 1) - 1];
@@ -12552,9 +12492,6 @@ L39:
     int i__1;
     double d__1, d__2, d__3;
 
-    // Builtin functions
-    double sqrt(double), d_sign(double *, double *);
-
     // Local variables
     double c__;
     int i__, l, m;
@@ -12571,7 +12508,7 @@ L39:
     double gamma, alpha, sigma, anorm;
     extern double dlapy2_(double *, double *), dlamch_(char *);
     int iscale;
-    extern /* Subroutine */ int dlascl_(char *, int *, int *, double *, 
+    extern /* Subroutine */ int dlascl_(char *, int *, int *, double *,
 	    double *, int *, int *, double *, int *, int *);
     double oldgam, safmin;
     extern /* Subroutine */ int xerbla_(char *, int *);
@@ -12661,7 +12598,7 @@ L10:
     }
     i__1 = *n - 1;
     for (m = l1; m <= i__1; ++m) {
-	if ((d__3 = e[m], abs(d__3)) <= sqrt((d__1 = d__[m], abs(d__1))) * 
+	if ((d__3 = e[m], abs(d__3)) <= sqrt((d__1 = d__[m], abs(d__1))) *
 		sqrt((d__2 = d__[m + 1], abs(d__2))) * eps) {
 	    e[m] = 0.;
 	    goto L30;
@@ -12690,18 +12627,18 @@ L30:
     if (anorm > ssfmax) {
 	iscale = 1;
 	i__1 = lend - l + 1;
-	dlascl_("G", &c__0, &c__0, &anorm, &ssfmax, &i__1, &c__1, &d__[l], n, 
+	dlascl_("G", &c__0, &c__0, &anorm, &ssfmax, &i__1, &c__1, &d__[l], n,
 		info);
 	i__1 = lend - l;
-	dlascl_("G", &c__0, &c__0, &anorm, &ssfmax, &i__1, &c__1, &e[l], n, 
+	dlascl_("G", &c__0, &c__0, &anorm, &ssfmax, &i__1, &c__1, &e[l], n,
 		info);
     } else if (anorm < ssfmin) {
 	iscale = 2;
 	i__1 = lend - l + 1;
-	dlascl_("G", &c__0, &c__0, &anorm, &ssfmin, &i__1, &c__1, &d__[l], n, 
+	dlascl_("G", &c__0, &c__0, &anorm, &ssfmin, &i__1, &c__1, &d__[l], n,
 		info);
 	i__1 = lend - l;
-	dlascl_("G", &c__0, &c__0, &anorm, &ssfmin, &i__1, &c__1, &e[l], n, 
+	dlascl_("G", &c__0, &c__0, &anorm, &ssfmin, &i__1, &c__1, &e[l], n,
 		info);
     }
     i__1 = lend - 1;
@@ -12728,7 +12665,7 @@ L50:
 	if (l != lend) {
 	    i__1 = lend - 1;
 	    for (m = l; m <= i__1; ++m) {
-		if ((d__2 = e[m], abs(d__2)) <= eps2 * (d__1 = d__[m] * d__[m 
+		if ((d__2 = e[m], abs(d__2)) <= eps2 * (d__1 = d__[m] * d__[m
 			+ 1], abs(d__1))) {
 		    goto L70;
 		}
@@ -12821,7 +12758,7 @@ L90:
 L100:
 	i__1 = lend + 1;
 	for (m = l; m >= i__1; --m) {
-	    if ((d__2 = e[m - 1], abs(d__2)) <= eps2 * (d__1 = d__[m] * d__[m 
+	    if ((d__2 = e[m - 1], abs(d__2)) <= eps2 * (d__1 = d__[m] * d__[m
 		    - 1], abs(d__1))) {
 		goto L120;
 	    }
@@ -12911,12 +12848,12 @@ L140:
 L150:
     if (iscale == 1) {
 	i__1 = lendsv - lsv + 1;
-	dlascl_("G", &c__0, &c__0, &ssfmax, &anorm, &i__1, &c__1, &d__[lsv], 
+	dlascl_("G", &c__0, &c__0, &ssfmax, &anorm, &i__1, &c__1, &d__[lsv],
 		n, info);
     }
     if (iscale == 2) {
 	i__1 = lendsv - lsv + 1;
-	dlascl_("G", &c__0, &c__0, &ssfmin, &anorm, &i__1, &c__1, &d__[lsv], 
+	dlascl_("G", &c__0, &c__0, &ssfmin, &anorm, &i__1, &c__1, &d__[lsv],
 		n, info);
     }
     //
@@ -13280,9 +13217,9 @@ L180:
 //>       California at Berkeley, USA \n
 //>
 // =====================================================================
-/* Subroutine */ int dsyevr_(char *jobz, char *range, char *uplo, int *n, 
-	double *a, int *lda, double *vl, double *vu, int *il, int *iu, double 
-	*abstol, int *m, double *w, double *z__, int *ldz, int *isuppz, 
+/* Subroutine */ int dsyevr_(char *jobz, char *range, char *uplo, int *n,
+	double *a, int *lda, double *vl, double *vu, int *il, int *iu, double
+	*abstol, int *m, double *w, double *z__, int *ldz, int *isuppz,
 	double *work, int *lwork, int *iwork, int *liwork, int *info)
 {
     // Table of constant values
@@ -13296,9 +13233,6 @@ L180:
     // System generated locals
     int a_dim1, a_offset, z_dim1, z_offset, i__1, i__2;
     double d__1, d__2;
-
-    // Builtin functions
-    double sqrt(double);
 
     // Local variables
     int i__, j, nb, jj;
@@ -13327,25 +13261,25 @@ L180:
     extern /* Subroutine */ int xerbla_(char *, int *);
     double abstll, bignum;
     int indtau, indisp;
-    extern /* Subroutine */ int dstein_(int *, double *, double *, int *, 
-	    double *, int *, int *, double *, int *, double *, int *, int *, 
+    extern /* Subroutine */ int dstein_(int *, double *, double *, int *,
+	    double *, int *, int *, double *, int *, double *, int *, int *,
 	    int *), dsterf_(int *, double *, double *, int *);
     int indiwo, indwkn;
     extern double dlansy_(char *, char *, int *, double *, int *, double *);
-    extern /* Subroutine */ int dstebz_(char *, char *, int *, double *, 
+    extern /* Subroutine */ int dstebz_(char *, char *, int *, double *,
 	    double *, int *, int *, double *, double *, double *, int *, int *
 	    , double *, int *, int *, double *, int *, int *), dstemr_(char *,
-	     char *, int *, double *, double *, double *, double *, int *, 
-	    int *, int *, double *, double *, int *, int *, int *, int *, 
+	     char *, int *, double *, double *, double *, double *, int *,
+	    int *, int *, double *, double *, int *, int *, int *, int *,
 	    double *, int *, int *, int *, int *);
     int liwmin;
     int tryrac;
-    extern /* Subroutine */ int dormtr_(char *, char *, char *, int *, int *, 
+    extern /* Subroutine */ int dormtr_(char *, char *, char *, int *, int *,
 	    double *, int *, double *, double *, int *, double *, int *, int *
 	    );
     int llwrkn, llwork, nsplit;
     double smlnum;
-    extern /* Subroutine */ int dsytrd_(char *, int *, double *, int *, 
+    extern /* Subroutine */ int dsytrd_(char *, int *, double *, int *,
 	    double *, double *, double *, double *, int *, int *);
     int lwkopt;
     int lquery;
@@ -13590,7 +13524,7 @@ L180:
 	    } else {
 		tryrac = FALSE_;
 	    }
-	    dstemr_(jobz, "A", n, &work[inddd], &work[indee], vl, vu, il, iu, 
+	    dstemr_(jobz, "A", n, &work[inddd], &work[indee], vl, vu, il, iu,
 		    m, &w[1], &z__[z_offset], ldz, n, &isuppz[1], &tryrac, &
 		    work[indwk], lwork, &iwork[1], liwork, info);
 	    //
@@ -13847,7 +13781,7 @@ L30:
 //> \endverbatim
 //>
 // =====================================================================
-/* Subroutine */ int dsymv_(char *uplo, int *n, double *alpha, double *a, int 
+/* Subroutine */ int dsymv_(char *uplo, int *n, double *alpha, double *a, int
 	*lda, double *x, int *incx, double *beta, double *y, int *incy)
 {
     // System generated locals
@@ -14212,7 +14146,7 @@ L30:
 //> \endverbatim
 //>
 // =====================================================================
-/* Subroutine */ int dsyr2_(char *uplo, int *n, double *alpha, double *x, int 
+/* Subroutine */ int dsyr2_(char *uplo, int *n, double *alpha, double *x, int
 	*incx, double *y, int *incy, double *a, int *lda)
 {
     // System generated locals
@@ -14315,7 +14249,7 @@ L30:
 		    temp2 = *alpha * x[j];
 		    i__2 = j;
 		    for (i__ = 1; i__ <= i__2; ++i__) {
-			a[i__ + j * a_dim1] = a[i__ + j * a_dim1] + x[i__] * 
+			a[i__ + j * a_dim1] = a[i__ + j * a_dim1] + x[i__] *
 				temp1 + y[i__] * temp2;
 // L10:
 		    }
@@ -14332,7 +14266,7 @@ L30:
 		    iy = ky;
 		    i__2 = j;
 		    for (i__ = 1; i__ <= i__2; ++i__) {
-			a[i__ + j * a_dim1] = a[i__ + j * a_dim1] + x[ix] * 
+			a[i__ + j * a_dim1] = a[i__ + j * a_dim1] + x[ix] *
 				temp1 + y[iy] * temp2;
 			ix += *incx;
 			iy += *incy;
@@ -14356,7 +14290,7 @@ L30:
 		    temp2 = *alpha * x[j];
 		    i__2 = *n;
 		    for (i__ = j; i__ <= i__2; ++i__) {
-			a[i__ + j * a_dim1] = a[i__ + j * a_dim1] + x[i__] * 
+			a[i__ + j * a_dim1] = a[i__ + j * a_dim1] + x[i__] *
 				temp1 + y[i__] * temp2;
 // L50:
 		    }
@@ -14373,7 +14307,7 @@ L30:
 		    iy = jy;
 		    i__2 = *n;
 		    for (i__ = j; i__ <= i__2; ++i__) {
-			a[i__ + j * a_dim1] = a[i__ + j * a_dim1] + x[ix] * 
+			a[i__ + j * a_dim1] = a[i__ + j * a_dim1] + x[ix] *
 				temp1 + y[iy] * temp2;
 			ix += *incx;
 			iy += *incy;
@@ -14587,11 +14521,11 @@ L30:
 //>
 // =====================================================================
 /* Subroutine */ int dsyr2k_(char *uplo, char *trans, int *n, int *k, double *
-	alpha, double *a, int *lda, double *b, int *ldb, double *beta, double 
+	alpha, double *a, int *lda, double *b, int *ldb, double *beta, double
 	*c__, int *ldc)
 {
     // System generated locals
-    int a_dim1, a_offset, b_dim1, b_offset, c_dim1, c_offset, i__1, i__2, 
+    int a_dim1, a_offset, b_dim1, b_offset, c_dim1, c_offset, i__1, i__2,
 	    i__3;
 
     // Local variables
@@ -14755,7 +14689,7 @@ L30:
 			i__3 = j;
 			for (i__ = 1; i__ <= i__3; ++i__) {
 			    c__[i__ + j * c_dim1] = c__[i__ + j * c_dim1] + a[
-				    i__ + l * a_dim1] * temp1 + b[i__ + l * 
+				    i__ + l * a_dim1] * temp1 + b[i__ + l *
 				    b_dim1] * temp2;
 // L110:
 			}
@@ -14788,7 +14722,7 @@ L30:
 			i__3 = *n;
 			for (i__ = j; i__ <= i__3; ++i__) {
 			    c__[i__ + j * c_dim1] = c__[i__ + j * c_dim1] + a[
-				    i__ + l * a_dim1] * temp1 + b[i__ + l * 
+				    i__ + l * a_dim1] * temp1 + b[i__ + l *
 				    b_dim1] * temp2;
 // L160:
 			}
@@ -14816,10 +14750,10 @@ L30:
 // L190:
 		    }
 		    if (*beta == 0.) {
-			c__[i__ + j * c_dim1] = *alpha * temp1 + *alpha * 
+			c__[i__ + j * c_dim1] = *alpha * temp1 + *alpha *
 				temp2;
 		    } else {
-			c__[i__ + j * c_dim1] = *beta * c__[i__ + j * c_dim1] 
+			c__[i__ + j * c_dim1] = *beta * c__[i__ + j * c_dim1]
 				+ *alpha * temp1 + *alpha * temp2;
 		    }
 // L200:
@@ -14840,10 +14774,10 @@ L30:
 // L220:
 		    }
 		    if (*beta == 0.) {
-			c__[i__ + j * c_dim1] = *alpha * temp1 + *alpha * 
+			c__[i__ + j * c_dim1] = *alpha * temp1 + *alpha *
 				temp2;
 		    } else {
-			c__[i__ + j * c_dim1] = *beta * c__[i__ + j * c_dim1] 
+			c__[i__ + j * c_dim1] = *beta * c__[i__ + j * c_dim1]
 				+ *alpha * temp1 + *alpha * temp2;
 		    }
 // L230:
@@ -15048,15 +14982,15 @@ L30:
     int i__;
     extern double ddot_(int *, double *, int *, double *, int *);
     double taui;
-    extern /* Subroutine */ int dsyr2_(char *, int *, double *, double *, int 
+    extern /* Subroutine */ int dsyr2_(char *, int *, double *, double *, int
 	    *, double *, int *, double *, int *);
     double alpha;
     extern int lsame_(char *, char *);
-    extern /* Subroutine */ int daxpy_(int *, double *, double *, int *, 
+    extern /* Subroutine */ int daxpy_(int *, double *, double *, int *,
 	    double *, int *);
     int upper;
-    extern /* Subroutine */ int dsymv_(char *, int *, double *, double *, int 
-	    *, double *, int *, double *, double *, int *), dlarfg_(int *, 
+    extern /* Subroutine */ int dsymv_(char *, int *, double *, double *, int
+	    *, double *, int *, double *, double *, int *), dlarfg_(int *,
 	    double *, double *, int *, double *), xerbla_(char *, int *);
 
     //
@@ -15124,7 +15058,7 @@ L30:
 	    //          Generate elementary reflector H(i) = I - tau * v * v**T
 	    //          to annihilate A(1:i-1,i+1)
 	    //
-	    dlarfg_(&i__, &a[i__ + (i__ + 1) * a_dim1], &a[(i__ + 1) * a_dim1 
+	    dlarfg_(&i__, &a[i__ + (i__ + 1) * a_dim1], &a[(i__ + 1) * a_dim1
 		    + 1], &c__1, &taui);
 	    e[i__] = a[i__ + (i__ + 1) * a_dim1];
 	    if (taui != 0.) {
@@ -15135,12 +15069,12 @@ L30:
 		//
 		//             Compute  x := tau * A * v  storing x in TAU(1:i)
 		//
-		dsymv_(uplo, &i__, &taui, &a[a_offset], lda, &a[(i__ + 1) * 
+		dsymv_(uplo, &i__, &taui, &a[a_offset], lda, &a[(i__ + 1) *
 			a_dim1 + 1], &c__1, &c_b8, &tau[1], &c__1);
 		//
 		//             Compute  w := x - 1/2 * tau * (x**T * v) * v
 		//
-		alpha = taui * -.5 * ddot_(&i__, &tau[1], &c__1, &a[(i__ + 1) 
+		alpha = taui * -.5 * ddot_(&i__, &tau[1], &c__1, &a[(i__ + 1)
 			* a_dim1 + 1], &c__1);
 		daxpy_(&i__, &alpha, &a[(i__ + 1) * a_dim1 + 1], &c__1, &tau[
 			1], &c__1);
@@ -15148,7 +15082,7 @@ L30:
 		//             Apply the transformation as a rank-2 update:
 		//                A := A - v * w**T - w * v**T
 		//
-		dsyr2_(uplo, &i__, &c_b14, &a[(i__ + 1) * a_dim1 + 1], &c__1, 
+		dsyr2_(uplo, &i__, &c_b14, &a[(i__ + 1) * a_dim1 + 1], &c__1,
 			&tau[1], &c__1, &a[a_offset], lda);
 		a[i__ + (i__ + 1) * a_dim1] = e[i__];
 	    }
@@ -15182,14 +15116,14 @@ L30:
 		//             Compute  x := tau * A * v  storing y in TAU(i:n-1)
 		//
 		i__2 = *n - i__;
-		dsymv_(uplo, &i__2, &taui, &a[i__ + 1 + (i__ + 1) * a_dim1], 
+		dsymv_(uplo, &i__2, &taui, &a[i__ + 1 + (i__ + 1) * a_dim1],
 			lda, &a[i__ + 1 + i__ * a_dim1], &c__1, &c_b8, &tau[
 			i__], &c__1);
 		//
 		//             Compute  w := x - 1/2 * tau * (x**T * v) * v
 		//
 		i__2 = *n - i__;
-		alpha = taui * -.5 * ddot_(&i__2, &tau[i__], &c__1, &a[i__ + 
+		alpha = taui * -.5 * ddot_(&i__2, &tau[i__], &c__1, &a[i__ +
 			1 + i__ * a_dim1], &c__1);
 		i__2 = *n - i__;
 		daxpy_(&i__2, &alpha, &a[i__ + 1 + i__ * a_dim1], &c__1, &tau[
@@ -15200,7 +15134,7 @@ L30:
 		//
 		i__2 = *n - i__;
 		dsyr2_(uplo, &i__2, &c_b14, &a[i__ + 1 + i__ * a_dim1], &c__1,
-			 &tau[i__], &c__1, &a[i__ + 1 + (i__ + 1) * a_dim1], 
+			 &tau[i__], &c__1, &a[i__ + 1 + (i__ + 1) * a_dim1],
 			lda);
 		a[i__ + 1 + i__ * a_dim1] = e[i__];
 	    }
@@ -15429,10 +15363,10 @@ L30:
     extern int lsame_(char *, char *);
     int nbmin, iinfo;
     int upper;
-    extern /* Subroutine */ int dsytd2_(char *, int *, double *, int *, 
-	    double *, double *, double *, int *), dsyr2k_(char *, char *, int 
-	    *, int *, double *, double *, int *, double *, int *, double *, 
-	    double *, int *), dlatrd_(char *, int *, int *, double *, int *, 
+    extern /* Subroutine */ int dsytd2_(char *, int *, double *, int *,
+	    double *, double *, double *, int *), dsyr2k_(char *, char *, int
+	    *, int *, double *, double *, int *, double *, int *, double *,
+	    double *, int *), dlatrd_(char *, int *, int *, double *, int *,
 	    double *, double *, double *, int *), xerbla_(char *, int *);
     extern int ilaenv_(int *, char *, char *, int *, int *, int *, int *);
     int ldwork, lwkopt;
@@ -15555,7 +15489,7 @@ L30:
 	kk = *n - (*n - nx + nb - 1) / nb * nb;
 	i__1 = kk + 1;
 	i__2 = -nb;
-	for (i__ = *n - nb + 1; i__2 < 0 ? i__ >= i__1 : i__ <= i__1; i__ += 
+	for (i__ = *n - nb + 1; i__2 < 0 ? i__ >= i__1 : i__ <= i__1; i__ +=
 		i__2) {
 	    //
 	    //          Reduce columns i:i+nb-1 to tridiagonal form and form the
@@ -15570,7 +15504,7 @@ L30:
 	    //          update of the form:  A := A - V*W**T - W*V**T
 	    //
 	    i__3 = i__ - 1;
-	    dsyr2k_(uplo, "No transpose", &i__3, &nb, &c_b22, &a[i__ * a_dim1 
+	    dsyr2k_(uplo, "No transpose", &i__3, &nb, &c_b22, &a[i__ * a_dim1
 		    + 1], lda, &work[1], &ldwork, &c_b23, &a[a_offset], lda);
 	    //
 	    //          Copy superdiagonal elements back into A, and diagonal
@@ -15609,7 +15543,7 @@ L30:
 	    //          an update of the form:  A := A - V*W**T - W*V**T
 	    //
 	    i__3 = *n - i__ - nb + 1;
-	    dsyr2k_(uplo, "No transpose", &i__3, &nb, &c_b22, &a[i__ + nb + 
+	    dsyr2k_(uplo, "No transpose", &i__3, &nb, &c_b22, &a[i__ + nb +
 		    i__ * a_dim1], lda, &work[nb + 1], &ldwork, &c_b23, &a[
 		    i__ + nb + (i__ + nb) * a_dim1], lda);
 	    //
@@ -15628,7 +15562,7 @@ L30:
 	//       Use unblocked code to reduce the last or only block
 	//
 	i__1 = *n - i__ + 1;
-	dsytd2_(uplo, &i__1, &a[i__ + i__ * a_dim1], lda, &d__[i__], &e[i__], 
+	dsytd2_(uplo, &i__1, &a[i__ + i__ * a_dim1], lda, &d__[i__], &e[i__],
 		&tau[i__], &iinfo);
     }
     work[1] = (double) lwkopt;

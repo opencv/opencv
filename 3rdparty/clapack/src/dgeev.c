@@ -186,7 +186,7 @@
     rightv = lsame_(side, "R");
     leftv = lsame_(side, "L");
     *info = 0;
-    if (! lsame_(job, "N") && ! lsame_(job, "P") && ! lsame_(job, "S") && ! 
+    if (! lsame_(job, "N") && ! lsame_(job, "P") && ! lsame_(job, "S") && !
 	    lsame_(job, "B")) {
 	*info = -1;
     } else if (! rightv && ! leftv) {
@@ -518,7 +518,7 @@ L50:
 
     // Function Body
     *info = 0;
-    if (! lsame_(job, "N") && ! lsame_(job, "P") && ! lsame_(job, "S") && ! 
+    if (! lsame_(job, "N") && ! lsame_(job, "P") && ! lsame_(job, "S") && !
 	    lsame_(job, "B")) {
 	*info = -1;
     } else if (*n < 0) {
@@ -940,12 +940,9 @@ L210:
     int c_n1 = -1;
 
     // System generated locals
-    int a_dim1, a_offset, vl_dim1, vl_offset, vr_dim1, vr_offset, i__1, i__2, 
+    int a_dim1, a_offset, vl_dim1, vl_offset, vr_dim1, vr_offset, i__1, i__2,
 	    i__3;
     double d__1, d__2;
-
-    // Builtin functions
-    double sqrt(double);
 
     // Local variables
     int i__, k;
@@ -965,16 +962,16 @@ L210:
     extern /* Subroutine */ int dscal_(int *, double *, double *, int *);
     extern int lsame_(char *, char *);
     extern double dlapy2_(double *, double *);
-    extern /* Subroutine */ int dlabad_(double *, double *), dgebak_(char *, 
-	    char *, int *, int *, int *, double *, int *, double *, int *, 
-	    int *), dgebal_(char *, int *, double *, int *, int *, int *, 
+    extern /* Subroutine */ int dlabad_(double *, double *), dgebak_(char *,
+	    char *, int *, int *, int *, double *, int *, double *, int *,
+	    int *), dgebal_(char *, int *, double *, int *, int *, int *,
 	    double *, int *);
     int scalea;
     extern double dlamch_(char *);
     double cscale;
     extern double dlange_(char *, int *, int *, double *, int *, double *);
-    extern /* Subroutine */ int dgehrd_(int *, int *, int *, double *, int *, 
-	    double *, double *, int *, int *), dlascl_(char *, int *, int *, 
+    extern /* Subroutine */ int dgehrd_(int *, int *, int *, double *, int *,
+	    double *, double *, int *, int *), dlascl_(char *, int *, int *,
 	    double *, double *, int *, int *, double *, int *, int *);
     extern int idamax_(int *, double *, int *);
     extern /* Subroutine */ int dlacpy_(char *, int *, int *, double *, int *,
@@ -983,8 +980,8 @@ L210:
     int select[1];
     extern int ilaenv_(int *, char *, char *, int *, int *, int *, int *);
     double bignum;
-    extern /* Subroutine */ int dorghr_(int *, int *, int *, double *, int *, 
-	    double *, double *, int *, int *), dhseqr_(char *, char *, int *, 
+    extern /* Subroutine */ int dorghr_(int *, int *, int *, double *, int *,
+	    double *, double *, int *, int *), dhseqr_(char *, char *, int *,
 	    int *, int *, double *, int *, double *, double *, double *, int *
 	    , double *, int *, int *);
     int minwrk, maxwrk;
@@ -992,7 +989,7 @@ L210:
     double smlnum;
     int hswork;
     int lquery, wantvr;
-    extern /* Subroutine */ int dtrevc3_(char *, char *, int *, int *, double 
+    extern /* Subroutine */ int dtrevc3_(char *, char *, int *, int *, double
 	    *, int *, double *, int *, double *, int *, int *, int *, double *
 	    , int *, int *);
 
@@ -1073,12 +1070,12 @@ L210:
 	    minwrk = 1;
 	    maxwrk = 1;
 	} else {
-	    maxwrk = (*n << 1) + *n * ilaenv_(&c__1, "DGEHRD", " ", n, &c__1, 
+	    maxwrk = (*n << 1) + *n * ilaenv_(&c__1, "DGEHRD", " ", n, &c__1,
 		    n, &c__0);
 	    if (wantvl) {
 		minwrk = *n << 2;
 		// Computing MAX
-		i__1 = maxwrk, i__2 = (*n << 1) + (*n - 1) * ilaenv_(&c__1, 
+		i__1 = maxwrk, i__2 = (*n << 1) + (*n - 1) * ilaenv_(&c__1,
 			"DORGHR", " ", n, &c__1, n, &c_n1);
 		maxwrk = max(i__1,i__2);
 		dhseqr_("S", "V", n, &c__1, n, &a[a_offset], lda, &wr[1], &wi[
@@ -1101,7 +1098,7 @@ L210:
 	    } else if (wantvr) {
 		minwrk = *n << 2;
 		// Computing MAX
-		i__1 = maxwrk, i__2 = (*n << 1) + (*n - 1) * ilaenv_(&c__1, 
+		i__1 = maxwrk, i__2 = (*n << 1) + (*n - 1) * ilaenv_(&c__1,
 			"DORGHR", " ", n, &c__1, n, &c_n1);
 		maxwrk = max(i__1,i__2);
 		dhseqr_("S", "V", n, &c__1, n, &a[a_offset], lda, &wr[1], &wi[
@@ -1265,7 +1262,7 @@ L210:
 	//       (Workspace: need 4*N, prefer N + N + 2*N*NB)
 	//
 	i__1 = *lwork - iwrk + 1;
-	dtrevc3_(side, "B", select, n, &a[a_offset], lda, &vl[vl_offset], 
+	dtrevc3_(side, "B", select, n, &a[a_offset], lda, &vl[vl_offset],
 		ldvl, &vr[vr_offset], ldvr, n, &nout, &work[iwrk], &i__1, &
 		ierr);
     }
@@ -1300,9 +1297,9 @@ L210:
 // L10:
 		}
 		k = idamax_(n, &work[iwrk], &c__1);
-		dlartg_(&vl[k + i__ * vl_dim1], &vl[k + (i__ + 1) * vl_dim1], 
+		dlartg_(&vl[k + i__ * vl_dim1], &vl[k + (i__ + 1) * vl_dim1],
 			&cs, &sn, &r__);
-		drot_(n, &vl[i__ * vl_dim1 + 1], &c__1, &vl[(i__ + 1) * 
+		drot_(n, &vl[i__ * vl_dim1 + 1], &c__1, &vl[(i__ + 1) *
 			vl_dim1 + 1], &c__1, &cs, &sn);
 		vl[k + (i__ + 1) * vl_dim1] = 0.;
 	    }
@@ -1340,9 +1337,9 @@ L210:
 // L30:
 		}
 		k = idamax_(n, &work[iwrk], &c__1);
-		dlartg_(&vr[k + i__ * vr_dim1], &vr[k + (i__ + 1) * vr_dim1], 
+		dlartg_(&vr[k + i__ * vr_dim1], &vr[k + (i__ + 1) * vr_dim1],
 			&cs, &sn, &r__);
-		drot_(n, &vr[i__ * vr_dim1 + 1], &c__1, &vr[(i__ + 1) * 
+		drot_(n, &vr[i__ * vr_dim1 + 1], &c__1, &vr[(i__ + 1) *
 			vr_dim1 + 1], &c__1, &cs, &sn);
 		vr[k + (i__ + 1) * vr_dim1] = 0.;
 	    }
@@ -1358,20 +1355,20 @@ L50:
 	// Computing MAX
 	i__3 = *n - *info;
 	i__2 = max(i__3,1);
-	dlascl_("G", &c__0, &c__0, &cscale, &anrm, &i__1, &c__1, &wr[*info + 
+	dlascl_("G", &c__0, &c__0, &cscale, &anrm, &i__1, &c__1, &wr[*info +
 		1], &i__2, &ierr);
 	i__1 = *n - *info;
 	// Computing MAX
 	i__3 = *n - *info;
 	i__2 = max(i__3,1);
-	dlascl_("G", &c__0, &c__0, &cscale, &anrm, &i__1, &c__1, &wi[*info + 
+	dlascl_("G", &c__0, &c__0, &cscale, &anrm, &i__1, &c__1, &wi[*info +
 		1], &i__2, &ierr);
 	if (*info > 0) {
 	    i__1 = ilo - 1;
-	    dlascl_("G", &c__0, &c__0, &cscale, &anrm, &i__1, &c__1, &wr[1], 
+	    dlascl_("G", &c__0, &c__0, &cscale, &anrm, &i__1, &c__1, &wr[1],
 		    n, &ierr);
 	    i__1 = ilo - 1;
-	    dlascl_("G", &c__0, &c__0, &cscale, &anrm, &i__1, &c__1, &wi[1], 
+	    dlascl_("G", &c__0, &c__0, &cscale, &anrm, &i__1, &c__1, &wi[1],
 		    n, &ierr);
 	}
     }
@@ -1533,7 +1530,7 @@ L50:
 //> \endverbatim
 //>
 // =====================================================================
-/* Subroutine */ int dgehd2_(int *n, int *ilo, int *ihi, double *a, int *lda, 
+/* Subroutine */ int dgehd2_(int *n, int *ilo, int *ihi, double *a, int *lda,
 	double *tau, double *work, int *info)
 {
     // Table of constant values
@@ -1545,8 +1542,8 @@ L50:
     // Local variables
     int i__;
     double aii;
-    extern /* Subroutine */ int dlarf_(char *, int *, int *, double *, int *, 
-	    double *, double *, int *, double *), dlarfg_(int *, double *, 
+    extern /* Subroutine */ int dlarf_(char *, int *, int *, double *, int *,
+	    double *, double *, int *, double *), dlarfg_(int *, double *,
 	    double *, int *, double *), xerbla_(char *, int *);
 
     //
@@ -1605,7 +1602,7 @@ L50:
 	i__2 = *ihi - i__;
 	// Computing MIN
 	i__3 = i__ + 2;
-	dlarfg_(&i__2, &a[i__ + 1 + i__ * a_dim1], &a[min(i__3,*n) + i__ * 
+	dlarfg_(&i__2, &a[i__ + 1 + i__ * a_dim1], &a[min(i__3,*n) + i__ *
 		a_dim1], &c__1, &tau[i__]);
 	aii = a[i__ + 1 + i__ * a_dim1];
 	a[i__ + 1 + i__ * a_dim1] = 1.;
@@ -1800,7 +1797,7 @@ L50:
 //> \endverbatim
 //>
 // =====================================================================
-/* Subroutine */ int dgehrd_(int *n, int *ilo, int *ihi, double *a, int *lda, 
+/* Subroutine */ int dgehrd_(int *n, int *ilo, int *ihi, double *a, int *lda,
 	double *tau, double *work, int *lwork, int *info)
 {
     // Table of constant values
@@ -1819,17 +1816,17 @@ L50:
     int i__, j, ib;
     double ei;
     int nb, nh, nx, iwt;
-    extern /* Subroutine */ int dgemm_(char *, char *, int *, int *, int *, 
-	    double *, double *, int *, double *, int *, double *, double *, 
+    extern /* Subroutine */ int dgemm_(char *, char *, int *, int *, int *,
+	    double *, double *, int *, double *, int *, double *, double *,
 	    int *);
     int nbmin, iinfo;
-    extern /* Subroutine */ int dtrmm_(char *, char *, char *, char *, int *, 
-	    int *, double *, double *, int *, double *, int *), daxpy_(int *, 
+    extern /* Subroutine */ int dtrmm_(char *, char *, char *, char *, int *,
+	    int *, double *, double *, int *, double *, int *), daxpy_(int *,
 	    double *, double *, int *, double *, int *), dgehd2_(int *, int *,
 	     int *, double *, int *, double *, double *, int *), dlahr2_(int *
-	    , int *, int *, double *, int *, double *, double *, int *, 
-	    double *, int *), dlarfb_(char *, char *, char *, char *, int *, 
-	    int *, int *, double *, int *, double *, int *, double *, int *, 
+	    , int *, int *, double *, int *, double *, double *, int *,
+	    double *, int *), dlarfb_(char *, char *, char *, char *, int *,
+	    int *, int *, double *, int *, double *, int *, double *, int *,
 	    double *, int *), xerbla_(char *, int *);
     extern int ilaenv_(int *, char *, char *, int *, int *, int *, int *);
     int ldwork, lwkopt;
@@ -2003,7 +2000,7 @@ L50:
 		     &a[i__ + 1 + i__ * a_dim1], lda, &work[1], &ldwork);
 	    i__3 = ib - 2;
 	    for (j = 0; j <= i__3; ++j) {
-		daxpy_(&i__, &c_b25, &work[ldwork * j + 1], &c__1, &a[(i__ + 
+		daxpy_(&i__, &c_b25, &work[ldwork * j + 1], &c__1, &a[(i__ +
 			j + 1) * a_dim1 + 1], &c__1);
 // L30:
 	    }
@@ -2365,9 +2362,6 @@ L50:
     double d__1;
     char ch__1[2+1]={'\0'};
 
-    // Builtin functions
-    /* Subroutine */ int s_cat(char *, char **, int *, int *);
-
     // Local variables
     int i__;
     double hl[2401]	/* was [49][49] */;
@@ -2376,11 +2370,11 @@ L50:
     int initz;
     double workl[49];
     int wantt, wantz;
-    extern /* Subroutine */ int dlaqr0_(int *, int *, int *, int *, int *, 
+    extern /* Subroutine */ int dlaqr0_(int *, int *, int *, int *, int *,
 	    double *, int *, double *, double *, int *, int *, double *, int *
-	    , double *, int *, int *), dlahqr_(int *, int *, int *, int *, 
+	    , double *, int *, int *), dlahqr_(int *, int *, int *, int *,
 	    int *, double *, int *, double *, double *, int *, int *, double *
-	    , int *, int *), dlacpy_(char *, int *, int *, double *, int *, 
+	    , int *, int *), dlacpy_(char *, int *, int *, double *, int *,
 	    double *, int *), dlaset_(char *, int *, int *, double *, double *
 	    , double *, int *);
     extern int ilaenv_(int *, char *, char *, int *, int *, int *, int *);
@@ -2529,14 +2523,14 @@ L50:
 	//       ==== DLAQR0 for big matrices; DLAHQR for small ones ====
 	//
 	if (*n > nmin) {
-	    dlaqr0_(&wantt, &wantz, n, ilo, ihi, &h__[h_offset], ldh, &wr[1], 
-		    &wi[1], ilo, ihi, &z__[z_offset], ldz, &work[1], lwork, 
+	    dlaqr0_(&wantt, &wantz, n, ilo, ihi, &h__[h_offset], ldh, &wr[1],
+		    &wi[1], ilo, ihi, &z__[z_offset], ldz, &work[1], lwork,
 		    info);
 	} else {
 	    //
 	    //          ==== Small matrix ====
 	    //
-	    dlahqr_(&wantt, &wantz, n, ilo, ihi, &h__[h_offset], ldh, &wr[1], 
+	    dlahqr_(&wantt, &wantz, n, ilo, ihi, &h__[h_offset], ldh, &wr[1],
 		    &wi[1], ilo, ihi, &z__[z_offset], ldz, info);
 	    if (*info > 0) {
 		//
@@ -2549,8 +2543,8 @@ L50:
 		    //                ==== Larger matrices have enough subdiagonal scratch
 		    //                .    space to call DLAQR0 directly. ====
 		    //
-		    dlaqr0_(&wantt, &wantz, n, ilo, &kbot, &h__[h_offset], 
-			    ldh, &wr[1], &wi[1], ilo, ihi, &z__[z_offset], 
+		    dlaqr0_(&wantt, &wantz, n, ilo, &kbot, &h__[h_offset],
+			    ldh, &wr[1], &wi[1], ilo, ihi, &z__[z_offset],
 			    ldz, &work[1], lwork, info);
 		} else {
 		    //
@@ -2565,7 +2559,7 @@ L50:
 		    dlaset_("A", &c__49, &i__1, &c_b11, &c_b11, &hl[(*n + 1) *
 			     49 - 49], &c__49);
 		    dlaqr0_(&wantt, &wantz, &c__49, ilo, &kbot, hl, &c__49, &
-			    wr[1], &wi[1], ilo, ihi, &z__[z_offset], ldz, 
+			    wr[1], &wi[1], ilo, ihi, &z__[z_offset], ldz,
 			    workl, &c__49, info);
 		    if (wantt || *info != 0) {
 			dlacpy_("A", n, n, hl, &c__49, &h__[h_offset], ldh);
@@ -2688,7 +2682,7 @@ L50:
 //> \ingroup doubleOTHERauxiliary
 //
 // =====================================================================
-/* Subroutine */ int dladiv_(double *a, double *b, double *c__, double *d__, 
+/* Subroutine */ int dladiv_(double *a, double *b, double *c__, double *d__,
 	double *p, double *q)
 {
     // System generated locals
@@ -2697,7 +2691,7 @@ L50:
     // Local variables
     double s, aa, ab, bb, cc, cd, dd, be, un, ov, eps;
     extern double dlamch_(char *);
-    extern /* Subroutine */ int dladiv1_(double *, double *, double *, double 
+    extern /* Subroutine */ int dladiv1_(double *, double *, double *, double
 	    *, double *, double *);
 
     //
@@ -2773,11 +2767,11 @@ L50:
 } // dladiv_
 
 //> \ingroup doubleOTHERauxiliary
-/* Subroutine */ int dladiv1_(double *a, double *b, double *c__, double *d__, 
+/* Subroutine */ int dladiv1_(double *a, double *b, double *c__, double *d__,
 	double *p, double *q)
 {
     double r__, t;
-    extern double dladiv2_(double *, double *, double *, double *, double *, 
+    extern double dladiv2_(double *, double *, double *, double *, double *,
 	    double *);
 
     //
@@ -2811,7 +2805,7 @@ L50:
 } // dladiv1_
 
 //> \ingroup doubleOTHERauxiliary
-double dladiv2_(double *a, double *b, double *c__, double *d__, double *r__, 
+double dladiv2_(double *a, double *b, double *c__, double *d__, double *r__,
 	double *t)
 {
     // System generated locals
@@ -3021,16 +3015,16 @@ double dladiv2_(double *a, double *b, double *c__, double *d__, double *r__,
 	     double *, double *);
     double scale, dnorm, xnorm;
     extern /* Subroutine */ int dlanv2_(double *, double *, double *, double *
-	    , double *, double *, double *, double *, double *, double *), 
-	    dlasy2_(int *, int *, int *, int *, int *, double *, int *, 
-	    double *, int *, double *, int *, double *, double *, int *, 
+	    , double *, double *, double *, double *, double *, double *),
+	    dlasy2_(int *, int *, int *, int *, int *, double *, int *,
+	    double *, int *, double *, int *, double *, double *, int *,
 	    double *, int *);
-    extern double dlamch_(char *), dlange_(char *, int *, int *, double *, 
+    extern double dlamch_(char *), dlange_(char *, int *, int *, double *,
 	    int *, double *);
-    extern /* Subroutine */ int dlarfg_(int *, double *, double *, int *, 
+    extern /* Subroutine */ int dlarfg_(int *, double *, double *, int *,
 	    double *), dlacpy_(char *, int *, int *, double *, int *, double *
 	    , int *), dlartg_(double *, double *, double *, double *, double *
-	    ), dlarfx_(char *, int *, int *, double *, double *, double *, 
+	    ), dlarfx_(char *, int *, int *, double *, double *, double *,
 	    int *, double *);
     double thresh, smlnum;
 
@@ -3100,11 +3094,11 @@ double dladiv2_(double *a, double *b, double *c__, double *d__, double *r__,
 	//
 	if (j3 <= *n) {
 	    i__1 = *n - *j1 - 1;
-	    drot_(&i__1, &t[*j1 + j3 * t_dim1], ldt, &t[j2 + j3 * t_dim1], 
+	    drot_(&i__1, &t[*j1 + j3 * t_dim1], ldt, &t[j2 + j3 * t_dim1],
 		    ldt, &cs, &sn);
 	}
 	i__1 = *j1 - 1;
-	drot_(&i__1, &t[*j1 * t_dim1 + 1], &c__1, &t[j2 * t_dim1 + 1], &c__1, 
+	drot_(&i__1, &t[*j1 * t_dim1 + 1], &c__1, &t[j2 * t_dim1 + 1], &c__1,
 		&cs, &sn);
 	t[*j1 + *j1 * t_dim1] = t22;
 	t[j2 + j2 * t_dim1] = t11;
@@ -3112,7 +3106,7 @@ double dladiv2_(double *a, double *b, double *c__, double *d__, double *r__,
 	    //
 	    //          Accumulate transformation in the matrix Q.
 	    //
-	    drot_(n, &q[*j1 * q_dim1 + 1], &c__1, &q[j2 * q_dim1 + 1], &c__1, 
+	    drot_(n, &q[*j1 * q_dim1 + 1], &c__1, &q[j2 * q_dim1 + 1], &c__1,
 		    &cs, &sn);
 	}
     } else {
@@ -3137,7 +3131,7 @@ double dladiv2_(double *a, double *b, double *c__, double *d__, double *r__,
 	//
 	//       Solve T11*X - X*T22 = scale*T12 for X.
 	//
-	dlasy2_(&c_false, &c_false, &c_n1, n1, n2, d__, &c__4, &d__[*n1 + 1 + 
+	dlasy2_(&c_false, &c_false, &c_n1, n1, n2, d__, &c__4, &d__[*n1 + 1 +
 		(*n1 + 1 << 2) - 5], &c__4, &d__[(*n1 + 1 << 2) - 4], &c__4, &
 		scale, x, &c__2, &xnorm, &ierr);
 	//
@@ -3170,7 +3164,7 @@ L10:
 	//       Test whether to reject swap.
 	//
 	// Computing MAX
-	d__2 = abs(d__[2]), d__3 = abs(d__[6]), d__2 = max(d__2,d__3), d__3 = 
+	d__2 = abs(d__[2]), d__3 = abs(d__[6]), d__2 = max(d__2,d__3), d__3 =
 		(d__1 = d__[10] - t11, abs(d__1));
 	if (max(d__2,d__3) > thresh) {
 	    goto L50;
@@ -3217,7 +3211,7 @@ L20:
 	//       Test whether to reject swap.
 	//
 	// Computing MAX
-	d__2 = abs(d__[1]), d__3 = abs(d__[2]), d__2 = max(d__2,d__3), d__3 = 
+	d__2 = abs(d__[1]), d__3 = abs(d__[2]), d__2 = max(d__2,d__3), d__3 =
 		(d__1 = d__[0] - t33, abs(d__1));
 	if (max(d__2,d__3) > thresh) {
 	    goto L50;
@@ -3273,7 +3267,7 @@ L30:
 	//       Test whether to reject swap.
 	//
 	// Computing MAX
-	d__1 = abs(d__[2]), d__2 = abs(d__[6]), d__1 = max(d__1,d__2), d__2 = 
+	d__1 = abs(d__[2]), d__2 = abs(d__[6]), d__1 = max(d__1,d__2), d__2 =
 		abs(d__[3]), d__1 = max(d__1,d__2), d__2 = abs(d__[7]);
 	if (max(d__1,d__2) > thresh) {
 	    goto L50;
@@ -3313,7 +3307,7 @@ L40:
 		    j1 * t_dim1], &t[j2 + j2 * t_dim1], &wr1, &wi1, &wr2, &
 		    wi2, &cs, &sn);
 	    i__1 = *n - *j1 - 1;
-	    drot_(&i__1, &t[*j1 + (*j1 + 2) * t_dim1], ldt, &t[j2 + (*j1 + 2) 
+	    drot_(&i__1, &t[*j1 + (*j1 + 2) * t_dim1], ldt, &t[j2 + (*j1 + 2)
 		    * t_dim1], ldt, &cs, &sn);
 	    i__1 = *j1 - 1;
 	    drot_(&i__1, &t[*j1 * t_dim1 + 1], &c__1, &t[j2 * t_dim1 + 1], &
@@ -3329,7 +3323,7 @@ L40:
 	    //
 	    j3 = *j1 + *n2;
 	    j4 = j3 + 1;
-	    dlanv2_(&t[j3 + j3 * t_dim1], &t[j3 + j4 * t_dim1], &t[j4 + j3 * 
+	    dlanv2_(&t[j3 + j3 * t_dim1], &t[j3 + j4 * t_dim1], &t[j4 + j3 *
 		    t_dim1], &t[j4 + j4 * t_dim1], &wr1, &wi1, &wr2, &wi2, &
 		    cs, &sn);
 	    if (j3 + 2 <= *n) {
@@ -3577,9 +3571,6 @@ L50:
     int h_dim1, h_offset, z_dim1, z_offset, i__1, i__2, i__3, i__4;
     double d__1, d__2, d__3, d__4;
 
-    // Builtin functions
-    double sqrt(double);
-
     // Local variables
     int i__, j, k, l, m;
     double s, v[3];
@@ -3594,14 +3585,14 @@ L50:
     int its;
     double ulp, sum, tst, rt1i, rt2i, rt1r, rt2r;
     extern /* Subroutine */ int drot_(int *, double *, int *, double *, int *,
-	     double *, double *), dcopy_(int *, double *, int *, double *, 
+	     double *, double *), dcopy_(int *, double *, int *, double *,
 	    int *);
     int itmax;
     extern /* Subroutine */ int dlanv2_(double *, double *, double *, double *
-	    , double *, double *, double *, double *, double *, double *), 
+	    , double *, double *, double *, double *, double *, double *),
 	    dlabad_(double *, double *);
     extern double dlamch_(char *);
-    extern /* Subroutine */ int dlarfg_(int *, double *, double *, int *, 
+    extern /* Subroutine */ int dlarfg_(int *, double *, double *, int *,
 	    double *);
     double safmin, safmax, rtdisc, smlnum;
 
@@ -3717,7 +3708,7 @@ L20:
 	    if ((d__1 = h__[k + (k - 1) * h_dim1], abs(d__1)) <= smlnum) {
 		goto L40;
 	    }
-	    tst = (d__1 = h__[k - 1 + (k - 1) * h_dim1], abs(d__1)) + (d__2 = 
+	    tst = (d__1 = h__[k - 1 + (k - 1) * h_dim1], abs(d__1)) + (d__2 =
 		    h__[k + k * h_dim1], abs(d__2));
 	    if (tst == 0.) {
 		if (k - 2 >= *ilo) {
@@ -3742,12 +3733,12 @@ L20:
 		ba = min(d__3,d__4);
 		// Computing MAX
 		d__3 = (d__1 = h__[k + k * h_dim1], abs(d__1)), d__4 = (d__2 =
-			 h__[k - 1 + (k - 1) * h_dim1] - h__[k + k * h_dim1], 
+			 h__[k - 1 + (k - 1) * h_dim1] - h__[k + k * h_dim1],
 			abs(d__2));
 		aa = max(d__3,d__4);
 		// Computing MIN
 		d__3 = (d__1 = h__[k + k * h_dim1], abs(d__1)), d__4 = (d__2 =
-			 h__[k - 1 + (k - 1) * h_dim1] - h__[k + k * h_dim1], 
+			 h__[k - 1 + (k - 1) * h_dim1] - h__[k + k * h_dim1],
 			abs(d__2));
 		bb = min(d__3,d__4);
 		s = aa + ab;
@@ -3786,7 +3777,7 @@ L40:
 	    //
 	    //          Exceptional shift.
 	    //
-	    s = (d__1 = h__[l + 1 + l * h_dim1], abs(d__1)) + (d__2 = h__[l + 
+	    s = (d__1 = h__[l + 1 + l * h_dim1], abs(d__1)) + (d__2 = h__[l +
 		    2 + (l + 1) * h_dim1], abs(d__2));
 	    h11 = s * .75 + h__[l + l * h_dim1];
 	    h12 = s * -.4375;
@@ -3796,7 +3787,7 @@ L40:
 	    //
 	    //          Exceptional shift.
 	    //
-	    s = (d__1 = h__[i__ + (i__ - 1) * h_dim1], abs(d__1)) + (d__2 = 
+	    s = (d__1 = h__[i__ + (i__ - 1) * h_dim1], abs(d__1)) + (d__2 =
 		    h__[i__ - 1 + (i__ - 2) * h_dim1], abs(d__2));
 	    h11 = s * .75 + h__[i__ + i__ * h_dim1];
 	    h12 = s * -.4375;
@@ -3863,11 +3854,11 @@ L40:
 	    //          overflows and most underflows.)
 	    //
 	    h21s = h__[m + 1 + m * h_dim1];
-	    s = (d__1 = h__[m + m * h_dim1] - rt2r, abs(d__1)) + abs(rt2i) + 
+	    s = (d__1 = h__[m + m * h_dim1] - rt2r, abs(d__1)) + abs(rt2i) +
 		    abs(h21s);
 	    h21s = h__[m + 1 + m * h_dim1] / s;
-	    v[0] = h21s * h__[m + (m + 1) * h_dim1] + (h__[m + m * h_dim1] - 
-		    rt1r) * ((h__[m + m * h_dim1] - rt2r) / s) - rt1i * (rt2i 
+	    v[0] = h21s * h__[m + (m + 1) * h_dim1] + (h__[m + m * h_dim1] -
+		    rt1r) * ((h__[m + m * h_dim1] - rt2r) / s) - rt1i * (rt2i
 		    / s);
 	    v[1] = h21s * (h__[m + m * h_dim1] + h__[m + 1 + (m + 1) * h_dim1]
 		     - rt1r - rt2r);
@@ -3879,9 +3870,9 @@ L40:
 	    if (m == l) {
 		goto L60;
 	    }
-	    if ((d__1 = h__[m + (m - 1) * h_dim1], abs(d__1)) * (abs(v[1]) + 
-		    abs(v[2])) <= ulp * abs(v[0]) * ((d__2 = h__[m - 1 + (m - 
-		    1) * h_dim1], abs(d__2)) + (d__3 = h__[m + m * h_dim1], 
+	    if ((d__1 = h__[m + (m - 1) * h_dim1], abs(d__1)) * (abs(v[1]) +
+		    abs(v[2])) <= ulp * abs(v[0]) * ((d__2 = h__[m - 1 + (m -
+		    1) * h_dim1], abs(d__2)) + (d__3 = h__[m + m * h_dim1],
 		    abs(d__3)) + (d__4 = h__[m + 1 + (m + 1) * h_dim1], abs(
 		    d__4)))) {
 		goto L60;
@@ -3935,7 +3926,7 @@ L60:
 		//
 		i__3 = i2;
 		for (j = k; j <= i__3; ++j) {
-		    sum = h__[k + j * h_dim1] + v2 * h__[k + 1 + j * h_dim1] 
+		    sum = h__[k + j * h_dim1] + v2 * h__[k + 1 + j * h_dim1]
 			    + v3 * h__[k + 2 + j * h_dim1];
 		    h__[k + j * h_dim1] -= sum * t1;
 		    h__[k + 1 + j * h_dim1] -= sum * t2;
@@ -3963,7 +3954,7 @@ L60:
 		    //
 		    i__3 = *ihiz;
 		    for (j = *iloz; j <= i__3; ++j) {
-			sum = z__[j + k * z_dim1] + v2 * z__[j + (k + 1) * 
+			sum = z__[j + k * z_dim1] + v2 * z__[j + (k + 1) *
 				z_dim1] + v3 * z__[j + (k + 2) * z_dim1];
 			z__[j + k * z_dim1] -= sum * t1;
 			z__[j + (k + 1) * z_dim1] -= sum * t2;
@@ -4001,7 +3992,7 @@ L60:
 		    //
 		    i__3 = *ihiz;
 		    for (j = *iloz; j <= i__3; ++j) {
-			sum = z__[j + k * z_dim1] + v2 * z__[j + (k + 1) * 
+			sum = z__[j + k * z_dim1] + v2 * z__[j + (k + 1) *
 				z_dim1];
 			z__[j + k * z_dim1] -= sum * t1;
 			z__[j + (k + 1) * z_dim1] -= sum * t2;
@@ -4032,9 +4023,9 @@ L150:
 	//       Transform the 2-by-2 submatrix to standard Schur form,
 	//       and compute and store the eigenvalues.
 	//
-	dlanv2_(&h__[i__ - 1 + (i__ - 1) * h_dim1], &h__[i__ - 1 + i__ * 
-		h_dim1], &h__[i__ + (i__ - 1) * h_dim1], &h__[i__ + i__ * 
-		h_dim1], &wr[i__ - 1], &wi[i__ - 1], &wr[i__], &wi[i__], &cs, 
+	dlanv2_(&h__[i__ - 1 + (i__ - 1) * h_dim1], &h__[i__ - 1 + i__ *
+		h_dim1], &h__[i__ + (i__ - 1) * h_dim1], &h__[i__ + i__ *
+		h_dim1], &wr[i__ - 1], &wi[i__ - 1], &wr[i__], &wi[i__], &cs,
 		&sn);
 	if (*wantt) {
 	    //
@@ -4053,7 +4044,7 @@ L150:
 	    //
 	    //          Apply the transformation to Z.
 	    //
-	    drot_(&nz, &z__[*iloz + (i__ - 1) * z_dim1], &c__1, &z__[*iloz + 
+	    drot_(&nz, &z__[*iloz + (i__ - 1) * z_dim1], &c__1, &z__[*iloz +
 		    i__ * z_dim1], &c__1, &cs, &sn);
 	}
     }
@@ -4252,7 +4243,7 @@ L160:
 //>  Mathematical Software, 32(2):180-194, June 2006.
 //>
 // =====================================================================
-/* Subroutine */ int dlahr2_(int *n, int *k, int *nb, double *a, int *lda, 
+/* Subroutine */ int dlahr2_(int *n, int *k, int *nb, double *a, int *lda,
 	double *tau, double *t, int *ldt, double *y, int *ldy)
 {
     // Table of constant values
@@ -4262,23 +4253,23 @@ L160:
     double c_b38 = 0.;
 
     // System generated locals
-    int a_dim1, a_offset, t_dim1, t_offset, y_dim1, y_offset, i__1, i__2, 
+    int a_dim1, a_offset, t_dim1, t_offset, y_dim1, y_offset, i__1, i__2,
 	    i__3;
     double d__1;
 
     // Local variables
     int i__;
     double ei;
-    extern /* Subroutine */ int dscal_(int *, double *, double *, int *), 
-	    dgemm_(char *, char *, int *, int *, int *, double *, double *, 
+    extern /* Subroutine */ int dscal_(int *, double *, double *, int *),
+	    dgemm_(char *, char *, int *, int *, int *, double *, double *,
 	    int *, double *, int *, double *, double *, int *), dgemv_(char *,
-	     int *, int *, double *, double *, int *, double *, int *, double 
-	    *, double *, int *), dcopy_(int *, double *, int *, double *, int 
+	     int *, int *, double *, double *, int *, double *, int *, double
+	    *, double *, int *), dcopy_(int *, double *, int *, double *, int
 	    *), dtrmm_(char *, char *, char *, char *, int *, int *, double *,
-	     double *, int *, double *, int *), daxpy_(int *, double *, 
-	    double *, int *, double *, int *), dtrmv_(char *, char *, char *, 
+	     double *, int *, double *, int *), daxpy_(int *, double *,
+	    double *, int *, double *, int *), dtrmv_(char *, char *, char *,
 	    int *, double *, int *, double *, int *), dlarfg_(int *, double *,
-	     double *, int *, double *), dlacpy_(char *, int *, int *, double 
+	     double *, int *, double *), dlacpy_(char *, int *, int *, double
 	    *, int *, double *, int *);
 
     //
@@ -4332,8 +4323,8 @@ L160:
 	    //
 	    i__2 = *n - *k;
 	    i__3 = i__ - 1;
-	    dgemv_("NO TRANSPOSE", &i__2, &i__3, &c_b4, &y[*k + 1 + y_dim1], 
-		    ldy, &a[*k + i__ - 1 + a_dim1], lda, &c_b5, &a[*k + 1 + 
+	    dgemv_("NO TRANSPOSE", &i__2, &i__3, &c_b4, &y[*k + 1 + y_dim1],
+		    ldy, &a[*k + i__ - 1 + a_dim1], lda, &c_b5, &a[*k + 1 +
 		    i__ * a_dim1], &c__1);
 	    //
 	    //          Apply I - V * T**T * V**T to this column (call it b) from the
@@ -4347,18 +4338,18 @@ L160:
 	    //          w := V1**T * b1
 	    //
 	    i__2 = i__ - 1;
-	    dcopy_(&i__2, &a[*k + 1 + i__ * a_dim1], &c__1, &t[*nb * t_dim1 + 
+	    dcopy_(&i__2, &a[*k + 1 + i__ * a_dim1], &c__1, &t[*nb * t_dim1 +
 		    1], &c__1);
 	    i__2 = i__ - 1;
-	    dtrmv_("Lower", "Transpose", "UNIT", &i__2, &a[*k + 1 + a_dim1], 
+	    dtrmv_("Lower", "Transpose", "UNIT", &i__2, &a[*k + 1 + a_dim1],
 		    lda, &t[*nb * t_dim1 + 1], &c__1);
 	    //
 	    //          w := w + V2**T * b2
 	    //
 	    i__2 = *n - *k - i__ + 1;
 	    i__3 = i__ - 1;
-	    dgemv_("Transpose", &i__2, &i__3, &c_b5, &a[*k + i__ + a_dim1], 
-		    lda, &a[*k + i__ + i__ * a_dim1], &c__1, &c_b5, &t[*nb * 
+	    dgemv_("Transpose", &i__2, &i__3, &c_b5, &a[*k + i__ + a_dim1],
+		    lda, &a[*k + i__ + i__ * a_dim1], &c__1, &c_b5, &t[*nb *
 		    t_dim1 + 1], &c__1);
 	    //
 	    //          w := T**T * w
@@ -4372,7 +4363,7 @@ L160:
 	    i__2 = *n - *k - i__ + 1;
 	    i__3 = i__ - 1;
 	    dgemv_("NO TRANSPOSE", &i__2, &i__3, &c_b4, &a[*k + i__ + a_dim1],
-		     lda, &t[*nb * t_dim1 + 1], &c__1, &c_b5, &a[*k + i__ + 
+		     lda, &t[*nb * t_dim1 + 1], &c__1, &c_b5, &a[*k + i__ +
 		    i__ * a_dim1], &c__1);
 	    //
 	    //          b1 := b1 - V1*w
@@ -4381,7 +4372,7 @@ L160:
 	    dtrmv_("Lower", "NO TRANSPOSE", "UNIT", &i__2, &a[*k + 1 + a_dim1]
 		    , lda, &t[*nb * t_dim1 + 1], &c__1);
 	    i__2 = i__ - 1;
-	    daxpy_(&i__2, &c_b4, &t[*nb * t_dim1 + 1], &c__1, &a[*k + 1 + i__ 
+	    daxpy_(&i__2, &c_b4, &t[*nb * t_dim1 + 1], &c__1, &a[*k + 1 + i__
 		    * a_dim1], &c__1);
 	    a[*k + i__ - 1 + (i__ - 1) * a_dim1] = ei;
 	}
@@ -4392,7 +4383,7 @@ L160:
 	i__2 = *n - *k - i__ + 1;
 	// Computing MIN
 	i__3 = *k + i__ + 1;
-	dlarfg_(&i__2, &a[*k + i__ + i__ * a_dim1], &a[min(i__3,*n) + i__ * 
+	dlarfg_(&i__2, &a[*k + i__ + i__ * a_dim1], &a[min(i__3,*n) + i__ *
 		a_dim1], &c__1, &tau[i__]);
 	ei = a[*k + i__ + i__ * a_dim1];
 	a[*k + i__ + i__ * a_dim1] = 1.;
@@ -4401,17 +4392,17 @@ L160:
 	//
 	i__2 = *n - *k;
 	i__3 = *n - *k - i__ + 1;
-	dgemv_("NO TRANSPOSE", &i__2, &i__3, &c_b5, &a[*k + 1 + (i__ + 1) * 
+	dgemv_("NO TRANSPOSE", &i__2, &i__3, &c_b5, &a[*k + 1 + (i__ + 1) *
 		a_dim1], lda, &a[*k + i__ + i__ * a_dim1], &c__1, &c_b38, &y[*
 		k + 1 + i__ * y_dim1], &c__1);
 	i__2 = *n - *k - i__ + 1;
 	i__3 = i__ - 1;
 	dgemv_("Transpose", &i__2, &i__3, &c_b5, &a[*k + i__ + a_dim1], lda, &
-		a[*k + i__ + i__ * a_dim1], &c__1, &c_b38, &t[i__ * t_dim1 + 
+		a[*k + i__ + i__ * a_dim1], &c__1, &c_b38, &t[i__ * t_dim1 +
 		1], &c__1);
 	i__2 = *n - *k;
 	i__3 = i__ - 1;
-	dgemv_("NO TRANSPOSE", &i__2, &i__3, &c_b4, &y[*k + 1 + y_dim1], ldy, 
+	dgemv_("NO TRANSPOSE", &i__2, &i__3, &c_b4, &y[*k + 1 + y_dim1], ldy,
 		&t[i__ * t_dim1 + 1], &c__1, &c_b5, &y[*k + 1 + i__ * y_dim1],
 		 &c__1);
 	i__2 = *n - *k;
@@ -4423,7 +4414,7 @@ L160:
 	d__1 = -tau[i__];
 	dscal_(&i__2, &d__1, &t[i__ * t_dim1 + 1], &c__1);
 	i__2 = i__ - 1;
-	dtrmv_("Upper", "No Transpose", "NON-UNIT", &i__2, &t[t_offset], ldt, 
+	dtrmv_("Upper", "No Transpose", "NON-UNIT", &i__2, &t[t_offset], ldt,
 		&t[i__ * t_dim1 + 1], &c__1);
 	t[i__ + i__ * t_dim1] = tau[i__];
 // L10:
@@ -4433,12 +4424,12 @@ L160:
     //    Compute Y(1:K,1:NB)
     //
     dlacpy_("ALL", k, nb, &a[(a_dim1 << 1) + 1], lda, &y[y_offset], ldy);
-    dtrmm_("RIGHT", "Lower", "NO TRANSPOSE", "UNIT", k, nb, &c_b5, &a[*k + 1 
+    dtrmm_("RIGHT", "Lower", "NO TRANSPOSE", "UNIT", k, nb, &c_b5, &a[*k + 1
 	    + a_dim1], lda, &y[y_offset], ldy);
     if (*n > *k + *nb) {
 	i__1 = *n - *k - *nb;
-	dgemm_("NO TRANSPOSE", "NO TRANSPOSE", k, nb, &i__1, &c_b5, &a[(*nb + 
-		2) * a_dim1 + 1], lda, &a[*k + 1 + *nb + a_dim1], lda, &c_b5, 
+	dgemm_("NO TRANSPOSE", "NO TRANSPOSE", k, nb, &i__1, &c_b5, &a[(*nb +
+		2) * a_dim1 + 1], lda, &a[*k + 1 + *nb + a_dim1], lda, &c_b5,
 		&y[y_offset], ldy);
     }
     dtrmm_("RIGHT", "Upper", "NO TRANSPOSE", "NON-UNIT", k, nb, &c_b5, &t[
@@ -4668,9 +4659,9 @@ L160:
 //> \ingroup doubleOTHERauxiliary
 //
 // =====================================================================
-/* Subroutine */ int dlaln2_(int *ltrans, int *na, int *nw, double *smin, 
-	double *ca, double *a, int *lda, double *d1, double *d2, double *b, 
-	int *ldb, double *wr, double *wi, double *x, int *ldx, double *scale, 
+/* Subroutine */ int dlaln2_(int *ltrans, int *na, int *nw, double *smin,
+	double *ca, double *a, int *lda, double *d1, double *d2, double *b,
+	int *ldb, double *wr, double *wi, double *x, int *ldx, double *scale,
 	double *xnorm, int *info)
 {
     /* Initialized data */
@@ -4689,7 +4680,7 @@ L160:
     int j;
 #define ci (equiv_0)
 #define cr (equiv_1)
-    double bi1, bi2, br1, br2, xi1, xi2, xr1, xr2, ci21, ci22, cr21, cr22, 
+    double bi1, bi2, br1, br2, xi1, xi2, xr1, xr2, ci21, ci22, cr21, cr22,
 	    li21, csi, ui11, lr21, ui12, ui22;
 #define civ (equiv_0)
     double csr, ur11, ur12, ur22;
@@ -4813,7 +4804,7 @@ L160:
 	    //
 	    //          Check scaling for  X = B / C
 	    //
-	    bnorm = (d__1 = b[b_dim1 + 1], abs(d__1)) + (d__2 = b[(b_dim1 << 
+	    bnorm = (d__1 = b[b_dim1 + 1], abs(d__1)) + (d__2 = b[(b_dim1 <<
 		    1) + 1], abs(d__2));
 	    if (cnorm < 1. && bnorm > 1.) {
 		if (bnorm > bignum * cnorm) {
@@ -4827,7 +4818,7 @@ L160:
 	    d__2 = *scale * b[(b_dim1 << 1) + 1];
 	    dladiv_(&d__1, &d__2, &csr, &csi, &x[x_dim1 + 1], &x[(x_dim1 << 1)
 		     + 1]);
-	    *xnorm = (d__1 = x[x_dim1 + 1], abs(d__1)) + (d__2 = x[(x_dim1 << 
+	    *xnorm = (d__1 = x[x_dim1 + 1], abs(d__1)) + (d__2 = x[(x_dim1 <<
 		    1) + 1], abs(d__2));
 	}
     } else {
@@ -4963,8 +4954,8 @@ L160:
 	    //
 	    if (cmax < smini) {
 		// Computing MAX
-		d__5 = (d__1 = b[b_dim1 + 1], abs(d__1)) + (d__2 = b[(b_dim1 
-			<< 1) + 1], abs(d__2)), d__6 = (d__3 = b[b_dim1 + 2], 
+		d__5 = (d__1 = b[b_dim1 + 1], abs(d__1)) + (d__2 = b[(b_dim1
+			<< 1) + 1], abs(d__2)), d__6 = (d__3 = b[b_dim1 + 2],
 			abs(d__3)) + (d__4 = b[(b_dim1 << 1) + 2], abs(d__4));
 		bnorm = max(d__5,d__6);
 		if (smini < 1. && bnorm > 1.) {
@@ -5237,8 +5228,8 @@ L160:
 //> \endverbatim
 //>
 // =====================================================================
-/* Subroutine */ int dlanv2_(double *a, double *b, double *c__, double *d__, 
-	double *rt1r, double *rt1i, double *rt2r, double *rt2i, double *cs, 
+/* Subroutine */ int dlanv2_(double *a, double *b, double *c__, double *d__,
+	double *rt1r, double *rt1i, double *rt2r, double *rt2i, double *cs,
 	double *sn)
 {
     // Table of constant values
@@ -5247,11 +5238,8 @@ L160:
     // System generated locals
     double d__1, d__2;
 
-    // Builtin functions
-    double d_sign(double *, double *), sqrt(double);
-
     // Local variables
-    double p, z__, aa, bb, cc, dd, cs1, sn1, sab, sac, eps, tau, temp, scale, 
+    double p, z__, aa, bb, cc, dd, cs1, sn1, sab, sac, eps, tau, temp, scale,
 	    bcmax, bcmis, sigma;
     extern double dlapy2_(double *, double *), dlamch_(char *);
 
@@ -5695,18 +5683,18 @@ L160:
     double zdum[1]	/* was [1][1] */;
     int kacc22, itmax, nsmax, nwmax, kwtop;
     extern /* Subroutine */ int dlanv2_(double *, double *, double *, double *
-	    , double *, double *, double *, double *, double *, double *), 
+	    , double *, double *, double *, double *, double *, double *),
 	    dlaqr3_(int *, int *, int *, int *, int *, int *, double *, int *,
-	     int *, int *, double *, int *, int *, int *, double *, double *, 
-	    double *, int *, int *, double *, int *, int *, double *, int *, 
-	    double *, int *), dlaqr4_(int *, int *, int *, int *, int *, 
+	     int *, int *, double *, int *, int *, int *, double *, double *,
+	    double *, int *, int *, double *, int *, int *, double *, int *,
+	    double *, int *), dlaqr4_(int *, int *, int *, int *, int *,
 	    double *, int *, double *, double *, int *, int *, double *, int *
-	    , double *, int *, int *), dlaqr5_(int *, int *, int *, int *, 
-	    int *, int *, int *, double *, double *, double *, int *, int *, 
-	    int *, double *, int *, double *, int *, double *, int *, int *, 
+	    , double *, int *, int *), dlaqr5_(int *, int *, int *, int *,
+	    int *, int *, int *, double *, double *, double *, int *, int *,
+	    int *, double *, int *, double *, int *, double *, int *, int *,
 	    double *, int *, int *, double *, int *);
     int nibble;
-    extern /* Subroutine */ int dlahqr_(int *, int *, int *, int *, int *, 
+    extern /* Subroutine */ int dlahqr_(int *, int *, int *, int *, int *,
 	    double *, int *, double *, double *, int *, int *, double *, int *
 	    , int *), dlacpy_(char *, int *, int *, double *, int *, double *,
 	     int *);
@@ -5827,7 +5815,7 @@ L160:
 	//
 	nsr = ilaenv_(&c__15, "DLAQR0", jbcmpz, n, ilo, ihi, lwork);
 	// Computing MIN
-	i__1 = nsr, i__2 = (*n + 6) / 9, i__1 = min(i__1,i__2), i__2 = *ihi - 
+	i__1 = nsr, i__2 = (*n + 6) / 9, i__1 = min(i__1,i__2), i__2 = *ihi -
 		*ilo;
 	nsr = min(i__1,i__2);
 	// Computing MAX
@@ -5839,9 +5827,9 @@ L160:
 	//       ==== Workspace query call to DLAQR3 ====
 	//
 	i__1 = nwr + 1;
-	dlaqr3_(wantt, wantz, n, ilo, ihi, &i__1, &h__[h_offset], ldh, iloz, 
+	dlaqr3_(wantt, wantz, n, ilo, ihi, &i__1, &h__[h_offset], ldh, iloz,
 		ihiz, &z__[z_offset], ldz, &ls, &ld, &wr[1], &wi[1], &h__[
-		h_offset], ldh, n, &h__[h_offset], ldh, n, &h__[h_offset], 
+		h_offset], ldh, n, &h__[h_offset], ldh, n, &h__[h_offset],
 		ldh, &work[1], &c_n1);
 	//
 	//       ==== Optimal workspace = MAX(DLAQR5, DLAQR3) ====
@@ -5958,8 +5946,8 @@ L20:
 		    nw = nh;
 		} else {
 		    kwtop = kbot - nw + 1;
-		    if ((d__1 = h__[kwtop + (kwtop - 1) * h_dim1], abs(d__1)) 
-			    > (d__2 = h__[kwtop - 1 + (kwtop - 2) * h_dim1], 
+		    if ((d__1 = h__[kwtop + (kwtop - 1) * h_dim1], abs(d__1))
+			    > (d__2 = h__[kwtop - 1 + (kwtop - 2) * h_dim1],
 			    abs(d__2))) {
 			++nw;
 		    }
@@ -5994,9 +5982,9 @@ L20:
 	    //
 	    //          ==== Aggressive early deflation ====
 	    //
-	    dlaqr3_(wantt, wantz, n, &ktop, &kbot, &nw, &h__[h_offset], ldh, 
+	    dlaqr3_(wantt, wantz, n, &ktop, &kbot, &nw, &h__[h_offset], ldh,
 		    iloz, ihiz, &z__[z_offset], ldz, &ls, &ld, &wr[1], &wi[1],
-		     &h__[kv + h_dim1], ldh, &nho, &h__[kv + kt * h_dim1], 
+		     &h__[kv + h_dim1], ldh, &nho, &h__[kv + kt * h_dim1],
 		    ldh, &nve, &h__[kwv + h_dim1], ldh, &work[1], lwork);
 	    //
 	    //          ==== Adjust KBOT accounting for new deflations. ====
@@ -6041,7 +6029,7 @@ L20:
 		    i__2 = max(i__3,i__4);
 		    for (i__ = kbot; i__ >= i__2; i__ += -2) {
 			ss = (d__1 = h__[i__ + (i__ - 1) * h_dim1], abs(d__1))
-				 + (d__2 = h__[i__ - 1 + (i__ - 2) * h_dim1], 
+				 + (d__2 = h__[i__ - 1 + (i__ - 2) * h_dim1],
 				abs(d__2));
 			aa = ss * .75 + h__[i__ + i__ * h_dim1];
 			bb = ss;
@@ -6114,7 +6102,7 @@ L20:
 			    for (i__ = ks; i__ <= i__3; ++i__) {
 				if ((d__1 = wr[i__], abs(d__1)) + (d__2 = wi[
 					i__], abs(d__2)) < (d__3 = wr[i__ + 1]
-					, abs(d__3)) + (d__4 = wi[i__ + 1], 
+					, abs(d__3)) + (d__4 = wi[i__ + 1],
 					abs(d__4))) {
 				    sorted = FALSE_;
 				    swap = wr[i__];
@@ -6160,7 +6148,7 @@ L60:
 		if (kbot - ks + 1 == 2) {
 		    if (wi[kbot] == 0.) {
 			if ((d__1 = wr[kbot] - h__[kbot + kbot * h_dim1], abs(
-				d__1)) < (d__2 = wr[kbot - 1] - h__[kbot + 
+				d__1)) < (d__2 = wr[kbot - 1] - h__[kbot +
 				kbot * h_dim1], abs(d__2))) {
 			    wr[kbot - 1] = wr[kbot];
 			} else {
@@ -6200,10 +6188,10 @@ L60:
 		//
 		//             ==== Small-bulge multi-shift QR sweep ====
 		//
-		dlaqr5_(wantt, wantz, &kacc22, n, &ktop, &kbot, &ns, &wr[ks], 
+		dlaqr5_(wantt, wantz, &kacc22, n, &ktop, &kbot, &ns, &wr[ks],
 			&wi[ks], &h__[h_offset], ldh, iloz, ihiz, &z__[
-			z_offset], ldz, &work[1], &c__3, &h__[ku + h_dim1], 
-			ldh, &nve, &h__[kwv + h_dim1], ldh, &nho, &h__[ku + 
+			z_offset], ldz, &work[1], &c__3, &h__[ku + h_dim1],
+			ldh, &nve, &h__[kwv + h_dim1], ldh, &nho, &h__[ku +
 			kwh * h_dim1], ldh);
 	    }
 	    //
@@ -6359,7 +6347,7 @@ L90:
 //>       University of Kansas, USA
 //>
 // =====================================================================
-/* Subroutine */ int dlaqr1_(int *n, double *h__, int *ldh, double *sr1, 
+/* Subroutine */ int dlaqr1_(int *n, double *h__, int *ldh, double *sr1,
 	double *si1, double *sr2, double *si2, double *v)
 {
     // System generated locals
@@ -6403,20 +6391,20 @@ L90:
 	return 0;
     }
     if (*n == 2) {
-	s = (d__1 = h__[h_dim1 + 1] - *sr2, abs(d__1)) + abs(*si2) + (d__2 = 
+	s = (d__1 = h__[h_dim1 + 1] - *sr2, abs(d__1)) + abs(*si2) + (d__2 =
 		h__[h_dim1 + 2], abs(d__2));
 	if (s == 0.) {
 	    v[1] = 0.;
 	    v[2] = 0.;
 	} else {
 	    h21s = h__[h_dim1 + 2] / s;
-	    v[1] = h21s * h__[(h_dim1 << 1) + 1] + (h__[h_dim1 + 1] - *sr1) * 
+	    v[1] = h21s * h__[(h_dim1 << 1) + 1] + (h__[h_dim1 + 1] - *sr1) *
 		    ((h__[h_dim1 + 1] - *sr2) / s) - *si1 * (*si2 / s);
 	    v[2] = h21s * (h__[h_dim1 + 1] + h__[(h_dim1 << 1) + 2] - *sr1 - *
 		    sr2);
 	}
     } else {
-	s = (d__1 = h__[h_dim1 + 1] - *sr2, abs(d__1)) + abs(*si2) + (d__2 = 
+	s = (d__1 = h__[h_dim1 + 1] - *sr2, abs(d__1)) + abs(*si2) + (d__2 =
 		h__[h_dim1 + 2], abs(d__2)) + (d__3 = h__[h_dim1 + 3], abs(
 		d__3));
 	if (s == 0.) {
@@ -6426,7 +6414,7 @@ L90:
 	} else {
 	    h21s = h__[h_dim1 + 2] / s;
 	    h31s = h__[h_dim1 + 3] / s;
-	    v[1] = (h__[h_dim1 + 1] - *sr1) * ((h__[h_dim1 + 1] - *sr2) / s) 
+	    v[1] = (h__[h_dim1 + 1] - *sr1) * ((h__[h_dim1 + 1] - *sr2) / s)
 		    - *si1 * (*si2 / s) + h__[(h_dim1 << 1) + 1] * h21s + h__[
 		    h_dim1 * 3 + 1] * h31s;
 	    v[2] = h21s * (h__[h_dim1 + 1] + h__[(h_dim1 << 1) + 2] - *sr1 - *
@@ -6718,7 +6706,7 @@ L90:
 // =====================================================================
 /* Subroutine */ int dlaqr2_(int *wantt, int *wantz, int *n, int *ktop, int *
 	kbot, int *nw, double *h__, int *ldh, int *iloz, int *ihiz, double *
-	z__, int *ldz, int *ns, int *nd, double *sr, double *si, double *v, 
+	z__, int *ldz, int *ns, int *nd, double *sr, double *si, double *v,
 	int *ldv, int *nh, double *t, int *ldt, int *nv, double *wv, int *
 	ldwv, double *work, int *lwork)
 {
@@ -6730,12 +6718,9 @@ L90:
     int c_true = TRUE_;
 
     // System generated locals
-    int h_dim1, h_offset, t_dim1, t_offset, v_dim1, v_offset, wv_dim1, 
+    int h_dim1, h_offset, t_dim1, t_offset, v_dim1, v_offset, wv_dim1,
 	    wv_offset, z_dim1, z_offset, i__1, i__2, i__3, i__4;
     double d__1, d__2, d__3, d__4, d__5, d__6;
-
-    // Builtin functions
-    double sqrt(double);
 
     // Local variables
     int i__, j, k;
@@ -6747,31 +6732,31 @@ L90:
     int lwk1, lwk2;
     double beta;
     int kend, kcol, info, ifst, ilst, ltop, krow;
-    extern /* Subroutine */ int dlarf_(char *, int *, int *, double *, int *, 
+    extern /* Subroutine */ int dlarf_(char *, int *, int *, double *, int *,
 	    double *, double *, int *, double *), dgemm_(char *, char *, int *
-	    , int *, int *, double *, double *, int *, double *, int *, 
+	    , int *, int *, double *, double *, int *, double *, int *,
 	    double *, double *, int *);
     int bulge;
     extern /* Subroutine */ int dcopy_(int *, double *, int *, double *, int *
 	    );
     int infqr, kwtop;
     extern /* Subroutine */ int dlanv2_(double *, double *, double *, double *
-	    , double *, double *, double *, double *, double *, double *), 
+	    , double *, double *, double *, double *, double *, double *),
 	    dlabad_(double *, double *);
     extern double dlamch_(char *);
-    extern /* Subroutine */ int dgehrd_(int *, int *, int *, double *, int *, 
-	    double *, double *, int *, int *), dlarfg_(int *, double *, 
-	    double *, int *, double *), dlahqr_(int *, int *, int *, int *, 
+    extern /* Subroutine */ int dgehrd_(int *, int *, int *, double *, int *,
+	    double *, double *, int *, int *), dlarfg_(int *, double *,
+	    double *, int *, double *), dlahqr_(int *, int *, int *, int *,
 	    int *, double *, int *, double *, double *, int *, int *, double *
-	    , int *, int *), dlacpy_(char *, int *, int *, double *, int *, 
+	    , int *, int *), dlacpy_(char *, int *, int *, double *, int *,
 	    double *, int *);
     double safmin;
-    extern /* Subroutine */ int dlaset_(char *, int *, int *, double *, 
+    extern /* Subroutine */ int dlaset_(char *, int *, int *, double *,
 	    double *, double *, int *);
     double safmax;
-    extern /* Subroutine */ int dtrexc_(char *, int *, double *, int *, 
-	    double *, int *, int *, int *, double *, int *), dormhr_(char *, 
-	    char *, int *, int *, int *, int *, double *, int *, double *, 
+    extern /* Subroutine */ int dtrexc_(char *, int *, double *, int *,
+	    double *, int *, int *, int *, double *, int *), dormhr_(char *,
+	    char *, int *, int *, int *, int *, double *, int *, double *,
 	    double *, int *, double *, int *, int *);
     int sorted;
     double smlnum;
@@ -6917,7 +6902,7 @@ L90:
     //    .    the deflation window that converged using INFQR
     //    .    here and there to keep track.) ====
     //
-    dlacpy_("U", &jw, &jw, &h__[kwtop + kwtop * h_dim1], ldh, &t[t_offset], 
+    dlacpy_("U", &jw, &jw, &h__[kwtop + kwtop * h_dim1], ldh, &t[t_offset],
 	    ldt);
     i__1 = jw - 1;
     i__2 = *ldh + 1;
@@ -6925,7 +6910,7 @@ L90:
     dcopy_(&i__1, &h__[kwtop + 1 + kwtop * h_dim1], &i__2, &t[t_dim1 + 2], &
 	    i__3);
     dlaset_("A", &jw, &jw, &c_b12, &c_b13, &v[v_offset], ldv);
-    dlahqr_(&c_true, &c_true, &jw, &c__1, &jw, &t[t_offset], ldt, &sr[kwtop], 
+    dlahqr_(&c_true, &c_true, &jw, &c__1, &jw, &t[t_offset], ldt, &sr[kwtop],
 	    &si[kwtop], &c__1, &jw, &v[v_offset], ldv, &infqr);
     //
     //    ==== DTREXC needs a clean margin near the diagonal ====
@@ -7060,7 +7045,7 @@ L40:
 		evk = (d__1 = t[k + k * t_dim1], abs(d__1));
 	    } else {
 		evk = (d__3 = t[k + k * t_dim1], abs(d__3)) + sqrt((d__1 = t[
-			k + 1 + k * t_dim1], abs(d__1))) * sqrt((d__2 = t[k + 
+			k + 1 + k * t_dim1], abs(d__1))) * sqrt((d__2 = t[k +
 			(k + 1) * t_dim1], abs(d__2)));
 	    }
 	    if (evi >= evk) {
@@ -7109,7 +7094,7 @@ L60:
 	    cc = t[i__ + (i__ - 1) * t_dim1];
 	    bb = t[i__ - 1 + i__ * t_dim1];
 	    dd = t[i__ + i__ * t_dim1];
-	    dlanv2_(&aa, &bb, &cc, &dd, &sr[kwtop + i__ - 2], &si[kwtop + i__ 
+	    dlanv2_(&aa, &bb, &cc, &dd, &sr[kwtop + i__ - 2], &si[kwtop + i__
 		    - 2], &sr[kwtop + i__ - 1], &si[kwtop + i__ - 1], &cs, &
 		    sn);
 	    i__ += -2;
@@ -7170,15 +7155,15 @@ L60:
 	}
 	i__1 = kwtop - 1;
 	i__2 = *nv;
-	for (krow = ltop; i__2 < 0 ? krow >= i__1 : krow <= i__1; krow += 
+	for (krow = ltop; i__2 < 0 ? krow >= i__1 : krow <= i__1; krow +=
 		i__2) {
 	    // Computing MIN
 	    i__3 = *nv, i__4 = kwtop - krow;
 	    kln = min(i__3,i__4);
-	    dgemm_("N", "N", &kln, &jw, &jw, &c_b13, &h__[krow + kwtop * 
-		    h_dim1], ldh, &v[v_offset], ldv, &c_b12, &wv[wv_offset], 
+	    dgemm_("N", "N", &kln, &jw, &jw, &c_b13, &h__[krow + kwtop *
+		    h_dim1], ldh, &v[v_offset], ldv, &c_b12, &wv[wv_offset],
 		    ldwv);
-	    dlacpy_("A", &kln, &jw, &wv[wv_offset], ldwv, &h__[krow + kwtop * 
+	    dlacpy_("A", &kln, &jw, &wv[wv_offset], ldwv, &h__[krow + kwtop *
 		    h_dim1], ldh);
 // L70:
 	}
@@ -7188,7 +7173,7 @@ L60:
 	if (*wantt) {
 	    i__2 = *n;
 	    i__1 = *nh;
-	    for (kcol = *kbot + 1; i__1 < 0 ? kcol >= i__2 : kcol <= i__2; 
+	    for (kcol = *kbot + 1; i__1 < 0 ? kcol >= i__2 : kcol <= i__2;
 		    kcol += i__1) {
 		// Computing MIN
 		i__3 = *nh, i__4 = *n - kcol + 1;
@@ -7212,10 +7197,10 @@ L60:
 		// Computing MIN
 		i__3 = *nv, i__4 = *ihiz - krow + 1;
 		kln = min(i__3,i__4);
-		dgemm_("N", "N", &kln, &jw, &jw, &c_b13, &z__[krow + kwtop * 
+		dgemm_("N", "N", &kln, &jw, &jw, &c_b13, &z__[krow + kwtop *
 			z_dim1], ldz, &v[v_offset], ldv, &c_b12, &wv[
 			wv_offset], ldwv);
-		dlacpy_("A", &kln, &jw, &wv[wv_offset], ldwv, &z__[krow + 
+		dlacpy_("A", &kln, &jw, &wv[wv_offset], ldwv, &z__[krow +
 			kwtop * z_dim1], ldz);
 // L90:
 	    }
@@ -7520,7 +7505,7 @@ L60:
 // =====================================================================
 /* Subroutine */ int dlaqr3_(int *wantt, int *wantz, int *n, int *ktop, int *
 	kbot, int *nw, double *h__, int *ldh, int *iloz, int *ihiz, double *
-	z__, int *ldz, int *ns, int *nd, double *sr, double *si, double *v, 
+	z__, int *ldz, int *ns, int *nd, double *sr, double *si, double *v,
 	int *ldv, int *nh, double *t, int *ldt, int *nv, double *wv, int *
 	ldwv, double *work, int *lwork)
 {
@@ -7533,12 +7518,9 @@ L60:
     int c__12 = 12;
 
     // System generated locals
-    int h_dim1, h_offset, t_dim1, t_offset, v_dim1, v_offset, wv_dim1, 
+    int h_dim1, h_offset, t_dim1, t_offset, v_dim1, v_offset, wv_dim1,
 	    wv_offset, z_dim1, z_offset, i__1, i__2, i__3, i__4;
     double d__1, d__2, d__3, d__4, d__5, d__6;
-
-    // Builtin functions
-    double sqrt(double);
 
     // Local variables
     int i__, j, k;
@@ -7550,33 +7532,33 @@ L60:
     int lwk1, lwk2, lwk3;
     double beta;
     int kend, kcol, info, nmin, ifst, ilst, ltop, krow;
-    extern /* Subroutine */ int dlarf_(char *, int *, int *, double *, int *, 
+    extern /* Subroutine */ int dlarf_(char *, int *, int *, double *, int *,
 	    double *, double *, int *, double *), dgemm_(char *, char *, int *
-	    , int *, int *, double *, double *, int *, double *, int *, 
+	    , int *, int *, double *, double *, int *, double *, int *,
 	    double *, double *, int *);
     int bulge;
     extern /* Subroutine */ int dcopy_(int *, double *, int *, double *, int *
 	    );
     int infqr, kwtop;
     extern /* Subroutine */ int dlanv2_(double *, double *, double *, double *
-	    , double *, double *, double *, double *, double *, double *), 
-	    dlaqr4_(int *, int *, int *, int *, int *, double *, int *, 
+	    , double *, double *, double *, double *, double *, double *),
+	    dlaqr4_(int *, int *, int *, int *, int *, double *, int *,
 	    double *, double *, int *, int *, double *, int *, double *, int *
 	    , int *), dlabad_(double *, double *);
     extern double dlamch_(char *);
-    extern /* Subroutine */ int dgehrd_(int *, int *, int *, double *, int *, 
-	    double *, double *, int *, int *), dlarfg_(int *, double *, 
-	    double *, int *, double *), dlahqr_(int *, int *, int *, int *, 
+    extern /* Subroutine */ int dgehrd_(int *, int *, int *, double *, int *,
+	    double *, double *, int *, int *), dlarfg_(int *, double *,
+	    double *, int *, double *), dlahqr_(int *, int *, int *, int *,
 	    int *, double *, int *, double *, double *, int *, int *, double *
-	    , int *, int *), dlacpy_(char *, int *, int *, double *, int *, 
+	    , int *, int *), dlacpy_(char *, int *, int *, double *, int *,
 	    double *, int *);
     double safmin;
     extern int ilaenv_(int *, char *, char *, int *, int *, int *, int *);
     double safmax;
-    extern /* Subroutine */ int dlaset_(char *, int *, int *, double *, 
+    extern /* Subroutine */ int dlaset_(char *, int *, int *, double *,
 	    double *, double *, int *), dtrexc_(char *, int *, double *, int *
 	    , double *, int *, int *, int *, double *, int *), dormhr_(char *,
-	     char *, int *, int *, int *, int *, double *, int *, double *, 
+	     char *, int *, int *, int *, int *, double *, int *, double *,
 	    double *, int *, double *, int *, int *);
     int sorted;
     double smlnum;
@@ -7652,7 +7634,7 @@ L60:
 	//
 	//       ==== Workspace query call to DLAQR4 ====
 	//
-	dlaqr4_(&c_true, &c_true, &jw, &c__1, &jw, &t[t_offset], ldt, &sr[1], 
+	dlaqr4_(&c_true, &c_true, &jw, &c__1, &jw, &t[t_offset], ldt, &sr[1],
 		&si[1], &c__1, &jw, &v[v_offset], ldv, &work[1], &c_n1, &
 		infqr);
 	lwk3 = (int) work[1];
@@ -7731,7 +7713,7 @@ L60:
     //    .    the deflation window that converged using INFQR
     //    .    here and there to keep track.) ====
     //
-    dlacpy_("U", &jw, &jw, &h__[kwtop + kwtop * h_dim1], ldh, &t[t_offset], 
+    dlacpy_("U", &jw, &jw, &h__[kwtop + kwtop * h_dim1], ldh, &t[t_offset],
 	    ldt);
     i__1 = jw - 1;
     i__2 = *ldh + 1;
@@ -7742,7 +7724,7 @@ L60:
     nmin = ilaenv_(&c__12, "DLAQR3", "SV", &jw, &c__1, &jw, lwork);
     if (jw > nmin) {
 	dlaqr4_(&c_true, &c_true, &jw, &c__1, &jw, &t[t_offset], ldt, &sr[
-		kwtop], &si[kwtop], &c__1, &jw, &v[v_offset], ldv, &work[1], 
+		kwtop], &si[kwtop], &c__1, &jw, &v[v_offset], ldv, &work[1],
 		lwork, &infqr);
     } else {
 	dlahqr_(&c_true, &c_true, &jw, &c__1, &jw, &t[t_offset], ldt, &sr[
@@ -7881,7 +7863,7 @@ L40:
 		evk = (d__1 = t[k + k * t_dim1], abs(d__1));
 	    } else {
 		evk = (d__3 = t[k + k * t_dim1], abs(d__3)) + sqrt((d__1 = t[
-			k + 1 + k * t_dim1], abs(d__1))) * sqrt((d__2 = t[k + 
+			k + 1 + k * t_dim1], abs(d__1))) * sqrt((d__2 = t[k +
 			(k + 1) * t_dim1], abs(d__2)));
 	    }
 	    if (evi >= evk) {
@@ -7930,7 +7912,7 @@ L60:
 	    cc = t[i__ + (i__ - 1) * t_dim1];
 	    bb = t[i__ - 1 + i__ * t_dim1];
 	    dd = t[i__ + i__ * t_dim1];
-	    dlanv2_(&aa, &bb, &cc, &dd, &sr[kwtop + i__ - 2], &si[kwtop + i__ 
+	    dlanv2_(&aa, &bb, &cc, &dd, &sr[kwtop + i__ - 2], &si[kwtop + i__
 		    - 2], &sr[kwtop + i__ - 1], &si[kwtop + i__ - 1], &cs, &
 		    sn);
 	    i__ += -2;
@@ -7991,15 +7973,15 @@ L60:
 	}
 	i__1 = kwtop - 1;
 	i__2 = *nv;
-	for (krow = ltop; i__2 < 0 ? krow >= i__1 : krow <= i__1; krow += 
+	for (krow = ltop; i__2 < 0 ? krow >= i__1 : krow <= i__1; krow +=
 		i__2) {
 	    // Computing MIN
 	    i__3 = *nv, i__4 = kwtop - krow;
 	    kln = min(i__3,i__4);
-	    dgemm_("N", "N", &kln, &jw, &jw, &c_b18, &h__[krow + kwtop * 
-		    h_dim1], ldh, &v[v_offset], ldv, &c_b17, &wv[wv_offset], 
+	    dgemm_("N", "N", &kln, &jw, &jw, &c_b18, &h__[krow + kwtop *
+		    h_dim1], ldh, &v[v_offset], ldv, &c_b17, &wv[wv_offset],
 		    ldwv);
-	    dlacpy_("A", &kln, &jw, &wv[wv_offset], ldwv, &h__[krow + kwtop * 
+	    dlacpy_("A", &kln, &jw, &wv[wv_offset], ldwv, &h__[krow + kwtop *
 		    h_dim1], ldh);
 // L70:
 	}
@@ -8009,7 +7991,7 @@ L60:
 	if (*wantt) {
 	    i__2 = *n;
 	    i__1 = *nh;
-	    for (kcol = *kbot + 1; i__1 < 0 ? kcol >= i__2 : kcol <= i__2; 
+	    for (kcol = *kbot + 1; i__1 < 0 ? kcol >= i__2 : kcol <= i__2;
 		    kcol += i__1) {
 		// Computing MIN
 		i__3 = *nh, i__4 = *n - kcol + 1;
@@ -8033,10 +8015,10 @@ L60:
 		// Computing MIN
 		i__3 = *nv, i__4 = *ihiz - krow + 1;
 		kln = min(i__3,i__4);
-		dgemm_("N", "N", &kln, &jw, &jw, &c_b18, &z__[krow + kwtop * 
+		dgemm_("N", "N", &kln, &jw, &jw, &c_b18, &z__[krow + kwtop *
 			z_dim1], ldz, &v[v_offset], ldv, &c_b17, &wv[
 			wv_offset], ldwv);
-		dlacpy_("A", &kln, &jw, &wv[wv_offset], ldwv, &z__[krow + 
+		dlacpy_("A", &kln, &jw, &wv[wv_offset], ldwv, &z__[krow +
 			kwtop * z_dim1], ldz);
 // L90:
 	    }
@@ -8361,17 +8343,17 @@ L60:
     int ktop;
     double zdum[1]	/* was [1][1] */;
     int kacc22, itmax, nsmax, nwmax, kwtop;
-    extern /* Subroutine */ int dlaqr2_(int *, int *, int *, int *, int *, 
-	    int *, double *, int *, int *, int *, double *, int *, int *, int 
-	    *, double *, double *, double *, int *, int *, double *, int *, 
-	    int *, double *, int *, double *, int *), dlanv2_(double *, 
-	    double *, double *, double *, double *, double *, double *, 
+    extern /* Subroutine */ int dlaqr2_(int *, int *, int *, int *, int *,
+	    int *, double *, int *, int *, int *, double *, int *, int *, int
+	    *, double *, double *, double *, int *, int *, double *, int *,
+	    int *, double *, int *, double *, int *), dlanv2_(double *,
+	    double *, double *, double *, double *, double *, double *,
 	    double *, double *, double *), dlaqr5_(int *, int *, int *, int *,
-	     int *, int *, int *, double *, double *, double *, int *, int *, 
-	    int *, double *, int *, double *, int *, double *, int *, int *, 
+	     int *, int *, int *, double *, double *, double *, int *, int *,
+	    int *, double *, int *, double *, int *, double *, int *, int *,
 	    double *, int *, int *, double *, int *);
     int nibble;
-    extern /* Subroutine */ int dlahqr_(int *, int *, int *, int *, int *, 
+    extern /* Subroutine */ int dlahqr_(int *, int *, int *, int *, int *,
 	    double *, int *, double *, double *, int *, int *, double *, int *
 	    , int *), dlacpy_(char *, int *, int *, double *, int *, double *,
 	     int *);
@@ -8491,7 +8473,7 @@ L60:
 	//
 	nsr = ilaenv_(&c__15, "DLAQR4", jbcmpz, n, ilo, ihi, lwork);
 	// Computing MIN
-	i__1 = nsr, i__2 = (*n + 6) / 9, i__1 = min(i__1,i__2), i__2 = *ihi - 
+	i__1 = nsr, i__2 = (*n + 6) / 9, i__1 = min(i__1,i__2), i__2 = *ihi -
 		*ilo;
 	nsr = min(i__1,i__2);
 	// Computing MAX
@@ -8503,9 +8485,9 @@ L60:
 	//       ==== Workspace query call to DLAQR2 ====
 	//
 	i__1 = nwr + 1;
-	dlaqr2_(wantt, wantz, n, ilo, ihi, &i__1, &h__[h_offset], ldh, iloz, 
+	dlaqr2_(wantt, wantz, n, ilo, ihi, &i__1, &h__[h_offset], ldh, iloz,
 		ihiz, &z__[z_offset], ldz, &ls, &ld, &wr[1], &wi[1], &h__[
-		h_offset], ldh, n, &h__[h_offset], ldh, n, &h__[h_offset], 
+		h_offset], ldh, n, &h__[h_offset], ldh, n, &h__[h_offset],
 		ldh, &work[1], &c_n1);
 	//
 	//       ==== Optimal workspace = MAX(DLAQR5, DLAQR2) ====
@@ -8622,8 +8604,8 @@ L20:
 		    nw = nh;
 		} else {
 		    kwtop = kbot - nw + 1;
-		    if ((d__1 = h__[kwtop + (kwtop - 1) * h_dim1], abs(d__1)) 
-			    > (d__2 = h__[kwtop - 1 + (kwtop - 2) * h_dim1], 
+		    if ((d__1 = h__[kwtop + (kwtop - 1) * h_dim1], abs(d__1))
+			    > (d__2 = h__[kwtop - 1 + (kwtop - 2) * h_dim1],
 			    abs(d__2))) {
 			++nw;
 		    }
@@ -8658,9 +8640,9 @@ L20:
 	    //
 	    //          ==== Aggressive early deflation ====
 	    //
-	    dlaqr2_(wantt, wantz, n, &ktop, &kbot, &nw, &h__[h_offset], ldh, 
+	    dlaqr2_(wantt, wantz, n, &ktop, &kbot, &nw, &h__[h_offset], ldh,
 		    iloz, ihiz, &z__[z_offset], ldz, &ls, &ld, &wr[1], &wi[1],
-		     &h__[kv + h_dim1], ldh, &nho, &h__[kv + kt * h_dim1], 
+		     &h__[kv + h_dim1], ldh, &nho, &h__[kv + kt * h_dim1],
 		    ldh, &nve, &h__[kwv + h_dim1], ldh, &work[1], lwork);
 	    //
 	    //          ==== Adjust KBOT accounting for new deflations. ====
@@ -8705,7 +8687,7 @@ L20:
 		    i__2 = max(i__3,i__4);
 		    for (i__ = kbot; i__ >= i__2; i__ += -2) {
 			ss = (d__1 = h__[i__ + (i__ - 1) * h_dim1], abs(d__1))
-				 + (d__2 = h__[i__ - 1 + (i__ - 2) * h_dim1], 
+				 + (d__2 = h__[i__ - 1 + (i__ - 2) * h_dim1],
 				abs(d__2));
 			aa = ss * .75 + h__[i__ + i__ * h_dim1];
 			bb = ss;
@@ -8734,7 +8716,7 @@ L20:
 			kt = *n - ns + 1;
 			dlacpy_("A", &ns, &ns, &h__[ks + ks * h_dim1], ldh, &
 				h__[kt + h_dim1], ldh);
-			dlahqr_(&c_false, &c_false, &ns, &c__1, &ns, &h__[kt 
+			dlahqr_(&c_false, &c_false, &ns, &c__1, &ns, &h__[kt
 				+ h_dim1], ldh, &wr[ks], &wi[ks], &c__1, &
 				c__1, zdum, &c__1, &inf);
 			ks += inf;
@@ -8771,7 +8753,7 @@ L20:
 			    for (i__ = ks; i__ <= i__3; ++i__) {
 				if ((d__1 = wr[i__], abs(d__1)) + (d__2 = wi[
 					i__], abs(d__2)) < (d__3 = wr[i__ + 1]
-					, abs(d__3)) + (d__4 = wi[i__ + 1], 
+					, abs(d__3)) + (d__4 = wi[i__ + 1],
 					abs(d__4))) {
 				    sorted = FALSE_;
 				    swap = wr[i__];
@@ -8817,7 +8799,7 @@ L60:
 		if (kbot - ks + 1 == 2) {
 		    if (wi[kbot] == 0.) {
 			if ((d__1 = wr[kbot] - h__[kbot + kbot * h_dim1], abs(
-				d__1)) < (d__2 = wr[kbot - 1] - h__[kbot + 
+				d__1)) < (d__2 = wr[kbot - 1] - h__[kbot +
 				kbot * h_dim1], abs(d__2))) {
 			    wr[kbot - 1] = wr[kbot];
 			} else {
@@ -8857,10 +8839,10 @@ L60:
 		//
 		//             ==== Small-bulge multi-shift QR sweep ====
 		//
-		dlaqr5_(wantt, wantz, &kacc22, n, &ktop, &kbot, &ns, &wr[ks], 
+		dlaqr5_(wantt, wantz, &kacc22, n, &ktop, &kbot, &ns, &wr[ks],
 			&wi[ks], &h__[h_offset], ldh, iloz, ihiz, &z__[
-			z_offset], ldz, &work[1], &c__3, &h__[ku + h_dim1], 
-			ldh, &nve, &h__[kwv + h_dim1], ldh, &nho, &h__[ku + 
+			z_offset], ldz, &work[1], &c__3, &h__[ku + h_dim1],
+			ldh, &nve, &h__[kwv + h_dim1], ldh, &nho, &h__[ku +
 			kwh * h_dim1], ldh);
 	    }
 	    //
@@ -9150,10 +9132,10 @@ L90:
 //>       929--947, 2002.
 //>
 // =====================================================================
-/* Subroutine */ int dlaqr5_(int *wantt, int *wantz, int *kacc22, int *n, int 
-	*ktop, int *kbot, int *nshfts, double *sr, double *si, double *h__, 
-	int *ldh, int *iloz, int *ihiz, double *z__, int *ldz, double *v, int 
-	*ldv, double *u, int *ldu, int *nv, double *wv, int *ldwv, int *nh, 
+/* Subroutine */ int dlaqr5_(int *wantt, int *wantz, int *kacc22, int *n, int
+	*ktop, int *kbot, int *nshfts, double *sr, double *si, double *h__,
+	int *ldh, int *iloz, int *ihiz, double *z__, int *ldz, double *v, int
+	*ldv, double *u, int *ldu, int *nv, double *wv, int *ldwv, int *nh,
 	double *wh, int *ldwh)
 {
     // Table of constant values
@@ -9164,7 +9146,7 @@ L90:
     int c__2 = 2;
 
     // System generated locals
-    int h_dim1, h_offset, u_dim1, u_offset, v_dim1, v_offset, wh_dim1, 
+    int h_dim1, h_offset, u_dim1, u_offset, v_dim1, v_offset, wh_dim1,
 	    wh_offset, wv_dim1, wv_offset, z_dim1, z_offset, i__1, i__2, i__3,
 	     i__4, i__5, i__6, i__7;
     double d__1, d__2, d__3, d__4, d__5;
@@ -9184,20 +9166,20 @@ L90:
     int jtop, jrow, mtop;
     double alpha;
     int accum;
-    extern /* Subroutine */ int dgemm_(char *, char *, int *, int *, int *, 
-	    double *, double *, int *, double *, int *, double *, double *, 
+    extern /* Subroutine */ int dgemm_(char *, char *, int *, int *, int *,
+	    double *, double *, int *, double *, int *, double *, double *,
 	    int *);
     int ndcol, incol, krcol, nbmps;
-    extern /* Subroutine */ int dtrmm_(char *, char *, char *, char *, int *, 
+    extern /* Subroutine */ int dtrmm_(char *, char *, char *, char *, int *,
 	    int *, double *, double *, int *, double *, int *), dlaqr1_(int *,
 	     double *, int *, double *, double *, double *, double *, double *
 	    ), dlabad_(double *, double *);
     extern double dlamch_(char *);
-    extern /* Subroutine */ int dlarfg_(int *, double *, double *, int *, 
+    extern /* Subroutine */ int dlarfg_(int *, double *, double *, int *,
 	    double *), dlacpy_(char *, int *, int *, double *, int *, double *
 	    , int *);
     double safmin;
-    extern /* Subroutine */ int dlaset_(char *, int *, int *, double *, 
+    extern /* Subroutine */ int dlaset_(char *, int *, int *, double *,
 	    double *, double *, int *);
     double safmax, refsum;
     int mstart;
@@ -9328,7 +9310,7 @@ L90:
     //
     i__1 = *kbot - 2;
     i__2 = nbmps * 3 - 2;
-    for (incol = (1 - nbmps) * 3 + *ktop - 1; i__2 < 0 ? incol >= i__1 : 
+    for (incol = (1 - nbmps) * 3 + *ktop - 1; i__2 < 0 ? incol >= i__1 :
 	    incol <= i__1; incol += i__2) {
 	ndcol = incol + kdu;
 	if (accum) {
@@ -9375,17 +9357,17 @@ L90:
 	    for (m = mtop; m <= i__4; ++m) {
 		k = krcol + (m - 1) * 3;
 		if (k == *ktop - 1) {
-		    dlaqr1_(&c__3, &h__[*ktop + *ktop * h_dim1], ldh, &sr[(m 
+		    dlaqr1_(&c__3, &h__[*ktop + *ktop * h_dim1], ldh, &sr[(m
 			    << 1) - 1], &si[(m << 1) - 1], &sr[m * 2], &si[m *
 			     2], &v[m * v_dim1 + 1]);
 		    alpha = v[m * v_dim1 + 1];
-		    dlarfg_(&c__3, &alpha, &v[m * v_dim1 + 2], &c__1, &v[m * 
+		    dlarfg_(&c__3, &alpha, &v[m * v_dim1 + 2], &c__1, &v[m *
 			    v_dim1 + 1]);
 		} else {
 		    beta = h__[k + 1 + k * h_dim1];
 		    v[m * v_dim1 + 2] = h__[k + 2 + k * h_dim1];
 		    v[m * v_dim1 + 3] = h__[k + 3 + k * h_dim1];
-		    dlarfg_(&c__3, &beta, &v[m * v_dim1 + 2], &c__1, &v[m * 
+		    dlarfg_(&c__3, &beta, &v[m * v_dim1 + 2], &c__1, &v[m *
 			    v_dim1 + 1]);
 		    //
 		    //                ==== A Bulge may collapse because of vigilant
@@ -9411,17 +9393,17 @@ L90:
 			//                   .    Otherwise, use the new one. ====
 			//
 			dlaqr1_(&c__3, &h__[k + 1 + (k + 1) * h_dim1], ldh, &
-				sr[(m << 1) - 1], &si[(m << 1) - 1], &sr[m * 
+				sr[(m << 1) - 1], &si[(m << 1) - 1], &sr[m *
 				2], &si[m * 2], vt);
 			alpha = vt[0];
 			dlarfg_(&c__3, &alpha, &vt[1], &c__1, vt);
-			refsum = vt[0] * (h__[k + 1 + k * h_dim1] + vt[1] * 
+			refsum = vt[0] * (h__[k + 1 + k * h_dim1] + vt[1] *
 				h__[k + 2 + k * h_dim1]);
-			if ((d__1 = h__[k + 2 + k * h_dim1] - refsum * vt[1], 
+			if ((d__1 = h__[k + 2 + k * h_dim1] - refsum * vt[1],
 				abs(d__1)) + (d__2 = refsum * vt[2], abs(d__2)
 				) > ulp * ((d__3 = h__[k + k * h_dim1], abs(
 				d__3)) + (d__4 = h__[k + 1 + (k + 1) * h_dim1]
-				, abs(d__4)) + (d__5 = h__[k + 2 + (k + 2) * 
+				, abs(d__4)) + (d__5 = h__[k + 2 + (k + 2) *
 				h_dim1], abs(d__5)))) {
 			    //
 			    //                      ==== Starting a new bulge here would
@@ -9459,12 +9441,12 @@ L90:
 			    m22 << 1) - 1], &si[(m22 << 1) - 1], &sr[m22 * 2],
 			     &si[m22 * 2], &v[m22 * v_dim1 + 1]);
 		    beta = v[m22 * v_dim1 + 1];
-		    dlarfg_(&c__2, &beta, &v[m22 * v_dim1 + 2], &c__1, &v[m22 
+		    dlarfg_(&c__2, &beta, &v[m22 * v_dim1 + 2], &c__1, &v[m22
 			    * v_dim1 + 1]);
 		} else {
 		    beta = h__[k + 1 + k * h_dim1];
 		    v[m22 * v_dim1 + 2] = h__[k + 2 + k * h_dim1];
-		    dlarfg_(&c__2, &beta, &v[m22 * v_dim1 + 2], &c__1, &v[m22 
+		    dlarfg_(&c__2, &beta, &v[m22 * v_dim1 + 2], &c__1, &v[m22
 			    * v_dim1 + 1]);
 		    h__[k + 1 + k * h_dim1] = beta;
 		    h__[k + 2 + k * h_dim1] = 0.;
@@ -9489,7 +9471,7 @@ L90:
 		for (m = mtop; m <= i__5; ++m) {
 		    k = krcol + (m - 1) * 3;
 		    refsum = v[m * v_dim1 + 1] * (h__[k + 1 + j * h_dim1] + v[
-			    m * v_dim1 + 2] * h__[k + 2 + j * h_dim1] + v[m * 
+			    m * v_dim1 + 2] * h__[k + 2 + j * h_dim1] + v[m *
 			    v_dim1 + 3] * h__[k + 3 + j * h_dim1]);
 		    h__[k + 1 + j * h_dim1] -= refsum;
 		    h__[k + 2 + j * h_dim1] -= refsum * v[m * v_dim1 + 2];
@@ -9504,7 +9486,7 @@ L90:
 		i__4 = k + 1;
 		i__5 = jbot;
 		for (j = max(i__4,*ktop); j <= i__5; ++j) {
-		    refsum = v[m22 * v_dim1 + 1] * (h__[k + 1 + j * h_dim1] + 
+		    refsum = v[m22 * v_dim1 + 1] * (h__[k + 1 + j * h_dim1] +
 			    v[m22 * v_dim1 + 2] * h__[k + 2 + j * h_dim1]);
 		    h__[k + 1 + j * h_dim1] -= refsum;
 		    h__[k + 2 + j * h_dim1] -= refsum * v[m22 * v_dim1 + 2];
@@ -9531,14 +9513,14 @@ L90:
 		    i__6 = *kbot, i__7 = k + 3;
 		    i__4 = min(i__6,i__7);
 		    for (j = jtop; j <= i__4; ++j) {
-			refsum = v[m * v_dim1 + 1] * (h__[j + (k + 1) * 
-				h_dim1] + v[m * v_dim1 + 2] * h__[j + (k + 2) 
-				* h_dim1] + v[m * v_dim1 + 3] * h__[j + (k + 
+			refsum = v[m * v_dim1 + 1] * (h__[j + (k + 1) *
+				h_dim1] + v[m * v_dim1 + 2] * h__[j + (k + 2)
+				* h_dim1] + v[m * v_dim1 + 3] * h__[j + (k +
 				3) * h_dim1]);
 			h__[j + (k + 1) * h_dim1] -= refsum;
-			h__[j + (k + 2) * h_dim1] -= refsum * v[m * v_dim1 + 
+			h__[j + (k + 2) * h_dim1] -= refsum * v[m * v_dim1 +
 				2];
-			h__[j + (k + 3) * h_dim1] -= refsum * v[m * v_dim1 + 
+			h__[j + (k + 3) * h_dim1] -= refsum * v[m * v_dim1 +
 				3];
 // L60:
 		    }
@@ -9553,14 +9535,14 @@ L90:
 			i__4 = 1, i__6 = *ktop - incol;
 			i__7 = kdu;
 			for (j = max(i__4,i__6); j <= i__7; ++j) {
-			    refsum = v[m * v_dim1 + 1] * (u[j + (kms + 1) * 
-				    u_dim1] + v[m * v_dim1 + 2] * u[j + (kms 
-				    + 2) * u_dim1] + v[m * v_dim1 + 3] * u[j 
+			    refsum = v[m * v_dim1 + 1] * (u[j + (kms + 1) *
+				    u_dim1] + v[m * v_dim1 + 2] * u[j + (kms
+				    + 2) * u_dim1] + v[m * v_dim1 + 3] * u[j
 				    + (kms + 3) * u_dim1]);
 			    u[j + (kms + 1) * u_dim1] -= refsum;
-			    u[j + (kms + 2) * u_dim1] -= refsum * v[m * 
+			    u[j + (kms + 2) * u_dim1] -= refsum * v[m *
 				    v_dim1 + 2];
-			    u[j + (kms + 3) * u_dim1] -= refsum * v[m * 
+			    u[j + (kms + 3) * u_dim1] -= refsum * v[m *
 				    v_dim1 + 3];
 // L70:
 			}
@@ -9572,14 +9554,14 @@ L90:
 			//
 			i__7 = *ihiz;
 			for (j = *iloz; j <= i__7; ++j) {
-			    refsum = v[m * v_dim1 + 1] * (z__[j + (k + 1) * 
-				    z_dim1] + v[m * v_dim1 + 2] * z__[j + (k 
+			    refsum = v[m * v_dim1 + 1] * (z__[j + (k + 1) *
+				    z_dim1] + v[m * v_dim1 + 2] * z__[j + (k
 				    + 2) * z_dim1] + v[m * v_dim1 + 3] * z__[
 				    j + (k + 3) * z_dim1]);
 			    z__[j + (k + 1) * z_dim1] -= refsum;
-			    z__[j + (k + 2) * z_dim1] -= refsum * v[m * 
+			    z__[j + (k + 2) * z_dim1] -= refsum * v[m *
 				    v_dim1 + 2];
-			    z__[j + (k + 3) * z_dim1] -= refsum * v[m * 
+			    z__[j + (k + 3) * z_dim1] -= refsum * v[m *
 				    v_dim1 + 3];
 // L80:
 			}
@@ -9597,11 +9579,11 @@ L90:
 		    i__7 = *kbot, i__4 = k + 3;
 		    i__5 = min(i__7,i__4);
 		    for (j = jtop; j <= i__5; ++j) {
-			refsum = v[m22 * v_dim1 + 1] * (h__[j + (k + 1) * 
-				h_dim1] + v[m22 * v_dim1 + 2] * h__[j + (k + 
+			refsum = v[m22 * v_dim1 + 1] * (h__[j + (k + 1) *
+				h_dim1] + v[m22 * v_dim1 + 2] * h__[j + (k +
 				2) * h_dim1]);
 			h__[j + (k + 1) * h_dim1] -= refsum;
-			h__[j + (k + 2) * h_dim1] -= refsum * v[m22 * v_dim1 
+			h__[j + (k + 2) * h_dim1] -= refsum * v[m22 * v_dim1
 				+ 2];
 // L100:
 		    }
@@ -9611,22 +9593,22 @@ L90:
 			i__5 = 1, i__7 = *ktop - incol;
 			i__4 = kdu;
 			for (j = max(i__5,i__7); j <= i__4; ++j) {
-			    refsum = v[m22 * v_dim1 + 1] * (u[j + (kms + 1) * 
+			    refsum = v[m22 * v_dim1 + 1] * (u[j + (kms + 1) *
 				    u_dim1] + v[m22 * v_dim1 + 2] * u[j + (
 				    kms + 2) * u_dim1]);
 			    u[j + (kms + 1) * u_dim1] -= refsum;
-			    u[j + (kms + 2) * u_dim1] -= refsum * v[m22 * 
+			    u[j + (kms + 2) * u_dim1] -= refsum * v[m22 *
 				    v_dim1 + 2];
 // L110:
 			}
 		    } else if (*wantz) {
 			i__4 = *ihiz;
 			for (j = *iloz; j <= i__4; ++j) {
-			    refsum = v[m22 * v_dim1 + 1] * (z__[j + (k + 1) * 
+			    refsum = v[m22 * v_dim1 + 1] * (z__[j + (k + 1) *
 				    z_dim1] + v[m22 * v_dim1 + 2] * z__[j + (
 				    k + 2) * z_dim1]);
 			    z__[j + (k + 1) * z_dim1] -= refsum;
-			    z__[j + (k + 2) * z_dim1] -= refsum * v[m22 * 
+			    z__[j + (k + 2) * z_dim1] -= refsum * v[m22 *
 				    v_dim1 + 2];
 // L120:
 			}
@@ -9663,7 +9645,7 @@ L90:
 		//             .    unnecessary. ====
 		//
 		if (h__[k + 1 + k * h_dim1] != 0.) {
-		    tst1 = (d__1 = h__[k + k * h_dim1], abs(d__1)) + (d__2 = 
+		    tst1 = (d__1 = h__[k + k * h_dim1], abs(d__1)) + (d__2 =
 			    h__[k + 1 + (k + 1) * h_dim1], abs(d__2));
 		    if (tst1 == 0.) {
 			if (k >= *ktop + 1) {
@@ -9679,15 +9661,15 @@ L90:
 				    d__1));
 			}
 			if (k <= *kbot - 2) {
-			    tst1 += (d__1 = h__[k + 2 + (k + 1) * h_dim1], 
+			    tst1 += (d__1 = h__[k + 2 + (k + 1) * h_dim1],
 				    abs(d__1));
 			}
 			if (k <= *kbot - 3) {
-			    tst1 += (d__1 = h__[k + 3 + (k + 1) * h_dim1], 
+			    tst1 += (d__1 = h__[k + 3 + (k + 1) * h_dim1],
 				    abs(d__1));
 			}
 			if (k <= *kbot - 4) {
-			    tst1 += (d__1 = h__[k + 4 + (k + 1) * h_dim1], 
+			    tst1 += (d__1 = h__[k + 4 + (k + 1) * h_dim1],
 				    abs(d__1));
 			}
 		    }
@@ -9696,23 +9678,23 @@ L90:
 		    if ((d__1 = h__[k + 1 + k * h_dim1], abs(d__1)) <= max(
 			    d__2,d__3)) {
 			// Computing MAX
-			d__3 = (d__1 = h__[k + 1 + k * h_dim1], abs(d__1)), 
+			d__3 = (d__1 = h__[k + 1 + k * h_dim1], abs(d__1)),
 				d__4 = (d__2 = h__[k + (k + 1) * h_dim1], abs(
 				d__2));
 			h12 = max(d__3,d__4);
 			// Computing MIN
-			d__3 = (d__1 = h__[k + 1 + k * h_dim1], abs(d__1)), 
+			d__3 = (d__1 = h__[k + 1 + k * h_dim1], abs(d__1)),
 				d__4 = (d__2 = h__[k + (k + 1) * h_dim1], abs(
 				d__2));
 			h21 = min(d__3,d__4);
 			// Computing MAX
 			d__3 = (d__1 = h__[k + 1 + (k + 1) * h_dim1], abs(
-				d__1)), d__4 = (d__2 = h__[k + k * h_dim1] - 
+				d__1)), d__4 = (d__2 = h__[k + k * h_dim1] -
 				h__[k + 1 + (k + 1) * h_dim1], abs(d__2));
 			h11 = max(d__3,d__4);
 			// Computing MIN
 			d__3 = (d__1 = h__[k + 1 + (k + 1) * h_dim1], abs(
-				d__1)), d__4 = (d__2 = h__[k + k * h_dim1] - 
+				d__1)), d__4 = (d__2 = h__[k + k * h_dim1] -
 				h__[k + 1 + (k + 1) * h_dim1], abs(d__2));
 			h22 = min(d__3,d__4);
 			scl = h11 + h12;
@@ -9784,13 +9766,13 @@ L90:
 		//
 		i__3 = jbot;
 		i__4 = *nh;
-		for (jcol = min(ndcol,*kbot) + 1; i__4 < 0 ? jcol >= i__3 : 
+		for (jcol = min(ndcol,*kbot) + 1; i__4 < 0 ? jcol >= i__3 :
 			jcol <= i__3; jcol += i__4) {
 		    // Computing MIN
 		    i__5 = *nh, i__7 = jbot - jcol + 1;
 		    jlen = min(i__5,i__7);
-		    dgemm_("C", "N", &nu, &jlen, &nu, &c_b8, &u[k1 + k1 * 
-			    u_dim1], ldu, &h__[incol + k1 + jcol * h_dim1], 
+		    dgemm_("C", "N", &nu, &jlen, &nu, &c_b8, &u[k1 + k1 *
+			    u_dim1], ldu, &h__[incol + k1 + jcol * h_dim1],
 			    ldh, &c_b7, &wh[wh_offset], ldwh);
 		    dlacpy_("ALL", &nu, &jlen, &wh[wh_offset], ldwh, &h__[
 			    incol + k1 + jcol * h_dim1], ldh);
@@ -9801,13 +9783,13 @@ L90:
 		//
 		i__4 = max(*ktop,incol) - 1;
 		i__3 = *nv;
-		for (jrow = jtop; i__3 < 0 ? jrow >= i__4 : jrow <= i__4; 
+		for (jrow = jtop; i__3 < 0 ? jrow >= i__4 : jrow <= i__4;
 			jrow += i__3) {
 		    // Computing MIN
 		    i__5 = *nv, i__7 = max(*ktop,incol) - jrow;
 		    jlen = min(i__5,i__7);
 		    dgemm_("N", "N", &jlen, &nu, &nu, &c_b8, &h__[jrow + (
-			    incol + k1) * h_dim1], ldh, &u[k1 + k1 * u_dim1], 
+			    incol + k1) * h_dim1], ldh, &u[k1 + k1 * u_dim1],
 			    ldu, &c_b7, &wv[wv_offset], ldwv);
 		    dlacpy_("ALL", &jlen, &nu, &wv[wv_offset], ldwv, &h__[
 			    jrow + (incol + k1) * h_dim1], ldh);
@@ -9825,7 +9807,7 @@ L90:
 			i__5 = *nv, i__7 = *ihiz - jrow + 1;
 			jlen = min(i__5,i__7);
 			dgemm_("N", "N", &jlen, &nu, &nu, &c_b8, &z__[jrow + (
-				incol + k1) * z_dim1], ldz, &u[k1 + k1 * 
+				incol + k1) * z_dim1], ldz, &u[k1 + k1 *
 				u_dim1], ldu, &c_b7, &wv[wv_offset], ldwv);
 			dlacpy_("ALL", &jlen, &nu, &wv[wv_offset], ldwv, &z__[
 				jrow + (incol + k1) * z_dim1], ldz);
@@ -9854,7 +9836,7 @@ L90:
 		//
 		i__4 = jbot;
 		i__3 = *nh;
-		for (jcol = min(ndcol,*kbot) + 1; i__3 < 0 ? jcol >= i__4 : 
+		for (jcol = min(ndcol,*kbot) + 1; i__3 < 0 ? jcol >= i__4 :
 			jcol <= i__4; jcol += i__3) {
 		    // Computing MIN
 		    i__5 = *nh, i__7 = jbot - jcol + 1;
@@ -9863,21 +9845,21 @@ L90:
 		    //                ==== Copy bottom of H to top+KZS of scratch ====
 		    //                 (The first KZS rows get multiplied by zero.) ====
 		    //
-		    dlacpy_("ALL", &knz, &jlen, &h__[incol + 1 + j2 + jcol * 
+		    dlacpy_("ALL", &knz, &jlen, &h__[incol + 1 + j2 + jcol *
 			    h_dim1], ldh, &wh[kzs + 1 + wh_dim1], ldwh);
 		    //
 		    //                ==== Multiply by U21**T ====
 		    //
-		    dlaset_("ALL", &kzs, &jlen, &c_b7, &c_b7, &wh[wh_offset], 
+		    dlaset_("ALL", &kzs, &jlen, &c_b7, &c_b7, &wh[wh_offset],
 			    ldwh);
-		    dtrmm_("L", "U", "C", "N", &knz, &jlen, &c_b8, &u[j2 + 1 
+		    dtrmm_("L", "U", "C", "N", &knz, &jlen, &c_b8, &u[j2 + 1
 			    + (kzs + 1) * u_dim1], ldu, &wh[kzs + 1 + wh_dim1]
 			    , ldwh);
 		    //
 		    //                ==== Multiply top of H by U11**T ====
 		    //
-		    dgemm_("C", "N", &i2, &jlen, &j2, &c_b8, &u[u_offset], 
-			    ldu, &h__[incol + 1 + jcol * h_dim1], ldh, &c_b8, 
+		    dgemm_("C", "N", &i2, &jlen, &j2, &c_b8, &u[u_offset],
+			    ldu, &h__[incol + 1 + jcol * h_dim1], ldh, &c_b8,
 			    &wh[wh_offset], ldwh);
 		    //
 		    //                ==== Copy top of H to bottom of WH ====
@@ -9887,7 +9869,7 @@ L90:
 		    //
 		    //                ==== Multiply by U21**T ====
 		    //
-		    dtrmm_("L", "L", "C", "N", &j2, &jlen, &c_b8, &u[(i2 + 1) 
+		    dtrmm_("L", "L", "C", "N", &j2, &jlen, &c_b8, &u[(i2 + 1)
 			    * u_dim1 + 1], ldu, &wh[i2 + 1 + wh_dim1], ldwh);
 		    //
 		    //                ==== Multiply by U22 ====
@@ -9895,7 +9877,7 @@ L90:
 		    i__5 = i4 - i2;
 		    i__7 = j4 - j2;
 		    dgemm_("C", "N", &i__5, &jlen, &i__7, &c_b8, &u[j2 + 1 + (
-			    i2 + 1) * u_dim1], ldu, &h__[incol + 1 + j2 + 
+			    i2 + 1) * u_dim1], ldu, &h__[incol + 1 + j2 +
 			    jcol * h_dim1], ldh, &c_b8, &wh[i2 + 1 + wh_dim1],
 			     ldwh);
 		    //
@@ -9910,7 +9892,7 @@ L90:
 		//
 		i__3 = max(incol,*ktop) - 1;
 		i__4 = *nv;
-		for (jrow = jtop; i__4 < 0 ? jrow >= i__3 : jrow <= i__3; 
+		for (jrow = jtop; i__4 < 0 ? jrow >= i__3 : jrow <= i__3;
 			jrow += i__4) {
 		    // Computing MIN
 		    i__5 = *nv, i__7 = max(incol,*ktop) - jrow;
@@ -9925,10 +9907,10 @@ L90:
 		    //
 		    //                ==== Multiply by U21 ====
 		    //
-		    dlaset_("ALL", &jlen, &kzs, &c_b7, &c_b7, &wv[wv_offset], 
+		    dlaset_("ALL", &jlen, &kzs, &c_b7, &c_b7, &wv[wv_offset],
 			    ldwv);
-		    dtrmm_("R", "U", "N", "N", &jlen, &knz, &c_b8, &u[j2 + 1 
-			    + (kzs + 1) * u_dim1], ldu, &wv[(kzs + 1) * 
+		    dtrmm_("R", "U", "N", "N", &jlen, &knz, &c_b8, &u[j2 + 1
+			    + (kzs + 1) * u_dim1], ldu, &wv[(kzs + 1) *
 			    wv_dim1 + 1], ldwv);
 		    //
 		    //                ==== Multiply by U11 ====
@@ -9939,13 +9921,13 @@ L90:
 		    //
 		    //                ==== Copy left of H to right of scratch ====
 		    //
-		    dlacpy_("ALL", &jlen, &j2, &h__[jrow + (incol + 1) * 
+		    dlacpy_("ALL", &jlen, &j2, &h__[jrow + (incol + 1) *
 			    h_dim1], ldh, &wv[(i2 + 1) * wv_dim1 + 1], ldwv);
 		    //
 		    //                ==== Multiply by U21 ====
 		    //
 		    i__5 = i4 - i2;
-		    dtrmm_("R", "L", "N", "N", &jlen, &i__5, &c_b8, &u[(i2 + 
+		    dtrmm_("R", "L", "N", "N", &jlen, &i__5, &c_b8, &u[(i2 +
 			    1) * u_dim1 + 1], ldu, &wv[(i2 + 1) * wv_dim1 + 1]
 			    , ldwv);
 		    //
@@ -9954,8 +9936,8 @@ L90:
 		    i__5 = i4 - i2;
 		    i__7 = j4 - j2;
 		    dgemm_("N", "N", &jlen, &i__5, &i__7, &c_b8, &h__[jrow + (
-			    incol + 1 + j2) * h_dim1], ldh, &u[j2 + 1 + (i2 + 
-			    1) * u_dim1], ldu, &c_b8, &wv[(i2 + 1) * wv_dim1 
+			    incol + 1 + j2) * h_dim1], ldh, &u[j2 + 1 + (i2 +
+			    1) * u_dim1], ldu, &c_b8, &wv[(i2 + 1) * wv_dim1
 			    + 1], ldwv);
 		    //
 		    //                ==== Copy it back ====
@@ -9979,35 +9961,35 @@ L90:
 			//                   ==== Copy right of Z to left of scratch (first
 			//                   .     KZS columns get multiplied by zero) ====
 			//
-			dlacpy_("ALL", &jlen, &knz, &z__[jrow + (incol + 1 + 
-				j2) * z_dim1], ldz, &wv[(kzs + 1) * wv_dim1 + 
+			dlacpy_("ALL", &jlen, &knz, &z__[jrow + (incol + 1 +
+				j2) * z_dim1], ldz, &wv[(kzs + 1) * wv_dim1 +
 				1], ldwv);
 			//
 			//                   ==== Multiply by U12 ====
 			//
 			dlaset_("ALL", &jlen, &kzs, &c_b7, &c_b7, &wv[
 				wv_offset], ldwv);
-			dtrmm_("R", "U", "N", "N", &jlen, &knz, &c_b8, &u[j2 
-				+ 1 + (kzs + 1) * u_dim1], ldu, &wv[(kzs + 1) 
+			dtrmm_("R", "U", "N", "N", &jlen, &knz, &c_b8, &u[j2
+				+ 1 + (kzs + 1) * u_dim1], ldu, &wv[(kzs + 1)
 				* wv_dim1 + 1], ldwv);
 			//
 			//                   ==== Multiply by U11 ====
 			//
 			dgemm_("N", "N", &jlen, &i2, &j2, &c_b8, &z__[jrow + (
-				incol + 1) * z_dim1], ldz, &u[u_offset], ldu, 
+				incol + 1) * z_dim1], ldz, &u[u_offset], ldu,
 				&c_b8, &wv[wv_offset], ldwv);
 			//
 			//                   ==== Copy left of Z to right of scratch ====
 			//
-			dlacpy_("ALL", &jlen, &j2, &z__[jrow + (incol + 1) * 
-				z_dim1], ldz, &wv[(i2 + 1) * wv_dim1 + 1], 
+			dlacpy_("ALL", &jlen, &j2, &z__[jrow + (incol + 1) *
+				z_dim1], ldz, &wv[(i2 + 1) * wv_dim1 + 1],
 				ldwv);
 			//
 			//                   ==== Multiply by U21 ====
 			//
 			i__5 = i4 - i2;
 			dtrmm_("R", "L", "N", "N", &jlen, &i__5, &c_b8, &u[(
-				i2 + 1) * u_dim1 + 1], ldu, &wv[(i2 + 1) * 
+				i2 + 1) * u_dim1 + 1], ldu, &wv[(i2 + 1) *
 				wv_dim1 + 1], ldwv);
 			//
 			//                   ==== Multiply by U22 ====
@@ -10015,8 +9997,8 @@ L90:
 			i__5 = i4 - i2;
 			i__7 = j4 - j2;
 			dgemm_("N", "N", &jlen, &i__5, &i__7, &c_b8, &z__[
-				jrow + (incol + 1 + j2) * z_dim1], ldz, &u[j2 
-				+ 1 + (i2 + 1) * u_dim1], ldu, &c_b8, &wv[(i2 
+				jrow + (incol + 1 + j2) * z_dim1], ldz, &u[j2
+				+ 1 + (i2 + 1) * u_dim1], ldu, &c_b8, &wv[(i2
 				+ 1) * wv_dim1 + 1], ldwv);
 			//
 			//                   ==== Copy the result back to Z ====
@@ -10171,7 +10153,7 @@ L90:
     int j;
     double t1, t2, t3, t4, t5, t6, t7, t8, t9, v1, v2, v3, v4, v5, v6, v7, v8,
 	     v9, t10, v10, sum;
-    extern /* Subroutine */ int dlarf_(char *, int *, int *, double *, int *, 
+    extern /* Subroutine */ int dlarf_(char *, int *, int *, double *, int *,
 	    double *, double *, int *, double *);
     extern int lsame_(char *, char *);
 
@@ -10269,7 +10251,7 @@ L50:
 	t3 = *tau * v3;
 	i__1 = *n;
 	for (j = 1; j <= i__1; ++j) {
-	    sum = v1 * c__[j * c_dim1 + 1] + v2 * c__[j * c_dim1 + 2] + v3 * 
+	    sum = v1 * c__[j * c_dim1 + 1] + v2 * c__[j * c_dim1 + 2] + v3 *
 		    c__[j * c_dim1 + 3];
 	    c__[j * c_dim1 + 1] -= sum * t1;
 	    c__[j * c_dim1 + 2] -= sum * t2;
@@ -10291,7 +10273,7 @@ L70:
 	t4 = *tau * v4;
 	i__1 = *n;
 	for (j = 1; j <= i__1; ++j) {
-	    sum = v1 * c__[j * c_dim1 + 1] + v2 * c__[j * c_dim1 + 2] + v3 * 
+	    sum = v1 * c__[j * c_dim1 + 1] + v2 * c__[j * c_dim1 + 2] + v3 *
 		    c__[j * c_dim1 + 3] + v4 * c__[j * c_dim1 + 4];
 	    c__[j * c_dim1 + 1] -= sum * t1;
 	    c__[j * c_dim1 + 2] -= sum * t2;
@@ -10316,7 +10298,7 @@ L90:
 	t5 = *tau * v5;
 	i__1 = *n;
 	for (j = 1; j <= i__1; ++j) {
-	    sum = v1 * c__[j * c_dim1 + 1] + v2 * c__[j * c_dim1 + 2] + v3 * 
+	    sum = v1 * c__[j * c_dim1 + 1] + v2 * c__[j * c_dim1 + 2] + v3 *
 		    c__[j * c_dim1 + 3] + v4 * c__[j * c_dim1 + 4] + v5 * c__[
 		    j * c_dim1 + 5];
 	    c__[j * c_dim1 + 1] -= sum * t1;
@@ -10345,7 +10327,7 @@ L110:
 	t6 = *tau * v6;
 	i__1 = *n;
 	for (j = 1; j <= i__1; ++j) {
-	    sum = v1 * c__[j * c_dim1 + 1] + v2 * c__[j * c_dim1 + 2] + v3 * 
+	    sum = v1 * c__[j * c_dim1 + 1] + v2 * c__[j * c_dim1 + 2] + v3 *
 		    c__[j * c_dim1 + 3] + v4 * c__[j * c_dim1 + 4] + v5 * c__[
 		    j * c_dim1 + 5] + v6 * c__[j * c_dim1 + 6];
 	    c__[j * c_dim1 + 1] -= sum * t1;
@@ -10377,9 +10359,9 @@ L130:
 	t7 = *tau * v7;
 	i__1 = *n;
 	for (j = 1; j <= i__1; ++j) {
-	    sum = v1 * c__[j * c_dim1 + 1] + v2 * c__[j * c_dim1 + 2] + v3 * 
+	    sum = v1 * c__[j * c_dim1 + 1] + v2 * c__[j * c_dim1 + 2] + v3 *
 		    c__[j * c_dim1 + 3] + v4 * c__[j * c_dim1 + 4] + v5 * c__[
-		    j * c_dim1 + 5] + v6 * c__[j * c_dim1 + 6] + v7 * c__[j * 
+		    j * c_dim1 + 5] + v6 * c__[j * c_dim1 + 6] + v7 * c__[j *
 		    c_dim1 + 7];
 	    c__[j * c_dim1 + 1] -= sum * t1;
 	    c__[j * c_dim1 + 2] -= sum * t2;
@@ -10413,9 +10395,9 @@ L150:
 	t8 = *tau * v8;
 	i__1 = *n;
 	for (j = 1; j <= i__1; ++j) {
-	    sum = v1 * c__[j * c_dim1 + 1] + v2 * c__[j * c_dim1 + 2] + v3 * 
+	    sum = v1 * c__[j * c_dim1 + 1] + v2 * c__[j * c_dim1 + 2] + v3 *
 		    c__[j * c_dim1 + 3] + v4 * c__[j * c_dim1 + 4] + v5 * c__[
-		    j * c_dim1 + 5] + v6 * c__[j * c_dim1 + 6] + v7 * c__[j * 
+		    j * c_dim1 + 5] + v6 * c__[j * c_dim1 + 6] + v7 * c__[j *
 		    c_dim1 + 7] + v8 * c__[j * c_dim1 + 8];
 	    c__[j * c_dim1 + 1] -= sum * t1;
 	    c__[j * c_dim1 + 2] -= sum * t2;
@@ -10452,10 +10434,10 @@ L170:
 	t9 = *tau * v9;
 	i__1 = *n;
 	for (j = 1; j <= i__1; ++j) {
-	    sum = v1 * c__[j * c_dim1 + 1] + v2 * c__[j * c_dim1 + 2] + v3 * 
+	    sum = v1 * c__[j * c_dim1 + 1] + v2 * c__[j * c_dim1 + 2] + v3 *
 		    c__[j * c_dim1 + 3] + v4 * c__[j * c_dim1 + 4] + v5 * c__[
-		    j * c_dim1 + 5] + v6 * c__[j * c_dim1 + 6] + v7 * c__[j * 
-		    c_dim1 + 7] + v8 * c__[j * c_dim1 + 8] + v9 * c__[j * 
+		    j * c_dim1 + 5] + v6 * c__[j * c_dim1 + 6] + v7 * c__[j *
+		    c_dim1 + 7] + v8 * c__[j * c_dim1 + 8] + v9 * c__[j *
 		    c_dim1 + 9];
 	    c__[j * c_dim1 + 1] -= sum * t1;
 	    c__[j * c_dim1 + 2] -= sum * t2;
@@ -10495,10 +10477,10 @@ L190:
 	t10 = *tau * v10;
 	i__1 = *n;
 	for (j = 1; j <= i__1; ++j) {
-	    sum = v1 * c__[j * c_dim1 + 1] + v2 * c__[j * c_dim1 + 2] + v3 * 
+	    sum = v1 * c__[j * c_dim1 + 1] + v2 * c__[j * c_dim1 + 2] + v3 *
 		    c__[j * c_dim1 + 3] + v4 * c__[j * c_dim1 + 4] + v5 * c__[
-		    j * c_dim1 + 5] + v6 * c__[j * c_dim1 + 6] + v7 * c__[j * 
-		    c_dim1 + 7] + v8 * c__[j * c_dim1 + 8] + v9 * c__[j * 
+		    j * c_dim1 + 5] + v6 * c__[j * c_dim1 + 6] + v7 * c__[j *
+		    c_dim1 + 7] + v8 * c__[j * c_dim1 + 8] + v9 * c__[j *
 		    c_dim1 + 9] + v10 * c__[j * c_dim1 + 10];
 	    c__[j * c_dim1 + 1] -= sum * t1;
 	    c__[j * c_dim1 + 2] -= sum * t2;
@@ -10573,7 +10555,7 @@ L250:
 	t3 = *tau * v3;
 	i__1 = *m;
 	for (j = 1; j <= i__1; ++j) {
-	    sum = v1 * c__[j + c_dim1] + v2 * c__[j + (c_dim1 << 1)] + v3 * 
+	    sum = v1 * c__[j + c_dim1] + v2 * c__[j + (c_dim1 << 1)] + v3 *
 		    c__[j + c_dim1 * 3];
 	    c__[j + c_dim1] -= sum * t1;
 	    c__[j + (c_dim1 << 1)] -= sum * t2;
@@ -10595,7 +10577,7 @@ L270:
 	t4 = *tau * v4;
 	i__1 = *m;
 	for (j = 1; j <= i__1; ++j) {
-	    sum = v1 * c__[j + c_dim1] + v2 * c__[j + (c_dim1 << 1)] + v3 * 
+	    sum = v1 * c__[j + c_dim1] + v2 * c__[j + (c_dim1 << 1)] + v3 *
 		    c__[j + c_dim1 * 3] + v4 * c__[j + (c_dim1 << 2)];
 	    c__[j + c_dim1] -= sum * t1;
 	    c__[j + (c_dim1 << 1)] -= sum * t2;
@@ -10620,8 +10602,8 @@ L290:
 	t5 = *tau * v5;
 	i__1 = *m;
 	for (j = 1; j <= i__1; ++j) {
-	    sum = v1 * c__[j + c_dim1] + v2 * c__[j + (c_dim1 << 1)] + v3 * 
-		    c__[j + c_dim1 * 3] + v4 * c__[j + (c_dim1 << 2)] + v5 * 
+	    sum = v1 * c__[j + c_dim1] + v2 * c__[j + (c_dim1 << 1)] + v3 *
+		    c__[j + c_dim1 * 3] + v4 * c__[j + (c_dim1 << 2)] + v5 *
 		    c__[j + c_dim1 * 5];
 	    c__[j + c_dim1] -= sum * t1;
 	    c__[j + (c_dim1 << 1)] -= sum * t2;
@@ -10649,8 +10631,8 @@ L310:
 	t6 = *tau * v6;
 	i__1 = *m;
 	for (j = 1; j <= i__1; ++j) {
-	    sum = v1 * c__[j + c_dim1] + v2 * c__[j + (c_dim1 << 1)] + v3 * 
-		    c__[j + c_dim1 * 3] + v4 * c__[j + (c_dim1 << 2)] + v5 * 
+	    sum = v1 * c__[j + c_dim1] + v2 * c__[j + (c_dim1 << 1)] + v3 *
+		    c__[j + c_dim1 * 3] + v4 * c__[j + (c_dim1 << 2)] + v5 *
 		    c__[j + c_dim1 * 5] + v6 * c__[j + c_dim1 * 6];
 	    c__[j + c_dim1] -= sum * t1;
 	    c__[j + (c_dim1 << 1)] -= sum * t2;
@@ -10681,8 +10663,8 @@ L330:
 	t7 = *tau * v7;
 	i__1 = *m;
 	for (j = 1; j <= i__1; ++j) {
-	    sum = v1 * c__[j + c_dim1] + v2 * c__[j + (c_dim1 << 1)] + v3 * 
-		    c__[j + c_dim1 * 3] + v4 * c__[j + (c_dim1 << 2)] + v5 * 
+	    sum = v1 * c__[j + c_dim1] + v2 * c__[j + (c_dim1 << 1)] + v3 *
+		    c__[j + c_dim1 * 3] + v4 * c__[j + (c_dim1 << 2)] + v5 *
 		    c__[j + c_dim1 * 5] + v6 * c__[j + c_dim1 * 6] + v7 * c__[
 		    j + c_dim1 * 7];
 	    c__[j + c_dim1] -= sum * t1;
@@ -10717,8 +10699,8 @@ L350:
 	t8 = *tau * v8;
 	i__1 = *m;
 	for (j = 1; j <= i__1; ++j) {
-	    sum = v1 * c__[j + c_dim1] + v2 * c__[j + (c_dim1 << 1)] + v3 * 
-		    c__[j + c_dim1 * 3] + v4 * c__[j + (c_dim1 << 2)] + v5 * 
+	    sum = v1 * c__[j + c_dim1] + v2 * c__[j + (c_dim1 << 1)] + v3 *
+		    c__[j + c_dim1 * 3] + v4 * c__[j + (c_dim1 << 2)] + v5 *
 		    c__[j + c_dim1 * 5] + v6 * c__[j + c_dim1 * 6] + v7 * c__[
 		    j + c_dim1 * 7] + v8 * c__[j + (c_dim1 << 3)];
 	    c__[j + c_dim1] -= sum * t1;
@@ -10756,8 +10738,8 @@ L370:
 	t9 = *tau * v9;
 	i__1 = *m;
 	for (j = 1; j <= i__1; ++j) {
-	    sum = v1 * c__[j + c_dim1] + v2 * c__[j + (c_dim1 << 1)] + v3 * 
-		    c__[j + c_dim1 * 3] + v4 * c__[j + (c_dim1 << 2)] + v5 * 
+	    sum = v1 * c__[j + c_dim1] + v2 * c__[j + (c_dim1 << 1)] + v3 *
+		    c__[j + c_dim1 * 3] + v4 * c__[j + (c_dim1 << 2)] + v5 *
 		    c__[j + c_dim1 * 5] + v6 * c__[j + c_dim1 * 6] + v7 * c__[
 		    j + c_dim1 * 7] + v8 * c__[j + (c_dim1 << 3)] + v9 * c__[
 		    j + c_dim1 * 9];
@@ -10799,8 +10781,8 @@ L390:
 	t10 = *tau * v10;
 	i__1 = *m;
 	for (j = 1; j <= i__1; ++j) {
-	    sum = v1 * c__[j + c_dim1] + v2 * c__[j + (c_dim1 << 1)] + v3 * 
-		    c__[j + c_dim1 * 3] + v4 * c__[j + (c_dim1 << 2)] + v5 * 
+	    sum = v1 * c__[j + c_dim1] + v2 * c__[j + (c_dim1 << 1)] + v3 *
+		    c__[j + c_dim1 * 3] + v4 * c__[j + (c_dim1 << 2)] + v5 *
 		    c__[j + c_dim1 * 5] + v6 * c__[j + c_dim1 * 6] + v7 * c__[
 		    j + c_dim1 * 7] + v8 * c__[j + (c_dim1 << 3)] + v9 * c__[
 		    j + c_dim1 * 9] + v10 * c__[j + c_dim1 * 10];
@@ -11000,8 +10982,8 @@ L410:
 //> \ingroup doubleSYauxiliary
 //
 // =====================================================================
-/* Subroutine */ int dlasy2_(int *ltranl, int *ltranr, int *isgn, int *n1, 
-	int *n2, double *tl, int *ldtl, double *tr, int *ldtr, double *b, int 
+/* Subroutine */ int dlasy2_(int *ltranl, int *ltranr, int *isgn, int *n1,
+	int *n2, double *tl, int *ldtl, double *tr, int *ldtr, double *b, int
 	*ldb, double *scale, double *x, int *ldx, double *xnorm, int *info)
 {
     // Table of constant values
@@ -11019,7 +11001,7 @@ L410:
     static int bswpiv[4] = { FALSE_,TRUE_,FALSE_,TRUE_ };
 
     // System generated locals
-    int b_dim1, b_offset, tl_dim1, tl_offset, tr_dim1, tr_offset, x_dim1, 
+    int b_dim1, b_offset, tl_dim1, tl_offset, tr_dim1, tr_offset, x_dim1,
 	    x_offset;
     double d__1, d__2, d__3, d__4, d__5, d__6, d__7, d__8;
 
@@ -11027,7 +11009,7 @@ L410:
     int i__, j, k;
     double x2[2], l21, u11, u12;
     int ip, jp;
-    double u22, t16[16]	/* was [4][4] */, gam, bet, eps, sgn, tmp[4], tau1, 
+    double u22, t16[16]	/* was [4][4] */, gam, bet, eps, sgn, tmp[4], tau1,
 	    btmp[4], smin;
     int ipiv;
     double temp;
@@ -11139,7 +11121,7 @@ L20:
     d__7 = (d__1 = tl[tl_dim1 + 1], abs(d__1)), d__8 = (d__2 = tr[tr_dim1 + 1]
 	    , abs(d__2)), d__7 = max(d__7,d__8), d__8 = (d__3 = tr[(tr_dim1 <<
 	     1) + 1], abs(d__3)), d__7 = max(d__7,d__8), d__8 = (d__4 = tr[
-	    tr_dim1 + 2], abs(d__4)), d__7 = max(d__7,d__8), d__8 = (d__5 = 
+	    tr_dim1 + 2], abs(d__4)), d__7 = max(d__7,d__8), d__8 = (d__5 =
 	    tr[(tr_dim1 << 1) + 2], abs(d__5));
     d__6 = eps * max(d__7,d__8);
     smin = max(d__6,smlnum);
@@ -11166,7 +11148,7 @@ L30:
     d__7 = (d__1 = tr[tr_dim1 + 1], abs(d__1)), d__8 = (d__2 = tl[tl_dim1 + 1]
 	    , abs(d__2)), d__7 = max(d__7,d__8), d__8 = (d__3 = tl[(tl_dim1 <<
 	     1) + 1], abs(d__3)), d__7 = max(d__7,d__8), d__8 = (d__4 = tl[
-	    tl_dim1 + 2], abs(d__4)), d__7 = max(d__7,d__8), d__8 = (d__5 = 
+	    tl_dim1 + 2], abs(d__4)), d__7 = max(d__7,d__8), d__8 = (d__5 =
 	    tl[(tl_dim1 << 1) + 2], abs(d__5));
     d__6 = eps * max(d__7,d__8);
     smin = max(d__6,smlnum);
@@ -11209,7 +11191,7 @@ L40:
 	btmp[1] -= l21 * btmp[0];
     }
     *scale = 1.;
-    if (smlnum * 2. * abs(btmp[1]) > abs(u22) || smlnum * 2. * abs(btmp[0]) > 
+    if (smlnum * 2. * abs(btmp[1]) > abs(u22) || smlnum * 2. * abs(btmp[0]) >
 	    abs(u11)) {
 	// Computing MAX
 	d__1 = abs(btmp[0]), d__2 = abs(btmp[1]);
@@ -11227,7 +11209,7 @@ L40:
     x[x_dim1 + 1] = x2[0];
     if (*n1 == 1) {
 	x[(x_dim1 << 1) + 1] = x2[1];
-	*xnorm = (d__1 = x[x_dim1 + 1], abs(d__1)) + (d__2 = x[(x_dim1 << 1) 
+	*xnorm = (d__1 = x[x_dim1 + 1], abs(d__1)) + (d__2 = x[(x_dim1 << 1)
 		+ 1], abs(d__2));
     } else {
 	x[x_dim1 + 2] = x2[1];
@@ -11247,14 +11229,14 @@ L40:
     //
 L50:
     // Computing MAX
-    d__5 = (d__1 = tr[tr_dim1 + 1], abs(d__1)), d__6 = (d__2 = tr[(tr_dim1 << 
+    d__5 = (d__1 = tr[tr_dim1 + 1], abs(d__1)), d__6 = (d__2 = tr[(tr_dim1 <<
 	    1) + 1], abs(d__2)), d__5 = max(d__5,d__6), d__6 = (d__3 = tr[
-	    tr_dim1 + 2], abs(d__3)), d__5 = max(d__5,d__6), d__6 = (d__4 = 
+	    tr_dim1 + 2], abs(d__3)), d__5 = max(d__5,d__6), d__6 = (d__4 =
 	    tr[(tr_dim1 << 1) + 2], abs(d__4));
     smin = max(d__5,d__6);
     // Computing MAX
     d__5 = smin, d__6 = (d__1 = tl[tl_dim1 + 1], abs(d__1)), d__5 = max(d__5,
-	    d__6), d__6 = (d__2 = tl[(tl_dim1 << 1) + 1], abs(d__2)), d__5 = 
+	    d__6), d__6 = (d__2 = tl[(tl_dim1 << 1) + 1], abs(d__2)), d__5 =
 	    max(d__5,d__6), d__6 = (d__3 = tl[tl_dim1 + 2], abs(d__3)), d__5 =
 	     max(d__5,d__6), d__6 = (d__4 = tl[(tl_dim1 << 1) + 2], abs(d__4))
 	    ;
@@ -11317,7 +11299,7 @@ L50:
 	    btmp[ipsv - 1] = temp;
 	}
 	if (jpsv != i__) {
-	    dswap_(&c__4, &t16[(jpsv << 2) - 4], &c__1, &t16[(i__ << 2) - 4], 
+	    dswap_(&c__4, &t16[(jpsv << 2) - 4], &c__1, &t16[(i__ << 2) - 4],
 		    &c__1);
 	}
 	jpiv[i__ - 1] = jpsv;
@@ -11343,10 +11325,10 @@ L50:
     }
     *scale = 1.;
     if (smlnum * 8. * abs(btmp[0]) > abs(t16[0]) || smlnum * 8. * abs(btmp[1])
-	     > abs(t16[5]) || smlnum * 8. * abs(btmp[2]) > abs(t16[10]) || 
+	     > abs(t16[5]) || smlnum * 8. * abs(btmp[2]) > abs(t16[10]) ||
 	    smlnum * 8. * abs(btmp[3]) > abs(t16[15])) {
 	// Computing MAX
-	d__1 = abs(btmp[0]), d__2 = abs(btmp[1]), d__1 = max(d__1,d__2), d__2 
+	d__1 = abs(btmp[0]), d__2 = abs(btmp[1]), d__1 = max(d__1,d__2), d__2
 		= abs(btmp[2]), d__1 = max(d__1,d__2), d__2 = abs(btmp[3]);
 	*scale = .125 / max(d__1,d__2);
 	btmp[0] *= *scale;
@@ -11513,7 +11495,7 @@ L50:
 //> \ingroup doubleOTHERcomputational
 //
 // =====================================================================
-/* Subroutine */ int dorghr_(int *n, int *ilo, int *ihi, double *a, int *lda, 
+/* Subroutine */ int dorghr_(int *n, int *ilo, int *ihi, double *a, int *lda,
 	double *tau, double *work, int *lwork, int *info)
 {
     // Table of constant values
@@ -11527,7 +11509,7 @@ L50:
     int i__, j, nb, nh, iinfo;
     extern /* Subroutine */ int xerbla_(char *, int *);
     extern int ilaenv_(int *, char *, char *, int *, int *, int *, int *);
-    extern /* Subroutine */ int dorgqr_(int *, int *, int *, double *, int *, 
+    extern /* Subroutine */ int dorgqr_(int *, int *, int *, double *, int *,
 	    double *, double *, int *, int *);
     int lwkopt;
     int lquery;
@@ -11851,9 +11833,6 @@ L50:
     int a_dim1, a_offset, c_dim1, c_offset, i__1[2], i__2;
     char ch__1[2+1]={'\0'};
 
-    // Builtin functions
-    /* Subroutine */ int s_cat(char *, char **, int *, int *);
-
     // Local variables
     int i1, i2, nb, mi, nh, ni, nq, nw;
     int left;
@@ -11861,7 +11840,7 @@ L50:
     int iinfo;
     extern /* Subroutine */ int xerbla_(char *, int *);
     extern int ilaenv_(int *, char *, char *, int *, int *, int *, int *);
-    extern /* Subroutine */ int dormqr_(char *, char *, int *, int *, int *, 
+    extern /* Subroutine */ int dormqr_(char *, char *, int *, int *, int *,
 	    double *, int *, double *, double *, int *, double *, int *, int *
 	    );
     int lwkopt;
@@ -12227,8 +12206,8 @@ L50:
 //> \endverbatim
 //>
 // =====================================================================
-/* Subroutine */ int dtrevc3_(char *side, char *howmny, int *select, int *n, 
-	double *t, int *ldt, double *vl, int *ldvl, double *vr, int *ldvr, 
+/* Subroutine */ int dtrevc3_(char *side, char *howmny, int *select, int *n,
+	double *t, int *ldt, double *vl, int *ldvl, double *vr, int *ldvr,
 	int *mm, int *m, double *work, int *lwork, int *info)
 {
     // Table of constant values
@@ -12242,14 +12221,10 @@ L50:
 
     // System generated locals
     address a__1[2];
-    int t_dim1, t_offset, vl_dim1, vl_offset, vr_dim1, vr_offset, i__1[2], 
+    int t_dim1, t_offset, vl_dim1, vl_offset, vr_dim1, vr_offset, i__1[2],
 	    i__2, i__3, i__4;
     double d__1, d__2, d__3, d__4;
     char ch__1[2+1]={'\0'};
-
-    // Builtin functions
-    /* Subroutine */ int s_cat(char *, char **, int *, int *);
-    double sqrt(double);
 
     // Local variables
     int i__, j, k;
@@ -12268,28 +12243,28 @@ L50:
     int jnxt;
     extern /* Subroutine */ int dscal_(int *, double *, double *, int *);
     double scale;
-    extern /* Subroutine */ int dgemm_(char *, char *, int *, int *, int *, 
-	    double *, double *, int *, double *, int *, double *, double *, 
+    extern /* Subroutine */ int dgemm_(char *, char *, int *, int *, int *,
+	    double *, double *, int *, double *, int *, double *, double *,
 	    int *);
     extern int lsame_(char *, char *);
-    extern /* Subroutine */ int dgemv_(char *, int *, int *, double *, double 
+    extern /* Subroutine */ int dgemv_(char *, int *, int *, double *, double
 	    *, int *, double *, int *, double *, double *, int *);
     double remax;
     extern /* Subroutine */ int dcopy_(int *, double *, int *, double *, int *
 	    );
     int leftv, bothv;
-    extern /* Subroutine */ int daxpy_(int *, double *, double *, int *, 
+    extern /* Subroutine */ int daxpy_(int *, double *, double *, int *,
 	    double *, int *);
     double vcrit;
     int somev;
     double xnorm;
-    extern /* Subroutine */ int dlaln2_(int *, int *, int *, double *, double 
+    extern /* Subroutine */ int dlaln2_(int *, int *, int *, double *, double
 	    *, double *, int *, double *, double *, double *, int *, double *,
 	     double *, double *, int *, double *, double *, int *), dlabad_(
 	    double *, double *);
     extern double dlamch_(char *);
     extern int idamax_(int *, double *, int *);
-    extern /* Subroutine */ int dlaset_(char *, int *, int *, double *, 
+    extern /* Subroutine */ int dlaset_(char *, int *, int *, double *,
 	    double *, double *, int *), xerbla_(char *, int *);
     extern int ilaenv_(int *, char *, char *, int *, int *, int *, int *);
     extern /* Subroutine */ int dlacpy_(char *, int *, int *, double *, int *,
@@ -12523,7 +12498,7 @@ L50:
 	    wr = t[ki + ki * t_dim1];
 	    wi = 0.;
 	    if (ip != 0) {
-		wi = sqrt((d__1 = t[ki + (ki - 1) * t_dim1], abs(d__1))) * 
+		wi = sqrt((d__1 = t[ki + (ki - 1) * t_dim1], abs(d__1))) *
 			sqrt((d__2 = t[ki - 1 + ki * t_dim1], abs(d__2)));
 	    }
 	    // Computing MAX
@@ -12565,8 +12540,8 @@ L50:
 			//
 			//                   1-by-1 diagonal block
 			//
-			dlaln2_(&c_false, &c__1, &c__1, &smin, &c_b29, &t[j + 
-				j * t_dim1], ldt, &c_b29, &c_b29, &work[j + 
+			dlaln2_(&c_false, &c__1, &c__1, &smin, &c_b29, &t[j +
+				j * t_dim1], ldt, &c_b29, &c_b29, &work[j +
 				iv * *n], n, &wr, &c_b17, x, &c__2, &scale, &
 				xnorm, &ierr);
 			//
@@ -12597,7 +12572,7 @@ L50:
 			//
 			//                   2-by-2 diagonal block
 			//
-			dlaln2_(&c_false, &c__2, &c__1, &smin, &c_b29, &t[j - 
+			dlaln2_(&c_false, &c__2, &c__1, &smin, &c_b29, &t[j -
 				1 + (j - 1) * t_dim1], ldt, &c_b29, &c_b29, &
 				work[j - 1 + iv * *n], n, &wr, &c_b17, x, &
 				c__2, &scale, &xnorm, &ierr);
@@ -12628,7 +12603,7 @@ L50:
 			//
 			i__2 = j - 2;
 			d__1 = -x[0];
-			daxpy_(&i__2, &d__1, &t[(j - 1) * t_dim1 + 1], &c__1, 
+			daxpy_(&i__2, &d__1, &t[(j - 1) * t_dim1 + 1], &c__1,
 				&work[iv * *n + 1], &c__1);
 			i__2 = j - 2;
 			d__1 = -x[1];
@@ -12644,7 +12619,7 @@ L60:
 		if (! over) {
 		    //                ------------------------------
 		    //                no back-transform: copy x to VR and normalize.
-		    dcopy_(&ki, &work[iv * *n + 1], &c__1, &vr[is * vr_dim1 + 
+		    dcopy_(&ki, &work[iv * *n + 1], &c__1, &vr[is * vr_dim1 +
 			    1], &c__1);
 		    ii = idamax_(&ki, &vr[is * vr_dim1 + 1], &c__1);
 		    remax = 1. / (d__1 = vr[ii + is * vr_dim1], abs(d__1));
@@ -12691,7 +12666,7 @@ L60:
 		    work[ki - 1 + (iv - 1) * *n] = 1.;
 		    work[ki + iv * *n] = wi / t[ki - 1 + ki * t_dim1];
 		} else {
-		    work[ki - 1 + (iv - 1) * *n] = -wi / t[ki + (ki - 1) * 
+		    work[ki - 1 + (iv - 1) * *n] = -wi / t[ki + (ki - 1) *
 			    t_dim1];
 		    work[ki + iv * *n] = 1.;
 		}
@@ -12702,9 +12677,9 @@ L60:
 		//
 		i__2 = ki - 2;
 		for (k = 1; k <= i__2; ++k) {
-		    work[k + (iv - 1) * *n] = -work[ki - 1 + (iv - 1) * *n] * 
+		    work[k + (iv - 1) * *n] = -work[ki - 1 + (iv - 1) * *n] *
 			    t[k + (ki - 1) * t_dim1];
-		    work[k + iv * *n] = -work[ki + iv * *n] * t[k + ki * 
+		    work[k + iv * *n] = -work[ki + iv * *n] * t[k + ki *
 			    t_dim1];
 // L80:
 		}
@@ -12730,9 +12705,9 @@ L60:
 			//
 			//                   1-by-1 diagonal block
 			//
-			dlaln2_(&c_false, &c__1, &c__2, &smin, &c_b29, &t[j + 
+			dlaln2_(&c_false, &c__1, &c__2, &smin, &c_b29, &t[j +
 				j * t_dim1], ldt, &c_b29, &c_b29, &work[j + (
-				iv - 1) * *n], n, &wr, &wi, x, &c__2, &scale, 
+				iv - 1) * *n], n, &wr, &wi, x, &c__2, &scale,
 				&xnorm, &ierr);
 			//
 			//                   Scale X(1,1) and X(1,2) to avoid overflow when
@@ -12770,7 +12745,7 @@ L60:
 			//
 			//                   2-by-2 diagonal block
 			//
-			dlaln2_(&c_false, &c__2, &c__2, &smin, &c_b29, &t[j - 
+			dlaln2_(&c_false, &c__2, &c__2, &smin, &c_b29, &t[j -
 				1 + (j - 1) * t_dim1], ldt, &c_b29, &c_b29, &
 				work[j - 1 + (iv - 1) * *n], n, &wr, &wi, x, &
 				c__2, &scale, &xnorm, &ierr);
@@ -12808,7 +12783,7 @@ L60:
 			//
 			i__2 = j - 2;
 			d__1 = -x[0];
-			daxpy_(&i__2, &d__1, &t[(j - 1) * t_dim1 + 1], &c__1, 
+			daxpy_(&i__2, &d__1, &t[(j - 1) * t_dim1 + 1], &c__1,
 				&work[(iv - 1) * *n + 1], &c__1);
 			i__2 = j - 2;
 			d__1 = -x[1];
@@ -12816,7 +12791,7 @@ L60:
 				(iv - 1) * *n + 1], &c__1);
 			i__2 = j - 2;
 			d__1 = -x[2];
-			daxpy_(&i__2, &d__1, &t[(j - 1) * t_dim1 + 1], &c__1, 
+			daxpy_(&i__2, &d__1, &t[(j - 1) * t_dim1 + 1], &c__1,
 				&work[iv * *n + 1], &c__1);
 			i__2 = j - 2;
 			d__1 = -x[3];
@@ -12832,16 +12807,16 @@ L90:
 		if (! over) {
 		    //                ------------------------------
 		    //                no back-transform: copy x to VR and normalize.
-		    dcopy_(&ki, &work[(iv - 1) * *n + 1], &c__1, &vr[(is - 1) 
+		    dcopy_(&ki, &work[(iv - 1) * *n + 1], &c__1, &vr[(is - 1)
 			    * vr_dim1 + 1], &c__1);
-		    dcopy_(&ki, &work[iv * *n + 1], &c__1, &vr[is * vr_dim1 + 
+		    dcopy_(&ki, &work[iv * *n + 1], &c__1, &vr[is * vr_dim1 +
 			    1], &c__1);
 		    emax = 0.;
 		    i__2 = ki;
 		    for (k = 1; k <= i__2; ++k) {
 			// Computing MAX
 			d__3 = emax, d__4 = (d__1 = vr[k + (is - 1) * vr_dim1]
-				, abs(d__1)) + (d__2 = vr[k + is * vr_dim1], 
+				, abs(d__1)) + (d__2 = vr[k + is * vr_dim1],
 				abs(d__2));
 			emax = max(d__3,d__4);
 // L100:
@@ -12861,7 +12836,7 @@ L90:
 		    if (ki > 2) {
 			i__2 = ki - 2;
 			dgemv_("N", n, &i__2, &c_b29, &vr[vr_offset], ldvr, &
-				work[(iv - 1) * *n + 1], &c__1, &work[ki - 1 
+				work[(iv - 1) * *n + 1], &c__1, &work[ki - 1
 				+ (iv - 1) * *n], &vr[(ki - 1) * vr_dim1 + 1],
 				 &c__1);
 			i__2 = ki - 2;
@@ -12869,9 +12844,9 @@ L90:
 				work[iv * *n + 1], &c__1, &work[ki + iv * *n],
 				 &vr[ki * vr_dim1 + 1], &c__1);
 		    } else {
-			dscal_(n, &work[ki - 1 + (iv - 1) * *n], &vr[(ki - 1) 
+			dscal_(n, &work[ki - 1 + (iv - 1) * *n], &vr[(ki - 1)
 				* vr_dim1 + 1], &c__1);
-			dscal_(n, &work[ki + iv * *n], &vr[ki * vr_dim1 + 1], 
+			dscal_(n, &work[ki + iv * *n], &vr[ki * vr_dim1 + 1],
 				&c__1);
 		    }
 		    emax = 0.;
@@ -12879,7 +12854,7 @@ L90:
 		    for (k = 1; k <= i__2; ++k) {
 			// Computing MAX
 			d__3 = emax, d__4 = (d__1 = vr[k + (ki - 1) * vr_dim1]
-				, abs(d__1)) + (d__2 = vr[k + ki * vr_dim1], 
+				, abs(d__1)) + (d__2 = vr[k + ki * vr_dim1],
 				abs(d__2));
 			emax = max(d__3,d__4);
 // L120:
@@ -12917,8 +12892,8 @@ L90:
 		if (iv <= 2 || ki2 == 1) {
 		    i__2 = nb - iv + 1;
 		    i__3 = ki2 + nb - iv;
-		    dgemm_("N", "N", n, &i__2, &i__3, &c_b29, &vr[vr_offset], 
-			    ldvr, &work[iv * *n + 1], n, &c_b17, &work[(nb + 
+		    dgemm_("N", "N", n, &i__2, &i__3, &c_b29, &vr[vr_offset],
+			    ldvr, &work[iv * *n + 1], n, &c_b17, &work[(nb +
 			    iv) * *n + 1], n);
 		    //                normalize vectors
 		    i__2 = nb;
@@ -12926,7 +12901,7 @@ L90:
 			if (iscomplex[k - 1] == 0) {
 			    //                      real eigenvector
 			    ii = idamax_(n, &work[(nb + k) * *n + 1], &c__1);
-			    remax = 1. / (d__1 = work[ii + (nb + k) * *n], 
+			    remax = 1. / (d__1 = work[ii + (nb + k) * *n],
 				    abs(d__1));
 			} else if (iscomplex[k - 1] == 1) {
 			    //                      first eigenvector of conjugate pair
@@ -12935,7 +12910,7 @@ L90:
 			    for (ii = 1; ii <= i__3; ++ii) {
 				// Computing MAX
 				d__3 = emax, d__4 = (d__1 = work[ii + (nb + k)
-					 * *n], abs(d__1)) + (d__2 = work[ii 
+					 * *n], abs(d__1)) + (d__2 = work[ii
 					+ (nb + k + 1) * *n], abs(d__2));
 				emax = max(d__3,d__4);
 			    }
@@ -13005,7 +12980,7 @@ L140:
 	    wr = t[ki + ki * t_dim1];
 	    wi = 0.;
 	    if (ip != 0) {
-		wi = sqrt((d__1 = t[ki + (ki + 1) * t_dim1], abs(d__1))) * 
+		wi = sqrt((d__1 = t[ki + (ki + 1) * t_dim1], abs(d__1))) *
 			sqrt((d__2 = t[ki + 1 + ki * t_dim1], abs(d__2)));
 	    }
 	    // Computing MAX
@@ -13061,14 +13036,14 @@ L140:
 			    vcrit = bignum;
 			}
 			i__4 = j - ki - 1;
-			work[j + iv * *n] -= ddot_(&i__4, &t[ki + 1 + j * 
+			work[j + iv * *n] -= ddot_(&i__4, &t[ki + 1 + j *
 				t_dim1], &c__1, &work[ki + 1 + iv * *n], &
 				c__1);
 			//
 			//                   Solve [ T(J,J) - WR ]**T * X = WORK
 			//
-			dlaln2_(&c_false, &c__1, &c__1, &smin, &c_b29, &t[j + 
-				j * t_dim1], ldt, &c_b29, &c_b29, &work[j + 
+			dlaln2_(&c_false, &c__1, &c__1, &smin, &c_b29, &t[j +
+				j * t_dim1], ldt, &c_b29, &c_b29, &work[j +
 				iv * *n], n, &wr, &c_b17, x, &c__2, &scale, &
 				xnorm, &ierr);
 			//
@@ -13101,11 +13076,11 @@ L140:
 			    vcrit = bignum;
 			}
 			i__4 = j - ki - 1;
-			work[j + iv * *n] -= ddot_(&i__4, &t[ki + 1 + j * 
+			work[j + iv * *n] -= ddot_(&i__4, &t[ki + 1 + j *
 				t_dim1], &c__1, &work[ki + 1 + iv * *n], &
 				c__1);
 			i__4 = j - ki - 1;
-			work[j + 1 + iv * *n] -= ddot_(&i__4, &t[ki + 1 + (j 
+			work[j + 1 + iv * *n] -= ddot_(&i__4, &t[ki + 1 + (j
 				+ 1) * t_dim1], &c__1, &work[ki + 1 + iv * *n]
 				, &c__1);
 			//
@@ -13113,8 +13088,8 @@ L140:
 			//                   [ T(J,J)-WR   T(J,J+1)      ]**T * X = SCALE*( WORK1 )
 			//                   [ T(J+1,J)    T(J+1,J+1)-WR ]                ( WORK2 )
 			//
-			dlaln2_(&c_true, &c__2, &c__1, &smin, &c_b29, &t[j + 
-				j * t_dim1], ldt, &c_b29, &c_b29, &work[j + 
+			dlaln2_(&c_true, &c__2, &c__1, &smin, &c_b29, &t[j +
+				j * t_dim1], ldt, &c_b29, &c_b29, &work[j +
 				iv * *n], n, &wr, &c_b17, x, &c__2, &scale, &
 				xnorm, &ierr);
 			//
@@ -13129,7 +13104,7 @@ L140:
 			//
 			// Computing MAX
 			d__3 = (d__1 = work[j + iv * *n], abs(d__1)), d__4 = (
-				d__2 = work[j + 1 + iv * *n], abs(d__2)), 
+				d__2 = work[j + 1 + iv * *n], abs(d__2)),
 				d__3 = max(d__3,d__4);
 			vmax = max(d__3,vmax);
 			vcrit = bignum / vmax;
@@ -13144,10 +13119,10 @@ L170:
 		    //                ------------------------------
 		    //                no back-transform: copy x to VL and normalize.
 		    i__3 = *n - ki + 1;
-		    dcopy_(&i__3, &work[ki + iv * *n], &c__1, &vl[ki + is * 
+		    dcopy_(&i__3, &work[ki + iv * *n], &c__1, &vl[ki + is *
 			    vl_dim1], &c__1);
 		    i__3 = *n - ki + 1;
-		    ii = idamax_(&i__3, &vl[ki + is * vl_dim1], &c__1) + ki - 
+		    ii = idamax_(&i__3, &vl[ki + is * vl_dim1], &c__1) + ki -
 			    1;
 		    remax = 1. / (d__1 = vl[ii + is * vl_dim1], abs(d__1));
 		    i__3 = *n - ki + 1;
@@ -13162,7 +13137,7 @@ L170:
 		    //                version 1: back-transform each vector with GEMV, Q*x.
 		    if (ki < *n) {
 			i__3 = *n - ki;
-			dgemv_("N", n, &i__3, &c_b29, &vl[(ki + 1) * vl_dim1 
+			dgemv_("N", n, &i__3, &c_b29, &vl[(ki + 1) * vl_dim1
 				+ 1], ldvl, &work[ki + 1 + iv * *n], &c__1, &
 				work[ki + iv * *n], &vl[ki * vl_dim1 + 1], &
 				c__1);
@@ -13191,13 +13166,13 @@ L170:
 		//             [ ( T(KI,KI)    T(KI,KI+1)  )**T - (WR - I* WI) ]*X = 0.
 		//             [ ( T(KI+1,KI) T(KI+1,KI+1) )                   ]
 		//
-		if ((d__1 = t[ki + (ki + 1) * t_dim1], abs(d__1)) >= (d__2 = 
+		if ((d__1 = t[ki + (ki + 1) * t_dim1], abs(d__1)) >= (d__2 =
 			t[ki + 1 + ki * t_dim1], abs(d__2))) {
 		    work[ki + iv * *n] = wi / t[ki + (ki + 1) * t_dim1];
 		    work[ki + 1 + (iv + 1) * *n] = 1.;
 		} else {
 		    work[ki + iv * *n] = 1.;
-		    work[ki + 1 + (iv + 1) * *n] = -wi / t[ki + 1 + ki * 
+		    work[ki + 1 + (iv + 1) * *n] = -wi / t[ki + 1 + ki *
 			    t_dim1];
 		}
 		work[ki + 1 + iv * *n] = 0.;
@@ -13207,9 +13182,9 @@ L170:
 		//
 		i__3 = *n;
 		for (k = ki + 2; k <= i__3; ++k) {
-		    work[k + iv * *n] = -work[ki + iv * *n] * t[ki + k * 
+		    work[k + iv * *n] = -work[ki + iv * *n] * t[ki + k *
 			    t_dim1];
-		    work[k + (iv + 1) * *n] = -work[ki + 1 + (iv + 1) * *n] * 
+		    work[k + (iv + 1) * *n] = -work[ki + 1 + (iv + 1) * *n] *
 			    t[ki + 1 + k * t_dim1];
 // L190:
 		}
@@ -13252,19 +13227,19 @@ L170:
 			    vcrit = bignum;
 			}
 			i__4 = j - ki - 2;
-			work[j + iv * *n] -= ddot_(&i__4, &t[ki + 2 + j * 
+			work[j + iv * *n] -= ddot_(&i__4, &t[ki + 2 + j *
 				t_dim1], &c__1, &work[ki + 2 + iv * *n], &
 				c__1);
 			i__4 = j - ki - 2;
-			work[j + (iv + 1) * *n] -= ddot_(&i__4, &t[ki + 2 + j 
+			work[j + (iv + 1) * *n] -= ddot_(&i__4, &t[ki + 2 + j
 				* t_dim1], &c__1, &work[ki + 2 + (iv + 1) * *
 				n], &c__1);
 			//
 			//                   Solve [ T(J,J)-(WR-i*WI) ]*(X11+i*X12)= WK+I*WK2
 			//
 			d__1 = -wi;
-			dlaln2_(&c_false, &c__1, &c__2, &smin, &c_b29, &t[j + 
-				j * t_dim1], ldt, &c_b29, &c_b29, &work[j + 
+			dlaln2_(&c_false, &c__1, &c__2, &smin, &c_b29, &t[j +
+				j * t_dim1], ldt, &c_b29, &c_b29, &work[j +
 				iv * *n], n, &wr, &d__1, x, &c__2, &scale, &
 				xnorm, &ierr);
 			//
@@ -13281,7 +13256,7 @@ L170:
 			work[j + (iv + 1) * *n] = x[2];
 			// Computing MAX
 			d__3 = (d__1 = work[j + iv * *n], abs(d__1)), d__4 = (
-				d__2 = work[j + (iv + 1) * *n], abs(d__2)), 
+				d__2 = work[j + (iv + 1) * *n], abs(d__2)),
 				d__3 = max(d__3,d__4);
 			vmax = max(d__3,vmax);
 			vcrit = bignum / vmax;
@@ -13306,19 +13281,19 @@ L170:
 			    vcrit = bignum;
 			}
 			i__4 = j - ki - 2;
-			work[j + iv * *n] -= ddot_(&i__4, &t[ki + 2 + j * 
+			work[j + iv * *n] -= ddot_(&i__4, &t[ki + 2 + j *
 				t_dim1], &c__1, &work[ki + 2 + iv * *n], &
 				c__1);
 			i__4 = j - ki - 2;
-			work[j + (iv + 1) * *n] -= ddot_(&i__4, &t[ki + 2 + j 
+			work[j + (iv + 1) * *n] -= ddot_(&i__4, &t[ki + 2 + j
 				* t_dim1], &c__1, &work[ki + 2 + (iv + 1) * *
 				n], &c__1);
 			i__4 = j - ki - 2;
-			work[j + 1 + iv * *n] -= ddot_(&i__4, &t[ki + 2 + (j 
+			work[j + 1 + iv * *n] -= ddot_(&i__4, &t[ki + 2 + (j
 				+ 1) * t_dim1], &c__1, &work[ki + 2 + iv * *n]
 				, &c__1);
 			i__4 = j - ki - 2;
-			work[j + 1 + (iv + 1) * *n] -= ddot_(&i__4, &t[ki + 2 
+			work[j + 1 + (iv + 1) * *n] -= ddot_(&i__4, &t[ki + 2
 				+ (j + 1) * t_dim1], &c__1, &work[ki + 2 + (
 				iv + 1) * *n], &c__1);
 			//
@@ -13327,8 +13302,8 @@ L170:
 			//                   [ (T(j+1,j) T(j+1,j+1))                  ]
 			//
 			d__1 = -wi;
-			dlaln2_(&c_true, &c__2, &c__2, &smin, &c_b29, &t[j + 
-				j * t_dim1], ldt, &c_b29, &c_b29, &work[j + 
+			dlaln2_(&c_true, &c__2, &c__2, &smin, &c_b29, &t[j +
+				j * t_dim1], ldt, &c_b29, &c_b29, &work[j +
 				iv * *n], n, &wr, &d__1, x, &c__2, &scale, &
 				xnorm, &ierr);
 			//
@@ -13362,7 +13337,7 @@ L200:
 		    //                ------------------------------
 		    //                no back-transform: copy x to VL and normalize.
 		    i__3 = *n - ki + 1;
-		    dcopy_(&i__3, &work[ki + iv * *n], &c__1, &vl[ki + is * 
+		    dcopy_(&i__3, &work[ki + iv * *n], &c__1, &vl[ki + is *
 			    vl_dim1], &c__1);
 		    i__3 = *n - ki + 1;
 		    dcopy_(&i__3, &work[ki + (iv + 1) * *n], &c__1, &vl[ki + (
@@ -13372,7 +13347,7 @@ L200:
 		    for (k = ki; k <= i__3; ++k) {
 			// Computing MAX
 			d__3 = emax, d__4 = (d__1 = vl[k + is * vl_dim1], abs(
-				d__1)) + (d__2 = vl[k + (is + 1) * vl_dim1], 
+				d__1)) + (d__2 = vl[k + (is + 1) * vl_dim1],
 				abs(d__2));
 			emax = max(d__3,d__4);
 // L220:
@@ -13394,19 +13369,19 @@ L200:
 		    //                version 1: back-transform each vector with GEMV, Q*x.
 		    if (ki < *n - 1) {
 			i__3 = *n - ki - 1;
-			dgemv_("N", n, &i__3, &c_b29, &vl[(ki + 2) * vl_dim1 
+			dgemv_("N", n, &i__3, &c_b29, &vl[(ki + 2) * vl_dim1
 				+ 1], ldvl, &work[ki + 2 + iv * *n], &c__1, &
 				work[ki + iv * *n], &vl[ki * vl_dim1 + 1], &
 				c__1);
 			i__3 = *n - ki - 1;
-			dgemv_("N", n, &i__3, &c_b29, &vl[(ki + 2) * vl_dim1 
+			dgemv_("N", n, &i__3, &c_b29, &vl[(ki + 2) * vl_dim1
 				+ 1], ldvl, &work[ki + 2 + (iv + 1) * *n], &
-				c__1, &work[ki + 1 + (iv + 1) * *n], &vl[(ki 
+				c__1, &work[ki + 1 + (iv + 1) * *n], &vl[(ki
 				+ 1) * vl_dim1 + 1], &c__1);
 		    } else {
-			dscal_(n, &work[ki + iv * *n], &vl[ki * vl_dim1 + 1], 
+			dscal_(n, &work[ki + iv * *n], &vl[ki * vl_dim1 + 1],
 				&c__1);
-			dscal_(n, &work[ki + 1 + (iv + 1) * *n], &vl[(ki + 1) 
+			dscal_(n, &work[ki + 1 + (iv + 1) * *n], &vl[(ki + 1)
 				* vl_dim1 + 1], &c__1);
 		    }
 		    emax = 0.;
@@ -13414,7 +13389,7 @@ L200:
 		    for (k = 1; k <= i__3; ++k) {
 			// Computing MAX
 			d__3 = emax, d__4 = (d__1 = vl[k + ki * vl_dim1], abs(
-				d__1)) + (d__2 = vl[k + (ki + 1) * vl_dim1], 
+				d__1)) + (d__2 = vl[k + (ki + 1) * vl_dim1],
 				abs(d__2));
 			emax = max(d__3,d__4);
 // L240:
@@ -13453,7 +13428,7 @@ L200:
 		if (iv >= nb - 1 || ki2 == *n) {
 		    i__3 = *n - ki2 + iv;
 		    dgemm_("N", "N", n, &iv, &i__3, &c_b29, &vl[(ki2 - iv + 1)
-			     * vl_dim1 + 1], ldvl, &work[ki2 - iv + 1 + *n], 
+			     * vl_dim1 + 1], ldvl, &work[ki2 - iv + 1 + *n],
 			    n, &c_b17, &work[(nb + 1) * *n + 1], n);
 		    //                normalize vectors
 		    i__3 = iv;
@@ -13461,7 +13436,7 @@ L200:
 			if (iscomplex[k - 1] == 0) {
 			    //                      real eigenvector
 			    ii = idamax_(n, &work[(nb + k) * *n + 1], &c__1);
-			    remax = 1. / (d__1 = work[ii + (nb + k) * *n], 
+			    remax = 1. / (d__1 = work[ii + (nb + k) * *n],
 				    abs(d__1));
 			} else if (iscomplex[k - 1] == 1) {
 			    //                      first eigenvector of conjugate pair
@@ -13470,7 +13445,7 @@ L200:
 			    for (ii = 1; ii <= i__4; ++ii) {
 				// Computing MAX
 				d__3 = emax, d__4 = (d__1 = work[ii + (nb + k)
-					 * *n], abs(d__1)) + (d__2 = work[ii 
+					 * *n], abs(d__1)) + (d__2 = work[ii
 					+ (nb + k + 1) * *n], abs(d__2));
 				emax = max(d__3,d__4);
 			    }
@@ -13653,7 +13628,7 @@ L260:
 //> \ingroup doubleOTHERcomputational
 //
 // =====================================================================
-/* Subroutine */ int dtrexc_(char *compq, int *n, double *t, int *ldt, double 
+/* Subroutine */ int dtrexc_(char *compq, int *n, double *t, int *ldt, double
 	*q, int *ldq, int *ifst, int *ilst, double *work, int *info)
 {
     // Table of constant values
@@ -13667,8 +13642,8 @@ L260:
     int nbf, nbl, here;
     extern int lsame_(char *, char *);
     int wantq;
-    extern /* Subroutine */ int dlaexc_(int *, int *, double *, int *, double 
-	    *, int *, int *, int *, int *, double *, int *), xerbla_(char *, 
+    extern /* Subroutine */ int dlaexc_(int *, int *, double *, int *, double
+	    *, int *, int *, int *, int *, double *, int *), xerbla_(char *,
 	    int *);
     int nbnext;
 

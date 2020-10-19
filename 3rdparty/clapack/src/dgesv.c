@@ -131,8 +131,8 @@
     int a_dim1, a_offset, b_dim1, b_offset, i__1;
 
     // Local variables
-    extern /* Subroutine */ int dgetrf_(int *, int *, double *, int *, int *, 
-	    int *), xerbla_(char *, int *), dgetrs_(char *, int *, int *, 
+    extern /* Subroutine */ int dgetrf_(int *, int *, double *, int *, int *,
+	    int *), xerbla_(char *, int *), dgetrs_(char *, int *, int *,
 	    double *, int *, int *, double *, int *, int *);
 
     //
@@ -308,7 +308,7 @@
 //> \ingroup doubleGEcomputational
 //
 // =====================================================================
-/* Subroutine */ int dgetrf_(int *m, int *n, double *a, int *lda, int *ipiv, 
+/* Subroutine */ int dgetrf_(int *m, int *n, double *a, int *lda, int *ipiv,
 	int *info)
 {
     // Table of constant values
@@ -322,16 +322,16 @@
 
     // Local variables
     int i__, j, jb, nb;
-    extern /* Subroutine */ int dgemm_(char *, char *, int *, int *, int *, 
-	    double *, double *, int *, double *, int *, double *, double *, 
+    extern /* Subroutine */ int dgemm_(char *, char *, int *, int *, int *,
+	    double *, double *, int *, double *, int *, double *, double *,
 	    int *);
     int iinfo;
-    extern /* Subroutine */ int dtrsm_(char *, char *, char *, char *, int *, 
+    extern /* Subroutine */ int dtrsm_(char *, char *, char *, char *, int *,
 	    int *, double *, double *, int *, double *, int *), xerbla_(char *
 	    , int *);
     extern int ilaenv_(int *, char *, char *, int *, int *, int *, int *);
-    extern /* Subroutine */ int dlaswp_(int *, double *, int *, int *, int *, 
-	    int *, int *), dgetrf2_(int *, int *, double *, int *, int *, int 
+    extern /* Subroutine */ int dlaswp_(int *, double *, int *, int *, int *,
+	    int *, int *), dgetrf2_(int *, int *, double *, int *, int *, int
 	    *);
 
     //
@@ -444,7 +444,7 @@
 		//
 		i__3 = *n - j - jb + 1;
 		dtrsm_("Left", "Lower", "No transpose", "Unit", &jb, &i__3, &
-			c_b16, &a[j + j * a_dim1], lda, &a[j + (j + jb) * 
+			c_b16, &a[j + j * a_dim1], lda, &a[j + (j + jb) *
 			a_dim1], lda);
 		if (j + jb <= *m) {
 		    //
@@ -452,8 +452,8 @@
 		    //
 		    i__3 = *m - j - jb + 1;
 		    i__4 = *n - j - jb + 1;
-		    dgemm_("No transpose", "No transpose", &i__3, &i__4, &jb, 
-			    &c_b19, &a[j + jb + j * a_dim1], lda, &a[j + (j + 
+		    dgemm_("No transpose", "No transpose", &i__3, &i__4, &jb,
+			    &c_b19, &a[j + jb + j * a_dim1], lda, &a[j + (j +
 			    jb) * a_dim1], lda, &c_b16, &a[j + jb + (j + jb) *
 			     a_dim1], lda);
 		}
@@ -582,7 +582,7 @@
 //> \ingroup doubleGEcomputational
 //
 // =====================================================================
-/* Subroutine */ int dgetrf2_(int *m, int *n, double *a, int *lda, int *ipiv, 
+/* Subroutine */ int dgetrf2_(int *m, int *n, double *a, int *lda, int *ipiv,
 	int *info)
 {
     // Table of constant values
@@ -597,16 +597,16 @@
     // Local variables
     int i__, n1, n2;
     double temp;
-    extern /* Subroutine */ int dscal_(int *, double *, double *, int *), 
-	    dgemm_(char *, char *, int *, int *, int *, double *, double *, 
+    extern /* Subroutine */ int dscal_(int *, double *, double *, int *),
+	    dgemm_(char *, char *, int *, int *, int *, double *, double *,
 	    int *, double *, int *, double *, double *, int *);
     int iinfo;
     double sfmin;
-    extern /* Subroutine */ int dtrsm_(char *, char *, char *, char *, int *, 
+    extern /* Subroutine */ int dtrsm_(char *, char *, char *, char *, int *,
 	    int *, double *, double *, int *, double *, int *);
     extern double dlamch_(char *);
     extern int idamax_(int *, double *, int *);
-    extern /* Subroutine */ int xerbla_(char *, int *), dlaswp_(int *, double 
+    extern /* Subroutine */ int xerbla_(char *, int *), dlaswp_(int *, double
 	    *, int *, int *, int *, int *, int *);
 
     //
@@ -742,13 +742,13 @@
 	//
 	i__1 = *m - n1;
 	dgemm_("N", "N", &i__1, &n2, &n1, &c_b16, &a[n1 + 1 + a_dim1], lda, &
-		a[(n1 + 1) * a_dim1 + 1], lda, &c_b13, &a[n1 + 1 + (n1 + 1) * 
+		a[(n1 + 1) * a_dim1 + 1], lda, &c_b13, &a[n1 + 1 + (n1 + 1) *
 		a_dim1], lda);
 	//
 	//       Factor A22
 	//
 	i__1 = *m - n1;
-	dgetrf2_(&i__1, &n2, &a[n1 + 1 + (n1 + 1) * a_dim1], lda, &ipiv[n1 + 
+	dgetrf2_(&i__1, &n2, &a[n1 + 1 + (n1 + 1) * a_dim1], lda, &ipiv[n1 +
 		1], &iinfo);
 	//
 	//       Adjust INFO and the pivot indices
@@ -910,9 +910,9 @@
 
     // Local variables
     extern int lsame_(char *, char *);
-    extern /* Subroutine */ int dtrsm_(char *, char *, char *, char *, int *, 
+    extern /* Subroutine */ int dtrsm_(char *, char *, char *, char *, int *,
 	    int *, double *, double *, int *, double *, int *), xerbla_(char *
-	    , int *), dlaswp_(int *, double *, int *, int *, int *, int *, 
+	    , int *), dlaswp_(int *, double *, int *, int *, int *, int *,
 	    int *);
     int notran;
 
@@ -1135,7 +1135,7 @@
 //> \endverbatim
 //>
 // =====================================================================
-/* Subroutine */ int dlaswp_(int *n, double *a, int *lda, int *k1, int *k2, 
+/* Subroutine */ int dlaswp_(int *n, double *a, int *lda, int *k1, int *k2,
 	int *ipiv, int *incx)
 {
     // System generated locals
@@ -1192,7 +1192,7 @@
 	    ix = ix0;
 	    i__2 = i2;
 	    i__3 = inc;
-	    for (i__ = i1; i__3 < 0 ? i__ >= i__2 : i__ <= i__2; i__ += i__3) 
+	    for (i__ = i1; i__3 < 0 ? i__ >= i__2 : i__ <= i__2; i__ += i__3)
 		    {
 		ip = ipiv[ix];
 		if (ip != i__) {

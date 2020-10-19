@@ -112,7 +112,7 @@
 //> \ingroup OTHERauxiliary
 //
 // =====================================================================
-/* Subroutine */ int dlaset_(char *uplo, int *m, int *n, double *alpha, 
+/* Subroutine */ int dlaset_(char *uplo, int *m, int *n, double *alpha,
 	double *beta, double *a, int *lda)
 {
     // System generated locals

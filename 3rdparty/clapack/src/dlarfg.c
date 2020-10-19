@@ -108,15 +108,12 @@
 //> \ingroup doubleOTHERauxiliary
 //
 // =====================================================================
-/* Subroutine */ int dlarfg_(int *n, double *alpha, double *x, int *incx, 
+/* Subroutine */ int dlarfg_(int *n, double *alpha, double *x, int *incx,
 	double *tau)
 {
     // System generated locals
     int i__1;
     double d__1;
-
-    // Builtin functions
-    double d_sign(double *, double *);
 
     // Local variables
     int j, knt;

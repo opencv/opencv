@@ -99,15 +99,12 @@
 //> \ingroup OTHERauxiliary
 //
 // =====================================================================
-/* Subroutine */ int dlartg_(double *f, double *g, double *cs, double *sn, 
+/* Subroutine */ int dlartg_(double *f, double *g, double *cs, double *sn,
 	double *r__)
 {
     // System generated locals
     int i__1;
     double d__1, d__2;
-
-    // Builtin functions
-    double log(double), pow_di(double *, int *), sqrt(double);
 
     // Local variables
     int i__;

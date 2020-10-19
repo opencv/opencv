@@ -145,7 +145,7 @@
 //> \ingroup OTHERauxiliary
 //
 // =====================================================================
-/* Subroutine */ int dlascl_(char *type__, int *kl, int *ku, double *cfrom, 
+/* Subroutine */ int dlascl_(char *type__, int *kl, int *ku, double *cfrom,
 	double *cto, int *m, int *n, double *a, int *lda, int *info)
 {
     // System generated locals
@@ -236,7 +236,7 @@
 	} else /* if(complicated condition) */ {
 	    // Computing MAX
 	    i__1 = *n - 1;
-	    if (*ku < 0 || *ku > max(i__1,0) || (itype == 4 || itype == 5) && 
+	    if (*ku < 0 || *ku > max(i__1,0) || (itype == 4 || itype == 5) &&
 		    *kl != *ku) {
 		*info = -3;
 	    } else if (itype == 4 && *lda < *kl + 1 || itype == 5 && *lda < *

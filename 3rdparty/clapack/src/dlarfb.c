@@ -208,17 +208,17 @@
     double c_b25 = -1.;
 
     // System generated locals
-    int c_dim1, c_offset, t_dim1, t_offset, v_dim1, v_offset, work_dim1, 
+    int c_dim1, c_offset, t_dim1, t_offset, v_dim1, v_offset, work_dim1,
 	    work_offset, i__1, i__2;
 
     // Local variables
     int i__, j;
-    extern /* Subroutine */ int dgemm_(char *, char *, int *, int *, int *, 
-	    double *, double *, int *, double *, int *, double *, double *, 
+    extern /* Subroutine */ int dgemm_(char *, char *, int *, int *, int *,
+	    double *, double *, int *, double *, int *, double *, double *,
 	    int *);
     extern int lsame_(char *, char *);
     extern /* Subroutine */ int dcopy_(int *, double *, int *, double *, int *
-	    ), dtrmm_(char *, char *, char *, char *, int *, int *, double *, 
+	    ), dtrmm_(char *, char *, char *, char *, int *, int *, double *,
 	    double *, int *, double *, int *);
     char transt[1+1]={'\0'};
 
@@ -303,7 +303,7 @@
 		    //
 		    i__1 = *m - *k;
 		    dgemm_("Transpose", "No transpose", n, k, &i__1, &c_b14, &
-			    c__[*k + 1 + c_dim1], ldc, &v[*k + 1 + v_dim1], 
+			    c__[*k + 1 + c_dim1], ldc, &v[*k + 1 + v_dim1],
 			    ldv, &c_b14, &work[work_offset], ldwork);
 		}
 		//
@@ -320,7 +320,7 @@
 		    //
 		    i__1 = *m - *k;
 		    dgemm_("No transpose", "Transpose", &i__1, n, k, &c_b25, &
-			    v[*k + 1 + v_dim1], ldv, &work[work_offset], 
+			    v[*k + 1 + v_dim1], ldv, &work[work_offset],
 			    ldwork, &c_b14, &c__[*k + 1 + c_dim1], ldc);
 		}
 		//
@@ -350,7 +350,7 @@
 		//
 		i__1 = *k;
 		for (j = 1; j <= i__1; ++j) {
-		    dcopy_(m, &c__[j * c_dim1 + 1], &c__1, &work[j * 
+		    dcopy_(m, &c__[j * c_dim1 + 1], &c__1, &work[j *
 			    work_dim1 + 1], &c__1);
 // L40:
 		}
@@ -365,8 +365,8 @@
 		    //
 		    i__1 = *n - *k;
 		    dgemm_("No transpose", "No transpose", m, k, &i__1, &
-			    c_b14, &c__[(*k + 1) * c_dim1 + 1], ldc, &v[*k + 
-			    1 + v_dim1], ldv, &c_b14, &work[work_offset], 
+			    c_b14, &c__[(*k + 1) * c_dim1 + 1], ldc, &v[*k +
+			    1 + v_dim1], ldv, &c_b14, &work[work_offset],
 			    ldwork);
 		}
 		//
@@ -383,7 +383,7 @@
 		    //
 		    i__1 = *n - *k;
 		    dgemm_("No transpose", "Transpose", m, &i__1, k, &c_b25, &
-			    work[work_offset], ldwork, &v[*k + 1 + v_dim1], 
+			    work[work_offset], ldwork, &v[*k + 1 + v_dim1],
 			    ldv, &c_b14, &c__[(*k + 1) * c_dim1 + 1], ldc);
 		}
 		//
@@ -421,7 +421,7 @@
 		//
 		i__1 = *k;
 		for (j = 1; j <= i__1; ++j) {
-		    dcopy_(n, &c__[*m - *k + j + c_dim1], ldc, &work[j * 
+		    dcopy_(n, &c__[*m - *k + j + c_dim1], ldc, &work[j *
 			    work_dim1 + 1], &c__1);
 // L70:
 		}
@@ -429,7 +429,7 @@
 		//             W := W * V2
 		//
 		dtrmm_("Right", "Upper", "No transpose", "Unit", n, k, &c_b14,
-			 &v[*m - *k + 1 + v_dim1], ldv, &work[work_offset], 
+			 &v[*m - *k + 1 + v_dim1], ldv, &work[work_offset],
 			ldwork);
 		if (*m > *k) {
 		    //
@@ -461,7 +461,7 @@
 		//             W := W * V2**T
 		//
 		dtrmm_("Right", "Upper", "Transpose", "Unit", n, k, &c_b14, &
-			v[*m - *k + 1 + v_dim1], ldv, &work[work_offset], 
+			v[*m - *k + 1 + v_dim1], ldv, &work[work_offset],
 			ldwork);
 		//
 		//             C2 := C2 - W**T
@@ -470,7 +470,7 @@
 		for (j = 1; j <= i__1; ++j) {
 		    i__2 = *n;
 		    for (i__ = 1; i__ <= i__2; ++i__) {
-			c__[*m - *k + j + i__ * c_dim1] -= work[i__ + j * 
+			c__[*m - *k + j + i__ * c_dim1] -= work[i__ + j *
 				work_dim1];
 // L80:
 		    }
@@ -494,7 +494,7 @@
 		//             W := W * V2
 		//
 		dtrmm_("Right", "Upper", "No transpose", "Unit", m, k, &c_b14,
-			 &v[*n - *k + 1 + v_dim1], ldv, &work[work_offset], 
+			 &v[*n - *k + 1 + v_dim1], ldv, &work[work_offset],
 			ldwork);
 		if (*n > *k) {
 		    //
@@ -526,7 +526,7 @@
 		//             W := W * V2**T
 		//
 		dtrmm_("Right", "Upper", "Transpose", "Unit", m, k, &c_b14, &
-			v[*n - *k + 1 + v_dim1], ldv, &work[work_offset], 
+			v[*n - *k + 1 + v_dim1], ldv, &work[work_offset],
 			ldwork);
 		//
 		//             C2 := C2 - W
@@ -535,7 +535,7 @@
 		for (j = 1; j <= i__1; ++j) {
 		    i__2 = *m;
 		    for (i__ = 1; i__ <= i__2; ++i__) {
-			c__[i__ + (*n - *k + j) * c_dim1] -= work[i__ + j * 
+			c__[i__ + (*n - *k + j) * c_dim1] -= work[i__ + j *
 				work_dim1];
 // L110:
 		    }
@@ -575,7 +575,7 @@
 		    //
 		    i__1 = *m - *k;
 		    dgemm_("Transpose", "Transpose", n, k, &i__1, &c_b14, &
-			    c__[*k + 1 + c_dim1], ldc, &v[(*k + 1) * v_dim1 + 
+			    c__[*k + 1 + c_dim1], ldc, &v[(*k + 1) * v_dim1 +
 			    1], ldv, &c_b14, &work[work_offset], ldwork);
 		}
 		//
@@ -592,7 +592,7 @@
 		    //
 		    i__1 = *m - *k;
 		    dgemm_("Transpose", "Transpose", &i__1, n, k, &c_b25, &v[(
-			    *k + 1) * v_dim1 + 1], ldv, &work[work_offset], 
+			    *k + 1) * v_dim1 + 1], ldv, &work[work_offset],
 			    ldwork, &c_b14, &c__[*k + 1 + c_dim1], ldc);
 		}
 		//
@@ -622,7 +622,7 @@
 		//
 		i__1 = *k;
 		for (j = 1; j <= i__1; ++j) {
-		    dcopy_(m, &c__[j * c_dim1 + 1], &c__1, &work[j * 
+		    dcopy_(m, &c__[j * c_dim1 + 1], &c__1, &work[j *
 			    work_dim1 + 1], &c__1);
 // L160:
 		}
@@ -637,8 +637,8 @@
 		    //
 		    i__1 = *n - *k;
 		    dgemm_("No transpose", "Transpose", m, k, &i__1, &c_b14, &
-			    c__[(*k + 1) * c_dim1 + 1], ldc, &v[(*k + 1) * 
-			    v_dim1 + 1], ldv, &c_b14, &work[work_offset], 
+			    c__[(*k + 1) * c_dim1 + 1], ldc, &v[(*k + 1) *
+			    v_dim1 + 1], ldv, &c_b14, &work[work_offset],
 			    ldwork);
 		}
 		//
@@ -655,8 +655,8 @@
 		    //
 		    i__1 = *n - *k;
 		    dgemm_("No transpose", "No transpose", m, &i__1, k, &
-			    c_b25, &work[work_offset], ldwork, &v[(*k + 1) * 
-			    v_dim1 + 1], ldv, &c_b14, &c__[(*k + 1) * c_dim1 
+			    c_b25, &work[work_offset], ldwork, &v[(*k + 1) *
+			    v_dim1 + 1], ldv, &c_b14, &c__[(*k + 1) * c_dim1
 			    + 1], ldc);
 		}
 		//
@@ -693,7 +693,7 @@
 		//
 		i__1 = *k;
 		for (j = 1; j <= i__1; ++j) {
-		    dcopy_(n, &c__[*m - *k + j + c_dim1], ldc, &work[j * 
+		    dcopy_(n, &c__[*m - *k + j + c_dim1], ldc, &work[j *
 			    work_dim1 + 1], &c__1);
 // L190:
 		}
@@ -742,7 +742,7 @@
 		for (j = 1; j <= i__1; ++j) {
 		    i__2 = *n;
 		    for (i__ = 1; i__ <= i__2; ++i__) {
-			c__[*m - *k + j + i__ * c_dim1] -= work[i__ + j * 
+			c__[*m - *k + j + i__ * c_dim1] -= work[i__ + j *
 				work_dim1];
 // L200:
 		    }
@@ -791,7 +791,7 @@
 		    //
 		    i__1 = *n - *k;
 		    dgemm_("No transpose", "No transpose", m, &i__1, k, &
-			    c_b25, &work[work_offset], ldwork, &v[v_offset], 
+			    c_b25, &work[work_offset], ldwork, &v[v_offset],
 			    ldv, &c_b14, &c__[c_offset], ldc);
 		}
 		//
@@ -807,7 +807,7 @@
 		for (j = 1; j <= i__1; ++j) {
 		    i__2 = *m;
 		    for (i__ = 1; i__ <= i__2; ++i__) {
-			c__[i__ + (*n - *k + j) * c_dim1] -= work[i__ + j * 
+			c__[i__ + (*n - *k + j) * c_dim1] -= work[i__ + j *
 				work_dim1];
 // L230:
 		    }

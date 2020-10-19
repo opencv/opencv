@@ -83,21 +83,47 @@ static __inline int i_nint(float *x)
 }
 
 int pow_ii(int *ap, int *bp);
-double pow_ri(float *ap, int *bp);
-double pow_di(double *ap, int *bp);
+static __inline double pow_ri(float *ap, int *bp)
+{
+    return pow((double)*ap, (double)*bp);
+}
+
+static __inline double pow_di(double *ap, int *bp)
+{
+    return pow(*ap, (double)*bp);
+}
 
 static __inline double pow_dd(double *ap, double *bp)
 {
     return pow(*ap, *bp);
 }
 
-void d_cnjg(doublecomplex *r, doublecomplex *z);
-void r_cnjg(complex *r, complex *z);
+static __inline void d_cnjg(doublecomplex *r, doublecomplex *z)
+{
+	double zi = z->i;
+	r->r = z->r;
+	r->i = -zi;
+}
 
-int s_copy(char *a, char *b);
+static __inline void r_cnjg(complex *r, complex *z)
+{
+	float zi = z->i;
+	r->r = z->r;
+	r->i = -zi;
+}
+
+static __inline int s_copy(char *a, char *b)
+{
+    strcpy(a, b);
+    return 0;
+}
+
 int s_cat(char *lp, char **rpp, int* rnp, int *np);
 int s_cmp(char *a0, char *b0);
-int i_len(char*);
+static __inline int i_len(char* s)
+{
+    return (int)strlen(s);
+}
 
 #ifdef __cplusplus
 }

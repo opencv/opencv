@@ -198,12 +198,9 @@
     doublecomplex c_b2 = {0.,0.};
 
     // System generated locals
-    int a_dim1, a_offset, b_dim1, b_offset, c_dim1, c_offset, i__1, i__2, 
+    int a_dim1, a_offset, b_dim1, b_offset, c_dim1, c_offset, i__1, i__2,
 	    i__3, i__4, i__5, i__6;
     doublecomplex z__1, z__2, z__3, z__4;
-
-    // Builtin functions
-    void d_cnjg(doublecomplex *, doublecomplex *);
 
     // Local variables
     int i__, j, l, info;
@@ -327,7 +324,7 @@
 		for (i__ = 1; i__ <= i__2; ++i__) {
 		    i__3 = i__ + j * c_dim1;
 		    i__4 = i__ + j * c_dim1;
-		    z__1.r = beta->r * c__[i__4].r - beta->i * c__[i__4].i, 
+		    z__1.r = beta->r * c__[i__4].r - beta->i * c__[i__4].i,
 			    z__1.i = beta->r * c__[i__4].i + beta->i * c__[
 			    i__4].r;
 		    c__[i__3].r = z__1.r, c__[i__3].i = z__1.i;
@@ -370,7 +367,7 @@
 		i__2 = *k;
 		for (l = 1; l <= i__2; ++l) {
 		    i__3 = l + j * b_dim1;
-		    z__1.r = alpha->r * b[i__3].r - alpha->i * b[i__3].i, 
+		    z__1.r = alpha->r * b[i__3].r - alpha->i * b[i__3].i,
 			    z__1.i = alpha->r * b[i__3].i + alpha->i * b[i__3]
 			    .r;
 		    temp.r = z__1.r, temp.i = z__1.i;
@@ -379,10 +376,10 @@
 			i__4 = i__ + j * c_dim1;
 			i__5 = i__ + j * c_dim1;
 			i__6 = i__ + l * a_dim1;
-			z__2.r = temp.r * a[i__6].r - temp.i * a[i__6].i, 
+			z__2.r = temp.r * a[i__6].r - temp.i * a[i__6].i,
 				z__2.i = temp.r * a[i__6].i + temp.i * a[i__6]
 				.r;
-			z__1.r = c__[i__5].r + z__2.r, z__1.i = c__[i__5].i + 
+			z__1.r = c__[i__5].r + z__2.r, z__1.i = c__[i__5].i +
 				z__2.i;
 			c__[i__4].r = z__1.r, c__[i__4].i = z__1.i;
 // L70:
@@ -404,7 +401,7 @@
 		    for (l = 1; l <= i__3; ++l) {
 			d_cnjg(&z__3, &a[l + i__ * a_dim1]);
 			i__4 = l + j * b_dim1;
-			z__2.r = z__3.r * b[i__4].r - z__3.i * b[i__4].i, 
+			z__2.r = z__3.r * b[i__4].r - z__3.i * b[i__4].i,
 				z__2.i = z__3.r * b[i__4].i + z__3.i * b[i__4]
 				.r;
 			z__1.r = temp.r + z__2.r, z__1.i = temp.i + z__2.i;
@@ -413,14 +410,14 @@
 		    }
 		    if (beta->r == 0. && beta->i == 0.) {
 			i__3 = i__ + j * c_dim1;
-			z__1.r = alpha->r * temp.r - alpha->i * temp.i, 
-				z__1.i = alpha->r * temp.i + alpha->i * 
+			z__1.r = alpha->r * temp.r - alpha->i * temp.i,
+				z__1.i = alpha->r * temp.i + alpha->i *
 				temp.r;
 			c__[i__3].r = z__1.r, c__[i__3].i = z__1.i;
 		    } else {
 			i__3 = i__ + j * c_dim1;
-			z__2.r = alpha->r * temp.r - alpha->i * temp.i, 
-				z__2.i = alpha->r * temp.i + alpha->i * 
+			z__2.r = alpha->r * temp.r - alpha->i * temp.i,
+				z__2.i = alpha->r * temp.i + alpha->i *
 				temp.r;
 			i__4 = i__ + j * c_dim1;
 			z__3.r = beta->r * c__[i__4].r - beta->i * c__[i__4]
@@ -455,14 +452,14 @@
 		    }
 		    if (beta->r == 0. && beta->i == 0.) {
 			i__3 = i__ + j * c_dim1;
-			z__1.r = alpha->r * temp.r - alpha->i * temp.i, 
-				z__1.i = alpha->r * temp.i + alpha->i * 
+			z__1.r = alpha->r * temp.r - alpha->i * temp.i,
+				z__1.i = alpha->r * temp.i + alpha->i *
 				temp.r;
 			c__[i__3].r = z__1.r, c__[i__3].i = z__1.i;
 		    } else {
 			i__3 = i__ + j * c_dim1;
-			z__2.r = alpha->r * temp.r - alpha->i * temp.i, 
-				z__2.i = alpha->r * temp.i + alpha->i * 
+			z__2.r = alpha->r * temp.r - alpha->i * temp.i,
+				z__2.i = alpha->r * temp.i + alpha->i *
 				temp.r;
 			i__4 = i__ + j * c_dim1;
 			z__3.r = beta->r * c__[i__4].r - beta->i * c__[i__4]
@@ -505,7 +502,7 @@
 		i__2 = *k;
 		for (l = 1; l <= i__2; ++l) {
 		    d_cnjg(&z__2, &b[j + l * b_dim1]);
-		    z__1.r = alpha->r * z__2.r - alpha->i * z__2.i, z__1.i = 
+		    z__1.r = alpha->r * z__2.r - alpha->i * z__2.i, z__1.i =
 			    alpha->r * z__2.i + alpha->i * z__2.r;
 		    temp.r = z__1.r, temp.i = z__1.i;
 		    i__3 = *m;
@@ -513,10 +510,10 @@
 			i__4 = i__ + j * c_dim1;
 			i__5 = i__ + j * c_dim1;
 			i__6 = i__ + l * a_dim1;
-			z__2.r = temp.r * a[i__6].r - temp.i * a[i__6].i, 
+			z__2.r = temp.r * a[i__6].r - temp.i * a[i__6].i,
 				z__2.i = temp.r * a[i__6].i + temp.i * a[i__6]
 				.r;
-			z__1.r = c__[i__5].r + z__2.r, z__1.i = c__[i__5].i + 
+			z__1.r = c__[i__5].r + z__2.r, z__1.i = c__[i__5].i +
 				z__2.i;
 			c__[i__4].r = z__1.r, c__[i__4].i = z__1.i;
 // L180:
@@ -553,7 +550,7 @@
 		i__2 = *k;
 		for (l = 1; l <= i__2; ++l) {
 		    i__3 = j + l * b_dim1;
-		    z__1.r = alpha->r * b[i__3].r - alpha->i * b[i__3].i, 
+		    z__1.r = alpha->r * b[i__3].r - alpha->i * b[i__3].i,
 			    z__1.i = alpha->r * b[i__3].i + alpha->i * b[i__3]
 			    .r;
 		    temp.r = z__1.r, temp.i = z__1.i;
@@ -562,10 +559,10 @@
 			i__4 = i__ + j * c_dim1;
 			i__5 = i__ + j * c_dim1;
 			i__6 = i__ + l * a_dim1;
-			z__2.r = temp.r * a[i__6].r - temp.i * a[i__6].i, 
+			z__2.r = temp.r * a[i__6].r - temp.i * a[i__6].i,
 				z__2.i = temp.r * a[i__6].i + temp.i * a[i__6]
 				.r;
-			z__1.r = c__[i__5].r + z__2.r, z__1.i = c__[i__5].i + 
+			z__1.r = c__[i__5].r + z__2.r, z__1.i = c__[i__5].i +
 				z__2.i;
 			c__[i__4].r = z__1.r, c__[i__4].i = z__1.i;
 // L230:
@@ -589,7 +586,7 @@
 		    for (l = 1; l <= i__3; ++l) {
 			d_cnjg(&z__3, &a[l + i__ * a_dim1]);
 			d_cnjg(&z__4, &b[j + l * b_dim1]);
-			z__2.r = z__3.r * z__4.r - z__3.i * z__4.i, z__2.i = 
+			z__2.r = z__3.r * z__4.r - z__3.i * z__4.i, z__2.i =
 				z__3.r * z__4.i + z__3.i * z__4.r;
 			z__1.r = temp.r + z__2.r, z__1.i = temp.i + z__2.i;
 			temp.r = z__1.r, temp.i = z__1.i;
@@ -597,14 +594,14 @@
 		    }
 		    if (beta->r == 0. && beta->i == 0.) {
 			i__3 = i__ + j * c_dim1;
-			z__1.r = alpha->r * temp.r - alpha->i * temp.i, 
-				z__1.i = alpha->r * temp.i + alpha->i * 
+			z__1.r = alpha->r * temp.r - alpha->i * temp.i,
+				z__1.i = alpha->r * temp.i + alpha->i *
 				temp.r;
 			c__[i__3].r = z__1.r, c__[i__3].i = z__1.i;
 		    } else {
 			i__3 = i__ + j * c_dim1;
-			z__2.r = alpha->r * temp.r - alpha->i * temp.i, 
-				z__2.i = alpha->r * temp.i + alpha->i * 
+			z__2.r = alpha->r * temp.r - alpha->i * temp.i,
+				z__2.i = alpha->r * temp.i + alpha->i *
 				temp.r;
 			i__4 = i__ + j * c_dim1;
 			z__3.r = beta->r * c__[i__4].r - beta->i * c__[i__4]
@@ -630,7 +627,7 @@
 		    for (l = 1; l <= i__3; ++l) {
 			d_cnjg(&z__3, &a[l + i__ * a_dim1]);
 			i__4 = j + l * b_dim1;
-			z__2.r = z__3.r * b[i__4].r - z__3.i * b[i__4].i, 
+			z__2.r = z__3.r * b[i__4].r - z__3.i * b[i__4].i,
 				z__2.i = z__3.r * b[i__4].i + z__3.i * b[i__4]
 				.r;
 			z__1.r = temp.r + z__2.r, z__1.i = temp.i + z__2.i;
@@ -639,14 +636,14 @@
 		    }
 		    if (beta->r == 0. && beta->i == 0.) {
 			i__3 = i__ + j * c_dim1;
-			z__1.r = alpha->r * temp.r - alpha->i * temp.i, 
-				z__1.i = alpha->r * temp.i + alpha->i * 
+			z__1.r = alpha->r * temp.r - alpha->i * temp.i,
+				z__1.i = alpha->r * temp.i + alpha->i *
 				temp.r;
 			c__[i__3].r = z__1.r, c__[i__3].i = z__1.i;
 		    } else {
 			i__3 = i__ + j * c_dim1;
-			z__2.r = alpha->r * temp.r - alpha->i * temp.i, 
-				z__2.i = alpha->r * temp.i + alpha->i * 
+			z__2.r = alpha->r * temp.r - alpha->i * temp.i,
+				z__2.i = alpha->r * temp.i + alpha->i *
 				temp.r;
 			i__4 = i__ + j * c_dim1;
 			z__3.r = beta->r * c__[i__4].r - beta->i * c__[i__4]
@@ -674,8 +671,8 @@
 		    for (l = 1; l <= i__3; ++l) {
 			i__4 = l + i__ * a_dim1;
 			d_cnjg(&z__3, &b[j + l * b_dim1]);
-			z__2.r = a[i__4].r * z__3.r - a[i__4].i * z__3.i, 
-				z__2.i = a[i__4].r * z__3.i + a[i__4].i * 
+			z__2.r = a[i__4].r * z__3.r - a[i__4].i * z__3.i,
+				z__2.i = a[i__4].r * z__3.i + a[i__4].i *
 				z__3.r;
 			z__1.r = temp.r + z__2.r, z__1.i = temp.i + z__2.i;
 			temp.r = z__1.r, temp.i = z__1.i;
@@ -683,14 +680,14 @@
 		    }
 		    if (beta->r == 0. && beta->i == 0.) {
 			i__3 = i__ + j * c_dim1;
-			z__1.r = alpha->r * temp.r - alpha->i * temp.i, 
-				z__1.i = alpha->r * temp.i + alpha->i * 
+			z__1.r = alpha->r * temp.r - alpha->i * temp.i,
+				z__1.i = alpha->r * temp.i + alpha->i *
 				temp.r;
 			c__[i__3].r = z__1.r, c__[i__3].i = z__1.i;
 		    } else {
 			i__3 = i__ + j * c_dim1;
-			z__2.r = alpha->r * temp.r - alpha->i * temp.i, 
-				z__2.i = alpha->r * temp.i + alpha->i * 
+			z__2.r = alpha->r * temp.r - alpha->i * temp.i,
+				z__2.i = alpha->r * temp.i + alpha->i *
 				temp.r;
 			i__4 = i__ + j * c_dim1;
 			z__3.r = beta->r * c__[i__4].r - beta->i * c__[i__4]
@@ -725,14 +722,14 @@
 		    }
 		    if (beta->r == 0. && beta->i == 0.) {
 			i__3 = i__ + j * c_dim1;
-			z__1.r = alpha->r * temp.r - alpha->i * temp.i, 
-				z__1.i = alpha->r * temp.i + alpha->i * 
+			z__1.r = alpha->r * temp.r - alpha->i * temp.i,
+				z__1.i = alpha->r * temp.i + alpha->i *
 				temp.r;
 			c__[i__3].r = z__1.r, c__[i__3].i = z__1.i;
 		    } else {
 			i__3 = i__ + j * c_dim1;
-			z__2.r = alpha->r * temp.r - alpha->i * temp.i, 
-				z__2.i = alpha->r * temp.i + alpha->i * 
+			z__2.r = alpha->r * temp.r - alpha->i * temp.i,
+				z__2.i = alpha->r * temp.i + alpha->i *
 				temp.r;
 			i__4 = i__ + j * c_dim1;
 			z__3.r = beta->r * c__[i__4].r - beta->i * c__[i__4]

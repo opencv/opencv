@@ -141,7 +141,7 @@
     // Local variables
     extern int lsame_(char *, char *);
     extern /* Subroutine */ int xerbla_(char *, int *), spotrf_(char *, int *,
-	     float *, int *, int *), spotrs_(char *, int *, int *, float *, 
+	     float *, int *, int *), spotrs_(char *, int *, int *, float *,
 	    int *, float *, int *, int *);
 
     //
@@ -333,12 +333,12 @@
     // Local variables
     int j, jb, nb;
     extern int lsame_(char *, char *);
-    extern /* Subroutine */ int sgemm_(char *, char *, int *, int *, int *, 
+    extern /* Subroutine */ int sgemm_(char *, char *, int *, int *, int *,
 	    float *, float *, int *, float *, int *, float *, float *, int *);
     int upper;
-    extern /* Subroutine */ int strsm_(char *, char *, char *, char *, int *, 
-	    int *, float *, float *, int *, float *, int *), ssyrk_(char *, 
-	    char *, int *, int *, float *, float *, int *, float *, float *, 
+    extern /* Subroutine */ int strsm_(char *, char *, char *, char *, int *,
+	    int *, float *, float *, int *, float *, int *), ssyrk_(char *,
+	    char *, int *, int *, float *, float *, int *, float *, float *,
 	    int *), xerbla_(char *, int *);
     extern int ilaenv_(int *, char *, char *, int *, int *, int *, int *);
     extern /* Subroutine */ int spotrf2_(char *, int *, float *, int *, int *)
@@ -425,7 +425,7 @@
 		i__3 = nb, i__4 = *n - j + 1;
 		jb = min(i__3,i__4);
 		i__3 = j - 1;
-		ssyrk_("Upper", "Transpose", &jb, &i__3, &c_b13, &a[j * 
+		ssyrk_("Upper", "Transpose", &jb, &i__3, &c_b13, &a[j *
 			a_dim1 + 1], lda, &c_b14, &a[j + j * a_dim1], lda);
 		spotrf2_("Upper", &jb, &a[j + j * a_dim1], lda, info);
 		if (*info != 0) {
@@ -438,12 +438,12 @@
 		    i__3 = *n - j - jb + 1;
 		    i__4 = j - 1;
 		    sgemm_("Transpose", "No transpose", &jb, &i__3, &i__4, &
-			    c_b13, &a[j * a_dim1 + 1], lda, &a[(j + jb) * 
-			    a_dim1 + 1], lda, &c_b14, &a[j + (j + jb) * 
+			    c_b13, &a[j * a_dim1 + 1], lda, &a[(j + jb) *
+			    a_dim1 + 1], lda, &c_b14, &a[j + (j + jb) *
 			    a_dim1], lda);
 		    i__3 = *n - j - jb + 1;
 		    strsm_("Left", "Upper", "Transpose", "Non-unit", &jb, &
-			    i__3, &c_b14, &a[j + j * a_dim1], lda, &a[j + (j 
+			    i__3, &c_b14, &a[j + j * a_dim1], lda, &a[j + (j
 			    + jb) * a_dim1], lda);
 		}
 // L10:
@@ -463,7 +463,7 @@
 		i__3 = nb, i__4 = *n - j + 1;
 		jb = min(i__3,i__4);
 		i__3 = j - 1;
-		ssyrk_("Lower", "No transpose", &jb, &i__3, &c_b13, &a[j + 
+		ssyrk_("Lower", "No transpose", &jb, &i__3, &c_b13, &a[j +
 			a_dim1], lda, &c_b14, &a[j + j * a_dim1], lda);
 		spotrf2_("Lower", &jb, &a[j + j * a_dim1], lda, info);
 		if (*info != 0) {
@@ -476,11 +476,11 @@
 		    i__3 = *n - j - jb + 1;
 		    i__4 = j - 1;
 		    sgemm_("No transpose", "Transpose", &i__3, &jb, &i__4, &
-			    c_b13, &a[j + jb + a_dim1], lda, &a[j + a_dim1], 
+			    c_b13, &a[j + jb + a_dim1], lda, &a[j + a_dim1],
 			    lda, &c_b14, &a[j + jb + j * a_dim1], lda);
 		    i__3 = *n - j - jb + 1;
 		    strsm_("Right", "Lower", "Transpose", "Non-unit", &i__3, &
-			    jb, &c_b14, &a[j + j * a_dim1], lda, &a[j + jb + 
+			    jb, &c_b14, &a[j + j * a_dim1], lda, &a[j + jb +
 			    j * a_dim1], lda);
 		}
 // L20:
@@ -615,17 +615,14 @@ L40:
     // System generated locals
     int a_dim1, a_offset, i__1;
 
-    // Builtin functions
-    double sqrt(double);
-
     // Local variables
     int n1, n2;
     extern int lsame_(char *, char *);
     int iinfo;
     int upper;
-    extern /* Subroutine */ int strsm_(char *, char *, char *, char *, int *, 
-	    int *, float *, float *, int *, float *, int *), ssyrk_(char *, 
-	    char *, int *, int *, float *, float *, int *, float *, float *, 
+    extern /* Subroutine */ int strsm_(char *, char *, char *, char *, int *,
+	    int *, float *, float *, int *, float *, int *), ssyrk_(char *,
+	    char *, int *, int *, float *, float *, int *, float *, float *,
 	    int *), xerbla_(char *, int *);
     extern int sisnan_(float *);
 
@@ -723,7 +720,7 @@ L40:
 	    //
 	    //          Update and factor A22
 	    //
-	    ssyrk_(uplo, "T", &n2, &n1, &c_b11, &a[(n1 + 1) * a_dim1 + 1], 
+	    ssyrk_(uplo, "T", &n2, &n1, &c_b11, &a[(n1 + 1) * a_dim1 + 1],
 		    lda, &c_b9, &a[n1 + 1 + (n1 + 1) * a_dim1], lda);
 	    spotrf2_(uplo, &n2, &a[n1 + 1 + (n1 + 1) * a_dim1], lda, &iinfo);
 	    if (iinfo != 0) {
@@ -881,8 +878,8 @@ L40:
     // Local variables
     extern int lsame_(char *, char *);
     int upper;
-    extern /* Subroutine */ int strsm_(char *, char *, char *, char *, int *, 
-	    int *, float *, float *, int *, float *, int *), xerbla_(char *, 
+    extern /* Subroutine */ int strsm_(char *, char *, char *, char *, int *,
+	    int *, float *, float *, int *, float *, int *), xerbla_(char *,
 	    int *);
 
     //
@@ -1309,7 +1306,7 @@ L40:
 			temp = *alpha * a[j + l * a_dim1];
 			i__3 = j;
 			for (i__ = 1; i__ <= i__3; ++i__) {
-			    c__[i__ + j * c_dim1] += temp * a[i__ + l * 
+			    c__[i__ + j * c_dim1] += temp * a[i__ + l *
 				    a_dim1];
 // L110:
 			}
@@ -1340,7 +1337,7 @@ L40:
 			temp = *alpha * a[j + l * a_dim1];
 			i__3 = *n;
 			for (i__ = j; i__ <= i__3; ++i__) {
-			    c__[i__ + j * c_dim1] += temp * a[i__ + l * 
+			    c__[i__ + j * c_dim1] += temp * a[i__ + l *
 				    a_dim1];
 // L160:
 			}

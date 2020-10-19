@@ -82,9 +82,6 @@ double dnrm2_(int *n, double *x, int *incx)
     int i__1, i__2;
     double ret_val, d__1;
 
-    // Builtin functions
-    double sqrt(double);
-
     // Local variables
     int ix;
     double ssq, norm, scale, absxi;

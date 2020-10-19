@@ -116,7 +116,7 @@
 //> \ingroup doubleOTHERcomputational
 //
 // =====================================================================
-/* Subroutine */ int dorg2r_(int *m, int *n, int *k, double *a, int *lda, 
+/* Subroutine */ int dorg2r_(int *m, int *n, int *k, double *a, int *lda,
 	double *tau, double *work, int *info)
 {
     // Table of constant values
@@ -128,8 +128,8 @@
 
     // Local variables
     int i__, j, l;
-    extern /* Subroutine */ int dscal_(int *, double *, double *, int *), 
-	    dlarf_(char *, int *, int *, double *, int *, double *, double *, 
+    extern /* Subroutine */ int dscal_(int *, double *, double *, int *),
+	    dlarf_(char *, int *, int *, double *, int *, double *, double *,
 	    int *, double *), xerbla_(char *, int *);
 
     //
@@ -362,7 +362,7 @@
 //> \ingroup doubleOTHERcomputational
 //
 // =====================================================================
-/* Subroutine */ int dorgqr_(int *m, int *n, int *k, double *a, int *lda, 
+/* Subroutine */ int dorgqr_(int *m, int *n, int *k, double *a, int *lda,
 	double *tau, double *work, int *lwork, int *info)
 {
     // Table of constant values
@@ -376,10 +376,10 @@
 
     // Local variables
     int i__, j, l, ib, nb, ki, kk, nx, iws, nbmin, iinfo;
-    extern /* Subroutine */ int dorg2r_(int *, int *, int *, double *, int *, 
+    extern /* Subroutine */ int dorg2r_(int *, int *, int *, double *, int *,
 	    double *, double *, int *), dlarfb_(char *, char *, char *, char *
 	    , int *, int *, int *, double *, int *, double *, int *, double *,
-	     int *, double *, int *), dlarft_(char *, char *, int *, int *, 
+	     int *, double *, int *), dlarft_(char *, char *, int *, int *,
 	    double *, int *, double *, double *, int *), xerbla_(char *, int *
 	    );
     extern int ilaenv_(int *, char *, char *, int *, int *, int *, int *);
@@ -529,7 +529,7 @@
 		//             H = H(i) H(i+1) . . . H(i+ib-1)
 		//
 		i__2 = *m - i__ + 1;
-		dlarft_("Forward", "Columnwise", &i__2, &ib, &a[i__ + i__ * 
+		dlarft_("Forward", "Columnwise", &i__2, &ib, &a[i__ + i__ *
 			a_dim1], lda, &tau[i__], &work[1], &ldwork);
 		//
 		//             Apply H to A(i:m,i+ib:n) from the left

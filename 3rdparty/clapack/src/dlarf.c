@@ -374,7 +374,7 @@
 //> \ingroup doubleOTHERauxiliary
 //
 // =====================================================================
-/* Subroutine */ int dlarf_(char *side, int *m, int *n, double *v, int *incv, 
+/* Subroutine */ int dlarf_(char *side, int *m, int *n, double *v, int *incv,
 	double *tau, double *c__, int *ldc, double *work)
 {
     // Table of constant values
@@ -392,10 +392,10 @@
     extern /* Subroutine */ int dger_(int *, int *, double *, double *, int *,
 	     double *, int *, double *, int *);
     extern int lsame_(char *, char *);
-    extern /* Subroutine */ int dgemv_(char *, int *, int *, double *, double 
+    extern /* Subroutine */ int dgemv_(char *, int *, int *, double *, double
 	    *, int *, double *, int *, double *, double *, int *);
     int lastc, lastv;
-    extern int iladlc_(int *, int *, double *, int *), iladlr_(int *, int *, 
+    extern int iladlc_(int *, int *, double *, int *), iladlr_(int *, int *,
 	    double *, int *);
 
     //

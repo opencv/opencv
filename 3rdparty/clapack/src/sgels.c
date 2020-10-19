@@ -670,7 +670,7 @@ int ilaslr_(int *m, int *n, float *a, int *lda)
 //> \endverbatim
 //>
 // =====================================================================
-/* Subroutine */ int sgelq2_(int *m, int *n, float *a, int *lda, float *tau, 
+/* Subroutine */ int sgelq2_(int *m, int *n, float *a, int *lda, float *tau,
 	float *work, int *info)
 {
     // System generated locals
@@ -679,8 +679,8 @@ int ilaslr_(int *m, int *n, float *a, int *lda)
     // Local variables
     int i__, k;
     float aii;
-    extern /* Subroutine */ int slarf_(char *, int *, int *, float *, int *, 
-	    float *, float *, int *, float *), xerbla_(char *, int *), 
+    extern /* Subroutine */ int slarf_(char *, int *, int *, float *, int *,
+	    float *, float *, int *, float *), xerbla_(char *, int *),
 	    slarfg_(int *, float *, float *, int *, float *);
 
     //
@@ -905,7 +905,7 @@ int ilaslr_(int *m, int *n, float *a, int *lda)
 //> \endverbatim
 //>
 // =====================================================================
-/* Subroutine */ int sgelqf_(int *m, int *n, float *a, int *lda, float *tau, 
+/* Subroutine */ int sgelqf_(int *m, int *n, float *a, int *lda, float *tau,
 	float *work, int *lwork, int *info)
 {
     // Table of constant values
@@ -920,8 +920,8 @@ int ilaslr_(int *m, int *n, float *a, int *lda)
     // Local variables
     int i__, k, ib, nb, nx, iws, nbmin, iinfo;
     extern /* Subroutine */ int sgelq2_(int *, int *, float *, int *, float *,
-	     float *, int *), slarfb_(char *, char *, char *, char *, int *, 
-	    int *, int *, float *, int *, float *, int *, float *, int *, 
+	     float *, int *), slarfb_(char *, char *, char *, char *, int *,
+	    int *, int *, float *, int *, float *, int *, float *, int *,
 	    float *, int *), xerbla_(char *, int *);
     extern int ilaenv_(int *, char *, char *, int *, int *, int *, int *);
     extern /* Subroutine */ int slarft_(char *, char *, int *, int *, float *,
@@ -1043,16 +1043,16 @@ int ilaslr_(int *m, int *n, float *a, int *lda)
 		//             H = H(i) H(i+1) . . . H(i+ib-1)
 		//
 		i__3 = *n - i__ + 1;
-		slarft_("Forward", "Rowwise", &i__3, &ib, &a[i__ + i__ * 
+		slarft_("Forward", "Rowwise", &i__3, &ib, &a[i__ + i__ *
 			a_dim1], lda, &tau[i__], &work[1], &ldwork);
 		//
 		//             Apply H to A(i+ib:m,i:n) from the right
 		//
 		i__3 = *m - i__ - ib + 1;
 		i__4 = *n - i__ + 1;
-		slarfb_("Right", "No transpose", "Forward", "Rowwise", &i__3, 
+		slarfb_("Right", "No transpose", "Forward", "Rowwise", &i__3,
 			&i__4, &ib, &a[i__ + i__ * a_dim1], lda, &work[1], &
-			ldwork, &a[i__ + ib + i__ * a_dim1], lda, &work[ib + 
+			ldwork, &a[i__ + ib + i__ * a_dim1], lda, &work[ib +
 			1], &ldwork);
 	    }
 // L10:
@@ -1260,7 +1260,7 @@ int ilaslr_(int *m, int *n, float *a, int *lda)
 //> \ingroup realGEsolve
 //
 // =====================================================================
-/* Subroutine */ int sgels_(char *trans, int *m, int *n, int *nrhs, float *a, 
+/* Subroutine */ int sgels_(char *trans, int *m, int *n, int *nrhs, float *a,
 	int *lda, float *b, int *ldb, float *work, int *lwork, int *info)
 {
     // Table of constant values
@@ -1282,24 +1282,24 @@ int ilaslr_(int *m, int *n, float *a, int *lda)
     int wsize;
     float rwork[1];
     extern /* Subroutine */ int slabad_(float *, float *);
-    extern double slamch_(char *), slange_(char *, int *, int *, float *, int 
+    extern double slamch_(char *), slange_(char *, int *, int *, float *, int
 	    *, float *);
     extern /* Subroutine */ int xerbla_(char *, int *);
     extern int ilaenv_(int *, char *, char *, int *, int *, int *, int *);
     int scllen;
     float bignum;
     extern /* Subroutine */ int sgelqf_(int *, int *, float *, int *, float *,
-	     float *, int *, int *), slascl_(char *, int *, int *, float *, 
-	    float *, int *, int *, float *, int *, int *), sgeqrf_(int *, int 
+	     float *, int *, int *), slascl_(char *, int *, int *, float *,
+	    float *, int *, int *, float *, int *, int *), sgeqrf_(int *, int
 	    *, float *, int *, float *, float *, int *, int *), slaset_(char *
 	    , int *, int *, float *, float *, float *, int *);
     float smlnum;
-    extern /* Subroutine */ int sormlq_(char *, char *, int *, int *, int *, 
+    extern /* Subroutine */ int sormlq_(char *, char *, int *, int *, int *,
 	    float *, int *, float *, float *, int *, float *, int *, int *);
     int lquery;
-    extern /* Subroutine */ int sormqr_(char *, char *, int *, int *, int *, 
-	    float *, int *, float *, float *, int *, float *, int *, int *), 
-	    strtrs_(char *, char *, char *, int *, int *, float *, int *, 
+    extern /* Subroutine */ int sormqr_(char *, char *, int *, int *, int *,
+	    float *, int *, float *, float *, int *, float *, int *, int *),
+	    strtrs_(char *, char *, char *, int *, int *, float *, int *,
 	    float *, int *, int *);
 
     //
@@ -1440,14 +1440,14 @@ int ilaslr_(int *m, int *n, float *a, int *lda)
 	//
 	//       Scale matrix norm up to SMLNUM
 	//
-	slascl_("G", &c__0, &c__0, &anrm, &smlnum, m, n, &a[a_offset], lda, 
+	slascl_("G", &c__0, &c__0, &anrm, &smlnum, m, n, &a[a_offset], lda,
 		info);
 	iascl = 1;
     } else if (anrm > bignum) {
 	//
 	//       Scale matrix norm down to BIGNUM
 	//
-	slascl_("G", &c__0, &c__0, &anrm, &bignum, m, n, &a[a_offset], lda, 
+	slascl_("G", &c__0, &c__0, &anrm, &bignum, m, n, &a[a_offset], lda,
 		info);
 	iascl = 2;
     } else if (anrm == 0.f) {
@@ -1468,14 +1468,14 @@ int ilaslr_(int *m, int *n, float *a, int *lda)
 	//
 	//       Scale matrix norm up to SMLNUM
 	//
-	slascl_("G", &c__0, &c__0, &bnrm, &smlnum, &brow, nrhs, &b[b_offset], 
+	slascl_("G", &c__0, &c__0, &bnrm, &smlnum, &brow, nrhs, &b[b_offset],
 		ldb, info);
 	ibscl = 1;
     } else if (bnrm > bignum) {
 	//
 	//       Scale matrix norm down to BIGNUM
 	//
-	slascl_("G", &c__0, &c__0, &bnrm, &bignum, &brow, nrhs, &b[b_offset], 
+	slascl_("G", &c__0, &c__0, &bnrm, &bignum, &brow, nrhs, &b[b_offset],
 		ldb, info);
 	ibscl = 2;
     }
@@ -1515,7 +1515,7 @@ int ilaslr_(int *m, int *n, float *a, int *lda)
 	    //
 	    //          B(1:N,1:NRHS) := inv(R**T) * B(1:N,1:NRHS)
 	    //
-	    strtrs_("Upper", "Transpose", "Non-unit", n, nrhs, &a[a_offset], 
+	    strtrs_("Upper", "Transpose", "Non-unit", n, nrhs, &a[a_offset],
 		    lda, &b[b_offset], ldb, info);
 	    if (*info > 0) {
 		return 0;
@@ -1600,7 +1600,7 @@ int ilaslr_(int *m, int *n, float *a, int *lda)
 	    //
 	    //          B(1:M,1:NRHS) := inv(L**T) * B(1:M,1:NRHS)
 	    //
-	    strtrs_("Lower", "Transpose", "Non-unit", m, nrhs, &a[a_offset], 
+	    strtrs_("Lower", "Transpose", "Non-unit", m, nrhs, &a[a_offset],
 		    lda, &b[b_offset], ldb, info);
 	    if (*info > 0) {
 		return 0;
@@ -1839,7 +1839,7 @@ L50:
 
     // Function Body
     info = 0;
-    if (! lsame_(trans, "N") && ! lsame_(trans, "T") && ! lsame_(trans, "C")) 
+    if (! lsame_(trans, "N") && ! lsame_(trans, "T") && ! lsame_(trans, "C"))
 	    {
 	info = 1;
     } else if (*m < 0) {
@@ -2132,7 +2132,7 @@ L50:
 //> \endverbatim
 //>
 // =====================================================================
-/* Subroutine */ int sgeqr2_(int *m, int *n, float *a, int *lda, float *tau, 
+/* Subroutine */ int sgeqr2_(int *m, int *n, float *a, int *lda, float *tau,
 	float *work, int *info)
 {
     // Table of constant values
@@ -2144,8 +2144,8 @@ L50:
     // Local variables
     int i__, k;
     float aii;
-    extern /* Subroutine */ int slarf_(char *, int *, int *, float *, int *, 
-	    float *, float *, int *, float *), xerbla_(char *, int *), 
+    extern /* Subroutine */ int slarf_(char *, int *, int *, float *, int *,
+	    float *, float *, int *, float *), xerbla_(char *, int *),
 	    slarfg_(int *, float *, float *, int *, float *);
 
     //
@@ -2372,7 +2372,7 @@ L50:
 //> \endverbatim
 //>
 // =====================================================================
-/* Subroutine */ int sgeqrf_(int *m, int *n, float *a, int *lda, float *tau, 
+/* Subroutine */ int sgeqrf_(int *m, int *n, float *a, int *lda, float *tau,
 	float *work, int *lwork, int *info)
 {
     // Table of constant values
@@ -2387,8 +2387,8 @@ L50:
     // Local variables
     int i__, k, ib, nb, nx, iws, nbmin, iinfo;
     extern /* Subroutine */ int sgeqr2_(int *, int *, float *, int *, float *,
-	     float *, int *), slarfb_(char *, char *, char *, char *, int *, 
-	    int *, int *, float *, int *, float *, int *, float *, int *, 
+	     float *, int *), slarfb_(char *, char *, char *, char *, int *,
+	    int *, int *, float *, int *, float *, int *, float *, int *,
 	    float *, int *), xerbla_(char *, int *);
     extern int ilaenv_(int *, char *, char *, int *, int *, int *, int *);
     extern /* Subroutine */ int slarft_(char *, char *, int *, int *, float *,
@@ -2510,7 +2510,7 @@ L50:
 		//             H = H(i) H(i+1) . . . H(i+ib-1)
 		//
 		i__3 = *m - i__ + 1;
-		slarft_("Forward", "Columnwise", &i__3, &ib, &a[i__ + i__ * 
+		slarft_("Forward", "Columnwise", &i__3, &ib, &a[i__ + i__ *
 			a_dim1], lda, &tau[i__], &work[1], &ldwork);
 		//
 		//             Apply H**T to A(i:m,i+ib:n) from the left
@@ -2519,7 +2519,7 @@ L50:
 		i__4 = *n - i__ - ib + 1;
 		slarfb_("Left", "Transpose", "Forward", "Columnwise", &i__3, &
 			i__4, &ib, &a[i__ + i__ * a_dim1], lda, &work[1], &
-			ldwork, &a[i__ + (i__ + ib) * a_dim1], lda, &work[ib 
+			ldwork, &a[i__ + (i__ + ib) * a_dim1], lda, &work[ib
 			+ 1], &ldwork);
 	    }
 // L10:
@@ -2675,7 +2675,7 @@ L50:
 //> \endverbatim
 //>
 // =====================================================================
-/* Subroutine */ int sger_(int *m, int *n, float *alpha, float *x, int *incx, 
+/* Subroutine */ int sger_(int *m, int *n, float *alpha, float *x, int *incx,
 	float *y, int *incy, float *a, int *lda)
 {
     // System generated locals
@@ -2869,9 +2869,6 @@ L50:
 // =====================================================================
 /* Subroutine */ int slabad_(float *small, float *large)
 {
-    // Builtin functions
-    double r_lg10(float *), sqrt(double);
-
     //
     // -- LAPACK auxiliary routine (version 3.7.0) --
     // -- LAPACK is a software package provided by Univ. of Tennessee,    --
@@ -3025,9 +3022,6 @@ double slange_(char *norm, int *m, int *n, float *a, int *lda, float *work)
     int a_dim1, a_offset, i__1, i__2;
     float ret_val, r__1;
 
-    // Builtin functions
-    double sqrt(double);
-
     // Local variables
     extern /* Subroutine */ int scombssq_(float *, float *);
     int i__, j;
@@ -3036,7 +3030,7 @@ double slange_(char *norm, int *m, int *n, float *a, int *lda, float *work)
     float value;
     extern int sisnan_(float *);
     float colssq[2];
-    extern /* Subroutine */ int slassq_(int *, float *, int *, float *, float 
+    extern /* Subroutine */ int slassq_(int *, float *, int *, float *, float
 	    *);
 
     //
@@ -3233,9 +3227,6 @@ double slapy2_(float *x, float *y)
     // System generated locals
     float ret_val, r__1;
 
-    // Builtin functions
-    double sqrt(double);
-
     // Local variables
     int x_is_nan__, y_is_nan__;
     float w, z__, xabs, yabs;
@@ -3418,7 +3409,7 @@ double slapy2_(float *x, float *y)
 //> \ingroup realOTHERauxiliary
 //
 // =====================================================================
-/* Subroutine */ int slarf_(char *side, int *m, int *n, float *v, int *incv, 
+/* Subroutine */ int slarf_(char *side, int *m, int *n, float *v, int *incv,
 	float *tau, float *c__, int *ldc, float *work)
 {
     // Table of constant values
@@ -3433,14 +3424,14 @@ double slapy2_(float *x, float *y)
     // Local variables
     int i__;
     int applyleft;
-    extern /* Subroutine */ int sger_(int *, int *, float *, float *, int *, 
+    extern /* Subroutine */ int sger_(int *, int *, float *, float *, int *,
 	    float *, int *, float *, int *);
     extern int lsame_(char *, char *);
     int lastc;
     extern /* Subroutine */ int sgemv_(char *, int *, int *, float *, float *,
 	     int *, float *, int *, float *, float *, int *);
     int lastv;
-    extern int ilaslc_(int *, int *, float *, int *), ilaslr_(int *, int *, 
+    extern int ilaslc_(int *, int *, float *, int *), ilaslr_(int *, int *,
 	    float *, int *);
 
     //
@@ -3754,16 +3745,16 @@ double slapy2_(float *x, float *y)
     float c_b25 = -1.f;
 
     // System generated locals
-    int c_dim1, c_offset, t_dim1, t_offset, v_dim1, v_offset, work_dim1, 
+    int c_dim1, c_offset, t_dim1, t_offset, v_dim1, v_offset, work_dim1,
 	    work_offset, i__1, i__2;
 
     // Local variables
     int i__, j;
     extern int lsame_(char *, char *);
-    extern /* Subroutine */ int sgemm_(char *, char *, int *, int *, int *, 
+    extern /* Subroutine */ int sgemm_(char *, char *, int *, int *, int *,
 	    float *, float *, int *, float *, int *, float *, float *, int *),
-	     scopy_(int *, float *, int *, float *, int *), strmm_(char *, 
-	    char *, char *, char *, int *, int *, float *, float *, int *, 
+	     scopy_(int *, float *, int *, float *, int *), strmm_(char *,
+	    char *, char *, char *, int *, int *, float *, float *, int *,
 	    float *, int *);
     char transt[1+1]={'\0'};
 
@@ -3848,7 +3839,7 @@ double slapy2_(float *x, float *y)
 		    //
 		    i__1 = *m - *k;
 		    sgemm_("Transpose", "No transpose", n, k, &i__1, &c_b14, &
-			    c__[*k + 1 + c_dim1], ldc, &v[*k + 1 + v_dim1], 
+			    c__[*k + 1 + c_dim1], ldc, &v[*k + 1 + v_dim1],
 			    ldv, &c_b14, &work[work_offset], ldwork);
 		}
 		//
@@ -3865,7 +3856,7 @@ double slapy2_(float *x, float *y)
 		    //
 		    i__1 = *m - *k;
 		    sgemm_("No transpose", "Transpose", &i__1, n, k, &c_b25, &
-			    v[*k + 1 + v_dim1], ldv, &work[work_offset], 
+			    v[*k + 1 + v_dim1], ldv, &work[work_offset],
 			    ldwork, &c_b14, &c__[*k + 1 + c_dim1], ldc);
 		}
 		//
@@ -3895,7 +3886,7 @@ double slapy2_(float *x, float *y)
 		//
 		i__1 = *k;
 		for (j = 1; j <= i__1; ++j) {
-		    scopy_(m, &c__[j * c_dim1 + 1], &c__1, &work[j * 
+		    scopy_(m, &c__[j * c_dim1 + 1], &c__1, &work[j *
 			    work_dim1 + 1], &c__1);
 // L40:
 		}
@@ -3910,8 +3901,8 @@ double slapy2_(float *x, float *y)
 		    //
 		    i__1 = *n - *k;
 		    sgemm_("No transpose", "No transpose", m, k, &i__1, &
-			    c_b14, &c__[(*k + 1) * c_dim1 + 1], ldc, &v[*k + 
-			    1 + v_dim1], ldv, &c_b14, &work[work_offset], 
+			    c_b14, &c__[(*k + 1) * c_dim1 + 1], ldc, &v[*k +
+			    1 + v_dim1], ldv, &c_b14, &work[work_offset],
 			    ldwork);
 		}
 		//
@@ -3928,7 +3919,7 @@ double slapy2_(float *x, float *y)
 		    //
 		    i__1 = *n - *k;
 		    sgemm_("No transpose", "Transpose", m, &i__1, k, &c_b25, &
-			    work[work_offset], ldwork, &v[*k + 1 + v_dim1], 
+			    work[work_offset], ldwork, &v[*k + 1 + v_dim1],
 			    ldv, &c_b14, &c__[(*k + 1) * c_dim1 + 1], ldc);
 		}
 		//
@@ -3966,7 +3957,7 @@ double slapy2_(float *x, float *y)
 		//
 		i__1 = *k;
 		for (j = 1; j <= i__1; ++j) {
-		    scopy_(n, &c__[*m - *k + j + c_dim1], ldc, &work[j * 
+		    scopy_(n, &c__[*m - *k + j + c_dim1], ldc, &work[j *
 			    work_dim1 + 1], &c__1);
 // L70:
 		}
@@ -3974,7 +3965,7 @@ double slapy2_(float *x, float *y)
 		//             W := W * V2
 		//
 		strmm_("Right", "Upper", "No transpose", "Unit", n, k, &c_b14,
-			 &v[*m - *k + 1 + v_dim1], ldv, &work[work_offset], 
+			 &v[*m - *k + 1 + v_dim1], ldv, &work[work_offset],
 			ldwork);
 		if (*m > *k) {
 		    //
@@ -4006,7 +3997,7 @@ double slapy2_(float *x, float *y)
 		//             W := W * V2**T
 		//
 		strmm_("Right", "Upper", "Transpose", "Unit", n, k, &c_b14, &
-			v[*m - *k + 1 + v_dim1], ldv, &work[work_offset], 
+			v[*m - *k + 1 + v_dim1], ldv, &work[work_offset],
 			ldwork);
 		//
 		//             C2 := C2 - W**T
@@ -4015,7 +4006,7 @@ double slapy2_(float *x, float *y)
 		for (j = 1; j <= i__1; ++j) {
 		    i__2 = *n;
 		    for (i__ = 1; i__ <= i__2; ++i__) {
-			c__[*m - *k + j + i__ * c_dim1] -= work[i__ + j * 
+			c__[*m - *k + j + i__ * c_dim1] -= work[i__ + j *
 				work_dim1];
 // L80:
 		    }
@@ -4039,7 +4030,7 @@ double slapy2_(float *x, float *y)
 		//             W := W * V2
 		//
 		strmm_("Right", "Upper", "No transpose", "Unit", m, k, &c_b14,
-			 &v[*n - *k + 1 + v_dim1], ldv, &work[work_offset], 
+			 &v[*n - *k + 1 + v_dim1], ldv, &work[work_offset],
 			ldwork);
 		if (*n > *k) {
 		    //
@@ -4071,7 +4062,7 @@ double slapy2_(float *x, float *y)
 		//             W := W * V2**T
 		//
 		strmm_("Right", "Upper", "Transpose", "Unit", m, k, &c_b14, &
-			v[*n - *k + 1 + v_dim1], ldv, &work[work_offset], 
+			v[*n - *k + 1 + v_dim1], ldv, &work[work_offset],
 			ldwork);
 		//
 		//             C2 := C2 - W
@@ -4080,7 +4071,7 @@ double slapy2_(float *x, float *y)
 		for (j = 1; j <= i__1; ++j) {
 		    i__2 = *m;
 		    for (i__ = 1; i__ <= i__2; ++i__) {
-			c__[i__ + (*n - *k + j) * c_dim1] -= work[i__ + j * 
+			c__[i__ + (*n - *k + j) * c_dim1] -= work[i__ + j *
 				work_dim1];
 // L110:
 		    }
@@ -4120,7 +4111,7 @@ double slapy2_(float *x, float *y)
 		    //
 		    i__1 = *m - *k;
 		    sgemm_("Transpose", "Transpose", n, k, &i__1, &c_b14, &
-			    c__[*k + 1 + c_dim1], ldc, &v[(*k + 1) * v_dim1 + 
+			    c__[*k + 1 + c_dim1], ldc, &v[(*k + 1) * v_dim1 +
 			    1], ldv, &c_b14, &work[work_offset], ldwork);
 		}
 		//
@@ -4137,7 +4128,7 @@ double slapy2_(float *x, float *y)
 		    //
 		    i__1 = *m - *k;
 		    sgemm_("Transpose", "Transpose", &i__1, n, k, &c_b25, &v[(
-			    *k + 1) * v_dim1 + 1], ldv, &work[work_offset], 
+			    *k + 1) * v_dim1 + 1], ldv, &work[work_offset],
 			    ldwork, &c_b14, &c__[*k + 1 + c_dim1], ldc);
 		}
 		//
@@ -4167,7 +4158,7 @@ double slapy2_(float *x, float *y)
 		//
 		i__1 = *k;
 		for (j = 1; j <= i__1; ++j) {
-		    scopy_(m, &c__[j * c_dim1 + 1], &c__1, &work[j * 
+		    scopy_(m, &c__[j * c_dim1 + 1], &c__1, &work[j *
 			    work_dim1 + 1], &c__1);
 // L160:
 		}
@@ -4182,8 +4173,8 @@ double slapy2_(float *x, float *y)
 		    //
 		    i__1 = *n - *k;
 		    sgemm_("No transpose", "Transpose", m, k, &i__1, &c_b14, &
-			    c__[(*k + 1) * c_dim1 + 1], ldc, &v[(*k + 1) * 
-			    v_dim1 + 1], ldv, &c_b14, &work[work_offset], 
+			    c__[(*k + 1) * c_dim1 + 1], ldc, &v[(*k + 1) *
+			    v_dim1 + 1], ldv, &c_b14, &work[work_offset],
 			    ldwork);
 		}
 		//
@@ -4200,8 +4191,8 @@ double slapy2_(float *x, float *y)
 		    //
 		    i__1 = *n - *k;
 		    sgemm_("No transpose", "No transpose", m, &i__1, k, &
-			    c_b25, &work[work_offset], ldwork, &v[(*k + 1) * 
-			    v_dim1 + 1], ldv, &c_b14, &c__[(*k + 1) * c_dim1 
+			    c_b25, &work[work_offset], ldwork, &v[(*k + 1) *
+			    v_dim1 + 1], ldv, &c_b14, &c__[(*k + 1) * c_dim1
 			    + 1], ldc);
 		}
 		//
@@ -4238,7 +4229,7 @@ double slapy2_(float *x, float *y)
 		//
 		i__1 = *k;
 		for (j = 1; j <= i__1; ++j) {
-		    scopy_(n, &c__[*m - *k + j + c_dim1], ldc, &work[j * 
+		    scopy_(n, &c__[*m - *k + j + c_dim1], ldc, &work[j *
 			    work_dim1 + 1], &c__1);
 // L190:
 		}
@@ -4287,7 +4278,7 @@ double slapy2_(float *x, float *y)
 		for (j = 1; j <= i__1; ++j) {
 		    i__2 = *n;
 		    for (i__ = 1; i__ <= i__2; ++i__) {
-			c__[*m - *k + j + i__ * c_dim1] -= work[i__ + j * 
+			c__[*m - *k + j + i__ * c_dim1] -= work[i__ + j *
 				work_dim1];
 // L200:
 		    }
@@ -4336,7 +4327,7 @@ double slapy2_(float *x, float *y)
 		    //
 		    i__1 = *n - *k;
 		    sgemm_("No transpose", "No transpose", m, &i__1, k, &
-			    c_b25, &work[work_offset], ldwork, &v[v_offset], 
+			    c_b25, &work[work_offset], ldwork, &v[v_offset],
 			    ldv, &c_b14, &c__[c_offset], ldc);
 		}
 		//
@@ -4352,7 +4343,7 @@ double slapy2_(float *x, float *y)
 		for (j = 1; j <= i__1; ++j) {
 		    i__2 = *m;
 		    for (i__ = 1; i__ <= i__2; ++i__) {
-			c__[i__ + (*n - *k + j) * c_dim1] -= work[i__ + j * 
+			c__[i__ + (*n - *k + j) * c_dim1] -= work[i__ + j *
 				work_dim1];
 // L230:
 		    }
@@ -4475,15 +4466,12 @@ double slapy2_(float *x, float *y)
 //> \ingroup realOTHERauxiliary
 //
 // =====================================================================
-/* Subroutine */ int slarfg_(int *n, float *alpha, float *x, int *incx, float 
+/* Subroutine */ int slarfg_(int *n, float *alpha, float *x, int *incx, float
 	*tau)
 {
     // System generated locals
     int i__1;
     float r__1;
-
-    // Builtin functions
-    double r_sign(float *, float *);
 
     // Local variables
     int j, knt;
@@ -4749,7 +4737,7 @@ L10:
 //> \endverbatim
 //>
 // =====================================================================
-/* Subroutine */ int slarft_(char *direct, char *storev, int *n, int *k, 
+/* Subroutine */ int slarft_(char *direct, char *storev, int *n, int *k,
 	float *v, int *ldv, float *tau, float *t, int *ldt)
 {
     // Table of constant values
@@ -4843,7 +4831,7 @@ L10:
 		    i__2 = j - i__;
 		    i__3 = i__ - 1;
 		    r__1 = -tau[i__];
-		    sgemv_("Transpose", &i__2, &i__3, &r__1, &v[i__ + 1 + 
+		    sgemv_("Transpose", &i__2, &i__3, &r__1, &v[i__ + 1 +
 			    v_dim1], ldv, &v[i__ + 1 + i__ * v_dim1], &c__1, &
 			    c_b7, &t[i__ * t_dim1 + 1], &c__1);
 		} else {
@@ -4866,7 +4854,7 @@ L10:
 		    i__3 = j - i__;
 		    r__1 = -tau[i__];
 		    sgemv_("No transpose", &i__2, &i__3, &r__1, &v[(i__ + 1) *
-			     v_dim1 + 1], ldv, &v[i__ + (i__ + 1) * v_dim1], 
+			     v_dim1 + 1], ldv, &v[i__ + (i__ + 1) * v_dim1],
 			    ldv, &c_b7, &t[i__ * t_dim1 + 1], &c__1);
 		}
 		//
@@ -4909,7 +4897,7 @@ L10:
 			}
 			i__1 = *k;
 			for (j = i__ + 1; j <= i__1; ++j) {
-			    t[j + i__ * t_dim1] = -tau[i__] * v[*n - *k + i__ 
+			    t[j + i__ * t_dim1] = -tau[i__] * v[*n - *k + i__
 				    + j * v_dim1];
 			}
 			j = max(lastv,prevlastv);
@@ -4919,7 +4907,7 @@ L10:
 			i__1 = *n - *k + i__ - j;
 			i__2 = *k - i__;
 			r__1 = -tau[i__];
-			sgemv_("Transpose", &i__1, &i__2, &r__1, &v[j + (i__ 
+			sgemv_("Transpose", &i__1, &i__2, &r__1, &v[j + (i__
 				+ 1) * v_dim1], ldv, &v[j + i__ * v_dim1], &
 				c__1, &c_b7, &t[i__ + 1 + i__ * t_dim1], &
 				c__1);
@@ -4933,7 +4921,7 @@ L10:
 			}
 			i__1 = *k;
 			for (j = i__ + 1; j <= i__1; ++j) {
-			    t[j + i__ * t_dim1] = -tau[i__] * v[j + (*n - *k 
+			    t[j + i__ * t_dim1] = -tau[i__] * v[j + (*n - *k
 				    + i__) * v_dim1];
 			}
 			j = max(lastv,prevlastv);
@@ -4943,8 +4931,8 @@ L10:
 			i__1 = *k - i__;
 			i__2 = *n - *k + i__ - j;
 			r__1 = -tau[i__];
-			sgemv_("No transpose", &i__1, &i__2, &r__1, &v[i__ + 
-				1 + j * v_dim1], ldv, &v[i__ + j * v_dim1], 
+			sgemv_("No transpose", &i__1, &i__2, &r__1, &v[i__ +
+				1 + j * v_dim1], ldv, &v[i__ + j * v_dim1],
 				ldv, &c_b7, &t[i__ + 1 + i__ * t_dim1], &c__1)
 				;
 		    }
@@ -4952,7 +4940,7 @@ L10:
 		    //                T(i+1:k,i) := T(i+1:k,i+1:k) * T(i+1:k,i)
 		    //
 		    i__1 = *k - i__;
-		    strmv_("Lower", "No transpose", "Non-unit", &i__1, &t[i__ 
+		    strmv_("Lower", "No transpose", "Non-unit", &i__1, &t[i__
 			    + 1 + (i__ + 1) * t_dim1], ldt, &t[i__ + 1 + i__ *
 			     t_dim1], &c__1);
 		    if (i__ > 1) {
@@ -5116,7 +5104,7 @@ L10:
 //> \ingroup OTHERauxiliary
 //
 // =====================================================================
-/* Subroutine */ int slascl_(char *type__, int *kl, int *ku, float *cfrom, 
+/* Subroutine */ int slascl_(char *type__, int *kl, int *ku, float *cfrom,
 	float *cto, int *m, int *n, float *a, int *lda, int *info)
 {
     // System generated locals
@@ -5208,7 +5196,7 @@ L10:
 	} else /* if(complicated condition) */ {
 	    // Computing MAX
 	    i__1 = *n - 1;
-	    if (*ku < 0 || *ku > max(i__1,0) || (itype == 4 || itype == 5) && 
+	    if (*ku < 0 || *ku > max(i__1,0) || (itype == 4 || itype == 5) &&
 		    *kl != *ku) {
 		*info = -3;
 	    } else if (itype == 4 && *lda < *kl + 1 || itype == 5 && *lda < *
@@ -5695,7 +5683,7 @@ L10:
 //> \ingroup OTHERauxiliary
 //
 // =====================================================================
-/* Subroutine */ int slassq_(int *n, float *x, int *incx, float *scale, float 
+/* Subroutine */ int slassq_(int *n, float *x, int *incx, float *scale, float
 	*sumsq)
 {
     // System generated locals
@@ -5841,9 +5829,6 @@ double snrm2_(int *n, float *x, int *incx)
     // System generated locals
     int i__1, i__2;
     float ret_val, r__1;
-
-    // Builtin functions
-    double sqrt(double);
 
     // Local variables
     int ix;
@@ -6070,8 +6055,8 @@ double snrm2_(int *n, float *x, int *incx)
 //> \ingroup realOTHERcomputational
 //
 // =====================================================================
-/* Subroutine */ int sorm2r_(char *side, char *trans, int *m, int *n, int *k, 
-	float *a, int *lda, float *tau, float *c__, int *ldc, float *work, 
+/* Subroutine */ int sorm2r_(char *side, char *trans, int *m, int *n, int *k,
+	float *a, int *lda, float *tau, float *c__, int *ldc, float *work,
 	int *info)
 {
     // Table of constant values
@@ -6085,7 +6070,7 @@ double snrm2_(int *n, float *x, int *incx)
     float aii;
     int left;
     extern int lsame_(char *, char *);
-    extern /* Subroutine */ int slarf_(char *, int *, int *, float *, int *, 
+    extern /* Subroutine */ int slarf_(char *, int *, int *, float *, int *,
 	    float *, float *, int *, float *), xerbla_(char *, int *);
     int notran;
 
@@ -6372,8 +6357,8 @@ double snrm2_(int *n, float *x, int *incx)
 //> \ingroup realOTHERcomputational
 //
 // =====================================================================
-/* Subroutine */ int sorml2_(char *side, char *trans, int *m, int *n, int *k, 
-	float *a, int *lda, float *tau, float *c__, int *ldc, float *work, 
+/* Subroutine */ int sorml2_(char *side, char *trans, int *m, int *n, int *k,
+	float *a, int *lda, float *tau, float *c__, int *ldc, float *work,
 	int *info)
 {
     // System generated locals
@@ -6384,7 +6369,7 @@ double snrm2_(int *n, float *x, int *incx)
     float aii;
     int left;
     extern int lsame_(char *, char *);
-    extern /* Subroutine */ int slarf_(char *, int *, int *, float *, int *, 
+    extern /* Subroutine */ int slarf_(char *, int *, int *, float *, int *,
 	    float *, float *, int *, float *), xerbla_(char *, int *);
     int notran;
 
@@ -6680,8 +6665,8 @@ double snrm2_(int *n, float *x, int *incx)
 //> \ingroup realOTHERcomputational
 //
 // =====================================================================
-/* Subroutine */ int sormlq_(char *side, char *trans, int *m, int *n, int *k, 
-	float *a, int *lda, float *tau, float *c__, int *ldc, float *work, 
+/* Subroutine */ int sormlq_(char *side, char *trans, int *m, int *n, int *k,
+	float *a, int *lda, float *tau, float *c__, int *ldc, float *work,
 	int *lwork, int *info)
 {
     // Table of constant values
@@ -6695,17 +6680,14 @@ double snrm2_(int *n, float *x, int *incx)
     int a_dim1, a_offset, c_dim1, c_offset, i__1, i__2, i__3[2], i__4, i__5;
     char ch__1[2+1]={'\0'};
 
-    // Builtin functions
-    /* Subroutine */ int s_cat(char *, char **, int *, int *);
-
     // Local variables
     int i__, i1, i2, i3, ib, ic, jc, nb, mi, ni, nq, nw, iwt;
     int left;
     extern int lsame_(char *, char *);
     int nbmin, iinfo;
-    extern /* Subroutine */ int sorml2_(char *, char *, int *, int *, int *, 
+    extern /* Subroutine */ int sorml2_(char *, char *, int *, int *, int *,
 	    float *, int *, float *, float *, int *, float *, int *), slarfb_(
-	    char *, char *, char *, char *, int *, int *, int *, float *, int 
+	    char *, char *, char *, char *, int *, int *, int *, float *, int
 	    *, float *, int *, float *, int *, float *, int *), xerbla_(char *
 	    , int *);
     extern int ilaenv_(int *, char *, char *, int *, int *, int *, int *);
@@ -6871,7 +6853,7 @@ double snrm2_(int *n, float *x, int *incx)
 	    //          H = H(i) H(i+1) . . . H(i+ib-1)
 	    //
 	    i__4 = nq - i__ + 1;
-	    slarft_("Forward", "Rowwise", &i__4, &ib, &a[i__ + i__ * a_dim1], 
+	    slarft_("Forward", "Rowwise", &i__4, &ib, &a[i__ + i__ * a_dim1],
 		    lda, &tau[i__], &work[iwt], &c__65);
 	    if (left) {
 		//
@@ -6889,8 +6871,8 @@ double snrm2_(int *n, float *x, int *incx)
 	    //
 	    //          Apply H or H**T
 	    //
-	    slarfb_(side, transt, "Forward", "Rowwise", &mi, &ni, &ib, &a[i__ 
-		    + i__ * a_dim1], lda, &work[iwt], &c__65, &c__[ic + jc * 
+	    slarfb_(side, transt, "Forward", "Rowwise", &mi, &ni, &ib, &a[i__
+		    + i__ * a_dim1], lda, &work[iwt], &c__65, &c__[ic + jc *
 		    c_dim1], ldc, &work[1], &ldwork);
 // L10:
 	}
@@ -7071,8 +7053,8 @@ double snrm2_(int *n, float *x, int *incx)
 //> \ingroup realOTHERcomputational
 //
 // =====================================================================
-/* Subroutine */ int sormqr_(char *side, char *trans, int *m, int *n, int *k, 
-	float *a, int *lda, float *tau, float *c__, int *ldc, float *work, 
+/* Subroutine */ int sormqr_(char *side, char *trans, int *m, int *n, int *k,
+	float *a, int *lda, float *tau, float *c__, int *ldc, float *work,
 	int *lwork, int *info)
 {
     // Table of constant values
@@ -7086,17 +7068,14 @@ double snrm2_(int *n, float *x, int *incx)
     int a_dim1, a_offset, c_dim1, c_offset, i__1, i__2, i__3[2], i__4, i__5;
     char ch__1[2+1]={'\0'};
 
-    // Builtin functions
-    /* Subroutine */ int s_cat(char *, char **, int *, int *);
-
     // Local variables
     int i__, i1, i2, i3, ib, ic, jc, nb, mi, ni, nq, nw, iwt;
     int left;
     extern int lsame_(char *, char *);
     int nbmin, iinfo;
-    extern /* Subroutine */ int sorm2r_(char *, char *, int *, int *, int *, 
+    extern /* Subroutine */ int sorm2r_(char *, char *, int *, int *, int *,
 	    float *, int *, float *, float *, int *, float *, int *), slarfb_(
-	    char *, char *, char *, char *, int *, int *, int *, float *, int 
+	    char *, char *, char *, char *, int *, int *, int *, float *, int
 	    *, float *, int *, float *, int *, float *, int *), xerbla_(char *
 	    , int *);
     extern int ilaenv_(int *, char *, char *, int *, int *, int *, int *);
@@ -7255,7 +7234,7 @@ double snrm2_(int *n, float *x, int *incx)
 	    //          H = H(i) H(i+1) . . . H(i+ib-1)
 	    //
 	    i__4 = nq - i__ + 1;
-	    slarft_("Forward", "Columnwise", &i__4, &ib, &a[i__ + i__ * 
+	    slarft_("Forward", "Columnwise", &i__4, &ib, &a[i__ + i__ *
 		    a_dim1], lda, &tau[i__], &work[iwt], &c__65);
 	    if (left) {
 		//
@@ -7274,7 +7253,7 @@ double snrm2_(int *n, float *x, int *incx)
 	    //          Apply H or H**T
 	    //
 	    slarfb_(side, trans, "Forward", "Columnwise", &mi, &ni, &ib, &a[
-		    i__ + i__ * a_dim1], lda, &work[iwt], &c__65, &c__[ic + 
+		    i__ + i__ * a_dim1], lda, &work[iwt], &c__65, &c__[ic +
 		    jc * c_dim1], ldc, &work[1], &ldwork);
 // L10:
 	}
@@ -7465,7 +7444,7 @@ double snrm2_(int *n, float *x, int *incx)
 //> \endverbatim
 //>
 // =====================================================================
-/* Subroutine */ int strmm_(char *side, char *uplo, char *transa, char *diag, 
+/* Subroutine */ int strmm_(char *side, char *uplo, char *transa, char *diag,
 	int *m, int *n, float *alpha, float *a, int *lda, float *b, int *ldb)
 {
     // System generated locals
@@ -7585,7 +7564,7 @@ double snrm2_(int *n, float *x, int *incx)
 			    temp = *alpha * b[k + j * b_dim1];
 			    i__3 = k - 1;
 			    for (i__ = 1; i__ <= i__3; ++i__) {
-				b[i__ + j * b_dim1] += temp * a[i__ + k * 
+				b[i__ + j * b_dim1] += temp * a[i__ + k *
 					a_dim1];
 // L30:
 			    }
@@ -7610,7 +7589,7 @@ double snrm2_(int *n, float *x, int *incx)
 			    }
 			    i__2 = *m;
 			    for (i__ = k + 1; i__ <= i__2; ++i__) {
-				b[i__ + j * b_dim1] += temp * a[i__ + k * 
+				b[i__ + j * b_dim1] += temp * a[i__ + k *
 					a_dim1];
 // L60:
 			    }
@@ -7685,7 +7664,7 @@ double snrm2_(int *n, float *x, int *incx)
 			    temp = *alpha * a[k + j * a_dim1];
 			    i__2 = *m;
 			    for (i__ = 1; i__ <= i__2; ++i__) {
-				b[i__ + j * b_dim1] += temp * b[i__ + k * 
+				b[i__ + j * b_dim1] += temp * b[i__ + k *
 					b_dim1];
 // L160:
 			    }
@@ -7712,7 +7691,7 @@ double snrm2_(int *n, float *x, int *incx)
 			    temp = *alpha * a[k + j * a_dim1];
 			    i__3 = *m;
 			    for (i__ = 1; i__ <= i__3; ++i__) {
-				b[i__ + j * b_dim1] += temp * b[i__ + k * 
+				b[i__ + j * b_dim1] += temp * b[i__ + k *
 					b_dim1];
 // L200:
 			    }
@@ -7735,7 +7714,7 @@ double snrm2_(int *n, float *x, int *incx)
 			    temp = *alpha * a[j + k * a_dim1];
 			    i__3 = *m;
 			    for (i__ = 1; i__ <= i__3; ++i__) {
-				b[i__ + j * b_dim1] += temp * b[i__ + k * 
+				b[i__ + j * b_dim1] += temp * b[i__ + k *
 					b_dim1];
 // L230:
 			    }
@@ -7763,7 +7742,7 @@ double snrm2_(int *n, float *x, int *incx)
 			    temp = *alpha * a[j + k * a_dim1];
 			    i__2 = *m;
 			    for (i__ = 1; i__ <= i__2; ++i__) {
-				b[i__ + j * b_dim1] += temp * b[i__ + k * 
+				b[i__ + j * b_dim1] += temp * b[i__ + k *
 					b_dim1];
 // L270:
 			    }
@@ -7941,7 +7920,7 @@ double snrm2_(int *n, float *x, int *incx)
 //> \endverbatim
 //>
 // =====================================================================
-/* Subroutine */ int strmv_(char *uplo, char *trans, char *diag, int *n, 
+/* Subroutine */ int strmv_(char *uplo, char *trans, char *diag, int *n,
 	float *a, int *lda, float *x, int *incx)
 {
     // System generated locals
@@ -8327,7 +8306,7 @@ double snrm2_(int *n, float *x, int *incx)
 //> \ingroup realOTHERcomputational
 //
 // =====================================================================
-/* Subroutine */ int strtrs_(char *uplo, char *trans, char *diag, int *n, int 
+/* Subroutine */ int strtrs_(char *uplo, char *trans, char *diag, int *n, int
 	*nrhs, float *a, int *lda, float *b, int *ldb, int *info)
 {
     // Table of constant values
@@ -8338,8 +8317,8 @@ double snrm2_(int *n, float *x, int *incx)
 
     // Local variables
     extern int lsame_(char *, char *);
-    extern /* Subroutine */ int strsm_(char *, char *, char *, char *, int *, 
-	    int *, float *, float *, int *, float *, int *), xerbla_(char *, 
+    extern /* Subroutine */ int strsm_(char *, char *, char *, char *, int *,
+	    int *, float *, float *, int *, float *, int *), xerbla_(char *,
 	    int *);
     int nounit;
 

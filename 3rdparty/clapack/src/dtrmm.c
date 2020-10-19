@@ -179,7 +179,7 @@
 //> \endverbatim
 //>
 // =====================================================================
-/* Subroutine */ int dtrmm_(char *side, char *uplo, char *transa, char *diag, 
+/* Subroutine */ int dtrmm_(char *side, char *uplo, char *transa, char *diag,
 	int *m, int *n, double *alpha, double *a, int *lda, double *b, int *
 	ldb)
 {
@@ -300,7 +300,7 @@
 			    temp = *alpha * b[k + j * b_dim1];
 			    i__3 = k - 1;
 			    for (i__ = 1; i__ <= i__3; ++i__) {
-				b[i__ + j * b_dim1] += temp * a[i__ + k * 
+				b[i__ + j * b_dim1] += temp * a[i__ + k *
 					a_dim1];
 // L30:
 			    }
@@ -325,7 +325,7 @@
 			    }
 			    i__2 = *m;
 			    for (i__ = k + 1; i__ <= i__2; ++i__) {
-				b[i__ + j * b_dim1] += temp * a[i__ + k * 
+				b[i__ + j * b_dim1] += temp * a[i__ + k *
 					a_dim1];
 // L60:
 			    }
@@ -400,7 +400,7 @@
 			    temp = *alpha * a[k + j * a_dim1];
 			    i__2 = *m;
 			    for (i__ = 1; i__ <= i__2; ++i__) {
-				b[i__ + j * b_dim1] += temp * b[i__ + k * 
+				b[i__ + j * b_dim1] += temp * b[i__ + k *
 					b_dim1];
 // L160:
 			    }
@@ -427,7 +427,7 @@
 			    temp = *alpha * a[k + j * a_dim1];
 			    i__3 = *m;
 			    for (i__ = 1; i__ <= i__3; ++i__) {
-				b[i__ + j * b_dim1] += temp * b[i__ + k * 
+				b[i__ + j * b_dim1] += temp * b[i__ + k *
 					b_dim1];
 // L200:
 			    }
@@ -450,7 +450,7 @@
 			    temp = *alpha * a[j + k * a_dim1];
 			    i__3 = *m;
 			    for (i__ = 1; i__ <= i__3; ++i__) {
-				b[i__ + j * b_dim1] += temp * b[i__ + k * 
+				b[i__ + j * b_dim1] += temp * b[i__ + k *
 					b_dim1];
 // L230:
 			    }
@@ -478,7 +478,7 @@
 			    temp = *alpha * a[j + k * a_dim1];
 			    i__2 = *m;
 			    for (i__ = 1; i__ <= i__2; ++i__) {
-				b[i__ + j * b_dim1] += temp * b[i__ + k * 
+				b[i__ + j * b_dim1] += temp * b[i__ + k *
 					b_dim1];
 // L270:
 			    }

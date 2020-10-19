@@ -144,8 +144,8 @@
     // Local variables
     int i__, k;
     double aii;
-    extern /* Subroutine */ int dlarf_(char *, int *, int *, double *, int *, 
-	    double *, double *, int *, double *), dlarfg_(int *, double *, 
+    extern /* Subroutine */ int dlarf_(char *, int *, int *, double *, int *,
+	    double *, double *, int *, double *), dlarfg_(int *, double *,
 	    double *, int *, double *), xerbla_(char *, int *);
 
     //
@@ -386,7 +386,7 @@
 
     // Local variables
     int i__, k, ib, nb, nx, iws, nbmin, iinfo;
-    extern /* Subroutine */ int dgeqr2_(int *, int *, double *, int *, double 
+    extern /* Subroutine */ int dgeqr2_(int *, int *, double *, int *, double
 	    *, double *, int *), dlarfb_(char *, char *, char *, char *, int *
 	    , int *, int *, double *, int *, double *, int *, double *, int *,
 	     double *, int *), dlarft_(char *, char *, int *, int *, double *,
@@ -509,7 +509,7 @@
 		//             H = H(i) H(i+1) . . . H(i+ib-1)
 		//
 		i__3 = *m - i__ + 1;
-		dlarft_("Forward", "Columnwise", &i__3, &ib, &a[i__ + i__ * 
+		dlarft_("Forward", "Columnwise", &i__3, &ib, &a[i__ + i__ *
 			a_dim1], lda, &tau[i__], &work[1], &ldwork);
 		//
 		//             Apply H**T to A(i:m,i+ib:n) from the left
@@ -518,7 +518,7 @@
 		i__4 = *n - i__ - ib + 1;
 		dlarfb_("Left", "Transpose", "Forward", "Columnwise", &i__3, &
 			i__4, &ib, &a[i__ + i__ * a_dim1], lda, &work[1], &
-			ldwork, &a[i__ + (i__ + ib) * a_dim1], lda, &work[ib 
+			ldwork, &a[i__ + (i__ + ib) * a_dim1], lda, &work[ib
 			+ 1], &ldwork);
 	    }
 // L10:

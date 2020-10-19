@@ -267,15 +267,15 @@ int isamax_(int *n, float *sx, int *incx)
 //> \ingroup realGEsolve
 //
 // =====================================================================
-/* Subroutine */ int sgesv_(int *n, int *nrhs, float *a, int *lda, int *ipiv, 
+/* Subroutine */ int sgesv_(int *n, int *nrhs, float *a, int *lda, int *ipiv,
 	float *b, int *ldb, int *info)
 {
     // System generated locals
     int a_dim1, a_offset, b_dim1, b_offset, i__1;
 
     // Local variables
-    extern /* Subroutine */ int xerbla_(char *, int *), sgetrf_(int *, int *, 
-	    float *, int *, int *, int *), sgetrs_(char *, int *, int *, 
+    extern /* Subroutine */ int xerbla_(char *, int *), sgetrf_(int *, int *,
+	    float *, int *, int *, int *), sgetrs_(char *, int *, int *,
 	    float *, int *, int *, float *, int *, int *);
 
     //
@@ -451,7 +451,7 @@ int isamax_(int *n, float *sx, int *incx)
 //> \ingroup realGEcomputational
 //
 // =====================================================================
-/* Subroutine */ int sgetrf_(int *m, int *n, float *a, int *lda, int *ipiv, 
+/* Subroutine */ int sgetrf_(int *m, int *n, float *a, int *lda, int *ipiv,
 	int *info)
 {
     // Table of constant values
@@ -465,12 +465,12 @@ int isamax_(int *n, float *sx, int *incx)
 
     // Local variables
     int i__, j, jb, nb, iinfo;
-    extern /* Subroutine */ int sgemm_(char *, char *, int *, int *, int *, 
+    extern /* Subroutine */ int sgemm_(char *, char *, int *, int *, int *,
 	    float *, float *, int *, float *, int *, float *, float *, int *),
-	     strsm_(char *, char *, char *, char *, int *, int *, float *, 
+	     strsm_(char *, char *, char *, char *, int *, int *, float *,
 	    float *, int *, float *, int *), xerbla_(char *, int *);
     extern int ilaenv_(int *, char *, char *, int *, int *, int *, int *);
-    extern /* Subroutine */ int slaswp_(int *, float *, int *, int *, int *, 
+    extern /* Subroutine */ int slaswp_(int *, float *, int *, int *, int *,
 	    int *, int *), sgetrf2_(int *, int *, float *, int *, int *, int *
 	    );
 
@@ -584,7 +584,7 @@ int isamax_(int *n, float *sx, int *incx)
 		//
 		i__3 = *n - j - jb + 1;
 		strsm_("Left", "Lower", "No transpose", "Unit", &jb, &i__3, &
-			c_b16, &a[j + j * a_dim1], lda, &a[j + (j + jb) * 
+			c_b16, &a[j + j * a_dim1], lda, &a[j + (j + jb) *
 			a_dim1], lda);
 		if (j + jb <= *m) {
 		    //
@@ -592,8 +592,8 @@ int isamax_(int *n, float *sx, int *incx)
 		    //
 		    i__3 = *m - j - jb + 1;
 		    i__4 = *n - j - jb + 1;
-		    sgemm_("No transpose", "No transpose", &i__3, &i__4, &jb, 
-			    &c_b19, &a[j + jb + j * a_dim1], lda, &a[j + (j + 
+		    sgemm_("No transpose", "No transpose", &i__3, &i__4, &jb,
+			    &c_b19, &a[j + jb + j * a_dim1], lda, &a[j + (j +
 			    jb) * a_dim1], lda, &c_b16, &a[j + jb + (j + jb) *
 			     a_dim1], lda);
 		}
@@ -722,7 +722,7 @@ int isamax_(int *n, float *sx, int *incx)
 //> \ingroup realGEcomputational
 //
 // =====================================================================
-/* Subroutine */ int sgetrf2_(int *m, int *n, float *a, int *lda, int *ipiv, 
+/* Subroutine */ int sgetrf2_(int *m, int *n, float *a, int *lda, int *ipiv,
 	int *info)
 {
     // Table of constant values
@@ -738,16 +738,16 @@ int isamax_(int *n, float *sx, int *incx)
     int i__, n1, n2;
     float temp;
     int iinfo;
-    extern /* Subroutine */ int sscal_(int *, float *, float *, int *), 
-	    sgemm_(char *, char *, int *, int *, int *, float *, float *, int 
+    extern /* Subroutine */ int sscal_(int *, float *, float *, int *),
+	    sgemm_(char *, char *, int *, int *, int *, float *, float *, int
 	    *, float *, int *, float *, float *, int *);
     float sfmin;
-    extern /* Subroutine */ int strsm_(char *, char *, char *, char *, int *, 
+    extern /* Subroutine */ int strsm_(char *, char *, char *, char *, int *,
 	    int *, float *, float *, int *, float *, int *);
     extern double slamch_(char *);
     extern /* Subroutine */ int xerbla_(char *, int *);
     extern int isamax_(int *, float *, int *);
-    extern /* Subroutine */ int slaswp_(int *, float *, int *, int *, int *, 
+    extern /* Subroutine */ int slaswp_(int *, float *, int *, int *, int *,
 	    int *, int *);
 
     //
@@ -883,13 +883,13 @@ int isamax_(int *n, float *sx, int *incx)
 	//
 	i__1 = *m - n1;
 	sgemm_("N", "N", &i__1, &n2, &n1, &c_b16, &a[n1 + 1 + a_dim1], lda, &
-		a[(n1 + 1) * a_dim1 + 1], lda, &c_b13, &a[n1 + 1 + (n1 + 1) * 
+		a[(n1 + 1) * a_dim1 + 1], lda, &c_b13, &a[n1 + 1 + (n1 + 1) *
 		a_dim1], lda);
 	//
 	//       Factor A22
 	//
 	i__1 = *m - n1;
-	sgetrf2_(&i__1, &n2, &a[n1 + 1 + (n1 + 1) * a_dim1], lda, &ipiv[n1 + 
+	sgetrf2_(&i__1, &n2, &a[n1 + 1 + (n1 + 1) * a_dim1], lda, &ipiv[n1 +
 		1], &iinfo);
 	//
 	//       Adjust INFO and the pivot indices
@@ -1051,11 +1051,11 @@ int isamax_(int *n, float *sx, int *incx)
 
     // Local variables
     extern int lsame_(char *, char *);
-    extern /* Subroutine */ int strsm_(char *, char *, char *, char *, int *, 
-	    int *, float *, float *, int *, float *, int *), xerbla_(char *, 
+    extern /* Subroutine */ int strsm_(char *, char *, char *, char *, int *,
+	    int *, float *, float *, int *, float *, int *), xerbla_(char *,
 	    int *);
     int notran;
-    extern /* Subroutine */ int slaswp_(int *, float *, int *, int *, int *, 
+    extern /* Subroutine */ int slaswp_(int *, float *, int *, int *, int *,
 	    int *, int *);
 
     //
@@ -1277,7 +1277,7 @@ int isamax_(int *n, float *sx, int *incx)
 //> \endverbatim
 //>
 // =====================================================================
-/* Subroutine */ int slaswp_(int *n, float *a, int *lda, int *k1, int *k2, 
+/* Subroutine */ int slaswp_(int *n, float *a, int *lda, int *k1, int *k2,
 	int *ipiv, int *incx)
 {
     // System generated locals
@@ -1334,7 +1334,7 @@ int isamax_(int *n, float *sx, int *incx)
 	    ix = ix0;
 	    i__2 = i2;
 	    i__3 = inc;
-	    for (i__ = i1; i__3 < 0 ? i__ >= i__2 : i__ <= i__2; i__ += i__3) 
+	    for (i__ = i1; i__3 < 0 ? i__ >= i__2 : i__ <= i__2; i__ += i__3)
 		    {
 		ip = ipiv[ix];
 		if (ip != i__) {

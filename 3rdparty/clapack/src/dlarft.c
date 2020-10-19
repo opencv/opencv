@@ -165,7 +165,7 @@
 //> \endverbatim
 //>
 // =====================================================================
-/* Subroutine */ int dlarft_(char *direct, char *storev, int *n, int *k, 
+/* Subroutine */ int dlarft_(char *direct, char *storev, int *n, int *k,
 	double *v, int *ldv, double *tau, double *t, int *ldt)
 {
     // Table of constant values
@@ -179,7 +179,7 @@
     // Local variables
     int i__, j, prevlastv;
     extern int lsame_(char *, char *);
-    extern /* Subroutine */ int dgemv_(char *, int *, int *, double *, double 
+    extern /* Subroutine */ int dgemv_(char *, int *, int *, double *, double
 	    *, int *, double *, int *, double *, double *, int *);
     int lastv;
     extern /* Subroutine */ int dtrmv_(char *, char *, char *, int *, double *
@@ -259,7 +259,7 @@
 		    i__2 = j - i__;
 		    i__3 = i__ - 1;
 		    d__1 = -tau[i__];
-		    dgemv_("Transpose", &i__2, &i__3, &d__1, &v[i__ + 1 + 
+		    dgemv_("Transpose", &i__2, &i__3, &d__1, &v[i__ + 1 +
 			    v_dim1], ldv, &v[i__ + 1 + i__ * v_dim1], &c__1, &
 			    c_b7, &t[i__ * t_dim1 + 1], &c__1);
 		} else {
@@ -282,7 +282,7 @@
 		    i__3 = j - i__;
 		    d__1 = -tau[i__];
 		    dgemv_("No transpose", &i__2, &i__3, &d__1, &v[(i__ + 1) *
-			     v_dim1 + 1], ldv, &v[i__ + (i__ + 1) * v_dim1], 
+			     v_dim1 + 1], ldv, &v[i__ + (i__ + 1) * v_dim1],
 			    ldv, &c_b7, &t[i__ * t_dim1 + 1], &c__1);
 		}
 		//
@@ -325,7 +325,7 @@
 			}
 			i__1 = *k;
 			for (j = i__ + 1; j <= i__1; ++j) {
-			    t[j + i__ * t_dim1] = -tau[i__] * v[*n - *k + i__ 
+			    t[j + i__ * t_dim1] = -tau[i__] * v[*n - *k + i__
 				    + j * v_dim1];
 			}
 			j = max(lastv,prevlastv);
@@ -335,7 +335,7 @@
 			i__1 = *n - *k + i__ - j;
 			i__2 = *k - i__;
 			d__1 = -tau[i__];
-			dgemv_("Transpose", &i__1, &i__2, &d__1, &v[j + (i__ 
+			dgemv_("Transpose", &i__1, &i__2, &d__1, &v[j + (i__
 				+ 1) * v_dim1], ldv, &v[j + i__ * v_dim1], &
 				c__1, &c_b7, &t[i__ + 1 + i__ * t_dim1], &
 				c__1);
@@ -349,7 +349,7 @@
 			}
 			i__1 = *k;
 			for (j = i__ + 1; j <= i__1; ++j) {
-			    t[j + i__ * t_dim1] = -tau[i__] * v[j + (*n - *k 
+			    t[j + i__ * t_dim1] = -tau[i__] * v[j + (*n - *k
 				    + i__) * v_dim1];
 			}
 			j = max(lastv,prevlastv);
@@ -359,8 +359,8 @@
 			i__1 = *k - i__;
 			i__2 = *n - *k + i__ - j;
 			d__1 = -tau[i__];
-			dgemv_("No transpose", &i__1, &i__2, &d__1, &v[i__ + 
-				1 + j * v_dim1], ldv, &v[i__ + j * v_dim1], 
+			dgemv_("No transpose", &i__1, &i__2, &d__1, &v[i__ +
+				1 + j * v_dim1], ldv, &v[i__ + j * v_dim1],
 				ldv, &c_b7, &t[i__ + 1 + i__ * t_dim1], &c__1)
 				;
 		    }
@@ -368,7 +368,7 @@
 		    //                T(i+1:k,i) := T(i+1:k,i+1:k) * T(i+1:k,i)
 		    //
 		    i__1 = *k - i__;
-		    dtrmv_("Lower", "No transpose", "Non-unit", &i__1, &t[i__ 
+		    dtrmv_("Lower", "No transpose", "Non-unit", &i__1, &t[i__
 			    + 1 + (i__ + 1) * t_dim1], ldt, &t[i__ + 1 + i__ *
 			     t_dim1], &c__1);
 		    if (i__ > 1) {

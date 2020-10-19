@@ -206,24 +206,24 @@
     int wsize;
     double rwork[1];
     extern /* Subroutine */ int dlabad_(double *, double *);
-    extern double dlamch_(char *), dlange_(char *, int *, int *, double *, 
+    extern double dlamch_(char *), dlange_(char *, int *, int *, double *,
 	    int *, double *);
-    extern /* Subroutine */ int dgelqf_(int *, int *, double *, int *, double 
+    extern /* Subroutine */ int dgelqf_(int *, int *, double *, int *, double
 	    *, double *, int *, int *), dlascl_(char *, int *, int *, double *
-	    , double *, int *, int *, double *, int *, int *), dgeqrf_(int *, 
-	    int *, double *, int *, double *, double *, int *, int *), 
+	    , double *, int *, int *, double *, int *, int *), dgeqrf_(int *,
+	    int *, double *, int *, double *, double *, int *, int *),
 	    dlaset_(char *, int *, int *, double *, double *, double *, int *)
 	    , xerbla_(char *, int *);
     extern int ilaenv_(int *, char *, char *, int *, int *, int *, int *);
     int scllen;
     double bignum;
-    extern /* Subroutine */ int dormlq_(char *, char *, int *, int *, int *, 
+    extern /* Subroutine */ int dormlq_(char *, char *, int *, int *, int *,
 	    double *, int *, double *, double *, int *, double *, int *, int *
-	    ), dormqr_(char *, char *, int *, int *, int *, double *, int *, 
+	    ), dormqr_(char *, char *, int *, int *, int *, double *, int *,
 	    double *, double *, int *, double *, int *, int *);
     double smlnum;
     int lquery;
-    extern /* Subroutine */ int dtrtrs_(char *, char *, char *, int *, int *, 
+    extern /* Subroutine */ int dtrtrs_(char *, char *, char *, int *, int *,
 	    double *, int *, double *, int *, int *);
 
     //
@@ -364,14 +364,14 @@
 	//
 	//       Scale matrix norm up to SMLNUM
 	//
-	dlascl_("G", &c__0, &c__0, &anrm, &smlnum, m, n, &a[a_offset], lda, 
+	dlascl_("G", &c__0, &c__0, &anrm, &smlnum, m, n, &a[a_offset], lda,
 		info);
 	iascl = 1;
     } else if (anrm > bignum) {
 	//
 	//       Scale matrix norm down to BIGNUM
 	//
-	dlascl_("G", &c__0, &c__0, &anrm, &bignum, m, n, &a[a_offset], lda, 
+	dlascl_("G", &c__0, &c__0, &anrm, &bignum, m, n, &a[a_offset], lda,
 		info);
 	iascl = 2;
     } else if (anrm == 0.) {
@@ -392,14 +392,14 @@
 	//
 	//       Scale matrix norm up to SMLNUM
 	//
-	dlascl_("G", &c__0, &c__0, &bnrm, &smlnum, &brow, nrhs, &b[b_offset], 
+	dlascl_("G", &c__0, &c__0, &bnrm, &smlnum, &brow, nrhs, &b[b_offset],
 		ldb, info);
 	ibscl = 1;
     } else if (bnrm > bignum) {
 	//
 	//       Scale matrix norm down to BIGNUM
 	//
-	dlascl_("G", &c__0, &c__0, &bnrm, &bignum, &brow, nrhs, &b[b_offset], 
+	dlascl_("G", &c__0, &c__0, &bnrm, &bignum, &brow, nrhs, &b[b_offset],
 		ldb, info);
 	ibscl = 2;
     }
@@ -439,7 +439,7 @@
 	    //
 	    //          B(1:N,1:NRHS) := inv(R**T) * B(1:N,1:NRHS)
 	    //
-	    dtrtrs_("Upper", "Transpose", "Non-unit", n, nrhs, &a[a_offset], 
+	    dtrtrs_("Upper", "Transpose", "Non-unit", n, nrhs, &a[a_offset],
 		    lda, &b[b_offset], ldb, info);
 	    if (*info > 0) {
 		return 0;
@@ -524,7 +524,7 @@
 	    //
 	    //          B(1:M,1:NRHS) := inv(L**T) * B(1:M,1:NRHS)
 	    //
-	    dtrtrs_("Lower", "Transpose", "Non-unit", m, nrhs, &a[a_offset], 
+	    dtrtrs_("Lower", "Transpose", "Non-unit", m, nrhs, &a[a_offset],
 		    lda, &b[b_offset], ldb, info);
 	    if (*info > 0) {
 		return 0;
@@ -698,7 +698,7 @@ L50:
 //> \ingroup doubleOTHERcomputational
 //
 // =====================================================================
-/* Subroutine */ int dtrtrs_(char *uplo, char *trans, char *diag, int *n, int 
+/* Subroutine */ int dtrtrs_(char *uplo, char *trans, char *diag, int *n, int
 	*nrhs, double *a, int *lda, double *b, int *ldb, int *info)
 {
     // Table of constant values
@@ -709,7 +709,7 @@ L50:
 
     // Local variables
     extern int lsame_(char *, char *);
-    extern /* Subroutine */ int dtrsm_(char *, char *, char *, char *, int *, 
+    extern /* Subroutine */ int dtrsm_(char *, char *, char *, char *, int *,
 	    int *, double *, double *, int *, double *, int *), xerbla_(char *
 	    , int *);
     int nounit;

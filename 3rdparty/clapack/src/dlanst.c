@@ -111,16 +111,13 @@ double dlanst_(char *norm, int *n, double *d__, double *e)
     int i__1;
     double ret_val, d__1, d__2, d__3;
 
-    // Builtin functions
-    double sqrt(double);
-
     // Local variables
     int i__;
     double sum, scale;
     extern int lsame_(char *, char *);
     double anorm;
     extern int disnan_(double *);
-    extern /* Subroutine */ int dlassq_(int *, double *, int *, double *, 
+    extern /* Subroutine */ int dlassq_(int *, double *, int *, double *,
 	    double *);
 
     //

@@ -149,7 +149,7 @@
 //> \endverbatim
 //>
 // =====================================================================
-/* Subroutine */ int dtrmv_(char *uplo, char *trans, char *diag, int *n, 
+/* Subroutine */ int dtrmv_(char *uplo, char *trans, char *diag, int *n,
 	double *a, int *lda, double *x, int *incx)
 {
     // System generated locals

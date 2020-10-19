@@ -174,6 +174,12 @@ if(WITH_LAPACK)
      add_subdirectory(3rdparty/clapack)
   endif()
 
+  # -- uncomment 2 lines below and set BUILD_CLAPACK=ON
+  #    in order to test the built-in Lapack regadless
+  #    of the external Lapack presence --
+  #unset(LAPACK_LIBRARIES)
+  #unset(LAPACK_LIBRARIES CACHE)
+
   if(NOT LAPACK_LIBRARIES)
      set(LAPACK_CBLAS_H  "cblas.h")
      set(LAPACK_LAPACKE_H  "lapack.h")
