@@ -51,6 +51,7 @@ public:
     View(Ptrs&& ptrs, Strides&& strs, Callback &&cb = [](){});
     View(const View&) = delete;
     View(View&&) = default;
+    View& operator = (const View&) = delete;
     ~View();
 
     Ptrs    ptr;
