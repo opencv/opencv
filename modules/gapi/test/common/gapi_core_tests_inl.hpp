@@ -618,7 +618,8 @@ TEST_P(SumTest, AccuracyTest)
 #undef countNonZero
 TEST_P(CountNonZeroTest, AccuracyTest)
 {
-    int out_cnz_gapi, out_cnz_ocv;
+    int out_cnz_gapi = -1;
+    int out_cnz_ocv = -2;
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;
