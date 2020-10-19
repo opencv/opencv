@@ -227,6 +227,7 @@ OCV_OPTION(BUILD_ITT                "Build Intel ITT from source"
     (NOT MINGW OR OPENCV_FORCE_3RDPARTY_BUILD)
     IF (X86_64 OR X86 OR ARM OR AARCH64 OR PPC64 OR PPC64LE) AND NOT WINRT AND NOT APPLE_FRAMEWORK
 )
+OCV_OPTION(BUILD_CLAPACK            "Build CLapack from source"          ON) #(NOT APPLE))
 
 # Optional 3rd party components
 # ===================================================
@@ -1439,7 +1440,7 @@ if(WITH_TENGINE OR HAVE_TENGINE)
 endif()
 
 if(WITH_LAPACK OR HAVE_LAPACK)
-  status("    Lapack:"      HAVE_LAPACK     THEN "YES (${LAPACK_LIBRARIES})" ELSE NO)
+  status("    Lapack:"      HAVE_LAPACK     THEN "YES (${LAPACK_LIBRARIES}${LAPACK_VERSION})" ELSE NO)
 endif()
 
 if(WITH_HALIDE OR HAVE_HALIDE)
