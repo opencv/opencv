@@ -372,13 +372,13 @@ int ilaenv_(int *ispec, char *name__, char *opts, int *n1, int *n2, int *n3,
     // Local variables
     int twostage;
     int i__;
-    char c1[1+1]={}, c2[2+1]={}, c3[3+1]={}, c4[2+1]={};
+    char c1[1+1]={'\0'}, c2[2+1]={'\0'}, c3[3+1]={'\0'}, c4[2+1]={'\0'};
     int ic, nb, iz, nx;
     int cname;
     int nbmin;
     int sname;
     extern int ieeeck_(int *, float *, float *);
-    char subnam[16+1]={};
+    char subnam[16+1]={'\0'};
     extern int iparmq_(int *, char *, char *, int *, int *, int *, int *);
 
     //
@@ -1174,7 +1174,7 @@ int iparmq_(int *ispec, char *name__, char *opts, int *n, int *ilo, int *ihi,
 
     // Local variables
     int i__, ic, nh, ns, iz;
-    char subnam[6+1]={};
+    char subnam[6+1]={'\0'};
 
     //
     // -- LAPACK auxiliary routine (version 3.7.1) --

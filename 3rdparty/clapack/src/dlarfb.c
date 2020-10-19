@@ -220,7 +220,7 @@
     extern /* Subroutine */ int dcopy_(int *, double *, int *, double *, int *
 	    ), dtrmm_(char *, char *, char *, char *, int *, int *, double *, 
 	    double *, int *, double *, int *);
-    char transt[1+1]={};
+    char transt[1+1]={'\0'};
 
     //
     // -- LAPACK auxiliary routine (version 3.7.0) --

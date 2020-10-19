@@ -955,7 +955,7 @@ L210:
     int ilo;
     double dum[1], eps;
     int lwork_trevc__, ibal;
-    char side[1+1]={};
+    char side[1+1]={'\0'};
     double anrm;
     int ierr, itau;
     extern /* Subroutine */ int drot_(int *, double *, int *, double *, int *,
@@ -2363,7 +2363,7 @@ L50:
     address a__1[2];
     int h_dim1, h_offset, z_dim1, z_offset, i__1, i__2[2], i__3;
     double d__1;
-    char ch__1[F2C_STR_MAX]={};
+    char ch__1[F2C_STR_MAX]={'\0'};
 
     // Builtin functions
     /* Subroutine */ int s_cat(char *, char **, int *, int *);
@@ -5711,7 +5711,7 @@ L160:
 	    , int *), dlacpy_(char *, int *, int *, double *, int *, double *,
 	     int *);
     extern int ilaenv_(int *, char *, char *, int *, int *, int *, int *);
-    char jbcmpz[2+1]={};
+    char jbcmpz[2+1]={'\0'};
     int nwupbd;
     int sorted;
     int lwkopt;
@@ -8376,7 +8376,7 @@ L60:
 	    , int *), dlacpy_(char *, int *, int *, double *, int *, double *,
 	     int *);
     extern int ilaenv_(int *, char *, char *, int *, int *, int *, int *);
-    char jbcmpz[2+1]={};
+    char jbcmpz[2+1]={'\0'};
     int nwupbd;
     int sorted;
     int lwkopt;
@@ -11849,7 +11849,7 @@ L50:
     // System generated locals
     address a__1[2];
     int a_dim1, a_offset, c_dim1, c_offset, i__1[2], i__2;
-    char ch__1[F2C_STR_MAX]={};
+    char ch__1[F2C_STR_MAX]={'\0'};
 
     // Builtin functions
     /* Subroutine */ int s_cat(char *, char **, int *, int *);
@@ -12245,7 +12245,7 @@ L50:
     int t_dim1, t_offset, vl_dim1, vl_offset, vr_dim1, vr_offset, i__1[2], 
 	    i__2, i__3, i__4;
     double d__1, d__2, d__3, d__4;
-    char ch__1[F2C_STR_MAX]={};
+    char ch__1[F2C_STR_MAX]={'\0'};
 
     // Builtin functions
     /* Subroutine */ int s_cat(char *, char **, int *, int *);
