@@ -5,11 +5,11 @@
 
 #include "f2c.h"
 
-int s_cat(char *lp, char **rpp, ftnint* rnp, ftnint *np)
+int s_cat(char *lp, char **rpp, int* rnp, int *np)
 {
-    ftnlen i, L = 0;
-    ftnlen n = *np;
-    
+    int i, L = 0;
+    int n = *np;
+
     for(i = 0; i < n; i++) {
         int ni = rnp[i];
         if(ni > 0) {

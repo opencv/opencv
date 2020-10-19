@@ -19,7 +19,7 @@ static const unsigned char lapack_toupper_tab[] =
 
 #define lapack_toupper(c) ((char)lapack_toupper_tab[(unsigned char)(c)])
 
-logical lsame_(char *ca, char *cb)
+int lsame_(char *ca, char *cb)
 {
     return lapack_toupper(ca[0]) == lapack_toupper(cb[0]);
 }

@@ -1,8 +1,8 @@
 #include "f2c.h"
 
-void d_cnjg(doublecomplex *r, doublecomplex *z)
+void d_cnjg(lapack_doublecomplex *r, lapack_doublecomplex *z)
 {
-	doublereal zi = z->i;
+	double zi = z->i;
 	r->r = z->r;
 	r->i = -zi;
 }

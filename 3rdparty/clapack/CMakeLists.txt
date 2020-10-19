@@ -7,11 +7,7 @@ project(clapack)
 # TODO: extract it from sources somehow
 set(CLAPACK_VERSION "3.9.0" PARENT_SCOPE)
 
-# List of C++ files:
-
-include_directories(
-	"${CMAKE_CURRENT_SOURCE_DIR}/include"
-	)
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include")
 
 # The .cpp files:
 file(GLOB lapack_srcs src/*.c)
@@ -26,7 +22,9 @@ set(the_target "clapack")
 
 add_library(${the_target} STATIC ${lapack_srcs} ${runtime_srcs} ${lib_hdrs})
 
-ocv_warnings_disable(CMAKE_C_FLAGS -Wno-parentheses -Wno-uninitialized -Wno-implicit-function-declaration -Wno-unused -Wunused-parameter)
+ocv_warnings_disable(CMAKE_C_FLAGS -Wno-parentheses -Wno-uninitialized
+    -Wno-implicit-function-declaration -Wno-unused -Wunused-parameter) # gcc/clang warnings
+ocv_warnings_disable(CMAKE_C_FLAGS /wd4244 /wd4554 /wd4723) # visual studio warnings
 
 set_target_properties(${the_target}
   PROPERTIES OUTPUT_NAME ${the_target}

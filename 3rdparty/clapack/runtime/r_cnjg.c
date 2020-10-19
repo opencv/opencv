@@ -2,7 +2,7 @@
 
 void r_cnjg(complex *r, complex *z)
 {
-	real zi = z->i;
+	float zi = z->i;
 	r->r = z->r;
 	r->i = -zi;
 }

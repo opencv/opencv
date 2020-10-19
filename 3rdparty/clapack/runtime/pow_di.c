@@ -1,14 +1,10 @@
 #include "f2c.h"
 
-double pow_di(doublereal *ap, integer *bp)
+double pow_di(double *ap, int *bp)
 {
-    double pow, x;
-    integer n;
-    unsigned long u;
-
-    pow = 1;
-    x = *ap;
-    n = *bp;
+    double p = 1;
+    double x = *ap;
+    int n = *bp;
 
     if(n != 0)
     {
@@ -17,15 +13,15 @@ double pow_di(doublereal *ap, integer *bp)
             n = -n;
             x = 1/x;
         }
-        for(u = n; ; )
+        for(unsigned u = (unsigned)n; ; )
         {
             if(u & 01)
-                pow *= x;
+                p *= x;
             if(u >>= 1)
                 x *= x;
             else
                 break;
         }
     }
-    return(pow);
+    return p;
 }

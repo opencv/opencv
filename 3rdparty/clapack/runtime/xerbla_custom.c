@@ -14,6 +14,6 @@
 
 /* Subroutine */ int xerbla_(char *srname, int *info)
 {
-	printf("** On entry to %s, parameter number %2i had an illegal value\n", srname, *info);
+    printf("** On entry to %s, parameter number %2i had an illegal value\n", srname, *info);
     return 0;
 } /* xerbla_ */

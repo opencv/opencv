@@ -40,7 +40,7 @@ dst_path = "."
 
 def error(msg):
     print ("error: " + msg)
-    assert False
+    sys.exit(0)
 
 def file2fun(fname):
     return (os.path.basename(fname)[:-2]).upper()
