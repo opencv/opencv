@@ -190,7 +190,7 @@ CV_ALWAYS_INLINE int absdiff_impl(const T in1[], const T in2[], T out[], int len
             absdiff_store(out, a, b, x);
         }
 
-        if (x < length)
+        if (x < length && (in1 != out) && (in2 != out))
         {
             x = length - nlanes;
             continue;  // process one more time (unaligned tail)
@@ -250,7 +250,7 @@ CV_ALWAYS_INLINE int add_simd_sametype(const T in1[], const T in2[], T out[], in
             vx_store(&out[x], a + b);
         }
 
-        if (x < length)
+        if (x < length && (in1 != out) && (in2 != out))
         {
             x = length - nlanes;
             continue;  // process one more time (unaligned tail)
@@ -310,6 +310,8 @@ CV_ALWAYS_INLINE int add_simd(const SRC in1[], const SRC in2[], DST out[], int l
 
             if (x < length)
             {
+                CV_DbgAssert((reinterpret_cast<const short*>(in1) != reinterpret_cast<const short*>(out)) &&
+                             (reinterpret_cast<const short*>(in2) != reinterpret_cast<const short*>(out)));
                 x = length - nlanes;
                 continue;  // process one more time (unaligned tail)
             }
@@ -346,6 +348,8 @@ CV_ALWAYS_INLINE int add_simd(const SRC in1[], const SRC in2[], DST out[], int l
 
             if (x < length)
             {
+                CV_DbgAssert((reinterpret_cast<const float*>(in1) != reinterpret_cast<const float*>(out)) &&
+                             (reinterpret_cast<const float*>(in2) != reinterpret_cast<const float*>(out)));
                 x = length - nlanes;
                 continue;  // process one more time (unaligned tail)
             }
@@ -376,7 +380,7 @@ CV_ALWAYS_INLINE int sub_simd_sametype(const T in1[], const T in2[], T out[], in
             vx_store(&out[x], a - b);
         }
 
-        if (x < length)
+        if (x < length && (in1 != out) && (in2 != out))
         {
             x = length - nlanes;
             continue;  // process one more time (unaligned tail)
@@ -436,6 +440,8 @@ CV_ALWAYS_INLINE int sub_simd(const SRC in1[], const SRC in2[], DST out[], int l
 
             if (x < length)
             {
+                CV_DbgAssert((reinterpret_cast<const short*>(in1) != reinterpret_cast<const short*>(out)) &&
+                             (reinterpret_cast<const short*>(in2) != reinterpret_cast<const short*>(out)));
                 x = length - nlanes;
                 continue;  // process one more time (unaligned tail)
             }
@@ -472,6 +478,8 @@ CV_ALWAYS_INLINE int sub_simd(const SRC in1[], const SRC in2[], DST out[], int l
 
             if (x < length)
             {
+                CV_DbgAssert((reinterpret_cast<const float*>(in1) != reinterpret_cast<const float*>(out)) &&
+                             (reinterpret_cast<const float*>(in2) != reinterpret_cast<const float*>(out)));
                 x = length - nlanes;
                 continue;  // process one more time (unaligned tail)
             }
