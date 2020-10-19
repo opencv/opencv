@@ -54,7 +54,7 @@ namespace
     // Draw random ellipses on given mat of given size and type
     void initMatForFindingContours(cv::Mat& mat, const cv::Size& sz, int type)
     {
-        cv::RNG rng(time(nullptr));
+        cv::RNG rng = theRNG();
         mat = cv::Mat(sz, type, cv::Scalar::all(0));
         size_t numEllipses = rng.uniform(1, 10);
 
@@ -549,7 +549,7 @@ TEST_P(BoundingRectMatTest, AccuracyTest)
 
 TEST_P(BoundingRectVector32STest, AccuracyTest)
 {
-    cv::RNG rng(time(nullptr));
+    cv::RNG rng = theRNG();
     cv::Rect out_rect_gapi, out_rect_ocv;
 
     std::vector<cv::Point2i> in_vectorS(sz.width);
@@ -575,13 +575,16 @@ TEST_P(BoundingRectVector32STest, AccuracyTest)
 
 TEST_P(BoundingRectVector32FTest, AccuracyTest)
 {
-    cv::RNG rng(time(nullptr));
+    cv::RNG rng = theRNG();
     cv::Rect out_rect_gapi, out_rect_ocv;
 
     std::vector<cv::Point2f> in_vectorF(sz.width);
     for (int i = 0; i < sz.width; i++)
-        in_vectorF.push_back(cv::Point2f(expf(rng.uniform(-1, 6) * 3.0f * static_cast<float>(CV_LOG2)),
-                                         expf(rng.uniform(-1, 6) * 3.0f * static_cast<float>(CV_LOG2))));
+    {
+        cv::Point2f pt(expf(static_cast<float>(rng.uniform(-1., 6.) * 3.0 * CV_LOG2)),
+                       expf(static_cast<float>(rng.uniform(-1., 6.) * 3.0 * CV_LOG2)));
+        in_vectorF.push_back(pt);
+    }
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GArray<cv::Point2f> in;
