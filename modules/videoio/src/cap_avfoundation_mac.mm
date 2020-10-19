@@ -1199,13 +1199,23 @@ CvVideoWriter_AVFoundation::CvVideoWriter_AVFoundation(const std::string &filena
         is_good = false;
     }
 
-    // Two codec supported AVVideoCodecH264 AVVideoCodecJPEG
+    // Three codec supported AVVideoCodecH264 AVVideoCodecJPEG AVVideoCodecTypeHEVC
     // On iPhone 3G H264 is not supported.
     if (fourcc == CV_FOURCC('J','P','E','G') || fourcc == CV_FOURCC('j','p','e','g') ||
-            fourcc == CV_FOURCC('M','J','P','G') || fourcc == CV_FOURCC('m','j','p','g') ){
+            fourcc == CV_FOURCC('M','J','P','G') || fourcc == CV_FOURCC('m','j','p','g')){
         codec = [AVVideoCodecJPEG copy]; // Use JPEG codec if specified, otherwise H264
     }else if(fourcc == CV_FOURCC('H','2','6','4') || fourcc == CV_FOURCC('a','v','c','1')){
             codec = [AVVideoCodecH264 copy];
+    // Available since macOS 10.13
+#if defined(__MAC_OS_X_VERSION_MIN_REQUIRED) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101300
+    }else if(fourcc == CV_FOURCC('H','2','6','5') || fourcc == CV_FOURCC('h','v','c','1') ||
+            fourcc == CV_FOURCC('H','E','V','C') || fourcc == CV_FOURCC('h','e','v','c')){
+        if (@available(macOS 10.13, *)) {
+            codec = [AVVideoCodecTypeHEVC copy];
+        } else {
+            is_good = false;
+        }
+#endif
     }else{
         is_good = false;
     }
