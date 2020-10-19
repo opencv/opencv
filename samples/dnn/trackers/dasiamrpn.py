@@ -17,7 +17,7 @@ import sys
 class DaSiamRPNTracker:
     # Initialization of used values, initial bounding box, used network
     def __init__(self, net="dasiamrpn_model.onnx", kernel_r1="dasiamrpn_kernel_r1.onnx", kernel_cls1="dasiamrpn_kernel_cls1.onnx"):
-        windowing = "cosine"
+        self.windowing = "cosine"
         self.exemplar_size = 127
         self.instance_size = 271
         self.anchor_stride = 8
@@ -29,7 +29,7 @@ class DaSiamRPNTracker:
         self.penalty_k = 0.055
         self.window_influence = 0.42
         self.lr = 0.295
-        if windowing == "cosine":
+        if self.windowing == "cosine":
             self.window = np.outer(np.hanning(self.score_size), np.hanning(self.score_size))
         elif self.windowing == "uniform":
             self.window = np.ones((self.score_size, self.score_size))

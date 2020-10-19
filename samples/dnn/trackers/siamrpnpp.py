@@ -52,7 +52,7 @@ class ModelBuilder:
 class SiamRPNTracker:
     def __init__(self, model):
         super(SiamRPNTracker, self).__init__()
-        windowing = "cosine"
+        self.windowing = "cosine"
         self.base_size = 8
         self.exemplar_size = 127
         self.instance_size = 255
@@ -66,9 +66,9 @@ class SiamRPNTracker:
         self.penalty_k = 0.04
         self.window_influence = 0.44
         self.lr = 0.4
-        if windowing == "cosine":
+        if self.windowing == "cosine":
             self.window = np.outer(np.hanning(self.score_size), np.hanning(self.score_size))
-        elif windowing == "uniform":
+        elif self.windowing == "uniform":
             self.window = np.ones((self.score_size, self.score_size))
         self.window = np.tile(self.window.flatten(), self.anchor_num)
         self.anchors = self.generate_anchor(self.score_size)
