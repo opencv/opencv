@@ -48,6 +48,7 @@ void cblas_zgemm(CBLAS_LAYOUT layout, CBLAS_TRANSPOSE TransA,
                 const void *beta, void *C, const int ldc);
 
 int xerbla_(char *, int *);
+int lsame_(char *, char *);
 double dlamch_(char* cmach);
 double dlamc3_(double *a, double *b);
 
