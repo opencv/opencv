@@ -54,7 +54,7 @@ namespace
     // Draw random ellipses on given mat of given size and type
     void initMatForFindingContours(cv::Mat& mat, const cv::Size& sz, int type)
     {
-        cv::RNG rng = theRNG();
+        cv::RNG& rng = theRNG();
         mat = cv::Mat(sz, type, cv::Scalar::all(0));
         size_t numEllipses = rng.uniform(1, 10);
 
@@ -62,13 +62,13 @@ namespace
         {
             cv::Point center;
             cv::Size  axes;
-            center.x    = rng.uniform(0, sz.width);
-            center.y    = rng.uniform(0, sz.height);
-            axes.width  = rng.uniform(2, sz.width);
-            axes.height = rng.uniform(2, sz.height);
-            int angle   = rng.uniform(0, 180);
-            int color   = rng.uniform(1, 256);
-            cv::ellipse(mat, center, axes, angle, 0, 360, color, 1, FILLED);
+            center.x     = rng.uniform(0, sz.width);
+            center.y     = rng.uniform(0, sz.height);
+            axes.width   = rng.uniform(2, sz.width);
+            axes.height  = rng.uniform(2, sz.height);
+            int color    = rng.uniform(1, 256);
+            double angle = rng.uniform(0., 180.);
+            cv::ellipse(mat, center, axes, angle, 0., 360., color, 1, FILLED);
         }
     }
 }
@@ -549,7 +549,7 @@ TEST_P(BoundingRectMatTest, AccuracyTest)
 
 TEST_P(BoundingRectVector32STest, AccuracyTest)
 {
-    cv::RNG rng = theRNG();
+    cv::RNG& rng = theRNG();
     cv::Rect out_rect_gapi, out_rect_ocv;
 
     std::vector<cv::Point2i> in_vectorS(sz.width);
@@ -575,7 +575,7 @@ TEST_P(BoundingRectVector32STest, AccuracyTest)
 
 TEST_P(BoundingRectVector32FTest, AccuracyTest)
 {
-    cv::RNG rng = theRNG();
+    cv::RNG& rng = theRNG();
     cv::Rect out_rect_gapi, out_rect_ocv;
 
     std::vector<cv::Point2f> in_vectorF(sz.width);
