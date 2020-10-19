@@ -202,7 +202,7 @@ lapack_SVD(fptype* a, size_t a_step, fptype *w, fptype* u, size_t u_step, fptype
     int ldv = (int)(v_step / sizeof(fptype));
     int ldu = (int)(u_step / sizeof(fptype));
     int lwork = -1;
-    std::vector<int> iworkBuf(16*std::min(m, n));
+    std::vector<int> iworkBuf(8*std::min(m, n));
     std::vector<fptype> ubuf;
     fptype work1 = 0;
 

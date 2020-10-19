@@ -424,7 +424,7 @@ L10:
     //    Convert NAME to upper case if the first character is lower case.
     //
     ret_val = 1;
-    s_copy(subnam, name__);
+    s_copy(subnam, name__, (int)16);
     ic = *(unsigned char *)subnam;
     iz = 'Z';
     if (iz == 90 || iz == 122) {
@@ -478,9 +478,9 @@ L10:
     if (! (cname || sname)) {
 	return ret_val;
     }
-    s_copy(c2, subnam + 1);
-    s_copy(c3, subnam + 3);
-    s_copy(c4, c3 + 1);
+    s_copy(c2, subnam + 1, (int)2);
+    s_copy(c3, subnam + 3, (int)3);
+    s_copy(c4, c3 + 1, (int)2);
     twostage = i_len(subnam) >= 11 && *(unsigned char *)&subnam[10] == '2';
     switch (*ispec) {
 	case 1:  goto L50;
@@ -1255,7 +1255,7 @@ int iparmq_(int *ispec, char *name__, char *opts, int *n, int *ilo, int *ihi,
 	//       Convert NAME to upper case if the first character is lower case.
 	//
 	ret_val = 0;
-	s_copy(subnam, name__);
+	s_copy(subnam, name__, (int)6);
 	ic = *(unsigned char *)subnam;
 	iz = 'Z';
 	if (iz == 90 || iz == 122) {

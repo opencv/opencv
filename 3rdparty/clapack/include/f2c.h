@@ -108,9 +108,10 @@ static __inline void r_cnjg(complex *r, complex *z)
 	r->i = -zi;
 }
 
-static __inline int s_copy(char *a, char *b)
+static __inline int s_copy(char *a, char *b, int maxlen)
 {
-    strcpy(a, b);
+    strncpy(a, b, maxlen);
+    a[maxlen] = '\0';
     return 0;
 }
 
