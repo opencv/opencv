@@ -12,7 +12,6 @@ int s_cat(char *lp, char **rpp, ftnint* rnp, ftnint *np)
     
     for(i = 0; i < n; i++) {
         int ni = rnp[i];
-        ni = min(F2C_STR_MAX-1-L, ni);
         if(ni > 0) {
             memcpy(lp + L, rpp[i], ni);
             L += ni;

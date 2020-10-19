@@ -481,7 +481,7 @@
     // System generated locals
     address a__1[2];
     int a_dim1, a_offset, c_dim1, c_offset, i__1, i__2, i__3[2], i__4, i__5;
-    char ch__1[F2C_STR_MAX]={'\0'};
+    char ch__1[2+1]={'\0'};
 
     // Builtin functions
     /* Subroutine */ int s_cat(char *, char **, int *, int *);

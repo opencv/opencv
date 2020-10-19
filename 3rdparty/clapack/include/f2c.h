@@ -31,8 +31,6 @@ extern "C" {
 
 #undef complex
 
-#define F2C_STR_MAX 64
-
 typedef int integer;
 typedef unsigned int uinteger;
 typedef char *address;
