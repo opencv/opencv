@@ -131,12 +131,12 @@ public:
     std::vector<double> gains() const;
 
 private:
-    Mat getSimilarityMask(Mat src1, Mat src2);
+    UMat buildSimilarityMask(InputArray src_array1, InputArray src_array2);
 
     Mat_<double> gains_;
     int nr_feeds_;
     double similarity_threshold_;
-    std::vector<Mat> similarities_;
+    std::vector<UMat> similarities_;
 };
 
 /** @brief Exposure compensator which tries to remove exposure related artifacts by adjusting image

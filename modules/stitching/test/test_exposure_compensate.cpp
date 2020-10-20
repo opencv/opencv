@@ -62,7 +62,7 @@ TEST(ExposureCompensate, SimilarityThreshold)
   image1_result = image1.clone();
   compensator.apply(0, {}, image1_result, mask);
   double psnr_similarity_mask = minPSNR(image1, image1_result);
-  EXPECT_GT(psnr_similarity_mask, 65);
+  EXPECT_GT(psnr_similarity_mask, 300);
 }
 
 } // namespace
