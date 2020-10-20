@@ -237,7 +237,7 @@ IIStream& get_v(IIStream& is, V& v, std::size_t i, std::size_t gi) {
     if (i == gi) {
         X x{};
         is >> x;
-        v = std::move(x);
+        v = V{std::move(x)};
         return is;
     } else return get_v<V, Xs...>(is, v, i+1, gi);
 }
@@ -245,7 +245,7 @@ IIStream& get_v(IIStream& is, V& v, std::size_t i, std::size_t gi) {
 
 template<typename... Ts>
 IOStream& operator<< (IOStream& os, const cv::util::variant<Ts...> &v) {
-    os << (uint32_t)v.index();
+    os << static_cast<uint32_t>(v.index());
     return detail::put_v<cv::util::variant<Ts...>, Ts...>(os, v, v.index());
 }
 template<typename... Ts>
@@ -281,7 +281,6 @@ static GCompileArg exec(cv::gapi::s11n::IIStream& is, const std::string& tag) {
             cv::gapi::s11n::detail::S11N<T>::deserialize(is)
         };
     }
-
     return deserialize_arg<std::tuple<Types...>>::exec(is, tag);
 }
 };
