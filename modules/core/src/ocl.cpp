@@ -113,6 +113,10 @@
 
 #include "opencv2/core/opencl/runtime/opencl_core.hpp"
 
+#ifdef HAVE_DIRECTX
+#include "directx.hpp"
+#endif
+
 #ifdef HAVE_OPENCL_SVM
 #include "opencv2/core/opencl/runtime/opencl_svm_20.hpp"
 #include "opencv2/core/opencl/runtime/opencl_svm_hsa_extension.hpp"
@@ -2327,6 +2331,9 @@ protected:
         , contextId(CV_XADD(&g_contextId, 1))
         , configuration(configuration_)
         , handle(0)
+#ifdef HAVE_DIRECTX
+        , p_directx_impl(0)
+#endif
 #ifdef HAVE_OPENCL_SVM
         , svmInitialized(false)
 #endif
@@ -2352,6 +2359,9 @@ protected:
                 handle = NULL;
             }
             devices.clear();
+#ifdef HAVE_DIRECTX
+            directx::internal::deleteDirectXImpl(&p_directx_impl);
+#endif
         }
 
         {
@@ -2657,6 +2667,19 @@ public:
         CV_DbgAssert(bufferPoolHostPtr_);
         return *bufferPoolHostPtr_.get();
     }
+
+#ifdef HAVE_DIRECTX
+    directx::internal::OpenCLDirectXImpl* p_directx_impl;
+
+    directx::internal::OpenCLDirectXImpl* getDirectXImpl()
+    {
+        if (!p_directx_impl)
+        {
+            p_directx_impl = directx::internal::createDirectXImpl();
+        }
+        return p_directx_impl;
+    }
+#endif
 
 #ifdef HAVE_OPENCL_SVM
     bool svmInitialized;
@@ -7285,5 +7308,16 @@ uint64 Timer::durationNS() const
 }
 
 }} // namespace
+
+#ifdef HAVE_DIRECTX
+namespace cv { namespace directx { namespace internal {
+OpenCLDirectXImpl* getDirectXImpl(ocl::Context& ctx)
+{
+    ocl::Context::Impl* i = ctx.getImpl();
+    CV_Assert(i);
+    return i->getDirectXImpl();
+}
+}}} // namespace cv::directx::internal
+#endif
 
 #endif // HAVE_OPENCL
