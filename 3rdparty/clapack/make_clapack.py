@@ -1,25 +1,25 @@
 appdoc = """
     This is generator of CLapack subset.
     The usage:
-    
+
     1. Make sure you have the special version of f2c installed.
        Grab it from https://github.com/vpisarev/f2c/tree/for_lapack.
     2. Download fresh version of Lapack from
        https://github.com/Reference-LAPACK/lapack.
        You may choose some specific version or the latest snapshot.
-    3. If necessary, edit "roots" and "banlist" variable in this script, specify the needed and unneeded functions
+    3. If necessary, edit "roots" and "banlist" variables in this script, specify the needed and unneeded functions
     4. From within a working directory run
-       
+
        $ python3 <opencv_root>/3rdparty/clapack/make_clapack.py <lapack_root>
        or
        $ F2C=<path_to_custom_f2c> python3 <opencv_root>/3rdparty/clapack/make_clapack.py <lapack_root>
-       
+
        it will generate "new_clapack" directory with "include" and "src" subdirectories.
     5. erase opencv/3rdparty/clapack/src and replace it with new_clapack/src.
     6. copy new_clapack/include/lapack.h to opencv/3rdparty/clapack/include.
     7. optionally, edit opencv/3rdparty/clapack/CMakeLists.txt and update CLAPACK_VERSION as needed.
-    
-    This is it. Now build it and enjoy.   
+
+    This is it. Now build it and enjoy.
 """
 
 import glob, re, os, shutil, subprocess, sys
@@ -63,7 +63,6 @@ def fun2file(func):
         return blas_loc
     elif os.path.exists(lapack_loc):
         return lapack_loc
-        f = open(lapack_loc, 'rt')
     else:
         error("neither %s nor %s exist" % (blas_loc, lapack_loc))
 
@@ -171,7 +170,7 @@ for (func, h) in func_home.items():
     elems = res_files.get(h, set([]))
     elems.add(func)
     res_files[h] = elems
-    
+
 print ("total files after amalgamation: %d" % len(res_files))
 #print_graph(res_files)
 
@@ -236,9 +235,9 @@ for (filename, funcs) in sorted(res_files.items()):
         print ("running " + f2c_cmd + " on " + ffilename +  " ...")
         ffile = open(ffilename, 'rt')
         delta_out = subprocess.check_output(f2c_cmd.split(' '), stdin=ffile).decode("utf-8")
-        extract_proto(func, delta_out)
         # remove trailing whitespaces
         delta_out = '\n'.join([l.rstrip() for l in delta_out.split('\n')])
+        extract_proto(func, delta_out)
         out += delta_out
         ffile.close()
         f2c_cmd = f2c_cmd1
@@ -270,4 +269,3 @@ proto_hdr_fname = os.path.join(outdir_inc, "lapack.h")
 f = open(proto_hdr_fname, 'wt')
 f.write(proto_hdr)
 f.close()
-    
