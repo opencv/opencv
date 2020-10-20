@@ -12,6 +12,7 @@
 #include <unordered_map>
 #include <opencv2/gapi/s11n/base.hpp>
 #include <opencv2/gapi/gcomputation.hpp>
+#include <opencv2/gapi/rmat.hpp>
 
 namespace cv {
 namespace gapi {
@@ -25,6 +26,9 @@ namespace detail {
 
     template<typename... Types>
     cv::GCompileArgs getCompileArgs(const std::vector<char> &p);
+
+    template<typename RMatAdapterType>
+    cv::GRunArgs getRunArgsWithRMats(const std::vector<char> &p);
 } // namespace detail
 
 GAPI_EXPORTS std::vector<char> serialize(const cv::GComputation &c);
@@ -58,6 +62,12 @@ template<typename T, typename... Types> inline
 typename std::enable_if<std::is_same<T, GCompileArgs>::value, GCompileArgs>::
 type deserialize(const std::vector<char> &p) {
     return detail::getCompileArgs<Types...>(p);
+}
+
+template<typename T, typename RMatAdapterType> inline
+typename std::enable_if<std::is_same<T, GRunArgs>::value, GRunArgs>::
+type deserialize(const std::vector<char> &p) {
+    return detail::getRunArgsWithRMats<RMatAdapterType>(p);
 }
 } // namespace gapi
 } // namespace cv
@@ -123,6 +133,27 @@ GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::Scalar &s);
 GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::Mat &m);
 GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::Mat &m);
 
+// FIXME: for GRunArgs serailization
+#if !defined(GAPI_STANDALONE)
+GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::UMat &);
+GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::UMat &);
+#endif // !defined(GAPI_STANDALONE)
+
+GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::RMat &r);
+GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::RMat &r);
+
+GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::gapi::wip::IStreamSource::Ptr &);
+GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::gapi::wip::IStreamSource::Ptr &);
+
+GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::detail::VectorRef &);
+GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::detail::VectorRef &);
+
+GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::detail::OpaqueRef &);
+GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::detail::OpaqueRef &);
+
+GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::MediaFrame &);
+GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::MediaFrame &);
+
 // Generic STL types ////////////////////////////////////////////////////////////////
 template<typename K, typename V>
 IOStream& operator<< (IOStream& os, const std::map<K, V> &m) {
@@ -184,6 +215,52 @@ IIStream& operator>> (IIStream& is, std::vector<T> &ts) {
     }
     return is;
 }
+
+// Generic: variant serialization
+namespace detail {
+template<typename V>
+IOStream& put_v(IOStream&, const V&, std::size_t) {
+    GAPI_Assert(false && "variant>>: requested index is invalid");
+};
+template<typename V, typename X, typename... Xs>
+IOStream& put_v(IOStream& os, const V& v, std::size_t x) {
+    return (x == 0u)
+        ? os << cv::util::get<X>(v)
+        : put_v<V, Xs...>(os, v, x-1);
+}
+template<typename V>
+IIStream& get_v(IIStream&, V&, std::size_t, std::size_t) {
+    GAPI_Assert(false && "variant<<: requested index is invalid");
+}
+template<typename V, typename X, typename... Xs>
+IIStream& get_v(IIStream& is, V& v, std::size_t i, std::size_t gi) {
+    if (i == gi) {
+        X x{};
+        is >> x;
+        v = V{std::move(x)};
+        return is;
+    } else return get_v<V, Xs...>(is, v, i+1, gi);
+}
+} // namespace detail
+
+template<typename... Ts>
+IOStream& operator<< (IOStream& os, const cv::util::variant<Ts...> &v) {
+    os << static_cast<uint32_t>(v.index());
+    return detail::put_v<cv::util::variant<Ts...>, Ts...>(os, v, v.index());
+}
+template<typename... Ts>
+IIStream& operator>> (IIStream& is, cv::util::variant<Ts...> &v) {
+    int idx = -1;
+    is >> idx;
+    GAPI_Assert(idx >= 0 && idx < (int)sizeof...(Ts));
+    return detail::get_v<cv::util::variant<Ts...>, Ts...>(is, v, 0u, idx);
+}
+
+// FIXME: consider a better solution
+template<typename... Ts>
+void getRunArgByIdx (IIStream& is, cv::util::variant<Ts...> &v, uint32_t idx) {
+    is = detail::get_v<cv::util::variant<Ts...>, Ts...>(is, v, 0u, idx);
+}
 } // namespace s11n
 
 namespace detail
@@ -204,8 +281,24 @@ static GCompileArg exec(cv::gapi::s11n::IIStream& is, const std::string& tag) {
             cv::gapi::s11n::detail::S11N<T>::deserialize(is)
         };
     }
-
     return deserialize_arg<std::tuple<Types...>>::exec(is, tag);
+}
+};
+
+template<typename T> struct deserialize_runarg;
+
+template<typename RMatAdapterType>
+struct deserialize_runarg {
+static GRunArg exec(cv::gapi::s11n::IIStream& is, uint32_t idx) {
+    if (idx == GRunArg::index_of<RMat>()) {
+        auto ptr = std::make_shared<RMatAdapterType>();
+        ptr->deserialize(is);
+        return GRunArg { RMat(std::move(ptr)) };
+    } else { // non-RMat arg - use default deserialization
+        GRunArg arg;
+        getRunArgByIdx(is, arg, idx);
+        return arg;
+    }
 }
 };
 
@@ -221,6 +314,23 @@ cv::GCompileArgs getCompileArgs(const std::vector<char> &p) {
         std::string tag;
         is >> tag;
         args.push_back(cv::gapi::detail::deserialize_arg<std::tuple<Types...>>::exec(is, tag));
+    }
+
+    return args;
+}
+
+template<typename RMatAdapterType>
+cv::GRunArgs getRunArgsWithRMats(const std::vector<char> &p) {
+    std::unique_ptr<cv::gapi::s11n::IIStream> pIs = cv::gapi::s11n::detail::getInStream(p);
+    cv::gapi::s11n::IIStream& is = *pIs;
+    cv::GRunArgs args;
+
+    uint32_t sz = 0;
+    is >> sz;
+    for (uint32_t i = 0; i < sz; ++i) {
+        uint32_t idx = 0;
+        is >> idx;
+        args.push_back(cv::gapi::detail::deserialize_runarg<RMatAdapterType>::exec(is, idx));
     }
 
     return args;
