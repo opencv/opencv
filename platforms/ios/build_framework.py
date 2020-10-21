@@ -171,7 +171,10 @@ class Builder:
             "-DOPENCV_3P_LIB_INSTALL_PATH=lib/3rdparty",
             "-DFRAMEWORK_NAME=%s" % self.framework_name,
         ] + ([
+            "-DWITH_CUDA=OFF",
+            "-DBUILD_LIST=imgcodecs,core,imgproc",
             "-DBUILD_SHARED_LIBS=ON",
+            "-DBUILD_PROTOBUF=OFF",
             "-DCMAKE_MACOSX_BUNDLE=ON",
             "-DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED=NO",
         ] if self.dynamic and not self.build_objc_wrapper else []) + ([
