@@ -380,6 +380,7 @@ UMat GainCompensator::buildSimilarityMask(InputArray src_array1, InputArray src_
             }
         }
     }
+    similarity.release();
 
     Mat kernel = getStructuringElement(MORPH_RECT, Size(3,3));
     erode(umat_similarity, umat_similarity, kernel);
