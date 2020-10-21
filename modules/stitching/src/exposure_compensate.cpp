@@ -361,7 +361,7 @@ UMat GainCompensator::buildSimilarityMask(InputArray src_array1, InputArray src_
                 Vec<float, 3> vec_diff =
                     Vec<float, 3>(*src1.ptr<Vec<uchar, 3>>(y, x))
                     - Vec<float, 3>(*src2.ptr<Vec<uchar, 3>>(y, x));
-                float diff = norm(vec_diff * (1.f / 255.f));
+                double diff = norm(vec_diff * (1.f / 255.f));
 
                 *similarity.ptr<uchar>(y, x) = diff <= similarity_threshold_ ? 255 : 0;
             }

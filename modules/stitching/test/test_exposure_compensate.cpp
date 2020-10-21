@@ -39,10 +39,11 @@ TEST(ExposureCompensate, SimilarityThreshold)
   // identical, except for the red artifact in image 2
   // Apart from that artifact, there is no exposure to compensate
   compensator.setSimilarityThreshold(1);
+  uchar xff = 255;
   compensator.feed(
       {{}, {}},
       {image1, image2},
-      {{mask, 255}, {mask, 255}}
+      {{mask, xff}, {mask, xff}}
   );
   // Verify that the artifact in image 2 did create
   // an artifact in image1 during the exposure compensation
@@ -57,7 +58,7 @@ TEST(ExposureCompensate, SimilarityThreshold)
   compensator.feed(
       {{}, {}},
       {image1, image2},
-      {{mask, 255}, {mask, 255}}
+      {{mask, xff}, {mask, xff}}
   );
   image1_result = image1.clone();
   compensator.apply(0, {}, image1_result, mask);
