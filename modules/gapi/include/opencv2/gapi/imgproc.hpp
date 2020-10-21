@@ -905,6 +905,8 @@ GAPI_EXPORTS GArray<Point2f> goodFeaturesToTrack(const GMat  &image,
 
 /** @brief Equalizes the histogram of a grayscale image.
 
+//! @} gapi_feature
+
 The function equalizes the histogram of the input image using the following algorithm:
 
 - Calculate the histogram \f$H\f$ for src .
@@ -921,8 +923,6 @@ The algorithm normalizes the brightness and increases the contrast of the image.
 @param src Source 8-bit single channel image.
  */
 GAPI_EXPORTS GMat equalizeHist(const GMat& src);
-
-//! @} gapi_feature
 
 //! @addtogroup gapi_shape
 //! @{
