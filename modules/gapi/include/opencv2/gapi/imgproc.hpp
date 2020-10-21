@@ -26,6 +26,25 @@
 @}
  */
 
+namespace {
+void checkMetaForFindingContours(int depth, int chan, int mode)
+{
+    GAPI_Assert(chan == 1);
+    switch (mode)
+    {
+    case cv::RETR_CCOMP:
+        GAPI_Assert(depth == CV_8U || depth == CV_32S);
+        break;
+    case cv::RETR_FLOODFILL:
+        GAPI_Assert(depth == CV_32S);
+        break;
+    default:
+        GAPI_Assert(depth == CV_8U);
+        break;
+    }
+}
+} // anonymous namespace
+
 namespace cv { namespace gapi {
 
 namespace imgproc {
@@ -132,19 +151,7 @@ namespace imgproc {
     {
         static GArrayDesc outMeta(GMatDesc in, int mode, int, Point)
         {
-            GAPI_Assert(in.chan == 1);
-            switch (mode)
-            {
-            case RETR_CCOMP:
-                GAPI_Assert(in.depth == CV_8U || in.depth == CV_32S);
-                break;
-            case RETR_FLOODFILL:
-                GAPI_Assert(in.depth == CV_32S);
-                break;
-            default:
-                GAPI_Assert(in.depth == CV_8U);
-                break;
-            }
+            checkMetaForFindingContours(in.depth, in.chan, mode);
             return empty_array_desc();
         }
     };
@@ -154,25 +161,13 @@ namespace imgproc {
     {
         static std::tuple<GArrayDesc,GArrayDesc> outMeta(GMatDesc in, int mode, int, Point)
         {
-            GAPI_Assert(in.chan == 1);
-            switch (mode)
-            {
-            case RETR_CCOMP:
-                GAPI_Assert(in.depth == CV_8U || in.depth == CV_32S);
-                break;
-            case RETR_FLOODFILL:
-                GAPI_Assert(in.depth == CV_32S);
-                break;
-            default:
-                GAPI_Assert(in.depth == CV_8U);
-                break;
-            }
+            checkMetaForFindingContours(in.depth, in.chan, mode);
             return std::make_tuple(empty_array_desc(), empty_array_desc());
         }
     };
 
     G_TYPED_KERNEL(GBoundingRectMat, <GOpaque<Rect>(GMat)>,
-                   "org.opencv.imgproc.shape.boundingrectMat") {
+                   "org.opencv.imgproc.shape.boundingRectMat") {
         static GOpaqueDesc outMeta(GMatDesc in) {
             GAPI_Assert(in.depth == CV_8U && in.chan == 1);
             return empty_gopaque_desc();
@@ -180,14 +175,14 @@ namespace imgproc {
     };
 
     G_TYPED_KERNEL(GBoundingRectVector32S, <GOpaque<Rect>(GArray<Point2i>)>,
-                   "org.opencv.imgproc.shape.boundingrectVector32S") {
+                   "org.opencv.imgproc.shape.boundingRectVector32S") {
         static GOpaqueDesc outMeta(GArrayDesc) {
             return empty_gopaque_desc();
         }
     };
 
     G_TYPED_KERNEL(GBoundingRectVector32F, <GOpaque<Rect>(GArray<Point2f>)>,
-                   "org.opencv.imgproc.shape.boundingrectVector32F") {
+                   "org.opencv.imgproc.shape.boundingRectVector32F") {
         static GOpaqueDesc outMeta(GArrayDesc) {
             return empty_gopaque_desc();
         }
