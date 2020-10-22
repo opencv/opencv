@@ -88,26 +88,6 @@ GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::GArrayDesc &);
 GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::GFrameDesc &);
 GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::GFrameDesc &);
 
-#if !defined(GAPI_STANDALONE)
-GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::UMat &);
-GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::UMat &);
-#endif // !defined(GAPI_STANDALONE)
-
-GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::RMat &r);
-GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::RMat &r);
-
-GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::gapi::wip::IStreamSource::Ptr &);
-GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::gapi::wip::IStreamSource::Ptr &);
-
-GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::detail::VectorRef &);
-GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::detail::VectorRef &);
-
-GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::detail::OpaqueRef &);
-GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::detail::OpaqueRef &);
-
-GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::MediaFrame &);
-GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::MediaFrame &);
-
 GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::gimpl::RcDesc &rc);
 GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::gimpl::RcDesc &rc);
 
@@ -177,46 +157,6 @@ GAPI_EXPORTS void serialize( IOStream& os
 // on every compilation process issued for this GComputation.
 GAPI_EXPORTS GSerialized deserialize(IIStream& is);
 GAPI_EXPORTS void reconstruct(const GSerialized &s, ade::Graph &g);
-
-// Generic: variant serialization //////////////////////////////////////////////
-namespace detail { // FIXME: breaks old code
-template<typename V>
-IOStream& put_v(IOStream&, const V&, std::size_t) {
-    GAPI_Assert(false && "variant>>: requested index is invalid");
-};
-template<typename V, typename X, typename... Xs>
-IOStream& put_v(IOStream& os, const V& v, std::size_t x) {
-    return (x == 0u)
-        ? os << cv::util::get<X>(v)
-        : put_v<V, Xs...>(os, v, x-1);
-}
-template<typename V>
-IIStream& get_v(IIStream&, V&, std::size_t, std::size_t) {
-    GAPI_Assert(false && "variant<<: requested index is invalid");
-}
-template<typename V, typename X, typename... Xs>
-IIStream& get_v(IIStream& is, V& v, std::size_t i, std::size_t gi) {
-    if (i == gi) {
-        X x{};
-        is >> x;
-        v = std::move(x);
-        return is;
-    } else return get_v<V, Xs...>(is, v, i+1, gi);
-}
-} // namespace detail FIXME: breaks old code
-
-template<typename... Ts>
-IOStream& operator<< (IOStream& os, const cv::util::variant<Ts...> &v) {
-    os << (uint32_t)v.index();
-    return detail::put_v<cv::util::variant<Ts...>, Ts...>(os, v, v.index());
-}
-template<typename... Ts>
-IIStream& operator>> (IIStream& is, cv::util::variant<Ts...> &v) {
-    int idx = -1;
-    is >> idx;
-    GAPI_Assert(idx >= 0 && idx < (int)sizeof...(Ts));
-    return detail::get_v<cv::util::variant<Ts...>, Ts...>(is, v, 0u, idx);
-}
 
 // FIXME: Basic Stream implementaions //////////////////////////////////////////
 

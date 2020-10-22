@@ -10,6 +10,16 @@
 #include <opencv2/gapi/gmat.hpp>
 #include <opencv2/gapi/own/exports.hpp>
 
+// Forward declaration
+namespace cv {
+namespace gapi {
+namespace s11n {
+    struct IOStream;
+    struct IIStream;
+} // namespace s11n
+} // namespace gapi
+} // namespace cv
+
 namespace cv {
 
 // "Remote Mat", a general class which provides an abstraction layer over the data
@@ -90,6 +100,12 @@ public:
         // the view when accessed for writing, to ensure that the data from the view
         // is transferred to the device when the view is destroyed
         virtual View access(Access) = 0;
+        virtual void serialize(cv::gapi::s11n::IOStream&) {
+            GAPI_Assert(false && "Generic serialize method should never be called for RMat adapter");
+        }
+        virtual void deserialize(cv::gapi::s11n::IIStream&) {
+            GAPI_Assert(false && "Generic deserialize method should never be called for RMat adapter");
+        }
     };
     using AdapterP = std::shared_ptr<Adapter>;
 
@@ -111,6 +127,10 @@ public:
         static_assert(std::is_base_of<Adapter, T>::value, "T is not derived from Adapter!");
         GAPI_Assert(m_adapter != nullptr);
         return dynamic_cast<T*>(m_adapter.get());
+    }
+
+    void serialize(cv::gapi::s11n::IOStream& os) const {
+        m_adapter->serialize(os);
     }
 
 private:

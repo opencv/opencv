@@ -151,6 +151,348 @@ GAPI_FLUID_KERNEL(GFluidAddW, cv::gapi::core::GAddW, false)
 
 enum Arithm { ARITHM_ABSDIFF, ARITHM_ADD, ARITHM_SUBTRACT, ARITHM_MULTIPLY, ARITHM_DIVIDE };
 
+#if CV_SIMD
+CV_ALWAYS_INLINE void absdiff_store(short out[], const v_int16& a, const v_int16& b, int x)
+{
+    vx_store(&out[x], v_absdiffs(a, b));
+}
+
+CV_ALWAYS_INLINE void absdiff_store(ushort out[], const v_uint16& a, const v_uint16& b, int x)
+{
+    vx_store(&out[x], v_absdiff(a, b));
+}
+
+CV_ALWAYS_INLINE void absdiff_store(uchar out[], const v_uint8& a, const v_uint8& b, int x)
+{
+    vx_store(&out[x], v_absdiff(a, b));
+}
+
+CV_ALWAYS_INLINE void absdiff_store(float out[], const v_float32& a, const v_float32& b, int x)
+{
+    vx_store(&out[x], v_absdiff(a, b));
+}
+
+template<typename T, typename VT>
+CV_ALWAYS_INLINE int absdiff_impl(const T in1[], const T in2[], T out[], int length)
+{
+    constexpr int nlanes = static_cast<int>(VT::nlanes);
+
+    if (length < nlanes)
+        return 0;
+
+    int x = 0;
+    for (;;)
+    {
+        for (; x <= length - nlanes; x += nlanes)
+        {
+            VT a = vx_load(&in1[x]);
+            VT b = vx_load(&in2[x]);
+            absdiff_store(out, a, b, x);
+        }
+
+        if (x < length && (in1 != out) && (in2 != out))
+        {
+            x = length - nlanes;
+            continue;  // process one more time (unaligned tail)
+        }
+        break;
+    }
+
+    return x;
+}
+
+template<typename T>
+CV_ALWAYS_INLINE int absdiff_simd(const T in1[], const T in2[], T out[], int length)
+{
+    if (std::is_same<T, uchar>::value)
+    {
+        return absdiff_impl<uchar, v_uint8>(reinterpret_cast<const uchar*>(in1),
+                                            reinterpret_cast<const uchar*>(in2),
+                                            reinterpret_cast<uchar*>(out), length);
+    }
+    else if (std::is_same<T, ushort>::value)
+    {
+        return absdiff_impl<ushort, v_uint16>(reinterpret_cast<const ushort*>(in1),
+                                              reinterpret_cast<const ushort*>(in2),
+                                              reinterpret_cast<ushort*>(out), length);
+    }
+    else if (std::is_same<T, short>::value)
+    {
+        return absdiff_impl<short, v_int16>(reinterpret_cast<const short*>(in1),
+                                            reinterpret_cast<const short*>(in2),
+                                            reinterpret_cast<short*>(out), length);
+    }
+    else if (std::is_same<T, float>::value)
+    {
+        return absdiff_impl<float, v_float32>(reinterpret_cast<const float*>(in1),
+                                              reinterpret_cast<const float*>(in2),
+                                              reinterpret_cast<float*>(out), length);
+    }
+
+    return 0;
+}
+
+template<typename T, typename VT>
+CV_ALWAYS_INLINE int add_simd_sametype(const T in1[], const T in2[], T out[], int length)
+{
+    constexpr int nlanes = static_cast<int>(VT::nlanes);
+
+    if (length < nlanes)
+        return 0;
+
+    int x = 0;
+    for (;;)
+    {
+        for (; x <= length - nlanes; x += nlanes)
+        {
+            VT a = vx_load(&in1[x]);
+            VT b = vx_load(&in2[x]);
+            vx_store(&out[x], a + b);
+        }
+
+        if (x < length && (in1 != out) && (in2 != out))
+        {
+            x = length - nlanes;
+            continue;  // process one more time (unaligned tail)
+        }
+        break;
+    }
+
+    return x;
+}
+
+template<typename SRC, typename DST>
+CV_ALWAYS_INLINE int add_simd(const SRC in1[], const SRC in2[], DST out[], int length)
+{
+    if (std::is_same<DST, float>::value && !std::is_same<SRC, float>::value)
+        return 0;
+
+    if (std::is_same<DST, SRC>::value)
+    {
+        if (std::is_same<DST, uchar>::value)
+        {
+            return add_simd_sametype<uchar, v_uint8>(reinterpret_cast<const uchar*>(in1),
+                                                     reinterpret_cast<const uchar*>(in2),
+                                                     reinterpret_cast<uchar*>(out), length);
+        }
+        else if (std::is_same<DST, short>::value)
+        {
+            return add_simd_sametype<short, v_int16>(reinterpret_cast<const short*>(in1),
+                                                     reinterpret_cast<const short*>(in2),
+                                                     reinterpret_cast<short*>(out), length);
+        }
+        else if (std::is_same<DST, float>::value)
+        {
+            return add_simd_sametype<float, v_float32>(reinterpret_cast<const float*>(in1),
+                                                       reinterpret_cast<const float*>(in2),
+                                                       reinterpret_cast<float*>(out), length);
+        }
+    }
+    else if (std::is_same<SRC, short>::value && std::is_same<DST, uchar>::value)
+    {
+        constexpr int nlanes = static_cast<int>(v_uint8::nlanes);
+
+        if (length < nlanes)
+            return 0;
+
+        int x = 0;
+        for (;;)
+        {
+            for (; x <= length - nlanes; x += nlanes)
+            {
+                v_int16 a1 = vx_load(reinterpret_cast<const short*>(&in1[x]));
+                v_int16 a2 = vx_load(reinterpret_cast<const short*>(&in1[x + nlanes / 2]));
+                v_int16 b1 = vx_load(reinterpret_cast<const short*>(&in2[x]));
+                v_int16 b2 = vx_load(reinterpret_cast<const short*>(&in2[x + nlanes / 2]));
+
+                vx_store(reinterpret_cast<uchar*>(&out[x]), v_pack_u(a1 + b1, a2 + b2));
+            }
+
+            if (x < length)
+            {
+                CV_DbgAssert((reinterpret_cast<const short*>(in1) != reinterpret_cast<const short*>(out)) &&
+                             (reinterpret_cast<const short*>(in2) != reinterpret_cast<const short*>(out)));
+                x = length - nlanes;
+                continue;  // process one more time (unaligned tail)
+            }
+            break;
+        }
+
+        return x;
+    }
+    else if (std::is_same<SRC, float>::value && std::is_same<DST, uchar>::value)
+    {
+        constexpr int nlanes = static_cast<int>(v_uint8::nlanes);
+
+        if (length < nlanes)
+            return 0;
+
+        int x = 0;
+        for (;;)
+        {
+            for (; x <= length - nlanes; x += nlanes)
+            {
+                v_float32 a1 = vx_load(reinterpret_cast<const float*>(&in1[x]));
+                v_float32 a2 = vx_load(reinterpret_cast<const float*>(&in1[x + nlanes / 4]));
+                v_float32 a3 = vx_load(reinterpret_cast<const float*>(&in1[x + 2 * nlanes / 4]));
+                v_float32 a4 = vx_load(reinterpret_cast<const float*>(&in1[x + 3 * nlanes / 4]));
+
+                v_float32 b1 = vx_load(reinterpret_cast<const float*>(&in2[x]));
+                v_float32 b2 = vx_load(reinterpret_cast<const float*>(&in2[x + nlanes / 4]));
+                v_float32 b3 = vx_load(reinterpret_cast<const float*>(&in2[x + 2 * nlanes / 4]));
+                v_float32 b4 = vx_load(reinterpret_cast<const float*>(&in2[x + 3 * nlanes / 4]));
+
+                vx_store(reinterpret_cast<uchar*>(&out[x]), v_pack_u(v_pack(v_round(a1 + b1), v_round(a2 + b2)),
+                                                                     v_pack(v_round(a3 + b3), v_round(a4 + b4))));
+            }
+
+            if (x < length)
+            {
+                CV_DbgAssert((reinterpret_cast<const float*>(in1) != reinterpret_cast<const float*>(out)) &&
+                             (reinterpret_cast<const float*>(in2) != reinterpret_cast<const float*>(out)));
+                x = length - nlanes;
+                continue;  // process one more time (unaligned tail)
+            }
+            break;
+        }
+
+        return x;
+    }
+
+    return 0;
+}
+
+template<typename T, typename VT>
+CV_ALWAYS_INLINE int sub_simd_sametype(const T in1[], const T in2[], T out[], int length)
+{
+    constexpr int nlanes = static_cast<int>(VT::nlanes);
+
+    if (length < nlanes)
+        return 0;
+
+    int x = 0;
+    for (;;)
+    {
+        for (; x <= length - nlanes; x += nlanes)
+        {
+            VT a = vx_load(&in1[x]);
+            VT b = vx_load(&in2[x]);
+            vx_store(&out[x], a - b);
+        }
+
+        if (x < length && (in1 != out) && (in2 != out))
+        {
+            x = length - nlanes;
+            continue;  // process one more time (unaligned tail)
+        }
+        break;
+    }
+
+    return x;
+}
+
+template<typename SRC, typename DST>
+CV_ALWAYS_INLINE int sub_simd(const SRC in1[], const SRC in2[], DST out[], int length)
+{
+    if (std::is_same<DST, float>::value && !std::is_same<SRC, float>::value)
+        return 0;
+
+    if (std::is_same<DST, SRC>::value)
+    {
+        if (std::is_same<DST, uchar>::value)
+        {
+            return sub_simd_sametype<uchar, v_uint8>(reinterpret_cast<const uchar*>(in1),
+                                                     reinterpret_cast<const uchar*>(in2),
+                                                     reinterpret_cast<uchar*>(out), length);
+        }
+        else if (std::is_same<DST, short>::value)
+        {
+            return sub_simd_sametype<short, v_int16>(reinterpret_cast<const short*>(in1),
+                                                     reinterpret_cast<const short*>(in2),
+                                                     reinterpret_cast<short*>(out), length);
+        }
+        else if (std::is_same<DST, float>::value)
+        {
+            return sub_simd_sametype<float, v_float32>(reinterpret_cast<const float*>(in1),
+                                                       reinterpret_cast<const float*>(in2),
+                                                       reinterpret_cast<float*>(out), length);
+        }
+    }
+    else if (std::is_same<SRC, short>::value && std::is_same<DST, uchar>::value)
+    {
+        constexpr int nlanes = static_cast<int>(v_uint8::nlanes);
+
+        if (length < nlanes)
+            return 0;
+
+        int x = 0;
+        for (;;)
+        {
+            for (; x <= length - nlanes; x += nlanes)
+            {
+                v_int16 a1 = vx_load(reinterpret_cast<const short*>(&in1[x]));
+                v_int16 a2 = vx_load(reinterpret_cast<const short*>(&in1[x + nlanes / 2]));
+                v_int16 b1 = vx_load(reinterpret_cast<const short*>(&in2[x]));
+                v_int16 b2 = vx_load(reinterpret_cast<const short*>(&in2[x + nlanes / 2]));
+
+                vx_store(reinterpret_cast<uchar*>(&out[x]), v_pack_u(a1 - b1, a2 - b2));
+            }
+
+            if (x < length)
+            {
+                CV_DbgAssert((reinterpret_cast<const short*>(in1) != reinterpret_cast<const short*>(out)) &&
+                             (reinterpret_cast<const short*>(in2) != reinterpret_cast<const short*>(out)));
+                x = length - nlanes;
+                continue;  // process one more time (unaligned tail)
+            }
+            break;
+        }
+
+        return x;
+    }
+    else if (std::is_same<SRC, float>::value && std::is_same<DST, uchar>::value)
+    {
+        constexpr int nlanes = static_cast<int>(v_uint8::nlanes);
+
+        if (length < nlanes)
+            return 0;
+
+        int x = 0;
+        for (;;)
+        {
+            for (; x <= length - nlanes; x += nlanes)
+            {
+                v_float32 a1 = vx_load(reinterpret_cast<const float*>(&in1[x]));
+                v_float32 a2 = vx_load(reinterpret_cast<const float*>(&in1[x + nlanes / 4]));
+                v_float32 a3 = vx_load(reinterpret_cast<const float*>(&in1[x + 2 * nlanes / 4]));
+                v_float32 a4 = vx_load(reinterpret_cast<const float*>(&in1[x + 3 * nlanes / 4]));
+
+                v_float32 b1 = vx_load(reinterpret_cast<const float*>(&in2[x]));
+                v_float32 b2 = vx_load(reinterpret_cast<const float*>(&in2[x + nlanes / 4]));
+                v_float32 b3 = vx_load(reinterpret_cast<const float*>(&in2[x + 2 * nlanes / 4]));
+                v_float32 b4 = vx_load(reinterpret_cast<const float*>(&in2[x + 3 * nlanes / 4]));
+
+                vx_store(reinterpret_cast<uchar*>(&out[x]), v_pack_u(v_pack(v_round(a1 - b1), v_round(a2 - b2)),
+                                                                     v_pack(v_round(a3 - b3), v_round(a4 - b4))));
+            }
+
+            if (x < length)
+            {
+                CV_DbgAssert((reinterpret_cast<const float*>(in1) != reinterpret_cast<const float*>(out)) &&
+                             (reinterpret_cast<const float*>(in2) != reinterpret_cast<const float*>(out)));
+                x = length - nlanes;
+                continue;  // process one more time (unaligned tail)
+            }
+            break;
+        }
+
+        return x;
+    }
+
+    return 0;
+}
+#endif
+
 template<typename DST, typename SRC1, typename SRC2>
 static void run_arithm(Buffer &dst, const View &src1, const View &src2, Arithm arithm,
                        double scale=1)
@@ -168,29 +510,37 @@ static void run_arithm(Buffer &dst, const View &src1, const View &src2, Arithm a
     // NB: assume in/out types are not 64-bits
     float _scale = static_cast<float>( scale );
 
+    int x = 0;
+
     switch (arithm)
     {
-    case ARITHM_ABSDIFF:
-        for (int l=0; l < length; l++)
-            out[l] = absdiff<DST>(in1[l], in2[l]);
-        break;
-    case ARITHM_ADD:
-        for (int l=0; l < length; l++)
-            out[l] = add<DST>(in1[l], in2[l]);
-        break;
-    case ARITHM_SUBTRACT:
-        for (int l=0; l < length; l++)
-            out[l] = sub<DST>(in1[l], in2[l]);
-        break;
-    case ARITHM_MULTIPLY:
-        for (int l=0; l < length; l++)
-            out[l] = mul<DST>(in1[l], in2[l], _scale);
-        break;
-    case ARITHM_DIVIDE:
-        for (int l=0; l < length; l++)
-            out[l] = div<DST>(in1[l], in2[l], _scale);
-        break;
-    default: CV_Error(cv::Error::StsBadArg, "unsupported arithmetic operation");
+        case ARITHM_ADD:
+        {
+#if CV_SIMD
+            x = add_simd(in1, in2, out, length);
+#endif
+            for (; x < length; ++x)
+                out[x] = add<DST>(in1[x], in2[x]);
+            break;
+        }
+        case ARITHM_SUBTRACT:
+        {
+#if CV_SIMD
+            x = sub_simd(in1, in2, out, length);
+#endif
+            for (; x < length; ++x)
+                out[x] = sub<DST>(in1[x], in2[x]);
+            break;
+        }
+        case ARITHM_MULTIPLY:
+            for (; x < length; ++x)
+                out[x] = mul<DST>(in1[x], in2[x], _scale);
+            break;
+        case ARITHM_DIVIDE:
+            for (; x < length; ++x)
+                out[x] = div<DST>(in1[x], in2[x], _scale);
+            break;
+        default: CV_Error(cv::Error::StsBadArg, "unsupported arithmetic operation");
     }
 }
 
@@ -270,6 +620,29 @@ GAPI_FLUID_KERNEL(GFluidDiv, cv::gapi::core::GDiv, false)
     }
 };
 
+template<typename DST, typename SRC1, typename SRC2>
+static void run_absdiff(Buffer &dst, const View &src1, const View &src2)
+{
+    static_assert(std::is_same<SRC1, SRC2>::value, "wrong types");
+    static_assert(std::is_same<SRC1, DST>::value, "wrong types");
+
+    const auto *in1 = src1.InLine<SRC1>(0);
+    const auto *in2 = src2.InLine<SRC2>(0);
+    auto *out = dst.OutLine<DST>();
+
+    int width = dst.length();
+    int chan = dst.meta().chan;
+    int length = width * chan;
+
+    int x = 0;
+
+#if CV_SIMD
+    x = absdiff_simd(in1, in2, out, length);
+#endif
+    for (; x < length; ++x)
+        out[x] = absdiff<DST>(in1[x], in2[x]);
+}
+
 GAPI_FLUID_KERNEL(GFluidAbsDiff, cv::gapi::core::GAbsDiff, false)
 {
     static const int Window = 1;
@@ -277,10 +650,10 @@ GAPI_FLUID_KERNEL(GFluidAbsDiff, cv::gapi::core::GAbsDiff, false)
     static void run(const View &src1, const View &src2, Buffer &dst)
     {
         //      DST     SRC1    SRC2    OP          __VA_ARGS__
-        BINARY_(uchar , uchar , uchar , run_arithm, dst, src1, src2, ARITHM_ABSDIFF);
-        BINARY_(ushort, ushort, ushort, run_arithm, dst, src1, src2, ARITHM_ABSDIFF);
-        BINARY_( short,  short,  short, run_arithm, dst, src1, src2, ARITHM_ABSDIFF);
-        BINARY_( float,  float,  float, run_arithm, dst, src1, src2, ARITHM_ABSDIFF);
+        BINARY_(uchar , uchar , uchar , run_absdiff, dst, src1, src2);
+        BINARY_(ushort, ushort, ushort, run_absdiff, dst, src1, src2);
+        BINARY_( short,  short,  short, run_absdiff, dst, src1, src2);
+        BINARY_( float,  float,  float, run_absdiff, dst, src1, src2);
 
         CV_Error(cv::Error::StsBadArg, "unsupported combination of types");
     }
