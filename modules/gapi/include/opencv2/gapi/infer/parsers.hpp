@@ -122,4 +122,16 @@ GAPI_EXPORTS std::tuple<GArray<Rect>, GArray<int>> parseYolo(const GMat& in,
 } // namespace gapi
 } // namespace cv
 
+// Reimport parseSSD & parseYolo under their initial namespace
+namespace cv {
+namespace gapi {
+namespace streaming {
+
+using cv::gapi::parseSSD;
+using cv::gapi::parseYolo;
+
+} // namespace streaming
+} // namespace gapi
+} // namespace cv
+
 #endif // OPENCV_GAPI_PARSERS_HPP

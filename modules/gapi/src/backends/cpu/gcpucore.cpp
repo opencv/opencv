@@ -625,7 +625,7 @@ GAPI_OCV_KERNEL(GCPUParseYolo, cv::gapi::nn::parsers::GParseYolo)
     }
 };
 
-GAPI_OCV_KERNEL(GCPUSize, cv::gapi::core::GSize)
+GAPI_OCV_KERNEL(GCPUSize, cv::gapi::streaming::GSize)
 {
     static void run(const cv::Mat& in, cv::Size& out)
     {
@@ -634,7 +634,7 @@ GAPI_OCV_KERNEL(GCPUSize, cv::gapi::core::GSize)
     }
 };
 
-GAPI_OCV_KERNEL(GCPUSizeR, cv::gapi::core::GSizeR)
+GAPI_OCV_KERNEL(GCPUSizeR, cv::gapi::streaming::GSizeR)
 {
     static void run(const cv::Rect& in, cv::Size& out)
     {

@@ -2124,7 +2124,7 @@ PERF_TEST_P_(SizePerfTest, TestPerformance)
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;
-    auto out = cv::gapi::size(in);
+    auto out = cv::gapi::streaming::size(in);
     cv::GComputation c(cv::GIn(in), cv::GOut(out));
     cv::Size out_sz;
 
@@ -2156,7 +2156,7 @@ PERF_TEST_P_(SizeRPerfTest, TestPerformance)
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GOpaque<cv::Rect> op_rect;
-    auto out = cv::gapi::size(op_rect);
+    auto out = cv::gapi::streaming::size(op_rect);
     cv::GComputation c(cv::GIn(op_rect), cv::GOut(out));
     cv::Size out_sz;
 

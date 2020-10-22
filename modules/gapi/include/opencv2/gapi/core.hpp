@@ -508,19 +508,23 @@ namespace core {
             return in.withType(in.depth, in.chan).withSize(dsize);
         }
     };
+} // namespace core
 
-    G_TYPED_KERNEL(GSize, <GOpaque<Size>(GMat)>, "org.opencv.core.size") {
-        static GOpaqueDesc outMeta(const GMatDesc&) {
-            return empty_gopaque_desc();
-        }
-    };
+namespace streaming {
 
-    G_TYPED_KERNEL(GSizeR, <GOpaque<Size>(GOpaque<Rect>)>, "org.opencv.core.sizeR") {
-        static GOpaqueDesc outMeta(const GOpaqueDesc&) {
-            return empty_gopaque_desc();
-        }
-    };
-}
+// Operations for Streaming (declared in this header for convenience)
+G_TYPED_KERNEL(GSize, <GOpaque<Size>(GMat)>, "org.opencv.streaming.size") {
+    static GOpaqueDesc outMeta(const GMatDesc&) {
+        return empty_gopaque_desc();
+    }
+};
+
+G_TYPED_KERNEL(GSizeR, <GOpaque<Size>(GOpaque<Rect>)>, "org.opencv.streaming.sizeR") {
+    static GOpaqueDesc outMeta(const GOpaqueDesc&) {
+        return empty_gopaque_desc();
+    }
+};
+} // namespace streaming
 
 //! @addtogroup gapi_math
 //! @{
@@ -1753,9 +1757,10 @@ GAPI_EXPORTS GMat warpAffine(const GMat& src, const Mat& M, const Size& dsize, i
                              int borderMode = cv::BORDER_CONSTANT, const Scalar& borderValue = Scalar());
 //! @} gapi_transform
 
+namespace streaming {
 /** @brief Gets dimensions from Mat.
 
-@note Function textual ID is "org.opencv.core.size"
+@note Function textual ID is "org.opencv.streaming.size"
 
 @param src Input tensor
 @return Size (tensor dimensions).
@@ -1765,12 +1770,13 @@ GAPI_EXPORTS GOpaque<Size> size(const GMat& src);
 /** @overload
 Gets dimensions from rectangle.
 
-@note Function textual ID is "org.opencv.core.sizeR"
+@note Function textual ID is "org.opencv.streaming.sizeR"
 
 @param r Input rectangle.
 @return Size (rectangle dimensions).
 */
 GAPI_EXPORTS GOpaque<Size> size(const GOpaque<Rect>& r);
+} //namespace streaming
 } //namespace gapi
 } //namespace cv
 
