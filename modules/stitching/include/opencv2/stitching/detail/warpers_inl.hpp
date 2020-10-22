@@ -61,6 +61,14 @@ Point2f RotationWarperBase<P>::warpPoint(const Point2f &pt, InputArray K, InputA
     return uv;
 }
 
+template <class P>
+Point2f RotationWarperBase<P>::warpPointBackward(const Point2f& pt, InputArray K, InputArray R)
+{
+    projector_.setCameraParams(K, R);
+    Point2f xy;
+    projector_.mapBackward(pt.x, pt.y, xy.x, xy.y);
+    return xy;
+}
 
 template <class P>
 Rect RotationWarperBase<P>::buildMaps(Size src_size, InputArray K, InputArray R, OutputArray _xmap, OutputArray _ymap)
