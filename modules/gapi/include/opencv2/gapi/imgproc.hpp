@@ -27,7 +27,7 @@
  */
 
 namespace {
-void checkMetaForFindingContours(int depth, int chan, int mode)
+void checkMetaForFindingContours(const int depth, const int chan, const int mode)
 {
     GAPI_Assert(chan == 1);
     switch (mode)

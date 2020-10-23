@@ -52,7 +52,7 @@ namespace
     }
 
     // Draw random ellipses on given mat of given size and type
-    void initMatForFindingContours(cv::Mat& mat, const cv::Size& sz, int type)
+    void initMatForFindingContours(cv::Mat& mat, const cv::Size& sz, const int type)
     {
         cv::RNG& rng = theRNG();
         mat = cv::Mat(sz, type, cv::Scalar::all(0));
