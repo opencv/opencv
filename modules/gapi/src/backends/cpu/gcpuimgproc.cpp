@@ -145,6 +145,15 @@ GAPI_OCV_KERNEL(GCPUDilate, cv::gapi::imgproc::GDilate)
     }
 };
 
+GAPI_OCV_KERNEL(GCPUMorphologyEx, cv::gapi::imgproc::GMorphologyEx)
+{
+    static void run(const cv::Mat &in, int op, const cv::Mat &kernel, const cv::Point &anchor,
+                    int iterations, int borderType, const cv::Scalar &borderValue, cv::Mat &out)
+    {
+        cv::morphologyEx(in, out, op, kernel, anchor, iterations, borderType, borderValue);
+    }
+};
+
 GAPI_OCV_KERNEL(GCPUSobel, cv::gapi::imgproc::GSobel)
 {
     static void run(const cv::Mat& in, int ddepth, int dx, int dy, int ksize, double scale, double delta, int borderType,
@@ -478,6 +487,7 @@ cv::gapi::GKernelPackage cv::gapi::imgproc::cpu::kernels()
         , GCPUMedianBlur
         , GCPUErode
         , GCPUDilate
+        , GCPUMorphologyEx
         , GCPUSobel
         , GCPUSobelXY
         , GCPULaplacian

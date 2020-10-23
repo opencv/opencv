@@ -78,6 +78,13 @@ namespace imgproc {
         }
     };
 
+    G_TYPED_KERNEL(GMorphologyEx, <GMat(GMat,int,Mat,Point,int,int,Scalar)>,
+                   "org.opencv.imgproc.filters.morphologyEx") {
+        static GMatDesc outMeta(GMatDesc in, int, Mat, Point, int, int, Scalar) {
+            return in;
+        }
+    };
+
     G_TYPED_KERNEL(GSobel, <GMat(GMat,int,int,int,int,double,double,int,Scalar)>, "org.opencv.imgproc.filters.sobel") {
         static GMatDesc outMeta(GMatDesc in, int ddepth, int, int, int, double, double, int, Scalar) {
             return in.withDepth(ddepth);
@@ -595,6 +602,37 @@ Output image must have the same type, size, and number of channels as the input 
 GAPI_EXPORTS GMat dilate3x3(const GMat& src, int iterations = 1,
                             int borderType = BORDER_CONSTANT,
                             const  Scalar& borderValue = morphologyDefaultBorderValue());
+
+/** @brief Performs advanced morphological transformations.
+
+The function can perform advanced morphological transformations using an erosion and dilation as
+basic operations.
+
+Any of the operations can be done in-place. In case of multi-channel images, each channel is
+processed independently.
+
+@note Function textual ID is "org.opencv.imgproc.filters.morphologyEx"
+
+@param src Input image.
+@param op Type of a morphological operation, see #MorphTypes
+@param kernel Structuring element. It can be created using #getStructuringElement.
+@param anchor Anchor position within the element. Both negative values mean that the anchor is at
+the kernel center.
+@param iterations Number of times erosion and dilation are applied.
+@param borderType Pixel extrapolation method, see #BorderTypes. #BORDER_WRAP is not supported.
+@param borderValue Border value in case of a constant border. The default value has a special
+meaning.
+@sa  dilate, erode, getStructuringElement
+@note The number of iterations is the number of times erosion or dilatation operation will be
+applied. For instance, an opening operation (#MORPH_OPEN) with two iterations is equivalent to
+apply successively: erode -> erode -> dilate -> dilate
+(and not erode -> dilate -> erode -> dilate).
+ */
+GAPI_EXPORTS GMat morphologyEx(const GMat &src, int op, const Mat &kernel,
+                               const Point  &anchor      = Point(-1,-1),
+                                     int     iterations  = 1,
+                                     int     borderType  = BORDER_CONSTANT,
+                               const Scalar &borderValue = morphologyDefaultBorderValue());
 
 /** @brief Calculates the first, second, third, or mixed image derivatives using an extended Sobel operator.
 
