@@ -91,7 +91,12 @@ class DownloadInstance:
                 print(' done')
                 print(' file {}'.format(filename))
                 if sha is None:
-                    sha = getHashsumFromFile(filepath)
+                    download_path = os.path.join(self.save_dir, filename)
+                    sha = getHashsumFromFile(download_path)
+                    new_dir = os.path.join(self.save_dir, sha)
+                    os.makedirs(new_dir, exist_ok=True)
+                    if not (os.path.exists(os.path.join(new_dir, filename))):
+                        shutil.move(download_path, new_dir)
                     print('  No expected hashsum provided, actual SHA is {}'.format(sha))
                 else:
                     checkHashsum(sha, filepath, silent=False)
@@ -111,8 +116,11 @@ class Loader(object):
         self.archive_member = archive_member
 
     def load(self, requested_file, sha, save_dir):
-        # create a new folder in save_dir to avoid possible name conflicts
-        download_dir = os.path.join(save_dir, self.download_sha)
+        if self.download_sha is None:
+            download_dir = save_dir
+        else:
+            # create a new folder in save_dir to avoid possible name conflicts
+            download_dir = os.path.join(save_dir, self.download_sha)
         os.makedirs(download_dir, exist_ok=True)
         download_path = os.path.join(download_dir, self.download_name)
         print("  Preparing to download file " + self.download_name)
@@ -121,12 +129,16 @@ class Loader(object):
         else:
             filesize = self.download(download_path)
             print('  Downloaded {} with size {} Mb'.format(self.download_name, filesize/self.MB))
-            checkHashsum(self.download_sha, download_path, silent=False)
+            if self.download_sha is not None:
+                checkHashsum(self.download_sha, download_path, silent=False)
         if self.download_name == requested_file:
             return
         else:
             if isArchive(download_path):
-                extract_dir = os.path.join(save_dir, sha)
+                if sha is not None:
+                    extract_dir = os.path.join(save_dir, sha)
+                else:
+                    extract_dir = save_dir
                 os.makedirs(extract_dir, exist_ok=True)
                 self.extract(requested_file, download_path, extract_dir)
             else:
@@ -268,6 +280,7 @@ def downloadFile(url, sha=None, save_dir=None, filename=None):
     if filename is None:
         filename = "download_" + datetime.now().__str__()
     name = filename
+    print(save_dir)
     produceDownloadInstance(name, filename, sha, url, save_dir).get()
 
 def parseMetalinkFile(metalink_filepath, save_dir):
