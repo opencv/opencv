@@ -6,13 +6,20 @@ import sys
 import yaml
 import argparse
 import tarfile
+import platform
+import tempfile
 import hashlib
 import requests
+import shutil
+from pathlib import Path
+from datetime import datetime
 if sys.version_info[0] < 3:
     from urllib2 import urlopen
 else:
     from urllib.request import urlopen
 import xml.etree.ElementTree as ET
+
+__all__ = ["downloadFile"]
 
 class HashMismatchException(Exception):
         def __init__(self, expected, actual):
@@ -22,8 +29,7 @@ class HashMismatchException(Exception):
         def __str__(self):
             return 'Hash mismatch: expected {} vs actual of {}'.format(self.expected, self.actual)
 
-def checkHashsum(expected_sha, filepath, silent=True):
-    print('  expected SHA1: {}'.format(expected_sha))
+def getHashsumFromFile(filepath):
     sha = hashlib.sha1()
     if os.path.exists(filepath):
         print('  there is already a file with the same name')
@@ -33,7 +39,12 @@ def checkHashsum(expected_sha, filepath, silent=True):
                 if not buf:
                     break
                 sha.update(buf)
-    actual_sha = sha.hexdigest()
+    hashsum = sha.hexdigest()
+    return hashsum
+
+def checkHashsum(expected_sha, filepath, silent=True):
+    print('  expected SHA1: {}'.format(expected_sha))
+    actual_sha = getHashsumFromFile(filepath)
     print('  actual SHA1:{}'.format(actual_sha))
     hashes_matched = expected_sha == actual_sha
     if not hashes_matched and not silent:
@@ -43,28 +54,30 @@ def checkHashsum(expected_sha, filepath, silent=True):
 def isArchive(filepath):
     return tarfile.is_tarfile(filepath)
 
-class Model:
+class DownloadInstance:
     def __init__(self, **kwargs):
         self.name = kwargs.pop('name')
         self.filenames = kwargs.pop('filenames')
         self.loader = kwargs.pop('loader', None)
         self.save_dir = kwargs.pop('save_dir')
-        self.shas = kwargs.pop('shas', None)
-    
+        self.shas = kwargs.pop('shas', None)    
 
     def __str__(self):
-        return 'Model <{}>'.format(self.name)
+        return 'DownloadInstance <{}>'.format(self.name)
         
     def get(self):
         print("  Working on " + self.name)
         for filename, sha in zip(self.filenames, self.shas):
             print("  Getting file " + filename)
-            filepath = os.path.join(self.save_dir, filename)
-            if checkHashsum(sha, filepath):
-                print('  hash match - file already exists, skipping')
-                continue
+            if sha is None:
+                print('  No expected hashsum provided, loading file')
             else:
-                print('  hash didn\'t match, loading file')
+                filepath = os.path.join(self.save_dir, sha, filename)
+                if checkHashsum(sha, filepath):
+                    print('  hash match - file already exists, skipping')
+                    continue
+                else:
+                    print('  hash didn\'t match, loading file')
 
             if not os.path.exists(self.save_dir):
                 print('  creating directory: ' + self.save_dir)
@@ -74,10 +87,14 @@ class Model:
             print('  hash check failed - loading')
             assert self.loader
             try:
-                self.loader.load(filename, self.save_dir)
+                self.loader.load(filename, sha, self.save_dir)
                 print(' done')
                 print(' file {}'.format(filename))
-                checkHashsum(sha, filepath, silent=False)
+                if sha is None:
+                    sha = getHashsumFromFile(filepath)
+                    print('  No expected hashsum provided, actual SHA is {}'.format(sha))
+                else:
+                    checkHashsum(sha, filepath, silent=False)
             except Exception as e:
                 print("  There was some problem with loading file {} for {}".format(filename, self.name))
                 print("  Exception: {}".format(e))
@@ -93,20 +110,25 @@ class Loader(object):
         self.download_sha = download_sha
         self.archive_member = archive_member
 
-    def load(self, requested_file, save_dir):
-        filepath = os.path.join(save_dir, self.download_name)
+    def load(self, requested_file, sha, save_dir):
+        # create a new folder in save_dir to avoid possible name conflicts
+        download_dir = os.path.join(save_dir, self.download_sha)
+        os.makedirs(download_dir, exist_ok=True)
+        download_path = os.path.join(download_dir, self.download_name)
         print("  Preparing to download file " + self.download_name)
-        if checkHashsum(self.download_sha, filepath):
+        if checkHashsum(self.download_sha, download_path):
             print('  hash match - file already exists, no need to download')
         else:
-            filesize = self.download(filepath)
+            filesize = self.download(download_path)
             print('  Downloaded {} with size {} Mb'.format(self.download_name, filesize/self.MB))
-            checkHashsum(self.download_sha, filepath, silent=False)
+            checkHashsum(self.download_sha, download_path, silent=False)
         if self.download_name == requested_file:
             return
         else:
-            if isArchive(filepath):
-                self.extract(requested_file, filepath, save_dir)
+            if isArchive(download_path):
+                extract_dir = os.path.join(save_dir, sha)
+                os.makedirs(extract_dir, exist_ok=True)
+                self.extract(requested_file, download_path, extract_dir)
             else:
                 raise Exception("Downloaded file has different name")
     
@@ -202,7 +224,9 @@ class GDriveLoader(Loader):
         print('')
         return sz
 
-def produceModel(model_name, filename, sha, url, save_dir, download_name=None, download_sha=None, archive_member=None):
+def produceDownloadInstance(instance_name, filename, sha, url, save_dir, download_name=None, download_sha=None, archive_member=None):
+    spec_param = url
+    loader = URLLoader
     if download_name is None:
         download_name = filename
     if download_sha is None:
@@ -216,19 +240,35 @@ def produceModel(model_name, filename, sha, url, save_dir, download_name=None, d
             if param.startswith("id="):                
                 token = param[3:]
         if token:
-            loader = GDriveLoader(download_name, download_sha, token, archive_member)
+            loader = GDriveLoader
+            spec_param = token
         else:
             print("Warning: possibly wrong Google Drive link")
-            loader = URLLoader(download_name, download_sha, url, archive_member)
-    else:
-        loader = URLLoader(download_name, download_sha, url, archive_member)
-    return Model(
-        name=model_name,
+    return DownloadInstance(
+        name=instance_name,
         filenames=[filename],
         shas=[sha],
         save_dir=save_dir,
-        loader=loader
+        loader=loader(download_name, download_sha, spec_param, archive_member)
     )
+
+def getSaveDir():
+    env_path = os.environ.get("OPENCV_SAVE_DIR", None)
+    if env_path:
+        save_dir = env_path
+    else:
+        temp_dir = Path("/tmp" if platform.system() == "Darwin" else tempfile.gettempdir())
+        save_dir = os.path.join(temp_dir, "opencv_data")
+    os.makedirs(save_dir, exist_ok=True)
+    return save_dir
+
+def downloadFile(url, sha=None, save_dir=None, filename=None):
+    if save_dir is None:
+        save_dir = getSaveDir()
+    if filename is None:
+        filename = "download_" + datetime.now().__str__()
+    name = filename
+    produceDownloadInstance(name, filename, sha, url, save_dir).get()
 
 def parseMetalinkFile(metalink_filepath, save_dir):
     NS = {'ml': 'urn:ietf:params:xml:ns:metalink'}
@@ -238,7 +278,7 @@ def parseMetalinkFile(metalink_filepath, save_dir):
         fname = file_elem.attrib['name']
         name = file_elem.find('ml:identity', NS).text
         hash_sum = file_elem.find('ml:hash', NS).text
-        models.append(produceModel(name, fname, hash_sum, url, save_dir))
+        models.append(produceDownloadInstance(name, fname, hash_sum, url, save_dir))
     return models
 
 def parseYAMLFile(yaml_filepath, save_dir):
@@ -254,7 +294,7 @@ def parseYAMLFile(yaml_filepath, save_dir):
                 download_sha = load_info.get("download_sha")
                 download_name = load_info.get("download_name")
                 archive_member = load_info.get("member")
-                models.append(produceModel(name, fname, hash_sum, url, save_dir, 
+                models.append(produceDownloadInstance(name, fname, hash_sum, url, save_dir, 
                     download_name=download_name, download_sha=download_sha, archive_member=archive_member))
 
     return models
