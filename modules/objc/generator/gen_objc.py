@@ -1347,7 +1347,17 @@ typedef NS_ENUM(int, {2}) {{
 
     def finalize(self, output_objc_path):
         opencv_header_file = os.path.join(output_objc_path, framework_name + ".h")
-        self.save(opencv_header_file, '\n'.join(['#import "%s"' % os.path.basename(f) for f in self.header_files]))
+        opencv_header = "#import <Foundation/Foundation.h>\n\n"
+        opencv_header += "// ! Project version number\nFOUNDATION_EXPORT double " + framework_name + "VersionNumber;\n\n"
+        opencv_header += "// ! Project version string\nFOUNDATION_EXPORT const unsigned char " + framework_name + "VersionString[];\n\n"
+        opencv_header += "\n".join(["#import <" + framework_name + "/%s>" % os.path.basename(f) for f in self.header_files])
+        self.save(opencv_header_file, opencv_header)
+        opencv_modulemap_file = os.path.join(output_objc_path, framework_name + ".modulemap")
+        opencv_modulemap = "framework module " + framework_name + " {\n"
+        opencv_modulemap += "  umbrella header \"" + framework_name + ".h\"\n"
+        opencv_modulemap += "\n".join(["  header \"%s\"" % os.path.basename(f) for f in self.header_files])
+        opencv_modulemap += "\n  export *\n  module * {export *}\n}\n"
+        self.save(opencv_modulemap_file, opencv_modulemap)
         cmakelist_template = read_contents(os.path.join(SCRIPT_DIR, 'templates/cmakelists.template'))
         cmakelist = Template(cmakelist_template).substitute(modules = ";".join(modules), framework = framework_name)
         self.save(os.path.join(dstdir, "CMakeLists.txt"), cmakelist)
