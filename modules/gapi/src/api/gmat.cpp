@@ -137,6 +137,13 @@ template<typename M> inline bool canDescribeHelper(const GMatDesc& desc, const M
 }
 } // anonymous namespace
 
+bool GMatDesc::isVectorPoints(int n, int ddepth) const
+{
+    return (ddepth == depth || ddepth < 0) &&
+           ((chan == n && (size.height == 1 || size.width == 1)) ||
+            (chan == 1 && size.width == n));
+}
+
 bool GMatDesc::canDescribe(const cv::Mat& mat) const
 {
     return canDescribeHelper(*this, mat);

@@ -109,6 +109,9 @@ struct GAPI_EXPORTS GMatDesc
 
     bool isND() const { return !dims.empty(); }
 
+    // Checks if the passed mat is a set of n-dimetional points of the given depth
+    bool isVectorPoints(int n, int depth) const;
+
     // Checks if the passed mat can be described by this descriptor
     // (it handles the case when
     // 1-channel mat can be reinterpreted as is (1-channel mat)

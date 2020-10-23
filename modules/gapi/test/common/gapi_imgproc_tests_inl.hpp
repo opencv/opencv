@@ -495,7 +495,7 @@ TEST_P(FindContoursTest, AccuracyTest)
     EXPECT_TRUE(AbsExact().to_compare_f()(out_mat_ocv, out_mat_gapi));
 }
 
-TEST_P(FindContoursHierarchicalTest, AccuracyTest)
+TEST_P(FindContoursHTest, AccuracyTest)
 {
     std::vector<std::vector<cv::Point>> outCtsOCV,  outCtsGAPI;
     std::vector<cv::Vec4i>              outHierOCV, outHierGAPI;
@@ -513,7 +513,7 @@ TEST_P(FindContoursHierarchicalTest, AccuracyTest)
     cv::GMat in;
     cv::GArray<cv::GArray<cv::Point>> outCts;
     cv::GArray<cv::Vec4i> outHier;
-    std::tie(outCts, outHier) = cv::gapi::findContoursHierarchical(in, mode, method);
+    std::tie(outCts, outHier) = cv::gapi::findContoursH(in, mode, method);
     cv::GComputation c(GIn(in), GOut(outCts, outHier));
     c.apply(gin(in_mat1), gout(outCtsGAPI, outHierGAPI), getCompileArgs());
 
@@ -546,6 +546,63 @@ TEST_P(BoundingRectMatTest, AccuracyTest)
         EXPECT_TRUE(cmpF(out_rect_gapi, out_rect_ocv));
     }
 }
+
+TEST_P(BoundingRectMatVector32STest, AccuracyTest)
+{
+    cv::RNG& rng = theRNG();
+    cv::Rect out_rect_gapi, out_rect_ocv;
+
+    std::vector<cv::Point2i> in_vectorS(sz.width);
+    for (int i = 0; i < sz.width; i++)
+        in_vectorS.push_back(cv::Point2i(rng(INT_MAX + 1U), rng(INT_MAX + 1U)));
+    in_mat1 = cv::Mat(in_vectorS);
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    auto out = cv::gapi::boundingRect(in);
+
+    cv::GComputation c(cv::GIn(in), cv::GOut(out));
+    c.apply(cv::gin(in_mat1), cv::gout(out_rect_gapi), getCompileArgs());
+    // OpenCV code /////////////////////////////////////////////////////////////
+    {
+        out_rect_ocv = cv::boundingRect(in_mat1);
+    }
+    // Comparison //////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(cmpF(out_rect_gapi, out_rect_ocv));
+    }
+}
+
+TEST_P(BoundingRectMatVector32FTest, AccuracyTest)
+{
+    cv::RNG& rng = theRNG();
+    cv::Rect out_rect_gapi, out_rect_ocv;
+
+    std::vector<cv::Point2f> in_vectorF(sz.width);
+    for (int i = 0; i < sz.width; i++)
+    {
+        cv::Point2f pt(expf(static_cast<float>(rng.uniform(-1., 6.) * 3.0 * CV_LOG2)),
+                       expf(static_cast<float>(rng.uniform(-1., 6.) * 3.0 * CV_LOG2)));
+        in_vectorF.push_back(pt);
+    }
+    in_mat1 = cv::Mat(in_vectorF);
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    auto out = cv::gapi::boundingRect(in);
+
+    cv::GComputation c(cv::GIn(in), cv::GOut(out));
+    c.apply(cv::gin(in_mat1), cv::gout(out_rect_gapi), getCompileArgs());
+    // OpenCV code /////////////////////////////////////////////////////////////
+    {
+        out_rect_ocv = cv::boundingRect(in_mat1);
+    }
+    // Comparison //////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(cmpF(out_rect_gapi, out_rect_ocv));
+    }
+}
+
 
 TEST_P(BoundingRectVector32STest, AccuracyTest)
 {

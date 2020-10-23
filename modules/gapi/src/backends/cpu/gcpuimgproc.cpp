@@ -220,7 +220,7 @@ GAPI_OCV_KERNEL(GCPUFindContours, cv::gapi::imgproc::GFindContours)
     }
 };
 
-GAPI_OCV_KERNEL(GCPUFindContoursHierarchical, cv::gapi::imgproc::GFindContoursHierarchical)
+GAPI_OCV_KERNEL(GCPUFindContoursH, cv::gapi::imgproc::GFindContoursH)
 {
     static void run(const cv::Mat& image, int mode, int method, const cv::Point& offset,
                     std::vector<std::vector<cv::Point>> &outConts, std::vector<cv::Vec4i> &outHier)
@@ -528,7 +528,7 @@ cv::gapi::GKernelPackage cv::gapi::imgproc::cpu::kernels()
         , GCPUGoodFeatures
         , GCPUEqualizeHist
         , GCPUFindContours
-        , GCPUFindContoursHierarchical
+        , GCPUFindContoursH
         , GCPUBGR2RGB
         , GCPURGB2YUV
         , GCPUBoundingRectMat

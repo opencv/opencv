@@ -156,8 +156,8 @@ namespace imgproc {
         }
     };
 
-    G_TYPED_KERNEL(GFindContoursHierarchical,<GFindContoursOutput(GMat,int,int,Point)>,
-                   "org.opencv.imgproc.shape.findContoursHierarchical")
+    G_TYPED_KERNEL(GFindContoursH,<GFindContoursOutput(GMat,int,int,Point)>,
+                   "org.opencv.imgproc.shape.findContoursH")
     {
         static std::tuple<GArrayDesc,GArrayDesc> outMeta(GMatDesc in, int mode, int, Point)
         {
@@ -169,7 +169,9 @@ namespace imgproc {
     G_TYPED_KERNEL(GBoundingRectMat, <GOpaque<Rect>(GMat)>,
                    "org.opencv.imgproc.shape.boundingRectMat") {
         static GOpaqueDesc outMeta(GMatDesc in) {
-            GAPI_Assert(in.depth == CV_8U && in.chan == 1);
+            GAPI_Assert((in.depth == CV_8U && in.chan == 1) ||
+                        (in.isVectorPoints(2, CV_32S) || in.isVectorPoints(2, CV_32F)));
+
             return empty_gopaque_desc();
         }
     };
@@ -959,7 +961,7 @@ The contours are a useful tool for shape analysis and object detection and recog
 See squares.cpp in the OpenCV sample directory.
 @note Since opencv 3.2 source image is not modified by this function.
 
-@note Function textual ID is "org.opencv.imgproc.shape.findContoursHierarchical"
+@note Function textual ID is "org.opencv.imgproc.shape.findContoursH"
 
 @param src Input gray-scale image @ref CV_8UC1. Non-zero pixels are treated as 1's. Zero
 pixels remain 0's, so the image is treated as binary . You can use #compare, #inRange, #threshold ,
@@ -981,8 +983,8 @@ child contour and the parent contour, respectively. If for the contour i there a
 previous, parent, or nested contours, the corresponding elements of hierarchy[i] will be negative.
  */
 GAPI_EXPORTS std::tuple<GArray<GArray<Point>>,GArray<Vec4i>>
-findContoursHierarchical(const GMat &src, const int mode, const int method,
-                         const Point &offset = Point());
+findContoursH(const GMat &src, const int mode, const int method,
+              const Point &offset = Point());
 
 /** @brief Calculates the up-right bounding rectangle of a point set or non-zero pixels
 of gray-scale image.
@@ -990,21 +992,32 @@ of gray-scale image.
 The function calculates and returns the minimal up-right bounding rectangle for the specified
 point set or non-zero pixels of gray-scale image.
 
-@note Function textual ID is "org.opencv.imgproc.shape.boundingrectMat"
+@note Function textual ID is "org.opencv.imgproc.shape.boundingRectMat"
 
-@param src Input gray-scale image @ref CV_8UC1.
+@param src Input gray-scale image @ref CV_8UC1; or input set of @ref CV_32S or @ref CV_32F
+2D points stored in Mat.
+
+@note In case of a 2D points' set given, Mat should be 2-dimensional, have a single row or column
+if there are 2 channels, or have 2 columns if there is a single channel. Mat should have either
+@ref CV_32S or @ref CV_32F depth
  */
 GAPI_EXPORTS GOpaque<Rect> boundingRect(const GMat& src);
 
 /** @overload
-@note Function textual ID is "org.opencv.imgproc.shape.boundingrectVector32S"
+
+Calculates the up-right bounding rectangle of a point set.
+
+@note Function textual ID is "org.opencv.imgproc.shape.boundingRectVector32S"
 
 @param src Input 2D point set, stored in std::vector<cv::Point2i>.
  */
 GAPI_EXPORTS GOpaque<Rect> boundingRect(const GArray<Point2i>& src);
 
 /** @overload
-@note Function textual ID is "org.opencv.imgproc.shape.boundingrectVector32F"
+
+Calculates the up-right bounding rectangle of a point set.
+
+@note Function textual ID is "org.opencv.imgproc.shape.boundingRectVector32F"
 
 @param src Input 2D point set, stored in std::vector<cv::Point2f>.
  */

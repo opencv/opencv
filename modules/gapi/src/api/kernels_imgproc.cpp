@@ -122,9 +122,9 @@ findContours(const GMat &src, const int mode, const int method, const Point &off
 }
 
 std::tuple<GArray<GArray<Point>>,GArray<Vec4i>>
-findContoursHierarchical(const GMat &src, const int mode, const int method, const Point &offset)
+findContoursH(const GMat &src, const int mode, const int method, const Point &offset)
 {
-    return imgproc::GFindContoursHierarchical::on(src, mode, method, offset);
+    return imgproc::GFindContoursH::on(src, mode, method, offset);
 }
 
 GOpaque<Rect> boundingRect(const GMat& src)

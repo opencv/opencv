@@ -248,7 +248,7 @@ INSTANTIATE_TEST_CASE_P(FindContoursTestCPU, FindContoursTest,
                                 Values(RETR_EXTERNAL),
                                 Values(CHAIN_APPROX_NONE)));
 
-INSTANTIATE_TEST_CASE_P(FindContoursHierarchyTestCPU, FindContoursHierarchicalTest,
+INSTANTIATE_TEST_CASE_P(FindContoursHTestCPU, FindContoursHTest,
                         Combine(Values(IMGPROC_CPU),
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
@@ -257,7 +257,7 @@ INSTANTIATE_TEST_CASE_P(FindContoursHierarchyTestCPU, FindContoursHierarchicalTe
                                 Values(CHAIN_APPROX_NONE, CHAIN_APPROX_SIMPLE,
                                        CHAIN_APPROX_TC89_L1, CHAIN_APPROX_TC89_KCOS)));
 
-INSTANTIATE_TEST_CASE_P(FindContoursHierarchy32STestCPU, FindContoursHierarchicalTest,
+INSTANTIATE_TEST_CASE_P(FindContoursH32STestCPU, FindContoursHTest,
                         Combine(Values(IMGPROC_CPU),
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
@@ -274,6 +274,22 @@ INSTANTIATE_TEST_CASE_P(BoundingRectMatTestCPU, BoundingRectMatTest,
                                 Values(-1),
                                 Values(IMGPROC_CPU),
                                 Values(AbsToleranceRect(0).to_compare_obj())));
+
+INSTANTIATE_TEST_CASE_P(BoundingRectMatVector32STestCPU, BoundingRectVector32STest,
+                        Combine(Values(-1),
+                                Values(cv::Size(1280, 1),
+                                       cv::Size(128, 1)),
+                                Values(-1),
+                                Values(IMGPROC_CPU),
+                                Values(AbsToleranceRect(0).to_compare_obj())));
+
+ INSTANTIATE_TEST_CASE_P(BoundingRectMatVector32FTestCPU, BoundingRectVector32FTest,
+                         Combine(Values(-1),
+                                 Values(cv::Size(1280, 1),
+                                        cv::Size(128, 1)),
+                                 Values(-1),
+                                 Values(IMGPROC_CPU),
+                                 Values(AbsToleranceRect(1e-5).to_compare_obj())));
 
 INSTANTIATE_TEST_CASE_P(BoundingRectVector32STestCPU, BoundingRectVector32STest,
                         Combine(Values(-1),
