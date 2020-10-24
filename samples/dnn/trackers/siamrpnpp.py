@@ -42,7 +42,8 @@ class ModelBuilder:
         self.search_net.setInput(x)
         outNames = self.search_net.getUnconnectedOutLayersNames()
         xfs_1, xfs_2, xfs_3 = self.search_net.forward(outNames)
-        self.rpn_head.setInput(np.stack([self.zfs_1, self.zfs_2, self.zfs_3]), 'input_1')
+        self.rpn_head.setInput(np.stack([self.zfs_1, self.zfs_2, self.zfs_3]),
+                               'input_1')
         self.rpn_head.setInput(np.stack([xfs_1, xfs_2, xfs_3]), 'input_2')
         outNames = self.rpn_head.getUnconnectedOutLayersNames()
         cls, loc = self.rpn_head.forward(outNames)
@@ -70,7 +71,8 @@ class SiamRPNTracker:
         self.window_influence = 0.44
         self.lr = 0.4
         if self.windowing == "cosine":
-            self.window = np.outer(np.hanning(self.score_size), np.hanning(self.score_size))
+            self.window = np.outer(np.hanning(self.score_size),
+                                   np.hanning(self.score_size))
         elif self.windowing == "uniform":
             self.window = np.ones((self.score_size, self.score_size))
         self.window = np.tile(self.window.flatten(), self.anchor_number)
@@ -107,7 +109,8 @@ class SiamRPNTracker:
         context_ymax += top_pad
 
         if any([top_pad, bottom_pad, left_pad, right_pad]):
-            size = (im_h + top_pad + bottom_pad, im_w + left_pad + right_pad, im_d)
+            size = (im_h + top_pad + bottom_pad, im_w + left_pad + right_pad,
+                    im_d)
             te_im = np.zeros(size, np.uint8)
             te_im[top_pad:top_pad + im_h, left_pad:left_pad + im_w, :] = im
             if top_pad:
@@ -119,10 +122,10 @@ class SiamRPNTracker:
             if right_pad:
                 te_im[:, im_w + left_pad:, :] = avg_chans
             im_patch = te_im[int(context_ymin):int(context_ymax + 1),
-                       int(context_xmin):int(context_xmax + 1), :]
+                             int(context_xmin):int(context_xmax + 1), :]
         else:
             im_patch = im[int(context_ymin):int(context_ymax + 1),
-                       int(context_xmin):int(context_xmax + 1), :]
+                          int(context_xmin):int(context_xmax + 1), :]
 
         if not np.array_equal(model_sz, original_sz):
             im_patch = cv.resize(im_patch, (model_sz, model_sz))
@@ -154,7 +157,7 @@ class SiamRPNTracker:
         """
         x = x.astype(dtype=np.float32)
         x_max = x.max(axis=1)[:, np.newaxis]
-        e_x = np.exp(x-x_max)
+        e_x = np.exp(x - x_max)
         div = np.sum(e_x, axis=1)[:, np.newaxis]
         y = e_x / div
         return y
@@ -171,7 +174,7 @@ class SiamRPNTracker:
         score_view = score_con.reshape(2, -1)
         score = np.transpose(score_view, (1, 0))
         score = self._softmax(score)
-        return score[:,1]
+        return score[:, 1]
 
     def _bbox_clip(self, cx, cy, width, height, boundary):
         """
@@ -198,7 +201,8 @@ class SiamRPNTracker:
         h_z = self.h + self.context_amount * np.add(h, w)
         s_z = round(np.sqrt(w_z * h_z))
         self.channel_average = np.mean(img, axis=(0, 1))
-        z_crop = self.get_subwindow(img, self.center_pos, self.exemplar_size, s_z, self.channel_average)
+        z_crop = self.get_subwindow(img, self.center_pos, self.exemplar_size,
+                                    s_z, self.channel_average)
         self.model.template(z_crop)
 
     def track(self, img):
@@ -213,7 +217,8 @@ class SiamRPNTracker:
         s_z = np.sqrt(w_z * h_z)
         scale_z = self.exemplar_size / s_z
         s_x = s_z * (self.instance_size / self.exemplar_size)
-        x_crop = self.get_subwindow(img, self.center_pos, self.instance_size, round(s_x), self.channel_average)
+        x_crop = self.get_subwindow(img, self.center_pos, self.instance_size,
+                                    round(s_x), self.channel_average)
         outputs = self.model.track(x_crop)
         score = self._convert_score(outputs['cls'])
         pred_bbox = self._convert_bbox(outputs['loc'], self.anchors)
@@ -226,12 +231,12 @@ class SiamRPNTracker:
             return np.sqrt((w + pad) * (h + pad))
 
         # scale penalty
-        s_c = change(sz(pred_bbox[2, :], pred_bbox[3, :]) /
-                     (sz(self.w * scale_z, self.h * scale_z)))
+        s_c = change(
+            sz(pred_bbox[2, :], pred_bbox[3, :]) /
+            (sz(self.w * scale_z, self.h * scale_z)))
 
         # aspect ratio penalty
-        r_c = change((self.w / self.h) /
-                     (pred_bbox[2, :] / pred_bbox[3, :]))
+        r_c = change((self.w / self.h) / (pred_bbox[2, :] / pred_bbox[3, :]))
         penalty = np.exp(-(r_c * s_c - 1) * self.penalty_k)
         pscore = penalty * score
 
@@ -243,7 +248,7 @@ class SiamRPNTracker:
         lr = penalty[best_idx] * score[best_idx] * self.lr
 
         cpx, cpy = self.center_pos
-        x,y,w,h = bbox
+        x, y, w, h = bbox
         cx = x + cpx
         cy = y + cpy
 
@@ -252,7 +257,8 @@ class SiamRPNTracker:
         height = self.h * (1 - lr) + h * lr
 
         # clip boundary
-        cx, cy, width, height = self._bbox_clip(cx, cy, width, height, img.shape[:2])
+        cx, cy, width, height = self._bbox_clip(cx, cy, width, height,
+                                                img.shape[:2])
 
         # udpate state
         self.center_pos = np.array([cx, cy])
@@ -261,6 +267,7 @@ class SiamRPNTracker:
         bbox = [cx - width / 2, cy - height / 2, width, height]
         best_score = score[best_idx]
         return {'bbox': bbox, 'best_score': best_score}
+
 
 def get_frames(video_name):
     """
@@ -276,6 +283,7 @@ def get_frames(video_name):
             yield frame
         else:
             break
+
 
 def main():
     """ Sample SiamRPN Tracker
@@ -339,7 +347,8 @@ def main():
     for frame in get_frames(args.input_video):
         if first_frame:
             try:
-                init_rect = cv.selectROI('SiamRPN++ Tracker', frame, False, False)
+                init_rect = cv.selectROI('SiamRPN++ Tracker', frame, False,
+                                         False)
             except:
                 exit()
             tracker.init(frame, init_rect)
@@ -347,12 +356,13 @@ def main():
         else:
             outputs = tracker.track(frame)
             bbox = list(map(int, outputs['bbox']))
-            x,y,w,h = bbox
-            cv.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 3)
+            x, y, w, h = bbox
+            cv.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 3)
         cv.imshow('SiamRPN++ Tracker', frame)
         key = cv.waitKey(1)
         if key == ord("q"):
             break
+
 
 if __name__ == '__main__':
     main()
