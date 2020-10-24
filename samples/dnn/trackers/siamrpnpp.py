@@ -14,7 +14,7 @@ import cv2 as cv
 import numpy as np
 import os
 
-from .utils import Anchors
+from .utils import generate_anchors
 
 
 class ModelBuilder:
@@ -59,10 +59,13 @@ class SiamRPNTracker:
         self.anchor_stride = 8
         self.anchor_ratios = [0.33, 0.5, 1, 2, 3]
         self.anchor_scales = [8]
-        self.anchor_num = len(self.anchor_ratios) * len(self.anchor_scales)
-        self.context_amount = 0.5
+        self.anchor_number = len(self.anchor_ratios) * len(self.anchor_scales)
+        self.anchors = generate_anchors(self.anchor_stride, self.anchor_ratios,
+                                        self.anchor_scales, self.anchor_number,
+                                        self.score_size)
         self.score_size = (self.instance_size - self.exemplar_size) // \
-                          self.anchor_stride + 1 + self.base_size
+                           self.anchor_stride + 1 + self.base_size
+        self.context_amount = 0.5
         self.penalty_k = 0.04
         self.window_influence = 0.44
         self.lr = 0.4
@@ -70,8 +73,7 @@ class SiamRPNTracker:
             self.window = np.outer(np.hanning(self.score_size), np.hanning(self.score_size))
         elif self.windowing == "uniform":
             self.window = np.ones((self.score_size, self.score_size))
-        self.window = np.tile(self.window.flatten(), self.anchor_num)
-        self.anchors = self.generate_anchor(self.score_size)
+        self.window = np.tile(self.window.flatten(), self.anchor_number)
         self.model = model
 
     def get_subwindow(self, im, pos, model_sz, original_sz, avg_chans):
@@ -128,32 +130,6 @@ class SiamRPNTracker:
         im_patch = im_patch[np.newaxis, :, :, :]
         im_patch = im_patch.astype(np.float32)
         return im_patch
-
-    def generate_anchor(self, score_size):
-        """
-        Args:
-            im:         bgr based input image frame
-            pos:        position of the center of the frame
-            model_sz:   exemplar / target image size
-            s_z:        original / search image size
-            avg_chans:  channel average
-        Return:
-            anchor:     anchors for pre-determined values of stride, ratio, and scale
-        """
-        anchors = Anchors(self.anchor_stride, self.anchor_ratios, self.anchor_scales)
-        anchor = anchors.anchors
-        x1, y1, x2, y2 = anchor[:, 0], anchor[:, 1], anchor[:, 2], anchor[:, 3]
-        anchor = np.stack([(x1 + x2) * 0.5, (y1 + y2) * 0.5, x2 - x1, y2 - y1], 1)
-        total_stride = anchors.stride
-        anchor_num = anchors.anchor_num
-        anchor = np.tile(anchor, score_size * score_size).reshape((-1, 4))
-        ori = - (score_size // 2) * total_stride
-        xx, yy = np.meshgrid([ori + total_stride * dx for dx in range(score_size)],
-                             [ori + total_stride * dy for dy in range(score_size)])
-        xx, yy = np.tile(xx.flatten(), (anchor_num, 1)).flatten(), \
-                 np.tile(yy.flatten(), (anchor_num, 1)).flatten()
-        anchor[:, 0], anchor[:, 1] = xx.astype(np.float32), yy.astype(np.float32)
-        return anchor
 
     def _convert_bbox(self, delta, anchor):
         """

@@ -13,6 +13,8 @@ import cv2 as cv
 import numpy as np
 import sys
 
+from .utils import generate_anchors
+
 
 class DaSiamRPNTracker:
     # Initialization of used values, initial bounding box, used network
@@ -23,9 +25,13 @@ class DaSiamRPNTracker:
         self.anchor_stride = 8
         self.anchor_ratios = [0.33, 0.5, 1, 2, 3]
         self.anchor_scales = [8]
-        self.anchor_num = len(self.anchor_ratios) * len(self.anchor_scales)
+        self.anchor_number = len(self.anchor_ratios) * len(self.anchor_scales)
+        self.score_size = (self.instance_size - self.exemplar_size) // \
+                           self.anchor_stride + 1
+        self.anchors = generate_anchors(self.anchor_stride, self.anchor_ratios,
+                                        self.anchor_scales, self.anchor_number,
+                                        self.score_size)
         self.context_amount = 0.5
-        self.score_size = (self.instance_size - self.exemplar_size) // self.anchor_stride + 1
         self.penalty_k = 0.055
         self.window_influence = 0.42
         self.lr = 0.295
@@ -33,7 +39,7 @@ class DaSiamRPNTracker:
             self.window = np.outer(np.hanning(self.score_size), np.hanning(self.score_size))
         elif self.windowing == "uniform":
             self.window = np.ones((self.score_size, self.score_size))
-        self.window = np.tile(self.window.flatten(), self.anchor_num)
+        self.window = np.tile(self.window.flatten(), self.anchor_number)
         self.score = []
         # Loading network`s and kernel`s models
         self.net = cv.dnn.readNet(net)
@@ -57,7 +63,6 @@ class DaSiamRPNTracker:
             raise AssertionError(
                 "Initializing BB is too small-try to restart tracker with larger BB")
 
-        self.anchor = self.__generate_anchor()
         wc_z = self.target_sz[0] + self.context_amount * sum(self.target_sz)
         hc_z = self.target_sz[1] + self.context_amount * sum(self.target_sz)
         s_z = round(np.sqrt(wc_z * hc_z))
@@ -73,29 +78,6 @@ class DaSiamRPNTracker:
         cls1 = cls1.reshape(10, 256 , 4, 4)
         self.net.setParam(self.net.getLayerId('65'), 0, r1)
         self.net.setParam(self.net.getLayerId('68'), 0, cls1)
-
-    # Сreating anchor for tracking bounding box
-    def __generate_anchor(self):
-        self.anchor = np.zeros((self.anchor_num, 4),  dtype = np.float32)
-        size = self.anchor_stride * self.anchor_stride
-        count = 0
-
-        for ratio in self.anchor_ratios:
-            ws = int(np.sqrt(size / ratio))
-            hs = int(ws * ratio)
-            for scale in self.anchor_scales:
-                wws = ws * scale
-                hhs = hs * scale
-                self.anchor[count] = [0, 0, wws, hhs]
-                count += 1
-
-        score_sz = int(self.score_size)
-        self.anchor = np.tile(self.anchor, score_sz * score_sz).reshape((-1, 4))
-        ori = - (score_sz / 2) * self.anchor_stride
-        xx, yy = np.meshgrid([ori + self.anchor_stride * dx for dx in range(score_sz)], [ori + self.anchor_stride * dy for dy in range(score_sz)])
-        xx, yy = np.tile(xx.flatten(), (self.anchor_num, 1)).flatten(), np.tile(yy.flatten(), (self.anchor_num, 1)).flatten()
-        self.anchor[:, 0], self.anchor[:, 1] = xx.astype(np.float32), yy.astype(np.float32)
-        return self.anchor
 
     # Function for updating tracker state
     def update(self, im):
@@ -135,10 +117,10 @@ class DaSiamRPNTracker:
         score = np.ascontiguousarray(score, dtype = np.float32)
         score = np.reshape(score, (2, -1))
         score = self.__softmax(score)[1, :]
-        delta[0, :] = delta[0, :] * self.anchor[:, 2] + self.anchor[:, 0]
-        delta[1, :] = delta[1, :] * self.anchor[:, 3] + self.anchor[:, 1]
-        delta[2, :] = np.exp(delta[2, :]) * self.anchor[:, 2]
-        delta[3, :] = np.exp(delta[3, :]) * self.anchor[:, 3]
+        delta[0, :] = delta[0, :] * self.anchors[:, 2] + self.anchors[:, 0]
+        delta[1, :] = delta[1, :] * self.anchors[:, 3] + self.anchors[:, 1]
+        delta[2, :] = np.exp(delta[2, :]) * self.anchors[:, 2]
+        delta[3, :] = np.exp(delta[3, :]) * self.anchors[:, 3]
 
         def __change(r):
             return np.maximum(r, 1./r)

@@ -1,32 +1,27 @@
 import numpy as np
 
 
-class Anchors:
-    """ This class generate anchors.
+def generate_anchors(anchor_stride, anchor_ratios, anchor_scales, anchor_number, score_size):
     """
-    def __init__(self, stride, ratios, scales, image_center=0, size=0):
-        self.stride = stride
-        self.ratios = ratios
-        self.scales = scales
-        self.image_center = image_center
-        self.size = size
-        self.anchor_num = len(self.scales) * len(self.ratios)
-        self.anchors = self.generate_anchors()
+    generate anchors based on predefined configuration
+    """
+    anchors = np.zeros((anchor_number, 4), dtype=np.float32)
+    size = anchor_stride**2
+    count = 0
+    for ratio in anchor_ratios:
+        ws = int(np.sqrt(size * 1. / ratio))
+        hs = int(ws * ratio)
+        for scale in anchor_scales:
+            w = ws * scale
+            h = hs * scale
+            anchors[count][:] = [0, 0, w, h]
+            count += 1
 
-    def generate_anchors(self):
-        """
-        generate anchors based on predefined configuration
-        """
-        anchors = np.zeros((self.anchor_num, 4), dtype=np.float32)
-        size = self.stride**2
-        count = 0
-        for r in self.ratios:
-            ws = int(np.sqrt(size * 1. / r))
-            hs = int(ws * r)
-
-            for s in self.scales:
-                w = ws * s
-                h = hs * s
-                anchors[count][:] = [-w * 0.5, -h * 0.5, w * 0.5, h * 0.5][:]
-                count += 1
-        return anchors
+    anchors = np.tile(anchors, score_size**2).reshape((-1, 4))
+    ori = - (score_size // 2) * anchor_stride
+    xx, yy = np.meshgrid([ori + anchor_stride * dx for dx in range(score_size)],
+                         [ori + anchor_stride * dy for dy in range(score_size)])
+    xx, yy = np.tile(xx.flatten(), (anchor_number, 1)).flatten(), \
+             np.tile(yy.flatten(), (anchor_number, 1)).flatten()
+    anchors[:, 0], anchors[:, 1] = xx.astype(np.float32), yy.astype(np.float32)
+    return anchors
