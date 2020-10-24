@@ -112,6 +112,22 @@ public:
     GAPI_WRAP void setSource(const gapi::wip::IStreamSource::Ptr& s);
 
     /**
+     * @brief Constructs and specifies an input video stream for a
+     * single-input computation pipeline with the given parameters.
+     *
+     * Throws if pipeline is already running. Use stop() and then
+     * setSource() to run the graph on a new video stream.
+     *
+     * @overload
+     * @param args arguments used to contruct and initialize a stream
+     * source.
+     */
+    template<typename T, typename... Args>
+    void setSource(Args&&... args) {
+        setSource(cv::gapi::wip::make_src<T>(std::forward<Args>(args)...));
+    }
+
+    /**
      * @brief Start the pipeline execution.
      *
      * Use pull()/try_pull() to obtain data. Throws an exception if
