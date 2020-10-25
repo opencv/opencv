@@ -338,7 +338,8 @@ on whether a panorama spans horizontally or vertically
 @param rmats Camera rotation matrices.
 @return The correction kind to use for this panorama
  */
-WaveCorrectKind CV_EXPORTS_W autoDetectWaveCorrectKind(const std::vector<Mat> &rmats);
+CV_EXPORTS
+WaveCorrectKind autoDetectWaveCorrectKind(const std::vector<Mat> &rmats);
 
 /** @brief Tries to make panorama more horizontal (or vertical).
 
