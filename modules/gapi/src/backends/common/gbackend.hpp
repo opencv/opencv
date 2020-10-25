@@ -134,7 +134,7 @@ inline cv::util::optional<T> getCompileArg(const cv::GCompileArgs &args)
     return cv::gapi::getCompileArg<T>(args);
 }
 
-void createMat(const cv::GMatDesc& desc, cv::Mat& mat);
+void GAPI_EXPORTS createMat(const cv::GMatDesc& desc, cv::Mat& mat);
 
 }} // cv::gimpl
 

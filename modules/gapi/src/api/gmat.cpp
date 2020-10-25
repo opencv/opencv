@@ -144,7 +144,7 @@ bool GMatDesc::canDescribe(const cv::Mat& mat) const
 
 bool GMatDesc::canDescribe(const cv::RMat& mat) const
 {
-    return *this == mat.desc();
+    return canDescribeHelper(*this, mat);
 }
 
 }// namespace cv
