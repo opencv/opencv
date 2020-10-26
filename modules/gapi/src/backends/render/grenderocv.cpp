@@ -33,12 +33,12 @@ GAPI_OCV_KERNEL_ST(RenderBGROCVImpl, cv::gapi::wip::draw::GRenderBGR, RenderOCVS
                       const cv::GCompileArgs& args)
     {
         using namespace cv::gapi::wip::draw;
-        auto has_freetype_font = cv::gapi::getCompileArg<freetype_font>(args);
+        auto opt_freetype_font = cv::gapi::getCompileArg<freetype_font>(args);
         state = std::make_shared<RenderOCVState>();
 
-        if (has_freetype_font)
+        if (opt_freetype_font.has_value())
         {
-            state->ftpr = std::make_shared<FTTextRender>(has_freetype_font.value().path);
+            state->ftpr = std::make_shared<FTTextRender>(opt_freetype_font.value().path);
         }
     }
 };
