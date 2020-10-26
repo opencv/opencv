@@ -5,6 +5,8 @@
 
 // NB: Python wrapper replaces :: with _ for classes
 using gapi_GKernelPackage = cv::gapi::GKernelPackage;
+using gapi_GNetPackage = cv::gapi::GNetPackage;
+using gapi_ie_PyParams = cv::gapi::ie::PyParams;
 using gapi_wip_IStreamSource_Ptr = cv::Ptr<cv::gapi::wip::IStreamSource>;
 
 // FIXME: Python wrapper generate code without namespace std,
