@@ -25,15 +25,15 @@ cv::util::any cv::gapi::ie::PyParams::params() const {
     return m_priv->params();
 }
 
-cv::gapi::ie::PyParams params(const std::string &tag,
-                              const std::string &model,
-                              const std::string &weights,
-                              const std::string &device) {
+cv::gapi::ie::PyParams cv::gapi::ie::params(const std::string &tag,
+                                            const std::string &model,
+                                            const std::string &weights,
+                                            const std::string &device) {
     return {tag, model, weights, device};
 }
 
-cv::gapi::ie::PyParams params(const std::string &tag,
-                              const std::string &model,
-                              const std::string &device) {
+cv::gapi::ie::PyParams cv::gapi::ie::params(const std::string &tag,
+                                            const std::string &model,
+                                            const std::string &device) {
     return {tag, model, device};
 }
