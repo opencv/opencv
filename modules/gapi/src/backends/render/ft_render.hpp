@@ -23,8 +23,6 @@ namespace wip
 namespace draw
 {
 
-#ifdef HAVE_FREETYPE
-
 class GAPI_EXPORTS FTTextRender
 {
 public:
@@ -37,12 +35,6 @@ public:
 private:
     std::shared_ptr<Priv> m_priv;
 };
-
-#else
-
-class GAPI_EXPORTS FTTextRender {};
-
-#endif // HAVE_FREETYPE
 
 } // namespace draw
 } // namespace wip
