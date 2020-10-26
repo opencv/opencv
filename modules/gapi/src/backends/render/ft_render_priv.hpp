@@ -10,7 +10,7 @@
 #ifndef OPENCV_FT_RENDER_PRIV_HPP
 #define OPENCV_FT_RENDER_PRIV_HPP
 
-#include "api/ft_render.hpp"
+#include "ft_render.hpp"
 
 #include <ft2build.h>
 #include FT_FREETYPE_H

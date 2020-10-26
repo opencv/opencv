@@ -95,7 +95,6 @@ TEST_P(RenderNV12OCVTestFTexts, AccuracyTest)
                                 cv::compile_args(cv::gapi::wip::draw::freetype_font{
                                 "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc"
                                 })));
-
 }
 
 static std::wstring to_wstring(const char* bytes)
