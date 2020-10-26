@@ -38,7 +38,7 @@ GAPI_OCV_KERNEL_ST(RenderBGROCVImpl, cv::gapi::wip::draw::GRenderBGR, RenderOCVS
 
         if (opt_freetype_font.has_value())
         {
-            state->ftpr = std::make_shared<FTTextRender>(opt_freetype_font.value().path);
+            state->ftpr = std::make_shared<FTTextRender>(opt_freetype_font->path);
         }
     }
 };
@@ -109,7 +109,7 @@ GAPI_OCV_KERNEL_ST(RenderNV12OCVImpl, cv::gapi::wip::draw::GRenderNV12, RenderOC
 
         if (has_freetype_font)
         {
-            state->ftpr = std::make_shared<FTTextRender>(has_freetype_font.value().path);
+            state->ftpr = std::make_shared<FTTextRender>(has_freetype_font->path);
         }
     }
 };
