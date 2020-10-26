@@ -162,4 +162,4 @@ protected:
 } // namespace gapi
 } // namespace cv
 
-#endif // OPENCV_GAPI_INFER_HPP
+#endif // OPENCV_GAPI_INFER_IE_HPP

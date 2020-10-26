@@ -77,7 +77,6 @@ set(gapi_srcs
     src/api/render.cpp
     src/api/render_ocv.cpp
     src/api/ginfer.cpp
-    src/api/ft_render.cpp
     src/api/media.cpp
     src/api/rmat.cpp
 
@@ -131,8 +130,8 @@ set(gapi_srcs
     src/backends/ie/giebackend/giewrapper.cpp
 
     # Render Backend.
-    src/backends/render/grenderocvbackend.cpp
     src/backends/render/grenderocv.cpp
+    src/backends/render/ft_render.cpp
 
     #PlaidML Backend
     src/backends/plaidml/gplaidmlcore.cpp
@@ -145,6 +144,9 @@ set(gapi_srcs
     # Serialization API and routines
     src/api/s11n.cpp
     src/backends/common/serialization.cpp
+
+    # Python bridge
+    src/backends/ie/bindings_ie.cpp
     )
 
 ocv_add_dispatched_file(backends/fluid/gfluidimgproc_func SSE4_1 AVX2)

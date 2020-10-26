@@ -328,8 +328,18 @@ private:
 enum WaveCorrectKind
 {
     WAVE_CORRECT_HORIZ,
-    WAVE_CORRECT_VERT
+    WAVE_CORRECT_VERT,
+    WAVE_CORRECT_AUTO
 };
+
+/** @brief Tries to detect the wave correction kind depending
+on whether a panorama spans horizontally or vertically
+
+@param rmats Camera rotation matrices.
+@return The correction kind to use for this panorama
+ */
+CV_EXPORTS
+WaveCorrectKind autoDetectWaveCorrectKind(const std::vector<Mat> &rmats);
 
 /** @brief Tries to make panorama more horizontal (or vertical).
 

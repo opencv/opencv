@@ -133,14 +133,18 @@ struct InOutInfo
  * @{
  * @brief G-API object used to collect network inputs
  */
-class GAPI_EXPORTS GInferInputs
+class GAPI_EXPORTS_W_SIMPLE GInferInputs
 {
+using Map = std::unordered_map<std::string, GMat>;
 public:
+    GAPI_WRAP GInferInputs();
+    GAPI_WRAP void setInput(const std::string& name, const cv::GMat& value);
+
     cv::GMat& operator[](const std::string& name);
-    const std::unordered_map<std::string, cv::GMat>& getBlobs() const;
+    const Map& getBlobs() const;
 
 private:
-    std::unordered_map<std::string, cv::GMat> in_blobs;
+    std::shared_ptr<Map> in_blobs;
 };
 /** @} */
 
@@ -148,16 +152,16 @@ private:
  * @{
  * @brief G-API object used to collect network outputs
  */
-struct GAPI_EXPORTS GInferOutputs
+struct GAPI_EXPORTS_W_SIMPLE GInferOutputs
 {
 public:
+    GAPI_WRAP GInferOutputs() = default;
     GInferOutputs(std::shared_ptr<cv::GCall> call);
-    cv::GMat at(const std::string& name);
+    GAPI_WRAP cv::GMat at(const std::string& name);
 
 private:
-    std::shared_ptr<cv::GCall> m_call;
-    InOutInfo* m_info = nullptr;
-    std::unordered_map<std::string, cv::GMat> out_blobs;
+    struct Priv;
+    std::shared_ptr<Priv> m_priv;
 };
 /** @} */
 
@@ -333,6 +337,11 @@ infer(const std::string& tag, const GInferInputs& inputs)
     return GInferOutputs{std::move(call)};
 }
 
+GAPI_EXPORTS_W inline GInferOutputs infer(const String& name, const GInferInputs& inputs)
+{
+    return infer<Generic>(name, inputs);
+}
+
 } // namespace gapi
 } // namespace cv
 
@@ -361,8 +370,8 @@ struct GAPI_EXPORTS GNetParam {
  *
  * @sa cv::gapi::networks
  */
-struct GAPI_EXPORTS GNetPackage {
-    GNetPackage() : GNetPackage({}) {}
+struct GAPI_EXPORTS_W_SIMPLE GNetPackage {
+    GAPI_WRAP GNetPackage() : GNetPackage({}) {}
     explicit GNetPackage(std::initializer_list<GNetParam> &&ii);
     std::vector<GBackend> backends() const;
     std::vector<GNetParam> networks;

@@ -6,6 +6,7 @@
 
 #include "opencv2/ts.hpp"
 #include "opencv2/stitching.hpp"
+#include "opencv2/stitching/detail/motion_estimators.hpp"
 #include "opencv2/stitching/detail/matchers.hpp"
 #include "opencv2/stitching/detail/blenders.hpp"
 #include "opencv2/stitching/detail/exposure_compensate.hpp"
