@@ -1112,67 +1112,6 @@ void Mat::push_back(const std::vector<_Tp>& v)
     push_back(Mat(v));
 }
 
-inline
-Mat::Mat(Mat&& m)
-    : flags(m.flags), dims(m.dims), rows(m.rows), cols(m.cols), data(m.data),
-      datastart(m.datastart), dataend(m.dataend), datalimit(m.datalimit), allocator(m.allocator),
-      u(m.u), size(&rows)
-{
-    if (m.dims <= 2)  // move new step/size info
-    {
-        step[0] = m.step[0];
-        step[1] = m.step[1];
-    }
-    else
-    {
-        CV_DbgAssert(m.step.p != m.step.buf);
-        step.p = m.step.p;
-        size.p = m.size.p;
-        m.step.p = m.step.buf;
-        m.size.p = &m.rows;
-    }
-    m.flags = MAGIC_VAL; m.dims = m.rows = m.cols = 0;
-    m.data = NULL; m.datastart = NULL; m.dataend = NULL; m.datalimit = NULL;
-    m.allocator = NULL;
-    m.u = NULL;
-}
-
-inline
-Mat& Mat::operator = (Mat&& m)
-{
-    if (this == &m)
-      return *this;
-
-    release();
-    flags = m.flags; dims = m.dims; rows = m.rows; cols = m.cols; data = m.data;
-    datastart = m.datastart; dataend = m.dataend; datalimit = m.datalimit; allocator = m.allocator;
-    u = m.u;
-    if (step.p != step.buf) // release self step/size
-    {
-        fastFree(step.p);
-        step.p = step.buf;
-        size.p = &rows;
-    }
-    if (m.dims <= 2) // move new step/size info
-    {
-        step[0] = m.step[0];
-        step[1] = m.step[1];
-    }
-    else
-    {
-        CV_DbgAssert(m.step.p != m.step.buf);
-        step.p = m.step.p;
-        size.p = m.size.p;
-        m.step.p = m.step.buf;
-        m.size.p = &m.rows;
-    }
-    m.flags = MAGIC_VAL; m.dims = m.rows = m.cols = 0;
-    m.data = NULL; m.datastart = NULL; m.dataend = NULL; m.datalimit = NULL;
-    m.allocator = NULL;
-    m.u = NULL;
-    return *this;
-}
-
 
 ///////////////////////////// MatSize ////////////////////////////
 
@@ -3340,66 +3279,6 @@ inline
 size_t UMat::step1(int i) const
 {
     return step.p[i] / elemSize1();
-}
-
-inline
-UMat::UMat(UMat&& m)
-: flags(m.flags), dims(m.dims), rows(m.rows), cols(m.cols), allocator(m.allocator),
-  usageFlags(m.usageFlags), u(m.u), offset(m.offset), size(&rows)
-{
-    if (m.dims <= 2)  // move new step/size info
-    {
-        step[0] = m.step[0];
-        step[1] = m.step[1];
-    }
-    else
-    {
-        CV_DbgAssert(m.step.p != m.step.buf);
-        step.p = m.step.p;
-        size.p = m.size.p;
-        m.step.p = m.step.buf;
-        m.size.p = &m.rows;
-    }
-    m.flags = MAGIC_VAL; m.dims = m.rows = m.cols = 0;
-    m.allocator = NULL;
-    m.u = NULL;
-    m.offset = 0;
-}
-
-inline
-UMat& UMat::operator = (UMat&& m)
-{
-    if (this == &m)
-      return *this;
-    release();
-    flags = m.flags; dims = m.dims; rows = m.rows; cols = m.cols;
-    allocator = m.allocator; usageFlags = m.usageFlags;
-    u = m.u;
-    offset = m.offset;
-    if (step.p != step.buf) // release self step/size
-    {
-        fastFree(step.p);
-        step.p = step.buf;
-        size.p = &rows;
-    }
-    if (m.dims <= 2) // move new step/size info
-    {
-        step[0] = m.step[0];
-        step[1] = m.step[1];
-    }
-    else
-    {
-        CV_DbgAssert(m.step.p != m.step.buf);
-        step.p = m.step.p;
-        size.p = m.size.p;
-        m.step.p = m.step.buf;
-        m.size.p = &m.rows;
-    }
-    m.flags = MAGIC_VAL; m.dims = m.rows = m.cols = 0;
-    m.allocator = NULL;
-    m.u = NULL;
-    m.offset = 0;
-    return *this;
 }
 
 
