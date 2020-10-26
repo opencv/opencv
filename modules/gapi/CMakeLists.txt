@@ -145,6 +145,9 @@ set(gapi_srcs
     # Serialization API and routines
     src/api/s11n.cpp
     src/backends/common/serialization.cpp
+
+    # Python bridge
+    src/backends/ie/bindings_ie.cpp
     )
 
 ocv_add_dispatched_file(backends/fluid/gfluidimgproc_func SSE4_1 AVX2)
