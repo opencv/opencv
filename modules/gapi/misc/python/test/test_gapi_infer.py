@@ -9,25 +9,15 @@ from tests_common import NewOpenCVTests
 
 class test_gapi_infer(NewOpenCVTests):
 
-    def checkIETarget(self, backend, target):
-        proto = self.find_file('dnn/layers/layer_convolution.prototxt',   [os.environ.get('OPENCV_TEST_DATA_PATH')])
-        model = self.find_file('dnn/layers/layer_convolution.caffemodel', [os.environ.get('OPENCV_TEST_DATA_PATH')])
-        net = cv.dnn.readNet(proto, model)
-        net.setPreferableBackend(backend)
-        net.setPreferableTarget(target)
-        inp = np.random.standard_normal([1, 2, 10, 11]).astype(np.float32)
-        try:
-            net.setInput(inp)
-            net.forward()
-        except BaseException as e:
-            return False
-        return True
+    def test_getAvailableTargets(self):
+        targets = cv.dnn.getAvailableTargets(cv.dnn.DNN_BACKEND_OPENCV)
+        self.assertTrue(cv.dnn.DNN_TARGET_CPU in targets)
 
 
     def test_age_gender_infer(self):
-        if not self.checkIETarget(cv.dnn.DNN_BACKEND_INFERENCE_ENGINE, cv.dnn.DNN_TARGET_CPU):
-            # FIXME: OpenCV build without IE support, so skip this test
-            # Is there more graceful solution ?
+
+        # NB: Check IE
+        if not cv.dnn.DNN_TARGET_CPU in cv.dnn.getAvailableTargets(cv.dnn.DNN_BACKEND_INFERENCE_ENGINE):
             return
 
         root_path    = '/omz_intel_models/intel/age-gender-recognition-retail-0013/FP32/age-gender-recognition-retail-0013'
