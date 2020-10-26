@@ -158,48 +158,8 @@ protected:
     std::string m_tag;
 };
 
-// NB: Used by python wrapper
-// This class can be marked as SIMPLE, because it's implemented as pimpl
-class GAPI_EXPORTS_W_SIMPLE PyParams {
-public:
-    PyParams() = default;
-
-    PyParams(const std::string &tag,
-             const std::string &model,
-             const std::string &weights,
-             const std::string &device)
-        : m_priv(std::make_shared<Params<cv::gapi::Generic>>(tag, model, weights, device)) {
-    }
-
-    PyParams(const std::string &tag,
-             const std::string &model,
-             const std::string &device)
-        : m_priv(std::make_shared<Params<cv::gapi::Generic>>(tag, model, device)) {
-    }
-
-    GBackend      backend()    const { return m_priv->backend(); }
-    std::string   tag()        const { return m_priv->tag();     }
-    cv::util::any params()     const { return m_priv->params();  }
-
-private:
-    std::shared_ptr<Params<cv::gapi::Generic>> m_priv;
-};
-
-GAPI_EXPORTS_W inline PyParams params(const std::string &tag,
-                                      const std::string &model,
-                                      const std::string &weights,
-                                      const std::string &device) {
-    return {tag, model, weights, device};
-}
-
-GAPI_EXPORTS_W inline PyParams params(const std::string &tag,
-                                      const std::string &model,
-                                      const std::string &device) {
-    return {tag, model, device};
-}
-
 } // namespace ie
 } // namespace gapi
 } // namespace cv
 
-#endif // OPENCV_GAPI_INFER_HPP
+#endif // OPENCV_GAPI_INFER_IE_HPP
