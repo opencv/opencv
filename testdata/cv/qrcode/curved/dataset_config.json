@@ -1,0 +1,23 @@
+{
+    "test_images": [
+        { "image_name": "curved_1.jpg", "x": [ 343, 48, 179, 447 ], "y": [
+                399, 276, 19, 115 ],
+            "info": "https://github.com/opencv/opencv" },
+        { "image_name": "curved_2.jpg", "x": [ 61, 62, 220, 228 ], "y": [
+                232, 60, 54, 240 ], "info": "OpenCV" },
+        { "image_name": "curved_3.jpg", "x": [ 55, 40, 357, 327 ], "y": [
+                365, 84, 84, 363 ], "info": "2020" },
+        { "image_name": "curved_4.jpg", "x": [ 315, 306, 180, 180 ], "y": [
+                277, 404, 413, 272 ], "info": "OpenCV" },
+        { "image_name": "curved_5.jpg", "x": [ 79, 272, 270, 92 ], "y": [
+                64, 69, 254, 234 ], "info": "http://q.mcd.com/qc222222" },
+        { "image_name": "curved_6.jpg", "x": [ 43, 45, 324, 312 ], "y": [
+                363, 53, 67, 337 ],
+            "info": "https://habr.com/ru/company/intel/blog/507382/" },
+        { "image_name": "curved_7.jpg", "x": [ 53, 337, 343, 75 ], "y": [
+                156, 163, 465, 412 ], "info": "2020" },
+        { "image_name": "curved_8.jpg", "x": [ 44, 360, 345, 71 ], "y": [
+                182, 184, 471, 456 ],
+            "info": "https://habr.com/ru/company/intel/blog/507382/" }
+    ]
+}
