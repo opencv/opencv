@@ -12,8 +12,8 @@ function(ocv_add_external_target name inc link def)
   set_target_properties(ocv.3rdparty.${name} PROPERTIES
     INTERFACE_INCLUDE_DIRECTORIES "${inc}"
     INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${inc}"
-    INTERFACE_LINK_LIBRARIES "${link}"
     INTERFACE_COMPILE_DEFINITIONS "${def}")
+  target_link_libraries(ocv.3rdparty.${name} INTERFACE ${link})
   if(NOT BUILD_SHARED_LIBS)
     install(TARGETS ocv.3rdparty.${name} EXPORT OpenCVModules)
   endif()
