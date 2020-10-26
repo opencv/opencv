@@ -80,7 +80,7 @@ namespace imgproc {
 
     G_TYPED_KERNEL(GMorphologyEx, <GMat(GMat,int,Mat,Point,int,int,Scalar)>,
                    "org.opencv.imgproc.filters.morphologyEx") {
-        static GMatDesc outMeta(GMatDesc in, int, Mat, Point, int, int, Scalar) {
+        static GMatDesc outMeta(const GMatDesc &in, int, Mat, Point, int, int, Scalar) {
             return in;
         }
     };
@@ -628,10 +628,10 @@ applied. For instance, an opening operation (#MORPH_OPEN) with two iterations is
 apply successively: erode -> erode -> dilate -> dilate
 (and not erode -> dilate -> erode -> dilate).
  */
-GAPI_EXPORTS GMat morphologyEx(const GMat &src, int op, const Mat &kernel,
+GAPI_EXPORTS GMat morphologyEx(const GMat &src, const int op, const Mat &kernel,
                                const Point  &anchor      = Point(-1,-1),
-                                     int     iterations  = 1,
-                                     int     borderType  = BORDER_CONSTANT,
+                               const int     iterations  = 1,
+                               const int     borderType  = BORDER_CONSTANT,
                                const Scalar &borderValue = morphologyDefaultBorderValue());
 
 /** @brief Calculates the first, second, third, or mixed image derivatives using an extended Sobel operator.
