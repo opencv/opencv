@@ -9,6 +9,7 @@
 
 #include "gapi_tests_common.hpp"
 #include "../../include/opencv2/gapi/video.hpp"
+#include <opencv2/core.hpp>
 
 #ifdef HAVE_OPENCV_VIDEO
 #include <opencv2/video.hpp>
@@ -319,6 +320,53 @@ inline GComputation runOCVnGAPIOptFlowPipeline(TestFunctional& testInst,
             std::move(const_cast<cv::GCompileArgs&>(params.compileArgs)));
 
     return c;
+}
+
+inline void compareBackSubResults(const cv::Mat &actual, const cv::Mat &expected, const int diffPercent)
+{
+    GAPI_Assert(actual.size() == expected.size());
+    int allowedNumDiffPixels = actual.size().area() * diffPercent / 100;
+
+    cv::Mat diff;
+    cv::absdiff(actual, expected, diff);
+
+    cv::Mat hist(256, 1, CV_32FC1, cv::Scalar(0));
+    const float range[]{ 0, 256 };
+    const float *histRange{ range };
+    calcHist(&diff, 1, 0, Mat(), hist, 1, &hist.rows, &histRange, true, false);
+    for (int i = 2; i < hist.rows; ++i)
+    {
+        hist.at<float>(i) += hist.at<float>(i - 1);
+    }
+
+    int numDiffPixels = static_cast<int>(hist.at<float>(255));
+
+    EXPECT_GT(allowedNumDiffPixels, numDiffPixels);
+}
+
+inline void testBackSubInStreaming(cv::GStreamingCompiled gapiBackSub, const int diffPercent)
+{
+    cv::Mat frame,
+        gapiForeground,
+        ocvForeground;
+
+    gapiBackSub.start();
+    EXPECT_TRUE(gapiBackSub.running());
+
+    // OpenCV reference substractor
+    auto pOCVBackSub = createBackgroundSubtractorMOG2();
+
+    // Comparison of G-API and OpenCV substractors
+    std::size_t frames = 0u;
+    while (gapiBackSub.pull(cv::gout(frame, gapiForeground)))
+    {
+        pOCVBackSub->apply(frame, ocvForeground, -1);
+        compareBackSubResults(gapiForeground, ocvForeground, diffPercent);
+
+        frames++;
+    }
+    EXPECT_LT(0u, frames);
+    EXPECT_FALSE(gapiBackSub.running());
 }
 
 #else // !HAVE_OPENCV_VIDEO

@@ -80,12 +80,27 @@ GAPI_OCV_KERNEL(GCPUCalcOptFlowLKForPyr, cv::gapi::video::GCalcOptFlowLKForPyr)
     }
 };
 
+GAPI_OCV_KERNEL_ST(GCPUBackSubMOG2, cv::gapi::video::GBackSubMOG2, cv::BackgroundSubtractorMOG2)
+{
+    static void setup(const cv::GMatDesc &/* desc */, std::shared_ptr<cv::BackgroundSubtractorMOG2> &state)
+    {
+        state = cv::createBackgroundSubtractorMOG2();
+        GAPI_Assert(state);
+    }
+
+    static void run(const cv::Mat& in, cv::Mat &out, cv::BackgroundSubtractorMOG2& state)
+    {
+        state.apply(in, out, -1);
+    }
+};
+
 cv::gapi::GKernelPackage cv::gapi::video::cpu::kernels()
 {
     static auto pkg = cv::gapi::kernels
         < GCPUBuildOptFlowPyramid
         , GCPUCalcOptFlowLK
         , GCPUCalcOptFlowLKForPyr
+        , GCPUBackSubMOG2
         >();
     return pkg;
 }

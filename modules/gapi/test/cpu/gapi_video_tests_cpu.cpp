@@ -97,4 +97,10 @@ INSTANTIATE_TEST_CASE_MACRO_P(WITH_VIDEO(BuildPyr_CalcOptFlow_PipelineInternalTe
                                       Values(15),
                                       Values(3),
                                       Values(true)));
+
+INSTANTIATE_TEST_CASE_MACRO_P(WITH_VIDEO(BackSubMOG2InternalTestCPU),
+                              BackSubMOG2Test,
+                              Combine(Values(VIDEO_CPU),
+                              Values("cv/video/768x576.avi"),
+                              Values("cv/video/1920x1080.avi")));
 } // opencv_test

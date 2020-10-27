@@ -1065,6 +1065,8 @@ The algorithm normalizes the brightness and increases the contrast of the image.
  */
 GAPI_EXPORTS GMat equalizeHist(const GMat& src);
 
+//! @} gapi_filters
+
 //! @addtogroup gapi_shape
 //! @{
 /** @brief Finds contours in a binary image.
@@ -1326,20 +1328,6 @@ GAPI_EXPORTS GOpaque<Vec6f> fitLine3D(const GArray<Point3d>& src, const Distance
 
 //! @addtogroup gapi_colorconvert
 //! @{
-/** @brief Converts an image from BGR color space to RGB color space.
-
-The function converts an input image from BGR color space to RGB.
-The conventional ranges for B, G, and R channel values are 0 to 255.
-
-Output image is 8-bit unsigned 3-channel image @ref CV_8UC3.
-
-@note Function textual ID is "org.opencv.imgproc.colorconvert.bgr2rgb"
-
-@param src input image: 8-bit unsigned 3-channel image @ref CV_8UC3.
-@sa RGB2BGR
-*/
-GAPI_EXPORTS GMat BGR2RGB(const GMat& src);
-
 /** @brief Converts an image from RGB color space to gray-scaled.
 The conventional ranges for R, G, and B channel values are 0 to 255.
 Resulting gray color value computed as
@@ -1394,6 +1382,20 @@ Output image must be 8-bit unsigned 3-channel image @ref CV_8UC3.
 @sa YUV2RGB, RGB2Lab
 */
 GAPI_EXPORTS GMat RGB2YUV(const GMat& src);
+
+/** @brief Converts an image from BGR color space to RGB color space.
+
+The function converts an input image from BGR color space to RGB.
+The conventional ranges for B, G, and R channel values are 0 to 255.
+
+Output image is 8-bit unsigned 3-channel image @ref CV_8UC3.
+
+@note Function textual ID is "org.opencv.imgproc.colorconvert.bgr2rgb"
+
+@param src input image: 8-bit unsigned 3-channel image @ref CV_8UC3.
+@sa RGB2BGR
+*/
+GAPI_EXPORTS GMat BGR2RGB(const GMat& src);
 
 /** @brief Converts an image from BGR color space to I420 color space.
 

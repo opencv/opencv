@@ -62,6 +62,12 @@ G_TYPED_KERNEL(GCalcOptFlowLKForPyr,
         return std::make_tuple(empty_array_desc(), empty_array_desc(), empty_array_desc());
     }
 };
+
+G_TYPED_KERNEL(GBackSubMOG2, <GMat(GMat)>, "org.opencv.video.backgroundSubtractormog2")
+{
+    static GMatDesc outMeta(GMatDesc in) { return in.withType(CV_8U, 1); }
+};
+
 } //namespace video
 
 //! @addtogroup gapi_video
@@ -168,6 +174,20 @@ calcOpticalFlowPyrLK(const GArray<GMat>    &prevPyr,
                                                                         30, 0.01),
                            int              flags        = 0,
                            double           minEigThresh = 1e-4);
+
+/** @brief Gaussian Mixture based Background/Foreground Segmentation.
+The class generates a foreground mask.
+
+Output image is foreground mask, i.e. 8-bit unsigned 1-channel (binary) matrix @ref CV_8UC1.
+
+@note Functional textual ID is "org.opencv.videoanalysis.backgroundSubtractormog2"
+
+@param src input image: Floating point frame is used without scaling and should be in range [0,255].
+@ref CV_32FC3.
+
+@sa BackSubMOG2
+*/
+GAPI_EXPORTS GMat BackSubMOG2(const GMat& src);
 
 //! @} gapi_video
 } //namespace gapi
