@@ -66,6 +66,7 @@ It provides easy interface to:
 -   Add trackbars to the windows, handle simple mouse events as well as keyboard commands.
 
 @{
+    @defgroup highgui_window_flags Flags related creating and manipulating HighGUI windows and mouse events
     @defgroup highgui_opengl OpenGL support
     @defgroup highgui_qt Qt New Functions
 
@@ -93,7 +94,7 @@ It provides easy interface to:
 
 
             namedWindow("main1",WINDOW_NORMAL);
-            namedWindow("main2",WINDOW_AUTOSIZE | CV_GUI_NORMAL);
+            namedWindow("main2",WINDOW_AUTOSIZE | WINDOW_GUI_NORMAL);
             createTrackbar( "track1", "main1", &value, 255,  NULL);
 
             String nameb1 = "button1";
@@ -178,6 +179,9 @@ namespace cv
 //! @addtogroup highgui
 //! @{
 
+//! @addtogroup highgui_window_flags
+//! @{
+
 //! Flags for cv::namedWindow
 enum WindowFlags {
        WINDOW_NORMAL     = 0x00000000, //!< the user can resize the window (no constraint) / also use to switch a fullscreen window to a normal size.
@@ -227,6 +231,11 @@ enum MouseEventFlags {
        EVENT_FLAG_ALTKEY    = 32 //!< indicates that ALT Key is pressed.
      };
 
+//! @} highgui_window_flags
+
+//! @addtogroup highgui_qt
+//! @{
+
 //! Qt font weight
 enum QtFontWeights {
         QT_FONT_LIGHT           = 25, //!< Weight of 25
@@ -250,6 +259,8 @@ enum QtButtonTypes {
        QT_RADIOBOX      = 2,    //!< Radiobox button.
        QT_NEW_BUTTONBAR = 1024  //!< Button should create a new buttonbar
      };
+
+//! @} highgui_qt
 
 /** @brief Callback function for mouse events. see cv::setMouseCallback
 @param event one of the cv::MouseEventTypes constants.
@@ -389,7 +400,7 @@ videos, it will display the video frame-by-frame)
  */
 CV_EXPORTS_W void imshow(const String& winname, InputArray mat);
 
-/** @brief Resizes window to the specified size
+/** @brief Resizes the window to the specified size
 
 @note
 
@@ -408,7 +419,7 @@ CV_EXPORTS_W void resizeWindow(const String& winname, int width, int height);
 */
 CV_EXPORTS_W void resizeWindow(const String& winname, const cv::Size& size);
 
-/** @brief Moves window to the specified position
+/** @brief Moves the window to the specified position
 
 @param winname Name of the window.
 @param x The new x-coordinate of the window.
@@ -476,8 +487,6 @@ For cv::EVENT_MOUSEWHEEL positive and negative values mean forward and backward 
 respectively. For cv::EVENT_MOUSEHWHEEL, where available, positive and negative values mean right and
 left scrolling, respectively.
 
-With the C API, the macro CV_GET_WHEEL_DELTA(flags) can be used alternatively.
-
 @note
 
 Mouse-wheel events are currently supported only on Windows.
@@ -486,8 +495,9 @@ Mouse-wheel events are currently supported only on Windows.
  */
 CV_EXPORTS int getMouseWheelDelta(int flags);
 
-/** @brief Selects ROI on the given image.
-Function creates a window and allows user to select a ROI using mouse.
+/** @brief Allows users to select a ROI on the given image.
+
+The function creates a window and allows users to select a ROI using the mouse.
 Controls: use `space` or `enter` to finish selection, use key `c` to cancel selection (function will return the zero cv::Rect).
 
 @param windowName name of the window where selection process will be shown.
@@ -506,8 +516,9 @@ CV_EXPORTS_W Rect selectROI(const String& windowName, InputArray img, bool showC
  */
 CV_EXPORTS_W Rect selectROI(InputArray img, bool showCrosshair = true, bool fromCenter = false);
 
-/** @brief Selects ROIs on the given image.
-Function creates a window and allows user to select a ROIs using mouse.
+/** @brief Allows users to select multiple ROIs on the given image.
+
+The function creates a window and allows users to select multiple ROIs using the mouse.
 Controls: use `space` or `enter` to finish current selection and start a new one,
 use `esc` to terminate multiple ROI selection process.
 
