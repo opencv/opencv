@@ -375,6 +375,65 @@ size_t UMat::total() const
 }
 
 
+UMat::UMat(UMat&& m)
+: flags(m.flags), dims(m.dims), rows(m.rows), cols(m.cols), allocator(m.allocator),
+  usageFlags(m.usageFlags), u(m.u), offset(m.offset), size(&rows)
+{
+    if (m.dims <= 2)  // move new step/size info
+    {
+        step[0] = m.step[0];
+        step[1] = m.step[1];
+    }
+    else
+    {
+        CV_DbgAssert(m.step.p != m.step.buf);
+        step.p = m.step.p;
+        size.p = m.size.p;
+        m.step.p = m.step.buf;
+        m.size.p = &m.rows;
+    }
+    m.flags = MAGIC_VAL; m.dims = m.rows = m.cols = 0;
+    m.allocator = NULL;
+    m.u = NULL;
+    m.offset = 0;
+}
+
+UMat& UMat::operator=(UMat&& m)
+{
+    if (this == &m)
+      return *this;
+    release();
+    flags = m.flags; dims = m.dims; rows = m.rows; cols = m.cols;
+    allocator = m.allocator; usageFlags = m.usageFlags;
+    u = m.u;
+    offset = m.offset;
+    if (step.p != step.buf) // release self step/size
+    {
+        fastFree(step.p);
+        step.p = step.buf;
+        size.p = &rows;
+    }
+    if (m.dims <= 2) // move new step/size info
+    {
+        step[0] = m.step[0];
+        step[1] = m.step[1];
+    }
+    else
+    {
+        CV_DbgAssert(m.step.p != m.step.buf);
+        step.p = m.step.p;
+        size.p = m.size.p;
+        m.step.p = m.step.buf;
+        m.size.p = &m.rows;
+    }
+    m.flags = MAGIC_VAL; m.dims = m.rows = m.cols = 0;
+    m.allocator = NULL;
+    m.u = NULL;
+    m.offset = 0;
+    return *this;
+}
+
+
 MatAllocator* UMat::getStdAllocator()
 {
 #ifdef HAVE_OPENCL
