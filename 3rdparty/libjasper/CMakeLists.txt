@@ -17,7 +17,7 @@ file(GLOB lib_ext_hdrs jasper/*.h)
 #         Define the library target:
 # ----------------------------------------------------------------------------------
 
-add_library(${JASPER_LIBRARY} STATIC ${lib_srcs} ${lib_hdrs} ${lib_ext_hdrs})
+add_library(${JASPER_LIBRARY} STATIC ${OPENCV_3RDPARTY_EXCLUDE_FROM_ALL} ${lib_srcs} ${lib_hdrs} ${lib_ext_hdrs})
 
 if(WIN32 AND NOT MINGW)
   add_definitions(-DJAS_WIN_MSVC_BUILD)
@@ -46,7 +46,7 @@ if(ENABLE_SOLUTION_FOLDERS)
 endif()
 
 if(NOT BUILD_SHARED_LIBS)
-  ocv_install_target(${JASPER_LIBRARY} EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev)
+  ocv_install_target(${JASPER_LIBRARY} EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev OPTIONAL)
 endif()
 
 ocv_install_3rdparty_licenses(jasper LICENSE README copyright)
