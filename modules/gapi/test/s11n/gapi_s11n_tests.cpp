@@ -365,6 +365,12 @@ TEST_F(S11N_Basic, Test_MatDesc) {
     EXPECT_EQ(v, get<cv::GMatDesc>());
 }
 
+TEST_F(S11N_Basic, Test_MatDescND) {
+    cv::GMatDesc v = { CV_8U, {1,1,224,224} };
+    put(v);
+    EXPECT_EQ(v, get<cv::GMatDesc>());
+}
+
 TEST_F(S11N_Basic, Test_MetaArg_MatDesc) {
     cv::GMatDesc desc = { CV_8U, 1,{ 320,240 } };
     auto v = cv::GMetaArg{ desc };
