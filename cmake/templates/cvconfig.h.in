@@ -109,8 +109,11 @@
 /* OpenEXR codec */
 #cmakedefine HAVE_OPENEXR
 
-/* OpenGL support*/
+/* OpenGL support */
 #cmakedefine HAVE_OPENGL
+
+/* OpenGL Extension Wrangler */
+#cmakedefine HAVE_GLEW
 
 /* PNG codec */
 #cmakedefine HAVE_PNG
