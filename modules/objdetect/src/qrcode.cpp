@@ -993,7 +993,7 @@ protected:
     bool computeClosestPoints(const vector<Point> &result_integer_hull);
     bool computeSidesPoints(const vector<Point> &result_integer_hull);
     vector<Point> getPointsNearUnstablePoint(const vector<Point> &side, int start, int end, int step);
-    bool findAndAddStablePoint(const vector<Point> &result_integer_hull);
+    bool findAndAddStablePoint();
     bool findIndexesCurvedSides();
     bool findIncompleteIndexesCurvedSides();
     Mat getPatternsMask();
@@ -1274,7 +1274,7 @@ vector<Point> QRDecode::getPointsNearUnstablePoint(const vector<Point> &side, in
     return points;
 }
 
-bool QRDecode::findAndAddStablePoint(const vector<Point> &result_integer_hull)
+bool QRDecode::findAndAddStablePoint()
 {
     size_t idx_unstable_point = unstable_pair.first;
     Point unstable_point = unstable_pair.second;
@@ -1385,7 +1385,7 @@ bool QRDecode::findAndAddStablePoint(const vector<Point> &result_integer_hull)
 
     bool add_stable_point = true;
 
-    for (size_t i = 0; i < result_integer_hull.size(); i++)
+    for (size_t i = 0; i < original_points.size(); i++)
     {
         if(arePointsNearest(stable_point, original_points[i], 3.0))
         {
@@ -2211,7 +2211,7 @@ bool QRDecode::preparingCurvedQRCodes()
         return false;
     if (!computeSidesPoints(result_integer_hull))
         return false;
-    if (!findAndAddStablePoint(result_integer_hull))
+    if (!findAndAddStablePoint())
         return false;
     if (!findIndexesCurvedSides())
         return false;
