@@ -49,6 +49,7 @@
   @defgroup imgcodecs Image file reading and writing
   @{
     @defgroup imgcodecs_c C API
+    @defgroup imgcodecs_flags Flags used for image file reading and writing
     @defgroup imgcodecs_ios iOS glue
   @}
 */
@@ -58,6 +59,9 @@ namespace cv
 {
 
 //! @addtogroup imgcodecs
+//! @{
+
+//! @addtogroup imgcodecs_flags
 //! @{
 
 //! Imread flags
@@ -129,6 +133,8 @@ enum ImwritePAMFlags {
        IMWRITE_PAM_FORMAT_RGB = 4,
        IMWRITE_PAM_FORMAT_RGB_ALPHA = 5,
      };
+
+//! @} imgcodecs_flags
 
 /** @brief Loads an image from a file.
 
