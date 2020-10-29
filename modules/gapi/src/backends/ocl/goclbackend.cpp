@@ -272,4 +272,8 @@ void cv::gimpl::GOCLExecutable::run(std::vector<InObj>  &&input_objs,
             GAPI_Assert((out_arg_data == (mag_mat.getMat(ACCESS_RW).data)) && " data for output parameters was reallocated ?");
         }
     }
+
+    // In/Out args clean-up is mandatory now with RMat
+    for (auto &it : input_objs) magazine::unbind(m_res, it.first);
+    for (auto &it : output_objs) magazine::unbind(m_res, it.first);
 }

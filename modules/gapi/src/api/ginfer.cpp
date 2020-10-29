@@ -70,7 +70,10 @@ cv::GMat cv::GInferOutputs::at(const std::string& name)
     auto it = m_priv->out_blobs.find(name);
     if (it == m_priv->out_blobs.end()) {
         // FIXME: Avoid modifying GKernel
+        // Expect output to be always GMat
         m_priv->call->kernel().outShapes.push_back(cv::GShape::GMAT);
+        // ...so _empty_ constructor is passed here.
+        m_priv->call->kernel().outCtors.emplace_back(cv::util::monostate{});
         int out_idx = static_cast<int>(m_priv->out_blobs.size());
         it = m_priv->out_blobs.emplace(name, m_priv->call->yield(out_idx)).first;
         m_priv->info->out_names.push_back(name);

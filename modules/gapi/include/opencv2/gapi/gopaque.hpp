@@ -295,25 +295,27 @@ namespace detail
 template<typename T> class GOpaque
 {
 public:
-    GOpaque() { putDetails(); }              // Empty constructor
-    explicit GOpaque(detail::GOpaqueU &&ref) // GOpaqueU-based constructor
-        : m_ref(ref) { putDetails(); }       // (used by GCall, not for users)
-
-    detail::GOpaqueU strip() const { return m_ref; }
-
-private:
     // Host type (or Flat type) - the type this GOpaque is actually
     // specified to.
     using HT = typename detail::flatten_g<util::decay_t<T>>::type;
 
-    static void CTor(detail::OpaqueRef& ref) {
-        ref.reset<HT>();
-        ref.storeKind<HT>();
+    GOpaque() { putDetails(); }              // Empty constructor
+    explicit GOpaque(detail::GOpaqueU &&ref) // GOpaqueU-based constructor
+        : m_ref(ref) { putDetails(); }       // (used by GCall, not for users)
+
+    /// @private
+    detail::GOpaqueU strip() const {
+        return m_ref;
     }
+    /// @private
+    static void Ctor(detail::OpaqueRef& ref) {
+        ref.reset<HT>();
+    }
+private:
     void putDetails() {
-        m_ref.setConstructFcn(&CTor);
-        m_ref.specifyType<HT>(); // FIXME: to unify those 2 to avoid excessive dynamic_cast
-        m_ref.storeKind<HT>();   //
+        m_ref.setConstructFcn(&Ctor);
+        m_ref.specifyType<HT>();
+        m_ref.storeKind<HT>();
     }
 
     detail::GOpaqueU m_ref;

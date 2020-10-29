@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2020 Intel Corporation
 
 
 #include "../test_precomp.hpp"
@@ -29,7 +29,9 @@ namespace
                                     , ""
                                     , nullptr
                                     , { GShape::GMAT }
-                                    , { D::OpaqueKind::CV_UNKNOWN } }).pass(m).yield(0);
+                                    , { D::OpaqueKind::CV_UNKNOWN }
+                                    , { cv::detail::HostCtor{cv::util::monostate{}} }
+                                    }).pass(m).yield(0);
     }
 
     cv::GMat binaryOp(cv::GMat m1, cv::GMat m2)
@@ -38,7 +40,9 @@ namespace
                                     , ""
                                     , nullptr
                                     , { GShape::GMAT }
-                                    , { D::OpaqueKind::CV_UNKNOWN, D::OpaqueKind::CV_UNKNOWN } }).pass(m1, m2).yield(0);
+                                    , { D::OpaqueKind::CV_UNKNOWN, D::OpaqueKind::CV_UNKNOWN }
+                                    , { cv::detail::HostCtor{cv::util::monostate{}} }
+                                    }).pass(m1, m2).yield(0);
     }
 
     std::vector<ade::NodeHandle> collectOperations(const cv::gimpl::GModel::Graph& gr)
