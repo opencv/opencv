@@ -2,10 +2,12 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2019 Intel Corporation
+// Copyright (C) 2019-2020 Intel Corporation
 
 
 #include "../test_precomp.hpp"
+
+#include <thread> // sleep_for (Delay)
 
 #include <opencv2/gapi/cpu/core.hpp>
 #include <opencv2/gapi/cpu/imgproc.hpp>
@@ -18,6 +20,7 @@
 #include <opencv2/gapi/ocl/imgproc.hpp>
 
 #include <opencv2/gapi/streaming/cap.hpp>
+#include <opencv2/gapi/streaming/desync.hpp>
 
 namespace opencv_test
 {
@@ -97,6 +100,16 @@ struct GAPI_Streaming: public ::testing::TestWithParam<KernelPackage> {
             break;
         }
         throw std::logic_error("Unknown package");
+    }
+};
+
+G_API_OP(Delay, <cv::GMat(cv::GMat, int)>, "org.opencv.test.delay") {
+    static cv::GMatDesc outMeta(const cv::GMatDesc &in, int) { return in; }
+};
+GAPI_OCV_KERNEL(OCVDelay, Delay) {
+    static void run(const cv::Mat &in, int ms, cv::Mat &out) {
+        std::this_thread::sleep_for(std::chrono::milliseconds{ms});
+        in.copyTo(out);
     }
 };
 
@@ -794,6 +807,104 @@ TEST(GAPI_Streaming_Types, OutputVector)
     EXPECT_LT(0u, num_frames);
 }
 
+G_API_OP(DimsChans,
+         <std::tuple<cv::GArray<int>, cv::GOpaque<int>>(cv::GMat)>,
+         "test.streaming.dims_chans") {
+    static std::tuple<cv::GArrayDesc, cv::GOpaqueDesc> outMeta(const cv::GMatDesc &) {
+        return std::make_tuple(cv::empty_array_desc(),
+                               cv::empty_gopaque_desc());
+    }
+};
+
+GAPI_OCV_KERNEL(OCVDimsChans, DimsChans) {
+    static void run(const cv::Mat &in, std::vector<int> &ov, int &oi) {
+        ov = {in.cols, in.rows};
+        oi = in.channels();
+    }
+};
+
+struct GAPI_Streaming_TemplateTypes: ::testing::Test {
+    // There was a problem in GStreamingExecutor
+    // when outputs were formally not used by the graph
+    // but still should be in place as operation need
+    // to produce them, and host data type constructors
+    // were missing for GArray and GOpaque in this case.
+    // This test tests exactly this.
+
+    GAPI_Streaming_TemplateTypes() {
+        // Prepare everything for the test:
+        // Graph itself
+        blur = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
+
+        cv::GMat blur_d = cv::gapi::streaming::desync(blur);
+        std::tie(vec, opq) = DimsChans::on(blur_d);
+
+        // Kernel package
+        pkg = cv::gapi::kernels<OCVDimsChans>();
+
+        // Input mat
+        in_mat = cv::Mat::eye(cv::Size(320,240), CV_8UC3);
+    }
+
+    cv::GMat in;
+    cv::GMat blur;
+    cv::GArray<int> vec;
+    cv::GOpaque<int> opq;
+    cv::gapi::GKernelPackage pkg;
+    cv::Mat in_mat;
+};
+
+TEST_F(GAPI_Streaming_TemplateTypes, UnusedVectorIsOK)
+{
+    // Declare graph without listing vec as output
+    auto sc = cv::GComputation(cv::GIn(in), cv::GOut(blur, opq))
+        .compileStreaming(cv::compile_args(pkg));
+    sc.setSource(cv::gin(in_mat));
+    sc.start();
+
+    cv::optional<cv::Mat> out_mat;
+    cv::optional<int> out_int;
+
+    int counter = 0;
+    while (sc.pull(cv::gout(out_mat, out_int))) {
+        if (counter++ == 10) {
+            // Stop the test after 10 iterations
+            sc.stop();
+            break;
+        }
+        GAPI_Assert(out_mat || out_int);
+        if (out_int) {
+            EXPECT_EQ(  3, out_int.value());
+        }
+    }
+}
+
+TEST_F(GAPI_Streaming_TemplateTypes, UnusedOpaqueIsOK)
+{
+    // Declare graph without listing opq as output
+    auto sc = cv::GComputation(cv::GIn(in), cv::GOut(blur, vec))
+        .compileStreaming(cv::compile_args(pkg));
+    sc.setSource(cv::gin(in_mat));
+    sc.start();
+
+    cv::optional<cv::Mat> out_mat;
+    cv::optional<std::vector<int> > out_vec;
+
+    int counter = 0;
+    while (sc.pull(cv::gout(out_mat, out_vec))) {
+        if (counter++ == 10) {
+            // Stop the test after 10 iterations
+            sc.stop();
+            break;
+        }
+        GAPI_Assert(out_mat || out_vec);
+        if (out_vec) {
+            EXPECT_EQ(320, out_vec.value()[0]);
+            EXPECT_EQ(240, out_vec.value()[1]);
+        }
+    }
+}
+
 struct GAPI_Streaming_Unit: public ::testing::Test {
     cv::Mat m;
 
@@ -882,7 +993,7 @@ TEST_F(GAPI_Streaming_Unit, StartStopStart_NoSetSource)
     EXPECT_NO_THROW(sc.setSource(cv::gin(m, m)));
     EXPECT_NO_THROW(sc.start());
     EXPECT_NO_THROW(sc.stop());
-    EXPECT_ANY_THROW(sc.start()); // Should fails since setSource was not called
+    EXPECT_ANY_THROW(sc.start()); // Should fail since setSource was not called
 }
 
 TEST_F(GAPI_Streaming_Unit, StartStopStress_Const)
@@ -1016,6 +1127,382 @@ TEST(Streaming, Python_Pull_Overload)
 
     ccomp.stop();
     EXPECT_FALSE(ccomp.running());
+}
+
+TEST(GAPI_Streaming_Desync, SmokeTest_Regular)
+{
+    cv::GMat in;
+    cv::GMat tmp1 = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
+    cv::GMat out1 = cv::gapi::Canny(tmp1, 32, 128, 3);
+
+    // FIXME: Unary desync should not require tie!
+    cv::GMat tmp2 = cv::gapi::streaming::desync(tmp1);
+    cv::GMat out2 = tmp2 / cv::gapi::Sobel(tmp2, CV_8U, 1, 1);;
+
+    cv::Mat test_in = cv::Mat::eye(cv::Size(32,32), CV_8UC3);
+    cv::Mat test_out1, test_out2;
+    cv::GComputation(cv::GIn(in), cv::GOut(out1, out2))
+        .apply(cv::gin(test_in), cv::gout(test_out1, test_out2));
+}
+
+TEST(GAPI_Streaming_Desync, SmokeTest_Streaming)
+{
+    initTestDataPath();
+
+    cv::GMat in;
+    cv::GMat tmp1 = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
+    cv::GMat out1 = cv::gapi::Canny(tmp1, 32, 128, 3);
+
+    cv::GMat tmp2 = cv::gapi::streaming::desync(tmp1);
+    cv::GMat out2 = Delay::on(tmp2,10) / cv::gapi::Sobel(tmp2, CV_8U, 1, 1);
+
+    auto sc = cv::GComputation(cv::GIn(in), cv::GOut(out1, out2))
+        .compileStreaming(cv::compile_args(cv::gapi::kernels<OCVDelay>()));
+    auto sc_file = findDataFile("cv/video/768x576.avi");
+    auto sc_src = gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(sc_file);
+    sc.setSource(cv::gin(sc_src));
+    sc.start();
+
+    std::size_t out1_hits = 0u;
+    std::size_t out2_hits = 0u;
+    cv::optional<cv::Mat> test_out1, test_out2;
+    while (sc.pull(cv::gout(test_out1, test_out2))) {
+        GAPI_Assert(test_out1 || test_out2);
+        if (test_out1) out1_hits++;
+        if (test_out2) out2_hits++;
+    }
+    EXPECT_EQ(100u, out1_hits);      // out1 must be available for all frames
+    EXPECT_LE(out2_hits, out1_hits); // out2 must appear less times than out1
+    std::cout << "Got " << out1_hits << " out1's and " << out2_hits << " out2's" << std::endl;
+}
+
+TEST(GAPI_Streaming_Desync, SmokeTest_Streaming_TwoParts)
+{
+    initTestDataPath();
+
+    cv::GMat in;
+    cv::GMat tmp1 = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
+    cv::GMat out1 = cv::gapi::Canny(tmp1, 32, 128, 3);
+
+    // Desynchronized path 1
+    cv::GMat tmp2 = cv::gapi::streaming::desync(tmp1);
+    cv::GMat out2 = tmp2 / cv::gapi::Sobel(tmp2, CV_8U, 1, 1);
+
+    // Desynchronized path 2
+    cv::GMat tmp3 = cv::gapi::streaming::desync(tmp1);
+    cv::GMat out3 = 0.5*tmp3 +  0.5*cv::gapi::medianBlur(tmp3, 7);
+
+    // The code should compile and execute well (desynchronized parts don't cross)
+    auto sc = cv::GComputation(cv::GIn(in), cv::GOut(out1, out2, out3))
+        .compileStreaming();
+    auto sc_file = findDataFile("cv/video/768x576.avi");
+    auto sc_src = gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(sc_file);
+    sc.setSource(cv::gin(sc_src));
+    sc.start();
+
+    std::size_t test_frames = 0u;
+    cv::optional<cv::Mat> test_out1, test_out2, test_out3;
+    while (sc.pull(cv::gout(test_out1, test_out2, test_out3))) {
+        GAPI_Assert(test_out1 || test_out2 || test_out3);
+        if (test_out1) {
+            // count frames only for synchronized output
+            test_frames++;
+        }
+    }
+    EXPECT_EQ(100u, test_frames);
+}
+
+TEST(GAPI_Streaming_Desync, Negative_NestedDesync_Tier0)
+{
+    cv::GMat in;
+    cv::GMat tmp1 = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
+
+    // Desynchronized path 1
+    cv::GMat tmp2 = cv::gapi::streaming::desync(tmp1);
+    cv::GMat out1 = cv::gapi::medianBlur(tmp2, 3);
+
+    // Desynchronized path 2, nested from 1 (directly from desync)
+    cv::GMat tmp3 = cv::gapi::streaming::desync(tmp2);
+    cv::GMat out2 = 0.5*tmp3;
+
+    // This shouldn't compile
+    EXPECT_ANY_THROW(cv::GComputation(cv::GIn(in), cv::GOut(out1, out2))
+                     .compileStreaming());
+}
+
+TEST(GAPI_Streaming_Desync, Negative_NestedDesync_Tier1)
+{
+    cv::GMat in;
+    cv::GMat tmp1 = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
+
+    // Desynchronized path 1
+    cv::GMat tmp2 = cv::gapi::streaming::desync(tmp1);
+    cv::GMat out1 = cv::gapi::medianBlur(tmp2, 3);
+
+    // Desynchronized path 2, nested from 1 (indirectly from desync)
+    cv::GMat tmp3 = cv::gapi::streaming::desync(out1);
+    cv::GMat out2 = 0.5*tmp3;
+
+    // This shouldn't compile
+    EXPECT_ANY_THROW(cv::GComputation(cv::GIn(in), cv::GOut(out1, out2))
+                     .compileStreaming());
+}
+
+TEST(GAPI_Streaming_Desync, Negative_CrossMainPart_Tier0)
+{
+    cv::GMat in;
+    cv::GMat tmp1 = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
+
+    // Desynchronized path: depends on both tmp1 and tmp2
+    cv::GMat tmp2 = cv::gapi::streaming::desync(tmp1);
+    cv::GMat out1 = 0.5*tmp1 + 0.5*tmp2;
+
+    // This shouldn't compile
+    EXPECT_ANY_THROW(cv::GComputation(in, out1).compileStreaming());
+}
+
+TEST(GAPI_Streaming_Desync, Negative_CrossMainPart_Tier1)
+{
+    cv::GMat in;
+    cv::GMat tmp1 = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
+
+    // Desynchronized path: depends on both tmp1 and tmp2
+    cv::GMat tmp2 = cv::gapi::streaming::desync(tmp1);
+    cv::GMat out1 = 0.5*tmp1 + 0.5*cv::gapi::medianBlur(tmp2, 3);
+
+    // This shouldn't compile
+    EXPECT_ANY_THROW(cv::GComputation(in, out1).compileStreaming());
+}
+
+TEST(GAPI_Streaming_Desync, Negative_CrossOtherDesync_Tier0)
+{
+    cv::GMat in;
+    cv::GMat tmp1 = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
+
+    // Desynchronized path 1
+    cv::GMat tmp2 = cv::gapi::streaming::desync(tmp1);
+    cv::GMat out1 = 0.5*tmp2;
+
+    // Desynchronized path 2 (depends on 1)
+    cv::GMat tmp3 = cv::gapi::streaming::desync(tmp1);
+    cv::GMat out2 = 0.5*tmp3 + tmp2;
+
+    // This shouldn't compile
+    EXPECT_ANY_THROW(cv::GComputation(cv::GIn(in), cv::GOut(out1, out2))
+                     .compileStreaming());
+}
+
+TEST(GAPI_Streaming_Desync, Negative_CrossOtherDesync_Tier1)
+{
+    cv::GMat in;
+    cv::GMat tmp1 = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
+
+    // Desynchronized path 1
+    cv::GMat tmp2 = cv::gapi::streaming::desync(tmp1);
+    cv::GMat out1 = 0.5*tmp2;
+
+    // Desynchronized path 2 (depends on 1)
+    cv::GMat tmp3 = cv::gapi::streaming::desync(tmp1);
+    cv::GMat out2 = 0.5*cv::gapi::medianBlur(tmp3,3) + 1.0*tmp2;
+
+    // This shouldn't compile
+    EXPECT_ANY_THROW(cv::GComputation(cv::GIn(in), cv::GOut(out1, out2))
+                     .compileStreaming());
+}
+
+TEST(GAPI_Streaming_Desync, Negative_SynchronizedPull)
+{
+    initTestDataPath();
+
+    cv::GMat in;
+    cv::GMat out1 = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
+
+    cv::GMat tmp1 = cv::gapi::streaming::desync(out1);
+    cv::GMat out2 = 0.5*tmp1;
+
+    auto sc = cv::GComputation(cv::GIn(in), cv::GOut(out1, out2))
+        .compileStreaming();
+
+    auto sc_file = findDataFile("cv/video/768x576.avi");
+    auto sc_src = gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(sc_file);
+    sc.setSource(cv::gin(sc_src));
+    sc.start();
+
+    cv::Mat o1, o2;
+    EXPECT_ANY_THROW(sc.pull(cv::gout(o1, o2)));
+}
+
+TEST(GAPI_Streaming_Desync, UseSpecialPull)
+{
+    initTestDataPath();
+
+    cv::GMat in;
+    cv::GMat out1 = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
+
+    cv::GMat tmp1 = cv::gapi::streaming::desync(out1);
+    cv::GMat out2 = 0.5*tmp1;
+
+    auto sc = cv::GComputation(cv::GIn(in), cv::GOut(out1, out2))
+        .compileStreaming();
+
+    auto sc_file = findDataFile("cv/video/768x576.avi");
+    auto sc_src = gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(sc_file);
+    sc.setSource(cv::gin(sc_src));
+    sc.start();
+
+    cv::optional<cv::Mat> o1, o2;
+    std::size_t num_frames = 0u;
+
+    while (sc.pull(cv::gout(o1, o2))) {
+        if (o1) num_frames++;
+    }
+    EXPECT_EQ(100u, num_frames);
+}
+
+G_API_OP(ProduceVector, <cv::GArray<int>(cv::GMat)>, "test.desync.vector") {
+    static cv::GArrayDesc outMeta(const cv::GMatDesc &) {
+        return cv::empty_array_desc();
+    }
+};
+
+G_API_OP(ProduceOpaque, <cv::GOpaque<int>(cv::GMat)>, "test.desync.opaque") {
+    static cv::GOpaqueDesc outMeta(const cv::GMatDesc &) {
+        return cv::empty_gopaque_desc();
+    }
+};
+
+GAPI_OCV_KERNEL(OCVVector, ProduceVector) {
+    static void run(const cv::Mat& in, std::vector<int> &out) {
+        out = {in.cols, in.rows};
+    }
+};
+
+GAPI_OCV_KERNEL(OCVOpaque, ProduceOpaque) {
+    static void run(const cv::Mat &in, int &v) {
+        v = in.channels();
+    }
+};
+
+namespace {
+cv::GStreamingCompiled desyncTestObject() {
+    cv::GMat in;
+    cv::GMat blur = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
+
+    cv::GMat blur_d = cv::gapi::copy(cv::gapi::streaming::desync(blur));
+    cv::GMat d1 = Delay::on(blur_d, 10);
+    cv::GMat d2 = Delay::on(blur_d, 30);
+
+    cv::GArray<int>  vec = ProduceVector::on(d1);
+    cv::GOpaque<int> opq = ProduceOpaque::on(d2);
+
+    auto pkg = cv::gapi::kernels<OCVDelay, OCVVector, OCVOpaque>();
+    return cv::GComputation(cv::GIn(in), cv::GOut(blur, vec, opq))
+        .compileStreaming(cv::compile_args(pkg));
+}
+} // anonymous namespace
+
+TEST(GAPI_Streaming_Desync, MultipleDesyncOutputs_1) {
+    auto sc = desyncTestObject();
+    const cv::Mat in_mat = cv::Mat::eye(cv::Size(320,240), CV_8UC3);
+
+    sc.setSource(cv::gin(in_mat));
+    sc.start();
+
+    cv::optional<cv::Mat> out_mat;
+    cv::optional<std::vector<int> > out_vec;
+    cv::optional<int> out_int;
+
+    int counter = 0;
+    while (sc.pull(cv::gout(out_mat, out_vec, out_int))) {
+        if (counter++ == 1000) {
+            // Stop the test after 1000 iterations
+            sc.stop();
+            break;
+        }
+        GAPI_Assert(out_mat || out_vec || out_int);
+
+        // out_vec and out_int are on the same desynchronized path
+        // they MUST arrive together. If one is available, the other
+        // also must be available.
+        if (out_vec) { ASSERT_TRUE(out_int.has_value()); }
+        if (out_int) { ASSERT_TRUE(out_vec.has_value()); }
+
+        if (out_vec || out_int) {
+            EXPECT_EQ(320, out_vec.value()[0]);
+            EXPECT_EQ(240, out_vec.value()[1]);
+            EXPECT_EQ(  3, out_int.value());
+        }
+    }
+}
+
+TEST(GAPI_Streaming_Desync, StartStop_Stress) {
+    auto sc = desyncTestObject();
+    const cv::Mat in_mat = cv::Mat::eye(cv::Size(320,240), CV_8UC3);
+
+    cv::optional<cv::Mat> out_mat;
+    cv::optional<std::vector<int> > out_vec;
+    cv::optional<int> out_int;
+
+    for (int i = 0; i < 10; i++) {
+        sc.setSource(cv::gin(in_mat));
+        sc.start();
+        int counter = 0;
+        while (counter++ < 100) {
+            sc.pull(cv::gout(out_mat, out_vec, out_int));
+            GAPI_Assert(out_mat || out_vec || out_int);
+            if (out_vec) { ASSERT_TRUE(out_int.has_value()); }
+            if (out_int) { ASSERT_TRUE(out_vec.has_value()); }
+        }
+        sc.stop();
+    }
+}
+
+GAPI_FLUID_KERNEL(FluidCopy, cv::gapi::core::GCopy, false) {
+    static const int Window = 1;
+
+    static void run(const cv::gapi::fluid::View &in,
+                          cv::gapi::fluid::Buffer &out) {
+        const uint8_t *in_ptr = in.InLineB(0);
+        uint8_t *out_ptr = out.OutLineB(0);
+
+        const auto in_type = CV_MAKETYPE(in.meta().depth, in.meta().chan);
+        const auto out_type = CV_MAKETYPE(out.meta().depth, out.meta().chan);
+        GAPI_Assert(in_type == out_type);
+        std::copy_n(in_ptr, in.length()*CV_ELEM_SIZE(in_type), out_ptr);
+    }
+};
+
+
+TEST(GAPI_Streaming_Desync, DesyncObjectConsumedByTwoIslandsViaSeparateDesync) {
+    // See comment in the implementation of cv::gapi::streaming::desync (.cpp)
+    cv::GMat in;
+    cv::GMat tmp = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
+
+    cv::GMat tmp1 = cv::gapi::streaming::desync(tmp);
+    cv::GMat out1 = cv::gapi::copy(tmp1); // ran via Fluid backend
+
+    cv::GMat tmp2 = cv::gapi::streaming::desync(tmp);
+    cv::GMat out2 = tmp2 * 0.5;           // ran via OCV backend
+
+    auto c = cv::GComputation(cv::GIn(in), cv::GOut(out1, out2));
+    auto p = cv::gapi::kernels<FluidCopy>();
+
+    EXPECT_NO_THROW(c.compileStreaming(cv::compile_args(p)));
+}
+
+TEST(GAPI_Streaming_Desync, DesyncObjectConsumedByTwoIslandsViaSameDesync) {
+    // See comment in the implementation of cv::gapi::streaming::desync (.cpp)
+    cv::GMat in;
+    cv::GMat tmp = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
+
+    cv::GMat tmp1 = cv::gapi::streaming::desync(tmp);
+    cv::GMat out1 = cv::gapi::copy(tmp1); // ran via Fluid backend
+    cv::GMat out2 = out1 - 0.5*tmp1;      // ran via OCV backend
+
+    auto c = cv::GComputation(cv::GIn(in), cv::GOut(out1, out2));
+    auto p = cv::gapi::kernels<FluidCopy>();
+
+    EXPECT_NO_THROW(c.compileStreaming(cv::compile_args(p)));
 }
 
 } // namespace opencv_test

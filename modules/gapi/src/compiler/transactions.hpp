@@ -14,6 +14,7 @@
 
 #include <ade/graph.hpp>
 
+#include "opencv2/gapi/util/util.hpp" // Seq
 #include "opencv2/gapi/own/assert.hpp"
 
 enum class Direction: int {Invalid, In, Out};
@@ -21,8 +22,50 @@ enum class Direction: int {Invalid, In, Out};
 ////////////////////////////////////////////////////////////////////////////
 ////
 // TODO: Probably it can be moved to ADE
+template<class H, class... Metatypes>
+class Preserved
+{
+    using S = typename cv::detail::MkSeq<sizeof...(Metatypes)>::type;
+    std::tuple<cv::util::optional<Metatypes>...> m_data;
 
-namespace Change
+    template<class T>
+    cv::util::optional<T> get(ade::ConstTypedGraph<Metatypes...> g, H h) {
+        return g.metadata(h).template contains<T>()
+            ? cv::util::make_optional(g.metadata(h).template get<T>())
+            : cv::util::optional<T>{};
+    }
+    template<std::size_t Id>
+    int set(ade::TypedGraph<Metatypes...> &g, H &h) {
+        const auto &opt = std::get<Id>(m_data);
+        if (opt.has_value())
+            g.metadata(h).set(opt.value());
+        return 0;
+    }
+    template<int... IIs>
+    void copyTo_impl(ade::TypedGraph<Metatypes...> &g, H h, cv::detail::Seq<IIs...>) {
+        int unused[] = {0, set<IIs>(g, h)...};
+        (void) unused;
+    }
+public:
+    Preserved(const ade::Graph &g, H h) {
+        ade::ConstTypedGraph<Metatypes...> tg(g);
+        m_data = std::make_tuple(get<Metatypes>(tg, h)...);
+    }
+    void copyTo(ade::Graph &g, H h) {
+        ade::TypedGraph<Metatypes...> tg(g);
+        copyTo_impl(tg, h, S{});
+    }
+};
+// Do nothing if there's no metadata
+template<class H>
+class Preserved<H> {
+public:
+    Preserved(const ade::Graph &, H) {}
+    void copyTo(ade::Graph &, H) {}
+};
+
+template<class... Metatypes>
+struct ChangeT
 {
     struct Base
     {
@@ -30,6 +73,8 @@ namespace Change
         virtual void rollback(ade::Graph & ) {};
         virtual ~Base() = default;
     };
+
+    template<typename H> using Preserved = ::Preserved<H, Metatypes...>;
 
     class NodeCreated final: public Base
     {
@@ -39,11 +84,7 @@ namespace Change
         virtual void rollback(ade::Graph &g) override { g.erase(m_node); }
     };
 
-    // NB: Drops all metadata stored in the EdgeHandle,
-    // which is not restored even in the rollback
-
-    // FIXME: either add a way for users to preserve meta manually
-    // or extend ADE to manipulate with meta such way
+    // FIXME: maybe extend ADE to clone/copy the whole metadata?
     class DropLink final: public Base
     {
         ade::NodeHandle m_node;
@@ -51,13 +92,15 @@ namespace Change
 
         ade::NodeHandle m_sibling;
 
+        Preserved<ade::EdgeHandle> m_meta;
+
     public:
         DropLink(ade::Graph &g,
                  const ade::NodeHandle &node,
                  const ade::EdgeHandle &edge)
-            : m_node(node), m_dir(node == edge->srcNode()
-                                  ? Direction::Out
-                                  : Direction::In)
+            : m_node(node)
+            , m_dir(node == edge->srcNode() ? Direction::Out : Direction::In)
+            , m_meta(g, edge)
         {
             m_sibling = (m_dir == Direction::In
                          ? edge->srcNode()
@@ -67,12 +110,17 @@ namespace Change
 
         virtual void rollback(ade::Graph &g) override
         {
+            // FIXME: Need to preserve metadata here!
+            // GIslandModel edges now have metadata
+            ade::EdgeHandle eh;
             switch(m_dir)
             {
-            case Direction::In:  g.link(m_sibling, m_node); break;
-            case Direction::Out: g.link(m_node, m_sibling); break;
+            case Direction::In:  eh = g.link(m_sibling, m_node); break;
+            case Direction::Out: eh = g.link(m_node, m_sibling); break;
             default: GAPI_Assert(false);
             }
+            GAPI_Assert(eh != nullptr);
+            m_meta.copyTo(g, eh);
         }
     };
 
@@ -82,10 +130,15 @@ namespace Change
 
     public:
         NewLink(ade::Graph &g,
-                  const ade::NodeHandle &prod,
-                  const ade::NodeHandle &cons)
+                const ade::NodeHandle &prod,
+                const ade::NodeHandle &cons,
+                const ade::EdgeHandle &copy_from = ade::EdgeHandle())
             : m_edge(g.link(prod, cons))
         {
+            if (copy_from != nullptr)
+            {
+                Preserved<ade::EdgeHandle>(g, copy_from).copyTo(g, m_edge);
+            }
         }
 
         virtual void rollback(ade::Graph &g) override
@@ -141,7 +194,7 @@ namespace Change
             }
         }
     };
-} // namespace Change
+}; // struct Change
 ////////////////////////////////////////////////////////////////////////////
 
 #endif // OPENCV_GAPI_COMPILER_TRANSACTIONS_HPP

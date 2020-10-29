@@ -67,6 +67,21 @@ cv::gapi::GKernelPackage cv::gapi::GBackend::Priv::auxiliaryKernels() const
     return {};
 }
 
+bool cv::gapi::GBackend::Priv::controlsMerge() const
+{
+    return false;
+}
+
+bool cv::gapi::GBackend::Priv::allowsMerge(const cv::gimpl::GIslandModel::Graph &,
+                                           const ade::NodeHandle &,
+                                           const ade::NodeHandle &,
+                                           const ade::NodeHandle &) const
+{
+    GAPI_Assert(controlsMerge());
+    return true;
+}
+
+
 // GBackend public implementation //////////////////////////////////////////////
 cv::gapi::GBackend::GBackend()
 {

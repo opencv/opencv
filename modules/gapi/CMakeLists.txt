@@ -74,6 +74,7 @@ set(gapi_srcs
     src/api/kernels_imgproc.cpp
     src/api/kernels_video.cpp
     src/api/kernels_nnparsers.cpp
+    src/api/kernels_streaming.cpp
     src/api/render.cpp
     src/api/render_ocv.cpp
     src/api/ginfer.cpp
@@ -97,6 +98,7 @@ set(gapi_srcs
     src/compiler/passes/pattern_matching.cpp
     src/compiler/passes/perform_substitution.cpp
     src/compiler/passes/streaming.cpp
+    src/compiler/passes/intrin.cpp
 
     # Executor
     src/executor/gexecutor.cpp
