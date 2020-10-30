@@ -355,11 +355,8 @@ TEST(TestAgeGenderIE, GenericInfer)
     initDLDTDataPath();
 
     cv::gapi::ie::detail::ParamDesc params;
-    //params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-    //params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
-    //params.device_id = "CPU";
-    params.model_path = "/home/atalaman/workspace/opencv_extra/testdata/dnn/omz_intel_models/intel/age-gender-recognition-retail-0013/FP32/age-gender-recognition-retail-0013.xml";
-    params.weights_path = "/home/atalaman/workspace/opencv_extra/testdata/dnn/omz_intel_models/intel/age-gender-recognition-retail-0013/FP32/age-gender-recognition-retail-0013.bin";
+    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
+    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
     params.device_id = "CPU";
 
     cv::Mat in_mat(cv::Size(320, 240), CV_8UC3);
@@ -424,11 +421,10 @@ TEST(TestAgeGenderIE, InvalidConfig)
     auto gender  = outputs.at("prob");
     cv::GComputation comp(cv::GIn(in), cv::GOut(age, gender));
 
-    cv::gapi::ie::Params<cv::gapi::Generic> pp{"age-gender-generic",
-                                                model_path,
-                                                weights_path,
-                                                device_id,
-                                                {{"unsupported_config", "some_value"}}};
+    auto pp = cv::gapi::ie::Params<cv::gapi::Generic>{"age-gender-generic",
+                                                       model_path,
+                                                       weights_path,
+                                                       device_id}.cfgPlugin({{"unsupported_config", "some_value"}});
 
     EXPECT_ANY_THROW(comp.compile(cv::GMatDesc{CV_8U,3,cv::Size{320, 240}},
                      cv::compile_args(cv::gapi::networks(pp))));

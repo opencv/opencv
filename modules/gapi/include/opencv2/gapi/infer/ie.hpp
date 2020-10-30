@@ -50,7 +50,6 @@ namespace detail {
         std::string model_path;
         std::string weights_path;
         std::string device_id;
-        IEConfig    config;
 
         // NB: Here order follows the `Net` API
         std::vector<std::string> input_names;
@@ -67,6 +66,7 @@ namespace detail {
         enum class Kind { Load, Import };
         Kind kind;
         bool is_generic;
+        IEConfig config;
     };
 } // namespace detail
 
@@ -85,23 +85,23 @@ template<typename Net> class Params {
 public:
     Params(const std::string &model,
            const std::string &weights,
-           const std::string &device,
-           const IEConfig    &config = {})
-        : desc{ model, weights, device, config, {}, {}, {}
+           const std::string &device)
+        : desc{ model, weights, device, {}, {}, {}
               , std::tuple_size<typename Net::InArgs>::value  // num_in
               , std::tuple_size<typename Net::OutArgs>::value // num_out
               , detail::ParamDesc::Kind::Load
-              , false} {
+              , false
+              , {}} {
     };
 
     Params(const std::string &model,
-           const std::string &device,
-           const IEConfig    &config = {})
-        : desc{ model, {}, device, config, {}, {}, {}
+           const std::string &device)
+        : desc{ model, {}, device, {}, {}, {}
               , std::tuple_size<typename Net::InArgs>::value  // num_in
               , std::tuple_size<typename Net::OutArgs>::value // num_out
               , detail::ParamDesc::Kind::Import
-              , false} {
+              , false
+              , {}} {
     };
 
     Params<Net>& cfgInputLayers(const typename PortCfg<Net>::In &ll) {
@@ -127,6 +127,11 @@ public:
         return *this;
     }
 
+    Params& cfgPlugin(IEConfig cfg) {
+        desc.config = std::move(cfg);
+        return *this;
+    }
+
     // BEGIN(G-API's network parametrization API)
     GBackend      backend()    const { return cv::gapi::ie::backend();  }
     std::string   tag()        const { return Net::tag(); }
@@ -143,17 +148,20 @@ public:
     Params(const std::string &tag,
            const std::string &model,
            const std::string &weights,
-           const std::string &device,
-           const IEConfig    &config = {})
-        : desc{ model, weights, device, config, {}, {}, {}, 0u, 0u, detail::ParamDesc::Kind::Load, true}, m_tag(tag) {
+           const std::string &device)
+        : desc{ model, weights, device, {}, {}, {}, 0u, 0u, detail::ParamDesc::Kind::Load, true, {}}, m_tag(tag) {
     };
 
     Params(const std::string &tag,
            const std::string &model,
-           const std::string &device,
-           const IEConfig    &config = {})
-        : desc{ model, {}, device, config, {}, {}, {}, 0u, 0u, detail::ParamDesc::Kind::Import, true}, m_tag(tag) {
+           const std::string &device)
+        : desc{ model, {}, device, {}, {}, {}, 0u, 0u, detail::ParamDesc::Kind::Import, true, {}}, m_tag(tag) {
     };
+
+    Params& cfgPlugin(IEConfig cfg) {
+        desc.config = std::move(cfg);
+        return *this;
+    }
 
     // BEGIN(G-API's network parametrization API)
     GBackend      backend()    const { return cv::gapi::ie::backend();  }
