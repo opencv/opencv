@@ -524,8 +524,13 @@ ocv_cmake_hook(POST_OPTIONS)
 #  Build & install layouts
 # ----------------------------------------------------------------------------
 
+set(OPENCV_TEST_DATA_PATH "" CACHE PATH "Path to the testdata directory in the opencv_extra repository")
 if(OPENCV_TEST_DATA_PATH)
   get_filename_component(OPENCV_TEST_DATA_PATH ${OPENCV_TEST_DATA_PATH} ABSOLUTE)
+else()
+	if (INSTALL_TESTS)
+		message(STATUS "INSTALL_TESTS is ON but OPENCV_TEST_DATA_PATH is not set. Some tests will fail without test data available.")
+	endif()
 endif()
 
 # Save libs and executables in the same place
