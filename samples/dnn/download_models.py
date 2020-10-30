@@ -1,6 +1,7 @@
 '''
 Helper module to download extra data from Internet
 '''
+from __future__ import print_function
 import os
 import sys
 import yaml
@@ -81,7 +82,7 @@ class DownloadInstance:
 
             if not os.path.exists(self.save_dir):
                 print('  creating directory: ' + self.save_dir)
-                os.makedirs(self.save_dir, exist_ok=True)
+                os.makedirs(self.save_dir)
             
 
             print('  hash check failed - loading')
@@ -94,7 +95,9 @@ class DownloadInstance:
                     download_path = os.path.join(self.save_dir, filename)
                     sha = getHashsumFromFile(download_path)
                     new_dir = os.path.join(self.save_dir, sha)
-                    os.makedirs(new_dir, exist_ok=True)
+
+                    if not os.path.exists(new_dir):
+                        os.makedirs(new_dir)
                     if not (os.path.exists(os.path.join(new_dir, filename))):
                         shutil.move(download_path, new_dir)
                     print('  No expected hashsum provided, actual SHA is {}'.format(sha))
@@ -121,7 +124,8 @@ class Loader(object):
         else:
             # create a new folder in save_dir to avoid possible name conflicts
             download_dir = os.path.join(save_dir, self.download_sha)
-        os.makedirs(download_dir, exist_ok=True)
+        if not os.path.exists(download_dir):
+            os.makedirs(download_dir)
         download_path = os.path.join(download_dir, self.download_name)
         print("  Preparing to download file " + self.download_name)
         if checkHashsum(self.download_sha, download_path):
@@ -139,7 +143,8 @@ class Loader(object):
                     extract_dir = os.path.join(save_dir, sha)
                 else:
                     extract_dir = save_dir
-                os.makedirs(extract_dir, exist_ok=True)
+                if not os.path.exists(extract_dir):
+                    os.makedirs(extract_dir)
                 self.extract(requested_file, download_path, extract_dir)
             else:
                 raise Exception("Downloaded file has different name")
@@ -162,19 +167,19 @@ class Loader(object):
     
     def save(self, filepath, r):
         with open(filepath, 'wb') as f:
-            print('  progress ', end='')
+            print('  progress ', end="")
             sys.stdout.flush()
             while True:
                 buf = r.read(self.BUFSIZE)
                 if not buf:
                     break
                 f.write(buf)
-                print('>', end='')
+                print('>', end="")
                 sys.stdout.flush()
 
 class URLLoader(Loader):
     def __init__(self, download_name, download_sha, url, archive_member = None):
-        super().__init__(download_name, download_sha, archive_member)
+        super(URLLoader, self).__init__(download_name, download_sha, archive_member)
         self.download_name = download_name
         self.download_sha = download_sha
         self.url = url
@@ -198,7 +203,7 @@ class GDriveLoader(Loader):
     BUFSIZE = 1024 * 1024
     PROGRESS_SIZE = 10 * 1024 * 1024
     def __init__(self, download_name, download_sha, gid, archive_member = None):
-        super().__init__(download_name, download_sha, archive_member)
+        super(GDriveLoader, self).__init__(download_name, download_sha, archive_member)
         self.download_name = download_name
         self.download_sha = download_sha
         self.gid = gid
@@ -271,7 +276,8 @@ def getSaveDir():
     else:
         temp_dir = Path("/tmp" if platform.system() == "Darwin" else tempfile.gettempdir())
         save_dir = os.path.join(temp_dir, "opencv_data")
-    os.makedirs(save_dir, exist_ok=True)
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
     return save_dir
 
 def downloadFile(url, sha=None, save_dir=None, filename=None):
