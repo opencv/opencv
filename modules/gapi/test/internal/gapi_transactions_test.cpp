@@ -2,11 +2,14 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018 - 2020 Intel Corporation
 
 
 #include "../test_precomp.hpp"
+
 #include <ade/graph.hpp>
+#include <ade/typed_graph.hpp>
+
 #include "compiler/transactions.hpp"
 
 namespace opencv_test
@@ -33,10 +36,11 @@ struct SimpleGraph
 
     enum { node_nums = 5 };
     ade::Graph        graph;
-    ade::NodeHandle   fused_nh;                     /* For check that fusion  node is connected to the
-                                                               inputs of the prod and the outputs of the cons */
+    ade::NodeHandle   fused_nh;  // For check that fusion  node is connected to the
+                                 // inputs of the prod and the outputs of the cons
     std::array<ade::NodeHandle, node_nums>     nhs;
     std::array<ade::EdgeHandle, node_nums - 1> ehs;
+    using Change = ChangeT<>;
     Change::List changes;
 
     SimpleGraph()
@@ -192,8 +196,6 @@ TEST_F(Transactions, DropNode_Commit)
 
 TEST_F(Transactions, Fusion_Commit)
 {
-    namespace C = Change;
-
     fuse();
     commit();
 
@@ -204,8 +206,6 @@ TEST_F(Transactions, Fusion_Commit)
 
 TEST_F(Transactions, Fusion_RollBack)
 {
-    namespace C = Change;
-
     fuse();
     rollback();
 
@@ -217,6 +217,153 @@ TEST_F(Transactions, Fusion_RollBack)
     {
         EXPECT_TRUE(connected(nhs[i], nhs[i + 1]));
     }
+}
+
+namespace
+{
+    struct MetaInt {
+        static const char *name() { return "int_meta"; }
+        int x;
+    };
+
+    struct MetaStr {
+        static const char *name() { return "string_meta"; }
+        std::string s;
+    };
+}
+
+TEST(PreservedMeta, TestMetaCopy_Full)
+{
+    ade::Graph g;
+    ade::TypedGraph<MetaInt, MetaStr> tg(g);
+
+    auto src_nh = tg.createNode();
+    tg.metadata(src_nh).set(MetaInt{42});
+    tg.metadata(src_nh).set(MetaStr{"hi"});
+
+    auto dst_nh = tg.createNode();
+
+    EXPECT_FALSE(tg.metadata(dst_nh).contains<MetaInt>());
+    EXPECT_FALSE(tg.metadata(dst_nh).contains<MetaStr>());
+
+    // Here we specify all the meta types we know about the src node
+    // Assume Preserved copies its all for us
+    Preserved<ade::NodeHandle, MetaInt, MetaStr>(g, src_nh).copyTo(g, dst_nh);
+
+    ASSERT_TRUE(tg.metadata(dst_nh).contains<MetaInt>());
+    ASSERT_TRUE(tg.metadata(dst_nh).contains<MetaStr>());
+
+    EXPECT_EQ(42,   tg.metadata(dst_nh).get<MetaInt>().x);
+    EXPECT_EQ("hi", tg.metadata(dst_nh).get<MetaStr>().s);
+}
+
+
+TEST(PreservedMeta, TestMetaCopy_Partial_Dst)
+{
+    ade::Graph g;
+    ade::TypedGraph<MetaInt, MetaStr> tg(g);
+
+    auto tmp_nh1 = tg.createNode();
+    auto tmp_nh2 = tg.createNode();
+    auto src_eh  = tg.link(tmp_nh1, tmp_nh2);
+
+    tg.metadata(src_eh).set(MetaInt{42});
+    tg.metadata(src_eh).set(MetaStr{"hi"});
+
+    auto tmp_nh3 = tg.createNode();
+    auto tmp_nh4 = tg.createNode();
+    auto dst_eh  = tg.link(tmp_nh3, tmp_nh4);
+
+    EXPECT_FALSE(tg.metadata(dst_eh).contains<MetaInt>());
+    EXPECT_FALSE(tg.metadata(dst_eh).contains<MetaStr>());
+
+    // Here we specify just a single meta type for the src node
+    // Assume Preserved copies only this type and nothing else
+    Preserved<ade::EdgeHandle, MetaStr>(g, src_eh).copyTo(g, dst_eh);
+
+    ASSERT_FALSE(tg.metadata(dst_eh).contains<MetaInt>());
+    ASSERT_TRUE (tg.metadata(dst_eh).contains<MetaStr>());
+
+    EXPECT_EQ("hi", tg.metadata(dst_eh).get<MetaStr>().s);
+}
+
+TEST(PreservedMeta, TestMetaCopy_Partial_Src)
+{
+    ade::Graph g;
+    ade::TypedGraph<MetaInt, MetaStr> tg(g);
+
+    auto src_nh = tg.createNode();
+    tg.metadata(src_nh).set(MetaInt{42});
+
+    auto dst_nh = tg.createNode();
+
+    EXPECT_FALSE(tg.metadata(dst_nh).contains<MetaInt>());
+    EXPECT_FALSE(tg.metadata(dst_nh).contains<MetaStr>());
+
+    // Here we specify all the meta types we know about the src node
+    // but the src node has just one of them.
+    // A valid situation, only MetaInt to be copied.
+    Preserved<ade::NodeHandle, MetaInt, MetaStr>(g, src_nh).copyTo(g, dst_nh);
+
+    ASSERT_TRUE (tg.metadata(dst_nh).contains<MetaInt>());
+    ASSERT_FALSE(tg.metadata(dst_nh).contains<MetaStr>());
+
+    EXPECT_EQ(42, tg.metadata(dst_nh).get<MetaInt>().x);
+}
+
+TEST(PreservedMeta, TestMetaCopy_Nothing)
+{
+    ade::Graph g;
+    ade::TypedGraph<MetaInt, MetaStr> tg(g);
+
+    auto src_nh = tg.createNode();
+    auto dst_nh = tg.createNode();
+
+    EXPECT_FALSE(tg.metadata(src_nh).contains<MetaInt>());
+    EXPECT_FALSE(tg.metadata(src_nh).contains<MetaStr>());
+
+    EXPECT_FALSE(tg.metadata(dst_nh).contains<MetaInt>());
+    EXPECT_FALSE(tg.metadata(dst_nh).contains<MetaStr>());
+
+    // Here we specify all the meta types we know about the src node
+    // but the src node has none of those. See how it works now
+    Preserved<ade::NodeHandle, MetaInt, MetaStr>(g, src_nh).copyTo(g, dst_nh);
+
+    ASSERT_FALSE(tg.metadata(dst_nh).contains<MetaInt>());
+    ASSERT_FALSE(tg.metadata(dst_nh).contains<MetaStr>());
+}
+
+TEST(PreservedMeta, DropEdge)
+{
+    ade::Graph g;
+    ade::TypedGraph<MetaInt, MetaStr> tg(g);
+
+    auto nh1 = tg.createNode();
+    auto nh2 = tg.createNode();
+    auto eh  = tg.link(nh1, nh2);
+
+    tg.metadata(eh).set(MetaInt{42});
+    tg.metadata(eh).set(MetaStr{"hi"});
+
+    // Drop an edge using the transaction API
+    using Change = ChangeT<MetaInt, MetaStr>;
+    Change::List changes;
+    changes.enqueue<Change::DropLink>(g, nh1, eh);
+
+    EXPECT_EQ(0u,      nh1->outNodes().size());
+    EXPECT_EQ(nullptr, eh);
+
+    // Now restore the edge and check if it's meta was restored
+    changes.rollback(g);
+
+    ASSERT_EQ(1u,      nh1->outNodes().size());
+    eh = *nh1->outEdges().begin();
+
+    ASSERT_TRUE(tg.metadata(eh).contains<MetaInt>());
+    ASSERT_TRUE(tg.metadata(eh).contains<MetaStr>());
+
+    EXPECT_EQ(42,   tg.metadata(eh).get<MetaInt>().x);
+    EXPECT_EQ("hi", tg.metadata(eh).get<MetaStr>().s);
 }
 
 } // opencv_test
