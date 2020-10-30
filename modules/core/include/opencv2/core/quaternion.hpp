@@ -223,7 +223,7 @@ public:
      * ```
      */
     template <typename T>
-    friend Quat<T> cv::log(const Quat<T> &q, bool assumeUnit);
+    friend Quat<T> log(const Quat<T> &q, bool assumeUnit);
 
     /**
      * @brief return the value of logarithm function.
