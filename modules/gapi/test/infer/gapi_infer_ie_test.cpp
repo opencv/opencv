@@ -355,8 +355,11 @@ TEST(TestAgeGenderIE, GenericInfer)
     initDLDTDataPath();
 
     cv::gapi::ie::detail::ParamDesc params;
-    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    //params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
+    //params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    //params.device_id = "CPU";
+    params.model_path = "/home/atalaman/workspace/opencv_extra/testdata/dnn/omz_intel_models/intel/age-gender-recognition-retail-0013/FP32/age-gender-recognition-retail-0013.xml";
+    params.weights_path = "/home/atalaman/workspace/opencv_extra/testdata/dnn/omz_intel_models/intel/age-gender-recognition-retail-0013/FP32/age-gender-recognition-retail-0013.bin";
     params.device_id = "CPU";
 
     cv::Mat in_mat(cv::Size(320, 240), CV_8UC3);
@@ -401,6 +404,34 @@ TEST(TestAgeGenderIE, GenericInfer)
     // Validate with IE itself (avoid DNN module dependency here)
     normAssert(cv::gapi::ie::util::to_ocv(ie_age),    gapi_age,    "Test age output"   );
     normAssert(cv::gapi::ie::util::to_ocv(ie_gender), gapi_gender, "Test gender output");
+}
+
+TEST(TestAgeGenderIE, InvalidConfig)
+{
+    initDLDTDataPath();
+
+    std::string model_path   = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
+    std::string weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    std::string device_id    = "CPU";
+
+    // Configure & run G-API
+    cv::GMat in;
+    GInferInputs inputs;
+    inputs["data"] = in;
+
+    auto outputs = cv::gapi::infer<cv::gapi::Generic>("age-gender-generic", inputs);
+    auto age     = outputs.at("age_conv3");
+    auto gender  = outputs.at("prob");
+    cv::GComputation comp(cv::GIn(in), cv::GOut(age, gender));
+
+    cv::gapi::ie::Params<cv::gapi::Generic> pp{"age-gender-generic",
+                                                model_path,
+                                                weights_path,
+                                                device_id,
+                                                {{"unsupported_config", "some_value"}}};
+
+    EXPECT_ANY_THROW(comp.compile(cv::GMatDesc{CV_8U,3,cv::Size{320, 240}},
+                     cv::compile_args(cv::gapi::networks(pp))));
 }
 
 } // namespace opencv_test
