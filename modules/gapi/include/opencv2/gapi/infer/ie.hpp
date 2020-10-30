@@ -11,6 +11,7 @@
 #include <string>
 #include <array>
 #include <tuple> // tuple, tuple_size
+#include <map>
 
 #include <opencv2/gapi/opencv_includes.hpp>
 #include <opencv2/gapi/util/any.hpp>
@@ -42,11 +43,14 @@ enum class TraitAs: int
     IMAGE   //!< G-API traits an associated cv::Mat as an image so creates an "image" blob (NCHW/NHWC, etc)
 };
 
+using IEConfig = std::map<std::string, std::string>;
+
 namespace detail {
     struct ParamDesc {
         std::string model_path;
         std::string weights_path;
         std::string device_id;
+        IEConfig    config;
 
         // NB: Here order follows the `Net` API
         std::vector<std::string> input_names;
@@ -81,8 +85,9 @@ template<typename Net> class Params {
 public:
     Params(const std::string &model,
            const std::string &weights,
-           const std::string &device)
-        : desc{ model, weights, device, {}, {}, {}
+           const std::string &device,
+           const IEConfig    &config = {})
+        : desc{ model, weights, device, config, {}, {}, {}
               , std::tuple_size<typename Net::InArgs>::value  // num_in
               , std::tuple_size<typename Net::OutArgs>::value // num_out
               , detail::ParamDesc::Kind::Load
@@ -90,8 +95,9 @@ public:
     };
 
     Params(const std::string &model,
-           const std::string &device)
-        : desc{ model, {}, device, {}, {}, {}
+           const std::string &device,
+           const IEConfig    &config = {})
+        : desc{ model, {}, device, config, {}, {}, {}
               , std::tuple_size<typename Net::InArgs>::value  // num_in
               , std::tuple_size<typename Net::OutArgs>::value // num_out
               , detail::ParamDesc::Kind::Import
@@ -137,14 +143,16 @@ public:
     Params(const std::string &tag,
            const std::string &model,
            const std::string &weights,
-           const std::string &device)
-        : desc{ model, weights, device, {}, {}, {}, 0u, 0u, detail::ParamDesc::Kind::Load, true}, m_tag(tag) {
+           const std::string &device,
+           const IEConfig    &config = {})
+        : desc{ model, weights, device, config, {}, {}, {}, 0u, 0u, detail::ParamDesc::Kind::Load, true}, m_tag(tag) {
     };
 
     Params(const std::string &tag,
            const std::string &model,
-           const std::string &device)
-        : desc{ model, {}, device, {}, {}, {}, 0u, 0u, detail::ParamDesc::Kind::Import, true}, m_tag(tag) {
+           const std::string &device,
+           const IEConfig    &config = {})
+        : desc{ model, {}, device, config, {}, {}, {}, 0u, 0u, detail::ParamDesc::Kind::Import, true}, m_tag(tag) {
     };
 
     // BEGIN(G-API's network parametrization API)
