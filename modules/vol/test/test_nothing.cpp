@@ -8,7 +8,7 @@ namespace opencv_test { namespace {
 
 TEST(VolTests, doNothing)
 {
-	ASSERT_TRUE(doNothing());
+    ASSERT_TRUE(doNothing());
 }
 
 
