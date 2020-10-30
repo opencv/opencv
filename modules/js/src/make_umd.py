@@ -103,7 +103,7 @@ def make_umd(opencvjs, cvjs):
     Module = {};
   return cv(Module);
 }));
-    """ % (content)).lstrip())
+    """ % (content)).lstrip().encode(encoding='UTF-8',errors='strict')
 
 if __name__ == "__main__":
     if len(sys.argv) > 2:
