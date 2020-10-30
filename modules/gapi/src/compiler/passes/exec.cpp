@@ -20,6 +20,7 @@
 #include <opencv2/gapi/util/optional.hpp>  // util::optional
 #include "logger.hpp"    // GAPI_LOG
 
+#include "api/gbackend_priv.hpp" // for canMerge()
 #include "compiler/gmodel.hpp"
 #include "compiler/gislandmodel.hpp"
 #include "compiler/passes/passes.hpp"
@@ -54,11 +55,28 @@ namespace
         // Also check the cases backend can't handle
         // (e.x. GScalar connecting two fluid ops should split the graph)
         const GModel::ConstGraph g(src_graph);
+        if (g.metadata().contains<Desynchronized>()) {
+            // Fusion of a graph having a desynchronized path is
+            // definitely non-trivial
+            return false;
+        }
         const auto& active_backends = g.metadata().get<ActiveBackends>().backends;
-        return active_backends.size() == 1 &&
-                ade::util::all_of(g.nodes(), [&](ade::NodeHandle nh) {
-            return !g.metadata(nh).contains<Island>();
-        });
+        if (active_backends.size() != 1u) {
+            // More than 1 backend involved - non-trivial
+            return false;
+        }
+        const auto& has_island_tags = [&](ade::NodeHandle nh) {
+            return g.metadata(nh).contains<Island>();
+        };
+        if (ade::util::any_of(g.nodes(), has_island_tags)) {
+            // There are user-defined islands - non-trivial
+            return false;
+        }
+        if (active_backends.begin()->priv().controlsMerge()) {
+            // If the only backend controls Island Fusion on its own - non-trivial
+            return false;
+        }
+        return true;
     }
 
     void fuseTrivial(GIslandModel::Graph &g, const ade::Graph &src_graph)
@@ -71,12 +89,12 @@ namespace
 
         all.insert(src_g.nodes().begin(), src_g.nodes().end());
 
-        for (const auto nh : proto.in_nhs)
+        for (const auto& nh : proto.in_nhs)
         {
             all.erase(nh);
             in_ops.insert(nh->outNodes().begin(), nh->outNodes().end());
         }
-        for (const auto nh : proto.out_nhs)
+        for (const auto& nh : proto.out_nhs)
         {
             all.erase(nh);
             out_ops.insert(nh->inNodes().begin(), nh->inNodes().end());
@@ -90,12 +108,12 @@ namespace
 
         auto ih = GIslandModel::mkIslandNode(g, std::move(isl));
 
-        for (const auto nh : proto.in_nhs)
+        for (const auto& nh : proto.in_nhs)
         {
             auto slot = GIslandModel::mkSlotNode(g, nh);
             g.link(slot, ih);
         }
-        for (const auto nh : proto.out_nhs)
+        for (const auto& nh : proto.out_nhs)
         {
             auto slot = GIslandModel::mkSlotNode(g, nh);
             g.link(ih, slot);
@@ -125,9 +143,9 @@ namespace
     };
 
     bool canMerge(const GIslandModel::Graph &g,
-                  const ade::NodeHandle a_nh,
-                  const ade::NodeHandle /*slot_nh*/,
-                  const ade::NodeHandle b_nh,
+                  const ade::NodeHandle &a_nh,
+                  const ade::NodeHandle &slot_nh,
+                  const ade::NodeHandle &b_nh,
                   const MergeContext &ctx = MergeContext())
     {
         auto a_ptr = g.metadata(a_nh).get<FusedIsland>().object;
@@ -142,8 +160,8 @@ namespace
         // Islands which cause a cycle can't be merged as well
         // (since the flag is set, the procedure already tried to
         // merge these islands in the past)
-        if (ade::util::contains(ctx.cycle_causers, std::make_pair(a_ptr, b_ptr))||
-            ade::util::contains(ctx.cycle_causers, std::make_pair(b_ptr, a_ptr)))
+        if (   ade::util::contains(ctx.cycle_causers, std::make_pair(a_ptr, b_ptr))
+            || ade::util::contains(ctx.cycle_causers, std::make_pair(b_ptr, a_ptr)))
             return false;
 
         // There may be user-defined islands. Initially user-defined
@@ -163,7 +181,13 @@ namespace
                 return false;
         }
 
-        // FIXME: add a backend-specified merge checker
+        // If available, run the backend-specified merge checker
+        const auto &this_backend_p = a_ptr->backend().priv();
+        if (    this_backend_p.controlsMerge()
+            && !this_backend_p.allowsMerge(g, a_nh, slot_nh, b_nh))
+        {
+            return false;
+        }
         return true;
     }
 
@@ -205,10 +229,31 @@ namespace
     {
         using namespace std::placeholders;
 
+        // Before checking for candidates, find and ban neighbor nodes
+        // (input or outputs) which are connected via desynchronized
+        // edges.
+        GIsland::node_set nodes_with_desync_edges;
+        for (const auto& in_eh : nh->inEdges()) {
+            if (g.metadata(in_eh).contains<DesyncIslEdge>()) {
+                nodes_with_desync_edges.insert(in_eh->srcNode());
+            }
+        }
+        for (const auto& output_data_nh : nh->outNodes()) {
+            for (const auto &out_reader_eh : output_data_nh->outEdges()) {
+                if (g.metadata(out_reader_eh).contains<DesyncIslEdge>()) {
+                    nodes_with_desync_edges.insert(out_reader_eh->dstNode());
+                }
+            }
+        }
+
         // Find a first matching candidate GIsland for merge
         // among inputs
-        for (const auto& input_data_nh : nh->inNodes())
+        for (const auto& in_eh : nh->inEdges())
         {
+            if (ade::util::contains(nodes_with_desync_edges, in_eh->srcNode())) {
+                continue; // desync edges can never be fused
+            }
+            const auto& input_data_nh = in_eh->srcNode();
             if (input_data_nh->inNodes().size() != 0)
             {
                 // Data node must have a single producer only
@@ -224,14 +269,17 @@ namespace
         // Ok, now try to find it among the outputs
         for (const auto& output_data_nh : nh->outNodes())
         {
-            auto mergeTest = [&](ade::NodeHandle cons_nh) -> bool {
-                return canMerge(g, nh, output_data_nh, cons_nh, ctx);
+            auto mergeTest = [&](ade::EdgeHandle cons_eh) -> bool {
+                if (ade::util::contains(nodes_with_desync_edges, cons_eh->dstNode())) {
+                    return false;  // desync edges can never be fused
+                }
+                return canMerge(g, nh, output_data_nh, cons_eh->dstNode(), ctx);
             };
-            auto cand_it = std::find_if(output_data_nh->outNodes().begin(),
-                                        output_data_nh->outNodes().end(),
+            auto cand_it = std::find_if(output_data_nh->outEdges().begin(),
+                                        output_data_nh->outEdges().end(),
                                         mergeTest);
-            if (cand_it != output_data_nh->outNodes().end())
-                return std::make_tuple(*cand_it,
+            if (cand_it != output_data_nh->outEdges().end())
+                return std::make_tuple((*cand_it)->dstNode(),
                                        output_data_nh,
                                        Direction::Out);
         } // for(outNodes)
@@ -251,6 +299,7 @@ namespace
         ade::NodeHandle m_slot;
         ade::NodeHandle m_cons;
 
+        using Change = ChangeT<DesyncIslEdge>;
         Change::List m_changes;
 
         struct MergeObjects
@@ -423,10 +472,10 @@ namespace
         auto backend = m_gim.metadata(m_prod).get<FusedIsland>()
             .object->backend();
         auto merged = std::make_shared<GIsland>(backend,
-                                                           std::move(mo.all),
-                                                           std::move(mo.in_ops),
-                                                           std::move(mo.out_ops),
-                                                           std::move(maybe_user_tag));
+                                                std::move(mo.all),
+                                                std::move(mo.in_ops),
+                                                std::move(mo.out_ops),
+                                                std::move(maybe_user_tag));
         // FIXME: move this debugging to some user-controllable log-level
 #ifdef DEBUG_MERGE
         merged->debug();
@@ -440,7 +489,9 @@ namespace
                                                  m_prod->inEdges().end());
         for (auto in_edge : input_edges)
         {
-            m_changes.enqueue<Change::NewLink>(m_g, in_edge->srcNode(), new_nh);
+            // FIXME: Introduce a Relink primitive instead?
+            // (combining the both actions into one?)
+            m_changes.enqueue<Change::NewLink>(m_g, in_edge->srcNode(), new_nh, in_edge);
             m_changes.enqueue<Change::DropLink>(m_g, m_prod, in_edge);
         }
 
@@ -450,7 +501,7 @@ namespace
                                                   m_cons->outEdges().end());
         for (auto out_edge : output_edges)
         {
-            m_changes.enqueue<Change::NewLink>(m_g, new_nh, out_edge->dstNode());
+            m_changes.enqueue<Change::NewLink>(m_g, new_nh, out_edge->dstNode(), out_edge);
             m_changes.enqueue<Change::DropLink>(m_g, m_cons, out_edge);
         }
 
@@ -491,6 +542,10 @@ namespace
                     m_changes.enqueue<Change::DropLink>(m_g, non_opt_slot_nh, eh);
                 }
             }
+            // FIXME: No metadata copied here (from where??)
+            // For DesyncIslEdges it still works, as these tags are
+            // placed to Data->Op edges and this one is an Op->Data
+            // edge.
             m_changes.enqueue<Change::NewLink>(m_g, new_nh, non_opt_slot_nh);
         }
 
@@ -502,7 +557,7 @@ namespace
              m_prod->outEdges().end());
         for (auto extra_out : prod_extra_out_edges)
         {
-            m_changes.enqueue<Change::NewLink>(m_g, new_nh, extra_out->dstNode());
+            m_changes.enqueue<Change::NewLink>(m_g, new_nh, extra_out->dstNode(), extra_out);
             m_changes.enqueue<Change::DropLink>(m_g, m_prod, extra_out);
         }
 
@@ -514,7 +569,7 @@ namespace
              m_cons->inEdges().end());
         for (auto extra_in : cons_extra_in_edges)
         {
-            m_changes.enqueue<Change::NewLink>(m_g, extra_in->srcNode(), new_nh);
+            m_changes.enqueue<Change::NewLink>(m_g, extra_in->srcNode(), new_nh, extra_in);
             m_changes.enqueue<Change::DropLink>(m_g, m_cons, extra_in);
         }
 
@@ -557,10 +612,10 @@ namespace
             there_was_a_merge = false;
 
             // FIXME: move this debugging to some user-controllable log level
-    #ifdef DEBUG_MERGE
+#ifdef DEBUG_MERGE
             GAPI_LOG_INFO(NULL, "Before next merge attempt " << iteration << "...");
             merge_debug(g, iteration);
-    #endif
+#endif
             iteration++;
             auto sorted = pass_helpers::topoSort(im);
             for (auto nh : sorted)
@@ -600,9 +655,9 @@ namespace
                                           "merge(" << l_obj->name() << "," << r_obj->name() <<
                                           ") was successful!");
                             action.commit();
-    #ifdef DEBUG_MERGE
+#ifdef DEBUG_MERGE
                             GIslandModel::syncIslandTags(gim, g);
-    #endif
+#endif
                             there_was_a_merge = true;
                             break; // start do{}while from the beginning
                         }

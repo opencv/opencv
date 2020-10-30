@@ -1,19 +1,92 @@
 #include "../test_precomp.hpp"
 
 #include "backends/common/serialization.hpp"
+#include <opencv2/gapi/rmat.hpp>
+
+namespace {
+    struct MyCustomType {
+        int val;
+        std::string name;
+        std::vector<float> vec;
+        std::map<int, uint64_t> mmap;
+        bool operator==(const MyCustomType& other) const {
+            return val == other.val && name == other.name &&
+                   vec == other.vec && mmap == other.mmap;
+        }
+    };
+}
+
+namespace cv {
+namespace gapi {
+namespace s11n {
+namespace detail {
+    template<> struct S11N<MyCustomType> {
+        static void serialize(IOStream &os, const MyCustomType &p) {
+            os << p.val << p.name << p.vec << p.mmap;
+        }
+        static MyCustomType deserialize(IIStream &is) {
+            MyCustomType p;
+            is >> p.val >> p.name >> p.vec >> p.mmap;
+            return p;
+        }
+    };
+} // namespace detail
+} // namespace s11n
+} // namespace gapi
+} // namespace cv
+
+
+namespace cv {
+namespace detail {
+template<> struct CompileArgTag<MyCustomType> {
+    static const char* tag() {
+        return "org.opencv.test.mycustomtype";
+    }
+};
+} // namespace detail
+} // namespace cv
+
+namespace {
+class MyRMatAdapter : public cv::RMat::Adapter {
+    cv::Mat m_mat;
+    int m_value;
+    std::string m_str;
+public:
+    MyRMatAdapter() = default;
+    MyRMatAdapter(cv::Mat m, int value, const std::string& str)
+        : m_mat(m), m_value(value), m_str(str)
+    {}
+    virtual cv::RMat::View access(cv::RMat::Access access) override {
+        if (access == cv::RMat::Access::W) {
+            return cv::RMat::View(cv::descr_of(m_mat), m_mat.data, m_mat.step);
+        } else {
+            return cv::RMat::View(cv::descr_of(m_mat), m_mat.data, m_mat.step);
+        }
+    }
+    virtual cv::GMatDesc desc() const override { return cv::descr_of(m_mat); }
+    virtual void serialize(cv::gapi::s11n::IOStream& os) override {
+        os << m_value << m_str;
+    }
+    virtual void deserialize(cv::gapi::s11n::IIStream& is) override {
+        is >> m_value >> m_str;
+    }
+    int getVal() { return m_value; }
+    std::string getStr() { return m_str; }
+};
+}
 
 namespace opencv_test {
 
 struct S11N_Basic: public ::testing::Test {
     template<typename T> void put(T &&t) {
-        cv::gimpl::s11n::ByteMemoryOutStream os;
+        cv::gapi::s11n::ByteMemoryOutStream os;
         os << t;
         m_buffer = os.data();
     }
 
     template<typename T> T get() {
         // FIXME: This stream API needs a fix-up
-        cv::gimpl::s11n::ByteMemoryInStream is(m_buffer);
+        cv::gapi::s11n::ByteMemoryInStream is(m_buffer);
         T t{};
         is >> t;
         return t;
@@ -62,10 +135,78 @@ TEST_F(S11N_Basic, Test_fp64) {
     EXPECT_EQ(x, get<double>());
 }
 
+TEST_F(S11N_Basic, Test_uint64) {
+    uint64_t x = 2147483647374;
+    put(x);
+    EXPECT_EQ(x, get<uint64_t>());
+}
+
+TEST_F(S11N_Basic, Test_int32_pos) {
+    int32_t x = 2147483647;
+    put(x);
+    EXPECT_EQ(x, get<int32_t>());
+}
+
+TEST_F(S11N_Basic, Test_int32_neg) {
+    int32_t x = -2147483646;
+    put(x);
+    EXPECT_EQ(x, get<int32_t>());
+}
+
+TEST_F(S11N_Basic, Test_vector_bool) {
+    std::vector<bool> v = {false, true, false};
+    put(v);
+    EXPECT_EQ(v, get<std::vector<bool>>());
+}
+
+TEST_F(S11N_Basic, Test_map_string2string) {
+    using T = std::map<std::string, std::string>;
+    T v;
+    v["gapi"] = "cool";
+    v["42"] = "answer";
+    v["hi"] = "hello there";
+    put(v);
+    EXPECT_EQ(v, get<T>());
+}
+
+TEST_F(S11N_Basic, Test_map_int2int) {
+    using T = std::map<int, int32_t>;
+    T v;
+    v[1] = 23;
+    v[-100] = 0;
+    v[435346] = -12346;
+    put(v);
+    EXPECT_EQ(v, get<T>());
+}
+
+TEST_F(S11N_Basic, Test_map_float2cvsize) {
+    using T = std::map<float, cv::Size>;
+    T v;
+    v[0.4f] = cv::Size(4, 5);
+    v[234.43f] = cv::Size(3421, 321);
+    v[2223.f] = cv::Size(1920, 1080);
+    put(v);
+    EXPECT_EQ(v, get<T>());
+}
+
+TEST_F(S11N_Basic, Test_map_uint642cvmat) {
+    using T = std::map<uint64_t, cv::Mat>;
+    T v;
+    v[21304805324] = cv::Mat(3, 3, CV_8UC1, cv::Scalar::all(3));
+    v[4353245222] = cv::Mat(5, 5, CV_8UC3, cv::Scalar::all(7));
+    v[0] = cv::Mat(10, 10, CV_32FC2, cv::Scalar::all(-128.f));
+    put(v);
+    auto out_v = get<T>();
+    for (const auto& el : out_v) {
+        EXPECT_NE(v.end(), v.find(el.first));
+        EXPECT_EQ(0, cv::norm(el.second, v[el.first]));
+    }
+}
+
 TEST_F(S11N_Basic, Test_vector_int) {
     std::vector<int> v = {1,2,3};
     put(v);
-    EXPECT_EQ(v, get<std::vector<int> >());
+    EXPECT_EQ(v, get<std::vector<int>>());
 }
 
 TEST_F(S11N_Basic, Test_vector_cvSize) {
@@ -74,7 +215,7 @@ TEST_F(S11N_Basic, Test_vector_cvSize) {
         cv::Size(1280, 1024),
     };
     put(v);
-    EXPECT_EQ(v, get<std::vector<cv::Size> >());
+    EXPECT_EQ(v, get<std::vector<cv::Size>>());
 }
 
 TEST_F(S11N_Basic, Test_vector_string) {
@@ -84,13 +225,13 @@ TEST_F(S11N_Basic, Test_vector_string) {
         "ok!"
     };
     put(v);
-    EXPECT_EQ(v, get<std::vector<std::string> >());
+    EXPECT_EQ(v, get<std::vector<std::string>>());
 }
 
 TEST_F(S11N_Basic, Test_vector_empty) {
     std::vector<char> v;
     put(v);
-    EXPECT_EQ(v, get<std::vector<char> >());
+    EXPECT_EQ(v, get<std::vector<char>>());
 }
 
 TEST_F(S11N_Basic, Test_variant) {
@@ -349,4 +490,110 @@ TEST_F(S11N_Basic, Test_Bind_RunArgs_MatScalar) {
     }
 }
 
+TEST_F(S11N_Basic, Test_RunArg_RMat) {
+    cv::Mat mat = cv::Mat::eye(cv::Size(128, 64), CV_8UC3);
+    cv::RMat rmat = cv::make_rmat<MyRMatAdapter>(mat, 42, "It actually works");
+    auto v = cv::GRunArgs{ cv::GRunArg{ rmat } };
+
+    const std::vector<char> sargsin = cv::gapi::serialize(v);
+    cv::GRunArgs out = cv::gapi::deserialize<cv::GRunArgs, MyRMatAdapter>(sargsin);
+    cv::RMat out_mat = cv::util::get<cv::RMat>(out[0]);
+    auto adapter = out_mat.get<MyRMatAdapter>();
+    EXPECT_EQ(42, adapter->getVal());
+    EXPECT_EQ("It actually works", adapter->getStr());
+}
+
+TEST_F(S11N_Basic, Test_RunArg_RMat_Scalar_Mat) {
+    cv::Mat mat = cv::Mat::eye(cv::Size(128, 64), CV_8UC3);
+    cv::RMat rmat = cv::make_rmat<MyRMatAdapter>(mat, 42, "It actually works");
+    cv::Scalar sc(111);
+    auto v = cv::GRunArgs{ cv::GRunArg{ rmat }, cv::GRunArg{ sc }, cv::GRunArg{ mat } };
+
+    const std::vector<char> sargsin = cv::gapi::serialize(v);
+    cv::GRunArgs out = cv::gapi::deserialize<cv::GRunArgs, MyRMatAdapter>(sargsin);
+    cv::RMat out_rmat = cv::util::get<cv::RMat>(out[0]);
+    auto adapter = out_rmat.get<MyRMatAdapter>();
+    EXPECT_EQ(42, adapter->getVal());
+    EXPECT_EQ("It actually works", adapter->getStr());
+
+    cv::Scalar out_sc = cv::util::get<cv::Scalar>(out[1]);
+    EXPECT_EQ(sc, out_sc);
+
+    cv::Mat out_mat = cv::util::get<cv::Mat>(out[2]);
+    EXPECT_EQ(0, cv::norm(mat, out_mat));
+}
+
+namespace {
+    template <cv::detail::OpaqueKind K, typename T>
+    bool verifyOpaqueKind(T&& in) {
+        auto inObjs = cv::gin(in);
+        auto in_o_ref = cv::util::get<cv::detail::OpaqueRef>(inObjs[0]);
+        return K == in_o_ref.getKind();
+    }
+
+    template <cv::detail::OpaqueKind K, typename T>
+    bool verifyArrayKind(T&& in) {
+        auto inObjs = cv::gin(in);
+        auto in_o_ref = cv::util::get<cv::detail::VectorRef>(inObjs[0]);
+        return K == in_o_ref.getKind();
+    }
+}
+
+TEST_F(S11N_Basic, Test_Gin_GOpaque) {
+    int i; float f; double d;
+    std::uint64_t ui; bool b;
+    std::string s;
+    cv::Rect r; cv::Size sz;
+    cv::Point p;
+    EXPECT_TRUE(verifyOpaqueKind<cv::detail::OpaqueKind::CV_INT>(i));
+    EXPECT_TRUE(verifyOpaqueKind<cv::detail::OpaqueKind::CV_FLOAT>(f));
+    EXPECT_TRUE(verifyOpaqueKind<cv::detail::OpaqueKind::CV_DOUBLE>(d));
+    EXPECT_TRUE(verifyOpaqueKind<cv::detail::OpaqueKind::CV_UINT64>(ui));
+    EXPECT_TRUE(verifyOpaqueKind<cv::detail::OpaqueKind::CV_BOOL>(b));
+    EXPECT_TRUE(verifyOpaqueKind<cv::detail::OpaqueKind::CV_STRING>(s));
+    EXPECT_TRUE(verifyOpaqueKind<cv::detail::OpaqueKind::CV_RECT>(r));
+    EXPECT_TRUE(verifyOpaqueKind<cv::detail::OpaqueKind::CV_SIZE>(sz));
+    EXPECT_TRUE(verifyOpaqueKind<cv::detail::OpaqueKind::CV_POINT>(p));
+}
+
+TEST_F(S11N_Basic, Test_Gin_GArray) {
+    std::vector<int> i; std::vector<float> f; std::vector<double> d;
+    std::vector<std::uint64_t> ui; std::vector<bool> b;
+    std::vector<std::string> s;
+    std::vector<cv::Rect> r; std::vector<cv::Size> sz;
+    std::vector<cv::Point> p;
+    std::vector<cv::Mat> mat;
+    std::vector<cv::Scalar> sc;
+    EXPECT_TRUE(verifyArrayKind<cv::detail::OpaqueKind::CV_INT>(i));
+    EXPECT_TRUE(verifyArrayKind<cv::detail::OpaqueKind::CV_FLOAT>(f));
+    EXPECT_TRUE(verifyArrayKind<cv::detail::OpaqueKind::CV_DOUBLE>(d));
+    EXPECT_TRUE(verifyArrayKind<cv::detail::OpaqueKind::CV_UINT64>(ui));
+    EXPECT_TRUE(verifyArrayKind<cv::detail::OpaqueKind::CV_BOOL>(b));
+    EXPECT_TRUE(verifyArrayKind<cv::detail::OpaqueKind::CV_STRING>(s));
+    EXPECT_TRUE(verifyArrayKind<cv::detail::OpaqueKind::CV_RECT>(r));
+    EXPECT_TRUE(verifyArrayKind<cv::detail::OpaqueKind::CV_SIZE>(sz));
+    EXPECT_TRUE(verifyArrayKind<cv::detail::OpaqueKind::CV_POINT>(p));
+    EXPECT_TRUE(verifyArrayKind<cv::detail::OpaqueKind::CV_MAT>(mat));
+    EXPECT_TRUE(verifyArrayKind<cv::detail::OpaqueKind::CV_SCALAR>(sc));
+}
+
+TEST_F(S11N_Basic, Test_Custom_Type) {
+    MyCustomType var{1324, "Hello", {1920, 1080, 720}, {{1, 2937459432}, {42, 253245432}}};
+    cv::gapi::s11n::ByteMemoryOutStream os;
+    cv::gapi::s11n::detail::S11N<MyCustomType>::serialize(os, var);
+    cv::gapi::s11n::ByteMemoryInStream is(os.data());
+    MyCustomType new_var = cv::gapi::s11n::detail::S11N<MyCustomType>::deserialize(is);
+    EXPECT_EQ(var, new_var);
+}
+
+TEST_F(S11N_Basic, Test_Custom_CompileArg) {
+    MyCustomType customVar{1248, "World", {1280, 720, 640, 480}, {{5, 32434142342}, {7, 34242432}}};
+
+    std::vector<char> sArgs = cv::gapi::serialize(cv::compile_args(customVar));
+
+    GCompileArgs dArgs = cv::gapi::deserialize<GCompileArgs, MyCustomType>(sArgs);
+
+    MyCustomType dCustomVar = cv::gapi::getCompileArg<MyCustomType>(dArgs).value();
+    EXPECT_EQ(customVar, dCustomVar);
+}
 } // namespace opencv_test

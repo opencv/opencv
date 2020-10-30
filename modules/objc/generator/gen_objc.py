@@ -274,8 +274,9 @@ class ClassInfo(GeneralInfo):
 
     def getForwardDeclarations(self, module):
         enum_decl = filter(lambda x:self.isEnum(x) and type_dict[x]["import_module"] != module, self.imports)
+        enum_imports = list(set(map(lambda m: type_dict[m]["import_module"], enum_decl)))
         class_decl = filter(lambda x: not self.isEnum(x), self.imports)
-        return ["#import \"%s.h\"" % type_dict[c]["import_module"] for c in enum_decl] + [""] + ["@class %s;" % c for c in sorted(class_decl)]
+        return ["#import \"%s.h\"" % c for c in enum_imports] + [""] + ["@class %s;" % c for c in sorted(class_decl)]
 
     def addImports(self, ctype, is_out_type):
         if ctype == self.cname:
@@ -721,10 +722,7 @@ class ObjectiveCWrapperGenerator(object):
 
         # class props
         for p in decl[3]:
-            if True: #"vector" not in p[0]:
-                classinfo.props.append( ClassPropInfo(p) )
-            else:
-                logging.warning("Skipped property: [%s]" % name, p)
+            classinfo.props.append( ClassPropInfo(p) )
 
         if name != self.Module:
             type_dict.setdefault("Ptr_"+name, {}).update(
@@ -786,7 +784,8 @@ class ObjectiveCWrapperGenerator(object):
             type_dict[objc_type] = { "cast_to" : get_cname(enumType),
                                      "objc_type": objc_type,
                                      "is_enum": True,
-                                     "import_module": import_module}
+                                     "import_module": import_module,
+                                     "from_cpp": "(" + objc_type + ")%(n)s"}
             self.classes[self.Module].member_enums.append(objc_type)
 
         const_decls = decl[3]
@@ -1301,7 +1300,7 @@ typedef NS_ENUM(int, {2}) {{
                     ci.method_implementations.write("\t" + ("\n\t".join(prologue)) + "\n")
                     ci.method_implementations.write("\t" + ptr_ref + pi.name + " = valVector;\n}\n\n")
                 else:
-                    to_cpp = type_data.get("to_cpp", "%(n)s")
+                    to_cpp = type_data.get("to_cpp", ("(" + type_data.get("cast_to") + ")%(n)s") if type_data.has_key("cast_to") else "%(n)s")
                     val = to_cpp % {"n": pi.name}
                     ci.method_implementations.write("-(void)set" + pi.name[0].upper() + pi.name[1:] + ":(" + objc_type + ")" + pi.name + " {\n\t" + ptr_ref + pi.name + " = " + val + ";\n}\n\n")
 
@@ -1348,7 +1347,17 @@ typedef NS_ENUM(int, {2}) {{
 
     def finalize(self, output_objc_path):
         opencv_header_file = os.path.join(output_objc_path, framework_name + ".h")
-        self.save(opencv_header_file, '\n'.join(['#import "%s"' % os.path.basename(f) for f in self.header_files]))
+        opencv_header = "#import <Foundation/Foundation.h>\n\n"
+        opencv_header += "// ! Project version number\nFOUNDATION_EXPORT double " + framework_name + "VersionNumber;\n\n"
+        opencv_header += "// ! Project version string\nFOUNDATION_EXPORT const unsigned char " + framework_name + "VersionString[];\n\n"
+        opencv_header += "\n".join(["#import <" + framework_name + "/%s>" % os.path.basename(f) for f in self.header_files])
+        self.save(opencv_header_file, opencv_header)
+        opencv_modulemap_file = os.path.join(output_objc_path, framework_name + ".modulemap")
+        opencv_modulemap = "framework module " + framework_name + " {\n"
+        opencv_modulemap += "  umbrella header \"" + framework_name + ".h\"\n"
+        opencv_modulemap += "\n".join(["  header \"%s\"" % os.path.basename(f) for f in self.header_files])
+        opencv_modulemap += "\n  export *\n  module * {export *}\n}\n"
+        self.save(opencv_modulemap_file, opencv_modulemap)
         cmakelist_template = read_contents(os.path.join(SCRIPT_DIR, 'templates/cmakelists.template'))
         cmakelist = Template(cmakelist_template).substitute(modules = ";".join(modules), framework = framework_name)
         self.save(os.path.join(dstdir, "CMakeLists.txt"), cmakelist)
@@ -1583,6 +1592,11 @@ if __name__ == "__main__":
             ios_files_dir = os.path.join(misc_location, 'ios')
             if os.path.exists(ios_files_dir):
                 copied_files += copy_objc_files(ios_files_dir, objc_base_path, module, True)
+
+        if args.target == 'osx':
+            osx_files_dir = os.path.join(misc_location, 'macosx')
+            if os.path.exists(osx_files_dir):
+                copied_files += copy_objc_files(osx_files_dir, objc_base_path, module, True)
 
         objc_test_files_dir = os.path.join(misc_location, 'test')
         if os.path.exists(objc_test_files_dir):

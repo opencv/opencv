@@ -355,7 +355,7 @@ cv::Mat cv::findHomography( InputArray _points1, InputArray _points2,
 {
     CV_INSTRUMENT_REGION();
 
-    if (method >= 32 && method <= 38)
+    if (method >= USAC_DEFAULT && method <= USAC_MAGSAC)
         return usac::findHomography(_points1, _points2, method, ransacReprojThreshold,
             _mask, maxIters, confidence);
 
@@ -380,6 +380,9 @@ cv::Mat cv::findHomography( InputArray _points1, InputArray _points2,
                 return Mat();
             convertPointsFromHomogeneous(p, p);
         }
+        // Need at least 4 point correspondences to calculate Homography
+        if( npoints < 4 )
+            CV_Error(Error::StsVecLengthErr , "The input arrays should have at least 4 corresponding point sets to calculate Homography");
         p.reshape(2, npoints).convertTo(m, CV_32F);
     }
 
@@ -831,7 +834,7 @@ cv::Mat cv::findFundamentalMat( InputArray _points1, InputArray _points2,
 {
     CV_INSTRUMENT_REGION();
 
-    if (method >= 32 && method <= 38)
+    if (method >= USAC_DEFAULT && method <= USAC_MAGSAC)
         return usac::findFundamentalMat(_points1, _points2, method,
             ransacReprojThreshold, confidence, maxIters, _mask);
 

@@ -450,7 +450,7 @@ enum { LMEDS  = 4,  //!< least-median of squares algorithm
        USAC_FAST = 35,     //!< USAC, fast settings
        USAC_ACCURATE = 36, //!< USAC, accurate settings
        USAC_PROSAC = 37,   //!< USAC, sorted points, runs PROSAC
-       USAC_MAGSAC = 38    //!< USAC, sorted points, runs PROSAC
+       USAC_MAGSAC = 38    //!< USAC, runs MAGSAC++
      };
 
 enum SolvePnPMethod {
@@ -550,17 +550,18 @@ enum NeighborSearchMethod { NEIGH_FLANN_KNN, NEIGH_GRID, NEIGH_FLANN_RADIUS };
 
 struct CV_EXPORTS_W_SIMPLE UsacParams
 { // in alphabetical order
-    double confidence = 0.99;
-    bool isParallel = false;
-    int loIterations = 5;
-    LocalOptimMethod loMethod = LocalOptimMethod::LOCAL_OPTIM_INNER_LO;
-    int loSampleSize = 14;
-    int maxIterations = 5000;
-    NeighborSearchMethod neighborsSearch = NeighborSearchMethod::NEIGH_GRID;
-    int randomGeneratorState = 0;
-    SamplingMethod sampler = SamplingMethod::SAMPLING_UNIFORM;
-    ScoreMethod score = ScoreMethod::SCORE_METHOD_MSAC;
-    double threshold = 1.5;
+    CV_WRAP UsacParams();
+    CV_PROP_RW double confidence;
+    CV_PROP_RW bool isParallel;
+    CV_PROP_RW int loIterations;
+    CV_PROP_RW LocalOptimMethod loMethod;
+    CV_PROP_RW int loSampleSize;
+    CV_PROP_RW int maxIterations;
+    CV_PROP_RW NeighborSearchMethod neighborsSearch;
+    CV_PROP_RW int randomGeneratorState;
+    CV_PROP_RW SamplingMethod sampler;
+    CV_PROP_RW ScoreMethod score;
+    CV_PROP_RW double threshold;
 };
 
 /** @brief Converts a rotation matrix to a rotation vector or vice versa.
@@ -2607,7 +2608,7 @@ final fundamental matrix. It can be set to something like 1-3, depending on the 
 point localization, image resolution, and the image noise.
 @param confidence Parameter used for the RANSAC and LMedS methods only. It specifies a desirable level
 of confidence (probability) that the estimated matrix is correct.
-@param mask
+@param[out] mask optional output mask
 @param maxIters The maximum number of robust method iterations.
 
 The epipolar geometry is described by the following equation:

@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018-2019 Intel Corporation
+// Copyright (C) 2018-2020 Intel Corporation
 
 
 #include "../test_precomp.hpp"
@@ -53,7 +53,17 @@ INSTANTIATE_TEST_CASE_P(SubTestGPU, MathOpTest,
                                 Values (1.0),
                                 testing::Bool()));
 
-INSTANTIATE_TEST_CASE_P(DivTestGPU, MathOpTest,
+// FIXME: Accuracy test for DIV math operation fails on CV_8UC3 HD input cv::Mat, double-presicion
+//        input cv::Scalar and CV_16U output cv::Mat when we also test reverse operation on Mac.
+//        Accuracy test for DIV math operation fails on CV_8UC3 VGA input cv::Mat, double-presicion
+//        input cv::Scalar and output cv::Mat having the SAME depth as input one when we also test
+//        reverse operation on Mac.
+//        It is oddly, but test doesn't fail if we have VGA CV_8UC3 input cv::Mat, double-precision
+//        input cv::Scalar and output cv::Mat having explicitly specified CV_8U depth when we also
+//        test reverse operation on Mac.
+//        As failures are sporadic, disabling all instantiation cases for DIV operation.
+//        Github ticket: https://github.com/opencv/opencv/issues/18373.
+INSTANTIATE_TEST_CASE_P(DISABLED_DivTestGPU, MathOpTest,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
@@ -138,7 +148,8 @@ INSTANTIATE_TEST_CASE_P(CompareTestGPU, CmpTest,
                                 Values(CV_8U),
                                 Values(CORE_GPU),
                                 Values(CMP_EQ, CMP_GE, CMP_NE, CMP_GT, CMP_LT, CMP_LE),
-                                testing::Bool()));
+                                testing::Bool(),
+                                Values(AbsExact().to_compare_obj())));
 
 INSTANTIATE_TEST_CASE_P(BitwiseTestGPU, BitwiseTest,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1),
@@ -147,7 +158,8 @@ INSTANTIATE_TEST_CASE_P(BitwiseTestGPU, BitwiseTest,
                                        cv::Size(128, 128)),
                                 Values(-1),
                                 Values(CORE_GPU),
-                                Values(AND, OR, XOR)));
+                                Values(AND, OR, XOR),
+                                testing::Bool()));
 
 INSTANTIATE_TEST_CASE_P(BitwiseNotTestGPU, NotTest,
                         Combine(Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1),
@@ -180,7 +192,16 @@ INSTANTIATE_TEST_CASE_P(SumTestGPU, SumTest,
                                        cv::Size(128, 128)),
                                 Values(-1),
                                 Values(CORE_GPU),
-                                Values(AbsToleranceScalar(1e-3).to_compare_obj())));//TODO: too relaxed?
+                                Values(AbsToleranceScalar(1e-5).to_compare_obj())));
+
+INSTANTIATE_TEST_CASE_P(CountNonZeroTestGPU, CountNonZeroTest,
+                        Combine(Values( CV_8UC1, CV_16UC1, CV_16SC1, CV_32FC1 ),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480),
+                                       cv::Size(128, 128)),
+                                Values(-1),
+                                Values(CORE_GPU),
+                                Values(AbsToleranceScalar(1e-5).to_compare_obj())));
 
 INSTANTIATE_TEST_CASE_P(AbsDiffTestGPU, AbsDiffTest,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),

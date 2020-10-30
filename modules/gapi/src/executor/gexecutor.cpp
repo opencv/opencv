@@ -72,7 +72,7 @@ cv::gimpl::GExecutor::GExecutor(std::unique_ptr<ade::Graph> &&g_model)
                 const auto orig_data_nh
                     = m_gim.metadata(nh).get<DataSlot>().original_data_node;
                 // (1)
-                initResource(orig_data_nh);
+                initResource(nh, orig_data_nh);
                 m_slots.emplace_back(DataDesc{nh, orig_data_nh});
             }
             break;
@@ -84,7 +84,82 @@ cv::gimpl::GExecutor::GExecutor(std::unique_ptr<ade::Graph> &&g_model)
     } // for(gim nodes)
 }
 
-void cv::gimpl::GExecutor::initResource(const ade::NodeHandle &orig_nh)
+namespace cv {
+namespace gimpl {
+namespace magazine {
+namespace {
+
+void bindInArgExec(Mag& mag, const RcDesc &rc, const GRunArg &arg)
+{
+    if (rc.shape != GShape::GMAT)
+    {
+        bindInArg(mag, rc, arg);
+        return;
+    }
+    auto& mag_rmat = mag.template slot<cv::RMat>()[rc.id];
+    switch (arg.index())
+    {
+    case GRunArg::index_of<Mat>() :
+        mag_rmat = make_rmat<RMatAdapter>(util::get<Mat>(arg)); break;
+    case GRunArg::index_of<cv::RMat>() :
+        mag_rmat = util::get<cv::RMat>(arg); break;
+    default: util::throw_error(std::logic_error("content type of the runtime argument does not match to resource description ?"));
+    }
+}
+
+void bindOutArgExec(Mag& mag, const RcDesc &rc, const GRunArgP &arg)
+{
+    if (rc.shape != GShape::GMAT)
+    {
+        bindOutArg(mag, rc, arg);
+        return;
+    }
+    auto& mag_rmat = mag.template slot<cv::RMat>()[rc.id];
+    switch (arg.index())
+    {
+    case GRunArgP::index_of<Mat*>() :
+        mag_rmat = make_rmat<RMatAdapter>(*util::get<Mat*>(arg)); break;
+    case GRunArgP::index_of<cv::RMat*>() :
+        mag_rmat = *util::get<cv::RMat*>(arg); break;
+    default: util::throw_error(std::logic_error("content type of the runtime argument does not match to resource description ?"));
+    }
+}
+
+cv::GRunArgP getObjPtrExec(Mag& mag, const RcDesc &rc)
+{
+    if (rc.shape != GShape::GMAT)
+    {
+        return getObjPtr(mag, rc);
+    }
+    return GRunArgP(&mag.template slot<cv::RMat>()[rc.id]);
+}
+
+void writeBackExec(const Mag& mag, const RcDesc &rc, GRunArgP &g_arg)
+{
+    if (rc.shape != GShape::GMAT)
+    {
+        writeBack(mag, rc, g_arg);
+        return;
+    }
+    auto checkOutArgData = [&](const uchar* out_arg_data) {
+        //simply check that memory was not reallocated, i.e.
+        //both Mat and View pointing to the same memory
+        auto mag_data = mag.template slot<cv::RMat>().at(rc.id).get<RMatAdapter>()->data();
+        GAPI_Assert((out_arg_data == mag_data) && " data for output parameters was reallocated ?");
+    };
+
+    switch (g_arg.index())
+    {
+    case GRunArgP::index_of<cv::Mat*>() : checkOutArgData(util::get<cv::Mat*>(g_arg)->data); break;
+    case GRunArgP::index_of<cv::RMat*>() : /* do nothing */ break;
+    default: util::throw_error(std::logic_error("content type of the runtime argument does not match to resource description ?"));
+    }
+}
+} // anonymous namespace
+}}} // namespace cv::gimpl::magazine
+
+
+void cv::gimpl::GExecutor::initResource(const ade::NodeHandle & nh, const ade::NodeHandle &orig_nh)
 {
     const Data &d = m_gm.metadata(orig_nh).get<Data>();
 
@@ -99,9 +174,19 @@ void cv::gimpl::GExecutor::initResource(const ade::NodeHandle &orig_nh)
     {
     case GShape::GMAT:
         {
+            // Let island allocate it's outputs if it can,
+            // allocate cv::Mat and wrap it with RMat otherwise
+            GAPI_Assert(!nh->inNodes().empty());
             const auto desc = util::get<cv::GMatDesc>(d.meta);
-            auto& mat = m_res.slot<cv::Mat>()[d.rc];
-            createMat(desc, mat);
+            auto& exec = m_gim.metadata(nh->inNodes().front()).get<IslandExec>().object;
+            auto& rmat = m_res.slot<cv::RMat>()[d.rc];
+            if (exec->allocatesOutputs()) {
+                rmat = exec->allocate(desc);
+            } else {
+                Mat mat;
+                createMat(desc, mat);
+                rmat = make_rmat<RMatAdapter>(mat);
+            }
         }
         break;
 
@@ -114,6 +199,12 @@ void cv::gimpl::GExecutor::initResource(const ade::NodeHandle &orig_nh)
         break;
 
     case GShape::GARRAY:
+        if (d.storage == Data::Storage::CONST_VAL)
+        {
+            auto rc = RcDesc{d.rc, d.shape, d.ctor};
+            magazine::bindInArg(m_res, rc, m_gm.metadata(orig_nh).get<ConstValue>().arg);
+        }
+        break;
     case GShape::GOPAQUE:
         // Constructed on Reset, do nothing here
         break;
@@ -140,7 +231,7 @@ public:
 class cv::gimpl::GExecutor::Output final: public cv::gimpl::GIslandExecutable::IOutput
 {
     cv::gimpl::Mag &mag;
-    virtual GRunArgP get(int idx) override { return magazine::getObjPtr(mag, desc()[idx]); }
+    virtual GRunArgP get(int idx) override { return magazine::getObjPtrExec(mag, desc()[idx]); }
     virtual void post(GRunArgP&&) override { } // Do nothing here
     virtual void post(EndOfStream&&) override {} // Do nothing here too
 public:
@@ -180,11 +271,10 @@ void cv::gimpl::GExecutor::run(cv::gimpl::GRuntimeArgs &&args)
             using cv::util::get;
             const auto desc = get<cv::GMatDesc>(d.meta);
 
-            auto check_own_mat = [&desc, &args, &index]()
+            auto check_rmat = [&desc, &args, &index]()
             {
-                auto& out_mat = *get<cv::Mat*>(args.outObjs.at(index));
-                GAPI_Assert(out_mat.data != nullptr &&
-                        desc.canDescribe(out_mat));
+                auto& out_mat = *get<cv::RMat*>(args.outObjs.at(index));
+                GAPI_Assert(desc.canDescribe(out_mat));
             };
 
 #if !defined(GAPI_STANDALONE)
@@ -196,15 +286,25 @@ void cv::gimpl::GExecutor::run(cv::gimpl::GRuntimeArgs &&args)
                 auto& out_mat = *get<cv::Mat*>(args.outObjs.at(index));
                 createMat(desc, out_mat);
             }
-            // In the case of own::Mat never reallocated, checked to perfectly fit required meta
+            // In the case of RMat check to fit required meta
             else
             {
-                check_own_mat();
+                check_rmat();
             }
 #else
             // Building standalone - output buffer should always exist,
             // and _exact_ match our inferred metadata
-            check_own_mat();
+            if (cv::util::holds_alternative<cv::Mat*>(args.outObjs.at(index)))
+            {
+                auto& out_mat = *get<cv::Mat*>(args.outObjs.at(index));
+                GAPI_Assert(out_mat.data != nullptr &&
+                        desc.canDescribe(out_mat));
+            }
+            // In the case of RMat check to fit required meta
+            else
+            {
+                check_rmat();
+            }
 #endif // !defined(GAPI_STANDALONE)
         }
     }
@@ -212,12 +312,12 @@ void cv::gimpl::GExecutor::run(cv::gimpl::GRuntimeArgs &&args)
     for (auto it : ade::util::zip(ade::util::toRange(proto.inputs),
                                   ade::util::toRange(args.inObjs)))
     {
-        magazine::bindInArg(m_res, std::get<0>(it), std::get<1>(it));
+        magazine::bindInArgExec(m_res, std::get<0>(it), std::get<1>(it));
     }
     for (auto it : ade::util::zip(ade::util::toRange(proto.outputs),
                                   ade::util::toRange(args.outObjs)))
     {
-        magazine::bindOutArg(m_res, std::get<0>(it), std::get<1>(it));
+        magazine::bindOutArgExec(m_res, std::get<0>(it), std::get<1>(it));
     }
 
     // Reset internal data
@@ -240,7 +340,7 @@ void cv::gimpl::GExecutor::run(cv::gimpl::GRuntimeArgs &&args)
     for (auto it : ade::util::zip(ade::util::toRange(proto.outputs),
                                   ade::util::toRange(args.outObjs)))
     {
-        magazine::writeBack(m_res, std::get<0>(it), std::get<1>(it));
+        magazine::writeBackExec(m_res, std::get<0>(it), std::get<1>(it));
     }
 }
 

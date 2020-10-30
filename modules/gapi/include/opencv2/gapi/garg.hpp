@@ -13,6 +13,7 @@
 
 #include <opencv2/gapi/opencv_includes.hpp>
 #include <opencv2/gapi/own/mat.hpp>
+#include <opencv2/gapi/media.hpp>
 
 #include <opencv2/gapi/util/any.hpp>
 #include <opencv2/gapi/util/variant.hpp>
@@ -21,9 +22,11 @@
 #include <opencv2/gapi/gscalar.hpp>
 #include <opencv2/gapi/garray.hpp>
 #include <opencv2/gapi/gopaque.hpp>
+#include <opencv2/gapi/gframe.hpp>
 #include <opencv2/gapi/gtype_traits.hpp>
 #include <opencv2/gapi/gmetaarg.hpp>
 #include <opencv2/gapi/streaming/source.hpp>
+#include <opencv2/gapi/rmat.hpp>
 
 namespace cv {
 
@@ -94,11 +97,13 @@ using GRunArg  = util::variant<
 #if !defined(GAPI_STANDALONE)
     cv::UMat,
 #endif // !defined(GAPI_STANDALONE)
+    cv::RMat,
     cv::gapi::wip::IStreamSource::Ptr,
     cv::Mat,
     cv::Scalar,
     cv::detail::VectorRef,
-    cv::detail::OpaqueRef
+    cv::detail::OpaqueRef,
+    cv::MediaFrame
     >;
 using GRunArgs = std::vector<GRunArg>;
 
@@ -144,6 +149,7 @@ using GRunArgP = util::variant<
     cv::UMat*,
 #endif // !defined(GAPI_STANDALONE)
     cv::Mat*,
+    cv::RMat*,
     cv::Scalar*,
     cv::detail::VectorRef,
     cv::detail::OpaqueRef

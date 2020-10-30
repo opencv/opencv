@@ -57,6 +57,11 @@ void cv::GCompiled::Priv::checkArgs(const cv::gimpl::GRuntimeArgs &args) const
         // FIXME: Add details on what is actually wrong
     }
     validate_input_args(args.inObjs);
+    // FIXME: Actually, the passed parameter vector is never checked
+    // against its shapes - so if you compile with GScalarDesc passed
+    // for GMat argument, you will get your compilation right (!!)
+    // Probably it was there but somehow that olds checks (if they
+    // exist) are bypassed now.
 }
 
 bool cv::GCompiled::Priv::canReshape() const
@@ -97,6 +102,7 @@ cv::GCompiled::operator bool() const
 
 void cv::GCompiled::operator() (GRunArgs &&ins, GRunArgsP &&outs)
 {
+    // FIXME: Check that <ins> matches the protocol!!!
     // FIXME: Check that <outs> matches the protocol
     m_priv->run(cv::gimpl::GRuntimeArgs{std::move(ins),std::move(outs)});
 }

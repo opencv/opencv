@@ -80,6 +80,7 @@ namespace detail
 
     protected:
         GArrayU();                                // Default constructor
+        GArrayU(const detail::VectorRef& vref);   // Constant value constructor
         template<class> friend class cv::GArray;  //  (available to GArray<T> only)
 
         void setConstructFcn(ConstructVec &&cv);  // Store T-aware constructor
@@ -260,8 +261,8 @@ namespace detail
         template<typename T> void reset()
         {
             if (!m_ref) m_ref.reset(new VectorRefT<T>());
-
             check<T>();
+            storeKind<T>();
             static_cast<VectorRefT<T>&>(*m_ref).reset();
         }
 
@@ -281,6 +282,14 @@ namespace detail
         {
             check<T>();
             return static_cast<VectorRefT<T>&>(*m_ref).rref();
+        }
+
+        // Check if was created for/from std::vector<T>
+        template <typename T> bool holds() const
+        {
+            if (!m_ref) return false;
+            using U = typename std::decay<T>::type;
+            return dynamic_cast<VectorRefT<U>*>(m_ref.get()) != nullptr;
         }
 
         void mov(VectorRef &v)
@@ -328,23 +337,30 @@ namespace detail
 template<typename T> class GArray
 {
 public:
-    GArray() { putDetails(); }             // Empty constructor
-    explicit GArray(detail::GArrayU &&ref) // GArrayU-based constructor
-        : m_ref(ref) { putDetails(); }     //   (used by GCall, not for users)
-
-    detail::GArrayU strip() const { return m_ref; }
-
-private:
     // Host type (or Flat type) - the type this GArray is actually
     // specified to.
     using HT = typename detail::flatten_g<typename std::decay<T>::type>::type;
 
-    static void VCTor(detail::VectorRef& vref) {
-        vref.reset<HT>();
-        vref.storeKind<HT>();
+    explicit GArray(const std::vector<HT>& v) // Constant value constructor
+        : m_ref(detail::GArrayU(detail::VectorRef(v))) { putDetails(); }
+    explicit GArray(std::vector<HT>&& v)      // Move-constructor
+        : m_ref(detail::GArrayU(detail::VectorRef(std::move(v)))) { putDetails(); }
+    GArray() { putDetails(); }             // Empty constructor
+    explicit GArray(detail::GArrayU &&ref) // GArrayU-based constructor
+        : m_ref(ref) { putDetails(); }     //   (used by GCall, not for users)
+
+    /// @private
+    detail::GArrayU strip() const {
+        return m_ref;
     }
+    /// @private
+    static void VCtor(detail::VectorRef& vref) {
+        vref.reset<HT>();
+    }
+
+private:
     void putDetails() {
-        m_ref.setConstructFcn(&VCTor);
+        m_ref.setConstructFcn(&VCtor);
         m_ref.specifyType<HT>();  // FIXME: to unify those 2 to avoid excessive dynamic_cast
         m_ref.storeKind<HT>();    //
     }

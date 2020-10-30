@@ -350,6 +350,8 @@ class Builder:
             INSTALL_PDB='ON',
             INSTALL_PDB_COMPONENT_EXCLUDE_FROM_ALL='OFF',
 
+            VIDEOIO_PLUGIN_LIST='all',
+
             OPENCV_SKIP_CMAKE_ROOT_CONFIG='ON',
             OPENCV_BIN_INSTALL_PATH='bin',
             OPENCV_INCLUDE_INSTALL_PATH='include',
@@ -443,8 +445,8 @@ class Builder:
 def main():
 
     dldt_src_url = 'https://github.com/openvinotoolkit/openvino'
-    dldt_src_commit = '2020.4'
-    dldt_release = '2020040000'
+    dldt_src_commit = '2021.1'
+    dldt_release = '2021010000'
 
     build_cache_dir_default = os.environ.get('BUILD_CACHE_DIR', '.build_cache')
     build_subst_drive = os.environ.get('BUILD_SUBST_DRIVE', None)

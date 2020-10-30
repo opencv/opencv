@@ -44,6 +44,12 @@ static void initDLDTDataPath()
 #endif // WINRT
 }
 
+#if INF_ENGINE_RELEASE >= 2020010000
+static const std::string SUBDIR = "intel/age-gender-recognition-retail-0013/FP32/";
+#else
+static const std::string SUBDIR = "Retail/object_attributes/age_gender/dldt/";
+#endif
+
 // FIXME: taken from the DNN module
 void normAssert(cv::InputArray ref, cv::InputArray test,
                 const char *comment /*= ""*/,
@@ -54,46 +60,6 @@ void normAssert(cv::InputArray ref, cv::InputArray test,
 
     double normInf = cvtest::norm(ref, test, cv::NORM_INF);
     EXPECT_LE(normInf, lInf) << comment;
-}
-
-std::vector<std::string> modelPathByName(const std::string &model_name) {
-    // Handle OMZ model layout changes among OpenVINO versions here
-    static const std::unordered_multimap<std::string, std::string> map = {
-#if INF_ENGINE_RELEASE >= 2019040000  // >= 2019.R4
-        {"age-gender-recognition-retail-0013",
-         "2020.3.0/intel/age-gender-recognition-retail-0013/FP32"},
-#endif // INF_ENGINE_RELEASE >= 2019040000
-        {"age-gender-recognition-retail-0013",
-         "Retail/object_attributes/age_gender/dldt"},
-    };
-    const auto range = map.equal_range(model_name);
-    std::vector<std::string> result;
-    for (auto it = range.first; it != range.second; ++it) {
-        result.emplace_back(it->second);
-    }
-    return result;
-}
-
-std::tuple<std::string, std::string> findModel(const std::string &model_name) {
-    const auto candidates = modelPathByName(model_name);
-    CV_Assert(!candidates.empty() && "No model path candidates found at all");
-
-    for (auto &&path : candidates) {
-        std::string model_xml, model_bin;
-        try {
-            model_xml = findDataFile(path + "/" + model_name + ".xml", false);
-            model_bin = findDataFile(path + "/" + model_name + ".bin", false);
-            // Return the first file which actually works
-            return std::make_tuple(model_xml, model_bin);
-        } catch (SkipTestException&) {
-            // This is quite ugly but it is a way for OpenCV to let us know
-            // this file wasn't found.
-            continue;
-        }
-    }
-
-    // Default behavior if reached here.
-    throw SkipTestException("Files for " + model_name + " were not found");
 }
 
 namespace IE = InferenceEngine;
@@ -112,7 +78,8 @@ TEST(TestAgeGenderIE, InferBasicTensor)
     initDLDTDataPath();
 
     cv::gapi::ie::detail::ParamDesc params;
-    std::tie(params.model_path, params.weights_path) = findModel("age-gender-recognition-retail-0013");
+    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
+    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
     params.device_id = "CPU";
 
     // Load IE network, initialize input data using that.
@@ -162,7 +129,8 @@ TEST(TestAgeGenderIE, InferBasicImage)
     initDLDTDataPath();
 
     cv::gapi::ie::detail::ParamDesc params;
-    std::tie(params.model_path, params.weights_path) = findModel("age-gender-recognition-retail-0013");
+    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
+    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
     params.device_id = "CPU";
 
     // FIXME: Ideally it should be an image from disk
@@ -221,9 +189,10 @@ struct ROIList: public ::testing::Test {
     using AGInfo = std::tuple<cv::GMat, cv::GMat>;
     G_API_NET(AgeGender, <AGInfo(cv::GMat)>, "test-age-gender");
 
-    ROIList() {
+    void SetUp() {
         initDLDTDataPath();
-        std::tie(params.model_path, params.weights_path) = findModel("age-gender-recognition-retail-0013");
+        params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
+        params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
         params.device_id = "CPU";
 
         // FIXME: it must be cv::imread(findDataFile("../dnn/grace_hopper_227.png", false));
@@ -316,7 +285,8 @@ TEST(DISABLED_TestTwoIENNPipeline, InferBasicImage)
     initDLDTDataPath();
 
     cv::gapi::ie::detail::ParamDesc AGparams;
-    std::tie(AGparams.model_path, AGparams.weights_path) = findModel("age-gender-recognition-retail-0013");
+    AGparams.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml", false);
+    AGparams.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
     AGparams.device_id = "MYRIAD";
 
     // FIXME: Ideally it should be an image from disk
@@ -378,6 +348,59 @@ TEST(DISABLED_TestTwoIENNPipeline, InferBasicImage)
     normAssert(cv::gapi::ie::util::to_ocv(ie_gender1), gapi_gender1, "Test gender output 1");
     normAssert(cv::gapi::ie::util::to_ocv(ie_age2),    gapi_age2,    "Test age output 2");
     normAssert(cv::gapi::ie::util::to_ocv(ie_gender2), gapi_gender2, "Test gender output 2");
+}
+
+TEST(TestAgeGenderIE, GenericInfer)
+{
+    initDLDTDataPath();
+
+    cv::gapi::ie::detail::ParamDesc params;
+    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
+    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    params.device_id = "CPU";
+
+    cv::Mat in_mat(cv::Size(320, 240), CV_8UC3);
+    cv::randu(in_mat, 0, 255);
+
+    cv::Mat gapi_age, gapi_gender;
+
+    // Load & run IE network
+    IE::Blob::Ptr ie_age, ie_gender;
+    {
+        auto plugin = cv::gimpl::ie::wrap::getPlugin(params);
+        auto net    = cv::gimpl::ie::wrap::readNetwork(params);
+        setNetParameters(net);
+        auto this_network  = cv::gimpl::ie::wrap::loadNetwork(plugin, net, params);
+        auto infer_request = this_network.CreateInferRequest();
+        infer_request.SetBlob("data", cv::gapi::ie::util::to_ie(in_mat));
+        infer_request.Infer();
+        ie_age    = infer_request.GetBlob("age_conv3");
+        ie_gender = infer_request.GetBlob("prob");
+    }
+
+    // Configure & run G-API
+    cv::GMat in;
+    GInferInputs inputs;
+    inputs["data"] = in;
+
+    auto outputs = cv::gapi::infer<cv::gapi::Generic>("age-gender-generic", inputs);
+
+    auto age    = outputs.at("age_conv3");
+    auto gender = outputs.at("prob");
+
+    cv::GComputation comp(cv::GIn(in), cv::GOut(age, gender));
+
+    cv::gapi::ie::Params<cv::gapi::Generic> pp{"age-gender-generic",
+                                                params.model_path,
+                                                params.weights_path,
+                                                params.device_id};
+
+    comp.apply(cv::gin(in_mat), cv::gout(gapi_age, gapi_gender),
+               cv::compile_args(cv::gapi::networks(pp)));
+
+    // Validate with IE itself (avoid DNN module dependency here)
+    normAssert(cv::gapi::ie::util::to_ocv(ie_age),    gapi_age,    "Test age output"   );
+    normAssert(cv::gapi::ie::util::to_ocv(ie_gender), gapi_gender, "Test gender output");
 }
 
 } // namespace opencv_test

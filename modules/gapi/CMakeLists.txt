@@ -49,6 +49,7 @@ file(GLOB gapi_ext_hdrs
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/ocl/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/own/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/render/*.hpp"
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/s11n/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/streaming/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/plaidml/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/util/*.hpp"
@@ -61,6 +62,7 @@ set(gapi_srcs
     src/api/garray.cpp
     src/api/gopaque.cpp
     src/api/gscalar.cpp
+    src/api/gframe.cpp
     src/api/gkernel.cpp
     src/api/gbackend.cpp
     src/api/gproto.cpp
@@ -71,10 +73,13 @@ set(gapi_srcs
     src/api/kernels_core.cpp
     src/api/kernels_imgproc.cpp
     src/api/kernels_video.cpp
+    src/api/kernels_nnparsers.cpp
+    src/api/kernels_streaming.cpp
     src/api/render.cpp
     src/api/render_ocv.cpp
     src/api/ginfer.cpp
-    src/api/ft_render.cpp
+    src/api/media.cpp
+    src/api/rmat.cpp
 
     # Compiler part
     src/compiler/gmodel.cpp
@@ -93,6 +98,7 @@ set(gapi_srcs
     src/compiler/passes/pattern_matching.cpp
     src/compiler/passes/perform_substitution.cpp
     src/compiler/passes/streaming.cpp
+    src/compiler/passes/intrin.cpp
 
     # Executor
     src/executor/gexecutor.cpp
@@ -105,6 +111,7 @@ set(gapi_srcs
     src/backends/cpu/gcpuimgproc.cpp
     src/backends/cpu/gcpuvideo.cpp
     src/backends/cpu/gcpucore.cpp
+    src/backends/cpu/gnnparsers.cpp
 
     # Fluid Backend (also built-in, FIXME:move away)
     src/backends/fluid/gfluidbuffer.cpp
@@ -125,8 +132,8 @@ set(gapi_srcs
     src/backends/ie/giebackend/giewrapper.cpp
 
     # Render Backend.
-    src/backends/render/grenderocvbackend.cpp
     src/backends/render/grenderocv.cpp
+    src/backends/render/ft_render.cpp
 
     #PlaidML Backend
     src/backends/plaidml/gplaidmlcore.cpp
@@ -139,6 +146,9 @@ set(gapi_srcs
     # Serialization API and routines
     src/api/s11n.cpp
     src/backends/common/serialization.cpp
+
+    # Python bridge
+    src/backends/ie/bindings_ie.cpp
     )
 
 ocv_add_dispatched_file(backends/fluid/gfluidimgproc_func SSE4_1 AVX2)

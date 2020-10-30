@@ -10,7 +10,9 @@
 
 #include <opencv2/core.hpp>
 #include <opencv2/core/cvstd.hpp>
+#ifdef HAVE_OPENCV_VIDEO
 #include <opencv2/video.hpp>
+#endif
 
 
 namespace opencv_test
@@ -19,7 +21,7 @@ namespace opencv_test
     {
         std::string method;
     };
-}
+} // namespace opencv_test
 
 namespace cv
 {
@@ -29,11 +31,11 @@ namespace cv
         {
             static const char* tag()
             {
-                return "org.opencv.test..background_substractor_state_params";
+                return "org.opencv.test.background_substractor_state_params";
             }
         };
-    }
-}
+    } // namespace detail
+} // namespace cv
 
 namespace opencv_test
 {
@@ -117,7 +119,7 @@ namespace
     {
          static GMatDesc outMeta(GMatDesc in) { return in.withType(CV_8U, 1); }
     };
-
+#ifdef HAVE_OPENCV_VIDEO
     GAPI_OCV_KERNEL_ST(GOCVBackSub, GBackSub, cv::BackgroundSubtractor)
     {
         static void setup(const cv::GMatDesc &/* desc */,
@@ -140,6 +142,7 @@ namespace
             state.apply(in, out, -1);
         }
     };
+#endif
 };
 
 TEST(StatefulKernel, StateIsMutableInRuntime)
@@ -224,6 +227,7 @@ TEST(StatefulKernel, InvalidReallocatingKernel)
     EXPECT_THROW(comp.apply(in_mat, out_mat, cv::compile_args(pkg)), std::logic_error);
 }
 
+#ifdef HAVE_OPENCV_VIDEO
 namespace
 {
     void compareBackSubResults(const cv::Mat &actual, const cv::Mat &expected,
@@ -284,7 +288,9 @@ TEST(StatefulKernel, StateIsInitViaCompArgs)
     pOcvBackSub->apply(frame, ocvForeground);
     compareBackSubResults(gapiForeground, ocvForeground, 1);
 }
+#endif
 
+#ifdef HAVE_OPENCV_VIDEO
 namespace
 {
     void testBackSubInStreaming(cv::GStreamingCompiled gapiBackSub, const int diffPercent)
@@ -340,6 +346,7 @@ TEST(StatefulKernel, StateIsInitViaCompArgsInStreaming)
     // Allowing 5% difference of all pixels between G-API and reference OpenCV results
     testBackSubInStreaming(gapiBackSub, 5);
 }
+#endif
 //-------------------------------------------------------------------------------------------------------------
 
 
