@@ -1072,13 +1072,16 @@ CV__DNN_INLINE_NS_BEGIN
       * Model creates net from file with trained weights and config,
       * sets preprocessing input and runs forward pass.
       */
-     class CV_EXPORTS_W_SIMPLE Model : public Net
+     class CV_EXPORTS_W_SIMPLE Model
      {
      public:
-         /**
-          * @brief Default constructor.
-          */
+         CV_DEPRECATED_EXTERNAL  // avoid using in C++ code, will be moved to "protected" (need to fix bindings first)
          Model();
+
+         Model(const Model&) = default;
+         Model(Model&&) = default;
+         Model& operator=(const Model&) = default;
+         Model& operator=(Model&&) = default;
 
          /**
           * @brief Create model from deep learning network represented in one of the supported formats.
@@ -1100,13 +1103,12 @@ CV__DNN_INLINE_NS_BEGIN
          */
          CV_WRAP Model& setInputSize(const Size& size);
 
-         /** @brief Set input size for frame.
+         /** @overload
          *  @param[in] width New input width.
          *  @param[in] height New input height.
-         *  @note If shape of the new blob less than 0,
-         *  then frame size not change.
          */
-         CV_WRAP Model& setInputSize(int width, int height);
+         CV_WRAP inline
+         Model& setInputSize(int width, int height) { return setInputSize(Size(width, height)); }
 
          /** @brief Set mean value for frame.
           *  @param[in] mean Scalar with mean values which are subtracted from channels.
@@ -1143,10 +1145,31 @@ CV__DNN_INLINE_NS_BEGIN
           *  @param[in]  frame  The input image.
           *  @param[out] outs Allocated output blobs, which will store results of the computation.
           */
-         CV_WRAP void predict(InputArray frame, OutputArrayOfArrays outs);
+         CV_WRAP void predict(InputArray frame, OutputArrayOfArrays outs) const;
 
-     protected:
+
+         // ============================== Net proxy methods ==============================
+         // Never expose methods with network implementation details, like:
+         // - addLayer, addLayerToPrev, connect, setInputsNames, setInputShape, setParam, getParam
+         // - getLayer*, getUnconnectedOutLayers, getUnconnectedOutLayersNames, getLayersShapes
+         // - forward* methods, setInput
+
+         /// @sa Net::setPreferableBackend
+         CV_WRAP Model& setPreferableBackend(dnn::Backend backendId);
+         /// @sa Net::setPreferableTarget
+         CV_WRAP Model& setPreferableTarget(dnn::Target targetId);
+
+         CV_DEPRECATED_EXTERNAL
+         operator Net&() const { return getNetwork_(); }
+
+     //protected: - internal/tests usage only
+         Net& getNetwork_() const;
+         inline Net& getNetwork_() { return const_cast<const Model*>(this)->getNetwork_(); }
+
          struct Impl;
+         inline Impl* getImpl() const { return impl.get(); }
+         inline Impl& getImplRef() const { CV_DbgAssert(impl); return *impl.get(); }
+     protected:
          Ptr<Impl> impl;
      };
 
