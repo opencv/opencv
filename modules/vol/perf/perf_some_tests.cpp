@@ -9,10 +9,10 @@ namespace opencv_test
 namespace
 {
 
-PERF_TEST_P_(VolPerfTest, EmptyTest)
+PERF_TEST(VolPerfTest, EmptyTest)
 {
-    ASSERT_TRUE(doNothing());
+    ASSERT_TRUE(cv::vol::doNothing());
 }
 
-}
 } // namespace
+} // namespace opencv_test

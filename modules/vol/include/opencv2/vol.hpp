@@ -14,7 +14,8 @@ Some docs
 
 namespace cv
 {
-
+namespace vol
+{
 //! @addtogroup vol
 //! @{
 
@@ -28,6 +29,7 @@ CV_EXPORTS_W bool doNothing();
 
 
 //! @} vol
-}
+} // namespace vol
+} // namespace cv
 
 #endif // OPENCV_VOL_HPP

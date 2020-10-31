@@ -13,4 +13,5 @@ bool doNothing()
     return true;
 }
 
-}
+} // namespace vol
+} // namespace cv
