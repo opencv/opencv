@@ -246,7 +246,7 @@ void PoseSolver::computeOmega(InputArray objectPoints, InputArray imagePoints)
 
     cv::SVD omega_svd(omega_, cv::SVD::FULL_UV);
     s_ = omega_svd.w;
-    u_ = omega_svd.u;
+    u_ = cv::Mat(omega_svd.vt.t());
 
     CV_Assert(s_(0) >= 1e-7);
 
