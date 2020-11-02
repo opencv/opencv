@@ -962,6 +962,7 @@ context.
 
 @return GArray of detected contours. Each contour is stored as a GArray of points.
  */
+// FIXME oc: make default value offset = Point()
 GAPI_EXPORTS GArray<GArray<Point>>
 findContours(const GMat &src, const RetrievalModes mode, const ContourApproximationModes method,
              const GOpaque<Point> &offset);
@@ -994,6 +995,7 @@ indices in contours of the next and previous contours at the same hierarchical l
 child contour and the parent contour, respectively. If for the contour i there are no next,
 previous, parent, or nested contours, the corresponding elements of hierarchy[i] will be negative.
  */
+// FIXME oc: make default value offset = Point()
 GAPI_EXPORTS std::tuple<GArray<GArray<Point>>,GArray<Vec4i>>
 findContoursH(const GMat &src, const RetrievalModes mode, const ContourApproximationModes method,
               const GOpaque<Point> &offset);
