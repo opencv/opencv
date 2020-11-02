@@ -483,10 +483,11 @@ TEST_P(FindContoursTest, AccuracyTest)
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;
+    GOpaque<Point> offset;
     cv::GArray<cv::GArray<cv::Point>> outCts;
-    outCts = cv::gapi::findContours(in, mode, method);
-    cv::GComputation c(GIn(in), GOut(outCts));
-    c.apply(gin(in_mat1), gout(outCtsGAPI), getCompileArgs());
+    outCts = cv::gapi::findContours(in, mode, method, offset);
+    cv::GComputation c(GIn(in, offset), GOut(outCts));
+    c.apply(gin(in_mat1, cv::Point()), gout(outCtsGAPI), getCompileArgs());
 
     // Comparison //////////////////////////////////////////////////////////////
     EXPECT_TRUE(outCtsGAPI.size() == outCtsOCV.size());
@@ -511,11 +512,12 @@ TEST_P(FindContoursHTest, AccuracyTest)
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;
+    GOpaque<Point> offset;
     cv::GArray<cv::GArray<cv::Point>> outCts;
     cv::GArray<cv::Vec4i> outHier;
-    std::tie(outCts, outHier) = cv::gapi::findContoursH(in, mode, method);
-    cv::GComputation c(GIn(in), GOut(outCts, outHier));
-    c.apply(gin(in_mat1), gout(outCtsGAPI, outHierGAPI), getCompileArgs());
+    std::tie(outCts, outHier) = cv::gapi::findContoursH(in, mode, method, offset);
+    cv::GComputation c(GIn(in, offset), GOut(outCts, outHier));
+    c.apply(gin(in_mat1, cv::Point()), gout(outCtsGAPI, outHierGAPI), getCompileArgs());
 
     // Comparison //////////////////////////////////////////////////////////////
     EXPECT_TRUE(outCtsGAPI.size() == outCtsOCV.size());
@@ -549,12 +551,10 @@ TEST_P(BoundingRectMatTest, AccuracyTest)
 
 TEST_P(BoundingRectMatVector32STest, AccuracyTest)
 {
-    cv::RNG& rng = theRNG();
     cv::Rect out_rect_gapi, out_rect_ocv;
 
     std::vector<cv::Point2i> in_vectorS(sz.width);
-    for (int i = 0; i < sz.width; i++)
-        in_vectorS.push_back(cv::Point2i(rng(INT_MAX + 1U), rng(INT_MAX + 1U)));
+    cv::randu(in_vectorS, cv::Scalar::all(0), cv::Scalar::all(255));
     in_mat1 = cv::Mat(in_vectorS);
 
     // G-API code //////////////////////////////////////////////////////////////
@@ -579,10 +579,11 @@ TEST_P(BoundingRectMatVector32FTest, AccuracyTest)
     cv::Rect out_rect_gapi, out_rect_ocv;
 
     std::vector<cv::Point2f> in_vectorF(sz.width);
+    const int fscale = 256;  // avoid bits near ULP, generate stable test input
     for (int i = 0; i < sz.width; i++)
     {
-        cv::Point2f pt(expf(static_cast<float>(rng.uniform(-1., 6.) * 3.0 * CV_LOG2)),
-                       expf(static_cast<float>(rng.uniform(-1., 6.) * 3.0 * CV_LOG2)));
+        cv::Point2f pt(rng.uniform(0, 255 * fscale) / static_cast<float>(fscale),
+                       rng.uniform(0, 255 * fscale) / static_cast<float>(fscale));
         in_vectorF.push_back(pt);
     }
     in_mat1 = cv::Mat(in_vectorF);
@@ -606,12 +607,10 @@ TEST_P(BoundingRectMatVector32FTest, AccuracyTest)
 
 TEST_P(BoundingRectVector32STest, AccuracyTest)
 {
-    cv::RNG& rng = theRNG();
     cv::Rect out_rect_gapi, out_rect_ocv;
 
     std::vector<cv::Point2i> in_vectorS(sz.width);
-    for (int i = 0; i < sz.width; i++)
-        in_vectorS.push_back(cv::Point2i(rng(INT_MAX + 1U), rng(INT_MAX + 1U)));
+    cv::randu(in_vectorS, cv::Scalar::all(0), cv::Scalar::all(255));
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GArray<cv::Point2i> in;
@@ -636,10 +635,11 @@ TEST_P(BoundingRectVector32FTest, AccuracyTest)
     cv::Rect out_rect_gapi, out_rect_ocv;
 
     std::vector<cv::Point2f> in_vectorF(sz.width);
+    const int fscale = 256;  // avoid bits near ULP, generate stable test input
     for (int i = 0; i < sz.width; i++)
     {
-        cv::Point2f pt(expf(static_cast<float>(rng.uniform(-1., 6.) * 3.0 * CV_LOG2)),
-                       expf(static_cast<float>(rng.uniform(-1., 6.) * 3.0 * CV_LOG2)));
+        cv::Point2f pt(rng.uniform(0, 255 * fscale) / static_cast<float>(fscale),
+                       rng.uniform(0, 255 * fscale) / static_cast<float>(fscale));
         in_vectorF.push_back(pt);
     }
 

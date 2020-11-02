@@ -157,21 +157,21 @@ namespace imgproc {
 
     using RetrMode = RetrievalModes;
     using ContMethod = ContourApproximationModes;
-    G_TYPED_KERNEL(GFindContours, <GArray<GArray<Point>>(GMat,RetrMode,ContMethod,Point)>,
+    G_TYPED_KERNEL(GFindContours, <GArray<GArray<Point>>(GMat,RetrMode,ContMethod,GOpaque<Point>)>,
                    "org.opencv.imgproc.shape.findContours")
     {
-        static GArrayDesc outMeta(GMatDesc in, RetrMode mode, ContMethod, Point)
+        static GArrayDesc outMeta(GMatDesc in, RetrMode mode, ContMethod, GOpaqueDesc)
         {
             checkMetaForFindingContours(in.depth, in.chan, mode);
             return empty_array_desc();
         }
     };
 
-    G_TYPED_KERNEL(GFindContoursH,<GFindContoursOutput(GMat,RetrMode,ContMethod,Point)>,
+    G_TYPED_KERNEL(GFindContoursH,<GFindContoursOutput(GMat,RetrMode,ContMethod,GOpaque<Point>)>,
                    "org.opencv.imgproc.shape.findContoursH")
     {
         static std::tuple<GArrayDesc,GArrayDesc>
-        outMeta(GMatDesc in, RetrMode mode, ContMethod, Point)
+        outMeta(GMatDesc in, RetrMode mode, ContMethod, GOpaqueDesc)
         {
             checkMetaForFindingContours(in.depth, in.chan, mode);
             return std::make_tuple(empty_array_desc(), empty_array_desc());
@@ -964,7 +964,7 @@ context.
  */
 GAPI_EXPORTS GArray<GArray<Point>>
 findContours(const GMat &src, const RetrievalModes mode, const ContourApproximationModes method,
-             const Point &offset = Point());
+             const GOpaque<Point> &offset);
 
 /** @brief Finds contours and their hierarchy in a binary image.
 
@@ -996,7 +996,7 @@ previous, parent, or nested contours, the corresponding elements of hierarchy[i]
  */
 GAPI_EXPORTS std::tuple<GArray<GArray<Point>>,GArray<Vec4i>>
 findContoursH(const GMat &src, const RetrievalModes mode, const ContourApproximationModes method,
-              const Point &offset = Point());
+              const GOpaque<Point> &offset);
 
 /** @brief Calculates the up-right bounding rectangle of a point set or non-zero pixels
 of gray-scale image.

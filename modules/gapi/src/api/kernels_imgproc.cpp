@@ -117,14 +117,14 @@ cv::GArray<cv::Point2f> goodFeaturesToTrack(const GMat& image, int maxCorners, d
 
 GArray<GArray<Point>>
 findContours(const GMat &src, const RetrievalModes mode, const ContourApproximationModes method,
-             const Point &offset)
+             const GOpaque<Point> &offset)
 {
     return imgproc::GFindContours::on(src, mode, method, offset);
 }
 
 std::tuple<GArray<GArray<Point>>,GArray<Vec4i>>
 findContoursH(const GMat &src, const RetrievalModes mode, const ContourApproximationModes method,
-              const Point &offset)
+              const GOpaque<Point> &offset)
 {
     return imgproc::GFindContoursH::on(src, mode, method, offset);
 }

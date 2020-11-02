@@ -791,42 +791,6 @@ private:
     double _tol;
 };
 
-class AbsToleranceRect : public WrappableRect<AbsToleranceRect>
-{
-public:
-    AbsToleranceRect(double tol) : _tol(tol) {}
-    bool operator() (const cv::Rect& in1, const cv::Rect& in2) const
-    {
-        double abs_err = (  static_cast<double>(std::abs(in1.x - in2.x))
-                                / std::max(1, std::abs(in2.x))
-                          + static_cast<double>(std::abs(in1.y - in2.y))
-                                / std::max(1, std::abs(in2.y))
-                          + static_cast<double>(std::abs(in1.width - in2.width))
-                                / std::max(1, std::abs(in2.width))
-                          + static_cast<double>(std::abs(in1.height - in2.height))
-                                / std::max(1, std::abs(in2.height))) / 4.0;
-        if (abs_err > _tol)
-        {
-            std::cout << "AbsToleranceRect error: abs_err=" << abs_err << "  tolerance=" << _tol
-                      << " in1.x="      << in1.x      << " in2.x="      << in2.x
-                      << " in1.y="      << in1.y      << " in2.y="      << in2.y
-                      << " in1.width="  << in1.width  << " in2.width="  << in2.width
-                      << " in1.height=" << in1.height << " in2.height=" << in2.height << std::endl;
-            return false;
-        }
-        else
-        {
-            return true;
-        }
-    }
-    friend std::ostream& operator<<(std::ostream& os, const AbsToleranceRect& obj)
-    {
-        return os << "AbsToleranceRect(" << std::to_string(obj._tol) << ")";
-    }
-private:
-    double _tol;
-};
-
 class IoUToleranceRect : public WrappableRect<IoUToleranceRect>
 {
 public:
