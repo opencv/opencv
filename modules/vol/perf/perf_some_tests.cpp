@@ -11,7 +11,9 @@ namespace
 
 PERF_TEST(VolPerfTest, EmptyTest)
 {
-    ASSERT_TRUE(cv::vol::doNothing());
+    TEST_CYCLE() cv::vol::doNothing();
+
+    SANITY_CHECK(true);
 }
 
 } // namespace
