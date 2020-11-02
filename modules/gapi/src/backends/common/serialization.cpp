@@ -338,8 +338,13 @@ IIStream& operator>> (IIStream& is,       cv::gapi::wip::draw::Line &l) {
 
 IOStream& operator<< (IOStream& os, const cv::GCompileArg& arg)
 {
+    ByteMemoryOutStream tmpS;
+    arg.serialize(tmpS);
+    std::vector<char> data = tmpS.data();
+
     os << arg.tag;
-    arg.serialize(os);
+    os << data;
+
     return os;
 }
 
