@@ -827,6 +827,46 @@ private:
     double _tol;
 };
 
+class IoUToleranceRect : public WrappableRect<IoUToleranceRect>
+{
+public:
+    IoUToleranceRect(double tol) : _tol(tol) {}
+    bool operator() (const cv::Rect& in1, const cv::Rect& in2) const
+    {
+        // determine the (x, y)-coordinates of the intersection rectangle
+        int xA = max(in1.x, in2.x);
+        int yA = max(in1.y, in2.y);
+        int xB = min(in1.br().x, in2.br().x);
+        int yB = min(in1.br().y, in2.br().y);
+        // compute the area of intersection rectangle
+        int interArea = max(0, xB - xA) * max(0, yB - yA);
+        // compute the area of union rectangle
+        int unionArea = in1.area() + in2.area() - interArea;
+
+        double iou = interArea / unionArea;
+        double err = 1 - iou;
+        if (err > _tol)
+        {
+            std::cout << "IoUToleranceRect error: err=" << err << "  tolerance=" << _tol
+                      << " in1.x="      << in1.x      << " in2.x="      << in2.x
+                      << " in1.y="      << in1.y      << " in2.y="      << in2.y
+                      << " in1.width="  << in1.width  << " in2.width="  << in2.width
+                      << " in1.height=" << in1.height << " in2.height=" << in2.height << std::endl;
+            return false;
+        }
+        else
+        {
+            return true;
+        }
+    }
+    friend std::ostream& operator<<(std::ostream& os, const IoUToleranceRect& obj)
+    {
+        return os << "IoUToleranceRect(" << std::to_string(obj._tol) << ")";
+    }
+private:
+    double _tol;
+};
+
 template<typename Elem>
 class AbsExactVector : public WrappableVector<AbsExactVector<Elem>, Elem>
 {

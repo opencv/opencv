@@ -273,7 +273,7 @@ INSTANTIATE_TEST_CASE_P(BoundingRectMatTestCPU, BoundingRectMatTest,
                                        cv::Size(128, 128)),
                                 Values(-1),
                                 Values(IMGPROC_CPU),
-                                Values(AbsToleranceRect(0).to_compare_obj())));
+                                Values(IoUToleranceRect(0).to_compare_obj())));
 
 INSTANTIATE_TEST_CASE_P(BoundingRectMatVector32STestCPU, BoundingRectVector32STest,
                         Combine(Values(-1),
@@ -281,7 +281,7 @@ INSTANTIATE_TEST_CASE_P(BoundingRectMatVector32STestCPU, BoundingRectVector32STe
                                        cv::Size(128, 1)),
                                 Values(-1),
                                 Values(IMGPROC_CPU),
-                                Values(AbsToleranceRect(0).to_compare_obj())));
+                                Values(IoUToleranceRect(0).to_compare_obj())));
 
  INSTANTIATE_TEST_CASE_P(BoundingRectMatVector32FTestCPU, BoundingRectVector32FTest,
                          Combine(Values(-1),
@@ -289,7 +289,7 @@ INSTANTIATE_TEST_CASE_P(BoundingRectMatVector32STestCPU, BoundingRectVector32STe
                                         cv::Size(128, 1)),
                                  Values(-1),
                                  Values(IMGPROC_CPU),
-                                 Values(AbsToleranceRect(1e-5).to_compare_obj())));
+                                 Values(IoUToleranceRect(1e-5).to_compare_obj())));
 
 INSTANTIATE_TEST_CASE_P(BoundingRectVector32STestCPU, BoundingRectVector32STest,
                         Combine(Values(-1),
@@ -297,7 +297,7 @@ INSTANTIATE_TEST_CASE_P(BoundingRectVector32STestCPU, BoundingRectVector32STest,
                                        cv::Size(128, 1)),
                                 Values(-1),
                                 Values(IMGPROC_CPU),
-                                Values(AbsToleranceRect(0).to_compare_obj())));
+                                Values(IoUToleranceRect(0).to_compare_obj())));
 
  INSTANTIATE_TEST_CASE_P(BoundingRectVector32FTestCPU, BoundingRectVector32FTest,
                          Combine(Values(-1),
@@ -305,7 +305,7 @@ INSTANTIATE_TEST_CASE_P(BoundingRectVector32STestCPU, BoundingRectVector32STest,
                                         cv::Size(128, 1)),
                                  Values(-1),
                                  Values(IMGPROC_CPU),
-                                 Values(AbsToleranceRect(1e-5).to_compare_obj())));
+                                 Values(IoUToleranceRect(1e-5).to_compare_obj())));
 
 INSTANTIATE_TEST_CASE_P(BGR2RGBTestCPU, BGR2RGBTest,
                         Combine(Values(CV_8UC3),

@@ -213,7 +213,8 @@ GAPI_OCV_KERNEL(GCPUGoodFeatures, cv::gapi::imgproc::GGoodFeatures)
 
 GAPI_OCV_KERNEL(GCPUFindContours, cv::gapi::imgproc::GFindContours)
 {
-    static void run(const cv::Mat& image, int mode, int method, const cv::Point& offset,
+    static void run(const cv::Mat& image, const cv::RetrievalModes mode,
+                    const cv::ContourApproximationModes method, const cv::Point& offset,
                     std::vector<std::vector<cv::Point>> &outConts)
     {
         cv::findContours(image, outConts, mode, method, offset);
@@ -222,7 +223,8 @@ GAPI_OCV_KERNEL(GCPUFindContours, cv::gapi::imgproc::GFindContours)
 
 GAPI_OCV_KERNEL(GCPUFindContoursH, cv::gapi::imgproc::GFindContoursH)
 {
-    static void run(const cv::Mat& image, int mode, int method, const cv::Point& offset,
+    static void run(const cv::Mat& image, const cv::RetrievalModes mode,
+                    const cv::ContourApproximationModes method, const cv::Point& offset,
                     std::vector<std::vector<cv::Point>> &outConts, std::vector<cv::Vec4i> &outHier)
     {
         cv::findContours(image, outConts, outHier, mode, method, offset);

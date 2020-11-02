@@ -43,6 +43,15 @@ void checkMetaForFindingContours(const int depth, const int chan, const int mode
         break;
     }
 }
+
+// Checks if the passed mat is a set of n-dimentional points of the given depth
+bool isPointsVector(const int chan, const cv::Size &size, const int depth,
+                    const int n, const int ddepth)
+{
+    return (ddepth == depth || ddepth < 0) &&
+           ((chan == n && (size.height == 1 || size.width == 1)) ||
+            (chan == 1 && size.width == n));
+}
 } // anonymous namespace
 
 namespace cv { namespace gapi {
@@ -146,20 +155,23 @@ namespace imgproc {
         }
     };
 
-    G_TYPED_KERNEL(GFindContours,<GArray<GArray<Point>>(GMat,int,int,Point)>,
+    using RetrMode = RetrievalModes;
+    using ContMethod = ContourApproximationModes;
+    G_TYPED_KERNEL(GFindContours, <GArray<GArray<Point>>(GMat,RetrMode,ContMethod,Point)>,
                    "org.opencv.imgproc.shape.findContours")
     {
-        static GArrayDesc outMeta(GMatDesc in, int mode, int, Point)
+        static GArrayDesc outMeta(GMatDesc in, RetrMode mode, ContMethod, Point)
         {
             checkMetaForFindingContours(in.depth, in.chan, mode);
             return empty_array_desc();
         }
     };
 
-    G_TYPED_KERNEL(GFindContoursH,<GFindContoursOutput(GMat,int,int,Point)>,
+    G_TYPED_KERNEL(GFindContoursH,<GFindContoursOutput(GMat,RetrMode,ContMethod,Point)>,
                    "org.opencv.imgproc.shape.findContoursH")
     {
-        static std::tuple<GArrayDesc,GArrayDesc> outMeta(GMatDesc in, int mode, int, Point)
+        static std::tuple<GArrayDesc,GArrayDesc>
+        outMeta(GMatDesc in, RetrMode mode, ContMethod, Point)
         {
             checkMetaForFindingContours(in.depth, in.chan, mode);
             return std::make_tuple(empty_array_desc(), empty_array_desc());
@@ -170,7 +182,8 @@ namespace imgproc {
                    "org.opencv.imgproc.shape.boundingRectMat") {
         static GOpaqueDesc outMeta(GMatDesc in) {
             GAPI_Assert((in.depth == CV_8U && in.chan == 1) ||
-                        (in.isVectorPoints(2, CV_32S) || in.isVectorPoints(2, CV_32F)));
+                        (isPointsVector(in.chan, in.size, in.depth, 2, CV_32S) ||
+                         isPointsVector(in.chan, in.size, in.depth, 2, CV_32F)));
 
             return empty_gopaque_desc();
         }
@@ -933,7 +946,6 @@ GAPI_EXPORTS GMat equalizeHist(const GMat& src);
 The function retrieves contours from the binary image using the algorithm @cite Suzuki85 .
 The contours are a useful tool for shape analysis and object detection and recognition.
 See squares.cpp in the OpenCV sample directory.
-@note Since opencv 3.2 source image is not modified by this function.
 
 @note Function textual ID is "org.opencv.imgproc.shape.findContours"
 
@@ -951,7 +963,8 @@ context.
 @return GArray of detected contours. Each contour is stored as a GArray of points.
  */
 GAPI_EXPORTS GArray<GArray<Point>>
-findContours(const GMat &src, const int mode, const int method, const Point &offset = Point());
+findContours(const GMat &src, const RetrievalModes mode, const ContourApproximationModes method,
+             const Point &offset = Point());
 
 /** @brief Finds contours and their hierarchy in a binary image.
 
@@ -959,7 +972,6 @@ The function retrieves contours from the binary image using the algorithm @cite 
 and calculates their hierarchy.
 The contours are a useful tool for shape analysis and object detection and recognition.
 See squares.cpp in the OpenCV sample directory.
-@note Since opencv 3.2 source image is not modified by this function.
 
 @note Function textual ID is "org.opencv.imgproc.shape.findContoursH"
 
@@ -983,7 +995,7 @@ child contour and the parent contour, respectively. If for the contour i there a
 previous, parent, or nested contours, the corresponding elements of hierarchy[i] will be negative.
  */
 GAPI_EXPORTS std::tuple<GArray<GArray<Point>>,GArray<Vec4i>>
-findContoursH(const GMat &src, const int mode, const int method,
+findContoursH(const GMat &src, const RetrievalModes mode, const ContourApproximationModes method,
               const Point &offset = Point());
 
 /** @brief Calculates the up-right bounding rectangle of a point set or non-zero pixels

@@ -78,63 +78,6 @@ TEST(GAPI_MetaDesc, VecMatDesc)
     EXPECT_EQ((GMatDesc{CV_8U, 3, {640, 480}}), get<GMatDesc>(desc2[0]));
 }
 
-TEST(GAPI_MetaDesc, IsVectorPoints)
-{
-    constexpr int n = 2;
-    constexpr int N = 15;
-
-    cv::Mat m0(N, n, CV_8UC1);
-    cv::GMatDesc md0 = cv::descr_of(m0);
-
-    cv::Mat m1(n, N, CV_8UC1);
-    cv::GMatDesc md1 = cv::descr_of(m1);
-
-    cv::Mat m2(N, n + 1, CV_8UC1);
-    cv::GMatDesc md2 = cv::descr_of(m2);
-
-    cv::Mat m3(N, n, CV_8UC3);
-    cv::GMatDesc md3 = cv::descr_of(m3);
-
-    cv::Mat m4(N, n, CV_32FC1);
-    cv::GMatDesc md4 = cv::descr_of(m4);
-
-    cv::Mat m5(N, 1, CV_8UC(n));
-    cv::GMatDesc md5 = cv::descr_of(m5);
-
-    cv::Mat m6(1, N, CV_8UC(n));
-    cv::GMatDesc md6 = cv::descr_of(m6);
-
-    std::vector<cv::Point2i> v0 = {{0, 0}, {1, 1}, {2, 2}};
-    cv::Mat mv0(v0);
-    cv::GMatDesc mdv0 = cv::descr_of(mv0);
-
-    std::vector<cv::Point3f> v1 = {{0.f, 0.f, 0.f}, {1.f, 1.f, 1.f},
-                                   {2.f, 2.f, 2.f}, {3.f, 3.f, 3.f}};
-    cv::Mat mv1(v1);
-    cv::GMatDesc mdv1 = cv::descr_of(mv1);
-
-    EXPECT_TRUE (md0.isVectorPoints(n,     CV_8U));
-    EXPECT_TRUE (md0.isVectorPoints(n,     -1));
-    EXPECT_FALSE(md0.isVectorPoints(n + 1, CV_8U));
-    EXPECT_FALSE(md0.isVectorPoints(n + 1, -1));
-    EXPECT_FALSE(md0.isVectorPoints(n,     CV_32F));
-
-    EXPECT_FALSE(md1.isVectorPoints(n, -1));
-    EXPECT_FALSE(md2.isVectorPoints(n, -1));
-    EXPECT_FALSE(md3.isVectorPoints(n, -1));
-    EXPECT_FALSE(md4.isVectorPoints(n, CV_8U));
-    EXPECT_TRUE (md4.isVectorPoints(n, -1));
-
-    EXPECT_TRUE (md5.isVectorPoints(n, CV_8U));
-    EXPECT_TRUE (md6.isVectorPoints(n, CV_8U));
-
-    EXPECT_TRUE (mdv0.isVectorPoints(2, CV_32S));
-    EXPECT_FALSE(mdv0.isVectorPoints(3, CV_32S));
-    EXPECT_FALSE(mdv0.isVectorPoints(2, CV_32F));
-
-    EXPECT_TRUE (mdv1.isVectorPoints(3, CV_32F));
-}
-
 TEST(GAPI_MetaDesc, CanDescribe)
 {
     constexpr int w = 15;
