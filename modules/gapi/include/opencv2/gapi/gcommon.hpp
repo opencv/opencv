@@ -161,7 +161,9 @@ public:
     template<typename T, typename std::enable_if<!detail::is_compile_arg<T>::value, int>::type = 0>
     explicit GCompileArg(T &&t)
         : tag(detail::CompileArgTag<typename std::decay<T>::type>::tag())
-        , serializeF(&cv::gapi::s11n::detail::wrap_serialize<T>::serialize)
+        , serializeF(cv::gapi::s11n::detail::has_S11N_spec<T>::value ?
+                     &cv::gapi::s11n::detail::wrap_serialize<T>::serialize :
+                     nullptr)
         , arg(t)
     {
     }
@@ -178,7 +180,10 @@ public:
 
     void serialize(cv::gapi::s11n::IOStream& os) const
     {
-        serializeF(os, *this);
+        if (serializeF)
+        {
+            serializeF(os, *this);
+        }
     }
 
 private:
@@ -222,8 +227,8 @@ template<typename T> struct wrap_serialize
 {
     static void serialize(IOStream& os, const GCompileArg& arg)
     {
-        using decayed_type = typename std::decay<T>::type;
-        S11N<decayed_type>::serialize(os, arg.get<decayed_type>());
+        using DT = typename std::decay<T>::type;
+        S11N<DT>::serialize(os, arg.get<DT>());
     }
 };
 } // namespace detail

@@ -265,23 +265,25 @@ void getRunArgByIdx (IIStream& is, cv::util::variant<Ts...> &v, uint32_t idx) {
 
 namespace detail
 {
-template<typename T> struct deserialize_arg;
+template<typename T> struct try_deserialize_comparg;
 
-template<> struct deserialize_arg<std::tuple<>> {
-static GCompileArg exec(cv::gapi::s11n::IIStream&, const std::string&) {
-        throw std::logic_error("Passed arg can't be deserialized!");
+template<> struct try_deserialize_comparg<std::tuple<>> {
+static cv::util::optional<GCompileArg> exec(const std::string&, cv::gapi::s11n::IIStream&) {
+        return { };
     }
 };
 
 template<typename T, typename... Types>
-struct deserialize_arg<std::tuple<T, Types...>> {
-static GCompileArg exec(cv::gapi::s11n::IIStream& is, const std::string& tag) {
+struct try_deserialize_comparg<std::tuple<T, Types...>> {
+static cv::util::optional<GCompileArg> exec(const std::string& tag, cv::gapi::s11n::IIStream& is) {
     if (tag == cv::detail::CompileArgTag<T>::tag()) {
-        return GCompileArg {
-            cv::gapi::s11n::detail::S11N<T>::deserialize(is)
-        };
+        static_assert(cv::gapi::s11n::detail::has_S11N_spec<T>::value,
+            "cv::gapi::deserialize<GCompileArgs, Types...> expects Types to have S11N "
+            "specializations with deserialization callbacks!");
+        return cv::util::optional<GCompileArg>(
+            GCompileArg { cv::gapi::s11n::detail::S11N<T>::deserialize(is) });
     }
-    return deserialize_arg<std::tuple<Types...>>::exec(is, tag);
+    return try_deserialize_comparg<std::tuple<Types...>>::exec(tag, is);
 }
 };
 
@@ -303,17 +305,35 @@ static GRunArg exec(cv::gapi::s11n::IIStream& is, uint32_t idx) {
 };
 
 template<typename... Types>
-cv::GCompileArgs getCompileArgs(const std::vector<char> &p) {
-    std::unique_ptr<cv::gapi::s11n::IIStream> pIs = cv::gapi::s11n::detail::getInStream(p);
-    cv::gapi::s11n::IIStream& is = *pIs;
+inline cv::util::optional<GCompileArg> tryDeserializeCompArg(const std::string& tag,
+                                                             const std::vector<char>& sArg) {
+    std::unique_ptr<cv::gapi::s11n::IIStream> pArgIs = cv::gapi::s11n::detail::getInStream(sArg);
+    return try_deserialize_comparg<std::tuple<Types...>>::exec(tag, *pArgIs);
+}
+
+template<typename... Types>
+cv::GCompileArgs getCompileArgs(const std::vector<char> &sArgs) {
     cv::GCompileArgs args;
+
+    std::unique_ptr<cv::gapi::s11n::IIStream> pIs = cv::gapi::s11n::detail::getInStream(sArgs);
+    cv::gapi::s11n::IIStream& is = *pIs;
 
     uint32_t sz = 0;
     is >> sz;
     for (uint32_t i = 0; i < sz; ++i) {
         std::string tag;
         is >> tag;
-        args.push_back(cv::gapi::detail::deserialize_arg<std::tuple<Types...>>::exec(is, tag));
+
+        std::vector<char> sArg;
+        is >> sArg;
+
+        cv::util::optional<GCompileArg> dArg =
+            cv::gapi::detail::tryDeserializeCompArg<Types...>(tag, sArg);
+
+        if (dArg.has_value())
+        {
+            args.push_back(dArg.value());
+        }
     }
 
     return args;
