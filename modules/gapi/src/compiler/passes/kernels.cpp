@@ -141,6 +141,7 @@ void cv::gimpl::passes::bindNetParams(ade::passes::PassContext &ctx,
                 continue;
 
             pgr.metadata(nh).set(NetworkParams{it->params});
+            op.backend = it->backend;
         }
     }
 }
@@ -181,13 +182,25 @@ void cv::gimpl::passes::resolveKernels(ade::passes::PassContext   &ctx,
             // of the same kernel to be presented in the kernel
             // package (as it was designed originally).
 
-            cv::gapi::GBackend selected_backend;
-            cv::GKernelImpl    selected_impl;
-            std::tie(selected_backend, selected_impl) = kernels.lookup(op.k.name);
+            cv::GKernelImpl selected_impl;
 
-            selected_backend.priv().unpackKernel(ctx.graph, nh, selected_impl);
-            op.backend = selected_backend;
-            active_backends.insert(selected_backend);
+            if (op.backend == cv::gapi::GBackend()) {
+                std::tie(op.backend, selected_impl) = kernels.lookup(op.k.name);
+            } else {
+                // FIXME: This needs to be reworked properly
+                // Lookup for implementation from the pre-assinged backend
+                cv::gapi::GBackend dummy;
+                std::tie(dummy, selected_impl) = op.backend.priv()
+                    .auxiliaryKernels().lookup(op.k.name);
+                // FIXME: Warning here!
+                // This situation may happen when NN (infer) backend was assigned
+                // by tag in bindNetParams (see above) but at this stage the operation
+                // lookup resulted in another backend (and it is perfectly valid when
+                // we have multiple NN backends available).
+            }
+
+            op.backend.priv().unpackKernel(ctx.graph, nh, selected_impl);
+            active_backends.insert(op.backend);
 
             if (gr.metadata().contains<Deserialized>())
             {
