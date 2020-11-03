@@ -127,8 +127,13 @@ public:
         return *this;
     }
 
-    Params& pluginConfig(IEConfig cfg) {
+    Params& pluginConfig(IEConfig&& cfg) {
         desc.config = std::move(cfg);
+        return *this;
+    }
+
+    Params& pluginConfig(const IEConfig& cfg) {
+        desc.config = cfg;
         return *this;
     }
 
@@ -158,8 +163,13 @@ public:
         : desc{ model, {}, device, {}, {}, {}, 0u, 0u, detail::ParamDesc::Kind::Import, true, {}}, m_tag(tag) {
     };
 
-    Params& pluginConfig(IEConfig cfg) {
+    Params& pluginConfig(IEConfig&& cfg) {
         desc.config = std::move(cfg);
+        return *this;
+    }
+
+    Params& pluginConfig(const IEConfig& cfg) {
+        desc.config = cfg;
         return *this;
     }
 
