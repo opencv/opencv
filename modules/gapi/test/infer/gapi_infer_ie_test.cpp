@@ -424,7 +424,7 @@ TEST(TestAgeGenderIE, InvalidConfig)
     auto pp = cv::gapi::ie::Params<cv::gapi::Generic>{"age-gender-generic",
                                                        model_path,
                                                        weights_path,
-                                                       device_id}.cfgPlugin({{"unsupported_config", "some_value"}});
+                                                       device_id}.pluginConfig({{"unsupported_config", "some_value"}});
 
     EXPECT_ANY_THROW(comp.compile(cv::GMatDesc{CV_8U,3,cv::Size{320, 240}},
                      cv::compile_args(cv::gapi::networks(pp))));
