@@ -8,6 +8,7 @@
 #define OPENCV_GAPI_S11N_BASE_HPP
 
 #include <opencv2/gapi/own/assert.hpp>
+#include <opencv2/gapi/own/exports.hpp>
 
 namespace cv {
 namespace gapi {
@@ -16,16 +17,25 @@ struct IOStream;
 struct IIStream;
 
 namespace detail {
-// Will be used along with default types if possible in specific cases (compile args, etc)
-// Note: actual implementation is defined by user
+
+struct NotImplemented {
+};
+
+// The default S11N for custom types is NotImplemented
+// Don't! sublass from NotImplemented if you actually implement S11N.
 template<typename T>
-struct S11N {
+struct S11N: public NotImplemented {
     static void serialize(IOStream &, const T &) {
         GAPI_Assert(false && "No serialization routine is provided!");
     }
     static T deserialize(IIStream &) {
         GAPI_Assert(false && "No deserialization routine is provided!");
     }
+};
+
+template<typename T> struct has_S11N_spec {
+    static constexpr bool value = !std::is_base_of<NotImplemented,
+                                        S11N<typename std::decay<T>::type>>::value;
 };
 
 } // namespace detail
