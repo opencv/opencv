@@ -19,14 +19,18 @@ public:
         : m_mat(m), m_callbackCalled(callbackCalled)
     {}
     virtual RMat::View access(RMat::Access access) override {
+        RMat::View::stepsT steps(m_mat.dims);
+        for (int i = 0; i < m_mat.dims; i++) {
+            steps[i] = m_mat.step[i];
+        }
         if (access == RMat::Access::W) {
-            return RMat::View(cv::descr_of(m_mat), m_mat.data, m_mat.step,
+            return RMat::View(cv::descr_of(m_mat), m_mat.data, steps,
                               [this](){
                                   EXPECT_FALSE(m_callbackCalled);
                                   m_callbackCalled = true;
                               });
         } else {
-            return RMat::View(cv::descr_of(m_mat), m_mat.data, m_mat.step);
+            return RMat::View(cv::descr_of(m_mat), m_mat.data, steps);
         }
     }
     virtual cv::GMatDesc desc() const override { return cv::descr_of(m_mat); }
@@ -42,8 +46,12 @@ public:
         : m_deviceMat(m), m_hostMat(m.clone()), m_callbackCalled(callbackCalled)
     {}
     virtual RMat::View access(RMat::Access access) override {
+        RMat::View::stepsT steps(m_hostMat.dims);
+        for (int i = 0; i < m_hostMat.dims; i++) {
+            steps[i] = m_hostMat.step[i];
+        }
         if (access == RMat::Access::W) {
-            return RMat::View(cv::descr_of(m_hostMat), m_hostMat.data, m_hostMat.step,
+            return RMat::View(cv::descr_of(m_hostMat), m_hostMat.data, steps,
                               [this](){
                                   EXPECT_FALSE(m_callbackCalled);
                                   m_callbackCalled = true;
@@ -51,7 +59,7 @@ public:
                               });
         } else {
             m_deviceMat.copyTo(m_hostMat);
-            return RMat::View(cv::descr_of(m_hostMat), m_hostMat.data, m_hostMat.step);
+            return RMat::View(cv::descr_of(m_hostMat), m_hostMat.data, steps);
         }
     }
     virtual cv::GMatDesc desc() const override { return cv::descr_of(m_hostMat); }
