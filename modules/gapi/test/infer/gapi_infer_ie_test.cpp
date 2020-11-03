@@ -403,7 +403,7 @@ TEST(TestAgeGenderIE, GenericInfer)
     normAssert(cv::gapi::ie::util::to_ocv(ie_gender), gapi_gender, "Test gender output");
 }
 
-TEST(TestAgeGenderIE, InvalidConfig)
+TEST(TestAgeGenderIE, InvalidConfigGeneric)
 {
     initDLDTDataPath();
 
@@ -428,6 +428,81 @@ TEST(TestAgeGenderIE, InvalidConfig)
 
     EXPECT_ANY_THROW(comp.compile(cv::GMatDesc{CV_8U,3,cv::Size{320, 240}},
                      cv::compile_args(cv::gapi::networks(pp))));
+}
+
+TEST(TestAgeGenderIE, CPUConfigGeneric)
+{
+    initDLDTDataPath();
+
+    std::string model_path   = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
+    std::string weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    std::string device_id    = "CPU";
+
+    // Configure & run G-API
+    cv::GMat in;
+    GInferInputs inputs;
+    inputs["data"] = in;
+
+    auto outputs = cv::gapi::infer<cv::gapi::Generic>("age-gender-generic", inputs);
+    auto age     = outputs.at("age_conv3");
+    auto gender  = outputs.at("prob");
+    cv::GComputation comp(cv::GIn(in), cv::GOut(age, gender));
+
+    auto pp = cv::gapi::ie::Params<cv::gapi::Generic>{"age-gender-generic",
+                                                       model_path,
+                                                       weights_path,
+                                                       device_id}.pluginConfig({{"ENFORCE_BF16", "NO"}});
+
+    EXPECT_NO_THROW(comp.compile(cv::GMatDesc{CV_8U,3,cv::Size{320, 240}},
+                    cv::compile_args(cv::gapi::networks(pp))));
+}
+
+TEST(TestAgeGenderIE, InvalidConfig)
+{
+    initDLDTDataPath();
+
+    std::string model_path   = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
+    std::string weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    std::string device_id    = "CPU";
+
+    using AGInfo = std::tuple<cv::GMat, cv::GMat>;
+    G_API_NET(AgeGender, <AGInfo(cv::GMat)>, "test-age-gender");
+
+    cv::GMat in;
+    cv::GMat age, gender;
+    std::tie(age, gender) = cv::gapi::infer<AgeGender>(in);
+    cv::GComputation comp(cv::GIn(in), cv::GOut(age, gender));
+
+    auto pp = cv::gapi::ie::Params<AgeGender> {
+        model_path, weights_path, device_id
+    }.cfgOutputLayers({ "age_conv3", "prob" }).pluginConfig({{"unsupported_config", "some_value"}});
+
+    EXPECT_ANY_THROW(comp.compile(cv::GMatDesc{CV_8U,3,cv::Size{320, 240}},
+                     cv::compile_args(cv::gapi::networks(pp))));
+}
+
+TEST(TestAgeGenderIE, CPUConfig)
+{
+    initDLDTDataPath();
+
+    std::string model_path   = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
+    std::string weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    std::string device_id    = "CPU";
+
+    using AGInfo = std::tuple<cv::GMat, cv::GMat>;
+    G_API_NET(AgeGender, <AGInfo(cv::GMat)>, "test-age-gender");
+
+    cv::GMat in;
+    cv::GMat age, gender;
+    std::tie(age, gender) = cv::gapi::infer<AgeGender>(in);
+    cv::GComputation comp(cv::GIn(in), cv::GOut(age, gender));
+
+    auto pp = cv::gapi::ie::Params<AgeGender> {
+        model_path, weights_path, device_id
+    }.cfgOutputLayers({ "age_conv3", "prob" }).pluginConfig({{"ENFORCE_BF16", "NO"}});
+
+    EXPECT_NO_THROW(comp.compile(cv::GMatDesc{CV_8U,3,cv::Size{320, 240}},
+                    cv::compile_args(cv::gapi::networks(pp))));
 }
 
 } // namespace opencv_test
