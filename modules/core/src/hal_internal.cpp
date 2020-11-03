@@ -100,7 +100,7 @@ template <typename fptype> static inline int
 lapack_LU(fptype* a, size_t a_step, int m, fptype* b, size_t b_step, int n, int* info)
 {
     int lda = (int)(a_step / sizeof(fptype)), sign = 0;
-    int* piv = new int[m];
+    std::vector<int> piv(m+1);
 
     transpose_square_inplace(a, lda, m);
 
@@ -109,33 +109,34 @@ lapack_LU(fptype* a, size_t a_step, int m, fptype* b, size_t b_step, int n, int*
         if(n == 1 && b_step == sizeof(fptype))
         {
             if(typeid(fptype) == typeid(float))
-                sgesv_(&m, &n, (float*)a, &lda, piv, (float*)b, &m, info);
+                sgesv_(&m, &n, (float*)a, &lda, &piv[0], (float*)b, &m, info);
             else if(typeid(fptype) == typeid(double))
-                dgesv_(&m, &n, (double*)a, &lda, piv, (double*)b, &m, info);
+                dgesv_(&m, &n, (double*)a, &lda, &piv[0], (double*)b, &m, info);
         }
         else
         {
             int ldb = (int)(b_step / sizeof(fptype));
-            fptype* tmpB = new fptype[m*n];
+            std::vector<fptype> tmpB(m*n+1);
 
-            transpose(b, ldb, tmpB, m, m, n);
+            transpose(b, ldb, &tmpB[0], m, m, n);
 
             if(typeid(fptype) == typeid(float))
-                sgesv_(&m, &n, (float*)a, &lda, piv, (float*)tmpB, &m, info);
+                sgesv_(&m, &n, (float*)a, &lda, &piv[0], (float*)&tmpB[0], &m, info);
             else if(typeid(fptype) == typeid(double))
-                dgesv_(&m, &n, (double*)a, &lda, piv, (double*)tmpB, &m, info);
+                dgesv_(&m, &n, (double*)a, &lda, &piv[0], (double*)&tmpB[0], &m, info);
 
-            transpose(tmpB, m, b, ldb, n, m);
-            delete[] tmpB;
+            transpose(&tmpB[0], m, b, ldb, n, m);
         }
     }
     else
     {
         if(typeid(fptype) == typeid(float))
-            sgetrf_(&m, &m, (float*)a, &lda, piv, info);
+            sgetrf_(&m, &m, (float*)a, &lda, &piv[0], info);
         else if(typeid(fptype) == typeid(double))
-            dgetrf_(&m, &m, (double*)a, &lda, piv, info);
+            dgetrf_(&m, &m, (double*)a, &lda, &piv[0], info);
     }
+
+    int retcode = *info >= 0 ? CV_HAL_ERROR_OK : CV_HAL_ERROR_NOT_IMPLEMENTED;
 
     if(*info == 0)
     {
@@ -146,8 +147,7 @@ lapack_LU(fptype* a, size_t a_step, int m, fptype* b, size_t b_step, int n, int*
     else
         *info = 0; //in opencv LU function zero means error
 
-    delete[] piv;
-    return CV_HAL_ERROR_OK;
+    return retcode;
 }
 
 template <typename fptype> static inline int
@@ -192,7 +192,7 @@ lapack_Cholesky(fptype* a, size_t a_step, int m, fptype* b, size_t b_step, int n
     if(lapackStatus == 0) *info = true;
     else *info = false; //in opencv Cholesky function false means error
 
-    return CV_HAL_ERROR_OK;
+    return lapackStatus >= 0 ? CV_HAL_ERROR_OK : CV_HAL_ERROR_NOT_IMPLEMENTED;
 }
 
 template <typename fptype> static inline int
@@ -299,6 +299,9 @@ lapack_QR(fptype* a, size_t a_step, int m, int n, int k, fptype* b, size_t b_ste
             else if (typeid(fptype) == typeid(double))
                 dgels_(mode, &m, &n, &k, (double*)tmpA, &ldtmpA, (double*)b, &m, (double*)&work1, &lwork, info);
 
+            if (*info < 0)
+                return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
             lwork = cvRound(work1); //optimal buffer size
             std::vector<fptype> workBufMemHolder(lwork + 1);
             fptype* buffer = &workBufMemHolder.front();
@@ -320,6 +323,9 @@ lapack_QR(fptype* a, size_t a_step, int m, int n, int k, fptype* b, size_t b_ste
             else if (typeid(fptype) == typeid(double))
                 dgels_(mode, &m, &n, &k, (double*)tmpA, &ldtmpA, (double*)tmpB, &m, (double*)&work1, &lwork, info);
 
+            if (*info < 0)
+                return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
             lwork = cvRound(work1); //optimal buffer size
             std::vector<fptype> workBufMemHolder(lwork + 1);
             fptype* buffer = &workBufMemHolder.front();
@@ -338,6 +344,9 @@ lapack_QR(fptype* a, size_t a_step, int m, int n, int k, fptype* b, size_t b_ste
             sgeqrf_(&m, &n, (float*)tmpA, &ldtmpA, (float*)dst, (float*)&work1, &lwork, info);
         else if (typeid(fptype) == typeid(double))
             dgeqrf_(&m, &n, (double*)tmpA, &ldtmpA, (double*)dst, (double*)&work1, &lwork, info);
+
+        if (*info < 0)
+            return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
         lwork = cvRound(work1); //optimal buffer size
         std::vector<fptype> workBufMemHolder(lwork + 1);

@@ -25,9 +25,10 @@ appdoc = """
 import glob, re, os, shutil, subprocess, sys
 
 roots = ["cgemm_", "dgemm_", "sgemm_", "zgemm_",
-         "dgeev_", "dgesdd_", "dsyevr_",
-         "dgesv_", "dgetrf_", "dposv_", "dpotrf_", "dgels_", "dgeqrf_",
-         "sgesv_", "sgetrf_", "sposv_", "spotrf_", "sgels_", "sgeqrf_"
+         "dgeev_", "dgesdd_", 
+         #"dsyevr_",
+         #"dgesv_", "dgetrf_", "dposv_", "dpotrf_", "dgels_", "dgeqrf_",
+         #"sgesv_", "sgetrf_", "sposv_", "spotrf_", "sgels_", "sgeqrf_"
          ]
 banlist = ["slamch_", "slamc3_", "dlamch_", "dlamc3_", "lsame_", "xerbla_"]
 

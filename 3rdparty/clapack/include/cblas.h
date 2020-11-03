@@ -54,6 +54,43 @@ double slamc3_(float *a, float *b);
 double dlamch_(char* cmach);
 double dlamc3_(double *a, double *b);
 
+int dgels_(char *trans, int *m, int *n, int *nrhs, double *a,
+	int *lda, double *b, int *ldb, double *work, int *lwork, int *info);
+
+int dgesv_(int *n, int *nrhs, double *a, int *lda, int *ipiv,
+	double *b, int *ldb, int *info);
+
+int dgetrf_(int *m, int *n, double *a, int *lda, int *ipiv,
+	int *info);
+
+int dposv_(char *uplo, int *n, int *nrhs, double *a, int *
+	lda, double *b, int *ldb, int *info);
+
+int dpotrf_(char *uplo, int *n, double *a, int *lda, int *
+	info);
+
+int sgels_(char *trans, int *m, int *n, int *nrhs, float *a,
+	int *lda, float *b, int *ldb, float *work, int *lwork, int *info);
+
+int sgeev_(char *jobvl, char *jobvr, int *n, float *a, int *
+	lda, float *wr, float *wi, float *vl, int *ldvl, float *vr, int *
+	ldvr, float *work, int *lwork, int *info);
+
+int sgeqrf_(int *m, int *n, float *a, int *lda, float *tau,
+	float *work, int *lwork, int *info);
+
+int sgesv_(int *n, int *nrhs, float *a, int *lda, int *ipiv,
+	float *b, int *ldb, int *info);
+
+int sgetrf_(int *m, int *n, float *a, int *lda, int *ipiv,
+	int *info);
+
+int sposv_(char *uplo, int *n, int *nrhs, float *a, int *
+	lda, float *b, int *ldb, int *info);
+
+int spotrf_(char *uplo, int *n, float *a, int *lda, int *
+	info);
+
 int sgesdd_(char *jobz, int *m, int *n, float *a, int *lda,
 	float *s, float *u, int *ldu, float *vt, int *ldvt, float *work,
 	int *lwork, int *iwork, int *info);
