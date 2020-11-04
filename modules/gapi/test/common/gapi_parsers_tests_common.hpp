@@ -225,13 +225,26 @@ private:
 class ParserYoloTest
 {
 public:
-    cv::Mat generateYoloOutput(const int num_classes)
+    cv::Mat generateYoloOutput(const int num_classes, std::pair<bool,int> dims_config = {false, 4})
     {
-        std::vector<int> dims = { 1, 13, 13, (num_classes + 5) * 5 };
+        bool one_dim = false;
+        int num_dims = 0;
+        std::tie(one_dim, num_dims) = dims_config;
+        GAPI_Assert(num_dims <= 4);
+        GAPI_Assert((!one_dim && num_dims >= 3) ||
+                    ( one_dim && num_dims >= 1));
+        std::vector<int> dims(num_dims, 1);
+        if (one_dim) {
+            dims.back() = (num_classes+5)*5*13*13;
+        } else {
+            dims.back() = (num_classes+5)*5;
+            dims[num_dims-2] = 13;
+            dims[num_dims-3] = 13;
+        }
         cv::Mat mat(dims, CV_32FC1);
         auto data = mat.ptr<float>();
 
-        const size_t range = dims[0] * dims[1] * dims[2] * dims[3];
+        const size_t range = std::accumulate(dims.begin(), dims.end(), 1, std::multiplies<int>());
         for (size_t i = 0; i < range; ++i)
         {
             data[i] = static_cast<float>(std::rand()) / RAND_MAX;

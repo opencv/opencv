@@ -246,6 +246,28 @@ void parseSSD(const cv::Mat&  in_ssd_result,
     }
 }
 
+static void checkYoloDims(const MatSize& dims) {
+    const auto d = dims.dims();
+    // Accept 1x13x13xN and 13x13xN
+    GAPI_Assert(d >= 2);
+    if (d >= 3) {
+        if (dims[d-2] == 13) {
+            GAPI_Assert(dims[d-1]%5 == 0);
+            GAPI_Assert(dims[d-2] == 13);
+            GAPI_Assert(dims[d-3] == 13);
+            for (int i = 0; i < d-3; i++) {
+                GAPI_Assert(dims[i] == 1);
+            }
+            return;
+        }
+    }
+    // Accept 1x1x1xN, 1x1xN, 1xN
+    GAPI_Assert(dims[d-1]%(5*13*13) == 0);
+    for (int i = 0; i < d-1; i++) {
+        GAPI_Assert(dims[i] == 1);
+    }
+}
+
 void parseYolo(const cv::Mat&  in_yolo_result,
                const cv::Size& in_size,
                const float     confidence_threshold,
@@ -255,12 +277,12 @@ void parseYolo(const cv::Mat&  in_yolo_result,
                std::vector<int>&      out_labels)
 {
     const auto& dims = in_yolo_result.size;
-    GAPI_Assert(dims.dims() == 4);
-    GAPI_Assert(dims[0] == 1);
-    GAPI_Assert(dims[1] == 13);
-    GAPI_Assert(dims[2] == 13);
-    GAPI_Assert(dims[3] % 5 == 0); // 5 boxes
-    const auto num_classes = dims[3] / 5 - 5;
+    checkYoloDims(dims);
+    int acc = 1;
+    for (int i = 0; i < dims.dims(); i++) {
+        acc *= dims[i];
+    }
+    const auto num_classes = acc/(5*13*13)-5;
     GAPI_Assert(num_classes > 0);
     GAPI_Assert(0 < nms_threshold && nms_threshold <= 1);
     out_boxes.clear();
