@@ -33,6 +33,8 @@ protected:
 
     Quatd qNull{0, 0, 0, 0};
     Quatd qIdentity{1, 0, 0, 0};
+    AssumeType assumeUnit = ASSUME_UNIT;
+
 };
 
 TEST_F(QuatTest, constructor){
@@ -77,7 +79,7 @@ TEST_F(QuatTest, basicfuns){
     EXPECT_EQ(q1.conjugate(), q1Conj);
     EXPECT_EQ(q1.inv(), q1Inv);
     EXPECT_EQ(inv(q1), q1Inv);
-    EXPECT_EQ(q3.inv(true) * q3, qIdentity);
+    EXPECT_EQ(q3.inv(assumeUnit) * q3, qIdentity);
     EXPECT_EQ(q1.inv() * q1, qIdentity);
     EXPECT_ANY_THROW(inv(qNull));
     EXPECT_NO_THROW(q1.at(0));
@@ -88,6 +90,13 @@ TEST_F(QuatTest, basicfuns){
                                    1.0 / 3 , 14.0 / 15, 2.0 / 15);
     Mat q1RotMat = q1.toRotMat3x3();
     EXPECT_MAT_NEAR(q1RotMat, R, 1e-6);
+    Vec3d z_axis{0,0,1};
+    Quatd q_unit1 = Quatd::createFromAngleAxis(angle, z_axis);
+    Mat pointsA = (Mat_<double>(2, 3) << 1,0,0,1,0,1);
+    pointsA = pointsA.t();
+    Mat new_point = q_unit1.toRotMat3x3() * pointsA;
+    Mat afterRo = (Mat_<double>(3, 2) << -1,-1,0,0,0,1);
+    EXPECT_MAT_NEAR(afterRo, new_point, 1e-6);
     EXPECT_ANY_THROW(qNull.toRotVec());
     Vec3d rodVec{CV_PI/sqrt(3), CV_PI/sqrt(3), CV_PI/sqrt(3)};
     Vec3d q3Rod = q3.toRotVec();
@@ -95,8 +104,8 @@ TEST_F(QuatTest, basicfuns){
     EXPECT_NEAR(q3Rod[1], rodVec[1], 1e-6);
     EXPECT_NEAR(q3Rod[2], rodVec[2], 1e-6);
 
-    EXPECT_EQ(log(q1Unit, true), log(q1Unit));
-    EXPECT_EQ(log(qIdentity, true), qNull);
+    EXPECT_EQ(log(q1Unit, assumeUnit), log(q1Unit));
+    EXPECT_EQ(log(qIdentity, assumeUnit), qNull);
     EXPECT_EQ(log(q3), Quatd(0, angle * unitAxis[0] / 2, angle * unitAxis[1] / 2, angle * unitAxis[2] / 2));
     EXPECT_ANY_THROW(log(qNull));
     EXPECT_EQ(log(Quatd(exp(1), 0, 0, 0)), qIdentity);
@@ -106,11 +115,11 @@ TEST_F(QuatTest, basicfuns){
     EXPECT_EQ(exp(Quatd(0, angle * unitAxis[0] / 2, angle * unitAxis[1] / 2, angle * unitAxis[2] / 2)), q3);
 
     EXPECT_EQ(power(q3, 2), Quatd::createFromAngleAxis(2*angle, axis));
-    EXPECT_EQ(power(Quatd(0.5, 0.5, 0.5, 0.5), 2.0, true), Quatd(-0.5,0.5,0.5,0.5));
+    EXPECT_EQ(power(Quatd(0.5, 0.5, 0.5, 0.5), 2.0, assumeUnit), Quatd(-0.5,0.5,0.5,0.5));
     EXPECT_EQ(power(Quatd(0.5, 0.5, 0.5, 0.5), -2.0), Quatd(-0.5,-0.5,-0.5,-0.5));
     EXPECT_EQ(sqrt(q1), power(q1, 0.5));
     EXPECT_EQ(exp(q3 * log(q1)), power(q1, q3));
-    EXPECT_EQ(exp(q1 * log(q3)), power(q3, q1, true));
+    EXPECT_EQ(exp(q1 * log(q3)), power(q3, q1, assumeUnit));
     EXPECT_EQ(crossProduct(q1, q3), (q1 * q3 - q3 * q1) / 2);
     EXPECT_EQ(sinh(qNull), qNull);
     EXPECT_EQ(sinh(q1), (exp(q1) - exp(-q1)) / 2);
@@ -183,7 +192,7 @@ TEST_F(QuatTest, quatAttrs){
 
     EXPECT_EQ(angleQ1, q1.getAngle());
     EXPECT_EQ(angleQ1, q1Unit.getAngle());
-    EXPECT_EQ(angleQ1, q1Unit.getAngle(true));
+    EXPECT_EQ(angleQ1, q1Unit.getAngle(assumeUnit));
     EXPECT_EQ(0, qIdentity.getAngle());
     EXPECT_ANY_THROW(qNull.getAxis());
     EXPECT_NEAR(axis1[0], q1axis1[0], 1e-6);
@@ -206,14 +215,14 @@ TEST_F(QuatTest, interpolation){
     EXPECT_EQ(Quatd::nlerp(q3NrNn2, q3Norm2, 0), qNoRot);
     EXPECT_EQ(Quatd::nlerp(q3NrNn2, q3Norm2, 1), q3);
     EXPECT_EQ(Quatd::nlerp(q3NrNn2, q3Norm2, 0.5), qLerpInter.normalize());
-    EXPECT_EQ(Quatd::nlerp(qNoRot, q3, 0, true), qNoRot);
-    EXPECT_EQ(Quatd::nlerp(qNoRot, q3, 1, true), q3);
-    EXPECT_EQ(Quatd::nlerp(qNoRot, q3, 0.5, true), qLerpInter.normalize());
+    EXPECT_EQ(Quatd::nlerp(qNoRot, q3, 0, assumeUnit), qNoRot);
+    EXPECT_EQ(Quatd::nlerp(qNoRot, q3, 1, assumeUnit), q3);
+    EXPECT_EQ(Quatd::nlerp(qNoRot, q3, 0.5, assumeUnit), qLerpInter.normalize());
     Quatd q3Minus(-q3);
     EXPECT_EQ(Quatd::nlerp(qNoRot, q3, 0.4), -Quatd::nlerp(qNoRot, q3Minus, 0.4));
-    EXPECT_EQ(Quatd::slerp(qNoRot, q3, 0, true), qNoRot);
-    EXPECT_EQ(Quatd::slerp(qNoRot, q3, 1, true), q3);
-    EXPECT_EQ(Quatd::slerp(qNoRot, q3, 0.5, true), -Quatd::nlerp(qNoRot, -q3, 0.5, true));
+    EXPECT_EQ(Quatd::slerp(qNoRot, q3, 0, assumeUnit), qNoRot);
+    EXPECT_EQ(Quatd::slerp(qNoRot, q3, 1, assumeUnit), q3);
+    EXPECT_EQ(Quatd::slerp(qNoRot, q3, 0.5, assumeUnit), -Quatd::nlerp(qNoRot, -q3, 0.5, assumeUnit));
     EXPECT_EQ(Quatd::slerp(qNoRot, q1, 0.5), Quatd(0.76895194, 0.2374325, 0.35614876, 0.47486501));
     EXPECT_EQ(Quatd::slerp(-qNoRot, q1, 0.5), Quatd(0.76895194, 0.2374325, 0.35614876, 0.47486501));
     EXPECT_EQ(Quatd::slerp(qNoRot, -q1, 0.5), -Quatd::slerp(-qNoRot, q1, 0.5));
@@ -225,7 +234,7 @@ TEST_F(QuatTest, interpolation){
     EXPECT_ANY_THROW(Quatd::spline(qNull, tr1, tr2, tr3, 0));
     EXPECT_EQ(Quatd::spline(tr1, tr2, tr3, tr4, 0), tr2);
     EXPECT_EQ(Quatd::spline(tr1, tr2, tr3, tr4, 1), tr3);
-    EXPECT_EQ(Quatd::spline(tr1, tr2, tr3, tr4, 0.6, true), Quatd::spline(tr1, tr2, tr3, tr4, 0.6));
+    EXPECT_EQ(Quatd::spline(tr1, tr2, tr3, tr4, 0.6, assumeUnit), Quatd::spline(tr1, tr2, tr3, tr4, 0.6));
     EXPECT_EQ(Quatd::spline(tr1, tr2, tr3, tr3, 0.5), Quatd::spline(tr1, -tr2, tr3, tr3, 0.5));
     EXPECT_EQ(Quatd::spline(tr1, tr2, tr3, tr3, 0.5), -Quatd::spline(-tr1, -tr2, -tr3, tr3, 0.5));
     EXPECT_EQ(Quatd::spline(tr1, tr2, tr3, tr3, 0.5), Quatd(0.336889853392, 0.543600719487, 0.543600719487, 0.543600719487));

@@ -40,17 +40,17 @@ static constexpr double CV_QUAT_EPS = 1.e-6;
  *      \f[q = w + x\boldsymbol{i} + y\boldsymbol{j} + z\boldsymbol{k}\f]
  *      \f[q = [w, x, y, z]\f]
  *      \f[q = [w, \boldsymbol{v}] \f]
- *      \f[q = ||q||[\cos\theta, u_x\sin\theta,u_y\sin\theta,  u_z\sin\theta].\f]
- *      \f[q = ||q||[\cos\theta, \boldsymbol{u}\sin\theta]\f]
- * where \f$\theta = \frac{\psi}{2}\f$, \f$\psi\f$ represents rotation angle,
+ *      \f[q = ||q||[\cos\psi, u_x\sin\psi,u_y\sin\psi,  u_z\sin\psi].\f]
+ *      \f[q = ||q||[\cos\psi, \boldsymbol{u}\sin\psi]\f]
+ * where \f$\psi = \frac{\theta}{2}\f$, \f$\theta\f$ represents rotation angle,
  * \f$\boldsymbol{u} = [u_x, u_y, u_z]\f$ represents normalized rotation axis,
- * and \f$||q||\f$ represents the norm of \f$q\f$
+ * and \f$||q||\f$ represents the norm of \f$q\f$.
  *
  * A unit quaternion is usually represents rotation, which has the form:
- *      \f[q = [\cos\theta, u_x\sin\theta,u_y\sin\theta,  u_z\sin\theta].\f]
+ *      \f[q = [\cos\psi, u_x\sin\psi,u_y\sin\psi,  u_z\sin\psi].\f]
  *
- * To create a quaternion representing the rotation around the axis \f$\boldsymbol{v}\f$
- * with angle \f$\psi\f$, you can use
+ * To create a quaternion representing the rotation around the axis \f$\boldsymbol{u}\f$
+ * with angle \f$\theta\f$, you can use
  * ```
  * using namespace cv;
  * double angle = CV_PI;
@@ -97,9 +97,9 @@ static constexpr double CV_QUAT_EPS = 1.e-6;
  *
  * Quatd::spline(q0, q0, q1, q1, t)
  * ```
- * spline can smoothly connect show the rotation between multiple quaternions
+ * spline can smoothly connect rotations of  multiple quaternions
  *
- * Three ways to get a element in Quaternion
+ * Three ways to get an element in Quaternion
  * ```
  * Quatf q(1,2,3,4);
  * std::cout << q.w << std::endl; // w=1, x=2, y=3, z=4
@@ -111,11 +111,30 @@ template <typename _Tp> class Quat;
 template <typename S>
 std::ostream& operator<<(std::ostream&, const Quat<S>&);
 
+//! Unit quaternion flag
+enum AssumeType
+{
+    /**
+     * This flag is specified by default.
+     * If this flag is specified, the input quaternions are assumed to be not unit quaternions.
+     * It can guarantee the correctness of the calculations,
+     * although the calculation speed will be slower than the flag ASSUME_UNIT.
+     */
+    ASSUME_NOT_UNIT,
+    /**
+     * If this flag is specified, the input quaternions are assumed to be unit quaternions which
+     * will save some computations. However, if this flag is specified without unit quaternion,
+     * the program correctness of the result will not be guaranteed.
+     */
+    ASSUME_UNIT
+};
+
 template <typename _Tp>
 class Quat
 {
-static_assert(std::is_floating_point<_Tp>::value, "Quaternion only make sense with type of float and double");
+static_assert(std::is_floating_point<_Tp>::value, "Quaternion only make sense with type of float or double");
 using value_type = _Tp;
+
 public:
     Quat() = default;
 
@@ -132,7 +151,8 @@ public:
     /**
      * @brief from an angle, axis. Axis will be normalized in this function. And
      * it generates
-     * \f[q = [\cos\theta, u_x\sin\theta,u_y\sin\theta,  u_z\sin\theta].\f]
+     * \f[q = [\cos\psi, u_x\sin\psi,u_y\sin\psi,  u_z\sin\psi].\f]
+     * where \f$\psi = \frac{\theta}{2}\f$, \f$\theta\f$ is the rotation angle.
      */
     static Quat<_Tp> createFromAngleAxis(const _Tp angle, const Vec<_Tp, 3> &axis);
 
@@ -143,7 +163,7 @@ public:
 
     /**
      * @brief from a rotation vector
-     * Rotation vector \f$r\f$ has the form \f$\psi \cdot \boldsymbol{u}\f$, where \f$\psi\f$
+     * \f$r\f$ has the form \f$\theta \cdot \boldsymbol{u}\f$, where \f$\theta\f$
      * represents rotation angle and \f$\boldsymbol{u}\f$ represents normalized rotation axis.
      *
      * Angle and axis could be easily derived as:
@@ -151,13 +171,13 @@ public:
      * \begin{equation}
      * \begin{split}
      * \psi &= ||r||\\
-     * \boldsymbol{u} &= \frac{r}{\psi}
+     * \boldsymbol{u} &= \frac{r}{\theta}
      * \end{split}
      * \end{equation}
      * \f]
      * Then a quaternion can be calculated by
-     *  \f[q = [\cos\theta, \boldsymbol{u}\sin\theta]\f]
-     *  where \f$\theta = \psi / 2 \f$
+     *  \f[q = [\cos\psi, \boldsymbol{u}\sin\psi]\f]
+     *  where \f$\psi = \theta / 2 \f$
      */
     static Quat<_Tp> createFromRvec(InputArray rvec);
 
@@ -179,7 +199,7 @@ public:
 
     /**
      * @brief return the conjugate of this quaternion.
-     * \f[q.conjugate() = (w, -x, -y, -z)\f].
+     * \f[q.conjugate() = (w, -x, -y, -z).\f]
      */
     Quat<_Tp> conjugate() const;
 
@@ -187,6 +207,7 @@ public:
      *
      * @brief return the value of exponential value.
      * \f[\exp(q) = e^w (\cos||\boldsymbol{v}||+ \frac{v}{||\boldsymbol{v}||})\sin||\boldsymbol{v}||\f]
+     * where \f$\boldsymbol{v} = [x, y, z].\f$
      * @param q a quaternion.
      *
      * For example:
@@ -200,7 +221,8 @@ public:
 
     /**
      * @brief return the value of exponential value.
-     * \f[\exp(q) = e^w (\cos||\boldsymbol{v}||+ \frac{v}{||\boldsymbol{v}||}\sin||\boldsymbol{v}||)\f].
+     * \f[\exp(q) = e^w (\cos||\boldsymbol{v}||+ \frac{v}{||\boldsymbol{v}||}\sin||\boldsymbol{v}||)\f]
+     * where \f$\boldsymbol{v} = [x, y, z].\f$
      *
      * For example
      * ```
@@ -212,9 +234,10 @@ public:
 
     /**
      * @brief return the value of logarithm function.
-     * \f[\ln(q) = \ln||q|| + \frac{\boldsymbol{v}}{||\boldsymbol{v}||}\arccos\frac{a}{||q||}\f].
+     * \f[\ln(q) = \ln||q|| + \frac{\boldsymbol{v}}{||\boldsymbol{v}||}\arccos\frac{w}{||q||}.\f]
+     * where \f$\boldsymbol{v} = [x, y, z].\f$
      * @param q a quaternion.
-     * @param assumeUnit if true, q should be a unit quaternion and this function will save some computations.
+     * @param assumeUnit if ASSUME_UNIT, q assume to be a unit quaternion and this function will save some computations.
      *
      * For example
      * ```
@@ -223,103 +246,109 @@ public:
      * ```
      */
     template <typename T>
-    friend Quat<T> log(const Quat<T> &q, bool assumeUnit);
+    friend Quat<T> log(const Quat<T> &q, AssumeType assumeUnit);
 
     /**
      * @brief return the value of logarithm function.
      *  \f[\ln(q) = \ln||q|| + \frac{\boldsymbol{v}}{||\boldsymbol{v}||}\arccos\frac{w}{||q||}\f].
-     * @param assumeUnit if true, this quaternion should be a unit quaternion and this function will save some computations.
+     * where \f$\boldsymbol{v} = [x, y, z].\f$
+     * @param assumeUnit if ASSUME_UNIT, this quaternion assume to be a unit quaternion and this function will save some computations.
      *
      * For example
      * ```
      * Quatd q(1,2,3,4);
      * q.log();
      *
+     * AssumeType assumeUnit = ASSUME_UNIT;
      * Quatd q1(1,2,3,4);
-     * q1.normalize().log(true);
+     * q1.normalize().log(assumeUnit);
      * ```
      */
-    Quat<_Tp> log(bool assumeUnit=false) const;
+    Quat<_Tp> log(AssumeType assumeUnit=ASSUME_NOT_UNIT) const;
 
     /**
      * @brief return the value of power function with index \f$x\f$.
-     * \f[q^x = ||q||(cos(x\theta) + \boldsymbol{u}sin(x\theta)))\f].
+     * \f[q^x = ||q||(cos(x\theta) + \boldsymbol{u}sin(x\theta))).\f]
      * @param q a quaternion.
      * @param x index of exponentiation.
-     * @param assumeUnit if true, quaternion q should be a unit quaternion and this function will save some computations.
+     * @param assumeUnit if ASSUME_UNIT, quaternion q assume to be a unit quaternion and this function will save some computations.
      *
      * For example
      * ```
-     * quatd q(1,2,3,4);
+     * Quatd q(1,2,3,4);
      * power(q, 2);
      *
+     * AssumeType assumeUnit = ASSUME_UNIT;
      * double angle = CV_PI;
      * Vec3d axis{0, 0, 1};
-     * Quatd q1(angle, axis); //generate a unit quat by axis and angle
-     * power(q1, 2, true);
+     * Quatd q1 = Quatd::createFromAngleAxis(angle, axis); //generate a unit quat by axis and angle
+     * power(q1, 2, assumeUnit);//This assumeUnit means q1 is a unit quaternion.
      * ```
      */
     template <typename T, typename _T>
-    friend Quat<T> power(const Quat<T> &q, _T x, bool assumeUnit);
+    friend Quat<T> power(const Quat<T> &q, _T x, AssumeType assumeUnit);
 
     /**
      * @brief return the value of power function with index \f$x\f$.
-     * \f[q^x = ||q||(\cos(x\theta) + \boldsymbol{u}\sin(x\theta)))\f].
+     * \f[q^x = ||q||(\cos(x\theta) + \boldsymbol{u}\sin(x\theta))).\f]
      * @param x index of exponentiation.
-     * @param assumeUnit if true, this quaternion should be a unit quaternion and this function will save some computations.
+     * @param assumeUnit if ASSUME_UNIT, this quaternion assume to be a unit quaternion and this function will save some computations.
      *
      * For example
      * ```
-     * quatd q(1,2,3,4);
+     * Quatd q(1,2,3,4);
      * q.power(2);
      *
+     * AssumeType assumeUnit = ASSUME_UNIT;
      * double angle = CV_PI;
      * Vec3d axis{0, 0, 1};
-     * Quatd q1(angle, axis); //generate a unit quat by axis and angle
-     * q1.power(2, true); //true means q is a unit quaternion
+     * Quatd q1 = Quatd::createFromAngleAxis(angle, axis); //generate a unit quat by axis and angle
+     * q1.power(2, assumeUnit); //This assumeUnt means q1 is a unit quaternion
      * ```
      */
     template <typename _T>
-    Quat<_Tp> power(_T x, bool assumeUnit=false) const;
+    Quat<_Tp> power(_T x, AssumeType assumeUnit=ASSUME_NOT_UNIT) const;
 
     /**
      * @brief return \f$\sqrt{q}\f$.
      * @param q a quaternion.
-     * @param assumeUnit if true, quaternion q should be a unit quaternion and this function will save some computations.
+     * @param assumeUnit if ASSUME_UNIT, quaternion q assume to be a unit quaternion and this function will save some computations.
      *
      * For example
      * ```
      * Quatf q(1,2,3,4);
      * sqrt(q);
      *
+     * AssumeType assumeUnit = ASSUME_UNIT;
      * q = {1,0,0,0};
-     * sqrt(q, true); //true means q is a unit quaternion
+     * sqrt(q, assumeUnit); //This assumeUnit means q is a unit quaternion.
      * ```
      */
     template <typename T>
-    friend Quat<T> sqrt(const Quat<T> &q, bool assumeUnit);
+    friend Quat<T> sqrt(const Quat<T> &q, AssumeType assumeUnit);
 
     /**
      * @brief return \f$\sqrt{q}\f$.
-     * @param assumeUnit if true, this quaternion should be a unit quaternion and this function will save some computations.
+     * @param assumeUnit if ASSUME_UNIT, this quaternion assume to be a unit quaternion and this function will save some computations.
      *
      * For example
      * ```
      * Quatf q(1,2,3,4);
      * q.sqrt();
      *
+     * AssumeType assumeUnit = ASSUME_UNIT;
      * q = {1,0,0,0};
-     * q.sqrt(true); //true means q is a unit quaternion
+     * q.sqrt(assumeUnit); //This assumeUnit means q is a unit quaternion
      * ```
      */
-    Quat<_Tp> sqrt(bool assumeUnit=false) const;
+    Quat<_Tp> sqrt(AssumeType assumeUnit=ASSUME_NOT_UNIT) const;
 
     /**
      * @brief return the value of power function with quaternion \f$q\f$.
-     * \f[p^q = e^{q\ln(p)}\f].
+     * \f[p^q = e^{q\ln(p)}.\f]
      * @param p base quaternion of power function.
      * @param q index quaternion of power function.
-     * @param assumeUnit if true, quaternion \f$p\f$ should be a unit quaternion and this function will save some computations.
+     * @param assumeUnit if ASSUME_UNIT, quaternion \f$p\f$ assume to be a unit quaternion and this function will save some computations.
      *
      * For example
      * ```
@@ -327,18 +356,19 @@ public:
      * Quatd q(5,6,7,8);
      * power(p, q);
      *
+     * AssumeType assumeUnit = ASSUME_UNIT;
      * p = p.normalize();
-     * power(p, q, true); //true means p is a unit quaternion
+     * power(p, q, assumeUnit); //This assumeUnit means p is a unit quaternion
      * ```
      */
     template <typename T>
-    friend Quat<T> power(const Quat<T> &p, const Quat<T> &q, bool assumeUnit);
+    friend Quat<T> power(const Quat<T> &p, const Quat<T> &q, AssumeType assumeUnit);
 
     /**
      * @brief return the value of power function with quaternion \f$q\f$.
-     * \f[p^q = e^{q\ln(p)}\f].
+     * \f[p^q = e^{q\ln(p)}.\f]
      * @param q index quaternion of power function.
-     * @param assumeUnit if true, this quaternion should be a unit quaternion and this function will save some computations.
+     * @param assumeUnit if ASSUME_UNIT, this quaternion assume to be a unit quaternion and this function will save some computations.
      *
      * For example
      * ```
@@ -346,23 +376,24 @@ public:
      * Quatd q(5,6,7,8);
      * p.power(q);
      *
+     * AssumeType assumeUnit = ASSUME_UNIT;
      * p = p.normalize();
-     * p.power(q, true); //true means p is a unit quaternion
+     * p.power(q, assumeUnit); //This assumeUnit means p is a unit quaternion
      * ```
      */
-    Quat<_Tp> power(const Quat<_Tp> &q, bool assumeUnit=false) const;
+    Quat<_Tp> power(const Quat<_Tp> &q, AssumeType assumeUnit=ASSUME_NOT_UNIT) const;
 
     /**
      * @brief return the crossProduct between \f$p = (a, b, c, d) = (a, \boldsymbol{u})\f$ and \f$q = (w, x, y, z) = (w, \boldsymbol{v})\f$.
-     * \f[p \times q = \frac{pq- qp}{2}\f].
-     * \f[p \times q = \boldsymbol{u} \times \boldsymbol{v}\f].
-     * \f[p \times q = (cz-dy)i + (dx-bz)j + (by-xc)k \f].
+     * \f[p \times q = \frac{pq- qp}{2}\f]
+     * \f[p \times q = \boldsymbol{u} \times \boldsymbol{v}\f]
+     * \f[p \times q = (cz-dy)i + (dx-bz)j + (by-xc)k \f]
      *
      * For example
      * ```
      * Quatd q{1,2,3,4};
      * Quatd p{5,6,7,8};
-     * crossProduct(p, q)
+     * crossProduct(p, q);
      * ```
      */
     template <typename T>
@@ -370,9 +401,9 @@ public:
 
     /**
      * @brief return the crossProduct between \f$p = (a, b, c, d) = (a, \boldsymbol{u})\f$ and \f$q = (w, x, y, z) = (w, \boldsymbol{v})\f$.
-     * \f[p \times q = \frac{pq- qp}{2}\f].
-     * \f[p \times q = \boldsymbol{u} \times \boldsymbol{v}\f].
-     * \f[p \times q = (cz-dy)i + (dx-bz)j + (by-xc)k \f].
+     * \f[p \times q = \frac{pq- qp}{2}.\f]
+     * \f[p \times q = \boldsymbol{u} \times \boldsymbol{v}.\f]
+     * \f[p \times q = (cz-dy)i + (dx-bz)j + (by-xc)k. \f]
      *
      * For example
      * ```
@@ -385,14 +416,14 @@ public:
 
     /**
      * @brief return the norm of quaternion.
-     * \f[||q|| = \sqrt{w^2 + x^2 + y^2 + z^2}\f].
+     * \f[||q|| = \sqrt{w^2 + x^2 + y^2 + z^2}.\f]
      */
     _Tp norm() const;
 
     /**
      * @brief return a normalized \f$p\f$.
      * \f[p = \frac{q}{||q||}\f]
-     * where \f$p\f$ satisfies \f$(p.x)^2 + (p.y)^2 + (p.z)^2 + (p.w)^2 = 1.\f$.
+     * where \f$p\f$ satisfies \f$(p.x)^2 + (p.y)^2 + (p.z)^2 + (p.w)^2 = 1.\f$
      */
     Quat<_Tp> normalize() const;
 
@@ -400,39 +431,42 @@ public:
      * @brief return \f$q^{-1}\f$ which is an inverse of \f$q\f$
      * which satisfies \f$q * q^{-1} = 1\f$.
      * @param q a quaternion.
-     * @param assumeUnit if true, quaternion q should be a unit quaternion and this function will save some computations.
+     * @param assumeUnit if ASSUME_UNIT, quaternion q assume to be a unit quaternion and this function will save some computations.
      *
      * For example
      * ```
      * Quatd q(1,2,3,4);
      * inv(q);
      *
+     * AssumeType assumeUnit = ASSUME_UNIT;
      * q = q.normalize();
-     * inv(q, true);
+     * inv(q, assumeUnit);//This assumeUnit means p is a unit quaternion
      * ```
      */
     template <typename T>
-    friend Quat<T> inv(const Quat<T> &q, bool assumeUnit);
+    friend Quat<T> inv(const Quat<T> &q, AssumeType assumeUnit);
 
     /**
      * @brief return \f$q^{-1}\f$ which is an inverse of \f$q\f$
      * satisfying \f$q * q^{-1} = 1\f$.
-     * @param assumeUnit if true, quaternion q should be a unit quaternion and this function will save some computations.
+     * @param assumeUnit if ASSUME_UNIT, quaternion q assume to be a unit quaternion and this function will save some computations.
      *
      * For example
      * ```
      * Quatd q(1,2,3,4);
      * q.inv();
      *
+     * AssumeType assumeUnit = ASSUME_UNIT;
      * q = q.normalize();
-     * q.inv(true);
+     * q.inv(assumeUnit);  //assumeUnit means p is a unit quaternion
      * ```
      */
-    Quat<_Tp> inv(bool assumeUnit=false) const;
+    Quat<_Tp> inv(AssumeType assumeUnit=ASSUME_NOT_UNIT) const;
 
     /**
      * @brief return sinh value of quaternion q, sinh could be calculated as:
-     * \f[\sinh(p) = \sin(w)\cos(||\boldsymbol{v}||) + \cosh(w)\frac{v}{||\boldsymbol{v}||}\sin||\boldsymbol{v}||\f].
+     * \f[\sinh(p) = \sin(w)\cos(||\boldsymbol{v}||) + \cosh(w)\frac{v}{||\boldsymbol{v}||}\sin||\boldsymbol{v}||\f]
+     * where \f$\boldsymbol{v} = [x, y, z].\f$
      * @param q a quaternion.
      *
      * For example
@@ -446,7 +480,8 @@ public:
 
     /**
      * @brief return sinh value of this quaternion, sinh could be calculated as:
-     * \f$\sinh(p) = \sin(w)\cos(||\boldsymbol{v}||) + \cosh(w)\frac{v}{||\boldsymbol{v}||}\sin||\boldsymbol{v}||\f$.
+     * \f$\sinh(p) = \sin(w)\cos(||\boldsymbol{v}||) + \cosh(w)\frac{v}{||\boldsymbol{v}||}\sin||\boldsymbol{v}||\f$
+     * where \f$\boldsymbol{v} = [x, y, z].\f$
      *
      * For example
      * ```
@@ -458,7 +493,8 @@ public:
 
     /**
      * @brief return cosh value of quaternion q, cosh could be calculated as:
-     * \f[\cosh(p) = \cosh(w) * \cos(||\boldsymbol{v}||) + \sinh(w)\frac{\boldsymbol{v}}{||\boldsymbol{v}||}\sin(||\boldsymbol{v}||)\f].
+     * \f[\cosh(p) = \cosh(w) * \cos(||\boldsymbol{v}||) + \sinh(w)\frac{\boldsymbol{v}}{||\boldsymbol{v}||}\sin(||\boldsymbol{v}||)\f]
+     * where \f$\boldsymbol{v} = [x, y, z].\f$
      * @param q a quaternion.
      *
      * For example
@@ -472,7 +508,8 @@ public:
 
     /**
      * @brief return cosh value of this quaternion, cosh could be calculated as:
-     * \f[\cosh(p) = \cosh(w) * \cos(||\boldsymbol{v}||) + \sinh(w)\frac{\boldsymbol{v}}{||\boldsymbol{v}||}sin(||\boldsymbol{v}||)\f].
+     * \f[\cosh(p) = \cosh(w) * \cos(||\boldsymbol{v}||) + \sinh(w)\frac{\boldsymbol{v}}{||\boldsymbol{v}||}sin(||\boldsymbol{v}||)\f]
+     * where \f$\boldsymbol{v} = [x, y, z].\f$
      *
      * For example
      * ```
@@ -484,7 +521,7 @@ public:
 
     /**
      * @brief return tanh value of quaternion q, tanh could be calculated as:
-     * \f[ \tanh(q) = \frac{\sinh(q)}{\cosh(q)}\f].
+     * \f[ \tanh(q) = \frac{\sinh(q)}{\cosh(q)}.\f]
      * @param q a quaternion.
      *
      * For example
@@ -499,7 +536,7 @@ public:
 
     /**
      * @brief return tanh value of this quaternion, tanh could be calculated as:
-     * \f[ \tanh(q) = \frac{\sinh(q)}{\cosh(q)}\f].
+     * \f[ \tanh(q) = \frac{\sinh(q)}{\cosh(q)}.\f]
      *
      * For example
      * ```
@@ -512,7 +549,8 @@ public:
 
     /**
      * @brief return tanh value of quaternion q, sin could be calculated as:
-     * \f[\sin(p) = \sin(w) * \cosh(||\boldsymbol{v}||) + \cos(w)\frac{\boldsymbol{v}}{||\boldsymbol{v}||}\sinh(||\boldsymbol{v}||)\f].
+     * \f[\sin(p) = \sin(w) * \cosh(||\boldsymbol{v}||) + \cos(w)\frac{\boldsymbol{v}}{||\boldsymbol{v}||}\sinh(||\boldsymbol{v}||)\f]
+     * where \f$\boldsymbol{v} = [x, y, z].\f$
      * @param q a quaternion.
      *
      * For example
@@ -526,7 +564,8 @@ public:
 
     /**
      * @brief return sin value of this quaternion, sin could be calculated as:
-     * \f[\sin(p) = \sin(w) * \cosh(||\boldsymbol{v}||) + \cos(w)\frac{\boldsymbol{v}}{||\boldsymbol{v}||}\sinh(||\boldsymbol{v}||)\f].
+     * \f[\sin(p) = \sin(w) * \cosh(||\boldsymbol{v}||) + \cos(w)\frac{\boldsymbol{v}}{||\boldsymbol{v}||}\sinh(||\boldsymbol{v}||)\f]
+     * where \f$\boldsymbol{v} = [x, y, z].\f$
      *
      * For example
      * ```
@@ -538,7 +577,8 @@ public:
 
     /**
      * @brief return sin value of quaternion q, cos could be calculated as:
-     * \f[\cos(p) = \cos(w) * \cosh(||\boldsymbol{v}||) - \sin(w)\frac{\boldsymbol{v}}{||\boldsymbol{v}||}\sinh(||\boldsymbol{v}||)\f].
+     * \f[\cos(p) = \cos(w) * \cosh(||\boldsymbol{v}||) - \sin(w)\frac{\boldsymbol{v}}{||\boldsymbol{v}||}\sinh(||\boldsymbol{v}||)\f]
+     * where \f$\boldsymbol{v} = [x, y, z].\f$
      * @param q a quaternion.
      *
      * For example
@@ -552,7 +592,8 @@ public:
 
     /**
      * @brief return cos value of this quaternion, cos could be calculated as:
-     * \f[\cos(p) = \cos(w) * \cosh(||\boldsymbol{v}||) - \sin(w)\frac{\boldsymbol{v}}{||\boldsymbol{v}||}\sinh(||\boldsymbol{v}||)\f].
+     * \f[\cos(p) = \cos(w) * \cosh(||\boldsymbol{v}||) - \sin(w)\frac{\boldsymbol{v}}{||\boldsymbol{v}||}\sinh(||\boldsymbol{v}||)\f]
+     * where \f$\boldsymbol{v} = [x, y, z].\f$
      *
      * For example
      * ```
@@ -564,7 +605,7 @@ public:
 
     /**
      * @brief return tan value of quaternion q, tan could be calculated as:
-     * \f[\tan(q) = \frac{\sin(q)}{\cos(q)}\f].
+     * \f[\tan(q) = \frac{\sin(q)}{\cos(q)}.\f]
      * @param q a quaternion.
      *
      * For example
@@ -578,7 +619,7 @@ public:
 
     /**
      * @brief return tan value of this quaternion, tan could be calculated as:
-     * \f[\tan(q) = \frac{\sin(q)}{\cos(q)}\f].
+     * \f[\tan(q) = \frac{\sin(q)}{\cos(q)}.\f]
      *
      * For example
      * ```
@@ -590,7 +631,8 @@ public:
 
     /**
      * @brief return arcsin value of quaternion q, arcsin could be calculated as:
-     * \f[\arcsin(q) = -\frac{\boldsymbol{v}}{||\boldsymbol{v}||}arcsinh(q\frac{\boldsymbol{v}}{||\boldsymbol{v}||})\f].
+     * \f[\arcsin(q) = -\frac{\boldsymbol{v}}{||\boldsymbol{v}||}arcsinh(q\frac{\boldsymbol{v}}{||\boldsymbol{v}||})\f]
+     * where \f$\boldsymbol{v} = [x, y, z].\f$
      * @param q a quaternion.
      *
      * For example
@@ -604,7 +646,8 @@ public:
 
     /**
      * @brief return arcsin value of this quaternion, arcsin could be calculated as:
-     * \f[\arcsin(q) = -\frac{\boldsymbol{v}}{||\boldsymbol{v}||}arcsinh(q\frac{\boldsymbol{v}}{||\boldsymbol{v}||})\f].
+     * \f[\arcsin(q) = -\frac{\boldsymbol{v}}{||\boldsymbol{v}||}arcsinh(q\frac{\boldsymbol{v}}{||\boldsymbol{v}||})\f]
+     * where \f$\boldsymbol{v} = [x, y, z].\f$
      *
      * For example
      * ```
@@ -616,7 +659,8 @@ public:
 
     /**
      * @brief return arccos value of quaternion q, arccos could be calculated as:
-     * \f[\arccos(q) = -\frac{\boldsymbol{v}}{||\boldsymbol{v}||}arccosh(q)\f].
+     * \f[\arccos(q) = -\frac{\boldsymbol{v}}{||\boldsymbol{v}||}arccosh(q)\f]
+     * where \f$\boldsymbol{v} = [x, y, z].\f$
      * @param q a quaternion.
      *
      * For example
@@ -630,7 +674,8 @@ public:
 
     /**
      * @brief return arccos value of this quaternion, arccos could be calculated as:
-     * \f[\arccos(q) = -\frac{\boldsymbol{v}}{||\boldsymbol{v}||}arccosh(q)\f].
+     * \f[\arccos(q) = -\frac{\boldsymbol{v}}{||\boldsymbol{v}||}arccosh(q)\f]
+     * where \f$\boldsymbol{v} = [x, y, z].\f$
      *
      * For example
      * ```
@@ -642,7 +687,8 @@ public:
 
     /**
      * @brief return arctan value of quaternion q, arctan could be calculated as:
-     * \f[\arctan(q) = -\frac{\boldsymbol{v}}{||\boldsymbol{v}||}arctanh(q\frac{\boldsymbol{v}}{||\boldsymbol{v}||})\f].
+     * \f[\arctan(q) = -\frac{\boldsymbol{v}}{||\boldsymbol{v}||}arctanh(q\frac{\boldsymbol{v}}{||\boldsymbol{v}||})\f]
+     * where \f$\boldsymbol{v} = [x, y, z].\f$
      * @param q a quaternion.
      *
      * For example
@@ -656,7 +702,8 @@ public:
 
     /**
      * @brief return arctan value of this quaternion, arctan could be calculated as:
-     * \f[\arctan(q) = -\frac{\boldsymbol{v}}{||\boldsymbol{v}||}arctanh(q\frac{\boldsymbol{v}}{||\boldsymbol{v}||})\f].
+     * \f[\arctan(q) = -\frac{\boldsymbol{v}}{||\boldsymbol{v}||}arctanh(q\frac{\boldsymbol{v}}{||\boldsymbol{v}||})\f]
+     * where \f$\boldsymbol{v} = [x, y, z].\f$
      *
      * For example
      * ```
@@ -748,7 +795,7 @@ public:
      * @brief return true if this quaternion is a unit quaternion.
      * @param eps tolerance scope of normalization. The eps could be defined as
      *
-     * \f[eps = |1 - dotValue|\f] where \f[dotValue = (this.w^2 + this.x^2 + this,y^2 + this.z^2)\f].
+     * \f[eps = |1 - dotValue|\f] where \f[dotValue = (this.w^2 + this.x^2 + this,y^2 + this.z^2).\f]
      * And this function will consider it is normalized when the dotValue over a range \f$[1-eps, 1+eps]\f$.
      */
     bool isNormal(_Tp eps=CV_QUAT_EPS) const;
@@ -762,8 +809,8 @@ public:
 
     /**
      * @brief transform a quaternion to a 3x3 rotation matrix.
-     * @param assumeUnit if true, this quaternion should be a unit quaternion and
-     * this function will save some computations. Otherwise, this function will normalize this
+     * @param assumeUnit if ASSUME_UNIT, this quaternion assume to be a unit quaternion and
+     * this function will save some computations. Otherwise, this function will normalized this
      * quaternion at first then to do the transformation.
      *
      * @note Matrix A which is to be rotated should have the form
@@ -772,7 +819,7 @@ public:
      * y_0& y_1& y_2&...&y_n\\
      * z_0& z_1& z_2&...&z_n
      * \end{bmatrix}\f]
-     * where the same subscript represents a point. The shape of A should be [3, n]
+     * where the same subscript represents a point. The shape of A assume to be [3, n]
      * The points matrix A can be rotated by toRotMat3x3() * A.
      * The result has 3 rows and n columns too.
 
@@ -785,19 +832,19 @@ public:
      * //assume there is two points (1,0,0) and (1,0,1) to be rotated
      * Mat pointsA = (Mat_<double>(2, 3) << 1,0,0,1,0,1);
      * //change the shape
-     * pointsA = pointsA.t()
+     * pointsA = pointsA.t();
      * // rotate 180 degrees around the z axis
      * Mat new_point = q_unit.toRotMat3x3() * pointsA;
      * // print two points
      * cout << new_point << endl;
      * ```
      */
-    Mat toRotMat3x3(bool assumeUnit=false) const;
+    Mat toRotMat3x3(AssumeType assumeUnit=ASSUME_NOT_UNIT) const;
 
     /**
      * @brief transform a quaternion to a 4x4 rotation matrix.
-     * @param assumeUnit if true, this quaternion should be a unit quaternion and
-     * this function will save some computations. Otherwise, this function will normalize this
+     * @param assumeUnit if ASSUME_UNIT, this quaternion assume to be a unit quaternion and
+     * this function will save some computations. Otherwise, this function will normalized this
      * quaternion at first then to do the transformation.
      *
      * The operations is similar as toRotMat3x3
@@ -811,7 +858,7 @@ public:
      *
      * @sa toRotMat3x3
      */
-    Mat toRotMat4x4(bool assumeUnit=false) const;
+    Mat toRotMat4x4(AssumeType assumeUnit=ASSUME_NOT_UNIT) const;
 
     /**
      * @brief transform the this quaternion to a Vec<T, 4>.
@@ -826,7 +873,7 @@ public:
 
     /**
      * @brief transform this quaternion to a Rotation vector.
-     * @param assumeUnit if true, this quaternion should be a unit quaternion and
+     * @param assumeUnit if ASSUME_UNIT, this quaternion assume to be a unit quaternion and
      * this function will save some computations.
      * Rotation vector rVec is defined as:
      * \f[ rVec = [\theta v_x, \theta v_y, \theta v_z]\f]
@@ -837,14 +884,15 @@ public:
      * Quatd q(1,2,3,4);
      * q.toRotVec();
      *
-     * q.normalize().toRotVec(true);
+     * AssumeType assumeUnit = ASSUME_UNIT;
+     * q.normalize().toRotVec(assumeUnit); //answer is same as q.toRotVec().
      * ```
      */
-    Vec<_Tp, 3> toRotVec(bool assumeUnit=false)  const;
+    Vec<_Tp, 3> toRotVec(AssumeType assumeUnit=ASSUME_NOT_UNIT) const;
 
     /**
      * @brief get the angle of quaternion, it returns the rotation angle.
-     * @param assumeUnit if true, this quaternion should be a unit quaternion and
+     * @param assumeUnit if ASSUME_UNIT, this quaternion assume to be a unit quaternion and
      * this function will save some computations.
      * \f[\psi = 2 *arccos(\frac{w}{||q||})\f]
      *
@@ -853,31 +901,39 @@ public:
      * Quatd q(1,2,3,4);
      * q.getAngle();
      *
-     * q.normalize().getAngle(true);//same as q.getAngle()
+     * AssumeType assumeUnit = ASSUME_UNIT;
+     * q.normalize().getAngle(assumeUnit);//same as q.getAngle().
      * ```
      * @note It always return the value between \f$[0, 2\pi]\f$.
      */
-    _Tp getAngle(bool assumeUnit=false) const;
+    _Tp getAngle(AssumeType assumeUnit=ASSUME_NOT_UNIT) const;
 
     /**
      * @brief get the axis of quaternion, it returns a vector of length 3.
-     * @param assumeUnit if true, this quaternion should be a unit quaternion and
+     * @param assumeUnit if ASSUME_UNIT, this quaternion assume to be a unit quaternion and
      * this function will save some computations.
-     * the unit axis \f$\boldsymbol{n}\f$ is defined by
-     * \f[\begin{array}
-     *      \boldsymbol{v} &= \boldsymbol{u} ||\boldsymbol{v}||\\
-     *             &= \boldsymbol{u}||q||sin(\theta)
-     *      \end{array}\f]
+     *
+     * the unit axis \f$\boldsymbol{u}\f$ is defined by
+     * \f[\begin{equation}
+     *    \begin{split}
+     *      \boldsymbol{v}
+     *      &= \boldsymbol{u} ||\boldsymbol{v}||\\
+     *      &= \boldsymbol{u}||q||sin(\frac{\theta}{2})
+     *    \end{split}
+     *    \end{equation}\f]
+     *  where \f$v=[x, y ,z]\f$ and \f$\theta\f$ represents rotation angle.
+     *
      *
      * For example
      * ```
      * Quatd q(1,2,3,4);
      * q.getAxis();
      *
-     * q.normalize().getAxis(true);//same as q.getAxis()
+     * AssumeType assumeUnit = ASSUME_UNIT;
+     * q.normalize().getAxis(assumeUnit);//same as q.getAxis()
      * ```
      */
-    Vec<_Tp, 3> getAxis(bool assumeUnit=false) const;
+    Vec<_Tp, 3> getAxis(AssumeType assumeUnit=ASSUME_NOT_UNIT) const;
 
     /**
      * @brief return the dot between quaternion \f$q\f$ and this quaternion.
@@ -903,10 +959,10 @@ public:
     /**
      * @brief To calculate the interpolation from \f$q_0\f$ to \f$q_1\f$ by Linear Interpolation(Nlerp)
      * For two quaternions, this interpolation curve can be displayed as:
-     * \f[Lerp(q_0, q_1, t) = (1 - t)q_0 + tq_1 \f].
+     * \f[Lerp(q_0, q_1, t) = (1 - t)q_0 + tq_1.\f]
      * Obviously, the lerp will interpolate along a straight line if we think of \f$q_0\f$ and \f$q_1\f$ as a vector
      * in a two-dimensional space. When \f$t = 0\f$, it returns \f$q_0\f$ and when \f$t= 1\f$, it returns \f$q_1\f$.
-     * \f$t\f$ should be ranged in \f$[0, 1]\f$ normally.
+     * \f$t\f$ should to be ranged in \f$[0, 1]\f$ normally.
      * @param q0 a quaternion used in linear interpolation.
      * @param q1 a quaternion used in linear interpolation.
      * @param t percent of vector \f$\overrightarrow{q_0q_1}\f$ over a range [0, 1].
@@ -922,11 +978,11 @@ public:
      * @param q0 a quaternion used in normalized linear interpolation.
      * @param q1 a quaternion used in normalized linear interpolation.
      * @param t percent of vector \f$\overrightarrow{q_0q_1}\f$ over a range [0, 1].
-     * @param assumeUnit if true, all input quaternions should be unit quaternion. Otherwise, all inputs
+     * @param assumeUnit if ASSUME_UNIT, all input quaternions assume to be unit quaternion. Otherwise, all inputs
      quaternion will be normalized inside the function.
      * @sa lerp
      */
-    static Quat<_Tp> nlerp(const Quat<_Tp> &q0, const Quat &q1, const _Tp t, bool assumeUnit=false);
+    static Quat<_Tp> nlerp(const Quat<_Tp> &q0, const Quat &q1, const _Tp t, AssumeType assumeUnit=ASSUME_NOT_UNIT);
 
     /**
      @brief To calculate the interpolation between \f$q_0\f$ and \f$q_1\f$ by Spherical Linear
@@ -938,13 +994,13 @@ public:
     @param q0 a quaternion used in Slerp.
     @param q1 a quaternion used in Slerp.
     @param t percent of angle between \f$q_0\f$ and \f$q_1\f$ over a range [0, 1].
-    @param assumeUnit if true, all input quaternions should be unit quaternions. Otherwise, all input
+    @param assumeUnit if ASSUME_UNIT, all input quaternions assume to be unit quaternions. Otherwise, all input
     quaternions will be normalized inside the function.
-    @param directChange if true, the interpolation will choose the nearest path.
+    @param directChange if ASSUME_UNIT, the interpolation will choose the nearest path.
     @note If the interpolation angle is small, the error between Nlerp and Slerp is not so large. To improve efficiency and
     avoid zero division error, we use Nlerp instead of Slerp.
     */
-    static Quat<_Tp> slerp(const Quat<_Tp> &q0, const Quat &q1, const _Tp t, bool assumeUnit=false, bool directChange=true);
+    static Quat<_Tp> slerp(const Quat<_Tp> &q0, const Quat &q1, const _Tp t, AssumeType assumeUnit=ASSUME_NOT_UNIT, bool directChange=true);
 
     /**
      * @brief To calculate the interpolation between \f$q_0\f$,\f$q_1\f$,\f$q_2\f$,\f$q_3\f$  by Spherical and quadrangle(Squad). This could be defined as:
@@ -961,29 +1017,29 @@ public:
      * @param s1 the third quaternion.
      * @param q1 thr fourth quaternion.
      * @param t interpolation parameter of quadratic and linear interpolation over a range \f$[0, 1]\f$.
-     * @param assumeUnit if true, all input quaternions should be unit quaternion. Otherwise, all input
+     * @param assumeUnit if ASSUME_UNIT, all input quaternions assume to be unit quaternion. Otherwise, all input
      * quaternions will be normalized inside the function.
-     * @param directChange if true, squad will find the nearest path to interpolate.
+     * @param directChange if ASSUME_UNIT, squad will find the nearest path to interpolate.
      * @sa interPoint, spline
      */
     static Quat<_Tp> squad(const Quat<_Tp> &q0, const Quat<_Tp> &s0,
                             const Quat<_Tp> &s1, const Quat<_Tp> &q1,
-                            const _Tp t, bool assumeUnit=false,
+                            const _Tp t, AssumeType assumeUnit=ASSUME_NOT_UNIT,
                             bool directChange=true);
 
     /**
      * @brief This is the part calculation of squad.
      * To calculate the intermedia quaternion \f$s_i\f$ between each three quaternion
-     * \f[s_i = q_i\exp(-\frac{\log(q^*_iq_{i+1}) + \log(q^*_iq_{i-1})}{4})\f]
+     * \f[s_i = q_i\exp(-\frac{\log(q^*_iq_{i+1}) + \log(q^*_iq_{i-1})}{4}).\f]
      * @param q0 the first quaternion.
      * @param q1 the second quaternion.
      * @param q2 the third quaternion.
-     * @param assumeUnit if true, all input quaternions should be unit quaternion. Otherwise, all input
+     * @param assumeUnit if ASSUME_UNIT, all input quaternions assume to be unit quaternion. Otherwise, all input
      * quaternions will be normalized inside the function.
      * @sa squad
      */
     static Quat<_Tp> interPoint(const Quat<_Tp> &q0, const Quat<_Tp> &q1,
-                                 const Quat<_Tp> &q2, bool assumeUnit=false);
+                                 const Quat<_Tp> &q2, AssumeType assumeUnit=ASSUME_NOT_UNIT);
 
     /**
      * @brief to calculate a quaternion which is the result of a \f$C^1\f$ continuous
@@ -995,7 +1051,7 @@ public:
      * @param q2 the third input quaternion.
      * @param q3 the fourth input quaternion the same use of \f$q1\f$.
      * @param t ratio over a range [0, 1].
-     * @param assumeUnit if true, \f$q_0, q_1, q_2, q_3\f$ should be normalized. Otherwise, all input
+     * @param assumeUnit if ASSUME_UNIT, \f$q_0, q_1, q_2, q_3\f$ assume to be unit quaternion. Otherwise, all input
      * quaternions will be normalized inside the function.
      *
      * For example:
@@ -1014,7 +1070,7 @@ public:
      */
     static Quat<_Tp> spline(const Quat<_Tp> &q0, const Quat<_Tp> &q1,
                             const Quat<_Tp> &q2, const Quat<_Tp> &q3,
-                            const _Tp t, bool assumeUnit=false);
+                            const _Tp t, AssumeType assumeUnit=ASSUME_NOT_UNIT);
 
 
     Quat<_Tp> operator-() const;
@@ -1059,11 +1115,9 @@ public:
     _Tp w, x, y, z;
 
 };
-template <typename T>
-Quat<T> rvec2Quat(Vec<T, 3> &rvec);
 
 template <typename T>
-Quat<T> inv(const Quat<T> &q, bool assumeUnit=false);
+Quat<T> inv(const Quat<T> &q, AssumeType assumeUnit=ASSUME_NOT_UNIT);
 
 template <typename T>
 Quat<T> sinh(const Quat<T> &q);
@@ -1102,22 +1156,22 @@ template <typename T>
 Quat<T> atan(const Quat<T> &q);
 
 template <typename T>
-Quat<T> power(const Quat<T> &q, const Quat<T> &p, bool assumeUnit=false);
+Quat<T> power(const Quat<T> &q, const Quat<T> &p, AssumeType assumeUnit=ASSUME_NOT_UNIT);
 
 template <typename T>
 Quat<T> exp(const Quat<T> &q);
 
 template <typename T>
-Quat<T> log(const Quat<T> &q, bool assumeUnit=false);
+Quat<T> log(const Quat<T> &q, AssumeType assumeUnit=ASSUME_NOT_UNIT);
 
 template <typename T, typename _T>
-Quat<T> power(const Quat<T>& q, _T x, bool assumeUnit=false);
+Quat<T> power(const Quat<T>& q, _T x, AssumeType assumeUnit=ASSUME_NOT_UNIT);
 
 template <typename T>
 Quat<T> crossProduct(const Quat<T> &p, const Quat<T> &q);
 
 template <typename S>
-Quat<S> sqrt(const Quat<S> &q, bool assumeUnit=false);
+Quat<S> sqrt(const Quat<S> &q, AssumeType assumeUnit=ASSUME_NOT_UNIT);
 
 template <typename S, typename T>
 Quat<S> operator*(const T, const Quat<S>&);
@@ -1130,6 +1184,10 @@ std::ostream& operator<<(std::ostream&, const Quat<S>&);
 
 using Quatd = Quat<double>;
 using Quatf = Quat<float>;
+using std::cos;
+using std::sin;
+using std::acos;
+using std::asin;
 //! @} core
 }
 
