@@ -405,13 +405,19 @@ void DetectionModel::detect(InputArray frame, CV_OUT std::vector<int>& classIds,
 struct TextRecognitionModel::Voc
 {
     std::vector<String> vocabulary;
+    String decodeType;
 
     void setVocabulary(const std::vector<String>& inputVoc)
     {
         vocabulary.assign(inputVoc.begin(), inputVoc.end());
     }
 
-    String decode(const Mat& prediction, const String& decodeType)
+    void setDecodeType(const String& type)
+    {
+        decodeType = type;
+    }
+
+    String decode(const Mat& prediction)
     {
         String decodeSeq = "";
         if (decodeType == "CTC-greedy") {
@@ -441,6 +447,8 @@ struct TextRecognitionModel::Voc
                     ctcFlag = true;
                 }
             }
+        } else if (decodeType.length() == 0) {
+            CV_Error(Error::StsBadArg, "Please set decodeType");
         } else {
             CV_Error(Error::StsBadArg, "Unsupported decodeType");
         }
@@ -459,7 +467,12 @@ void TextRecognitionModel::setVocabulary(const std::vector<String>& inputVoc)
     voc->setVocabulary(inputVoc);
 }
 
-void TextRecognitionModel::recognize(InputArray frame, const String& decodeType, std::vector<String>& results,
+void TextRecognitionModel::setDecodeType(const String& type)
+{
+    voc->setDecodeType(type);
+}
+
+void TextRecognitionModel::recognize(InputArray frame, std::vector<String>& results,
                                      const std::vector<std::vector<Point>>& roiPolygons)
 {
     results.clear();
@@ -469,7 +482,7 @@ void TextRecognitionModel::recognize(InputArray frame, const String& decodeType,
     if (roiSize == 0) {
         impl->predict(*this, frame.getMat(), outs);
         CV_Assert(outs.size() == 1);
-        results.push_back(voc->decode(outs[0], decodeType));
+        results.push_back(voc->decode(outs[0]));
     } else {
         Mat input = frame.getMat();
 
@@ -490,7 +503,7 @@ void TextRecognitionModel::recognize(InputArray frame, const String& decodeType,
             Mat roi = input(roiRect);
             impl->predict(*this, roi, outs);
             CV_Assert(outs.size() == 1);
-            results.push_back(voc->decode(outs[0], decodeType));
+            results.push_back(voc->decode(outs[0]));
         }
     }
 }
@@ -532,8 +545,7 @@ static double contourScore(const Mat& binary, const std::vector<Point>& contour)
     return score;
 }
 
-static void unclip(const std::vector<Point>& inPoly, std::vector<Point> &outPoly, const double& unclipRatio,
-                   const float& scaleWidth, const float& scaleHeight)
+static void unclip(const std::vector<Point>& inPoly, std::vector<Point> &outPoly, const double& unclipRatio)
 {
     double area = contourArea(inPoly);
     double length = arcLength(inPoly, true);
@@ -567,17 +579,17 @@ static void unclip(const std::vector<Point>& inPoly, std::vector<Point> &outPoly
         if( fabs(cosAngle) > 0.7 ) {
             pt.x = (int)((b.x + c.x) / 2);
             pt.y = (int)((b.y + c.y) / 2);
+            outPoly.push_back(pt);
         } else {
             double denom = a.x * (double)(d.y - c.y) + b.x * (double)(c.y - d.y) +
                            d.x * (double)(b.y - a.y) + c.x * (double)(a.y - b.y);
             double num = a.x * (double)(d.y - c.y) + c.x * (double)(a.y - d.y) + d.x * (double)(c.y - a.y);
             double s = num / denom;
 
-            pt.x = (int)((a.x + s*(b.x - a.x)) * scaleWidth);
-            pt.y = (int)((a.y + s*(b.y - a.y)) * scaleHeight);
+            pt.x = (int)((a.x + s*(b.x - a.x)));
+            pt.y = (int)((a.y + s*(b.y - a.y)));
+            outPoly.push_back(pt);
         }
-
-        outPoly.push_back(pt);
     }
 }
 
@@ -586,7 +598,7 @@ TextDetectionModel::TextDetectionModel(const String& model, const String& config
 
 TextDetectionModel::TextDetectionModel(const Net& network) : Model(network) {}
 
-void TextDetectionModel::detect(InputArray frame, std::vector<std::vector<Point>>& results, const int& outputType,
+void TextDetectionModel::detect(InputArray frame, std::vector<std::vector<Point>>& results,
             const float& binThresh, const float& polyThresh, const double& unclipRatio, const uint& maxCandidates)
 {
     results.clear();
@@ -620,25 +632,26 @@ void TextDetectionModel::detect(InputArray frame, std::vector<std::vector<Point>
     for (size_t i = 0; i < numCandidate; i++) {
         std::vector<Point> contour = contours[i];
 
+        // Rescale
+        std::vector<Point> contourScaled;
+        for (size_t j = 0; j < contour.size(); j++) {
+            contourScaled.push_back(Point(int(contour[j].x * scaleWidth),
+                                          int(contour[j].y * scaleHeight)));
+        }
+
         // Calculate text contour score
         if (contourScore(binary, contour) < polyThresh) continue;
 
-        // Unclip and Rescale
+        // Unclip
         std::vector<Point> approx;
-        if (outputType == 0) {
-            RotatedRect box = minAreaRect(contour);
-            Point2f vertex[4];
-            box.points(vertex);
-            for (int j = 0; j < 4; j++) {
-                approx.push_back(Point((int)(vertex[3-j].x), (int)(vertex[3-j].y)));
-            }
-        } else {
-            double epsilon = arcLength(contour, true) * 0.01;
-            approxPolyDP(contour, approx, epsilon, true);
-            if (approx.size() < 4) continue;
+        RotatedRect box = minAreaRect(contourScaled);
+        Point2f vertex[4];
+        box.points(vertex);
+        for (int j = 0; j < 4; j++) {
+            approx.push_back(Point((int)(vertex[3-j].x), (int)(vertex[3-j].y)));
         }
         std::vector<Point> polygon;
-        unclip(approx, polygon, unclipRatio, scaleWidth, scaleHeight);
+        unclip(approx, polygon, unclipRatio);
         results.push_back(polygon);
     }
 }

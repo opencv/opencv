@@ -19,7 +19,6 @@ std::string keys =
         "{ binaryThreshold bt               |0.3| Confidence threshold of the binary map. }"
         "{ polygonThreshold pt              |0.5| Confidence threshold of polygons. }"
         "{ maxCandidate max                 |200| Max candidates of polygons. }"
-        "{ outputType type                  |0| The output type of detected text: 0: multi-oriented quadrilateral; 1: polygon }"
         "{ unclipRatio ratio                |2.0| unclip ratio. }"
         "{ evaluate e                       |false| false: predict with input images; true: evaluate on benchmarks. }"
         "{ evalDataPath edp                  | | Path to benchmarks for evaluation. "
@@ -42,7 +41,6 @@ int main(int argc, char** argv)
     float polyThresh = parser.get<float>("polygonThreshold");
     uint maxCandidates = parser.get<uint>("maxCandidate");
     String modelPath = parser.get<String>("modelPath");
-    int outputType = parser.get<int>("outputType");
     double unclipRatio = parser.get<double>("unclipRatio");
     int height = parser.get<int>("inputHeight");
     int width = parser.get<int>("inputWidth");
@@ -90,7 +88,7 @@ int main(int argc, char** argv)
 
             // Inference
             std::vector<std::vector<Point>> results;
-            detector.detect(frame, results, outputType, binThresh, polyThresh, unclipRatio, maxCandidates);
+            detector.detect(frame, results, binThresh, polyThresh, unclipRatio, maxCandidates);
 
             polylines(frame, results, true, Scalar(0, 255, 0), 5);
             imshow(winName, frame);
@@ -140,9 +138,14 @@ int main(int argc, char** argv)
 
         // Detect
         std::vector<std::vector<Point>> results;
-        detector.detect(frame, results, outputType, binThresh, polyThresh, unclipRatio, maxCandidates);
+        detector.detect(frame, results, binThresh, polyThresh, unclipRatio, maxCandidates);
 
         polylines(frame, results, true, Scalar(0, 255, 0), 5);
+        for (int j = 0; j < results.size(); j++) {
+            for (int i = 0; i < results[j].size(); i++) {
+                std::cout << results[j][i].x << "-" << results[j][i].y << std::endl;
+            }
+        }
         imshow(winName, frame);
         waitKey();
     }

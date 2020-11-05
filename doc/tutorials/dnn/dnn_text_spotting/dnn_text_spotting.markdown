@@ -157,12 +157,12 @@ Step2. Setting Parameters
 
     // The decoding method
     // more methods will be supported in future
-    String decodeType = "CTC-greedy";
+    model.setDecodeType("CTC-greedy");
 ```
 Step3. Inference
 ```cpp
     std::vector<String> recResults;
-    model.recognize(image, decodeType, recResults);
+    model.recognize(image, recResults);
     std::cout << recResults[0] << std::endl;
 ```
 
@@ -187,7 +187,7 @@ Step1. Loading images and models
     // Load model weights
     TextDetectionModel model("/path/to/DB_TD500_resnet50.onnx");
 ```
-Step2. Setting Parameters
+Step2. Setting Parameters (DB)
 ```cpp
     // Normalization parameters
     double scale = 1.0 / 255.0;
@@ -203,12 +203,32 @@ Step2. Setting Parameters
     float polyThresh = 0.5;
     uint maxCandidates = 200;
     double unclipRatio = 2.0;
-    int outputType = 0;  // 0: multi-oriented quadrilateral; 1: polygon
 ```
-Step3. Inference
+Step3. Inference (DB)
 ```cpp
     std::vector<std::vector<Point>> results;
-    model.detect(image, results, outputType, binThresh, polyThresh, unclipRatio, maxCandidates);
+    model.detect(image, results, binThresh, polyThresh, unclipRatio, maxCandidates);
+
+    // Visualization
+    polylines(image, results, true, Scalar(0, 255, 0), 2);
+    imshow("Text Detection", image);
+    waitKey();
+```
+
+Step2. Setting Parameters (EAST)
+```cpp
+    float confThreshold = 0.5;
+    float nmsThreshold = 0.4;
+    double detScale = 1.0;
+    Size detInputSize = Size(320, 320);
+    Scalar detMean = Scalar(123.68, 116.78, 103.94);
+    bool swapRB = true;
+    model.setInputParams(detScale, detInputSize, detMean, swapRB);
+```
+Step3. Inference (EAST)
+```cpp
+    std::vector<std::vector<Point>> results;
+    model.detect(image, detResults, confThreshold, nmsThreshold);
 
     // Visualization
     polylines(image, results, true, Scalar(0, 255, 0), 2);

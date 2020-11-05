@@ -21,7 +21,6 @@ std::string keys =
         "{ binaryThreshold bt               |0.3| Confidence threshold of the binary map. }"
         "{ polygonThreshold pt              |0.5| Confidence threshold of polygons. }"
         "{ maxCandidate max                 |200| Max candidates of polygons. }"
-        "{ outputType type                  |0| The output type of detected text: 0: multi-oriented quadrilateral; 1: polygon }"
         "{ unclipRatio ratio                |2.0| unclip ratio. }"
         "{ vocabularyPath vp                | | Path to benchmarks for evaluation. "
             "Download links are provided in doc/tutorials/dnn/dnn_text_spotting/dnn_text_spotting.markdown}";
@@ -44,7 +43,6 @@ int main(int argc, char** argv)
     String detModelPath = parser.get<String>("detModelPath");
     String recModelPath = parser.get<String>("recModelPath");
     String vocPath = parser.get<String>("vocabularyPath");
-    int outputType = parser.get<int>("outputType");
     double unclipRatio = parser.get<double>("unclipRatio");
     int height = parser.get<int>("inputHeight");
     int width = parser.get<int>("inputWidth");
@@ -74,6 +72,7 @@ int main(int argc, char** argv)
         vocabulary.push_back(vocLine);
     }
     recognizer.setVocabulary(vocabulary);
+    recognizer.setDecodeType("CTC-greedy");
 
     // Parameters for Detection
     double detScale = 1.0 / 255.0;
@@ -97,7 +96,7 @@ int main(int argc, char** argv)
 
     // Inference
     std::vector<std::vector<Point>> detResults;
-    detector.detect(frame, detResults, outputType, binThresh, polyThresh, unclipRatio, maxCandidates);
+    detector.detect(frame, detResults, binThresh, polyThresh, unclipRatio, maxCandidates);
     if (detResults.size() == 0) {
         std::cout << "No Text Detected." << std::endl;
         return 0;
@@ -112,7 +111,7 @@ int main(int argc, char** argv)
     }
 
     // Recognize all ROIs at the same time
-    recognizer.recognize(recInput, decodeType, recResults, detResults);
+    recognizer.recognize(recInput, recResults, detResults);
 
     // Visualization
     for (uint i = 0; i < detResults.size(); i++) {

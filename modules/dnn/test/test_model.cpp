@@ -126,15 +126,16 @@ public:
              .setInputSwapRB(swapRB).setInputCrop(crop);
 
         model.setVocabulary(vocabulary);
+        model.setDecodeType(decodeType);
 
         std::vector<std::string> results;
-        model.recognize(frame, decodeType, results);
+        model.recognize(frame, results);
         ASSERT_STREQ(results[0].c_str(), seq.c_str());
     }
 
     void testTextDetectionModelByDB(const std::string& weights, const std::string& cfg,
                                     const std::string& imgPath, const std::vector<std::vector<Point>>& gt,
-                                    int outputType, float binThresh, float polyThresh,
+                                    float binThresh, float polyThresh,
                                     uint maxCandidates, double unclipRatio,
                                     const Size& size = {-1, -1}, Scalar mean = Scalar(),
                                     double scale = 1.0, bool swapRB = false, bool crop = false)
@@ -148,7 +149,7 @@ public:
              .setInputSwapRB(swapRB).setInputCrop(crop);
 
         std::vector<std::vector<Point>> results;
-        model.detect(frame, results, outputType, binThresh, polyThresh, unclipRatio, maxCandidates);
+        model.detect(frame, results, binThresh, polyThresh, unclipRatio, maxCandidates);
         normAssertTextDetections(gt, results);
     }
 
@@ -471,8 +472,8 @@ TEST_P(Test_Model, TextDetectionByDB)
     std::string weightPath = _tf("onnx/models/DB_TD500_resnet50.onnx", false);
 
     // GroundTruth
-    std::vector<std::vector<Point>> gt = {{Point(213, 151), Point(133, 165), Point(142, 191), Point(221, 177)},
-                                          {Point(318, 71), Point(115, 116), Point(135, 164), Point(338, 120)}};
+    std::vector<std::vector<Point>> gt = {{Point(212, 149), Point(136, 163), Point(141, 191), Point(217, 178)},
+                                          {Point(318, 69), Point(122, 112), Point(133, 165), Point(329, 122)}};
 
     Size size{736, 736};
     double scale = 1.0 / 255.0;
@@ -481,10 +482,9 @@ TEST_P(Test_Model, TextDetectionByDB)
     float binThresh = 0.3;
     float polyThresh = 0.5;
     uint maxCandidates = 200;
-    int outputType = 0;
     double unclipRatio = 2.0;
 
-    testTextDetectionModelByDB(weightPath, "", imgPath, gt, outputType, binThresh, polyThresh, maxCandidates, unclipRatio, size, mean, scale);
+    testTextDetectionModelByDB(weightPath, "", imgPath, gt, binThresh, polyThresh, maxCandidates, unclipRatio, size, mean, scale);
 }
 
 TEST_P(Test_Model, TextDetectionByEAST)

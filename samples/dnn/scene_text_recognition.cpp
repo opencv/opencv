@@ -60,9 +60,9 @@ int main(int argc, char** argv)
         vocabulary.push_back(vocLine);
     }
     recognizer.setVocabulary(vocabulary);
+    recognizer.setDecodeType("CTC-greedy");
 
     // Set parameters
-    const String decodeType = "CTC-greedy";
     double scale = 1.0 / 127.5;
     Scalar mean = Scalar(127.5, 127.5, 127.5);
     Size inputSize = Size(100, 32);
@@ -92,7 +92,7 @@ int main(int argc, char** argv)
             Mat frame = imread(samples::findFile(imgPath), imreadRGB);
             CV_Assert(!frame.empty());
             std::vector<String> recResults;
-            recognizer.recognize(frame, decodeType, recResults);
+            recognizer.recognize(frame, recResults);
             timer.stop();
 
             if (gt == convertForEval(recResults[0])) cntRight++;
@@ -113,7 +113,7 @@ int main(int argc, char** argv)
 
         // Recognition
         std::vector<String> recResults;
-        recognizer.recognize(frame, decodeType, recResults);
+        recognizer.recognize(frame, recResults);
 
         imshow(winName, frame);
         std::cout << "Predition: " << recResults[0] << std::endl;

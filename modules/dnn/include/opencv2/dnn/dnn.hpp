@@ -1312,13 +1312,18 @@ CV__DNN_INLINE_NS_BEGIN
          CV_WRAP void setVocabulary(const std::vector<String>& inputVoc);
 
          /**
+          * @brief Set the decoding method for recognition.
+          * @param[in] type: The decoding method of translating the network output into string: {"CTC-greedy": greedy decoding for the output of CTC-based methods}
+          */
+         CV_WRAP void setDecodeType(const String& type);
+
+         /**
           * @brief Given the @p input frame, create input blob, run net and return recognition result.
           * @param[in] frame: The input image.
-          * @param[in] decodeType: The decoding method of translating the network output into string: {'CTC-greedy': greedy decoding for the output of CTC-based methods}
           * @param[out] results: A set of text recognition results.
           * @param[in] roiPolygons: (Optional) A set of text detection results. If it is not empty, all the ROIs will be cropped as the network inputs.
           */
-         CV_WRAP void recognize(InputArray frame, const String& decodeType, CV_OUT std::vector<String>& results,
+         CV_WRAP void recognize(InputArray frame, CV_OUT std::vector<String>& results,
                                 const std::vector<std::vector<Point>>& roiPolygons = {});
 
      protected:
@@ -1352,16 +1357,16 @@ CV__DNN_INLINE_NS_BEGIN
 
          /**
           * @brief Given the @p input frame, create input blob, run net and return detection results by "Real-time Scene Text Detection with Differentiable Binarization"(DB).
+          * Currently, it only supports a variant of DB without deformable convolution.
           * For more information about the hyper-parameters setting, please refer to https://github.com/MhLiao/DB.
           * @param[in] frame: The input image.
           * @param[out] results: A set of text detection results.
-          * @param[in] outputType: The output shape type: {0: multi-oriented quadrilateral; 1: polygon}
           * @param[in] binThresh: The threshold of the binary map. It is usually set to 0.3.
           * @param[in] polyThresh: The threshold of text polygons. It is usually set to 0.5, 0.6, and 0.7.
           * @param[in] unclipRatio: The unclip ratio of the detected text region, which determines the output size. It is usually set to 2.0.
           * @param[in] maxCandidates: The max number of the output results.
           */
-         CV_WRAP void detect(InputArray frame, CV_OUT std::vector<std::vector<Point>>& results, const int& outputType,
+         CV_WRAP void detect(InputArray frame, CV_OUT std::vector<std::vector<Point>>& results,
                              const float& binThresh, const float& polyThresh,
                              const double& unclipRatio, const uint& maxCandidates);
 
