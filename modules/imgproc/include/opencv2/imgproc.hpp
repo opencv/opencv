@@ -4721,6 +4721,108 @@ CV_EXPORTS_W double getFontScaleFromHeight(const int fontFace,
                                            const int pixelHeight,
                                            const int thickness = 1);
 
+/** @brief Wrapper on top of a truetype/opentype/etc font, i.e. Freetype's FT_Face.
+
+The class is used to store the loaded fonts;
+the font can then be passed to the functions
+putText and getTextSize.
+*/
+class CV_EXPORTS_W_SIMPLE FontFace
+{
+public:
+    /** @brief loads default font */
+    CV_WRAP FontFace();
+    /** @brief
+       loads font at the specified path or with specified name.
+       Empty fontPathOrName means the default embedded font.
+    */
+    CV_WRAP FontFace(const String& fontPathOrName, double sf=0.);
+
+    /** @brief loads new font face */
+    CV_WRAP bool set(const String& fontPathOrName, double sf=0.);
+    CV_WRAP String getName() const;
+    CV_WRAP double getScaleFactor() const;
+
+    ~FontFace();
+
+    struct Impl;
+
+    /** @brief returns wrapper on top of FT_Face */
+    Impl* operator -> ();
+    static bool getBuiltinFontData(const String& fontName, const uchar*& data, size_t& datasize);
+
+protected:
+    Ptr<Impl> impl;
+};
+
+/** @brief Defines various put text flags */
+enum
+{
+    PUT_TEXT_ALIGN_LEFT=0,  // put the text to the right from the origin
+    PUT_TEXT_ALIGN_CENTER=1,// center the text at the origin; not implemented yet
+    PUT_TEXT_ALIGN_RIGHT=2, // put the text to the left of the origin
+    PUT_TEXT_ALIGN_MASK=3,  // alignment mask
+    PUT_TEXT_ORIGIN_TL=0,
+    PUT_TEXT_ORIGIN_BL=32,  // treat the target image as having bottom-left origin
+    PUT_TEXT_WRAP=128       // wrap text to the next line if it does not fit
+};
+
+/** @brief Draws a text string using specified font.
+
+The function cv::putText renders the specified text string in the image. Symbols that cannot be rendered
+using the specified font are replaced by question marks. See #getTextSize for a text rendering code
+example. The function returns the coordinates in pixels from where the text can be continued.
+
+@param img Image.
+@param text Text string to be drawn.
+@param org Bottom-left corner of the first character of the printed text
+           (see PUT_TEXT_ALIGN_... though)
+@param color Text color.
+@param fface The font to use for the text
+@param size Font size in pixels (by default) or pts
+@param weight Font weight, 100..1000,
+       where 100 is "thin" font, 400 is "regular",
+       600 is "semibold", 800 is "bold" and beyond that is "black".
+       The default weight means "400" for variable-weight fonts or
+       whatever "default" weight the used font provides.
+@param flags Various flags, see PUT_TEXT_...
+@param wrap The optional text wrapping range:
+       In the case of left-to-right (LTR) text if the printed character would cross wrap.end boundary,
+       the "cursor" is set to wrap.start.
+       In the case of right-to-left (RTL) text it's vice versa.
+       If the parameters is not set,
+       [org.x, img.cols] is used for LTR text and
+       [0, org.x] is for RTL one.
+*/
+CV_EXPORTS_W Point putText( InputOutputArray img, const String& text,
+                            Point org, Scalar color,
+                            FontFace& fface, double size,
+                            int weight=0, int flags=0,
+                            Range wrap=Range() );
+
+/** @brief Calculates the bounding rect for the text
+
+The function cv::getTextSize calculates and returns the size of a box that contains the specified text.
+That is, the following code renders some text, the tight box surrounding it, and the baseline: :
+
+@param imgsize Size of the target image, can be empty
+@param text Text string to be drawn.
+@param org Bottom-left corner of the first character of the printed text
+           (see PUT_TEXT_ALIGN_... though)
+@param fface The font to use for the text
+@param size Font size in pixels (by default) or pts
+@param weight Font weight, 100..1000,
+        where 100 is "thin" font, 400 is "regular",
+        600 is "semibold", 800 is "bold" and beyond that is "black".
+        The default weight means "400" for variable-weight fonts or
+        whatever "default" weight the used font provides.
+@param flags Various flags, see PUT_TEXT_...
+@param wrap The optional text wrapping range; see #putText.
+*/
+CV_EXPORTS_W Rect getTextSize( Size imgsize, const String& text, Point org,
+                               FontFace& fface, double size,
+                               int weight=0, int flags=0, Range wrap=Range() );
+
 /** @brief Line iterator
 
 The class is used to iterate over all the pixels on the raster line

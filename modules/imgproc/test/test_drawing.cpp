@@ -679,4 +679,148 @@ TEST(Drawing, fillpoly_circle)
     EXPECT_LT(diff_fp3, 1.);
 }
 
+
+TEST(Drawing, fromJava_getTextSize)
+{
+    String text = "Android all the way";
+    double fontScale = 2;
+    int thickness = 3;
+    int baseLine = 0;
+
+    Size res0 = getTextSize(text, FONT_HERSHEY_SCRIPT_SIMPLEX, fontScale, thickness, 0);
+    Size res = getTextSize(text, FONT_HERSHEY_SCRIPT_SIMPLEX, fontScale, thickness, &baseLine);
+
+    EXPECT_EQ(res0.width, res.width);
+    EXPECT_EQ(res0.height, res.height);
+    EXPECT_NEAR(476, res.width, 3.0);
+    EXPECT_NEAR(41, res.height, 3.0);
+    EXPECT_NEAR(10, baseLine, 3.0);
+}
+
+TEST(Drawing, fromJava_testPutTextMatStringPointIntDoubleScalarIntIntBoolean)
+{
+    String text = "Hello World";
+    Size labelSize(175, 22);
+
+    Mat img(20 + (int)labelSize.height, 20 + (int)labelSize.width, CV_8U, Scalar::all(0));
+    Point origin(10, 10);
+
+    putText(img, text, origin, FONT_HERSHEY_SIMPLEX, 1.0, Scalar::all(255), 1, LINE_8, true);
+
+    EXPECT_LT(0, countNonZero(img));
+    // check that border is not corrupted
+    rectangle(img, origin,
+                Point(origin.x + labelSize.width, origin.y + labelSize.height),
+                      Scalar::all(0), -1, 8);
+    EXPECT_EQ(0, countNonZero(img));
+}
+
+typedef struct TextProp
+{
+    const char* str;
+    bool ralign;
+    int weight;
+    bool italic;
+    bool uni;
+} TextProp;
+
+TEST(Drawing, ttf_text)
+{
+    string ts_data_path = TS::ptr()->get_data_path();
+    string custom_font_path = ts_data_path + "../highgui/drawing/";
+
+    FontFace sans("sans");
+    FontFace italic("italic");
+    FontFace uni(custom_font_path + "WenQuanYiMicroHei.ttf");
+    Mat img(1000, 1500, CV_8UC3);
+    TextProp text[] =
+    {
+        {"The quick brown fox jumps over lazy dog. Fly, start, finish, shuffle shuttle.", false, 400, false, false},
+        {"vechicle #5 detected; fps=123.45.\n", false, 600, false, false},
+        {"Съешь же ещё этих мя́гких французских булок, да выпей чаю!\n"
+        "Dès Noël où un zéphyr haï me vêt de glaçons würmiens je dîne\nd’exquis rôtis de bœuf au kir à l’aÿ d’âge mûr & cætera!\n"
+        "“Falsches Üben von Xylophonmusik quält jeden größeren Zwerg”.", false, 400, true},
+
+        {"¡Oh tú, sabio encantador, quienquiera que seas,\n"
+         "a quien ha de tocar el ser coronista desta peregrina\n"
+         "historia, ruégote que no te olvides de mi buen Rocinante,\n"
+         "compañero eterno mío en todos mis caminos y carreras!.\n", false, 300, false, false},
+        {"Ταχίστη αλώπηξ βαφής ψημένη γη, δρασκελίζει υπέρ νωθρού κυνός.", false, 400, false, true},
+        {"春眠不觉晓，\n处处闻啼鸟。\n夜来风雨声，\n花落知多少。\n\n"
+        " あなたはそれが困難見つけた場合 — あなたは正しい方向に向かっている。\n"
+        " 넌 모든 꽃들을 다 꺾어버릴 수는 있겠지만, 봄이 오는 걸 막을 수는 없어。 ", false, 400, false, true}
+    };
+    Scalar color(150, 80, 0);
+
+    for(int iter = 0; iter < 1; iter++)
+    {
+        //double ts = (double)getTickCount();
+        img.setTo(Scalar::all(255));
+        int sz = 20;
+        int x0 = 50, y0 = 70;
+        Point org(x0, y0);
+
+        int j = 0, column = 1;
+        for(const TextProp& t: text)
+        {
+            int flags = t.ralign ? PUT_TEXT_ALIGN_RIGHT : 0;
+            if(t.ralign)
+            {
+                if(j > 0)
+                    break;
+                if(column == 1)
+                {
+                    column = 2;
+                    org.y = y0;
+                }
+                org.x = img.cols - x0;
+            }
+            else
+            {
+                org.x = column == 1 ? x0 : img.cols/2;
+            }
+            //Rect r = getTextSize(img.size(), t.str, org, face, sz, t.weight, flags);
+            org = putText(img, t.str, org, color, t.uni ? uni : t.italic ? italic : sans,
+                          sz, t.weight, flags, Range());
+            //rectangle(img, r, Scalar(80, 0, 128), 1, LINE_AA);
+            org.y += sz + 10;
+        }
+        org.x = x0;
+        org.y = y0 = org.y + 150;
+        column = 1;
+
+        Scalar color2(80, 0, 128);
+
+        org = Point(img.cols - 550, img.rows/2+50);
+        putText(img, "Пробуем\n ", org, color2, italic, 80, 300,
+                PUT_TEXT_ALIGN_LEFT, Range());
+        org.x -= 90;
+        org.y += 130;
+        putText(img, "OpenCV", org, color2, italic, 120, 800,
+                PUT_TEXT_ALIGN_LEFT, Range());
+        org.y += 140;
+        org.x += 60;
+        putText(img, "打印文字", org, color2, sans, 100, 400,
+                PUT_TEXT_ALIGN_LEFT, Range());
+        //ts = (double)getTickCount() - ts;
+        //printf("iter=%d. ts=%.2fms\n", iter, ts*1000./getTickFrequency());
+    }
+
+#if 0
+    //imwrite(ts_data_path + "../highgui/drawing/text_test.png", img);
+    imshow("test", img);
+    waitKey();
+#else
+    Mat refimg = imread(ts_data_path + "../highgui/drawing/text_test.png", IMREAD_UNCHANGED);
+    //imshow("ref", refimg);
+    //imshow("actual", img);
+    //absdiff(refimg, img, refimg);
+    //imshow("diff", refimg);
+    //waitKey();
+    EXPECT_EQ(refimg.size(), img.size());
+    EXPECT_LT(cv::norm(refimg, img, NORM_L1), 6500);
+#endif
+}
+
+
 }} // namespace
