@@ -48,7 +48,7 @@ titles = ['Original Image','BINARY','BINARY_INV','TRUNC','TOZERO','TOZERO_INV']
 images = [img, thresh1, thresh2, thresh3, thresh4, thresh5]
 
 for i in xrange(6):
-    plt.subplot(2,3,i+1),plt.imshow(images[i],'gray')
+    plt.subplot(2,3,i+1),plt.imshow(images[i],'gray',vmin=0,vmax=255)
     plt.title(titles[i])
     plt.xticks([]),plt.yticks([])
 
