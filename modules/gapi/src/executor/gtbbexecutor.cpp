@@ -204,6 +204,8 @@ enum class is_tbb_work_present {
    no
 };
 
+//RAII object to block TBB master thread (one that does wait_for_all())
+//N.B. :wait_for_all() return control when root ref_count drops to 1,
 struct root_wait_lock_t {
     struct root_decrement_ref_count{
         void operator()(tbb::task* t) const{
@@ -217,6 +219,7 @@ struct root_wait_lock_t {
 
     root_wait_lock_t() = default;
     root_wait_lock_t(tasking::root_t& root, is_tbb_work_present& previous_state) : guard{root.get()} {
+        // Block the master thread while the *this object is alive.
         auto new_root_ref_count = root->add_ref_count(1);
         previous_state = (new_root_ref_count == 2) ? is_tbb_work_present::no : is_tbb_work_present::yes;
     }
@@ -350,16 +353,14 @@ namespace graph {
                         {
                             GAPI_ITT_AUTO_TRACE_GUARD(ittTbbEnqueueSpawnReadyBlocks);
                             // Force master thread (one that does wait_for_all()) to (actively) wait for enqueued tasks
-                            // and unlock it right after all dependee tasks are spawned
-                            // (and therefore ref_count of root has been increased accordingly, thus blocking
-                            // the waiting accordingly).
+                            // and unlock it right after all dependent tasks are spawned.
 
                             auto root_wait_lock = copy_through_move(lock_wait_master(self_copy.ctx.root, master_was_active));
 
                             // TODO: add test to cover proper holding of root_wait_lock
                             // As the calling thread most likely is not TBB one, instead of spawning TBB tasks directly we
                             // enqueue a task which will spawn them.
-                            // For master thread to not leave wait_for_all() premature,
+                            // For master thread to not leave wait_for_all() prematurely,
                             // hold the root_wait_lock until need tasks are actually spawned.
                             self_copy.ctx.arena.enqueue([ready_items, self_copy, root_wait_lock](){
                                 self_copy.spawn_clones(ready_items);

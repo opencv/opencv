@@ -50,8 +50,14 @@ struct atomic_copyable_wrapper {
 struct async_tag {};
 constexpr async_tag async;
 
+// Class describing a piece of work in the node in the tasks graph.
+// Most of the fields are set only once during graph compilation and never changes.
+// (However at the moment they can not be made const due to two phase initialization
+// of the tile_node objects)
+// FIXME: refactor the code to make the const?
 struct tile_node {
-    // place in totally ordered queue of tasks to execute. Inverse to priority, i.e. lower index means higher priority
+    // place in totally ordered queue of tasks to execute. Inverse to priority, i.e.
+    // lower index means higher priority
     size_t                                          total_order_index = 0;
 
     // FIXME: use templates here instead of std::function
@@ -65,8 +71,6 @@ struct tile_node {
     util::variant<sync_task_body, async_task_body>  task_body;
 
     // number of dependencies according to a dependency graph (i.e. number of "input" edges).
-    // Set only once during graph compilation.
-    // (Can not be made const due to two phase initialization of the tile_node objects)
     size_t                                          dependencies     = 0;
 
     // number of unsatisfied dependencies. When drops to zero task is ready for execution.
