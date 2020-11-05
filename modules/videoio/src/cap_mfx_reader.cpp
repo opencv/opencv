@@ -112,6 +112,7 @@ VideoCapture_IntelMFX::VideoCapture_IntelMFX(const cv::String &filename)
         return;
     }
 
+    frameSize = Size(params.mfx.FrameInfo.CropW, params.mfx.FrameInfo.CropH);
     good = true;
 }
 
@@ -127,10 +128,23 @@ VideoCapture_IntelMFX::~VideoCapture_IntelMFX()
     cleanup(deviceHandler);
 }
 
-double VideoCapture_IntelMFX::getProperty(int) const
+double VideoCapture_IntelMFX::getProperty(int prop) const
 {
-    MSG(cerr << "MFX: getProperty() is not implemented" << endl);
-    return 0;
+    if (!good)
+    {
+        MSG(cerr << "MFX: can not call getProperty(), backend has not been initialized" << endl);
+        return 0;
+    }
+    switch (prop)
+    {
+        case CAP_PROP_FRAME_WIDTH:
+            return frameSize.width;
+        case CAP_PROP_FRAME_HEIGHT:
+            return frameSize.height;
+        default:
+            MSG(cerr << "MFX: unsupported property" << endl);
+            return 0;
+    }
 }
 
 bool VideoCapture_IntelMFX::setProperty(int, double)

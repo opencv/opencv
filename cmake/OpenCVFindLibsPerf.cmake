@@ -51,7 +51,12 @@ endif(WITH_CUDA)
 
 # --- Eigen ---
 if(WITH_EIGEN AND NOT HAVE_EIGEN)
-  find_package(Eigen3 QUIET)
+  if(NOT OPENCV_SKIP_EIGEN_FIND_PACKAGE_CONFIG)
+    find_package(Eigen3 CONFIG QUIET)  # Ceres 2.0.0 CMake scripts doesn't work with CMake's FindEigen3.cmake module (due to missing EIGEN3_VERSION_STRING)
+  endif()
+  if(NOT Eigen3_FOUND)
+    find_package(Eigen3 QUIET)
+  endif()
 
   if(Eigen3_FOUND)
     if(TARGET Eigen3::Eigen)
