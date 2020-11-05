@@ -111,6 +111,8 @@ TEST_P(Videoio_MFX, read_write_raw)
     VideoCapture cap;
     cap.open(filename, CAP_INTEL_MFX);
     ASSERT_TRUE(cap.isOpened());
+    EXPECT_EQ(FRAME_SIZE.width, cap.get(CAP_PROP_FRAME_WIDTH));
+    EXPECT_EQ(FRAME_SIZE.height, cap.get(CAP_PROP_FRAME_HEIGHT));
     for (int i = 0; i < FRAME_COUNT; ++i)
     {
         ASSERT_TRUE(cap.read(frame));
