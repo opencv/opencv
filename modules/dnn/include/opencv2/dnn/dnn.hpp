@@ -1320,11 +1320,9 @@ CV__DNN_INLINE_NS_BEGIN
          /**
           * @brief Given the @p input frame, create input blob, run net and return recognition result.
           * @param[in] frame: The input image.
-          * @param[out] results: A set of text recognition results.
-          * @param[in] roiPolygons: (Optional) A set of text detection results. If it is not empty, all the ROIs will be cropped as the network inputs.
+          * @returns a String holding the recognition result
           */
-         CV_WRAP void recognize(InputArray frame, CV_OUT std::vector<String>& results,
-                                const std::vector<std::vector<Point>>& roiPolygons = {});
+         CV_WRAP String recognize(InputArray frame);
 
      protected:
          struct Voc;

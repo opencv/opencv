@@ -139,10 +139,9 @@ int main(int argc, char** argv)
                 Mat cropped;
                 fourPointsTransform(recInput, vertices, cropped);
 
-                std::vector<String> recResults;
-                recognizer.recognize(cropped, recResults);
+                String recResult = recognizer.recognize(cropped);
 
-                putText(frame, recResults[0], vertices[1], FONT_HERSHEY_SIMPLEX, 1.5, Scalar(0, 0, 255), 2);
+                putText(frame, recResult, vertices[3], FONT_HERSHEY_SIMPLEX, 1.5, Scalar(0, 0, 255), 2);
             }
             polylines(frame, detResults, true, Scalar(0, 255, 0), 2);
         }

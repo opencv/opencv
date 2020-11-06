@@ -91,11 +91,10 @@ int main(int argc, char** argv)
             timer.start();
             Mat frame = imread(samples::findFile(imgPath), imreadRGB);
             CV_Assert(!frame.empty());
-            std::vector<String> recResults;
-            recognizer.recognize(frame, recResults);
+            String recResult = recognizer.recognize(frame);
             timer.stop();
 
-            if (gt == convertForEval(recResults[0])) cntRight++;
+            if (gt == convertForEval(recResult)) cntRight++;
 
             cntAll++;
         }
@@ -112,11 +111,10 @@ int main(int argc, char** argv)
         CV_Assert(!frame.empty());
 
         // Recognition
-        std::vector<String> recResults;
-        recognizer.recognize(frame, recResults);
+        String recResult = recognizer.recognize(frame);
 
         imshow(winName, frame);
-        std::cout << "Predition: " << recResults[0] << std::endl;
+        std::cout << "Prediction: " << recResult << std::endl;
         waitKey();
     }
 

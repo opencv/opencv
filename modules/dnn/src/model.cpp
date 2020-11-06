@@ -409,7 +409,7 @@ struct TextRecognitionModel::Voc
 
     void setVocabulary(const std::vector<String>& inputVoc)
     {
-        vocabulary.assign(inputVoc.begin(), inputVoc.end());
+        vocabulary = inputVoc;
     }
 
     void setDecodeType(const String& type)
@@ -472,40 +472,13 @@ void TextRecognitionModel::setDecodeType(const String& type)
     voc->setDecodeType(type);
 }
 
-void TextRecognitionModel::recognize(InputArray frame, std::vector<String>& results,
-                                     const std::vector<std::vector<Point>>& roiPolygons)
+String TextRecognitionModel::recognize(InputArray frame)
 {
-    results.clear();
-
     std::vector<Mat> outs;
-    uint roiSize = roiPolygons.size();
-    if (roiSize == 0) {
-        impl->predict(*this, frame.getMat(), outs);
-        CV_Assert(outs.size() == 1);
-        results.push_back(voc->decode(outs[0]));
-    } else {
-        Mat input = frame.getMat();
+    impl->predict(*this, frame.getMat(), outs);
+    CV_Assert(outs.size() == 1);
 
-        // Predict for each RoI
-        for (uint i = 0; i < roiSize; i++) {
-            int xmin = input.cols, xmax = 0, ymin = input.rows, ymax = 0;
-            for (uint j = 0; j < roiPolygons[i].size(); j++) {
-                xmin = std::min(roiPolygons[i][j].x, xmin);
-                xmax = std::max(roiPolygons[i][j].x, xmax);
-                ymin = std::min(roiPolygons[i][j].y, ymin);
-                ymax = std::max(roiPolygons[i][j].y, ymax);
-            }
-            xmin = std::max(xmin, 0);
-            ymin = std::max(ymin, 0);
-            xmax = std::min(input.cols - 1, xmax);
-            ymax = std::min(input.rows - 1, ymax);
-            Rect roiRect = Rect(xmin, ymin, xmax - xmin, ymax - ymin);
-            Mat roi = input(roiRect);
-            impl->predict(*this, roi, outs);
-            CV_Assert(outs.size() == 1);
-            results.push_back(voc->decode(outs[0]));
-        }
-    }
+    return voc->decode(outs[0]);
 }
 
 static double contourScore(const Mat& binary, const std::vector<Point>& contour)
@@ -579,7 +552,6 @@ static void unclip(const std::vector<Point>& inPoly, std::vector<Point> &outPoly
         if( fabs(cosAngle) > 0.7 ) {
             pt.x = (int)((b.x + c.x) / 2);
             pt.y = (int)((b.y + c.y) / 2);
-            outPoly.push_back(pt);
         } else {
             double denom = a.x * (double)(d.y - c.y) + b.x * (double)(c.y - d.y) +
                            d.x * (double)(b.y - a.y) + c.x * (double)(a.y - b.y);
@@ -588,8 +560,8 @@ static void unclip(const std::vector<Point>& inPoly, std::vector<Point> &outPoly
 
             pt.x = (int)((a.x + s*(b.x - a.x)));
             pt.y = (int)((a.y + s*(b.y - a.y)));
-            outPoly.push_back(pt);
         }
+        outPoly.push_back(pt);
     }
 }
 

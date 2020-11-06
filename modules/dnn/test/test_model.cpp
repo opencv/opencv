@@ -128,9 +128,8 @@ public:
         model.setVocabulary(vocabulary);
         model.setDecodeType(decodeType);
 
-        std::vector<std::string> results;
-        model.recognize(frame, results);
-        ASSERT_STREQ(results[0].c_str(), seq.c_str());
+        std::string result = model.recognize(frame);
+        ASSERT_STREQ(result.c_str(), seq.c_str());
     }
 
     void testTextDetectionModelByDB(const std::string& weights, const std::string& cfg,

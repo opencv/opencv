@@ -12,7 +12,7 @@ In the current version, `TextRecognitionModel` only supports CNN+RNN+CTC based a
 and the greedy decoding method for CTC is provided.
 For more information, please refer to the [original paper](https://arxiv.org/abs/1507.05717)
 
-`TextRecognitionModel::recognize()` is the main function for text recognition.
+Before recognition, you should `setVocabulary` and `setDecodeType`.
 - The parameter `String decodeType` is for decoding, and other methods will be added in the future.
     If decodeType is "CTC-greedy", the output of the text recognition model should be a probability matrix.
     The shape should be (T, B, Dim), where
@@ -20,10 +20,8 @@ For more information, please refer to the [original paper](https://arxiv.org/abs
     - B is the batch size (only support B=1 in inference),
     - and Dim is the length of vocabulary +1('Blank' of CTC is at the index=0 of Dim).
 
-- The last input parameter `const std::vector<std::vector<Point>> & roiPolygons` is optional.
-    - If it is not empty, we will crop all the ROIs as the network inputs, and all the results are returned in `std::vector<String> & results`.
-    - If it is empty, the whole image will be inputted.
-
+`TextRecognitionModel::recognize()` is the main function for text recognition.
+- The input image should be a cropped text image.
 
 ---
 
@@ -161,9 +159,7 @@ Step2. Setting Parameters
 ```
 Step3. Inference
 ```cpp
-    std::vector<String> recResults;
-    model.recognize(image, recResults);
-    std::cout << recResults[0] << std::endl;
+    String recResult = recognizer.recognize(frame);
 ```
 
 Input image:
@@ -243,31 +239,15 @@ Output:
 ## Example for Text Spotting
 
 After following the steps above, it is easy to get the detection results `std::vector<std::vector<Point>> detResults` of an input image.
-Then, we can set the last optional parameter of `recognize` with `detResults`, and get the final results.
-```cpp
-    std::vector<String> recResults;
-    recognizer.recognize(recInput, decodeType, recResults, detResults);
-
-    // Visualization
-    for (uint i = 0; i < detResults.size(); i++) {
-        polylines(image, detResults[i], true, Scalar(0, 255, 0), 2);
-        putText(image, recResults[i], detResults[i][3], FONT_HERSHEY_PLAIN, 2.0, Scalar(0, 0, 255), 2);
-    }
-    imshow("Text Spotting", image);
-    waitKey();
-```
-
-or you can do transformation before recognizing each text instance:
+Then, you can do transformation and crop text images for recognition.
+For more information, please refer to **Detailed Sample**
 ```cpp
     // Transform and Crop
     Mat cropped;
     fourPointsTransform(recInput, vertices, cropped);
 
-    std::vector<String> recResults;
-    recognizer.recognize(cropped, recResults);
+    String recResult = recognizer.recognize(cropped);
 ```
-
-For more information, please refer to **Detailed Sample**
 
 Output Examples:
 
