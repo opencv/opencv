@@ -257,6 +257,18 @@ Then, we can set the last optional parameter of `recognize` with `detResults`, a
     waitKey();
 ```
 
+or you can do transformation before recognizing each text instance:
+```cpp
+    // Transform and Crop
+    Mat cropped;
+    fourPointsTransform(recInput, vertices, cropped);
+
+    std::vector<String> recResults;
+    recognizer.recognize(cropped, recResults);
+```
+
+For more information, please refer to **Detailed Sample**
+
 Output Examples:
 
 ![Picture example](detect_test1.jpg)

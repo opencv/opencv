@@ -141,11 +141,6 @@ int main(int argc, char** argv)
         detector.detect(frame, results, binThresh, polyThresh, unclipRatio, maxCandidates);
 
         polylines(frame, results, true, Scalar(0, 255, 0), 5);
-        for (int j = 0; j < results.size(); j++) {
-            for (int i = 0; i < results[j].size(); i++) {
-                std::cout << results[j][i].x << "-" << results[j][i].y << std::endl;
-            }
-        }
         imshow(winName, frame);
         waitKey();
     }
