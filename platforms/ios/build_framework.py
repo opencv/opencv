@@ -184,17 +184,25 @@ class Builder:
             "-DOPENCV_INCLUDE_INSTALL_PATH=include",
             "-DOPENCV_3P_LIB_INSTALL_PATH=lib/3rdparty",
             "-DFRAMEWORK_NAME=%s" % self.framework_name,
-        ] + ([
-            "-DBUILD_SHARED_LIBS=ON",
-            "-DCMAKE_MACOSX_BUNDLE=ON",
-            "-DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED=NO",
-        ] if self.dynamic and not self.build_objc_wrapper else []) + ([
-            "-DDYNAMIC_PLIST=ON"
-        ] if self.dynamic else []) + ([
-            "-DOPENCV_ENABLE_NONFREE=ON"
-        ] if self.enablenonfree else []) + ([
-            "-DBUILD_WITH_DEBUG_INFO=ON"
-        ] if self.debug_info else [])
+        ]
+        if self.dynamic and not self.build_objc_wrapper:
+            args += [
+                "-DBUILD_SHARED_LIBS=ON",
+                "-DCMAKE_MACOSX_BUNDLE=ON",
+                "-DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED=NO",
+            ]
+        if self.dynamic:
+            args += [
+                "-DDYNAMIC_PLIST=ON"
+            ] 
+        if self.enablenonfree:
+            args += [
+                "-DOPENCV_ENABLE_NONFREE=ON"
+            ] 
+        if self.debug_info:
+            args += [
+                "-DBUILD_WITH_DEBUG_INFO=ON"
+            ]
 
         if len(self.exclude) > 0:
             args += ["-DBUILD_opencv_%s=OFF" % m for m in self.exclude]
@@ -480,14 +488,14 @@ if __name__ == "__main__":
         if not "objc" in args.without:
             args.without.append("objc")
 
-    b = iOSBuilder(args.opencv, args.contrib, args.dynamic, args.bitcodedisabled, args.without, args.disable, args.enablenonfree,
-        [
-            (iphoneos_archs, "iPhoneOS"),
-        ] if os.environ.get('BUILD_PRECOMMIT', None) else
-        [
-            # (iphoneos_archs, "iPhoneOS"),
-            # (iphonesimulator_archs, "iPhoneSimulator"),
-            (catalyst_archs, "Catalyst"),
-        ], args.debug, args.debug_info, args.framework_name, args.run_tests, args.build_docs)
+    targets = []
+    if os.environ.get('BUILD_PRECOMMIT', None):
+        targets.append((iphoneos_archs, "iPhoneOS"))
+    else:
+        # targets.append((iphoneos_archs, "iPhoneOS"))
+        # targets.append((iphonesimulator_archs, "iPhoneSimulator"))
+        targets.append((catalyst_archs, "Catalyst"))
+
+    b = iOSBuilder(args.opencv, args.contrib, args.dynamic, args.bitcodedisabled, args.without, args.disable, args.enablenonfree, targets, args.debug, args.debug_info, args.framework_name, args.run_tests, args.build_docs)
 
     b.build(args.out)
