@@ -16,26 +16,22 @@
 #include <opencv2/gapi/infer/onnx.hpp>
 
 namespace {
-
 struct ONNXInitPath {
     ONNXInitPath() {
         const char* env_path = getenv("OPENCV_GAPI_ONNX_MODEL_PATH");
-        if (env_path)
-            cvtest::addDataSearchPath(env_path);
+        if (env_path) {
+            cvtest::addDataSearchPath(env_path); 
+        }
     }
 };
 static ONNXInitPath g_init_path;
 
-cv::Mat initMatrixRandU(int type, cv::Size sz_in)
-{
+cv::Mat initMatrixRandU(int type, cv::Size sz_in) {
     cv::Mat in_mat1 = cv::Mat(sz_in, type);
 
-    if (CV_MAT_DEPTH(type) < CV_32F)
-    {
+    if (CV_MAT_DEPTH(type) < CV_32F) {
         cv::randu(in_mat1, cv::Scalar::all(0), cv::Scalar::all(255));
-    }
-    else
-    {
+    } else {
         const int fscale = 256;  // avoid bits near ULP, generate stable test input
         cv::Mat in_mat32s(in_mat1.size(), CV_MAKE_TYPE(CV_32S, CV_MAT_CN(type)));
         cv::randu(in_mat32s, cv::Scalar::all(0), cv::Scalar::all(255 * fscale));
@@ -43,15 +39,14 @@ cv::Mat initMatrixRandU(int type, cv::Size sz_in)
     }
     return in_mat1;
 }
-}
+} // anonymous namespace
 namespace opencv_test
 {
 namespace {
 // FIXME: taken from the DNN module
 void normAssert(cv::InputArray ref, cv::InputArray test,
                 const char *comment /*= ""*/,
-                double l1 = 0.00001, double lInf = 0.0001)
-{
+                double l1 = 0.00001, double lInf = 0.0001) {
     double normL1 = cvtest::norm(ref, test, cv::NORM_L1) / ref.getMat().total();
     EXPECT_LE(normL1, l1) << comment;
 
@@ -59,31 +54,15 @@ void normAssert(cv::InputArray ref, cv::InputArray test,
     EXPECT_LE(normInf, lInf) << comment;
 }
 
-std::string findModel(const std::string &model_name)
-{
+std::string findModel(const std::string &model_name) {
     return findDataFile("vision/" + model_name + ".onnx", false);
 }
 
-void remap_yolo(const std::unordered_map<std::string, cv::Mat> &onnx,
-                       std::unordered_map<std::string, cv::Mat> &gapi) {
-    GAPI_Assert(onnx.size() == 1u);
-    GAPI_Assert(gapi.size() == 1u);
-    const auto size = onnx.begin()->second.total();
-    GAPI_Assert(onnx.begin()->second.size == gapi.begin()->second.size);
-    const float* onnx_ptr = onnx.begin()->second.ptr<float>();
-          float* gapi_ptr = gapi.begin()->second.ptr<float>();
-
-    // Simple copy. Same sizes.
-    for (size_t i = 0; i < size; ++i) {
-       gapi_ptr[i] = onnx_ptr[i];
-    }
-}
-
-void toCHW(cv::Mat& src, cv::Mat& dst, int new_h, int new_w, int new_c) {
-    dst.create(cv::Size(new_w, new_h * new_c), CV_32F);
+inline void toCHW(cv::Mat& src, cv::Mat& dst) {
+    dst.create(cv::Size(src.cols, src.rows * src.channels()), CV_32F);
     std::vector<cv::Mat> planes;
-    for (int i = 0; i < new_c; ++i) {
-        planes.push_back(dst.rowRange(i * new_h, (i + 1) * new_h));
+    for (int i = 0; i < src.channels(); ++i) {
+        planes.push_back(dst.rowRange(i * src.rows, (i + 1) * src.rows));
     }
     cv::split(src, planes);
 }
@@ -92,7 +71,6 @@ inline int toCV(ONNXTensorElementDataType prec) {
     switch (prec) {
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT8: return CV_8U;
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT: return CV_32F;
-    case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32: return CV_32S;
     default: GAPI_Assert(false && "Unsupported data type");
     }
     return -1;
@@ -110,23 +88,55 @@ inline std::vector<const char*> getCharNames(const std::vector<std::string>& nam
     return out_vec;
 }
 
+inline void match_out(const cv::Mat& in, cv::Mat& out) {
+    GAPI_Assert(in.depth() == CV_32F);
+    GAPI_Assert(in.size == out.size);
+    const float* inptr = in.ptr<float>();
+    float* optr = out.ptr<float>();
+    int size = in.total();
+    for (int i = 0; i < size; ++i) {
+        optr[i] = inptr[i];
+    }
+}
+
+void remap_yolo(const std::unordered_map<std::string, cv::Mat> &onnx,
+                      std::unordered_map<std::string, cv::Mat> &gapi) {
+    GAPI_Assert(onnx.size() == 1u);
+    GAPI_Assert(gapi.size() == 1u);
+    // Result from Run method
+    const cv::Mat& in = onnx.begin()->second;
+    // Configured output
+    cv::Mat& out = gapi.begin()->second;
+    // Simple copy
+    match_out(in, out);
+}
+
+void remap_ssd_ports(const std::unordered_map<std::string, cv::Mat> &onnx,
+                           std::unordered_map<std::string, cv::Mat> &gapi) {
+    // Result from Run method
+    const cv::Mat& in_num     = onnx.at("num_detections:0");
+    const cv::Mat& in_boxes   = onnx.at("detection_boxes:0");
+    const cv::Mat& in_scores  = onnx.at("detection_scores:0");
+    const cv::Mat& in_classes = onnx.at("detection_classes:0");
+    // Configured outputs
+    cv::Mat& out_boxes   = gapi.at("out1");
+    cv::Mat& out_classes = gapi.at("out2");
+    cv::Mat& out_scores  = gapi.at("out3");
+    cv::Mat& out_num     = gapi.at("out4");
+    // Simple copy for outputs
+    match_out(in_num, out_num);
+    match_out(in_boxes, out_boxes);
+    match_out(in_scores, out_scores);
+    match_out(in_classes, out_classes);
+}
+
 class ONNXtest : public ::testing::Test {
 public:
-    Ort::Env env{nullptr};
-    Ort::MemoryInfo memory_info{nullptr};
-    Ort::AllocatorWithDefaultOptions allocator;
-    Ort::SessionOptions session_options;
-    Ort::Session session{nullptr};
-
     std::string model_path;
-    cv::Mat in_mat1;
+    size_t num_in, num_out;
     std::vector<cv::Mat> out_gapi;
     std::vector<cv::Mat> out_onnx;
-
-    std::vector<int64_t> output_node_dims;
-    std::vector<int64_t> input_node_dims;
-    std::vector<std::string> in_node_names;
-    std::vector<std::string> out_node_names;
+    cv::Mat in_mat1;
 
     ONNXtest() {
         env = Ort::Env(ORT_LOGGING_LEVEL_WARNING, "test");
@@ -134,6 +144,65 @@ public:
         out_gapi.resize(1);
         out_onnx.resize(1);
         in_mat1 = initMatrixRandU(CV_8UC3, cv::Size{640, 480});
+    }
+
+    template<typename T>
+    void infer(const std::vector<cv::Mat>& ins,
+                     std::vector<cv::Mat>& outs) {
+        // Prepare session
+        session = Ort::Session(env, model_path.data(), session_options);
+        num_in = session.GetInputCount();
+        num_out = session.GetOutputCount();
+        in_node_names.clear();
+        out_node_names.clear();
+        // Inputs Run params
+        std::vector<Ort::Value> in_tensors;
+        for(size_t i = 0; i < num_in; ++i) {
+            char* in_node_name_p = session.GetInputName(i, allocator);
+            in_node_names.push_back(std::string(in_node_name_p));
+            allocator.Free(in_node_name_p);
+            input_node_dims = toORT(ins[i].size);
+            in_tensors.emplace_back(Ort::Value::CreateTensor<T>(memory_info,
+                                                                const_cast<T*>(ins[i].ptr<T>()),
+                                                                ins[i].total(),
+                                                                input_node_dims.data(),
+                                                                input_node_dims.size()));
+        }
+        // Outputs Run params
+        for(size_t i = 0; i < num_out; ++i) {
+            char* out_node_name_p = session.GetOutputName(i, allocator);
+            out_node_names.push_back(std::string(out_node_name_p));
+            allocator.Free(out_node_name_p);
+        }
+        // Input/output order by names
+        auto in_run_names  = getCharNames(in_node_names);
+        auto out_run_names = getCharNames(out_node_names);
+        // Run
+        auto result = session.Run(Ort::RunOptions{nullptr},
+                                  in_run_names.data(),
+                                  &in_tensors.front(),
+                                  num_in,
+                                  out_run_names.data(),
+                                  num_out);
+        // Copy outputs
+        GAPI_Assert(result.size() == num_out);
+        outs.resize(num_out);
+        for (size_t i = 0; i < num_out; ++i) {
+            auto info = result[i].GetTensorTypeAndShapeInfo();
+            auto shape = info.GetShape();
+            auto type = info.GetElementType();
+            cv::Mat mt(std::vector<int>(shape.begin(), shape.end()), toCV(type),
+                       reinterpret_cast<void*>(result[i].GetTensorMutableData<uint8_t*>()));
+            mt.copyTo(outs[i]);
+        }
+    }
+    // One input/output overload
+    template<typename T>
+    void infer(const cv::Mat& in, cv::Mat& out) {
+        std::vector<cv::Mat> result;
+        infer<T>({in}, result);
+        GAPI_Assert(result.size() == 1u);
+        out = result.front();
     }
 
     void validate() {
@@ -148,57 +217,27 @@ public:
     void useModel(const std::string& model_name) {
         model_path = findModel(model_name);
     }
+private:
+    Ort::Env env{nullptr};
+    Ort::MemoryInfo memory_info{nullptr};
+    Ort::AllocatorWithDefaultOptions allocator;
+    Ort::SessionOptions session_options;
+    Ort::Session session{nullptr};
+
+    std::vector<int64_t> input_node_dims;
+    std::vector<std::string> in_node_names;
+    std::vector<std::string> out_node_names;
 };
 
-class ONNXSimpleTest : public ONNXtest {
+class ONNXClassificationTest : public ONNXtest {
 public:
     cv::Scalar mean, std;
-
     virtual void SetUp() {
         mean = { 0.485, 0.456, 0.406 };
-        std = { 0.229, 0.224, 0.225 };
+        std  = { 0.229, 0.224, 0.225 };
     }
 
-    virtual void prepareInfer() {
-        session = Ort::Session(env, model_path.data(), session_options);
-        char* in_node_name_p = session.GetInputName(0, allocator);
-        char* out_node_name_p = session.GetOutputName(0, allocator);
-        in_node_names = {std::string(in_node_name_p)};
-        out_node_names = {std::string(out_node_name_p)};
-        allocator.Free(in_node_name_p);
-        allocator.Free(out_node_name_p);
-    }
-
-    void infer(const cv::Mat& in, cv::Mat& out) {
-        prepareInfer();
-        input_node_dims.clear();
-        for (int i = 0; i < in.size.dims(); ++i) {
-            input_node_dims.push_back(in.size[i]);
-        }
-        auto in_tensor = Ort::Value::CreateTensor<float>(memory_info,
-                                                         const_cast<float*>(in.ptr<float>()),
-                                                         in.total(),
-                                                         input_node_dims.data(),
-                                                         input_node_dims.size());
-
-        std::vector<const char *> in_names = {in_node_names[0].data()};
-        std::vector<const char *> out_names = {out_node_names[0].data()};
-        auto result = session.Run(Ort::RunOptions{nullptr},
-                                  in_names.data(),
-                                  &in_tensor,
-                                  session.GetInputCount(),
-                                  out_names.data(),
-                                  session.GetOutputCount());
-
-        auto info = result.front().GetTensorTypeAndShapeInfo();
-        auto shape = info.GetShape();
-        auto type = info.GetElementType();
-        cv::Mat mt(std::vector<int>(shape.begin(), shape.end()), toCV(type),
-                   reinterpret_cast<void*>(result.front().GetTensorMutableData<uint8_t*>()));
-        mt.copyTo(out);
-    }
-
-    virtual void preprocess(const cv::Mat& src, cv::Mat& dst) {
+    void preprocess(const cv::Mat& src, cv::Mat& dst) {
         const int new_h = 224;
         const int new_w = 224;
         cv::Mat tmp, nmat, cvt;
@@ -206,34 +245,34 @@ public:
         dst.convertTo(cvt, CV_32F, 1.f / 255);
         nmat = cvt - mean;
         tmp = nmat / std;
-        toCHW(tmp, dst, new_h, new_w, 3);
+        toCHW(tmp, dst);
         dst = dst.reshape(1, {1, 3, new_h, new_w});
     }
 };
 
-class ONNXGRayScaleTest : public ONNXSimpleTest {
+class ONNXGRayScaleTest : public ONNXtest {
 public:
-    virtual void preprocess(const cv::Mat& src, cv::Mat& dst) {
+    void preprocess(const cv::Mat& src, cv::Mat& dst) {
         const int new_h = 64;
         const int new_w = 64;
         cv::Mat csc, rsc, cvt;
         cv::cvtColor(src, csc, cv::COLOR_BGR2GRAY);
         cv::resize(csc, rsc, cv::Size(new_w, new_h));
         rsc.convertTo(cvt, CV_32F);
-        toCHW(cvt, dst, new_h, new_w, 1);
+        toCHW(cvt, dst);
         dst = dst.reshape(1, {1, 1, new_h, new_w});
     }
 };
 
 } // anonymous namespace
 
-TEST_F(ONNXSimpleTest, Infer)
+TEST_F(ONNXClassificationTest, Infer)
 {
     useModel("classification/squeezenet/model/squeezenet1.0-9");
     // ONNX_API code
     cv::Mat processed_mat;
     preprocess(in_mat1, processed_mat);
-    infer(processed_mat, out_onnx.front());
+    infer<float>(processed_mat, out_onnx.front());
     // G_API code
     G_API_NET(SqueezNet, <cv::GMat(cv::GMat)>, "squeeznet");
     cv::GMat in;
@@ -247,7 +286,7 @@ TEST_F(ONNXSimpleTest, Infer)
     validate();
 }
 
-TEST_F(ONNXSimpleTest, InferTensor)
+TEST_F(ONNXClassificationTest, InferTensor)
 {
     useModel("classification/squeezenet/model/squeezenet1.0-9");
     // Create tensor
@@ -255,13 +294,12 @@ TEST_F(ONNXSimpleTest, InferTensor)
     const std::vector<int> dims = {1, rand_mat.channels(), rand_mat.rows, rand_mat.cols};
     const cv::Mat tensor(dims, CV_32F, rand_mat.data);
     // ONNX_API code
-    infer(tensor, out_onnx.front());
+    infer<float>(tensor, out_onnx.front());
     // G_API code
     G_API_NET(SqueezNet, <cv::GMat(cv::GMat)>, "squeeznet");
     cv::GMat in;
     cv::GMat out = cv::gapi::infer<SqueezNet>(in);
     cv::GComputation comp(cv::GIn(in), cv::GOut(out));
-
     auto net = cv::gapi::onnx::Params<SqueezNet> { model_path };
     comp.apply(cv::gin(tensor),
                cv::gout(out_gapi.front()),
@@ -270,14 +308,14 @@ TEST_F(ONNXSimpleTest, InferTensor)
     validate();
 }
 
-TEST_F(ONNXSimpleTest, InferROI)
+TEST_F(ONNXClassificationTest, InferROI)
 {
     useModel("classification/squeezenet/model/squeezenet1.0-9");
     const cv::Rect ROI(cv::Point{0, 0}, cv::Size{250, 250});
     // ONNX_API code
     cv::Mat roi_mat;
     preprocess(in_mat1(ROI), roi_mat);
-    infer(roi_mat, out_onnx.front());
+    infer<float>(roi_mat, out_onnx.front());
     // G_API code
     G_API_NET(SqueezNet, <cv::GMat(cv::GMat)>, "squeeznet");
     cv::GMat in;
@@ -292,7 +330,7 @@ TEST_F(ONNXSimpleTest, InferROI)
     validate();
 }
 
-TEST_F(ONNXSimpleTest, InferROIList)
+TEST_F(ONNXClassificationTest, InferROIList)
 {
     useModel("classification/squeezenet/model/squeezenet1.0-9");
     const std::vector<cv::Rect> rois = {
@@ -304,7 +342,7 @@ TEST_F(ONNXSimpleTest, InferROIList)
     for (size_t i = 0; i < rois.size(); ++i) {
         cv::Mat roi_mat;
         preprocess(in_mat1(rois[i]), roi_mat);
-        infer(roi_mat, out_onnx[i]);
+        infer<float>(roi_mat, out_onnx[i]);
     }
     // G_API code
     G_API_NET(SqueezNet, <cv::GMat(cv::GMat)>, "squeeznet");
@@ -320,7 +358,7 @@ TEST_F(ONNXSimpleTest, InferROIList)
     validate();
 }
 
-TEST_F(ONNXSimpleTest, Infer2ROIList)
+TEST_F(ONNXClassificationTest, Infer2ROIList)
 {
     useModel("classification/squeezenet/model/squeezenet1.0-9");
     const std::vector<cv::Rect> rois = {
@@ -332,7 +370,7 @@ TEST_F(ONNXSimpleTest, Infer2ROIList)
     for (size_t i = 0; i < rois.size(); ++i) {
         cv::Mat roi_mat;
         preprocess(in_mat1(rois[i]), roi_mat);
-        infer(roi_mat, out_onnx[i]);
+        infer<float>(roi_mat, out_onnx[i]);
     }
     // G_API code
     G_API_NET(SqueezNet, <cv::GMat(cv::GMat)>, "squeeznet");
@@ -344,12 +382,11 @@ TEST_F(ONNXSimpleTest, Infer2ROIList)
     comp.apply(cv::gin(in_mat1, rois),
                cv::gout(out_gapi),
                cv::compile_args(cv::gapi::networks(net)));
-
     // Validate
     validate();
 }
 
-TEST_F(ONNXSimpleTest, InferDynamicInputTensor)
+TEST_F(ONNXtest, InferDynamicInputTensor)
 {
     useModel("object_detection_segmentation/tiny-yolov2/model/tinyyolov2-8");
     // Create tensor
@@ -358,17 +395,15 @@ TEST_F(ONNXSimpleTest, InferDynamicInputTensor)
     cv::Mat tensor(dims, CV_32F, rand_mat.data);
     const cv::Mat in_tensor = tensor / 255.f;
     // ONNX_API code
-    infer(in_tensor, out_onnx.front());
+    infer<float>(in_tensor, out_onnx.front());
     // G_API code
     G_API_NET(YoloNet, <cv::GMat(cv::GMat)>, "YoloNet");
+    cv::GMat in;
+    cv::GMat out = cv::gapi::infer<YoloNet>(in);
+    cv::GComputation comp(cv::GIn(in), cv::GOut(out));
     auto net = cv::gapi::onnx::Params<YoloNet>{model_path}
         .cfgPostProc({cv::GMatDesc{CV_32F, {1,125,13,13}}}, remap_yolo)
         .cfgOutputLayers({"out"});
-
-    cv::GMat in;
-    cv::GMat out = cv::gapi::infer<YoloNet>(in);
-
-    cv::GComputation comp(cv::GIn(in), cv::GOut(out));
     comp.apply(cv::gin(in_tensor),
                cv::gout(out_gapi.front()),
                cv::compile_args(cv::gapi::networks(net)));
@@ -382,14 +417,14 @@ TEST_F(ONNXGRayScaleTest, InferImage)
     // ONNX_API code
     cv::Mat prep_mat;
     preprocess(in_mat1, prep_mat);
-    infer(prep_mat, out_onnx.front());
+    infer<float>(prep_mat, out_onnx.front());
     // G_API code
     G_API_NET(EmotionNet, <cv::GMat(cv::GMat)>, "emotion-ferplus");
     cv::GMat in;
     cv::GMat out = cv::gapi::infer<EmotionNet>(in);
     cv::GComputation comp(cv::GIn(in), cv::GOut(out));
     auto net = cv::gapi::onnx::Params<EmotionNet> { model_path }
-    .cfgNormalize({false}); // model accepts 0..255 range in FP32;
+        .cfgNormalize({false}); // model accepts 0..255 range in FP32;
     comp.apply(cv::gin(in_mat1),
                cv::gout(out_gapi.front()),
                cv::compile_args(cv::gapi::networks(net)));
@@ -397,6 +432,32 @@ TEST_F(ONNXGRayScaleTest, InferImage)
     validate();
 }
 
+TEST_F(ONNXtest, InferMultiNodes)
+{
+    useModel("object_detection_segmentation/ssd-mobilenetv1/model/ssd_mobilenet_v1_10");
+    // ONNX_API code
+    auto prep_mat = in_mat1.reshape(1, {1, in_mat1.rows, in_mat1.cols, in_mat1.channels()});
+    infer<uint8_t>({prep_mat}, out_onnx);
+    // G_API code
+    using OUT = std::tuple<cv::GMat, cv::GMat, cv::GMat, cv::GMat>;
+    G_API_NET(MobileNet, <OUT(cv::GMat)>, "ssd_mobilenet");
+    cv::GMat in;
+    cv::GMat out1, out2, out3, out4;
+    std::tie(out1, out2, out3, out4) = cv::gapi::infer<MobileNet>(in);
+    cv::GComputation comp(cv::GIn(in), cv::GOut(out1, out2, out3, out4));
+    auto net = cv::gapi::onnx::Params<MobileNet>{model_path}
+        .cfgOutputLayers({"out1", "out2", "out3", "out4"})
+        .cfgPostProc({cv::GMatDesc{CV_32F, {1,100,4}},
+                      cv::GMatDesc{CV_32F, {1,100}},
+                      cv::GMatDesc{CV_32F, {1,100}},
+                      cv::GMatDesc{CV_32F, {1,1}}}, remap_ssd_ports);
+    out_gapi.resize(num_out);
+    comp.apply(cv::gin(in_mat1),
+               cv::gout(out_gapi[0], out_gapi[1], out_gapi[2], out_gapi[3]),
+               cv::compile_args(cv::gapi::networks(net)));
+    // Validate
+    validate();
+}
 } // namespace opencv_test
 
 #endif //  HAVE_ONNX
