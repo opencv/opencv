@@ -25,6 +25,9 @@ std::string keys =
         "{ vocabularyPath vp                | | Path to benchmarks for evaluation. "
             "Download links are provided in doc/tutorials/dnn/dnn_text_spotting/dnn_text_spotting.markdown}";
 
+void fourPointsTransform(const Mat& frame, const Point2f vertices[], Mat& result);
+bool sortPts(const Point& p1, const Point& p2);
+
 int main(int argc, char** argv)
 {
     // Parse arguments
@@ -81,7 +84,6 @@ int main(int argc, char** argv)
     detector.setInputParams(detScale, detInputSize, detMean);
 
     // Parameters for Recognition
-    const String decodeType = "CTC-greedy";
     double recScale = 1.0 / 127.5;
     Scalar recMean = Scalar(127.5);
     Size recInputSize = Size(100, 32);
@@ -97,29 +99,73 @@ int main(int argc, char** argv)
     // Inference
     std::vector<std::vector<Point>> detResults;
     detector.detect(frame, detResults, binThresh, polyThresh, unclipRatio, maxCandidates);
-    if (detResults.size() == 0) {
-        std::cout << "No Text Detected." << std::endl;
-        return 0;
-    }
 
-    std::vector<String> recResults;
-    Mat recInput;
-    if (!imreadRGB) {
-        cvtColor(frame, recInput, cv::COLOR_BGR2GRAY);
+    if (detResults.size() > 0) {
+        // Text Recognition
+        Mat recInput;
+        if (!imreadRGB) {
+            cvtColor(frame, recInput, cv::COLOR_BGR2GRAY);
+        } else {
+            recInput = frame;
+        }
+        for (uint i = 0; i < detResults.size(); i++)
+        {
+            std::vector<Point> box = detResults[i];
+
+            // Sort the points
+            std::sort(box.begin(), box.end(), sortPts);
+            int index[4] = {0, 1, 2, 3};
+            if (box[1].y > box[0].y) {
+                index[0] = 0;
+                index[3] = 1;
+            } else {
+                index[0] = 1;
+                index[3] = 0;
+            }
+            if (box[3].y > box[2].y) {
+                index[1] = 2;
+                index[2] = 3;
+            } else {
+                index[1] = 3;
+                index[2] = 2;
+            }
+            Point2f vertices[4] = {box[index[3]], box[index[0]],
+                                   box[index[1]], box[index[2]]};
+
+            // Transform and Crop
+            Mat cropped;
+            fourPointsTransform(recInput, vertices, cropped);
+
+            std::vector<String> recResults;
+            recognizer.recognize(cropped, recResults);
+
+            putText(frame, recResults[0], vertices[3], FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 0, 255), 2);
+        }
+        polylines(frame, detResults, true, Scalar(0, 255, 0), 2);
     } else {
-        recInput = frame;
-    }
-
-    // Recognize all ROIs at the same time
-    recognizer.recognize(recInput, recResults, detResults);
-
-    // Visualization
-    for (uint i = 0; i < detResults.size(); i++) {
-        polylines(frame, detResults[i], true, Scalar(0, 255, 0), 2);
-        putText(frame, recResults[i], detResults[i][3], FONT_HERSHEY_PLAIN, 2.0, Scalar(0, 0, 255), 2);
+        std::cout << "No Text Detected." << std::endl;
     }
     imshow(winName, frame);
     waitKey();
 
     return 0;
+}
+
+void fourPointsTransform(const Mat& frame, const Point2f vertices[], Mat& result)
+{
+    const Size outputSize = Size(100, 32);
+
+    Point2f targetVertices[4] = {
+        Point(0, outputSize.height - 1),
+        Point(0, 0), Point(outputSize.width - 1, 0),
+        Point(outputSize.width - 1, outputSize.height - 1)
+    };
+    Mat rotationMatrix = getPerspectiveTransform(vertices, targetVertices);
+
+    warpPerspective(frame, result, rotationMatrix, outputSize);
+}
+
+bool sortPts(const Point& p1, const Point& p2)
+{
+    return p1.x < p2.x;
 }

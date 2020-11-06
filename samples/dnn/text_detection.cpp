@@ -30,12 +30,12 @@ using namespace cv::dnn;
 const char* keys =
     "{ help  h              | | Print help message. }"
     "{ input i              | | Path to input image or video file. Skip this argument to capture frames from a camera.}"
-    "{ detModel dm          | | Path to a binary .pb file contains trained detector network.}"
+    "{ detModel dmp         | | Path to a binary .pb file contains trained detector network.}"
     "{ width                | 320 | Preprocess input image by resizing to a specific width. It should be multiple by 32. }"
     "{ height               | 320 | Preprocess input image by resizing to a specific height. It should be multiple by 32. }"
     "{ thr                  | 0.5 | Confidence threshold. }"
     "{ nms                  | 0.4 | Non-maximum suppression threshold. }"
-    "{ recModel rm          | | Path to a binary .onnx file contains trained CRNN text recognition model. "
+    "{ recModel rmp         | | Path to a binary .onnx file contains trained CRNN text recognition model. "
         "Download links are provided in doc/tutorials/dnn/dnn_text_spotting/dnn_text_spotting.markdown}"
     "{ RGBInput rgb         |0| 0: imread with flags=IMREAD_GRAYSCALE; 1: imread with flags=IMREAD_COLOR. }"
     "{ vocabularyPath vp    | | Path to benchmarks for evaluation. "
@@ -86,9 +86,9 @@ int main(int argc, char** argv)
         vocabulary.push_back(vocLine);
     }
     recognizer.setVocabulary(vocabulary);
+    recognizer.setDecodeType("CTC-greedy");
 
     // Parameters for Recognition
-    const String decodeType = "CTC-greedy";
     double recScale = 1.0 / 127.5;
     Scalar recMean = Scalar(127.5, 127.5, 127.5);
     Size recInputSize = Size(100, 32);
@@ -140,7 +140,7 @@ int main(int argc, char** argv)
                 fourPointsTransform(recInput, vertices, cropped);
 
                 std::vector<String> recResults;
-                recognizer.recognize(cropped, decodeType, recResults);
+                recognizer.recognize(cropped, recResults);
 
                 putText(frame, recResults[0], vertices[1], FONT_HERSHEY_SIMPLEX, 1.5, Scalar(0, 0, 255), 2);
             }
