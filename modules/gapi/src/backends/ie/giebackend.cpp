@@ -472,6 +472,7 @@ struct Infer: public cv::detail::KernelTag {
                         && "Non-GMat inputs are not supported");
 
             const auto &meta = util::get<cv::GMatDesc>(mm);
+
             ii->setPrecision(toIE(meta.depth));
             ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
         }
@@ -504,7 +505,8 @@ struct Infer: public cv::detail::KernelTag {
             // FIXME: By default here we trait our inputs as images.
             // May be we need to make some more intelligence here about it
             IE::Blob::Ptr this_blob = wrapIE(this_mat, cv::gapi::ie::TraitAs::IMAGE);
-            iec.this_request.SetBlob(uu.params.input_names[i], this_blob);
+            iec.this_request.SetBlob(uu.params.input_names[i], this_blob,
+                                     uu.inputs.at(uu.params.input_names[i])->getPreProcess());
         }
         iec.this_request.Infer();
         for (auto i : ade::util::iota(uu.params.num_out)) {
@@ -569,7 +571,8 @@ struct InferROI: public cv::detail::KernelTag {
         const auto  this_mat = ctx.inMat(1);
         IE::Blob::Ptr this_blob = wrapIE(this_mat, cv::gapi::ie::TraitAs::IMAGE);
         IE::Blob::Ptr roi_blob = IE::make_shared_blob(this_blob, toIE(this_roi));
-        iec.this_request.SetBlob(*uu.params.input_names.begin(), roi_blob);
+        iec.this_request.SetBlob(*uu.params.input_names.begin(), roi_blob,
+                                  uu.inputs.at(uu.params.input_names[i])->getPreProcess());
         iec.this_request.Infer();
         for (auto i : ade::util::iota(uu.params.num_out)) {
             cv::Mat& out_mat = ctx.outMatR(i);
@@ -647,7 +650,8 @@ struct InferList: public cv::detail::KernelTag {
         for (const auto &rc : in_roi_vec) {
             // FIXME: Assumed only 1 input
             IE::Blob::Ptr roi_blob = IE::make_shared_blob(this_blob, toIE(rc));
-            iec.this_request.SetBlob(uu.params.input_names[0u], roi_blob);
+            iec.this_request.SetBlob(uu.params.input_names[0u], roi_blob,
+                                     uu.inputs.at(uu.params.input_names[i])->getPreProcess());
             iec.this_request.Infer();
 
             // While input is fixed to be 1,
@@ -774,7 +778,8 @@ struct InferList2: public cv::detail::KernelTag {
                 } else {
                     GAPI_Assert(false && "Only Rect and Mat types are supported for infer list 2!");
                 }
-                iec.this_request.SetBlob(uu.params.input_names[in_idx], this_blob);
+                iec.this_request.SetBlob(uu.params.input_names[in_idx], this_blob,
+                                         uu.inputs.at(uu.params.input_names[i])->getPreProcess());
                 // }}} (Preapre input)
             } // }}} (For every input of the net)
 
