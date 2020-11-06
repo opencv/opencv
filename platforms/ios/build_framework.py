@@ -119,13 +119,27 @@ class Builder:
             if xcode_ver >= 7 and target[1] == 'iPhoneOS' and self.bitcodedisabled == False:
                 cmake_flags.append("-DCMAKE_C_FLAGS=-fembed-bitcode")
                 cmake_flags.append("-DCMAKE_CXX_FLAGS=-fembed-bitcode")
+            if xcode_ver >= 7 and target[1] == 'Catalyst':  # TODOjon: Do I need this? (I think I do in order to set the C/CXX Flag for the ABI)
+                c_flags = [
+                    "-target %s-apple-ios-macabi -miphoneos-version-min=13.0" % target[0],  # e.g. x86_64-apple-ios13.2-macabi
+                    r"-iframework ${CMAKE_OSX_SYSROOT}/System/iOSSupport/System/Library/Frameworks",
+                ]
+                if self.bitcodedisabled == False:
+                    c_flags.append("-fembed-bitcode")
+                cmake_flags.append("-DPLATFORM=MAC_CATALYST")
+                # cmake_flags.append("-DDEPLOYMENT_TARGET=10.15")
+                # cmake_flags.append("-DCMAKE_SYSTEM_NAME=macosx")
+                # cmake_flags.append("-DCMAKE_OSX_SYSROOT=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk")
+                cmake_flags.append("-DCMAKE_C_FLAGS=" + " ".join(c_flags))
+                cmake_flags.append("-DCMAKE_CXX_FLAGS=" + " ".join(c_flags))
+                cmake_flags.append("-DCMAKE_BUILD_TYPE=MAC_CATALYST")
             self.buildOne(target[0], target[1], main_build_dir, cmake_flags)
 
             if not self.dynamic:
                 self.mergeLibs(main_build_dir)
             else:
                 self.makeDynamicLib(main_build_dir)
-        self.makeFramework(outdir, dirs)
+        self.makeFramework(outdir, dirs) ## TODOjon: Use -create-xcframework instead of lipo, make lipo version available with a flag, fail if lipo is specified and catalyst is asked for
         if self.build_objc_wrapper:
             if self.run_tests:
                 check_call([sys.argv[0].replace("build_framework", "run_tests"), "--framework_dir=" + outdir, "--framework_name=" + self.framework_name, dirs[0] +  "/modules/objc_bindings_generator/{}/test".format(self.getObjcTarget())])
@@ -141,7 +155,7 @@ class Builder:
             else:
                 print("To build docs call:")
                 print(sys.argv[0].replace("build_framework", "build_docs") + " " + dirs[0] + "/modules/objc/framework_build")
-            self.copy_samples(outdir)
+            # self.copy_samples(outdir)
 
     def build(self, outdir):
         try:
@@ -196,7 +210,7 @@ class Builder:
             "xcodebuild",
         ]
 
-        if (self.dynamic or self.build_objc_wrapper) and not self.bitcodedisabled and target == "iPhoneOS":
+        if (self.dynamic or self.build_objc_wrapper) and not self.bitcodedisabled and (target == "iPhoneOS" or target == "Catalyst"):
             buildcmd.append("BITCODE_GENERATION_MODE=bitcode")
 
         buildcmd += [
@@ -204,8 +218,17 @@ class Builder:
             "ARCHS=%s" % arch,
         ]
 
+        if target == "Catalyst":
+            buildcmd.append("-destination 'platform=macOS,arch=x86_64,variant=Mac Catalyst'")
+            buildcmd.append("-UseModernBuildSystem=YES")
+            buildcmd.append("SKIP_INSTALL=NO")
+            buildcmd.append("BUILD_LIBRARY_FOR_DISTRIBUTION=YES")
+            buildcmd.append("TARGETED_DEVICE_FAMILY=\"1,2\"")
+            buildcmd.append("SDKROOT=iphoneos")
+            buildcmd.append("SUPPORTS_MAC_CATALYST=YES")
+
         buildcmd += [
-                "-sdk", target.lower(),
+                "-sdk", "iphoneos" if target == "Catalyst" else target.lower(),
                 "-configuration", self.getConfiguration(),
                 "-parallelizeTargets",
                 "-jobs", str(multiprocessing.cpu_count()),
@@ -224,7 +247,8 @@ class Builder:
         toolchain = self.getToolchain(arch, target)
         cmakecmd = self.getCMakeArgs(arch, target) + \
             (["-DCMAKE_TOOLCHAIN_FILE=%s" % toolchain] if toolchain is not None else [])
-        if target.lower().startswith("iphoneos"):
+        if target.lower().startswith("iphoneos") or target.lower() == "catalyst":
+            ## cmakecmd.append("-DCMAKE_CROSSCOMPILING=ON") # TODOjon:
             cmakecmd.append("-DCPU_BASELINE=DETECT")
         if target.lower() == "macosx":
             build_arch = check_output(["uname", "-m"]).rstrip()
@@ -280,7 +304,7 @@ class Builder:
     def makeDynamicLib(self, builddir):
         target = builddir[(builddir.rfind("build-") + 6):]
         target_platform = target[(target.rfind("-") + 1):]
-        is_device = target_platform == "iphoneos"
+        is_device = target_platform == "iphoneos" or target_platform == "catalyst"
         res = os.path.join(builddir, "install", "lib", self.framework_name + ".framework", self.framework_name)
         libs = glob.glob(os.path.join(builddir, "install", "lib", "*.a"))
         module = [os.path.join(builddir, "lib", self.getConfiguration(), self.framework_name + ".framework", self.framework_name)]
@@ -291,7 +315,7 @@ class Builder:
         bitcode_flags = ["-fembed-bitcode", "-Xlinker", "-bitcode_verify"] if is_device and not self.bitcodedisabled else []
         toolchain_dir = getXCodeSetting("TOOLCHAIN_DIR", builddir)
         swift_link_dirs = ["-L" + toolchain_dir + "/usr/lib/swift/" + target_platform, "-L/usr/lib/swift"]
-        sdk_dir = getXCodeSetting("SDK_DIR", builddir)
+        sdk_dir = getXCodeSetting("SDK_DIR", builddir) # TODOjon: Is this overwriting the specified SDK?
         execute([
             "clang++",
             "-Xlinker", "-rpath",
@@ -331,7 +355,7 @@ class Builder:
                         file.write(body)
         if self.build_objc_wrapper:
             copy_tree(os.path.join(builddirs[0], "install", "lib", name + ".framework", "Headers"), os.path.join(dstdir, "Headers"))
-            platform_name_map = {
+            platform_name_map = { # TODOjon: This is probably important, and will need expanding for Silicon
                     "arm": "armv7-apple-ios",
                     "arm64": "arm64-apple-ios",
                     "i386": "i386-apple-ios-simulator",
@@ -432,6 +456,7 @@ if __name__ == "__main__":
     parser.add_argument('--iphoneos_deployment_target', default=os.environ.get('IPHONEOS_DEPLOYMENT_TARGET', IPHONEOS_DEPLOYMENT_TARGET), help='specify IPHONEOS_DEPLOYMENT_TARGET')
     parser.add_argument('--iphoneos_archs', default='armv7,armv7s,arm64', help='select iPhoneOS target ARCHS')
     parser.add_argument('--iphonesimulator_archs', default='i386,x86_64', help='select iPhoneSimulator target ARCHS')
+    parser.add_argument('--catalyst_archs', default='x86_64,arm64', help='select Catalyst target ARCHS')
     parser.add_argument('--enable_nonfree', default=False, dest='enablenonfree', action='store_true', help='enable non-free modules (disabled by default)')
     parser.add_argument('--debug', default=False, dest='debug', action='store_true', help='Build "Debug" binaries (disabled by default)')
     parser.add_argument('--debug_info', default=False, dest='debug_info', action='store_true', help='Build with debug information (useful for Release mode: BUILD_WITH_DEBUG_INFO=ON)')
@@ -448,6 +473,8 @@ if __name__ == "__main__":
     print('Using iPhoneOS ARCHS=' + str(iphoneos_archs))
     iphonesimulator_archs = args.iphonesimulator_archs.split(',')
     print('Using iPhoneSimulator ARCHS=' + str(iphonesimulator_archs))
+    catalyst_archs = args.catalyst_archs.split(',')
+    print('Using Catalyst ARCHS=' + str(catalyst_archs))
     if args.legacy_build:
         args.framework_name = "opencv2"
         if not "objc" in args.without:
@@ -458,8 +485,9 @@ if __name__ == "__main__":
             (iphoneos_archs, "iPhoneOS"),
         ] if os.environ.get('BUILD_PRECOMMIT', None) else
         [
-            (iphoneos_archs, "iPhoneOS"),
-            (iphonesimulator_archs, "iPhoneSimulator"),
+            # (iphoneos_archs, "iPhoneOS"),
+            # (iphonesimulator_archs, "iPhoneSimulator"),
+            (catalyst_archs, "Catalyst"),
         ], args.debug, args.debug_info, args.framework_name, args.run_tests, args.build_docs)
 
     b.build(args.out)

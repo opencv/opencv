@@ -76,11 +76,32 @@ else()
   message(FATAL_ERROR "iOS toolchain doesn't recognize ARCH='${IOS_ARCH}' value")
 endif()
 
+# If user did not specify the SDK root to use, then query xcodebuild for it.
+# execute_process(COMMAND xcodebuild -version -sdk iphoneos Path
+#     OUTPUT_VARIABLE CMAKE_OSX_SYSROOT_INT
+#     ERROR_QUIET
+#     OUTPUT_STRIP_TRAILING_WHITESPACE)
+# if (NOT DEFINED CMAKE_OSX_SYSROOT_INT AND NOT DEFINED CMAKE_OSX_SYSROOT)
+#   message(SEND_ERROR "Please make sure that Xcode is installed and that the toolchain"
+#   "is pointing to the correct path. Please run:"
+#   "sudo xcode-select -s /Applications/Xcode.app/Contents/Developer"
+#   "and see if that fixes the problem for you.")
+#   message(FATAL_ERROR "Invalid CMAKE_OSX_SYSROOT: ${CMAKE_OSX_SYSROOT} "
+#   "does not exist.")
+# elseif(DEFINED CMAKE_OSX_SYSROOT_INT)
+#   set(CMAKE_OSX_SYSROOT "${CMAKE_OSX_SYSROOT_INT}" CACHE INTERNAL "")
+# endif()
+
+toolchain_save_config(IOS_ARCH IPHONEOS_DEPLOYMENT_TARGET)
+
 if(NOT DEFINED CMAKE_OSX_SYSROOT)
   if(IPHONEOS)
     set(CMAKE_OSX_SYSROOT "iphoneos")
-  else()
+  elseif(IPHONESIMULATOR)
     set(CMAKE_OSX_SYSROOT "iphonesimulator")
+  elseif(CATALYST)
+    # Use iOS SDK for Catalyst builds
+    set(CMAKE_OSX_SYSROOT "macosx")
   endif()
 endif()
 set(CMAKE_MACOSX_BUNDLE YES)
@@ -123,7 +144,7 @@ if(NOT __IN_TRY_COMPILE)
 endif()
 
 # Standard settings
-set(CMAKE_SYSTEM_NAME iOS)
+set(CMAKE_SYSTEM_NAME iOS) # TODOjon: Is this correct? Should it be Darwin?
 
 # Apple Framework settings
 if(APPLE_FRAMEWORK AND BUILD_SHARED_LIBS)
@@ -165,5 +186,3 @@ set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM ONLY)
 #   for libraries and headers in the target directories
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
-
-toolchain_save_config(IOS_ARCH IPHONEOS_DEPLOYMENT_TARGET)
