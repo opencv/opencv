@@ -263,7 +263,6 @@ public:
         dst = dst.reshape(1, {1, 1, new_h, new_w});
     }
 };
-
 } // anonymous namespace
 
 TEST_F(ONNXClassificationTest, Infer)
