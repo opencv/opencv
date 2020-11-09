@@ -86,13 +86,6 @@ if(NOT DEFINED CMAKE_OSX_SYSROOT)
   elseif(CATALYST)
     # Use MacOS SDK for Catalyst builds
     set(CMAKE_OSX_SYSROOT "macosx")
-    
-    message("CMAKE_CXX_FLAGS: ${CMAKE_CXX_FLAGS}")
-    # Tell compiler to use Catalyst ABIs
-    # TODOChris: I don't think this is having an effect after all.
-    set(INTERNAL_TARGET_FLAGS "-target ${IOS_ARCH}-apple-ios-macabi -miphoneos-version-min=13.0 -iframework ${CMAKE_OSX_SYSROOT}/System/iOSSupport/System/Library/Frameworks")
-    set(CMAKE_C_FLAGS, "${INTERNAL_TARGET_FLAGS}" CACHE STRING "" FORCE)
-    set(CMAKE_CXX_FLAGS, "${INTERNAL_TARGET_FLAGS}" CACHE STRING "" FORCE)
   endif()
 endif()
 set(CMAKE_MACOSX_BUNDLE YES)
