@@ -208,7 +208,7 @@ public:
     void validate() {
         GAPI_Assert(!out_gapi.empty() && !out_onnx.empty());
         ASSERT_EQ(out_gapi.size(), out_onnx.size());
-        cosnt auto size = out_gapi.size();
+        const auto size = out_gapi.size();
         for (size_t i = 0; i < size; ++i) {
             normAssert(out_onnx[i], out_gapi[i], "Test output");
         }
@@ -286,7 +286,7 @@ TEST_F(ONNXClassificationTest, Infer)
     validate();
 }
 
-TEST_F(ONNXClassificationTest, InferTensor)
+TEST_F(ONNXtest, InferTensor)
 {
     useModel("classification/squeezenet/model/squeezenet1.0-9");
     // Create tensor
