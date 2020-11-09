@@ -86,6 +86,9 @@ void CV_DrawingTest::run( int )
         float Eps = 1;
         if( err > Eps)
         {
+            //imshow("reference", valImg);
+            //imshow("result", testImg);
+            //waitKey();
             ts->printf( ts->LOG, "NORM_L1 between testImg and valImg is equal %f (larger than %f)\n", err, Eps );
             ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
         }
@@ -690,17 +693,26 @@ TEST(Drawing, fromJava_getTextSize)
     Size res0 = getTextSize(text, FONT_HERSHEY_SCRIPT_SIMPLEX, fontScale, thickness, 0);
     Size res = getTextSize(text, FONT_HERSHEY_SCRIPT_SIMPLEX, fontScale, thickness, &baseLine);
 
+#if 0
+    Mat img(200, 700, CV_8UC3, Scalar::all(255));
+    Point org(100, 100);
+    putText(img, text, org, FONT_HERSHEY_SCRIPT_SIMPLEX, fontScale, Scalar(128, 0, 0), thickness);
+    rectangle(img, org, Point(org.x + res0.width, org.y - res0.height), Scalar(0, 0, 128), 2, LINE_AA);
+    imshow("result", img);
+    waitKey();
+#endif
+
     EXPECT_EQ(res0.width, res.width);
     EXPECT_EQ(res0.height, res.height);
-    EXPECT_NEAR(476, res.width, 3.0);
-    EXPECT_NEAR(41, res.height, 3.0);
+    EXPECT_NEAR(505, res.width, 3.0);
+    EXPECT_NEAR(51, res.height, 3.0);
     EXPECT_NEAR(10, baseLine, 3.0);
 }
 
 TEST(Drawing, fromJava_testPutTextMatStringPointIntDoubleScalarIntIntBoolean)
 {
     String text = "Hello World";
-    Size labelSize(175, 22);
+    Size labelSize(170, 23);
 
     Mat img(20 + (int)labelSize.height, 20 + (int)labelSize.width, CV_8U, Scalar::all(0));
     Point origin(10, 10);
@@ -712,6 +724,8 @@ TEST(Drawing, fromJava_testPutTextMatStringPointIntDoubleScalarIntIntBoolean)
     rectangle(img, origin,
                 Point(origin.x + labelSize.width, origin.y + labelSize.height),
                       Scalar::all(0), -1, 8);
+    //imshow("img", img);
+    //waitKey();
     EXPECT_EQ(0, countNonZero(img));
 }
 
@@ -721,7 +735,6 @@ typedef struct TextProp
     bool ralign;
     int weight;
     bool italic;
-    bool uni;
 } TextProp;
 
 TEST(Drawing, ttf_text)
@@ -731,24 +744,23 @@ TEST(Drawing, ttf_text)
 
     FontFace sans("sans");
     FontFace italic("italic");
-    FontFace uni(custom_font_path + "WenQuanYiMicroHei.ttf");
-    Mat img(1000, 1500, CV_8UC3);
+    Mat img(600, 1300, CV_8UC3);
     TextProp text[] =
     {
-        {"The quick brown fox jumps over lazy dog. Fly, start, finish, shuffle shuttle.", false, 400, false, false},
-        {"vechicle #5 detected; fps=123.45.\n", false, 600, false, false},
-        {"Съешь же ещё этих мя́гких французских булок, да выпей чаю!\n"
+        {"The quick brown fox jumps over lazy dog. Fly, start, finish, shuffle shuttle.", false, 400, false},
+        {"vechicle #5 detected; fps=123.45.\n", false, 600, false},
+        {"Съешь же ещё этих мягких французских булок, да выпей чаю!\n"
         "Dès Noël où un zéphyr haï me vêt de glaçons würmiens je dîne\nd’exquis rôtis de bœuf au kir à l’aÿ d’âge mûr & cætera!\n"
-        "“Falsches Üben von Xylophonmusik quält jeden größeren Zwerg”.", false, 400, true},
+        "“Falsches Üben von Xylophonmusik quält jeden größeren Zwerg”.", false, 400},
 
         {"¡Oh tú, sabio encantador, quienquiera que seas,\n"
          "a quien ha de tocar el ser coronista desta peregrina\n"
          "historia, ruégote que no te olvides de mi buen Rocinante,\n"
-         "compañero eterno mío en todos mis caminos y carreras!.\n", false, 300, false, false},
-        {"Ταχίστη αλώπηξ βαφής ψημένη γη, δρασκελίζει υπέρ νωθρού κυνός.", false, 400, false, true},
+         "compañero eterno mío en todos mis caminos y carreras!\n", false, 300, false},
+        {"Ταχίστη αλώπηξ βαφής ψημένη γη, δρασκελίζει υπέρ νωθρού κυνός.", false, 400, false},
         {"春眠不觉晓，\n处处闻啼鸟。\n夜来风雨声，\n花落知多少。\n\n"
         " あなたはそれが困難見つけた場合 — あなたは正しい方向に向かっている。\n"
-        " 넌 모든 꽃들을 다 꺾어버릴 수는 있겠지만, 봄이 오는 걸 막을 수는 없어。 ", false, 400, false, true}
+        " 넌 모든 꽃들을 다 꺾어버릴 수는 있겠지만, 봄이 오는 걸 막을 수는 없어。 ", false, 400, false}
     };
     Scalar color(150, 80, 0);
 
@@ -779,24 +791,23 @@ TEST(Drawing, ttf_text)
             {
                 org.x = column == 1 ? x0 : img.cols/2;
             }
+            FontFace& face = t.italic ? italic : sans;
             //Rect r = getTextSize(img.size(), t.str, org, face, sz, t.weight, flags);
-            org = putText(img, t.str, org, color, t.uni ? uni : t.italic ? italic : sans,
+            org = putText(img, t.str, org, color, face,
                           sz, t.weight, flags, Range());
             //rectangle(img, r, Scalar(80, 0, 128), 1, LINE_AA);
             org.y += sz + 10;
         }
-        org.x = x0;
-        org.y = y0 = org.y + 150;
-        column = 1;
 
         Scalar color2(80, 0, 128);
 
-        org = Point(img.cols - 550, img.rows/2+50);
+        org = Point(img.cols - 500, 150);
         putText(img, "Пробуем\n ", org, color2, italic, 80, 300,
                 PUT_TEXT_ALIGN_LEFT, Range());
         org.x -= 90;
         org.y += 130;
-        putText(img, "OpenCV", org, color2, italic, 120, 800,
+        italic.setInstance({CV_FOURCC('w','g','h','t'), 800<<16});
+        putText(img, "OpenCV", org, color2, italic, 120, 0,
                 PUT_TEXT_ALIGN_LEFT, Range());
         org.y += 140;
         org.x += 60;
@@ -807,7 +818,7 @@ TEST(Drawing, ttf_text)
     }
 
 #if 0
-    //imwrite(ts_data_path + "../highgui/drawing/text_test.png", img);
+    imwrite(ts_data_path + "../highgui/drawing/text_test.png", img);
     imshow("test", img);
     waitKey();
 #else

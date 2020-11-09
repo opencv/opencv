@@ -4736,18 +4736,25 @@ public:
        loads font at the specified path or with specified name.
        Empty fontPathOrName means the default embedded font.
     */
-    CV_WRAP FontFace(const String& fontPathOrName, double sf=0.);
-
-    /** @brief loads new font face */
-    CV_WRAP bool set(const String& fontPathOrName, double sf=0.);
-    CV_WRAP String getName() const;
-    CV_WRAP double getScaleFactor() const;
+    CV_WRAP FontFace(const String& fontPathOrName);
 
     ~FontFace();
 
+    /** @brief loads new font face */
+    CV_WRAP bool set(const String& fontPathOrName);
+    CV_WRAP String getName() const;
+
+    /** @brief sets the current variable font instance.
+        @param params The list of pairs key1, value1, key2, value2, ..., e.g.
+             `myfont.setInstance({CV_FOURCC('w','g','h','t'), 400<<16, CV_FOURCC('s','l','n','t'), -(15<<16)});`
+        Note that the parameter values are specified in 16.16 fixed-point format, that is, integer values
+        need to be shifted by 16 (or multiplied by 65536).
+    */
+    CV_WRAP bool setInstance(const std::vector<int>& params);
+    CV_WRAP bool getInstance(CV_OUT std::vector<int>& params) const;
+
     struct Impl;
 
-    /** @brief returns wrapper on top of FT_Face */
     Impl* operator -> ();
     static bool getBuiltinFontData(const String& fontName, const uchar*& data, size_t& datasize);
 
@@ -4783,8 +4790,8 @@ example. The function returns the coordinates in pixels from where the text can 
 @param weight Font weight, 100..1000,
        where 100 is "thin" font, 400 is "regular",
        600 is "semibold", 800 is "bold" and beyond that is "black".
-       The default weight means "400" for variable-weight fonts or
-       whatever "default" weight the used font provides.
+       The parameter is ignored if the font is not a variable font or if it does not provide variation along 'wght' axis.
+       If the weight is 0, then the weight, currently set via setInstance(), is used.
 @param flags Various flags, see PUT_TEXT_...
 @param wrap The optional text wrapping range:
        In the case of left-to-right (LTR) text if the printed character would cross wrap.end boundary,
@@ -4797,7 +4804,7 @@ example. The function returns the coordinates in pixels from where the text can 
 CV_EXPORTS_W Point putText( InputOutputArray img, const String& text,
                             Point org, Scalar color,
                             FontFace& fface, double size,
-                            int weight=0, int flags=0,
+                            double weight=0, int flags=0,
                             Range wrap=Range() );
 
 /** @brief Calculates the bounding rect for the text
@@ -4821,7 +4828,7 @@ That is, the following code renders some text, the tight box surrounding it, and
 */
 CV_EXPORTS_W Rect getTextSize( Size imgsize, const String& text, Point org,
                                FontFace& fface, double size,
-                               int weight=0, int flags=0, Range wrap=Range() );
+                               double weight=0, int flags=0, Range wrap=Range() );
 
 /** @brief Line iterator
 

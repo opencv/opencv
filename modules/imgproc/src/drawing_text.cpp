@@ -15,12 +15,31 @@ namespace cv
 
 #include "builtin_font0.h"
 #include "builtin_font1.h"
+#include "builtin_font2.h"
 
 typedef stbtt_fontinfo font_t;
 
 /////////////////////// Some temporary stub for Harfbuzz API /////////////////////////
 
 #ifndef HAVE_HARFBUZZ
+
+typedef struct hb_glyph_position_t
+{
+    int x_advance;
+    int y_advance;
+    int x_offset;
+    int y_offset;
+} hb_glyph_position_t;
+
+typedef struct hb_font_t
+{
+    int font_data;
+} hb_font_t;
+
+typedef struct hb_buffer_t
+{
+    int buf_data;
+} hb_buffer_t;
 
 typedef enum hb_direction_t
 {
@@ -48,74 +67,15 @@ typedef enum hb_script_t
     HB_SCRIPT_THAANA
 } hb_script_t;
 
-typedef enum hb_unicode_general_category_t
-{
-    HB_UNICODE_GENERAL_CATEGORY_OTHER_LETTER,
-    HB_UNICODE_GENERAL_CATEGORY_NON_SPACING_MARK,
-    HB_UNICODE_GENERAL_CATEGORY_SURROGATE,
-    HB_UNICODE_GENERAL_CATEGORY_FORMAT,
-    HB_UNICODE_GENERAL_CATEGORY_SPACE_SEPARATOR,
-    HB_UNICODE_GENERAL_CATEGORY_OPEN_PUNCTUATION,
-    HB_UNICODE_GENERAL_CATEGORY_CONNECT_PUNCTUATION,
-    HB_UNICODE_GENERAL_CATEGORY_DASH_PUNCTUATION,
-    HB_UNICODE_GENERAL_CATEGORY_CURRENCY_SYMBOL,
-    HB_UNICODE_GENERAL_CATEGORY_MODIFIER_SYMBOL
-} hb_unicode_general_category_t;
-
-typedef struct hb_glyph_position_t
-{
-    int x_advance;
-    int y_advance;
-    int x_offset;
-    int y_offset;
-} hb_glyph_position_t;
-
-typedef struct hb_buffer_t
-{
-    int buf_data;
-} hb_buffer_t;
-
 typedef struct hb_unicode_funcs_t
 {
     int funcs_data;
 } hb_unicode_funcs_t;
 
-typedef struct hb_font_t
-{
-    int font_data;
-} hb_font_t;
-
-typedef struct hb_feature_t
-{
-    int feature_data;
-} hb_feature_t;
-
-typedef struct hb_glyph_info_t
-{
-    int codepoint;
-} hb_glyph_info_t;
-
-static hb_unicode_general_category_t hb_unicode_general_category(hb_unicode_funcs_t*, int)
-{
-    return HB_UNICODE_GENERAL_CATEGORY_OTHER_LETTER;
-}
-static hb_script_t hb_unicode_script(hb_unicode_funcs_t*, int)
-{
-    return HB_SCRIPT_COMMON;
-}
 static hb_buffer_t* hb_buffer_create() { return 0; }
+static void hb_buffer_destroy(hb_buffer_t*) {}
 static void hb_buffer_guess_segment_properties(hb_buffer_t *) {}
 static hb_unicode_funcs_t* hb_unicode_funcs_get_default() { return 0; }
-static void hb_buffer_destroy(hb_buffer_t*) {}
-
-static void hb_buffer_reset(hb_buffer_t*) {}
-static void hb_buffer_add_utf32(hb_buffer_t*, const uint32_t*, int, unsigned int, int) {}
-static void hb_buffer_set_direction(hb_buffer_t*, hb_direction_t) {}
-static void hb_buffer_set_script(hb_buffer_t*, hb_script_t) {}
-static void hb_shape(hb_font_t*, hb_buffer_t*, const hb_feature_t *features,
-                     unsigned int num_features);
-static hb_glyph_info_t* hb_buffer_get_glyph_infos(hb_buffer_t*, unsigned int* nglyphs) { *nglyphs = 0; return 0; }
-static hb_glyph_position_t* hb_buffer_get_glyph_positions(hb_buffer_t*, unsigned int* nglyphs) { *nglyphs = 0; return 0; }
 
 #endif
 
@@ -139,6 +99,7 @@ static BuiltinFontData builtinFontData[BUILTIN_FONTS_NUM+1] =
 {
     {OcvBuiltinFontSans, sizeof(OcvBuiltinFontSans), "sans", 1.0, false},
     {OcvBuiltinFontItalic, sizeof(OcvBuiltinFontItalic), "italic", 1.0, true},
+    {OcvBuiltinFontUni, sizeof(OcvBuiltinFontUni), "uni", 1.0, true},
     {0, 0, 0, 0.0, false}
 };
 
@@ -207,6 +168,8 @@ struct FontFace::Impl {
 
     bool setStd(const BuiltinFontData& fontdata)
     {
+        if(fontdata.size <= 1)
+            return false;
         if(ttface == 0 || currname != fontdata.name)
         {
             deleteFont();
@@ -223,33 +186,45 @@ struct FontFace::Impl {
         return true;
     }
 
-    bool set(const String& fontname, double sf)
+    bool set(const String& fontname)
     {
         CV_Assert(!fontname.empty());
 
         if(ttface != 0 && fontname == currname)
-        {
-            scalefactor = sf;
             return true;
-        }
 
         deleteFont();
 
-        FILE* f = fopen(fontname.c_str(), "rb");
+        const char* fntname = fontname.c_str();
+        size_t fntnamelen = fontname.size();
+        FILE* f = fopen(fntname, "rb");
         if (!f)
             return false;
         fseek(f, 0, SEEK_END);
-        long sz = ftell(f);
-        if (sz == 0)
+        long sz0 = ftell(f), sz1;
+        std::vector<uchar> srcdata(sz0);
+        if (sz0 > 0)
+        {
+            fseek(f, 0, SEEK_SET);
+            sz1 = (long)fread(&srcdata[0], 1, sz0, f);
+        }
+        fclose(f);
+        if (sz0 == 0 || sz1 != sz0)
             return false;
-        std::vector<uchar> srcdata(sz);
-        if (!inflate(&srcdata[0], srcdata.size(), fontbuf))
-            return false;
+        if (fntnamelen > 3 && strcmp(fntname + fntnamelen - 3, ".gz") == 0)
+        {
+            if (!inflate(&srcdata[0], srcdata.size(), fontbuf))
+                return false;
+        }
+        else
+        {
+            fontbuf.resize(srcdata.size());
+            std::copy(srcdata.begin(), srcdata.end(), fontbuf.begin());
+        }
         ttface = stbtt_CreateFont(&fontbuf[0], (unsigned)fontbuf.size(), stbtt_GetFontOffsetForIndex(&fontbuf[0],0));
         if (!ttface)
             return false;
         currname = fontname;
-        scalefactor = sf;
         initParams();
         return true;
     }
@@ -259,20 +234,19 @@ struct FontFace::Impl {
         if (ttface == 0)
             return false;
         if (std::abs(size - currsize) < 1e-3 &&
-            weight == currweight)
+            (weight == currweight || weight == 0))
             return true;
 
-        if (weight != currweight) {
-            unsigned tags[] = {STBTT_FOURCC('w','g','h','t')};
-            float values[] = { (float)weight };
-            if (!stbtt_SetInstance(ttface, tags, values, 1))
+        if (weight != currweight && weight != 0) {
+            int params[] = {STBTT_FOURCC('w','g','h','t'), weight};
+            if (!stbtt_SetInstance(ttface, params, 1, 0))
                 return false;
+            currweight = weight;
         }
 
         if(size != currsize)
             scale = stbtt_ScaleForPixelHeightNoDesc(ttface, (float)size);
 
-        currweight = weight;
         currsize = size;
         return true;
     }
@@ -344,7 +318,7 @@ struct GlyphCacheVal
     GlyphCacheVal()
     {
         crc = 0;
-        width = height = vertAdvance = bitmapTop = horiBearingX = horiBearingY = 0;
+        width = height = linegap = ascent = horiBearingX = horiBearingY = 0;
     }
 
     std::vector<uchar> rlebuf;
@@ -353,8 +327,7 @@ struct GlyphCacheVal
     int width;
     int height;
     Point advance;
-    int vertAdvance;
-    int bitmapTop;
+    int linegap, ascent;
     int horiBearingX;
     int horiBearingY;
 };
@@ -463,7 +436,7 @@ public:
 
     Point putText_( Mat& img, Size imgsize, const String& str_, Point org,
                     const uchar* color, FontFace& fontface, double size,
-                    int weight, int flags, Range wrapRange, bool render,
+                    double weight, int flags, Range wrapRange, bool render,
                     Rect* bbox );
 
 protected:
@@ -490,13 +463,13 @@ protected:
 thread_local FontRenderEngine fontRenderEngine;
 
 FontFace::FontFace() { impl = makePtr<Impl>(); }
-FontFace::FontFace(const String& fontname, double sf_ )
+FontFace::FontFace(const String& fontname)
 {
     impl = makePtr<Impl>();
-    set(fontname, sf_);
+    set(fontname);
 }
 
-bool FontFace::set(const String& fontname_, double sf)
+bool FontFace::set(const String& fontname_)
 {
     String fontname = fontname_;
     if(fontname.empty())
@@ -506,7 +479,7 @@ bool FontFace::set(const String& fontname_, double sf)
     int i = 0;
     for( ; i < BUILTIN_FONTS_NUM; i++ )
     {
-        if( builtinFontData[i].name == fontname )
+        if( builtinFontData[i].name == fontname && builtinFontData[i].size > 1 )
             break;
     }
     if( i >= BUILTIN_FONTS_NUM )
@@ -526,10 +499,9 @@ bool FontFace::set(const String& fontname_, double sf)
     }
     else
     {
-        sf = sf > 0 ? sf : 1.0;
         if(impl->ttface != 0)
             impl = makePtr<Impl>();
-        ok = impl->set(fontname, sf);
+        ok = impl->set(fontname);
     }
     return ok;
 }
@@ -544,7 +516,7 @@ bool FontFace::getBuiltinFontData(const String& fontname_,
     size = 0;
     for(int i = 0; i < BUILTIN_FONTS_NUM; i++)
     {
-        if(builtinFontData[i].name == fontname)
+        if(builtinFontData[i].name == fontname && builtinFontData[i].size > 1)
         {
             FontFace& builtin_fface = fontRenderEngine.getStdFontFace(i);
             if( builtin_fface.impl->ttface )
@@ -561,9 +533,36 @@ bool FontFace::getBuiltinFontData(const String& fontname_,
 }
 
 String FontFace::getName() const { return impl->currname; }
-double FontFace::getScaleFactor() const { return impl->scalefactor; }
 FontFace::Impl* FontFace::operator -> () { return impl.get(); }
 FontFace::~FontFace() {}
+
+bool FontFace::setInstance(const std::vector<int>& params)
+{
+    if (params.empty())
+        return true;
+    if (!impl->ttface)
+        return false;
+    CV_Assert(params.size() % 2 == 0);
+    return stbtt_SetInstance(impl->ttface, &params[0], (int)(params.size()/2), 1) > 0;
+}
+
+bool FontFace::getInstance(std::vector<int>& params) const
+{
+    if (!impl->ttface)
+        return false;
+
+    stbtt_axisinfo axes[STBTT_MAX_AXES];
+    int i, naxes = stbtt_GetInstance(impl->ttface, axes, STBTT_MAX_AXES);
+    params.resize(naxes*2);
+
+    for( i = 0; i < naxes; i++ )
+    {
+        int tag = axes[i].tag;
+        params[i*2] = CV_FOURCC(tag >> 24, tag >> 16, tag >> 8, tag);
+        params[i*2+1] = axes[i].currval;
+    }
+    return naxes > 0;
+}
 
 static unsigned calccrc(const std::vector<uchar>& buf)
 {
@@ -838,6 +837,7 @@ static void drawCharacter(
     }
 }
 
+#ifdef HAVE_HARFBUZZ
 //by amarullz from https://stackoverflow.com/questions/5423960/how-can-i-recognize-rtl-strings-in-c
 static bool isRightToLeft(unsigned c)
 {
@@ -874,33 +874,25 @@ static bool isRightToLeft(unsigned c)
     ((c>=0x10B40)&&(c<=0x10C48))||
     ((c>=0x1EE00)&&(c<=0x1EEBB)));
 }
-
+#endif
 
 Point FontRenderEngine::putText_(
     Mat& img, Size imgsize, const String& str_, Point org,
     const uchar* color, FontFace& fontface, double size,
-    int weight, int flags, Range wrapRange, bool render, Rect* bbox_ )
+    double weight_, int flags, Range wrapRange, bool render, Rect* bbox_ )
 {
     size = cvRound(size*256)/256.;
     bool bottom_left = (flags & PUT_TEXT_ORIGIN_BL) != 0;
+    int saved_weights[BUILTIN_FONTS_NUM+1]={0};
+    int weight = cvRound(weight_*65536);
 
     if(fontface.getName().empty())
         fontface.set("sans");
-
-    fontface->setParams(size, weight);
     if(!fontface->ttface)
         return org;
 
-    for(int j = 0; j < BUILTIN_FONTS_NUM; j++)
-    {
-        if(!builtin_ffaces_initialized)
-            builtin_ffaces[j].set(builtinFontData[j].name);
-        builtin_ffaces[j]->setParams(size, weight);
-    }
-    builtin_ffaces_initialized = true;
-
     Point pen = org;
-    int i, j, k, len = (int)str_.size();
+    int i, j, len = (int)str_.size();
     bool wrap = (flags & PUT_TEXT_WRAP) != 0;
     int alignment = flags & PUT_TEXT_ALIGN_MASK;
     int x0 = std::min(wrapRange.start, wrapRange.end);
@@ -926,6 +918,22 @@ Point FontRenderEngine::putText_(
             *bbox_ = Rect(org.x, org.y, 0, 0);
         return org;
     }
+
+    saved_weights[BUILTIN_FONTS_NUM] = stbtt_GetWeight(fontface->ttface);
+    fontface->setParams(size, weight);
+
+    for(j = 0; j < BUILTIN_FONTS_NUM; j++)
+    {
+        FontFace& fface = builtin_ffaces[j];
+        if(!builtin_ffaces_initialized)
+            fface.set(builtinFontData[j].name);
+
+        if (fface->ttface) {
+            saved_weights[j] = stbtt_GetWeight(fface->ttface);
+            fface->setParams(size, weight);
+        }
+    }
+    builtin_ffaces_initialized = true;
 
     if(alignment == PUT_TEXT_ALIGN_RIGHT)
         std::swap(x0, x1);
@@ -973,21 +981,26 @@ Point FontRenderEngine::putText_(
     len = (int)u32buf.size();
     unsigned* chars = &u32buf[0];
     int prev_dy = 0;
+#ifdef HAVE_HARFBUZZ
     hb_direction_t glob_dir = HB_DIRECTION_INVALID;
+#endif
 
     while(len > 0)
     {
         int nextline_dy = 0;
-        int segstart = 0, punctstart = -1;
         font_t* ttface0 = fontface->ttface;
+        float scale0 = fontface->scale;
         font_t* curr_ttface = ttface0;
-        int curr_fontidx = -1;
-        hb_script_t curr_script = HB_SCRIPT_UNKNOWN;
-        hb_direction_t curr_dir = HB_DIRECTION_INVALID;
 
         segments.clear();
         glyphs.clear();
 
+    #ifdef HAVE_HARFBUZZ
+        hb_script_t curr_script = HB_SCRIPT_UNKNOWN;
+        hb_direction_t curr_dir = HB_DIRECTION_INVALID;
+        int curr_fontidx = -1;
+
+        int k, segstart = 0, punctstart = -1;
         // TODO: possibly implement https://unicode.org/reports/tr9/ or find compact implementation of it
         for(i = 0; i < len; i++)
         {
@@ -1204,6 +1217,39 @@ Point FontRenderEngine::putText_(
                 glyphs.push_back(glyph);
             }
         }
+    #else
+        for(i = 0; i < len; i++)
+        {
+            int c = chars[i];
+            if(c == '\n')
+                break;
+            font_t* ttface = ttface0;
+            float scale = scale0;
+            int q_glyph_index = stbtt_FindGlyphIndex(ttface0, '?');
+            for(j = -1; j < BUILTIN_FONTS_NUM; j++)
+            {
+                if (j >= 0)
+                {
+                    ttface = builtin_ffaces[j]->ttface;
+                    scale = builtin_ffaces[j]->scale;
+                }
+                int glyph_index = ttface ? stbtt_FindGlyphIndex(ttface, c) : 0;
+                if(glyph_index == 0)
+                {
+                    if (j+1 < BUILTIN_FONTS_NUM)
+                        continue;
+                    ttface = ttface0;
+                    scale = scale0;
+                    glyph_index = q_glyph_index;
+                }
+                hb_glyph_position_t pos;
+                pos.x_advance = pos.y_advance = 0;
+                pos.x_offset = pos.y_offset = 0;
+                glyphs.push_back(FontGlyph(ttface, glyph_index, pos, scale));
+                break;
+            }
+        }
+    #endif
 
         chars += i;
         len -= i;
@@ -1222,7 +1268,7 @@ Point FontRenderEngine::putText_(
         min_x = std::min(min_x, pen.x);
         max_x = std::max(max_x, pen.x);
 
-        font_t* prev_ttface = 0;
+        curr_ttface = 0;
         int ascent = 0, descent = 0, linegap = 0;
         for(j = 0; j < nglyphs; j++)
         {
@@ -1233,6 +1279,7 @@ Point FontRenderEngine::putText_(
                 curr_ttface = ttface;
                 space_glyph = stbtt_FindGlyphIndex(ttface, ' ');
                 stbtt_GetFontVMetrics(ttface, &ascent, &descent, &linegap);
+                if (linegap == 0) linegap = ascent - descent;
             }
 
             float scale = glyph.scale;
@@ -1247,26 +1294,24 @@ Point FontRenderEngine::putText_(
                 cached = &new_cached;
                 int w=0, h=0, xoff=0, yoff=0;
                 float advx = 0.f;
-                uchar* curr_buf = stbtt_GetGlyphBitmapSubpixelRealloc(ttface, scale, scale, 0.f, 0.f,
-                                glyph.index, &w, &h, &xoff, &yoff, &advx, &glyph_buf, &glyph_bufsz);
-                if(!curr_buf)
+                bitmap_buf = stbtt_GetGlyphBitmapSubpixelRealloc(ttface, scale, scale, 0.f, 0.f,
+                                glyph.index, &w, &h, &bitmap_step, &xoff, &yoff, &advx, &glyph_buf, &glyph_bufsz);
+                if(!bitmap_buf)
                     continue;
+                //printf("j=%d. bw=%d, bh=%d, step=%d, xoff=%d, yoff=%d, advx=%.1f, glyph_bufsz=%d\n", j, w, h, bitmap_step, xoff, yoff, advx, glyph_bufsz);
 
-                cached->width = (int)slot->metrics.width;
-                cached->height = (int)slot->metrics.height;
+                cached->width = w;
+                cached->height = h;
                 cached->advance.x = cvRound(advx*64);
                 cached->advance.y = 0;
-                cached->vertAdvance =
-                cached->bitmapTop = (int)slot->bitmap_top;
-                cached->horiBearingX = (int)slot->metrics.horiBearingX;
-                cached->horiBearingY = (int)slot->metrics.horiBearingY;
+                cached->ascent = cvRound(ascent*glyph.scale);
+                cached->linegap = cvRound(linegap*glyph.scale);
+                cached->horiBearingX = (int)(xoff*64);
+                cached->horiBearingY = (int)(-yoff*64);
 
-                bitmap_buf = slot->bitmap.buffer;
-                bitmap_step = (int)slot->bitmap.pitch;
-                bbox = Rect(0, 0, slot->bitmap.width, slot->bitmap.rows);
+                bbox = Rect(0, 0, w, h);
 
-                if(slot->bitmap.width <= MAX_CACHED_GLYPH_SIZE &&
-                   slot->bitmap.rows <= MAX_CACHED_GLYPH_SIZE)
+                if(w <= MAX_CACHED_GLYPH_SIZE && h <= MAX_CACHED_GLYPH_SIZE)
                 {
                     compressCharacter(bitmap_buf, bitmap_step, Size(w, h),
                                       cached->rlebuf, cached->bbox,
@@ -1292,7 +1337,7 @@ Point FontRenderEngine::putText_(
             int dx = cached->advance.x >> 6;
             int dy = cached->advance.y >> 6;
             int new_pen_x = pen.x + dx*alignSign;
-            nextline_dy = max(nextline_dy, cached->vertAdvance >> 6);
+            nextline_dy = max(nextline_dy, cached->linegap);
             // TODO: this wrapping algorithm is quite dumb,
             // preferably should split text at word boundary
             if( wrap && imgsize.width > 0 && new_pen_x*alignSign > x1*alignSign )
@@ -1307,8 +1352,8 @@ Point FontRenderEngine::putText_(
             }
 
             if(!wrapped)
-                max_dy = std::max(max_dy, cached->bitmapTop);
-            int baseline = (cached->height - cached->horiBearingY) >> 6;
+                max_dy = std::max(max_dy, cached->ascent);
+            int baseline = cached->height - (cached->horiBearingY >> 6);
             max_baseline = std::max(max_baseline, baseline);
 
             if(alignment == PUT_TEXT_ALIGN_RIGHT)
@@ -1319,6 +1364,7 @@ Point FontRenderEngine::putText_(
 
             if( render )
             {
+                //circle(img, pen, 2, Scalar(0, 0, 128), -1, LINE_AA);
                 drawCharacter(img, color, bitmap_buf, bitmap_step, bbox.size(), x, y, bottom_left);
             }
 
@@ -1344,6 +1390,16 @@ Point FontRenderEngine::putText_(
             *bbox_ = Rect(min_x, org.y - max_dy, max_x - min_x + 1, pen.y - org.y + max_dy + max_baseline);
     }
 
+    // restore the weights
+    if (weight != 0)
+        for(j = 0; j <= BUILTIN_FONTS_NUM; j++)
+        {
+            int params[] = {STBTT_FOURCC('w', 'g', 'h', 't'), saved_weights[j]};
+            font_t* ttface = (j < BUILTIN_FONTS_NUM ? builtin_ffaces[j] : fontface)->ttface;
+            if (ttface)
+                stbtt_SetInstance(ttface, params, 1, 0);
+        }
+
     return pen;
 }
 
@@ -1351,7 +1407,7 @@ Point FontRenderEngine::putText_(
 Point putText(InputOutputArray img_, const String& str,
              Point org, Scalar color_,
              FontFace& fontface, double size,
-             int weight, int flags, Range wrap)
+             double weight, int flags, Range wrap)
 {
     uchar color[] =
     {
@@ -1370,7 +1426,7 @@ Point putText(InputOutputArray img_, const String& str,
 
 Rect getTextSize(Size imgsize, const String& str, Point org,
                  FontFace& fontface, double size,
-                 int weight, int flags, Range wrap)
+                 double weight, int flags, Range wrap)
 {
     Mat img;
     Rect bbox;

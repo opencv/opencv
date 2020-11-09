@@ -229,7 +229,7 @@ STBTT_DEF int stbtt_GetFontOffsetForIndex(const unsigned char *data, int index);
 
 typedef struct stbtt_axisinfo
 {
-    unsigned tag;
+    int tag;
     int minval, defval, maxval;
     int currval;
 } stbtt_axisinfo;
@@ -421,8 +421,9 @@ STBTT_DEF int stbtt_GetGlyphSVG(const stbtt_fontinfo *info, int gl, const char *
 //
 // FONT VARIATIONS
 //
-STBTT_DEF int stbtt_GetVariations(const stbtt_fontinfo* info, stbtt_axisinfo* axes, int max_count);
-STBTT_DEF int stbtt_SetInstance(stbtt_fontinfo* info, const unsigned* tags, const float* axis_values, int count);
+STBTT_DEF int stbtt_GetWeight(const stbtt_fontinfo* info);
+STBTT_DEF int stbtt_GetInstance(const stbtt_fontinfo* info, stbtt_axisinfo* axes, int max_count);
+STBTT_DEF int stbtt_SetInstance(stbtt_fontinfo* info, const int* params, int count, int reset_to_defaults);
 
 //////////////////////////////////////////////////////////////////////////////
 //
@@ -431,38 +432,6 @@ STBTT_DEF int stbtt_SetInstance(stbtt_fontinfo* info, const unsigned* tags, cons
 
 STBTT_DEF void stbtt_FreeBitmap(unsigned char *bitmap, void *userdata);
 // frees the bitmap allocated below
-
-STBTT_DEF unsigned char *stbtt_GetCodepointBitmap(const stbtt_fontinfo *info, float scale_x, float scale_y, int codepoint,
-                                                  int *width, int *height, int *xoff, int *yoff, float* advx);
-// allocates a large-enough single-channel 8bpp bitmap and renders the
-// specified character/glyph at the specified scale into it, with
-// antialiasing. 0 is no coverage (transparent), 255 is fully covered (opaque).
-// *width & *height are filled out with the width & height of the bitmap,
-// which is stored left-to-right, top-to-bottom.
-//
-// xoff/yoff are the offset it pixel space from the glyph origin to the top-left of the bitmap
-
-STBTT_DEF unsigned char *stbtt_GetCodepointBitmapSubpixel(const stbtt_fontinfo *info, float scale_x, float scale_y,
-                                                          float shift_x, float shift_y, int codepoint,
-                                                          int *width, int *height, int *xoff, int *yoff, float* advx);
-// the same as stbtt_GetCodepoitnBitmap, but you can specify a subpixel
-// shift for the character
-
-STBTT_DEF void stbtt_MakeCodepointBitmap(const stbtt_fontinfo *info, unsigned char *output, int out_w, int out_h, int out_stride,
-                                         float scale_x, float scale_y, int codepoint, float* advx);
-// the same as stbtt_GetCodepointBitmap, but you pass in storage for the bitmap
-// in the form of 'output', with row spacing of 'out_stride' bytes. the bitmap
-// is clipped to out_w/out_h bytes. Call stbtt_GetCodepointBitmapBox to get the
-// width and height and positioning info for it first.
-
-STBTT_DEF void stbtt_MakeCodepointBitmapSubpixel(const stbtt_fontinfo *info, unsigned char *output, int out_w, int out_h, int out_stride,
-                                                 float scale_x, float scale_y, float shift_x, float shift_y, int codepoint, float* advx);
-// same as stbtt_MakeCodepointBitmap, but you can specify a subpixel
-// shift for the character
-
-STBTT_DEF void stbtt_MakeCodepointBitmapSubpixelPrefilter(const stbtt_fontinfo *info, unsigned char *output, int out_w, int out_h, int out_stride, float scale_x, float scale_y, float shift_x, float shift_y, int oversample_x, int oversample_y, float *sub_x, float *sub_y, int codepoint);
-// same as stbtt_MakeCodepointBitmapSubpixel, but prefiltering
-// is performed (see stbtt_PackSetOversampling)
 
 STBTT_DEF void stbtt_GetCodepointBitmapBox(const stbtt_fontinfo *font, int codepoint, float scale_x, float scale_y, int *ix0, int *iy0, int *ix1, int *iy1);
 // get the bbox of the bitmap centered around the glyph origin; so the
@@ -477,12 +446,10 @@ STBTT_DEF void stbtt_GetCodepointBitmapBoxSubpixel(const stbtt_fontinfo *font, i
 
 // the following functions are equivalent to the above functions, but operate
 // on glyph indices instead of Unicode codepoints (for efficiency)
-STBTT_DEF unsigned char *stbtt_GetGlyphBitmap(const stbtt_fontinfo *info, float scale_x, float scale_y, int glyph,
-                                              int *width, int *height, int *xoff, int *yoff, float* advx);
-STBTT_DEF unsigned char *stbtt_GetGlyphBitmapSubpixel(const stbtt_fontinfo *info, float scale_x, float scale_y, float shift_x, float shift_y,
-                                                      int glyph, int *width, int *height, int *xoff, int *yoff, float* advx);
-STBTT_DEF unsigned char *stbtt_GetGlyphBitmapSubpixelRealloc(const stbtt_fontinfo *info, float scale_x, float scale_y, float shift_x, float shift_y,
-                                                             int glyph, int *width, int *height, int *xoff, int *yoff, float* advx,
+STBTT_DEF unsigned char *stbtt_GetGlyphBitmapSubpixelRealloc(const stbtt_fontinfo *info, float scale_x, float scale_y,
+                                                             float shift_x, float shift_y,
+                                                             int glyph, int *width, int *height, int* step,
+                                                             int *xoff, int *yoff, float* advx,
                                                              unsigned char** buf, int* bufsize);
 STBTT_DEF void stbtt_MakeGlyphBitmap(const stbtt_fontinfo *info, unsigned char *output, int out_w, int out_h, int out_stride, float scale_x, float scale_y, int glyph);
 STBTT_DEF void stbtt_MakeGlyphBitmapSubpixel(const stbtt_fontinfo *info, unsigned char *output, int out_w, int out_h, int out_stride, float scale_x, float scale_y, float shift_x, float shift_y, int glyph);

@@ -1818,9 +1818,9 @@ public class ImgprocTest extends OpenCVTestCase {
         Imgproc.getTextSize(text, Imgproc.FONT_HERSHEY_SCRIPT_SIMPLEX, fontScale, thickness, null);
         Size res = Imgproc.getTextSize(text, Imgproc.FONT_HERSHEY_SCRIPT_SIMPLEX, fontScale, thickness, baseLine);
 
-        assertEquals(543.0, res.width);
-        assertEquals(44.0, res.height);
-        assertEquals(20, baseLine[0]);
+        assertEquals(505.0, res.width);
+        assertEquals(51.0, res.height);
+        assertEquals(10, baseLine[0]);
     }
 
     public void testCircleMatPointIntScalar() {
@@ -2032,7 +2032,7 @@ public class ImgprocTest extends OpenCVTestCase {
 
     public void testPutTextMatStringPointIntDoubleScalar() {
         String text = "Hello World";
-        Size labelSize = new Size(175, 22);
+        Size labelSize = new Size(170, 23);
         Mat img = new Mat(20 + (int) labelSize.height, 20 + (int) labelSize.width, CvType.CV_8U, colorBlack);
         Point origin = new Point(10, labelSize.height + 10);
 
@@ -2046,7 +2046,7 @@ public class ImgprocTest extends OpenCVTestCase {
 
     public void testPutTextMatStringPointIntDoubleScalarInt() {
         String text = "Hello World";
-        Size labelSize = new Size(176, 22);
+        Size labelSize = new Size(170, 23);
         Mat img = new Mat(20 + (int) labelSize.height, 20 + (int) labelSize.width, CvType.CV_8U, colorBlack);
         Point origin = new Point(10, labelSize.height + 10);
 
@@ -2060,7 +2060,7 @@ public class ImgprocTest extends OpenCVTestCase {
 
     public void testPutTextMatStringPointIntDoubleScalarIntIntBoolean() {
         String text = "Hello World";
-        Size labelSize = new Size(175, 22);
+        Size labelSize = new Size(170, 23);
 
         Mat img = new Mat(20 + (int) labelSize.height, 20 + (int) labelSize.width, CvType.CV_8U, colorBlack);
         Point origin = new Point(10, 10);

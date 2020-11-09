@@ -1,5 +1,6 @@
 #include "stb_truetype.hpp"
 #include <stdio.h>
+#include <limits.h>
 
 #define STB_TRUETYPE_IMPLEMENTATION
 //#define STBTT_RASTERIZER_VERSION 1
@@ -872,7 +873,7 @@ static int stbtt__read_fvar(stbtt_fontinfo *info)
       stbtt_axisinfo* axis = &info->axes[i];
       axis->tag = ttULONG(axis_data);
       axis->minval = ttLONG(axis_data + 4);
-      axis->defval = ttLONG(axis_data + 8);
+      axis->defval = axis->currval = ttLONG(axis_data + 8);
       axis->maxval = ttLONG(axis_data + 12);
       if(axis->minval > axis->defval || axis->defval > axis->maxval)
          return 0;
@@ -1031,7 +1032,7 @@ static int stbtt_InitFont_internal(stbtt_fontinfo *info, unsigned char *data, st
 
    if (info->fvar || info->gvar || info->hvar) {
       if(!info->fvar || !info->gvar || !info->hvar || !stbtt__read_fvar(info) ||
-         !stbtt__read_gvar(info) || !stbtt_SetInstance(info, 0, 0, 0)) {
+         !stbtt__read_gvar(info) || !stbtt_SetInstance(info, 0, 0, 1)) {
          info->fvar = info->gvar = 0;
          return 0;
       }
@@ -3551,9 +3552,12 @@ STBTT_DEF void stbtt_FreeBitmap(unsigned char *bitmap, void *userdata)
 
 STBTT_DEF unsigned char* stbtt_GetGlyphBitmapSubpixelRealloc(const stbtt_fontinfo *info,
                                                              float scale_x, float scale_y, float shift_x, float shift_y,
-                                                             int glyph, int *width, int *height, int *xoff, int *yoff, float* advx,
+                                                             int glyph, int *width, int *height, int *step,
+                                                             int *xoff, int *yoff, float* advx,
                                                              unsigned char** buf, int* bufsize)
 {
+   if (!buf || !bufsize) return 0;
+
    int ix0,ix1,iy0,iy1;
    int scaled_ix0, scaled_iy0, scaled_ix1, scaled_iy1;
    stbtt__bitmap gbm;
@@ -3580,13 +3584,14 @@ STBTT_DEF unsigned char* stbtt_GetGlyphBitmapSubpixelRealloc(const stbtt_fontinf
    // now we get the size
    gbm.w = (scaled_ix1 - scaled_ix0)+pad_x*2;
    gbm.h = (scaled_iy1 - scaled_iy0)+pad_y*2;
-   gbm.pixels = NULL; // in case we error
+   gbm.pixels = *buf; // in case we error
 
-   if (width ) *width  = gbm.w;
-   if (height) *height = gbm.h;
-   if (xoff  ) *xoff   = scaled_ix0 - pad_x;
-   if (yoff  ) *yoff   = scaled_iy0 - pad_y;
-   if (advx  ) {
+   if (width) *width = 0;
+   if (height) *height = 0;
+   if (step) *step = gbm.w;
+   if (xoff) *xoff = 0;
+   if (yoff) *yoff = 0;
+   if (advx) {
        int advx0 = 0, lsb = 0, x0 = 0, x1 = 0;
        stbtt_GetGlyphBox(info, glyph, &x0, 0, &x1, 0);
        stbtt_GetGlyphHMetrics(info, glyph, &advx0, &lsb);
@@ -3595,81 +3600,52 @@ STBTT_DEF unsigned char* stbtt_GetGlyphBitmapSubpixelRealloc(const stbtt_fontinf
    }
 
    if (gbm.w && gbm.h) {
-      int new_bufsz = gbm.w*gbm.h;
-      if (buf && bufsize) {
-         if (!*buf) *bufsize = 0;
-         if (new_bufsz > *bufsize) {
-            int bufsz_to_alloc = STBTT_max(*bufsize*3/2, new_bufsz);
-            STBTT_free(*buf, info->userdata);
-            *buf = (unsigned char*)STBTT_malloc(bufsz_to_alloc, info->userdata);
-            if(*buf)
-               *bufsize = bufsz_to_alloc;
-         }
-         gbm.pixels = *buf;
-      } else {
-         gbm.pixels = (unsigned char *) STBTT_malloc(gbm.w * gbm.h, info->userdata);
-      }
-      if (gbm.pixels) {
+     int new_bufsz = gbm.w*gbm.h;
+     if (!*buf) *bufsize = 0;
+     if (new_bufsz > *bufsize) {
+        int bufsz_to_alloc = STBTT_max(*bufsize*3/2, new_bufsz);
+        STBTT_free(*buf, info->userdata);
+        *buf = (unsigned char*)STBTT_malloc(bufsz_to_alloc, info->userdata);
+        *bufsize = bufsz_to_alloc;
+     }
+     gbm.pixels = *buf;
+     if (gbm.pixels) {
          memset(gbm.pixels, 0, new_bufsz);
          gbm.stride = gbm.w;
          stbtt_Rasterize(&gbm, 0.35f, vertices, num_verts, scale_x, scale_y,
                          shift_x+pad_x, shift_y+pad_y, scaled_ix0, scaled_iy0, 1, info->userdata);
-      }
+         int x, y;
+         ix0 = iy0 = INT_MAX;
+         ix1 = iy1 = INT_MIN;
+         for (y = 0; y < gbm.h; y++) {
+             int have_nz = 0;
+             for (x = 0; x < gbm.w; x++) {
+                 if (gbm.pixels[y*gbm.w + x] != 0) {
+                     have_nz = 1;
+                     ix0 = STBTT_min(ix0, x);
+                     ix1 = STBTT_max(ix1, x);
+                 }
+             }
+             if (have_nz) {
+                 iy0 = STBTT_min(iy0, y);
+                 iy1 = STBTT_max(iy1, y);
+             }
+         }
+         int w = ix1 - ix0 + 1, h = iy1 - iy0 + 1;
+         if (ix0 == INT_MAX || iy0 == INT_MAX || ix1 == INT_MIN || iy1 == INT_MIN ) {
+             w = h = 0;
+             ix0 = pad_x;
+             iy0 = pad_y;
+         }
+         if (width) *width = w;
+         if (height) *height = h;
+         if (xoff) *xoff = scaled_ix0 - pad_x + ix0;
+         if (yoff) *yoff = scaled_iy0 - pad_y + iy0;
+         gbm.pixels += gbm.w*iy0 + ix0;
+     }
    }
    STBTT_free(vertices, info->userdata);
    return gbm.pixels;
-}
-
-STBTT_DEF unsigned char *stbtt_GetGlyphBitmapSubpixel(const stbtt_fontinfo *info, float scale_x, float scale_y, float shift_x, float shift_y,
-                                                      int glyph, int *width, int *height, int *xoff, int *yoff, float* advx)
-{
-    return stbtt_GetGlyphBitmapSubpixelRealloc(info, scale_x, scale_y, shift_x, shift_y, glyph, width, height, xoff, yoff, advx, 0, 0);
-}
-
-STBTT_DEF unsigned char *stbtt_GetGlyphBitmap(const stbtt_fontinfo *info, float scale_x, float scale_y, int glyph,
-                                              int *width, int *height, int *xoff, int *yoff, float* advx)
-{
-   return stbtt_GetGlyphBitmapSubpixel(info, scale_x, scale_y, 0.0f, 0.0f, glyph, width, height, xoff, yoff, advx);
-}
-
-STBTT_DEF void stbtt_MakeGlyphBitmapSubpixel(const stbtt_fontinfo *info, unsigned char *output,
-                                             int out_w, int out_h, int out_stride, float scale_x,
-                                             float scale_y, float shift_x, float shift_y, int glyph)
-{
-   int ix0,iy0,ix1,iy1;
-   stbtt_vertex *vertices;
-   int num_verts = stbtt_GetGlyphShape(info, glyph, &vertices, &ix0, &iy0, &ix1, &iy1);
-   stbtt__bitmap gbm;
-
-   stbtt_GetGlyphBitmapBoxSubpixel(info, glyph, scale_x, scale_y, shift_x, shift_y, &ix0, &iy0,0,0);
-   gbm.pixels = output;
-   gbm.w = out_w;
-   gbm.h = out_h;
-   gbm.stride = out_stride;
-
-   if (gbm.w && gbm.h)
-      stbtt_Rasterize(&gbm, 0.35f, vertices, num_verts, scale_x, scale_y, shift_x, shift_y, ix0,iy0, 1, info->userdata);
-
-   STBTT_free(vertices, info->userdata);
-}
-
-STBTT_DEF void stbtt_MakeGlyphBitmap(const stbtt_fontinfo *info, unsigned char *output, int out_w, int out_h, int out_stride, float scale_x, float scale_y, int glyph)
-{
-   stbtt_MakeGlyphBitmapSubpixel(info, output, out_w, out_h, out_stride, scale_x, scale_y, 0.0f,0.0f, glyph);
-}
-
-STBTT_DEF unsigned char *stbtt_GetCodepointBitmapSubpixel(const stbtt_fontinfo *info, float scale_x, float scale_y, float shift_x, float shift_y,
-                                                          int codepoint, int *width, int *height, int *xoff, int *yoff, float* advx)
-{
-   return stbtt_GetGlyphBitmapSubpixel(info, scale_x, scale_y,shift_x,shift_y, stbtt_FindGlyphIndex(info,codepoint), width, height, xoff, yoff, advx);
-}
-
-STBTT_DEF void stbtt_MakeCodepointBitmapSubpixelPrefilter(const stbtt_fontinfo *info, unsigned char *output, int out_w, int out_h, int out_stride,
-                                                          float scale_x, float scale_y, float shift_x, float shift_y, int oversample_x, int oversample_y,
-                                                          float *sub_x, float *sub_y, int codepoint)
-{
-   stbtt_MakeGlyphBitmapSubpixelPrefilter(info, output, out_w, out_h, out_stride, scale_x, scale_y, shift_x, shift_y,
-                                          oversample_x, oversample_y, sub_x, sub_y, stbtt_FindGlyphIndex(info,codepoint));
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -4855,7 +4831,7 @@ STBTT_DEF int stbtt_CompareUTF8toUTF16_bigendian(const char *s1, int len1, const
    return stbtt_CompareUTF8toUTF16_bigendian_internal((char *) s1, len1, (char *) s2, len2);
 }
 
-STBTT_DEF int stbtt_GetVariations(const stbtt_fontinfo* info, stbtt_axisinfo* axes, int max_count)
+STBTT_DEF int stbtt_GetInstance(const stbtt_fontinfo* info, stbtt_axisinfo* axes, int max_count)
 {
     if (!info) return 0;
     if (!axes) return info->axis_count;
@@ -4865,23 +4841,36 @@ STBTT_DEF int stbtt_GetVariations(const stbtt_fontinfo* info, stbtt_axisinfo* ax
     return count;
 }
 
-STBTT_DEF int stbtt_SetInstance(stbtt_fontinfo* info, const unsigned* tags, const float* axis_values, int count)
+STBTT_DEF int stbtt_GetWeight(const stbtt_fontinfo* info)
+{
+    int i;
+    for (i = 0; i < info->axis_count; i++) {
+        const stbtt_axisinfo* axis = &info->axes[i];
+        if (axis->tag == STBTT_FOURCC('w', 'g', 'h', 't'))
+            return axis->currval;
+    }
+    return 0;
+}
+
+STBTT_DEF int stbtt_SetInstance(stbtt_fontinfo* info, const int* params, int count, int reset_to_defaults)
 {
     if (!info || count < 0) return 0;
-    if (count > 0 && (!tags || !axis_values)) return 0;
+    if (count > 0 && !params) return 0;
     if (info->axis_count == 0) return 1;
     int fixptvals[STBTT_MAX_AXES];
     int i, j;
     for (i = 0; i < info->axis_count; i++) {
         const stbtt_axisinfo* axis = &info->axes[i];
         for (j = 0; j < count; j++) {
-            if (axis->tag == tags[j])
+            int tag = params[j*2];
+            int revtag = STBTT_FOURCC(tag, tag >> 8, tag >> 16, tag >> 24);
+            if (axis->tag == tag || axis->tag == revtag)
                 break;
         }
-        fixptvals[i] = info->axes[i].defval;
+        fixptvals[i] = reset_to_defaults ? info->axes[i].defval : info->axes[i].currval;
         if (j == count)
             continue;
-        int val = (int)(axis_values[j]*65536);
+        int val = params[j*2+1];
         fixptvals[i] = val < axis->minval ? axis->minval : val > axis->maxval ? axis->maxval : val;
     }
     return stbtt__SetVarfontInstance(info, fixptvals);

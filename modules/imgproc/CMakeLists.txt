@@ -20,7 +20,35 @@ if(OPENCV_IPP_GAUSSIAN_BLUR)
   ocv_append_source_file_compile_definitions(${CMAKE_CURRENT_SOURCE_DIR}/src/smooth.dispatch.cpp "ENABLE_IPP_GAUSSIAN_BLUR=1")
 endif()
 
+set(UNIFONT_MD5 "fb79cf5b4f4c89414f1233f14c2eb273")
+set(UNIFONT_NAME "WenQuanYiMicroHei.ttf.gz")
+set(UNIFONT_COMMIT "cc7d85179d69a704bee209aa37ce8a657f2f8b34")
+set(UNIFONT_URL "https://raw.githubusercontent.com/vpisarev/opencv_3rdparty/${UNIFONT_COMMIT}/")
+
+ocv_download(FILENAME ${UNIFONT_NAME}
+             HASH ${UNIFONT_MD5}
+             URL
+               "${OPENCV_UNIFONT_URL}"
+               "${UNIFONT_URL}"
+             DESTINATION_DIR "${CMAKE_CURRENT_BINARY_DIR}"
+             ID UNIFONT
+             STATUS res
+             RELATIVE_URL)
+
+if (NOT res)
+	message(STATUS "Unicode font download failed. Turning it off.")
+	set(USE_UNIFONT OFF)
+else ()
+	message(STATUS "Unicode font has been downloaded successfully.")
+	set(USE_UNIFONT ON)
+endif()
+
 ocv_blob2hdr("${CMAKE_CURRENT_SOURCE_DIR}/fonts/Rubik.ttf.gz" "${CMAKE_CURRENT_BINARY_DIR}/builtin_font0.h" OcvBuiltinFontSans)
 ocv_blob2hdr("${CMAKE_CURRENT_SOURCE_DIR}/fonts/Rubik-Italic.ttf.gz" "${CMAKE_CURRENT_BINARY_DIR}/builtin_font1.h" OcvBuiltinFontItalic)
-
+if (USE_UNIFONT)
+    ocv_blob2hdr("${CMAKE_CURRENT_BINARY_DIR}/${UNIFONT_NAME}" "${CMAKE_CURRENT_BINARY_DIR}/builtin_font2.h" OcvBuiltinFontUni)
+else()
+    file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/builtin_font2.h" "static const unsigned char OcvBuiltinFontUni[] = {0};")
+endif()
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")
+ocv_target_link_libraries(${the_module} LINK_PRIVATE ${ZLIB_LIBRARIES})
