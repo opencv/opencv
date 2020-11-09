@@ -26,8 +26,8 @@ struct ONNXInitPath {
 };
 static ONNXInitPath g_init_path;
 
-cv::Mat initMatrixRandU(int type, cv::Size sz_in) {
-    cv::Mat in_mat1 = cv::Mat(sz_in, type);
+cv::Mat initMatrixRandU(const int type, const cv::Size& sz_in) {
+    const cv::Mat in_mat1 = cv::Mat(sz_in, type);
 
     if (CV_MAT_DEPTH(type) < CV_32F) {
         cv::randu(in_mat1, cv::Scalar::all(0), cv::Scalar::all(255));
@@ -44,13 +44,13 @@ namespace opencv_test
 {
 namespace {
 // FIXME: taken from the DNN module
-void normAssert(cv::InputArray ref, cv::InputArray test,
+void normAssert(const cv::InputArray& ref, const cv::InputArray& test,
                 const char *comment /*= ""*/,
                 double l1 = 0.00001, double lInf = 0.0001) {
-    double normL1 = cvtest::norm(ref, test, cv::NORM_L1) / ref.getMat().total();
+    const double normL1 = cvtest::norm(ref, test, cv::NORM_L1) / ref.getMat().total();
     EXPECT_LE(normL1, l1) << comment;
 
-    double normInf = cvtest::norm(ref, test, cv::NORM_INF);
+    const double normInf = cvtest::norm(ref, test, cv::NORM_INF);
     EXPECT_LE(normInf, lInf) << comment;
 }
 
@@ -58,7 +58,7 @@ std::string findModel(const std::string &model_name) {
     return findDataFile("vision/" + model_name + ".onnx", false);
 }
 
-inline void toCHW(cv::Mat& src, cv::Mat& dst) {
+inline void toCHW(const cv::Mat& src, cv::Mat& dst) {
     dst.create(cv::Size(src.cols, src.rows * src.channels()), CV_32F);
     std::vector<cv::Mat> planes;
     for (int i = 0; i < src.channels(); ++i) {
@@ -67,7 +67,7 @@ inline void toCHW(cv::Mat& src, cv::Mat& dst) {
     cv::split(src, planes);
 }
 
-inline int toCV(ONNXTensorElementDataType prec) {
+inline int toCV(const ONNXTensorElementDataType prec) {
     switch (prec) {
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT8: return CV_8U;
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT: return CV_32F;
@@ -93,7 +93,7 @@ inline void match_out(const cv::Mat& in, cv::Mat& out) {
     GAPI_Assert(in.size == out.size);
     const float* inptr = in.ptr<float>();
     float* optr = out.ptr<float>();
-    int size = in.total();
+    const int size = in.total();
     for (int i = 0; i < size; ++i) {
         optr[i] = inptr[i];
     }
@@ -175,8 +175,8 @@ public:
             allocator.Free(out_node_name_p);
         }
         // Input/output order by names
-        auto in_run_names  = getCharNames(in_node_names);
-        auto out_run_names = getCharNames(out_node_names);
+        const auto in_run_names  = getCharNames(in_node_names);
+        const auto out_run_names = getCharNames(out_node_names);
         // Run
         auto result = session.Run(Ort::RunOptions{nullptr},
                                   in_run_names.data(),
@@ -188,9 +188,9 @@ public:
         GAPI_Assert(result.size() == num_out);
         outs.resize(num_out);
         for (size_t i = 0; i < num_out; ++i) {
-            auto info = result[i].GetTensorTypeAndShapeInfo();
-            auto shape = info.GetShape();
-            auto type = info.GetElementType();
+            const auto info = result[i].GetTensorTypeAndShapeInfo();
+            const auto shape = info.GetShape();
+            const auto type = info.GetElementType();
             cv::Mat mt(std::vector<int>(shape.begin(), shape.end()), toCV(type),
                        reinterpret_cast<void*>(result[i].GetTensorMutableData<uint8_t*>()));
             mt.copyTo(outs[i]);
@@ -210,7 +210,7 @@ public:
         ASSERT_EQ(out_gapi.size(), out_onnx.size());
         const auto size = out_gapi.size();
         for (size_t i = 0; i < size; ++i) {
-            normAssert(out_onnx[i], out_gapi[i], "Test output");
+            normAssert(out_onnx[i], out_gapi[i], "Test outputs");
         }
     }
 
@@ -432,7 +432,7 @@ TEST_F(ONNXGRayScaleTest, InferImage)
     validate();
 }
 
-TEST_F(ONNXtest, InferMultiNodes)
+TEST_F(ONNXtest, InferMultOutput)
 {
     useModel("object_detection_segmentation/ssd-mobilenetv1/model/ssd_mobilenet_v1_10");
     // ONNX_API code
