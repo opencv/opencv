@@ -76,23 +76,6 @@ else()
   message(FATAL_ERROR "iOS toolchain doesn't recognize ARCH='${IOS_ARCH}' value")
 endif()
 
-# If user did not specify the SDK root to use, then query xcodebuild for it.
-# execute_process(COMMAND xcodebuild -version -sdk macosx Path
-#     OUTPUT_VARIABLE CMAKE_OSX_SYSROOT_INT
-#     ERROR_QUIET
-#     OUTPUT_STRIP_TRAILING_WHITESPACE)
-# if (NOT DEFINED CMAKE_OSX_SYSROOT_INT AND NOT DEFINED CMAKE_OSX_SYSROOT)
-#   message(SEND_ERROR "Please make sure that Xcode is installed and that the toolchain"
-#   "is pointing to the correct path. Please run:"
-#   "sudo xcode-select -s /Applications/Xcode.app/Contents/Developer"
-#   "and see if that fixes the problem for you.")
-#   message(FATAL_ERROR "Invalid CMAKE_OSX_SYSROOT: ${CMAKE_OSX_SYSROOT} "
-#   "does not exist.")
-# elseif(DEFINED CMAKE_OSX_SYSROOT_INT)
-#   message("SYSROOT is now ${CMAKE_OSX_SYSROOT_INT}")
-#   set(CMAKE_OSX_SYSROOT "${CMAKE_OSX_SYSROOT_INT}" CACHE INTERNAL "")
-# endif()
-
 toolchain_save_config(IOS_ARCH IPHONEOS_DEPLOYMENT_TARGET)
 
 if(NOT DEFINED CMAKE_OSX_SYSROOT)
@@ -103,10 +86,13 @@ if(NOT DEFINED CMAKE_OSX_SYSROOT)
   elseif(CATALYST)
     # Use MacOS SDK for Catalyst builds
     set(CMAKE_OSX_SYSROOT "macosx")
+    
+    message("CMAKE_CXX_FLAGS: ${CMAKE_CXX_FLAGS}")
     # Tell compiler to use Catalyst ABIs
+    # TODOChris: I don't think this is having an effect after all.
     set(INTERNAL_TARGET_FLAGS "-target ${IOS_ARCH}-apple-ios-macabi -miphoneos-version-min=13.0 -iframework ${CMAKE_OSX_SYSROOT}/System/iOSSupport/System/Library/Frameworks")
-    set(CMAKE_C_FLAGS, "${INTERNAL_TARGET_FLAGS}")
-    set(CMAKE_CXX_FLAGS, "${INTERNAL_TARGET_FLAGS}")
+    set(CMAKE_C_FLAGS, "${INTERNAL_TARGET_FLAGS}" CACHE STRING "" FORCE)
+    set(CMAKE_CXX_FLAGS, "${INTERNAL_TARGET_FLAGS}" CACHE STRING "" FORCE)
   endif()
 endif()
 set(CMAKE_MACOSX_BUNDLE YES)
@@ -177,8 +163,6 @@ include(CMakeForceCompiler)
 # CMAKE_FORCE_C_COMPILER (clang GNU)
 # CMAKE_FORCE_CXX_COMPILER (clang++ GNU)
 
-# message("Test wow")
-
 set(CMAKE_C_HAS_ISYSROOT 1)
 set(CMAKE_CXX_HAS_ISYSROOT 1)
 set(CMAKE_C_COMPILER_ABI ELF)
@@ -188,22 +172,8 @@ set(CMAKE_CXX_COMPILER_ABI ELF)
 set(CMAKE_CXX_COMPILER_WORKS TRUE CACHE INTERNAL "")
 set(CMAKE_C_COMPILER_WORKS TRUE CACHE INTERNAL "")
 
-# SET(CMAKE_C_COMPILER_FORCED TRUE CACHE INTERNAL "")
-# SET(CMAKE_CXX_COMPILER_FORCED TRUE CACHE INTERNAL "")
-
-# set(CMAKE_FORCE_C_COMPILER clang GNU)
-# set(CMAKE_FORCE_CXX_COMPILER clang++ GNU)
-
-# SET(CMAKE_C_COMPILER_ID_RUN TRUE CACHE INTERNAL "")
-# SET(CMAKE_CXX_COMPILER_ID_RUN TRUE CACHE INTERNAL "")
-
 # Search for programs in the build host directories
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM ONLY)
 #   for libraries and headers in the target directories
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
-
-# set(CMAKE_THREAD_LIBS_INIT "-lpthread")
-# set(CMAKE_HAVE_THREADS_LIBRARY 1)
-# set(CMAKE_USE_WIN32_THREADS_INIT 0)
-# set(CMAKE_USE_PTHREADS_INIT 1)
