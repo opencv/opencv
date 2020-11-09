@@ -8,6 +8,7 @@
 #include "precomp.hpp"
 
 #include <ade/graph.hpp>
+#include <ade/util/zip_range.hpp>   // util::indexed
 
 #include <opencv2/gapi/gproto.hpp> // can_describe
 #include <opencv2/gapi/gcompiled.hpp>
@@ -125,8 +126,9 @@ std::tuple<bool, cv::GRunArgs> cv::GStreamingCompiled::pull()
     run_args.reserve(out_shapes.size());
     outs.reserve(out_shapes.size());
 
-    for (auto&& shape : out_shapes)
+    for (auto&& it : ade::util::indexed(out_shapes))
     {
+        const auto& shape = ade::util::value(it);
         switch (shape)
         {
             case cv::GShape::GMAT:
@@ -139,6 +141,21 @@ std::tuple<bool, cv::GRunArgs> cv::GStreamingCompiled::pull()
             {
                 run_args.emplace_back(cv::Scalar{});
                 outs.emplace_back(&cv::util::get<cv::Scalar>(run_args.back()));
+                break;
+            }
+            case cv::GShape::GARRAY:
+            {
+                const auto& kinds = m_priv->outKinds();
+                auto idx = ade::util::index(it);
+                switch (kinds[idx])
+                {
+                    case cv::detail::OpaqueKind::CV_POINT2F:
+                        run_args.emplace_back(cv::detail::VectorRef{std::vector<cv::Point2f>{}});
+                        outs.emplace_back(cv::util::get<cv::detail::VectorRef>(run_args.back()));
+                        break;
+                    default:
+                        util::throw_error(std::logic_error("Unsupported kind for GArray"));
+                }
                 break;
             }
             default:

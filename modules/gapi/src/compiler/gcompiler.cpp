@@ -435,6 +435,17 @@ cv::GCompiled cv::gimpl::GCompiler::produceCompiled(GPtr &&pg)
     //     an execution plan for it (backend-specific execution)
     // ...before call to produceCompiled();
 
+    GModel::ConstGraph cgr(*pg);
+    // NB: Need to store output kinds to allocate output arrays for python bindings
+    auto out_nhs = cgr.metadata().get<cv::gimpl::Protocol>().out_nhs;
+    std::vector<cv::detail::OpaqueKind> out_kinds;
+    out_kinds.reserve(out_nhs.size());
+    for (auto&& nh : out_nhs)
+    {
+        const auto& data = cgr.metadata(nh).get<cv::gimpl::Data>();
+        out_kinds.push_back(data.kind);
+    }
+
     const auto &outMetas = GModel::ConstGraph(*pg).metadata()
         .get<OutputMeta>().outMeta;
     std::unique_ptr<GExecutor> pE(new GExecutor(std::move(pg)));
@@ -442,7 +453,9 @@ cv::GCompiled cv::gimpl::GCompiler::produceCompiled(GPtr &&pg)
     // make GExecutor abstract.
 
     GCompiled compiled;
+    compiled.priv().setOutKinds(std::move(out_kinds));
     compiled.priv().setup(m_metas, outMetas, std::move(pE));
+
     return compiled;
 }
 
@@ -458,13 +471,23 @@ cv::GStreamingCompiled cv::gimpl::GCompiler::produceStreamingCompiled(GPtr &&pg)
         outMetas = GModel::ConstGraph(*pg).metadata().get<OutputMeta>().outMeta;
     }
 
-    auto out_desc = GModel::ConstGraph(*pg).metadata().get<cv::gimpl::Protocol>().outputs;
+
+    GModel::ConstGraph cgr(*pg);
+
+    // NB: Need to store output shapes/kinds to allocate outputs for python
+    auto out_nhs = cgr.metadata().get<cv::gimpl::Protocol>().out_nhs;
+    std::vector<cv::detail::OpaqueKind> out_kinds;
+    out_kinds.reserve(out_nhs.size());
     GShapes out_shapes;
-    for (auto&& desc : out_desc)
+    out_shapes.reserve(out_nhs.size());
+    for (auto&& nh : out_nhs)
     {
-        out_shapes.push_back(desc.shape);
+        const auto& data = cgr.metadata(nh).get<cv::gimpl::Data>();
+        out_kinds.push_back(data.kind);
+        out_shapes.push_back(data.shape);
     }
     compiled.priv().setOutShapes(std::move(out_shapes));
+    compiled.priv().setOutKinds(std::move(out_kinds));
 
     std::unique_ptr<GStreamingExecutor> pE(new GStreamingExecutor(std::move(pg),
                                                                   m_args));

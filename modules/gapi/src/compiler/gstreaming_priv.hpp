@@ -28,6 +28,7 @@ class GAPI_EXPORTS GStreamingCompiled::Priv
     GMetaArgs  m_outMetas; // inferred by compiler
     std::unique_ptr<cv::gimpl::GStreamingExecutor> m_exec;
     GShapes m_out_shapes;
+    std::vector<cv::detail::OpaqueKind> m_out_kinds;
 
 public:
     void setup(const GMetaArgs &metaArgs,
@@ -52,6 +53,10 @@ public:
     // so need to know out shapes to create corresponding GRunArg
     void setOutShapes(GShapes shapes) { m_out_shapes = std::move(shapes); }
     const GShapes& outShapes() const { return m_out_shapes; }
+
+    // NB: Needed for python bindings to recognize GArray type
+    void setOutKinds(std::vector<cv::detail::OpaqueKind> kinds) { m_out_kinds = std::move(kinds); }
+    const std::vector<cv::detail::OpaqueKind>& outKinds() const { return m_out_kinds; }
 };
 
 } // namespace cv

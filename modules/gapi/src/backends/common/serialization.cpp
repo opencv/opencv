@@ -152,6 +152,13 @@ IIStream& operator>> (IIStream& is, cv::Point& pt) {
     return is >> pt.x >> pt.y;
 }
 
+IOStream& operator<< (IOStream& os, const cv::Point2f &pt) {
+    return os << pt.x << pt.y;
+}
+IIStream& operator>> (IIStream& is, cv::Point2f& pt) {
+    return is >> pt.x >> pt.y;
+}
+
 IOStream& operator<< (IOStream& os, const cv::Size &sz) {
     return os << sz.width << sz.height;
 }
@@ -516,17 +523,18 @@ IOStream& operator<< (IOStream& os, const cv::GArg &arg) {
         GAPI_Assert(arg.kind == cv::detail::ArgKind::OPAQUE_VAL);
         GAPI_Assert(arg.opaque_kind != cv::detail::OpaqueKind::CV_UNKNOWN);
         switch (arg.opaque_kind) {
-        case cv::detail::OpaqueKind::CV_BOOL:   os << arg.get<bool>();         break;
-        case cv::detail::OpaqueKind::CV_INT:    os << arg.get<int>();          break;
-        case cv::detail::OpaqueKind::CV_UINT64: os << arg.get<uint64_t>();     break;
-        case cv::detail::OpaqueKind::CV_DOUBLE: os << arg.get<double>();       break;
-        case cv::detail::OpaqueKind::CV_FLOAT:  os << arg.get<float>();        break;
-        case cv::detail::OpaqueKind::CV_STRING: os << arg.get<std::string>();  break;
-        case cv::detail::OpaqueKind::CV_POINT:  os << arg.get<cv::Point>();    break;
-        case cv::detail::OpaqueKind::CV_SIZE:   os << arg.get<cv::Size>();     break;
-        case cv::detail::OpaqueKind::CV_RECT:   os << arg.get<cv::Rect>();     break;
-        case cv::detail::OpaqueKind::CV_SCALAR: os << arg.get<cv::Scalar>();   break;
-        case cv::detail::OpaqueKind::CV_MAT:    os << arg.get<cv::Mat>();      break;
+        case cv::detail::OpaqueKind::CV_BOOL:    os << arg.get<bool>();         break;
+        case cv::detail::OpaqueKind::CV_INT:     os << arg.get<int>();          break;
+        case cv::detail::OpaqueKind::CV_UINT64:  os << arg.get<uint64_t>();     break;
+        case cv::detail::OpaqueKind::CV_DOUBLE:  os << arg.get<double>();       break;
+        case cv::detail::OpaqueKind::CV_FLOAT:   os << arg.get<float>();        break;
+        case cv::detail::OpaqueKind::CV_STRING:  os << arg.get<std::string>();  break;
+        case cv::detail::OpaqueKind::CV_POINT:   os << arg.get<cv::Point>();    break;
+        case cv::detail::OpaqueKind::CV_POINT2F: os << arg.get<cv::Point2f>();  break;
+        case cv::detail::OpaqueKind::CV_SIZE:    os << arg.get<cv::Size>();     break;
+        case cv::detail::OpaqueKind::CV_RECT:    os << arg.get<cv::Rect>();     break;
+        case cv::detail::OpaqueKind::CV_SCALAR:  os << arg.get<cv::Scalar>();   break;
+        case cv::detail::OpaqueKind::CV_MAT:     os << arg.get<cv::Mat>();      break;
         default: GAPI_Assert(false && "GArg: Unsupported (unknown?) opaque value type");
         }
     }
@@ -550,17 +558,18 @@ IIStream& operator>> (IIStream& is, cv::GArg &arg) {
         switch (arg.opaque_kind) {
 #define HANDLE_CASE(E,T) case cv::detail::OpaqueKind::CV_##E:           \
             { T t{}; is >> t; arg = (cv::GArg(t)); } break
-            HANDLE_CASE(BOOL   , bool);
-            HANDLE_CASE(INT    , int);
-            HANDLE_CASE(UINT64 , uint64_t);
-            HANDLE_CASE(DOUBLE , double);
-            HANDLE_CASE(FLOAT  , float);
-            HANDLE_CASE(STRING , std::string);
-            HANDLE_CASE(POINT  , cv::Point);
-            HANDLE_CASE(SIZE   , cv::Size);
-            HANDLE_CASE(RECT   , cv::Rect);
-            HANDLE_CASE(SCALAR , cv::Scalar);
-            HANDLE_CASE(MAT    , cv::Mat);
+            HANDLE_CASE(BOOL    , bool);
+            HANDLE_CASE(INT     , int);
+            HANDLE_CASE(UINT64  , uint64_t);
+            HANDLE_CASE(DOUBLE  , double);
+            HANDLE_CASE(FLOAT   , float);
+            HANDLE_CASE(STRING  , std::string);
+            HANDLE_CASE(POINT   , cv::Point);
+            HANDLE_CASE(POINT2F , cv::Point2f);
+            HANDLE_CASE(SIZE    , cv::Size);
+            HANDLE_CASE(RECT    , cv::Rect);
+            HANDLE_CASE(SCALAR  , cv::Scalar);
+            HANDLE_CASE(MAT     , cv::Mat);
 #undef HANDLE_CASE
         default: GAPI_Assert(false && "GArg: Unsupported (unknown?) opaque value type");
         }
