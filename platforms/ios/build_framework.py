@@ -100,6 +100,7 @@ class Builder:
         dirs = []
 
         xcode_ver = getXCodeMajor()
+        print("Build!!!!!!!!!!!!")
 
         # build each architecture separately
         alltargets = []
@@ -120,8 +121,13 @@ class Builder:
                 cmake_flags.append("-DCMAKE_C_FLAGS=-fembed-bitcode")
                 cmake_flags.append("-DCMAKE_CXX_FLAGS=-fembed-bitcode")
             if xcode_ver >= 7 and target[1] == 'Catalyst':  # TODOjon: Do I need this? (I think I do in order to set the C/CXX Flag for the ABI)
+                # cmake_flags.append("-DCC=/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang")
+                # cmake_flags.append("-DCXX=/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++")
+                # cmake_flags.append("-DCCLD=/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang")
+                # cmake_flags.append("-DCXXLD=/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++")
                 c_flags = [
-                    "-target %s-apple-ios-macabi -miphoneos-version-min=13.0" % target[0],  # e.g. x86_64-apple-ios13.2-macabi
+                    # "-isysroot",  # e.g. x86_64-apple-ios13.2-macabi # -mmacosx-version-min=10.15
+                    # "-target %s-apple-ios-macabi -miphoneos-version-min=13.0" % target[0],  # e.g. x86_64-apple-ios13.2-macabi # -mmacosx-version-min=10.15
                     r"-iframework ${CMAKE_OSX_SYSROOT}/System/iOSSupport/System/Library/Frameworks",
                 ]
                 if self.bitcodedisabled == False:
@@ -253,11 +259,14 @@ class Builder:
 
     def makeCMakeCmd(self, arch, target, dir, cmakeargs = []):
         toolchain = self.getToolchain(arch, target)
+        # toolchain = None
         cmakecmd = self.getCMakeArgs(arch, target) + \
             (["-DCMAKE_TOOLCHAIN_FILE=%s" % toolchain] if toolchain is not None else [])
-        if target.lower().startswith("iphoneos") or target.lower() == "catalyst":
-            ## cmakecmd.append("-DCMAKE_CROSSCOMPILING=ON") # TODOjon:
+        if target.lower().startswith("iphoneos"):
             cmakecmd.append("-DCPU_BASELINE=DETECT")
+        if target.lower() == "catalyst":
+            cmakecmd.append("-DCPU_BASELINE=DETECT")
+            cmakecmd.append("-DCMAKE_CROSSCOMPILING=ON")
         if target.lower() == "macosx":
             build_arch = check_output(["uname", "-m"]).rstrip()
             if build_arch != arch:
@@ -281,7 +290,9 @@ class Builder:
         #cmakecmd.append(self.opencv)
         #cmakecmd.extend(cmakeargs)
         cmakecmd = self.makeCMakeCmd(arch, target, self.opencv, cmakeargs)
+        print("Before CMake !!!!!!!!!!!!!!!!")
         execute(cmakecmd, cwd = builddir)
+        print("After CMake !!!!!!!!!!!!!!!!")
 
         # Clean and build
         clean_dir = os.path.join(builddir, "install")

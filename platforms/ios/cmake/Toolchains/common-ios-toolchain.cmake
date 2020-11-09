@@ -77,7 +77,7 @@ else()
 endif()
 
 # If user did not specify the SDK root to use, then query xcodebuild for it.
-# execute_process(COMMAND xcodebuild -version -sdk iphoneos Path
+# execute_process(COMMAND xcodebuild -version -sdk macosx Path
 #     OUTPUT_VARIABLE CMAKE_OSX_SYSROOT_INT
 #     ERROR_QUIET
 #     OUTPUT_STRIP_TRAILING_WHITESPACE)
@@ -89,6 +89,7 @@ endif()
 #   message(FATAL_ERROR "Invalid CMAKE_OSX_SYSROOT: ${CMAKE_OSX_SYSROOT} "
 #   "does not exist.")
 # elseif(DEFINED CMAKE_OSX_SYSROOT_INT)
+#   message("SYSROOT is now ${CMAKE_OSX_SYSROOT_INT}")
 #   set(CMAKE_OSX_SYSROOT "${CMAKE_OSX_SYSROOT_INT}" CACHE INTERNAL "")
 # endif()
 
@@ -102,6 +103,8 @@ if(NOT DEFINED CMAKE_OSX_SYSROOT)
   elseif(CATALYST)
     # Use iOS SDK for Catalyst builds
     set(CMAKE_OSX_SYSROOT "macosx")
+    set(PLATFORM MAC_CATALYST)
+    set(CMAKE_BUILD_TYPE MAC_CATALYST)
   endif()
 endif()
 set(CMAKE_MACOSX_BUNDLE YES)
@@ -169,8 +172,10 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/platform
 
 # Force the compilers to clang for iOS
 include(CMakeForceCompiler)
-#CMAKE_FORCE_C_COMPILER (clang GNU)
-#CMAKE_FORCE_CXX_COMPILER (clang++ GNU)
+# CMAKE_FORCE_C_COMPILER (clang GNU)
+# CMAKE_FORCE_CXX_COMPILER (clang++ GNU)
+
+# message("Test wow")
 
 set(CMAKE_C_HAS_ISYSROOT 1)
 set(CMAKE_CXX_HAS_ISYSROOT 1)
@@ -178,11 +183,25 @@ set(CMAKE_C_COMPILER_ABI ELF)
 set(CMAKE_CXX_COMPILER_ABI ELF)
 
 # Skip the platform compiler checks for cross compiling
-set(CMAKE_CXX_COMPILER_WORKS TRUE)
-set(CMAKE_C_COMPILER_WORKS TRUE)
+set(CMAKE_CXX_COMPILER_WORKS TRUE CACHE INTERNAL "")
+set(CMAKE_C_COMPILER_WORKS TRUE CACHE INTERNAL "")
+
+# SET(CMAKE_C_COMPILER_FORCED TRUE CACHE INTERNAL "")
+# SET(CMAKE_CXX_COMPILER_FORCED TRUE CACHE INTERNAL "")
+
+# set(CMAKE_FORCE_C_COMPILER clang GNU)
+# set(CMAKE_FORCE_CXX_COMPILER clang++ GNU)
+
+# SET(CMAKE_C_COMPILER_ID_RUN TRUE CACHE INTERNAL "")
+# SET(CMAKE_CXX_COMPILER_ID_RUN TRUE CACHE INTERNAL "")
 
 # Search for programs in the build host directories
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM ONLY)
 #   for libraries and headers in the target directories
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+
+# set(CMAKE_THREAD_LIBS_INIT "-lpthread")
+# set(CMAKE_HAVE_THREADS_LIBRARY 1)
+# set(CMAKE_USE_WIN32_THREADS_INIT 0)
+# set(CMAKE_USE_PTHREADS_INIT 1)
