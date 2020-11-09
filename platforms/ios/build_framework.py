@@ -128,11 +128,11 @@ class Builder:
                 ]
                 if self.bitcodedisabled == False:
                     c_flags.append("-fembed-bitcode")
-                cmake_flags.append("-DCMAKE_C_FLAGS:STRING=" + " ".join(c_flags))
-                cmake_flags.append("-DCMAKE_CXX_FLAGS:STRING=" + " ".join(c_flags))
-                cmake_flags.append("-DCMAKE_SHARED_LINKER_FLAGS:STRING=" + " ".join(c_flags))
-                cmake_flags.append("-DCMAKE_STATIC_LINKER_FLAGS:STRING=" + " ".join(c_flags))
-                cmake_flags.append("-DCMAKE_EXE_LINKER_FLAGS:STRING=" + " ".join(c_flags))
+                cmake_flags.append("-DCMAKE_C_FLAGS=" + " ".join(c_flags))
+                cmake_flags.append("-DCMAKE_CXX_FLAGS=" + " ".join(c_flags))
+                cmake_flags.append("-DCMAKE_SHARED_LINKER_FLAGS=" + " ".join(c_flags))
+                cmake_flags.append("-DCMAKE_STATIC_LINKER_FLAGS=" + " ".join(c_flags))
+                cmake_flags.append("-DCMAKE_EXE_LINKER_FLAGS=" + " ".join(c_flags))
             self.buildOne(target[0], target[1], main_build_dir, cmake_flags)
 
             if not self.dynamic:
