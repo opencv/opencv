@@ -78,9 +78,10 @@ namespace imgproc {
         }
     };
 
-    G_TYPED_KERNEL(GMorphologyEx, <GMat(GMat,int,Mat,Point,int,int,Scalar)>,
+    G_TYPED_KERNEL(GMorphologyEx, <GMat(GMat,MorphTypes,Mat,Point,int,BorderTypes,Scalar)>,
                    "org.opencv.imgproc.filters.morphologyEx") {
-        static GMatDesc outMeta(const GMatDesc &in, int, Mat, Point, int, int, Scalar) {
+        static GMatDesc outMeta(const GMatDesc &in, MorphTypes, Mat, Point, int,
+                                BorderTypes, Scalar) {
             return in;
         }
     };
@@ -528,7 +529,7 @@ anchor is at the element center.
 @param iterations number of times erosion is applied.
 @param borderType pixel extrapolation method, see cv::BorderTypes
 @param borderValue border value in case of a constant border
-@sa  dilate
+@sa  dilate, morphologyEx
  */
 GAPI_EXPORTS GMat erode(const GMat& src, const Mat& kernel, const Point& anchor = Point(-1,-1), int iterations = 1,
                         int borderType = BORDER_CONSTANT,
@@ -628,11 +629,11 @@ applied. For instance, an opening operation (#MORPH_OPEN) with two iterations is
 apply successively: erode -> erode -> dilate -> dilate
 (and not erode -> dilate -> erode -> dilate).
  */
-GAPI_EXPORTS GMat morphologyEx(const GMat &src, const int op, const Mat &kernel,
-                               const Point  &anchor      = Point(-1,-1),
-                               const int     iterations  = 1,
-                               const int     borderType  = BORDER_CONSTANT,
-                               const Scalar &borderValue = morphologyDefaultBorderValue());
+GAPI_EXPORTS GMat morphologyEx(const GMat &src, const MorphTypes op, const Mat &kernel,
+                               const Point       &anchor      = Point(-1,-1),
+                               const int          iterations  = 1,
+                               const BorderTypes  borderType  = BORDER_CONSTANT,
+                               const Scalar      &borderValue = morphologyDefaultBorderValue());
 
 /** @brief Calculates the first, second, third, or mixed image derivatives using an extended Sobel operator.
 

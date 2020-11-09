@@ -147,9 +147,9 @@ GAPI_OCV_KERNEL(GCPUDilate, cv::gapi::imgproc::GDilate)
 
 GAPI_OCV_KERNEL(GCPUMorphologyEx, cv::gapi::imgproc::GMorphologyEx)
 {
-    static void run(const cv::Mat &in, const int op, const cv::Mat &kernel,
-                    const cv::Point &anchor, const int iterations, const int borderType,
-                    const cv::Scalar &borderValue, cv::Mat &out)
+    static void run(const cv::Mat &in, const cv::MorphTypes op, const cv::Mat &kernel,
+                    const cv::Point &anchor, const int iterations,
+                    const cv::BorderTypes borderType, const cv::Scalar &borderValue, cv::Mat &out)
     {
         cv::morphologyEx(in, out, op, kernel, anchor, iterations, borderType, borderValue);
     }

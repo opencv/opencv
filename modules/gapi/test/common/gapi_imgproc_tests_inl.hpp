@@ -292,7 +292,8 @@ TEST_P(Dilate3x3Test, AccuracyTest)
 
 TEST_P(MorphologyExTest, AccuracyTest)
 {
-    int defShape = cv::MORPH_RECT, defKernSize = 3;
+    MorphShapes defShape = cv::MORPH_RECT;
+    int defKernSize = 3;
     cv::Mat kernel = cv::getStructuringElement(defShape, cv::Size(defKernSize, defKernSize));
 
     // G-API code //////////////////////////////////////////////////////////////

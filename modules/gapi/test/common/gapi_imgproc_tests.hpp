@@ -46,7 +46,8 @@ GAPI_TEST_FIXTURE(Erode3x3Test, initMatrixRandN, FIXTURE_API(CompareMats,int), 2
 GAPI_TEST_FIXTURE(DilateTest, initMatrixRandN, FIXTURE_API(CompareMats,int,int), 3,
     cmpF, kernSize, kernType)
 GAPI_TEST_FIXTURE(Dilate3x3Test, initMatrixRandN, FIXTURE_API(CompareMats,int), 2, cmpF, numIters)
-GAPI_TEST_FIXTURE(MorphologyExTest, initMatrixRandN, FIXTURE_API(CompareMats,int), 2, cmpF, op)
+GAPI_TEST_FIXTURE(MorphologyExTest, initMatrixRandN, FIXTURE_API(CompareMats,MorphTypes),
+                  2, cmpF, op)
 GAPI_TEST_FIXTURE(SobelTest, initMatrixRandN, FIXTURE_API(CompareMats,int,int,int), 4,
     cmpF, kernSize, dx, dy)
 GAPI_TEST_FIXTURE(SobelXYTest, initMatrixRandN, FIXTURE_API(CompareMats,int,int,int,int), 5,
