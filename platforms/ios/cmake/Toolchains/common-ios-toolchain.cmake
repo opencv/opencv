@@ -101,10 +101,12 @@ if(NOT DEFINED CMAKE_OSX_SYSROOT)
   elseif(IPHONESIMULATOR)
     set(CMAKE_OSX_SYSROOT "iphonesimulator")
   elseif(CATALYST)
-    # Use iOS SDK for Catalyst builds
+    # Use MacOS SDK for Catalyst builds
     set(CMAKE_OSX_SYSROOT "macosx")
-    set(PLATFORM MAC_CATALYST)
-    set(CMAKE_BUILD_TYPE MAC_CATALYST)
+    # Tell compiler to use Catalyst ABIs
+    set(INTERNAL_TARGET_FLAGS "-target ${IOS_ARCH}-apple-ios-macabi -miphoneos-version-min=13.0 -iframework ${CMAKE_OSX_SYSROOT}/System/iOSSupport/System/Library/Frameworks")
+    set(CMAKE_C_FLAGS, "${INTERNAL_TARGET_FLAGS}")
+    set(CMAKE_CXX_FLAGS, "${INTERNAL_TARGET_FLAGS}")
   endif()
 endif()
 set(CMAKE_MACOSX_BUNDLE YES)

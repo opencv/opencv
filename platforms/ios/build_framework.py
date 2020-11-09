@@ -121,24 +121,22 @@ class Builder:
                 cmake_flags.append("-DCMAKE_C_FLAGS=-fembed-bitcode")
                 cmake_flags.append("-DCMAKE_CXX_FLAGS=-fembed-bitcode")
             if xcode_ver >= 7 and target[1] == 'Catalyst':  # TODOjon: Do I need this? (I think I do in order to set the C/CXX Flag for the ABI)
-                # cmake_flags.append("-DCC=/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang")
-                # cmake_flags.append("-DCXX=/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++")
-                # cmake_flags.append("-DCCLD=/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang")
-                # cmake_flags.append("-DCXXLD=/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++")
                 c_flags = [
-                    # "-isysroot",  # e.g. x86_64-apple-ios13.2-macabi # -mmacosx-version-min=10.15
-                    # "-target %s-apple-ios-macabi -miphoneos-version-min=13.0" % target[0],  # e.g. x86_64-apple-ios13.2-macabi # -mmacosx-version-min=10.15
-                    r"-iframework ${CMAKE_OSX_SYSROOT}/System/iOSSupport/System/Library/Frameworks",
+                    # "-target %s-apple-ios13.0-macabi" % target[0],  # e.g. x86_64-apple-ios13.2-macabi # -mmacosx-version-min=10.15
+                    # r"-iframework ${CMAKE_OSX_SYSROOT}/System/iOSSupport/System/Library/Frameworks",
                 ]
                 if self.bitcodedisabled == False:
                     c_flags.append("-fembed-bitcode")
-                cmake_flags.append("-DPLATFORM=MAC_CATALYST")
-                # cmake_flags.append("-DDEPLOYMENT_TARGET=10.15")
-                # cmake_flags.append("-DCMAKE_SYSTEM_NAME=macosx")
-                # cmake_flags.append("-DCMAKE_OSX_SYSROOT=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk")
-                cmake_flags.append("-DCMAKE_C_FLAGS=" + " ".join(c_flags))
-                cmake_flags.append("-DCMAKE_CXX_FLAGS=" + " ".join(c_flags))
-                cmake_flags.append("-DCMAKE_BUILD_TYPE=MAC_CATALYST")
+                # # cmake_flags.append("-DPLATFORM=MAC_CATALYST")
+                # # cmake_flags.append("-DDEPLOYMENT_TARGET=10.15")
+                # # cmake_flags.append("-DCMAKE_SYSTEM_NAME=macosx")
+                # # cmake_flags.append("-DCMAKE_OSX_SYSROOT=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk")
+                # cmake_flags.append("-DCMAKE_C_FLAGS=" + " ".join(c_flags))
+                # cmake_flags.append("-DCMAKE_CXX_FLAGS=" + " ".join(c_flags))
+                # cmake_flags.append("-DCMAKE_SHARED_LINKER_FLAGS=" + " ".join(c_flags))
+                # cmake_flags.append("-DCMAKE_STATIC_LINKER_FLAGS=" + " ".join(c_flags))
+                # cmake_flags.append("-DLDFLAGS=" + " ".join(c_flags))
+                # # cmake_flags.append("-DCMAKE_BUILD_TYPE=MAC_CATALYST")
             self.buildOne(target[0], target[1], main_build_dir, cmake_flags)
 
             if not self.dynamic:
@@ -266,7 +264,7 @@ class Builder:
             cmakecmd.append("-DCPU_BASELINE=DETECT")
         if target.lower() == "catalyst":
             cmakecmd.append("-DCPU_BASELINE=DETECT")
-            cmakecmd.append("-DCMAKE_CROSSCOMPILING=ON")
+            # cmakecmd.append("-DCMAKE_CROSSCOMPILING=ON")
         if target.lower() == "macosx":
             build_arch = check_output(["uname", "-m"]).rstrip()
             if build_arch != arch:
