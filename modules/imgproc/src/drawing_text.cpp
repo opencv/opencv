@@ -201,7 +201,7 @@ struct FontFace::Impl {
         if (!f)
             return false;
         fseek(f, 0, SEEK_END);
-        long sz0 = ftell(f), sz1;
+        long sz0 = ftell(f), sz1 = 0;
         std::vector<uchar> srcdata(sz0);
         if (sz0 > 0)
         {
@@ -558,7 +558,7 @@ bool FontFace::getInstance(std::vector<int>& params) const
     for( i = 0; i < naxes; i++ )
     {
         int tag = axes[i].tag;
-        params[i*2] = CV_FOURCC(tag >> 24, tag >> 16, tag >> 8, tag);
+        params[i*2] = CV_FOURCC((char)(tag >> 24), (char)(tag >> 16), (char)(tag >> 8), (char)tag);
         params[i*2+1] = axes[i].currval;
     }
     return naxes > 0;
@@ -878,12 +878,13 @@ static bool isRightToLeft(unsigned c)
 
 Point FontRenderEngine::putText_(
     Mat& img, Size imgsize, const String& str_, Point org,
-    const uchar* color, FontFace& fontface, double size,
+    const uchar* color, FontFace& fontface, double size_,
     double weight_, int flags, Range wrapRange, bool render, Rect* bbox_ )
 {
-    size = cvRound(size*256)/256.;
+    size_ = cvRound(size_*256)/256.;
     bool bottom_left = (flags & PUT_TEXT_ORIGIN_BL) != 0;
     int saved_weights[BUILTIN_FONTS_NUM+1]={0};
+    int size = cvRound(size_);
     int weight = cvRound(weight_*65536);
 
     if(fontface.getName().empty())
@@ -981,6 +982,7 @@ Point FontRenderEngine::putText_(
     len = (int)u32buf.size();
     unsigned* chars = &u32buf[0];
     int prev_dy = 0;
+
 #ifdef HAVE_HARFBUZZ
     hb_direction_t glob_dir = HB_DIRECTION_INVALID;
 #endif
@@ -1249,6 +1251,8 @@ Point FontRenderEngine::putText_(
                 break;
             }
         }
+        if (i == 0)
+            nextline_dy = prev_dy;
     #endif
 
         chars += i;

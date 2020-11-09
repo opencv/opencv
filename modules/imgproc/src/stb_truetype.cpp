@@ -1356,7 +1356,7 @@ static int stbtt__VaryGlyphShapeTT(const stbtt_fontinfo *info, int glyph_index,
    stbtt_uint16* shared_ptnum = private_ptnum + max_ptcount;
    stbtt_int16* deltas = (stbtt_int16*)(shared_ptnum + max_ptcount);
    stbtt_int16* packed_deltas = (stbtt_int16*)(deltas + max_ptcount*2);
-   short NO_DELTA = isComposite ? (short)0 : (short)0x8000;
+   short NO_DELTA = isComposite ? (short)0 : (short)-32768;
 
    for (i = 0; i < max_ptcount*2; i++)
       sum_deltas[i] = 0;
@@ -2215,8 +2215,10 @@ static int stbtt__GetGlyphInfoT2(const stbtt_fontinfo *info, int glyph_index, in
 STBTT_DEF int stbtt_GetGlyphShape(const stbtt_fontinfo *info, int glyph_index, stbtt_vertex **pvertices,
                                   int* ix0, int* iy0, int* ix1, int* iy1)
 {
-   if (ix0) *ix0 = 0; if (ix1) *ix1 = 0;
-   if (iy0) *iy0 = 0; if (iy1) *iy1 = 0;
+   if (ix0) *ix0 = 0;
+   if (ix1) *ix1 = 0;
+   if (iy0) *iy0 = 0;
+   if (iy1) *iy1 = 0;
    if (!info->cff.size)
       return stbtt__GetGlyphShapeTT(info, glyph_index, pvertices, ix0, iy0, ix1, iy1);
    else {

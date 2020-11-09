@@ -758,7 +758,7 @@ TEST(Drawing, ttf_text)
          "historia, ruégote que no te olvides de mi buen Rocinante,\n"
          "compañero eterno mío en todos mis caminos y carreras!\n", false, 300, false},
         {"Ταχίστη αλώπηξ βαφής ψημένη γη, δρασκελίζει υπέρ νωθρού κυνός.", false, 400, false},
-        {"春眠不觉晓，\n处处闻啼鸟。\n夜来风雨声，\n花落知多少。\n\n"
+        {"春眠不觉晓，\n处处闻啼鸟。\n夜来风雨声，\n花落知多少。\n"
         " あなたはそれが困難見つけた場合 — あなたは正しい方向に向かっている。\n"
         " 넌 모든 꽃들을 다 꺾어버릴 수는 있겠지만, 봄이 오는 걸 막을 수는 없어。 ", false, 400, false}
     };
@@ -818,7 +818,7 @@ TEST(Drawing, ttf_text)
     }
 
 #if 0
-    imwrite(ts_data_path + "../highgui/drawing/text_test.png", img);
+    //imwrite(ts_data_path + "../highgui/drawing/text_test.png", img);
     imshow("test", img);
     waitKey();
 #else
