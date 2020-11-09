@@ -46,7 +46,7 @@ namespace {
 // FIXME: taken from the DNN module
 void normAssert(const cv::InputArray& ref, const cv::InputArray& test,
                 const char *comment /*= ""*/,
-                double l1 = 0.00001, double lInf = 0.0001) {
+                const double l1 = 0.00001, const double lInf = 0.0001) {
     const double normL1 = cvtest::norm(ref, test, cv::NORM_L1) / ref.getMat().total();
     EXPECT_LE(normL1, l1) << comment;
 
@@ -436,7 +436,7 @@ TEST_F(ONNXtest, InferMultOutput)
 {
     useModel("object_detection_segmentation/ssd-mobilenetv1/model/ssd_mobilenet_v1_10");
     // ONNX_API code
-    auto prep_mat = in_mat1.reshape(1, {1, in_mat1.rows, in_mat1.cols, in_mat1.channels()});
+    const auto prep_mat = in_mat1.reshape(1, {1, in_mat1.rows, in_mat1.cols, in_mat1.channels()});
     infer<uint8_t>({prep_mat}, out_onnx);
     // G_API code
     using OUT = std::tuple<cv::GMat, cv::GMat, cv::GMat, cv::GMat>;
