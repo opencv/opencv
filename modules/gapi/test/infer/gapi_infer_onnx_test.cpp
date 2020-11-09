@@ -323,7 +323,7 @@ TEST_F(ONNXClassificationTest, InferROI)
     cv::GMat out = cv::gapi::infer<SqueezNet>(rect, in);
     cv::GComputation comp(cv::GIn(in, rect), cv::GOut(out));
     auto net = cv::gapi::onnx::Params<SqueezNet> { model_path }.cfgMeanStd({mean},{std});
-    comp.apply(cv::gin(in_mat1(ROI), ROI),
+    comp.apply(cv::gin(in_mat1, ROI),
                cv::gout(out_gapi.front()),
                cv::compile_args(cv::gapi::networks(net)));
     // Validate
