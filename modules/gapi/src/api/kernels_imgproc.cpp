@@ -73,6 +73,13 @@ GMat dilate3x3(const GMat& src, int iterations,
     return dilate(src, cv::Mat(), cv::Point(-1,-1), iterations, borderType, borderValue);
 }
 
+GMat morphologyEx(const GMat &src, const MorphTypes op, const Mat &kernel, const Point &anchor,
+                  const int iterations, const BorderTypes borderType, const Scalar &borderValue)
+{
+    return imgproc::GMorphologyEx::on(src, op, kernel, anchor, iterations,
+                                      borderType, borderValue);
+}
+
 GMat Sobel(const GMat& src, int ddepth, int dx, int dy, int ksize,
            double scale, double delta,
            int borderType, const Scalar& bordVal)

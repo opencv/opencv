@@ -290,6 +290,29 @@ TEST_P(Dilate3x3Test, AccuracyTest)
     }
 }
 
+TEST_P(MorphologyExTest, AccuracyTest)
+{
+    MorphShapes defShape = cv::MORPH_RECT;
+    int defKernSize = 3;
+    cv::Mat kernel = cv::getStructuringElement(defShape, cv::Size(defKernSize, defKernSize));
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    auto out = cv::gapi::morphologyEx(in, op, kernel);
+
+    cv::GComputation c(in, out);
+    c.apply(in_mat1, out_mat_gapi, getCompileArgs());
+    // OpenCV code /////////////////////////////////////////////////////////////
+    {
+        cv::morphologyEx(in_mat1, out_mat_ocv, op, kernel);
+    }
+    // Comparison //////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
+        EXPECT_EQ(out_mat_gapi.size(), sz);
+    }
+}
+
 TEST_P(SobelTest, AccuracyTest)
 {
     // G-API code //////////////////////////////////////////////////////////////
