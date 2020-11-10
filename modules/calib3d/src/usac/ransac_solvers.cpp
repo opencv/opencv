@@ -286,7 +286,7 @@ public:
                             current_score = quality->getScore(models[i]);
                         } else {
                             if (is_magsac && iters % repeat_magsac == 0) {
-                                if (!local_optimization->refineModel
+                                if (local_optimization && !local_optimization->refineModel
                                         (models[i], best_score_thread, models[i], current_score))
                                     continue;
                             } else if (model_verifier->isModelGood(models[i])) {
