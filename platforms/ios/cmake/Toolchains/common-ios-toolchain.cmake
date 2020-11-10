@@ -153,8 +153,8 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/platform
 
 # Force the compilers to clang for iOS
 include(CMakeForceCompiler)
-# CMAKE_FORCE_C_COMPILER (clang GNU)
-# CMAKE_FORCE_CXX_COMPILER (clang++ GNU)
+#CMAKE_FORCE_C_COMPILER (clang GNU)
+#CMAKE_FORCE_CXX_COMPILER (clang++ GNU)
 
 set(CMAKE_C_HAS_ISYSROOT 1)
 set(CMAKE_CXX_HAS_ISYSROOT 1)
@@ -162,8 +162,8 @@ set(CMAKE_C_COMPILER_ABI ELF)
 set(CMAKE_CXX_COMPILER_ABI ELF)
 
 # Skip the platform compiler checks for cross compiling
-set(CMAKE_CXX_COMPILER_WORKS TRUE CACHE INTERNAL "")
-set(CMAKE_C_COMPILER_WORKS TRUE CACHE INTERNAL "")
+set(CMAKE_CXX_COMPILER_WORKS TRUE)
+set(CMAKE_C_COMPILER_WORKS TRUE)
 
 # Search for programs in the build host directories
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM ONLY)
