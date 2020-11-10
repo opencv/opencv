@@ -1376,7 +1376,7 @@ typedef NS_ENUM(int, {2}) {{
             for dirname, dirs, files in os.walk(os.path.join(testdir, "test")):
                 for filename in files:
                     filepath = os.path.join(dirname, filename)
-                    with open(filepath) as file:
+                    with open(filepath, encoding="utf-8", errors="ignore") as file:
                         body = file.read()
                     body = body.replace("import OpenCV", "import " + framework_name)
                     body = body.replace("#import <OpenCV/OpenCV.h>", "#import <" + framework_name + "/" + framework_name + ".h>")

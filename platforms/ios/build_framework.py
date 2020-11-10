@@ -49,7 +49,7 @@ def execute(cmd, cwd = None):
 
 def getXCodeMajor():
     ret = check_output(["xcodebuild", "-version"])
-    m = re.match(r'Xcode\s+(\d+)\..*', ret, flags=re.IGNORECASE)
+    m = re.match(rb'Xcode\s+(\d+)\..*', ret, flags=re.IGNORECASE)
     if m:
         return int(m.group(1))
     else:
