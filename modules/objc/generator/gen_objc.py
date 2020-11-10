@@ -1,26 +1,22 @@
 #!/usr/bin/env python
 
-from __future__ import print_function
+from __future__ import print_function, unicode_literals
 from builtins import str
 from builtins import object
 import sys, re, os.path, errno, fnmatch
 import json
 import logging
 import codecs
+import io
 from shutil import copyfile
 from pprint import pformat
 from string import Template
 from distutils.dir_util import copy_tree
 
-if sys.version_info[0] >= 3:
-    from io import StringIO
-else:
-    import io
-    class StringIO(io.StringIO):
-        def write(self, s):
-            if isinstance(s, str):
-                s = str(s)  # noqa: F821
-            return super(StringIO, self).write(s)
+try:
+    from io import StringIO # Python 3
+except:
+    from io import BytesIO as StringIO
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -1376,11 +1372,11 @@ typedef NS_ENUM(int, {2}) {{
             for dirname, dirs, files in os.walk(os.path.join(testdir, "test")):
                 for filename in files:
                     filepath = os.path.join(dirname, filename)
-                    with open(filepath, encoding="utf-8", errors="ignore") as file:
+                    with io.open(filepath, encoding="utf-8", errors="ignore") as file:
                         body = file.read()
                     body = body.replace("import OpenCV", "import " + framework_name)
                     body = body.replace("#import <OpenCV/OpenCV.h>", "#import <" + framework_name + "/" + framework_name + ".h>")
-                    with open(filepath, "w") as file:
+                    with codecs.open(filepath, "w", "utf-8") as file:
                         file.write(body)
 
 
