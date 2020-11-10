@@ -531,14 +531,14 @@ template<typename T> struct DFT_R5
 template<typename T> struct DFT_VecR2
 {
     void operator()(Complex<T>* dst, const int c_n, const int n, const int dw0, const Complex<T>* wave) const {
-        return DFT_R2<T>()(dst, c_n, n, dw0, wave);
+        DFT_R2<T>()(dst, c_n, n, dw0, wave);
     }
 };
 
 template<typename T> struct DFT_VecR3
 {
     void operator()(Complex<T>* dst, const int c_n, const int n, const int dw0, const Complex<T>* wave) const {
-        return DFT_R3<T>()(dst, c_n, n, dw0, wave);
+        DFT_R3<T>()(dst, c_n, n, dw0, wave);
     }
 };
 

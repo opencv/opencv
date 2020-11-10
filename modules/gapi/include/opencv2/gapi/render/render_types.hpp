@@ -252,7 +252,7 @@ struct Mosaic
     {
     }
 
-    Mosaic() = default;
+    Mosaic() : cellSz(0), decim(0) {}
 
     /*@{*/
     cv::Rect   mos;    //!< Coordinates of the mosaic
