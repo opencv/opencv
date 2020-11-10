@@ -33,7 +33,7 @@ Adding --dynamic parameter will build {framework_name}.framework as App Store dy
 
 from __future__ import print_function, unicode_literals
 import glob, re, os, os.path, shutil, string, sys, argparse, traceback, multiprocessing
-from subprocess import check_call, check_output, CalledProcessError
+from subprocess import check_call, check_output, CalledProcessError, run
 from distutils.dir_util import copy_tree
 
 IPHONEOS_DEPLOYMENT_TARGET='9.0'  # default, can be changed via command line options or environment variable
@@ -46,8 +46,8 @@ def execute(cmd, cwd = None):
         raise Exception("Child returned:", retcode)
 
 def getXCodeMajor():
-    ret = check_output(["xcodebuild", "-version"]).decode('utf-8')
-    m = re.match(r'Xcode\s+(\d+)\..*', ret, flags=re.IGNORECASE)
+    ret = check_output(["xcodebuild", "-version"])
+    m = re.match(rb'Xcode\s+(\d+)\..*', ret, flags=re.IGNORECASE)
     if m:
         return int(m.group(1))
     else:
@@ -121,12 +121,15 @@ class Builder:
                 cmake_flags.append("-DCMAKE_C_FLAGS=-fembed-bitcode")
                 cmake_flags.append("-DCMAKE_CXX_FLAGS=-fembed-bitcode")
             if xcode_ver >= 7 and target[1] == 'Catalyst':  # TODOjon: Do I need this? (I think I do in order to set the C/CXX Flag for the ABI)
+                sdk_path = run(["xcodebuild", "-version", "-sdk", "macosx", "Path"], capture_output=True, text=True).stdout.rstrip()
                 c_flags = [
                     # TODOChris: Enable/disable target flags here
                     "-target %s-apple-ios13.0-macabi" % target[0],  # e.g. x86_64-apple-ios13.2-macabi # -mmacosx-version-min=10.15
-                    "-iframework ${CMAKE_OSX_SYSROOT}/System/iOSSupport/System/Library/Frameworks",
+                    "-isysroot %s" % sdk_path,
+                    "-iframework %s/System/iOSSupport/System/Library/Frameworks" % sdk_path,
+                    "-isystem %s/System/iOSSupport/usr/include" % sdk_path,
                 ]
-                if self.bitcodedisabled == False:
+                if self.bitcodedisabled == False: # TODOjon: OSX doesn't embed bitcode. Should this?
                     c_flags.append("-fembed-bitcode")
                 cmake_flags.append("-DCMAKE_C_FLAGS=" + " ".join(c_flags))
                 cmake_flags.append("-DCMAKE_CXX_FLAGS=" + " ".join(c_flags))
@@ -136,6 +139,9 @@ class Builder:
                 cmake_flags.append("-DIOS=1")  # Build the iOS codebase
                 cmake_flags.append("-DMAC_CATALYST=1")  # Set a flag for Mac Catalyst, just in case we need it
                 cmake_flags.append("-DWITH_OPENCL=OFF")  # Disable OpenCL; it isn't compatible with iOS
+                cmake_flags.append("-DCMAKE_OSX_SYSROOT=%s" % sdk_path)
+                cmake_flags.append("-DCMAKE_CXX_COMPILER_WORKS=TRUE")
+                cmake_flags.append("-DCMAKE_C_COMPILER_WORKS=TRUE")
             self.buildOne(target[0], target[1], main_build_dir, cmake_flags)
 
             if not self.dynamic:

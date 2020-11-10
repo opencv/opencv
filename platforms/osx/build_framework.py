@@ -3,7 +3,6 @@
 The script builds OpenCV.framework for OSX.
 """
 
-from __future__ import print_function
 import os, os.path, sys, argparse, traceback, multiprocessing
 
 # import common code
