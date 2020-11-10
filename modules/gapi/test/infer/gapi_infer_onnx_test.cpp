@@ -234,7 +234,6 @@ private:
 
 class ONNXClassificationTest : public ONNXtest {
 public:
-    // cv::Scalar mean, std;
     const cv::Scalar mean = { 0.485, 0.456, 0.406 };
     const cv::Scalar std  = { 0.229, 0.224, 0.225 };
 
