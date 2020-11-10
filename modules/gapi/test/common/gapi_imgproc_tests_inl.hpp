@@ -468,7 +468,7 @@ TEST_P(GoodFeaturesTest, AccuracyTest)
     }
 }
 
-TEST_P(FindContoursTest, AccuracyTest)
+TEST_P(FindContoursNoOffsetTest, AccuracyTest)
 {
     std::vector<std::vector<cv::Point>> outCtsOCV,  outCtsGAPI;
 
@@ -483,11 +483,10 @@ TEST_P(FindContoursTest, AccuracyTest)
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;
-    GOpaque<Point> offset;
     cv::GArray<cv::GArray<cv::Point>> outCts;
-    outCts = cv::gapi::findContours(in, mode, method, offset);
-    cv::GComputation c(GIn(in, offset), GOut(outCts));
-    c.apply(gin(in_mat1, cv::Point()), gout(outCtsGAPI), getCompileArgs());
+    outCts = cv::gapi::findContours(in, mode, method);
+    cv::GComputation c(GIn(in), GOut(outCts));
+    c.apply(gin(in_mat1), gout(outCtsGAPI), getCompileArgs());
 
     // Comparison //////////////////////////////////////////////////////////////
     EXPECT_TRUE(outCtsGAPI.size() == outCtsOCV.size());
@@ -496,7 +495,40 @@ TEST_P(FindContoursTest, AccuracyTest)
     EXPECT_TRUE(AbsExact().to_compare_f()(out_mat_ocv, out_mat_gapi));
 }
 
-TEST_P(FindContoursHTest, AccuracyTest)
+TEST_P(FindContoursOffsetTest, AccuracyTest)
+{
+    const cv::Size sz(1280, 720);
+    const MatType2 type = CV_8UC1;
+    const cv::RetrievalModes mode = cv::RETR_EXTERNAL;
+    const cv::ContourApproximationModes method = cv::CHAIN_APPROX_NONE;
+    const cv::Point offset(15, 15);
+    std::vector<std::vector<cv::Point>> outCtsOCV,  outCtsGAPI;
+
+    initMatForFindingContours(in_mat1, sz, type);
+    out_mat_gapi = cv::Mat(sz, type, cv::Scalar::all(0));
+    out_mat_ocv  = cv::Mat(sz, type, cv::Scalar::all(0));
+
+    // OpenCV code /////////////////////////////////////////////////////////////
+    {
+        cv::findContours(in_mat1, outCtsOCV, mode, method, offset);
+    }
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    GOpaque<Point> gOffset;
+    cv::GArray<cv::GArray<cv::Point>> outCts;
+    outCts = cv::gapi::findContours(in, mode, method, gOffset);
+    cv::GComputation c(GIn(in, gOffset), GOut(outCts));
+    c.apply(gin(in_mat1, offset), gout(outCtsGAPI), getCompileArgs());
+
+    // Comparison //////////////////////////////////////////////////////////////
+    EXPECT_TRUE(outCtsGAPI.size() == outCtsOCV.size());
+    cv::fillPoly(out_mat_ocv,  outCtsOCV,  cv::Scalar::all(1));
+    cv::fillPoly(out_mat_gapi, outCtsGAPI, cv::Scalar::all(1));
+    EXPECT_TRUE(AbsExact().to_compare_f()(out_mat_ocv, out_mat_gapi));
+}
+
+TEST_P(FindContoursHNoOffsetTest, AccuracyTest)
 {
     std::vector<std::vector<cv::Point>> outCtsOCV,  outCtsGAPI;
     std::vector<cv::Vec4i>              outHierOCV, outHierGAPI;
@@ -512,12 +544,49 @@ TEST_P(FindContoursHTest, AccuracyTest)
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;
-    GOpaque<Point> offset;
     cv::GArray<cv::GArray<cv::Point>> outCts;
     cv::GArray<cv::Vec4i> outHier;
-    std::tie(outCts, outHier) = cv::gapi::findContoursH(in, mode, method, offset);
-    cv::GComputation c(GIn(in, offset), GOut(outCts, outHier));
-    c.apply(gin(in_mat1, cv::Point()), gout(outCtsGAPI, outHierGAPI), getCompileArgs());
+    std::tie(outCts, outHier) = cv::gapi::findContoursH(in, mode, method);
+    cv::GComputation c(GIn(in), GOut(outCts, outHier));
+    c.apply(gin(in_mat1), gout(outCtsGAPI, outHierGAPI), getCompileArgs());
+
+    // Comparison //////////////////////////////////////////////////////////////
+    EXPECT_TRUE(outCtsGAPI.size() == outCtsOCV.size());
+    cv::fillPoly(out_mat_ocv,  outCtsOCV,  cv::Scalar::all(1));
+    cv::fillPoly(out_mat_gapi, outCtsGAPI, cv::Scalar::all(1));
+    EXPECT_TRUE(AbsExact().to_compare_f()(out_mat_ocv, out_mat_gapi));
+
+    EXPECT_TRUE(outCtsGAPI.size() == outCtsOCV.size());
+    EXPECT_TRUE(AbsExactVector<cv::Vec4i>().to_compare_f()(outHierOCV, outHierGAPI));
+}
+
+TEST_P(FindContoursHOffsetTest, AccuracyTest)
+{
+    const cv::Size sz(1280, 720);
+    const MatType2 type = CV_8UC1;
+    const cv::RetrievalModes mode = cv::RETR_EXTERNAL;
+    const cv::ContourApproximationModes method = cv::CHAIN_APPROX_NONE;
+    const cv::Point offset(15, 15);
+    std::vector<std::vector<cv::Point>> outCtsOCV,  outCtsGAPI;
+    std::vector<cv::Vec4i>              outHierOCV, outHierGAPI;
+
+    initMatForFindingContours(in_mat1, sz, type);
+    out_mat_gapi = cv::Mat(sz, type, cv::Scalar::all(0));
+    out_mat_ocv  = cv::Mat(sz, type, cv::Scalar::all(0));
+
+    // OpenCV code /////////////////////////////////////////////////////////////
+    {
+        cv::findContours(in_mat1, outCtsOCV, outHierOCV, mode, method, offset);
+    }
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    GOpaque<Point> gOffset;
+    cv::GArray<cv::GArray<cv::Point>> outCts;
+    cv::GArray<cv::Vec4i> outHier;
+    std::tie(outCts, outHier) = cv::gapi::findContoursH(in, mode, method, gOffset);
+    cv::GComputation c(GIn(in, gOffset), GOut(outCts, outHier));
+    c.apply(gin(in_mat1, offset), gout(outCtsGAPI, outHierGAPI), getCompileArgs());
 
     // Comparison //////////////////////////////////////////////////////////////
     EXPECT_TRUE(outCtsGAPI.size() == outCtsOCV.size());

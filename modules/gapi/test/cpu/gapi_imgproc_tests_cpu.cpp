@@ -241,14 +241,17 @@ INSTANTIATE_TEST_CASE_P(GoodFeaturesInternalTestCPU, GoodFeaturesTest,
                                 Values(3),
                                 Values(true)));
 
-INSTANTIATE_TEST_CASE_P(FindContoursTestCPU, FindContoursTest,
+INSTANTIATE_TEST_CASE_P(FindContoursNoOffsetTestCPU, FindContoursNoOffsetTest,
                         Combine(Values(IMGPROC_CPU),
                                 Values(cv::Size(1280, 720)),
                                 Values(CV_8UC1),
                                 Values(RETR_EXTERNAL),
                                 Values(CHAIN_APPROX_NONE)));
 
-INSTANTIATE_TEST_CASE_P(FindContoursHTestCPU, FindContoursHTest,
+INSTANTIATE_TEST_CASE_P(FindContoursOffsetTestCPU, FindContoursOffsetTest,
+                        Values(IMGPROC_CPU));
+
+INSTANTIATE_TEST_CASE_P(FindContoursHNoOffsetTestCPU, FindContoursHNoOffsetTest,
                         Combine(Values(IMGPROC_CPU),
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
@@ -257,7 +260,7 @@ INSTANTIATE_TEST_CASE_P(FindContoursHTestCPU, FindContoursHTest,
                                 Values(CHAIN_APPROX_NONE, CHAIN_APPROX_SIMPLE,
                                        CHAIN_APPROX_TC89_L1, CHAIN_APPROX_TC89_KCOS)));
 
-INSTANTIATE_TEST_CASE_P(FindContoursH32STestCPU, FindContoursHTest,
+INSTANTIATE_TEST_CASE_P(FindContoursHNoOffset32STestCPU, FindContoursHNoOffsetTest,
                         Combine(Values(IMGPROC_CPU),
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
@@ -265,6 +268,9 @@ INSTANTIATE_TEST_CASE_P(FindContoursH32STestCPU, FindContoursHTest,
                                 Values(RETR_CCOMP, RETR_FLOODFILL),
                                 Values(CHAIN_APPROX_NONE, CHAIN_APPROX_SIMPLE,
                                        CHAIN_APPROX_TC89_L1, CHAIN_APPROX_TC89_KCOS)));
+
+INSTANTIATE_TEST_CASE_P(FindContoursHOffsetTestCPU, FindContoursHOffsetTest,
+                        Values(IMGPROC_CPU));
 
 INSTANTIATE_TEST_CASE_P(BoundingRectMatTestCPU, BoundingRectMatTest,
                         Combine(Values( CV_8UC1 ),

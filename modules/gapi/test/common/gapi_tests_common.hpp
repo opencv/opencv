@@ -919,6 +919,37 @@ inline std::ostream& operator<<(std::ostream& os, NormTypes op)
 #undef CASE
     return os;
 }
+
+inline std::ostream& operator<<(std::ostream& os, RetrievalModes op)
+{
+#define CASE(v) case RetrievalModes::v: os << #v; break
+    switch (op)
+    {
+        CASE(RETR_EXTERNAL);
+        CASE(RETR_LIST);
+        CASE(RETR_CCOMP);
+        CASE(RETR_TREE);
+        CASE(RETR_FLOODFILL);
+        default: GAPI_Assert(false && "unknown RetrievalModes value");
+    }
+#undef CASE
+    return os;
+}
+
+inline std::ostream& operator<<(std::ostream& os, ContourApproximationModes op)
+{
+#define CASE(v) case ContourApproximationModes::v: os << #v; break
+    switch (op)
+    {
+        CASE(CHAIN_APPROX_NONE);
+        CASE(CHAIN_APPROX_SIMPLE);
+        CASE(CHAIN_APPROX_TC89_L1);
+        CASE(CHAIN_APPROX_TC89_KCOS);
+        default: GAPI_Assert(false && "unknown ContourApproximationModes value");
+    }
+#undef CASE
+    return os;
+}
 }  // namespace cv
 
 #endif //OPENCV_GAPI_TESTS_COMMON_HPP

@@ -27,7 +27,7 @@
  */
 
 namespace {
-void checkMetaForFindingContours(const int depth, const int chan, const int mode)
+void validateFindingContoursMeta(const int depth, const int chan, const int mode)
 {
     GAPI_Assert(chan == 1);
     switch (mode)
@@ -162,7 +162,18 @@ namespace imgproc {
     {
         static GArrayDesc outMeta(GMatDesc in, RetrMode mode, ContMethod, GOpaqueDesc)
         {
-            checkMetaForFindingContours(in.depth, in.chan, mode);
+            validateFindingContoursMeta(in.depth, in.chan, mode);
+            return empty_array_desc();
+        }
+    };
+
+    // FIXME oc: make default value offset = Point()
+    G_TYPED_KERNEL(GFindContoursNoOffset, <GArray<GArray<Point>>(GMat,RetrMode,ContMethod)>,
+                   "org.opencv.imgproc.shape.findContoursNoOffset")
+    {
+        static GArrayDesc outMeta(GMatDesc in, RetrMode mode, ContMethod)
+        {
+            validateFindingContoursMeta(in.depth, in.chan, mode);
             return empty_array_desc();
         }
     };
@@ -173,7 +184,19 @@ namespace imgproc {
         static std::tuple<GArrayDesc,GArrayDesc>
         outMeta(GMatDesc in, RetrMode mode, ContMethod, GOpaqueDesc)
         {
-            checkMetaForFindingContours(in.depth, in.chan, mode);
+            validateFindingContoursMeta(in.depth, in.chan, mode);
+            return std::make_tuple(empty_array_desc(), empty_array_desc());
+        }
+    };
+
+    // FIXME oc: make default value offset = Point()
+    G_TYPED_KERNEL(GFindContoursHNoOffset,<GFindContoursOutput(GMat,RetrMode,ContMethod)>,
+                   "org.opencv.imgproc.shape.findContoursHNoOffset")
+    {
+        static std::tuple<GArrayDesc,GArrayDesc>
+        outMeta(GMatDesc in, RetrMode mode, ContMethod)
+        {
+            validateFindingContoursMeta(in.depth, in.chan, mode);
             return std::make_tuple(empty_array_desc(), empty_array_desc());
         }
     };
@@ -964,8 +987,14 @@ context.
  */
 GAPI_EXPORTS GArray<GArray<Point>>
 findContours(const GMat &src, const RetrievalModes mode, const ContourApproximationModes method,
-             // FIXME oc: make default value offset = Point()
              const GOpaque<Point> &offset);
+
+// FIXME oc: make default value offset = Point()
+/** @overload
+@note Function textual ID is "org.opencv.imgproc.shape.findContoursNoOffset"
+ */
+GAPI_EXPORTS GArray<GArray<Point>>
+findContours(const GMat &src, const RetrievalModes mode, const ContourApproximationModes method);
 
 /** @brief Finds contours and their hierarchy in a binary image.
 
@@ -997,8 +1026,14 @@ previous, parent, or nested contours, the corresponding elements of hierarchy[i]
  */
 GAPI_EXPORTS std::tuple<GArray<GArray<Point>>,GArray<Vec4i>>
 findContoursH(const GMat &src, const RetrievalModes mode, const ContourApproximationModes method,
-              // FIXME oc: make default value offset = Point()
               const GOpaque<Point> &offset);
+
+// FIXME oc: make default value offset = Point()
+/** @overload
+@note Function textual ID is "org.opencv.imgproc.shape.findContoursHNoOffset"
+ */
+GAPI_EXPORTS std::tuple<GArray<GArray<Point>>,GArray<Vec4i>>
+findContoursH(const GMat &src, const RetrievalModes mode, const ContourApproximationModes method);
 
 /** @brief Calculates the up-right bounding rectangle of a point set or non-zero pixels
 of gray-scale image.

@@ -221,6 +221,16 @@ GAPI_OCV_KERNEL(GCPUFindContours, cv::gapi::imgproc::GFindContours)
     }
 };
 
+GAPI_OCV_KERNEL(GCPUFindContoursNoOffset, cv::gapi::imgproc::GFindContoursNoOffset)
+{
+    static void run(const cv::Mat& image, const cv::RetrievalModes mode,
+                    const cv::ContourApproximationModes method,
+                    std::vector<std::vector<cv::Point>> &outConts)
+    {
+        cv::findContours(image, outConts, mode, method);
+    }
+};
+
 GAPI_OCV_KERNEL(GCPUFindContoursH, cv::gapi::imgproc::GFindContoursH)
 {
     static void run(const cv::Mat& image, const cv::RetrievalModes mode,
@@ -228,6 +238,16 @@ GAPI_OCV_KERNEL(GCPUFindContoursH, cv::gapi::imgproc::GFindContoursH)
                     std::vector<std::vector<cv::Point>> &outConts, std::vector<cv::Vec4i> &outHier)
     {
         cv::findContours(image, outConts, outHier, mode, method, offset);
+    }
+};
+
+GAPI_OCV_KERNEL(GCPUFindContoursHNoOffset, cv::gapi::imgproc::GFindContoursHNoOffset)
+{
+    static void run(const cv::Mat& image, const cv::RetrievalModes mode,
+                    const cv::ContourApproximationModes method,
+                    std::vector<std::vector<cv::Point>> &outConts, std::vector<cv::Vec4i> &outHier)
+    {
+        cv::findContours(image, outConts, outHier, mode, method);
     }
 };
 
@@ -530,7 +550,9 @@ cv::gapi::GKernelPackage cv::gapi::imgproc::cpu::kernels()
         , GCPUGoodFeatures
         , GCPUEqualizeHist
         , GCPUFindContours
+        , GCPUFindContoursNoOffset
         , GCPUFindContoursH
+        , GCPUFindContoursHNoOffset
         , GCPUBGR2RGB
         , GCPURGB2YUV
         , GCPUBoundingRectMat
