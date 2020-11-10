@@ -56,6 +56,12 @@ void cv::gapi::wip::draw::cvtNV12ToYUV(const cv::Mat& y,
     cv::merge(std::vector<cv::Mat>{y, upsample_uv}, yuv);
 }
 
+cv::GFrame cv::gapi::wip::draw::renderFrame(const cv::GFrame& src,
+                                            const cv::GArray<cv::gapi::wip::draw::Prim>& prims)
+{
+    return cv::gapi::wip::draw::GRenderFrame::on(src, prims);
+}
+
 cv::GMat cv::gapi::wip::draw::render3ch(const cv::GMat& src,
                                         const cv::GArray<cv::gapi::wip::draw::Prim>& prims)
 {

@@ -62,6 +62,9 @@ struct GAPI_EXPORTS GFrameDesc
 static inline GFrameDesc empty_gframe_desc() { return GFrameDesc{}; }
 /** @} */
 
+class MediaFrame;
+GAPI_EXPORTS GFrameDesc descr_of(const MediaFrame &frame);
+
 GAPI_EXPORTS std::ostream& operator<<(std::ostream& os, const cv::GFrameDesc &desc);
 
 } // namespace cv

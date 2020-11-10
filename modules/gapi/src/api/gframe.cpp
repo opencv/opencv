@@ -8,6 +8,7 @@
 #include "precomp.hpp"
 
 #include <opencv2/gapi/gframe.hpp>
+#include <opencv2/gapi/media.hpp>
 
 #include "api/gorigin.hpp"
 
@@ -32,6 +33,10 @@ namespace cv {
 
 bool GFrameDesc::operator== (const GFrameDesc &rhs) const {
     return fmt == rhs.fmt && size == rhs.size;
+}
+
+GFrameDesc descr_of(const cv::MediaFrame &frame) {
+    return frame.desc();
 }
 
 std::ostream& operator<<(std::ostream& os, const cv::GFrameDesc &d) {

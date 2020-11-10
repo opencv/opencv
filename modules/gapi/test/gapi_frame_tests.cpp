@@ -7,6 +7,7 @@
 #include "test_precomp.hpp"
 
 #include <opencv2/gapi/media.hpp>
+#include <opencv2/gapi/render/render.hpp>
 
 ////////////////////////////////////////////////////////////////////////////////
 // cv::GFrame tests
@@ -173,5 +174,36 @@ TEST(MediaFrame, Callback) {
     }
     EXPECT_EQ(3, counter);
 }
+
+TEST(MediaFrame, Rendering)
+{
+    cv::Size sz{640, 480};
+
+    cv::Mat in_bgr{sz, CV_8UC3};
+    cv::randu(in_bgr, cv::Scalar::all(0), cv::Scalar::all(255));
+
+    cv::Mat out_bgr{sz, CV_8UC3};
+    cv::randu(out_bgr, cv::Scalar::all(0), cv::Scalar::all(255));
+
+    cv::MediaFrame in_frame  = cv::MediaFrame::Create<TestMediaBGR>(in_bgr);
+    cv::MediaFrame out_frame = cv::MediaFrame::Create<TestMediaBGR>(out_bgr);
+
+    cv::GFrame in;
+    cv::GArray<cv::gapi::wip::draw::Prim> arr;
+    auto out = cv::gapi::wip::draw::renderFrame(in, arr);
+
+    cv::Rect rect{100, 100, 200, 200};
+    cv::Scalar color{255, 0, 0};
+    int thick = 10;
+    cv::gapi::wip::draw::Prims prims;
+    prims.emplace_back(cv::gapi::wip::draw::Rect{rect, color, thick});
+
+    cv::GComputation(cv::GIn(in, arr), cv::GOut(out)).apply(cv::gin(in_frame, prims),cv::gout(out_frame));
+
+    auto view = out_frame.access(cv::MediaFrame::Access::R);
+    cv::Mat output{sz, CV_8UC3, view.ptr[0]};
+
+    cv::imwrite("frame.png", output);
+};
 
 } // namespace opencv_test

@@ -101,6 +101,7 @@ public:
 
     const cv::Scalar& inVal(int input);
     cv::Scalar& outValR(int output); // FIXME: Avoid cv::Scalar s = ctx.outValR()
+    cv::MediaFrame& outFrame(int output);
     template<typename T> std::vector<T>& outVecR(int output) // FIXME: the same issue
     {
         return outVecRef(output).wref<T>();
@@ -263,6 +264,13 @@ template<typename U> struct get_out<cv::GArray<U>>
     static std::vector<U>& get(GCPUContext &ctx, int idx)
     {
         return ctx.outVecR<U>(idx);
+    }
+};
+template<> struct get_out<cv::GFrame>
+{
+    static cv::MediaFrame& get(GCPUContext &ctx, int idx)
+    {
+        return ctx.outFrame(idx);
     }
 };
 

@@ -43,6 +43,51 @@ GAPI_OCV_KERNEL_ST(RenderBGROCVImpl, cv::gapi::wip::draw::GRenderBGR, RenderOCVS
     }
 };
 
+GAPI_OCV_KERNEL_ST(RenderFrameOCVImpl, cv::gapi::wip::draw::GRenderFrame, RenderOCVState)
+{
+    static void run(const cv::MediaFrame& in,
+                    const cv::gapi::wip::draw::Prims& prims,
+                    cv::MediaFrame& out,
+                    RenderOCVState& state)
+    {
+        const auto& in_desc  = in.desc();
+        const auto& out_desc = out.desc();
+        auto vout = out.access(cv::MediaFrame::Access::W);
+        auto vin  = in.access(cv::MediaFrame::Access::R);
+
+        if (in_desc.fmt  == cv::MediaFormat::BGR &&
+            out_desc.fmt == cv::MediaFormat::BGR)
+        {
+            cv::Mat in_bgr(in_desc.size, CV_8UC3, vin.ptr[0]);
+            cv::Mat out_bgr(out_desc.size, CV_8UC3, vout.ptr[0]);
+
+            // NB: If in and out cv::Mats are the same object
+            // we can avoid copy and render on out cv::Mat
+            // It's work if this kernel is last operation in the graph
+            if (in_bgr.data != out_bgr.data)
+            {
+                in_bgr.copyTo(out_bgr);
+            }
+            cv::gapi::wip::draw::drawPrimitivesOCVBGR(out_bgr, prims, state.ftpr);
+        }
+    }
+
+    static void setup(const cv::GFrameDesc& /* in */,
+                      const cv::GArrayDesc& /* prims */,
+                      std::shared_ptr<RenderOCVState>& state,
+                      const cv::GCompileArgs& args)
+    {
+        using namespace cv::gapi::wip::draw;
+        auto opt_freetype_font = cv::gapi::getCompileArg<freetype_font>(args);
+        state = std::make_shared<RenderOCVState>();
+
+        if (opt_freetype_font.has_value())
+        {
+            state->ftpr = std::make_shared<FTTextRender>(opt_freetype_font->path);
+        }
+    }
+};
+
 GAPI_OCV_KERNEL_ST(RenderNV12OCVImpl, cv::gapi::wip::draw::GRenderNV12, RenderOCVState)
 {
     static void run(const cv::Mat& in_y,
@@ -116,6 +161,8 @@ GAPI_OCV_KERNEL_ST(RenderNV12OCVImpl, cv::gapi::wip::draw::GRenderNV12, RenderOC
 
 cv::gapi::GKernelPackage cv::gapi::render::ocv::kernels()
 {
-    const static auto pkg = cv::gapi::kernels<RenderBGROCVImpl, RenderNV12OCVImpl>();
+    const static auto pkg = cv::gapi::kernels<RenderBGROCVImpl
+                                            , RenderNV12OCVImpl
+                                            , RenderFrameOCVImpl>();
     return pkg;
 }

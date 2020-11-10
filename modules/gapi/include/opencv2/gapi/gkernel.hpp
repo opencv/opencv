@@ -67,6 +67,10 @@ namespace detail
     {
         static inline cv::GMat yield(cv::GCall &call, int i) { return call.yield(i); }
     };
+    template<> struct Yield<cv::GFrame>
+    {
+        static inline cv::GFrame yield(cv::GCall &call, int i) { return call.yieldFrame(i); }
+    };
     template<> struct Yield<cv::GMatP>
     {
         static inline cv::GMatP yield(cv::GCall &call, int i) { return call.yieldP(i); }
@@ -232,7 +236,7 @@ public:
     using InArgs  = std::tuple<Args...>;
     using OutArgs = std::tuple<R>;
 
-    static_assert(!cv::detail::contains<GFrame, OutArgs>::value, "Values of GFrame type can't be used as operation outputs");
+    //static_assert(!cv::detail::contains<GFrame, OutArgs>::value, "Values of GFrame type can't be used as operation outputs");
 
     static R on(Args... args)
     {
