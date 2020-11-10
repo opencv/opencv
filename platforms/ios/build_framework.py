@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 """
 The script builds OpenCV.framework for iOS.
 The built framework is universal, it can be used to build app and run it on either iOS simulator or real device.
@@ -36,7 +36,7 @@ import glob, re, os, os.path, shutil, string, sys, argparse, traceback, multipro
 from subprocess import check_call, check_output, CalledProcessError
 from distutils.dir_util import copy_tree
 
-IPHONEOS_DEPLOYMENT_TARGET='8.0'  # default, can be changed via command line options or environment variable
+IPHONEOS_DEPLOYMENT_TARGET='9.0'  # default, can be changed via command line options or environment variable
 
 def execute(cmd, cwd = None):
     print("Executing: %s in %s" % (cmd, cwd), file=sys.stderr)
