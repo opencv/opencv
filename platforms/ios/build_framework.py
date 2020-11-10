@@ -236,11 +236,11 @@ class Builder:
             buildcmd.append("SUPPORTS_MAC_CATALYST=YES")
 
         buildcmd += [
-                "-sdk", "iphoneos" if target == "Catalyst" else target.lower(),
-                "-configuration", self.getConfiguration(),
-                "-parallelizeTargets",
-                "-jobs", str(multiprocessing.cpu_count()),
-            ]
+            "-sdk", "iphoneos" if target == "Catalyst" else target.lower(),
+            "-configuration", self.getConfiguration(),
+            "-parallelizeTargets",
+            "-jobs", str(multiprocessing.cpu_count()),
+        ]
 
         return buildcmd
 
@@ -260,8 +260,14 @@ class Builder:
         if target.lower().startswith("iphoneos"):
             cmakecmd.append("-DCPU_BASELINE=DETECT")
         if target.lower() == "catalyst":
-            cmakecmd.append("-DCPU_BASELINE=DETECT")
-            # cmakecmd.append("-DCMAKE_CROSSCOMPILING=ON")
+            build_arch = check_output(["uname", "-m"]).rstrip()
+            if build_arch != arch:
+                print("!!!!!!!!!!!!!!!!! build_arch != arch")
+                cmakecmd.append("-DCMAKE_SYSTEM_PROCESSOR=" + arch)
+                cmakecmd.append("-DCMAKE_OSX_ARCHITECTURES=" + arch)
+                cmakecmd.append("-DCPU_BASELINE=DETECT")
+                cmakecmd.append("-DCMAKE_CROSSCOMPILING=ON")
+                cmakecmd.append("-DOPENCV_WORKAROUND_CMAKE_20989=ON")
         if target.lower() == "macosx":
             build_arch = check_output(["uname", "-m"]).rstrip()
             if build_arch != arch:
@@ -285,9 +291,17 @@ class Builder:
         #cmakecmd.append(self.opencv)
         #cmakecmd.extend(cmakeargs)
         cmakecmd = self.makeCMakeCmd(arch, target, self.opencv, cmakeargs)
-        print("Before CMake !!!!!!!!!!!!!!!!")
+        print("")
+        print("=================================")
+        print("CMake")
+        print("=================================")
+        print("")
         execute(cmakecmd, cwd = builddir)
-        print("After CMake !!!!!!!!!!!!!!!!")
+        print("")
+        print("=================================")
+        print("Xcodebuild")
+        print("=================================")
+        print("")
 
         # Clean and build
         clean_dir = os.path.join(builddir, "install")
