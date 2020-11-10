@@ -1,9 +1,10 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 """
 The script builds OpenCV.framework for OSX.
 """
 
 from __future__ import print_function
+from builtins import str
 import os, os.path, sys, argparse, traceback, multiprocessing
 
 # import common code
