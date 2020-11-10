@@ -54,7 +54,7 @@ void normAssert(const cv::InputArray& ref, const cv::InputArray& test,
     EXPECT_LE(normInf, lInf) << comment;
 }
 
-std::string findModel(const std::string &model_name) {
+inline std::string findModel(const std::string &model_name) {
     return findDataFile("vision/" + model_name + ".onnx", false);
 }
 
@@ -92,7 +92,7 @@ inline void copyToOut(const cv::Mat& in, cv::Mat& out) {
     GAPI_Assert(in.depth() == CV_32F);
     GAPI_Assert(in.size == out.size);
     const float* const inptr = in.ptr<float>();
-    float* optr = out.ptr<float>();
+    float* const optr = out.ptr<float>();
     const int size = in.total();
     for (int i = 0; i < size; ++i) {
         optr[i] = inptr[i];
@@ -155,6 +155,7 @@ public:
         session = Ort::Session(env, model_path.data(), session_options);
         num_in = session.GetInputCount();
         num_out = session.GetOutputCount();
+        GAPI_Assert(num_in == ins.size());
         in_node_names.clear();
         out_node_names.clear();
         // Inputs Run params
