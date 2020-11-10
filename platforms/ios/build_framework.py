@@ -123,16 +123,19 @@ class Builder:
             if xcode_ver >= 7 and target[1] == 'Catalyst':  # TODOjon: Do I need this? (I think I do in order to set the C/CXX Flag for the ABI)
                 c_flags = [
                     # TODOChris: Enable/disable target flags here
-                    "-target %s-apple-ios-macabi -miphoneos-version-min=13.0" % target[0],  # e.g. x86_64-apple-ios13.2-macabi # -mmacosx-version-min=10.15
+                    "-target %s-apple-ios13.0-macabi" % target[0],  # e.g. x86_64-apple-ios13.2-macabi # -mmacosx-version-min=10.15
                     "-iframework ${CMAKE_OSX_SYSROOT}/System/iOSSupport/System/Library/Frameworks",
                 ]
                 if self.bitcodedisabled == False:
                     c_flags.append("-fembed-bitcode")
                 cmake_flags.append("-DCMAKE_C_FLAGS=" + " ".join(c_flags))
                 cmake_flags.append("-DCMAKE_CXX_FLAGS=" + " ".join(c_flags))
-                cmake_flags.append("-DCMAKE_SHARED_LINKER_FLAGS=" + " ".join(c_flags))
-                cmake_flags.append("-DCMAKE_STATIC_LINKER_FLAGS=" + " ".join(c_flags))
+                # cmake_flags.append("-DCMAKE_SHARED_LINKER_FLAGS=" + " ".join(c_flags))
+                # cmake_flags.append("-DCMAKE_STATIC_LINKER_FLAGS=" + " ".join(c_flags))
                 cmake_flags.append("-DCMAKE_EXE_LINKER_FLAGS=" + " ".join(c_flags))
+                cmake_flags.append("-DIOS=1")  # Build the iOS codebase
+                cmake_flags.append("-DMAC_CATALYST=1")  # Set a flag for Mac Catalyst, just in case we need it
+                cmake_flags.append("-DWITH_OPENCL=OFF")  # Disable OpenCL; it isn't compatible with iOS
             self.buildOne(target[0], target[1], main_build_dir, cmake_flags)
 
             if not self.dynamic:
