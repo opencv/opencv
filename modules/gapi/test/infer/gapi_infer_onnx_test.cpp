@@ -88,10 +88,10 @@ inline std::vector<const char*> getCharNames(const std::vector<std::string>& nam
     return out_vec;
 }
 
-inline void match_out(const cv::Mat& in, cv::Mat& out) {
+inline void copyToOut(const cv::Mat& in, cv::Mat& out) {
     GAPI_Assert(in.depth() == CV_32F);
     GAPI_Assert(in.size == out.size);
-    const float* inptr = in.ptr<float>();
+    const float* const inptr = in.ptr<float>();
     float* optr = out.ptr<float>();
     const int size = in.total();
     for (int i = 0; i < size; ++i) {
@@ -99,7 +99,7 @@ inline void match_out(const cv::Mat& in, cv::Mat& out) {
     }
 }
 
-void remap_yolo(const std::unordered_map<std::string, cv::Mat> &onnx,
+void remapYolo(const std::unordered_map<std::string, cv::Mat> &onnx,
                       std::unordered_map<std::string, cv::Mat> &gapi) {
     GAPI_Assert(onnx.size() == 1u);
     GAPI_Assert(gapi.size() == 1u);
@@ -108,10 +108,10 @@ void remap_yolo(const std::unordered_map<std::string, cv::Mat> &onnx,
     // Configured output
     cv::Mat& out = gapi.begin()->second;
     // Simple copy
-    match_out(in, out);
+    copyToOut(in, out);
 }
 
-void remap_ssd_ports(const std::unordered_map<std::string, cv::Mat> &onnx,
+void remapSsdPorts(const std::unordered_map<std::string, cv::Mat> &onnx,
                            std::unordered_map<std::string, cv::Mat> &gapi) {
     // Result from Run method
     const cv::Mat& in_num     = onnx.at("num_detections:0");
@@ -124,10 +124,10 @@ void remap_ssd_ports(const std::unordered_map<std::string, cv::Mat> &onnx,
     cv::Mat& out_scores  = gapi.at("out3");
     cv::Mat& out_num     = gapi.at("out4");
     // Simple copy for outputs
-    match_out(in_num, out_num);
-    match_out(in_boxes, out_boxes);
-    match_out(in_scores, out_scores);
-    match_out(in_classes, out_classes);
+    copyToOut(in_num, out_num);
+    copyToOut(in_boxes, out_boxes);
+    copyToOut(in_scores, out_scores);
+    copyToOut(in_classes, out_classes);
 }
 
 class ONNXtest : public ::testing::Test {
@@ -143,6 +143,8 @@ public:
         memory_info = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
         out_gapi.resize(1);
         out_onnx.resize(1);
+        // FIXME: All tests chek "random" image
+        // Ideally it should be a real image
         in_mat1 = initMatrixRandU(CV_8UC3, cv::Size{640, 480});
     }
 
@@ -161,12 +163,12 @@ public:
             char* in_node_name_p = session.GetInputName(i, allocator);
             in_node_names.push_back(std::string(in_node_name_p));
             allocator.Free(in_node_name_p);
-            input_node_dims = toORT(ins[i].size);
+            in_node_dims = toORT(ins[i].size);
             in_tensors.emplace_back(Ort::Value::CreateTensor<T>(memory_info,
                                                                 const_cast<T*>(ins[i].ptr<T>()),
                                                                 ins[i].total(),
-                                                                input_node_dims.data(),
-                                                                input_node_dims.size()));
+                                                                in_node_dims.data(),
+                                                                in_node_dims.size()));
         }
         // Outputs Run params
         for(size_t i = 0; i < num_out; ++i) {
@@ -224,27 +226,24 @@ private:
     Ort::SessionOptions session_options;
     Ort::Session session{nullptr};
 
-    std::vector<int64_t> input_node_dims;
+    std::vector<int64_t> in_node_dims;
     std::vector<std::string> in_node_names;
     std::vector<std::string> out_node_names;
 };
 
 class ONNXClassificationTest : public ONNXtest {
 public:
-    cv::Scalar mean, std;
-    virtual void SetUp() {
-        mean = { 0.485, 0.456, 0.406 };
-        std  = { 0.229, 0.224, 0.225 };
-    }
+    // cv::Scalar mean, std;
+    const cv::Scalar mean = { 0.485, 0.456, 0.406 };
+    const cv::Scalar std  = { 0.229, 0.224, 0.225 };
 
     void preprocess(const cv::Mat& src, cv::Mat& dst) {
         const int new_h = 224;
         const int new_w = 224;
-        cv::Mat tmp, nmat, cvt;
-        cv::resize(src, dst, cv::Size(new_w, new_h));
-        dst.convertTo(cvt, CV_32F, 1.f / 255);
-        nmat = cvt - mean;
-        tmp = nmat / std;
+        cv::Mat tmp, cvt, rsz;
+        cv::resize(src, rsz, cv::Size(new_w, new_h));
+        rsz.convertTo(cvt, CV_32F, 1.f / 255);
+        tmp = (cvt - mean) / std;
         toCHW(tmp, dst);
         dst = dst.reshape(1, {1, 3, new_h, new_w});
     }
@@ -255,10 +254,10 @@ public:
     void preprocess(const cv::Mat& src, cv::Mat& dst) {
         const int new_h = 64;
         const int new_w = 64;
-        cv::Mat csc, rsc, cvt;
-        cv::cvtColor(src, csc, cv::COLOR_BGR2GRAY);
-        cv::resize(csc, rsc, cv::Size(new_w, new_h));
-        rsc.convertTo(cvt, CV_32F);
+        cv::Mat cvc, rsz, cvt;
+        cv::cvtColor(src, cvc, cv::COLOR_BGR2GRAY);
+        cv::resize(cvc, rsz, cv::Size(new_w, new_h));
+        rsz.convertTo(cvt, CV_32F);
         toCHW(cvt, dst);
         dst = dst.reshape(1, {1, 1, new_h, new_w});
     }
@@ -277,7 +276,9 @@ TEST_F(ONNXClassificationTest, Infer)
     cv::GMat in;
     cv::GMat out = cv::gapi::infer<SqueezNet>(in);
     cv::GComputation comp(cv::GIn(in), cv::GOut(out));
-    auto net = cv::gapi::onnx::Params<SqueezNet> { model_path }.cfgMeanStd({mean},{std});
+    // NOTE: We have to normalize U8 tensor
+    // so cfgMeanStd() is here
+    auto net = cv::gapi::onnx::Params<SqueezNet> { model_path }.cfgMeanStd({ mean }, { std });
     comp.apply(cv::gin(in_mat1),
                cv::gout(out_gapi.front()),
                cv::compile_args(cv::gapi::networks(net)));
@@ -289,6 +290,8 @@ TEST_F(ONNXtest, InferTensor)
 {
     useModel("classification/squeezenet/model/squeezenet1.0-9");
     // Create tensor
+    // FIXME: Test cheks "random" image
+    // Ideally it should be a real image
     const cv::Mat rand_mat = initMatrixRandU(CV_32FC3, cv::Size{224, 224});
     const std::vector<int> dims = {1, rand_mat.channels(), rand_mat.rows, rand_mat.cols};
     const cv::Mat tensor(dims, CV_32F, rand_mat.data);
@@ -321,7 +324,9 @@ TEST_F(ONNXClassificationTest, InferROI)
     cv::GOpaque<cv::Rect> rect;
     cv::GMat out = cv::gapi::infer<SqueezNet>(rect, in);
     cv::GComputation comp(cv::GIn(in, rect), cv::GOut(out));
-    auto net = cv::gapi::onnx::Params<SqueezNet> { model_path }.cfgMeanStd({mean},{std});
+    // NOTE: We have to normalize U8 tensor
+    // so cfgMeanStd() is here
+    auto net = cv::gapi::onnx::Params<SqueezNet> { model_path }.cfgMeanStd({ mean }, { std });
     comp.apply(cv::gin(in_mat1, ROI),
                cv::gout(out_gapi.front()),
                cv::compile_args(cv::gapi::networks(net)));
@@ -349,7 +354,9 @@ TEST_F(ONNXClassificationTest, InferROIList)
     cv::GArray<cv::Rect> rr;
     cv::GArray<cv::GMat> out = cv::gapi::infer<SqueezNet>(rr, in);
     cv::GComputation comp(cv::GIn(in, rr), cv::GOut(out));
-    auto net = cv::gapi::onnx::Params<SqueezNet> { model_path }.cfgMeanStd({mean},{std});
+    // NOTE: We have to normalize U8 tensor
+    // so cfgMeanStd() is here
+    auto net = cv::gapi::onnx::Params<SqueezNet> { model_path }.cfgMeanStd({ mean }, { std });
     comp.apply(cv::gin(in_mat1, rois),
                cv::gout(out_gapi),
                cv::compile_args(cv::gapi::networks(net)));
@@ -375,9 +382,11 @@ TEST_F(ONNXClassificationTest, Infer2ROIList)
     G_API_NET(SqueezNet, <cv::GMat(cv::GMat)>, "squeeznet");
     cv::GMat in;
     cv::GArray<cv::Rect> rr;
-    cv::GArray<cv::GMat> out = cv::gapi::infer2<SqueezNet>(in,rr);
+    cv::GArray<cv::GMat> out = cv::gapi::infer2<SqueezNet>(in, rr);
     cv::GComputation comp(cv::GIn(in, rr), cv::GOut(out));
-    auto net = cv::gapi::onnx::Params<SqueezNet> { model_path }.cfgMeanStd({mean},{std});
+    // NOTE: We have to normalize U8 tensor
+    // so cfgMeanStd() is here
+    auto net = cv::gapi::onnx::Params<SqueezNet> { model_path }.cfgMeanStd({ mean }, { std });
     comp.apply(cv::gin(in_mat1, rois),
                cv::gout(out_gapi),
                cv::compile_args(cv::gapi::networks(net)));
@@ -389,6 +398,8 @@ TEST_F(ONNXtest, InferDynamicInputTensor)
 {
     useModel("object_detection_segmentation/tiny-yolov2/model/tinyyolov2-8");
     // Create tensor
+    // FIXME: Test cheks "random" image
+    // Ideally it should be a real image
     const cv::Mat rand_mat = initMatrixRandU(CV_32FC3, cv::Size{416, 416});
     const std::vector<int> dims = {1, rand_mat.channels(), rand_mat.rows, rand_mat.cols};
     cv::Mat tensor(dims, CV_32F, rand_mat.data);
@@ -401,7 +412,7 @@ TEST_F(ONNXtest, InferDynamicInputTensor)
     cv::GMat out = cv::gapi::infer<YoloNet>(in);
     cv::GComputation comp(cv::GIn(in), cv::GOut(out));
     auto net = cv::gapi::onnx::Params<YoloNet>{model_path}
-        .cfgPostProc({cv::GMatDesc{CV_32F, {1,125,13,13}}}, remap_yolo)
+        .cfgPostProc({cv::GMatDesc{CV_32F, {1, 125, 13, 13}}}, remapYolo)
         .cfgOutputLayers({"out"});
     comp.apply(cv::gin(in_tensor),
                cv::gout(out_gapi.front()),
@@ -423,7 +434,7 @@ TEST_F(ONNXGRayScaleTest, InferImage)
     cv::GMat out = cv::gapi::infer<EmotionNet>(in);
     cv::GComputation comp(cv::GIn(in), cv::GOut(out));
     auto net = cv::gapi::onnx::Params<EmotionNet> { model_path }
-        .cfgNormalize({false}); // model accepts 0..255 range in FP32;
+        .cfgNormalize({ false }); // model accepts 0..255 range in FP32;
     comp.apply(cv::gin(in_mat1),
                cv::gout(out_gapi.front()),
                cv::compile_args(cv::gapi::networks(net)));
@@ -438,18 +449,18 @@ TEST_F(ONNXtest, InferMultOutput)
     const auto prep_mat = in_mat1.reshape(1, {1, in_mat1.rows, in_mat1.cols, in_mat1.channels()});
     infer<uint8_t>({prep_mat}, out_onnx);
     // G_API code
-    using OUT = std::tuple<cv::GMat, cv::GMat, cv::GMat, cv::GMat>;
-    G_API_NET(MobileNet, <OUT(cv::GMat)>, "ssd_mobilenet");
+    using SSDOut = std::tuple<cv::GMat, cv::GMat, cv::GMat, cv::GMat>;
+    G_API_NET(MobileNet, <SSDOut(cv::GMat)>, "ssd_mobilenet");
     cv::GMat in;
     cv::GMat out1, out2, out3, out4;
     std::tie(out1, out2, out3, out4) = cv::gapi::infer<MobileNet>(in);
     cv::GComputation comp(cv::GIn(in), cv::GOut(out1, out2, out3, out4));
     auto net = cv::gapi::onnx::Params<MobileNet>{model_path}
         .cfgOutputLayers({"out1", "out2", "out3", "out4"})
-        .cfgPostProc({cv::GMatDesc{CV_32F, {1,100,4}},
-                      cv::GMatDesc{CV_32F, {1,100}},
-                      cv::GMatDesc{CV_32F, {1,100}},
-                      cv::GMatDesc{CV_32F, {1,1}}}, remap_ssd_ports);
+        .cfgPostProc({cv::GMatDesc{CV_32F, {1, 100, 4}},
+                      cv::GMatDesc{CV_32F, {1, 100}},
+                      cv::GMatDesc{CV_32F, {1, 100}},
+                      cv::GMatDesc{CV_32F, {1, 1}}}, remapSsdPorts);
     out_gapi.resize(num_out);
     comp.apply(cv::gin(in_mat1),
                cv::gout(out_gapi[0], out_gapi[1], out_gapi[2], out_gapi[3]),
