@@ -145,9 +145,23 @@ if(DOXYGEN_FOUND)
   set(tutorial_js_path "${CMAKE_CURRENT_SOURCE_DIR}/js_tutorials")
   set(example_path "${CMAKE_SOURCE_DIR}/samples")
 
+  set(doxygen_image_path
+      ${CMAKE_CURRENT_SOURCE_DIR}/images
+      ${paths_doc}
+      ${tutorial_path}
+      ${tutorial_py_path}
+      ${tutorial_js_path}
+      ${paths_tutorial}
+      #${OpenCV_SOURCE_DIR}/samples/data         # TODO: need to resolve ambiguous conflicts first
+      ${OpenCV_SOURCE_DIR}
+      ${OpenCV_SOURCE_DIR}/modules               # <opencv>/modules
+      ${OPENCV_EXTRA_MODULES_PATH}               # <opencv_contrib>/modules
+      ${OPENCV_DOCS_EXTRA_IMAGE_PATH}            # custom variable for user modules
+  )
+
   # set export variables
   string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_INPUT_LIST "${rootfile} ; ${faqfile} ; ${paths_include} ; ${paths_hal_interface} ; ${paths_doc} ; ${tutorial_path} ; ${tutorial_py_path} ; ${tutorial_js_path} ; ${paths_tutorial} ; ${tutorial_contrib_root}")
-  string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_IMAGE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/images ; ${paths_doc} ; ${tutorial_path} ; ${tutorial_py_path} ; ${tutorial_js_path} ; ${paths_tutorial}")
+  string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_IMAGE_PATH "${doxygen_image_path}")
   string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_EXCLUDE_LIST "${CMAKE_DOXYGEN_EXCLUDE_LIST}")
   string(REPLACE ";" " " CMAKE_DOXYGEN_ENABLED_SECTIONS "${CMAKE_DOXYGEN_ENABLED_SECTIONS}")
   # TODO: remove paths_doc from EXAMPLE_PATH after face module tutorials/samples moved to separate folders

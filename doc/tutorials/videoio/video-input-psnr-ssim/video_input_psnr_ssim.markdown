@@ -126,8 +126,7 @@ captRefrnc.set(CAP_PROP_POS_FRAMES, 10); // go to the 10th frame of the video
 For properties you can read and change look into the documentation of the @ref cv::VideoCapture::get and
 @ref cv::VideoCapture::set functions.
 
-Image similarity - PSNR and SSIM
---------------------------------
+### Image similarity - PSNR and SSIM
 
 We want to check just how imperceptible our video converting operation went, therefore we need a
 system to check frame by frame the similarity or differences. The most common algorithm used for
@@ -145,15 +144,15 @@ Here the \f$MAX_I\f$ is the maximum valid value for a pixel. In case of the simp
 per pixel per channel this is 255. When two images are the same the MSE will give zero, resulting in
 an invalid divide by zero operation in the PSNR formula. In this case the PSNR is undefined and as
 we'll need to handle this case separately. The transition to a logarithmic scale is made because the
-pixel values have a very wide dynamic range. All this translated to OpenCV and a C++ function looks
+pixel values have a very wide dynamic range. All this translated to OpenCV and a function looks
 like:
 
 @add_toggle_cpp
-@include cpp/tutorial_code/videoio/video-input-psnr-ssim/video-input-psnr-ssim.cpp get-psnr
+@snippet cpp/tutorial_code/videoio/video-input-psnr-ssim/video-input-psnr-ssim.cpp get-psnr
 @end_toggle
 
 @add_toggle_python
-@include samples/python/tutorial_code/videoio/video-input-psnr-ssim.py get-psnr
+@snippet samples/python/tutorial_code/videoio/video-input-psnr-ssim.py get-psnr
 @end_toggle
 
 Typically result values are anywhere between 30 and 50 for video compression, where higher is
@@ -172,11 +171,11 @@ implementation below.
     Transactions on Image Processing, vol. 13, no. 4, pp. 600-612, Apr. 2004." article.
 
 @add_toggle_cpp
-@include cpp/tutorial_code/videoio/video-input-psnr-ssim/video-input-psnr-ssim.cpp get-mssim
+@snippet samples/cpp/tutorial_code/videoio/video-input-psnr-ssim/video-input-psnr-ssim.cpp get-mssim
 @end_toggle
 
 @add_toggle_python
-@include samples/python/tutorial_code/videoio/video-input-psnr-ssim.py get-mssim
+@snippet samples/python/tutorial_code/videoio/video-input-psnr-ssim.py get-mssim
 @end_toggle
 
 This will return a similarity index for each channel of the image. This value is between zero and
