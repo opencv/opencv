@@ -11,8 +11,9 @@ mkdir -p ./xcframework-build/catalyst-x86_64
 mkdir -p ./xcframework-build/osx-x86_64
 mkdir -p ./xcframework-build/catalyst-arm64
 mkdir -p ./xcframework-build/osx-arm64
-mkdir -p ./xcframework-build/iphoneos
-mkdir -p ./xcframework-build/iphonesimulator
+mkdir -p ./xcframework-build/iphoneos-arm64
+mkdir -p ./xcframework-build/iphonesimulator-x86_64
+mkdir -p ./xcframework-build/iphonesimulator-arm64
 
 # Build OSX slices
 python3 ../osx/build_framework.py --archs x86_64 --without=objc --build-only-specified-archs ./xcframework-build/osx-x86_64
@@ -20,8 +21,9 @@ python3 ../osx/build_framework.py --archs arm64 --without=objc --build-only-spec
 python3 ../osx/build_framework.py --catalyst_archs x86_64 --without=objc --build-only-specified-archs ./xcframework-build/catalyst-x86_64
 python3 ../osx/build_framework.py --catalyst_archs arm64 --without=objc --build-only-specified-archs ./xcframework-build/catalyst-arm64
 # Build iOS slices
-python3 ../ios/build_framework.py --iphoneos_archs arm64 --without=objc --build-only-specified-archs ./xcframework-build/iphoneos
-python3 ../ios/build_framework.py --iphonesimulator_archs x86_64 --without=objc --build-only-specified-archs ./xcframework-build/iphonesimulator
+python3 ../ios/build_framework.py --iphoneos_archs arm64 --without=objc --build-only-specified-archs ./xcframework-build/iphoneos-arm64
+python3 ../ios/build_framework.py --iphonesimulator_archs x86_64 --without=objc --build-only-specified-archs ./xcframework-build/iphonesimulator-x86_64
+python3 ../ios/build_framework.py --iphonesimulator_archs arm64 --without=objc --build-only-specified-archs ./xcframework-build/iphonesimulator-arm64
 # Stitch them all together into an xcframework
 xcodebuild -create-xcframework \
     -framework ./xcframework-build/catalyst-x86_64/opencv2.framework \
