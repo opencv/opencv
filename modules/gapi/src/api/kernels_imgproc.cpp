@@ -122,6 +122,48 @@ cv::GArray<cv::Point2f> goodFeaturesToTrack(const GMat& image, int maxCorners, d
                                       useHarrisDetector, k);
 }
 
+GArray<GArray<Point>>
+findContours(const GMat &src, const RetrievalModes mode, const ContourApproximationModes method,
+             const GOpaque<Point> &offset)
+{
+    return imgproc::GFindContours::on(src, mode, method, offset);
+}
+
+GArray<GArray<Point>>
+findContours(const GMat &src, const RetrievalModes mode, const ContourApproximationModes method)
+{
+    return imgproc::GFindContoursNoOffset::on(src, mode, method);
+}
+
+
+std::tuple<GArray<GArray<Point>>,GArray<Vec4i>>
+findContoursH(const GMat &src, const RetrievalModes mode, const ContourApproximationModes method,
+              const GOpaque<Point> &offset)
+{
+    return imgproc::GFindContoursH::on(src, mode, method, offset);
+}
+
+std::tuple<GArray<GArray<Point>>,GArray<Vec4i>>
+findContoursH(const GMat &src, const RetrievalModes mode, const ContourApproximationModes method)
+{
+    return imgproc::GFindContoursHNoOffset::on(src, mode, method);
+}
+
+GOpaque<Rect> boundingRect(const GMat& src)
+{
+    return imgproc::GBoundingRectMat::on(src);
+}
+
+GOpaque<Rect> boundingRect(const GArray<Point2i>& src)
+{
+    return imgproc::GBoundingRectVector32S::on(src);
+}
+
+GOpaque<Rect> boundingRect(const GArray<Point2f>& src)
+{
+    return imgproc::GBoundingRectVector32F::on(src);
+}
+
 GMat BGR2RGB(const GMat& src)
 {
     return imgproc::GBGR2RGB::on(src);

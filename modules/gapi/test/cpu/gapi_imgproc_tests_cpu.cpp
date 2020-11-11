@@ -265,6 +265,78 @@ INSTANTIATE_TEST_CASE_P(GoodFeaturesInternalTestCPU, GoodFeaturesTest,
                                 Values(3),
                                 Values(true)));
 
+INSTANTIATE_TEST_CASE_P(FindContoursNoOffsetTestCPU, FindContoursNoOffsetTest,
+                        Combine(Values(IMGPROC_CPU),
+                                Values(cv::Size(1280, 720)),
+                                Values(CV_8UC1),
+                                Values(RETR_EXTERNAL),
+                                Values(CHAIN_APPROX_NONE)));
+
+INSTANTIATE_TEST_CASE_P(FindContoursOffsetTestCPU, FindContoursOffsetTest,
+                        Values(IMGPROC_CPU));
+
+INSTANTIATE_TEST_CASE_P(FindContoursHNoOffsetTestCPU, FindContoursHNoOffsetTest,
+                        Combine(Values(IMGPROC_CPU),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480)),
+                                Values(CV_8UC1),
+                                Values(RETR_EXTERNAL, RETR_LIST, RETR_CCOMP, RETR_TREE),
+                                Values(CHAIN_APPROX_NONE, CHAIN_APPROX_SIMPLE,
+                                       CHAIN_APPROX_TC89_L1, CHAIN_APPROX_TC89_KCOS)));
+
+INSTANTIATE_TEST_CASE_P(FindContoursHNoOffset32STestCPU, FindContoursHNoOffsetTest,
+                        Combine(Values(IMGPROC_CPU),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480)),
+                                Values(CV_32SC1),
+                                Values(RETR_CCOMP, RETR_FLOODFILL),
+                                Values(CHAIN_APPROX_NONE, CHAIN_APPROX_SIMPLE,
+                                       CHAIN_APPROX_TC89_L1, CHAIN_APPROX_TC89_KCOS)));
+
+INSTANTIATE_TEST_CASE_P(FindContoursHOffsetTestCPU, FindContoursHOffsetTest,
+                        Values(IMGPROC_CPU));
+
+INSTANTIATE_TEST_CASE_P(BoundingRectMatTestCPU, BoundingRectMatTest,
+                        Combine(Values( CV_8UC1 ),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480),
+                                       cv::Size(128, 128)),
+                                Values(-1),
+                                Values(IMGPROC_CPU),
+                                Values(IoUToleranceRect(0).to_compare_obj())));
+
+INSTANTIATE_TEST_CASE_P(BoundingRectMatVector32STestCPU, BoundingRectMatVector32STest,
+                        Combine(Values(-1),
+                                Values(cv::Size(1280, 1),
+                                       cv::Size(128, 1)),
+                                Values(-1),
+                                Values(IMGPROC_CPU),
+                                Values(IoUToleranceRect(0).to_compare_obj())));
+
+ INSTANTIATE_TEST_CASE_P(BoundingRectMatVector32FTestCPU, BoundingRectMatVector32FTest,
+                         Combine(Values(-1),
+                                 Values(cv::Size(1280, 1),
+                                        cv::Size(128, 1)),
+                                 Values(-1),
+                                 Values(IMGPROC_CPU),
+                                 Values(IoUToleranceRect(1e-5).to_compare_obj())));
+
+INSTANTIATE_TEST_CASE_P(BoundingRectVector32STestCPU, BoundingRectVector32STest,
+                        Combine(Values(-1),
+                                Values(cv::Size(1280, 1),
+                                       cv::Size(128, 1)),
+                                Values(-1),
+                                Values(IMGPROC_CPU),
+                                Values(IoUToleranceRect(0).to_compare_obj())));
+
+ INSTANTIATE_TEST_CASE_P(BoundingRectVector32FTestCPU, BoundingRectVector32FTest,
+                         Combine(Values(-1),
+                                 Values(cv::Size(1280, 1),
+                                        cv::Size(128, 1)),
+                                 Values(-1),
+                                 Values(IMGPROC_CPU),
+                                 Values(IoUToleranceRect(1e-5).to_compare_obj())));
+
 INSTANTIATE_TEST_CASE_P(BGR2RGBTestCPU, BGR2RGBTest,
                         Combine(Values(CV_8UC3),
                                 Values(cv::Size(1280, 720),
