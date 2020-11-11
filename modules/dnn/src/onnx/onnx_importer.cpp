@@ -200,12 +200,12 @@ LayerParams ONNXImporter::getLayerParams(const opencv_onnx::NodeProto& node_prot
 
         if(attribute_name == "kernel_shape")
         {
-            CV_Assert(attribute_proto.ints_size() == 2 || attribute_proto.ints_size() == 3);
+            CV_Assert(attribute_proto.ints_size() == 1 || attribute_proto.ints_size() == 2 || attribute_proto.ints_size() == 3);
             lp.set("kernel_size", parse(attribute_proto.ints()));
         }
         else if(attribute_name == "strides")
         {
-            CV_Assert(attribute_proto.ints_size() == 2 || attribute_proto.ints_size() == 3);
+            CV_Assert(attribute_proto.ints_size() == 1 || attribute_proto.ints_size() == 2 || attribute_proto.ints_size() == 3);
             lp.set("stride", parse(attribute_proto.ints()));
         }
         else if(attribute_name == "pads")
@@ -229,7 +229,7 @@ LayerParams ONNXImporter::getLayerParams(const opencv_onnx::NodeProto& node_prot
             else
             {
                 // Convolution or pooling.
-                CV_Assert(attribute_proto.ints_size() == 4 || attribute_proto.ints_size() == 6);
+                CV_Assert(attribute_proto.ints_size() == 2 || attribute_proto.ints_size() == 4 || attribute_proto.ints_size() == 6);
                 lp.set("pad", parse(attribute_proto.ints()));
             }
         }
@@ -244,7 +244,7 @@ LayerParams ONNXImporter::getLayerParams(const opencv_onnx::NodeProto& node_prot
         }
         else if(attribute_name == "dilations")
         {
-            CV_Assert(attribute_proto.ints_size() == 2 || attribute_proto.ints_size() == 3);
+            CV_Assert(attribute_proto.ints_size() == 1 || attribute_proto.ints_size() == 2 || attribute_proto.ints_size() == 3);
             lp.set("dilation", parse(attribute_proto.ints()));
         }
         else if (attribute_proto.has_i())
@@ -1185,6 +1185,12 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
         else if (layer_type == "Conv")
         {
             CV_Assert(node_proto.input_size() >= 2);
+            if (layerParams.has("kernel_size")) {
+                const DictValue &kernel = layerParams.get("kernel_size");
+                if (kernel.size() == 1) {
+                    layerParams.set("is_1d", true);
+                }
+            }
             layerParams.type = "Convolution";
             for (int j = 1; j < node_proto.input_size(); j++) {
                 if (constBlobs.find(node_proto.input(j)) != constBlobs.end())
