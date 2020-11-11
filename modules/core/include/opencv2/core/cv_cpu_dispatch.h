@@ -216,6 +216,11 @@ struct VZeroUpperGuard {
 #  define CV_VSX 1
 #endif
 
+#ifdef __F16C__
+#  include <immintrin.h>
+#  define CV_FP16 1
+#endif
+
 #endif // !__OPENCV_BUILD && !__CUDACC (Compatibility code)
 
 
