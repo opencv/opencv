@@ -55,20 +55,57 @@ GAPI_OCV_KERNEL_ST(RenderFrameOCVImpl, cv::gapi::wip::draw::GRenderFrame, Render
         auto vout = out.access(cv::MediaFrame::Access::W);
         auto vin  = in.access(cv::MediaFrame::Access::R);
 
-        if (in_desc.fmt  == cv::MediaFormat::BGR &&
-            out_desc.fmt == cv::MediaFormat::BGR)
-        {
-            cv::Mat in_bgr(in_desc.size, CV_8UC3, vin.ptr[0]);
-            cv::Mat out_bgr(out_desc.size, CV_8UC3, vout.ptr[0]);
+        GAPI_Assert(in_desc.fmt == out_desc.fmt &&
+                    "Input and output frame should have the same format");
 
-            // NB: If in and out cv::Mats are the same object
-            // we can avoid copy and render on out cv::Mat
-            // It's work if this kernel is last operation in the graph
-            if (in_bgr.data != out_bgr.data)
+        switch (in_desc.fmt)
+        {
+            case cv::MediaFormat::BGR:
             {
-                in_bgr.copyTo(out_bgr);
+                cv::Mat in_bgr(in_desc.size, CV_8UC3, vin.ptr[0]);
+                cv::Mat out_bgr(out_desc.size, CV_8UC3, vout.ptr[0]);
+
+                // NB: If in and out cv::Mats are the same object
+                // we can avoid copy and render on out cv::Mat
+                // It's work if this kernel is last operation in the graph
+                if (in_bgr.data != out_bgr.data)
+                {
+                    in_bgr.copyTo(out_bgr);
+                }
+                cv::gapi::wip::draw::drawPrimitivesOCVBGR(out_bgr, prims, state.ftpr);
+                break;
             }
-            cv::gapi::wip::draw::drawPrimitivesOCVBGR(out_bgr, prims, state.ftpr);
+            case cv::MediaFormat::NV12:
+            {
+               cv::Mat in_y(in_desc.size       , CV_8UC1, vin.ptr[0]);
+               cv::Mat out_y(out_desc.size     , CV_8UC1, vout.ptr[0]);
+               cv::Mat in_uv(in_desc.size   / 2, CV_8UC2, vin.ptr[1]);
+               cv::Mat out_uv(out_desc.size / 2, CV_8UC2, vout.ptr[1]);
+
+               // NB: If in and out cv::Mats are the same object
+               // we can avoid copy and render on out cv::Mat
+               // It's work if this kernel is last operation in the graph
+               if (in_y.data != out_y.data)
+               {
+                   in_y.copyTo(out_y);
+               }
+
+               if (in_uv.data != out_uv.data)
+               {
+                   in_uv.copyTo(out_uv);
+               }
+
+               cv::Mat yuv;
+               // NV12 -> YUV
+               cv::gapi::wip::draw::cvtNV12ToYUV(out_y, out_uv, yuv);
+               cv::gapi::wip::draw::drawPrimitivesOCVYUV(yuv, prims, state.ftpr);
+               // YUV -> NV12
+               cv::gapi::wip::draw::cvtYUVToNV12(yuv, out_y, out_uv);
+
+               break;
+            }
+            default:
+                cv::util::throw_error(std::logic_error("Unsupported MediaFrame format for render"));
         }
     }
 
@@ -126,20 +163,12 @@ GAPI_OCV_KERNEL_ST(RenderNV12OCVImpl, cv::gapi::wip::draw::GRenderNV12, RenderOC
          * 3) Convert yuv to NV12 (using bilinear interpolation)
          *
          */
-
-        // NV12 -> YUV
-        cv::Mat upsample_uv, yuv;
-        cv::resize(in_uv, upsample_uv, in_uv.size() * 2, cv::INTER_LINEAR);
-        cv::merge(std::vector<cv::Mat>{in_y, upsample_uv}, yuv);
-
-        cv::gapi::wip::draw::drawPrimitivesOCVYUV(yuv, prims, state.ftpr);
-
-        // YUV -> NV12
-        cv::Mat out_u, out_v, uv_plane;
-        std::vector<cv::Mat> chs = {out_y, out_u, out_v};
-        cv::split(yuv, chs);
-        cv::merge(std::vector<cv::Mat>{chs[1], chs[2]}, uv_plane);
-        cv::resize(uv_plane, out_uv, uv_plane.size() / 2, cv::INTER_LINEAR);
+         cv::Mat yuv;
+         // NV12 -> YUV
+         cv::gapi::wip::draw::cvtNV12ToYUV(out_y, out_uv, yuv);
+         cv::gapi::wip::draw::drawPrimitivesOCVYUV(yuv, prims, state.ftpr);
+         // YUV -> NV12
+         cv::gapi::wip::draw::cvtYUVToNV12(yuv, out_y, out_uv);
     }
 
     static void setup(const cv::GMatDesc&   /* in_y  */,

@@ -40,11 +40,12 @@ void cv::gapi::wip::draw::cvtYUVToNV12(const cv::Mat& yuv,
     GAPI_Assert(yuv.size().width  % 2 == 0);
     GAPI_Assert(yuv.size().height % 2 == 0);
 
+    cv::Mat uv_plane;
     std::vector<cv::Mat> chs(3);
+    chs[0] = y;
     cv::split(yuv, chs);
-    y = chs[0];
-    cv::merge(std::vector<cv::Mat>{chs[1], chs[2]}, uv);
-    cv::resize(uv, uv, uv.size() / 2, cv::INTER_LINEAR);
+    cv::merge(std::vector<cv::Mat>{chs[1], chs[2]}, uv_plane);
+    cv::resize(uv_plane, uv, uv_plane.size() / 2, cv::INTER_LINEAR);
 }
 
 void cv::gapi::wip::draw::cvtNV12ToYUV(const cv::Mat& y,

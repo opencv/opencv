@@ -236,8 +236,6 @@ public:
     using InArgs  = std::tuple<Args...>;
     using OutArgs = std::tuple<R>;
 
-    //static_assert(!cv::detail::contains<GFrame, OutArgs>::value, "Values of GFrame type can't be used as operation outputs");
-
     static R on(Args... args)
     {
         cv::GCall call(GKernel{ K::id()

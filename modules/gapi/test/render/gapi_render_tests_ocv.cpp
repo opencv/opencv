@@ -14,6 +14,50 @@
 
 #include "api/render_priv.hpp"
 
+namespace
+{
+
+class TestMediaBGR final: public cv::MediaFrame::IAdapter {
+    cv::Mat m_mat;
+    using Cb = cv::MediaFrame::View::Callback;
+    Cb m_cb;
+
+public:
+    explicit TestMediaBGR(cv::Mat m, Cb cb = [](){})
+        : m_mat(m), m_cb(cb) {
+    }
+    cv::GFrameDesc meta() const override {
+        return cv::GFrameDesc{cv::MediaFormat::BGR, cv::Size(m_mat.cols, m_mat.rows)};
+    }
+    cv::MediaFrame::View access(cv::MediaFrame::Access) override {
+        cv::MediaFrame::View::Ptrs pp = { m_mat.ptr(), nullptr, nullptr, nullptr };
+        cv::MediaFrame::View::Strides ss = { m_mat.step, 0u, 0u, 0u };
+        return cv::MediaFrame::View(std::move(pp), std::move(ss), Cb{m_cb});
+    }
+};
+
+class TestMediaNV12 final: public cv::MediaFrame::IAdapter {
+    cv::Mat m_y;
+    cv::Mat m_uv;
+public:
+    TestMediaNV12(cv::Mat y, cv::Mat uv) : m_y(y), m_uv(uv) {
+    }
+    cv::GFrameDesc meta() const override {
+        return cv::GFrameDesc{cv::MediaFormat::NV12, cv::Size(m_y.cols, m_y.rows)};
+    }
+    cv::MediaFrame::View access(cv::MediaFrame::Access) override {
+        cv::MediaFrame::View::Ptrs pp = {
+            m_y.ptr(), m_uv.ptr(), nullptr, nullptr
+        };
+        cv::MediaFrame::View::Strides ss = {
+            m_y.step, m_uv.step, 0u, 0u
+        };
+        return cv::MediaFrame::View(std::move(pp), std::move(ss));
+    }
+};
+
+} // anonymous namespace
+
 namespace opencv_test
 {
 
@@ -397,6 +441,83 @@ TEST_P(RenderNV12OCVTestPolylines, AccuracyTest)
         EXPECT_EQ(0, cv::norm(uv_gapi_mat, uv_ref_mat));
     }
 }
+
+TEST(RenderMediaFrameBGR, AccuracyTest)
+{
+    cv::Size sz{640, 480};
+
+    cv::Mat gapi_mat{sz, CV_8UC3};
+    cv::randu(gapi_mat, cv::Scalar::all(0), cv::Scalar::all(255));
+    cv::MediaFrame frame  = cv::MediaFrame::Create<TestMediaBGR>(gapi_mat);
+
+    cv::Mat ocv_mat;
+    gapi_mat.copyTo(ocv_mat);
+
+    // Primitives //////////////////////////////////////////////////////////////
+    cv::Rect rect{100, 100, 200, 200};
+    cv::Scalar color{255, 100, 50};
+    int thick = 10;
+    cv::gapi::wip::draw::Prims prims;
+    prims.emplace_back(cv::gapi::wip::draw::Rect{rect, color, thick});
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GFrame in;
+    cv::GArray<cv::gapi::wip::draw::Prim> arr;
+    auto out = cv::gapi::wip::draw::renderFrame(in, arr);
+    cv::GComputation(cv::GIn(in, arr), cv::GOut(out)).apply(cv::gin(frame, prims),cv::gout(frame));
+
+    // OpenCV code //////////////////////////////////////////////////////////////
+    {
+        cv::rectangle(ocv_mat, rect, color, thick);
+    }
+
+    // Comparison //////////////////////////////////////////////////////////////
+    EXPECT_EQ(0, cvtest::norm(ocv_mat, gapi_mat, NORM_INF));
+};
+
+TEST(RenderMediaFrameNV12, AccucaryTest)
+{
+    cv::Size sz{640, 480};
+
+    cv::Mat gapi_mat_y{sz, CV_8UC1};
+    cv::randu(gapi_mat_y, cv::Scalar::all(0), cv::Scalar::all(255));
+    cv::Mat gapi_mat_uv{sz / 2, CV_8UC2};
+    cv::randu(gapi_mat_uv, cv::Scalar::all(0), cv::Scalar::all(255));
+    cv::MediaFrame frame  = cv::MediaFrame::Create<TestMediaNV12>(gapi_mat_y, gapi_mat_uv);
+
+    cv::Mat ocv_mat_y, ocv_mat_uv;
+    gapi_mat_y.copyTo(ocv_mat_y);
+    gapi_mat_uv.copyTo(ocv_mat_uv);
+
+    // Primitives //////////////////////////////////////////////////////////////
+    cv::Rect rect{100, 100, 200, 200};
+    cv::Scalar color{255, 100, 50};
+    int thick = 10;
+    cv::gapi::wip::draw::Prims prims;
+    prims.emplace_back(cv::gapi::wip::draw::Rect{rect, color, thick});
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GFrame in;
+    cv::GArray<cv::gapi::wip::draw::Prim> arr;
+    auto out = cv::gapi::wip::draw::renderFrame(in, arr);
+    cv::GComputation(cv::GIn(in, arr), cv::GOut(out)).apply(cv::gin(frame, prims),cv::gout(frame));
+
+    // OpenCV code //////////////////////////////////////////////////////////////
+    {
+        // NV12 -> YUV
+        cv::Mat yuv;
+        cv::gapi::wip::draw::cvtNV12ToYUV(ocv_mat_y, ocv_mat_uv, yuv);
+
+        cv::rectangle(yuv, rect, cvtBGRToYUVC(color), thick);
+
+        // YUV -> NV12
+        cv::gapi::wip::draw::cvtYUVToNV12(yuv, ocv_mat_y, ocv_mat_uv);
+    }
+
+    // Comparison //////////////////////////////////////////////////////////////
+    EXPECT_EQ(0, cvtest::norm(ocv_mat_y,  gapi_mat_y,  NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(ocv_mat_uv, gapi_mat_uv, NORM_INF));
+};
 
 // FIXME avoid code duplicate for NV12 and BGR cases
 INSTANTIATE_TEST_CASE_P(RenderBGROCVTestRectsImpl, RenderBGROCVTestRects,
