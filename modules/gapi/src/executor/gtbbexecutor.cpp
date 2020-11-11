@@ -39,8 +39,8 @@ namespace detail {
 namespace tasking {
 
 enum class use_tbb_scheduler_bypass {
-   yes,
-   no
+   no,
+   yes
 };
 
 inline void assert_graph_is_running(tbb::task* root)
@@ -137,8 +137,8 @@ struct async_tasks_t {
 };
 
 enum class wake_tbb_master {
-   yes,
-   no
+   no,
+   yes
 };
 
 void inline wake_master(async_tasks_t& async_tasks, wake_tbb_master wake_master)
@@ -200,8 +200,8 @@ master_thread_sleep_lock_t inline lock_sleep_master(async_tasks_t& async_tasks){
 }
 
 enum class is_tbb_work_present {
-   yes,
-   no
+   no,
+   yes
 };
 
 //RAII object to block TBB master thread (one that does wait_for_all())
@@ -234,8 +234,8 @@ root_wait_lock_t inline lock_wait_master(tasking::root_t& root, is_tbb_work_pres
 
 inline tile_node*  pop(prio_items_queue_t& q){
     tile_node* node = nullptr;
-    bool poped = q.try_pop(node);
-    ASSERT(poped && "queue should be non empty as we push items to it before we spawn");
+    bool popped = q.try_pop(node);
+    ASSERT(popped && "queue should be non empty as we push items to it before we spawn");
     return node;
 }
 
@@ -245,7 +245,7 @@ namespace graph {
     {
         GAPI_ITT_AUTO_TRACE_GUARD(ittTbbAddReadyBlocksToQueue);
         std::size_t ready_items = 0;
-        // then enable task dependees
+        // enable dependent tasks
         for (auto* dependant : node->dependants)
         {
             // fetch_and_sub returns previous value
@@ -297,7 +297,7 @@ namespace graph {
     // Each instance basically does the three things :
     // 1. Gets the tile_node item from the top of the queue
     // 2. Executes its body
-    // 3. Push dependent tile_nodes to the queue once they are ready
+    // 3. Pushes dependent tile_nodes to the queue once they are ready
     //
     struct task_body {
         exec_ctx& ctx;
@@ -422,7 +422,8 @@ void cv::gimpl::parallel::execute(prio_items_queue_t& q, tbb::task_arena& arena)
             // assert_graph_is_running(root) will not hold, so spawn without assert
             tasking::batch_spawn(num_start_tasks, ctx.root.get(), graph::task_body{ctx}, /* assert_graph_is_running*/false);
 
-            std::chrono::high_resolution_clock timer;
+            using namespace std::chrono;
+            high_resolution_clock timer;
 
             auto tbb_work_done   = [&ctx](){ return 1 == ctx.root->ref_count(); };
             auto async_work_done = [&ctx](){ return 0 == ctx.async_tasks.count; };
@@ -437,7 +438,6 @@ void cv::gimpl::parallel::execute(prio_items_queue_t& q, tbb::task_arena& arena)
                    // then wait (probably by sleeping) until all async tasks are completed or new TBB tasks are created.
                    ctx.async_tasks.cv.wait(lk, [&]{return async_work_done() || !tbb_work_done() ;});
 
-                   using namespace std::chrono;
                    LOG_INFO(NULL, "Slept for " << duration_cast<milliseconds>(timer.now() - start).count() << " ms \n");
                }
             }

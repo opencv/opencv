@@ -58,6 +58,4 @@ namespace gimpl { namespace parallel {
 }} //gimpl::parallel
 }  //namespace cv
 
-
-
 #endif /* OPENCV_GAPI_GAPI_ITT_HPP */
