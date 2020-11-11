@@ -1122,7 +1122,7 @@ bool QRDecode::computeClosestPoints(const vector<Point> &result_integer_hull)
 {
     CV_TRACE_FUNCTION();
     double min_norm, max_norm = 0.0;
-    size_t idx_min;
+    size_t idx_min = (size_t)-1;
     for (size_t i = 0; i < original_points.size(); i++)
     {
         min_norm = std::numeric_limits<double>::max();
@@ -1144,6 +1144,7 @@ bool QRDecode::computeClosestPoints(const vector<Point> &result_integer_hull)
             max_norm = min_norm;
             unstable_pair = std::pair<size_t,Point>(i, closest_pnt);
         }
+        CV_Assert(idx_min != (size_t)-1);
         closest_points.push_back(std::pair<size_t,Point>(idx_min, closest_pnt));
     }
 
