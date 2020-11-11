@@ -11,6 +11,11 @@ from build_framework import Builder
 
 MACOSX_DEPLOYMENT_TARGET='10.12'  # default, can be changed via command line options or environment variable
 
+def printError(text):
+    print("="*60, file=sys.stderr)
+    print("ERROR: %s" % text, file=sys.stderr)
+    print("="*60, file=sys.stderr)
+
 class OSXBuilder(Builder):
 
     def getObjcTarget(self):
@@ -46,8 +51,9 @@ if __name__ == "__main__":
     parser.add_argument('--disable', metavar='FEATURE', default=[], action='append', help='OpenCV features to disable (add WITH_*=OFF)')
     parser.add_argument('--enable_nonfree', default=False, dest='enablenonfree', action='store_true', help='enable non-free modules (disabled by default)')
     parser.add_argument('--macosx_deployment_target', default=os.environ.get('MACOSX_DEPLOYMENT_TARGET', MACOSX_DEPLOYMENT_TARGET), help='specify MACOSX_DEPLOYMENT_TARGET')
-    parser.add_argument('--archs', default='x86_64', help='Select target ARCHS (set to "x86_64,arm64" to build Universal Binary for Big Sur and later)')
-    parser.add_argument('--catalyst_archs', default='x86_64', help='Select target ARCHS (set to "x86_64,arm64" to build Universal Binary for Big Sur and later)')
+    parser.add_argument('--build-only-specified-archs', default=False, dest='build_only_specified_archs', action='store_true', help='if enabled, only directly specified archs are built and defaults are ignored')
+    parser.add_argument('--archs', default=None, help='Select target ARCHS (set to "x86_64,arm64" to build Universal Binary for Big Sur and later). Default is "x86_64')
+    parser.add_argument('--catalyst_archs', default=None, help='Select target ARCHS (set to "x86_64,arm64" to build Universal Binary for Big Sur and later). Default is "x86_64"')
     parser.add_argument('--debug', action='store_true', help='Build "Debug" binaries (CMAKE_BUILD_TYPE=Debug)')
     parser.add_argument('--debug_info', action='store_true', help='Build with debug information (useful for Release mode: BUILD_WITH_DEBUG_INFO=ON)')
     parser.add_argument('--framework_name', default='opencv2', dest='framework_name', action='store_true', help='Name of OpenCV framework (default: opencv2, will change to OpenCV in future version)')
@@ -59,20 +65,40 @@ if __name__ == "__main__":
 
     os.environ['MACOSX_DEPLOYMENT_TARGET'] = args.macosx_deployment_target
     print('Using MACOSX_DEPLOYMENT_TARGET=' + os.environ['MACOSX_DEPLOYMENT_TARGET'])
-    archs = args.archs.split(',')
+
+    if args.archs:
+        archs = args.archs.split(',')
+    else:
+        if args.build_only_specified_archs:
+            archs = None
+        else:
+            # Supply defaults
+            archs = ["x86_64"]
     print('Using ARCHS=' + str(archs))
-    catalyst_archs = args.catalyst_archs.split(',')
-    print('Using Catalyst ARCHS=' + str(archs))
+
+    if args.catalyst_archs:
+        catalyst_archs = args.catalyst_archs.split(',')
+    else:
+        if args.build_only_specified_archs:
+            catalyst_archs = None
+        else:
+            # Supply defaults
+            catalyst_archs = ["x86_64"]
+    print('Using Catalyst ARCHS=' + str(catalyst_archs))
 
     if args.legacy_build:
         args.framework_name = "opencv2"
         if not "objc" in args.without:
             args.without.append("objc")
 
-    targets = [
-        # (archs, "MacOSX"),
-        (catalyst_archs, "Catalyst"),
-    ]
+    targets = []
+    if not archs and not catalyst_archs:
+        printError("--iphoneos_archs and --iphonesimulator_archs are undefined; nothing will be built.")
+        sys.exit(1)
+    if archs:
+        targets.append((archs, "MacOSX"))
+    if catalyst_archs:
+        targets.append((catalyst_archs, "Catalyst")),
 
     b = OSXBuilder(args.opencv, args.contrib, False, False, args.without, args.disable, args.enablenonfree, targets, args.debug, args.debug_info, args.framework_name, args.run_tests, args.build_docs)
     b.build(args.out)

@@ -38,6 +38,11 @@ from distutils.dir_util import copy_tree
 
 IPHONEOS_DEPLOYMENT_TARGET='9.0'  # default, can be changed via command line options or environment variable
 
+def printError(text):
+    print("="*60, file=sys.stderr)
+    print("ERROR: %s" % text, file=sys.stderr)
+    print("="*60, file=sys.stderr)
+
 def execute(cmd, cwd = None):
     print("Executing: %s in %s" % (cmd, cwd), file=sys.stderr)
     print('Executing: ' + ' '.join(cmd))
@@ -170,9 +175,7 @@ class Builder:
         try:
             self._build(outdir)
         except Exception as e:
-            print("="*60, file=sys.stderr)
-            print("ERROR: %s" % e, file=sys.stderr)
-            print("="*60, file=sys.stderr)
+            printError(e)
             traceback.print_exc(file=sys.stderr)
             sys.exit(1)
 
@@ -491,9 +494,9 @@ if __name__ == "__main__":
     parser.add_argument('--dynamic', default=False, action='store_true', help='build dynamic framework (default is "False" - builds static framework)')
     parser.add_argument('--disable-bitcode', default=False, dest='bitcodedisabled', action='store_true', help='disable bitcode (enabled by default)')
     parser.add_argument('--iphoneos_deployment_target', default=os.environ.get('IPHONEOS_DEPLOYMENT_TARGET', IPHONEOS_DEPLOYMENT_TARGET), help='specify IPHONEOS_DEPLOYMENT_TARGET')
-    parser.add_argument('--iphoneos_archs', default='armv7,armv7s,arm64', help='select iPhoneOS target ARCHS')
-    parser.add_argument('--iphonesimulator_archs', default='i386,x86_64', help='select iPhoneSimulator target ARCHS')
-    parser.add_argument('--catalyst_archs', default='x86_64,arm64', help='select Catalyst target ARCHS')
+    parser.add_argument('--build-only-specified-archs', default=False, dest='build_only_specified_archs', action='store_true', help='if enabled, only directly specified archs are built and defaults are ignored')
+    parser.add_argument('--iphoneos_archs', default=None, help='select iPhoneOS target ARCHS. Default is "armv7,armv7s,arm64"')
+    parser.add_argument('--iphonesimulator_archs', default=None, help='select iPhoneSimulator target ARCHS. Default is "i386,x86_64"')
     parser.add_argument('--enable_nonfree', default=False, dest='enablenonfree', action='store_true', help='enable non-free modules (disabled by default)')
     parser.add_argument('--debug', default=False, dest='debug', action='store_true', help='Build "Debug" binaries (disabled by default)')
     parser.add_argument('--debug_info', default=False, dest='debug_info', action='store_true', help='Build with debug information (useful for Release mode: BUILD_WITH_DEBUG_INFO=ON)')
@@ -506,12 +509,27 @@ if __name__ == "__main__":
 
     os.environ['IPHONEOS_DEPLOYMENT_TARGET'] = args.iphoneos_deployment_target
     print('Using IPHONEOS_DEPLOYMENT_TARGET=' + os.environ['IPHONEOS_DEPLOYMENT_TARGET'])
-    iphoneos_archs = args.iphoneos_archs.split(',')
+
+    if args.iphoneos_archs:
+        iphoneos_archs = args.iphoneos_archs.split(',')
+    else:
+        if args.build_only_specified_archs:
+            iphoneos_archs = None
+        else:
+            # Supply defaults
+            iphoneos_archs = ["armv7", "armv7s", "arm64"]
     print('Using iPhoneOS ARCHS=' + str(iphoneos_archs))
-    iphonesimulator_archs = args.iphonesimulator_archs.split(',')
+
+    if args.iphonesimulator_archs == None:
+        if args.build_only_specified_archs:
+            iphonesimulator_archs = None
+        else:
+            # Supply defaults
+            iphonesimulator_archs = ["i386", "x86_64"]
+    else:
+        iphonesimulator_archs = args.iphonesimulator_archs.split(',')
     print('Using iPhoneSimulator ARCHS=' + str(iphonesimulator_archs))
-    catalyst_archs = args.catalyst_archs.split(',')
-    print('Using Catalyst ARCHS=' + str(catalyst_archs))
+
     if args.legacy_build:
         args.framework_name = "opencv2"
         if not "objc" in args.without:
@@ -519,11 +537,18 @@ if __name__ == "__main__":
 
     targets = []
     if os.environ.get('BUILD_PRECOMMIT', None):
+        if not iphoneos_archs:
+            printError("--iphoneos_archs must have at least one value")
+            sys.exit(1)
         targets.append((iphoneos_archs, "iPhoneOS"))
     else:
-        # targets.append((iphoneos_archs, "iPhoneOS"))
-        # targets.append((iphonesimulator_archs, "iPhoneSimulator"))
-        targets.append((catalyst_archs, "Catalyst"))
+        if not iphoneos_archs and not iphonesimulator_archs:
+            printError("--iphoneos_archs and --iphonesimulator_archs are undefined; nothing will be built.")
+            sys.exit(1)
+        if iphoneos_archs:
+            targets.append((iphoneos_archs, "iPhoneOS"))
+        if iphonesimulator_archs:
+            targets.append((iphonesimulator_archs, "iPhoneSimulator"))
 
     b = iOSBuilder(args.opencv, args.contrib, args.dynamic, args.bitcodedisabled, args.without, args.disable, args.enablenonfree, targets, args.debug, args.debug_info, args.framework_name, args.run_tests, args.build_docs)
 
