@@ -508,6 +508,9 @@ OCV_OPTION(OPENCV_ENABLE_MEMALIGN     "Enable posix_memalign or memalign usage" 
 OCV_OPTION(ENABLE_PYLINT              "Add target with Pylint checks"                            (BUILD_DOCS OR BUILD_EXAMPLES) IF (NOT CMAKE_CROSSCOMPILING AND NOT APPLE_FRAMEWORK) )
 OCV_OPTION(ENABLE_FLAKE8              "Add target with Python flake8 checker"                    (BUILD_DOCS OR BUILD_EXAMPLES) IF (NOT CMAKE_CROSSCOMPILING AND NOT APPLE_FRAMEWORK) )
 
+OCV_OPTION(WITH_UNIFONT               "Build 'uni' font (WQY MicroHei) into OpenCV"              (NOT BUILD_opencv_js)
+           VERIFY HAVE_UNIFONT)
+
 if(ENABLE_IMPL_COLLECTION)
   add_definitions(-DCV_COLLECT_IMPL_DATA)
 endif()
@@ -1236,6 +1239,10 @@ endif()
 
 if(WITH_VTK OR HAVE_VTK)
   status("    VTK support:" HAVE_VTK THEN "YES (ver ${VTK_VERSION})" ELSE NO)
+endif()
+
+if(WITH_UNIFONT OR HAVE_UNIFONT)
+  status("    Built-in Unicode font:" HAVE_UNIFONT THEN "YES" ELSE "NO")
 endif()
 
 # ========================== MEDIA IO ==========================

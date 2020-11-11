@@ -1,4 +1,7 @@
 {
+    "class_ignore_list": [
+        "FontFace"
+    ],
     "enum_ignore_list" : [
         "MorphShapes_c",
         "SmoothMethod_c"
@@ -124,6 +127,13 @@
         },
         "Subdiv2D" : {
             "(void)insert:(NSArray<Point2f*>*)ptvec" : { "insert" : {"name" : "insertVector"} }
+        }
+    },
+    "type_dict": {
+        "FontFace": {
+            "objc_type": "FontFace*",
+            "to_cpp": "%(n)s.nativeRef",
+            "from_cpp": "[FontFace fromNative:%(n)s]"
         }
     }
 }

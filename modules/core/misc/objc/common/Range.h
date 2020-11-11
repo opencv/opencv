@@ -21,6 +21,10 @@ NS_ASSUME_NONNULL_BEGIN
 */
 CV_EXPORTS @interface Range : NSObject
 
+#ifdef __cplusplus
+@property(readonly) cv::Range& nativeRef;
+#endif
+
 #pragma mark - Properties
 
 @property int start;
@@ -89,6 +93,10 @@ CV_EXPORTS @interface Range : NSObject
 * Returns a string that describes the contents of the object
 */
 - (NSString*)description;
+
+#ifdef __cplusplus
++ (instancetype)fromNative:(cv::Range&)range;
+#endif
 
 @end
 

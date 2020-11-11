@@ -164,4 +164,7 @@
 /* Library QR-code decoding */
 #cmakedefine HAVE_QUIRC
 
+/* The font "uni" (WQY MicroHei) is available */
+#cmakedefine HAVE_UNIFONT
+
 #endif // OPENCV_CVCONFIG_H_INCLUDED

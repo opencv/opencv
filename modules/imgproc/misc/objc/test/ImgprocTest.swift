@@ -1490,13 +1490,14 @@ class ImgprocTest: OpenCVTestCase {
         let fontScale:Int32 = 2
         let thickness:Int32 = 3
         var baseLine:Int32 = 0
+        let EPS = 0.0
 
         Imgproc.getTextSize(text: text, fontFace: .FONT_HERSHEY_SCRIPT_SIMPLEX, fontScale: Double(fontScale), thickness: thickness, baseLine: &baseLine)
         let res = Imgproc.getTextSize(text: text, fontFace: .FONT_HERSHEY_SCRIPT_SIMPLEX, fontScale: Double(fontScale), thickness: thickness, baseLine: &baseLine)
 
-        XCTAssertEqual(431, res.width)
-        XCTAssertEqual(44, res.height)
-        XCTAssertEqual(20, baseLine)
+        XCTAssertEqual(454, res.width, accuracy:EPS)
+        XCTAssertEqual(51, res.height, accuracy:EPS)
+        XCTAssertEqual(10, baseLine, accuracy:2.0)
     }
 
     func testCircleMatPointIntScalar() {
@@ -1700,7 +1701,7 @@ class ImgprocTest: OpenCVTestCase {
 
     func testPutTextMatStringPointIntDoubleScalar() {
         let text = "Hello World"
-        let labelSize = Size(width: 175, height: 22)
+        let labelSize = Size(width: 170, height: 23)
         let img = Mat(rows: 20 + labelSize.height, cols: 20 + labelSize.width, type: CvType.CV_8U, scalar: colorBlack)
         let origin = Point(x: 10, y: labelSize.height + 10)
 
@@ -1708,13 +1709,13 @@ class ImgprocTest: OpenCVTestCase {
 
         XCTAssert(Core.countNonZero(src: img) > 0)
         // check that border is not corrupted
-        Imgproc.rectangle(img: img, pt1: Point(x: 11, y: 11), pt2: Point(x: labelSize.width + 10, y: labelSize.height + 10), color: colorBlack, thickness: Core.FILLED)
+        Imgproc.rectangle(img: img, pt1: Point(x: 10, y: 10), pt2: Point(x: labelSize.width + 10, y: labelSize.height + 10), color: colorBlack, thickness: Core.FILLED)
         XCTAssertEqual(0, Core.countNonZero(src: img))
     }
 
     func testPutTextMatStringPointIntDoubleScalarInt() {
         let text = "Hello World"
-        let labelSize = Size(width: 176, height: 22)
+        let labelSize = Size(width: 170, height: 23)
         let img = Mat(rows: 20 + labelSize.height, cols: 20 + labelSize.width, type: CvType.CV_8U, scalar: colorBlack)
         let origin = Point(x: 10, y: labelSize.height + 10)
 
@@ -1728,7 +1729,7 @@ class ImgprocTest: OpenCVTestCase {
 
     func testPutTextMatStringPointIntDoubleScalarIntIntBoolean() {
         let text = "Hello World"
-        let labelSize = Size(width: 175, height: 22)
+        let labelSize = Size(width: 170, height: 23)
 
         let img = Mat(rows: 20 + labelSize.height, cols: 20 + labelSize.width, type: CvType.CV_8U, scalar: colorBlack)
         let origin = Point(x: 10, y: 10)
