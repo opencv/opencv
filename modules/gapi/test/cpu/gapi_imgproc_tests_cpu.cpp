@@ -130,6 +130,30 @@ INSTANTIATE_TEST_CASE_P(Dilate3x3TestCPU, Dilate3x3Test,
                                 Values(AbsExact().to_compare_obj()),
                                 Values(1,2,4)));
 
+INSTANTIATE_TEST_CASE_P(MorphologyExTestCPU, MorphologyExTest,
+                        Combine(Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480)),
+                                Values(-1),
+                                Values(IMGPROC_CPU),
+                                Values(AbsExact().to_compare_obj()),
+                                Values(cv::MorphTypes::MORPH_ERODE,
+                                       cv::MorphTypes::MORPH_DILATE,
+                                       cv::MorphTypes::MORPH_OPEN,
+                                       cv::MorphTypes::MORPH_CLOSE,
+                                       cv::MorphTypes::MORPH_GRADIENT,
+                                       cv::MorphTypes::MORPH_TOPHAT,
+                                       cv::MorphTypes::MORPH_BLACKHAT)));
+
+INSTANTIATE_TEST_CASE_P(MorphologyExHitMissTestCPU, MorphologyExTest,
+                        Combine(Values(CV_8UC1),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480)),
+                                Values(-1),
+                                Values(IMGPROC_CPU),
+                                Values(AbsExact().to_compare_obj()),
+                                Values(cv::MorphTypes::MORPH_HITMISS)));
+
 INSTANTIATE_TEST_CASE_P(SobelTestCPU, SobelTest,
                         Combine(Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1),
                                 Values(cv::Size(1280, 720),

@@ -69,6 +69,11 @@ bool cv::GStreamingCompiled::Priv::pull(cv::GRunArgsP &&outs)
     return m_exec->pull(std::move(outs));
 }
 
+bool cv::GStreamingCompiled::Priv::pull(cv::GOptRunArgsP &&outs)
+{
+    return m_exec->pull(std::move(outs));
+}
+
 bool cv::GStreamingCompiled::Priv::try_pull(cv::GRunArgsP &&outs)
 {
     return m_exec->try_pull(std::move(outs));
@@ -113,6 +118,7 @@ bool cv::GStreamingCompiled::pull(cv::GRunArgsP &&outs)
 
 std::tuple<bool, cv::GRunArgs> cv::GStreamingCompiled::pull()
 {
+    // FIXME: Why it is not @ priv??
     GRunArgs run_args;
     GRunArgsP outs;
     const auto& out_shapes = m_priv->outShapes();
@@ -142,6 +148,11 @@ std::tuple<bool, cv::GRunArgs> cv::GStreamingCompiled::pull()
 
     bool is_over = m_priv->pull(std::move(outs));
     return std::make_tuple(is_over, run_args);
+}
+
+bool cv::GStreamingCompiled::pull(cv::GOptRunArgsP &&outs)
+{
+    return m_priv->pull(std::move(outs));
 }
 
 bool cv::GStreamingCompiled::try_pull(cv::GRunArgsP &&outs)

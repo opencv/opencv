@@ -32,8 +32,7 @@ In this tutorial you will learn how to:
 -#  Create and update the background model by using @ref cv::BackgroundSubtractor class;
 -#  Get and show the foreground mask by using @ref cv::imshow ;
 
-Code
-----
+### Code
 
 In the following you can find the source code. We will let the user choose to process either a video
 file or a sequence of images.

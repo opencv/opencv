@@ -1,34 +1,89 @@
 #include "../test_precomp.hpp"
 
 #include "backends/common/serialization.hpp"
+#include <opencv2/gapi/rmat.hpp>
 
 namespace {
-    struct MyCustomType {
-        int val;
-        std::string name;
-        std::vector<float> vec;
-        std::map<int, uint64_t> mmap;
-        bool operator==(const MyCustomType& other) const {
-            return val == other.val && name == other.name &&
-                   vec == other.vec && mmap == other.mmap;
-        }
-    };
-}
+struct EmptyCustomType { };
+
+struct SimpleCustomType {
+    bool val;
+    bool operator==(const SimpleCustomType& other) const {
+        return val == other.val;
+    }
+};
+
+struct SimpleCustomType2 {
+    int id;
+    bool operator==(const SimpleCustomType2& other) const {
+        return id == other.id;
+    }
+};
+
+struct MyCustomType {
+    int val;
+    std::string name;
+    std::vector<float> vec;
+    std::map<int, uint64_t> mmap;
+    bool operator==(const MyCustomType& other) const {
+        return val == other.val && name == other.name &&
+                vec == other.vec && mmap == other.mmap;
+    }
+};
+
+struct MyCustomTypeNoS11N {
+    char sym;
+    int id;
+    std::string name;
+
+    bool operator==(const MyCustomTypeNoS11N& other) const {
+        return sym == other.sym && id == other.id &&
+                name == other.name;
+    }
+};
+} // anonymous namespace
 
 namespace cv {
 namespace gapi {
 namespace s11n {
 namespace detail {
-    template<> struct S11N<MyCustomType> {
-        static void serialize(IOStream &os, const MyCustomType &p) {
-            os << p.val << p.name << p.vec << p.mmap;
-        }
-        static MyCustomType deserialize(IIStream &is) {
-            MyCustomType p;
-            is >> p.val >> p.name >> p.vec >> p.mmap;
-            return p;
-        }
-    };
+template<> struct S11N<EmptyCustomType> {
+    static void serialize(IOStream &, const EmptyCustomType &) { }
+    static EmptyCustomType deserialize(IIStream &) { return EmptyCustomType { }; }
+};
+
+template<> struct S11N<SimpleCustomType> {
+    static void serialize(IOStream &os, const SimpleCustomType &p) {
+        os << p.val;
+    }
+    static SimpleCustomType deserialize(IIStream &is) {
+        SimpleCustomType p;
+        is >> p.val;
+        return p;
+    }
+};
+
+template<> struct S11N<SimpleCustomType2> {
+    static void serialize(IOStream &os, const SimpleCustomType2 &p) {
+        os << p.id;
+    }
+    static SimpleCustomType2 deserialize(IIStream &is) {
+        SimpleCustomType2 p;
+        is >> p.id;
+        return p;
+    }
+};
+
+template<> struct S11N<MyCustomType> {
+    static void serialize(IOStream &os, const MyCustomType &p) {
+        os << p.val << p.name << p.vec << p.mmap;
+    }
+    static MyCustomType deserialize(IIStream &is) {
+        MyCustomType p;
+        is >> p.val >> p.name >> p.vec >> p.mmap;
+        return p;
+    }
+};
 } // namespace detail
 } // namespace s11n
 } // namespace gapi
@@ -37,13 +92,66 @@ namespace detail {
 
 namespace cv {
 namespace detail {
+template<> struct CompileArgTag<EmptyCustomType> {
+    static const char* tag() {
+        return "org.opencv.test.empty_custom_type";
+    }
+};
+
+template<> struct CompileArgTag<SimpleCustomType> {
+    static const char* tag() {
+        return "org.opencv.test.simple_custom_type";
+    }
+};
+
+template<> struct CompileArgTag<SimpleCustomType2> {
+    static const char* tag() {
+        return "org.opencv.test.simple_custom_type_2";
+    }
+};
+
 template<> struct CompileArgTag<MyCustomType> {
     static const char* tag() {
-        return "org.opencv.test.mycustomtype";
+        return "org.opencv.test.my_custom_type";
+    }
+};
+
+template<> struct CompileArgTag<MyCustomTypeNoS11N> {
+    static const char* tag() {
+        return "org.opencv.test.my_custom_type_no_s11n";
     }
 };
 } // namespace detail
 } // namespace cv
+
+namespace {
+class MyRMatAdapter : public cv::RMat::Adapter {
+    cv::Mat m_mat;
+    int m_value;
+    std::string m_str;
+public:
+    MyRMatAdapter() = default;
+    MyRMatAdapter(cv::Mat m, int value, const std::string& str)
+        : m_mat(m), m_value(value), m_str(str)
+    {}
+    virtual cv::RMat::View access(cv::RMat::Access access) override {
+        if (access == cv::RMat::Access::W) {
+            return cv::RMat::View(cv::descr_of(m_mat), m_mat.data, m_mat.step);
+        } else {
+            return cv::RMat::View(cv::descr_of(m_mat), m_mat.data, m_mat.step);
+        }
+    }
+    virtual cv::GMatDesc desc() const override { return cv::descr_of(m_mat); }
+    virtual void serialize(cv::gapi::s11n::IOStream& os) override {
+        os << m_value << m_str;
+    }
+    virtual void deserialize(cv::gapi::s11n::IIStream& is) override {
+        is >> m_value >> m_str;
+    }
+    int getVal() { return m_value; }
+    std::string getStr() { return m_str; }
+};
+}
 
 namespace opencv_test {
 
@@ -460,6 +568,39 @@ TEST_F(S11N_Basic, Test_Bind_RunArgs_MatScalar) {
     }
 }
 
+TEST_F(S11N_Basic, Test_RunArg_RMat) {
+    cv::Mat mat = cv::Mat::eye(cv::Size(128, 64), CV_8UC3);
+    cv::RMat rmat = cv::make_rmat<MyRMatAdapter>(mat, 42, "It actually works");
+    auto v = cv::GRunArgs{ cv::GRunArg{ rmat } };
+
+    const std::vector<char> sargsin = cv::gapi::serialize(v);
+    cv::GRunArgs out = cv::gapi::deserialize<cv::GRunArgs, MyRMatAdapter>(sargsin);
+    cv::RMat out_mat = cv::util::get<cv::RMat>(out[0]);
+    auto adapter = out_mat.get<MyRMatAdapter>();
+    EXPECT_EQ(42, adapter->getVal());
+    EXPECT_EQ("It actually works", adapter->getStr());
+}
+
+TEST_F(S11N_Basic, Test_RunArg_RMat_Scalar_Mat) {
+    cv::Mat mat = cv::Mat::eye(cv::Size(128, 64), CV_8UC3);
+    cv::RMat rmat = cv::make_rmat<MyRMatAdapter>(mat, 42, "It actually works");
+    cv::Scalar sc(111);
+    auto v = cv::GRunArgs{ cv::GRunArg{ rmat }, cv::GRunArg{ sc }, cv::GRunArg{ mat } };
+
+    const std::vector<char> sargsin = cv::gapi::serialize(v);
+    cv::GRunArgs out = cv::gapi::deserialize<cv::GRunArgs, MyRMatAdapter>(sargsin);
+    cv::RMat out_rmat = cv::util::get<cv::RMat>(out[0]);
+    auto adapter = out_rmat.get<MyRMatAdapter>();
+    EXPECT_EQ(42, adapter->getVal());
+    EXPECT_EQ("It actually works", adapter->getStr());
+
+    cv::Scalar out_sc = cv::util::get<cv::Scalar>(out[1]);
+    EXPECT_EQ(sc, out_sc);
+
+    cv::Mat out_mat = cv::util::get<cv::Mat>(out[2]);
+    EXPECT_EQ(0, cv::norm(mat, out_mat));
+}
+
 namespace {
     template <cv::detail::OpaqueKind K, typename T>
     bool verifyOpaqueKind(T&& in) {
@@ -523,7 +664,7 @@ TEST_F(S11N_Basic, Test_Custom_Type) {
     EXPECT_EQ(var, new_var);
 }
 
-TEST_F(S11N_Basic, Test_Custom_CompileArg) {
+TEST_F(S11N_Basic, Test_CompileArg) {
     MyCustomType customVar{1248, "World", {1280, 720, 640, 480}, {{5, 32434142342}, {7, 34242432}}};
 
     std::vector<char> sArgs = cv::gapi::serialize(cv::compile_args(customVar));
@@ -533,4 +674,151 @@ TEST_F(S11N_Basic, Test_Custom_CompileArg) {
     MyCustomType dCustomVar = cv::gapi::getCompileArg<MyCustomType>(dArgs).value();
     EXPECT_EQ(customVar, dCustomVar);
 }
+
+TEST_F(S11N_Basic, Test_CompileArg_Without_UserCallback) {
+    SimpleCustomType   customVar1 { false };
+    MyCustomTypeNoS11N customVar2 { 'z', 189, "Name" };
+    MyCustomType       customVar3 { 1248, "World", {1280, 720, 640, 480},
+                                    {{5, 32434142342}, {7, 34242432}} };
+
+    EXPECT_NO_THROW(cv::gapi::serialize(cv::compile_args(customVar1, customVar2, customVar3)));
+
+    std::vector<char> sArgs = cv::gapi::serialize(
+        cv::compile_args(customVar1, customVar2, customVar3));
+
+    GCompileArgs dArgs = cv::gapi::deserialize<GCompileArgs,
+                                               SimpleCustomType,
+                                               MyCustomType>(sArgs);
+
+    SimpleCustomType dCustomVar1 = cv::gapi::getCompileArg<SimpleCustomType>(dArgs).value();
+    MyCustomType     dCustomVar3 = cv::gapi::getCompileArg<MyCustomType>(dArgs).value();
+
+    EXPECT_EQ(customVar1, dCustomVar1);
+    EXPECT_EQ(customVar3, dCustomVar3);
+}
+
+TEST_F(S11N_Basic, Test_Deserialize_Only_Requested_CompileArgs) {
+    MyCustomType     myCustomVar { 1248, "World", {1280, 720, 640, 480},
+                                   {{5, 32434142342}, {7, 34242432}} };
+    SimpleCustomType simpleCustomVar { false };
+
+    std::vector<char> sArgs = cv::gapi::serialize(cv::compile_args(myCustomVar, simpleCustomVar));
+
+    GCompileArgs dArgs = cv::gapi::deserialize<GCompileArgs, MyCustomType>(sArgs);
+    EXPECT_EQ(1u, dArgs.size());
+    EXPECT_EQ(myCustomVar, cv::gapi::getCompileArg<MyCustomType>(dArgs).value());
+
+    dArgs.clear();
+    dArgs = cv::gapi::deserialize<GCompileArgs, SimpleCustomType>(sArgs);
+    EXPECT_EQ(1u, dArgs.size());
+    EXPECT_EQ(simpleCustomVar, cv::gapi::getCompileArg<SimpleCustomType>(dArgs).value());
+
+    dArgs.clear();
+    dArgs = cv::gapi::deserialize<GCompileArgs, SimpleCustomType2>(sArgs);
+    EXPECT_EQ(0u, dArgs.size());
+
+    dArgs.clear();
+    dArgs = cv::gapi::deserialize<GCompileArgs, MyCustomType, SimpleCustomType>(sArgs);
+    EXPECT_EQ(2u, dArgs.size());
+    EXPECT_EQ(myCustomVar, cv::gapi::getCompileArg<MyCustomType>(dArgs).value());
+    EXPECT_EQ(simpleCustomVar, cv::gapi::getCompileArg<SimpleCustomType>(dArgs).value());
+
+    SimpleCustomType2 simpleCustomVar2 { 5 };
+    std::vector<char> sArgs2 = cv::gapi::serialize(
+        cv::compile_args(myCustomVar, simpleCustomVar, simpleCustomVar2));
+    GCompileArgs dArgs2 = cv::gapi::deserialize<GCompileArgs,
+                                                MyCustomType,
+                                                SimpleCustomType2>(sArgs2);
+    EXPECT_EQ(2u, dArgs2.size());
+    EXPECT_EQ(myCustomVar, cv::gapi::getCompileArg<MyCustomType>(dArgs2).value());
+    EXPECT_EQ(simpleCustomVar2, cv::gapi::getCompileArg<SimpleCustomType2>(dArgs2).value());
+}
+
+TEST_F(S11N_Basic, Test_Deserialize_CompileArgs_RandomOrder) {
+    SimpleCustomType  simpleCustomVar { false };
+    SimpleCustomType2 simpleCustomVar2 { 5 };
+
+    std::vector<char> sArgs = cv::gapi::serialize(
+        cv::compile_args(simpleCustomVar, simpleCustomVar2));
+    GCompileArgs dArgs = cv::gapi::deserialize<GCompileArgs,
+                                               // Here, types of passed to serialize() arguments
+                                               // are enumerated in reverse order
+                                               SimpleCustomType2,
+                                               SimpleCustomType>(sArgs);
+
+    EXPECT_EQ(simpleCustomVar, cv::gapi::getCompileArg<SimpleCustomType>(dArgs).value());
+    EXPECT_EQ(simpleCustomVar2, cv::gapi::getCompileArg<SimpleCustomType2>(dArgs).value());
+}
+
+TEST_F(S11N_Basic, Test_CompileArgs_With_EmptyCompileArg) {
+    MyCustomType      myCustomVar { 1248, "World", {1280, 720, 640, 480},
+                                    {{5, 32434142342}, {7, 34242432}} };
+    SimpleCustomType  simpleCustomVar { false };
+    EmptyCustomType   emptyCustomVar {  };
+
+    //----{ emptyCustomVar, myCustomVar }----
+    std::vector<char> sArgs1 = cv::gapi::serialize(cv::compile_args(emptyCustomVar, myCustomVar));
+    GCompileArgs dArgsEmptyVar1 = cv::gapi::deserialize<GCompileArgs, EmptyCustomType>(sArgs1);
+    GCompileArgs dArgsMyVar1 = cv::gapi::deserialize<GCompileArgs, MyCustomType>(sArgs1);
+    GCompileArgs dArgsEmptyAndMyVars1 = cv::gapi::deserialize<GCompileArgs,
+                                                              EmptyCustomType,
+                                                              MyCustomType>(sArgs1);
+    EXPECT_EQ(1u, dArgsEmptyVar1.size());
+    EXPECT_TRUE(cv::gapi::getCompileArg<EmptyCustomType>(dArgsEmptyVar1).has_value());
+    EXPECT_EQ(1u, dArgsMyVar1.size());
+    EXPECT_EQ(myCustomVar, cv::gapi::getCompileArg<MyCustomType>(dArgsMyVar1).value());
+    EXPECT_EQ(2u, dArgsEmptyAndMyVars1.size());
+    EXPECT_TRUE(cv::gapi::getCompileArg<EmptyCustomType>(dArgsEmptyAndMyVars1).has_value());
+    EXPECT_EQ(myCustomVar, cv::gapi::getCompileArg<MyCustomType>(dArgsEmptyAndMyVars1).value());
+
+    //----{ myCustomVar, emptyCustomVar }----
+    std::vector<char> sArgs2 = cv::gapi::serialize(cv::compile_args(myCustomVar, emptyCustomVar));
+    GCompileArgs dArgsMyVar2 = cv::gapi::deserialize<GCompileArgs, MyCustomType>(sArgs2);
+    GCompileArgs dArgsEmptyVar2 = cv::gapi::deserialize<GCompileArgs, EmptyCustomType>(sArgs2);
+    GCompileArgs dArgsMyAndEmptyVars2 = cv::gapi::deserialize<GCompileArgs,
+                                                              MyCustomType,
+                                                              EmptyCustomType>(sArgs2);
+    EXPECT_EQ(1u, dArgsMyVar2.size());
+    EXPECT_EQ(myCustomVar, cv::gapi::getCompileArg<MyCustomType>(dArgsMyVar2).value());
+    EXPECT_EQ(1u, dArgsEmptyVar2.size());
+    EXPECT_TRUE(cv::gapi::getCompileArg<EmptyCustomType>(dArgsEmptyVar2).has_value());
+    EXPECT_EQ(2u, dArgsMyAndEmptyVars2.size());
+    EXPECT_EQ(myCustomVar, cv::gapi::getCompileArg<MyCustomType>(dArgsMyAndEmptyVars2).value());
+    EXPECT_TRUE(cv::gapi::getCompileArg<EmptyCustomType>(dArgsMyAndEmptyVars2).has_value());
+
+    //----{ myCustomVar, emptyCustomVar, simpleCustomVar }----
+    std::vector<char> sArgs3 = cv::gapi::serialize(
+        cv::compile_args(myCustomVar, emptyCustomVar, simpleCustomVar));
+    GCompileArgs dArgsMyVar3 = cv::gapi::deserialize<GCompileArgs, MyCustomType>(sArgs3);
+    GCompileArgs dArgsEmptyVar3 = cv::gapi::deserialize<GCompileArgs, EmptyCustomType>(sArgs3);
+    GCompileArgs dArgsSimpleVar3 = cv::gapi::deserialize<GCompileArgs, SimpleCustomType>(sArgs3);
+    GCompileArgs dArgsMyAndSimpleVars3 = cv::gapi::deserialize<GCompileArgs,
+                                                               MyCustomType,
+                                                               SimpleCustomType>(sArgs3);
+    GCompileArgs dArgs3 = cv::gapi::deserialize<GCompileArgs,
+                                                MyCustomType,
+                                                EmptyCustomType,
+                                                SimpleCustomType>(sArgs3);
+    EXPECT_EQ(1u, dArgsMyVar3.size());
+    EXPECT_EQ(myCustomVar, cv::gapi::getCompileArg<MyCustomType>(dArgsMyVar3).value());
+    EXPECT_EQ(1u, dArgsEmptyVar3.size());
+    EXPECT_TRUE(cv::gapi::getCompileArg<EmptyCustomType>(dArgsEmptyVar3).has_value());
+    EXPECT_EQ(1u, dArgsSimpleVar3.size());
+    EXPECT_EQ(simpleCustomVar, cv::gapi::getCompileArg<SimpleCustomType>(dArgsSimpleVar3).value());
+    EXPECT_EQ(2u, dArgsMyAndSimpleVars3.size());
+    EXPECT_EQ(myCustomVar, cv::gapi::getCompileArg<MyCustomType>(dArgsMyAndSimpleVars3).value());
+    EXPECT_EQ(simpleCustomVar,
+              cv::gapi::getCompileArg<SimpleCustomType>(dArgsMyAndSimpleVars3).value());
+    EXPECT_EQ(3u, dArgs3.size());
+    EXPECT_EQ(myCustomVar, cv::gapi::getCompileArg<MyCustomType>(dArgs3).value());
+    EXPECT_TRUE(cv::gapi::getCompileArg<EmptyCustomType>(dArgs3).has_value());
+    EXPECT_EQ(simpleCustomVar, cv::gapi::getCompileArg<SimpleCustomType>(dArgs3).value());
+
+    //----{ emptyCustomVar }----
+    std::vector<char> sArgs4 = cv::gapi::serialize(cv::compile_args(emptyCustomVar));
+    GCompileArgs dArgsEmptyVar4 = cv::gapi::deserialize<GCompileArgs, EmptyCustomType>(sArgs4);
+    EXPECT_EQ(1u, dArgsEmptyVar4.size());
+    EXPECT_TRUE(cv::gapi::getCompileArg<EmptyCustomType>(dArgsEmptyVar4).has_value());
+}
+
 } // namespace opencv_test

@@ -134,12 +134,19 @@ cv::gimpl::Unrolled cv::gimpl::unrollExpr(const GProtoArgs &ins,
 
                 // Put the outputs object description of the node
                 // so that they are not lost if they are not consumed by other operations
+                GAPI_Assert(call_p.m_k.outCtors.size() == call_p.m_k.outShapes.size());
                 for (const auto &it : ade::util::indexed(call_p.m_k.outShapes))
                 {
                     std::size_t port  = ade::util::index(it);
                     GShape shape      = ade::util::value(it);
 
-                    GOrigin org { shape, node, port, {}, origin.kind };
+                    // FIXME: then use ZIP
+                    HostCtor ctor     = call_p.m_k.outCtors[port];
+
+                    // NB: Probably this fixes all other "missing host ctor"
+                    // problems.
+                    // TODO: Clean-up the old workarounds if it really is.
+                    GOrigin org {shape, node, port, std::move(ctor), origin.kind};
                     origins.insert(org);
                 }
 

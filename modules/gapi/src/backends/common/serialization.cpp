@@ -94,13 +94,14 @@ void linkNodes(ade::Graph& g) {
 }
 
 void relinkProto(ade::Graph& g) {
+    using namespace cv::gimpl;
     // identify which node handles map to the protocol
     // input/output object in the reconstructed graph
-    using S = std::set<cv::gimpl::RcDesc>;                  // FIXME: use ...
-    using M = std::map<cv::gimpl::RcDesc, ade::NodeHandle>; // FIXME: unordered!
+    using S = std::set<RcDesc>;                  // FIXME: use ...
+    using M = std::map<RcDesc, ade::NodeHandle>; // FIXME: unordered!
 
-    cv::gimpl::GModel::Graph gm(g);
-    auto &proto = gm.metadata().get<cv::gimpl::Protocol>();
+    GModel::Graph gm(g);
+    auto &proto = gm.metadata().get<Protocol>();
 
     const S set_in(proto.inputs.begin(), proto.inputs.end());
     const S set_out(proto.outputs.begin(), proto.outputs.end());
@@ -108,9 +109,9 @@ void relinkProto(ade::Graph& g) {
 
     // Associate the protocol node handles with their resource identifiers
     for (auto &&nh : gm.nodes()) {
-        if (gm.metadata(nh).get<cv::gimpl::NodeType>().t == cv::gimpl::NodeType::DATA) {
-            const auto &d = gm.metadata(nh).get<cv::gimpl::Data>();
-            const auto rc = cv::gimpl::RcDesc{d.rc, d.shape, d.ctor};
+        if (gm.metadata(nh).get<NodeType>().t == NodeType::DATA) {
+            const auto &d = gm.metadata(nh).get<Data>();
+            const auto rc = RcDesc{d.rc, d.shape, d.ctor};
             if (set_in.count(rc) > 0) {
                 GAPI_DbgAssert(set_out.count(rc) == 0);
                 map_in[rc] = nh;
@@ -128,6 +129,12 @@ void relinkProto(ade::Graph& g) {
     proto.out_nhs.clear();
     for (auto &rc : proto.inputs)  { proto.in_nhs .push_back(map_in .at(rc)); }
     for (auto &rc : proto.outputs) { proto.out_nhs.push_back(map_out.at(rc)); }
+
+    // If a subgraph is being serialized it's possible that
+    // some of its in/out nodes are INTERNAL in the full graph.
+    // Set their storage apporpriately
+    for (auto &nh : proto.in_nhs)  { gm.metadata(nh).get<Data>().storage = Data::Storage::INPUT; }
+    for (auto &nh : proto.out_nhs) { gm.metadata(nh).get<Data>().storage = Data::Storage::OUTPUT; }
 }
 
 } // anonymous namespace
@@ -165,12 +172,12 @@ IOStream& operator<< (IOStream& os, const cv::Scalar &s) {
 IIStream& operator>> (IIStream& is, cv::Scalar& s) {
     return is >> s.val[0] >> s.val[1] >> s.val[2] >> s.val[3];
 }
-IOStream& operator<< (IOStream& os, const cv::RMat&) {
-    util::throw_error(std::logic_error("Serialization of RMat is not supported"));
+IOStream& operator<< (IOStream& os, const cv::RMat& mat) {
+    mat.serialize(os);
     return os;
 }
 IIStream& operator>> (IIStream& is, cv::RMat&) {
-    util::throw_error(std::logic_error("Serialization of RMat is not supported"));
+    util::throw_error(std::logic_error("operator>> for RMat should never be called"));
     return is;
 }
 
@@ -331,8 +338,13 @@ IIStream& operator>> (IIStream& is,       cv::gapi::wip::draw::Line &l) {
 
 IOStream& operator<< (IOStream& os, const cv::GCompileArg& arg)
 {
+    ByteMemoryOutStream tmpS;
+    arg.serialize(tmpS);
+    std::vector<char> data = tmpS.data();
+
     os << arg.tag;
-    arg.serialize(os);
+    os << data;
+
     return os;
 }
 

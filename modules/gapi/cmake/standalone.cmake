@@ -15,6 +15,8 @@ file(GLOB FLUID_includes "${FLUID_ROOT}/include/opencv2/*.hpp"
                          "${FLUID_ROOT}/include/opencv2/gapi/own/*.hpp"
                          "${FLUID_ROOT}/include/opencv2/gapi/fluid/*.hpp")
 file(GLOB FLUID_sources  "${FLUID_ROOT}/src/api/g*.cpp"
+                         "${FLUID_ROOT}/src/api/rmat.cpp"
+                         "${FLUID_ROOT}/src/api/media.cpp"
                          "${FLUID_ROOT}/src/compiler/*.cpp"
                          "${FLUID_ROOT}/src/compiler/passes/*.cpp"
                          "${FLUID_ROOT}/src/executor/*.cpp"

@@ -950,6 +950,25 @@ inline std::ostream& operator<<(std::ostream& os, ContourApproximationModes op)
 #undef CASE
     return os;
 }
+
+inline std::ostream& operator<<(std::ostream& os, MorphTypes op)
+{
+#define CASE(v) case MorphTypes::v: os << #v; break
+    switch (op)
+    {
+        CASE(MORPH_ERODE);
+        CASE(MORPH_DILATE);
+        CASE(MORPH_OPEN);
+        CASE(MORPH_CLOSE);
+        CASE(MORPH_GRADIENT);
+        CASE(MORPH_TOPHAT);
+        CASE(MORPH_BLACKHAT);
+        CASE(MORPH_HITMISS);
+        default: GAPI_Assert(false && "unknown MorphTypes value");
+    }
+#undef CASE
+    return os;
+}
 }  // namespace cv
 
 #endif //OPENCV_GAPI_TESTS_COMMON_HPP

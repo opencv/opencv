@@ -191,6 +191,29 @@ namespace detail
 
     template<typename T> using wrap_gapi_helper = WrapValue<typename std::decay<T>::type>;
     template<typename T> using wrap_host_helper = WrapValue<typename std::decay<g_type_of_t<T> >::type>;
+
+// Union type for various user-defined type constructors (GArray<T>,
+// GOpaque<T>, etc)
+//
+// TODO: Replace construct-only API with a more generic one (probably
+//    with bits of introspection)
+//
+// Not required for non-user-defined types (GMat, GScalar, etc)
+using HostCtor = util::variant
+    < util::monostate
+    , detail::ConstructVec
+    , detail::ConstructOpaque
+    >;
+
+template<typename T> struct GObtainCtor {
+    static HostCtor get() { return HostCtor{}; }
+};
+template<typename T> struct GObtainCtor<GArray<T> > {
+    static HostCtor get() { return HostCtor{ConstructVec{&GArray<T>::VCtor}}; };
+};
+template<typename T> struct GObtainCtor<GOpaque<T> > {
+    static HostCtor get() { return HostCtor{ConstructOpaque{&GOpaque<T>::Ctor}}; };
+};
 } // namespace detail
 } // namespace cv
 
