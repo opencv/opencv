@@ -21,14 +21,45 @@
 @{
     @defgroup gapi_filters Graph API: Image filters
     @defgroup gapi_colorconvert Graph API: Converting image from one color space to another
+    @defgroup gapi_feature Graph API: Image Feature Detection
+    @defgroup gapi_shape Graph API: Image Structural Analysis and Shape Descriptors
 @}
  */
+
+namespace {
+void validateFindingContoursMeta(const int depth, const int chan, const int mode)
+{
+    GAPI_Assert(chan == 1);
+    switch (mode)
+    {
+    case cv::RETR_CCOMP:
+        GAPI_Assert(depth == CV_8U || depth == CV_32S);
+        break;
+    case cv::RETR_FLOODFILL:
+        GAPI_Assert(depth == CV_32S);
+        break;
+    default:
+        GAPI_Assert(depth == CV_8U);
+        break;
+    }
+}
+
+// Checks if the passed mat is a set of n-dimentional points of the given depth
+bool isPointsVector(const int chan, const cv::Size &size, const int depth,
+                    const int n, const int ddepth)
+{
+    return (ddepth == depth || ddepth < 0) &&
+           ((chan == n && (size.height == 1 || size.width == 1)) ||
+            (chan == 1 && size.width == n));
+}
+} // anonymous namespace
 
 namespace cv { namespace gapi {
 
 namespace imgproc {
     using GMat2 = std::tuple<GMat,GMat>;
     using GMat3 = std::tuple<GMat,GMat,GMat>; // FIXME: how to avoid this?
+    using GFindContoursOutput = std::tuple<GArray<GArray<Point>>,GArray<Vec4i>>;
 
     G_TYPED_KERNEL(GFilter2D, <GMat(GMat,int,Mat,Point,Scalar,int,Scalar)>,"org.opencv.imgproc.filters.filter2D") {
         static GMatDesc outMeta(GMatDesc in, int ddepth, Mat, Point, Scalar, int, Scalar) {
@@ -78,6 +109,14 @@ namespace imgproc {
         }
     };
 
+    G_TYPED_KERNEL(GMorphologyEx, <GMat(GMat,MorphTypes,Mat,Point,int,BorderTypes,Scalar)>,
+                   "org.opencv.imgproc.filters.morphologyEx") {
+        static GMatDesc outMeta(const GMatDesc &in, MorphTypes, Mat, Point, int,
+                                BorderTypes, Scalar) {
+            return in;
+        }
+    };
+
     G_TYPED_KERNEL(GSobel, <GMat(GMat,int,int,int,int,double,double,int,Scalar)>, "org.opencv.imgproc.filters.sobel") {
         static GMatDesc outMeta(GMatDesc in, int ddepth, int, int, int, double, double, int, Scalar) {
             return in.withDepth(ddepth);
@@ -110,7 +149,7 @@ namespace imgproc {
         }
     };
 
-    G_TYPED_KERNEL(GCanny, <GMat(GMat,double,double,int,bool)>, "org.opencv.imgproc.canny"){
+    G_TYPED_KERNEL(GCanny, <GMat(GMat,double,double,int,bool)>, "org.opencv.imgproc.feature.canny"){
         static GMatDesc outMeta(GMatDesc in, double, double, int, bool) {
             return in.withType(CV_8U, 1);
         }
@@ -118,9 +157,80 @@ namespace imgproc {
 
     G_TYPED_KERNEL(GGoodFeatures,
                    <cv::GArray<cv::Point2f>(GMat,int,double,double,Mat,int,bool,double)>,
-                   "org.opencv.imgproc.goodFeaturesToTrack") {
+                   "org.opencv.imgproc.feature.goodFeaturesToTrack") {
         static GArrayDesc outMeta(GMatDesc, int, double, double, const Mat&, int, bool, double) {
             return empty_array_desc();
+        }
+    };
+
+    using RetrMode = RetrievalModes;
+    using ContMethod = ContourApproximationModes;
+    G_TYPED_KERNEL(GFindContours, <GArray<GArray<Point>>(GMat,RetrMode,ContMethod,GOpaque<Point>)>,
+                   "org.opencv.imgproc.shape.findContours")
+    {
+        static GArrayDesc outMeta(GMatDesc in, RetrMode mode, ContMethod, GOpaqueDesc)
+        {
+            validateFindingContoursMeta(in.depth, in.chan, mode);
+            return empty_array_desc();
+        }
+    };
+
+    // FIXME oc: make default value offset = Point()
+    G_TYPED_KERNEL(GFindContoursNoOffset, <GArray<GArray<Point>>(GMat,RetrMode,ContMethod)>,
+                   "org.opencv.imgproc.shape.findContoursNoOffset")
+    {
+        static GArrayDesc outMeta(GMatDesc in, RetrMode mode, ContMethod)
+        {
+            validateFindingContoursMeta(in.depth, in.chan, mode);
+            return empty_array_desc();
+        }
+    };
+
+    G_TYPED_KERNEL(GFindContoursH,<GFindContoursOutput(GMat,RetrMode,ContMethod,GOpaque<Point>)>,
+                   "org.opencv.imgproc.shape.findContoursH")
+    {
+        static std::tuple<GArrayDesc,GArrayDesc>
+        outMeta(GMatDesc in, RetrMode mode, ContMethod, GOpaqueDesc)
+        {
+            validateFindingContoursMeta(in.depth, in.chan, mode);
+            return std::make_tuple(empty_array_desc(), empty_array_desc());
+        }
+    };
+
+    // FIXME oc: make default value offset = Point()
+    G_TYPED_KERNEL(GFindContoursHNoOffset,<GFindContoursOutput(GMat,RetrMode,ContMethod)>,
+                   "org.opencv.imgproc.shape.findContoursHNoOffset")
+    {
+        static std::tuple<GArrayDesc,GArrayDesc>
+        outMeta(GMatDesc in, RetrMode mode, ContMethod)
+        {
+            validateFindingContoursMeta(in.depth, in.chan, mode);
+            return std::make_tuple(empty_array_desc(), empty_array_desc());
+        }
+    };
+
+    G_TYPED_KERNEL(GBoundingRectMat, <GOpaque<Rect>(GMat)>,
+                   "org.opencv.imgproc.shape.boundingRectMat") {
+        static GOpaqueDesc outMeta(GMatDesc in) {
+            GAPI_Assert((in.depth == CV_8U && in.chan == 1) ||
+                        (isPointsVector(in.chan, in.size, in.depth, 2, CV_32S) ||
+                         isPointsVector(in.chan, in.size, in.depth, 2, CV_32F)));
+
+            return empty_gopaque_desc();
+        }
+    };
+
+    G_TYPED_KERNEL(GBoundingRectVector32S, <GOpaque<Rect>(GArray<Point2i>)>,
+                   "org.opencv.imgproc.shape.boundingRectVector32S") {
+        static GOpaqueDesc outMeta(GArrayDesc) {
+            return empty_gopaque_desc();
+        }
+    };
+
+    G_TYPED_KERNEL(GBoundingRectVector32F, <GOpaque<Rect>(GArray<Point2f>)>,
+                   "org.opencv.imgproc.shape.boundingRectVector32F") {
+        static GOpaqueDesc outMeta(GArrayDesc) {
+            return empty_gopaque_desc();
         }
     };
 
@@ -272,7 +382,7 @@ namespace imgproc {
         }
     };
 
-    G_TYPED_KERNEL(GNV12toRGBp, <GMatP(GMat,GMat)>, "org.opencv.colorconvert.imgproc.nv12torgbp") {
+    G_TYPED_KERNEL(GNV12toRGBp, <GMatP(GMat,GMat)>, "org.opencv.imgproc.colorconvert.nv12torgbp") {
         static GMatDesc outMeta(GMatDesc inY, GMatDesc inUV) {
             GAPI_Assert(inY.depth == CV_8U);
             GAPI_Assert(inUV.depth == CV_8U);
@@ -286,7 +396,7 @@ namespace imgproc {
         }
     };
 
-    G_TYPED_KERNEL(GNV12toGray, <GMat(GMat,GMat)>, "org.opencv.colorconvert.imgproc.nv12togray") {
+    G_TYPED_KERNEL(GNV12toGray, <GMat(GMat,GMat)>, "org.opencv.imgproc.colorconvert.nv12togray") {
         static GMatDesc outMeta(GMatDesc inY, GMatDesc inUV) {
             GAPI_Assert(inY.depth   == CV_8U);
             GAPI_Assert(inUV.depth  == CV_8U);
@@ -301,7 +411,7 @@ namespace imgproc {
         }
     };
 
-    G_TYPED_KERNEL(GNV12toBGRp, <GMatP(GMat,GMat)>, "org.opencv.colorconvert.imgproc.nv12tobgrp") {
+    G_TYPED_KERNEL(GNV12toBGRp, <GMatP(GMat,GMat)>, "org.opencv.imgproc.colorconvert.nv12tobgrp") {
         static GMatDesc outMeta(GMatDesc inY, GMatDesc inUV) {
             GAPI_Assert(inY.depth == CV_8U);
             GAPI_Assert(inUV.depth == CV_8U);
@@ -521,7 +631,7 @@ anchor is at the element center.
 @param iterations number of times erosion is applied.
 @param borderType pixel extrapolation method, see cv::BorderTypes
 @param borderValue border value in case of a constant border
-@sa  dilate
+@sa  dilate, morphologyEx
  */
 GAPI_EXPORTS GMat erode(const GMat& src, const Mat& kernel, const Point& anchor = Point(-1,-1), int iterations = 1,
                         int borderType = BORDER_CONSTANT,
@@ -595,6 +705,37 @@ Output image must have the same type, size, and number of channels as the input 
 GAPI_EXPORTS GMat dilate3x3(const GMat& src, int iterations = 1,
                             int borderType = BORDER_CONSTANT,
                             const  Scalar& borderValue = morphologyDefaultBorderValue());
+
+/** @brief Performs advanced morphological transformations.
+
+The function can perform advanced morphological transformations using an erosion and dilation as
+basic operations.
+
+Any of the operations can be done in-place. In case of multi-channel images, each channel is
+processed independently.
+
+@note Function textual ID is "org.opencv.imgproc.filters.morphologyEx"
+
+@param src Input image.
+@param op Type of a morphological operation, see #MorphTypes
+@param kernel Structuring element. It can be created using #getStructuringElement.
+@param anchor Anchor position within the element. Both negative values mean that the anchor is at
+the kernel center.
+@param iterations Number of times erosion and dilation are applied.
+@param borderType Pixel extrapolation method, see #BorderTypes. #BORDER_WRAP is not supported.
+@param borderValue Border value in case of a constant border. The default value has a special
+meaning.
+@sa  dilate, erode, getStructuringElement
+@note The number of iterations is the number of times erosion or dilatation operation will be
+applied. For instance, an opening operation (#MORPH_OPEN) with two iterations is equivalent to
+apply successively: erode -> erode -> dilate -> dilate
+(and not erode -> dilate -> erode -> dilate).
+ */
+GAPI_EXPORTS GMat morphologyEx(const GMat &src, const MorphTypes op, const Mat &kernel,
+                               const Point       &anchor      = Point(-1,-1),
+                               const int          iterations  = 1,
+                               const BorderTypes  borderType  = BORDER_CONSTANT,
+                               const Scalar      &borderValue = morphologyDefaultBorderValue());
 
 /** @brief Calculates the first, second, third, or mixed image derivatives using an extended Sobel operator.
 
@@ -761,6 +902,10 @@ proportional to sigmaSpace.
 GAPI_EXPORTS GMat bilateralFilter(const GMat& src, int d, double sigmaColor, double sigmaSpace,
                                   int borderType = BORDER_DEFAULT);
 
+//! @} gapi_filters
+
+//! @addtogroup gapi_feature
+//! @{
 /** @brief Finds edges in an image using the Canny algorithm.
 
 The function finds edges in the input image and marks them in the output map edges using the
@@ -768,7 +913,7 @@ Canny algorithm. The smallest value between threshold1 and threshold2 is used fo
 largest value is used to find initial segments of strong edges. See
 <http://en.wikipedia.org/wiki/Canny_edge_detector>
 
-@note Function textual ID is "org.opencv.imgproc.filters.canny"
+@note Function textual ID is "org.opencv.imgproc.feature.canny"
 
 @param image 8-bit input image.
 @param threshold1 first threshold for the hysteresis procedure.
@@ -803,7 +948,7 @@ The function can be used to initialize a point-based tracker of an object.
 A \> B, the vector of returned corners with qualityLevel=A will be the prefix of the output vector
 with qualityLevel=B .
 
-@note Function textual ID is "org.opencv.imgproc.goodFeaturesToTrack"
+@note Function textual ID is "org.opencv.imgproc.feature.goodFeaturesToTrack"
 
 @param image Input 8-bit or floating-point 32-bit, single-channel image.
 @param maxCorners Maximum number of corners to return. If there are more corners than are found,
@@ -837,6 +982,8 @@ GAPI_EXPORTS GArray<Point2f> goodFeaturesToTrack(const GMat  &image,
 
 /** @brief Equalizes the histogram of a grayscale image.
 
+//! @} gapi_feature
+
 The function equalizes the histogram of the input image using the following algorithm:
 
 - Calculate the histogram \f$H\f$ for src .
@@ -854,6 +1001,120 @@ The algorithm normalizes the brightness and increases the contrast of the image.
  */
 GAPI_EXPORTS GMat equalizeHist(const GMat& src);
 
+//! @addtogroup gapi_shape
+//! @{
+/** @brief Finds contours in a binary image.
+
+The function retrieves contours from the binary image using the algorithm @cite Suzuki85 .
+The contours are a useful tool for shape analysis and object detection and recognition.
+See squares.cpp in the OpenCV sample directory.
+
+@note Function textual ID is "org.opencv.imgproc.shape.findContours"
+
+@param src Input gray-scale image @ref CV_8UC1. Non-zero pixels are treated as 1's. Zero
+pixels remain 0's, so the image is treated as binary . You can use #compare, #inRange, #threshold ,
+#adaptiveThreshold, #Canny, and others to create a binary image out of a grayscale or color one.
+If mode equals to #RETR_CCOMP, the input can also be a 32-bit integer
+image of labels ( @ref CV_32SC1 ). If #RETR_FLOODFILL then @ref CV_32SC1 is supported only.
+@param mode Contour retrieval mode, see #RetrievalModes
+@param method Contour approximation method, see #ContourApproximationModes
+@param offset Optional offset by which every contour point is shifted. This is useful if the
+contours are extracted from the image ROI and then they should be analyzed in the whole image
+context.
+
+@return GArray of detected contours. Each contour is stored as a GArray of points.
+ */
+GAPI_EXPORTS GArray<GArray<Point>>
+findContours(const GMat &src, const RetrievalModes mode, const ContourApproximationModes method,
+             const GOpaque<Point> &offset);
+
+// FIXME oc: make default value offset = Point()
+/** @overload
+@note Function textual ID is "org.opencv.imgproc.shape.findContoursNoOffset"
+ */
+GAPI_EXPORTS GArray<GArray<Point>>
+findContours(const GMat &src, const RetrievalModes mode, const ContourApproximationModes method);
+
+/** @brief Finds contours and their hierarchy in a binary image.
+
+The function retrieves contours from the binary image using the algorithm @cite Suzuki85
+and calculates their hierarchy.
+The contours are a useful tool for shape analysis and object detection and recognition.
+See squares.cpp in the OpenCV sample directory.
+
+@note Function textual ID is "org.opencv.imgproc.shape.findContoursH"
+
+@param src Input gray-scale image @ref CV_8UC1. Non-zero pixels are treated as 1's. Zero
+pixels remain 0's, so the image is treated as binary . You can use #compare, #inRange, #threshold ,
+#adaptiveThreshold, #Canny, and others to create a binary image out of a grayscale or color one.
+If mode equals to #RETR_CCOMP, the input can also be a 32-bit integer
+image of labels ( @ref CV_32SC1 ). If #RETR_FLOODFILL -- @ref CV_32SC1 supports only.
+@param mode Contour retrieval mode, see #RetrievalModes
+@param method Contour approximation method, see #ContourApproximationModes
+@param offset Optional offset by which every contour point is shifted. This is useful if the
+contours are extracted from the image ROI and then they should be analyzed in the whole image
+context.
+
+@return GArray of detected contours. Each contour is stored as a GArray of points.
+@return Optional output GArray of cv::Vec4i, containing information about the image topology.
+It has as many elements as the number of contours. For each i-th contour contours[i], the elements
+hierarchy[i][0] , hierarchy[i][1] , hierarchy[i][2] , and hierarchy[i][3] are set to 0-based
+indices in contours of the next and previous contours at the same hierarchical level, the first
+child contour and the parent contour, respectively. If for the contour i there are no next,
+previous, parent, or nested contours, the corresponding elements of hierarchy[i] will be negative.
+ */
+GAPI_EXPORTS std::tuple<GArray<GArray<Point>>,GArray<Vec4i>>
+findContoursH(const GMat &src, const RetrievalModes mode, const ContourApproximationModes method,
+              const GOpaque<Point> &offset);
+
+// FIXME oc: make default value offset = Point()
+/** @overload
+@note Function textual ID is "org.opencv.imgproc.shape.findContoursHNoOffset"
+ */
+GAPI_EXPORTS std::tuple<GArray<GArray<Point>>,GArray<Vec4i>>
+findContoursH(const GMat &src, const RetrievalModes mode, const ContourApproximationModes method);
+
+/** @brief Calculates the up-right bounding rectangle of a point set or non-zero pixels
+of gray-scale image.
+
+The function calculates and returns the minimal up-right bounding rectangle for the specified
+point set or non-zero pixels of gray-scale image.
+
+@note Function textual ID is "org.opencv.imgproc.shape.boundingRectMat"
+
+@param src Input gray-scale image @ref CV_8UC1; or input set of @ref CV_32S or @ref CV_32F
+2D points stored in Mat.
+
+@note In case of a 2D points' set given, Mat should be 2-dimensional, have a single row or column
+if there are 2 channels, or have 2 columns if there is a single channel. Mat should have either
+@ref CV_32S or @ref CV_32F depth
+ */
+GAPI_EXPORTS GOpaque<Rect> boundingRect(const GMat& src);
+
+/** @overload
+
+Calculates the up-right bounding rectangle of a point set.
+
+@note Function textual ID is "org.opencv.imgproc.shape.boundingRectVector32S"
+
+@param src Input 2D point set, stored in std::vector<cv::Point2i>.
+ */
+GAPI_EXPORTS GOpaque<Rect> boundingRect(const GArray<Point2i>& src);
+
+/** @overload
+
+Calculates the up-right bounding rectangle of a point set.
+
+@note Function textual ID is "org.opencv.imgproc.shape.boundingRectVector32F"
+
+@param src Input 2D point set, stored in std::vector<cv::Point2f>.
+ */
+GAPI_EXPORTS GOpaque<Rect> boundingRect(const GArray<Point2f>& src);
+
+//! @} gapi_shape
+
+//! @addtogroup gapi_colorconvert
+//! @{
 /** @brief Converts an image from BGR color space to RGB color space.
 
 The function converts an input image from BGR color space to RGB.
@@ -868,10 +1129,6 @@ Output image is 8-bit unsigned 3-channel image @ref CV_8UC3.
 */
 GAPI_EXPORTS GMat BGR2RGB(const GMat& src);
 
-//! @} gapi_filters
-
-//! @addtogroup gapi_colorconvert
-//! @{
 /** @brief Converts an image from RGB color space to gray-scaled.
 The conventional ranges for R, G, and B channel values are 0 to 255.
 Resulting gray color value computed as

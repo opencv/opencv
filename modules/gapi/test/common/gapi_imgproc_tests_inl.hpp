@@ -50,6 +50,27 @@ namespace
             rgb2yuyv(in_line_p, out_line_p, in.cols);
         }
     }
+
+    // Draw random ellipses on given mat of given size and type
+    void initMatForFindingContours(cv::Mat& mat, const cv::Size& sz, const int type)
+    {
+        cv::RNG& rng = theRNG();
+        mat = cv::Mat(sz, type, cv::Scalar::all(0));
+        size_t numEllipses = rng.uniform(1, 10);
+
+        for( size_t i = 0; i < numEllipses; i++ )
+        {
+            cv::Point center;
+            cv::Size  axes;
+            center.x     = rng.uniform(0, sz.width);
+            center.y     = rng.uniform(0, sz.height);
+            axes.width   = rng.uniform(2, sz.width);
+            axes.height  = rng.uniform(2, sz.height);
+            int color    = rng.uniform(1, 256);
+            double angle = rng.uniform(0., 180.);
+            cv::ellipse(mat, center, axes, angle, 0., 360., color, 1, FILLED);
+        }
+    }
 }
 
 TEST_P(Filter2DTest, AccuracyTest)
@@ -290,6 +311,29 @@ TEST_P(Dilate3x3Test, AccuracyTest)
     }
 }
 
+TEST_P(MorphologyExTest, AccuracyTest)
+{
+    MorphShapes defShape = cv::MORPH_RECT;
+    int defKernSize = 3;
+    cv::Mat kernel = cv::getStructuringElement(defShape, cv::Size(defKernSize, defKernSize));
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    auto out = cv::gapi::morphologyEx(in, op, kernel);
+
+    cv::GComputation c(in, out);
+    c.apply(in_mat1, out_mat_gapi, getCompileArgs());
+    // OpenCV code /////////////////////////////////////////////////////////////
+    {
+        cv::morphologyEx(in_mat1, out_mat_ocv, op, kernel);
+    }
+    // Comparison //////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
+        EXPECT_EQ(out_mat_gapi.size(), sz);
+    }
+}
+
 TEST_P(SobelTest, AccuracyTest)
 {
     // G-API code //////////////////////////////////////////////////////////////
@@ -444,6 +488,267 @@ TEST_P(GoodFeaturesTest, AccuracyTest)
     // Comparison //////////////////////////////////////////////////////////////
     {
         EXPECT_TRUE(cmpF(outVecGAPI, outVecOCV));
+    }
+}
+
+TEST_P(FindContoursNoOffsetTest, AccuracyTest)
+{
+    std::vector<std::vector<cv::Point>> outCtsOCV,  outCtsGAPI;
+
+    initMatForFindingContours(in_mat1, sz, type);
+    out_mat_gapi = cv::Mat(sz, type, cv::Scalar::all(0));
+    out_mat_ocv  = cv::Mat(sz, type, cv::Scalar::all(0));
+
+    // OpenCV code /////////////////////////////////////////////////////////////
+    {
+        cv::findContours(in_mat1, outCtsOCV, mode, method);
+    }
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    cv::GArray<cv::GArray<cv::Point>> outCts;
+    outCts = cv::gapi::findContours(in, mode, method);
+    cv::GComputation c(GIn(in), GOut(outCts));
+    c.apply(gin(in_mat1), gout(outCtsGAPI), getCompileArgs());
+
+    // Comparison //////////////////////////////////////////////////////////////
+    EXPECT_TRUE(outCtsGAPI.size() == outCtsOCV.size());
+    cv::fillPoly(out_mat_ocv,  outCtsOCV,  cv::Scalar::all(1));
+    cv::fillPoly(out_mat_gapi, outCtsGAPI, cv::Scalar::all(1));
+    EXPECT_TRUE(AbsExact().to_compare_f()(out_mat_ocv, out_mat_gapi));
+}
+
+TEST_P(FindContoursOffsetTest, AccuracyTest)
+{
+    const cv::Size sz(1280, 720);
+    const MatType2 type = CV_8UC1;
+    const cv::RetrievalModes mode = cv::RETR_EXTERNAL;
+    const cv::ContourApproximationModes method = cv::CHAIN_APPROX_NONE;
+    const cv::Point offset(15, 15);
+    std::vector<std::vector<cv::Point>> outCtsOCV,  outCtsGAPI;
+
+    initMatForFindingContours(in_mat1, sz, type);
+    out_mat_gapi = cv::Mat(sz, type, cv::Scalar::all(0));
+    out_mat_ocv  = cv::Mat(sz, type, cv::Scalar::all(0));
+
+    // OpenCV code /////////////////////////////////////////////////////////////
+    {
+        cv::findContours(in_mat1, outCtsOCV, mode, method, offset);
+    }
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    GOpaque<Point> gOffset;
+    cv::GArray<cv::GArray<cv::Point>> outCts;
+    outCts = cv::gapi::findContours(in, mode, method, gOffset);
+    cv::GComputation c(GIn(in, gOffset), GOut(outCts));
+    c.apply(gin(in_mat1, offset), gout(outCtsGAPI), getCompileArgs());
+
+    // Comparison //////////////////////////////////////////////////////////////
+    EXPECT_TRUE(outCtsGAPI.size() == outCtsOCV.size());
+    cv::fillPoly(out_mat_ocv,  outCtsOCV,  cv::Scalar::all(1));
+    cv::fillPoly(out_mat_gapi, outCtsGAPI, cv::Scalar::all(1));
+    EXPECT_TRUE(AbsExact().to_compare_f()(out_mat_ocv, out_mat_gapi));
+}
+
+TEST_P(FindContoursHNoOffsetTest, AccuracyTest)
+{
+    std::vector<std::vector<cv::Point>> outCtsOCV,  outCtsGAPI;
+    std::vector<cv::Vec4i>              outHierOCV, outHierGAPI;
+
+    initMatForFindingContours(in_mat1, sz, type);
+    out_mat_gapi = cv::Mat(sz, type, cv::Scalar::all(0));
+    out_mat_ocv  = cv::Mat(sz, type, cv::Scalar::all(0));
+
+    // OpenCV code /////////////////////////////////////////////////////////////
+    {
+        cv::findContours(in_mat1, outCtsOCV, outHierOCV, mode, method);
+    }
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    cv::GArray<cv::GArray<cv::Point>> outCts;
+    cv::GArray<cv::Vec4i> outHier;
+    std::tie(outCts, outHier) = cv::gapi::findContoursH(in, mode, method);
+    cv::GComputation c(GIn(in), GOut(outCts, outHier));
+    c.apply(gin(in_mat1), gout(outCtsGAPI, outHierGAPI), getCompileArgs());
+
+    // Comparison //////////////////////////////////////////////////////////////
+    EXPECT_TRUE(outCtsGAPI.size() == outCtsOCV.size());
+    cv::fillPoly(out_mat_ocv,  outCtsOCV,  cv::Scalar::all(1));
+    cv::fillPoly(out_mat_gapi, outCtsGAPI, cv::Scalar::all(1));
+    EXPECT_TRUE(AbsExact().to_compare_f()(out_mat_ocv, out_mat_gapi));
+
+    EXPECT_TRUE(outCtsGAPI.size() == outCtsOCV.size());
+    EXPECT_TRUE(AbsExactVector<cv::Vec4i>().to_compare_f()(outHierOCV, outHierGAPI));
+}
+
+TEST_P(FindContoursHOffsetTest, AccuracyTest)
+{
+    const cv::Size sz(1280, 720);
+    const MatType2 type = CV_8UC1;
+    const cv::RetrievalModes mode = cv::RETR_EXTERNAL;
+    const cv::ContourApproximationModes method = cv::CHAIN_APPROX_NONE;
+    const cv::Point offset(15, 15);
+    std::vector<std::vector<cv::Point>> outCtsOCV,  outCtsGAPI;
+    std::vector<cv::Vec4i>              outHierOCV, outHierGAPI;
+
+    initMatForFindingContours(in_mat1, sz, type);
+    out_mat_gapi = cv::Mat(sz, type, cv::Scalar::all(0));
+    out_mat_ocv  = cv::Mat(sz, type, cv::Scalar::all(0));
+
+    // OpenCV code /////////////////////////////////////////////////////////////
+    {
+        cv::findContours(in_mat1, outCtsOCV, outHierOCV, mode, method, offset);
+    }
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    GOpaque<Point> gOffset;
+    cv::GArray<cv::GArray<cv::Point>> outCts;
+    cv::GArray<cv::Vec4i> outHier;
+    std::tie(outCts, outHier) = cv::gapi::findContoursH(in, mode, method, gOffset);
+    cv::GComputation c(GIn(in, gOffset), GOut(outCts, outHier));
+    c.apply(gin(in_mat1, offset), gout(outCtsGAPI, outHierGAPI), getCompileArgs());
+
+    // Comparison //////////////////////////////////////////////////////////////
+    EXPECT_TRUE(outCtsGAPI.size() == outCtsOCV.size());
+    cv::fillPoly(out_mat_ocv,  outCtsOCV,  cv::Scalar::all(1));
+    cv::fillPoly(out_mat_gapi, outCtsGAPI, cv::Scalar::all(1));
+    EXPECT_TRUE(AbsExact().to_compare_f()(out_mat_ocv, out_mat_gapi));
+
+    EXPECT_TRUE(outCtsGAPI.size() == outCtsOCV.size());
+    EXPECT_TRUE(AbsExactVector<cv::Vec4i>().to_compare_f()(outHierOCV, outHierGAPI));
+}
+
+TEST_P(BoundingRectMatTest, AccuracyTest)
+{
+    cv::Rect out_rect_gapi, out_rect_ocv;
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    auto out = cv::gapi::boundingRect(in);
+
+    cv::GComputation c(cv::GIn(in), cv::GOut(out));
+    c.apply(cv::gin(in_mat1), cv::gout(out_rect_gapi), getCompileArgs());
+    // OpenCV code /////////////////////////////////////////////////////////////
+    {
+        out_rect_ocv = cv::boundingRect(in_mat1);
+    }
+    // Comparison //////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(cmpF(out_rect_gapi, out_rect_ocv));
+    }
+}
+
+TEST_P(BoundingRectMatVector32STest, AccuracyTest)
+{
+    cv::Rect out_rect_gapi, out_rect_ocv;
+
+    std::vector<cv::Point2i> in_vectorS(sz.width);
+    cv::randu(in_vectorS, cv::Scalar::all(0), cv::Scalar::all(255));
+    in_mat1 = cv::Mat(in_vectorS);
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    auto out = cv::gapi::boundingRect(in);
+
+    cv::GComputation c(cv::GIn(in), cv::GOut(out));
+    c.apply(cv::gin(in_mat1), cv::gout(out_rect_gapi), getCompileArgs());
+    // OpenCV code /////////////////////////////////////////////////////////////
+    {
+        out_rect_ocv = cv::boundingRect(in_mat1);
+    }
+    // Comparison //////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(cmpF(out_rect_gapi, out_rect_ocv));
+    }
+}
+
+TEST_P(BoundingRectMatVector32FTest, AccuracyTest)
+{
+    cv::RNG& rng = theRNG();
+    cv::Rect out_rect_gapi, out_rect_ocv;
+
+    std::vector<cv::Point2f> in_vectorF(sz.width);
+    const int fscale = 256;  // avoid bits near ULP, generate stable test input
+    for (int i = 0; i < sz.width; i++)
+    {
+        cv::Point2f pt(rng.uniform(0, 255 * fscale) / static_cast<float>(fscale),
+                       rng.uniform(0, 255 * fscale) / static_cast<float>(fscale));
+        in_vectorF.push_back(pt);
+    }
+    in_mat1 = cv::Mat(in_vectorF);
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    auto out = cv::gapi::boundingRect(in);
+
+    cv::GComputation c(cv::GIn(in), cv::GOut(out));
+    c.apply(cv::gin(in_mat1), cv::gout(out_rect_gapi), getCompileArgs());
+    // OpenCV code /////////////////////////////////////////////////////////////
+    {
+        out_rect_ocv = cv::boundingRect(in_mat1);
+    }
+    // Comparison //////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(cmpF(out_rect_gapi, out_rect_ocv));
+    }
+}
+
+
+TEST_P(BoundingRectVector32STest, AccuracyTest)
+{
+    cv::Rect out_rect_gapi, out_rect_ocv;
+
+    std::vector<cv::Point2i> in_vectorS(sz.width);
+    cv::randu(in_vectorS, cv::Scalar::all(0), cv::Scalar::all(255));
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GArray<cv::Point2i> in;
+    auto out = cv::gapi::boundingRect(in);
+
+    cv::GComputation c(cv::GIn(in), cv::GOut(out));
+    c.apply(cv::gin(in_vectorS), cv::gout(out_rect_gapi), getCompileArgs());
+    // OpenCV code /////////////////////////////////////////////////////////////
+    {
+        out_rect_ocv = cv::boundingRect(in_vectorS);
+    }
+
+    // Comparison //////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(cmpF(out_rect_gapi, out_rect_ocv));
+    }
+}
+
+TEST_P(BoundingRectVector32FTest, AccuracyTest)
+{
+    cv::RNG& rng = theRNG();
+    cv::Rect out_rect_gapi, out_rect_ocv;
+
+    std::vector<cv::Point2f> in_vectorF(sz.width);
+    const int fscale = 256;  // avoid bits near ULP, generate stable test input
+    for (int i = 0; i < sz.width; i++)
+    {
+        cv::Point2f pt(rng.uniform(0, 255 * fscale) / static_cast<float>(fscale),
+                       rng.uniform(0, 255 * fscale) / static_cast<float>(fscale));
+        in_vectorF.push_back(pt);
+    }
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GArray<cv::Point2f> in;
+    auto out = cv::gapi::boundingRect(in);
+
+    cv::GComputation c(cv::GIn(in), cv::GOut(out));
+    c.apply(cv::gin(in_vectorF), cv::gout(out_rect_gapi), getCompileArgs());
+    // OpenCV code /////////////////////////////////////////////////////////////
+    {
+        out_rect_ocv = cv::boundingRect(in_vectorF);
+    }
+
+    // Comparison //////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(cmpF(out_rect_gapi, out_rect_ocv));
     }
 }
 
