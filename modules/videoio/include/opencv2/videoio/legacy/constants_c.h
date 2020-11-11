@@ -413,19 +413,6 @@ enum
 //! Macro to construct the fourcc code of the codec. Same as CV_FOURCC()
 #define CV_FOURCC_MACRO(c1, c2, c3, c4) (((c1) & 255) + (((c2) & 255) << 8) + (((c3) & 255) << 16) + (((c4) & 255) << 24))
 
-/** @brief Constructs the fourcc code of the codec function
-
-Simply call it with 4 chars fourcc code like `CV_FOURCC('I', 'Y', 'U', 'V')`
-
-List of codes can be obtained at [Video Codecs by FOURCC](http://www.fourcc.org/codecs.php) page.
-FFMPEG backend with MP4 container natively uses other values as fourcc code:
-see [ObjectType](http://mp4ra.org/#/codecs).
-*/
-CV_INLINE int CV_FOURCC(char c1, char c2, char c3, char c4)
-{
-    return CV_FOURCC_MACRO(c1, c2, c3, c4);
-}
-
 //! (Windows only) Open Codec Selection Dialog
 #define CV_FOURCC_PROMPT -1
 //! (Linux only) Use default codec for specified filename

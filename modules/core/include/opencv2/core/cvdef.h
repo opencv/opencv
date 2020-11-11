@@ -915,6 +915,14 @@ protected:
 }
 #endif
 
+/** @brief Constructs the 'fourcc' code, used in video codecs and many other places.
+    Simply call it with 4 chars like `CV_FOURCC('I', 'Y', 'U', 'V')`
+*/
+CV_INLINE int CV_FOURCC(char c1, char c2, char c3, char c4)
+{
+    return (c1 & 255) + ((c2 & 255) << 8) + ((c3 & 255) << 16) + ((c4 & 255) << 24);
+}
+
 //! @}
 
 #ifndef __cplusplus
