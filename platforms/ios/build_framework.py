@@ -238,7 +238,7 @@ class Builder:
         ]
 
         if target == "Catalyst":
-            buildcmd.append("-destination 'platform=macOS,arch=x86_64,variant=Mac Catalyst'")
+            buildcmd.append("-destination 'platform=macOS,arch=%s,variant=Mac Catalyst'" % arch)
             buildcmd.append("-UseModernBuildSystem=YES")
             buildcmd.append("SKIP_INSTALL=NO")
             buildcmd.append("BUILD_LIBRARY_FOR_DISTRIBUTION=YES")
