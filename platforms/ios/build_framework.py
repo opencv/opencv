@@ -31,7 +31,7 @@ However, {framework_name}.framework directory is erased and recreated on each ru
 Adding --dynamic parameter will build {framework_name}.framework as App Store dynamic framework. Only iOS 8+ versions are supported.
 """
 
-from __future__ import print_function
+from __future__ import print_function, unicode_literals
 import glob, re, os, os.path, shutil, string, sys, argparse, traceback, multiprocessing
 from subprocess import check_call, check_output, CalledProcessError
 from distutils.dir_util import copy_tree
