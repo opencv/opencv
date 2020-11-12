@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from __future__ import print_function, unicode_literals
+from __future__ import print_function
 import sys, re, os.path, errno, fnmatch
 import json
 import logging
