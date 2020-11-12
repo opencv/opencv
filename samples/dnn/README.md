@@ -29,6 +29,23 @@ python download_models.py --save_dir FaceDetector opencv_fd
 
 You can use default configuration files adopted for OpenCV from [here](https://github.com/opencv/opencv_extra/tree/master/testdata/dnn).
 
+You also can use the script to download necessary files from your code. Assume you have the following code inside ```your_script.py```:
+
+```python
+from download_models import downloadFile
+
+downloadFile("https://drive.google.com/uc?export=download&id=0B3gersZ2cHIxRm5PMWRoTkdHdHc", None, filename="MobileNetSSD_deploy.caffemodel", save_dir="save_dir_1")
+downloadFile("https://drive.google.com/uc?export=download&id=0B3gersZ2cHIxRm5PMWRoTkdHdHc", "994d30a8afaa9e754d17d2373b2d62a7dfbaaf7a", filename="MobileNetSSD_deploy.caffemodel")
+# Your code
+```
+
+By running the following commands, you will get **MobileNetSSD_deploy.caffemodel** file:
+```bash
+export OPENCV_SAVE_DIR=save_dir_2
+python your_script.py
+```
+
+**Note** that you can provide a directory using **save_dir** parameter or via **OPENCV_SAVE_DIR** environment variable.
 
 #### Face detection
 [An origin model](https://github.com/opencv/opencv/tree/3.4/samples/dnn/face_detector)
