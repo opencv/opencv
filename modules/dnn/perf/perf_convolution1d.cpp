@@ -7,45 +7,41 @@
 
 namespace opencv_test {
 
-    struct Conv1DParam_t {
-        int kernel;
-        struct BlobShape { int dims[3]; } shapeIn;
-        int outCN;
-        int groups;
-        int stride;
-        int dilation;
-        int pad[2];
-        const char* padMode;
-        bool hasBias;
-        double declared_flops;
-    };
+struct Conv1DParam_t {
+    int kernel;
+    struct BlobShape { int dims[3]; } shapeIn;
+    int outCN;
+    int groups;
+    int stride;
+    int dilation;
+    int pad[2];
+    const char* padMode;
+    bool hasBias;
+    double declared_flops;
+};
 // Details: #12142
-    static const Conv1DParam_t testConvolution1DConfigs[] = {
-            {3, {{1, 6, 10}}, 6, 1, 1, 1, {0, 0}, "VALID", true, 1776.},
-            {3, {{1, 2, 19}}, 2, 2, 2, 1, {1, 1}, "", true, 260.},
-            {3, {{1, 2, 25}}, 2, 2, 1, 1, {2, 2}, "SAME", false, 650.},
-    };
+static const Conv1DParam_t testConvolution1DConfigs[] = {
+        {3, {{1, 6, 10}}, 6, 1, 1, 1, {0, 0}, "VALID", true, 1776.},
+        {3, {{1, 2, 19}}, 2, 2, 2, 1, {1, 1}, "", true, 260.},
+        {3, {{1, 2, 25}}, 2, 2, 1, 1, {2, 2}, "SAME", false, 650.},
+};
 
-    struct Conv1DParamID
+struct Conv1DParamID
+{
+    enum {
+        CONV_0 = 0,
+        CONV_LAST = sizeof(testConvolution1DConfigs) / sizeof(testConvolution1DConfigs[0])
+    };
+    int val_;                                                                  \
+Conv1DParamID(int val = 0) : val_(val) {}
+    operator int() const { return val_; }
+    static ::testing::internal::ParamGenerator<Conv1DParamID> all()
     {
-        enum {
-            CONV_0 = 0,
-            CONV_LAST = sizeof(testConvolution1DConfigs) / sizeof(testConvolution1DConfigs[0])
-        };
-        int val_;                                                                  \
-    Conv1DParamID(int val = 0) : val_(val) {}
-        operator int() const { return val_; }
-        static ::testing::internal::ParamGenerator<Conv1DParamID> all()
-        {
-#if 0
-            enum { NUM = (int)CONV_LAST };
-#else
-            enum { NUM = (int)CONV_LAST };
-#endif
-            Conv1DParamID v_[NUM]; for (int i = 0; i < NUM; ++i) { v_[i] = Conv1DParamID(i); } // reduce generated code size
-            return ::testing::ValuesIn(v_, v_ + NUM);
-        }
-    };                                                                                  \
+        enum { NUM = (int)CONV_LAST };
+        Conv1DParamID v_[NUM]; for (int i = 0; i < NUM; ++i) { v_[i] = Conv1DParamID(i); } // reduce generated code size
+        return ::testing::ValuesIn(v_, v_ + NUM);
+    }
+};                                                                                  \
 static inline void PrintTo(const Conv1DParamID& v, std::ostream* os)
     {
         CV_Assert((int)v >= 0); CV_Assert((int)v < Conv1DParamID::CONV_LAST);
@@ -70,10 +66,10 @@ static inline void PrintTo(const Conv1DParamID& v, std::ostream* os)
     }
 
 
-    typedef tuple<Conv1DParamID, tuple<Backend, Target> > Conv1DTestParam_t;
-    typedef TestBaseWithParam<Conv1DTestParam_t> Conv1D;
+typedef tuple<Conv1DParamID, tuple<Backend, Target> > Conv1DTestParam_t;
+typedef TestBaseWithParam<Conv1DTestParam_t> Conv1D;
 
-    PERF_TEST_P_(Conv1D, conv1d)
+PERF_TEST_P_(Conv1D, conv1d)
 {
     int test_id = (int)get<0>(GetParam());
     ASSERT_GE(test_id, 0); ASSERT_LT(test_id, Conv1DParamID::CONV_LAST);
@@ -120,42 +116,43 @@ static inline void PrintTo(const Conv1DParamID& v, std::ostream* os)
     lp.blobs.push_back(weights);
 
     if (hasBias)
-{
-    Mat bias(1, outChannels, CV_32F);
-    randu(bias, -1.0f, 1.0f);
-    lp.blobs.push_back(bias);
-}
-int inpSz[] = {1, inChannels, inputShape[2]};
-Mat input(3, &inpSz[0], CV_32F);
-randu(input, -1.0f, 1.0f);
+    {
+        Mat bias(1, outChannels, CV_32F);
+        randu(bias, -1.0f, 1.0f);
+        lp.blobs.push_back(bias);
+    }
 
-Net net;
-net.addLayerToPrev(lp.name, lp.type, lp);
+    int inpSz[] = {1, inChannels, inputShape[2]};
+    Mat input(3, &inpSz[0], CV_32F);
+    randu(input, -1.0f, 1.0f);
 
-net.setInput(input);
-net.setPreferableBackend(backendId);
-net.setPreferableTarget(targetId);
+    Net net;
+    net.addLayerToPrev(lp.name, lp.type, lp);
 
-Mat output = net.forward();
+    net.setInput(input);
+    net.setPreferableBackend(backendId);
+    net.setPreferableTarget(targetId);
 
-MatShape netInputShape = shape(input);
-size_t weightsMemory = 0, blobsMemory = 0;
-net.getMemoryConsumption(netInputShape, weightsMemory, blobsMemory);
-int64 flops = net.getFLOPS(netInputShape);
-CV_Assert(flops > 0);
+    Mat output = net.forward();
 
-std::cout
-<< "IN=" << divUp(input.total() * input.elemSize(), 1u<<10) << " Kb " << netInputShape
-<< "    OUT=" << divUp(output.total() * output.elemSize(), 1u<<10) << " Kb " << shape(output)
-<< "    Weights(parameters): " << divUp(weightsMemory, 1u<<10) << " Kb"
-<< "    MFLOPS=" << flops * 1e-6 << std::endl;
+    MatShape netInputShape = shape(input);
+    size_t weightsMemory = 0, blobsMemory = 0;
+    net.getMemoryConsumption(netInputShape, weightsMemory, blobsMemory);
+    int64 flops = net.getFLOPS(netInputShape);
+    CV_Assert(flops > 0);
 
-TEST_CYCLE()
-{
-    Mat res = net.forward();
-}
-EXPECT_NEAR(flops, declared_flops, declared_flops * 1e-6);
-SANITY_CHECK_NOTHING();
+    std::cout
+    << "IN=" << divUp(input.total() * input.elemSize(), 1u<<10) << " Kb " << netInputShape
+    << "    OUT=" << divUp(output.total() * output.elemSize(), 1u<<10) << " Kb " << shape(output)
+    << "    Weights(parameters): " << divUp(weightsMemory, 1u<<10) << " Kb"
+    << "    MFLOPS=" << flops * 1e-6 << std::endl;
+
+    TEST_CYCLE()
+    {
+        Mat res = net.forward();
+    }
+    EXPECT_NEAR(flops, declared_flops, declared_flops * 1e-6);
+    SANITY_CHECK_NOTHING();
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Conv1D, Combine(
