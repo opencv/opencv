@@ -31,17 +31,18 @@ def get_framework_build_command_for_platform(platform, destination, framework_na
     only_64_bit : bool, optional
         Build only 64-bit archs, by default False
     """
+    destination = destination.replace(" ", "\\ ")
     if platform == 'macos':
-        return f"python3 ../osx/build_framework.py --archs x86_64,arm64 --framework_name {framework_name} --build-only-specified-archs {destination}"
+        return ["python3", "../osx/build_framework.py", "--archs", "x86_64,arm64", "--framework_name", framework_name, "--build-only-specified-archs", destination]
     elif platform == 'ios-maccatalyst':
         # This is not a mistake. For Catalyst, we use the osx toolchain.
-        return f"python3 ../osx/build_framework.py --catalyst_archs x86_64,arm64 --framework_name {framework_name} --without=objc --build-only-specified-archs {destination}"
+        return ["python3", "../osx/build_framework.py", "--catalyst_archs", "x86_64,arm64", "--framework_name", framework_name, "--build-only-specified-archs", destination]
     elif platform == 'ios':
         archs = "arm64" if only_64_bit else "arm64,armv7,armv7s"
-        return f"python3 ../ios/build_framework.py --iphoneos_archs {archs} --framework_name {framework_name} --build-only-specified-archs {destination}"
+        return ["python3", "../ios/build_framework.py", "--iphoneos_archs", archs, "--framework_name", framework_name, "--build-only-specified-archs", destination]
     elif platform == 'ios-simulator':
         archs = "x86_64,arm64" if only_64_bit else "x86_64,arm64,i386"
-        return f"python3 ../ios/build_framework.py --iphonesimulator_archs {archs} --framework_name {framework_name} --build-only-specified-archs {destination}"
+        return ["python3", "../ios/build_framework.py", "--iphonesimulator_archs", archs, "--framework_name", framework_name, "--build-only-specified-archs", destination]
     else:
         raise Exception(f"Platform {platform} has no associated build commands.")
 
@@ -67,12 +68,17 @@ if __name__ == "__main__":
 
             print("")
             print_header(f"Building frameworks for {platform}")
-            execute(framework_build_command)
+            execute(framework_build_command, cwd=os.getcwd())
 
         # Put all the built .frameworks together into a .xcframework
-        framework_args = " ".join([f"-framework {folder}/{args.framework_name}.framework" for folder in build_folders])
-        xcframework_build_command = f"xcodebuild -create-xcframework {framework_args} -output {args.out}/{args.framework_name}.xcframework"
-        execute(xcframework_build_command)
+        xcframework_build_command = [
+            "xcodebuild", "-create-xcframework", 
+            "-output", 
+            f"{args.out}/{args.framework_name}.xcframework",
+        ]
+        for folder in build_folders:
+            xcframework_build_command += ["-framework", f"{folder}/{args.framework_name}.framework"]
+        execute(xcframework_build_command, cwd=os.getcwd())
 
         print("")
         print_header(f"Finished building {args.out}/{args.framework_name}.xcframework")
