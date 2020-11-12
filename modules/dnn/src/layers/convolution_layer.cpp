@@ -113,6 +113,10 @@ public:
         MatSize weightShape = blobs.empty() ? inputs[1].size : blobs[0].size;
 
         CV_Assert(inputs[0].dims == outputs[0].dims);
+        if (weightShape.dims() == 3)
+        {
+            kernel_size.assign(1, kernel_size[0]);
+        }
         CV_Assert(weightShape.dims() == kernel_size.size() + 2);
         for (int i = 0; i < kernel_size.size(); i++) {
             CV_Assert(weightShape[i + 2] == kernel_size[i]);
@@ -680,11 +684,11 @@ public:
         {
             size_t karea = std::accumulate(kernel_size.begin(), kernel_size.end(),
                                            1, std::multiplies<size_t>());
-            bool isConv1D = kernel_size.size() == 1;
-            bool isConv2D = kernel_size.size() == 2;
-            bool isConv3D = kernel_size.size() == 3;
+            bool isConv1D = input.dims == 3;
+            bool isConv2D = input.dims == 4;
+            bool isConv3D = input.dims == 5;
             CV_Assert_N(
-                       ((input.dims == 3 && isConv1D) || (input.dims == 4 && isConv2D) || (input.dims == 5 && isConv3D))
+                       ((kernel_size.size() == 1 && isConv1D) || (kernel_size.size() == 2 && isConv2D) || (kernel_size.size() == 3 && isConv3D))
                        && input.dims == output.dims,
                        input.size[0] == output.size[0],
                        weights.rows == output.size[1],

@@ -81,7 +81,7 @@ bool getParameter(const LayerParams &params, const std::string& nameBase, const 
                 CV_Assert(param.get<int>(i) >= 0);
                 parameter.push_back(param.get<int>(i));
             }
-            if (parameter.size() == 1 && !params.has("is_1d"))
+            if (parameter.size() == 1)
                 parameter.resize(2, parameter[0]);
             return true;
         }
@@ -122,7 +122,7 @@ void getStrideAndPadding(const LayerParams &params, std::vector<size_t>& pads_be
     }
     else {
         util::getParameter(params, "pad", "pad", pads_begin, true, std::vector<size_t>(kernel_size, 0));
-        if (pads_begin.size() < 4 && !params.has("is_1d"))
+        if (pads_begin.size() < 4)
             pads_end = pads_begin;
         else
         {

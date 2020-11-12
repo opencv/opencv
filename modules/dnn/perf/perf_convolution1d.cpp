@@ -110,7 +110,6 @@ PERF_TEST_P_(Conv1D, conv1d)
     lp.set("num_output", outChannels);
     lp.set("group", groups);
     lp.set("bias_term", hasBias);
-    lp.set("is_1d", true);
     lp.type = "Convolution";
     lp.name = "testLayer";
     lp.blobs.push_back(weights);

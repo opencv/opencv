@@ -1185,12 +1185,6 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
         else if (layer_type == "Conv")
         {
             CV_Assert(node_proto.input_size() >= 2);
-            if (layerParams.has("kernel_size")) {
-                const DictValue &kernel = layerParams.get("kernel_size");
-                if (kernel.size() == 1) {
-                    layerParams.set("is_1d", true);
-                }
-            }
             layerParams.type = "Convolution";
             for (int j = 1; j < node_proto.input_size(); j++) {
                 if (constBlobs.find(node_proto.input(j)) != constBlobs.end())

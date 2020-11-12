@@ -650,7 +650,7 @@ TEST_P(Test_ONNX_layers, ResizeOpset11_Torch1_6)
 
 TEST_P(Test_ONNX_layers, Conv1d)
 {
-    if (backend != DNN_BACKEND_OPENCV && target != DNN_TARGET_CPU)
+    if (backend != DNN_BACKEND_OPENCV || target != DNN_TARGET_CPU)
         throw SkipTestException("Only OpenCV CPU is supported");
     testONNXModels("conv1d");
 }
