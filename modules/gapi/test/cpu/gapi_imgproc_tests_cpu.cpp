@@ -337,6 +337,54 @@ INSTANTIATE_TEST_CASE_P(BoundingRectVector32STestCPU, BoundingRectVector32STest,
                                  Values(IMGPROC_CPU),
                                  Values(IoUToleranceRect(1e-5).to_compare_obj())));
 
+INSTANTIATE_TEST_CASE_P(FitLine2DMatVectorTestCPU, FitLine2DMatVectorTest,
+                        Combine(Values(CV_8U, CV_8S, CV_16U, CV_16S,
+                                       CV_32S, CV_32F, CV_64F),
+                                Values(cv::Size(8, 0), cv::Size(1024, 0)),
+                                Values(-1),
+                                Values(IMGPROC_CPU),
+                                Values(AvgDiffToleranceVec<float, 4>(0.01).to_compare_obj()),
+                                Values(DIST_L1, DIST_L2, DIST_L12, DIST_FAIR,
+                                       DIST_WELSCH, DIST_HUBER)));
+
+#define INSTANTIATE_FITLINE_2DVECTOR_TEST(type) INSTANTIATE_TEST_CASE_P(                      \
+                        FitLine2DVector##type##TestCPU,                                       \
+                        FitLine2DVector##type##Test,                                          \
+                        Combine(Values(-1),                                                   \
+                                Values(cv::Size(8, 0)),                                       \
+                                Values(-1),                                                   \
+                                Values(IMGPROC_CPU),                                          \
+                                Values(AvgDiffToleranceVec<float, 4>(0.01).to_compare_obj()), \
+                                Values(DIST_L1)))
+
+INSTANTIATE_FITLINE_2DVECTOR_TEST(32S);
+INSTANTIATE_FITLINE_2DVECTOR_TEST(32F);
+INSTANTIATE_FITLINE_2DVECTOR_TEST(64F);
+
+INSTANTIATE_TEST_CASE_P(FitLine3DMatVectorTestCPU, FitLine3DMatVectorTest,
+                        Combine(Values(CV_8UC1, CV_8SC1, CV_16UC1, CV_16SC1,
+                                       CV_32SC1, CV_32FC1, CV_64FC1),
+                                Values(cv::Size(8, 0), cv::Size(1024, 0)),
+                                Values(-1),
+                                Values(IMGPROC_CPU),
+                                Values(AvgDiffToleranceVec<float, 6>(0.01).to_compare_obj()),
+                                Values(DIST_L1, DIST_L2, DIST_L12, DIST_FAIR,
+                                       DIST_WELSCH, DIST_HUBER)));
+
+#define INSTANTIATE_FITLINE_3DVECTOR_TEST(type) INSTANTIATE_TEST_CASE_P(                      \
+                        FitLine3DVector##type##TestCPU,                                       \
+                        FitLine3DVector##type##Test,                                          \
+                        Combine(Values(-1),                                                   \
+                                Values(cv::Size(8, 0)),                                       \
+                                Values(-1),                                                   \
+                                Values(IMGPROC_CPU),                                          \
+                                Values(AvgDiffToleranceVec<float, 6>(0.01).to_compare_obj()), \
+                                Values(DIST_L1)))
+
+INSTANTIATE_FITLINE_3DVECTOR_TEST(32S);
+INSTANTIATE_FITLINE_3DVECTOR_TEST(32F);
+INSTANTIATE_FITLINE_3DVECTOR_TEST(64F);
+
 INSTANTIATE_TEST_CASE_P(BGR2RGBTestCPU, BGR2RGBTest,
                         Combine(Values(CV_8UC3),
                                 Values(cv::Size(1280, 720),

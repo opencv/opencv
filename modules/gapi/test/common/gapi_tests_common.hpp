@@ -74,6 +74,50 @@ namespace
         }
 #endif // WINRT
     }
+
+    template <typename T> inline void initPointRandU(cv::RNG &rng, cv::Point_<T>& pt)
+    {
+        GAPI_Assert(std::is_integral<T>::value);
+        pt = cv::Point_<T>(static_cast<T>(rng(CHAR_MAX + 1U)),
+                           static_cast<T>(rng(CHAR_MAX + 1U)));
+    }
+
+    template <typename T> inline void initPointRandU(cv::RNG &rng, cv::Point3_<T>& pt)
+    {
+        GAPI_Assert(std::is_integral<T>::value);
+        pt = cv::Point3_<T>(static_cast<T>(rng(CHAR_MAX + 1U)),
+                            static_cast<T>(rng(CHAR_MAX + 1U)),
+                            static_cast<T>(rng(CHAR_MAX + 1U)));
+    }
+
+    template <typename F> inline void initFloatPointRandU(cv::RNG &rng, cv::Point_<F> &pt)
+    {
+        GAPI_Assert(std::is_floating_point<F>::value);
+        static const int fscale = 256;  // avoid bits near ULP, generate stable test input
+        pt = cv::Point_<F>(rng.uniform(0, 255 * fscale) / static_cast<F>(fscale),
+                           rng.uniform(0, 255 * fscale) / static_cast<F>(fscale));
+    }
+
+    template<> inline void initPointRandU(cv::RNG &rng, cv::Point2f &pt)
+    { initFloatPointRandU(rng, pt); }
+
+    template<> inline void initPointRandU(cv::RNG &rng, cv::Point2d &pt)
+    { initFloatPointRandU(rng, pt); }
+
+    template <typename F> inline void initFloatPointRandU(cv::RNG &rng, cv::Point3_<F> &pt)
+    {
+        GAPI_Assert(std::is_floating_point<F>::value);
+        static const int fscale = 256;  // avoid bits near ULP, generate stable test input
+        pt = cv::Point3_<F>(rng.uniform(0, 255 * fscale) / static_cast<F>(fscale),
+                            rng.uniform(0, 255 * fscale) / static_cast<F>(fscale),
+                            rng.uniform(0, 255 * fscale) / static_cast<F>(fscale));
+    }
+
+    template<> inline void initPointRandU(cv::RNG &rng, cv::Point3f &pt)
+    { initFloatPointRandU(rng, pt); }
+
+    template<> inline void initPointRandU(cv::RNG &rng, cv::Point3d &pt)
+    { initFloatPointRandU(rng, pt); }
 } // namespace
 
 namespace opencv_test
@@ -279,6 +323,76 @@ public:
         }
     }
 
+    template <typename T>
+    inline void initPointRandU(cv::RNG& rng, T& pt)
+    { ::initPointRandU(rng, pt); }
+
+    // initialize std::vector<cv::Point_<T>>/std::vector<cv::Point3_<T>>
+    template <typename T, template <typename> class Pt>
+    void initPointsVectorRandU(const int sz_in, std::vector<Pt<T>> &vec_)
+    {
+        bool is_Point_2D_or_3D = std::is_same<Pt<T>, cv::Point_ <T>>::value ||
+                                 std::is_same<Pt<T>, cv::Point3_<T>>::value;
+        GAPI_Assert(is_Point_2D_or_3D);
+
+        cv::RNG& rng = theRNG();
+
+        vec_.clear();
+        vec_.reserve(sz_in);
+
+        for (int i = 0; i < sz_in; i++)
+        {
+            Pt<T> pt;
+            initPointRandU(rng, pt);
+            vec_.push_back(pt);
+        }
+    }
+
+    template<typename Pt>
+    inline void initMatByPointsVectorRandU(const cv::Size &sz_in)
+    {
+            std::vector<Pt> in_vector;
+            initPointsVectorRandU(sz_in.width, in_vector);
+            in_mat1 = cv::Mat(in_vector, true);
+    }
+
+    // initialize Mat by a vector of Points
+    template<template <typename> class Pt>
+    inline void initMatByPointsVectorRandU(int type, cv::Size sz_in, int)
+    {
+        int depth = CV_MAT_DEPTH(type);
+        switch (depth)
+        {
+        case CV_8U:
+            initMatByPointsVectorRandU<Pt<uchar>>(sz_in);
+            break;
+        case CV_8S:
+            initMatByPointsVectorRandU<Pt<char>>(sz_in);
+            break;
+        case CV_16U:
+            initMatByPointsVectorRandU<Pt<ushort>>(sz_in);
+            break;
+        case CV_16S:
+            initMatByPointsVectorRandU<Pt<short>>(sz_in);
+            break;
+        case CV_32S:
+            initMatByPointsVectorRandU<Pt<int>>(sz_in);
+            break;
+        case CV_32F:
+            initMatByPointsVectorRandU<Pt<float>>(sz_in);
+            break;
+        case CV_64F:
+            initMatByPointsVectorRandU<Pt<double>>(sz_in);
+            break;
+        case CV_16F:
+            initMatByPointsVectorRandU<Pt<cv::float16_t>>(sz_in);
+            break;
+        default:
+            GAPI_Assert(false && "Unsupported depth");
+            break;
+        }
+    }
+
     // empty function intended to show that nothing is to be initialized via TestFunctional methods
     void initNothing(int, cv::Size, int, bool = true) {}
 };
@@ -469,6 +583,9 @@ template<typename Elem>
 using compare_vector_f = std::function<bool(const std::vector<Elem> &a,
                                             const std::vector<Elem> &b)>;
 
+template<typename Elem, int cn>
+using compare_vec_f = std::function<bool(const cv::Vec<Elem, cn> &a, const cv::Vec<Elem, cn> &b)>;
+
 template<typename T1, typename T2>
 struct CompareF
 {
@@ -494,6 +611,9 @@ using CompareRects = CompareF<cv::Rect, cv::Rect>;
 
 template<typename Elem>
 using CompareVectors = CompareF<std::vector<Elem>, std::vector<Elem>>;
+
+template<typename Elem, int cn>
+using CompareVecs = CompareF<cv::Vec<Elem, cn>, cv::Vec<Elem, cn>>;
 
 template<typename T>
 struct Wrappable
@@ -577,6 +697,27 @@ struct WrappableVector
         std::stringstream ss;
         ss << t;
         return CompareVectors<Elem>(to_compare_f(), ss.str());
+    }
+};
+
+template<typename T, typename Elem, int cn>
+struct WrappableVec
+{
+    compare_vec_f<Elem, cn> to_compare_f()
+    {
+        T t = *static_cast<T* const>(this);
+        return [t](const cv::Vec<Elem, cn> &a, const cv::Vec<Elem, cn> &b)
+        {
+            return t(a, b);
+        };
+    }
+
+    CompareVecs<Elem, cn> to_compare_obj()
+    {
+        T t = *static_cast<T* const>(this);
+        std::stringstream ss;
+        ss << t;
+        return CompareVecs<Elem, cn>(to_compare_f(), ss.str());
     }
 };
 
@@ -855,6 +996,79 @@ public:
         return os << "AbsExactVector()";
     }
 };
+
+template<typename Elem, int cn>
+class AvgDiffToleranceVec : public WrappableVec<AvgDiffToleranceVec<Elem, cn>, Elem, cn>
+{
+public:
+    AvgDiffToleranceVec(double tol) : _tol(tol) {}
+    bool operator() (const cv::Vec<Elem, cn> &in1, const cv::Vec<Elem, cn> &in2) const
+    {
+        double abs_err = 0;
+        for (int i = 0; i < cn; i++)
+        {
+            abs_err += static_cast<double>(std::abs(in1[i] - in2[i]))
+                       / std::max(static_cast<Elem>(1), std::abs(in2[i]));
+        }
+        abs_err /= cn;
+        if (abs_err > _tol)
+        {
+            std::cout << "AvgDiffToleranceVec error: abs_err=" << abs_err << "  tolerance=" << _tol;
+            for (int i = 0; i < cn; i++)
+            {
+                std::cout << " in1[" << i << "]=" << in1[i] << " in2[" << i << "]=" << in2[i];
+            }
+            std::cout << std::endl;
+            return false;
+        }
+        else
+        {
+            return true;
+        }
+    }
+    friend std::ostream& operator<<(std::ostream& os, const AvgDiffToleranceVec<Elem, cn>& obj)
+    {
+        return os << "AvgDiffToleranceVec(" << std::to_string(obj._tol) << ")";
+    }
+    private:
+        double _tol;
+};
+
+// class AbsToleranceLine2D : public WrappableVec<AbsToleranceLine2D, float, 4>
+// {
+// public:
+//     AbsToleranceLine2D(double tol) : _tol(tol) {}
+//     bool operator() (const cv::Vec4f &in1, const cv::Vec4f &in2) const
+//     {
+//         double vx1 = in1[0], vy1 = in1[1], x1 = in1[2], y1 = in1[3],
+//                vx2 = in2[0], vy2 = in2[1], x2 = in2[2], y2 = in2[3];
+//         // calculating 2D line equasion (ax + by + c = 0) coefficients:
+//         // a = vy, b = vx, c = y0 * vx - x0 * vy
+//         double c1 = y1 * vx1 - x1 * vy1,
+//                c2 = y2 * vx2 - x2 * vy2;
+//         double err = ( (std::abs(vx1 - vx2) / std::max(1., std::abs(vx2))) +
+//                        (std::abs(vy1 - vy2) / std::max(1., std::abs(vy2))) +
+//                        (std::abs(c1 - c2)   / std::max(1., std::abs(c2)))    ) / 3.;
+//         if (err > _tol)
+//         {
+//             std::cout << "AbsToleranceLine2D error: err=" << err << "  tolerance=" << _tol
+//                       << " a1=" << vy1 << " a2=" << vy2
+//                       << " b1=" << vx1 << " b2=" << vx2
+//                       << " c1=" << c1  << " c2=" << c2  << std::endl;
+//             return false;
+//         }
+//         else
+//         {
+//             return true;
+//         }
+//     }
+//     friend std::ostream& operator<<(std::ostream& os, const AbsToleranceLine2D& obj)
+//     {
+//         return os << "AbsToleranceLine2D(" << std::to_string(obj._tol) << ")";
+//     }
+//     private:
+//         double _tol;
+// };
 } // namespace opencv_test
 
 namespace
@@ -878,6 +1092,12 @@ template<typename Elem>
 inline std::ostream& operator<<(std::ostream& os, const opencv_test::compare_vector_f<Elem>&)
 {
     return os << "compare_vector_f";
+}
+
+template<typename Elem, int cn>
+inline std::ostream& operator<<(std::ostream& os, const opencv_test::compare_vec_f<Elem, cn>&)
+{
+    return os << "compare_vec_f";
 }
 }  // anonymous namespace
 
@@ -965,6 +1185,25 @@ inline std::ostream& operator<<(std::ostream& os, MorphTypes op)
         CASE(MORPH_BLACKHAT);
         CASE(MORPH_HITMISS);
         default: GAPI_Assert(false && "unknown MorphTypes value");
+    }
+#undef CASE
+    return os;
+}
+
+inline std::ostream& operator<<(std::ostream& os, DistanceTypes op)
+{
+#define CASE(v) case DistanceTypes::v: os << #v; break
+    switch (op)
+    {
+        CASE(DIST_USER);
+        CASE(DIST_L1);
+        CASE(DIST_L2);
+        CASE(DIST_C);
+        CASE(DIST_L12);
+        CASE(DIST_FAIR);
+        CASE(DIST_WELSCH);
+        CASE(DIST_HUBER);
+        default: GAPI_Assert(false && "unknown DistanceTypes value");
     }
 #undef CASE
     return os;
