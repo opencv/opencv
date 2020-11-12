@@ -40,7 +40,8 @@ def get_framework_build_command_for_platform(platform, destination, framework_na
         archs = "arm64" if only_64_bit else "arm64,armv7,armv7s"
         return f"python3 ../ios/build_framework.py --iphoneos_archs {archs} --framework_name {framework_name} --without=objc --build-only-specified-archs {destination}"
     elif platform == 'ios-simulator':
-        return f"python3 ../ios/build_framework.py --iphonesimulator_archs x86_64,arm64 --framework_name {framework_name} --without=objc --build-only-specified-archs {destination}"
+        archs = "x86_64,arm64" if only_64_bit else "x86_64,arm64,i386"
+        return f"python3 ../ios/build_framework.py --iphonesimulator_archs {archs} --framework_name {framework_name} --without=objc --build-only-specified-archs {destination}"
     else:
         raise Exception(f"Platform {platform} has no associated build commands.")
 
