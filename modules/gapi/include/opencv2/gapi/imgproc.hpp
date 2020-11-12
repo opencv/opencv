@@ -1234,7 +1234,6 @@ GAPI_EXPORTS GOpaque<Vec4f> fitLine2D(const GArray<Point2i>& src, const Distance
 
 @note Function textual ID is "org.opencv.imgproc.shape.fitLine2DVector32F"
 
-@param src Input 2D point set, stored in std::vector<cv::Point2f>.
  */
 GAPI_EXPORTS GOpaque<Vec4f> fitLine2D(const GArray<Point2f>& src, const DistanceTypes distType,
                                       const double param = 0., const double reps = 0.,
