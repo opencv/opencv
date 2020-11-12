@@ -50,7 +50,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='This script builds an OpenCV .xcframework supporting the Apple platforms of your choice.')
     parser.add_argument('out', metavar='OUTDIR', help='folder to put built xcframework into')
     parser.add_argument('--platform', default='ios,ios-simulator,ios-maccatalyst,macos', help='platforms to build for')
-    parser.add_argument('--framework-name', default='opencv2', dest='framework_name', action='store_true', help='Name of OpenCV framework (default: opencv2, will change to OpenCV in future version)')
+    parser.add_argument('--framework-name', default='opencv2', dest='framework_name', help='Name of OpenCV framework (default: opencv2, will change to OpenCV in future version)')
     parser.add_argument('--only-64-bit', default=False, dest='only_64_bit', action='store_true', help='only build for 64-bit archs')
 
     args = parser.parse_args()
@@ -72,7 +72,8 @@ if __name__ == "__main__":
 
         # Put all the built .frameworks together into a .xcframework
         xcframework_build_command = [
-            "xcodebuild", "-create-xcframework", 
+            "xcodebuild", 
+            "-create-xcframework", 
             "-output", 
             f"{args.out}/{args.framework_name}.xcframework",
         ]
