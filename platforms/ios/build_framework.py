@@ -33,7 +33,7 @@ Adding --dynamic parameter will build {framework_name}.framework as App Store dy
 
 from __future__ import print_function, unicode_literals
 import glob, re, os, os.path, shutil, string, sys, argparse, traceback, multiprocessing
-from subprocess import check_call, check_output, CalledProcessError, run
+from subprocess import check_call, check_output, CalledProcessError
 from distutils.dir_util import copy_tree
 
 IPHONEOS_DEPLOYMENT_TARGET='9.0'  # default, can be changed via command line options or environment variable
@@ -126,7 +126,7 @@ class Builder:
                 cmake_flags.append("-DCMAKE_C_FLAGS=-fembed-bitcode")
                 cmake_flags.append("-DCMAKE_CXX_FLAGS=-fembed-bitcode")
             if xcode_ver >= 7 and target[1] == 'Catalyst':  # TODOjon: Do I need this? (I think I do in order to set the C/CXX Flag for the ABI)
-                sdk_path = run(["xcodebuild", "-version", "-sdk", "macosx", "Path"], capture_output=True, text=True).stdout.rstrip()
+                sdk_path = check_output(["xcodebuild", "-version", "-sdk", "macosx", "Path"]).decode('utf-8').rstrip()
                 c_flags = [
                     # TODOChris: Enable/disable target flags here
                     "-target %s-apple-ios13.0-macabi" % target[0],  # e.g. x86_64-apple-ios13.2-macabi # -mmacosx-version-min=10.15
