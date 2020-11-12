@@ -753,13 +753,16 @@ public:
                     for( int k_c = 0; k_c < kernel_w; k_c++ )
                         ofstab[k*kernel_w + k_c] = k*width + k_c*dil_w;
             }
-            else if (isConv2D) {
+            else if (isConv2D)
+            {
                 for (int k = 0; k < ncn; k++)
                     for (int k_r = 0; k_r < kernel_h; k_r++)
                         for (int k_c = 0; k_c < kernel_w; k_c++)
                             ofstab[(k * kernel_h + k_r) * kernel_w + k_c] =
                                     (k * height + k_r * dil_h) * width + k_c * dil_w;
-            } else {
+            }
+            else
+            {
                 for (int k = 0; k < ncn; k++)
                     for (int k_d = 0; k_d < kernel_d; k_d++)
                         for (int k_r = 0; k_r < kernel_h; k_r++)
