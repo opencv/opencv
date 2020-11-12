@@ -32,8 +32,6 @@ Adding --dynamic parameter will build {framework_name}.framework as App Store dy
 """
 
 from __future__ import print_function, unicode_literals
-from builtins import str
-from builtins import object
 import glob, re, os, os.path, shutil, string, sys, argparse, traceback, multiprocessing
 from subprocess import check_call, check_output, CalledProcessError
 from distutils.dir_util import copy_tree
@@ -63,7 +61,7 @@ def getXCodeSetting(var, projectdir):
     else:
         raise Exception("Failed to parse Xcode settings")
 
-class Builder(object):
+class Builder:
     def __init__(self, opencv, contrib, dynamic, bitcodedisabled, exclude, disable, enablenonfree, targets, debug, debug_info, framework_name, run_tests, build_docs):
         self.opencv = os.path.abspath(opencv)
         self.contrib = None

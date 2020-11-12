@@ -4,7 +4,6 @@ This script runs OpenCV.framework tests for iOS.
 """
 
 from __future__ import print_function
-from builtins import object
 import glob, re, os, os.path, shutil, string, sys, argparse, traceback, multiprocessing
 from subprocess import check_call, check_output, CalledProcessError
 
@@ -17,7 +16,7 @@ def execute(cmd, cwd = None):
     if retcode != 0:
         raise Exception("Child returned:", retcode)
 
-class TestRunner(object):
+class TestRunner:
     def __init__(self, script_dir, tests_dir, build_dir, framework_dir, framework_name, arch, target, platform):
         self.script_dir = script_dir
         self.tests_dir = tests_dir

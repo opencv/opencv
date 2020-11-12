@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 
 from __future__ import print_function, unicode_literals
-from builtins import str
-from builtins import object
 import sys, re, os.path, errno, fnmatch
 import json
 import logging
@@ -111,7 +109,7 @@ T_OBJC_CLASS_BODY = read_contents(os.path.join(SCRIPT_DIR, 'templates/objc_class
 T_OBJC_MODULE_HEADER = read_contents(os.path.join(SCRIPT_DIR, 'templates/objc_module_header.template'))
 T_OBJC_MODULE_BODY = read_contents(os.path.join(SCRIPT_DIR, 'templates/objc_module_body.template'))
 
-class GeneralInfo(object):
+class GeneralInfo():
     def __init__(self, type, decl, namespaces):
         self.namespace, self.classpath, self.classname, self.name = self.parseName(decl[0], namespaces)
 
@@ -220,7 +218,7 @@ def gen_class_doc(docstring, module, members, enums):
 
     return "\n".join(lines)
 
-class ClassPropInfo(object):
+class ClassPropInfo():
     def __init__(self, decl): # [f_ctype, f_name, '', '/RW']
         self.ctype = decl[0]
         self.name = decl[1]
@@ -407,7 +405,7 @@ class ClassInfo(GeneralInfo):
                             docs = gen_class_doc(self.docstring, M, self.member_classes, self.member_enums),
                             base = self.base)
 
-class ArgInfo(object):
+class ArgInfo():
     def __init__(self, arg_tuple): # [ ctype, name, def val, [mod], argno ]
         self.pointer = False
         ctype = arg_tuple[0]
