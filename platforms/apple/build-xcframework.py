@@ -33,16 +33,16 @@ def get_framework_build_command_for_platform(platform, destination, framework_na
     """
     destination = destination.replace(" ", "\\ ")
     if platform == 'macos':
-        return ["python3", "../osx/build_framework.py", "--archs", "x86_64,arm64", "--framework_name", framework_name, "--build-only-specified-archs", destination]
+        return ["python3", "../osx/build_framework.py", "--archs", "x86_64,arm64", "--framework_name", framework_name, "--build_only_specified_archs", destination]
     elif platform == 'ios-maccatalyst':
         # This is not a mistake. For Catalyst, we use the osx toolchain.
-        return ["python3", "../osx/build_framework.py", "--catalyst_archs", "x86_64,arm64", "--framework_name", framework_name, "--build-only-specified-archs", destination]
+        return ["python3", "../osx/build_framework.py", "--catalyst_archs", "x86_64,arm64", "--framework_name", framework_name, "--build_only_specified_archs", destination]
     elif platform == 'ios':
         archs = "arm64" if only_64_bit else "arm64,armv7,armv7s"
-        return ["python3", "../ios/build_framework.py", "--iphoneos_archs", archs, "--framework_name", framework_name, "--build-only-specified-archs", destination]
+        return ["python3", "../ios/build_framework.py", "--iphoneos_archs", archs, "--framework_name", framework_name, "--build_only_specified_archs", destination]
     elif platform == 'ios-simulator':
         archs = "x86_64,arm64" if only_64_bit else "x86_64,arm64,i386"
-        return ["python3", "../ios/build_framework.py", "--iphonesimulator_archs", archs, "--framework_name", framework_name, "--build-only-specified-archs", destination]
+        return ["python3", "../ios/build_framework.py", "--iphonesimulator_archs", archs, "--framework_name", framework_name, "--build_only_specified_archs", destination]
     else:
         raise Exception(f"Platform {platform} has no associated build commands.")
 
@@ -50,8 +50,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='This script builds an OpenCV .xcframework supporting the Apple platforms of your choice.')
     parser.add_argument('out', metavar='OUTDIR', help='folder to put built xcframework into')
     parser.add_argument('--platform', default='ios,ios-simulator,ios-maccatalyst,macos', help='platforms to build for')
-    parser.add_argument('--framework-name', default='opencv2', dest='framework_name', help='Name of OpenCV framework (default: opencv2, will change to OpenCV in future version)')
-    parser.add_argument('--only-64-bit', default=False, dest='only_64_bit', action='store_true', help='only build for 64-bit archs')
+    parser.add_argument('--framework_name', default='opencv2', help='Name of OpenCV framework (default: opencv2, will change to OpenCV in future version)')
+    parser.add_argument('--only_64_bit', default=False, action='store_true', help='only build for 64-bit archs')
 
     args = parser.parse_args()
 
