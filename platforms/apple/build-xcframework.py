@@ -6,12 +6,12 @@ of your choice. Just run it and grab a snack; you'll be waiting a while.
 """
 
 import sys, os, os.path, argparse, pathlib, traceback
-from cv_build_utils import execute, print_error
+from cv_build_utils import execute, print_error, print_header
 
 assert sys.version_info >= (3, 6), "Python 3.6 or newer is required!"
 
 def get_or_create_folder_for_platform(platform):
-    folder_name = "./xcframework-build/%s" % platform
+    folder_name = f"./xcframework-build/{platform}"
     pathlib.Path(folder_name).mkdir(parents=True, exist_ok=True)
     return folder_name
 
@@ -32,16 +32,17 @@ def get_framework_build_command_for_platform(platform, destination, framework_na
         Build only 64-bit archs, by default False
     """
     if platform == 'macos':
-        return "python3 ../osx/build_framework.py --archs %s --framework_name %s --without=objc --build-only-specified-archs %s" % ("x86_64,arm64", framework_name, destination)
+        return f"python3 ../osx/build_framework.py --archs x86_64,arm64 --framework_name {framework_name} --without=objc --build-only-specified-archs {destination}"
     elif platform == 'ios-maccatalyst':
         # This is not a mistake. For Catalyst, we use the osx toolchain.
-        return "python3 ../osx/build_framework.py --catalyst_archs %s --framework_name %s --without=objc --build-only-specified-archs %s" % ("x86_64,arm64", framework_name, destination)
+        return f"python3 ../osx/build_framework.py --catalyst_archs x86_64,arm64 --framework_name {framework_name} --without=objc --build-only-specified-archs {destination}"
     elif platform == 'ios':
-        return "python3 ../ios/build_framework.py --iphoneos_archs %s --framework_name %s --without=objc --build-only-specified-archs %s" % ("arm64" if only_64_bit else "arm64,armv7,armv7s", framework_name, destination)
+        archs = "arm64" if only_64_bit else "arm64,armv7,armv7s"
+        return f"python3 ../ios/build_framework.py --iphoneos_archs {archs} --framework_name {framework_name} --without=objc --build-only-specified-archs {destination}"
     elif platform == 'ios-simulator':
-        return "python3 ../ios/build_framework.py --iphonesimulator_archs %s --framework_name %s --without=objc --build-only-specified-archs %s" % ("x86_64,arm64", framework_name, destination)
+        return f"python3 ../ios/build_framework.py --iphonesimulator_archs x86_64,arm64 --framework_name {framework_name} --without=objc --build-only-specified-archs {destination}"
     else:
-        raise Exception("Platform %s has no associated build commands." % platform)
+        raise Exception(f"Platform {platform} has no associated build commands.")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='This script builds an OpenCV .xcframework supporting the Apple platforms of your choice.')
@@ -62,6 +63,9 @@ if __name__ == "__main__":
             folder = get_or_create_folder_for_platform(platform)
             build_folders.append(folder)
             framework_build_command = get_framework_build_command_for_platform(platform, folder, args.framework_name, args.only_64_bit)
+
+            print("")
+            print_header(f"Building frameworks for {platform}")
             execute(framework_build_command)
 
         # Put all the built .frameworks together into a .xcframework
@@ -69,7 +73,8 @@ if __name__ == "__main__":
         xcframework_build_command = f"xcodebuild -create-xcframework {framework_args} -output {args.out}/{args.framework_name}.xcframework"
         execute(xcframework_build_command)
 
-        print(f"Finished building {args.out}/{args.framework_name}.xcframework")
+        print("")
+        print_header(f"Finished building {args.out}/{args.framework_name}.xcframework")
     except Exception as e:
         print_error(e)
         traceback.print_exc(file=sys.stderr)
