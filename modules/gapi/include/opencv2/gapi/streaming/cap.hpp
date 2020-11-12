@@ -99,7 +99,7 @@ protected:
         }
         // Tag data with seq_id/ts
         const auto now = std::chrono::system_clock::now();
-        const auto dur = std::chrono::duration_cast<std::chrono::milliseconds>
+        const auto dur = std::chrono::duration_cast<std::chrono::microseconds>
             (now.time_since_epoch());
         data.meta[cv::gapi::streaming::meta_tag::timestamp] = int64_t{dur.count()};
         data.meta[cv::gapi::streaming::meta_tag::seq_id]    = int64_t{counter++};

@@ -12,6 +12,8 @@
 #include <ade/util/zip_range.hpp>
 
 #include <opencv2/gapi/opencv_includes.hpp>
+
+#include "api/gproto_priv.hpp" // ptr(GRunArgP)
 #include "executor/gexecutor.hpp"
 #include "compiler/passes/passes.hpp"
 
@@ -159,21 +161,18 @@ void writeBackExec(const Mag& mag, const RcDesc &rc, GRunArgP &g_arg)
     }
 }
 
-void assignMetaStubExec(Mag& mag, const Data &d, const cv::GRunArg::Meta &meta) {
-    if (d.storage != Data::Storage::INTERNAL && d.storage != Data::Storage::OUTPUT) {
-        return;
-    }
-    switch (d.shape)
+void assignMetaStubExec(Mag& mag, const RcDesc &rc, const cv::GRunArg::Meta &meta) {
+    switch (rc.shape)
     {
-    case GShape::GARRAY:  mag.meta<cv::detail::VectorRef>()[d.rc] = meta; break;
-    case GShape::GOPAQUE: mag.meta<cv::detail::OpaqueRef>()[d.rc] = meta; break;
-    case GShape::GSCALAR: mag.meta<cv::Scalar>()[d.rc]            = meta; break;
-    case GShape::GFRAME:  mag.meta<cv::MediaFrame>()[d.rc]        = meta; break;
+    case GShape::GARRAY:  mag.meta<cv::detail::VectorRef>()[rc.id] = meta; break;
+    case GShape::GOPAQUE: mag.meta<cv::detail::OpaqueRef>()[rc.id] = meta; break;
+    case GShape::GSCALAR: mag.meta<cv::Scalar>()[rc.id]            = meta; break;
+    case GShape::GFRAME:  mag.meta<cv::MediaFrame>()[rc.id]        = meta; break;
     case GShape::GMAT:
-        mag.meta<cv::Mat>() [d.rc] = meta;
-        mag.meta<cv::RMat>()[d.rc] = meta;
+        mag.meta<cv::Mat>() [rc.id] = meta;
+        mag.meta<cv::RMat>()[rc.id] = meta;
 #if defined(GAPI_STANDALONE)
-        mag.meta<cv::UMat>()[d.rc] = meta;
+        mag.meta<cv::UMat>()[rc.id] = meta;
 #endif
         break;
     default: util::throw_error(std::logic_error("Unsupported GShape type")); break;
@@ -256,11 +255,28 @@ public:
 class cv::gimpl::GExecutor::Output final: public cv::gimpl::GIslandExecutable::IOutput
 {
     cv::gimpl::Mag &mag;
-    virtual GRunArgP get(int idx) override { return magazine::getObjPtrExec(mag, desc()[idx]); }
-    virtual void post(GRunArgP&&) override { } // Do nothing here
-    virtual void post(EndOfStream&&) override {} // Do nothing here too
+    std::unordered_map<const void*, int> out_idx;
+
+    GRunArgP get(int idx) override
+    {
+        auto r = magazine::getObjPtrExec(mag, desc()[idx]);
+        // Remember the output port for this output object
+        out_idx[cv::gimpl::proto::ptr(r)] = idx;
+        return r;
+    }
+    void post(GRunArgP&&) override { } // Do nothing here
+    void post(EndOfStream&&) override {} // Do nothing here too
+    void meta(const GRunArgP &out, const GRunArg::Meta &m) override
+    {
+        const auto idx = out_idx.at(cv::gimpl::proto::ptr(out));
+        magazine::assignMetaStubExec(mag, desc()[idx], m);
+    }
 public:
-    Output(cv::gimpl::Mag &m, const std::vector<RcDesc> &rcs) : mag(m) { set(rcs); }
+    Output(cv::gimpl::Mag &m, const std::vector<RcDesc> &rcs)
+        : mag(m)
+    {
+        set(rcs);
+    }
 };
 
 void cv::gimpl::GExecutor::run(cv::gimpl::GRuntimeArgs &&args)
@@ -343,17 +359,6 @@ void cv::gimpl::GExecutor::run(cv::gimpl::GRuntimeArgs &&args)
                                   ade::util::toRange(args.outObjs)))
     {
         magazine::bindOutArgExec(m_res, std::get<0>(it), std::get<1>(it));
-    }
-    // Propagate in-graph meta down to the graph
-    // Note: this is not a complete implementation! Mainly this is a stub
-    // and the proper implementation should come later.
-    cv::GRunArg::Meta stub_meta;
-    for (auto &&in_arg : args.inObjs) {
-        stub_meta.insert(in_arg.meta.begin(), in_arg.meta.end());
-    }
-    for (auto &sd : m_slots) {
-        const auto& data = m_gm.metadata(sd.data_nh).get<Data>();
-        magazine::assignMetaStubExec(m_res, data, stub_meta);
     }
 
     // Reset internal data

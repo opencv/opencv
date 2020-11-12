@@ -350,16 +350,14 @@ bool QueueReader::getInputVector(std::vector<Q*> &in_queues,
             // value-initialized scalar)
             // It can also hold a constant value received with
             // Stop::Kind::CNST message (see above).
-            // FIXME: Variant move problem
-            isl_inputs[id] = const_cast<const cv::GRunArg&>(in_constants[id]);
+            isl_inputs[id] = in_constants[id];
             continue;
         }
 
         q->pop(m_cmd[id]);
         if (!cv::util::holds_alternative<Stop>(m_cmd[id]))
         {
-            // FIXME: Variant move problem
-            isl_inputs[id] = const_cast<const cv::GRunArg &>(cv::util::get<cv::GRunArg>(m_cmd[id]));
+            isl_inputs[id] = cv::util::get<cv::GRunArg>(m_cmd[id]);
         }
         else // A Stop sign
         {
@@ -382,7 +380,7 @@ bool QueueReader::getInputVector(std::vector<Q*> &in_queues,
                 // NEXT time (on a next call to getInputVector()), the
                 // "q==nullptr" check above will be triggered, but now
                 // we need to make it manually:
-                isl_inputs[id] = const_cast<const cv::GRunArg&>(in_constants[id]);
+                isl_inputs[id] = in_constants[id];
             }
             else
             {
@@ -666,8 +664,7 @@ class StreamingOutput final: public cv::gimpl::GIslandExecutable::IOutput
             Cmd cmd;
             if (cv::util::holds_alternative<cv::GRunArg>(post_iter->data))
             {
-                // FIXME: That ugly VARIANT problem
-                cmd = Cmd{const_cast<const cv::GRunArg&>(cv::util::get<cv::GRunArg>(post_iter->data))};
+                cmd = Cmd{cv::util::get<cv::GRunArg>(post_iter->data)};
             }
             else
             {
@@ -677,8 +674,7 @@ class StreamingOutput final: public cv::gimpl::GIslandExecutable::IOutput
             }
             for (auto &&q : m_out_queues[out_idx])
             {
-                // FIXME: This ugly VARIANT problem
-                q->push(const_cast<const Cmd&>(cmd));
+                q->push(cmd);
             }
             post_iter = m_postings[out_idx].erase(post_iter);
         }
@@ -708,6 +704,15 @@ class StreamingOutput final: public cv::gimpl::GIslandExecutable::IOutput
             }
         }
     }
+    void meta(const cv::GRunArgP &out, const cv::GRunArg::Meta &m) override
+    {
+        const auto it = m_postIdx.find(cv::gimpl::proto::ptr(out));
+        GAPI_Assert(it != m_postIdx.end());
+
+        const auto out_iter = it->second.second;
+        cv::util::get<cv::GRunArg>(out_iter->data).meta = m;
+    }
+
 public:
     explicit StreamingOutput(const cv::GMetaArgs &metas,
                              std::vector< std::vector<Q*> > &out_queues,
