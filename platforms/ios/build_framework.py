@@ -272,26 +272,27 @@ class Builder:
         if target.lower().startswith("iphoneos"):
             cmakecmd.append("-DCPU_BASELINE=DETECT")
         if target.lower().startswith("iphonesimulator"):
-            build_arch = check_output(["uname", "-m"]).rstrip()
+            build_arch = check_output(["uname", "-m"]).decode('utf-8').rstrip()
             if build_arch != arch:
-                print("!!!!!!!!!!!!!!!!! build_arch != arch")
+                print("build_arch (%s) != arch (%s)" % (build_arch, arch))
                 cmakecmd.append("-DCMAKE_SYSTEM_PROCESSOR=" + arch)
                 cmakecmd.append("-DCMAKE_OSX_ARCHITECTURES=" + arch)
                 cmakecmd.append("-DCPU_BASELINE=DETECT")
                 cmakecmd.append("-DCMAKE_CROSSCOMPILING=ON")
                 cmakecmd.append("-DOPENCV_WORKAROUND_CMAKE_20989=ON")
         if target.lower() == "catalyst":
-            build_arch = check_output(["uname", "-m"]).rstrip()
+            build_arch = check_output(["uname", "-m"]).decode('utf-8').rstrip()
             if build_arch != arch:
-                print("!!!!!!!!!!!!!!!!! build_arch != arch")
+                print("build_arch (%s) != arch (%s)" % (build_arch, arch))
                 cmakecmd.append("-DCMAKE_SYSTEM_PROCESSOR=" + arch)
                 cmakecmd.append("-DCMAKE_OSX_ARCHITECTURES=" + arch)
                 cmakecmd.append("-DCPU_BASELINE=DETECT")
                 cmakecmd.append("-DCMAKE_CROSSCOMPILING=ON")
                 cmakecmd.append("-DOPENCV_WORKAROUND_CMAKE_20989=ON")
         if target.lower() == "macosx":
-            build_arch = check_output(["uname", "-m"]).rstrip()
+            build_arch = check_output(["uname", "-m"]).decode('utf-8').rstrip()
             if build_arch != arch:
+                print("build_arch (%s) != arch (%s)" % (build_arch, arch))
                 cmakecmd.append("-DCMAKE_SYSTEM_PROCESSOR=" + arch)
                 cmakecmd.append("-DCMAKE_OSX_ARCHITECTURES=" + arch)
                 cmakecmd.append("-DCPU_BASELINE=DETECT")
