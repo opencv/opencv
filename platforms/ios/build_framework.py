@@ -105,7 +105,6 @@ class Builder:
         dirs = []
 
         xcode_ver = getXCodeMajor()
-        print("Build!!!!!!!!!!!!")
 
         # build each architecture separately
         alltargets = []
@@ -264,9 +263,7 @@ class Builder:
         return 'ios'
 
     def makeCMakeCmd(self, arch, target, dir, cmakeargs = []):
-        print("makeCMakeCmd!!!!!!!!!!!!!!!")
         toolchain = self.getToolchain(arch, target)
-        # toolchain = None
         cmakecmd = self.getCMakeArgs(arch, target) + \
             (["-DCMAKE_TOOLCHAIN_FILE=%s" % toolchain] if toolchain is not None else [])
         if target.lower().startswith("iphoneos"):
