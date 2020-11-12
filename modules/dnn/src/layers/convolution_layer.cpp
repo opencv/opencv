@@ -561,7 +561,7 @@ public:
         CV_Assert_N(inputs.size() >= 1, nodes.size() >= 1);
         auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
         std::vector<size_t> dims = ieInpNode->get_shape();
-        CV_Assert((dims.size() == 3 && kernel_size.size() == 1) || dims.size() == 4 || dims.size() == 5);
+        CV_Assert(dims.size() == 4 || dims.size() == 5);
         std::shared_ptr<ngraph::Node> ieWeights = nodes.size() > 1 ? nodes[1].dynamicCast<InfEngineNgraphNode>()->node : nullptr;
         if (nodes.size() > 1)
             CV_Assert(ieWeights);  // dynamic_cast should not fail
@@ -688,9 +688,8 @@ public:
             bool isConv1D = input.dims == 3;
             bool isConv2D = input.dims == 4;
             bool isConv3D = input.dims == 5;
-            CV_Assert_N(
-                       ((kernel_size.size() == 1 && isConv1D) || (kernel_size.size() == 2 && isConv2D) || (kernel_size.size() == 3 && isConv3D))
-                       && input.dims == output.dims,
+            CV_CheckEQ(static_cast<int>(kernel_size.size()), input.dims - 2, "");
+            CV_Assert_N(input.dims == output.dims,
                        input.size[0] == output.size[0],
                        weights.rows == output.size[1],
                        weights.cols == (input.size[1]/ngroups)*karea,
@@ -755,21 +754,20 @@ public:
             }
             else if (isConv2D)
             {
-                for (int k = 0; k < ncn; k++)
-                    for (int k_r = 0; k_r < kernel_h; k_r++)
-                        for (int k_c = 0; k_c < kernel_w; k_c++)
-                            ofstab[(k * kernel_h + k_r) * kernel_w + k_c] =
-                                    (k * height + k_r * dil_h) * width + k_c * dil_w;
+                for( int k = 0; k < ncn; k++ )
+                    for( int k_r = 0; k_r < kernel_h; k_r++ )
+                        for( int k_c = 0; k_c < kernel_w; k_c++ )
+                            ofstab[(k*kernel_h + k_r)*kernel_w + k_c] =
+                                    (k*height + k_r*dil_h)*width + k_c*dil_w;
             }
             else
             {
-                for (int k = 0; k < ncn; k++)
-                    for (int k_d = 0; k_d < kernel_d; k_d++)
-                        for (int k_r = 0; k_r < kernel_h; k_r++)
-                            for (int k_c = 0; k_c < kernel_w; k_c++)
-                                ofstab[(k * kernel_d * kernel_h + k_d * kernel_h + k_r) * kernel_w + k_c] =
-                                        (k * depth * height + k_d * dil_d * height + k_r * dil_h) * width +
-                                        k_c * dil_w;
+                for( int k = 0; k < ncn; k++ )
+                    for( int k_d = 0; k_d < kernel_d; k_d++ )
+                        for( int k_r = 0; k_r < kernel_h; k_r++ )
+                            for( int k_c = 0; k_c < kernel_w; k_c++ )
+                                ofstab[(k*kernel_d*kernel_h + k_d*kernel_h + k_r)*kernel_w + k_c] =
+                                        (k*depth*height + k_d*dil_d*height + k_r*dil_h)*width + k_c*dil_w;
             }
 
             p.biasvec_ = &biasvec;
