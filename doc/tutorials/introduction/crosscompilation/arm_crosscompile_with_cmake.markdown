@@ -26,11 +26,11 @@ Prerequisites
 -   Cross compilation tools for ARM: gcc, libstc++, etc. Depending on target platform you need to
     choose *gnueabi* or *gnueabihf* tools. Install command for *gnueabi*:
     @code{.bash}
-    sudo apt-get install gcc-arm-linux-gnueabi
+    sudo apt-get install gcc-arm-linux-gnueabi g++-arm-linux-gnueabi
     @endcode
     Install command for *gnueabihf*:
     @code{.bash}
-    sudo apt-get install gcc-arm-linux-gnueabihf
+    sudo apt-get install gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf
     @endcode
 -   pkgconfig;
 -   Python 2.6 for host system;
