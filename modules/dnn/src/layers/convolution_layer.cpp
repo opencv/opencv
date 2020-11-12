@@ -116,6 +116,7 @@ public:
         if (weightShape.dims() == 3)
         {
             kernel_size.assign(1, kernel_size[0]);
+            strides.assign(1, strides[0]);
         }
         CV_Assert(weightShape.dims() == kernel_size.size() + 2);
         for (int i = 0; i < kernel_size.size(); i++) {
