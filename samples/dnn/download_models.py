@@ -23,12 +23,12 @@ import xml.etree.ElementTree as ET
 __all__ = ["downloadFile"]
 
 class HashMismatchException(Exception):
-        def __init__(self, expected, actual):
-            Exception.__init__(self)
-            self.expected = expected
-            self.actual = actual
-        def __str__(self):
-            return 'Hash mismatch: expected {} vs actual of {}'.format(self.expected, self.actual)
+    def __init__(self, expected, actual):
+        Exception.__init__(self)
+        self.expected = expected
+        self.actual = actual
+    def __str__(self):
+        return 'Hash mismatch: expected {} vs actual of {}'.format(self.expected, self.actual)
 
 def getHashsumFromFile(filepath):
     sha = hashlib.sha1()
