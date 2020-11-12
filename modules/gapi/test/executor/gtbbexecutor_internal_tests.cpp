@@ -59,7 +59,7 @@ TEST(TBBExecutor, SerialExecution)
     std::vector<tile_node> nodes; nodes.reserve(n+1);
     std::vector<std::thread::id> thread_id(n);
     for (int i=0; i <n; i++) {
-        nodes.push_back( tile_node([&, i](){
+        nodes.push_back(tile_node([&, i](){
                 thread_id[i] = std::this_thread::get_id();
                 std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
@@ -71,7 +71,7 @@ TEST(TBBExecutor, SerialExecution)
     execute(q, serial_arena);
     auto print_thread_ids = [&]{
         std::stringstream str;
-        for ( auto & i : thread_id) { str << i <<" ";}
+        for (auto & i : thread_id) { str << i <<" ";}
         return str.str();
     };
     EXPECT_NE(thread_id[0], std::thread::id{}) << print_thread_ids();
@@ -137,14 +137,14 @@ TEST(TBBExecutor, Dependencies)
         node.dependency_count.fetch_add(1);
     };
     for (int i=0; i <n; i++) {
-        nodes.push_back( tile_node([&, i](){
+        nodes.push_back(tile_node([&, i](){
                 tiles_exec_order[i] = counter++;
                 if (!serial) {
                     //sleep gives a better chance for other threads to take part in the execution
                     std::this_thread::sleep_for(std::chrono::milliseconds(10));
                 }
         }));
-        if (i >0 ) {
+        if (i >0) {
             auto last_node = nodes.end() - 1;
             add_dependency_to(*last_node, *(last_node -1));
         }
@@ -156,19 +156,19 @@ TEST(TBBExecutor, Dependencies)
     execute(q, arena);
     auto print_execution_order = [&]{
         std::stringstream str;
-        for ( auto & i : tiles_exec_order) { str << i <<" ";}
+        for (auto & i : tiles_exec_order) { str << i <<" ";}
         return str.str();
     };
     ASSERT_EQ(0, std::count(tiles_exec_order.begin(), tiles_exec_order.end(), invalid_order))
-        <<"Not all "<< n <<" task executed ?\n"
-        <<"execution order : " << print_execution_order();
+        << "Not all " << n << " task executed ?\n"
+        <<" execution order : " << print_execution_order();
 
     for (size_t i=0; i <nodes.size(); i++){
         auto node_exec_order = tiles_exec_order[i];
         for (auto* dependee : nodes[i].dependants) {
             auto index = std::distance(&nodes.front(), dependee);
             auto dependee_execution_order = tiles_exec_order[index];
-            ASSERT_LT(node_exec_order, dependee_execution_order) << "node number " << index <<" is executed earlier than it's dependency " << i;
+            ASSERT_LT(node_exec_order, dependee_execution_order) << "node number " << index << " is executed earlier than it's dependency " << i;
         }
     }
 }
