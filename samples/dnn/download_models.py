@@ -61,11 +61,11 @@ class DownloadInstance:
         self.filenames = kwargs.pop('filenames')
         self.loader = kwargs.pop('loader', None)
         self.save_dir = kwargs.pop('save_dir')
-        self.shas = kwargs.pop('shas', None)    
+        self.shas = kwargs.pop('shas', None)
 
     def __str__(self):
         return 'DownloadInstance <{}>'.format(self.name)
-        
+
     def get(self):
         print("  Working on " + self.name)
         for filename, sha in zip(self.filenames, self.shas):
@@ -83,7 +83,7 @@ class DownloadInstance:
             if not os.path.exists(self.save_dir):
                 print('  creating directory: ' + self.save_dir)
                 os.makedirs(self.save_dir)
-            
+
 
             print('  hash check failed - loading')
             assert self.loader
@@ -148,11 +148,11 @@ class Loader(object):
                 self.extract(requested_file, download_path, extract_dir)
             else:
                 raise Exception("Downloaded file has different name")
-    
+
     def download(self, filepath):
         print("Warning: download is not implemented, this is a base class")
         return 0
-    
+
     def extract(self, requested_file, archive_path, save_dir):
         filepath = os.path.join(save_dir, requested_file)
         try:
@@ -164,7 +164,7 @@ class Loader(object):
                 self.save(filepath, f.extractfile(self.archive_member))
         except Exception as e:
             print('  catch {}'.format(e))
-    
+
     def save(self, filepath, r):
         with open(filepath, 'wb') as f:
             print('  progress ', end="")
@@ -189,7 +189,7 @@ class URLLoader(Loader):
         self.printRequest(r)
         self.save(filepath, r)
         return os.path.getsize(filepath)
-    
+
     def printRequest(self, r):
         def getMB(r):
             d = dict(r.info())
@@ -254,7 +254,7 @@ def produceDownloadInstance(instance_name, filename, sha, url, save_dir, downloa
         if "&id=" not in token_part:
             token_part = url.rsplit('/', 1)[-2]
         for param in token_part.split("&"):
-            if param.startswith("id="):                
+            if param.startswith("id="):
                 token = param[3:]
         if token:
             loader = GDriveLoader
@@ -335,7 +335,7 @@ def parseYAMLFile(yaml_filepath, save_dir):
                 download_sha = load_info.get("download_sha")
                 download_name = load_info.get("download_name")
                 archive_member = load_info.get("member")
-                models.append(produceDownloadInstance(name, fname, hash_sum, url, save_dir, 
+                models.append(produceDownloadInstance(name, fname, hash_sum, url, save_dir,
                     download_name=download_name, download_sha=download_sha, archive_member=archive_member))
 
     return models
