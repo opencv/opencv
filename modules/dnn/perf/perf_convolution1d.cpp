@@ -133,6 +133,7 @@ PERF_TEST_P_(Conv1D, conv1d)
     net.setPreferableBackend(backendId);
     net.setPreferableTarget(targetId);
 
+    // warmup
     Mat output = net.forward();
 
     MatShape netInputShape = shape(input);
