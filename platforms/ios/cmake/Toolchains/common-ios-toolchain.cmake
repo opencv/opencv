@@ -76,8 +76,6 @@ else()
   message(FATAL_ERROR "iOS toolchain doesn't recognize ARCH='${IOS_ARCH}' value")
 endif()
 
-toolchain_save_config(IOS_ARCH IPHONEOS_DEPLOYMENT_TARGET)
-
 if(NOT DEFINED CMAKE_OSX_SYSROOT)
   if(IPHONEOS)
     set(CMAKE_OSX_SYSROOT "iphoneos")
@@ -170,3 +168,5 @@ set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM ONLY)
 #   for libraries and headers in the target directories
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+
+toolchain_save_config(IOS_ARCH IPHONEOS_DEPLOYMENT_TARGET)

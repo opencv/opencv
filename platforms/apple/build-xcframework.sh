@@ -30,7 +30,7 @@ xcodebuild -create-xcframework \
     -framework ./xcframework-build/catalyst-arm64/opencv2.framework \
     -framework ./xcframework-build/osx-x86_64/opencv2.framework \
     -framework ./xcframework-build/osx-arm64/opencv2.framework \
-    -framework ./xcframework-build/iphonesimulator-x86_64/opencv2.framework \
     -framework ./xcframework-build/iphonesimulator-arm64/opencv2.framework \
-    -framework ./xcframework-build/iphoneos/opencv2.framework \
+    -framework ./xcframework-build/iphonesimulator-x86_64/opencv2.framework \
+    -framework ./xcframework-build/iphoneos-arm64/opencv2.framework \
     -output ./xcframework-build/opencv2.xcframework
