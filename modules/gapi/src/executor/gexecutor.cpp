@@ -105,6 +105,9 @@ void bindInArgExec(Mag& mag, const RcDesc &rc, const GRunArg &arg)
         mag_rmat = util::get<cv::RMat>(arg); break;
     default: util::throw_error(std::logic_error("content type of the runtime argument does not match to resource description ?"));
     }
+    // FIXME: has to take extra care about meta here for this particuluar
+    // case, just because this function exists at all
+    mag.meta<cv::RMat>()[rc.id] = arg.meta;
 }
 
 void bindOutArgExec(Mag& mag, const RcDesc &rc, const GRunArgP &arg)
@@ -131,7 +134,7 @@ cv::GRunArgP getObjPtrExec(Mag& mag, const RcDesc &rc)
     {
         return getObjPtr(mag, rc);
     }
-    return GRunArgP(&mag.template slot<cv::RMat>()[rc.id]);
+    return GRunArgP(&mag.slot<cv::RMat>()[rc.id]);
 }
 
 void writeBackExec(const Mag& mag, const RcDesc &rc, GRunArgP &g_arg)
@@ -155,6 +158,28 @@ void writeBackExec(const Mag& mag, const RcDesc &rc, GRunArgP &g_arg)
     default: util::throw_error(std::logic_error("content type of the runtime argument does not match to resource description ?"));
     }
 }
+
+void assignMetaStubExec(Mag& mag, const Data &d, const cv::GRunArg::Meta &meta) {
+    if (d.storage != Data::Storage::INTERNAL && d.storage != Data::Storage::OUTPUT) {
+        return;
+    }
+    switch (d.shape)
+    {
+    case GShape::GARRAY:  mag.meta<cv::detail::VectorRef>()[d.rc] = meta; break;
+    case GShape::GOPAQUE: mag.meta<cv::detail::OpaqueRef>()[d.rc] = meta; break;
+    case GShape::GSCALAR: mag.meta<cv::Scalar>()[d.rc]            = meta; break;
+    case GShape::GFRAME:  mag.meta<cv::MediaFrame>()[d.rc]        = meta; break;
+    case GShape::GMAT:
+        mag.meta<cv::Mat>() [d.rc] = meta;
+        mag.meta<cv::RMat>()[d.rc] = meta;
+#if defined(GAPI_STANDALONE)
+        mag.meta<cv::UMat>()[d.rc] = meta;
+#endif
+        break;
+    default: util::throw_error(std::logic_error("Unsupported GShape type")); break;
+    }
+}
+
 } // anonymous namespace
 }}} // namespace cv::gimpl::magazine
 
@@ -319,6 +344,17 @@ void cv::gimpl::GExecutor::run(cv::gimpl::GRuntimeArgs &&args)
     {
         magazine::bindOutArgExec(m_res, std::get<0>(it), std::get<1>(it));
     }
+    // Propagate in-graph meta down to the graph
+    // Note: this is not a complete implementation! Mainly this is a stub
+    // and the proper implementation should come later.
+    cv::GRunArg::Meta stub_meta;
+    for (auto &&in_arg : args.inObjs) {
+        stub_meta.insert(in_arg.meta.begin(), in_arg.meta.end());
+    }
+    for (auto &sd : m_slots) {
+        const auto& data = m_gm.metadata(sd.data_nh).get<Data>();
+        magazine::assignMetaStubExec(m_res, data, stub_meta);
+    }
 
     // Reset internal data
     for (auto &sd : m_slots)
@@ -330,7 +366,7 @@ void cv::gimpl::GExecutor::run(cv::gimpl::GRuntimeArgs &&args)
     // Run the script
     for (auto &op : m_ops)
     {
-        // (5)
+        // (5), (6)
         Input i{m_res, op.in_objects};
         Output o{m_res, op.out_objects};
         op.isl_exec->run(i, o);
