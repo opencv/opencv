@@ -1199,7 +1199,8 @@ weights \f$w_i\f$ are adjusted to be inversely proportional to \f$\rho(r_i)\f$ .
 
 @note Function textual ID is "org.opencv.imgproc.shape.fitLine2DMat"
 
-@param src Input set of 2D points stored in Mat.
+@param src Input set of 2D points stored in one of possible containers: Mat,
+std::vector<cv::Point2i>, std::vector<cv::Point2f>, std::vector<cv::Point2d>.
 
 @note In case of an N-dimentional points' set given, Mat should be 2-dimensional, have a single row
 or column if there are N channels, or have N columns if there is a single channel.
@@ -1224,7 +1225,6 @@ GAPI_EXPORTS GOpaque<Vec4f> fitLine2D(const GMat& src, const DistanceTypes distT
 
 @note Function textual ID is "org.opencv.imgproc.shape.fitLine2DVector32S"
 
-@param src Input 2D point set, stored in std::vector<cv::Point2i>.
  */
 GAPI_EXPORTS GOpaque<Vec4f> fitLine2D(const GArray<Point2i>& src, const DistanceTypes distType,
                                       const double param = 0., const double reps = 0.,
@@ -1244,7 +1244,6 @@ GAPI_EXPORTS GOpaque<Vec4f> fitLine2D(const GArray<Point2f>& src, const Distance
 
 @note Function textual ID is "org.opencv.imgproc.shape.fitLine2DVector64F"
 
-@param src Input 2D point set, stored in std::vector<cv::Point2d>.
  */
 GAPI_EXPORTS GOpaque<Vec4f> fitLine2D(const GArray<Point2d>& src, const DistanceTypes distType,
                                       const double param = 0., const double reps = 0.,
@@ -1274,7 +1273,8 @@ weights \f$w_i\f$ are adjusted to be inversely proportional to \f$\rho(r_i)\f$ .
 
 @note Function textual ID is "org.opencv.imgproc.shape.fitLine3DMat"
 
-@param src Input set of 3D points stored in Mat.
+@param src Input set of 3D points stored in one of possible containers: Mat,
+std::vector<cv::Point3i>, std::vector<cv::Point3f>, std::vector<cv::Point3d>.
 
 @note In case of an N-dimentional points' set given, Mat should be 2-dimensional, have a single row
 or column if there are N channels, or have N columns if there is a single channel.
@@ -1300,7 +1300,6 @@ GAPI_EXPORTS GOpaque<Vec6f> fitLine3D(const GMat& src, const DistanceTypes distT
 
 @note Function textual ID is "org.opencv.imgproc.shape.fitLine3DVector32S"
 
-@param src Input 3D point set, stored in std::vector<cv::Point3i>.
  */
 GAPI_EXPORTS GOpaque<Vec6f> fitLine3D(const GArray<Point3i>& src, const DistanceTypes distType,
                                       const double param = 0., const double reps = 0.,
@@ -1310,7 +1309,6 @@ GAPI_EXPORTS GOpaque<Vec6f> fitLine3D(const GArray<Point3i>& src, const Distance
 
 @note Function textual ID is "org.opencv.imgproc.shape.fitLine3DVector32F"
 
-@param src Input 3D point set, stored in std::vector<cv::Point3f>.
  */
 GAPI_EXPORTS GOpaque<Vec6f> fitLine3D(const GArray<Point3f>& src, const DistanceTypes distType,
                                       const double param = 0., const double reps = 0.,
@@ -1320,7 +1318,6 @@ GAPI_EXPORTS GOpaque<Vec6f> fitLine3D(const GArray<Point3f>& src, const Distance
 
 @note Function textual ID is "org.opencv.imgproc.shape.fitLine3DVector64F"
 
-@param src Input 3D point set, stored in std::vector<cv::Point3d>.
  */
 GAPI_EXPORTS GOpaque<Vec6f> fitLine3D(const GArray<Point3d>& src, const DistanceTypes distType,
                                       const double param = 0., const double reps = 0.,

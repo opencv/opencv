@@ -78,16 +78,16 @@ namespace
     template <typename T> inline void initPointRandU(cv::RNG &rng, cv::Point_<T>& pt)
     {
         GAPI_Assert(std::is_integral<T>::value);
-        pt = cv::Point_<T>(static_cast<T>(rng(CHAR_MAX + 1U)),
-                           static_cast<T>(rng(CHAR_MAX + 1U)));
+        pt = cv::Point_<T>(static_cast<T>(static_cast<char>(rng(CHAR_MAX + 1U))),
+                           static_cast<T>(static_cast<char>(rng(CHAR_MAX + 1U))));
     }
 
     template <typename T> inline void initPointRandU(cv::RNG &rng, cv::Point3_<T>& pt)
     {
         GAPI_Assert(std::is_integral<T>::value);
-        pt = cv::Point3_<T>(static_cast<T>(rng(CHAR_MAX + 1U)),
-                            static_cast<T>(rng(CHAR_MAX + 1U)),
-                            static_cast<T>(rng(CHAR_MAX + 1U)));
+        pt = cv::Point3_<T>(static_cast<T>(static_cast<char>(rng(CHAR_MAX + 1U))),
+                            static_cast<T>(static_cast<char>(rng(CHAR_MAX + 1U))),
+                            static_cast<T>(static_cast<char>(rng(CHAR_MAX + 1U))));
     }
 
     template <typename F> inline void initFloatPointRandU(cv::RNG &rng, cv::Point_<F> &pt)
@@ -331,10 +331,6 @@ public:
     template <typename T, template <typename> class Pt>
     void initPointsVectorRandU(const int sz_in, std::vector<Pt<T>> &vec_)
     {
-        bool is_Point_2D_or_3D = std::is_same<Pt<T>, cv::Point_ <T>>::value ||
-                                 std::is_same<Pt<T>, cv::Point3_<T>>::value;
-        GAPI_Assert(is_Point_2D_or_3D);
-
         cv::RNG& rng = theRNG();
 
         vec_.clear();
