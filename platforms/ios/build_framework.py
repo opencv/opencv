@@ -101,8 +101,9 @@ class Builder:
                 cmake_flags.append("-DCMAKE_CXX_FLAGS=-fembed-bitcode")
             if xcode_ver >= 7 and target[1] == 'Catalyst':
                 sdk_path = check_output(["xcodebuild", "-version", "-sdk", "macosx", "Path"]).decode('utf-8').rstrip()
+                target_flag = "-target %s-apple-ios13.0-macabi" % target[0]  # e.g. x86_64-apple-ios13.0-macabi 
                 c_flags = [
-                    "-target %s-apple-ios13.0-macabi" % target[0],  # e.g. x86_64-apple-ios13.2-macabi # -mmacosx-version-min=10.15
+					target_flag,                    
                     "-isysroot %s" % sdk_path,
                     "-iframework %s/System/iOSSupport/System/Library/Frameworks" % sdk_path,
                     "-isystem %s/System/iOSSupport/usr/include" % sdk_path,
@@ -295,8 +296,10 @@ class Builder:
             cmakecmd.append("-DBUILD_ROOT=%s" % builddir)
             cmakecmd.append("-DCMAKE_INSTALL_NAME_TOOL=install_name_tool")
             cmakecmd.append("--no-warn-unused-cli")
+            cmakecmd.append("--debug-trycompile")
+            print('==============cmakecmd===============')
             execute(cmakecmd, cwd = builddir + "/modules/objc/framework_build")
-
+            print('==============buildcmd===============')
             execute(buildcmd + ["-target", "ALL_BUILD", "build"], cwd = builddir + "/modules/objc/framework_build")
             execute(["cmake", "-DBUILD_TYPE=%s" % self.getConfiguration(), "-DCMAKE_INSTALL_PREFIX=%s" % (builddir + "/install"), "-P", "cmake_install.cmake"], cwd = builddir + "/modules/objc/framework_build")
 
