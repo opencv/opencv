@@ -171,7 +171,7 @@ void assignMetaStubExec(Mag& mag, const RcDesc &rc, const cv::GRunArg::Meta &met
     case GShape::GMAT:
         mag.meta<cv::Mat>() [rc.id] = meta;
         mag.meta<cv::RMat>()[rc.id] = meta;
-#if defined(GAPI_STANDALONE)
+#if !defined(GAPI_STANDALONE)
         mag.meta<cv::UMat>()[rc.id] = meta;
 #endif
         break;

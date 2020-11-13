@@ -215,7 +215,7 @@ namespace detail
 
         virtual const void* ptr() const override { return &rref(); }
 
-        virtual void set(const cv::util::any &a) {
+        virtual void set(const cv::util::any &a) override {
             wref() = util::any_cast<T>(a);
         }
     };
