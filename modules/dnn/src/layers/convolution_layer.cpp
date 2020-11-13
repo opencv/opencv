@@ -313,6 +313,7 @@ public:
         {
             getConvPoolOutParams(inpShape, kernel_size, strides, padMode, dilations, outShape);
         }
+
         int ngroups = inpCn / weightShape[1];
         if (ngroups == 0 || ngroups * weightShape[1] != inpCn)
             CV_Error(Error::StsError, format("Number of input channels should "
@@ -758,16 +759,16 @@ public:
                     for( int k_r = 0; k_r < kernel_h; k_r++ )
                         for( int k_c = 0; k_c < kernel_w; k_c++ )
                             ofstab[(k*kernel_h + k_r)*kernel_w + k_c] =
-                                    (k*height + k_r*dil_h)*width + k_c*dil_w;
+                                   (k*height + k_r*dil_h)*width + k_c*dil_w;
             }
             else
             {
                 for( int k = 0; k < ncn; k++ )
-                    for( int k_d = 0; k_d < kernel_d; k_d++ )
+                    for (int k_d = 0; k_d < kernel_d; k_d++)
                         for( int k_r = 0; k_r < kernel_h; k_r++ )
                             for( int k_c = 0; k_c < kernel_w; k_c++ )
                                 ofstab[(k*kernel_d*kernel_h + k_d*kernel_h + k_r)*kernel_w + k_c] =
-                                        (k*depth*height + k_d*dil_d*height + k_r*dil_h)*width + k_c*dil_w;
+                                       (k*depth*height + k_d*dil_d*height + k_r*dil_h)*width + k_c*dil_w;
             }
 
             p.biasvec_ = &biasvec;
