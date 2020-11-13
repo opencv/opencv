@@ -26,7 +26,7 @@ def get_framework_build_command_for_platform(platform, destination, framework_na
     only_64_bit : bool, optional
         Build only 64-bit archs, by default False
     """
-    destination = destination.replace(" ", "\\ ")
+    destination = destination.replace(" ", "\\ ")  # Escape spaces in destination path
     if platform == 'macos':
         return ["python3", "../osx/build_framework.py", "--archs", "x86_64,arm64", "--framework_name", framework_name, "--build_only_specified_archs", destination]
     elif platform == 'ios-maccatalyst':
