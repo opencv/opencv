@@ -192,9 +192,14 @@ TEST_P(Test_ONNX_layers, Convolution3D)
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2019010000)
     applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_VERSION);
 #endif
-    if (target != DNN_TARGET_CPU && backend != DNN_BACKEND_CUDA)
-        throw SkipTestException("Only CPU and CUDA is supported");
     testONNXModels("conv3d");
+}
+
+TEST_P(Test_ONNX_layers, Convolution3D_bias)
+{
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2019010000)
+    applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+#endif
     testONNXModels("conv3d_bias");
 }
 
@@ -679,6 +684,58 @@ TEST_P(Test_ONNX_layers, MatmulWithTwoInputs)
 TEST_P(Test_ONNX_layers, ResizeOpset11_Torch1_6)
 {
     testONNXModels("resize_opset11_torch1.6");
+}
+
+TEST_P(Test_ONNX_layers, Conv1d)
+{
+    testONNXModels("conv1d");
+}
+
+TEST_P(Test_ONNX_layers, Conv1d_bias)
+{
+    testONNXModels("conv1d_bias");
+}
+
+TEST_P(Test_ONNX_layers, Conv1d_variable_weight)
+{
+    String basename = "conv1d_variable_w";
+    Net net = readNetFromONNX(_tf("models/" + basename + ".onnx"));
+    ASSERT_FALSE(net.empty());
+
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    Mat input = blobFromNPY(_tf("data/input_" + basename + "_0.npy"));
+    Mat weights = blobFromNPY(_tf("data/input_" + basename + "_1.npy"));
+    Mat ref = blobFromNPY(_tf("data/output_" + basename + ".npy"));
+
+    net.setInput(input, "0");
+    net.setInput(weights, "1");
+
+    Mat out = net.forward();
+    normAssert(ref, out, "", default_l1, default_lInf);
+}
+
+TEST_P(Test_ONNX_layers, Conv1d_variable_weight_bias)
+{
+    String basename = "conv1d_variable_wb";
+    Net net = readNetFromONNX(_tf("models/" + basename + ".onnx"));
+    ASSERT_FALSE(net.empty());
+
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    Mat input = blobFromNPY(_tf("data/input_" + basename + "_0.npy"));
+    Mat weights = blobFromNPY(_tf("data/input_" + basename + "_1.npy"));
+    Mat bias = blobFromNPY(_tf("data/input_" + basename + "_2.npy"));
+    Mat ref = blobFromNPY(_tf("data/output_" + basename + ".npy"));
+
+    net.setInput(input, "0");
+    net.setInput(weights, "1");
+    net.setInput(bias, "bias");
+
+    Mat out = net.forward();
+    normAssert(ref, out, "", default_l1, default_lInf);
 }
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_ONNX_layers, dnnBackendsAndTargets());

@@ -533,7 +533,7 @@ struct ConvParamID
         CONV_100 = 100,
         CONV_LAST = sizeof(testConvolutionConfigs) / sizeof(testConvolutionConfigs[0])
     };
-    int val_;                                                                  \
+    int val_;
     ConvParamID(int val = 0) : val_(val) {}
     operator int() const { return val_; }
     static ::testing::internal::ParamGenerator<ConvParamID> all()
@@ -546,7 +546,7 @@ struct ConvParamID
         ConvParamID v_[NUM]; for (int i = 0; i < NUM; ++i) { v_[i] = ConvParamID(i); } // reduce generated code size
         return ::testing::ValuesIn(v_, v_ + NUM);
     }
-};                                                                                  \
+};
 static inline void PrintTo(const ConvParamID& v, std::ostream* os)
 {
     CV_Assert((int)v >= 0); CV_Assert((int)v < ConvParamID::CONV_LAST);
