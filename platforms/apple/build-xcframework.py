@@ -5,7 +5,7 @@ This script builds OpenCV into an xcframework compatible the platforms
 of your choice. Just run it and grab a snack; you'll be waiting a while.
 """
 
-import sys, os, os.path, argparse, pathlib, traceback
+import sys, os, argparse, pathlib, traceback
 from cv_build_utils import execute, print_error, print_header
 
 assert sys.version_info >= (3, 6), "Python 3.6 or newer is required!"
