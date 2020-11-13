@@ -266,22 +266,26 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+        size_t ksize = kernel_size.size();
 #ifdef HAVE_INF_ENGINE
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         {
-            if (kernel_size.size() == 1)
+            if (ksize == 1)
                 return false;
-            if (kernel_size.size() == 3)
+            if (ksize == 3)
                 return preferableTarget == DNN_TARGET_CPU;
             if ((backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || preferableTarget != DNN_TARGET_MYRIAD) && blobs.empty())
                 return false;
             return (preferableTarget != DNN_TARGET_MYRIAD || dilation.width == dilation.height);
         }
-        else
 #endif
-            return (kernel_size.size() == 3 && preferableTarget == DNN_TARGET_CPU && backendId == DNN_BACKEND_OPENCV) ||
-                   (kernel_size.size() == 1 && preferableTarget == DNN_TARGET_CPU && backendId == DNN_BACKEND_OPENCV) ||
-                   (kernel_size.size() == 2 && (backendId == DNN_BACKEND_OPENCV || (backendId == DNN_BACKEND_HALIDE && !blobs.empty())));
+        if (backendId == DNN_BACKEND_OPENCV)
+            return ksize >= 1 && ksize <= 3;
+#ifdef HAVE_HALIDE
+        if (backendId == DNN_BACKEND_HALIDE)
+            return ksize == 2 && !blobs.empty();
+#endif
+        return false;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -333,18 +337,27 @@ public:
         inputs_arr.getMatVector(inputs);
         // prepare weightsMat where each row is aligned and has enough zero padding on the right to
         // use vectorized (i.e. with intrinsics) loops without tail processing
-        Mat wm = blobs.empty() ? inputs[1].reshape(1, numOutput) : blobs[0].reshape(1, numOutput);
-        if( wm.step1() % VEC_ALIGN != 0 )
+        if (!blobs.empty())
         {
-            int newcols = (int)alignSize(wm.step1(), VEC_ALIGN);
-            Mat wm_buffer = Mat(numOutput, newcols, wm.type());
-            Mat wm_padding = wm_buffer.colRange(wm.cols, newcols);
-            wm_padding.setTo(Scalar::all(0.));
-            Mat wm_aligned = wm_buffer.colRange(0, wm.cols);
-            wm.copyTo(wm_aligned);
-            wm = wm_aligned;
+            Mat wm = blobs[0].reshape(1, numOutput);
+            if( wm.step1() % VEC_ALIGN != 0 )
+            {
+                int newcols = (int)alignSize(wm.step1(), VEC_ALIGN);
+                Mat wm_buffer = Mat(numOutput, newcols, wm.type());
+                Mat wm_padding = wm_buffer.colRange(wm.cols, newcols);
+                wm_padding.setTo(Scalar::all(0.));
+                Mat wm_aligned = wm_buffer.colRange(0, wm.cols);
+                wm.copyTo(wm_aligned);
+                wm = wm_aligned;
+            }
+            weightsMat = wm;
         }
-        weightsMat = wm;
+        else
+        {
+            // initialized in .forward()
+            weightsMat.release();
+        }
+
         weightsMultipliers.assign(numOutput, 1.0);
 
         Mat biasMat = hasBias() ? blobs[1].reshape(1, numOutput) : Mat();
@@ -700,6 +713,8 @@ public:
                        input.isContinuous(),
                        output.isContinuous(),
                        biasvec.size() == (size_t)output.size[1]+2);
+            CV_Check(weights.step1(), weights.step1() % VEC_ALIGN == 0, "");
+            CV_CheckType(weights.type(), CV_32FC1, "");
             ParallelConv p;
 
             p.input_ = &input;
@@ -1348,9 +1363,12 @@ public:
                                             vs12 = v_setzero_f32(), vs13 = v_setzero_f32();
                                 for( k = 0; k < vsz; k += 4, rptr += 4 )
                                 {
-                                    v_float32x4 w0 = v_load_aligned(wptr0 + k), w1 = v_load_aligned(wptr1 + k);
-                                    v_float32x4 r0 = v_load_aligned(rptr), r1 = v_load_aligned(rptr + vsz_a),
-                                                r2 = v_load_aligned(rptr + vsz_a*2), r3 = v_load_aligned(rptr + vsz_a*3);
+                                    v_float32x4 w0 = v_load_aligned(wptr0 + k);
+                                    v_float32x4 w1 = v_load_aligned(wptr1 + k);
+                                    v_float32x4 r0 = v_load_aligned(rptr);
+                                    v_float32x4 r1 = v_load_aligned(rptr + vsz_a);
+                                    v_float32x4 r2 = v_load_aligned(rptr + vsz_a*2);
+                                    v_float32x4 r3 = v_load_aligned(rptr + vsz_a*3);
 
                                     vs00 += w0*r0;
                                     vs01 += w0*r1;
@@ -1420,6 +1438,12 @@ public:
 #ifdef HAVE_OPENCL
     bool forward_ocl(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
     {
+        if (kernel_size.size() != 2)
+        {
+            // no OpenCL optimizations, see .supportedBacked()
+            return false;
+        }
+
         std::vector<UMat> inputs;
         std::vector<UMat> outputs;
 
@@ -1603,19 +1627,21 @@ public:
         if (blobs.empty())
         {
             Mat wm = inputs[1].reshape(1, outCn);
-            if( wm.step1() % VEC_ALIGN != 0 )
+            if (wm.data != weightsMat.data)
             {
-                wm.copyTo(weightsMat);
+                int newcols = (int)alignSize(wm.step1(), VEC_ALIGN);
+                Mat wm_buffer = Mat(numOutput, newcols, wm.type());
+                Mat wm_padding = wm_buffer.colRange(wm.cols, newcols);
+                wm_padding.setTo(Scalar::all(0.));
+                weightsMat = wm_buffer.colRange(0, wm.cols);
+
+                wm.copyTo((const Mat&)weightsMat);
                 if (inputs.size() > 2)
                 {
                     Mat biasMat = inputs[2].reshape(1, outCn);
                     biasMat.col(0).copyTo(biasvec);
-                    biasvec.resize(outCn + 2);
                 }
-                else
-                {
-                    biasvec.resize(outCn + 2, 0);
-                }
+                biasvec.resize(outCn + 2, 0);
             }
         }
         /*if (inputs[0].dims > 3) {

@@ -183,9 +183,14 @@ TEST_P(Test_ONNX_layers, Convolution3D)
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2019010000)
     applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_VERSION);
 #endif
-    if (target != DNN_TARGET_CPU)
-        throw SkipTestException("Only CPU is supported");
     testONNXModels("conv3d");
+}
+
+TEST_P(Test_ONNX_layers, Convolution3D_bias)
+{
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2019010000)
+    applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+#endif
     testONNXModels("conv3d_bias");
 }
 
@@ -650,17 +655,16 @@ TEST_P(Test_ONNX_layers, ResizeOpset11_Torch1_6)
 
 TEST_P(Test_ONNX_layers, Conv1d)
 {
-    if (backend != DNN_BACKEND_OPENCV || target != DNN_TARGET_CPU)
-        throw SkipTestException("Only OpenCV CPU is supported");
     testONNXModels("conv1d");
+}
+
+TEST_P(Test_ONNX_layers, Conv1d_bias)
+{
     testONNXModels("conv1d_bias");
 }
 
 TEST_P(Test_ONNX_layers, Conv1d_variable_weight)
 {
-    if (backend != DNN_BACKEND_OPENCV || target != DNN_TARGET_CPU)
-        throw SkipTestException("Only OpenCV CPU is supported");
-
     String basename = "conv1d_variable_w";
     Net net = readNetFromONNX(_tf("models/" + basename + ".onnx"));
     ASSERT_FALSE(net.empty());
@@ -681,9 +685,6 @@ TEST_P(Test_ONNX_layers, Conv1d_variable_weight)
 
 TEST_P(Test_ONNX_layers, Conv1d_variable_weight_bias)
 {
-    if (backend != DNN_BACKEND_OPENCV || target != DNN_TARGET_CPU)
-        throw SkipTestException("Only OpenCV CPU is supported");
-
     String basename = "conv1d_variable_wb";
     Net net = readNetFromONNX(_tf("models/" + basename + ".onnx"));
     ASSERT_FALSE(net.empty());
