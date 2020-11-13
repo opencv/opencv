@@ -986,3 +986,40 @@ class Scale(nn.Module):
 x = Variable(torch.randn(1, 3, 2, 2))
 model = Scale()
 save_data_and_model("scale", x, model)
+
+x = Variable(torch.randn(1, 3, 25))
+conv1d = nn.Conv1d(3, 2, kernel_size=3, padding=2, stride=2, dilation=2, bias=False)
+save_data_and_model("conv1d", x, conv1d)
+
+x = Variable(torch.randn(1, 3, 25))
+conv1d = nn.Conv1d(3, 2, kernel_size=3, padding=0, stride=1, dilation=1, bias=True)
+save_data_and_model("conv1d_bias", x, conv1d)
+
+class Conv1d(nn.Module):
+    def forward(self, x, kernel):
+        out = F.conv1d(x, kernel, groups=1)
+        return out
+
+x = Variable(torch.randn(2, 2, 10))
+kernel = Variable(torch.randn(2, 2, 2))
+model = Conv1d()
+save_data_and_model_multy_inputs("conv1d_variable_w", model, x, kernel)
+
+class Conv1dBias(nn.Module):
+    def forward(self, x, kernel, bias):
+      batch = x.size(0)
+      channel = x.size(1)
+      x = x.view(1, batch*channel, x.size(2))
+      kernel = kernel.view(batch*channel, 1, 2)
+      conv = nn.Conv1d(4, 4, kernel_size=2, bias=False, groups=4)
+      conv.weight = nn.Parameter(kernel)
+      conv.bias = nn.Parameter(bias)
+      out = conv(x)
+      out = out.view(batch, channel, out.size(2))
+      return out
+
+x = Variable(torch.randn(2, 2, 5))
+kernel = Variable(torch.randn(2, 2, 2))
+bias = Variable(torch.randn(4))
+model = Conv1dBias()
+save_data_and_model_multy_inputs("conv1d_variable_wb", model, x, kernel, bias)
