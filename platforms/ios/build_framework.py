@@ -32,39 +32,16 @@ Adding --dynamic parameter will build {framework_name}.framework as App Store dy
 """
 
 from __future__ import print_function, unicode_literals
-import glob, re, os, os.path, shutil, string, sys, argparse, traceback, multiprocessing
+from builtins import str
+from builtins import object
+import glob, os, os.path, shutil, string, sys, argparse, traceback, multiprocessing
 from subprocess import check_call, check_output, CalledProcessError
 from distutils.dir_util import copy_tree
 
+sys.path.insert(0, os.path.abspath(os.path.abspath(os.path.dirname(__file__))+'/../apple'))
+from cv_build_utils import execute, print_error, get_xcode_major, get_xcode_setting
+
 IPHONEOS_DEPLOYMENT_TARGET='9.0'  # default, can be changed via command line options or environment variable
-
-def printError(text):
-    print("="*60, file=sys.stderr)
-    print("ERROR: %s" % text, file=sys.stderr)
-    print("="*60, file=sys.stderr)
-
-def execute(cmd, cwd = None):
-    print("Executing: %s in %s" % (cmd, cwd), file=sys.stderr)
-    print('Executing: ' + ' '.join(cmd))
-    retcode = check_call(cmd, cwd = cwd)
-    if retcode != 0:
-        raise Exception("Child returned:", retcode)
-
-def getXCodeMajor():
-    ret = check_output(["xcodebuild", "-version"])
-    m = re.match(rb'Xcode\s+(\d+)\..*', ret, flags=re.IGNORECASE)
-    if m:
-        return int(m.group(1))
-    else:
-        raise Exception("Failed to parse Xcode version")
-
-def getXCodeSetting(var, projectdir):
-    ret = check_output(["xcodebuild", "-showBuildSettings"], cwd = projectdir)
-    m = re.search("\s" + var + " = (.*)", ret)
-    if m:
-        return m.group(1)
-    else:
-        raise Exception("Failed to parse Xcode settings")
 
 class Builder:
     def __init__(self, opencv, contrib, dynamic, bitcodedisabled, exclude, disable, enablenonfree, targets, debug, debug_info, framework_name, run_tests, build_docs):
@@ -104,7 +81,7 @@ class Builder:
         main_working_dir = os.path.join(outdir, "build")
         dirs = []
 
-        xcode_ver = getXCodeMajor()
+        xcode_ver = get_xcode_major()
 
         # build each architecture separately
         alltargets = []
@@ -174,7 +151,7 @@ class Builder:
         try:
             self._build(outdir)
         except Exception as e:
-            printError(e)
+            print_error(e)
             traceback.print_exc(file=sys.stderr)
             sys.exit(1)
 
@@ -348,9 +325,9 @@ class Builder:
 
         link_target = target[:target.find("-")] + "-apple-ios" + os.environ['IPHONEOS_DEPLOYMENT_TARGET'] + ("-simulator" if target.endswith("simulator") else "")
         bitcode_flags = ["-fembed-bitcode", "-Xlinker", "-bitcode_verify"] if is_device and not self.bitcodedisabled else []
-        toolchain_dir = getXCodeSetting("TOOLCHAIN_DIR", builddir)
+        toolchain_dir = get_xcode_setting("TOOLCHAIN_DIR", builddir)
         swift_link_dirs = ["-L" + toolchain_dir + "/usr/lib/swift/" + target_platform, "-L/usr/lib/swift"]
-        sdk_dir = getXCodeSetting("SDK_DIR", builddir) # TODOjon: Is this overwriting the specified SDK?
+        sdk_dir = get_xcode_setting("SDK_DIR", builddir) # TODOjon: Is this overwriting the specified SDK?
         execute([
             "clang++",
             "-Xlinker", "-rpath",
@@ -537,12 +514,12 @@ if __name__ == "__main__":
     targets = []
     if os.environ.get('BUILD_PRECOMMIT', None):
         if not iphoneos_archs:
-            printError("--iphoneos_archs must have at least one value")
+            print_error("--iphoneos_archs must have at least one value")
             sys.exit(1)
         targets.append((iphoneos_archs, "iPhoneOS"))
     else:
         if not iphoneos_archs and not iphonesimulator_archs:
-            printError("--iphoneos_archs and --iphonesimulator_archs are undefined; nothing will be built.")
+            print_error("--iphoneos_archs and --iphonesimulator_archs are undefined; nothing will be built.")
             sys.exit(1)
         if iphoneos_archs:
             targets.append((iphoneos_archs, "iPhoneOS"))

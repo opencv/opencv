@@ -8,13 +8,10 @@ import os, os.path, sys, argparse, traceback, multiprocessing
 # import common code
 sys.path.insert(0, os.path.abspath(os.path.abspath(os.path.dirname(__file__))+'/../ios'))
 from build_framework import Builder
+sys.path.insert(0, os.path.abspath(os.path.abspath(os.path.dirname(__file__))+'/../apple'))
+from cv_build_utils import print_error
 
 MACOSX_DEPLOYMENT_TARGET='10.12'  # default, can be changed via command line options or environment variable
-
-def printError(text):
-    print("="*60, file=sys.stderr)
-    print("ERROR: %s" % text, file=sys.stderr)
-    print("="*60, file=sys.stderr)
 
 class OSXBuilder(Builder):
 
@@ -103,7 +100,7 @@ if __name__ == "__main__":
 
     targets = []
     if not archs and not catalyst_archs:
-        printError("--iphoneos_archs and --iphonesimulator_archs are undefined; nothing will be built.")
+        print_error("--iphoneos_archs and --iphonesimulator_archs are undefined; nothing will be built.")
         sys.exit(1)
     if archs:
         targets.append((archs, "MacOSX"))
