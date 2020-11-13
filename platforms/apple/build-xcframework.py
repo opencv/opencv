@@ -10,11 +10,6 @@ from cv_build_utils import execute, print_error, print_header
 
 assert sys.version_info >= (3, 6), "Python 3.6 or newer is required!"
 
-def get_or_create_folder_for_platform(platform):
-    folder_name = f"./xcframework-build/{platform}"
-    pathlib.Path(folder_name).mkdir(parents=True, exist_ok=True)
-    return folder_name
-
 def get_framework_build_command_for_platform(platform, destination, framework_name, only_64_bit=False):
     """
     Generates the build command that creates a framework supporting the given platform.
@@ -63,7 +58,8 @@ if __name__ == "__main__":
         # Build .frameworks for each platform
         build_folders = []
         for platform in platforms:
-            folder = get_or_create_folder_for_platform(platform)
+            folder = f"./xcframework-build/{platform}"
+            pathlib.Path(folder).mkdir(parents=True, exist_ok=True)
             build_folders.append(folder)
             framework_build_command = get_framework_build_command_for_platform(platform, folder, args.framework_name, args.only_64_bit)
 
