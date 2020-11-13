@@ -105,7 +105,7 @@ T_CPP_MODULE = Template(read_contents(os.path.join(SCRIPT_DIR, 'templates/cpp_mo
 
 class GeneralInfo():
     def __init__(self, type, decl, namespaces):
-        self.namespace, self.classpath, self.classname, self.name = self.parseName(decl[0], namespaces)
+        self.symbol_id, self.namespace, self.classpath, self.classname, self.name = self.parseName(decl[0], namespaces)
 
         # parse doxygen comments
         self.params={}
@@ -141,13 +141,13 @@ class GeneralInfo():
                 break
         pieces = localName.split(".")
         if len(pieces) > 2: # <class>.<class>.<class>.<name>
-            return spaceName, ".".join(pieces[:-1]), pieces[-2], pieces[-1]
+            return name, spaceName, ".".join(pieces[:-1]), pieces[-2], pieces[-1]
         elif len(pieces) == 2: # <class>.<name>
-            return spaceName, pieces[0], pieces[0], pieces[1]
+            return name, spaceName, pieces[0], pieces[0], pieces[1]
         elif len(pieces) == 1: # <name>
-            return spaceName, "", "", pieces[0]
+            return name, spaceName, "", "", pieces[0]
         else:
-            return spaceName, "", "" # error?!
+            return name, spaceName, "", "" # error?!
 
     def fullName(self, isCPP=False):
         result = ".".join([self.fullClass(), self.name])
@@ -249,8 +249,8 @@ class ClassInfo(GeneralInfo):
 
     def getAllMethods(self):
         result = []
-        result.extend([fi for fi in sorted(self.methods) if fi.isconstructor])
-        result.extend([fi for fi in sorted(self.methods) if not fi.isconstructor])
+        result += [fi for fi in self.methods if fi.isconstructor]
+        result += [fi for fi in self.methods if not fi.isconstructor]
         return result
 
     def addMethod(self, fi):
@@ -369,7 +369,7 @@ class JavaWrapperGenerator(object):
         self.clear()
 
     def clear(self):
-        self.namespaces = set(["cv"])
+        self.namespaces = ["cv"]
         self.classes = { "Mat" : ClassInfo([ 'class Mat', '', [], [] ], self.namespaces) }
         self.module = ""
         self.Module = ""
@@ -512,9 +512,9 @@ class JavaWrapperGenerator(object):
             includes.append('#include "' + hdr + '"')
         for hdr in srcfiles:
             decls = parser.parse(hdr)
-            self.namespaces = parser.namespaces
+            self.namespaces = sorted(parser.namespaces)
             logging.info("\n\n===== Header: %s =====", hdr)
-            logging.info("Namespaces: %s", parser.namespaces)
+            logging.info("Namespaces: %s", sorted(parser.namespaces))
             if decls:
                 includes.append('#include "' + hdr + '"')
             else:
@@ -536,7 +536,7 @@ class JavaWrapperGenerator(object):
         moduleCppCode = StringIO()
         package_path = os.path.join(output_java_path, module)
         mkdir_p(package_path)
-        for ci in self.classes.values():
+        for ci in sorted(self.classes.values(), key=lambda x: x.symbol_id):
             if ci.name == "Mat":
                 continue
             ci.initCodeStreams(self.Module)
@@ -560,7 +560,7 @@ class JavaWrapperGenerator(object):
         report.write("\n".join(self.ported_func_list))
         report.write("\n\nSKIPPED FUNCs LIST (%i of %i):\n\n" % (len(self.skipped_func_list), total_count))
         report.write("".join(self.skipped_func_list))
-        for i in self.def_args_hist.keys():
+        for i in sorted(self.def_args_hist.keys()):
             report.write("\n%i def args - %i funcs" % (i, self.def_args_hist[i]))
         return report.getvalue()
 
@@ -1028,10 +1028,11 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
         if ci.consts:
             enumTypes = set(map(lambda c: c.enumType, ci.consts))
             grouped_consts = {enumType: [c for c in ci.consts if c.enumType == enumType] for enumType in enumTypes}
-            for typeName, consts in grouped_consts.items():
+            for typeName in sorted(grouped_consts.keys(), key=lambda x: str(x) if x is not None else ""):
+                consts = grouped_consts[typeName]
                 logging.info("%s", consts)
                 if typeName:
-                    typeName = typeName.rsplit(".", 1)[-1]
+                    typeNameShort = typeName.rsplit(".", 1)[-1]
 ###################### Utilize Java enums ######################
 #                    ci.j_code.write("""
 #    public enum {1} {{
@@ -1045,9 +1046,9 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
 #                    )
 ################################################################
                     ci.j_code.write("""
-    // C++: enum {1}
+    // C++: enum {1} ({2})
     public static final int
-            {0};\n\n""".format((",\n"+" "*12).join(["%s = %s" % (c.name, const_value(c.value)) for c in consts]), typeName)
+            {0};\n\n""".format((",\n"+" "*12).join(["%s = %s" % (c.name, const_value(c.value)) for c in consts]), typeNameShort, typeName)
                     )
                 else:
                     ci.j_code.write("""
@@ -1072,10 +1073,12 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
 
         # manual ports
         if ci.name in ManualFuncs:
-            for func in ManualFuncs[ci.name].keys():
-                ci.j_code.write ( "\n".join(ManualFuncs[ci.name][func]["j_code"]) )
-                ci.jn_code.write( "\n".join(ManualFuncs[ci.name][func]["jn_code"]) )
-                ci.cpp_code.write( "\n".join(ManualFuncs[ci.name][func]["cpp_code"]) )
+            for func in sorted(ManualFuncs[ci.name].keys()):
+                logging.info("manual function: %s", func)
+                fn = ManualFuncs[ci.name][func]
+                ci.j_code.write("\n".join(fn["j_code"]))
+                ci.jn_code.write("\n".join(fn["jn_code"]))
+                ci.cpp_code.write("\n".join(fn["cpp_code"]))
 
         if ci.name != self.Module or ci.base:
             # finalize()
@@ -1303,7 +1306,7 @@ if __name__ == "__main__":
     # initialize logger
     logging.basicConfig(filename='gen_java.log', format=None, filemode='w', level=logging.INFO)
     handler = logging.StreamHandler()
-    handler.setLevel(logging.WARNING)
+    handler.setLevel(os.environ.get('LOG_LEVEL', logging.WARNING))
     logging.getLogger().addHandler(handler)
 
     # parse command line parameters
