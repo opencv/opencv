@@ -653,6 +653,55 @@ TEST_P(Test_ONNX_layers, Conv1d)
     if (backend != DNN_BACKEND_OPENCV || target != DNN_TARGET_CPU)
         throw SkipTestException("Only OpenCV CPU is supported");
     testONNXModels("conv1d");
+    testONNXModels("conv1d_bias");
+}
+
+TEST_P(Test_ONNX_layers, Conv1d_variable_weight)
+{
+    if (backend != DNN_BACKEND_OPENCV || target != DNN_TARGET_CPU)
+        throw SkipTestException("Only OpenCV CPU is supported");
+
+    String basename = "conv1d_variable_w";
+    Net net = readNetFromONNX(_tf("models/" + basename + ".onnx"));
+    ASSERT_FALSE(net.empty());
+
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    Mat input = blobFromNPY(_tf("data/input_" + basename + "_0.npy"));
+    Mat weights = blobFromNPY(_tf("data/input_" + basename + "_1.npy"));
+    Mat ref = blobFromNPY(_tf("data/output_" + basename + ".npy"));
+
+    net.setInput(input, "0");
+    net.setInput(weights, "1");
+
+    Mat out = net.forward();
+    normAssert(ref, out, "", default_l1, default_lInf);
+}
+
+TEST_P(Test_ONNX_layers, Conv1d_variable_weight_bias)
+{
+    if (backend != DNN_BACKEND_OPENCV || target != DNN_TARGET_CPU)
+        throw SkipTestException("Only OpenCV CPU is supported");
+
+    String basename = "conv1d_variable_wb";
+    Net net = readNetFromONNX(_tf("models/" + basename + ".onnx"));
+    ASSERT_FALSE(net.empty());
+
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    Mat input = blobFromNPY(_tf("data/input_" + basename + "_0.npy"));
+    Mat weights = blobFromNPY(_tf("data/input_" + basename + "_1.npy"));
+    Mat bias = blobFromNPY(_tf("data/input_" + basename + "_2.npy"));
+    Mat ref = blobFromNPY(_tf("data/output_" + basename + ".npy"));
+
+    net.setInput(input, "0");
+    net.setInput(weights, "1");
+    net.setInput(bias, "bias");
+
+    Mat out = net.forward();
+    normAssert(ref, out, "", default_l1, default_lInf);
 }
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_ONNX_layers, dnnBackendsAndTargets());
