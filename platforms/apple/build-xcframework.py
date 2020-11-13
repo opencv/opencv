@@ -43,11 +43,11 @@ def get_framework_build_command_for_platform(platform, destination, framework_na
         raise Exception(f"Platform {platform} has no associated build commands.")
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='This script builds an OpenCV .xcframework supporting the Apple platforms of your choice.')
-    parser.add_argument('out', metavar='OUTDIR', help='folder to put built xcframework into')
-    parser.add_argument('--platform', default='ios,ios-simulator,ios-maccatalyst,macos', help='platforms to build for')
-    parser.add_argument('--framework_name', default='opencv2', help='Name of OpenCV framework (default: opencv2, will change to OpenCV in future version)')
-    parser.add_argument('--only_64_bit', default=False, action='store_true', help='only build for 64-bit archs')
+    parser = argparse.ArgumentParser(description='This script builds OpenCV into an xcframework supporting the Apple platforms of your choice.')
+    parser.add_argument('out', metavar='OUTDIR', help='The directory where the xcframework will be created')
+    parser.add_argument('--platform', default='ios,ios-simulator,ios-maccatalyst,macos', help='Platforms to build for (default: ios,ios-simulator,ios-maccatalyst,macos)')
+    parser.add_argument('--framework_name', default='opencv2', help='Name of OpenCV xcframework (default: opencv2, will change to OpenCV in future version)')
+    parser.add_argument('--only_64_bit', default=False, action='store_true', help='Build for 64-bit archs only')
 
     args = parser.parse_args()
 
