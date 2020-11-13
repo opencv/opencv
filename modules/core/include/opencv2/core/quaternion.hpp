@@ -1184,10 +1184,6 @@ std::ostream& operator<<(std::ostream&, const Quat<S>&);
 
 using Quatd = Quat<double>;
 using Quatf = Quat<float>;
-using std::cos;
-using std::sin;
-using std::acos;
-using std::asin;
 //! @} core
 }
 
