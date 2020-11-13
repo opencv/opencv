@@ -387,7 +387,7 @@ def main():
     focals = []
     for cam in cameras:
         focals.append(cam.focal)
-    sorted(focals)
+    focals.sort()
     if len(focals) % 2 == 1:
         warped_image_scale = focals[len(focals) // 2]
     else:
