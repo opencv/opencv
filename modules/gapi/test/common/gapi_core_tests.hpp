@@ -157,7 +157,7 @@ GAPI_TEST_EXT_BASE_FIXTURE(ParseSSDBLTest, ParserSSDTest, initNothing,
 GAPI_TEST_EXT_BASE_FIXTURE(ParseSSDTest, ParserSSDTest, initNothing,
     FIXTURE_API(float, bool, bool), 3, confidence_threshold, alignment_to_square, filter_out_of_bounds)
 GAPI_TEST_EXT_BASE_FIXTURE(ParseYoloTest, ParserYoloTest, initNothing,
-    FIXTURE_API(float, float, int), 3, confidence_threshold, nms_threshold, num_classes)
+    FIXTURE_API(float, float, int, std::pair<bool,int>), 4, confidence_threshold, nms_threshold, num_classes, dims_config)
 GAPI_TEST_FIXTURE(SizeTest, initMatrixRandU, <>, 0)
 GAPI_TEST_FIXTURE(SizeRTest, initNothing, <>, 0)
 } // opencv_test

@@ -531,7 +531,12 @@ INSTANTIATE_TEST_CASE_P(ParseTestCPU, ParseYoloTest,
                                 Values(CORE_CPU),
                                 Values(0.3f, 0.5f, 0.7f),
                                 Values(0.5f, 1.0f),
-                                Values(80, 7)));
+                                Values(80, 7),
+                                Values(std::make_pair(false, 3),
+                                       std::make_pair(false, 4),
+                                       std::make_pair(true,  2),
+                                       std::make_pair(true,  3),
+                                       std::make_pair(true,  4))));
 
 INSTANTIATE_TEST_CASE_P(SizeTestCPU, SizeTest,
                         Combine(Values(CV_8UC1, CV_8UC3, CV_32FC1),
