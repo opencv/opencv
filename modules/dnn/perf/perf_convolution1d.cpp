@@ -32,8 +32,8 @@ struct Conv1DParamID
         CONV_0 = 0,
         CONV_LAST = sizeof(testConvolution1DConfigs) / sizeof(testConvolution1DConfigs[0])
     };
-    int val_;                                                                  \
-Conv1DParamID(int val = 0) : val_(val) {}
+    int val_;
+    Conv1DParamID(int val = 0) : val_(val) {}
     operator int() const { return val_; }
     static ::testing::internal::ParamGenerator<Conv1DParamID> all()
     {
@@ -41,29 +41,29 @@ Conv1DParamID(int val = 0) : val_(val) {}
         Conv1DParamID v_[NUM]; for (int i = 0; i < NUM; ++i) { v_[i] = Conv1DParamID(i); } // reduce generated code size
         return ::testing::ValuesIn(v_, v_ + NUM);
     }
-};                                                                                  \
+};
 static inline void PrintTo(const Conv1DParamID& v, std::ostream* os)
-    {
-        CV_Assert((int)v >= 0); CV_Assert((int)v < Conv1DParamID::CONV_LAST);
-        const Conv1DParam_t& p = testConvolution1DConfigs[(int)v];
+{
+    CV_Assert((int)v >= 0); CV_Assert((int)v < Conv1DParamID::CONV_LAST);
+    const Conv1DParam_t& p = testConvolution1DConfigs[(int)v];
 
-        *os << "GFLOPS=" << cv::format("%.3f", p.declared_flops * 1e-9)
-            << ", K=[" << p.kernel << "]"
-            << ", IN={" << p.shapeIn.dims[0] << ", " << p.shapeIn.dims[1] << ", " << p.shapeIn.dims[2] << "}"
-            << ", OCN=" << p.outCN;
-        if (p.groups > 1)
-            *os << ", G=" << p.groups;
-        if (p.stride != 1)
-            *os << ", S=" << p.stride;
-        if (p.dilation != 1)
-            *os << ", D="  << p.dilation;
-        if (p.pad[0] != 0 && p.pad[1] != 0 )
-            *os << ", P=(" << p.pad[0] << ", " << p.pad[1] << ")";
-        if (!((std::string)p.padMode).empty())
-            *os << ", PM=" << ((std::string)p.padMode);
-        if (p.hasBias)
-            *os << ", BIAS";
-    }
+    *os << "GFLOPS=" << cv::format("%.3f", p.declared_flops * 1e-9)
+        << ", K=[" << p.kernel << "]"
+        << ", IN={" << p.shapeIn.dims[0] << ", " << p.shapeIn.dims[1] << ", " << p.shapeIn.dims[2] << "}"
+        << ", OCN=" << p.outCN;
+    if (p.groups > 1)
+        *os << ", G=" << p.groups;
+    if (p.stride != 1)
+        *os << ", S=" << p.stride;
+    if (p.dilation != 1)
+        *os << ", D="  << p.dilation;
+    if (p.pad[0] != 0 && p.pad[1] != 0 )
+        *os << ", P=(" << p.pad[0] << ", " << p.pad[1] << ")";
+    if (!((std::string)p.padMode).empty())
+        *os << ", PM=" << ((std::string)p.padMode);
+    if (p.hasBias)
+        *os << ", BIAS";
+}
 
 
 typedef tuple<Conv1DParamID, tuple<Backend, Target> > Conv1DTestParam_t;
@@ -91,7 +91,7 @@ PERF_TEST_P_(Conv1D, conv1d)
     Target targetId = get<1>(get<1>(GetParam()));
 
     if (targetId != DNN_TARGET_CPU)
-    throw SkipTestException("Only CPU is supported");
+        throw SkipTestException("Only CPU is supported");
 
     int inChannels = inputShape[1];
 
@@ -103,7 +103,7 @@ PERF_TEST_P_(Conv1D, conv1d)
     lp.set("kernel_size", kernel);
     lp.set("pad", pad);
     if (!padMode.empty())
-    lp.set("pad_mode", padMode);
+        lp.set("pad_mode", padMode);
 
     lp.set("stride", stride);
     lp.set("dilation", dilation);
