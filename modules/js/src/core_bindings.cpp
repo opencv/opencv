@@ -145,6 +145,11 @@ namespace binding_utils
         return step;
     }
 
+    static Mat dimsMat(const emscripten::val& js_dims, int type) {
+        std::vector<int> dims = emscripten::vecFromJSArray<int>(js_dims);
+        return cv::Mat(dims.size(), dims.data(), type);
+    }
+
     static Mat matEye(int rows, int cols, int type)
     {
         return Mat(cv::Mat::eye(rows, cols, type));
@@ -448,6 +453,7 @@ EMSCRIPTEN_BINDINGS(binding_utils)
         .constructor<int, int, int, const Scalar&>()
         .constructor(&binding_utils::createMat, allow_raw_pointers())
 
+        .class_function("MatND", select_overload<Mat(const emscripten::val&, int)>(&binding_utils::dimsMat), allow_raw_pointers())
         .class_function("eye", select_overload<Mat(Size, int)>(&binding_utils::matEye))
         .class_function("eye", select_overload<Mat(int, int, int)>(&binding_utils::matEye))
         .class_function("ones", select_overload<Mat(Size, int)>(&binding_utils::matOnes))

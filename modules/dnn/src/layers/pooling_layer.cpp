@@ -59,6 +59,7 @@
 #endif
 
 #include "../op_vkcom.hpp"
+#include "../op_webgpu.hpp"
 
 #include <float.h>
 #include <algorithm>
@@ -218,7 +219,8 @@ public:
         {
             return !computeMaxIdx && type != STOCHASTIC;
         }
-        if (backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE || backendId == DNN_BACKEND_VKCOM)
+        if (backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE ||
+            backendId == DNN_BACKEND_VKCOM || backendId == DNN_BACKEND_WEBGPU)
         {
             if (kernel_size.size() == 3)
                 return (backendId == DNN_BACKEND_OPENCV && preferableTarget == DNN_TARGET_CPU);
@@ -227,6 +229,8 @@ public:
                        (backendId == DNN_BACKEND_HALIDE && haveHalide() &&
                            (type == MAX || (type == AVE && !pad_t && !pad_l && !pad_b && !pad_r))) ||
                        (backendId == DNN_BACKEND_VKCOM && haveVulkan() &&
+                           (type == MAX || type == AVE)) ||
+                        (backendId == DNN_BACKEND_WEBGPU && haveWGPU() &&
                            (type == MAX || type == AVE));
             else
                 return false;
@@ -451,6 +455,39 @@ public:
     }
 #endif
 
+#ifdef HAVE_WEBGPU
+    virtual Ptr<BackendNode> initWGPU(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
+    {
+        int padding_mode;
+        webgpu::PoolType pool_type;
+        int filter_size[2] = {kernel.height, kernel.width};
+        int pad_size[2] = {pad.height, pad.width};
+        int stride_size[2] = {stride.height, stride.width};
+        pool_type = type == MAX ? webgpu::PoolType::wPoolTypeMax:
+                   (type == AVE ? webgpu::PoolType::wPoolTypeAvg:
+                            webgpu::PoolType::wPoolTypeNum);
+
+        if (padMode.empty())
+        {
+            padding_mode = webgpu::wPaddingModeCaffe;
+        }
+        else if (padMode == "VALID")
+        {
+            padding_mode = webgpu::wPaddingModeValid;
+        }
+        else if (padMode == "SAME")
+        {
+            padding_mode = webgpu::wPaddingModeSame;
+        }
+        else
+            CV_Error(Error::StsError, "Unsupported padding mode " + padMode);
+
+        std::shared_ptr<webgpu::OpBase> op(new webgpu::OpPool(filter_size, pad_size,
+                                                            stride_size, padding_mode,
+                                                            pool_type, avePoolPaddedArea));
+        return Ptr<BackendNode>(new WGPUBackendNode(inputs, op));
+    }
+#endif  // HAVE_WEBGPU
 
     virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
     {

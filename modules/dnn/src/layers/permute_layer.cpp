@@ -46,6 +46,7 @@
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
 #include "../op_vkcom.hpp"
+#include "../op_webgpu.hpp"
 
 #include <float.h>
 #include <algorithm>
@@ -116,7 +117,8 @@ public:
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
                ((backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && haveInfEngine()) ||
-               (backendId == DNN_BACKEND_VKCOM && haveVulkan());
+               (backendId == DNN_BACKEND_VKCOM && haveVulkan()) ||
+               (backendId == DNN_BACKEND_WEBGPU && haveWGPU());;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -184,9 +186,21 @@ public:
         computeStrides(shape(inputs[0]), shape(outputs[0]));
 
 #ifdef HAVE_OPENCL
-        uorder.release();
-        uold_stride.release();
-        unew_stride.release();
+        if (uorder.empty())
+        {
+            std::vector<int> orderVec(_order.begin(), _order.end());;
+            Mat morder(1, orderVec.size(), CV_32SC1, &orderVec[0]);
+
+            std::vector<int> oldStrideVec(_oldStride.begin(), _oldStride.end());
+            Mat mold_stride(1, _oldStride.size(), CV_32SC1, &oldStrideVec[0]);
+
+            std::vector<int> newStrideVec(_newStride.begin(), _newStride.end());
+            Mat mnew_stride(1, newStrideVec.size(), CV_32SC1, &newStrideVec[0]);
+
+            morder.copyTo(uorder);
+            mold_stride.copyTo(uold_stride);
+            mnew_stride.copyTo(unew_stride);
+        }
 #endif
     }
 
@@ -273,22 +287,6 @@ public:
 
         if (!_needsPermute)
             return false;
-
-        if (uorder.empty())
-        {
-            std::vector<int> orderVec(_order.begin(), _order.end());;
-            Mat morder(1, orderVec.size(), CV_32SC1, &orderVec[0]);
-
-            std::vector<int> oldStrideVec(_oldStride.begin(), _oldStride.end());
-            Mat mold_stride(1, _oldStride.size(), CV_32SC1, &oldStrideVec[0]);
-
-            std::vector<int> newStrideVec(_newStride.begin(), _newStride.end());
-            Mat mnew_stride(1, newStrideVec.size(), CV_32SC1, &newStrideVec[0]);
-
-            morder.copyTo(uorder);
-            mold_stride.copyTo(uold_stride);
-            mnew_stride.copyTo(unew_stride);
-        }
 
         bool use_half = (inps.depth() == CV_16S);
         String opts = format("-DDtype=%s", use_half ? "half" : "float");
@@ -432,6 +430,14 @@ public:
     }
 #endif // HAVE_VULKAN
 
+#ifdef HAVE_WEBGPU
+    virtual Ptr<BackendNode> initWGPU(const std::vector<Ptr<BackendWrapper> > &input) CV_OVERRIDE
+    {
+        CV_Assert(!_order.empty());
+        std::shared_ptr<webgpu::OpBase> op(new webgpu::OpPermute(_order));
+        return Ptr<BackendNode>(new WGPUBackendNode(input, op));
+    }
+#endif // HAVE_VULKAN
 
     size_t _count;
     std::vector<size_t> _order;

@@ -260,6 +260,8 @@ TEST_P(setInput, normalization)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
     if (backend == DNN_BACKEND_VKCOM && dtype != CV_32F)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_VULKAN);
+    if (backend == DNN_BACKEND_WEBGPU && dtype != CV_32F)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_WGPU);
 
     Mat inp(5, 5, CV_8UC3);
     randu(inp, 0, 255);

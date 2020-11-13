@@ -520,6 +520,6 @@ TEST_P(DNNTestNetwork, FastNeuralStyle_eccv16)
     expectNoFallbacksFromCUDA(net);
 }
 
-INSTANTIATE_TEST_CASE_P(/*nothing*/, DNNTestNetwork, dnnBackendsAndTargets(true, true, false, true, true));
+INSTANTIATE_TEST_CASE_P(/*nothing*/, DNNTestNetwork, dnnBackendsAndTargets(true, true, false, true, true, true));
 
 }} // namespace

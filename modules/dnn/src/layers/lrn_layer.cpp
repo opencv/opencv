@@ -47,6 +47,7 @@
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
 #include "../op_vkcom.hpp"
+#include "../op_webgpu.hpp"
 
 #include "opencv2/imgproc.hpp"
 #include "opencv2/dnn/shape_utils.hpp"
@@ -108,7 +109,8 @@ public:
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
                backendId == DNN_BACKEND_HALIDE ||
-               (backendId == DNN_BACKEND_VKCOM && haveVulkan() && (size % 2 == 1) && (type == CHANNEL_NRM));
+               (backendId == DNN_BACKEND_VKCOM && haveVulkan() && (size % 2 == 1) && (type == CHANNEL_NRM))
+               || (backendId == DNN_BACKEND_WEBGPU && haveWGPU() && (size % 2 == 1) && (type == CHANNEL_NRM));
     }
 
 #ifdef HAVE_OPENCL
@@ -368,6 +370,15 @@ public:
         std::shared_ptr<vkcom::OpBase> op(new vkcom::OpLRN(size / 2, bias, alpha, beta, normBySize));
         return Ptr<BackendNode>(new VkComBackendNode(inputs, op));
 #endif
+        return Ptr<BackendNode>();
+    }
+
+    virtual Ptr<BackendNode> initWGPU(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
+    {
+#ifdef HAVE_WEBGPU
+        std::shared_ptr<webgpu::OpBase> op(new webgpu::OpLRN(size / 2, bias, alpha, beta, normBySize));
+        return Ptr<BackendNode>(new WGPUBackendNode(inputs, op));
+#endif  // HAVE_WEBGPU
         return Ptr<BackendNode>();
     }
 

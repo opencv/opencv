@@ -161,6 +161,8 @@ class Builder:
             cmd.append("-DBUILD_WASM_INTRIN_TESTS=ON")
         else:
             cmd.append("-DBUILD_WASM_INTRIN_TESTS=OFF")
+        if self.options.build_webgpu:
+            cmd.append("-DWITH_WEBGPU=ON")
 
         flags = self.get_build_flags()
         if flags:
@@ -180,6 +182,8 @@ class Builder:
             flags += "-s USE_PTHREADS=0 "
         if self.options.enable_exception:
             flags += "-s DISABLE_EXCEPTION_CATCHING=0 "
+        if self.options.build_webgpu:
+            flags += "-s USE_WEBGPU=1 -s ASYNCIFY -s EXTRA_EXPORTED_RUNTIME_METHODS=['Asyncify'] "
         if self.options.simd:
             flags += "-msimd128 "
         if self.options.build_flags:
@@ -236,6 +240,8 @@ if __name__ == "__main__":
     # Use flag --build_flags="-s USE_PTHREADS=0 -Os" for one and more arguments as in the example
     parser.add_argument('--build_flags', help="Append Emscripten build options")
     parser.add_argument('--build_wasm_intrin_test', default=False, action="store_true", help="Build WASM intrin tests")
+    # Build dawn for webgpu dnn module
+    parser.add_argument('--build_webgpu', action="store_true", help="Build dawn for webgpu dnn module")
     # Write a path to modify file like argument of this flag
     parser.add_argument('--config', default=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'opencv_js.config.py'),
                         help="Specify configuration file with own list of exported into JS functions")

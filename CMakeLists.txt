@@ -286,6 +286,9 @@ OCV_OPTION(WITH_HALIDE "Include Halide support" OFF
 OCV_OPTION(WITH_VULKAN "Include Vulkan support" OFF
   VISIBLE_IF TRUE
   VERIFY HAVE_VULKAN)
+  OCV_OPTION(WITH_WEBGPU "Include WebGPU-Dawn support" OFF
+  VISIBLE_IF TRUE
+  VERIFY HAVE_WEBGPU)
 OCV_OPTION(WITH_INF_ENGINE "Include Intel Inference Engine support" OFF
   VISIBLE_IF TRUE
   VERIFY INF_ENGINE_TARGET)
@@ -754,6 +757,11 @@ endif()
 # --- VkCom ---
 if(WITH_VULKAN)
   include(cmake/OpenCVDetectVulkan.cmake)
+endif()
+
+# --- WEBGPU ---
+if(WITH_WEBGPU)
+  include(cmake/OpenCVDetectWebGPU.cmake)
 endif()
 
 # --- Inference Engine ---
@@ -1546,6 +1554,11 @@ if(WITH_VULKAN OR HAVE_VULKAN)
     status("    Include path:"  VULKAN_INCLUDE_DIRS THEN "${VULKAN_INCLUDE_DIRS}" ELSE "NO")
     status("    Link libraries:" VULKAN_LIBRARIES THEN "${VULKAN_LIBRARIES}" ELSE "Dynamic load")
   endif()
+endif()
+
+if(WITH_WEBGPU OR HAVE_WEBGPU)
+  status("")
+  status("  WebGPU-Dawn Support:" HAVE_WEBGPU THEN "YES" ELSE "NO")
 endif()
 
 if(WITH_OPENCL OR HAVE_OPENCL)
