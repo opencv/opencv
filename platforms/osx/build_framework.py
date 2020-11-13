@@ -35,6 +35,16 @@ class OSXBuilder(Builder):
             "-parallelizeTargets",
             "-jobs", str(multiprocessing.cpu_count())
         ]
+
+        if target == "Catalyst":
+            buildcmd.append("-destination 'platform=macOS,arch=%s,variant=Mac Catalyst'" % arch)
+            buildcmd.append("-UseModernBuildSystem=YES")
+            buildcmd.append("SKIP_INSTALL=NO")
+            buildcmd.append("BUILD_LIBRARY_FOR_DISTRIBUTION=YES")
+            buildcmd.append("TARGETED_DEVICE_FAMILY=\"1,2\"")
+            buildcmd.append("SDKROOT=iphoneos")
+            buildcmd.append("SUPPORTS_MAC_CATALYST=YES")
+
         return buildcmd
 
     def getInfoPlist(self, builddirs):

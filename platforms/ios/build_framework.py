@@ -229,25 +229,13 @@ class Builder:
             "xcodebuild",
         ]
 
-        if (self.dynamic or self.build_objc_wrapper) and not self.bitcodedisabled and (target == "iPhoneOS" or target == "Catalyst"):
+        if (self.dynamic or self.build_objc_wrapper) and not self.bitcodedisabled and target == "iPhoneOS":
             buildcmd.append("BITCODE_GENERATION_MODE=bitcode")
 
         buildcmd += [
             "IPHONEOS_DEPLOYMENT_TARGET=" + os.environ['IPHONEOS_DEPLOYMENT_TARGET'],
             "ARCHS=%s" % arch,
-        ]
-
-        if target == "Catalyst":
-            buildcmd.append("-destination 'platform=macOS,arch=%s,variant=Mac Catalyst'" % arch)
-            buildcmd.append("-UseModernBuildSystem=YES")
-            buildcmd.append("SKIP_INSTALL=NO")
-            buildcmd.append("BUILD_LIBRARY_FOR_DISTRIBUTION=YES")
-            buildcmd.append("TARGETED_DEVICE_FAMILY=\"1,2\"")
-            buildcmd.append("SDKROOT=iphoneos")
-            buildcmd.append("SUPPORTS_MAC_CATALYST=YES")
-
-        buildcmd += [
-            "-sdk", "iphoneos" if target == "Catalyst" else target.lower(),
+            "-sdk", target.lower(),
             "-configuration", self.getConfiguration(),
             "-parallelizeTargets",
             "-jobs", str(multiprocessing.cpu_count()),
@@ -418,6 +406,10 @@ class Builder:
                     filestem = os.path.splitext(filename)[0]
                     fileext = os.path.splitext(filename)[1]
                     if filestem in platform_name_map:
+                        print("!!!!!!!!!!!!!!!platform")
+                        print(os.path.join(dirname, platform_name_map[filestem] + fileext))
+                        print("builddirs[0]: %s" % builddirs[0])
+                        # exit()
                         os.rename(os.path.join(dirname, filename), os.path.join(dirname, platform_name_map[filestem] + fileext))
 
         # make universal static lib
