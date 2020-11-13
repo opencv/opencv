@@ -31,12 +31,12 @@ However, {framework_name}.framework directory is erased and recreated on each ru
 Adding --dynamic parameter will build {framework_name}.framework as App Store dynamic framework. Only iOS 8+ versions are supported.
 """
 
-from __future__ import print_function
+from __future__ import print_function, unicode_literals
 import glob, re, os, os.path, shutil, string, sys, argparse, traceback, multiprocessing
 from subprocess import check_call, check_output, CalledProcessError
 from distutils.dir_util import copy_tree
 
-IPHONEOS_DEPLOYMENT_TARGET='8.0'  # default, can be changed via command line options or environment variable
+IPHONEOS_DEPLOYMENT_TARGET='9.0'  # default, can be changed via command line options or environment variable
 
 def execute(cmd, cwd = None):
     print("Executing: %s in %s" % (cmd, cwd), file=sys.stderr)
@@ -46,7 +46,7 @@ def execute(cmd, cwd = None):
         raise Exception("Child returned:", retcode)
 
 def getXCodeMajor():
-    ret = check_output(["xcodebuild", "-version"])
+    ret = check_output(["xcodebuild", "-version"]).decode('utf-8')
     m = re.match(r'Xcode\s+(\d+)\..*', ret, flags=re.IGNORECASE)
     if m:
         return int(m.group(1))
