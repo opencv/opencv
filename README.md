@@ -1,5 +1,7 @@
 ## OpenCV: Open Source Computer Vision Library
 
+![arm64 build checks](https://github.com/opencv/opencv/workflows/arm64%20build%20checks/badge.svg)
+
 ### Resources
 
 * Homepage: <https://opencv.org>
