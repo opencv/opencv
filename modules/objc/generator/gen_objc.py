@@ -1342,7 +1342,7 @@ typedef NS_ENUM(int, {2}) {{
             return "Ptr<" + fullname + ">"
         return fullname
 
-    def finalize(self, output_objc_path):
+    def finalize(self, objc_target, output_objc_path, output_objc_build_path):
         opencv_header_file = os.path.join(output_objc_path, framework_name + ".h")
         opencv_header = "#import <Foundation/Foundation.h>\n\n"
         opencv_header += "// ! Project version number\nFOUNDATION_EXPORT double " + framework_name + "VersionNumber;\n\n"
@@ -1356,15 +1356,15 @@ typedef NS_ENUM(int, {2}) {{
         opencv_modulemap += "\n  export *\n  module * {export *}\n}\n"
         self.save(opencv_modulemap_file, opencv_modulemap)
         cmakelist_template = read_contents(os.path.join(SCRIPT_DIR, 'templates/cmakelists.template'))
-        cmakelist = Template(cmakelist_template).substitute(modules = ";".join(modules), framework = framework_name)
+        cmakelist = Template(cmakelist_template).substitute(modules = ";".join(modules), framework = framework_name, objc_target=objc_target)
         self.save(os.path.join(dstdir, "CMakeLists.txt"), cmakelist)
-        mkdir_p("./framework_build")
-        mkdir_p("./test_build")
-        mkdir_p("./doc_build")
+        mkdir_p(os.path.join(output_objc_build_path, "framework_build"))
+        mkdir_p(os.path.join(output_objc_build_path, "test_build"))
+        mkdir_p(os.path.join(output_objc_build_path, "doc_build"))
         with open(os.path.join(SCRIPT_DIR, '../doc/README.md')) as readme_in:
             readme_body = readme_in.read()
         readme_body += "\n\n\n##Modules\n\n" + ", ".join(["`" + m.capitalize() + "`" for m in modules])
-        with open("./doc_build/README.md", "w") as readme_out:
+        with open(os.path.join(output_objc_build_path, "doc_build/README.md"), "w") as readme_out:
             readme_out.write(readme_body)
         if framework_name != "OpenCV":
             for dirname, dirs, files in os.walk(os.path.join(testdir, "test")):
@@ -1513,6 +1513,11 @@ if __name__ == "__main__":
         config = json.load(f)
 
     ROOT_DIR = config['rootdir']; assert os.path.exists(ROOT_DIR)
+    if 'objc_build_dir' in config:
+        objc_build_dir = config['objc_build_dir']
+        assert os.path.exists(objc_build_dir), objc_build_dir
+    else:
+        objc_build_dir = os.getcwd()
 
     dstdir = "./gen"
     testdir = "./test"
@@ -1608,6 +1613,6 @@ if __name__ == "__main__":
             generator.gen(srcfiles, module, dstdir, objc_base_path, common_headers, manual_classes)
         else:
             logging.info("No generated code for module: %s", module)
-    generator.finalize(objc_base_path)
+    generator.finalize(args.target, objc_base_path, objc_build_dir)
 
     print('Generated files: %d (updated %d)' % (total_files, updated_files))

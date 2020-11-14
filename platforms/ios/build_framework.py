@@ -128,10 +128,10 @@ class Builder:
         self.makeFramework(outdir, dirs)
         if self.build_objc_wrapper:
             if self.run_tests:
-                check_call([sys.argv[0].replace("build_framework", "run_tests"), "--framework_dir=" + outdir, "--framework_name=" + self.framework_name, dirs[0] +  "/modules/objc/test"])
+                check_call([sys.argv[0].replace("build_framework", "run_tests"), "--framework_dir=" + outdir, "--framework_name=" + self.framework_name, dirs[0] +  "/modules/objc_bindings_generator/{}/test".format(self.getObjcTarget())])
             else:
                 print("To run tests call:")
-                print(sys.argv[0].replace("build_framework", "run_tests") + " --framework_dir=" + outdir + " --framework_name=" + self.framework_name + " " + dirs[0] +  "/modules/objc/test")
+                print(sys.argv[0].replace("build_framework", "run_tests") + " --framework_dir=" + outdir + " --framework_name=" + self.framework_name + " " + dirs[0] +  "/modules/objc_bindings_generator/{}/test".format(self.getObjcTarget()))
             if self.build_docs:
                 check_call([sys.argv[0].replace("build_framework", "build_docs"), dirs[0] + "/modules/objc/framework_build"])
                 doc_path = os.path.join(dirs[0], "modules", "objc", "doc_build", "docs")
@@ -216,6 +216,10 @@ class Builder:
     def getInfoPlist(self, builddirs):
         return os.path.join(builddirs[0], "ios", "Info.plist")
 
+    def getObjcTarget(self):
+        # Obj-C generation target
+        return 'ios'
+
     def makeCMakeCmd(self, arch, target, dir, cmakeargs = []):
         toolchain = self.getToolchain(arch, target)
         cmakecmd = self.getCMakeArgs(arch, target) + \
@@ -255,7 +259,7 @@ class Builder:
         execute(buildcmd + ["-target", "ALL_BUILD", "build"], cwd = builddir)
         execute(["cmake", "-DBUILD_TYPE=%s" % self.getConfiguration(), "-P", "cmake_install.cmake"], cwd = builddir)
         if self.build_objc_wrapper:
-            cmakecmd = self.makeCMakeCmd(arch, target, builddir + "/modules/objc/gen", cmakeargs)
+            cmakecmd = self.makeCMakeCmd(arch, target, builddir + "/modules/objc_bindings_generator/{}/gen".format(self.getObjcTarget()), cmakeargs)
             cmakecmd.append("-DBUILD_ROOT=%s" % builddir)
             cmakecmd.append("-DCMAKE_INSTALL_NAME_TOOL=install_name_tool")
             cmakecmd.append("--no-warn-unused-cli")

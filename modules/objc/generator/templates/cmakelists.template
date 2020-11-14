@@ -24,7 +24,7 @@ target_include_directories($framework PRIVATE "$${BUILD_ROOT}")
 target_include_directories($framework PRIVATE "$${BUILD_ROOT}/install/include")
 target_include_directories($framework PRIVATE "$${BUILD_ROOT}/install/include/opencv2")
 foreach(m $${MODULES})
-  target_include_directories($framework PRIVATE "$${BUILD_ROOT}/modules/objc/gen/objc/$${m}")
+  target_include_directories($framework PRIVATE "$${BUILD_ROOT}/modules/objc_bindings_generator/$objc_target/gen/objc/$${m}")
 endforeach()
 
 install(TARGETS $framework LIBRARY DESTINATION lib)
