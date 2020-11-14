@@ -104,6 +104,15 @@ def mkdir_p(path):
         else:
             raise
 
+def header_import(hdr):
+    """ converts absolute header path to import parameter """
+    pos = hdr.find('/include/')
+    hdr = hdr[pos+9 if pos >= 0 else 0:]
+    #pos = hdr.find('opencv2/')
+    #hdr = hdr[pos+8 if pos >= 0 else 0:]
+    return hdr
+
+
 T_OBJC_CLASS_HEADER = read_contents(os.path.join(SCRIPT_DIR, 'templates/objc_class_header.template'))
 T_OBJC_CLASS_BODY = read_contents(os.path.join(SCRIPT_DIR, 'templates/objc_class_body.template'))
 T_OBJC_MODULE_HEADER = read_contents(os.path.join(SCRIPT_DIR, 'templates/objc_module_header.template'))
@@ -693,17 +702,17 @@ class ObjectiveCWrapperGenerator(object):
         classinfo = ClassInfo(decl, namespaces=self.namespaces)
         if classinfo.name in class_ignore_list:
             logging.info('ignored: %s', classinfo)
-            return
+            return None
         if classinfo.name != self.Module:
             self.classes[self.Module].member_classes.append(classinfo.objc_name)
         name = classinfo.cname
         if self.isWrapped(name) and not classinfo.base:
             logging.warning('duplicated: %s', classinfo)
-            return
+            return None
         self.classes[name] = classinfo
         if name in type_dict and not classinfo.base:
             logging.warning('duplicated: %s', classinfo)
-            return
+            return None
         if name != self.Module:
             type_dict.setdefault(name, {}).update(
                 { "objc_type" : classinfo.objc_name + "*",
@@ -731,6 +740,7 @@ class ObjectiveCWrapperGenerator(object):
             )
 
         logging.info('ok: class %s, name: %s, base: %s', classinfo, name, classinfo.base)
+        return classinfo
 
     def add_const(self, decl, scope=None, enumType=None): # [ "const cname", val, [], [] ]
         constinfo = ConstInfo(decl, namespaces=self.namespaces, enumType=enumType)
@@ -837,27 +847,30 @@ class ObjectiveCWrapperGenerator(object):
         # TODO: support UMat versions of declarations (implement UMat-wrapper for Java)
         parser = hdr_parser.CppHeaderParser(generate_umat_decls=False)
 
-        self.add_class( ['class ' + self.Module, '', [], []]) # [ 'class/struct cname', ':bases', [modlist] [props] ]
+        module_ci = self.add_class( ['class ' + self.Module, '', [], []]) # [ 'class/struct cname', ':bases', [modlist] [props] ]
+        module_ci.header_import = module + '.hpp'
 
         # scan the headers and build more descriptive maps of classes, consts, functions
         includes = []
         for hdr in common_headers:
             logging.info("\n===== Common header : %s =====", hdr)
-            includes.append('#include "' + hdr + '"')
+            includes.append(header_import(hdr))
         for hdr in srcfiles:
             decls = parser.parse(hdr)
             self.namespaces = parser.namespaces
             logging.info("\n\n===== Header: %s =====", hdr)
             logging.info("Namespaces: %s", parser.namespaces)
             if decls:
-                includes.append('#include "' + hdr + '"')
+                includes.append(header_import(hdr))
             else:
                 logging.info("Ignore header: %s", hdr)
             for decl in decls:
                 logging.info("\n--- Incoming ---\n%s", pformat(decl[:5], 4)) # without docstring
                 name = decl[0]
                 if name.startswith("struct") or name.startswith("class"):
-                    self.add_class(decl)
+                    ci = self.add_class(decl)
+                    if ci:
+                        ci.header_import = header_import(hdr)
                 elif name.startswith("const"):
                     self.add_const(decl)
                 elif name.startswith("enum"):
@@ -1190,13 +1203,26 @@ $unrefined_call$epilogue$ret
 
     def gen_class(self, ci, module, extension_implementations, extension_signatures):
         logging.info("%s", ci)
-        if module in AdditionalImports and (ci.name in AdditionalImports[module] or "*" in AdditionalImports[module]):
-            additional_imports = []
+        additional_imports = []
+        if module in AdditionalImports:
             if "*" in AdditionalImports[module]:
                 additional_imports += AdditionalImports[module]["*"]
             if ci.name in AdditionalImports[module]:
                 additional_imports += AdditionalImports[module][ci.name]
-            ci.additionalImports.write("\n".join(["#import %s" % h for h in additional_imports]))
+        if hasattr(ci, 'header_import'):
+            h = '"{}"'.format(ci.header_import)
+            if not h in additional_imports:
+                additional_imports.append(h)
+
+        h = '"{}.hpp"'.format(module)
+        if h in additional_imports:
+            additional_imports.remove(h)
+        h = '"opencv2/{}.hpp"'.format(module)
+        if not h in additional_imports:
+            additional_imports.insert(0, h)
+
+        if additional_imports:
+            ci.additionalImports.write('\n'.join(['#import %s' % h for h in additional_imports]))
 
         # constants
         wrote_consts_pragma = False
