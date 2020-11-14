@@ -14,6 +14,10 @@ MACOSX_DEPLOYMENT_TARGET='10.12'  # default, can be changed via command line opt
 
 class OSXBuilder(Builder):
 
+    def getObjcTarget(self):
+        # Obj-C generation target
+        return 'osx'
+
     def getToolchain(self, arch, target):
         return None
 
