@@ -111,7 +111,7 @@ T_OBJC_MODULE_BODY = read_contents(os.path.join(SCRIPT_DIR, 'templates/objc_modu
 
 class GeneralInfo():
     def __init__(self, type, decl, namespaces):
-        self.namespace, self.classpath, self.classname, self.name = self.parseName(decl[0], namespaces)
+        self.symbol_id, self.namespace, self.classpath, self.classname, self.name = self.parseName(decl[0], namespaces)
 
         # parse doxygen comments
         self.params={}
@@ -149,13 +149,13 @@ class GeneralInfo():
                 break
         pieces = localName.split(".")
         if len(pieces) > 2: # <class>.<class>.<class>.<name>
-            return spaceName, ".".join(pieces[:-1]), pieces[-2], pieces[-1]
+            return name, spaceName, ".".join(pieces[:-1]), pieces[-2], pieces[-1]
         elif len(pieces) == 2: # <class>.<name>
-            return spaceName, pieces[0], pieces[0], pieces[1]
+            return name, spaceName, pieces[0], pieces[0], pieces[1]
         elif len(pieces) == 1: # <name>
-            return spaceName, "", "", pieces[0]
+            return name, spaceName, "", "", pieces[0]
         else:
-            return spaceName, "", "" # error?!
+            return name, spaceName, "", "" # error?!
 
     def fullName(self, isCPP=False):
         result = ".".join([self.fullClass(), self.name])
@@ -271,7 +271,7 @@ class ClassInfo(GeneralInfo):
 
     def getForwardDeclarations(self, module):
         enum_decl = [x for x in self.imports if self.isEnum(x) and type_dict[x]["import_module"] != module]
-        enum_imports = list(set([type_dict[m]["import_module"] for m in enum_decl]))
+        enum_imports = sorted(list(set([type_dict[m]["import_module"] for m in enum_decl])))
         class_decl = [x for x in self.imports if not self.isEnum(x)]
         return ["#import \"%s.h\"" % c for c in enum_imports] + [""] + ["@class %s;" % c for c in sorted(class_decl)]
 
@@ -293,8 +293,8 @@ class ClassInfo(GeneralInfo):
 
     def getAllMethods(self):
         result = []
-        result.extend([fi for fi in sorted(self.methods) if fi.isconstructor])
-        result.extend([fi for fi in sorted(self.methods) if not fi.isconstructor])
+        result += [fi for fi in self.methods if fi.isconstructor]
+        result += [fi for fi in self.methods if not fi.isconstructor]
         return result
 
     def addMethod(self, fi):
@@ -677,7 +677,7 @@ class ObjectiveCWrapperGenerator(object):
         self.clear()
 
     def clear(self):
-        self.namespaces = set(["cv"])
+        self.namespaces = ["cv"]
         mat_class_info = ClassInfo([ 'class Mat', '', [], [] ], self.namespaces)
         mat_class_info.namespace = "cv"
         self.classes = { "Mat" : mat_class_info }
@@ -846,9 +846,9 @@ class ObjectiveCWrapperGenerator(object):
             includes.append('#include "' + hdr + '"')
         for hdr in srcfiles:
             decls = parser.parse(hdr)
-            self.namespaces = parser.namespaces
+            self.namespaces = sorted(parser.namespaces)
             logging.info("\n\n===== Header: %s =====", hdr)
-            logging.info("Namespaces: %s", parser.namespaces)
+            logging.info("Namespaces: %s", sorted(parser.namespaces))
             if decls:
                 includes.append('#include "' + hdr + '"')
             else:
@@ -872,7 +872,7 @@ class ObjectiveCWrapperGenerator(object):
         mkdir_p(package_path)
         extension_file = "%s/%s/%sExt.swift" % (output_objc_path, module, self.Module)
 
-        for ci in list(self.classes.values()):
+        for ci in sorted(self.classes.values(), key=lambda x: x.symbol_id):
             if ci.name == "Mat":
                 continue
             ci.initCodeStreams(self.Module)
@@ -898,7 +898,7 @@ class ObjectiveCWrapperGenerator(object):
         report.write("\n".join(self.ported_func_list))
         report.write("\n\nSKIPPED FUNCs LIST (%i of %i):\n\n" % (len(self.skipped_func_list), total_count))
         report.write("".join(self.skipped_func_list))
-        for i in list(self.def_args_hist.keys()):
+        for i in sorted(self.def_args_hist.keys()):
             report.write("\n%i def args - %i funcs" % (i, self.def_args_hist[i]))
         return report.getvalue()
 
@@ -1211,17 +1211,18 @@ $unrefined_call$epilogue$ret
         if ci.consts:
             enumTypes = set([c.enumType for c in ci.consts])
             grouped_consts = {enumType: [c for c in ci.consts if c.enumType == enumType] for enumType in enumTypes}
-            for typeName, consts in list(grouped_consts.items()):
+            for typeName in sorted(grouped_consts.keys(), key=lambda x: str(x) if x is not None else ""):
+                consts = grouped_consts[typeName]
                 logging.info("%s", consts)
                 if typeName:
-                    typeName = typeName.rsplit(".", 1)[-1]
+                    typeNameShort = typeName.rsplit(".", 1)[-1]
                     if ci.cname in enum_fix:
-                        typeName = enum_fix[ci.cname].get(typeName, typeName)
+                        typeNameShort = enum_fix[ci.cname].get(typeNameShort, typeNameShort)
 
                     ci.enum_declarations.write("""
-// C++: enum {1}
-typedef NS_ENUM(int, {2}) {{
-    {0}\n}};\n\n""".format(",\n    ".join(["%s = %s" % (c.name, c.value) for c in consts]), typeName, typeName)
+// C++: enum {1} ({2})
+typedef NS_ENUM(int, {1}) {{
+    {0}\n}};\n\n""".format(",\n    ".join(["%s = %s" % (c.name, c.value) for c in consts]), typeNameShort, typeName)
                     )
                 else:
                     if not wrote_consts_pragma:
@@ -1303,9 +1304,11 @@ typedef NS_ENUM(int, {2}) {{
 
         # manual ports
         if ci.name in ManualFuncs:
-            for func in list(ManualFuncs[ci.name].keys()):
-                ci.method_declarations.write( "\n".join(ManualFuncs[ci.name][func]["declaration"]) )
-                ci.method_implementations.write( "\n".join(ManualFuncs[ci.name][func]["implementation"]) )
+            for func in sorted(ManualFuncs[ci.name].keys()):
+                logging.info("manual function: %s", func)
+                fn = ManualFuncs[ci.name][func]
+                ci.method_declarations.write( "\n".join(fn["declaration"]) )
+                ci.method_implementations.write( "\n".join(fn["implementation"]) )
 
     def getClass(self, classname):
         return self.classes[classname or self.Module]
@@ -1489,7 +1492,7 @@ if __name__ == "__main__":
     # initialize logger
     logging.basicConfig(filename='gen_objc.log', format=None, filemode='w', level=logging.INFO)
     handler = logging.StreamHandler()
-    handler.setLevel(logging.WARNING)
+    handler.setLevel(os.environ.get('LOG_LEVEL', logging.WARNING))
     logging.getLogger().addHandler(handler)
 
     # parse command line parameters
