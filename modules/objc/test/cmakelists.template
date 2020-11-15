@@ -42,5 +42,6 @@ endif()
 set_target_properties(OpenCVTestTests PROPERTIES LINK_FLAGS -Wl,-undefined,dynamic_lookup)
 
 set_source_files_properties(test/resources PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+set_target_properties(OpenCVTestTests PROPERTIES RESOURCE "${CMAKE_CURRENT_LIST_DIR}/test/resources")
 
 xctest_add_test(XCTest.OpenCVTest OpenCVTestTests)
