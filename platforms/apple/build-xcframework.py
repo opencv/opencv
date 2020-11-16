@@ -18,7 +18,8 @@ def get_framework_build_command_for_platform(platform, destination, framework_na
     Parameters
     ----------
     platform : str
-        The name of the platform you want to build for.
+        The name of the platform you want to build for. Options are
+        "ios", "ios-simulator", "ios-maccatalyst", "macos"
     destination : str
         The directory you want to build the framework into.
     framework_name : str
