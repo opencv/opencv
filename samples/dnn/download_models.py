@@ -58,57 +58,58 @@ def isArchive(filepath):
 class DownloadInstance:
     def __init__(self, **kwargs):
         self.name = kwargs.pop('name')
-        self.filenames = kwargs.pop('filenames')
+        self.filename = kwargs.pop('filename')
         self.loader = kwargs.pop('loader', None)
         self.save_dir = kwargs.pop('save_dir')
-        self.shas = kwargs.pop('shas', None)
+        self.sha = kwargs.pop('sha', None)
 
     def __str__(self):
         return 'DownloadInstance <{}>'.format(self.name)
 
     def get(self):
         print("  Working on " + self.name)
-        for filename, sha in zip(self.filenames, self.shas):
-            print("  Getting file " + filename)
-            if sha is None:
-                print('  No expected hashsum provided, loading file')
+        print("  Getting file " + self.filename)
+        if self.sha is None:
+            print('  No expected hashsum provided, loading file')
+        else:
+            filepath = os.path.join(self.save_dir, self.sha, self.filename)
+            if checkHashsum(self.sha, filepath):
+                print('  hash match - file already exists, skipping')
+                return filepath
             else:
-                filepath = os.path.join(self.save_dir, sha, filename)
-                if checkHashsum(sha, filepath):
-                    print('  hash match - file already exists, skipping')
-                    continue
-                else:
-                    print('  hash didn\'t match, loading file')
+                print('  hash didn\'t match, loading file')
 
-            if not os.path.exists(self.save_dir):
-                print('  creating directory: ' + self.save_dir)
-                os.makedirs(self.save_dir)
+        if not os.path.exists(self.save_dir):
+            print('  creating directory: ' + self.save_dir)
+            os.makedirs(self.save_dir)
 
 
-            print('  hash check failed - loading')
-            assert self.loader
-            try:
-                self.loader.load(filename, sha, self.save_dir)
-                print(' done')
-                print(' file {}'.format(filename))
-                if sha is None:
-                    download_path = os.path.join(self.save_dir, filename)
-                    sha = getHashsumFromFile(download_path)
-                    new_dir = os.path.join(self.save_dir, sha)
+        print('  hash check failed - loading')
+        assert self.loader
+        try:
+            self.loader.load(self.filename, self.sha, self.save_dir)
+            print(' done')
+            print(' file {}'.format(self.filename))
+            if self.sha is None:
+                download_path = os.path.join(self.save_dir, self.filename)
+                self.sha = getHashsumFromFile(download_path)
+                new_dir = os.path.join(self.save_dir, self.sha)
 
-                    if not os.path.exists(new_dir):
-                        os.makedirs(new_dir)
-                    if not (os.path.exists(os.path.join(new_dir, filename))):
-                        shutil.move(download_path, new_dir)
-                    print('  No expected hashsum provided, actual SHA is {}'.format(sha))
-                else:
-                    checkHashsum(sha, filepath, silent=False)
-            except Exception as e:
-                print("  There was some problem with loading file {} for {}".format(filename, self.name))
-                print("  Exception: {}".format(e))
-                continue
+                if not os.path.exists(new_dir):
+                    os.makedirs(new_dir)
+                filepath = os.path.join(new_dir, self.filename)
+                if not (os.path.exists(filepath)):
+                    shutil.move(download_path, new_dir)
+                print('  No expected hashsum provided, actual SHA is {}'.format(self.sha))
+            else:
+                checkHashsum(self.sha, filepath, silent=False)
+        except Exception as e:
+            print("  There was some problem with loading file {} for {}".format(self.filename, self.name))
+            print("  Exception: {}".format(e))
+            return
 
         print("  Finished " + self.name)
+        return filepath
 
 class Loader(object):
     MB = 1024*1024
@@ -263,8 +264,8 @@ def produceDownloadInstance(instance_name, filename, sha, url, save_dir, downloa
             print("Warning: possibly wrong Google Drive link")
     return DownloadInstance(
         name=instance_name,
-        filenames=[filename],
-        shas=[sha],
+        filename=filename,
+        sha=sha,
         save_dir=save_dir,
         loader=loader(download_name, download_sha, spec_param, archive_member)
     )
@@ -309,7 +310,7 @@ def downloadFile(url, sha=None, save_dir=None, filename=None):
     if filename is None:
         filename = "download_" + datetime.now().__str__()
     name = filename
-    produceDownloadInstance(name, filename, sha, url, save_dir).get()
+    return produceDownloadInstance(name, filename, sha, url, save_dir).get()
 
 def parseMetalinkFile(metalink_filepath, save_dir):
     NS = {'ml': 'urn:ietf:params:xml:ns:metalink'}
