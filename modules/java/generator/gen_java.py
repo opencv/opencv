@@ -272,8 +272,16 @@ class ClassInfo(GeneralInfo):
 
         self.base = ''
         if decl[1]:
-            #self.base = re.sub(r"\b"+self.jname+r"\b", "", decl[1].replace(":", "")).strip()
-            self.base = re.sub(r"^.*:", "", decl[1].split(",")[0]).strip().replace(self.jname, "")
+            # FIXIT Use generator to find type properly instead of hacks below
+            base_class = re.sub(r"^: ", "", decl[1])
+            base_class = re.sub(r"^cv::", "", base_class)
+            base_class = base_class.replace('::', '.')
+            base_info = ClassInfo(('class {}'.format(base_class), '', [], [], None, None), [self.namespace])
+            base_type_name = base_info.name
+            if not base_type_name in type_dict:
+                base_type_name = re.sub(r"^.*:", "", decl[1].split(",")[0]).strip().replace(self.jname, "")
+            self.base = base_type_name
+            self.addImports(self.base)
 
     def __repr__(self):
         return Template("CLASS $namespace::$classpath.$name : $base").substitute(**self.__dict__)
