@@ -613,7 +613,7 @@ if(NOT IOS)
   include(cmake/OpenCVDetectPython.cmake)
 endif()
 
-include(cmake/OpenCVCompilerOptions.cmake) # TODOjon: This is responsible for the compiler  tests
+include(cmake/OpenCVCompilerOptions.cmake)
 
 ocv_cmake_hook(POST_COMPILER_OPTIONS)
 

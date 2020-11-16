@@ -101,21 +101,18 @@ class Builder:
             if xcode_ver >= 7 and target[1] == 'iPhoneOS' and self.bitcodedisabled == False:
                 cmake_flags.append("-DCMAKE_C_FLAGS=-fembed-bitcode")
                 cmake_flags.append("-DCMAKE_CXX_FLAGS=-fembed-bitcode")
-            if xcode_ver >= 7 and target[1] == 'Catalyst':  # TODOjon: Do I need this? (I think I do in order to set the C/CXX Flag for the ABI)
+            if xcode_ver >= 7 and target[1] == 'Catalyst':
                 sdk_path = check_output(["xcodebuild", "-version", "-sdk", "macosx", "Path"]).decode('utf-8').rstrip()
                 c_flags = [
-                    # TODOChris: Enable/disable target flags here
                     "-target %s-apple-ios13.0-macabi" % target[0],  # e.g. x86_64-apple-ios13.2-macabi # -mmacosx-version-min=10.15
                     "-isysroot %s" % sdk_path,
                     "-iframework %s/System/iOSSupport/System/Library/Frameworks" % sdk_path,
                     "-isystem %s/System/iOSSupport/usr/include" % sdk_path,
                 ]
-                if self.bitcodedisabled == False: # TODOjon: OSX doesn't embed bitcode. Should this?
+                if self.bitcodedisabled == False:
                     c_flags.append("-fembed-bitcode")
                 cmake_flags.append("-DCMAKE_C_FLAGS=" + " ".join(c_flags))
                 cmake_flags.append("-DCMAKE_CXX_FLAGS=" + " ".join(c_flags))
-                # cmake_flags.append("-DCMAKE_SHARED_LINKER_FLAGS=" + " ".join(c_flags))
-                # cmake_flags.append("-DCMAKE_STATIC_LINKER_FLAGS=" + " ".join(c_flags))
                 cmake_flags.append("-DCMAKE_EXE_LINKER_FLAGS=" + " ".join(c_flags))
                 cmake_flags.append("-DIOS=1")  # Build the iOS codebase
                 cmake_flags.append("-DMAC_CATALYST=1")  # Set a flag for Mac Catalyst, just in case we need it
@@ -129,7 +126,7 @@ class Builder:
                 self.mergeLibs(main_build_dir)
             else:
                 self.makeDynamicLib(main_build_dir)
-        self.makeFramework(outdir, dirs) ## TODOjon: Use -create-xcframework instead of lipo, make lipo version available with a flag, fail if lipo is specified and catalyst is asked for
+        self.makeFramework(outdir, dirs)
         if self.build_objc_wrapper:
             if self.run_tests:
                 check_call([sys.argv[0].replace("build_framework", "run_tests"), "--framework_dir=" + outdir, "--framework_name=" + self.framework_name, dirs[0] +  "/modules/objc_bindings_generator/{}/test".format(self.getObjcTarget())])
@@ -145,7 +142,7 @@ class Builder:
             else:
                 print("To build docs call:")
                 print(sys.argv[0].replace("build_framework", "build_docs") + " " + dirs[0] + "/modules/objc/framework_build")
-            # self.copy_samples(outdir)
+            self.copy_samples(outdir)
 
     def build(self, outdir):
         try:
@@ -327,7 +324,7 @@ class Builder:
         bitcode_flags = ["-fembed-bitcode", "-Xlinker", "-bitcode_verify"] if is_device and not self.bitcodedisabled else []
         toolchain_dir = get_xcode_setting("TOOLCHAIN_DIR", builddir)
         swift_link_dirs = ["-L" + toolchain_dir + "/usr/lib/swift/" + target_platform, "-L/usr/lib/swift"]
-        sdk_dir = get_xcode_setting("SDK_DIR", builddir) # TODOjon: Is this overwriting the specified SDK?
+        sdk_dir = get_xcode_setting("SDK_DIR", builddir)
         execute([
             "clang++",
             "-Xlinker", "-rpath",
@@ -367,7 +364,7 @@ class Builder:
                         file.write(body)
         if self.build_objc_wrapper:
             copy_tree(os.path.join(builddirs[0], "install", "lib", name + ".framework", "Headers"), os.path.join(dstdir, "Headers"))
-            platform_name_map = { # TODOjon: This is probably important, and will need expanding for Silicon
+            platform_name_map = {
                     "arm": "armv7-apple-ios",
                     "arm64": "arm64-apple-ios",
                     "i386": "i386-apple-ios-simulator",
@@ -383,10 +380,6 @@ class Builder:
                     filestem = os.path.splitext(filename)[0]
                     fileext = os.path.splitext(filename)[1]
                     if filestem in platform_name_map:
-                        print("!!!!!!!!!!!!!!!platform")
-                        print(os.path.join(dirname, platform_name_map[filestem] + fileext))
-                        print("builddirs[0]: %s" % builddirs[0])
-                        # exit()
                         os.rename(os.path.join(dirname, filename), os.path.join(dirname, platform_name_map[filestem] + fileext))
 
         # make universal static lib

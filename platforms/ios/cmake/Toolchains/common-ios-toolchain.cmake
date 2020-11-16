@@ -126,7 +126,7 @@ if(NOT __IN_TRY_COMPILE)
 endif()
 
 # Standard settings
-set(CMAKE_SYSTEM_NAME iOS) # TODOjon: Is this correct? Should it be Darwin?
+set(CMAKE_SYSTEM_NAME iOS)
 
 # Apple Framework settings
 if(APPLE_FRAMEWORK AND BUILD_SHARED_LIBS)
