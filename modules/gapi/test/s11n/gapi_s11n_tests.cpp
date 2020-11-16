@@ -2,6 +2,7 @@
 
 #include "backends/common/serialization.hpp"
 #include <opencv2/gapi/rmat.hpp>
+#include <../src/backends/common/gbackend.hpp> // asView
 
 namespace {
 struct EmptyCustomType { };
@@ -134,12 +135,8 @@ public:
     MyRMatAdapter(cv::Mat m, int value, const std::string& str)
         : m_mat(m), m_value(value), m_str(str)
     {}
-    virtual cv::RMat::View access(cv::RMat::Access access) override {
-        if (access == cv::RMat::Access::W) {
-            return cv::RMat::View(cv::descr_of(m_mat), m_mat.data, m_mat.step);
-        } else {
-            return cv::RMat::View(cv::descr_of(m_mat), m_mat.data, m_mat.step);
-        }
+    virtual cv::RMat::View access(cv::RMat::Access) override {
+        return cv::gimpl::asView(m_mat);
     }
     virtual cv::GMatDesc desc() const override { return cv::descr_of(m_mat); }
     virtual void serialize(cv::gapi::s11n::IOStream& os) override {
@@ -361,6 +358,12 @@ TEST_F(S11N_Basic, Test_Mat_view) {
 
 TEST_F(S11N_Basic, Test_MatDesc) {
     cv::GMatDesc v = { CV_8U, 1, {320,240} };
+    put(v);
+    EXPECT_EQ(v, get<cv::GMatDesc>());
+}
+
+TEST_F(S11N_Basic, Test_MatDescND) {
+    cv::GMatDesc v = { CV_8U, {1,1,224,224} };
     put(v);
     EXPECT_EQ(v, get<cv::GMatDesc>());
 }

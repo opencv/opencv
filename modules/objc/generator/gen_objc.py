@@ -104,6 +104,15 @@ def mkdir_p(path):
         else:
             raise
 
+def header_import(hdr):
+    """ converts absolute header path to import parameter """
+    pos = hdr.find('/include/')
+    hdr = hdr[pos+9 if pos >= 0 else 0:]
+    #pos = hdr.find('opencv2/')
+    #hdr = hdr[pos+8 if pos >= 0 else 0:]
+    return hdr
+
+
 T_OBJC_CLASS_HEADER = read_contents(os.path.join(SCRIPT_DIR, 'templates/objc_class_header.template'))
 T_OBJC_CLASS_BODY = read_contents(os.path.join(SCRIPT_DIR, 'templates/objc_class_body.template'))
 T_OBJC_MODULE_HEADER = read_contents(os.path.join(SCRIPT_DIR, 'templates/objc_module_header.template'))
@@ -693,17 +702,17 @@ class ObjectiveCWrapperGenerator(object):
         classinfo = ClassInfo(decl, namespaces=self.namespaces)
         if classinfo.name in class_ignore_list:
             logging.info('ignored: %s', classinfo)
-            return
+            return None
         if classinfo.name != self.Module:
             self.classes[self.Module].member_classes.append(classinfo.objc_name)
         name = classinfo.cname
         if self.isWrapped(name) and not classinfo.base:
             logging.warning('duplicated: %s', classinfo)
-            return
+            return None
         self.classes[name] = classinfo
         if name in type_dict and not classinfo.base:
             logging.warning('duplicated: %s', classinfo)
-            return
+            return None
         if name != self.Module:
             type_dict.setdefault(name, {}).update(
                 { "objc_type" : classinfo.objc_name + "*",
@@ -731,6 +740,7 @@ class ObjectiveCWrapperGenerator(object):
             )
 
         logging.info('ok: class %s, name: %s, base: %s', classinfo, name, classinfo.base)
+        return classinfo
 
     def add_const(self, decl, scope=None, enumType=None): # [ "const cname", val, [], [] ]
         constinfo = ConstInfo(decl, namespaces=self.namespaces, enumType=enumType)
@@ -837,27 +847,30 @@ class ObjectiveCWrapperGenerator(object):
         # TODO: support UMat versions of declarations (implement UMat-wrapper for Java)
         parser = hdr_parser.CppHeaderParser(generate_umat_decls=False)
 
-        self.add_class( ['class ' + self.Module, '', [], []]) # [ 'class/struct cname', ':bases', [modlist] [props] ]
+        module_ci = self.add_class( ['class ' + self.Module, '', [], []]) # [ 'class/struct cname', ':bases', [modlist] [props] ]
+        module_ci.header_import = module + '.hpp'
 
         # scan the headers and build more descriptive maps of classes, consts, functions
         includes = []
         for hdr in common_headers:
             logging.info("\n===== Common header : %s =====", hdr)
-            includes.append('#include "' + hdr + '"')
+            includes.append(header_import(hdr))
         for hdr in srcfiles:
             decls = parser.parse(hdr)
             self.namespaces = sorted(parser.namespaces)
             logging.info("\n\n===== Header: %s =====", hdr)
             logging.info("Namespaces: %s", sorted(parser.namespaces))
             if decls:
-                includes.append('#include "' + hdr + '"')
+                includes.append(header_import(hdr))
             else:
                 logging.info("Ignore header: %s", hdr)
             for decl in decls:
                 logging.info("\n--- Incoming ---\n%s", pformat(decl[:5], 4)) # without docstring
                 name = decl[0]
                 if name.startswith("struct") or name.startswith("class"):
-                    self.add_class(decl)
+                    ci = self.add_class(decl)
+                    if ci:
+                        ci.header_import = header_import(hdr)
                 elif name.startswith("const"):
                     self.add_const(decl)
                 elif name.startswith("enum"):
@@ -1190,13 +1203,26 @@ $unrefined_call$epilogue$ret
 
     def gen_class(self, ci, module, extension_implementations, extension_signatures):
         logging.info("%s", ci)
-        if module in AdditionalImports and (ci.name in AdditionalImports[module] or "*" in AdditionalImports[module]):
-            additional_imports = []
+        additional_imports = []
+        if module in AdditionalImports:
             if "*" in AdditionalImports[module]:
                 additional_imports += AdditionalImports[module]["*"]
             if ci.name in AdditionalImports[module]:
                 additional_imports += AdditionalImports[module][ci.name]
-            ci.additionalImports.write("\n".join(["#import %s" % h for h in additional_imports]))
+        if hasattr(ci, 'header_import'):
+            h = '"{}"'.format(ci.header_import)
+            if not h in additional_imports:
+                additional_imports.append(h)
+
+        h = '"{}.hpp"'.format(module)
+        if h in additional_imports:
+            additional_imports.remove(h)
+        h = '"opencv2/{}.hpp"'.format(module)
+        if not h in additional_imports:
+            additional_imports.insert(0, h)
+
+        if additional_imports:
+            ci.additionalImports.write('\n'.join(['#import %s' % h for h in additional_imports]))
 
         # constants
         wrote_consts_pragma = False
@@ -1345,7 +1371,7 @@ typedef NS_ENUM(int, {1}) {{
             return "Ptr<" + fullname + ">"
         return fullname
 
-    def finalize(self, output_objc_path):
+    def finalize(self, objc_target, output_objc_path, output_objc_build_path):
         opencv_header_file = os.path.join(output_objc_path, framework_name + ".h")
         opencv_header = "#import <Foundation/Foundation.h>\n\n"
         opencv_header += "// ! Project version number\nFOUNDATION_EXPORT double " + framework_name + "VersionNumber;\n\n"
@@ -1359,18 +1385,20 @@ typedef NS_ENUM(int, {1}) {{
         opencv_modulemap += "\n  export *\n  module * {export *}\n}\n"
         self.save(opencv_modulemap_file, opencv_modulemap)
         cmakelist_template = read_contents(os.path.join(SCRIPT_DIR, 'templates/cmakelists.template'))
-        cmakelist = Template(cmakelist_template).substitute(modules = ";".join(modules), framework = framework_name)
+        cmakelist = Template(cmakelist_template).substitute(modules = ";".join(modules), framework = framework_name, objc_target=objc_target)
         self.save(os.path.join(dstdir, "CMakeLists.txt"), cmakelist)
-        mkdir_p("./framework_build")
-        mkdir_p("./test_build")
-        mkdir_p("./doc_build")
+        mkdir_p(os.path.join(output_objc_build_path, "framework_build"))
+        mkdir_p(os.path.join(output_objc_build_path, "test_build"))
+        mkdir_p(os.path.join(output_objc_build_path, "doc_build"))
         with open(os.path.join(SCRIPT_DIR, '../doc/README.md')) as readme_in:
             readme_body = readme_in.read()
         readme_body += "\n\n\n##Modules\n\n" + ", ".join(["`" + m.capitalize() + "`" for m in modules])
-        with open("./doc_build/README.md", "w") as readme_out:
+        with open(os.path.join(output_objc_build_path, "doc_build/README.md"), "w") as readme_out:
             readme_out.write(readme_body)
         if framework_name != "OpenCV":
             for dirname, dirs, files in os.walk(os.path.join(testdir, "test")):
+                if dirname.endswith('/resources'):
+                    continue  # don't touch resource binary files
                 for filename in files:
                     filepath = os.path.join(dirname, filename)
                     with io.open(filepath, encoding="utf-8", errors="ignore") as file:
@@ -1516,6 +1544,11 @@ if __name__ == "__main__":
         config = json.load(f)
 
     ROOT_DIR = config['rootdir']; assert os.path.exists(ROOT_DIR)
+    if 'objc_build_dir' in config:
+        objc_build_dir = config['objc_build_dir']
+        assert os.path.exists(objc_build_dir), objc_build_dir
+    else:
+        objc_build_dir = os.getcwd()
 
     dstdir = "./gen"
     testdir = "./test"
@@ -1611,6 +1644,6 @@ if __name__ == "__main__":
             generator.gen(srcfiles, module, dstdir, objc_base_path, common_headers, manual_classes)
         else:
             logging.info("No generated code for module: %s", module)
-    generator.finalize(objc_base_path)
+    generator.finalize(args.target, objc_base_path, objc_build_dir)
 
     print('Generated files: %d (updated %d)' % (total_files, updated_files))
