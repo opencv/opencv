@@ -1368,6 +1368,8 @@ typedef NS_ENUM(int, {2}) {{
             readme_out.write(readme_body)
         if framework_name != "OpenCV":
             for dirname, dirs, files in os.walk(os.path.join(testdir, "test")):
+                if dirname.endswith('/resources'):
+                    continue  # don't touch resource binary files
                 for filename in files:
                     filepath = os.path.join(dirname, filename)
                     with io.open(filepath, encoding="utf-8", errors="ignore") as file:
