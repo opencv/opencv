@@ -32,6 +32,18 @@ def get_xcode_major():
     else:
         raise Exception("Failed to parse Xcode version")
 
+def get_xcode_version():
+    """
+    Returns the major and minor version of the current Xcode 
+    command line tools as a tuple of (major, minor)
+    """
+    ret = check_output(["xcodebuild", "-version"]).decode('utf-8')
+    m = re.match(r'Xcode\s+(\d+)\.(\d+)', ret, flags=re.IGNORECASE)
+    if m:
+        return (int(m.group(1)), int(m.group(2)))
+    else:
+        raise Exception("Failed to parse Xcode version")
+
 def get_xcode_setting(var, projectdir):
     ret = check_output(["xcodebuild", "-showBuildSettings"], cwd = projectdir)
     m = re.search("\s" + var + " = (.*)", ret)
@@ -39,3 +51,15 @@ def get_xcode_setting(var, projectdir):
         return m.group(1)
     else:
         raise Exception("Failed to parse Xcode settings")
+
+def get_cmake_version():
+    """
+    Returns the major and minor version of the current CMake 
+    command line tools as a tuple of (major, minor, revision)
+    """
+    ret = check_output(["cmake", "--version"]).decode('utf-8')
+    m = re.match(r'cmake\sversion\s+(\d+)\.(\d+).(\d+)', ret, flags=re.IGNORECASE)
+    if m:
+        return (int(m.group(1)), int(m.group(2)), int(m.group(3)))
+    else:
+        raise Exception("Failed to parse CMake version")

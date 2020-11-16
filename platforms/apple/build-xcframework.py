@@ -6,9 +6,7 @@ of your choice. Just run it and grab a snack; you'll be waiting a while.
 """
 
 import sys, os, argparse, pathlib, traceback
-from cv_build_utils import execute, print_error, print_header
-
-assert sys.version_info >= (3, 6), "Python 3.6 or newer is required!"
+from cv_build_utils import execute, print_error, print_header, get_xcode_version, get_cmake_version
 
 def get_framework_build_command_for_platform(platform, destination, framework_name, only_64_bit=False):
     """
@@ -44,6 +42,16 @@ def get_framework_build_command_for_platform(platform, destination, framework_na
         raise Exception(f"Platform {platform} has no associated build commands.")
 
 if __name__ == "__main__":
+
+    # Check for dependencies
+    assert sys.version_info >= (3, 6), f"Python 3.6 or later is required! Current version is {sys.version_info}"
+    # Need CMake 3.18.5/3.19 or later for a Catalyst fix. See https://gitlab.kitware.com/cmake/cmake/-/issues/21425 for context.
+    assert get_cmake_version() >= (3, 18, 5), f"CMake 3.18.5 or later is required. Current version is {get_cmake_version()}"
+    # Need Xcode 12.2 for Apple Silicon support
+    assert get_xcode_version() >= (12, 2), f"Xcode 12.2 command line tools or later are required! Current version is {get_xcode_version()}. \
+    Run xcode-select to switch if you have multiple Xcode installs."
+
+    # Parse arguments
     parser = argparse.ArgumentParser(description='This script builds OpenCV into an xcframework supporting the Apple platforms of your choice.')
     parser.add_argument('out', metavar='OUTDIR', help='The directory where the xcframework will be created')
     parser.add_argument('--platform', default='ios,ios-simulator,ios-maccatalyst,macos', help='Platforms to build for (default: ios,ios-simulator,ios-maccatalyst,macos)')
