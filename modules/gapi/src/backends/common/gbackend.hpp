@@ -23,12 +23,26 @@ namespace cv {
 namespace gimpl {
 
     inline cv::Mat asMat(RMat::View& v) {
+#if !defined(GAPI_STANDALONE)
+        return v.dims().empty() ? cv::Mat(v.rows(), v.cols(), v.type(), v.ptr(), v.step())
+                                : cv::Mat(v.dims(), v.type(), v.ptr(), v.steps().data());
+#else
+        // FIXME: add a check that steps are default
         return v.dims().empty() ? cv::Mat(v.rows(), v.cols(), v.type(), v.ptr(), v.step())
                                 : cv::Mat(v.dims(), v.type(), v.ptr());
+
+#endif
     }
     inline RMat::View asView(const Mat& m, RMat::View::DestroyCallback&& cb = nullptr) {
-        // FIXME: View doesn't support multidimensional cv::Mat's
+#if !defined(GAPI_STANDALONE)
+        RMat::View::stepsT steps(m.dims);
+        for (int i = 0; i < m.dims; i++) {
+            steps[i] = m.step[i];
+        }
+        return RMat::View(cv::descr_of(m), m.data, steps, std::move(cb));
+#else
         return RMat::View(cv::descr_of(m), m.data, m.step, std::move(cb));
+#endif
     }
 
     class RMatAdapter : public RMat::Adapter {
