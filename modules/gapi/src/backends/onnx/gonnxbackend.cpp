@@ -167,8 +167,16 @@ inline void preprocess(const cv::Mat& src,
         // No layout or dimension transformations done here!
         // TODO: This needs to be aligned across all NN backends.
         GAPI_Assert(toCV(ti.type) == CV_32F && "Only 32F model input is supported for 32F data");
-        GAPI_Assert(toORT(src.size) == ti.dims && "32F tensor dimensions should match with NN input");
-        GAPI_Assert(!ti.is_dynamic && "Dynamic inputs are not supported for this case");
+        const auto tensor_dims = toORT(src.size);
+        if (tensor_dims.size() == ti.dims.size()) {
+            for (size_t i = 0; i < ti.dims.size(); ++i) {
+                GAPI_Assert((ti.dims[i] == -1 || ti.dims[i] == tensor_dims[i]) &&
+                            "32F tensor dimensions should match with all non-dynamic NN input dimensions");
+            }
+        } else {
+            GAPI_Assert(false && "32F tensor size should match with NN input");
+        }
+
         dst = src;
     } else {
         // 8U input: full preprocessing path
