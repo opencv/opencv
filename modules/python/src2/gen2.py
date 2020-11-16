@@ -201,7 +201,8 @@ simple_argtype_mapping = {
     "int": ArgTypeInfo("int", FormatStrings.int, "0", True),
     "float": ArgTypeInfo("float", FormatStrings.float, "0.f", True),
     "double": ArgTypeInfo("double", FormatStrings.double, "0", True),
-    "c_string": ArgTypeInfo("char*", FormatStrings.string, '(char*)""')
+    "c_string": ArgTypeInfo("char*", FormatStrings.string, '(char*)""'),
+    "string": ArgTypeInfo("std::string", FormatStrings.object, None, True),
 }
 
 
