@@ -28,12 +28,12 @@ struct GMeta {
     static const char *id() {
         return "org.opencv.streaming.meta";
     }
-    // An universal yield for meta(), same as in GDesync
+    // A universal yield for meta(), same as in GDesync
     template<typename... R, int... IIs>
     static std::tuple<R...> yield(cv::GCall &call, cv::detail::Seq<IIs...>) {
         return std::make_tuple(cv::detail::Yield<R>::yield(call, IIs)...);
     }
-    // Also an universal outMeta stub here
+    // Also a universal outMeta stub here
     static GMetaArgs getOutMeta(const GMetaArgs &args, const GArgs &) {
         return args;
     }
@@ -69,11 +69,11 @@ cv::GOpaque<int64_t> seq_id(G g) {
 template<typename G>
 cv::GOpaque<int64_t> seqNo(G g) {
     // Old name, compatibility only
-    return seqNo(g);
+    return seq_id(g);
 }
 
 } // namespace streaming
 } // namespace gapi
 } // namespace cv
 
-#endif // OPENCV_GAPI_GSTREAMING_DESYNC_HPP
+#endif // OPENCV_GAPI_GSTREAMING_META_HPP
