@@ -7,14 +7,14 @@
 #pragma once
 
 #ifdef __cplusplus
-#import "opencv.hpp"
+#import "opencv2/core.hpp"
 #else
 #define CV_EXPORTS
 #endif
 
+#import "Mat.h"
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
-#import "Mat.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
