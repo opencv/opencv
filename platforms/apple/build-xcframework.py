@@ -45,7 +45,8 @@ if __name__ == "__main__":
 
     # Check for dependencies
     assert sys.version_info >= (3, 6), f"Python 3.6 or later is required! Current version is {sys.version_info}"
-    # Need CMake 3.18.5/3.19 or later for a Catalyst fix. See https://gitlab.kitware.com/cmake/cmake/-/issues/21425 for context.
+    # Need CMake 3.18.5/3.19 or later for a Silicon-related fix to building for the iOS Simulator. 
+    # See https://gitlab.kitware.com/cmake/cmake/-/issues/21425 for context.
     assert get_cmake_version() >= (3, 18, 5), f"CMake 3.18.5 or later is required. Current version is {get_cmake_version()}"
     # Need Xcode 12.2 for Apple Silicon support
     assert get_xcode_version() >= (12, 2), f"Xcode 12.2 command line tools or later are required! Current version is {get_xcode_version()}. \
