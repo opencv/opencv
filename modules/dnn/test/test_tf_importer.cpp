@@ -169,17 +169,10 @@ TEST_P(Test_TensorFlow_layers, Convolution3D)
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2019010000)
     applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_VERSION);
 #endif
-    if (backend == DNN_BACKEND_CUDA)
-    {
-        // ok
-    }
-    else if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target != DNN_TARGET_CPU)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target != DNN_TARGET_CPU)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);  // Only CPU on DLIE backend is supported
-    else if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target != DNN_TARGET_CPU)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target != DNN_TARGET_CPU)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);  // Only CPU on DLIE backend is supported
-    else if (target != DNN_TARGET_CPU)
-        throw SkipTestException("Only CPU is supported");
-
     runTensorFlowNet("conv3d");
 }
 

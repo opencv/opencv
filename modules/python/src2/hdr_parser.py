@@ -663,6 +663,10 @@ class CppHeaderParser(object):
         stack_top = self.block_stack[-1]
         context = stack_top[self.BLOCK_TYPE]
 
+        if stmt.startswith('inline namespace'):
+            # emulate anonymous namespace
+            return "namespace", "", True, None
+
         stmt_type = ""
         if end_token == "{":
             stmt_type = "block"
