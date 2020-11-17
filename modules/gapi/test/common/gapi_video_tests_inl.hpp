@@ -89,33 +89,49 @@ TEST_P(BuildPyr_CalcOptFlow_PipelineTest, AccuracyTest)
     compareOutputsOptFlow(outOCV, outGAPI);
 }
 
-TEST_P(BackSubMOG2Test, AccuracyTest)
+#ifdef HAVE_OPENCV_VIDEO
+TEST_P(BackgroundSubtractorTest, AccuracyTest)
 {
     initTestDataPath();
 
+    cv::gapi::video::BackgroundSubtractorType opType;
+    double thr = -1;
+    std::tie(opType, thr) = typeAndThreshold;
+
+    cv::gapi::video::BackgroundSubtractorParams bsp(opType, histLength, thr,
+                                                    detectShadows, learningRate);
+
     // G-API graph declaration
     cv::GMat in;
-    cv::GMat out = cv::gapi::video::GBackSubMOG2::on(in);
+    cv::GMat out = cv::gapi::BackgroundSubtractor(in, bsp);
     // Preserving 'in' in output to have possibility to compare with OpenCV reference
     cv::GComputation c(cv::GIn(in), cv::GOut(cv::gapi::copy(in), out));
 
     // G-API compilation of graph for streaming mode
-    //const auto pkg = cv::gapi::kernels<GCPUBackSubMOG2>();
-    //auto gapiBackSub = c.compileStreaming(cv::compile_args(pkg));
     auto gapiBackSub = c.compileStreaming(getCompileArgs());
+
     // Testing G-API Background Substractor in streaming mode
-    gapiBackSub.setSource(gapi::wip::make_src<cv::gapi::wip::GCaptureSource>
-        (findDataFile(filePath1)));
+    auto path = findDataFile("cv/video/768x576.avi");
+    try
+    {
+        gapiBackSub.setSource(gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(path));
+    }
+    catch (...)
+    { throw SkipTestException("Video file can't be opened."); }
+
+    cv::Ptr<cv::BackgroundSubtractor> pOCVBackSub;
+
+    if (opType == cv::gapi::video::TYPE_BS_MOG2)
+        pOCVBackSub = cv::createBackgroundSubtractorMOG2(histLength, thr,
+                                                         detectShadows);
+    else if (opType == cv::gapi::video::TYPE_BS_KNN)
+        pOCVBackSub = cv::createBackgroundSubtractorKNN(histLength, thr,
+                                                        detectShadows);
+
     // Allowing 1% difference of all pixels between G-API and reference OpenCV results
-    testBackSubInStreaming(gapiBackSub, 1);
-
-    // Additionally, test the case when the new stream happens
-    gapiBackSub.setSource(gapi::wip::make_src<cv::gapi::wip::GCaptureSource>
-        (findDataFile(filePath2)));
-    // Allowing 5% difference of all pixels between G-API and reference OpenCV results
-    testBackSubInStreaming(gapiBackSub, 5);
+    testBackgroundSubtractorStreaming(gapiBackSub, pOCVBackSub, 1, 1, learningRate, testNumFrames);
 }
-
+#endif
 } // opencv_test
 
 #endif // OPENCV_GAPI_VIDEO_TESTS_INL_HPP

@@ -80,17 +80,30 @@ GAPI_OCV_KERNEL(GCPUCalcOptFlowLKForPyr, cv::gapi::video::GCalcOptFlowLKForPyr)
     }
 };
 
-GAPI_OCV_KERNEL_ST(GCPUBackSubMOG2, cv::gapi::video::GBackSubMOG2, cv::BackgroundSubtractorMOG2)
+GAPI_OCV_KERNEL_ST(GCPUBackgroundSubtractor,
+                   cv::gapi::video::GBackgroundSubtractor,
+                   cv::BackgroundSubtractor)
 {
-    static void setup(const cv::GMatDesc &/* desc */, std::shared_ptr<cv::BackgroundSubtractorMOG2> &state)
+    static void setup(const cv::GMatDesc&, const cv::gapi::video::BackgroundSubtractorParams& bsParams,
+                      std::shared_ptr<cv::BackgroundSubtractor>& state,
+                      const cv::GCompileArgs&)
     {
-        state = cv::createBackgroundSubtractorMOG2();
+        if (bsParams.operation == cv::gapi::video::TYPE_BS_MOG2)
+            state = cv::createBackgroundSubtractorMOG2(bsParams.history,
+                                                       bsParams.threshold,
+                                                       bsParams.detectShadows);
+        else if (bsParams.operation == cv::gapi::video::TYPE_BS_KNN)
+            state = cv::createBackgroundSubtractorKNN(bsParams.history,
+                                                      bsParams.threshold,
+                                                      bsParams.detectShadows);
+
         GAPI_Assert(state);
     }
 
-    static void run(const cv::Mat& in, cv::Mat &out, cv::BackgroundSubtractorMOG2& state)
+    static void run(const cv::Mat& in, const cv::gapi::video::BackgroundSubtractorParams& bsParams,
+                    cv::Mat &out, cv::BackgroundSubtractor& state)
     {
-        state.apply(in, out, -1);
+        state.apply(in, out, bsParams.learningRate);
     }
 };
 
@@ -100,7 +113,7 @@ cv::gapi::GKernelPackage cv::gapi::video::cpu::kernels()
         < GCPUBuildOptFlowPyramid
         , GCPUCalcOptFlowLK
         , GCPUCalcOptFlowLKForPyr
-        , GCPUBackSubMOG2
+        , GCPUBackgroundSubtractor
         >();
     return pkg;
 }

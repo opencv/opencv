@@ -52,9 +52,9 @@ GOptFlowLKOutput calcOpticalFlowPyrLK(const cv::GArray<cv::GMat>    &prevPyr,
                                     criteria, flags, minEigThresh);
 }
 
-GMat BackSubMOG2(const GMat& src)
+GMat BackgroundSubtractor(const GMat& src, const BackgroundSubtractorParams& bsp)
 {
-    return GBackSubMOG2::on(src);
+    return GBackgroundSubtractor::on(src, bsp);
 }
 
 } //namespace gapi

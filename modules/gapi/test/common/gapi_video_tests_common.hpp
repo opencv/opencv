@@ -9,7 +9,6 @@
 
 #include "gapi_tests_common.hpp"
 #include "../../include/opencv2/gapi/video.hpp"
-#include <opencv2/core.hpp>
 
 #ifdef HAVE_OPENCV_VIDEO
 #include <opencv2/video.hpp>
@@ -322,49 +321,31 @@ inline GComputation runOCVnGAPIOptFlowPipeline(TestFunctional& testInst,
     return c;
 }
 
-inline void compareBackSubResults(const cv::Mat &actual, const cv::Mat &expected, const int diffPercent)
+inline void testBackgroundSubtractorStreaming(cv::GStreamingCompiled& gapiBackSub,
+                                              const cv::Ptr<cv::BackgroundSubtractor>& pOCVBackSub,
+                                              const int diffPercent, const int tolerance,
+                                              const double lRate, const std::size_t testNumFrames)
 {
-    GAPI_Assert(actual.size() == expected.size());
-    int allowedNumDiffPixels = actual.size().area() * diffPercent / 100;
-
-    cv::Mat diff;
-    cv::absdiff(actual, expected, diff);
-
-    cv::Mat hist(256, 1, CV_32FC1, cv::Scalar(0));
-    const float range[]{ 0, 256 };
-    const float *histRange{ range };
-    calcHist(&diff, 1, 0, Mat(), hist, 1, &hist.rows, &histRange, true, false);
-    for (int i = 2; i < hist.rows; ++i)
-    {
-        hist.at<float>(i) += hist.at<float>(i - 1);
-    }
-
-    int numDiffPixels = static_cast<int>(hist.at<float>(255));
-
-    EXPECT_GT(allowedNumDiffPixels, numDiffPixels);
-}
-
-inline void testBackSubInStreaming(cv::GStreamingCompiled gapiBackSub, const int diffPercent)
-{
-    cv::Mat frame,
-        gapiForeground,
-        ocvForeground;
+    cv::Mat frame, gapiForeground, ocvForeground;
+    double numDiff = diffPercent / 100.0;
 
     gapiBackSub.start();
     EXPECT_TRUE(gapiBackSub.running());
 
-    // OpenCV reference substractor
-    auto pOCVBackSub = createBackgroundSubtractorMOG2();
+    compare_f cmpF = AbsSimilarPoints(tolerance, numDiff).to_compare_f();
 
     // Comparison of G-API and OpenCV substractors
     std::size_t frames = 0u;
-    while (gapiBackSub.pull(cv::gout(frame, gapiForeground)))
+    while (frames <= testNumFrames && gapiBackSub.pull(cv::gout(frame, gapiForeground)))
     {
-        pOCVBackSub->apply(frame, ocvForeground, -1);
-        compareBackSubResults(gapiForeground, ocvForeground, diffPercent);
-
+        pOCVBackSub->apply(frame, ocvForeground, lRate);
+        EXPECT_TRUE(cmpF(gapiForeground, ocvForeground));
         frames++;
     }
+
+    if (gapiBackSub.running())
+        gapiBackSub.stop();
+
     EXPECT_LT(0u, frames);
     EXPECT_FALSE(gapiBackSub.running());
 }
