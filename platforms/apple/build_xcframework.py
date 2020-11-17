@@ -25,18 +25,20 @@ def get_framework_build_command_for_platform(platform, destination, framework_na
         Build only 64-bit archs, by default False
     """
     destination = destination.replace(" ", "\\ ")  # Escape spaces in destination path
+    osx_script_path = os.path.abspath(os.path.abspath(os.path.dirname(__file__))+'/../osx/build_framework.py')
+    ios_script_path = os.path.abspath(os.path.abspath(os.path.dirname(__file__))+'/../ios/build_framework.py')
     if platform == 'macos':
-        return ["python3", "../osx/build_framework.py", "--archs", "x86_64,arm64", "--framework_name", framework_name, "--build_only_specified_archs", destination]
+        return ["python3", osx_script_path, "--archs", "x86_64,arm64", "--framework_name", framework_name, "--build_only_specified_archs", destination]
     elif platform == 'ios-maccatalyst':
         # This is not a mistake. For Catalyst, we use the osx toolchain.
         # TODO: This is building with objc turned off due to an issue with CMake. See here for discussion: https://gitlab.kitware.com/cmake/cmake/-/issues/21436
-        return ["python3", "../osx/build_framework.py", "--catalyst_archs", "x86_64,arm64", "--framework_name", framework_name, "--without=objc", "--build_only_specified_archs", destination]
+        return ["python3", osx_script_path, "--catalyst_archs", "x86_64,arm64", "--framework_name", framework_name, "--without=objc", "--build_only_specified_archs", destination]
     elif platform == 'ios':
         archs = "arm64" if only_64_bit else "arm64,armv7,armv7s"
-        return ["python3", "../ios/build_framework.py", "--iphoneos_archs", archs, "--framework_name", framework_name, "--build_only_specified_archs", destination]
+        return ["python3", ios_script_path, "--iphoneos_archs", archs, "--framework_name", framework_name, "--build_only_specified_archs", destination]
     elif platform == 'ios-simulator':
         archs = "x86_64,arm64" if only_64_bit else "x86_64,arm64,i386"
-        return ["python3", "../ios/build_framework.py", "--iphonesimulator_archs", archs, "--framework_name", framework_name, "--build_only_specified_archs", destination]
+        return ["python3", ios_script_path, "--iphonesimulator_archs", archs, "--framework_name", framework_name, "--build_only_specified_archs", destination]
     else:
         raise Exception(f"Platform {platform} has no associated build commands.")
 
