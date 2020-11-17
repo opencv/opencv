@@ -5,6 +5,9 @@ import PackageDescription
 
 let package = Package(
     name: "OpenCV",
+    platforms: [
+        .macOS(.v10_12), .iOS(.v9),
+    ],
     products: [
         .library(
             name: "OpenCV",
