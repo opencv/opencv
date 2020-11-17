@@ -433,6 +433,8 @@ class iOSBuilder(Builder):
     def copy_samples(self, outdir):
         print('Copying samples to: ' + outdir)
         samples_dir = os.path.join(outdir, "samples")
+        if os.path.exists(samples_dir):
+            shutil.rmtree(samples_dir)
         shutil.copytree(os.path.join(self.opencv, "samples", "swift", "ios"), samples_dir)
         if self.framework_name != "OpenCV":
             for dirname, dirs, files in os.walk(samples_dir):
