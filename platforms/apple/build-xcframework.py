@@ -45,7 +45,7 @@ if __name__ == "__main__":
 
     # Check for dependencies
     assert sys.version_info >= (3, 6), f"Python 3.6 or later is required! Current version is {sys.version_info}"
-    # Need CMake 3.18.5/3.19 or later for a Silicon-related fix to building for the iOS Simulator. 
+    # Need CMake 3.18.5/3.19 or later for a Silicon-related fix to building for the iOS Simulator.
     # See https://gitlab.kitware.com/cmake/cmake/-/issues/21425 for context.
     assert get_cmake_version() >= (3, 18, 5), f"CMake 3.18.5 or later is required. Current version is {get_cmake_version()}"
     # Need Xcode 12.2 for Apple Silicon support
@@ -79,9 +79,9 @@ if __name__ == "__main__":
 
         # Put all the built .frameworks together into a .xcframework
         xcframework_build_command = [
-            "xcodebuild", 
-            "-create-xcframework", 
-            "-output", 
+            "xcodebuild",
+            "-create-xcframework",
+            "-output",
             f"{args.out}/{args.framework_name}.xcframework",
         ]
         for folder in build_folders:

@@ -34,7 +34,7 @@ def get_xcode_major():
 
 def get_xcode_version():
     """
-    Returns the major and minor version of the current Xcode 
+    Returns the major and minor version of the current Xcode
     command line tools as a tuple of (major, minor)
     """
     ret = check_output(["xcodebuild", "-version"]).decode('utf-8')
@@ -54,7 +54,7 @@ def get_xcode_setting(var, projectdir):
 
 def get_cmake_version():
     """
-    Returns the major and minor version of the current CMake 
+    Returns the major and minor version of the current CMake
     command line tools as a tuple of (major, minor, revision)
     """
     ret = check_output(["cmake", "--version"]).decode('utf-8')

@@ -177,11 +177,11 @@ class Builder:
         if self.dynamic:
             args += [
                 "-DDYNAMIC_PLIST=ON"
-            ] 
+            ]
         if self.enablenonfree:
             args += [
                 "-DOPENCV_ENABLE_NONFREE=ON"
-            ] 
+            ]
         if self.debug_info:
             args += [
                 "-DBUILD_WITH_DEBUG_INFO=ON"
