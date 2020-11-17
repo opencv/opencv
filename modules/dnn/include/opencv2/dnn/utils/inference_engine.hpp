@@ -42,6 +42,7 @@ CV_EXPORTS_W cv::String setInferenceEngineBackendType(const cv::String& newBacke
  */
 CV_EXPORTS_W void resetMyriadDevice();
 
+
 /* Values for 'OPENCV_DNN_IE_VPU_TYPE' parameter */
 #define CV_DNN_INFERENCE_ENGINE_VPU_TYPE_UNSPECIFIED ""
 /// Intel(R) Movidius(TM) Neural Compute Stick, NCS (USB 03e7:2150), Myriad2 (https://software.intel.com/en-us/movidius-ncs)
@@ -60,6 +61,7 @@ CV_EXPORTS_W cv::String getInferenceEngineVPUType();
 /** @brief Release a HDDL plugin.
  */
 CV_EXPORTS_W void releaseHDDLPlugin();
+
 
 CV__DNN_INLINE_NS_END
 }} // namespace
