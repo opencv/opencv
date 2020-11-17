@@ -1119,6 +1119,7 @@ struct Net::Impl : public detail::NetImplBase
         preferableBackend = DNN_BACKEND_DEFAULT;
         preferableTarget = DNN_TARGET_CPU;
         skipInfEngineInit = false;
+        hasDynamicShapes = false;
     }
 
     Ptr<DataLayer> netInputLayer;
@@ -1130,6 +1131,7 @@ struct Net::Impl : public detail::NetImplBase
     int preferableTarget;
     String halideConfigFile;
     bool skipInfEngineInit;
+    bool hasDynamicShapes;
     // Map host data to backend specific wrapper.
     std::map<void*, Ptr<BackendWrapper> > backendWrappers;
 
@@ -3074,6 +3076,46 @@ struct Net::Impl : public detail::NetImplBase
         shapes = inOutShapes[layerId];
     }
 
+    void updateLayersShapes()
+    {
+        CV_Assert(!layers[0].outputBlobs.empty());
+        ShapesVec inputShapes;
+        for(int i = 0; i < layers[0].outputBlobs.size(); i++)
+        {
+            Mat& inp = layers[0].outputBlobs[i];
+            CV_Assert(inp.total());
+            if (preferableBackend == DNN_BACKEND_OPENCV &&
+                preferableTarget == DNN_TARGET_OPENCL_FP16)
+            {
+                layers[0].outputBlobs[i].create(inp.dims, inp.size, CV_16S);
+            }
+            inputShapes.push_back(shape(inp));
+        }
+        LayersShapesMap layersShapes;
+        layersShapes[0].in = inputShapes;
+        for (MapIdToLayerData::iterator it = layers.begin();
+             it != layers.end(); it++)
+        {
+            int layerId = it->first;
+            std::vector<LayerPin>& inputLayerIds = it->second.inputBlobsId;
+            if (layersShapes[layerId].in.empty())
+            {
+                for(int i = 0; i < inputLayerIds.size(); i++)
+                {
+                    int inputLayerId = inputLayerIds[i].lid;
+                    LayersShapesMap::iterator inputIt = layersShapes.find(inputLayerId);
+                    if(inputIt == layersShapes.end() || inputIt->second.out.empty())
+                    {
+                        getLayerShapesRecursively(inputLayerId, layersShapes);
+                    }
+                    const MatShape& shape = layersShapes[inputLayerId].out[inputLayerIds[i].oid];
+                    layersShapes[layerId].in.push_back(shape);
+                }
+                it->second.layerInstance->updateMemoryShapes(layersShapes[layerId].in);
+            }
+        }
+    }
+
     LayerPin getLatestLayerPin(const std::vector<LayerPin>& pins)
     {
         return *std::max_element(pins.begin(), pins.end());
@@ -3487,6 +3529,8 @@ int Net::addLayer(const String &name, const String &type, LayerParams &params)
     int id = ++impl->lastLayerId;
     impl->layerNameToId.insert(std::make_pair(name, id));
     impl->layers.insert(std::make_pair(id, LayerData(id, name, type, params)));
+    if (params.get<bool>("has_dynamic_shapes", false))
+        impl->hasDynamicShapes = true;
 
     return id;
 }
@@ -3818,8 +3862,13 @@ void Net::setInput(InputArray blob, const String& name, double scalefactor, cons
     bool oldShape = prevShape == blobShape;
 
     blob_.copyTo(impl->netInputLayer->inputsData[pin.oid]);
-    if (!oldShape)
+    if (!oldShape) {
         ld.outputBlobs[pin.oid] = impl->netInputLayer->inputsData[pin.oid];
+        if (impl->hasDynamicShapes)
+        {
+            impl->updateLayersShapes();
+        }
+    }
 
     if (!ld.outputBlobsWrappers[pin.oid].empty())
     {
@@ -4746,6 +4795,10 @@ bool Layer::getMemoryShapes(const std::vector<MatShape> &inputs,
     return false;
 }
 
+bool Layer::updateMemoryShapes(const std::vector<MatShape> &inputs)
+{
+    return true;
+}
 //////////////////////////////////////////////////////////////////////////
 
 static Mutex& getLayerFactoryMutex()
