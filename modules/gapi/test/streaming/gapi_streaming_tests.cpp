@@ -26,7 +26,7 @@ namespace opencv_test
 {
 namespace
 {
-void initTestDataPath()
+/*void initTestDataPath()
 {
 #ifndef WINRT
     static bool initialized = false;
@@ -38,7 +38,7 @@ void initTestDataPath()
         initialized = true;
     }
 #endif // WINRT
-}
+}*/
 
 enum class KernelPackage: int
 {
@@ -63,8 +63,6 @@ std::ostream& operator<< (std::ostream &os, const KernelPackage &e)
 }
 
 struct GAPI_Streaming: public ::testing::TestWithParam<KernelPackage> {
-    GAPI_Streaming() { initTestDataPath(); }
-
     cv::gapi::GKernelPackage getKernelPackage()
     {
         using namespace cv::gapi;
@@ -362,7 +360,7 @@ TEST_P(GAPI_Streaming, SmokeTest_AutoMeta)
 
     // Test with one video source
     try {
-        testc.setSource(cv::gin(in_const, gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(findDataFile("cv/video/1920x1080.avi"))));
+        testc.setSource(cv::gin(in_const, gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(findDataFile("cv/video/768x576.avi"))));
     } catch(...) {
         throw SkipTestException("Video file can not be opened");
     }
@@ -637,8 +635,6 @@ TEST(GAPI_Streaming_Types, XChangeScalar)
     // This test verifies if Streaming works when pipeline steps
     // (islands) exchange Scalar data.
 
-    initTestDataPath();
-
     cv::GMat in;
     cv::GScalar m = cv::gapi::mean(in);
     cv::GMat tmp = cv::gapi::convertTo(in, CV_32F) - m;
@@ -704,8 +700,6 @@ TEST(GAPI_Streaming_Types, XChangeVector)
     // This test verifies if Streaming works when pipeline steps
     // (islands) exchange Vector data.
 
-    initTestDataPath();
-
     cv::GMat in1, in2;
     cv::GMat in = cv::gapi::crop(in1, cv::Rect{0,0,576,576});
     cv::GScalar m = cv::gapi::mean(in);
@@ -769,8 +763,6 @@ TEST(GAPI_Streaming_Types, OutputScalar)
     // This test verifies if Streaming works when pipeline
     // produces scalar data only
 
-    initTestDataPath();
-
     cv::GMat in;
     cv::GScalar out = cv::gapi::mean(in);
     auto sc = cv::GComputation(cv::GIn(in), cv::GOut(out))
@@ -808,7 +800,6 @@ TEST(GAPI_Streaming_Types, OutputVector)
     // This test verifies if Streaming works when pipeline
     // produces vector data only
 
-    initTestDataPath();
     auto pkg = cv::gapi::kernels<TypesTest::OCVSumV>();
 
     cv::GMat in1, in2;
@@ -970,8 +961,6 @@ struct GAPI_Streaming_Unit: public ::testing::Test {
                 return cv::GComputation(cv::GIn(a, b), cv::GOut(c));
             })
     {
-        initTestDataPath();
-
         const auto a_desc = cv::descr_of(m);
         const auto b_desc = cv::descr_of(m);
         sc  = cc.compileStreaming(a_desc, b_desc);
@@ -1204,8 +1193,6 @@ TEST(GAPI_Streaming_Desync, SmokeTest_Regular)
 
 TEST(GAPI_Streaming_Desync, SmokeTest_Streaming)
 {
-    initTestDataPath();
-
     cv::GMat in;
     cv::GMat tmp1 = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
     cv::GMat out1 = cv::gapi::Canny(tmp1, 32, 128, 3);
@@ -1237,8 +1224,6 @@ TEST(GAPI_Streaming_Desync, SmokeTest_Streaming)
 
 TEST(GAPI_Streaming_Desync, SmokeTest_Streaming_TwoParts)
 {
-    initTestDataPath();
-
     cv::GMat in;
     cv::GMat tmp1 = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
     cv::GMat out1 = cv::gapi::Canny(tmp1, 32, 128, 3);
@@ -1373,8 +1358,6 @@ TEST(GAPI_Streaming_Desync, Negative_CrossOtherDesync_Tier1)
 
 TEST(GAPI_Streaming_Desync, Negative_SynchronizedPull)
 {
-    initTestDataPath();
-
     cv::GMat in;
     cv::GMat out1 = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
 
@@ -1397,8 +1380,6 @@ TEST(GAPI_Streaming_Desync, Negative_SynchronizedPull)
 
 TEST(GAPI_Streaming_Desync, UseSpecialPull)
 {
-    initTestDataPath();
-
     cv::GMat in;
     cv::GMat out1 = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
 
