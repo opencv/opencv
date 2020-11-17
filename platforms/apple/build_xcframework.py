@@ -7,7 +7,7 @@ of your choice. Just run it and grab a snack; you'll be waiting a while.
 import sys, os, argparse, pathlib, traceback
 from cv_build_utils import execute, print_error, print_header, get_xcode_version, get_cmake_version
 
-def get_framework_build_command_for_platform(platform, destination, framework_name, only_64_bit=False):
+def get_framework_build_command_for_platform(platform, destination, framework_name, only_64_bit, other_args):
     """
     Generates the build command that creates a framework supporting the given platform.
     This command can be handed off to the command line for execution.
@@ -21,26 +21,34 @@ def get_framework_build_command_for_platform(platform, destination, framework_na
         The directory you want to build the framework into.
     framework_name : str
         The name of the generated framework.
-    only_64_bit : bool, optional
-        Build only 64-bit archs, by default False
+    only_64_bit : bool
+        Build only 64-bit archs
+    other_args : [str]
+        Arguments that will be passed through to the ios/osx build_framework scripts.
     """
-    destination = destination.replace(" ", "\\ ")  # Escape spaces in destination path
     osx_script_path = os.path.abspath(os.path.abspath(os.path.dirname(__file__))+'/../osx/build_framework.py')
     ios_script_path = os.path.abspath(os.path.abspath(os.path.dirname(__file__))+'/../ios/build_framework.py')
+    args = [
+        "python3"
+    ]
     if platform == 'macos':
-        return ["python3", osx_script_path, "--archs", "x86_64,arm64", "--framework_name", framework_name, "--build_only_specified_archs", destination]
+        args += [osx_script_path, "--archs", "x86_64,arm64", "--framework_name", framework_name, "--build_only_specified_archs"]
     elif platform == 'ios-maccatalyst':
         # This is not a mistake. For Catalyst, we use the osx toolchain.
         # TODO: This is building with objc turned off due to an issue with CMake. See here for discussion: https://gitlab.kitware.com/cmake/cmake/-/issues/21436
-        return ["python3", osx_script_path, "--catalyst_archs", "x86_64,arm64", "--framework_name", framework_name, "--without=objc", "--build_only_specified_archs", destination]
+        args += [osx_script_path, "--catalyst_archs", "x86_64,arm64", "--framework_name", framework_name, "--without=objc", "--build_only_specified_archs"]
     elif platform == 'ios':
         archs = "arm64" if only_64_bit else "arm64,armv7,armv7s"
-        return ["python3", ios_script_path, "--iphoneos_archs", archs, "--framework_name", framework_name, "--build_only_specified_archs", destination]
+        args += [ios_script_path, "--iphoneos_archs", archs, "--framework_name", framework_name, "--build_only_specified_archs"]
     elif platform == 'ios-simulator':
         archs = "x86_64,arm64" if only_64_bit else "x86_64,arm64,i386"
-        return ["python3", ios_script_path, "--iphonesimulator_archs", archs, "--framework_name", framework_name, "--build_only_specified_archs", destination]
+        args += ["python3", ios_script_path, "--iphonesimulator_archs", archs, "--framework_name", framework_name, "--build_only_specified_archs"]
     else:
         raise Exception(f"Platform {platform} has no associated build commands.")
+
+    args += other_args
+    args.append(destination.replace(" ", "\\ "))  # Escape spaces in destination path
+    return args
 
 if __name__ == "__main__":
 
@@ -59,11 +67,12 @@ if __name__ == "__main__":
     parser.add_argument('--platform', default='ios,ios-simulator,ios-maccatalyst,macos', help='Platforms to build for (default: ios,ios-simulator,ios-maccatalyst,macos)')
     parser.add_argument('--framework_name', default='opencv2', help='Name of OpenCV xcframework (default: opencv2, will change to OpenCV in future version)')
     parser.add_argument('--only_64_bit', default=False, action='store_true', help='Build for 64-bit archs only')
+    parser.add_argument('passthrough_args', nargs=argparse.REMAINDER, help='Any flags not captured by this script will be passed through to the ios/osx build_framework.py scripts')
 
-    args = parser.parse_args()
+    args, unknown_args = parser.parse_known_args()
+    print(f"The following args will be passed through to the ios/osx build_framework.py scripts: {args.passthrough_args}")
 
     platforms = args.platform.split(',')
-    print(f'Building for platforms: {platforms}')
 
     try:
         # Build .frameworks for each platform
@@ -72,7 +81,7 @@ if __name__ == "__main__":
             folder = f"./xcframework-build/{platform}"
             pathlib.Path(folder).mkdir(parents=True, exist_ok=True)
             build_folders.append(folder)
-            framework_build_command = get_framework_build_command_for_platform(platform, folder, args.framework_name, args.only_64_bit)
+            framework_build_command = get_framework_build_command_for_platform(platform, folder, args.framework_name, args.only_64_bit, args.passthrough_args)
 
             print("")
             print_header(f"Building frameworks for {platform}")
