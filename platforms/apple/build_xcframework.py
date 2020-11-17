@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """
-The script builds OpenCV.framework for OSX.
-This script builds OpenCV into an xcframework compatible the platforms
+This script builds OpenCV into an xcframework compatible with the platforms
 of your choice. Just run it and grab a snack; you'll be waiting a while.
 """
 
