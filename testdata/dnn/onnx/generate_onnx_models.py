@@ -944,14 +944,32 @@ x = Variable(torch.randn(2, 2))
 model = Power(2)
 save_data_and_model("pow2", x, model)
 
-class ReduceMax(nn.Module):
+class ReduceMaxGlobal(nn.Module):
   def forward(self, x):
     out = torch.max(x)
     return torch.unsqueeze(out, 0)
 
 x = Variable(torch.randn(1, 3, 2, 2))
-model = ReduceMax()
+model = ReduceMaxGlobal()
 save_data_and_model("reduce_max", x, model)
+
+class ReduceMax(nn.Module):
+      def __init__(self, axes):
+    super(ReduceMax, self).__init__()
+    self.axes = axes
+
+  def forward(self, x):
+    # torch.return_types.max(values, indices)
+    out = torch.max(x, dim=self.axes, keepdim=False)[0]
+    return out
+
+x = Variable(torch.randn(1, 3, 2, 2))
+
+model = ReduceMax(axes=0)
+save_data_and_model("reduce_max_axis_0", x, model)
+
+model = ReduceMax(axes=1)
+save_data_and_model("reduce_max_axis_1", x, model)
 
 class ResizeConv(nn.Module):
     def __init__(
