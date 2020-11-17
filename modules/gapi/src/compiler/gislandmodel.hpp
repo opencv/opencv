@@ -172,6 +172,10 @@ struct GIslandExecutable::IOutput: public GIslandExecutable::IODesc {
     virtual GRunArgP get(int idx) = 0;  // Allocate (wrap) a new data object for output idx
     virtual void post(GRunArgP&&) = 0;  // Release the object back to the framework (mark available)
     virtual void post(EndOfStream&&) = 0; // Post end-of-stream marker back to the framework
+
+    // Assign accumulated metadata to the given output object.
+    // This method can only be called after get() and before post().
+    virtual void meta(const GRunArgP&, const GRunArg::Meta &) = 0;
 };
 
 // GIslandEmitter - a backend-specific thing which feeds data into

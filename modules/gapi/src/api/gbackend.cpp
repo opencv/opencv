@@ -143,6 +143,14 @@ void bindInArg(Mag& mag, const RcDesc &rc, const GRunArg &arg, HandleRMat handle
         if (handleRMat == HandleRMat::SKIP) return;
         GAPI_Assert(arg.index() == GRunArg::index_of<cv::RMat>());
         bindRMat(mag, rc, util::get<cv::RMat>(arg), RMat::Access::R);
+
+        // FIXME: Here meta may^WWILL be copied multiple times!
+        // Replace it is reference-counted object?
+        mag.meta<cv::RMat>()[rc.id] = arg.meta;
+        mag.meta<cv::Mat>()[rc.id] = arg.meta;
+#if !defined(GAPI_STANDALONE)
+        mag.meta<cv::UMat>()[rc.id] = arg.meta;
+#endif
         break;
     }
 
@@ -154,19 +162,23 @@ void bindInArg(Mag& mag, const RcDesc &rc, const GRunArg &arg, HandleRMat handle
         case GRunArg::index_of<cv::Scalar>() : mag_scalar = util::get<cv::Scalar>(arg);    break;
         default: util::throw_error(std::logic_error("content type of the runtime argument does not match to resource description ?"));
         }
+        mag.meta<cv::Scalar>()[rc.id] = arg.meta;
         break;
     }
 
     case GShape::GARRAY:
-        mag.template slot<cv::detail::VectorRef>()[rc.id] = util::get<cv::detail::VectorRef>(arg);
+        mag.slot<cv::detail::VectorRef>()[rc.id] = util::get<cv::detail::VectorRef>(arg);
+        mag.meta<cv::detail::VectorRef>()[rc.id] = arg.meta;
         break;
 
     case GShape::GOPAQUE:
-        mag.template slot<cv::detail::OpaqueRef>()[rc.id] = util::get<cv::detail::OpaqueRef>(arg);
+        mag.slot<cv::detail::OpaqueRef>()[rc.id] = util::get<cv::detail::OpaqueRef>(arg);
+        mag.meta<cv::detail::OpaqueRef>()[rc.id] = arg.meta;
         break;
 
     case GShape::GFRAME:
-        mag.template slot<cv::MediaFrame>()[rc.id] = util::get<cv::MediaFrame>(arg);
+        mag.slot<cv::MediaFrame>()[rc.id] = util::get<cv::MediaFrame>(arg);
+        mag.meta<cv::MediaFrame>()[rc.id] = arg.meta;
         break;
 
     default:
@@ -250,13 +262,23 @@ cv::GRunArg getArg(const Mag& mag, const RcDesc &ref)
     // Wrap associated CPU object (either host or an internal one)
     switch (ref.shape)
     {
-    case GShape::GMAT:    return GRunArg(mag.template slot<cv::RMat>().at(ref.id));
-    case GShape::GSCALAR: return GRunArg(mag.template slot<cv::Scalar>().at(ref.id));
+    case GShape::GMAT:
+        return GRunArg(mag.slot<cv::RMat>().at(ref.id),
+                       mag.meta<cv::RMat>().at(ref.id));
+    case GShape::GSCALAR:
+        return GRunArg(mag.slot<cv::Scalar>().at(ref.id),
+                       mag.meta<cv::Scalar>().at(ref.id));
     // Note: .at() is intentional for GArray and GOpaque as objects MUST be already there
     //   (and constructed by either bindIn/Out or resetInternal)
-    case GShape::GARRAY:  return GRunArg(mag.template slot<cv::detail::VectorRef>().at(ref.id));
-    case GShape::GOPAQUE: return GRunArg(mag.template slot<cv::detail::OpaqueRef>().at(ref.id));
-    case GShape::GFRAME:  return GRunArg(mag.template slot<cv::MediaFrame>().at(ref.id));
+    case GShape::GARRAY:
+        return GRunArg(mag.slot<cv::detail::VectorRef>().at(ref.id),
+                       mag.meta<cv::detail::VectorRef>().at(ref.id));
+    case GShape::GOPAQUE:
+        return GRunArg(mag.slot<cv::detail::OpaqueRef>().at(ref.id),
+                       mag.meta<cv::detail::OpaqueRef>().at(ref.id));
+    case GShape::GFRAME:
+        return GRunArg(mag.slot<cv::MediaFrame>().at(ref.id),
+                       mag.meta<cv::MediaFrame>().at(ref.id));
     default:
         util::throw_error(std::logic_error("Unsupported GShape type"));
         break;

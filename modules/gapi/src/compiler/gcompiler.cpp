@@ -35,6 +35,7 @@
 #include "executor/gexecutor.hpp"
 #include "executor/gstreamingexecutor.hpp"
 #include "backends/common/gbackend.hpp"
+#include "backends/common/gmetabackend.hpp"
 
 // <FIXME:>
 #if !defined(GAPI_STANDALONE)
@@ -58,7 +59,8 @@ namespace
             for (const auto &b : pkg.backends()) {
                 aux_pkg = combine(aux_pkg, b.priv().auxiliaryKernels());
             }
-            return combine(pkg, aux_pkg);
+            // Always include built-in meta<> implementation
+            return combine(pkg, aux_pkg, cv::gimpl::meta::kernels());
         };
 
         auto has_use_only = cv::gapi::getCompileArg<cv::gapi::use_only>(args);
