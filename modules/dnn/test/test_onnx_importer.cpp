@@ -280,9 +280,11 @@ TEST_P(Test_ONNX_layers, ReduceSum)
     testONNXModels("reduce_sum");
 }
 
-TEST_P(Test_ONNX_layers, ReduceMaxGlobal)
+TEST_P(Test_ONNX_layers, ReduceMax)
 {
     testONNXModels("reduce_max");
+    testONNXModels("reduce_max_axis_0");
+    testONNXModels("reduce_max_axis_1");
 }
 
 TEST_P(Test_ONNX_layers, Scale)
@@ -718,6 +720,10 @@ TEST_P(Test_ONNX_layers, Conv1d_variable_weight)
 
 TEST_P(Test_ONNX_layers, Conv1d_variable_weight_bias)
 {
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+    {
+        if (target == DNN_TARGET_MYRIAD) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    }
     String basename = "conv1d_variable_wb";
     Net net = readNetFromONNX(_tf("models/" + basename + ".onnx"));
     ASSERT_FALSE(net.empty());
@@ -736,6 +742,37 @@ TEST_P(Test_ONNX_layers, Conv1d_variable_weight_bias)
 
     Mat out = net.forward();
     normAssert(ref, out, "", default_l1, default_lInf);
+}
+
+TEST_P(Test_ONNX_layers, GatherMultiOutput)
+{
+#if defined(INF_ENGINE_RELEASE)
+    if (target == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE);
+#endif
+
+    testONNXModels("gather_multi_output");
+}
+
+TEST_P(Test_ONNX_layers, DynamicAxes)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+    {
+        if (target == DNN_TARGET_MYRIAD) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    }
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+    {
+        if (target == DNN_TARGET_MYRIAD) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    }
+    testONNXModels("squeeze_and_conv_dynamic_axes");
+    testONNXModels("unsqueeze_and_conv_dynamic_axes");
+    testONNXModels("gather_dynamic_axes");
+    testONNXModels("gather_scalar_dynamic_axes");
+    testONNXModels("slice_dynamic_axes");
+    testONNXModels("slice_opset_11_dynamic_axes");
+    testONNXModels("resize_opset11_torch1.6_dynamic_axes");
+    testONNXModels("average_pooling_dynamic_axes");
+    testONNXModels("maxpooling_sigmoid_dynamic_axes");
 }
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_ONNX_layers, dnnBackendsAndTargets());

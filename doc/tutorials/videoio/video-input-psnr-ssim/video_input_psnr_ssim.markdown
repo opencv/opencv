@@ -131,7 +131,7 @@ For properties you can read and change look into the documentation of the @ref c
 We want to check just how imperceptible our video converting operation went, therefore we need a
 system to check frame by frame the similarity or differences. The most common algorithm used for
 this is the PSNR (aka **Peak signal-to-noise ratio**). The simplest definition of this starts out
-from the *mean squad error*. Let there be two images: I1 and I2; with a two dimensional size i and
+from the *mean squared error*. Let there be two images: I1 and I2; with a two dimensional size i and
 j, composed of c number of channels.
 
 \f[MSE = \frac{1}{c*i*j} \sum{(I_1-I_2)^2}\f]

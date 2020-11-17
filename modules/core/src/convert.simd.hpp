@@ -5,6 +5,11 @@
 #include "precomp.hpp"
 #include "convert.hpp"
 
+#if !defined(OPENCV_SUPRESS_WARNING_AVX2_WITHOUT_FP16C) && \
+    (defined(__GNUC__) && defined(__AVX2__) && !defined(__F16C__))
+#warning "Non-optimal compiler flags: AVX2 without FP16. Generated code is very slow. Consider adding '-mf16c' compiler option."
+#endif
+
 namespace cv {
 namespace hal {
 CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN

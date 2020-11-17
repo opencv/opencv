@@ -32,7 +32,7 @@ bool calib::parametersController::loadFromFile(const std::string &inputFileName)
 
     if(!reader.isOpened()) {
         std::cerr << "Warning: Unable to open " << inputFileName <<
-                     " Applicatioin stated with default advanced parameters" << std::endl;
+                     " Application started with default advanced parameters" << std::endl;
         return true;
     }
 
