@@ -93,7 +93,8 @@ CV__DNN_INLINE_NS_BEGIN
         DNN_TARGET_VULKAN,
         DNN_TARGET_FPGA,  //!< FPGA device with CPU fallbacks using Inference Engine's Heterogeneous plugin.
         DNN_TARGET_CUDA,
-        DNN_TARGET_CUDA_FP16
+        DNN_TARGET_CUDA_FP16,
+        DNN_TARGET_HDDL
     };
 
     CV_EXPORTS std::vector< std::pair<Backend, Target> > getAvailableBackends();
@@ -571,6 +572,7 @@ CV__DNN_INLINE_NS_BEGIN
          * | DNN_TARGET_FPGA        |                    |                            + |                    |                   |
          * | DNN_TARGET_CUDA        |                    |                              |                    |                 + |
          * | DNN_TARGET_CUDA_FP16   |                    |                              |                    |                 + |
+         * | DNN_TARGET_HDDL        |                    |                            + |                    |                   |
          */
         CV_WRAP void setPreferableTarget(int targetId);
 
