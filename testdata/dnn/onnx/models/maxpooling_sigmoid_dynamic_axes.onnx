@@ -1,0 +1,21 @@
+pytorch1.6:Ë
+V
+01	MaxPool_0"MaxPool*
+kernel_shape@@ *
+pads@@@@ *
+strides@@ 
+
+12	Sigmoid_1"Sigmoidtorch-jit-exportZ&
+0!
+
+
+
+height
+widthb
+2
+
+
+
+
+
+B	
