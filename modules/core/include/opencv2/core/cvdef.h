@@ -765,7 +765,7 @@ protected:
     float16_t() {}
     explicit float16_t(float x)
     {
-    #if CV_AVX2
+    #if CV_FP16
         __m128 v = _mm_load_ss(&x);
         w = (ushort)_mm_cvtsi128_si32(_mm_cvtps_ph(v, 0));
     #else
@@ -796,7 +796,7 @@ protected:
 
     operator float() const
     {
-    #if CV_AVX2
+    #if CV_FP16
         float f;
         _mm_store_ss(&f, _mm_cvtph_ps(_mm_cvtsi32_si128(w)));
         return f;
