@@ -267,9 +267,11 @@ TEST_P(Test_ONNX_layers, ReduceSum)
     testONNXModels("reduce_sum");
 }
 
-TEST_P(Test_ONNX_layers, ReduceMaxGlobal)
+TEST_P(Test_ONNX_layers, ReduceMax)
 {
     testONNXModels("reduce_max");
+    testONNXModels("reduce_max_axis_0");
+    testONNXModels("reduce_max_axis_1");
 }
 
 TEST_P(Test_ONNX_layers, Scale)
