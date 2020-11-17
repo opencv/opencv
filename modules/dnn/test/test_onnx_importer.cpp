@@ -685,6 +685,10 @@ TEST_P(Test_ONNX_layers, Conv1d_variable_weight)
 
 TEST_P(Test_ONNX_layers, Conv1d_variable_weight_bias)
 {
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+    {
+        if (target == DNN_TARGET_MYRIAD) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    }
     String basename = "conv1d_variable_wb";
     Net net = readNetFromONNX(_tf("models/" + basename + ".onnx"));
     ASSERT_FALSE(net.empty());
