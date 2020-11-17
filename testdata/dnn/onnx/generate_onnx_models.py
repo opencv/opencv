@@ -944,14 +944,32 @@ x = Variable(torch.randn(2, 2))
 model = Power(2)
 save_data_and_model("pow2", x, model)
 
-class ReduceMax(nn.Module):
+class ReduceMaxGlobal(nn.Module):
   def forward(self, x):
     out = torch.max(x)
     return torch.unsqueeze(out, 0)
 
 x = Variable(torch.randn(1, 3, 2, 2))
-model = ReduceMax()
+model = ReduceMaxGlobal()
 save_data_and_model("reduce_max", x, model)
+
+class ReduceMax(nn.Module):
+      def __init__(self, axes):
+    super(ReduceMax, self).__init__()
+    self.axes = axes
+
+  def forward(self, x):
+    # torch.return_types.max(values, indices)
+    out = torch.max(x, dim=self.axes, keepdim=False)[0]
+    return out
+
+x = Variable(torch.randn(1, 3, 2, 2))
+
+model = ReduceMax(axes=0)
+save_data_and_model("reduce_max_axis_0", x, model)
+
+model = ReduceMax(axes=1)
+save_data_and_model("reduce_max_axis_1", x, model)
 
 class ResizeConv(nn.Module):
     def __init__(
@@ -1023,3 +1041,117 @@ kernel = Variable(torch.randn(2, 2, 2))
 bias = Variable(torch.randn(4))
 model = Conv1dBias()
 save_data_and_model_multy_inputs("conv1d_variable_wb", model, x, kernel, bias)
+
+class GatherMultiOutput(nn.Module):
+    def __init__(self, in_dim = 2):
+        super(GatherMultiOutput, self).__init__()
+        self.in_dim = in_dim
+        self.lin_inp = nn.Linear(in_dim, 2, bias=False)
+    def forward(self, x):
+        x_projected = self.lin_inp(x).long()
+        x_gather = x_projected[:,0,:]
+        x_float1 = x_gather.float()
+        x_float2 = x_gather.float()
+        x_float3 = x_gather.float()
+        return x_float1+x_float2+x_float3
+
+x = Variable(torch.zeros([1, 2, 2]))
+model = GatherMultiOutput()
+save_data_and_model("gather_multi_output", x, model)
+
+def postprocess_model(model_path, inputs_shapes):
+    onnx_model = onnx.load(model_path)
+
+    def update_inputs_dims(model, input_dims):
+        """
+            This function updates the sizes of dimensions of the model's inputs to the values
+            provided in input_dims. if the dim value provided is negative, a unique dim_param
+            will be set for that dimension.
+        """
+        def update_dim(tensor, dim, i, j, dim_param_prefix):
+            dim_proto = tensor.type.tensor_type.shape.dim[j]
+            if isinstance(dim, int):
+                if dim >= 0:
+                    dim_proto.dim_value = dim
+                else:
+                    dim_proto.dim_param = dim_param_prefix + str(i) + '_' + str(j)
+            elif isinstance(dim, str):
+                dim_proto.dim_param = dim
+            else:
+                raise ValueError('Only int or str is accepted as dimension value, incorrect type: {}'.format(type(dim)))
+
+        for i, input_dim_arr in enumerate(input_dims):
+            for j, dim in enumerate(input_dim_arr):
+                update_dim(model.graph.input[i], dim, i, j, 'in_')
+
+        onnx.checker.check_model(model)
+        return model
+    
+    onnx_model = update_inputs_dims(onnx_model, inputs_shapes)
+    onnx.save(onnx_model, model_path)
+
+class UnsqueezeAndConv(nn.Module):
+    def __init__(self):
+        super(UnsqueezeAndConv, self).__init__()
+        self.conv = nn.Conv2d(3, 3, kernel_size=1, stride=1, padding=0)
+    def forward(self, x):
+        x = x.unsqueeze(axis=0)
+        out = self.conv(x)
+        return out
+
+x = Variable(torch.randn(3, 10, 10))
+model = UnsqueezeAndConv()
+save_data_and_model("unsqueeze_and_conv_dynamic_axes", x, model)
+postprocess_model("models/unsqueeze_and_conv_dynamic_axes.onnx", [[3, 'height', 'width']])
+
+class SqueezeAndConv(nn.Module):
+    def __init__(self):
+        super(SqueezeAndConv, self).__init__()
+        self.conv = nn.Conv2d(3, 3, kernel_size=1, stride=1, padding=0)
+    def forward(self, x):
+        x = x.squeeze()
+        out = self.conv(x)
+        return out
+
+x = Variable(torch.randn(2, 1, 3, 3, 3))
+model = SqueezeAndConv()
+save_data_and_model("squeeze_and_conv_dynamic_axes", x, model)
+postprocess_model("models/squeeze_and_conv_dynamic_axes.onnx", [["batch_size", 1, "channels", 'height', 'width']])
+
+x = Variable(torch.randn(2))
+model = GatherScalar()
+save_data_and_model("gather_scalar_dynamic_axes", x, model)
+postprocess_model("models/gather_scalar_dynamic_axes.onnx", [['shape']])
+
+x = Variable(torch.randn(2, 2, 2, 2))
+print(x)
+model = Gather()
+print(model(x))
+print(model(x).shape)
+save_data_and_model("gather_dynamic_axes", x, model)
+postprocess_model("models/gather_dynamic_axes.onnx", [["batch_size", 2, 'height', 'width']])
+
+input = Variable(torch.randn(1, 2, 4, 4))
+model = Slice()
+save_data_and_model("slice_dynamic_axes", input, model)
+save_data_and_model("slice_opset_11_dynamic_axes", input, model, version=11)
+postprocess_model("models/slice_dynamic_axes.onnx", [["batch_size", 2, 'height', 'width']])
+postprocess_model("models/slice_opset_11_dynamic_axes.onnx", [["batch_size", 2, 'height', 'width']])
+
+x = Variable(torch.rand(1, 2, 2, 2))
+model = ResizeConv(2, 0, 2)
+save_data_and_model("resize_opset11_torch1.6_dynamic_axes", x, model, 11)
+postprocess_model("models/resize_opset11_torch1.6_dynamic_axes.onnx", [["batch_size", 2, 'height', 'width']])
+
+maxpooling_sigmoid = nn.Sequential(
+          nn.MaxPool2d(kernel_size=4, stride=2, padding=(1, 2), dilation=1),
+          nn.Sigmoid()
+        )
+input = Variable(torch.randn(2, 3, 12, 18))
+save_data_and_model("maxpooling_sigmoid_dynamic_axes", input, maxpooling_sigmoid)
+postprocess_model("models/maxpooling_sigmoid_dynamic_axes.onnx", [[2, 3, 'height', 'width']])
+
+ave_pool = nn.AvgPool2d(kernel_size=3, stride=2, padding=1)
+input = Variable(torch.randn(1, 3, 7, 5))
+save_data_and_model("average_pooling_dynamic_axes", input, ave_pool)
+postprocess_model("models/average_pooling_dynamic_axes.onnx", [[1, 3, 'height', 'width']])
