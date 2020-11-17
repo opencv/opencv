@@ -12,6 +12,8 @@
 #include <ade/util/zip_range.hpp>
 
 #include <opencv2/gapi/opencv_includes.hpp>
+
+#include "api/gproto_priv.hpp" // ptr(GRunArgP)
 #include "executor/gexecutor.hpp"
 #include "compiler/passes/passes.hpp"
 
@@ -105,6 +107,9 @@ void bindInArgExec(Mag& mag, const RcDesc &rc, const GRunArg &arg)
         mag_rmat = util::get<cv::RMat>(arg); break;
     default: util::throw_error(std::logic_error("content type of the runtime argument does not match to resource description ?"));
     }
+    // FIXME: has to take extra care about meta here for this particuluar
+    // case, just because this function exists at all
+    mag.meta<cv::RMat>()[rc.id] = arg.meta;
 }
 
 void bindOutArgExec(Mag& mag, const RcDesc &rc, const GRunArgP &arg)
@@ -131,7 +136,7 @@ cv::GRunArgP getObjPtrExec(Mag& mag, const RcDesc &rc)
     {
         return getObjPtr(mag, rc);
     }
-    return GRunArgP(&mag.template slot<cv::RMat>()[rc.id]);
+    return GRunArgP(&mag.slot<cv::RMat>()[rc.id]);
 }
 
 void writeBackExec(const Mag& mag, const RcDesc &rc, GRunArgP &g_arg)
@@ -155,6 +160,25 @@ void writeBackExec(const Mag& mag, const RcDesc &rc, GRunArgP &g_arg)
     default: util::throw_error(std::logic_error("content type of the runtime argument does not match to resource description ?"));
     }
 }
+
+void assignMetaStubExec(Mag& mag, const RcDesc &rc, const cv::GRunArg::Meta &meta) {
+    switch (rc.shape)
+    {
+    case GShape::GARRAY:  mag.meta<cv::detail::VectorRef>()[rc.id] = meta; break;
+    case GShape::GOPAQUE: mag.meta<cv::detail::OpaqueRef>()[rc.id] = meta; break;
+    case GShape::GSCALAR: mag.meta<cv::Scalar>()[rc.id]            = meta; break;
+    case GShape::GFRAME:  mag.meta<cv::MediaFrame>()[rc.id]        = meta; break;
+    case GShape::GMAT:
+        mag.meta<cv::Mat>() [rc.id] = meta;
+        mag.meta<cv::RMat>()[rc.id] = meta;
+#if !defined(GAPI_STANDALONE)
+        mag.meta<cv::UMat>()[rc.id] = meta;
+#endif
+        break;
+    default: util::throw_error(std::logic_error("Unsupported GShape type")); break;
+    }
+}
+
 } // anonymous namespace
 }}} // namespace cv::gimpl::magazine
 
@@ -231,11 +255,28 @@ public:
 class cv::gimpl::GExecutor::Output final: public cv::gimpl::GIslandExecutable::IOutput
 {
     cv::gimpl::Mag &mag;
-    virtual GRunArgP get(int idx) override { return magazine::getObjPtrExec(mag, desc()[idx]); }
-    virtual void post(GRunArgP&&) override { } // Do nothing here
-    virtual void post(EndOfStream&&) override {} // Do nothing here too
+    std::unordered_map<const void*, int> out_idx;
+
+    GRunArgP get(int idx) override
+    {
+        auto r = magazine::getObjPtrExec(mag, desc()[idx]);
+        // Remember the output port for this output object
+        out_idx[cv::gimpl::proto::ptr(r)] = idx;
+        return r;
+    }
+    void post(GRunArgP&&) override { } // Do nothing here
+    void post(EndOfStream&&) override {} // Do nothing here too
+    void meta(const GRunArgP &out, const GRunArg::Meta &m) override
+    {
+        const auto idx = out_idx.at(cv::gimpl::proto::ptr(out));
+        magazine::assignMetaStubExec(mag, desc()[idx], m);
+    }
 public:
-    Output(cv::gimpl::Mag &m, const std::vector<RcDesc> &rcs) : mag(m) { set(rcs); }
+    Output(cv::gimpl::Mag &m, const std::vector<RcDesc> &rcs)
+        : mag(m)
+    {
+        set(rcs);
+    }
 };
 
 void cv::gimpl::GExecutor::run(cv::gimpl::GRuntimeArgs &&args)
@@ -330,7 +371,7 @@ void cv::gimpl::GExecutor::run(cv::gimpl::GRuntimeArgs &&args)
     // Run the script
     for (auto &op : m_ops)
     {
-        // (5)
+        // (5), (6)
         Input i{m_res, op.in_objects};
         Output o{m_res, op.out_objects};
         op.isl_exec->run(i, o);

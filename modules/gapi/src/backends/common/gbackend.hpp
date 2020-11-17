@@ -62,6 +62,8 @@ namespace magazine {
     template<typename... Ts> struct Class
     {
         template<typename T> using MapT = std::unordered_map<int, T>;
+        using MapM = std::unordered_map<int, GRunArg::Meta>;
+
         template<typename T>       MapT<T>& slot()
         {
             return std::get<ade::util::type_list_index<T, Ts...>::value>(slots);
@@ -70,8 +72,17 @@ namespace magazine {
         {
             return std::get<ade::util::type_list_index<T, Ts...>::value>(slots);
         }
+        template<typename T> MapM& meta()
+        {
+            return metas[ade::util::type_list_index<T, Ts...>::value];
+        }
+        template<typename T> const MapM& meta() const
+        {
+            return metas[ade::util::type_list_index<T, Ts...>::value];
+        }
     private:
         std::tuple<MapT<Ts>...> slots;
+        std::array<MapM, sizeof...(Ts)> metas;
     };
 
 } // namespace magazine

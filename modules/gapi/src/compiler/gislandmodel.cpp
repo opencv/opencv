@@ -357,26 +357,21 @@ void GIslandExecutable::run(GIslandExecutable::IInput &in, GIslandExecutable::IO
     for (auto &&it: ade::util::zip(ade::util::toRange(in_desc),
                                    ade::util::toRange(in_vector)))
     {
-        // FIXME: Not every Island expects a cv::Mat instead of own::Mat on input
-        // This kludge should go as a result of de-ownification
         const cv::GRunArg& in_data_orig = std::get<1>(it);
         cv::GRunArg in_data;
-#if !defined(GAPI_STANDALONE)
         switch (in_data_orig.index())
         {
         case cv::GRunArg::index_of<cv::Mat>():
-            in_data = cv::GRunArg{cv::make_rmat<cv::gimpl::RMatAdapter>(cv::util::get<cv::Mat>(in_data_orig))};
-            break;
-        case cv::GRunArg::index_of<cv::Scalar>():
-            in_data = cv::GRunArg{(cv::util::get<cv::Scalar>(in_data_orig))};
+            // FIXME: This whole construct is ugly, from
+            // its writing to a need in this in general
+            in_data = cv::GRunArg{ cv::make_rmat<cv::gimpl::RMatAdapter>(cv::util::get<cv::Mat>(in_data_orig))
+                                 , in_data_orig.meta
+                                 };
             break;
         default:
             in_data = in_data_orig;
             break;
         }
-#else
-        in_data = in_data_orig;
-#endif // GAPI_STANDALONE
         in_objs.emplace_back(std::get<0>(it), std::move(in_data));
     }
     for (auto &&it: ade::util::indexed(ade::util::toRange(out_desc)))
@@ -385,9 +380,27 @@ void GIslandExecutable::run(GIslandExecutable::IInput &in, GIslandExecutable::IO
                               out.get(ade::util::checked_cast<int>(ade::util::index(it))));
     }
     run(std::move(in_objs), std::move(out_objs));
+
+    // Propagate in-graph meta down to the graph
+    // Note: this is not a complete implementation! Mainly this is a stub
+    // and the proper implementation should come later.
+    //
+    // Propagating the meta information here has its pros and cons.
+    // Pros: it works here uniformly for both regular and streaming cases,
+    //   also for the majority of old-fashioned (synchronous) backends
+    // Cons: backends implementing the asynchronous run(IInput,IOutput)
+    //   won't get it out of the box
+    cv::GRunArg::Meta stub_meta;
+    for (auto &&in_arg : in_vector)
+    {
+        stub_meta.insert(in_arg.meta.begin(), in_arg.meta.end());
+    }
+    // Report output objects as "ready" to the executor, also post
+    // calculated in-graph meta for the objects
     for (auto &&it: out_objs)
     {
-        out.post(std::move(it.second)); // report output objects as "ready" to the executor
+        out.meta(it.second, stub_meta);
+        out.post(std::move(it.second));
     }
 }
 

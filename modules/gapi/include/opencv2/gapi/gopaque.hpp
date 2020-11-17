@@ -15,6 +15,7 @@
 #include <opencv2/gapi/own/exports.hpp>
 #include <opencv2/gapi/opencv_includes.hpp>
 
+#include <opencv2/gapi/util/any.hpp>
 #include <opencv2/gapi/util/variant.hpp>
 #include <opencv2/gapi/util/throw.hpp>
 #include <opencv2/gapi/util/type_traits.hpp>
@@ -119,6 +120,7 @@ namespace detail
 
         virtual void mov(BasicOpaqueRef &ref) = 0;
         virtual const void* ptr() const = 0;
+        virtual void set(const cv::util::any &a) = 0;
     };
 
     template<typename T> class OpaqueRefT final: public BasicOpaqueRef
@@ -212,6 +214,10 @@ namespace detail
         }
 
         virtual const void* ptr() const override { return &rref(); }
+
+        virtual void set(const cv::util::any &a) override {
+            wref() = util::any_cast<T>(a);
+        }
     };
 
     // This class strips type information from OpaqueRefT<> and makes it usable
@@ -285,6 +291,13 @@ namespace detail
 
         // May be used to uniquely identify this object internally
         const void *ptr() const { return m_ref->ptr(); }
+
+        // Introduced for in-graph meta handling
+        OpaqueRef& operator= (const cv::util::any &a)
+        {
+            m_ref->set(a);
+            return *this;
+        }
     };
 } // namespace detail
 
