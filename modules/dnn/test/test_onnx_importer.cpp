@@ -707,6 +707,11 @@ TEST_P(Test_ONNX_layers, Conv1d_variable_weight_bias)
 
 TEST_P(Test_ONNX_layers, GatherMultiOutput)
 {
+#if defined(INF_ENGINE_RELEASE)
+    if (target == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE);
+#endif
+
     testONNXModels("gather_multi_output");
 }
 
