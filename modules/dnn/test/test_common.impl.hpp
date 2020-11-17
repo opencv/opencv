@@ -40,6 +40,7 @@ void PrintTo(const cv::dnn::Target& v, std::ostream* os)
     case DNN_TARGET_OPENCL: *os << "OCL"; return;
     case DNN_TARGET_OPENCL_FP16: *os << "OCL_FP16"; return;
     case DNN_TARGET_MYRIAD: *os << "MYRIAD"; return;
+    case DNN_TARGET_HDDL: *os << "HDDL"; return;
     case DNN_TARGET_VULKAN: *os << "VULKAN"; return;
     case DNN_TARGET_FPGA: *os << "FPGA"; return;
     case DNN_TARGET_CUDA: *os << "CUDA"; return;
@@ -221,7 +222,7 @@ testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTarget
         available = getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019);
         for (std::vector< Target >::const_iterator i = available.begin(); i != available.end(); ++i)
         {
-            if (*i == DNN_TARGET_MYRIAD && !withVPU)
+            if ((*i == DNN_TARGET_MYRIAD || *i == DNN_TARGET_HDDL) && !withVPU)
                 continue;
             targets.push_back(make_tuple(DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019, *i));
         }
@@ -231,7 +232,7 @@ testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTarget
         available = getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
         for (std::vector< Target >::const_iterator i = available.begin(); i != available.end(); ++i)
         {
-            if (*i == DNN_TARGET_MYRIAD && !withVPU)
+            if ((*i == DNN_TARGET_MYRIAD || *i == DNN_TARGET_HDDL) && !withVPU)
                 continue;
             targets.push_back(make_tuple(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, *i));
         }
@@ -281,7 +282,7 @@ testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTarget
         available = getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019);
         for (std::vector< Target >::const_iterator i = available.begin(); i != available.end(); ++i)
         {
-            if (*i == DNN_TARGET_MYRIAD && !withVPU)
+            if ((*i == DNN_TARGET_MYRIAD || *i == DNN_TARGET_HDDL) && !withVPU)
                 continue;
             targets.push_back(make_tuple(DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019, *i));
         }
@@ -291,7 +292,7 @@ testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTarget
         available = getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
         for (std::vector< Target >::const_iterator i = available.begin(); i != available.end(); ++i)
         {
-            if (*i == DNN_TARGET_MYRIAD && !withVPU)
+            if ((*i == DNN_TARGET_MYRIAD || *i == DNN_TARGET_HDDL) && !withVPU)
                 continue;
             targets.push_back(make_tuple(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, *i));
         }
@@ -323,7 +324,7 @@ static bool validateVPUType_()
     bool have_vpu_target = false;
     for (std::vector<Target>::const_iterator i = available.begin(); i != available.end(); ++i)
     {
-        if (*i == DNN_TARGET_MYRIAD)
+        if (*i == DNN_TARGET_MYRIAD || *i == DNN_TARGET_HDDL)
         {
             have_vpu_target = true;
             break;

@@ -492,7 +492,7 @@ public:
         std::vector<size_t> axes, offsets, dims;
         int from, to, step;
         int numDims = finalSliceRanges[0].size();
-        if (preferableTarget == DNN_TARGET_MYRIAD)
+        if (preferableTarget == DNN_TARGET_MYRIAD || preferableTarget == DNN_TARGET_HDDL)
         {
             from = axis;
             to = numDims;

@@ -58,6 +58,11 @@ CV_EXPORTS_W void resetMyriadDevice();
 CV_EXPORTS_W cv::String getInferenceEngineVPUType();
 
 
+/** @brief Release a HDDL plugin.
+ */
+CV_EXPORTS_W void releaseHDDLPlugin();
+
+
 CV__DNN_INLINE_NS_END
 }} // namespace
 
