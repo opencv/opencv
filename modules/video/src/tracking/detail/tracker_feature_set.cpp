@@ -21,62 +21,28 @@ TrackerFeatureSet::~TrackerFeatureSet()
 
 void TrackerFeatureSet::extraction(const std::vector<Mat>& images)
 {
+    blockAddTrackerFeature = true;
+
     clearResponses();
     responses.resize(features.size());
 
     for (size_t i = 0; i < features.size(); i++)
     {
-        Mat response;
-        features[i].second->compute(images, response);
-        responses[i] = response;
-    }
-
-    if (!blockAddTrackerFeature)
-    {
-        blockAddTrackerFeature = true;
+        CV_DbgAssert(features[i]);
+        features[i]->compute(images, responses[i]);
     }
 }
 
-void TrackerFeatureSet::selection()
+bool TrackerFeatureSet::addTrackerFeature(const Ptr<TrackerFeature>& feature)
 {
-}
+    CV_Assert(!blockAddTrackerFeature);
+    CV_Assert(feature);
 
-void TrackerFeatureSet::removeOutliers()
-{
-}
-
-bool TrackerFeatureSet::addTrackerFeature(String trackerFeatureType)
-{
-    if (blockAddTrackerFeature)
-    {
-        return false;
-    }
-    Ptr<TrackerFeature> feature = TrackerFeature::create(trackerFeatureType);
-
-    if (!feature)
-    {
-        return false;
-    }
-
-    features.push_back(std::make_pair(trackerFeatureType, feature));
-
+    features.push_back(feature);
     return true;
 }
 
-bool TrackerFeatureSet::addTrackerFeature(Ptr<TrackerFeature>& feature)
-{
-    if (blockAddTrackerFeature)
-    {
-        return false;
-    }
-
-    String trackerFeatureType = feature->getClassName();
-    features.push_back(std::make_pair(trackerFeatureType, feature));
-
-    return true;
-}
-
-const std::vector<std::pair<String, Ptr<TrackerFeature>>>& TrackerFeatureSet::getTrackerFeature() const
+const std::vector<Ptr<TrackerFeature>>& TrackerFeatureSet::getTrackerFeatures() const
 {
     return features;
 }

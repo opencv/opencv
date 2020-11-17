@@ -5,9 +5,14 @@
 #include "../precomp.hpp"
 #include "detail/tracker_mil_model.hpp"
 
+#include "detail/tracker_feature_haar.impl.hpp"
+
 namespace cv {
 inline namespace tracking {
 namespace impl {
+
+using cv::detail::tracking::internal::TrackerFeatureHAAR;
+
 
 class TrackerMILImpl CV_FINAL : public TrackerMIL
 {
@@ -80,7 +85,7 @@ void TrackerMILImpl::init(InputArray image, const Rect& boundingBox)
     HAARparameters.numFeatures = params.featureSetNumFeatures;
     HAARparameters.rectSize = Size((int)boundingBox.width, (int)boundingBox.height);
     HAARparameters.isIntegral = true;
-    Ptr<TrackerFeature> trackerFeature = Ptr<TrackerFeatureHAAR>(new TrackerFeatureHAAR(HAARparameters));
+    Ptr<TrackerFeature> trackerFeature = makePtr<TrackerFeatureHAAR>(HAARparameters);
     featureSet->addTrackerFeature(trackerFeature);
 
     featureSet->extraction(posSamples);
@@ -90,8 +95,7 @@ void TrackerMILImpl::init(InputArray image, const Rect& boundingBox)
     const std::vector<Mat> negResponse = featureSet->getResponses();
 
     model = makePtr<TrackerMILModel>(boundingBox);
-    Ptr<TrackerStateEstimatorMILBoosting> stateEstimator = Ptr<TrackerStateEstimatorMILBoosting>(
-            new TrackerStateEstimatorMILBoosting(params.featureSetNumFeatures));
+    Ptr<TrackerStateEstimatorMILBoosting> stateEstimator = makePtr<TrackerStateEstimatorMILBoosting>(params.featureSetNumFeatures);
     model->setTrackerStateEstimator(stateEstimator);
 
     //Run model estimation and update
@@ -113,7 +117,10 @@ bool TrackerMILImpl::update(InputArray image, Rect& boundingBox)
             lastLocation->getTargetHeight());
 
     //sampling new frame based on last location
-    (sampler->getSamplers().at(0).second).staticCast<TrackerSamplerCSC>()->setMode(TrackerSamplerCSC::MODE_DETECT);
+    auto& samplers = sampler->getSamplers();
+    CV_Assert(!samplers.empty());
+    CV_Assert(samplers[0]);
+    samplers[0].staticCast<TrackerSamplerCSC>()->setMode(TrackerSamplerCSC::MODE_DETECT);
     sampler->sampling(intImage, lastBoundingBox);
     std::vector<Mat> detectSamples = sampler->getSamples();
     if (detectSamples.empty())
@@ -158,12 +165,12 @@ bool TrackerMILImpl::update(InputArray image, Rect& boundingBox)
 
     //sampling new frame based on new location
     //Positive sampling
-    (sampler->getSamplers().at(0).second).staticCast<TrackerSamplerCSC>()->setMode(TrackerSamplerCSC::MODE_INIT_POS);
+    samplers[0].staticCast<TrackerSamplerCSC>()->setMode(TrackerSamplerCSC::MODE_INIT_POS);
     sampler->sampling(intImage, boundingBox);
     std::vector<Mat> posSamples = sampler->getSamples();
 
     //Negative sampling
-    (sampler->getSamplers().at(0).second).staticCast<TrackerSamplerCSC>()->setMode(TrackerSamplerCSC::MODE_INIT_NEG);
+    samplers[0].staticCast<TrackerSamplerCSC>()->setMode(TrackerSamplerCSC::MODE_INIT_NEG);
     sampler->sampling(intImage, boundingBox);
     std::vector<Mat> negSamples = sampler->getSamples();
 

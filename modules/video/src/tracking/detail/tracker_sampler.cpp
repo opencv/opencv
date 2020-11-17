@@ -17,17 +17,18 @@ TrackerSampler::TrackerSampler()
 
 TrackerSampler::~TrackerSampler()
 {
+    // nothing
 }
 
 void TrackerSampler::sampling(const Mat& image, Rect boundingBox)
 {
-
     clearSamples();
 
     for (size_t i = 0; i < samplers.size(); i++)
     {
+        CV_DbgAssert(samplers[i]);
         std::vector<Mat> current_samples;
-        samplers[i].second->sampling(image, boundingBox, current_samples);
+        samplers[i]->sampling(image, boundingBox, current_samples);
 
         //push in samples all current_samples
         for (size_t j = 0; j < current_samples.size(); j++)
@@ -37,49 +38,19 @@ void TrackerSampler::sampling(const Mat& image, Rect boundingBox)
         }
     }
 
-    if (!blockAddTrackerSampler)
-    {
-        blockAddTrackerSampler = true;
-    }
+    blockAddTrackerSampler = true;
 }
 
-bool TrackerSampler::addTrackerSamplerAlgorithm(String trackerSamplerAlgorithmType)
+bool TrackerSampler::addTrackerSamplerAlgorithm(const Ptr<TrackerSamplerAlgorithm>& sampler)
 {
-    if (blockAddTrackerSampler)
-    {
-        return false;
-    }
-    Ptr<TrackerSamplerAlgorithm> sampler = TrackerSamplerAlgorithm::create(trackerSamplerAlgorithmType);
+    CV_Assert(!blockAddTrackerSampler);
+    CV_Assert(sampler);
 
-    if (!sampler)
-    {
-        return false;
-    }
-
-    samplers.push_back(std::make_pair(trackerSamplerAlgorithmType, sampler));
-
+    samplers.push_back(sampler);
     return true;
 }
 
-bool TrackerSampler::addTrackerSamplerAlgorithm(Ptr<TrackerSamplerAlgorithm>& sampler)
-{
-    if (blockAddTrackerSampler)
-    {
-        return false;
-    }
-
-    if (!sampler)
-    {
-        return false;
-    }
-
-    String trackerSamplerAlgorithmType = sampler->getClassName();
-    samplers.push_back(std::make_pair(trackerSamplerAlgorithmType, sampler));
-
-    return true;
-}
-
-const std::vector<std::pair<String, Ptr<TrackerSamplerAlgorithm>>>& TrackerSampler::getSamplers() const
+const std::vector<Ptr<TrackerSamplerAlgorithm>>& TrackerSampler::getSamplers() const
 {
     return samplers;
 }

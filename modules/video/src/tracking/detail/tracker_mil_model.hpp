@@ -6,6 +6,7 @@
 #define __OPENCV_TRACKER_MIL_MODEL_HPP__
 
 #include "opencv2/video/detail/tracking.private.hpp"
+#include "tracker_mil_state.hpp"
 
 namespace cv {
 inline namespace tracking {
@@ -14,7 +15,7 @@ namespace impl {
 using namespace cv::detail::tracking;
 
 /**
- * @brief Implementation of TrackerModel for MIL algorithm
+ * \brief Implementation of TrackerModel for MIL algorithm
  */
 class TrackerMILModel : public detail::TrackerModel
 {
@@ -26,21 +27,27 @@ public:
         MODE_ESTIMATON = 3  // mode for estimation step
     };
 
-    /** @brief Constructor
-    * @param boundingBox The first boundingBox
-    */
+    /**
+   * \brief Constructor
+   * \param boundingBox The first boundingBox
+   */
     TrackerMILModel(const Rect& boundingBox);
 
+    /**
+   * \brief Destructor
+   */
     ~TrackerMILModel() {};
 
-    /** @brief Set the mode
-    */
+    /**
+   * \brief Set the mode
+   */
     void setMode(int trainingMode, const std::vector<Mat>& samples);
 
-    /** @brief Create the ConfidenceMap from a list of responses
-    * @param responses The list of the responses
-    * @param confidenceMap The output
-    */
+    /**
+   * \brief Create the ConfidenceMap from a list of responses
+   * \param responses The list of the responses
+   * \param confidenceMap The output
+   */
     void responseToConfidenceMap(const std::vector<Mat>& responses, ConfidenceMap& confidenceMap);
 
 protected:

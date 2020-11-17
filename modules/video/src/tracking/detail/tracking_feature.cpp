@@ -4,6 +4,7 @@
 
 #include "../../precomp.hpp"
 #include "opencv2/video/detail/tracking.private.hpp"
+#include "opencv2/video/detail/tracking_feature.private.hpp"
 
 namespace cv {
 namespace detail {
@@ -15,19 +16,8 @@ inline namespace tracking {
  */
 
 CvParams::CvParams()
-    : name("params")
 {
-}
-void CvParams::printDefaults() const
-{
-    //std::cout << "--" << name << "--" << std::endl;
-}
-void CvParams::printAttrs() const
-{
-}
-bool CvParams::scanAttr(const std::string, const std::string)
-{
-    return false;
+    // nothing
 }
 
 //---------------------------- FeatureParams --------------------------------------
@@ -37,44 +27,14 @@ CvFeatureParams::CvFeatureParams()
     , featSize(1)
     , numFeatures(1)
 {
-    name = CC_FEATURE_PARAMS;
-}
-
-void CvFeatureParams::init(const CvFeatureParams& fp)
-{
-    maxCatCount = fp.maxCatCount;
-    featSize = fp.featSize;
-    numFeatures = fp.numFeatures;
-}
-
-void CvFeatureParams::write(FileStorage& fs) const
-{
-    fs << CC_MAX_CAT_COUNT << maxCatCount;
-    fs << CC_FEATURE_SIZE << featSize;
-    fs << CC_NUM_FEATURES << numFeatures;
-}
-
-bool CvFeatureParams::read(const FileNode& node)
-{
-    if (node.empty())
-        return false;
-    maxCatCount = node[CC_MAX_CAT_COUNT];
-    featSize = node[CC_FEATURE_SIZE];
-    numFeatures = node[CC_NUM_FEATURES];
-    return (maxCatCount >= 0 && featSize >= 1);
-}
-
-Ptr<CvFeatureParams> CvFeatureParams::create(FeatureType featureType)
-{
-    return featureType == HAAR ? Ptr<CvFeatureParams>(new CvHaarFeatureParams) : featureType == LBP ? Ptr<CvFeatureParams>(new CvLBPFeatureParams)
-            : featureType == HOG                                                                    ? Ptr<CvFeatureParams>(new CvHOGFeatureParams)
-                                                                                                    : Ptr<CvFeatureParams>();
+    // nothing
 }
 
 //------------------------------------- FeatureEvaluator ---------------------------------------
 
 void CvFeatureEvaluator::init(const CvFeatureParams* _featureParams, int _maxSampleCount, Size _winSize)
 {
+    CV_Assert(_featureParams);
     CV_Assert(_maxSampleCount > 0);
     featureParams = (CvFeatureParams*)_featureParams;
     winSize = _winSize;
@@ -93,68 +53,16 @@ void CvFeatureEvaluator::setImage(const Mat& img, uchar clsLabel, int idx)
     cls.ptr<float>(idx)[0] = clsLabel;
 }
 
-Ptr<CvFeatureEvaluator> CvFeatureEvaluator::create(CvFeatureParams::FeatureType type)
-{
-    return type == CvFeatureParams::HAAR ? Ptr<CvFeatureEvaluator>(new CvHaarEvaluator) : type == CvFeatureParams::LBP ? Ptr<CvFeatureEvaluator>(new CvLBPEvaluator)
-            : type == CvFeatureParams::HOG                                                                             ? Ptr<CvFeatureEvaluator>(new CvHOGEvaluator)
-                                                                                                                       : Ptr<CvFeatureEvaluator>();
-}
-
 CvHaarFeatureParams::CvHaarFeatureParams()
 {
-    name = HFP_NAME;
     isIntegral = false;
-}
-
-void CvHaarFeatureParams::init(const CvFeatureParams& fp)
-{
-    CvFeatureParams::init(fp);
-    isIntegral = ((const CvHaarFeatureParams&)fp).isIntegral;
-}
-
-void CvHaarFeatureParams::write(FileStorage& fs) const
-{
-    CvFeatureParams::write(fs);
-    fs << CC_ISINTEGRAL << isIntegral;
-}
-
-bool CvHaarFeatureParams::read(const FileNode& node)
-{
-    if (!CvFeatureParams::read(node))
-        return false;
-
-    FileNode rnode = node[CC_ISINTEGRAL];
-    if (!rnode.isString())
-        return false;
-    String intStr;
-    rnode >> intStr;
-    isIntegral = !intStr.compare("0") ? false : !true;
-    return true;
-}
-
-void CvHaarFeatureParams::printDefaults() const
-{
-    CvFeatureParams::printDefaults();
-    //std::cout << "isIntegral: false" << std::endl;
-}
-
-void CvHaarFeatureParams::printAttrs() const
-{
-    CvFeatureParams::printAttrs();
-    //std::string int_str = isIntegral == true ? "true" : "false";
-    //std::cout << "isIntegral: " << int_str << std::endl;
-}
-
-bool CvHaarFeatureParams::scanAttr(const std::string /*prmName*/, const std::string /*val*/)
-{
-
-    return true;
 }
 
 //--------------------- HaarFeatureEvaluator ----------------
 
 void CvHaarEvaluator::init(const CvFeatureParams* _featureParams, int /*_maxSampleCount*/, Size _winSize)
 {
+    CV_Assert(_featureParams);
     int cols = (_winSize.width + 1) * (_winSize.height + 1);
     sum.create((int)1, cols, CV_32SC1);
     isIntegral = ((CvHaarFeatureParams*)_featureParams)->isIntegral;
@@ -181,18 +89,6 @@ void CvHaarEvaluator::setImage(const Mat& img, uchar /*clsLabel*/, int /*idx*/)
     }
 }
 
-void CvHaarEvaluator::writeFeatures(FileStorage& fs, const Mat& featureMap) const
-{
-    _writeFeatures(features, fs, featureMap);
-}
-
-void CvHaarEvaluator::writeFeature(FileStorage& fs) const
-{
-    String modeStr = isIntegral == true ? "1" : "0";
-    CV_Assert(!modeStr.empty());
-    fs << "isIntegral" << modeStr;
-}
-
 void CvHaarEvaluator::generateFeatures()
 {
     generateFeatures(featureParams->numFeatures);
@@ -207,31 +103,6 @@ void CvHaarEvaluator::generateFeatures(int nFeatures)
     }
 }
 
-const std::vector<CvHaarEvaluator::FeatureHaar>& CvHaarEvaluator::getFeatures() const
-{
-    return features;
-}
-
-float CvHaarEvaluator::operator()(int featureIdx, int /*sampleIdx*/)
-{
-    /* TODO Added from MIL implementation */
-    //return features[featureIdx].calc( _ii_img, Mat(), 0 );
-    float res;
-    features.at(featureIdx).eval(_ii_img, Rect(0, 0, winSize.width, winSize.height), &res);
-    return res;
-}
-
-void CvHaarEvaluator::setWinSize(Size patchSize)
-{
-    winSize.width = patchSize.width;
-    winSize.height = patchSize.height;
-}
-
-Size CvHaarEvaluator::setWinSize() const
-{
-    return Size(winSize.width, winSize.height);
-}
-
 #define INITSIGMA(numAreas) (static_cast<float>(sqrt(256.0f * 256.0f / 12.0f * (numAreas))));
 
 CvHaarEvaluator::FeatureHaar::FeatureHaar(Size patchSize)
@@ -242,18 +113,9 @@ CvHaarEvaluator::FeatureHaar::FeatureHaar(Size patchSize)
     }
     catch (...)
     {
+        // FIXIT
         throw;
     }
-}
-
-float CvHaarEvaluator::FeatureHaar::getInitMean() const
-{
-    return m_initMean;
-}
-
-float CvHaarEvaluator::FeatureHaar::getInitSigma() const
-{
-    return m_initSigma;
 }
 
 void CvHaarEvaluator::FeatureHaar::generateRandomFeature(Size patchSize)
@@ -713,321 +575,6 @@ float CvHaarEvaluator::FeatureHaar::getSum(const Mat& image, Rect imageROI) cons
                 - image.at<float>(OriginY + Height, OriginX));
 
     return value;
-}
-
-int CvHaarEvaluator::FeatureHaar::getNumAreas()
-{
-    return m_numAreas;
-}
-
-const std::vector<float>& CvHaarEvaluator::FeatureHaar::getWeights() const
-{
-    return m_weights;
-}
-
-const std::vector<Rect>& CvHaarEvaluator::FeatureHaar::getAreas() const
-{
-    return m_areas;
-}
-
-CvHOGFeatureParams::CvHOGFeatureParams()
-{
-    maxCatCount = 0;
-    name = HOGF_NAME;
-    featSize = N_BINS * N_CELLS;
-}
-
-void CvHOGEvaluator::init(const CvFeatureParams* _featureParams, int _maxSampleCount, Size _winSize)
-{
-    CV_Assert(_maxSampleCount > 0);
-    int cols = (_winSize.width + 1) * (_winSize.height + 1);
-    for (int bin = 0; bin < N_BINS; bin++)
-    {
-        hist.push_back(Mat(_maxSampleCount, cols, CV_32FC1));
-    }
-    normSum.create((int)_maxSampleCount, cols, CV_32FC1);
-    CvFeatureEvaluator::init(_featureParams, _maxSampleCount, _winSize);
-}
-
-void CvHOGEvaluator::setImage(const Mat& img, uchar clsLabel, int idx)
-{
-    CV_DbgAssert(!hist.empty());
-    CvFeatureEvaluator::setImage(img, clsLabel, idx);
-    std::vector<Mat> integralHist;
-    for (int bin = 0; bin < N_BINS; bin++)
-    {
-        integralHist.push_back(Mat(winSize.height + 1, winSize.width + 1, hist[bin].type(), hist[bin].ptr<float>((int)idx)));
-    }
-    Mat integralNorm(winSize.height + 1, winSize.width + 1, normSum.type(), normSum.ptr<float>((int)idx));
-    integralHistogram(img, integralHist, integralNorm, (int)N_BINS);
-}
-
-//void CvHOGEvaluator::writeFeatures( FileStorage &fs, const Mat& featureMap ) const
-//{
-//    _writeFeatures( features, fs, featureMap );
-//}
-
-void CvHOGEvaluator::writeFeatures(FileStorage& fs, const Mat& featureMap) const
-{
-    int featIdx;
-    int componentIdx;
-    const Mat_<int>& featureMap_ = (const Mat_<int>&)featureMap;
-    fs << FEATURES << "[";
-    for (int fi = 0; fi < featureMap.cols; fi++)
-        if (featureMap_(0, fi) >= 0)
-        {
-            fs << "{";
-            featIdx = fi / getFeatureSize();
-            componentIdx = fi % getFeatureSize();
-            features[featIdx].write(fs, componentIdx);
-            fs << "}";
-        }
-    fs << "]";
-}
-
-void CvHOGEvaluator::generateFeatures()
-{
-    int offset = winSize.width + 1;
-    Size blockStep;
-    int x, y, t, w, h;
-
-    for (t = 8; t <= winSize.width / 2; t += 8)  //t = size of a cell. blocksize = 4*cellSize
-    {
-        blockStep = Size(4, 4);
-        w = 2 * t;  //width of a block
-        h = 2 * t;  //height of a block
-        for (x = 0; x <= winSize.width - w; x += blockStep.width)
-        {
-            for (y = 0; y <= winSize.height - h; y += blockStep.height)
-            {
-                features.push_back(Feature(offset, x, y, t, t));
-            }
-        }
-        w = 2 * t;
-        h = 4 * t;
-        for (x = 0; x <= winSize.width - w; x += blockStep.width)
-        {
-            for (y = 0; y <= winSize.height - h; y += blockStep.height)
-            {
-                features.push_back(Feature(offset, x, y, t, 2 * t));
-            }
-        }
-        w = 4 * t;
-        h = 2 * t;
-        for (x = 0; x <= winSize.width - w; x += blockStep.width)
-        {
-            for (y = 0; y <= winSize.height - h; y += blockStep.height)
-            {
-                features.push_back(Feature(offset, x, y, 2 * t, t));
-            }
-        }
-    }
-
-    numFeatures = (int)features.size();
-}
-
-CvHOGEvaluator::Feature::Feature()
-{
-    for (int i = 0; i < N_CELLS; i++)
-    {
-        rect[i] = Rect(0, 0, 0, 0);
-    }
-}
-
-CvHOGEvaluator::Feature::Feature(int offset, int x, int y, int cellW, int cellH)
-{
-    rect[0] = Rect(x, y, cellW, cellH);  //cell0
-    rect[1] = Rect(x + cellW, y, cellW, cellH);  //cell1
-    rect[2] = Rect(x, y + cellH, cellW, cellH);  //cell2
-    rect[3] = Rect(x + cellW, y + cellH, cellW, cellH);  //cell3
-
-    for (int i = 0; i < N_CELLS; i++)
-    {
-        CV_SUM_OFFSETS(fastRect[i].p0, fastRect[i].p1, fastRect[i].p2, fastRect[i].p3, rect[i], offset);
-    }
-}
-
-void CvHOGEvaluator::Feature::write(FileStorage& fs) const
-{
-    fs << CC_RECTS << "[";
-    for (int i = 0; i < N_CELLS; i++)
-    {
-        fs << "[:" << rect[i].x << rect[i].y << rect[i].width << rect[i].height << "]";
-    }
-    fs << "]";
-}
-
-//cell and bin idx writing
-//void CvHOGEvaluator::Feature::write(FileStorage &fs, int varIdx) const
-//{
-//    int featComponent = varIdx % (N_CELLS * N_BINS);
-//    int cellIdx = featComponent / N_BINS;
-//    int binIdx = featComponent % N_BINS;
-//
-//    fs << CC_RECTS << "[:" << rect[cellIdx].x << rect[cellIdx].y <<
-//        rect[cellIdx].width << rect[cellIdx].height << binIdx << "]";
-//}
-
-//cell[0] and featComponent idx writing. By cell[0] it's possible to recover all block
-//All block is necessary for block normalization
-void CvHOGEvaluator::Feature::write(FileStorage& fs, int featComponentIdx) const
-{
-    fs << CC_RECT << "[:" << rect[0].x << rect[0].y << rect[0].width << rect[0].height << featComponentIdx << "]";
-}
-
-void CvHOGEvaluator::integralHistogram(const Mat& img, std::vector<Mat>& histogram, Mat& norm, int nbins) const
-{
-    CV_Assert(img.type() == CV_8U || img.type() == CV_8UC3);
-    int x, y, binIdx;
-
-    Size gradSize(img.size());
-    Size histSize(histogram[0].size());
-    Mat grad(gradSize, CV_32F);
-    Mat qangle(gradSize, CV_8U);
-
-    AutoBuffer<int> mapbuf(gradSize.width + gradSize.height + 4);
-    int* xmap = mapbuf.data() + 1;
-    int* ymap = xmap + gradSize.width + 2;
-
-    const int borderType = (int)BORDER_REPLICATE;
-
-    for (x = -1; x < gradSize.width + 1; x++)
-        xmap[x] = borderInterpolate(x, gradSize.width, borderType);
-    for (y = -1; y < gradSize.height + 1; y++)
-        ymap[y] = borderInterpolate(y, gradSize.height, borderType);
-
-    int width = gradSize.width;
-    AutoBuffer<float> _dbuf(width * 4);
-    float* dbuf = _dbuf.data();
-    Mat Dx(1, width, CV_32F, dbuf);
-    Mat Dy(1, width, CV_32F, dbuf + width);
-    Mat Mag(1, width, CV_32F, dbuf + width * 2);
-    Mat Angle(1, width, CV_32F, dbuf + width * 3);
-
-    float angleScale = (float)(nbins / CV_PI);
-
-    for (y = 0; y < gradSize.height; y++)
-    {
-        const uchar* currPtr = img.data + img.step * ymap[y];
-        const uchar* prevPtr = img.data + img.step * ymap[y - 1];
-        const uchar* nextPtr = img.data + img.step * ymap[y + 1];
-        float* gradPtr = (float*)grad.ptr(y);
-        uchar* qanglePtr = (uchar*)qangle.ptr(y);
-
-        for (x = 0; x < width; x++)
-        {
-            dbuf[x] = (float)(currPtr[xmap[x + 1]] - currPtr[xmap[x - 1]]);
-            dbuf[width + x] = (float)(nextPtr[xmap[x]] - prevPtr[xmap[x]]);
-        }
-        cartToPolar(Dx, Dy, Mag, Angle, false);
-        for (x = 0; x < width; x++)
-        {
-            float mag = dbuf[x + width * 2];
-            float angle = dbuf[x + width * 3];
-            angle = angle * angleScale - 0.5f;
-            int bidx = cvFloor(angle);
-            angle -= bidx;
-            if (bidx < 0)
-                bidx += nbins;
-            else if (bidx >= nbins)
-                bidx -= nbins;
-
-            qanglePtr[x] = (uchar)bidx;
-            gradPtr[x] = mag;
-        }
-    }
-    integral(grad, norm, grad.depth());
-
-    float* histBuf;
-    const float* magBuf;
-    const uchar* binsBuf;
-
-    int binsStep = (int)(qangle.step / sizeof(uchar));
-    int histStep = (int)(histogram[0].step / sizeof(float));
-    int magStep = (int)(grad.step / sizeof(float));
-    for (binIdx = 0; binIdx < nbins; binIdx++)
-    {
-        histBuf = (float*)histogram[binIdx].data;
-        magBuf = (const float*)grad.data;
-        binsBuf = (const uchar*)qangle.data;
-
-        memset(histBuf, 0, histSize.width * sizeof(histBuf[0]));
-        histBuf += histStep + 1;
-        for (y = 0; y < qangle.rows; y++)
-        {
-            histBuf[-1] = 0.f;
-            float strSum = 0.f;
-            for (x = 0; x < qangle.cols; x++)
-            {
-                if (binsBuf[x] == binIdx)
-                    strSum += magBuf[x];
-                histBuf[x] = histBuf[-histStep + x] + strSum;
-            }
-            histBuf += histStep;
-            binsBuf += binsStep;
-            magBuf += magStep;
-        }
-    }
-}
-
-CvLBPFeatureParams::CvLBPFeatureParams()
-{
-    maxCatCount = 256;
-    name = LBPF_NAME;
-}
-
-void CvLBPEvaluator::init(const CvFeatureParams* _featureParams, int _maxSampleCount, Size _winSize)
-{
-    CV_Assert(_maxSampleCount > 0);
-    sum.create((int)_maxSampleCount, (_winSize.width + 1) * (_winSize.height + 1), CV_32SC1);
-    CvFeatureEvaluator::init(_featureParams, _maxSampleCount, _winSize);
-}
-
-void CvLBPEvaluator::setImage(const Mat& img, uchar clsLabel, int idx)
-{
-    CV_DbgAssert(!sum.empty());
-    CvFeatureEvaluator::setImage(img, clsLabel, idx);
-    Mat innSum(winSize.height + 1, winSize.width + 1, sum.type(), sum.ptr<int>((int)idx));
-    integral(img, innSum);
-}
-
-void CvLBPEvaluator::writeFeatures(FileStorage& fs, const Mat& featureMap) const
-{
-    _writeFeatures(features, fs, featureMap);
-}
-
-void CvLBPEvaluator::generateFeatures()
-{
-    int offset = winSize.width + 1;
-    for (int x = 0; x < winSize.width; x++)
-        for (int y = 0; y < winSize.height; y++)
-            for (int w = 1; w <= winSize.width / 3; w++)
-                for (int h = 1; h <= winSize.height / 3; h++)
-                    if ((x + 3 * w <= winSize.width) && (y + 3 * h <= winSize.height))
-                        features.push_back(Feature(offset, x, y, w, h));
-    numFeatures = (int)features.size();
-}
-
-CvLBPEvaluator::Feature::Feature()
-{
-    rect = Rect(0, 0, 0, 0);
-}
-
-CvLBPEvaluator::Feature::Feature(int offset, int x, int y, int _blockWidth, int _blockHeight)
-{
-    Rect tr = rect = Rect(x, y, _blockWidth, _blockHeight);
-    CV_SUM_OFFSETS(p[0], p[1], p[4], p[5], tr, offset)
-    tr.x += 2 * rect.width;
-    CV_SUM_OFFSETS(p[2], p[3], p[6], p[7], tr, offset)
-    tr.y += 2 * rect.height;
-    CV_SUM_OFFSETS(p[10], p[11], p[14], p[15], tr, offset)
-    tr.x -= 2 * rect.width;
-    CV_SUM_OFFSETS(p[8], p[9], p[12], p[13], tr, offset)
-}
-
-void CvLBPEvaluator::Feature::write(FileStorage& fs) const
-{
-    fs << CC_RECT << "[:" << rect.x << rect.y << rect.width << rect.height << "]";
 }
 
 }}}  // namespace cv::detail::tracking

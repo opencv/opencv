@@ -5,7 +5,6 @@
 #ifndef OPENCV_VIDEO_DETAIL_TRACKING_ONLINE_MIL_HPP
 #define OPENCV_VIDEO_DETAIL_TRACKING_ONLINE_MIL_HPP
 
-#include "opencv2/core.hpp"
 #include <limits>
 
 namespace cv {
