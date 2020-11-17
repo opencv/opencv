@@ -340,7 +340,7 @@ public:
         {
             Pt<T> pt;
             initPointRandU(rng, pt);
-            vec_.push_back(pt);
+            vec_.emplace_back(pt);
         }
     }
 
@@ -994,22 +994,20 @@ public:
 };
 
 template<typename Elem, int cn>
-class AvgDiffToleranceVec : public WrappableVec<AvgDiffToleranceVec<Elem, cn>, Elem, cn>
+class RelDiffToleranceVec : public WrappableVec<RelDiffToleranceVec<Elem, cn>, Elem, cn>
 {
 public:
-    AvgDiffToleranceVec(double tol) : _tol(tol) {}
+    RelDiffToleranceVec(double tol) : _tol(tol) {}
     bool operator() (const cv::Vec<Elem, cn> &in1, const cv::Vec<Elem, cn> &in2) const
     {
-        double abs_err = 0;
-        for (int i = 0; i < cn; i++)
+        double abs_err  = cv::norm(in1, in2, cv::NORM_L1);
+        double in2_norm = cv::norm(in2, cv::NORM_L1);
+        // Checks to avoid dividing by zero
+        double err = abs_err ? abs_err / (in2_norm ? in2_norm : cv::norm(in1, cv::NORM_L1))
+                             : abs_err;
+        if (err > _tol)
         {
-            abs_err += static_cast<double>(std::abs(in1[i] - in2[i]))
-                       / std::max(static_cast<Elem>(1), std::abs(in2[i]));
-        }
-        abs_err /= cn;
-        if (abs_err > _tol)
-        {
-            std::cout << "AvgDiffToleranceVec error: abs_err=" << abs_err << "  tolerance=" << _tol;
+            std::cout << "RelDiffToleranceVec error: err=" << err << "  tolerance=" << _tol;
             for (int i = 0; i < cn; i++)
             {
                 std::cout << " in1[" << i << "]=" << in1[i] << " in2[" << i << "]=" << in2[i];
@@ -1022,49 +1020,13 @@ public:
             return true;
         }
     }
-    friend std::ostream& operator<<(std::ostream& os, const AvgDiffToleranceVec<Elem, cn>& obj)
+    friend std::ostream& operator<<(std::ostream& os, const RelDiffToleranceVec<Elem, cn>& obj)
     {
-        return os << "AvgDiffToleranceVec(" << std::to_string(obj._tol) << ")";
+        return os << "RelDiffToleranceVec(" << std::to_string(obj._tol) << ")";
     }
     private:
         double _tol;
 };
-
-// class AbsToleranceLine2D : public WrappableVec<AbsToleranceLine2D, float, 4>
-// {
-// public:
-//     AbsToleranceLine2D(double tol) : _tol(tol) {}
-//     bool operator() (const cv::Vec4f &in1, const cv::Vec4f &in2) const
-//     {
-//         double vx1 = in1[0], vy1 = in1[1], x1 = in1[2], y1 = in1[3],
-//                vx2 = in2[0], vy2 = in2[1], x2 = in2[2], y2 = in2[3];
-//         // calculating 2D line equasion (ax + by + c = 0) coefficients:
-//         // a = vy, b = vx, c = y0 * vx - x0 * vy
-//         double c1 = y1 * vx1 - x1 * vy1,
-//                c2 = y2 * vx2 - x2 * vy2;
-//         double err = ( (std::abs(vx1 - vx2) / std::max(1., std::abs(vx2))) +
-//                        (std::abs(vy1 - vy2) / std::max(1., std::abs(vy2))) +
-//                        (std::abs(c1 - c2)   / std::max(1., std::abs(c2)))    ) / 3.;
-//         if (err > _tol)
-//         {
-//             std::cout << "AbsToleranceLine2D error: err=" << err << "  tolerance=" << _tol
-//                       << " a1=" << vy1 << " a2=" << vy2
-//                       << " b1=" << vx1 << " b2=" << vx2
-//                       << " c1=" << c1  << " c2=" << c2  << std::endl;
-//             return false;
-//         }
-//         else
-//         {
-//             return true;
-//         }
-//     }
-//     friend std::ostream& operator<<(std::ostream& os, const AbsToleranceLine2D& obj)
-//     {
-//         return os << "AbsToleranceLine2D(" << std::to_string(obj._tol) << ")";
-//     }
-//     private:
-//         double _tol;
-// };
 } // namespace opencv_test
 
 namespace
