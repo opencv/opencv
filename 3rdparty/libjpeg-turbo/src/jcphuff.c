@@ -43,10 +43,10 @@
  * memory footprint by 64k, which is important for some mobile applications
  * that create many isolated instances of libjpeg-turbo (web browsers, for
  * instance.)  This may improve performance on some mobile platforms as well.
- * This feature is enabled by default only on ARM processors, because some x86
+ * This feature is enabled by default only on Arm processors, because some x86
  * chips have a slow implementation of bsr, and the use of clz/bsr cannot be
  * shown to have a significant performance impact even on the x86 chips that
- * have a fast implementation of it.  When building for ARMv6, you can
+ * have a fast implementation of it.  When building for Armv6, you can
  * explicitly disable the use of clz/bsr by adding -mthumb to the compiler
  * flags (this defines __thumb__).
  */
