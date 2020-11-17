@@ -83,6 +83,22 @@ GAPI_TEST_FIXTURE(BoundingRectVector32STest, initNothing, FIXTURE_API(CompareRec
 GAPI_TEST_FIXTURE(BoundingRectVector32FTest, initNothing, FIXTURE_API(CompareRects), 1, cmpF)
 GAPI_TEST_FIXTURE(BGR2RGBTest, initMatrixRandN, FIXTURE_API(CompareMats), 1, cmpF)
 GAPI_TEST_FIXTURE(RGB2GrayTest, initMatrixRandN, FIXTURE_API(CompareMats), 1, cmpF)
+GAPI_TEST_FIXTURE(FitLine2DMatVectorTest, initMatByPointsVectorRandU<cv::Point_>,
+                  FIXTURE_API(CompareVecs<float, 4>,cv::DistanceTypes), 2, cmpF, distType)
+GAPI_TEST_FIXTURE(FitLine2DVector32STest, initNothing,
+                  FIXTURE_API(CompareVecs<float, 4>,cv::DistanceTypes), 2, cmpF, distType)
+GAPI_TEST_FIXTURE(FitLine2DVector32FTest, initNothing,
+                  FIXTURE_API(CompareVecs<float, 4>,cv::DistanceTypes), 2, cmpF, distType)
+GAPI_TEST_FIXTURE(FitLine2DVector64FTest, initNothing,
+                  FIXTURE_API(CompareVecs<float, 4>,cv::DistanceTypes), 2, cmpF, distType)
+GAPI_TEST_FIXTURE(FitLine3DMatVectorTest, initMatByPointsVectorRandU<cv::Point3_>,
+                  FIXTURE_API(CompareVecs<float, 6>,cv::DistanceTypes), 2, cmpF, distType)
+GAPI_TEST_FIXTURE(FitLine3DVector32STest, initNothing,
+                  FIXTURE_API(CompareVecs<float, 6>,cv::DistanceTypes), 2, cmpF, distType)
+GAPI_TEST_FIXTURE(FitLine3DVector32FTest, initNothing,
+                  FIXTURE_API(CompareVecs<float, 6>,cv::DistanceTypes), 2, cmpF, distType)
+GAPI_TEST_FIXTURE(FitLine3DVector64FTest, initNothing,
+                  FIXTURE_API(CompareVecs<float, 6>,cv::DistanceTypes), 2, cmpF, distType)
 GAPI_TEST_FIXTURE(BGR2GrayTest, initMatrixRandN, FIXTURE_API(CompareMats), 1, cmpF)
 GAPI_TEST_FIXTURE(RGB2YUVTest, initMatrixRandN, FIXTURE_API(CompareMats), 1, cmpF)
 GAPI_TEST_FIXTURE(BGR2I420Test, initMatrixRandN, FIXTURE_API(CompareMats), 1, cmpF)
