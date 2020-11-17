@@ -327,6 +327,11 @@ public:
     inline void initPointRandU(cv::RNG& rng, T& pt)
     { ::initPointRandU(rng, pt); }
 
+// Disable unreachable code warning for MSVS 2015
+#if defined _MSC_VER && _MSC_VER < 1910 /*MSVS 2017*/
+#pragma warning(push)
+#pragma warning(disable: 4702)
+#endif
     // initialize std::vector<cv::Point_<T>>/std::vector<cv::Point3_<T>>
     template <typename T, template <typename> class Pt>
     void initPointsVectorRandU(const int sz_in, std::vector<Pt<T>> &vec_)
@@ -343,6 +348,9 @@ public:
             vec_.emplace_back(pt);
         }
     }
+#if defined _MSC_VER && _MSC_VER < 1910 /*MSVS 2017*/
+#pragma warning(pop)
+#endif
 
     template<typename Pt>
     inline void initMatByPointsVectorRandU(const cv::Size &sz_in)
