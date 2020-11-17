@@ -74,16 +74,15 @@ if __name__ == "__main__":
     os.environ['MACOSX_DEPLOYMENT_TARGET'] = args.macosx_deployment_target
     print('Using MACOSX_DEPLOYMENT_TARGET=' + os.environ['MACOSX_DEPLOYMENT_TARGET'])
 
+    archs = None
     if args.archs:
         archs = args.archs.split(',')
-    else:
-        if args.build_only_specified_archs:
-            archs = None
-        else:
-            # Supply defaults
-            archs = ["x86_64"]
+    elif not args.build_only_specified_archs:
+        # Supply defaults
+        archs = ["x86_64"]
     print('Using ARCHS=' + str(archs))
 
+    catalyst_archs = None
     if args.catalyst_archs:
         catalyst_archs = args.catalyst_archs.split(',')
     # TODO: To avoid breaking existing CI, catalyst_archs has no defaults. When we can make a breaking change, this should specify a default arch.

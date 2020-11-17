@@ -479,24 +479,20 @@ if __name__ == "__main__":
     os.environ['IPHONEOS_DEPLOYMENT_TARGET'] = args.iphoneos_deployment_target
     print('Using IPHONEOS_DEPLOYMENT_TARGET=' + os.environ['IPHONEOS_DEPLOYMENT_TARGET'])
 
+    iphoneos_archs = None
     if args.iphoneos_archs:
         iphoneos_archs = args.iphoneos_archs.split(',')
-    else:
-        if args.build_only_specified_archs:
-            iphoneos_archs = None
-        else:
-            # Supply defaults
-            iphoneos_archs = ["armv7", "armv7s", "arm64"]
+    elif not args.build_only_specified_archs:
+        # Supply defaults
+        iphoneos_archs = ["armv7", "armv7s", "arm64"]
     print('Using iPhoneOS ARCHS=' + str(iphoneos_archs))
 
-    if args.iphonesimulator_archs == None:
-        if args.build_only_specified_archs:
-            iphonesimulator_archs = None
-        else:
-            # Supply defaults
-            iphonesimulator_archs = ["i386", "x86_64"]
-    else:
+    iphonesimulator_archs = None
+    if args.iphonesimulator_archs:
         iphonesimulator_archs = args.iphonesimulator_archs.split(',')
+    elif not args.build_only_specified_archs:
+        # Supply defaults
+        iphonesimulator_archs = ["i386", "x86_64"]
     print('Using iPhoneSimulator ARCHS=' + str(iphonesimulator_archs))
 
     # Prevent the build from happening if the same architecture is specified for multiple platforms.
