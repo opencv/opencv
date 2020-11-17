@@ -144,7 +144,7 @@ void bindInArg(Mag& mag, const RcDesc &rc, const GRunArg &arg, HandleRMat handle
         GAPI_Assert(arg.index() == GRunArg::index_of<cv::RMat>());
         bindRMat(mag, rc, util::get<cv::RMat>(arg), RMat::Access::R);
 
-        // FIXME: Here meta may^WILL be copied multiple times!
+        // FIXME: Here meta may^WWILL be copied multiple times!
         // Replace it is reference-counted object?
         mag.meta<cv::RMat>()[rc.id] = arg.meta;
         mag.meta<cv::Mat>()[rc.id] = arg.meta;
