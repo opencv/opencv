@@ -1140,18 +1140,37 @@ void forwardInfEngine(const std::vector<Ptr<BackendWrapper> >& outBlobsWrappers,
 
 CV__DNN_INLINE_NS_BEGIN
 
-void resetMyriadDevice(const std::string& device)
+void resetMyriadDevice()
 {
 #ifdef HAVE_INF_ENGINE
     AutoLock lock(getInitializationMutex());
 #if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
-    getSharedPlugins().erase(device);
+    getSharedPlugins().erase("MYRIAD");
 #else
-    // Unregister "HDDL", or "MYRIAD" and "HETERO:MYRIAD,CPU" plugins
-    InferenceEngine::Core& ie = getCore(device);
+    // Unregister both "MYRIAD" and "HETERO:MYRIAD,CPU" plugins
+    InferenceEngine::Core& ie = getCore("MYRIAD");
     try
     {
-        ie.UnregisterPlugin(device);
+        ie.UnregisterPlugin("MYRIAD");
+        ie.UnregisterPlugin("HETERO");
+    }
+    catch (...) {}
+#endif
+#endif  // HAVE_INF_ENGINE
+}
+
+void releaseHDDLPlugin()
+{
+#ifdef HAVE_INF_ENGINE
+    AutoLock lock(getInitializationMutex());
+#if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
+    getSharedPlugins().erase("HDDL");
+#else
+    // Unregister both "HDDL" and "HETERO:HDDL,CPU" plugins
+    InferenceEngine::Core& ie = getCore("HDDL");
+    try
+    {
+        ie.UnregisterPlugin("HDDL");
         ie.UnregisterPlugin("HETERO");
     }
     catch (...) {}

@@ -40,8 +40,7 @@ CV_EXPORTS_W cv::String setInferenceEngineBackendType(const cv::String& newBacke
  * Single Myriad device cannot be shared across multiple processes which uses
  * Inference Engine's Myriad plugin.
  */
-CV_EXPORTS_W void resetMyriadDevice(const std::string& device = "MYRIAD");
-
+CV_EXPORTS_W void resetMyriadDevice();
 
 /* Values for 'OPENCV_DNN_IE_VPU_TYPE' parameter */
 #define CV_DNN_INFERENCE_ENGINE_VPU_TYPE_UNSPECIFIED ""
@@ -57,6 +56,10 @@ CV_EXPORTS_W void resetMyriadDevice(const std::string& device = "MYRIAD");
  */
 CV_EXPORTS_W cv::String getInferenceEngineVPUType();
 
+
+/** @brief Release a HDDL plugin.
+ */
+CV_EXPORTS_W void releaseHDDLPlugin();
 
 CV__DNN_INLINE_NS_END
 }} // namespace
