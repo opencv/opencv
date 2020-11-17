@@ -89,6 +89,14 @@ if __name__ == "__main__":
     # TODO: To avoid breaking existing CI, catalyst_archs has no defaults. When we can make a breaking change, this should specify a default arch.
     print('Using Catalyst ARCHS=' + str(catalyst_archs))
 
+    # Prevent the build from happening if the same architecture is specified for multiple platforms.
+    # When `lipo` is run to stitch the frameworks together into a fat framework, it'll fail, so it's
+    # better to stop here while we're ahead.
+    duplicate_archs = set(archs).intersection(catalyst_archs)
+    if duplicate_archs:
+        print_error("Cannot have the same architecture for multiple platforms in a fat framework! Consider using build_xcframework.py in the apple platform folder instead. Duplicate archs are %s" % duplicate_archs)
+        exit(1)
+
     if args.legacy_build:
         args.framework_name = "opencv2"
         if not "objc" in args.without:
