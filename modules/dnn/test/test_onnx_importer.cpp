@@ -705,6 +705,11 @@ TEST_P(Test_ONNX_layers, Conv1d_variable_weight_bias)
     normAssert(ref, out, "", default_l1, default_lInf);
 }
 
+TEST_P(Test_ONNX_layers, GatherMultiOutput)
+{
+    testONNXModels("gather_multi_output");
+}
+
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_ONNX_layers, dnnBackendsAndTargets());
 
 class Test_ONNX_nets : public Test_ONNX_layers
