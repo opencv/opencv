@@ -46,7 +46,7 @@ void validateFindingContoursMeta(const int depth, const int chan, const int mode
 
 // Checks if the passed mat is a set of n-dimentional points of the given depth
 bool isPointsVector(const int chan, const cv::Size &size, const int depth,
-                    const int n, const int ddepth)
+                    const int n, const int ddepth = -1)
 {
     return (ddepth == depth || ddepth < 0) &&
            ((chan == n && (size.height == 1 || size.width == 1)) ||
@@ -230,6 +230,70 @@ namespace imgproc {
     G_TYPED_KERNEL(GBoundingRectVector32F, <GOpaque<Rect>(GArray<Point2f>)>,
                    "org.opencv.imgproc.shape.boundingRectVector32F") {
         static GOpaqueDesc outMeta(GArrayDesc) {
+            return empty_gopaque_desc();
+        }
+    };
+
+    G_TYPED_KERNEL(GFitLine2DMat, <GOpaque<Vec4f>(GMat,DistanceTypes,double,double,double)>,
+                   "org.opencv.imgproc.shape.fitLine2DMat") {
+        static GOpaqueDesc outMeta(GMatDesc in,DistanceTypes,double,double,double) {
+            GAPI_Assert(isPointsVector(in.chan, in.size, in.depth, 2, -1));
+            return empty_gopaque_desc();
+        }
+    };
+
+    G_TYPED_KERNEL(GFitLine2DVector32S,
+                   <GOpaque<Vec4f>(GArray<Point2i>,DistanceTypes,double,double,double)>,
+                   "org.opencv.imgproc.shape.fitLine2DVector32S") {
+        static GOpaqueDesc outMeta(GArrayDesc,DistanceTypes,double,double,double) {
+            return empty_gopaque_desc();
+        }
+    };
+
+    G_TYPED_KERNEL(GFitLine2DVector32F,
+                   <GOpaque<Vec4f>(GArray<Point2f>,DistanceTypes,double,double,double)>,
+                   "org.opencv.imgproc.shape.fitLine2DVector32F") {
+        static GOpaqueDesc outMeta(GArrayDesc,DistanceTypes,double,double,double) {
+            return empty_gopaque_desc();
+        }
+    };
+
+    G_TYPED_KERNEL(GFitLine2DVector64F,
+                   <GOpaque<Vec4f>(GArray<Point2d>,DistanceTypes,double,double,double)>,
+                   "org.opencv.imgproc.shape.fitLine2DVector64F") {
+        static GOpaqueDesc outMeta(GArrayDesc,DistanceTypes,double,double,double) {
+            return empty_gopaque_desc();
+        }
+    };
+
+    G_TYPED_KERNEL(GFitLine3DMat, <GOpaque<Vec6f>(GMat,DistanceTypes,double,double,double)>,
+                   "org.opencv.imgproc.shape.fitLine3DMat") {
+        static GOpaqueDesc outMeta(GMatDesc in,int,double,double,double) {
+            GAPI_Assert(isPointsVector(in.chan, in.size, in.depth, 3, -1));
+            return empty_gopaque_desc();
+        }
+    };
+
+    G_TYPED_KERNEL(GFitLine3DVector32S,
+                   <GOpaque<Vec6f>(GArray<Point3i>,DistanceTypes,double,double,double)>,
+                   "org.opencv.imgproc.shape.fitLine3DVector32S") {
+        static GOpaqueDesc outMeta(GArrayDesc,DistanceTypes,double,double,double) {
+            return empty_gopaque_desc();
+        }
+    };
+
+    G_TYPED_KERNEL(GFitLine3DVector32F,
+                   <GOpaque<Vec6f>(GArray<Point3f>,DistanceTypes,double,double,double)>,
+                   "org.opencv.imgproc.shape.fitLine3DVector32F") {
+        static GOpaqueDesc outMeta(GArrayDesc,DistanceTypes,double,double,double) {
+            return empty_gopaque_desc();
+        }
+    };
+
+    G_TYPED_KERNEL(GFitLine3DVector64F,
+                   <GOpaque<Vec6f>(GArray<Point3d>,DistanceTypes,double,double,double)>,
+                   "org.opencv.imgproc.shape.fitLine3DVector64F") {
+        static GOpaqueDesc outMeta(GArrayDesc,DistanceTypes,double,double,double) {
             return empty_gopaque_desc();
         }
     };
@@ -1110,6 +1174,153 @@ Calculates the up-right bounding rectangle of a point set.
 @param src Input 2D point set, stored in std::vector<cv::Point2f>.
  */
 GAPI_EXPORTS GOpaque<Rect> boundingRect(const GArray<Point2f>& src);
+
+/** @brief Fits a line to a 2D point set.
+
+The function fits a line to a 2D point set by minimizing \f$\sum_i \rho(r_i)\f$ where
+\f$r_i\f$ is a distance between the \f$i^{th}\f$ point, the line and \f$\rho(r)\f$ is a distance
+function, one of the following:
+-  DIST_L2
+\f[\rho (r) = r^2/2  \quad \text{(the simplest and the fastest least-squares method)}\f]
+- DIST_L1
+\f[\rho (r) = r\f]
+- DIST_L12
+\f[\rho (r) = 2  \cdot ( \sqrt{1 + \frac{r^2}{2}} - 1)\f]
+- DIST_FAIR
+\f[\rho \left (r \right ) = C^2  \cdot \left (  \frac{r}{C} -  \log{\left(1 + \frac{r}{C}\right)} \right )  \quad \text{where} \quad C=1.3998\f]
+- DIST_WELSCH
+\f[\rho \left (r \right ) =  \frac{C^2}{2} \cdot \left ( 1 -  \exp{\left(-\left(\frac{r}{C}\right)^2\right)} \right )  \quad \text{where} \quad C=2.9846\f]
+- DIST_HUBER
+\f[\rho (r) =  \fork{r^2/2}{if \(r < C\)}{C \cdot (r-C/2)}{otherwise} \quad \text{where} \quad C=1.345\f]
+
+The algorithm is based on the M-estimator ( <http://en.wikipedia.org/wiki/M-estimator> ) technique
+that iteratively fits the line using the weighted least-squares algorithm. After each iteration the
+weights \f$w_i\f$ are adjusted to be inversely proportional to \f$\rho(r_i)\f$ .
+
+@note Function textual ID is "org.opencv.imgproc.shape.fitLine2DMat"
+
+@param src Input set of 2D points stored in one of possible containers: Mat,
+std::vector<cv::Point2i>, std::vector<cv::Point2f>, std::vector<cv::Point2d>.
+
+@note In case of an N-dimentional points' set given, Mat should be 2-dimensional, have a single row
+or column if there are N channels, or have N columns if there is a single channel.
+
+@param distType Distance used by the M-estimator, see #DistanceTypes. @ref DIST_USER
+and @ref DIST_C are not suppored.
+@param param Numerical parameter ( C ) for some types of distances. If it is 0, an optimal value
+is chosen.
+@param reps Sufficient accuracy for the radius (distance between the coordinate origin and the
+line). 1.0 would be a good default value for reps. If it is 0, a default value is chosen.
+@param aeps Sufficient accuracy for the angle. 0.01 would be a good default value for aeps.
+If it is 0, a default value is chosen.
+
+@return Output line parameters: a vector of 4 elements (like Vec4f) - (vx, vy, x0, y0),
+where (vx, vy) is a normalized vector collinear to the line and (x0, y0) is a point on the line.
+ */
+GAPI_EXPORTS GOpaque<Vec4f> fitLine2D(const GMat& src, const DistanceTypes distType,
+                                      const double param = 0., const double reps = 0.,
+                                      const double aeps = 0.);
+
+/** @overload
+
+@note Function textual ID is "org.opencv.imgproc.shape.fitLine2DVector32S"
+
+ */
+GAPI_EXPORTS GOpaque<Vec4f> fitLine2D(const GArray<Point2i>& src, const DistanceTypes distType,
+                                      const double param = 0., const double reps = 0.,
+                                      const double aeps = 0.);
+
+/** @overload
+
+@note Function textual ID is "org.opencv.imgproc.shape.fitLine2DVector32F"
+
+ */
+GAPI_EXPORTS GOpaque<Vec4f> fitLine2D(const GArray<Point2f>& src, const DistanceTypes distType,
+                                      const double param = 0., const double reps = 0.,
+                                      const double aeps = 0.);
+
+/** @overload
+
+@note Function textual ID is "org.opencv.imgproc.shape.fitLine2DVector64F"
+
+ */
+GAPI_EXPORTS GOpaque<Vec4f> fitLine2D(const GArray<Point2d>& src, const DistanceTypes distType,
+                                      const double param = 0., const double reps = 0.,
+                                      const double aeps = 0.);
+
+/** @brief Fits a line to a 3D point set.
+
+The function fits a line to a 3D point set by minimizing \f$\sum_i \rho(r_i)\f$ where
+\f$r_i\f$ is a distance between the \f$i^{th}\f$ point, the line and \f$\rho(r)\f$ is a distance
+function, one of the following:
+-  DIST_L2
+\f[\rho (r) = r^2/2  \quad \text{(the simplest and the fastest least-squares method)}\f]
+- DIST_L1
+\f[\rho (r) = r\f]
+- DIST_L12
+\f[\rho (r) = 2  \cdot ( \sqrt{1 + \frac{r^2}{2}} - 1)\f]
+- DIST_FAIR
+\f[\rho \left (r \right ) = C^2  \cdot \left (  \frac{r}{C} -  \log{\left(1 + \frac{r}{C}\right)} \right )  \quad \text{where} \quad C=1.3998\f]
+- DIST_WELSCH
+\f[\rho \left (r \right ) =  \frac{C^2}{2} \cdot \left ( 1 -  \exp{\left(-\left(\frac{r}{C}\right)^2\right)} \right )  \quad \text{where} \quad C=2.9846\f]
+- DIST_HUBER
+\f[\rho (r) =  \fork{r^2/2}{if \(r < C\)}{C \cdot (r-C/2)}{otherwise} \quad \text{where} \quad C=1.345\f]
+
+The algorithm is based on the M-estimator ( <http://en.wikipedia.org/wiki/M-estimator> ) technique
+that iteratively fits the line using the weighted least-squares algorithm. After each iteration the
+weights \f$w_i\f$ are adjusted to be inversely proportional to \f$\rho(r_i)\f$ .
+
+@note Function textual ID is "org.opencv.imgproc.shape.fitLine3DMat"
+
+@param src Input set of 3D points stored in one of possible containers: Mat,
+std::vector<cv::Point3i>, std::vector<cv::Point3f>, std::vector<cv::Point3d>.
+
+@note In case of an N-dimentional points' set given, Mat should be 2-dimensional, have a single row
+or column if there are N channels, or have N columns if there is a single channel.
+
+@param distType Distance used by the M-estimator, see #DistanceTypes. @ref DIST_USER
+and @ref DIST_C are not suppored.
+@param param Numerical parameter ( C ) for some types of distances. If it is 0, an optimal value
+is chosen.
+@param reps Sufficient accuracy for the radius (distance between the coordinate origin and the
+line). 1.0 would be a good default value for reps. If it is 0, a default value is chosen.
+@param aeps Sufficient accuracy for the angle. 0.01 would be a good default value for aeps.
+If it is 0, a default value is chosen.
+
+@return Output line parameters: a vector of 6 elements (like Vec6f) - (vx, vy, vz, x0, y0, z0),
+where (vx, vy, vz) is a normalized vector collinear to the line and (x0, y0, z0) is a point on
+the line.
+ */
+GAPI_EXPORTS GOpaque<Vec6f> fitLine3D(const GMat& src, const DistanceTypes distType,
+                                      const double param = 0., const double reps = 0.,
+                                      const double aeps = 0.);
+
+/** @overload
+
+@note Function textual ID is "org.opencv.imgproc.shape.fitLine3DVector32S"
+
+ */
+GAPI_EXPORTS GOpaque<Vec6f> fitLine3D(const GArray<Point3i>& src, const DistanceTypes distType,
+                                      const double param = 0., const double reps = 0.,
+                                      const double aeps = 0.);
+
+/** @overload
+
+@note Function textual ID is "org.opencv.imgproc.shape.fitLine3DVector32F"
+
+ */
+GAPI_EXPORTS GOpaque<Vec6f> fitLine3D(const GArray<Point3f>& src, const DistanceTypes distType,
+                                      const double param = 0., const double reps = 0.,
+                                      const double aeps = 0.);
+
+/** @overload
+
+@note Function textual ID is "org.opencv.imgproc.shape.fitLine3DVector64F"
+
+ */
+GAPI_EXPORTS GOpaque<Vec6f> fitLine3D(const GArray<Point3d>& src, const DistanceTypes distType,
+                                      const double param = 0., const double reps = 0.,
+                                      const double aeps = 0.);
 
 //! @} gapi_shape
 

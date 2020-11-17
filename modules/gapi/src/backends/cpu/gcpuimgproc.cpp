@@ -285,6 +285,78 @@ GAPI_OCV_KERNEL(GCPUBoundingRectVector32F, cv::gapi::imgproc::GBoundingRectVecto
     }
 };
 
+GAPI_OCV_KERNEL(GCPUFitLine2DMat, cv::gapi::imgproc::GFitLine2DMat)
+{
+    static void run(const cv::Mat& in, const cv::DistanceTypes distType, const double param,
+                    const double reps, const double aeps, cv::Vec4f& out)
+    {
+        cv::fitLine(in, out, distType, param, reps, aeps);
+    }
+};
+
+GAPI_OCV_KERNEL(GCPUFitLine2DVector32S, cv::gapi::imgproc::GFitLine2DVector32S)
+{
+    static void run(const std::vector<cv::Point2i>& in, const cv::DistanceTypes distType,
+                    const double param, const double reps, const double aeps, cv::Vec4f& out)
+    {
+        cv::fitLine(in, out, distType, param, reps, aeps);
+    }
+};
+
+GAPI_OCV_KERNEL(GCPUFitLine2DVector32F, cv::gapi::imgproc::GFitLine2DVector32F)
+{
+    static void run(const std::vector<cv::Point2f>& in, const cv::DistanceTypes distType,
+                    const double param, const double reps, const double aeps, cv::Vec4f& out)
+    {
+        cv::fitLine(in, out, distType, param, reps, aeps);
+    }
+};
+
+GAPI_OCV_KERNEL(GCPUFitLine2DVector64F, cv::gapi::imgproc::GFitLine2DVector64F)
+{
+    static void run(const std::vector<cv::Point2d>& in, const cv::DistanceTypes distType,
+                    const double param, const double reps, const double aeps, cv::Vec4f& out)
+    {
+        cv::fitLine(in, out, distType, param, reps, aeps);
+    }
+};
+
+GAPI_OCV_KERNEL(GCPUFitLine3DMat, cv::gapi::imgproc::GFitLine3DMat)
+{
+    static void run(const cv::Mat& in, const cv::DistanceTypes distType, const double param,
+                    const double reps, const double aeps, cv::Vec6f& out)
+    {
+        cv::fitLine(in, out, distType, param, reps, aeps);
+    }
+};
+
+GAPI_OCV_KERNEL(GCPUFitLine3DVector32S, cv::gapi::imgproc::GFitLine3DVector32S)
+{
+    static void run(const std::vector<cv::Point3i>& in, const cv::DistanceTypes distType,
+                    const double param, const double reps, const double aeps, cv::Vec6f& out)
+    {
+        cv::fitLine(in, out, distType, param, reps, aeps);
+    }
+};
+
+GAPI_OCV_KERNEL(GCPUFitLine3DVector32F, cv::gapi::imgproc::GFitLine3DVector32F)
+{
+    static void run(const std::vector<cv::Point3f>& in, const cv::DistanceTypes distType,
+                    const double param, const double reps, const double aeps, cv::Vec6f& out)
+    {
+        cv::fitLine(in, out, distType, param, reps, aeps);
+    }
+};
+
+GAPI_OCV_KERNEL(GCPUFitLine3DVector64F, cv::gapi::imgproc::GFitLine3DVector64F)
+{
+    static void run(const std::vector<cv::Point3d>& in, const cv::DistanceTypes distType,
+                    const double param, const double reps, const double aeps, cv::Vec6f& out)
+    {
+        cv::fitLine(in, out, distType, param, reps, aeps);
+    }
+};
+
 GAPI_OCV_KERNEL(GCPUBGR2RGB, cv::gapi::imgproc::GBGR2RGB)
 {
     static void run(const cv::Mat& in, cv::Mat &out)
@@ -569,6 +641,14 @@ cv::gapi::GKernelPackage cv::gapi::imgproc::cpu::kernels()
         , GCPUBoundingRectMat
         , GCPUBoundingRectVector32S
         , GCPUBoundingRectVector32F
+        , GCPUFitLine2DMat
+        , GCPUFitLine2DVector32S
+        , GCPUFitLine2DVector32F
+        , GCPUFitLine2DVector64F
+        , GCPUFitLine3DMat
+        , GCPUFitLine3DVector32S
+        , GCPUFitLine3DVector32F
+        , GCPUFitLine3DVector64F
         , GCPUYUV2RGB
         , GCPUBGR2I420
         , GCPURGB2I420
