@@ -774,6 +774,7 @@ void islandActorThread(std::vector<cv::gimpl::RcDesc> in_rcs,                // 
 void collectorThread(std::vector<Q*>   in_queues,
                      std::vector<int>  in_mapping,
                      const std::size_t out_size,
+                     const bool        handle_stop,
                      Q&                out_queue)
 {
     // These flags are static now: regardless if the sync or
@@ -788,9 +789,14 @@ void collectorThread(std::vector<Q*>   in_queues,
     while (true)
     {
         cv::GRunArgs this_result(out_size);
-        if (!qr.getResultsVector(in_queues, in_mapping, out_size, this_result))
+        const bool ok = qr.getResultsVector(in_queues, in_mapping, out_size, this_result);
+        if (!ok)
         {
-            out_queue.push(Cmd{Stop{}});
+            if (handle_stop)
+            {
+                out_queue.push(Cmd{Stop{}});
+            }
+            // Terminate the thread anyway
             return;
         }
         out_queue.push(Cmd{Result{std::move(this_result), flags}});
@@ -1268,12 +1274,22 @@ void cv::gimpl::GStreamingExecutor::setSource(GRunArgs &&ins)
     // If there are desynchronized parts in the graph, there may be
     // multiple theads polling every separate (desynchronized)
     // branch in the graph individually.
+    const bool has_main_path = m_sink_sync.end() !=
+        std::find(m_sink_sync.begin(), m_sink_sync.end(), -1);
     for (auto &&info : m_collector_map) {
         m_threads.emplace_back(collectorThread,
                                info.second.queues,
                                info.second.mapping,
                                m_sink_queues.size(),
+                               has_main_path ? info.first == -1 : true, // see below (*)
                                std::ref(m_out_queue));
+
+        // (*) - there may be a problem with desynchronized paths when those work
+        // faster than the main path. In this case, the desync paths get "Stop" message
+        // earlier and thus broadcast it down to pipeline gets stopped when there is
+        // some "main path" data to process. This new collectorThread's flag regulates it:
+        // - desync paths should never post Stop message if there is a main path.
+        // - if there is no main path, than any desync path can terminate the execution.
     }
     state = State::READY;
 }
