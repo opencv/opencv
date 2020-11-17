@@ -32,8 +32,6 @@ Adding --dynamic parameter will build {framework_name}.framework as App Store dy
 """
 
 from __future__ import print_function, unicode_literals
-from builtins import str
-from builtins import object
 import glob, os, os.path, shutil, string, sys, argparse, traceback, multiprocessing
 from subprocess import check_call, check_output, CalledProcessError
 from distutils.dir_util import copy_tree
