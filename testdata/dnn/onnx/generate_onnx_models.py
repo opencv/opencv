@@ -1023,3 +1023,20 @@ kernel = Variable(torch.randn(2, 2, 2))
 bias = Variable(torch.randn(4))
 model = Conv1dBias()
 save_data_and_model_multy_inputs("conv1d_variable_wb", model, x, kernel, bias)
+
+class GatherMultiOutput(nn.Module):
+    def __init__(self, in_dim = 2):
+        super(GatherMultiOutput, self).__init__()
+        self.in_dim = in_dim
+        self.lin_inp = nn.Linear(in_dim, 2, bias=False)
+    def forward(self, x):
+        x_projected = self.lin_inp(x).long()
+        x_gather = x_projected[:,0,:]
+        x_float1 = x_gather.float()
+        x_float2 = x_gather.float()
+        x_float3 = x_gather.float()
+        return x_float1+x_float2+x_float3
+
+x = Variable(torch.zeros([1, 2, 2]))
+model = GatherMultiOutput()
+save_data_and_model("gather_multi_output", x, model)
