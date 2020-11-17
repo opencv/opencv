@@ -513,6 +513,19 @@ Mat getMatFromTensor(opencv_onnx::TensorProto& tensor_proto)
         CV_Assert(!field.empty());
         Mat(sizes, CV_64FC1, (void*)field.data()).convertTo(blob, CV_32FC1);
     }
+    else if (datatype == opencv_onnx::TensorProto_DataType_INT32)
+    {
+        if (!tensor_proto.int32_data().empty())
+        {
+            const ::google::protobuf::RepeatedField<int32_t> field = tensor_proto.int32_data();
+            Mat(sizes, CV_32SC1, (void*)field.data()).copyTo(blob);
+        }
+        else
+        {
+            char* val = const_cast<char*>(tensor_proto.raw_data().c_str());
+            Mat(sizes, CV_32SC1, val).copyTo(blob);
+        }
+    }
     else if (datatype == opencv_onnx::TensorProto_DataType_INT64)
     {
         blob.create(sizes, CV_32SC1);
