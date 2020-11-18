@@ -2153,10 +2153,10 @@ CV_EXPORTS void convertPointsHomogeneous( InputArray src, OutputArray dst );
 floating-point (single or double precision).
 @param points2 Array of the second image points of the same size and format as points1 .
 @param method Method for computing a fundamental matrix.
--   **CV_FM_7POINT** for a 7-point algorithm. \f$N = 7\f$
--   **CV_FM_8POINT** for an 8-point algorithm. \f$N \ge 8\f$
--   **CV_FM_RANSAC** for the RANSAC algorithm. \f$N \ge 8\f$
--   **CV_FM_LMEDS** for the LMedS algorithm. \f$N \ge 8\f$
+-   **FM_7POINT** for a 7-point algorithm. \f$N = 7\f$
+-   **FM_8POINT** for an 8-point algorithm. \f$N \ge 8\f$
+-   **FM_RANSAC** for the RANSAC algorithm. \f$N \ge 8\f$
+-   **FM_LMEDS** for the LMedS algorithm. \f$N \ge 8\f$
 @param ransacReprojThreshold Parameter used only for RANSAC. It is the maximum distance from a point to an epipolar
 line in pixels, beyond which the point is considered an outlier and is not used for computing the
 final fundamental matrix. It can be set to something like 1-3, depending on the accuracy of the
