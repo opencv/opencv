@@ -5,7 +5,7 @@ build_xcframework.py creates an xcframework supporting a variety of Apple platfo
 You'll need the following to run these steps:
 - MacOS 10.15 or later
 - Python 3.6 or later
-- CMake 10.19 or later (make sure the `cmake` command is available on your PATH)
+- CMake 3.18.5/3.19.0 or later (make sure the `cmake` command is available on your PATH)
 - Xcode 12.2 or later (and its command line tools)
 
 You can then run build_xcframework.py, as below:
