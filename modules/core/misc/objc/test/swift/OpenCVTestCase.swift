@@ -7,8 +7,23 @@
 import XCTest
 import OpenCV
 
+// TODO: these typealiases can be removed once xcframework is recompiled
+typealias Rect = Rect2i
+typealias Point = Point2i
+typealias Size = Size2i
+
 enum OpenCVTestError: Error {
     case unsupportedOperationError(String)
+}
+
+extension Bundle {
+    static var testBundle: Bundle {
+        #if SWIFT_PACKAGE
+        return Bundle.module
+        #else
+        return Bundle(for: OpenCVTestCase.self)
+        #endif
+    }
 }
 
 open class OpenCVTestCase: XCTestCase {
@@ -67,11 +82,11 @@ open class OpenCVTestCase: XCTestCase {
     let rgba128 = Mat(rows: matSize, cols: matSize, type: CvType.CV_8UC4, scalar: Scalar.all(128))
 
     let rgbLena: Mat = {
-        return Imgcodecs.imread(filename: Bundle(for: OpenCVTestCase.self).path(forResource:"lena", ofType:"png", inDirectory:"resources")!)
+        return Imgcodecs.imread(filename: Bundle.testBundle.path(forResource:"lena", ofType:"png")!)
     }()
 
     let grayChess: Mat = {
-        return Imgcodecs.imread(filename: Bundle(for: OpenCVTestCase.self).path(forResource:"chessboard", ofType:"jpg", inDirectory:"resources")!, flags: ImreadModes.IMREAD_GRAYSCALE.rawValue)
+        return Imgcodecs.imread(filename: Bundle.testBundle.path(forResource:"chessboard", ofType:"jpg")!, flags: ImreadModes.IMREAD_GRAYSCALE.rawValue)
     }()
 
     let gray255_32f_3d = Mat(sizes: [matSize, matSize, matSize] as [NSNumber], type: CvType.CV_32F, scalar: Scalar(255.0))

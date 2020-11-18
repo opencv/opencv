@@ -1,5 +1,4 @@
 // swift-tools-version:5.3
-// The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
 
@@ -18,7 +17,13 @@ let package = Package(
         .target(
             name: "OpenCV",
             dependencies: ["opencv2"],
-            path: "modules/core/misc/objc/swift-package-manager/Sources"),
+            path: "modules/core/misc/objc/swift-package-manager/Sources",
+            linkerSettings: [
+                .linkedLibrary("c++"),
+                .linkedFramework("Accelerate"),
+                .linkedFramework("OpenCL", .when(platforms: [.macOS]))
+            ]
+        ),
         // Recompute checksum via `swift package --package-path /path/to/opencv compute-checksum /path/to/opencv2.xcframework.zip`
 //        .binaryTarget(
 //            name: "opencv2",
@@ -33,7 +38,13 @@ let package = Package(
         .testTarget(
             name: "OpenCVTests",
             dependencies: ["OpenCV"],
-            path: "modules/core/misc/objc/swift-package-manager/Tests"
-            ),
+            path: "modules/core/misc/objc/test/swift",
+            resources: [.process("Resources")]
+        ),
+        .testTarget(
+            name: "OpenCVObjCTests",
+            dependencies: ["OpenCV"],
+            path: "modules/core/misc/objc/test/objc"
+        ),
     ]
 )

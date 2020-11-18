@@ -5,7 +5,7 @@
 //
 
 #import <XCTest/XCTest.h>
-#import <OpenCV/OpenCV.h>
+#import <opencv2/opencv2.h>
 
 #define CV_8U 0
 #define CV_16S 3
