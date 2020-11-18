@@ -125,6 +125,8 @@ void CvHaarEvaluator::FeatureHaar::generateRandomFeature(Size patchSize)
     Size sizeFactor;
     int area;
 
+    CV_Assert(!patchSize.empty());
+
     //Size minSize = Size( 3, 3 );
     int minArea = 9;
 
