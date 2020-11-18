@@ -95,6 +95,7 @@ void TrackerStateEstimatorMILBoosting::prepareData(const ConfidenceMap& confiden
     for (size_t i = 0; i < confidenceMap.size(); i++)
     {
         Ptr<TrackerMILTargetState> currentTargetState = confidenceMap.at(i).first.staticCast<TrackerMILTargetState>();
+        CV_DbgAssert(currentTargetState);
         if (currentTargetState->isTargetFg())
             posCounter++;
         else

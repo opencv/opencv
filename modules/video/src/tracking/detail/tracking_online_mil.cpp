@@ -18,7 +18,7 @@ public:
     T _val;
     int _ind;
     SortableElementRev()
-        : _ind(0)
+        : _val(), _ind(0)
     {
     }
     SortableElementRev(T val, int ind)
@@ -69,6 +69,8 @@ ClfMilBoost::Params::Params()
 }
 
 ClfMilBoost::ClfMilBoost()
+    : _numsamples(0)
+    , _counter(0)
 {
     _myParams = ClfMilBoost::Params();
     _numsamples = 0;
@@ -224,6 +226,12 @@ std::vector<float> ClfMilBoost::classify(const Mat& x, bool logR)
 //implementations for weak classifier
 
 ClfOnlineStump::ClfOnlineStump()
+    : _mu0(0), _mu1(0), _sig0(0), _sig1(0)
+    , _q(0)
+    , _s(0)
+    , _log_n1(0), _log_n0(0)
+    , _e1(0), _e0(0)
+    , _lRate(0)
 {
     _trained = false;
     _ind = -1;
@@ -231,6 +239,12 @@ ClfOnlineStump::ClfOnlineStump()
 }
 
 ClfOnlineStump::ClfOnlineStump(int ind)
+    : _mu0(0), _mu1(0), _sig0(0), _sig1(0)
+    , _q(0)
+    , _s(0)
+    , _log_n1(0), _log_n0(0)
+    , _e1(0), _e0(0)
+    , _lRate(0)
 {
     _trained = false;
     _ind = ind;
