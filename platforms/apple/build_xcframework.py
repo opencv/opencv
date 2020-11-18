@@ -78,7 +78,7 @@ if __name__ == "__main__":
         # Build .frameworks for each platform
         build_folders = []
         for platform in platforms:
-            folder = f"./xcframework-build/{platform}"
+            folder = f"./{args.out}/{platform}"
             pathlib.Path(folder).mkdir(parents=True, exist_ok=True)
             build_folders.append(folder)
             framework_build_command = get_framework_build_command_for_platform(platform, folder, args.framework_name, args.only_64_bit, args.passthrough_args)
