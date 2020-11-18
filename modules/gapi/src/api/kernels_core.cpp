@@ -388,6 +388,40 @@ GMat warpAffine(const GMat& src, const Mat& M, const Size& dsize, int flags,
     return core::GWarpAffine::on(src, M, dsize, flags, borderMode, borderValue);
 }
 
+std::tuple<GOpaque<double>,GMat,GMat> kmeans(const GMat& data, const int K,
+                                             const TermCriteria& criteria, const int attempts,
+                                             const KmeansFlags flags, const GMat& bestLabels)
+{
+    return core::GKMeansND::on(data, K, criteria, attempts, flags, bestLabels);
+}
+
+std::tuple<GOpaque<double>,GMat,GMat> kmeans(const GMat& data, const int K,
+                                             const TermCriteria& criteria, const int attempts,
+                                             const KmeansFlags flags)
+{
+    return core::GKMeansNDNoInit::on(data, K, criteria, attempts, flags);
+}
+
+std::tuple<GOpaque<double>,GArray<int>,GArray<Point2f>> kmeans(const GArray<Point2f>& data,
+                                                               const int              K,
+                                                               const TermCriteria&    criteria,
+                                                               const int              attempts,
+                                                               const KmeansFlags      flags,
+                                                               const GArray<int>&     bestLabels)
+{
+    return core::GKMeans2D::on(data, K, criteria, attempts, flags, bestLabels);
+}
+
+std::tuple<GOpaque<double>,GArray<int>,GArray<Point3f>> kmeans(const GArray<Point3f>& data,
+                                                               const int              K,
+                                                               const TermCriteria&    criteria,
+                                                               const int              attempts,
+                                                               const KmeansFlags      flags,
+                                                               const GArray<int>&     bestLabels)
+{
+    return core::GKMeans3D::on(data, K, criteria, attempts, flags, bestLabels);
+}
+
 GOpaque<Size> streaming::size(const GMat& src)
 {
     return streaming::GSize::on(src);

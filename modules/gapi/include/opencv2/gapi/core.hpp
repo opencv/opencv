@@ -26,6 +26,33 @@
     @defgroup gapi_transform Graph API: Image and channel composition functions
 @}
  */
+
+namespace {
+// Checks if the passed mat is a set of n-dimentional points of the given depth
+// Returns (quantity, elemSize)
+std::tuple<int, int> checkVector(const int chan, const cv::Size &size, const int depth,
+                                 const int ddepth)
+{
+    GAPI_Assert(ddepth == depth);
+    if (size.width == 1)
+    {
+        return std::make_tuple(size.height, chan);
+    }
+    else if (size.height == 1)
+    {
+        return std::make_tuple(size.width,  chan);
+    }
+    else if (chan == 1)
+    {
+        return std::make_tuple(size.height, size.width);
+    }
+    else
+    {
+        GAPI_Assert(false && "Input Mat can't be described as vector of points");
+    }
+}
+} //anonymous namespace
+
 namespace cv { namespace gapi {
 namespace core {
     using GMat2 = std::tuple<GMat,GMat>;
@@ -506,6 +533,83 @@ namespace core {
             GAPI_Assert(border_mode != cv::BORDER_TRANSPARENT &&
                         "cv::BORDER_TRANSPARENT mode is not supported in cv::gapi::warpAffine");
             return in.withType(in.depth, in.chan).withSize(dsize);
+        }
+    };
+
+    G_TYPED_KERNEL(
+        GKMeansND,
+        <std::tuple<GOpaque<double>,GMat,GMat>(GMat,int,TermCriteria,int,KmeansFlags,GMat)>,
+        "org.opencv.core.kmeansND") {
+
+        static std::tuple<GOpaqueDesc,GMatDesc,GMatDesc>
+        outMeta(const GMatDesc& in, int K, const TermCriteria&, int, KmeansFlags flags,
+                const GMatDesc& labels) {
+            int elemSize = 0, quantity = 0;
+            std::tie(quantity, elemSize) = checkVector(in.chan, in.size, in.depth, CV_32F);
+            GMatDesc out_labels, centers;
+            if (flags & KMEANS_USE_INITIAL_LABELS)
+            {
+                GAPI_Assert(labels.depth == CV_32S && labels.chan == 1 &&
+                            labels.size.area() == quantity * 1 &&
+                            (labels.size.height == 1 || labels.size.width  == 1));
+                out_labels = labels;
+            }
+            else
+            {
+                out_labels = GMatDesc(CV_32S, 1, Size{1, quantity});
+            }
+
+            if (in.size.width == quantity)
+            {
+                centers = in.withSize(Size{K, in.size.height});
+            }
+            else
+            {
+                centers = in.withSize(Size{in.size.width, K});
+            }
+            return std::make_tuple(empty_gopaque_desc(), out_labels, centers);
+        }
+    };
+
+    G_TYPED_KERNEL(
+        GKMeansNDNoInit,
+        <std::tuple<GOpaque<double>,GMat,GMat>(GMat,int,TermCriteria,int,KmeansFlags)>,
+        "org.opencv.core.kmeansNDNoInit") {
+
+        static std::tuple<GOpaqueDesc,GMatDesc,GMatDesc>
+        outMeta(const GMatDesc& in, int K, const TermCriteria&, int, KmeansFlags flags) {
+            GAPI_Assert( !(flags & KMEANS_USE_INITIAL_LABELS) );
+            int elemSize = 0, quantity = 0;
+            std::tie(quantity, elemSize) = checkVector(in.chan, in.size, in.depth, CV_32F);
+
+            GMatDesc out_labels(CV_32S, 1, Size{1, quantity}), centers;
+            if (in.size.width == quantity)
+            {
+                centers = in.withSize(Size{K, in.size.height});
+            }
+            else
+            {
+                centers = in.withSize(Size{in.size.width, K});
+            }
+            return std::make_tuple(empty_gopaque_desc(), out_labels, centers);
+        }
+    };
+
+    G_TYPED_KERNEL(GKMeans2D, <std::tuple<GOpaque<double>,GArray<int>,GArray<Point2f>>
+                               (GArray<Point2f>,int,TermCriteria,int,KmeansFlags,GArray<int>)>,
+                   "org.opencv.core.kmeans2D") {
+        static std::tuple<GOpaqueDesc,GArrayDesc,GArrayDesc>
+        outMeta(const GArrayDesc&,int,const TermCriteria&,int,KmeansFlags,const GArrayDesc&) {
+            return std::make_tuple(empty_gopaque_desc(), empty_array_desc(), empty_array_desc());
+        }
+    };
+
+    G_TYPED_KERNEL(GKMeans3D, <std::tuple<GOpaque<double>,GArray<int>,GArray<Point3f>>
+                               (GArray<Point3f>,int,TermCriteria,int,KmeansFlags,GArray<int>)>,
+                   "org.opencv.core.kmeans3D") {
+        static std::tuple<GOpaqueDesc,GArrayDesc,GArrayDesc>
+        outMeta(const GArrayDesc&,int,const TermCriteria&,int,KmeansFlags,const GArrayDesc&) {
+            return std::make_tuple(empty_gopaque_desc(), empty_array_desc(), empty_array_desc());
         }
     };
 } // namespace core
@@ -1756,6 +1860,71 @@ borderMode=#BORDER_TRANSPARENT isn't supported
 GAPI_EXPORTS GMat warpAffine(const GMat& src, const Mat& M, const Size& dsize, int flags = cv::INTER_LINEAR,
                              int borderMode = cv::BORDER_CONSTANT, const Scalar& borderValue = Scalar());
 //! @} gapi_transform
+
+/** @brief Finds centers of clusters and groups input samples around the clusters.
+
+The function kmeans implements a k-means algorithm that finds the centers of K clusters
+and groups the input samples around the clusters. As an output, \f$\texttt{bestLabels}_i\f$
+contains a 0-based cluster index for the \f$i^{th}\f$ sample.
+
+@note Function textual ID is "org.opencv.core.kmeansND"
+
+@param data Data for clustering. An array of N-Dimensional points with float coordinates is needed.
+Function can take GArray<Point2f>, GArray<Point2f> for 2D and 3D cases or GMat for any
+dimentionality
+
+@note In case of an N-dimentional points' set given, input Mat should be 2-dimensional, have
+a single row or column if there are N channels, or have N columns if there is a single channel.
+Mat should have @ref CV_32F depth
+
+@param K Number of clusters to split the set by.
+@param bestLabels Optional input integer array that can store the supposed initial cluster indices
+for every sample. Used when ( flags = #KMEANS_USE_INITIAL_LABELS ) flag is set.
+@param criteria The algorithm termination criteria, that is, the maximum number of iterations
+and/or the desired accuracy. The accuracy is specified as criteria.epsilon. As soon as each of
+the cluster centers moves by less than criteria.epsilon on some iteration, the algorithm stops.
+@param attempts Flag to specify the number of times the algorithm is executed using different
+initial labellings. The algorithm returns the labels that yield the best compactness (see the first
+function return value).
+@param flags Flag that can take values of cv::KmeansFlags
+
+@return Compactness measure that is computed as
+\f[\sum _i  \| \texttt{samples} _i -  \texttt{centers} _{ \texttt{labels} _i} \| ^2\f]
+after every attempt. The best (minimum) value is chosen and the corresponding labels and the
+compactness value are returned by the function.
+@return Integer array that stores the cluster indices for every sample.
+@return Array of the cluster centers.
+
+@note Basically, you can use only the core of the function: set the number of attempts to 1,
+initialize labels each time using a custom algorithm, pass them with the
+( flags = #KMEANS_USE_INITIAL_LABELS ) flag, and then choose the best (most-compact) clustering.
+*/
+GAPI_EXPORTS std::tuple<GOpaque<double>,GMat,GMat>
+kmeans(const GMat& data, const int K, const TermCriteria& criteria,
+       const int attempts, const KmeansFlags flags, const GMat& bestLabels);
+
+/** @overload
+@note Function textual ID is "org.opencv.core.kmeansNDNoInit"
+
+@note #KMEANS_USE_INITIAL_LABELS flag must not be set while using this overload.
+ */
+GAPI_EXPORTS std::tuple<GOpaque<double>,GMat,GMat>
+kmeans(const GMat& data, const int K, const TermCriteria& criteria, const int attempts,
+       const KmeansFlags flags);
+
+/** @overload
+@note Function textual ID is "org.opencv.core.kmeans2D"
+ */
+GAPI_EXPORTS std::tuple<GOpaque<double>,GArray<int>,GArray<Point2f>>
+kmeans(const GArray<Point2f>& data, const int K, const TermCriteria& criteria, const int attempts,
+       const KmeansFlags flags, const GArray<int>& bestLabels = GArray<int>(std::vector<int>{}));
+
+/** @overload
+@note Function textual ID is "org.opencv.core.kmeans3D"
+ */
+GAPI_EXPORTS std::tuple<GOpaque<double>,GArray<int>,GArray<Point3f>>
+kmeans(const GArray<Point3f>& data, const int K, const TermCriteria& criteria, const int attempts,
+       const KmeansFlags flags, const GArray<int>& bestLabels = GArray<int>(std::vector<int>{}));
 
 namespace streaming {
 /** @brief Gets dimensions from Mat.
