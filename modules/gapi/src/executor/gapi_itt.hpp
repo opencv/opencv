@@ -28,8 +28,7 @@ namespace util {
     // D will be called automatically with p as argument when ScopeGuard goes out of scope.
     // call release() on the ScopeGuard object to revoke guard action
     template<typename T, typename D>
-    auto make_ptr_guard(T* p, D&& d) -> std::unique_ptr<T, util::remove_reference_t<D>>
-    {
+    auto make_ptr_guard(T* p, D&& d) -> std::unique_ptr<T, util::remove_reference_t<D>> {
         return {p, std::forward<D>(d)};
     }
 }  // namespace util
@@ -40,9 +39,9 @@ namespace gimpl { namespace parallel {
     extern const __itt_domain* gapi_itt_domain;
 
     namespace {
-        auto make_itt_guard = [](__itt_string_handle* h){
+        auto make_itt_guard = [](__itt_string_handle* h) {
            __itt_task_begin(gapi_itt_domain, __itt_null, __itt_null, (h));
-           return util::make_ptr_guard(reinterpret_cast<int*>(1), [](int* ){ __itt_task_end(gapi_itt_domain); });
+           return util::make_ptr_guard(reinterpret_cast<int*>(1), [](int* ) { __itt_task_end(gapi_itt_domain); });
         };
     }  // namespace
 

@@ -14,11 +14,9 @@
 #include <thread>
 
 namespace {
-    tbb::task_arena create_task_arena(int max_concurrency  = tbb::task_arena::automatic) // set to 1 for single thread
-    {
+    tbb::task_arena create_task_arena(int max_concurrency  = tbb::task_arena::automatic /* set to 1 for single thread */) {
         unsigned int reserved_for_master_threads = 1;
-        if (max_concurrency == 1)
-        {
+        if (max_concurrency == 1) {
             // Leave no room for TBB worker threads, by reserving all to masters.
             // TBB runtime guarantees that no worker threads will join the arena
             // if max_concurrency is equal to reserved_for_master_threads
@@ -36,14 +34,14 @@ namespace {
         return tbb::task_arena{max_concurrency, reserved_for_master_threads};
     }
 }
-namespace opencv_test
-{
-TEST(TBBExecutor, Basic)
-{
+
+namespace opencv_test {
+
+TEST(TBBExecutor, Basic) {
     using namespace cv::gimpl::parallel;
     bool executed = false;
     prio_items_queue_t q;
-    tile_node n([&](){
+    tile_node n([&]() {
         executed = true;
     });
     q.push(&n);
@@ -51,15 +49,14 @@ TEST(TBBExecutor, Basic)
     EXPECT_EQ(true, executed);
 }
 
-TEST(TBBExecutor, SerialExecution)
-{
+TEST(TBBExecutor, SerialExecution) {
     using namespace cv::gimpl::parallel;
     const int n = 10;
     prio_items_queue_t q;
     std::vector<tile_node> nodes; nodes.reserve(n+1);
     std::vector<std::thread::id> thread_id(n);
     for (int i=0; i <n; i++) {
-        nodes.push_back(tile_node([&, i](){
+        nodes.push_back(tile_node([&, i]() {
                 thread_id[i] = std::this_thread::get_id();
                 std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
@@ -69,7 +66,7 @@ TEST(TBBExecutor, SerialExecution)
 
     auto serial_arena = create_task_arena(1);
     execute(q, serial_arena);
-    auto print_thread_ids = [&]{
+    auto print_thread_ids = [&] {
         std::stringstream str;
         for (auto & i : thread_id) { str << i <<" ";}
         return str.str();
@@ -78,8 +75,8 @@ TEST(TBBExecutor, SerialExecution)
     EXPECT_EQ(thread_id.size(), static_cast<size_t>(std::count(thread_id.begin(), thread_id.end(), thread_id[0])))
         << print_thread_ids();
 }
-TEST(TBBExecutor, AsyncBasic)
-{
+
+TEST(TBBExecutor, AsyncBasic) {
     using namespace cv::gimpl::parallel;
 
     std::atomic<bool> callback_ready {false};
@@ -89,7 +86,7 @@ TEST(TBBExecutor, AsyncBasic)
     std::atomic<bool> master_is_waiting {true};
     std::atomic<bool> master_was_blocked_until_callback_called {false};
 
-    auto async_thread = std::thread([&]{
+    auto async_thread = std::thread([&] {
             bool slept = false;
             while (!callback_ready) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -103,7 +100,7 @@ TEST(TBBExecutor, AsyncBasic)
             master_was_blocked_until_callback_called = (master_is_waiting == true);
     });
 
-    auto async_task_body = [&](std::function<void()> && cb, size_t /*total_order_index*/){
+    auto async_task_body = [&](std::function<void()> && cb, size_t /*total_order_index*/) {
         callback = std::move(cb);
         callback_ready = true;
     };
@@ -120,8 +117,7 @@ TEST(TBBExecutor, AsyncBasic)
     EXPECT_EQ(true, master_was_blocked_until_callback_called);
 }
 
-TEST(TBBExecutor, Dependencies)
-{
+TEST(TBBExecutor, Dependencies) {
     using namespace cv::gimpl::parallel;
     const int n = 10;
     bool serial = true;
@@ -137,7 +133,7 @@ TEST(TBBExecutor, Dependencies)
         node.dependency_count.fetch_add(1);
     };
     for (int i=0; i <n; i++) {
-        nodes.push_back(tile_node([&, i](){
+        nodes.push_back(tile_node([&, i]() {
                 tiles_exec_order[i] = counter++;
                 if (!serial) {
                     //sleep gives a better chance for other threads to take part in the execution
@@ -154,7 +150,7 @@ TEST(TBBExecutor, Dependencies)
 
     auto arena = serial ? create_task_arena(1) : create_task_arena();
     execute(q, arena);
-    auto print_execution_order = [&]{
+    auto print_execution_order = [&] {
         std::stringstream str;
         for (auto & i : tiles_exec_order) { str << i <<" ";}
         return str.str();
@@ -163,7 +159,7 @@ TEST(TBBExecutor, Dependencies)
         << "Not all " << n << " task executed ?\n"
         <<" execution order : " << print_execution_order();
 
-    for (size_t i=0; i <nodes.size(); i++){
+    for (size_t i=0; i <nodes.size(); i++) {
         auto node_exec_order = tiles_exec_order[i];
         for (auto* dependee : nodes[i].dependants) {
             auto index = std::distance(&nodes.front(), dependee);

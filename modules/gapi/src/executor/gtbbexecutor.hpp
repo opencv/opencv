@@ -33,16 +33,16 @@ struct atomic_copyable_wrapper {
     atomic_copyable_wrapper(count_t val) : value(val) {}
     atomic_copyable_wrapper(atomic_copyable_wrapper const& lhs) : value (lhs.value.load(std::memory_order_relaxed)) {}
 
-    atomic_copyable_wrapper& operator=(count_t val){
+    atomic_copyable_wrapper& operator=(count_t val) {
         value.store(val, std::memory_order_relaxed);
         return *this;
     }
 
-    count_t fetch_sub(count_t val){
+    count_t fetch_sub(count_t val) {
         return value.fetch_sub(val);
     }
 
-    count_t fetch_add(count_t val){
+    count_t fetch_add(count_t val) {
         return value.fetch_add(val);
     }
 };
