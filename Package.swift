@@ -31,6 +31,7 @@ let package = Package(
 //            checksum: "The checksum of the ZIP archive that contains the XCFramework."
 //        ),
         // If you are compiling OpenCV locally, you can uncomment the below block to use a custom copy
+        // e.g. `$ python platforms/apple/build_xcframework.py platforms/apple/xcframework-build/`
         .binaryTarget(
             name: "opencv2",
             path: "platforms/apple/xcframework-build/opencv2.xcframework"
