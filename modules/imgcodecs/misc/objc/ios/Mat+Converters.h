@@ -20,6 +20,9 @@ NS_ASSUME_NONNULL_BEGIN
 
 CV_EXPORTS @interface Mat (Converters)
 
+-(CGImageRef)toCGImage;
+-(instancetype)initWithCGImage:(CGImageRef)image;
+-(instancetype)initWithCGImage:(CGImageRef)image alphaExist:(BOOL)alphaExist;
 -(UIImage*)toUIImage;
 -(instancetype)initWithUIImage:(UIImage*)image;
 -(instancetype)initWithUIImage:(UIImage*)image alphaExist:(BOOL)alphaExist;
