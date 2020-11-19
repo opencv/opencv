@@ -33,7 +33,7 @@ protected:
 
     Quatd qNull{0, 0, 0, 0};
     Quatd qIdentity{1, 0, 0, 0};
-    AssumeType assumeUnit = ASSUME_UNIT;
+    QuatAssumeType assumeUnit = QUAT_ASSUME_UNIT;
 
 };
 

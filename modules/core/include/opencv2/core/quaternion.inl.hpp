@@ -329,13 +329,13 @@ Quat<T> Quat<T>::exp() const
 }
 
 template <typename T>
-Quat<T> log(const Quat<T> &q, AssumeType assumeUnit)
+Quat<T> log(const Quat<T> &q, QuatAssumeType assumeUnit)
 {
     return q.log(assumeUnit);
 }
 
 template <typename T>
-Quat<T> Quat<T>::log(AssumeType assumeUnit) const
+Quat<T> Quat<T>::log(QuatAssumeType assumeUnit) const
 {
     Vec<T, 3> v{x, y, z};
     T vNorm = std::sqrt(v.dot(v));
@@ -354,14 +354,14 @@ Quat<T> Quat<T>::log(AssumeType assumeUnit) const
 }
 
 template <typename T, typename _T>
-inline Quat<T> power(const Quat<T> &q1, _T alpha, AssumeType assumeUnit)
+inline Quat<T> power(const Quat<T> &q1, _T alpha, QuatAssumeType assumeUnit)
 {
     return q1.power(alpha, assumeUnit);
 }
 
 template <typename T>
 template <typename _T>
-inline Quat<T> Quat<T>::power(_T alpha, AssumeType assumeUnit) const
+inline Quat<T> Quat<T>::power(_T alpha, QuatAssumeType assumeUnit) const
 {
     if (x * x + y * y + z * z > CV_QUAT_EPS)
     {
@@ -381,27 +381,27 @@ inline Quat<T> Quat<T>::power(_T alpha, AssumeType assumeUnit) const
 
 
 template <typename T>
-inline Quat<T> sqrt(const Quat<T> &q, AssumeType assumeUnit)
+inline Quat<T> sqrt(const Quat<T> &q, QuatAssumeType assumeUnit)
 {
     return q.sqrt(assumeUnit);
 }
 
 template <typename T>
-inline Quat<T> Quat<T>::sqrt(AssumeType assumeUnit) const
+inline Quat<T> Quat<T>::sqrt(QuatAssumeType assumeUnit) const
 {
     return power(0.5, assumeUnit);
 }
 
 
 template <typename T>
-inline Quat<T> power(const Quat<T> &p, const Quat<T> &q, AssumeType assumeUnit)
+inline Quat<T> power(const Quat<T> &p, const Quat<T> &q, QuatAssumeType assumeUnit)
 {
     return p.power(q, assumeUnit);
 }
 
 
 template <typename T>
-inline Quat<T> Quat<T>::power(const Quat<T> &q, AssumeType assumeUnit) const
+inline Quat<T> Quat<T>::power(const Quat<T> &q, QuatAssumeType assumeUnit) const
 {
     return cv::exp(q * log(assumeUnit));
 }
@@ -438,14 +438,14 @@ inline Quat<T> Quat<T>::normalize() const
 }
 
 template <typename T>
-inline Quat<T> inv(const Quat<T> &q, AssumeType assumeUnit)
+inline Quat<T> inv(const Quat<T> &q, QuatAssumeType assumeUnit)
 {
     return q.inv(assumeUnit);
 }
 
 
 template <typename T>
-inline Quat<T> Quat<T>::inv(AssumeType assumeUnit) const
+inline Quat<T> Quat<T>::inv(QuatAssumeType assumeUnit) const
 {
     if (assumeUnit)
     {
@@ -633,7 +633,7 @@ inline Quat<T> Quat<T>::atan() const
 }
 
 template <typename T>
-inline T Quat<T>::getAngle(AssumeType assumeUnit) const
+inline T Quat<T>::getAngle(QuatAssumeType assumeUnit) const
 {
     if (assumeUnit)
     {
@@ -647,7 +647,7 @@ inline T Quat<T>::getAngle(AssumeType assumeUnit) const
 }
 
 template <typename T>
-inline Vec<T, 3> Quat<T>::getAxis(AssumeType assumeUnit) const
+inline Vec<T, 3> Quat<T>::getAxis(QuatAssumeType assumeUnit) const
 {
     T angle = getAngle(assumeUnit);
     const T sin_v = std::sin(angle * 0.5);
@@ -659,7 +659,7 @@ inline Vec<T, 3> Quat<T>::getAxis(AssumeType assumeUnit) const
 }
 
 template <typename T>
-Matx<T, 4, 4> Quat<T>::toRotMat4x4(AssumeType assumeUnit) const
+Matx<T, 4, 4> Quat<T>::toRotMat4x4(QuatAssumeType assumeUnit) const
 {
     T a = w, b = x, c = y, d = z;
     if (!assumeUnit)
@@ -680,7 +680,7 @@ Matx<T, 4, 4> Quat<T>::toRotMat4x4(AssumeType assumeUnit) const
 }
 
 template <typename T>
-Matx<T, 3, 3> Quat<T>::toRotMat3x3(AssumeType assumeUnit) const
+Matx<T, 3, 3> Quat<T>::toRotMat3x3(QuatAssumeType assumeUnit) const
 {
     T a = w, b = x, c = y, d = z;
     if (!assumeUnit)
@@ -700,7 +700,7 @@ Matx<T, 3, 3> Quat<T>::toRotMat3x3(AssumeType assumeUnit) const
 }
 
 template <typename T>
-Vec<T, 3> Quat<T>::toRotVec(AssumeType assumeUnit) const
+Vec<T, 3> Quat<T>::toRotVec(QuatAssumeType assumeUnit) const
 {
     T angle = getAngle(assumeUnit);
     Vec<T, 3> axis = getAxis(assumeUnit);
@@ -720,7 +720,7 @@ Quat<T> Quat<T>::lerp(const Quat<T> &q0, const Quat<T> &q1, const T t)
 }
 
 template <typename T>
-Quat<T> Quat<T>::slerp(const Quat<T> &q0, const Quat<T> &q1, const T t, AssumeType assumeUnit, bool directChange)
+Quat<T> Quat<T>::slerp(const Quat<T> &q0, const Quat<T> &q1, const T t, QuatAssumeType assumeUnit, bool directChange)
 {
     Quatd v0(q0);
     Quatd v1(q1);
@@ -733,7 +733,7 @@ Quat<T> Quat<T>::slerp(const Quat<T> &q0, const Quat<T> &q1, const T t, AssumeTy
     constexpr T DOT_THRESHOLD = 0.995;
     if (cosTheta > DOT_THRESHOLD)
     {
-        return nlerp(v0, v1, t, ASSUME_UNIT);
+        return nlerp(v0, v1, t, QUAT_ASSUME_UNIT);
     }
 
     if (directChange && cosTheta < 0)
@@ -748,7 +748,7 @@ Quat<T> Quat<T>::slerp(const Quat<T> &q0, const Quat<T> &q1, const T t, AssumeTy
 
 
 template <typename T>
-inline Quat<T> Quat<T>::nlerp(const Quat<T> &q0, const Quat<T> &q1, const T t, AssumeType assumeUnit)
+inline Quat<T> Quat<T>::nlerp(const Quat<T> &q0, const Quat<T> &q1, const T t, QuatAssumeType assumeUnit)
 {
     Quat<T> v0(q0), v1(q1);
     if (v1.dot(v0) < 0)
@@ -786,7 +786,7 @@ inline void Quat<T>::assertNormal(T eps) const
 template <typename T>
 inline Quat<T> Quat<T>::squad(const Quat<T> &q0, const Quat<T> &q1,
                             const Quat<T> &q2, const Quat<T> &q3,
-                            const T t, AssumeType assumeUnit,
+                            const T t, QuatAssumeType assumeUnit,
                             bool directChange)
 {
     Quat<T> v0(q0), v1(q1), v2(q2), v3(q3);
@@ -805,7 +805,7 @@ inline Quat<T> Quat<T>::squad(const Quat<T> &q0, const Quat<T> &q1,
 
 template <typename T>
 Quat<T> Quat<T>::interPoint(const Quat<T> &q0, const Quat<T> &q1,
-                            const Quat<T> &q2, AssumeType assumeUnit)
+                            const Quat<T> &q2, QuatAssumeType assumeUnit)
 {
     Quat<T> v0(q0), v1(q1), v2(q2);
     if (!assumeUnit)
@@ -818,7 +818,7 @@ Quat<T> Quat<T>::interPoint(const Quat<T> &q0, const Quat<T> &q1,
 }
 
 template <typename T>
-Quat<T> Quat<T>::spline(const Quat<T> &q0, const Quat<T> &q1, const Quat<T> &q2, const Quat<T> &q3, const T t, AssumeType assumeUnit)
+Quat<T> Quat<T>::spline(const Quat<T> &q0, const Quat<T> &q1, const Quat<T> &q2, const Quat<T> &q3, const T t, QuatAssumeType assumeUnit)
 {
     Quatd v0(q0), v1(q1), v2(q2), v3(q3);
     if (!assumeUnit)
@@ -838,13 +838,12 @@ Quat<T> Quat<T>::spline(const Quat<T> &q0, const Quat<T> &q1, const Quat<T> &q2,
             vec[i + 1] = -vec[i + 1];
         }
     }
-    Quat<T> s1 = interPoint(vec[0], vec[1], vec[2], ASSUME_UNIT);
-    Quat<T> s2 = interPoint(vec[1], vec[2], vec[3], ASSUME_UNIT);
-    return squad(vec[1], s1, s2, vec[2], t, assumeUnit, ASSUME_NOT_UNIT);
+    Quat<T> s1 = interPoint(vec[0], vec[1], vec[2], QUAT_ASSUME_UNIT);
+    Quat<T> s2 = interPoint(vec[1], vec[2], vec[3], QUAT_ASSUME_UNIT);
+    return squad(vec[1], s1, s2, vec[2], t, assumeUnit, QUAT_ASSUME_NOT_UNIT);
 }
 
 }  // namepsace
-
 //! @endcond
 
 #endif /*OPENCV_CORE_QUATERNION_INL_HPP*/
