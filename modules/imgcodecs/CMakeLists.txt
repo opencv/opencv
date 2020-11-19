@@ -113,7 +113,7 @@ file(GLOB imgcodecs_ext_hdrs
      "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/legacy/*.h"
      )
 
-if(APPLE)
+if(APPLE OR APPLE_FRAMEWORK)
   list(APPEND imgcodecs_srcs ${CMAKE_CURRENT_LIST_DIR}/src/apple_conversions.h)
   list(APPEND imgcodecs_srcs ${CMAKE_CURRENT_LIST_DIR}/src/apple_conversions.mm)
 endif()
