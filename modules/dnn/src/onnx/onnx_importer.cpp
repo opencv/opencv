@@ -1764,28 +1764,25 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
             bool foundScales = false;
             if (hasDynamicShapes)
             {
-                Mat shapes = getBlob(node_proto, node_proto.input_size() - 1);
-                CV_CheckEQ(shapes.size[0], 4, "");
-                CV_CheckEQ(shapes.size[1], 1, "");
-                CV_CheckDepth(shapes.depth(), shapes.depth() == CV_32S || shapes.depth() == CV_32F, "");
-                if (shapes.depth() == CV_32F)
-                    shapes.convertTo(shapes, CV_32S);
-                layerParams.set("zoom_factor_y", shapes.at<int>(2));
-                layerParams.set("zoom_factor_x", shapes.at<int>(3));
+                Mat scales = getBlob(node_proto, node_proto.input_size() - 1);
+                CV_CheckEQ(scales.size[0], 4, "");
+                CV_CheckEQ(scales.size[1], 1, "");
+                CV_CheckDepth(scales.depth(), scales.depth() == CV_32S || scales.depth() == CV_32F, "");
+                if (scales.depth() == CV_32F)
+                    scales.convertTo(scales, CV_32S);
+                layerParams.set("zoom_factor_y", scales.at<int>(2));
+                layerParams.set("zoom_factor_x", scales.at<int>(3));
                 foundScales = true;
             }
-            else if (node_proto.input_size() > 1)
+            else
             {
                 const std::string& inputS = node_proto.input(node_proto.input_size() > 2 ? 2 : 1);
-                if (constBlobs.find(inputS) != constBlobs.end())
+                Mat scales = getBlob(inputS);
+                if (scales.total() == 4)
                 {
-                    Mat scales = getBlob(inputS);
-                    if (scales.total() == 4)
-                    {
-                        layerParams.set("zoom_factor_y", scales.at<float>(2));
-                        layerParams.set("zoom_factor_x", scales.at<float>(3));
-                        foundScales = true;
-                    }
+                    layerParams.set("zoom_factor_y", scales.at<float>(2));
+                    layerParams.set("zoom_factor_x", scales.at<float>(3));
+                    foundScales = true;
                 }
             }
 
