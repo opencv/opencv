@@ -168,12 +168,6 @@ class Builder:
             "-DOPENCV_3P_LIB_INSTALL_PATH=lib/3rdparty",
             "-DFRAMEWORK_NAME=%s" % self.framework_name,
         ]
-        if self.dynamic and not self.build_objc_wrapper:
-            args += [
-                "-DBUILD_SHARED_LIBS=ON",
-                "-DCMAKE_MACOSX_BUNDLE=ON",
-                "-DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED=NO",
-            ]
         if self.dynamic:
             args += [
                 "-DDYNAMIC_PLIST=ON"
@@ -312,23 +306,50 @@ class Builder:
         target = builddir[(builddir.rfind("build-") + 6):]
         target_platform = target[(target.rfind("-") + 1):]
         is_device = target_platform == "iphoneos" or target_platform == "catalyst"
-        res = os.path.join(builddir, "install", "lib", self.framework_name + ".framework", self.framework_name)
+        framework_dir = os.path.join(builddir, "install", "lib", self.framework_name + ".framework")
+        if not os.path.exists(framework_dir):
+            os.makedirs(framework_dir)
+        res = os.path.join(framework_dir, self.framework_name)
         libs = glob.glob(os.path.join(builddir, "install", "lib", "*.a"))
-        module = [os.path.join(builddir, "lib", self.getConfiguration(), self.framework_name + ".framework", self.framework_name)]
+        if self.build_objc_wrapper:
+            module = [os.path.join(builddir, "lib", self.getConfiguration(), self.framework_name + ".framework", self.framework_name)]
+        else:
+            module = []
 
         libs3 = glob.glob(os.path.join(builddir, "install", "lib", "3rdparty", "*.a"))
 
-        link_target = target[:target.find("-")] + "-apple-ios" + os.environ['IPHONEOS_DEPLOYMENT_TARGET'] + ("-simulator" if target.endswith("simulator") else "")
+        if os.environ.get('IPHONEOS_DEPLOYMENT_TARGET'):
+            link_target = target[:target.find("-")] + "-apple-ios" + os.environ['IPHONEOS_DEPLOYMENT_TARGET'] + ("-simulator" if target.endswith("simulator") else "")
+        else:
+            if target_platform == "catalyst":
+                link_target = "%s-apple-ios13.0-macabi" % target[:target.find("-")]
+            else:
+                link_target = "%s-apple-darwin" % target[:target.find("-")]
         bitcode_flags = ["-fembed-bitcode", "-Xlinker", "-bitcode_verify"] if is_device and not self.bitcodedisabled else []
         toolchain_dir = get_xcode_setting("TOOLCHAIN_DIR", builddir)
-        swift_link_dirs = ["-L" + toolchain_dir + "/usr/lib/swift/" + target_platform, "-L/usr/lib/swift"]
         sdk_dir = get_xcode_setting("SDK_DIR", builddir)
+        framework_options = []
+        swift_link_dirs = ["-L" + toolchain_dir + "/usr/lib/swift/" + target_platform, "-L/usr/lib/swift"]
+        if target_platform == "catalyst":
+            swift_link_dirs = ["-L" + toolchain_dir + "/usr/lib/swift/" + "maccatalyst", "-L/usr/lib/swift"]
+            framework_options = [
+                "-iframework", "%s/System/iOSSupport/System/Library/Frameworks" % sdk_dir,
+                "-framework", "AVFoundation", "-framework", "UIKit", "-framework", "CoreGraphics",
+                "-framework", "CoreImage", "-framework", "CoreMedia", "-framework", "QuartzCore",
+            ]
+        elif target_platform == "macosx":
+            framework_options = [
+                "-framework", "AVFoundation", "-framework", "AppKit", "-framework", "CoreGraphics",
+                "-framework", "CoreImage", "-framework", "CoreMedia", "-framework", "QuartzCore",
+                "-framework", "Accelerate", "-framework", "OpenCL",
+            ]
         execute([
             "clang++",
             "-Xlinker", "-rpath",
             "-Xlinker", "/usr/lib/swift",
             "-target", link_target,
-            "-isysroot", sdk_dir,
+            "-isysroot", sdk_dir,] +
+            framework_options + [
             "-install_name", "@rpath/" + self.framework_name + ".framework/" + self.framework_name,
             "-dynamiclib", "-dead_strip", "-fobjc-link-runtime", "-all_load",
             "-o", res
