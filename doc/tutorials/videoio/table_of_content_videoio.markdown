@@ -26,6 +26,10 @@ This section contains tutorials about how to read/save your video files.
 
     *Languages:* C++
 
+-   @subpage tutorial_orbbec_astra
+
+    *Languages:* C++
+
 -   @subpage tutorial_intelperc
 
     *Languages:* C++
