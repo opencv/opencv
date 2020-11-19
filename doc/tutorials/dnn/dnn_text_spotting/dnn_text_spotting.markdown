@@ -1,9 +1,9 @@
-# High Level API: TextDetectionModel & TextRecognitionModel {#tutorial_dnn_text_spotting}
+# High Level API: TextDetectionModel and TextRecognitionModel {#tutorial_dnn_text_spotting}
 
 @prev_tutorial{tutorial_dnn_OCR}
 
 ## Introduction
-In this tutorial, we will introduce the APIs for TextRecognitionModel & TextDetectionModel in detail.
+In this tutorial, we will introduce the APIs for TextRecognitionModel and TextDetectionModel in detail.
 
 ---
 #### TextRecognitionModel:
@@ -13,15 +13,15 @@ and the greedy decoding method for CTC is provided.
 For more information, please refer to the [original paper](https://arxiv.org/abs/1507.05717)
 
 Before recognition, you should `setVocabulary` and `setDecodeType`.
-- The parameter `String decodeType` is for decoding, and other methods will be added in the future.
-    If decodeType is "CTC-greedy", the output of the text recognition model should be a probability matrix.
-    The shape should be (T, B, Dim), where
-    - T is the sequence length,
-    - B is the batch size (only support B=1 in inference),
-    - and Dim is the length of vocabulary +1('Blank' of CTC is at the index=0 of Dim).
+- "CTC-greedy", the output of the text recognition model should be a probability matrix.
+    The shape should be `(T, B, Dim)`, where
+    - `T` is the sequence length
+    - `B` is the batch size (only support `B=1` in inference)
+    - and `Dim` is the length of vocabulary +1('Blank' of CTC is at the index=0 of Dim).
 
 `TextRecognitionModel::recognize()` is the main function for text recognition.
 - The input image should be a cropped text image.
+- Other decoding methods may supported in the future
 
 ---
 
@@ -43,6 +43,7 @@ We encourage you to add new algorithms to these APIs.
 ## Pretrained Models
 
 #### TextRecognitionModel:
+
 ```
 crnn.onnx:
 url: https://drive.google.com/uc?export=dowload&id=1ooaLR-rkTl8jdpGy1DoQs0-X0lQsB6Fj
@@ -74,6 +75,7 @@ which are taken from [clovaai](https://github.com/clovaai/deep-text-recognition-
 You can train more models by [CRNN](https://github.com/meijieru/crnn.pytorch), and convert models by `torch.onnx.export`.
 
 #### TextDetectionModel:
+
 ```
 - DB_IC15_resnet50.onnx:
 url: https://drive.google.com/uc?export=dowload&id=1cmAs91yFRyC2LC3nTTBNNYooyEmb0i5t
@@ -108,6 +110,7 @@ This model is based on https://github.com/argman/EAST
 ```
 
 ## Images for Testing
+
 ```
 Text Recognition:
 url: https://drive.google.com/uc?export=dowload&id=1nMcEy68zDNpIlqAn6xCk_kYcUTIeSOtN
@@ -121,6 +124,7 @@ sha: ced3c03fb7f8d9608169a913acf7e7b93e07109b
 ## Example for Text Recognition
 
 Step1. Loading images and models with a vocabulary
+
 ```cpp
     // Load a cropped text line image
     // you can find cropped images for testing in "Images for Testing"
@@ -129,6 +133,10 @@ Step1. Loading images and models with a vocabulary
 
     // Load models weights
     TextRecognitionModel model("path/to/crnn_cs.onnx");
+
+    // The decoding method
+    // more methods will be supported in future
+    model.setDecodeType("CTC-greedy");
 
     // Load vocabulary
     // vocabulary should be changed according to the text recognition model
@@ -142,7 +150,9 @@ Step1. Loading images and models with a vocabulary
     }
     model.setVocabulary(vocabulary);
 ```
+
 Step2. Setting Parameters
+
 ```cpp
     // Normalization parameters
     double scale = 1.0 / 127.5;
@@ -152,14 +162,11 @@ Step2. Setting Parameters
     Size inputSize = Size(100, 32);
 
     model.setInputParams(scale, inputSize, mean);
-
-    // The decoding method
-    // more methods will be supported in future
-    model.setDecodeType("CTC-greedy");
 ```
 Step3. Inference
 ```cpp
-    String recResult = recognizer.recognize(frame);
+    std::string recognitionResult = recognizer.recognize(image);
+    std::cout << "'" << recognitionResult << "'" << std::endl;
 ```
 
 Input image:

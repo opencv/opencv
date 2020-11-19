@@ -16,13 +16,13 @@ std::string keys =
         "{ recModelPath rmp                 | | Path to a binary .onnx model for recognition. "
             "Download links are provided in doc/tutorials/dnn/dnn_text_spotting/dnn_text_spotting.markdown}"
         "{ inputHeight ih                   |736| image height of the model input. }"
-        "{ inputWidth iw                    |1280| image width of the model input. }"
+        "{ inputWidth iw                    |736| image width of the model input. }"
         "{ RGBInput rgb                     |0| 0: imread with flags=IMREAD_GRAYSCALE; 1: imread with flags=IMREAD_COLOR. }"
         "{ binaryThreshold bt               |0.3| Confidence threshold of the binary map. }"
         "{ polygonThreshold pt              |0.5| Confidence threshold of polygons. }"
         "{ maxCandidate max                 |200| Max candidates of polygons. }"
         "{ unclipRatio ratio                |2.0| unclip ratio. }"
-        "{ vocabularyPath vp                | | Path to benchmarks for evaluation. "
+        "{ vocabularyPath vp                | alphabet_36.txt | Path to benchmarks for evaluation. "
             "Download links are provided in doc/tutorials/dnn/dnn_text_spotting/dnn_text_spotting.markdown}";
 
 void fourPointsTransform(const Mat& frame, const Point2f vertices[], Mat& result);
@@ -59,7 +59,11 @@ int main(int argc, char** argv)
 
     // Load networks
     CV_Assert(!detModelPath.empty());
-    TextDetectionModel detector(detModelPath);
+    TextDetectionModel_DB detector(detModelPath);
+    detector.setBinaryThreshold(binThresh)
+            .setPolygonThreshold(polyThresh)
+            .setUnclipRatio(unclipRatio)
+            .setMaxCandidates(maxCandidates);
 
     CV_Assert(!recModelPath.empty());
     TextRecognitionModel recognizer(recModelPath);
@@ -67,7 +71,7 @@ int main(int argc, char** argv)
     // Load vocabulary
     CV_Assert(!vocPath.empty());
     std::ifstream vocFile;
-    vocFile.open(vocPath);
+    vocFile.open(samples::findFile(vocPath));
     CV_Assert(vocFile.is_open());
     String vocLine;
     std::vector<String> vocabulary;
@@ -91,14 +95,13 @@ int main(int argc, char** argv)
 
     // Create a window
     static const std::string winName = "Text_Spotting";
-    namedWindow(winName, WINDOW_NORMAL);
 
     // Input data
     Mat frame = imread(samples::findFile(parser.get<String>("inputImage")));
+    std::cout << frame.size << std::endl;
 
     // Inference
-    std::vector<std::vector<Point>> detResults;
-    detector.detect(frame, detResults, binThresh, polyThresh, unclipRatio, maxCandidates);
+    std::vector<RotatedRect> detResults = detector.detect(frame);
 
     if (detResults.size() > 0) {
         // Text Recognition
@@ -108,39 +111,29 @@ int main(int argc, char** argv)
         } else {
             recInput = frame;
         }
+        std::vector< std::vector<Point> > contours;
         for (uint i = 0; i < detResults.size(); i++)
         {
-            std::vector<Point> box = detResults[i];
+            const auto& box = detResults[i];
 
-            // Sort the points
-            std::sort(box.begin(), box.end(), sortPts);
-            int index[4] = {0, 1, 2, 3};
-            if (box[1].y > box[0].y) {
-                index[0] = 0;
-                index[3] = 1;
-            } else {
-                index[0] = 1;
-                index[3] = 0;
-            }
-            if (box[3].y > box[2].y) {
-                index[1] = 2;
-                index[2] = 3;
-            } else {
-                index[1] = 3;
-                index[2] = 2;
-            }
-            Point2f vertices[4] = {box[index[3]], box[index[0]],
-                                   box[index[1]], box[index[2]]};
+            Point2f vertices[4] = {};
+            box.points(vertices);
+
+            std::vector<Point> contour;
+            for (int j = 0; j < 4; j++)
+                contour.emplace_back(vertices[j]);
+            contours.emplace_back(contour);
 
             // Transform and Crop
             Mat cropped;
             fourPointsTransform(recInput, vertices, cropped);
 
-            String recResult = recognizer.recognize(cropped);
+            std::string recognitionResult = recognizer.recognize(cropped);
+            std::cout << i << ": '" << recognitionResult << "'" << std::endl;
 
-            putText(frame, recResult, vertices[3], FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 0, 255), 2);
+            putText(frame, recognitionResult, vertices[3], FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 0, 255), 2);
         }
-        polylines(frame, detResults, true, Scalar(0, 255, 0), 2);
+        polylines(frame, contours, true, Scalar(0, 255, 0), 2);
     } else {
         std::cout << "No Text Detected." << std::endl;
     }

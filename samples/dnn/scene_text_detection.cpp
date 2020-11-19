@@ -53,7 +53,11 @@ int main(int argc, char** argv)
 
     // Load the network
     CV_Assert(!modelPath.empty());
-    TextDetectionModel detector(modelPath);
+    TextDetectionModel_DB detector(modelPath);
+    detector.setBinaryThreshold(binThresh)
+            .setPolygonThreshold(polyThresh)
+            .setUnclipRatio(unclipRatio)
+            .setMaxCandidates(maxCandidates);
 
     double scale = 1.0 / 255.0;
     Size inputSize = Size(width, height);
@@ -62,7 +66,6 @@ int main(int argc, char** argv)
 
     // Create a window
     static const std::string winName = "TextDetectionModel";
-    namedWindow(winName, WINDOW_NORMAL);
 
     if (parser.get<bool>("evaluate")) {
         // for evaluation
@@ -87,8 +90,7 @@ int main(int argc, char** argv)
             Mat src = frame.clone();
 
             // Inference
-            std::vector<std::vector<Point>> results;
-            detector.detect(frame, results, binThresh, polyThresh, unclipRatio, maxCandidates);
+            std::vector<std::vector<Point>> results = detector.detectTextContours(frame);
 
             polylines(frame, results, true, Scalar(0, 255, 0), 5);
             imshow(winName, frame);
@@ -137,8 +139,7 @@ int main(int argc, char** argv)
         CV_Assert(!frame.empty());
 
         // Detect
-        std::vector<std::vector<Point>> results;
-        detector.detect(frame, results, binThresh, polyThresh, unclipRatio, maxCandidates);
+        std::vector<std::vector<Point>> results = detector.detectTextContours(frame);
 
         polylines(frame, results, true, Scalar(0, 255, 0), 5);
         imshow(winName, frame);

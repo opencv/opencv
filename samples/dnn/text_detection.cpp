@@ -38,7 +38,7 @@ const char* keys =
     "{ recModel rmp         | | Path to a binary .onnx file contains trained CRNN text recognition model. "
         "Download links are provided in doc/tutorials/dnn/dnn_text_spotting/dnn_text_spotting.markdown}"
     "{ RGBInput rgb         |0| 0: imread with flags=IMREAD_GRAYSCALE; 1: imread with flags=IMREAD_COLOR. }"
-    "{ vocabularyPath vp    | | Path to benchmarks for evaluation. "
+    "{ vocabularyPath vp    | alphabet_36.txt | Path to benchmarks for evaluation. "
         "Download links are provided in doc/tutorials/dnn/dnn_text_spotting/dnn_text_spotting.markdown}";
 
 void fourPointsTransform(const Mat& frame, const Point2f vertices[], Mat& result);
@@ -72,13 +72,16 @@ int main(int argc, char** argv)
 
     // Load networks.
     CV_Assert(!detModelPath.empty() && !recModelPath.empty());
-    TextDetectionModel detector(detModelPath);
+    TextDetectionModel_EAST detector(detModelPath);
+    detector.setConfidenceThreshold(confThreshold)
+            .setNMSThreshold(nmsThreshold);
+
     TextRecognitionModel recognizer(recModelPath);
 
     // Load vocabulary
     CV_Assert(!vocPath.empty());
     std::ifstream vocFile;
-    vocFile.open(vocPath);
+    vocFile.open(samples::findFile(vocPath));
     CV_Assert(vocFile.is_open());
     String vocLine;
     std::vector<String> vocabulary;
@@ -107,7 +110,6 @@ int main(int argc, char** argv)
     CV_Assert(openSuccess);
 
     static const std::string kWinName = "EAST: An Efficient and Accurate Scene Text Detector";
-    namedWindow(kWinName, WINDOW_NORMAL);
 
     Mat frame;
     while (waitKey(1) < 0)
@@ -119,9 +121,10 @@ int main(int argc, char** argv)
             break;
         }
 
+        std::cout << frame.size << std::endl;
+
         // Detection
-        std::vector<std::vector<Point>> detResults;
-        detector.detect(frame, detResults, confThreshold, nmsThreshold);
+        std::vector<RotatedRect> detResults = detector.detect(frame);
 
         if (detResults.size() > 0) {
             // Text Recognition
@@ -131,19 +134,27 @@ int main(int argc, char** argv)
             } else {
                 recInput = frame;
             }
+            std::vector< std::vector<Point> > contours;
             for (uint i = 0; i < detResults.size(); i++)
             {
-                std::vector<Point>& box = detResults[i];
-                Point2f vertices[4] = {box[0], box[1], box[2], box[3]};
+                const auto& box = detResults[i];
+                Point2f vertices[4] = {};
+                box.points(vertices);
+
+                std::vector<Point> contour;
+                for (int j = 0; j < 4; j++)
+                    contour.emplace_back(vertices[j]);
+                contours.emplace_back(contour);
 
                 Mat cropped;
                 fourPointsTransform(recInput, vertices, cropped);
 
-                String recResult = recognizer.recognize(cropped);
+                std::string recognitionResult = recognizer.recognize(cropped);
+                std::cout << i << ": '" << recognitionResult << "'" << std::endl;
 
-                putText(frame, recResult, vertices[3], FONT_HERSHEY_SIMPLEX, 1.5, Scalar(0, 0, 255), 2);
+                putText(frame, recognitionResult, vertices[3], FONT_HERSHEY_SIMPLEX, 1.5, Scalar(0, 0, 255), 2);
             }
-            polylines(frame, detResults, true, Scalar(0, 255, 0), 2);
+            polylines(frame, contours, true, Scalar(0, 255, 0), 2);
         }
         imshow(kWinName, frame);
     }

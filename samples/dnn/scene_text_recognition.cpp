@@ -17,7 +17,7 @@ String keys =
         "{ evaluate e                       |false| false: predict with input images; true: evaluate on benchmarks. }"
         "{ evalDataPath edp                 | | Path to benchmarks for evaluation. "
             "Download links are provided in doc/tutorials/dnn/dnn_text_spotting/dnn_text_spotting.markdown}"
-        "{ vocabularyPath vp                | | Path to benchmarks for evaluation. "
+        "{ vocabularyPath vp                | alphabet_36.txt | Path to recognition vocabulary. "
             "Download links are provided in doc/tutorials/dnn/dnn_text_spotting/dnn_text_spotting.markdown}";
 
 String convertForEval(String &input);
@@ -52,7 +52,7 @@ int main(int argc, char** argv)
     // Load vocabulary
     CV_Assert(!vocPath.empty());
     std::ifstream vocFile;
-    vocFile.open(vocPath);
+    vocFile.open(samples::findFile(vocPath));
     CV_Assert(vocFile.is_open());
     String vocLine;
     std::vector<String> vocabulary;
@@ -68,7 +68,8 @@ int main(int argc, char** argv)
     Size inputSize = Size(100, 32);
     recognizer.setInputParams(scale, inputSize, mean);
 
-    if (parser.get<bool>("evaluate")) {
+    if (parser.get<bool>("evaluate"))
+    {
         // For evaluation
         String evalDataPath = parser.get<String>("evalDataPath");
         CV_Assert(!evalDataPath.empty());
@@ -88,22 +89,24 @@ int main(int argc, char** argv)
             String gt = gtLine.substr(splitLoc+1);
 
             // Inference
-            timer.start();
             Mat frame = imread(samples::findFile(imgPath), imreadRGB);
             CV_Assert(!frame.empty());
-            String recResult = recognizer.recognize(frame);
+            timer.start();
+            std::string recognitionResult = recognizer.recognize(frame);
             timer.stop();
 
-            if (gt == convertForEval(recResult)) cntRight++;
+            if (gt == convertForEval(recognitionResult))
+                cntRight++;
 
             cntAll++;
         }
         std::cout << "Accuracy(%): " << (double)(cntRight) / (double)(cntAll) << std::endl;
         std::cout << "Average Inference Time(ms): " << timer.getTimeMilli() / (double)(cntAll) << std::endl;
-    } else {
+    }
+    else
+    {
         // Create a window
         static const std::string winName = "Input Cropped Image";
-        namedWindow(winName, WINDOW_NORMAL);
 
         // Open an image file
         CV_Assert(parser.has("inputImage"));
@@ -111,10 +114,10 @@ int main(int argc, char** argv)
         CV_Assert(!frame.empty());
 
         // Recognition
-        String recResult = recognizer.recognize(frame);
+        std::string recognitionResult = recognizer.recognize(frame);
 
         imshow(winName, frame);
-        std::cout << "Prediction: " << recResult << std::endl;
+        std::cout << "Predition: '" << recognitionResult << "'" << std::endl;
         waitKey();
     }
 
