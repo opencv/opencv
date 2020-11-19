@@ -57,6 +57,7 @@ file(GLOB gapi_ext_hdrs
 
 set(gapi_srcs
     # Front-end part
+    src/api/grunarg.cpp
     src/api/gorigin.cpp
     src/api/gmat.cpp
     src/api/garray.cpp
@@ -131,18 +132,19 @@ set(gapi_srcs
     src/backends/ie/giebackend.cpp
     src/backends/ie/giebackend/giewrapper.cpp
 
-    # ONNX Backend.
+    # ONNX backend
     src/backends/onnx/gonnxbackend.cpp
 
-    # Render Backend.
+    # Render backend
     src/backends/render/grenderocv.cpp
     src/backends/render/ft_render.cpp
 
-    #PlaidML Backend
+    # PlaidML Backend
     src/backends/plaidml/gplaidmlcore.cpp
     src/backends/plaidml/gplaidmlbackend.cpp
 
-    # Compound
+    # Common backend code
+    src/backends/common/gmetabackend.cpp
     src/backends/common/gcompoundbackend.cpp
     src/backends/common/gcompoundkernel.cpp
 

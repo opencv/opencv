@@ -164,6 +164,54 @@ GOpaque<Rect> boundingRect(const GArray<Point2f>& src)
     return imgproc::GBoundingRectVector32F::on(src);
 }
 
+GOpaque<Vec4f> fitLine2D(const GMat& src, const DistanceTypes distType, const double param,
+                         const double reps, const double aeps)
+{
+    return imgproc::GFitLine2DMat::on(src, distType, param, reps, aeps);
+}
+
+GOpaque<Vec4f> fitLine2D(const GArray<Point2i>& src, const DistanceTypes distType,
+                         const double param, const double reps, const double aeps)
+{
+    return imgproc::GFitLine2DVector32S::on(src, distType, param, reps, aeps);
+}
+
+GOpaque<Vec4f> fitLine2D(const GArray<Point2f>& src, const DistanceTypes distType,
+                         const double param, const double reps, const double aeps)
+{
+    return imgproc::GFitLine2DVector32F::on(src, distType, param, reps, aeps);
+}
+
+GOpaque<Vec4f> fitLine2D(const GArray<Point2d>& src, const DistanceTypes distType,
+                         const double param, const double reps, const double aeps)
+{
+    return imgproc::GFitLine2DVector64F::on(src, distType, param, reps, aeps);
+}
+
+GOpaque<Vec6f> fitLine3D(const GMat& src, const DistanceTypes distType, const double param,
+                         const double reps, const double aeps)
+{
+    return imgproc::GFitLine3DMat::on(src, distType, param, reps, aeps);
+}
+
+GOpaque<Vec6f> fitLine3D(const GArray<Point3i>& src, const DistanceTypes distType,
+                         const double param, const double reps, const double aeps)
+{
+    return imgproc::GFitLine3DVector32S::on(src, distType, param, reps, aeps);
+}
+
+GOpaque<Vec6f> fitLine3D(const GArray<Point3f>& src, const DistanceTypes distType,
+                         const double param, const double reps, const double aeps)
+{
+    return imgproc::GFitLine3DVector32F::on(src, distType, param, reps, aeps);
+}
+
+GOpaque<Vec6f> fitLine3D(const GArray<Point3d>& src, const DistanceTypes distType,
+                         const double param, const double reps, const double aeps)
+{
+    return imgproc::GFitLine3DVector64F::on(src, distType, param, reps, aeps);
+}
+
 GMat BGR2RGB(const GMat& src)
 {
     return imgproc::GBGR2RGB::on(src);

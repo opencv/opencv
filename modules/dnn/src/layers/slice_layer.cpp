@@ -72,6 +72,8 @@ public:
         setParamsFrom(params);
         axis = params.get<int>("axis", 1);
         num_split = params.get<int>("num_split", 0);
+        hasDynamicShapes = params.get<bool>("has_dynamic_shapes", false);
+        shapesInitialized = !hasDynamicShapes;
         if (params.has("slice_point"))
         {
             CV_Assert(!params.has("begin") && !params.has("size") && !params.has("end"));
@@ -150,7 +152,8 @@ public:
                 CV_Assert(sliceRanges[i].size() <= inpShape.size());
                 for (int j = 0; j < sliceRanges[i].size(); ++j)
                 {
-                    outputs[i][j] = clamp(sliceRanges[i][j], inpShape[j]).size();
+                    if (shapesInitialized || inpShape[j] > 0)
+                        outputs[i][j] = clamp(sliceRanges[i][j], inpShape[j]).size();
                 }
             }
         }
@@ -163,6 +166,12 @@ public:
             outputs.resize(splits, inpShape);
         }
         return false;
+    }
+
+    bool updateMemoryShapes(const std::vector<MatShape> &inputs) CV_OVERRIDE
+    {
+        shapesInitialized = true;
+        return true;
     }
 
     void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
@@ -492,7 +501,7 @@ public:
         std::vector<size_t> axes, offsets, dims;
         int from, to, step;
         int numDims = finalSliceRanges[0].size();
-        if (preferableTarget == DNN_TARGET_MYRIAD)
+        if (preferableTarget == DNN_TARGET_MYRIAD || preferableTarget == DNN_TARGET_HDDL)
         {
             from = axis;
             to = numDims;
@@ -597,6 +606,8 @@ public:
 protected:
     // The actual non-negative values determined from @p sliceRanges depends on input size.
     std::vector<std::vector<Range> > finalSliceRanges;
+    bool hasDynamicShapes;
+    bool shapesInitialized;
 };
 
 class CropLayerImpl CV_FINAL : public SliceLayerImpl

@@ -563,7 +563,7 @@ TEST_P(Test_Caffe_nets, DenseNet_121)
     }
     normAssert(outs[0], ref, "", l1, lInf);
     if (target != DNN_TARGET_MYRIAD || getInferenceEngineVPUType() != CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
-        expectNoFallbacksFromIE(model);
+        expectNoFallbacksFromIE(model.getNetwork_());
 }
 
 TEST(Test_Caffe, multiple_inputs)

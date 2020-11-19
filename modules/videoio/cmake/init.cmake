@@ -38,6 +38,7 @@ add_backend("msdk" WITH_MFX)
 add_backend("openni2" WITH_OPENNI2)
 add_backend("pvapi" WITH_PVAPI)
 add_backend("realsense" WITH_LIBREALSENSE)
+add_backend("ueye" WITH_UEYE)
 add_backend("ximea" WITH_XIMEA)
 add_backend("xine" WITH_XINE)
 

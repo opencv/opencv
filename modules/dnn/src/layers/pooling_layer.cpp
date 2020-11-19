@@ -98,6 +98,9 @@ public:
         stride = Size(1, 1);
         pad_t = pad_l = pad_b = pad_r = 0;
 
+        hasDynamicShapes = params.get<bool>("has_dynamic_shapes", false);
+        shapesInitialized = !hasDynamicShapes;
+
         if (params.has("pool") || params.has("kernel_size") ||
             params.has("kernel_w") || params.has("kernel_h"))
         {
@@ -202,7 +205,7 @@ public:
                 return false;
             if (kernel_size.size() == 3)
                 return preferableTarget == DNN_TARGET_CPU;
-            if (preferableTarget == DNN_TARGET_MYRIAD) {
+            if (preferableTarget == DNN_TARGET_MYRIAD || preferableTarget == DNN_TARGET_HDDL) {
 #if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
                 if (type == MAX && (pad_l == 1 && pad_t == 1) && stride == Size(2, 2) ) {
                     return !isMyriadX();
@@ -1191,25 +1194,33 @@ public:
             outShape.push_back(pooledSize.height);
             outShape.push_back(pooledSize.width);
         }
-        else if (padMode.empty())
-        {
-            for (int i = 0; i < local_kernel.size(); i++) {
-                float dst = (float)(inpShape[i] + pads_begin[i] + pads_end[i] - local_kernel[i]) / strides[i];
-                outShape.push_back(1 + (ceilMode ? ceil(dst) : floor(dst)));
-            }
-
-            // If we have padding, ensure that the last pooling starts strictly
-            // inside the image (instead of at the padding); otherwise clip the last.
-            for (int i = 0; i < pads_end.size(); i++) {
-                if (pads_end[i] && (outShape[2 + i] - 1) * strides[i] >= inpShape[i] + pads_end[i]) {
-                    --outShape[2 + i];
-                    CV_Assert((outShape[2 + i] - 1) * strides[i] < inpShape[i] + pads_end[i]);
-                }
-            }
-        }
         else
         {
-            getConvPoolOutParams(inpShape, local_kernel, strides, padMode, std::vector<size_t>(local_kernel.size(), 1), outShape);
+            if (hasDynamicShapes && !shapesInitialized)
+            {
+                //Just copy input shapes for width and height to prevent errors on loading stage
+                for (int i = 0; i < inpShape.size(); i++)
+                    outShape.push_back(inpShape[i]);
+            }
+            else if (padMode.empty())
+            {
+                for (int i = 0; i < local_kernel.size(); i++) {
+                    float dst = (float) (inpShape[i] + pads_begin[i] + pads_end[i] - local_kernel[i]) / strides[i];
+                    outShape.push_back(1 + (ceilMode ? ceil(dst) : floor(dst)));
+                }
+
+                // If we have padding, ensure that the last pooling starts strictly
+                // inside the image (instead of at the padding); otherwise clip the last.
+                for (int i = 0; i < pads_end.size(); i++) {
+                    if (pads_end[i] && (outShape[2 + i] - 1) * strides[i] >= inpShape[i] + pads_end[i]) {
+                        --outShape[2 + i];
+                        CV_Assert((outShape[2 + i] - 1) * strides[i] < inpShape[i] + pads_end[i]);
+                    }
+                }
+            } else {
+                getConvPoolOutParams(inpShape, local_kernel, strides, padMode,
+                                     std::vector<size_t>(local_kernel.size(), 1), outShape);
+            }
         }
         if (type == ROI)
         {
@@ -1229,6 +1240,14 @@ public:
         outputs.assign(numOutputs, outShape);
 
         return false;
+    }
+
+    bool updateMemoryShapes(const std::vector<MatShape> &inputs) CV_OVERRIDE
+    {
+        int dims = inputs[0].size();
+        CV_Assert(inputs[0][dims - 1] > 0 && inputs[0][dims - 2] > 0);
+        shapesInitialized = true;
+        return true;
     }
 
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
@@ -1262,6 +1281,8 @@ private:
         ROI,   // RoI pooling, https://arxiv.org/pdf/1504.08083.pdf
         PSROI  // Position-sensitive RoI pooling, https://arxiv.org/pdf/1605.06409.pdf
     };
+    bool hasDynamicShapes;
+    bool shapesInitialized;
 };
 
 Ptr<PoolingLayer> PoolingLayer::create(const LayerParams& params)

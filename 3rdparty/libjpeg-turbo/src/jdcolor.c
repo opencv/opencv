@@ -571,11 +571,10 @@ ycck_cmyk_convert(j_decompress_ptr cinfo, JSAMPIMAGE input_buf,
  * RGB565 conversion
  */
 
-#define PACK_SHORT_565_LE(r, g, b)  ((((r) << 8) & 0xF800) | \
-                                     (((g) << 3) & 0x7E0) | ((b) >> 3))
-#define PACK_SHORT_565_BE(r, g, b)  (((r) & 0xF8) | ((g) >> 5) | \
-                                     (((g) << 11) & 0xE000) | \
-                                     (((b) << 5) & 0x1F00))
+#define PACK_SHORT_565_LE(r, g, b) \
+  ((((r) << 8) & 0xF800) | (((g) << 3) & 0x7E0) | ((b) >> 3))
+#define PACK_SHORT_565_BE(r, g, b) \
+  (((r) & 0xF8) | ((g) >> 5) | (((g) << 11) & 0xE000) | (((b) << 5) & 0x1F00))
 
 #define PACK_TWO_PIXELS_LE(l, r)    ((r << 16) | l)
 #define PACK_TWO_PIXELS_BE(l, r)    ((l << 16) | r)
