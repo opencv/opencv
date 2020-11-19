@@ -1761,32 +1761,17 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
             if (layerParams.get<String>("mode") == "linear" && framework_name == "pytorch")
                 layerParams.set("mode", "opencv_linear");
 
-            bool foundScales = false;
-            if (hasDynamicShapes)
+            // input = [X, scales], [X, roi, scales] or [x, roi, scales, sizes]
+            int foundScaleId = hasDynamicShapes ? node_proto.input_size() - 1
+                                                : node_proto.input_size() > 2 ? 2 : 1;
+
+            Mat scales = getBlob(node_proto, foundScaleId);
+            if (scales.total() == 4)
             {
-                Mat scales = getBlob(node_proto, node_proto.input_size() - 1);
-                CV_CheckEQ(scales.size[0], 4, "");
-                CV_CheckEQ(scales.size[1], 1, "");
-                CV_CheckDepth(scales.depth(), scales.depth() == CV_32S || scales.depth() == CV_32F, "");
-                if (scales.depth() == CV_32F)
-                    scales.convertTo(scales, CV_32S);
-                layerParams.set("zoom_factor_y", scales.at<int>(2));
-                layerParams.set("zoom_factor_x", scales.at<int>(3));
-                foundScales = true;
+                layerParams.set("zoom_factor_y", scales.at<float>(2));
+                layerParams.set("zoom_factor_x", scales.at<float>(3));
             }
             else
-            {
-                const std::string& inputS = node_proto.input(node_proto.input_size() > 2 ? 2 : 1);
-                Mat scales = getBlob(inputS);
-                if (scales.total() == 4)
-                {
-                    layerParams.set("zoom_factor_y", scales.at<float>(2));
-                    layerParams.set("zoom_factor_x", scales.at<float>(3));
-                    foundScales = true;
-                }
-            }
-
-            if( !foundScales )
             {
                 const std::string& inputLast = node_proto.input(node_proto.input_size() - 1);
                 if (constBlobs.find(inputLast) != constBlobs.end())
