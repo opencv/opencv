@@ -36,18 +36,27 @@ class PatternMaker:
     def make_circles_pattern(self):
         spacing = self.square_size
         r = spacing / self.radius_rate
-        for x in range(1, self.cols + 1):
-            for y in range(1, self.rows + 1):
-                dot = SVG("circle", cx=x * spacing, cy=y * spacing, r=r, fill="black", stroke="none")
+        pattern_width = ((self.cols - 1.0) * spacing) + (2.0 * r)
+        pattern_height = ((self.rows - 1.0) * spacing) + (2.0 * r)
+        x_spacing = (self.width - pattern_width) / 2.0
+        y_spacing = (self.height - pattern_height) / 2.0
+        for x in range(0, self.cols):
+            for y in range(0, self.rows):
+                dot = SVG("circle", cx=(x * spacing) + x_spacing + r,
+                          cy=(y * spacing) + y_spacing + r, r=r, fill="black", stroke="none")
                 self.g.append(dot)
 
     def make_acircles_pattern(self):
         spacing = self.square_size
         r = spacing / self.radius_rate
-        for i in range(0, self.rows):
-            for j in range(0, self.cols):
-                dot = SVG("circle", cx=((j * 2 + i % 2) * spacing) + spacing, cy=self.height - (i * spacing + spacing),
-                          r=r, fill="black", stroke="none")
+        pattern_width = ((self.cols-1.0) * 2 * spacing) + spacing + (2.0 * r)
+        pattern_height = ((self.rows-1.0) * spacing) + (2.0 * r)
+        x_spacing = (self.width - pattern_width) / 2.0
+        y_spacing = (self.height - pattern_height) / 2.0
+        for x in range(0, self.cols):
+            for y in range(0, self.rows):
+                dot = SVG("circle", cx=(2 * x * spacing) + (y % 2)*spacing + x_spacing + r,
+                          cy=(y * spacing) + y_spacing + r, r=r, fill="black", stroke="none")
                 self.g.append(dot)
 
     def make_checkerboard_pattern(self):
@@ -83,11 +92,11 @@ def main():
                         dest="square_size", type=float)
     parser.add_argument("-R", "--radius_rate", help="circles_radius = square_size/radius_rate", default="5.0",
                         action="store", dest="radius_rate", type=float)
-    parser.add_argument("-w", "--page_width", help="page width in units", default="216", action="store",
-                        dest="page_width", type=int)
-    parser.add_argument("-h", "--page_height", help="page height in units", default="279", action="store",
-                        dest="page_width", type=int)
-    parser.add_argument("-a", "--page_size", help="page size, supersedes -h -w arguments", default="A4", action="store",
+    parser.add_argument("-w", "--page_width", help="page width in units", default=argparse.SUPPRESS, action="store",
+                        dest="page_width", type=float)
+    parser.add_argument("-h", "--page_height", help="page height in units", default=argparse.SUPPRESS, action="store",
+                        dest="page_height", type=float)
+    parser.add_argument("-a", "--page_size", help="page size, superseded if -h and -w are set", default="A4", action="store",
                         dest="page_size", choices=["A0", "A1", "A2", "A3", "A4", "A5"])
     args = parser.parse_args()
 
@@ -102,12 +111,16 @@ def main():
     units = args.units
     square_size = args.square_size
     radius_rate = args.radius_rate
-    page_size = args.page_size
-    # page size dict (ISO standard, mm) for easy lookup. format - size: [width, height]
-    page_sizes = {"A0": [840, 1188], "A1": [594, 840], "A2": [420, 594], "A3": [297, 420], "A4": [210, 297],
-                  "A5": [148, 210]}
-    page_width = page_sizes[page_size.upper()][0]
-    page_height = page_sizes[page_size.upper()][1]
+    if 'page_width' and 'page_height' in args:
+        page_width = args.page_width
+        page_height = args.page_height
+    else:
+        page_size = args.page_size
+        # page size dict (ISO standard, mm) for easy lookup. format - size: [width, height]
+        page_sizes = {"A0": [840, 1188], "A1": [594, 840], "A2": [420, 594], "A3": [297, 420], "A4": [210, 297],
+                      "A5": [148, 210]}
+        page_width = page_sizes[page_size][0]
+        page_height = page_sizes[page_size][1]
     pm = PatternMaker(columns, rows, output, units, square_size, radius_rate, page_width, page_height)
     # dict for easy lookup of pattern type
     mp = {"circles": pm.make_circles_pattern, "acircles": pm.make_acircles_pattern,

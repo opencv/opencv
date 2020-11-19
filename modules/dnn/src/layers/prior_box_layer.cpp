@@ -607,7 +607,7 @@ public:
 
             auto priorBox = std::make_shared<ngraph::op::PriorBoxClustered>(slice_layer, slice_image, attrs);
             auto axis = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{1}, std::vector<int64_t>{0});
-            auto unsqueeze = std::make_shared<ngraph::op::Unsqueeze>(priorBox, axis);
+            auto unsqueeze = std::make_shared<ngraph::op::v0::Unsqueeze>(priorBox, axis);
             return Ptr<BackendNode>(new InfEngineNgraphNode(unsqueeze));
         }
         else
@@ -628,7 +628,7 @@ public:
 
             auto priorBox = std::make_shared<ngraph::op::PriorBox>(slice_layer, slice_image, attrs);
             auto axis = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{1}, std::vector<int64_t>{0});
-            auto unsqueeze = std::make_shared<ngraph::op::Unsqueeze>(priorBox, axis);
+            auto unsqueeze = std::make_shared<ngraph::op::v0::Unsqueeze>(priorBox, axis);
             return Ptr<BackendNode>(new InfEngineNgraphNode(unsqueeze));
         }
     }

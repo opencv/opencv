@@ -37,14 +37,12 @@ namespace detail
 }
 
 // Forward-declare the serialization objects
-namespace gimpl {
+namespace gapi {
 namespace s11n {
-namespace I {
-    struct IStream;
-    struct OStream;
-} // namespace I
+    struct IIStream;
+    struct IOStream;
 } // namespace s11n
-} // namespace gimpl
+} // namespace gapi
 
 /**
  * \addtogroup gapi_main_classes
@@ -161,8 +159,8 @@ public:
      *
      * @sa @ref gapi_data_objects
      */
-    GComputation(GProtoInputArgs &&ins,
-                 GProtoOutputArgs &&outs);             // Arg-to-arg overload
+    GAPI_WRAP GComputation(GProtoInputArgs &&ins,
+                           GProtoOutputArgs &&outs);             // Arg-to-arg overload
 
     // 2. Syntax sugar and compatibility overloads
     /**
@@ -172,7 +170,7 @@ public:
      * @param in input GMat of the defined unary computation
      * @param out output GMat of the defined unary computation
      */
-    GComputation(GMat in, GMat out);                   // Unary overload
+    GAPI_WRAP GComputation(GMat in, GMat out);  // Unary overload
 
     /**
      * @brief Defines an unary (one input -- one output) computation
@@ -181,7 +179,7 @@ public:
      * @param in input GMat of the defined unary computation
      * @param out output GScalar of the defined unary computation
      */
-    GComputation(GMat in, GScalar out);                // Unary overload (scalar)
+    GAPI_WRAP GComputation(GMat in, GScalar out);      // Unary overload (scalar)
 
     /**
      * @brief Defines a binary (two inputs -- one output) computation
@@ -260,6 +258,9 @@ public:
     void apply(GRunArgs &&ins, GRunArgsP &&outs, GCompileArgs &&args = {});       // Arg-to-arg overload
 
     /// @private -- Exclude this function from OpenCV documentation
+    GAPI_WRAP GRunArgs apply(GRunArgs &&ins, GCompileArgs &&args = {});
+
+    /// @private -- Exclude this function from OpenCV documentation
     void apply(const std::vector<cv::Mat>& ins,                                   // Compatibility overload
                const std::vector<cv::Mat>& outs,
                GCompileArgs &&args = {});
@@ -298,7 +299,7 @@ public:
      * @param args compilation arguments for underlying compilation
      * process.
      */
-    GAPI_WRAP void apply(cv::Mat in1, cv::Mat in2, CV_OUT cv::Mat &out, GCompileArgs &&args = {}); // Binary overload
+    void apply(cv::Mat in1, cv::Mat in2, cv::Mat &out, GCompileArgs &&args = {}); // Binary overload
 
     /**
      * @brief Execute an binary computation (with compilation on the fly)
@@ -435,7 +436,7 @@ public:
      *
      * @sa @ref gapi_compile_args
      */
-    GStreamingCompiled compileStreaming(GMetaArgs &&in_metas, GCompileArgs &&args = {});
+    GAPI_WRAP GStreamingCompiled compileStreaming(GMetaArgs &&in_metas, GCompileArgs &&args = {});
 
     /**
      * @brief Compile the computation for streaming mode.
@@ -456,7 +457,7 @@ public:
      *
      * @sa @ref gapi_compile_args
      */
-    GStreamingCompiled compileStreaming(GCompileArgs &&args = {});
+    GAPI_WRAP GStreamingCompiled compileStreaming(GCompileArgs &&args = {});
 
     // 2. Direct metadata version
     /**
@@ -506,9 +507,9 @@ public:
     /// @private
     const Priv& priv() const;
     /// @private
-    explicit GComputation(cv::gimpl::s11n::I::IStream &);
+    explicit GComputation(cv::gapi::s11n::IIStream &);
     /// @private
-    void serialize(cv::gimpl::s11n::I::OStream &) const;
+    void serialize(cv::gapi::s11n::IOStream &) const;
 
 protected:
 
@@ -528,6 +529,7 @@ protected:
         GCompileArgs comp_args = std::get<sizeof...(Ts)-1>(meta_and_compile_args);
         return compileStreaming(std::move(meta_args), std::move(comp_args));
     }
+    void recompile(GMetaArgs&& in_metas, GCompileArgs &&args);
     /// @private
     std::shared_ptr<Priv> m_priv;
 };

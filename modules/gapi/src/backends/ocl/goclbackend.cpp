@@ -165,12 +165,31 @@ void cv::gimpl::GOCLExecutable::run(std::vector<InObj>  &&input_objs,
         // NB: avoid clearing the whole magazine, there's also pre-allocated internal data
         for (auto& it : input_objs)  umats.erase(it.first.id);
         for (auto& it : output_objs) umats.erase(it.first.id);
+
+        // In/Out args clean-up is mandatory now with RMat
+        for (auto &it : input_objs)  magazine::unbind(*p, it.first);
+        for (auto &it : output_objs) magazine::unbind(*p, it.first);
     };
     // RAII wrapper to clean-up m_res
     std::unique_ptr<cv::gimpl::Mag, decltype(clean_up)> cleaner(&m_res, clean_up);
 
-    for (auto& it : input_objs)   magazine::bindInArg (m_res, it.first, it.second, true);
-    for (auto& it : output_objs)  magazine::bindOutArg(m_res, it.first, it.second, true);
+    const auto bindUMat = [this](const RcDesc& rc) {
+            auto& mag_umat = m_res.template slot<cv::UMat>()[rc.id];
+            mag_umat = m_res.template slot<cv::Mat>()[rc.id].getUMat(ACCESS_READ);
+    };
+
+    for (auto& it : input_objs) {
+        const auto& rc = it.first;
+        magazine::bindInArg (m_res, rc, it.second);
+        // There is already cv::Mat in the magazine after bindInArg call,
+        // extract UMat from it, put into the magazine
+        if (rc.shape == GShape::GMAT) bindUMat(rc);
+    }
+    for (auto& it : output_objs) {
+        const auto& rc = it.first;
+        magazine::bindOutArg(m_res, rc, it.second);
+        if (rc.shape == GShape::GMAT) bindUMat(rc);
+    }
 
     // Initialize (reset) internal data nodes with user structures
     // before processing a frame (no need to do it for external data structures)
@@ -241,5 +260,20 @@ void cv::gimpl::GOCLExecutable::run(std::vector<InObj>  &&input_objs,
         }
     } // for(m_script)
 
-    for (auto &it : output_objs) magazine::writeBack(m_res, it.first, it.second, true);
+    for (auto &it : output_objs)
+    {
+        auto& rc = it.first;
+        auto& g_arg = it.second;
+        magazine::writeBack(m_res, rc, g_arg);
+        if (rc.shape == GShape::GMAT)
+        {
+            uchar* out_arg_data = m_res.template slot<cv::Mat>()[rc.id].data;
+            auto& mag_mat = m_res.template slot<cv::UMat>().at(rc.id);
+            GAPI_Assert((out_arg_data == (mag_mat.getMat(ACCESS_RW).data)) && " data for output parameters was reallocated ?");
+        }
+    }
+
+    // In/Out args clean-up is mandatory now with RMat
+    for (auto &it : input_objs) magazine::unbind(m_res, it.first);
+    for (auto &it : output_objs) magazine::unbind(m_res, it.first);
 }

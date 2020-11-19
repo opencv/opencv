@@ -423,7 +423,7 @@ TEST_P(Test_Model, Detection_normalized)
         scoreDiff = 5e-3;
         iouDiff = 0.09;
     }
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2020040000)
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2020040000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
     {
         iouDiff = 0.095f;

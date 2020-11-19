@@ -51,6 +51,8 @@
 
 #include "usac.hpp"
 
+#include <opencv2/core/utils/logger.hpp>
+
 namespace cv
 {
 #if defined _DEBUG || defined CV_STATIC_ANALYSIS
@@ -195,6 +197,21 @@ public:
     Mat tvec;
 };
 
+UsacParams::UsacParams()
+{
+    confidence = 0.99;
+    isParallel = false;
+    loIterations = 5;
+    loMethod = LocalOptimMethod::LOCAL_OPTIM_INNER_LO;
+    loSampleSize = 14;
+    maxIterations = 5000;
+    neighborsSearch = NeighborSearchMethod::NEIGH_GRID;
+    randomGeneratorState = 0;
+    sampler = SamplingMethod::SAMPLING_UNIFORM;
+    score = ScoreMethod::SCORE_METHOD_MSAC;
+    threshold = 1.5;
+}
+
 bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
                     InputArray _cameraMatrix, InputArray _distCoeffs,
                     OutputArray _rvec, OutputArray _tvec, bool useExtrinsicGuess,
@@ -203,7 +220,7 @@ bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
 {
     CV_INSTRUMENT_REGION();
 
-    if (flags >= 32 && flags <= 38)
+    if (flags >= USAC_DEFAULT && flags <= USAC_MAGSAC)
         return usac::solvePnPRansac(_opoints, _ipoints, _cameraMatrix, _distCoeffs,
             _rvec, _tvec, useExtrinsicGuess, iterationsCount, reprojectionError,
             confidence, _inliers, flags);
@@ -809,6 +826,15 @@ int solvePnPGeneric( InputArray _opoints, InputArray _ipoints,
     vector<Mat> vec_rvecs, vec_tvecs;
     if (flags == SOLVEPNP_EPNP || flags == SOLVEPNP_DLS || flags == SOLVEPNP_UPNP)
     {
+        if (flags == SOLVEPNP_DLS)
+        {
+            CV_LOG_DEBUG(NULL, "Broken implementation for SOLVEPNP_DLS. Fallback to EPnP.");
+        }
+        else if (flags == SOLVEPNP_UPNP)
+        {
+            CV_LOG_DEBUG(NULL, "Broken implementation for SOLVEPNP_UPNP. Fallback to EPnP.");
+        }
+
         Mat undistortedPoints;
         undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
         epnp PnP(cameraMatrix, opoints, undistortedPoints);

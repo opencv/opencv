@@ -1881,3 +1881,9 @@ function(ocv_update_file filepath content)
     file(WRITE "${filepath}" "${content}")
   endif()
 endfunction()
+
+if(NOT BUILD_SHARED_LIBS AND (CMAKE_VERSION VERSION_LESS "3.14.0"))
+  ocv_update(OPENCV_3RDPARTY_EXCLUDE_FROM_ALL "")  # avoid CMake warnings: https://gitlab.kitware.com/cmake/cmake/-/issues/18938
+else()
+  ocv_update(OPENCV_3RDPARTY_EXCLUDE_FROM_ALL "EXCLUDE_FROM_ALL")
+endif()

@@ -228,9 +228,12 @@ TEST_P(Imgcodecs_Image, read_write_BGR)
     double psnrThreshold = 100;
     if (ext == "jpg")
         psnrThreshold = 32;
-#ifdef HAVE_JASPER
+#if defined(HAVE_JASPER)
     if (ext == "jp2")
         psnrThreshold = 95;
+#elif defined(HAVE_OPENJPEG)
+    if (ext == "jp2")
+        psnrThreshold = 35;
 #endif
 
     Mat image = generateTestImageBGR();
@@ -254,9 +257,12 @@ TEST_P(Imgcodecs_Image, read_write_GRAYSCALE)
     double psnrThreshold = 100;
     if (ext == "jpg")
         psnrThreshold = 40;
-#ifdef HAVE_JASPER
+#if defined(HAVE_JASPER)
     if (ext == "jp2")
         psnrThreshold = 70;
+#elif defined(HAVE_OPENJPEG)
+    if (ext == "jp2")
+        psnrThreshold = 35;
 #endif
 
     Mat image = generateTestImageGrayscale();

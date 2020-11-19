@@ -930,7 +930,7 @@ Mat estimateAffine2D(InputArray _from, InputArray _to, OutputArray _inliers,
                      const size_t refineIters)
 {
 
-    if (method >= 32 && method <= 38)
+    if (method >= USAC_DEFAULT && method <= USAC_MAGSAC)
         return cv::usac::estimateAffine2D(_from, _to, _inliers, method,
             ransacReprojThreshold, (int)maxIters, confidence, (int)refineIters);
 

@@ -164,7 +164,7 @@ template<> struct get_in<cv::GMatP>
 };
 template<> struct get_in<cv::GFrame>
 {
-    static cv::Mat    get(GCPUContext &ctx, int idx) { return get_in<cv::GMat>::get(ctx, idx); }
+    static cv::MediaFrame get(GCPUContext &ctx, int idx) { return ctx.inArg<cv::MediaFrame>(idx); }
 };
 template<> struct get_in<cv::GScalar>
 {
@@ -268,6 +268,11 @@ template<typename U> struct get_out<cv::GArray<U>>
 
 //FIXME(dm): GArray<Mat>/GArray<GMat> conversion should be done more gracefully in the system
 template<> struct get_out<cv::GArray<cv::GMat> >: public get_out<cv::GArray<cv::Mat> >
+{
+};
+
+// FIXME(dm): GArray<vector<U>>/GArray<GArray<U>> conversion should be done more gracefully in the system
+template<typename U> struct get_out<cv::GArray<cv::GArray<U>> >: public get_out<cv::GArray<std::vector<U>> >
 {
 };
 
@@ -443,7 +448,7 @@ struct OCVStCallHelper<Impl, std::tuple<Ins...>, std::tuple<Outs...>> :
 template<class Impl, class K>
 class GCPUKernelImpl: public cv::detail::KernelTag
 {
-    using CallHelper = detail::OCVCallHelper<Impl, typename K::InArgs, typename K::OutArgs>;
+    using CallHelper = cv::detail::OCVCallHelper<Impl, typename K::InArgs, typename K::OutArgs>;
 
 public:
     using API = K;
@@ -497,7 +502,7 @@ private:
 template<typename K, typename Callable>
 gapi::cpu::GOCVFunctor gapi::cpu::ocv_kernel(Callable& c)
 {
-    using P = detail::OCVCallHelper<Callable, typename K::InArgs, typename K::OutArgs>;
+    using P = cv::detail::OCVCallHelper<Callable, typename K::InArgs, typename K::OutArgs>;
     return GOCVFunctor{ K::id()
                       , &K::getOutMeta
                       , std::bind(&P::callFunctor, std::placeholders::_1, std::ref(c))
@@ -507,7 +512,7 @@ gapi::cpu::GOCVFunctor gapi::cpu::ocv_kernel(Callable& c)
 template<typename K, typename Callable>
 gapi::cpu::GOCVFunctor gapi::cpu::ocv_kernel(const Callable& c)
 {
-    using P = detail::OCVCallHelper<Callable, typename K::InArgs, typename K::OutArgs>;
+    using P = cv::detail::OCVCallHelper<Callable, typename K::InArgs, typename K::OutArgs>;
     return GOCVFunctor{ K::id()
                       , &K::getOutMeta
                       , std::bind(&P::callFunctor, std::placeholders::_1, c)

@@ -16,6 +16,7 @@ Implementation of Scale layer.
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
 
+#include <opencv2/imgproc.hpp>
 #include <opencv2/dnn/shape_utils.hpp>
 
 #ifdef HAVE_CUDA
@@ -389,7 +390,7 @@ public:
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
         CV_Assert_N(inputs.size() == 1, blobs.size() == 3);
-        CV_Assert_N(blobs[0].total() == 1, blobs[1].total() == total(inputs[0], 1),
+        CV_Assert_N(blobs[0].total() == 1,
                     blobs[2].total() == inputs[0][1]);
 
         outputs.assign(1, inputs[0]);
@@ -412,15 +413,20 @@ public:
         float* outData = outputs[0].ptr<float>();
 
         Mat data_mean_cpu = blobs[1].clone();
+        Mat mean_resize = Mat(inputs[0].size[3], inputs[0].size[2], CV_32FC3);
+        Mat mean_3d = Mat(data_mean_cpu.size[3], data_mean_cpu.size[2], CV_32FC3, data_mean_cpu.ptr<float>(0));
+        resize(mean_3d, mean_resize, Size(inputs[0].size[3], inputs[0].size[2]));
+        int new_size[] = {1, mean_resize.channels(), mean_resize.cols, mean_resize.rows};
+        Mat data_mean_cpu_resize = mean_resize.reshape(1, *new_size);
         Mat data_mean_per_channel_cpu = blobs[2].clone();
 
-        const int numWeights = data_mean_cpu.total();
+        const int numWeights = data_mean_cpu_resize.total();
         CV_Assert(numWeights != 0);
 
         ++num_iter;
         if (num_iter <= recompute_mean)
         {
-            data_mean_cpu *= (num_iter - 1);
+            data_mean_cpu_resize *= (num_iter - 1);
             const int batch = inputs[0].size[0];
             float alpha = 1.0 / batch;
 
@@ -429,15 +435,15 @@ public:
                 Mat inpSlice(1, numWeights, CV_32F, inpData);
                 inpSlice = alpha * inpSlice;
 
-                add(data_mean_cpu.reshape(1, 1), inpSlice, data_mean_cpu.reshape(1, 1));
+                add(data_mean_cpu_resize.reshape(1, 1), inpSlice, data_mean_cpu_resize.reshape(1, 1));
                 inpData += numWeights;
             }
-            data_mean_cpu *= (1.0 / num_iter);
+            data_mean_cpu_resize *= (1.0 / num_iter);
 
-            int newsize[] = {blobs[1].size[1], (int)blobs[1].total(2)};
-            reduce(data_mean_cpu.reshape(1, 2, &newsize[0]), data_mean_per_channel_cpu, 1, REDUCE_SUM, CV_32F);
+            int newsize[] = {inputs[0].size[1], (int)inputs[0].total(2)};
+            reduce(data_mean_cpu_resize.reshape(1, 2, &newsize[0]), data_mean_per_channel_cpu, 1, REDUCE_SUM, CV_32F);
 
-            int area = blobs[1].total(2);
+            int area = inputs[0].total(2);
             data_mean_per_channel_cpu *= (1.0 / area);
         }
 
@@ -452,7 +458,7 @@ public:
                 Mat inpSlice(1, numWeights, CV_32F, inpData);
                 Mat outSlice(1, numWeights, CV_32F, outData);
 
-                add(inpSlice, (-1) * data_mean_cpu, outSlice);
+                add(inpSlice, (-1) * data_mean_cpu_resize, outSlice);
                 inpData += numWeights;
                 outData += numWeights;
             }

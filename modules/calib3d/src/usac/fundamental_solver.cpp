@@ -20,7 +20,7 @@ public:
 
     int estimate (const std::vector<int> &sample, std::vector<Mat> &models) const override {
         const int m = 7, n = 9; // rows, cols
-        std::vector<double> a(m*n);
+        std::vector<double> a(63); // m*n
         auto * a_ = &a[0];
 
         for (int i = 0; i < m; i++ ) {
@@ -39,7 +39,8 @@ public:
             (*a_++) = 1;
         }
 
-        Math::eliminateUpperTriangular(a, m, n);
+        if (!Math::eliminateUpperTriangular(a, m, n))
+            return 0;
 
         /*
          [a11 a12 a13 a14 a15 a16 a17 a18 a19]
@@ -79,8 +80,8 @@ public:
         }
 
         // OpenCV:
-        double c[4], r[3];
-        double t0, t1, t2;
+        double c[4] = { 0 }, r[3] = { 0 };
+        double t0 = 0, t1 = 0, t2 = 0;
         Mat_<double> coeffs (1, 4, c);
         Mat_<double> roots (1, 3, r);
 
@@ -158,11 +159,14 @@ private:
     const float * const points;
 public:
     explicit FundamentalMinimalSolver8ptsImpl (const Mat &points_) :
-            points_mat (&points_), points ((float*) points_.data) {}
+            points_mat (&points_), points ((float*) points_.data)
+    {
+        CV_DbgAssert(points);
+    }
 
     int estimate (const std::vector<int> &sample, std::vector<Mat> &models) const override {
         const int m = 8, n = 9; // rows, cols
-        std::vector<double> a(m*n);
+        std::vector<double> a(72); // m*n
         auto * a_ = &a[0];
 
         for (int i = 0; i < m; i++ ) {
@@ -181,7 +185,8 @@ public:
             (*a_++) = 1;
         }
 
-        Math::eliminateUpperTriangular(a, m, n);
+        if (!Math::eliminateUpperTriangular(a, m, n))
+            return 0;
 
         /*
          [a11 a12 a13 a14 a15 a16 a17 a18 a19]
@@ -310,16 +315,15 @@ public:
         Matx<double, 9, 9> AtA_(AtA), U, Vt;
         Vec<double, 9> W;
         SVD::compute(AtA_, W, U, Vt, SVD::FULL_UV + SVD::MODIFY_A);
-        models = std::vector<Mat> { Mat(Vt.row(8).reshape<3,3>()) };
+        models = std::vector<Mat> { Mat_<double>(3, 3, Vt.val + 72 /*=8*9*/) };
 #endif
+        FundamentalDegeneracy::recoverRank(models[0], true/*F*/);
 
         // Transpose T2 (in T2 the lower diagonal is zero)
         T2(2, 0) = T2(0, 2); T2(2, 1) = T2(1, 2);
         T2(0, 2) = 0; T2(1, 2) = 0;
 
         models[0] = T2 * models[0] * T1;
-
-        FundamentalDegeneracy::recoverRank(models[0]);
         return 1;
     }
 

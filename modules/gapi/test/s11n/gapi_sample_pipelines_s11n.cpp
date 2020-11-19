@@ -8,8 +8,9 @@
 #include "../test_precomp.hpp"
 
 #include <ade/util/iota_range.hpp>
-
 #include <opencv2/gapi/s11n.hpp>
+#include "api/render_priv.hpp"
+#include "../common/gapi_render_tests.hpp"
 
 namespace opencv_test
 {
@@ -282,4 +283,527 @@ TEST(S11N, Pipeline_CustomRGB2YUV)
     }
 }
 
+namespace ThisTest
+{
+    using GOpBool = GOpaque<bool>;
+    using GOpInt = GOpaque<int>;
+    using GOpDouble = GOpaque<double>;
+    using GOpPoint = GOpaque<cv::Point>;
+    using GOpSize = GOpaque<cv::Size>;
+    using GOpRect = GOpaque<cv::Rect>;
+
+    using GOpOut = std::tuple<GOpPoint, GOpSize, GOpRect>;
+
+    G_TYPED_KERNEL_M(OpGenerate, <GOpOut(GOpBool, GOpInt, GOpDouble)>, "test.s11n.gopaque")
+    {
+        static std::tuple<GOpaqueDesc, GOpaqueDesc, GOpaqueDesc> outMeta(const GOpaqueDesc&, const GOpaqueDesc&, const GOpaqueDesc&) {
+            return std::make_tuple(empty_gopaque_desc(), empty_gopaque_desc(), empty_gopaque_desc());
+        }
+    };
+
+    GAPI_OCV_KERNEL(OCVOpGenerate, OpGenerate)
+    {
+        static void run(const bool& b, const int& i, const double& d,
+                        cv::Point& p, cv::Size& s, cv::Rect& r)
+        {
+            p = cv::Point(i, i*2);
+            s = b ? cv::Size(42, 42) : cv::Size(7, 7);
+            int ii = static_cast<int>(d);
+            r = cv::Rect(ii, ii, ii, ii);
+        }
+    };
+
+    using GArrInt = GArray<int>;
+    using GArrDouble = GArray<double>;
+    using GArrPoint = GArray<cv::Point>;
+    using GArrSize = GArray<cv::Size>;
+    using GArrRect = GArray<cv::Rect>;
+    using GArrMat = GArray<cv::Mat>;
+    using GArrScalar = GArray<cv::Scalar>;
+
+    using GArrOut = std::tuple<GArrPoint, GArrSize, GArrRect, GArrMat>;
+
+    G_TYPED_KERNEL_M(ArrGenerate, <GArrOut(GArrInt, GArrInt, GArrDouble, GArrScalar)>, "test.s11n.garray")
+    {
+        static std::tuple<GArrayDesc, GArrayDesc, GArrayDesc, GArrayDesc> outMeta(const GArrayDesc&, const GArrayDesc&,
+                                                                                  const GArrayDesc&, const GArrayDesc&) {
+            return std::make_tuple(empty_array_desc(), empty_array_desc(), empty_array_desc(), empty_array_desc());
+        }
+    };
+
+    GAPI_OCV_KERNEL(OCVArrGenerate, ArrGenerate)
+    {
+        static void run(const std::vector<int>& b, const std::vector<int>& i,
+                        const std::vector<double>& d, const std::vector<cv::Scalar>& sc,
+                        std::vector<cv::Point>& p, std::vector<cv::Size>& s,
+                        std::vector<cv::Rect>& r, std::vector<cv::Mat>& m)
+        {
+            p.clear(); p.resize(b.size());
+            s.clear(); s.resize(b.size());
+            r.clear(); r.resize(b.size());
+            m.clear(); m.resize(b.size());
+
+            for (std::size_t idx = 0; idx < b.size(); ++idx)
+            {
+                p[idx] = cv::Point(i[idx], i[idx]*2);
+                s[idx] = b[idx] == 1 ? cv::Size(42, 42) : cv::Size(7, 7);
+                int ii = static_cast<int>(d[idx]);
+                r[idx] = cv::Rect(ii, ii, ii, ii);
+                m[idx] = cv::Mat(3, 3, CV_8UC1, sc[idx]);
+            }
+        }
+    };
+
+    G_TYPED_KERNEL_M(OpArrK1, <std::tuple<GArrInt,GOpSize>(GOpInt, GArrSize)>, "test.s11n.oparrk1")
+    {
+        static std::tuple<GArrayDesc, GOpaqueDesc> outMeta(const GOpaqueDesc&, const GArrayDesc&) {
+            return std::make_tuple(empty_array_desc(), empty_gopaque_desc());
+        }
+    };
+
+    GAPI_OCV_KERNEL(OCVOpArrK1, OpArrK1)
+    {
+        static void run(const int& i, const std::vector<cv::Size>& vs,
+                        std::vector<int>& vi, cv::Size& s)
+        {
+            vi.clear(); vi.resize(vs.size());
+            s = cv::Size(i, i);
+            for (std::size_t idx = 0; idx < vs.size(); ++ idx)
+                vi[idx] = vs[idx].area();
+        }
+    };
+
+    G_TYPED_KERNEL_M(OpArrK2, <std::tuple<GOpDouble,GArrPoint>(GArrInt, GOpSize)>, "test.s11n.oparrk2")
+    {
+        static std::tuple<GOpaqueDesc, GArrayDesc> outMeta(const GArrayDesc&, const GOpaqueDesc&) {
+            return std::make_tuple(empty_gopaque_desc(), empty_array_desc());
+        }
+    };
+
+    GAPI_OCV_KERNEL(OCVOpArrK2, OpArrK2)
+    {
+        static void run(const std::vector<int>& vi, const cv::Size& s,
+                        double& d, std::vector<cv::Point>& vp)
+        {
+            vp.clear(); vp.resize(vi.size());
+            d = s.area() * 1.5;
+            for (std::size_t idx = 0; idx < vi.size(); ++ idx)
+                vp[idx] = cv::Point(vi[idx], vi[idx]);
+        }
+    };
+
+    using GK3Out = std::tuple<cv::GArray<uint64_t>, cv::GArray<int32_t>>;
+    G_TYPED_KERNEL_M(OpArrK3, <GK3Out(cv::GArray<bool>, cv::GArray<int32_t>, cv::GOpaque<float>)>, "test.s11n.oparrk3")
+    {
+        static std::tuple<GArrayDesc, GArrayDesc> outMeta(const GArrayDesc&, const GArrayDesc&, const GOpaqueDesc&) {
+            return std::make_tuple(empty_array_desc(), empty_array_desc());
+        }
+    };
+
+    GAPI_OCV_KERNEL(OCVOpArrK3, OpArrK3)
+    {
+        static void run(const std::vector<bool>& vb, const std::vector<int32_t>& vi_in, const float& f,
+                        std::vector<uint64_t>& vui, std::vector<int32_t>& vi)
+        {
+            vui.clear(); vui.resize(vi_in.size());
+            vi.clear();  vi.resize(vi_in.size());
+
+            for (std::size_t idx = 0; idx < vi_in.size(); ++ idx)
+            {
+                vi[idx] = vb[idx] ? vi_in[idx] : -vi_in[idx];
+                vui[idx] = vb[idx] ? static_cast<uint64_t>(vi_in[idx] * f) :
+                                     static_cast<uint64_t>(vi_in[idx] / f);
+            }
+        }
+    };
+
+    using GK4Out = std::tuple<cv::GOpaque<int>, cv::GArray<std::string>>;
+    G_TYPED_KERNEL_M(OpArrK4, <GK4Out(cv::GOpaque<bool>, cv::GOpaque<std::string>)>, "test.s11n.oparrk4")
+    {
+        static std::tuple<GOpaqueDesc, GArrayDesc> outMeta(const GOpaqueDesc&, const GOpaqueDesc&) {
+            return std::make_tuple(empty_gopaque_desc(), empty_array_desc());
+        }
+    };
+
+    GAPI_OCV_KERNEL(OCVOpArrK4, OpArrK4)
+    {
+        static void run(const bool& b, const std::string& s,
+                        int& i, std::vector<std::string>& vs)
+        {
+            vs.clear();
+            vs.resize(2);
+            i = b ? 42 : 24;
+            auto s_copy = s + " world";
+            vs = std::vector<std::string>{s_copy, s_copy};
+        }
+    };
+} // namespace ThisTest
+
+TEST(S11N, Pipeline_GOpaque)
+{
+    using namespace ThisTest;
+    GOpBool in1;
+    GOpInt in2;
+    GOpDouble in3;
+
+    auto out = OpGenerate::on(in1, in2, in3);
+    cv::GComputation c(cv::GIn(in1, in2, in3), cv::GOut(std::get<0>(out), std::get<1>(out), std::get<2>(out)));
+
+    auto p = cv::gapi::serialize(c);
+    auto dc = cv::gapi::deserialize<cv::GComputation>(p);
+
+    bool b = true;
+    int i = 33;
+    double d = 128.7;
+    cv::Point pp;
+    cv::Size s;
+    cv::Rect r;
+    dc.apply(cv::gin(b, i, d), cv::gout(pp, s, r), cv::compile_args(cv::gapi::kernels<OCVOpGenerate>()));
+
+    EXPECT_EQ(pp, cv::Point(i, i*2));
+    EXPECT_EQ(s, cv::Size(42, 42));
+    int ii = static_cast<int>(d);
+    EXPECT_EQ(r, cv::Rect(ii, ii, ii, ii));
+}
+
+TEST(S11N, Pipeline_GArray)
+{
+    using namespace ThisTest;
+    GArrInt in1, in2;
+    GArrDouble in3;
+    GArrScalar in4;
+
+    auto out = ArrGenerate::on(in1, in2, in3, in4);
+    cv::GComputation c(cv::GIn(in1, in2, in3, in4),
+                       cv::GOut(std::get<0>(out), std::get<1>(out),
+                                std::get<2>(out), std::get<3>(out)));
+
+    auto p = cv::gapi::serialize(c);
+    auto dc = cv::gapi::deserialize<cv::GComputation>(p);
+
+    std::vector<int> b {1, 0, -1};
+    std::vector<int> i {3, 0 , 59};
+    std::vector<double> d {0.7, 120.5, 44.14};
+    std::vector<cv::Scalar> sc {cv::Scalar::all(10), cv::Scalar::all(15), cv::Scalar::all(99)};
+    std::vector<cv::Point> pp;
+    std::vector<cv::Size> s;
+    std::vector<cv::Rect> r;
+    std::vector<cv::Mat> m;
+    dc.apply(cv::gin(b, i, d, sc), cv::gout(pp, s, r, m), cv::compile_args(cv::gapi::kernels<OCVArrGenerate>()));
+
+    for (std::size_t idx = 0; idx < b.size(); ++idx)
+    {
+        EXPECT_EQ(pp[idx], cv::Point(i[idx], i[idx]*2));
+        EXPECT_EQ(s[idx], b[idx] == 1 ? cv::Size(42, 42) : cv::Size(7, 7));
+        int ii = static_cast<int>(d[idx]);
+        EXPECT_EQ(r[idx], cv::Rect(ii, ii, ii, ii));
+    }
+}
+
+TEST(S11N, Pipeline_GArray_GOpaque_Multinode)
+{
+    using namespace ThisTest;
+    GOpInt in1;
+    GArrSize in2;
+
+    auto tmp = OpArrK1::on(in1, in2);
+    auto out = OpArrK2::on(std::get<0>(tmp), std::get<1>(tmp));
+
+    cv::GComputation c(cv::GIn(in1, in2),
+                       cv::GOut(std::get<0>(out), std::get<1>(out)));
+
+    auto p = cv::gapi::serialize(c);
+    auto dc = cv::gapi::deserialize<cv::GComputation>(p);
+
+    int i = 42;
+    std::vector<cv::Size> s{cv::Size(11, 22), cv::Size(13, 18)};
+    double d;
+    std::vector<cv::Point> pp;
+
+    dc.apply(cv::gin(i, s), cv::gout(d, pp), cv::compile_args(cv::gapi::kernels<OCVOpArrK1, OCVOpArrK2>()));
+
+    auto st = cv::Size(i ,i);
+    EXPECT_EQ(d, st.area() * 1.5);
+
+    for (std::size_t idx = 0; idx < s.size(); ++idx)
+    {
+        EXPECT_EQ(pp[idx], cv::Point(s[idx].area(), s[idx].area()));
+    }
+}
+
+TEST(S11N, Pipeline_GArray_GOpaque_2)
+{
+    using namespace ThisTest;
+
+    cv::GArray<bool> in1;
+    cv::GArray<int32_t> in2;
+    cv::GOpaque<float> in3;
+    auto out = OpArrK3::on(in1, in2, in3);
+    cv::GComputation c(cv::GIn(in1, in2, in3),
+                       cv::GOut(std::get<0>(out), std::get<1>(out)));
+
+    auto p = cv::gapi::serialize(c);
+    auto dc = cv::gapi::deserialize<cv::GComputation>(p);
+
+    std::vector<bool> b {true, false, false};
+    std::vector<int32_t> i {234324, -234252, 999};
+    float f = 0.85f;
+    std::vector<int32_t> out_i;
+    std::vector<uint64_t> out_ui;
+    dc.apply(cv::gin(b, i, f), cv::gout(out_ui, out_i), cv::compile_args(cv::gapi::kernels<OCVOpArrK3>()));
+
+    for (std::size_t idx = 0; idx < b.size(); ++idx)
+    {
+        EXPECT_EQ(out_i[idx], b[idx] ? i[idx] : -i[idx]);
+        EXPECT_EQ(out_ui[idx], b[idx] ? static_cast<uint64_t>(i[idx] * f) :
+                                        static_cast<uint64_t>(i[idx] / f));
+    }
+}
+
+TEST(S11N, Pipeline_GArray_GOpaque_3)
+{
+    using namespace ThisTest;
+
+    cv::GOpaque<bool> in1;
+    cv::GOpaque<std::string> in2;
+    auto out = OpArrK4::on(in1, in2);
+    cv::GComputation c(cv::GIn(in1, in2),
+                       cv::GOut(std::get<0>(out), std::get<1>(out)));
+
+    auto p = cv::gapi::serialize(c);
+    auto dc = cv::gapi::deserialize<cv::GComputation>(p);
+
+    bool b = false;
+    std::string s("hello");
+    int i = 0;
+    std::vector<std::string> vs{};
+    dc.apply(cv::gin(b, s), cv::gout(i, vs), cv::compile_args(cv::gapi::kernels<OCVOpArrK4>()));
+
+    EXPECT_EQ(24, i);
+    std::vector<std::string> vs_ref{"hello world", "hello world"};
+    EXPECT_EQ(vs_ref, vs);
+}
+
+TEST(S11N, Pipeline_Render_NV12)
+{
+    cv::Size sz (100, 200);
+    int rects_num = 10;
+    int text_num  = 10;
+    int image_num = 10;
+
+    int thick = 2;
+    int lt = LINE_8;
+    cv::Scalar color(111, 222, 77);
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::gapi::wip::draw::Prims prims;
+
+    // Rects
+    int shift = 0;
+    for (int i = 0; i < rects_num; ++i) {
+        cv::Rect rect(200 + i, 200 + i, 200, 200);
+        prims.emplace_back(cv::gapi::wip::draw::Rect(rect, color, thick, lt, shift));
+    }
+
+    // Mosaic
+    int cellsz = 50;
+    int decim = 0;
+    for (int i = 0; i < rects_num; ++i) {
+        cv::Rect mos(200 + i, 200 + i, 200, 200);
+        prims.emplace_back(cv::gapi::wip::draw::Mosaic(mos, cellsz, decim));
+    }
+
+    // Text
+    std::string text = "Some text";
+    int ff = FONT_HERSHEY_SIMPLEX;
+    double fs = 2.0;
+    bool blo = false;
+    for (int i = 0; i < text_num; ++i) {
+        cv::Point org(200 + i, 200 + i);
+        prims.emplace_back(cv::gapi::wip::draw::Text(text, org, ff, fs, color, thick, lt, blo));
+    }
+
+    // Image
+    double transparency = 1.0;
+    cv::Rect rect_img(0 ,0 , 50, 50);
+    cv::Mat img(rect_img.size(), CV_8UC3, color);
+    cv::Mat alpha(rect_img.size(), CV_32FC1, transparency);
+    auto tl = rect_img.tl();
+    for (int i = 0; i < image_num; ++i) {
+        cv::Point org_img = {tl.x + i, tl.y + rect_img.size().height + i};
+
+        prims.emplace_back(cv::gapi::wip::draw::Image({org_img, img, alpha}));
+    }
+
+    // Circle
+    cv::Point center(300, 400);
+    int rad = 25;
+    prims.emplace_back(cv::gapi::wip::draw::Circle({center, rad, color, thick, lt, shift}));
+
+    // Line
+    cv::Point point_next(300, 425);
+    prims.emplace_back(cv::gapi::wip::draw::Line({center, point_next, color, thick, lt, shift}));
+
+    // Poly
+    std::vector<cv::Point> points = {{300, 400}, {290, 450}, {348, 410}, {300, 400}};
+    prims.emplace_back(cv::gapi::wip::draw::Poly({points, color, thick, lt, shift}));
+
+    cv::GMat y_in, uv_in, y_out, uv_out;
+    cv::GArray<cv::gapi::wip::draw::Prim> arr;
+    std::tie(y_out, uv_out) = cv::gapi::wip::draw::renderNV12(y_in, uv_in, arr);
+    cv::GComputation comp(cv::GIn(y_in, uv_in, arr), cv::GOut(y_out, uv_out));
+
+    auto serialized = cv::gapi::serialize(comp);
+    auto dc = cv::gapi::deserialize<cv::GComputation>(serialized);
+
+    cv::Mat y(1920, 1080, CV_8UC1);
+    cv::Mat uv(960, 540, CV_8UC2);
+    cv::randu(y, cv::Scalar(0), cv::Scalar(255));
+    cv::randu(uv, cv::Scalar::all(0), cv::Scalar::all(255));
+    cv::Mat y_ref_mat = y.clone(), uv_ref_mat = uv.clone();
+    dc.apply(cv::gin(y, uv, prims), cv::gout(y, uv));
+
+    // OpenCV code //////////////////////////////////////////////////////////////
+    cv::Mat yuv;
+    cv::gapi::wip::draw::cvtNV12ToYUV(y_ref_mat, uv_ref_mat, yuv);
+
+    for (int i = 0; i < rects_num; ++i) {
+        cv::Rect rect(200 + i, 200 + i, 200, 200);
+        cv::rectangle(yuv, rect, cvtBGRToYUVC(color), thick, lt, shift);
+    }
+
+    for (int i = 0; i < rects_num; ++i) {
+        cv::Rect mos(200 + i, 200 + i, 200, 200);
+         drawMosaicRef(yuv, mos, cellsz);
+    }
+
+    for (int i = 0; i < text_num; ++i) {
+        cv::Point org(200 + i, 200 + i);
+        cv::putText(yuv, text, org, ff, fs, cvtBGRToYUVC(color), thick, lt, blo);
+    }
+
+    for (int i = 0; i < image_num; ++i) {
+        cv::Point org_img = {tl.x + i, tl.y + rect_img.size().height + i};
+        cv::Mat yuv_img;
+        cv::cvtColor(img, yuv_img, cv::COLOR_BGR2YUV);
+        blendImageRef(yuv, org_img, yuv_img, alpha);
+    }
+
+    cv::circle(yuv, center, rad, cvtBGRToYUVC(color), thick, lt, shift);
+    cv::line(yuv, center, point_next, cvtBGRToYUVC(color), thick, lt, shift);
+    std::vector<std::vector<cv::Point>> pp{points};
+    cv::fillPoly(yuv, pp, cvtBGRToYUVC(color), lt, shift);
+
+    // YUV -> NV12
+    cv::gapi::wip::draw::cvtYUVToNV12(yuv, y_ref_mat, uv_ref_mat);
+
+    EXPECT_EQ(cv::norm( y,  y_ref_mat), 0);
+    EXPECT_EQ(cv::norm(uv, uv_ref_mat), 0);
+}
+
+TEST(S11N, Pipeline_Render_RGB)
+{
+    cv::Size sz (100, 200);
+    int rects_num = 10;
+    int text_num  = 10;
+    int image_num = 10;
+
+    int thick = 2;
+    int lt = LINE_8;
+    cv::Scalar color(111, 222, 77);
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::gapi::wip::draw::Prims prims;
+
+    // Rects
+    int shift = 0;
+    for (int i = 0; i < rects_num; ++i) {
+        cv::Rect rect(200 + i, 200 + i, 200, 200);
+        prims.emplace_back(cv::gapi::wip::draw::Rect(rect, color, thick, lt, shift));
+    }
+
+    // Mosaic
+    int cellsz = 50;
+    int decim = 0;
+    for (int i = 0; i < rects_num; ++i) {
+        cv::Rect mos(200 + i, 200 + i, 200, 200);
+        prims.emplace_back(cv::gapi::wip::draw::Mosaic(mos, cellsz, decim));
+    }
+
+    // Text
+    std::string text = "Some text";
+    int ff = FONT_HERSHEY_SIMPLEX;
+    double fs = 2.0;
+    bool blo = false;
+    for (int i = 0; i < text_num; ++i) {
+        cv::Point org(200 + i, 200 + i);
+        prims.emplace_back(cv::gapi::wip::draw::Text(text, org, ff, fs, color, thick, lt, blo));
+    }
+
+    // Image
+    double transparency = 1.0;
+    cv::Rect rect_img(0 ,0 , 50, 50);
+    cv::Mat img(rect_img.size(), CV_8UC3, color);
+    cv::Mat alpha(rect_img.size(), CV_32FC1, transparency);
+    auto tl = rect_img.tl();
+    for (int i = 0; i < image_num; ++i) {
+        cv::Point org_img = {tl.x + i, tl.y + rect_img.size().height + i};
+
+        prims.emplace_back(cv::gapi::wip::draw::Image({org_img, img, alpha}));
+    }
+
+    // Circle
+    cv::Point center(300, 400);
+    int rad = 25;
+    prims.emplace_back(cv::gapi::wip::draw::Circle({center, rad, color, thick, lt, shift}));
+
+    // Line
+    cv::Point point_next(300, 425);
+    prims.emplace_back(cv::gapi::wip::draw::Line({center, point_next, color, thick, lt, shift}));
+
+    // Poly
+    std::vector<cv::Point> points = {{300, 400}, {290, 450}, {348, 410}, {300, 400}};
+    prims.emplace_back(cv::gapi::wip::draw::Poly({points, color, thick, lt, shift}));
+
+    cv::GMat in, out;
+    cv::GArray<cv::gapi::wip::draw::Prim> arr;
+    out = cv::gapi::wip::draw::render3ch(in, arr);
+    cv::GComputation comp(cv::GIn(in, arr), cv::GOut(out));
+
+    auto serialized = cv::gapi::serialize(comp);
+    auto dc = cv::gapi::deserialize<cv::GComputation>(serialized);
+
+    cv::Mat input(1920, 1080, CV_8UC3);
+    cv::randu(input, cv::Scalar::all(0), cv::Scalar::all(255));
+    cv::Mat ref_mat = input.clone();
+    dc.apply(cv::gin(input, prims), cv::gout(input));
+
+    // OpenCV code //////////////////////////////////////////////////////////////
+    for (int i = 0; i < rects_num; ++i) {
+        cv::Rect rect(200 + i, 200 + i, 200, 200);
+        cv::rectangle(ref_mat, rect, color, thick, lt, shift);
+    }
+
+    for (int i = 0; i < rects_num; ++i) {
+        cv::Rect mos(200 + i, 200 + i, 200, 200);
+         drawMosaicRef(ref_mat, mos, cellsz);
+    }
+
+    for (int i = 0; i < text_num; ++i) {
+        cv::Point org(200 + i, 200 + i);
+        cv::putText(ref_mat, text, org, ff, fs, color, thick, lt, blo);
+    }
+
+    for (int i = 0; i < image_num; ++i) {
+        cv::Point org_img = {tl.x + i, tl.y + rect_img.size().height + i};
+        blendImageRef(ref_mat, org_img, img, alpha);
+    }
+
+    cv::circle(ref_mat, center, rad, color, thick, lt, shift);
+    cv::line(ref_mat, center, point_next, color, thick, lt, shift);
+    std::vector<std::vector<cv::Point>> pp{points};
+    cv::fillPoly(ref_mat, pp, color, lt, shift);
+
+    EXPECT_EQ(cv::norm(input,  ref_mat), 0);
+}
 } // namespace opencv_test
