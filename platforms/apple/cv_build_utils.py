@@ -45,7 +45,7 @@ def get_xcode_version():
         raise Exception("Failed to parse Xcode version")
 
 def get_xcode_setting(var, projectdir):
-    ret = check_output(["xcodebuild", "-showBuildSettings"], cwd = projectdir)
+    ret = check_output(["xcodebuild", "-showBuildSettings"], cwd = projectdir).decode('utf-8')
     m = re.search("\s" + var + " = (.*)", ret)
     if m:
         return m.group(1)
