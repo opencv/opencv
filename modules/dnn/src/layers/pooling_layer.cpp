@@ -461,8 +461,8 @@ virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inp
 
             PoolingInvoker p;
 
-            bool isConv1D = src.dims == 3;
-            bool isConv3D = src.dims == 5;
+            bool isPool1D = src.dims == 3;
+            bool isPool3D = src.dims == 5;
 
             p.src = &src;
             p.rois = &rois;
@@ -477,9 +477,9 @@ virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inp
             p.kernel = Size(kernel_size[1], kernel_size[0]);
             p.stride = Size(strides[1], strides[0]);
             p.pad_l = pads_begin.back();
-            p.pad_t = isConv1D? 0 : pads_begin[pads_begin.size() - 2];
+            p.pad_t = isPool1D ? 0 : pads_begin[pads_begin.size() - 2];
             p.pad_r = pads_end.back();
-            p.pad_b = isConv1D? 0 : pads_end[pads_end.size() - 2];
+            p.pad_b = isPool1D ? 0 : pads_end[pads_end.size() - 2];
 
             p.avePoolPaddedArea = avePoolPaddedArea;
             p.nstripes = nstripes;
@@ -489,11 +489,11 @@ virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inp
 
             if( !computeMaxIdx )
             {
-                int height = isConv1D? 1 : src.size[src.dims - 2];
+                int height = isPool1D ? 1 : src.size[src.dims - 2];
                 int width = src.size[src.dims - 1];
 
-                int kernel_d = isConv3D? kernel_size[0] : 1;
-                int kernel_h = isConv1D? 1 : kernel_size[kernel_size.size() - 2];
+                int kernel_d = isPool3D ? kernel_size[0] : 1;
+                int kernel_h = isPool1D ? 1 : kernel_size[kernel_size.size() - 2];
                 int kernel_w = kernel_size.back();
 
                 p.ofsbuf.resize(kernel_d * kernel_h * kernel_w);
