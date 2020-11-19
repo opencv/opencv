@@ -32,7 +32,28 @@ namespace cv
 {
 //! @addtogroup core
 //! @{
-static constexpr double CV_QUAT_EPS = 1.e-6;
+
+//! Unit quaternion flag
+enum AssumeType
+{
+    /**
+     * This flag is specified by default.
+     * If this flag is specified, the input quaternions are assumed to be not unit quaternions.
+     * It can guarantee the correctness of the calculations,
+     * although the calculation speed will be slower than the flag ASSUME_UNIT.
+     */
+    ASSUME_NOT_UNIT,
+    /**
+     * If this flag is specified, the input quaternions are assumed to be unit quaternions which
+     * will save some computations. However, if this flag is specified without unit quaternion,
+     * the program correctness of the result will not be guaranteed.
+     */
+    ASSUME_UNIT
+};
+
+template <typename _Tp> class Quat;
+template <typename _Tp> std::ostream& operator<<(std::ostream&, const Quat<_Tp>&);
+
 /**
  * Quaternion is a number system that extends the complex numbers. It can be expressed as a
  * rotation in three-dimensional space.
@@ -107,36 +128,16 @@ static constexpr double CV_QUAT_EPS = 1.e-6;
  * std::cout << q.at(0) << std::endl;
  * ```
  */
-template <typename _Tp> class Quat;
-template <typename S>
-std::ostream& operator<<(std::ostream&, const Quat<S>&);
-
-//! Unit quaternion flag
-enum AssumeType
-{
-    /**
-     * This flag is specified by default.
-     * If this flag is specified, the input quaternions are assumed to be not unit quaternions.
-     * It can guarantee the correctness of the calculations,
-     * although the calculation speed will be slower than the flag ASSUME_UNIT.
-     */
-    ASSUME_NOT_UNIT,
-    /**
-     * If this flag is specified, the input quaternions are assumed to be unit quaternions which
-     * will save some computations. However, if this flag is specified without unit quaternion,
-     * the program correctness of the result will not be guaranteed.
-     */
-    ASSUME_UNIT
-};
-
 template <typename _Tp>
 class Quat
 {
-static_assert(std::is_floating_point<_Tp>::value, "Quaternion only make sense with type of float or double");
-using value_type = _Tp;
+    static_assert(std::is_floating_point<_Tp>::value, "Quaternion only make sense with type of float or double");
+    using value_type = _Tp;
 
 public:
-    Quat() = default;
+    static constexpr _Tp CV_QUAT_EPS = (_Tp)1.e-6;
+
+    Quat();
 
     /**
      * @brief From Vec4d or Vec4f.
@@ -839,7 +840,7 @@ public:
      * cout << new_point << endl;
      * ```
      */
-    Mat toRotMat3x3(AssumeType assumeUnit=ASSUME_NOT_UNIT) const;
+    Matx<_Tp, 3, 3> toRotMat3x3(AssumeType assumeUnit=ASSUME_NOT_UNIT) const;
 
     /**
      * @brief transform a quaternion to a 4x4 rotation matrix.
@@ -858,7 +859,7 @@ public:
      *
      * @sa toRotMat3x3
      */
-    Mat toRotMat4x4(AssumeType assumeUnit=ASSUME_NOT_UNIT) const;
+    Matx<_Tp, 4, 4> toRotMat4x4(AssumeType assumeUnit=ASSUME_NOT_UNIT) const;
 
     /**
      * @brief transform the this quaternion to a Vec<T, 4>.
@@ -1184,6 +1185,7 @@ std::ostream& operator<<(std::ostream&, const Quat<S>&);
 
 using Quatd = Quat<double>;
 using Quatf = Quat<float>;
+
 //! @} core
 }
 

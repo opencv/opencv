@@ -1,4 +1,4 @@
-/// This file is part of OpenCV project.
+// This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
@@ -24,14 +24,21 @@
 // Author: Liangqian Kong <chargerKong@126.com>
 //         Longbu Wang <riskiest@gmail.com>
 
-#ifndef OPENCV_CORE_QUATERNIONINL_HPP
-#define OPENCV_CORE_QUATERNIONINL_HPP
+#ifndef OPENCV_CORE_QUATERNION_INL_HPP
+#define OPENCV_CORE_QUATERNION_INL_HPP
 
-#include "quaternion.hpp"
+#ifndef OPENCV_CORE_QUATERNION_HPP
+#erorr This is not a standalone header. Include quaternion.hpp instead.
+#endif
+
 //@cond IGNORE
 ///////////////////////////////////////////////////////////////////////////////////////
 //Implementation
-namespace cv{
+namespace cv {
+
+template <typename T>
+Quat<T>::Quat() : w(0), x(0), y(0), z(0) {}
+
 template <typename T>
 Quat<T>::Quat(const Vec<T, 4> &coeff):w(coeff[0]), x(coeff[1]), y(coeff[2]), z(coeff[3]){}
 
@@ -47,55 +54,61 @@ Quat<T> Quat<T>::createFromAngleAxis(const T angle, const Vec<T, 3> &axis)
     {
         CV_Error(Error::StsBadArg, "this quaternion does not represent a rotation");
     }
-    w = std::cos(angle / 2);
-    x = std::sin(angle / 2) * (axis[0] / vNorm);
-    y = std::sin(angle / 2) * (axis[1] / vNorm);
-    z = std::sin(angle / 2) * (axis[2] / vNorm);
+    const T angle_half = angle * 0.5;
+    w = std::cos(angle_half);
+    const T sin_v = std::sin(angle_half);
+    const T sin_norm = sin_v / vNorm;
+    x = sin_norm * axis[0];
+    y = sin_norm * axis[1];
+    z = sin_norm * axis[2];
     return Quat<T>(w, x, y, z);
 }
 
 template <typename T>
 Quat<T> Quat<T>::createFromRotMat(InputArray _R)
 {
-    Mat R = _R.getMat();
-    if (R.rows != 3 || R.cols != 3)
+    CV_CheckTypeEQ(_R.type(), cv::traits::Type<T>::value, "");
+    if (_R.rows() != 3 || _R.cols() != 3)
     {
         CV_Error(Error::StsBadArg, "Cannot convert matrix to quaternion: rotation matrix should be a 3x3 matrix");
     }
+    Matx<T, 3, 3> R;
+    _R.copyTo(R);
+
     T S, w, x, y, z;
-    T trace = R.at<T>(0, 0) + R.at<T>(1, 1) + R.at<T>(2, 2);
+    T trace = R(0, 0) + R(1, 1) + R(2, 2);
     if (trace > 0)
     {
         S = std::sqrt(trace + 1) * 2;
-        x = (R.at<T>(1, 2) - R.at<T>(2, 1)) / S;
-        y = (R.at<T>(2, 0) - R.at<T>(0, 2)) / S;
-        z = (R.at<T>(0, 1) - R.at<T>(1, 0)) / S;
+        x = (R(1, 2) - R(2, 1)) / S;
+        y = (R(2, 0) - R(0, 2)) / S;
+        z = (R(0, 1) - R(1, 0)) / S;
         w = -0.25 * S;
     }
-    else if (R.at<T>(0, 0) > R.at<T>(1, 1) && R.at<T>(0, 0) > R.at<T>(2, 2))
+    else if (R(0, 0) > R(1, 1) && R(0, 0) > R(2, 2))
     {
 
-        S = std::sqrt(1.0 + R.at<T>(0, 0) - R.at<T>(1, 1) - R.at<T>(2, 2)) * 2;
+        S = std::sqrt(1.0 + R(0, 0) - R(1, 1) - R(2, 2)) * 2;
         x = -0.25 * S;
-        y = -(R.at<T>(1, 0) + R.at<T>(0, 1)) / S;
-        z = -(R.at<T>(0, 2) + R.at<T>(2, 0)) / S;
-        w = (R.at<T>(1, 2) - R.at<T>(2, 1)) / S;
+        y = -(R(1, 0) + R(0, 1)) / S;
+        z = -(R(0, 2) + R(2, 0)) / S;
+        w = (R(1, 2) - R(2, 1)) / S;
     }
-    else if (R.at<T>(1, 1) > R.at<T>(2, 2))
+    else if (R(1, 1) > R(2, 2))
     {
-        S = std::sqrt(1.0 - R.at<T>(0, 0) + R.at<T>(1, 1) - R.at<T>(2, 2)) * 2;
-        x = (R.at<T>(0, 1) + R.at<T>(1, 0)) / S;
+        S = std::sqrt(1.0 - R(0, 0) + R(1, 1) - R(2, 2)) * 2;
+        x = (R(0, 1) + R(1, 0)) / S;
         y = 0.25 * S;
-        z = (R.at<T>(1, 2) + R.at<T>(2, 1)) / S;
-        w = (R.at<T>(0, 2) - R.at<T>(2, 0)) / S;
+        z = (R(1, 2) + R(2, 1)) / S;
+        w = (R(0, 2) - R(2, 0)) / S;
     }
     else
     {
-        S = std::sqrt(1.0 - R.at<T>(0, 0) - R.at<T>(1, 1) + R.at<T>(2, 2)) * 2;
-        x = (R.at<T>(0, 2) + R.at<T>(2, 0)) / S;
-        y = (R.at<T>(1, 2) + R.at<T>(2, 1)) / S;
+        S = std::sqrt(1.0 - R(0, 0) - R(1, 1) + R(2, 2)) * 2;
+        x = (R(0, 2) + R(2, 0)) / S;
+        y = (R(1, 2) + R(2, 1)) / S;
         z = 0.25 * S;
-        w = -(R.at<T>(0, 1) - R.at<T>(1, 0)) / S;
+        w = -(R(0, 1) - R(1, 0)) / S;
     }
     return Quat<T> (w, x, y, z);
 }
@@ -103,13 +116,13 @@ Quat<T> Quat<T>::createFromRotMat(InputArray _R)
 template <typename T>
 Quat<T> Quat<T>::createFromRvec(InputArray _rvec)
 {
-    Mat rmat = _rvec.getMat();
-    if (!((rmat.cols == 1 && rmat.rows == 3) || (rmat.cols == 3 && rmat.rows == 1))){
+    if (!((_rvec.cols() == 1 && _rvec.rows() == 3) || (_rvec.cols() == 3 && _rvec.rows() == 1))) {
         CV_Error(Error::StsBadArg, "Cannot convert rotation vector to quaternion: The length of rotation vector should be 3");
     }
-    Vec<T, 3> rvec(rmat);
+    Vec<T, 3> rvec;
+    _rvec.copyTo(rvec);
     T psi = std::sqrt(rvec.dot(rvec));
-    if (abs(psi) < CV_QUAT_EPS){
+    if (abs(psi) < CV_QUAT_EPS) {
         return Quat<T> (1, 0, 0, 0);
     }
     Vec<T, 3> axis = rvec / psi;
@@ -220,17 +233,19 @@ Quat<T>& Quat<T>::operator*=(const T &q1)
 template <typename T>
 inline Quat<T>& Quat<T>::operator/=(const T &a)
 {
-    w /= a;
-    x /= a;
-    y /= a;
-    z /= a;
+    const T a_inv = 1.0 / a;
+    w *= a_inv;
+    x *= a_inv;
+    y *= a_inv;
+    z *= a_inv;
     return *this;
 }
 
 template <typename T>
 inline Quat<T> Quat<T>::operator/(const T &a) const
 {
-    return Quat<T>(w / a, x / a, y / a, z / a);
+    const T a_inv = 1.0 / a;
+    return Quat<T>(w * a_inv, x * a_inv, y * a_inv, z * a_inv);
 }
 
 template <typename T>
@@ -635,15 +650,16 @@ template <typename T>
 inline Vec<T, 3> Quat<T>::getAxis(AssumeType assumeUnit) const
 {
     T angle = getAngle(assumeUnit);
+    const T sin_v = std::sin(angle * 0.5);
     if (assumeUnit)
     {
-        return Vec<T, 3>{x, y, z} / std::sin(angle / 2);
+        return Vec<T, 3>{x, y, z} / sin_v;
     }
-    return Vec<T, 3> {x, y, z} / (norm() * std::sin(angle / 2));
+    return Vec<T, 3> {x, y, z} / (norm() * sin_v);
 }
 
 template <typename T>
-Mat Quat<T>::toRotMat4x4(AssumeType assumeUnit) const
+Matx<T, 4, 4> Quat<T>::toRotMat4x4(AssumeType assumeUnit) const
 {
     T a = w, b = x, c = y, d = z;
     if (!assumeUnit)
@@ -660,11 +676,11 @@ Mat Quat<T>::toRotMat4x4(AssumeType assumeUnit) const
         2 * (b * d - a * c)    , 2 * (c * d + a * b)    , 1 - 2 * (b * b + c * c), 0,
         0                      , 0                      , 0                      , 1,
     };
-    return Mat(R);
+    return R;
 }
 
 template <typename T>
-Mat Quat<T>::toRotMat3x3(AssumeType assumeUnit) const
+Matx<T, 3, 3> Quat<T>::toRotMat3x3(AssumeType assumeUnit) const
 {
     T a = w, b = x, c = y, d = z;
     if (!assumeUnit)
@@ -680,7 +696,7 @@ Mat Quat<T>::toRotMat3x3(AssumeType assumeUnit) const
         2 * (b * c + a * d)    , 1 - 2 * (b * b + d * d), 2 * (c * d - a * b),
         2 * (b * d - a * c)    , 2 * (c * d + a * b)    , 1 - 2 * (b * b + c * c)
     };
-    return Mat(R);
+    return R;
 }
 
 template <typename T>
@@ -827,8 +843,8 @@ Quat<T> Quat<T>::spline(const Quat<T> &q0, const Quat<T> &q1, const Quat<T> &q2,
     return squad(vec[1], s1, s2, vec[2], t, assumeUnit, ASSUME_NOT_UNIT);
 }
 
-}//namepsace
+}  // namepsace
 
 //! @endcond
 
-#endif /*OPENCV_CORE_QUATERNIONINL_HPP*/
+#endif /*OPENCV_CORE_QUATERNION_INL_HPP*/
