@@ -561,7 +561,7 @@ void TextRecognitionModel::setDecodeType(const String& type)
 String TextRecognitionModel::recognize(InputArray frame)
 {
     std::vector<Mat> outs;
-    impl->predict(*this, frame.getMat(), outs);
+    impl->processFrame(frame, outs);
     CV_Assert(outs.size() == 1);
 
     return voc->decode(outs[0]);
@@ -662,7 +662,7 @@ void TextDetectionModel::detect(InputArray frame, std::vector<std::vector<Point>
     results.clear();
 
     std::vector<Mat> outs;
-    impl->predict(*this, frame.getMat(), outs);
+    impl->processFrame(frame, outs);
     CV_Assert(outs.size() == 1);
     Mat binary = outs[0];
 
@@ -720,7 +720,7 @@ void TextDetectionModel::detect(InputArray frame, std::vector<std::vector<Point>
     results.clear();
 
     std::vector<Mat> outs;
-    impl->predict(*this, frame.getMat(), outs);
+    impl->processFrame(frame, outs);
     CV_Assert(outs.size() == 2);
     Mat geometry = outs[0];
     Mat scoreMap = outs[1];
