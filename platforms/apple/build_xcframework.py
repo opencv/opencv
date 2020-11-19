@@ -38,10 +38,10 @@ def get_framework_build_command_for_platform(platform, destination, framework_na
         # TODO: This is building with objc turned off due to an issue with CMake. See here for discussion: https://gitlab.kitware.com/cmake/cmake/-/issues/21436
         args += [osx_script_path, "--catalyst_archs", "x86_64,arm64", "--framework_name", framework_name, "--without=objc", "--build_only_specified_archs"]
     elif platform == 'ios':
-        archs = "arm64" if only_64_bit else "arm64,armv7,armv7s"
+        archs = "arm64" if only_64_bit else "arm64,armv7"
         args += [ios_script_path, "--iphoneos_archs", archs, "--framework_name", framework_name, "--build_only_specified_archs"]
     elif platform == 'ios-simulator':
-        archs = "x86_64,arm64" if only_64_bit else "x86_64,arm64,i386"
+        archs = "x86_64,arm64"
         args += [ios_script_path, "--iphonesimulator_archs", archs, "--framework_name", framework_name, "--build_only_specified_archs"]
     else:
         raise Exception(f"Platform {platform} has no associated build commands.")
@@ -64,7 +64,7 @@ if __name__ == "__main__":
     # Parse arguments
     parser = argparse.ArgumentParser(description='This script builds OpenCV into an xcframework supporting the Apple platforms of your choice.')
     parser.add_argument('out', metavar='OUTDIR', help='The directory where the xcframework will be created')
-    parser.add_argument('--platform', default='ios,ios-simulator,ios-maccatalyst,macos', help='Platforms to build for (default: ios,ios-simulator,ios-maccatalyst,macos)')
+    parser.add_argument('--platforms', default='ios,ios-simulator,ios-maccatalyst,macos', help='Platforms to build for (default: ios,ios-simulator,ios-maccatalyst,macos)')
     parser.add_argument('--framework_name', default='opencv2', help='Name of OpenCV xcframework (default: opencv2, will change to OpenCV in future version)')
     parser.add_argument('--only_64_bit', default=False, action='store_true', help='Build for 64-bit archs only')
     parser.add_argument('passthrough_args', nargs=argparse.REMAINDER, help='Any flags not captured by this script will be passed through to the ios/osx build_framework.py scripts')
@@ -72,7 +72,7 @@ if __name__ == "__main__":
     args, unknown_args = parser.parse_known_args()
     print(f"The following args will be passed through to the ios/osx build_framework.py scripts: {args.passthrough_args}")
 
-    platforms = args.platform.split(',')
+    platforms = args.platforms.split(',')
 
     try:
         # Build .frameworks for each platform
