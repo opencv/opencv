@@ -516,33 +516,13 @@ TEST_P(Test_ONNX_layers, Broadcast)
     testONNXModels("channel_broadcast", npy, 0, 0, false, true, 2);
 }
 
-TEST_P(Test_ONNX_layers, DynamicResizeOpset9)
+TEST_P(Test_ONNX_layers, DynamicResize)
 {
     testONNXModels("dynamic_resize_9", npy, 0, 0, false, true, 2);
-}
-
-TEST_P(Test_ONNX_layers, DynamicResizeOpset10)
-{
     testONNXModels("dynamic_resize_10", npy, 0, 0, false, true, 2);
-}
-
-TEST_P(Test_ONNX_layers, DynamicResizeOpset11)
-{
     testONNXModels("dynamic_resize_11", npy, 0, 0, false, true, 2);
-}
-
-TEST_P(Test_ONNX_layers, DynamicResizeScaleOpset9)
-{
     testONNXModels("dynamic_resize_scale_9", npy, 0, 0, false, true, 2);
-}
-
-TEST_P(Test_ONNX_layers, DynamicResizeScaleOpset10)
-{
     testONNXModels("dynamic_resize_scale_10", npy, 0, 0, false, true, 2);
-}
-
-TEST_P(Test_ONNX_layers, DynamicResizeScaleOpset11)
-{
     testONNXModels("dynamic_resize_scale_11", npy, 0, 0, false, true, 2);
 }
 
