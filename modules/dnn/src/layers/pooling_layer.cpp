@@ -453,13 +453,16 @@ virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inp
             CV_Assert_N(
                       src.isContinuous(), dst.isContinuous(),
                       src.type() == CV_32F, src.type() == dst.type(),
-                      src.dims == 4 || src.dims == 5, dst.dims == 4 || dst.dims == 5,
+                      src.dims == 3 || src.dims == 4 || src.dims == 5, dst.dims == 3 || dst.dims == 4 || dst.dims == 5,
                       (((poolingType == ROI || poolingType == PSROI) &&
                       dst.size[0] == rois.size[0]) || src.size[0] == dst.size[0]),
                       poolingType == PSROI || src.size[1] == dst.size[1],
                       (mask.empty() || (mask.type() == src.type() && mask.size == dst.size)));
 
             PoolingInvoker p;
+
+            bool isConv1D = src.dims == 3;
+            bool isConv3D = src.dims == 5;
 
             p.src = &src;
             p.rois = &rois;
@@ -474,9 +477,9 @@ virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inp
             p.kernel = Size(kernel_size[1], kernel_size[0]);
             p.stride = Size(strides[1], strides[0]);
             p.pad_l = pads_begin.back();
-            p.pad_t = pads_begin[pads_begin.size() - 2];
+            p.pad_t = isConv1D? 0 : pads_begin[pads_begin.size() - 2];
             p.pad_r = pads_end.back();
-            p.pad_b = pads_end[pads_end.size() - 2];
+            p.pad_b = isConv1D? 0 : pads_end[pads_end.size() - 2];
 
             p.avePoolPaddedArea = avePoolPaddedArea;
             p.nstripes = nstripes;
@@ -486,11 +489,11 @@ virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inp
 
             if( !computeMaxIdx )
             {
-                int height = src.size[src.dims - 2];
+                int height = isConv1D? 1 : src.size[src.dims - 2];
                 int width = src.size[src.dims - 1];
 
-                int kernel_d = (kernel_size.size() == 3) ? kernel_size[0] : 1;
-                int kernel_h = kernel_size[kernel_size.size() - 2];
+                int kernel_d = isConv3D? kernel_size[0] : 1;
+                int kernel_h = isConv1D? 1 : kernel_size[kernel_size.size() - 2];
                 int kernel_w = kernel_size.back();
 
                 p.ofsbuf.resize(kernel_d * kernel_h * kernel_w);
@@ -510,13 +513,15 @@ virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inp
         {
             int channels = dst->size[1];
 
+            bool isPool3D = src->dims == 5;
             bool isPool2D = src->dims == 4;
-            int depth = !isPool2D? dst->size[2] : 1;
-            int height = dst->size[dst->dims - 2];
+            bool isPool1D = src->dims == 3;
+            int depth = isPool3D? dst->size[2] : 1;
+            int height = isPool1D? 1 : dst->size[dst->dims - 2];
             int width = dst->size[dst->dims - 1];
 
-            int inp_depth = !isPool2D? src->size[2] : 1;
-            int inp_height = src->size[src->dims - 2];
+            int inp_depth = isPool3D? src->size[2] : 1;
+            int inp_height = isPool1D? 1 : src->size[src->dims - 2];
             int inp_width = src->size[src->dims - 1];
 
             size_t total = dst->total();
@@ -524,12 +529,12 @@ virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inp
             size_t stripeStart = r.start*stripeSize;
             size_t stripeEnd = std::min(r.end*stripeSize, total);
 
-            int kernel_d = !isPool2D? kernel_size[0] : 1;
-            int kernel_h = kernel_size[kernel_size.size() - 2];
+            int kernel_d = isPool3D? kernel_size[0] : 1;
+            int kernel_h = isPool1D? 1 : kernel_size[kernel_size.size() - 2];
             int kernel_w = kernel_size.back();
 
-            int stride_d = !isPool2D? strides[0] : 0;
-            int stride_h = strides[strides.size() - 2];
+            int stride_d = isPool3D? strides[0] : 0;
+            int stride_h = isPool1D? 1 :strides[strides.size() - 2];
             int stride_w = strides.back();
             bool compMaxIdx = computeMaxIdx;
 
@@ -721,6 +726,21 @@ virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inp
                         }
                         else
 #endif
+                        if( isPool1D )
+                        {
+                            const float* first = srcData + xstart;
+                            const float* last = srcData + xend;
+                            const float* max_elem = std::max_element(first, last);
+                            if (max_elem!=last)
+                            {
+                                dstData[x0] = *max_elem;
+                                if( compMaxIdx )
+                                {
+                                    dstMaskData[x0] = std::distance(first, max_elem);
+                                }
+                            }
+                        }
+                        else
                         {
                             float max_val = -FLT_MAX;
                             if( compMaxIdx )
@@ -794,6 +814,14 @@ virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inp
                         }
                         else
 #endif
+                        if( isPool1D )
+                        {
+                            const float* first = srcData + xstart;
+                            const float* last = srcData + xend;
+                            float sum_val = std::accumulate(first, last, 0.f);
+                            dstData[x0] = sum_val*inv_kernel_area;
+                        }
+                        else
                         {
                             float sum_val = 0.f;
                             for (int d = dstart; d < dend; ++d) {
@@ -1028,6 +1056,7 @@ virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inp
     {
         CV_Assert(inputs.size() != 0);
 
+        bool isPool1D = inputs[0].size() == 3;
         std::vector<int> inpShape(inputs[0].begin() + 2, inputs[0].end());
         std::vector<int> outShape(inputs[0].begin(), inputs[0].begin() + 2);
 
@@ -1056,14 +1085,15 @@ virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inp
             }
             else if (padMode.empty())
             {
-                for (int i = 0; i < local_kernel.size(); i++) {
+                int addedDims = isPool1D? inpShape.size() : local_kernel.size();
+                for (int i = 0; i < addedDims; i++) {
                     float dst = (float) (inpShape[i] + pads_begin[i] + pads_end[i] - local_kernel[i]) / strides[i];
                     outShape.push_back(1 + (ceilMode ? ceil(dst) : floor(dst)));
                 }
 
                 // If we have padding, ensure that the last pooling starts strictly
                 // inside the image (instead of at the padding); otherwise clip the last.
-                for (int i = 0; i < pads_end.size(); i++) {
+                for (int i = 0; i < addedDims; i++) {
                     if (pads_end[i] && (outShape[2 + i] - 1) * strides[i] >= inpShape[i] + pads_end[i]) {
                         --outShape[2 + i];
                         CV_Assert((outShape[2 + i] - 1) * strides[i] < inpShape[i] + pads_end[i]);
@@ -1107,7 +1137,8 @@ virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inp
     {
         CV_UNUSED(inputs); // suppress unused variable warning
         long flops = 0;
-        size_t karea = std::accumulate(kernel_size.begin(), kernel_size.end(),
+        bool isPool1D = inputs[0].size() == 3;
+        size_t karea = std::accumulate(kernel_size.begin(), isPool1D? kernel_size.begin() + 1 : kernel_size.end(),
                                     1, std::multiplies<size_t>());
         for(int i = 0; i < outputs.size(); i++)
         {
