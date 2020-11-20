@@ -61,7 +61,8 @@ if __name__ == "__main__":
     parser.add_argument('--enable_nonfree', default=False, dest='enablenonfree', action='store_true', help='enable non-free modules (disabled by default)')
     parser.add_argument('--macosx_deployment_target', default=os.environ.get('MACOSX_DEPLOYMENT_TARGET', MACOSX_DEPLOYMENT_TARGET), help='specify MACOSX_DEPLOYMENT_TARGET')
     parser.add_argument('--build_only_specified_archs', default=False, action='store_true', help='if enabled, only directly specified archs are built and defaults are ignored')
-    parser.add_argument('--archs', default=None, help='Select target ARCHS (set to "x86_64,arm64" to build Universal Binary for Big Sur and later). Default is "x86_64"')
+    parser.add_argument('--archs', default=None, help='(Deprecated! Prefer --macos_archs instead.) Select target ARCHS (set to "x86_64,arm64" to build Universal Binary for Big Sur and later). Default is "x86_64".')
+    parser.add_argument('--macos_archs', default=None, help='Select target ARCHS (set to "x86_64,arm64" to build Universal Binary for Big Sur and later). Default is "x86_64"')
     parser.add_argument('--catalyst_archs', default=None, help='Select target ARCHS (set to "x86_64,arm64" to build Universal Binary for Big Sur and later). Default is None')
     parser.add_argument('--debug', action='store_true', help='Build "Debug" binaries (CMAKE_BUILD_TYPE=Debug)')
     parser.add_argument('--debug_info', action='store_true', help='Build with debug information (useful for Release mode: BUILD_WITH_DEBUG_INFO=ON)')
@@ -75,13 +76,18 @@ if __name__ == "__main__":
     os.environ['MACOSX_DEPLOYMENT_TARGET'] = args.macosx_deployment_target
     print('Using MACOSX_DEPLOYMENT_TARGET=' + os.environ['MACOSX_DEPLOYMENT_TARGET'])
 
-    archs = None
+    macos_archs = None
     if args.archs:
-        archs = args.archs.split(',')
+        # The archs flag is replaced by macos_archs. If the user specifies archs,
+        # treat it as if the user specified the macos_archs flag instead.
+        args.macos_archs = args.archs
+        print("--archs is deprecated! Prefer --macos_archs instead.")
+    if args.macos_archs:
+        macos_archs = args.macos_archs.split(',')
     elif not args.build_only_specified_archs:
         # Supply defaults
-        archs = ["x86_64"]
-    print('Using ARCHS=' + str(archs))
+        macos_archs = ["x86_64"]
+    print('Using MacOS ARCHS=' + str(macos_archs))
 
     catalyst_archs = None
     if args.catalyst_archs:
@@ -92,8 +98,8 @@ if __name__ == "__main__":
     # Prevent the build from happening if the same architecture is specified for multiple platforms.
     # When `lipo` is run to stitch the frameworks together into a fat framework, it'll fail, so it's
     # better to stop here while we're ahead.
-    if archs and catalyst_archs:
-        duplicate_archs = set(archs).intersection(catalyst_archs)
+    if macos_archs and catalyst_archs:
+        duplicate_archs = set(macos_archs).intersection(catalyst_archs)
         if duplicate_archs:
             print_error("Cannot have the same architecture for multiple platforms in a fat framework! Consider using build_xcframework.py in the apple platform folder instead. Duplicate archs are %s" % duplicate_archs)
             exit(1)
@@ -104,11 +110,11 @@ if __name__ == "__main__":
             args.without.append("objc")
 
     targets = []
-    if not archs and not catalyst_archs:
-        print_error("--iphoneos_archs and --iphonesimulator_archs are undefined; nothing will be built.")
+    if not macos_archs and not catalyst_archs:
+        print_error("--macos_archs and --catalyst_archs are undefined; nothing will be built.")
         sys.exit(1)
-    if archs:
-        targets.append((archs, "MacOSX"))
+    if macos_archs:
+        targets.append((macos_archs, "MacOSX"))
     if catalyst_archs:
         targets.append((catalyst_archs, "Catalyst")),
 

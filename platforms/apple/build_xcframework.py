@@ -32,7 +32,7 @@ def get_framework_build_command_for_platform(platform, destination, framework_na
         "python3"
     ]
     if platform == 'macos':
-        args += [osx_script_path, "--archs", "x86_64,arm64", "--framework_name", framework_name, "--build_only_specified_archs"]
+        args += [osx_script_path, "--macos_archs", "x86_64,arm64", "--framework_name", framework_name, "--build_only_specified_archs"]
     elif platform == 'ios-maccatalyst':
         # This is not a mistake. For Catalyst, we use the osx toolchain.
         # TODO: This is building with objc turned off due to an issue with CMake. See here for discussion: https://gitlab.kitware.com/cmake/cmake/-/issues/21436
