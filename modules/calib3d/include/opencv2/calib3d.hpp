@@ -594,11 +594,11 @@ pairs to compute an initial homography estimate with a simple least-squares sche
 
 However, if not all of the point pairs ( \f$srcPoints_i\f$, \f$dstPoints_i\f$ ) fit the rigid perspective
 transformation (that is, there are some outliers), this initial estimate will be poor. In this case,
-you can use one of the three robust methods. The methods RANSAC, LMEDS and RHO try many different
+you can use one of the three robust methods. The methods RANSAC, LMedS and RHO try many different
 random subsets of the corresponding point pairs (of four pairs each, collinear pairs are discarded), estimate the homography matrix
 using this subset and a simple least-squares algorithm, and then compute the quality/goodness of the
 computed homography (which is the number of inliers for RANSAC or the least median re-projection error for
-LMEDS). The best subset is then used to produce the initial estimate of the homography matrix and
+LMedS). The best subset is then used to produce the initial estimate of the homography matrix and
 the mask of inliers/outliers.
 
 Regardless of the method, robust or not, the computed homography matrix is refined further (using
@@ -606,7 +606,7 @@ inliers only in case of a robust method) with the Levenberg-Marquardt method to 
 re-projection error even more.
 
 The methods RANSAC and RHO can handle practically any ratio of outliers but need a threshold to
-distinguish inliers from outliers. The method LMEDS does not need any threshold but it works
+distinguish inliers from outliers. The method LMedS does not need any threshold but it works
 correctly only when there are more than 50% of inliers. Finally, if there are no outliers and the
 noise is rather small, use the default method (method=0).
 
@@ -2384,15 +2384,15 @@ to normalized image coordinates, which are valid for the identity camera intrins
 passing these coordinates, pass the identity matrix for this parameter.
 @param method Method for computing an essential matrix.
 -   @ref RANSAC for the RANSAC algorithm.
--   @ref LMEDS for the LMEDS algorithm.
-@param prob Parameter used for the RANSAC or LMEDS methods only. It specifies a desirable level of
+-   @ref LMEDS for the LMedS algorithm.
+@param prob Parameter used for the RANSAC or LMedS methods only. It specifies a desirable level of
 confidence (probability) that the estimated matrix is correct.
 @param threshold Parameter used for RANSAC. It is the maximum distance from a point to an epipolar
 line in pixels, beyond which the point is considered an outlier and is not used for computing the
 final fundamental matrix. It can be set to something like 1-3, depending on the accuracy of the
 point localization, image resolution, and the image noise.
 @param mask Output array of N elements, every element of which is set to 0 for outliers and to 1
-for the other points. The array is computed only in the RANSAC and LMEDS methods.
+for the other points. The array is computed only in the RANSAC and LMedS methods.
 
 This function estimates essential matrix based on the five-point algorithm solver in @cite Nister03 .
 @cite SteweniusCFS is also a related. The epipolar geometry is described by the following equation:
@@ -2417,15 +2417,15 @@ are feature points from cameras with same focal length and principal point.
 @param pp principal point of the camera.
 @param method Method for computing a fundamental matrix.
 -   @ref RANSAC for the RANSAC algorithm.
--   @ref LMEDS for the LMEDS algorithm.
+-   @ref LMEDS for the LMedS algorithm.
 @param threshold Parameter used for RANSAC. It is the maximum distance from a point to an epipolar
 line in pixels, beyond which the point is considered an outlier and is not used for computing the
 final fundamental matrix. It can be set to something like 1-3, depending on the accuracy of the
 point localization, image resolution, and the image noise.
-@param prob Parameter used for the RANSAC or LMEDS methods only. It specifies a desirable level of
+@param prob Parameter used for the RANSAC or LMedS methods only. It specifies a desirable level of
 confidence (probability) that the estimated matrix is correct.
 @param mask Output array of N elements, every element of which is set to 0 for outliers and to 1
-for the other points. The array is computed only in the RANSAC and LMEDS methods.
+for the other points. The array is computed only in the RANSAC and LMedS methods.
 
 This function differs from the one above that it computes camera intrinsic matrix from focal length and
 principal point:
@@ -2467,7 +2467,7 @@ of 4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion 
 of 4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion coefficients are assumed.
 @param method Method for computing an essential matrix.
 -   @ref RANSAC for the RANSAC algorithm.
--   @ref LMEDS for the LMEDS algorithm.
+-   @ref LMEDS for the LMedS algorithm.
 @param prob Parameter used for the RANSAC or LMedS methods only. It specifies a desirable level of
 confidence (probability) that the estimated matrix is correct.
 @param threshold Parameter used for RANSAC. It is the maximum distance from a point to an epipolar
@@ -2906,7 +2906,7 @@ Levenberg-Marquardt method to reduce the re-projection error even more.
 
 @note
 The RANSAC method can handle practically any ratio of outliers but needs a threshold to
-distinguish inliers from outliers. The method LMeDS does not need any threshold but it works
+distinguish inliers from outliers. The method LMedS does not need any threshold but it works
 correctly only when there are more than 50% of inliers.
 
 @sa estimateAffinePartial2D, getAffineTransform
@@ -2954,7 +2954,7 @@ translations in \f$ x, y \f$ axes respectively.
 
 @note
 The RANSAC method can handle practically any ratio of outliers but need a threshold to
-distinguish inliers from outliers. The method LMeDS does not need any threshold but it works
+distinguish inliers from outliers. The method LMedS does not need any threshold but it works
 correctly only when there are more than 50% of inliers.
 
 @sa estimateAffine2D, getAffineTransform
