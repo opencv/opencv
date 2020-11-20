@@ -27,8 +27,8 @@ let package = Package(
         // Recompute checksum via `swift package --package-path /path/to/opencv compute-checksum /path/to/opencv2.xcframework.zip`
         .binaryTarget(
             name: "opencv2",
-            url: "https://github.com/Rightpoint/opencv/releases/download/4.5.1/opencv-4.5.1-xcframework.zip",
-            checksum: "891e8756cb7e4073ff7d319c1edbff907eab022408f3ca639320d3d660ac9873"
+            url: "https://github.com/Rightpoint/opencv/releases/download/4.5.1/opencv2-4.5.1-dynamic.xcframework.zip",
+            checksum: "a2088bcdebb64e6126e9b85409083b06d8ea7b3ab206e72daa06b105f5ca6f28"
         ),
         // If you are compiling OpenCV locally, you can uncomment the below block to use a custom copy
         // e.g. `$ python platforms/apple/build_xcframework.py platforms/apple/xcframework-build/`
