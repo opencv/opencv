@@ -631,7 +631,7 @@ void PoseSolver::computeRowAndNullspace(const cv::Matx<double, 9, 1>& r,
 void PoseSolver::nearestRotationMatrix(const cv::Matx<double, 9, 1>& e,
     cv::Matx<double, 9, 1>& r)
 {
-    register int i;
+    int i;
     double l, lprev, det_e, e_sq, adj_e_sq, adj_e[9];
 
     // e's adjoint
