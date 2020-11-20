@@ -13,7 +13,7 @@ PERF_TEST(_3DPerfTest, EmptyTest)
 {
     TEST_CYCLE() cv::_3d::doNothing();
 
-    SANITY_CHECK(true);
+    SANITY_CHECK_NOTHING();
 }
 
 } // namespace
