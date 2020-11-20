@@ -1,6 +1,6 @@
 from __future__ import print_function
 import torch
-from torch.autograd import Variable
+from torch.autograd import Variable, Function
 import torch.nn.init as init
 import torch.nn as nn
 import torch.nn.functional as F
@@ -24,14 +24,14 @@ def assertONNXExpected(binary_pb):
     return model_def
 
 
-def export_to_string(model, inputs, version=None):
+def export_to_string(model, inputs, version=None, export_params=False):
     f = io.BytesIO()
     with torch.no_grad():
-        torch.onnx.export(model, inputs, f, export_params=True, opset_version=version)
+        torch.onnx.export(model, inputs, f, export_params=export_params, opset_version=version)
     return f.getvalue()
 
 
-def save_data_and_model(name, input, model, version=None):
+def save_data_and_model(name, input, model, version=None, export_params=False):
     model.eval()
     print(name + " input has sizes",  input.shape)
     input_files = os.path.join("data", "input_" + name)
@@ -46,7 +46,7 @@ def save_data_and_model(name, input, model, version=None):
 
     models_files = os.path.join("models", name + ".onnx")
 
-    onnx_model_pb = export_to_string(model, input, version)
+    onnx_model_pb = export_to_string(model, input, version, export_params)
     model_def = assertONNXExpected(onnx_model_pb)
     with open(models_files, 'wb') as file:
         file.write(model_def.SerializeToString())
@@ -192,7 +192,7 @@ def save_data_and_model_multy_inputs(name, model, *args, **kwargs):
 
     models_files = os.path.join("models", name + ".onnx")
 
-    onnx_model_pb = export_to_string(model, (args), version=kwargs.get('version', None))
+    onnx_model_pb = export_to_string(model, (args), version=kwargs.get('version', None), export_params=kwargs.get('export_params', False))
     model_def = assertONNXExpected(onnx_model_pb)
     with open(models_files, 'wb') as file:
         file.write(model_def.SerializeToString())
@@ -387,7 +387,7 @@ class Slice(nn.Module):
 input = Variable(torch.randn(1, 2, 4, 4))
 model = Slice()
 save_data_and_model("slice", input, model)
-save_data_and_model("slice_opset_11", input, model, opset_version=11)
+save_data_and_model("slice_opset_11", input, model, version=11)
 
 class Eltwise(nn.Module):
 
@@ -587,7 +587,7 @@ class ReshapeByDiv(nn.Module):
         channels = image.size(1)
         h = image.size(2)
         w = image.size(3)
-        image = image.view(batch_size, channels*h* (w / 2), -1)
+        image = image.view(batch_size, channels*h*(w // 2), -1)
         return image
 
 input = Variable(torch.randn(1, 2, 3, 4))
@@ -652,7 +652,21 @@ class DynamicResize(nn.Module):
 input_0 = Variable(torch.randn(1, 3, 8, 6))
 input_1 = Variable(torch.randn(1, 3, 4, 3))
 model = DynamicResize()
-save_data_and_model_multy_inputs("dynamic_resize", model, input_0, input_1, version=11)
+save_data_and_model_multy_inputs("dynamic_resize_9", model, input_0, input_1, version=9)
+save_data_and_model_multy_inputs("dynamic_resize_10", model, input_0, input_1, version=10)
+save_data_and_model_multy_inputs("dynamic_resize_11", model, input_0, input_1, version=11)
+
+class DynamicResizeScale(nn.Module):
+    def forward(self, x, y):
+        up = nn.Upsample(scale_factor=(0.5, 0.5), mode='bilinear')
+        return up(x) + y
+
+input_0 = Variable(torch.randn(1, 3, 8, 6))
+input_1 = Variable(torch.randn(1, 3, 4, 3))
+model = DynamicResizeScale()
+save_data_and_model_multy_inputs("dynamic_resize_scale_9", model, input_0, input_1, version=9, export_params=True)
+save_data_and_model_multy_inputs("dynamic_resize_scale_10", model, input_0, input_1, version=10, export_params=True)
+save_data_and_model_multy_inputs("dynamic_resize_scale_11", model, input_0, input_1, version=11, export_params=True)
 
 class ShapeConst(nn.Module):
     def __init__(self):
@@ -813,7 +827,7 @@ model = UpsampleUnfusedTwoInput()
 save_data_and_model_multy_inputs("upsample_unfused_two_inputs_opset9_torch1.4", UpsampleUnfusedTwoInput(), input_0, input_1, version=9)
 save_data_and_model_multy_inputs("upsample_unfused_two_inputs_opset11_torch1.4", UpsampleUnfusedTwoInput(), input_0, input_1, version=11)
 
- class FrozenBatchNorm2d(nn.Module):
+class FrozenBatchNorm2d(nn.Module):
     def __init__(self, n):
         super(FrozenBatchNorm2d, self).__init__()
         self.register_buffer("weight", torch.ones(n))
@@ -832,7 +846,7 @@ x = Variable(torch.randn(1, 2, 3, 4))
 model = FrozenBatchNorm2d(2)
 save_data_and_model("batch_norm_subgraph", x, model)
 
- class GatherScalar(nn.Module):
+class GatherScalar(nn.Module):
     def forward(self, x):
         return x[1]
 
@@ -840,7 +854,7 @@ x = Variable(torch.randn(2))
 model = GatherScalar()
 save_data_and_model("gather_scalar", x, model)
 
- class Gather(nn.Module):
+class Gather(nn.Module):
     def forward(self, x):
         return x[..., 1]
 
@@ -921,11 +935,11 @@ class MatmulWithTwoInputs(nn.Module):
         const = torch.zeros(1, self.interm_dim)
         const_projected = self.linear_for_const(const)
         const_projected = const_projected.expand(2, self.interm_dim)
-        sum_tanh = torch.tanh(const_projected + x_projected) 
+        sum_tanh = torch.tanh(const_projected + x_projected)
         sum_tanh = sum_tanh.reshape(-1, self.interm_dim)
         sum_tanh_projected = self.second_linear(sum_tanh)
         sum_tanh_projected = sum_tanh_projected.reshape(1, 2)
-        after_softmax = F.softmax(sum_tanh_projected, dim=1)     
+        after_softmax = F.softmax(sum_tanh_projected, dim=1)
         return torch.matmul(after_softmax, x)
 
 x = Variable(torch.rand([1, 2, 2]))
