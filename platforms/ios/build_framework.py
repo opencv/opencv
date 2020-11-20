@@ -412,8 +412,7 @@ class Builder:
             for l in links:
                 s = os.path.join(*l[0])
                 d = os.path.join(framework_dir, *l[1])
-                if os.path.exists(s):
-                    os.symlink(s, d)
+                os.symlink(s, d)
 
     def copy_samples(self, outdir):
         return
