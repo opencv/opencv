@@ -14,11 +14,12 @@ cd ~/<my_working_directory>
 python opencv/platforms/apple/build_xcframework.py
 ```
 
-Grab a coffee, because you'll be here for a while. By default this builds OpenCV for 10 architectures across 4 platforms:
+Grab a coffee, because you'll be here for a while. By default this builds OpenCV for 8 architectures across 4 platforms:
 
-- iOS: arm64, armv7, armv7s
-- iOS Simulator: x86_64, arm64, i386
-- MacOS: x86_64, arm64 (and Catalyst versions of each)
+- iOS: arm64, armv7
+- iOS Simulator: x86_64, arm64
+- macOS: x86_64, arm64
+- Mac Catalyst: x86_64, arm64
 
 If everything's fine, you will eventually get `~/<my_working_directory>/apple/opencv2.xcframework`.
 
