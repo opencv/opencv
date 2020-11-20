@@ -587,9 +587,9 @@ GAPI_OCV_KERNEL(GCPUWarpAffine, cv::gapi::core::GWarpAffine)
 
 GAPI_OCV_KERNEL(GCPUKMeansND, cv::gapi::core::GKMeansND)
 {
-    static void run(const cv::Mat& data, const int K,
+    static void run(const cv::Mat& data, const int K, const cv::Mat& inBestLabels,
                     const cv::TermCriteria& criteria, const int attempts,
-                    const cv::KmeansFlags flags, const cv::Mat& inBestLabels,
+                    const cv::KmeansFlags flags,
                     double& compactness, cv::Mat& outBestLabels, cv::Mat& centers)
     {
         if (flags & cv::KMEANS_USE_INITIAL_LABELS)
@@ -613,13 +613,15 @@ GAPI_OCV_KERNEL(GCPUKMeansNDNoInit, cv::gapi::core::GKMeansNDNoInit)
 GAPI_OCV_KERNEL(GCPUKMeans2D, cv::gapi::core::GKMeans2D)
 {
     static void run(const std::vector<cv::Point2f>& data, const int K,
-                    const cv::TermCriteria& criteria, const int attempts,
-                    const cv::KmeansFlags flags, const std::vector<int>& inBestLabels,
+                    const std::vector<int>& inBestLabels, const cv::TermCriteria& criteria,
+                    const int attempts, const cv::KmeansFlags flags,
                     double& compactness, std::vector<int>& outBestLabels,
                     std::vector<cv::Point2f>& centers)
     {
         if (flags & cv::KMEANS_USE_INITIAL_LABELS)
+        {
             outBestLabels = inBestLabels;
+        }
         compactness = cv::kmeans(data, K, outBestLabels, criteria, attempts, flags, centers);
     }
 };
@@ -627,13 +629,15 @@ GAPI_OCV_KERNEL(GCPUKMeans2D, cv::gapi::core::GKMeans2D)
 GAPI_OCV_KERNEL(GCPUKMeans3D, cv::gapi::core::GKMeans3D)
 {
     static void run(const std::vector<cv::Point3f>& data, const int K,
-                    const cv::TermCriteria& criteria, const int attempts,
-                    const cv::KmeansFlags flags, const std::vector<int>& inBestLabels,
+                    const std::vector<int>& inBestLabels, const cv::TermCriteria& criteria,
+                    const int attempts, const cv::KmeansFlags flags,
                     double& compactness, std::vector<int>& outBestLabels,
                     std::vector<cv::Point3f>& centers)
     {
         if (flags & cv::KMEANS_USE_INITIAL_LABELS)
+        {
             outBestLabels = inBestLabels;
+        }
         compactness = cv::kmeans(data, K, outBestLabels, criteria, attempts, flags, centers);
     }
 };

@@ -36,6 +36,39 @@ const cv::GOrigin& cv::GMat::priv() const
     return *m_priv;
 }
 
+int cv::checkVector(const cv::GMatDesc& in, const int n, const int ddepth)
+{
+    GAPI_Assert(ddepth == in.depth || ddepth < 0);
+    const int chan = in.chan;
+    const cv::Size size = in.size;
+    int quantity = -1;
+    if (n <= 0)
+    {
+        if (size.width == 1 || chan == 1)
+        {
+            quantity = size.height;
+        }
+        else if (size.height == 1)
+        {
+            quantity = size.width;
+        }
+        // else input Mat can't be described as vector of points
+    }
+    else // n is given
+    {
+        if (chan == n && size.height == 1)
+        {
+            quantity = size.width;
+        }
+        else if ((chan == n && size.width == 1) || (chan == 1 && size.width == n))
+        {
+            quantity = size.height;
+        }
+        // else input Mat can't be described as vector of n-dimentional points
+    }
+    return quantity;
+}
+
 namespace{
     template <typename T> cv::GMetaArgs vec_descr_of(const std::vector<T> &vec)
         {

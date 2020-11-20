@@ -1425,7 +1425,7 @@ TEST_P(KMeansNDInitTest, AccuracyTest)
     cv::GMat in, gLabelsIn, gLabelsOut, centers;
     cv::GOpaque<double> compactness;
     std::tie(compactness, gLabelsOut, centers) =
-        cv::gapi::kmeans(in, K, criteria, attempts, flags, gLabelsIn);
+        cv::gapi::kmeans(in, K, gLabelsIn, criteria, attempts, flags);
     cv::GComputation c(cv::GIn(in, gLabelsIn), cv::GOut(compactness, gLabelsOut, centers));
     c.apply(cv::gin(in_mat1, in_labels), cv::gout(compact_gapi, labels_gapi, centers_gapi),
             getCompileArgs());
@@ -1450,9 +1450,10 @@ TEST_P(KMeans2DNoInitTest, AccuracyTest)
     initPointsVectorRandU(quantity, in_vector);
     // G-API code //////////////////////////////////////////////////////////////
     cv::GArray<cv::Point2f> in, centers;
-    cv::GArray<int> labels;
+    cv::GArray<int> labels, gLabelsIn(std::vector<int>{});
     cv::GOpaque<double> compactness;
-    std::tie(compactness, labels, centers) = cv::gapi::kmeans(in, K, criteria, attempts, flags);
+    std::tie(compactness, labels, centers) =
+        cv::gapi::kmeans(in, K, gLabelsIn, criteria, attempts, flags);
     cv::GComputation c(cv::GIn(in), cv::GOut(compactness, labels, centers));
     c.apply(cv::gin(in_vector), cv::gout(compact_gapi, labels_gapi, centers_gapi), getCompileArgs());
     // Validation //////////////////////////////////////////////////////////////
@@ -1480,7 +1481,7 @@ TEST_P(KMeans2DInitTest, AccuracyTest)
     cv::GArray<int> gLabelsIn, gLabelsOut;
     cv::GOpaque<double> compactness;
     std::tie(compactness, gLabelsOut, centers) =
-        cv::gapi::kmeans(in, K, criteria, attempts, flags, gLabelsIn);
+        cv::gapi::kmeans(in, K, gLabelsIn, criteria, attempts, flags);
     cv::GComputation c(cv::GIn(in, gLabelsIn), cv::GOut(compactness, gLabelsOut, centers));
     c.apply(cv::gin(in_vector, in_labels), cv::gout(compact_gapi, labels_gapi, centers_gapi),
             getCompileArgs());
@@ -1505,9 +1506,10 @@ TEST_P(KMeans3DNoInitTest, AccuracyTest)
     initPointsVectorRandU(quantity, in_vector);
     // G-API code //////////////////////////////////////////////////////////////
     cv::GArray<cv::Point3f> in, centers;
-    cv::GArray<int> labels;
+    cv::GArray<int> labels, gLabelsIn(std::vector<int>{});
     cv::GOpaque<double> compactness;
-    std::tie(compactness, labels, centers) = cv::gapi::kmeans(in, K, criteria, attempts, flags);
+    std::tie(compactness, labels, centers) =
+        cv::gapi::kmeans(in, K, gLabelsIn, criteria, attempts, flags);
     cv::GComputation c(cv::GIn(in), cv::GOut(compactness, labels, centers));
     c.apply(cv::gin(in_vector), cv::gout(compact_gapi, labels_gapi, centers_gapi), getCompileArgs());
     // Validation //////////////////////////////////////////////////////////////
@@ -1535,7 +1537,7 @@ TEST_P(KMeans3DInitTest, AccuracyTest)
     cv::GArray<int> gLabelsIn, gLabelsOut;
     cv::GOpaque<double> compactness;
     std::tie(compactness, gLabelsOut, centers) =
-        cv::gapi::kmeans(in, K, criteria, attempts, flags, gLabelsIn);
+        cv::gapi::kmeans(in, K, gLabelsIn, criteria, attempts, flags);
     cv::GComputation c(cv::GIn(in, gLabelsIn), cv::GOut(compactness, gLabelsOut, centers));
     c.apply(cv::gin(in_vector, in_labels), cv::gout(compact_gapi, labels_gapi, centers_gapi),
             getCompileArgs());

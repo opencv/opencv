@@ -43,15 +43,6 @@ void validateFindingContoursMeta(const int depth, const int chan, const int mode
         break;
     }
 }
-
-// Checks if the passed mat is a set of n-dimentional points of the given depth
-bool isPointsVector(const int chan, const cv::Size &size, const int depth,
-                    const int n, const int ddepth = -1)
-{
-    return (ddepth == depth || ddepth < 0) &&
-           ((chan == n && (size.height == 1 || size.width == 1)) ||
-            (chan == 1 && size.width == n));
-}
 } // anonymous namespace
 
 namespace cv { namespace gapi {
@@ -212,10 +203,17 @@ namespace imgproc {
     G_TYPED_KERNEL(GBoundingRectMat, <GOpaque<Rect>(GMat)>,
                    "org.opencv.imgproc.shape.boundingRectMat") {
         static GOpaqueDesc outMeta(GMatDesc in) {
-            GAPI_Assert((in.depth == CV_8U && in.chan == 1) ||
-                        (isPointsVector(in.chan, in.size, in.depth, 2, CV_32S) ||
-                         isPointsVector(in.chan, in.size, in.depth, 2, CV_32F)));
-
+            if (in.depth == CV_8U)
+            {
+                GAPI_Assert(in.chan == 1);
+            }
+            else
+            {
+                GAPI_Assert (in.depth == CV_32S || in.depth == CV_32F);
+                int quantity = checkVector(in, 2);
+                GAPI_Assert(quantity > 0 &&
+                            "Input Mat can't be described as vector of 2-dimentional points");
+            }
             return empty_gopaque_desc();
         }
     };
@@ -237,7 +235,9 @@ namespace imgproc {
     G_TYPED_KERNEL(GFitLine2DMat, <GOpaque<Vec4f>(GMat,DistanceTypes,double,double,double)>,
                    "org.opencv.imgproc.shape.fitLine2DMat") {
         static GOpaqueDesc outMeta(GMatDesc in,DistanceTypes,double,double,double) {
-            GAPI_Assert(isPointsVector(in.chan, in.size, in.depth, 2, -1));
+            int quantity = checkVector(in, 2);
+            GAPI_Assert(quantity > 0 &&
+                        "Input Mat can't be described as vector of 2-dimentional points");
             return empty_gopaque_desc();
         }
     };
@@ -269,7 +269,9 @@ namespace imgproc {
     G_TYPED_KERNEL(GFitLine3DMat, <GOpaque<Vec6f>(GMat,DistanceTypes,double,double,double)>,
                    "org.opencv.imgproc.shape.fitLine3DMat") {
         static GOpaqueDesc outMeta(GMatDesc in,int,double,double,double) {
-            GAPI_Assert(isPointsVector(in.chan, in.size, in.depth, 3, -1));
+            int quantity = checkVector(in, 3);
+            GAPI_Assert(quantity > 0 &&
+                        "Input Mat can't be described as vector of 3-dimentional points");
             return empty_gopaque_desc();
         }
     };

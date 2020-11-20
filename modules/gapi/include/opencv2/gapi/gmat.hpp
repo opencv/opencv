@@ -203,6 +203,13 @@ struct GAPI_EXPORTS GMatDesc
 
 static inline GMatDesc empty_gmat_desc() { return GMatDesc{-1,-1,{-1,-1}}; }
 
+// Checks GMatDesc fields if the passed matrix is a set of n-dimentional points of the given depth.
+// If n <= 0 given, there are no checks on sizes of elements.
+// If ddepth < 0 given, there is no assert on the depth of the passed matrix
+// Returns quantity of the elements.
+// In case input matrix can't be described as vector of points, returns -1.
+int checkVector(const GMatDesc& in, const int n = -1, const int ddepth = -1);
+
 #if !defined(GAPI_STANDALONE)
 GAPI_EXPORTS GMatDesc descr_of(const cv::UMat &mat);
 #endif // !defined(GAPI_STANDALONE)
