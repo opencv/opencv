@@ -471,6 +471,7 @@ enum SolvePnPMethod {
                               //!<   - point 1: [ squareLength / 2,  squareLength / 2, 0]
                               //!<   - point 2: [ squareLength / 2, -squareLength / 2, 0]
                               //!<   - point 3: [-squareLength / 2, -squareLength / 2, 0]
+    SOLVEPNP_SQPNP       = 8, //!< SQPnP: A Consistently Fast and Globally OptimalSolution to the Perspective-n-Point Problem @cite Terzakis20
 #ifndef CV_DOXYGEN
     SOLVEPNP_MAX_COUNT        //!< Used for count
 #endif
@@ -946,6 +947,9 @@ It requires 4 coplanar object points defined in the following order:
   - point 1: [ squareLength / 2,  squareLength / 2, 0]
   - point 2: [ squareLength / 2, -squareLength / 2, 0]
   - point 3: [-squareLength / 2, -squareLength / 2, 0]
+-   **SOLVEPNP_SQPNP** Method is based on the paper "A Consistently Fast and Globally Optimal Solution to the
+Perspective-n-Point Problem" by G. Terzakis and M.Lourakis (@cite Terzakis20). It requires 3 or more points.
+
 
 The function estimates the object pose given a set of object points, their corresponding image
 projections, as well as the camera intrinsic matrix and the distortion coefficients, see the figure below
@@ -1069,6 +1073,7 @@ a 3D point expressed in the world frame into the camera frame:
          - point 1: [ squareLength / 2,  squareLength / 2, 0]
          - point 2: [ squareLength / 2, -squareLength / 2, 0]
          - point 3: [-squareLength / 2, -squareLength / 2, 0]
+    -  With **SOLVEPNP_SQPNP** input points must be >= 3
  */
 CV_EXPORTS_W bool solvePnP( InputArray objectPoints, InputArray imagePoints,
                             InputArray cameraMatrix, InputArray distCoeffs,
@@ -2598,10 +2603,10 @@ CV_EXPORTS void convertPointsHomogeneous( InputArray src, OutputArray dst );
 floating-point (single or double precision).
 @param points2 Array of the second image points of the same size and format as points1 .
 @param method Method for computing a fundamental matrix.
--   **CV_FM_7POINT** for a 7-point algorithm. \f$N = 7\f$
--   **CV_FM_8POINT** for an 8-point algorithm. \f$N \ge 8\f$
--   **CV_FM_RANSAC** for the RANSAC algorithm. \f$N \ge 8\f$
--   **CV_FM_LMEDS** for the LMedS algorithm. \f$N \ge 8\f$
+-   @ref FM_7POINT for a 7-point algorithm. \f$N = 7\f$
+-   @ref FM_8POINT for an 8-point algorithm. \f$N \ge 8\f$
+-   @ref FM_RANSAC for the RANSAC algorithm. \f$N \ge 8\f$
+-   @ref FM_LMEDS for the LMedS algorithm. \f$N \ge 8\f$
 @param ransacReprojThreshold Parameter used only for RANSAC. It is the maximum distance from a point to an epipolar
 line in pixels, beyond which the point is considered an outlier and is not used for computing the
 final fundamental matrix. It can be set to something like 1-3, depending on the accuracy of the
