@@ -1717,8 +1717,7 @@ CV_EXPORTS_AS(calibrateCameraExtended) double calibrateCamera( InputArrayOfArray
                                      OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs,
                                      OutputArray stdDeviations, OutputArray perViewErrors,
                                      int flags = 0, TermCriteria criteria = TermCriteria(
-                                        TermCriteria::COUNT + TermCriteria::EPS, 30, DBL_EPSILON) 
-                                    );
+                                        TermCriteria::COUNT + TermCriteria::EPS, 30, DBL_EPSILON) );
 
 /** @brief Finds the camera intrinsic and extrinsic parameters from several views of a calibration pattern.
 
@@ -1776,6 +1775,7 @@ views. The algorithm is based on @cite Zhang2000, @cite BouguetMCT and @cite str
 calibrateCamera() for other detailed explanations.
 @sa
    calibrateCamera, findChessboardCorners, solvePnP, initCameraMatrix2D, stereoCalibrate, undistort
+
  */
 CV_EXPORTS_W double calibrateCamera( InputArrayOfArrays objectPoints,
                                      InputArrayOfArrays imagePoints, Size imageSize,
