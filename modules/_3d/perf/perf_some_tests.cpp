@@ -9,9 +9,9 @@ namespace opencv_test
 namespace
 {
 
-PERF_TEST(VolPerfTest, EmptyTest)
+PERF_TEST(_3DPerfTest, EmptyTest)
 {
-    TEST_CYCLE() cv::vol::doNothing();
+    TEST_CYCLE() cv::_3d::doNothing();
 
     SANITY_CHECK(true);
 }

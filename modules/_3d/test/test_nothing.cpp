@@ -2,5 +2,14 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-#include "opencv2/ts.hpp"
-#include "opencv2/vol.hpp"
+#include "test_precomp.hpp"
+
+namespace opencv_test { namespace {
+
+TEST(_3DTests, testDoNothing)
+{
+    ASSERT_TRUE(cv::_3d::doNothing());
+}
+
+
+}} // namespace

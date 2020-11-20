@@ -5,7 +5,7 @@
 namespace cv
 {
 
-namespace vol
+namespace _3d
 {
 
 bool doNothing()
@@ -13,5 +13,5 @@ bool doNothing()
     return true;
 }
 
-} // namespace vol
+} // namespace _3d
 } // namespace cv

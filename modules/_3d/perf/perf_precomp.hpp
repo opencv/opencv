@@ -3,4 +3,4 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "opencv2/ts.hpp"
-#include "opencv2/vol.hpp"
+#include "opencv2/_3d.hpp"

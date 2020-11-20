@@ -1,12 +1,12 @@
 //TODO: insert actual license
 
-#ifndef OPENCV_VOL_HPP
-#define OPENCV_VOL_HPP
+#ifndef OPENCV_3D_HPP
+#define OPENCV_3D_HPP
 
 #include "opencv2/core.hpp"
 
 /**
-@defgroup vol 3D functionality
+@defgroup _3d 3D functionality
 
 Some docs
 
@@ -14,9 +14,9 @@ Some docs
 
 namespace cv
 {
-namespace vol
+namespace _3d
 {
-//! @addtogroup vol
+//! @addtogroup _3d
 //! @{
 
 
@@ -28,8 +28,8 @@ This function is needed for testing purposes.
 CV_EXPORTS_W bool doNothing();
 
 
-//! @} vol
-} // namespace vol
+//! @} _3d
+} // namespace _3d
 } // namespace cv
 
-#endif // OPENCV_VOL_HPP
+#endif // OPENCV_3D_HPP
