@@ -1640,6 +1640,32 @@ TEST(Core_InputOutput, FileStorage_free_file_after_exception)
     ASSERT_EQ(0, std::remove(fileName.c_str()));
 }
 
+TEST(Core_InputOutput, FileStorage_write_to_sequence)
+{
+    const std::vector<std::string> formatExts = { ".yml", ".json", ".xml" };
+    const std::string fileName = "FileStorage_write_to_sequence";
+
+    for (const auto& ext : formatExts)
+    {
+        FileStorage fs(fileName + ext, FileStorage::WRITE);
+        std::vector<int> in = { 23, 42 };
+        fs.startWriteStruct("some_sequence", cv::FileNode::SEQ);
+        for (int i : in)
+            fs.write("", i);
+        fs.endWriteStruct();
+        fs.release();
+
+        FileStorage fsIn(fileName + ext, FileStorage::READ);
+        FileNode seq = fsIn["some_sequence"];
+        FileNodeIterator it = seq.begin(), it_end = seq.end();
+        std::vector<int> out;
+        for (; it != it_end; ++it)
+            out.push_back((int)*it);
+
+        EXPECT_EQ(in, out);
+    }
+}
+
 TEST(Core_InputOutput, FileStorage_YAML_parse_multiple_documents)
 {
     const std::string filename = "FileStorage_YAML_parse_multiple_documents.yml";
