@@ -16,7 +16,7 @@ def get_framework_build_command_for_platform(platform, destination, framework_na
     ----------
     platform : str
         The name of the platform you want to build for. Options are
-        "ios", "ios-simulator", "ios-maccatalyst", "macos"
+        "iphoneos", "iphonesimulator", "catalyst", "macos"
     destination : str
         The directory you want to build the framework into.
     framework_name : str
@@ -24,7 +24,6 @@ def get_framework_build_command_for_platform(platform, destination, framework_na
     other_args : [str]
         Arguments that will be passed through to the ios/osx build_framework scripts.
     """
-    print(other_args)
     osx_script_path = os.path.abspath(os.path.abspath(os.path.dirname(__file__))+'/../osx/build_framework.py')
     ios_script_path = os.path.abspath(os.path.abspath(os.path.dirname(__file__))+'/../ios/build_framework.py')
     args = [
@@ -35,17 +34,17 @@ def get_framework_build_command_for_platform(platform, destination, framework_na
         if "--macos_archs" not in other_args and "--archs" not in other_args:
             # TODO: --archs flag is deprecated. Remove the check here for  --archs when possible.
             args += ["--macos_archs", "x86_64,arm64"]
-    elif platform == 'ios-maccatalyst':
+    elif platform == 'catalyst':
         # This is not a mistake. For Catalyst, we use the osx toolchain.
         # TODO: This is building with objc turned off due to an issue with CMake. See here for discussion: https://gitlab.kitware.com/cmake/cmake/-/issues/21436
         args += [osx_script_path, "--framework_name", framework_name, "--without=objc", "--build_only_specified_archs"]
         if "--catalyst_archs" not in other_args:
             args += ["--catalyst_archs", "x86_64,arm64"]
-    elif platform == 'ios':
+    elif platform == 'iphoneos':
         args += [ios_script_path, "--framework_name", framework_name, "--build_only_specified_archs"]
         if "--iphoneos_archs" not in other_args:
             args += ["--iphoneos_archs", "arm64,armv7"]
-    elif platform == 'ios-simulator':
+    elif platform == 'iphonesimulator':
         args += [ios_script_path, "--framework_name", framework_name, "--build_only_specified_archs"]
         if "--iphonesimulator_archs" not in other_args:
             args += ["--iphonesimulator_archs", "x86_64,arm64"]
@@ -70,7 +69,7 @@ if __name__ == "__main__":
     # Parse arguments
     parser = argparse.ArgumentParser(description='This script builds OpenCV into an xcframework supporting the Apple platforms of your choice.')
     parser.add_argument('out', metavar='OUTDIR', help='The directory where the xcframework will be created')
-    parser.add_argument('--platforms', default='ios,ios-simulator,ios-maccatalyst,macos', help='Platforms to build for (default: ios,ios-simulator,ios-maccatalyst,macos)')
+    parser.add_argument('--platforms', default='iphone,iphonesimulator,catalyst,macos', help='Platforms to build for (default: iphone,iphonesimulator,catalyst,macos) (options: iphone,iphonesimulator,catalyst,macos)')
     parser.add_argument('--framework_name', default='opencv2', help='Name of OpenCV xcframework (default: opencv2, will change to OpenCV in future version)')
     parser.add_argument('passthrough_args', nargs=argparse.REMAINDER, help='Any flags not captured by this script will be passed through to the ios/osx build_framework.py scripts')
 
