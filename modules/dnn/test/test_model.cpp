@@ -206,6 +206,8 @@ TEST_P(Test_Model, DetectionOutput)
     {
         if (backend == DNN_BACKEND_OPENCV)
             scoreDiff = 4e-3;
+        else
+            scoreDiff = 2e-2;
         iouDiff = 1.8e-1;
     }
 

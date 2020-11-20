@@ -499,7 +499,7 @@ typename cv::Affine3<T>::Vec3 cv::Affine3<T>::rvec() const
     double s = std::sqrt((rx*rx + ry*ry + rz*rz)*0.25);
     double c = (R.val[0] + R.val[4] + R.val[8] - 1) * 0.5;
     c = c > 1.0 ? 1.0 : c < -1.0 ? -1.0 : c;
-    double theta = acos(c);
+    double theta = std::acos(c);
 
     if( s < 1e-5 )
     {

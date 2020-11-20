@@ -363,8 +363,8 @@ void StereographicProjector::mapForward(float x, float y, float &u, float &v)
 
     float r = sinf(v_) / (1 - cosf(v_));
 
-    u = scale * r * cos(u_);
-    v = scale * r * sin(u_);
+    u = scale * r * std::cos(u_);
+    v = scale * r * std::sin(u_);
 }
 
 inline
@@ -625,7 +625,7 @@ void TransverseMercatorProjector::mapBackward(float u, float v, float &x, float 
     v /= scale;
 
     float v_ = asinf( sinf(v) / coshf(u) );
-    float u_ = atan2f( sinhf(u), cos(v) );
+    float u_ = atan2f( sinhf(u), std::cos(v) );
 
     float cosv = cosf(v_);
     float x_ = cosv * sinf(u_);
