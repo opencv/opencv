@@ -91,8 +91,7 @@ if __name__ == "__main__":
             print_header("Building Catalyst frameworks")
             build_folder = f"./{args.out}/catalyst".replace(" ", "\\ ")  # Escape spaces in output path
             build_folders.append(build_folder)
-            # TODO: This is building with objc turned off due to an issue with CMake. See here for discussion: https://gitlab.kitware.com/cmake/cmake/-/issues/21436
-            command = ["python3", osx_script_path, "--catalyst_archs", catalyst_archs, "--framework-name", args.framework_name, "--build_only_specified_archs", "--without=objc", build_folder] + args.passthrough_args
+            command = ["python3", osx_script_path, "--catalyst_archs", catalyst_archs, "--framework-name", args.framework_name, "--build_only_specified_archs", build_folder] + args.passthrough_args
             execute(command, cwd=os.getcwd())
 
         # Put all the built .frameworks together into a .xcframework

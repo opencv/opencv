@@ -112,6 +112,11 @@ class Builder:
                 cmake_flags.append("-DCMAKE_C_FLAGS=" + " ".join(c_flags))
                 cmake_flags.append("-DCMAKE_CXX_FLAGS=" + " ".join(c_flags))
                 cmake_flags.append("-DCMAKE_EXE_LINKER_FLAGS=" + " ".join(c_flags))
+
+                # CMake annot compile Swift for Catalyst https://gitlab.kitware.com/cmake/cmake/-/issues/21436
+                # cmake_flags.append("-DCMAKE_Swift_FLAGS=" + " " + target_flag)
+                cmake_flags.append("-DSWIFT_DISABLED=1")
+
                 cmake_flags.append("-DIOS=1")  # Build the iOS codebase
                 cmake_flags.append("-DMAC_CATALYST=1")  # Set a flag for Mac Catalyst, just in case we need it
                 cmake_flags.append("-DWITH_OPENCL=OFF")  # Disable OpenCL; it isn't compatible with iOS
@@ -127,10 +132,10 @@ class Builder:
         self.makeFramework(outdir, dirs)
         if self.build_objc_wrapper:
             if self.run_tests:
-                check_call([sys.argv[0].replace("build_framework", "run_tests"), "--framework_dir=" + outdir, "--framework_name=" + self.framework_name, dirs[0] +  "/modules/objc_bindings_generator/{}/test".format(self.getObjcTarget())])
+                check_call([sys.argv[0].replace("build_framework", "run_tests"), "--framework_dir=" + outdir, "--framework_name=" + self.framework_name, dirs[0] +  "/modules/objc_bindings_generator/{}/test".format(self.getObjcTarget(target[1]))])
             else:
                 print("To run tests call:")
-                print(sys.argv[0].replace("build_framework", "run_tests") + " --framework_dir=" + outdir + " --framework_name=" + self.framework_name + " " + dirs[0] +  "/modules/objc_bindings_generator/{}/test".format(self.getObjcTarget()))
+                print(sys.argv[0].replace("build_framework", "run_tests") + " --framework_dir=" + outdir + " --framework_name=" + self.framework_name + " " + dirs[0] +  "/modules/objc_bindings_generator/{}/test".format(self.getObjcTarget(target[1])))
             if self.build_docs:
                 check_call([sys.argv[0].replace("build_framework", "build_docs"), dirs[0] + "/modules/objc/framework_build"])
                 doc_path = os.path.join(dirs[0], "modules", "objc", "doc_build", "docs")
@@ -212,7 +217,7 @@ class Builder:
     def getInfoPlist(self, builddirs):
         return os.path.join(builddirs[0], "ios", "Info.plist")
 
-    def getObjcTarget(self):
+    def getObjcTarget(self, target):
         # Obj-C generation target
         return 'ios'
 
@@ -284,7 +289,9 @@ class Builder:
         execute(buildcmd + ["-target", "ALL_BUILD", "build"], cwd = builddir)
         execute(["cmake", "-DBUILD_TYPE=%s" % self.getConfiguration(), "-P", "cmake_install.cmake"], cwd = builddir)
         if self.build_objc_wrapper:
-            cmakecmd = self.makeCMakeCmd(arch, target, builddir + "/modules/objc_bindings_generator/{}/gen".format(self.getObjcTarget()), cmakeargs)
+            cmakecmd = self.makeCMakeCmd(arch, target, builddir + "/modules/objc_bindings_generator/{}/gen".format(self.getObjcTarget(target)), cmakeargs)
+            # cmakecmd.append("-DCMAKE_Swift_FLAGS=" + "-target x86_64-apple-ios13.0-macabi")
+            # cmakecmd.append("-DCMAKE_EXE_LINKER_FLAGS=" + "-target x86_64-apple-ios13.0-macabi")
             cmakecmd.append("-DBUILD_ROOT=%s" % builddir)
             cmakecmd.append("-DCMAKE_INSTALL_NAME_TOOL=install_name_tool")
             cmakecmd.append("--no-warn-unused-cli")
