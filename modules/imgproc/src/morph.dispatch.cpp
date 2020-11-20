@@ -221,7 +221,8 @@ static bool halMorph(int op, int src_type, int dst_type,
 }
 
 // ===== 2. IPP implementation
-#if 0 //defined HAVE_IPP
+#if defined HAVE_IPP
+// #if 0 //defined HAVE_IPP
 #ifdef HAVE_IPP_IW
 static inline IwiMorphologyType ippiGetMorphologyType(int morphOp)
 {
@@ -495,12 +496,12 @@ void morph(int op, int src_type, int dst_type,
             return;
     }
 
-    /*CV_IPP_RUN_FAST(ippMorph(op, src_type, dst_type, src_data, src_step, dst_data, dst_step, width, height,
+    CV_IPP_RUN_FAST(ippMorph(op, src_type, dst_type, src_data, src_step, dst_data, dst_step, width, height,
                             roi_width, roi_height, roi_x, roi_y,
                             roi_width2, roi_height2, roi_x2, roi_y2,
                             kernel_type, kernel_data, kernel_step,
                             kernel_width, kernel_height, anchor_x, anchor_y,
-                            borderType, borderValue, iterations, isSubmatrix));*/
+                            borderType, borderValue, iterations, isSubmatrix));
 
     ocvMorph(op, src_type, dst_type, src_data, src_step, dst_data, dst_step, width, height,
              roi_width, roi_height, roi_x, roi_y,
@@ -1085,7 +1086,8 @@ static bool ocl_morphologyEx(InputArray _src, OutputArray _dst, int op,
 #endif
 
 #define IPP_DISABLE_MORPH_ADV 1
-#if 0 //defined HAVE_IPP
+#if defined HAVE_IPP
+// #if 0 //defined HAVE_IPP
 #if !IPP_DISABLE_MORPH_ADV
 static bool ipp_morphologyEx(int op, InputArray _src, OutputArray _dst,
                      InputArray _kernel,
@@ -1182,7 +1184,7 @@ void morphologyEx( InputArray _src, OutputArray _dst, int op,
     Mat dst = _dst.getMat();
 
 #if !IPP_DISABLE_MORPH_ADV
-    //CV_IPP_RUN_FAST(ipp_morphologyEx(op, src, dst, kernel, anchor, iterations, borderType, borderValue));
+    CV_IPP_RUN_FAST(ipp_morphologyEx(op, src, dst, kernel, anchor, iterations, borderType, borderValue));
 #endif
 
     switch( op )

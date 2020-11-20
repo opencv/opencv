@@ -981,11 +981,11 @@ static bool ipp_flip(Mat &src, Mat &dst, int flip_mode)
     CV_INSTRUMENT_REGION_IPP();
 
     // Details: https://github.com/opencv/opencv/issues/12943
-    if (flip_mode <= 0 /* swap rows */
-        && cv::ipp::getIppTopFeatures() != ippCPUID_SSE42
-        && (int64_t)(src.total()) * src.elemSize() >= CV_BIG_INT(0x80000000)/*2Gb*/
-    )
-        return false;
+    // if (flip_mode <= 0 /* swap rows */
+    //     && cv::ipp::getIppTopFeatures() != ippCPUID_SSE42
+    //     && (int64_t)(src.total()) * src.elemSize() >= CV_BIG_INT(0x80000000)/*2Gb*/
+    // )
+    //     return false;
 
     IppiAxis ippMode;
     if(flip_mode < 0)

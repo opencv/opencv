@@ -471,7 +471,8 @@ static bool ocl_preCornerDetect( InputArray _src, OutputArray _dst, int ksize, i
 
 }
 
-#if 0 //defined(HAVE_IPP)
+#if defined(HAVE_IPP)
+// #if 0 //defined(HAVE_IPP)
 namespace cv
 {
 static bool ipp_cornerMinEigenVal( InputArray _src, OutputArray _dst, int blockSize, int ksize, int borderType )
@@ -554,7 +555,7 @@ void cv::cornerMinEigenVal( InputArray _src, OutputArray _dst, int blockSize, in
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
                ocl_cornerMinEigenValVecs(_src, _dst, blockSize, ksize, 0.0, borderType, MINEIGENVAL))
 
-/*#ifdef HAVE_IPP
+#ifdef HAVE_IPP
     int kerSize = (ksize < 0)?3:ksize;
     bool isolated = (borderType & BORDER_ISOLATED) != 0;
     int borderTypeNI = borderType & ~BORDER_ISOLATED;
@@ -562,7 +563,7 @@ void cv::cornerMinEigenVal( InputArray _src, OutputArray _dst, int blockSize, in
     CV_IPP_RUN(((borderTypeNI == BORDER_REPLICATE && (!_src.isSubmatrix() || isolated)) &&
             (kerSize == 3 || kerSize == 5) && (blockSize == 3 || blockSize == 5)) && IPP_VERSION_X100 >= 800,
         ipp_cornerMinEigenVal( _src, _dst, blockSize, ksize, borderType ));
-    */
+   
 
     Mat src = _src.getMat();
     _dst.create( src.size(), CV_32FC1 );

@@ -2303,6 +2303,7 @@ public:
 
             if(env == "disabled")
             {
+                printf("Hi there! env is disabled!!!\n");
                 std::cerr << "WARNING: IPP was disabled by OPENCV_IPP environment variable" << std::endl;
                 useIPP = false;
             }
@@ -2337,6 +2338,12 @@ public:
             ))
         {
             useIPP = false;
+            printf("cpuFeatures = %lu\n", cpuFeatures);
+            printf("cpuFeatures&ippCPUID_AVX512F = %lu\n", cpuFeatures&ippCPUID_AVX512F);
+            printf("cpuFeatures&ippCPUID_AVX2 = %lu\n", cpuFeatures&ippCPUID_AVX2);
+            printf("cpuFeatures&ippCPUID_SSE42 = %lu\n", cpuFeatures&ippCPUID_SSE42);
+            printf("ippCPUID_SSE42 = %lu\n", ippCPUID_SSE42);
+            printf("useIPP 0 = %d\n", useIPP);
             return;
         }
 

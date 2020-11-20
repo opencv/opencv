@@ -203,7 +203,8 @@ static bool openvx_medianFilter(InputArray _src, OutputArray _dst, int ksize)
 }
 #endif
 
-#if 0 //defined HAVE_IPP
+#if defined HAVE_IPP
+// #if 0 //defined HAVE_IPP
 static bool ipp_medianFilter(Mat &src0, Mat &dst, int ksize)
 {
     CV_INSTRUMENT_REGION_IPP();
@@ -303,7 +304,7 @@ void medianBlur( InputArray _src0, OutputArray _dst, int ksize )
     CV_OVX_RUN(true,
                openvx_medianFilter(_src0, _dst, ksize))
 
-    //CV_IPP_RUN_FAST(ipp_medianFilter(src0, dst, ksize));
+    CV_IPP_RUN_FAST(ipp_medianFilter(src0, dst, ksize));
 
     CV_CPU_DISPATCH(medianBlur, (src0, dst, ksize),
         CV_CPU_DISPATCH_MODES_ALL);

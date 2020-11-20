@@ -2445,9 +2445,9 @@ TEST(Core_MinMaxIdx, rows_overflow)
 
         double minVal0 = 0, maxVal0 = 0;
         int minIdx0[CV_MAX_DIM] = { 0 }, maxIdx0[CV_MAX_DIM] = { 0 };
-        cv::ipp::setUseIPP(false);
+        // cv::ipp::setUseIPP(false);
         cv::minMaxIdx(m, &minVal0, &maxVal0, minIdx0, maxIdx0);
-        cv::ipp::setUseIPP(true);
+        // cv::ipp::setUseIPP(true);
 
         EXPECT_FALSE(fabs(minVal0 - minVal) > 1e-6 || fabs(maxVal0 - maxVal) > 1e-6) << "NxM=" << N << "x" << M <<
             "    min=" << minVal0 << " vs " <<  minVal <<

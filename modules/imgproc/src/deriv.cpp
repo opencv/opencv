@@ -260,7 +260,8 @@ namespace cv
 }
 #endif
 
-#if 0 //defined HAVE_IPP
+#if defined HAVE_IPP
+// #if 0 //defined HAVE_IPP
 namespace cv
 {
 
@@ -459,7 +460,7 @@ void cv::Sobel( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
     CV_OVX_RUN(true,
                openvx_sobel(src, dst, dx, dy, ksize, scale, delta, borderType))
 
-    //CV_IPP_RUN_FAST(ipp_Deriv(src, dst, dx, dy, ksize, scale, delta, borderType));
+    CV_IPP_RUN_FAST(ipp_Deriv(src, dst, dx, dy, ksize, scale, delta, borderType));
 
     sepFilter2D(src, dst, ddepth, kx, ky, Point(-1, -1), delta, borderType );
 }
@@ -511,7 +512,7 @@ void cv::Scharr( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
     CALL_HAL(scharr, cv_hal_scharr, src.ptr(), src.step, dst.ptr(), dst.step, src.cols, src.rows, sdepth, ddepth, cn,
              ofs.x, ofs.y, wsz.width - src.cols - ofs.x, wsz.height - src.rows - ofs.y, dx, dy, scale, delta, borderType&~BORDER_ISOLATED);
 
-    //CV_IPP_RUN_FAST(ipp_Deriv(src, dst, dx, dy, 0, scale, delta, borderType));
+    CV_IPP_RUN_FAST(ipp_Deriv(src, dst, dx, dy, 0, scale, delta, borderType));
 
     sepFilter2D( src, dst, ddepth, kx, ky, Point(-1, -1), delta, borderType );
 }
