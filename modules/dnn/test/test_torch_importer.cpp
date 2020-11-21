@@ -165,7 +165,8 @@ TEST_P(Test_Torch_layers, run_reshape_single_sample)
     }
     else if (target == DNN_TARGET_CUDA_FP16)
     {
-        l1 = 0.01;
+        l1 = 0.02;
+        lInf = 0.04;
     }
     runTorchNet("net_reshape_single_sample", "", false, false, true, l1, lInf);
 }
