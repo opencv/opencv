@@ -76,26 +76,26 @@ if __name__ == "__main__":
         if iphoneos_archs:
             build_folder = get_or_create_build_folder(args.out, "iphoneos")
             build_folders.append(build_folder)
-            command = ["python3", ios_script_path, "--iphoneos_archs", iphoneos_archs, "--framework-name", args.framework_name, "--build_only_specified_archs", build_folder] + args.passthrough_args
+            command = ["python3", ios_script_path, "--iphoneos_archs", iphoneos_archs, "--framework_name", args.framework_name, "--build_only_specified_archs", build_folder] + args.passthrough_args
             print_header("Building iPhoneOS frameworks")
             print(command)
             execute(command, cwd=os.getcwd())
         if iphonesimulator_archs:
             build_folder = get_or_create_build_folder(args.out, "iphonesimulator")
             build_folders.append(build_folder)
-            command = ["python3", ios_script_path, "--iphonesimulator_archs", iphonesimulator_archs, "--framework-name", args.framework_name, "--build_only_specified_archs", build_folder] + args.passthrough_args
+            command = ["python3", ios_script_path, "--iphonesimulator_archs", iphonesimulator_archs, "--framework_name", args.framework_name, "--build_only_specified_archs", build_folder] + args.passthrough_args
             print_header("Building iPhoneSimulator frameworks")
             execute(command, cwd=os.getcwd())
         if macos_archs:
             build_folder = get_or_create_build_folder(args.out, "macos")
             build_folders.append(build_folder)
-            command = ["python3", osx_script_path, "--macos_archs", macos_archs, "--framework-name", args.framework_name, "--build_only_specified_archs", build_folder] + args.passthrough_args
+            command = ["python3", osx_script_path, "--macos_archs", macos_archs, "--framework_name", args.framework_name, "--build_only_specified_archs", build_folder] + args.passthrough_args
             print_header("Building MacOS frameworks")
             execute(command, cwd=os.getcwd())
         if catalyst_archs:
             build_folder = get_or_create_build_folder(args.out, "catalyst")
             build_folders.append(build_folder)
-            command = ["python3", osx_script_path, "--catalyst_archs", catalyst_archs, "--framework-name", args.framework_name, "--build_only_specified_archs", build_folder] + args.passthrough_args
+            command = ["python3", osx_script_path, "--catalyst_archs", catalyst_archs, "--framework_name", args.framework_name, "--build_only_specified_archs", build_folder] + args.passthrough_args
             print_header("Building Catalyst frameworks")
             execute(command, cwd=os.getcwd())
 
