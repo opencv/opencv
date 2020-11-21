@@ -1303,10 +1303,12 @@ CV__DNN_INLINE_NS_BEGIN
           *  @param[out] boxes A set of bounding boxes.
           *  @param[in] confThreshold A threshold used to filter boxes by confidences.
           *  @param[in] nmsThreshold A threshold used in non maximum suppression.
+          *  @param[in] nmsDifferentLabels Determines if non maximum suppression should be applied when labels are different.
           */
          CV_WRAP void detect(InputArray frame, CV_OUT std::vector<int>& classIds,
                              CV_OUT std::vector<float>& confidences, CV_OUT std::vector<Rect>& boxes,
-                             float confThreshold = 0.5f, float nmsThreshold = 0.0f);
+                             float confThreshold = 0.5f, float nmsThreshold = 0.0f,
+                             bool nmsDifferentLabels = false);
      };
 
 //! @}
