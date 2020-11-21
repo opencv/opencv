@@ -492,7 +492,6 @@ INSTANTIATE_TEST_CASE_P(KMeansNDNoInitTestCPU, KMeansNDNoInitTest,
                                 Values(5),
                                 Values(cv::KMEANS_RANDOM_CENTERS, cv::KMEANS_PP_CENTERS)));
 
-
 INSTANTIATE_TEST_CASE_P(KMeansNDInitTestCPU, KMeansNDInitTest,
                         Combine(Values(CV_32FC1),
                                 Values(cv::Size(5, 720),
@@ -512,7 +511,6 @@ INSTANTIATE_TEST_CASE_P(KMeans2DNoInitTestCPU, KMeans2DNoInitTest,
                                 Values(5),
                                 Values(cv::KMEANS_RANDOM_CENTERS, cv::KMEANS_PP_CENTERS)));
 
-
 INSTANTIATE_TEST_CASE_P(KMeans2DInitTestCPU, KMeans2DInitTest,
                         Combine(Values(-1),
                                 Values(cv::Size(-1, 720),
@@ -530,7 +528,6 @@ INSTANTIATE_TEST_CASE_P(KMeans3DNoInitTestCPU, KMeans3DNoInitTest,
                                 Values(CORE_CPU),
                                 Values(5),
                                 Values(cv::KMEANS_RANDOM_CENTERS, cv::KMEANS_PP_CENTERS)));
-
 
 INSTANTIATE_TEST_CASE_P(KMeans3DInitTestCPU, KMeans3DInitTest,
                         Combine(Values(-1),
