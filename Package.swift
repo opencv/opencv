@@ -31,10 +31,10 @@ let package = Package(
             checksum: "a2088bcdebb64e6126e9b85409083b06d8ea7b3ab206e72daa06b105f5ca6f28"
         ),
         // If you are compiling OpenCV locally, you can uncomment the below block to use a custom copy
-        // e.g. `$ python platforms/apple/build_xcframework.py platforms/apple/xcframework-build/`
+        // e.g. `$ python platforms/apple/build_xcframework.py --dynamic build/dynamic-xcframework`
 //        .binaryTarget(
 //            name: "opencv2",
-//            path: "platforms/apple/xcframework-build/opencv2.xcframework"
+//            path: "build/dynamic-xcframework/opencv2.xcframework"
 //        ),
         .testTarget(
             name: "OpenCVTests",
