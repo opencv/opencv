@@ -7,11 +7,6 @@
 import XCTest
 import OpenCV
 
-// TODO: these typealiases can be removed once xcframework is recompiled
-typealias Rect = Rect2i
-typealias Point = Point2i
-typealias Size = Size2i
-
 enum OpenCVTestError: Error {
     case unsupportedOperationError(String)
 }
