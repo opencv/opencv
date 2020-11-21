@@ -1372,11 +1372,13 @@ square grouping and ordering algorithm fails.
 CV_EXPORTS_W bool findChessboardCorners( InputArray image, Size patternSize, OutputArray corners,
                                          int flags = CALIB_CB_ADAPTIVE_THRESH + CALIB_CB_NORMALIZE_IMAGE );
 
+
+// FIX ME
 /*
    Checks whether the image contains chessboard of the specific size or not.
    If yes, nonzero value is returned.
 */
-CV_EXPORTS_W bool checkChessboard(InputArray img, Size size);
+//CV_EXPORTS_W bool checkChessboard(InputArray img, Size size);
 
 /** @brief Finds the positions of internal corners of the chessboard using a sector based approach.
 
@@ -2493,11 +2495,11 @@ CV_EXPORTS_W Mat findEssentialMat( InputArray points1, InputArray points2,
                                  double prob = 0.999, double threshold = 1.0,
                                  OutputArray mask = noArray() );
 
-
-CV_EXPORTS_W Mat findEssentialMat( InputArray points1, InputArray points2,
-                      InputArray cameraMatrix1, InputArray cameraMatrix2,
-                      InputArray dist_coeff1, InputArray dist_coeff2, OutputArray mask,
-                      const UsacParams &params);
+// FIX ME
+// CV_EXPORTS_W Mat findEssentialMat( InputArray points1, InputArray points2,
+//                       InputArray cameraMatrix1, InputArray cameraMatrix2,
+//                       InputArray dist_coeff1, InputArray dist_coeff2, OutputArray mask,
+//                       const UsacParams &params);
 
 /** @brief Decompose an essential matrix to possible rotations and translation.
 
