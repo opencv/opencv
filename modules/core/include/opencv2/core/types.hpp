@@ -522,6 +522,8 @@ public:
     @param pts The points array for storing rectangle vertices. The order is bottomLeft, topLeft, topRight, bottomRight.
     */
     void points(Point2f pts[]) const;
+    //! scale rectangle
+    void scaleBy(float scale);
     //! returns the minimal up-right integer rectangle containing the rotated rectangle
     Rect boundingRect() const;
     //! returns the minimal (exact) floating point rectangle containing the rotated rectangle, not intended for use with images
