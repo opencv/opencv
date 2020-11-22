@@ -123,7 +123,7 @@ def main():
     print("OpenCV model was successfully read. Layer IDs: \n", opencv_net.getLayerNames())
 
     # get preprocessed image
-    input_img = get_preprocessed_img("../data/ILSVRC2012_val_00000502.JPEG")
+    input_img = get_preprocessed_img("../data/squirrel_cls.jpg")
 
     # get ImageNet labels
     imagenet_labels = get_imagenet_labels("../data/dnn/classification_classes_ILSVRC2012.txt")

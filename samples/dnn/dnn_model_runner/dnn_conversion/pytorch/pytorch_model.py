@@ -75,7 +75,7 @@ class PyTorchModelProcessor(Framework):
             model_out = self._prepared_model(tensor)
 
         # segmentation case
-        if len(model_out) == 2: #self._prepared_model(tensor)) == 2:
+        if len(model_out) == 2:
             model_out = model_out['out']
 
         out = model_out.detach().numpy()

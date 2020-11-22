@@ -75,7 +75,7 @@ def add_preproc_args(zoo, parser, sample):
                  help='Preprocess input image by resizing to a specific width.')
     add_argument(zoo, parser, 'height', type=int,
                  help='Preprocess input image by resizing to a specific height.')
-    add_argument(zoo, parser, 'rgb', type=bool, default=True,
+    add_argument(zoo, parser, 'rgb', action='store_true',
                  help='Indicate that model works with RGB input images instead BGR ones.')
     add_argument(zoo, parser, 'classes',
                  help='Optional path to a text file with names of classes to label detected objects.')

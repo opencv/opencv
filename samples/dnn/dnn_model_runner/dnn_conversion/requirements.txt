@@ -7,10 +7,3 @@ torchvision>=0.6.1
 
 tensorflow>=2.1.0
 tensorflow-gpu>=2.1.0
-
-# manual python binding
-opencv>=4.4.0
-
-# nightly versions for segmentation experiments
-torch>=1.7.0.dev20200727
-torchvision>=0.8.0.dev20200727

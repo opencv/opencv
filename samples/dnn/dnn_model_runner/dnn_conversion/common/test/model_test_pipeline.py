@@ -47,7 +47,6 @@ class ModelTestPipeline:
                 self._test_module_config.mean = self._default_input_blob_preproc["mean"]
                 self._test_module_config.std = self._default_input_blob_preproc["std"]
                 self._test_module_config.crop = self._default_input_blob_preproc["crop"]
-                self._test_module_config.rgb = self._default_input_blob_preproc["rgb"]
 
                 if "rsz_height" in self._default_input_blob_preproc and "rsz_width" in self._default_input_blob_preproc:
                     self._test_module_config.rsz_height = self._default_input_blob_preproc["rsz_height"]
@@ -60,10 +59,12 @@ class ModelTestPipeline:
                     '--height', self._test_module_config.frame_height,
                     '--scale', self._test_module_config.scale,
                     '--mean', *self._test_module_config.mean,
-                    '--rgb', self._test_module_config.rgb,
                     '--std', *self._test_module_config.std,
                     '--classes', self._test_module_config.classes,
                 ]
+
+                if self._default_input_blob_preproc["rgb"]:
+                    self._test_module_param_list.append('--rgb')
 
                 self._configure_test_module_params()
 

@@ -7,7 +7,7 @@ pytorch_resize_input_blob = {
     "scale": str(BASE_IMG_SCALE_FACTOR),
     "std": ["0.229", "0.224", "0.225"],
     "crop": "True",
-    "rgb": "True",
+    "rgb": True,
     "rsz_height": str(PYTORCH_RSZ_HEIGHT),
     "rsz_width": str(PYTORCH_RSZ_WIDTH)
 }
@@ -17,7 +17,7 @@ pytorch_input_blob = {
     "scale": str(BASE_IMG_SCALE_FACTOR),
     "std": ["0.229", "0.224", "0.225"],
     "crop": "True",
-    "rgb": "True"
+    "rgb": True
 }
 
 tf_input_blob = {
@@ -25,7 +25,7 @@ tf_input_blob = {
     "mean": ["127.5", "127.5", "127.5"],
     "std": [],
     "crop": "True",
-    "rgb": "True"
+    "rgb": True
 }
 
 tf_model_blob_caffe_mode = {
@@ -33,5 +33,5 @@ tf_model_blob_caffe_mode = {
     "scale": "1.0",
     "std": [],
     "crop": "True",
-    "rgb": "False",
+    "rgb": False
 }

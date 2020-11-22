@@ -1,4 +1,9 @@
-# Conversion of TensorFlow Classification Models and Launch with OpenCV Python
+# Conversion of TensorFlow Classification Models and Launch with OpenCV Python {#tf_cls_tutorial_dnn_conversion}
+
+|    |    |
+| -: | :- |
+| Original author | Anastasia Murzova |
+| Compatibility | OpenCV >= 4.5 |
 
 ## Goals
 In this tutorial you will learn how to:
@@ -9,11 +14,28 @@ In this tutorial you will learn how to:
 We will explore the above-listed points by the example of MobileNet architecture.
 
 ## Introduction
-Let's briefly view the key concepts involved in the pipeline of TensorFlow models transition with OpenCV API. The initial step in conversion of TensorFlow models into [cv.dnn_Net](https://docs.opencv.org/4.3.0/db/d30/classcv_1_1dnn_1_1Net.html#a82eb4d60b3c396cb85c79d267516cf15)
+Let's briefly view the key concepts involved in the pipeline of TensorFlow models transition with OpenCV API. The initial step in conversion of TensorFlow models into cv.dnn.Net
 is obtaining the frozen TF model graph. Frozen graph defines the combination of the model graph structure with kept values of the required variables, for example, weights. Usually the frozen graph is saved in [protobuf](https://en.wikipedia.org/wiki/Protocol_Buffers) (```.pb```) files.
-After the model ``.pb`` file was generated it can be read with [``cv.dnn.readNetFromTensorflow``](https://docs.opencv.org/4.3.0/d6/d0f/group__dnn.html#gad820b280978d06773234ba6841e77e8d) function.
+After the model ``.pb`` file was generated it can be read with cv.dnn.readNetFromTensorflow function.
 
-## Practise
+## Requirements
+To be able to experiment with the below code you will need to install a set of libraries. We will use a virtual environment with python3.7+ for this:
+
+```console
+virtualenv -p /usr/bin/python3.7 <env_dir_path>
+source <env_dir_path>/bin/activate
+```
+
+For OpenCV-Python building from source, follow the corresponding instructions from the @ref tutorial_py_table_of_contents_setup.
+
+Before you start the installation of the libraries, you can customize the [requirements.txt](https://github.com/opencv/opencv/tree/master/samples/dnn/dnn_model_runner/dnn_conversion/requirements.txt), excluding or including (for example, ``opencv-python``) some dependencies.
+The below line initiates requirements installation into the previously activated virtual environment:
+
+```console
+pip install -r requirements.txt
+```
+
+## Practice
 In this part we are going to cover the following points:
 1. create a TF classification model conversion pipeline and provide the inference
 2. evaluate and test TF classification models
@@ -23,7 +45,7 @@ If you'd like merely to run evaluation or test model pipelines, the "Model Conve
 ### Model Conversion Pipeline
 The code in this subchapter is located in the ``dnn_model_runner`` module and can be executed with the line:
 
-```
+```console
 python -m dnn_model_runner.dnn_conversion.tf.classification.py_to_py_mobilenet
 ```
 
@@ -49,7 +71,7 @@ opencv_net = cv2.dnn.readNetFromTensorflow(full_pb_path)
 print("OpenCV model was successfully read. Model layers: \n", opencv_net.getLayerNames())
 
 # get preprocessed image
-input_img = get_preprocessed_img("../data/ILSVRC2012_val_00000502.JPEG")
+input_img = get_preprocessed_img("../data/squirrel_cls.jpg")
 
 # get ImageNet labels
 imagenet_labels = get_imagenet_labels("../data/dnn/classification_classes_ILSVRC2012.txt")
@@ -57,13 +79,16 @@ imagenet_labels = get_imagenet_labels("../data/dnn/classification_classes_ILSVRC
 # obtain OpenCV DNN predictions
 get_opencv_dnn_prediction(opencv_net, input_img, imagenet_labels)
 
-# obtainTF model predictions
+# obtain TF model predictions
 get_tf_dnn_prediction(original_tf_model, input_img, imagenet_labels)
 ```
 
-To provide model inference we will use the below image of a squirrel from the ImageNet validation dataset:
+To provide model inference we will use the below [squirrel photo](https://www.pexels.com/photo/brown-squirrel-eating-1564292) (under [CC0](https://www.pexels.com/terms-of-service/) license) corresponding to ImageNet class ID 335:
+```console
+fox squirrel, eastern fox squirrel, Sciurus niger
+```
 
-![ImageNet img](images/ILSVRC2012_val_00000502.JPEG)
+![Classification model input image](images/squirrel_cls.jpg)
 
 For the label decoding of the obtained prediction, we also need ``imagenet_classes.txt`` file, which contains the full list of the ImageNet classes.
 
@@ -111,14 +136,14 @@ tf.io.write_graph(graph_or_graph_def=frozen_tf_func.graph,
 
 After the successful execution of the above code, we will get a frozen graph in ``models/mobilenet.pb``.
 
-* read TF frozen graph with with [``cv.dnn.readNetFromTensorflow``](https://docs.opencv.org/4.3.0/d6/d0f/group__dnn.html#gad820b280978d06773234ba6841e77e8d) passing the obtained in the previous step ``mobilenet.pb`` into it:
+* read TF frozen graph with with cv.dnn.readNetFromTensorflow passing the obtained in the previous step ``mobilenet.pb`` into it:
 
 ```python
 # get TF frozen graph path
 full_pb_path = get_tf_model_proto(original_tf_model)
 ```
 
-* prepare input data with [``cv2.dnn.blobFromImage``](https://docs.opencv.org/4.3.0/d6/d0f/group__dnn.html#ga29f34df9376379a603acd8df581ac8d7) function:
+* prepare input data with cv2.dnn.blobFromImage function:
 
 ```python
 # read the image
@@ -143,14 +168,14 @@ input_blob = cv2.dnn.blobFromImage(
 print("Input blob shape: {}\n".format(input_blob.shape))
 ```
 
-Please, pay attention at the preprocessing order in the ``cv2.dnn.blobFromImage`` function. Firstly, the mean value is subtracted and only then pixel values are multiplied by the defined scale.
-Therefore, to reproduce the image preprocessing pipeline from the TF [``mobilenet.preprocess_input``](https://github.com/tensorflow/tensorflow/blob/v2.3.0/tensorflow/python/keras/applications/mobilenet.py#L443-L445) function, we multiply ``mean`` by ``127.5``.
+Please, pay attention at the preprocessing order in the cv2.dnn.blobFromImage function. Firstly, the mean value is subtracted and only then pixel values are multiplied by the defined scale.
+Therefore, to reproduce the image preprocessing pipeline from the TF [``mobilenet.preprocess_input``](https://github.com/tensorflow/tensorflow/blob/02032fb477e9417197132648ec81e75beee9063a/tensorflow/python/keras/applications/mobilenet.py#L443-L445) function, we multiply ``mean`` by ``127.5``.
 
 As a result, 4-dimensional ``input_blob`` was obtained:
 
  ``Input blob shape: (1, 3, 224, 224)``
 
-* provide OpenCV ``cv.dnn_Net`` inference:
+* provide OpenCV cv.dnn.Net inference:
 
 ```python
 # set OpenCV DNN input
@@ -172,11 +197,11 @@ print("* confidence: {:.4f}\n".format(confidence))
 
 After the above code execution we will get the following output:
 
-```
+```console
 OpenCV DNN prediction:
 * shape:  (1, 1000)
 * class ID: 335, label: fox squirrel, eastern fox squirrel, Sciurus niger
-* confidence: 0.9941
+* confidence: 0.9525
 ```
 
 * provide TF MobileNet inference:
@@ -202,17 +227,17 @@ print("* confidence: {:.4f}".format(confidence))
 
 To fit TF model input, ``input_blob`` was transposed:
 
-```
+```console
 TF input blob shape: (1, 224, 224, 3)
 ```
 
 TF inference results are the following:
 
-```
+```console
 TensorFlow model prediction:
 * shape:  (1, 1000)
 * class ID: 335, label: fox squirrel, eastern fox squirrel, Sciurus niger
-* confidence: 0.9941
+* confidence: 0.9525
 ```
 
 As it can be seen from the experiments OpenCV and TF inference results are equal.
@@ -242,13 +267,13 @@ This list can be also extended with further appropriate evaluation pipeline conf
 
 To below line represents running of the module in the evaluation mode:
 
-```
+```console
 python -m dnn_model_runner.dnn_conversion.tf.classification.py_to_py_cls --model_name <tf_cls_model_name>
 ```
 
 Chosen from the list classification model will be read into OpenCV ``cv.dnn_Net`` object. Evaluation results of TF and OpenCV models (accuracy, inference time, L1) will be written into the log file. Inference time values will be also depicted in a chart to generalize the obtained model information.
 
-Necessary evaluation configurations are defined in the [``test_config.py``](https://):
+Necessary evaluation configurations are defined in the [test_config.py](https://github.com/opencv/opencv/tree/master/samples/dnn/dnn_model_runner/dnn_conversion/common/test/configs/test_config.py) and can be modified in accordance with actual paths of data location::
 
 ```python
 @dataclass
@@ -265,21 +290,29 @@ The values from ``TestClsConfig`` can be customized in accordance with chosen mo
 
 To initiate the evaluation of the TensorFlow MobileNet, run the following line:
 
-```
+```console
 python -m dnn_model_runner.dnn_conversion.tf.classification.py_to_py_cls --model_name mobilenet
+```
+
+After script launch, the log file with evaluation data will be generated in ``dnn_model_runner/dnn_conversion/logs``:
+
+```console
+===== Running evaluation of the model with the following params:
+    * val data location: ./ILSVRC2012_img_val
+    * log file location: dnn_model_runner/dnn_conversion/logs/TF_mobilenet_log.txt
 ```
 
 #### Test Mode
 
 The below line represents running of the module in the test mode, namely it provides the steps for the model inference:
 
-```
+```console
 python -m dnn_model_runner.dnn_conversion.tf.classification.py_to_py_cls --model_name <tf_cls_model_name> --test True --default_img_preprocess <True/False> --evaluate False
 ```
 
 Here ``default_img_preprocess`` key defines whether you'd like to parametrize the model test process with some particular values or use the default values, for example, ``scale``, ``mean`` or ``std``.
 
-Test configuration is represented in [``test_config.py``](https://) ``TestClsModuleConfig`` class:
+Test configuration is represented in [test_config.py](https://github.com/opencv/opencv/tree/master/samples/dnn/dnn_model_runner/dnn_conversion/common/test/configs/test_config.py) ``TestClsModuleConfig`` class:
 
 ```python
 @dataclass
@@ -287,7 +320,7 @@ class TestClsModuleConfig:
     cls_test_data_dir: str = "../data"
     test_module_name: str = "classification"
     test_module_path: str = "classification.py"
-    input_img: str = os.path.join(cls_test_data_dir, "ILSVRC2012_val_00000502.JPEG")
+    input_img: str = os.path.join(cls_test_data_dir, "squirrel_cls.jpg")
     model: str = ""
 
     frame_height: str = str(TestClsConfig.frame_size)
@@ -314,14 +347,14 @@ tf_input_blob = {
 }
 ```
 
-The basis of the model testing is represented in ``samples/dnn/classification.py``.  ``classification.py`` can be executed autonomously with provided converted model in ``--input`` and populated parameters for ``cv2.dnn.blobFromImage``.
+The basis of the model testing is represented in [samples/dnn/classification.py](https://github.com/opencv/opencv/blob/master/samples/dnn/classification.py). ``classification.py`` can be executed autonomously with provided converted model in ``--input`` and populated parameters for cv.dnn.blobFromImage.
 
 To reproduce from scratch the described in "Model Conversion Pipeline" OpenCV steps with ``dnn_model_runner`` execute the below line:
 
-```
+```console
 python -m dnn_model_runner.dnn_conversion.tf.classification.py_to_py_cls --model_name mobilenet --test True --default_img_preprocess True --evaluate False
 ```
 
 The network prediction is depicted in the top left corner of the output window:
 
-![TF MobileNet OpenCV Net](images/tf_mobilenet_opencv_test_res.jpg)
+![TF MobileNet OpenCV inference output](images/tf_mobilenet_opencv_test_res.jpg)

@@ -38,18 +38,6 @@ def get_args_parser(func_args):
                              '%d: CPU target (by default), '
                              '%d: OpenCL, '
                              '%d: OpenCL fp16 (half-float precision), '
-                             '%d: VPU' % targets)
-    parser.add_argument('--backend', choices=backends, default=cv.dnn.DNN_BACKEND_DEFAULT, type=int,
-                        help="Choose one of computation backends: "
-                             "%d: automatically (by default), "
-                             "%d: Halide language (http://halide-lang.org/), "
-                             "%d: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
-                             "%d: OpenCV implementation" % backends)
-    parser.add_argument('--target', choices=targets, default=cv.dnn.DNN_TARGET_CPU, type=int,
-                        help='Choose one of target computation devices: '
-                             '%d: CPU target (by default), '
-                             '%d: OpenCL, '
-                             '%d: OpenCL fp16 (half-float precision), '
                              '%d: NCS2 VPU, '
                              '%d: HDDL VPU' % targets)
 

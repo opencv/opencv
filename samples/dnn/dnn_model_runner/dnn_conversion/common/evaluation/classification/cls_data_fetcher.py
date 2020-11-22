@@ -71,7 +71,7 @@ class PyTorchPreprocessedFetch(DataFetch):
         img = cv2.resize(img, (PYTORCH_RSZ_WIDTH, PYTORCH_RSZ_HEIGHT))
         img = self.center_crop(img)
         if self.preprocess_input:
-            return self.preprocess_input(img)
+            return self.presprocess_input(img)
         return get_pytorch_preprocess(img)
 
 

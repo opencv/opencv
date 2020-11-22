@@ -1,19 +1,44 @@
-# Conversion of PyTorch Classification Models and Launch with OpenCV Python
+# Conversion of PyTorch Classification Models and Launch with OpenCV Python {#pytorch_cls_tutorial_dnn_conversion}
+
+@prev_tutorial{tutorial_dnn_OCR}
+@next_tutorial{pytorch_cls_c_tutorial_dnn_conversion}
+
+|    |    |
+| -: | :- |
+| Original author | Anastasia Murzova |
+| Compatibility | OpenCV >= 4.5 |
 
 ## Goals
 In this tutorial you will learn how to:
 * convert PyTorch classification models into ONNX format
 * run converted PyTorch model with OpenCV Python API
-* obtain an evaluation of the PyTorch and OpenCV DNN models
+* obtain an evaluation of the PyTorch and OpenCV DNN models.
 
 We will explore the above-listed points by the example of the ResNet-50 architecture.
 
 ## Introduction
-Let's briefly view the key concepts involved in the pipeline of PyTorch models transition with OpenCV API. The initial step in conversion of PyTorch models into [cv.dnn_Net](https://docs.opencv.org/4.3.0/db/d30/classcv_1_1dnn_1_1Net.html#a82eb4d60b3c396cb85c79d267516cf15)
+Let's briefly view the key concepts involved in the pipeline of PyTorch models transition with OpenCV API. The initial step in conversion of PyTorch models into cv.dnn.Net
 is model transferring into [ONNX](https://onnx.ai/about.html) format. ONNX aims at the interchangeability of the neural networks between various frameworks. There is a built-in function in PyTorch for ONNX conversion: [``torch.onnx.export``](https://pytorch.org/docs/stable/onnx.html#torch.onnx.export).
-Further the obtained ``.onnx`` model is passed into [``cv.dnn.readNetFromONNX``](https://docs.opencv.org/4.3.0/d6/d0f/group__dnn.html#ga7faea56041d10c71dbbd6746ca854197).
+Further the obtained ``.onnx`` model is passed into cv.dnn.readNetFromONNX.
 
-## Practise
+## Requirements
+To be able to experiment with the below code you will need to install a set of libraries. We will use a virtual environment with python3.7+ for this:
+
+```console
+virtualenv -p /usr/bin/python3.7 <env_dir_path>
+source <env_dir_path>/bin/activate
+```
+
+For OpenCV-Python building from source, follow the corresponding instructions from the @ref tutorial_py_table_of_contents_setup.
+
+Before you start the installation of the libraries, you can customize the [requirements.txt](https://github.com/opencv/opencv/tree/master/samples/dnn/dnn_model_runner/dnn_conversion/requirements.txt), excluding or including (for example, ``opencv-python``) some dependencies.
+The below line initiates requirements installation into the previously activated virtual environment:
+
+```console
+pip install -r requirements.txt
+```
+
+## Practice
 In this part we are going to cover the following points:
 1. create a classification model conversion pipeline and provide the inference
 2. evaluate and test classification models
@@ -23,9 +48,9 @@ If you'd like merely to run evaluation or test model pipelines, the "Model Conve
 ### Model Conversion Pipeline
 The code in this subchapter is located in the ``dnn_model_runner`` module and can be executed with the line:
 
-``
+```console
 python -m dnn_model_runner.dnn_conversion.pytorch.classification.py_to_py_resnet50
-``
+```
 
 The following code contains the description of the below-listed steps:
 1. instantiate PyTorch model
@@ -46,7 +71,7 @@ opencv_net = cv2.dnn.readNetFromONNX(full_model_path)
 print("OpenCV model was successfully read. Layer IDs: \n", opencv_net.getLayerNames())
 
 # get preprocessed image
-input_img = get_preprocessed_img("../data/ILSVRC2012_val_00000502.JPEG")
+input_img = get_preprocessed_img("../data/squirrel_cls.jpg")
 
 # get ImageNet labels
 imagenet_labels = get_imagenet_labels("../data/dnn/classification_classes_ILSVRC2012.txt")
@@ -58,9 +83,12 @@ get_opencv_dnn_prediction(opencv_net, input_img, imagenet_labels)
 get_pytorch_dnn_prediction(original_model, input_img, imagenet_labels)
 ```
 
-To provide model inference we will use the below picture from the ImageNet validation dataset:
+To provide model inference we will use the below [squirrel photo](https://www.pexels.com/photo/brown-squirrel-eating-1564292) (under [CC0](https://www.pexels.com/terms-of-service/) license) corresponding to ImageNet class ID 335:
+```console
+fox squirrel, eastern fox squirrel, Sciurus niger
+```
 
-![ImageNet img](images/ILSVRC2012_val_00000502.JPEG)
+![Classification model input image](images/squirrel_cls.jpg)
 
 For the label decoding of the obtained prediction, we also need ``imagenet_classes.txt`` file, which contains the full list of the ImageNet classes.
 
@@ -105,7 +133,7 @@ torch.onnx.export(
 
 After the successful execution of the above code, we will get ``models/resnet50.onnx``.
 
-* read the transferred network with [``cv.dnn.readNetFromONNX``](https://docs.opencv.org/4.3.0/d6/d0f/group__dnn.html#ga7faea56041d10c71dbbd6746ca854197) passing the obtained in the previous step ONNX model into it:
+* read the transferred network with cv.dnn.readNetFromONNX passing the obtained in the previous step ONNX model into it:
 
 ```python
 # read converted .onnx model with OpenCV API
@@ -141,8 +169,8 @@ input_blob = cv2.dnn.blobFromImage(
 input_blob[0] /= np.asarray(std, dtype=np.float32).reshape(3, 1, 1)
 ```
 
-In this step we read the image and prepare model input with [``cv2.dnn.blobFromImage``](https://docs.opencv.org/4.3.0/d6/d0f/group__dnn.html#ga29f34df9376379a603acd8df581ac8d7) function, which returns 4-dimensional blob.
-It should be noted that firstly in ``cv2.dnn.blobFromImage`` mean value is subtracted and only then pixel values are multiplied by scale. Thus, ``mean`` is multiplied by ``255.0`` to reproduce the original image preprocessing order:
+In this step we read the image and prepare model input with cv.dnn.blobFromImage function, which returns 4-dimensional blob.
+It should be noted that firstly in cv.dnn.blobFromImage mean value is subtracted and only then pixel values are multiplied by scale. Thus, ``mean`` is multiplied by ``255.0`` to reproduce the original image preprocessing order:
 
 ```python
 img /= 255.0
@@ -150,7 +178,7 @@ img -= [0.485, 0.456, 0.406]
 img /= [0.229, 0.224, 0.225]
 ```
 
-* OpenCV ``cv.dnn_Net`` inference:
+* OpenCV cv.dnn.Net inference:
 
 ```python
 # set OpenCV DNN input
@@ -172,11 +200,11 @@ print("* confidence: {:.4f}".format(confidence))
 
 After the above code execution we will get the following output:
 
-```
+```console
 OpenCV DNN prediction:
 * shape:  (1, 1000)
 * class ID: 335, label: fox squirrel, eastern fox squirrel, Sciurus niger
-* confidence: 13.2758
+* confidence: 14.8308
 ```
 
 * PyTorch ResNet-50 model inference:
@@ -201,18 +229,18 @@ print("* confidence: {:.4f}".format(confidence.item()))
 
 After the above code launching we will get the following output:
 
-```
+```console
 PyTorch model prediction:
 * shape:  torch.Size([1, 1000])
 * class ID: 335, label: fox squirrel, eastern fox squirrel, Sciurus niger
-* confidence: 13.2758
+* confidence: 14.8308
 ```
 
-The inference results of the original ResNet-50 model and ``cv.dnn_Net`` are equal. For the extended evaluation of the models we can use ``py_to_py_cls`` of the ``dnn_model_runner`` module. This module part will be described in the next subchapter.
+The inference results of the original ResNet-50 model and cv.dnn.Net are equal. For the extended evaluation of the models we can use ``py_to_py_cls`` of the ``dnn_model_runner`` module. This module part will be described in the next subchapter.
 
 ### Evaluation of the Models
 
-The proposed in ``dnn/samples`` ``dnn_model_runner`` module allows to run the full evaluation pipeline on the ImageNet dataset and test execution for the following PyTorch classification models:
+The proposed in ``samples/dnn`` ``dnn_model_runner`` module allows to run the full evaluation pipeline on the ImageNet dataset and test execution for the following PyTorch classification models:
 * alexnet
 * vgg11
 * vgg13
@@ -236,13 +264,13 @@ This list can be also extended with further appropriate evaluation pipeline conf
 
 The below line represents running of the module in the evaluation mode:
 
-```
+```console
 python -m dnn_model_runner.dnn_conversion.pytorch.classification.py_to_py_cls --model_name <pytorch_cls_model_name>
 ```
 
-Chosen from the list classification model will be read into OpenCV ``cv.dnn_Net`` object. Evaluation results of PyTorch and OpenCV models (accuracy, inference time, L1) will be written into the log file. Inference time values will be also depicted in a chart to generalize the obtained model information.
+Chosen from the list classification model will be read into OpenCV cv.dnn.Net object. Evaluation results of PyTorch and OpenCV models (accuracy, inference time, L1) will be written into the log file. Inference time values will be also depicted in a chart to generalize the obtained model information.
 
-Necessary evaluation configurations are defined in the [``test_config.py``](https://):
+Necessary evaluation configurations are defined in the [test_config.py](https://github.com/opencv/opencv/tree/master/samples/dnn/dnn_model_runner/dnn_conversion/common/test/configs/test_config.py) and can be modified in accordance with actual paths of data location:
 
 ```python
 @dataclass
@@ -257,21 +285,30 @@ class TestClsConfig:
 
 To initiate the evaluation of the PyTorch ResNet-50, run the following line:
 
-```
+```console
 python -m dnn_model_runner.dnn_conversion.pytorch.classification.py_to_py_cls --model_name resnet50
+```
+
+After script launch, the log file with evaluation data will be generated in ``dnn_model_runner/dnn_conversion/logs``:
+
+```console
+The model PyTorch resnet50 was successfully obtained and converted to OpenCV DNN resnet50
+===== Running evaluation of the model with the following params:
+    * val data location: ./ILSVRC2012_img_val
+    * log file location: dnn_model_runner/dnn_conversion/logs/PyTorch_resnet50_log.txt
 ```
 
 #### Test Mode
 
 The below line represents running of the module in the test mode, namely it provides the steps for the model inference:
 
-```
+```console
 python -m dnn_model_runner.dnn_conversion.pytorch.classification.py_to_py_cls --model_name <pytorch_cls_model_name> --test True --default_img_preprocess <True/False> --evaluate False
 ```
 
 Here ``default_img_preprocess`` key defines whether you'd like to parametrize the model test process with some particular values or use the default values, for example, ``scale``, ``mean`` or ``std``.
 
-Test configuration is represented in [``test_config.py``](https://) ``TestClsModuleConfig`` class:
+Test configuration is represented in [test_config.py](https://github.com/opencv/opencv/tree/master/samples/dnn/dnn_model_runner/dnn_conversion/common/test/configs/test_config.py) ``TestClsModuleConfig`` class:
 
 ```python
 @dataclass
@@ -279,7 +316,7 @@ class TestClsModuleConfig:
     cls_test_data_dir: str = "../data"
     test_module_name: str = "classification"
     test_module_path: str = "classification.py"
-    input_img: str = os.path.join(cls_test_data_dir, "ILSVRC2012_val_00000502.JPEG")
+    input_img: str = os.path.join(cls_test_data_dir, "squirrel_cls.jpg")
     model: str = ""
 
     frame_height: str = str(TestClsConfig.frame_size)
@@ -294,7 +331,7 @@ class TestClsModuleConfig:
     classes: str = os.path.join(cls_test_data_dir, "dnn", "classification_classes_ILSVRC2012.txt")
 ```
 
-The default image preprocessing options are defined in ``default_preprocess_config.py``. For instance:
+The default image preprocessing options are defined in [default_preprocess_config.py](https://github.com/opencv/opencv/tree/master/samples/dnn/dnn_model_runner/dnn_conversion/common/test/configs/default_preprocess_config.py). For instance:
 
 ```python
 BASE_IMG_SCALE_FACTOR = 1 / 255.0
@@ -312,14 +349,14 @@ pytorch_resize_input_blob = {
 }
 ```
 
-The basis of the model testing is represented in ``samples/dnn/classification.py``.  ``classification.py`` can be executed autonomously with provided converted model in ``--input`` and populated parameters for ``cv2.dnn.blobFromImage``.
+The basis of the model testing is represented in [samples/dnn/classification.py](https://github.com/opencv/opencv/blob/master/samples/dnn/classification.py).  ``classification.py`` can be executed autonomously with provided converted model in ``--input`` and populated parameters for cv.dnn.blobFromImage.
 
 To reproduce from scratch the described in "Model Conversion Pipeline" OpenCV steps with ``dnn_model_runner`` execute the below line:
 
-```
+```console
 python -m dnn_model_runner.dnn_conversion.pytorch.classification.py_to_py_cls --model_name resnet50 --test True --default_img_preprocess True --evaluate False
 ```
 
 The network prediction is depicted in the top left corner of the output window:
 
-![ResNet50 OpenCV Net](images/pytorch_resnet50_opencv_test_res.jpg)
+![ResNet50 OpenCV inference output](images/pytorch_resnet50_opencv_test_res.jpg)

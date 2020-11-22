@@ -25,7 +25,7 @@ class TestClsModuleConfig:
     cls_test_data_dir: str = "../data"
     test_module_name: str = "classification"
     test_module_path: str = "classification.py"
-    input_img: str = os.path.join(cls_test_data_dir, "ILSVRC2012_val_00000502.JPEG")
+    input_img: str = os.path.join(cls_test_data_dir, "squirrel_cls.jpg")
     model: str = ""
 
     frame_height: str = str(TestClsConfig.frame_size)
