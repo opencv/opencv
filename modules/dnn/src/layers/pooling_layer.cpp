@@ -230,6 +230,14 @@ public:
         bool use_half = (inps.depth() == CV_16S);
         inps.getUMatVector(inputs);
         outs.getUMatVector(outputs);
+        if (inputs[0].dims==3)
+        {
+            //Pool1D
+            kernel.height = 1;
+            pad_t = 0;
+            pad_b = 0;
+            stride.height = 1;
+        }
 
         if (poolOp.empty())
         {

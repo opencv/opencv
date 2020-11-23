@@ -753,11 +753,11 @@ TEST_P(Test_ONNX_layers, Pool1d)
         if (target == DNN_TARGET_MYRIAD) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
     }
     testONNXModels("maxpooling_1d");
-    //testONNXModels("maxpooling_sigmoid_1d");
-    //testONNXModels("two_maxpooling_1d");
-    //testONNXModels("average_pooling_1d");
-    //testONNXModels("pool_conv_1d");
-    //testONNXModels("conv_resize_pool_1d");
+    testONNXModels("maxpooling_sigmoid_1d");
+    testONNXModels("two_maxpooling_1d");
+    testONNXModels("average_pooling_1d");
+    testONNXModels("pool_conv_1d");
+    testONNXModels("conv_resize_pool_1d");
 }
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_ONNX_layers, dnnBackendsAndTargets());
