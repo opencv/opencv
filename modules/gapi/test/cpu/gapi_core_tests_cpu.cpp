@@ -493,9 +493,20 @@ INSTANTIATE_TEST_CASE_P(KMeansNDNoInitTestCPU, KMeansNDNoInitTest,
                                 Values(cv::KMEANS_RANDOM_CENTERS, cv::KMEANS_PP_CENTERS)));
 
 INSTANTIATE_TEST_CASE_P(KMeansNDInitTestCPU, KMeansNDInitTest,
-                        Combine(Values(CV_32FC1),
-                                Values(cv::Size(5, 720),
-                                       cv::Size(2, 20)),
+                        Combine(Values(CV_32FC1, CV_32FC3),
+                                Values(cv::Size(1, 20),
+                                       cv::Size(2, 20),
+                                       cv::Size(5, 720)),
+                                Values(-1),
+                                Values(CORE_CPU),
+                                Values(AbsTolerance(0.01).to_compare_obj()),
+                                Values(5, 15),
+                                Values(cv::KMEANS_RANDOM_CENTERS | cv::KMEANS_USE_INITIAL_LABELS,
+                                       cv::KMEANS_PP_CENTERS     | cv::KMEANS_USE_INITIAL_LABELS)));
+
+INSTANTIATE_TEST_CASE_P(KMeansNDInitReverseTestCPU, KMeansNDInitTest,
+                        Combine(Values(CV_32FC3),
+                                Values(cv::Size(20, 1)),
                                 Values(-1),
                                 Values(CORE_CPU),
                                 Values(AbsTolerance(0.01).to_compare_obj()),

@@ -1389,7 +1389,9 @@ TEST_P(NormalizeTest, Test)
 
 TEST_P(KMeansNDNoInitTest, AccuracyTest)
 {
-    const int quantity = sz.height, dimensions = sz.width;
+    const int quantity   = sz.height != 1 ? sz.height : sz.width,
+              dimensions = sz.height != 1 ? sz.width : (CV_MAT_DEPTH(type) >> CV_CN_SHIFT) + 1;
+                                                       // amount of channels
     const cv::TermCriteria criteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 30, 0);
     const int attempts = 1;
     double compact_gapi = -1.;
@@ -1415,7 +1417,7 @@ TEST_P(KMeansNDNoInitTest, AccuracyTest)
 
 TEST_P(KMeansNDInitTest, AccuracyTest)
 {
-    const int quantity = sz.height;
+    const int quantity = sz.height != 1 ? sz.height : sz.width;
     const cv::TermCriteria criteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 30, 0);
     const int attempts = 1;
     cv::Mat in_labels(cv::Size{1, quantity}, CV_32SC1);

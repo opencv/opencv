@@ -518,27 +518,23 @@ namespace core {
         static std::tuple<GOpaqueDesc,GMatDesc,GMatDesc>
         outMeta(const GMatDesc& in, int K, const GMatDesc& in_labels, const TermCriteria&, int,
                 KmeansFlags flags) {
-            int quantity = checkVector(in, -1, CV_32F);
-            GAPI_Assert(quantity > 0 && "Input Mat can't be described as vector of points");
-            GMatDesc out_labels, centers;
+            int quantity = -1, dimensionality = -1;
+            std::tie(quantity, dimensionality) = checkVector(in, -1, CV_32F);
+            if (quantity == -1)  // Mat with height != 1, width != 1, channels != 1 given
+            {                    // which means that kmeans will consider the following:
+                quantity       = in.size.height;
+                dimensionality = in.size.width * in.chan;
+            }
+                     // kmeans sets these labels' sizes when no in_labels given:
+            GMatDesc out_labels(CV_32S, 1, Size{1, quantity}),
+                     // kmeans always sets these centers' sizes:
+                     centers   (CV_32F, 1, Size{dimensionality, K});
             if (flags & KMEANS_USE_INITIAL_LABELS)
             {
-                int labels_quantity = checkVector(in_labels, 1, CV_32S);
+                int labels_quantity = -1;
+                std::tie(labels_quantity, std::ignore) = checkVector(in_labels, 1, CV_32S);
                 GAPI_Assert(labels_quantity == quantity);
-                out_labels = in_labels;
-            }
-            else
-            {
-                out_labels = GMatDesc(CV_32S, 1, Size{1, quantity});
-            }
-
-            if (in.size.width == quantity)
-            {
-                centers = in.withSize(Size{K, in.size.height});
-            }
-            else
-            {
-                centers = in.withSize(Size{in.size.width, K});
+                out_labels = in_labels;  // kmeans preserves in_labels' sizes if given
             }
             return std::make_tuple(empty_gopaque_desc(), out_labels, centers);
         }
@@ -552,17 +548,15 @@ namespace core {
         static std::tuple<GOpaqueDesc,GMatDesc,GMatDesc>
         outMeta(const GMatDesc& in, int K, const TermCriteria&, int, KmeansFlags flags) {
             GAPI_Assert( !(flags & KMEANS_USE_INITIAL_LABELS) );
-            int quantity = checkVector(in, -1, CV_32F);
-            GAPI_Assert(quantity > 0 && "Input Mat can't be described as vector of points");
-            GMatDesc out_labels(CV_32S, 1, Size{1, quantity}), centers;
-            if (in.size.width == quantity)
-            {
-                centers = in.withSize(Size{K, in.size.height});
+            int quantity = -1, dimensionality = -1;
+            std::tie(quantity, dimensionality) = checkVector(in, -1, CV_32F);
+            if (quantity == -1)  // Mat with height != 1, width != 1, channels != 1 given
+            {                    // which means that kmeans will consider the following:
+                quantity       = in.size.height;
+                dimensionality = in.size.width * in.chan;
             }
-            else
-            {
-                centers = in.withSize(Size{in.size.width, K});
-            }
+            GMatDesc out_labels(CV_32S, 1, Size{1, quantity}),
+                     centers   (CV_32F, 1, Size{dimensionality, K});
             return std::make_tuple(empty_gopaque_desc(), out_labels, centers);
         }
     };
@@ -1843,11 +1837,14 @@ contains a 0-based cluster index for the \f$i^{th}\f$ sample.
 
 @param data Data for clustering. An array of N-Dimensional points with float coordinates is needed.
 Function can take GArray<Point2f>, GArray<Point3f> for 2D and 3D cases or GMat for any
-dimentionality
+dimentionality and channels.
 
 @note In case of an N-dimentional points' set given, input Mat should be 2-dimensional, have
 a single row or column if there are N channels, or have N columns if there is a single channel.
-Mat should have @ref CV_32F depth
+Mat should have @ref CV_32F depth.
+
+@note If GMat with height != 1, width != 1, channels != 1 given as data, n-dimensional samples
+are considered given in quantity of Q, where Q = height, n = width * channels.
 
 @param K Number of clusters to split the set by.
 @param bestLabels Optional input integer array that can store the supposed initial cluster indices
@@ -1858,7 +1855,7 @@ the cluster centers moves by less than criteria.epsilon on some iteration, the a
 @param attempts Flag to specify the number of times the algorithm is executed using different
 initial labellings. The algorithm returns the labels that yield the best compactness (see the first
 function return value).
-@param flags Flag that can take values of cv::KmeansFlags
+@param flags Flag that can take values of cv::KmeansFlags .
 
 @return Compactness measure that is computed as
 \f[\sum _i  \| \texttt{samples} _i -  \texttt{centers} _{ \texttt{labels} _i} \| ^2\f]
@@ -1866,6 +1863,13 @@ after every attempt. The best (minimum) value is chosen and the corresponding la
 compactness value are returned by the function.
 @return Integer array that stores the cluster indices for every sample.
 @return Array of the cluster centers.
+
+@note In case of GMat given as data, the output labels are returned as 1-channel GMat with sizes
+width = 1, height = Q, where Q is samples quantity, or width = in_labels.width,
+height = in_labels.height if in_labels given.
+
+@note In case of GMat given as data, the cluster centers are returned as 1-channel GMat with sizes
+width = d, height = K, where d is samples' dimentionality and K is clusters' quantity.
 
 @note As one of possible usages, if you don't want to allow the function to set initial labels
 randomly, you can utilize just the core of the function: set the number of attempts to 1,
