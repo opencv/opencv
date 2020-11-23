@@ -9,8 +9,8 @@ Using Orbbec Astra 3D cameras {#tutorial_orbbec_astra}
 
 This tutorial is devoted to the Astra Series of Orbbec 3D cameras (https://orbbec3d.com/product-astra-pro/).
 That cameras have a depth sensor in addition to a common color sensor. The depth sensors can be read using
-the OpenNI interface with @ref cv::VideoCapture class. The video stream is provided through the regular camera
-interface.
+the open source OpenNI API with @ref cv::VideoCapture class. The video stream is provided through the regular
+camera interface.
 
 ### Installation Instructions
 
@@ -70,15 +70,20 @@ In order to use a depth sensor with OpenCV you should do the following steps:
 
 ### Code
 
-To get both depth and color frames, two @ref cv::VideoCapture objects should be created:
+The Astra Pro camera has two sensors -- a depth sensor and a color sensor. The depth sensors
+can be read using the OpenNI interface with @ref cv::VideoCapture class. The video stream is
+not available through OpenNI API and is only provided through the regular camera interface.
+So, to get both depth and color frames, two @ref cv::VideoCapture objects should be created:
 
 @snippetlineno samples/cpp/tutorial_code/videoio/orbbec_astra/orbbec_astra.cpp Open streams
 
-The first object will use the regular Video4Linux2 interface to access the color sensor. The second one
+The first object will use the Video4Linux2 interface to access the color sensor. The second one
 is using OpenNI2 API to retrieve depth data.
 
-Before using the created VideoCapture objects you may want to setup stream parameters by setting
-objects' properties. The most important parameters are frame width, frame height and fps:
+Before using the created VideoCapture objects you may want to set up stream parameters by setting
+objects' properties. The most important parameters are frame width, frame height and fps.
+For this example, we’ll configure width and height of both streams to VGA resolution as that’s
+the maximum resolution available for both sensors and we’d like both stream parameters to be the same:
 
 @snippetlineno samples/cpp/tutorial_code/videoio/orbbec_astra/orbbec_astra.cpp Setup streams
 
@@ -113,8 +118,9 @@ After the VideoCapture objects are set up you can start reading frames from them
     to avoid one stream blocking while another stream is being read. VideoCapture is not a
     thread-safe class, so you need to be careful to avoid any possible deadlocks or data races.
 
-Example implementation that gets frames from each sensor in a new thread and stores them
-in a list along with their timestamps:
+As there are two video sources that should be read simultaneously, it’s necessary to create two
+threads to avoid blocking. Example implementation that gets frames from each sensor in a new thread
+and stores them in a list along with their timestamps:
 
 @snippetlineno samples/cpp/tutorial_code/videoio/orbbec_astra/orbbec_astra.cpp Read streams
 
@@ -130,17 +136,24 @@ VideoCapture can retrieve the following data:
 
 -#  data given from the color sensor is a regular BGR image (CV_8UC3).
 
-When new data is available a reading thread notifies the main thread. A frame is stored in the
-ordered list -- the first frame is the latest one:
+When new data are available a reading thread notifies the main thread using a condition variable.
+A frame is stored in the ordered list -- the first frame is the latest one. As depth and color frames
+are read from independent sources two video streams may become out of sync even when both streams
+are set up for the same frame rate. A post-synchronization procedure can be applied to the streams
+to combine depth and color frames into pairs. The sample code below demonstrates this procedure:
 
-@snippetlineno samples/cpp/tutorial_code/videoio/orbbec_astra/orbbec_astra.cpp Show color frame
+@snippetlineno samples/cpp/tutorial_code/videoio/orbbec_astra/orbbec_astra.cpp Pair frames
 
-Depth frames can be picked the same way from the `depthFrames` list.
+In the code snippet above the execution is blocked until there are some frames in both frame lists.
+When there are new frames, their timestamps are being checked -- if they differ more than a half of
+the frame period then one of the frames is dropped. If timestamps are close enough, then two frames
+are paired. Now, we have two frames: one containing color information and another one -- depth information.
+In the example above retrieved frames are simply shown with cv::imshow function, but you can insert
+any other processing code here.
 
-After that, you'll have two frames: one containing color information and another one -- depth
-information. In the sample images below you can see the color frame and the depth frame showing
-the same scene. Looking at the color frame it's hard to distinguish plant leaves from leaves painted
-on a wall, but the depth data makes it easy.
+In the sample images below you can see the color frame and the depth frame representing the same scene.
+Looking at the color frame it's hard to distinguish plant leaves from leaves painted on a wall,
+but the depth data makes it easy.
 
 ![Color frame](images/astra_color.jpg)
 ![Depth frame](images/astra_depth.png)
