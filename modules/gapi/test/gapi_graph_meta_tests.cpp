@@ -99,7 +99,12 @@ TEST(GraphMeta, Streaming_AccessInput) {
     cv::GComputation graph(cv::GIn(in), cv::GOut(out1, out2));
 
     auto ccomp = graph.compileStreaming();
-    ccomp.setSource<cv::gapi::wip::GCaptureSource>(findDataFile("cv/video/768x576.avi", false));
+    const auto path = findDataFile("cv/video/768x576.avi", false);
+    try {
+        ccomp.setSource<cv::gapi::wip::GCaptureSource>(path);
+    } catch(...) {
+        throw SkipTestException("Video file can not be opened");
+    }
     ccomp.start();
 
     cv::Mat out_mat;
@@ -122,7 +127,12 @@ TEST(GraphMeta, Streaming_AccessOutput) {
     cv::GComputation graph(cv::GIn(in), cv::GOut(out1, out2, out3));
 
     auto ccomp = graph.compileStreaming();
-    ccomp.setSource<cv::gapi::wip::GCaptureSource>(findDataFile("cv/video/768x576.avi", false));
+    const auto path = findDataFile("cv/video/768x576.avi", false);
+    try {
+        ccomp.setSource<cv::gapi::wip::GCaptureSource>(path);
+    } catch(...) {
+        throw SkipTestException("Video file can not be opened");
+    }
     ccomp.start();
 
     cv::Mat out_mat;
@@ -155,7 +165,12 @@ TEST(GraphMeta, Streaming_AccessDesync) {
     cv::GComputation graph(cv::GIn(in), cv::GOut(out1, out2, out3, out4, out5));
 
     auto ccomp = graph.compileStreaming();
-    ccomp.setSource<cv::gapi::wip::GCaptureSource>(findDataFile("cv/video/768x576.avi", false));
+    const auto path = findDataFile("cv/video/768x576.avi", false);
+    try {
+        ccomp.setSource<cv::gapi::wip::GCaptureSource>(path);
+    } catch(...) {
+        throw SkipTestException("Video file can not be opened");
+    }
     ccomp.start();
 
     cv::optional<int64_t> out_sync_id;
