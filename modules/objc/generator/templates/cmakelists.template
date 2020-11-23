@@ -13,8 +13,8 @@ set (SUPPRESS_WARNINGS_FLAGS "-Wno-incomplete-umbrella")
 set (CMAKE_CXX_FLAGS  "$${CMAKE_CXX_FLAGS} $${OBJC_COMPILE_FLAGS} $${SUPPRESS_WARNINGS_FLAGS}")
 
 # grab the files
-if (SWIFT_DISABLED)
-  message("Swift wrapper disabled.")
+if(SWIFT_DISABLED)
+  message(STATUS "Swift wrapper disabled")
   file(GLOB_RECURSE objc_sources "objc/*\.h" "objc/*\.m" "objc/*\.mm" "objc/*\.modulemap")
 else()
   enable_language(Swift)

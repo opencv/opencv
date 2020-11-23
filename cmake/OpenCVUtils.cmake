@@ -1512,7 +1512,7 @@ function(ocv_add_library target)
 
     set(CMAKE_SHARED_LIBRARY_RUNTIME_C_FLAG 1)
 
-    if (IOS AND NOT MAC_CATALYST)
+    if(IOS AND NOT MAC_CATALYST)
       set(OPENCV_APPLE_INFO_PLIST "${CMAKE_BINARY_DIR}/ios/Info.plist")
     else()
       set(OPENCV_APPLE_INFO_PLIST "${CMAKE_BINARY_DIR}/osx/Info.plist")
