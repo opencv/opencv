@@ -85,7 +85,6 @@ public:
         computeMaxIdx = true;
         globalPooling = false;
         isGlobalPooling = std::vector<bool>(3, false);
-        stride = Size(1, 1);
         pad_t = pad_l = pad_b = pad_r = 0;
 
         hasDynamicShapes = params.get<bool>("has_dynamic_shapes", false);
@@ -109,9 +108,6 @@ public:
             getPoolingKernelParams(params, kernel_size, isGlobalPooling, pads_begin, pads_end, strides, padMode);
             globalPooling = isGlobalPooling[0] || isGlobalPooling[1] || isGlobalPooling[2];
             if (kernel_size.size() == 2) {
-                kernel = Size(kernel_size[1], kernel_size[0]);
-                stride = Size(strides[1], strides[0]);
-                pad = Size(pads_begin[1], pads_begin[0]);
 
                 pad_t = pads_begin[0];
                 pad_l = pads_begin[1];
@@ -165,7 +161,6 @@ public:
                 finalKernel.push_back(isGlobalPooling[idx] ? inp[i] : kernel_size[idx]);
              }
              kernel_size = finalKernel;
-             kernel = Size(kernel_size[1], kernel_size[0]);
          }
 
         getConvPoolPaddings(inp, kernel_size, strides, padMode, pads_begin, pads_end);
@@ -175,6 +170,16 @@ public:
             pad_b = pads_end[0];
             pad_r = pads_end[1];
         }
+
+        if (inputs[0].dims == 3)
+        {
+            //Pool1D
+            kernel_size.erase(kernel_size.begin() + 1);
+            strides.erase(strides.begin() + 1);
+            pad_t = 0;
+            pad_b = 0;
+        }
+
 
 #ifdef HAVE_OPENCL
         poolOp.release();
@@ -205,7 +210,7 @@ public:
 #endif
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         {
-            return !computeMaxIdx && type != STOCHASTIC;
+            return !computeMaxIdx && type != STOCHASTIC && kernel_size.size() > 1;
         }
         else if (backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE)
         {
@@ -215,6 +220,10 @@ public:
                 return backendId == DNN_BACKEND_OPENCV ||
                        (backendId == DNN_BACKEND_HALIDE && haveHalide() &&
                            (type == MAX || (type == AVE && !pad_t && !pad_l && !pad_b && !pad_r)));
+            if (kernel_size.size() == 1)
+                return (backendId == DNN_BACKEND_OPENCV && preferableTarget == DNN_TARGET_CPU) ||
+                       (backendId == DNN_BACKEND_OPENCV && preferableTarget == DNN_TARGET_OPENCL) ||
+                       (backendId == DNN_BACKEND_OPENCV && preferableTarget == DNN_TARGET_OPENCL_FP16);
             else
                 return false;
         }
@@ -230,14 +239,6 @@ public:
         bool use_half = (inps.depth() == CV_16S);
         inps.getUMatVector(inputs);
         outs.getUMatVector(outputs);
-        if (inputs[0].dims==3)
-        {
-            //Pool1D
-            kernel.height = 1;
-            pad_t = 0;
-            pad_b = 0;
-            stride.height = 1;
-        }
 
         if (poolOp.empty())
         {
@@ -245,12 +246,21 @@ public:
 
             config.in_shape = shape(inputs[0]);
             config.out_shape = shape(outputs[0]);
-            config.kernel = kernel;
+            if (inputs[0].dims == 3)
+            {
+                //Pool1D
+                config.kernel = Size(kernel_size[0], 1);
+                config.stride = Size(strides[0], 1);
+            }
+            else
+            {
+                config.kernel = Size(kernel_size[1], kernel_size[0]);
+                config.stride = Size(strides[1], strides[0]);
+            }
             config.pad_l = pad_l;
             config.pad_t = pad_t;
             config.pad_r = pad_r;
             config.pad_b = pad_b;
-            config.stride = stride;
             config.channels = inputs[0].size[1];
             config.pool_method = type == MAX ? LIBDNN_POOLING_METHOD_MAX :
                                 (type == AVE ? LIBDNN_POOLING_METHOD_AVE :
@@ -436,7 +446,6 @@ virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inp
     public:
         const Mat* src, *rois;
         Mat *dst, *mask;
-        Size kernel, stride;
         int pad_l, pad_t, pad_r, pad_b;
         bool avePoolPaddedArea;
         int nstripes;
@@ -482,8 +491,6 @@ virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inp
             p.pads_end = pads_end;
 
             p.mask = &mask;
-            p.kernel = Size(kernel_size[1], kernel_size[0]);
-            p.stride = Size(strides[1], strides[0]);
             p.pad_l = pads_begin.back();
             p.pad_t = isPool1D ? 0 : pads_begin[pads_begin.size() - 2];
             p.pad_r = pads_end.back();
@@ -943,20 +950,24 @@ virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inp
         Halide::Buffer<float> inputBuffer = halideBuffer(inputs[0]);
         const int inWidth = inputBuffer.width();
         const int inHeight = inputBuffer.height();
+        const size_t kernelHeight = kernel_size[0];
+        const size_t kernelWidth = kernel_size[1];
+        const size_t strideHeight = strides[0];
+        const size_t strideWidth = strides[1];
 
         Halide::Var x("x"), y("y"), c("c"), n("n");
         Halide::Func top = (name.empty() ? Halide::Func() : Halide::Func(name));
-        Halide::RDom r(0, kernel.width, 0, kernel.height);
+        Halide::RDom r(0, kernelWidth, 0, kernelHeight);
         Halide::Expr kx, ky;
         if(pad_l || pad_t)
         {
-            kx = clamp(x * stride.width + r.x - pad_l, 0, inWidth - 1);
-            ky = clamp(y * stride.height + r.y - pad_t, 0, inHeight - 1);
+            kx = clamp(x * strideWidth + r.x - pad_l, 0, inWidth - 1);
+            ky = clamp(y * strideHeight + r.y - pad_t, 0, inHeight - 1);
         }
         else
         {
-            kx = min(x * stride.width + r.x, inWidth - 1);
-            ky = min(y * stride.height + r.y, inHeight - 1);
+            kx = min(x * strideWidth + r.x, inWidth - 1);
+            ky = min(y * strideHeight + r.y, inHeight - 1);
         }
 
         // Halide::argmax returns tuple (r.x, r.y, max).
@@ -966,15 +977,15 @@ virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inp
         Halide::Expr max_index;
         if(pad_l || pad_t)
         {
-            max_index = clamp(y * stride.height + res[1] - pad_t,
+            max_index = clamp(y * strideHeight + res[1] - pad_t,
                               0, inHeight - 1) * inWidth +
-                        clamp(x * stride.width + res[0] - pad_l,
+                        clamp(x * strideWidth + res[0] - pad_l,
                               0, inWidth - 1);
         }
         else
         {
-            max_index = min(y * stride.height + res[1], inHeight - 1) * inWidth +
-                        min(x * stride.width + res[0], inWidth - 1);
+            max_index = min(y * strideHeight + res[1], inHeight - 1) * inWidth +
+                        min(x * strideWidth + res[0], inWidth - 1);
         }
         top(x, y, c, n) = { res[2], Halide::cast<float>(max_index) };
         return Ptr<BackendNode>(new HalideBackendNode(top));
@@ -988,21 +999,25 @@ virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inp
         Halide::Buffer<float> inputBuffer = halideBuffer(inputs[0]);
 
         const int inW = inputBuffer.width(), inH = inputBuffer.height();
-        if ((inW - kernel.width) % stride.width || (inH - kernel.height) % stride.height)
+        const size_t kernelHeight = kernel_size[0];
+        const size_t kernelWidth = kernel_size[1];
+        const size_t strideHeight = strides[0];
+        const size_t strideWidth = strides[1];
+        if ((inW - kernelWidth) % strideWidth || (inH - kernelHeight) % strideHeight)
         {
             CV_Error(cv::Error::StsNotImplemented,
                      "Halide backend for average pooling with partial "
                      "kernels is not implemented");
         }
 
-        const float norm = 1.0f / (kernel.width * kernel.height);
+        const float norm = 1.0f / (kernelWidth * kernelHeight);
 
         Halide::Var x("x"), y("y"), c("c"), n("n");
         Halide::Func top = (name.empty() ? Halide::Func() : Halide::Func(name));
-        Halide::RDom r(0, kernel.width, 0, kernel.height);
+        Halide::RDom r(0, kernelWidth, 0, kernelHeight);
         top(x, y, c, n) = sum(
-            inputBuffer(x * stride.width + r.x,
-                        y * stride.height + r.y, c, n)) * norm;
+            inputBuffer(x * strideWidth + r.x,
+                        y * strideHeight + r.y, c, n)) * norm;
         return Ptr<BackendNode>(new HalideBackendNode(top));
 #endif  // HAVE_HALIDE
         return Ptr<BackendNode>();
