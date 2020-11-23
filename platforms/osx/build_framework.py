@@ -75,6 +75,8 @@ if __name__ == "__main__":
     parser.add_argument('--build_docs', default=False, dest='build_docs', action='store_true', help='Build docs')
 
     args, unknown_args = parser.parse_known_args()
+    if unknown_args:
+        print("The following args are not recognized and will not be used: %s" % unknown_args)
 
     os.environ['MACOSX_DEPLOYMENT_TARGET'] = args.macosx_deployment_target
     print('Using MACOSX_DEPLOYMENT_TARGET=' + os.environ['MACOSX_DEPLOYMENT_TARGET'])
