@@ -85,7 +85,6 @@ public:
         computeMaxIdx = true;
         globalPooling = false;
         isGlobalPooling = std::vector<bool>(3, false);
-        pad_t = pad_l = pad_b = pad_r = 0;
 
         hasDynamicShapes = params.get<bool>("has_dynamic_shapes", false);
         shapesInitialized = !hasDynamicShapes;
@@ -107,13 +106,6 @@ public:
 
             getPoolingKernelParams(params, kernel_size, isGlobalPooling, pads_begin, pads_end, strides, padMode);
             globalPooling = isGlobalPooling[0] || isGlobalPooling[1] || isGlobalPooling[2];
-            if (kernel_size.size() == 2) {
-
-                pad_t = pads_begin[0];
-                pad_l = pads_begin[1];
-                pad_b = pads_end[0];
-                pad_r = pads_end[1];
-            }
         }
         else if (params.has("pooled_w") || params.has("pooled_h"))
         {
@@ -164,20 +156,14 @@ public:
          }
 
         getConvPoolPaddings(inp, kernel_size, strides, padMode, pads_begin, pads_end);
-        if (pads_begin.size() == 2) {
-            pad_t = pads_begin[0];
-            pad_l = pads_begin[1];
-            pad_b = pads_end[0];
-            pad_r = pads_end[1];
-        }
 
         if (inputs[0].dims == 3)
         {
             //Pool1D
             kernel_size.erase(kernel_size.begin() + 1);
             strides.erase(strides.begin() + 1);
-            pad_t = 0;
-            pad_b = 0;
+            pads_begin.erase(pads_begin.begin() + 1);
+            pads_end.erase(pads_end.begin() + 1);
         }
 
 
@@ -196,9 +182,11 @@ public:
                 return false;
             if (kernel_size.size() == 3)
                 return preferableTarget == DNN_TARGET_CPU;
+            if (kernel_size.size() == 1)
+                return false;
             if (preferableTarget == DNN_TARGET_MYRIAD) {
 #if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
-                if (type == MAX && (pad_l == 1 && pad_t == 1) && stride == Size(2, 2) ) {
+                if (type == MAX && (pads_begin[1] == 1 && pads_begin[0] == 1) && (strides[0] == 2 && strides[1] == 2)) {
                     return !isMyriadX();
                 }
 #endif
@@ -219,7 +207,7 @@ public:
             if (kernel_size.empty() || kernel_size.size() == 2)
                 return backendId == DNN_BACKEND_OPENCV ||
                        (backendId == DNN_BACKEND_HALIDE && haveHalide() &&
-                           (type == MAX || (type == AVE && !pad_t && !pad_l && !pad_b && !pad_r)));
+                       (type == MAX || (type == AVE && !pads_begin[0] && !pads_begin[1] && !pads_end[0] && !pads_end[1])));
             if (kernel_size.size() == 1)
                 return (backendId == DNN_BACKEND_OPENCV && preferableTarget == DNN_TARGET_CPU) ||
                        (backendId == DNN_BACKEND_OPENCV && preferableTarget == DNN_TARGET_OPENCL) ||
@@ -251,16 +239,20 @@ public:
                 //Pool1D
                 config.kernel = Size(kernel_size[0], 1);
                 config.stride = Size(strides[0], 1);
+                config.pad_l = pads_begin[0];
+                config.pad_t = 0;
+                config.pad_r = pads_end[0];
+                config.pad_b = 0;
             }
             else
             {
                 config.kernel = Size(kernel_size[1], kernel_size[0]);
                 config.stride = Size(strides[1], strides[0]);
+                config.pad_l = pads_begin[1];
+                config.pad_t = pads_begin[0];
+                config.pad_r = pads_end[1];
+                config.pad_b = pads_end[0];
             }
-            config.pad_l = pad_l;
-            config.pad_t = pad_t;
-            config.pad_r = pad_r;
-            config.pad_b = pad_b;
             config.channels = inputs[0].size[1];
             config.pool_method = type == MAX ? LIBDNN_POOLING_METHOD_MAX :
                                 (type == AVE ? LIBDNN_POOLING_METHOD_AVE :
@@ -954,15 +946,17 @@ virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inp
         const size_t kernelWidth = kernel_size[1];
         const size_t strideHeight = strides[0];
         const size_t strideWidth = strides[1];
+        const size_t paddingTop = pads_begin[0];
+        const size_t paddingLeft = pads_begin[1];
 
         Halide::Var x("x"), y("y"), c("c"), n("n");
         Halide::Func top = (name.empty() ? Halide::Func() : Halide::Func(name));
         Halide::RDom r(0, kernelWidth, 0, kernelHeight);
         Halide::Expr kx, ky;
-        if(pad_l || pad_t)
+        if(paddingLeft || paddingTop)
         {
-            kx = clamp(x * strideWidth + r.x - pad_l, 0, inWidth - 1);
-            ky = clamp(y * strideHeight + r.y - pad_t, 0, inHeight - 1);
+            kx = clamp(x * strideWidth + r.x - paddingLeft, 0, inWidth - 1);
+            ky = clamp(y * strideHeight + r.y - paddingTop, 0, inHeight - 1);
         }
         else
         {
@@ -975,11 +969,11 @@ virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inp
 
         // Compute offset from argmax in range [0, kernel_size).
         Halide::Expr max_index;
-        if(pad_l || pad_t)
+        if(paddingLeft || paddingTop)
         {
-            max_index = clamp(y * strideHeight + res[1] - pad_t,
+            max_index = clamp(y * strideHeight + res[1] - paddingTop,
                               0, inHeight - 1) * inWidth +
-                        clamp(x * strideWidth + res[0] - pad_l,
+                        clamp(x * strideWidth + res[0] - paddingLeft,
                               0, inWidth - 1);
         }
         else
