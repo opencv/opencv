@@ -732,6 +732,8 @@ virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inp
                             }
                         }
                         else
+#else
+                        CV_UNUSED(isPool2D);
 #endif
                         if( isPool1D )
                         {
