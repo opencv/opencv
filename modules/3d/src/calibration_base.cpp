@@ -1413,7 +1413,7 @@ void cv3d::findExtrinsicCameraParams2( const Mat& objectPoints,
                 _h1 *= 1./MAX(h1_norm, DBL_EPSILON);
                 _h2 *= 1./MAX(h2_norm, DBL_EPSILON);
                 _t = _h3 * (2./MAX(h1_norm + h2_norm, DBL_EPSILON));
-                _h3 = _h1.cross(_h2);
+                _h1.cross(_h2).copyTo(_h3);
 
                 cv3d::Rodrigues( matH, _r );
                 cv3d::Rodrigues( _r, matH );

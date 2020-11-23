@@ -7,9 +7,8 @@
 namespace cv {
 namespace stereo {
 
-void cv::reprojectImageTo3D( InputArray _disparity,
-                             OutputArray __3dImage, InputArray _Qmat,
-                             bool handleMissingValues, int dtype )
+void reprojectImageTo3D( InputArray _disparity, OutputArray __3dImage,
+                         InputArray _Qmat, bool handleMissingValues, int dtype )
 {
     CV_INSTRUMENT_REGION();
 

@@ -15,6 +15,11 @@
 namespace cv {
 namespace stereo {
 
+enum
+{
+    STEREO_ZERO_DISPARITY=0x00400
+};
+
 //! @addtogroup stereo
 //! @{
 
@@ -128,7 +133,7 @@ CV_EXPORTS_W void stereoRectify( InputArray cameraMatrix1, InputArray distCoeffs
                                  Size imageSize, InputArray R, InputArray T,
                                  OutputArray R1, OutputArray R2,
                                  OutputArray P1, OutputArray P2,
-                                 OutputArray Q, int flags = CALIB_ZERO_DISPARITY,
+                                 OutputArray Q, int flags = STEREO_ZERO_DISPARITY,
                                  double alpha = -1, Size newImageSize = Size(),
                                  CV_OUT Rect* validPixROI1 = 0, CV_OUT Rect* validPixROI2 = 0 );
 

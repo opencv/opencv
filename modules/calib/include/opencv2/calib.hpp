@@ -6,6 +6,8 @@
 #define OPENCV_CALIB_HPP
 
 #include "opencv2/core.hpp"
+#include "opencv2/features2d.hpp"
+#include "opencv2/core/affine.hpp"
 
 /**
   @defgroup calib Camera Calibration

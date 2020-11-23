@@ -49,7 +49,7 @@
 #include <stdio.h>
 #include <limits>
 #include <vector>
-#include "opencl_kernels_calib3d.hpp"
+#include "opencl_kernels_stereo.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 #include "opencv2/core/utils/buffer_area.private.hpp"
 
@@ -105,7 +105,7 @@ struct StereoBMParams
 #ifdef HAVE_OPENCL
 static bool ocl_prefilter_norm(InputArray _input, OutputArray _output, int winsize, int prefilterCap)
 {
-    ocl::Kernel k("prefilter_norm", ocl::calib3d::stereobm_oclsrc, cv::format("-D WSZ=%d", winsize));
+    ocl::Kernel k("prefilter_norm", ocl::stereo::stereobm_oclsrc, format("-D WSZ=%d", winsize));
     if(k.empty())
         return false;
 
@@ -191,7 +191,7 @@ static void prefilterNorm( const Mat& src, Mat& dst, int winsize, int ftzero, in
 #ifdef HAVE_OPENCL
 static bool ocl_prefilter_xsobel(InputArray _input, OutputArray _output, int prefilterCap)
 {
-    ocl::Kernel k("prefilter_xsobel", ocl::calib3d::stereobm_oclsrc);
+    ocl::Kernel k("prefilter_xsobel", ocl::stereo::stereobm_oclsrc);
     if(k.empty())
         return false;
 
@@ -1023,7 +1023,7 @@ static bool ocl_stereobm( InputArray _left, InputArray _right,
                                 " -D BLOCK_SIZE_X=%d -D BLOCK_SIZE_Y=%d -D WSZ=%d",
                                 mindisp, ndisp,
                                 sizeX, sizeY, wsz);
-    ocl::Kernel k("stereoBM", ocl::calib3d::stereobm_oclsrc, opt);
+    ocl::Kernel k("stereoBM", ocl::stereo::stereobm_oclsrc, opt);
     if(k.empty())
         return false;
 

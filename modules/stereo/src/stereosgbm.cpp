@@ -2470,9 +2470,7 @@ static bool ipp_filterSpeckles(Mat &img, int maxSpeckleSize, int newVal, int max
 }
 #endif
 
-}
-
-void cv::filterSpeckles( InputOutputArray _img, double _newval, int maxSpeckleSize,
+void filterSpeckles( InputOutputArray _img, double _newval, int maxSpeckleSize,
                          double _maxDiff, InputOutputArray __buf )
 {
     CV_INSTRUMENT_REGION();
@@ -2492,7 +2490,7 @@ void cv::filterSpeckles( InputOutputArray _img, double _newval, int maxSpeckleSi
         filterSpecklesImpl<short>(img, newVal, maxSpeckleSize, maxDiff, _buf);
 }
 
-void cv::validateDisparity( InputOutputArray _disp, InputArray _cost, int minDisparity,
+void validateDisparity( InputOutputArray _disp, InputArray _cost, int minDisparity,
                             int numberOfDisparities, int disp12MaxDiff )
 {
     CV_INSTRUMENT_REGION();

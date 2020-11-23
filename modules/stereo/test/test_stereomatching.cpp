@@ -781,15 +781,15 @@ protected:
         Mat leftImg; cvtColor( _leftImg, leftImg, COLOR_BGR2GRAY );
         Mat rightImg; cvtColor( _rightImg, rightImg, COLOR_BGR2GRAY );
 
-        Ptr<StereoBM> bm = StereoBM::create( params.ndisp, params.winSize );
+        Ptr<cv::stereo::StereoBM> bm = cv::stereo::StereoBM::create( params.ndisp, params.winSize );
         Mat tempDisp;
         bm->setMinDisparity(params.mindisp);
 
         Rect cROI(0, 0, _leftImg.cols, _leftImg.rows);
-        calcROI = getValidDisparityROI(cROI, cROI, params.mindisp, params.ndisp, params.winSize);
+        calcROI = cv::stereo::getValidDisparityROI(cROI, cROI, params.mindisp, params.ndisp, params.winSize);
 
         bm->compute( leftImg, rightImg, tempDisp );
-        tempDisp.convertTo(leftDisp, CV_32F, 1./StereoMatcher::DISP_SCALE);
+        tempDisp.convertTo(leftDisp, CV_32F, 1./cv::stereo::StereoMatcher::DISP_SCALE);
 
         //check for fixed-type disparity data type
         Mat_<float> fixedFloatDisp;
@@ -802,7 +802,7 @@ protected:
                 for (int x = 0; x < leftDisp.cols; x++)
                 {
                     if (leftDisp.at<float>(y, x) < params.mindisp)
-                        leftDisp.at<float>(y, x) = -1./StereoMatcher::DISP_SCALE; // treat disparity < mindisp as no disparity
+                        leftDisp.at<float>(y, x) = -1./cv::stereo::StereoMatcher::DISP_SCALE; // treat disparity < mindisp as no disparity
                 }
 
         return params.winSize/2;
@@ -818,8 +818,8 @@ typedef testing::TestWithParam< BufferBM_Params_t > Calib3d_StereoBM_BufferBM;
 
 const int preFilters[] =
 {
-    StereoBM::PREFILTER_NORMALIZED_RESPONSE,
-    StereoBM::PREFILTER_XSOBEL
+    cv::stereo::StereoBM::PREFILTER_NORMALIZED_RESPONSE,
+    cv::stereo::StereoBM::PREFILTER_XSOBEL
 };
 
 const tuple < int, int > useShortsConditions[] =
@@ -841,7 +841,7 @@ TEST_P(Calib3d_StereoBM_BufferBM, memAllocsTest)
     ASSERT_FALSE(rightImg.empty());
     Mat leftDisp;
     {
-        Ptr<StereoBM> bm = StereoBM::create(16,9);
+        Ptr<cv::stereo::StereoBM> bm = cv::stereo::StereoBM::create(16,9);
         bm->setPreFilterType(preFilter);
         bm->setPreFilterCap(preFilterCap);
         bm->setBlockSize(SADWindowSize);
@@ -903,13 +903,13 @@ protected:
     {
         RunParams params = caseRunParams[caseIdx];
         assert( params.ndisp%16 == 0 );
-        Ptr<StereoSGBM> sgbm = StereoSGBM::create( 0, params.ndisp, params.winSize,
+        Ptr<cv::stereo::StereoSGBM> sgbm = cv::stereo::StereoSGBM::create( 0, params.ndisp, params.winSize,
                                                  10*params.winSize*params.winSize,
                                                  40*params.winSize*params.winSize,
                                                  1, 63, 10, 100, 32, params.mode );
 
         Rect cROI(0, 0, leftImg.cols, leftImg.rows);
-        calcROI = getValidDisparityROI(cROI, cROI, 0, params.ndisp, params.winSize);
+        calcROI = cv::stereo::getValidDisparityROI(cROI, cROI, 0, params.ndisp, params.winSize);
 
         sgbm->compute( leftImg, rightImg, leftDisp );
         CV_Assert( leftDisp.type() == CV_16SC1 );
@@ -932,7 +932,8 @@ TEST(Calib3d_StereoSGBM_HH4, regression)
     Mat leftDisp;
     Mat toCheck;
     {
-        Ptr<StereoSGBM> sgbm = StereoSGBM::create( 0, 48, 3, 90, 360, 1, 63, 10, 100, 32, StereoSGBM::MODE_HH4);
+        Ptr<cv::stereo::StereoSGBM> sgbm = cv::stereo::StereoSGBM::create(
+            0, 48, 3, 90, 360, 1, 63, 10, 100, 32, cv::stereo::StereoSGBM::MODE_HH4);
         sgbm->compute( leftImg, rightImg, leftDisp);
         CV_Assert( leftDisp.type() == CV_16SC1 );
         leftDisp.convertTo(toCheck, CV_16UC1,1,16);

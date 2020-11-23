@@ -122,7 +122,7 @@ protected:
         randu(Q, Scalar(-5), Scalar(5));
         Mat_<out3d_t> _3dImg(disp.size());
 
-        reprojectImageTo3D(disp, _3dImg, Q, handleMissingValues);
+        cv::stereo::reprojectImageTo3D(disp, _3dImg, Q, handleMissingValues);
 
         for(int y = 0; y < disp.rows; ++y)
             for(int x = 0; x < disp.cols; ++x)

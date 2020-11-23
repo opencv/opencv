@@ -50,7 +50,6 @@
 #include "opencv2/imgproc.hpp"
 #include "opencv2/features2d.hpp"
 
-
 #include "opencv2/core/ocl.hpp"
 
 #define GET_OPTIMIZED(func) (func)
