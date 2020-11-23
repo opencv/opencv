@@ -417,8 +417,8 @@ void cv::gimpl::GCompiler::compileIslands(ade::Graph &g, const cv::GCompileArgs 
     GIslandModel::compileIslands(gim, g, args);
 }
 
-static cv::GTypesInfo collectArgsInfo(const cv::gimpl::GModel::ConstGraph& g,
-                                      const std::vector<ade::NodeHandle>& nhs) {
+static cv::GTypesInfo collectInfo(const cv::gimpl::GModel::ConstGraph& g,
+                                  const std::vector<ade::NodeHandle>& nhs) {
     cv::GTypesInfo info;
     info.reserve(nhs.size());
 
@@ -460,8 +460,8 @@ cv::GCompiled cv::gimpl::GCompiler::produceCompiled(GPtr &&pg)
     compiled.priv().setup(m_metas, outMetas, std::move(pE));
 
     // NB: Need to store input/output GTypeInfo to allocate output arrays for python bindings
-    auto out_meta = collectArgsInfo(cgr, cgr.metadata().get<cv::gimpl::Protocol>().out_nhs);
-    auto in_meta  = collectArgsInfo(cgr, cgr.metadata().get<cv::gimpl::Protocol>().in_nhs);
+    auto out_meta = collectInfo(cgr, cgr.metadata().get<cv::gimpl::Protocol>().out_nhs);
+    auto in_meta  = collectInfo(cgr, cgr.metadata().get<cv::gimpl::Protocol>().in_nhs);
 
     compiled.priv().setOutInfo(std::move(out_meta));
     compiled.priv().setInInfo(std::move(in_meta));
@@ -485,8 +485,8 @@ cv::GStreamingCompiled cv::gimpl::GCompiler::produceStreamingCompiled(GPtr &&pg)
     GModel::ConstGraph cgr(*pg);
 
     // NB: Need to store input/output GTypeInfo to allocate output arrays for python bindings
-    auto out_meta = collectArgsInfo(cgr, cgr.metadata().get<cv::gimpl::Protocol>().out_nhs);
-    auto in_meta  = collectArgsInfo(cgr, cgr.metadata().get<cv::gimpl::Protocol>().in_nhs);
+    auto out_meta = collectInfo(cgr, cgr.metadata().get<cv::gimpl::Protocol>().out_nhs);
+    auto in_meta  = collectInfo(cgr, cgr.metadata().get<cv::gimpl::Protocol>().in_nhs);
 
     compiled.priv().setOutInfo(std::move(out_meta));
     compiled.priv().setInInfo(std::move(in_meta));
