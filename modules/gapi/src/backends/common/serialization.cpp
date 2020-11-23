@@ -530,7 +530,6 @@ IOStream& operator<< (IOStream& os, const cv::GArg &arg) {
         case cv::detail::OpaqueKind::CV_FLOAT:   os << arg.get<float>();        break;
         case cv::detail::OpaqueKind::CV_STRING:  os << arg.get<std::string>();  break;
         case cv::detail::OpaqueKind::CV_POINT:   os << arg.get<cv::Point>();    break;
-        case cv::detail::OpaqueKind::CV_POINT2F: os << arg.get<cv::Point2f>();  break;
         case cv::detail::OpaqueKind::CV_SIZE:    os << arg.get<cv::Size>();     break;
         case cv::detail::OpaqueKind::CV_RECT:    os << arg.get<cv::Rect>();     break;
         case cv::detail::OpaqueKind::CV_SCALAR:  os << arg.get<cv::Scalar>();   break;
