@@ -122,14 +122,13 @@ std::tuple<bool, cv::GRunArgs> cv::GStreamingCompiled::pull()
     // FIXME: Why it is not @ priv??
     GRunArgs run_args;
     GRunArgsP outs;
-    const auto& out_shapes = m_priv->outShapes();
-    run_args.reserve(out_shapes.size());
-    outs.reserve(out_shapes.size());
+    const auto& out_info = m_priv->outInfo();
+    run_args.reserve(out_info.size());
+    outs.reserve(out_info.size());
 
-    for (auto&& it : ade::util::indexed(out_shapes))
+    for (auto&& info : out_info)
     {
-        const auto& shape = ade::util::value(it);
-        switch (shape)
+        switch (info.shape)
         {
             case cv::GShape::GMAT:
             {
@@ -145,9 +144,7 @@ std::tuple<bool, cv::GRunArgs> cv::GStreamingCompiled::pull()
             }
             case cv::GShape::GARRAY:
             {
-                const auto& kinds = m_priv->outKinds();
-                auto idx = ade::util::index(it);
-                switch (kinds[idx])
+                switch (info.kind)
                 {
                     case cv::detail::OpaqueKind::CV_POINT2F:
                         run_args.emplace_back(cv::detail::VectorRef{std::vector<cv::Point2f>{}});

@@ -37,7 +37,10 @@ class GAPI_EXPORTS GCompiled::Priv
     GMetaArgs  m_metas;    // passed by user
     GMetaArgs  m_outMetas; // inferred by compiler
     std::unique_ptr<cv::gimpl::GExecutor> m_exec;
-    std::vector<cv::detail::OpaqueKind>   m_out_kinds;
+
+    // NB: Used by python wrapper to clarify input/output types
+    GTypesInfo m_out_info;
+    GTypesInfo m_in_info;
 
     void checkArgs(const cv::gimpl::GRuntimeArgs &args) const;
 
@@ -57,8 +60,11 @@ public:
 
     const cv::gimpl::GModel::Graph& model() const;
 
-    void setOutKinds(std::vector<cv::detail::OpaqueKind> kinds) { m_out_kinds = std::move(kinds); }
-    const std::vector<cv::detail::OpaqueKind>& outKinds() const { return m_out_kinds; }
+    void setOutInfo(const GTypesInfo& info) { m_out_info = std::move(info); }
+    const GTypesInfo& outInfo() const { return m_out_info; }
+
+    void setInInfo(const GTypesInfo& info) { m_in_info = std::move(info); }
+    const GTypesInfo& inInfo() const { return m_in_info; }
 };
 
 }

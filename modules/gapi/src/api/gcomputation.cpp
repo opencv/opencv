@@ -176,34 +176,32 @@ cv::GRunArgs cv::GComputation::apply(GRunArgs &&ins, GCompileArgs &&args)
 {
     recompile(descr_of(ins), std::move(args));
 
-    const auto& out_metas = m_priv->m_lastCompiled.outMetas();
+    const auto& out_info = m_priv->m_lastCompiled.priv().outInfo();
+
     GRunArgs run_args;
     GRunArgsP outs;
-    run_args.reserve(out_metas.size());
-    outs.reserve(out_metas.size());
+    run_args.reserve(out_info.size());
+    outs.reserve(out_info.size());
 
-    for (auto&& it : ade::util::indexed(out_metas))
+    for (auto&& info : out_info)
     {
-        const auto& meta = ade::util::value(it);
-        switch (meta.index())
+        switch (info.shape)
         {
-            case cv::GMetaArg::index_of<cv::GMatDesc>():
+            case cv::GShape::GMAT:
             {
                 run_args.emplace_back(cv::Mat{});
                 outs.emplace_back(&cv::util::get<cv::Mat>(run_args.back()));
                 break;
             }
-            case cv::GMetaArg::index_of<cv::GScalarDesc>():
+            case cv::GShape::GSCALAR:
             {
                 run_args.emplace_back(cv::Scalar{});
                 outs.emplace_back(&cv::util::get<cv::Scalar>(run_args.back()));
                 break;
             }
-            case cv::GMetaArg::index_of<GArrayDesc>():
+            case cv::GShape::GARRAY:
             {
-                const auto& kinds = m_priv->m_lastCompiled.priv().outKinds();
-                auto idx = ade::util::index(it);
-                switch (kinds[idx])
+                switch (info.kind)
                 {
                     case cv::detail::OpaqueKind::CV_POINT2F:
                         run_args.emplace_back(cv::detail::VectorRef{std::vector<cv::Point2f>{}});
