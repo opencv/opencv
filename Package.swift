@@ -28,7 +28,7 @@ let package = Package(
         .binaryTarget(
             name: "opencv2",
             url: "https://github.com/Rightpoint/opencv/releases/download/4.5.1/opencv2-4.5.1-dynamic.xcframework.zip",
-            checksum: "a2088bcdebb64e6126e9b85409083b06d8ea7b3ab206e72daa06b105f5ca6f28"
+            checksum: "addf9238afa325ce33dbdb789513b67042f55ff5f4bc657d5bfa7492c90dbe25"
         ),
         // If you are compiling OpenCV locally, you can uncomment the below block to use a custom copy
         // e.g. `$ python platforms/apple/build_xcframework.py --dynamic build/dynamic-xcframework`
