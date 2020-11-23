@@ -138,7 +138,7 @@ cmake \
 
 Each module is a subdirectory of the `modules` directory. It is possible to disable one module:
 ```.sh
-cmake -DBUILD_opencv_calib3d=OFF ../opencv
+cmake -DBUILD_opencv_3d=OFF ../opencv
 ```
 
 The opposite option is to build only specified modules and all modules they depend on:
