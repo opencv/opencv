@@ -4,7 +4,7 @@ set(ONNXRT_ROOT_DIR "" CACHE PATH "ONNX Runtime install directory")
 
 # For now, check the old name ORT_INSTALL_DIR
 if(ORT_INSTALL_DIR AND NOT ONNXRT_ROOT_DIR)
-  set(ONNXRT_ROOT_DIR ORT_INSTALL_DIR)
+  set(ONNXRT_ROOT_DIR ${ORT_INSTALL_DIR})
 endif()
 
 if(ONNXRT_ROOT_DIR)
