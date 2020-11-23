@@ -1867,7 +1867,8 @@ compactness value are returned by the function.
 @return Integer array that stores the cluster indices for every sample.
 @return Array of the cluster centers.
 
-@note Basically, you can use only the core of the function: set the number of attempts to 1,
+@note As one of possible usages, if you don't want to allow the function to set initial labels
+randomly, you can utilize just the core of the function: set the number of attempts to 1,
 initialize labels each time using a custom algorithm, pass them with the
 ( flags = #KMEANS_USE_INITIAL_LABELS ) flag, and then choose the best (most-compact) clustering.
 */

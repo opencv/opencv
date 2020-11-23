@@ -36,9 +36,9 @@ const cv::GOrigin& cv::GMat::priv() const
     return *m_priv;
 }
 
-int cv::checkVector(const cv::GMatDesc& in, const int n, const int ddepth)
+int cv::checkVector(const cv::GMatDesc& in, const int n, const int expectedDepth)
 {
-    GAPI_Assert(ddepth == in.depth || ddepth < 0);
+    GAPI_Assert(expectedDepth == in.depth || expectedDepth == -1);
     const int chan = in.chan;
     const cv::Size size = in.size;
     int quantity = -1;
