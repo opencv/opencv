@@ -19,7 +19,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      - uses: actions/cache@v2
+      - name: CMake Build Cache
+        uses: actions/cache@v2
         with:
           path: |
             build/xcframework
@@ -29,6 +30,13 @@ jobs:
           key: ${{ runner.os }}-xcframework-${{ hashFiles('build/xcframework/**/**/version_string.tmp') }}
           restore-keys: |
             ${{ runner.os }}-xcframework-
+      - name: Swift Package Manager Cache
+        uses: actions/cache@v2
+        with:
+          path: .build
+          key: ${{ runner.os }}-spm-${{ hashFiles('**/Package.resolved') }}
+          restore-keys: |
+            ${{ runner.os }}-spm-
       - name: Update CMake 3.19+
         run: brew update && (brew upgrade cmake || true) # Need CMake 3.19 or higher https://gitlab.kitware.com/cmake/cmake/-/issues/21425
       - name: Build Dynamic XCFramework
@@ -47,7 +55,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      - uses: actions/cache@v2
+      - name: CMake Build Cache
+        uses: actions/cache@v2
         with:
           path: |
             build/xcframework
@@ -57,6 +66,13 @@ jobs:
           key: ${{ runner.os }}-xcframework-${{ hashFiles('build/xcframework/**/**/version_string.tmp') }}
           restore-keys: |
             ${{ runner.os }}-xcframework-
+      - name: Swift Package Manager Cache
+        uses: actions/cache@v2
+        with:
+          path: .build
+          key: ${{ runner.os }}-spm-${{ hashFiles('**/Package.resolved') }}
+          restore-keys: |
+            ${{ runner.os }}-spm-
       - name: Update CMake 3.19+
         run: brew update && (brew upgrade cmake || true) # Need CMake 3.19 or higher https://gitlab.kitware.com/cmake/cmake/-/issues/21425
       - name: Build Static XCFramework
