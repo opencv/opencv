@@ -85,8 +85,6 @@ public:
         computeMaxIdx = true;
         globalPooling = false;
         isGlobalPooling = std::vector<bool>(3, false);
-        stride = Size(1, 1);
-        pad_t = pad_l = pad_b = pad_r = 0;
 
         hasDynamicShapes = params.get<bool>("has_dynamic_shapes", false);
         shapesInitialized = !hasDynamicShapes;
@@ -108,16 +106,6 @@ public:
 
             getPoolingKernelParams(params, kernel_size, isGlobalPooling, pads_begin, pads_end, strides, padMode);
             globalPooling = isGlobalPooling[0] || isGlobalPooling[1] || isGlobalPooling[2];
-            if (kernel_size.size() == 2) {
-                kernel = Size(kernel_size[1], kernel_size[0]);
-                stride = Size(strides[1], strides[0]);
-                pad = Size(pads_begin[1], pads_begin[0]);
-
-                pad_t = pads_begin[0];
-                pad_l = pads_begin[1];
-                pad_b = pads_end[0];
-                pad_r = pads_end[1];
-            }
         }
         else if (params.has("pooled_w") || params.has("pooled_h"))
         {
@@ -165,16 +153,19 @@ public:
                 finalKernel.push_back(isGlobalPooling[idx] ? inp[i] : kernel_size[idx]);
              }
              kernel_size = finalKernel;
-             kernel = Size(kernel_size[1], kernel_size[0]);
          }
 
         getConvPoolPaddings(inp, kernel_size, strides, padMode, pads_begin, pads_end);
-        if (pads_begin.size() == 2) {
-            pad_t = pads_begin[0];
-            pad_l = pads_begin[1];
-            pad_b = pads_end[0];
-            pad_r = pads_end[1];
+
+        if (inputs[0].dims == 3)
+        {
+            //Pool1D
+            kernel_size.erase(kernel_size.begin() + 1);
+            strides.erase(strides.begin() + 1);
+            pads_begin.erase(pads_begin.begin() + 1);
+            pads_end.erase(pads_end.begin() + 1);
         }
+
 
 #ifdef HAVE_OPENCL
         poolOp.release();
@@ -191,9 +182,11 @@ public:
                 return false;
             if (kernel_size.size() == 3)
                 return preferableTarget == DNN_TARGET_CPU;
+            if (kernel_size.size() == 1)
+                return false;
             if (preferableTarget == DNN_TARGET_MYRIAD) {
 #if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
-                if (type == MAX && (pad_l == 1 && pad_t == 1) && stride == Size(2, 2) ) {
+                if (type == MAX && (pads_begin[1] == 1 && pads_begin[0] == 1) && (strides[0] == 2 && strides[1] == 2)) {
                     return !isMyriadX();
                 }
 #endif
@@ -205,18 +198,22 @@ public:
 #endif
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         {
-            return !computeMaxIdx && type != STOCHASTIC;
+            return !computeMaxIdx && type != STOCHASTIC && kernel_size.size() > 1;
         }
-        else if (backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE)
+        else if (backendId == DNN_BACKEND_OPENCV)
         {
             if (kernel_size.size() == 3)
-                return (backendId == DNN_BACKEND_OPENCV && preferableTarget == DNN_TARGET_CPU);
-            if (kernel_size.empty() || kernel_size.size() == 2)
-                return backendId == DNN_BACKEND_OPENCV ||
-                       (backendId == DNN_BACKEND_HALIDE && haveHalide() &&
-                           (type == MAX || (type == AVE && !pad_t && !pad_l && !pad_b && !pad_r)));
+                return preferableTarget == DNN_TARGET_CPU;
+            if (kernel_size.size() <= 2)
+                return true;
             else
                 return false;
+        }
+        else if (backendId == DNN_BACKEND_HALIDE)
+        {
+            if (kernel_size.empty() || kernel_size.size() == 2)
+                return haveHalide() &&
+                       (type == MAX || (type == AVE && !pads_begin[0] && !pads_begin[1] && !pads_end[0] && !pads_end[1]));
         }
         return false;
     }
@@ -237,12 +234,25 @@ public:
 
             config.in_shape = shape(inputs[0]);
             config.out_shape = shape(outputs[0]);
-            config.kernel = kernel;
-            config.pad_l = pad_l;
-            config.pad_t = pad_t;
-            config.pad_r = pad_r;
-            config.pad_b = pad_b;
-            config.stride = stride;
+            if (inputs[0].dims == 3)
+            {
+                //Pool1D
+                config.kernel = Size(kernel_size[0], 1);
+                config.stride = Size(strides[0], 1);
+                config.pad_l = pads_begin[0];
+                config.pad_t = 0;
+                config.pad_r = pads_end[0];
+                config.pad_b = 0;
+            }
+            else
+            {
+                config.kernel = Size(kernel_size[1], kernel_size[0]);
+                config.stride = Size(strides[1], strides[0]);
+                config.pad_l = pads_begin[1];
+                config.pad_t = pads_begin[0];
+                config.pad_r = pads_end[1];
+                config.pad_b = pads_end[0];
+            }
             config.channels = inputs[0].size[1];
             config.pool_method = type == MAX ? LIBDNN_POOLING_METHOD_MAX :
                                 (type == AVE ? LIBDNN_POOLING_METHOD_AVE :
@@ -428,7 +438,6 @@ virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inp
     public:
         const Mat* src, *rois;
         Mat *dst, *mask;
-        Size kernel, stride;
         int pad_l, pad_t, pad_r, pad_b;
         bool avePoolPaddedArea;
         int nstripes;
@@ -453,13 +462,16 @@ virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inp
             CV_Assert_N(
                       src.isContinuous(), dst.isContinuous(),
                       src.type() == CV_32F, src.type() == dst.type(),
-                      src.dims == 4 || src.dims == 5, dst.dims == 4 || dst.dims == 5,
+                      src.dims == 3 || src.dims == 4 || src.dims == 5, dst.dims == 3 || dst.dims == 4 || dst.dims == 5,
                       (((poolingType == ROI || poolingType == PSROI) &&
                       dst.size[0] == rois.size[0]) || src.size[0] == dst.size[0]),
                       poolingType == PSROI || src.size[1] == dst.size[1],
                       (mask.empty() || (mask.type() == src.type() && mask.size == dst.size)));
 
             PoolingInvoker p;
+
+            bool isPool1D = src.dims == 3;
+            bool isPool3D = src.dims == 5;
 
             p.src = &src;
             p.rois = &rois;
@@ -471,12 +483,10 @@ virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inp
             p.pads_end = pads_end;
 
             p.mask = &mask;
-            p.kernel = Size(kernel_size[1], kernel_size[0]);
-            p.stride = Size(strides[1], strides[0]);
             p.pad_l = pads_begin.back();
-            p.pad_t = pads_begin[pads_begin.size() - 2];
+            p.pad_t = isPool1D ? 0 : pads_begin[pads_begin.size() - 2];
             p.pad_r = pads_end.back();
-            p.pad_b = pads_end[pads_end.size() - 2];
+            p.pad_b = isPool1D ? 0 : pads_end[pads_end.size() - 2];
 
             p.avePoolPaddedArea = avePoolPaddedArea;
             p.nstripes = nstripes;
@@ -486,11 +496,11 @@ virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inp
 
             if( !computeMaxIdx )
             {
-                int height = src.size[src.dims - 2];
+                int height = isPool1D ? 1 : src.size[src.dims - 2];
                 int width = src.size[src.dims - 1];
 
-                int kernel_d = (kernel_size.size() == 3) ? kernel_size[0] : 1;
-                int kernel_h = kernel_size[kernel_size.size() - 2];
+                int kernel_d = isPool3D ? kernel_size[0] : 1;
+                int kernel_h = isPool1D ? 1 : kernel_size[kernel_size.size() - 2];
                 int kernel_w = kernel_size.back();
 
                 p.ofsbuf.resize(kernel_d * kernel_h * kernel_w);
@@ -510,13 +520,15 @@ virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inp
         {
             int channels = dst->size[1];
 
+            bool isPool3D = src->dims == 5;
             bool isPool2D = src->dims == 4;
-            int depth = !isPool2D? dst->size[2] : 1;
-            int height = dst->size[dst->dims - 2];
+            bool isPool1D = src->dims == 3;
+            int depth = isPool3D? dst->size[2] : 1;
+            int height = isPool1D? 1 : dst->size[dst->dims - 2];
             int width = dst->size[dst->dims - 1];
 
-            int inp_depth = !isPool2D? src->size[2] : 1;
-            int inp_height = src->size[src->dims - 2];
+            int inp_depth = isPool3D? src->size[2] : 1;
+            int inp_height = isPool1D? 1 : src->size[src->dims - 2];
             int inp_width = src->size[src->dims - 1];
 
             size_t total = dst->total();
@@ -524,12 +536,12 @@ virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inp
             size_t stripeStart = r.start*stripeSize;
             size_t stripeEnd = std::min(r.end*stripeSize, total);
 
-            int kernel_d = !isPool2D? kernel_size[0] : 1;
-            int kernel_h = kernel_size[kernel_size.size() - 2];
+            int kernel_d = isPool3D? kernel_size[0] : 1;
+            int kernel_h = isPool1D? 1 : kernel_size[kernel_size.size() - 2];
             int kernel_w = kernel_size.back();
 
-            int stride_d = !isPool2D? strides[0] : 0;
-            int stride_h = strides[strides.size() - 2];
+            int stride_d = isPool3D? strides[0] : 0;
+            int stride_h = isPool1D? 1 :strides[strides.size() - 2];
             int stride_w = strides.back();
             bool compMaxIdx = computeMaxIdx;
 
@@ -720,7 +732,24 @@ virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inp
                             }
                         }
                         else
+#else
+                        CV_UNUSED(isPool2D);
 #endif
+                        if( isPool1D )
+                        {
+                            const float* first = srcData + xstart;
+                            const float* last = srcData + xend;
+                            const float* max_elem = std::max_element(first, last);
+                            if (max_elem!=last)
+                            {
+                                dstData[x0] = *max_elem;
+                                if( compMaxIdx )
+                                {
+                                    dstMaskData[x0] = std::distance(first, max_elem);
+                                }
+                            }
+                        }
+                        else
                         {
                             float max_val = -FLT_MAX;
                             if( compMaxIdx )
@@ -794,6 +823,14 @@ virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inp
                         }
                         else
 #endif
+                        if( isPool1D )
+                        {
+                            const float* first = srcData + xstart;
+                            const float* last = srcData + xend;
+                            float sum_val = std::accumulate(first, last, 0.f);
+                            dstData[x0] = sum_val*inv_kernel_area;
+                        }
+                        else
                         {
                             float sum_val = 0.f;
                             for (int d = dstart; d < dend; ++d) {
@@ -907,20 +944,26 @@ virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inp
         Halide::Buffer<float> inputBuffer = halideBuffer(inputs[0]);
         const int inWidth = inputBuffer.width();
         const int inHeight = inputBuffer.height();
+        const size_t kernelHeight = kernel_size[0];
+        const size_t kernelWidth = kernel_size[1];
+        const size_t strideHeight = strides[0];
+        const size_t strideWidth = strides[1];
+        const size_t paddingTop = pads_begin[0];
+        const size_t paddingLeft = pads_begin[1];
 
         Halide::Var x("x"), y("y"), c("c"), n("n");
         Halide::Func top = (name.empty() ? Halide::Func() : Halide::Func(name));
-        Halide::RDom r(0, kernel.width, 0, kernel.height);
+        Halide::RDom r(0, kernelWidth, 0, kernelHeight);
         Halide::Expr kx, ky;
-        if(pad_l || pad_t)
+        if(paddingLeft || paddingTop)
         {
-            kx = clamp(x * stride.width + r.x - pad_l, 0, inWidth - 1);
-            ky = clamp(y * stride.height + r.y - pad_t, 0, inHeight - 1);
+            kx = clamp(x * strideWidth + r.x - paddingLeft, 0, inWidth - 1);
+            ky = clamp(y * strideHeight + r.y - paddingTop, 0, inHeight - 1);
         }
         else
         {
-            kx = min(x * stride.width + r.x, inWidth - 1);
-            ky = min(y * stride.height + r.y, inHeight - 1);
+            kx = min(x * strideWidth + r.x, inWidth - 1);
+            ky = min(y * strideHeight + r.y, inHeight - 1);
         }
 
         // Halide::argmax returns tuple (r.x, r.y, max).
@@ -928,17 +971,17 @@ virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inp
 
         // Compute offset from argmax in range [0, kernel_size).
         Halide::Expr max_index;
-        if(pad_l || pad_t)
+        if(paddingLeft || paddingTop)
         {
-            max_index = clamp(y * stride.height + res[1] - pad_t,
+            max_index = clamp(y * strideHeight + res[1] - paddingTop,
                               0, inHeight - 1) * inWidth +
-                        clamp(x * stride.width + res[0] - pad_l,
+                        clamp(x * strideWidth + res[0] - paddingLeft,
                               0, inWidth - 1);
         }
         else
         {
-            max_index = min(y * stride.height + res[1], inHeight - 1) * inWidth +
-                        min(x * stride.width + res[0], inWidth - 1);
+            max_index = min(y * strideHeight + res[1], inHeight - 1) * inWidth +
+                        min(x * strideWidth + res[0], inWidth - 1);
         }
         top(x, y, c, n) = { res[2], Halide::cast<float>(max_index) };
         return Ptr<BackendNode>(new HalideBackendNode(top));
@@ -952,21 +995,25 @@ virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inp
         Halide::Buffer<float> inputBuffer = halideBuffer(inputs[0]);
 
         const int inW = inputBuffer.width(), inH = inputBuffer.height();
-        if ((inW - kernel.width) % stride.width || (inH - kernel.height) % stride.height)
+        const size_t kernelHeight = kernel_size[0];
+        const size_t kernelWidth = kernel_size[1];
+        const size_t strideHeight = strides[0];
+        const size_t strideWidth = strides[1];
+        if ((inW - kernelWidth) % strideWidth || (inH - kernelHeight) % strideHeight)
         {
             CV_Error(cv::Error::StsNotImplemented,
                      "Halide backend for average pooling with partial "
                      "kernels is not implemented");
         }
 
-        const float norm = 1.0f / (kernel.width * kernel.height);
+        const float norm = 1.0f / (kernelWidth * kernelHeight);
 
         Halide::Var x("x"), y("y"), c("c"), n("n");
         Halide::Func top = (name.empty() ? Halide::Func() : Halide::Func(name));
-        Halide::RDom r(0, kernel.width, 0, kernel.height);
+        Halide::RDom r(0, kernelWidth, 0, kernelHeight);
         top(x, y, c, n) = sum(
-            inputBuffer(x * stride.width + r.x,
-                        y * stride.height + r.y, c, n)) * norm;
+            inputBuffer(x * strideWidth + r.x,
+                        y * strideHeight + r.y, c, n)) * norm;
         return Ptr<BackendNode>(new HalideBackendNode(top));
 #endif  // HAVE_HALIDE
         return Ptr<BackendNode>();
@@ -1028,6 +1075,7 @@ virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inp
     {
         CV_Assert(inputs.size() != 0);
 
+        bool isPool1D = inputs[0].size() == 3;
         std::vector<int> inpShape(inputs[0].begin() + 2, inputs[0].end());
         std::vector<int> outShape(inputs[0].begin(), inputs[0].begin() + 2);
 
@@ -1056,14 +1104,15 @@ virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inp
             }
             else if (padMode.empty())
             {
-                for (int i = 0; i < local_kernel.size(); i++) {
+                int addedDims = isPool1D? inpShape.size() : local_kernel.size();
+                for (int i = 0; i < addedDims; i++) {
                     float dst = (float) (inpShape[i] + pads_begin[i] + pads_end[i] - local_kernel[i]) / strides[i];
                     outShape.push_back(1 + (ceilMode ? ceil(dst) : floor(dst)));
                 }
 
                 // If we have padding, ensure that the last pooling starts strictly
                 // inside the image (instead of at the padding); otherwise clip the last.
-                for (int i = 0; i < pads_end.size(); i++) {
+                for (int i = 0; i < addedDims; i++) {
                     if (pads_end[i] && (outShape[2 + i] - 1) * strides[i] >= inpShape[i] + pads_end[i]) {
                         --outShape[2 + i];
                         CV_Assert((outShape[2 + i] - 1) * strides[i] < inpShape[i] + pads_end[i]);
@@ -1107,7 +1156,8 @@ virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inp
     {
         CV_UNUSED(inputs); // suppress unused variable warning
         long flops = 0;
-        size_t karea = std::accumulate(kernel_size.begin(), kernel_size.end(),
+        bool isPool1D = inputs[0].size() == 3;
+        size_t karea = std::accumulate(kernel_size.begin(), isPool1D? kernel_size.begin() + 1 : kernel_size.end(),
                                     1, std::multiplies<size_t>());
         for(int i = 0; i < outputs.size(); i++)
         {
