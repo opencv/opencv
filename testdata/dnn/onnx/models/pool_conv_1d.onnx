@@ -1,0 +1,25 @@
+pytorch1.6:û
+N
+03	MaxPool_0"MaxPool*
+kernel_shape@ *
+pads@@ *
+strides@ 
+€
+3
+conv.weight
+	conv.bias4Conv_1"Conv*
+	dilations@ *
+group *
+kernel_shape@ *
+pads@@ *
+strides@ torch-jit-export*B	conv.biasJFö=È1¿½*GBconv.weightJ0'\º¾—I·>ñ½‡¾ù:>½ýˆï=‘U<Ù¥Œ¾;õ¨¾Ñ›¦>ò%ˆ=%i­>f%¾Z
+0
+
+
+
+b
+4
+
+
+
+B	
