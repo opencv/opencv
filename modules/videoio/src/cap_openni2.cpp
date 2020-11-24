@@ -119,6 +119,7 @@ public:
     virtual bool setProperty(int probIdx, double propVal) CV_OVERRIDE;
     virtual bool grabFrame() CV_OVERRIDE;
     virtual IplImage* retrieveFrame(int outputType) CV_OVERRIDE;
+    virtual int getCaptureDomain() CV_OVERRIDE { return cv::CAP_OPENNI2; }
 
     bool isOpened() const;
 
