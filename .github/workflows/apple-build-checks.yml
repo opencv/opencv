@@ -1,42 +1,41 @@
-name: Apple Platform CI
+name: Apple CI
 
 on: [push, pull_request]
+
+env:
+  DEVELOPER_DIR: /Applications/Xcode_12.2.app/Contents/Developer
 
 jobs:
   dynamic-xcframework:
     runs-on: macos-11.0
     steps:
       - name: Checkout
-        uses: actions/checkout@v1
+        uses: actions/checkout@v2
       - name: Build Dynamic XCFramework
-        env:
-          DEVELOPER_DIR: /Applications/Xcode_12.2.app/Contents/Developer
         run: |
-          brew outdated cmake || (brew uninstall cmake --force; brew install cmake --force-bottle)
-          python3 platforms/apple/build_xcframework.py build/dynamic-xcframework --dynamic
-          zip -r opencv2-dynamic-${GITHUB_SHA::7}.xcframework.zip build/dynamic-xcframework/opencv2.xcframework 
+          brew upgrade cmake || true # Need CMake 3.19 or higher https://gitlab.kitware.com/cmake/cmake/-/issues/21425
+          python3 platforms/apple/build_xcframework.py build/xcframework --dynamic
+          cd build/xcframework/ && zip -r opencv2-dynamic-${GITHUB_SHA::7}.xcframework.zip opencv2.xcframework
       - name: Upload Dynamic XCFramework
         uses: actions/upload-artifact@v2
         with:
           name: opencv2-dynamic.xcframework.zip
           path: |
-            opencv2-dynamic-${GITHUB_SHA::7}.xcframework.zip
+            build/xcframework/opencv2-dynamic-${GITHUB_SHA::7}.xcframework.zip
 
   static-xcframework:
     runs-on: macos-11.0
     steps:
       - name: Checkout
-        uses: actions/checkout@v1
+        uses: actions/checkout@v2
       - name: Build Static XCFramework
-        env:
-          DEVELOPER_DIR: /Applications/Xcode_12.2.app/Contents/Developer
         run: |
-          brew outdated cmake || (brew uninstall cmake --force; brew install cmake --force-bottle)
-          python3 platforms/apple/build_xcframework.py build/static-xcframework
-          zip -r opencv2-static-${GITHUB_SHA::7}.xcframework.zip build/static-xcframework/opencv2.xcframework 
+          brew upgrade cmake || true # Need CMake 3.19 or higher https://gitlab.kitware.com/cmake/cmake/-/issues/21425
+          python3 platforms/apple/build_xcframework.py build/xcframework
+          cd build/xcframework/ && zip -r opencv2-static-${GITHUB_SHA::7}.xcframework.zip opencv2.xcframework
       - name: Upload Static XCFramework
         uses: actions/upload-artifact@v2
         with:
           name: opencv2-static.xcframework.zip
           path: |
-            opencv2-static-${GITHUB_SHA::7}.xcframework.zip
+            build/xcframework/opencv2-static-${GITHUB_SHA::7}.xcframework.zip
