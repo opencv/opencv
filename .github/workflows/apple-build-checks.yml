@@ -2,10 +2,6 @@ name: Apple Platform CI
 
 on: [push, pull_request]
 
-defaults:
-  env:
-    DEVELOPER_DIR: /Applications/Xcode_12.2.app/Contents/Developer
-
 jobs:
   dynamic-xcframework:
     runs-on: macos-11.0
@@ -13,6 +9,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v1
       - name: Build Dynamic XCFramework
+        env:
+          DEVELOPER_DIR: /Applications/Xcode_12.2.app/Contents/Developer
         run: |
           brew outdated cmake || (brew uninstall cmake --force; brew install cmake --force-bottle)
           python platforms/apple/build_xcframework.py build/dynamic-xcframework --dynamic
@@ -30,6 +28,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v1
       - name: Build Static XCFramework
+        env:
+          DEVELOPER_DIR: /Applications/Xcode_12.2.app/Contents/Developer
         run: |
           brew outdated cmake || (brew uninstall cmake --force; brew install cmake --force-bottle)
           python platforms/apple/build_xcframework.py build/static-xcframework
