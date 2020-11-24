@@ -120,10 +120,9 @@ TEST(TestAgeGenderIE, InferBasicTensor)
 {
     initDLDTDataPath();
 
-    cv::gapi::ie::detail::ParamDesc params;
-    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
-    params.device_id = "CPU";
+    std::string model_path   = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
+    std::string weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    std::string device_id    = "CPU";
 
     // Load IE network, initialize input data using that.
     cv::Mat in_mat;
@@ -131,9 +130,10 @@ TEST(TestAgeGenderIE, InferBasicTensor)
 
     IE::Blob::Ptr ie_age, ie_gender;
     {
-        auto plugin        = cv::gimpl::ie::wrap::getPlugin(params);
-        auto net           = cv::gimpl::ie::wrap::readNetwork(params);
-        auto this_network  = cv::gimpl::ie::wrap::loadNetwork(plugin, net, params);
+        namespace gwrap = cv::gimpl::ie::wrap;
+        auto plugin       = gwrap::getPlugin({model_path, weights_path, device_id});
+        auto net          = gwrap::readNetwork({model_path, weights_path, device_id});
+        auto this_network = gwrap::loadNetwork(plugin, net, {model_path, weights_path, device_id});
         auto infer_request = this_network.CreateInferRequest();
 
         const auto &iedims = net.getInputsInfo().begin()->second->getTensorDesc().getDims();
@@ -156,9 +156,8 @@ TEST(TestAgeGenderIE, InferBasicTensor)
     std::tie(age, gender) = cv::gapi::infer<AgeGender>(in);
     cv::GComputation comp(cv::GIn(in), cv::GOut(age, gender));
 
-    auto pp = cv::gapi::ie::Params<AgeGender> {
-        params.model_path, params.weights_path, params.device_id
-    }.cfgOutputLayers({ "age_conv3", "prob" });
+    auto pp = cv::gapi::ie::Params<AgeGender> {model_path, weights_path, device_id
+                                              }.cfgOutputLayers({ "age_conv3", "prob" });
     comp.apply(cv::gin(in_mat), cv::gout(gapi_age, gapi_gender),
                cv::compile_args(cv::gapi::networks(pp)));
 
@@ -171,10 +170,9 @@ TEST(TestAgeGenderIE, InferBasicImage)
 {
     initDLDTDataPath();
 
-    cv::gapi::ie::detail::ParamDesc params;
-    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
-    params.device_id = "CPU";
+    std::string model_path   = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
+    std::string weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    std::string device_id    = "CPU";
 
     // FIXME: Ideally it should be an image from disk
     // cv::Mat in_mat = cv::imread(findDataFile("grace_hopper_227.png"));
@@ -186,10 +184,11 @@ TEST(TestAgeGenderIE, InferBasicImage)
     // Load & run IE network
     IE::Blob::Ptr ie_age, ie_gender;
     {
-        auto plugin        = cv::gimpl::ie::wrap::getPlugin(params);
-        auto net           = cv::gimpl::ie::wrap::readNetwork(params);
+        namespace gwrap = cv::gimpl::ie::wrap;
+        auto plugin       = gwrap::getPlugin({model_path, weights_path, device_id});
+        auto net          = gwrap::readNetwork({model_path, weights_path, device_id});
         setNetParameters(net);
-        auto this_network  = cv::gimpl::ie::wrap::loadNetwork(plugin, net, params);
+        auto this_network = gwrap::loadNetwork(plugin, net, {model_path, weights_path, device_id});
         auto infer_request = this_network.CreateInferRequest();
         infer_request.SetBlob("data", cv::gapi::ie::util::to_ie(in_mat));
         infer_request.Infer();
@@ -206,9 +205,8 @@ TEST(TestAgeGenderIE, InferBasicImage)
     std::tie(age, gender) = cv::gapi::infer<AgeGender>(in);
     cv::GComputation comp(cv::GIn(in), cv::GOut(age, gender));
 
-    auto pp = cv::gapi::ie::Params<AgeGender> {
-        params.model_path, params.weights_path, params.device_id
-    }.cfgOutputLayers({ "age_conv3", "prob" });
+    auto pp = cv::gapi::ie::Params<AgeGender> {model_path, weights_path, device_id
+                                              }.cfgOutputLayers({ "age_conv3", "prob" });
     comp.apply(cv::gin(in_mat), cv::gout(gapi_age, gapi_gender),
                cv::compile_args(cv::gapi::networks(pp)));
 
@@ -218,7 +216,7 @@ TEST(TestAgeGenderIE, InferBasicImage)
 }
 
 struct ROIList: public ::testing::Test {
-    cv::gapi::ie::detail::ParamDesc params;
+    std::string model_path   = "", weights_path = "", device_id    = "";
 
     cv::Mat m_in_mat;
     std::vector<cv::Rect> m_roi_list;
@@ -234,9 +232,9 @@ struct ROIList: public ::testing::Test {
 
     void SetUp() {
         initDLDTDataPath();
-        params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-        params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
-        params.device_id = "CPU";
+        model_path   = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
+        weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+        device_id    = "CPU";
 
         // FIXME: it must be cv::imread(findDataFile("../dnn/grace_hopper_227.png", false));
         m_in_mat = cv::Mat(cv::Size(320, 240), CV_8UC3);
@@ -250,10 +248,12 @@ struct ROIList: public ::testing::Test {
 
         // Load & run IE network
         {
-            auto plugin        = cv::gimpl::ie::wrap::getPlugin(params);
-            auto net           = cv::gimpl::ie::wrap::readNetwork(params);
+            namespace gwrap = cv::gimpl::ie::wrap;
+            auto plugin       = gwrap::getPlugin({model_path, weights_path, device_id});
+            auto net          = gwrap::readNetwork({model_path, weights_path, device_id});
             setNetParameters(net);
-            auto this_network  = cv::gimpl::ie::wrap::loadNetwork(plugin, net, params);
+            auto this_network = gwrap::loadNetwork(plugin, net,
+                                                   {model_path, weights_path, device_id});
             auto infer_request = this_network.CreateInferRequest();
             auto frame_blob = cv::gapi::ie::util::to_ie(m_in_mat);
 
@@ -372,9 +372,8 @@ TEST_F(ROIList, TestInfer)
     std::tie(age, gender) = cv::gapi::infer<AgeGender>(rr, in);
     cv::GComputation comp(cv::GIn(in, rr), cv::GOut(age, gender));
 
-    auto pp = cv::gapi::ie::Params<AgeGender> {
-        params.model_path, params.weights_path, params.device_id
-    }.cfgOutputLayers({ "age_conv3", "prob" });
+    auto pp = cv::gapi::ie::Params<AgeGender> {model_path, weights_path, device_id
+                                              }.cfgOutputLayers({ "age_conv3", "prob" });
     comp.apply(cv::gin(m_in_mat, m_roi_list),
                cv::gout(m_out_gapi_ages, m_out_gapi_genders),
                cv::compile_args(cv::gapi::networks(pp)));
@@ -389,9 +388,8 @@ TEST_F(ROIList, TestInfer2)
     std::tie(age, gender) = cv::gapi::infer2<AgeGender>(in, rr);
     cv::GComputation comp(cv::GIn(in, rr), cv::GOut(age, gender));
 
-    auto pp = cv::gapi::ie::Params<AgeGender> {
-        params.model_path, params.weights_path, params.device_id
-    }.cfgOutputLayers({ "age_conv3", "prob" });
+    auto pp = cv::gapi::ie::Params<AgeGender> {model_path, weights_path, device_id
+                                              }.cfgOutputLayers({ "age_conv3", "prob" });
     comp.apply(cv::gin(m_in_mat, m_roi_list),
                cv::gout(m_out_gapi_ages, m_out_gapi_genders),
                cv::compile_args(cv::gapi::networks(pp)));
@@ -402,10 +400,11 @@ TEST(DISABLED_TestTwoIENNPipeline, InferBasicImage)
 {
     initDLDTDataPath();
 
-    cv::gapi::ie::detail::ParamDesc AGparams;
-    AGparams.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml", false);
-    AGparams.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
-    AGparams.device_id = "MYRIAD";
+    std::string model_path   = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml",
+                                            false);
+    std::string weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin",
+                                            false);
+    std::string device_id    = "MYRIAD";
 
     // FIXME: Ideally it should be an image from disk
     // cv::Mat in_mat = cv::imread(findDataFile("grace_hopper_227.png"));
@@ -417,20 +416,23 @@ TEST(DISABLED_TestTwoIENNPipeline, InferBasicImage)
     // Load & run IE network
     IE::Blob::Ptr ie_age1, ie_gender1, ie_age2, ie_gender2;
     {
-        auto AGplugin1         = cv::gimpl::ie::wrap::getPlugin(AGparams);
-        auto AGnet1            = cv::gimpl::ie::wrap::readNetwork(AGparams);
+        namespace gwrap = cv::gimpl::ie::wrap;
+        auto AGplugin1         = gwrap::getPlugin({model_path, weights_path, device_id});
+        auto AGnet1            = gwrap::readNetwork({model_path, weights_path, device_id});
         setNetParameters(AGnet1);
-        auto AGplugin_network1 = cv::gimpl::ie::wrap::loadNetwork(AGplugin1, AGnet1, AGparams);
+        auto AGplugin_network1 = gwrap::loadNetwork(AGplugin1, AGnet1,
+                                                    {model_path, weights_path, device_id});
         auto AGinfer_request1  = AGplugin_network1.CreateInferRequest();
         AGinfer_request1.SetBlob("data", cv::gapi::ie::util::to_ie(in_mat));
         AGinfer_request1.Infer();
         ie_age1    = AGinfer_request1.GetBlob("age_conv3");
         ie_gender1 = AGinfer_request1.GetBlob("prob");
 
-        auto AGplugin2         = cv::gimpl::ie::wrap::getPlugin(AGparams);
-        auto AGnet2            = cv::gimpl::ie::wrap::readNetwork(AGparams);
+        auto AGplugin2         = gwrap::getPlugin({model_path, weights_path, device_id});
+        auto AGnet2            = gwrap::readNetwork({model_path, weights_path, device_id});
         setNetParameters(AGnet2);
-        auto AGplugin_network2 = cv::gimpl::ie::wrap::loadNetwork(AGplugin2, AGnet2, AGparams);
+        auto AGplugin_network2 = gwrap::loadNetwork(AGplugin2, AGnet2,
+                                                    {model_path, weights_path, device_id});
         auto AGinfer_request2     = AGplugin_network2.CreateInferRequest();
         AGinfer_request2.SetBlob("data", cv::gapi::ie::util::to_ie(in_mat));
         AGinfer_request2.Infer();
@@ -451,12 +453,10 @@ TEST(DISABLED_TestTwoIENNPipeline, InferBasicImage)
     std::tie(age2, gender2) = cv::gapi::infer<AgeGender2>(cv::gapi::copy(in));
     cv::GComputation comp(cv::GIn(in), cv::GOut(age1, gender1, age2, gender2));
 
-    auto age_net1 = cv::gapi::ie::Params<AgeGender1> {
-        AGparams.model_path, AGparams.weights_path, AGparams.device_id
-    }.cfgOutputLayers({ "age_conv3", "prob" });
-    auto age_net2 = cv::gapi::ie::Params<AgeGender2> {
-        AGparams.model_path, AGparams.weights_path, AGparams.device_id
-    }.cfgOutputLayers({ "age_conv3", "prob" });
+    auto age_net1 = cv::gapi::ie::Params<AgeGender1> {model_path, weights_path, device_id
+                                                     }.cfgOutputLayers({ "age_conv3", "prob" });
+    auto age_net2 = cv::gapi::ie::Params<AgeGender2> {model_path, weights_path, device_id
+                                                     }.cfgOutputLayers({ "age_conv3", "prob" });
 
     comp.apply(cv::gin(in_mat), cv::gout(gapi_age1, gapi_gender1, gapi_age2, gapi_gender2),
                cv::compile_args(cv::gapi::networks(age_net1, age_net2)));
@@ -472,10 +472,9 @@ TEST(TestAgeGenderIE, GenericInfer)
 {
     initDLDTDataPath();
 
-    cv::gapi::ie::detail::ParamDesc params;
-    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
-    params.device_id = "CPU";
+    std::string model_path   = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
+    std::string weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    std::string device_id    = "CPU";
 
     cv::Mat in_mat(cv::Size(320, 240), CV_8UC3);
     cv::randu(in_mat, 0, 255);
@@ -485,10 +484,12 @@ TEST(TestAgeGenderIE, GenericInfer)
     // Load & run IE network
     IE::Blob::Ptr ie_age, ie_gender;
     {
-        auto plugin = cv::gimpl::ie::wrap::getPlugin(params);
-        auto net    = cv::gimpl::ie::wrap::readNetwork(params);
+        namespace gwrap = cv::gimpl::ie::wrap;
+        auto plugin       = gwrap::getPlugin({model_path, weights_path, device_id});
+        auto net          = gwrap::readNetwork({model_path, weights_path, device_id});
         setNetParameters(net);
-        auto this_network  = cv::gimpl::ie::wrap::loadNetwork(plugin, net, params);
+        auto this_network = gwrap::loadNetwork(plugin, net,
+                                               {model_path, weights_path, device_id});
         auto infer_request = this_network.CreateInferRequest();
         infer_request.SetBlob("data", cv::gapi::ie::util::to_ie(in_mat));
         infer_request.Infer();
@@ -509,9 +510,9 @@ TEST(TestAgeGenderIE, GenericInfer)
     cv::GComputation comp(cv::GIn(in), cv::GOut(age, gender));
 
     cv::gapi::ie::Params<cv::gapi::Generic> pp{"age-gender-generic",
-                                                params.model_path,
-                                                params.weights_path,
-                                                params.device_id};
+                                               model_path,
+                                               weights_path,
+                                               device_id};
 
     comp.apply(cv::gin(in_mat), cv::gout(gapi_age, gapi_gender),
                cv::compile_args(cv::gapi::networks(pp)));
@@ -540,9 +541,11 @@ TEST(TestAgeGenderIE, InvalidConfigGeneric)
     cv::GComputation comp(cv::GIn(in), cv::GOut(age, gender));
 
     auto pp = cv::gapi::ie::Params<cv::gapi::Generic>{"age-gender-generic",
-                                                       model_path,
-                                                       weights_path,
-                                                       device_id}.pluginConfig({{"unsupported_config", "some_value"}});
+                                                      model_path,
+                                                      weights_path,
+                                                      device_id
+                                                     }.pluginConfig({{"unsupported_config",
+                                                                      "some_value"}});
 
     EXPECT_ANY_THROW(comp.compile(cv::GMatDesc{CV_8U,3,cv::Size{320, 240}},
                      cv::compile_args(cv::gapi::networks(pp))));
@@ -567,9 +570,10 @@ TEST(TestAgeGenderIE, CPUConfigGeneric)
     cv::GComputation comp(cv::GIn(in), cv::GOut(age, gender));
 
     auto pp = cv::gapi::ie::Params<cv::gapi::Generic>{"age-gender-generic",
-                                                       model_path,
-                                                       weights_path,
-                                                       device_id}.pluginConfig({{"ENFORCE_BF16", "NO"}});
+                                                      model_path,
+                                                      weights_path,
+                                                      device_id
+                                                     }.pluginConfig({{"ENFORCE_BF16", "NO"}});
 
     EXPECT_NO_THROW(comp.compile(cv::GMatDesc{CV_8U,3,cv::Size{320, 240}},
                     cv::compile_args(cv::gapi::networks(pp))));
@@ -591,9 +595,10 @@ TEST(TestAgeGenderIE, InvalidConfig)
     std::tie(age, gender) = cv::gapi::infer<AgeGender>(in);
     cv::GComputation comp(cv::GIn(in), cv::GOut(age, gender));
 
-    auto pp = cv::gapi::ie::Params<AgeGender> {
-        model_path, weights_path, device_id
-    }.cfgOutputLayers({ "age_conv3", "prob" }).pluginConfig({{"unsupported_config", "some_value"}});
+    auto pp = cv::gapi::ie::Params<AgeGender> {model_path, weights_path, device_id
+                                              }.cfgOutputLayers({ "age_conv3", "prob" })
+                                               .pluginConfig({{"unsupported_config",
+                                                               "some_value"}});
 
     EXPECT_ANY_THROW(comp.compile(cv::GMatDesc{CV_8U,3,cv::Size{320, 240}},
                      cv::compile_args(cv::gapi::networks(pp))));
@@ -615,9 +620,9 @@ TEST(TestAgeGenderIE, CPUConfig)
     std::tie(age, gender) = cv::gapi::infer<AgeGender>(in);
     cv::GComputation comp(cv::GIn(in), cv::GOut(age, gender));
 
-    auto pp = cv::gapi::ie::Params<AgeGender> {
-        model_path, weights_path, device_id
-    }.cfgOutputLayers({ "age_conv3", "prob" }).pluginConfig({{"ENFORCE_BF16", "NO"}});
+    auto pp = cv::gapi::ie::Params<AgeGender> {model_path, weights_path, device_id
+                                              }.cfgOutputLayers({ "age_conv3", "prob" })
+                                               .pluginConfig({{"ENFORCE_BF16", "NO"}});
 
     EXPECT_NO_THROW(comp.compile(cv::GMatDesc{CV_8U,3,cv::Size{320, 240}},
                     cv::compile_args(cv::gapi::networks(pp))));

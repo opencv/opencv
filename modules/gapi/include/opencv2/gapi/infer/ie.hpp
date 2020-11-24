@@ -67,6 +67,17 @@ namespace detail {
         Kind kind;
         bool is_generic;
         IEConfig config;
+
+        ParamDesc(std::string model, std::string weights, std::string device,
+                  std::vector<std::string> inputNames, std::vector<std::string> outputNames,
+                  std::unordered_map<std::string, ConstInput> constInputs,
+                  std::size_t numIn, std::size_t numOut, Kind kind_, bool isGen, IEConfig config_)
+            : model_path(model), weights_path(weights), device_id(device), input_names(inputNames),
+              output_names(outputNames), const_inputs(constInputs), num_in(numIn), num_out(numOut),
+              kind(kind_), is_generic(isGen), config(config_) {}
+
+        ParamDesc(std::string model, std::string weights, std::string device)
+            : model_path(model), weights_path(weights), device_id(device) {};
     };
 } // namespace detail
 
