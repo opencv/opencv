@@ -99,7 +99,7 @@ TEST(GraphMeta, Streaming_AccessInput) {
     cv::GComputation graph(cv::GIn(in), cv::GOut(out1, out2));
 
     auto ccomp = graph.compileStreaming();
-    const auto path = findDataFile("cv/video/768x576.avi", false);
+    const auto path = findDataFile("cv/video/768x576.avi");
     try {
         ccomp.setSource<cv::gapi::wip::GCaptureSource>(path);
     } catch(...) {
@@ -127,7 +127,7 @@ TEST(GraphMeta, Streaming_AccessOutput) {
     cv::GComputation graph(cv::GIn(in), cv::GOut(out1, out2, out3));
 
     auto ccomp = graph.compileStreaming();
-    const auto path = findDataFile("cv/video/768x576.avi", false);
+    const auto path = findDataFile("cv/video/768x576.avi");
     try {
         ccomp.setSource<cv::gapi::wip::GCaptureSource>(path);
     } catch(...) {
@@ -165,7 +165,7 @@ TEST(GraphMeta, Streaming_AccessDesync) {
     cv::GComputation graph(cv::GIn(in), cv::GOut(out1, out2, out3, out4, out5));
 
     auto ccomp = graph.compileStreaming();
-    const auto path = findDataFile("cv/video/768x576.avi", false);
+    const auto path = findDataFile("cv/video/768x576.avi");
     try {
         ccomp.setSource<cv::gapi::wip::GCaptureSource>(path);
     } catch(...) {
