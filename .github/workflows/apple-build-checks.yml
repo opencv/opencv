@@ -1,10 +1,6 @@
 name: Apple Platform CI
 
-on:
-  push:
-    branches: [master]
-  pull_request:
-    branches: [master]
+on: [push, pull_request]
 
 defaults:
   runs-on: macos-11.0
