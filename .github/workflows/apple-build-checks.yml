@@ -13,7 +13,7 @@ jobs:
           DEVELOPER_DIR: /Applications/Xcode_12.2.app/Contents/Developer
         run: |
           brew outdated cmake || (brew uninstall cmake --force; brew install cmake --force-bottle)
-          python platforms/apple/build_xcframework.py build/dynamic-xcframework --dynamic
+          python3 platforms/apple/build_xcframework.py build/dynamic-xcframework --dynamic
           zip -r opencv2-dynamic-${GITHUB_SHA::7}.xcframework.zip build/dynamic-xcframework/opencv2.xcframework 
       - name: Upload Dynamic XCFramework
         uses: actions/upload-artifact@v2
@@ -32,7 +32,7 @@ jobs:
           DEVELOPER_DIR: /Applications/Xcode_12.2.app/Contents/Developer
         run: |
           brew outdated cmake || (brew uninstall cmake --force; brew install cmake --force-bottle)
-          python platforms/apple/build_xcframework.py build/static-xcframework
+          python3 platforms/apple/build_xcframework.py build/static-xcframework
           zip -r opencv2-static-${GITHUB_SHA::7}.xcframework.zip build/static-xcframework/opencv2.xcframework 
       - name: Upload Static XCFramework
         uses: actions/upload-artifact@v2
