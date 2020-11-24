@@ -13,7 +13,13 @@ set (SUPPRESS_WARNINGS_FLAGS "-Wno-incomplete-umbrella")
 set (CMAKE_CXX_FLAGS  "$${CMAKE_CXX_FLAGS} $${OBJC_COMPILE_FLAGS} $${SUPPRESS_WARNINGS_FLAGS}")
 
 # grab the files
-file(GLOB_RECURSE objc_sources "objc/*\.h" "objc/*\.m" "objc/*\.mm" "objc/*\.swift" "objc/*\.modulemap")
+if(SWIFT_DISABLED)
+  message(STATUS "Swift wrapper disabled")
+  file(GLOB_RECURSE objc_sources "objc/*\.h" "objc/*\.m" "objc/*\.mm" "objc/*\.modulemap")
+else()
+  enable_language(Swift)
+  file(GLOB_RECURSE objc_sources "objc/*\.h" "objc/*\.m" "objc/*\.mm" "objc/*\.swift" "objc/*\.modulemap")
+endif()
 file(GLOB_RECURSE objc_headers "*\.h")
 
 add_library($framework STATIC $${objc_sources})
@@ -28,8 +34,6 @@ foreach(m $${MODULES})
 endforeach()
 
 install(TARGETS $framework LIBRARY DESTINATION lib)
-
-enable_language(Swift)
 
 # Additional target properties
 if (CMAKE_XCODE_BUILD_SYSTEM GREATER_EQUAL 12)
