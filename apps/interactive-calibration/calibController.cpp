@@ -8,7 +8,8 @@
 #include <cmath>
 #include <ctime>
 
-#include <opencv2/calib3d.hpp>
+#include <opencv2/3d.hpp>
+#include <opencv2/calib.hpp>
 #include <opencv2/imgproc.hpp>
 
 double calib::calibController::estimateCoverageQuality()
@@ -78,42 +79,42 @@ void calib::calibController::updateState()
         mCoverageQualityState = estimateCoverageQuality() > 1.8 ? true : false;
 
     if (getFramesNumberState() && mNeedTuning) {
-        if( !(mCalibFlags & cv::CALIB_FIX_ASPECT_RATIO) &&
+        if( !(mCalibFlags & cv::calib::CALIB_FIX_ASPECT_RATIO) &&
             mCalibData->cameraMatrix.total()) {
             double fDiff = fabs(mCalibData->cameraMatrix.at<double>(0,0) -
                                 mCalibData->cameraMatrix.at<double>(1,1));
 
             if (fDiff < 3*mCalibData->stdDeviations.at<double>(0) &&
                     fDiff < 3*mCalibData->stdDeviations.at<double>(1)) {
-                mCalibFlags |= cv::CALIB_FIX_ASPECT_RATIO;
+                mCalibFlags |= cv::calib::CALIB_FIX_ASPECT_RATIO;
                 mCalibData->cameraMatrix.at<double>(0,0) =
                         mCalibData->cameraMatrix.at<double>(1,1);
             }
         }
 
-        if(!(mCalibFlags & cv::CALIB_ZERO_TANGENT_DIST)) {
+        if(!(mCalibFlags & cv::calib::CALIB_ZERO_TANGENT_DIST)) {
             const double eps = 0.005;
             if(fabs(mCalibData->distCoeffs.at<double>(2)) < eps &&
                     fabs(mCalibData->distCoeffs.at<double>(3)) < eps)
-                mCalibFlags |= cv::CALIB_ZERO_TANGENT_DIST;
+                mCalibFlags |= cv::calib::CALIB_ZERO_TANGENT_DIST;
         }
 
-        if(!(mCalibFlags & cv::CALIB_FIX_K1)) {
+        if(!(mCalibFlags & cv::calib::CALIB_FIX_K1)) {
             const double eps = 0.005;
             if(fabs(mCalibData->distCoeffs.at<double>(0)) < eps)
-                mCalibFlags |= cv::CALIB_FIX_K1;
+                mCalibFlags |= cv::calib::CALIB_FIX_K1;
         }
 
-        if(!(mCalibFlags & cv::CALIB_FIX_K2)) {
+        if(!(mCalibFlags & cv::calib::CALIB_FIX_K2)) {
             const double eps = 0.005;
             if(fabs(mCalibData->distCoeffs.at<double>(1)) < eps)
-                mCalibFlags |= cv::CALIB_FIX_K2;
+                mCalibFlags |= cv::calib::CALIB_FIX_K2;
         }
 
-        if(!(mCalibFlags & cv::CALIB_FIX_K3)) {
+        if(!(mCalibFlags & cv::calib::CALIB_FIX_K3)) {
             const double eps = 0.005;
             if(fabs(mCalibData->distCoeffs.at<double>(4)) < eps)
-                mCalibFlags |= cv::CALIB_FIX_K3;
+                mCalibFlags |= cv::calib::CALIB_FIX_K3;
         }
 
     }
@@ -327,8 +328,8 @@ void calib::calibDataController::printParametersToConsole(std::ostream &output) 
 
 void calib::calibDataController::updateUndistortMap()
 {
-    cv::initUndistortRectifyMap(mCalibData->cameraMatrix, mCalibData->distCoeffs, cv::noArray(),
-                                cv::getOptimalNewCameraMatrix(mCalibData->cameraMatrix, mCalibData->distCoeffs, mCalibData->imageSize, 0.0, mCalibData->imageSize),
+    cv3d::initUndistortRectifyMap(mCalibData->cameraMatrix, mCalibData->distCoeffs, cv::noArray(),
+                                cv3d::getOptimalNewCameraMatrix(mCalibData->cameraMatrix, mCalibData->distCoeffs, mCalibData->imageSize, 0.0, mCalibData->imageSize),
                                 mCalibData->imageSize, CV_16SC2, mCalibData->undistMap1, mCalibData->undistMap2);
 
 }

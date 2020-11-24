@@ -92,7 +92,7 @@ protected:
 
         void operator()() const
         {
-            calibrateCameraRO(objPts_arg, imgPts_arg, imageSize, iFixedPoint,
+            cv::calib::calibrateCameraRO(objPts_arg, imgPts_arg, imageSize, iFixedPoint,
                               cameraMatrix_arg, distCoeffs_arg, rvecs_arg, tvecs_arg,
                               newObjPts_arg, flags);
         }
@@ -184,13 +184,13 @@ void CV_CameraCalibrationBadArgTest::run( int /* start_from */ )
     caller.initArgs();
     Mat badCM = Mat::zeros(4, 4, CV_64F);
     caller.cameraMatrix_arg = badCM;
-    caller.flags = CALIB_USE_INTRINSIC_GUESS;
+    caller.flags = cv::calib::CALIB_USE_INTRINSIC_GUESS;
     errors += run_test_case( CV_StsBadArg, "Bad camearaMatrix header", caller );
 
     caller.initArgs();
     Mat badDC = Mat::zeros(10, 10, CV_64F);
     caller.distCoeffs_arg = badDC;
-    caller.flags = CALIB_USE_INTRINSIC_GUESS;
+    caller.flags = cv::calib::CALIB_USE_INTRINSIC_GUESS;
     errors += run_test_case( CV_StsBadArg, "Bad camearaMatrix header", caller );
 
     if (errors)
@@ -226,7 +226,7 @@ protected:
 
         void operator()()
         {
-            cv::Rodrigues(src_arg, dst_arg, j_arg);
+            cv3d::Rodrigues(src_arg, dst_arg, j_arg);
         }
     };
 
@@ -306,7 +306,7 @@ protected:
 
         void operator()()
         {
-            projectPoints(objectPoints_arg, rvec_arg, tvec_arg, A_arg, DC_arg,
+            cv3d::projectPoints(objectPoints_arg, rvec_arg, tvec_arg, A_arg, DC_arg,
                           imagePoints_arg, J, aspectRatio );
         }
     };
@@ -321,7 +321,7 @@ protected:
         randu(objectPoints_cpp, Scalar::all(1), Scalar::all(10));
         caller.objectPoints = objectPoints_cpp;
         caller.t_vec = Mat::zeros(1, 3, CV_32F);
-        cvtest::Rodrigues(Mat::eye(3, 3, CV_32F), caller.r_vec);
+        cv3d::Rodrigues(Mat::eye(3, 3, CV_32F), caller.r_vec);
         caller.A = Mat::eye(3, 3, CV_32F);
         caller.distCoeffs = Mat::zeros(1, 5, CV_32F);
         caller.aspectRatio0 = 1.0;

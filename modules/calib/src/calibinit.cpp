@@ -71,6 +71,7 @@
 
 #include "precomp.hpp"
 #include "circlesgrid.hpp"
+#include "opencv2/imgproc/imgproc_c.h"
 
 #include <stack>
 
@@ -88,12 +89,13 @@
 #ifdef DEBUG_CHESSBOARD
 #include "opencv2/highgui.hpp"
 #include "opencv2/imgproc.hpp"
-#define DPRINTF(...)  CV_LOG_INFO(NULL, cv::format("calib3d: " __VA_ARGS__))
+#define DPRINTF(...)  CV_LOG_INFO(NULL, format("calib3d: " __VA_ARGS__))
 #else
 #define DPRINTF(...)
 #endif
 
 namespace cv {
+namespace calib {
 
 //=====================================================================================
 // Implementation for the enhanced calibration object detection
@@ -101,7 +103,7 @@ namespace cv {
 
 #define MAX_CONTOUR_APPROX  7
 
-#define USE_CV_FINDCONTOURS  // switch between cv::findContours() and legacy C API
+#define USE_CV_FINDCONTOURS  // switch between findContours() and legacy C API
 #ifdef USE_CV_FINDCONTOURS
 struct QuadCountour {
     Point pt[4];
@@ -114,11 +116,6 @@ struct QuadCountour {
     }
 };
 #else
-
-} // namespace
-#include "opencv2/imgproc/imgproc_c.h"
-namespace cv {
-
 struct CvContourEx
 {
     CV_CONTOUR_FIELDS()
@@ -126,16 +123,15 @@ struct CvContourEx
 };
 #endif
 
-
 /** This structure stores information about the chessboard corner.*/
 struct ChessBoardCorner
 {
-    cv::Point2f pt;  // Coordinates of the corner
+    Point2f pt;  // Coordinates of the corner
     int row;         // Board row index
     int count;       // Number of neighbor corners
     struct ChessBoardCorner* neighbors[4]; // Neighbor corners
 
-    ChessBoardCorner(const cv::Point2f& pt_ = cv::Point2f()) :
+    ChessBoardCorner(const Point2f& pt_ = Point2f()) :
         pt(pt_), row(0), count(0)
     {
         neighbors[0] = neighbors[1] = neighbors[2] = neighbors[3] = NULL;
@@ -225,11 +221,11 @@ static void SHOW_QUADS(const std::string & name, const Mat & img_, ChessBoardQua
 class ChessBoardDetector
 {
 public:
-    cv::Mat binarized_image;
+    Mat binarized_image;
     Size pattern_size;
 
-    cv::AutoBuffer<ChessBoardQuad> all_quads;
-    cv::AutoBuffer<ChessBoardCorner> all_corners;
+    AutoBuffer<ChessBoardQuad> all_quads;
+    AutoBuffer<ChessBoardCorner> all_corners;
 
     int all_quads_count;
 
@@ -246,9 +242,9 @@ public:
         all_quads_count = 0;
     }
 
-    void generateQuads(const cv::Mat& image_, int flags);
+    void generateQuads(const Mat& image_, int flags);
 
-    bool processQuads(std::vector<cv::Point2f>& out_corners, int &prev_sqr_size);
+    bool processQuads(std::vector<Point2f>& out_corners, int &prev_sqr_size);
 
     void findQuadNeighbors();
 
@@ -271,7 +267,7 @@ public:
 
     void removeQuadFromGroup(std::vector<ChessBoardQuad*>& quads, ChessBoardQuad& q0);
 
-    bool checkBoardMonotony(const std::vector<cv::Point2f>& corners);
+    bool checkBoardMonotony(const std::vector<Point2f>& corners);
 };
 
 /***************************************************************************************************/
@@ -349,16 +345,16 @@ static void icvBinarizationHistogramBased(Mat & img)
     int iMaxPix1 = iMaxPix/100;
     const int iNumBins = 256;
     const int iMaxPos = 20;
-    cv::AutoBuffer<int, 256> piHistIntensity(iNumBins);
-    cv::AutoBuffer<int, 256> piHistSmooth(iNumBins);
-    cv::AutoBuffer<int, 256> piHistGrad(iNumBins);
-    cv::AutoBuffer<int> piMaxPos(iMaxPos);
+    AutoBuffer<int, 256> piHistIntensity(iNumBins);
+    AutoBuffer<int, 256> piHistSmooth(iNumBins);
+    AutoBuffer<int, 256> piHistGrad(iNumBins);
+    AutoBuffer<int> piMaxPos(iMaxPos);
 
     icvGetIntensityHistogram256(img, piHistIntensity);
 
 #if 0
     // get accumulated sum starting from bright
-    cv::AutoBuffer<int, 256> piAccumSum(iNumBins);
+    AutoBuffer<int, 256> piAccumSum(iNumBins);
     piAccumSum[iNumBins-1] = piHistIntensity[iNumBins-1];
     for (int i = iNumBins - 2; i >= 0; --i)
     {
@@ -508,7 +504,7 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
     if (!corners_.needed())
         CV_Error(Error::StsNullPtr, "Null pointer to corners");
 
-    std::vector<cv::Point2f> out_corners;
+    std::vector<Point2f> out_corners;
 
     if (img.channels() != 1)
     {
@@ -588,8 +584,8 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
         {
             // empiric threshold level
             // thresholding performed here and not inside the cycle to save processing time
-            double mean = cv::mean(img).val[0];
-            int thresh_level = std::max(cvRound(mean - 10), 10);
+            double meanval = mean(img).val[0];
+            int thresh_level = std::max(cvRound(meanval - 10), 10);
             threshold(img, thresh_img, thresh_level, 255, THRESH_BINARY);
         }
         //if flag CALIB_CB_ADAPTIVE_THRESH is not set it doesn't make sense to iterate over k
@@ -680,8 +676,8 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
                 }
             }
         }
-        cv::cornerSubPix(img, out_corners, Size(2, 2), Size(-1,-1),
-                         cv::TermCriteria(TermCriteria::EPS + TermCriteria::MAX_ITER, 15, 0.1));
+        cornerSubPix(img, out_corners, Size(2, 2), Size(-1,-1),
+                         TermCriteria(TermCriteria::EPS + TermCriteria::MAX_ITER, 15, 0.1));
     }
 
     Mat(out_corners).copyTo(corners_);
@@ -699,7 +695,7 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
 // This function has been created as temporary workaround for the bug in current implementation
 // of cvFindChessboardCornes that produces absolutely unordered sets of corners.
 //
-bool ChessBoardDetector::checkBoardMonotony(const std::vector<cv::Point2f>& corners)
+bool ChessBoardDetector::checkBoardMonotony(const std::vector<Point2f>& corners)
 {
     for (int k = 0; k < 2; ++k)
     {
@@ -707,8 +703,8 @@ bool ChessBoardDetector::checkBoardMonotony(const std::vector<cv::Point2f>& corn
         int max_j = (k == 0 ? pattern_size.width: pattern_size.height) - 1;
         for (int i = 0; i < max_i; ++i)
         {
-            cv::Point2f a = k == 0 ? corners[i*pattern_size.width] : corners[i];
-            cv::Point2f b = k == 0 ? corners[(i+1)*pattern_size.width-1]
+            Point2f a = k == 0 ? corners[i*pattern_size.width] : corners[i];
+            Point2f b = k == 0 ? corners[(i+1)*pattern_size.width-1]
                                    : corners[(pattern_size.height-1)*pattern_size.width + i];
             float dx0 = b.x - a.x, dy0 = b.y - a.y;
             if (fabs(dx0) + fabs(dy0) < FLT_EPSILON)
@@ -716,7 +712,7 @@ bool ChessBoardDetector::checkBoardMonotony(const std::vector<cv::Point2f>& corn
             float prevt = 0;
             for (int j = 1; j < max_j; ++j)
             {
-                cv::Point2f c = k == 0 ? corners[i*pattern_size.width + j]
+                Point2f c = k == 0 ? corners[i*pattern_size.width + j]
                                        : corners[j*pattern_size.width + i];
                 float t = ((c.x - a.x)*dx0 + (c.y - a.y)*dy0)/(dx0*dx0 + dy0*dy0);
                 if (t < prevt || t > 1)
@@ -1008,11 +1004,11 @@ int ChessBoardDetector::addOuterQuad(ChessBoardQuad& quad, std::vector<ChessBoar
 
             // make corners of new quad
             // same as neighbor quad, but offset
-            const cv::Point2f pt_offset = quad.corners[i]->pt - quad.corners[j]->pt;
+            const Point2f pt_offset = quad.corners[i]->pt - quad.corners[j]->pt;
             for (int k = 0; k < 4; k++)
             {
                 ChessBoardCorner& corner = (ChessBoardCorner&)all_corners[q_index * 4 + k];
-                const cv::Point2f& pt = quad.corners[k]->pt;
+                const Point2f& pt = quad.corners[k]->pt;
                 corner = ChessBoardCorner(pt);
                 q.corners[k] = &corner;
                 corner.pt += pt_offset;
@@ -1215,14 +1211,14 @@ int ChessBoardDetector::cleanFoundConnectedQuads(std::vector<ChessBoardQuad*>& q
     CV_DbgAssert(quad_count > 0);
 
     // create an array of quadrangle centers
-    cv::AutoBuffer<cv::Point2f> centers(quad_count);
+    AutoBuffer<Point2f> centers(quad_count);
 
-    cv::Point2f center;
+    Point2f center;
     for (int i = 0; i < quad_count; ++i)
     {
         ChessBoardQuad* q = quad_group[i];
 
-        const cv::Point2f ci = (
+        const Point2f ci = (
                 q->corners[0]->pt +
                 q->corners[1]->pt +
                 q->corners[2]->pt +
@@ -1250,11 +1246,11 @@ int ChessBoardDetector::cleanFoundConnectedQuads(std::vector<ChessBoardQuad*>& q
         for (int skip = 0; skip < quad_count; ++skip)
         {
             // get bounding rectangle
-            cv::Point2f temp = centers[skip]; // temporarily make index 'skip' the same as
+            Point2f temp = centers[skip]; // temporarily make index 'skip' the same as
             centers[skip] = center;            // pattern center (so it is not counted for convex hull)
             std::vector<Point2f> hull;
             Mat points(1, quad_count, CV_32FC2, &centers[0]);
-            cv::convexHull(points, hull, true);
+            convexHull(points, hull, true);
             centers[skip] = temp;
             double hull_area = contourArea(hull, true);
 
@@ -1572,7 +1568,7 @@ int ChessBoardDetector::checkQuadGroup(std::vector<ChessBoardQuad*>& quad_group,
 
     // check if we need to revert the order in each row
     {
-        cv::Point2f p0 = out_corners[0]->pt,
+        Point2f p0 = out_corners[0]->pt,
                     p1 = out_corners[pattern_size.width-1]->pt,
                     p2 = out_corners[pattern_size.width]->pt;
         if( (p1.x - p0.x)*(p2.y - p1.y) - (p1.y - p0.y)*(p2.x - p1.x) < 0 )
@@ -1637,7 +1633,7 @@ void ChessBoardDetector::findQuadNeighbors()
             int closest_corner_idx = -1;
             ChessBoardQuad *closest_quad = 0;
 
-            cv::Point2f pt = cur_quad.corners[i]->pt;
+            Point2f pt = cur_quad.corners[i]->pt;
 
             // find the closest corner in all other quadrangles
             for (int k = 0; k < all_quads_count; k++)
@@ -1750,7 +1746,7 @@ void ChessBoardDetector::findQuadNeighbors()
 // returns corners in clockwise order
 // corners don't necessarily start at same position on quad (e.g.,
 //   top left corner)
-void ChessBoardDetector::generateQuads(const cv::Mat& image_, int flags)
+void ChessBoardDetector::generateQuads(const Mat& image_, int flags)
 {
     binarized_image = image_;  // save for debug purposes
 
@@ -1763,16 +1759,16 @@ void ChessBoardDetector::generateQuads(const cv::Mat& image_, int flags)
     int min_size = 25; //cvRound( image->cols * image->rows * .03 * 0.01 * 0.92 );
 
     bool filterQuads = (flags & CALIB_CB_FILTER_QUADS) != 0;
-#ifdef USE_CV_FINDCONTOURS // use cv::findContours
+#ifdef USE_CV_FINDCONTOURS // use findContours
 
     std::vector<std::vector<Point> > contours;
     std::vector<Vec4i> hierarchy;
 
-    cv::findContours(image_, contours, hierarchy, RETR_CCOMP, CHAIN_APPROX_SIMPLE);
+    findContours(image_, contours, hierarchy, RETR_CCOMP, CHAIN_APPROX_SIMPLE);
 
     if (contours.empty())
     {
-        CV_LOG_DEBUG(NULL, "calib3d(chessboard): cv::findContours() returns no contours");
+        CV_LOG_DEBUG(NULL, "calib3d(chessboard): findContours() returns no contours");
         return;
     }
 
@@ -1813,18 +1809,18 @@ void ChessBoardDetector::generateQuads(const cv::Mat& image_, int flags)
         // reject non-quadrangles
         if (approx_contour.size() != 4)
             continue;
-        if (!cv::isContourConvex(approx_contour))
+        if (!isContourConvex(approx_contour))
             continue;
 
-        cv::Point pt[4];
+        Point pt[4];
         for (int i = 0; i < 4; ++i)
             pt[i] = approx_contour[i];
         CV_LOG_VERBOSE(NULL, 9, "... contours(" << contour_quads.size() << " added):" << pt[0] << " " << pt[1] << " " << pt[2] << " " << pt[3]);
 
         if (filterQuads)
         {
-            double p = cv::arcLength(approx_contour, true);
-            double area = cv::contourArea(approx_contour, false);
+            double p = arcLength(approx_contour, true);
+            double area = contourArea(approx_contour, false);
 
             double d1 = sqrt(normL2Sqr<double>(pt[0] - pt[2]));
             double d2 = sqrt(normL2Sqr<double>(pt[1] - pt[3]));
@@ -1885,7 +1881,7 @@ void ChessBoardDetector::generateQuads(const cv::Mat& image_, int flags)
     CvContourEx* board = 0;
 
     // create temporary storage for contours and the sequence of pointers to found quadrangles
-    cv::Ptr<CvMemStorage> temp_storage(cvCreateMemStorage(0));
+    Ptr<CvMemStorage> temp_storage(cvCreateMemStorage(0));
     CvSeq *root = cvCreateSeq(0, sizeof(CvSeq), sizeof(CvSeq*), temp_storage);
 
     // initialize contour retrieving routine
@@ -1922,7 +1918,7 @@ void ChessBoardDetector::generateQuads(const cv::Mat& image_, int flags)
             // reject non-quadrangles
             if( dst_contour->total == 4 && cvCheckContourConvexity(dst_contour) )
             {
-                cv::Point2i pt[4];
+                Point2i pt[4];
                 double p = cvContourPerimeter(dst_contour);
                 double area = fabs(cvContourArea(dst_contour, CV_WHOLE_SEQ));
 
@@ -2001,7 +1997,7 @@ void ChessBoardDetector::generateQuads(const cv::Mat& image_, int flags)
     CV_LOG_VERBOSE(NULL, 3, "filtered quad_count=" << quad_count);
 }
 
-bool ChessBoardDetector::processQuads(std::vector<cv::Point2f>& out_corners, int &prev_sqr_size)
+bool ChessBoardDetector::processQuads(std::vector<Point2f>& out_corners, int &prev_sqr_size)
 {
     out_corners.resize(0);
     if (all_quads_count <= 0)
@@ -2127,7 +2123,7 @@ void drawChessboardCorners( InputOutputArray image, Size patternSize,
 
         for (int i = 0; i < nelems; i++ )
         {
-            cv::Point2i pt(
+            Point2i pt(
                     cvRound(corners_data[i].x*(1 << shift)),
                     cvRound(corners_data[i].y*(1 << shift))
             );
@@ -2150,7 +2146,7 @@ void drawChessboardCorners( InputOutputArray image, Size patternSize,
             {255,0,255,0}
         };
 
-        cv::Point2i prev_pt;
+        Point2i prev_pt;
         for (int y = 0, i = 0; y < patternSize.height; y++)
         {
             const int* line_color = &line_colors[y % line_max][0];
@@ -2161,7 +2157,7 @@ void drawChessboardCorners( InputOutputArray image, Size patternSize,
 
             for (int x = 0; x < patternSize.width; x++, i++)
             {
-                cv::Point2i pt(
+                Point2i pt(
                         cvRound(corners_data[i].x*(1 << shift)),
                         cvRound(corners_data[i].y*(1 << shift))
                 );
@@ -2238,7 +2234,7 @@ bool findCirclesGrid( InputArray _image, Size patternSize,
       {
         isFound = boxFinder.findHoles();
       }
-      catch (const cv::Exception &)
+      catch (const Exception &)
       {
 
       }
@@ -2263,7 +2259,7 @@ bool findCirclesGrid( InputArray _image, Size patternSize,
         {
           Mat orgPointsMat;
           transform(centers, orgPointsMat, H.inv());
-          convertPointsFromHomogeneous(orgPointsMat, centers);
+          cv3d::convertPointsFromHomogeneous(orgPointsMat, centers);
         }
         Mat(centers).copyTo(_centers);
         return true;
@@ -2284,8 +2280,8 @@ bool findCirclesGrid( InputArray _image, Size patternSize,
 bool findCirclesGrid(InputArray _image, Size patternSize,
                      OutputArray _centers, int flags, const Ptr<FeatureDetector> &blobDetector)
 {
-    return cv::findCirclesGrid(_image, patternSize, _centers, flags, blobDetector, CirclesGridFinderParameters());
+    return findCirclesGrid(_image, patternSize, _centers, flags, blobDetector, CirclesGridFinderParameters());
 }
 
-} // namespace
+}} // namespace
 /* End of file. */

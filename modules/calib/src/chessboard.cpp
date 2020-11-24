@@ -1533,7 +1533,7 @@ bool Chessboard::Board::estimatePose(const cv::Size2f &real_size,cv::InputArray 
             object_points.push_back(cv::Point3f(field_width*col-offset_x,field_height*row-offset_y,1.0));
         }
     }
-    return cv::solvePnP(object_points,image_points,K,cv::Mat(),rvec,tvec);//,cv::SOLVEPNP_P3P);
+    return cv3d::solvePnP(object_points,image_points,K,cv::Mat(),rvec,tvec);//,cv::SOLVEPNP_P3P);
 }
 
 float Chessboard::Board::getBlackAngle()const
@@ -2238,7 +2238,7 @@ int Chessboard::Board::detectMarkers(cv::InputArray image)
             src[1] = *cell->top_right;
             src[2] = *cell->bottom_right;
             src[3] = *cell->bottom_left;
-            cv::Mat H = cv::findHomography(src,dst,cv::LMEDS);
+            cv::Mat H = cv3d::findHomography(src,dst,cv3d::LMEDS);
             cv::Mat field;
             cv::warpPerspective(image,field,H,cv::Size(DUMMY_FIELD_SIZE,DUMMY_FIELD_SIZE));
 
@@ -2254,7 +2254,7 @@ int Chessboard::Board::detectMarkers(cv::InputArray image)
             src[1] = *cell2->top_right;
             src[2] = *cell2->bottom_right;
             src[3] = *cell2->bottom_left;
-            H = cv::findHomography(src,dst,cv::LMEDS);
+            H = cv3d::findHomography(src,dst,cv3d::LMEDS);
             cv::warpPerspective(image,field,H,cv::Size(DUMMY_FIELD_SIZE,DUMMY_FIELD_SIZE));
             cv::bitwise_and(field,mask2,temp);
             double reference = cv::sum(temp)[0]/noise_size;
@@ -3136,7 +3136,7 @@ cv::Mat Chessboard::Board::estimateHomography(cv::Rect rect,int field_size)const
     }
     if(dst.size() < 4)
         return cv::Mat();
-    return cv::findHomography(src, dst,cv::LMEDS);
+    return cv3d::findHomography(src, dst,cv3d::LMEDS);
 }
 
 cv::Mat Chessboard::Board::estimateHomography(int field_size)const
@@ -3162,7 +3162,7 @@ cv::Mat Chessboard::Board::estimateHomography(int field_size)const
     }
     if(dst.size() < 4)
         return cv::Mat();
-    return cv::findHomography(src, dst);
+    return cv3d::findHomography(src, dst);
 }
 
 bool Chessboard::Board::findNextPoint(cv::flann::Index &index,const cv::Mat &data,
@@ -3837,11 +3837,11 @@ void Chessboard::detectImpl(InputArray image, std::vector<KeyPoint>& keypoints, 
     detectImpl(image.getMat(),keypoints,mask.getMat());
 }
 
-} // end namespace details
+}} // end namespace details
 
 
 // public API
-bool findChessboardCornersSB(cv::InputArray image_, cv::Size pattern_size,
+bool cv::calib::findChessboardCornersSB(cv::InputArray image_, cv::Size pattern_size,
                              cv::OutputArray corners_, int flags, cv::OutputArray meta_)
 {
     CV_INSTRUMENT_REGION();
@@ -3950,7 +3950,7 @@ bool findChessboardCornersSB(cv::InputArray image_, cv::Size pattern_size,
 }
 
 // public API
-cv::Scalar estimateChessboardSharpness(InputArray image_, Size patternSize, InputArray corners_,
+cv::Scalar cv::calib::estimateChessboardSharpness(InputArray image_, Size patternSize, InputArray corners_,
                                        float rise_distance,bool vertical, cv::OutputArray sharpness)
 {
     CV_INSTRUMENT_REGION();
@@ -3975,6 +3975,3 @@ cv::Scalar estimateChessboardSharpness(InputArray image_, Size patternSize, Inpu
     details::Chessboard::Board board(patternSize,points);
     return board.calcEdgeSharpness(img,rise_distance,vertical,sharpness);
 }
-
-
-} // namespace cv

@@ -5,7 +5,8 @@
 #include "frameProcessor.hpp"
 #include "rotationConverters.hpp"
 
-#include <opencv2/calib3d.hpp>
+#include <opencv2/3d.hpp>
+#include <opencv2/calib.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
 
@@ -58,15 +59,15 @@ FrameProcessor::~FrameProcessor()
 
 bool CalibProcessor::detectAndParseChessboard(const cv::Mat &frame)
 {
-    int chessBoardFlags = cv::CALIB_CB_ADAPTIVE_THRESH | cv::CALIB_CB_NORMALIZE_IMAGE | cv::CALIB_CB_FAST_CHECK;
-    bool isTemplateFound = cv::findChessboardCorners(frame, mBoardSize, mCurrentImagePoints, chessBoardFlags);
+    int chessBoardFlags = cv::calib::CALIB_CB_ADAPTIVE_THRESH | cv::calib::CALIB_CB_NORMALIZE_IMAGE | cv::calib::CALIB_CB_FAST_CHECK;
+    bool isTemplateFound = cv::calib::findChessboardCorners(frame, mBoardSize, mCurrentImagePoints, chessBoardFlags);
 
     if (isTemplateFound) {
         cv::Mat viewGray;
         cv::cvtColor(frame, viewGray, cv::COLOR_BGR2GRAY);
         cv::cornerSubPix(viewGray, mCurrentImagePoints, cv::Size(11,11),
             cv::Size(-1,-1), cv::TermCriteria( cv::TermCriteria::EPS+cv::TermCriteria::COUNT, 30, 0.1 ));
-        cv::drawChessboardCorners(frame, mBoardSize, cv::Mat(mCurrentImagePoints), isTemplateFound);
+        cv::calib::drawChessboardCorners(frame, mBoardSize, cv::Mat(mCurrentImagePoints), isTemplateFound);
         mTemplateLocations.insert(mTemplateLocations.begin(), mCurrentImagePoints[0]);
     }
     return isTemplateFound;
@@ -110,10 +111,10 @@ bool CalibProcessor::detectAndParseChAruco(const cv::Mat &frame)
 
 bool CalibProcessor::detectAndParseACircles(const cv::Mat &frame)
 {
-    bool isTemplateFound = findCirclesGrid(frame, mBoardSize, mCurrentImagePoints, cv::CALIB_CB_ASYMMETRIC_GRID, mBlobDetectorPtr);
+    bool isTemplateFound = findCirclesGrid(frame, mBoardSize, mCurrentImagePoints, cv::calib::CALIB_CB_ASYMMETRIC_GRID, mBlobDetectorPtr);
     if(isTemplateFound) {
         mTemplateLocations.insert(mTemplateLocations.begin(), mCurrentImagePoints[0]);
-        cv::drawChessboardCorners(frame, mBoardSize, cv::Mat(mCurrentImagePoints), isTemplateFound);
+        cv::calib::drawChessboardCorners(frame, mBoardSize, cv::Mat(mCurrentImagePoints), isTemplateFound);
     }
     return isTemplateFound;
 }
@@ -124,18 +125,18 @@ bool CalibProcessor::detectAndParseDualACircles(const cv::Mat &frame)
 
     cv::Mat invertedView;
     cv::bitwise_not(frame, invertedView);
-    bool isWhiteGridFound = cv::findCirclesGrid(frame, mBoardSize, mCurrentImagePoints, cv::CALIB_CB_ASYMMETRIC_GRID, mBlobDetectorPtr);
+    bool isWhiteGridFound = cv::calib::findCirclesGrid(frame, mBoardSize, mCurrentImagePoints, cv::calib::CALIB_CB_ASYMMETRIC_GRID, mBlobDetectorPtr);
     if(!isWhiteGridFound)
         return false;
-    bool isBlackGridFound = cv::findCirclesGrid(invertedView, mBoardSize, blackPointbuf, cv::CALIB_CB_ASYMMETRIC_GRID, mBlobDetectorPtr);
+    bool isBlackGridFound = cv::calib::findCirclesGrid(invertedView, mBoardSize, blackPointbuf, cv::calib::CALIB_CB_ASYMMETRIC_GRID, mBlobDetectorPtr);
 
     if(!isBlackGridFound)
     {
         mCurrentImagePoints.clear();
         return false;
     }
-    cv::drawChessboardCorners(frame, mBoardSize, cv::Mat(mCurrentImagePoints), isWhiteGridFound);
-    cv::drawChessboardCorners(frame, mBoardSize, cv::Mat(blackPointbuf), isBlackGridFound);
+    cv::calib::drawChessboardCorners(frame, mBoardSize, cv::Mat(mCurrentImagePoints), isWhiteGridFound);
+    cv::calib::drawChessboardCorners(frame, mBoardSize, cv::Mat(blackPointbuf), isBlackGridFound);
     mCurrentImagePoints.insert(mCurrentImagePoints.end(), blackPointbuf.begin(), blackPointbuf.end());
     mTemplateLocations.insert(mTemplateLocations.begin(), mCurrentImagePoints[0]);
 
@@ -223,7 +224,7 @@ bool CalibProcessor::checkLastFrame()
 
     if(mBoardType != chAruco) {
         cv::Mat r, t, angles;
-        cv::solvePnP(mCalibData->objectPoints.back(), mCurrentImagePoints, tmpCamMatrix, mCalibData->distCoeffs, r, t);
+        cv3d::solvePnP(mCalibData->objectPoints.back(), mCurrentImagePoints, tmpCamMatrix, mCalibData->distCoeffs, r, t);
         RodriguesToEuler(r, angles, CALIB_DEGREES);
 
         if(fabs(angles.at<double>(0)) > badAngleThresh || fabs(angles.at<double>(1)) > badAngleThresh) {
@@ -444,9 +445,9 @@ cv::Mat ShowProcessor::processFrame(const cv::Mat &frame)
         }
         int calibFlags = mController->getNewFlags();
         displayMessage = "";
-        if(!(calibFlags & cv::CALIB_FIX_ASPECT_RATIO))
+        if(!(calibFlags & cv::calib::CALIB_FIX_ASPECT_RATIO))
             displayMessage.append(cv::format("AR=%.3f ", mCalibdata->cameraMatrix.at<double>(0,0)/mCalibdata->cameraMatrix.at<double>(1,1)));
-        if(calibFlags & cv::CALIB_ZERO_TANGENT_DIST)
+        if(calibFlags & cv::calib::CALIB_ZERO_TANGENT_DIST)
             displayMessage.append("TD=0 ");
         displayMessage.append(cv::format("K1=%.2f K2=%.2f K3=%.2f", mCalibdata->distCoeffs.at<double>(0), mCalibdata->distCoeffs.at<double>(1),
                                          mCalibdata->distCoeffs.at<double>(4)));

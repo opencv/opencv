@@ -262,7 +262,7 @@ void cameraCalibrationTiltTest::SetUp()
     angle.push_back(-maxAngle);
     angle.push_back(maxAngle);
     cv::Matx33d baseMatrix;
-    cv::Rodrigues(m_pointTargetRvec.front(), baseMatrix);
+    cv3d::Rodrigues(m_pointTargetRvec.front(), baseMatrix);
     for (std::vector<double>::const_iterator itAngle = angle.begin(); itAngle != angle.end(); ++itAngle)
     {
         cv::Matx33d rmat;
@@ -270,9 +270,9 @@ void cameraCalibrationTiltTest::SetUp()
         {
             cv::Vec3d rvec(0,0,0);
             rvec(i) = *itAngle;
-            cv::Rodrigues(rvec, rmat);
+            cv3d::Rodrigues(rvec, rmat);
             rmat = baseMatrix*rmat;
-            cv::Rodrigues(rmat, rvec);
+            cv3d::Rodrigues(rmat, rvec);
             m_pointTargetTvec.push_back(m_fovCenter.front());
             m_pointTargetRvec.push_back(rvec);
         }
@@ -318,9 +318,9 @@ void cameraCalibrationTiltTest::numericalDerivative(
     {
         double save = *(param[col]);
         *(param[col]) = save + eps;
-        cv::projectPoints(obj, r, t, cm, dc, pix0);
+        cv3d::projectPoints(obj, r, t, cm, dc, pix0);
         *(param[col]) = save - eps;
-        cv::projectPoints(obj, r, t, cm, dc, pix1);
+        cv3d::projectPoints(obj, r, t, cm, dc, pix1);
         *(param[col]) = save;
 
         std::vector<cv::Point2d>::const_iterator it0 = pix0.begin();
@@ -419,7 +419,7 @@ TEST_F(cameraCalibrationTiltTest, projectPoints)
         randomDistortionCoeff(distortionCoeff, coeffNoiseHalfWidth);
 
         // projection
-        cv::projectPoints(
+        cv3d::projectPoints(
             objectPoints,
             rvec,
             tvec,
@@ -435,7 +435,7 @@ TEST_F(cameraCalibrationTiltTest, projectPoints)
         cv::Mat jacobian(2*numPoints, numParams, CV_64FC1);
 
         // projection and jacobian
-        cv::projectPoints(
+        cv3d::projectPoints(
             objectPoints,
             rvec,
             tvec,
@@ -505,7 +505,7 @@ TEST_F(cameraCalibrationTiltTest, undistortPoints)
         std::vector<cv::Point2d> normalizedUndistorted;
 
         // undistort
-        cv::undistortPoints(distorted,
+        cv3d::undistortPoints(distorted,
             normalizedUndistorted,
             m_cameraMatrix,
             distortionCoeff);
@@ -518,7 +518,7 @@ TEST_F(cameraCalibrationTiltTest, undistortPoints)
 
         // project
         std::vector<cv::Point2d> imagePoints(objectPoints.size());
-        cv::projectPoints(objectPoints,
+        cv3d::projectPoints(objectPoints,
             cv::Vec3d(0,0,0),
             cv::Vec3d(0,0,0),
             m_cameraMatrix,
@@ -595,7 +595,7 @@ TEST_F(cameraCalibrationTiltTest, calibrateCamera)
             std::vector<cv::Point2f> imagePoints;
             std::vector<cv::Point2f> noisyImagePoints;
             // project calibration target to sensor
-            cv::projectPoints(
+            cv3d::projectPoints(
                 objectPoints,
                 *itRvec,
                 *itTvec,
@@ -625,14 +625,14 @@ TEST_F(cameraCalibrationTiltTest, calibrateCamera)
             1e-14);
         // model choice
         int flag =
-            cv::CALIB_FIX_ASPECT_RATIO |
+            cv::calib::CALIB_FIX_ASPECT_RATIO |
             // cv::CALIB_RATIONAL_MODEL |
-            cv::CALIB_FIX_K3 |
+            cv::calib::CALIB_FIX_K3 |
             // cv::CALIB_FIX_K6 |
-            cv::CALIB_THIN_PRISM_MODEL |
-            cv::CALIB_TILTED_MODEL;
+            cv::calib::CALIB_THIN_PRISM_MODEL |
+            cv::calib::CALIB_TILTED_MODEL;
         // estimate
-        double backProjErr = cv::calibrateCamera(
+        double backProjErr = cv::calib::calibrateCamera(
             viewsObjectPoints,
             viewsNoisyImagePoints,
             m_imageSize,
@@ -675,7 +675,7 @@ TEST_F(cameraCalibrationTiltTest, calibrateCamera)
                 EXPECT_LE(dTvec, tolTvec);
 
                 std::vector<cv::Point2f> backProjection;
-                cv::projectPoints(
+                cv3d::projectPoints(
                     viewsObjectPoints[i],
                     outRvecs[i],
                     outTvecs[i],

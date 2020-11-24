@@ -422,7 +422,7 @@ void BestOf2NearestMatcher::match(const ImageFeatures &features1, const ImageFea
     }
 
     // Find pair-wise motion
-    matches_info.H = findHomography(src_points, dst_points, matches_info.inliers_mask, RANSAC);
+    matches_info.H = cv3d::findHomography(src_points, dst_points, matches_info.inliers_mask, cv3d::RANSAC);
     if (matches_info.H.empty() || std::abs(determinant(matches_info.H)) < std::numeric_limits<double>::epsilon())
         return;
 
@@ -469,7 +469,7 @@ void BestOf2NearestMatcher::match(const ImageFeatures &features1, const ImageFea
     }
 
     // Rerun motion estimation on inliers only
-    matches_info.H = findHomography(src_points, dst_points, RANSAC);
+    matches_info.H = findHomography(src_points, dst_points, cv3d::RANSAC);
 }
 
 void BestOf2NearestMatcher::collectGarbage()
@@ -532,9 +532,9 @@ void AffineBestOf2NearestMatcher::match(const ImageFeatures &features1, const Im
 
     // Find pair-wise motion
     if (full_affine_)
-        matches_info.H = estimateAffine2D(src_points, dst_points, matches_info.inliers_mask);
+        matches_info.H = cv3d::estimateAffine2D(src_points, dst_points, matches_info.inliers_mask);
     else
-        matches_info.H = estimateAffinePartial2D(src_points, dst_points, matches_info.inliers_mask);
+        matches_info.H = cv3d::estimateAffinePartial2D(src_points, dst_points, matches_info.inliers_mask);
 
     if (matches_info.H.empty()) {
         // could not find transformation

@@ -3,7 +3,6 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "test_precomp.hpp"
-#include "opencv2/calib3d.hpp"
 
 namespace opencv_test { namespace {
 
@@ -42,7 +41,7 @@ static void generatePose(RNG& rng, double min_theta, double max_theta,
         tvec.at<double>(2,0) *= std::copysign(1.0, rng.uniform(-1.0, 1.0));
     }
 
-    cv::Rodrigues(rvec, R);
+    cv3d::Rodrigues(rvec, R);
 }
 
 static Mat homogeneousInverse(const Mat& T)
@@ -106,12 +105,12 @@ static void simulateDataEyeInHand(RNG& rng, int nPoses,
             //Add some noise for the transformation between the target and the camera
             Mat R_target2cam_noise = T_target2cam(Rect(0, 0, 3, 3));
             Mat rvec_target2cam_noise;
-            cv::Rodrigues(R_target2cam_noise, rvec_target2cam_noise);
+            cv3d::Rodrigues(R_target2cam_noise, rvec_target2cam_noise);
             rvec_target2cam_noise.at<double>(0,0) += rng.gaussian(0.002);
             rvec_target2cam_noise.at<double>(1,0) += rng.gaussian(0.002);
             rvec_target2cam_noise.at<double>(2,0) += rng.gaussian(0.002);
 
-            cv::Rodrigues(rvec_target2cam_noise, R_target2cam_noise);
+            cv3d::Rodrigues(rvec_target2cam_noise, R_target2cam_noise);
 
             Mat t_target2cam_noise = T_target2cam(Rect(3, 0, 1, 3));
             t_target2cam_noise.at<double>(0,0) += rng.gaussian(0.005);
@@ -121,12 +120,12 @@ static void simulateDataEyeInHand(RNG& rng, int nPoses,
             //Add some noise for the transformation between the gripper and the robot base
             Mat R_gripper2base_noise = T_gripper2base(Rect(0, 0, 3, 3));
             Mat rvec_gripper2base_noise;
-            cv::Rodrigues(R_gripper2base_noise, rvec_gripper2base_noise);
+            cv3d::Rodrigues(R_gripper2base_noise, rvec_gripper2base_noise);
             rvec_gripper2base_noise.at<double>(0,0) += rng.gaussian(0.001);
             rvec_gripper2base_noise.at<double>(1,0) += rng.gaussian(0.001);
             rvec_gripper2base_noise.at<double>(2,0) += rng.gaussian(0.001);
 
-            cv::Rodrigues(rvec_gripper2base_noise, R_gripper2base_noise);
+            cv3d::Rodrigues(rvec_gripper2base_noise, R_gripper2base_noise);
 
             Mat t_gripper2base_noise = T_gripper2base(Rect(3, 0, 1, 3));
             t_gripper2base_noise.at<double>(0,0) += rng.gaussian(0.001);
@@ -136,7 +135,7 @@ static void simulateDataEyeInHand(RNG& rng, int nPoses,
 
         //Test rvec representation
         Mat rvec_target2cam;
-        cv::Rodrigues(T_target2cam(Rect(0, 0, 3, 3)), rvec_target2cam);
+        cv3d::Rodrigues(T_target2cam(Rect(0, 0, 3, 3)), rvec_target2cam);
         R_target2cam.push_back(rvec_target2cam);
         t_target2cam.push_back(T_target2cam(Rect(3, 0, 1, 3)));
     }
@@ -188,12 +187,12 @@ static void simulateDataEyeToHand(RNG& rng, int nPoses,
             //Add some noise for the transformation between the target and the camera
             Mat R_target2cam_noise = T_target2cam(Rect(0, 0, 3, 3));
             Mat rvec_target2cam_noise;
-            cv::Rodrigues(R_target2cam_noise, rvec_target2cam_noise);
+            cv3d::Rodrigues(R_target2cam_noise, rvec_target2cam_noise);
             rvec_target2cam_noise.at<double>(0,0) += rng.gaussian(0.002);
             rvec_target2cam_noise.at<double>(1,0) += rng.gaussian(0.002);
             rvec_target2cam_noise.at<double>(2,0) += rng.gaussian(0.002);
 
-            cv::Rodrigues(rvec_target2cam_noise, R_target2cam_noise);
+            cv3d::Rodrigues(rvec_target2cam_noise, R_target2cam_noise);
 
             Mat t_target2cam_noise = T_target2cam(Rect(3, 0, 1, 3));
             t_target2cam_noise.at<double>(0,0) += rng.gaussian(0.005);
@@ -202,12 +201,12 @@ static void simulateDataEyeToHand(RNG& rng, int nPoses,
 
             //Add some noise for the transformation between the robot base and the gripper
             Mat rvec_base2gripper_noise;
-            cv::Rodrigues(R_base2gripper_, rvec_base2gripper_noise);
+            cv3d::Rodrigues(R_base2gripper_, rvec_base2gripper_noise);
             rvec_base2gripper_noise.at<double>(0,0) += rng.gaussian(0.001);
             rvec_base2gripper_noise.at<double>(1,0) += rng.gaussian(0.001);
             rvec_base2gripper_noise.at<double>(2,0) += rng.gaussian(0.001);
 
-            cv::Rodrigues(rvec_base2gripper_noise, R_base2gripper_);
+            cv3d::Rodrigues(rvec_base2gripper_noise, R_base2gripper_);
 
             t_base2gripper_.at<double>(0,0) += rng.gaussian(0.001);
             t_base2gripper_.at<double>(1,0) += rng.gaussian(0.001);
@@ -219,34 +218,34 @@ static void simulateDataEyeToHand(RNG& rng, int nPoses,
 
         //Test rvec representation
         Mat rvec_target2cam;
-        cv::Rodrigues(T_target2cam(Rect(0, 0, 3, 3)), rvec_target2cam);
+        cv3d::Rodrigues(T_target2cam(Rect(0, 0, 3, 3)), rvec_target2cam);
         R_target2cam.push_back(rvec_target2cam);
         t_target2cam.push_back(T_target2cam(Rect(3, 0, 1, 3)));
     }
 }
 
-static std::string getMethodName(HandEyeCalibrationMethod method)
+static std::string getMethodName(cv::calib::HandEyeCalibrationMethod method)
 {
     std::string method_name = "";
     switch (method)
     {
-    case CALIB_HAND_EYE_TSAI:
+    case cv::calib::CALIB_HAND_EYE_TSAI:
         method_name = "Tsai";
         break;
 
-    case CALIB_HAND_EYE_PARK:
+    case cv::calib::CALIB_HAND_EYE_PARK:
         method_name = "Park";
         break;
 
-    case CALIB_HAND_EYE_HORAUD:
+    case cv::calib::CALIB_HAND_EYE_HORAUD:
         method_name = "Horaud";
         break;
 
-    case CALIB_HAND_EYE_ANDREFF:
+    case cv::calib::CALIB_HAND_EYE_ANDREFF:
         method_name = "Andreff";
         break;
 
-    case CALIB_HAND_EYE_DANIILIDIS:
+    case cv::calib::CALIB_HAND_EYE_DANIILIDIS:
         method_name = "Daniilidis";
         break;
 
@@ -257,16 +256,16 @@ static std::string getMethodName(HandEyeCalibrationMethod method)
     return method_name;
 }
 
-static std::string getMethodName(RobotWorldHandEyeCalibrationMethod method)
+static std::string getMethodName(cv::calib::RobotWorldHandEyeCalibrationMethod method)
 {
     std::string method_name = "";
     switch (method)
     {
-    case CALIB_ROBOT_WORLD_HAND_EYE_SHAH:
+    case cv::calib::CALIB_ROBOT_WORLD_HAND_EYE_SHAH:
         method_name = "Shah";
         break;
 
-    case CALIB_ROBOT_WORLD_HAND_EYE_LI:
+    case cv::calib::CALIB_ROBOT_WORLD_HAND_EYE_LI:
         method_name = "Li";
         break;
 
@@ -409,36 +408,36 @@ class CV_CalibrateHandEyeTest : public cvtest::BaseTest
 {
 public:
     CV_CalibrateHandEyeTest(bool eyeToHand) : eyeToHandConfig(eyeToHand) {
-        eps_rvec[CALIB_HAND_EYE_TSAI] = 1.0e-8;
-        eps_rvec[CALIB_HAND_EYE_PARK] = 1.0e-8;
-        eps_rvec[CALIB_HAND_EYE_HORAUD] = 1.0e-8;
-        eps_rvec[CALIB_HAND_EYE_ANDREFF] = 1.0e-8;
-        eps_rvec[CALIB_HAND_EYE_DANIILIDIS] = 1.0e-8;
+        eps_rvec[cv::calib::CALIB_HAND_EYE_TSAI] = 1.0e-8;
+        eps_rvec[cv::calib::CALIB_HAND_EYE_PARK] = 1.0e-8;
+        eps_rvec[cv::calib::CALIB_HAND_EYE_HORAUD] = 1.0e-8;
+        eps_rvec[cv::calib::CALIB_HAND_EYE_ANDREFF] = 1.0e-8;
+        eps_rvec[cv::calib::CALIB_HAND_EYE_DANIILIDIS] = 1.0e-8;
 
-        eps_tvec[CALIB_HAND_EYE_TSAI] = 1.0e-8;
-        eps_tvec[CALIB_HAND_EYE_PARK] = 1.0e-8;
-        eps_tvec[CALIB_HAND_EYE_HORAUD] = 1.0e-8;
-        eps_tvec[CALIB_HAND_EYE_ANDREFF] = 1.0e-8;
-        eps_tvec[CALIB_HAND_EYE_DANIILIDIS] = 1.0e-8;
+        eps_tvec[cv::calib::CALIB_HAND_EYE_TSAI] = 1.0e-8;
+        eps_tvec[cv::calib::CALIB_HAND_EYE_PARK] = 1.0e-8;
+        eps_tvec[cv::calib::CALIB_HAND_EYE_HORAUD] = 1.0e-8;
+        eps_tvec[cv::calib::CALIB_HAND_EYE_ANDREFF] = 1.0e-8;
+        eps_tvec[cv::calib::CALIB_HAND_EYE_DANIILIDIS] = 1.0e-8;
 
-        eps_rvec_noise[CALIB_HAND_EYE_TSAI] = 2.0e-2;
-        eps_rvec_noise[CALIB_HAND_EYE_PARK] = 2.0e-2;
-        eps_rvec_noise[CALIB_HAND_EYE_HORAUD] = 2.0e-2;
-        eps_rvec_noise[CALIB_HAND_EYE_ANDREFF] = 1.0e-2;
-        eps_rvec_noise[CALIB_HAND_EYE_DANIILIDIS] = 1.0e-2;
+        eps_rvec_noise[cv::calib::CALIB_HAND_EYE_TSAI] = 2.0e-2;
+        eps_rvec_noise[cv::calib::CALIB_HAND_EYE_PARK] = 2.0e-2;
+        eps_rvec_noise[cv::calib::CALIB_HAND_EYE_HORAUD] = 2.0e-2;
+        eps_rvec_noise[cv::calib::CALIB_HAND_EYE_ANDREFF] = 1.0e-2;
+        eps_rvec_noise[cv::calib::CALIB_HAND_EYE_DANIILIDIS] = 1.0e-2;
 
-        eps_tvec_noise[CALIB_HAND_EYE_TSAI] = 5.0e-2;
-        eps_tvec_noise[CALIB_HAND_EYE_PARK] = 5.0e-2;
-        eps_tvec_noise[CALIB_HAND_EYE_HORAUD] = 5.0e-2;
+        eps_tvec_noise[cv::calib::CALIB_HAND_EYE_TSAI] = 5.0e-2;
+        eps_tvec_noise[cv::calib::CALIB_HAND_EYE_PARK] = 5.0e-2;
+        eps_tvec_noise[cv::calib::CALIB_HAND_EYE_HORAUD] = 5.0e-2;
         if (eyeToHandConfig)
         {
-            eps_tvec_noise[CALIB_HAND_EYE_ANDREFF] = 7.0e-2;
+            eps_tvec_noise[cv::calib::CALIB_HAND_EYE_ANDREFF] = 7.0e-2;
         }
         else
         {
-            eps_tvec_noise[CALIB_HAND_EYE_ANDREFF] = 5.0e-2;
+            eps_tvec_noise[cv::calib::CALIB_HAND_EYE_ANDREFF] = 5.0e-2;
         }
-        eps_tvec_noise[CALIB_HAND_EYE_DANIILIDIS] = 5.0e-2;
+        eps_tvec_noise[cv::calib::CALIB_HAND_EYE_DANIILIDIS] = 5.0e-2;
     }
 protected:
     virtual void run(int);
@@ -461,12 +460,12 @@ void CV_CalibrateHandEyeTest::run(int)
     std::vector<std::vector<double> > vec_rvec_diff_noise(5);
     std::vector<std::vector<double> > vec_tvec_diff_noise(5);
 
-    std::vector<HandEyeCalibrationMethod> methods;
-    methods.push_back(CALIB_HAND_EYE_TSAI);
-    methods.push_back(CALIB_HAND_EYE_PARK);
-    methods.push_back(CALIB_HAND_EYE_HORAUD);
-    methods.push_back(CALIB_HAND_EYE_ANDREFF);
-    methods.push_back(CALIB_HAND_EYE_DANIILIDIS);
+    std::vector<cv::calib::HandEyeCalibrationMethod> methods;
+    methods.push_back(cv::calib::CALIB_HAND_EYE_TSAI);
+    methods.push_back(cv::calib::CALIB_HAND_EYE_PARK);
+    methods.push_back(cv::calib::CALIB_HAND_EYE_HORAUD);
+    methods.push_back(cv::calib::CALIB_HAND_EYE_ANDREFF);
+    methods.push_back(cv::calib::CALIB_HAND_EYE_DANIILIDIS);
 
     const int nTests = 100;
     for (int i = 0; i < nTests; i++)
@@ -487,13 +486,13 @@ void CV_CalibrateHandEyeTest::run(int)
                 for (size_t idx = 0; idx < methods.size(); idx++)
                 {
                     Mat rvec_cam2base_true;
-                    cv::Rodrigues(R_cam2base_true, rvec_cam2base_true);
+                    cv3d::Rodrigues(R_cam2base_true, rvec_cam2base_true);
 
                     Mat R_cam2base_est, t_cam2base_est;
                     calibrateHandEye(R_base2gripper, t_base2gripper, R_target2cam, t_target2cam, R_cam2base_est, t_cam2base_est, methods[idx]);
 
                     Mat rvec_cam2base_est;
-                    cv::Rodrigues(R_cam2base_est, rvec_cam2base_est);
+                    cv3d::Rodrigues(R_cam2base_est, rvec_cam2base_est);
 
                     double rvecDiff = cvtest::norm(rvec_cam2base_true, rvec_cam2base_est, NORM_L2);
                     double tvecDiff = cvtest::norm(t_cam2base_true, t_cam2base_est, NORM_L2);
@@ -527,13 +526,13 @@ void CV_CalibrateHandEyeTest::run(int)
                 for (size_t idx = 0; idx < methods.size(); idx++)
                 {
                     Mat rvec_cam2base_true;
-                    cv::Rodrigues(R_cam2base_true, rvec_cam2base_true);
+                    cv3d::Rodrigues(R_cam2base_true, rvec_cam2base_true);
 
                     Mat R_cam2base_est, t_cam2base_est;
                     calibrateHandEye(R_base2gripper, t_base2gripper, R_target2cam, t_target2cam, R_cam2base_est, t_cam2base_est, methods[idx]);
 
                     Mat rvec_cam2base_est;
-                    cv::Rodrigues(R_cam2base_est, rvec_cam2base_est);
+                    cv3d::Rodrigues(R_cam2base_est, rvec_cam2base_est);
 
                     double rvecDiff = cvtest::norm(rvec_cam2base_true, rvec_cam2base_est, NORM_L2);
                     double tvecDiff = cvtest::norm(t_cam2base_true, t_cam2base_est, NORM_L2);
@@ -569,13 +568,13 @@ void CV_CalibrateHandEyeTest::run(int)
                 for (size_t idx = 0; idx < methods.size(); idx++)
                 {
                     Mat rvec_cam2gripper_true;
-                    cv::Rodrigues(R_cam2gripper_true, rvec_cam2gripper_true);
+                    cv3d::Rodrigues(R_cam2gripper_true, rvec_cam2gripper_true);
 
                     Mat R_cam2gripper_est, t_cam2gripper_est;
                     calibrateHandEye(R_gripper2base, t_gripper2base, R_target2cam, t_target2cam, R_cam2gripper_est, t_cam2gripper_est, methods[idx]);
 
                     Mat rvec_cam2gripper_est;
-                    cv::Rodrigues(R_cam2gripper_est, rvec_cam2gripper_est);
+                    cv3d::Rodrigues(R_cam2gripper_est, rvec_cam2gripper_est);
 
                     double rvecDiff = cvtest::norm(rvec_cam2gripper_true, rvec_cam2gripper_est, NORM_L2);
                     double tvecDiff = cvtest::norm(t_cam2gripper_true, t_cam2gripper_est, NORM_L2);
@@ -609,13 +608,13 @@ void CV_CalibrateHandEyeTest::run(int)
                 for (size_t idx = 0; idx < methods.size(); idx++)
                 {
                     Mat rvec_cam2gripper_true;
-                    cv::Rodrigues(R_cam2gripper_true, rvec_cam2gripper_true);
+                    cv3d::Rodrigues(R_cam2gripper_true, rvec_cam2gripper_true);
 
                     Mat R_cam2gripper_est, t_cam2gripper_est;
                     calibrateHandEye(R_gripper2base, t_gripper2base, R_target2cam, t_target2cam, R_cam2gripper_est, t_cam2gripper_est, methods[idx]);
 
                     Mat rvec_cam2gripper_est;
-                    cv::Rodrigues(R_cam2gripper_est, rvec_cam2gripper_est);
+                    cv3d::Rodrigues(R_cam2gripper_est, rvec_cam2gripper_est);
 
                     double rvecDiff = cvtest::norm(rvec_cam2gripper_true, rvec_cam2gripper_est, NORM_L2);
                     double tvecDiff = cvtest::norm(t_cam2gripper_true, t_cam2gripper_est, NORM_L2);
@@ -671,11 +670,14 @@ TEST(Calib3d_CalibrateHandEye, regression_17986)
     std::vector<Mat> R_base2gripper, t_base2gripper;
     loadDataset(R_target2cam, t_target2cam, R_base2gripper, t_base2gripper);
 
-    std::vector<HandEyeCalibrationMethod> methods = {CALIB_HAND_EYE_TSAI,
-                                                     CALIB_HAND_EYE_PARK,
-                                                     CALIB_HAND_EYE_HORAUD,
-                                                     CALIB_HAND_EYE_ANDREFF,
-                                                     CALIB_HAND_EYE_DANIILIDIS};
+    std::vector<cv::calib::HandEyeCalibrationMethod> methods =
+    {
+        cv::calib::CALIB_HAND_EYE_TSAI,
+        cv::calib::CALIB_HAND_EYE_PARK,
+        cv::calib::CALIB_HAND_EYE_HORAUD,
+        cv::calib::CALIB_HAND_EYE_ANDREFF,
+        cv::calib::CALIB_HAND_EYE_DANIILIDIS
+    };
 
     for (auto method : methods) {
         SCOPED_TRACE(cv::format("method=%s", getMethodName(method).c_str()));
@@ -700,12 +702,15 @@ TEST(Calib3d_CalibrateRobotWorldHandEye, regression)
     for (size_t i = 0; i < R_world2cam.size(); i++)
     {
         Mat rvec;
-        cv::Rodrigues(R_world2cam[i], rvec);
+        cv3d::Rodrigues(R_world2cam[i], rvec);
         rvec_R_world2cam.push_back(rvec);
     }
 
-    std::vector<RobotWorldHandEyeCalibrationMethod> methods = {CALIB_ROBOT_WORLD_HAND_EYE_SHAH,
-                                                               CALIB_ROBOT_WORLD_HAND_EYE_LI};
+    std::vector<cv::calib::RobotWorldHandEyeCalibrationMethod> methods =
+    {
+        cv::calib::CALIB_ROBOT_WORLD_HAND_EYE_SHAH,
+        cv::calib::CALIB_ROBOT_WORLD_HAND_EYE_LI
+    };
 
     Matx33d wRb, cRg;
     Matx31d wtb, ctg;
@@ -716,8 +721,9 @@ TEST(Calib3d_CalibrateRobotWorldHandEye, regression)
 
         Matx33d wRb_est, cRg_est;
         Matx31d wtb_est, ctg_est;
-        calibrateRobotWorldHandEye(rvec_R_world2cam, t_worldt2cam, R_base2gripper, t_base2gripper,
-                                   wRb_est, wtb_est, cRg_est, ctg_est, method);
+        cv::calib::calibrateRobotWorldHandEye(rvec_R_world2cam, t_worldt2cam,
+                                              R_base2gripper, t_base2gripper,
+                                              wRb_est, wtb_est, cRg_est, ctg_est, method);
 
         EXPECT_TRUE(checkRange(wRb_est));
         EXPECT_TRUE(checkRange(wtb_est));
@@ -732,7 +738,7 @@ TEST(Calib3d_CalibrateRobotWorldHandEye, regression)
         //rotation error
         Matx33d wRw_est = wRb * wRb_est.t();
         Matx31d rvec_wRw_est;
-        cv::Rodrigues(wRw_est, rvec_wRw_est);
+        cv3d::Rodrigues(wRw_est, rvec_wRw_est);
         double X_rotation_error = cv::norm(rvec_wRw_est)*180/CV_PI;
         //translation error
         double X_t_error = cv::norm(wtb_est - wtb);
@@ -745,7 +751,7 @@ TEST(Calib3d_CalibrateRobotWorldHandEye, regression)
         //rotation error
         Matx33d cRc_est = cRg * cRg_est.t();
         Matx31d rvec_cMc_est;
-        cv::Rodrigues(cRc_est, rvec_cMc_est);
+        cv3d::Rodrigues(cRc_est, rvec_cMc_est);
         double Z_rotation_error = cv::norm(rvec_cMc_est)*180/CV_PI;
         //translation error
         double Z_t_error = cv::norm(ctg_est - ctg);

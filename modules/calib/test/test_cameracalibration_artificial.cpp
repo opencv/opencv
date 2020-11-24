@@ -69,7 +69,7 @@ Mat calcRvec(const vector<Point3f>& points, const Size& cornerSize)
     *rot.ptr<Vec3d>(2) = ez * (1.0/cv::norm(ez)); // TODO cvtest
 
     Mat res;
-    cvtest::Rodrigues(rot.t(), res);
+    cv3d::Rodrigues(rot.t(), res);
     return res.reshape(1, 1);
 }
 
@@ -194,8 +194,8 @@ protected:
         const int errMsgNum = 4;
         for(size_t i = 0; i < rvecs.size(); ++i)
         {
-            cvtest::Rodrigues(rvecs[i], rmat);
-            cvtest::Rodrigues(rvecs_est[i], rmat_est);
+            cv3d::Rodrigues(rvecs[i], rmat);
+            cv3d::Rodrigues(rvecs_est[i], rmat_est);
 
             if (cvtest::norm(rmat_est, rmat, NORM_L2) > eps* (cvtest::norm(rmat, NORM_L2) + dlt))
             {
@@ -227,8 +227,8 @@ protected:
 
         for(size_t i = 0; i < rvecs_exp.size(); ++i)
         {
-            projectPoints(_chessboard3D, _rvecs_exp[i], _tvecs_exp[i], eye33, zero15, uv_exp);
-            projectPoints(_chessboard3D, rvecs_est[i], tvecs_est[i], eye33, zero15, uv_est);
+            cv3d::projectPoints(_chessboard3D, _rvecs_exp[i], _tvecs_exp[i], eye33, zero15, uv_exp);
+            cv3d::projectPoints(_chessboard3D, rvecs_est[i], tvecs_est[i], eye33, zero15, uv_est);
             for(size_t j = 0; j < cb3d.size(); ++j)
                 res += cv::norm(uv_exp[i] - uv_est[i]); // TODO cvtest
         }
@@ -268,7 +268,7 @@ protected:
             for(;;)
             {
                 boards[i] = cbg(bg, camMat, distCoeffs, sqSile, corners_art);
-                if(findChessboardCorners(boards[i], cornersSize, corners_fcb))
+                if(cv::calib::findChessboardCorners(boards[i], cornersSize, corners_fcb))
                     break;
             }
 
@@ -311,7 +311,7 @@ protected:
                 Mat gray;
                 cvtColor(boards[i], gray, COLOR_BGR2GRAY);
                 vector<Point2f> tmp = imagePoints_findCb[i];
-                find4QuadCornerSubpix(gray, tmp, Size(5, 5));
+                cv::calib::find4QuadCornerSubpix(gray, tmp, Size(5, 5));
                 imagePoints.push_back(tmp);
             }
             break;
@@ -322,9 +322,11 @@ protected:
         Mat camMat_est = Mat::eye(3, 3, CV_64F), distCoeffs_est = Mat::zeros(1, 5, CV_64F);
         vector<Mat> rvecs_est, tvecs_est;
 
-        int flags = /*CALIB_FIX_K3|*/CALIB_FIX_K4|CALIB_FIX_K5|CALIB_FIX_K6; //CALIB_FIX_K3; //CALIB_FIX_ASPECT_RATIO |  | CALIB_ZERO_TANGENT_DIST;
+        int flags = /*CALIB_FIX_K3|*/cv::calib::CALIB_FIX_K4|cv::calib::CALIB_FIX_K5|cv::calib::CALIB_FIX_K6; //CALIB_FIX_K3; //CALIB_FIX_ASPECT_RATIO |  | CALIB_ZERO_TANGENT_DIST;
         TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 100, DBL_EPSILON);
-        double rep_error = calibrateCamera(objectPoints, imagePoints, imgSize, camMat_est, distCoeffs_est, rvecs_est, tvecs_est, flags, criteria);
+        double rep_error = cv::calib::calibrateCamera(objectPoints, imagePoints, imgSize,
+                                                      camMat_est, distCoeffs_est, rvecs_est,
+                                                      tvecs_est, flags, criteria);
         rep_error /= brdsNum * cornersSize.area();
 
         const double thres = 1;
@@ -353,7 +355,7 @@ protected:
         rvecs_spnp.resize(brdsNum);
         tvecs_spnp.resize(brdsNum);
         for(size_t i = 0; i < brdsNum; ++i)
-            solvePnP(objectPoints[i], imagePoints[i], camMat, distCoeffs, rvecs_spnp[i], tvecs_spnp[i]);
+            cv3d::solvePnP(objectPoints[i], imagePoints[i], camMat, distCoeffs, rvecs_spnp[i], tvecs_spnp[i]);
 
         compareShiftVecs(tvecs_exp, tvecs_spnp);
         compareRotationVecs(rvecs_exp, rvecs_spnp);

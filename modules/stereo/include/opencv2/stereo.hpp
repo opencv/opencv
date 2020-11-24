@@ -172,6 +172,19 @@ CV_EXPORTS_W bool stereoRectifyUncalibrated( InputArray points1, InputArray poin
                                              double threshold = 5 );
 
 
+CV_EXPORTS float rectify3Collinear( InputArray _cameraMatrix1, InputArray _distCoeffs1,
+                   InputArray _cameraMatrix2, InputArray _distCoeffs2,
+                   InputArray _cameraMatrix3, InputArray _distCoeffs3,
+                   InputArrayOfArrays _imgpt1,
+                   InputArrayOfArrays _imgpt3,
+                   Size imageSize, InputArray _Rmat12, InputArray _Tmat12,
+                   InputArray _Rmat13, InputArray _Tmat13,
+                   OutputArray _Rmat1, OutputArray _Rmat2, OutputArray _Rmat3,
+                   OutputArray _Pmat1, OutputArray _Pmat2, OutputArray _Pmat3,
+                   OutputArray _Qmat,
+                   double alpha, Size newImgSize,
+                   Rect* roi1, Rect* roi2, int flags );
+
 /** @brief The base class for stereo correspondence algorithms.
  */
 class CV_EXPORTS_W StereoMatcher : public Algorithm

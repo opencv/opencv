@@ -504,7 +504,7 @@ TEST_F(fisheyeTest, stereoRectify)
     double balance = 0.0, fov_scale = 1.1;
     cv::Mat R1, R2, P1, P2, Q;
     cv::fisheye::stereoRectify(K1, D1, K2, D2, calibration_size, theR, theT, R1, R2, P1, P2, Q,
-                      cv::CALIB_ZERO_DISPARITY, requested_size, balance, fov_scale);
+                      cv::calib::CALIB_ZERO_DISPARITY, requested_size, balance, fov_scale);
 
     // Collected with these CMake flags: -DWITH_IPP=OFF -DCV_ENABLE_INTRINSICS=OFF -DCV_DISABLE_OPTIMIZATION=ON -DCMAKE_BUILD_TYPE=Debug
     cv::Matx33d R1_ref(

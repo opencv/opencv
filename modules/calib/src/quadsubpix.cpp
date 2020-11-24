@@ -48,6 +48,7 @@
 #include <math.h>
 
 namespace cv {
+namespace calib {
 
 inline bool is_smaller(const std::pair<int, float>& p1, const std::pair<int, float>& p2)
 {
@@ -159,9 +160,7 @@ static int segment_hist_max(const Mat& hist, int& low_thresh, int& high_thresh)
     }
 }
 
-}
-
-bool cv::find4QuadCornerSubpix(InputArray _img, InputOutputArray _corners, Size region_size)
+bool find4QuadCornerSubpix(InputArray _img, InputOutputArray _corners, Size region_size)
 {
     CV_INSTRUMENT_REGION();
 
@@ -238,3 +237,5 @@ bool cv::find4QuadCornerSubpix(InputArray _img, InputOutputArray _corners, Size 
 
     return true;
 }
+
+}}

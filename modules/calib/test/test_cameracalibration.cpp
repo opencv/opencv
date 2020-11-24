@@ -40,7 +40,7 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/calib3d/calib3d_c.h"
+#include "opencv2/stereo.hpp"
 
 namespace opencv_test { namespace {
 
@@ -420,7 +420,7 @@ void CV_CameraCalibrationTest::run( int start_from )
         transVects.resize(numImages);
         rotMatrs.resize(numImages);
         newObjPoints.resize(numPoints);
-        stdDevs.resize(CALIB_NINTRINSIC + 6*numImages + 3*numPoints);
+        stdDevs.resize(cv::calib::CALIB_NINTRINSIC + 6*numImages + 3*numPoints);
         perViewErrors.resize(numImages);
 
         goodTransVects.resize(numImages);
@@ -428,7 +428,7 @@ void CV_CameraCalibrationTest::run( int start_from )
         goodObjPoints.resize(numPoints);
         goodPerViewErrors.resize(numImages);
 
-        int nstddev = CALIB_NINTRINSIC + 6*numImages + 3*numPoints;
+        int nstddev = cv::calib::CALIB_NINTRINSIC + 6*numImages + 3*numPoints;
         goodStdDevs.resize(nstddev);
 
         for( currImage = 0; currImage < numImages; currImage++ )
@@ -514,7 +514,7 @@ void CV_CameraCalibrationTest::run( int start_from )
         }
 
         /* Read good stdDeviations */
-        for (i = 0; i < CALIB_NINTRINSIC + numImages*6; i++)
+        for (i = 0; i < cv::calib::CALIB_NINTRINSIC + numImages*6; i++)
         {
             values_read = fscanf(file, "%lf", &goodStdDevs[i]);
             CV_Assert(values_read == 1);
@@ -773,13 +773,13 @@ void CV_CameraCalibrationTest_CPP::calibrate(Size imageSize,
         Mat(_objectPoints[i]).convertTo(objectPoints[i], CV_32F);
     }
 
-    size_t nstddev0 = CV_CALIB_NINTRINSIC + imageCount*6, nstddev1 = nstddev0 + _imagePoints[0].size()*3;
+    size_t nstddev0 = cv::calib::CALIB_NINTRINSIC + imageCount*6, nstddev1 = nstddev0 + _imagePoints[0].size()*3;
     for( i = nstddev0; i < nstddev1; i++ )
     {
         stdDevs[i] = 0.0;
     }
 
-    calibrateCameraRO( objectPoints,
+    cv::calib::calibrateCameraRO( objectPoints,
                        imagePoints,
                        imageSize,
                        iFixedPoint,
@@ -811,7 +811,7 @@ void CV_CameraCalibrationTest_CPP::calibrate(Size imageSize,
     for( i = 0; i < imageCount; i++ )
     {
         Mat r9;
-        cvtest::Rodrigues( rvecs[i], r9 );
+        cv3d::Rodrigues( rvecs[i], r9 );
         cv::transpose(r9, r9);
         r9.convertTo(rotationMatrices[i], CV_64F);
         tvecs[i].convertTo(translationVectors[i], CV_64F);
@@ -824,7 +824,7 @@ void CV_CameraCalibrationTest_CPP::project( const std::vector<Point3d>& objectPo
                          const Mat& cameraMatrix, const Mat& distortion,
                          std::vector<Point2d>& imagePoints )
 {
-    projectPoints(objectPoints, rotationMatrix, translationVector, cameraMatrix, distortion, imagePoints );
+    cv3d::projectPoints(objectPoints, rotationMatrix, translationVector, cameraMatrix, distortion, imagePoints );
     /*Mat objectPoints( pointCount, 3, CV_64FC1, _objectPoints );
     Mat rmat( 3, 3, CV_64FC1, rotationMatrix ),
         rvec( 1, 3, CV_64FC1 ),
@@ -966,7 +966,7 @@ void CV_CalibrationMatrixValuesTest_CPP::calibMatrixValues( const Mat& cameraMat
                                                          double& fovx, double& fovy, double& focalLength,
                                                          Point2d& principalPoint, double& aspectRatio )
 {
-    calibrationMatrixValues( cameraMatrix, imageSize, apertureWidth, apertureHeight,
+    cv::calib::calibrationMatrixValues( cameraMatrix, imageSize, apertureWidth, apertureHeight,
         fovx, fovy, focalLength, principalPoint, aspectRatio );
 }
 
@@ -1046,7 +1046,7 @@ void CV_ProjectPointsTest::run(int)
     rvec(0,1) = rng.uniform( rMinVal, rMaxVal );
     rvec(0,2) = rng.uniform( rMinVal, rMaxVal );
     rmat = cv::Mat_<float>::zeros(3, 3);
-    cvtest::Rodrigues( rvec, rmat );
+    cv3d::Rodrigues( rvec, rmat );
 
     tvec(0,0) = rng.uniform( tMinVal, tMaxVal );
     tvec(0,1) = rng.uniform( tMinVal, tMaxVal );
@@ -1229,7 +1229,7 @@ void CV_ProjectPointsTest_CPP::project( const Mat& objectPoints, const Mat& rvec
                                        Mat& dpdrot, Mat& dpdt, Mat& dpdf, Mat& dpdc, Mat& dpddist, double aspectRatio)
 {
     Mat J;
-    projectPoints( objectPoints, rvec, tvec, cameraMatrix, distCoeffs, imagePoints, J, aspectRatio);
+    cv3d::projectPoints( objectPoints, rvec, tvec, cameraMatrix, distCoeffs, imagePoints, J, aspectRatio);
     J.colRange(0, 3).copyTo(dpdrot);
     J.colRange(3, 6).copyTo(dpdt);
     J.colRange(6, 8).copyTo(dpdf);
@@ -1306,7 +1306,7 @@ bool CV_StereoCalibrationTest::checkPandROI( int test_case_idx, const Mat& M, co
         for( x = 0; x < N; x++ )
             pts.push_back(Point2f((float)x*imgsize.width/(N-1), (float)y*imgsize.height/(N-1)));
 
-    undistortPoints(pts, upts, M, D, R, P );
+    cv3d::undistortPoints(pts, upts, M, D, R, P );
     for( k = 0; k < N*N; k++ )
         if( upts[k].x < -imgsize.width*eps || upts[k].x > imgsize.width*(1+eps) ||
             upts[k].y < -imgsize.height*eps || upts[k].y > imgsize.height*(1+eps) )
@@ -1319,7 +1319,7 @@ bool CV_StereoCalibrationTest::checkPandROI( int test_case_idx, const Mat& M, co
     // step 2. check that all the points inside ROI belong to the original source image
     Mat temp(imgsize, CV_8U), utemp, map1, map2;
     temp = Scalar::all(1);
-    initUndistortRectifyMap(M, D, R, P, imgsize, CV_16SC2, map1, map2);
+    cv3d::initUndistortRectifyMap(M, D, R, P, imgsize, CV_16SC2, map1, map2);
     remap(temp, utemp, map1, map2, INTER_LINEAR);
 
     if(roi.x < 0 || roi.y < 0 || roi.x + roi.width > imgsize.width || roi.y + roi.height > imgsize.height)
@@ -1406,8 +1406,8 @@ void CV_StereoCalibrationTest::run( int )
                 return;
             }
             imgsize = left.size();
-            bool found1 = findChessboardCorners(left, patternSize, imgpt1[i]);
-            bool found2 = findChessboardCorners(right, patternSize, imgpt2[i]);
+            bool found1 = cv::calib::findChessboardCorners(left, patternSize, imgpt1[i]);
+            bool found2 = cv::calib::findChessboardCorners(right, patternSize, imgpt2[i]);
             if(!found1 || !found2)
             {
                 ts->printf( cvtest::TS::LOG, "The function could not detect boards (%d x %d) on the images %s and %s, testcase %d\n",
@@ -1429,12 +1429,12 @@ void CV_StereoCalibrationTest::run( int )
         D2 = Scalar::all(0);
         double err = calibrateStereoCamera(objpt, imgpt1, imgpt2, M1, D1, M2, D2, imgsize, R, T, E, F,
             TermCriteria(TermCriteria::MAX_ITER+TermCriteria::EPS, 30, 1e-6),
-            CV_CALIB_SAME_FOCAL_LENGTH
-            //+ CV_CALIB_FIX_ASPECT_RATIO
-            + CV_CALIB_FIX_PRINCIPAL_POINT
-            + CV_CALIB_ZERO_TANGENT_DIST
-            + CV_CALIB_FIX_K3
-            + CV_CALIB_FIX_K4 + CV_CALIB_FIX_K5 //+ CV_CALIB_FIX_K6
+            cv::calib::CALIB_SAME_FOCAL_LENGTH
+            //+ cv::calib::CALIB_FIX_ASPECT_RATIO
+            + cv::calib::CALIB_FIX_PRINCIPAL_POINT
+            + cv::calib::CALIB_ZERO_TANGENT_DIST
+            + cv::calib::CALIB_FIX_K3
+            + cv::calib::CALIB_FIX_K4 + cv::calib::CALIB_FIX_K5 //+ cv::calib::CALIB_FIX_K6
             );
         err /= nframes*npoints;
         if( err > maxReprojErr )
@@ -1516,7 +1516,7 @@ void CV_StereoCalibrationTest::run( int )
         const int dimension = 4;
         homogeneousPoints4d = homogeneousPoints4d.reshape(dimension);
         Mat triangulatedPoints;
-        convertPointsFromHomogeneous(homogeneousPoints4d, triangulatedPoints);
+        cv3d::convertPointsFromHomogeneous(homogeneousPoints4d, triangulatedPoints);
 
         Mat sparsePoints;
         sparsePoints.push_back(projectedPoints_1);
@@ -1559,10 +1559,10 @@ void CV_StereoCalibrationTest::run( int )
         points1 = points1.reshape(2, 1);
         Mat points2 = projectedPoints_2.t();
         points2 = points2.reshape(2, 1);
-        correctMatches(F, points1, points2, newPoints1, newPoints2);
+        cv3d::correctMatches(F, points1, points2, newPoints1, newPoints2);
         Mat newHomogeneousPoints1, newHomogeneousPoints2;
-        convertPointsToHomogeneous(newPoints1, newHomogeneousPoints1);
-        convertPointsToHomogeneous(newPoints2, newHomogeneousPoints2);
+        cv3d::convertPointsToHomogeneous(newPoints1, newHomogeneousPoints1);
+        cv3d::convertPointsToHomogeneous(newPoints2, newHomogeneousPoints2);
         newHomogeneousPoints1 = newHomogeneousPoints1.reshape(1);
         newHomogeneousPoints2 = newHomogeneousPoints2.reshape(1);
         Mat typedF;
@@ -1597,13 +1597,13 @@ void CV_StereoCalibrationTest::run( int )
 
         Mat _M1, _M2, _D1, _D2;
         vector<Mat> _R1, _R2, _T1, _T2;
-        calibrateCamera( objpt, imgpt1, imgsize, _M1, _D1, _R1, _T1, 0 );
-        calibrateCamera( objpt, imgpt2, imgsize, _M2, _D2, _R2, _T2, 0 );
-        undistortPoints( _imgpt1, _imgpt1, _M1, _D1, Mat(), _M1 );
-        undistortPoints( _imgpt2, _imgpt2, _M2, _D2, Mat(), _M2 );
+        cv::calib::calibrateCamera( objpt, imgpt1, imgsize, _M1, _D1, _R1, _T1, 0 );
+        cv::calib::calibrateCamera( objpt, imgpt2, imgsize, _M2, _D2, _R2, _T2, 0 );
+        cv3d::undistortPoints( _imgpt1, _imgpt1, _M1, _D1, Mat(), _M1 );
+        cv3d::undistortPoints( _imgpt2, _imgpt2, _M2, _D2, Mat(), _M2 );
 
         Mat matF, _H1, _H2;
-        matF = findFundamentalMat( _imgpt1, _imgpt2 );
+        matF = cv3d::findFundamentalMat( _imgpt1, _imgpt2 );
         rectifyUncalibrated( _imgpt1, _imgpt2, matF, imgsize, _H1, _H2 );
 
         Mat rectifPoints1, rectifPoints2;
@@ -1615,8 +1615,8 @@ void CV_StereoCalibrationTest::run( int )
         for( int i = 0, k = 0; i < nframes; i++ )
         {
             vector<Point2f> temp[2];
-            undistortPoints(imgpt1[i], temp[0], M1, D1, R1, P1);
-            undistortPoints(imgpt2[i], temp[1], M2, D2, R2, P2);
+            cv3d::undistortPoints(imgpt1[i], temp[0], M1, D1, R1, P1);
+            cv3d::undistortPoints(imgpt2[i], temp[1], M2, D2, R2, P2);
 
             for( int j = 0; j < npoints; j++, k++ )
             {
@@ -1686,7 +1686,7 @@ double CV_StereoCalibrationTest_CPP::calibrateStereoCamera( const vector<vector<
                                              Size imageSize, Mat& R, Mat& T,
                                              Mat& E, Mat& F, TermCriteria criteria, int flags )
 {
-    return stereoCalibrate( objectPoints, imagePoints1, imagePoints2,
+    return cv::calib::stereoCalibrate( objectPoints, imagePoints1, imagePoints2,
                     cameraMatrix1, distCoeffs1, cameraMatrix2, distCoeffs2,
                     imageSize, R, T, E, F, flags, criteria );
 }
@@ -1698,28 +1698,28 @@ void CV_StereoCalibrationTest_CPP::rectify( const Mat& cameraMatrix1, const Mat&
                                          double alpha, Size newImageSize,
                                          Rect* validPixROI1, Rect* validPixROI2, int flags )
 {
-    stereoRectify( cameraMatrix1, distCoeffs1, cameraMatrix2, distCoeffs2,
+    cv::stereo::stereoRectify( cameraMatrix1, distCoeffs1, cameraMatrix2, distCoeffs2,
                 imageSize, R, T, R1, R2, P1, P2, Q, flags, alpha, newImageSize,validPixROI1, validPixROI2 );
 }
 
 bool CV_StereoCalibrationTest_CPP::rectifyUncalibrated( const Mat& points1,
                        const Mat& points2, const Mat& F, Size imgSize, Mat& H1, Mat& H2, double threshold )
 {
-    return stereoRectifyUncalibrated( points1, points2, F, imgSize, H1, H2, threshold );
+    return cv::stereo::stereoRectifyUncalibrated( points1, points2, F, imgSize, H1, H2, threshold );
 }
 
 void CV_StereoCalibrationTest_CPP::triangulate( const Mat& P1, const Mat& P2,
         const Mat &points1, const Mat &points2,
         Mat &points4D )
 {
-    triangulatePoints(P1, P2, points1, points2, points4D);
+    cv3d::triangulatePoints(P1, P2, points1, points2, points4D);
 }
 
 void CV_StereoCalibrationTest_CPP::correct( const Mat& F,
         const Mat &points1, const Mat &points2,
         Mat &newPoints1, Mat &newPoints2 )
 {
-    correctMatches(F, points1, points2, newPoints1, newPoints2);
+    cv3d::correctMatches(F, points1, points2, newPoints1, newPoints2);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1740,7 +1740,7 @@ TEST(Calib3d_ProjectPoints_CPP, inputShape)
                                                   L,  L,
                                                   0,  0);
         vector<Point2f> imagePoints;
-        projectPoints(objectPoints, rvec, tvec, cameraMatrix, noArray(), imagePoints);
+        cv3d::projectPoints(objectPoints, rvec, tvec, cameraMatrix, noArray(), imagePoints);
         EXPECT_EQ(objectPoints.cols, static_cast<int>(imagePoints.size()));
         EXPECT_NEAR(imagePoints[0].x, -L, std::numeric_limits<float>::epsilon());
         EXPECT_NEAR(imagePoints[0].y,  L, std::numeric_limits<float>::epsilon());
@@ -1752,7 +1752,7 @@ TEST(Calib3d_ProjectPoints_CPP, inputShape)
         Mat objectPoints = (Mat_<float>(2, 3) << -L,  L, 0,
                                                   L,  L, 0);
         vector<Point2f> imagePoints;
-        projectPoints(objectPoints, rvec, tvec, cameraMatrix, noArray(), imagePoints);
+        cv3d::projectPoints(objectPoints, rvec, tvec, cameraMatrix, noArray(), imagePoints);
         EXPECT_EQ(objectPoints.rows, static_cast<int>(imagePoints.size()));
         EXPECT_NEAR(imagePoints[0].x, -L, std::numeric_limits<float>::epsilon());
         EXPECT_NEAR(imagePoints[0].y,  L, std::numeric_limits<float>::epsilon());
@@ -1766,7 +1766,7 @@ TEST(Calib3d_ProjectPoints_CPP, inputShape)
         objectPoints.at<Vec3f>(0,1) = Vec3f(L, L, 0);
 
         vector<Point2f> imagePoints;
-        projectPoints(objectPoints, rvec, tvec, cameraMatrix, noArray(), imagePoints);
+        cv3d::projectPoints(objectPoints, rvec, tvec, cameraMatrix, noArray(), imagePoints);
         EXPECT_EQ(objectPoints.cols, static_cast<int>(imagePoints.size()));
         EXPECT_NEAR(imagePoints[0].x, -L, std::numeric_limits<float>::epsilon());
         EXPECT_NEAR(imagePoints[0].y,  L, std::numeric_limits<float>::epsilon());
@@ -1780,7 +1780,7 @@ TEST(Calib3d_ProjectPoints_CPP, inputShape)
         objectPoints.at<Vec3f>(1,0) = Vec3f(L, L, 0);
 
         vector<Point2f> imagePoints;
-        projectPoints(objectPoints, rvec, tvec, cameraMatrix, noArray(), imagePoints);
+        cv3d::projectPoints(objectPoints, rvec, tvec, cameraMatrix, noArray(), imagePoints);
         EXPECT_EQ(objectPoints.rows, static_cast<int>(imagePoints.size()));
         EXPECT_NEAR(imagePoints[0].x, -L, std::numeric_limits<float>::epsilon());
         EXPECT_NEAR(imagePoints[0].y,  L, std::numeric_limits<float>::epsilon());
@@ -1794,7 +1794,7 @@ TEST(Calib3d_ProjectPoints_CPP, inputShape)
         objectPoints.push_back(Point3f(L, L, 0));
 
         vector<Point2f> imagePoints;
-        projectPoints(objectPoints, rvec, tvec, cameraMatrix, noArray(), imagePoints);
+        cv3d::projectPoints(objectPoints, rvec, tvec, cameraMatrix, noArray(), imagePoints);
         EXPECT_EQ(objectPoints.size(), imagePoints.size());
         EXPECT_NEAR(imagePoints[0].x, -L, std::numeric_limits<float>::epsilon());
         EXPECT_NEAR(imagePoints[0].y,  L, std::numeric_limits<float>::epsilon());
@@ -1808,7 +1808,7 @@ TEST(Calib3d_ProjectPoints_CPP, inputShape)
         objectPoints.push_back(Point3d(L, L, 0));
 
         vector<Point2d> imagePoints;
-        projectPoints(objectPoints, rvec, tvec, cameraMatrix, noArray(), imagePoints);
+        cv3d::projectPoints(objectPoints, rvec, tvec, cameraMatrix, noArray(), imagePoints);
         EXPECT_EQ(objectPoints.size(), imagePoints.size());
         EXPECT_NEAR(imagePoints[0].x, -L, std::numeric_limits<double>::epsilon());
         EXPECT_NEAR(imagePoints[0].y,  L, std::numeric_limits<double>::epsilon());
@@ -1831,7 +1831,7 @@ TEST(Calib3d_ProjectPoints_CPP, outputShape)
 
         //Mat --> will be Nx1 2-channel
         Mat imagePoints;
-        projectPoints(objectPoints, rvec, tvec, cameraMatrix, noArray(), imagePoints);
+        cv3d::projectPoints(objectPoints, rvec, tvec, cameraMatrix, noArray(), imagePoints);
         EXPECT_EQ(static_cast<int>(objectPoints.size()), imagePoints.rows);
         EXPECT_NEAR(imagePoints.at<Vec2f>(0,0)(0), -L, std::numeric_limits<float>::epsilon());
         EXPECT_NEAR(imagePoints.at<Vec2f>(0,0)(1),  L, std::numeric_limits<float>::epsilon());
@@ -1848,7 +1848,7 @@ TEST(Calib3d_ProjectPoints_CPP, outputShape)
 
         //Nx1 2-channel
         Mat imagePoints(3,1,CV_32FC2);
-        projectPoints(objectPoints, rvec, tvec, cameraMatrix, noArray(), imagePoints);
+        cv3d::projectPoints(objectPoints, rvec, tvec, cameraMatrix, noArray(), imagePoints);
         EXPECT_EQ(static_cast<int>(objectPoints.size()), imagePoints.rows);
         EXPECT_NEAR(imagePoints.at<Vec2f>(0,0)(0), -L, std::numeric_limits<float>::epsilon());
         EXPECT_NEAR(imagePoints.at<Vec2f>(0,0)(1),  L, std::numeric_limits<float>::epsilon());
@@ -1865,7 +1865,7 @@ TEST(Calib3d_ProjectPoints_CPP, outputShape)
 
         //1xN 2-channel
         Mat imagePoints(1,3,CV_32FC2);
-        projectPoints(objectPoints, rvec, tvec, cameraMatrix, noArray(), imagePoints);
+        cv3d::projectPoints(objectPoints, rvec, tvec, cameraMatrix, noArray(), imagePoints);
         EXPECT_EQ(static_cast<int>(objectPoints.size()), imagePoints.cols);
         EXPECT_NEAR(imagePoints.at<Vec2f>(0,0)(0), -L, std::numeric_limits<float>::epsilon());
         EXPECT_NEAR(imagePoints.at<Vec2f>(0,0)(1),  L, std::numeric_limits<float>::epsilon());
@@ -1881,7 +1881,7 @@ TEST(Calib3d_ProjectPoints_CPP, outputShape)
 
         //vector<Point2f>
         vector<Point2f> imagePoints;
-        projectPoints(objectPoints, rvec, tvec, cameraMatrix, noArray(), imagePoints);
+        cv3d::projectPoints(objectPoints, rvec, tvec, cameraMatrix, noArray(), imagePoints);
         EXPECT_EQ(objectPoints.size(), imagePoints.size());
         EXPECT_NEAR(imagePoints[0].x, -L, std::numeric_limits<float>::epsilon());
         EXPECT_NEAR(imagePoints[0].y,  L, std::numeric_limits<float>::epsilon());
@@ -1895,7 +1895,7 @@ TEST(Calib3d_ProjectPoints_CPP, outputShape)
 
         //vector<Point2d>
         vector<Point2d> imagePoints;
-        projectPoints(objectPoints, rvec, tvec, cameraMatrix, noArray(), imagePoints);
+        cv3d::projectPoints(objectPoints, rvec, tvec, cameraMatrix, noArray(), imagePoints);
         EXPECT_EQ(objectPoints.size(), imagePoints.size());
         EXPECT_NEAR(imagePoints[0].x, -L, std::numeric_limits<double>::epsilon());
         EXPECT_NEAR(imagePoints[0].y,  L, std::numeric_limits<double>::epsilon());
@@ -1923,8 +1923,8 @@ TEST(Calib3d_StereoCalibrate_CPP, extended)
     vector<vector<Point2f> > imgpt1(1), imgpt2(1);
     vector<vector<Point3f> > objpt(1);
     Size patternSize(9, 6), imageSize(640, 480);
-    bool found1 = findChessboardCorners(left, patternSize, imgpt1[0]);
-    bool found2 = findChessboardCorners(right, patternSize, imgpt2[0]);
+    bool found1 = cv::calib::findChessboardCorners(left, patternSize, imgpt1[0]);
+    bool found2 = cv::calib::findChessboardCorners(right, patternSize, imgpt2[0]);
 
     if(!found1 || !found2)
     {
@@ -1937,12 +1937,12 @@ TEST(Calib3d_StereoCalibrate_CPP, extended)
 
     Mat K1, K2, c1, c2, R, T, E, F, err;
     int flags = 0;
-    double res0 = stereoCalibrate( objpt, imgpt1, imgpt2,
+    double res0 = cv::calib::stereoCalibrate( objpt, imgpt1, imgpt2,
                     K1, c1, K2, c2,
                     imageSize, R, T, E, F, err, flags);
 
-    flags = CALIB_USE_EXTRINSIC_GUESS;
-    double res1 = stereoCalibrate( objpt, imgpt1, imgpt2,
+    flags = cv::calib::CALIB_USE_EXTRINSIC_GUESS;
+    double res1 = cv::calib::stereoCalibrate( objpt, imgpt1, imgpt2,
                     K1, c1, K2, c2,
                     imageSize, R, T, E, F, err, flags);
     EXPECT_LE(res1, res0);
@@ -1979,9 +1979,9 @@ TEST(Calib3d_StereoCalibrate, regression_10791)
 
     Mat R1, R2, P1, P2, Q;
     Rect roi1, roi2;
-    stereoRectify(M1, D1, M2, D2, imageSize, R, T,
+    cv::stereo::stereoRectify(M1, D1, M2, D2, imageSize, R, T,
                   R1, R2, P1, P2, Q,
-                  CALIB_ZERO_DISPARITY, 1, imageSize, &roi1, &roi2);
+                  cv::calib::CALIB_ZERO_DISPARITY, 1, imageSize, &roi1, &roi2);
 
     EXPECT_GE(roi1.area(), 400*300) << roi1;
     EXPECT_GE(roi2.area(), 400*300) << roi2;
@@ -2013,9 +2013,9 @@ TEST(Calib3d_StereoCalibrate, regression_11131)
 
     Mat R1, R2, P1, P2, Q;
     Rect roi1, roi2;
-    stereoRectify(M1, D1, M2, D2, imageSize, R, T,
+    stereo::stereoRectify(M1, D1, M2, D2, imageSize, R, T,
                   R1, R2, P1, P2, Q,
-                  CALIB_ZERO_DISPARITY, 1, imageSize, &roi1, &roi2);
+                  cv::calib::CALIB_ZERO_DISPARITY, 1, imageSize, &roi1, &roi2);
 
     EXPECT_GT(P1.at<double>(0, 0), 0);
     EXPECT_GT(P2.at<double>(0, 0), 0);
@@ -2041,9 +2041,9 @@ TEST(Calib3d_Triangulate, accuracy)
     Mat res0(1, 3, CV_32F, Xdata);
     Mat res_, res;
 
-    triangulatePoints(P1, P2, x1, x2, res_);
+    cv3d::triangulatePoints(P1, P2, x1, x2, res_);
     cv::transpose(res_, res_); // TODO cvtest (transpose doesn't support inplace)
-    convertPointsFromHomogeneous(res_, res);
+    cv3d::convertPointsFromHomogeneous(res_, res);
     res = res.reshape(1, 1);
 
     cout << "[1]:" << endl;
@@ -2081,9 +2081,9 @@ TEST(Calib3d_Triangulate, accuracy)
     Mat res0(1, 3, CV_32F, Xdata);
     Mat res_, res;
 
-    triangulatePoints(P1, P2, x1, x2, res_);
+    cv3d::triangulatePoints(P1, P2, x1, x2, res_);
     cv::transpose(res_, res_); // TODO cvtest (transpose doesn't support inplace)
-    convertPointsFromHomogeneous(res_, res);
+    cv3d::convertPointsFromHomogeneous(res_, res);
     res = res.reshape(1, 1);
 
     cout << "[2]:" << endl;
@@ -2158,13 +2158,13 @@ TEST(CV_RecoverPoseTest, regression_15341)
 
             // Estimation of fundamental matrix using the RANSAC algorithm
             Mat E, E2, R, t;
-            E = findEssentialMat(points1, points2, cameraMatrix, RANSAC, 0.999, 1.0, mask);
-            E2 = findEssentialMat(points1, points2, cameraMatrix, zeroDistCoeffs, cameraMatrix, zeroDistCoeffs, RANSAC, 0.999, 1.0, mask);
+            E = cv3d::findEssentialMat(points1, points2, cameraMatrix, cv3d::RANSAC, 0.999, 1.0, mask);
+            E2 = cv3d::findEssentialMat(points1, points2, cameraMatrix, zeroDistCoeffs, cameraMatrix, zeroDistCoeffs, cv3d::RANSAC, 0.999, 1.0, mask);
             EXPECT_LT(cv::norm(E, E2, NORM_INF), 1e-4) <<
                 "Two big difference between the same essential matrices computed using different functions, testcase " << testcase;
             EXPECT_EQ(0, (int)mask[13]) << "Detecting outliers in function findEssentialMat failed, testcase " << testcase;
             points2[12] = Point2f(0.0f, 0.0f); // provoke another outlier detection for recover Pose
-            Inliers = recoverPose(E, points1, points2, cameraMatrix, R, t, mask);
+            Inliers = cv3d::recoverPose(E, points1, points2, cameraMatrix, R, t, mask);
             EXPECT_EQ(0, (int)mask[12]) << "Detecting outliers in function failed, testcase " << testcase;
         }
         else // testcase with mat input data
@@ -2185,13 +2185,13 @@ TEST(CV_RecoverPoseTest, regression_15341)
 
             // Estimation of fundamental matrix using the RANSAC algorithm
             Mat E, E2, R, t;
-            E = findEssentialMat(points1, points2, cameraMatrix, RANSAC, 0.999, 1.0, mask);
-            E2 = findEssentialMat(points1, points2, cameraMatrix, zeroDistCoeffs, cameraMatrix, zeroDistCoeffs, RANSAC, 0.999, 1.0, mask);
+            E = cv3d::findEssentialMat(points1, points2, cameraMatrix, cv3d::RANSAC, 0.999, 1.0, mask);
+            E2 = cv3d::findEssentialMat(points1, points2, cameraMatrix, zeroDistCoeffs, cameraMatrix, zeroDistCoeffs, cv3d::RANSAC, 0.999, 1.0, mask);
             EXPECT_LT(cv::norm(E, E2, NORM_INF), 1e-4) <<
                 "Two big difference between the same essential matrices computed using different functions, testcase " << testcase;
             EXPECT_EQ(0, (int)mask.at<unsigned char>(13)) << "Detecting outliers in function findEssentialMat failed, testcase " << testcase;
             points2.at<Point2f>(12) = Point2f(0.0f, 0.0f); // provoke an outlier detection
-            Inliers = recoverPose(E, points1, points2, cameraMatrix, R, t, mask);
+            Inliers = cv3d::recoverPose(E, points1, points2, cameraMatrix, R, t, mask);
             EXPECT_EQ(0, (int)mask.at<unsigned char>(12)) << "Detecting outliers in function failed, testcase " << testcase;
         }
         EXPECT_EQ(Inliers, point_count - invalid_point_count) <<

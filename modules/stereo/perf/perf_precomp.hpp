@@ -5,6 +5,6 @@
 #define __OPENCV_PERF_PRECOMP_HPP__
 
 #include "opencv2/ts.hpp"
-#include "opencv2/calib3d.hpp"
+#include "opencv2/stereo.hpp"
 
 #endif

@@ -1626,26 +1626,125 @@ void cv3d::projectPoints( InputArray _opoints,
                       &c_imagePoints, pdpdrot, pdpdt, pdpdf, pdpdc, pdpddist, aspectRatio );
 }
 
-#if 0
-cv::Mat cv::getOptimalNewCameraMatrix( InputArray _cameraMatrix,
-                                       InputArray _distCoeffs,
-                                       Size imgSize, double alpha, Size newImgSize,
-                                       Rect* validPixROI, bool centerPrincipalPoint )
+void cv3d::getUndistortRectangles(InputArray _cameraMatrix, InputArray _distCoeffs,
+              InputArray R, InputArray newCameraMatrix, Size imgSize,
+              Rect_<float>& inner, Rect_<float>& outer )
 {
-    CV_INSTRUMENT_REGION();
+    const int N = 9;
+    int x, y, k;
+    Mat _pts(1, N*N, CV_32FC2);
+    Point2f* pts = _pts.ptr<Point2f>();
 
-    Mat cameraMatrix = _cameraMatrix.getMat(), distCoeffs = _distCoeffs.getMat();
-    CvMat c_cameraMatrix = cvMat(cameraMatrix), c_distCoeffs = cvMat(distCoeffs);
+    for( y = k = 0; y < N; y++ )
+        for( x = 0; x < N; x++ )
+            pts[k++] = Point2f((float)x*imgSize.width/(N-1), (float)y*imgSize.height/(N-1));
 
-    Mat newCameraMatrix(3, 3, CV_MAT_TYPE(c_cameraMatrix.type));
-    CvMat c_newCameraMatrix = cvMat(newCameraMatrix);
+    undistortPoints(_pts, _pts, _cameraMatrix, _distCoeffs, R, newCameraMatrix);
 
-    cvGetOptimalNewCameraMatrix(&c_cameraMatrix, &c_distCoeffs, cvSize(imgSize),
-                                alpha, &c_newCameraMatrix,
-                                cvSize(newImgSize), (CvRect*)validPixROI, (int)centerPrincipalPoint);
-    return newCameraMatrix;
+    float iX0=-FLT_MAX, iX1=FLT_MAX, iY0=-FLT_MAX, iY1=FLT_MAX;
+    float oX0=FLT_MAX, oX1=-FLT_MAX, oY0=FLT_MAX, oY1=-FLT_MAX;
+    // find the inscribed rectangle.
+    // the code will likely not work with extreme rotation matrices (R) (>45%)
+    for( y = k = 0; y < N; y++ )
+        for( x = 0; x < N; x++ )
+        {
+            Point2f p = pts[k++];
+            oX0 = MIN(oX0, p.x);
+            oX1 = MAX(oX1, p.x);
+            oY0 = MIN(oY0, p.y);
+            oY1 = MAX(oY1, p.y);
+
+            if( x == 0 )
+                iX0 = MAX(iX0, p.x);
+            if( x == N-1 )
+                iX1 = MIN(iX1, p.x);
+            if( y == 0 )
+                iY0 = MAX(iY0, p.y);
+            if( y == N-1 )
+                iY1 = MIN(iY1, p.y);
+        }
+    inner = Rect_<float>(iX0, iY0, iX1-iX0, iY1-iY0);
+    outer = Rect_<float>(oX0, oY0, oX1-oX0, oY1-oY0);
 }
-#endif
+
+cv::Mat cv3d::getOptimalNewCameraMatrix( InputArray _cameraMatrix, InputArray _distCoeffs,
+                                  Size imgSize, double alpha, Size newImgSize,
+                                  Rect* validPixROI, bool centerPrincipalPoint )
+{
+    Rect_<float> inner, outer;
+    newImgSize = newImgSize.width*newImgSize.height != 0 ? newImgSize : imgSize;
+
+    Mat cameraMatrix = _cameraMatrix.getMat(), M;
+    cameraMatrix.convertTo(M, CV_64F);
+    CV_Assert(M.isContinuous());
+
+    if( centerPrincipalPoint )
+    {
+        double cx0 = M.at<double>(0, 2);
+        double cy0 = M.at<double>(1, 2);
+        double cx = (newImgSize.width-1)*0.5;
+        double cy = (newImgSize.height-1)*0.5;
+
+        getUndistortRectangles( _cameraMatrix, _distCoeffs, Mat(), cameraMatrix, imgSize, inner, outer );
+        double s0 = std::max(std::max(std::max((double)cx/(cx0 - inner.x), (double)cy/(cy0 - inner.y)),
+                                      (double)cx/(inner.x + inner.width - cx0)),
+                             (double)cy/(inner.y + inner.height - cy0));
+        double s1 = std::min(std::min(std::min((double)cx/(cx0 - outer.x), (double)cy/(cy0 - outer.y)),
+                                      (double)cx/(outer.x + outer.width - cx0)),
+                             (double)cy/(outer.y + outer.height - cy0));
+        double s = s0*(1 - alpha) + s1*alpha;
+
+        M.at<double>(0, 0) *= s;
+        M.at<double>(1, 1) *= s;
+        M.at<double>(0, 2) = cx;
+        M.at<double>(1, 2) = cy;
+
+        if( validPixROI )
+        {
+            inner = cv::Rect_<float>((float)((inner.x - cx0)*s + cx),
+                                     (float)((inner.y - cy0)*s + cy),
+                                     (float)(inner.width*s),
+                                     (float)(inner.height*s));
+            Rect r(cvCeil(inner.x), cvCeil(inner.y), cvFloor(inner.width), cvFloor(inner.height));
+            r &= Rect(0, 0, newImgSize.width, newImgSize.height);
+            *validPixROI = r;
+        }
+    }
+    else
+    {
+        // Get inscribed and circumscribed rectangles in normalized
+        // (independent of camera matrix) coordinates
+        getUndistortRectangles( _cameraMatrix, _distCoeffs, Mat(), Mat(), imgSize, inner, outer );
+
+        // Projection mapping inner rectangle to viewport
+        double fx0 = (newImgSize.width  - 1) / inner.width;
+        double fy0 = (newImgSize.height - 1) / inner.height;
+        double cx0 = -fx0 * inner.x;
+        double cy0 = -fy0 * inner.y;
+
+        // Projection mapping outer rectangle to viewport
+        double fx1 = (newImgSize.width  - 1) / outer.width;
+        double fy1 = (newImgSize.height - 1) / outer.height;
+        double cx1 = -fx1 * outer.x;
+        double cy1 = -fy1 * outer.y;
+
+        // Interpolate between the two optimal projections
+        M.at<double>(0, 0) = fx0*(1 - alpha) + fx1*alpha;
+        M.at<double>(1, 1) = fy0*(1 - alpha) + fy1*alpha;
+        M.at<double>(0, 2) = cx0*(1 - alpha) + cx1*alpha;
+        M.at<double>(1, 2) = cy0*(1 - alpha) + cy1*alpha;
+
+        if( validPixROI )
+        {
+            getUndistortRectangles( _cameraMatrix, _distCoeffs, Mat(), M, imgSize, inner, outer );
+            Rect r = inner;
+            r &= Rect(0, 0, newImgSize.width, newImgSize.height);
+            *validPixROI = r;
+        }
+    }
+
+    return M;
+}
 
 cv::Vec3d cv3d::RQDecomp3x3( InputArray _Mmat,
                    OutputArray _Rmat,

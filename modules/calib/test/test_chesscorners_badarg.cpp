@@ -41,7 +41,6 @@
 
 #include "test_precomp.hpp"
 #include "test_chessboardgenerator.hpp"
-#include "opencv2/calib3d/calib3d_c.h"
 
 namespace opencv_test { namespace {
 
@@ -70,7 +69,7 @@ protected:
 
     void run_func()
     {
-        findChessboardCorners(img_arg, pattern_size, corners_arg, flags);
+        cv::calib::findChessboardCorners(img_arg, pattern_size, corners_arg, flags);
     }
 };
 
@@ -89,7 +88,7 @@ void CV_ChessboardDetectorBadArgTest::run( int /*start_from */)
 
     /* /*//*/ */
     int errors = 0;
-    flags = CV_CALIB_CB_ADAPTIVE_THRESH | CV_CALIB_CB_NORMALIZE_IMAGE;
+    flags = cv::calib::CALIB_CB_ADAPTIVE_THRESH | cv::calib::CALIB_CB_NORMALIZE_IMAGE;
 
     img = cb.clone();
     initArgs();

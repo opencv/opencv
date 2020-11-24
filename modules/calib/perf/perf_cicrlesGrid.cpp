@@ -34,7 +34,7 @@ PERF_TEST_P(String_Size, asymm_circles_grid, testing::Values(
 
     declare.in(frame).out(ptvec);
 
-    TEST_CYCLE() ASSERT_TRUE(findCirclesGrid(frame, gridSize, ptvec, CALIB_CB_CLUSTERING | CALIB_CB_ASYMMETRIC_GRID));
+    TEST_CYCLE() ASSERT_TRUE(cv::calib::findCirclesGrid(frame, gridSize, ptvec, cv::calib::CALIB_CB_CLUSTERING | cv::calib::CALIB_CB_ASYMMETRIC_GRID));
 
     SANITY_CHECK(ptvec, 2);
 }

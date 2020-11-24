@@ -41,7 +41,6 @@
 
 #include "test_precomp.hpp"
 #include "opencv2/imgproc.hpp"
-#include "opencv2/calib3d.hpp"
 
 namespace opencv_test { namespace {
 
@@ -120,9 +119,9 @@ void CV_ChessboardDetectorTimingTest::run( int start_from )
         cvtColor(img, gray, COLOR_BGR2GRAY);
 
         int64 _time0 = cv::getTickCount();
-        bool result = cv::checkChessboard(gray, pattern_size);
+        bool result = cv::calib::checkChessboard(gray, pattern_size);
         int64 _time01 = cv::getTickCount();
-        bool result1 = findChessboardCorners(gray, pattern_size, v, 15);
+        bool result1 = cv::calib::findChessboardCorners(gray, pattern_size, v, 15);
         int64 _time1 = cv::getTickCount();
 
         if( result != (is_chessboard != 0))

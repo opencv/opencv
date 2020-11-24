@@ -134,8 +134,6 @@ static inline bool haveCollinearPoints( const Mat& m, int count )
     return false;
 }
 
-int checkChessboardBinary(const Mat & img, const Size & size);
-
 void findExtrinsicCameraParams2( const Mat& objectPoints,
                   const Mat& imagePoints, const Mat& A,
                   const Mat& distCoeffs, Mat& rvec, Mat& tvec,

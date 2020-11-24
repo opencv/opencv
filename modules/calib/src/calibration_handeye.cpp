@@ -3,9 +3,11 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "precomp.hpp"
-#include "opencv2/calib3d.hpp"
 
 namespace cv {
+namespace calib {
+
+using namespace cv3d;
 
 static Mat homogeneousInverse(const Mat& T)
 {
@@ -971,4 +973,5 @@ void calibrateRobotWorldHandEye(InputArrayOfArrays R_world2cam, InputArrayOfArra
     Mat(cRg).copyTo(R_gripper2cam);
     Mat(ctg).copyTo(t_gripper2cam);
 }
-}
+
+}}

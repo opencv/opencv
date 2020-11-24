@@ -3,7 +3,8 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include <opencv2/core.hpp>
-#include <opencv2/calib3d.hpp>
+#include <opencv2/3d.hpp>
+#include <opencv2/calib.hpp>
 #include <opencv2/cvconfig.h>
 #include <opencv2/highgui.hpp>
 
@@ -114,7 +115,7 @@ int main(int argc, char** argv)
     if(!parser.has("v")) globalData->imageSize = capParams.cameraResolution;
 
     int calibrationFlags = 0;
-    if(intParams.fastSolving) calibrationFlags |= cv::CALIB_USE_QR;
+    if(intParams.fastSolving) calibrationFlags |= cv::calib::CALIB_USE_QR;
     cv::Ptr<calibController> controller(new calibController(globalData, calibrationFlags,
                                                          parser.get<bool>("ft"), capParams.minFramesNum));
     cv::Ptr<calibDataController> dataController(new calibDataController(globalData, capParams.maxFramesNum,
@@ -169,7 +170,7 @@ int main(int argc, char** argv)
 
                 if(capParams.board != chAruco) {
                     globalData->totalAvgErr =
-                            cv::calibrateCamera(globalData->objectPoints, globalData->imagePoints,
+                            cv::calib::calibrateCamera(globalData->objectPoints, globalData->imagePoints,
                                                     globalData->imageSize, globalData->cameraMatrix,
                                                     globalData->distCoeffs, cv::noArray(), cv::noArray(),
                                                     globalData->stdDeviations, cv::noArray(), globalData->perViewErrors,

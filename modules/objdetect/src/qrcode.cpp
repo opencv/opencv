@@ -7,7 +7,7 @@
 
 #include "precomp.hpp"
 #include "opencv2/objdetect.hpp"
-#include "opencv2/calib3d.hpp"
+#include "opencv2/3d.hpp"
 
 #ifdef HAVE_QUIRC
 #include "quirc.h"
@@ -1014,7 +1014,7 @@ bool QRDecode::updatePerspective()
     vector<Point2f> pts = original_points;
     pts.push_back(centerPt);
 
-    Mat H = findHomography(pts, perspective_points);
+    Mat H = cv3d::findHomography(pts, perspective_points);
     Mat bin_original;
     adaptiveThreshold(original, bin_original, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY, 83, 2);
     Mat temp_intermediate;

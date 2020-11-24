@@ -57,7 +57,8 @@
 #  endif
 #endif
 
-using namespace cv;
+namespace cv {
+namespace calib {
 
 #ifdef DEBUG_CIRCLES
 void drawPoints(const std::vector<Point2f> &points, Mat &outImage, int radius = 2,  Scalar color = Scalar::all(255), int thickness = -1)
@@ -409,14 +410,16 @@ void CirclesGridClusterFinder::rectifyPatternPoints(const std::vector<cv::Point2
     }
   }
 
-  Mat homography = findHomography(sortedCorners, idealPoints, 0);
+  Mat homography = cv3d::findHomography(sortedCorners, idealPoints, 0);
   Mat rectifiedPointsMat;
   transform(patternPoints, rectifiedPointsMat, homography);
   rectifiedPatternPoints.clear();
-  convertPointsFromHomogeneous(rectifiedPointsMat, rectifiedPatternPoints);
+  cv3d::convertPointsFromHomogeneous(rectifiedPointsMat, rectifiedPatternPoints);
 }
 
-void CirclesGridClusterFinder::parsePatternPoints(const std::vector<cv::Point2f> &patternPoints, const std::vector<cv::Point2f> &rectifiedPatternPoints, std::vector<cv::Point2f> &centers)
+void CirclesGridClusterFinder::parsePatternPoints(const std::vector<cv::Point2f> &patternPoints,
+                                                  const std::vector<cv::Point2f> &rectifiedPatternPoints,
+                                                  std::vector<cv::Point2f> &centers)
 {
 #ifndef HAVE_OPENCV_FLANN
   CV_UNUSED(patternPoints);
@@ -865,7 +868,7 @@ Mat CirclesGridFinder::rectifyGrid(Size detectedGridSize, const std::vector<Poin
     }
   }
 
-  Mat H = findHomography(centers, dstPoints, RANSAC);
+  Mat H = cv3d::findHomography(centers, dstPoints, cv3d::RANSAC);
   //Mat H = findHomography(corners, dstPoints);
 
   if (H.empty())
@@ -884,7 +887,7 @@ Mat CirclesGridFinder::rectifyGrid(Size detectedGridSize, const std::vector<Poin
   Mat dstKeypointsMat;
   transform(srcKeypoints, dstKeypointsMat, H);
   std::vector<Point2f> dstKeypoints;
-  convertPointsFromHomogeneous(dstKeypointsMat, dstKeypoints);
+  cv3d::convertPointsFromHomogeneous(dstKeypointsMat, dstKeypoints);
 
   warpedKeypoints.clear();
   for (size_t i = 0; i < dstKeypoints.size(); i++)
@@ -1632,3 +1635,5 @@ size_t CirclesGridFinder::getFirstCorner(std::vector<Point> &largeCornerIndices,
 
   return cornerIdx;
 }
+
+}}

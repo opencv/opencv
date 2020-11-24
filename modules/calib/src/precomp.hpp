@@ -47,17 +47,17 @@
 #include "opencv2/core/private.hpp"
 
 #include "opencv2/calib.hpp"
+#include "opencv2/3d.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/features2d.hpp"
-
 
 #include "opencv2/core/ocl.hpp"
 
 #define GET_OPTIMIZED(func) (func)
 
 
-namespace cv
-{
+namespace cv {
+namespace calib {
 
 /**
  * Compute the number of iterations given the confidence, outlier ratio, number
@@ -135,8 +135,8 @@ static inline bool haveCollinearPoints( const Mat& m, int count )
     return false;
 }
 
-} // namespace cv
+int checkChessboardBinary(const Mat & img, const Size & size);
 
-int checkChessboardBinary(const cv::Mat & img, const cv::Size & size);
+}} // namespace cv
 
 #endif

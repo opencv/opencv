@@ -6,7 +6,8 @@
 
 #include <cmath>
 
-#include <opencv2/calib3d.hpp>
+#include <opencv2/3d.hpp>
+#include <opencv2/calib.hpp>
 #include <opencv2/core.hpp>
 
 #define CALIB_PI 3.14159265358979323846
@@ -113,7 +114,7 @@ void calib::RodriguesToEuler(const cv::Mat& src, cv::Mat& dst, int argType)
 {
     CV_Assert((src.cols == 1 && src.rows == 3) || (src.cols == 3 && src.rows == 1));
     cv::Mat R;
-    cv::Rodrigues(src, R);
+    cv3d::Rodrigues(src, R);
     Euler(R, dst, argType);
 }
 
@@ -122,5 +123,5 @@ void calib::EulerToRodrigues(const cv::Mat& src, cv::Mat& dst, int argType)
     CV_Assert((src.cols == 1 && src.rows == 3) || (src.cols == 3 && src.rows == 1));
     cv::Mat R;
     Euler(src, R, argType);
-    cv::Rodrigues(R, dst);
+    cv3d::Rodrigues(R, dst);
 }

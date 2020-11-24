@@ -43,7 +43,7 @@ using namespace testing;
 
 static void MakeArtificialExample(Mat& dst_left_view, Mat& dst_view);
 
-CV_ENUM(SGBMModes, StereoSGBM::MODE_SGBM, StereoSGBM::MODE_SGBM_3WAY, StereoSGBM::MODE_HH4);
+CV_ENUM(SGBMModes, stereo::StereoSGBM::MODE_SGBM, stereo::StereoSGBM::MODE_SGBM_3WAY, stereo::StereoSGBM::MODE_HH4);
 typedef tuple<Size, int, SGBMModes> SGBMParams;
 typedef TestBaseWithParam<SGBMParams> TestStereoCorrespSGBM;
 
@@ -69,7 +69,7 @@ PERF_TEST_P( TestStereoCorrespSGBM, DISABLED_TooLongInDebug_SGBM, Combine(Values
     int P1 = 8*src_left.channels()*wsize*wsize;
     TEST_CYCLE()
     {
-        Ptr<StereoSGBM> sgbm = StereoSGBM::create(0,num_disparities,wsize,P1,4*P1,1,63,25,0,0,mode);
+        Ptr<stereo::StereoSGBM> sgbm = stereo::StereoSGBM::create(0,num_disparities,wsize,P1,4*P1,1,63,25,0,0,mode);
         sgbm->compute(src_left,src_right,dst);
     }
 
@@ -94,7 +94,7 @@ PERF_TEST_P(TestStereoCorrespBM, BM, Combine(Values(Size(1280, 720), Size(640, 4
     int wsize = 21;
     TEST_CYCLE()
     {
-        Ptr<StereoBM> bm = StereoBM::create(num_disparities, wsize);
+        Ptr<stereo::StereoBM> bm = stereo::StereoBM::create(num_disparities, wsize);
         bm->compute(src_left, src_right, dst);
     }
 

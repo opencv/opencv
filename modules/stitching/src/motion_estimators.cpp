@@ -42,7 +42,6 @@
 
 #include "precomp.hpp"
 #include "opencv2/core/core_c.h"
-#include "opencv2/calib3d/calib3d_c.h"
 #include "opencv2/core/cvdef.h"
 
 using namespace cv;
@@ -254,7 +253,7 @@ bool BundleAdjusterBase::estimate(const std::vector<ImageFeatures> &features,
         total_num_matches_ += static_cast<int>(pairwise_matches[edges_[i].first * num_images_ +
                                                                 edges_[i].second].num_inliers);
 
-    CvLevMarq solver(num_images_ * num_params_per_cam_,
+    cv3d::CvLevMarq solver(num_images_ * num_params_per_cam_,
                      total_num_matches_ * num_errs_per_measurement_,
                      cvTermCriteria(term_criteria_));
 
@@ -344,7 +343,7 @@ void BundleAdjusterReproj::setUpInitialCameraParams(const std::vector<CameraPara
             R *= -1;
 
         Mat rvec;
-        Rodrigues(R, rvec);
+        cv3d::Rodrigues(R, rvec);
         CV_Assert(rvec.type() == CV_32F);
         cam_params_.at<double>(i * 7 + 4, 0) = rvec.at<float>(0, 0);
         cam_params_.at<double>(i * 7 + 5, 0) = rvec.at<float>(1, 0);
@@ -366,7 +365,7 @@ void BundleAdjusterReproj::obtainRefinedCameraParams(std::vector<CameraParams> &
         rvec.at<double>(0, 0) = cam_params_.at<double>(i * 7 + 4, 0);
         rvec.at<double>(1, 0) = cam_params_.at<double>(i * 7 + 5, 0);
         rvec.at<double>(2, 0) = cam_params_.at<double>(i * 7 + 6, 0);
-        Rodrigues(rvec, cameras[i].R);
+        cv3d::Rodrigues(rvec, cameras[i].R);
 
         Mat tmp;
         cameras[i].R.convertTo(tmp, CV_32F);
@@ -399,14 +398,14 @@ void BundleAdjusterReproj::calcError(Mat &err)
         rvec.at<double>(0, 0) = cam_params_.at<double>(i * 7 + 4, 0);
         rvec.at<double>(1, 0) = cam_params_.at<double>(i * 7 + 5, 0);
         rvec.at<double>(2, 0) = cam_params_.at<double>(i * 7 + 6, 0);
-        Rodrigues(rvec, R1_);
+        cv3d::Rodrigues(rvec, R1_);
 
         double R2[9];
         Mat R2_(3, 3, CV_64F, R2);
         rvec.at<double>(0, 0) = cam_params_.at<double>(j * 7 + 4, 0);
         rvec.at<double>(1, 0) = cam_params_.at<double>(j * 7 + 5, 0);
         rvec.at<double>(2, 0) = cam_params_.at<double>(j * 7 + 6, 0);
-        Rodrigues(rvec, R2_);
+        cv3d::Rodrigues(rvec, R2_);
 
         const ImageFeatures& features1 = features_[i];
         const ImageFeatures& features2 = features_[j];
@@ -522,7 +521,7 @@ void BundleAdjusterRay::setUpInitialCameraParams(const std::vector<CameraParams>
             R *= -1;
 
         Mat rvec;
-        Rodrigues(R, rvec);
+        cv3d::Rodrigues(R, rvec);
         CV_Assert(rvec.type() == CV_32F);
         cam_params_.at<double>(i * 4 + 1, 0) = rvec.at<float>(0, 0);
         cam_params_.at<double>(i * 4 + 2, 0) = rvec.at<float>(1, 0);
@@ -541,7 +540,7 @@ void BundleAdjusterRay::obtainRefinedCameraParams(std::vector<CameraParams> &cam
         rvec.at<double>(0, 0) = cam_params_.at<double>(i * 4 + 1, 0);
         rvec.at<double>(1, 0) = cam_params_.at<double>(i * 4 + 2, 0);
         rvec.at<double>(2, 0) = cam_params_.at<double>(i * 4 + 3, 0);
-        Rodrigues(rvec, cameras[i].R);
+        cv3d::Rodrigues(rvec, cameras[i].R);
 
         Mat tmp;
         cameras[i].R.convertTo(tmp, CV_32F);
@@ -568,14 +567,14 @@ void BundleAdjusterRay::calcError(Mat &err)
         rvec.at<double>(0, 0) = cam_params_.at<double>(i * 4 + 1, 0);
         rvec.at<double>(1, 0) = cam_params_.at<double>(i * 4 + 2, 0);
         rvec.at<double>(2, 0) = cam_params_.at<double>(i * 4 + 3, 0);
-        Rodrigues(rvec, R1_);
+        cv3d::Rodrigues(rvec, R1_);
 
         double R2[9];
         Mat R2_(3, 3, CV_64F, R2);
         rvec.at<double>(0, 0) = cam_params_.at<double>(j * 4 + 1, 0);
         rvec.at<double>(1, 0) = cam_params_.at<double>(j * 4 + 2, 0);
         rvec.at<double>(2, 0) = cam_params_.at<double>(j * 4 + 3, 0);
-        Rodrigues(rvec, R2_);
+        cv3d::Rodrigues(rvec, R2_);
 
         const ImageFeatures& features1 = features_[i];
         const ImageFeatures& features2 = features_[j];

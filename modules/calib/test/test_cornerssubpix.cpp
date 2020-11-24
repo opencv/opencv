@@ -152,7 +152,7 @@ void CV_ChessboardSubpixelTest::run( int )
         Mat chessboard_image = gen_chessboard(bg, intrinsic_matrix_, distortion_coeffs_, corners);
 
         vector<Point2f> test_corners;
-        bool result = findChessboardCorners(chessboard_image, pattern_size, test_corners, 15);
+        bool result = cv::calib::findChessboardCorners(chessboard_image, pattern_size, test_corners, 15);
         if(!result)
         {
 #if 0
@@ -183,7 +183,7 @@ void CV_ChessboardSubpixelTest::run( int )
         IplImage chessboard_image_header = cvIplImage(chessboard_image);
         cvFindCornerSubPix(&chessboard_image_header, (CvPoint2D32f*)&test_corners[0],
             (int)test_corners.size(), cvSize(3, 3), cvSize(1, 1), cvTermCriteria(CV_TERMCRIT_EPS|CV_TERMCRIT_ITER,300,0.1));
-        find4QuadCornerSubpix(chessboard_image, test_corners, Size(5, 5));
+        cv::calib::find4QuadCornerSubpix(chessboard_image, test_corners, Size(5, 5));
 
         double dist2 = 0.0;
         ret = calcDistance(corners, test_corners, dist2);

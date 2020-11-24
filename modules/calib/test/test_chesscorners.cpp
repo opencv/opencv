@@ -252,7 +252,7 @@ void CV_ChessboardDetectorTest::run_batch( const string& filename )
         switch( pattern )
         {
             case CHESSBOARD:
-                flags = CALIB_CB_ADAPTIVE_THRESH | CALIB_CB_NORMALIZE_IMAGE;
+                flags = cv::calib::CALIB_CB_ADAPTIVE_THRESH | cv::calib::CALIB_CB_NORMALIZE_IMAGE;
                 break;
             case CIRCLES_GRID:
             case CHESSBOARD_SB:
@@ -263,7 +263,7 @@ void CV_ChessboardDetectorTest::run_batch( const string& filename )
         bool result = findChessboardCornersWrapper(gray, pattern_size,v,flags);
         if(result && sharpness && (pattern == CHESSBOARD_SB || pattern == CHESSBOARD))
         {
-            Scalar s= estimateChessboardSharpness(gray,pattern_size,v);
+            Scalar s = cv::calib::estimateChessboardSharpness(gray,pattern_size,v);
             if(fabs(s[0] - sharpness) > 0.1)
             {
                 ts->printf(cvtest::TS::LOG, "chessboard image has a wrong sharpness in %s. Expected %f but measured %f\n", img_file.c_str(),sharpness,s[0]);
@@ -381,16 +381,16 @@ bool CV_ChessboardDetectorTest::findChessboardCornersWrapper(InputArray image, S
     switch(pattern)
     {
     case CHESSBOARD:
-        return findChessboardCorners(image,patternSize,corners,flags);
+        return cv::calib::findChessboardCorners(image,patternSize,corners,flags);
     case CHESSBOARD_SB:
         // check default settings until flags have been specified
-        return findChessboardCornersSB(image,patternSize,corners,0);
+        return cv::calib::findChessboardCornersSB(image,patternSize,corners,0);
     case ASYMMETRIC_CIRCLES_GRID:
-        flags |= CALIB_CB_ASYMMETRIC_GRID | algorithmFlags;
-        return findCirclesGrid(image, patternSize,corners,flags);
+        flags |= cv::calib::CALIB_CB_ASYMMETRIC_GRID | algorithmFlags;
+        return cv::calib::findCirclesGrid(image, patternSize,corners,flags);
     case CIRCLES_GRID:
-        flags |= CALIB_CB_SYMMETRIC_GRID;
-        return findCirclesGrid(image, patternSize,corners,flags);
+        flags |= cv::calib::CALIB_CB_SYMMETRIC_GRID;
+        return cv::calib::findCirclesGrid(image, patternSize,corners,flags);
     default:
         ts->printf( cvtest::TS::LOG, "Internal Error: unsupported chessboard pattern" );
         ts->set_failed_test_info( cvtest::TS::FAIL_GENERIC);
@@ -504,7 +504,7 @@ bool CV_ChessboardDetectorTest::checkByGenerator()
         if (found)
             res = false;
 
-        cv::drawChessboardCorners(cb, cbg.cornersSize(), Mat(corners_found), found);
+        cv::calib::drawChessboardCorners(cb, cbg.cornersSize(), Mat(corners_found), found);
     }
 
     return res;
@@ -588,7 +588,7 @@ bool CV_ChessboardDetectorTest::checkByGeneratorHighAccuracy()
         Vec3f rvec(0.0F,0.05F,float(float(i)/180.0*CV_PI));
         Vec3f tvec(0,0,0);
         cv::Mat k = (cv::Mat_<double>(3,3) << fx/2,0,center.x*2, 0,fy/2,center.y, 0,0,1);
-        cv::projectPoints(pts3d,rvec,tvec,k,cv::Mat(),pts2_all);
+        cv3d::projectPoints(pts3d,rvec,tvec,k,cv::Mat(),pts2_all);
 
         // get perspective transform using four correspondences and wrap original image
         pts1.clear();
@@ -634,7 +634,7 @@ TEST(Calib3d_ChessboardDetector2, accuracy) {  CV_ChessboardDetectorTest test( C
 TEST(Calib3d_CirclesPatternDetector, accuracy) { CV_ChessboardDetectorTest test( CIRCLES_GRID ); test.safe_run(); }
 TEST(Calib3d_AsymmetricCirclesPatternDetector, accuracy) { CV_ChessboardDetectorTest test( ASYMMETRIC_CIRCLES_GRID ); test.safe_run(); }
 #ifdef HAVE_OPENCV_FLANN
-TEST(Calib3d_AsymmetricCirclesPatternDetectorWithClustering, accuracy) { CV_ChessboardDetectorTest test( ASYMMETRIC_CIRCLES_GRID, CALIB_CB_CLUSTERING ); test.safe_run(); }
+TEST(Calib3d_AsymmetricCirclesPatternDetectorWithClustering, accuracy) { CV_ChessboardDetectorTest test( ASYMMETRIC_CIRCLES_GRID, cv::calib::CALIB_CB_CLUSTERING ); test.safe_run(); }
 #endif
 
 TEST(Calib3d_CirclesPatternDetectorWithClustering, accuracy)
@@ -649,7 +649,7 @@ TEST(Calib3d_CirclesPatternDetectorWithClustering, accuracy)
     cv::Mat image = cv::imread(dataDir + "circles15.png");
 
     std::vector<Point2f> centers;
-    cv::findCirclesGrid(image, Size(10, 8), centers, CALIB_CB_SYMMETRIC_GRID | CALIB_CB_CLUSTERING);
+    cv::calib::findCirclesGrid(image, Size(10, 8), centers, cv::calib::CALIB_CB_SYMMETRIC_GRID | cv::calib::CALIB_CB_CLUSTERING);
     ASSERT_EQ(expected.total(), centers.size());
 
     double error = calcError(centers, expected);

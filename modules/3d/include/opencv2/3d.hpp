@@ -6,6 +6,7 @@
 #define OPENCV_3D_HPP
 
 #include "opencv2/core.hpp"
+#include "opencv2/core/types_c.h"
 
 /**
   @defgroup 3d 3D vision functionality
@@ -2194,6 +2195,61 @@ CV_EXPORTS_W
 Mat getDefaultNewCameraMatrix(InputArray cameraMatrix, Size imgsize = Size(),
                               bool centerPrincipalPoint = false);
 
+/** @brief Returns the inscribed and bounding rectangles for the "undisorted" image plane.
+
+The functions emulates undistortion of the image plane using the specified camera matrix,
+distortion coefficients, the optional 3D rotation and the "new" camera matrix. In the case of
+noticeable radial (or maybe pinclusion) distortion the rectangular image plane is distorted and
+turns into some convex or concave shape. The function computes approximate inscribed (inner) and
+bounding (outer) rectangles after such undistortion. The rectangles can be used to adjust
+the newCameraMatrix so that the result image, for example, fits all the data from the original image
+(at the expense of possibly big "black" areas) or, for another example, gets rid of black areas at the expense
+some lost data near the original image edge. The function #getOptimalNewCameraMatrix uses this function
+to compute the optimal new camera matrix.
+
+@param cameraMatrix the original camera matrix.
+@param distCoeffs distortion coefficients.
+@param R the optional 3D rotation, applied before projection (see stereoRectify etc.)
+@param newCameraMatrix the new camera matrix after undistortion. Usually it matches the original cameraMatrix.
+@param imgSize the size of the image plane.
+@param inner the output maximal inscribed rectangle of the undistorted image plane.
+@param outer the output minimal bounding rectangle of the undistorted image plane.
+ */
+CV_EXPORTS void getUndistortRectangles(InputArray cameraMatrix, InputArray distCoeffs,
+                                       InputArray R, InputArray newCameraMatrix, Size imgSize,
+                                       Rect_<float>& inner, Rect_<float>& outer );
+
+/** @brief Returns the new camera intrinsic matrix based on the free scaling parameter.
+
+@param cameraMatrix Input camera intrinsic matrix.
+@param distCoeffs Input vector of distortion coefficients
+\f$\distcoeffs\f$. If the vector is NULL/empty, the zero distortion coefficients are
+assumed.
+@param imageSize Original image size.
+@param alpha Free scaling parameter between 0 (when all the pixels in the undistorted image are
+valid) and 1 (when all the source image pixels are retained in the undistorted image). See
+stereoRectify for details.
+@param newImgSize Image size after rectification. By default, it is set to imageSize .
+@param validPixROI Optional output rectangle that outlines all-good-pixels region in the
+undistorted image. See roi1, roi2 description in stereoRectify .
+@param centerPrincipalPoint Optional flag that indicates whether in the new camera intrinsic matrix the
+principal point should be at the image center or not. By default, the principal point is chosen to
+best fit a subset of the source image (determined by alpha) to the corrected image.
+@return new_camera_matrix Output new camera intrinsic matrix.
+
+The function computes and returns the optimal new camera intrinsic matrix based on the free scaling parameter.
+By varying this parameter, you may retrieve only sensible pixels alpha=0 , keep all the original
+image pixels if there is valuable information in the corners alpha=1 , or get something in between.
+When alpha\>0 , the undistorted result is likely to have some black pixels corresponding to
+"virtual" pixels outside of the captured distorted image. The original camera intrinsic matrix, distortion
+coefficients, the computed new camera intrinsic matrix, and newImageSize should be passed to
+initUndistortRectifyMap to produce the maps for remap .
+ */
+CV_EXPORTS_W Mat getOptimalNewCameraMatrix( InputArray cameraMatrix, InputArray distCoeffs,
+                                            Size imageSize, double alpha, Size newImgSize = Size(),
+                                            CV_OUT Rect* validPixROI = 0,
+                                            bool centerPrincipalPoint = false);
+
 /** @brief Computes the ideal point coordinates from the observed point coordinates.
 
 The function is similar to #undistort and #initUndistortRectifyMap but it operates on a
@@ -2239,6 +2295,46 @@ void undistortPoints(InputArray src, OutputArray dst,
                      InputArray cameraMatrix, InputArray distCoeffs,
                      InputArray R = noArray(), InputArray P = noArray(),
                      TermCriteria criteria=TermCriteria(TermCriteria::MAX_ITER, 5, 0.01));
+
+//////////////////////////////////////////////////////////////////////////////////////////
+
+// the old-style Levenberg-Marquardt solver; to be removed soon
+class CV_EXPORTS CvLevMarq
+{
+public:
+    CvLevMarq();
+    CvLevMarq( int nparams, int nerrs, CvTermCriteria criteria=
+               cvTermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_ITER,30,DBL_EPSILON),
+               bool completeSymmFlag=false );
+    ~CvLevMarq();
+    void init( int nparams, int nerrs, CvTermCriteria criteria=
+               cvTermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_ITER,30,DBL_EPSILON),
+               bool completeSymmFlag=false );
+    bool update( const CvMat*& param, CvMat*& J, CvMat*& err );
+    bool updateAlt( const CvMat*& param, CvMat*& JtJ, CvMat*& JtErr, double*& errNorm );
+
+    void clear();
+    void step();
+    enum { DONE=0, STARTED=1, CALC_J=2, CHECK_ERR=3 };
+
+    cv::Ptr<CvMat> mask;
+    cv::Ptr<CvMat> prevParam;
+    cv::Ptr<CvMat> param;
+    cv::Ptr<CvMat> J;
+    cv::Ptr<CvMat> err;
+    cv::Ptr<CvMat> JtJ;
+    cv::Ptr<CvMat> JtJN;
+    cv::Ptr<CvMat> JtErr;
+    cv::Ptr<CvMat> JtJV;
+    cv::Ptr<CvMat> JtJW;
+    double prevErrNorm, errNorm;
+    int lambdaLg10;
+    CvTermCriteria criteria;
+    int state;
+    int iters;
+    bool completeSymmFlag;
+    int solveMethod;
+};
 
 //! @} _3d
 } //end namespace _3d
