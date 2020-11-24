@@ -1,6 +1,14 @@
 name: Apple CI
 
-on: [push, pull_request]
+on:  
+  push:
+    branches:
+      - master
+      - '3.4'
+      - next
+    tags:
+      - '**'
+  pull_request: # Run on every pull request, regardless of target branch
 
 env:
   DEVELOPER_DIR: /Applications/Xcode_12.2.app/Contents/Developer
@@ -11,9 +19,16 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+      - uses: actions/cache@v2
+        with:
+          path: build/xcframework
+          key: ${{ runner.os }}-xcframework-${{ hashFiles('**/version_string.tmp') }}
+          restore-keys: |
+            ${{ runner.os }}-xcframework-
+      - name: Update CMake 3.19+
+        run: brew update && (brew upgrade cmake || true) # Need CMake 3.19 or higher https://gitlab.kitware.com/cmake/cmake/-/issues/21425
       - name: Build Dynamic XCFramework
         run: |
-          brew update && (brew upgrade cmake || true) # Need CMake 3.19 or higher https://gitlab.kitware.com/cmake/cmake/-/issues/21425
           python3 platforms/apple/build_xcframework.py build/xcframework --dynamic
           cd build/xcframework/ && zip -r opencv2-dynamic-${GITHUB_SHA::7}.xcframework.zip opencv2.xcframework
       - name: Upload Dynamic XCFramework
@@ -28,9 +43,16 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+      - uses: actions/cache@v2
+        with:
+          path: build/xcframework
+          key: ${{ runner.os }}-xcframework-${{ hashFiles('**/version_string.tmp') }}
+          restore-keys: |
+            ${{ runner.os }}-xcframework-
+      - name: Update CMake 3.19+
+        run: brew update && (brew upgrade cmake || true) # Need CMake 3.19 or higher https://gitlab.kitware.com/cmake/cmake/-/issues/21425
       - name: Build Static XCFramework
         run: |
-          brew update && (brew upgrade cmake || true) # Need CMake 3.19 or higher https://gitlab.kitware.com/cmake/cmake/-/issues/21425
           python3 platforms/apple/build_xcframework.py build/xcframework
           cd build/xcframework/ && zip -r opencv2-static-${GITHUB_SHA::7}.xcframework.zip opencv2.xcframework
       - name: Upload Static XCFramework
