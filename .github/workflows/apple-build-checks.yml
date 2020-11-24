@@ -3,17 +3,18 @@ name: Apple Platform CI
 on: [push, pull_request]
 
 defaults:
-  runs-on: macos-11.0
   env:
     DEVELOPER_DIR: /Applications/Xcode_12.2.app/Contents/Developer
 
 jobs:
   dynamic-xcframework:
+    runs-on: macos-11.0
     steps:
       - name: Checkout
         uses: actions/checkout@v1
       - name: Build Dynamic XCFramework
         run: |
+          brew outdated cmake || (brew uninstall cmake --force; brew install cmake --force-bottle)
           python platforms/apple/build_xcframework.py build/dynamic-xcframework --dynamic
           zip -r opencv2-dynamic-${GITHUB_SHA::7}.xcframework.zip build/static-xcframework/opencv2.xcframework 
       - name: Upload Dynamic XCFramework
@@ -24,11 +25,13 @@ jobs:
             opencv2-dynamic-${GITHUB_SHA::7}.xcframework.zip
 
   static-xcframework:
+    runs-on: macos-11.0
     steps:
       - name: Checkout
         uses: actions/checkout@v1
       - name: Build Static XCFramework
         run: |
+          brew outdated cmake || (brew uninstall cmake --force; brew install cmake --force-bottle)
           python platforms/apple/build_xcframework.py build/static-xcframework
           zip -r opencv2-static-${GITHUB_SHA::7}.xcframework.zip build/static-xcframework/opencv2.xcframework 
       - name: Upload Static XCFramework
