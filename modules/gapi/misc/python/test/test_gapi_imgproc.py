@@ -20,7 +20,7 @@ class gapi_imgproc_test(NewOpenCVTests):
 
     def test_good_features_to_track(self):
         # TODO: Extend to use any type and size here
-        sz = (1280, 720)
+        sz = (720, 1280)
         in1 = np.random.randint(0, 100, sz).astype(np.uint8)
 
         # NB: goodFeaturesToTrack configuration
@@ -55,7 +55,7 @@ class gapi_imgproc_test(NewOpenCVTests):
 
     def test_rgb2gray(self):
         # TODO: Extend to use any type and size here
-        sz = (1280, 720, 3)
+        sz = (720, 1280, 3)
         in1 = np.random.randint(0, 100, sz).astype(np.uint8)
 
         # OpenCV
