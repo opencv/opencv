@@ -1123,7 +1123,7 @@ class ObjectiveCWrapperGenerator(object):
                 if cpp_type.find("::") == -1:
                     cpp_type = self.get_namespace_prefix(cpp_type) + cpp_type
                 prologue.append("NSMutableArray<NSMutableArray<" + objc_type + ">*>* retVal = [NSMutableArray new];")
-                ret_val = "std::vector<" + cpp_type + "> retValVector = "
+                ret_val = "std::vector< std::vector<" + cpp_type + "> > retValVector = "
                 epilogue.append("CV2OBJC2(" + cpp_type + ", " + objc_type[:-1] + ", retValVector, retVal);")
             elif ret_type.startswith("Ptr_"):
                 cpp_type = type_dict[ret_type]["c_type"]
