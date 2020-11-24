@@ -200,20 +200,24 @@ public:
         {
             return !computeMaxIdx && type != STOCHASTIC && kernel_size.size() > 1;
         }
-        else if (backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE)
+        else if (backendId == DNN_BACKEND_OPENCV)
         {
             if (kernel_size.size() == 3)
-                return (backendId == DNN_BACKEND_OPENCV && preferableTarget == DNN_TARGET_CPU);
+                return preferableTarget == DNN_TARGET_CPU;
             if (kernel_size.empty() || kernel_size.size() == 2)
-                return backendId == DNN_BACKEND_OPENCV ||
-                       (backendId == DNN_BACKEND_HALIDE && haveHalide() &&
-                       (type == MAX || (type == AVE && !pads_begin[0] && !pads_begin[1] && !pads_end[0] && !pads_end[1])));
+                return true;
             if (kernel_size.size() == 1)
-                return (backendId == DNN_BACKEND_OPENCV && preferableTarget == DNN_TARGET_CPU) ||
-                       (backendId == DNN_BACKEND_OPENCV && preferableTarget == DNN_TARGET_OPENCL) ||
-                       (backendId == DNN_BACKEND_OPENCV && preferableTarget == DNN_TARGET_OPENCL_FP16);
+                return preferableTarget == DNN_TARGET_CPU ||
+                       preferableTarget == DNN_TARGET_OPENCL ||
+                       preferableTarget == DNN_TARGET_OPENCL_FP16;
             else
                 return false;
+        }
+        else if (backendId == DNN_BACKEND_HALIDE)
+        {
+            if (kernel_size.empty() || kernel_size.size() == 2)
+                return haveHalide() &&
+                       (type == MAX || (type == AVE && !pads_begin[0] && !pads_begin[1] && !pads_end[0] && !pads_end[1]));
         }
         return false;
     }
