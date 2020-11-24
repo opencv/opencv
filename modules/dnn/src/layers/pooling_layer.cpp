@@ -204,12 +204,8 @@ public:
         {
             if (kernel_size.size() == 3)
                 return preferableTarget == DNN_TARGET_CPU;
-            if (kernel_size.empty() || kernel_size.size() == 2)
+            if (kernel_size.size() <= 2)
                 return true;
-            if (kernel_size.size() == 1)
-                return preferableTarget == DNN_TARGET_CPU ||
-                       preferableTarget == DNN_TARGET_OPENCL ||
-                       preferableTarget == DNN_TARGET_OPENCL_FP16;
             else
                 return false;
         }
