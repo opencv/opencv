@@ -1,0 +1,43 @@
+name: Apple Platform CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+defaults:
+  runs-on: macos-11.0
+  env:
+    DEVELOPER_DIR: /Applications/Xcode_12.2.app/Contents/Developer
+
+jobs:
+  dynamic-xcframework:
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v1
+      - name: Build Dynamic XCFramework
+        run: |
+          python platforms/apple/build_xcframework.py build/dynamic-xcframework --dynamic
+          zip -r opencv2-dynamic-${GITHUB_SHA::7}.xcframework.zip build/static-xcframework/opencv2.xcframework 
+      - name: Upload Dynamic XCFramework
+        uses: actions/upload-artifact@v2
+        with:
+          name: opencv2-dynamic.xcframework.zip
+          path: |
+            opencv2-dynamic-${GITHUB_SHA::7}.xcframework.zip
+
+  static-xcframework:
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v1
+      - name: Build Static XCFramework
+        run: |
+          python platforms/apple/build_xcframework.py build/static-xcframework
+          zip -r opencv2-static-${GITHUB_SHA::7}.xcframework.zip build/static-xcframework/opencv2.xcframework 
+      - name: Upload Static XCFramework
+        uses: actions/upload-artifact@v2
+        with:
+          name: opencv2-static.xcframework.zip
+          path: |
+            opencv2-static-${GITHUB_SHA::7}.xcframework.zip
