@@ -320,28 +320,39 @@ void SegmentationModel::segment(InputArray frame, OutputArray mask)
     }
 }
 
-void disableRegionNMS(Net& net)
+class DetectionModel_Impl : public Model::Impl
 {
-    for (String& name : net.getUnconnectedOutLayersNames())
+public:
+    virtual ~DetectionModel_Impl() {}
+    DetectionModel_Impl() : Impl() {}
+    DetectionModel_Impl(const DetectionModel_Impl&) = delete;
+    DetectionModel_Impl(DetectionModel_Impl&&) = delete;
+
+    void disableRegionNMS(Net& net)
     {
-        int layerId = net.getLayerId(name);
-        Ptr<RegionLayer> layer = net.getLayer(layerId).dynamicCast<RegionLayer>();
-        if (!layer.empty())
+        for (String& name : net.getUnconnectedOutLayersNames())
         {
-            layer->nmsThreshold = 0;
+            int layerId = net.getLayerId(name);
+            Ptr<RegionLayer> layer = net.getLayer(layerId).dynamicCast<RegionLayer>();
+            if (!layer.empty())
+            {
+                layer->nmsThreshold = 0;
+            }
         }
     }
-}
+};
 
 DetectionModel::DetectionModel(const String& model, const String& config)
-    : Model(model, config)
+    : DetectionModel(readNet(model, config))
 {
-    disableRegionNMS(getNetwork_());  // FIXIT Move to DetectionModel::Impl::initNet()
+    // nothing
 }
 
-DetectionModel::DetectionModel(const Net& network) : Model(network)
+DetectionModel::DetectionModel(const Net& network) : Model()
 {
-    disableRegionNMS(getNetwork_());  // FIXIT Move to DetectionModel::Impl::initNet()
+    impl = makePtr<DetectionModel_Impl>();
+    impl->initNet(network);
+    impl.dynamicCast<DetectionModel_Impl>()->disableRegionNMS(getNetwork_());  // FIXIT Move to DetectionModel::Impl::initNet()
 }
 
 void DetectionModel::detect(InputArray frame, CV_OUT std::vector<int>& classIds,
