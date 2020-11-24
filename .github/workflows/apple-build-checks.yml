@@ -13,7 +13,7 @@ jobs:
         uses: actions/checkout@v2
       - name: Build Dynamic XCFramework
         run: |
-          brew upgrade cmake || true # Need CMake 3.19 or higher https://gitlab.kitware.com/cmake/cmake/-/issues/21425
+          brew update && (brew upgrade cmake || true) # Need CMake 3.19 or higher https://gitlab.kitware.com/cmake/cmake/-/issues/21425
           python3 platforms/apple/build_xcframework.py build/xcframework --dynamic
           cd build/xcframework/ && zip -r opencv2-dynamic-${GITHUB_SHA::7}.xcframework.zip opencv2.xcframework
       - name: Upload Dynamic XCFramework
@@ -30,7 +30,7 @@ jobs:
         uses: actions/checkout@v2
       - name: Build Static XCFramework
         run: |
-          brew upgrade cmake || true # Need CMake 3.19 or higher https://gitlab.kitware.com/cmake/cmake/-/issues/21425
+          brew update && (brew upgrade cmake || true) # Need CMake 3.19 or higher https://gitlab.kitware.com/cmake/cmake/-/issues/21425
           python3 platforms/apple/build_xcframework.py build/xcframework
           cd build/xcframework/ && zip -r opencv2-static-${GITHUB_SHA::7}.xcframework.zip opencv2.xcframework
       - name: Upload Static XCFramework
