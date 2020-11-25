@@ -37,6 +37,11 @@ jobs:
           key: ${{ runner.os }}-spm-${{ hashFiles('**/Package.resolved') }}
           restore-keys: |
             ${{ runner.os }}-spm-
+      - name: Remove Stale Items from Cache
+        run: |
+          rm -r build/xcframework/opencv2-static.xcframework.zip || true
+          rm -r build/xcframework/opencv2-dynamic.xcframework.zip || true
+          rm -r build/xcframework/opencv2.xcframework || true
       - name: Update CMake 3.19+
         run: brew update && (brew upgrade cmake || true) # Need CMake 3.19 or higher https://gitlab.kitware.com/cmake/cmake/-/issues/21425
       - name: Build Dynamic XCFramework
@@ -75,6 +80,11 @@ jobs:
           key: ${{ runner.os }}-spm-${{ hashFiles('**/Package.resolved') }}
           restore-keys: |
             ${{ runner.os }}-spm-
+      - name: Remove Stale Items from Cache
+        run: |
+          rm -r build/xcframework/opencv2-static.xcframework.zip || true
+          rm -r build/xcframework/opencv2-dynamic.xcframework.zip || true
+          rm -r build/xcframework/opencv2.xcframework || true
       - name: Update CMake 3.19+
         run: brew update && (brew upgrade cmake || true) # Need CMake 3.19 or higher https://gitlab.kitware.com/cmake/cmake/-/issues/21425
       - name: Build Static XCFramework
