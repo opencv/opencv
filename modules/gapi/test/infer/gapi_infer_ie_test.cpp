@@ -573,7 +573,8 @@ TEST(TestAgeGenderIE, CPUConfigGeneric)
                                                       model_path,
                                                       weights_path,
                                                       device_id
-                                                     }.pluginConfig({{"ENFORCE_BF16", "NO"}});
+                                                     }.pluginConfig({{"CPU_THROUGHPUT_STREAMS",
+                                                                      "CPU_THROUGHPUT_NUMA"}});
 
     EXPECT_NO_THROW(comp.compile(cv::GMatDesc{CV_8U,3,cv::Size{320, 240}},
                     cv::compile_args(cv::gapi::networks(pp))));
@@ -622,7 +623,8 @@ TEST(TestAgeGenderIE, CPUConfig)
 
     auto pp = cv::gapi::ie::Params<AgeGender> {model_path, weights_path, device_id
                                               }.cfgOutputLayers({ "age_conv3", "prob" })
-                                               .pluginConfig({{"ENFORCE_BF16", "NO"}});
+                                               .pluginConfig({{"CPU_THROUGHPUT_STREAMS",
+                                                               "CPU_THROUGHPUT_NUMA"}});
 
     EXPECT_NO_THROW(comp.compile(cv::GMatDesc{CV_8U,3,cv::Size{320, 240}},
                     cv::compile_args(cv::gapi::networks(pp))));
