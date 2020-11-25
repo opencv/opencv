@@ -775,7 +775,7 @@ void solvePnPRefineVVS(InputArray _objectPoints, InputArray _imagePoints,
 int solvePnPGeneric( InputArray _opoints, InputArray _ipoints,
                      InputArray _cameraMatrix, InputArray _distCoeffs,
                      OutputArrayOfArrays _rvecs, OutputArrayOfArrays _tvecs,
-                     bool useExtrinsicGuess, SolvePnPMethod flags,
+                     bool useExtrinsicGuess, int flags,
                      InputArray _rvec, InputArray _tvec,
                      OutputArray reprojectionError) {
     CV_INSTRUMENT_REGION();

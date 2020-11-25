@@ -360,7 +360,7 @@ class FuncInfo(GeneralInfo):
     def __init__(self, decl, namespaces=[]): # [ funcname, return_ctype, [modifiers], [args] ]
         GeneralInfo.__init__(self, "func", decl, namespaces)
         self.cname = get_cname(decl[0])
-        self.jname = self.name
+        self.jname = make_jname(self.name)
         self.isconstructor = self.name == self.classname
         if "[" in self.name:
             self.jname = "getelem"
@@ -368,10 +368,9 @@ class FuncInfo(GeneralInfo):
             self.jname = '%s_%s' % (namespaces_dict[self.namespace], self.jname)
         for m in decl[2]:
             if m.startswith("="):
-                self.jname = m[1:]
+                self.jname = make_jname(m[1:])
         self.static = ["","static"][ "/S" in decl[2] ]
         self.ctype = re.sub(r"^CvTermCriteria", "TermCriteria", decl[1] or "")
-        self.jname = make_jname(self.name)
         self.args = []
         func_fix_map = func_arg_fix.get(self.jname, {})
         for a in decl[3]:
