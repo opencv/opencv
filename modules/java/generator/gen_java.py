@@ -118,6 +118,7 @@ def mkdir_p(path):
 
 def make_jname(m):
     return "Cv"+m if (m[0] in "0123456789") else m
+
 def make_jmodule(m):
     return "cv"+m if (m[0] in "0123456789") else m
 
@@ -323,7 +324,7 @@ class ClassInfo(GeneralInfo):
         return Template(self.j_code.getvalue() + "\n\n" +
                          self.jn_code.getvalue() + "\n}\n").substitute(
                             module = m,
-                            jmodule = make_jmodule(m), 
+                            jmodule = make_jmodule(m),
                             name = self.name,
                             jname = self.jname,
                             imports = "\n".join(self.getAllImports(M)),

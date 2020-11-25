@@ -37,7 +37,7 @@ def get_no_exception_msg(value):
 class Bindings(NewOpenCVTests):
 
     def test_inheritance(self):
-        bm = cv.StereoBM_create()
+        bm = cv.stereo.StereoBM_create()
         bm.getPreFilterCap()  # from StereoBM
         bm.getBlockSize()  # from SteroMatcher
 

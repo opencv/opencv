@@ -3,8 +3,9 @@
 namespace opencv_test
 {
 using namespace perf;
+using namespace cv3d;
 
-CV_ENUM(pnpAlgo, cv3d::SOLVEPNP_ITERATIVE, cv3d::SOLVEPNP_EPNP, cv3d::SOLVEPNP_P3P, cv3d::SOLVEPNP_DLS, cv3d::SOLVEPNP_UPNP)
+CV_ENUM(pnpAlgo, SOLVEPNP_ITERATIVE, SOLVEPNP_EPNP, SOLVEPNP_P3P, SOLVEPNP_DLS, SOLVEPNP_UPNP)
 
 typedef tuple<int, pnpAlgo> PointsNum_Algo_t;
 typedef perf::TestBaseWithParam<PointsNum_Algo_t> PointsNum_Algo;
@@ -14,7 +15,7 @@ typedef perf::TestBaseWithParam<int> PointsNum;
 PERF_TEST_P(PointsNum_Algo, solvePnP,
             testing::Combine( //When non planar, DLT needs at least 6 points for SOLVEPNP_ITERATIVE flag
                 testing::Values(6, 3*9, 7*13), //TODO: find why results on 4 points are too unstable
-                testing::Values((int)cv3d::SOLVEPNP_ITERATIVE, (int)cv3d::SOLVEPNP_EPNP, (int)cv3d::SOLVEPNP_UPNP, (int)cv3d::SOLVEPNP_DLS)
+                testing::Values((int)SOLVEPNP_ITERATIVE, (int)SOLVEPNP_EPNP, (int)SOLVEPNP_UPNP, (int)SOLVEPNP_DLS)
                 )
             )
 {
@@ -37,7 +38,7 @@ PERF_TEST_P(PointsNum_Algo, solvePnP,
     warmup(rvec, WARMUP_RNG);
     warmup(tvec, WARMUP_RNG);
 
-    cv3d::projectPoints(points3d, rvec, tvec, intrinsics, distortion, points2d);
+    projectPoints(points3d, rvec, tvec, intrinsics, distortion, points2d);
 
     //add noise
     Mat noise(1, (int)points2d.size(), CV_32FC2);
@@ -49,7 +50,7 @@ PERF_TEST_P(PointsNum_Algo, solvePnP,
 
     TEST_CYCLE_N(1000)
     {
-        cv3d::solvePnP(points3d, points2d, intrinsics, distortion, rvec, tvec, false, algo);
+        solvePnP(points3d, points2d, intrinsics, distortion, rvec, tvec, false, algo);
     }
 
     SANITY_CHECK(rvec, 1e-4);
@@ -59,13 +60,13 @@ PERF_TEST_P(PointsNum_Algo, solvePnP,
 PERF_TEST_P(PointsNum_Algo, solvePnPSmallPoints,
             testing::Combine(
                 testing::Values(5),
-                testing::Values((int)cv3d::SOLVEPNP_P3P, (int)cv3d::SOLVEPNP_EPNP, (int)cv3d::SOLVEPNP_DLS, (int)cv3d::SOLVEPNP_UPNP)
+                testing::Values((int)SOLVEPNP_P3P, (int)SOLVEPNP_EPNP, (int)SOLVEPNP_DLS, (int)SOLVEPNP_UPNP)
                 )
             )
 {
     int pointsNum = get<0>(GetParam());
     pnpAlgo algo = get<1>(GetParam());
-    if( algo == cv3d::SOLVEPNP_P3P )
+    if( algo == SOLVEPNP_P3P )
         pointsNum = 4;
 
     vector<Point2f> points2d(pointsNum);
@@ -86,10 +87,10 @@ PERF_TEST_P(PointsNum_Algo, solvePnPSmallPoints,
 
     // normalize Rodrigues vector
     Mat rvec_tmp = Mat::eye(3, 3, CV_32F);
-    cv3d::Rodrigues(rvec, rvec_tmp);
-    cv3d::Rodrigues(rvec_tmp, rvec);
+    Rodrigues(rvec, rvec_tmp);
+    Rodrigues(rvec_tmp, rvec);
 
-    cv3d::projectPoints(points3d, rvec, tvec, intrinsics, distortion, points2d);
+    projectPoints(points3d, rvec, tvec, intrinsics, distortion, points2d);
 
     //add noise
     Mat noise(1, (int)points2d.size(), CV_32FC2);
@@ -101,7 +102,7 @@ PERF_TEST_P(PointsNum_Algo, solvePnPSmallPoints,
 
     TEST_CYCLE_N(1000)
     {
-        cv3d::solvePnP(points3d, points2d, intrinsics, distortion, rvec, tvec, false, algo);
+        solvePnP(points3d, points2d, intrinsics, distortion, rvec, tvec, false, algo);
     }
 
     SANITY_CHECK(rvec, 1e-1);
@@ -131,7 +132,7 @@ PERF_TEST_P(PointsNum, DISABLED_SolvePnPRansac, testing::Values(5, 3*9, 7*13))
 
     Mat tvec_gold(1, 3, CV_32FC1);
     randu(tvec_gold, 0, 1);
-    cv3d::projectPoints(object, rvec_gold, tvec_gold, camera_mat, dist_coef, image_vec);
+    projectPoints(object, rvec_gold, tvec_gold, camera_mat, dist_coef, image_vec);
 
     Mat image(1, count, CV_32FC2, &image_vec[0]);
 
@@ -140,7 +141,7 @@ PERF_TEST_P(PointsNum, DISABLED_SolvePnPRansac, testing::Values(5, 3*9, 7*13))
 
     TEST_CYCLE()
     {
-        cv3d::solvePnPRansac(object, image, camera_mat, dist_coef, rvec, tvec);
+        solvePnPRansac(object, image, camera_mat, dist_coef, rvec, tvec);
     }
 
     SANITY_CHECK(rvec, 1e-6);

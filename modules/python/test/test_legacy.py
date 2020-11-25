@@ -25,8 +25,8 @@ class Hackathon244Tests(NewOpenCVTests):
 
     def test_projectPoints(self):
         objpt = np.float64([[1,2,3]])
-        imgpt0, jac0 = cv.projectPoints(objpt, np.zeros(3), np.zeros(3), np.eye(3), np.float64([]))
-        imgpt1, jac1 = cv.projectPoints(objpt, np.zeros(3), np.zeros(3), np.eye(3), None)
+        imgpt0, jac0 = cv._3d.projectPoints(objpt, np.zeros(3), np.zeros(3), np.eye(3), np.float64([]))
+        imgpt1, jac1 = cv._3d.projectPoints(objpt, np.zeros(3), np.zeros(3), np.eye(3), None)
         self.assertEqual(imgpt0.shape, (objpt.shape[0], 1, 2))
         self.assertEqual(imgpt1.shape, imgpt0.shape)
         self.assertEqual(jac0.shape, jac1.shape)
@@ -37,7 +37,7 @@ class Hackathon244Tests(NewOpenCVTests):
         pattern_points = np.zeros((np.prod(pattern_size), 3), np.float32)
         pattern_points[:,:2] = np.indices(pattern_size).T.reshape(-1, 2)
         pattern_points *= 10
-        (retval, out, inliers) = cv.estimateAffine3D(pattern_points, pattern_points)
+        (retval, out, inliers) = cv._3d.estimateAffine3D(pattern_points, pattern_points)
         self.assertEqual(retval, 1)
         if cv.norm(out[2,:]) < 1e-3:
             out[2,2]=1

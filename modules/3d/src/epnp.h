@@ -9,7 +9,7 @@
 #include "opencv2/core/core_c.h"
 
 namespace cv {
-namespace _3d {    
+namespace _3d {
 
 class epnp {
  public:

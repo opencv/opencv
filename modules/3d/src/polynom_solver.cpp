@@ -177,4 +177,3 @@ int solve_deg4(double a, double b, double c, double d, double e,
 }
 
 }}
-

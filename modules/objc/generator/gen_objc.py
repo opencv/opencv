@@ -107,6 +107,12 @@ def mkdir_p(path):
         else:
             raise
 
+def make_objcname(m):
+    return "Cv"+m if (m[0] in "0123456789") else m
+
+def make_objcmodule(m):
+    return "cv"+m if (m[0] in "0123456789") else m
+
 T_OBJC_CLASS_HEADER = read_contents(os.path.join(SCRIPT_DIR, 'templates/objc_class_header.template'))
 T_OBJC_CLASS_BODY = read_contents(os.path.join(SCRIPT_DIR, 'templates/objc_class_body.template'))
 T_OBJC_MODULE_HEADER = read_contents(os.path.join(SCRIPT_DIR, 'templates/objc_module_header.template'))
@@ -369,7 +375,7 @@ class ClassInfo(GeneralInfo):
                             manualMethodDeclations = "",
                             methodDeclarations = self.method_declarations.getvalue(),
                             name = self.name,
-                            objcName = self.objc_name,
+                            objcName = make_objcname(self.objc_name),
                             cName = self.cname,
                             imports = "\n".join(self.getImports(M)),
                             docs = gen_class_doc(self.docstring, M, self.member_classes, self.member_enums),
@@ -378,6 +384,7 @@ class ClassInfo(GeneralInfo):
     def generateObjcBodyCode(self, m, M):
         return Template(self.objc_body_template + "\n\n").substitute(
                             module = M,
+                            objcname = make_objcname(M),
                             nativePointerHandling=Template(
 """
 - (instancetype)initWithNativePtr:(cv::Ptr<$cName>)nativePtr {
@@ -394,14 +401,14 @@ class ClassInfo(GeneralInfo):
 """
                             ).substitute(
                                 cName = self.fullName(isCPP=True),
-                                objcName = self.objc_name,
+                                objcName = make_objcname(self.objc_name),
                                 native_ptr_name = self.native_ptr_name,
                                 init_call = "init" if self.is_base_class else "initWithNativePtr:nativePtr"
                             ),
                             manualMethodDeclations = "",
                             methodImplementations = self.method_implementations.getvalue(),
                             name = self.name,
-                            objcName = self.objc_name,
+                            objcName = make_objcname(self.objc_name),
                             cName = self.cname,
                             imports = "\n".join(self.getImports(M)),
                             docs = gen_class_doc(self.docstring, M, self.member_classes, self.member_enums),
@@ -605,7 +612,7 @@ def build_swift_signature(args):
     return swift_signature
 
 def build_unrefined_call(name, args, constructor, static, classname, has_ret):
-    swift_refine_call = ("let ret = " if has_ret and not constructor else "") + ((classname + ".") if static else "") + (name if not constructor else "self.init")
+    swift_refine_call = ("let ret = " if has_ret and not constructor else "") + ((make_objcname(classname) + ".") if static else "") + (name if not constructor else "self.init")
     call_args = []
     for a in args:
         if a.ctype not in type_dict:
@@ -834,6 +841,7 @@ class ObjectiveCWrapperGenerator(object):
     def gen(self, srcfiles, module, output_path, output_objc_path, common_headers, manual_classes):
         self.clear()
         self.module = module
+        self.objcmodule = make_objcmodule(module)
         self.Module = module.capitalize()
         extension_implementations = StringIO() # Swift extensions implementations stream
         extension_signatures = []
@@ -872,9 +880,9 @@ class ObjectiveCWrapperGenerator(object):
         self.classes[self.Module].member_classes += manual_classes
 
         logging.info("\n\n===== Generating... =====")
-        package_path = os.path.join(output_objc_path, module)
+        package_path = os.path.join(output_objc_path, self.objcmodule)
         mkdir_p(package_path)
-        extension_file = "%s/%s/%sExt.swift" % (output_objc_path, module, self.Module)
+        extension_file = "%s/%sExt.swift" % (package_path, make_objcname(self.Module))
 
         for ci in self.classes.values():
             if ci.name == "Mat":
@@ -882,15 +890,16 @@ class ObjectiveCWrapperGenerator(object):
             ci.initCodeStreams(self.Module)
             self.gen_class(ci, self.module, extension_implementations, extension_signatures)
             classObjcHeaderCode = ci.generateObjcHeaderCode(self.module, self.Module, ci.objc_name)
-            header_file = "%s/%s/%s.h" % (output_objc_path, module, ci.objc_name)
+            objc_mangled_name = make_objcname(ci.objc_name)
+            header_file = "%s/%s.h" % (package_path, objc_mangled_name)
             self.save(header_file, classObjcHeaderCode)
             self.header_files.append(header_file)
             classObjcBodyCode = ci.generateObjcBodyCode(self.module, self.Module)
-            self.save("%s/%s/%s.mm" % (output_objc_path, module, ci.objc_name), classObjcBodyCode)
+            self.save("%s/%s.mm" % (package_path, objc_mangled_name), classObjcBodyCode)
             ci.cleanupCodeStreams()
         self.save(extension_file, extension_implementations.getvalue())
         extension_implementations.close()
-        self.save(os.path.join(output_path, module+".txt"), self.makeReport())
+        self.save(os.path.join(output_path, self.objcmodule+".txt"), self.makeReport())
 
     def makeReport(self):
         '''
@@ -1172,7 +1181,7 @@ $unrefined_call$epilogue$ret
 
 """
                         ).substitute(
-                            classname = ci.name,
+                            classname = make_objcname(ci.name),
                             deprecation_decl = "@available(*, deprecated)\n    " if fi.deprecated else "",
                             prototype = prototype,
                             prologue = "        " + "\n        ".join(pro),

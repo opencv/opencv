@@ -1419,7 +1419,7 @@ void cv::calcOpticalFlowPyrLK( InputArray _prevImg, InputArray _nextImg,
 cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, bool fullAffine )
 {
     CV_INSTRUMENT_REGION();
-#ifndef HAVE_OPENCV_CALIB3D
+#ifndef HAVE_OPENCV_3D
     CV_UNUSED(src1); CV_UNUSED(src2); CV_UNUSED(fullAffine);
     CV_Error(Error::StsError, "estimateRigidTransform requires 3d module");
 #else
@@ -1524,11 +1524,11 @@ cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, bool fullA
 
     if (fullAffine)
     {
-        return estimateAffine2D(pA, pB);
+        return cv3d::estimateAffine2D(pA, pB);
     }
     else
     {
-        return estimateAffinePartial2D(pA, pB);
+        return cv3d::estimateAffinePartial2D(pA, pB);
     }
 #endif
 }

@@ -7,7 +7,7 @@
 import XCTest
 import OpenCV
 
-class _3dTest: OpenCVTestCase {
+class Cv3dTest: OpenCVTestCase {
 
     var size = Size()
 
@@ -38,7 +38,7 @@ class _3dTest: OpenCVTestCase {
         let outTvec = Mat(rows: 3, cols: 1, type: CvType.CV_32F)
         try outTvec.put(row: 0, col: 0, data: [1.4560841, 1.0680628, 0.81598103])
 
-        _3d.composeRT(rvec1: rvec1, tvec1: tvec1, rvec2: rvec2, tvec2: tvec2, rvec3: rvec3, tvec3: tvec3)
+        Cv3d.composeRT(rvec1: rvec1, tvec1: tvec1, rvec2: rvec2, tvec2: tvec2, rvec3: rvec3, tvec3: tvec3)
 
         try assertMatEqual(outRvec, rvec3, OpenCVTestCase.EPS)
         try assertMatEqual(outTvec, tvec3, OpenCVTestCase.EPS)
@@ -72,14 +72,14 @@ class _3dTest: OpenCVTestCase {
 
         try r.put(row:0, col:0, data:[.pi, 0, 0] as [Float])
 
-        _3d.Rodrigues(src: r, dst: R)
+        Cv3d.Rodrigues(src: r, dst: R)
 
         truth = Mat(rows: 3, cols: 3, type: CvType.CV_32F)
         try truth!.put(row:0, col:0, data:[1, 0, 0, 0, -1, 0, 0, 0, -1] as [Float])
         try assertMatEqual(truth!, R, OpenCVTestCase.EPS)
 
         let r2 = Mat()
-        _3d.Rodrigues(src: R, dst: r2)
+        Cv3d.Rodrigues(src: R, dst: r2)
 
         try assertMatEqual(r, r2, OpenCVTestCase.EPS)
     }
@@ -107,7 +107,7 @@ class _3dTest: OpenCVTestCase {
 
         let rvec = Mat()
         let tvec = Mat()
-        _3d.solvePnP(objectPoints: points3d, imagePoints: points2d, cameraMatrix: intrinsics, distCoeffs: MatOfDouble(), rvec: rvec, tvec: tvec)
+        Cv3d.solvePnP(objectPoints: points3d, imagePoints: points2d, cameraMatrix: intrinsics, distCoeffs: MatOfDouble(), rvec: rvec, tvec: tvec)
 
         let truth_rvec = Mat(rows: 3, cols: 1, type: CvType.CV_64F)
         try truth_rvec.put(row: 0, col: 0, data: [0, .pi / 2, 0] as [Double])
@@ -128,7 +128,7 @@ class _3dTest: OpenCVTestCase {
         let lines = Mat()
         let truth = Mat(rows: 1, cols: 1, type: CvType.CV_32FC3)
         try truth.put(row: 0, col: 0, data: [-0.70735186, 0.70686162, -0.70588124])
-        _3d.computeCorrespondEpilines(points: left, whichImage: 1, F: fundamental, lines: lines)
+        Cv3d.computeCorrespondEpilines(points: left, whichImage: 1, F: fundamental, lines: lines)
         try assertMatEqual(truth, lines, OpenCVTestCase.EPS)
     }
 
@@ -161,7 +161,7 @@ class _3dTest: OpenCVTestCase {
 
         let reprojectionError = Mat(rows: 2, cols: 1, type: CvType.CV_64FC1)
 
-        _3d.solvePnPGeneric(objectPoints: points3d, imagePoints: points2d, cameraMatrix: intrinsics, distCoeffs: MatOfDouble(), rvecs: &rvecs, tvecs: &tvecs, useExtrinsicGuess: false, flags: .SOLVEPNP_IPPE, rvec: rvec, tvec: tvec, reprojectionError: reprojectionError)
+        Cv3d.solvePnPGeneric(objectPoints: points3d, imagePoints: points2d, cameraMatrix: intrinsics, distCoeffs: MatOfDouble(), rvecs: &rvecs, tvecs: &tvecs, useExtrinsicGuess: false, flags: .SOLVEPNP_IPPE, rvec: rvec, tvec: tvec, reprojectionError: reprojectionError)
 
         let truth_rvec = Mat(rows: 3, cols: 1, type: CvType.CV_64F)
         try truth_rvec.put(row: 0, col: 0, data: [0, .pi / 2, 0] as [Double])
@@ -174,14 +174,14 @@ class _3dTest: OpenCVTestCase {
     }
 
     func testGetDefaultNewCameraMatrixMat() {
-        let mtx = _3d.getDefaultNewCameraMatrix(cameraMatrix: gray0)
+        let mtx = Cv3d.getDefaultNewCameraMatrix(cameraMatrix: gray0)
 
         XCTAssertFalse(mtx.empty())
         XCTAssertEqual(0, Core.countNonZero(src: mtx))
     }
 
     func testGetDefaultNewCameraMatrixMatSizeBoolean() {
-        let mtx = _3d.getDefaultNewCameraMatrix(cameraMatrix: gray0, imgsize: size, centerPrincipalPoint: true)
+        let mtx = Cv3d.getDefaultNewCameraMatrix(cameraMatrix: gray0, imgsize: size, centerPrincipalPoint: true)
 
         XCTAssertFalse(mtx.empty())
         XCTAssertFalse(0 == Core.countNonZero(src: mtx))
@@ -198,7 +198,7 @@ class _3dTest: OpenCVTestCase {
         let distCoeffs = Mat(rows: 1, cols: 4, type: CvType.CV_32F)
         try distCoeffs.put(row: 0, col: 0, data: [1, 3, 2, 4] as [Float])
 
-        _3d.undistort(src: src, dst: dst, cameraMatrix: cameraMatrix, distCoeffs: distCoeffs)
+        Cv3d.undistort(src: src, dst: dst, cameraMatrix: cameraMatrix, distCoeffs: distCoeffs)
 
         truth = Mat(rows: 3, cols: 3, type: CvType.CV_32F)
         try truth!.put(row: 0, col: 0, data: [0, 0, 0] as [Float])
@@ -220,7 +220,7 @@ class _3dTest: OpenCVTestCase {
 
         let newCameraMatrix = Mat(rows: 3, cols: 3, type: CvType.CV_32F, scalar: Scalar(1))
 
-        _3d.undistort(src: src, dst: dst, cameraMatrix: cameraMatrix, distCoeffs: distCoeffs, newCameraMatrix: newCameraMatrix)
+        Cv3d.undistort(src: src, dst: dst, cameraMatrix: cameraMatrix, distCoeffs: distCoeffs, newCameraMatrix: newCameraMatrix)
 
         truth = Mat(rows: 3, cols: 3, type: CvType.CV_32F, scalar: Scalar(3))
         try assertMatEqual(truth!, dst, OpenCVTestCase.EPS)
@@ -233,7 +233,7 @@ class _3dTest: OpenCVTestCase {
         let cameraMatrix = Mat.eye(rows: 3, cols: 3, type: CvType.CV_64FC1)
         let distCoeffs = Mat(rows: 8, cols: 1, type: CvType.CV_64FC1, scalar: Scalar(0))
 
-        _3d.undistortPoints(src: src, dst: dst, cameraMatrix: cameraMatrix, distCoeffs: distCoeffs)
+        Cv3d.undistortPoints(src: src, dst: dst, cameraMatrix: cameraMatrix, distCoeffs: distCoeffs)
 
         XCTAssertEqual(src.toArray(), dst.toArray())
     }

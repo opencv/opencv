@@ -125,7 +125,7 @@ public class CalibTest extends OpenCVTestCase {
         assertEquals((1 << 17), Calib.CALIB_USE_LU);
         assertEquals((1 << 22), Calib.CALIB_USE_EXTRINSIC_GUESS);
     }
-    
+
     /*public void testEstimateNewCameraMatrixForUndistortRectify() {
         Mat K = new Mat().eye(3, 3, CvType.CV_64FC1);
         Mat K_new = new Mat().eye(3, 3, CvType.CV_64FC1);

@@ -2643,4 +2643,3 @@ static inline void   sacSub8x1(float* Hout, const float* H, const float* dH){
 
 /* End namespace cv */
 }}
-

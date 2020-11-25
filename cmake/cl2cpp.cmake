@@ -16,7 +16,7 @@ if (MODULE_NAME MATCHES "^[0-9].+")
     set(MANGLED_MODULE_NAME "_${MODULE_NAME}")
 else()
     set(MANGLED_MODULE_NAME "${MODULE_NAME}")
-endif()    
+endif()
 set(nested_namespace_start "namespace ${MANGLED_MODULE_NAME}\n{")
 set(nested_namespace_end "}")
 
