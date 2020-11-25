@@ -27,7 +27,7 @@ def  perspectiveCorrection(img1Path, img2Path ,patternSize ):
         sys.exit(-1)
 
     # [estimate-homography]
-    H, _ = cv.findHomography(corners1, corners2)
+    H, _ = cv._3d.findHomography(corners1, corners2)
     print(H)
     # [estimate-homography]
 

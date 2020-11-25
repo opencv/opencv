@@ -115,7 +115,7 @@ class PlaneTracker:
             p0 = [target.keypoints[m.trainIdx].pt for m in matches]
             p1 = [self.frame_points[m.queryIdx].pt for m in matches]
             p0, p1 = np.float32((p0, p1))
-            H, status = cv.findHomography(p0, p1, cv.RANSAC, 3.0)
+            H, status = cv._3d.findHomography(p0, p1, cv.RANSAC, 3.0)
             status = status.ravel() != 0
             if status.sum() < MIN_MATCH_COUNT:
                 continue

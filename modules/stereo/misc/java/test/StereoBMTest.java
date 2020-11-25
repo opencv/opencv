@@ -1,4 +1,4 @@
-package org.opencv.test.calib3d;
+package org.opencv.test.stereo;
 
 import org.opencv.test.OpenCVTestCase;
 

@@ -1,4 +1,4 @@
-package org.opencv.test.cv3dTest;
+package org.opencv.test.cv3d;
 
 import java.util.ArrayList;
 

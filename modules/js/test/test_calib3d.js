@@ -37,7 +37,7 @@ QUnit.test('findHomography', function(assert) {
     300,
   ]);
 
-  const mat = cv.findHomography(srcPoints, dstPoints);
+  const mat = cv._3d.findHomography(srcPoints, dstPoints);
 
   assert.ok(mat instanceof cv.Mat);
 });

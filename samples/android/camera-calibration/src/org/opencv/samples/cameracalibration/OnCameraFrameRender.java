@@ -5,7 +5,7 @@ import java.util.List;
 
 import org.opencv.android.CameraBridgeViewBase.CvCameraViewFrame;
 import org.opencv.cv3d.Cv3d;
-import org.opencv.calib.calib;
+import org.opencv.calib.Calib;
 import org.opencv.core.Core;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfPoint;

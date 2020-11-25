@@ -991,9 +991,9 @@ class JavaWrapperGenerator(object):
 """
 ${namespace}
 
-JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname ($argst);
+JNIEXPORT $rtype JNICALL Java_org_opencv_${jmodule}_${clazz}_$fname ($argst);
 
-JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
+JNIEXPORT $rtype JNICALL Java_org_opencv_${jmodule}_${clazz}_$fname
   ($args)
 {
     static const char method_name[] = "$jmodule::$fname()";

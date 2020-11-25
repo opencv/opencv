@@ -77,7 +77,7 @@ class lk_homography_test(NewOpenCVTests):
                 if len(self.p0) < 4:
                     self.p0 = None
                     continue
-                _H, status = cv.findHomography(self.p0, self.p1, cv.RANSAC, 5.0)
+                _H, status = cv._3d.findHomography(self.p0, self.p1, cv.RANSAC, 5.0)
 
                 goodPointsInRect = 0
                 goodPointsOutsideRect = 0
