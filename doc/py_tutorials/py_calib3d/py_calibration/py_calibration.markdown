@@ -209,7 +209,7 @@ find the average error, we calculate the arithmetical mean of the errors calcula
 calibration images.
 @code{.py}
 mean_error = 0
-for i in xrange(len(objpoints)):
+for i in range(len(objpoints)):
     imgpoints2, _ = cv.projectPoints(objpoints[i], rvecs[i], tvecs[i], mtx, dist)
     error = cv.norm(imgpoints[i], imgpoints2, cv.NORM_L2)/len(imgpoints2)
     mean_error += error
