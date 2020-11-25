@@ -61,7 +61,7 @@ if __name__ == '__main__':
 
     print('Essential matrix RANSAC')
     start = time.time()
-    E, inliers = cv.findEssentialMat(pts1, pts2, K, cv.RANSAC, 0.999, 1.0)
+    E, inliers = cv.findEssentialMat(pts1, pts2, K, cv._3d.RANSAC, 0.999, 1.0)
     print('RANSAC time', time.time() - start, 'seconds')
     print('Median error to epipolar lines', getEpipolarError
           (np.dot(np.linalg.inv(K).T, np.dot(E, np.linalg.inv(K))), pts1, pts2, inliers.squeeze()),

@@ -146,7 +146,7 @@ def main():
             raw_matches = matcher.knnMatch(desc1, trainDescriptors = desc2, k = 2) #2
         p1, p2, kp_pairs = filter_matches(kp1, kp2, raw_matches)
         if len(p1) >= 4:
-            H, status = cv._3d.findHomography(p1, p2, cv.RANSAC, 5.0)
+            H, status = cv._3d.findHomography(p1, p2, cv._3d.RANSAC, 5.0)
             print('%d / %d  inliers/matched' % (np.sum(status), len(status)))
             # do not draw outliers (there will be a lot of them)
             kp_pairs = [kpp for kpp, flag in zip(kp_pairs, status) if flag]

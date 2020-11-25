@@ -10,9 +10,9 @@ if (typeof module !== 'undefined' && module.exports) {
 QUnit.module('Camera Calibration and 3D Reconstruction', {});
 
 QUnit.test('constants', function(assert) {
-  assert.strictEqual(typeof cv.LMEDS, 'number');
-  assert.strictEqual(typeof cv.RANSAC, 'number');
-  assert.strictEqual(typeof cv.RHO, 'number');
+  assert.strictEqual(typeof cv._3d.LMEDS, 'number');
+  assert.strictEqual(typeof cv._3d.RANSAC, 'number');
+  assert.strictEqual(typeof cv._3d.RHO, 'number');
 });
 
 QUnit.test('findHomography', function(assert) {

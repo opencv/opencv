@@ -75,7 +75,7 @@ if len(good)>MIN_MATCH_COUNT:
     src_pts = np.float32([ kp1[m.queryIdx].pt for m in good ]).reshape(-1,1,2)
     dst_pts = np.float32([ kp2[m.trainIdx].pt for m in good ]).reshape(-1,1,2)
 
-    M, mask = cv.findHomography(src_pts, dst_pts, cv.RANSAC,5.0)
+    M, mask = cv._3d.findHomography(src_pts, dst_pts, cv._3d.RANSAC,5.0)
     matchesMask = mask.ravel().tolist()
 
     h,w,d = img1.shape

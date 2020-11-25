@@ -70,7 +70,7 @@ class App:
                 if len(self.p0) < 4:
                     self.p0 = None
                     continue
-                H, status = cv.findHomography(self.p0, self.p1, (0, cv.RANSAC)[self.use_ransac], 10.0)
+                H, status = cv.findHomography(self.p0, self.p1, (0, cv._3d.RANSAC)[self.use_ransac], 10.0)
                 h, w = frame.shape[:2]
                 overlay = cv.warpPerspective(self.frame0, H, (w, h))
                 vis = cv.addWeighted(vis, 0.5, overlay, 0.5, 0.0)
