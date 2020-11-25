@@ -1871,10 +1871,11 @@ height = in_labels.height if in_labels given.
 @note In case of GMat given as data, the cluster centers are returned as 1-channel GMat with sizes
 width = d, height = K, where d is samples' dimentionality and K is clusters' quantity.
 
-@note As one of possible usages, if you don't want to allow the function to set initial labels
-randomly, you can utilize just the core of the function: set the number of attempts to 1,
-initialize labels each time using a custom algorithm, pass them with the
+@note As one of possible usages, if you want to control the initial labels for each attempt
+by yourself randomly, you can utilize just the core of the function. To do that, set the number
+of attempts to 1, initialize labels each time using a custom algorithm, pass them with the
 ( flags = #KMEANS_USE_INITIAL_LABELS ) flag, and then choose the best (most-compact) clustering.
+To do this
 */
 GAPI_EXPORTS std::tuple<GOpaque<double>,GMat,GMat>
 kmeans(const GMat& data, const int K, const GMat& bestLabels,
