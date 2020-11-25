@@ -1269,7 +1269,7 @@ public:
     bool compute(InputArray _param, OutputArray _err, OutputArray _Jac) const CV_OVERRIDE
     {
         Mat param = _param.getMat();
-        CV_Assert(param.cols == 1 || param.rows == 1 && param.total() == 6 && param.type() == CV_64F);
+        CV_Assert((param.cols == 1 || param.rows == 1) && param.total() == 6 && param.type() == CV_64F);
         double* pdata = param.ptr<double>();
         Mat rvec(3, 1, CV_64F, pdata);
         Mat tvec(3, 1, CV_64F, pdata + 3);
