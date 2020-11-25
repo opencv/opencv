@@ -43,6 +43,8 @@ jobs:
         run: python3 platforms/apple/build_xcframework.py build/xcframework --dynamic
       - name: Zip Dynamic XCFramework
         run: cd build/xcframework/ && zip -r opencv2-dynamic.xcframework.zip opencv2.xcframework
+      - name: Compute Swift Package binary checksum
+        run: swift package compute-checksum build/xcframework/opencv2-dynamic.xcframework.zip
       - name: Upload Dynamic XCFramework
         uses: actions/upload-artifact@v2
         with:
@@ -79,6 +81,8 @@ jobs:
         run: python3 platforms/apple/build_xcframework.py build/xcframework
       - name: Zip Static XCFramework
         run: cd build/xcframework/ && zip -r opencv2-static.xcframework.zip opencv2.xcframework
+      - name: Compute Swift Package binary checksum
+        run: swift package compute-checksum build/xcframework/opencv2-static.xcframework.zip
       - name: Upload Static XCFramework
         uses: actions/upload-artifact@v2
         with:
