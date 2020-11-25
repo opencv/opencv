@@ -9,6 +9,8 @@
 #include <codecvt>
 #endif // HAVE_FREETYPE
 
+#include <opencv2/gapi/streaming/cap.hpp>
+
 #include "../test_precomp.hpp"
 #include "../common/gapi_render_tests.hpp"
 
@@ -53,6 +55,27 @@ public:
             m_y.step, m_uv.step, 0u, 0u
         };
         return cv::MediaFrame::View(std::move(pp), std::move(ss));
+    }
+};
+
+class BGRSource : public cv::gapi::wip::GCaptureSource {
+public:
+    explicit BGRSource(const std::string& pipeline)
+        : cv::gapi::wip::GCaptureSource(pipeline) {
+    }
+
+    bool pull(cv::gapi::wip::Data& data) {
+        if (cv::gapi::wip::GCaptureSource::pull(data)) {
+            data = cv::MediaFrame::Create<TestMediaBGR>(cv::util::get<cv::Mat>(data));
+            return true;
+        }
+        return false;
+    }
+
+    cv::GMetaArg descr_of() const override {
+        return cv::GMetaArg{cv::GFrameDesc{cv::MediaFormat::BGR,
+                                           cv::util::get<cv::GMatDesc>(
+                                           cv::gapi::wip::GCaptureSource::descr_of()).size}};
     }
 };
 
@@ -518,6 +541,35 @@ TEST(RenderMediaFrameNV12, AccucaryTest)
     EXPECT_EQ(0, cvtest::norm(ocv_mat_y,  gapi_mat_y,  NORM_INF));
     EXPECT_EQ(0, cvtest::norm(ocv_mat_uv, gapi_mat_uv, NORM_INF));
 };
+
+TEST(RenderMediaFrameVideo, AccuracyTest)
+{
+    initTestDataPath();
+    std::string filepath = findDataFile("cv/video/768x576.avi");
+
+    // Primitives //////////////////////////////////////////////////////////////
+    cv::Rect rect{100, 100, 200, 200};
+    cv::Scalar color{255, 100, 50};
+    int thick = 10;
+    cv::gapi::wip::draw::Prims prims;
+    prims.emplace_back(cv::gapi::wip::draw::Rect{rect, color, thick});
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GFrame in;
+    cv::GArray<cv::gapi::wip::draw::Prim> arr;
+    auto out = cv::gapi::wip::draw::renderFrame(in, arr);
+
+    cv::GComputation comp(cv::GIn(in, arr), cv::GOut(out));	
+    auto cc = comp.compileStreaming();
+    auto src = cv::gapi::wip::make_src<BGRSource>(filepath);
+
+    cc.setSource(cv::gin(src, prims));
+    cc.start();
+
+    cv::MediaFrame out_frame;
+
+    cc.pull(cv::gout(out_frame));
+}
 
 // FIXME avoid code duplicate for NV12 and BGR cases
 INSTANTIATE_TEST_CASE_P(RenderBGROCVTestRectsImpl, RenderBGROCVTestRects,

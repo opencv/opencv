@@ -6,10 +6,7 @@
 
 #include "test_precomp.hpp"
 
-#include "api/render_priv.hpp"
-
 #include <opencv2/gapi/media.hpp>
-#include <opencv2/gapi/render/render.hpp>
 
 ////////////////////////////////////////////////////////////////////////////////
 // cv::GFrame tests

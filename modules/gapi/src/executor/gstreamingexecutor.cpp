@@ -638,6 +638,23 @@ class StreamingOutput final: public cv::gimpl::GIslandExecutable::IOutput
                 ret_val = cv::GRunArgP(rr);
             }
             break;
+        case cv::GShape::GFrame:
+            {
+                //auto desc = cv::util::get<cv::GMatDesc>(m_metas[idx]);
+                //if (m_island->allocatesOutputs())
+                //{
+                    //out_arg = cv::GRunArg(m_island->allocate(desc));
+                //}
+                //else
+                //{
+                    //MatType newMat;
+                    //cv::gimpl::createMat(desc, newMat);
+                    //auto rmat = cv::make_rmat<cv::gimpl::RMatAdapter>(newMat);
+                    //out_arg = cv::GRunArg(std::move(rmat));
+                //}
+                //ret_val = cv::GRunArgP(&cv::util::get<cv::RMat>(out_arg));
+            }
+            break;
         default:
             cv::util::throw_error(std::logic_error("Unsupported GShape"));
         }
