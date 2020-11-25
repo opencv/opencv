@@ -645,25 +645,6 @@ found, or as colored corners connected with lines if the board was found.
 CV_EXPORTS_W void drawChessboardCorners( InputOutputArray image, Size patternSize,
                                          InputArray corners, bool patternWasFound );
 
-/** @brief Draw axes of the world/object coordinate system from pose estimation. @sa solvePnP
-
-@param image Input/output image. It must have 1 or 3 channels. The number of channels is not altered.
-@param cameraMatrix Input 3x3 floating-point matrix of camera intrinsic parameters.
-\f$\cameramatrix{A}\f$
-@param distCoeffs Input vector of distortion coefficients
-\f$\distcoeffs\f$. If the vector is empty, the zero distortion coefficients are assumed.
-@param rvec Rotation vector (see @ref Rodrigues ) that, together with tvec, brings points from
-the model coordinate system to the camera coordinate system.
-@param tvec Translation vector.
-@param length Length of the painted axes in the same unit than tvec (usually in meters).
-@param thickness Line thickness of the painted axes.
-
-This function draws the axes of the world/object coordinate system w.r.t. to the camera frame.
-OX is drawn in red, OY in green and OZ in blue.
- */
-CV_EXPORTS_W void drawFrameAxes(InputOutputArray image, InputArray cameraMatrix, InputArray distCoeffs,
-                                InputArray rvec, InputArray tvec, float length, int thickness=3);
-
 struct CV_EXPORTS_W_SIMPLE CirclesGridFinderParameters
 {
     CV_WRAP CirclesGridFinderParameters();
@@ -1262,10 +1243,10 @@ A minimum of 2 motions with non parallel rotation axes are necessary to determin
 So at least 3 different poses are required, but it is strongly recommended to use many more poses.
 
  */
-CV_EXPORTS_W void calibrateHandEye( InputArrayOfArrays R_gripper2base, InputArrayOfArrays t_gripper2base,
+CV_EXPORTS void calibrateHandEye( InputArrayOfArrays R_gripper2base, InputArrayOfArrays t_gripper2base,
                                     InputArrayOfArrays R_target2cam, InputArrayOfArrays t_target2cam,
                                     OutputArray R_cam2gripper, OutputArray t_cam2gripper,
-                                    HandEyeCalibrationMethod method=CALIB_HAND_EYE_TSAI );
+                                    HandEyeCalibrationMethod method=cv::calib::CALIB_HAND_EYE_TSAI );
 
 /** @brief Computes Robot-World/Hand-Eye calibration: \f$_{}^{w}\textrm{T}_b\f$ and \f$_{}^{c}\textrm{T}_g\f$
 
@@ -1405,11 +1386,11 @@ This problem is also known as solving the \f$\mathbf{A}\mathbf{X}=\mathbf{Z}\mat
 At least 3 measurements are required (input vectors size must be greater or equal to 3).
 
  */
-CV_EXPORTS_W void calibrateRobotWorldHandEye( InputArrayOfArrays R_world2cam, InputArrayOfArrays t_world2cam,
+CV_EXPORTS void calibrateRobotWorldHandEye( InputArrayOfArrays R_world2cam, InputArrayOfArrays t_world2cam,
                                               InputArrayOfArrays R_base2gripper, InputArrayOfArrays t_base2gripper,
                                               OutputArray R_base2world, OutputArray t_base2world,
                                               OutputArray R_gripper2cam, OutputArray t_gripper2cam,
-                                              RobotWorldHandEyeCalibrationMethod method=CALIB_ROBOT_WORLD_HAND_EYE_SHAH );
+                                              RobotWorldHandEyeCalibrationMethod method=cv::calib::CALIB_ROBOT_WORLD_HAND_EYE_SHAH );
 } // namespace calib
 
 /** @brief The methods in this namespace use a so-called fisheye camera model.

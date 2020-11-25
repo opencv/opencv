@@ -937,7 +937,7 @@ a 3D point expressed in the world frame into the camera frame:
 CV_EXPORTS_W bool solvePnP( InputArray objectPoints, InputArray imagePoints,
                             InputArray cameraMatrix, InputArray distCoeffs,
                             OutputArray rvec, OutputArray tvec,
-                            bool useExtrinsicGuess = false, int flags = SOLVEPNP_ITERATIVE );
+                            bool useExtrinsicGuess = false, int flags = cv::_3d::SOLVEPNP_ITERATIVE );
 
 /** @brief Finds an object pose from 3D-2D point correspondences using the RANSAC scheme.
 
@@ -985,7 +985,7 @@ CV_EXPORTS_W bool solvePnPRansac( InputArray objectPoints, InputArray imagePoint
                                   OutputArray rvec, OutputArray tvec,
                                   bool useExtrinsicGuess = false, int iterationsCount = 100,
                                   float reprojectionError = 8.0, double confidence = 0.99,
-                                  OutputArray inliers = noArray(), int flags = SOLVEPNP_ITERATIVE );
+                                  OutputArray inliers = noArray(), int flags = cv::_3d::SOLVEPNP_ITERATIVE );
 
 /*
 Finds rotation and translation vector.
@@ -1279,7 +1279,7 @@ CV_EXPORTS_W int solvePnPGeneric( InputArray objectPoints, InputArray imagePoint
                                   InputArray cameraMatrix, InputArray distCoeffs,
                                   OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs,
                                   bool useExtrinsicGuess = false,
-                                  SolvePnPMethod flags = SOLVEPNP_ITERATIVE,
+                                  SolvePnPMethod flags = cv::_3d::SOLVEPNP_ITERATIVE,
                                   InputArray rvec = noArray(), InputArray tvec = noArray(),
                                   OutputArray reprojectionError = noArray() );
 

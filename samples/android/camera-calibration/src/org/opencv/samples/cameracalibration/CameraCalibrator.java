@@ -37,11 +37,11 @@ public class CameraCalibrator {
 
     public CameraCalibrator(int width, int height) {
         mImageSize = new Size(width, height);
-        mFlags = Calib3d.CALIB_FIX_PRINCIPAL_POINT +
-                 Calib3d.CALIB_ZERO_TANGENT_DIST +
-                 Calib3d.CALIB_FIX_ASPECT_RATIO +
-                 Calib3d.CALIB_FIX_K4 +
-                 Calib3d.CALIB_FIX_K5;
+        mFlags = Calib.CALIB_FIX_PRINCIPAL_POINT +
+                 Calib.CALIB_ZERO_TANGENT_DIST +
+                 Calib.CALIB_FIX_ASPECT_RATIO +
+                 Calib.CALIB_FIX_K4 +
+                 Calib.CALIB_FIX_K5;
         Mat.eye(3, 3, CvType.CV_64FC1).copyTo(mCameraMatrix);
         mCameraMatrix.put(0, 0, 1.0);
         Mat.zeros(5, 1, CvType.CV_64FC1).copyTo(mDistortionCoefficients);
@@ -64,7 +64,7 @@ public class CameraCalibrator {
             objectPoints.add(objectPoints.get(0));
         }
 
-        Calib3d.calibrateCamera(objectPoints, mCornersBuffer, mImageSize,
+        Calib.calibrateCamera(objectPoints, mCornersBuffer, mImageSize,
                 mCameraMatrix, mDistortionCoefficients, rvecs, tvecs, mFlags);
 
         mIsCalibrated = Core.checkRange(mCameraMatrix)
@@ -108,7 +108,7 @@ public class CameraCalibrator {
         int totalPoints = 0;
         for (int i = 0; i < objectPoints.size(); i++) {
             MatOfPoint3f points = new MatOfPoint3f(objectPoints.get(i));
-            Calib3d.projectPoints(points, rvecs.get(i), tvecs.get(i),
+            Cv3d.projectPoints(points, rvecs.get(i), tvecs.get(i),
                     mCameraMatrix, distortionCoefficients, cornersProjected);
             error = Core.norm(mCornersBuffer.get(i), cornersProjected, Core.NORM_L2);
 
@@ -124,8 +124,8 @@ public class CameraCalibrator {
     }
 
     private void findPattern(Mat grayFrame) {
-        mPatternWasFound = Calib3d.findCirclesGrid(grayFrame, mPatternSize,
-                mCorners, Calib3d.CALIB_CB_ASYMMETRIC_GRID);
+        mPatternWasFound = Calib.findCirclesGrid(grayFrame, mPatternSize,
+                mCorners, Calib.CALIB_CB_ASYMMETRIC_GRID);
     }
 
     public void addCorners() {
@@ -135,7 +135,7 @@ public class CameraCalibrator {
     }
 
     private void drawPoints(Mat rgbaFrame) {
-        Calib3d.drawChessboardCorners(rgbaFrame, mPatternSize, mCorners, mPatternWasFound);
+        Calib.drawChessboardCorners(rgbaFrame, mPatternSize, mCorners, mPatternWasFound);
     }
 
     private void renderFrame(Mat rgbaFrame) {

@@ -59,7 +59,7 @@ class _3dTest: OpenCVTestCase {
             try transformedPoints.put(row:i, col:0, data:[y, x])
         }
 
-        let hmg = Calib3d.findHomography(srcPoints: originalPoints, dstPoints: transformedPoints)
+        let hmg = Cv3d.findHomography(srcPoints: originalPoints, dstPoints: transformedPoints)
 
         truth = Mat(rows: 3, cols: 3, type: CvType.CV_64F)
         try truth!.put(row:0, col:0, data:[0, 1, 0, 1, 0, 0, 0, 0, 1] as [Double])

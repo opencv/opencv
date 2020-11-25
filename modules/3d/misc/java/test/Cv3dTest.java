@@ -1,8 +1,8 @@
-package org.opencv.test._3d;
+package org.opencv.test.cv3dTest;
 
 import java.util.ArrayList;
 
-import org.opencv._3d;
+import org.opencv.cv3d.Cv3d;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
@@ -15,7 +15,7 @@ import org.opencv.core.Size;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.imgproc.Imgproc;
 
-public class _3dTest extends OpenCVTestCase {
+public class Cv3dTest extends OpenCVTestCase {
 
     Size size;
 
@@ -44,7 +44,7 @@ public class _3dTest extends OpenCVTestCase {
         Mat outTvec = new Mat(3, 1, CvType.CV_32F);
         outTvec.put(0, 0, 1.4560841, 1.0680628, 0.81598103);
 
-        _3d.composeRT(rvec1, tvec1, rvec2, tvec2, rvec3, tvec3);
+        Cv3d.composeRT(rvec1, tvec1, rvec2, tvec2, rvec3, tvec3);
 
         assertMatEqual(outRvec, rvec3, EPS);
         assertMatEqual(outTvec, tvec3, EPS);
@@ -186,7 +186,7 @@ public class _3dTest extends OpenCVTestCase {
             transformedPoints.put(i, 0, y, x);
         }
 
-        Mat hmg = _3d.findHomography(originalPoints, transformedPoints);
+        Mat hmg = Cv3d.findHomography(originalPoints, transformedPoints);
 
         truth = new Mat(3, 3, CvType.CV_64F);
         truth.put(0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1);
@@ -252,14 +252,14 @@ public class _3dTest extends OpenCVTestCase {
 
         r.put(0, 0, Math.PI, 0, 0);
 
-        _3d.Rodrigues(r, R);
+        Cv3d.Rodrigues(r, R);
 
         truth = new Mat(3, 3, CvType.CV_32F);
         truth.put(0, 0, 1, 0, 0, 0, -1, 0, 0, 0, -1);
         assertMatEqual(truth, R, EPS);
 
         Mat r2 = new Mat();
-        _3d.Rodrigues(R, r2);
+        Cv3d.Rodrigues(R, r2);
 
         assertMatEqual(r, r2, EPS);
     }
@@ -307,7 +307,7 @@ public class _3dTest extends OpenCVTestCase {
 
         Mat rvec = new Mat();
         Mat tvec = new Mat();
-        _3d.solvePnP(points3d, points2d, intrinsics, new MatOfDouble(), rvec, tvec);
+        Cv3d.solvePnP(points3d, points2d, intrinsics, new MatOfDouble(), rvec, tvec);
 
         Mat truth_rvec = new Mat(3, 1, CvType.CV_64F);
         truth_rvec.put(0, 0, 0, Math.PI / 2, 0);
@@ -385,7 +385,7 @@ public class _3dTest extends OpenCVTestCase {
         Mat lines = new Mat();
         Mat truth = new Mat(1, 1, CvType.CV_32FC3);
         truth.put(0, 0, -0.70735186, 0.70686162, -0.70588124);
-        _3d.computeCorrespondEpilines(left, 1, fundamental, lines);
+        Cv3d.computeCorrespondEpilines(left, 1, fundamental, lines);
         assertMatEqual(truth, lines, EPS);
     }
 
@@ -418,7 +418,7 @@ public class _3dTest extends OpenCVTestCase {
 
         Mat reprojectionError = new Mat(2, 1, CvType.CV_64FC1);
 
-        _3d.solvePnPGeneric(points3d, points2d, intrinsics, new MatOfDouble(), rvecs, tvecs, false, _3d.SOLVEPNP_IPPE, rvec, tvec, reprojectionError);
+        Cv3d.solvePnPGeneric(points3d, points2d, intrinsics, new MatOfDouble(), rvecs, tvecs, false, Cv3d.SOLVEPNP_IPPE, rvec, tvec, reprojectionError);
 
         Mat truth_rvec = new Mat(3, 1, CvType.CV_64F);
         truth_rvec.put(0, 0, 0, Math.PI / 2, 0);
@@ -431,14 +431,14 @@ public class _3dTest extends OpenCVTestCase {
     }
 
     public void testGetDefaultNewCameraMatrixMat() {
-        Mat mtx = _3d.getDefaultNewCameraMatrix(gray0);
+        Mat mtx = Cv3d.getDefaultNewCameraMatrix(gray0);
 
         assertFalse(mtx.empty());
         assertEquals(0, Core.countNonZero(mtx));
     }
 
     public void testGetDefaultNewCameraMatrixMatSizeBoolean() {
-        Mat mtx = _3d.getDefaultNewCameraMatrix(gray0, size, true);
+        Mat mtx = Cv3d.getDefaultNewCameraMatrix(gray0, size, true);
 
         assertFalse(mtx.empty());
         assertFalse(0 == Core.countNonZero(mtx));
@@ -460,7 +460,7 @@ public class _3dTest extends OpenCVTestCase {
         Mat map2 = new Mat();
 
         // TODO: complete this test
-        _3d.initUndistortRectifyMap(cameraMatrix, distCoeffs, R, newCameraMatrix, size, CvType.CV_32F, map1, map2);
+        Cv3d.initUndistortRectifyMap(cameraMatrix, distCoeffs, R, newCameraMatrix, size, CvType.CV_32F, map1, map2);
     }
 
     public void testInitWideAngleProjMapMatMatSizeIntIntMatMat() {
@@ -479,7 +479,7 @@ public class _3dTest extends OpenCVTestCase {
         truth.put(1, 0, 0, 0, 0);
         truth.put(2, 0, 0, 3, 0);
         // TODO: No documentation for this function
-        // _3d.initWideAngleProjMap(cameraMatrix, distCoeffs, imageSize,
+        // Cv3d.initWideAngleProjMap(cameraMatrix, distCoeffs, imageSize,
         // 5, m1type, truthput1, truthput2);
     }
 
@@ -506,7 +506,7 @@ public class _3dTest extends OpenCVTestCase {
             }
         };
 
-        _3d.undistort(src, dst, cameraMatrix, distCoeffs);
+        Cv3d.undistort(src, dst, cameraMatrix, distCoeffs);
 
         truth = new Mat(3, 3, CvType.CV_32F) {
             {
@@ -534,7 +534,7 @@ public class _3dTest extends OpenCVTestCase {
         };
         Mat newCameraMatrix = new Mat(3, 3, CvType.CV_32F, new Scalar(1));
 
-        _3d.undistort(src, dst, cameraMatrix, distCoeffs, newCameraMatrix);
+        Cv3d.undistort(src, dst, cameraMatrix, distCoeffs, newCameraMatrix);
 
         truth = new Mat(3, 3, CvType.CV_32F, new Scalar(3));
         assertMatEqual(truth, dst, EPS);
@@ -547,7 +547,7 @@ public class _3dTest extends OpenCVTestCase {
         Mat cameraMatrix = Mat.eye(3, 3, CvType.CV_64FC1);
         Mat distCoeffs = new Mat(8, 1, CvType.CV_64FC1, new Scalar(0));
 
-        _3d.undistortPoints(src, dst, cameraMatrix, distCoeffs);
+        Cv3d.undistortPoints(src, dst, cameraMatrix, distCoeffs);
 
         assertEquals(src.size(), dst.size());
         for(int i=0; i<src.toList().size(); i++) {
@@ -555,32 +555,4 @@ public class _3dTest extends OpenCVTestCase {
             assertTrue(src.toList().get(i).equals(dst.toList().get(i)));
         }
     }
-
-    public void testEstimateNewCameraMatrixForUndistortRectify() {
-        Mat K = new Mat().eye(3, 3, CvType.CV_64FC1);
-        Mat K_new = new Mat().eye(3, 3, CvType.CV_64FC1);
-        Mat K_new_truth = new Mat().eye(3, 3, CvType.CV_64FC1);
-        Mat D = new Mat().zeros(4, 1, CvType.CV_64FC1);
-
-        K.put(0,0,600.4447738238429);
-        K.put(1,1,578.9929805505851);
-        K.put(0,2,992.0642578801213);
-        K.put(1,2,549.2682624212172);
-
-        D.put(0,0,-0.05090103223466704);
-        D.put(1,0,0.030944413642173308);
-        D.put(2,0,-0.021509225493198905);
-        D.put(3,0,0.0043378096628297145);
-
-        K_new_truth.put(0,0, 387.4809086880343);
-        K_new_truth.put(0,2, 1036.669802754649);
-        K_new_truth.put(1,1, 373.6375700303157);
-        K_new_truth.put(1,2, 538.8373261247601);
-
-        _3d.fisheye_estimateNewCameraMatrixForUndistortRectify(K,D,new Size(1920,1080),
-                    new Mat().eye(3, 3, CvType.CV_64F), K_new, 0.0, new Size(1920,1080));
-
-        assertMatEqual(K_new, K_new_truth, EPS);
-    }
-
 }

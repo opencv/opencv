@@ -1,7 +1,4 @@
 {
-    "namespaces_dict": {
-        "cv.fisheye": "fisheye"
-    },
     "func_arg_fix" : {
         "findFundamentalMat"  : { "points1" : {"ctype" : "vector_Point2f"},
                                   "points2" : {"ctype" : "vector_Point2f"} },
@@ -17,6 +14,6 @@
                               "dst" : {"ctype" : "vector_Point2f"} },
         "projectPoints" : { "objectPoints" : {"ctype" : "vector_Point3f"},
                             "imagePoints"  : {"ctype" : "vector_Point2f"},
-                            "distCoeffs"   : {"ctype" : "vector_double" } },
+                            "distCoeffs"   : {"ctype" : "vector_double" } }
     }
 }

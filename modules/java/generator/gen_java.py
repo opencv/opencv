@@ -116,6 +116,11 @@ def mkdir_p(path):
         else:
             raise
 
+def make_jname(m):
+    return "Cv"+m if (m[0] in "0123456789") else m
+def make_jmodule(m):
+    return "cv"+m if (m[0] in "0123456789") else m
+
 T_JAVA_START_INHERITED = read_contents(os.path.join(SCRIPT_DIR, 'templates/java_class_inherited.prolog'))
 T_JAVA_START_ORPHAN = read_contents(os.path.join(SCRIPT_DIR, 'templates/java_class.prolog'))
 T_JAVA_START_MODULE = read_contents(os.path.join(SCRIPT_DIR, 'templates/java_module.prolog'))
@@ -228,20 +233,20 @@ class ClassInfo(GeneralInfo):
     def __init__(self, decl, namespaces=[]): # [ 'class/struct cname', ': base', [modlist] ]
         GeneralInfo.__init__(self, "class", decl, namespaces)
         self.cname = get_cname(self.name)
+        self.jname = make_jname(self.name)
         self.methods = []
         self.methods_suffixes = {}
         self.consts = [] # using a list to save the occurrence order
         self.private_consts = []
         self.imports = set()
         self.props= []
-        self.jname = self.name
         self.smart = None # True if class stores Ptr<T>* instead of T* in nativeObj field
         self.j_code = None # java code stream
         self.jn_code = None # jni code stream
         self.cpp_code = None # cpp code stream
         for m in decl[2]:
             if m.startswith("="):
-                self.jname = m[1:]
+                self.jname = make_jname(m[1:])
         self.base = ''
         if decl[1]:
             #self.base = re.sub(r"\b"+self.jname+r"\b", "", decl[1].replace(":", "")).strip()
@@ -318,6 +323,7 @@ class ClassInfo(GeneralInfo):
         return Template(self.j_code.getvalue() + "\n\n" +
                          self.jn_code.getvalue() + "\n}\n").substitute(
                             module = m,
+                            jmodule = make_jmodule(m), 
                             name = self.name,
                             jname = self.jname,
                             imports = "\n".join(self.getAllImports(M)),
@@ -365,6 +371,7 @@ class FuncInfo(GeneralInfo):
                 self.jname = m[1:]
         self.static = ["","static"][ "/S" in decl[2] ]
         self.ctype = re.sub(r"^CvTermCriteria", "TermCriteria", decl[1] or "")
+        self.jname = make_jname(self.name)
         self.args = []
         func_fix_map = func_arg_fix.get(self.jname, {})
         for a in decl[3]:
@@ -552,7 +559,8 @@ class JavaWrapperGenerator(object):
 
         logging.info("\n\n===== Generating... =====")
         moduleCppCode = StringIO()
-        package_path = os.path.join(output_java_path, module)
+        package_path = os.path.join(output_java_path, make_jmodule(module))
+        #print("package path: %s\n" % package_path)
         mkdir_p(package_path)
         for ci in self.classes.values():
             if ci.name == "Mat":
@@ -560,7 +568,7 @@ class JavaWrapperGenerator(object):
             ci.initCodeStreams(self.Module)
             self.gen_class(ci)
             classJavaCode = ci.generateJavaCode(self.module, self.Module)
-            self.save("%s/%s/%s.java" % (output_java_path, module, ci.jname), classJavaCode)
+            self.save("%s/%s.java" % (package_path, ci.jname), classJavaCode)
             moduleCppCode.write(ci.generateCppCode())
             ci.cleanupCodeStreams()
         cpp_file = os.path.abspath(os.path.join(output_jni_path, module + ".inl.hpp"))
@@ -988,7 +996,7 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname ($argst);
 JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
   ($args)
 {
-    static const char method_name[] = "$module::$fname()";
+    static const char method_name[] = "$jmodule::$fname()";
     try {
         LOGD("%s", method_name);$prologue
         $retval$cvname($cvargs);$epilogue$ret
@@ -1003,6 +1011,7 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
 """ ).substitute(
         rtype = rtype,
         module = self.module.replace('_', '_1'),
+        jmodule = make_jmodule(self.module.replace('_', '_1')),
         clazz = clazz.replace('_', '_1'),
         fname = (fi.jname + '_' + str(suffix_counter)).replace('_', '_1'),
         args  = ", ".join(["%s %s" % (type_dict[a.ctype].get("jni_type"), a.name) for a in jni_args]),
@@ -1407,6 +1416,7 @@ if __name__ == "__main__":
         gendict_fname = os.path.join(misc_location, 'gen_dict.json')
         if os.path.exists(gendict_fname):
             with open(gendict_fname) as f:
+                print("java script bindings generator: loading %s\n" % gendict_fname)
                 gen_type_dict = json.load(f)
             class_ignore_list += gen_type_dict.get("class_ignore_list", [])
             const_ignore_list += gen_type_dict.get("const_ignore_list", [])

@@ -2,7 +2,8 @@ package org.opencv.test.calib;
 
 import java.util.ArrayList;
 
-import org.opencv._3d;
+import org.opencv.cv3d.Cv3d;
+import org.opencv.calib.Calib;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
@@ -124,4 +125,31 @@ public class CalibTest extends OpenCVTestCase {
         assertEquals((1 << 17), Calib.CALIB_USE_LU);
         assertEquals((1 << 22), Calib.CALIB_USE_EXTRINSIC_GUESS);
     }
+    
+    /*public void testEstimateNewCameraMatrixForUndistortRectify() {
+        Mat K = new Mat().eye(3, 3, CvType.CV_64FC1);
+        Mat K_new = new Mat().eye(3, 3, CvType.CV_64FC1);
+        Mat K_new_truth = new Mat().eye(3, 3, CvType.CV_64FC1);
+        Mat D = new Mat().zeros(4, 1, CvType.CV_64FC1);
+
+        K.put(0,0,600.4447738238429);
+        K.put(1,1,578.9929805505851);
+        K.put(0,2,992.0642578801213);
+        K.put(1,2,549.2682624212172);
+
+        D.put(0,0,-0.05090103223466704);
+        D.put(1,0,0.030944413642173308);
+        D.put(2,0,-0.021509225493198905);
+        D.put(3,0,0.0043378096628297145);
+
+        K_new_truth.put(0,0, 387.4809086880343);
+        K_new_truth.put(0,2, 1036.669802754649);
+        K_new_truth.put(1,1, 373.6375700303157);
+        K_new_truth.put(1,2, 538.8373261247601);
+
+        Calib.fisheye_estimateNewCameraMatrixForUndistortRectify(K,D,new Size(1920,1080),
+                    new Mat().eye(3, 3, CvType.CV_64F), K_new, 0.0, new Size(1920,1080));
+
+        assertMatEqual(K_new, K_new_truth, EPS);
+    }*/
 }
