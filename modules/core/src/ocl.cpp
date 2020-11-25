@@ -2437,6 +2437,7 @@ public:
         if (impl)
         {
             CV_LOG_INFO(NULL, "OpenCL: reuse context@" << impl->contextId << " for configuration: " << configuration)
+            impl->addref();
             return impl;
         }
 
