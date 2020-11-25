@@ -296,10 +296,7 @@ class Builder:
             cmakecmd.append("-DBUILD_ROOT=%s" % builddir)
             cmakecmd.append("-DCMAKE_INSTALL_NAME_TOOL=install_name_tool")
             cmakecmd.append("--no-warn-unused-cli")
-            cmakecmd.append("--debug-trycompile") # Remove me when we've got this figured out
-            print('==============cmakecmd===============')
             execute(cmakecmd, cwd = builddir + "/modules/objc/framework_build")
-            print('==============buildcmd===============')
             execute(buildcmd + ["-target", "ALL_BUILD", "build"], cwd = builddir + "/modules/objc/framework_build")
             execute(["cmake", "-DBUILD_TYPE=%s" % self.getConfiguration(), "-DCMAKE_INSTALL_PREFIX=%s" % (builddir + "/install"), "-P", "cmake_install.cmake"], cwd = builddir + "/modules/objc/framework_build")
 
