@@ -2581,6 +2581,19 @@ static Mat prepareCameraMatrix(Mat& cameraMatrix0, int rtype, int flags)
     return cameraMatrix;
 }
 
+Mat initCameraMatrix2D( InputArrayOfArrays objectPoints,
+                        InputArrayOfArrays imagePoints,
+                        Size imageSize, double aspectRatio )
+{
+    CV_INSTRUMENT_REGION();
+
+    Mat objPt, imgPt, npoints, cameraMatrix;
+    collectCalibrationData( objectPoints, imagePoints, noArray(),
+                            objPt, imgPt, 0, npoints );
+    initIntrinsicParams2D( objPt, imgPt, npoints, imageSize, cameraMatrix, aspectRatio );
+    return cameraMatrix;
+}
+
 static Mat prepareDistCoeffs(Mat& distCoeffs0, int rtype, int outputSize = 14)
 {
     CV_Assert((int)distCoeffs0.total() <= outputSize);

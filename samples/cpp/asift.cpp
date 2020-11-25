@@ -2,7 +2,7 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/features2d.hpp>
 #include <opencv2/highgui.hpp>
-#include <opencv2/calib3d.hpp>
+#include <opencv2/3d.hpp>
 #include <iostream>
 #include <iomanip>
 
@@ -131,7 +131,7 @@ int main(int argc, char** argv)
     }
     vector<uchar> status;
     vector< pair<Point2f, Point2f> > pointPairs;
-    Mat H = findHomography(p1, p2, status, RANSAC);
+    Mat H = findHomography(p1, p2, status, cv3d::RANSAC);
     int inliers = 0;
     for (size_t i = 0; i < status.size(); i++)
     {

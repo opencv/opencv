@@ -89,7 +89,7 @@
 #ifdef DEBUG_CHESSBOARD
 #include "opencv2/highgui.hpp"
 #include "opencv2/imgproc.hpp"
-#define DPRINTF(...)  CV_LOG_INFO(NULL, format("calib3d: " __VA_ARGS__))
+#define DPRINTF(...)  CV_LOG_INFO(NULL, format("calib: " __VA_ARGS__))
 #else
 #define DPRINTF(...)
 #endif
@@ -1768,7 +1768,7 @@ void ChessBoardDetector::generateQuads(const Mat& image_, int flags)
 
     if (contours.empty())
     {
-        CV_LOG_DEBUG(NULL, "calib3d(chessboard): findContours() returns no contours");
+        CV_LOG_DEBUG(NULL, "calib(chessboard): findContours() returns no contours");
         return;
     }
 

@@ -2,7 +2,9 @@
  * 3calibration.cpp -- Calibrate 3 cameras in a horizontal line together.
  */
 
-#include "opencv2/calib3d.hpp"
+#include "opencv2/3d.hpp"
+#include "opencv2/stereo.hpp"
+#include "opencv2/calib.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui.hpp"
@@ -13,6 +15,9 @@
 #include <time.h>
 
 using namespace cv;
+using namespace cv3d;
+using namespace cv::calib;
+using namespace cv::stereo;
 using namespace std;
 
 enum { DETECTION = 0, CAPTURING = 1, CALIBRATED = 2 };

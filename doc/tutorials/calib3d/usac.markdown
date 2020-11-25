@@ -10,7 +10,7 @@ title: 'Google Summer of Code: Improvement of Random Sample Consensus in OpenCV'
 Contribution
 ============
 
-The integrated part to OpenCV `calib3d` module is RANSAC-based universal
+The integrated part to OpenCV `3d` module is RANSAC-based universal
 framework USAC (`namespace usac`) written in C++. The framework includes
 different state-of-the-arts methods for sampling, verification or local
 optimization. The main advantage of the framework is its independence to

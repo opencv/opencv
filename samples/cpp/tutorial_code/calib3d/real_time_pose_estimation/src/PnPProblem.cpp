@@ -11,7 +11,7 @@
 #include "PnPProblem.h"
 #include "Mesh.h"
 
-#include <opencv2/calib3d/calib3d.hpp>
+#include <opencv2/3d.hpp>
 
 /* Functions for Möller-Trumbore intersection algorithm */
 static cv::Point3f CROSS(cv::Point3f v1, cv::Point3f v2)
@@ -108,11 +108,11 @@ bool PnPProblem::estimatePose( const std::vector<cv::Point3f> &list_points3d,
     bool useExtrinsicGuess = false;
 
     // Pose estimation
-    bool correspondence = cv::solvePnP( list_points3d, list_points2d, A_matrix_, distCoeffs, rvec, tvec,
+    bool correspondence = cv3d::solvePnP( list_points3d, list_points2d, A_matrix_, distCoeffs, rvec, tvec,
                                         useExtrinsicGuess, flags);
 
     // Transforms Rotation Vector to Matrix
-    Rodrigues(rvec, R_matrix_);
+    cv3d::Rodrigues(rvec, R_matrix_);
     t_matrix_ = tvec;
 
     // Set projection matrix
@@ -135,11 +135,11 @@ void PnPProblem::estimatePoseRANSAC( const std::vector<cv::Point3f> &list_points
     bool useExtrinsicGuess = false;   // if true the function uses the provided rvec and tvec values as
     // initial approximations of the rotation and translation vectors
 
-    cv::solvePnPRansac( list_points3d, list_points2d, A_matrix_, distCoeffs, rvec, tvec,
+    cv3d::solvePnPRansac( list_points3d, list_points2d, A_matrix_, distCoeffs, rvec, tvec,
                         useExtrinsicGuess, iterationsCount, reprojectionError, confidence,
                         inliers, flags );
 
-    Rodrigues(rvec, R_matrix_); // converts Rotation Vector to Matrix
+    cv3d::Rodrigues(rvec, R_matrix_); // converts Rotation Vector to Matrix
     t_matrix_ = tvec;           // set translation matrix
 
     this->set_P_matrix(R_matrix_, t_matrix_); // set rotation-translation matrix

@@ -5,7 +5,7 @@
 #include <opencv2/core/utils/filesystem.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
-#include <opencv2/calib3d.hpp>
+#include <opencv2/3d.hpp>
 #include <opencv2/video/tracking.hpp>
 // PnP Tutorial
 #include "Mesh.h"
@@ -88,7 +88,7 @@ int main(int argc, char *argv[])
     int minInliersKalman = 30;    // Kalman threshold updating
 
     // PnP parameters
-    int pnpMethod = SOLVEPNP_ITERATIVE;
+    int pnpMethod = cv3d::SOLVEPNP_ITERATIVE;
     string featureName = "ORB";
     bool useFLANN = false;
 

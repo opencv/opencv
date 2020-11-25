@@ -3,7 +3,7 @@ import java.util.List;
 import java.util.Random;
 
 import org.opencv.core.*;
-import org.opencv.calib3d.Calib3d;
+import org.opencv._3d._3d;
 import org.opencv.highgui.HighGui;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;

@@ -3,7 +3,7 @@
 // OpenCV
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
-#include <opencv2/calib3d.hpp>
+#include <opencv2/3d.hpp>
 #include <opencv2/features2d.hpp>
 // PnP Tutorial
 #include "Mesh.h"
@@ -206,7 +206,7 @@ int main(int argc, char *argv[])
     vector<Point3f> list_points3d = registration.get_points3d();
 
     // Estimate pose given the registered points
-    bool is_correspondence = pnp_registration.estimatePose(list_points3d, list_points2d, SOLVEPNP_ITERATIVE);
+    bool is_correspondence = pnp_registration.estimatePose(list_points3d, list_points2d, cv3d::SOLVEPNP_ITERATIVE);
     if ( is_correspondence )
     {
         cout << "Correspondence found" << endl;

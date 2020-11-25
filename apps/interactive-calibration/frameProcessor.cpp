@@ -244,7 +244,7 @@ bool CalibProcessor::checkLastFrame()
             allObjPoints.push_back(mCharucoBoard->chessboardCorners[pointID]);
         }
 
-        cv::solvePnP(allObjPoints, mCurrentCharucoCorners, tmpCamMatrix, mCalibData->distCoeffs, r, t);
+        cv3d::solvePnP(allObjPoints, mCurrentCharucoCorners, tmpCamMatrix, mCalibData->distCoeffs, r, t);
         RodriguesToEuler(r, angles, CALIB_DEGREES);
 
         if(180.0 - fabs(angles.at<double>(0)) > badAngleThresh || fabs(angles.at<double>(1)) > badAngleThresh) {

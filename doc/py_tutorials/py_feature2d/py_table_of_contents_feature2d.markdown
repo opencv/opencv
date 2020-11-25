@@ -51,4 +51,4 @@ Feature Detection and Description {#tutorial_py_table_of_contents_feature2d}
 
 -   @subpage tutorial_py_feature_homography
 
-    Now we know about feature matching. Let's mix it up with calib3d module to find objects in a complex image.
+    Now we know about feature matching. Let's mix it up with 3d module to find objects in a complex image.

@@ -7,12 +7,14 @@
 #include <opencv2/core.hpp>
 #include <opencv2/core/utility.hpp>
 #include <opencv2/imgproc.hpp>
-#include <opencv2/calib3d.hpp>
+#include <opencv2/3d.hpp>
+#include <opencv2/calib.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/videoio.hpp>
 #include <opencv2/highgui.hpp>
 
 using namespace cv;
+using namespace cv::calib;
 using namespace std;
 
 class Settings
@@ -420,7 +422,7 @@ int main(int argc, char* argv[])
             if (s.useFisheye)
               cv::fisheye::undistortImage(temp, view, cameraMatrix, distCoeffs);
             else
-              undistort(temp, view, cameraMatrix, distCoeffs);
+              cv3d::undistort(temp, view, cameraMatrix, distCoeffs);
         }
         //! [output_undistorted]
         //------------------------------ Show image and check for input commands -------------------
@@ -458,9 +460,9 @@ int main(int argc, char* argv[])
         }
         else
         {
-            initUndistortRectifyMap(
+            cv3d::initUndistortRectifyMap(
                 cameraMatrix, distCoeffs, Mat(),
-                getOptimalNewCameraMatrix(cameraMatrix, distCoeffs, imageSize, 1, imageSize, 0), imageSize,
+                cv3d::getOptimalNewCameraMatrix(cameraMatrix, distCoeffs, imageSize, 1, imageSize, 0), imageSize,
                 CV_16SC2, map1, map2);
         }
 
@@ -502,7 +504,7 @@ static double computeReprojectionErrors( const vector<vector<Point3f> >& objectP
         }
         else
         {
-            projectPoints(objectPoints[i], rvecs[i], tvecs[i], cameraMatrix, distCoeffs, imagePoints2);
+            cv3d::projectPoints(objectPoints[i], rvecs[i], tvecs[i], cameraMatrix, distCoeffs, imagePoints2);
         }
         err = norm(imagePoints[i], imagePoints2, NORM_L2);
 

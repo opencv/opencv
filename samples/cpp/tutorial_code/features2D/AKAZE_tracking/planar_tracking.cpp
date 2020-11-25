@@ -1,7 +1,7 @@
 #include <opencv2/features2d.hpp>
 #include <opencv2/videoio.hpp>
 #include <opencv2/imgproc.hpp>
-#include <opencv2/calib3d.hpp>
+#include <opencv2/3d.hpp>
 #include <opencv2/highgui.hpp>      //for imshow
 #include <vector>
 #include <iostream>
@@ -87,7 +87,7 @@ Mat Tracker::process(const Mat frame, Stats& stats)
     vector<DMatch> inlier_matches;
     if(matched1.size() >= 4) {
         homography = findHomography(Points(matched1), Points(matched2),
-                                    RANSAC, ransac_thresh, inlier_mask);
+                                    cv3d::RANSAC, ransac_thresh, inlier_mask);
     }
     tm.stop();
     stats.fps = 1. / tm.getTimeSec();

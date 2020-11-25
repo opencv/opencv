@@ -2,7 +2,8 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html
 
-#include "opencv2/calib3d.hpp"
+#include "opencv2/3d.hpp"
+#include "opencv2/features2d.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/imgproc.hpp"
 
@@ -250,7 +251,7 @@ int main(int args, char** argv) {
     const int pts_size = (int) pts1.size();
     const auto begin_time = std::chrono::steady_clock::now();
     // fine essential matrix
-    const Mat E = findEssentialMat(pts1, pts2, Mat(K), RANSAC, 0.99, 1.0, inliers);
+    const Mat E = cv3d::findEssentialMat(pts1, pts2, Mat(K), cv3d::RANSAC, 0.99, 1.0, inliers);
     std::cout << "RANSAC essential matrix time " << std::chrono::duration_cast<std::chrono::microseconds>
             (std::chrono::steady_clock::now() - begin_time).count() <<
             "mcs.\nNumber of inliers " << countNonZero(inliers) << "\n";
@@ -264,7 +265,7 @@ int main(int args, char** argv) {
 
     // decompose essential into rotation and translation
     Mat R1, R2, t;
-    decomposeEssentialMat(E, R1, R2, t);
+    cv3d::decomposeEssentialMat(E, R1, R2, t);
 
     // Create two relative pose
     // P1 = K [  I    |   0  ]
@@ -293,7 +294,7 @@ int main(int args, char** argv) {
 
             Vec4d obj_pt;
             // find object point using triangulation
-            triangulatePoints(P1, P2, points1.col(i), points2.col(i), obj_pt);
+            cv3d::triangulatePoints(P1, P2, points1.col(i), points2.col(i), obj_pt);
             obj_pt /= obj_pt(3); // normalize 4d point
             if (obj_pt(2) > 0) { // check if projected point has positive depth
                 obj_pts_per_cam[cam_idx].emplace_back(Vec3d(obj_pt(0), obj_pt(1), obj_pt(2)));

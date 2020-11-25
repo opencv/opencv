@@ -49,7 +49,7 @@ rectified first camera's image.
 camera, i.e. it projects points given in the rectified first camera coordinate system into the
 rectified second camera's image.
 @param Q Output \f$4 \times 4\f$ disparity-to-depth mapping matrix (see @ref reprojectImageTo3D).
-@param flags Operation flags that may be zero or CALIB_ZERO_DISPARITY . If the flag is set,
+@param flags Operation flags that may be zero or STEREO_ZERO_DISPARITY . If the flag is set,
 the function makes the principal points of each camera have the same pixel coordinates in the
 rectified views. And if the flag is not set, the function may still shift the images in the
 horizontal or vertical direction (depending on the orientation of epipolar lines) to maximize the
@@ -96,7 +96,7 @@ coordinates. The function distinguishes the following two cases:
                      \end{bmatrix} ,\f]
 
     where \f$T_x\f$ is a horizontal shift between the cameras and \f$cx_1=cx_2\f$ if
-    CALIB_ZERO_DISPARITY is set.
+    STEREO_ZERO_DISPARITY is set.
 
 -   **Vertical stereo**: the first and the second camera views are shifted relative to each other
     mainly in the vertical direction (and probably a bit in the horizontal direction too). The epipolar
@@ -115,7 +115,7 @@ coordinates. The function distinguishes the following two cases:
                      \end{bmatrix},\f]
 
     where \f$T_y\f$ is a vertical shift between the cameras and \f$cy_1=cy_2\f$ if
-    CALIB_ZERO_DISPARITY is set.
+    STEREO_ZERO_DISPARITY is set.
 
 As you can see, the first three columns of P1 and P2 will effectively be the new "rectified" camera
 matrices. The matrices, together with R1 and R2 , can then be passed to initUndistortRectifyMap to

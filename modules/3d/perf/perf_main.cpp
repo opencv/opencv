@@ -4,4 +4,4 @@
     #include <hpx/hpx_main.hpp>
 #endif
 
-CV_PERF_TEST_MAIN(_3d)
+CV_PERF_TEST_MAIN(calib3d)

@@ -11,7 +11,8 @@
 #include "opencv2/core.hpp"
 #include <opencv2/core/utility.hpp>
 #include "opencv2/imgproc.hpp"
-#include "opencv2/calib3d.hpp"
+#include "opencv2/3d.hpp"
+#include "opencv2/calib.hpp"
 #include "opencv2/imgcodecs.hpp"
 #include "opencv2/videoio.hpp"
 #include "opencv2/highgui.hpp"
@@ -148,7 +149,7 @@ static Rect extract3DBox(const Mat& frame, Mat& shownFrame, Mat& selectedObjFram
         for( int i = 0; i < 4; i++ )
             objpt.push_back(Point3f(objpt[i].x, objpt[i].y, box[3].z));
 
-    projectPoints(Mat(objpt), rvec, tvec, cameraMatrix, Mat(), imgpt);
+    cv3d::projectPoints(Mat(objpt), rvec, tvec, cameraMatrix, Mat(), imgpt);
 
     if( !shownFrame.empty() )
     {
@@ -211,7 +212,7 @@ static int select3DBox(const string& windowname, const string& selWinName, const
     vector<Point> temphull;
     int nobjpt = 0;
     Mat R, selectedObjMask, selectedObjFrame, shownFrame;
-    Rodrigues(rvec, R);
+    cv3d::Rodrigues(rvec, R);
     box.resize(4);
 
     for(;;)
@@ -250,7 +251,7 @@ static int select3DBox(const string& windowname, const string& selWinName, const
                 else
                     tempobj[0] = Point3f(box[nearestIdx].x, box[nearestIdx].y, 1.f);
 
-                projectPoints(Mat(tempobj), rvec, tvec, cameraMatrix, Mat(), tempimg);
+                cv3d::projectPoints(Mat(tempobj), rvec, tvec, cameraMatrix, Mat(), tempimg);
 
                 Point2f a = imgpt[nearestIdx], b = tempimg[0], d1 = b - a, d2 = m - a;
                 float n1 = (float)norm(d1), n2 = (float)norm(d2);
@@ -530,22 +531,22 @@ int main(int argc, char** argv)
                 cameraMatrix.at<double>(1,2) *= sy;
             }
             Mat dummy;
-            initUndistortRectifyMap(cameraMatrix, distCoeffs, Mat(),
+            cv3d::initUndistortRectifyMap(cameraMatrix, distCoeffs, Mat(),
                                     cameraMatrix, frame0.size(),
                                     CV_32FC2, mapxy, dummy );
             distCoeffs = Mat::zeros(5, 1, CV_64F);
         }
         remap(frame0, frame, mapxy, Mat(), INTER_LINEAR);
         vector<Point2f> foundBoardCorners;
-        boardFound = findChessboardCorners(frame, boardSize, foundBoardCorners);
+        boardFound = calib::findChessboardCorners(frame, boardSize, foundBoardCorners);
 
         Mat rvec, tvec;
         if( boardFound )
-            solvePnP(Mat(boardPoints), Mat(foundBoardCorners), cameraMatrix,
+            cv3d::solvePnP(Mat(boardPoints), Mat(foundBoardCorners), cameraMatrix,
                      distCoeffs, rvec, tvec, false);
 
         frame.copyTo(shownFrame);
-        drawChessboardCorners(shownFrame, boardSize, Mat(foundBoardCorners), boardFound);
+        calib::drawChessboardCorners(shownFrame, boardSize, Mat(foundBoardCorners), boardFound);
         selectedObjFrame = Mat::zeros(frame.size(), frame.type());
 
         if( boardFound && grabNext )

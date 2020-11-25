@@ -52,7 +52,7 @@
 #include "opencv2/imgcodecs.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/highgui.hpp"
-#include "opencv2/calib3d.hpp"
+#include "opencv2/3d.hpp"
 
 #if defined __GNUC__ && __GNUC__ >= 8
 #pragma GCC diagnostic ignored "-Wclass-memaccess"

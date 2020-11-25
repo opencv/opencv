@@ -6,8 +6,8 @@
  *  Copyright 2010 Argus Corp. All rights reserved.
  *
  */
-
-#include "opencv2/calib3d/calib3d.hpp"
+#include "opencv2/3d.hpp"
+#include "opencv2/stereo.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui.hpp"
@@ -17,6 +17,7 @@
 #include <sstream>
 
 using namespace cv;
+using namespace cv::stereo;
 
 static void print_help(char** argv)
 {
@@ -196,11 +197,11 @@ int main(int argc, char** argv)
         fs["R"] >> R;
         fs["T"] >> T;
 
-        stereoRectify( M1, D1, M2, D2, img_size, R, T, R1, R2, P1, P2, Q, CALIB_ZERO_DISPARITY, -1, img_size, &roi1, &roi2 );
+        stereoRectify( M1, D1, M2, D2, img_size, R, T, R1, R2, P1, P2, Q, STEREO_ZERO_DISPARITY, -1, img_size, &roi1, &roi2 );
 
         Mat map11, map12, map21, map22;
-        initUndistortRectifyMap(M1, D1, R1, P1, img_size, CV_16SC2, map11, map12);
-        initUndistortRectifyMap(M2, D2, R2, P2, img_size, CV_16SC2, map21, map22);
+        cv3d::initUndistortRectifyMap(M1, D1, R1, P1, img_size, CV_16SC2, map11, map12);
+        cv3d::initUndistortRectifyMap(M2, D2, R2, P2, img_size, CV_16SC2, map21, map22);
 
         Mat img1r, img2r;
         remap(img1, img1r, map11, map12, INTER_LINEAR);

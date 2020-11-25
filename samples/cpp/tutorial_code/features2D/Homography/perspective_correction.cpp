@@ -1,11 +1,14 @@
 #include <iostream>
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
-#include <opencv2/calib3d.hpp>
+#include <opencv2/3d.hpp>
+#include <opencv2/calib.hpp>
 #include <opencv2/highgui.hpp>
 
 using namespace std;
 using namespace cv;
+using namespace cv3d;
+using namespace cv::calib;
 
 namespace
 {

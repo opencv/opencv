@@ -2,10 +2,13 @@
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
-#include <opencv2/calib3d.hpp>
+#include <opencv2/3d.hpp>
+#include <opencv2/calib.hpp>
 
 using namespace std;
 using namespace cv;
+using namespace cv3d;
+using namespace cv::calib;
 
 namespace
 {
@@ -95,8 +98,8 @@ void homographyFromCameraDisplacement(const string &img1Path, const string &img2
 
     Mat img1_copy_pose = img1.clone(), img2_copy_pose = img2.clone();
     Mat img_draw_poses;
-    drawFrameAxes(img1_copy_pose, cameraMatrix, distCoeffs, rvec1, tvec1, 2*squareSize);
-    drawFrameAxes(img2_copy_pose, cameraMatrix, distCoeffs, rvec2, tvec2, 2*squareSize);
+    cv3d::drawFrameAxes(img1_copy_pose, cameraMatrix, distCoeffs, rvec1, tvec1, 2*squareSize);
+    cv3d::drawFrameAxes(img2_copy_pose, cameraMatrix, distCoeffs, rvec2, tvec2, 2*squareSize);
     hconcat(img1_copy_pose, img2_copy_pose, img_draw_poses);
     imshow("Chessboard poses", img_draw_poses);
 
