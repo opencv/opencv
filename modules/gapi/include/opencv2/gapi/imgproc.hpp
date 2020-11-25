@@ -211,7 +211,7 @@ namespace imgproc {
             {
                 GAPI_Assert (in.depth == CV_32S || in.depth == CV_32F);
                 int quantity = -1;
-                std::tie(quantity, std::ignore) = checkVector(in, 2);
+                std::tie(quantity, std::ignore) = detail::checkVector(in, 2);
                 GAPI_Assert(quantity != -1 &&
                             "Input Mat can't be described as vector of 2-dimentional points");
             }
@@ -237,7 +237,7 @@ namespace imgproc {
                    "org.opencv.imgproc.shape.fitLine2DMat") {
         static GOpaqueDesc outMeta(GMatDesc in,DistanceTypes,double,double,double) {
             int quantity = -1;
-            std::tie(quantity, std::ignore) = checkVector(in, 2);
+            std::tie(quantity, std::ignore) = detail::checkVector(in, 2);
             GAPI_Assert(quantity != -1 &&
                         "Input Mat can't be described as vector of 2-dimentional points");
             return empty_gopaque_desc();
@@ -272,7 +272,7 @@ namespace imgproc {
                    "org.opencv.imgproc.shape.fitLine3DMat") {
         static GOpaqueDesc outMeta(GMatDesc in,int,double,double,double) {
             int quantity = -1;
-            std::tie(quantity, std::ignore) = checkVector(in, 3);
+            std::tie(quantity, std::ignore) = detail::checkVector(in, 3);
             GAPI_Assert(quantity != -1 &&
                         "Input Mat can't be described as vector of 3-dimentional points");
             return empty_gopaque_desc();

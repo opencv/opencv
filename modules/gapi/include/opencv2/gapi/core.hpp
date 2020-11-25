@@ -519,7 +519,7 @@ namespace core {
         outMeta(const GMatDesc& in, int K, const GMatDesc& in_labels, const TermCriteria&, int,
                 KmeansFlags flags) {
             int quantity = -1, dimensionality = -1;
-            std::tie(quantity, dimensionality) = checkVector(in, -1, CV_32F);
+            std::tie(quantity, dimensionality) = detail::checkVector(in, -1, CV_32F);
             if (quantity == -1)  // Mat with height != 1, width != 1, channels != 1 given
             {                    // which means that kmeans will consider the following:
                 quantity       = in.size.height;
@@ -532,7 +532,7 @@ namespace core {
             if (flags & KMEANS_USE_INITIAL_LABELS)
             {
                 int labels_quantity = -1;
-                std::tie(labels_quantity, std::ignore) = checkVector(in_labels, 1, CV_32S);
+                std::tie(labels_quantity, std::ignore) = detail::checkVector(in_labels, 1, CV_32S);
                 GAPI_Assert(labels_quantity == quantity);
                 out_labels = in_labels;  // kmeans preserves in_labels' sizes if given
             }
@@ -549,7 +549,7 @@ namespace core {
         outMeta(const GMatDesc& in, int K, const TermCriteria&, int, KmeansFlags flags) {
             GAPI_Assert( !(flags & KMEANS_USE_INITIAL_LABELS) );
             int quantity = -1, dimensionality = -1;
-            std::tie(quantity, dimensionality) = checkVector(in, -1, CV_32F);
+            std::tie(quantity, dimensionality) = detail::checkVector(in, -1, CV_32F);
             if (quantity == -1)  // Mat with height != 1, width != 1, channels != 1 given
             {                    // which means that kmeans will consider the following:
                 quantity       = in.size.height;

@@ -36,7 +36,8 @@ const cv::GOrigin& cv::GMat::priv() const
     return *m_priv;
 }
 
-std::tuple<int,int> cv::checkVector(const cv::GMatDesc& in, const int n, const int expectedDepth)
+std::tuple<int,int> cv::gapi::detail::checkVector(const cv::GMatDesc& in, const int n,
+                                                  const int expectedDepth)
 {
     GAPI_Assert(expectedDepth == in.depth || expectedDepth == -1);
     const int chan = in.chan, width = in.size.width, height = in.size.height;
