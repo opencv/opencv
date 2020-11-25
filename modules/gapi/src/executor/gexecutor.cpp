@@ -162,7 +162,7 @@ void writeBackExec(const Mag& mag, const RcDesc &rc, GRunArgP &g_arg)
 void cv::gimpl::GExecutor::initResource(const ade::NodeHandle & nh, const ade::NodeHandle &orig_nh)
 {
     const Data &d = m_gm.metadata(orig_nh).get<Data>();
-
+    
     if (   d.storage != Data::Storage::INTERNAL
         && d.storage != Data::Storage::CONST_VAL)
         return;
@@ -208,7 +208,6 @@ void cv::gimpl::GExecutor::initResource(const ade::NodeHandle & nh, const ade::N
     case GShape::GOPAQUE:
         // Constructed on Reset, do nothing here
         break;
-
     default:
         GAPI_Assert(false);
     }

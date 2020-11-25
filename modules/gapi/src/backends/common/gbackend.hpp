@@ -20,6 +20,12 @@
 #include "compiler/gmodel.hpp"
 
 namespace cv {
+
+struct MediaStorage
+{
+    cv::Mat mem;
+};
+
 namespace gimpl {
 
     inline cv::Mat asMat(RMat::View& v) {
@@ -38,6 +44,25 @@ namespace gimpl {
         RMatAdapter(cv::Mat m) : m_mat(m) {}
         virtual RMat::View access(RMat::Access) override { return asView(m_mat); }
         virtual cv::GMatDesc desc() const override { return cv::descr_of(m_mat); }
+    };
+
+    class MediaAdapter final: public cv::MediaFrame::IAdapter {
+        cv::Mat m_mat;
+        using Cb = cv::MediaFrame::View::Callback;
+        Cb m_cb;
+
+    public:
+        explicit MediaAdapter(cv::Mat m, Cb cb = [](){})
+            : m_mat(m), m_cb(cb) {
+        }
+        cv::GFrameDesc meta() const override {
+            return cv::GFrameDesc{cv::MediaFormat::BGR, cv::Size(m_mat.cols, m_mat.rows)};
+        }
+        cv::MediaFrame::View access(cv::MediaFrame::Access) override {
+            cv::MediaFrame::View::Ptrs pp = { m_mat.ptr(), nullptr, nullptr, nullptr };
+            cv::MediaFrame::View::Strides ss = { m_mat.step, 0u, 0u, 0u };
+            return cv::MediaFrame::View(std::move(pp), std::move(ss), Cb{m_cb});
+        }
     };
 
     // Forward declarations
@@ -69,6 +94,7 @@ using Mag = magazine::Class< cv::Mat
                            , cv::RMat
                            , cv::RMat::View
                            , cv::MediaFrame
+                           , cv::MediaStorage
 #if !defined(GAPI_STANDALONE)
                            , cv::UMat
 #endif

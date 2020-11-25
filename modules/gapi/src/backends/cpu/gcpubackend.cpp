@@ -112,6 +112,14 @@ cv::gimpl::GCPUExecutable::GCPUExecutable(const ade::Graph &g,
                 auto& mat = m_res.slot<cv::Mat>()[desc.rc];
                 createMat(mat_desc, mat);
             }
+            if (desc.storage == Data::Storage::INTERNAL && desc.shape == GShape::GFRAME)
+            {
+                auto& storage = m_res.slot<cv::MediaStorage>()[desc.rc];
+                const auto& frame_desc = util::get<cv::GFrameDesc>(desc.meta);
+                createMat(cv::GMatDesc{CV_8U, 3, frame_desc.size}, storage.mem);
+                auto& frame = m_res.slot<cv::MediaFrame>()[desc.rc];
+                frame = cv::MediaFrame::Create<MediaAdapter>(storage.mem);
+            }
             break;
         }
         default: util::throw_error(std::logic_error("Unsupported NodeType type"));

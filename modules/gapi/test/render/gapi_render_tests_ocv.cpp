@@ -79,6 +79,32 @@ public:
     }
 };
 
+G_TYPED_KERNEL(GFrameResize, <cv::GFrame(cv::GFrame, cv::Size)>, "org.opencv.test.frame_resize")
+{
+     static cv::GFrameDesc outMeta(cv::GFrameDesc desc, cv::Size sz)
+     {
+         GAPI_Assert(desc.fmt == cv::MediaFormat::BGR);
+         return cv::GFrameDesc{desc.fmt, sz};
+     }
+};
+
+GAPI_OCV_KERNEL(GOCVFrameResize, GFrameResize)
+{
+    static void run(const cv::MediaFrame in, const cv::Size& sz, cv::MediaFrame& out)
+    {
+        const auto& in_desc  = in.desc();
+        const auto& out_desc = out.desc();
+
+        auto vout = out.access(cv::MediaFrame::Access::W);
+        auto vin  = in.access(cv::MediaFrame::Access::R);
+
+        cv::Mat in_bgr(in_desc.size,   CV_8UC3, vin.ptr[0]);
+        cv::Mat out_bgr(out_desc.size, CV_8UC3, vout.ptr[0]);
+
+        cv::resize(in_bgr, out_bgr, sz);
+    }
+};
+
 } // anonymous namespace
 
 namespace opencv_test
@@ -542,10 +568,23 @@ TEST(RenderMediaFrameNV12, AccucaryTest)
     EXPECT_EQ(0, cvtest::norm(ocv_mat_uv, gapi_mat_uv, NORM_INF));
 };
 
-TEST(RenderMediaFrameVideo, AccuracyTest)
+TEST(RenderPipeline, AccuracyTest)
 {
-    initTestDataPath();
-    std::string filepath = findDataFile("cv/video/768x576.avi");
+    cv::Size sz{640, 480};
+    cv::Size out_sz{320, 240};
+
+    cv::Mat gapi_mat{sz, CV_8UC3};
+    cv::randu(gapi_mat, cv::Scalar::all(0), cv::Scalar::all(255));
+
+    cv::Mat gapi_out_mat{out_sz, CV_8UC3};
+    cv::randu(gapi_out_mat, cv::Scalar::all(0), cv::Scalar::all(255));
+
+    cv::MediaFrame frame     = cv::MediaFrame::Create<TestMediaBGR>(gapi_mat);
+    //cv::MediaFrame out_frame;
+    cv::MediaFrame out_frame = cv::MediaFrame::Create<TestMediaBGR>(gapi_out_mat);
+
+    cv::Mat ocv_mat;
+    gapi_mat.copyTo(ocv_mat);
 
     // Primitives //////////////////////////////////////////////////////////////
     cv::Rect rect{100, 100, 200, 200};
@@ -557,19 +596,52 @@ TEST(RenderMediaFrameVideo, AccuracyTest)
     // G-API code //////////////////////////////////////////////////////////////
     cv::GFrame in;
     cv::GArray<cv::gapi::wip::draw::Prim> arr;
-    auto out = cv::gapi::wip::draw::renderFrame(in, arr);
+    auto rendered = cv::gapi::wip::draw::renderFrame(in, arr);
+    auto out      = GFrameResize::on(rendered, out_sz);
+    cv::GComputation comp(cv::GIn(in, arr), cv::GOut(out));
 
-    cv::GComputation comp(cv::GIn(in, arr), cv::GOut(out));	
-    auto cc = comp.compileStreaming();
-    auto src = cv::gapi::wip::make_src<BGRSource>(filepath);
+    const auto pkg = cv::gapi::kernels<GOCVFrameResize>();
+    comp.apply(cv::gin(frame, prims),cv::gout(out_frame), cv::compile_args(pkg));
 
-    cc.setSource(cv::gin(src, prims));
-    cc.start();
+    cv::imwrite("out_mat.png", gapi_out_mat);
 
-    cv::MediaFrame out_frame;
+    //// OpenCV code //////////////////////////////////////////////////////////////
+    //{
+        //cv::rectangle(ocv_mat, rect, color, thick);
+    //}
 
-    cc.pull(cv::gout(out_frame));
+    //// Comparison //////////////////////////////////////////////////////////////
+    //EXPECT_EQ(0, cvtest::norm(ocv_mat, gapi_mat, NORM_INF));
 }
+
+//TEST(RenderMediaFrameVideo, AccuracyTest)
+//{
+    //initTestDataPath();
+    //std::string filepath = findDataFile("cv/video/768x576.avi");
+
+    //// Primitives //////////////////////////////////////////////////////////////
+    //cv::Rect rect{100, 100, 200, 200};
+    //cv::Scalar color{255, 100, 50};
+    //int thick = 10;
+    //cv::gapi::wip::draw::Prims prims;
+    //prims.emplace_back(cv::gapi::wip::draw::Rect{rect, color, thick});
+
+    //// G-API code //////////////////////////////////////////////////////////////
+    //cv::GFrame in;
+    //cv::GArray<cv::gapi::wip::draw::Prim> arr;
+    //auto out = cv::gapi::wip::draw::renderFrame(in, arr);
+
+    //cv::GComputation comp(cv::GIn(in, arr), cv::GOut(out));	
+    //auto cc = comp.compileStreaming();
+    //auto src = cv::gapi::wip::make_src<BGRSource>(filepath);
+
+    //cc.setSource(cv::gin(src, prims));
+    //cc.start();
+
+    //cv::MediaFrame out_frame;
+
+    //cc.pull(cv::gout(out_frame));
+//}
 
 // FIXME avoid code duplicate for NV12 and BGR cases
 INSTANTIATE_TEST_CASE_P(RenderBGROCVTestRectsImpl, RenderBGROCVTestRects,
