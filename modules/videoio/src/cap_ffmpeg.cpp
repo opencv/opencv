@@ -321,7 +321,7 @@ CvResult CV_API_CALL cv_capture_retrieve(CvPluginCapture handle, int stream_idx,
         Mat img;
         // TODO: avoid unnecessary copying
         if (instance->retrieveFrame(stream_idx, img))
-            return callback(stream_idx, img.data, img.step, img.cols, img.rows, img.channels(), userdata);
+            return callback(stream_idx, img.data, img.step, img.cols, img.rows, img.type(), userdata);
         return CV_ERROR_FAIL;
     }
     catch(...)

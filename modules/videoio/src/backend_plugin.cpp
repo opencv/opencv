@@ -465,13 +465,13 @@ public:
                 return true;
         return false;
     }
-    static CvResult CV_API_CALL retrieve_callback(int stream_idx, const unsigned char* data, int step, int width, int height, int cn, void* userdata)
+    static CvResult CV_API_CALL retrieve_callback(int stream_idx, const unsigned char* data, int step, int width, int height, int type, void* userdata)
     {
         CV_UNUSED(stream_idx);
         cv::_OutputArray* dst = static_cast<cv::_OutputArray*>(userdata);
         if (!dst)
             return CV_ERROR_FAIL;
-        cv::Mat(cv::Size(width, height), CV_MAKETYPE(CV_8U, cn), (void*)data, step).copyTo(*dst);
+        cv::Mat(cv::Size(width, height), type, (void*)data, step).copyTo(*dst);
         return CV_ERROR_OK;
     }
     bool retrieveFrame(int idx, cv::OutputArray img) CV_OVERRIDE
