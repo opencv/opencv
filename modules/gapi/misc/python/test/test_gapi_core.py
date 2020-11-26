@@ -20,7 +20,7 @@ class gapi_core_test(NewOpenCVTests):
 
     def test_add(self):
         # TODO: Extend to use any type and size here
-        sz = (1280, 720)
+        sz = (720, 1280)
         in1 = np.full(sz, 100)
         in2 = np.full(sz, 50)
 
@@ -42,7 +42,7 @@ class gapi_core_test(NewOpenCVTests):
 
 
     def test_add_uint8(self):
-        sz = (1280, 720)
+        sz = (720, 1280)
         in1 = np.full(sz, 100, dtype=np.uint8)
         in2 = np.full(sz, 50 , dtype=np.uint8)
 
