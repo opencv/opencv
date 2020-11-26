@@ -314,7 +314,7 @@ struct SIdx
         UsedFinder(const SIdx& _used) : used(_used) {}
         const SIdx& used;
         bool operator()(const SIdx& v) const { return  (v.i1 == used.i1 || v.i2 == used.i2); }
-        UsedFinder& operator=(const UsedFinder&);
+        UsedFinder& operator=(const UsedFinder&) = delete;
     };
 };
 
