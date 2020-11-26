@@ -113,7 +113,7 @@ class Builder:
                 cmake_flags.append("-DCMAKE_CXX_FLAGS=" + " ".join(c_flags))
                 cmake_flags.append("-DCMAKE_EXE_LINKER_FLAGS=" + " ".join(c_flags))
 
-                # CMake annot compile Swift for Catalyst https://gitlab.kitware.com/cmake/cmake/-/issues/21436
+                # CMake cannot compile Swift for Catalyst https://gitlab.kitware.com/cmake/cmake/-/issues/21436
                 # cmake_flags.append("-DCMAKE_Swift_FLAGS=" + " " + target_flag)
                 cmake_flags.append("-DSWIFT_DISABLED=1")
 

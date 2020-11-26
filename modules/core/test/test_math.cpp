@@ -2579,7 +2579,7 @@ TEST(Core_CheckRange_INT_MAX, accuracy)
 TEST(Core_CheckRange_INT_MAX1, accuracy)
 {
     cv::Mat m(3, 3, CV_32SC1, cv::Scalar(INT_MAX));
-    ASSERT_TRUE( cv::checkRange(m, true, 0, 0, INT_MAX+1.0f) );
+    ASSERT_TRUE( cv::checkRange(m, true, 0, 0, (float)((double)INT_MAX+1.0f)) );
     ASSERT_TRUE( cv::checkRange(m) );
 }
 
