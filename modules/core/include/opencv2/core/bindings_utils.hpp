@@ -81,7 +81,10 @@ AsyncArray testAsyncException()
     return p.getArrayResult();
 }
 
+namespace fs {
+    CV_EXPORTS_AS(getCacheDirectory) cv::String getCacheDirectoryForDownloads();
+}
 //! @}
-}} // namespace
+}} // namespace fs
 
 #endif // OPENCV_CORE_BINDINGS_UTILS_HPP

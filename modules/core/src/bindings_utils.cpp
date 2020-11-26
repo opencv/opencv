@@ -5,6 +5,7 @@
 #include "precomp.hpp"
 #include "opencv2/core/bindings_utils.hpp"
 #include <sstream>
+#include <opencv2/core/utils/filesystem.hpp>
 
 namespace cv { namespace utils {
 
@@ -207,5 +208,12 @@ CV_EXPORTS_W String dumpInputOutputArrayOfArrays(InputOutputArrayOfArrays argume
     }
     return ss.str();
 }
+
+namespace fs {
+cv::String getCacheDirectoryForDownloads()
+{
+    return cv::utils::fs::getCacheDirectory("downloads", "OPENCV_DOWNLOADS_CACHE_DIR");
+}
+} // namespace fs
 
 }} // namespace
