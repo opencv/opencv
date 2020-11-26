@@ -36,26 +36,34 @@ const cv::GOrigin& cv::GMat::priv() const
     return *m_priv;
 }
 
-std::tuple<int,int> cv::gapi::detail::checkVector(const cv::GMatDesc& in, const int n,
-                                                  const int expectedDepth)
+bool cv::gapi::detail::checkVector(const cv::GMatDesc& in, const int n, const int expectedDepth,
+                                   int& quantity, int& dimensionality)
 {
     GAPI_Assert(expectedDepth == in.depth || expectedDepth == -1);
     const int chan = in.chan, width = in.size.width, height = in.size.height;
     if (width  == 1 && (n <= 0 || n == chan))
     {
-        return std::make_tuple(height, chan);
+        quantity       = height;
+        dimensionality = chan;
+        return true;
     }
     else if (height == 1 && (n <= 0 || n == chan))
     {
-        return std::make_tuple(width, chan);
+        quantity       = width;
+        dimensionality = chan;
+        return true;
     }
     else if (chan   == 1 && (n <= 0 || n == width))
     {
-        return std::make_tuple(height, width);
+        quantity       = height;
+        dimensionality = width;
+        return true;
     }
     else // input Mat can't be described as vector of points of given dimensionality
     {
-        return std::make_tuple(-1, -1);
+        quantity       = -1;
+        dimensionality = -1;
+        return false;
     }
 }
 

@@ -210,9 +210,9 @@ namespace imgproc {
             else
             {
                 GAPI_Assert (in.depth == CV_32S || in.depth == CV_32F);
-                int quantity = -1;
-                std::tie(quantity, std::ignore) = detail::checkVector(in, 2);
-                GAPI_Assert(quantity != -1 &&
+                int quantity = -1, dimensionality = -1;
+                bool isVector = detail::checkVector(in, 2, -1, quantity, dimensionality);
+                GAPI_Assert(isVector &&
                             "Input Mat can't be described as vector of 2-dimentional points");
             }
             return empty_gopaque_desc();
@@ -236,9 +236,9 @@ namespace imgproc {
     G_TYPED_KERNEL(GFitLine2DMat, <GOpaque<Vec4f>(GMat,DistanceTypes,double,double,double)>,
                    "org.opencv.imgproc.shape.fitLine2DMat") {
         static GOpaqueDesc outMeta(GMatDesc in,DistanceTypes,double,double,double) {
-            int quantity = -1;
-            std::tie(quantity, std::ignore) = detail::checkVector(in, 2);
-            GAPI_Assert(quantity != -1 &&
+            int quantity = -1, dimensionality = -1;
+            bool isVector = detail::checkVector(in, 2, -1, quantity, dimensionality);
+            GAPI_Assert(isVector &&
                         "Input Mat can't be described as vector of 2-dimentional points");
             return empty_gopaque_desc();
         }
@@ -271,9 +271,9 @@ namespace imgproc {
     G_TYPED_KERNEL(GFitLine3DMat, <GOpaque<Vec6f>(GMat,DistanceTypes,double,double,double)>,
                    "org.opencv.imgproc.shape.fitLine3DMat") {
         static GOpaqueDesc outMeta(GMatDesc in,int,double,double,double) {
-            int quantity = -1;
-            std::tie(quantity, std::ignore) = detail::checkVector(in, 3);
-            GAPI_Assert(quantity != -1 &&
+            int quantity = -1, dimensionality = -1;
+            bool isVector = detail::checkVector(in, 3, -1, quantity, dimensionality);
+            GAPI_Assert(isVector &&
                         "Input Mat can't be described as vector of 3-dimentional points");
             return empty_gopaque_desc();
         }
