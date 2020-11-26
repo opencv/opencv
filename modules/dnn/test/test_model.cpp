@@ -199,7 +199,7 @@ public:
         imshow("result_contours", result); // imwrite("result_contours.png", result);
         waitKey(0);
 #endif
-        normAssertTextDetections(gt, contours);
+        normAssertTextDetections(gt, contours, "", 0.05f);
     }
 
     void testTextDetectionModelByEAST(const std::string& weights, const std::string& cfg,

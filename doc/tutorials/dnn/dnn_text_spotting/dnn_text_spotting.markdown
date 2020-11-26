@@ -20,7 +20,7 @@ Before recognition, you should `setVocabulary` and `setDecodeType`.
     - and `Dim` is the length of vocabulary +1('Blank' of CTC is at the index=0 of Dim).
 
 `TextRecognitionModel::recognize()` is the main function for text recognition.
-- The input image should be a cropped text image.
+- The input image should be a cropped text image or an image with `roiRects`
 - Other decoding methods may supported in the future
 
 ---
@@ -32,7 +32,7 @@ and the performance can be referred to the Table.1 in the [paper]((https://arxiv
 For more information, please refer to the [official code](https://github.com/MhLiao/DB)
 
 `TextDetectionModel::detect()` is the main function for text detection.
-- All the results are returned in the parameter `std::vector<std::vector<Point>> & results`.
+- All the results are returned in `std::vector<std::vector<Point>>` or `std::vector<RotatedRect>`
 
 ---
 
@@ -78,28 +78,28 @@ You can train more models by [CRNN](https://github.com/meijieru/crnn.pytorch), a
 
 ```
 - DB_IC15_resnet50.onnx:
-url: https://drive.google.com/uc?export=dowload&id=1cmAs91yFRyC2LC3nTTBNNYooyEmb0i5t
-sha: 9a562c2a8fa3d95fbecd2d45690fb4f787fd496a
-parameter setting: -inputHeight=736, -inputWidth=1280;
-description: This model is trained on ICDAR2015, so it is only able to detect English text instances.
+url: https://drive.google.com/uc?export=dowload&id=17_ABp79PlFt9yPCxSaarVc_DKTmrSGGf
+sha: bef233c28947ef6ec8c663d20a2b326302421fa3
+recommended parameter setting: -inputHeight=736, -inputWidth=1280;
+description: This model is trained on ICDAR2015, so it can only detect English text instances.
 
 - DB_IC15_resnet18.onnx:
-url: https://drive.google.com/uc?export=dowload&id=1JQ_-R7_feD25qE2uibpKM1S-R3keTD1U
-sha: b215b5fb85d1c606d1f56f03e8c841025e72733d
-parameter setting: -inputHeight=736, -inputWidth=1280;
-description: This model is trained on ICDAR2015, so it is only able to detect English text instances.
+url: https://drive.google.com/uc?export=dowload&id=1sZszH3pEt8hliyBlTmB-iulxHP1dCQWV
+sha: 19543ce09b2efd35f49705c235cc46d0e22df30b
+recommended parameter setting: -inputHeight=736, -inputWidth=1280;
+description: This model is trained on ICDAR2015, so it can only detect English text instances.
 
 - DB_TD500_resnet50.onnx:
-url: https://drive.google.com/uc?export=dowload&id=1_9KB6QkIghp2VNZti_dJ3Araz-nDZBsL
-sha: 6d3b7b84fc23906be7d583a8cedef727cc351fad
-parameter setting: -inputHeight=736, -inputWidth=736;
-description: This model is trained on MSRA-TD500, so it is able to detect English and Chinese text instances.
+url: https://drive.google.com/uc?export=dowload&id=19YWhArrNccaoSza0CfkXlA8im4-lAGsR
+sha: 1b4dd21a6baa5e3523156776970895bd3db6960a
+recommended parameter setting: -inputHeight=736, -inputWidth=736;
+description: This model is trained on MSRA-TD500, so it can detect bot English and Chinese text instances.
 
 - DB_TD500_resnet18.onnx:
-url: https://drive.google.com/uc?export=dowload&id=1f0dfqG_-Fiq4ywdrRhq8JH9PXCcJDO01
-sha: dd19abe7e2326ac660ce2733be1cb7032f76d458
-parameter setting: -inputHeight=736, -inputWidth=736;
-description: This model is trained on MSRA-TD500, so it is able to detect English and Chinese text instances.
+url: https://drive.google.com/uc?export=dowload&id=1vY_KsDZZZb_svd5RT6pjyI8BS1nPbBSX
+sha: 8a3700bdc13e00336a815fc7afff5dcc1ce08546
+recommended parameter setting: -inputHeight=736, -inputWidth=736;
+description: This model is trained on MSRA-TD500, so it can detect both English and Chinese text instances.
 
 ```
 
@@ -175,7 +175,7 @@ Input image:
 
 Output:
 ```
-welcome
+'welcome'
 ```
 
 
@@ -185,7 +185,7 @@ Step1. Loading images and models
 ```cpp
     // Load an image
     // you can find some images for testing in "Images for Testing"
-    Mat image = imread("/path/to/text_det_test.png");
+    Mat frame = imread("/path/to/text_det_test.png");
 
     // Load model weights
     TextDetectionModel model("/path/to/DB_TD500_resnet50.onnx");
@@ -209,11 +209,10 @@ Step2. Setting Parameters (DB)
 ```
 Step3. Inference (DB)
 ```cpp
-    std::vector<std::vector<Point>> results;
-    model.detect(image, results, binThresh, polyThresh, unclipRatio, maxCandidates);
+    std::vector<std::vector<Point>> detResults = detector.detectTextContours(frame);
 
     // Visualization
-    polylines(image, results, true, Scalar(0, 255, 0), 2);
+    polylines(frame, results, true, Scalar(0, 255, 0), 2);
     imshow("Text Detection", image);
     waitKey();
 ```
@@ -230,13 +229,7 @@ Step2. Setting Parameters (EAST)
 ```
 Step3. Inference (EAST)
 ```cpp
-    std::vector<std::vector<Point>> results;
-    model.detect(image, detResults, confThreshold, nmsThreshold);
-
-    // Visualization
-    polylines(image, results, true, Scalar(0, 255, 0), 2);
-    imshow("Text Detection", image);
-    waitKey();
+    std::vector<RotatedRect> detResults = detector.detect(frame)
 ```
 
 Output:
@@ -245,7 +238,7 @@ Output:
 
 ## Example for Text Spotting
 
-After following the steps above, it is easy to get the detection results `std::vector<std::vector<Point>> detResults` of an input image.
+After following the steps above, it is easy to get the detection results of an input image.
 Then, you can do transformation and crop text images for recognition.
 For more information, please refer to **Detailed Sample**
 ```cpp
@@ -279,6 +272,7 @@ Examples:
 scene_text_recognition -mp=path/to/crnn_cs.onnx -i=path/to/an/image -rgb=1 -vp=/path/to/alphabet_94.txt
 scene_text_detection -mp=path/to/DB_TD500_resnet50.onnx -i=path/to/an/image -ih=736 -iw=736
 scene_text_spotting -dmp=path/to/DB_IC15_resnet50.onnx -rmp=path/to/crnn_cs.onnx -i=path/to/an/image -iw=1280 -ih=736 -rgb=1 -vp=/path/to/alphabet_94.txt
+text_detection -dmp=path/to/EAST.pb -rmp=path/to/crnn_cs.onnx -i=path/to/an/image -rgb=1 -vp=path/to/alphabet_94.txt
 ```
 
 #### Test on public datasets
