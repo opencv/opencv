@@ -47,6 +47,8 @@ class test_gapi_streaming(NewOpenCVTests):
         ccomp.start()
 
         # Assert
+        max_num_frames  = 10
+        proc_num_frames = 0
         while cap.isOpened():
             has_expected, expected = cap.read()
             has_actual,   actual   = ccomp.pull()
@@ -57,6 +59,10 @@ class test_gapi_streaming(NewOpenCVTests):
                 break
 
             self.assertEqual(0.0, cv.norm(cv.medianBlur(expected, ksize), actual, cv.NORM_INF))
+
+            proc_num_frames += 1
+            if proc_num_frames == max_num_frames:
+                break;
 
 
     def test_video_split3(self):
@@ -76,6 +82,8 @@ class test_gapi_streaming(NewOpenCVTests):
         ccomp.start()
 
         # Assert
+        max_num_frames  = 10
+        proc_num_frames = 0
         while cap.isOpened():
             has_expected, frame = cap.read()
             has_actual,   actual   = ccomp.pull()
@@ -88,6 +96,10 @@ class test_gapi_streaming(NewOpenCVTests):
             expected = cv.split(frame)
             for e, a in zip(expected, actual):
                 self.assertEqual(0.0, cv.norm(e, a, cv.NORM_INF))
+
+            proc_num_frames += 1
+            if proc_num_frames == max_num_frames:
+                break;
 
 
     def test_video_add(self):
@@ -111,6 +123,8 @@ class test_gapi_streaming(NewOpenCVTests):
         ccomp.start()
 
         # Assert
+        max_num_frames  = 10
+        proc_num_frames = 0
         while cap.isOpened():
             has_expected, frame  = cap.read()
             has_actual,   actual = ccomp.pull()
@@ -122,6 +136,10 @@ class test_gapi_streaming(NewOpenCVTests):
 
             expected = cv.add(frame, in_mat)
             self.assertEqual(0.0, cv.norm(expected, actual, cv.NORM_INF))
+
+            proc_num_frames += 1
+            if proc_num_frames == max_num_frames:
+                break;
 
 
     def test_video_good_features_to_track(self):
@@ -153,9 +171,11 @@ class test_gapi_streaming(NewOpenCVTests):
         ccomp.start()
 
         # Assert
+        max_num_frames  = 10
+        proc_num_frames = 0
         while cap.isOpened():
-            has_expected, frame = cap.read()
-            has_actual,   actual   = ccomp.pull()
+            has_expected, frame  = cap.read()
+            has_actual,   actual = ccomp.pull()
 
             self.assertEqual(has_expected, has_actual)
 
@@ -173,6 +193,9 @@ class test_gapi_streaming(NewOpenCVTests):
                 # G-API  - (num_points, 2)
                 self.assertEqual(0.0, cv.norm(e.flatten(), a.flatten(), cv.NORM_INF))
 
+            proc_num_frames += 1
+            if proc_num_frames == max_num_frames:
+                break;
 
 
 if __name__ == '__main__':
