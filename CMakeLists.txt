@@ -32,6 +32,11 @@ endif()
 #
 # Configure CMake policies
 #
+
+if(POLICY CMP0025)
+  cmake_policy(SET CMP0025 NEW)  # CMAKE_CXX_COMPILER_ID=AppleClang
+endif()
+
 if(POLICY CMP0026)
   cmake_policy(SET CMP0026 NEW)
 endif()
