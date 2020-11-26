@@ -1231,10 +1231,6 @@ void cv::gimpl::GStreamingExecutor::setSource(GRunArgs &&ins)
                                real_video_completion_cb);
     }
 
-    for (auto &&op : m_ops) {
-        op.isl_exec->handleNewStream();
-    }
-
     // Now do this for every island (in a topological order)
     for (auto &&op : m_ops)
     {
