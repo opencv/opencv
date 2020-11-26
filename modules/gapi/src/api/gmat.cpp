@@ -36,6 +36,7 @@ const cv::GOrigin& cv::GMat::priv() const
     return *m_priv;
 }
 
+// FIXME: implement different overloads for clarity and convenience
 bool cv::gapi::detail::checkVector(const cv::GMatDesc& in, const int n, const int expectedDepth,
                                    int& quantity, int& dimensionality)
 {

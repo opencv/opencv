@@ -204,10 +204,11 @@ struct GAPI_EXPORTS GMatDesc
 static inline GMatDesc empty_gmat_desc() { return GMatDesc{-1,-1,{-1,-1}}; }
 
 namespace gapi { namespace detail {
-// Checks GMatDesc fields if the passed matrix is a set of n-dimentional points of the given depth
-// and returns ture or false.
+// Checks GMatDesc fields if the passed matrix is a set of n-dimentional points of the given depth.
+// Returns true if input Mat can be described as vector of points of given dimensionality,
+// and false otherwise.
 // If n <= 0 given, the function counts the dimentionality by itself.
-// If ddepth < 0 given, there is no assert on the depth of the passed matrix.
+// If expectedDepth < 0 given, there is no assert on the depth of the passed matrix.
 // Outputs are quantity of the elements and their dimentionality.
 // In case input matrix can't be described as vector of points, returns
 // quantity = -1, dimensionality = -1.
