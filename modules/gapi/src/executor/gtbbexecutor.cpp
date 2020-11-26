@@ -139,11 +139,6 @@ void inline wake_master(async_tasks_t& async_tasks, wake_tbb_master wake_master)
     // TODO: seems that this can be relaxed
     auto active_async_tasks = --async_tasks.count;
 
-    auto is_not_wrapped_around = [](decltype(active_async_tasks) r) {
-        using counter_limits_t =  std::numeric_limits<decltype(active_async_tasks)>;
-        return r < counter_limits_t::max() && !counter_limits_t::is_signed;
-    };
-    ASSERT(is_not_wrapped_around(active_async_tasks));
     if ((active_async_tasks == 0) || (wake_master == wake_tbb_master::yes)) {
         // Was the last async task or asked to wake TBB master up(e.g. there are new TBB tasks to execute)
         GAPI_ITT_AUTO_TRACE_GUARD(ittTbbUnlockMasterThread);
@@ -178,8 +173,7 @@ struct master_thread_sleep_lock_t
     }
 
     void unlock(wake_tbb_master wake) {
-        if (auto* p = guard.release())
-        {
+        if (auto* p = guard.release()) {
             wake_master(*p, wake);
         }
     }
@@ -412,11 +406,11 @@ void cv::gimpl::parallel::execute(prio_items_queue_t& q, tbb::task_arena& arena)
                // First participate in execution of TBB graph till there are no more ready tasks.
                ctx.root->wait_for_all();
 
-               if (!async_work_done()) { // Bypass waiting on cv if there no async work to do
-                   // FIXME: use TBB resumable tasks here to avoid blocking TBB thread here
+               if (!async_work_done()) { // Wait on the conditional variable iff there is active async work
                    auto start = timer.now();
                    std::unique_lock<std::mutex> lk(ctx.async_tasks.mtx);
-                   // then wait (probably by sleeping) until all async tasks are completed or new TBB tasks are created.
+                   // Wait (probably by sleeping) until all async tasks are completed or new TBB tasks are created.
+                   // FIXME: Use TBB resumable tasks here to avoid blocking TBB thread
                    ctx.async_tasks.cv.wait(lk, [&]{return async_work_done() || !tbb_work_done() ;});
 
                    LOG_INFO(NULL, "Slept for " << duration_cast<milliseconds>(timer.now() - start).count() << " ms \n");

@@ -68,7 +68,7 @@ TEST(TBBExecutor, SerialExecution) {
     execute(q, serial_arena);
     auto print_thread_ids = [&] {
         std::stringstream str;
-        for (auto & i : thread_id) { str << i <<" ";}
+        for (auto& i : thread_id) { str << i <<" ";}
         return str.str();
     };
     EXPECT_NE(thread_id[0], std::thread::id{}) << print_thread_ids();
@@ -100,7 +100,7 @@ TEST(TBBExecutor, AsyncBasic) {
             master_was_blocked_until_callback_called = (master_is_waiting == true);
     });
 
-    auto async_task_body = [&](std::function<void()> && cb, size_t /*total_order_index*/) {
+    auto async_task_body = [&](std::function<void()>&& cb, size_t /*total_order_index*/) {
         callback = std::move(cb);
         callback_ready = true;
     };
@@ -152,7 +152,7 @@ TEST(TBBExecutor, Dependencies) {
     execute(q, arena);
     auto print_execution_order = [&] {
         std::stringstream str;
-        for (auto & i : tiles_exec_order) { str << i <<" ";}
+        for (auto& i : tiles_exec_order) { str << i <<" ";}
         return str.str();
     };
     ASSERT_EQ(0, std::count(tiles_exec_order.begin(), tiles_exec_order.end(), invalid_order))
