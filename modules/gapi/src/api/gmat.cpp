@@ -36,36 +36,37 @@ const cv::GOrigin& cv::GMat::priv() const
     return *m_priv;
 }
 
-// FIXME: implement different overloads for clarity and convenience
-bool cv::gapi::detail::checkVector(const cv::GMatDesc& in, const int n, const int expectedDepth,
-                                   int& quantity, int& dimensionality)
+namespace {
+std::vector<int> checkVectorImpl(const int width, const int height, const int chan, const int n)
 {
-    GAPI_Assert(expectedDepth == in.depth || expectedDepth == -1);
-    const int chan = in.chan, width = in.size.width, height = in.size.height;
-    if (width  == 1 && (n <= 0 || n == chan))
+    if (width == 1 && (n == -1 || n == chan))
     {
-        quantity       = height;
-        dimensionality = chan;
-        return true;
+        return {height, chan};
     }
-    else if (height == 1 && (n <= 0 || n == chan))
+    else if (height == 1 && (n == -1 || n == chan))
     {
-        quantity       = width;
-        dimensionality = chan;
-        return true;
+        return {width, chan};
     }
-    else if (chan   == 1 && (n <= 0 || n == width))
+    else if (chan == 1 && (n == -1 || n == width))
     {
-        quantity       = height;
-        dimensionality = width;
-        return true;
+        return {height, width};
     }
     else // input Mat can't be described as vector of points of given dimensionality
     {
-        quantity       = -1;
-        dimensionality = -1;
-        return false;
+        return {-1, -1};
     }
+}
+} // anonymous namespace
+
+int cv::gapi::detail::checkVector(const cv::GMatDesc& in, const size_t n)
+{
+    GAPI_Assert(n != 0u);
+    return checkVectorImpl(in.size.width, in.size.height, in.chan, static_cast<int>(n))[0];
+}
+
+std::vector<int> cv::gapi::detail::checkVector(const cv::GMatDesc& in)
+{
+    return checkVectorImpl(in.size.width, in.size.height, in.chan, -1);
 }
 
 namespace{

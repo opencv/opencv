@@ -518,10 +518,11 @@ namespace core {
         static std::tuple<GOpaqueDesc,GMatDesc,GMatDesc>
         outMeta(const GMatDesc& in, int K, const GMatDesc& in_labels, const TermCriteria&, int,
                 KmeansFlags flags) {
-            int quantity = -1, dimensionality = -1;
-            bool isVector = detail::checkVector(in, -1, CV_32F, quantity, dimensionality);
-            if (!isVector) // Mat with height != 1, width != 1, channels != 1 given
-            {              // which means that kmeans will consider the following:
+            GAPI_Assert(in.depth == CV_32F);
+            std::vector<int> q_n_d = detail::checkVector(in);
+            int quantity = q_n_d[0], dimensionality = q_n_d[1];
+            if (quantity == -1) // Mat with height != 1, width != 1, channels != 1 given
+            {                   // which means that kmeans will consider the following:
                 quantity       = in.size.height;
                 dimensionality = in.size.width * in.chan;
             }
@@ -531,10 +532,9 @@ namespace core {
                      centers   (CV_32F, 1, Size{dimensionality, K});
             if (flags & KMEANS_USE_INITIAL_LABELS)
             {
-                int labels_quantity = -1, labels_dimensionality = -1;
-                bool isLabelVector = detail::checkVector(in_labels, 1, CV_32S,
-                                                         labels_quantity, labels_dimensionality);
-                GAPI_Assert(isLabelVector && labels_quantity == quantity);
+                GAPI_Assert(in_labels.depth == CV_32S);
+                int labels_quantity = detail::checkVector(in_labels, 1u);
+                GAPI_Assert(labels_quantity == quantity);
                 out_labels = in_labels;  // kmeans preserves in_labels' sizes if given
             }
             return std::make_tuple(empty_gopaque_desc(), out_labels, centers);
@@ -549,10 +549,11 @@ namespace core {
         static std::tuple<GOpaqueDesc,GMatDesc,GMatDesc>
         outMeta(const GMatDesc& in, int K, const TermCriteria&, int, KmeansFlags flags) {
             GAPI_Assert( !(flags & KMEANS_USE_INITIAL_LABELS) );
-            int quantity = -1, dimensionality = -1;
-            bool isVector = detail::checkVector(in, -1, CV_32F, quantity, dimensionality);
-            if (!isVector) // Mat with height != 1, width != 1, channels != 1 given
-            {              // which means that kmeans will consider the following:
+            GAPI_Assert(in.depth == CV_32F);
+            std::vector<int> q_n_d = detail::checkVector(in);
+            int quantity = q_n_d[0], dimensionality = q_n_d[1];
+            if (quantity == -1) // Mat with height != 1, width != 1, channels != 1 given
+            {                   // which means that kmeans will consider the following:
                 quantity       = in.size.height;
                 dimensionality = in.size.width * in.chan;
             }
