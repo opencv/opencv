@@ -116,11 +116,11 @@ public:
 // we have some specific data hidden under RMat,
 // test that we can obtain it via RMat.as<T>() method
 TEST(RMat, UsageInBackend) {
-    int i = std::rand();
+    int i = 123456;
     auto rmat = cv::make_rmat<RMatAdapterForBackend>(i);
 
     auto adapter = rmat.get<RMatAdapterForBackend>();
-    EXPECT_NE(nullptr, adapter);
+    ASSERT_NE(nullptr, adapter);
     EXPECT_EQ(i, adapter->deviceSpecificData());
 }
 } // namespace opencv_test

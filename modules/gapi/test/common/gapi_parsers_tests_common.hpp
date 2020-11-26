@@ -176,7 +176,7 @@ private:
     int randInRange(const int start, const int end)
     {
         GAPI_Assert(start <= end);
-        return start + std::rand() % (end - start + 1);
+        return theRNG().uniform(start, end);
     }
 
     cv::Rect generateBox(const cv::Size& in_sz)
@@ -211,7 +211,7 @@ private:
         SSDitem it;
         it.image_id = static_cast<float>(i);
         it.label = static_cast<float>(randInRange(0, 9));
-        it.confidence = static_cast<float>(std::rand()) / RAND_MAX;
+        it.confidence = theRNG().uniform(0.f, 1.f);
         auto box = generateBox(in_sz);
         it.rc_left   = normalize(box.x, in_sz.width);
         it.rc_right  = normalize(box.x + box.width, in_sz.width);
@@ -245,9 +245,10 @@ public:
         auto data = mat.ptr<float>();
 
         const size_t range = std::accumulate(dims.begin(), dims.end(), 1, std::multiplies<int>());
+        cv::RNG& rng = theRNG();
         for (size_t i = 0; i < range; ++i)
         {
-            data[i] = static_cast<float>(std::rand()) / RAND_MAX;
+            data[i] = rng.uniform(0.f, 1.f);
         }
         return mat;
     }
