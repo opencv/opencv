@@ -8,7 +8,7 @@
 opencv_fd:
   load_info:
     url: "https://github.com/opencv/opencv_3rdparty/raw/dnn_samples_face_detector_20170830/res10_300x300_ssd_iter_140000.caffemodel"
-    sha: "15aa726b4d46d9f023526d85537db81cbc8dd566"
+    sha1: "15aa726b4d46d9f023526d85537db81cbc8dd566"
   model: "opencv_face_detector.caffemodel"
   config: "opencv_face_detector.prototxt"
   mean: [104, 177, 123]
@@ -24,7 +24,7 @@ opencv_fd:
 yolo:
   load_info:
     url: "https://pjreddie.com/media/files/yolov3.weights"
-    sha: "520878f12e97cf820529daea502acca380f1cb8e"
+    sha1: "520878f12e97cf820529daea502acca380f1cb8e"
   model: "yolov3.weights"
   config: "yolov3.cfg"
   mean: [0, 0, 0]
@@ -38,7 +38,7 @@ yolo:
 tiny-yolo-voc:
   load_info:
     url: "https://pjreddie.com/media/files/yolov2-tiny-voc.weights"
-    sha: "24b4bd049fc4fa5f5e95f684a8967e65c625dff9"
+    sha1: "24b4bd049fc4fa5f5e95f684a8967e65c625dff9"
   model: "tiny-yolo-voc.weights"
   config: "tiny-yolo-voc.cfg"
   mean: [0, 0, 0]
@@ -53,7 +53,7 @@ tiny-yolo-voc:
 ssd_caffe:
   load_info:
     url: "https://drive.google.com/uc?export=download&id=0B3gersZ2cHIxRm5PMWRoTkdHdHc"
-    sha: "994d30a8afaa9e754d17d2373b2d62a7dfbaaf7a"
+    sha1: "994d30a8afaa9e754d17d2373b2d62a7dfbaaf7a"
   model: "MobileNetSSD_deploy.caffemodel"
   config: "MobileNetSSD_deploy.prototxt"
   mean: [127.5, 127.5, 127.5]
@@ -68,7 +68,7 @@ ssd_caffe:
 ssd_tf:
   load_info:
     url: "http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_coco_2017_11_17.tar.gz"
-    sha: "9e4bcdd98f4c6572747679e4ce570de4f03a70e2"
+    sha1: "9e4bcdd98f4c6572747679e4ce570de4f03a70e2"
     download_sha: "6157ddb6da55db2da89dd561eceb7f944928e317"
     download_name: "ssd_mobilenet_v1_coco_2017_11_17.tar.gz"
     member: "ssd_mobilenet_v1_coco_2017_11_17/frozen_inference_graph.pb"
@@ -86,7 +86,7 @@ ssd_tf:
 faster_rcnn_tf:
   load_info:
     url: "http://download.tensorflow.org/models/object_detection/faster_rcnn_inception_v2_coco_2018_01_28.tar.gz"
-    sha: "f2e4bf386b9bb3e25ddfcbbd382c20f417e444f3"
+    sha1: "f2e4bf386b9bb3e25ddfcbbd382c20f417e444f3"
     download_sha: "c710f25e5c6a3ce85fe793d5bf266d581ab1c230"
     download_name: "faster_rcnn_inception_v2_coco_2018_01_28.tar.gz"
     member: "faster_rcnn_inception_v2_coco_2018_01_28/frozen_inference_graph.pb"
@@ -107,7 +107,7 @@ faster_rcnn_tf:
 squeezenet:
   load_info:
     url: "https://raw.githubusercontent.com/DeepScale/SqueezeNet/b5c3f1a23713c8b3fd7b801d229f6b04c64374a5/SqueezeNet_v1.1/squeezenet_v1.1.caffemodel"
-    sha: "3397f026368a45ae236403ccc81cfcbe8ebe1bd0"
+    sha1: "3397f026368a45ae236403ccc81cfcbe8ebe1bd0"
   model: "squeezenet_v1.1.caffemodel"
   config: "squeezenet_v1.1.prototxt"
   mean: [0, 0, 0]
@@ -122,7 +122,7 @@ squeezenet:
 googlenet:
   load_info:
     url: "http://dl.caffe.berkeleyvision.org/bvlc_googlenet.caffemodel"
-    sha: "405fc5acd08a3bb12de8ee5e23a96bec22f08204"
+    sha1: "405fc5acd08a3bb12de8ee5e23a96bec22f08204"
   model: "bvlc_googlenet.caffemodel"
   config: "bvlc_googlenet.prototxt"
   mean: [104, 117, 123]
@@ -142,7 +142,7 @@ googlenet:
 enet:
   load_info:
     url: "https://www.dropbox.com/s/tdde0mawbi5dugq/Enet-model-best.net?dl=1"
-    sha: "b4123a73bf464b9ebe9cfc4ab9c2d5c72b161315"
+    sha1: "b4123a73bf464b9ebe9cfc4ab9c2d5c72b161315"
   model: "Enet-model-best.net"
   mean: [0, 0, 0]
   scale: 0.00392
@@ -155,7 +155,7 @@ enet:
 fcn8s:
   load_info:
     url: "http://dl.caffe.berkeleyvision.org/fcn8s-heavy-pascal.caffemodel"
-    sha: "c449ea74dd7d83751d1357d6a8c323fcf4038962"
+    sha1: "c449ea74dd7d83751d1357d6a8c323fcf4038962"
   model: "fcn8s-heavy-pascal.caffemodel"
   config: "fcn8s-heavy-pascal.prototxt"
   mean: [0, 0, 0]

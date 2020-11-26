@@ -3,6 +3,7 @@ Helper module to download extra data from Internet
 '''
 from __future__ import print_function
 import os
+import cv2
 import sys
 import yaml
 import argparse
@@ -275,31 +276,7 @@ def getSaveDir():
     if env_path:
         save_dir = env_path
     else:
-        if platform.system() == "Darwin":
-            #On Apple devices
-            temp_env = os.environ.get("TMPDIR", None)
-            if temp_env is None or not os.path.isdir(temp_env):
-                temp_dir = Path("/tmp")
-                print("Using world accessible cache directory. This may be not secure: ", temp_dir)
-            else:
-                temp_dir = temp_env
-        elif platform.system() == "Windows":
-            temp_dir = tempfile.gettempdir()
-        else:
-            xdg_cache_env = os.environ.get("XDG_CACHE_HOME", None)
-            if (xdg_cache_env and xdg_cache_env[0] and os.path.isdir(xdg_cache_env)):
-                temp_dir = xdg_cache_env
-            else:
-                home_env = os.environ.get("HOME", None)
-                if (home_env and home_env[0] and os.path.isdir(home_env)):
-                    home_path = os.path.join(home_env, ".cache/")
-                    if os.path.isdir(home_path):
-                        temp_dir = home_path
-                else:
-                    temp_dir = tempfile.gettempdir()
-                    print("Using world accessible cache directory. This may be not secure: ", temp_dir)
-
-        save_dir = os.path.join(temp_dir, "opencv_data")
+        save_dir = cv2.utils.getCacheDirectory("samples")
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
     return save_dir
@@ -331,7 +308,7 @@ def parseYAMLFile(yaml_filepath, save_dir):
             load_info = params.get("load_info", None)
             if load_info:
                 fname = os.path.basename(params.get("model"))
-                hash_sum = load_info.get("sha")
+                hash_sum = load_info.get("sha1")
                 url = load_info.get("url")
                 download_sha = load_info.get("download_sha")
                 download_name = load_info.get("download_name")
