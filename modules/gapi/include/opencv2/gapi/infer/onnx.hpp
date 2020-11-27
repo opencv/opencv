@@ -58,6 +58,8 @@ struct ParamDesc {
     PostProc custom_post_proc;
 
     std::vector<bool> normalize;
+    std::vector<float> range_anchor;
+    std::vector<float> divisibility;
 };
 } // namespace detail
 
@@ -75,6 +77,9 @@ struct PortCfg {
     using Normalize = std::array
         < bool
         , std::tuple_size<typename Net::InArgs>::value >;
+    using PaddingCoefs = std::array
+        < float
+        , std::tuple_size<typename Net::InArgs>::value >;
 };
 
 template<typename Net> class Params {
@@ -86,7 +91,7 @@ public:
     };
 
     // BEGIN(G-API's network parametrization API)
-    GBackend      backend() const { return cv::gapi::onnx::backend();  }
+    GBackend      backend() const { return cv::gapi::onnx::backend(); }
     std::string   tag()     const { return Net::tag(); }
     cv::util::any params()  const { return { desc }; }
     // END(G-API's network parametrization API)
@@ -124,6 +129,13 @@ public:
 
     Params<Net>& cfgNormalize(const typename PortCfg<Net>::Normalize &n) {
         desc.normalize.assign(n.begin(), n.end());
+        return *this;
+    }
+
+    Params<Net>& cfgPadding(const typename PortCfg<Net>::PaddingCoefs &ra,
+                            const typename PortCfg<Net>::PaddingCoefs &d) {
+        desc.range_anchor.assign(ra.begin(), ra.end());
+        desc.divisibility.assign(d.begin(), d.end());
         return *this;
     }
 

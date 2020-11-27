@@ -90,7 +90,13 @@ struct TensorInfo {
         cv::Scalar mean;
         cv::Scalar stdev;
     };
+
+    struct Padding {
+        float range_anchor;
+        float divisibility;
+    };
     cv::util::optional<MeanStdev> mstd;
+    cv::util::optional<Padding> pad;
 };
 
 using Views = std::vector<std::unique_ptr<cv::MediaFrame::View>>;
@@ -218,7 +224,11 @@ inline void preprocess(const cv::Mat& src,
     } else {
         // 8U input: full preprocessing path
         GAPI_Assert(src.depth()   == CV_8U && "Only 8U data type is supported for preproc");
-        GAPI_Assert(ti.dims.size() == 4u && "Only NCHW/NHWC layouts are supported for preproc");
+        GAPI_Assert((ti.dims.size() == 4u || ti.dims.size() == 3u)
+                    && "Only NCHW/NHWC/CHW/HWC layouts are supported for preproc");
+
+        const bool with_batch = ti.dims.size() == 4u ? true : false;
+        const int shift = with_batch ? 0 : 1;
 
         const auto ddepth = toCV(ti.type);
         GAPI_Assert((ddepth == CV_8U || ddepth == CV_32F)
@@ -227,8 +237,8 @@ inline void preprocess(const cv::Mat& src,
         // Assess the expected input layout
         const bool is_hwc = [&](int ch) {
             if (ti.is_grayscale)       return false; // 1,1,h,w
-            else if (ti.dims[3] == ch) return true;  // _,_,_,c
-            else if (ti.dims[1] == ch) return false; // _,c,_,_
+            else if (ti.dims[3 - shift] == ch) return true;  // _,_,_,c
+            else if (ti.dims[1 - shift] == ch) return false; // _,c,_,_
             else cv::util::throw_error(std::logic_error("Couldn't identify input tensor layout"));
         } (src.channels());
 
@@ -249,11 +259,17 @@ inline void preprocess(const cv::Mat& src,
             new_w = src.cols;
         } else {
             // take h & w from the ONNX tensor info
-            new_h = ti.dims[is_hwc ? 1 : 2];
-            new_w = ti.dims[is_hwc ? 2 : 3];
+            new_h = ti.dims[(is_hwc ? 1 : 2) - shift];
+            new_w = ti.dims[(is_hwc ? 2 : 3) - shift];
         }
         GAPI_Assert(new_h != -1 && new_w != -1);
 
+        bool with_pad = ti.pad.has_value();
+        if (with_pad) {
+            const float ratio = ti.pad->range_anchor / std::min(src.cols, src.rows);
+            new_h = static_cast<int>(ratio * src.rows);
+            new_w = static_cast<int>(ratio * src.cols);
+        }
         cv::Mat rsz, pp;
         cv::resize(csc, rsz, cv::Size(new_w, new_h));
         if (src.depth() == CV_8U && ddepth == CV_32F) {
@@ -266,7 +282,7 @@ inline void preprocess(const cv::Mat& src,
             pp = rsz;
         }
 
-        if (!is_hwc && new_c > 1) {
+        if (!is_hwc && new_c >= 1) {
             // Convert to CHW
             dst.create(cv::Size(new_w, new_h * new_c), ddepth);
             std::vector<cv::Mat> planes(new_c);
@@ -279,12 +295,34 @@ inline void preprocess(const cv::Mat& src,
             dst = pp;
         }
 
+        if (with_pad) {
+            const auto div = ti.pad->divisibility;
+            const int padded_h = std::ceil(new_h / div) * div;
+            const int padded_w = std::ceil(new_w / div) * div;
+            int type = -1;
+            if (!is_hwc && new_c >= 1) {
+                type = ddepth;
+            } else {
+                type = ddepth == CV_32F ? CV_32FC3 : CV_8UC3;
+            }
+            GAPI_Assert(type != -1);
+            cv::Mat pad_im(cv::Size(padded_w, (!is_hwc ? new_c : 1) * padded_h), type, 0.f);
+            pad_im(cv::Rect(0, 0, dst.cols, dst.rows)) += dst;
+            dst = pad_im;
+            new_h = padded_h;
+            new_w = padded_w;
+        }
+
         // Ensure dst is a tensor shape (not a 2D image)
         if (ti.is_dynamic) {
             // Reshape to input dimensions
             const std::vector<int> out_dims = is_hwc
-                ? std::vector<int>{1, new_h, new_w, new_c}
-                : std::vector<int>{1, new_c, new_h, new_w};
+                ? with_batch
+                    ? std::vector<int>{1, new_h, new_w, new_c}
+                    : std::vector<int>{new_h, new_w, new_c}
+                : with_batch
+                    ? std::vector<int>{1, new_c, new_h, new_w}
+                    : std::vector<int>{new_c, new_h, new_w};
             dst = dst.reshape(1, out_dims);
         } else {
             // Reshape to ONNX dimensions (no -1s there!)
