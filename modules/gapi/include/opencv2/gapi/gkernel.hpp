@@ -26,9 +26,16 @@
 
 namespace cv {
 
-using GShapes = std::vector<GShape>;
-using GKinds = std::vector<cv::detail::OpaqueKind>;
-using GCtors  = std::vector<detail::HostCtor>;
+struct GTypeInfo
+{
+    GShape                 shape;
+    cv::detail::OpaqueKind kind;
+};
+
+using GShapes    = std::vector<GShape>;
+using GKinds     = std::vector<cv::detail::OpaqueKind>;
+using GCtors     = std::vector<detail::HostCtor>;
+using GTypesInfo = std::vector<GTypeInfo>;
 
 // GKernel describes kernel API to the system
 // FIXME: add attributes of a kernel, (e.g. number and types

@@ -1035,7 +1035,7 @@ or #cornerMinEigenVal.
 
 @return vector of detected corners.
  */
-GAPI_EXPORTS GArray<Point2f> goodFeaturesToTrack(const GMat  &image,
+GAPI_EXPORTS_W GArray<Point2f> goodFeaturesToTrack(const GMat  &image,
                                                        int    maxCorners,
                                                        double qualityLevel,
                                                        double minDistance,
@@ -1350,7 +1350,7 @@ Resulting gray color value computed as
 @param src input image: 8-bit unsigned 3-channel image @ref CV_8UC1.
 @sa RGB2YUV
  */
-GAPI_EXPORTS GMat RGB2Gray(const GMat& src);
+GAPI_EXPORTS_W GMat RGB2Gray(const GMat& src);
 
 /** @overload
 Resulting gray color value computed as

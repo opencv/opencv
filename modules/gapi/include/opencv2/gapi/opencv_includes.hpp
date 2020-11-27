@@ -21,11 +21,12 @@
 #  include <opencv2/gapi/own/mat.hpp>
 // replacement of cv's structures:
 namespace cv {
-    using Rect   = gapi::own::Rect;
-    using Size   = gapi::own::Size;
-    using Point  = gapi::own::Point;
-    using Scalar = gapi::own::Scalar;
-    using Mat    = gapi::own::Mat;
+    using Rect    = gapi::own::Rect;
+    using Size    = gapi::own::Size;
+    using Point   = gapi::own::Point;
+    using Point2f = gapi::own::Point2f;
+    using Scalar  = gapi::own::Scalar;
+    using Mat     = gapi::own::Mat;
 }  // namespace cv
 #endif // !defined(GAPI_STANDALONE)
 
