@@ -1169,3 +1169,59 @@ ave_pool = nn.AvgPool2d(kernel_size=3, stride=2, padding=1)
 input = Variable(torch.randn(1, 3, 7, 5))
 save_data_and_model("average_pooling_dynamic_axes", input, ave_pool)
 postprocess_model("models/average_pooling_dynamic_axes.onnx", [[1, 3, 'height', 'width']])
+
+x = Variable(torch.randn(1, 3, 10))
+max_pool = nn.MaxPool1d(kernel_size=(5), stride=1, padding=2, dilation=1)
+save_data_and_model("maxpooling_1d", x, max_pool)
+
+x = Variable(torch.randn(2, 3, 12))
+maxpooling_sigmoid = nn.Sequential(
+          nn.MaxPool1d(kernel_size=4, stride=2, padding=(2), dilation=1),
+          nn.Sigmoid()
+        )
+save_data_and_model("maxpooling_sigmoid_1d", x, maxpooling_sigmoid)
+
+x = Variable(torch.randn(2, 3, 12))
+maxpool2 = nn.Sequential(
+           nn.MaxPool1d(kernel_size=5, stride=1, padding=0, dilation=1),
+           nn.MaxPool1d(kernel_size=3, stride=1, padding=0, dilation=1)
+           )
+save_data_and_model("two_maxpooling_1d", x, maxpool2)
+
+x = Variable(torch.randn(1, 3, 7))
+ave_pool = nn.AvgPool1d(kernel_size=3, stride=2, padding=1)
+save_data_and_model("average_pooling_1d", x, ave_pool)
+
+class PoolConv1d(nn.Module):
+
+    def __init__(self):
+        super(PoolConv1d, self).__init__()
+        self.pool = nn.MaxPool1d(3, stride=2, padding=1)
+        self.conv = nn.Conv1d(2, 2, kernel_size=3, stride=1, padding=1)
+
+    def forward(self, x):
+        x = self.pool(x)
+        y = self.conv(x)
+        return y
+
+x = Variable(torch.randn(1, 2, 4))
+model = PoolConv1d()
+save_data_and_model("pool_conv_1d", x, model)
+
+class Conv1ResizePoold(nn.Module):
+    def __init__(self):
+        super(Conv1ResizePoold, self).__init__()
+        self.pool = nn.MaxPool1d(3, stride=2, padding=1)
+        self.conv = nn.Conv2d(2, 2, kernel_size=3, stride=1, padding=1)
+
+    def forward(self, x):
+        batch_size = x.size(0)
+        channels = x.size(1)
+        x = self.conv(x)
+        x = x.view(batch_size, channels, -1)
+        y = self.pool(x)
+        return y
+
+x = Variable(torch.randn(1, 2, 20, 20))
+model = Conv1ResizePoold()
+save_data_and_model("conv_resize_pool_1d", x, model)
