@@ -284,7 +284,8 @@ TEST(GOpaque_OpaqueRef, TestMov)
     EXPECT_NE(test, mov.rref<I>());         // ref lost the data
 }
 
-namespace {
+// types from anonymous namespace doesn't work well with templates
+inline namespace gapi_opaque_tests {
     struct MyTestStruct {
         int i;
         float f;
