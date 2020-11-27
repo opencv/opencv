@@ -39,8 +39,8 @@ namespace detail {
 namespace tasking {
 
 enum class use_tbb_scheduler_bypass {
-   no,
-   yes
+   NO,
+   YES
 };
 
 inline void assert_graph_is_running(tbb::task* root) {
@@ -63,7 +63,7 @@ struct functor_task : tbb::task {
 
       auto reuse_current_task = body();
       // if needed, say TBB to execute current task once again
-      return (use_tbb_scheduler_bypass::yes ==  reuse_current_task) ? (recycle_as_continuation(), this) : nullptr;
+      return (use_tbb_scheduler_bypass::YES ==  reuse_current_task) ? (recycle_as_continuation(), this) : nullptr;
    }
    ~functor_task() {
       assert_graph_is_running(parent());
@@ -131,15 +131,15 @@ struct async_tasks_t {
 };
 
 enum class wake_tbb_master {
-   no,
-   yes
+   NO,
+   YES
 };
 
 void inline wake_master(async_tasks_t& async_tasks, wake_tbb_master wake_master) {
     // TODO: seems that this can be relaxed
     auto active_async_tasks = --async_tasks.count;
 
-    if ((active_async_tasks == 0) || (wake_master == wake_tbb_master::yes)) {
+    if ((active_async_tasks == 0) || (wake_master == wake_tbb_master::YES)) {
         // Was the last async task or asked to wake TBB master up(e.g. there are new TBB tasks to execute)
         GAPI_ITT_AUTO_TRACE_GUARD(ittTbbUnlockMasterThread);
         // While decrement of async_tasks_t::count is atomic, it might occur after the waiting
@@ -160,7 +160,7 @@ struct master_thread_sleep_lock_t
     struct sleep_unlock {
        void operator()(async_tasks_t* t) const {
           ASSERT(t);
-          wake_master(*t, wake_tbb_master::no);
+          wake_master(*t, wake_tbb_master::NO);
        }
     };
 
@@ -184,8 +184,8 @@ master_thread_sleep_lock_t inline lock_sleep_master(async_tasks_t& async_tasks) 
 }
 
 enum class is_tbb_work_present {
-   no,
-   yes
+   NO,
+   YES
 };
 
 //RAII object to block TBB master thread (one that does wait_for_all())
@@ -205,7 +205,7 @@ struct root_wait_lock_t {
     root_wait_lock_t(tasking::root_t& root, is_tbb_work_present& previous_state) : guard{root.get()} {
         // Block the master thread while the *this object is alive.
         auto new_root_ref_count = root->add_ref_count(1);
-        previous_state = (new_root_ref_count == 2) ? is_tbb_work_present::no : is_tbb_work_present::yes;
+        previous_state = (new_root_ref_count == 2) ? is_tbb_work_present::NO : is_tbb_work_present::YES;
     }
 
 };
@@ -297,7 +297,7 @@ namespace graph {
 
             tile_node* node = detail::pop(ctx.q);
 
-            auto result = tasking::use_tbb_scheduler_bypass::no;
+            auto result = tasking::use_tbb_scheduler_bypass::NO;
             // execute the task
 
             if (auto p = util::get_if<tile_node::sync_task_body>(&(node->task_body))) {
@@ -309,7 +309,7 @@ namespace graph {
                 if (ready_items > 0) {
                     // spawn one less tasks and say TBB to reuse(recycle) current task
                     spawn_clones(ready_items - 1);
-                    result = tasking::use_tbb_scheduler_bypass::yes;
+                    result = tasking::use_tbb_scheduler_bypass::YES;
                 }
             }
             else {
@@ -326,7 +326,7 @@ namespace graph {
                     auto master_sleep_lock = std::move(block_master);
                     std::size_t ready_items = self_copy.push_ready_dependants(node);
                     if (ready_items > 0) {
-                        auto master_was_active = is_tbb_work_present::no;
+                        auto master_was_active = is_tbb_work_present::NO;
                         {
                             GAPI_ITT_AUTO_TRACE_GUARD(ittTbbEnqueueSpawnReadyBlocks);
                             // Force master thread (one that does wait_for_all()) to (actively) wait for enqueued tasks
@@ -350,8 +350,8 @@ namespace graph {
                         // 1. there is new TBB work to do, and
                         // 2. Master thread was sleeping on condition variable waiting for async tasks to complete
                         //   (There was no active work before (i.e. root->ref_count() was == 1))
-                        auto wake_master = (master_was_active == is_tbb_work_present::no) ?
-                                wake_tbb_master::yes : wake_tbb_master::no;
+                        auto wake_master = (master_was_active == is_tbb_work_present::NO) ?
+                                wake_tbb_master::YES : wake_tbb_master::NO;
                         master_sleep_lock.get().unlock(wake_master);
                     }
                 };

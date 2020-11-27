@@ -18,7 +18,6 @@
 #endif
 
 #include <opencv2/gapi/util/compiler_hints.hpp>
-#include <iostream>
 namespace cv {
 namespace util {
     template< class T >
