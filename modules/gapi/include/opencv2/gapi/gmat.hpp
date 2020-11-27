@@ -207,7 +207,7 @@ namespace gapi { namespace detail {
 /** Checks GMatDesc fields if the passed matrix is a set of n-dimentional points.
 @param in GMatDesc to check.
 @param n expected dimensionality.
-@return the quantity of the elements. In case input matrix can't be described as vector of points
+@return the amount of points. In case input matrix can't be described as vector of points
 of expected dimensionality, returns -1.
  */
 int checkVector(const GMatDesc& in, const size_t n);
@@ -217,7 +217,7 @@ int checkVector(const GMatDesc& in, const size_t n);
 Checks GMatDesc fields if the passed matrix can be described as a set of points of any
 dimensionality.
 
-@return array of two elements in form of std::vector<int>: the quantity of the elements
+@return array of two elements in form of std::vector<int>: the amount of points
 and their calculated dimensionality. In case input matrix can't be described as vector of points,
 returns {-1, -1}.
  */

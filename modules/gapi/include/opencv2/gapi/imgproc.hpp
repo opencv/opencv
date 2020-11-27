@@ -210,8 +210,8 @@ namespace imgproc {
             else
             {
                 GAPI_Assert (in.depth == CV_32S || in.depth == CV_32F);
-                int quantity = detail::checkVector(in, 2u);
-                GAPI_Assert(quantity != -1 &&
+                int amount = detail::checkVector(in, 2u);
+                GAPI_Assert(amount != -1 &&
                             "Input Mat can't be described as vector of 2-dimentional points");
             }
             return empty_gopaque_desc();
@@ -235,8 +235,8 @@ namespace imgproc {
     G_TYPED_KERNEL(GFitLine2DMat, <GOpaque<Vec4f>(GMat,DistanceTypes,double,double,double)>,
                    "org.opencv.imgproc.shape.fitLine2DMat") {
         static GOpaqueDesc outMeta(GMatDesc in,DistanceTypes,double,double,double) {
-            int quantity = detail::checkVector(in, 2u);
-            GAPI_Assert(quantity != -1 &&
+            int amount = detail::checkVector(in, 2u);
+            GAPI_Assert(amount != -1 &&
                         "Input Mat can't be described as vector of 2-dimentional points");
             return empty_gopaque_desc();
         }
@@ -269,8 +269,8 @@ namespace imgproc {
     G_TYPED_KERNEL(GFitLine3DMat, <GOpaque<Vec6f>(GMat,DistanceTypes,double,double,double)>,
                    "org.opencv.imgproc.shape.fitLine3DMat") {
         static GOpaqueDesc outMeta(GMatDesc in,int,double,double,double) {
-            int quantity = detail::checkVector(in, 3u);
-            GAPI_Assert(quantity != -1 &&
+            int amount = detail::checkVector(in, 3u);
+            GAPI_Assert(amount != -1 &&
                         "Input Mat can't be described as vector of 3-dimentional points");
             return empty_gopaque_desc();
         }

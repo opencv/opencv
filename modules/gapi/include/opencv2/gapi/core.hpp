@@ -516,26 +516,26 @@ namespace core {
         "org.opencv.core.kmeansND") {
 
         static std::tuple<GOpaqueDesc,GMatDesc,GMatDesc>
-        outMeta(const GMatDesc& in, int K, const GMatDesc& in_labels, const TermCriteria&, int,
+        outMeta(const GMatDesc& in, int K, const GMatDesc& bestLabels, const TermCriteria&, int,
                 KmeansFlags flags) {
             GAPI_Assert(in.depth == CV_32F);
-            std::vector<int> q_n_d = detail::checkVector(in);
-            int quantity = q_n_d[0], dimensionality = q_n_d[1];
-            if (quantity == -1) // Mat with height != 1, width != 1, channels != 1 given
+            std::vector<int> amount_n_dim = detail::checkVector(in);
+            int amount = amount_n_dim[0], dim = amount_n_dim[1];
+            if (amount == -1)   // Mat with height != 1, width != 1, channels != 1 given
             {                   // which means that kmeans will consider the following:
-                quantity       = in.size.height;
-                dimensionality = in.size.width * in.chan;
+                amount = in.size.height;
+                dim    = in.size.width * in.chan;
             }
-                     // kmeans sets these labels' sizes when no in_labels given:
-            GMatDesc out_labels(CV_32S, 1, Size{1, quantity}),
+                     // kmeans sets these labels' sizes when no bestLabels given:
+            GMatDesc out_labels(CV_32S, 1, Size{1, amount}),
                      // kmeans always sets these centers' sizes:
-                     centers   (CV_32F, 1, Size{dimensionality, K});
+                     centers   (CV_32F, 1, Size{dim, K});
             if (flags & KMEANS_USE_INITIAL_LABELS)
             {
-                GAPI_Assert(in_labels.depth == CV_32S);
-                int labels_quantity = detail::checkVector(in_labels, 1u);
-                GAPI_Assert(labels_quantity == quantity);
-                out_labels = in_labels;  // kmeans preserves in_labels' sizes if given
+                GAPI_Assert(bestLabels.depth == CV_32S);
+                int labels_amount = detail::checkVector(bestLabels, 1u);
+                GAPI_Assert(labels_amount == amount);
+                out_labels = bestLabels;  // kmeans preserves bestLabels' sizes if given
             }
             return std::make_tuple(empty_gopaque_desc(), out_labels, centers);
         }
@@ -550,15 +550,15 @@ namespace core {
         outMeta(const GMatDesc& in, int K, const TermCriteria&, int, KmeansFlags flags) {
             GAPI_Assert( !(flags & KMEANS_USE_INITIAL_LABELS) );
             GAPI_Assert(in.depth == CV_32F);
-            std::vector<int> q_n_d = detail::checkVector(in);
-            int quantity = q_n_d[0], dimensionality = q_n_d[1];
-            if (quantity == -1) // Mat with height != 1, width != 1, channels != 1 given
+            std::vector<int> amount_n_dim = detail::checkVector(in);
+            int amount = amount_n_dim[0], dim = amount_n_dim[1];
+            if (amount == -1) // Mat with height != 1, width != 1, channels != 1 given
             {                   // which means that kmeans will consider the following:
-                quantity       = in.size.height;
-                dimensionality = in.size.width * in.chan;
+                amount = in.size.height;
+                dim    = in.size.width * in.chan;
             }
-            GMatDesc out_labels(CV_32S, 1, Size{1, quantity}),
-                     centers   (CV_32F, 1, Size{dimensionality, K});
+            GMatDesc out_labels(CV_32S, 1, Size{1, amount}),
+                     centers   (CV_32F, 1, Size{dim, K});
             return std::make_tuple(empty_gopaque_desc(), out_labels, centers);
         }
     };
@@ -1841,12 +1841,12 @@ contains a 0-based cluster index for the \f$i^{th}\f$ sample.
 Function can take GArray<Point2f>, GArray<Point3f> for 2D and 3D cases or GMat for any
 dimentionality and channels.
 
-@note In case of an N-dimentional points' set given, input Mat should be 2-dimensional, have
-a single row or column if there are N channels, or have N columns if there is a single channel.
-Mat should have @ref CV_32F depth.
+@note In case of an N-dimentional points' set given, input GMat can have the following traits:
+2 dimensions, a single row or column if there are N channels,
+or N columns if there is a single channel. Mat should have @ref CV_32F depth.
 
-@note If GMat with height != 1, width != 1, channels != 1 given as data, n-dimensional samples
-are considered given in quantity of Q, where Q = height, n = width * channels.
+@note Although, if GMat with height != 1, width != 1, channels != 1 given as data, n-dimensional
+samples are considered given in amount of A, where A = height, n = width * channels.
 
 @param K Number of clusters to split the set by.
 @param bestLabels Optional input integer array that can store the supposed initial cluster indices
@@ -1867,17 +1867,16 @@ compactness value are returned by the function.
 @return Array of the cluster centers.
 
 @note In case of GMat given as data, the output labels are returned as 1-channel GMat with sizes
-width = 1, height = Q, where Q is samples quantity, or width = in_labels.width,
-height = in_labels.height if in_labels given.
+width = 1, height = A, where A is samples amount, or width = bestLabels.width,
+height = bestLabels.height if bestLabels given.
 
 @note In case of GMat given as data, the cluster centers are returned as 1-channel GMat with sizes
-width = d, height = K, where d is samples' dimentionality and K is clusters' quantity.
+width = n, height = K, where n is samples' dimentionality and K is clusters' amount.
 
 @note As one of possible usages, if you want to control the initial labels for each attempt
-by yourself randomly, you can utilize just the core of the function. To do that, set the number
+by yourself, you can utilize just the core of the function. To do that, set the number
 of attempts to 1, initialize labels each time using a custom algorithm, pass them with the
 ( flags = #KMEANS_USE_INITIAL_LABELS ) flag, and then choose the best (most-compact) clustering.
-To do this
 */
 GAPI_EXPORTS std::tuple<GOpaque<double>,GMat,GMat>
 kmeans(const GMat& data, const int K, const GMat& bestLabels,
