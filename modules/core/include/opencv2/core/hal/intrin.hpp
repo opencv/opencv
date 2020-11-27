@@ -104,7 +104,7 @@ template<typename _Tp> struct V_TypeTraits
 {
 };
 
-#define CV_INTRIN_DEF_TYPE_TRAITS(type, int_type_, uint_type_, abs_type_, w_type_, q_type_, sum_type_, nlanes128_) \
+#define CV_INTRIN_DEF_TYPE_TRAITS(type, int_type_, uint_type_, abs_type_, w_type_, q_type_, sum_type_) \
     template<> struct V_TypeTraits<type> \
     { \
         typedef type value_type; \
@@ -114,7 +114,6 @@ template<typename _Tp> struct V_TypeTraits
         typedef w_type_ w_type; \
         typedef q_type_ q_type; \
         typedef sum_type_ sum_type; \
-        enum { nlanes128 = nlanes128_ }; \
     \
         static inline int_type reinterpret_int(type x) \
         { \
@@ -131,7 +130,7 @@ template<typename _Tp> struct V_TypeTraits
         } \
     }
 
-#define CV_INTRIN_DEF_TYPE_TRAITS_NO_Q_TYPE(type, int_type_, uint_type_, abs_type_, w_type_, sum_type_, nlanes128_) \
+#define CV_INTRIN_DEF_TYPE_TRAITS_NO_Q_TYPE(type, int_type_, uint_type_, abs_type_, w_type_, sum_type_) \
     template<> struct V_TypeTraits<type> \
     { \
         typedef type value_type; \
@@ -140,7 +139,6 @@ template<typename _Tp> struct V_TypeTraits
         typedef uint_type_ uint_type; \
         typedef w_type_ w_type; \
         typedef sum_type_ sum_type; \
-        enum { nlanes128 = nlanes128_ }; \
     \
         static inline int_type reinterpret_int(type x) \
         { \
@@ -157,16 +155,16 @@ template<typename _Tp> struct V_TypeTraits
         } \
     }
 
-CV_INTRIN_DEF_TYPE_TRAITS(uchar, schar, uchar, uchar, ushort, unsigned, unsigned, 16);
-CV_INTRIN_DEF_TYPE_TRAITS(schar, schar, uchar, uchar, short, int, int, 16);
-CV_INTRIN_DEF_TYPE_TRAITS(ushort, short, ushort, ushort, unsigned, uint64, unsigned, 8);
-CV_INTRIN_DEF_TYPE_TRAITS(short, short, ushort, ushort, int, int64, int, 8);
-CV_INTRIN_DEF_TYPE_TRAITS_NO_Q_TYPE(unsigned, int, unsigned, unsigned, uint64, unsigned, 4);
-CV_INTRIN_DEF_TYPE_TRAITS_NO_Q_TYPE(int, int, unsigned, unsigned, int64, int, 4);
-CV_INTRIN_DEF_TYPE_TRAITS_NO_Q_TYPE(float, int, unsigned, float, double, float, 4);
-CV_INTRIN_DEF_TYPE_TRAITS_NO_Q_TYPE(uint64, int64, uint64, uint64, void, uint64, 2);
-CV_INTRIN_DEF_TYPE_TRAITS_NO_Q_TYPE(int64, int64, uint64, uint64, void, int64, 2);
-CV_INTRIN_DEF_TYPE_TRAITS_NO_Q_TYPE(double, int64, uint64, double, void, double, 2);
+CV_INTRIN_DEF_TYPE_TRAITS(uchar, schar, uchar, uchar, ushort, unsigned, unsigned);
+CV_INTRIN_DEF_TYPE_TRAITS(schar, schar, uchar, uchar, short, int, int);
+CV_INTRIN_DEF_TYPE_TRAITS(ushort, short, ushort, ushort, unsigned, uint64, unsigned);
+CV_INTRIN_DEF_TYPE_TRAITS(short, short, ushort, ushort, int, int64, int);
+CV_INTRIN_DEF_TYPE_TRAITS_NO_Q_TYPE(unsigned, int, unsigned, unsigned, uint64, unsigned);
+CV_INTRIN_DEF_TYPE_TRAITS_NO_Q_TYPE(int, int, unsigned, unsigned, int64, int);
+CV_INTRIN_DEF_TYPE_TRAITS_NO_Q_TYPE(float, int, unsigned, float, double, float);
+CV_INTRIN_DEF_TYPE_TRAITS_NO_Q_TYPE(uint64, int64, uint64, uint64, void, uint64);
+CV_INTRIN_DEF_TYPE_TRAITS_NO_Q_TYPE(int64, int64, uint64, uint64, void, int64);
+CV_INTRIN_DEF_TYPE_TRAITS_NO_Q_TYPE(double, int64, uint64, double, void, double);
 
 #ifndef CV_DOXYGEN
 
@@ -310,13 +308,13 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
 
 //==================================================================================================
 
-#define CV_INTRIN_DEFINE_WIDE_INTRIN(typ, vtyp, short_typ, prefix, loadsfx) \
+#define CV_INTRIN_DEFINE_WIDE_INTRIN(typ, vtyp, short_typ, prefix) \
     inline vtyp vx_setall_##short_typ(typ v) { return prefix##_setall_##short_typ(v); } \
     inline vtyp vx_setzero_##short_typ() { return prefix##_setzero_##short_typ(); } \
-    inline vtyp vx_##loadsfx(const typ* ptr) { return prefix##_##loadsfx(ptr); } \
-    inline vtyp vx_##loadsfx##_aligned(const typ* ptr) { return prefix##_##loadsfx##_aligned(ptr); } \
-    inline vtyp vx_##loadsfx##_low(const typ* ptr) { return prefix##_##loadsfx##_low(ptr); } \
-    inline vtyp vx_##loadsfx##_halves(const typ* ptr0, const typ* ptr1) { return prefix##_##loadsfx##_halves(ptr0, ptr1); } \
+    inline vtyp vx_load(const typ* ptr) { return prefix##_load(ptr); } \
+    inline vtyp vx_load_aligned(const typ* ptr) { return prefix##_load_aligned(ptr); } \
+    inline vtyp vx_load_low(const typ* ptr) { return prefix##_load_low(ptr); } \
+    inline vtyp vx_load_halves(const typ* ptr0, const typ* ptr1) { return prefix##_load_halves(ptr0, ptr1); } \
     inline void vx_store(typ* ptr, const vtyp& v) { return v_store(ptr, v); } \
     inline void vx_store_aligned(typ* ptr, const vtyp& v) { return v_store_aligned(ptr, v); } \
     inline vtyp vx_lut(const typ* ptr, const int* idx) { return prefix##_lut(ptr, idx); } \
@@ -328,34 +326,31 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
 #define CV_INTRIN_DEFINE_WIDE_LOAD_EXPAND(typ, wtyp, prefix) \
     inline wtyp vx_load_expand(const typ* ptr) { return prefix##_load_expand(ptr); }
 
-#define CV_INTRIN_DEFINE_WIDE_LOAD_EXPAND_Q(typ, qtyp, prefix) \
-    inline qtyp vx_load_expand_q(const typ* ptr) { return prefix##_load_expand_q(ptr); }
-
-#define CV_INTRIN_DEFINE_WIDE_INTRIN_WITH_EXPAND(typ, vtyp, short_typ, wtyp, qtyp, prefix, loadsfx) \
-    CV_INTRIN_DEFINE_WIDE_INTRIN(typ, vtyp, short_typ, prefix, loadsfx) \
+#define CV_INTRIN_DEFINE_WIDE_INTRIN_WITH_EXPAND(typ, vtyp, short_typ, wtyp, qtyp, prefix) \
+    CV_INTRIN_DEFINE_WIDE_INTRIN(typ, vtyp, short_typ, prefix) \
     CV_INTRIN_DEFINE_WIDE_LUT_QUAD(typ, vtyp, prefix) \
     CV_INTRIN_DEFINE_WIDE_LOAD_EXPAND(typ, wtyp, prefix) \
-    CV_INTRIN_DEFINE_WIDE_LOAD_EXPAND_Q(typ, qtyp, prefix)
+    inline qtyp vx_load_expand_q(const typ * ptr) { return prefix##_load_expand_q(ptr); }
 
 #define CV_INTRIN_DEFINE_WIDE_INTRIN_ALL_TYPES(prefix) \
-    CV_INTRIN_DEFINE_WIDE_INTRIN_WITH_EXPAND(uchar, v_uint8, u8, v_uint16, v_uint32, prefix, load) \
-    CV_INTRIN_DEFINE_WIDE_INTRIN_WITH_EXPAND(schar, v_int8, s8, v_int16, v_int32, prefix, load) \
-    CV_INTRIN_DEFINE_WIDE_INTRIN(ushort, v_uint16, u16, prefix, load) \
+    CV_INTRIN_DEFINE_WIDE_INTRIN_WITH_EXPAND(uchar, v_uint8, u8, v_uint16, v_uint32, prefix) \
+    CV_INTRIN_DEFINE_WIDE_INTRIN_WITH_EXPAND(schar, v_int8, s8, v_int16, v_int32, prefix) \
+    CV_INTRIN_DEFINE_WIDE_INTRIN(ushort, v_uint16, u16, prefix) \
     CV_INTRIN_DEFINE_WIDE_LUT_QUAD(ushort, v_uint16, prefix) \
     CV_INTRIN_DEFINE_WIDE_LOAD_EXPAND(ushort, v_uint32, prefix) \
-    CV_INTRIN_DEFINE_WIDE_INTRIN(short, v_int16, s16, prefix, load) \
+    CV_INTRIN_DEFINE_WIDE_INTRIN(short, v_int16, s16, prefix) \
     CV_INTRIN_DEFINE_WIDE_LUT_QUAD(short, v_int16, prefix) \
     CV_INTRIN_DEFINE_WIDE_LOAD_EXPAND(short, v_int32, prefix) \
-    CV_INTRIN_DEFINE_WIDE_INTRIN(int, v_int32, s32, prefix, load) \
+    CV_INTRIN_DEFINE_WIDE_INTRIN(int, v_int32, s32, prefix) \
     CV_INTRIN_DEFINE_WIDE_LUT_QUAD(int, v_int32, prefix) \
     CV_INTRIN_DEFINE_WIDE_LOAD_EXPAND(int, v_int64, prefix) \
-    CV_INTRIN_DEFINE_WIDE_INTRIN(unsigned, v_uint32, u32, prefix, load) \
+    CV_INTRIN_DEFINE_WIDE_INTRIN(unsigned, v_uint32, u32, prefix) \
     CV_INTRIN_DEFINE_WIDE_LUT_QUAD(unsigned, v_uint32, prefix) \
     CV_INTRIN_DEFINE_WIDE_LOAD_EXPAND(unsigned, v_uint64, prefix) \
-    CV_INTRIN_DEFINE_WIDE_INTRIN(float, v_float32, f32, prefix, load) \
+    CV_INTRIN_DEFINE_WIDE_INTRIN(float, v_float32, f32, prefix) \
     CV_INTRIN_DEFINE_WIDE_LUT_QUAD(float, v_float32, prefix) \
-    CV_INTRIN_DEFINE_WIDE_INTRIN(int64, v_int64, s64, prefix, load) \
-    CV_INTRIN_DEFINE_WIDE_INTRIN(uint64, v_uint64, u64, prefix, load) \
+    CV_INTRIN_DEFINE_WIDE_INTRIN(int64, v_int64, s64, prefix) \
+    CV_INTRIN_DEFINE_WIDE_INTRIN(uint64, v_uint64, u64, prefix) \
     CV_INTRIN_DEFINE_WIDE_LOAD_EXPAND(float16_t, v_float32, prefix)
 
 template<typename _Tp> struct V_RegTraits
@@ -425,21 +420,39 @@ namespace CV__SIMD_NAMESPACE {
     #define CV_SIMD_64F CV_SIMD512_64F
     #define CV_SIMD_FP16 CV_SIMD512_FP16
     #define CV_SIMD_WIDTH 64
+    //! @brief Maximum available vector register capacity 8-bit unsigned integer values
     typedef v_uint8x64    v_uint8;
+    //! @brief Maximum available vector register capacity 8-bit signed integer values
     typedef v_int8x64     v_int8;
+    //! @brief Maximum available vector register capacity 16-bit unsigned integer values
     typedef v_uint16x32   v_uint16;
+    //! @brief Maximum available vector register capacity 16-bit signed integer values
     typedef v_int16x32    v_int16;
+    //! @brief Maximum available vector register capacity 32-bit unsigned integer values
     typedef v_uint32x16   v_uint32;
+    //! @brief Maximum available vector register capacity 32-bit signed integer values
     typedef v_int32x16    v_int32;
+    //! @brief Maximum available vector register capacity 64-bit unsigned integer values
     typedef v_uint64x8    v_uint64;
+    //! @brief Maximum available vector register capacity 64-bit signed integer values
     typedef v_int64x8     v_int64;
+    //! @brief Maximum available vector register capacity 32-bit floating point values (single precision)
     typedef v_float32x16  v_float32;
+    //! @name Variable register size operations
+    //! @{
+    //! @brief Operations provide widest possible register capacity result corresponding to same named 128-bit v_ prefixed intrinsics
     CV_INTRIN_DEFINE_WIDE_INTRIN_ALL_TYPES(v512)
-#if CV_SIMD512_64F
+    //! @}
+    #if CV_SIMD512_64F
+    //! @brief Maximum available vector register capacity 64-bit floating point values (double precision)
     typedef v_float64x8   v_float64;
-    CV_INTRIN_DEFINE_WIDE_INTRIN(double, v_float64, f64, v512, load)
-#endif
-        inline void vx_cleanup() { v512_cleanup(); }
+    //! @name Variable register size operations
+    //! @{
+    //! @brief Operations provide widest possible register capacity result corresponding to same named 128-bit v_ prefixed intrinsics
+    CV_INTRIN_DEFINE_WIDE_INTRIN(double, v_float64, f64, v512)
+    //! @}
+    #endif
+    inline void vx_cleanup() { v512_cleanup(); }
 } // namespace
 using namespace CV__SIMD_NAMESPACE;
 #elif CV_SIMD256 && (!defined(CV__SIMD_FORCE_WIDTH) || CV__SIMD_FORCE_WIDTH == 256)
@@ -449,19 +462,37 @@ namespace CV__SIMD_NAMESPACE {
     #define CV_SIMD_64F CV_SIMD256_64F
     #define CV_SIMD_FP16 CV_SIMD256_FP16
     #define CV_SIMD_WIDTH 32
+    //! @brief Maximum available vector register capacity 8-bit unsigned integer values
     typedef v_uint8x32   v_uint8;
+    //! @brief Maximum available vector register capacity 8-bit signed integer values
     typedef v_int8x32    v_int8;
+    //! @brief Maximum available vector register capacity 16-bit unsigned integer values
     typedef v_uint16x16  v_uint16;
+    //! @brief Maximum available vector register capacity 16-bit signed integer values
     typedef v_int16x16   v_int16;
+    //! @brief Maximum available vector register capacity 32-bit unsigned integer values
     typedef v_uint32x8   v_uint32;
+    //! @brief Maximum available vector register capacity 32-bit signed integer values
     typedef v_int32x8    v_int32;
+    //! @brief Maximum available vector register capacity 64-bit unsigned integer values
     typedef v_uint64x4   v_uint64;
+    //! @brief Maximum available vector register capacity 64-bit signed integer values
     typedef v_int64x4    v_int64;
+    //! @brief Maximum available vector register capacity 32-bit floating point values (single precision)
     typedef v_float32x8  v_float32;
+    //! @name Variable register size operations
+    //! @{
+    //! @brief Operations provide widest possible register capacity result corresponding to same named 128-bit v_ prefixed intrinsics
     CV_INTRIN_DEFINE_WIDE_INTRIN_ALL_TYPES(v256)
+    //! @}
     #if CV_SIMD256_64F
+    //! @brief Maximum available vector register capacity 64-bit floating point values (double precision)
     typedef v_float64x4  v_float64;
-    CV_INTRIN_DEFINE_WIDE_INTRIN(double, v_float64, f64, v256, load)
+    //! @name Variable register size operations
+    //! @{
+    //! @brief Operations provide widest possible register capacity result corresponding to same named 128-bit v_ prefixed intrinsics
+    CV_INTRIN_DEFINE_WIDE_INTRIN(double, v_float64, f64, v256)
+    //! @}
     #endif
     inline void vx_cleanup() { v256_cleanup(); }
 } // namespace
@@ -476,19 +507,37 @@ namespace CV__SIMD_NAMESPACE {
     #define CV_SIMD CV_SIMD128
     #define CV_SIMD_64F CV_SIMD128_64F
     #define CV_SIMD_WIDTH 16
+    //! @brief Maximum available vector register capacity 8-bit unsigned integer values
     typedef v_uint8x16  v_uint8;
+    //! @brief Maximum available vector register capacity 8-bit signed integer values
     typedef v_int8x16   v_int8;
+    //! @brief Maximum available vector register capacity 16-bit unsigned integer values
     typedef v_uint16x8  v_uint16;
+    //! @brief Maximum available vector register capacity 16-bit signed integer values
     typedef v_int16x8   v_int16;
+    //! @brief Maximum available vector register capacity 32-bit unsigned integer values
     typedef v_uint32x4  v_uint32;
+    //! @brief Maximum available vector register capacity 32-bit signed integer values
     typedef v_int32x4   v_int32;
+    //! @brief Maximum available vector register capacity 64-bit unsigned integer values
     typedef v_uint64x2  v_uint64;
+    //! @brief Maximum available vector register capacity 64-bit signed integer values
     typedef v_int64x2   v_int64;
+    //! @brief Maximum available vector register capacity 32-bit floating point values (single precision)
     typedef v_float32x4 v_float32;
+    //! @name Variable register size operations
+    //! @{
+    //! @brief Operations provide widest possible register capacity result corresponding to same named 128-bit v_ prefixed intrinsics
     CV_INTRIN_DEFINE_WIDE_INTRIN_ALL_TYPES(v)
+    //! @}
     #if CV_SIMD128_64F
+    //! @brief Maximum available vector register capacity 64-bit floating point values (double precision)
     typedef v_float64x2 v_float64;
-    CV_INTRIN_DEFINE_WIDE_INTRIN(double, v_float64, f64, v, load)
+    //! @name Variable register size operations
+    //! @{
+    //! @brief Operations provide widest possible register capacity result corresponding to same named 128-bit v_ prefixed intrinsics
+    CV_INTRIN_DEFINE_WIDE_INTRIN(double, v_float64, f64, v)
+    //! @}
     #endif
     inline void vx_cleanup() { v_cleanup(); }
 } // namespace
