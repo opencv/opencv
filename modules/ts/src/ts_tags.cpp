@@ -48,8 +48,9 @@ static std::vector<std::string>& getTestTagsSkipList()
 #if OPENCV_32BIT_CONFIGURATION
         testSkipWithTags.push_back(CV_TEST_TAG_MEMORY_2GB);
 #else
-        if (!cvtest::runBigDataTests)
-            testSkipWithTags.push_back(CV_TEST_TAG_MEMORY_6GB);
+        testSkipWithTags.push_back(CV_TEST_TAG_MEMORY_6GB);
+        // if (!cvtest::runBigDataTests)
+        //     testSkipWithTags.push_back(CV_TEST_TAG_MEMORY_6GB);
 #endif
         testSkipWithTags.push_back(CV_TEST_TAG_VERYLONG);
 #if defined(_DEBUG)

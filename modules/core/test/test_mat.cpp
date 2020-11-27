@@ -2156,7 +2156,7 @@ TEST(Core_Eigen, cv2eigen_tensormap_check_tensormap_access)
 
 TEST(Mat, regression_12943)  // memory usage: ~4.5 Gb
 {
-    applyTestTag(CV_TEST_TAG_MEMORY_6GB);
+    // applyTestTag(CV_TEST_TAG_MEMORY_6GB);
 
     const int width = 0x8000;
     const int height = 0x10001;
