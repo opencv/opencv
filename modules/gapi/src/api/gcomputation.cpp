@@ -9,6 +9,7 @@
 #include <algorithm> // remove_if
 #include <cctype>    // isspace (non-locale version)
 #include <ade/util/algorithm.hpp>
+#include <ade/util/zip_range.hpp>   // util::indexed
 
 #include "logger.hpp" // GAPI_LOG
 
@@ -21,6 +22,7 @@
 
 #include "compiler/gmodelbuilder.hpp"
 #include "compiler/gcompiler.hpp"
+#include "compiler/gcompiled_priv.hpp"
 
 // cv::GComputation private implementation /////////////////////////////////////
 // <none>
@@ -174,26 +176,40 @@ cv::GRunArgs cv::GComputation::apply(GRunArgs &&ins, GCompileArgs &&args)
 {
     recompile(descr_of(ins), std::move(args));
 
-    const auto& out_metas = m_priv->m_lastCompiled.outMetas();
+    const auto& out_info = m_priv->m_lastCompiled.priv().outInfo();
+
     GRunArgs run_args;
     GRunArgsP outs;
-    run_args.reserve(out_metas.size());
-    outs.reserve(out_metas.size());
+    run_args.reserve(out_info.size());
+    outs.reserve(out_info.size());
 
-    for (auto&& meta : out_metas)
+    for (auto&& info : out_info)
     {
-        switch (meta.index())
+        switch (info.shape)
         {
-            case cv::GMetaArg::index_of<cv::GMatDesc>():
+            case cv::GShape::GMAT:
             {
                 run_args.emplace_back(cv::Mat{});
                 outs.emplace_back(&cv::util::get<cv::Mat>(run_args.back()));
                 break;
             }
-            case cv::GMetaArg::index_of<cv::GScalarDesc>():
+            case cv::GShape::GSCALAR:
             {
                 run_args.emplace_back(cv::Scalar{});
                 outs.emplace_back(&cv::util::get<cv::Scalar>(run_args.back()));
+                break;
+            }
+            case cv::GShape::GARRAY:
+            {
+                switch (info.kind)
+                {
+                    case cv::detail::OpaqueKind::CV_POINT2F:
+                        run_args.emplace_back(cv::detail::VectorRef{std::vector<cv::Point2f>{}});
+                        outs.emplace_back(cv::util::get<cv::detail::VectorRef>(run_args.back()));
+                        break;
+                    default:
+                        util::throw_error(std::logic_error("Unsupported kind for GArray"));
+                }
                 break;
             }
             default:
