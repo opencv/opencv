@@ -2681,7 +2681,6 @@ struct Net::Impl : public detail::NetImplBase
 
 #ifdef HAVE_CUDA
                     // CUDA backend supports fusion with eltwise sum (without variable channels)
-                    // `nextEltwiseLayer` is reset if eltwise layer doesn't have a compatible configuration for fusion
                     if (IS_DNN_CUDA_TARGET(preferableTarget) && !nextEltwiseLayer.empty())
                     {
                         // we create a temporary backend node for eltwise layer to obtain the eltwise configuration
@@ -2691,38 +2690,41 @@ struct Net::Impl : public detail::NetImplBase
                         // CUDA backend uses EltwiseOp when all operands have the same number of channels; otherwise, ShortcutOp is used.
                         // Hence, a successful cast to EltwiseOp implies that the number of channels is same in all operand tensors.
                         if (eltwiseNode.empty() || eltwiseNode->op != cuda4dnn::EltwiseOpType::SUM || !eltwiseNode->coeffs.empty())
-                            nextEltwiseLayer = Ptr<EltwiseLayer>();
+                            break;
                     }
 #endif
 
-                    if (pinsToKeep.count(lpNext) != 0)
+                    if (IS_DNN_OPENCL_TARGET(preferableTarget) && pinsToKeep.count(lpNext) != 0)
                         break;
                     if (nextData->inputBlobsId.size() != 2)
                         break;
 
-                    if (!nextData->params.has("operation") || toLowerCase(nextData->params.get<String>("operation")) == "sum")
+                    if (IS_DNN_OPENCL_TARGET(preferableTarget))
                     {
-                        if (nextData->params.has("coeff"))
+                        if (!nextData->params.has("operation") || toLowerCase(nextData->params.get<String>("operation")) == "sum")
                         {
-                            DictValue paramCoeff = nextData->params.get("coeff");
-                            int n = paramCoeff.size();
-                            bool isCoeffOneOne = (n == 2);
-                            for (int i = 0; isCoeffOneOne && i < n; i++)
+                            if (nextData->params.has("coeff"))
                             {
-                                float c = paramCoeff.get<float>(i);
-                                isCoeffOneOne &= (c == 1.0f);
-                            }
-                            if (!isCoeffOneOne)
-                            {
-                                CV_LOG_DEBUG(NULL, "DNN/OpenCL: fusion of 'Sum' without coeffs (or {1.0, 1.0}) is supported only");
-                                break;
+                                DictValue paramCoeff = nextData->params.get("coeff");
+                                int n = paramCoeff.size();
+                                bool isCoeffOneOne = (n == 2);
+                                for (int i = 0; isCoeffOneOne && i < n; i++)
+                                {
+                                    float c = paramCoeff.get<float>(i);
+                                    isCoeffOneOne &= (c == 1.0f);
+                                }
+                                if (!isCoeffOneOne)
+                                {
+                                    CV_LOG_DEBUG(NULL, "DNN/OpenCL: fusion of 'Sum' without coeffs (or {1.0, 1.0}) is supported only");
+                                    break;
+                                }
                             }
                         }
-                    }
-                    else
-                    {
-                        CV_LOG_DEBUG(NULL, "DNN/OpenCL: fusion with eltwise operation is not supported: " << nextData->params.get<String>("operation"));
-                        break;
+                        else
+                        {
+                            CV_LOG_DEBUG(NULL, "DNN/OpenCL: fusion with eltwise operation is not supported: " << nextData->params.get<String>("operation"));
+                            break;
+                        }
                     }
 
                     {
