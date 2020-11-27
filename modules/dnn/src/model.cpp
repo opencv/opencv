@@ -933,7 +933,24 @@ struct TextDetectionModel_DB_Impl : public TextDetectionModel_Impl
         {
             std::vector<Point>& contour = contours[i];
             RotatedRect box = minAreaRect(contour);
-            results.emplace_back(box);
+
+            // minArea() rect is not normalized, it may return rectangles with angle=-90 or height < width
+            const float angle_threshold = 60;  // do not expect vertical text, TODO detection algo property
+            bool swap_size = false;
+            if (box.size.width < box.size.height)  // horizontal-wide text area is expected
+                swap_size = true;
+            else if (std::fabs(box.angle) >= angle_threshold)  // don't work with vertical rectangles
+                swap_size = true;
+            if (swap_size)
+            {
+                std::swap(box.size.width, box.size.height);
+                if (box.angle < 0)
+                    box.angle += 90;
+                else if (box.angle > 0)
+                    box.angle -= 90;
+            }
+
+            results.push_back(box);
         }
         return results;
     }
