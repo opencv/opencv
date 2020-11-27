@@ -126,7 +126,10 @@ public:
     {
 #ifdef HAVE_DNN_IE_NN_BUILDER_2019
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
-            return !zeroDev && (preferableTarget != DNN_TARGET_MYRIAD || eps <= 1e-7f);
+        {
+            bool isMyriad = preferableTarget == DNN_TARGET_MYRIAD || preferableTarget == DNN_TARGET_HDDL;
+            return !zeroDev && (!isMyriad || eps <= 1e-7f);
+        }
 #endif
 #ifdef HAVE_DNN_NGRAPH
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)

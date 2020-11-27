@@ -61,6 +61,14 @@ Point2f RotationWarperBase<P>::warpPoint(const Point2f &pt, InputArray K, InputA
     return uv;
 }
 
+template <class P>
+Point2f RotationWarperBase<P>::warpPointBackward(const Point2f& pt, InputArray K, InputArray R)
+{
+    projector_.setCameraParams(K, R);
+    Point2f xy;
+    projector_.mapBackward(pt.x, pt.y, xy.x, xy.y);
+    return xy;
+}
 
 template <class P>
 Rect RotationWarperBase<P>::buildMaps(Size src_size, InputArray K, InputArray R, OutputArray _xmap, OutputArray _ymap)
@@ -355,8 +363,8 @@ void StereographicProjector::mapForward(float x, float y, float &u, float &v)
 
     float r = sinf(v_) / (1 - cosf(v_));
 
-    u = scale * r * cos(u_);
-    v = scale * r * sin(u_);
+    u = scale * r * std::cos(u_);
+    v = scale * r * std::sin(u_);
 }
 
 inline
@@ -617,7 +625,7 @@ void TransverseMercatorProjector::mapBackward(float u, float v, float &x, float 
     v /= scale;
 
     float v_ = asinf( sinf(v) / coshf(u) );
-    float u_ = atan2f( sinhf(u), cos(v) );
+    float u_ = atan2f( sinhf(u), std::cos(v) );
 
     float cosv = cosf(v_);
     float x_ = cosv * sinf(u_);

@@ -49,7 +49,9 @@
   @defgroup imgcodecs Image file reading and writing
   @{
     @defgroup imgcodecs_c C API
+    @defgroup imgcodecs_flags Flags used for image file reading and writing
     @defgroup imgcodecs_ios iOS glue
+    @defgroup imgcodecs_macosx MacOS(OSX) glue
   @}
 */
 
@@ -58,6 +60,9 @@ namespace cv
 {
 
 //! @addtogroup imgcodecs
+//! @{
+
+//! @addtogroup imgcodecs_flags
 //! @{
 
 //! Imread flags
@@ -130,6 +135,8 @@ enum ImwritePAMFlags {
        IMWRITE_PAM_FORMAT_RGB = 4,
        IMWRITE_PAM_FORMAT_RGB_ALPHA = 5,
      };
+
+//! @} imgcodecs_flags
 
 /** @brief Loads an image from a file.
 
@@ -223,6 +230,14 @@ It also demonstrates how to save multiple images in a TIFF file:
 */
 CV_EXPORTS_W bool imwrite( const String& filename, InputArray img,
               const std::vector<int>& params = std::vector<int>());
+
+/// @overload multi-image overload for bindings
+CV_WRAP static inline
+bool imwritemulti(const String& filename, InputArrayOfArrays img,
+                  const std::vector<int>& params = std::vector<int>())
+{
+    return imwrite(filename, img, params);
+}
 
 /** @brief Reads an image from a buffer in memory.
 

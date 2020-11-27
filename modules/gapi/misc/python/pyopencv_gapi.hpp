@@ -3,7 +3,16 @@
 
 #ifdef HAVE_OPENCV_GAPI
 
+// NB: Python wrapper replaces :: with _ for classes
 using gapi_GKernelPackage = cv::gapi::GKernelPackage;
+using gapi_GNetPackage = cv::gapi::GNetPackage;
+using gapi_ie_PyParams = cv::gapi::ie::PyParams;
+using gapi_wip_IStreamSource_Ptr = cv::Ptr<cv::gapi::wip::IStreamSource>;
+
+// FIXME: Python wrapper generate code without namespace std,
+// so it cause error: "string wasn't declared"
+// WA: Create using
+using std::string;
 
 template<>
 bool pyopencv_to(PyObject* obj, std::vector<GCompileArg>& value, const ArgInfo& info)
@@ -38,8 +47,20 @@ static PyObject* from_grunarg(const GRunArg& v)
             const auto& s = util::get<cv::Scalar>(v);
             return pyopencv_from(s);
         }
-
+        case GRunArg::index_of<cv::detail::VectorRef>():
+        {
+            const auto& vref = util::get<cv::detail::VectorRef>(v);
+            switch (vref.getKind())
+            {
+                case cv::detail::OpaqueKind::CV_POINT2F:
+                    return pyopencv_from(vref.rref<cv::Point2f>());
+                default:
+                    PyErr_SetString(PyExc_TypeError, "Unsupported kind for GArray");
+                    return NULL;
+            }
+        }
         default:
+            PyErr_SetString(PyExc_TypeError, "Failed to unpack GRunArgs");
             return NULL;
     }
     GAPI_Assert(false);
@@ -56,7 +77,6 @@ PyObject* pyopencv_from(const GRunArgs& value)
         PyObject* item = from_grunarg(value[0]);
         if(!item)
         {
-            PyErr_SetString(PyExc_TypeError, "Failed to unpack GRunArgs");
             return NULL;
         }
         return item;
@@ -78,6 +98,18 @@ PyObject* pyopencv_from(const GRunArgs& value)
     return list;
 }
 
+template<>
+bool pyopencv_to(PyObject* obj, GMetaArgs& value, const ArgInfo& info)
+{
+    return pyopencv_to_generic_vec(obj, value, info);
+}
+
+template<>
+PyObject* pyopencv_from(const GMetaArgs& value)
+{
+    return pyopencv_from_generic_vec(value);
+}
+
 template <typename T>
 static PyObject* extract_proto_args(PyObject* py_args, PyObject* kw)
 {
@@ -96,9 +128,13 @@ static PyObject* extract_proto_args(PyObject* py_args, PyObject* kw)
         {
             args.emplace_back(reinterpret_cast<pyopencv_GMat_t*>(item)->v);
         }
+        else if (PyObject_TypeCheck(item, reinterpret_cast<PyTypeObject*>(pyopencv_GArrayP2f_TypePtr)))
+        {
+            args.emplace_back(reinterpret_cast<pyopencv_GArrayP2f_t*>(item)->v.strip());
+        }
         else
         {
-            PyErr_SetString(PyExc_TypeError, "cv.GIn() supports only cv.GMat and cv.GScalar");
+            PyErr_SetString(PyExc_TypeError, "Unsupported type for cv.GIn()/cv.GOut()");
             return NULL;
         }
     }
@@ -150,6 +186,19 @@ static PyObject* pyopencv_cv_gin(PyObject* , PyObject* py_args, PyObject* kw)
                 PyErr_SetString(PyExc_TypeError, "Failed convert array to cv::Mat");
                 return NULL;
             }
+        }
+        else if (PyObject_TypeCheck(item,
+                    reinterpret_cast<PyTypeObject*>(pyopencv_gapi_wip_IStreamSource_TypePtr)))
+        {
+            cv::gapi::wip::IStreamSource::Ptr source =
+                reinterpret_cast<pyopencv_gapi_wip_IStreamSource_t*>(item)->v;
+            args.emplace_back(source);
+        }
+        else
+        {
+            PyErr_SetString(PyExc_TypeError, "cv.gin can works only with cv::Mat,"
+                                             "cv::Scalar, cv::gapi::wip::IStreamSource::Ptr");
+            return NULL;
         }
     }
 

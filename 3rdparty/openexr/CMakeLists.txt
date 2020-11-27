@@ -109,6 +109,7 @@ ocv_warnings_disable(CMAKE_CXX_FLAGS -Wshadow -Wunused -Wsign-compare -Wundef -W
                                      -Wmissing-prototypes  # gcc/clang
                                      -Wreorder
                                      -Wunused-result
+                                     -Wimplicit-const-int-float-conversion  # clang
 )
 if(CV_GCC AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 8.0)
   ocv_warnings_disable(CMAKE_CXX_FLAGS -Wclass-memaccess)
@@ -125,7 +126,7 @@ if(MSVC AND CV_ICC)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /Qrestrict")
 endif()
 
-add_library(IlmImf STATIC ${lib_hdrs} ${lib_srcs})
+add_library(IlmImf STATIC ${OPENCV_3RDPARTY_EXCLUDE_FROM_ALL} ${lib_hdrs} ${lib_srcs})
 target_link_libraries(IlmImf ${ZLIB_LIBRARIES})
 
 set_target_properties(IlmImf
@@ -142,7 +143,7 @@ if(ENABLE_SOLUTION_FOLDERS)
 endif()
 
 if(NOT BUILD_SHARED_LIBS)
-  ocv_install_target(IlmImf EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev)
+  ocv_install_target(IlmImf EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev OPTIONAL)
 endif()
 
 ocv_install_3rdparty_licenses(openexr LICENSE AUTHORS.ilmbase AUTHORS.openexr)

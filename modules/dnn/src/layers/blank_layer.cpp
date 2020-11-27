@@ -125,7 +125,7 @@ public:
 
         InferenceEngine::Builder::Layer ieLayer(name);
         ieLayer.setName(name);
-        if (preferableTarget == DNN_TARGET_MYRIAD)
+        if (preferableTarget == DNN_TARGET_MYRIAD || preferableTarget == DNN_TARGET_HDDL)
         {
             ieLayer.setType("Copy");
         }

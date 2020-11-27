@@ -15,6 +15,9 @@ namespace dnn {
 
 struct Model::Impl
 {
+//protected:
+    Net    net;
+
     Size   size;
     Scalar mean;
     double  scale = 1.0;
@@ -23,7 +26,70 @@ struct Model::Impl
     Mat    blob;
     std::vector<String> outNames;
 
-    void predict(Net& net, const Mat& frame, OutputArrayOfArrays outs)
+public:
+    virtual ~Impl() {}
+    Impl() {}
+    Impl(const Impl&) = delete;
+    Impl(Impl&&) = delete;
+
+    virtual Net& getNetwork() const { return const_cast<Net&>(net); }
+
+    virtual void setPreferableBackend(Backend backendId) { net.setPreferableBackend(backendId); }
+    virtual void setPreferableTarget(Target targetId) { net.setPreferableTarget(targetId); }
+
+    /*virtual*/
+    void initNet(const Net& network)
+    {
+        net = network;
+
+        outNames = net.getUnconnectedOutLayersNames();
+        std::vector<MatShape> inLayerShapes;
+        std::vector<MatShape> outLayerShapes;
+        net.getLayerShapes(MatShape(), 0, inLayerShapes, outLayerShapes);
+        if (!inLayerShapes.empty() && inLayerShapes[0].size() == 4)
+            size = Size(inLayerShapes[0][3], inLayerShapes[0][2]);
+        else
+            size = Size();
+    }
+
+    /*virtual*/
+    void setInputParams(double scale_, const Size& size_, const Scalar& mean_,
+                        bool swapRB_, bool crop_)
+    {
+        size = size_;
+        mean = mean_;
+        scale = scale_;
+        crop = crop_;
+        swapRB = swapRB_;
+    }
+    /*virtual*/
+    void setInputSize(const Size& size_)
+    {
+        size = size_;
+    }
+    /*virtual*/
+    void setInputMean(const Scalar& mean_)
+    {
+        mean = mean_;
+    }
+    /*virtual*/
+    void setInputScale(double scale_)
+    {
+        scale = scale_;
+    }
+    /*virtual*/
+    void setInputCrop(bool crop_)
+    {
+        crop = crop_;
+    }
+    /*virtual*/
+    void setInputSwapRB(bool swapRB_)
+    {
+        swapRB = swapRB_;
+    }
+
+    /*virtual*/
+    void processFrame(InputArray frame, OutputArrayOfArrays outs)
     {
         if (size.empty())
             CV_Error(Error::StsBadSize, "Input size not specified");
@@ -34,96 +100,115 @@ struct Model::Impl
         // Faster-RCNN or R-FCN
         if (net.getLayer(0)->outputNameToIndex("im_info") != -1)
         {
-            Mat imInfo = (Mat_<float>(1, 3) << size.height, size.width, 1.6f);
+            Mat imInfo(Matx13f(size.height, size.width, 1.6f));
             net.setInput(imInfo, "im_info");
         }
         net.forward(outs, outNames);
     }
 };
 
-Model::Model() : impl(new Impl) {}
+Model::Model()
+    : impl(makePtr<Impl>())
+{
+    // nothing
+}
 
 Model::Model(const String& model, const String& config)
-    : Net(readNet(model, config)), impl(new Impl)
+    : Model()
 {
-    impl->outNames = getUnconnectedOutLayersNames();
-    std::vector<MatShape> inLayerShapes;
-    std::vector<MatShape> outLayerShapes;
-    getLayerShapes(MatShape(), 0, inLayerShapes, outLayerShapes);
-    if (!inLayerShapes.empty() && inLayerShapes[0].size() == 4)
-        impl->size = Size(inLayerShapes[0][3], inLayerShapes[0][2]);
-};
+    impl->initNet(readNet(model, config));
+}
 
-Model::Model(const Net& network) : Net(network), impl(new Impl)
+Model::Model(const Net& network)
+    : Model()
 {
-    impl->outNames = getUnconnectedOutLayersNames();
-    std::vector<MatShape> inLayerShapes;
-    std::vector<MatShape> outLayerShapes;
-    getLayerShapes(MatShape(), 0, inLayerShapes, outLayerShapes);
-    if (!inLayerShapes.empty() && inLayerShapes[0].size() == 4)
-        impl->size = Size(inLayerShapes[0][3], inLayerShapes[0][2]);
-};
+    impl->initNet(network);
+}
 
-Model& Model::setInputSize(const Size& size)
+Net& Model::getNetwork_() const
 {
-    impl->size = size;
+    CV_DbgAssert(impl);
+    return impl->getNetwork();
+}
+
+Model& Model::setPreferableBackend(Backend backendId)
+{
+    CV_DbgAssert(impl);
+    impl->setPreferableBackend(backendId);
+    return *this;
+}
+Model& Model::setPreferableTarget(Target targetId)
+{
+    CV_DbgAssert(impl);
+    impl->setPreferableTarget(targetId);
     return *this;
 }
 
-Model& Model::setInputSize(int width, int height)
+Model& Model::setInputSize(const Size& size)
 {
-    impl->size = Size(width, height);
+    CV_DbgAssert(impl);
+    impl->setInputSize(size);
     return *this;
 }
 
 Model& Model::setInputMean(const Scalar& mean)
 {
-    impl->mean = mean;
+    CV_DbgAssert(impl);
+    impl->setInputMean(mean);
     return *this;
 }
 
 Model& Model::setInputScale(double scale)
 {
-    impl->scale = scale;
+    CV_DbgAssert(impl);
+    impl->setInputScale(scale);
     return *this;
 }
 
 Model& Model::setInputCrop(bool crop)
 {
-    impl->crop = crop;
+    CV_DbgAssert(impl);
+    impl->setInputCrop(crop);
     return *this;
 }
 
 Model& Model::setInputSwapRB(bool swapRB)
 {
-    impl->swapRB = swapRB;
+    CV_DbgAssert(impl);
+    impl->setInputSwapRB(swapRB);
     return *this;
 }
 
 void Model::setInputParams(double scale, const Size& size, const Scalar& mean,
                            bool swapRB, bool crop)
 {
-    impl->size = size;
-    impl->mean = mean;
-    impl->scale = scale;
-    impl->crop = crop;
-    impl->swapRB = swapRB;
+    CV_DbgAssert(impl);
+    impl->setInputParams(scale, size, mean, swapRB, crop);
 }
 
-void Model::predict(InputArray frame, OutputArrayOfArrays outs)
+void Model::predict(InputArray frame, OutputArrayOfArrays outs) const
 {
-    impl->predict(*this, frame.getMat(), outs);
+    CV_DbgAssert(impl);
+    impl->processFrame(frame, outs);
 }
+
 
 ClassificationModel::ClassificationModel(const String& model, const String& config)
-    : Model(model, config) {};
+    : Model(model, config)
+{
+    // nothing
+}
 
-ClassificationModel::ClassificationModel(const Net& network) : Model(network) {};
+ClassificationModel::ClassificationModel(const Net& network)
+    : Model(network)
+{
+    // nothing
+}
 
 std::pair<int, float> ClassificationModel::classify(InputArray frame)
 {
     std::vector<Mat> outs;
-    impl->predict(*this, frame.getMat(), outs);
+    impl->processFrame(frame, outs);
     CV_Assert(outs.size() == 1);
 
     double conf;
@@ -145,11 +230,11 @@ KeypointsModel::KeypointsModel(const Net& network) : Model(network) {};
 std::vector<Point2f> KeypointsModel::estimate(InputArray frame, float thresh)
 {
 
-    int frameHeight = frame.getMat().size[0];
-    int frameWidth = frame.getMat().size[1];
+    int frameHeight = frame.rows();
+    int frameWidth = frame.cols();
     std::vector<Mat> outs;
 
-    impl->predict(*this, frame.getMat(), outs);
+    impl->processFrame(frame, outs);
     CV_Assert(outs.size() == 1);
     Mat output = outs[0];
 
@@ -202,9 +287,8 @@ SegmentationModel::SegmentationModel(const Net& network) : Model(network) {};
 
 void SegmentationModel::segment(InputArray frame, OutputArray mask)
 {
-
     std::vector<Mat> outs;
-    impl->predict(*this, frame.getMat(), outs);
+    impl->processFrame(frame, outs);
     CV_Assert(outs.size() == 1);
     Mat score = outs[0];
 
@@ -250,12 +334,14 @@ void disableRegionNMS(Net& net)
 }
 
 DetectionModel::DetectionModel(const String& model, const String& config)
-    : Model(model, config) {
-      disableRegionNMS(*this);
+    : Model(model, config)
+{
+    disableRegionNMS(getNetwork_());  // FIXIT Move to DetectionModel::Impl::initNet()
 }
 
-DetectionModel::DetectionModel(const Net& network) : Model(network) {
-    disableRegionNMS(*this);
+DetectionModel::DetectionModel(const Net& network) : Model(network)
+{
+    disableRegionNMS(getNetwork_());  // FIXIT Move to DetectionModel::Impl::initNet()
 }
 
 void DetectionModel::detect(InputArray frame, CV_OUT std::vector<int>& classIds,
@@ -263,7 +349,7 @@ void DetectionModel::detect(InputArray frame, CV_OUT std::vector<int>& classIds,
                             float confThreshold, float nmsThreshold)
 {
     std::vector<Mat> detections;
-    impl->predict(*this, frame.getMat(), detections);
+    impl->processFrame(frame, detections);
 
     boxes.clear();
     confidences.clear();
@@ -271,15 +357,15 @@ void DetectionModel::detect(InputArray frame, CV_OUT std::vector<int>& classIds,
 
     int frameWidth  = frame.cols();
     int frameHeight = frame.rows();
-    if (getLayer(0)->outputNameToIndex("im_info") != -1)
+    if (getNetwork_().getLayer(0)->outputNameToIndex("im_info") != -1)
     {
         frameWidth = impl->size.width;
         frameHeight = impl->size.height;
     }
 
-    std::vector<String> layerNames = getLayerNames();
-    int lastLayerId = getLayerId(layerNames.back());
-    Ptr<Layer> lastLayer = getLayer(lastLayerId);
+    std::vector<String> layerNames = getNetwork_().getLayerNames();
+    int lastLayerId = getNetwork_().getLayerId(layerNames.back());
+    Ptr<Layer> lastLayer = getNetwork_().getLayer(lastLayerId);
 
     if (lastLayer->type == "DetectionOutput")
     {

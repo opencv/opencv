@@ -11,6 +11,10 @@ set(OPENJPEG_LIBRARY_NAME libopenjp2)
 
 project(openjpeg C)
 
+ocv_warnings_disable(CMAKE_C_FLAGS
+    -Wimplicit-const-int-float-conversion  # clang
+)
+
 #-----------------------------------------------------------------------------
 # OPENJPEG version number, useful for packaging and doxygen doc:
 set(OPENJPEG_VERSION_MAJOR 2)

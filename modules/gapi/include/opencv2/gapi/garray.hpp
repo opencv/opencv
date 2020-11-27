@@ -284,6 +284,14 @@ namespace detail
             return static_cast<VectorRefT<T>&>(*m_ref).rref();
         }
 
+        // Check if was created for/from std::vector<T>
+        template <typename T> bool holds() const
+        {
+            if (!m_ref) return false;
+            using U = typename std::decay<T>::type;
+            return dynamic_cast<VectorRefT<U>*>(m_ref.get()) != nullptr;
+        }
+
         void mov(VectorRef &v)
         {
             m_ref->mov(*v.m_ref);
@@ -341,21 +349,26 @@ public:
     explicit GArray(detail::GArrayU &&ref) // GArrayU-based constructor
         : m_ref(ref) { putDetails(); }     //   (used by GCall, not for users)
 
-    detail::GArrayU strip() const { return m_ref; }
+    /// @private
+    detail::GArrayU strip() const {
+        return m_ref;
+    }
+    /// @private
+    static void VCtor(detail::VectorRef& vref) {
+        vref.reset<HT>();
+    }
 
 private:
-    static void VCTor(detail::VectorRef& vref) {
-        vref.reset<HT>();
-        vref.storeKind<HT>();
-    }
     void putDetails() {
-        m_ref.setConstructFcn(&VCTor);
+        m_ref.setConstructFcn(&VCtor);
         m_ref.specifyType<HT>();  // FIXME: to unify those 2 to avoid excessive dynamic_cast
         m_ref.storeKind<HT>();    //
     }
 
     detail::GArrayU m_ref;
 };
+
+using GArrayP2f = GArray<cv::Point2f>;
 
 /** @} */
 

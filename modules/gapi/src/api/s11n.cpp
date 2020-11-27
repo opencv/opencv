@@ -44,6 +44,13 @@ std::vector<char> cv::gapi::serialize(const cv::GRunArgs& ra)
     return os.data();
 }
 
+std::vector<char> cv::gapi::serialize(const cv::GCompileArgs& ca)
+{
+    cv::gapi::s11n::ByteMemoryOutStream os;
+    serialize(os, ca);
+    return os.data();
+}
+
 // FIXME: This function should move from S11N to GRunArg-related entities.
 // it has nothing to do with the S11N as it is
 cv::GRunArgsP cv::gapi::bind(cv::GRunArgs &results)
@@ -71,6 +78,9 @@ cv::GRunArgsP cv::gapi::bind(cv::GRunArgs &results)
             break;
         case T::index_of<cv::detail::OpaqueRef>() :
             outputs.emplace_back(cv::util::get<cv::detail::OpaqueRef>(res_obj));
+            break;
+        case cv::GRunArg::index_of<cv::RMat>() :
+            outputs.emplace_back((cv::RMat*)(&(cv::util::get<cv::RMat>(res_obj))));
             break;
         default:
             GAPI_Assert(false && "This value type is not supported!"); // ...maybe because of STANDALONE mode.
@@ -104,6 +114,9 @@ cv::GRunArg cv::gapi::bind(cv::GRunArgP &out)
 
     case T::index_of<cv::Scalar*>() :
         return cv::GRunArg(*cv::util::get<cv::Scalar*>(out));
+
+    case T::index_of<cv::RMat*>() :
+        return cv::GRunArg(*cv::util::get<cv::RMat*>(out));
 
     default:
         // ...maybe our types were extended

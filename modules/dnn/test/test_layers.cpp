@@ -2228,7 +2228,7 @@ public:
 
     static testing::internal::ParamGenerator<tuple<Backend, Target> > dnnBackendsAndTargetsForFusionTests()
     {
-        return dnnBackendsAndTargets(false, false, true, false, false, false); // OCV OpenCL + OCV CPU
+        return dnnBackendsAndTargets(false, false, true, false, true, false); // OCV OpenCL + OCV CPU + CUDA
     }
 };
 
@@ -2264,10 +2264,6 @@ TEST_P(ConvolutionActivationFusion, Accuracy)
     Backend backendId = get<0>(get<2>(GetParam()));
     Target targetId = get<1>(get<2>(GetParam()));
 
-    // bug: https://github.com/opencv/opencv/issues/17964
-    if (actType == "Power" && backendId == DNN_BACKEND_OPENCV && (targetId == DNN_TARGET_OPENCL || targetId == DNN_TARGET_OPENCL_FP16))
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL);
-
     Net net;
     int convId = net.addLayer(convParams.name, convParams.type, convParams);
     int activId = net.addLayerToPrev(activationParams.name, activationParams.type, activationParams);
@@ -2280,11 +2276,16 @@ TEST_P(ConvolutionActivationFusion, Accuracy)
             expectedFusedLayers.push_back(activId); // all activations are fused
         else if (targetId == DNN_TARGET_OPENCL || targetId == DNN_TARGET_OPENCL_FP16)
         {
-            if (actType == "ReLU" || actType == "ChannelsPReLU" || actType == "ReLU6" || actType == "TanH" || actType == "Power")
+            if (actType == "ReLU" || actType == "ChannelsPReLU" || actType == "ReLU6" || actType == "TanH" /*|| actType == "Power"*/)
                 expectedFusedLayers.push_back(activId);
         }
     }
-
+    else if (backendId == DNN_BACKEND_CUDA)
+    {
+        if (actType == "ReLU" || actType == "ReLU6" || actType == "TanH" || actType == "Swish" ||
+            actType == "Mish" || actType == "Sigmoid" || actType == "Power")
+                expectedFusedLayers.push_back(activId);
+    }
     TestLayerFusion::test(input, net, backendId, targetId, expectedFusedLayers);
 }
 INSTANTIATE_TEST_CASE_P(TestLayerFusion, ConvolutionActivationFusion, Combine(
@@ -2323,7 +2324,7 @@ TEST_P(ConvolutionEltwiseFusion, Accuracy)
     std::string eltwiseOp = get<1>(GetParam());
     bool weightedEltwise = get<2>(GetParam());
     if (eltwiseOp != "sum" && weightedEltwise)
-            throw SkipTestException("weighted eltwise not supported");
+        throw SkipTestException("weighted eltwise not supported");
     LayerParams eltwiseParams;
     TestLayerFusion::makeDefaultTestEltwiseLayer(eltwiseParams, eltwiseOp, weightedEltwise);
 
@@ -2336,7 +2337,11 @@ TEST_P(ConvolutionEltwiseFusion, Accuracy)
 
     Backend backendId = get<0>(get<3>(GetParam()));
     Target targetId = get<1>(get<3>(GetParam()));
-    TestLayerFusion::test(input, net, backendId, targetId);
+
+    std::vector<int> expectedFusedLayers;
+    if (backendId == DNN_BACKEND_CUDA && eltwiseOp == "sum" && !weightedEltwise)
+        expectedFusedLayers.push_back(eltwiseId);
+    TestLayerFusion::test(input, net, backendId, targetId, expectedFusedLayers);
 }
 INSTANTIATE_TEST_CASE_P(TestLayerFusion, ConvolutionEltwiseFusion, Combine(
 /* bias */              testing::Bool(),
@@ -2390,21 +2395,6 @@ TEST_P(ConvolutionEltwiseActivationFusion, Accuracy)
     Backend backendId = get<0>(get<4>(GetParam()));
     Target targetId = get<1>(get<4>(GetParam()));
 
-    // bug: https://github.com/opencv/opencv/issues/17945
-    if ((eltwiseOp != "sum" || weightedEltwise) && backendId == DNN_BACKEND_OPENCV && (targetId == DNN_TARGET_OPENCL || targetId == DNN_TARGET_OPENCL_FP16))
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL);
-
-    // bug: https://github.com/opencv/opencv/issues/17953
-    if (eltwiseOp == "sum" && actType == "ChannelsPReLU" && bias_term == false &&
-        backendId == DNN_BACKEND_OPENCV && (targetId == DNN_TARGET_OPENCL || targetId == DNN_TARGET_OPENCL_FP16))
-    {
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL);
-    }
-
-    // bug: https://github.com/opencv/opencv/issues/17964
-    if (actType == "Power" && backendId == DNN_BACKEND_OPENCV && (targetId == DNN_TARGET_OPENCL || targetId == DNN_TARGET_OPENCL_FP16))
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL);
-
     Net net;
     int convId = net.addLayer(convParams.name, convParams.type, convParams);
     int eltwiseId = net.addLayer(eltwiseParams.name, eltwiseParams.type, eltwiseParams);
@@ -2421,14 +2411,25 @@ TEST_P(ConvolutionEltwiseActivationFusion, Accuracy)
             expectedFusedLayers.push_back(activId); // activation is fused with eltwise layer
         else if (targetId == DNN_TARGET_OPENCL || targetId == DNN_TARGET_OPENCL_FP16)
         {
-            if (actType == "ReLU" || actType == "ChannelsPReLU" || actType == "Power")
+            if (eltwiseOp == "sum" && !weightedEltwise &&
+                (actType == "ReLU" || actType == "ChannelsPReLU" /*|| actType == "Power"*/)
+            )
             {
                 expectedFusedLayers.push_back(eltwiseId);
                 expectedFusedLayers.push_back(activId);
             }
         }
     }
-
+    else if(backendId == DNN_BACKEND_CUDA)
+    {
+        if (eltwiseOp == "sum" && !weightedEltwise)
+        {
+            expectedFusedLayers.push_back(eltwiseId);
+            if (actType == "ReLU" || actType == "ReLU6" || actType == "TanH" || actType == "Swish" ||
+                actType == "Mish" || actType == "Sigmoid" || actType == "Power")
+                expectedFusedLayers.push_back(activId);
+        }
+    }
     TestLayerFusion::test(input, net, backendId, targetId, expectedFusedLayers);
 }
 INSTANTIATE_TEST_CASE_P(TestLayerFusion, ConvolutionEltwiseActivationFusion, Combine(
@@ -2483,17 +2484,6 @@ TEST_P(ConvolutionActivationEltwiseFusion, Accuracy)
     Backend backendId = get<0>(get<4>(GetParam()));
     Target targetId = get<1>(get<4>(GetParam()));
 
-    // bug: https://github.com/opencv/opencv/issues/17964
-    if (actType == "Power" && backendId == DNN_BACKEND_OPENCV && (targetId == DNN_TARGET_OPENCL || targetId == DNN_TARGET_OPENCL_FP16))
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL);
-
-    // bug: https://github.com/opencv/opencv/issues/17953
-    if (actType == "ChannelsPReLU" && bias_term == false &&
-        backendId == DNN_BACKEND_OPENCV && (targetId == DNN_TARGET_OPENCL || targetId == DNN_TARGET_OPENCL_FP16))
-    {
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL);
-    }
-
     Net net;
     int convId = net.addLayer(convParams.name, convParams.type, convParams);
     int activId = net.addLayer(activationParams.name, activationParams.type, activationParams);
@@ -2510,11 +2500,20 @@ TEST_P(ConvolutionActivationEltwiseFusion, Accuracy)
             expectedFusedLayers.push_back(activId); // activation fused with convolution
         else if (targetId == DNN_TARGET_OPENCL || targetId == DNN_TARGET_OPENCL_FP16)
         {
-            if (actType == "ReLU" || actType == "ChannelsPReLU" || actType == "ReLU6" || actType == "TanH" || actType == "Power")
+            if (actType == "ReLU" || actType == "ChannelsPReLU" || actType == "ReLU6" || actType == "TanH" /*|| actType == "Power"*/)
                 expectedFusedLayers.push_back(activId); // activation fused with convolution
         }
     }
-
+    else if(backendId == DNN_BACKEND_CUDA)
+    {
+        if (actType == "ReLU" || actType == "ReLU6" || actType == "TanH" || actType == "Swish" ||
+            actType == "Mish" || actType == "Sigmoid" || actType == "Power")
+        {
+                expectedFusedLayers.push_back(activId);
+                if (eltwiseOp == "sum" && !weightedEltwise)
+                    expectedFusedLayers.push_back(eltwiseId);
+        }
+    }
     TestLayerFusion::test(input, net, backendId, targetId, expectedFusedLayers);
 }
 INSTANTIATE_TEST_CASE_P(TestLayerFusion, ConvolutionActivationEltwiseFusion, Combine(

@@ -51,7 +51,7 @@ namespace {
 - platform specific universal SDK: WINRT, AVFOUNDATION, MSMF/DSHOW, V4L/V4L2
 - RGB-D: OpenNI/OpenNI2, REALSENSE
 - special OpenCV (file-based): "images", "mjpeg"
-- special camera SDKs, including stereo: other special SDKs: FIREWIRE/1394, XIMEA/ARAVIS/GIGANETIX/PVAPI(GigE)
+- special camera SDKs, including stereo: other special SDKs: FIREWIRE/1394, XIMEA/ARAVIS/GIGANETIX/PVAPI(GigE)/uEye
 - other: XINE, gphoto2, etc
 */
 static const struct VideoBackendInfo builtin_backends[] =
@@ -128,6 +128,12 @@ static const struct VideoBackendInfo builtin_backends[] =
 #endif
 #ifdef HAVE_ARAVIS_API
     DECLARE_STATIC_BACKEND(CAP_ARAVIS, "ARAVIS", MODE_CAPTURE_BY_INDEX, 0, create_Aravis_capture, 0),
+#endif
+
+#ifdef HAVE_UEYE // uEye
+    DECLARE_STATIC_BACKEND(CAP_UEYE, "UEYE", MODE_CAPTURE_BY_INDEX, 0, create_ueye_camera, 0),
+#elif defined(ENABLE_PLUGINS)
+    DECLARE_DYNAMIC_BACKEND(CAP_UEYE, "UEYE", MODE_CAPTURE_BY_INDEX),
 #endif
 
 #ifdef HAVE_GPHOTO2

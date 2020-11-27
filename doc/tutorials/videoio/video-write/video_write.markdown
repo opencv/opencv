@@ -63,7 +63,7 @@ specialized video writing libraries such as *FFMpeg* or codecs as *HuffYUV*, *Co
 an alternative, create the video track with OpenCV and expand it with sound tracks or convert it to
 other formats by using video manipulation programs such as *VirtualDub* or *AviSynth*.
 
-The *VideoWriter* class
+The VideoWriter class
 -----------------------
 
 The content written here builds on the assumption you

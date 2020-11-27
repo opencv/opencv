@@ -112,6 +112,7 @@ enum VideoCaptureAPIs {
        CAP_REALSENSE    = 1500,         //!< Synonym for CAP_INTELPERC
        CAP_OPENNI2      = 1600,         //!< OpenNI2 (for Kinect)
        CAP_OPENNI2_ASUS = 1610,         //!< OpenNI2 (for Asus Xtion and Occipital Structure sensors)
+       CAP_OPENNI2_ASTRA= 1620,         //!< OpenNI2 (for Orbbec Astra)
        CAP_GPHOTO2      = 1700,         //!< gPhoto2 connection
        CAP_GSTREAMER    = 1800,         //!< GStreamer
        CAP_FFMPEG       = 1900,         //!< Open and record video file or stream using the FFMPEG library
@@ -120,6 +121,7 @@ enum VideoCaptureAPIs {
        CAP_OPENCV_MJPEG = 2200,         //!< Built-in OpenCV MotionJPEG codec
        CAP_INTEL_MFX    = 2300,         //!< Intel MediaSDK
        CAP_XINE         = 2400,         //!< XINE engine (Linux)
+       CAP_UEYE         = 2500,         //!< uEye Camera API
      };
 
 /** @brief %VideoCapture generic properties identifier.
@@ -825,7 +827,7 @@ public:
     @throws Exception %Exception on stream errors (check .isOpened() to filter out malformed streams) or VideoCapture type is not supported
 
     The primary use of the function is in multi-camera environments.
-    The method fills the ready state vector, grabbs video frame, if camera is ready.
+    The method fills the ready state vector, grabs video frame, if camera is ready.
 
     After this call use VideoCapture::retrieve() to decode and fetch frame data.
     */

@@ -1512,10 +1512,16 @@ function(ocv_add_library target)
 
     set(CMAKE_SHARED_LIBRARY_RUNTIME_C_FLAG 1)
 
+    if(IOS AND NOT MAC_CATALYST)
+      set(OPENCV_APPLE_INFO_PLIST "${CMAKE_BINARY_DIR}/ios/Info.plist")
+    else()
+      set(OPENCV_APPLE_INFO_PLIST "${CMAKE_BINARY_DIR}/osx/Info.plist")
+    endif()
+
     set_target_properties(${target} PROPERTIES
       FRAMEWORK TRUE
       MACOSX_FRAMEWORK_IDENTIFIER org.opencv
-      MACOSX_FRAMEWORK_INFO_PLIST ${CMAKE_BINARY_DIR}/ios/Info.plist
+      MACOSX_FRAMEWORK_INFO_PLIST ${OPENCV_APPLE_INFO_PLIST}
       # "current version" in semantic format in Mach-O binary file
       VERSION ${OPENCV_LIBVERSION}
       # "compatibility version" in semantic format in Mach-O binary file
@@ -1881,6 +1887,13 @@ function(ocv_update_file filepath content)
     file(WRITE "${filepath}" "${content}")
   endif()
 endfunction()
+
+if(NOT BUILD_SHARED_LIBS AND (CMAKE_VERSION VERSION_LESS "3.14.0"))
+  ocv_update(OPENCV_3RDPARTY_EXCLUDE_FROM_ALL "")  # avoid CMake warnings: https://gitlab.kitware.com/cmake/cmake/-/issues/18938
+else()
+  ocv_update(OPENCV_3RDPARTY_EXCLUDE_FROM_ALL "EXCLUDE_FROM_ALL")
+endif()
+
 
 # adopted from https://gist.github.com/amir-saniyan/de99cee82fa9d8d615bb69f3f53b6004
 function(ocv_blob2hdr blob_filename hdr_filename cpp_variable)

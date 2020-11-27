@@ -165,7 +165,8 @@ TEST_P(Test_Torch_layers, run_reshape_single_sample)
     }
     else if (target == DNN_TARGET_CUDA_FP16)
     {
-        l1 = 0.01;
+        l1 = 0.02;
+        lInf = 0.04;
     }
     runTorchNet("net_reshape_single_sample", "", false, false, true, l1, lInf);
 }
@@ -409,6 +410,10 @@ TEST_P(Test_Torch_nets, ENet_accuracy)
         if (target == DNN_TARGET_MYRIAD)      applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
         throw SkipTestException("");
     }
+#endif
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2021010000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
 #endif
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target != DNN_TARGET_CPU)
     {
