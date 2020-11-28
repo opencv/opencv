@@ -774,6 +774,7 @@ static bool checkTestData = cv::utils::getConfigurationParameterBool("OPENCV_TES
 bool skipUnstableTests = false;
 bool runBigDataTests = false;
 int testThreads = 0;
+int debugLevel = (int)cv::utils::getConfigurationParameterSizeT("OPENCV_TEST_DEBUG", 0);
 
 
 static size_t memory_usage_base = 0;
@@ -883,6 +884,7 @@ void parseCustomOptions(int argc, char **argv)
         "{ test_threads       |-1       |the number of worker threads, if parallel execution is enabled}"
         "{ skip_unstable      |false    |skip unstable tests }"
         "{ test_bigdata       |false    |run BigData tests (>=2Gb) }"
+        "{ test_debug         |         |0 - no debug (default), 1 - basic test debug information, >1 - extra debug information }"
         "{ test_require_data  |") + (checkTestData ? "true" : "false") + string("|fail on missing non-required test data instead of skip (env:OPENCV_TEST_REQUIRE_DATA)}"
         CV_TEST_TAGS_PARAMS
         "{ h   help           |false    |print help info                          }"
@@ -909,6 +911,14 @@ void parseCustomOptions(int argc, char **argv)
 
     skipUnstableTests = parser.get<bool>("skip_unstable");
     runBigDataTests = parser.get<bool>("test_bigdata");
+    if (parser.has("test_debug"))
+    {
+        cv::String s = parser.get<cv::String>("test_debug");
+        if (s.empty() || s == "true")
+            debugLevel = 1;
+        else
+            debugLevel = parser.get<int>("test_debug");
+    }
     if (parser.has("test_require_data"))
         checkTestData = parser.get<bool>("test_require_data");
 
