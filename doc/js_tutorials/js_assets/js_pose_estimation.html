@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Pose Estimation Example</title>
+    <link href="js_example_style.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+<h2>Pose Estimation Example</h2>
+<p>
+    This tutorial shows you how to write an pose estimation example with OpenCV.js.<br>
+    To try the example you should click the <b>modelFile</b> button(and <b>configInput</b> button if needed) to upload inference model.
+    You can find the model URLs and parameters in the <a href="#appendix">model info</a> section.
+    Then You should change the parameters in the first code snippet according to the uploaded model.
+    Finally click <b>Try it</b> button to see the result. You can choose any other images.<br>
+</p>
+
+<div class="control"><button id="tryIt" disabled>Try it</button></div>
+<div>
+    <table cellpadding="0" cellspacing="0" width="0" border="0">
+        <tr>
+            <td>
+                <canvas id="canvasInput" width="400" height="250"></canvas>
+            </td>
+            <td>
+                <canvas id="canvasOutput" style="visibility: hidden;" width="400" height="250"></canvas>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <div class="caption">
+                    canvasInput <input type="file" id="fileInput" name="file" accept="image/*">
+                </div>
+            </td>
+            <td>
+                <p id='status' align="left"></p>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <div class="caption">
+                    modelFile <input type="file" id="modelFile" name="file">
+                </div>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <div class="caption">
+                    configFile <input type="file" id="configFile">
+                </div>
+            </td>
+        </tr>
+    </table>
+</div>
+
+<div>
+    <p class="err" id="errorMessage"></p>
+</div>
+
+<div>
+    <h3>Help function</h3>
+    <p>1.The parameters for model inference which you can modify to investigate more models.</p>
+    <textarea class="code" rows="9" cols="100" id="codeEditor" spellcheck="false"></textarea>
+    <p>2.Main loop in which will read the image from canvas and do inference once.</p>
+    <textarea class="code" rows="15" cols="100" id="codeEditor1" spellcheck="false"></textarea>
+    <p>3.Get blob from image as input for net, and standardize it with <b>mean</b> and <b>std</b>.</p>
+    <textarea class="code" rows="17" cols="100" id="codeEditor2" spellcheck="false"></textarea>
+    <p>4.Fetch model file and save to emscripten file system once click the input button.</p>
+    <textarea class="code" rows="17" cols="100" id="codeEditor3" spellcheck="false"></textarea>
+    <p>5.The pairs of keypoints of different dataset.</p>
+    <textarea class="code" rows="30" cols="100" id="codeEditor4" spellcheck="false"></textarea>
+    <p>6.The post-processing, including get the predicted points and draw lines into the image.</p>
+    <textarea class="code" rows="30" cols="100" id="codeEditor5" spellcheck="false"></textarea>
+</div>
+
+<div id="appendix">
+    <h2>Model Info:</h2>
+</div>
+
+<script src="utils.js" type="text/javascript"></script>
+<script src="js_dnn_example_helper.js" type="text/javascript"></script>
+
+<script id="codeSnippet" type="text/code-snippet">
+inputSize = [368, 368];
+mean = [0, 0, 0];
+std = 0.00392;
+swapRB = false;
+threshold = 0.1;
+
+// the pairs of keypoint, can be "COCO", "MPI" and "BODY_25"
+dataset = "COCO";
+</script>
+
+<script id="codeSnippet1" type="text/code-snippet">
+main = async function() {
+    const input = getBlobFromImage(inputSize, mean, std, swapRB, 'canvasInput');
+    let net = cv.readNet(configPath, modelPath);
+    net.setInput(input);
+    const start = performance.now();
+    const result = net.forward();
+    const time  = performance.now()-start;
+    const output = postProcess(result);
+
+    updateResult(output, time);
+    input.delete();
+    net.delete();
+    result.delete();
+}
+</script>
+
+<script id="codeSnippet4" type="text/code-snippet">
+BODY_PARTS = {};
+POSE_PAIRS = [];
+
+if (dataset === 'COCO') {
+    BODY_PARTS = { "Nose": 0, "Neck": 1, "RShoulder": 2, "RElbow": 3, "RWrist": 4,
+                   "LShoulder": 5, "LElbow": 6, "LWrist": 7, "RHip": 8, "RKnee": 9,
+                   "RAnkle": 10, "LHip": 11, "LKnee": 12, "LAnkle": 13, "REye": 14,
+                   "LEye": 15, "REar": 16, "LEar": 17, "Background": 18 };
+
+    POSE_PAIRS = [ ["Neck", "RShoulder"], ["Neck", "LShoulder"], ["RShoulder", "RElbow"],
+                   ["RElbow", "RWrist"], ["LShoulder", "LElbow"], ["LElbow", "LWrist"],
+                   ["Neck", "RHip"], ["RHip", "RKnee"], ["RKnee", "RAnkle"], ["Neck", "LHip"],
+                   ["LHip", "LKnee"], ["LKnee", "LAnkle"], ["Neck", "Nose"], ["Nose", "REye"],
+                   ["REye", "REar"], ["Nose", "LEye"], ["LEye", "LEar"] ]
+} else if (dataset === 'MPI') {
+    BODY_PARTS = { "Head": 0, "Neck": 1, "RShoulder": 2, "RElbow": 3, "RWrist": 4,
+                   "LShoulder": 5, "LElbow": 6, "LWrist": 7, "RHip": 8, "RKnee": 9,
+                   "RAnkle": 10, "LHip": 11, "LKnee": 12, "LAnkle": 13, "Chest": 14,
+                   "Background": 15 }
+
+    POSE_PAIRS = [ ["Head", "Neck"], ["Neck", "RShoulder"], ["RShoulder", "RElbow"],
+                   ["RElbow", "RWrist"], ["Neck", "LShoulder"], ["LShoulder", "LElbow"],
+                   ["LElbow", "LWrist"], ["Neck", "Chest"], ["Chest", "RHip"], ["RHip", "RKnee"],
+                   ["RKnee", "RAnkle"], ["Chest", "LHip"], ["LHip", "LKnee"], ["LKnee", "LAnkle"] ]
+} else if (dataset === 'BODY_25') {
+    BODY_PARTS = { "Nose": 0, "Neck": 1, "RShoulder": 2, "RElbow": 3, "RWrist": 4,
+                   "LShoulder": 5, "LElbow": 6, "LWrist": 7, "MidHip": 8, "RHip": 9,
+                   "RKnee": 10, "RAnkle": 11, "LHip": 12, "LKnee": 13, "LAnkle": 14,
+                   "REye": 15, "LEye": 16, "REar": 17, "LEar": 18, "LBigToe": 19,
+                   "LSmallToe": 20, "LHeel": 21, "RBigToe": 22, "RSmallToe": 23,
+                   "RHeel": 24, "Background": 25 }
+
+    POSE_PAIRS = [ ["Neck", "Nose"], ["Neck", "RShoulder"],
+                   ["Neck", "LShoulder"], ["RShoulder", "RElbow"],
+                   ["RElbow", "RWrist"], ["LShoulder", "LElbow"],
+                   ["LElbow", "LWrist"], ["Nose", "REye"],
+                   ["REye", "REar"], ["Neck", "LEye"],
+                   ["LEye", "LEar"], ["Neck", "MidHip"],
+                   ["MidHip", "RHip"], ["RHip", "RKnee"],
+                   ["RKnee", "RAnkle"], ["RAnkle", "RBigToe"],
+                   ["RBigToe", "RSmallToe"], ["RAnkle", "RHeel"],
+                   ["MidHip", "LHip"], ["LHip", "LKnee"],
+                   ["LKnee", "LAnkle"], ["LAnkle", "LBigToe"],
+                   ["LBigToe", "LSmallToe"], ["LAnkle", "LHeel"] ]
+}
+</script>
+
+<script id="codeSnippet5" type="text/code-snippet">
+postProcess = function(result) {
+    const resultData = result.data32F;
+    const matSize = result.matSize;
+    const size1 = matSize[1];
+    const size2 = matSize[2];
+    const size3 = matSize[3];
+    const mapSize = size2 * size3;
+
+    let canvasOutput = document.getElementById('canvasOutput');
+    const outputWidth = canvasOutput.width;
+    const outputHeight = canvasOutput.height;
+
+    let image = cv.imread("canvasInput");
+    let output = new cv.Mat(outputWidth, outputHeight, cv.CV_8UC3);
+    cv.cvtColor(image, output, cv.COLOR_RGBA2RGB);
+
+    // get position of keypoints from output
+    let points = [];
+    for (let i = 0; i < Object.keys(BODY_PARTS).length; ++i) {
+        heatMap = resultData.slice(i*mapSize, (i+1)*mapSize);
+
+        let maxIndex = 0;
+        let maxConf = heatMap[0];
+        for (index in heatMap) {
+            if (heatMap[index] > heatMap[maxIndex]) {
+                maxIndex = index;
+                maxConf = heatMap[index];
+            }
+        }
+
+        if (maxConf > threshold) {
+            indexX = maxIndex % size3;
+            indexY = maxIndex / size3;
+
+            x = outputWidth * indexX / size3;
+            y = outputHeight * indexY / size2;
+
+            points[i] = [Math.round(x), Math.round(y)];
+        }
+    }
+
+    // draw the points and lines into the image
+    for (pair of POSE_PAIRS) {
+        partFrom = pair[0];
+        partTo = pair[1];
+        idFrom = BODY_PARTS[partFrom];
+        idTo = BODY_PARTS[partTo];
+        pointFrom = points[idFrom];
+        pointTo = points[idTo];
+
+        if (points[idFrom] && points[idTo]) {
+            cv.line(output, new cv.Point(pointFrom[0], pointFrom[1]),
+                            new cv.Point(pointTo[0], pointTo[1]), new cv.Scalar(0, 255, 0), 3);
+            cv.ellipse(output, new cv.Point(pointFrom[0], pointFrom[1]), new cv.Size(3, 3), 0, 0, 360,
+                               new cv.Scalar(0, 0, 255), cv.FILLED);
+            cv.ellipse(output, new cv.Point(pointTo[0], pointTo[1]), new cv.Size(3, 3), 0, 0, 360,
+                               new cv.Scalar(0, 0, 255), cv.FILLED);
+        }
+    }
+
+    return output;
+}
+</script>
+
+<script type="text/javascript">
+    let jsonUrl = "js_pose_estimation_model_info.json";
+    drawInfoTable(jsonUrl, 'appendix');
+
+    let utils = new Utils('errorMessage');
+    utils.loadCode('codeSnippet', 'codeEditor');
+    utils.loadCode('codeSnippet1', 'codeEditor1');
+
+    let getBlobFromImageCode = 'getBlobFromImage = ' + getBlobFromImage.toString();
+    document.getElementById('codeEditor2').value = getBlobFromImageCode;
+    let loadModelCode = 'loadModel = ' + loadModel.toString();
+    document.getElementById('codeEditor3').value = loadModelCode;
+
+    utils.loadCode('codeSnippet4', 'codeEditor4');
+    utils.loadCode('codeSnippet5', 'codeEditor5');
+
+    let canvas = document.getElementById('canvasInput');
+    let ctx = canvas.getContext('2d');
+    let img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.src = 'roi.jpg';
+    img.onload = function() {
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    };
+
+    let tryIt = document.getElementById('tryIt');
+    tryIt.addEventListener('click', () => {
+        initStatus();
+        document.getElementById('status').innerHTML = 'Running function main()...';
+        utils.executeCode('codeEditor');
+        utils.executeCode('codeEditor1');
+        if (modelPath === "") {
+            document.getElementById('status').innerHTML = 'Runing failed.';
+            utils.printError('Please upload model file by clicking the button first.');
+        } else {
+            setTimeout(main, 1);
+        }
+    });
+
+    let fileInput = document.getElementById('fileInput');
+    fileInput.addEventListener('change', (e) => {
+        initStatus();
+        loadImageToCanvas(e, 'canvasInput');
+    });
+
+    let configPath = "";
+    let configFile = document.getElementById('configFile');
+    configFile.addEventListener('change', async (e) => {
+        initStatus();
+        configPath = await loadModel(e);
+        document.getElementById('status').innerHTML = `The config file '${configPath}' is created successfully.`;
+    });
+
+    let modelPath = "";
+    let modelFile = document.getElementById('modelFile');
+    modelFile.addEventListener('change', async (e) => {
+        initStatus();
+        modelPath = await loadModel(e);
+        document.getElementById('status').innerHTML = `The model file '${modelPath}' is created successfully.`;
+        configPath = "";
+        configFile.value = "";
+    });
+
+    utils.loadOpenCv(() => {
+        tryIt.removeAttribute('disabled');
+    });
+
+    var main = async function() {};
+    var postProcess = function(result) {};
+
+    utils.executeCode('codeEditor');
+    utils.executeCode('codeEditor1');
+    utils.executeCode('codeEditor2');
+    utils.executeCode('codeEditor3');
+    utils.executeCode('codeEditor4');
+    utils.executeCode('codeEditor5');
+
+    function updateResult(output, time) {
+        try{
+            let canvasOutput = document.getElementById('canvasOutput');
+            canvasOutput.style.visibility = "visible";
+            let resized = new cv.Mat(canvasOutput.width, canvasOutput.height, cv.CV_8UC4);
+            cv.resize(output, resized, new cv.Size(canvasOutput.width, canvasOutput.height));
+            cv.imshow('canvasOutput', resized);
+            document.getElementById('status').innerHTML = `<b>Model:</b> ${modelPath}<br>
+                                                           <b>Inference time:</b> ${time.toFixed(2)} ms`;
+        } catch(e) {
+            console.log(e);
+        }
+    }
+
+    function initStatus() {
+        document.getElementById('status').innerHTML = '';
+        document.getElementById('canvasOutput').style.visibility = "hidden";
+        utils.clearError();
+    }
+
+</script>
+
+</body>
+
+</html>
