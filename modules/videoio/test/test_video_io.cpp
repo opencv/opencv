@@ -231,6 +231,34 @@ public:
         else
             std::cout << "Frames counter is not available. Actual frames: " << count_actual << ". SKIP check." << std::endl;
     }
+
+    void doTimestampTest()
+    {
+        if (!isBackendAvailable(apiPref, cv::videoio_registry::getStreamBackends()))
+            throw SkipTestException(cv::String("Backend is not available/disabled: ") + cv::videoio_registry::getBackendName(apiPref));
+
+        if ((apiPref == CAP_MSMF) || ((apiPref == CAP_FFMPEG) && ((ext == "h264") || (ext == "h265"))))
+            throw SkipTestException(cv::String("Backend ") +  cv::videoio_registry::getBackendName(apiPref) +
+                    cv::String(" does not support CAP_PROP_POS_MSEC option"));
+
+        VideoCapture cap;
+        EXPECT_NO_THROW(cap.open(video_file, apiPref));
+        if (!cap.isOpened())
+            throw SkipTestException(cv::String("Backend ") +  cv::videoio_registry::getBackendName(apiPref) +
+                    cv::String(" can't open the video: ")  + video_file);
+
+        Mat img;
+        for(int i = 0; i < 10; i++)
+        {
+            double timestamp = 0;
+            ASSERT_NO_THROW(cap >> img);
+            EXPECT_NO_THROW(timestamp = cap.get(CAP_PROP_POS_MSEC));
+            const double frame_period = 1000.f/bunny_param.getFps();
+            // NOTE: eps == frame_period, because videoCapture returns frame begining timestamp or frame end
+            // timestamp depending on codec and back-end. So the first frame has timestamp 0 or frame_period.
+            EXPECT_NEAR(timestamp, i*frame_period, frame_period);
+        }
+    }
 };
 
 //==================================================================================================
@@ -366,6 +394,8 @@ static const string bunny_params[] = {
 TEST_P(Videoio_Bunny, read_position) { doTest(); }
 
 TEST_P(Videoio_Bunny, frame_count) { doFrameCountTest(); }
+
+TEST_P(Videoio_Bunny, frame_timestamp) { doTimestampTest(); }
 
 INSTANTIATE_TEST_CASE_P(videoio, Videoio_Bunny,
                           testing::Combine(
