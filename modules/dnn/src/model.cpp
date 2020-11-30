@@ -373,12 +373,16 @@ DetectionModel::DetectionModel() : Model()
 
 DetectionModel& DetectionModel::setNmsAcrossClasses(bool value)
 {
+    CV_Assert(impl != nullptr && impl.dynamicCast<DetectionModel_Impl>() != nullptr); // remove once default constructor is removed
+
     impl.dynamicCast<DetectionModel_Impl>()->setNmsAcrossClasses(value);
     return *this;
 }
 
 bool DetectionModel::getNmsAcrossClasses()
 {
+    CV_Assert(impl != nullptr && impl.dynamicCast<DetectionModel_Impl>() != nullptr); // remove once default constructor is removed
+
     return impl.dynamicCast<DetectionModel_Impl>()->getNmsAcrossClasses();
 }
 
@@ -386,6 +390,8 @@ void DetectionModel::detect(InputArray frame, CV_OUT std::vector<int>& classIds,
                             CV_OUT std::vector<float>& confidences, CV_OUT std::vector<Rect>& boxes,
                             float confThreshold, float nmsThreshold)
 {
+    CV_Assert(impl != nullptr && impl.dynamicCast<DetectionModel_Impl>() != nullptr); // remove once default constructor is removed
+
     std::vector<Mat> detections;
     impl->processFrame(frame, detections);
 
