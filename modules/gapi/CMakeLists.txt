@@ -107,6 +107,7 @@ set(gapi_srcs
 
     # Executor
     src/executor/gexecutor.cpp
+    src/executor/gtbbexecutor.cpp
     src/executor/gstreamingexecutor.cpp
     src/executor/gasync.cpp
 
@@ -194,6 +195,10 @@ ocv_add_accuracy_tests(${__test_extra_deps})
 if(TARGET opencv_test_gapi)
   target_include_directories(opencv_test_gapi PRIVATE "${CMAKE_CURRENT_LIST_DIR}/src")
   target_link_libraries(opencv_test_gapi PRIVATE ade)
+endif()
+
+if(HAVE_TBB AND TARGET opencv_test_gapi)
+  ocv_target_link_libraries(opencv_test_gapi PRIVATE tbb)
 endif()
 
 if(HAVE_FREETYPE)
