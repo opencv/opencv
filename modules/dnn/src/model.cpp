@@ -1003,9 +1003,7 @@ struct TextDetectionModel_DB_Impl : public TextDetectionModel_Impl
             Point2f vertex[4];
             box.points(vertex);
             for (int j = 0; j < 4; j++)
-            {
-                approx.push_back(Point((int)(vertex[3-j].x), (int)(vertex[3-j].y)));
-            }
+                approx.emplace_back(vertex[j]);
             std::vector<Point> polygon;
             unclip(approx, polygon, unclipRatio);
             results.push_back(polygon);
@@ -1069,7 +1067,7 @@ struct TextDetectionModel_DB_Impl : public TextDetectionModel_Impl
             Point pt2 = inPoly[(i + 1) % numPoints];
             Point vec = pt2 - pt1;
             float unclipDis = (float)(distance / norm(vec));
-            Point2f rotateVec = Point2f(-vec.y * unclipDis, vec.x * unclipDis);
+            Point2f rotateVec = Point2f(vec.y * unclipDis, -vec.x * unclipDis);
             newLine.push_back(Point2f(pt1.x + rotateVec.x, pt1.y + rotateVec.y));
             newLine.push_back(Point2f(pt2.x + rotateVec.x, pt2.y + rotateVec.y));
             newLines.push_back(newLine);

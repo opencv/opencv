@@ -78,7 +78,6 @@ int main(int argc, char** argv)
 
         // Create a window for showing groundtruth
         static const std::string winNameGT = "GT";
-        namedWindow(winNameGT, WINDOW_NORMAL);
 
         String testImgPath;
         while (std::getline(testList, testImgPath)) {
@@ -92,13 +91,13 @@ int main(int argc, char** argv)
             // Inference
             std::vector<std::vector<Point>> results = detector.detectTextContours(frame);
 
-            polylines(frame, results, true, Scalar(0, 255, 0), 5);
+            polylines(frame, results, true, Scalar(0, 255, 0), 2);
             imshow(winName, frame);
 
             // load groundtruth
             String imgName = testImgPath.substr(0, testImgPath.length() - 4);
             String gtPath = evalDataPath + "/test_gts/" + imgName + ".txt";
-            std::cout << gtPath << std::endl;
+            // std::cout << gtPath << std::endl;
             std::ifstream gtFile;
             gtFile.open(gtPath);
             CV_Assert(gtFile.is_open());
@@ -127,7 +126,7 @@ int main(int argc, char** argv)
                 }
                 gts.push_back(pts);
             }
-            polylines(src, gts, true, Scalar(0, 255, 0), 5);
+            polylines(src, gts, true, Scalar(0, 255, 0), 2);
             imshow(winNameGT, src);
 
             waitKey();
@@ -141,7 +140,7 @@ int main(int argc, char** argv)
         // Detect
         std::vector<std::vector<Point>> results = detector.detectTextContours(frame);
 
-        polylines(frame, results, true, Scalar(0, 255, 0), 5);
+        polylines(frame, results, true, Scalar(0, 255, 0), 2);
         imshow(winName, frame);
         waitKey();
     }

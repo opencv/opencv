@@ -59,7 +59,7 @@ sha: a641e9c57a5147546f7a2dbea4fd322b47197cd5
 alphabet_94.txt: https://drive.google.com/uc?export=dowload&id=1oKXxXKusquimp7XY1mFvj9nwLzldVgBR
 parameter setting: -rgb=1;
 description: The classification number of this model is 94 (0~9 + a~z + A~Z + punctuations).
-             The training datasets are MJsynth and SynthText90k.
+             The training datasets are MJsynth and SynthText.
 
 crnn_cs_CN.onnx:
 url: https://drive.google.com/uc?export=dowload&id=1is4eYEUKH7HR7Gl37Sw4WPXx6Ir8oQEG
@@ -93,7 +93,7 @@ description: This model is trained on ICDAR2015, so it can only detect English t
 url: https://drive.google.com/uc?export=dowload&id=19YWhArrNccaoSza0CfkXlA8im4-lAGsR
 sha: 1b4dd21a6baa5e3523156776970895bd3db6960a
 recommended parameter setting: -inputHeight=736, -inputWidth=736;
-description: This model is trained on MSRA-TD500, so it can detect bot English and Chinese text instances.
+description: This model is trained on MSRA-TD500, so it can detect both English and Chinese text instances.
 
 - DB_TD500_resnet18.onnx:
 url: https://drive.google.com/uc?export=dowload&id=1vY_KsDZZZb_svd5RT6pjyI8BS1nPbBSX
