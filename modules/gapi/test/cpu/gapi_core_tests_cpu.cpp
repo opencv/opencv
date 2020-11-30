@@ -484,6 +484,72 @@ INSTANTIATE_TEST_CASE_P(NormalizeTestCPU, NormalizeTest,
                                 Values(NORM_MINMAX, NORM_INF, NORM_L1, NORM_L2),
                                 Values(-1, CV_8U, CV_16U, CV_16S, CV_32F)));
 
+INSTANTIATE_TEST_CASE_P(KMeansNDNoInitTestCPU, KMeansNDNoInitTest,
+                        Combine(Values(CV_32FC1),
+                                Values(cv::Size(2, 20)),
+                                Values(-1),
+                                Values(CORE_CPU),
+                                Values(5),
+                                Values(cv::KMEANS_RANDOM_CENTERS, cv::KMEANS_PP_CENTERS)));
+
+INSTANTIATE_TEST_CASE_P(KMeansNDInitTestCPU, KMeansNDInitTest,
+                        Combine(Values(CV_32FC1, CV_32FC3),
+                                Values(cv::Size(1, 20),
+                                       cv::Size(2, 20),
+                                       cv::Size(5, 720)),
+                                Values(-1),
+                                Values(CORE_CPU),
+                                Values(AbsTolerance(0.01).to_compare_obj()),
+                                Values(5, 15),
+                                Values(cv::KMEANS_RANDOM_CENTERS | cv::KMEANS_USE_INITIAL_LABELS,
+                                       cv::KMEANS_PP_CENTERS     | cv::KMEANS_USE_INITIAL_LABELS)));
+
+INSTANTIATE_TEST_CASE_P(KMeansNDInitReverseTestCPU, KMeansNDInitTest,
+                        Combine(Values(CV_32FC3),
+                                Values(cv::Size(20, 1)),
+                                Values(-1),
+                                Values(CORE_CPU),
+                                Values(AbsTolerance(0.01).to_compare_obj()),
+                                Values(5, 15),
+                                Values(cv::KMEANS_RANDOM_CENTERS | cv::KMEANS_USE_INITIAL_LABELS,
+                                       cv::KMEANS_PP_CENTERS     | cv::KMEANS_USE_INITIAL_LABELS)));
+
+INSTANTIATE_TEST_CASE_P(KMeans2DNoInitTestCPU, KMeans2DNoInitTest,
+                        Combine(Values(-1),
+                                Values(cv::Size(-1, 20)),
+                                Values(-1),
+                                Values(CORE_CPU),
+                                Values(5),
+                                Values(cv::KMEANS_RANDOM_CENTERS, cv::KMEANS_PP_CENTERS)));
+
+INSTANTIATE_TEST_CASE_P(KMeans2DInitTestCPU, KMeans2DInitTest,
+                        Combine(Values(-1),
+                                Values(cv::Size(-1, 720),
+                                       cv::Size(-1, 20)),
+                                Values(-1),
+                                Values(CORE_CPU),
+                                Values(5, 15),
+                                Values(cv::KMEANS_RANDOM_CENTERS | cv::KMEANS_USE_INITIAL_LABELS,
+                                       cv::KMEANS_PP_CENTERS     | cv::KMEANS_USE_INITIAL_LABELS)));
+
+INSTANTIATE_TEST_CASE_P(KMeans3DNoInitTestCPU, KMeans3DNoInitTest,
+                        Combine(Values(-1),
+                                Values(cv::Size(-1, 20)),
+                                Values(-1),
+                                Values(CORE_CPU),
+                                Values(5),
+                                Values(cv::KMEANS_RANDOM_CENTERS, cv::KMEANS_PP_CENTERS)));
+
+INSTANTIATE_TEST_CASE_P(KMeans3DInitTestCPU, KMeans3DInitTest,
+                        Combine(Values(-1),
+                                Values(cv::Size(-1, 720),
+                                       cv::Size(-1, 20)),
+                                Values(-1),
+                                Values(CORE_CPU),
+                                Values(5, 15),
+                                Values(cv::KMEANS_RANDOM_CENTERS | cv::KMEANS_USE_INITIAL_LABELS,
+                                       cv::KMEANS_PP_CENTERS     | cv::KMEANS_USE_INITIAL_LABELS)));
+
 // PLEASE DO NOT PUT NEW ACCURACY TESTS BELOW THIS POINT! //////////////////////
 
 INSTANTIATE_TEST_CASE_P(BackendOutputAllocationTestCPU, BackendOutputAllocationTest,
