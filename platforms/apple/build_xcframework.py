@@ -10,13 +10,14 @@ from cv_build_utils import execute, print_error, print_header, get_xcode_version
 if __name__ == "__main__":
 
     # Check for dependencies
-    assert sys.version_info >= (3, 6), f"Python 3.6 or later is required! Current version is {sys.version_info}"
+    assert sys.version_info >= (3, 6), "Python 3.6 or later is required! Current version is {}".format(sys.version_info)
     # Need CMake 3.18.5/3.19 or later for a Silicon-related fix to building for the iOS Simulator.
     # See https://gitlab.kitware.com/cmake/cmake/-/issues/21425 for context.
-    assert get_cmake_version() >= (3, 18, 5), f"CMake 3.18.5 or later is required. Current version is {get_cmake_version()}"
+    assert get_cmake_version() >= (3, 18, 5), "CMake 3.18.5 or later is required. Current version is {}".format(get_cmake_version())
     # Need Xcode 12.2 for Apple Silicon support
-    assert get_xcode_version() >= (12, 2), f"Xcode 12.2 command line tools or later are required! Current version is {get_xcode_version()}. \
-    Run xcode-select to switch if you have multiple Xcode installs."
+    assert get_xcode_version() >= (12, 2), \
+        "Xcode 12.2 command line tools or later are required! Current version is {}. ".format(get_xcode_version()) + \
+        "Run xcode-select to switch if you have multiple Xcode installs."
 
     # Parse arguments
     description = """
@@ -36,32 +37,32 @@ if __name__ == "__main__":
 
     args, unknown_args = parser.parse_known_args()
     if unknown_args:
-        print(f"The following args are not recognized by this script and will be passed through to the ios/osx build_framework.py scripts: {unknown_args}")
+        print("The following args are not recognized by this script and will be passed through to the ios/osx build_framework.py scripts: {}".format(unknown_args))
 
     # Parse architectures from args
     iphoneos_archs = args.iphoneos_archs
     if not iphoneos_archs and not args.build_only_specified_archs:
         # Supply defaults
         iphoneos_archs = "armv7,arm64"
-    print(f'Using iPhoneOS ARCHS={iphoneos_archs}')
+    print('Using iPhoneOS ARCHS={}'.format(iphoneos_archs))
 
     iphonesimulator_archs = args.iphonesimulator_archs
     if not iphonesimulator_archs and not args.build_only_specified_archs:
         # Supply defaults
         iphonesimulator_archs = "x86_64,arm64"
-    print(f'Using iPhoneSimulator ARCHS={iphonesimulator_archs}')
+    print('Using iPhoneSimulator ARCHS={}'.format(iphonesimulator_archs))
 
     macos_archs = args.macos_archs
     if not macos_archs and not args.build_only_specified_archs:
         # Supply defaults
         macos_archs = "x86_64,arm64"
-    print(f'Using MacOS ARCHS={macos_archs}')
+    print('Using MacOS ARCHS={}'.format(macos_archs))
 
     catalyst_archs = args.macos_archs
     if not catalyst_archs and not args.build_only_specified_archs:
         # Supply defaults
         catalyst_archs = "x86_64,arm64"
-    print(f'Using Catalyst ARCHS={catalyst_archs}')
+    print('Using Catalyst ARCHS={}'.format(catalyst_archs))
 
     # Build phase
 
@@ -73,7 +74,7 @@ if __name__ == "__main__":
         build_folders = []
 
         def get_or_create_build_folder(base_dir, platform):
-            build_folder = f"./{base_dir}/{platform}".replace(" ", "\\ ")  # Escape spaces in output path
+            build_folder = "./{}/{}".format(base_dir, platform).replace(" ", "\\ ")  # Escape spaces in output path
             pathlib.Path(build_folder).mkdir(parents=True, exist_ok=True)
             return build_folder
 
@@ -105,18 +106,20 @@ if __name__ == "__main__":
 
         # Put all the built .frameworks together into a .xcframework
         print_header("Building xcframework")
+
+        framework_path = "{}/{}.xcframework".format(args.out, args.framework_name)
         xcframework_build_command = [
             "xcodebuild",
             "-create-xcframework",
             "-output",
-            f"{args.out}/{args.framework_name}.xcframework",
+            framework_path,
         ]
         for folder in build_folders:
-            xcframework_build_command += ["-framework", f"{folder}/{args.framework_name}.framework"]
+            xcframework_build_command += ["-framework", "{}/{}.framework".format(folder, args.framework_name)]
         execute(xcframework_build_command, cwd=os.getcwd())
 
         print("")
-        print_header(f"Finished building {args.out}/{args.framework_name}.xcframework")
+        print_header("Finished building {}".format(framework_path))
     except Exception as e:
         print_error(e)
         traceback.print_exc(file=sys.stderr)
