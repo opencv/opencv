@@ -28,6 +28,7 @@ namespace util {
 GAPI_EXPORTS std::vector<int> to_ocv(const InferenceEngine::SizeVector &dims);
 GAPI_EXPORTS cv::Mat to_ocv(InferenceEngine::Blob::Ptr blob);
 GAPI_EXPORTS InferenceEngine::Blob::Ptr to_ie(cv::Mat &blob);
+GAPI_EXPORTS InferenceEngine::Blob::Ptr to_ie(cv::Mat &y_plane, cv::Mat &uv_plane);
 
 }}}}
 
