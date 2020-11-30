@@ -1296,13 +1296,16 @@ CV__DNN_INLINE_NS_BEGIN
           */
          CV_WRAP DetectionModel(const Net& network);
 
+         CV_DEPRECATED_EXTERNAL  // avoid using in C++ code (need to fix bindings first)
+         DetectionModel();
+
          /**
           * @brief nmsAcrossClasses defaults to false,
           * such that when non max suppression is used during the detect() function, it will do so per-class.
           * This function allows you to toggle this behaviour.
           * @param[in] value The new value for nmsAcrossClasses
           */
-         CV_WRAP void setNmsAcrossClasses(bool value);
+         CV_WRAP DetectionModel& setNmsAcrossClasses(bool value);
 
          /**
           * @brief Getter for nmsAcrossClasses. This variable defaults to false,

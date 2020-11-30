@@ -366,12 +366,18 @@ DetectionModel::DetectionModel(const Net& network) : Model()
     impl.dynamicCast<DetectionModel_Impl>()->disableRegionNMS(getNetwork_());  // FIXIT Move to DetectionModel::Impl::initNet()
 }
 
-CV_WRAP void DetectionModel::setNmsAcrossClasses(bool value)
+DetectionModel::DetectionModel() : Model()
 {
-    impl.dynamicCast<DetectionModel_Impl>()->setNmsAcrossClasses(value);
+    // nothing
 }
 
-CV_WRAP bool DetectionModel::getNmsAcrossClasses()
+DetectionModel& DetectionModel::setNmsAcrossClasses(bool value)
+{
+    impl.dynamicCast<DetectionModel_Impl>()->setNmsAcrossClasses(value);
+    return *this;
+}
+
+bool DetectionModel::getNmsAcrossClasses()
 {
     return impl.dynamicCast<DetectionModel_Impl>()->getNmsAcrossClasses();
 }
