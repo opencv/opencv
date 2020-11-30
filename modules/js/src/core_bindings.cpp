@@ -87,7 +87,7 @@ namespace hal {
 using namespace emscripten;
 using namespace cv;
 #ifdef HAVE_OPENCV_DNN
-using namespace dnn;
+using namespace cv::dnn;
 #endif
 
 namespace binding_utils

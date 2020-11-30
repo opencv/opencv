@@ -104,8 +104,6 @@ def makeWhiteList(module_list):
     return wl
 
 white_list = None
-exec(open(os.environ["OPENCV_JS_WHITELIST"]).read())
-assert(white_list)
 
 # Features to be exported
 export_enums = False
@@ -891,10 +889,10 @@ class JSWrapperGenerator(object):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 4:
+    if len(sys.argv) < 5:
         print("Usage:\n", \
             os.path.basename(sys.argv[0]), \
-            "<full path to hdr_parser.py> <bindings.cpp> <headers.txt> <core_bindings.cpp>")
+            "<full path to hdr_parser.py> <bindings.cpp> <headers.txt> <core_bindings.cpp> <opencv_js.config.py>")
         print("Current args are: ", ", ".join(["'"+a+"'" for a in sys.argv]))
         exit(0)
 
@@ -908,5 +906,9 @@ if __name__ == "__main__":
     bindingsCpp = sys.argv[2]
     headers = open(sys.argv[3], 'r').read().split(';')
     coreBindings = sys.argv[4]
+    whiteListFile = sys.argv[5]
+    exec(open(whiteListFile).read())
+    assert(white_list)
+
     generator = JSWrapperGenerator()
     generator.gen(bindingsCpp, headers, coreBindings)
