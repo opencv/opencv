@@ -1445,8 +1445,9 @@ Input matrix must be of @ref CV_8UC3 (@ref CV_8UC4) type.
 
 The function split3/split4 does the reverse operation.
 
-@note Function textual ID for merge3 is "org.opencv.core.transform.merge3"
-@note Function textual ID for merge4 is "org.opencv.core.transform.merge4"
+@note
+ - Function textual ID for merge3 is "org.opencv.core.transform.merge3"
+ - Function textual ID for merge4 is "org.opencv.core.transform.merge4"
 
 @param src1 first input matrix to be merged
 @param src2 second input matrix to be merged
@@ -1464,8 +1465,9 @@ The function splits a 3-channel (4-channel) matrix into 3(4) single-channel matr
 
 All output matrices must be in @ref CV_8UC1.
 
-@note Function textual for split3 ID is "org.opencv.core.transform.split3"
-@note Function textual for split4 ID is "org.opencv.core.transform.split4"
+@note
+ - Function textual ID for split3 is "org.opencv.core.transform.split3"
+ - Function textual ID for split4 is "org.opencv.core.transform.split4"
 
 @param src input @ref CV_8UC4 (@ref CV_8UC3) matrix.
 @sa merge3, merge4
@@ -1488,7 +1490,9 @@ convert from floating to fixed-point representations of a map is that they can y
 cvFloor(y)) and \f$map_2\f$ contains indices in a table of interpolation coefficients.
 Output image must be of the same size and depth as input one.
 
-@note Function textual ID is "org.opencv.core.transform.remap"
+@note
+ - Function textual ID is "org.opencv.core.transform.remap"
+ - Due to current implementation limitations the size of an input and output images should be less than 32767x32767.
 
 @param src Source image.
 @param map1 The first map of either (x,y) points or just x values having the type CV_16SC2,
@@ -1501,8 +1505,6 @@ and #INTER_LINEAR_EXACT are not supported by this function.
 borderMode=BORDER_TRANSPARENT, it means that the pixels in the destination image that
 corresponds to the "outliers" in the source image are not modified by the function.
 @param borderValue Value used in case of a constant border. By default, it is 0.
-@note
-Due to current implementation limitations the size of an input and output images should be less than 32767x32767.
  */
 GAPI_EXPORTS GMat remap(const GMat& src, const Mat& map1, const Mat& map2,
                       int interpolation, int borderMode = BORDER_CONSTANT,
