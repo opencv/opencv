@@ -237,7 +237,7 @@ public:
         if (!isBackendAvailable(apiPref, cv::videoio_registry::getStreamBackends()))
             throw SkipTestException(cv::String("Backend is not available/disabled: ") + cv::videoio_registry::getBackendName(apiPref));
 
-        if ((apiPref == CAP_MSMF) || ((apiPref == CAP_FFMPEG) && ((ext == "h264") || (ext == "h265"))))
+        if (((apiPref == CAP_FFMPEG) && ((ext == "h264") || (ext == "h265"))))
             throw SkipTestException(cv::String("Backend ") +  cv::videoio_registry::getBackendName(apiPref) +
                     cv::String(" does not support CAP_PROP_POS_MSEC option"));
 
