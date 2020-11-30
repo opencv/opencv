@@ -560,8 +560,8 @@ TEST_P(Test_Model, TextDetectionByDB)
     std::string weightPath = _tf("onnx/models/DB_TD500_resnet50.onnx", false);
 
     // GroundTruth
-    std::vector<std::vector<Point>> gt = {{Point(212, 149), Point(136, 163), Point(141, 191), Point(217, 178)},
-                                          {Point(318, 69), Point(122, 112), Point(133, 165), Point(329, 122)}};
+    std::vector<std::vector<Point>> gt = {{Point(213, 150), Point(136, 163), Point(141, 192), Point(218, 178)},
+                                          {Point(318, 71), Point(122, 114), Point(136, 164), Point(329, 121)}};
 
     Size size{736, 736};
     double scale = 1.0 / 255.0;
