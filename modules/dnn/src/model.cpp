@@ -836,6 +836,24 @@ struct TextDetectionModel_EAST_Impl : public TextDetectionModel_Impl
                     vertices[j].y *= ratio.y;
                 }
                 RotatedRect box = minAreaRect(Mat(4, 1, CV_32FC2, (void*)vertices));
+
+                // minArea() rect is not normalized, it may return rectangles rotated by +90/-90
+                float angle_diff = std::fabs(box.angle - box0.angle);
+                while (angle_diff >= (90 + 45))
+                {
+                    box.angle += (box.angle < box0.angle) ? 180 : -180;
+                    angle_diff = std::fabs(box.angle - box0.angle);
+                }
+                if (angle_diff > 45)  // avoid ~90 degree turns
+                {
+                    std::swap(box.size.width, box.size.height);
+                    if (box.angle < box0.angle)
+                        box.angle += 90;
+                    else if (box.angle > box0.angle)
+                        box.angle -= 90;
+                }
+                // CV_DbgAssert(std::fabs(box.angle - box0.angle) <= 45);
+
                 results.emplace_back(box);
             }
         }
