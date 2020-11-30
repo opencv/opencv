@@ -36,8 +36,8 @@ const cv::GOrigin& cv::GMat::priv() const
     return *m_priv;
 }
 
-namespace {
-std::vector<int> checkVectorImpl(const int width, const int height, const int chan, const int n)
+static std::vector<int> checkVectorImpl(const int width, const int height, const int chan,
+                                        const int n)
 {
     if (width == 1 && (n == -1 || n == chan))
     {
@@ -56,7 +56,6 @@ std::vector<int> checkVectorImpl(const int width, const int height, const int ch
         return {-1, -1};
     }
 }
-} // anonymous namespace
 
 int cv::gapi::detail::checkVector(const cv::GMatDesc& in, const size_t n)
 {
