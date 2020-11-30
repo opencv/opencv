@@ -440,9 +440,9 @@ public:
     {
         int padding_mode;
         vkcom::PoolType pool_type;
-        int filter_size[2] = {kernel_size[0], kernel_size[1]};
-        int pad_size[2] = {pads_begin[0], pads_begin[1]};
-        int stride_size[2] = {strides[0], strides[1]};
+        int filter_size[2] = {static_cast<int>(kernel_size[0]), static_cast<int>(kernel_size[1])};
+        int pad_size[2] = {static_cast<int>(pads_begin[0]), static_cast<int>(pads_begin[1])};
+        int stride_size[2] = {static_cast<int>(strides[0]), static_cast<int>(strides[1])};
         pool_type = type == MAX ? vkcom::kPoolTypeMax:
                    (type == AVE ? vkcom::kPoolTypeAvg:
                             vkcom::kPoolTypeNum);
