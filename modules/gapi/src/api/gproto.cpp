@@ -282,6 +282,8 @@ const void* cv::gimpl::proto::ptr(const GRunArgP &arg)
 #endif
     case GRunArgP::index_of<cv::Mat*>():
         return static_cast<const void*>(cv::util::get<cv::Mat*>(arg));
+    case GRunArgP::index_of<cv::MediaFrame*>():
+        return static_cast<const void*>(cv::util::get<cv::MediaFrame*>(arg));
     case GRunArgP::index_of<cv::Scalar*>():
         return static_cast<const void*>(cv::util::get<cv::Scalar*>(arg));
     case GRunArgP::index_of<cv::RMat*>():

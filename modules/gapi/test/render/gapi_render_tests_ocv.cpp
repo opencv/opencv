@@ -105,6 +105,17 @@ GAPI_OCV_KERNEL(GOCVFrameResize, GFrameResize)
     }
 };
 
+//GAPI_OCV_KERNEL(GOCVBGR, GBGR)
+//{
+    //static void run(const cv::MediaFrame in, cv::Mat& out)
+    //{
+        //auto vin = out_frame.access(cv::MediaFrame::Access::R);
+        //const auto& desc  = out_frame.desc();
+        //cv::Mat bgr(desc.size, CV_8UC3, vin.ptr[0]);
+        //bgr.copyTo(out);
+    //}
+//};
+
 } // anonymous namespace
 
 namespace opencv_test
@@ -614,34 +625,42 @@ TEST(RenderPipeline, AccuracyTest)
     //EXPECT_EQ(0, cvtest::norm(ocv_mat, gapi_mat, NORM_INF));
 }
 
-//TEST(RenderMediaFrameVideo, AccuracyTest)
-//{
-    //initTestDataPath();
-    //std::string filepath = findDataFile("cv/video/768x576.avi");
+TEST(RenderMediaFrameVideo, AccuracyTest)
+{
+    initTestDataPath();
+    std::string filepath = findDataFile("cv/video/768x576.avi");
 
-    //// Primitives //////////////////////////////////////////////////////////////
-    //cv::Rect rect{100, 100, 200, 200};
-    //cv::Scalar color{255, 100, 50};
-    //int thick = 10;
-    //cv::gapi::wip::draw::Prims prims;
-    //prims.emplace_back(cv::gapi::wip::draw::Rect{rect, color, thick});
+    // Primitives //////////////////////////////////////////////////////////////
+    cv::Rect rect{100, 100, 200, 200};
+    cv::Scalar color{255, 100, 50};
+    int thick = 10;
+    cv::gapi::wip::draw::Prims prims;
+    prims.emplace_back(cv::gapi::wip::draw::Rect{rect, color, thick});
 
-    //// G-API code //////////////////////////////////////////////////////////////
-    //cv::GFrame in;
-    //cv::GArray<cv::gapi::wip::draw::Prim> arr;
-    //auto out = cv::gapi::wip::draw::renderFrame(in, arr);
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GFrame in;
+    cv::GArray<cv::gapi::wip::draw::Prim> arr;
+    auto out = cv::gapi::wip::draw::renderFrame(in, arr);
 
-    //cv::GComputation comp(cv::GIn(in, arr), cv::GOut(out));	
-    //auto cc = comp.compileStreaming();
-    //auto src = cv::gapi::wip::make_src<BGRSource>(filepath);
+    //cv::gapi::wip::draw::renderFrame(in, arr);
+    //auto bgr = cv::gapi::streaming::BGR(out);
 
-    //cc.setSource(cv::gin(src, prims));
-    //cc.start();
+    cv::GComputation comp(cv::GIn(in, arr), cv::GOut(out));	
+    auto cc = comp.compileStreaming();
+    auto src = cv::gapi::wip::make_src<BGRSource>(filepath);
 
-    //cv::MediaFrame out_frame;
+    cc.setSource(cv::gin(src, prims));
+    cc.start();
 
-    //cc.pull(cv::gout(out_frame));
-//}
+    cv::MediaFrame out_frame;
+    cc.pull(cv::gout(out_frame));
+
+    auto vin = out_frame.access(cv::MediaFrame::Access::R);
+    const auto& desc  = out_frame.desc();
+    cv::Mat bgr(desc.size, CV_8UC3, vin.ptr[0]);
+
+    cv::imwrite("mediaframe.png", bgr);
+}
 
 // FIXME avoid code duplicate for NV12 and BGR cases
 INSTANTIATE_TEST_CASE_P(RenderBGROCVTestRectsImpl, RenderBGROCVTestRects,

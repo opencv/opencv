@@ -132,6 +132,9 @@ void sync_data(cv::GRunArgs &results, cv::GRunArgsP &outputs)
             auto view = cv::util::get<cv::RMat>(res_obj).access(cv::RMat::Access::R);
             *out_mat_p = cv::gimpl::asMat(view).clone();
         } break;
+        case T::index_of<cv::MediaFrame*>():
+            *cv::util::get<cv::MediaFrame*>(out_obj) = std::move(cv::util::get<cv::MediaFrame>(res_obj));
+            break;
         case T::index_of<cv::RMat*>():
             *cv::util::get<cv::RMat*>(out_obj) = std::move(cv::util::get<cv::RMat>(res_obj));
             break;
@@ -638,6 +641,14 @@ class StreamingOutput final: public cv::gimpl::GIslandExecutable::IOutput
                 ret_val = cv::GRunArgP(rr);
             }
             break;
+        case cv::GShape::GFRAME:
+            {
+                cv::MediaFrame frame;
+                out_arg = cv::GRunArg(std::move(frame));
+                ret_val = cv::GRunArgP(&cv::util::get<cv::MediaFrame>(out_arg));
+            }
+            break;
+
         default:
             cv::util::throw_error(std::logic_error("Unsupported GShape"));
         }

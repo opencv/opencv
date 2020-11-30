@@ -50,6 +50,8 @@ GAPI_OCV_KERNEL_ST(RenderFrameOCVImpl, cv::gapi::wip::draw::GRenderFrame, Render
                     cv::MediaFrame& out,
                     RenderOCVState& state)
     {
+        out = in;
+
         const auto& in_desc  = in.desc();
         const auto& out_desc = out.desc();
         auto vout = out.access(cv::MediaFrame::Access::W);

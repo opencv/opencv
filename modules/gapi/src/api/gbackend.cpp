@@ -316,7 +316,6 @@ void writeBack(const Mag& mag, const RcDesc &rc, GRunArgP &g_arg)
     case GShape::GARRAY:
     case GShape::GMAT:
     case GShape::GOPAQUE:
-    case GShape::GFRAME:
         // Do nothing - should we really do anything here?
         break;
 
@@ -327,6 +326,11 @@ void writeBack(const Mag& mag, const RcDesc &rc, GRunArgP &g_arg)
         case GRunArgP::index_of<cv::Scalar*>() : *util::get<cv::Scalar*>(g_arg) = mag.template slot<cv::Scalar>().at(rc.id); break;
         default: util::throw_error(std::logic_error("content type of the runtime argument does not match to resource description ?"));
         }
+        break;
+    }
+    case GShape::GFRAME:
+    {
+        *util::get<cv::MediaFrame*>(g_arg) = mag.template slot<cv::MediaFrame>().at(rc.id);
         break;
     }
 
