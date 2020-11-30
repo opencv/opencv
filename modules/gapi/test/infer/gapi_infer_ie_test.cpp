@@ -216,7 +216,7 @@ TEST(TestAgeGenderIE, InferBasicImage)
 }
 
 struct ROIList: public ::testing::Test {
-    std::string model_path   = "", weights_path = "", device_id    = "";
+    std::string model_path, weights_path, device_id;
 
     cv::Mat m_in_mat;
     std::vector<cv::Rect> m_roi_list;

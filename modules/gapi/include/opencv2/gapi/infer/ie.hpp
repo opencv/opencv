@@ -68,18 +68,19 @@ namespace detail {
         bool is_generic;
         IEConfig config;
 
-        ParamDesc(const std::string& model, const std::string& weights, const std::string& device,
-                  const std::vector<std::string>& inputNames,
-                  const std::vector<std::string>& outputNames,
-                  const std::unordered_map<std::string, ConstInput>& constInputs,
-                  const std::size_t numIn, const std::size_t numOut, const Kind kind_,
-                  const bool isGen, const IEConfig& config_)
-            : model_path(model), weights_path(weights), device_id(device), input_names(inputNames),
-              output_names(outputNames), const_inputs(constInputs), num_in(numIn), num_out(numOut),
-              kind(kind_), is_generic(isGen), config(config_) {}
+        ParamDesc(std::string model, std::string weights, std::string device,
+                  std::vector<std::string> inputNames, std::vector<std::string> outputNames,
+                  std::unordered_map<std::string, ConstInput> constInputs, std::size_t numIn,
+                  std::size_t numOut, Kind kind_, bool isGen, IEConfig config_)
+            : model_path(std::move(model)), weights_path(std::move(weights)),
+              device_id(std::move(device)), input_names(std::move(inputNames)),
+              output_names(std::move(outputNames)), const_inputs(std::move(constInputs)),
+              num_in(std::move(numIn)), num_out(std::move(numOut)), kind(std::move(kind_)),
+              is_generic(std::move(isGen)), config(std::move(config_)) {}
 
-        ParamDesc(const std::string& model, const std::string& weights, const std::string& device)
-            : model_path(model), weights_path(weights), device_id(device) {};
+        ParamDesc(std::string model, std::string weights, std::string device)
+            : model_path(std::move(model)), weights_path(std::move(weights)),
+              device_id(std::move(device)) {};
     };
 } // namespace detail
 
