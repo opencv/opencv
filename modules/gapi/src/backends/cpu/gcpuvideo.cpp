@@ -80,12 +80,40 @@ GAPI_OCV_KERNEL(GCPUCalcOptFlowLKForPyr, cv::gapi::video::GCalcOptFlowLKForPyr)
     }
 };
 
+GAPI_OCV_KERNEL_ST(GCPUBackgroundSubtractor,
+                   cv::gapi::video::GBackgroundSubtractor,
+                   cv::BackgroundSubtractor)
+{
+    static void setup(const cv::GMatDesc&, const cv::gapi::video::BackgroundSubtractorParams& bsParams,
+                      std::shared_ptr<cv::BackgroundSubtractor>& state,
+                      const cv::GCompileArgs&)
+    {
+        if (bsParams.operation == cv::gapi::video::TYPE_BS_MOG2)
+            state = cv::createBackgroundSubtractorMOG2(bsParams.history,
+                                                       bsParams.threshold,
+                                                       bsParams.detectShadows);
+        else if (bsParams.operation == cv::gapi::video::TYPE_BS_KNN)
+            state = cv::createBackgroundSubtractorKNN(bsParams.history,
+                                                      bsParams.threshold,
+                                                      bsParams.detectShadows);
+
+        GAPI_Assert(state);
+    }
+
+    static void run(const cv::Mat& in, const cv::gapi::video::BackgroundSubtractorParams& bsParams,
+                    cv::Mat &out, cv::BackgroundSubtractor& state)
+    {
+        state.apply(in, out, bsParams.learningRate);
+    }
+};
+
 cv::gapi::GKernelPackage cv::gapi::video::cpu::kernels()
 {
     static auto pkg = cv::gapi::kernels
         < GCPUBuildOptFlowPyramid
         , GCPUCalcOptFlowLK
         , GCPUCalcOptFlowLKForPyr
+        , GCPUBackgroundSubtractor
         >();
     return pkg;
 }
