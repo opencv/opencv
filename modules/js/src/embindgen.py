@@ -635,7 +635,7 @@ class JSWrapperGenerator(object):
                 if ptr_type in type_dict:
                     ret_type = type_dict[ptr_type]
             for key in type_dict:
-                if key in ret_type:
+                if key in ret_type and "DetectorParameters" not in ret_type:
                     ret_type = ret_type.replace(key, type_dict[key])
 
             if variant.constret and ret_type.startswith('const') == False:
