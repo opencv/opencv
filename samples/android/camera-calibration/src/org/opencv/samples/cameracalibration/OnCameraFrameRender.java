@@ -4,7 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.opencv.android.CameraBridgeViewBase.CvCameraViewFrame;
-import org.opencv.calib3d.Calib3d;
+import org.opencv.cv3d.Cv3d;
+import org.opencv.calib.Calib;
 import org.opencv.core.Core;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfPoint;
@@ -51,7 +52,7 @@ class UndistortionFrameRender extends FrameRender {
     @Override
     public Mat render(CvCameraViewFrame inputFrame) {
         Mat renderedFrame = new Mat(inputFrame.rgba().size(), inputFrame.rgba().type());
-        Calib3d.undistort(inputFrame.rgba(), renderedFrame,
+        Cv3d.undistort(inputFrame.rgba(), renderedFrame,
                 mCalibrator.getCameraMatrix(), mCalibrator.getDistortionCoefficients());
 
         return renderedFrame;
@@ -72,7 +73,7 @@ class ComparisonFrameRender extends FrameRender {
     @Override
     public Mat render(CvCameraViewFrame inputFrame) {
         Mat undistortedFrame = new Mat(inputFrame.rgba().size(), inputFrame.rgba().type());
-        Calib3d.undistort(inputFrame.rgba(), undistortedFrame,
+        Cv3d.undistort(inputFrame.rgba(), undistortedFrame,
                 mCalibrator.getCameraMatrix(), mCalibrator.getDistortionCoefficients());
 
         Mat comparisonFrame = inputFrame.rgba();

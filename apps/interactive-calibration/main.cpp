@@ -3,7 +3,8 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include <opencv2/core.hpp>
-#include <opencv2/calib3d.hpp>
+#include <opencv2/3d.hpp>
+#include <opencv2/calib.hpp>
 #include <opencv2/cvconfig.h>
 #include <opencv2/highgui.hpp>
 

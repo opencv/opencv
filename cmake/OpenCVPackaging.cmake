@@ -123,9 +123,9 @@ endif()
 set(STD_OPENCV_LIBS opencv-data)
 set(STD_OPENCV_DEV libopencv-dev)
 
-foreach(module calib3d core dnn features2d flann gapi highgui
+foreach(module 3d calib core dnn features2d flann gapi highgui
                imgcodecs imgproc ml objdetect
-               photo stitching ts video videoio)
+               photo stereo stitching ts video videoio)
   if(HAVE_opencv_${module})
     list(APPEND STD_OPENCV_LIBS "libopencv-${module}4.0")
     list(APPEND STD_OPENCV_DEV "libopencv-${module}-dev")

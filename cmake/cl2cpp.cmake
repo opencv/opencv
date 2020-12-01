@@ -12,7 +12,12 @@ endif()
 string(REGEX REPLACE "\\.cpp$" ".hpp" OUTPUT_HPP "${OUTPUT}")
 get_filename_component(OUTPUT_HPP_NAME "${OUTPUT_HPP}" NAME)
 
-set(nested_namespace_start "namespace ${MODULE_NAME}\n{")
+if (MODULE_NAME MATCHES "^[0-9].+")
+    set(MANGLED_MODULE_NAME "_${MODULE_NAME}")
+else()
+    set(MANGLED_MODULE_NAME "${MODULE_NAME}")
+endif()
+set(nested_namespace_start "namespace ${MANGLED_MODULE_NAME}\n{")
 set(nested_namespace_end "}")
 
 set(STR_CPP "// This file is auto-generated. Do not edit!

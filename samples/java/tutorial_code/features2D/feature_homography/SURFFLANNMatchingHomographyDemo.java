@@ -1,7 +1,7 @@
 import java.util.ArrayList;
 import java.util.List;
 
-import org.opencv.calib3d.Calib3d;
+import org.opencv._3d;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.DMatch;
@@ -82,7 +82,7 @@ class SURFFLANNMatchingHomography {
         objMat.fromList(obj);
         sceneMat.fromList(scene);
         double ransacReprojThreshold = 3.0;
-        Mat H = Calib3d.findHomography( objMat, sceneMat, Calib3d.RANSAC, ransacReprojThreshold );
+        Mat H = Cv3d.findHomography( objMat, sceneMat, Cv3d.RANSAC, ransacReprojThreshold );
 
         //-- Get the corners from the image_1 ( the object to be "detected" )
         Mat objCorners = new Mat(4, 1, CvType.CV_32FC2), sceneCorners = new Mat();

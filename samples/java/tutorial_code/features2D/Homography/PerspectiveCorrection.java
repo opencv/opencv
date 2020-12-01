@@ -3,7 +3,8 @@ import java.util.List;
 import java.util.Random;
 
 import org.opencv.core.*;
-import org.opencv.calib3d.Calib3d;
+import org.opencv.3d.Cv3d;
+import org.opencv.calib.Calib;
 import org.opencv.highgui.HighGui;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
@@ -17,8 +18,8 @@ class PerspectiveCorrectionRun {
 
         //! [find-corners]
         MatOfPoint2f corners1 = new MatOfPoint2f(), corners2 = new MatOfPoint2f();
-        boolean found1 = Calib3d.findChessboardCorners(img1, new Size(9, 6), corners1 );
-        boolean found2 = Calib3d.findChessboardCorners(img2, new Size(9, 6), corners2 );
+        boolean found1 = Calib.findChessboardCorners(img1, new Size(9, 6), corners1 );
+        boolean found2 = Calib.findChessboardCorners(img2, new Size(9, 6), corners2 );
         //! [find-corners]
 
         if (!found1 || !found2) {
@@ -28,7 +29,7 @@ class PerspectiveCorrectionRun {
 
         //! [estimate-homography]
         Mat H = new Mat();
-        H = Calib3d.findHomography(corners1, corners2);
+        H = Cv3d.findHomography(corners1, corners2);
         System.out.println(H.dump());
         //! [estimate-homography]
 

@@ -6,11 +6,14 @@
 
 #include <cmath>
 
-#include <opencv2/calib3d.hpp>
+#include <opencv2/3d.hpp>
+#include <opencv2/calib.hpp>
 #include <opencv2/core.hpp>
 
 #define CALIB_PI 3.14159265358979323846
 #define CALIB_PI_2 1.57079632679489661923
+
+using namespace cv;
 
 void calib::Euler(const cv::Mat& src, cv::Mat& dst, int argType)
 {

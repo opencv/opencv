@@ -13,7 +13,7 @@
 
 #include <opencv2/opencv_modules.hpp>
 #include <opencv2/imgproc.hpp>
-#include <opencv2/calib3d.hpp>
+#include <opencv2/3d.hpp>
 #include <opencv2/flann.hpp>
 #if defined (HAVE_OPENCV_XFEATURES2D)
 #include <opencv2/xfeatures2d.hpp>
@@ -182,7 +182,7 @@ double get_rotation_error(const cv::Mat &R_true, const cv::Mat &R)
 {
     cv::Mat error_vec, error_mat;
     error_mat = -R_true * R.t();
-    cv::Rodrigues(error_mat, error_vec);
+    Rodrigues(error_mat, error_vec);
 
     return cv::norm(error_vec);
 }

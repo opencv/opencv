@@ -4642,9 +4642,9 @@ class CV_EXPORTS_W_SIMPLE FontFace
 public:
     /** @brief loads default font */
     CV_WRAP FontFace();
-    /** @brief
-       loads font at the specified path or with specified name.
-       Empty fontPathOrName means the default embedded font.
+    /** @brief loads font at the specified path or with specified name.
+       @param fontPathOrName either path to the custom font or the name of embedded font: "sans", "italic" or "uni".
+          Empty fontPathOrName means the default embedded font.
     */
     CV_WRAP FontFace(const String& fontPathOrName);
 

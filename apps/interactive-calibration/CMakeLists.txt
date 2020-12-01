@@ -1,4 +1,4 @@
-set(DEPS opencv_core opencv_imgproc opencv_features2d opencv_highgui opencv_calib3d opencv_videoio)
+set(DEPS opencv_core opencv_imgproc opencv_features2d opencv_highgui opencv_3d opencv_calib opencv_videoio)
 if(${BUILD_opencv_aruco})
     list(APPEND DEPS opencv_aruco)
 endif()

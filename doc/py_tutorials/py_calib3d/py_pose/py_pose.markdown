@@ -5,7 +5,7 @@ Goal
 ----
 
 In this section,
-    -   We will learn to exploit calib3d module to create some 3D effects in images.
+    -   We will learn to exploit 3d module to create some 3D effects in images.
 
 Basics
 ------

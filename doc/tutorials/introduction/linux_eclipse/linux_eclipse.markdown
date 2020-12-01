@@ -112,7 +112,7 @@ Making a project
             since I plan to use the whole bunch:
 
             opencv_core opencv_imgproc opencv_imgcodecs opencv_highgui opencv_ml opencv_videoio opencv_video opencv_features2d
-            opencv_calib3d opencv_objdetect opencv_flann
+            opencv_3d opencv_objdetect opencv_flann
 
             ![](images/a10.png)
 
