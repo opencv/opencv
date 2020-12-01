@@ -16,8 +16,8 @@
 
 #include <opencv2/gapi/infer.hpp>
 
-cv::gapi::GNetPackage::GNetPackage(std::initializer_list<GNetParam> &&ii)
-    : networks(std::move(ii)) {
+cv::gapi::GNetPackage::GNetPackage(std::initializer_list<GNetParam> ii)
+    : networks(ii) {
 }
 
 std::vector<cv::gapi::GBackend> cv::gapi::GNetPackage::backends() const {
