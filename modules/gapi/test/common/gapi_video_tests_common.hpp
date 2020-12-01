@@ -321,6 +321,35 @@ inline GComputation runOCVnGAPIOptFlowPipeline(TestFunctional& testInst,
     return c;
 }
 
+inline void testBackgroundSubtractorStreaming(cv::GStreamingCompiled& gapiBackSub,
+                                              const cv::Ptr<cv::BackgroundSubtractor>& pOCVBackSub,
+                                              const int diffPercent, const int tolerance,
+                                              const double lRate, const std::size_t testNumFrames)
+{
+    cv::Mat frame, gapiForeground, ocvForeground;
+    double numDiff = diffPercent / 100.0;
+
+    gapiBackSub.start();
+    EXPECT_TRUE(gapiBackSub.running());
+
+    compare_f cmpF = AbsSimilarPoints(tolerance, numDiff).to_compare_f();
+
+    // Comparison of G-API and OpenCV substractors
+    std::size_t frames = 0u;
+    while (frames <= testNumFrames && gapiBackSub.pull(cv::gout(frame, gapiForeground)))
+    {
+        pOCVBackSub->apply(frame, ocvForeground, lRate);
+        EXPECT_TRUE(cmpF(gapiForeground, ocvForeground));
+        frames++;
+    }
+
+    if (gapiBackSub.running())
+        gapiBackSub.stop();
+
+    EXPECT_LT(0u, frames);
+    EXPECT_FALSE(gapiBackSub.running());
+}
+
 #else // !HAVE_OPENCV_VIDEO
 
 inline cv::GComputation runOCVnGAPIBuildOptFlowPyramid(TestFunctional&,
