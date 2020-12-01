@@ -25,7 +25,8 @@ public:
                          double scoreDiff, double iouDiff,
                          double confThreshold = 0.24, double nmsThreshold = 0.0,
                          const Size& size = {-1, -1}, Scalar mean = Scalar(),
-                         double scale = 1.0, bool swapRB = false, bool crop = false)
+                         double scale = 1.0, bool swapRB = false, bool crop = false,
+                         bool nmsAcrossClasses = false)
     {
         checkBackend();
 
@@ -37,6 +38,8 @@ public:
 
         model.setPreferableBackend(backend);
         model.setPreferableTarget(target);
+
+        model.setNmsAcrossClasses(nmsAcrossClasses);
 
         std::vector<int> classIds;
         std::vector<float> confidences;
@@ -175,6 +178,58 @@ TEST_P(Test_Model, DetectRegion)
     testDetectModel(weights_file, config_file, img_path, refClassIds, refConfidences,
                     refBoxes, scoreDiff, iouDiff, confThreshold, nmsThreshold, size,
                     Scalar(), scale, swapRB);
+}
+
+TEST_P(Test_Model, DetectRegionWithNmsAcrossClasses)
+{
+    applyTestTag(CV_TEST_TAG_LONG, CV_TEST_TAG_MEMORY_1GB);
+
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2020040000)  // nGraph compilation failure
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+#endif
+
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2019010000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16);
+#endif
+
+#if defined(INF_ENGINE_RELEASE)
+    if (target == DNN_TARGET_MYRIAD
+        && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X);
+#endif
+
+    std::vector<int> refClassIds = { 6, 11 };
+    std::vector<float> refConfidences = { 0.750469f, 0.901615f };
+    std::vector<Rect2d> refBoxes = { Rect2d(240, 53, 135, 72),
+                                    Rect2d(58, 141, 117, 249) };
+
+    std::string img_path = _tf("dog416.png");
+    std::string weights_file = _tf("yolo-voc.weights", false);
+    std::string config_file = _tf("yolo-voc.cfg");
+
+    double scale = 1.0 / 255.0;
+    Size size{ 416, 416 };
+    bool swapRB = true;
+    bool crop = false;
+    bool nmsAcrossClasses = true;
+
+    double confThreshold = 0.24;
+    double nmsThreshold = (target == DNN_TARGET_MYRIAD) ? 0.15: 0.15;
+    double scoreDiff = 8e-5, iouDiff = 1e-5;
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CUDA_FP16)
+    {
+        scoreDiff = 1e-2;
+        iouDiff = 1.6e-2;
+    }
+
+    testDetectModel(weights_file, config_file, img_path, refClassIds, refConfidences,
+        refBoxes, scoreDiff, iouDiff, confThreshold, nmsThreshold, size,
+        Scalar(), scale, swapRB, crop,
+        nmsAcrossClasses);
 }
 
 TEST_P(Test_Model, DetectionOutput)
