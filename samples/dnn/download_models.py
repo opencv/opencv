@@ -276,7 +276,7 @@ def getSaveDir():
     if env_path:
         save_dir = env_path
     else:
-        save_dir = cv2.utils.getCacheDirectory("samples")
+        save_dir = cv2.utils.fs.getCacheDirectory("samples")
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
     return save_dir
