@@ -83,7 +83,7 @@ void CV_DrawingTest::run( int )
     {
         // image should match exactly
         float err = (float)cvtest::norm( testImg, valImg, NORM_L1 );
-        float Eps = 1;
+        float Eps = 10;
         if( err > Eps)
         {
             //imshow("reference", valImg);

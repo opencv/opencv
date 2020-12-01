@@ -45,8 +45,8 @@
 #include "lkpyramid.hpp"
 #include "opencl_kernels_video.hpp"
 #include "opencv2/core/hal/intrin.hpp"
-#ifdef HAVE_OPENCV_CALIB3D
-#include "opencv2/calib3d.hpp"
+#ifdef HAVE_OPENCV_3D
+#include "opencv2/3d.hpp"
 #endif
 
 #include "opencv2/core/openvx/ovx_defs.hpp"
@@ -1419,9 +1419,9 @@ void cv::calcOpticalFlowPyrLK( InputArray _prevImg, InputArray _nextImg,
 cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, bool fullAffine )
 {
     CV_INSTRUMENT_REGION();
-#ifndef HAVE_OPENCV_CALIB3D
+#ifndef HAVE_OPENCV_3D
     CV_UNUSED(src1); CV_UNUSED(src2); CV_UNUSED(fullAffine);
-    CV_Error(Error::StsError, "estimateRigidTransform requires calib3d module");
+    CV_Error(Error::StsError, "estimateRigidTransform requires 3d module");
 #else
     Mat A = src1.getMat(), B = src2.getMat();
 

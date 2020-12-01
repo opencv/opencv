@@ -11,7 +11,7 @@ set(OPENCV_CUDA_SAMPLES_REQUIRED_DEPS
   opencv_video
   opencv_objdetect
   opencv_features2d
-  opencv_calib3d
+  opencv_3d
   opencv_superres
   opencv_cudaarithm
   opencv_cudafilters

@@ -7,7 +7,7 @@
 
 #include "precomp.hpp"
 #include "opencv2/objdetect.hpp"
-#include "opencv2/calib3d.hpp"
+#include "opencv2/3d.hpp"
 
 #ifdef HAVE_QUIRC
 #include "quirc.h"

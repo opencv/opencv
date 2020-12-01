@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.opencv.calib3d.Calib3d;
+import org.opencv.cv3d.Cv3d;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfInt;
@@ -133,7 +133,7 @@ public class Features2dTest extends OpenCVTestCase {
         MatOfPoint2f points1 = new MatOfPoint2f(lp1.toArray(new Point[0]));
         MatOfPoint2f points2 = new MatOfPoint2f(lp2.toArray(new Point[0]));
 
-        Mat hmg = Calib3d.findHomography(points1, points2, Calib3d.RANSAC, 3);
+        Mat hmg = Cv3d.findHomography(points1, points2, Cv3d.RANSAC, 3);
 
         assertMatEqual(Mat.eye(3, 3, CvType.CV_64F), hmg, EPS);
 

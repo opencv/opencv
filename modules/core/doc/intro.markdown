@@ -16,11 +16,12 @@ libraries. The following modules are available:
     remapping), color space conversion, histograms, and so on.
 -   @ref video (**video**) - a video analysis module that includes motion estimation, background subtraction,
     and object tracking algorithms.
--   @ref calib3d (**calib3d**) - basic multiple-view geometry algorithms, single and stereo camera calibration,
-    object pose estimation, stereo correspondence algorithms, and elements of 3D reconstruction.
+-   @ref _3d "3d" (**3d**) - basic multiple-view geometry algorithms, object pose estimation and elements of 3D reconstruction.
 -   @ref features2d (**features2d**) - salient feature detectors, descriptors, and descriptor matchers.
 -   @ref objdetect (**objdetect**) - detection of objects and instances of the predefined classes (for example,
     faces, eyes, mugs, people, cars, and so on).
+-   @ref calib (**calib**) - single and stereo camera calibration
+-   @ref stereo (**stereo**) - stereo correspondence algorithms
 -   @ref highgui (**highgui**) - an easy-to-use interface to simple UI capabilities.
 -   @ref videoio (**videoio**) - an easy-to-use interface to video capturing and video codecs.
 -   ... some other helper modules, such as FLANN and Google test wrappers, Python bindings, and

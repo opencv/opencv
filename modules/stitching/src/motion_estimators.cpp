@@ -42,7 +42,6 @@
 
 #include "precomp.hpp"
 #include "opencv2/core/core_c.h"
-#include "opencv2/calib3d/calib3d_c.h"
 #include "opencv2/core/cvdef.h"
 
 using namespace cv;

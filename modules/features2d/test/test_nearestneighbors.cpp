@@ -112,7 +112,7 @@ int NearestNeighborTest::checkFind( const Mat& data )
         }
 
         double correctPerc = correctMatches / (double)pointsCount;
-        EXPECT_GE(correctPerc, .75) << "correctMatches=" << correctMatches << " pointsCount=" << pointsCount;
+        EXPECT_GE(correctPerc, .73) << "correctMatches=" << correctMatches << " pointsCount=" << pointsCount;
     }
 
     return code;
