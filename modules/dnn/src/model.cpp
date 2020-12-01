@@ -320,34 +320,78 @@ void SegmentationModel::segment(InputArray frame, OutputArray mask)
     }
 }
 
-void disableRegionNMS(Net& net)
+class DetectionModel_Impl : public Model::Impl
 {
-    for (String& name : net.getUnconnectedOutLayersNames())
+public:
+    virtual ~DetectionModel_Impl() {}
+    DetectionModel_Impl() : Impl() {}
+    DetectionModel_Impl(const DetectionModel_Impl&) = delete;
+    DetectionModel_Impl(DetectionModel_Impl&&) = delete;
+
+    void disableRegionNMS(Net& net)
     {
-        int layerId = net.getLayerId(name);
-        Ptr<RegionLayer> layer = net.getLayer(layerId).dynamicCast<RegionLayer>();
-        if (!layer.empty())
+        for (String& name : net.getUnconnectedOutLayersNames())
         {
-            layer->nmsThreshold = 0;
+            int layerId = net.getLayerId(name);
+            Ptr<RegionLayer> layer = net.getLayer(layerId).dynamicCast<RegionLayer>();
+            if (!layer.empty())
+            {
+                layer->nmsThreshold = 0;
+            }
         }
     }
-}
+
+    void setNmsAcrossClasses(bool value) {
+        nmsAcrossClasses = value;
+    }
+
+    bool getNmsAcrossClasses() {
+        return nmsAcrossClasses;
+    }
+
+private:
+    bool nmsAcrossClasses = false;
+};
 
 DetectionModel::DetectionModel(const String& model, const String& config)
-    : Model(model, config)
+    : DetectionModel(readNet(model, config))
 {
-    disableRegionNMS(getNetwork_());  // FIXIT Move to DetectionModel::Impl::initNet()
+    // nothing
 }
 
-DetectionModel::DetectionModel(const Net& network) : Model(network)
+DetectionModel::DetectionModel(const Net& network) : Model()
 {
-    disableRegionNMS(getNetwork_());  // FIXIT Move to DetectionModel::Impl::initNet()
+    impl = makePtr<DetectionModel_Impl>();
+    impl->initNet(network);
+    impl.dynamicCast<DetectionModel_Impl>()->disableRegionNMS(getNetwork_());  // FIXIT Move to DetectionModel::Impl::initNet()
+}
+
+DetectionModel::DetectionModel() : Model()
+{
+    // nothing
+}
+
+DetectionModel& DetectionModel::setNmsAcrossClasses(bool value)
+{
+    CV_Assert(impl != nullptr && impl.dynamicCast<DetectionModel_Impl>() != nullptr); // remove once default constructor is removed
+
+    impl.dynamicCast<DetectionModel_Impl>()->setNmsAcrossClasses(value);
+    return *this;
+}
+
+bool DetectionModel::getNmsAcrossClasses()
+{
+    CV_Assert(impl != nullptr && impl.dynamicCast<DetectionModel_Impl>() != nullptr); // remove once default constructor is removed
+
+    return impl.dynamicCast<DetectionModel_Impl>()->getNmsAcrossClasses();
 }
 
 void DetectionModel::detect(InputArray frame, CV_OUT std::vector<int>& classIds,
                             CV_OUT std::vector<float>& confidences, CV_OUT std::vector<Rect>& boxes,
                             float confThreshold, float nmsThreshold)
 {
+    CV_Assert(impl != nullptr && impl.dynamicCast<DetectionModel_Impl>() != nullptr); // remove once default constructor is removed
+
     std::vector<Mat> detections;
     impl->processFrame(frame, detections);
 
@@ -413,7 +457,7 @@ void DetectionModel::detect(InputArray frame, CV_OUT std::vector<int>& classIds,
     {
         std::vector<int> predClassIds;
         std::vector<Rect> predBoxes;
-        std::vector<float> predConf;
+        std::vector<float> predConfidences;
         for (int i = 0; i < detections.size(); ++i)
         {
             // Network produces output blob with a shape NxC where N is a number of
@@ -442,37 +486,51 @@ void DetectionModel::detect(InputArray frame, CV_OUT std::vector<int>& classIds,
                 height   = std::max(1, std::min(height, frameHeight - top));
 
                 predClassIds.push_back(classIdPoint.x);
-                predConf.push_back(static_cast<float>(conf));
+                predConfidences.push_back(static_cast<float>(conf));
                 predBoxes.emplace_back(left, top, width, height);
             }
         }
 
         if (nmsThreshold)
         {
-            std::map<int, std::vector<size_t> > class2indices;
-            for (size_t i = 0; i < predClassIds.size(); i++)
+            if (getNmsAcrossClasses())
             {
-                if (predConf[i] >= confThreshold)
-                {
-                    class2indices[predClassIds[i]].push_back(i);
-                }
-            }
-            for (const auto& it : class2indices)
-            {
-                std::vector<Rect> localBoxes;
-                std::vector<float> localConfidences;
-                for (size_t idx : it.second)
-                {
-                    localBoxes.push_back(predBoxes[idx]);
-                    localConfidences.push_back(predConf[idx]);
-                }
                 std::vector<int> indices;
-                NMSBoxes(localBoxes, localConfidences, confThreshold, nmsThreshold, indices);
-                classIds.resize(classIds.size() + indices.size(), it.first);
+                NMSBoxes(predBoxes, predConfidences, confThreshold, nmsThreshold, indices);
                 for (int idx : indices)
                 {
-                    boxes.push_back(localBoxes[idx]);
-                    confidences.push_back(localConfidences[idx]);
+                    boxes.push_back(predBoxes[idx]);
+                    confidences.push_back(predConfidences[idx]);
+                    classIds.push_back(predClassIds[idx]);
+                }
+            }
+            else
+            {
+                std::map<int, std::vector<size_t> > class2indices;
+                for (size_t i = 0; i < predClassIds.size(); i++)
+                {
+                    if (predConfidences[i] >= confThreshold)
+                    {
+                        class2indices[predClassIds[i]].push_back(i);
+                    }
+                }
+                for (const auto& it : class2indices)
+                {
+                    std::vector<Rect> localBoxes;
+                    std::vector<float> localConfidences;
+                    for (size_t idx : it.second)
+                    {
+                        localBoxes.push_back(predBoxes[idx]);
+                        localConfidences.push_back(predConfidences[idx]);
+                    }
+                    std::vector<int> indices;
+                    NMSBoxes(localBoxes, localConfidences, confThreshold, nmsThreshold, indices);
+                    classIds.resize(classIds.size() + indices.size(), it.first);
+                    for (int idx : indices)
+                    {
+                        boxes.push_back(localBoxes[idx]);
+                        confidences.push_back(localConfidences[idx]);
+                    }
                 }
             }
         }
@@ -480,7 +538,7 @@ void DetectionModel::detect(InputArray frame, CV_OUT std::vector<int>& classIds,
         {
             boxes       = std::move(predBoxes);
             classIds    = std::move(predClassIds);
-            confidences = std::move(predConf);
+            confidences = std::move(predConfidences);
         }
     }
     else
