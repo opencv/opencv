@@ -107,6 +107,58 @@ GAPI_OCV_KERNEL_ST(GCPUBackgroundSubtractor,
     }
 };
 
+GAPI_OCV_KERNEL_ST(GCPUKalmanFilter, cv::gapi::video::GKalmanFilter, cv::KalmanFilter)
+{
+    static void setup(const cv::GMatDesc&, const cv::GOpaqueDesc&,
+                      const cv::GMatDesc&, const cv::gapi::video::KalmanParams& kfParams,
+                      std::shared_ptr<cv::KalmanFilter> &state, const cv::GCompileArgs&)
+    {
+
+       // auto kfParams = cv::gapi::getCompileArg<cv::gapi::video::KalmanParams>(compileArgs)
+         //               .value_or(cv::gapi::video::KalmanParams{});
+
+        GAPI_Assert(kfParams.type == CV_32F || kfParams.type == CV_64F);
+        state = std::make_shared<cv::KalmanFilter>(kfParams.dpDim, kfParams.mpDim, kfParams.ctrlDim, kfParams.type);
+
+        // initial state
+        kfParams.statePre.copyTo(state->statePre);
+        kfParams.errorCovPre.copyTo(state->errorCovPre);
+
+        // dynamic system initialization
+        kfParams.controlMatrix.copyTo(state->controlMatrix);
+
+        kfParams.measurementMatrix.copyTo(state->measurementMatrix);
+
+        if (cv::norm(kfParams.transitionMatrix, cv::NORM_INF) != 0)
+            kfParams.transitionMatrix.copyTo(state->transitionMatrix);
+
+        if (cv::norm(kfParams.processNoiseCov, cv::NORM_INF) != 0)
+            kfParams.processNoiseCov.copyTo(state->processNoiseCov);
+
+        if (cv::norm(kfParams.measurementNoiseCov, cv::NORM_INF) != 0)
+            kfParams.measurementNoiseCov.copyTo(state->measurementNoiseCov);
+
+        GAPI_Assert(state);
+    }
+
+    static void run(const cv::Mat& measurements, bool haveMeasurement,
+                    const cv::Mat& control, const cv::gapi::video::KalmanParams&,
+                    cv::Mat &out, cv::KalmanFilter& state)
+    {
+        cv::Mat pre;
+
+        if (!control.empty() && cv::norm(control, cv::NORM_INF) != 0)
+            pre = state.predict(control);
+        else
+            pre = state.predict();
+
+        if (haveMeasurement && !measurements.empty())
+            state.correct(measurements).copyTo(out);
+        else
+            pre.copyTo(out);
+    }
+};
+
 cv::gapi::GKernelPackage cv::gapi::video::cpu::kernels()
 {
     static auto pkg = cv::gapi::kernels
@@ -114,6 +166,7 @@ cv::gapi::GKernelPackage cv::gapi::video::cpu::kernels()
         , GCPUCalcOptFlowLK
         , GCPUCalcOptFlowLKForPyr
         , GCPUBackgroundSubtractor
+        , GCPUKalmanFilter
         >();
     return pkg;
 }

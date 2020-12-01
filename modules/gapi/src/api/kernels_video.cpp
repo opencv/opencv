@@ -57,5 +57,10 @@ GMat BackgroundSubtractor(const GMat& src, const BackgroundSubtractorParams& bsp
     return GBackgroundSubtractor::on(src, bsp);
 }
 
+GMat KalmanFilter(const GMat& m, const cv::GOpaque<bool>& have_m, const GMat& c, const KalmanParams& kp)
+{
+    return GKalmanFilter::on(m, have_m, c, kp);
+}
+
 } //namespace gapi
 } //namespace cv

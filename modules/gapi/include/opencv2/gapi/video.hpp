@@ -129,6 +129,101 @@ G_TYPED_KERNEL(GBackgroundSubtractor, <GMat(GMat, BackgroundSubtractorParams)>,
     }
 };
 
+/** @brief Structure for the Kalman filter's initialization parameters.*/
+
+struct KalmanParams
+{
+    //! Type of the created matrices that should be CV_32F or CV_64F.
+    int type;
+    //! Dimensionality of the control vector.
+    int ctrlDim;
+    //! Dimensionality of the state.
+    int dpDim;
+    //! Dimensionality of the measurement.
+    int mpDim;
+
+    // initial state
+
+    //! predicted state(x'(k)): x(k)=A*x(k-1)+B*u(k)
+    Mat statePre;
+    //! priori error estimate covariance matrix (P'(k)): P'(k)=A*P(k-1)*At + Q)*/
+    Mat errorCovPre;
+
+    // dynamic system description
+
+    //! state transition matrix (A)
+    Mat transitionMatrix;
+    //! measurement matrix (H)
+    Mat measurementMatrix;
+    //! process noise covariance matrix (Q)
+    Mat processNoiseCov;
+    //! measurement noise covariance matrix (R)
+    Mat measurementNoiseCov;
+    //! control matrix (B) (Optional: not used if there's no control)
+    Mat controlMatrix;
+
+    /** Full constructor
+    @param dp Dimensionality of the state.
+    @param mp Dimensionality of the measurement.
+    @param cp Dimensionality of the control vector. If it equals 0, dynamic system don't have external impact.
+    So controlMatrix should be empty.
+    @param depth Type of the created matrices that should be CV_32F or CV_64F.
+    */
+    KalmanParams(int dp, int mp, int cp = 0, int depth = CV_32F)
+    {
+        GAPI_Assert(dp > 0 && mp > 0);
+        GAPI_Assert(depth == CV_32F || depth == CV_64F);
+        ctrlDim = std::max(cp, 0);
+        type = depth;
+        dpDim = dp;
+        mpDim = mp;
+
+        statePre = Mat::zeros(dpDim, 1, type);
+        transitionMatrix = Mat::eye(dpDim, dpDim, type);
+
+        processNoiseCov = Mat::eye(dpDim, dpDim, type);
+        measurementMatrix = Mat::zeros(mpDim, dpDim, type);
+        measurementNoiseCov = Mat::eye(mpDim, mpDim, type);
+
+        errorCovPre = Mat::zeros(dpDim, dpDim, type);
+
+        if (ctrlDim > 0)
+            controlMatrix = Mat::zeros(dpDim, ctrlDim, type);
+        else
+            controlMatrix.release();
+    }
+};
+
+G_TYPED_KERNEL(GKalmanFilter, <GMat(GMat, GOpaque<bool>, GMat, KalmanParams)>, "org.opencv.video.KalmanFilter")
+{
+    static GMatDesc outMeta(const GMatDesc& measurement, const GOpaqueDesc&, const GMatDesc&, const KalmanParams& kfParams)
+    {
+        GAPI_Assert(kfParams.type == CV_32F || kfParams.type == CV_64F);
+        GAPI_Assert(kfParams.dpDim > 0 && kfParams.mpDim > 0 && kfParams.ctrlDim >= 0);
+
+        GAPI_Assert(kfParams.statePre.depth() == kfParams.type &&
+                    kfParams.errorCovPre.depth() == kfParams.type &&
+                    kfParams.transitionMatrix.depth() == kfParams.type &&
+                    kfParams.measurementMatrix.depth() == kfParams.type &&
+                    kfParams.processNoiseCov.depth() == kfParams.type &&
+                    kfParams.measurementNoiseCov.depth() == kfParams.type &&
+                    kfParams.controlMatrix.depth() == kfParams.type);
+
+        GAPI_Assert(!kfParams.statePre.empty() && !kfParams.errorCovPre.empty() &&
+                    !kfParams.transitionMatrix.empty() && !kfParams.measurementMatrix.empty() &&
+                    !kfParams.processNoiseCov.empty() && !kfParams.measurementNoiseCov.empty());
+
+        GAPI_Assert(kfParams.statePre.rows == kfParams.dpDim && kfParams.statePre.cols == 1);
+        GAPI_Assert(kfParams.measurementMatrix.cols == kfParams.dpDim && kfParams.measurementMatrix.rows == kfParams.mpDim);
+        GAPI_Assert(kfParams.errorCovPre.rows == kfParams.errorCovPre.cols && kfParams.errorCovPre.rows == kfParams.dpDim);
+        
+        GAPI_Assert((kfParams.transitionMatrix.rows == kfParams.transitionMatrix.cols) && kfParams.transitionMatrix.rows == kfParams.dpDim);
+        GAPI_Assert((kfParams.processNoiseCov.rows == kfParams.processNoiseCov.cols) && kfParams.processNoiseCov.rows == kfParams.dpDim);
+        GAPI_Assert((kfParams.measurementNoiseCov.rows == kfParams.measurementNoiseCov.cols) && kfParams.measurementNoiseCov.rows == kfParams.mpDim);
+
+        return measurement.withSize(Size(1, kfParams.dpDim));
+    }
+};
 } //namespace video
 
 //! @addtogroup gapi_video
@@ -248,6 +343,24 @@ The operation generates a foreground mask.
 */
 GAPI_EXPORTS GMat BackgroundSubtractor(const GMat& src, const cv::gapi::video::BackgroundSubtractorParams& bsParams);
 
+/** @brief Standard Kalman filter <http://en.wikipedia.org/wiki/Kalman_filter>.
+However, you can modify transitionMatrix, controlMatrix,
+and measurementMatrix to get an extended Kalman filter functionality.
+
+Output image is predicted or corrected state, i.e. 32-bit or 64-bit float 1-channel
+matrix @ref CV_32F or CV_64F.
+Predicted state will be returned, if measurement matrix is empty.
+And vice versa corrected state will be returned, if measurement matrix is empty.
+@note Functional textual ID is "org.opencv.video.KalmanFilter"
+
+@param measurement input image: 32-bit or 64-bit float 1-channel matrix contains measurmens.
+@param haveMeasurement input flag that indicates whether we get measurments or not.
+@param control input image: 32-bit or 64-bit float 1-channel matrix contains control data for changing dynamic system.
+@param kfParams Set of initialization parameters for Kalman filter kernel.
+*/
+GAPI_EXPORTS GMat KalmanFilter(const GMat& measurement, const GOpaque<bool>& haveMeasurement,
+                               const GMat& control, const cv::gapi::video::KalmanParams& kfParams);
+
 //! @} gapi_video
 } //namespace gapi
 } //namespace cv
@@ -259,6 +372,14 @@ template<> struct CompileArgTag<cv::gapi::video::BackgroundSubtractorParams>
     static const char* tag()
     {
         return "org.opencv.video.background_substractor_params";
+    }
+};
+
+template<> struct CompileArgTag<cv::gapi::video::KalmanParams>
+{
+    static const char* tag()
+    {
+        return "org.opencv.video.kalman_params";
     }
 };
 }  // namespace detail

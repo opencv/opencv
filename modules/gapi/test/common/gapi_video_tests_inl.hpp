@@ -9,6 +9,7 @@
 
 #include "gapi_video_tests.hpp"
 #include <opencv2/gapi/streaming/cap.hpp>
+#include "opencv2/ts.hpp"
 
 namespace opencv_test
 {
@@ -131,7 +132,61 @@ TEST_P(BackgroundSubtractorTest, AccuracyTest)
     // Allowing 1% difference of all pixels between G-API and reference OpenCV results
     testBackgroundSubtractorStreaming(gapiBackSub, pOCVBackSub, 1, 1, learningRate, testNumFrames);
 }
+
+TEST_P(KalmanFilterTest, AccuracyTest)
+{
+    GAPI_Assert(depth == CV_32F || depth == CV_64F);
+    GAPI_Assert(dDim > 0 && mDim > 0 && cDim >= 0);
+
+    cv::gapi::video::KalmanParams kp(dDim, mDim, cDim, depth);
+
+    //measurements vector
+    cv::Mat measure_vec(mDim, 1, depth);
+
+    //control vector
+    cv::Mat ctrl_vec;
+
+    if (cDim > 0)
+        ctrl_vec = Mat::zeros(cDim, 1, depth);
+    else if (cDim == 0)
+        ctrl_vec = Mat::zeros(dDim, 1, depth);
+
+    cv::randu(measure_vec, Scalar::all(-1), Scalar::all(1));
+
+    if (cDim > 0)
+        cv::randu(ctrl_vec, Scalar::all(-1), Scalar::all(1));
+
+    cv::Mat gapiKState(dDim, 1, depth);
+    cv::Mat ocvKState(dDim, 1, depth);
+
+    // G-API code
+    cv::GMat m, ctrl;
+    cv::GOpaque<bool> have_m;
+    cv::GMat out = cv::gapi::KalmanFilter(m, have_m, ctrl, kp);
+    cv::GComputation comp(cv::GIn(m, have_m, ctrl), cv::GOut(out));
+
+    comp.apply(cv::gin(measure_vec, haveMeasure, ctrl_vec), cv::gout(gapiKState));
+
+    cv::KalmanFilter ocvKalman(dDim, mDim, cDim, depth);
+
+    if (cDim > 0)
+        ocvKState = ocvKalman.predict(ctrl_vec);
+    else if (cDim == 0)
+        ocvKState = ocvKalman.predict();
+
+    if (haveMeasure)
+        ocvKState = ocvKalman.correct(measure_vec);
+
+    // Comparison //////////////////////////////////////////////////////////////
+    {
+        double diff = 0;
+        vector<int> idx;
+        const double eps = 1.0;
+        EXPECT_TRUE(cmpEps(gapiKState, ocvKState, &diff, eps, &idx, false) >= 0);
+    }
+}
 #endif
+
 } // opencv_test
 
 #endif // OPENCV_GAPI_VIDEO_TESTS_INL_HPP
