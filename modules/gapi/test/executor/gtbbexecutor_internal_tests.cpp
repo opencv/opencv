@@ -95,9 +95,9 @@ TEST(TBBExecutor, AsyncBasic) {
             if (!slept) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(1));
             }
-            callback();
             callback_called = true;
             master_was_blocked_until_callback_called = (master_is_waiting == true);
+            callback();
     });
 
     auto async_task_body = [&](std::function<void()>&& cb, size_t /*total_order_index*/) {
