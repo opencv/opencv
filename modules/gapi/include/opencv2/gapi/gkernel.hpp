@@ -82,6 +82,10 @@ namespace detail
     {
         static inline cv::GScalar yield(cv::GCall &call, int i) { return call.yieldScalar(i); }
     };
+    template<> struct Yield<cv::GFrame>
+    {
+        static inline cv::GFrame yield(cv::GCall &call, int i) { return call.yieldFrame(i); }
+    };
     template<typename U> struct Yield<cv::GArray<U> >
     {
         static inline cv::GArray<U> yield(cv::GCall &call, int i) { return call.yieldArray<U>(i); }
@@ -238,8 +242,6 @@ class GKernelType<K, std::function<R(Args...)> >
 public:
     using InArgs  = std::tuple<Args...>;
     using OutArgs = std::tuple<R>;
-
-    static_assert(!cv::detail::contains<GFrame, OutArgs>::value, "Values of GFrame type can't be used as operation outputs");
 
     static R on(Args... args)
     {

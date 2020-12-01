@@ -11,6 +11,7 @@
 #include <opencv2/gapi/garg.hpp>      // GArg
 #include <opencv2/gapi/gmat.hpp>      // GMat
 #include <opencv2/gapi/gscalar.hpp>   // GScalar
+#include <opencv2/gapi/gframe.hpp>    // GFrame
 #include <opencv2/gapi/garray.hpp>    // GArray<T>
 #include <opencv2/gapi/gopaque.hpp>   // GOpaque<T>
 
@@ -41,6 +42,7 @@ public:
     GMat    yield      (int output = 0);
     GMatP   yieldP     (int output = 0);
     GScalar yieldScalar(int output = 0);
+    GFrame  yieldFrame (int output = 0);
 
     template<class T> GArray<T> yieldArray(int output = 0)
     {

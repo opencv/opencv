@@ -59,6 +59,11 @@ cv::GScalar cv::GCall::yieldScalar(int output)
     return cv::GScalar(m_priv->m_node, output);
 }
 
+cv::GFrame cv::GCall::yieldFrame(int output)
+{
+    return cv::GFrame(m_priv->m_node, output);
+}
+
 cv::detail::GArrayU cv::GCall::yieldArray(int output)
 {
     return cv::detail::GArrayU(m_priv->m_node, output);
