@@ -2003,7 +2003,8 @@ static const OpenCV_VideoIO_Plugin_API_preview plugin_api_v0 =
     /*  9*/cv_writer_release,
     /* 10*/cv_writer_get_prop,
     /* 11*/cv_writer_set_prop,
-    /* 12*/cv_writer_write
+    /* 12*/cv_writer_write,
+    /* 13*/NULL
 };
 
 } // namespace
@@ -2012,7 +2013,7 @@ const OpenCV_VideoIO_Plugin_API_preview* opencv_videoio_plugin_init_v0(int reque
 {
     if (requested_abi_version != 0)
         return NULL;
-    if (requested_api_version != 0)
+    if (requested_api_version != 0 && requested_api_version != 1)
         return NULL;
     return &cv::plugin_api_v0;
 }

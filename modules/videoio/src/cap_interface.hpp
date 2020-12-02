@@ -116,6 +116,17 @@ public:
         }
         return unusedParams;
     }
+
+    std::vector<int> getIntVector() const CV_NOEXCEPT {
+        std::vector<int> vint_params;
+        for (const auto& param : params_)
+        {
+            vint_params.push_back(param.key);
+            vint_params.push_back(param.value);
+        }
+        return vint_params;
+    }
+
 private:
     std::vector<VideoWriterParameter> params_;
 };

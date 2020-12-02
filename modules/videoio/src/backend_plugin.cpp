@@ -508,7 +508,21 @@ public:
     {
         CV_Assert(plugin_api);
         CvPluginWriter writer = NULL;
-        if (plugin_api->Writer_open)
+        if (plugin_api->api_header.api_version == 1 && plugin_api->Writer_open_with_params)
+        {
+            CV_Assert(plugin_api->Writer_release);
+            CV_Assert(!filename.empty());
+            std::vector<int> vint_params = params.getIntVector();
+            int* c_params = &vint_params[0];
+            size_t n_params = vint_params.size() / 2;
+
+            if (CV_ERROR_OK == plugin_api->Writer_open_with_params(filename.c_str(), fourcc, fps, sz.width, sz.height, c_params, n_params, &writer))
+            {
+                CV_Assert(writer);
+                return makePtr<PluginWriter>(plugin_api, writer);
+            }
+        }
+        else if (plugin_api->Writer_open)
         {
             CV_Assert(plugin_api->Writer_release);
             CV_Assert(!filename.empty());

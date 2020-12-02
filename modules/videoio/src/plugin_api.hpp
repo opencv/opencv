@@ -10,7 +10,7 @@
 
 // increase for backward-compatible changes, e.g. add new function
 // Main API <= Plugin API -> plugin is compatible
-#define API_VERSION 0 // preview
+#define API_VERSION 1 // preview
 // increase for incompatible changes, e.g. remove function argument
 // Main ABI == Plugin ABI -> plugin is compatible
 #define ABI_VERSION 0 // preview
@@ -142,6 +142,18 @@ typedef struct OpenCV_VideoIO_Plugin_API_preview
     @note API-CALL 12, API-Version == 0
      */
     CvResult (CV_API_CALL *Writer_write)(CvPluginWriter handle, const unsigned char *data, int step, int width, int height, int cn);
+
+
+    /** @brief Try to open video writer
+
+    @param filename File name or NULL to use camera_index instead
+    @param camera_index Camera index (used if filename == NULL)
+    @param[out] handle pointer on Writer handle
+
+    @note API-CALL 13, API-Version == 1
+     */
+    CvResult(CV_API_CALL* Writer_open_with_params)(const char* filename, int fourcc, double fps, int width, int height, int * params, size_t n_params,
+        CV_OUT CvPluginWriter* handle);
 
 } OpenCV_VideoIO_Plugin_API_preview;
 
