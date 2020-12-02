@@ -17,8 +17,8 @@ set(CMAKE_ASM_COMPILER_TARGET ${CLANG_TARGET_TRIPLE})
 # Don't run the linker on compiler check
 set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 
-set(CMAKE_C_FLAGS "-march=rv64gcv --gcc-toolchain=${RISCV_GCC_INSTALL_ROOT} -w ${CMAKE_C_FLAGS}")
-set(CMAKE_CXX_FLAGS "-march=rv64gcv --gcc-toolchain=${RISCV_GCC_INSTALL_ROOT} -w ${CXX_FLAGS}")
+set(CMAKE_C_FLAGS "-march=rv64gcv0p9 -menable-experimental-extensions --gcc-toolchain=${RISCV_GCC_INSTALL_ROOT} -w ${CMAKE_C_FLAGS}")
+set(CMAKE_CXX_FLAGS "-march=rv64gcv0p9 -menable-experimental-extensions --gcc-toolchain=${RISCV_GCC_INSTALL_ROOT} -w ${CXX_FLAGS}")
 
 set(CMAKE_FIND_ROOT_PATH ${CMAKE_SYSROOT})
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
