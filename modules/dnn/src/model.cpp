@@ -675,7 +675,23 @@ struct TextDetectionModel_Impl : public Model::Impl
     }
 
     virtual
-    std::vector<cv::RotatedRect> detect(InputArray frame)
+    std::vector< std::vector<Point2f> > detect(InputArray frame, CV_OUT std::vector<float>& confidences)
+    {
+        CV_TRACE_FUNCTION();
+        std::vector<RotatedRect> rects = detectTextRectangles(frame, confidences);
+        std::vector< std::vector<Point2f> > results;
+        for (const RotatedRect& rect : rects)
+        {
+            Point2f vertices[4] = {};
+            rect.points(vertices);
+            std::vector<Point2f> result = { vertices[0], vertices[1], vertices[2], vertices[3] };
+            results.emplace_back(result);
+        }
+        return results;
+    }
+
+    virtual
+    std::vector< std::vector<Point2f> > detect(InputArray frame)
     {
         CV_TRACE_FUNCTION();
         std::vector<float> confidences;
@@ -683,9 +699,17 @@ struct TextDetectionModel_Impl : public Model::Impl
     }
 
     virtual
-    std::vector<cv::RotatedRect> detect(InputArray frame, CV_OUT std::vector<float>& confidences)
+    std::vector<RotatedRect> detectTextRectangles(InputArray frame, CV_OUT std::vector<float>& confidences)
     {
         CV_Error(Error::StsNotImplemented, "");
+    }
+
+    virtual
+    std::vector<cv::RotatedRect> detectTextRectangles(InputArray frame)
+    {
+        CV_TRACE_FUNCTION();
+        std::vector<float> confidences;
+        return detectTextRectangles(frame, confidences);
     }
 
     static inline
@@ -703,16 +727,65 @@ TextDetectionModel::TextDetectionModel()
     // nothing
 }
 
-std::vector<cv::RotatedRect> TextDetectionModel::detect(InputArray frame) const
+static
+void to32s(
+        const std::vector< std::vector<Point2f> >& detections_f,
+        CV_OUT std::vector< std::vector<Point> >& detections
+)
 {
-    return TextDetectionModel_Impl::from(impl).detect(frame);
+    detections.resize(detections_f.size());
+    for (size_t i = 0; i < detections_f.size(); i++)
+    {
+        const auto& contour_f = detections_f[i];
+        std::vector<Point> contour(contour_f.size());
+        for (size_t j = 0; j < contour_f.size(); j++)
+        {
+            contour[j].x = cvRound(contour_f[j].x);
+            contour[j].y = cvRound(contour_f[j].y);
+        }
+        swap(detections[i], contour);
+    }
 }
 
-std::vector<cv::RotatedRect> TextDetectionModel::detect(InputArray frame, CV_OUT std::vector<float>& confidences) const
+void TextDetectionModel::detect(
+        InputArray frame,
+        CV_OUT std::vector< std::vector<Point> >& detections,
+        CV_OUT std::vector<float>& confidences
+) const
 {
-    return TextDetectionModel_Impl::from(impl).detect(frame, confidences);
+    std::vector< std::vector<Point2f> > detections_f = TextDetectionModel_Impl::from(impl).detect(frame, confidences);
+    to32s(detections_f, detections);
+    return;
 }
 
+void TextDetectionModel::detect(
+        InputArray frame,
+        CV_OUT std::vector< std::vector<Point> >& detections
+) const
+{
+    std::vector< std::vector<Point2f> > detections_f = TextDetectionModel_Impl::from(impl).detect(frame);
+    to32s(detections_f, detections);
+    return;
+}
+
+void TextDetectionModel::detectTextRectangles(
+        InputArray frame,
+        CV_OUT std::vector<cv::RotatedRect>& detections,
+        CV_OUT std::vector<float>& confidences
+) const
+{
+    detections = TextDetectionModel_Impl::from(impl).detectTextRectangles(frame, confidences);
+    return;
+}
+
+void TextDetectionModel::detectTextRectangles(
+        InputArray frame,
+        CV_OUT std::vector<cv::RotatedRect>& detections
+) const
+{
+    detections = TextDetectionModel_Impl::from(impl).detectTextRectangles(frame);
+    return;
+}
 
 
 struct TextDetectionModel_EAST_Impl : public TextDetectionModel_Impl
@@ -740,8 +813,14 @@ struct TextDetectionModel_EAST_Impl : public TextDetectionModel_Impl
     void setNMSThreshold(float nmsThreshold_) { nmsThreshold = nmsThreshold_; }
     float getNMSThreshold() const { return nmsThreshold; }
 
+    // TODO: According to article EAST supports quadrangles output: https://arxiv.org/pdf/1704.03155.pdf
+#if 0
     virtual
-    std::vector<cv::RotatedRect> detect(InputArray frame, CV_OUT std::vector<float>& confidences) CV_OVERRIDE
+    std::vector< std::vector<Point2f> > detect(InputArray frame, CV_OUT std::vector<float>& confidences) CV_OVERRIDE
+#endif
+
+    virtual
+    std::vector<cv::RotatedRect> detectTextRectangles(InputArray frame, CV_OUT std::vector<float>& confidences) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         std::vector<cv::RotatedRect> results;
@@ -941,15 +1020,14 @@ struct TextDetectionModel_DB_Impl : public TextDetectionModel_Impl
 
 
     virtual
-    std::vector<cv::RotatedRect> detect(InputArray frame, CV_OUT std::vector<float>& confidences) CV_OVERRIDE
+    std::vector<cv::RotatedRect> detectTextRectangles(InputArray frame, CV_OUT std::vector<float>& confidences) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
-        std::vector< std::vector<Point> > contours = detectTextContours(frame);
-        confidences = std::vector<float>(contours.size(), 1.0f);
+        std::vector< std::vector<Point2f> > contours = detect(frame, confidences);
         std::vector<cv::RotatedRect> results; results.reserve(contours.size());
         for (size_t i = 0; i < contours.size(); i++)
         {
-            std::vector<Point>& contour = contours[i];
+            auto& contour = contours[i];
             RotatedRect box = minAreaRect(contour);
 
             // minArea() rect is not normalized, it may return rectangles with angle=-90 or height < width
@@ -973,10 +1051,10 @@ struct TextDetectionModel_DB_Impl : public TextDetectionModel_Impl
         return results;
     }
 
-    std::vector< std::vector<Point> > detectTextContours(InputArray frame)
+    std::vector< std::vector<Point2f> > detect(InputArray frame, CV_OUT std::vector<float>& confidences) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
-        std::vector< std::vector<Point> > results;
+        std::vector< std::vector<Point2f> > results;
 
         std::vector<Mat> outs;
         processFrame(frame, outs);
@@ -1016,17 +1094,33 @@ struct TextDetectionModel_DB_Impl : public TextDetectionModel_Impl
             }
 
             // Unclip
-            std::vector<Point> approx;
             RotatedRect box = minAreaRect(contourScaled);
+
+            // minArea() rect is not normalized, it may return rectangles with angle=-90 or height < width
+            const float angle_threshold = 60;  // do not expect vertical text, TODO detection algo property
+            bool swap_size = false;
+            if (box.size.width < box.size.height)  // horizontal-wide text area is expected
+                swap_size = true;
+            else if (std::fabs(box.angle) >= angle_threshold)  // don't work with vertical rectangles
+                swap_size = true;
+            if (swap_size)
+            {
+                std::swap(box.size.width, box.size.height);
+                if (box.angle < 0)
+                    box.angle += 90;
+                else if (box.angle > 0)
+                    box.angle -= 90;
+            }
+
             Point2f vertex[4];
-            box.points(vertex);
-            for (int j = 0; j < 4; j++)
-                approx.emplace_back(vertex[j]);
-            std::vector<Point> polygon;
+            box.points(vertex);  // order: bl, tl, tr, br
+            std::vector<Point2f> approx = { vertex[3], vertex[0], vertex[1], vertex[2] };  // TODO unclip doesn't preserve order?
+            std::vector<Point2f> polygon;
             unclip(approx, polygon, unclipRatio);
             results.push_back(polygon);
         }
 
+        confidences = std::vector<float>(contours.size(), 1.0f);
         return results;
     }
 
@@ -1071,7 +1165,7 @@ struct TextDetectionModel_DB_Impl : public TextDetectionModel_Impl
     }
 
     // According to https://github.com/MhLiao/DB/blob/master/structure/representers/seg_detector_representer.py (2020-10)
-    static void unclip(const std::vector<Point>& inPoly, std::vector<Point> &outPoly, const double unclipRatio)
+    static void unclip(const std::vector<Point2f>& inPoly, std::vector<Point2f> &outPoly, const double unclipRatio)
     {
         double area = contourArea(inPoly);
         double length = arcLength(inPoly, true);
@@ -1097,23 +1191,25 @@ struct TextDetectionModel_DB_Impl : public TextDetectionModel_Impl
             Point2f b = newLines[i][1];
             Point2f c = newLines[(i + 1) % numLines][0];
             Point2f d = newLines[(i + 1) % numLines][1];
-            Point pt;
+            Point2f pt;
             Point2f v1 = b - a;
             Point2f v2 = d - c;
             double cosAngle = (v1.x * v2.x + v1.y * v2.y) / (norm(v1) * norm(v2));
 
             if( fabs(cosAngle) > 0.7 ) {
-                pt.x = (int)((b.x + c.x) / 2);
-                pt.y = (int)((b.y + c.y) / 2);
+                pt.x = (b.x + c.x) * 0.5;
+                pt.y = (b.y + c.y) * 0.5;
             } else {
                 double denom = a.x * (double)(d.y - c.y) + b.x * (double)(c.y - d.y) +
                                d.x * (double)(b.y - a.y) + c.x * (double)(a.y - b.y);
                 double num = a.x * (double)(d.y - c.y) + c.x * (double)(a.y - d.y) + d.x * (double)(c.y - a.y);
                 double s = num / denom;
 
-                pt.x = (int)((a.x + s*(b.x - a.x)));
-                pt.y = (int)((a.y + s*(b.y - a.y)));
+                pt.x = a.x + s*(b.x - a.x);
+                pt.y = a.y + s*(b.y - a.y);
             }
+
+
             outPoly.push_back(pt);
         }
     }
@@ -1179,12 +1275,6 @@ int TextDetectionModel_DB::getMaxCandidates() const
 {
     return TextDetectionModel_DB_Impl::from(impl).getMaxCandidates();
 }
-
-std::vector< std::vector<Point> > TextDetectionModel_DB::detectTextContours(InputArray frame) const
-{
-    return TextDetectionModel_DB_Impl::from(impl).detectTextContours(frame);
-}
-
 
 
 }} // namespace

@@ -124,7 +124,8 @@ int main(int argc, char** argv)
         std::cout << frame.size << std::endl;
 
         // Detection
-        std::vector<RotatedRect> detResults = detector.detect(frame);
+        std::vector< std::vector<Point> > detResults;
+        detector.detect(frame, detResults);
 
         if (detResults.size() > 0) {
             // Text Recognition
@@ -137,22 +138,22 @@ int main(int argc, char** argv)
             std::vector< std::vector<Point> > contours;
             for (uint i = 0; i < detResults.size(); i++)
             {
-                const auto& box = detResults[i];
-                Point2f vertices[4] = {};
-                box.points(vertices);
+                const auto& quadrangle = detResults[i];
+                CV_CheckEQ(quadrangle.size(), (size_t)4, "");
 
-                std::vector<Point> contour;
+                contours.emplace_back(quadrangle);
+
+                std::vector<Point2f> quadrangle_2f;
                 for (int j = 0; j < 4; j++)
-                    contour.emplace_back(vertices[j]);
-                contours.emplace_back(contour);
+                    quadrangle_2f.emplace_back(quadrangle[j]);
 
                 Mat cropped;
-                fourPointsTransform(recInput, vertices, cropped);
+                fourPointsTransform(recInput, &quadrangle_2f[0], cropped);
 
                 std::string recognitionResult = recognizer.recognize(cropped);
                 std::cout << i << ": '" << recognitionResult << "'" << std::endl;
 
-                putText(frame, recognitionResult, vertices[3], FONT_HERSHEY_SIMPLEX, 1.5, Scalar(0, 0, 255), 2);
+                putText(frame, recognitionResult, quadrangle[3], FONT_HERSHEY_SIMPLEX, 1.5, Scalar(0, 0, 255), 2);
             }
             polylines(frame, contours, true, Scalar(0, 255, 0), 2);
         }

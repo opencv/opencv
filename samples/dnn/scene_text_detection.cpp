@@ -82,14 +82,15 @@ int main(int argc, char** argv)
         String testImgPath;
         while (std::getline(testList, testImgPath)) {
             String imgPath = evalDataPath + "/test_images/" + testImgPath;
-            // std::cout << "Image Path: " << imgPath << std::endl;
+            std::cout << "Image Path: " << imgPath << std::endl;
 
             Mat frame = imread(samples::findFile(imgPath), IMREAD_COLOR);
             CV_Assert(!frame.empty());
             Mat src = frame.clone();
 
             // Inference
-            std::vector<std::vector<Point>> results = detector.detectTextContours(frame);
+            std::vector<std::vector<Point>> results;
+            detector.detect(frame, results);
 
             polylines(frame, results, true, Scalar(0, 255, 0), 2);
             imshow(winName, frame);
@@ -138,7 +139,8 @@ int main(int argc, char** argv)
         CV_Assert(!frame.empty());
 
         // Detect
-        std::vector<std::vector<Point>> results = detector.detectTextContours(frame);
+        std::vector<std::vector<Point>> results;
+        detector.detect(frame, results);
 
         polylines(frame, results, true, Scalar(0, 255, 0), 2);
         imshow(winName, frame);

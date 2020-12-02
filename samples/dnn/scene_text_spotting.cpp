@@ -101,7 +101,8 @@ int main(int argc, char** argv)
     std::cout << frame.size << std::endl;
 
     // Inference
-    std::vector<RotatedRect> detResults = detector.detect(frame);
+    std::vector< std::vector<Point> > detResults;
+    detector.detect(frame, detResults);
 
     if (detResults.size() > 0) {
         // Text Recognition
@@ -114,24 +115,23 @@ int main(int argc, char** argv)
         std::vector< std::vector<Point> > contours;
         for (uint i = 0; i < detResults.size(); i++)
         {
-            const auto& box = detResults[i];
+            const auto& quadrangle = detResults[i];
+            CV_CheckEQ(quadrangle.size(), (size_t)4, "");
 
-            Point2f vertices[4] = {};
-            box.points(vertices);
+            contours.emplace_back(quadrangle);
 
-            std::vector<Point> contour;
+            std::vector<Point2f> quadrangle_2f;
             for (int j = 0; j < 4; j++)
-                contour.emplace_back(vertices[j]);
-            contours.emplace_back(contour);
+                quadrangle_2f.emplace_back(quadrangle[j]);
 
             // Transform and Crop
             Mat cropped;
-            fourPointsTransform(recInput, vertices, cropped);
+            fourPointsTransform(recInput, &quadrangle_2f[0], cropped);
 
             std::string recognitionResult = recognizer.recognize(cropped);
             std::cout << i << ": '" << recognitionResult << "'" << std::endl;
 
-            putText(frame, recognitionResult, vertices[3], FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 0, 255), 2);
+            putText(frame, recognitionResult, quadrangle[3], FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 0, 255), 2);
         }
         polylines(frame, contours, true, Scalar(0, 255, 0), 2);
     } else {
@@ -149,12 +149,18 @@ void fourPointsTransform(const Mat& frame, const Point2f vertices[], Mat& result
 
     Point2f targetVertices[4] = {
         Point(0, outputSize.height - 1),
-        Point(0, 0), Point(outputSize.width - 1, 0),
+        Point(0, 0),
+        Point(outputSize.width - 1, 0),
         Point(outputSize.width - 1, outputSize.height - 1)
     };
     Mat rotationMatrix = getPerspectiveTransform(vertices, targetVertices);
 
     warpPerspective(frame, result, rotationMatrix, outputSize);
+
+#if 0
+    imshow("roi", result);
+    waitKey();
+#endif
 }
 
 bool sortPts(const Point& p1, const Point& p2)

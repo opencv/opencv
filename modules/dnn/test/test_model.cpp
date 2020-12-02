@@ -166,7 +166,9 @@ public:
         model.setPreferableTarget(target);
 
         // 1. Check common TextDetectionModel API through RotatedRect
-        std::vector<cv::RotatedRect> results = model.detect(frame);
+        std::vector<cv::RotatedRect> results;
+        model.detectTextRectangles(frame, results);
+
         EXPECT_GT(results.size(), (size_t)0);
 
         std::vector< std::vector<Point> > contours;
@@ -191,8 +193,10 @@ public:
 #endif
         normAssertTextDetections(gt, contours, "", 0.05f);
 
-        // 2. Check original contours-based API
-        /*std::vector< std::vector<Point> >*/ contours = model.detectTextContours(frame);
+        // 2. Check quadrangle-based API
+        // std::vector< std::vector<Point> > contours;
+        model.detect(frame, contours);
+
 #if 0 // test debug
         Mat result = frame.clone();
         drawContours(result, contours, -1, Scalar(0, 0, 255), 1);
@@ -223,7 +227,9 @@ public:
         model.setPreferableBackend(backend);
         model.setPreferableTarget(target);
 
-        std::vector<cv::RotatedRect> results = model.detect(frame);
+        std::vector<cv::RotatedRect> results;
+        model.detectTextRectangles(frame, results);
+
         EXPECT_EQ(results.size(), (size_t)1);
         for (size_t i = 0; i < results.size(); i++)
         {
@@ -560,8 +566,10 @@ TEST_P(Test_Model, TextDetectionByDB)
     std::string weightPath = _tf("onnx/models/DB_TD500_resnet50.onnx", false);
 
     // GroundTruth
-    std::vector<std::vector<Point>> gt = {{Point(213, 150), Point(136, 163), Point(141, 192), Point(218, 178)},
-                                          {Point(318, 71), Point(122, 114), Point(136, 164), Point(329, 121)}};
+    std::vector<std::vector<Point>> gt = {
+        { Point(213, 150), Point(136, 163), Point(141, 192), Point(218, 178) },
+        { Point(318, 71), Point(122, 114), Point(136, 164), Point(329, 121) }
+    };
 
     Size size{736, 736};
     double scale = 1.0 / 255.0;

@@ -8,7 +8,7 @@ In this tutorial, we will introduce the APIs for TextRecognitionModel and TextDe
 ---
 #### TextRecognitionModel:
 
-In the current version, `TextRecognitionModel` only supports CNN+RNN+CTC based algorithms,
+In the current version, @ref cv::dnn::TextRecognitionModel only supports CNN+RNN+CTC based algorithms,
 and the greedy decoding method for CTC is provided.
 For more information, please refer to the [original paper](https://arxiv.org/abs/1507.05717)
 
@@ -19,20 +19,25 @@ Before recognition, you should `setVocabulary` and `setDecodeType`.
     - `B` is the batch size (only support `B=1` in inference)
     - and `Dim` is the length of vocabulary +1('Blank' of CTC is at the index=0 of Dim).
 
-`TextRecognitionModel::recognize()` is the main function for text recognition.
+@ref cv::dnn::TextRecognitionModel::recognize() is the main function for text recognition.
 - The input image should be a cropped text image or an image with `roiRects`
 - Other decoding methods may supported in the future
 
 ---
 
 #### TextDetectionModel:
-In the current version, `TextDetectionModel` supports "DB" and "EAST" algorithms.
+
+@ref cv::dnn::TextDetectionModel API provides these methods for text detection:
+- cv::dnn::TextDetectionModel::detect() returns the results in std::vector<std::vector<Point>> (4-points quadrangles)
+- cv::dnn::TextDetectionModel::detectTextRectangles() returns the results in std::vector<cv::RotatedRect> (RBOX-like)
+
+In the current version, @ref cv::dnn::TextDetectionModel supports these algorithms:
+- use @ref cv::dnn::TextDetectionModel_DB with "DB" models
+- and use @ref cv::dnn::TextDetectionModel_EAST with "EAST" models
+
 The following provided pretrained models are variants of DB (w/o deformable convolution),
 and the performance can be referred to the Table.1 in the [paper]((https://arxiv.org/abs/1911.08947)).
 For more information, please refer to the [official code](https://github.com/MhLiao/DB)
-
-`TextDetectionModel::detect()` is the main function for text detection.
-- All the results are returned in `std::vector<std::vector<Point>>` or `std::vector<RotatedRect>`
 
 ---
 
@@ -186,12 +191,24 @@ Step1. Loading images and models
     // Load an image
     // you can find some images for testing in "Images for Testing"
     Mat frame = imread("/path/to/text_det_test.png");
-
-    // Load model weights
-    TextDetectionModel model("/path/to/DB_TD500_resnet50.onnx");
 ```
-Step2. Setting Parameters (DB)
+
+Step2.a Setting Parameters (DB)
 ```cpp
+    // Load model weights
+    TextDetectionModel_DB model("/path/to/DB_TD500_resnet50.onnx");
+
+    // Post-processing parameters
+    float binThresh = 0.3;
+    float polyThresh = 0.5;
+    uint maxCandidates = 200;
+    double unclipRatio = 2.0;
+    model.setBinaryThreshold(binThresh)
+         .setPolygonThreshold(polyThresh)
+         .setMaxCandidates(maxCandidates)
+         .setUnclipRatio(unclipRatio)
+    ;
+
     // Normalization parameters
     double scale = 1.0 / 255.0;
     Scalar mean = Scalar(122.67891434, 116.66876762, 104.00698793);
@@ -200,36 +217,35 @@ Step2. Setting Parameters (DB)
     Size inputSize = Size(736, 736);
 
     model.setInputParams(scale, inputSize, mean);
-
-    // Post-processing parameters
-    float binThresh = 0.3;
-    float polyThresh = 0.5;
-    uint maxCandidates = 200;
-    double unclipRatio = 2.0;
-```
-Step3. Inference (DB)
-```cpp
-    std::vector<std::vector<Point>> detResults = detector.detectTextContours(frame);
-
-    // Visualization
-    polylines(frame, results, true, Scalar(0, 255, 0), 2);
-    imshow("Text Detection", image);
-    waitKey();
 ```
 
-Step2. Setting Parameters (EAST)
+Step2.b Setting Parameters (EAST)
 ```cpp
+    TextDetectionModel_EAST model("EAST.pb");
+
     float confThreshold = 0.5;
     float nmsThreshold = 0.4;
+    model.setConfidenceThreshold(confThresh)
+         .setNMSThreshold(nmsThresh)
+    ;
+
     double detScale = 1.0;
     Size detInputSize = Size(320, 320);
     Scalar detMean = Scalar(123.68, 116.78, 103.94);
     bool swapRB = true;
     model.setInputParams(detScale, detInputSize, detMean, swapRB);
 ```
-Step3. Inference (EAST)
+
+
+Step3. Inference
 ```cpp
-    std::vector<RotatedRect> detResults = detector.detect(frame)
+    std::vector<std::vector<Point>> detResults;
+    model.detect(detResults);
+
+    // Visualization
+    polylines(frame, results, true, Scalar(0, 255, 0), 2);
+    imshow("Text Detection", image);
+    waitKey();
 ```
 
 Output:
@@ -269,10 +285,10 @@ For more information, please refer to:
 #### Test with an image
 Examples:
 ```bash
-scene_text_recognition -mp=path/to/crnn_cs.onnx -i=path/to/an/image -rgb=1 -vp=/path/to/alphabet_94.txt
-scene_text_detection -mp=path/to/DB_TD500_resnet50.onnx -i=path/to/an/image -ih=736 -iw=736
-scene_text_spotting -dmp=path/to/DB_IC15_resnet50.onnx -rmp=path/to/crnn_cs.onnx -i=path/to/an/image -iw=1280 -ih=736 -rgb=1 -vp=/path/to/alphabet_94.txt
-text_detection -dmp=path/to/EAST.pb -rmp=path/to/crnn_cs.onnx -i=path/to/an/image -rgb=1 -vp=path/to/alphabet_94.txt
+example_dnn_scene_text_recognition -mp=path/to/crnn_cs.onnx -i=path/to/an/image -rgb=1 -vp=/path/to/alphabet_94.txt
+example_dnn_scene_text_detection -mp=path/to/DB_TD500_resnet50.onnx -i=path/to/an/image -ih=736 -iw=736
+example_dnn_scene_text_spotting -dmp=path/to/DB_IC15_resnet50.onnx -rmp=path/to/crnn_cs.onnx -i=path/to/an/image -iw=1280 -ih=736 -rgb=1 -vp=/path/to/alphabet_94.txt
+example_dnn_text_detection -dmp=path/to/EAST.pb -rmp=path/to/crnn_cs.onnx -i=path/to/an/image -rgb=1 -vp=path/to/alphabet_94.txt
 ```
 
 #### Test on public datasets
@@ -283,8 +299,8 @@ The download link for testing images can be found in the **Images for Testing**
 
 Examples:
 ```bash
-scene_text_recognition -mp=path/to/crnn.onnx -e=true -edp=path/to/evaluation_data_rec -vp=/path/to/alphabet_36.txt -rgb=0
-scene_text_recognition -mp=path/to/crnn_cs.onnx -e=true -edp=path/to/evaluation_data_rec -vp=/path/to/alphabet_94.txt -rgb=1
+example_dnn_scene_text_recognition -mp=path/to/crnn.onnx -e=true -edp=path/to/evaluation_data_rec -vp=/path/to/alphabet_36.txt -rgb=0
+example_dnn_scene_text_recognition -mp=path/to/crnn_cs.onnx -e=true -edp=path/to/evaluation_data_rec -vp=/path/to/alphabet_94.txt -rgb=1
 ```
 
 Text Detection:
@@ -293,6 +309,6 @@ The download links for testing images can be found in the **Images for Testing**
 
 Examples:
 ```bash
-scene_text_detection -mp=path/to/DB_TD500_resnet50.onnx -e=true -edp=path/to/evaluation_data_det/TD500 -ih=736 -iw=736
-scene_text_detection -mp=path/to/DB_IC15_resnet50.onnx -e=true -edp=path/to/evaluation_data_det/IC15 -ih=736 -iw=1280
+example_dnn_scene_text_detection -mp=path/to/DB_TD500_resnet50.onnx -e=true -edp=path/to/evaluation_data_det/TD500 -ih=736 -iw=736
+example_dnn_scene_text_detection -mp=path/to/DB_IC15_resnet50.onnx -e=true -edp=path/to/evaluation_data_det/IC15 -ih=736 -iw=1280
 ```

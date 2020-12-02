@@ -1396,26 +1396,64 @@ protected:
     TextDetectionModel();
 
 public:
-    /** @brief Performs detection
-     *
-     * Given the input @p frame, prepare network input, run network inference, post-process network output and return result detections.
-     *
-     * @param[in] frame the input image
-     * @return array with text detection results
-     */
-    CV_WRAP
-    std::vector<cv::RotatedRect> detect(InputArray frame) const;
 
     /** @brief Performs detection
      *
      * Given the input @p frame, prepare network input, run network inference, post-process network output and return result detections.
      *
-     * @param[in] frame the input image
+     * Each result is quadrangle's 4 points in this order:
+     * - bottom-left
+     * - top-left
+     * - top-right
+     * - bottom-right
+     *
+     * Use cv::getPerspectiveTransform function to retrive image region without perspective transformations.
+     *
+     * @note If DL model doesn't support that kind of output then result may be derived from detectTextRectangles() output.
+     *
+     * @param[in] frame The input image
+     * @param[out] detections array with detections' quadrangles (4 points per result)
      * @param[out] confidences array with detection confidences
-     * @return array with text detection results
      */
     CV_WRAP
-    std::vector<cv::RotatedRect> detect(InputArray frame, CV_OUT std::vector<float>& confidences) const;
+    void detect(
+            InputArray frame,
+            CV_OUT std::vector< std::vector<Point> >& detections,
+            CV_OUT std::vector<float>& confidences
+    ) const;
+
+    /** @overload */
+    CV_WRAP
+    void detect(
+            InputArray frame,
+            CV_OUT std::vector< std::vector<Point> >& detections
+    ) const;
+
+    /** @brief Performs detection
+     *
+     * Given the input @p frame, prepare network input, run network inference, post-process network output and return result detections.
+     *
+     * Each result is rotated rectangle.
+     *
+     * @note Result may be inaccurate in case of strong perspective transformations.
+     *
+     * @param[in] frame the input image
+     * @param[out] detections array with detections' RotationRect results
+     * @param[out] confidences array with detection confidences
+     */
+    CV_WRAP
+    void detectTextRectangles(
+            InputArray frame,
+            CV_OUT std::vector<cv::RotatedRect>& detections,
+            CV_OUT std::vector<float>& confidences
+    ) const;
+
+    /** @overload */
+    CV_WRAP
+    void detectTextRectangles(
+            InputArray frame,
+            CV_OUT std::vector<cv::RotatedRect>& detections
+    ) const;
 };
 
 /** @brief This class represents high-level API for text detection DL networks compatible with EAST model.
@@ -1518,16 +1556,6 @@ public:
 
     CV_WRAP TextDetectionModel_DB& setMaxCandidates(int maxCandidates);
     CV_WRAP int getMaxCandidates() const;
-
-    /** @brief Performs detection
-     *
-     * Given the input @p frame, prepare network input, run network inference, post-process network output and return result detections.
-     *
-     * @param[in] frame The input image.
-     * @return array with text detection results
-     */
-    CV_WRAP
-    std::vector< std::vector<Point> > detectTextContours(InputArray frame) const;
 };
 
 //! @}
