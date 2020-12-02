@@ -140,12 +140,13 @@ struct InferAPIList {
 
 // APIList2 is also template to allow different calling options
 // (GArray<cv::Rect> vs GArray<cv::GMat> per input)
-template<class Net, class... Ts>
+template<class Net, typename T, class... Ts>
 struct InferAPIList2 {
     using type = typename std::enable_if
-        < cv::detail::valid_infer2_types< typename Net::InArgs
+        < detail::valid_infer_types<T>::value &&
+          cv::detail::valid_infer2_types< typename Net::InArgs
                                         , std::tuple<Ts...> >::value,
-          std::function<typename Net::ResultL(cv::GMat, cv::GArray<Ts>...)>
+          std::function<typename Net::ResultL(T, cv::GArray<Ts>...)>
         >::type;
 };
 
@@ -284,11 +285,11 @@ struct GInferList final
 // overload).
 // Takes an extra variadic template list to reflect how this network
 // was called (with Rects or GMats as array parameters)
-template<typename Net, typename... Args>
+template<typename Net, typename T, typename... Args>
 struct GInferList2 final
     : public GInferList2Base
-    , public detail::KernelTypeMedium< GInferList2<Net, Args...>
-                                     , typename InferAPIList2<Net, Args...>::type > {
+    , public detail::KernelTypeMedium< GInferList2<Net, T, Args...>
+                                     , typename InferAPIList2<Net, T, Args...>::type > {
     using GInferList2Base::getOutMeta; // FIXME: name lookup conflict workaround?
 
     static constexpr const char* tag() { return Net::tag(); }
@@ -358,11 +359,12 @@ typename Net::ResultL infer(cv::GArray<cv::Rect> roi, Args&&... args) {
  *   GArray<> objects is returned with the appropriate types inside.
  * @sa  G_API_NET()
  */
-template<typename Net, typename... Args>
-typename Net::ResultL infer2(cv::GMat image, cv::GArray<Args>... args) {
+
+template<typename Net, typename T, typename... Args>
+typename Net::ResultL infer2(T image, cv::GArray<Args>... args) {
     // FIXME: Declared as "2" because in the current form it steals
     // overloads from the regular infer
-    return GInferList2<Net, Args...>::on(image, args...);
+    return GInferList2<Net, T, Args...>::on(image, args...);
 }
 
 /**

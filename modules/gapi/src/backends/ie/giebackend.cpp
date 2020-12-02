@@ -152,6 +152,26 @@ inline IE::Blob::Ptr wrapIE(const cv::Mat &mat, cv::gapi::ie::TraitAs hint) {
     return IE::Blob::Ptr{};
 }
 
+inline IE::Blob::Ptr wrapIE(const std::unique_ptr<cv::MediaFrame::View>& view,
+                            const cv::GFrameDesc& desc) {
+
+    switch (desc.fmt) {
+        case cv::MediaFormat::BGR: {
+            auto bgr = cv::Mat(desc.size, CV_8UC3, view->ptr[0], view->stride[0]);
+            return wrapIE(bgr, cv::gapi::ie::TraitAs::IMAGE);
+        }
+        case cv::MediaFormat::NV12: {
+            auto y_plane  = cv::Mat(desc.size, CV_8UC1, view->ptr[0], view->stride[0]);
+            auto uv_plane = cv::Mat(desc.size / 2, CV_8UC2, view->ptr[1], view->stride[1]);
+            return cv::gapi::ie::util::to_ie(y_plane, uv_plane);
+        }
+        default:
+            GAPI_Assert(false && "Unsupported media format for IE backend");
+    }
+    GAPI_Assert(false);
+}
+
+
 template<class MatType>
 inline void copyFromIE(const IE::Blob::Ptr &blob, MatType &mat) {
     switch (blob->getTensorDesc().getPrecision()) {
@@ -452,6 +472,33 @@ namespace cv {
 namespace gimpl {
 namespace ie {
 
+static void configureInputInfo(const IE::InputInfo::Ptr& ii, const cv::GMetaArg mm) {
+    switch (mm.index()) {
+        case cv::GMetaArg::index_of<cv::GMatDesc>():
+            {
+                ii->setPrecision(toIE(util::get<cv::GMatDesc>(mm).depth));
+                break;
+            }
+        case cv::GMetaArg::index_of<cv::GFrameDesc>():
+            {
+                const auto &meta = util::get<cv::GFrameDesc>(mm);
+                switch (meta.fmt) {
+                    case cv::MediaFormat::NV12:
+                        ii->getPreProcess().setColorFormat(IE::ColorFormat::NV12);
+                    case cv::MediaFormat::BGR:
+                        // NB: Do nothing
+                        break;
+                    default:
+                        GAPI_Assert(false && "Unsupported media format for IE backend");
+                }
+                ii->setPrecision(toIE(CV_8U));
+                break;
+            }
+        default:
+            util::throw_error(std::runtime_error("Unsupported input meta for IE backend"));
+    }
+}
+
 struct Infer: public cv::detail::KernelTag {
     using API = cv::GInferBase;
     static cv::gapi::GBackend backend()  { return cv::gapi::ie::backend(); }
@@ -482,31 +529,7 @@ struct Infer: public cv::detail::KernelTag {
             auto       &&ii = uu.inputs.at(std::get<0>(it));
             const auto & mm =              std::get<1>(it);
 
-            switch (mm.index()) {
-                case cv::GMetaArg::index_of<cv::GMatDesc>():
-                {
-                    ii->setPrecision(toIE(util::get<cv::GMatDesc>(mm).depth));
-                    break;
-                }
-                case cv::GMetaArg::index_of<cv::GFrameDesc>():
-                {
-                    const auto &meta = util::get<cv::GFrameDesc>(mm);
-                    switch (meta.fmt) {
-                        case cv::MediaFormat::NV12:
-                            ii->getPreProcess().setColorFormat(IE::ColorFormat::NV12);
-                        case cv::MediaFormat::BGR:
-                            // NB: Do nothing
-                            break;
-                        default:
-                            GAPI_Assert(false && "Unsupported media format for IE backend");
-                    }
-                    ii->setPrecision(toIE(CV_8U));
-                    break;
-                }
-                default:
-                    util::throw_error(std::runtime_error("Unsupported input meta for IE backend"));
-
-            }
+            configureInputInfo(ii, mm);
             ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
         }
 
@@ -529,6 +552,7 @@ struct Infer: public cv::detail::KernelTag {
     static void run(IECompiled &iec, const IEUnit &uu, IECallContext &ctx) {
         // non-generic version for now:
         // - assumes all inputs/outputs are always Mats
+        std::vector<std::unique_ptr<cv::MediaFrame::View>> views;
         for (auto i : ade::util::iota(uu.params.num_in)) {
             // TODO: Ideally we shouldn't do SetBlob() but GetBlob() instead,
             // and redirect our data producers to this memory
@@ -537,25 +561,8 @@ struct Infer: public cv::detail::KernelTag {
             switch (ctx.in_shapes[i]) {
                 case cv::GShape::GFRAME: {
                     const auto& frame = ctx.inFrame(i);
-                    const auto& desc = frame.desc();
-                    auto view = frame.access(cv::MediaFrame::Access::R);
-                    switch (desc.fmt) {
-                        case cv::MediaFormat::BGR: {
-                            auto bgr = cv::Mat(desc.size, CV_8UC3, view.ptr[0], view.stride[0]);
-                            this_blob = wrapIE(bgr, cv::gapi::ie::TraitAs::IMAGE);
-                            break;
-                        }
-                        case cv::MediaFormat::NV12: {
-                            auto y_plane  = cv::Mat(desc.size,     CV_8UC1, view.ptr[0], view.stride[0]);
-                            auto uv_plane = cv::Mat(desc.size / 2, CV_8UC2, view.ptr[1], view.stride[1]);
-                            auto y_blob   = wrapIE(y_plane,  cv::gapi::ie::TraitAs::IMAGE);
-                            auto uv_blob  = wrapIE(uv_plane, cv::gapi::ie::TraitAs::IMAGE);
-                            this_blob = InferenceEngine::make_shared_blob<InferenceEngine::NV12Blob>(y_blob, uv_blob);
-                            break;
-                        }
-                        default:
-                            GAPI_Assert("Unsupported input shape for IE backend");
-                    }
+                    views.emplace_back(new cv::MediaFrame::View(frame.access(cv::MediaFrame::Access::R)));
+                    this_blob = wrapIE(views.back(), frame.desc());
                     break;
                 }
                 case cv::GShape::GMAT: {
@@ -568,6 +575,7 @@ struct Infer: public cv::detail::KernelTag {
                 default:
                     GAPI_Assert("Unsupported input shape for IE backend");
             }
+
             iec.this_request.SetBlob(uu.params.input_names[i], this_blob);
         }
         iec.this_request.Infer();
@@ -607,31 +615,7 @@ struct InferROI: public cv::detail::KernelTag {
         // 0th is ROI, 1st is input image
         auto &&ii = uu.inputs.at(uu.params.input_names.at(0));
         auto &&mm = in_metas.at(1u);
-        switch (mm.index()) {
-            case cv::GMetaArg::index_of<cv::GMatDesc>():
-            {
-                ii->setPrecision(toIE(util::get<cv::GMatDesc>(mm).depth));
-                break;
-            }
-            case cv::GMetaArg::index_of<cv::GFrameDesc>():
-            {
-                const auto &meta = util::get<cv::GFrameDesc>(mm);
-                switch (meta.fmt) {
-                    case cv::MediaFormat::NV12:
-                        ii->getPreProcess().setColorFormat(IE::ColorFormat::NV12);
-                    case cv::MediaFormat::BGR:
-                        // NB: Do nothing
-                        break;
-                    default:
-                        GAPI_Assert(false && "Unsupported media format for IE backend");
-                }
-                ii->setPrecision(toIE(CV_8U));
-                break;
-            }
-            default:
-                util::throw_error(std::runtime_error("Unsupported input meta for IE backend"));
-
-        }
+        configureInputInfo(ii, mm);
         ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
 
         // FIXME: It would be nice here to have an exact number of network's
@@ -654,29 +638,14 @@ struct InferROI: public cv::detail::KernelTag {
         // non-generic version for now, per the InferROI's definition
         GAPI_Assert(uu.params.num_in == 1);
         const auto& this_roi = ctx.inArg<cv::detail::OpaqueRef>(0).rref<cv::Rect>();
+
         IE::Blob::Ptr this_blob;
+        std::unique_ptr<cv::MediaFrame::View> view;
         switch (ctx.in_shapes[1]) {
             case cv::GShape::GFRAME: {
                 const auto& frame = ctx.inFrame(1u);
-                const auto& desc = frame.desc();
-                auto view = frame.access(cv::MediaFrame::Access::R);
-                switch (desc.fmt) {
-                    case cv::MediaFormat::BGR: {
-                        auto bgr = cv::Mat(desc.size, CV_8UC3, view.ptr[0], view.stride[0]);
-                        this_blob = wrapIE(bgr, cv::gapi::ie::TraitAs::IMAGE);
-                        break;
-                    }
-                    case cv::MediaFormat::NV12: {
-                        auto y_plane  = cv::Mat(desc.size, CV_8UC1, view.ptr[0], view.stride[0]);
-                        auto uv_plane = cv::Mat(desc.size / 2, CV_8UC2, view.ptr[1], view.stride[1]);
-                        auto y_blob   = wrapIE(y_plane,  cv::gapi::ie::TraitAs::IMAGE);
-                        auto uv_blob  = wrapIE(uv_plane, cv::gapi::ie::TraitAs::IMAGE);
-                        this_blob = InferenceEngine::make_shared_blob<InferenceEngine::NV12Blob>(y_blob, uv_blob);
-                        break;
-                    }
-                    default:
-                        GAPI_Assert("Unsupported input shape for IE backend");
-                }
+                view.reset(new cv::MediaFrame::View(frame.access(cv::MediaFrame::Access::R)));
+                this_blob = wrapIE(view, frame.desc());
                 break;
             }
             case cv::GShape::GMAT: {
@@ -688,9 +657,8 @@ struct InferROI: public cv::detail::KernelTag {
                 GAPI_Assert("Unsupported input shape for IE backend");
         }
 
-
-        IE::Blob::Ptr roi_blob = IE::make_shared_blob(this_blob, toIE(this_roi));
-        iec.this_request.SetBlob(*uu.params.input_names.begin(), roi_blob);
+        iec.this_request.SetBlob(*uu.params.input_names.begin(),
+                                 IE::make_shared_blob(this_blob, toIE(this_roi)));
         iec.this_request.Infer();
         for (auto i : ade::util::iota(uu.params.num_out)) {
             cv::Mat& out_mat = ctx.outMatR(i);
@@ -727,32 +695,7 @@ struct InferList: public cv::detail::KernelTag {
         for (auto &&input_name : uu.params.input_names) {
             auto       &&ii = uu.inputs.at(input_name);
             const auto & mm = in_metas[idx++];
-
-            switch (mm.index()) {
-                case cv::GMetaArg::index_of<cv::GMatDesc>():
-                {
-                    ii->setPrecision(toIE(util::get<cv::GMatDesc>(mm).depth));
-                    break;
-                }
-                case cv::GMetaArg::index_of<cv::GFrameDesc>():
-                {
-                    const auto &meta = util::get<cv::GFrameDesc>(mm);
-                    switch (meta.fmt) {
-                        case cv::MediaFormat::NV12:
-                            ii->getPreProcess().setColorFormat(IE::ColorFormat::NV12);
-                        case cv::MediaFormat::BGR:
-                            // NB: Do nothing
-                            break;
-                        default:
-                            GAPI_Assert(false && "Unsupported media format for IE backend");
-                    }
-                    ii->setPrecision(toIE(CV_8U));
-                    break;
-                }
-                default:
-                    util::throw_error(std::runtime_error("Unsupported input meta for IE backend"));
-
-            }
+            configureInputInfo(ii, mm);
             ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
         }
 
@@ -773,33 +716,17 @@ struct InferList: public cv::detail::KernelTag {
         const auto& in_roi_vec = ctx.inArg<cv::detail::VectorRef>(0u).rref<cv::Rect>();
 
         IE::Blob::Ptr this_blob;
+        std::unique_ptr<cv::MediaFrame::View> view;
         switch (ctx.in_shapes[1]) {
             case cv::GShape::GFRAME: {
-                const auto& frame = ctx.inFrame(1u);
-                const auto& desc = frame.desc();
-                auto view = frame.access(cv::MediaFrame::Access::R);
-                switch (desc.fmt) {
-                    case cv::MediaFormat::BGR: {
-                        auto bgr = cv::Mat(desc.size, CV_8UC3, view.ptr[0], view.stride[0]);
-                        this_blob = wrapIE(bgr, cv::gapi::ie::TraitAs::IMAGE);
-                        break;
-                    }
-                    case cv::MediaFormat::NV12: {
-                        auto y_plane  = cv::Mat(desc.size, CV_8UC1, view.ptr[0], view.stride[0]);
-                        auto uv_plane = cv::Mat(desc.size / 2, CV_8UC2, view.ptr[1], view.stride[1]);
-                        auto y_blob   = wrapIE(y_plane,  cv::gapi::ie::TraitAs::IMAGE);
-                        auto uv_blob  = wrapIE(uv_plane, cv::gapi::ie::TraitAs::IMAGE);
-                        this_blob = InferenceEngine::make_shared_blob<InferenceEngine::NV12Blob>(y_blob, uv_blob);
-                        break;
-                    }
-                    default:
-                        GAPI_Assert("Unsupported input shape for IE backend");
-                }
+                const auto& frame = ctx.inFrame(1);
+                view.reset(new cv::MediaFrame::View(frame.access(cv::MediaFrame::Access::R)));
+                this_blob = wrapIE(view, frame.desc());
                 break;
             }
             case cv::GShape::GMAT: {
                 // Since we do a ROI list inference, always assume our input buffer is image
-                this_blob = wrapIE(ctx.inMat(1u), cv::gapi::ie::TraitAs::IMAGE);
+                this_blob = wrapIE(ctx.inMat(1), cv::gapi::ie::TraitAs::IMAGE);
                 break;
             }
             default:
@@ -868,11 +795,30 @@ struct InferList2: public cv::detail::KernelTag {
         // "blob"-based ones)
         // FIXME: this is filtering not done, actually! GArrayDesc has
         // no hint for its underlying type!
-        const auto &mm_0   = in_metas[0u];
-        const auto &meta_0 = util::get<cv::GMatDesc>(mm_0);
-        GAPI_Assert(   !meta_0.isND()
+        const auto &mm_0 = in_metas[0u];
+        switch (in_metas[0u].index()) {
+            case cv::GMetaArg::index_of<cv::GMatDesc>(): {
+                const auto &meta_0 = util::get<cv::GMatDesc>(mm_0);
+                GAPI_Assert(   !meta_0.isND()
+                        && !meta_0.planar
+                        && "Only images are supported as the 0th argument");
+                break;
+            }
+            case cv::GMetaArg::index_of<cv::GFrameDesc>(): {
+                // FIXME: Is there any validation for GFrame ?
+                break;
+            }
+            default:
+                util::throw_error(std::runtime_error("Unsupported input meta for IE backend"));
+        }
+
+        if (util::holds_alternative<cv::GMatDesc>(mm_0)) {
+            const auto &meta_0 = util::get<cv::GMatDesc>(mm_0);
+            GAPI_Assert(   !meta_0.isND()
                     && !meta_0.planar
                     && "Only images are supported as the 0th argument");
+        }
+
         std::size_t idx = 1u;
         for (auto &&input_name : uu.params.input_names) {
                   auto &ii = uu.inputs.at(input_name);
@@ -882,7 +828,7 @@ struct InferList2: public cv::detail::KernelTag {
 
             if (op.k.inKinds[idx] == cv::detail::OpaqueKind::CV_RECT) {
                 // This is a cv::Rect -- configure the IE preprocessing
-                ii->setPrecision(toIE(meta_0.depth));
+                configureInputInfo(ii, mm_0);
                 ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
             } else {
                 // This is a cv::GMat (equals to: cv::Mat)
@@ -906,8 +852,23 @@ struct InferList2: public cv::detail::KernelTag {
                     && "This operation must have at least two arguments");
 
         // Since we do a ROI list inference, always assume our input buffer is image
-        const cv::Mat mat_0  = ctx.inMat(0u);
-        IE::Blob::Ptr blob_0 = wrapIE(mat_0, cv::gapi::ie::TraitAs::IMAGE);
+        IE::Blob::Ptr blob_0;
+        std::unique_ptr<cv::MediaFrame::View> view;
+        switch (ctx.in_shapes[0]) {
+            case cv::GShape::GFRAME: {
+                const auto& frame = ctx.inFrame(0);
+                view.reset(new cv::MediaFrame::View(frame.access(cv::MediaFrame::Access::R)));
+                blob_0 = wrapIE(view, frame.desc());
+                break;
+            }
+            case cv::GShape::GMAT: {
+                // Since we do a ROI list inference, always assume our input buffer is image
+                blob_0 = wrapIE(ctx.inMat(0), cv::gapi::ie::TraitAs::IMAGE);
+                break;
+            }
+            default:
+                GAPI_Assert("Unsupported input shape for IE backend");
+        }
 
         // Take the next argument, which must be vector (of any kind).
         // Use it only to obtain the ROI list size (sizes of all other
