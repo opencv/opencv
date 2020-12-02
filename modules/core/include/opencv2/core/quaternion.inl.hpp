@@ -149,6 +149,30 @@ inline Quat<T> Quat<T>::operator+(const Quat<T> &q1) const
 }
 
 template <typename T>
+inline Quat<T> operator+(const T a, const Quat<T>& q)
+{
+    return Quat<T>(q.w + a, q.x, q.y, q.z);
+}
+
+template <typename T>
+inline Quat<T> operator+(const Quat<T>& q, const T a)
+{
+    return Quat<T>(q.w + a, q.x, q.y, q.z);
+}
+
+template <typename T>
+inline Quat<T> operator-(const T a, const Quat<T>& q)
+{
+    return Quat<T>(a - q.w, -q.x, -q.y, -q.z);
+}
+
+template <typename T>
+inline Quat<T> operator-(const Quat<T>& q, const T a)
+{
+    return Quat<T>(q.w - a, q.x, q.y, q.z);
+}
+
+template <typename T>
 inline Quat<T> Quat<T>::operator-(const Quat<T> &q1) const
 {
     return Quat<T>(w - q1.w, x - q1.x, y - q1.y, z - q1.z);
@@ -183,14 +207,14 @@ inline Quat<T> Quat<T>::operator*(const Quat<T> &q1) const
 }
 
 
-template <typename T, typename S>
-Quat<T> operator*(const Quat<T> &q1, const S a)
+template <typename T>
+Quat<T> operator*(const Quat<T> &q1, const T a)
 {
     return Quat<T>(a * q1.w, a * q1.x, a * q1.y, a * q1.z);
 }
 
-template <typename T, typename S>
-Quat<T> operator*(const S a, const Quat<T> &q1)
+template <typename T>
+Quat<T> operator*(const T a, const Quat<T> &q1)
 {
     return Quat<T>(a * q1.w, a * q1.x, a * q1.y, a * q1.z);
 }
@@ -221,7 +245,7 @@ inline Quat<T>& Quat<T>::operator/=(const Quat<T> &q1)
     return *this;
 }
 template <typename T>
-Quat<T>& Quat<T>::operator*=(const T &q1)
+Quat<T>& Quat<T>::operator*=(const T q1)
 {
     w *= q1;
     x *= q1;
@@ -231,7 +255,7 @@ Quat<T>& Quat<T>::operator*=(const T &q1)
 }
 
 template <typename T>
-inline Quat<T>& Quat<T>::operator/=(const T &a)
+inline Quat<T>& Quat<T>::operator/=(const T a)
 {
     const T a_inv = 1.0 / a;
     w *= a_inv;
@@ -242,7 +266,7 @@ inline Quat<T>& Quat<T>::operator/=(const T &a)
 }
 
 template <typename T>
-inline Quat<T> Quat<T>::operator/(const T &a) const
+inline Quat<T> Quat<T>::operator/(const T a) const
 {
     const T a_inv = 1.0 / a;
     return Quat<T>(w * a_inv, x * a_inv, y * a_inv, z * a_inv);
@@ -353,15 +377,14 @@ Quat<T> Quat<T>::log(QuatAssumeType assumeUnit) const
     return Quat<T>(std::log(qNorm), v[0] * k, v[1] * k, v[2] *k);
 }
 
-template <typename T, typename _T>
-inline Quat<T> power(const Quat<T> &q1, _T alpha, QuatAssumeType assumeUnit)
+template <typename T>
+inline Quat<T> power(const Quat<T> &q1, const T alpha, QuatAssumeType assumeUnit)
 {
     return q1.power(alpha, assumeUnit);
 }
 
 template <typename T>
-template <typename _T>
-inline Quat<T> Quat<T>::power(_T alpha, QuatAssumeType assumeUnit) const
+inline Quat<T> Quat<T>::power(const T alpha, QuatAssumeType assumeUnit) const
 {
     if (x * x + y * y + z * z > CV_QUAT_EPS)
     {
