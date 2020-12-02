@@ -400,6 +400,24 @@ macro(ocv_clear_vars)
   endforeach()
 endmacro()
 
+
+# Clears passed variables with INTERNAL type from CMake cache
+macro(ocv_clear_internal_cache_vars)
+  foreach(_var ${ARGN})
+    get_property(_propertySet CACHE ${_var} PROPERTY TYPE SET)
+    if(_propertySet)
+      get_property(_type CACHE ${_var} PROPERTY TYPE)
+      if(_type STREQUAL "INTERNAL")
+        message("Cleaning INTERNAL cached variable: ${_var}")
+        unset(${_var} CACHE)
+      endif()
+    endif()
+  endforeach()
+  unset(_propertySet)
+  unset(_type)
+endmacro()
+
+
 set(OCV_COMPILER_FAIL_REGEX
     "argument .* is not valid"                  # GCC 9+ (including support of unicode quotes)
     "command[- ]line option .* is valid for .* but not for C\\+\\+" # GNU
