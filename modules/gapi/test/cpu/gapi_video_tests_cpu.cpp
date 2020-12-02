@@ -118,7 +118,7 @@ INSTANTIATE_TEST_CASE_MACRO_P(KalmanFilterInternalTestCPU,
                                       Values(CV_32F, CV_64F),
                                       Values(2,5),
                                       Values(2,5),
-                                      Values(3,7),
+                                      Values(0,2),
                                       Values(true, false)));
 
 } // opencv_test

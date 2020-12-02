@@ -8,7 +8,6 @@
 #define OPENCV_GAPI_CPU_VIDEO_API_HPP
 
 #include <opencv2/gapi/gkernel.hpp> // GKernelPackage
-#include "opencv2/core.hpp"
 
 
 namespace cv {

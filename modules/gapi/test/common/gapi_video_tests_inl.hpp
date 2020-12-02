@@ -9,7 +9,6 @@
 
 #include "gapi_video_tests.hpp"
 #include <opencv2/gapi/streaming/cap.hpp>
-#include "opencv2/ts.hpp"
 
 namespace opencv_test
 {
@@ -135,28 +134,21 @@ TEST_P(BackgroundSubtractorTest, AccuracyTest)
 
 TEST_P(KalmanFilterTest, AccuracyTest)
 {
-    GAPI_Assert(depth == CV_32F || depth == CV_64F);
-    GAPI_Assert(dDim > 0 && mDim > 0 && cDim >= 0);
-
     cv::gapi::video::KalmanParams kp(dDim, mDim, cDim, depth);
 
-    //measurements vector
+    //measurement vector
     cv::Mat measure_vec(mDim, 1, depth);
+    cv::randu(measure_vec, Scalar::all(-1), Scalar::all(1));
 
     //control vector
-    cv::Mat ctrl_vec;
-
-    if (cDim > 0)
-        ctrl_vec = Mat::zeros(cDim, 1, depth);
-    else if (cDim == 0)
-        ctrl_vec = Mat::zeros(dDim, 1, depth);
-
-    cv::randu(measure_vec, Scalar::all(-1), Scalar::all(1));
+    cv::Mat ctrl_vec = Mat::zeros(cDim > 0 ? cDim : dDim, 1, depth);
 
     if (cDim > 0)
         cv::randu(ctrl_vec, Scalar::all(-1), Scalar::all(1));
 
+    // G-API Kalman state
     cv::Mat gapiKState(dDim, 1, depth);
+    // OCV Kalman state
     cv::Mat ocvKState(dDim, 1, depth);
 
     // G-API code
@@ -167,12 +159,10 @@ TEST_P(KalmanFilterTest, AccuracyTest)
 
     comp.apply(cv::gin(measure_vec, haveMeasure, ctrl_vec), cv::gout(gapiKState));
 
+    // OpenCV code
     cv::KalmanFilter ocvKalman(dDim, mDim, cDim, depth);
 
-    if (cDim > 0)
-        ocvKState = ocvKalman.predict(ctrl_vec);
-    else if (cDim == 0)
-        ocvKState = ocvKalman.predict();
+    ocvKState = cDim > 0 ? ocvKalman.predict(ctrl_vec) : ocvKalman.predict();
 
     if (haveMeasure)
         ocvKState = ocvKalman.correct(measure_vec);
@@ -181,8 +171,7 @@ TEST_P(KalmanFilterTest, AccuracyTest)
     {
         double diff = 0;
         vector<int> idx;
-        const double eps = 1.0;
-        EXPECT_TRUE(cmpEps(gapiKState, ocvKState, &diff, eps, &idx, false) >= 0);
+        EXPECT_TRUE(cmpEps(gapiKState, ocvKState, &diff, 1.0, &idx, false) >= 0);
     }
 }
 #endif
