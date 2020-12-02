@@ -1230,17 +1230,19 @@ void hlineSmoothONa_yzy_a<uint16_t, ufixedpoint32>(const uint16_t* src, int cn, 
     int lencn = (len - post_shift + 1)*cn;
 #if CV_SIMD
     const int VECSZ = v_uint32::nlanes;
-    for (; i <= lencn - VECSZ; i += VECSZ, src += VECSZ, dst += VECSZ)
+    for (; i <= lencn - VECSZ * 2; i += VECSZ * 2, src += VECSZ * 2, dst += VECSZ * 2)
     {
-        v_uint64 m1, m2;
-        v_mul_expand(vx_load_expand(src + pre_shift * cn), vx_setall_u32(*((uint32_t*)(m + pre_shift))), m1, m2);
-        v_uint32 v_res0 = v_pack(m1, m2);
+        v_uint32 v_res0, v_res1;
+        v_mul_expand(vx_load(src + pre_shift * cn), vx_setall_u16((uint16_t) *((uint32_t*)(m + pre_shift))), v_res0, v_res1);
         for (int j = 0; j < pre_shift; j ++)
         {
-            v_mul_expand(vx_load_expand(src + j * cn) + vx_load_expand(src + (n - 1 - j)*cn), vx_setall_u32(*((uint32_t*)(m + j))), m1, m2);
-            v_res0 += v_pack(m1, m2);
+            v_uint32 v_add0, v_add1;
+            v_mul_expand(vx_load(src + j * cn) + vx_load(src + (n - 1 - j)*cn), vx_setall_u16((uint16_t) *((uint32_t*)(m + j))), v_add0, v_add1);
+            v_res0 += v_add0;
+            v_res1 += v_add1;
         }
         v_store((uint32_t*)dst, v_res0);
+        v_store((uint32_t*)dst + VECSZ, v_res1);
     }
 #endif
     for (; i < lencn; i++, src++, dst++)
