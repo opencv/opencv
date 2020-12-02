@@ -91,7 +91,7 @@ respectively) by the same factor.
 
 The joint rotation-translation matrix \f$[R|t]\f$ is the matrix product of a projective
 transformation and a homogeneous transformation. The 3-by-4 projective transformation maps 3D points
-represented in camera coordinates to 2D poins in the image plane and represented in normalized
+represented in camera coordinates to 2D points in the image plane and represented in normalized
 camera coordinates \f$x' = X_c / Z_c\f$ and \f$y' = Y_c / Z_c\f$:
 
 \f[Z_c \begin{bmatrix}
