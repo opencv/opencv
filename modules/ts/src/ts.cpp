@@ -1122,7 +1122,9 @@ void SystemInfoCollector::OnTestProgramStart(const testing::UnitTest&)
     }
     recordPropertyVerbose("cv_cpu_features", "CPU features", cv::getCPUFeaturesLine());
 #ifdef HAVE_IPP
-    recordPropertyVerbose("cv_ipp_version", "Intel(R) IPP version", cv::ipp::useIPP() ? cv::ipp::getIppVersion() :  "disabled");
+    recordPropertyVerbose("cv_ipp_version", "Intel(R) IPP version", cv::ipp::useIPP() ? cv::ipp::getIppVersion() : "disabled");
+    if (cv::ipp::useIPP())
+        recordPropertyVerbose("cv_ipp_features", "Intel(R) IPP features code", cv::format("0x%llx", cv::ipp::getIppTopFeatures()));
 #endif
 #ifdef HAVE_OPENCL
     cv::dumpOpenCLInformation();
