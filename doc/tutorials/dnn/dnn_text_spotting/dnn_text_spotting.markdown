@@ -108,6 +108,8 @@ description: This model is trained on MSRA-TD500, so it can detect both English 
 
 ```
 
+We will release more models of DB [here](https://drive.google.com/drive/folders/1qzNCHfUJOS0NEUOIKn69eCtxdlNPpWbq?usp=sharing) in the future.
+
 ```
 - EAST:
 Download link: https://www.dropbox.com/s/r2ingd0l3zt8hxs/frozen_east_text_detection.tar.gz?dl=1

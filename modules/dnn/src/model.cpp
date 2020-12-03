@@ -1114,7 +1114,9 @@ struct TextDetectionModel_DB_Impl : public TextDetectionModel_Impl
 
             Point2f vertex[4];
             box.points(vertex);  // order: bl, tl, tr, br
-            std::vector<Point2f> approx = { vertex[3], vertex[0], vertex[1], vertex[2] };  // TODO unclip doesn't preserve order?
+            std::vector<Point2f> approx;
+            for (int j = 0; j < 4; j++)
+                approx.emplace_back(vertex[j]);
             std::vector<Point2f> polygon;
             unclip(approx, polygon, unclipRatio);
             results.push_back(polygon);
@@ -1127,27 +1129,11 @@ struct TextDetectionModel_DB_Impl : public TextDetectionModel_Impl
     // According to https://github.com/MhLiao/DB/blob/master/structure/representers/seg_detector_representer.py (2020-10)
     static double contourScore(const Mat& binary, const std::vector<Point>& contour)
     {
-        int rows = binary.rows;
-        int cols = binary.cols;
-
-        // TODO replace with cv::boundingRect()
-        int xmin = cols - 1;
-        int xmax = 0;
-        int ymin = rows - 1;
-        int ymax = 0;
-        for (size_t i = 0; i < contour.size(); i++)
-        {
-            Point pt = contour[i];
-            xmin = std::min(pt.x, xmin);
-            xmax = std::max(pt.x, xmax);
-            ymin = std::min(pt.y, ymin);
-            ymax = std::max(pt.y, ymax);
-        }
-
-        xmin = std::max(xmin, 0);
-        xmax = std::min(cols - 1, xmax);
-        ymin = std::max(ymin, 0);
-        ymax = std::min(rows - 1, ymax);
+        Rect rect = boundingRect(contour);
+        int xmin = std::max(rect.x, 0);
+        int xmax = std::min(rect.x + rect.width, binary.cols - 1);
+        int ymin = std::max(rect.y, 0);
+        int ymax = std::min(rect.y + rect.height, binary.rows - 1);
 
         Mat binROI = binary(Rect(xmin, ymin, xmax - xmin + 1, ymax - ymin + 1));
 
@@ -1176,8 +1162,8 @@ struct TextDetectionModel_DB_Impl : public TextDetectionModel_Impl
         for (size_t i = 0; i < numPoints; i++) {
             std::vector<Point2f> newLine;
             Point pt1 = inPoly[i];
-            Point pt2 = inPoly[(i + 1) % numPoints];
-            Point vec = pt2 - pt1;
+            Point pt2 = inPoly[(i - 1) % numPoints];
+            Point vec = pt1 - pt2;
             float unclipDis = (float)(distance / norm(vec));
             Point2f rotateVec = Point2f(vec.y * unclipDis, -vec.x * unclipDis);
             newLine.push_back(Point2f(pt1.x + rotateVec.x, pt1.y + rotateVec.y));

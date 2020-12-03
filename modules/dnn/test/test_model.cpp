@@ -567,8 +567,8 @@ TEST_P(Test_Model, TextDetectionByDB)
 
     // GroundTruth
     std::vector<std::vector<Point>> gt = {
-        { Point(213, 150), Point(136, 163), Point(141, 192), Point(218, 178) },
-        { Point(318, 71), Point(122, 114), Point(136, 164), Point(329, 121) }
+        { Point(142, 193), Point(136, 164), Point(213, 150), Point(219, 178) },
+        { Point(136, 165), Point(122, 114), Point(319, 71), Point(330, 122) }
     };
 
     Size size{736, 736};
