@@ -320,8 +320,8 @@ namespace gapi {
  * @sa  G_API_NET()
  */
 template<typename Net, typename T>
-typename Net::Result infer(cv::GOpaque<cv::Rect> roi, T t) {
-    return GInferROI<Net, T>::on(roi, t);
+typename Net::Result infer(cv::GOpaque<cv::Rect> roi, T in) {
+    return GInferROI<Net, T>::on(roi, in);
 }
 
 /** @brief Calculates responses for the specified network (template
