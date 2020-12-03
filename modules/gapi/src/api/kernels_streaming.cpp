@@ -7,6 +7,8 @@
 #include "precomp.hpp"
 
 #include <opencv2/gapi/streaming/desync.hpp>
+#include <opencv2/gapi/streaming/copy.hpp>
+
 #include <opencv2/gapi/core.hpp>
 
 cv::GMat cv::gapi::streaming::desync(const cv::GMat &g) {
@@ -71,4 +73,9 @@ cv::GMat cv::gapi::streaming::desync(const cv::GMat &g) {
     // this synchronization problem. There will be one "last_written_value"
     // connected to a desynchronized data object, and this sole last_written_value
     // object will feed both branches of the streaming executable.
+}
+
+
+cv::GFrame cv::gapi::streaming::copy(const cv::GFrame& in) {
+    return cv::gapi::streaming::GCopy::on(in);
 }

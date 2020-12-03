@@ -144,6 +144,9 @@ void sync_data(cv::GRunArgs &results, cv::GRunArgsP &outputs)
         case T::index_of<cv::detail::OpaqueRef>():
             cv::util::get<cv::detail::OpaqueRef>(out_obj).mov(cv::util::get<cv::detail::OpaqueRef>(res_obj));
             break;
+        case T::index_of<cv::MediaFrame*>():
+            *cv::util::get<cv::MediaFrame*>(out_obj) = std::move(cv::util::get<cv::MediaFrame>(res_obj));
+            break;
         default:
             GAPI_Assert(false && "This value type is not supported!"); // ...maybe because of STANDALONE mode.
             break;
@@ -634,6 +637,13 @@ class StreamingOutput final: public cv::gimpl::GIslandExecutable::IOutput
                 // FIXME: that variant MOVE problem again
                 const auto &rr = cv::util::get<cv::detail::OpaqueRef>(out_arg);
                 ret_val = cv::GRunArgP(rr);
+            }
+            break;
+        case cv::GShape::GFRAME:
+            {
+                cv::MediaFrame frame;
+                out_arg = cv::GRunArg(std::move(frame));
+                ret_val = cv::GRunArgP(&cv::util::get<cv::MediaFrame>(out_arg));
             }
             break;
         default:

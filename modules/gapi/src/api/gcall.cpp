@@ -69,6 +69,11 @@ cv::detail::GOpaqueU cv::GCall::yieldOpaque(int output)
     return cv::detail::GOpaqueU(m_priv->m_node, output);
 }
 
+cv::GFrame cv::GCall::yieldFrame(int output)
+{
+    return cv::GFrame(m_priv->m_node, output);
+}
+
 cv::GCall::Priv& cv::GCall::priv()
 {
     return *m_priv;

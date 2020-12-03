@@ -319,6 +319,9 @@ cv::GRunArgP getObjPtr(Mag& mag, const RcDesc &rc, bool is_umat)
         // debugging this!!!1
         return GRunArgP(const_cast<const Mag&>(mag)
                         .template slot<cv::detail::OpaqueRef>().at(rc.id));
+    case GShape::GFRAME:
+        return GRunArgP(&mag.template slot<cv::MediaFrame>()[rc.id]);
+
     default:
         util::throw_error(std::logic_error("Unsupported GShape type"));
         break;

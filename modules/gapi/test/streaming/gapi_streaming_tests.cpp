@@ -21,6 +21,7 @@
 
 #include <opencv2/gapi/streaming/cap.hpp>
 #include <opencv2/gapi/streaming/desync.hpp>
+#include <opencv2/gapi/streaming/copy.hpp>
 
 namespace opencv_test
 {
@@ -110,6 +111,46 @@ GAPI_OCV_KERNEL(OCVDelay, Delay) {
     static void run(const cv::Mat &in, int ms, cv::Mat &out) {
         std::this_thread::sleep_for(std::chrono::milliseconds{ms});
         in.copyTo(out);
+    }
+};
+
+class TestMediaBGR final: public cv::MediaFrame::IAdapter {
+    cv::Mat m_mat;
+    using Cb = cv::MediaFrame::View::Callback;
+    Cb m_cb;
+
+    public:
+    explicit TestMediaBGR(cv::Mat m, Cb cb = [](){})
+        : m_mat(m), m_cb(cb) {
+        }
+    cv::GFrameDesc meta() const override {
+        return cv::GFrameDesc{cv::MediaFormat::BGR, cv::Size(m_mat.cols, m_mat.rows)};
+    }
+    cv::MediaFrame::View access(cv::MediaFrame::Access) override {
+        cv::MediaFrame::View::Ptrs pp = { m_mat.ptr(), nullptr, nullptr, nullptr };
+        cv::MediaFrame::View::Strides ss = { m_mat.step, 0u, 0u, 0u };
+        return cv::MediaFrame::View(std::move(pp), std::move(ss), Cb{m_cb});
+    }
+};
+
+class BGRSource : public cv::gapi::wip::GCaptureSource {
+public:
+    explicit BGRSource(const std::string& pipeline)
+        : cv::gapi::wip::GCaptureSource(pipeline) {
+    }
+
+    bool pull(cv::gapi::wip::Data& data) {
+        if (cv::gapi::wip::GCaptureSource::pull(data)) {
+            data = cv::MediaFrame::Create<TestMediaBGR>(cv::util::get<cv::Mat>(data));
+            return true;
+        }
+        return false;
+    }
+
+    GMetaArg descr_of() const override {
+        return cv::GMetaArg{cv::GFrameDesc{cv::MediaFormat::BGR,
+                                           cv::util::get<cv::GMatDesc>(
+                                                   cv::gapi::wip::GCaptureSource::descr_of()).size}};
     }
 };
 
@@ -1586,6 +1627,41 @@ TEST(GAPI_Streaming_Desync, DesyncObjectConsumedByTwoIslandsViaSameDesync) {
     auto p = cv::gapi::kernels<FluidCopy>();
 
     EXPECT_NO_THROW(c.compileStreaming(cv::compile_args(p)));
+}
+
+TEST(GAPI_Streaming, CopyFrame)
+{
+    initTestDataPath();
+    std::string filepath = findDataFile("cv/video/768x576.avi");
+
+    cv::GFrame in;
+    auto out = cv::gapi::streaming::copy(in);
+
+    cv::GComputation comp(cv::GIn(in), cv::GOut(out));
+
+    auto cc = comp.compileStreaming();
+    cc.setSource<BGRSource>(filepath);
+
+    cv::VideoCapture cap;
+    cap.open(filepath);
+    if (!cap.isOpened())
+        throw SkipTestException("Video file can not be opened");
+
+    cv::MediaFrame frame;
+    cv::Mat ocv_mat;
+    std::size_t num_frames = 0u;
+    std::size_t max_frames = 10u;
+
+    cc.start();
+    while (cc.pull(cv::gout(frame)) && num_frames < max_frames)
+    {
+        auto view = frame.access(cv::MediaFrame::Access::R);
+        cv::Mat gapi_mat(frame.desc().size, CV_8UC3, view.ptr[0]);
+        num_frames++;
+        cap >> ocv_mat;
+
+        EXPECT_EQ(0, cvtest::norm(ocv_mat, gapi_mat, NORM_INF));
+    }
 }
 
 } // namespace opencv_test

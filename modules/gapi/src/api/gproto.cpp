@@ -288,6 +288,8 @@ const void* cv::gimpl::proto::ptr(const GRunArgP &arg)
         return cv::util::get<cv::detail::VectorRef>(arg).ptr();
     case GRunArgP::index_of<cv::detail::OpaqueRef>():
         return cv::util::get<cv::detail::OpaqueRef>(arg).ptr();
+    case GRunArgP::index_of<cv::MediaFrame*>():
+        return static_cast<const void*>(cv::util::get<cv::MediaFrame*>(arg));
     default:
         util::throw_error(std::logic_error("Unknown GRunArgP type!"));
     }
