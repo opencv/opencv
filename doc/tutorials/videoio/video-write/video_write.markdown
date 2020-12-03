@@ -109,7 +109,7 @@ const string NAME = source.substr(0, pAt) + argv[2][0] + ".avi";   // Form the n
     @code{.cpp}
     CV_FOURCC('P','I','M,'1') // this is an MPEG1 codec from the characters to integer
     @endcode
-    If you pass for this argument minus one than a window will pop up at runtime that contains all
+    If you pass for this argument minus one then a window will pop up at runtime that contains all
     the codec installed on your system and ask you to select the one to use:
 
     ![](images/videoCompressSelect.png)
