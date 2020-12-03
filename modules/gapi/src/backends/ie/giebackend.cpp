@@ -152,17 +152,17 @@ inline IE::Blob::Ptr wrapIE(const cv::Mat &mat, cv::gapi::ie::TraitAs hint) {
     return IE::Blob::Ptr{};
 }
 
-inline IE::Blob::Ptr wrapIE(const std::unique_ptr<cv::MediaFrame::View>& view,
+inline IE::Blob::Ptr wrapIE(const cv::MediaFrame::View& view,
                             const cv::GFrameDesc& desc) {
 
     switch (desc.fmt) {
         case cv::MediaFormat::BGR: {
-            auto bgr = cv::Mat(desc.size, CV_8UC3, view->ptr[0], view->stride[0]);
+            auto bgr = cv::Mat(desc.size, CV_8UC3, view.ptr[0], view.stride[0]);
             return wrapIE(bgr, cv::gapi::ie::TraitAs::IMAGE);
         }
         case cv::MediaFormat::NV12: {
-            auto y_plane  = cv::Mat(desc.size, CV_8UC1, view->ptr[0], view->stride[0]);
-            auto uv_plane = cv::Mat(desc.size / 2, CV_8UC2, view->ptr[1], view->stride[1]);
+            auto y_plane  = cv::Mat(desc.size, CV_8UC1, view.ptr[0], view.stride[0]);
+            auto uv_plane = cv::Mat(desc.size / 2, CV_8UC2, view.ptr[1], view.stride[1]);
             return cv::gapi::ie::util::to_ie(y_plane, uv_plane);
         }
         default:
@@ -170,7 +170,6 @@ inline IE::Blob::Ptr wrapIE(const std::unique_ptr<cv::MediaFrame::View>& view,
     }
     GAPI_Assert(false);
 }
-
 
 template<class MatType>
 inline void copyFromIE(const IE::Blob::Ptr &blob, MatType &mat) {
@@ -345,6 +344,24 @@ using GConstGIEModel = ade::ConstTypedGraph
     , IEUnit
     , IECallable
     >;
+
+using Views = std::vector<std::unique_ptr<cv::MediaFrame::View>>;
+
+inline IE::Blob::Ptr extractBlob(IECallContext& ctx, std::size_t i, Views& views) {
+    switch (ctx.in_shapes[i]) {
+        case cv::GShape::GFRAME: {
+            const auto& frame = ctx.inFrame(i);
+            views.emplace_back(new cv::MediaFrame::View(frame.access(cv::MediaFrame::Access::R)));
+            return wrapIE(*views.back(), frame.desc());
+        }
+        case cv::GShape::GMAT: {
+            return wrapIE(ctx.inMat(i), cv::gapi::ie::TraitAs::IMAGE);
+        }
+        default:
+            GAPI_Assert("Unsupported input shape for IE backend");
+    }
+    GAPI_Assert(false);
+}
 } // anonymous namespace
 
 // GCPUExcecutable implementation //////////////////////////////////////////////
@@ -485,6 +502,7 @@ static void configureInputInfo(const IE::InputInfo::Ptr& ii, const cv::GMetaArg 
                 switch (meta.fmt) {
                     case cv::MediaFormat::NV12:
                         ii->getPreProcess().setColorFormat(IE::ColorFormat::NV12);
+                        break;
                     case cv::MediaFormat::BGR:
                         // NB: Do nothing
                         break;
@@ -552,30 +570,12 @@ struct Infer: public cv::detail::KernelTag {
     static void run(IECompiled &iec, const IEUnit &uu, IECallContext &ctx) {
         // non-generic version for now:
         // - assumes all inputs/outputs are always Mats
-        std::vector<std::unique_ptr<cv::MediaFrame::View>> views;
+        Views views;
         for (auto i : ade::util::iota(uu.params.num_in)) {
             // TODO: Ideally we shouldn't do SetBlob() but GetBlob() instead,
             // and redirect our data producers to this memory
             // (A memory dialog comes to the picture again)
-            IE::Blob::Ptr this_blob;
-            switch (ctx.in_shapes[i]) {
-                case cv::GShape::GFRAME: {
-                    const auto& frame = ctx.inFrame(i);
-                    views.emplace_back(new cv::MediaFrame::View(frame.access(cv::MediaFrame::Access::R)));
-                    this_blob = wrapIE(views.back(), frame.desc());
-                    break;
-                }
-                case cv::GShape::GMAT: {
-                    // Since we do a ROI list inference, always assume our input buffer is image
-                    // FIXME: By default here we trait our inputs as images.
-                    // May be we need to make some more intelligence here about it
-                    this_blob = wrapIE(ctx.inMat(i), cv::gapi::ie::TraitAs::IMAGE);
-                    break;
-                }
-                default:
-                    GAPI_Assert("Unsupported input shape for IE backend");
-            }
-
+            IE::Blob::Ptr this_blob = extractBlob(ctx, i, views);
             iec.this_request.SetBlob(uu.params.input_names[i], this_blob);
         }
         iec.this_request.Infer();
@@ -639,23 +639,8 @@ struct InferROI: public cv::detail::KernelTag {
         GAPI_Assert(uu.params.num_in == 1);
         const auto& this_roi = ctx.inArg<cv::detail::OpaqueRef>(0).rref<cv::Rect>();
 
-        IE::Blob::Ptr this_blob;
-        std::unique_ptr<cv::MediaFrame::View> view;
-        switch (ctx.in_shapes[1]) {
-            case cv::GShape::GFRAME: {
-                const auto& frame = ctx.inFrame(1u);
-                view.reset(new cv::MediaFrame::View(frame.access(cv::MediaFrame::Access::R)));
-                this_blob = wrapIE(view, frame.desc());
-                break;
-            }
-            case cv::GShape::GMAT: {
-                // Since we do a ROI list inference, always assume our input buffer is image
-                this_blob = wrapIE(ctx.inMat(1u), cv::gapi::ie::TraitAs::IMAGE);
-                break;
-            }
-            default:
-                GAPI_Assert("Unsupported input shape for IE backend");
-        }
+        Views views;
+        IE::Blob::Ptr this_blob = extractBlob(ctx, 1, views);
 
         iec.this_request.SetBlob(*uu.params.input_names.begin(),
                                  IE::make_shared_blob(this_blob, toIE(this_roi)));
@@ -715,23 +700,8 @@ struct InferList: public cv::detail::KernelTag {
 
         const auto& in_roi_vec = ctx.inArg<cv::detail::VectorRef>(0u).rref<cv::Rect>();
 
-        IE::Blob::Ptr this_blob;
-        std::unique_ptr<cv::MediaFrame::View> view;
-        switch (ctx.in_shapes[1]) {
-            case cv::GShape::GFRAME: {
-                const auto& frame = ctx.inFrame(1);
-                view.reset(new cv::MediaFrame::View(frame.access(cv::MediaFrame::Access::R)));
-                this_blob = wrapIE(view, frame.desc());
-                break;
-            }
-            case cv::GShape::GMAT: {
-                // Since we do a ROI list inference, always assume our input buffer is image
-                this_blob = wrapIE(ctx.inMat(1), cv::gapi::ie::TraitAs::IMAGE);
-                break;
-            }
-            default:
-                GAPI_Assert("Unsupported input shape for IE backend");
-        }
+        Views views;
+        IE::Blob::Ptr this_blob = extractBlob(ctx, 1, views);
 
         // FIXME: This could be done ONCE at graph compile stage!
         std::vector< std::vector<int> > cached_dims(uu.params.num_out);
@@ -851,24 +821,8 @@ struct InferList2: public cv::detail::KernelTag {
         GAPI_Assert(ctx.args.size() > 1u
                     && "This operation must have at least two arguments");
 
-        // Since we do a ROI list inference, always assume our input buffer is image
-        IE::Blob::Ptr blob_0;
-        std::unique_ptr<cv::MediaFrame::View> view;
-        switch (ctx.in_shapes[0]) {
-            case cv::GShape::GFRAME: {
-                const auto& frame = ctx.inFrame(0);
-                view.reset(new cv::MediaFrame::View(frame.access(cv::MediaFrame::Access::R)));
-                blob_0 = wrapIE(view, frame.desc());
-                break;
-            }
-            case cv::GShape::GMAT: {
-                // Since we do a ROI list inference, always assume our input buffer is image
-                blob_0 = wrapIE(ctx.inMat(0), cv::gapi::ie::TraitAs::IMAGE);
-                break;
-            }
-            default:
-                GAPI_Assert("Unsupported input shape for IE backend");
-        }
+        Views views;
+        IE::Blob::Ptr blob_0 = extractBlob(ctx, 0, views);
 
         // Take the next argument, which must be vector (of any kind).
         // Use it only to obtain the ROI list size (sizes of all other
