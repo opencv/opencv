@@ -864,6 +864,16 @@ models = [
         downloader=GDrive('1j4UTqVE4EGaUFiK7a5I_CYX7twO9c5br'),
         sha='49776d262993c387542f84d9cd16566840404f26',
         filename='gsoc2016-goturn/goturn.caffemodel'),
+    Model(
+        name='crnn',
+        url='https://drive.google.com/uc?export=dowload&id=1ooaLR-rkTl8jdpGy1DoQs0-X0lQsB6Fj',
+        sha='270d92c9ccb670ada2459a25977e8deeaf8380d3',
+        filename='onnx/models/crnn.onnx'),
+    Model(
+        name='DB_TD500_resnet50',
+        url='https://drive.google.com/uc?export=dowload&id=19YWhArrNccaoSza0CfkXlA8im4-lAGsR',
+        sha='1b4dd21a6baa5e3523156776970895bd3db6960a',
+        filename='onnx/models/DB_TD500_resnet50.onnx'),
 ]
 
 # Note: models will be downloaded to current working directory
