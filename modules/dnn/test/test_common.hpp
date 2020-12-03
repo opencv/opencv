@@ -113,6 +113,14 @@ void normAssertDetections(
         double confThreshold = 0.0, double scores_diff = 1e-5,
         double boxes_iou_diff = 1e-4);
 
+// For text detection networks
+// Curved text polygon is not supported in the current version.
+// (concave polygon is invalid input to intersectConvexConvex)
+void normAssertTextDetections(
+        const std::vector<std::vector<Point>>& gtPolys,
+        const std::vector<std::vector<Point>>& testPolys,
+        const char *comment = "", double boxes_iou_diff = 1e-4);
+
 void readFileContent(const std::string& filename, CV_OUT std::vector<char>& content);
 
 #ifdef HAVE_INF_ENGINE
