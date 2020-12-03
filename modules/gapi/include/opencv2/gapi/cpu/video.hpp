@@ -9,7 +9,6 @@
 
 #include <opencv2/gapi/gkernel.hpp> // GKernelPackage
 
-
 namespace cv {
 namespace gapi {
 namespace video {

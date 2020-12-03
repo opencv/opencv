@@ -107,14 +107,38 @@ GAPI_OCV_KERNEL_ST(GCPUBackgroundSubtractor,
     }
 };
 
+cv::gapi::video::KalmanParams::KalmanParams(int dp, int mp, int cp, int tp)
+{
+    GAPI_Assert(dp > 0 && mp > 0);
+    GAPI_Assert(tp == CV_32F || tp == CV_64F);
+    ctrlDim = std::max(cp, 0);
+    type = tp;
+    dpDim = dp;
+    mpDim = mp;
+
+    statePre = Mat::zeros(dpDim, 1, type);
+    transitionMatrix = Mat::eye(dpDim, dpDim, type);
+
+    processNoiseCov = Mat::eye(dpDim, dpDim, type);
+    measurementMatrix = Mat::zeros(mpDim, dpDim, type);
+    measurementNoiseCov = Mat::eye(mpDim, mpDim, type);
+
+    errorCovPre = Mat::zeros(dpDim, dpDim, type);
+
+    if (ctrlDim > 0)
+        controlMatrix = Mat::zeros(dpDim, ctrlDim, type);
+    else
+        controlMatrix.release();
+}
+
 GAPI_OCV_KERNEL_ST(GCPUKalmanFilter, cv::gapi::video::GKalmanFilter, cv::KalmanFilter)
 {
     static void setup(const cv::GMatDesc&, const cv::GOpaqueDesc&,
                       const cv::GMatDesc&, const cv::gapi::video::KalmanParams& kfParams,
                       std::shared_ptr<cv::KalmanFilter> &state, const cv::GCompileArgs&)
     {
-        GAPI_Assert(kfParams.type == CV_32F || kfParams.type == CV_64F);
-        state = std::make_shared<cv::KalmanFilter>(kfParams.dpDim, kfParams.mpDim, kfParams.ctrlDim, kfParams.type);
+        state = std::make_shared<cv::KalmanFilter>(kfParams.dpDim, kfParams.mpDim,
+                                                   kfParams.ctrlDim, kfParams.type);
 
         // initial state
         state->statePre = kfParams.statePre;
@@ -124,31 +148,22 @@ GAPI_OCV_KERNEL_ST(GCPUKalmanFilter, cv::gapi::video::GKalmanFilter, cv::KalmanF
         state->controlMatrix = kfParams.controlMatrix;
         state->measurementMatrix = kfParams.measurementMatrix;
 
-        if (cv::norm(kfParams.transitionMatrix, cv::NORM_INF) != 0)
-            state->transitionMatrix = kfParams.transitionMatrix;
+        GAPI_Assert(cv::norm(kfParams.transitionMatrix, cv::NORM_INF) != 0);
+        state->transitionMatrix = kfParams.transitionMatrix;
 
-        if (cv::norm(kfParams.processNoiseCov, cv::NORM_INF) != 0)
-            state->processNoiseCov = kfParams.processNoiseCov;
+        GAPI_Assert(cv::norm(kfParams.processNoiseCov, cv::NORM_INF) != 0);
+        state->processNoiseCov = kfParams.processNoiseCov;
 
-        if (cv::norm(kfParams.measurementNoiseCov, cv::NORM_INF) != 0)
-            state->measurementNoiseCov = kfParams.measurementNoiseCov;
+        GAPI_Assert(cv::norm(kfParams.measurementNoiseCov, cv::NORM_INF) != 0);
+        state->measurementNoiseCov = kfParams.measurementNoiseCov;
     }
 
     static void run(const cv::Mat& measurements, bool haveMeasurement,
                     const cv::Mat& control, const cv::gapi::video::KalmanParams&,
                     cv::Mat &out, cv::KalmanFilter& state)
     {
-        cv::Mat pre;
-
-        if (!control.empty() && cv::norm(control, cv::NORM_INF) != 0)
-            pre = state.predict(control);
-        else
-            pre = state.predict();
-
-        if (haveMeasurement && !measurements.empty())
-            state.correct(measurements).copyTo(out);
-        else
-            pre.copyTo(out);
+        cv::Mat pre = cv::norm(control, cv::NORM_INF) != 0 ? state.predict(control) : state.predict();
+        haveMeasurement ? state.correct(measurements).copyTo(out) : pre.copyTo(out);
     }
 };
 

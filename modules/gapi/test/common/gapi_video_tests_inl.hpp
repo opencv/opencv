@@ -134,22 +134,22 @@ TEST_P(BackgroundSubtractorTest, AccuracyTest)
 
 TEST_P(KalmanFilterTest, AccuracyTest)
 {
-    cv::gapi::video::KalmanParams kp(dDim, mDim, cDim, depth);
+    cv::gapi::video::KalmanParams kp(dDim, mDim, cDim, type);
 
     //measurement vector
-    cv::Mat measure_vec(mDim, 1, depth);
+    cv::Mat measure_vec(mDim, 1, type);
     cv::randu(measure_vec, Scalar::all(-1), Scalar::all(1));
 
     //control vector
-    cv::Mat ctrl_vec = Mat::zeros(cDim > 0 ? cDim : dDim, 1, depth);
+    cv::Mat ctrl_vec = Mat::zeros(cDim > 0 ? cDim : dDim, 1, type);
 
     if (cDim > 0)
         cv::randu(ctrl_vec, Scalar::all(-1), Scalar::all(1));
 
     // G-API Kalman state
-    cv::Mat gapiKState(dDim, 1, depth);
+    cv::Mat gapiKState(dDim, 1, type);
     // OCV Kalman state
-    cv::Mat ocvKState(dDim, 1, depth);
+    cv::Mat ocvKState(dDim, 1, type);
 
     // G-API code
     cv::GMat m, ctrl;
@@ -160,7 +160,7 @@ TEST_P(KalmanFilterTest, AccuracyTest)
     comp.apply(cv::gin(measure_vec, haveMeasure, ctrl_vec), cv::gout(gapiKState));
 
     // OpenCV code
-    cv::KalmanFilter ocvKalman(dDim, mDim, cDim, depth);
+    cv::KalmanFilter ocvKalman(dDim, mDim, cDim, type);
 
     ocvKState = cDim > 0 ? ocvKalman.predict(ctrl_vec) : ocvKalman.predict();
 

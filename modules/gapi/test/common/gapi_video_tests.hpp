@@ -32,7 +32,7 @@ GAPI_TEST_FIXTURE_SPEC_PARAMS(BackgroundSubtractorTest, FIXTURE_API(tuple<cv::ga
                                                                     int, bool, double, std::string, std::size_t),
                               6, typeAndThreshold, histLength, detectShadows, learningRate, filePath, testNumFrames)
 
-GAPI_TEST_FIXTURE_SPEC_PARAMS(KalmanFilterTest, FIXTURE_API(int, int, int, int, bool), 5, depth, dDim, mDim, cDim, haveMeasure)
+GAPI_TEST_FIXTURE_SPEC_PARAMS(KalmanFilterTest, FIXTURE_API(int, int, int, int, bool), 5, type, dDim, mDim, cDim, haveMeasure)
 
 } // opencv_test
 
