@@ -52,6 +52,7 @@ jobs:
         run: swift package compute-checksum build/xcframework/opencv2-dynamic.xcframework.zip
       - name: Upload Dynamic XCFramework
         uses: actions/upload-artifact@v2
+        if: github.event.pull_request == null
         with:
           name: opencv2-dynamic.xcframework.zip
           path: |
@@ -95,6 +96,7 @@ jobs:
         run: swift package compute-checksum build/xcframework/opencv2-static.xcframework.zip
       - name: Upload Static XCFramework
         uses: actions/upload-artifact@v2
+        if: github.event.pull_request == null
         with:
           name: opencv2-static.xcframework.zip
           path: |
