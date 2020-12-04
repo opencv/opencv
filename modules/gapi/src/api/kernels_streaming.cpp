@@ -75,7 +75,6 @@ cv::GMat cv::gapi::streaming::desync(const cv::GMat &g) {
     // object will feed both branches of the streaming executable.
 }
 
-
 cv::GFrame cv::gapi::streaming::copy(const cv::GFrame& in) {
     return cv::gapi::streaming::GCopy::on(in);
 }

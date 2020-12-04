@@ -158,7 +158,6 @@ void cv::gimpl::Copy::Actor::run(cv::gimpl::GIslandExecutable::IInput  &in,
             return;
         }
 
-        // Do nothing smart here, just repost the input object to the output
         const cv::GRunArgs &in_args = cv::util::get<cv::GRunArgs>(in_msg);
         GAPI_Assert(in_args.size() == 1u);
 
@@ -180,7 +179,6 @@ void cv::gimpl::BGR::Actor::run(cv::gimpl::GIslandExecutable::IInput  &in,
             return;
         }
 
-        // Do nothing smart here, just repost the input object to the output
         const cv::GRunArgs &in_args = cv::util::get<cv::GRunArgs>(in_msg);
         GAPI_Assert(in_args.size() == 1u);
 

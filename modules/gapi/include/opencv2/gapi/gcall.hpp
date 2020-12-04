@@ -41,7 +41,7 @@ public:
     GMat    yield      (int output = 0);
     GMatP   yieldP     (int output = 0);
     GScalar yieldScalar(int output = 0);
-    GFrame yieldFrame  (int output = 0);
+    GFrame  yieldFrame (int output = 0);
 
     template<class T> GArray<T> yieldArray(int output = 0)
     {

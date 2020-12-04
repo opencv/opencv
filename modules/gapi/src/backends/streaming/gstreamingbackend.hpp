@@ -92,4 +92,4 @@ struct BGR: public cv::detail::KernelTag
 } // namespace gimpl
 } // namespace cv
 
-#endif // OPENCV_GAPI_COPY_KERNEL_HPtruct Copy: public cv::detail::KernelTag {
+#endif // OPENCV_GAPI_COPY_KERNEL_HPP

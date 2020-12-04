@@ -186,7 +186,6 @@ cv::gimpl::GCompiler::GCompiler(const cv::GComputation &c,
     auto kernels_to_use  = getKernelPackage(m_args);
     auto networks_to_use = getNetworkPackage(m_args);
     std::unordered_set<cv::gapi::GBackend> all_backends;
-
     const auto take = [&](std::vector<cv::gapi::GBackend> &&v) {
         all_backends.insert(v.begin(), v.end());
     };
