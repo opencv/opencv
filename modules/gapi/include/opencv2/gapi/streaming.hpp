@@ -52,8 +52,6 @@ GAPI_EXPORTS cv::GFrame copy(const cv::GFrame& in);
 */
 GAPI_EXPORTS cv::GMat BGR (const cv::GFrame& in);
 
-GAPI_EXPORTS cv::gapi::GKernelPackage kernels();
-
 }
 } // namespace gapi
 } // namespace cv

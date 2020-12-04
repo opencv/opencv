@@ -15,6 +15,7 @@
 
 #include <opencv2/imgproc.hpp>
 #include <opencv2/gapi/util/throw.hpp> // throw_error
+#include <opencv2/gapi/streaming/streaming.hpp> // kernels
 
 #include "api/gbackend_priv.hpp"
 #include "backends/common/gbackend.hpp"
