@@ -108,12 +108,15 @@ TEST(videoio_gstreamer, gray16_writing)
     // write noise frame to file using GStreamer
     std::ostringstream writer_pipeline;
     writer_pipeline << "appsrc ! filesink location=" << temp_file;
+    std::vector<int> params {
+        VIDEOWRITER_PROP_IS_COLOR, 0/*false*/,
+        VIDEOWRITER_PROP_DEPTH, CV_16U
+    };
     VideoWriter writer;
-    std::vector<int> params{ VIDEOWRITER_PROP_IS_COLOR, 0, VIDEOWRITER_PROP_DEPTH, CV_16U };
     ASSERT_NO_THROW(writer.open(writer_pipeline.str(), CAP_GSTREAMER, 0/*fourcc*/, 30/*fps*/, frame_size, params));
     ASSERT_TRUE(writer.isOpened());
     ASSERT_NO_THROW(writer.write(frame));
-    EXPECT_NO_THROW(writer.release());
+    ASSERT_NO_THROW(writer.release());
 
     // read noise frame back in
     Mat written_frame(frame_size, CV_16U);

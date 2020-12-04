@@ -1240,8 +1240,8 @@ class CvVideoWriter_GStreamer : public CvVideoWriter
 {
 public:
     CvVideoWriter_GStreamer()
-        : input_pix_fmt(0),
-          num_frames(0), framerate(0), ipl_depth(CV_8U)
+        : ipl_depth(CV_8U)
+        , input_pix_fmt(0), num_frames(0), framerate(0)
     {
     }
     virtual ~CvVideoWriter_GStreamer() CV_OVERRIDE
@@ -1552,6 +1552,7 @@ bool CvVideoWriter_GStreamer::open( const std::string &filename, int fourcc,
 
     if (fourcc == CV_FOURCC('M','J','P','G') && frameSize.height == 1)
     {
+        CV_Assert(depth == CV_8U);
         ipl_depth = IPL_DEPTH_8U;
         input_pix_fmt = GST_VIDEO_FORMAT_ENCODED;
         caps.attach(gst_caps_new_simple("image/jpeg",
@@ -1559,8 +1560,9 @@ bool CvVideoWriter_GStreamer::open( const std::string &filename, int fourcc,
                                         NULL));
         caps.attach(gst_caps_fixate(caps.detach()));
     }
-    else if (is_color && depth == CV_8U)
+    else if (is_color)
     {
+        CV_Assert(depth == CV_8U);
         ipl_depth = IPL_DEPTH_8U;
         input_pix_fmt = GST_VIDEO_FORMAT_BGR;
         bufsize = frameSize.width * frameSize.height * 3;
@@ -1603,14 +1605,14 @@ bool CvVideoWriter_GStreamer::open( const std::string &filename, int fourcc,
                                         NULL));
         caps.attach(gst_caps_fixate(caps.detach()));
     }
-    else {
+    else
+    {
         CV_WARN("unsupported depth=" << depth <<", and is_color=" << is_color << " combination");
         pipeline.release();
         return false;
     }
 
     gst_app_src_set_caps(GST_APP_SRC(source.get()), caps);
-
     gst_app_src_set_stream_type(GST_APP_SRC(source.get()), GST_APP_STREAM_TYPE_STREAM);
     gst_app_src_set_size (GST_APP_SRC(source.get()), -1);
 
@@ -1954,29 +1956,41 @@ CvResult CV_API_CALL cv_capture_retrieve(CvPluginCapture handle, int stream_idx,
     }
 }
 
-
 static
-CvResult CV_API_CALL cv_writer_open_with_params(const char* filename, int fourcc, double fps, int width, int height, int* params, size_t n_params,
-                                    CV_OUT CvPluginWriter* handle)
+CvResult CV_API_CALL cv_writer_open_with_params(
+        const char* filename, int fourcc, double fps, int width, int height,
+        int* params, unsigned n_params,
+        CV_OUT CvPluginWriter* handle)
 {
     CvVideoWriter_GStreamer* wrt = 0;
     try
     {
-        wrt = new CvVideoWriter_GStreamer();
         CvSize sz = { width, height };
+        bool isColor = true;
         int depth = CV_8U;
-        int isColor = TRUE;
-        for (int i = 0; i < n_params; ++i) {
-            switch (params[i*2]) {
-            case VIDEOWRITER_PROP_IS_COLOR:
-                isColor = params[i * 2 + 1];
-                break;
-            case VIDEOWRITER_PROP_DEPTH:
-                depth = params[i * 2 + 1];
-                break;
+        if (params)
+        {
+            for (unsigned i = 0; i < n_params; ++i)
+            {
+                const int prop = params[i*2];
+                const int value = params[i*2 + 1];
+                switch (prop)
+                {
+                case VIDEOWRITER_PROP_IS_COLOR:
+                    isColor = value != 0;
+                    break;
+                case VIDEOWRITER_PROP_DEPTH:
+                    depth = value;
+                    break;
+                default:
+                    // TODO emit message about non-recognized propert
+                    // FUTURE: there should be mandatory and optional properties
+                    return CV_ERROR_FAIL;
+                }
             }
         }
-        if(wrt && wrt->open(filename, fourcc, fps, sz, isColor, depth))
+        wrt = new CvVideoWriter_GStreamer();
+        if (wrt && wrt->open(filename, fourcc, fps, sz, isColor, depth))
         {
             *handle = (CvPluginWriter)wrt;
             return CV_ERROR_OK;
@@ -1997,7 +2011,6 @@ CvResult CV_API_CALL cv_writer_open(const char* filename, int fourcc, double fps
     int params[2] = { VIDEOWRITER_PROP_IS_COLOR, isColor };
     return cv_writer_open_with_params(filename, fourcc, fps, width, height, params, 1, handle);
 }
-
 
 static
 CvResult CV_API_CALL cv_writer_release(CvPluginWriter handle)
