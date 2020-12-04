@@ -24,7 +24,8 @@
 
 namespace {
 
-struct StreamingCreateFunction {
+struct StreamingCreateFunction
+{
     static const char *name() { return "StreamingCreateFunction";  }
     cv::gapi::streaming::CreateActorFunction createActorFunction;
 };
@@ -42,7 +43,8 @@ using ConstStreamingGraph = ade::ConstTypedGraph
     >;
 
 
-class GStreamingExecutable final: public cv::gimpl::GIslandExecutable {
+class GStreamingExecutable final: public cv::gimpl::GIslandExecutable
+{
     virtual void run(std::vector<InObj>  &&,
                      std::vector<OutObj> &&) override {
         // NB: Is it really needed in non-streaming  mode ?
@@ -67,14 +69,17 @@ public:
 };
 
 void GStreamingExecutable::run(GIslandExecutable::IInput  &in,
-                               GIslandExecutable::IOutput &out) {
+                               GIslandExecutable::IOutput &out)
+{
     m_actor->run(in, out);
 }
 
-class GStreamingBackendImpl final: public cv::gapi::GBackend::Priv {
+class GStreamingBackendImpl final: public cv::gapi::GBackend::Priv
+{
     virtual void unpackKernel(ade::Graph            &graph,
                               const ade::NodeHandle &op_node,
-                              const cv::GKernelImpl &impl) override {
+                              const cv::GKernelImpl &impl) override
+    {
         StreamingGraph gm(graph);
         const auto &kimpl  = cv::util::any_cast<cv::gapi::streaming::GStreamingKernel>(impl.opaque);
         gm.metadata(op_node).set(StreamingCreateFunction{kimpl.createActorFunction});
@@ -82,24 +87,22 @@ class GStreamingBackendImpl final: public cv::gapi::GBackend::Priv {
 
     virtual EPtr compile(const ade::Graph &graph,
                          const cv::GCompileArgs &,
-                         const std::vector<ade::NodeHandle> &nodes) const override {
+                         const std::vector<ade::NodeHandle> &nodes) const override
+    {
         return EPtr{new GStreamingExecutable(graph, nodes)};
     }
 
-    virtual bool controlsMerge() const override {
+    virtual bool controlsMerge() const override
+    {
         return false;
     }
 
     virtual bool allowsMerge(const cv::gimpl::GIslandModel::Graph &,
                              const ade::NodeHandle &,
                              const ade::NodeHandle &,
-                             const ade::NodeHandle &) const override {
+                             const ade::NodeHandle &) const override
+    {
         return false;
-    }
-
-
-    virtual cv::gapi::GKernelPackage auxiliaryKernels() const override {
-        return cv::gapi::kernels<cv::gimpl::Copy>();
     }
 };
 
@@ -108,9 +111,11 @@ GStreamingExecutable::GStreamingExecutable(const ade::Graph& g,
     : m_g(g), m_gm(m_g)
 {
     using namespace cv::gimpl;
-    const auto is_op = [this](const ade::NodeHandle &nh) {
+    const auto is_op = [this](const ade::NodeHandle &nh)
+    {
         return m_gm.metadata(nh).get<NodeType>().t == NodeType::OP;
     };
+
     auto it = std::find_if(nodes.begin(), nodes.end(), is_op);
     GAPI_Assert(it != nodes.end() && "No operators found for this island?!");
 
@@ -118,7 +123,8 @@ GStreamingExecutable::GStreamingExecutable(const ade::Graph& g,
     m_actor = cag.metadata(*it).get<StreamingCreateFunction>().createActorFunction();
 
     // Ensure this the only op in the graph
-    if (std::any_of(it+1, nodes.end(), is_op)) {
+    if (std::any_of(it+1, nodes.end(), is_op))
+    {
         cv::util::throw_error
             (std::logic_error
              ("Internal error: Streaming subgraph has multiple operations"));
@@ -128,21 +134,25 @@ GStreamingExecutable::GStreamingExecutable(const ade::Graph& g,
 
 } // anonymous namespace
 
-cv::gapi::GBackend cv::gapi::streaming::backend() {
+cv::gapi::GBackend cv::gapi::streaming::backend()
+{
     static cv::gapi::GBackend this_backend(std::make_shared<GStreamingBackendImpl>());
     return this_backend;
 }
 
-cv::gapi::GKernelPackage cv::gapi::streaming::kernels() {
+cv::gapi::GKernelPackage cv::gapi::streaming::kernels()
+{
     return cv::gapi::kernels<cv::gimpl::Copy, cv::gimpl::BGR>();
 }
 
 void cv::gimpl::Copy::Actor::run(cv::gimpl::GIslandExecutable::IInput  &in,
                                  cv::gimpl::GIslandExecutable::IOutput &out)
 {
-    while (true) {
+    while (true)
+    {
         const auto in_msg = in.get();
-        if (cv::util::holds_alternative<cv::gimpl::EndOfStream>(in_msg)) {
+        if (cv::util::holds_alternative<cv::gimpl::EndOfStream>(in_msg))
+        {
             out.post(cv::gimpl::EndOfStream{});
             return;
         }

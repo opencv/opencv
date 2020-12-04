@@ -23,12 +23,14 @@
 namespace cv {
 namespace gimpl {
 
-class RMatMediaBGRAdapter : public cv::RMat::Adapter {
+class RMatMediaBGRAdapter : public cv::RMat::Adapter
+{
     cv::MediaFrame m_frame;
 public:
     RMatMediaBGRAdapter(cv::MediaFrame frame) : m_frame(frame) { };
 
-    virtual cv::RMat::View access(cv::RMat::Access a) override {
+    virtual cv::RMat::View access(cv::RMat::Access a) override
+    {
         auto view = m_frame.access(a == cv::RMat::Access::W ? cv::MediaFrame::Access::W
                                                             : cv::MediaFrame::Access::R);
 
@@ -38,7 +40,8 @@ public:
                               [=](){});
     }
 
-    virtual cv::GMatDesc desc() const override {
+    virtual cv::GMatDesc desc() const override
+    {
         const auto& desc = m_frame.desc();
         GAPI_Assert(desc.fmt == cv::MediaFormat::BGR);
         return cv::GMatDesc{CV_8U, 3, desc.size};
@@ -51,14 +54,16 @@ struct Copy: public cv::detail::KernelTag
 
     static gapi::GBackend backend() { return cv::gapi::streaming::backend(); }
 
-    class Actor final: public cv::gapi::streaming::IActor {
+    class Actor final: public cv::gapi::streaming::IActor
+    {
         public:
             explicit Actor() {}
             virtual void run(cv::gimpl::GIslandExecutable::IInput  &in,
                              cv::gimpl::GIslandExecutable::IOutput &out) override;
     };
 
-    static cv::gapi::streaming::IActor::Ptr create() {
+    static cv::gapi::streaming::IActor::Ptr create()
+    {
         return cv::gapi::streaming::IActor::Ptr(new Actor());
     }
 
@@ -77,7 +82,8 @@ struct BGR: public cv::detail::KernelTag
                              cv::gimpl::GIslandExecutable::IOutput&out) override;
     };
 
-    static cv::gapi::streaming::IActor::Ptr create() {
+    static cv::gapi::streaming::IActor::Ptr create()
+    {
         return cv::gapi::streaming::IActor::Ptr(new Actor());
     }
     static cv::gapi::streaming::GStreamingKernel kernel() { return {&create}; };
