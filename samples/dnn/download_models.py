@@ -272,11 +272,36 @@ def produceDownloadInstance(instance_name, filename, sha, url, save_dir, downloa
     )
 
 def getSaveDir():
-    env_path = os.environ.get("OPENCV_SAVE_DIR", None)
+    env_path = os.environ.get("OPENCV_DOWNLOAD_DATA_PATH", None)
     if env_path:
         save_dir = env_path
     else:
-        save_dir = cv2.utils.fs.getCacheDirectory("samples")
+        # TODO reuse binding function cv2.utils.fs.getCacheDirectory when issue #19011 is fixed
+        if platform.system() == "Darwin":
+            #On Apple devices	
+            temp_env = os.environ.get("TMPDIR", None)	
+            if temp_env is None or not os.path.isdir(temp_env):	
+                temp_dir = Path("/tmp")	
+                print("Using world accessible cache directory. This may be not secure: ", temp_dir)	
+            else:	
+                temp_dir = temp_env	
+        elif platform.system() == "Windows":	
+            temp_dir = tempfile.gettempdir()	
+        else:	
+            xdg_cache_env = os.environ.get("XDG_CACHE_HOME", None)	
+            if (xdg_cache_env and xdg_cache_env[0] and os.path.isdir(xdg_cache_env)):	
+                temp_dir = xdg_cache_env	
+            else:	
+                home_env = os.environ.get("HOME", None)	
+                if (home_env and home_env[0] and os.path.isdir(home_env)):	
+                    home_path = os.path.join(home_env, ".cache/")	
+                    if os.path.isdir(home_path):	
+                        temp_dir = home_path	
+                else:	
+                    temp_dir = tempfile.gettempdir()	
+                    print("Using world accessible cache directory. This may be not secure: ", temp_dir)	
+
+        save_dir = os.path.join(temp_dir, "downloads")
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
     return save_dir

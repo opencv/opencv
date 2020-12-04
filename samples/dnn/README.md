@@ -43,7 +43,7 @@ print(filepath2)
 
 By running the following commands, you will get **MobileNetSSD_deploy.caffemodel** file:
 ```bash
-export OPENCV_SAVE_DIR=save_dir_2
+export OPENCV_DOWNLOAD_DATA_PATH=download_folder
 python your_script.py
 ```
 
