@@ -4,7 +4,7 @@ This script builds OpenCV into an xcframework compatible with the platforms
 of your choice. Just run it and grab a snack; you'll be waiting a while.
 """
 
-import sys, os, argparse, pathlib, traceback
+import sys, os, argparse, pathlib, traceback, contextlib, shutil
 from cv_build_utils import execute, print_error, print_header, get_xcode_version, get_cmake_version
 
 if __name__ == "__main__":
@@ -67,7 +67,7 @@ if __name__ == "__main__":
     # Build phase
 
     try:
-        # Build .frameworks for each platform
+        # Phase 1: build .frameworks for each platform
         osx_script_path = os.path.abspath(os.path.abspath(os.path.dirname(__file__))+'/../osx/build_framework.py')
         ios_script_path = os.path.abspath(os.path.abspath(os.path.dirname(__file__))+'/../ios/build_framework.py')
 
@@ -104,22 +104,29 @@ if __name__ == "__main__":
             print_header("Building Catalyst frameworks")
             execute(command, cwd=os.getcwd())
 
-        # Put all the built .frameworks together into a .xcframework
-        print_header("Building xcframework")
+        # Phase 2: put all the built .frameworks together into a .xcframework
 
-        framework_path = "{}/{}.xcframework".format(args.out, args.framework_name)
+        xcframework_path = "{}/{}.xcframework".format(args.out, args.framework_name)
+        print_header("Building {}".format(xcframework_path))
+
+        # Remove the xcframework if it exists, otherwise the existing
+        # file will cause the xcodebuild command to fail.
+        with contextlib.suppress(FileNotFoundError):
+            shutil.rmtree(xcframework_path)
+            print("Removed existing xcframework at {}".format(xcframework_path))
+
         xcframework_build_command = [
             "xcodebuild",
             "-create-xcframework",
             "-output",
-            framework_path,
+            xcframework_path,
         ]
         for folder in build_folders:
-            xcframework_build_command += ["-framework", "{}/{}.framework".format(folder, args.framework_name)]
+            xcframework_build_command += ["-framework", xcframework_path]
         execute(xcframework_build_command, cwd=os.getcwd())
 
         print("")
-        print_header("Finished building {}".format(framework_path))
+        print_header("Finished building {}".format(xcframework_path))
     except Exception as e:
         print_error(e)
         traceback.print_exc(file=sys.stderr)

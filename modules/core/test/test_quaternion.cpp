@@ -18,7 +18,7 @@ protected:
     }
     double scalar = 2.5;
     double angle = CV_PI;
-    int qNorm2 = 2;
+    double qNorm2 = 2;
     Vec<double, 3> axis{1, 1, 1};
     Vec<double, 3> unAxis{0, 0, 0};
     Vec<double, 3> unitAxis{1.0 / sqrt(3), 1.0 / sqrt(3), 1.0 / sqrt(3)};
@@ -124,7 +124,7 @@ TEST_F(QuatTest, basicfuns){
     EXPECT_EQ(exp(qNull), qIdentity);
     EXPECT_EQ(exp(Quatd(0, angle * unitAxis[0] / 2, angle * unitAxis[1] / 2, angle * unitAxis[2] / 2)), q3);
 
-    EXPECT_EQ(power(q3, 2), Quatd::createFromAngleAxis(2*angle, axis));
+    EXPECT_EQ(power(q3, 2.0), Quatd::createFromAngleAxis(2*angle, axis));
     EXPECT_EQ(power(Quatd(0.5, 0.5, 0.5, 0.5), 2.0, assumeUnit), Quatd(-0.5,0.5,0.5,0.5));
     EXPECT_EQ(power(Quatd(0.5, 0.5, 0.5, 0.5), -2.0), Quatd(-0.5,-0.5,-0.5,-0.5));
     EXPECT_EQ(sqrt(q1), power(q1, 0.5));
@@ -160,7 +160,7 @@ TEST_F(QuatTest, basicfuns){
     EXPECT_EQ(tan(atan(q1)), q1);
 }
 
-TEST_F(QuatTest, opeartor){
+TEST_F(QuatTest, operator){
     Quatd minusQ{-1, -2, -3, -4};
     Quatd qAdd{3.5, 0, 6.5, 8};
     Quatd qMinus{-1.5, 4, -0.5, 0};
@@ -171,7 +171,15 @@ TEST_F(QuatTest, opeartor){
 
     EXPECT_EQ(-q1, minusQ);
     EXPECT_EQ(q1 + q2, qAdd);
+    EXPECT_EQ(q1 + scalar, Quatd(3.5, 2, 3, 4));
+    EXPECT_EQ(scalar + q1, Quatd(3.5, 2, 3, 4));
+    EXPECT_EQ(q1 + 2.0, Quatd(3, 2, 3, 4));
+    EXPECT_EQ(2.0 + q1, Quatd(3, 2, 3, 4));
     EXPECT_EQ(q1 - q2, qMinus);
+    EXPECT_EQ(q1 - scalar, Quatd(-1.5, 2, 3, 4));
+    EXPECT_EQ(scalar - q1, Quatd(1.5, -2, -3, -4));
+    EXPECT_EQ(q1 - 2.0, Quatd(-1, 2, 3, 4));
+    EXPECT_EQ(2.0 - q1, Quatd(1, -2, -3, -4));
     EXPECT_EQ(q1 * q2, qMultq);
     EXPECT_EQ(q1 * scalar, qMults);
     EXPECT_EQ(scalar * q1, qMults);
