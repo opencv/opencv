@@ -4,6 +4,11 @@ Finding contours in your image {#tutorial_find_contours}
 @prev_tutorial{tutorial_template_matching}
 @next_tutorial{tutorial_hull}
 
+|    |    |
+| -: | :- |
+| Original author | Ana Huamán |
+| Compatibility | OpenCV >= 3.0 |
+
 Goal
 ----
 

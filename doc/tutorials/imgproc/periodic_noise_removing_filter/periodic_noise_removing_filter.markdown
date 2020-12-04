@@ -3,6 +3,11 @@ Periodic Noise Removing Filter {#tutorial_periodic_noise_removing_filter}
 
 @prev_tutorial{tutorial_anisotropic_image_segmentation_by_a_gst}
 
+|    |    |
+| -: | :- |
+| Original author | Karpushin Vladislav |
+| Compatibility | OpenCV >= 3.0 |
+
 Goal
 ----
 

@@ -4,6 +4,11 @@ Histogram Comparison {#tutorial_histogram_comparison}
 @prev_tutorial{tutorial_histogram_calculation}
 @next_tutorial{tutorial_back_projection}
 
+|    |    |
+| -: | :- |
+| Original author | Ana Huamán |
+| Compatibility | OpenCV >= 3.0 |
+
 Goal
 ----
 

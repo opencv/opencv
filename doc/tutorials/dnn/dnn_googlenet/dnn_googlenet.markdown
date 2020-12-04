@@ -3,6 +3,11 @@ Load Caffe framework models  {#tutorial_dnn_googlenet}
 
 @next_tutorial{tutorial_dnn_halide}
 
+|    |    |
+| -: | :- |
+| Original author | Vitaliy Lyudvichenko |
+| Compatibility | OpenCV >= 3.3 |
+
 Introduction
 ------------
 

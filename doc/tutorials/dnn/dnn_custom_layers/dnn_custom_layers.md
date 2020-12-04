@@ -3,6 +3,11 @@
 @prev_tutorial{tutorial_dnn_javascript}
 @next_tutorial{tutorial_dnn_OCR}
 
+|    |    |
+| -: | :- |
+| Original author | Dmitry Kurtaev |
+| Compatibility | OpenCV >= 3.4.1 |
+
 ## Introduction
 Deep learning is a fast growing area. The new approaches to build neural networks
 usually introduce new types of layers. They could be modifications of existing

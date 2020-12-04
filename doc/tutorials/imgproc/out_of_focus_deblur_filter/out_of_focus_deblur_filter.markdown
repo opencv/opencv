@@ -4,6 +4,11 @@ Out-of-focus Deblur Filter {#tutorial_out_of_focus_deblur_filter}
 @prev_tutorial{tutorial_distance_transform}
 @next_tutorial{tutorial_motion_deblur_filter}
 
+|    |    |
+| -: | :- |
+| Original author | Karpushin Vladislav |
+| Compatibility | OpenCV >= 3.0 |
+
 Goal
 ----
 

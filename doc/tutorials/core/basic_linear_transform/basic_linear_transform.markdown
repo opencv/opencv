@@ -4,6 +4,11 @@ Changing the contrast and brightness of an image! {#tutorial_basic_linear_transf
 @prev_tutorial{tutorial_adding_images}
 @next_tutorial{tutorial_discrete_fourier_transform}
 
+|    |    |
+| -: | :- |
+| Original author | Ana Huamán |
+| Compatibility | OpenCV >= 3.0 |
+
 Goal
 ----
 

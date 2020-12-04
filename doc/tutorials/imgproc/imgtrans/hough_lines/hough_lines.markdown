@@ -4,6 +4,11 @@ Hough Line Transform {#tutorial_hough_lines}
 @prev_tutorial{tutorial_canny_detector}
 @next_tutorial{tutorial_hough_circle}
 
+|    |    |
+| -: | :- |
+| Original author | Ana Huamán |
+| Compatibility | OpenCV >= 3.0 |
+
 Goal
 ----
 

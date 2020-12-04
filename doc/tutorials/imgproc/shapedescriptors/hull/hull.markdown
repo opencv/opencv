@@ -4,6 +4,11 @@ Convex Hull {#tutorial_hull}
 @prev_tutorial{tutorial_find_contours}
 @next_tutorial{tutorial_bounding_rects_circles}
 
+|    |    |
+| -: | :- |
+| Original author | Ana Huamán |
+| Compatibility | OpenCV >= 3.0 |
+
 Goal
 ----
 

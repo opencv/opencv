@@ -1,5 +1,7 @@
 # Implementing a face beautification algorithm with G-API {#tutorial_gapi_face_beautification}
 
+@prev_tutorial{tutorial_gapi_anisotropic_segmentation}
+
 [TOC]
 
 # Introduction {#gapi_fb_intro}

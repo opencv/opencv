@@ -4,6 +4,11 @@ Camera calibration With OpenCV {#tutorial_camera_calibration}
 @prev_tutorial{tutorial_camera_calibration_square_chess}
 @next_tutorial{tutorial_real_time_pose}
 
+|    |    |
+| -: | :- |
+| Original author | Bernát Gábor |
+| Compatibility | OpenCV >= 4.0 |
+
 
 Cameras have been around for a long-long time. However, with the introduction of the cheap *pinhole*
 cameras in the late 20th century, they became a common occurrence in our everyday life.
