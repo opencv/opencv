@@ -396,7 +396,7 @@ CvResult CV_API_CALL cv_writer_write(CvPluginWriter handle, const unsigned char 
 static const OpenCV_VideoIO_Plugin_API_preview plugin_api_v0 =
 {
     {
-        sizeof(OpenCV_VideoIO_Plugin_API_preview), ABI_VERSION, API_VERSION,
+        sizeof(OpenCV_VideoIO_Plugin_API_preview), ABI_VERSION, 0/*API_VERSION*/,
         CV_VERSION_MAJOR, CV_VERSION_MINOR, CV_VERSION_REVISION, CV_VERSION_STATUS,
         "FFmpeg OpenCV Video I/O plugin"
     },
@@ -412,7 +412,7 @@ static const OpenCV_VideoIO_Plugin_API_preview plugin_api_v0 =
     /* 10*/cv_writer_get_prop,
     /* 11*/cv_writer_set_prop,
     /* 12*/cv_writer_write,
-    /* 13*/NULL
+    /* 13 Writer_open_with_params*/NULL
 };
 
 } // namespace
@@ -421,7 +421,7 @@ const OpenCV_VideoIO_Plugin_API_preview* opencv_videoio_plugin_init_v0(int reque
 {
     if (requested_abi_version != 0)
         return NULL;
-    if (requested_api_version != 0 && requested_api_version != 1)
+    if (requested_api_version != 0)
         return NULL;
     return &cv::plugin_api_v0;
 }

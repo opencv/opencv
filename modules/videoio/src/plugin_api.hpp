@@ -9,10 +9,12 @@
 #include <opencv2/core/llapi/llapi.h>
 
 // increase for backward-compatible changes, e.g. add new function
-// Main API <= Plugin API -> plugin is compatible
+// Main API <= Plugin API -> plugin is fully compatible
+// Main API > Plugin API -> plugin is not compatible, caller should use shim code to use plugins with old API
 #define API_VERSION 1 // preview
 // increase for incompatible changes, e.g. remove function argument
 // Main ABI == Plugin ABI -> plugin is compatible
+// Main ABI > Plugin ABI -> plugin is not compatible, caller should use shim code to use old ABI plugins
 #define ABI_VERSION 0 // preview
 
 #ifdef __cplusplus
@@ -93,8 +95,12 @@ typedef struct OpenCV_VideoIO_Plugin_API_preview
 
     /** @brief Try to open video writer
 
-    @param filename File name or NULL to use camera_index instead
-    @param camera_index Camera index (used if filename == NULL)
+    @param filename Destination location
+    @param fourcc FOURCC code
+    @param fps FPS
+    @param width frame width
+    @param height frame height
+    @param isColor true if video stream should save color frames
     @param[out] handle pointer on Writer handle
 
     @note API-CALL 8, API-Version == 0
@@ -146,14 +152,22 @@ typedef struct OpenCV_VideoIO_Plugin_API_preview
 
     /** @brief Try to open video writer
 
-    @param filename File name or NULL to use camera_index instead
-    @param camera_index Camera index (used if filename == NULL)
+    @param filename Destination location
+    @param fourcc FOURCC code
+    @param fps FPS
+    @param width frame width
+    @param height frame height
+    @param params pointer on 2*n_params array of 'key,value' pairs
+    @param n_params number of passed parameters
     @param[out] handle pointer on Writer handle
 
     @note API-CALL 13, API-Version == 1
      */
-    CvResult(CV_API_CALL* Writer_open_with_params)(const char* filename, int fourcc, double fps, int width, int height, int * params, size_t n_params,
-        CV_OUT CvPluginWriter* handle);
+    CvResult (CV_API_CALL* Writer_open_with_params)(
+        const char* filename, int fourcc, double fps, int width, int height,
+        int* params, unsigned n_params,
+        CV_OUT CvPluginWriter* handle
+    );
 
 } OpenCV_VideoIO_Plugin_API_preview;
 
