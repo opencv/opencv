@@ -4,6 +4,11 @@ Template Matching {#tutorial_template_matching}
 @prev_tutorial{tutorial_back_projection}
 @next_tutorial{tutorial_find_contours}
 
+|    |    |
+| -: | :- |
+| Original author | Ana Huamán |
+| Compatibility | OpenCV >= 3.0 |
+
 Goal
 ----
 

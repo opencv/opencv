@@ -4,6 +4,11 @@ Anisotropic image segmentation by a gradient structure tensor {#tutorial_anisotr
 @prev_tutorial{tutorial_motion_deblur_filter}
 @next_tutorial{tutorial_periodic_noise_removing_filter}
 
+|    |    |
+| -: | :- |
+| Original author | Karpushin Vladislav |
+| Compatibility | OpenCV >= 3.0 |
+
 Goal
 ----
 

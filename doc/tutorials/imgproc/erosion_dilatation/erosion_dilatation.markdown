@@ -4,6 +4,11 @@ Eroding and Dilating {#tutorial_erosion_dilatation}
 @prev_tutorial{tutorial_gausian_median_blur_bilateral_filter}
 @next_tutorial{tutorial_opening_closing_hats}
 
+|    |    |
+| -: | :- |
+| Original author | Ana Huamán |
+| Compatibility | OpenCV >= 3.0 |
+
 Goal
 ----
 

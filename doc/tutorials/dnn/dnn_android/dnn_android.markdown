@@ -3,6 +3,11 @@
 @prev_tutorial{tutorial_dnn_halide_scheduling}
 @next_tutorial{tutorial_dnn_yolo}
 
+|    |    |
+| -: | :- |
+| Original author | Dmitry Kurtaev |
+| Compatibility | OpenCV >= 3.3 |
+
 ## Introduction
 In this tutorial you'll know how to run deep learning networks on Android device
 using OpenCV deep learning module.

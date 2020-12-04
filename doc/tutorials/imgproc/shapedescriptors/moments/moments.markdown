@@ -4,6 +4,11 @@ Image Moments {#tutorial_moments}
 @prev_tutorial{tutorial_bounding_rotated_ellipses}
 @next_tutorial{tutorial_point_polygon_test}
 
+|    |    |
+| -: | :- |
+| Original author | Ana Huamán |
+| Compatibility | OpenCV >= 3.0 |
+
 Goal
 ----
 

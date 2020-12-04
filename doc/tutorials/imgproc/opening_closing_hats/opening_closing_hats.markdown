@@ -4,6 +4,11 @@ More Morphology Transformations {#tutorial_opening_closing_hats}
 @prev_tutorial{tutorial_erosion_dilatation}
 @next_tutorial{tutorial_hitOrMiss}
 
+|    |    |
+| -: | :- |
+| Original author | Ana Huamán |
+| Compatibility | OpenCV >= 3.0 |
+
 Goal
 ----
 

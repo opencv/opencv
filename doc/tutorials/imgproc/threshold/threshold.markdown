@@ -4,6 +4,11 @@ Basic Thresholding Operations {#tutorial_threshold}
 @prev_tutorial{tutorial_pyramids}
 @next_tutorial{tutorial_threshold_inRange}
 
+|    |    |
+| -: | :- |
+| Original author | Ana Huamán |
+| Compatibility | OpenCV >= 3.0 |
+
 Goal
 ----
 

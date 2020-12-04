@@ -3,6 +3,11 @@
 @prev_tutorial{tutorial_dnn_custom_layers}
 @next_tutorial{tutorial_dnn_text_spotting}
 
+|    |    |
+| -: | :- |
+| Original author | Zihao Mu |
+| Compatibility | OpenCV >= 4.3 |
+
 ## Introduction
 
 In this tutorial, we first introduce how to obtain the custom OCR model, then how to transform your own OCR models so that they can be run correctly by the opencv_dnn module. and finally we will provide some pre-trained models.

@@ -4,6 +4,11 @@ Creating Bounding rotated boxes and ellipses for contours {#tutorial_bounding_ro
 @prev_tutorial{tutorial_bounding_rects_circles}
 @next_tutorial{tutorial_moments}
 
+|    |    |
+| -: | :- |
+| Original author | Ana Huamán |
+| Compatibility | OpenCV >= 3.0 |
+
 Goal
 ----
 

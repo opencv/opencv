@@ -3,6 +3,11 @@
 @prev_tutorial{tutorial_dnn_googlenet}
 @next_tutorial{tutorial_dnn_halide_scheduling}
 
+|    |    |
+| -: | :- |
+| Original author | Dmitry Kurtaev |
+| Compatibility | OpenCV >= 3.3 |
+
 ## Introduction
 This tutorial guidelines how to run your models in OpenCV deep learning module
 using Halide language backend. Halide is an open-source project that let us

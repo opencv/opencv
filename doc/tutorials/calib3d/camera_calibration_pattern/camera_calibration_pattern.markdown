@@ -3,6 +3,11 @@ Create calibration pattern {#tutorial_camera_calibration_pattern}
 
 @next_tutorial{tutorial_camera_calibration_square_chess}
 
+|    |    |
+| -: | :- |
+| Original author | Laurent Berger |
+| Compatibility | OpenCV >= 3.0 |
+
 
 The goal of this tutorial is to learn how to create calibration pattern.
 

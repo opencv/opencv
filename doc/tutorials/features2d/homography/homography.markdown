@@ -3,6 +3,10 @@ Basic concepts of the homography explained with code {#tutorial_homography}
 
 @prev_tutorial{tutorial_akaze_tracking}
 
+|    |    |
+| -: | :- |
+| Compatibility | OpenCV >= 3.0 |
+
 @tableofcontents
 
 Introduction {#tutorial_homography_Introduction}
