@@ -540,7 +540,7 @@ public:
             CV_Assert(!filename.empty());
             std::vector<int> vint_params = params.getIntVector();
             int* c_params = &vint_params[0];
-            size_t n_params = vint_params.size() / 2;
+            unsigned n_params = (unsigned)(vint_params.size() / 2);
 
             if (CV_ERROR_OK == plugin_api->Writer_open_with_params(filename.c_str(), fourcc, fps, sz.width, sz.height, c_params, n_params, &writer))
             {
