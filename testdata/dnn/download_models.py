@@ -61,7 +61,7 @@ class Model:
             return True
 
         basedir = os.path.dirname(self.filename)
-        if not os.path.exists(basedir):
+        if basedir and not os.path.exists(basedir):
             print('  creating directory: ' + basedir)
             os.makedirs(basedir, exist_ok=True)
 
