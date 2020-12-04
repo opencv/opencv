@@ -13,6 +13,7 @@ void checkIppStatus();
 extern bool skipUnstableTests;
 extern bool runBigDataTests;
 extern int testThreads;
+extern int debugLevel;  //< 0 - no debug, 1 - basic test debug information, >1 - extra debug information
 
 void testSetUp();
 void testTearDown();
