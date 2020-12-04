@@ -449,7 +449,10 @@ TEST_F(fisheyeTest, stereoRectify)
             << "Q =" << std::endl << Q << std::endl;
     }
 
-#if 1 // Debug code
+    if (cvtest::debugLevel == 0)
+        return;
+    // DEBUG code is below
+
     cv::Mat lmapx, lmapy, rmapx, rmapy;
     //rewrite for fisheye
     cv::fisheye::initUndistortRectifyMap(K1, D1, R1, P1, requested_size, CV_32F, lmapx, lmapy);
@@ -482,7 +485,6 @@ TEST_F(fisheyeTest, stereoRectify)
 
         cv::imwrite(cv::format("fisheye_rectification_AB_%03d.png", i), rectification);
     }
-#endif
 }
 
 TEST_F(fisheyeTest, stereoCalibrate)
