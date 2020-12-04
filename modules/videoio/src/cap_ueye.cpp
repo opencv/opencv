@@ -356,6 +356,8 @@ void VideoCapture_uEye::unlock_image_buffer()
 // plugin glue
 #if defined(BUILD_PLUGIN)
 
+#define ABI_VERSION 0
+#define API_VERSION 0
 #include "plugin_api.hpp"
 
 namespace cv
@@ -464,37 +466,36 @@ CvResult CV_API_CALL cv_writer_write(CvPluginWriter /*handle*/, const unsigned c
     return CV_ERROR_FAIL;
 }
 
-const OpenCV_VideoIO_Plugin_API_preview plugin_api_v0 =
+const OpenCV_VideoIO_Plugin_API_preview plugin_api =
 {
     {
-        sizeof(OpenCV_VideoIO_Plugin_API_preview), ABI_VERSION, 0/*API_VERSION*/,
+        sizeof(OpenCV_VideoIO_Plugin_API_preview), ABI_VERSION, API_VERSION,
         CV_VERSION_MAJOR, CV_VERSION_MINOR, CV_VERSION_REVISION, CV_VERSION_STATUS,
         "uEye OpenCV Video I/O plugin"
     },
-    /*  1*/CAP_UEYE,
-    /*  2*/cv_capture_open,
-    /*  3*/cv_capture_release,
-    /*  4*/cv_capture_get_prop,
-    /*  5*/cv_capture_set_prop,
-    /*  6*/cv_capture_grab,
-    /*  7*/cv_capture_retrieve,
-    /*  8*/cv_writer_open,
-    /*  9*/cv_writer_release,
-    /* 10*/cv_writer_get_prop,
-    /* 11*/cv_writer_set_prop,
-    /* 12*/cv_writer_write,
-    /* 13 Writer_open_with_params*/NULL
+    {
+        /*  1*/CAP_UEYE,
+        /*  2*/cv_capture_open,
+        /*  3*/cv_capture_release,
+        /*  4*/cv_capture_get_prop,
+        /*  5*/cv_capture_set_prop,
+        /*  6*/cv_capture_grab,
+        /*  7*/cv_capture_retrieve,
+        /*  8*/cv_writer_open,
+        /*  9*/cv_writer_release,
+        /* 10*/cv_writer_get_prop,
+        /* 11*/cv_writer_set_prop,
+        /* 12*/cv_writer_write
+    }
 };
 } // namespace
 } // namespace cv
 
 const OpenCV_VideoIO_Plugin_API_preview* opencv_videoio_plugin_init_v0(int requested_abi_version, int requested_api_version, void* /*reserved=NULL*/) CV_NOEXCEPT
 {
-    if (requested_abi_version != 0)
-        return NULL;
-    if (requested_api_version != 0)
-        return NULL;
-    return &cv::plugin_api_v0;
+    if (requested_abi_version == ABI_VERSION && requested_api_version <= API_VERSION)
+        return &cv::plugin_api;
+    return NULL;
 }
 
 #endif // BUILD_PLUGIN
