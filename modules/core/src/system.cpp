@@ -2365,6 +2365,13 @@ public:
             ippTopFeatures = ippCPUID_SSE42;
 
         pIppLibInfo = ippiGetLibVersion();
+
+        // workaround: https://github.com/opencv/opencv/issues/12959
+        std::string ippName(pIppLibInfo->Name ? pIppLibInfo->Name : "");
+        if (ippName.find("SSE4.2") != std::string::npos)
+        {
+            ippTopFeatures = ippCPUID_SSE42;
+        }
     }
 
 public:
@@ -2396,16 +2403,12 @@ unsigned long long getIppFeatures()
 #endif
 }
 
-unsigned long long getIppTopFeatures();
-
+#ifdef HAVE_IPP
 unsigned long long getIppTopFeatures()
 {
-#ifdef HAVE_IPP
     return getIPPSingleton().ippTopFeatures;
-#else
-    return 0;
-#endif
 }
+#endif
 
 void setIppStatus(int status, const char * const _funcname, const char * const _filename, int _line)
 {
