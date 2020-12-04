@@ -62,5 +62,10 @@ GMat KalmanFilter(const GMat& m, const cv::GOpaque<bool>& have_m, const GMat& c,
     return GKalmanFilter::on(m, have_m, c, kp);
 }
 
+GMat KalmanFilter(const GMat& m, const cv::GOpaque<bool>& have_m, const KalmanParams& kp)
+{
+    return GKalmanFilterNoControl::on(m, have_m, kp);
+}
+
 } //namespace gapi
 } //namespace cv

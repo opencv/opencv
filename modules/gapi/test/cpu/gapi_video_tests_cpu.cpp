@@ -112,13 +112,21 @@ INSTANTIATE_TEST_CASE_MACRO_P(WITH_VIDEO(BackgroundSubtractorTestCPU),
                                              Values("cv/video/768x576.avi"),
                                              Values(3)));
 
-INSTANTIATE_TEST_CASE_MACRO_P(KalmanFilterInternalTestCPU,
+INSTANTIATE_TEST_CASE_MACRO_P(KalmanFilterTestCPU,
                               KalmanFilterTest,
                               Combine(Values(VIDEO_CPU),
                                       Values(CV_32F, CV_64F),
                                       Values(2,5),
                                       Values(2,5),
                                       Values(0,2),
-                                      Values(true, false)));
+                                      Values(5)));
+
+INSTANTIATE_TEST_CASE_MACRO_P(KalmanFilterTestCPU,
+                              KalmanFilterNoControlTest,
+                              Combine(Values(VIDEO_CPU),
+                                      Values(CV_32F, CV_64F),
+                                      Values(3),
+                                      Values(4),
+                                      Values(3)));
 
 } // opencv_test

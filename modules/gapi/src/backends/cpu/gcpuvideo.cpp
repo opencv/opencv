@@ -167,6 +167,42 @@ GAPI_OCV_KERNEL_ST(GCPUKalmanFilter, cv::gapi::video::GKalmanFilter, cv::KalmanF
     }
 };
 
+GAPI_OCV_KERNEL_ST(GCPUKalmanFilterNoControl, cv::gapi::video::GKalmanFilterNoControl, cv::KalmanFilter)
+{
+    static void setup(const cv::GMatDesc&, const cv::GOpaqueDesc&,
+                      const cv::gapi::video::KalmanParams& kfParams,
+                      std::shared_ptr<cv::KalmanFilter> &state,
+                      const cv::GCompileArgs&)
+    {
+        state = std::make_shared<cv::KalmanFilter>(kfParams.dpDim, kfParams.mpDim,
+                                                   0, kfParams.type);
+
+        // initial state
+        state->statePre = kfParams.statePre;
+        state->errorCovPre = kfParams.errorCovPre;
+
+        // dynamic system initialization
+        state->measurementMatrix = kfParams.measurementMatrix;
+
+        GAPI_Assert(cv::norm(kfParams.transitionMatrix, cv::NORM_INF) != 0);
+        state->transitionMatrix = kfParams.transitionMatrix;
+
+        GAPI_Assert(cv::norm(kfParams.processNoiseCov, cv::NORM_INF) != 0);
+        state->processNoiseCov = kfParams.processNoiseCov;
+
+        GAPI_Assert(cv::norm(kfParams.measurementNoiseCov, cv::NORM_INF) != 0);
+        state->measurementNoiseCov = kfParams.measurementNoiseCov;
+    }
+
+    static void run(const cv::Mat& measurements, bool haveMeasurement,
+                    const cv::gapi::video::KalmanParams&, cv::Mat &out,
+                    cv::KalmanFilter& state)
+    {
+        cv::Mat pre = state.predict();
+        haveMeasurement ? state.correct(measurements).copyTo(out) : pre.copyTo(out);
+    }
+};
+
 cv::gapi::GKernelPackage cv::gapi::video::cpu::kernels()
 {
     static auto pkg = cv::gapi::kernels
@@ -175,6 +211,7 @@ cv::gapi::GKernelPackage cv::gapi::video::cpu::kernels()
         , GCPUCalcOptFlowLKForPyr
         , GCPUBackgroundSubtractor
         , GCPUKalmanFilter
+        , GCPUKalmanFilterNoControl
         >();
     return pkg;
 }

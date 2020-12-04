@@ -141,31 +141,91 @@ TEST_P(KalmanFilterTest, AccuracyTest)
     cv::randu(measure_vec, Scalar::all(-1), Scalar::all(1));
 
     //control vector
-    cv::Mat ctrl_vec = Mat::zeros(cDim > 0 ? cDim : dDim, 1, type);
+    cv::Mat ctrl_vec = Mat::zeros(cDim > 0 ? cDim : 1, 1, type);
 
-    if (cDim > 0)
-        cv::randu(ctrl_vec, Scalar::all(-1), Scalar::all(1));
-
-    // G-API Kalman state
+    // G-API Kalman's output state
     cv::Mat gapiKState(dDim, 1, type);
-    // OCV Kalman state
+    // OCV Kalman's output state
     cv::Mat ocvKState(dDim, 1, type);
 
-    // G-API code
+    // G-API graph initialization
     cv::GMat m, ctrl;
     cv::GOpaque<bool> have_m;
     cv::GMat out = cv::gapi::KalmanFilter(m, have_m, ctrl, kp);
     cv::GComputation comp(cv::GIn(m, have_m, ctrl), cv::GOut(out));
 
-    comp.apply(cv::gin(measure_vec, haveMeasure, ctrl_vec), cv::gout(gapiKState));
-
-    // OpenCV code
+    // OpenCV reference KalmanFilter initialization
     cv::KalmanFilter ocvKalman(dDim, mDim, cDim, type);
 
-    ocvKState = cDim > 0 ? ocvKalman.predict(ctrl_vec) : ocvKalman.predict();
+    cv::RNG& rng = cv::theRNG();
+    bool haveMeasure;
 
-    if (haveMeasure)
-        ocvKState = ocvKalman.correct(measure_vec);
+    for (int i = 0; i < numIter; i++)
+    {
+        haveMeasure = rng(2u); // returns 0 or 1 - whether we have measurement at this iteration or not
+
+        if (haveMeasure)
+            cv::randu(measure_vec, Scalar::all(-1), Scalar::all(1));
+        if (cDim > 0)
+            cv::randu(ctrl_vec, Scalar::all(-1), Scalar::all(1));
+
+        // G-API
+        comp.apply(cv::gin(measure_vec, haveMeasure, ctrl_vec), cv::gout(gapiKState));
+
+        // OpenCV
+        ocvKState = cDim > 0 ? ocvKalman.predict(ctrl_vec) : ocvKalman.predict();
+        if (haveMeasure)
+            ocvKState = ocvKalman.correct(measure_vec);
+    }
+
+    // Comparison //////////////////////////////////////////////////////////////
+    {
+        double diff = 0;
+        vector<int> idx;
+        EXPECT_TRUE(cmpEps(gapiKState, ocvKState, &diff, 1.0, &idx, false) >= 0);
+    }
+}
+
+TEST_P(KalmanFilterNoControlTest, AccuracyTest)
+{
+    cv::gapi::video::KalmanParams kp(dDim, mDim, 0, type);
+
+    //measurement vector
+    cv::Mat measure_vec(mDim, 1, type);
+    cv::randu(measure_vec, Scalar::all(-1), Scalar::all(1));
+
+    // G-API Kalman's output state
+    cv::Mat gapiKState(dDim, 1, type);
+    // OCV Kalman's output state
+    cv::Mat ocvKState(dDim, 1, type);
+
+    // G-API graph initialization
+    cv::GMat m;
+    cv::GOpaque<bool> have_m;
+    cv::GMat out = cv::gapi::KalmanFilter(m, have_m, kp);
+    cv::GComputation comp(cv::GIn(m, have_m), cv::GOut(out));
+
+    // OpenCV reference KalmanFilter initialization
+    cv::KalmanFilter ocvKalman(dDim, mDim, 0, type);
+
+    cv::RNG& rng = cv::theRNG();
+    bool haveMeasure;
+
+    for (int i = 0; i < numIter; i++)
+    {
+        haveMeasure = rng(2u); // returns 0 or 1 - whether we have measurement at this iteration or not
+
+        if (haveMeasure)
+            cv::randu(measure_vec, Scalar::all(-1), Scalar::all(1));
+
+        // G-API
+        comp.apply(cv::gin(measure_vec, haveMeasure), cv::gout(gapiKState));
+
+        // OpenCV
+        ocvKState = ocvKalman.predict();
+        if (haveMeasure)
+            ocvKState = ocvKalman.correct(measure_vec);
+    }
 
     // Comparison //////////////////////////////////////////////////////////////
     {
@@ -175,7 +235,6 @@ TEST_P(KalmanFilterTest, AccuracyTest)
     }
 }
 #endif
-
 } // opencv_test
 
 #endif // OPENCV_GAPI_VIDEO_TESTS_INL_HPP
