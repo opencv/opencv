@@ -7,7 +7,7 @@
 #include "precomp.hpp"
 
 #include <opencv2/gapi/streaming/desync.hpp>
-#include <opencv2/gapi/streaming/copy.hpp>
+#include <opencv2/gapi/streaming.hpp>
 
 #include <opencv2/gapi/core.hpp>
 
@@ -78,4 +78,8 @@ cv::GMat cv::gapi::streaming::desync(const cv::GMat &g) {
 
 cv::GFrame cv::gapi::streaming::copy(const cv::GFrame& in) {
     return cv::gapi::streaming::GCopy::on(in);
+}
+
+cv::GMat cv::gapi::streaming::BGR(const cv::GFrame& in) {
+    return cv::gapi::streaming::GBGR::on(in);
 }

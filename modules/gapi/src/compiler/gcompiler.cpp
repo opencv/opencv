@@ -36,7 +36,7 @@
 #include "executor/gstreamingexecutor.hpp"
 #include "backends/common/gbackend.hpp"
 #include "backends/common/gmetabackend.hpp"
-#include "backends/copy_kernel.hpp"
+#include "backends/streaming/gstreamingbackend.hpp"
 
 // <FIXME:>
 #if !defined(GAPI_STANDALONE)

@@ -157,8 +157,8 @@ set(gapi_srcs
     src/api/s11n.cpp
     src/backends/common/serialization.cpp
 
-    # Copy kernel
-    src/backends/copy_kernel.cpp
+    # Streaming backend
+    src/backends/streaming/gstreamingbackend.cpp
 
     # Python bridge
     src/backends/ie/bindings_ie.cpp
