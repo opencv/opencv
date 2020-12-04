@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - master
-      - '3.4'
       - next
     tags:
       - '**'
