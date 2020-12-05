@@ -1866,7 +1866,7 @@ CvResult CV_API_CALL cv_writer_write(CvPluginWriter handle, const unsigned char*
 static const OpenCV_VideoIO_Plugin_API_preview plugin_api_v0 =
 {
     {
-        sizeof(OpenCV_VideoIO_Plugin_API_preview), ABI_VERSION, API_VERSION,
+        sizeof(OpenCV_VideoIO_Plugin_API_preview), ABI_VERSION, 0/*API_VERSION*/,
         CV_VERSION_MAJOR, CV_VERSION_MINOR, CV_VERSION_REVISION, CV_VERSION_STATUS,
         "Microsoft Media Foundation OpenCV Video I/O plugin"
     },

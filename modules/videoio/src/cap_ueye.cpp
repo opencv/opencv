@@ -467,7 +467,7 @@ CvResult CV_API_CALL cv_writer_write(CvPluginWriter /*handle*/, const unsigned c
 const OpenCV_VideoIO_Plugin_API_preview plugin_api_v0 =
 {
     {
-        sizeof(OpenCV_VideoIO_Plugin_API_preview), ABI_VERSION, API_VERSION,
+        sizeof(OpenCV_VideoIO_Plugin_API_preview), ABI_VERSION, 0/*API_VERSION*/,
         CV_VERSION_MAJOR, CV_VERSION_MINOR, CV_VERSION_REVISION, CV_VERSION_STATUS,
         "uEye OpenCV Video I/O plugin"
     },
@@ -482,7 +482,8 @@ const OpenCV_VideoIO_Plugin_API_preview plugin_api_v0 =
     /*  9*/cv_writer_release,
     /* 10*/cv_writer_get_prop,
     /* 11*/cv_writer_set_prop,
-    /* 12*/cv_writer_write
+    /* 12*/cv_writer_write,
+    /* 13 Writer_open_with_params*/NULL
 };
 } // namespace
 } // namespace cv
