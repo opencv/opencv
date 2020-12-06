@@ -116,6 +116,8 @@ double MotionJpegCapture::getProperty(int property) const
     {
         case CAP_PROP_POS_FRAMES:
             return (double)getFramePos();
+        case CAP_PROP_POS_MSEC:
+            return (double)getFramePos() * (1000. / m_fps);
         case CAP_PROP_POS_AVI_RATIO:
             return double(getFramePos())/m_mjpeg_frames.size();
         case CAP_PROP_FRAME_WIDTH:

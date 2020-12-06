@@ -194,8 +194,9 @@ enum VideoWriterProperties {
   VIDEOWRITER_PROP_QUALITY = 1,    //!< Current quality (0..100%) of the encoded videostream. Can be adjusted dynamically in some codecs.
   VIDEOWRITER_PROP_FRAMEBYTES = 2, //!< (Read-only): Size of just encoded video frame. Note that the encoding order may be different from representation order.
   VIDEOWRITER_PROP_NSTRIPES = 3,   //!< Number of stripes for parallel encoding. -1 for auto detection.
-  VIDEOWRITER_PROP_IS_COLOR = 4    //!< If it is not zero, the encoder will expect and encode color frames, otherwise it
+  VIDEOWRITER_PROP_IS_COLOR = 4,   //!< If it is not zero, the encoder will expect and encode color frames, otherwise it
                                    //!< will work with grayscale frames.
+  VIDEOWRITER_PROP_DEPTH = 5       //!< Defaults to CV_8U.
 };
 
 //! @} videoio_flags_base

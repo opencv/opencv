@@ -1,6 +1,5 @@
 #include <iostream>
 #include <fstream>
-#include <regex>
 
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
@@ -23,6 +22,21 @@ std::string keys =
         "{ evaluate e                       |false| false: predict with input images; true: evaluate on benchmarks. }"
         "{ evalDataPath edp                  | | Path to benchmarks for evaluation. "
             "Download links are provided in doc/tutorials/dnn/dnn_text_spotting/dnn_text_spotting.markdown}";
+
+static
+void split(const std::string& s, char delimiter, std::vector<std::string>& elems)
+{
+    elems.clear();
+    size_t prev_pos = 0;
+    size_t pos = 0;
+    while ((pos = s.find(delimiter, prev_pos)) != std::string::npos)
+    {
+        elems.emplace_back(s.substr(prev_pos, pos - prev_pos));
+        prev_pos = pos + 1;
+    }
+    if (prev_pos < s.size())
+        elems.emplace_back(s.substr(prev_pos, s.size() - prev_pos));
+}
 
 int main(int argc, char** argv)
 {
@@ -114,9 +128,9 @@ int main(int argc, char** argv)
                 }
                 gtLine = gtLine.substr(0, splitLoc);
 
-                std::regex delimiter(",");
-                std::vector<String> v(std::sregex_token_iterator(gtLine.begin(), gtLine.end(), delimiter, -1),
-                                      std::sregex_token_iterator());
+                std::vector<std::string> v;
+                split(gtLine, ',', v);
+
                 std::vector<int> loc;
                 std::vector<Point> pts;
                 for (auto && s : v) {
