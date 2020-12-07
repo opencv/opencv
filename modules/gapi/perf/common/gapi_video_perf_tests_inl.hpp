@@ -44,7 +44,7 @@ PERF_TEST_P_(BuildOptFlowPyramidPerfTest, TestPerformance)
     outMaxLevelGAPI = static_cast<int>(outMaxLevelSc[0]);
 
     // Comparison //////////////////////////////////////////////////////////////
-    compareOutputPyramids(outOCV, outGAPI);
+    compareOutputPyramids(outGAPI, outOCV);
 
     SANITY_CHECK_NOTHING();
 }
@@ -74,7 +74,7 @@ PERF_TEST_P_(OptFlowLKPerfTest, TestPerformance)
     }
 
     // Comparison //////////////////////////////////////////////////////////////
-    compareOutputsOptFlow(outOCV, outGAPI);
+    compareOutputsOptFlow(outGAPI, outOCV);
 
     SANITY_CHECK_NOTHING();
 }
@@ -109,7 +109,7 @@ PERF_TEST_P_(OptFlowLKForPyrPerfTest, TestPerformance)
     }
 
     // Comparison //////////////////////////////////////////////////////////////
-    compareOutputsOptFlow(outOCV, outGAPI);
+    compareOutputsOptFlow(outGAPI, outOCV);
 
     SANITY_CHECK_NOTHING();
 }
@@ -147,7 +147,7 @@ PERF_TEST_P_(BuildPyr_CalcOptFlow_PipelinePerfTest, TestPerformance)
     }
 
     // Comparison //////////////////////////////////////////////////////////////
-    compareOutputsOptFlow(outOCV, outGAPI);
+    compareOutputsOptFlow(outGAPI, outOCV);
 
     SANITY_CHECK_NOTHING();
 }
