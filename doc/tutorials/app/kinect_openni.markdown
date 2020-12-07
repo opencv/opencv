@@ -1,6 +1,8 @@
 Using Kinect and other OpenNI compatible depth sensors {#tutorial_kinect_openni}
 ======================================================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_video_write}
 @next_tutorial{tutorial_orbbec_astra}
 

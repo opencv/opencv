@@ -1,6 +1,8 @@
 Template Matching {#tutorial_template_matching}
 =================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_back_projection}
 @next_tutorial{tutorial_find_contours}
 

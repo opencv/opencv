@@ -1,5 +1,7 @@
 # How to enable Halide backend for improve efficiency  {#tutorial_dnn_halide}
 
+@tableofcontents
+
 @prev_tutorial{tutorial_dnn_googlenet}
 @next_tutorial{tutorial_dnn_halide_scheduling}
 

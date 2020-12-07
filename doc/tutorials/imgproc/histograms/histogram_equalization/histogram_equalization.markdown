@@ -1,6 +1,8 @@
 Histogram Equalization {#tutorial_histogram_equalization}
 ======================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_warp_affine}
 @next_tutorial{tutorial_histogram_calculation}
 

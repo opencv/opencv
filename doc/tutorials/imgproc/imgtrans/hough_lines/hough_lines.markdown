@@ -1,6 +1,8 @@
 Hough Line Transform {#tutorial_hough_lines}
 ====================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_canny_detector}
 @next_tutorial{tutorial_hough_circle}
 

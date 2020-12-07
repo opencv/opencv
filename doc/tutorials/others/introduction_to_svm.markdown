@@ -1,6 +1,8 @@
 Introduction to Support Vector Machines {#tutorial_introduction_to_svm}
 =======================================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_traincascade}
 @next_tutorial{tutorial_non_linear_svms}
 

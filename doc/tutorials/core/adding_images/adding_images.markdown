@@ -1,6 +1,8 @@
 Adding (blending) two images using OpenCV {#tutorial_adding_images}
 =========================================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_mat_operations}
 @next_tutorial{tutorial_basic_linear_transform}
 

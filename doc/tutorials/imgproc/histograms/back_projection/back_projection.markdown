@@ -1,6 +1,8 @@
 Back Projection {#tutorial_back_projection}
 ===============
 
+@tableofcontents
+
 @prev_tutorial{tutorial_histogram_comparison}
 @next_tutorial{tutorial_template_matching}
 

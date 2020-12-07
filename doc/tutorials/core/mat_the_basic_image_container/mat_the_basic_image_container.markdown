@@ -1,6 +1,8 @@
 Mat - The Basic Image Container {#tutorial_mat_the_basic_image_container}
 ===============================
 
+@tableofcontents
+
 @next_tutorial{tutorial_how_to_scan_images}
 
 |    |    |

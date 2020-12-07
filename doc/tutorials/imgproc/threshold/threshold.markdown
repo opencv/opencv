@@ -1,6 +1,8 @@
 Basic Thresholding Operations {#tutorial_threshold}
 =============================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_pyramids}
 @next_tutorial{tutorial_threshold_inRange}
 

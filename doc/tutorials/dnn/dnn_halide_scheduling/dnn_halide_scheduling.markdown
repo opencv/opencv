@@ -1,5 +1,7 @@
 # How to schedule your network for Halide backend {#tutorial_dnn_halide_scheduling}
 
+@tableofcontents
+
 @prev_tutorial{tutorial_dnn_halide}
 @next_tutorial{tutorial_dnn_android}
 

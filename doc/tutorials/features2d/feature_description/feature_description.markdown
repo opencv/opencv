@@ -1,6 +1,8 @@
 Feature Description {#tutorial_feature_description}
 ===================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_feature_detection}
 @next_tutorial{tutorial_feature_flann_matcher}
 

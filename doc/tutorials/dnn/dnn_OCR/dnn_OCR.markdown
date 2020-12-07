@@ -1,5 +1,7 @@
 # How to run custom OCR model {#tutorial_dnn_OCR}
 
+@tableofcontents
+
 @prev_tutorial{tutorial_dnn_custom_layers}
 @next_tutorial{tutorial_dnn_text_spotting}
 

@@ -1,6 +1,8 @@
 Video Input with OpenCV and similarity measurement {#tutorial_video_input_psnr_ssim}
 ==================================================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_raster_io_gdal}
 @next_tutorial{tutorial_video_write}
 

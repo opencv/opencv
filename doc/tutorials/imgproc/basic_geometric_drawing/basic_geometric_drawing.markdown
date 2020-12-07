@@ -1,6 +1,8 @@
 Basic Drawing {#tutorial_basic_geometric_drawing}
 =============
 
+@tableofcontents
+
 @next_tutorial{tutorial_random_generator_and_text}
 
 |    |    |

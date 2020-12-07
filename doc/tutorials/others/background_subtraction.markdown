@@ -1,6 +1,8 @@
 How to Use Background Subtraction Methods {#tutorial_background_subtraction}
 =========================================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_stitcher}
 @next_tutorial{tutorial_meanshift}
 

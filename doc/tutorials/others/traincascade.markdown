@@ -1,6 +1,8 @@
 Cascade Classifier Training {#tutorial_traincascade}
 ===========================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_cascade_classifier}
 @next_tutorial{tutorial_introduction_to_svm}
 
