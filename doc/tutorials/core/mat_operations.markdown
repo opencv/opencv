@@ -1,6 +1,8 @@
 Operations with images {#tutorial_mat_operations}
 ======================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_mat_mask_operations}
 @next_tutorial{tutorial_adding_images}
 

@@ -1,5 +1,7 @@
 # Custom deep learning layers support {#tutorial_dnn_custom_layers}
 
+@tableofcontents
+
 @prev_tutorial{tutorial_dnn_javascript}
 @next_tutorial{tutorial_dnn_OCR}
 

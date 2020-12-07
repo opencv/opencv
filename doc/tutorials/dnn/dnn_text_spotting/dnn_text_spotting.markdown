@@ -1,5 +1,7 @@
 # High Level API: TextDetectionModel and TextRecognitionModel {#tutorial_dnn_text_spotting}
 
+@tableofcontents
+
 @prev_tutorial{tutorial_dnn_OCR}
 
 |    |    |

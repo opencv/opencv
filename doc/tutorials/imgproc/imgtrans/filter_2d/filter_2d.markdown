@@ -1,6 +1,8 @@
 Making your own linear filters! {#tutorial_filter_2d}
 ===============================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_threshold_inRange}
 @next_tutorial{tutorial_copyMakeBorder}
 

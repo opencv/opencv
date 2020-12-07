@@ -1,6 +1,8 @@
 Adding a Trackbar to our applications! {#tutorial_trackbar}
 ======================================
 
+@tableofcontents
+
 @next_tutorial{tutorial_raster_io_gdal}
 
 |    |    |

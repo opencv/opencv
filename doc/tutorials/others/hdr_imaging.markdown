@@ -1,6 +1,8 @@
 High Dynamic Range Imaging {#tutorial_hdr_imaging}
 ==========================
 
+@tableofcontents
+
 @next_tutorial{tutorial_stitcher}
 
 |    |    |

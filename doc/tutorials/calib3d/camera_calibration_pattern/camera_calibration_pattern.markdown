@@ -1,6 +1,8 @@
 Create calibration pattern {#tutorial_camera_calibration_pattern}
 =========================================
 
+@tableofcontents
+
 @next_tutorial{tutorial_camera_calibration_square_chess}
 
 |    |    |

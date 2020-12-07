@@ -1,6 +1,8 @@
 High level stitching API (Stitcher class) {#tutorial_stitcher}
 =========================================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_hdr_imaging}
 @next_tutorial{tutorial_background_subtraction}
 

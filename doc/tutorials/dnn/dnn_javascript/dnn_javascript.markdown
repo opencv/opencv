@@ -1,5 +1,7 @@
 # How to run deep networks in browser {#tutorial_dnn_javascript}
 
+@tableofcontents
+
 @prev_tutorial{tutorial_dnn_yolo}
 @next_tutorial{tutorial_dnn_custom_layers}
 

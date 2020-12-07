@@ -1,6 +1,8 @@
 Mask operations on matrices {#tutorial_mat_mask_operations}
 ===========================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_how_to_scan_images}
 @next_tutorial{tutorial_mat_operations}
 

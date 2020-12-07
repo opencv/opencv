@@ -1,6 +1,8 @@
 YOLO DNNs  {#tutorial_dnn_yolo}
 ===============================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_dnn_android}
 @next_tutorial{tutorial_dnn_javascript}
 

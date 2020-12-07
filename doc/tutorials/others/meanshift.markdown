@@ -1,6 +1,8 @@
 Meanshift and Camshift {#tutorial_meanshift}
 ======================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_background_subtraction}
 @next_tutorial{tutorial_optical_flow}
 

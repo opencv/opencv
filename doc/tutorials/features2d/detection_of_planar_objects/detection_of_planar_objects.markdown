@@ -1,6 +1,8 @@
 Detection of planar objects {#tutorial_detection_of_planar_objects}
 ===========================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_feature_homography}
 @next_tutorial{tutorial_akaze_matching}
 

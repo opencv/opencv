@@ -1,6 +1,8 @@
 Reading Geospatial Raster files with GDAL {#tutorial_raster_io_gdal}
 =========================================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_trackbar}
 @next_tutorial{tutorial_video_input_psnr_ssim}
 

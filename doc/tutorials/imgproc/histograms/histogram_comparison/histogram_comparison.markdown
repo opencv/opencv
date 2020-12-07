@@ -1,6 +1,8 @@
 Histogram Comparison {#tutorial_histogram_comparison}
 ====================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_histogram_calculation}
 @next_tutorial{tutorial_back_projection}
 
