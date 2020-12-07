@@ -8,7 +8,20 @@ include(CMakeParseArguments)
 function(ocv_cmake_dump_vars)
   set(OPENCV_SUPPRESS_DEPRECATIONS 1)  # suppress deprecation warnings from variable_watch() guards
   get_cmake_property(__variableNames VARIABLES)
-  cmake_parse_arguments(DUMP "" "TOFILE" "" ${ARGN})
+  cmake_parse_arguments(DUMP "FORCE" "TOFILE" "" ${ARGN})
+
+  # avoid generation of excessive logs with "--trace" or "--trace-expand" parameters
+  # Note: `-DCMAKE_TRACE_MODE=1` should be passed to CMake through command line. It is not a CMake buildin variable for now (2020-12)
+  #       Use `cmake . -UCMAKE_TRACE_MODE` to remove this variable from cache
+  if(CMAKE_TRACE_MODE AND NOT DUMP_FORCE)
+    if(DUMP_TOFILE)
+      file(WRITE ${CMAKE_BINARY_DIR}/${DUMP_TOFILE} "Skipped due to enabled CMAKE_TRACE_MODE")
+    else()
+      message(AUTHOR_WARNING "ocv_cmake_dump_vars() is skipped due to enabled CMAKE_TRACE_MODE")
+    endif()
+    return()
+  endif()
+
   set(regex "${DUMP_UNPARSED_ARGUMENTS}")
   string(TOLOWER "${regex}" regex_lower)
   set(__VARS "")
