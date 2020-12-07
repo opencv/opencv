@@ -111,13 +111,16 @@ bool isAlignedAllocationEnabled()
 {
     // use construct on first use idiom https://isocpp.org/wiki/faq/ctors#static-init-order-on-first-use
     // details: https://github.com/opencv/opencv/issues/15691
-    static bool useMemalign
-    #if defined __GNUC__
-        __attribute__((unused))
-    #endif
-        = readMemoryAlignmentParameter();
+    static bool useMemalign = readMemoryAlignmentParameter();
     return useMemalign;
 }
+
+// need for this static const is disputed; retaining as it doesn't cause harm
+static const bool g_force_initialization_memalign_flag
+#if defined __GNUC__
+    __attribute__((unused))
+#endif
+    = isAlignedAllocationEnabled();
 #endif
 
 #ifdef OPENCV_ALLOC_ENABLE_STATISTICS

@@ -1,5 +1,9 @@
-#include <array>
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+
 #include "perf_precomp.hpp"
+#include <array>
 
 using namespace perf;
 
@@ -14,7 +18,7 @@ namespace opencv_test
 
 typedef perf::TestBaseWithParam<MatType> MatDepth_tb;
 
-PERF_TEST_P(MatDepth_tb, Allocation_Aligned,
+PERF_TEST_P(MatDepth_tb, DISABLED_Allocation_Aligned,
     testing::Values(CV_8UC1, CV_16SC1, CV_8UC3, CV_8UC4))
 {
     const int matType = GetParam();
