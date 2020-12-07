@@ -237,6 +237,11 @@ public:
         if (!isBackendAvailable(apiPref, cv::videoio_registry::getStreamBackends()))
             throw SkipTestException(cv::String("Backend is not available/disabled: ") + cv::videoio_registry::getBackendName(apiPref));
 
+        // GStreamer: https://github.com/opencv/opencv/issues/19025
+        if (apiPref == CAP_GSTREAMER)
+            throw SkipTestException(cv::String("Backend ") +  cv::videoio_registry::getBackendName(apiPref) +
+                    cv::String(" does not return reliable values for CAP_PROP_POS_MSEC property"));
+
         if (((apiPref == CAP_FFMPEG) && ((ext == "h264") || (ext == "h265"))))
             throw SkipTestException(cv::String("Backend ") +  cv::videoio_registry::getBackendName(apiPref) +
                     cv::String(" does not support CAP_PROP_POS_MSEC option"));
@@ -253,10 +258,12 @@ public:
             double timestamp = 0;
             ASSERT_NO_THROW(cap >> img);
             EXPECT_NO_THROW(timestamp = cap.get(CAP_PROP_POS_MSEC));
+            if (cvtest::debugLevel > 0)
+                std::cout << "i = " << i << ": timestamp = " << timestamp << std::endl;
             const double frame_period = 1000.f/bunny_param.getFps();
             // NOTE: eps == frame_period, because videoCapture returns frame begining timestamp or frame end
             // timestamp depending on codec and back-end. So the first frame has timestamp 0 or frame_period.
-            EXPECT_NEAR(timestamp, i*frame_period, frame_period);
+            EXPECT_NEAR(timestamp, i*frame_period, frame_period) << "i=" << i;
         }
     }
 };
