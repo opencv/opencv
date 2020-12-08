@@ -176,6 +176,18 @@ public:
 
         getConvPoolPaddings(inp, kernel_size, strides, padMode, pads_begin, pads_end);
 
+        if (inputs[0].dims == 3)
+        {
+            //Pool1D
+            #define REMOVE_EXTRA_ELEM(vector)\
+            if (vector.size() > 1)\
+                vector.pop_back();
+            REMOVE_EXTRA_ELEM(kernel_size);
+            REMOVE_EXTRA_ELEM(strides);
+            REMOVE_EXTRA_ELEM(pads_begin);
+            REMOVE_EXTRA_ELEM(pads_end);
+        }
+
 #ifdef HAVE_OPENCL
         poolOp.release();
 #endif

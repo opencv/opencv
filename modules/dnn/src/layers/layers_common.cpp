@@ -81,6 +81,8 @@ bool getParameter(const LayerParams &params, const std::string& nameBase, const 
                 CV_Assert(param.get<int>(i) >= 0);
                 parameter.push_back(param.get<int>(i));
             }
+            if (parameter.size() == 1)
+                parameter.resize(2, parameter[0]);
             return true;
         }
         else
