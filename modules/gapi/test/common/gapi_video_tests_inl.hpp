@@ -27,7 +27,7 @@ TEST_P(BuildOptFlowPyramidTest, AccuracyTest)
 
     runOCVnGAPIBuildOptFlowPyramid(*this, params, outOCV, outGAPI);
 
-    compareOutputPyramids(outOCV, outGAPI);
+    compareOutputPyramids(outGAPI, outOCV);
 }
 
 TEST_P(OptFlowLKTest, AccuracyTest)
@@ -44,7 +44,7 @@ TEST_P(OptFlowLKTest, AccuracyTest)
 
     runOCVnGAPIOptFlowLK(*this, inPts, params, outOCV, outGAPI);
 
-    compareOutputsOptFlow(outOCV, outGAPI);
+    compareOutputsOptFlow(outGAPI, outOCV);
 }
 
 TEST_P(OptFlowLKTestForPyr, AccuracyTest)
@@ -63,7 +63,7 @@ TEST_P(OptFlowLKTestForPyr, AccuracyTest)
 
     runOCVnGAPIOptFlowLKForPyr(*this, in, params, withDeriv, outOCV, outGAPI);
 
-    compareOutputsOptFlow(outOCV, outGAPI);
+    compareOutputsOptFlow(outGAPI, outOCV);
 }
 
 TEST_P(BuildPyr_CalcOptFlow_PipelineTest, AccuracyTest)
@@ -86,7 +86,7 @@ TEST_P(BuildPyr_CalcOptFlow_PipelineTest, AccuracyTest)
 
     runOCVnGAPIOptFlowPipeline(*this, params, outOCV, outGAPI, inPts);
 
-    compareOutputsOptFlow(outOCV, outGAPI);
+    compareOutputsOptFlow(outGAPI, outOCV);
 }
 
 #ifdef HAVE_OPENCV_VIDEO
