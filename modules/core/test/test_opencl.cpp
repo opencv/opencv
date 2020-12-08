@@ -120,12 +120,12 @@ TEST(OCL_OpenCLExecutionContext, createGPU)
 
     ASSERT_FALSE(ctx.empty());
 
-    ocl::Context context = ocl::Context::create(":GPU:1");
+    ocl::Context context = ocl::Context::create(":GPU:0");
     if (context.empty())
     {
         context = ocl::Context::create(":CPU:");
         if (context.empty())
-            throw SkipTestException("OpenCL GPU1/CPU devices are not available");
+            throw SkipTestException("OpenCL GPU0/CPU devices are not available");
     }
 
     ocl::Device device = context.device(0);
@@ -161,7 +161,7 @@ TEST(OCL_OpenCLExecutionContext, ScopeTest)
 
     ASSERT_FALSE(ctx.empty());
 
-    ocl::Context context = ocl::Context::create(":GPU:1");
+    ocl::Context context = ocl::Context::create(":GPU:0");
     if (context.empty())
     {
         context = ocl::Context::create(":CPU:");
