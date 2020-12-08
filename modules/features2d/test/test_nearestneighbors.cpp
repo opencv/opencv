@@ -123,7 +123,7 @@ void NearestNeighborTest::run( int /*start_from*/ ) {
     Mat desc( featuresCount, dims, CV_32FC1 );
     ts->get_rng().fill( desc, RNG::UNIFORM, minValue, maxValue );
 
-    createModel( desc );
+    createModel( desc.clone() );  // .clone() is used to simulate dangling pointers problem: https://github.com/opencv/opencv/issues/17553
 
     tempCode = checkGetPoints( desc );
     if( tempCode != cvtest::TS::OK )

@@ -397,7 +397,10 @@ void Index::build(InputArray _data, const IndexParams& params, flann_distance_t 
         return;
     }
 
-    Mat data = _data.getMat();
+    // Index may reuse 'data' during search, need to keep it alive
+    features_clone = _data.getMat().clone();
+    Mat data = features_clone;
+
     index = 0;
     featureType = data.type();
     distType = _distType;
@@ -461,6 +464,8 @@ Index::~Index()
 void Index::release()
 {
     CV_INSTRUMENT_REGION();
+
+    features_clone.release();
 
     if( !index )
         return;
