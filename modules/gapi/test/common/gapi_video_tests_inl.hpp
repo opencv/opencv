@@ -139,6 +139,8 @@ TEST_P(KalmanFilterTest, AccuracyTest)
 
     kp.statePre = Mat::zeros(dDim, 1, type);
     kp.errorCovPre = Mat::zeros(dDim, dDim, type);
+    kp.statePost = Mat::zeros(dDim, 1, type);
+    kp.errorCovPost = Mat::zeros(dDim, dDim, type);
 
     kp.transitionMatrix = Mat::ones(dDim, dDim, type)*2;
     kp.processNoiseCov = Mat::eye(dDim, dDim, type);
@@ -146,10 +148,7 @@ TEST_P(KalmanFilterTest, AccuracyTest)
     kp.measurementNoiseCov = Mat::eye(mDim, mDim, type);
 
     if (cDim > 0)
-    {
-        kp.controlMatrix = Mat::zeros(dDim, cDim, type);
-        setIdentity(kp.controlMatrix, Scalar::all(1));
-    }
+        kp.controlMatrix = Mat::eye(dDim, cDim, type);
 
     cv::randu(kp.statePre, Scalar::all(-1), Scalar::all(1));
 
@@ -181,6 +180,8 @@ TEST_P(KalmanFilterTest, AccuracyTest)
 
     ocvKalman.statePre = kp.statePre;
     ocvKalman.errorCovPre = kp.errorCovPre;
+    ocvKalman.statePost = kp.statePost;
+    ocvKalman.errorCovPost = kp.errorCovPost;
 
     ocvKalman.transitionMatrix = kp.transitionMatrix;
     ocvKalman.controlMatrix = kp.controlMatrix;
@@ -224,6 +225,8 @@ TEST_P(KalmanFilterNoControlTest, AccuracyTest)
 
     kp.statePre = Mat::zeros(dDim, 1, type);
     kp.errorCovPre = Mat::zeros(dDim, dDim, type);
+    kp.statePost = Mat::zeros(dDim, 1, type);
+    kp.errorCovPost = Mat::zeros(dDim, dDim, type);
 
     kp.transitionMatrix = Mat::ones(dDim, dDim, type) * 2;
     kp.processNoiseCov = Mat::eye(dDim, dDim, type);
@@ -232,10 +235,9 @@ TEST_P(KalmanFilterNoControlTest, AccuracyTest)
 
     cv::randu(kp.statePre, Scalar::all(-1), Scalar::all(1));
 
-    setIdentity(kp.measurementMatrix);
     setIdentity(kp.processNoiseCov, Scalar::all(1e-5));
     setIdentity(kp.measurementNoiseCov, Scalar::all(1e-1));
-    setIdentity(kp.errorCovPre, Scalar::all(1e-5));
+    setIdentity(kp.errorCovPost, Scalar::all(1));
 
     //measurement vector
     cv::Mat measure_vec(mDim, 1, type);
@@ -257,6 +259,8 @@ TEST_P(KalmanFilterNoControlTest, AccuracyTest)
 
     ocvKalman.statePre = kp.statePre;
     ocvKalman.errorCovPre = kp.errorCovPre;
+    ocvKalman.statePost = kp.statePost;
+    ocvKalman.errorCovPost = kp.errorCovPost;
 
     ocvKalman.transitionMatrix = kp.transitionMatrix;
     ocvKalman.measurementMatrix = kp.measurementMatrix;
@@ -268,7 +272,7 @@ TEST_P(KalmanFilterNoControlTest, AccuracyTest)
 
     for (int i = 0; i < numIter; i++)
     {
-        haveMeasure = (rng(2u) == 1) ? true : false;; // returns 0 or 1 - whether we have measurement at this iteration or not
+        haveMeasure = (rng(2u) == 1) ? true : false; // returns 0 or 1 - whether we have measurement at this iteration or not
 
         if (haveMeasure)
             cv::randu(measure_vec, Scalar::all(-1), Scalar::all(1));
@@ -287,6 +291,123 @@ TEST_P(KalmanFilterNoControlTest, AccuracyTest)
         double diff = 0;
         vector<int> idx;
         EXPECT_TRUE(cmpEps(gapiKState, ocvKState, &diff, 1.0, &idx, false) >= 0);
+    }
+}
+
+static inline Point calcPoint(Point2f center, double R, double angle)
+{
+    return center + Point2f((float)cos(angle), (float)-sin(angle))*(float)R;
+}
+
+TEST_P(KalmanFilterSampleTest, AccuracyTest)
+{
+    // auxiliary variables
+    cv::Mat img(500, 500, CV_8UC3);
+    cv::Mat processNoise(2, 1, type);
+#if 0
+    char code = (char)-1;
+#endif
+    // Input mesurement
+    cv::Mat measurement = Mat::zeros(1, 1, type);
+    // Angle and it's delta(phi, delta_phi)
+    cv::Mat state(2, 1, type);
+
+    // G-API graph initialization
+    cv::gapi::video::KalmanParams kp;
+    kp.depth = type;
+    kp.statePre = Mat::zeros(2, 1, type);
+    kp.statePost = Mat::zeros(2, 1, type);
+    kp.errorCovPre = Mat::zeros(2, 2, type);
+    kp.errorCovPost = Mat::zeros(2, 2, type);
+
+    if (type == CV_32F)
+        kp.transitionMatrix = (Mat_<float>(2, 2) << 1, 1, 0, 1);
+    else
+        kp.transitionMatrix = (Mat_<double>(2, 2) << 1, 1, 0, 1);
+
+    kp.processNoiseCov = Mat::zeros(2, 2, type);
+    kp.measurementMatrix = Mat::zeros(1, 2, type);
+    kp.measurementNoiseCov = Mat::zeros(1, 1, type);
+
+    setIdentity(kp.measurementMatrix);
+    setIdentity(kp.processNoiseCov, Scalar::all(1e-5));
+    setIdentity(kp.measurementNoiseCov, Scalar::all(1e-1));
+    setIdentity(kp.errorCovPost, Scalar::all(1));
+
+    randn(kp.statePost, Scalar::all(0), Scalar::all(0.1));
+
+    cv::GMat m;
+    cv::GOpaque<bool> have_mesure;
+    cv::GMat out = cv::gapi::KalmanFilter(m, have_mesure, kp);
+    cv::GComputation comp(cv::GIn(m, have_mesure), cv::GOut(out));
+
+    randn(state, Scalar::all(0), Scalar::all(0.1));
+
+    // Corrected state
+    cv::Mat correction(2, 1, type);
+
+    bool haveMeasure;
+#if 0
+    for (;;)
+#else
+    for (int i = 0; i < numIter; ++i)
+#endif
+    {
+        Point2f center(img.cols*0.5f, img.rows*0.5f);
+        float R = img.cols / 3.f;
+        double stateAngle = (type == CV_32F) ? state.at<float>(0): state.at<double>(0);
+#if 0
+        Point statePt = calcPoint(center, R, stateAngle);
+#endif
+        haveMeasure = false;
+        // Predicted state
+        cv::Mat prediction(2, 1, type);
+        comp.apply(cv::gin(measurement, haveMeasure), cv::gout(prediction));
+
+        double predictAngle = (type == CV_32F) ? prediction.at<float>(0): prediction.at<double>(0);
+#if 0
+        Point predictPt = calcPoint(center, R, predictAngle);
+#endif
+        randn(measurement, Scalar::all(0), Scalar::all((type == CV_32F) ?
+              kp.measurementNoiseCov.at<float>(0) : kp.measurementNoiseCov.at<double>(0)));
+
+        // generate measurement
+        measurement += kp.measurementMatrix*state;
+#if 0
+        double measAngle = (type == CV_32F) ? measurement.at<float>(0): measurement.at<double>(0);
+        Point measPt = calcPoint(center, R, measAngle);
+
+        // plot points
+        #define drawCross( center, color, d )                                        \
+                line( img, Point( center.x - d, center.y - d ),                          \
+                             Point( center.x + d, center.y + d ), color, 1, LINE_AA, 0); \
+                line( img, Point( center.x + d, center.y - d ),                          \
+                             Point( center.x - d, center.y + d ), color, 1, LINE_AA, 0 )
+
+        img = Scalar::all(0);
+        drawCross(statePt, Scalar(255, 255, 255), 3);
+        drawCross(measPt, Scalar(0, 0, 255), 3);
+        drawCross(predictPt, Scalar(0, 255, 0), 3);
+        line(img, statePt, measPt, Scalar(0, 0, 255), 3, LINE_AA, 0);
+        line(img, statePt, predictPt, Scalar(0, 255, 255), 3, LINE_AA, 0);
+#endif
+        if (theRNG().uniform(0, 4) != 0)
+        {
+            haveMeasure = true;
+            comp.apply(cv::gin(measurement, haveMeasure), cv::gout(correction));
+        }
+
+        randn(processNoise, Scalar(0), Scalar::all(sqrt(type == CV_32F ?
+                                                   kp.processNoiseCov.at<float>(0, 0):
+                                                   kp.processNoiseCov.at<double>(0, 0))));
+        state = kp.transitionMatrix*state + processNoise;
+#if 0
+        imshow("Kalman", img);
+        code = (char)waitKey(100);
+
+        if (code > 0)
+            break;
+#endif
     }
 }
 

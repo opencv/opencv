@@ -142,6 +142,10 @@ struct GAPI_EXPORTS KalmanParams
     Mat statePre;
     //! priori error estimate covariance matrix (P'(k)): P'(k)=A*P(k-1)*At + Q)*/
     Mat errorCovPre;
+    //! corrected state (x(k)): x(k)=x'(k)+K(k)*(z(k)-H*x'(k))
+    Mat statePost;
+    //! posteriori error estimate covariance matrix (P(k)): P(k)=(I-K(k)*H)*P'(k)
+    Mat errorCovPost;
 
     // dynamic system description
 
@@ -155,15 +159,6 @@ struct GAPI_EXPORTS KalmanParams
     Mat measurementNoiseCov;
     //! control matrix (B) (Optional: not used if there's no control)
     Mat controlMatrix;
-
-    /** Full constructor
-    @param dp Dimensionality of the state.
-    @param mp Dimensionality of the measurement.
-    @param cp Dimensionality of the control vector. If it equals 0, dynamic system don't have external impact.
-    So controlMatrix should be empty.
-    @param tp Type of the created matrices that should be CV_32F or CV_64F.
-    */
-   // KalmanParams(int dp, int mp, int cp = 0, int tp = CV_32F);
 };
 
 G_TYPED_KERNEL(GKalmanFilter, <GMat(GMat, GOpaque<bool>, GMat, KalmanParams)>,
@@ -178,6 +173,8 @@ G_TYPED_KERNEL(GKalmanFilter, <GMat(GMat, GOpaque<bool>, GMat, KalmanParams)>,
 
         GAPI_Assert(!kfParams.statePre.empty() && kfParams.statePre.depth() == kfParams.depth);
         GAPI_Assert(!kfParams.errorCovPre.empty() && kfParams.errorCovPre.depth() == kfParams.depth);
+        GAPI_Assert(!kfParams.statePost.empty() && kfParams.statePost.depth() == kfParams.depth);
+        GAPI_Assert(!kfParams.errorCovPost.empty() && kfParams.errorCovPost.depth() == kfParams.depth);
         GAPI_Assert(!kfParams.transitionMatrix.empty() && kfParams.transitionMatrix.depth() == kfParams.depth);
         GAPI_Assert(!kfParams.processNoiseCov.empty() && kfParams.processNoiseCov.depth() == kfParams.depth);
         GAPI_Assert(!kfParams.measurementNoiseCov.empty() && kfParams.measurementNoiseCov.depth() == kfParams.depth);
@@ -193,8 +190,14 @@ G_TYPED_KERNEL(GKalmanFilter, <GMat(GMat, GOpaque<bool>, GMat, KalmanParams)>,
         GAPI_Assert(kfParams.errorCovPre.rows == kfParams.errorCovPre.cols &&
                     kfParams.errorCovPre.rows == kfParams.transitionMatrix.rows);
 
+        GAPI_Assert(kfParams.errorCovPost.rows == kfParams.errorCovPost.cols &&
+                    kfParams.errorCovPost.rows == kfParams.transitionMatrix.rows);
+
         GAPI_Assert(kfParams.statePre.rows == kfParams.transitionMatrix.rows &&
                     kfParams.statePre.cols == 1);
+
+        GAPI_Assert(kfParams.statePost.rows == kfParams.transitionMatrix.rows &&
+                    kfParams.statePost.cols == 1);
 
         GAPI_Assert(kfParams.measurementMatrix.cols == kfParams.transitionMatrix.cols);
 
@@ -222,6 +225,8 @@ G_TYPED_KERNEL(GKalmanFilterNoControl, <GMat(GMat, GOpaque<bool>, KalmanParams)>
 
         GAPI_Assert(!kfParams.statePre.empty() && kfParams.statePre.depth() == kfParams.depth);
         GAPI_Assert(!kfParams.errorCovPre.empty() && kfParams.errorCovPre.depth() == kfParams.depth);
+        GAPI_Assert(!kfParams.statePost.empty() && kfParams.statePost.depth() == kfParams.depth);
+        GAPI_Assert(!kfParams.errorCovPost.empty() && kfParams.errorCovPost.depth() == kfParams.depth);
         GAPI_Assert(!kfParams.transitionMatrix.empty() && kfParams.transitionMatrix.depth() == kfParams.depth);
         GAPI_Assert(!kfParams.processNoiseCov.empty() && kfParams.processNoiseCov.depth() == kfParams.depth);
         GAPI_Assert(!kfParams.measurementNoiseCov.empty() && kfParams.measurementNoiseCov.depth() == kfParams.depth);
@@ -236,8 +241,14 @@ G_TYPED_KERNEL(GKalmanFilterNoControl, <GMat(GMat, GOpaque<bool>, KalmanParams)>
         GAPI_Assert(kfParams.errorCovPre.rows == kfParams.errorCovPre.cols &&
                     kfParams.errorCovPre.rows == kfParams.transitionMatrix.rows);
 
+        GAPI_Assert(kfParams.errorCovPost.rows == kfParams.errorCovPost.cols &&
+                    kfParams.errorCovPost.rows == kfParams.transitionMatrix.rows);
+
         GAPI_Assert(kfParams.statePre.rows == kfParams.transitionMatrix.rows &&
                     kfParams.statePre.cols == 1);
+
+        GAPI_Assert(kfParams.statePost.rows == kfParams.transitionMatrix.rows &&
+                    kfParams.statePost.cols == 1);
 
         GAPI_Assert(kfParams.measurementMatrix.cols == kfParams.transitionMatrix.cols);
 
