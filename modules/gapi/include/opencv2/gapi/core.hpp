@@ -1436,43 +1436,77 @@ Output image size will have the size dsize, the depth of output is the same as o
  */
 GAPI_EXPORTS GMatP resizeP(const GMatP& src, const Size& dsize, int interpolation = cv::INTER_LINEAR);
 
-/** @brief Creates one 3-channel (4-channel) matrix out of 3(4) single-channel ones.
+/** @brief Creates one 4-channel matrix out of 4 single-channel ones.
 
 The function merges several matrices to make a single multi-channel matrix. That is, each
 element of the output matrix will be a concatenation of the elements of the input matrices, where
 elements of i-th input matrix are treated as mv[i].channels()-element vectors.
-Input matrix must be of @ref CV_8UC3 (@ref CV_8UC4) type.
+Output matrix must be of @ref CV_8UC4 type.
 
-The function split3/split4 does the reverse operation.
+The function split4 does the reverse operation.
 
 @note
- - Function textual ID for merge3 is "org.opencv.core.transform.merge3"
- - Function textual ID for merge4 is "org.opencv.core.transform.merge4"
+ - Function textual ID is "org.opencv.core.transform.merge4"
 
-@param src1 first input matrix to be merged
-@param src2 second input matrix to be merged
-@param src3 third input matrix to be merged
-@param src4 fourth input matrix to be merged
-@sa  split4, split3
+@param src1 first input @ref CV_8UC1 matrix to be merged.
+@param src2 second input @ref CV_8UC1 matrix to be merged.
+@param src3 third input @ref CV_8UC1 matrix to be merged.
+@param src4 fourth input @ref CV_8UC1 matrix to be merged.
+@sa merge3, split4, split3
 */
 GAPI_EXPORTS GMat merge4(const GMat& src1, const GMat& src2, const GMat& src3, const GMat& src4);
-GAPI_EXPORTS GMat merge3(const GMat& src1, const GMat& src2, const GMat& src3);
 
-/** @brief Divides a 3-channel (4-channel) matrix into 3(4) single-channel matrices.
+/** @brief Creates one 3-channel matrix out of 3 single-channel ones.
 
-The function splits a 3-channel (4-channel) matrix into 3(4) single-channel matrices:
-\f[\texttt{mv} [c](I) =  \texttt{src} (I)_c\f]
+The function merges several matrices to make a single multi-channel matrix. That is, each
+element of the output matrix will be a concatenation of the elements of the input matrices, where
+elements of i-th input matrix are treated as mv[i].channels()-element vectors.
+Output matrix must be of @ref CV_8UC3 type.
 
-All output matrices must be in @ref CV_8UC1.
+The function split3 does the reverse operation.
 
 @note
- - Function textual ID for split3 is "org.opencv.core.transform.split3"
- - Function textual ID for split4 is "org.opencv.core.transform.split4"
+ - Function textual ID is "org.opencv.core.transform.merge3"
 
-@param src input @ref CV_8UC4 (@ref CV_8UC3) matrix.
-@sa merge3, merge4
+@param src1 first input @ref CV_8UC1 matrix to be merged.
+@param src2 second input @ref CV_8UC1 matrix to be merged.
+@param src3 third input @ref CV_8UC1 matrix to be merged.
+@sa merge4, split4, split3
+*/
+GAPI_EXPORTS GMat merge3(const GMat& src1, const GMat& src2, const GMat& src3);
+
+/** @brief Divides a 4-channel matrix into 4 single-channel matrices.
+
+The function splits a 4-channel matrix into 4 single-channel matrices:
+\f[\texttt{mv} [c](I) =  \texttt{src} (I)_c\f]
+
+All output matrices must be of @ref CV_8UC1 type.
+
+The function merge4 does the reverse operation.
+
+@note
+ - Function textual ID is "org.opencv.core.transform.split4"
+
+@param src input @ref CV_8UC4 matrix.
+@sa split3, merge3, merge4
 */
 GAPI_EXPORTS std::tuple<GMat, GMat, GMat,GMat> split4(const GMat& src);
+
+/** @brief Divides a 3-channel matrix into 3 single-channel matrices.
+
+The function splits a 3-channel matrix into 3 single-channel matrices:
+\f[\texttt{mv} [c](I) =  \texttt{src} (I)_c\f]
+
+All output matrices must be of @ref CV_8UC1 type.
+
+The function merge3 does the reverse operation.
+
+@note
+ - Function textual ID is "org.opencv.core.transform.split3"
+
+@param src input @ref CV_8UC3 matrix.
+@sa split4, merge3, merge4
+*/
 GAPI_EXPORTS_W std::tuple<GMat, GMat, GMat> split3(const GMat& src);
 
 /** @brief Applies a generic geometrical transformation to an image.
