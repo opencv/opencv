@@ -104,7 +104,7 @@ void normAssert(cv::InputArray ref, cv::InputArray test,
 namespace IE = InferenceEngine;
 
 void setNetParameters(IE::CNNNetwork& net, bool is_nv12 = false) {
-    auto &ii = net.getInputsInfo().at("data");
+    auto ii = net.getInputsInfo().at("data");
     ii->setPrecision(IE::Precision::U8);
     ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
     if (is_nv12) {
