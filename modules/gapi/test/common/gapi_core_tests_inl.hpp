@@ -18,10 +18,10 @@ namespace opencv_test
 namespace
 {
 template <typename Elem>
-inline bool compareVectorsAbsExact(const std::vector<Elem>& outOCV,
-                                   const std::vector<Elem>& outGAPI)
+inline bool compareVectorsAbsExact(const std::vector<Elem>& outGAPI,
+                                   const std::vector<Elem>& outOCV)
 {
-    return AbsExactVector<Elem>().to_compare_f()(outOCV, outGAPI);
+    return AbsExactVector<Elem>().to_compare_f()(outGAPI, outOCV);
 }
 }
 
