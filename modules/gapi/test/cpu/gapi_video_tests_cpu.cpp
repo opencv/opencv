@@ -118,7 +118,7 @@ INSTANTIATE_TEST_CASE_MACRO_P(KalmanFilterTestCPU,
                                       Values(CV_32F, CV_64F),
                                       Values(2,5),
                                       Values(2,5),
-                                      Values(0,2),
+                                      Values(2),
                                       Values(5)));
 
 INSTANTIATE_TEST_CASE_MACRO_P(KalmanFilterTestCPU,

@@ -133,14 +133,8 @@ G_TYPED_KERNEL(GBackgroundSubtractor, <GMat(GMat, BackgroundSubtractorParams)>,
 
 struct GAPI_EXPORTS KalmanParams
 {
-    //! Type of the created matrices that should be CV_32F or CV_64F.
-    int type = CV_32F;
-    //! Dimensionality of the control vector.
-    int ctrlDim = 0;
-    //! Dimensionality of the state.
-    int dpDim = 2;
-    //! Dimensionality of the measurement.
-    int mpDim = 2;
+    //! Depth of the created matrices that should be CV_32F or CV_64F.
+    int depth = CV_32F;
 
     // initial state
 
@@ -169,50 +163,53 @@ struct GAPI_EXPORTS KalmanParams
     So controlMatrix should be empty.
     @param tp Type of the created matrices that should be CV_32F or CV_64F.
     */
-    KalmanParams(int dp, int mp, int cp = 0, int tp = CV_32F);
+   // KalmanParams(int dp, int mp, int cp = 0, int tp = CV_32F);
 };
 
-G_TYPED_KERNEL(GKalmanFilter, <GMat(GMat, GOpaque<bool>, GMat, KalmanParams)>, "org.opencv.video.KalmanFilter")
+G_TYPED_KERNEL(GKalmanFilter, <GMat(GMat, GOpaque<bool>, GMat, KalmanParams)>,
+               "org.opencv.video.KalmanFilter")
 {
-    static GMatDesc outMeta(const GMatDesc& measurement, const GOpaqueDesc&, const GMatDesc& control, const KalmanParams& kfParams)
+    static GMatDesc outMeta(const GMatDesc& measurement, const GOpaqueDesc&,
+                            const GMatDesc& control, const KalmanParams& kfParams)
     {
-        GAPI_Assert(kfParams.type == CV_32F || kfParams.type == CV_64F);
-        GAPI_Assert(kfParams.dpDim > 0 && kfParams.mpDim > 0 && kfParams.ctrlDim >= 0);
+        GAPI_Assert(kfParams.depth == CV_32F || kfParams.depth == CV_64F);
 
-        GAPI_Assert(kfParams.statePre.type() == kfParams.type &&
-                    kfParams.errorCovPre.type() == kfParams.type &&
-                    kfParams.transitionMatrix.type() == kfParams.type &&
-                    kfParams.measurementMatrix.type() == kfParams.type &&
-                    kfParams.processNoiseCov.type() == kfParams.type &&
-                    kfParams.measurementNoiseCov.type() == kfParams.type);
+        GAPI_Assert(!kfParams.controlMatrix.empty() && "controlMatrix should be initialized in this overload!");
 
-        if (!kfParams.controlMatrix.empty() && kfParams.ctrlDim > 0)
-        {
-            GAPI_Assert(kfParams.controlMatrix.type() == kfParams.type &&
-                        kfParams.controlMatrix.cols == kfParams.ctrlDim &&
-                        kfParams.controlMatrix.rows == kfParams.dpDim);
-            GAPI_Assert(control.size.height == kfParams.ctrlDim &&
-                        control.size.width == 1);
-        }
+        GAPI_Assert(!kfParams.statePre.empty() && kfParams.statePre.depth() == kfParams.depth);
+        GAPI_Assert(!kfParams.errorCovPre.empty() && kfParams.errorCovPre.depth() == kfParams.depth);
+        GAPI_Assert(!kfParams.transitionMatrix.empty() && kfParams.transitionMatrix.depth() == kfParams.depth);
+        GAPI_Assert(!kfParams.processNoiseCov.empty() && kfParams.processNoiseCov.depth() == kfParams.depth);
+        GAPI_Assert(!kfParams.measurementNoiseCov.empty() && kfParams.measurementNoiseCov.depth() == kfParams.depth);
+        GAPI_Assert(!kfParams.measurementMatrix.empty() && kfParams.measurementMatrix.depth() == kfParams.depth);
+        GAPI_Assert(!measurement.size.empty() && measurement.depth == kfParams.depth);
+        GAPI_Assert(!control.size.empty() && control.depth == kfParams.depth);
 
-        GAPI_Assert(!kfParams.statePre.empty() && !kfParams.errorCovPre.empty() &&
-                    !kfParams.transitionMatrix.empty() && !kfParams.measurementMatrix.empty() &&
-                    !kfParams.processNoiseCov.empty() && !kfParams.measurementNoiseCov.empty());
+        GAPI_Assert(kfParams.transitionMatrix.rows == kfParams.transitionMatrix.cols);
 
-        GAPI_Assert(kfParams.statePre.rows == kfParams.dpDim && kfParams.statePre.cols == 1);
-        GAPI_Assert(kfParams.measurementMatrix.cols == kfParams.dpDim &&
-                    kfParams.measurementMatrix.rows == kfParams.mpDim);
-        GAPI_Assert(kfParams.errorCovPre.rows == kfParams.errorCovPre.cols &&
-                    kfParams.errorCovPre.rows == kfParams.dpDim);
-
-        GAPI_Assert(kfParams.transitionMatrix.rows == kfParams.transitionMatrix.cols &&
-                    kfParams.transitionMatrix.rows == kfParams.dpDim);
         GAPI_Assert(kfParams.processNoiseCov.rows == kfParams.processNoiseCov.cols &&
-                    kfParams.processNoiseCov.rows == kfParams.dpDim);
-        GAPI_Assert(kfParams.measurementNoiseCov.rows == kfParams.measurementNoiseCov.cols &&
-                    kfParams.measurementNoiseCov.rows == kfParams.mpDim);
+                    kfParams.processNoiseCov.rows == kfParams.transitionMatrix.rows);
 
-        return measurement.withSize(Size(1, kfParams.dpDim)).withDepth(kfParams.type);
+        GAPI_Assert(kfParams.errorCovPre.rows == kfParams.errorCovPre.cols &&
+                    kfParams.errorCovPre.rows == kfParams.transitionMatrix.rows);
+
+        GAPI_Assert(kfParams.statePre.rows == kfParams.transitionMatrix.rows &&
+                    kfParams.statePre.cols == 1);
+
+        GAPI_Assert(kfParams.measurementMatrix.cols == kfParams.transitionMatrix.cols);
+
+        GAPI_Assert(kfParams.measurementNoiseCov.rows == kfParams.measurementNoiseCov.cols &&
+                    kfParams.measurementNoiseCov.rows == kfParams.measurementMatrix.rows);
+
+        GAPI_Assert(kfParams.controlMatrix.rows == kfParams.transitionMatrix.rows);
+
+        GAPI_Assert(control.size.height == kfParams.controlMatrix.cols &&
+                    control.size.width == 1);
+
+        GAPI_Assert(measurement.size.height == kfParams.measurementMatrix.rows &&
+                    measurement.size.width == 1);
+
+        return measurement.withSize(Size(1, kfParams.transitionMatrix.rows)).withDepth(kfParams.depth);
     }
 };
 
@@ -220,35 +217,37 @@ G_TYPED_KERNEL(GKalmanFilterNoControl, <GMat(GMat, GOpaque<bool>, KalmanParams)>
 {
     static GMatDesc outMeta(const GMatDesc& measurement, const GOpaqueDesc&, const KalmanParams& kfParams)
     {
-        GAPI_Assert(kfParams.type == CV_32F || kfParams.type == CV_64F);
-        GAPI_Assert(kfParams.controlMatrix.empty() && kfParams.ctrlDim == 0);
-        GAPI_Assert(kfParams.dpDim > 0 && kfParams.mpDim > 0);
+        GAPI_Assert(kfParams.depth == CV_32F || kfParams.depth == CV_64F);
+        GAPI_Assert(kfParams.controlMatrix.empty() && "There are no control in this overload.");
 
-        GAPI_Assert(kfParams.statePre.type() == kfParams.type &&
-                    kfParams.errorCovPre.type() == kfParams.type &&
-                    kfParams.transitionMatrix.type() == kfParams.type &&
-                    kfParams.measurementMatrix.type() == kfParams.type &&
-                    kfParams.processNoiseCov.type() == kfParams.type &&
-                    kfParams.measurementNoiseCov.type() == kfParams.type);
+        GAPI_Assert(!kfParams.statePre.empty() && kfParams.statePre.depth() == kfParams.depth);
+        GAPI_Assert(!kfParams.errorCovPre.empty() && kfParams.errorCovPre.depth() == kfParams.depth);
+        GAPI_Assert(!kfParams.transitionMatrix.empty() && kfParams.transitionMatrix.depth() == kfParams.depth);
+        GAPI_Assert(!kfParams.processNoiseCov.empty() && kfParams.processNoiseCov.depth() == kfParams.depth);
+        GAPI_Assert(!kfParams.measurementNoiseCov.empty() && kfParams.measurementNoiseCov.depth() == kfParams.depth);
+        GAPI_Assert(!kfParams.measurementMatrix.empty() && kfParams.measurementMatrix.depth() == kfParams.depth);
+        GAPI_Assert(!measurement.size.empty() && measurement.depth == kfParams.depth);
 
-        GAPI_Assert(!kfParams.statePre.empty() && !kfParams.errorCovPre.empty() &&
-                    !kfParams.transitionMatrix.empty() && !kfParams.measurementMatrix.empty() &&
-                    !kfParams.processNoiseCov.empty() && !kfParams.measurementNoiseCov.empty());
+        GAPI_Assert(kfParams.transitionMatrix.rows == kfParams.transitionMatrix.cols);
 
-        GAPI_Assert(kfParams.statePre.rows == kfParams.dpDim && kfParams.statePre.cols == 1);
-        GAPI_Assert(kfParams.measurementMatrix.cols == kfParams.dpDim &&
-                    kfParams.measurementMatrix.rows == kfParams.mpDim);
-        GAPI_Assert(kfParams.errorCovPre.rows == kfParams.errorCovPre.cols &&
-                    kfParams.errorCovPre.rows == kfParams.dpDim);
-
-        GAPI_Assert(kfParams.transitionMatrix.rows == kfParams.transitionMatrix.cols &&
-                    kfParams.transitionMatrix.rows == kfParams.dpDim);
         GAPI_Assert(kfParams.processNoiseCov.rows == kfParams.processNoiseCov.cols &&
-                    kfParams.processNoiseCov.rows == kfParams.dpDim);
-        GAPI_Assert(kfParams.measurementNoiseCov.rows == kfParams.measurementNoiseCov.cols &&
-                    kfParams.measurementNoiseCov.rows == kfParams.mpDim);
+                    kfParams.processNoiseCov.rows == kfParams.transitionMatrix.rows);
 
-        return measurement.withSize(Size(1, kfParams.dpDim)).withDepth(kfParams.type);
+        GAPI_Assert(kfParams.errorCovPre.rows == kfParams.errorCovPre.cols &&
+                    kfParams.errorCovPre.rows == kfParams.transitionMatrix.rows);
+
+        GAPI_Assert(kfParams.statePre.rows == kfParams.transitionMatrix.rows &&
+                    kfParams.statePre.cols == 1);
+
+        GAPI_Assert(kfParams.measurementMatrix.cols == kfParams.transitionMatrix.cols);
+
+        GAPI_Assert(kfParams.measurementNoiseCov.rows == kfParams.measurementNoiseCov.cols &&
+                    kfParams.measurementNoiseCov.rows == kfParams.measurementMatrix.rows);
+
+        GAPI_Assert(measurement.size.height == kfParams.measurementMatrix.rows &&
+                    measurement.size.width == 1);
+
+        return measurement.withSize(Size(1, kfParams.transitionMatrix.rows)).withDepth(kfParams.depth);
     }
 };
 } //namespace video
@@ -375,7 +374,7 @@ by default <http://en.wikipedia.org/wiki/Kalman_filter>.
 transitionMatrix, controlMatrix and measurementMatrix can be modified to get an
 extended Kalman filter functionality. However, according to OCV's Kalman filter
 implementation transitionMatrix, processNoiseCov and measurementNoiseCov shouldn't
-be set to zero as it'll lead to unexpected behavior.
+be set to zero as it'll lead unexpected behavior.
 
 @return Output image is predicted or corrected state, i.e. 32-bit or 64-bit float
 matrix @ref CV_32F or @ref CV_64F.

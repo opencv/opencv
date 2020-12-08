@@ -107,38 +107,14 @@ GAPI_OCV_KERNEL_ST(GCPUBackgroundSubtractor,
     }
 };
 
-cv::gapi::video::KalmanParams::KalmanParams(int dp, int mp, int cp, int tp)
-{
-    GAPI_Assert(dp > 0 && mp > 0);
-    GAPI_Assert(tp == CV_32F || tp == CV_64F);
-    ctrlDim = std::max(cp, 0);
-    type = tp;
-    dpDim = dp;
-    mpDim = mp;
-
-    statePre = Mat::zeros(dpDim, 1, type);
-    transitionMatrix = Mat::eye(dpDim, dpDim, type);
-
-    processNoiseCov = Mat::eye(dpDim, dpDim, type);
-    measurementMatrix = Mat::zeros(mpDim, dpDim, type);
-    measurementNoiseCov = Mat::eye(mpDim, mpDim, type);
-
-    errorCovPre = Mat::zeros(dpDim, dpDim, type);
-
-    if (ctrlDim > 0)
-        controlMatrix = Mat::zeros(dpDim, ctrlDim, type);
-    else
-        controlMatrix.release();
-}
-
 GAPI_OCV_KERNEL_ST(GCPUKalmanFilter, cv::gapi::video::GKalmanFilter, cv::KalmanFilter)
 {
     static void setup(const cv::GMatDesc&, const cv::GOpaqueDesc&,
                       const cv::GMatDesc&, const cv::gapi::video::KalmanParams& kfParams,
                       std::shared_ptr<cv::KalmanFilter> &state, const cv::GCompileArgs&)
     {
-        state = std::make_shared<cv::KalmanFilter>(kfParams.dpDim, kfParams.mpDim,
-                                                   kfParams.ctrlDim, kfParams.type);
+        state = std::make_shared<cv::KalmanFilter>(kfParams.transitionMatrix.rows, kfParams.measurementMatrix.rows,
+                                                   kfParams.controlMatrix.cols, kfParams.depth);
 
         // initial state
         state->statePre = kfParams.statePre;
@@ -174,8 +150,8 @@ GAPI_OCV_KERNEL_ST(GCPUKalmanFilterNoControl, cv::gapi::video::GKalmanFilterNoCo
                       std::shared_ptr<cv::KalmanFilter> &state,
                       const cv::GCompileArgs&)
     {
-        state = std::make_shared<cv::KalmanFilter>(kfParams.dpDim, kfParams.mpDim,
-                                                   0, kfParams.type);
+        state = std::make_shared<cv::KalmanFilter>(kfParams.transitionMatrix.rows, kfParams.measurementMatrix.rows,
+                                                   0, kfParams.depth);
 
         // initial state
         state->statePre = kfParams.statePre;
