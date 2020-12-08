@@ -46,6 +46,10 @@
 
 #include "api/gbackend_priv.hpp" // FIXME: Make it part of Backend SDK!
 
+#if INF_ENGINE_RELEASE < 2021010000
+#include "ie_compound_blob.h"
+#endif
+
 namespace IE = InferenceEngine;
 
 namespace {
@@ -959,7 +963,11 @@ IE::Blob::Ptr cv::gapi::ie::util::to_ie(cv::Mat &blob) {
 IE::Blob::Ptr cv::gapi::ie::util::to_ie(cv::Mat &y_plane, cv::Mat &uv_plane) {
     auto y_blob   = wrapIE(y_plane,  cv::gapi::ie::TraitAs::IMAGE);
     auto uv_blob  = wrapIE(uv_plane, cv::gapi::ie::TraitAs::IMAGE);
+#if INF_ENGINE_RELEASE >= 2021010000
     return IE::make_shared_blob<IE::NV12Blob>(y_blob, uv_blob);
+#else
+    return IE::make_shared_blob<InferenceEngine::NV12Blob>(y_blob, uv_blob);
+#endif
 }
 
 #else // HAVE_INF_ENGINE
