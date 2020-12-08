@@ -55,8 +55,8 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             strides = config.strides;
             CV_Assert(pooling_order == strides.size());
 
-            if (pooling_order != 2 && pooling_order != 3)
-                CV_Error(Error::StsNotImplemented, "Only 2D/3D max-pooling are supported.");
+            if (pooling_order > 3)
+                CV_Error(Error::StsNotImplemented, "Only 1D/2D/3D max-pooling are supported.");
 
             padding_left.resize(pooling_order);
             if (config.padMode == MaxPoolingConfiguration::PaddingMode::MANUAL)

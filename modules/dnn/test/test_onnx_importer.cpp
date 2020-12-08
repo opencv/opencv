@@ -120,9 +120,10 @@ TEST_P(Test_ONNX_layers, Convolution_variable_weight)
          backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019) && target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
 
-    if (backend == DNN_BACKEND_CUDA)
+    if (backend == DNN_BACKEND_CUDA || backend == DNN_BACKEND_VKCOM) {
         applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA); // not supported
-
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_VULKAN); // not supported
+    }
     String basename = "conv_variable_w";
     Net net = readNetFromONNX(_tf("models/" + basename + ".onnx"));
     ASSERT_FALSE(net.empty());
@@ -150,8 +151,10 @@ TEST_P(Test_ONNX_layers, Convolution_variable_weight_bias)
          backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019) && target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
 
-    if (backend == DNN_BACKEND_CUDA)
+    if (backend == DNN_BACKEND_CUDA || backend == DNN_BACKEND_VKCOM) {
         applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA); // not supported
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_VULKAN); // not supported
+    }
 
     String basename = "conv_variable_wb";
     Net net = readNetFromONNX(_tf("models/" + basename + ".onnx"));
@@ -710,6 +713,10 @@ TEST_P(Test_ONNX_layers, Conv1d_bias)
 
 TEST_P(Test_ONNX_layers, Conv1d_variable_weight)
 {
+    if (backend == DNN_BACKEND_CUDA || backend == DNN_BACKEND_VKCOM) {
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA); // not supported
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_VULKAN); // not supported
+    }
     String basename = "conv1d_variable_w";
     Net net = readNetFromONNX(_tf("models/" + basename + ".onnx"));
     ASSERT_FALSE(net.empty());
@@ -730,6 +737,10 @@ TEST_P(Test_ONNX_layers, Conv1d_variable_weight)
 
 TEST_P(Test_ONNX_layers, Conv1d_variable_weight_bias)
 {
+    if (backend == DNN_BACKEND_CUDA || backend == DNN_BACKEND_VKCOM) {
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA); // not supported
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_VULKAN); // not supported
+    }
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
     {
         if (target == DNN_TARGET_MYRIAD) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);

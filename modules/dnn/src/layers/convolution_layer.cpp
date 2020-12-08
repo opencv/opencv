@@ -312,7 +312,7 @@ public:
         if (backendId == DNN_BACKEND_CUDA)
         {
             /* only convolution 2d and 3d supported */
-            if (ksize == 2 || ksize == 3)
+            if (ksize > 0 && ksize <= 3)
                 return true;
 
             return false;
