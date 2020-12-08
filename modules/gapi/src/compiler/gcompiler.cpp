@@ -338,7 +338,7 @@ void cv::gimpl::GCompiler::validateInputMeta()
         return false; // should never happen
     };
 
-    for (const auto &meta_arg_idx : ade::util::indexed(ade::util::zip(m_metas, c_expr.m_ins)))
+    for (const auto meta_arg_idx : ade::util::indexed(ade::util::zip(m_metas, c_expr.m_ins)))
     {
         const auto &meta  = std::get<0>(ade::util::value(meta_arg_idx));
         const auto &proto = std::get<1>(ade::util::value(meta_arg_idx));
@@ -365,7 +365,7 @@ void cv::gimpl::GCompiler::validateOutProtoArgs()
         return;
     }
     const auto &c_expr = util::get<cv::GComputation::Priv::Expr>(m_c.priv().m_shape);
-    for (const auto &out_pos : ade::util::indexed(c_expr.m_outs))
+    for (const auto out_pos : ade::util::indexed(c_expr.m_outs))
     {
         const auto &node = proto::origin_of(ade::util::value(out_pos)).node;
         if (node.shape() != cv::GNode::NodeShape::CALL)

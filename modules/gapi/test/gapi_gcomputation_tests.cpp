@@ -81,7 +81,7 @@ namespace opencv_test
 
           void check(const std::vector<cv::Mat>& out_mats)
           {
-              for (const auto& it : ade::util::zip(ref_mats, out_mats))
+              for (const auto it : ade::util::zip(ref_mats, out_mats))
               {
                   const auto& ref_mat = std::get<0>(it);
                   const auto& out_mat = std::get<1>(it);

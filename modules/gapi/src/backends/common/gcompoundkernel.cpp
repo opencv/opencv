@@ -16,7 +16,7 @@
 cv::detail::GCompoundContext::GCompoundContext(const cv::GArgs& in_args)
 {
     m_args.resize(in_args.size());
-    for (const auto& it : ade::util::indexed(in_args))
+    for (const auto it : ade::util::indexed(in_args))
     {
         const auto& i      = ade::util::index(it);
         const auto& in_arg = ade::util::value(it);
