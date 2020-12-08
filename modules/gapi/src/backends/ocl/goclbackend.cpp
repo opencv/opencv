@@ -231,21 +231,21 @@ void cv::gimpl::GOCLExecutable::run(std::vector<InObj>  &&input_objs,
 
         // - Output parameters.
         // FIXME: pre-allocate internal Mats, etc, according to the known meta
-        for (const auto &out_it : ade::util::indexed(op.outs))
+        for (const auto out_it : ade::util::indexed(op.outs))
         {
             // FIXME: Can the same GArg type resolution mechanism be reused here?
-            const auto out_port  = ade::util::index(out_it);
-            const auto out_desc  = ade::util::value(out_it);
+            const auto  out_port  = ade::util::index(out_it);
+            const auto& out_desc  = ade::util::value(out_it);
             context.m_results[out_port] = magazine::getObjPtr(m_res, out_desc, true);
         }
 
         // Now trigger the executable unit
         k.apply(context);
 
-        for (const auto &out_it : ade::util::indexed(op_info.expected_out_metas))
+        for (const auto out_it : ade::util::indexed(op_info.expected_out_metas))
         {
-            const auto out_index      = ade::util::index(out_it);
-            const auto expected_meta  = ade::util::value(out_it);
+            const auto  out_index      = ade::util::index(out_it);
+            const auto& expected_meta  = ade::util::value(out_it);
 
             if (!can_describe(expected_meta, context.m_results[out_index]))
             {
@@ -262,8 +262,8 @@ void cv::gimpl::GOCLExecutable::run(std::vector<InObj>  &&input_objs,
 
     for (auto &it : output_objs)
     {
-        auto& rc = it.first;
-        auto& g_arg = it.second;
+        const auto& rc    = it.first;
+              auto& g_arg = it.second;
         magazine::writeBack(m_res, rc, g_arg);
         if (rc.shape == GShape::GMAT)
         {
