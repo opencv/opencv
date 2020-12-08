@@ -390,16 +390,17 @@ void Index::build(InputArray _data, const IndexParams& params, flann_distance_t 
     CV_INSTRUMENT_REGION();
 
     release();
-    algo = getParam<flann_algorithm_t>(params, "algorithm", FLANN_INDEX_LINEAR);
-    if( algo == FLANN_INDEX_SAVED )
-    {
-        load(_data, getParam<String>(params, "filename", String()));
-        return;
-    }
 
     // Index may reuse 'data' during search, need to keep it alive
     features_clone = _data.getMat().clone();
     Mat data = features_clone;
+
+    algo = getParam<flann_algorithm_t>(params, "algorithm", FLANN_INDEX_LINEAR);
+    if( algo == FLANN_INDEX_SAVED )
+    {
+        load_(getParam<String>(params, "filename", String()));
+        return;
+    }
 
     index = 0;
     featureType = data.type();
@@ -790,9 +791,20 @@ bool loadIndex(Index* index0, void*& index, const Mat& data, FILE* fin, const Di
 
 bool Index::load(InputArray _data, const String& filename)
 {
-    Mat data = _data.getMat();
-    bool ok = true;
     release();
+
+    // Index may reuse 'data' during search, need to keep it alive
+    features_clone = _data.getMat().clone();
+    Mat data = features_clone;
+
+    return load_(filename);
+}
+
+bool Index::load_(const String& filename)
+{
+    Mat data = features_clone;
+    bool ok = true;
+
     FILE* fin = fopen(filename.c_str(), "rb");
     if (fin == NULL)
         return false;

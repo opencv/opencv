@@ -169,6 +169,8 @@ public:
     CV_WRAP cvflann::flann_algorithm_t getAlgorithm() const;
 
 protected:
+    bool load_(const String& filename);
+
     cvflann::flann_distance_t distType;
     cvflann::flann_algorithm_t algo;
     int featureType;
