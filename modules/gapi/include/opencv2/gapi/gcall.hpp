@@ -11,6 +11,7 @@
 #include <opencv2/gapi/garg.hpp>      // GArg
 #include <opencv2/gapi/gmat.hpp>      // GMat
 #include <opencv2/gapi/gscalar.hpp>   // GScalar
+#include <opencv2/gapi/gframe.hpp>    // GFrame
 #include <opencv2/gapi/garray.hpp>    // GArray<T>
 #include <opencv2/gapi/gopaque.hpp>   // GOpaque<T>
 

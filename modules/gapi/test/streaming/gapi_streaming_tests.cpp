@@ -1353,7 +1353,6 @@ TEST(GAPI_Streaming_Desync, SmokeTest_Streaming)
     }
     EXPECT_EQ(100u, out1_hits);      // out1 must be available for all frames
     EXPECT_LE(out2_hits, out1_hits); // out2 must appear less times than out1
-    std::cout << "Got " << out1_hits << " out1's and " << out2_hits << " out2's" << std::endl;
 }
 
 TEST(GAPI_Streaming_Desync, SmokeTest_Streaming_TwoParts)
