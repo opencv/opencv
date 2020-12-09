@@ -1728,6 +1728,66 @@ TEST(GAPI_Streaming, CopyFrame)
     }
 }
 
+TEST(GAPI_Streaming, Reshape)
+{
+    initTestDataPath();
+    std::string filepath = findDataFile("cv/video/768x576.avi");
+
+    cv::GFrame in;
+    auto out = cv::gapi::streaming::copy(in);
+
+    cv::GComputation comp(cv::GIn(in), cv::GOut(out));
+
+    auto cc = comp.compileStreaming();
+    cc.setSource<BGRSource>(filepath);
+
+    cv::VideoCapture cap;
+    cap.open(filepath);
+    if (!cap.isOpened())
+        throw SkipTestException("Video file can not be opened");
+
+    cv::MediaFrame frame;
+    cv::Mat ocv_mat;
+    std::size_t num_frames = 0u;
+    std::size_t max_frames = 10u;
+
+    cc.start();
+    while (cc.pull(cv::gout(frame)) && num_frames < max_frames)
+    {
+        auto view = frame.access(cv::MediaFrame::Access::R);
+        cv::Mat gapi_mat(frame.desc().size, CV_8UC3, view.ptr[0]);
+        num_frames++;
+        cap >> ocv_mat;
+
+        EXPECT_EQ(0, cvtest::norm(ocv_mat, gapi_mat, NORM_INF));
+    }
+
+    // Reshape the graph meta
+    filepath = findDataFile("cv/video/1920x1080.avi");
+    cc.stop();
+    cc.setSource<BGRSource>(filepath);
+
+    cap.open(filepath);
+    if (!cap.isOpened())
+        throw SkipTestException("Video file can not be opened");
+
+    cv::MediaFrame frame2;
+    cv::Mat ocv_mat2;
+
+    num_frames = 0u;
+
+    cc.start();
+    while (cc.pull(cv::gout(frame2)) && num_frames < max_frames)
+    {
+        auto view = frame2.access(cv::MediaFrame::Access::R);
+        cv::Mat gapi_mat(frame2.desc().size, CV_8UC3, view.ptr[0]);
+        num_frames++;
+        cap >> ocv_mat2;
+
+        EXPECT_EQ(0, cvtest::norm(ocv_mat2, gapi_mat, NORM_INF));
+    }
+}
+
 TEST(GAPI_Streaming, AccessBGRFromBGRFrame)
 {
     initTestDataPath();

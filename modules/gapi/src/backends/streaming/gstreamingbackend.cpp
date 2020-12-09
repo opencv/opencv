@@ -43,9 +43,25 @@ class GStreamingIntrinExecutable final: public cv::gimpl::GIslandExecutable
     virtual void run(GIslandExecutable::IInput &in,
                      GIslandExecutable::IOutput &out) override;
 
-    virtual bool canReshape() const override { return true;  }
-    virtual void reshape(ade::Graph&, const cv::GCompileArgs&) override {
-        
+    virtual bool canReshape() const override { return true; }
+    virtual void reshape(ade::Graph& graph, const cv::GCompileArgs&) override {
+        // The whole graph here consists only of 1 operation with 1 input node and 1 output one
+        cv::gimpl::GModel::ConstGraph new_gm(graph);
+
+        for (const auto& node_new : graph.nodes())
+        {
+            if (new_gm.metadata(node_new).get<cv::gimpl::NodeType>().t == cv::gimpl::NodeType::DATA) {
+                auto data_new = new_gm.metadata(node_new).get<cv::gimpl::Data>();
+                for (auto&& node : m_g.nodes()) {
+                    if (m_gm.metadata(node).get<cv::gimpl::NodeType>().t == cv::gimpl::NodeType::DATA) {
+                        auto data_old = m_gm.metadata(node).get<cv::gimpl::Data>();
+                        if (data_new.rc == data_old.rc && data_new.shape == data_old.shape) {
+                            data_old.meta = data_new.meta;
+                        }
+                    }
+                }
+            }
+        }
     }
 
 public:

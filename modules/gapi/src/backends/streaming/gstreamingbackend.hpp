@@ -22,11 +22,10 @@ struct RMatMediaBGRAdapter final: public cv::RMat::Adapter
     {
         auto view = m_frame.access(a == cv::RMat::Access::W ? cv::MediaFrame::Access::W
                                                             : cv::MediaFrame::Access::R);
-
+        auto callback = [=](){  };
         return cv::RMat::View(desc(),
                               reinterpret_cast<uchar*>(view.ptr[0]),
-                              view.stride[0],
-                              [=](){});
+                              view.stride[0], callback);
     }
 
     virtual cv::GMatDesc desc() const override
