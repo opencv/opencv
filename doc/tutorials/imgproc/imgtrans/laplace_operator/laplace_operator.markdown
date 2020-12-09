@@ -1,8 +1,15 @@
 Laplace Operator {#tutorial_laplace_operator}
 ================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_sobel_derivatives}
 @next_tutorial{tutorial_canny_detector}
+
+|    |    |
+| -: | :- |
+| Original author | Ana Huamán |
+| Compatibility | OpenCV >= 3.0 |
 
 Goal
 ----

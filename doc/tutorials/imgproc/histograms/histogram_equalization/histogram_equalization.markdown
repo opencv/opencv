@@ -1,8 +1,15 @@
 Histogram Equalization {#tutorial_histogram_equalization}
 ======================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_warp_affine}
 @next_tutorial{tutorial_histogram_calculation}
+
+|    |    |
+| -: | :- |
+| Original author | Ana Huamán |
+| Compatibility | OpenCV >= 3.0 |
 
 Goal
 ----
