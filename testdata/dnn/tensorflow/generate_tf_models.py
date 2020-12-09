@@ -1,27 +1,29 @@
 # This script is used to generate test data for OpenCV deep learning module.
+import os
+import struct
+
+import cv2 as cv
 import numpy as np
 import tensorflow as tf
-import os
-import argparse
-import struct
-import cv2 as cv
-
 from tensorflow.python.tools import optimize_for_inference_lib
 from tensorflow.tools.graph_transforms import TransformGraph
 
 np.random.seed(2701)
+
 
 def gen_data(placeholder):
     shape = placeholder.shape.as_list()
     shape[0] = shape[0] if shape[0] else 1  # batch size = 1 instead None
     return np.random.standard_normal(shape).astype(placeholder.dtype.as_numpy_dtype())
 
+
 def prepare_for_dnn(sess, graph_def, in_node, out_node, out_graph, dtype, optimize=True, quantize=False):
     # Freeze graph. Replaces variables to constants.
     graph_def = tf.graph_util.convert_variables_to_constants(sess, graph_def, [out_node])
     if optimize:
         # Optimize graph. Removes training-only ops, unused nodes.
-        graph_def = optimize_for_inference_lib.optimize_for_inference(graph_def, [in_node], [out_node], dtype.as_datatype_enum)
+        graph_def = optimize_for_inference_lib.optimize_for_inference(graph_def, [in_node], [out_node],
+                                                                      dtype.as_datatype_enum)
         # Fuse constant operations.
         transforms = ["fold_constants(ignore_errors=True)"]
         if quantize:
@@ -32,6 +34,7 @@ def prepare_for_dnn(sess, graph_def, in_node, out_node, out_graph, dtype, optimi
     with tf.gfile.FastGFile(out_graph, 'wb') as f:
         f.write(graph_def.SerializeToString())
 
+
 tf.reset_default_graph()
 tf.Graph().as_default()
 tf.set_random_seed(324)
@@ -39,6 +42,7 @@ sess = tf.Session()
 
 # Use this variable to switch behavior of layers.
 isTraining = tf.placeholder(tf.bool, name='isTraining')
+
 
 def writeBlob(data, name):
     if data.ndim == 4:
@@ -50,6 +54,16 @@ def writeBlob(data, name):
     else:
         # Save raw data.
         np.save(name + '.npy', data.astype(np.float32))
+
+def readBlob(data):
+    if data.ndim == 4:
+        # NCHW -> NHWC
+        return data.transpose(0, 2, 3, 1)
+    elif data.ndim == 5:
+        # NCDHW -> NDHWC
+        return data.transpose(0, 2, 3, 4, 1)
+    else:
+        return data
 
 def runModel(inpName, outName, name):
     with tf.Session(graph=tf.Graph()) as localSession:
@@ -66,12 +80,37 @@ def runModel(inpName, outName, name):
         writeBlob(inputData, name + '_in')
         writeBlob(outputData, name + '_out')
 
-def save(inp, out, name, quantize=False, optimize=True):
+
+def save(inp, out, name, quantize=False, optimize=True, is_gen_data=True):
+    """
+        Parameters:
+            inp: TF placeholder for appropriate input data generation
+            out: TF layer output
+            name: name of the particular test data or of the test group data;
+                  may contain the name of the particular test data within test group:
+                  ex.: name='resize_bilinear' or name=('resize_bilinear', 'align_corners')
+            quantize: indicates weather it's needed to quantize the weights in graph
+            optimize: indicates weather it's needed to remove training-only ops, unused nodes
+            is_gen_data: indicates weather it's needed to generate input data
+                        (use False for test groups to avoid extra data generation)
+    """
+    input_data_name = '{}_in'
+
+    if isinstance(name, tuple):
+        input_data_name = input_data_name.format(name[0])
+        name = '_'.join(name)
+    else:
+        input_data_name = input_data_name.format(name)
+
     sess.run(tf.global_variables_initializer())
 
-    inputData = gen_data(inp)
+    if is_gen_data:
+        inputData = gen_data(inp)
+        writeBlob(inputData, input_data_name)
+    else:
+        inputData = readBlob(np.load(input_data_name + '.npy'))
+
     outputData = sess.run(out, feed_dict={inp: inputData, isTraining: False})
-    writeBlob(inputData, name + '_in')
     writeBlob(outputData, name + '_out')
 
     prepare_for_dnn(sess, sess.graph.as_graph_def(), inp.name[:inp.name.rfind(':')],
@@ -95,6 +134,7 @@ def save(inp, out, name, quantize=False, optimize=True):
                     node.attr["value"].tensor.ClearField('half_val')
         tf.train.write_graph(graph_def, "", name + '_net.pb', as_text=False)
 
+
 # Test cases ###################################################################
 # shape: NHWC
 for dtype, prefix in zip([tf.float32, tf.float16], ['', 'fp16_']):
@@ -103,18 +143,18 @@ for dtype, prefix in zip([tf.float32, tf.float16], ['', 'fp16_']):
                             activation=tf.nn.relu,
                             bias_initializer=tf.random_normal_initializer())
     save(inp, conv, prefix + 'single_conv')
-################################################################################
+    ################################################################################
     inp = tf.placeholder(dtype, [3, 7, 5, 4], 'input')
     conv = tf.layers.conv2d(inputs=inp, filters=5, kernel_size=[5, 3], padding='SAME',
                             use_bias=False)
     activation_abs = tf.abs(conv)
     save(inp, activation_abs, prefix + 'padding_same')
-################################################################################
+    ################################################################################
     inp = tf.placeholder(dtype, [2, 4, 6, 5], 'input')
     conv = tf.layers.conv2d(inputs=inp, filters=4, kernel_size=[3, 5], padding='VALID',
                             activation=tf.nn.elu, bias_initializer=tf.random_normal_initializer())
     save(inp, conv, prefix + 'padding_valid')
-################################################################################
+    ################################################################################
     inp = tf.placeholder(dtype, [3, 2, 3, 4], 'input')
     conv = tf.layers.conv2d(inputs=inp, filters=4, kernel_size=[1, 1], activation=tf.nn.tanh,
                             bias_initializer=tf.random_uniform_initializer(0, 1))
@@ -122,29 +162,29 @@ for dtype, prefix in zip([tf.float32, tf.float16], ['', 'fp16_']):
                              bias_initializer=None)
     eltwise_add_mul = (inp * 0.31 + 2 * conv) * conv2
     save(inp, eltwise_add_mul, prefix + 'eltwise_add_mul')
-################################################################################
+    ################################################################################
     inp = tf.placeholder(dtype, [1, 4, 5, 1], 'input')
     conv = tf.layers.conv2d(inputs=inp, filters=4, kernel_size=[3, 1], padding='VALID')
     padded = tf.pad(conv, [[0, 0], [0, 2], [0, 0], [0, 0]])
     merged = tf.concat([padded, inp], axis=3)
     save(inp, merged, prefix + 'pad_and_concat')
-###############################################################################
+    ###############################################################################
     inp = tf.placeholder(dtype, [1, 6, 6, 2], 'input')
     conv = tf.layers.conv2d(inputs=inp, filters=3, kernel_size=[3, 3], padding='SAME')
     pool = tf.layers.max_pooling2d(inputs=conv, pool_size=2, strides=2)
     save(inp, pool, prefix + 'max_pool_even')
-################################################################################
+    ################################################################################
     inp = tf.placeholder(dtype, [1, 7, 7, 2], 'input')
     conv = tf.layers.conv2d(inputs=inp, filters=3, kernel_size=[3, 3], padding='SAME')
     pool = tf.layers.max_pooling2d(inputs=conv, pool_size=3, strides=2, padding='VALID')
     save(inp, pool, prefix + 'max_pool_odd_valid')
-################################################################################
+    ################################################################################
     inp = tf.placeholder(dtype, [1, 7, 7, 2], 'input')
     conv = tf.layers.conv2d(inputs=inp, filters=3, kernel_size=[3, 3], padding='SAME')
     relu = tf.nn.relu6(conv * 10)
     pool = tf.layers.max_pooling2d(inputs=relu, pool_size=2, strides=2, padding='SAME')
     save(inp, pool, prefix + 'max_pool_odd_same')
-################################################################################
+    ################################################################################
     inp = tf.placeholder(dtype, [1, 5, 6, 2], 'input')
     deconv_weights = tf.Variable(tf.random_normal([5, 3, 4, 2], dtype=dtype), name='deconv_weights')
     deconv = tf.nn.conv2d_transpose(value=inp, filter=deconv_weights,
@@ -200,9 +240,11 @@ save(inp, mm, 'matmul')
 ################################################################################
 from tensorflow.python.framework import function
 
+
 @function.Defun(tf.float32, func_name='Dropout')
 def my_dropout(x):
     return tf.layers.dropout(x, rate=0.1, training=isTraining)
+
 
 inp = tf.placeholder(tf.float32, [1, 10, 10, 3], 'input')
 conv = tf.layers.conv2d(inp, filters=3, kernel_size=[1, 1])
@@ -239,12 +281,12 @@ save(inp, reshape, 'reshape_reduce')
 ################################################################################
 times = 4  # Sequence length (number of batches in different time stamps)
 batch_size = 2
-input_size = 5*6*3  # W*H*C
+input_size = 5 * 6 * 3  # W*H*C
 output_size = 10
 # Define LSTM blobk.
 inp = tf.placeholder(tf.float32, [times, batch_size, input_size], 'input')
 lstm_cell = tf.contrib.rnn.LSTMBlockFusedCell(output_size, forget_bias=0.9,
-                                           cell_clip=0.4, use_peephole=True)
+                                              cell_clip=0.4, use_peephole=True)
 outputs, state = lstm_cell(inp, dtype=tf.float32)
 # shape(outputs) is a (times, batch_size, output_size)
 
@@ -338,7 +380,7 @@ conv = tf.layers.conv2d(inp, filters=5, kernel_size=[1, 1],
                         bias_initializer=tf.random_normal_initializer())
 flattened = tf.reshape(conv, [1, -1], 'reshaped')
 biases = tf.Variable(tf.random_normal([10]), name='matmul_biases')
-weights = tf.Variable(tf.random_normal([2*3*5, 10]), name='matmul_weights')
+weights = tf.Variable(tf.random_normal([2 * 3 * 5, 10]), name='matmul_weights')
 mm = tf.matmul(flattened, weights) + biases
 save(inp, mm, 'nhwc_reshape_matmul')
 ################################################################################
@@ -349,7 +391,7 @@ conv = tf.layers.conv2d(inp, filters=5, kernel_size=[1, 1],
 transposed = tf.transpose(conv, [0, 1, 2, 3])
 flattened = tf.reshape(transposed, [1, -1], 'reshaped')
 biases = tf.Variable(tf.random_normal([10]), name='matmul_biases')
-weights = tf.Variable(tf.random_normal([2*3*5, 10]), name='matmul_weights')
+weights = tf.Variable(tf.random_normal([2 * 3 * 5, 10]), name='matmul_weights')
 mm = tf.matmul(flattened, weights) + biases
 save(inp, flattened, 'nhwc_transpose_reshape_matmul')
 ################################################################################
@@ -457,6 +499,7 @@ relu = tf.maximum(0.01 * inp, inp, name='leaky_relu') * 2
 save(inp, relu, 'leaky_relu_order3', optimize=False)
 ################################################################################
 from tensorflow import keras as K
+
 model = K.models.Sequential()
 model.add(K.layers.Softmax(name='keras_softmax', input_shape=(2, 3, 4)))
 sess = K.backend.get_session()
@@ -477,6 +520,7 @@ save(sess.graph.get_tensor_by_name('keras_mobilenet_head_conv_input:0'),
 ################################################################################
 def keras_relu6(x):
     return K.activations.relu(x, max_value=6)
+
 
 inp = K.Input(shape=(2, 3, 4), name='keras_relu6_input')
 relu = K.layers.Activation(keras_relu6, name='keras_relu6')(inp)
@@ -535,14 +579,35 @@ save(sess.graph.get_tensor_by_name('keras_deconv_same_input:0'),
      'keras_deconv_same', optimize=True)
 ################################################################################
 inp = tf.placeholder(tf.float32, [2, 3, 4, 5], 'input')
-resized = tf.image.resize_bilinear(inp, size=[9, 8], name='resize_bilinear')
+resized = tf.image.resize_bilinear(inp, size=[9, 8], align_corners=False, name='resize_bilinear')
 save(inp, resized, 'resize_bilinear')
 ################################################################################
+inp = tf.placeholder(tf.float32, [2, 3, 4, 5], 'input')
+resized = tf.image.resize_bilinear(inp, size=[9, 8], align_corners=True, name='resize_bilinear')
+save(inp, resized, ('resize_bilinear', 'align_corners'), is_gen_data=False)
+################################################################################
+inp = tf.placeholder(tf.float32, [2, 3, 4, 5], 'input')
+resized = tf.image.resize_bilinear(inp, size=[9, 8], align_corners=False, name='resize_bilinear',
+                                   half_pixel_centers=True)
+save(inp, resized, ('resize_bilinear', 'half_pixel'), is_gen_data=False)
+################################################################################
 inp = tf.placeholder(tf.float32, [None, 3, 4, 5], 'input')
-resized = tf.image.resize_bilinear(inp, size=[tf.shape(inp)[1]*2, tf.shape(inp)[2]*3],
+resized = tf.image.resize_bilinear(inp, size=[tf.shape(inp)[1] * 2, tf.shape(inp)[2] * 3],
                                    name='resize_bilinear_factor')
 sub_add = resized - 0.3 + 0.3
 save(inp, sub_add, 'resize_bilinear_factor', optimize=False)
+################################################################################
+inp = tf.placeholder(tf.float32, [None, 3, 4, 5], 'input')
+resized = tf.image.resize_bilinear(inp, size=[tf.shape(inp)[1] * 2, tf.shape(inp)[2] * 3], align_corners=False,
+                                   name='resize_bilinear_factor', half_pixel_centers=True)
+sub_add = resized - 0.3 + 0.3
+save(inp, sub_add, ('resize_bilinear_factor', 'half_pixel'), optimize=False, is_gen_data=False)
+################################################################################
+inp = tf.placeholder(tf.float32, [None, 3, 4, 5], 'input')
+resized = tf.image.resize_bilinear(inp, size=[tf.shape(inp)[1] * 2, tf.shape(inp)[2] * 3], align_corners=True,
+                                   name='resize_bilinear_factor', half_pixel_centers=False)
+sub_add = resized - 0.3 + 0.3
+save(inp, sub_add, ('resize_bilinear_factor', 'align_corners'), optimize=False, is_gen_data=False)
 ################################################################################
 model = K.models.Sequential()
 model.add(K.layers.SeparableConv2D(filters=4, kernel_size=3, strides=(1, 1),
@@ -604,7 +669,7 @@ for name in ['conv_pool_nchw_in.npy', 'conv_pool_nchw_out.npy']:
 model = K.models.Sequential()
 
 model.add(K.layers.UpSampling2D(size=(3, 2), data_format='channels_last',
-                          name='keras_upsampling2d', input_shape=(2, 3, 4)))
+                                name='keras_upsampling2d', input_shape=(2, 3, 4)))
 sess = K.backend.get_session()
 sess.as_default()
 save(sess.graph.get_tensor_by_name('keras_upsampling2d_input:0'),
@@ -641,7 +706,7 @@ with tf.Session(graph=tf.Graph()) as localSession:
     np.save('ssd_mobilenet_v1_ppn_coco.detection_out.npy', detections)
 ################################################################################
 inp = tf.placeholder(tf.float32, [None, 2, 3], 'input')
-flatten = tf.reshape(inp, [-1, 2*3], 'planar')
+flatten = tf.reshape(inp, [-1, 2 * 3], 'planar')
 reshaped = tf.reshape(flatten, tf.shape(inp), 'reshape')
 save(inp, reshaped, 'reshape_as_shape', optimize=False)
 ################################################################################
@@ -678,9 +743,11 @@ inp = K.Input(shape=(2, 3, 4), name='keras_pad_concat_input', batch_size=1)
 conv = K.layers.Conv2D(filters=4, kernel_size=1, data_format='channels_last',
                        name='keras_pad_concat_conv', input_shape=(2, 3, 4))(inp)
 
+
 def pad_depth(x, desired_channels):
     y = K.backend.random_uniform_variable(x.shape.as_list()[:-1] + [desired_channels], low=0, high=1)
     return K.layers.concatenate([x, y])
+
 
 pad = K.layers.Lambda(pad_depth, arguments={'desired_channels': 5}, name='keras_pad_concat')(conv)
 
@@ -831,7 +898,7 @@ save(inp, unpool, 'max_pool_grad')
 inp = tf.placeholder(tf.float32, [1, 2, 3, 4], 'input')
 conv = tf.layers.conv2d(inp, filters=5, kernel_size=[1, 1])
 flatten = tf.contrib.layers.flatten(conv)
-weights = tf.Variable(tf.random_normal([2*3*5, 4]), name='matmul_weights')
+weights = tf.Variable(tf.random_normal([2 * 3 * 5, 4]), name='matmul_weights')
 mm = tf.matmul(flatten, weights)
 reshape = tf.reshape(mm, [-1, 1, 1, 4], 'reshaped')  # NHWC
 save(inp, reshape, 'matmul_layout')
@@ -849,7 +916,8 @@ with tf.Session(graph=tf.Graph()) as localSession:
     with tf.gfile.FastGFile('normal_and_abnormal_mnet_v2_96_96_Flatten.pb') as f:
         graph_def = tf.GraphDef()
         graph_def.ParseFromString(f.read())
-        graph_def = optimize_for_inference_lib.optimize_for_inference(graph_def, [inp_node], [out_node], tf.float32.as_datatype_enum)
+        graph_def = optimize_for_inference_lib.optimize_for_inference(graph_def, [inp_node], [out_node],
+                                                                      tf.float32.as_datatype_enum)
 
     tf.import_graph_def(graph_def, name='')
 
@@ -879,7 +947,7 @@ conv = tf.layers.conv2d(inp, filters=2, kernel_size=[1, 1])
 shape_input = tf.shape(inp)
 hi = shape_input[1] / 3
 wi = shape_input[2] / 2
-input_down = tf.image.resize(conv, size=[hi,wi], method=0, name='resize_down')
+input_down = tf.image.resize(conv, size=[hi, wi], method=0, name='resize_down')
 save(inp, input_down, 'resize_bilinear_down')
 ################################################################################
 
