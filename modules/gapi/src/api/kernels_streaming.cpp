@@ -7,7 +7,7 @@
 #include "precomp.hpp"
 
 #include <opencv2/gapi/streaming/desync.hpp>
-#include <opencv2/gapi/streaming.hpp>
+#include <opencv2/gapi/streaming/format.hpp>
 
 #include <opencv2/gapi/core.hpp>
 

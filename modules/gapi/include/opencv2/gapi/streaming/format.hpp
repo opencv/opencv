@@ -14,6 +14,7 @@ namespace gapi {
 namespace streaming {
 
 cv::gapi::GKernelPackage kernels();
+cv::gapi::GBackend backend();
 
 // FIXME: Make a generic kernel
 G_API_OP(GCopy, <GFrame(GFrame)>, "org.opencv.streaming.copy")

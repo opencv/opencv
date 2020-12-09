@@ -21,7 +21,7 @@
 
 #include <opencv2/gapi/streaming/cap.hpp>
 #include <opencv2/gapi/streaming/desync.hpp>
-#include <opencv2/gapi/streaming.hpp>
+#include <opencv2/gapi/streaming/format.hpp>
 
 namespace opencv_test
 {

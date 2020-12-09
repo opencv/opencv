@@ -35,12 +35,17 @@ using ConstStreamingGraph = ade::ConstTypedGraph
 
 class GStreamingIntrinExecutable final: public cv::gimpl::GIslandExecutable
 {
+    virtual void run(std::vector<InObj>  &&,
+                     std::vector<OutObj> &&) override {
+        GAPI_Assert(false && "Not implemented");
+    }
+
     virtual void run(GIslandExecutable::IInput &in,
                      GIslandExecutable::IOutput &out) override;
 
-    virtual bool canReshape() const override { return false;  }
+    virtual bool canReshape() const override { return true;  }
     virtual void reshape(ade::Graph&, const cv::GCompileArgs&) override {
-        cv::util::throw_error(std::logic_error("GStreamingIntrinExecutable::reshape() is not supported"));
+        
     }
 
 public:

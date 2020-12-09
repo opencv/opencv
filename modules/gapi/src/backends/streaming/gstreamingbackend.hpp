@@ -8,7 +8,7 @@
 #define OPENCV_GAPI_GSTREAMINGBACKEND_HPP
 
 #include <opencv2/gapi/gkernel.hpp>
-#include <opencv2/gapi/streaming.hpp>
+#include <opencv2/gapi/streaming/format.hpp>
 #include "gstreamingkernel.hpp"
 
 namespace cv {
