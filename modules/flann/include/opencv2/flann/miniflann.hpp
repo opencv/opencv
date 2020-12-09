@@ -131,26 +131,30 @@ struct CV_EXPORTS SearchParams : public IndexParams
     SearchParams( int checks = 32, float eps = 0, bool sorted = true );
 };
 
-class CV_EXPORTS_W Index
+class CV_EXPORTS Index
 {
 public:
-    CV_WRAP Index();
-    CV_WRAP Index(InputArray features, const IndexParams& params, cvflann::flann_distance_t distType=cvflann::FLANN_DIST_L2);
+    Index();
+
+    /// @note 'features' must have extended lifetime (as cv::Mat) than this #Index instance (to avoid dangling pointers)
+    Index(InputArray features, const IndexParams& params, cvflann::flann_distance_t distType=cvflann::FLANN_DIST_L2);
     virtual ~Index();
 
-    CV_WRAP virtual void build(InputArray features, const IndexParams& params, cvflann::flann_distance_t distType=cvflann::FLANN_DIST_L2);
-    CV_WRAP virtual void knnSearch(InputArray query, OutputArray indices,
+    /// @note 'features' must have extended lifetime (as cv::Mat) than this #Index instance (to avoid dangling pointers)
+    virtual void build(InputArray features, const IndexParams& params, cvflann::flann_distance_t distType=cvflann::FLANN_DIST_L2);
+
+    virtual void knnSearch(InputArray query, OutputArray indices,
                    OutputArray dists, int knn, const SearchParams& params=SearchParams());
 
-    CV_WRAP virtual int radiusSearch(InputArray query, OutputArray indices,
+    virtual int radiusSearch(InputArray query, OutputArray indices,
                              OutputArray dists, double radius, int maxResults,
                              const SearchParams& params=SearchParams());
 
-    CV_WRAP virtual void save(const String& filename) const;
-    CV_WRAP virtual bool load(InputArray features, const String& filename);
-    CV_WRAP virtual void release();
-    CV_WRAP cvflann::flann_distance_t getDistance() const;
-    CV_WRAP cvflann::flann_algorithm_t getAlgorithm() const;
+    virtual void save(const String& filename) const;
+    virtual bool load(InputArray features, const String& filename);
+    virtual void release();
+    cvflann::flann_distance_t getDistance() const;
+    cvflann::flann_algorithm_t getAlgorithm() const;
 
 protected:
     cvflann::flann_distance_t distType;
