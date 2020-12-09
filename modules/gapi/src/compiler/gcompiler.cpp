@@ -43,7 +43,7 @@
 #include <opencv2/gapi/cpu/imgproc.hpp> // ...Imgproc
 #include <opencv2/gapi/cpu/video.hpp>   // ...and Video kernel implementations
 #include <opencv2/gapi/render/render.hpp>   // render::ocv::backend()
-#include <opencv2/gapi/streaming/streaming.hpp> // streaming::kernels()
+#include <opencv2/gapi/streaming/format.hpp> // streaming::kernels()
 #endif // !defined(GAPI_STANDALONE)
 // </FIXME:>
 

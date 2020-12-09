@@ -197,8 +197,8 @@ void cvtBGR2NV12(const cv::Mat& bgr, cv::Mat& y, cv::Mat& uv) {
 
 class NV12Source : public cv::gapi::wip::GCaptureSource {
 public:
-explicit NV12Source(const std::string& pipeline)
-    : cv::gapi::wip::GCaptureSource(pipeline) {
+    explicit NV12Source(const std::string& pipeline)
+        : cv::gapi::wip::GCaptureSource(pipeline) {
 }
 
 bool pull(cv::gapi::wip::Data& data) {

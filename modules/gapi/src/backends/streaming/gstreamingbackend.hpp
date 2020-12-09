@@ -1,20 +1,11 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
 //
-// Copyright 2020 Intel Corporation.
-//
-// This software and the related documents are Intel copyrighted materials,
-// and your use of them is governed by the express license under which they
-// were provided to you ("License"). Unless the License provides otherwise,
-// you may not use, modify, copy, publish, distribute, disclose or transmit
-// this software or the related documents without Intel's prior written
-// permission.
-//
-// This software and the related documents are provided as is, with no
-// express or implied warranties, other than those that are expressly
-// stated in the License.
-//
+// Copyright (C) 2020 Intel Corporation
 
-#ifndef OPENCV_GAPI_COPY_KERNEL_HPP
-#define OPENCV_GAPI_COPY_KERNEL_HPP
+#ifndef OPENCV_GAPI_GSTREAMINGBACKEND_HPP
+#define OPENCV_GAPI_GSTREAMINGBACKEND_HPP
 
 #include <opencv2/gapi/gkernel.hpp>
 #include <opencv2/gapi/streaming.hpp>
@@ -23,10 +14,8 @@
 namespace cv {
 namespace gimpl {
 
-class RMatMediaBGRAdapter : public cv::RMat::Adapter
+struct RMatMediaBGRAdapter final: public cv::RMat::Adapter
 {
-    cv::MediaFrame m_frame;
-public:
     RMatMediaBGRAdapter(cv::MediaFrame frame) : m_frame(frame) { };
 
     virtual cv::RMat::View access(cv::RMat::Access a) override
@@ -46,6 +35,8 @@ public:
         GAPI_Assert(desc.fmt == cv::MediaFormat::BGR);
         return cv::GMatDesc{CV_8U, 3, desc.size};
     }
+
+    cv::MediaFrame m_frame;
 };
 
 struct Copy: public cv::detail::KernelTag
@@ -92,4 +83,4 @@ struct BGR: public cv::detail::KernelTag
 } // namespace gimpl
 } // namespace cv
 
-#endif // OPENCV_GAPI_COPY_KERNEL_HPP
+#endif // OPENCV_GAPI_GSTREAMINGBACKEND_HPP

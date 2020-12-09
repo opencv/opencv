@@ -1,21 +1,12 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
 //
-// Copyright 2020 Intel Corporation.
-//
-// This software and the related documents are Intel copyrighted materials,
-// and your use of them is governed by the express license under which they
-// were provided to you ("License"). Unless the License provides otherwise,
-// you may not use, modify, copy, publish, distribute, disclose or transmit
-// this software or the related documents without Intel's prior written
-// permission.
-//
-// This software and the related documents are provided as is, with no
-// express or implied warranties, other than those that are expressly
-// stated in the License.
-//
+// Copyright (C) 2020 Intel Corporation
 
 #include <opencv2/imgproc.hpp>
 #include <opencv2/gapi/util/throw.hpp> // throw_error
-#include <opencv2/gapi/streaming/streaming.hpp> // kernels
+#include <opencv2/gapi/streaming/format.hpp> // kernels
 
 #include "api/gbackend_priv.hpp"
 #include "backends/common/gbackend.hpp"
@@ -32,45 +23,37 @@ struct StreamingCreateFunction
 };
 
 using StreamingGraph = ade::TypedGraph
-    <
-      cv::gimpl::Op
+    < cv::gimpl::Op
     , StreamingCreateFunction
     >;
 
 using ConstStreamingGraph = ade::ConstTypedGraph
-    <
-      cv::gimpl::Op
+    < cv::gimpl::Op
     , StreamingCreateFunction
     >;
 
 
-class GStreamingExecutable final: public cv::gimpl::GIslandExecutable
+class GStreamingIntrinExecutable final: public cv::gimpl::GIslandExecutable
 {
-    virtual void run(std::vector<InObj>  &&,
-                     std::vector<OutObj> &&) override {
-        // NB: Is it really needed in non-streaming  mode ?
-        GAPI_Assert(false && "Not implemented");
-    }
-
     virtual void run(GIslandExecutable::IInput &in,
                      GIslandExecutable::IOutput &out) override;
 
     virtual bool canReshape() const override { return false;  }
     virtual void reshape(ade::Graph&, const cv::GCompileArgs&) override {
-        cv::util::throw_error(std::logic_error("GStreamingExecutable::reshape() is not supported"));
+        cv::util::throw_error(std::logic_error("GStreamingIntrinExecutable::reshape() is not supported"));
     }
 
 public:
-    GStreamingExecutable(const ade::Graph                   &,
-                         const std::vector<ade::NodeHandle> &);
+    GStreamingIntrinExecutable(const ade::Graph                   &,
+                               const std::vector<ade::NodeHandle> &);
 
     const ade::Graph& m_g;
     cv::gimpl::GModel::ConstGraph m_gm;
     cv::gapi::streaming::IActor::Ptr m_actor;
 };
 
-void GStreamingExecutable::run(GIslandExecutable::IInput  &in,
-                               GIslandExecutable::IOutput &out)
+void GStreamingIntrinExecutable::run(GIslandExecutable::IInput  &in,
+                                     GIslandExecutable::IOutput &out)
 {
     m_actor->run(in, out);
 }
@@ -90,7 +73,7 @@ class GStreamingBackendImpl final: public cv::gapi::GBackend::Priv
                          const cv::GCompileArgs &,
                          const std::vector<ade::NodeHandle> &nodes) const override
     {
-        return EPtr{new GStreamingExecutable(graph, nodes)};
+        return EPtr{new GStreamingIntrinExecutable(graph, nodes)};
     }
 
     virtual bool controlsMerge() const override
@@ -107,8 +90,8 @@ class GStreamingBackendImpl final: public cv::gapi::GBackend::Priv
     }
 };
 
-GStreamingExecutable::GStreamingExecutable(const ade::Graph& g,
-                                           const std::vector<ade::NodeHandle>& nodes)
+GStreamingIntrinExecutable::GStreamingIntrinExecutable(const ade::Graph& g,
+                                                       const std::vector<ade::NodeHandle>& nodes)
     : m_g(g), m_gm(m_g)
 {
     using namespace cv::gimpl;
@@ -131,7 +114,6 @@ GStreamingExecutable::GStreamingExecutable(const ade::Graph& g,
              ("Internal error: Streaming subgraph has multiple operations"));
     }
 }
-
 
 } // anonymous namespace
 
