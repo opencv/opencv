@@ -114,11 +114,13 @@ GAPI_OCV_KERNEL_ST(GCPUKalmanFilter, cv::gapi::video::GKalmanFilter, cv::KalmanF
                       std::shared_ptr<cv::KalmanFilter> &state, const cv::GCompileArgs&)
     {
         state = std::make_shared<cv::KalmanFilter>(kfParams.transitionMatrix.rows, kfParams.measurementMatrix.rows,
-                                                   kfParams.controlMatrix.cols, kfParams.depth);
+                                                   kfParams.controlMatrix.cols, kfParams.type);
 
         // initial state
         state->statePre = kfParams.statePre;
+        state->statePost = kfParams.statePost;
         state->errorCovPre = kfParams.errorCovPre;
+        state->errorCovPost = kfParams.errorCovPost;
 
         // dynamic system initialization
         state->controlMatrix = kfParams.controlMatrix;
@@ -151,7 +153,7 @@ GAPI_OCV_KERNEL_ST(GCPUKalmanFilterNoControl, cv::gapi::video::GKalmanFilterNoCo
                       const cv::GCompileArgs&)
     {
         state = std::make_shared<cv::KalmanFilter>(kfParams.transitionMatrix.rows, kfParams.measurementMatrix.rows,
-                                                   0, kfParams.depth);
+                                                   0, kfParams.type);
 
         // initial state
         state->statePre = kfParams.statePre;
@@ -170,10 +172,6 @@ GAPI_OCV_KERNEL_ST(GCPUKalmanFilterNoControl, cv::gapi::video::GKalmanFilterNoCo
 
         GAPI_Assert(cv::norm(kfParams.measurementNoiseCov, cv::NORM_INF) != 0);
         state->measurementNoiseCov = kfParams.measurementNoiseCov;
-
-        cv::setIdentity(state->errorCovPost, cv::Scalar::all(1));
-
-        randn(state->statePost, cv::Scalar::all(0), cv::Scalar::all(0.1));
     }
 
     static void run(const cv::Mat& measurements, bool haveMeasurement,

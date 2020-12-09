@@ -36,7 +36,7 @@ GAPI_TEST_FIXTURE_SPEC_PARAMS(KalmanFilterTest, FIXTURE_API(int, int, int, int, 
 
 GAPI_TEST_FIXTURE_SPEC_PARAMS(KalmanFilterNoControlTest, FIXTURE_API(int, int, int, int), 4, type, dDim, mDim, numIter)
 
-GAPI_TEST_FIXTURE_SPEC_PARAMS(KalmanFilterSampleTest, FIXTURE_API(int, int), 2, type, numIter)
+GAPI_TEST_FIXTURE_SPEC_PARAMS(KalmanFilterCircleSampleTest, FIXTURE_API(int, int), 2, type, numIter)
 
 } // opencv_test
 
