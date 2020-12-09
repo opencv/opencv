@@ -1,8 +1,15 @@
 Hit-or-Miss {#tutorial_hitOrMiss}
 =================================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_opening_closing_hats}
 @next_tutorial{tutorial_morph_lines_detection}
+
+|    |    |
+| -: | :- |
+| Original author | Lorena García |
+| Compatibility | OpenCV >= 3.0 |
 
 Goal
 ----

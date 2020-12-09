@@ -1,8 +1,15 @@
 Histogram Calculation {#tutorial_histogram_calculation}
 =====================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_histogram_equalization}
 @next_tutorial{tutorial_histogram_comparison}
+
+|    |    |
+| -: | :- |
+| Original author | Ana Huamán |
+| Compatibility | OpenCV >= 3.0 |
 
 Goal
 ----

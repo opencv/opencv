@@ -1,7 +1,14 @@
 Interactive camera calibration application {#tutorial_interactive_calibration}
 ==============================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_real_time_pose}
+
+|    |    |
+| -: | :- |
+| Original author | Vladislav Sovrasov |
+| Compatibility | OpenCV >= 3.1 |
 
 
 According to classical calibration technique user must collect all data first and when run @ref cv::calibrateCamera function

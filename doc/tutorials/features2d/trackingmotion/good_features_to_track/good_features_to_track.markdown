@@ -1,8 +1,15 @@
 Shi-Tomasi corner detector {#tutorial_good_features_to_track}
 ==========================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_harris_detector}
 @next_tutorial{tutorial_generic_corner_detector}
+
+|    |    |
+| -: | :- |
+| Original author | Ana Huamán |
+| Compatibility | OpenCV >= 3.0 |
 
 Goal
 ----

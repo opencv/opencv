@@ -1,8 +1,15 @@
 AKAZE and ORB planar tracking {#tutorial_akaze_tracking}
 =============================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_akaze_matching}
 @next_tutorial{tutorial_homography}
+
+|    |    |
+| -: | :- |
+| Original author | Fedor Morozov |
+| Compatibility | OpenCV >= 3.0 |
 
 Introduction
 ------------

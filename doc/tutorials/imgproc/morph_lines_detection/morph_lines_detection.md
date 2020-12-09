@@ -1,8 +1,15 @@
 Extract horizontal and vertical lines by using morphological operations {#tutorial_morph_lines_detection}
 =============
 
+@tableofcontents
+
 @prev_tutorial{tutorial_hitOrMiss}
 @next_tutorial{tutorial_pyramids}
+
+|    |    |
+| -: | :- |
+| Original author | Theodore Tsesmelis |
+| Compatibility | OpenCV >= 3.0 |
 
 Goal
 ----

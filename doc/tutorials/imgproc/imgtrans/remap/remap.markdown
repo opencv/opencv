@@ -1,8 +1,15 @@
 Remapping {#tutorial_remap}
 =========
 
+@tableofcontents
+
 @prev_tutorial{tutorial_hough_circle}
 @next_tutorial{tutorial_warp_affine}
+
+|    |    |
+| -: | :- |
+| Original author | Ana Huamán |
+| Compatibility | OpenCV >= 3.0 |
 
 Goal
 ----

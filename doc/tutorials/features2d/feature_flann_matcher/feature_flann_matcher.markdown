@@ -1,8 +1,15 @@
 Feature Matching with FLANN {#tutorial_feature_flann_matcher}
 ===========================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_feature_description}
 @next_tutorial{tutorial_feature_homography}
+
+|    |    |
+| -: | :- |
+| Original author | Ana Huamán |
+| Compatibility | OpenCV >= 3.0 |
 
 Goal
 ----

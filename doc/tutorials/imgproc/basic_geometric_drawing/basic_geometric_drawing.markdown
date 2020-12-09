@@ -1,7 +1,14 @@
 Basic Drawing {#tutorial_basic_geometric_drawing}
 =============
 
+@tableofcontents
+
 @next_tutorial{tutorial_random_generator_and_text}
+
+|    |    |
+| -: | :- |
+| Original author | Ana Huamán |
+| Compatibility | OpenCV >= 3.0 |
 
 Goals
 -----

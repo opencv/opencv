@@ -1,8 +1,15 @@
 Image Segmentation with Distance Transform and Watershed Algorithm {#tutorial_distance_transform}
 =============
 
+@tableofcontents
+
 @prev_tutorial{tutorial_point_polygon_test}
 @next_tutorial{tutorial_out_of_focus_deblur_filter}
+
+|    |    |
+| -: | :- |
+| Original author | Theodore Tsesmelis |
+| Compatibility | OpenCV >= 3.0 |
 
 Goal
 ----

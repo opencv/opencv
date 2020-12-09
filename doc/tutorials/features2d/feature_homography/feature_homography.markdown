@@ -1,8 +1,15 @@
 Features2D + Homography to find a known object {#tutorial_feature_homography}
 ==============================================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_feature_flann_matcher}
 @next_tutorial{tutorial_detection_of_planar_objects}
+
+|    |    |
+| -: | :- |
+| Original author | Ana Huamán |
+| Compatibility | OpenCV >= 3.0 |
 
 Goal
 ----

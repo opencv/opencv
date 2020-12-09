@@ -1,8 +1,15 @@
 How to scan images, lookup tables and time measurement with OpenCV {#tutorial_how_to_scan_images}
 ==================================================================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_mat_the_basic_image_container}
 @next_tutorial{tutorial_mat_mask_operations}
+
+|    |    |
+| -: | :- |
+| Original author | Bernát Gábor |
+| Compatibility | OpenCV >= 3.0 |
 
 Goal
 ----

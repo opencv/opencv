@@ -1,8 +1,15 @@
 Mask operations on matrices {#tutorial_mat_mask_operations}
 ===========================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_how_to_scan_images}
 @next_tutorial{tutorial_mat_operations}
+
+|    |    |
+| -: | :- |
+| Original author | Bernát Gábor |
+| Compatibility | OpenCV >= 3.0 |
 
 Mask operations on matrices are quite simple. The idea is that we recalculate each pixel's value in
 an image according to a mask matrix (also known as kernel). This mask holds values that will adjust
