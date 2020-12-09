@@ -1962,6 +1962,9 @@ void TFImporter::populateNet(Net dstNet)
             if (hasLayerAttr(layer, "align_corners"))
                 layerParams.set("align_corners", getLayerAttr(layer, "align_corners").b());
 
+            if (hasLayerAttr(layer, "half_pixel_centers"))
+                layerParams.set("half_pixel_centers", getLayerAttr(layer, "half_pixel_centers").b());
+
             int id = dstNet.addLayer(name, "Resize", layerParams);
             layer_id[name] = id;
 

@@ -48,6 +48,7 @@ public:
         CV_Check(interpolation, interpolation == "nearest" || interpolation == "opencv_linear" || interpolation == "bilinear", "");
 
         alignCorners = params.get<bool>("align_corners", false);
+        halfPixelCenters = params.get<bool>("half_pixel_centers", false);
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -123,7 +124,7 @@ public:
 
         Mat& inp = inputs[0];
         Mat& out = outputs[0];
-        if (interpolation == "nearest" || interpolation == "opencv_linear")
+        if (interpolation == "nearest" || interpolation == "opencv_linear" || (interpolation == "bilinear" && halfPixelCenters))
         {
             InterpolationFlags mode = interpolation == "nearest" ? INTER_NEAREST : INTER_LINEAR;
             for (size_t n = 0; n < inputs[0].size[0]; ++n)
@@ -269,6 +270,7 @@ protected:
     String interpolation;
     float scaleWidth, scaleHeight;
     bool alignCorners;
+    bool halfPixelCenters;
 };
 
 
