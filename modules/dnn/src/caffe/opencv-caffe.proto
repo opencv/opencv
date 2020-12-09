@@ -181,6 +181,8 @@ message DetectionOutputParameter {
   optional float confidence_threshold = 9;
   // If prior boxes are normalized to [0, 1] or not.
   optional bool normalized_bbox = 10 [default = true];
+  // OpenCV custom parameter
+  optional bool clip = 1000 [default = false];
 }
 
 message Datum {
