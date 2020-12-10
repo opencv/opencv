@@ -503,10 +503,10 @@ kernel kernelY. The final result is returned.
 
 Supported matrix data types are @ref CV_8UC1, @ref CV_8UC3, @ref CV_16UC1, @ref CV_16SC1, @ref CV_32FC1.
 Output image must have the same type, size, and number of channels as the input image.
-@note In case of floating-point computation, rounding to nearest even is procedeed
+@note
+ - In case of floating-point computation, rounding to nearest even is procedeed
 if hardware supports it (if not - to nearest value).
-
-@note Function textual ID is "org.opencv.imgproc.filters.sepfilter"
+ - Function textual ID is "org.opencv.imgproc.filters.sepfilter"
 @param src Source image.
 @param ddepth desired depth of the destination image (the following combinations of src.depth() and ddepth are supported:
 
@@ -545,9 +545,9 @@ anchor.y - 1)`.
 
 Supported matrix data types are @ref CV_8UC1, @ref CV_8UC3, @ref CV_16UC1, @ref CV_16SC1, @ref CV_32FC1.
 Output image must have the same size and number of channels an input image.
-@note Rounding to nearest even is procedeed if hardware supports it, if not - to nearest.
-
-@note Function textual ID is "org.opencv.imgproc.filters.filter2D"
+@note
+ - Rounding to nearest even is procedeed if hardware supports it, if not - to nearest.
+ - Function textual ID is "org.opencv.imgproc.filters.filter2D"
 
 @param src input image.
 @param ddepth desired depth of the destination image
@@ -582,9 +582,9 @@ algorithms, and so on). If you need to compute pixel sums over variable-size win
 
 Supported input matrix data types are @ref CV_8UC1, @ref CV_8UC3, @ref CV_16UC1, @ref CV_16SC1, @ref CV_32FC1.
 Output image must have the same type, size, and number of channels as the input image.
-@note Rounding to nearest even is procedeed if hardware supports it, if not - to nearest.
-
-@note Function textual ID is "org.opencv.imgproc.filters.boxfilter"
+@note
+ - Rounding to nearest even is procedeed if hardware supports it, if not - to nearest.
+ - Function textual ID is "org.opencv.imgproc.filters.boxfilter"
 
 @param src Source image.
 @param dtype the output image depth (-1 to set the input image data type).
@@ -611,9 +611,9 @@ true, borderType)`.
 
 Supported input matrix data types are @ref CV_8UC1, @ref CV_8UC3, @ref CV_16UC1, @ref CV_16SC1, @ref CV_32FC1.
 Output image must have the same type, size, and number of channels as the input image.
-@note Rounding to nearest even is procedeed if hardware supports it, if not - to nearest.
-
-@note Function textual ID is "org.opencv.imgproc.filters.blur"
+@note
+ - Rounding to nearest even is procedeed if hardware supports it, if not - to nearest.
+ - Function textual ID is "org.opencv.imgproc.filters.blur"
 
 @param src Source image.
 @param ksize blurring kernel size.
@@ -639,9 +639,9 @@ Output image must have the same type and number of channels an input image.
 
 Supported input matrix data types are @ref CV_8UC1, @ref CV_8UC3, @ref CV_16UC1, @ref CV_16SC1, @ref CV_32FC1.
 Output image must have the same type, size, and number of channels as the input image.
-@note Rounding to nearest even is procedeed if hardware supports it, if not - to nearest.
-
-@note Function textual ID is "org.opencv.imgproc.filters.gaussianBlur"
+@note
+ - Rounding to nearest even is procedeed if hardware supports it, if not - to nearest.
+ - Function textual ID is "org.opencv.imgproc.filters.gaussianBlur"
 
 @param src input image;
 @param ksize Gaussian kernel size. ksize.width and ksize.height can differ but they both must be
@@ -664,10 +664,10 @@ GAPI_EXPORTS GMat gaussianBlur(const GMat& src, const Size& ksize, double sigmaX
 The function smoothes an image using the median filter with the \f$\texttt{ksize} \times
 \texttt{ksize}\f$ aperture. Each channel of a multi-channel image is processed independently.
 Output image must have the same type, size, and number of channels as the input image.
-@note Rounding to nearest even is procedeed if hardware supports it, if not - to nearest.
+@note
+ - Rounding to nearest even is procedeed if hardware supports it, if not - to nearest.
 The median filter uses cv::BORDER_REPLICATE internally to cope with border pixels, see cv::BorderTypes
-
-@note Function textual ID is "org.opencv.imgproc.filters.medianBlur"
+ - Function textual ID is "org.opencv.imgproc.filters.medianBlur"
 
 @param src input matrix (image)
 @param ksize aperture linear size; it must be odd and greater than 1, for example: 3, 5, 7 ...
@@ -685,9 +685,9 @@ shape of a pixel neighborhood over which the minimum is taken:
 Erosion can be applied several (iterations) times. In case of multi-channel images, each channel is processed independently.
 Supported input matrix data types are @ref CV_8UC1, @ref CV_8UC3, @ref CV_16UC1, @ref CV_16SC1, and @ref CV_32FC1.
 Output image must have the same type, size, and number of channels as the input image.
-@note Rounding to nearest even is procedeed if hardware supports it, if not - to nearest.
-
-@note Function textual ID is "org.opencv.imgproc.filters.erode"
+@note
+ - Rounding to nearest even is procedeed if hardware supports it, if not - to nearest.
+ - Function textual ID is "org.opencv.imgproc.filters.erode"
 
 @param src input image
 @param kernel structuring element used for erosion; if `element=Mat()`, a `3 x 3` rectangular
@@ -709,7 +709,9 @@ The function erodes the source image using the rectangular structuring element w
 Erosion can be applied several (iterations) times. In case of multi-channel images, each channel is processed independently.
 Supported input matrix data types are @ref CV_8UC1, @ref CV_8UC3, @ref CV_16UC1, @ref CV_16SC1, and @ref CV_32FC1.
 Output image must have the same type, size, and number of channels as the input image.
-@note Rounding to nearest even is procedeed if hardware supports it, if not - to nearest.
+@note
+ - Rounding to nearest even is procedeed if hardware supports it, if not - to nearest.
+ - Function textual ID is "org.opencv.imgproc.filters.erode"
 
 @param src input image
 @param iterations number of times erosion is applied.
@@ -730,9 +732,9 @@ shape of a pixel neighborhood over which the maximum is taken:
 Dilation can be applied several (iterations) times. In case of multi-channel images, each channel is processed independently.
 Supported input matrix data types are @ref CV_8UC1, @ref CV_8UC3, @ref CV_16UC1, @ref CV_16SC1, and @ref CV_32FC1.
 Output image must have the same type, size, and number of channels as the input image.
-@note Rounding to nearest even is procedeed if hardware supports it, if not - to nearest.
-
-@note Function textual ID is "org.opencv.imgproc.filters.dilate"
+@note
+ - Rounding to nearest even is procedeed if hardware supports it, if not - to nearest.
+ - Function textual ID is "org.opencv.imgproc.filters.dilate"
 
 @param src input image.
 @param kernel structuring element used for dilation; if elemenat=Mat(), a 3 x 3 rectangular
@@ -757,9 +759,9 @@ shape of a pixel neighborhood over which the maximum is taken:
 Dilation can be applied several (iterations) times. In case of multi-channel images, each channel is processed independently.
 Supported input matrix data types are @ref CV_8UC1, @ref CV_8UC3, @ref CV_16UC1, @ref CV_16SC1, and @ref CV_32FC1.
 Output image must have the same type, size, and number of channels as the input image.
-@note Rounding to nearest even is procedeed if hardware supports it, if not - to nearest.
-
-@note Function textual ID is "org.opencv.imgproc.filters.dilate"
+@note
+ - Rounding to nearest even is procedeed if hardware supports it, if not - to nearest.
+ - Function textual ID is "org.opencv.imgproc.filters.dilate"
 
 @param src input image.
 @param iterations number of times dilation is applied.
@@ -780,7 +782,12 @@ basic operations.
 Any of the operations can be done in-place. In case of multi-channel images, each channel is
 processed independently.
 
-@note Function textual ID is "org.opencv.imgproc.filters.morphologyEx"
+@note
+ - Function textual ID is "org.opencv.imgproc.filters.morphologyEx"
+ - The number of iterations is the number of times erosion or dilatation operation will be
+applied. For instance, an opening operation (#MORPH_OPEN) with two iterations is equivalent to
+apply successively: erode -> erode -> dilate -> dilate
+(and not erode -> dilate -> erode -> dilate).
 
 @param src Input image.
 @param op Type of a morphological operation, see #MorphTypes
@@ -792,10 +799,6 @@ the kernel center.
 @param borderValue Border value in case of a constant border. The default value has a special
 meaning.
 @sa  dilate, erode, getStructuringElement
-@note The number of iterations is the number of times erosion or dilatation operation will be
-applied. For instance, an opening operation (#MORPH_OPEN) with two iterations is equivalent to
-apply successively: erode -> erode -> dilate -> dilate
-(and not erode -> dilate -> erode -> dilate).
  */
 GAPI_EXPORTS GMat morphologyEx(const GMat &src, const MorphTypes op, const Mat &kernel,
                                const Point       &anchor      = Point(-1,-1),
@@ -832,9 +835,9 @@ The second case corresponds to a kernel of:
 
 \f[\vecthreethree{-1}{-2}{-1}{0}{0}{0}{1}{2}{1}\f]
 
-@note Rounding to nearest even is procedeed if hardware supports it, if not - to nearest.
-
-@note Function textual ID is "org.opencv.imgproc.filters.sobel"
+@note
+ - Rounding to nearest even is procedeed if hardware supports it, if not - to nearest.
+ - Function textual ID is "org.opencv.imgproc.filters.sobel"
 
 @param src input image.
 @param ddepth output image depth, see @ref filter_depths "combinations"; in the case of
@@ -883,11 +886,10 @@ The second case corresponds to a kernel of:
 
 \f[\vecthreethree{-1}{-2}{-1}{0}{0}{0}{1}{2}{1}\f]
 
-@note First returned matrix correspons to dx derivative while the second one to dy.
-
-@note Rounding to nearest even is procedeed if hardware supports it, if not - to nearest.
-
-@note Function textual ID is "org.opencv.imgproc.filters.sobelxy"
+@note
+ - First returned matrix correspons to dx derivative while the second one to dy.
+ - Rounding to nearest even is procedeed if hardware supports it, if not - to nearest.
+ - Function textual ID is "org.opencv.imgproc.filters.sobelxy"
 
 @param src input image.
 @param ddepth output image depth, see @ref filter_depths "combinations"; in the case of
@@ -1010,11 +1012,11 @@ described in @cite Shi94
 
 The function can be used to initialize a point-based tracker of an object.
 
-@note If the function is called with different values A and B of the parameter qualityLevel , and
+@note
+ - If the function is called with different values A and B of the parameter qualityLevel , and
 A \> B, the vector of returned corners with qualityLevel=A will be the prefix of the output vector
 with qualityLevel=B .
-
-@note Function textual ID is "org.opencv.imgproc.feature.goodFeaturesToTrack"
+ - Function textual ID is "org.opencv.imgproc.feature.goodFeaturesToTrack"
 
 @param image Input 8-bit or floating-point 32-bit, single-channel image.
 @param maxCorners Maximum number of corners to return. If there are more corners than are found,
@@ -1059,9 +1061,9 @@ The function equalizes the histogram of the input image using the following algo
 - Transform the image using \f$H'\f$ as a look-up table: \f$\texttt{dst}(x,y) = H'(\texttt{src}(x,y))\f$
 
 The algorithm normalizes the brightness and increases the contrast of the image.
-@note The returned image is of the same size and type as input.
-
-@note Function textual ID is "org.opencv.imgproc.equalizeHist"
+@note
+ - The returned image is of the same size and type as input.
+ - Function textual ID is "org.opencv.imgproc.equalizeHist"
 
 @param src Source 8-bit single channel image.
  */
@@ -1121,8 +1123,9 @@ image of labels ( @ref CV_32SC1 ). If #RETR_FLOODFILL -- @ref CV_32SC1 supports 
 contours are extracted from the image ROI and then they should be analyzed in the whole image
 context.
 
-@return GArray of detected contours. Each contour is stored as a GArray of points.
-@return Optional output GArray of cv::Vec4i, containing information about the image topology.
+@return
+ - GArray of detected contours. Each contour is stored as a GArray of points.
+ - Optional output GArray of cv::Vec4i, containing information about the image topology.
 It has as many elements as the number of contours. For each i-th contour contours[i], the elements
 hierarchy[i][0] , hierarchy[i][1] , hierarchy[i][2] , and hierarchy[i][3] are set to 0-based
 indices in contours of the next and previous contours at the same hierarchical level, the first
@@ -1146,14 +1149,14 @@ of gray-scale image.
 The function calculates and returns the minimal up-right bounding rectangle for the specified
 point set or non-zero pixels of gray-scale image.
 
-@note Function textual ID is "org.opencv.imgproc.shape.boundingRectMat"
+@note
+ - Function textual ID is "org.opencv.imgproc.shape.boundingRectMat"
+ - In case of a 2D points' set given, Mat should be 2-dimensional, have a single row or column
+if there are 2 channels, or have 2 columns if there is a single channel. Mat should have either
+@ref CV_32S or @ref CV_32F depth
 
 @param src Input gray-scale image @ref CV_8UC1; or input set of @ref CV_32S or @ref CV_32F
 2D points stored in Mat.
-
-@note In case of a 2D points' set given, Mat should be 2-dimensional, have a single row or column
-if there are 2 channels, or have 2 columns if there is a single channel. Mat should have either
-@ref CV_32S or @ref CV_32F depth
  */
 GAPI_EXPORTS GOpaque<Rect> boundingRect(const GMat& src);
 
@@ -1199,14 +1202,13 @@ The algorithm is based on the M-estimator ( <http://en.wikipedia.org/wiki/M-esti
 that iteratively fits the line using the weighted least-squares algorithm. After each iteration the
 weights \f$w_i\f$ are adjusted to be inversely proportional to \f$\rho(r_i)\f$ .
 
-@note Function textual ID is "org.opencv.imgproc.shape.fitLine2DMat"
+@note
+ - Function textual ID is "org.opencv.imgproc.shape.fitLine2DMat"
+ - In case of an N-dimentional points' set given, Mat should be 2-dimensional, have a single row
+or column if there are N channels, or have N columns if there is a single channel.
 
 @param src Input set of 2D points stored in one of possible containers: Mat,
 std::vector<cv::Point2i>, std::vector<cv::Point2f>, std::vector<cv::Point2d>.
-
-@note In case of an N-dimentional points' set given, Mat should be 2-dimensional, have a single row
-or column if there are N channels, or have N columns if there is a single channel.
-
 @param distType Distance used by the M-estimator, see #DistanceTypes. @ref DIST_USER
 and @ref DIST_C are not suppored.
 @param param Numerical parameter ( C ) for some types of distances. If it is 0, an optimal value
@@ -1272,14 +1274,13 @@ The algorithm is based on the M-estimator ( <http://en.wikipedia.org/wiki/M-esti
 that iteratively fits the line using the weighted least-squares algorithm. After each iteration the
 weights \f$w_i\f$ are adjusted to be inversely proportional to \f$\rho(r_i)\f$ .
 
-@note Function textual ID is "org.opencv.imgproc.shape.fitLine3DMat"
+@note
+ - Function textual ID is "org.opencv.imgproc.shape.fitLine3DMat"
+ - In case of an N-dimentional points' set given, Mat should be 2-dimensional, have a single row
+or column if there are N channels, or have N columns if there is a single channel.
 
 @param src Input set of 3D points stored in one of possible containers: Mat,
 std::vector<cv::Point3i>, std::vector<cv::Point3f>, std::vector<cv::Point3d>.
-
-@note In case of an N-dimentional points' set given, Mat should be 2-dimensional, have a single row
-or column if there are N channels, or have N columns if there is a single channel.
-
 @param distType Distance used by the M-estimator, see #DistanceTypes. @ref DIST_USER
 and @ref DIST_C are not suppored.
 @param param Numerical parameter ( C ) for some types of distances. If it is 0, an optimal value

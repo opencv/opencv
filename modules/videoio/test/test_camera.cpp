@@ -12,21 +12,51 @@
 
 namespace opencv_test { namespace {
 
-static void test_readFrames(/*const*/ VideoCapture& capture, const int N = 100, Mat* lastFrame = NULL)
+static void test_readFrames(/*const*/ VideoCapture& capture, const int N = 100, Mat* lastFrame = NULL, bool testTimestamps = true)
 {
     Mat frame;
     int64 time0 = cv::getTickCount();
+    int64 sysTimePrev = time0;
+    const double cvTickFreq = cv::getTickFrequency();
+
+    double camTimePrev = 0.0;
+    const double fps = capture.get(cv::CAP_PROP_FPS);
+    const double framePeriod = fps == 0.0 ? 1. : 1.0 / fps;
+
+    const bool validTickAndFps = cvTickFreq != 0 && fps != 0.;
+    testTimestamps &= validTickAndFps;
+
     for (int i = 0; i < N; i++)
     {
         SCOPED_TRACE(cv::format("frame=%d", i));
 
         capture >> frame;
+        const int64 sysTimeCurr = cv::getTickCount();
+        const double camTimeCurr = capture.get(cv::CAP_PROP_POS_MSEC);
         ASSERT_FALSE(frame.empty());
 
+        // Do we have a previous frame?
+        if (i > 0 && testTimestamps)
+        {
+            const double sysTimeElapsedSecs = (sysTimeCurr - sysTimePrev) / cvTickFreq;
+            const double camTimeElapsedSecs = (camTimeCurr - camTimePrev) / 1000.;
+
+            // Check that the time between two camera frames and two system time calls
+            // are within 1.5 frame periods of one another.
+            //
+            // 1.5x is chosen to accomodate for a dropped frame, and an additional 50%
+            // to account for drift in the scale of the camera and system time domains.
+            EXPECT_NEAR(sysTimeElapsedSecs, camTimeElapsedSecs, framePeriod * 1.5);
+        }
+
         EXPECT_GT(cvtest::norm(frame, NORM_INF), 0) << "Complete black image has been received";
+
+        sysTimePrev = sysTimeCurr;
+        camTimePrev = camTimeCurr;
     }
+
     int64 time1 = cv::getTickCount();
-    printf("Processed %d frames on %.2f FPS\n", N, (N * cv::getTickFrequency()) / (time1 - time0 + 1));
+    printf("Processed %d frames on %.2f FPS\n", N, (N * cvTickFreq) / (time1 - time0 + 1));
     if (lastFrame) *lastFrame = frame.clone();
 }
 
