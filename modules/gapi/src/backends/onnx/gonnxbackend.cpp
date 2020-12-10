@@ -282,7 +282,7 @@ inline void preprocess(const std::unique_ptr<cv::MediaFrame::View>& view,
             break;
         }
         default:
-            GAPI_Assert(false && "Unsupported media format for IE backend");
+            GAPI_Assert(false && "Unsupported media format for ONNX backend");
     }
     preprocess(roi.empty() ? pp : pp(roi), ti, dst);
 }
@@ -666,7 +666,7 @@ void ONNXCompiled::setInput(ONNXCallContext &ctx,
             break;
         }
         default: {
-            GAPI_Assert("Unsupported input shape for backend");
+            GAPI_Assert("Unsupported input shape for ONNX backend");
         }
     }
 }
