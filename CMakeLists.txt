@@ -1040,9 +1040,11 @@ endif()
 if(CMAKE_GENERATOR MATCHES Xcode)
   status("    Xcode:"          ${XCODE_VERSION})
 endif()
-if(NOT CMAKE_GENERATOR MATCHES "Xcode|Visual Studio")
-  status("    Configuration:"  ${CMAKE_BUILD_TYPE})
-endif()
+if(CMAKE_GENERATOR MATCHES "Xcode|Visual Studio|Multi-Config")
+  status("    Configuration:"  ${CMAKE_CONFIGURATION_TYPES}) 
+else()
+  status("    Configuration:"  ${CMAKE_BUILD_TYPE}) 
+endif() 
 
 
 # ========================= CPU code generation mode =========================
