@@ -122,7 +122,7 @@ if __name__ == "__main__":
             xcframework_path,
         ]
         for folder in build_folders:
-            xcframework_build_command += ["-framework", xcframework_path]
+            xcframework_build_command += ["-framework", "{}/{}.framework".format(folder, args.framework_name)]
         execute(xcframework_build_command, cwd=os.getcwd())
 
         print("")
