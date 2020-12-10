@@ -762,7 +762,8 @@ static void checkInputMeta(const cv::GMetaArg mm) {
                 case cv::MediaFormat::BGR:  break;
                 default:
                     GAPI_Assert(false && "Unsupported media format for ONNX backend");
-            } break; } break;
+            } break;
+        } break;
         default:
             util::throw_error(std::runtime_error("Unsupported input meta for ONNX backend"));
     }

@@ -287,6 +287,23 @@ public:
     }
 };
 
+class ONNXMediaFrameTest : public ONNXClassificationTest {
+public:
+    const std::vector<cv::Rect> rois = {
+        cv::Rect(cv::Point{ 0,   0}, cv::Size{80, 120}),
+        cv::Rect(cv::Point{50, 100}, cv::Size{250, 360}),
+        cv::Rect(cv::Point{70, 10}, cv::Size{20, 260}),
+        cv::Rect(cv::Point{5, 15}, cv::Size{200, 160}),
+    };
+    cv::Mat m_in_y;
+    cv::Mat m_in_uv;
+    virtual void SetUp() {
+        cv::Size sz{640, 480};
+        m_in_y = initMatrixRandU(CV_8UC1, sz);
+        m_in_uv = initMatrixRandU(CV_8UC2, sz / 2);
+    }
+};
+
 class ONNXGRayScaleTest : public ONNXtest {
 public:
     void preprocess(const cv::Mat& src, cv::Mat& dst) {
@@ -507,7 +524,7 @@ TEST_F(ONNXtest, InferMultOutput)
     validate();
 }
 
-TEST_F(ONNXClassificationTest, InferBGR)
+TEST_F(ONNXMediaFrameTest, InferBGR)
 {
     useModel("classification/squeezenet/model/squeezenet1.0-9");
     // ONNX_API code
@@ -530,15 +547,10 @@ TEST_F(ONNXClassificationTest, InferBGR)
     validate();
 }
 
-TEST_F(ONNXClassificationTest, InferYUV)
+TEST_F(ONNXMediaFrameTest, InferYUV)
 {
     useModel("classification/squeezenet/model/squeezenet1.0-9");
-    cv::Size sz{640, 480};
-    cv::Mat m_in_y = cv::Mat{sz, CV_8UC1};
-        cv::randu(m_in_y, 0, 255);
-    cv::Mat m_in_uv = cv::Mat{sz / 2, CV_8UC2};
-        cv::randu(m_in_uv, 0, 255);
-    auto frame = MediaFrame::Create<TestMediaNV12>(m_in_y, m_in_uv);
+    const auto frame = MediaFrame::Create<TestMediaNV12>(m_in_y, m_in_uv);
     // ONNX_API code
     cv::Mat pp;
     cvtColorTwoPlane(m_in_y, m_in_uv, pp, cv::COLOR_YUV2BGR_NV12);
@@ -560,14 +572,13 @@ TEST_F(ONNXClassificationTest, InferYUV)
     validate();
 }
 
-TEST_F(ONNXClassificationTest, InferROIBGR)
+TEST_F(ONNXMediaFrameTest, InferROIBGR)
 {
     useModel("classification/squeezenet/model/squeezenet1.0-9");
-    const cv::Rect ROI(cv::Point{0, 0}, cv::Size{50, 50});
     auto frame = MediaFrame::Create<TestMediaBGR>(in_mat1);
     // ONNX_API code
     cv::Mat roi_mat;
-    preprocess(in_mat1(ROI), roi_mat);
+    preprocess(in_mat1(rois.front()), roi_mat);
     infer<float>(roi_mat, out_onnx.front());
     // G_API code
     G_API_NET(SqueezNet, <cv::GMat(cv::GMat)>, "squeeznet");
@@ -578,28 +589,22 @@ TEST_F(ONNXClassificationTest, InferROIBGR)
     // NOTE: We have to normalize U8 tensor
     // so cfgMeanStd() is here
     auto net = cv::gapi::onnx::Params<SqueezNet> { model_path }.cfgMeanStd({ mean }, { std });
-    comp.apply(cv::gin(frame, ROI),
+    comp.apply(cv::gin(frame, rois.front()),
                cv::gout(out_gapi.front()),
                cv::compile_args(cv::gapi::networks(net)));
     // Validate
     validate();
 }
 
-TEST_F(ONNXClassificationTest, InferROIYUV)
+TEST_F(ONNXMediaFrameTest, InferROIYUV)
 {
     useModel("classification/squeezenet/model/squeezenet1.0-9");
-    const cv::Rect ROI(cv::Point{0, 0}, cv::Size{50, 50});
-    cv::Size sz{640, 480};
-    cv::Mat m_in_y = cv::Mat{sz, CV_8UC1};
-        cv::randu(m_in_y, 0, 255);
-    cv::Mat m_in_uv = cv::Mat{sz / 2, CV_8UC2};
-        cv::randu(m_in_uv, 0, 255);
-    auto frame = MediaFrame::Create<TestMediaNV12>(m_in_y, m_in_uv);
+    const auto frame = MediaFrame::Create<TestMediaNV12>(m_in_y, m_in_uv);
     // ONNX_API code
     cv::Mat pp;
     cvtColorTwoPlane(m_in_y, m_in_uv, pp, cv::COLOR_YUV2BGR_NV12);
     cv::Mat roi_mat;
-    preprocess(pp(ROI), roi_mat);
+    preprocess(pp(rois.front()), roi_mat);
     infer<float>(roi_mat, out_onnx.front());
     // G_API code
     G_API_NET(SqueezNet, <cv::GMat(cv::GMat)>, "squeeznet");
@@ -610,21 +615,17 @@ TEST_F(ONNXClassificationTest, InferROIYUV)
     // NOTE: We have to normalize U8 tensor
     // so cfgMeanStd() is here
     auto net = cv::gapi::onnx::Params<SqueezNet> { model_path }.cfgMeanStd({ mean }, { std });
-    comp.apply(cv::gin(frame, ROI),
+    comp.apply(cv::gin(frame, rois.front()),
                cv::gout(out_gapi.front()),
                cv::compile_args(cv::gapi::networks(net)));
     // Validate
     validate();
 }
 
-TEST_F(ONNXClassificationTest, InferListBGR)
+TEST_F(ONNXMediaFrameTest, InferListBGR)
 {
     useModel("classification/squeezenet/model/squeezenet1.0-9");
-    const std::vector<cv::Rect> rois = {
-        cv::Rect(cv::Point{ 0,   0}, cv::Size{80, 120}),
-        cv::Rect(cv::Point{50, 100}, cv::Size{250, 360}),
-    };
-    auto frame = MediaFrame::Create<TestMediaBGR>(in_mat1);
+    const auto frame = MediaFrame::Create<TestMediaBGR>(in_mat1);
     // ONNX_API code
     out_onnx.resize(rois.size());
     for (size_t i = 0; i < rois.size(); ++i) {
@@ -632,7 +633,6 @@ TEST_F(ONNXClassificationTest, InferListBGR)
         preprocess(in_mat1(rois[i]), roi_mat);
         infer<float>(roi_mat, out_onnx[i]);
     }
-
     // G_API code
     G_API_NET(SqueezNet, <cv::GMat(cv::GMat)>, "squeeznet");
     cv::GFrame in;
@@ -649,20 +649,10 @@ TEST_F(ONNXClassificationTest, InferListBGR)
     validate();
 }
 
-TEST_F(ONNXClassificationTest, InferListYUV)
+TEST_F(ONNXMediaFrameTest, InferListYUV)
 {
     useModel("classification/squeezenet/model/squeezenet1.0-9");
-    const std::vector<cv::Rect> rois = {
-        cv::Rect(cv::Point{ 0,   0}, cv::Size{80, 120}),
-        cv::Rect(cv::Point{50, 100}, cv::Size{250, 360}),
-    };
-    cv::Size sz{640, 480};
-    cv::Mat m_in_y = cv::Mat{sz, CV_8UC1};
-        cv::randu(m_in_y, 0, 255);
-    cv::Mat m_in_uv = cv::Mat{sz / 2, CV_8UC2};
-        cv::randu(m_in_uv, 0, 255);
-    auto frame = MediaFrame::Create<TestMediaNV12>(m_in_y, m_in_uv);
-
+    const auto frame = MediaFrame::Create<TestMediaNV12>(m_in_y, m_in_uv);
     // ONNX_API code
     cv::Mat pp;
     cvtColorTwoPlane(m_in_y, m_in_uv, pp, cv::COLOR_YUV2BGR_NV12);
@@ -672,7 +662,6 @@ TEST_F(ONNXClassificationTest, InferListYUV)
         preprocess(pp(rois[i]), roi_mat);
         infer<float>(roi_mat, out_onnx[i]);
     }
-
     // G_API code
     G_API_NET(SqueezNet, <cv::GMat(cv::GMat)>, "squeeznet");
     cv::GFrame in;
@@ -689,14 +678,10 @@ TEST_F(ONNXClassificationTest, InferListYUV)
     validate();
 }
 
-TEST_F(ONNXClassificationTest, InferList2BGR)
+TEST_F(ONNXMediaFrameTest, InferList2BGR)
 {
     useModel("classification/squeezenet/model/squeezenet1.0-9");
-    const std::vector<cv::Rect> rois = {
-        cv::Rect(cv::Point{ 0,   0}, cv::Size{80, 120}),
-        cv::Rect(cv::Point{50, 100}, cv::Size{250, 360}),
-    };
-    auto frame = MediaFrame::Create<TestMediaBGR>(in_mat1);
+    const auto frame = MediaFrame::Create<TestMediaBGR>(in_mat1);
     // ONNX_API code
     out_onnx.resize(rois.size());
     for (size_t i = 0; i < rois.size(); ++i) {
@@ -704,7 +689,6 @@ TEST_F(ONNXClassificationTest, InferList2BGR)
         preprocess(in_mat1(rois[i]), roi_mat);
         infer<float>(roi_mat, out_onnx[i]);
     }
-
     // G_API code
     G_API_NET(SqueezNet, <cv::GMat(cv::GMat)>, "squeeznet");
     cv::GFrame in;
@@ -721,20 +705,10 @@ TEST_F(ONNXClassificationTest, InferList2BGR)
     validate();
 }
 
-TEST_F(ONNXClassificationTest, InferList2YUV)
+TEST_F(ONNXMediaFrameTest, InferList2YUV)
 {
     useModel("classification/squeezenet/model/squeezenet1.0-9");
-    const std::vector<cv::Rect> rois = {
-        cv::Rect(cv::Point{ 0,   0}, cv::Size{80, 120}),
-        cv::Rect(cv::Point{50, 100}, cv::Size{250, 360}),
-    };
-    cv::Size sz{640, 480};
-    cv::Mat m_in_y = cv::Mat{sz, CV_8UC1};
-        cv::randu(m_in_y, 0, 255);
-    cv::Mat m_in_uv = cv::Mat{sz / 2, CV_8UC2};
-        cv::randu(m_in_uv, 0, 255);
-    auto frame = MediaFrame::Create<TestMediaNV12>(m_in_y, m_in_uv);
-
+    const auto frame = MediaFrame::Create<TestMediaNV12>(m_in_y, m_in_uv);
     // ONNX_API code
     cv::Mat pp;
     cvtColorTwoPlane(m_in_y, m_in_uv, pp, cv::COLOR_YUV2BGR_NV12);
@@ -744,7 +718,6 @@ TEST_F(ONNXClassificationTest, InferList2YUV)
         preprocess(pp(rois[i]), roi_mat);
         infer<float>(roi_mat, out_onnx[i]);
     }
-
     // G_API code
     G_API_NET(SqueezNet, <cv::GMat(cv::GMat)>, "squeeznet");
     cv::GFrame in;
