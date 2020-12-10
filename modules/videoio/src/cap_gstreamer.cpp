@@ -924,6 +924,11 @@ bool GStreamerCapture::open(const String &filename_)
         gst_app_sink_set_max_buffers(GST_APP_SINK(sink.get()), 1);
     }
 
+    if (!manualpipeline)
+    {
+        gst_base_sink_set_sync(GST_BASE_SINK(sink.get()), FALSE);
+    }
+
     //do not emit signals: all calls will be synchronous and blocking
     gst_app_sink_set_emit_signals (GST_APP_SINK(sink.get()), FALSE);
 
