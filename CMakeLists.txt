@@ -603,7 +603,7 @@ endif()
 # ----------------------------------------------------------------------------
 # In case of Makefiles if the user does not setup CMAKE_BUILD_TYPE, assume it's Release:
 if(CMAKE_GENERATOR MATCHES "Makefiles|Ninja" AND "${CMAKE_BUILD_TYPE}" STREQUAL "")
-  set(CMAKE_DEFAULT_BUILD_TYPE Release)
+  set(CMAKE_BUILD_TYPE Release)
 endif()
 
 ocv_cmake_hook(POST_CMAKE_BUILD_OPTIONS)
