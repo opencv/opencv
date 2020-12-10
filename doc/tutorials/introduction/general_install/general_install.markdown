@@ -1,6 +1,8 @@
 OpenCV installation overview {#tutorial_general_install}
 ============================
 
+@next_tutorial{tutorial_config_reference}
+
 @tableofcontents
 
 There are two ways of installing OpenCV on your machine: download prebuilt version for your platform or compile from sources.

@@ -1,8 +1,15 @@
 Hough Circle Transform {#tutorial_hough_circle}
 ======================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_hough_lines}
 @next_tutorial{tutorial_remap}
+
+|    |    |
+| -: | :- |
+| Original author | Ana Huamán |
+| Compatibility | OpenCV >= 3.0 |
 
 Goal
 ----

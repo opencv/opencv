@@ -1597,15 +1597,15 @@ public:
                                     v_float32x4 r2 = v_load_aligned(rptr + vsz_a*2);
                                     v_float32x4 r3 = v_load_aligned(rptr + vsz_a*3);
 
-                                    vs00 += w0*r0;
-                                    vs01 += w0*r1;
-                                    vs02 += w0*r2;
-                                    vs03 += w0*r3;
+                                    vs00 = v_fma(w0, r0, vs00);
+                                    vs01 = v_fma(w0, r1, vs01);
+                                    vs02 = v_fma(w0, r2, vs02);
+                                    vs03 = v_fma(w0, r3, vs03);
 
-                                    vs10 += w1*r0;
-                                    vs11 += w1*r1;
-                                    vs12 += w1*r2;
-                                    vs13 += w1*r3;
+                                    vs10 = v_fma(w1, r0, vs10);
+                                    vs11 = v_fma(w1, r1, vs11);
+                                    vs12 = v_fma(w1, r2, vs12);
+                                    vs13 = v_fma(w1, r3, vs13);
                                 }
                                 s0 += v_reduce_sum4(vs00, vs01, vs02, vs03);
                                 s1 += v_reduce_sum4(vs10, vs11, vs12, vs13);
@@ -2365,20 +2365,21 @@ public:
 
                     for( ; n <= nmax - 4; n += 4 )
                     {
+                        v_float32x4 d0 = v_load(dst0 + n);
+                        v_float32x4 d1 = v_load(dst1 + n);
                         v_float32x4 b0 = v_load(bptr0 + n);
                         v_float32x4 b1 = v_load(bptr1 + n);
                         v_float32x4 b2 = v_load(bptr2 + n);
                         v_float32x4 b3 = v_load(bptr3 + n);
-                        v_float32x4 d0 = v_load(dst0 + n);
-                        v_float32x4 d1 = v_load(dst1 + n);
-                        d0 += b0*a00;
-                        d1 += b0*a01;
-                        d0 += b1*a10;
-                        d1 += b1*a11;
-                        d0 += b2*a20;
-                        d1 += b2*a21;
-                        d0 += b3*a30;
-                        d1 += b3*a31;
+                        // TODO try to improve pipeline width
+                        d0 = v_fma(b0, a00, d0);
+                        d1 = v_fma(b0, a01, d1);
+                        d0 = v_fma(b1, a10, d0);
+                        d1 = v_fma(b1, a11, d1);
+                        d0 = v_fma(b2, a20, d0);
+                        d1 = v_fma(b2, a21, d1);
+                        d0 = v_fma(b3, a30, d0);
+                        d1 = v_fma(b3, a31, d1);
                         v_store(dst0 + n, d0);
                         v_store(dst1 + n, d1);
                     }
@@ -2386,8 +2387,10 @@ public:
 
                     for( ; n < nmax; n++ )
                     {
-                        float b0 = bptr0[n], b1 = bptr1[n];
-                        float b2 = bptr2[n], b3 = bptr3[n];
+                        float b0 = bptr0[n];
+                        float b1 = bptr1[n];
+                        float b2 = bptr2[n];
+                        float b3 = bptr3[n];
                         float d0 = dst0[n] + alpha00*b0 + alpha10*b1 + alpha20*b2 + alpha30*b3;
                         float d1 = dst1[n] + alpha01*b0 + alpha11*b1 + alpha21*b2 + alpha31*b3;
                         dst0[n] = d0;
