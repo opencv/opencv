@@ -10,11 +10,14 @@ import os, os.path, sys, argparse, traceback, multiprocessing
 sys.path.insert(0, os.path.abspath(os.path.abspath(os.path.dirname(__file__))+'/../ios'))
 from build_framework import Builder
 sys.path.insert(0, os.path.abspath(os.path.abspath(os.path.dirname(__file__))+'/../apple'))
-from cv_build_utils import print_error
+from cv_build_utils import print_error, get_cmake_version
 
 MACOSX_DEPLOYMENT_TARGET='10.12'  # default, can be changed via command line options or environment variable
 
 class OSXBuilder(Builder):
+
+    def checkCMakeVersion(self):
+        assert get_cmake_version() >= (3, 17), "CMake 3.17 or later is required. Current version is {}".format(get_cmake_version())
 
     def getObjcTarget(self, target):
         # Obj-C generation target
