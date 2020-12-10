@@ -68,6 +68,14 @@ using std::min;
 using namespace cv::dnn::ocl4dnn;
 #endif
 
+#ifdef HAVE_HALIDE
+#if 0  // size_t is not well supported in Halide operations
+typedef size_t HALIDE_DIFF_T;
+#else
+typedef int HALIDE_DIFF_T;
+#endif
+#endif
+
 namespace cv
 {
 namespace dnn
@@ -944,12 +952,12 @@ virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inp
         Halide::Buffer<float> inputBuffer = halideBuffer(inputs[0]);
         const int inWidth = inputBuffer.width();
         const int inHeight = inputBuffer.height();
-        const size_t kernelHeight = kernel_size[0];
-        const size_t kernelWidth = kernel_size[1];
-        const size_t strideHeight = strides[0];
-        const size_t strideWidth = strides[1];
-        const size_t paddingTop = pads_begin[0];
-        const size_t paddingLeft = pads_begin[1];
+        const HALIDE_DIFF_T kernelHeight = (HALIDE_DIFF_T)kernel_size[0];
+        const HALIDE_DIFF_T kernelWidth = (HALIDE_DIFF_T)kernel_size[1];
+        const HALIDE_DIFF_T strideHeight = (HALIDE_DIFF_T)strides[0];
+        const HALIDE_DIFF_T strideWidth = (HALIDE_DIFF_T)strides[1];
+        const HALIDE_DIFF_T paddingTop = (HALIDE_DIFF_T)pads_begin[0];
+        const HALIDE_DIFF_T paddingLeft = (HALIDE_DIFF_T)pads_begin[1];
 
         Halide::Var x("x"), y("y"), c("c"), n("n");
         Halide::Func top = (name.empty() ? Halide::Func() : Halide::Func(name));
@@ -995,10 +1003,10 @@ virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inp
         Halide::Buffer<float> inputBuffer = halideBuffer(inputs[0]);
 
         const int inW = inputBuffer.width(), inH = inputBuffer.height();
-        const size_t kernelHeight = kernel_size[0];
-        const size_t kernelWidth = kernel_size[1];
-        const size_t strideHeight = strides[0];
-        const size_t strideWidth = strides[1];
+        const HALIDE_DIFF_T kernelHeight = (HALIDE_DIFF_T)kernel_size[0];
+        const HALIDE_DIFF_T kernelWidth = (HALIDE_DIFF_T)kernel_size[1];
+        const HALIDE_DIFF_T strideHeight = (HALIDE_DIFF_T)strides[0];
+        const HALIDE_DIFF_T strideWidth = (HALIDE_DIFF_T)strides[1];
         if ((inW - kernelWidth) % strideWidth || (inH - kernelHeight) % strideHeight)
         {
             CV_Error(cv::Error::StsNotImplemented,
