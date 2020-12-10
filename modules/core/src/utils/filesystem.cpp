@@ -422,11 +422,16 @@ cv::String getCacheDirectory(const char* sub_directory_name, const char* configu
     {
         cv::String default_cache_path;
 #ifdef _WIN32
-        char tmp_path_buf[MAX_PATH+1] = {0};
-        DWORD res = GetTempPath(MAX_PATH, tmp_path_buf);
+        WCHAR tmp_path_buf[MAX_PATH+1] = {0};
+        DWORD res = GetTempPathW(MAX_PATH, tmp_path_buf);
+        std::wstring wStr(tmp_path_buf, res);
         if (res > 0 && res <= MAX_PATH)
         {
-            default_cache_path = tmp_path_buf;
+            int length = WideCharToMultiByte(CP_UTF8, NULL, &wStr[0], static_cast<int>(wStr.size()), NULL, 0, NULL, NULL);
+            std::string str;
+            str.resize(length);
+            length = WideCharToMultiByte(CP_UTF8, NULL, &wStr[0], static_cast<int>(wStr.size()), &str[0], static_cast<int>(str.size()), NULL, NULL);
+            default_cache_path = str;
         }
 #elif defined __ANDROID__
         // no defaults
@@ -555,6 +560,28 @@ cv::String getCacheDirectory(const char* sub_directory_name, const char* configu
             cache_path += native_separator;
         }
     }
+#ifdef _WIN32
+    int length = MultiByteToWideChar(CP_UTF8, MB_COMPOSITE, cache_path.c_str(), static_cast<int>(cache_path.size()), NULL, 0);
+    if (length > 0)
+    {
+        std::wstring wideStr;
+        wideStr.resize(length);
+        MultiByteToWideChar(CP_ACP, MB_COMPOSITE, cache_path.c_str(), static_cast<int>(cache_path.size()), &wideStr[0], static_cast<int>(wideStr.size()));
+        int iSizeGuess = NormalizeString(NormalizationC, wideStr.c_str(), -1, NULL, 0);
+        LPWSTR pBuffer = (LPWSTR)malloc(iSizeGuess * sizeof(WCHAR));
+        if (pBuffer)
+        {
+            NormalizeString(NormalizationC, wideStr.c_str(), -1, pBuffer, iSizeGuess);
+            wideStr = std::wstring(pBuffer, iSizeGuess);
+            free(pBuffer);
+        }
+        length = WideCharToMultiByte(CP_UTF8, MB_COMPOSITE, wideStr.c_str(), static_cast<int>(wideStr.size()), NULL, 0, NULL, NULL);
+        std::string str = (std::string)cache_path;
+        str.resize(length);
+        WideCharToMultiByte(CP_UTF8, MB_COMPOSITE, wideStr.c_str(), static_cast<int>(wideStr.size()), &str[0], static_cast<int>(str.size()), NULL, NULL);
+        cache_path = str;
+    }
+#endif
     return cache_path;
 }
 
