@@ -440,7 +440,7 @@ public:
 #endif
         if (inputs[0].dims == 3)
         {
-            //Pool1D
+            //Conv1D
             #define REMOVE_EXTRA_ELEM(vector)\
             if (vector.size() > 1)\
                 vector.pop_back();
