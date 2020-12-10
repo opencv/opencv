@@ -132,34 +132,47 @@ TEST_P(BackgroundSubtractorTest, AccuracyTest)
     testBackgroundSubtractorStreaming(gapiBackSub, pOCVBackSub, 1, 1, learningRate, testNumFrames);
 }
 
-TEST_P(KalmanFilterTest, AccuracyTest)
+inline void initKalmanParams(cv::gapi::KalmanParams& kp, int type, int dDim, int mDim, int cDim)
 {
-    cv::gapi::video::KalmanParams kp;
-    kp.type = type;
+    kp.state = Mat::zeros(dDim, 1, type);
+    cv::randu(kp.state, Scalar::all(0), Scalar::all(0.1));
+    kp.errorCov = Mat::eye(dDim, dDim, type);
 
-    kp.statePre = Mat::zeros(dDim, 1, type);
-    kp.errorCovPre = Mat::zeros(dDim, dDim, type);
-    kp.statePost = Mat::zeros(dDim, 1, type);
-    kp.errorCovPost = Mat::zeros(dDim, dDim, type);
-
-    kp.transitionMatrix = Mat::ones(dDim, dDim, type)*2;
-    kp.processNoiseCov = Mat::eye(dDim, dDim, type);
-    kp.measurementMatrix = Mat::eye(mDim, dDim, type)*2;
-    kp.measurementNoiseCov = Mat::eye(mDim, mDim, type);
+    kp.transitionMatrix = Mat::ones(dDim, dDim, type) * 2;
+    kp.processNoiseCov = Mat::eye(dDim, dDim, type)*(1e-5);
+    kp.measurementMatrix = Mat::eye(mDim, dDim, type) * 2;
+    kp.measurementNoiseCov = Mat::eye(mDim, mDim, type)*(1e-5);
 
     if (cDim > 0)
-        kp.controlMatrix = Mat::eye(dDim, cDim, type);
+        kp.controlMatrix = Mat::eye(dDim, cDim, type)* (1e-3);
+}
 
-    cv::randu(kp.statePre, Scalar::all(-1), Scalar::all(1));
+inline void initKalmanFilter(const cv::gapi::KalmanParams& kp,
+                             cv::KalmanFilter& ocvKalman, bool control)
+{
+    kp.state.copyTo(ocvKalman.statePost);
+    kp.errorCov.copyTo(ocvKalman.errorCovPost);
 
-    setIdentity(kp.measurementMatrix);
-    setIdentity(kp.processNoiseCov, Scalar::all(1e-5));
-    setIdentity(kp.measurementNoiseCov, Scalar::all(1e-1));
-    setIdentity(kp.errorCovPre, Scalar::all(1e-5));
+    kp.transitionMatrix.copyTo(ocvKalman.transitionMatrix);
+    kp.measurementMatrix.copyTo(ocvKalman.measurementMatrix);
+    kp.measurementNoiseCov.copyTo(ocvKalman.measurementNoiseCov);
+    kp.processNoiseCov.copyTo(ocvKalman.processNoiseCov);
+
+    if (control)
+        kp.controlMatrix.copyTo(ocvKalman.controlMatrix);
+}
+
+TEST_P(KalmanFilterTest, AccuracyTest)
+{
+    cv::gapi::KalmanParams kp;
+    initKalmanParams(kp, type, dDim, mDim, cDim);
+
+    // OpenCV reference KalmanFilter initialization
+    cv::KalmanFilter ocvKalman(dDim, mDim, cDim, type);
+    initKalmanFilter(kp, ocvKalman, true);
 
     //measurement vector
     cv::Mat measure_vec(mDim, 1, type);
-    cv::randu(measure_vec, Scalar::all(-1), Scalar::all(1));
 
     //control vector
     cv::Mat ctrl_vec = Mat::zeros(cDim > 0 ? cDim : 2, 1, type);
@@ -175,20 +188,6 @@ TEST_P(KalmanFilterTest, AccuracyTest)
     cv::GMat out = cv::gapi::KalmanFilter(m, have_m, ctrl, kp);
     cv::GComputation comp(cv::GIn(m, have_m, ctrl), cv::GOut(out));
 
-    // OpenCV reference KalmanFilter initialization
-    cv::KalmanFilter ocvKalman(dDim, mDim, cDim, type);
-
-    ocvKalman.statePre = kp.statePre;
-    ocvKalman.errorCovPre = kp.errorCovPre;
-    ocvKalman.statePost = kp.statePost;
-    ocvKalman.errorCovPost = kp.errorCovPost;
-
-    ocvKalman.transitionMatrix = kp.transitionMatrix;
-    ocvKalman.controlMatrix = kp.controlMatrix;
-    ocvKalman.measurementMatrix = kp.measurementMatrix;
-    ocvKalman.measurementNoiseCov = kp.measurementNoiseCov;
-    ocvKalman.processNoiseCov = kp.processNoiseCov;
-
     cv::RNG& rng = cv::theRNG();
     bool haveMeasure;
 
@@ -201,10 +200,9 @@ TEST_P(KalmanFilterTest, AccuracyTest)
         if (cDim > 0)
             cv::randu(ctrl_vec, Scalar::all(-1), Scalar::all(1));
 
-        // G-API
+        // G-API KalmanFilter call
         comp.apply(cv::gin(measure_vec, haveMeasure, ctrl_vec), cv::gout(gapiKState));
-
-        // OpenCV
+        // OpenCV KalmanFilter call
         ocvKState = cDim > 0 ? ocvKalman.predict(ctrl_vec) : ocvKalman.predict();
         if (haveMeasure)
             ocvKState = ocvKalman.correct(measure_vec);
@@ -220,28 +218,15 @@ TEST_P(KalmanFilterTest, AccuracyTest)
 
 TEST_P(KalmanFilterNoControlTest, AccuracyTest)
 {
-    cv::gapi::video::KalmanParams kp;
-    kp.type = type;
+    cv::gapi::KalmanParams kp;
+    initKalmanParams(kp, type, dDim, mDim, 0);
 
-    kp.statePre = Mat::zeros(dDim, 1, type);
-    kp.errorCovPre = Mat::zeros(dDim, dDim, type);
-    kp.statePost = Mat::zeros(dDim, 1, type);
-    kp.errorCovPost = Mat::zeros(dDim, dDim, type);
-
-    kp.transitionMatrix = Mat::ones(dDim, dDim, type) * 2;
-    kp.processNoiseCov = Mat::eye(dDim, dDim, type);
-    kp.measurementMatrix = Mat::eye(mDim, dDim, type) * 2;
-    kp.measurementNoiseCov = Mat::eye(mDim, mDim, type);
-
-    cv::randu(kp.statePre, Scalar::all(-1), Scalar::all(1));
-
-    setIdentity(kp.processNoiseCov, Scalar::all(1e-5));
-    setIdentity(kp.measurementNoiseCov, Scalar::all(1e-1));
-    setIdentity(kp.errorCovPost, Scalar::all(1));
+    // OpenCV reference KalmanFilter initialization
+    cv::KalmanFilter ocvKalman(dDim, mDim, 0, type);
+    initKalmanFilter(kp, ocvKalman, false);
 
     //measurement vector
     cv::Mat measure_vec(mDim, 1, type);
-    cv::randu(measure_vec, Scalar::all(-1), Scalar::all(1));
 
     // G-API Kalman's output state
     cv::Mat gapiKState(dDim, 1, type);
@@ -253,19 +238,6 @@ TEST_P(KalmanFilterNoControlTest, AccuracyTest)
     cv::GOpaque<bool> have_m;
     cv::GMat out = cv::gapi::KalmanFilter(m, have_m, kp);
     cv::GComputation comp(cv::GIn(m, have_m), cv::GOut(out));
-
-    // OpenCV reference KalmanFilter initialization
-    cv::KalmanFilter ocvKalman(dDim, mDim, 0, type);
-
-    ocvKalman.statePre = kp.statePre;
-    ocvKalman.errorCovPre = kp.errorCovPre;
-    ocvKalman.statePost = kp.statePost;
-    ocvKalman.errorCovPost = kp.errorCovPost;
-
-    ocvKalman.transitionMatrix = kp.transitionMatrix;
-    ocvKalman.measurementMatrix = kp.measurementMatrix;
-    ocvKalman.measurementNoiseCov = kp.measurementNoiseCov;
-    ocvKalman.processNoiseCov = kp.processNoiseCov;
 
     cv::RNG& rng = cv::theRNG();
     bool haveMeasure;
@@ -298,6 +270,9 @@ TEST_P(KalmanFilterCircleSampleTest, AccuracyTest)
 {
     // auxiliary variables
     cv::Mat processNoise(2, 1, type);
+    // For comparison
+    double diff = 0;
+    vector<int> idx;
 
     // Input mesurement
     cv::Mat measurement = Mat::zeros(1, 1, type);
@@ -305,51 +280,37 @@ TEST_P(KalmanFilterCircleSampleTest, AccuracyTest)
     cv::Mat state(2, 1, type);
 
     // G-API graph initialization
-    cv::gapi::video::KalmanParams kp;
-    kp.type = type;
-    kp.statePre = Mat::zeros(2, 1, type);
-    kp.statePost = Mat::zeros(2, 1, type);
-    kp.errorCovPre = Mat::zeros(2, 2, type);
-    kp.errorCovPost = Mat::zeros(2, 2, type);
+    cv::gapi::KalmanParams kp;
+
+    kp.state = Mat::zeros(2, 1, type);
+    cv::randn(kp.state, Scalar::all(0), Scalar::all(0.1));
+
+    kp.errorCov = Mat::eye(2, 2, type);
 
     if (type == CV_32F)
         kp.transitionMatrix = (Mat_<float>(2, 2) << 1, 1, 0, 1);
     else
         kp.transitionMatrix = (Mat_<double>(2, 2) << 1, 1, 0, 1);
 
-    kp.processNoiseCov = Mat::zeros(2, 2, type);
-    kp.measurementMatrix = Mat::zeros(1, 2, type);
-    kp.measurementNoiseCov = Mat::zeros(1, 1, type);
-
-    setIdentity(kp.measurementMatrix);
-    setIdentity(kp.processNoiseCov, Scalar::all(1e-5));
-    setIdentity(kp.measurementNoiseCov, Scalar::all(1e-1));
-    setIdentity(kp.errorCovPost, Scalar::all(1));
-
-    randn(kp.statePost, Scalar::all(0), Scalar::all(0.1));
+    kp.processNoiseCov = Mat::eye(2, 2, type) * (1e-5);
+    kp.measurementMatrix = Mat::eye(1, 2, type);
+    kp.measurementNoiseCov = Mat::eye(1, 1, type) * (1e-1);
 
     cv::GMat m;
-    cv::GOpaque<bool> have_mesure;
-    cv::GMat out = cv::gapi::KalmanFilter(m, have_mesure, kp);
-    cv::GComputation comp(cv::GIn(m, have_mesure), cv::GOut(out));
+    cv::GOpaque<bool> have_measure;
+    cv::GMat out = cv::gapi::KalmanFilter(m, have_measure, kp);
+    cv::GComputation comp(cv::GIn(m, have_measure), cv::GOut(out));
 
     // OCV Kalman initialization
-    KalmanFilter KF(2, 1, 0);
-    KF.transitionMatrix = kp.transitionMatrix;
-    KF.measurementMatrix = kp.measurementMatrix;
-    KF.processNoiseCov = kp.processNoiseCov;
-    KF.measurementNoiseCov = kp.measurementNoiseCov;
-    KF.errorCovPost = kp.errorCovPost;
-    KF.statePost = kp.statePost;
+    cv::KalmanFilter KF(2, 1, 0);
+    initKalmanFilter(kp, KF, false);
 
-    randn(state, Scalar::all(0), Scalar::all(0.1));
+    cv::randn(state, Scalar::all(0), Scalar::all(0.1));
 
     // GAPI Corrected state
-    cv::Mat gapiCorrState(2, 1, type);
+    cv::Mat gapiState(2, 1, type);
     // OCV Corrected state
     cv::Mat ocvCorrState(2, 1, type);
-    // GAPI Predicted state
-    cv::Mat gapiPreState(2, 1, type);
     // OCV Predicted state
     cv::Mat ocvPreState(2, 1, type);
 
@@ -357,43 +318,39 @@ TEST_P(KalmanFilterCircleSampleTest, AccuracyTest)
 
     for (int i = 0; i < numIter; ++i)
     {
-        // Get GAPI Prediction
-        haveMeasure = false;
-        comp.apply(cv::gin(measurement, haveMeasure), cv::gout(gapiPreState));
-
         // Get OCV Prediction
         ocvPreState = KF.predict();
 
         GAPI_DbgAssert(cv::norm(kp.measurementNoiseCov, KF.measurementNoiseCov, cv::NORM_INF) == 0);
         // generation measurement
-        randn(measurement, Scalar::all(0), Scalar::all((type == CV_32F) ?
-              kp.measurementNoiseCov.at<float>(0) : kp.measurementNoiseCov.at<double>(0)));
+        cv::randn(measurement, Scalar::all(0), Scalar::all((type == CV_32FC1) ?
+                  kp.measurementNoiseCov.at<float>(0) : kp.measurementNoiseCov.at<double>(0)));
 
         GAPI_DbgAssert(cv::norm(kp.measurementMatrix, KF.measurementMatrix, cv::NORM_INF) == 0);
         measurement += kp.measurementMatrix*state;
 
-        if (theRNG().uniform(0, 4) != 0)
+        if (cv::theRNG().uniform(0, 4) != 0)
         {
             haveMeasure = true;
-            KF.correct(measurement);
-            comp.apply(cv::gin(measurement, haveMeasure), cv::gout(gapiCorrState));
+            ocvCorrState = KF.correct(measurement);
+            comp.apply(cv::gin(measurement, haveMeasure), cv::gout(gapiState));
+            EXPECT_TRUE(cmpEps(gapiState, ocvCorrState, &diff, 1.0, &idx, false) >= 0);
+        }
+        else
+        {
+            // Get GAPI Prediction
+            haveMeasure = false;
+            comp.apply(cv::gin(measurement, haveMeasure), cv::gout(gapiState));
+            EXPECT_TRUE(cmpEps(gapiState, ocvPreState, &diff, 1.0, &idx, false) >= 0);
         }
 
         GAPI_DbgAssert(cv::norm(kp.processNoiseCov, KF.processNoiseCov, cv::NORM_INF) == 0);
-        randn(processNoise, Scalar(0), Scalar::all(sqrt(type == CV_32F ?
-                                                   kp.processNoiseCov.at<float>(0, 0):
-                                                   kp.processNoiseCov.at<double>(0, 0))));
+        cv::randn(processNoise, Scalar(0), Scalar::all(sqrt(type == CV_32FC1 ?
+                                                       kp.processNoiseCov.at<float>(0, 0):
+                                                       kp.processNoiseCov.at<double>(0, 0))));
 
         GAPI_DbgAssert(cv::norm(kp.transitionMatrix, KF.transitionMatrix, cv::NORM_INF) == 0);
         state = kp.transitionMatrix*state + processNoise;
-    }
-
-    // Comparison //////////////////////////////////////////////////////////////
-    {
-        double diff = 0;
-        vector<int> idx;
-        EXPECT_TRUE(cmpEps(gapiCorrState, ocvCorrState, &diff, 1.0, &idx, false) >= 0);
-        EXPECT_TRUE(cmpEps(gapiPreState, ocvPreState, &diff, 1.0, &idx, false) >= 0);
     }
 }
 

@@ -110,76 +110,67 @@ GAPI_OCV_KERNEL_ST(GCPUBackgroundSubtractor,
 GAPI_OCV_KERNEL_ST(GCPUKalmanFilter, cv::gapi::video::GKalmanFilter, cv::KalmanFilter)
 {
     static void setup(const cv::GMatDesc&, const cv::GOpaqueDesc&,
-                      const cv::GMatDesc&, const cv::gapi::video::KalmanParams& kfParams,
+                      const cv::GMatDesc&, const cv::gapi::KalmanParams& kfParams,
                       std::shared_ptr<cv::KalmanFilter> &state, const cv::GCompileArgs&)
     {
         state = std::make_shared<cv::KalmanFilter>(kfParams.transitionMatrix.rows, kfParams.measurementMatrix.rows,
-                                                   kfParams.controlMatrix.cols, kfParams.type);
+                                                   kfParams.controlMatrix.cols, kfParams.transitionMatrix.type());
 
         // initial state
-        state->statePre = kfParams.statePre;
-        state->statePost = kfParams.statePost;
-        state->errorCovPre = kfParams.errorCovPre;
-        state->errorCovPost = kfParams.errorCovPost;
+        state->statePost = kfParams.state;
+        state->errorCovPost = kfParams.errorCov;
 
         // dynamic system initialization
         state->controlMatrix = kfParams.controlMatrix;
         state->measurementMatrix = kfParams.measurementMatrix;
-
-        GAPI_Assert(cv::norm(kfParams.transitionMatrix, cv::NORM_INF) != 0);
         state->transitionMatrix = kfParams.transitionMatrix;
-
-        GAPI_Assert(cv::norm(kfParams.processNoiseCov, cv::NORM_INF) != 0);
         state->processNoiseCov = kfParams.processNoiseCov;
-
-        GAPI_Assert(cv::norm(kfParams.measurementNoiseCov, cv::NORM_INF) != 0);
         state->measurementNoiseCov = kfParams.measurementNoiseCov;
     }
 
     static void run(const cv::Mat& measurements, bool haveMeasurement,
-                    const cv::Mat& control, const cv::gapi::video::KalmanParams&,
+                    const cv::Mat& control, const cv::gapi::KalmanParams&,
                     cv::Mat &out, cv::KalmanFilter& state)
     {
-        cv::Mat pre = cv::norm(control, cv::NORM_INF) != 0 ? state.predict(control) : state.predict();
-        haveMeasurement ? state.correct(measurements).copyTo(out) : pre.copyTo(out);
+        cv::Mat pre = state.predict(control);
+
+        if (haveMeasurement)
+            state.correct(measurements).copyTo(out);
+        else
+            pre.copyTo(out);
     }
 };
 
 GAPI_OCV_KERNEL_ST(GCPUKalmanFilterNoControl, cv::gapi::video::GKalmanFilterNoControl, cv::KalmanFilter)
 {
     static void setup(const cv::GMatDesc&, const cv::GOpaqueDesc&,
-                      const cv::gapi::video::KalmanParams& kfParams,
+                      const cv::gapi::KalmanParams& kfParams,
                       std::shared_ptr<cv::KalmanFilter> &state,
                       const cv::GCompileArgs&)
     {
         state = std::make_shared<cv::KalmanFilter>(kfParams.transitionMatrix.rows, kfParams.measurementMatrix.rows,
-                                                   0, kfParams.type);
-
+                                                   0, kfParams.transitionMatrix.type());
         // initial state
-        state->statePre = kfParams.statePre;
-        state->statePost = kfParams.statePost;
-        state->errorCovPre = kfParams.errorCovPre;
-        state->errorCovPost = kfParams.errorCovPost;
+        state->statePost = kfParams.state;
+        state->errorCovPost = kfParams.errorCov;
 
         // dynamic system initialization
         state->measurementMatrix = kfParams.measurementMatrix;
-
-        GAPI_Assert(cv::norm(kfParams.transitionMatrix, cv::NORM_INF) != 0);
         state->transitionMatrix = kfParams.transitionMatrix;
-
-        GAPI_Assert(cv::norm(kfParams.processNoiseCov, cv::NORM_INF) != 0);
         state->processNoiseCov = kfParams.processNoiseCov;
-
-        GAPI_Assert(cv::norm(kfParams.measurementNoiseCov, cv::NORM_INF) != 0);
         state->measurementNoiseCov = kfParams.measurementNoiseCov;
     }
 
     static void run(const cv::Mat& measurements, bool haveMeasurement,
-                    const cv::gapi::video::KalmanParams&, cv::Mat &out,
+                    const cv::gapi::KalmanParams&, cv::Mat &out,
                     cv::KalmanFilter& state)
     {
         cv::Mat pre = state.predict();
-        haveMeasurement ? state.correct(measurements).copyTo(out) : pre.copyTo(out);
+
+        if (haveMeasurement)
+            state.correct(measurements).copyTo(out);
+        else
+            pre.copyTo(out);
     }
 };
 

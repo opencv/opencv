@@ -16,6 +16,32 @@
  */
 
 namespace cv { namespace gapi {
+
+/** @brief Structure for the Kalman filter's initialization parameters.*/
+
+struct GAPI_EXPORTS KalmanParams
+{
+    // initial state
+
+    //! corrected state (x(k)): x(k)=x'(k)+K(k)*(z(k)-H*x'(k))
+    Mat state;
+    //! posteriori error estimate covariance matrix (P(k)): P(k)=(I-K(k)*H)*P'(k)
+    Mat errorCov;
+
+    // dynamic system description
+
+    //! state transition matrix (A)
+    Mat transitionMatrix;
+    //! measurement matrix (H)
+    Mat measurementMatrix;
+    //! process noise covariance matrix (Q)
+    Mat processNoiseCov;
+    //! measurement noise covariance matrix (R)
+    Mat measurementNoiseCov;
+    //! control matrix (B) (Optional: not used if there's no control)
+    Mat controlMatrix;
+};
+
 namespace  video
 {
 using GBuildPyrOutput  = std::tuple<GArray<GMat>, GScalar>;
@@ -129,37 +155,8 @@ G_TYPED_KERNEL(GBackgroundSubtractor, <GMat(GMat, BackgroundSubtractorParams)>,
     }
 };
 
-/** @brief Structure for the Kalman filter's initialization parameters.*/
-
-struct GAPI_EXPORTS KalmanParams
-{
-    //! Type of the created matrices that should be CV_32F or CV_64F.
-    int type = CV_32FC1;
-
-    // initial state
-
-    //! predicted state(x'(k)): x(k)=A*x(k-1)+B*u(k)
-    Mat statePre;
-    //! priori error estimate covariance matrix (P'(k)): P'(k)=A*P(k-1)*At + Q)*/
-    Mat errorCovPre;
-    //! corrected state (x(k)): x(k)=x'(k)+K(k)*(z(k)-H*x'(k))
-    Mat statePost;
-    //! posteriori error estimate covariance matrix (P(k)): P(k)=(I-K(k)*H)*P'(k)
-    Mat errorCovPost;
-
-    // dynamic system description
-
-    //! state transition matrix (A)
-    Mat transitionMatrix;
-    //! measurement matrix (H)
-    Mat measurementMatrix;
-    //! process noise covariance matrix (Q)
-    Mat processNoiseCov;
-    //! measurement noise covariance matrix (R)
-    Mat measurementNoiseCov;
-    //! control matrix (B) (Optional: not used if there's no control)
-    Mat controlMatrix;
-};
+void checkParams(const cv::gapi::KalmanParams& kfParams,
+                 const cv::GMatDesc& measurement, const cv::GMatDesc& control = {});
 
 G_TYPED_KERNEL(GKalmanFilter, <GMat(GMat, GOpaque<bool>, GMat, KalmanParams)>,
                "org.opencv.video.KalmanFilter")
@@ -167,57 +164,8 @@ G_TYPED_KERNEL(GKalmanFilter, <GMat(GMat, GOpaque<bool>, GMat, KalmanParams)>,
     static GMatDesc outMeta(const GMatDesc& measurement, const GOpaqueDesc&,
                             const GMatDesc& control, const KalmanParams& kfParams)
     {
-        GAPI_Assert(kfParams.type == CV_32FC1 || kfParams.type == CV_64FC1);
-        GAPI_Assert(!kfParams.controlMatrix.empty() && "controlMatrix should be initialized in this overload!");
-
-        GAPI_Assert(!kfParams.statePre.empty() && kfParams.statePre.type() == kfParams.type);
-        GAPI_Assert(!kfParams.errorCovPre.empty() && kfParams.errorCovPre.type() == kfParams.type);
-        GAPI_Assert(!kfParams.statePost.empty() && kfParams.statePost.type() == kfParams.type);
-        GAPI_Assert(!kfParams.errorCovPost.empty() && kfParams.errorCovPost.type() == kfParams.type);
-        GAPI_Assert(!kfParams.transitionMatrix.empty() && kfParams.transitionMatrix.type() == kfParams.type);
-        GAPI_Assert(!kfParams.processNoiseCov.empty() && kfParams.processNoiseCov.type() == kfParams.type);
-        GAPI_Assert(!kfParams.measurementNoiseCov.empty() && kfParams.measurementNoiseCov.type() == kfParams.type);
-        GAPI_Assert(!kfParams.measurementMatrix.empty() && kfParams.measurementMatrix.type() == kfParams.type);
-        GAPI_Assert(!measurement.size.empty() &&
-                    measurement.depth == (kfParams.type == CV_32FC1) ? CV_32F : CV_64F &&
-                    measurement.chan == 1);
-
-        GAPI_Assert(!control.size.empty() &&
-                    control.depth == (kfParams.type == CV_32FC1) ? CV_32F : CV_64F &&
-                    control.chan == 1);
-
-        GAPI_Assert(kfParams.transitionMatrix.rows == kfParams.transitionMatrix.cols);
-
-        GAPI_Assert(kfParams.processNoiseCov.rows == kfParams.processNoiseCov.cols &&
-                    kfParams.processNoiseCov.rows == kfParams.transitionMatrix.rows);
-
-        GAPI_Assert(kfParams.errorCovPre.rows == kfParams.errorCovPre.cols &&
-                    kfParams.errorCovPre.rows == kfParams.transitionMatrix.rows);
-
-        GAPI_Assert(kfParams.errorCovPost.rows == kfParams.errorCovPost.cols &&
-                    kfParams.errorCovPost.rows == kfParams.transitionMatrix.rows);
-
-        GAPI_Assert(kfParams.statePre.rows == kfParams.transitionMatrix.rows &&
-                    kfParams.statePre.cols == 1);
-
-        GAPI_Assert(kfParams.statePost.rows == kfParams.transitionMatrix.rows &&
-                    kfParams.statePost.cols == 1);
-
-        GAPI_Assert(kfParams.measurementMatrix.cols == kfParams.transitionMatrix.cols);
-
-        GAPI_Assert(kfParams.measurementNoiseCov.rows == kfParams.measurementNoiseCov.cols &&
-                    kfParams.measurementNoiseCov.rows == kfParams.measurementMatrix.rows);
-
-        GAPI_Assert(kfParams.controlMatrix.rows == kfParams.transitionMatrix.rows);
-
-        GAPI_Assert(control.size.height == kfParams.controlMatrix.cols &&
-                    control.size.width == 1);
-
-        GAPI_Assert(measurement.size.height == kfParams.measurementMatrix.rows &&
-                    measurement.size.width == 1);
-
-        return measurement.withSize(Size(1, kfParams.transitionMatrix.rows)).withType(kfParams.type == CV_32FC1 ?
-                                                                                      CV_32F : CV_64F, 1);
+        checkParams(kfParams, measurement, control);
+        return measurement.withSize(Size(1, kfParams.transitionMatrix.rows));
     }
 };
 
@@ -225,48 +173,8 @@ G_TYPED_KERNEL(GKalmanFilterNoControl, <GMat(GMat, GOpaque<bool>, KalmanParams)>
 {
     static GMatDesc outMeta(const GMatDesc& measurement, const GOpaqueDesc&, const KalmanParams& kfParams)
     {
-        GAPI_Assert(kfParams.type == CV_32FC1 || kfParams.type == CV_64FC1);
-        GAPI_Assert(kfParams.controlMatrix.empty() && "There are no control in this overload.");
-
-        GAPI_Assert(!kfParams.statePre.empty() && kfParams.statePre.type() == kfParams.type);
-        GAPI_Assert(!kfParams.errorCovPre.empty() && kfParams.errorCovPre.type() == kfParams.type);
-        GAPI_Assert(!kfParams.statePost.empty() && kfParams.statePost.type() == kfParams.type);
-        GAPI_Assert(!kfParams.errorCovPost.empty() && kfParams.errorCovPost.type() == kfParams.type);
-        GAPI_Assert(!kfParams.transitionMatrix.empty() && kfParams.transitionMatrix.type() == kfParams.type);
-        GAPI_Assert(!kfParams.processNoiseCov.empty() && kfParams.processNoiseCov.type() == kfParams.type);
-        GAPI_Assert(!kfParams.measurementNoiseCov.empty() && kfParams.measurementNoiseCov.type() == kfParams.type);
-        GAPI_Assert(!kfParams.measurementMatrix.empty() && kfParams.measurementMatrix.type() == kfParams.type);
-        GAPI_Assert(!measurement.size.empty() &&
-                    measurement.depth == (kfParams.type == CV_32FC1) ? CV_32F : CV_64F &&
-                    measurement.chan == 1);
-
-        GAPI_Assert(kfParams.transitionMatrix.rows == kfParams.transitionMatrix.cols);
-
-        GAPI_Assert(kfParams.processNoiseCov.rows == kfParams.processNoiseCov.cols &&
-                    kfParams.processNoiseCov.rows == kfParams.transitionMatrix.rows);
-
-        GAPI_Assert(kfParams.errorCovPre.rows == kfParams.errorCovPre.cols &&
-                    kfParams.errorCovPre.rows == kfParams.transitionMatrix.rows);
-
-        GAPI_Assert(kfParams.errorCovPost.rows == kfParams.errorCovPost.cols &&
-                    kfParams.errorCovPost.rows == kfParams.transitionMatrix.rows);
-
-        GAPI_Assert(kfParams.statePre.rows == kfParams.transitionMatrix.rows &&
-                    kfParams.statePre.cols == 1);
-
-        GAPI_Assert(kfParams.statePost.rows == kfParams.transitionMatrix.rows &&
-                    kfParams.statePost.cols == 1);
-
-        GAPI_Assert(kfParams.measurementMatrix.cols == kfParams.transitionMatrix.cols);
-
-        GAPI_Assert(kfParams.measurementNoiseCov.rows == kfParams.measurementNoiseCov.cols &&
-                    kfParams.measurementNoiseCov.rows == kfParams.measurementMatrix.rows);
-
-        GAPI_Assert(measurement.size.height == kfParams.measurementMatrix.rows &&
-                    measurement.size.width == 1);
-
-        return measurement.withSize(Size(1, kfParams.transitionMatrix.rows)).withType(kfParams.type == CV_32FC1 ?
-                                                                                      CV_32F : CV_64F, 1);
+        checkParams(kfParams, measurement);
+        return measurement.withSize(Size(1, kfParams.transitionMatrix.rows));
     }
 };
 } //namespace video
@@ -388,46 +296,48 @@ The operation generates a foreground mask.
 */
 GAPI_EXPORTS GMat BackgroundSubtractor(const GMat& src, const cv::gapi::video::BackgroundSubtractorParams& bsParams);
 
-/** @brief Standard Kalman filter algorithm. The operation uses standard matrices
-by default <http://en.wikipedia.org/wiki/Kalman_filter>.
-transitionMatrix, controlMatrix and measurementMatrix can be modified to get an
-extended Kalman filter functionality. However, according to OCV's Kalman filter
-implementation transitionMatrix, processNoiseCov and measurementNoiseCov shouldn't
-be set to zero as it'll lead unexpected behavior.
+/** @brief Standard Kalman filter algorithm <http://en.wikipedia.org/wiki/Kalman_filter>.
 
-@return Output image is predicted or corrected state, i.e. 32-bit or 64-bit float
-1-channel matrix @ref CV_32FC1 or @ref CV_64FC1.
-If measurement matrix is given (haveMeasurements == true), corrected state will
-be returned which corresponds to the pipeline
-cv::KalmanFilter::predict(control) -> cv::KalmanFilter::correct(measurement).
-Otherwise, predicted state will be returned which corresponds to the call of
-cv::KalmanFilter::predict(control).
 @note Functional textual ID is "org.opencv.video.KalmanFilter"
 
-@param measurement input matrix: 32-bit or 64-bit float 1-channel matrix contains measuremens.
+@param measurement input matrix: 32-bit or 64-bit float 1-channel matrix containing measurements.
 @param haveMeasurement dynamic input flag that indicates whether we get measurements
 at a particular iteration .
 @param control input matrix: 32-bit or 64-bit float 1-channel matrix contains control data
 for changing dynamic system.
 @param kfParams Set of initialization parameters for Kalman filter kernel.
+
+@return Output matrix is predicted or corrected state. They can be 32-bit or 64-bit float
+1-channel matrix @ref CV_32FC1 or @ref CV_64FC1.
+
+@details If measurement matrix is given (haveMeasurements == true), corrected state will
+be returned which corresponds to the pipeline
+cv::KalmanFilter::predict(control) -> cv::KalmanFilter::correct(measurement).
+Otherwise, predicted state will be returned which corresponds to the call of
+cv::KalmanFilter::predict(control).
+@sa cv::KalmanFilter
 */
 GAPI_EXPORTS GMat KalmanFilter(const GMat& measurement, const GOpaque<bool>& haveMeasurement,
-                               const GMat& control, const cv::gapi::video::KalmanParams& kfParams);
+                               const GMat& control, const cv::gapi::KalmanParams& kfParams);
 
 /** @overload
-Standard Kalman filter algorithm.
+The case of Standard Kalman filter algorithm when there is no control in a dynamic system.
+In this case the controlMatrix is empty and control vector is absent.
 
-@return Output image is predicted or corrected state, i.e. 32-bit or 64-bit float
-1-channel matrix @ref CV_32FC1 or @ref CV_64FC1.
 @note Function textual ID is "org.opencv.video.KalmanFilterNoControl"
 
-@param measurement input matrix: 32-bit or 64-bit float 1-channel matrix contains measuremens.
+@param measurement input matrix: 32-bit or 64-bit float 1-channel matrix containing measurements.
 @param haveMeasurement dynamic input flag that indicates whether we get measurements
 at a particular iteration.
 @param kfParams Set of initialization parameters for Kalman filter kernel.
+
+@return Output matrix is predicted or corrected state. They can be 32-bit or 64-bit float
+1-channel matrix @ref CV_32FC1 or @ref CV_64FC1.
+
+@sa cv::KalmanFilter
  */
 GAPI_EXPORTS GMat KalmanFilter(const GMat& measurement, const GOpaque<bool>& haveMeasurement,
-                               const cv::gapi::video::KalmanParams& kfParams);
+                               const cv::gapi::KalmanParams& kfParams);
 
 //! @} gapi_video
 } //namespace gapi
