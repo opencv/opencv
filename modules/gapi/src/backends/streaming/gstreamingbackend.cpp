@@ -43,6 +43,9 @@ class GStreamingIntrinExecutable final: public cv::gimpl::GIslandExecutable
     virtual void run(GIslandExecutable::IInput &in,
                      GIslandExecutable::IOutput &out) override;
 
+    virtual bool allocatesOutputs() const override { return true; }
+    virtual cv::RMat allocate(const cv::GMatDesc&) const override { return {}; }
+
     virtual bool canReshape() const override { return true; }
     virtual void reshape(ade::Graph& graph, const cv::GCompileArgs&) override {
         // The whole graph here consists only of 1 operation with 1 input node and 1 output one

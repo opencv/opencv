@@ -16,6 +16,7 @@
 #include <opencv2/gapi/util/optional.hpp>
 #include <opencv2/gapi/garg.hpp>
 #include <opencv2/gapi/streaming/source.hpp>
+//#include <opencv2/gapi/streaming/format.hpp>
 
 namespace cv {
 
