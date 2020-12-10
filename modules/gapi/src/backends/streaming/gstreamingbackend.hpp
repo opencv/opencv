@@ -27,7 +27,7 @@ struct RMatMediaBGRAdapter final: public cv::RMat::Adapter
 
         std::shared_ptr<cv::MediaFrame::View> view_ptr =
             std::make_shared<cv::MediaFrame::View>(std::move(view));
-        auto callback = [&]() { view_ptr.reset(); };
+        auto callback = [view_ptr]() mutable { view_ptr.reset(); };
 
         return cv::RMat::View(desc(), ptr, stride, callback);
     }
