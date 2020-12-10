@@ -16,6 +16,44 @@
 #include <opencv2/gapi/infer/onnx.hpp>
 
 namespace {
+class TestMediaBGR final: public cv::MediaFrame::IAdapter {
+    cv::Mat m_mat;
+    using Cb = cv::MediaFrame::View::Callback;
+    Cb m_cb;
+
+public:
+    explicit TestMediaBGR(cv::Mat m, Cb cb = [](){})
+        : m_mat(m), m_cb(cb) {
+    }
+    cv::GFrameDesc meta() const override {
+        return cv::GFrameDesc{cv::MediaFormat::BGR, cv::Size(m_mat.cols, m_mat.rows)};
+    }
+    cv::MediaFrame::View access(cv::MediaFrame::Access) override {
+        cv::MediaFrame::View::Ptrs pp = { m_mat.ptr(), nullptr, nullptr, nullptr };
+        cv::MediaFrame::View::Strides ss = { m_mat.step, 0u, 0u, 0u };
+        return cv::MediaFrame::View(std::move(pp), std::move(ss), Cb{m_cb});
+    }
+};
+
+class TestMediaNV12 final: public cv::MediaFrame::IAdapter {
+    cv::Mat m_y;
+    cv::Mat m_uv;
+public:
+    TestMediaNV12(cv::Mat y, cv::Mat uv) : m_y(y), m_uv(uv) {
+    }
+    cv::GFrameDesc meta() const override {
+        return cv::GFrameDesc{cv::MediaFormat::NV12, cv::Size(m_y.cols, m_y.rows)};
+    }
+    cv::MediaFrame::View access(cv::MediaFrame::Access) override {
+        cv::MediaFrame::View::Ptrs pp = {
+            m_y.ptr(), m_uv.ptr(), nullptr, nullptr
+        };
+        cv::MediaFrame::View::Strides ss = {
+            m_y.step, m_uv.step, 0u, 0u
+        };
+        return cv::MediaFrame::View(std::move(pp), std::move(ss));
+    }
+};
 struct ONNXInitPath {
     ONNXInitPath() {
         const char* env_path = getenv("OPENCV_GAPI_ONNX_MODEL_PATH");
@@ -464,6 +502,260 @@ TEST_F(ONNXtest, InferMultOutput)
     out_gapi.resize(num_out);
     comp.apply(cv::gin(in_mat1),
                cv::gout(out_gapi[0], out_gapi[1], out_gapi[2], out_gapi[3]),
+               cv::compile_args(cv::gapi::networks(net)));
+    // Validate
+    validate();
+}
+
+TEST_F(ONNXClassificationTest, InferBGR)
+{
+    useModel("classification/squeezenet/model/squeezenet1.0-9");
+    // ONNX_API code
+    cv::Mat processed_mat;
+    preprocess(in_mat1, processed_mat);
+    infer<float>(processed_mat, out_onnx.front());
+    // G_API code
+    auto frame = MediaFrame::Create<TestMediaBGR>(in_mat1);
+    G_API_NET(SqueezNet, <cv::GMat(cv::GMat)>, "squeeznet");
+    cv::GFrame in;
+    cv::GMat out = cv::gapi::infer<SqueezNet>(in);
+    cv::GComputation comp(cv::GIn(in), cv::GOut(out));
+    // NOTE: We have to normalize U8 tensor
+    // so cfgMeanStd() is here
+    auto net = cv::gapi::onnx::Params<SqueezNet> { model_path }.cfgMeanStd({ mean }, { std });
+    comp.apply(cv::gin(frame),
+               cv::gout(out_gapi.front()),
+               cv::compile_args(cv::gapi::networks(net)));
+    // Validate
+    validate();
+}
+
+TEST_F(ONNXClassificationTest, InferYUV)
+{
+    useModel("classification/squeezenet/model/squeezenet1.0-9");
+    cv::Size sz{640, 480};
+    cv::Mat m_in_y = cv::Mat{sz, CV_8UC1};
+        cv::randu(m_in_y, 0, 255);
+    cv::Mat m_in_uv = cv::Mat{sz / 2, CV_8UC2};
+        cv::randu(m_in_uv, 0, 255);
+    auto frame = MediaFrame::Create<TestMediaNV12>(m_in_y, m_in_uv);
+    // ONNX_API code
+    cv::Mat pp;
+    cvtColorTwoPlane(m_in_y, m_in_uv, pp, cv::COLOR_YUV2BGR_NV12);
+    cv::Mat processed_mat;
+    preprocess(pp, processed_mat);
+    infer<float>(processed_mat, out_onnx.front());
+    // G_API code
+    G_API_NET(SqueezNet, <cv::GMat(cv::GMat)>, "squeeznet");
+    cv::GFrame in;
+    cv::GMat out = cv::gapi::infer<SqueezNet>(in);
+    cv::GComputation comp(cv::GIn(in), cv::GOut(out));
+    // NOTE: We have to normalize U8 tensor
+    // so cfgMeanStd() is here
+    auto net = cv::gapi::onnx::Params<SqueezNet> { model_path }.cfgMeanStd({ mean }, { std });
+    comp.apply(cv::gin(frame),
+               cv::gout(out_gapi.front()),
+               cv::compile_args(cv::gapi::networks(net)));
+    // Validate
+    validate();
+}
+
+TEST_F(ONNXClassificationTest, InferROIBGR)
+{
+    useModel("classification/squeezenet/model/squeezenet1.0-9");
+    const cv::Rect ROI(cv::Point{0, 0}, cv::Size{50, 50});
+    auto frame = MediaFrame::Create<TestMediaBGR>(in_mat1);
+    // ONNX_API code
+    cv::Mat roi_mat;
+    preprocess(in_mat1(ROI), roi_mat);
+    infer<float>(roi_mat, out_onnx.front());
+    // G_API code
+    G_API_NET(SqueezNet, <cv::GMat(cv::GMat)>, "squeeznet");
+    cv::GFrame in;
+    cv::GOpaque<cv::Rect> rect;
+    cv::GMat out = cv::gapi::infer<SqueezNet>(rect, in);
+    cv::GComputation comp(cv::GIn(in, rect), cv::GOut(out));
+    // NOTE: We have to normalize U8 tensor
+    // so cfgMeanStd() is here
+    auto net = cv::gapi::onnx::Params<SqueezNet> { model_path }.cfgMeanStd({ mean }, { std });
+    comp.apply(cv::gin(frame, ROI),
+               cv::gout(out_gapi.front()),
+               cv::compile_args(cv::gapi::networks(net)));
+    // Validate
+    validate();
+}
+
+TEST_F(ONNXClassificationTest, InferROIYUV)
+{
+    useModel("classification/squeezenet/model/squeezenet1.0-9");
+    const cv::Rect ROI(cv::Point{0, 0}, cv::Size{50, 50});
+    cv::Size sz{640, 480};
+    cv::Mat m_in_y = cv::Mat{sz, CV_8UC1};
+        cv::randu(m_in_y, 0, 255);
+    cv::Mat m_in_uv = cv::Mat{sz / 2, CV_8UC2};
+        cv::randu(m_in_uv, 0, 255);
+    auto frame = MediaFrame::Create<TestMediaNV12>(m_in_y, m_in_uv);
+    // ONNX_API code
+    cv::Mat pp;
+    cvtColorTwoPlane(m_in_y, m_in_uv, pp, cv::COLOR_YUV2BGR_NV12);
+    cv::Mat roi_mat;
+    preprocess(pp(ROI), roi_mat);
+    infer<float>(roi_mat, out_onnx.front());
+    // G_API code
+    G_API_NET(SqueezNet, <cv::GMat(cv::GMat)>, "squeeznet");
+    cv::GFrame in;
+    cv::GOpaque<cv::Rect> rect;
+    cv::GMat out = cv::gapi::infer<SqueezNet>(rect, in);
+    cv::GComputation comp(cv::GIn(in, rect), cv::GOut(out));
+    // NOTE: We have to normalize U8 tensor
+    // so cfgMeanStd() is here
+    auto net = cv::gapi::onnx::Params<SqueezNet> { model_path }.cfgMeanStd({ mean }, { std });
+    comp.apply(cv::gin(frame, ROI),
+               cv::gout(out_gapi.front()),
+               cv::compile_args(cv::gapi::networks(net)));
+    // Validate
+    validate();
+}
+
+TEST_F(ONNXClassificationTest, InferListBGR)
+{
+    useModel("classification/squeezenet/model/squeezenet1.0-9");
+    const std::vector<cv::Rect> rois = {
+        cv::Rect(cv::Point{ 0,   0}, cv::Size{80, 120}),
+        cv::Rect(cv::Point{50, 100}, cv::Size{250, 360}),
+    };
+    auto frame = MediaFrame::Create<TestMediaBGR>(in_mat1);
+    // ONNX_API code
+    out_onnx.resize(rois.size());
+    for (size_t i = 0; i < rois.size(); ++i) {
+        cv::Mat roi_mat;
+        preprocess(in_mat1(rois[i]), roi_mat);
+        infer<float>(roi_mat, out_onnx[i]);
+    }
+
+    // G_API code
+    G_API_NET(SqueezNet, <cv::GMat(cv::GMat)>, "squeeznet");
+    cv::GFrame in;
+    cv::GArray<cv::Rect> rr;
+    cv::GArray<cv::GMat> out = cv::gapi::infer<SqueezNet>(rr, in);
+    cv::GComputation comp(cv::GIn(in, rr), cv::GOut(out));
+    // NOTE: We have to normalize U8 tensor
+    // so cfgMeanStd() is here
+    auto net = cv::gapi::onnx::Params<SqueezNet> { model_path }.cfgMeanStd({ mean }, { std });
+    comp.apply(cv::gin(frame, rois),
+               cv::gout(out_gapi),
+               cv::compile_args(cv::gapi::networks(net)));
+    // Validate
+    validate();
+}
+
+TEST_F(ONNXClassificationTest, InferListYUV)
+{
+    useModel("classification/squeezenet/model/squeezenet1.0-9");
+    const std::vector<cv::Rect> rois = {
+        cv::Rect(cv::Point{ 0,   0}, cv::Size{80, 120}),
+        cv::Rect(cv::Point{50, 100}, cv::Size{250, 360}),
+    };
+    cv::Size sz{640, 480};
+    cv::Mat m_in_y = cv::Mat{sz, CV_8UC1};
+        cv::randu(m_in_y, 0, 255);
+    cv::Mat m_in_uv = cv::Mat{sz / 2, CV_8UC2};
+        cv::randu(m_in_uv, 0, 255);
+    auto frame = MediaFrame::Create<TestMediaNV12>(m_in_y, m_in_uv);
+
+    // ONNX_API code
+    cv::Mat pp;
+    cvtColorTwoPlane(m_in_y, m_in_uv, pp, cv::COLOR_YUV2BGR_NV12);
+    out_onnx.resize(rois.size());
+    for (size_t i = 0; i < rois.size(); ++i) {
+        cv::Mat roi_mat;
+        preprocess(pp(rois[i]), roi_mat);
+        infer<float>(roi_mat, out_onnx[i]);
+    }
+
+    // G_API code
+    G_API_NET(SqueezNet, <cv::GMat(cv::GMat)>, "squeeznet");
+    cv::GFrame in;
+    cv::GArray<cv::Rect> rr;
+    cv::GArray<cv::GMat> out = cv::gapi::infer<SqueezNet>(rr, in);
+    cv::GComputation comp(cv::GIn(in, rr), cv::GOut(out));
+    // NOTE: We have to normalize U8 tensor
+    // so cfgMeanStd() is here
+    auto net = cv::gapi::onnx::Params<SqueezNet> { model_path }.cfgMeanStd({ mean }, { std });
+    comp.apply(cv::gin(frame, rois),
+               cv::gout(out_gapi),
+               cv::compile_args(cv::gapi::networks(net)));
+    // Validate
+    validate();
+}
+
+TEST_F(ONNXClassificationTest, InferList2BGR)
+{
+    useModel("classification/squeezenet/model/squeezenet1.0-9");
+    const std::vector<cv::Rect> rois = {
+        cv::Rect(cv::Point{ 0,   0}, cv::Size{80, 120}),
+        cv::Rect(cv::Point{50, 100}, cv::Size{250, 360}),
+    };
+    auto frame = MediaFrame::Create<TestMediaBGR>(in_mat1);
+    // ONNX_API code
+    out_onnx.resize(rois.size());
+    for (size_t i = 0; i < rois.size(); ++i) {
+        cv::Mat roi_mat;
+        preprocess(in_mat1(rois[i]), roi_mat);
+        infer<float>(roi_mat, out_onnx[i]);
+    }
+
+    // G_API code
+    G_API_NET(SqueezNet, <cv::GMat(cv::GMat)>, "squeeznet");
+    cv::GFrame in;
+    cv::GArray<cv::Rect> rr;
+    cv::GArray<cv::GMat> out = cv::gapi::infer2<SqueezNet>(in, rr);
+    cv::GComputation comp(cv::GIn(in, rr), cv::GOut(out));
+    // NOTE: We have to normalize U8 tensor
+    // so cfgMeanStd() is here
+    auto net = cv::gapi::onnx::Params<SqueezNet> { model_path }.cfgMeanStd({ mean }, { std });
+    comp.apply(cv::gin(frame, rois),
+               cv::gout(out_gapi),
+               cv::compile_args(cv::gapi::networks(net)));
+    // Validate
+    validate();
+}
+
+TEST_F(ONNXClassificationTest, InferList2YUV)
+{
+    useModel("classification/squeezenet/model/squeezenet1.0-9");
+    const std::vector<cv::Rect> rois = {
+        cv::Rect(cv::Point{ 0,   0}, cv::Size{80, 120}),
+        cv::Rect(cv::Point{50, 100}, cv::Size{250, 360}),
+    };
+    cv::Size sz{640, 480};
+    cv::Mat m_in_y = cv::Mat{sz, CV_8UC1};
+        cv::randu(m_in_y, 0, 255);
+    cv::Mat m_in_uv = cv::Mat{sz / 2, CV_8UC2};
+        cv::randu(m_in_uv, 0, 255);
+    auto frame = MediaFrame::Create<TestMediaNV12>(m_in_y, m_in_uv);
+
+    // ONNX_API code
+    cv::Mat pp;
+    cvtColorTwoPlane(m_in_y, m_in_uv, pp, cv::COLOR_YUV2BGR_NV12);
+    out_onnx.resize(rois.size());
+    for (size_t i = 0; i < rois.size(); ++i) {
+        cv::Mat roi_mat;
+        preprocess(pp(rois[i]), roi_mat);
+        infer<float>(roi_mat, out_onnx[i]);
+    }
+
+    // G_API code
+    G_API_NET(SqueezNet, <cv::GMat(cv::GMat)>, "squeeznet");
+    cv::GFrame in;
+    cv::GArray<cv::Rect> rr;
+    cv::GArray<cv::GMat> out = cv::gapi::infer2<SqueezNet>(in, rr);
+    cv::GComputation comp(cv::GIn(in, rr), cv::GOut(out));
+    // NOTE: We have to normalize U8 tensor
+    // so cfgMeanStd() is here
+    auto net = cv::gapi::onnx::Params<SqueezNet> { model_path }.cfgMeanStd({ mean }, { std });
+    comp.apply(cv::gin(frame, rois),
+               cv::gout(out_gapi),
                cv::compile_args(cv::gapi::networks(net)));
     // Validate
     validate();
