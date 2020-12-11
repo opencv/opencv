@@ -290,7 +290,7 @@ struct ROIList: public ::testing::Test {
 }; // ROIList
 
 struct ROIListNV12: public ::testing::Test {
-    cv::gapi::ie::detail::ParamDesc params;
+    std::string model_path, weights_path, device_id;
 
     cv::Mat m_in_uv;
     cv::Mat m_in_y;
@@ -307,9 +307,9 @@ struct ROIListNV12: public ::testing::Test {
 
     void SetUp() {
         initDLDTDataPath();
-        params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-        params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
-        params.device_id = "CPU";
+        model_path   = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
+        weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+        device_id    = "CPU";
 
         cv::Size sz{320, 240};
         m_in_y = cv::Mat{sz, CV_8UC1};
@@ -325,10 +325,12 @@ struct ROIListNV12: public ::testing::Test {
 
         // Load & run IE network
         {
-            auto plugin        = cv::gimpl::ie::wrap::getPlugin(params);
-            auto net           = cv::gimpl::ie::wrap::readNetwork(params);
+            namespace gwrap = cv::gimpl::ie::wrap;
+            auto plugin       = gwrap::getPlugin({model_path, weights_path, device_id});
+            auto net          = gwrap::readNetwork({model_path, weights_path, device_id});
             setNetParameters(net, true);
-            auto this_network  = cv::gimpl::ie::wrap::loadNetwork(plugin, net, params);
+            auto this_network = gwrap::loadNetwork(plugin, net,
+                                                   {model_path, weights_path, device_id});
             auto infer_request = this_network.CreateInferRequest();
             auto frame_blob = cv::gapi::ie::util::to_ie(m_in_y, m_in_uv);
 
@@ -642,9 +644,8 @@ TEST_F(ROIList, MediaInputBGR)
 
     auto frame = MediaFrame::Create<TestMediaBGR>(m_in_mat);
 
-    auto pp = cv::gapi::ie::Params<AgeGender> {
-        params.model_path, params.weights_path, params.device_id
-    }.cfgOutputLayers({ "age_conv3", "prob" });
+    auto pp = cv::gapi::ie::Params<AgeGender> {model_path, weights_path, device_id
+                                              }.cfgOutputLayers({ "age_conv3", "prob" });
     comp.apply(cv::gin(frame, m_roi_list),
                cv::gout(m_out_gapi_ages, m_out_gapi_genders),
                cv::compile_args(cv::gapi::networks(pp)));
@@ -664,9 +665,8 @@ TEST_F(ROIListNV12, MediaInputNV12)
 
     auto frame = MediaFrame::Create<TestMediaNV12>(m_in_y, m_in_uv);
 
-    auto pp = cv::gapi::ie::Params<AgeGender> {
-        params.model_path, params.weights_path, params.device_id
-    }.cfgOutputLayers({ "age_conv3", "prob" });
+    auto pp = cv::gapi::ie::Params<AgeGender> {model_path, weights_path, device_id
+                                              }.cfgOutputLayers({ "age_conv3", "prob" });
     comp.apply(cv::gin(frame, m_roi_list),
                cv::gout(m_out_gapi_ages, m_out_gapi_genders),
                cv::compile_args(cv::gapi::networks(pp)));
@@ -678,10 +678,9 @@ TEST(TestAgeGenderIE, MediaInputNV12)
 {
     initDLDTDataPath();
 
-    cv::gapi::ie::detail::ParamDesc params;
-    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
-    params.device_id = "CPU";
+    std::string model_path   = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
+    std::string weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    std::string device_id    = "CPU";
 
     cv::Size sz{320, 240};
     cv::Mat in_y_mat(sz, CV_8UC1);
@@ -694,10 +693,12 @@ TEST(TestAgeGenderIE, MediaInputNV12)
     // Load & run IE network
     IE::Blob::Ptr ie_age, ie_gender;
     {
-        auto plugin        = cv::gimpl::ie::wrap::getPlugin(params);
-        auto net           = cv::gimpl::ie::wrap::readNetwork(params);
+        namespace gwrap = cv::gimpl::ie::wrap;
+        auto plugin       = gwrap::getPlugin({model_path, weights_path, device_id});
+        auto net          = gwrap::readNetwork({model_path, weights_path, device_id});
         setNetParameters(net, true);
-        auto this_network  = cv::gimpl::ie::wrap::loadNetwork(plugin, net, params);
+        auto this_network = gwrap::loadNetwork(plugin, net,
+                                               {model_path, weights_path, device_id});
         auto infer_request = this_network.CreateInferRequest();
         infer_request.SetBlob("data", cv::gapi::ie::util::to_ie(in_y_mat, in_uv_mat));
         infer_request.Infer();
@@ -716,9 +717,8 @@ TEST(TestAgeGenderIE, MediaInputNV12)
 
     auto frame = MediaFrame::Create<TestMediaNV12>(in_y_mat, in_uv_mat);
 
-    auto pp = cv::gapi::ie::Params<AgeGender> {
-        params.model_path, params.weights_path, params.device_id
-    }.cfgOutputLayers({ "age_conv3", "prob" });
+    auto pp = cv::gapi::ie::Params<AgeGender> {model_path, weights_path, device_id
+                                              }.cfgOutputLayers({ "age_conv3", "prob" });
     comp.apply(cv::gin(frame), cv::gout(gapi_age, gapi_gender),
                cv::compile_args(cv::gapi::networks(pp)));
 
@@ -732,10 +732,9 @@ TEST(TestAgeGenderIE, MediaInputBGR)
 {
     initDLDTDataPath();
 
-    cv::gapi::ie::detail::ParamDesc params;
-    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
-    params.device_id = "CPU";
+    std::string model_path   = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
+    std::string weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    std::string device_id    = "CPU";
 
     cv::Size sz{320, 240};
     cv::Mat in_mat(sz, CV_8UC3);
@@ -746,10 +745,12 @@ TEST(TestAgeGenderIE, MediaInputBGR)
     // Load & run IE network
     IE::Blob::Ptr ie_age, ie_gender;
     {
-        auto plugin        = cv::gimpl::ie::wrap::getPlugin(params);
-        auto net           = cv::gimpl::ie::wrap::readNetwork(params);
+        namespace gwrap = cv::gimpl::ie::wrap;
+        auto plugin       = gwrap::getPlugin({model_path, weights_path, device_id});
+        auto net          = gwrap::readNetwork({model_path, weights_path, device_id});
         setNetParameters(net);
-        auto this_network  = cv::gimpl::ie::wrap::loadNetwork(plugin, net, params);
+        auto this_network = gwrap::loadNetwork(plugin, net,
+                                               {model_path, weights_path, device_id});
         auto infer_request = this_network.CreateInferRequest();
         infer_request.SetBlob("data", cv::gapi::ie::util::to_ie(in_mat));
         infer_request.Infer();
@@ -768,9 +769,8 @@ TEST(TestAgeGenderIE, MediaInputBGR)
 
     auto frame = MediaFrame::Create<TestMediaBGR>(in_mat);
 
-    auto pp = cv::gapi::ie::Params<AgeGender> {
-        params.model_path, params.weights_path, params.device_id
-    }.cfgOutputLayers({ "age_conv3", "prob" });
+    auto pp = cv::gapi::ie::Params<AgeGender> {model_path, weights_path, device_id
+                                              }.cfgOutputLayers({ "age_conv3", "prob" });
     comp.apply(cv::gin(frame), cv::gout(gapi_age, gapi_gender),
                cv::compile_args(cv::gapi::networks(pp)));
 
@@ -784,10 +784,9 @@ TEST(InferROI, MediaInputBGR)
 {
     initDLDTDataPath();
 
-    cv::gapi::ie::detail::ParamDesc params;
-    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
-    params.device_id = "CPU";
+    std::string model_path   = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
+    std::string weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    std::string device_id    = "CPU";
 
     cv::Size sz{320, 240};
     cv::Mat in_mat(sz, CV_8UC3);
@@ -799,10 +798,12 @@ TEST(InferROI, MediaInputBGR)
     // Load & run IE network
     IE::Blob::Ptr ie_age, ie_gender;
     {
-        auto plugin        = cv::gimpl::ie::wrap::getPlugin(params);
-        auto net           = cv::gimpl::ie::wrap::readNetwork(params);
+        namespace gwrap = cv::gimpl::ie::wrap;
+        auto plugin       = gwrap::getPlugin({model_path, weights_path, device_id});
+        auto net          = gwrap::readNetwork({model_path, weights_path, device_id});
         setNetParameters(net);
-        auto this_network  = cv::gimpl::ie::wrap::loadNetwork(plugin, net, params);
+        auto this_network = gwrap::loadNetwork(plugin, net,
+                                               {model_path, weights_path, device_id});
         auto infer_request = this_network.CreateInferRequest();
         const auto ie_rc = IE::ROI {
             0u
@@ -830,9 +831,8 @@ TEST(InferROI, MediaInputBGR)
 
     auto frame = MediaFrame::Create<TestMediaBGR>(in_mat);
 
-    auto pp = cv::gapi::ie::Params<AgeGender> {
-        params.model_path, params.weights_path, params.device_id
-    }.cfgOutputLayers({ "age_conv3", "prob" });
+    auto pp = cv::gapi::ie::Params<AgeGender> {model_path, weights_path, device_id
+                                              }.cfgOutputLayers({ "age_conv3", "prob" });
     comp.apply(cv::gin(frame, rect), cv::gout(gapi_age, gapi_gender),
                cv::compile_args(cv::gapi::networks(pp)));
 
@@ -846,10 +846,9 @@ TEST(InferROI, MediaInputNV12)
 {
     initDLDTDataPath();
 
-    cv::gapi::ie::detail::ParamDesc params;
-    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
-    params.device_id = "CPU";
+    std::string model_path   = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
+    std::string weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    std::string device_id    = "CPU";
 
     cv::Size sz{320, 240};
     auto in_y_mat = cv::Mat{sz, CV_8UC1};
@@ -863,10 +862,12 @@ TEST(InferROI, MediaInputNV12)
     // Load & run IE network
     IE::Blob::Ptr ie_age, ie_gender;
     {
-        auto plugin        = cv::gimpl::ie::wrap::getPlugin(params);
-        auto net           = cv::gimpl::ie::wrap::readNetwork(params);
+        namespace gwrap = cv::gimpl::ie::wrap;
+        auto plugin       = gwrap::getPlugin({model_path, weights_path, device_id});
+        auto net          = gwrap::readNetwork({model_path, weights_path, device_id});
         setNetParameters(net, true);
-        auto this_network  = cv::gimpl::ie::wrap::loadNetwork(plugin, net, params);
+        auto this_network = gwrap::loadNetwork(plugin, net,
+                                               {model_path, weights_path, device_id});
         auto infer_request = this_network.CreateInferRequest();
         const auto ie_rc = IE::ROI {
             0u
@@ -894,9 +895,8 @@ TEST(InferROI, MediaInputNV12)
 
     auto frame = MediaFrame::Create<TestMediaNV12>(in_y_mat, in_uv_mat);
 
-    auto pp = cv::gapi::ie::Params<AgeGender> {
-        params.model_path, params.weights_path, params.device_id
-    }.cfgOutputLayers({ "age_conv3", "prob" });
+    auto pp = cv::gapi::ie::Params<AgeGender> {model_path, weights_path, device_id
+                                              }.cfgOutputLayers({ "age_conv3", "prob" });
     comp.apply(cv::gin(frame, rect), cv::gout(gapi_age, gapi_gender),
                cv::compile_args(cv::gapi::networks(pp)));
 
@@ -916,9 +916,8 @@ TEST_F(ROIList, Infer2MediaInputBGR)
 
     auto frame = MediaFrame::Create<TestMediaBGR>(m_in_mat);
 
-    auto pp = cv::gapi::ie::Params<AgeGender> {
-        params.model_path, params.weights_path, params.device_id
-    }.cfgOutputLayers({ "age_conv3", "prob" });
+    auto pp = cv::gapi::ie::Params<AgeGender> {model_path, weights_path, device_id
+                                              }.cfgOutputLayers({ "age_conv3", "prob" });
     comp.apply(cv::gin(frame, m_roi_list),
                cv::gout(m_out_gapi_ages, m_out_gapi_genders),
                cv::compile_args(cv::gapi::networks(pp)));
@@ -935,9 +934,8 @@ TEST_F(ROIListNV12, Infer2MediaInputNV12)
 
     auto frame = MediaFrame::Create<TestMediaNV12>(m_in_y, m_in_uv);
 
-    auto pp = cv::gapi::ie::Params<AgeGender> {
-        params.model_path, params.weights_path, params.device_id
-    }.cfgOutputLayers({ "age_conv3", "prob" });
+    auto pp = cv::gapi::ie::Params<AgeGender> {model_path, weights_path, device_id
+                                              }.cfgOutputLayers({ "age_conv3", "prob" });
     comp.apply(cv::gin(frame, m_roi_list),
                cv::gout(m_out_gapi_ages, m_out_gapi_genders),
                cv::compile_args(cv::gapi::networks(pp)));
