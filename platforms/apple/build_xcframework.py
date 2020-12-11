@@ -74,7 +74,7 @@ if __name__ == "__main__":
         build_folders = []
 
         def get_or_create_build_folder(base_dir, platform):
-            build_folder = "./{}/{}".format(base_dir, platform).replace(" ", "\\ ")  # Escape spaces in output path
+            build_folder = "{}/{}".format(base_dir, platform).replace(" ", "\\ ")  # Escape spaces in output path
             pathlib.Path(build_folder).mkdir(parents=True, exist_ok=True)
             return build_folder
 
@@ -122,7 +122,7 @@ if __name__ == "__main__":
             xcframework_path,
         ]
         for folder in build_folders:
-            xcframework_build_command += ["-framework", xcframework_path]
+            xcframework_build_command += ["-framework", "{}/{}.framework".format(folder, args.framework_name)]
         execute(xcframework_build_command, cwd=os.getcwd())
 
         print("")
