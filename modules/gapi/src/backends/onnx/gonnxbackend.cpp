@@ -105,8 +105,8 @@ public:
     std::size_t numInputs() const { return params.num_in; }
     std::size_t numOutputs() const { return params.num_out; }
     void setInput(int i, const cv::Mat &m);
-    void setInput(ONNXCallContext &ctx, int i, int name_idx, Views& views, const cv::Rect& roi);
-    void setOutput(int i, cv::Mat &m);
+    void setInput(ONNXCallContext &ctx, int idx, int name_idx, Views &views, const cv::Rect &roi);
+    void setOutput(int idx, cv::Mat &m);
     cv::Mat allocOutput(int i) const;
 
     // Run with the assigned inputs/outputs
@@ -264,11 +264,11 @@ inline void preprocess(const cv::Mat& src,
     }
 }
 
-inline void preprocess(const std::unique_ptr<cv::MediaFrame::View>& view,
-                       const cv::GFrameDesc& desc,
-                       const cv::gimpl::onnx::TensorInfo& ti,
-                             cv::Mat& dst,
-                       const cv::Rect& roi) {
+void preprocess(const std::unique_ptr<cv::MediaFrame::View>& view,
+                const cv::GFrameDesc& desc,
+                const cv::gimpl::onnx::TensorInfo& ti,
+                const cv::Rect& roi,
+                      cv::Mat& dst) {
     cv::Mat pp;
     switch (desc.fmt) {
         case cv::MediaFormat::BGR: {
@@ -644,11 +644,10 @@ void ONNXCompiled::setInput(int i, const cv::Mat &m) {
 }
 
 void ONNXCompiled::setInput(ONNXCallContext &ctx,
-                            int i,
+                            int in_idx,
                             int name_idx,
                             Views& views,
                             const cv::Rect& roi = cv::Rect()) {
-    const auto in_idx  = i;
     const auto in_name = params.input_names[name_idx];
     const auto ort_idx = getIdxByName(in_tensor_info, in_name);
 
@@ -656,7 +655,7 @@ void ONNXCompiled::setInput(ONNXCallContext &ctx,
         case cv::GShape::GFRAME: {
             const cv::MediaFrame& frame = ctx.inFrame(in_idx);
             views.emplace_back(new cv::MediaFrame::View(frame.access(cv::MediaFrame::Access::R)));
-            preprocess(views.back(), frame.desc(), in_tensor_info[ort_idx], in_data[name_idx], roi);
+            preprocess(views.back(), frame.desc(), in_tensor_info[ort_idx], roi, in_data[name_idx]);
             break;
         }
         case cv::GShape::GMAT: {
@@ -929,8 +928,8 @@ struct InferList2: public cv::detail::KernelTag {
             case cv::GMetaArg::index_of<cv::GMatDesc>(): {
                 const auto &meta_0 = util::get<cv::GMatDesc>(mm_0);
                 GAPI_Assert(   !meta_0.isND()
-                        && !meta_0.planar
-                        && "Only images are supported as the 0th argument");
+                            && !meta_0.planar
+                            && "Only images are supported as the 0th argument");
                 break;
             }
             case cv::GMetaArg::index_of<cv::GFrameDesc>(): {
