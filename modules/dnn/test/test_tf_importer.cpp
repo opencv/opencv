@@ -920,6 +920,19 @@ TEST_P(Test_TensorFlow_layers, resize_nearest_neighbor)
     runTensorFlowNet("keras_upsampling2d");
 }
 
+TEST_P(Test_TensorFlow_layers, resize_nearest_neighbor_align_corners)
+{
+    runTensorFlowNet("resize_nearest_neighbor", false, 0.0, 0.0, false, "_align_corners");
+}
+
+TEST_P(Test_TensorFlow_layers, resize_nearest_neighbor_half_pixel)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+
+    runTensorFlowNet("resize_nearest_neighbor", false, 0.0, 0.0, false, "_half_pixel");
+}
+
 TEST_P(Test_TensorFlow_layers, fused_resize_conv)
 {
     runTensorFlowNet("fused_resize_conv");
