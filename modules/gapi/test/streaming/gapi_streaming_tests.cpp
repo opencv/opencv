@@ -1704,7 +1704,11 @@ TEST(GAPI_Streaming, CopyFrame)
     cv::GComputation comp(cv::GIn(in), cv::GOut(out));
 
     auto cc = comp.compileStreaming();
-    cc.setSource<BGRSource>(filepath);
+    try {
+        cc.setSource<BGRSource>(filepath);
+    } catch(...) {
+        throw SkipTestException("Video file can not be opened");
+    }
 
     cv::VideoCapture cap;
     cap.open(filepath);
@@ -1739,7 +1743,11 @@ TEST(GAPI_Streaming, Reshape)
     cv::GComputation comp(cv::GIn(in), cv::GOut(out));
 
     auto cc = comp.compileStreaming();
-    cc.setSource<BGRSource>(filepath);
+    try {
+        cc.setSource<BGRSource>(filepath);
+    } catch(...) {
+        throw SkipTestException("Video file can not be opened");
+    }
 
     cv::VideoCapture cap;
     cap.open(filepath);
@@ -1765,7 +1773,11 @@ TEST(GAPI_Streaming, Reshape)
     // Reshape the graph meta
     filepath = findDataFile("cv/video/1920x1080.avi");
     cc.stop();
-    cc.setSource<BGRSource>(filepath);
+    try {
+        cc.setSource<BGRSource>(filepath);
+    } catch(...) {
+        throw SkipTestException("Video file can not be opened");
+    }
 
     cap.open(filepath);
     if (!cap.isOpened())
@@ -1799,7 +1811,11 @@ TEST(GAPI_Streaming, AccessBGRFromBGRFrame)
     cv::GComputation comp(cv::GIn(in), cv::GOut(out));
 
     auto cc = comp.compileStreaming();
-    cc.setSource<BGRSource>(filepath);
+    try {
+        cc.setSource<BGRSource>(filepath);
+    } catch(...) {
+        throw SkipTestException("Video file can not be opened");
+    }
 
     cv::VideoCapture cap;
     cap.open(filepath);
@@ -1831,7 +1847,11 @@ TEST(GAPI_Streaming, AccessBGRFromNV12Frame)
     cv::GComputation comp(cv::GIn(in), cv::GOut(out));
 
     auto cc = comp.compileStreaming();
-    cc.setSource<NV12Source>(filepath);
+    try {
+        cc.setSource<NV12Source>(filepath);
+    } catch(...) {
+        throw SkipTestException("Video file can not be opened");
+    }
 
     cv::VideoCapture cap;
     cap.open(filepath);
