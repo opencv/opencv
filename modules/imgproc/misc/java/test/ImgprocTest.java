@@ -1344,8 +1344,8 @@ public class ImgprocTest extends OpenCVTestCase {
 
         RotatedRect rrect = Imgproc.minAreaRect(points);
 
-        assertEquals(new Size(2, 5), rrect.size);
-        assertEquals(-90., rrect.angle);
+        assertEquals(new Size(5, 2), rrect.size);
+        assertEquals(0., rrect.angle);
         assertEquals(new Point(3.5, 2), rrect.center);
     }
 

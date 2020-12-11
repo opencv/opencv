@@ -124,7 +124,7 @@ public:
 
         Mat& inp = inputs[0];
         Mat& out = outputs[0];
-        if (interpolation == "nearest" || interpolation == "opencv_linear" || (interpolation == "bilinear" && halfPixelCenters))
+        if ((interpolation == "nearest" && !alignCorners && !halfPixelCenters) || interpolation == "opencv_linear" || (interpolation == "bilinear" && halfPixelCenters))
         {
             InterpolationFlags mode = interpolation == "nearest" ? INTER_NEAREST : INTER_LINEAR;
             for (size_t n = 0; n < inputs[0].size[0]; ++n)
@@ -133,6 +133,54 @@ public:
                 {
                     resize(getPlane(inp, n, ch), getPlane(out, n, ch),
                            Size(outWidth, outHeight), 0, 0, mode);
+                }
+            }
+        }
+        else if (interpolation == "nearest")
+        {
+            const int inpHeight = inp.size[2];
+            const int inpWidth = inp.size[3];
+            const int inpSpatialSize = inpHeight * inpWidth;
+            const int outSpatialSize = outHeight * outWidth;
+            const int numPlanes = inp.size[0] * inp.size[1];
+            CV_Assert_N(inp.isContinuous(), out.isContinuous());
+
+            Mat inpPlanes = inp.reshape(1, numPlanes * inpHeight);
+            Mat outPlanes = out.reshape(1, numPlanes * outHeight);
+
+            float heightOffset = 0.0f;
+            float widthOffset = 0.0f;
+
+            if (halfPixelCenters)
+            {
+                heightOffset = 0.5f * scaleHeight;
+                widthOffset = 0.5f * scaleWidth;
+            }
+
+            for (int y = 0; y < outHeight; ++y)
+            {
+                float input_y = y * scaleHeight + heightOffset;
+                int y0 = halfPixelCenters ? std::floor(input_y) : lroundf(input_y);
+                y0 = std::min(y0, inpHeight - 1);
+
+                const float* inpData_row = inpPlanes.ptr<float>(y0);
+
+                for (int x = 0; x < outWidth; ++x)
+                {
+                    float input_x = x * scaleWidth + widthOffset;
+                    int x0 = halfPixelCenters ? std::floor(input_x) : lroundf(input_x);
+                    x0 = std::min(x0, inpWidth - 1);
+
+                    float* outData = outPlanes.ptr<float>(y, x);
+                    const float* inpData_row_c = inpData_row;
+
+                    for (int c = 0; c < numPlanes; ++c)
+                    {
+                        *outData = inpData_row_c[x0];
+
+                        inpData_row_c += inpSpatialSize;
+                        outData += outSpatialSize;
+                    }
                 }
             }
         }
