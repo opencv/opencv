@@ -63,6 +63,7 @@ namespace opencv_test { namespace {
 #define MESSAGE_RANSAC_DIFF "Reprojection error for current pair of points more than required."
 
 #define MAX_COUNT_OF_POINTS 303
+#define MIN_COUNT_OF_POINTS 4
 #define COUNT_NORM_TYPES 3
 #define METHODS_COUNT 4
 
@@ -249,7 +250,7 @@ void CV_HomographyTest::print_information_8(int _method, int j, int N, int k, in
 
 void CV_HomographyTest::run(int)
 {
-    for (int N = 4; N <= MAX_COUNT_OF_POINTS; ++N)
+    for (int N = MIN_COUNT_OF_POINTS; N <= MAX_COUNT_OF_POINTS; ++N)
     {
         RNG& rng = ts->get_rng();
 
@@ -709,6 +710,29 @@ TEST(Calib3d_Homography, fromImages)
     ASSERT_GE(ninliers0, 80);
     ASSERT_TRUE(!H1.empty());
     ASSERT_GE(ninliers1, 80);
+}
+
+TEST(Calib3d_Homography, minPoints)
+{
+    float pt1data[] =
+    {
+        2.80073029e+002f, 2.39591217e+002f, 2.21912201e+002f, 2.59783997e+002f
+    };
+
+    float pt2data[] =
+    {
+        1.84072723e+002f, 1.43591202e+002f, 1.25912483e+002f, 1.63783859e+002f
+    };
+
+    int npoints = (int)(sizeof(pt1data)/sizeof(pt1data[0])/2);
+    printf("npoints = %d\n", npoints);  // npoints = 2
+
+    Mat p1(1, npoints, CV_32FC2, pt1data);
+    Mat p2(1, npoints, CV_32FC2, pt2data);
+    Mat mask;
+
+    // findHomography should raise an error since npoints < MIN_COUNT_OF_POINTS
+    EXPECT_THROW(findHomography(p1, p2, RANSAC, 0.01, mask), cv::Exception);
 }
 
 }} // namespace

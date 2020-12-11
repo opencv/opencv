@@ -119,7 +119,6 @@ public:
             CV_CheckEQ(inputs.size(), (size_t)2, "");
             numOutput = inputs[1].back();
             cAxis = inputs[0].size() - 1;
-            CV_CheckEQ(numOutput, inputs[0][cAxis - 1], "");
             int dims = inputs[0].size();
             CV_CheckEQ(inputs[1].size(), (size_t)dims, "");
             CV_CheckGE(dims, 2, "");
@@ -246,16 +245,18 @@ public:
             #if CV_SIMD128
                     for( ; i <= nw - 4; i += 4, wptr += 4*wstep )
                     {
-                        v_float32x4 vs0 = v_setall_f32(0.f), vs1 = v_setall_f32(0.f);
-                        v_float32x4 vs2 = v_setall_f32(0.f), vs3 = v_setall_f32(0.f);
+                        v_float32x4 vs0 = v_setall_f32(0.f);
+                        v_float32x4 vs1 = v_setall_f32(0.f);
+                        v_float32x4 vs2 = v_setall_f32(0.f);
+                        v_float32x4 vs3 = v_setall_f32(0.f);
 
                         for( k = 0; k < vecsize; k += 4 )
                         {
                             v_float32x4 v = v_load_aligned(sptr + k);
-                            vs0 += v*v_load_aligned(wptr + k);
-                            vs1 += v*v_load_aligned(wptr + wstep + k);
-                            vs2 += v*v_load_aligned(wptr + wstep*2 + k);
-                            vs3 += v*v_load_aligned(wptr + wstep*3 + k);
+                            vs0 = v_fma(v, v_load_aligned(wptr + k), vs0);
+                            vs1 = v_fma(v, v_load_aligned(wptr + wstep + k), vs1);
+                            vs2 = v_fma(v, v_load_aligned(wptr + wstep*2 + k), vs2);
+                            vs3 = v_fma(v, v_load_aligned(wptr + wstep*3 + k), vs3);
                         }
 
                         v_float32x4 s = v_reduce_sum4(vs0, vs1, vs2, vs3);
@@ -587,7 +588,7 @@ public:
         }
         else
         {
-            std::vector<size_t> data = {(size_t)ieInpNode->get_shape()[0], (size_t)blobs[0].size[1]};
+            std::vector<int64_t> data = {(int64_t)ieInpNode->get_shape()[0], (int64_t)blobs[0].size[1]};
             auto new_shape = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{2}, data.data());
             auto inp = std::make_shared<ngraph::op::v1::Reshape>(ieInpNode, new_shape, true);
 

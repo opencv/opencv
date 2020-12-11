@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2020 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_GCOMPILED_HPP
@@ -207,6 +207,19 @@ public:
      */
     // FIXME: Why it requires compile args?
     void reshape(const GMetaArgs& inMetas, const GCompileArgs& args);
+
+    /**
+     * @brief Prepare inner kernels states for a new video-stream.
+     *
+     * GCompiled objects may be used to process video streams frame by frame.
+     * In this case, a GCompiled is called on every image frame individually.
+     * Starting OpenCV 4.4, some kernels in the graph may have their internal
+     * states (see GAPI_OCV_KERNEL_ST for the OpenCV backend).
+     * In this case, if user starts processing another video stream with
+     * this GCompiled, this method needs to be called to let kernels re-initialize
+     * their internal states to a new video stream.
+     */
+    void prepareForNewStream();
 
 protected:
     /// @private

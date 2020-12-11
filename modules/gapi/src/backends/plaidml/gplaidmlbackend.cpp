@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2019 Intel Corporation
+// Copyright (C) 2019-2020 Intel Corporation
 
 
 #ifdef HAVE_PLAIDML
@@ -57,7 +57,7 @@ namespace
                              const std::vector<cv::gimpl::Data>& ins_data,
                              const std::vector<cv::gimpl::Data>& outs_data) const override
         {
-            auto has_config = cv::gimpl::getCompileArg<cv::gapi::plaidml::config>(args);
+            auto has_config = cv::gapi::getCompileArg<cv::gapi::plaidml::config>(args);
 
             if (!has_config)
             {
@@ -198,6 +198,9 @@ void cv::gimpl::GPlaidMLExecutable::run(std::vector<InObj>  &&input_objs,
     exec_->run();
 
     for (auto& it : output_objs) bindOutArg(it.first, it.second);
+
+    // FIXME:
+    // PlaidML backend haven't been updated with RMat support
 }
 
 void cv::gimpl::GPlaidMLExecutable::bindInArg(const RcDesc &rc, const GRunArg  &arg)

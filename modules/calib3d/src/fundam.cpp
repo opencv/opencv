@@ -44,6 +44,8 @@
 #include "rho.h"
 #include <iostream>
 
+#include "usac.hpp"
+
 namespace cv
 {
 
@@ -353,6 +355,10 @@ cv::Mat cv::findHomography( InputArray _points1, InputArray _points2,
 {
     CV_INSTRUMENT_REGION();
 
+    if (method >= USAC_DEFAULT && method <= USAC_MAGSAC)
+        return usac::findHomography(_points1, _points2, method, ransacReprojThreshold,
+            _mask, maxIters, confidence);
+
     const double defaultRANSACReprojThreshold = 3;
     bool result = false;
 
@@ -374,6 +380,9 @@ cv::Mat cv::findHomography( InputArray _points1, InputArray _points2,
                 return Mat();
             convertPointsFromHomogeneous(p, p);
         }
+        // Need at least 4 point correspondences to calculate Homography
+        if( npoints < 4 )
+            CV_Error(Error::StsVecLengthErr , "The input arrays should have at least 4 corresponding point sets to calculate Homography");
         p.reshape(2, npoints).convertTo(m, CV_32F);
     }
 
@@ -438,6 +447,18 @@ cv::Mat cv::findHomography( InputArray _points1, InputArray _points2,
     return cv::findHomography(_points1, _points2, method, ransacReprojThreshold, _mask);
 }
 
+
+cv::Mat cv::findHomography(InputArray srcPoints, InputArray dstPoints, OutputArray mask,
+                   const UsacParams &params) {
+    Ptr<usac::Model> model;
+    usac::setParameters(model, usac::EstimationMethod::Homography, params, mask.needed());
+    Ptr<usac::RansacOutput> ransac_output;
+    if (usac::run(model, srcPoints, dstPoints, model->getRandomGeneratorState(),
+            ransac_output, noArray(), noArray(), noArray(), noArray())) {
+        usac::saveMask(mask, ransac_output->getInliersMask());
+        return ransac_output->getModel() / ransac_output->getModel().at<double>(2,2);
+    } else return Mat();
+}
 
 
 /* Estimation of Fundamental Matrix from point correspondences.
@@ -813,6 +834,10 @@ cv::Mat cv::findFundamentalMat( InputArray _points1, InputArray _points2,
 {
     CV_INSTRUMENT_REGION();
 
+    if (method >= USAC_DEFAULT && method <= USAC_MAGSAC)
+        return usac::findFundamentalMat(_points1, _points2, method,
+            ransacReprojThreshold, confidence, maxIters, _mask);
+
     Mat points1 = _points1.getMat(), points2 = _points2.getMat();
     Mat m1, m2, F;
     int npoints = -1;
@@ -884,6 +909,21 @@ cv::Mat cv::findFundamentalMat( cv::InputArray points1, cv::InputArray points2, 
 {
     return cv::findFundamentalMat(points1, points2, method, ransacReprojThreshold, confidence, 1000, mask);
 }
+
+cv::Mat cv::findFundamentalMat( InputArray points1, InputArray points2,
+                        OutputArray mask, const UsacParams &params) {
+    Ptr<usac::Model> model;
+    setParameters(model, usac::EstimationMethod::Fundamental, params, mask.needed());
+    CV_Assert(model);
+    Ptr<usac::RansacOutput> ransac_output;
+    if (usac::run(model, points1, points2, model->getRandomGeneratorState(),
+            ransac_output, noArray(), noArray(), noArray(), noArray())) {
+        usac::saveMask(mask, ransac_output->getInliersMask());
+        return ransac_output->getModel();
+    } else return Mat();
+}
+
+
 
 
 void cv::computeCorrespondEpilines( InputArray _points, int whichImage,

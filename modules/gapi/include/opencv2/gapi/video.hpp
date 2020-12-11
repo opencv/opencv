@@ -62,6 +62,73 @@ G_TYPED_KERNEL(GCalcOptFlowLKForPyr,
         return std::make_tuple(empty_array_desc(), empty_array_desc(), empty_array_desc());
     }
 };
+
+enum BackgroundSubtractorType
+{
+    TYPE_BS_MOG2,
+    TYPE_BS_KNN
+};
+
+/** @brief Structure for the Background Subtractor operation's initialization parameters.*/
+
+struct BackgroundSubtractorParams
+{
+    //! Type of the Background Subtractor operation.
+    BackgroundSubtractorType operation = TYPE_BS_MOG2;
+
+    //! Length of the history.
+    int history = 500;
+
+    //! For MOG2: Threshold on the squared Mahalanobis distance between the pixel
+    //! and the model to decide whether a pixel is well described by
+    //! the background model.
+    //! For KNN: Threshold on the squared distance between the pixel and the sample
+    //! to decide whether a pixel is close to that sample.
+    double threshold = 16;
+
+    //! If true, the algorithm will detect shadows and mark them.
+    bool detectShadows = true;
+
+    //! The value between 0 and 1 that indicates how fast
+    //! the background model is learnt.
+    //! Negative parameter value makes the algorithm use some automatically
+    //! chosen learning rate.
+    double learningRate = -1;
+
+    //! default constructor
+    BackgroundSubtractorParams() {}
+
+    /** Full constructor
+    @param op MOG2/KNN Background Subtractor type.
+    @param histLength Length of the history.
+    @param thrshld For MOG2: Threshold on the squared Mahalanobis distance between
+    the pixel and the model to decide whether a pixel is well described by the background model.
+    For KNN: Threshold on the squared distance between the pixel and the sample to decide
+    whether a pixel is close to that sample.
+    @param detect If true, the algorithm will detect shadows and mark them. It decreases the
+    speed a bit, so if you do not need this feature, set the parameter to false.
+    @param lRate The value between 0 and 1 that indicates how fast the background model is learnt.
+    Negative parameter value makes the algorithm to use some automatically chosen learning rate.
+    */
+    BackgroundSubtractorParams(BackgroundSubtractorType op, int histLength,
+                               double thrshld, bool detect, double lRate) : operation(op),
+                                                                            history(histLength),
+                                                                            threshold(thrshld),
+                                                                            detectShadows(detect),
+                                                                            learningRate(lRate){}
+};
+
+G_TYPED_KERNEL(GBackgroundSubtractor, <GMat(GMat, BackgroundSubtractorParams)>,
+               "org.opencv.video.BackgroundSubtractor")
+{
+    static GMatDesc outMeta(const GMatDesc& in, const BackgroundSubtractorParams& bsParams)
+    {
+        GAPI_Assert(bsParams.history >= 0);
+        GAPI_Assert(bsParams.learningRate <= 1);
+        return in.withType(CV_8U, 1);
+    }
+};
+
 } //namespace video
 
 //! @addtogroup gapi_video
@@ -83,8 +150,9 @@ G_TYPED_KERNEL(GCalcOptFlowLKForPyr,
 @param tryReuseInputImage put ROI of input image into the pyramid if possible. You can pass false
                           to force data copying.
 
-@return output pyramid.
-@return number of levels in constructed pyramid. Can be less than maxLevel.
+@return
+ - output pyramid.
+ - number of levels in constructed pyramid. Can be less than maxLevel.
  */
 GAPI_EXPORTS std::tuple<GArray<GMat>, GScalar>
 buildOpticalFlowPyramid(const GMat     &img,
@@ -131,11 +199,12 @@ by number of pixels in a window; if this value is less than minEigThreshold, the
 feature is filtered out and its flow is not processed, so it allows to remove bad points and get a
 performance boost.
 
-@return GArray of 2D points (with single-precision floating-point coordinates)
+@return
+ - GArray of 2D points (with single-precision floating-point coordinates)
 containing the calculated new positions of input features in the second image.
-@return status GArray (of unsigned chars); each element of the vector is set to 1 if
+ - status GArray (of unsigned chars); each element of the vector is set to 1 if
 the flow for the corresponding features has been found, otherwise, it is set to 0.
-@return GArray of errors (doubles); each element of the vector is set to an error for the
+ - GArray of errors (doubles); each element of the vector is set to an error for the
 corresponding feature, type of the error measure can be set in flags parameter; if the flow wasn't
 found then the error is not defined (use the status parameter to find such cases).
  */
@@ -169,8 +238,32 @@ calcOpticalFlowPyrLK(const GArray<GMat>    &prevPyr,
                            int              flags        = 0,
                            double           minEigThresh = 1e-4);
 
+/** @brief Gaussian Mixture-based or K-nearest neighbours-based Background/Foreground Segmentation Algorithm.
+The operation generates a foreground mask.
+
+@return Output image is foreground mask, i.e. 8-bit unsigned 1-channel (binary) matrix @ref CV_8UC1.
+
+@note Functional textual ID is "org.opencv.video.BackgroundSubtractor"
+
+@param src input image: Floating point frame is used without scaling and should be in range [0,255].
+@param bsParams Set of initialization parameters for Background Subtractor kernel.
+*/
+GAPI_EXPORTS GMat BackgroundSubtractor(const GMat& src, const cv::gapi::video::BackgroundSubtractorParams& bsParams);
+
 //! @} gapi_video
 } //namespace gapi
 } //namespace cv
+
+
+namespace cv { namespace detail {
+template<> struct CompileArgTag<cv::gapi::video::BackgroundSubtractorParams>
+{
+    static const char* tag()
+    {
+        return "org.opencv.video.background_substractor_params";
+    }
+};
+}  // namespace detail
+}  //namespace cv
 
 #endif // OPENCV_GAPI_VIDEO_HPP

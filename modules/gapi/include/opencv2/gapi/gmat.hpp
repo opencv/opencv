@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2020 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_GMAT_HPP
@@ -46,10 +46,10 @@ struct GOrigin;
  *    `cv::GArray<T>`    | std::vector<T>
  *    `cv::GOpaque<T>`   | T
  */
-class GAPI_EXPORTS GMat
+class GAPI_EXPORTS_W_SIMPLE GMat
 {
 public:
-    GMat();                                 // Empty constructor
+    GAPI_WRAP GMat();                       // Empty constructor
     GMat(const GNode &n, std::size_t out);  // Operation result constructor
 
     GOrigin& priv();                        // Internal use only
@@ -65,11 +65,7 @@ public:
     using GMat::GMat;
 };
 
-class GAPI_EXPORTS GFrame : public GMat
-{
-public:
-    using GMat::GMat;
-};
+class RMat;
 
 /** @} */
 
@@ -118,6 +114,8 @@ struct GAPI_EXPORTS GMatDesc
     // 1-channel mat can be reinterpreted as is (1-channel mat)
     // and as a 3-channel planar mat with height divided by 3)
     bool canDescribe(const cv::Mat& mat) const;
+
+    bool canDescribe(const cv::RMat& mat) const;
 
     // Meta combinator: return a new GMatDesc which differs in size by delta
     // (all other fields are taken unchanged from this GMatDesc)
@@ -205,18 +203,46 @@ struct GAPI_EXPORTS GMatDesc
 
 static inline GMatDesc empty_gmat_desc() { return GMatDesc{-1,-1,{-1,-1}}; }
 
+namespace gapi { namespace detail {
+/** Checks GMatDesc fields if the passed matrix is a set of n-dimentional points.
+@param in GMatDesc to check.
+@param n expected dimensionality.
+@return the amount of points. In case input matrix can't be described as vector of points
+of expected dimensionality, returns -1.
+ */
+int checkVector(const GMatDesc& in, const size_t n);
+
+/** @overload
+
+Checks GMatDesc fields if the passed matrix can be described as a set of points of any
+dimensionality.
+
+@return array of two elements in form of std::vector<int>: the amount of points
+and their calculated dimensionality. In case input matrix can't be described as vector of points,
+returns {-1, -1}.
+ */
+std::vector<int> checkVector(const GMatDesc& in);
+}} // namespace gapi::detail
+
 #if !defined(GAPI_STANDALONE)
 GAPI_EXPORTS GMatDesc descr_of(const cv::UMat &mat);
 #endif // !defined(GAPI_STANDALONE)
 
-GAPI_EXPORTS GMatDesc descr_of(const cv::Mat &mat);
-/** @} */
-
-// FIXME: WHY??? WHY it is under different namespace?
+//Fwd declarations
 namespace gapi { namespace own {
     class Mat;
     GAPI_EXPORTS GMatDesc descr_of(const Mat &mat);
 }}//gapi::own
+
+GAPI_EXPORTS GMatDesc descr_of(const RMat &mat);
+
+#if !defined(GAPI_STANDALONE)
+GAPI_EXPORTS GMatDesc descr_of(const cv::Mat &mat);
+#else
+using gapi::own::descr_of;
+#endif
+
+/** @} */
 
 GAPI_EXPORTS std::ostream& operator<<(std::ostream& os, const cv::GMatDesc &desc);
 

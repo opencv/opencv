@@ -15,7 +15,7 @@ from tf_text_graph_ssd import createSSDGraph
 from tf_text_graph_faster_rcnn import createFasterRCNNGraph
 
 backends = (cv.dnn.DNN_BACKEND_DEFAULT, cv.dnn.DNN_BACKEND_HALIDE, cv.dnn.DNN_BACKEND_INFERENCE_ENGINE, cv.dnn.DNN_BACKEND_OPENCV)
-targets = (cv.dnn.DNN_TARGET_CPU, cv.dnn.DNN_TARGET_OPENCL, cv.dnn.DNN_TARGET_OPENCL_FP16, cv.dnn.DNN_TARGET_MYRIAD)
+targets = (cv.dnn.DNN_TARGET_CPU, cv.dnn.DNN_TARGET_OPENCL, cv.dnn.DNN_TARGET_OPENCL_FP16, cv.dnn.DNN_TARGET_MYRIAD, cv.dnn.DNN_TARGET_HDDL)
 
 parser = argparse.ArgumentParser(add_help=False)
 parser.add_argument('--zoo', default=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models.yml'),
@@ -41,7 +41,8 @@ parser.add_argument('--target', choices=targets, default=cv.dnn.DNN_TARGET_CPU, 
                          '%d: CPU target (by default), '
                          '%d: OpenCL, '
                          '%d: OpenCL fp16 (half-float precision), '
-                         '%d: VPU' % targets)
+                         '%d: NCS2 VPU, '
+                         '%d: HDDL VPU' % targets)
 parser.add_argument('--async', type=int, default=0,
                     dest='asyncN',
                     help='Number of asynchronous forwards at the same time. '
@@ -141,9 +142,6 @@ def postprocess(frame, outs):
         # Network produces output blob with a shape NxC where N is a number of
         # detected objects and C is a number of classes + 4 where the first 4
         # numbers are [center_x, center_y, width, height]
-        classIds = []
-        confidences = []
-        boxes = []
         for out in outs:
             for detection in out:
                 scores = detection[5:]
@@ -163,9 +161,25 @@ def postprocess(frame, outs):
         print('Unknown output layer type: ' + lastLayer.type)
         exit()
 
-    indices = cv.dnn.NMSBoxes(boxes, confidences, confThreshold, nmsThreshold)
+    # NMS is used inside Region layer only on DNN_BACKEND_OPENCV for another backends we need NMS in sample
+    # or NMS is required if number of outputs > 1
+    if len(outNames) > 1 or lastLayer.type == 'Region' and args.backend != cv.dnn.DNN_BACKEND_OPENCV:
+        indices = []
+        classIds = np.array(classIds)
+        boxes = np.array(boxes)
+        confidences = np.array(confidences)
+        unique_classes = set(classIds)
+        for cl in unique_classes:
+            class_indices = np.where(classIds == cl)[0]
+            conf = confidences[class_indices]
+            box  = boxes[class_indices].tolist()
+            nms_indices = cv.dnn.NMSBoxes(box, conf, confThreshold, nmsThreshold)
+            nms_indices = nms_indices[:, 0] if len(nms_indices) else []
+            indices.extend(class_indices[nms_indices])
+    else:
+        indices = np.arange(0, len(classIds))
+
     for i in indices:
-        i = i[0]
         box = boxes[i]
         left = box[0]
         top = box[1]

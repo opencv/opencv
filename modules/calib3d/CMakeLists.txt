@@ -7,5 +7,6 @@ if(DEBUG_opencv_calib3d)
   list(APPEND debug_modules opencv_highgui)
 endif()
 ocv_define_module(calib3d opencv_imgproc opencv_features2d opencv_flann ${debug_modules}
-    WRAP java python js
+    WRAP java objc python js
 )
+ocv_target_link_libraries(${the_module} ${LAPACK_LIBRARIES})

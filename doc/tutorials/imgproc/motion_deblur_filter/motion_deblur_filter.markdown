@@ -1,8 +1,15 @@
 Motion Deblur Filter {#tutorial_motion_deblur_filter}
 ==========================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_out_of_focus_deblur_filter}
 @next_tutorial{tutorial_anisotropic_image_segmentation_by_a_gst}
+
+|    |    |
+| -: | :- |
+| Original author | Karpushin Vladislav |
+| Compatibility | OpenCV >= 3.0 |
 
 Goal
 ----

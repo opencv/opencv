@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2020 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_GARRAY_HPP
@@ -80,12 +80,18 @@ namespace detail
 
     protected:
         GArrayU();                                // Default constructor
+        GArrayU(const detail::VectorRef& vref);   // Constant value constructor
         template<class> friend class cv::GArray;  //  (available to GArray<T> only)
 
         void setConstructFcn(ConstructVec &&cv);  // Store T-aware constructor
 
         template <typename T>
         void specifyType();                       // Store type of initial GArray<T>
+
+        template <typename T>
+        void storeKind();
+
+        void setKind(cv::detail::OpaqueKind);
 
         std::shared_ptr<GOrigin> m_priv;
         std::shared_ptr<TypeHintBase> m_hint;
@@ -103,6 +109,11 @@ namespace detail
         m_hint.reset(new TypeHint<typename std::decay<T>::type>);
     };
 
+    template <typename T>
+    void GArrayU::storeKind(){
+        setKind(cv::detail::GOpaqueTraits<T>::kind);
+    };
+
     // This class represents a typed STL vector reference.
     // Depending on origins, this reference may be either "just a" reference to
     // an object created externally, OR actually own the underlying object
@@ -110,12 +121,14 @@ namespace detail
     class BasicVectorRef
     {
     public:
+        // These fields are set by the derived class(es)
         std::size_t    m_elemSize = 0ul;
         cv::GArrayDesc m_desc;
         virtual ~BasicVectorRef() {}
 
         virtual void mov(BasicVectorRef &ref) = 0;
         virtual const void* ptr() const = 0;
+        virtual std::size_t size() const = 0;
     };
 
     template<typename T> class VectorRefT final: public BasicVectorRef
@@ -210,6 +223,7 @@ namespace detail
         }
 
         virtual const void* ptr() const override { return &rref(); }
+        virtual std::size_t size() const override { return rref().size(); }
     };
 
     // This class strips type information from VectorRefT<> and makes it usable
@@ -222,6 +236,7 @@ namespace detail
     class VectorRef
     {
         std::shared_ptr<BasicVectorRef> m_ref;
+        cv::detail::OpaqueKind m_kind;
 
         template<typename T> inline void check() const
         {
@@ -231,16 +246,30 @@ namespace detail
 
     public:
         VectorRef() = default;
-        template<typename T> explicit VectorRef(const std::vector<T>& vec) : m_ref(new VectorRefT<T>(vec)) {}
-        template<typename T> explicit VectorRef(std::vector<T>& vec)       : m_ref(new VectorRefT<T>(vec)) {}
-        template<typename T> explicit VectorRef(std::vector<T>&& vec)      : m_ref(new VectorRefT<T>(vec)) {}
+        template<typename T> explicit VectorRef(const std::vector<T>& vec) :
+                                            m_ref(new VectorRefT<T>(vec)), m_kind(GOpaqueTraits<T>::kind) {}
+        template<typename T> explicit VectorRef(std::vector<T>& vec)       :
+                                            m_ref(new VectorRefT<T>(vec)), m_kind(GOpaqueTraits<T>::kind) {}
+        template<typename T> explicit VectorRef(std::vector<T>&& vec)      :
+                                            m_ref(new VectorRefT<T>(std::move(vec))), m_kind(GOpaqueTraits<T>::kind) {}
+
+        cv::detail::OpaqueKind getKind() const
+        {
+            return m_kind;
+        }
 
         template<typename T> void reset()
         {
             if (!m_ref) m_ref.reset(new VectorRefT<T>());
-
             check<T>();
+            storeKind<T>();
             static_cast<VectorRefT<T>&>(*m_ref).reset();
+        }
+
+        template <typename T>
+        void storeKind()
+        {
+            m_kind = cv::detail::GOpaqueTraits<T>::kind;
         }
 
         template<typename T> std::vector<T>& wref()
@@ -255,6 +284,14 @@ namespace detail
             return static_cast<VectorRefT<T>&>(*m_ref).rref();
         }
 
+        // Check if was created for/from std::vector<T>
+        template <typename T> bool holds() const
+        {
+            if (!m_ref) return false;
+            using U = typename std::decay<T>::type;
+            return dynamic_cast<VectorRefT<U>*>(m_ref.get()) != nullptr;
+        }
+
         void mov(VectorRef &v)
         {
             m_ref->mov(*v.m_ref);
@@ -263,6 +300,11 @@ namespace detail
         cv::GArrayDesc descr_of() const
         {
             return m_ref->m_desc;
+        }
+
+        std::size_t size() const
+        {
+            return m_ref->size();
         }
 
         // May be used to uniquely identify this object internally
@@ -295,27 +337,38 @@ namespace detail
 template<typename T> class GArray
 {
 public:
-    GArray() { putDetails(); }             // Empty constructor
-    explicit GArray(detail::GArrayU &&ref) // GArrayU-based constructor
-        : m_ref(ref) { putDetails(); }     //   (used by GCall, not for users)
-
-    detail::GArrayU strip() const { return m_ref; }
-
-private:
     // Host type (or Flat type) - the type this GArray is actually
     // specified to.
     using HT = typename detail::flatten_g<typename std::decay<T>::type>::type;
 
-    static void VCTor(detail::VectorRef& vref) {
+    explicit GArray(const std::vector<HT>& v) // Constant value constructor
+        : m_ref(detail::GArrayU(detail::VectorRef(v))) { putDetails(); }
+    explicit GArray(std::vector<HT>&& v)      // Move-constructor
+        : m_ref(detail::GArrayU(detail::VectorRef(std::move(v)))) { putDetails(); }
+    GArray() { putDetails(); }             // Empty constructor
+    explicit GArray(detail::GArrayU &&ref) // GArrayU-based constructor
+        : m_ref(ref) { putDetails(); }     //   (used by GCall, not for users)
+
+    /// @private
+    detail::GArrayU strip() const {
+        return m_ref;
+    }
+    /// @private
+    static void VCtor(detail::VectorRef& vref) {
         vref.reset<HT>();
     }
+
+private:
     void putDetails() {
-        m_ref.setConstructFcn(&VCTor);
-        m_ref.specifyType<HT>();
+        m_ref.setConstructFcn(&VCtor);
+        m_ref.specifyType<HT>();  // FIXME: to unify those 2 to avoid excessive dynamic_cast
+        m_ref.storeKind<HT>();    //
     }
 
     detail::GArrayU m_ref;
 };
+
+using GArrayP2f = GArray<cv::Point2f>;
 
 /** @} */
 

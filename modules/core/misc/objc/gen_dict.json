@@ -1,0 +1,440 @@
+{
+    "module_imports": ["Point2i", "MinMaxLocResult"],
+    "class_ignore_list" : [
+        "FileNode",
+        "FileStorage",
+        "KDTree",
+        "KeyPoint",
+        "DMatch"
+    ],
+    "missing_consts" : {
+        "Core" : {
+            "private" : [],
+            "public" : [
+                ["SVD_MODIFY_A", 1], ["SVD_NO_UV", 2], ["SVD_FULL_UV", 4],
+                ["FILLED", -1],
+                ["REDUCE_SUM", 0], ["REDUCE_AVG", 1], ["REDUCE_MAX", 2], ["REDUCE_MIN", 3]
+            ]
+        }
+    },
+    "ManualFuncs" : {
+        "Core" : {
+            "minMaxLoc" : {
+                "declaration" : [
+                    "// C++: minMaxLoc(Mat src, double* minVal, double* maxVal=0, Point* minLoc=0, Point* maxLoc=0, InputArray mask=noArray())",
+                    "+ (MinMaxLocResult*)minMaxLoc:(Mat*)src mask:(nullable Mat*)mask;",
+                    "\n",
+                    "+ (MinMaxLocResult*)minMaxLoc:(Mat*)src;",
+                    "\n"
+                ],
+                "implementation" : [
+                    "// C++: minMaxLoc(Mat src, double* minVal, double* maxVal=0, Point* minLoc=0, Point* maxLoc=0, InputArray mask=noArray())",
+                    "+ (MinMaxLocResult*)minMaxLoc:(Mat*)src mask:(nullable Mat*)mask {",
+                    "    double minVal, maxVal;",
+                    "    cv::Point minLoc, maxLoc;",
+                    "    cv::Mat& rSrc = src.nativeRef;",
+                    "    if (mask != nil) {",
+                    "        cv::Mat& rMask = mask.nativeRef;",
+                    "        cv::minMaxLoc(rSrc, &minVal, &maxVal, &minLoc, &maxLoc, rMask);",
+                    "    } else {",
+                    "        cv::minMaxLoc(rSrc, &minVal, &maxVal, &minLoc, &maxLoc);",
+                    "    }",
+                    "    return [[MinMaxLocResult alloc] initWithMinval:minVal maxVal:maxVal minLoc:[Point2i fromNative:minLoc] maxLoc:[Point2i fromNative:maxLoc]];",
+                    "}",
+                    "\n",
+                    "+ (MinMaxLocResult*)minMaxLoc:(Mat*)src {",
+                    "    return [self minMaxLoc:src mask:nil];",
+                    "}",
+                    "\n"
+                ],
+                "objc_method_name" : "+minMaxLoc:mask:"
+            },
+            "checkHardwareSupport" : {"declaration" : [""], "implementation" : [""] },
+            "setUseOptimized"      : {"declaration" : [""], "implementation" : [""] },
+            "useOptimized"         : {"declaration" : [""], "implementation" : [""] }
+        }
+    },
+    "func_arg_fix" : {
+        "Core": {
+            "randu"    : { "low"  : {"ctype" : "double"},
+                           "high" : {"ctype" : "double"} },
+            "randn"    : { "mean" : {"ctype" : "double"},
+                           "stddev" : {"ctype"  : "double"} },
+            "inRange"  : { "lowerb" : {"ctype" : "Scalar"},
+                           "upperb" : {"ctype" : "Scalar"} },
+            "hconcat" : { "src" : {"ctype" : "vector_Mat"} },
+            "vconcat" : { "src" : {"ctype" : "vector_Mat"} },
+            "checkRange" : {"pos" : {"ctype" : "*"} },
+            "meanStdDev" : { "mean"   : {"ctype" : "vector_double"},
+                             "stddev" : {"ctype" : "vector_double"} },
+            "mixChannels" : { "dst" : {"attrib" : []} },
+            "rotate" : { "rotateCode" : {"ctype" : "RotateFlags"} },
+            "norm" : { "normType" : {"ctype" : "NormTypes"} },
+            "batchDistance" : { "normType" : {"ctype" : "NormTypes"} },
+            "normalize" : { "norm_type" : {"ctype" : "NormTypes"} },
+            "compare" : { "cmpop" : {"ctype" : "CmpTypes"} },
+            "copyMakeBorder" : { "borderType" : {"ctype" : "BorderTypes"} },
+            "borderInterpolate" : { "borderType" : {"ctype" : "BorderTypes"} },
+            "(void)divide:(double)scale src2:(Mat*)src2 dst:(Mat*)dst dtype:(int)dtype" : { "src2" : {"name" : "src"} }
+        }
+    },
+    "type_dict" : {
+        "Algorithm": {
+            "objc_type": "Algorithm*"
+        },
+        "CvSlice": {
+            "objc_type": "Range*"
+        },
+        "CvTermCriteria": {
+            "objc_type": "TermCriteria*",
+            "to_cpp": "%(n)s.nativeRef",
+            "from_cpp": "[TermCriteria fromNative:%(n)s]"
+        },
+        "DMatch": {
+            "objc_type": "DMatch*"
+        },
+        "KeyPoint": {
+            "objc_type": "KeyPoint*",
+            "to_cpp": "%(n)s.nativeRef",
+            "from_cpp": "[KeyPoint fromNative:%(n)s]"
+        },
+        "Mat": {
+            "objc_type": "Mat*",
+            "to_cpp": "%(n)s.nativeRef",
+            "from_cpp": "[Mat fromNative:%(n)s]",
+            "from_cpp_ptr": "[Mat fromNativePtr:%(n)s]"
+        },
+        "Moments": {
+            "objc_type": "Moments*",
+            "to_cpp": "%(n)s.nativeRef",
+            "from_cpp": "[Moments fromNative:%(n)s]"
+        },
+        "Point": {
+            "objc_type": "Point2i*",
+            "to_cpp": "%(n)s.nativeRef",
+            "from_cpp": "[Point2i fromNative:%(n)s]",
+            "swift_type": "Point"
+        },
+        "Point2i": {
+            "objc_type": "Point2i*",
+            "to_cpp": "%(n)s.nativeRef",
+            "from_cpp": "[Point2i fromNative:%(n)s]",
+            "swift_type": "Point"
+        },
+        "Point2f": {
+            "objc_type": "Point2f*",
+            "to_cpp": "%(n)s.nativeRef",
+            "from_cpp": "[Point2f fromNative:%(n)s]"
+        },
+        "Point2d": {
+            "objc_type": "Point2d*",
+            "to_cpp": "%(n)s.nativeRef",
+            "from_cpp": "[Point2d fromNative:%(n)s]"
+        },
+        "Point3d": {
+            "objc_type": "Point3d*",
+            "to_cpp": "%(n)s.nativeRef",
+            "from_cpp": "[Point3d fromNative:%(n)s]"
+        },
+        "Point3f": {
+            "objc_type": "Point3f*",
+            "to_cpp": "%(n)s.nativeRef",
+            "from_cpp": "[Point3f fromNative:%(n)s]"
+        },
+        "Point3": {
+            "objc_type": "Point3i*",
+            "to_cpp": "%(n)s.nativeRef",
+            "from_cpp": "[Point3i fromNative:%(n)s]"
+        },
+        "Range": {
+            "objc_type": "Range*"
+        },
+        "Rect": {
+            "objc_type": "Rect2i*",
+            "to_cpp": "%(n)s.nativeRef",
+            "from_cpp": "[Rect2i fromNative:%(n)s]",
+            "swift_type": "Rect"
+        },
+        "Rect2i": {
+            "objc_type": "Rect2i*",
+            "to_cpp": "%(n)s.nativeRef",
+            "from_cpp": "[Rect2i fromNative:%(n)s]",
+            "swift_type": "Rect"
+        },
+        "Rect2f": {
+            "objc_type": "Rect2f*",
+            "to_cpp": "%(n)s.nativeRef",
+            "from_cpp": "[Rect2f fromNative:%(n)s]"
+        },
+        "Rect2d": {
+            "objc_type": "Rect2d*",
+            "to_cpp": "%(n)s.nativeRef",
+            "from_cpp": "[Rect2d fromNative:%(n)s]"
+        },
+        "RotatedRect": {
+            "objc_type": "RotatedRect*",
+            "to_cpp": "%(n)s.nativeRef",
+            "from_cpp": "[RotatedRect fromNative:%(n)s]"
+        },
+        "Scalar": {
+            "objc_type": "Scalar*",
+            "to_cpp": "%(n)s.nativeRef",
+            "from_cpp": "[Scalar fromNative:%(n)s]"
+        },
+        "Size": {
+            "objc_type": "Size2i*",
+            "to_cpp": "%(n)s.nativeRef",
+            "from_cpp": "[Size2i fromNative:%(n)s]",
+            "swift_type": "Size"
+        },
+        "Size2i": {
+            "objc_type": "Size2i*",
+            "to_cpp": "%(n)s.nativeRef",
+            "from_cpp": "[Size2i fromNative:%(n)s]",
+            "swift_type": "Size"
+        },
+        "Size2f": {
+            "objc_type": "Size2f*",
+            "to_cpp": "%(n)s.nativeRef",
+            "from_cpp": "[Size2f fromNative:%(n)s]"
+        },
+        "Size2d": {
+            "objc_type": "Size2d*",
+            "to_cpp": "%(n)s.nativeRef",
+            "from_cpp": "[Size2d fromNative:%(n)s]"
+        },
+        "String": {
+            "objc_type": "NSString*",
+            "to_cpp": "cv::String(%(n)s.UTF8String)",
+            "from_cpp": "[NSString stringWithUTF8String:%(n)s.c_str()]",
+            "swift_type": "String"
+        },
+        "std::string": {
+            "objc_type": "NSString*",
+            "to_cpp": "std::string(%(n)s.UTF8String)",
+            "from_cpp": "[NSString stringWithUTF8String:%(n)s.c_str()]",
+            "swift_type": "String"
+        },
+        "string": {
+            "cast_to": "std::string",
+            "objc_type": "NSString*",
+            "to_cpp": "std::string(%(n)s.UTF8String)",
+            "from_cpp": "[NSString stringWithUTF8String:%(n)s.c_str()]",
+            "swift_type": "String"
+        },
+        "TermCriteria": {
+            "objc_type": "TermCriteria*",
+            "to_cpp": "%(n)s.nativeRef",
+            "from_cpp": "[TermCriteria fromNative:%(n)s]"
+        },
+        "Vec4f": {
+            "objc_type": "Float4*",
+            "to_cpp": "%(n)s.nativeRef",
+            "from_cpp": "[Float4 fromNative:%(n)s]"
+        },
+        "Vec4i": {
+            "objc_type": "Int4*",
+            "to_cpp": "%(n)s.nativeRef",
+            "from_cpp": "[Int4 fromNative:%(n)s]"
+        },
+        "Vec6f": {
+            "objc_type": "Float6*",
+            "to_cpp": "%(n)s.nativeRef",
+            "from_cpp": "[Float6 fromNative:%(n)s]"
+        },
+        "Vec2d": {
+            "objc_type": "Double2*",
+            "to_cpp": "%(n)s.nativeRef",
+            "from_cpp": "[Double2 fromNative:%(n)s]"
+        },
+        "Vec3d": {
+            "objc_type": "Double3*",
+            "to_cpp": "%(n)s.nativeRef",
+            "from_cpp": "[Double3 fromNative:%(n)s]"
+        },
+        "c_string": {
+            "objc_type": "NSString*",
+            "to_cpp": "%(n)s.UTF8String",
+            "from_cpp": "[NSString stringWithUTF8String:%(n)s]",
+            "swift_type": "String"
+        },
+        "vector_DMatch": {
+            "objc_type": "DMatch*",
+            "v_type": "DMatch"
+        },
+        "vector_KeyPoint": {
+            "objc_type": "KeyPoint*",
+            "v_type": "KeyPoint"
+        },
+        "vector_Mat": {
+            "objc_type": "Mat*",
+            "v_type": "Mat"
+        },
+        "vector_Point": {
+            "objc_type": "Point2i*",
+            "v_type": "Point2i",
+            "swift_type": "[Point]"
+        },
+        "vector_Point2f": {
+            "objc_type": "Point2f*",
+            "v_type": "Point2f"
+        },
+        "vector_Point2d": {
+            "objc_type": "Point2d*",
+            "v_type": "Point2d"
+        },
+        "vector_Point3": {
+            "objc_type": "Point3i*",
+            "v_type": "Point3i"
+        },
+        "vector_Point3f": {
+            "objc_type": "Point3f*",
+            "v_type": "Point3f"
+        },
+        "vector_Point3d": {
+            "objc_type": "Point3d*",
+            "v_type": "Point3d"
+        },
+        "vector_Rect": {
+            "objc_type": "Rect2i*",
+            "v_type": "Rect2i",
+            "swift_type": "[Rect]"
+        },
+        "vector_Rect2d": {
+            "objc_type": "Rect2d*",
+            "v_type": "Rect2d"
+        },
+        "vector_RotatedRect": {
+            "objc_type": "RotatedRect*",
+            "v_type": "RotatedRect"
+        },
+        "vector_String": {
+            "objc_type": "NSString*",
+            "v_type": "String",
+            "swift_type": "[String]"
+        },
+        "vector_string": {
+            "objc_type": "NSString*",
+            "v_type": "std::string",
+            "swift_type": "[String]"
+        },
+        "vector_Vec4f": {
+            "objc_type": "Float4*",
+            "v_type": "Vec4f"
+        },
+        "vector_Vec4i": {
+            "objc_type": "Int4*",
+            "v_type": "Vec4i"
+        },
+        "vector_Vec6f": {
+            "objc_type": "Float6*",
+            "v_type": "Vec6f"
+        },
+        "vector_char": {
+            "objc_type": "ByteVector*",
+            "to_cpp": "%(n)s.nativeRef",
+            "from_cpp": "[ByteVector fromNative:%(n)s]",
+            "cast_to": "std::vector<char>",
+            "primitive_vector": true,
+            "swift_type": "[Int8]"
+        },
+        "vector_double": {
+            "objc_type": "DoubleVector*",
+            "to_cpp": "%(n)s.nativeRef",
+            "from_cpp": "[DoubleVector fromNative:%(n)s]",
+            "cast_to": "std::vector<double>",
+            "primitive_vector": true,
+            "swift_type": "[Double]"
+        },
+        "vector_float": {
+            "objc_type": "FloatVector*",
+            "to_cpp": "%(n)s.nativeRef",
+            "from_cpp": "[FloatVector fromNative:%(n)s]",
+            "cast_to": "std::vector<float>",
+            "primitive_vector": true,
+            "swift_type": "[Float]"
+        },
+        "vector_int": {
+            "objc_type": "IntVector*",
+            "to_cpp": "%(n)s.nativeRef",
+            "from_cpp": "[IntVector fromNative:%(n)s]",
+            "cast_to": "std::vector<int>",
+            "primitive_vector": true,
+            "swift_type": "[Int32]"
+        },
+        "vector_uchar": {
+            "objc_type": "ByteVector*",
+            "to_cpp": "(std::vector<uchar>&)%(n)s.nativeRef",
+            "from_cpp": "[ByteVector fromNative:(std::vector<char>&)%(n)s]",
+            "cast_to": "std::vector<uchar>",
+            "primitive_vector": true,
+            "swift_type": "[UInt8]",
+            "unsigned": true
+        },
+        "vector_vector_Mat": {
+            "objc_type": "Mat*",
+            "v_v_type": "Mat"
+        },
+        "vector_vector_DMatch": {
+            "objc_type": "DMatch*",
+            "v_v_type": "DMatch"
+        },
+        "vector_vector_KeyPoint": {
+            "objc_type": "KeyPoint*",
+            "v_v_type": "KeyPoint"
+        },
+        "vector_vector_Point": {
+            "objc_type": "Point2i*",
+            "v_v_type": "Point2i",
+            "swift_type": "[[Point]]"
+        },
+        "vector_vector_Point2f": {
+            "objc_type": "Point2f*",
+            "v_v_type": "Point2f"
+        },
+        "vector_vector_Point3f": {
+            "objc_type": "Point3f*",
+            "v_v_type": "Point3f"
+        },
+        "vector_vector_char": {
+            "objc_type": "ByteVector*",
+            "v_type": "ByteVector",
+            "primitive_vector_vector": true,
+            "swift_type": "[[Int8]]"
+        },
+        "vector_vector_int": {
+            "objc_type": "IntVector*",
+            "v_type": "IntVector",
+            "primitive_vector_vector": true,
+            "swift_type": "[[Int32]]"
+        },
+        "vector_vector_float": {
+            "objc_type": "FloatVector*",
+            "v_type": "FloatVector",
+            "primitive_vector_vector": true,
+            "swift_type": "[[Float]]"
+        },
+        "vector_vector_double": {
+            "objc_type": "DoubleVector*",
+            "v_type": "DoubleVector",
+            "primitive_vector_vector": true,
+            "swift_type": "[[Double]]"
+        },
+        "ByteVector": {
+            "objc_type": "ByteVector*",
+            "cast_to": "std::vector<char>"
+        },
+        "IntVector": {
+            "objc_type": "IntVector*",
+            "cast_to": "std::vector<int>"
+        },
+        "FloatVector": {
+            "objc_type": "FloatVector*",
+            "cast_to": "std::vector<float>"
+        },
+        "DoubleVector": {
+            "objc_type": "DoubleVector*",
+            "cast_to": "std::vector<double>"
+        }
+    }
+}

@@ -17,6 +17,7 @@
 #include <memory>                   //std::shared_ptr
 #include <cstring>                  //std::memcpy
 #include <numeric>                  //std::accumulate
+#include <vector>
 #include <opencv2/gapi/util/throw.hpp>
 
 namespace cv { namespace gapi { namespace own {
@@ -123,11 +124,11 @@ namespace cv { namespace gapi { namespace own {
            data = ptr(roi.y, roi.x);
         }
 
-        Mat(Mat const& src) = default;
-        Mat(Mat&& src) = default;
+        Mat(Mat const& ) = default;
+        Mat(Mat&& ) = default;
 
-        Mat& operator=(Mat const& src) = default;
-        Mat& operator=(Mat&& src) = default;
+        Mat& operator=(Mat const& ) = default;
+        Mat& operator=(Mat&& ) = default;
 
         /** @brief Sets all or some of the array elements to the specified value.
         @param s Assigned scalar converted to the actual array type.
@@ -251,6 +252,18 @@ namespace cv { namespace gapi { namespace own {
             tmp.memory.reset(new uchar[CV_ELEM_SIZE(_type)*sz], [](uchar * p){delete[] p;});
             tmp.data = tmp.memory.get();
             *this = std::move(tmp);
+        }
+
+        /** @brief Creates a full copy of the matrix and the underlying data.
+
+        The method creates a full copy of the matrix. The original step[] is not taken into account.
+        So, the copy has a continuous buffer occupying total() * elemSize() bytes.
+         */
+        Mat clone() const
+        {
+            Mat m;
+            copyTo(m);
+            return m;
         }
 
         /** @brief Copies the matrix to another one.

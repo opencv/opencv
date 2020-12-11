@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2020 Intel Corporation
 
 
 #include "precomp.hpp"
@@ -86,15 +86,15 @@ namespace
                     return gim.metadata(nh).get<NodeKind>().k == NodeKind::ISLAND;
                 });
 
-            const auto out_rois = cv::gimpl::getCompileArg<cv::GFluidOutputRois>(args);
+            const auto out_rois = cv::gapi::getCompileArg<cv::GFluidOutputRois>(args);
             if (num_islands > 1 && out_rois.has_value())
                 cv::util::throw_error(std::logic_error("GFluidOutputRois feature supports only one-island graphs"));
 
             auto rois = out_rois.value_or(cv::GFluidOutputRois());
 
             auto graph_data = fluidExtractInputDataFromGraph(graph, nodes);
-            const auto parallel_out_rois = cv::gimpl::getCompileArg<cv::GFluidParallelOutputRois>(args);
-            const auto gpfor             = cv::gimpl::getCompileArg<cv::GFluidParallelFor>(args);
+            const auto parallel_out_rois = cv::gapi::getCompileArg<cv::GFluidParallelOutputRois>(args);
+            const auto gpfor             = cv::gapi::getCompileArg<cv::GFluidParallelFor>(args);
 
 #if !defined(GAPI_STANDALONE)
             auto default_pfor = [](std::size_t count, std::function<void(std::size_t)> f){
@@ -952,7 +952,7 @@ namespace
         using namespace cv::gimpl;
         GModel::Graph g(graph);
         GFluidModel fg(graph);
-        for (const auto node : g.nodes())
+        for (const auto& node : g.nodes())
         {
             if (g.metadata(node).get<NodeType>().t == NodeType::DATA)
             {
@@ -1236,47 +1236,32 @@ void cv::gimpl::GFluidExecutable::reshape(ade::Graph &g, const GCompileArgs &arg
     initLineConsumption(g);
     calcLatency(g);
     calcSkew(g);
-    const auto out_rois = cv::gimpl::getCompileArg<cv::GFluidOutputRois>(args).value_or(cv::GFluidOutputRois());
+    const auto out_rois = cv::gapi::getCompileArg<cv::GFluidOutputRois>(args).value_or(cv::GFluidOutputRois());
     makeReshape(out_rois.rois);
 }
 
 // FIXME: Document what it does
 void cv::gimpl::GFluidExecutable::bindInArg(const cv::gimpl::RcDesc &rc, const GRunArg &arg)
 {
-    switch (rc.shape)
-    {
-    case GShape::GMAT:    m_buffers[m_id_map.at(rc.id)].priv().bindTo(util::get<cv::Mat>(arg), true); break;
-    case GShape::GSCALAR: m_res.slot<cv::Scalar>()[rc.id] = util::get<cv::Scalar>(arg); break;
-    case GShape::GARRAY:  m_res.slot<cv::detail::VectorRef>()[rc.id] = util::get<cv::detail::VectorRef>(arg); break;
-    case GShape::GOPAQUE: m_res.slot<cv::detail::OpaqueRef>()[rc.id] = util::get<cv::detail::OpaqueRef>(arg); break;
+    magazine::bindInArg(m_res, rc, arg);
+    if (rc.shape == GShape::GMAT) {
+        auto& mat = m_res.slot<cv::Mat>()[rc.id];
+        // fluid::Buffer::bindTo() is not connected to magazine::bindIn/OutArg and unbind() calls,
+        // it's simply called each run() without any requirement to call some fluid-specific
+        // unbind() at the end of run()
+        m_buffers[m_id_map.at(rc.id)].priv().bindTo(mat, true);
     }
 }
 
 void cv::gimpl::GFluidExecutable::bindOutArg(const cv::gimpl::RcDesc &rc, const GRunArgP &arg)
 {
     // Only GMat is supported as return type
-    using T = GRunArgP;
-    switch (rc.shape)
-    {
-    case GShape::GMAT:
-        {
-            cv::GMatDesc desc = m_buffers[m_id_map.at(rc.id)].meta();
-            auto &bref = m_buffers[m_id_map.at(rc.id)].priv();
-
-            switch (arg.index()) {
-            // FIXME: See the bindInArg comment on Streaming-related changes
-            case T::index_of<cv::Mat*>(): {
-                auto &outMat = *util::get<cv::Mat*>(arg);
-                GAPI_Assert(outMat.data != nullptr);
-                GAPI_Assert(cv::descr_of(outMat) == desc && "Output argument was not preallocated as it should be ?");
-                bref.bindTo(outMat, false);
-            } break;
-            default: GAPI_Assert(false);
-            } // switch(arg.index())
-            break;
-        }
-    default: util::throw_error(std::logic_error("Unsupported return GShape type"));
+    if (rc.shape != GShape::GMAT) {
+        util::throw_error(std::logic_error("Unsupported return GShape type"));
     }
+    magazine::bindOutArg(m_res, rc, arg);
+    auto& mat = m_res.slot<cv::Mat>()[rc.id];
+    m_buffers[m_id_map.at(rc.id)].priv().bindTo(mat, false);
 }
 
 void cv::gimpl::GFluidExecutable::packArg(cv::GArg &in_arg, const cv::GArg &op_arg)
@@ -1382,6 +1367,10 @@ void cv::gimpl::GFluidExecutable::run(std::vector<InObj>  &input_objs,
             agent->doWork();
         }
     }
+
+    // In/Out args clean-up is mandatory now with RMat
+    for (auto &it : input_objs) magazine::unbind(m_res, it.first);
+    for (auto &it : output_objs) magazine::unbind(m_res, it.first);
 }
 
 cv::gimpl::GParallelFluidExecutable::GParallelFluidExecutable(const ade::Graph                      &g,
@@ -1451,7 +1440,7 @@ void GFluidBackendImpl::addMetaSensitiveBackendPasses(ade::ExecutionEngineSetupC
                 {
                     // Add FluidData to all data nodes inside island,
                     // set internal = true if node is not a slot in terms of higher-level GIslandModel
-                    for (const auto node : isl->contents())
+                    for (const auto& node : isl->contents())
                     {
                         if (g.metadata(node).get<NodeType>().t == NodeType::DATA &&
                             !fg.metadata(node).contains<FluidData>())

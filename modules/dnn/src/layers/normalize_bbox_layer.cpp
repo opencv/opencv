@@ -75,7 +75,8 @@ public:
             if (pnorm != 2)
                 return false;
 
-            if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && preferableTarget == DNN_TARGET_MYRIAD)
+            bool isMyriad = preferableTarget == DNN_TARGET_MYRIAD || preferableTarget == DNN_TARGET_HDDL;
+            if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && isMyriad)
                 return !acrossSpatial;
 
             return startAxis == 1;
@@ -354,7 +355,7 @@ public:
             weight = std::make_shared<ngraph::op::Constant>(
                                       ngraph::element::f32, ngraph::Shape(shape), blobs[0].data);
         }
-        auto mul = std::make_shared<ngraph::op::v1::Multiply>(norm, weight, ngraph::op::AutoBroadcastType::NUMPY);
+        auto mul = std::make_shared<ngraph::op::v0::Multiply>(norm, weight, ngraph::op::AutoBroadcastType::NUMPY);
         return Ptr<BackendNode>(new InfEngineNgraphNode(mul));
     }
 #endif  // HAVE_DNN_NGRAPH

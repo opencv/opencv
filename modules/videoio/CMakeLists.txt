@@ -10,7 +10,7 @@ if(NOT TARGET opencv_videoio_plugins)
   add_custom_target(opencv_videoio_plugins ALL)
 endif()
 
-ocv_add_module(videoio opencv_imgproc opencv_imgcodecs WRAP java python)
+ocv_add_module(videoio opencv_imgproc opencv_imgcodecs WRAP java objc python)
 
 set(videoio_hdrs ${CMAKE_CURRENT_LIST_DIR}/src/precomp.hpp)
 
@@ -136,6 +136,15 @@ endif()
 if(TARGET ocv.3rdparty.ximea)
   list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_ximea.cpp)
   list(APPEND tgts ocv.3rdparty.ximea)
+endif()
+
+if(TARGET ocv.3rdparty.ueye)
+  if("ueye" IN_LIST VIDEOIO_PLUGIN_LIST OR VIDEOIO_PLUGIN_LIST STREQUAL "all")
+    ocv_create_builtin_videoio_plugin("opencv_videoio_ueye" ocv.3rdparty.ueye "cap_ueye.cpp")
+  else()
+    list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_ueye.cpp)
+    list(APPEND tgts ocv.3rdparty.ueye)
+  endif()
 endif()
 
 if(TARGET ocv.3rdparty.ffmpeg)

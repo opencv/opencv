@@ -294,6 +294,23 @@ SavedIndexParams::SavedIndexParams(const String& _filename)
     p["filename"] = filename;
 }
 
+SearchParams::SearchParams( int checks, float eps, bool sorted, bool explore_all_trees )
+{
+    ::cvflann::IndexParams& p = get_params(*this);
+
+    // how many leafs to visit when searching for neighbours (-1 for unlimited)
+    p["checks"] = checks;
+    // search for eps-approximate neighbours (default: 0)
+    p["eps"] = eps;
+    // only for radius search, require neighbours sorted by distance (default: true)
+    p["sorted"] = sorted;
+    // if false, search stops at the tree reaching the number of  max checks (original behavior).
+    // When true, we do a descent in each tree and. Like before the alternative paths
+    // stored in the heap are not be processed further when max checks is reached.
+    p["explore_all_trees"] = explore_all_trees;
+}
+
+
 SearchParams::SearchParams( int checks, float eps, bool sorted )
 {
     ::cvflann::IndexParams& p = get_params(*this);
@@ -304,6 +321,10 @@ SearchParams::SearchParams( int checks, float eps, bool sorted )
     p["eps"] = eps;
     // only for radius search, require neighbours sorted by distance (default: true)
     p["sorted"] = sorted;
+    // if false, search stops at the tree reaching the number of  max checks (original behavior).
+    // When true, we do a descent in each tree and. Like before the alternative paths
+    // stored in the heap are not be processed further when max checks is reached.
+    p["explore_all_trees"] = false;
 }
 
 
@@ -345,6 +366,7 @@ typedef ::cvflann::Hamming<uchar> HammingDistance;
 #else
 typedef ::cvflann::HammingLUT HammingDistance;
 #endif
+typedef ::cvflann::DNAmming2<uchar> DNAmmingDistance;
 
 Index::Index()
 {
@@ -397,6 +419,9 @@ void Index::build(InputArray _data, const IndexParams& params, flann_distance_t 
         buildIndex< ::cvflann::L1<float> >(index, data, params);
         break;
 #if MINIFLANN_SUPPORT_EXOTIC_DISTANCE_TYPES
+    case FLANN_DIST_DNAMMING:
+        buildIndex< DNAmmingDistance >(index, data, params);
+        break;
     case FLANN_DIST_MAX:
         buildIndex< ::cvflann::MaxDistance<float> >(index, data, params);
         break;
@@ -452,6 +477,9 @@ void Index::release()
             deleteIndex< ::cvflann::L1<float> >(index);
             break;
 #if MINIFLANN_SUPPORT_EXOTIC_DISTANCE_TYPES
+        case FLANN_DIST_DNAMMING:
+            deleteIndex< DNAmmingDistance >(index);
+            break;
         case FLANN_DIST_MAX:
             deleteIndex< ::cvflann::MaxDistance<float> >(index);
             break;
@@ -573,7 +601,8 @@ void Index::knnSearch(InputArray _query, OutputArray _indices,
     CV_INSTRUMENT_REGION();
 
     Mat query = _query.getMat(), indices, dists;
-    int dtype = distType == FLANN_DIST_HAMMING ? CV_32S : CV_32F;
+    int dtype = (distType == FLANN_DIST_HAMMING)
+                || (distType == FLANN_DIST_DNAMMING) ? CV_32S : CV_32F;
 
     createIndicesDists( _indices, _dists, indices, dists, query.rows, knn, knn, dtype );
 
@@ -589,6 +618,9 @@ void Index::knnSearch(InputArray _query, OutputArray _indices,
         runKnnSearch< ::cvflann::L1<float> >(index, query, indices, dists, knn, params);
         break;
 #if MINIFLANN_SUPPORT_EXOTIC_DISTANCE_TYPES
+    case FLANN_DIST_DNAMMING:
+        runKnnSearch<DNAmmingDistance>(index, query, indices, dists, knn, params);
+        break;
     case FLANN_DIST_MAX:
         runKnnSearch< ::cvflann::MaxDistance<float> >(index, query, indices, dists, knn, params);
         break;
@@ -617,7 +649,8 @@ int Index::radiusSearch(InputArray _query, OutputArray _indices,
     CV_INSTRUMENT_REGION();
 
     Mat query = _query.getMat(), indices, dists;
-    int dtype = distType == FLANN_DIST_HAMMING ? CV_32S : CV_32F;
+    int dtype = (distType == FLANN_DIST_HAMMING)
+                || (distType == FLANN_DIST_DNAMMING) ? CV_32S : CV_32F;
     CV_Assert( maxResults > 0 );
     createIndicesDists( _indices, _dists, indices, dists, query.rows, maxResults, INT_MAX, dtype );
 
@@ -634,6 +667,8 @@ int Index::radiusSearch(InputArray _query, OutputArray _indices,
     case FLANN_DIST_L1:
         return runRadiusSearch< ::cvflann::L1<float> >(index, query, indices, dists, radius, params);
 #if MINIFLANN_SUPPORT_EXOTIC_DISTANCE_TYPES
+    case FLANN_DIST_DNAMMING:
+        return runRadiusSearch< DNAmmingDistance >(index, query, indices, dists, radius, params);
     case FLANN_DIST_MAX:
         return runRadiusSearch< ::cvflann::MaxDistance<float> >(index, query, indices, dists, radius, params);
     case FLANN_DIST_HIST_INTERSECT:
@@ -697,6 +732,9 @@ void Index::save(const String& filename) const
         saveIndex< ::cvflann::L1<float> >(this, index, fout);
         break;
 #if MINIFLANN_SUPPORT_EXOTIC_DISTANCE_TYPES
+    case FLANN_DIST_DNAMMING:
+        saveIndex< DNAmmingDistance >(this, index, fout);
+        break;
     case FLANN_DIST_MAX:
         saveIndex< ::cvflann::MaxDistance<float> >(this, index, fout);
         break;
@@ -778,6 +816,7 @@ bool Index::load(InputArray _data, const String& filename)
     distType = (flann_distance_t)idistType;
 
     if( !((distType == FLANN_DIST_HAMMING && featureType == CV_8U) ||
+          (distType == FLANN_DIST_DNAMMING && featureType == CV_8U) ||
           (distType != FLANN_DIST_HAMMING && featureType == CV_32F)) )
     {
         fprintf(stderr, "Reading FLANN index error: unsupported feature type %d for the index type %d\n", featureType, algo);
@@ -797,11 +836,14 @@ bool Index::load(InputArray _data, const String& filename)
         loadIndex< ::cvflann::L1<float> >(this, index, data, fin);
         break;
 #if MINIFLANN_SUPPORT_EXOTIC_DISTANCE_TYPES
+    case FLANN_DIST_DNAMMING:
+        loadIndex< DNAmmingDistance >(this, index, data, fin);
+        break;
     case FLANN_DIST_MAX:
         loadIndex< ::cvflann::MaxDistance<float> >(this, index, data, fin);
         break;
     case FLANN_DIST_HIST_INTERSECT:
-        loadIndex< ::cvflann::HistIntersectionDistance<float> >(index, data, fin);
+        loadIndex< ::cvflann::HistIntersectionDistance<float> >(this, index, data, fin);
         break;
     case FLANN_DIST_HELLINGER:
         loadIndex< ::cvflann::HellingerDistance<float> >(this, index, data, fin);

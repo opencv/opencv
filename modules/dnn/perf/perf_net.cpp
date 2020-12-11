@@ -111,6 +111,10 @@ PERF_TEST_P_(DNNTestNetwork, ENet)
     if ((backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target != DNN_TARGET_CPU) ||
         (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16))
         throw SkipTestException("");
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2021010000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        throw SkipTestException("");
+#endif
     processNet("dnn/Enet-model-best.net", "", "enet.yml",
             Mat(cv::Size(512, 256), CV_32FC3));
 }
@@ -126,7 +130,7 @@ PERF_TEST_P_(DNNTestNetwork, OpenFace)
     if (backend == DNN_BACKEND_HALIDE)
         throw SkipTestException("");
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2018050000)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && (target == DNN_TARGET_MYRIAD || target == DNN_TARGET_HDDL))
         throw SkipTestException("");
 #endif
     processNet("dnn/openface_nn4.small2.v1.t7", "", "",
@@ -168,7 +172,7 @@ PERF_TEST_P_(DNNTestNetwork, DenseNet_121)
 PERF_TEST_P_(DNNTestNetwork, OpenPose_pose_mpi_faster_4_stages)
 {
     if (backend == DNN_BACKEND_HALIDE ||
-        (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD))
+        (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && (target == DNN_TARGET_MYRIAD || target == DNN_TARGET_HDDL)))
         throw SkipTestException("");
     // The same .caffemodel but modified .prototxt
     // See https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/src/openpose/pose/poseParameters.cpp
@@ -196,10 +200,56 @@ PERF_TEST_P_(DNNTestNetwork, YOLOv3)
 {
     if (backend == DNN_BACKEND_HALIDE)
         throw SkipTestException("");
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2020040000)  // nGraph compilation failure
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL)
+        throw SkipTestException("Test is disabled in OpenVINO 2020.4");
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL_FP16)
+        throw SkipTestException("Test is disabled in OpenVINO 2020.4");
+#endif
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021010000)  // nGraph compilation failure
+    if (target == DNN_TARGET_MYRIAD)
+        throw SkipTestException("");
+#endif
+
     Mat sample = imread(findDataFile("dnn/dog416.png"));
+    cvtColor(sample, sample, COLOR_BGR2RGB);
     Mat inp;
-    sample.convertTo(inp, CV_32FC3);
-    processNet("dnn/yolov3.weights", "dnn/yolov3.cfg", "", inp / 255);
+    sample.convertTo(inp, CV_32FC3, 1.0f / 255, 0);
+    processNet("dnn/yolov3.weights", "dnn/yolov3.cfg", "", inp);
+}
+
+PERF_TEST_P_(DNNTestNetwork, YOLOv4)
+{
+    if (backend == DNN_BACKEND_HALIDE)
+        throw SkipTestException("");
+    if (target == DNN_TARGET_MYRIAD)  // not enough resources
+        throw SkipTestException("");
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2020040000)  // nGraph compilation failure
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL)
+        throw SkipTestException("Test is disabled in OpenVINO 2020.4");
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL_FP16)
+        throw SkipTestException("Test is disabled in OpenVINO 2020.4");
+#endif
+    Mat sample = imread(findDataFile("dnn/dog416.png"));
+    cvtColor(sample, sample, COLOR_BGR2RGB);
+    Mat inp;
+    sample.convertTo(inp, CV_32FC3, 1.0f / 255, 0);
+    processNet("dnn/yolov4.weights", "dnn/yolov4.cfg", "", inp);
+}
+
+PERF_TEST_P_(DNNTestNetwork, YOLOv4_tiny)
+{
+    if (backend == DNN_BACKEND_HALIDE)
+        throw SkipTestException("");
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021010000)  // nGraph compilation failure
+    if (target == DNN_TARGET_MYRIAD)
+        throw SkipTestException("");
+#endif
+    Mat sample = imread(findDataFile("dnn/dog416.png"));
+    cvtColor(sample, sample, COLOR_BGR2RGB);
+    Mat inp;
+    sample.convertTo(inp, CV_32FC3, 1.0f / 255, 0);
+    processNet("dnn/yolov4-tiny.weights", "dnn/yolov4-tiny.cfg", "", inp);
 }
 
 PERF_TEST_P_(DNNTestNetwork, EAST_text_detection)
@@ -226,6 +276,10 @@ PERF_TEST_P_(DNNTestNetwork, Inception_v2_Faster_RCNN)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         throw SkipTestException("Test is disabled in OpenVINO 2019R2");
 #endif
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021010000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
+        throw SkipTestException("Test is disabled in OpenVINO 2021.1 / MYRIAD");
+#endif
     if (backend == DNN_BACKEND_HALIDE ||
         (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target != DNN_TARGET_CPU) ||
         (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16))
@@ -233,6 +287,17 @@ PERF_TEST_P_(DNNTestNetwork, Inception_v2_Faster_RCNN)
     processNet("dnn/faster_rcnn_inception_v2_coco_2018_01_28.pb",
                "dnn/faster_rcnn_inception_v2_coco_2018_01_28.pbtxt", "",
                Mat(cv::Size(800, 600), CV_32FC3));
+}
+
+PERF_TEST_P_(DNNTestNetwork, EfficientDet)
+{
+    if (backend == DNN_BACKEND_HALIDE || target != DNN_TARGET_CPU)
+        throw SkipTestException("");
+    Mat sample = imread(findDataFile("dnn/dog416.png"));
+    resize(sample, sample, Size(512, 512));
+    Mat inp;
+    sample.convertTo(inp, CV_32FC3, 1.0/255);
+    processNet("dnn/efficientdet-d0.pb", "dnn/efficientdet-d0.pbtxt", "", inp);
 }
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, DNNTestNetwork, dnnBackendsAndTargets());

@@ -1,6 +1,17 @@
 Image Watch: viewing in-memory images in the Visual Studio debugger {#tutorial_windows_visual_studio_image_watch}
 ===================================================================
 
+@prev_tutorial{tutorial_windows_visual_studio_opencv}
+@next_tutorial{tutorial_java_dev_intro}
+
+|    |    |
+| -: | :- |
+| Original author | Wolf Kienzle |
+| Compatibility | OpenCV >= 3.0 |
+
+@warning
+This tutorial can contain obsolete information.
+
 Image Watch is a plug-in for Microsoft Visual Studio that lets you to visualize in-memory images
 (*cv::Mat* or *IplImage_* objects, for example) while debugging an application. This can be helpful
 for tracking down bugs, or for simply understanding what a given piece of code is doing.
@@ -18,8 +29,8 @@ This tutorial assumes that you have the following available:
 Installation
 ------------
 
-[Download](http://go.microsoft.com/fwlink/?LinkId=285460) the Image Watch installer. The installer
-comes in a single file with extension .vsix (*Visual Studio Extension*). To launch it, simply
+Download the Image Watch installer. ([Visual Studio 2019](https://marketplace.visualstudio.com/items?itemName=VisualCPPTeam.ImageWatch2019) | [Visual Studio 2017](https://marketplace.visualstudio.com/items?itemName=VisualCPPTeam.ImageWatch2017) | [Visual Studio 2012, 2013, 2015](https://marketplace.visualstudio.com/items?itemName=VisualCPPTeam.ImageWatch))
+The installer comes in a single file with extension .vsix (*Visual Studio Extension*). To launch it, simply
 double-click on the .vsix file in Windows Explorer. When the installer has finished, make sure to
 restart Visual Studio to complete the installation.
 

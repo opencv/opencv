@@ -153,9 +153,8 @@ void CV_ChessboardSubpixelTest::run( int )
 
         vector<Point2f> test_corners;
         bool result = findChessboardCorners(chessboard_image, pattern_size, test_corners, 15);
-        if(!result)
+        if (!result && cvtest::debugLevel > 0)
         {
-#if 0
             ts->printf(cvtest::TS::LOG, "Warning: chessboard was not detected! Writing image to test.png\n");
             ts->printf(cvtest::TS::LOG, "Size = %d, %d\n", pattern_size.width, pattern_size.height);
             ts->printf(cvtest::TS::LOG, "Intrinsic params: fx = %f, fy = %f, cx = %f, cy = %f\n",
@@ -167,7 +166,9 @@ void CV_ChessboardSubpixelTest::run( int )
                        distortion_coeffs_.at<double>(0, 4));
 
             imwrite("test.png", chessboard_image);
-#endif
+        }
+        if (!result)
+        {
             continue;
         }
 

@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018-2019 Intel Corporation
+// Copyright (C) 2018-2020 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_GKERNEL_HPP
@@ -26,7 +26,16 @@
 
 namespace cv {
 
-using GShapes = std::vector<GShape>;
+struct GTypeInfo
+{
+    GShape                 shape;
+    cv::detail::OpaqueKind kind;
+};
+
+using GShapes    = std::vector<GShape>;
+using GKinds     = std::vector<cv::detail::OpaqueKind>;
+using GCtors     = std::vector<detail::HostCtor>;
+using GTypesInfo = std::vector<GTypeInfo>;
 
 // GKernel describes kernel API to the system
 // FIXME: add attributes of a kernel, (e.g. number and types
@@ -35,16 +44,21 @@ struct GAPI_EXPORTS GKernel
 {
     using M = std::function<GMetaArgs(const GMetaArgs &, const GArgs &)>;
 
-    const std::string name;       // kernel ID, defined by its API (signature)
-    const std::string tag;        // some (implementation-specific) tag
-    const M           outMeta;    // generic adaptor to API::outMeta(...)
-    const GShapes     outShapes;  // types (shapes) kernel's outputs
+    std::string name;       // kernel ID, defined by its API (signature)
+    std::string tag;        // some (implementation-specific) tag
+    M           outMeta;    // generic adaptor to API::outMeta(...)
+    GShapes     outShapes;  // types (shapes) kernel's outputs
+    GKinds      inKinds;    // kinds of kernel's inputs (fixme: below)
+    GCtors      outCtors;   // captured constructors for template output types
 };
+// TODO: It's questionable if inKinds should really be here. Instead,
+// this information could come from meta.
 
 // GKernelImpl describes particular kernel implementation to the system
 struct GAPI_EXPORTS GKernelImpl
 {
     util::any         opaque;    // backend-specific opaque info
+    GKernel::M        outMeta;   // for deserialized graphs, the outMeta is taken here
 };
 
 template<typename, typename> class GKernelTypeM;
@@ -55,30 +69,27 @@ namespace detail
     // yield() is used in graph construction time as a generic method to obtain
     // lazy "return value" of G-API operations
     //
-    namespace
+    template<typename T> struct Yield;
+    template<> struct Yield<cv::GMat>
     {
-        template<typename T> struct Yield;
-        template<> struct Yield<cv::GMat>
-        {
-            static inline cv::GMat yield(cv::GCall &call, int i) { return call.yield(i); }
-        };
-        template<> struct Yield<cv::GMatP>
-        {
-            static inline cv::GMatP yield(cv::GCall &call, int i) { return call.yieldP(i); }
-        };
-        template<> struct Yield<cv::GScalar>
-        {
-            static inline cv::GScalar yield(cv::GCall &call, int i) { return call.yieldScalar(i); }
-        };
-        template<typename U> struct Yield<cv::GArray<U> >
-        {
-            static inline cv::GArray<U> yield(cv::GCall &call, int i) { return call.yieldArray<U>(i); }
-        };
-        template<typename U> struct Yield<cv::GOpaque<U> >
-        {
-            static inline cv::GOpaque<U> yield(cv::GCall &call, int i) { return call.yieldOpaque<U>(i); }
-        };
-    } // anonymous namespace
+        static inline cv::GMat yield(cv::GCall &call, int i) { return call.yield(i); }
+    };
+    template<> struct Yield<cv::GMatP>
+    {
+        static inline cv::GMatP yield(cv::GCall &call, int i) { return call.yieldP(i); }
+    };
+    template<> struct Yield<cv::GScalar>
+    {
+        static inline cv::GScalar yield(cv::GCall &call, int i) { return call.yieldScalar(i); }
+    };
+    template<typename U> struct Yield<cv::GArray<U> >
+    {
+        static inline cv::GArray<U> yield(cv::GCall &call, int i) { return call.yieldArray<U>(i); }
+    };
+    template<typename U> struct Yield<cv::GOpaque<U> >
+    {
+        static inline cv::GOpaque<U> yield(cv::GCall &call, int i) { return call.yieldOpaque<U>(i); }
+    };
 
     ////////////////////////////////////////////////////////////////////////////
     // Helper classes which brings outputMeta() marshalling to kernel
@@ -90,11 +101,12 @@ namespace detail
     template<typename T> struct MetaType;
     template<> struct MetaType<cv::GMat>    { using type = GMatDesc; };
     template<> struct MetaType<cv::GMatP>   { using type = GMatDesc; };
-    template<> struct MetaType<cv::GFrame>  { using type = GMatDesc; };
+    template<> struct MetaType<cv::GFrame>  { using type = GFrameDesc; };
     template<> struct MetaType<cv::GScalar> { using type = GScalarDesc; };
     template<typename U> struct MetaType<cv::GArray<U> >  { using type = GArrayDesc; };
     template<typename U> struct MetaType<cv::GOpaque<U> > { using type = GOpaqueDesc; };
     template<typename T> struct MetaType    { using type = T; }; // opaque args passed as-is
+    // FIXME: Move it to type traits?
 
     // 2. Hacky test based on MetaType to check if we operate on G-* type or not
     template<typename T> using is_nongapi_type = std::is_same<T, typename MetaType<T>::type>;
@@ -202,10 +214,16 @@ public:
     using InArgs  = std::tuple<Args...>;
     using OutArgs = std::tuple<R...>;
 
+    // TODO: Args&&... here?
     static std::tuple<R...> on(Args... args)
     {
-        cv::GCall call(GKernel{K::id(), K::tag(), &K::getOutMeta, {detail::GTypeTraits<R>::shape...}});
-        call.pass(args...);
+        cv::GCall call(GKernel{ K::id()
+                              , K::tag()
+                              , &K::getOutMeta
+                              , {detail::GTypeTraits<R>::shape...}
+                              , {detail::GTypeTraits<Args>::op_kind...}
+                              , {detail::GObtainCtor<R>::get()...}});
+        call.pass(args...); // TODO: std::forward() here?
         return yield(call, typename detail::MkSeq<sizeof...(R)>::type());
     }
 };
@@ -225,7 +243,12 @@ public:
 
     static R on(Args... args)
     {
-        cv::GCall call(GKernel{K::id(), K::tag(), &K::getOutMeta, {detail::GTypeTraits<R>::shape}});
+        cv::GCall call(GKernel{ K::id()
+                              , K::tag()
+                              , &K::getOutMeta
+                              , {detail::GTypeTraits<R>::shape}
+                              , {detail::GTypeTraits<Args>::op_kind...}
+                              , {detail::GObtainCtor<R>::get()}});
         call.pass(args...);
         return detail::Yield<R>::yield(call, 0);
     }
@@ -431,7 +454,7 @@ namespace gapi {
      * Finally, two kernel packages can be combined into a new one
      * with function cv::gapi::combine().
      */
-    class GAPI_EXPORTS GKernelPackage
+    class GAPI_EXPORTS_W_SIMPLE GKernelPackage
     {
 
         /// @private
@@ -445,23 +468,18 @@ namespace gapi {
 
     protected:
         /// @private
-        // Check if package contains ANY implementation of a kernel API
-        // by API textual id.
-        bool includesAPI(const std::string &id) const;
-
-        /// @private
         // Remove ALL implementations of the given API (identified by ID)
         void removeAPI(const std::string &id);
 
         /// @private
         // Partial include() specialization for kernels
         template <typename KImpl>
-        typename std::enable_if<(std::is_base_of<detail::KernelTag, KImpl>::value), void>::type
+        typename std::enable_if<(std::is_base_of<cv::detail::KernelTag, KImpl>::value), void>::type
         includeHelper()
         {
             auto backend     = KImpl::backend();
             auto kernel_id   = KImpl::API::id();
-            auto kernel_impl = GKernelImpl{KImpl::kernel()};
+            auto kernel_impl = GKernelImpl{KImpl::kernel(), &KImpl::API::getOutMeta};
             removeAPI(kernel_id);
 
             m_id_kernels[kernel_id] = std::make_pair(backend, kernel_impl);
@@ -470,7 +488,7 @@ namespace gapi {
         /// @private
         // Partial include() specialization for transformations
         template <typename TImpl>
-        typename std::enable_if<(std::is_base_of<detail::TransformTag, TImpl>::value), void>::type
+        typename std::enable_if<(std::is_base_of<cv::detail::TransformTag, TImpl>::value), void>::type
         includeHelper()
         {
             m_transformations.emplace_back(TImpl::transformation());
@@ -509,7 +527,7 @@ namespace gapi {
         template<typename KImpl>
         bool includes() const
         {
-            static_assert(std::is_base_of<detail::KernelTag, KImpl>::value,
+            static_assert(std::is_base_of<cv::detail::KernelTag, KImpl>::value,
                           "includes() can be applied to kernels only");
 
             auto kernel_it = m_id_kernels.find(KImpl::API::id());
@@ -550,6 +568,9 @@ namespace gapi {
         {
             return includesAPI(KAPI::id());
         }
+
+        /// @private
+        bool includesAPI(const std::string &id) const;
 
         // FIXME: The below comment is wrong, and who needs this function?
         /**
@@ -624,7 +645,7 @@ namespace gapi {
     {
         // FIXME: currently there is no check that transformations' signatures are unique
         // and won't be any intersection in graph compilation stage
-        static_assert(detail::all_unique<typename KK::API...>::value, "Kernels API must be unique");
+        static_assert(cv::detail::all_unique<typename KK::API...>::value, "Kernels API must be unique");
 
         GKernelPackage pkg;
 
@@ -698,6 +719,7 @@ namespace detail
         static const char* tag() { return "gapi.use_only"; }
     };
 } // namespace detail
+
 } // namespace cv
 
 #endif // OPENCV_GAPI_GKERNEL_HPP

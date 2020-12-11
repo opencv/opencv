@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2020 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_GMODEL_HPP
@@ -26,6 +26,7 @@
 
 #include <opencv2/gapi/garg.hpp>
 #include <opencv2/gapi/gkernel.hpp>
+#include <opencv2/gapi/gcommon.hpp>
 
 #include "compiler/gobjref.hpp"
 #include "compiler/gislandmodel.hpp"
@@ -60,6 +61,7 @@ struct Op
     std::vector<RcDesc> outs; // TODO: Introduce a new type for resource references
 
     cv::gapi::GBackend  backend;
+    cv::util::any params; // Operation specific information
 };
 
 struct Data
@@ -71,9 +73,10 @@ struct Data
     int      rc;
     GMetaArg meta;
     HostCtor ctor;  // T-specific helper to deal with unknown types in our code
+    cv::detail::OpaqueKind kind; // FIXME: is needed to store GArray/GOpaque type
     // FIXME: Why rc+shape+meta is not represented as RcDesc here?
 
-    enum class Storage
+    enum class Storage: int
     {
         INTERNAL,   // data object is not listed in GComputation protocol
         INPUT,      // data object is listed in GComputation protocol as Input
@@ -138,7 +141,9 @@ class DataObjectCounter
 public:
     static const char* name() { return "DataObjectCounter"; }
     int GetNewId(GShape shape) { return m_next_data_id[shape]++; }
-private:
+
+    // NB: private!!! but used in the serialization
+    // couldn't get the `friend` stuff working correctly -- DM
     std::unordered_map<cv::GShape, int> m_next_data_id;
 };
 
@@ -165,6 +170,19 @@ struct Streaming
 {
     static const char *name() { return "StreamingFlag"; }
 };
+
+
+// This is a graph-global flag indicating this graph is compiled
+// after the deserialization. Some bits of information may be
+// unavailable (mainly callbacks) so let sensitive passes obtain
+// the required information in their special way.
+//
+// FIXME: Probably a better design can be suggested.
+struct Deserialized
+{
+    static const char *name() { return "DeserializedFlag"; }
+};
+
 
 // Backend-specific inference parameters for a neural network.
 // Since these parameters are set on compilation stage (not
@@ -193,6 +211,58 @@ struct CustomMetaFunction
     CM customOutMeta;
 };
 
+// This is a general flag indicating that this GModel has intrinsics.
+// In the beginning of the compilation, it is a quick check to
+// indicate there are intrinsics.
+//
+// In the end of the compilation, having this flag is fatal -- all
+// intrinsics must be resolved.
+struct HasIntrinsics
+{
+    static const char *name() { return "HasIntrinsicsFlag"; }
+};
+
+// This is a special tag for both DATA and OP nodes indicating
+// which desynchronized path this node belongs to.
+// This tag is set by a special complex pass intrinDesync/accept.
+struct DesyncPath
+{
+    static const char *name() { return "DesynchronizedPath"; }
+
+    // A zero-based index of the desynchronized path in the graph.
+    // Set by intrinDesync() compiler pass
+    int index;
+};
+
+// This is a special tag for graph Edges indicating that this
+// particular edge starts a desynchronized path in the graph.
+// At the execution stage, the data coming "through" these edges
+// (virtually, of course, since our GModel edges never transfer the
+// actual data, they just represent these transfers) is desynchronized
+// from the rest of the pipeline, i.e. may be "lost" (stay unconsumed
+// and then overwritten with some new data when streaming).
+struct DesyncEdge
+{
+    static const char *name() { return "DesynchronizedEdge"; }
+
+    // A zero-based index of the desynchronized path in the graph.
+    // Set by intrinDesync/apply() compiler pass
+    int index;
+};
+
+// This flag marks the island graph as "desynchronized"
+struct Desynchronized
+{
+    static const char *name() { return "Desynchronized"; }
+};
+
+// Reference to compile args of the computation
+struct CompileArgs
+{
+    static const char *name() { return "CompileArgs"; }
+    GCompileArgs args;
+};
+
 namespace GModel
 {
     using Graph = ade::TypedGraph
@@ -213,6 +283,12 @@ namespace GModel
         , ActiveBackends
         , CustomMetaFunction
         , Streaming
+        , Deserialized
+        , HasIntrinsics
+        , DesyncPath
+        , DesyncEdge
+        , Desynchronized
+        , CompileArgs
         >;
 
     // FIXME: How to define it based on GModel???
@@ -234,6 +310,12 @@ namespace GModel
         , ActiveBackends
         , CustomMetaFunction
         , Streaming
+        , Deserialized
+        , HasIntrinsics
+        , DesyncPath
+        , DesyncEdge
+        , Desynchronized
+        , CompileArgs
         >;
 
     // FIXME:
@@ -243,7 +325,11 @@ namespace GModel
     // GAPI_EXPORTS for tests
     GAPI_EXPORTS void init (Graph& g);
 
-    GAPI_EXPORTS ade::NodeHandle mkOpNode(Graph &g, const GKernel &k, const std::vector<GArg>& args, const std::string &island);
+    GAPI_EXPORTS ade::NodeHandle mkOpNode(Graph &g,
+                                          const GKernel &k,
+                                          const std::vector<GArg>& args,
+                                          const cv::util::any& params,
+                                          const std::string &island);
     // Isn't used by the framework or default backends, required for external backend development
     GAPI_EXPORTS ade::NodeHandle mkDataNode(Graph &g, const GShape shape);
 
@@ -254,11 +340,11 @@ namespace GModel
     // Clears logged messages of a node.
     GAPI_EXPORTS void log_clear(Graph &g, ade::NodeHandle node);
 
-    GAPI_EXPORTS void linkIn   (Graph &g, ade::NodeHandle op,     ade::NodeHandle obj, std::size_t in_port);
-    GAPI_EXPORTS void linkOut  (Graph &g, ade::NodeHandle op,     ade::NodeHandle obj, std::size_t out_port);
+    GAPI_EXPORTS ade::EdgeHandle linkIn   (Graph &g, ade::NodeHandle op,     ade::NodeHandle obj, std::size_t in_port);
+    GAPI_EXPORTS ade::EdgeHandle linkOut  (Graph &g, ade::NodeHandle op,     ade::NodeHandle obj, std::size_t out_port);
 
-    GAPI_EXPORTS void redirectReaders(Graph &g, ade::NodeHandle from, ade::NodeHandle to);
-    GAPI_EXPORTS void redirectWriter (Graph &g, ade::NodeHandle from, ade::NodeHandle to);
+    GAPI_EXPORTS std::vector<ade::EdgeHandle> redirectReaders(Graph &g, ade::NodeHandle from, ade::NodeHandle to);
+    GAPI_EXPORTS             ade::EdgeHandle  redirectWriter (Graph &g, ade::NodeHandle from, ade::NodeHandle to);
 
     GAPI_EXPORTS std::vector<ade::NodeHandle> orderedInputs (const ConstGraph &g, ade::NodeHandle nh);
     GAPI_EXPORTS std::vector<ade::NodeHandle> orderedOutputs(const ConstGraph &g, ade::NodeHandle nh);

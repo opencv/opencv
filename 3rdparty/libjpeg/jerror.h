@@ -2,7 +2,7 @@
  * jerror.h
  *
  * Copyright (C) 1994-1997, Thomas G. Lane.
- * Modified 1997-2012 by Guido Vollbeding.
+ * Modified 1997-2018 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -84,7 +84,7 @@ JMESSAGE(JERR_EOI_EXPECTED, "Didn't expect more than one scan")
 JMESSAGE(JERR_FILE_READ, "Input file read error")
 JMESSAGE(JERR_FILE_WRITE, "Output file write error --- out of disk space?")
 JMESSAGE(JERR_FRACT_SAMPLE_NOTIMPL, "Fractional sampling not implemented yet")
-JMESSAGE(JERR_HUFF_CLEN_OVERFLOW, "Huffman code size table overflow")
+JMESSAGE(JERR_HUFF_CLEN_OUTOFBOUNDS, "Huffman code size table out of bounds")
 JMESSAGE(JERR_HUFF_MISSING_CODE, "Missing Huffman code table entry")
 JMESSAGE(JERR_IMAGE_TOO_BIG, "Maximum supported image dimension is %u pixels")
 JMESSAGE(JERR_INPUT_EMPTY, "Empty input file")

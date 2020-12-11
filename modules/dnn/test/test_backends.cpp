@@ -321,6 +321,7 @@ TEST_P(DNNTestNetwork, SSD_VGG16)
     else if (target == DNN_TARGET_CUDA_FP16)
     {
         scoreDiff = 0.03;
+        iouDiff = 0.13;
     }
 
     processNet("dnn/VGG_ILSVRC2016_SSD_300x300_iter_440000.caffemodel",
@@ -462,6 +463,8 @@ TEST_P(DNNTestNetwork, DenseNet_121)
     {
         l1 = 2e-2;
         lInf = 9e-2;
+        if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+            lInf = 0.1f;
     }
     else if (target == DNN_TARGET_MYRIAD)
     {
@@ -509,7 +512,7 @@ TEST_P(DNNTestNetwork, FastNeuralStyle_eccv16)
     else if (target == DNN_TARGET_CUDA_FP16)
     {
         l1 = 0.3;
-        lInf = 7.2;
+        lInf = 7.6;
     }
     processNet("dnn/fast_neural_style_eccv16_starry_night.t7", "", inp, "", "", l1, lInf);
 #if defined(HAVE_INF_ENGINE) && INF_ENGINE_VER_MAJOR_GE(2019010000)

@@ -98,15 +98,6 @@ macro(ocv_add_dependencies full_modname)
   endforeach()
   unset(__depsvar)
 
-  # hack for python
-  set(__python_idx)
-  list(FIND OPENCV_MODULE_${full_modname}_WRAPPERS "python" __python_idx)
-  if (NOT __python_idx EQUAL -1)
-    list(REMOVE_ITEM OPENCV_MODULE_${full_modname}_WRAPPERS "python")
-    list(APPEND OPENCV_MODULE_${full_modname}_WRAPPERS "python_bindings_generator" "python2" "python3")
-  endif()
-  unset(__python_idx)
-
   ocv_list_unique(OPENCV_MODULE_${full_modname}_REQ_DEPS)
   ocv_list_unique(OPENCV_MODULE_${full_modname}_OPT_DEPS)
   ocv_list_unique(OPENCV_MODULE_${full_modname}_PRIVATE_REQ_DEPS)
@@ -209,11 +200,6 @@ macro(ocv_add_module _name)
     else()
       set(OPENCV_MODULES_DISABLED_USER ${OPENCV_MODULES_DISABLED_USER} "${the_module}" CACHE INTERNAL "List of OpenCV modules explicitly disabled by user")
     endif()
-
-    # add reverse wrapper dependencies
-    foreach (wrapper ${OPENCV_MODULE_${the_module}_WRAPPERS})
-      ocv_add_dependencies(opencv_${wrapper} OPTIONAL ${the_module})
-    endforeach()
 
     # stop processing of current file
     ocv_cmake_hook(POST_ADD_MODULE)
@@ -500,6 +486,21 @@ function(__ocv_resolve_dependencies)
       endif()
     endforeach()
   endif()
+
+  # add reverse wrapper dependencies (BINDINDS)
+  foreach(the_module ${OPENCV_MODULES_BUILD})
+    foreach (wrapper ${OPENCV_MODULE_${the_module}_WRAPPERS})
+      if(wrapper STREQUAL "python")  # hack for python (BINDINDS)
+        ocv_add_dependencies(opencv_python2 OPTIONAL ${the_module})
+        ocv_add_dependencies(opencv_python3 OPTIONAL ${the_module})
+      else()
+        ocv_add_dependencies(opencv_${wrapper} OPTIONAL ${the_module})
+      endif()
+      if(DEFINED OPENCV_MODULE_opencv_${wrapper}_bindings_generator_CLASS)
+        ocv_add_dependencies(opencv_${wrapper}_bindings_generator OPTIONAL ${the_module})
+      endif()
+    endforeach()
+  endforeach()
 
   # disable MODULES with unresolved dependencies
   set(has_changes ON)
@@ -788,6 +789,7 @@ macro(ocv_glob_module_sources)
   if (APPLE)
     file(GLOB_RECURSE lib_srcs_apple
          "${CMAKE_CURRENT_LIST_DIR}/src/*.mm"
+         "${CMAKE_CURRENT_LIST_DIR}/src/*.swift"
     )
     list(APPEND lib_srcs ${lib_srcs_apple})
   endif()
@@ -1363,8 +1365,8 @@ function(ocv_add_samples)
           add_dependencies(${the_target} opencv_videoio_plugins)
         endif()
 
-        if(WIN32)
-          install(TARGETS ${the_target} RUNTIME DESTINATION "samples/${module_id}" COMPONENT samples)
+        if(INSTALL_BIN_EXAMPLES)
+          install(TARGETS ${the_target} RUNTIME DESTINATION "${OPENCV_SAMPLES_BIN_INSTALL_PATH}/${module_id}" COMPONENT samples)
         endif()
       endforeach()
     endif()

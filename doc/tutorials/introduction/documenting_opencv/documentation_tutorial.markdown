@@ -1,6 +1,14 @@
 Writing documentation for OpenCV {#tutorial_documentation}
 ================================
 
+@prev_tutorial{tutorial_display_image}
+@next_tutorial{tutorial_transition_guide}
+
+|    |    |
+| -: | :- |
+| Original author | Maksim Shabunin |
+| Compatibility | OpenCV >= 3.0 |
+
 @tableofcontents
 
 Doxygen overview {#tutorial_documentation_overview}
@@ -47,6 +55,9 @@ Generate documentation {#tutorial_documentation_generate}
     @code{.sh}
     make check_pylint
     @endcode
+@note [Pylint](https://www.pylint.org/#install) must be installed before running cmake to be
+able to test Python code. You can install using your system's package manager, or with pip:
+@code{.sh} pip install pylint @endcode
 
 Quick start {#tutorial_documentation_quick_start}
 ===========
@@ -656,20 +667,9 @@ Write the tutorial {#tutorial_documentation_steps_tutorial}
 6.  Add newly created tutorial to the corresponding table of contents. Just find
     <em>"table_of_content_*.markdown"</em> file with the needed table and place new record in it
     similar to existing ones.
-    @verbatim
--   @subpage tutorial_windows_visual_studio_image_watch
 
-    _Languages:_ C++, Java, Python
-
-    _Compatibility:_ \>= OpenCV 2.4
-
-    _Author:_ Wolf Kienzle
-
-    You will learn how to visualize OpenCV matrices and images within Visual Studio 2012.
-    @endverbatim
-    As you can see it is just a list item with special _subpage_ command which marks your page as a
-    child and places it into the existing pages hierarchy. Add compatibility information,
-    authors list and short description. Also note the list item indent, empty lines between
+    It is simply a list item with special _subpage_ command which marks your page as a
+    child and places it into the existing pages hierarchy. Also note the list item indent, empty lines between
     paragraphs and special _italic_ markers.
 
 7.  Generate doxygen documentation and verify results.
@@ -690,6 +690,6 @@ References {#tutorial_documentation_refs}
 [Documenting basics]: http://www.doxygen.nl/manual/docblocks.html
 [Markdown support]: http://www.doxygen.nl/manual/markdown.html
 [Formulas support]: http://www.doxygen.nl/manual/formulas.html
-[Supported formula commands]: http://docs.mathjax.org/en/latest/tex.html#supported-latex-commands
+[Supported formula commands]: http://docs.mathjax.org/en/latest/input/tex/macros/index.html
 [Command reference]: http://www.doxygen.nl/manual/commands.html
 [Google Scholar]: http://scholar.google.ru/

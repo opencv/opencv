@@ -1,0 +1,39 @@
+{
+    "caffe": [
+        {
+            "model": "mobilenet_SSD",
+            "inputSize": "300, 300",
+            "mean": "127.5, 127.5, 127.5",
+            "std": "0.007843",
+            "swapRB": "false",
+            "outType": "SSD",
+            "labelsUrl": "https://raw.githubusercontent.com/opencv/opencv/master/samples/data/dnn/object_detection_classes_pascal_voc.txt",
+            "modelUrl": "https://raw.githubusercontent.com/chuanqi305/MobileNet-SSD/master/mobilenet_iter_73000.caffemodel",
+            "configUrl": "https://raw.githubusercontent.com/chuanqi305/MobileNet-SSD/master/deploy.prototxt"
+        },
+        {
+            "model": "VGG_SSD",
+            "inputSize": "300, 300",
+            "mean": "104, 117, 123",
+            "std": "1",
+            "swapRB": "false",
+            "outType": "SSD",
+            "labelsUrl": "https://raw.githubusercontent.com/opencv/opencv/master/samples/data/dnn/object_detection_classes_pascal_voc.txt",
+            "modelUrl": "https://drive.google.com/uc?id=0BzKzrI_SkD1_WVVTSmQxU0dVRzA&export=download",
+            "configUrl": "https://drive.google.com/uc?id=0BzKzrI_SkD1_WVVTSmQxU0dVRzA&export=download"
+        }
+    ],
+    "darknet": [
+        {
+            "model": "yolov2_tiny",
+            "inputSize": "416, 416",
+            "mean": "0, 0, 0",
+            "std": "0.00392",
+            "swapRB": "false",
+            "outType": "YOLO",
+            "labelsUrl": "https://raw.githubusercontent.com/opencv/opencv/master/samples/data/dnn/object_detection_classes_yolov3.txt",
+            "modelUrl": "https://pjreddie.com/media/files/yolov2-tiny.weights",
+            "configUrl": "https://raw.githubusercontent.com/pjreddie/darknet/master/cfg/yolov2-tiny.cfg"
+        }
+    ]
+}

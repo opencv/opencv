@@ -915,7 +915,7 @@ bool _InputArray::isContinuous(int i) const
     if( k == STD_ARRAY_MAT )
     {
         const Mat* vv = (const Mat*)obj;
-        CV_Assert(i > 0 && i < sz.height);
+        CV_Assert(i >= 0 && i < sz.height);
         return vv[i].isContinuous();
     }
 
@@ -949,21 +949,21 @@ bool _InputArray::isSubmatrix(int i) const
     if( k == STD_VECTOR_MAT )
     {
         const std::vector<Mat>& vv = *(const std::vector<Mat>*)obj;
-        CV_Assert((size_t)i < vv.size());
+        CV_Assert(i >= 0 && (size_t)i < vv.size());
         return vv[i].isSubmatrix();
     }
 
     if( k == STD_ARRAY_MAT )
     {
         const Mat* vv = (const Mat*)obj;
-        CV_Assert(i < sz.height);
+        CV_Assert(i >= 0 && i < sz.height);
         return vv[i].isSubmatrix();
     }
 
     if( k == STD_VECTOR_UMAT )
     {
         const std::vector<UMat>& vv = *(const std::vector<UMat>*)obj;
-        CV_Assert((size_t)i < vv.size());
+        CV_Assert(i >= 0 && (size_t)i < vv.size());
         return vv[i].isSubmatrix();
     }
 
@@ -994,9 +994,7 @@ size_t _InputArray::offset(int i) const
     if( k == STD_VECTOR_MAT )
     {
         const std::vector<Mat>& vv = *(const std::vector<Mat>*)obj;
-        if( i < 0 )
-            return 1;
-        CV_Assert( i < (int)vv.size() );
+        CV_Assert( i >= 0 && i < (int)vv.size() );
 
         return (size_t)(vv[i].ptr() - vv[i].datastart);
     }
@@ -1004,16 +1002,14 @@ size_t _InputArray::offset(int i) const
     if( k == STD_ARRAY_MAT )
     {
         const Mat* vv = (const Mat*)obj;
-        if( i < 0 )
-            return 1;
-        CV_Assert( i < sz.height );
+        CV_Assert( i >= 0 && i < sz.height );
         return (size_t)(vv[i].ptr() - vv[i].datastart);
     }
 
     if( k == STD_VECTOR_UMAT )
     {
         const std::vector<UMat>& vv = *(const std::vector<UMat>*)obj;
-        CV_Assert((size_t)i < vv.size());
+        CV_Assert(i >= 0 && (size_t)i < vv.size());
         return vv[i].offset;
     }
 
@@ -1027,7 +1023,7 @@ size_t _InputArray::offset(int i) const
     if (k == STD_VECTOR_CUDA_GPU_MAT)
     {
         const std::vector<cuda::GpuMat>& vv = *(const std::vector<cuda::GpuMat>*)obj;
-        CV_Assert((size_t)i < vv.size());
+        CV_Assert(i >= 0 && (size_t)i < vv.size());
         return (size_t)(vv[i].data - vv[i].datastart);
     }
 
@@ -1057,25 +1053,21 @@ size_t _InputArray::step(int i) const
     if( k == STD_VECTOR_MAT )
     {
         const std::vector<Mat>& vv = *(const std::vector<Mat>*)obj;
-        if( i < 0 )
-            return 1;
-        CV_Assert( i < (int)vv.size() );
+        CV_Assert( i >= 0 && i < (int)vv.size() );
         return vv[i].step;
     }
 
     if( k == STD_ARRAY_MAT )
     {
         const Mat* vv = (const Mat*)obj;
-        if( i < 0 )
-            return 1;
-        CV_Assert( i < sz.height );
+        CV_Assert( i >= 0 && i < sz.height );
         return vv[i].step;
     }
 
     if( k == STD_VECTOR_UMAT )
     {
         const std::vector<UMat>& vv = *(const std::vector<UMat>*)obj;
-        CV_Assert((size_t)i < vv.size());
+        CV_Assert(i >= 0 && (size_t)i < vv.size());
         return vv[i].step;
     }
 
@@ -1087,7 +1079,7 @@ size_t _InputArray::step(int i) const
     if (k == STD_VECTOR_CUDA_GPU_MAT)
     {
         const std::vector<cuda::GpuMat>& vv = *(const std::vector<cuda::GpuMat>*)obj;
-        CV_Assert((size_t)i < vv.size());
+        CV_Assert(i >= 0 && (size_t)i < vv.size());
         return vv[i].step;
     }
 
@@ -1248,6 +1240,7 @@ void _OutputArray::create(int d, const int* sizes, int mtype, int i,
     {
         CV_Assert( i < 0 );
         Mat& m = *(Mat*)obj;
+        CV_Assert(!(m.empty() && fixedType() && fixedSize()) && "Can't reallocate empty Mat with locked layout (probably due to misused 'const' modifier)");
         if (allowTransposed && !m.empty() &&
             d == 2 && m.dims == 2 &&
             m.type() == mtype && m.rows == sizes[1] && m.cols == sizes[0] &&
@@ -1261,13 +1254,13 @@ void _OutputArray::create(int d, const int* sizes, int mtype, int i,
             if(CV_MAT_CN(mtype) == m.channels() && ((1 << CV_MAT_TYPE(flags)) & fixedDepthMask) != 0 )
                 mtype = m.type();
             else
-                CV_CheckTypeEQ(m.type(), CV_MAT_TYPE(mtype), "");
+                CV_CheckTypeEQ(m.type(), CV_MAT_TYPE(mtype), "Can't reallocate Mat with locked type (probably due to misused 'const' modifier)");
         }
         if(fixedSize())
         {
-            CV_CheckEQ(m.dims, d, "");
+            CV_CheckEQ(m.dims, d, "Can't reallocate Mat with locked size (probably due to misused 'const' modifier)");
             for(int j = 0; j < d; ++j)
-                CV_CheckEQ(m.size[j], sizes[j], "");
+                CV_CheckEQ(m.size[j], sizes[j], "Can't reallocate Mat with locked size (probably due to misused 'const' modifier)");
         }
         m.create(d, sizes, mtype);
         return;
@@ -1277,6 +1270,7 @@ void _OutputArray::create(int d, const int* sizes, int mtype, int i,
     {
         CV_Assert( i < 0 );
         UMat& m = *(UMat*)obj;
+        CV_Assert(!(m.empty() && fixedType() && fixedSize()) && "Can't reallocate empty UMat with locked layout (probably due to misused 'const' modifier)");
         if (allowTransposed && !m.empty() &&
             d == 2 && m.dims == 2 &&
             m.type() == mtype && m.rows == sizes[1] && m.cols == sizes[0] &&
@@ -1290,13 +1284,13 @@ void _OutputArray::create(int d, const int* sizes, int mtype, int i,
             if(CV_MAT_CN(mtype) == m.channels() && ((1 << CV_MAT_TYPE(flags)) & fixedDepthMask) != 0 )
                 mtype = m.type();
             else
-                CV_CheckTypeEQ(m.type(), CV_MAT_TYPE(mtype), "");
+                CV_CheckTypeEQ(m.type(), CV_MAT_TYPE(mtype), "Can't reallocate UMat with locked type (probably due to misused 'const' modifier)");
         }
         if(fixedSize())
         {
-            CV_CheckEQ(m.dims, d, "");
+            CV_CheckEQ(m.dims, d, "Can't reallocate UMat with locked size (probably due to misused 'const' modifier)");
             for(int j = 0; j < d; ++j)
-                CV_CheckEQ(m.size[j], sizes[j], "");
+                CV_CheckEQ(m.size[j], sizes[j], "Can't reallocate UMat with locked size (probably due to misused 'const' modifier)");
         }
         m.create(d, sizes, mtype);
         return;

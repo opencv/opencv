@@ -219,6 +219,13 @@
 }
 
 {
+   OpenCV-SingletonLogger
+   Memcheck:Leak
+   ...
+   fun:_ZN2cv5utils7logging8internalL26getGlobalLoggingInitStructEv
+}
+
+{
    OpenCV-gtk_init
    Memcheck:Leak
    ...

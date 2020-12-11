@@ -1640,6 +1640,32 @@ TEST(Core_InputOutput, FileStorage_free_file_after_exception)
     ASSERT_EQ(0, std::remove(fileName.c_str()));
 }
 
+TEST(Core_InputOutput, FileStorage_write_to_sequence)
+{
+    const std::vector<std::string> formatExts = { ".yml", ".json", ".xml" };
+    const std::string fileName = "FileStorage_write_to_sequence";
+
+    for (const auto& ext : formatExts)
+    {
+        FileStorage fs(fileName + ext, FileStorage::WRITE);
+        std::vector<int> in = { 23, 42 };
+        fs.startWriteStruct("some_sequence", cv::FileNode::SEQ);
+        for (int i : in)
+            fs.write("", i);
+        fs.endWriteStruct();
+        fs.release();
+
+        FileStorage fsIn(fileName + ext, FileStorage::READ);
+        FileNode seq = fsIn["some_sequence"];
+        FileNodeIterator it = seq.begin(), it_end = seq.end();
+        std::vector<int> out;
+        for (; it != it_end; ++it)
+            out.push_back((int)*it);
+
+        EXPECT_EQ(in, out);
+    }
+}
+
 TEST(Core_InputOutput, FileStorage_YAML_parse_multiple_documents)
 {
     const std::string filename = "FileStorage_YAML_parse_multiple_documents.yml";
@@ -1769,6 +1795,45 @@ TEST(Core_InputOutput, FileStorage_open_empty_16823)
         ADD_FAILURE() << "Unexpected unknown C++ exception";
     }
 
+    EXPECT_EQ(0, remove(fname.c_str()));
+}
+
+TEST(Core_InputOutput, FileStorage_copy_constructor_17412)
+{
+    std::string fname = tempfile("test.yml");
+    FileStorage fs_orig(fname, cv::FileStorage::WRITE);
+    fs_orig << "string" << "wat";
+    fs_orig.release();
+
+    // no crash anymore
+    cv::FileStorage fs;
+    fs = cv::FileStorage(fname,  cv::FileStorage::READ);
+    std::string s;
+    fs["string"] >> s;
+    EXPECT_EQ(s, "wat");
+    EXPECT_EQ(0, remove(fname.c_str()));
+}
+
+TEST(Core_InputOutput, FileStorage_copy_constructor_17412_heap)
+{
+    std::string fname = tempfile("test.yml");
+    FileStorage fs_orig(fname, cv::FileStorage::WRITE);
+    fs_orig << "string" << "wat";
+    fs_orig.release();
+
+    // no crash anymore
+    cv::FileStorage fs;
+
+    // use heap to allow valgrind detections
+    {
+    cv::FileStorage* fs2 = new cv::FileStorage(fname, cv::FileStorage::READ);
+    fs = *fs2;
+    delete fs2;
+    }
+
+    std::string s;
+    fs["string"] >> s;
+    EXPECT_EQ(s, "wat");
     EXPECT_EQ(0, remove(fname.c_str()));
 }
 

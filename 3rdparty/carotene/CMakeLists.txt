@@ -27,7 +27,7 @@ if(CMAKE_COMPILER_IS_GNUCC)
     endif()
 endif()
 
-add_library(carotene_objs OBJECT
+add_library(carotene_objs OBJECT EXCLUDE_FROM_ALL
   ${carotene_headers}
   ${carotene_sources}
 )
@@ -40,4 +40,5 @@ if(WITH_NEON)
     target_compile_definitions(carotene_objs PRIVATE "-DWITH_NEON")
 endif()
 
-add_library(carotene STATIC EXCLUDE_FROM_ALL "$<TARGET_OBJECTS:carotene_objs>")
+# we add dummy file to fix XCode build
+add_library(carotene STATIC ${OPENCV_3RDPARTY_EXCLUDE_FROM_ALL} "$<TARGET_OBJECTS:carotene_objs>" "${CAROTENE_SOURCE_DIR}/dummy.cpp")

@@ -47,8 +47,13 @@
 
 #ifdef HAVE_DNN_NGRAPH
 #include "../ie_ngraph.hpp"
+#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2020_4)
+#include <ngraph/op/prior_box.hpp>
+#include <ngraph/op/prior_box_clustered.hpp>
+#else
 #include <ngraph/op/experimental/layers/prior_box.hpp>
 #include <ngraph/op/experimental/layers/prior_box_clustered.hpp>
+#endif
 #endif
 
 #include "../op_vkcom.hpp"
@@ -602,7 +607,7 @@ public:
 
             auto priorBox = std::make_shared<ngraph::op::PriorBoxClustered>(slice_layer, slice_image, attrs);
             auto axis = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{1}, std::vector<int64_t>{0});
-            auto unsqueeze = std::make_shared<ngraph::op::Unsqueeze>(priorBox, axis);
+            auto unsqueeze = std::make_shared<ngraph::op::v0::Unsqueeze>(priorBox, axis);
             return Ptr<BackendNode>(new InfEngineNgraphNode(unsqueeze));
         }
         else
@@ -623,7 +628,7 @@ public:
 
             auto priorBox = std::make_shared<ngraph::op::PriorBox>(slice_layer, slice_image, attrs);
             auto axis = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{1}, std::vector<int64_t>{0});
-            auto unsqueeze = std::make_shared<ngraph::op::Unsqueeze>(priorBox, axis);
+            auto unsqueeze = std::make_shared<ngraph::op::v0::Unsqueeze>(priorBox, axis);
             return Ptr<BackendNode>(new InfEngineNgraphNode(unsqueeze));
         }
     }

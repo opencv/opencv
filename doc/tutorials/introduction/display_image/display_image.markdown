@@ -1,6 +1,17 @@
 Getting Started with Images {#tutorial_display_image}
 ===========================
 
+@prev_tutorial{tutorial_building_tegra_cuda}
+@next_tutorial{tutorial_documentation}
+
+|    |    |
+| -: | :- |
+| Original author | Ana Huamán |
+| Compatibility | OpenCV >= 3.4.4 |
+
+@warning
+This tutorial can contain obsolete information.
+
 Goal
 ----
 

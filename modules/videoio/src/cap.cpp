@@ -458,6 +458,18 @@ VideoWriter::VideoWriter(const String& filename, int apiPreference, int _fourcc,
     open(filename, apiPreference, _fourcc, fps, frameSize, isColor);
 }
 
+VideoWriter::VideoWriter(const cv::String& filename, int fourcc, double fps,
+                         const cv::Size& frameSize, const std::vector<int>& params)
+{
+    open(filename, fourcc, fps, frameSize, params);
+}
+
+VideoWriter::VideoWriter(const cv::String& filename, int apiPreference, int fourcc, double fps,
+                         const cv::Size& frameSize, const std::vector<int>& params)
+{
+    open(filename, apiPreference, fourcc, fps, frameSize, params);
+}
+
 void VideoWriter::release()
 {
     iwriter.release();
@@ -471,11 +483,26 @@ VideoWriter::~VideoWriter()
 bool VideoWriter::open(const String& filename, int _fourcc, double fps, Size frameSize,
                        bool isColor)
 {
-    return open(filename, CAP_ANY, _fourcc, fps, frameSize, isColor);
+    return open(filename, CAP_ANY, _fourcc, fps, frameSize,
+                std::vector<int> { VIDEOWRITER_PROP_IS_COLOR, static_cast<int>(isColor) });
 }
 
 bool VideoWriter::open(const String& filename, int apiPreference, int _fourcc, double fps,
                        Size frameSize, bool isColor)
+{
+    return open(filename, apiPreference, _fourcc, fps, frameSize,
+                std::vector<int> { VIDEOWRITER_PROP_IS_COLOR, static_cast<int>(isColor) });
+}
+
+
+bool VideoWriter::open(const String& filename, int fourcc, double fps, const Size& frameSize,
+                       const std::vector<int>& params)
+{
+    return open(filename, CAP_ANY, fourcc, fps, frameSize, params);
+}
+
+bool VideoWriter::open(const String& filename, int apiPreference, int fourcc, double fps,
+                       const Size& frameSize, const std::vector<int>& params)
 {
     CV_INSTRUMENT_REGION();
 
@@ -484,30 +511,39 @@ bool VideoWriter::open(const String& filename, int apiPreference, int _fourcc, d
         release();
     }
 
-    const std::vector<VideoBackendInfo> backends = cv::videoio_registry::getAvailableBackends_Writer();
-    for (size_t i = 0; i < backends.size(); i++)
+    const VideoWriterParameters parameters(params);
+    for (const auto& info : videoio_registry::getAvailableBackends_Writer())
     {
-        const VideoBackendInfo& info = backends[i];
         if (apiPreference == CAP_ANY || apiPreference == info.id)
         {
             CV_WRITER_LOG_DEBUG(NULL,
                                 cv::format("VIDEOIO(%s): trying writer with filename='%s' "
                                            "fourcc=0x%08x fps=%g sz=%dx%d isColor=%d...",
-                                           info.name, filename.c_str(), (unsigned)_fourcc, fps,
-                                           frameSize.width, frameSize.height, (int)isColor));
+                                           info.name, filename.c_str(), (unsigned)fourcc, fps,
+                                           frameSize.width, frameSize.height,
+                                           parameters.get(VIDEOWRITER_PROP_IS_COLOR, true)));
             CV_Assert(!info.backendFactory.empty());
             const Ptr<IBackend> backend = info.backendFactory->getBackend();
             if (!backend.empty())
             {
                 try
                 {
-                    iwriter = backend->createWriter(filename, _fourcc, fps, frameSize, isColor);
+                    iwriter = backend->createWriter(filename, fourcc, fps, frameSize, parameters);
                     if (!iwriter.empty())
                     {
 
                         CV_WRITER_LOG_DEBUG(NULL,
                                             cv::format("VIDEOIO(%s): created, isOpened=%d",
                                                        info.name, iwriter->isOpened()));
+                        if (param_VIDEOIO_DEBUG || param_VIDEOWRITER_DEBUG)
+                        {
+                            for (int key: parameters.getUnused())
+                            {
+                                CV_LOG_WARNING(NULL,
+                                               cv::format("VIDEOIO(%s): parameter with key '%d' was unused",
+                                                          info.name, key));
+                            }
+                        }
                         if (iwriter->isOpened())
                         {
                             return true;
@@ -529,7 +565,7 @@ bool VideoWriter::open(const String& filename, int apiPreference, int _fourcc, d
                 catch (const std::exception& e)
                 {
                     CV_LOG_ERROR(NULL, cv::format("VIDEOIO(%s): raised C++ exception:\n\n%s\n",
-                                                     info.name, e.what()));
+                                                  info.name, e.what()));
                 }
                 catch (...)
                 {

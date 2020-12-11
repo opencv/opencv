@@ -8,7 +8,7 @@
 #include "../test_precomp.hpp"
 
 namespace opencv_test {
-// Tests on T/Kind matching ////////////////////////////////////////////////////
+// Tests on T/Spec/Kind matching ///////////////////////////////////////////////
 // {{
 
 template<class T, cv::detail::ArgKind Exp>
@@ -76,7 +76,6 @@ TYPED_TEST(GArgKind, RValue)
     EXPECT_EQ(TestFixture::Kind, arg.kind);
 }
 
-// }}
 ////////////////////////////////////////////////////////////////////////////////
 
 TEST(GArg, HasWrap)
@@ -116,6 +115,4 @@ TEST(GArg, GOpaqueU)
     cv::GArg arg2 = cv::GArg(cv::GOpaque<cv::Point>());
     EXPECT_NO_THROW(arg2.get<cv::detail::GOpaqueU>());
 }
-
-
 } // namespace opencv_test

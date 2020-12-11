@@ -36,6 +36,38 @@ const cv::GOrigin& cv::GMat::priv() const
     return *m_priv;
 }
 
+static std::vector<int> checkVectorImpl(const int width, const int height, const int chan,
+                                        const int n)
+{
+    if (width == 1 && (n == -1 || n == chan))
+    {
+        return {height, chan};
+    }
+    else if (height == 1 && (n == -1 || n == chan))
+    {
+        return {width, chan};
+    }
+    else if (chan == 1 && (n == -1 || n == width))
+    {
+        return {height, width};
+    }
+    else // input Mat can't be described as vector of points of given dimensionality
+    {
+        return {-1, -1};
+    }
+}
+
+int cv::gapi::detail::checkVector(const cv::GMatDesc& in, const size_t n)
+{
+    GAPI_Assert(n != 0u);
+    return checkVectorImpl(in.size.width, in.size.height, in.chan, static_cast<int>(n))[0];
+}
+
+std::vector<int> cv::gapi::detail::checkVector(const cv::GMatDesc& in)
+{
+    return checkVectorImpl(in.size.width, in.size.height, in.chan, -1);
+}
+
 namespace{
     template <typename T> cv::GMetaArgs vec_descr_of(const std::vector<T> &vec)
         {
@@ -48,9 +80,9 @@ namespace{
     }
 }
 
+#if !defined(GAPI_STANDALONE)
 cv::GMatDesc cv::descr_of(const cv::Mat &mat)
 {
-#if !defined(GAPI_STANDALONE)
     const auto mat_dims = mat.size.dims();
 
     if (mat_dims == 2)
@@ -62,12 +94,8 @@ cv::GMatDesc cv::descr_of(const cv::Mat &mat)
         dims[i] = mat.size[i];
     }
     return GMatDesc{mat.depth(), std::move(dims)};
-#else
-    return (mat.dims.empty())
-        ? GMatDesc{mat.depth(), mat.channels(), {mat.cols, mat.rows}}
-        : GMatDesc{mat.depth(), mat.dims};
-#endif
 }
+#endif
 
 cv::GMatDesc cv::gapi::own::descr_of(const Mat &mat)
 {
@@ -97,6 +125,11 @@ cv::GMetaArgs cv::descrs_of(const std::vector<cv::Mat> &vec)
 cv::GMetaArgs cv::gapi::own::descrs_of(const std::vector<Mat> &vec)
 {
     return vec_descr_of(vec);
+}
+
+cv::GMatDesc cv::descr_of(const cv::RMat &mat)
+{
+    return mat.desc();
 }
 
 namespace cv {
@@ -137,6 +170,11 @@ template<typename M> inline bool canDescribeHelper(const GMatDesc& desc, const M
 } // anonymous namespace
 
 bool GMatDesc::canDescribe(const cv::Mat& mat) const
+{
+    return canDescribeHelper(*this, mat);
+}
+
+bool GMatDesc::canDescribe(const cv::RMat& mat) const
 {
     return canDescribeHelper(*this, mat);
 }

@@ -1,6 +1,17 @@
 Real Time pose estimation of a textured object {#tutorial_real_time_pose}
 ==============================================
 
+@tableofcontents
+
+@prev_tutorial{tutorial_camera_calibration}
+@next_tutorial{tutorial_interactive_calibration}
+
+|    |    |
+| -: | :- |
+| Original author | Edgar Riba |
+| Compatibility | OpenCV >= 3.0 |
+
+
 Nowadays, augmented reality is one of the top research topic in computer vision and robotics fields.
 The most elemental problem in augmented reality is the estimation of the camera pose respect of an
 object in the case of computer vision area to do later some 3D rendering or in the case of robotics

@@ -54,6 +54,7 @@
 
 #include <iostream>
 #include <string.h>
+#include <thread>
 
 #include <gst/gst.h>
 #include <gst/gstbuffer.h>
@@ -107,6 +108,7 @@ template<> inline void GSafePtr_release<GstBuffer>(GstBuffer** pPtr) { if (pPtr)
 template<> inline void GSafePtr_release<GstSample>(GstSample** pPtr) { if (pPtr) { gst_sample_unref(*pPtr); *pPtr = NULL; } }
 template<> inline void GSafePtr_release<GstBus>(GstBus** pPtr) { if (pPtr) { gst_object_unref(G_OBJECT(*pPtr)); *pPtr = NULL; } }
 template<> inline void GSafePtr_release<GstMessage>(GstMessage** pPtr) { if (pPtr) { gst_message_unref(*pPtr); *pPtr = NULL; } }
+template<> inline void GSafePtr_release<GMainLoop>(GMainLoop** pPtr) { if (pPtr) { g_main_loop_unref(*pPtr); *pPtr = NULL; } }
 
 template<> inline void GSafePtr_release<GstEncodingVideoProfile>(GstEncodingVideoProfile** pPtr) { if (pPtr) { gst_encoding_profile_unref(*pPtr); *pPtr = NULL; } }
 template<> inline void GSafePtr_release<GstEncodingContainerProfile>(GstEncodingContainerProfile** pPtr) { if (pPtr) { gst_object_unref(G_OBJECT(*pPtr)); *pPtr = NULL; } }
@@ -194,10 +196,15 @@ public:
 private:
     bool isFailed;
     bool call_deinit;
+    bool start_loop;
+    GSafePtr<GMainLoop> loop;
+    std::thread thread;
+
     gst_initializer() :
         isFailed(false)
     {
         call_deinit = utils::getConfigurationParameterBool("OPENCV_VIDEOIO_GSTREAMER_CALL_DEINIT", false);
+        start_loop = utils::getConfigurationParameterBool("OPENCV_VIDEOIO_GSTREAMER_START_MAINLOOP", false);
 
         GSafePtr<GError> err;
         gst_init_check(NULL, NULL, err.getRef());
@@ -215,6 +222,14 @@ private:
             isFailed = true;
             return;
         }
+
+        if (start_loop)
+        {
+            loop.attach(g_main_loop_new (NULL, FALSE));
+            thread = std::thread([this](){
+                g_main_loop_run (loop);
+            });
+        }
     }
     ~gst_initializer()
     {
@@ -222,6 +237,12 @@ private:
         {
             // Debug leaks: GST_LEAKS_TRACER_STACK_TRACE=1 GST_DEBUG="GST_TRACER:7" GST_TRACERS="leaks"
             gst_deinit();
+        }
+
+        if (start_loop)
+        {
+            g_main_loop_quit(loop);
+            thread.join();
         }
     }
 };
@@ -970,6 +991,8 @@ double GStreamerCapture::getProperty(int propId) const
     switch(propId)
     {
     case CV_CAP_PROP_POS_MSEC:
+        CV_LOG_ONCE_WARNING(NULL, "OpenCV | GStreamer: CAP_PROP_POS_MSEC property result may be unrealiable: "
+                                  "https://github.com/opencv/opencv/issues/19025");
         format = GST_FORMAT_TIME;
         status = gst_element_query_position(sink.get(), CV_GST_FORMAT(format), &value);
         if(!status) {
@@ -1219,8 +1242,8 @@ class CvVideoWriter_GStreamer : public CvVideoWriter
 {
 public:
     CvVideoWriter_GStreamer()
-        : input_pix_fmt(0),
-          num_frames(0), framerate(0)
+        : ipl_depth(CV_8U)
+        , input_pix_fmt(0), num_frames(0), framerate(0)
     {
     }
     virtual ~CvVideoWriter_GStreamer() CV_OVERRIDE
@@ -1242,14 +1265,16 @@ public:
     int getCaptureDomain() const CV_OVERRIDE { return cv::CAP_GSTREAMER; }
 
     bool open(const std::string &filename, int fourcc,
-                       double fps, const Size &frameSize, bool isColor );
+                       double fps, const Size &frameSize, bool isColor, int depth );
     void close();
     bool writeFrame( const IplImage* image ) CV_OVERRIDE;
+
+    int getIplDepth() const { return ipl_depth; }
 protected:
     const char* filenameToMimetype(const char* filename);
     GSafePtr<GstElement> pipeline;
     GSafePtr<GstElement> source;
-
+    int ipl_depth;
     int input_pix_fmt;
     int num_frames;
     double framerate;
@@ -1375,6 +1400,7 @@ const char* CvVideoWriter_GStreamer::filenameToMimetype(const char *filename)
  * \param fps desired framerate
  * \param frameSize the size of the expected frames
  * \param is_color color or grayscale
+ * \param depth the depth of the expected frames
  * \return success
  *
  * We support 2 modes of operation. Either the user enters a filename and a fourcc
@@ -1387,7 +1413,8 @@ const char* CvVideoWriter_GStreamer::filenameToMimetype(const char *filename)
  *
  */
 bool CvVideoWriter_GStreamer::open( const std::string &filename, int fourcc,
-                                    double fps, const cv::Size &frameSize, bool is_color )
+                                    double fps, const cv::Size &frameSize,
+                                    bool is_color, int depth )
 {
     // check arguments
     CV_Assert(!filename.empty());
@@ -1527,6 +1554,8 @@ bool CvVideoWriter_GStreamer::open( const std::string &filename, int fourcc,
 
     if (fourcc == CV_FOURCC('M','J','P','G') && frameSize.height == 1)
     {
+        CV_Assert(depth == CV_8U);
+        ipl_depth = IPL_DEPTH_8U;
         input_pix_fmt = GST_VIDEO_FORMAT_ENCODED;
         caps.attach(gst_caps_new_simple("image/jpeg",
                                         "framerate", GST_TYPE_FRACTION, int(fps_num), int(fps_denom),
@@ -1535,6 +1564,8 @@ bool CvVideoWriter_GStreamer::open( const std::string &filename, int fourcc,
     }
     else if (is_color)
     {
+        CV_Assert(depth == CV_8U);
+        ipl_depth = IPL_DEPTH_8U;
         input_pix_fmt = GST_VIDEO_FORMAT_BGR;
         bufsize = frameSize.width * frameSize.height * 3;
 
@@ -1548,8 +1579,9 @@ bool CvVideoWriter_GStreamer::open( const std::string &filename, int fourcc,
         caps.attach(gst_caps_fixate(caps.detach()));
         CV_Assert(caps);
     }
-    else
+    else if (!is_color && depth == CV_8U)
     {
+        ipl_depth = IPL_DEPTH_8U;
         input_pix_fmt = GST_VIDEO_FORMAT_GRAY8;
         bufsize = frameSize.width * frameSize.height;
 
@@ -1560,6 +1592,26 @@ bool CvVideoWriter_GStreamer::open( const std::string &filename, int fourcc,
                                         "framerate", GST_TYPE_FRACTION, gint(fps_num), gint(fps_denom),
                                         NULL));
         caps.attach(gst_caps_fixate(caps.detach()));
+    }
+    else if (!is_color && depth == CV_16U)
+    {
+        ipl_depth = IPL_DEPTH_16U;
+        input_pix_fmt = GST_VIDEO_FORMAT_GRAY16_LE;
+        bufsize = frameSize.width * frameSize.height * 2;
+
+        caps.attach(gst_caps_new_simple("video/x-raw",
+                                        "format", G_TYPE_STRING, "GRAY16_LE",
+                                        "width", G_TYPE_INT, frameSize.width,
+                                        "height", G_TYPE_INT, frameSize.height,
+                                        "framerate", GST_TYPE_FRACTION, gint(fps_num), gint(fps_denom),
+                                        NULL));
+        caps.attach(gst_caps_fixate(caps.detach()));
+    }
+    else
+    {
+        CV_WARN("unsupported depth=" << depth <<", and is_color=" << is_color << " combination");
+        pipeline.release();
+        return false;
     }
 
     gst_app_src_set_caps(GST_APP_SRC(source.get()), caps);
@@ -1638,6 +1690,12 @@ bool CvVideoWriter_GStreamer::writeFrame( const IplImage * image )
             return false;
         }
     }
+    else if (input_pix_fmt == GST_VIDEO_FORMAT_GRAY16_LE) {
+        if (image->nChannels != 1 || image->depth != IPL_DEPTH_16U) {
+            CV_WARN("cvWriteFrame() needs images with depth = IPL_DEPTH_16U and nChannels = 1.");
+            return false;
+        }
+    }
     else {
         CV_WARN("cvWriteFrame() needs BGR or grayscale images\n");
         return false;
@@ -1673,12 +1731,15 @@ bool CvVideoWriter_GStreamer::writeFrame( const IplImage * image )
     return true;
 }
 
-Ptr<IVideoWriter> create_GStreamer_writer(const std::string &filename, int fourcc, double fps, const cv::Size &frameSize, bool isColor)
+Ptr<IVideoWriter> create_GStreamer_writer(const std::string& filename, int fourcc, double fps,
+                                          const cv::Size& frameSize, const VideoWriterParameters& params)
 {
     CvVideoWriter_GStreamer* wrt = new CvVideoWriter_GStreamer;
+    const bool isColor = params.get(VIDEOWRITER_PROP_IS_COLOR, true);
+    const int depth = params.get(VIDEOWRITER_PROP_DEPTH, CV_8U);
     try
     {
-        if (wrt->open(filename, fourcc, fps, frameSize, isColor))
+        if (wrt->open(filename, fourcc, fps, frameSize, isColor, depth))
             return makePtr<LegacyWriter>(wrt);
         delete wrt;
     }
@@ -1898,15 +1959,40 @@ CvResult CV_API_CALL cv_capture_retrieve(CvPluginCapture handle, int stream_idx,
 }
 
 static
-CvResult CV_API_CALL cv_writer_open(const char* filename, int fourcc, double fps, int width, int height, int isColor,
-                                    CV_OUT CvPluginWriter* handle)
+CvResult CV_API_CALL cv_writer_open_with_params(
+        const char* filename, int fourcc, double fps, int width, int height,
+        int* params, unsigned n_params,
+        CV_OUT CvPluginWriter* handle)
 {
     CvVideoWriter_GStreamer* wrt = 0;
     try
     {
-        wrt = new CvVideoWriter_GStreamer();
         CvSize sz = { width, height };
-        if(wrt && wrt->open(filename, fourcc, fps, sz, isColor))
+        bool isColor = true;
+        int depth = CV_8U;
+        if (params)
+        {
+            for (unsigned i = 0; i < n_params; ++i)
+            {
+                const int prop = params[i*2];
+                const int value = params[i*2 + 1];
+                switch (prop)
+                {
+                case VIDEOWRITER_PROP_IS_COLOR:
+                    isColor = value != 0;
+                    break;
+                case VIDEOWRITER_PROP_DEPTH:
+                    depth = value;
+                    break;
+                default:
+                    // TODO emit message about non-recognized propert
+                    // FUTURE: there should be mandatory and optional properties
+                    return CV_ERROR_FAIL;
+                }
+            }
+        }
+        wrt = new CvVideoWriter_GStreamer();
+        if (wrt && wrt->open(filename, fourcc, fps, sz, isColor, depth))
         {
             *handle = (CvPluginWriter)wrt;
             return CV_ERROR_OK;
@@ -1918,6 +2004,14 @@ CvResult CV_API_CALL cv_writer_open(const char* filename, int fourcc, double fps
     if (wrt)
         delete wrt;
     return CV_ERROR_FAIL;
+}
+
+static
+CvResult CV_API_CALL cv_writer_open(const char* filename, int fourcc, double fps, int width, int height, int isColor,
+    CV_OUT CvPluginWriter* handle)
+{
+    int params[2] = { VIDEOWRITER_PROP_IS_COLOR, isColor };
+    return cv_writer_open_with_params(filename, fourcc, fps, width, height, params, 1, handle);
 }
 
 static
@@ -1952,7 +2046,7 @@ CvResult CV_API_CALL cv_writer_write(CvPluginWriter handle, const unsigned char 
         CvVideoWriter_GStreamer* instance = (CvVideoWriter_GStreamer*)handle;
         CvSize sz = { width, height };
         IplImage img;
-        cvInitImageHeader(&img, sz, IPL_DEPTH_8U, cn);
+        cvInitImageHeader(&img, sz, instance->getIplDepth(), cn);
         cvSetData(&img, const_cast<unsigned char*>(data), step);
         return instance->writeFrame(&img) ? CV_ERROR_OK : CV_ERROR_FAIL;
     }
@@ -1980,7 +2074,8 @@ static const OpenCV_VideoIO_Plugin_API_preview plugin_api_v0 =
     /*  9*/cv_writer_release,
     /* 10*/cv_writer_get_prop,
     /* 11*/cv_writer_set_prop,
-    /* 12*/cv_writer_write
+    /* 12*/cv_writer_write,
+    /* 13*/cv_writer_open_with_params
 };
 
 } // namespace
@@ -1989,7 +2084,7 @@ const OpenCV_VideoIO_Plugin_API_preview* opencv_videoio_plugin_init_v0(int reque
 {
     if (requested_abi_version != 0)
         return NULL;
-    if (requested_api_version != 0)
+    if (requested_api_version != 0 && requested_api_version != 1)
         return NULL;
     return &cv::plugin_api_v0;
 }

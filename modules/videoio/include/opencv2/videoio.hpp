@@ -112,6 +112,7 @@ enum VideoCaptureAPIs {
        CAP_REALSENSE    = 1500,         //!< Synonym for CAP_INTELPERC
        CAP_OPENNI2      = 1600,         //!< OpenNI2 (for Kinect)
        CAP_OPENNI2_ASUS = 1610,         //!< OpenNI2 (for Asus Xtion and Occipital Structure sensors)
+       CAP_OPENNI2_ASTRA= 1620,         //!< OpenNI2 (for Orbbec Astra)
        CAP_GPHOTO2      = 1700,         //!< gPhoto2 connection
        CAP_GSTREAMER    = 1800,         //!< GStreamer
        CAP_FFMPEG       = 1900,         //!< Open and record video file or stream using the FFMPEG library
@@ -120,6 +121,7 @@ enum VideoCaptureAPIs {
        CAP_OPENCV_MJPEG = 2200,         //!< Built-in OpenCV MotionJPEG codec
        CAP_INTEL_MFX    = 2300,         //!< Intel MediaSDK
        CAP_XINE         = 2400,         //!< XINE engine (Linux)
+       CAP_UEYE         = 2500,         //!< uEye Camera API
      };
 
 /** @brief %VideoCapture generic properties identifier.
@@ -178,6 +180,8 @@ enum VideoCaptureProperties {
        CAP_PROP_WB_TEMPERATURE=45, //!< white-balance color temperature
        CAP_PROP_CODEC_PIXEL_FORMAT =46,    //!< (read-only) codec's pixel format. 4-character code - see VideoWriter::fourcc . Subset of [AV_PIX_FMT_*](https://github.com/FFmpeg/FFmpeg/blob/master/libavcodec/raw.c) or -1 if unknown
        CAP_PROP_BITRATE       =47, //!< (read-only) Video bitrate in kbits/s
+       CAP_PROP_ORIENTATION_META=48, //!< (read-only) Frame rotation defined by stream meta (applicable for FFmpeg back-end only)
+       CAP_PROP_ORIENTATION_AUTO=49, //!< if true - rotates output frames of CvCapture considering video file's metadata  (applicable for FFmpeg back-end only) (https://github.com/opencv/opencv/issues/15499)
 #ifndef CV_DOXYGEN
        CV__CAP_PROP_LATEST
 #endif
@@ -189,7 +193,10 @@ enum VideoCaptureProperties {
 enum VideoWriterProperties {
   VIDEOWRITER_PROP_QUALITY = 1,    //!< Current quality (0..100%) of the encoded videostream. Can be adjusted dynamically in some codecs.
   VIDEOWRITER_PROP_FRAMEBYTES = 2, //!< (Read-only): Size of just encoded video frame. Note that the encoding order may be different from representation order.
-  VIDEOWRITER_PROP_NSTRIPES = 3    //!< Number of stripes for parallel encoding. -1 for auto detection.
+  VIDEOWRITER_PROP_NSTRIPES = 3,   //!< Number of stripes for parallel encoding. -1 for auto detection.
+  VIDEOWRITER_PROP_IS_COLOR = 4,   //!< If it is not zero, the encoder will expect and encode color frames, otherwise it
+                                   //!< will work with grayscale frames.
+  VIDEOWRITER_PROP_DEPTH = 5       //!< Defaults to CV_8U.
 };
 
 //! @} videoio_flags_base
@@ -821,7 +828,7 @@ public:
     @throws Exception %Exception on stream errors (check .isOpened() to filter out malformed streams) or VideoCapture type is not supported
 
     The primary use of the function is in multi-camera environments.
-    The method fills the ready state vector, grabbs video frame, if camera is ready.
+    The method fills the ready state vector, grabs video frame, if camera is ready.
 
     After this call use VideoCapture::retrieve() to decode and fetch frame data.
     */
@@ -871,12 +878,12 @@ public:
     VideoWriter::fourcc('P','I','M','1') is a MPEG-1 codec, VideoWriter::fourcc('M','J','P','G') is a
     motion-jpeg codec etc. List of codes can be obtained at [Video Codecs by
     FOURCC](http://www.fourcc.org/codecs.php) page. FFMPEG backend with MP4 container natively uses
-    other values as fourcc code: see [ObjectType](http://www.mp4ra.org/codecs.html),
+    other values as fourcc code: see [ObjectType](http://mp4ra.org/#/codecs),
     so you may receive a warning message from OpenCV about fourcc code conversion.
     @param fps Framerate of the created video stream.
     @param frameSize Size of the video frames.
     @param isColor If it is not zero, the encoder will expect and encode color frames, otherwise it
-    will work with grayscale frames (the flag is currently supported on Windows only).
+    will work with grayscale frames.
 
     @b Tips:
     - With some backends `fourcc=-1` pops up the codec selection dialog from the system.
@@ -895,6 +902,18 @@ public:
      */
     CV_WRAP VideoWriter(const String& filename, int apiPreference, int fourcc, double fps,
                 Size frameSize, bool isColor = true);
+
+    /** @overload
+     * The `params` parameter allows to specify extra encoder parameters encoded as pairs (paramId_1, paramValue_1, paramId_2, paramValue_2, ... .)
+     * see cv::VideoWriterProperties
+     */
+    CV_WRAP VideoWriter(const String& filename, int fourcc, double fps, const Size& frameSize,
+                        const std::vector<int>& params);
+
+    /** @overload
+     */
+    CV_WRAP VideoWriter(const String& filename, int apiPreference, int fourcc, double fps,
+                        const Size& frameSize, const std::vector<int>& params);
 
     /** @brief Default destructor
 
@@ -917,6 +936,16 @@ public:
      */
     CV_WRAP bool open(const String& filename, int apiPreference, int fourcc, double fps,
                       Size frameSize, bool isColor = true);
+
+    /** @overload
+     */
+    CV_WRAP bool open(const String& filename, int fourcc, double fps, const Size& frameSize,
+                      const std::vector<int>& params);
+
+    /** @overload
+     */
+    CV_WRAP bool open(const String& filename, int apiPreference, int fourcc, double fps,
+                      const Size& frameSize, const std::vector<int>& params);
 
     /** @brief Returns true if video writer has been successfully initialized.
     */

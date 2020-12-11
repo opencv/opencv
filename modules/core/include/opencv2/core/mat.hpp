@@ -565,6 +565,7 @@ struct CV_EXPORTS UMatData
     int allocatorFlags_;
     int mapcount;
     UMatData* originalUMatData;
+    std::shared_ptr<void> allocatorContext;
 };
 CV_ENUM_FLAGS(UMatData::MemoryFlag)
 
@@ -2396,19 +2397,10 @@ public:
     UMat(const UMat& m, const Rect& roi);
     UMat(const UMat& m, const Range* ranges);
     UMat(const UMat& m, const std::vector<Range>& ranges);
+
+    // FIXIT copyData=false is not implemented, drop this in favor of cv::Mat (OpenCV 5.0)
     //! builds matrix from std::vector with or without copying the data
     template<typename _Tp> explicit UMat(const std::vector<_Tp>& vec, bool copyData=false);
-
-    //! builds matrix from cv::Vec; the data is copied by default
-    template<typename _Tp, int n> explicit UMat(const Vec<_Tp, n>& vec, bool copyData=true);
-    //! builds matrix from cv::Matx; the data is copied by default
-    template<typename _Tp, int m, int n> explicit UMat(const Matx<_Tp, m, n>& mtx, bool copyData=true);
-    //! builds matrix from a 2D point
-    template<typename _Tp> explicit UMat(const Point_<_Tp>& pt, bool copyData=true);
-    //! builds matrix from a 3D point
-    template<typename _Tp> explicit UMat(const Point3_<_Tp>& pt, bool copyData=true);
-    //! builds matrix from comma initializer
-    template<typename _Tp> explicit UMat(const MatCommaInitializer_<_Tp>& commaInitializer);
 
     //! destructor - calls release()
     ~UMat();

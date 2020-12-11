@@ -99,6 +99,15 @@ TEST(readNet, do_not_call_setInput)  // https://github.com/opencv/opencv/issues/
     EXPECT_TRUE(res.empty()) << res.size;
 }
 
+TEST(Net, empty_forward_18392)
+{
+    cv::dnn::Net net;
+    Mat image(Size(512, 512), CV_8UC3, Scalar::all(0));
+    Mat inputBlob = cv::dnn::blobFromImage(image, 1.0, Size(512, 512), Scalar(0,0,0), true, false);
+    net.setInput(inputBlob);
+    EXPECT_ANY_THROW(Mat output = net.forward());
+}
+
 #ifdef HAVE_INF_ENGINE
 static
 void test_readNet_IE_do_not_call_setInput(Backend backendId)
@@ -444,12 +453,14 @@ TEST_P(Async, model_optimizer_pipeline_set_and_forward_single)
     const Backend backendId = get<0>(get<1>(GetParam()));
     const Target targetId = get<1>(get<1>(GetParam()));
 
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && targetId == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+
     if (backendId != DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && backendId != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         throw SkipTestException("No support for async forward");
 
-    const std::string suffix = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? "_fp16" : "";
-    const std::string& model = findDataFile("dnn/layers/layer_convolution" + suffix + ".bin");
-    const std::string& proto = findDataFile("dnn/layers/layer_convolution" + suffix + ".xml");
+    const std::string& model = findDataFile("dnn/layers/layer_convolution.bin");
+    const std::string& proto = findDataFile("dnn/layers/layer_convolution.xml");
 
     if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_API);
@@ -503,12 +514,14 @@ TEST_P(Async, model_optimizer_pipeline_set_and_forward_all)
     const Backend backendId = get<0>(get<1>(GetParam()));
     const Target targetId = get<1>(get<1>(GetParam()));
 
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && targetId == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+
     if (backendId != DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && backendId != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         throw SkipTestException("No support for async forward");
 
-    const std::string suffix = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? "_fp16" : "";
-    const std::string& model = findDataFile("dnn/layers/layer_convolution" + suffix + ".bin");
-    const std::string& proto = findDataFile("dnn/layers/layer_convolution" + suffix + ".xml");
+    const std::string& model = findDataFile("dnn/layers/layer_convolution.bin");
+    const std::string& proto = findDataFile("dnn/layers/layer_convolution.xml");
 
     if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_API);
@@ -677,9 +690,11 @@ TEST_P(Test_Model_Optimizer, forward_two_nets)
     const Backend backendId = get<0>(GetParam());
     const Target targetId = get<1>(GetParam());
 
-    const std::string suffix = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? "_fp16" : "";
-    const std::string& model = findDataFile("dnn/layers/layer_convolution" + suffix + ".bin");
-    const std::string& proto = findDataFile("dnn/layers/layer_convolution" + suffix + ".xml");
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && targetId == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+
+    const std::string& model = findDataFile("dnn/layers/layer_convolution.bin");
+    const std::string& proto = findDataFile("dnn/layers/layer_convolution.xml");
 
     if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_API);
@@ -716,12 +731,14 @@ TEST_P(Test_Model_Optimizer, readFromBuffer)
     const Backend backendId = get<0>(GetParam());
     const Target targetId = get<1>(GetParam());
 
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && targetId == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+
     if (backendId != DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && backendId != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         throw SkipTestException("No support for async forward");
 
-    const std::string suffix = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? "_fp16" : "";
-    const std::string& weightsFile = findDataFile("dnn/layers/layer_convolution" + suffix + ".bin");
-    const std::string& modelFile = findDataFile("dnn/layers/layer_convolution" + suffix + ".xml");
+    const std::string& weightsFile = findDataFile("dnn/layers/layer_convolution.bin");
+    const std::string& modelFile = findDataFile("dnn/layers/layer_convolution.xml");
 
     if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_API);
@@ -769,8 +786,11 @@ TEST_P(Test_Model_Optimizer, flexible_inputs)
     const Backend backendId = get<0>(GetParam());
     const Target targetId = get<1>(GetParam());
 
-    const std::string& model = findDataFile("dnn/layers/layer_convolution_fp16.bin");
-    const std::string& proto = findDataFile("dnn/layers/layer_convolution_fp16.xml");
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && targetId == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+
+    const std::string& model = findDataFile("dnn/layers/layer_convolution.bin");
+    const std::string& proto = findDataFile("dnn/layers/layer_convolution.xml");
 
     if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_API);

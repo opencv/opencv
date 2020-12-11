@@ -351,8 +351,6 @@ public:
 
     STDMETHODIMP OnReadSample(HRESULT hrStatus, DWORD dwStreamIndex, DWORD dwStreamFlags, LONGLONG llTimestamp, IMFSample *pSample) CV_OVERRIDE
     {
-        CV_UNUSED(llTimestamp);
-
         HRESULT hr = 0;
         cv::AutoLock lock(m_mutex);
 
@@ -365,6 +363,7 @@ public:
                 {
                     CV_LOG_DEBUG(NULL, "videoio(MSMF): drop frame (not processed)");
                 }
+                m_lastSampleTimestamp = llTimestamp;
                 m_lastSample = pSample;
             }
         }
@@ -444,6 +443,7 @@ public:
 
     IMFSourceReader *m_reader;
     DWORD m_dwStreamIndex;
+    LONGLONG m_lastSampleTimestamp;
     _ComPtr<IMFSample>  m_lastSample;
 };
 
@@ -492,12 +492,14 @@ public:
             }
         }
     }
-    std::pair<MediaID, MediaType> findBest(const MediaType& newType)
+    std::pair<MediaID, MediaType> findBestVideoFormat(const MediaType& newType)
     {
         std::pair<MediaID, MediaType> best;
         std::map<MediaID, MediaType>::const_iterator i = formats.begin();
         for (; i != formats.end(); ++i)
         {
+            if (i->second.majorType != MFMediaType_Video)
+                continue;
             if (newType.isEmpty()) // file input - choose first returned media type
             {
                 best = *i;
@@ -775,7 +777,12 @@ bool CvCapture_MSMF::configureOutput(MediaType newType, cv::uint32_t outFormat)
 {
     FormatStorage formats;
     formats.read(videoFileSource.Get());
-    std::pair<FormatStorage::MediaID, MediaType> bestMatch = formats.findBest(newType);
+    std::pair<FormatStorage::MediaID, MediaType> bestMatch = formats.findBestVideoFormat(newType);
+    if (bestMatch.second.isEmpty())
+    {
+        CV_LOG_DEBUG(NULL, "Can not find video stream with requested parameters");
+        return false;
+    }
     dwStreamIndex = bestMatch.first.stream;
     nativeFormat = bestMatch.second;
     MediaType newFormat = nativeFormat;
@@ -910,6 +917,7 @@ bool CvCapture_MSMF::grabFrame()
             CV_LOG_WARNING(NULL, "videoio(MSMF): EOS signal. Capture stream is lost");
             return false;
         }
+        sampleTime = reader->m_lastSampleTimestamp;
         return true;
     }
     else if (isOpen)
@@ -1656,11 +1664,13 @@ void CvVideoWriter_MSMF::write(cv::InputArray img)
 }
 
 cv::Ptr<cv::IVideoWriter> cv::cvCreateVideoWriter_MSMF( const std::string& filename, int fourcc,
-                                                        double fps, const cv::Size &frameSize, bool isColor )
+                                                        double fps, const cv::Size& frameSize,
+                                                        const VideoWriterParameters& params)
 {
     cv::Ptr<CvVideoWriter_MSMF> writer = cv::makePtr<CvVideoWriter_MSMF>();
     if (writer)
     {
+        const bool isColor = params.get(VIDEOWRITER_PROP_IS_COLOR, true);
         writer->open(filename, fourcc, fps, frameSize, isColor);
         if (writer->isOpened())
             return writer;
@@ -1856,7 +1866,7 @@ CvResult CV_API_CALL cv_writer_write(CvPluginWriter handle, const unsigned char*
 static const OpenCV_VideoIO_Plugin_API_preview plugin_api_v0 =
 {
     {
-        sizeof(OpenCV_VideoIO_Plugin_API_preview), ABI_VERSION, API_VERSION,
+        sizeof(OpenCV_VideoIO_Plugin_API_preview), ABI_VERSION, 0/*API_VERSION*/,
         CV_VERSION_MAJOR, CV_VERSION_MINOR, CV_VERSION_REVISION, CV_VERSION_STATUS,
         "Microsoft Media Foundation OpenCV Video I/O plugin"
     },

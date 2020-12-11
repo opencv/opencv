@@ -10,7 +10,7 @@ set(the_description "Deep neural network module. It allows to load models from d
 
 ocv_add_dispatched_file_force_all("layers/layers_common" AVX AVX2 AVX512_SKX)
 
-ocv_add_module(dnn opencv_core opencv_imgproc WRAP python java js)
+ocv_add_module(dnn opencv_core opencv_imgproc WRAP python java objc js)
 
 ocv_option(OPENCV_DNN_OPENCL "Build with OpenCL support" HAVE_OPENCL AND NOT APPLE)
 if(HAVE_TENGINE)
@@ -21,10 +21,24 @@ if(OPENCV_DNN_OPENCL AND HAVE_OPENCL)
   add_definitions(-DCV_OCL4DNN=1)
 endif()
 
-ocv_option(OPENCV_DNN_CUDA "Build with CUDA support" HAVE_CUDA AND HAVE_CUBLAS AND HAVE_CUDNN)
+ocv_option(OPENCV_DNN_CUDA "Build with CUDA support"
+    HAVE_CUDA
+    AND HAVE_CUBLAS
+    AND HAVE_CUDNN
+)
 
-if(OPENCV_DNN_CUDA AND HAVE_CUDA AND HAVE_CUBLAS AND HAVE_CUDNN)
-  add_definitions(-DCV_CUDA4DNN=1)
+if(OPENCV_DNN_CUDA)
+  if(HAVE_CUDA AND HAVE_CUBLAS AND HAVE_CUDNN)
+    add_definitions(-DCV_CUDA4DNN=1)
+  else()
+    if(NOT HAVE_CUDA)
+      message(SEND_ERROR "DNN: CUDA backend requires CUDA Toolkit. Please resolve dependency or disable OPENCV_DNN_CUDA=OFF")
+    elseif(NOT HAVE_CUBLAS)
+      message(SEND_ERROR "DNN: CUDA backend requires cuBLAS. Please resolve dependency or disable OPENCV_DNN_CUDA=OFF")
+    elseif(NOT HAVE_CUDNN)
+      message(SEND_ERROR "DNN: CUDA backend requires cuDNN. Please resolve dependency or disable OPENCV_DNN_CUDA=OFF")
+    endif()
+  endif()
 endif()
 
 ocv_cmake_hook_append(INIT_MODULE_SOURCES_opencv_dnn "${CMAKE_CURRENT_LIST_DIR}/cmake/hooks/INIT_MODULE_SOURCES_opencv_dnn.cmake")
@@ -72,6 +86,9 @@ ocv_warnings_disable(CMAKE_CXX_FLAGS
     -Winvalid-offsetof                 # Apple Clang (attr_value.pb.cc)
 )
 
+set(include_dirs "")
+set(libs "")
+
 if(PROTOBUF_UPDATE_FILES)
   file(GLOB proto_files "${CMAKE_CURRENT_LIST_DIR}/src/tensorflow/*.proto" "${CMAKE_CURRENT_LIST_DIR}/src/caffe/opencv-caffe.proto" "${CMAKE_CURRENT_LIST_DIR}/src/onnx/opencv-onnx.proto")
   set(PROTOBUF_GENERATE_CPP_APPEND_PATH ON) # required for tensorflow
@@ -82,11 +99,15 @@ else()
   set(fw_inc "${CMAKE_CURRENT_LIST_DIR}/misc/caffe" "${CMAKE_CURRENT_LIST_DIR}/misc/tensorflow" "${CMAKE_CURRENT_LIST_DIR}/misc/onnx")
 endif()
 
-set(include_dirs ${fw_inc})
+list(APPEND include_dirs ${fw_inc})
+list(APPEND libs ${Protobuf_LIBRARIES})
+if(NOT BUILD_PROTOBUF)
+  list(APPEND include_dirs ${Protobuf_INCLUDE_DIRS})
+endif()
+
 set(sources_options "")
 
-set(libs libprotobuf ${LAPACK_LIBRARIES})
-
+list(APPEND libs ${LAPACK_LIBRARIES})
 if(OPENCV_DNN_OPENCL AND HAVE_OPENCL)
   list(APPEND include_dirs ${OPENCL_INCLUDE_DIRS})
 else()
@@ -107,17 +128,10 @@ else()
   set(sources_options ${sources_options} EXCLUDE_CUDA)
 endif()
 
-
 if(HAVE_TENGINE)
 	list(APPEND include_dirs ${TENGINE_INCLUDE_DIRS})
-	if(EXISTS ${TENGINE_LIBRARIES})
-		list(APPEND libs ${TENGINE_LIBRARIES})
-	else()
-		ocv_add_dependencies(opencv_dnn tengine)
-		list(APPEND libs ${TENGINE_LIBRARIES})
-	endif()
+	list(APPEND libs -Wl,--whole-archive ${TENGINE_LIBRARIES} -Wl,--no-whole-archive)
 endif()
-
 
 ocv_module_include_directories(${include_dirs})
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")

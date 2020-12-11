@@ -41,13 +41,6 @@
 //M*/
 
 #include "../precomp.hpp"
-#include "../op_cuda.hpp"
-#include "../op_inf_engine.hpp"
-
-#ifdef HAVE_DNN_NGRAPH
-#include "../ie_ngraph.hpp"
-#include <ngraph/op/experimental/layers/reorg_yolo.hpp>
-#endif
 
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/dnn/all_layers.hpp>
@@ -56,6 +49,17 @@
 #include "opencl_kernels_dnn.hpp"
 #endif
 
+#include "../op_inf_engine.hpp"
+#ifdef HAVE_DNN_NGRAPH
+#include "../ie_ngraph.hpp"
+#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2020_4)
+#include <ngraph/op/reorg_yolo.hpp>
+#else
+#include <ngraph/op/experimental/layers/reorg_yolo.hpp>
+#endif
+#endif
+
+#include "../op_cuda.hpp"
 #ifdef HAVE_CUDA
 #include "../cuda4dnn/primitives/reorg.hpp"
 using namespace cv::dnn::cuda4dnn;

@@ -12,7 +12,11 @@
 
 #ifdef HAVE_DNN_NGRAPH
 #include "../ie_ngraph.hpp"
+#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2020_4)
+#include <ngraph/op/interpolate.hpp>
+#else
 #include <ngraph/op/experimental/layers/interpolate.hpp>
+#endif
 #endif
 
 #ifdef HAVE_CUDA
@@ -25,8 +29,8 @@ namespace cv { namespace dnn {
 class ResizeLayerImpl : public ResizeLayer
 {
 public:
-    ResizeLayerImpl(const LayerParams& params) : zoomFactorWidth(params.get<int>("zoom_factor_x", params.get<int>("zoom_factor", 0))),
-                                                 zoomFactorHeight(params.get<int>("zoom_factor_y", params.get<int>("zoom_factor", 0))),
+    ResizeLayerImpl(const LayerParams& params) : zoomFactorWidth(params.get<float>("zoom_factor_x", params.get<float>("zoom_factor", 0))),
+                                                 zoomFactorHeight(params.get<float>("zoom_factor_y", params.get<float>("zoom_factor", 0))),
                                                  scaleWidth(0), scaleHeight(0)
     {
         setParamsFrom(params);
@@ -41,9 +45,10 @@ public:
             CV_Assert(params.has("zoom_factor_x") && params.has("zoom_factor_y"));
         }
         interpolation = params.get<String>("interpolation");
-        CV_Assert(interpolation == "nearest" || interpolation == "opencv_linear" || interpolation == "bilinear");
+        CV_Check(interpolation, interpolation == "nearest" || interpolation == "opencv_linear" || interpolation == "bilinear", "");
 
         alignCorners = params.get<bool>("align_corners", false);
+        halfPixelCenters = params.get<bool>("half_pixel_centers", false);
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -51,10 +56,15 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
-        CV_Assert_N(inputs.size() == 1, inputs[0].size() == 4);
+        CV_Assert_N(inputs.size() == 1 || inputs.size() == 2, inputs[0].size() == 4);
         outputs.resize(1, inputs[0]);
-        outputs[0][2] = zoomFactorHeight > 0 ? (outputs[0][2] * zoomFactorHeight) : outHeight;
-        outputs[0][3] = zoomFactorWidth > 0 ? (outputs[0][3] * zoomFactorWidth) : outWidth;
+        if (inputs.size() == 1) {
+            outputs[0][2] = zoomFactorHeight > 0 ? (outputs[0][2] * zoomFactorHeight) : outHeight;
+            outputs[0][3] = zoomFactorWidth > 0 ? (outputs[0][3] * zoomFactorWidth) : outWidth;
+        } else {
+            outputs[0][2] = inputs[1][2];
+            outputs[0][3] = inputs[1][3];
+        }
         // We can work in-place (do nothing) if input shape == output shape.
         return (outputs[0][2] == inputs[0][2]) && (outputs[0][3] == inputs[0][3]);
     }
@@ -114,7 +124,7 @@ public:
 
         Mat& inp = inputs[0];
         Mat& out = outputs[0];
-        if (interpolation == "nearest" || interpolation == "opencv_linear")
+        if (interpolation == "nearest" || interpolation == "opencv_linear" || (interpolation == "bilinear" && halfPixelCenters))
         {
             InterpolationFlags mode = interpolation == "nearest" ? INTER_NEAREST : INTER_LINEAR;
             for (size_t n = 0; n < inputs[0].size[0]; ++n)
@@ -256,10 +266,11 @@ public:
 
 protected:
     int outWidth, outHeight;
-    const int zoomFactorWidth, zoomFactorHeight;
+    const float zoomFactorWidth, zoomFactorHeight;
     String interpolation;
     float scaleWidth, scaleHeight;
     bool alignCorners;
+    bool halfPixelCenters;
 };
 
 

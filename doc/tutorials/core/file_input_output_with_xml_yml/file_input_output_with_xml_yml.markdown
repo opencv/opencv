@@ -1,8 +1,15 @@
 File Input and Output using XML and YAML files {#tutorial_file_input_output_with_xml_yml}
 ==============================================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_discrete_fourier_transform}
 @next_tutorial{tutorial_how_to_use_OpenCV_parallel_for_}
+
+|    |    |
+| -: | :- |
+| Original author | Bernát Gábor |
+| Compatibility | OpenCV >= 3.0 |
 
 Goal
 ----
@@ -107,8 +114,9 @@ you may access it. For sequences you need to go through them to query a specific
     then we have to specify if our output is either a sequence or map.
 
     For sequence before the first element print the "[" character and after the last one the "]"
-    character. With Python, the "]" character could be written with the name of the sequence or
-    the last element of the sequence depending on the number of elements:
+    character. With Python, call `FileStorage.startWriteStruct(structure_name, struct_type)`,
+    where `struct_type` is `cv2.FileNode_MAP` or `cv2.FileNode_SEQ` to start writing the structure.
+    Call `FileStorage.endWriteStruct()` to finish the structure:
     @add_toggle_cpp
     @snippet cpp/tutorial_code/core/file_input_output/file_input_output.cpp writeStr
     @end_toggle

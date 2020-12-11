@@ -8,6 +8,7 @@
 #define OPENCV_GAPI_VIDEO_TESTS_INL_HPP
 
 #include "gapi_video_tests.hpp"
+#include <opencv2/gapi/streaming/cap.hpp>
 
 namespace opencv_test
 {
@@ -26,7 +27,7 @@ TEST_P(BuildOptFlowPyramidTest, AccuracyTest)
 
     runOCVnGAPIBuildOptFlowPyramid(*this, params, outOCV, outGAPI);
 
-    compareOutputPyramids(outOCV, outGAPI);
+    compareOutputPyramids(outGAPI, outOCV);
 }
 
 TEST_P(OptFlowLKTest, AccuracyTest)
@@ -43,7 +44,7 @@ TEST_P(OptFlowLKTest, AccuracyTest)
 
     runOCVnGAPIOptFlowLK(*this, inPts, params, outOCV, outGAPI);
 
-    compareOutputsOptFlow(outOCV, outGAPI);
+    compareOutputsOptFlow(outGAPI, outOCV);
 }
 
 TEST_P(OptFlowLKTestForPyr, AccuracyTest)
@@ -62,7 +63,7 @@ TEST_P(OptFlowLKTestForPyr, AccuracyTest)
 
     runOCVnGAPIOptFlowLKForPyr(*this, in, params, withDeriv, outOCV, outGAPI);
 
-    compareOutputsOptFlow(outOCV, outGAPI);
+    compareOutputsOptFlow(outGAPI, outOCV);
 }
 
 TEST_P(BuildPyr_CalcOptFlow_PipelineTest, AccuracyTest)
@@ -85,9 +86,52 @@ TEST_P(BuildPyr_CalcOptFlow_PipelineTest, AccuracyTest)
 
     runOCVnGAPIOptFlowPipeline(*this, params, outOCV, outGAPI, inPts);
 
-    compareOutputsOptFlow(outOCV, outGAPI);
+    compareOutputsOptFlow(outGAPI, outOCV);
 }
 
+#ifdef HAVE_OPENCV_VIDEO
+TEST_P(BackgroundSubtractorTest, AccuracyTest)
+{
+    initTestDataPath();
+
+    cv::gapi::video::BackgroundSubtractorType opType;
+    double thr = -1;
+    std::tie(opType, thr) = typeAndThreshold;
+
+    cv::gapi::video::BackgroundSubtractorParams bsp(opType, histLength, thr,
+                                                    detectShadows, learningRate);
+
+    // G-API graph declaration
+    cv::GMat in;
+    cv::GMat out = cv::gapi::BackgroundSubtractor(in, bsp);
+    // Preserving 'in' in output to have possibility to compare with OpenCV reference
+    cv::GComputation c(cv::GIn(in), cv::GOut(cv::gapi::copy(in), out));
+
+    // G-API compilation of graph for streaming mode
+    auto gapiBackSub = c.compileStreaming(getCompileArgs());
+
+    // Testing G-API Background Substractor in streaming mode
+    auto path = findDataFile("cv/video/768x576.avi");
+    try
+    {
+        gapiBackSub.setSource(gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(path));
+    }
+    catch (...)
+    { throw SkipTestException("Video file can't be opened."); }
+
+    cv::Ptr<cv::BackgroundSubtractor> pOCVBackSub;
+
+    if (opType == cv::gapi::video::TYPE_BS_MOG2)
+        pOCVBackSub = cv::createBackgroundSubtractorMOG2(histLength, thr,
+                                                         detectShadows);
+    else if (opType == cv::gapi::video::TYPE_BS_KNN)
+        pOCVBackSub = cv::createBackgroundSubtractorKNN(histLength, thr,
+                                                        detectShadows);
+
+    // Allowing 1% difference of all pixels between G-API and reference OpenCV results
+    testBackgroundSubtractorStreaming(gapiBackSub, pOCVBackSub, 1, 1, learningRate, testNumFrames);
+}
+#endif
 } // opencv_test
 
 #endif // OPENCV_GAPI_VIDEO_TESTS_INL_HPP

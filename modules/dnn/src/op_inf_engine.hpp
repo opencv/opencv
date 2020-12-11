@@ -25,10 +25,13 @@
 #define INF_ENGINE_RELEASE_2019R3 2019030000
 #define INF_ENGINE_RELEASE_2020_1 2020010000
 #define INF_ENGINE_RELEASE_2020_2 2020020000
+#define INF_ENGINE_RELEASE_2020_3 2020030000
+#define INF_ENGINE_RELEASE_2020_4 2020040000
+#define INF_ENGINE_RELEASE_2021_1 2021010000
 
 #ifndef INF_ENGINE_RELEASE
-#warning("IE version have not been provided via command-line. Using 2020.2 by default")
-#define INF_ENGINE_RELEASE INF_ENGINE_RELEASE_2020_2
+#warning("IE version have not been provided via command-line. Using 2021.1 by default")
+#define INF_ENGINE_RELEASE INF_ENGINE_RELEASE_2021_1
 #endif
 
 #define INF_ENGINE_VER_MAJOR_GT(ver) (((INF_ENGINE_RELEASE) / 10000) > ((ver) / 10000))
@@ -42,7 +45,7 @@
 #pragma GCC diagnostic ignored "-Wsuggest-override"
 #endif
 
-#ifdef HAVE_DNN_IE_NN_BUILDER_2019
+#if defined(HAVE_DNN_IE_NN_BUILDER_2019) || INF_ENGINE_VER_MAJOR_EQ(INF_ENGINE_RELEASE_2020_4)
 //#define INFERENCE_ENGINE_DEPRECATED  // turn off deprecation warnings from IE
 //there is no way to suppress warnings from IE only at this moment, so we are forced to suppress warnings globally
 #if defined(__GNUC__)
@@ -51,7 +54,7 @@
 #ifdef _MSC_VER
 #pragma warning(disable: 4996)  // was declared deprecated
 #endif
-#endif  // HAVE_DNN_IE_NN_BUILDER_2019
+#endif
 
 #if defined(__GNUC__) && INF_ENGINE_VER_MAJOR_LT(INF_ENGINE_RELEASE_2020_1)
 #pragma GCC visibility push(default)
@@ -226,7 +229,9 @@ private:
 class InfEngineExtension : public InferenceEngine::IExtension
 {
 public:
+#if INF_ENGINE_VER_MAJOR_LT(INF_ENGINE_RELEASE_2020_2)
     virtual void SetLogCallback(InferenceEngine::IErrorListener&) noexcept {}
+#endif
     virtual void Unload() noexcept {}
     virtual void Release() noexcept {}
     virtual void GetVersion(const InferenceEngine::Version*&) const noexcept {}

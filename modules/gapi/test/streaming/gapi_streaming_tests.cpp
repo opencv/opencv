@@ -2,10 +2,12 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2019 Intel Corporation
+// Copyright (C) 2019-2020 Intel Corporation
 
 
 #include "../test_precomp.hpp"
+
+#include <thread> // sleep_for (Delay)
 
 #include <opencv2/gapi/cpu/core.hpp>
 #include <opencv2/gapi/cpu/imgproc.hpp>
@@ -18,6 +20,7 @@
 #include <opencv2/gapi/ocl/imgproc.hpp>
 
 #include <opencv2/gapi/streaming/cap.hpp>
+#include <opencv2/gapi/streaming/desync.hpp>
 
 namespace opencv_test
 {
@@ -31,9 +34,9 @@ void initTestDataPath()
     {
         // Since G-API has no own test data (yet), it is taken from the common space
         const char* testDataPath = getenv("OPENCV_TEST_DATA_PATH");
-        GAPI_Assert(testDataPath != nullptr);
-
-        cvtest::addDataSearchPath(testDataPath);
+        if (testDataPath) {
+            cvtest::addDataSearchPath(testDataPath);
+        }
         initialized = true;
     }
 #endif // WINRT
@@ -97,6 +100,16 @@ struct GAPI_Streaming: public ::testing::TestWithParam<KernelPackage> {
             break;
         }
         throw std::logic_error("Unknown package");
+    }
+};
+
+G_API_OP(Delay, <cv::GMat(cv::GMat, int)>, "org.opencv.test.delay") {
+    static cv::GMatDesc outMeta(const cv::GMatDesc &in, int) { return in; }
+};
+GAPI_OCV_KERNEL(OCVDelay, Delay) {
+    static void run(const cv::Mat &in, int ms, cv::Mat &out) {
+        std::this_thread::sleep_for(std::chrono::milliseconds{ms});
+        in.copyTo(out);
     }
 };
 
@@ -189,8 +202,12 @@ TEST_P(GAPI_Streaming, SmokeTest_VideoInput_GMat)
     EXPECT_TRUE(ccomp);
     EXPECT_FALSE(ccomp.running());
 
-    ccomp.setSource(gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(findDataFile("cv/video/768x576.avi")));
-
+    auto path = findDataFile("cv/video/768x576.avi");
+    try {
+        ccomp.setSource(gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(path));
+    } catch(...) {
+        throw SkipTestException("Video file can not be opened");
+    }
     ccomp.start();
     EXPECT_TRUE(ccomp.running());
 
@@ -259,8 +276,13 @@ TEST_P(GAPI_Streaming, SmokeTest_StartRestart)
     EXPECT_FALSE(ccomp.running());
 
     // Run 1
+    auto path = findDataFile("cv/video/768x576.avi");
     std::size_t num_frames1 = 0u;
-    ccomp.setSource(gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(findDataFile("cv/video/768x576.avi")));
+    try {
+        ccomp.setSource(gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(path));
+    } catch(...) {
+        throw SkipTestException("Video file can not be opened");
+    }
     ccomp.start();
     EXPECT_TRUE(ccomp.running());
 
@@ -271,7 +293,11 @@ TEST_P(GAPI_Streaming, SmokeTest_StartRestart)
 
     // Run 2
     std::size_t num_frames2 = 0u;
-    ccomp.setSource(gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(findDataFile("cv/video/768x576.avi")));
+    try {
+        ccomp.setSource(gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(path));
+    } catch(...) {
+        throw SkipTestException("Video file can not be opened");
+    }
     ccomp.start();
     EXPECT_TRUE(ccomp.running());
     while (ccomp.pull(cv::gout(out1, out2))) num_frames2++;
@@ -293,7 +319,12 @@ TEST_P(GAPI_Streaming, SmokeTest_VideoConstSource_NoHang)
     }).compileStreaming(cv::GMatDesc{CV_8U,3,cv::Size{768,576}},
                         cv::compile_args(cv::gapi::use_only{getKernelPackage()}));
 
-    refc.setSource(gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(findDataFile("cv/video/768x576.avi")));
+    auto path = findDataFile("cv/video/768x576.avi");
+    try {
+        refc.setSource(gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(path));
+    } catch(...) {
+        throw SkipTestException("Video file can not be opened");
+    }
     refc.start();
     std::size_t ref_frames = 0u;
     cv::Mat tmp;
@@ -312,7 +343,7 @@ TEST_P(GAPI_Streaming, SmokeTest_VideoConstSource_NoHang)
 
     cv::Mat in_const = cv::Mat::eye(cv::Size(256,256), CV_8UC3);
     testc.setSource(cv::gin(in_const,
-                            gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(findDataFile("cv/video/768x576.avi"))));
+                            gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(path)));
     testc.start();
     std::size_t test_frames = 0u;
     while (testc.pull(cv::gout(tmp))) test_frames++;
@@ -335,8 +366,12 @@ TEST_P(GAPI_Streaming, SmokeTest_AutoMeta)
     cv::Mat tmp;
 
     // Test with one video source
-    auto in_src = gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(findDataFile("cv/video/768x576.avi"));
-    testc.setSource(cv::gin(in_const, in_src));
+    auto path = findDataFile("cv/video/768x576.avi");
+    try {
+        testc.setSource(cv::gin(in_const, gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(path)));
+    } catch(...) {
+        throw SkipTestException("Video file can not be opened");
+    }
     testc.start();
 
     std::size_t test_frames = 0u;
@@ -344,8 +379,12 @@ TEST_P(GAPI_Streaming, SmokeTest_AutoMeta)
     EXPECT_EQ(100u, test_frames);
 
     // Now test with another one
-    in_src = gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(findDataFile("cv/video/1920x1080.avi"));
-    testc.setSource(cv::gin(in_const, in_src));
+    path = findDataFile("cv/video/1920x1080.avi");
+    try {
+        testc.setSource(cv::gin(in_const, gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(path)));
+    } catch(...) {
+        throw SkipTestException("Video file can not be opened");
+    }
     testc.start();
 
     test_frames = 0u;
@@ -398,8 +437,12 @@ TEST_P(GAPI_Streaming, SmokeTest_AutoMeta_VideoScalar)
 
     cv::Mat tmp;
     // Test with one video source and scalar
-    auto in_src = gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(findDataFile("cv/video/768x576.avi"));
-    testc.setSource(cv::gin(in_src, cv::Scalar{1.25}));
+    auto path = findDataFile("cv/video/768x576.avi");
+    try {
+        testc.setSource(cv::gin(gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(path), cv::Scalar{1.25}));
+    } catch(...) {
+        throw SkipTestException("Video file can not be opened");
+    }
     testc.start();
 
     std::size_t test_frames = 0u;
@@ -407,8 +450,12 @@ TEST_P(GAPI_Streaming, SmokeTest_AutoMeta_VideoScalar)
     EXPECT_EQ(100u, test_frames);
 
     // Now test with another one video source and scalar
-    in_src = gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(findDataFile("cv/video/1920x1080.avi"));
-    testc.setSource(cv::gin(in_src, cv::Scalar{0.75}));
+    path = findDataFile("cv/video/1920x1080.avi");
+    try {
+        testc.setSource(cv::gin(gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(path), cv::Scalar{0.75}));
+    } catch(...) {
+        throw SkipTestException("Video file can not be opened");
+    }
     testc.start();
 
     test_frames = 0u;
@@ -503,9 +550,13 @@ TEST_P(GAPI_Streaming, SmokeTest_AutoMeta_VideoArray)
 
     cv::Mat tmp;
     // Test with one video source and vector
-    auto in_src = gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(findDataFile("cv/video/768x576.avi"));
+    auto path = findDataFile("cv/video/768x576.avi");
     std::vector<int> first_in_vec(768*3, 1);
-    testc.setSource(cv::gin(in_src, first_in_vec));
+    try {
+        testc.setSource(cv::gin(gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(path), first_in_vec));
+    } catch(...) {
+        throw SkipTestException("Video file can not be opened");
+    }
     testc.start();
 
     std::size_t test_frames = 0u;
@@ -513,9 +564,13 @@ TEST_P(GAPI_Streaming, SmokeTest_AutoMeta_VideoArray)
     EXPECT_EQ(100u, test_frames);
 
     // Now test with another one
-    in_src = gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(findDataFile("cv/video/1920x1080.avi"));
+    path = findDataFile("cv/video/1920x1080.avi");
     std::vector<int> second_in_vec(1920*3, 1);
-    testc.setSource(cv::gin(in_src, second_in_vec));
+    try {
+        testc.setSource(cv::gin(gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(path), second_in_vec));
+    } catch(...) {
+        throw SkipTestException("Video file can not be opened");
+    }
     testc.start();
 
     test_frames = 0u;
@@ -634,8 +689,13 @@ TEST(GAPI_Streaming_Types, XChangeScalar)
 
     // Compile streaming pipeline
     auto sc = c.compileStreaming(cv::GMatDesc{CV_8U,3,cv::Size{768,576}},
-                                 cv::compile_args(cv::gapi::use_only{kernels}));
-    sc.setSource(gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(findDataFile("cv/video/768x576.avi")));
+                                cv::compile_args(cv::gapi::use_only{kernels}));
+    auto path = findDataFile("cv/video/768x576.avi");
+    try {
+        sc.setSource(gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(path));
+    } catch(...) {
+        throw SkipTestException("Video file can not be opened");
+    }
     sc.start();
 
     cv::Mat in_frame;
@@ -695,8 +755,13 @@ TEST(GAPI_Streaming_Types, XChangeVector)
     auto sc = c.compileStreaming(cv::GMatDesc{CV_8U,3,cv::Size{768,576}},
                                  cv::GMatDesc{CV_8U,3,cv::Size{576,576}},
                                  cv::compile_args(cv::gapi::use_only{kernels}));
-    sc.setSource(cv::gin(gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(findDataFile("cv/video/768x576.avi")),
-                         in_eye));
+    auto path = findDataFile("cv/video/768x576.avi");
+    try {
+        sc.setSource(cv::gin(gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(path),
+                             in_eye));
+    } catch(...) {
+        throw SkipTestException("Video file can not be opened");
+    }
     sc.start();
 
     cv::Mat in_frame;
@@ -724,12 +789,19 @@ TEST(GAPI_Streaming_Types, OutputScalar)
     auto sc = cv::GComputation(cv::GIn(in), cv::GOut(out))
         .compileStreaming(cv::GMatDesc{CV_8U,3,cv::Size{768,576}});
 
-    const auto video_path = findDataFile("cv/video/768x576.avi");
-    sc.setSource(gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(video_path));
+    std::string video_path;
+    video_path = findDataFile("cv/video/768x576.avi");
+    try {
+        sc.setSource(gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(video_path));
+    } catch(...) {
+        throw SkipTestException("Video file can not be opened");
+    }
     sc.start();
 
     cv::VideoCapture cap;
     cap.open(video_path);
+    if (!cap.isOpened())
+        throw SkipTestException("Video file can not be opened");
 
     cv::Mat tmp;
     cv::Scalar out_scl;
@@ -768,12 +840,19 @@ TEST(GAPI_Streaming_Types, OutputVector)
     };
 
     cv::Mat in_eye = cv::Mat::eye(cv::Size(256, 256), CV_8UC3);
-    const auto video_path = findDataFile("cv/video/768x576.avi");
-    sc.setSource(cv::gin(in_eye, gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(video_path)));
+    std::string video_path;
+    video_path = findDataFile("cv/video/768x576.avi");
+    try {
+        sc.setSource(cv::gin(in_eye, gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(video_path)));
+    } catch(...) {
+        throw SkipTestException("Video file can not be opened");
+    }
     sc.start();
 
     cv::VideoCapture cap;
     cap.open(video_path);
+    if (!cap.isOpened())
+        throw SkipTestException("Video file can not be opened");
 
     cv::Mat tmp;
     std::vector<int> ref_vec;
@@ -788,6 +867,104 @@ TEST(GAPI_Streaming_Types, OutputVector)
         EXPECT_EQ(ref_vec, out_vec);
     }
     EXPECT_LT(0u, num_frames);
+}
+
+G_API_OP(DimsChans,
+         <std::tuple<cv::GArray<int>, cv::GOpaque<int>>(cv::GMat)>,
+         "test.streaming.dims_chans") {
+    static std::tuple<cv::GArrayDesc, cv::GOpaqueDesc> outMeta(const cv::GMatDesc &) {
+        return std::make_tuple(cv::empty_array_desc(),
+                               cv::empty_gopaque_desc());
+    }
+};
+
+GAPI_OCV_KERNEL(OCVDimsChans, DimsChans) {
+    static void run(const cv::Mat &in, std::vector<int> &ov, int &oi) {
+        ov = {in.cols, in.rows};
+        oi = in.channels();
+    }
+};
+
+struct GAPI_Streaming_TemplateTypes: ::testing::Test {
+    // There was a problem in GStreamingExecutor
+    // when outputs were formally not used by the graph
+    // but still should be in place as operation need
+    // to produce them, and host data type constructors
+    // were missing for GArray and GOpaque in this case.
+    // This test tests exactly this.
+
+    GAPI_Streaming_TemplateTypes() {
+        // Prepare everything for the test:
+        // Graph itself
+        blur = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
+
+        cv::GMat blur_d = cv::gapi::streaming::desync(blur);
+        std::tie(vec, opq) = DimsChans::on(blur_d);
+
+        // Kernel package
+        pkg = cv::gapi::kernels<OCVDimsChans>();
+
+        // Input mat
+        in_mat = cv::Mat::eye(cv::Size(320,240), CV_8UC3);
+    }
+
+    cv::GMat in;
+    cv::GMat blur;
+    cv::GArray<int> vec;
+    cv::GOpaque<int> opq;
+    cv::gapi::GKernelPackage pkg;
+    cv::Mat in_mat;
+};
+
+TEST_F(GAPI_Streaming_TemplateTypes, UnusedVectorIsOK)
+{
+    // Declare graph without listing vec as output
+    auto sc = cv::GComputation(cv::GIn(in), cv::GOut(blur, opq))
+        .compileStreaming(cv::compile_args(pkg));
+    sc.setSource(cv::gin(in_mat));
+    sc.start();
+
+    cv::optional<cv::Mat> out_mat;
+    cv::optional<int> out_int;
+
+    int counter = 0;
+    while (sc.pull(cv::gout(out_mat, out_int))) {
+        if (counter++ == 10) {
+            // Stop the test after 10 iterations
+            sc.stop();
+            break;
+        }
+        GAPI_Assert(out_mat || out_int);
+        if (out_int) {
+            EXPECT_EQ(  3, out_int.value());
+        }
+    }
+}
+
+TEST_F(GAPI_Streaming_TemplateTypes, UnusedOpaqueIsOK)
+{
+    // Declare graph without listing opq as output
+    auto sc = cv::GComputation(cv::GIn(in), cv::GOut(blur, vec))
+        .compileStreaming(cv::compile_args(pkg));
+    sc.setSource(cv::gin(in_mat));
+    sc.start();
+
+    cv::optional<cv::Mat> out_mat;
+    cv::optional<std::vector<int> > out_vec;
+
+    int counter = 0;
+    while (sc.pull(cv::gout(out_mat, out_vec))) {
+        if (counter++ == 10) {
+            // Stop the test after 10 iterations
+            sc.stop();
+            break;
+        }
+        GAPI_Assert(out_mat || out_vec);
+        if (out_vec) {
+            EXPECT_EQ(320, out_vec.value()[0]);
+            EXPECT_EQ(240, out_vec.value()[1]);
+        }
+    }
 }
 
 struct GAPI_Streaming_Unit: public ::testing::Test {
@@ -821,17 +998,22 @@ struct GAPI_Streaming_Unit: public ::testing::Test {
 
 TEST_F(GAPI_Streaming_Unit, TestTwoVideoSourcesFail)
 {
-    const auto c_ptr = gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(findDataFile("cv/video/768x576.avi"));
     auto c_desc = cv::GMatDesc{CV_8U,3,{768,576}};
     auto m_desc = cv::descr_of(m);
-
-    sc = cc.compileStreaming(c_desc, m_desc);
-    EXPECT_NO_THROW(sc.setSource(cv::gin(c_ptr, m)));
-
-    sc = cc.compileStreaming(m_desc, c_desc);
-    EXPECT_NO_THROW(sc.setSource(cv::gin(m, c_ptr)));
+    auto path = findDataFile("cv/video/768x576.avi");
+    try {
+        sc = cc.compileStreaming(c_desc, m_desc);
+        // FIXME: it should be EXPECT_NO_THROW()
+        sc.setSource(cv::gin(gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(path), m));
+        sc = cc.compileStreaming(m_desc, c_desc);
+        // FIXME: it should be EXPECT_NO_THROW()
+        sc.setSource(cv::gin(m, gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(path)));
+    } catch(...) {
+        throw SkipTestException("Video file can not be opened");
+    }
 
     sc = cc.compileStreaming(c_desc, c_desc);
+    auto c_ptr = gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(path);
     EXPECT_ANY_THROW(sc.setSource(cv::gin(c_ptr, c_ptr)));
 }
 
@@ -878,7 +1060,7 @@ TEST_F(GAPI_Streaming_Unit, StartStopStart_NoSetSource)
     EXPECT_NO_THROW(sc.setSource(cv::gin(m, m)));
     EXPECT_NO_THROW(sc.start());
     EXPECT_NO_THROW(sc.stop());
-    EXPECT_ANY_THROW(sc.start()); // Should fails since setSource was not called
+    EXPECT_ANY_THROW(sc.start()); // Should fail since setSource was not called
 }
 
 TEST_F(GAPI_Streaming_Unit, StartStopStress_Const)
@@ -900,11 +1082,15 @@ TEST_F(GAPI_Streaming_Unit, StartStopStress_Video)
     sc = cc.compileStreaming(cv::GMatDesc{CV_8U,3,cv::Size{768,576}},
                              cv::GMatDesc{CV_8U,3,cv::Size{768,576}});
     m = cv::Mat::eye(cv::Size{768,576}, CV_8UC3);
+    auto path = findDataFile("cv/video/768x576.avi");
     for (int i = 0; i < 100; i++)
     {
-        auto src = cv::gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(findDataFile("cv/video/768x576.avi"));
         sc.stop();
-        sc.setSource(cv::gin(src, m));
+        try {
+            sc.setSource(cv::gin(cv::gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(path), m));
+        } catch(...) {
+            throw SkipTestException("Video file can not be opened");
+        }
         sc.start();
         cv::Mat out;
         for (int j = 0; j < 5; j++) EXPECT_TRUE(sc.pull(cv::gout(out)));
@@ -977,6 +1163,429 @@ TEST_F(GAPI_Streaming_Unit, SetSource_After_Completion)
     // Test against new ref
     ref(cv::gin(eye, m), cv::gout(out_ref));
     EXPECT_EQ(0., cv::norm(out, out_ref, cv::NORM_INF));
+}
+
+// NB: Check pull overload for python
+TEST(Streaming, Python_Pull_Overload)
+{
+    cv::GMat in;
+    auto out = cv::gapi::copy(in);
+    cv::GComputation c(in, out);
+
+    cv::Size sz(3,3);
+    cv::Mat in_mat(sz, CV_8UC3);
+    cv::randu(in_mat, cv::Scalar::all(0), cv::Scalar(255));
+
+    auto ccomp = c.compileStreaming(cv::descr_of(in_mat));
+
+    EXPECT_TRUE(ccomp);
+    EXPECT_FALSE(ccomp.running());
+
+    ccomp.setSource(cv::gin(in_mat));
+
+    ccomp.start();
+    EXPECT_TRUE(ccomp.running());
+
+    bool has_output;
+    cv::GRunArgs outputs;
+    std::tie(has_output, outputs) = ccomp.pull();
+
+    EXPECT_TRUE(has_output);
+    EXPECT_EQ(1u, outputs.size());
+
+    auto out_mat = cv::util::get<cv::Mat>(outputs[0]);
+    EXPECT_EQ(0., cv::norm(in_mat, out_mat, cv::NORM_INF));
+
+    ccomp.stop();
+    EXPECT_FALSE(ccomp.running());
+}
+
+TEST(GAPI_Streaming_Desync, SmokeTest_Regular)
+{
+    cv::GMat in;
+    cv::GMat tmp1 = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
+    cv::GMat out1 = cv::gapi::Canny(tmp1, 32, 128, 3);
+
+    // FIXME: Unary desync should not require tie!
+    cv::GMat tmp2 = cv::gapi::streaming::desync(tmp1);
+    cv::GMat out2 = tmp2 / cv::gapi::Sobel(tmp2, CV_8U, 1, 1);;
+
+    cv::Mat test_in = cv::Mat::eye(cv::Size(32,32), CV_8UC3);
+    cv::Mat test_out1, test_out2;
+    cv::GComputation(cv::GIn(in), cv::GOut(out1, out2))
+        .apply(cv::gin(test_in), cv::gout(test_out1, test_out2));
+}
+
+TEST(GAPI_Streaming_Desync, SmokeTest_Streaming)
+{
+    initTestDataPath();
+
+    cv::GMat in;
+    cv::GMat tmp1 = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
+    cv::GMat out1 = cv::gapi::Canny(tmp1, 32, 128, 3);
+
+    cv::GMat tmp2 = cv::gapi::streaming::desync(tmp1);
+    cv::GMat out2 = Delay::on(tmp2,10) / cv::gapi::Sobel(tmp2, CV_8U, 1, 1);
+
+    auto sc = cv::GComputation(cv::GIn(in), cv::GOut(out1, out2))
+        .compileStreaming(cv::compile_args(cv::gapi::kernels<OCVDelay>()));
+    auto path = findDataFile("cv/video/768x576.avi");
+    try {
+        sc.setSource(cv::gin(gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(path)));
+    } catch(...) {
+        throw SkipTestException("Video file can not be opened");
+    }
+    sc.start();
+
+    std::size_t out1_hits = 0u;
+    std::size_t out2_hits = 0u;
+    cv::optional<cv::Mat> test_out1, test_out2;
+    while (sc.pull(cv::gout(test_out1, test_out2))) {
+        GAPI_Assert(test_out1 || test_out2);
+        if (test_out1) out1_hits++;
+        if (test_out2) out2_hits++;
+    }
+    EXPECT_EQ(100u, out1_hits);      // out1 must be available for all frames
+    EXPECT_LE(out2_hits, out1_hits); // out2 must appear less times than out1
+    std::cout << "Got " << out1_hits << " out1's and " << out2_hits << " out2's" << std::endl;
+}
+
+TEST(GAPI_Streaming_Desync, SmokeTest_Streaming_TwoParts)
+{
+    initTestDataPath();
+
+    cv::GMat in;
+    cv::GMat tmp1 = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
+    cv::GMat out1 = cv::gapi::Canny(tmp1, 32, 128, 3);
+
+    // Desynchronized path 1
+    cv::GMat tmp2 = cv::gapi::streaming::desync(tmp1);
+    cv::GMat out2 = tmp2 / cv::gapi::Sobel(tmp2, CV_8U, 1, 1);
+
+    // Desynchronized path 2
+    cv::GMat tmp3 = cv::gapi::streaming::desync(tmp1);
+    cv::GMat out3 = 0.5*tmp3 +  0.5*cv::gapi::medianBlur(tmp3, 7);
+
+    // The code should compile and execute well (desynchronized parts don't cross)
+    auto sc = cv::GComputation(cv::GIn(in), cv::GOut(out1, out2, out3))
+        .compileStreaming();
+    auto path = findDataFile("cv/video/768x576.avi");
+    try {
+        sc.setSource(cv::gin(gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(path)));
+    } catch(...) {
+        throw SkipTestException("Video file can not be opened");
+    }
+    sc.start();
+
+    std::size_t test_frames = 0u;
+    cv::optional<cv::Mat> test_out1, test_out2, test_out3;
+    while (sc.pull(cv::gout(test_out1, test_out2, test_out3))) {
+        GAPI_Assert(test_out1 || test_out2 || test_out3);
+        if (test_out1) {
+            // count frames only for synchronized output
+            test_frames++;
+        }
+    }
+    EXPECT_EQ(100u, test_frames);
+}
+
+TEST(GAPI_Streaming_Desync, Negative_NestedDesync_Tier0)
+{
+    cv::GMat in;
+    cv::GMat tmp1 = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
+
+    // Desynchronized path 1
+    cv::GMat tmp2 = cv::gapi::streaming::desync(tmp1);
+    cv::GMat out1 = cv::gapi::medianBlur(tmp2, 3);
+
+    // Desynchronized path 2, nested from 1 (directly from desync)
+    cv::GMat tmp3 = cv::gapi::streaming::desync(tmp2);
+    cv::GMat out2 = 0.5*tmp3;
+
+    // This shouldn't compile
+    EXPECT_ANY_THROW(cv::GComputation(cv::GIn(in), cv::GOut(out1, out2))
+                     .compileStreaming());
+}
+
+TEST(GAPI_Streaming_Desync, Negative_NestedDesync_Tier1)
+{
+    cv::GMat in;
+    cv::GMat tmp1 = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
+
+    // Desynchronized path 1
+    cv::GMat tmp2 = cv::gapi::streaming::desync(tmp1);
+    cv::GMat out1 = cv::gapi::medianBlur(tmp2, 3);
+
+    // Desynchronized path 2, nested from 1 (indirectly from desync)
+    cv::GMat tmp3 = cv::gapi::streaming::desync(out1);
+    cv::GMat out2 = 0.5*tmp3;
+
+    // This shouldn't compile
+    EXPECT_ANY_THROW(cv::GComputation(cv::GIn(in), cv::GOut(out1, out2))
+                     .compileStreaming());
+}
+
+TEST(GAPI_Streaming_Desync, Negative_CrossMainPart_Tier0)
+{
+    cv::GMat in;
+    cv::GMat tmp1 = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
+
+    // Desynchronized path: depends on both tmp1 and tmp2
+    cv::GMat tmp2 = cv::gapi::streaming::desync(tmp1);
+    cv::GMat out1 = 0.5*tmp1 + 0.5*tmp2;
+
+    // This shouldn't compile
+    EXPECT_ANY_THROW(cv::GComputation(in, out1).compileStreaming());
+}
+
+TEST(GAPI_Streaming_Desync, Negative_CrossMainPart_Tier1)
+{
+    cv::GMat in;
+    cv::GMat tmp1 = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
+
+    // Desynchronized path: depends on both tmp1 and tmp2
+    cv::GMat tmp2 = cv::gapi::streaming::desync(tmp1);
+    cv::GMat out1 = 0.5*tmp1 + 0.5*cv::gapi::medianBlur(tmp2, 3);
+
+    // This shouldn't compile
+    EXPECT_ANY_THROW(cv::GComputation(in, out1).compileStreaming());
+}
+
+TEST(GAPI_Streaming_Desync, Negative_CrossOtherDesync_Tier0)
+{
+    cv::GMat in;
+    cv::GMat tmp1 = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
+
+    // Desynchronized path 1
+    cv::GMat tmp2 = cv::gapi::streaming::desync(tmp1);
+    cv::GMat out1 = 0.5*tmp2;
+
+    // Desynchronized path 2 (depends on 1)
+    cv::GMat tmp3 = cv::gapi::streaming::desync(tmp1);
+    cv::GMat out2 = 0.5*tmp3 + tmp2;
+
+    // This shouldn't compile
+    EXPECT_ANY_THROW(cv::GComputation(cv::GIn(in), cv::GOut(out1, out2))
+                     .compileStreaming());
+}
+
+TEST(GAPI_Streaming_Desync, Negative_CrossOtherDesync_Tier1)
+{
+    cv::GMat in;
+    cv::GMat tmp1 = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
+
+    // Desynchronized path 1
+    cv::GMat tmp2 = cv::gapi::streaming::desync(tmp1);
+    cv::GMat out1 = 0.5*tmp2;
+
+    // Desynchronized path 2 (depends on 1)
+    cv::GMat tmp3 = cv::gapi::streaming::desync(tmp1);
+    cv::GMat out2 = 0.5*cv::gapi::medianBlur(tmp3,3) + 1.0*tmp2;
+
+    // This shouldn't compile
+    EXPECT_ANY_THROW(cv::GComputation(cv::GIn(in), cv::GOut(out1, out2))
+                     .compileStreaming());
+}
+
+TEST(GAPI_Streaming_Desync, Negative_SynchronizedPull)
+{
+    initTestDataPath();
+
+    cv::GMat in;
+    cv::GMat out1 = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
+
+    cv::GMat tmp1 = cv::gapi::streaming::desync(out1);
+    cv::GMat out2 = 0.5*tmp1;
+
+    auto sc = cv::GComputation(cv::GIn(in), cv::GOut(out1, out2))
+        .compileStreaming();
+
+    auto path = findDataFile("cv/video/768x576.avi");
+    try {
+        sc.setSource(cv::gin(gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(path)));
+    } catch(...) {
+        throw SkipTestException("Video file can not be opened");
+    }
+    sc.start();
+
+    cv::Mat o1, o2;
+    EXPECT_ANY_THROW(sc.pull(cv::gout(o1, o2)));
+}
+
+TEST(GAPI_Streaming_Desync, UseSpecialPull)
+{
+    initTestDataPath();
+
+    cv::GMat in;
+    cv::GMat out1 = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
+
+    cv::GMat tmp1 = cv::gapi::streaming::desync(out1);
+    cv::GMat out2 = 0.5*tmp1;
+
+    auto sc = cv::GComputation(cv::GIn(in), cv::GOut(out1, out2))
+        .compileStreaming();
+
+    auto path = findDataFile("cv/video/768x576.avi");
+    try {
+        sc.setSource(cv::gin(gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(path)));
+    } catch(...) {
+        throw SkipTestException("Video file can not be opened");
+    }
+    sc.start();
+
+    cv::optional<cv::Mat> o1, o2;
+    std::size_t num_frames = 0u;
+
+    while (sc.pull(cv::gout(o1, o2))) {
+        if (o1) num_frames++;
+    }
+    EXPECT_EQ(100u, num_frames);
+}
+
+G_API_OP(ProduceVector, <cv::GArray<int>(cv::GMat)>, "test.desync.vector") {
+    static cv::GArrayDesc outMeta(const cv::GMatDesc &) {
+        return cv::empty_array_desc();
+    }
+};
+
+G_API_OP(ProduceOpaque, <cv::GOpaque<int>(cv::GMat)>, "test.desync.opaque") {
+    static cv::GOpaqueDesc outMeta(const cv::GMatDesc &) {
+        return cv::empty_gopaque_desc();
+    }
+};
+
+GAPI_OCV_KERNEL(OCVVector, ProduceVector) {
+    static void run(const cv::Mat& in, std::vector<int> &out) {
+        out = {in.cols, in.rows};
+    }
+};
+
+GAPI_OCV_KERNEL(OCVOpaque, ProduceOpaque) {
+    static void run(const cv::Mat &in, int &v) {
+        v = in.channels();
+    }
+};
+
+namespace {
+cv::GStreamingCompiled desyncTestObject() {
+    cv::GMat in;
+    cv::GMat blur = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
+
+    cv::GMat blur_d = cv::gapi::copy(cv::gapi::streaming::desync(blur));
+    cv::GMat d1 = Delay::on(blur_d, 10);
+    cv::GMat d2 = Delay::on(blur_d, 30);
+
+    cv::GArray<int>  vec = ProduceVector::on(d1);
+    cv::GOpaque<int> opq = ProduceOpaque::on(d2);
+
+    auto pkg = cv::gapi::kernels<OCVDelay, OCVVector, OCVOpaque>();
+    return cv::GComputation(cv::GIn(in), cv::GOut(blur, vec, opq))
+        .compileStreaming(cv::compile_args(pkg));
+}
+} // anonymous namespace
+
+TEST(GAPI_Streaming_Desync, MultipleDesyncOutputs_1) {
+    auto sc = desyncTestObject();
+    const cv::Mat in_mat = cv::Mat::eye(cv::Size(320,240), CV_8UC3);
+
+    sc.setSource(cv::gin(in_mat));
+    sc.start();
+
+    cv::optional<cv::Mat> out_mat;
+    cv::optional<std::vector<int> > out_vec;
+    cv::optional<int> out_int;
+
+    int counter = 0;
+    while (sc.pull(cv::gout(out_mat, out_vec, out_int))) {
+        if (counter++ == 1000) {
+            // Stop the test after 1000 iterations
+            sc.stop();
+            break;
+        }
+        GAPI_Assert(out_mat || out_vec || out_int);
+
+        // out_vec and out_int are on the same desynchronized path
+        // they MUST arrive together. If one is available, the other
+        // also must be available.
+        if (out_vec) { ASSERT_TRUE(out_int.has_value()); }
+        if (out_int) { ASSERT_TRUE(out_vec.has_value()); }
+
+        if (out_vec || out_int) {
+            EXPECT_EQ(320, out_vec.value()[0]);
+            EXPECT_EQ(240, out_vec.value()[1]);
+            EXPECT_EQ(  3, out_int.value());
+        }
+    }
+}
+
+TEST(GAPI_Streaming_Desync, StartStop_Stress) {
+    auto sc = desyncTestObject();
+    const cv::Mat in_mat = cv::Mat::eye(cv::Size(320,240), CV_8UC3);
+
+    cv::optional<cv::Mat> out_mat;
+    cv::optional<std::vector<int> > out_vec;
+    cv::optional<int> out_int;
+
+    for (int i = 0; i < 10; i++) {
+        sc.setSource(cv::gin(in_mat));
+        sc.start();
+        int counter = 0;
+        while (counter++ < 100) {
+            sc.pull(cv::gout(out_mat, out_vec, out_int));
+            GAPI_Assert(out_mat || out_vec || out_int);
+            if (out_vec) { ASSERT_TRUE(out_int.has_value()); }
+            if (out_int) { ASSERT_TRUE(out_vec.has_value()); }
+        }
+        sc.stop();
+    }
+}
+
+GAPI_FLUID_KERNEL(FluidCopy, cv::gapi::core::GCopy, false) {
+    static const int Window = 1;
+
+    static void run(const cv::gapi::fluid::View &in,
+                          cv::gapi::fluid::Buffer &out) {
+        const uint8_t *in_ptr = in.InLineB(0);
+        uint8_t *out_ptr = out.OutLineB(0);
+
+        const auto in_type = CV_MAKETYPE(in.meta().depth, in.meta().chan);
+        const auto out_type = CV_MAKETYPE(out.meta().depth, out.meta().chan);
+        GAPI_Assert(in_type == out_type);
+        std::copy_n(in_ptr, in.length()*CV_ELEM_SIZE(in_type), out_ptr);
+    }
+};
+
+
+TEST(GAPI_Streaming_Desync, DesyncObjectConsumedByTwoIslandsViaSeparateDesync) {
+    // See comment in the implementation of cv::gapi::streaming::desync (.cpp)
+    cv::GMat in;
+    cv::GMat tmp = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
+
+    cv::GMat tmp1 = cv::gapi::streaming::desync(tmp);
+    cv::GMat out1 = cv::gapi::copy(tmp1); // ran via Fluid backend
+
+    cv::GMat tmp2 = cv::gapi::streaming::desync(tmp);
+    cv::GMat out2 = tmp2 * 0.5;           // ran via OCV backend
+
+    auto c = cv::GComputation(cv::GIn(in), cv::GOut(out1, out2));
+    auto p = cv::gapi::kernels<FluidCopy>();
+
+    EXPECT_NO_THROW(c.compileStreaming(cv::compile_args(p)));
+}
+
+TEST(GAPI_Streaming_Desync, DesyncObjectConsumedByTwoIslandsViaSameDesync) {
+    // See comment in the implementation of cv::gapi::streaming::desync (.cpp)
+    cv::GMat in;
+    cv::GMat tmp = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
+
+    cv::GMat tmp1 = cv::gapi::streaming::desync(tmp);
+    cv::GMat out1 = cv::gapi::copy(tmp1); // ran via Fluid backend
+    cv::GMat out2 = out1 - 0.5*tmp1;      // ran via OCV backend
+
+    auto c = cv::GComputation(cv::GIn(in), cv::GOut(out1, out2));
+    auto p = cv::gapi::kernels<FluidCopy>();
+
+    EXPECT_NO_THROW(c.compileStreaming(cv::compile_args(p)));
 }
 
 } // namespace opencv_test

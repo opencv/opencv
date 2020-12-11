@@ -31,16 +31,16 @@ def calcGST(inputIMG, w):
     # GST components calculations (stop)
 
     # eigenvalue calculation (start)
-    # lambda1 = J11 + J22 + sqrt((J11-J22)^2 + 4*J12^2)
-    # lambda2 = J11 + J22 - sqrt((J11-J22)^2 + 4*J12^2)
+    # lambda1 = 0.5*(J11 + J22 + sqrt((J11-J22)^2 + 4*J12^2))
+    # lambda2 = 0.5*(J11 + J22 - sqrt((J11-J22)^2 + 4*J12^2))
     tmp1 = J11 + J22
     tmp2 = J11 - J22
     tmp2 = cv.multiply(tmp2, tmp2)
     tmp3 = cv.multiply(J12, J12)
     tmp4 = np.sqrt(tmp2 + 4.0 * tmp3)
 
-    lambda1 = tmp1 + tmp4    # biggest eigenvalue
-    lambda2 = tmp1 - tmp4    # smallest eigenvalue
+    lambda1 = 0.5*(tmp1 + tmp4)    # biggest eigenvalue
+    lambda2 = 0.5*(tmp1 - tmp4)    # smallest eigenvalue
     # eigenvalue calculation (stop)
 
     # Coherency calculation (start)

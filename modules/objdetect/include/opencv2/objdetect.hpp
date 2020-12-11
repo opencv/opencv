@@ -699,6 +699,15 @@ public:
      */
     CV_WRAP std::string decode(InputArray img, InputArray points, OutputArray straight_qrcode = noArray());
 
+    /** @brief Decodes QR code on a curved surface in image once it's found by the detect() method.
+
+     Returns UTF8-encoded output string or empty string if the code cannot be decoded.
+     @param img grayscale or color (BGR) image containing QR code.
+     @param points Quadrangle vertices found by detect() method (or some other algorithm).
+     @param straight_qrcode The optional output image containing rectified and binarized QR code
+     */
+    CV_WRAP cv::String decodeCurved(InputArray img, InputArray points, OutputArray straight_qrcode = noArray());
+
     /** @brief Both detects and decodes QR code
 
      @param img grayscale or color (BGR) image containing QR code.
@@ -707,6 +716,16 @@ public:
      */
     CV_WRAP std::string detectAndDecode(InputArray img, OutputArray points=noArray(),
                                         OutputArray straight_qrcode = noArray());
+
+    /** @brief Both detects and decodes QR code on a curved surface
+
+     @param img grayscale or color (BGR) image containing QR code.
+     @param points optional output array of vertices of the found QR code quadrangle. Will be empty if not found.
+     @param straight_qrcode The optional output image containing rectified and binarized QR code
+     */
+    CV_WRAP std::string detectAndDecodeCurved(InputArray img, OutputArray points=noArray(),
+                                              OutputArray straight_qrcode = noArray());
+
     /** @brief Detects QR codes in image and returns the vector of the quadrangles containing the codes.
      @param img grayscale or color (BGR) image containing (or not) QR codes.
      @param points Output vector of vector of vertices of the minimum-area quadrangle containing the codes.

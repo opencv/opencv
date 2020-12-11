@@ -122,7 +122,6 @@ if(CV_GCC OR CV_CLANG)
   endif()
   add_extra_compiler_option(-Wsign-promo)
   add_extra_compiler_option(-Wuninitialized)
-  add_extra_compiler_option(-Winit-self)
   if(CV_GCC AND (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 6.0) AND (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 7.0))
     add_extra_compiler_option(-Wno-psabi)
   endif()
@@ -153,7 +152,7 @@ if(CV_GCC OR CV_CLANG)
     if(CV_GCC AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 5.0)
       add_extra_compiler_option(-Wno-missing-field-initializers)  # GCC 4.x emits warnings about {}, fixed in GCC 5+
     endif()
-    if(CV_CLANG AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS 10.0)
+    if(CV_CLANG AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS 10.0)
       add_extra_compiler_option(-Wno-deprecated-enum-enum-conversion)
       add_extra_compiler_option(-Wno-deprecated-anon-enum-enum-conversion)
     endif()
@@ -191,7 +190,6 @@ if(CV_GCC OR CV_CLANG)
 
   # Profiling?
   if(ENABLE_PROFILING)
-    add_extra_compiler_option("-pg -g")
     # turn off incompatible options
     foreach(flags CMAKE_CXX_FLAGS CMAKE_C_FLAGS CMAKE_CXX_FLAGS_RELEASE CMAKE_C_FLAGS_RELEASE CMAKE_CXX_FLAGS_DEBUG CMAKE_C_FLAGS_DEBUG
                   OPENCV_EXTRA_FLAGS_RELEASE OPENCV_EXTRA_FLAGS_DEBUG OPENCV_EXTRA_C_FLAGS OPENCV_EXTRA_CXX_FLAGS)
@@ -199,6 +197,9 @@ if(CV_GCC OR CV_CLANG)
       string(REPLACE "-ffunction-sections" "" ${flags} "${${flags}}")
       string(REPLACE "-fdata-sections" "" ${flags} "${${flags}}")
     endforeach()
+    # -pg should be placed both in the linker and in the compiler settings
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pg")
+    add_extra_compiler_option("-pg -g")
   else()
     if(MSVC)
       # TODO: Clang/C2 is not supported
