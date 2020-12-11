@@ -9,28 +9,22 @@
 #include "precomp.hpp"
 
 #include <iostream>
-#include <cmath>
-#include <string>
-#include <vector>
 #include <queue>
-
-
-#include "opencv2/imgproc.hpp"
 
 namespace cv
 {
-    struct Pix
+struct Pix
+{
+    Point next_point;
+    double cost;
+
+    bool operator > (const Pix &b) const
     {
-        Point next_point;
-        double cost;
+        return cost > b.cost;
+    }
+};
 
-        bool operator > (const Pix &b) const
-        {
-            return cost > b.cost;
-        }
-    };
-
-    static float lcost(const Point& p, const Point& q, const Mat& gradient_magnitude, const Mat& Iy, const Mat& Ix, const Mat& zero_crossing)
+static float lcost(const Point& p, const Point& q, const Mat& gradient_magnitude, const Mat& Iy, const Mat& Ix, const Mat& zero_crossing)
 {
     float fG = gradient_magnitude.at<float>(q.y, q.x);
     float dp;
@@ -64,95 +58,95 @@ namespace cv
             WEIGHT_GRADIENT_MAGNITUDE * fG;
 }
 
-    IntelligentScissors::IntelligentScissors(int input_border) {border = input_border;}
-    IntelligentScissors::~IntelligentScissors() {}
+IntelligentScissors::IntelligentScissors(int input_border) {border = input_border;}
 
-    void IntelligentScissors::setBorder(int input_border) {border = input_border;}
+void IntelligentScissors::setBorder(int input_border) {border = input_border;}
 
-    void IntelligentScissors::apply(InputArray img, OutputArray total_hit_map_x, OutputArray total_hit_map_y, const Point start_point)
+void IntelligentScissors::apply(InputArray img, OutputArray total_hit_map_x, OutputArray total_hit_map_y, const Point start_point)
+{
+    const int EDGE_THRESHOLD_LOW = 50;
+    const int EDGE_THRESHOLD_HIGH = 100;
+    Mat src = img.getMat();
+
+    total_hit_map_x.create(src.size(), CV_32SC1);
+    Mat hit_map_x = total_hit_map_x.getMat();
+
+    total_hit_map_y.create(src.size(), CV_32SC1);
+    Mat hit_map_y = total_hit_map_y.getMat();
+
+    Mat grayscale, img_canny, Ix, Iy;
+    Mat zero_crossing, gradient_magnitude;
+
+    cvtColor(src, grayscale, COLOR_BGR2GRAY);
+    Canny(grayscale, img_canny, EDGE_THRESHOLD_LOW, EDGE_THRESHOLD_HIGH);
+    threshold(img_canny, zero_crossing, 254, 1, THRESH_BINARY_INV);
+    Sobel(grayscale, Ix, CV_32FC1, 1, 0, 1);
+    Sobel(grayscale, Iy, CV_32FC1, 0, 1, 1);
+    Ix.convertTo(Ix, CV_32F, 1.0/255);
+    Iy.convertTo(Iy, CV_32F, 1.0/255);
+    magnitude(Iy, Ix, gradient_magnitude);
+    double max_val = 0.0;
+    minMaxLoc(gradient_magnitude, 0, &max_val);
+    if (max_val < DBL_MIN)
+        return;
+    gradient_magnitude.convertTo(gradient_magnitude, CV_32F, -1/max_val, 1.0);
+
+    Pix begin;
+    Mat cost_map(src.size(), CV_32F, Scalar(FLT_MAX));
+    Mat expand(src.size(), CV_8UC1, Scalar(0));
+    Mat processed(src.size(), CV_8UC1, Scalar(0));
+    Mat removed(src.size(), CV_8UC1, Scalar(0));
+    std::priority_queue < Pix, std::vector<Pix>, std::greater<Pix> > L;
+
+    cost_map.at<float>(start_point) = 0;
+    processed.at<uchar>(start_point) = 1;
+    begin.cost = 0;
+    begin.next_point = start_point;
+    L.push(begin);
+
+    while (!L.empty())
     {
-        const int EDGE_THRESHOLD_LOW = 50;
-        const int EDGE_THRESHOLD_HIGH = 100;
-        double max_val = 0.0;
-        Mat src = img.getMat();
-
-        total_hit_map_x.create(src.size(), CV_32SC1);
-        Mat hit_map_x = total_hit_map_x.getMat();
-
-        total_hit_map_y.create(src.size(), CV_32SC1);
-        Mat hit_map_y = total_hit_map_y.getMat();
-
-        Mat grayscale, img_canny, Ix, Iy;
-        Mat zero_crossing, gradient_magnitude;
-
-        cvtColor(src, grayscale, COLOR_BGR2GRAY);
-        Canny(grayscale, img_canny, EDGE_THRESHOLD_LOW, EDGE_THRESHOLD_HIGH);
-        threshold(img_canny, zero_crossing, 254, 1, THRESH_BINARY_INV);
-        Sobel(grayscale, Ix, CV_32FC1, 1, 0, 1);
-        Sobel(grayscale, Iy, CV_32FC1, 0, 1, 1);
-        Ix.convertTo(Ix, CV_32F, 1.0/255);
-        Iy.convertTo(Iy, CV_32F, 1.0/255);
-        magnitude(Iy, Ix, gradient_magnitude);
-        minMaxLoc(gradient_magnitude, 0, &max_val);
-        gradient_magnitude.convertTo(gradient_magnitude, CV_32F, -1/max_val, 1.0);
-
-        //ALGO
-        Pix begin;
-        Mat cost_map(src.size(), CV_32F, Scalar(FLT_MAX));
-        Mat expand(src.size(), CV_8UC1, Scalar(0));
-        Mat processed(src.size(), CV_8UC1, Scalar(0));
-        Mat removed(src.size(), CV_8UC1, Scalar(0));
-        std::priority_queue < Pix, std::vector<Pix>, std::greater<Pix> > L;
-
-        cost_map.at<float>(start_point) = 0;
-        processed.at<uchar>(start_point) = 1;
-        begin.cost = 0;
-        begin.next_point = start_point;
-        L.push(begin);
-
-        while (!L.empty())
+        Pix P = L.top();
+        L.pop();
+        Point p = P.next_point;
+        processed.at<uchar>(p) = 0;
+        if (removed.at<uchar>(p) == 0)
         {
-            Pix P = L.top();
-            L.pop();
-            Point p = P.next_point;
-            processed.at<uchar>(p) = 0;
-            if (removed.at<uchar>(p) == 0)
+            expand.at<uchar>(p) = 1;
+            for (int i = -1; i <= 1; i++)
             {
-                expand.at<uchar>(p) = 1;
-                for (int i = -1; i <= 1; i++)
+                for(int j = -1; j <= 1; j++)
                 {
-                    for(int j = -1; j <= 1; j++)
+                    int tx = p.x + i;
+                    int ty = p.y + j;
+                    if (tx < 0 || tx >= src.cols || ty < 0 || ty >= src.rows)
+                        continue;
+                    if (expand.at<uchar>(ty, tx) == 0)
                     {
-                        int tx = p.x + i;
-                        int ty = p.y + j;
-                        if (tx < 0 || tx >= src.cols || ty < 0 || ty >= src.rows)
-                            continue;
-                        if (expand.at<uchar>(ty, tx) == 0)
+                        Point q(tx, ty);
+                        float cost = cost_map.at<float>(p) + lcost(p, q, gradient_magnitude, Iy, Ix, zero_crossing);
+                        if (processed.at<uchar>(q) == 1 && cost < cost_map.at<float>(q))
                         {
-                            Point q(tx, ty);
-                            float cost = cost_map.at<float>(p) + lcost(p, q, gradient_magnitude, Iy, Ix, zero_crossing);
-                            if (processed.at<uchar>(q) == 1 && cost < cost_map.at<float>(q))
-                            {
-                                removed.at<uchar>(q) = 1;
-                            }
-                            if (processed.at<uchar>(q) == 0)
-                            {
-                                cost_map.at<float>(q) = cost;
-                                hit_map_x.at<int>(q)= p.x;
-                                hit_map_y.at<int>(q) = p.y;
+                            removed.at<uchar>(q) = 1;
+                        }
+                        if (processed.at<uchar>(q) == 0)
+                        {
+                            cost_map.at<float>(q) = cost;
+                            hit_map_x.at<int>(q) = p.x;
+                            hit_map_y.at<int>(q) = p.y;
 
-                                processed.at<uchar>(q) = 1;
-                                Pix val;
-                                val.cost = cost_map.at<float>(q);
-                                val.next_point = q;
-                                L.push(val);
-                            }
+                            processed.at<uchar>(q) = 1;
+                            Pix val;
+                            val.cost = cost_map.at<float>(q);
+                            val.next_point = q;
+                            L.push(val);
                         }
                     }
                 }
             }
         }
-        hit_map_x.convertTo(total_hit_map_x, CV_32SC1);
-        hit_map_y.convertTo(total_hit_map_y, CV_32SC1);
     }
+    hit_map_x.convertTo(total_hit_map_x, CV_32SC1);
+    hit_map_y.convertTo(total_hit_map_y, CV_32SC1);
+}
 }// namespace
