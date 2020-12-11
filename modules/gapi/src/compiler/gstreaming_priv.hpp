@@ -20,7 +20,7 @@ namespace gimpl
 
 // FIXME: GAPI_EXPORTS is here only due to tests and Windows linker issues
 // FIXME: It seems it clearly duplicates the GStreamingCompiled and
-// GStreamingExecutable APIs so is highly redundant now.
+// GStreamingIntrinExecutable APIs so is highly redundant now.
 // Same applies to GCompiled/GCompiled::Priv/GExecutor.
 class GAPI_EXPORTS GStreamingCompiled::Priv
 {

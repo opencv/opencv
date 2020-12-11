@@ -210,6 +210,7 @@ using GRunArgP = util::variant<
     cv::Mat*,
     cv::RMat*,
     cv::Scalar*,
+    cv::MediaFrame*,
     cv::detail::VectorRef,
     cv::detail::OpaqueRef
     >;

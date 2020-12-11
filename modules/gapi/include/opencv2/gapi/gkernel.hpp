@@ -90,6 +90,10 @@ namespace detail
     {
         static inline cv::GOpaque<U> yield(cv::GCall &call, int i) { return call.yieldOpaque<U>(i); }
     };
+    template<> struct Yield<GFrame>
+    {
+        static inline cv::GFrame yield(cv::GCall &call, int i) { return call.yieldFrame(i); }
+    };
 
     ////////////////////////////////////////////////////////////////////////////
     // Helper classes which brings outputMeta() marshalling to kernel
@@ -238,8 +242,6 @@ class GKernelType<K, std::function<R(Args...)> >
 public:
     using InArgs  = std::tuple<Args...>;
     using OutArgs = std::tuple<R>;
-
-    static_assert(!cv::detail::contains<GFrame, OutArgs>::value, "Values of GFrame type can't be used as operation outputs");
 
     static R on(Args... args)
     {

@@ -41,6 +41,11 @@ cv::detail::OpaqueRef& cv::GCPUContext::outOpaqueRef(int output)
     return util::get<cv::detail::OpaqueRef>(m_results.at(output));
 }
 
+cv::MediaFrame& cv::GCPUContext::outFrame(int output)
+{
+    return *util::get<cv::MediaFrame*>(m_results.at(output));
+}
+
 cv::GCPUKernel::GCPUKernel()
 {
 }

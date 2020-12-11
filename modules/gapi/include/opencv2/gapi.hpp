@@ -33,8 +33,9 @@
 #include <opencv2/gapi/gkernel.hpp>
 #include <opencv2/gapi/operators.hpp>
 
-// Include this file here to avoid cyclic dependency between
+// Include these files here to avoid cyclic dependency between
 // Desync & GKernel & GComputation & GStreamingCompiled.
 #include <opencv2/gapi/streaming/desync.hpp>
+#include <opencv2/gapi/streaming/format.hpp>
 
 #endif // OPENCV_GAPI_HPP
