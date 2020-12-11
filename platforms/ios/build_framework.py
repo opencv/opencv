@@ -37,7 +37,7 @@ from subprocess import check_call, check_output, CalledProcessError
 from distutils.dir_util import copy_tree
 
 sys.path.insert(0, os.path.abspath(os.path.abspath(os.path.dirname(__file__))+'/../apple'))
-from cv_build_utils import execute, print_error, get_xcode_major, get_xcode_setting
+from cv_build_utils import execute, print_error, get_xcode_major, get_xcode_setting, get_xcode_version, get_cmake_version
 
 IPHONEOS_DEPLOYMENT_TARGET='9.0'  # default, can be changed via command line options or environment variable
 
@@ -64,6 +64,12 @@ class Builder:
         self.run_tests = run_tests
         self.build_docs = build_docs
 
+    def checkCMakeVersion(self):
+        if get_xcode_version() >= (12, 2):
+            assert get_cmake_version() >= (3, 19), "CMake 3.19 or later is required when building with Xcode 12.2 or greater. Current version is {}".format(get_cmake_version())
+        else:
+            assert get_cmake_version() >= (3, 17), "CMake 3.17 or later is required. Current version is {}".format(get_cmake_version())
+
     def getBuildDir(self, parent, target):
 
         res = os.path.join(parent, 'build-%s-%s' % (target[0].lower(), target[1].lower()))
@@ -73,6 +79,7 @@ class Builder:
         return os.path.abspath(res)
 
     def _build(self, outdir):
+        self.checkCMakeVersion()
         outdir = os.path.abspath(outdir)
         if not os.path.isdir(outdir):
             os.makedirs(outdir)
