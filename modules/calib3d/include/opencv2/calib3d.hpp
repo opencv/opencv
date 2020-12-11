@@ -1453,6 +1453,7 @@ struct CV_EXPORTS_W_SIMPLE CirclesGridFinderParameters2 : public CirclesGridFind
 -   **CALIB_CB_CLUSTERING** uses a special algorithm for grid detection. It is more robust to
 perspective distortions but much more sensitive to background clutter.
 @param blobDetector feature detector that finds blobs like dark circles on light background.
+                    If `blobDetector` is NULL then `image` represents Point2f array of candidates.
 @param parameters struct for finding circles in a grid pattern.
 
 The function attempts to determine whether the input image contains a grid of circles. If it is, the
