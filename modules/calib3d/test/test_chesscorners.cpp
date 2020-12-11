@@ -487,5 +487,59 @@ TEST(Calib3d_CirclesPatternDetectorWithClustering, accuracy)
     ASSERT_LE(error, precise_success_error_level);
 }
 
+TEST(Calib3d_AsymmetricCirclesPatternDetector, regression_18713)
+{
+    float pts_[][2] = {
+        { 166.5, 107 }, { 146, 236 }, { 147, 92 }, { 184, 162 }, { 150, 185.5 },
+        { 215, 105 }, { 270.5, 186 }, { 159, 142 }, { 6, 205.5 }, { 32, 148.5 },
+        { 126, 163.5 }, { 181, 208.5 }, { 240.5, 62 }, { 84.5, 76.5 }, { 190, 120.5 },
+        { 10, 189 }, { 266, 104 }, { 307.5, 207.5 }, { 97, 184 }, { 116.5, 210 },
+        { 114, 139 }, { 84.5, 233 }, { 269.5, 139 }, { 136, 126.5 }, { 120, 107.5 },
+        { 129.5, 65.5 }, { 212.5, 140.5 }, { 204.5, 60.5 }, { 207.5, 241 }, { 61.5, 94.5 },
+        { 186.5, 61.5 }, { 220, 63 }, { 239, 120.5 }, { 212, 186 }, { 284, 87.5 },
+        { 62, 114.5 }, { 283, 61.5 }, { 238.5, 88.5 }, { 243, 159 }, { 245, 208 },
+        { 298.5, 158.5 }, { 57, 129 }, { 156.5, 63.5 }, { 192, 90.5 }, { 281, 235.5 },
+        { 172, 62.5 }, { 291.5, 119.5 }, { 90, 127 }, { 68.5, 166.5 }, { 108.5, 83.5 },
+        { 22, 176 }
+    };
+    Mat candidates(51, 1, CV_32FC2, (void*)pts_);
+    Size patternSize(4, 9);
+
+    std::vector< Point2f > result;
+    bool res = false;
+
+    // issue reports about hangs
+    EXPECT_NO_THROW(res = findCirclesGrid(candidates, patternSize, result, CALIB_CB_ASYMMETRIC_GRID, Ptr<FeatureDetector>()/*blobDetector=NULL*/));
+    EXPECT_FALSE(res);
+
+    if (cvtest::debugLevel > 0)
+    {
+        std::cout << Mat(candidates) << std::endl;
+        std::cout << Mat(result) << std::endl;
+        Mat img(Size(400, 300), CV_8UC3, Scalar::all(0));
+
+        std::vector< Point2f > centers;
+        candidates.copyTo(centers);
+
+        for (size_t i = 0; i < centers.size(); i++)
+        {
+            const Point2f& pt = centers[i];
+            //printf("{ %g, %g }, \n", pt.x, pt.y);
+            circle(img, pt, 5, Scalar(0, 255, 0));
+        }
+        for (size_t i = 0; i < result.size(); i++)
+        {
+            const Point2f& pt = result[i];
+            circle(img, pt, 10, Scalar(0, 0, 255));
+        }
+        imwrite("test_18713.png", img);
+        if (cvtest::debugLevel >= 10)
+        {
+            imshow("result", img);
+            waitKey();
+        }
+    }
+}
+
 }} // namespace
 /* End of file. */
