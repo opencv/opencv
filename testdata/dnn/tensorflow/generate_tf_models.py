@@ -318,6 +318,16 @@ scaled = tf.image.resize_nearest_neighbor(conv, size=(15, 8))
 scaled = tf.image.resize_nearest_neighbor(scaled, size=(9, 12))
 save(inp, scaled, 'resize_nearest_neighbor')
 ################################################################################
+inp = tf.placeholder(tf.float32, [2, 10, 11, 3], 'input')
+resized = tf.image.resize_nearest_neighbor(inp, size=(15, 13), align_corners=True, name='resize_nearest_neighbor',
+                                           half_pixel_centers=False)
+save(inp, resized, ('resize_nearest_neighbor', 'align_corners'), is_gen_data=False)
+################################################################################
+inp = tf.placeholder(tf.float32, [2, 10, 11, 3], 'input')
+resized = tf.image.resize_nearest_neighbor(inp, size=(15, 13), align_corners=False, name='resize_nearest_neighbor',
+                                           half_pixel_centers=True)
+save(inp, resized, ('resize_nearest_neighbor', 'half_pixel'), is_gen_data=False)
+################################################################################
 inp = tf.placeholder(tf.float32, [1, 2, 3, 4], 'input')
 bn = tf.layers.batch_normalization(inp, training=isTraining, fused=False, name='batch_norm',
                                    beta_initializer=tf.random_normal_initializer(),
