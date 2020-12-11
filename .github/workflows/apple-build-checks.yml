@@ -1,6 +1,6 @@
 name: Apple CI
 
-on:  
+on:
   push:
     branches:
       - master
