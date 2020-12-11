@@ -19,7 +19,7 @@ imgproc = {'': ['Canny', 'GaussianBlur', 'Laplacian', 'HoughLines', 'HoughLinesP
                 'pointPolygonTest', 'putText','pyrDown','pyrUp','rectangle','remap', 'resize','sepFilter2D','threshold', \
                 'undistort','warpAffine','warpPerspective','warpPolar','watershed',\
                 'fillPoly', 'fillConvexPoly'], \
-                'Intelligent_scissors': ['Intelligent_scissors', 'Intelligent_scissors_one_point', 'setBorder'], \
+           'IntelligentScissors': ['IntelligentScissors', 'apply', 'setBorder'], \
            'CLAHE': ['apply', 'collectGarbage', 'getClipLimit', 'getTilesGridSize', 'setClipLimit', 'setTilesGridSize']}
 
 objdetect = {'': ['groupRectangles'],

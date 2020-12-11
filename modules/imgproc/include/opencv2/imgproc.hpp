@@ -4708,28 +4708,26 @@ CV_EXPORTS_W Size getTextSize(const String& text, int fontFace,
                             CV_OUT int* baseLine);
 
 
-    /** @brief Intelligent_scissors
-    This class is used to  find the minimum path between points
-    of image.
-    */
-class CV_EXPORTS_W Intelligent_scissors
+/** @brief Intelligent Scissors
+This class is used to find the minimum path between points
+of image.
+*/
+class CV_EXPORTS_W IntelligentScissors
 {
 public:
-    /** @brief initializes the Intelligent_scissors
+    /** @brief initializes the IntelligentScissors
 
     Create and set size of the counting area (offset
     by the number of pixels from the center point)
     */
 
-    CV_WRAP Intelligent_scissors(const int input_border);
-
-    ~Intelligent_scissors();
+    CV_WRAP IntelligentScissors(const int input_border);
 
     CV_WRAP void setBorder(const int input_border);
 
-    CV_WRAP void Intelligent_scissors_one_point(InputArray img, OutputArray total_hit_map_x, OutputArray total_hit_map_y, const Point start_point);
+    CV_WRAP void apply(InputArray img, OutputArray total_hit_map_x, OutputArray total_hit_map_y, const Point start_point);
 
-    // CV_WRAP void Intelligent_scissors_two_point(Mat img, OutputArray path, const Point start_point, const Point end_point);
+    // CV_WRAP void IntelligentScissors_two_point(Mat img, OutputArray path, const Point start_point, const Point end_point);
 protected:
     int border;
 };
@@ -4743,7 +4741,6 @@ protected:
 
 @see cv::putText
 */
-
 CV_EXPORTS_W double getFontScaleFromHeight(const int fontFace,
                                            const int pixelHeight,
                                            const int thickness = 1);
@@ -4900,6 +4897,7 @@ Point LineIterator::pos() const
 //! @} imgproc_draw
 
 //! @} imgproc
+
 } // cv
 
 #endif

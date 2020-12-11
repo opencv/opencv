@@ -2,8 +2,10 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018, Intel Corporation, all rights reserved.
+// Copyright (C) 2018-2020, Intel Corporation, all rights reserved.
 // Third party copyrights are property of their respective owners.
+
+
 #include "precomp.hpp"
 
 #include <iostream>
@@ -62,12 +64,12 @@ namespace cv
             WEIGHT_GRADIENT_MAGNITUDE * fG;
 }
 
-    Intelligent_scissors::Intelligent_scissors(int input_border) {border = input_border;}
-    Intelligent_scissors::~Intelligent_scissors() {}
+    IntelligentScissors::IntelligentScissors(int input_border) {border = input_border;}
+    IntelligentScissors::~IntelligentScissors() {}
 
-    void Intelligent_scissors::setBorder(int input_border) {border = input_border;}
+    void IntelligentScissors::setBorder(int input_border) {border = input_border;}
 
-    void Intelligent_scissors::Intelligent_scissors_one_point(InputArray img, OutputArray total_hit_map_x, OutputArray total_hit_map_y, const Point start_point)
+    void IntelligentScissors::apply(InputArray img, OutputArray total_hit_map_x, OutputArray total_hit_map_y, const Point start_point)
     {
         const int EDGE_THRESHOLD_LOW = 50;
         const int EDGE_THRESHOLD_HIGH = 100;
@@ -127,7 +129,7 @@ namespace cv
                             continue;
                         if (expand.at<uchar>(ty, tx) == 0)
                         {
-                            Point q = Point(tx, ty);
+                            Point q(tx, ty);
                             float cost = cost_map.at<float>(p) + lcost(p, q, gradient_magnitude, Iy, Ix, zero_crossing);
                             if (processed.at<uchar>(q) == 1 && cost < cost_map.at<float>(q))
                             {
