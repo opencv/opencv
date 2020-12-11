@@ -90,7 +90,7 @@ TEST(Features2D_ORB, _1996)
     ASSERT_EQ(0, roiViolations);
 }
 
-TEST(Features2D_ORB, crash)
+TEST(Features2D_ORB, crash_5031)
 {
     cv::Mat image = cv::Mat::zeros(cv::Size(1920, 1080), CV_8UC3);
 
@@ -122,5 +122,24 @@ TEST(Features2D_ORB, crash)
 
     ASSERT_NO_THROW(orb->compute(image, keypoints, descriptors));
 }
+
+
+TEST(Features2D_ORB, regression_16197)
+{
+    Mat img(Size(72, 72), CV_8UC1, Scalar::all(0));
+    Ptr<ORB> orbPtr = ORB::create();
+    orbPtr->setNLevels(5);
+    orbPtr->setFirstLevel(3);
+    orbPtr->setScaleFactor(1.8);
+    orbPtr->setPatchSize(8);
+    orbPtr->setEdgeThreshold(8);
+
+    std::vector<KeyPoint> kps;
+    Mat fv;
+
+    // exception in debug mode, crash in release
+    ASSERT_NO_THROW(orbPtr->detectAndCompute(img, noArray(), kps, fv));
+}
+
 
 }} // namespace
