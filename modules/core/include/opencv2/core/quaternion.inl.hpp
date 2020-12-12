@@ -866,6 +866,766 @@ Quat<T> Quat<T>::spline(const Quat<T> &q0, const Quat<T> &q1, const Quat<T> &q2,
     return squad(vec[1], s1, s2, vec[2], t, assumeUnit, QUAT_ASSUME_NOT_UNIT);
 }
 
+template <typename T>
+Quat<T> Quat<T>::createFromYRot(const T theta)
+{
+    return Quat<T>{std::cos(theta), 0, std::sin(theta), 0};
+}
+
+template <typename T>
+Quat<T> Quat<T>::createFromXRot(const T theta){
+    return Quat<T>{std::cos(theta), std::sin(theta), 0, 0};
+}
+
+template <typename T>
+Quat<T> Quat<T>::createFromZRot(const T theta){
+    return Quat<T>{std::cos(theta), 0, 0, std::sin(theta)};
+}
+
+template <typename T>
+Quat<T> Quat<T>::createFromEulerAngles(const Vec<T, 3> &angles,EulerAnglesType eulerAnglesType) {
+    Quat<T> q;
+    switch (eulerAnglesType)
+    {
+    case INT_XYZ:
+    {
+        Quat<T> q1 =  Quat<T>::createFromXRot(angles(0) / 2.);
+        Quat<T> q2 =  Quat<T>::createFromYRot(angles(1) / 2.);
+        Quat<T> q3 =  Quat<T>::createFromZRot(angles(2) / 2.);
+        q = q1 * q2 * q3;
+        break;
+    }
+    case INT_XZY:
+    {
+        Quat<T> q1 =  Quat<T>::createFromXRot(angles(0) / 2.);
+        Quat<T> q2 =  Quat<T>::createFromZRot(angles(1) / 2.);
+        Quat<T> q3 =  Quat<T>::createFromYRot(angles(2) / 2.);
+        q = q1 * q2 * q3;
+        break;
+    }
+    case INT_YXZ:
+    {
+        Quat<T> q1  =  Quat<T>::createFromYRot(angles(0) / 2.);
+        Quat<T> q2 =  Quat<T>::createFromXRot(angles(1) / 2.);
+        Quat<T> q3 = Quat<T>::createFromZRot(angles(2) / 2.);
+        q = q1 * q2 * q3;
+        break;
+    }
+    case INT_YZX:
+    {
+        Quat<T> q1 = Quat<T>::createFromYRot(angles(0) / 2.);
+        Quat<T> q2 = Quat<T>::createFromZRot(angles(1) / 2.);
+        Quat<T> q3 = Quat<T>::createFromXRot(angles(2) / 2.);
+        q = q1 * q2 * q3;
+        break;
+    }
+    case INT_ZXY:
+    {
+        Quat<T> q1 = Quat<T>::createFromZRot(angles(0) / 2.);
+        Quat<T> q2 = Quat<T>::createFromXRot(angles(1) / 2.);
+        Quat<T> q3 = Quat<T>::createFromYRot(angles(2) / 2.);
+        q = q1 * q2 * q3;
+        break;
+    }
+    case INT_ZYX:
+    {
+        Quat<T> q1 = Quat<T>::createFromZRot(angles(0) / 2.);
+        Quat<T> q2 = Quat<T>::createFromYRot(angles(1) / 2.);
+        Quat<T> q3 = Quat<T>::createFromXRot(angles(2) / 2.);
+        q = q1 * q2 * q3;
+        break;
+    }
+
+    case EXT_XYZ:
+    {
+        Quat<T> q1 = Quat<T>::createFromXRot(angles(0) / 2.);
+        Quat<T> q2 = Quat<T>::createFromYRot(angles(1) / 2.);
+        Quat<T> q3 = Quat<T>::createFromZRot(angles(2) / 2.);
+        q = q3 * q2 * q1;
+        break;
+    }
+    case EXT_XZY:
+    {
+        Quat<T> q1 = Quat<T>::createFromXRot(angles(0) / 2.);
+        Quat<T> q2 = Quat<T>::createFromZRot(angles(1) / 2.);
+        Quat<T> q3 = Quat<T>::createFromYRot(angles(2) / 2.);
+        q = q3 * q2 * q1;
+        break;
+    }
+    case EXT_YXZ:
+    {
+        Quat<T> q1 = Quat<T>::createFromYRot(angles(0) / 2.);
+        Quat<T> q2 = Quat<T>::createFromXRot(angles(1) / 2.);
+        Quat<T> q3 = Quat<T>::createFromZRot(angles(2) / 2.);
+        q = q3 * q2 * q1;
+        break;
+    }
+    case EXT_YZX:
+    {
+        Quat<T> q1 = Quat<T>::createFromYRot(angles(0) / 2.);
+        Quat<T> q2 = Quat<T>::createFromZRot(angles(1) / 2.);
+        Quat<T> q3 = Quat<T>::createFromXRot(angles(2) / 2.);
+        q = q3 * q2 * q1;
+        break;
+    }
+    case EXT_ZXY:
+    {
+        Quat<T> q1 = Quat<T>::createFromZRot(angles(0) / 2.);
+        Quat<T> q2 = Quat<T>::createFromXRot(angles(1) / 2.);
+        Quat<T> q3 = Quat<T>::createFromYRot(angles(2) / 2.);
+        q = q3 * q2 * q1;
+        break;
+    }
+    case EXT_ZYX:
+    {
+        Quat<T> q1 = Quat<T>::createFromZRot(angles(0) / 2.);
+        Quat<T> q2 = Quat<T>::createFromYRot(angles(1) / 2.);
+        Quat<T> q3 = Quat<T>::createFromXRot(angles(2) / 2.);
+        q = q3 * q2 * q1;
+        break;
+    }
+
+
+    case INT_YXY:
+    {
+        Quat<T> q1 = Quat<T>::createFromYRot(angles(0) / 2.);
+        Quat<T> q2 = Quat<T>::createFromXRot(angles(1) / 2.);
+        Quat<T> q3 = Quat<T>::createFromYRot(angles(2) / 2.);
+        q = q1 * q2 * q3;
+        break;
+    }
+    case EXT_YXY:
+    {
+        Quat<T> q1 = Quat<T>::createFromYRot(angles(0) / 2.);
+        Quat<T> q2 = Quat<T>::createFromXRot(angles(1) / 2.);
+        Quat<T> q3 = Quat<T>::createFromYRot(angles(2) / 2.);
+        q = q3 * q2 * q1;
+        break;
+    }
+
+
+    case INT_ZXZ:
+    {
+        Quat<T> q1 = Quat<T>::createFromZRot(angles(0) / 2.);
+        Quat<T> q2 = Quat<T>::createFromXRot(angles(1) / 2.);
+        Quat<T> q3 = Quat<T>::createFromZRot(angles(2) / 2.);
+        q = q1 * q2 * q3;
+        break;
+    }
+    case EXT_ZXZ:
+    {
+        Quat<T> q1 = Quat<T>::createFromZRot(angles(0) / 2.);
+        Quat<T> q2 = Quat<T>::createFromXRot(angles(1) / 2.);
+        Quat<T> q3 = Quat<T>::createFromZRot(angles(2) / 2.);
+        q = q3 * q2 * q1;
+        break;
+    }
+    case INT_XYX:
+    {
+        Quat<T> q1 = Quat<T>::createFromXRot(angles(0) / 2.);
+        Quat<T> q2= Quat<T>::createFromYRot(angles(1) / 2.);
+        Quat<T> q3 = Quat<T>::createFromXRot(angles(2) / 2.);
+        q = q1 *q2 * q3;
+        break;
+    }
+    case EXT_XYX:
+    {
+        Quat<T> q1 = Quat<T>::createFromXRot(angles(0) / 2.);
+        Quat<T> q2 = Quat<T>::createFromYRot(angles(1) / 2.);
+        Quat<T> q3 = Quat<T>::createFromXRot(angles(2) / 2.);
+        q = q3 * q2 * q1;
+        break;
+    }
+    case INT_ZYZ:
+    {
+        Quat<T> q1 = Quat<T>::createFromZRot(angles(0) / 2.);
+        Quat<T> q2 = Quat<T>::createFromYRot(angles(1) / 2.);
+        Quat<T> q3 = Quat<T>::createFromZRot(angles(2) / 2.);
+        q = q1 *q2 * q3;
+        break;
+    }
+    case EXT_ZYZ:
+    {
+        Quat<T> q1 = Quat<T>::createFromZRot(angles(0) / 2.);
+        Quat<T> q2 = Quat<T>::createFromYRot(angles(1) / 2.);
+        Quat<T> q3 = Quat<T>::createFromZRot(angles(2) / 2.);
+        q = q3 * q2 * q1;
+        break;
+    }
+    case INT_YZY:
+    {
+        Quat<T> q1 = Quat<T>::createFromYRot(angles(0) / 2.);
+        Quat<T> q2 = Quat<T>::createFromZRot(angles(1) / 2.);
+        Quat<T> q3 = Quat<T>::createFromYRot(angles(2) / 2.);
+        q = q1 * q2 * q3;
+        break;
+    }
+    case EXT_YZY:
+    {
+        Quat<T> q1 = Quat<T>::createFromYRot(angles(0) / 2.);
+        Quat<T> q2 = Quat<T>::createFromZRot(angles(1) / 2.);
+        Quat<T> q3 = Quat<T>::createFromYRot(angles(2) / 2.);
+        q = q3 * q2 * q1;
+        break;
+    }
+    case INT_XZX:
+    {
+        Quat<T> q1 = Quat<T>::createFromXRot(angles(0) / 2.);
+        Quat<T> q2 = Quat<T>::createFromZRot(angles(1) / 2.);
+        Quat<T> q3 = Quat<T>::createFromXRot(angles(2) / 2.);
+        q = q1 * q2 * q3;
+        break;
+    }
+    case EXT_XZX:
+    {
+        Quat<T> q1 = Quat<T>::createFromXRot(angles(0) / 2.);
+        Quat<T> q2 = Quat<T>::createFromZRot(angles(1) / 2.);
+        Quat<T> q3 = Quat<T>::createFromXRot(angles(2) / 2.);
+
+        q = q3 * q2 * q1;
+        break;
+    }
+    default:
+        CV_Error(Error::StsBadArg, "Wrong Euler angles type!" );
+        break;
+    }
+
+    return q;
+}
+
+template <typename T>
+Vec<T, 3> Quat<T>::toEulerAngles(EulerAnglesType eulerAnglesType){
+    Matx33d R = toRotMat3x3();
+    Vec<T, 3> angles;
+
+    switch (eulerAnglesType)
+    {
+
+    case INT_XYZ:
+    {
+        if (abs(R(0, 2) - 1) < CV_QUAT_CONVERT_THRESHOLD)
+        {
+            std::cout << "WARNING: Gimbal Lock will occur. Euler angles are non-unique." << std::endl;
+            std::cout << "For intrinsic rotations, we set the third angle to zero, and for external rotation, we set the first angle to zero." << std::endl;
+            angles = {std::atan2(R(1, 0), R(1, 1)), CV_PI / 2., 0};
+            break;
+        }
+        else if (abs(R(0, 2) + 1) < CV_QUAT_CONVERT_THRESHOLD)
+        {
+            std::cout << "WARNING: Gimbal Lock will occur. Euler angles are non-unique." << std::endl;
+            std::cout << "For intrinsic rotations, we set the third angle to zero, and for external rotation, we set the first angle to zero." << std::endl;
+            angles = {std::atan2(R(2, 1), R(1, 1)), -CV_PI / 2., 0};
+            break;
+        }
+        angles(0) = std::atan2(-R(1, 2), R(2, 2));
+        angles(1) = std::asin(R(0, 2));
+        angles(2) = std::atan2(-R(0, 1), R(0, 0));
+        break;
+    }
+    case INT_XZY:
+    {
+        if (abs(R(0, 1) - 1) < CV_QUAT_CONVERT_THRESHOLD)
+        {
+            std::cout << "WARNING: Gimbal Lock will occur. Euler angles are non-unique." << std::endl;
+            std::cout << "For intrinsic rotations, we set the third angle to zero, and for external rotation, we set the first angle to zero." << std::endl;
+            angles = {std::atan2(-R(1, 2), R(2, 2)), -CV_PI / 2., 0};
+            break;
+        }
+        else if (abs(R(0, 1) + 1) < CV_QUAT_CONVERT_THRESHOLD)
+        {
+            std::cout << "WARNING: Gimbal Lock will occur. Euler angles are non-unique." << std::endl;
+            std::cout << "For intrinsic rotations, we set the third angle to zero, and for external rotation, we set the first angle to zero." << std::endl;
+            angles = {std::atan2(R(2, 0), R(2, 2)), CV_PI / 2., 0};
+            break;
+        }
+        angles(0) = std::atan2(R(2, 1), R(1, 1));
+        angles(1) = std::asin(-R(0, 1));
+        angles(2) = std::atan2(R(0, 2), R(0, 0));
+
+        break;
+    }
+    case INT_XYX:
+    {
+        if (abs(R(0, 0) - 1) < CV_QUAT_CONVERT_THRESHOLD)
+        {
+            std::cout << "WARNING: Gimbal Lock will occur. Euler angles are non-unique." << std::endl;
+            std::cout << "For intrinsic rotations, we set the third angle to zero, and for external rotation, we set the first angle to zero." << std::endl;
+            angles = {std::atan2(R(2, 1), R(2, 2)), 0, 0};
+            break;
+        }
+        else if (abs(R(0, 0) + 1) < CV_QUAT_CONVERT_THRESHOLD)
+        {
+            std::cout << "WARNING: Gimbal Lock will occur. Euler angles are non-unique." << std::endl;
+            std::cout << "For intrinsic rotations, we set the third angle to zero, and for external rotation, we set the first angle to zero." << std::endl;
+            angles = {std::atan2(R(1, 2), R(1, 1)), CV_PI, 0};
+            break;
+        }
+        angles(0) = std::atan2(R(1, 0), -R(2, 0));
+        angles(1) = std::acos(R(0, 0));
+        angles(2) = std::atan2(R(0, 1), R(0, 2));
+
+        break;
+    }
+    case INT_XZX:
+    {
+        if (abs(R(0, 0) - 1) < CV_QUAT_CONVERT_THRESHOLD)
+        {
+            std::cout << "WARNING: Gimbal Lock will occur. Euler angles are non-unique." << std::endl;
+            std::cout << "For intrinsic rotations, we set the third angle to zero, and for external rotation, we set the first angle to zero." << std::endl;
+            angles = {std::atan2(R(2, 1), R(2, 2)), 0, 0};
+            break;
+        }
+        else if (abs(R(0, 0) + 1) < CV_QUAT_CONVERT_THRESHOLD)
+        {
+            std::cout << "WARNING: Gimbal Lock will occur. Euler angles are non-unique." << std::endl;
+            std::cout << "For intrinsic rotations, we set the third angle to zero, and for external rotation, we set the first angle to zero." << std::endl;
+            angles = {std::atan2(-R(2, 1), R(2, 2)), CV_PI, 0};
+
+            break;
+        }
+        angles(0) = std::atan2(R(2, 0), R(1, 0));
+        angles(1) = std::acos(R(0, 0));
+        angles(2) = std::atan2(R(0, 2), -R(0, 1));
+
+        break;
+    }
+    case INT_YXZ:
+    {
+        if (abs(R(1, 2) - 1) < CV_QUAT_CONVERT_THRESHOLD)
+        {
+            std::cout << "WARNING: Gimbal Lock will occur. Euler angles are non-unique." << std::endl;
+            std::cout << "For intrinsic rotations, we set the third angle to zero, and for external rotation, we set the first angle to zero." << std::endl;
+            angles = {std::atan2(-R(0, 1), R(0, 0)), -CV_PI / 2., 0};
+            break;
+        }
+        else if (abs(R(1, 2) + 1) < CV_QUAT_CONVERT_THRESHOLD)
+        {
+            std::cout << "WARNING: Gimbal Lock will occur. Euler angles are non-unique." << std::endl;
+            std::cout << "For intrinsic rotations, we set the third angle to zero, and for external rotation, we set the first angle to zero." << std::endl;
+            angles = {std::atan2(R(0, 1), R(0, 0)), CV_PI / 2., 0};
+            break;
+        }
+        angles(0) = std::atan2(R(0, 2), R(2, 2));
+        angles(1) = std::asin(-R(1, 2));
+        angles(2) = std::atan2(R(1, 0), R(1, 1));
+        break;
+    }
+    case INT_YZX:
+    {
+        if (abs(R(1, 0) - 1) < CV_QUAT_CONVERT_THRESHOLD)
+        {
+            std::cout << "WARNING: Gimbal Lock will occur. Euler angles are non-unique." << std::endl;
+            std::cout << "For intrinsic rotations, we set the third angle to zero, and for external rotation, we set the first angle to zero." << std::endl;
+            angles = {std::atan2(R(0, 2), R(2, 2)), CV_PI / 2., 0};
+            break;
+        }
+        else if (abs(R(1, 0) + 1) < CV_QUAT_CONVERT_THRESHOLD)
+        {
+            std::cout << "WARNING: Gimbal Lock will occur. Euler angles are non-unique." << std::endl;
+            std::cout << "For intrinsic rotations, we set the third angle to zero, and for external rotation, we set the first angle to zero." << std::endl;
+            angles = {std::atan2(R(0, 2), R(0, 1)), -CV_PI / 2., 0};
+            break;
+        }
+        angles(0) = std::atan2(-R(2, 0), R(0, 0));
+        angles(1) = std::asin(R(1, 0));
+        angles(2) = std::atan2(-R(1, 2), R(1, 1));
+        break;
+    }
+    case INT_YXY:
+    {
+        if (abs(R(1, 1) - 1) < CV_QUAT_CONVERT_THRESHOLD)
+        {
+            std::cout << "WARNING: Gimbal Lock will occur. Euler angles are non-unique." << std::endl;
+            std::cout << "For intrinsic rotations, we set the third angle to zero, and for external rotation, we set the first angle to zero." << std::endl;
+            angles = {std::atan2(R(0, 2), R(0, 0)), 0, 0};
+            break;
+        }
+        else if (abs(R(1, 1) + 1) < CV_QUAT_CONVERT_THRESHOLD)
+        {
+            std::cout << "WARNING: Gimbal Lock will occur. Euler angles are non-unique." << std::endl;
+            std::cout << "For intrinsic rotations, we set the third angle to zero, and for external rotation, we set the first angle to zero." << std::endl;
+            angles = {std::atan2(-R(2, 0), R(0, 0)), CV_PI, 0};
+            break;
+        }
+        angles(0) = std::atan2(R(0, 1), R(2, 1));
+        angles(1) = std::atan2(std::sqrt(1 - R(1, 1) * R(1, 1)), R(1, 1));
+        angles(2) = std::atan2(R(1, 0), -R(1, 2));
+        break;
+    }
+    case INT_YZY:
+    {
+        if (abs(R(1, 1) - 1) < CV_QUAT_CONVERT_THRESHOLD)
+        {
+            std::cout << "WARNING: Gimbal Lock will occur. Euler angles are non-unique." << std::endl;
+            std::cout << "For intrinsic rotations, we set the third angle to zero, and for external rotation, we set the first angle to zero." << std::endl;
+            angles = {std::atan2(R(0, 2), R(0, 0)), 0, 0};
+            break;
+        }
+        else if (abs(R(1, 1) + 1) < CV_QUAT_CONVERT_THRESHOLD)
+        {
+            std::cout << "WARNING: Gimbal Lock will occur. Euler angles are non-unique." << std::endl;
+            std::cout << "For intrinsic rotations, we set the third angle to zero, and for external rotation, we set the first angle to zero." << std::endl;
+            angles = {std::atan2(R(0, 2), -R(0, 0)), CV_PI, 0};
+            break;
+        }
+        angles(0) = std::atan2(R(2, 1), -R(0, 1));
+        angles(1) = std::acos(R(1, 1));
+        angles(2) = std::atan2(R(1, 2), R(1, 0));
+        break;
+    }
+    case INT_ZXY:
+    {
+        if (abs(R(2, 1) - 1) < CV_QUAT_CONVERT_THRESHOLD)
+        {
+            std::cout << "WARNING: Gimbal Lock will occur. Euler angles are non-unique." << std::endl;
+            std::cout << "For intrinsic rotations, we set the third angle to zero, and for external rotation, we set the first angle to zero." << std::endl;
+            angles = {std::atan2(R(1, 0), R(0, 0)), CV_PI / 2., 0};
+            break;
+        }
+        else if (abs(R(2, 1) + 1) < CV_QUAT_CONVERT_THRESHOLD)
+        {
+            std::cout << "WARNING: Gimbal Lock will occur. Euler angles are non-unique." << std::endl;
+            std::cout << "For intrinsic rotations, we set the third angle to zero, and for external rotation, we set the first angle to zero." << std::endl;
+            angles = {std::atan2(R(1, 0), R(0, 0)), -CV_PI / 2., 0};
+
+            break;
+        }
+        angles(0) = std::atan2(-R(0, 1), R(1, 1));
+        angles(1) = std::asin(R(2, 1));
+        angles(2) = std::atan2(-R(2, 0), R(2, 2));
+        break;
+    }
+    case INT_ZYX:
+    {
+        if (abs(R(2, 0) - 1) < CV_QUAT_CONVERT_THRESHOLD)
+        {
+            std::cout << "WARNING: Gimbal Lock will occur. Euler angles are non-unique." << std::endl;
+            std::cout << "For intrinsic rotations, we set the third angle to zero, and for external rotation, we set the first angle to zero." << std::endl;
+            angles = {std::atan2(-R(0, 1), R(1, 1)), -CV_PI / 2., 0};
+            break;
+        }
+        else if (abs(R(2, 0) + 1) < CV_QUAT_CONVERT_THRESHOLD)
+        {
+            std::cout << "WARNING: Gimbal Lock will occur. Euler angles are non-unique." << std::endl;
+            std::cout << "For intrinsic rotations, we set the third angle to zero, and for external rotation, we set the first angle to zero." << std::endl;
+            angles = {std::atan2(R(1, 2), R(1, 1)), CV_PI / 2., 0};
+            break;
+        }
+        angles(0) = std::atan2(R(1, 0), R(0, 0));
+        angles(1) = std::asin(-R(2, 0));
+        angles(2) = std::atan2(R(2, 1), R(2, 2));
+        break;
+    }
+    case INT_ZXZ:
+    {
+        if (abs(R(2, 2) - 1) < CV_QUAT_CONVERT_THRESHOLD)
+        {
+            std::cout << "WARNING: Gimbal Lock will occur. Euler angles are non-unique." << std::endl;
+            std::cout << "For intrinsic rotations, we set the third angle to zero, and for external rotation, we set the first angle to zero." << std::endl;
+            angles = {std::atan2(R(1, 0), R(1, 1)), 0, 0};
+            break;
+        }
+        else if (abs(R(2, 2) + 1) < CV_QUAT_CONVERT_THRESHOLD)
+        {
+            std::cout << "WARNING: Gimbal Lock will occur. Euler angles are non-unique." << std::endl;
+            std::cout << "For intrinsic rotations, we set the third angle to zero, and for external rotation, we set the first angle to zero." << std::endl;
+            angles = {std::atan2(R(1, 0), R(0, 0)), CV_PI, 0};
+            break;
+        }
+        angles(0) = std::atan2(R(0, 2), -R(1, 2));
+        angles(1) = std::acos(R(2, 2));
+        angles(2) = std::atan2(R(2, 0), R(2, 1));
+        break;
+    }
+    case INT_ZYZ:
+    {
+        if (abs(R(2, 2) - 1) < CV_QUAT_CONVERT_THRESHOLD)
+        {
+            std::cout << "WARNING: Gimbal Lock will occur. Euler angles are non-unique." << std::endl;
+            std::cout << "For intrinsic rotations, we set the third angle to zero, and for external rotation, we set the first angle to zero." << std::endl;
+            angles = {std::atan2(R(1, 0), R(0, 0)), 0, 0};
+            break;
+        }
+        else if (abs(R(2, 0) + 1) < CV_QUAT_CONVERT_THRESHOLD)
+        {
+            std::cout << "WARNING: Gimbal Lock will occur. Euler angles are non-unique." << std::endl;
+            std::cout << "For intrinsic rotations, we set the third angle to zero, and for external rotation, we set the first angle to zero." << std::endl;
+            angles = {std::atan2(R(1, 0), R(0, 0)), CV_PI, 0};
+            break;
+        }
+        angles(0) = std::atan2(R(1, 2), R(0, 2));
+        angles(1) = std::acos(R(2, 2));
+        angles(2) = std::atan2(R(2, 1), -R(2, 0));
+        break;
+    }
+
+    case EXT_XYZ:
+    {
+        if (abs(R(2, 0) - 1) < CV_QUAT_CONVERT_THRESHOLD)
+        {
+            std::cout << "WARNING: Gimbal Lock will occur. Euler angles are non-unique." << std::endl;
+            std::cout << "For intrinsic rotations, we set the third angle to zero, and for external rotation, we set the first angle to zero." << std::endl;
+            angles = {0, -CV_PI / 2., std::atan2(-R(0, 1), R(1, 1))};
+            break;
+        }
+        else if (abs(R(2, 0) + 1) < CV_QUAT_CONVERT_THRESHOLD)
+        {
+            std::cout << "WARNING: Gimbal Lock will occur. Euler angles are non-unique." << std::endl;
+            std::cout << "For intrinsic rotations, we set the third angle to zero, and for external rotation, we set the first angle to zero." << std::endl;
+            angles = {0, CV_PI / 2., std::atan2(R(1, 2), R(1, 1))};
+            break;
+        }
+        angles(0) = std::atan2(R(2, 1), R(2, 2));
+        angles(1) = std::asin(-R(2, 0));
+        angles(2) = std::atan2(R(1, 0), R(0, 0));
+
+        break;
+    }
+    case EXT_XZY:
+    {
+        if (abs(R(1, 0) - 1) < CV_QUAT_CONVERT_THRESHOLD)
+        {
+            std::cout << "WARNING: Gimbal Lock will occur. Euler angles are non-unique." << std::endl;
+            std::cout << "For intrinsic rotations, we set the third angle to zero, and for external rotation, we set the first angle to zero." << std::endl;
+            angles = {0, CV_PI / 2., std::atan2(R(0, 2), R(2, 2))};
+            break;
+        }
+        else if (abs(R(1, 0) + 1) < CV_QUAT_CONVERT_THRESHOLD)
+        {
+            std::cout << "WARNING: Gimbal Lock will occur. Euler angles are non-unique." << std::endl;
+            std::cout << "For intrinsic rotations, we set the third angle to zero, and for external rotation, we set the first angle to zero." << std::endl;
+            angles = {0, -CV_PI / 2., std::atan2(R(0, 2), R(0, 1))};
+            break;
+        }
+        angles(0) = std::atan2(-R(1, 2), R(1, 1));
+        angles(1) = std::asin(-R(1, 0));
+        angles(2) = std::atan2(-R(2, 0), R(0, 0));
+
+        break;
+    }
+    case EXT_XYX:
+    {
+        if (abs(R(0, 0) - 1) < CV_QUAT_CONVERT_THRESHOLD)
+        {
+            std::cout << "WARNING: Gimbal Lock will occur. Euler angles are non-unique." << std::endl;
+            std::cout << "For intrinsic rotations, we set the third angle to zero, and for external rotation, we set the first angle to zero." << std::endl;
+            angles = {0, 0, std::atan2(R(2, 1), R(2, 2))};
+            break;
+        }
+        else if (abs(R(0, 0) + 1) < CV_QUAT_CONVERT_THRESHOLD)
+        {
+            std::cout << "WARNING: Gimbal Lock will occur. Euler angles are non-unique." << std::endl;
+            std::cout << "For intrinsic rotations, we set the third angle to zero, and for external rotation, we set the first angle to zero." << std::endl;
+            angles = {0, CV_PI, std::atan2(R(1, 2), R(1, 1))};
+            break;
+        }
+        angles(0) = std::atan2(R(0, 1), R(0, 2));
+        angles(1) = std::acos(R(0, 0));
+        angles(2) = std::atan2(R(1, 0), -R(2, 0));
+
+        break;
+    }
+    case EXT_XZX:
+    {
+        if (abs(R(0, 0) - 1) < CV_QUAT_CONVERT_THRESHOLD)
+        {
+            std::cout << "WARNING: Gimbal Lock will occur. Euler angles are non-unique." << std::endl;
+            std::cout << "For intrinsic rotations, we set the third angle to zero, and for external rotation, we set the first angle to zero." << std::endl;
+            angles = {0, 0, std::atan2(R(2, 1), R(2, 2))};
+            break;
+        }
+        else if (abs(R(0, 0) + 1) < CV_QUAT_CONVERT_THRESHOLD)
+        {
+            std::cout << "WARNING: Gimbal Lock will occur. Euler angles are non-unique." << std::endl;
+            std::cout << "For intrinsic rotations, we set the third angle to zero, and for external rotation, we set the first angle to zero." << std::endl;
+            angles = {0, CV_PI, std::atan2(-R(2, 1), R(2, 2))};
+            break;
+        }
+        angles(0) = std::atan2(R(0, 2), -R(0, 1));
+        angles(1) = std::acos(R(0, 0));
+        angles(2) = std::atan2(R(2, 0), R(1, 0));
+        break;
+    }
+    case EXT_YXZ:
+    {
+        if (abs(R(2, 1) - 1) < CV_QUAT_CONVERT_THRESHOLD)
+        {
+            std::cout << "WARNING: Gimbal Lock will occur. Euler angles are non-unique." << std::endl;
+            std::cout << "For intrinsic rotations, we set the third angle to zero, and for external rotation, we set the first angle to zero." << std::endl;
+            angles = {0, CV_PI / 2., std::atan2(R(1, 0), R(0, 0))};
+            break;
+        }
+        else if (abs(R(2, 1) + 1) < CV_QUAT_CONVERT_THRESHOLD)
+        {
+            std::cout << "WARNING: Gimbal Lock will occur. Euler angles are non-unique." << std::endl;
+            std::cout << "For intrinsic rotations, we set the third angle to zero, and for external rotation, we set the first angle to zero." << std::endl;
+            angles = {0, -CV_PI / 2., std::atan2(R(1, 0), R(0, 0))};
+            break;
+        }
+        angles(0) = std::atan2(-R(2, 0), R(2, 2));
+        angles(1) = std::asin(R(2, 1));
+        angles(2) = std::atan2(-R(0, 1), R(1, 1));
+
+        break;
+    }
+    case EXT_YZX:
+    {
+        if (abs(R(0, 2) - 1) < CV_QUAT_CONVERT_THRESHOLD)
+        {
+            std::cout << "WARNING: Gimbal Lock will occur. Euler angles are non-unique." << std::endl;
+            std::cout << "For intrinsic rotations, we set the third angle to zero, and for external rotation, we set the first angle to zero." << std::endl;
+            angles = {0, -CV_PI / 2., std::atan2(-R(1, 2), R(2, 2))};
+            break;
+        }
+        else if (abs(R(0, 2) + 1) < CV_QUAT_CONVERT_THRESHOLD)
+        {
+            std::cout << "WARNING: Gimbal Lock will occur. Euler angles are non-unique." << std::endl;
+            std::cout << "For intrinsic rotations, we set the third angle to zero, and for external rotation, we set the first angle to zero." << std::endl;
+            angles = {0, CV_PI / 2., std::atan2(R(2, 0), R(2, 2))};
+            break;
+        }
+
+        angles(0) = std::atan2(R(0, 2), R(0, 0));
+        angles(1) = std::asin(-R(0, 1));
+        angles(2) = std::atan2(R(2, 1), R(1, 1));
+        break;
+    }
+    case EXT_YXY:
+    {
+        if (abs(R(1, 1) - 1) < CV_QUAT_CONVERT_THRESHOLD)
+        {
+            std::cout << "WARNING: Gimbal Lock will occur. Euler angles are non-unique." << std::endl;
+            std::cout << "For intrinsic rotations, we set the third angle to zero, and for external rotation, we set the first angle to zero." << std::endl;
+            angles = {0, 0, std::atan2(R(0, 2), R(0, 0))};
+            break;
+        }
+        else if (abs(R(1, 1) + 1) < CV_QUAT_CONVERT_THRESHOLD)
+        {
+            std::cout << "WARNING: Gimbal Lock will occur. Euler angles are non-unique." << std::endl;
+            std::cout << "For intrinsic rotations, we set the third angle to zero, and for external rotation, we set the first angle to zero." << std::endl;
+            angles = {0, CV_PI, std::atan2(-R(2, 0), R(0, 0))};
+            break;
+        }
+        angles(0) = std::atan2(R(1, 0), -R(1, 2));
+        angles(1) = std::acos(R(1, 1));
+        angles(2) = std::atan2(R(0, 1), R(2, 1));
+        break;
+    }
+    case EXT_YZY:
+    {
+        if (abs(R(1, 1) - 1) < CV_QUAT_CONVERT_THRESHOLD)
+        {
+            std::cout << "WARNING: Gimbal Lock will occur. Euler angles are non-unique." << std::endl;
+            std::cout << "For intrinsic rotations, we set the third angle to zero, and for external rotation, we set the first angle to zero." << std::endl;
+            angles = {0, 0, std::atan2(R(0, 2), R(0, 0))};
+            break;
+        }
+        else if (abs(R(1, 1) + 1) < CV_QUAT_CONVERT_THRESHOLD)
+        {
+            std::cout << "WARNING: Gimbal Lock will occur. Euler angles are non-unique." << std::endl;
+            std::cout << "For intrinsic rotations, we set the third angle to zero, and for external rotation, we set the first angle to zero." << std::endl;
+            angles = {0, CV_PI, std::atan2(R(0, 2), -R(0, 0))};
+            break;
+        }
+        angles(0) = std::atan2(R(1, 2), R(1, 0));
+        angles(1) = std::acos(R(1, 1));
+        angles(2) = std::atan2(R(2, 1), -R(0, 1));
+        break;
+    }
+    case EXT_ZXY:
+    {
+        if (abs(R(1, 2) - 1) < CV_QUAT_CONVERT_THRESHOLD)
+        {
+            std::cout << "WARNING: Gimbal Lock will occur. Euler angles are non-unique." << std::endl;
+            std::cout << "For intrinsic rotations, we set the third angle to zero, and for external rotation, we set the first angle to zero." << std::endl;
+            angles = {0, -CV_PI / 2., std::atan2(-R(0, 1), R(0, 0))};
+            break;
+        }
+        else if (abs(R(1, 2) + 1) < CV_QUAT_CONVERT_THRESHOLD)
+        {
+            std::cout << "WARNING: Gimbal Lock will occur. Euler angles are non-unique." << std::endl;
+            std::cout << "For intrinsic rotations, we set the third angle to zero, and for external rotation, we set the first angle to zero." << std::endl;
+            angles = {0, CV_PI / 2., std::atan2(R(0, 1), R(0, 0))};
+            break;
+        }
+        angles(0) = std::atan2(R(1, 0), R(1, 1));
+        angles(1) = std::asin(-R(1, 2));
+        angles(2) = std::atan2(R(0, 2), R(2, 2));
+        break;
+    }
+    case EXT_ZYX:
+    {
+        if (abs(R(0, 2) - 1) < CV_QUAT_CONVERT_THRESHOLD)
+        {
+            std::cout << "WARNING: Gimbal Lock will occur. Euler angles are non-unique." << std::endl;
+            std::cout << "For intrinsic rotations, we set the third angle to zero, and for external rotation, we set the first angle to zero." << std::endl;
+            angles = {0, CV_PI / 2., std::atan2(R(1, 0), R(1, 1))};
+            break;
+        }
+        else if (abs(R(0, 2) + 1) < CV_QUAT_CONVERT_THRESHOLD)
+        {
+            std::cout << "WARNING: Gimbal Lock will occur. Euler angles are non-unique." << std::endl;
+            std::cout << "For intrinsic rotations, we set the third angle to zero, and for external rotation, we set the first angle to zero." << std::endl;
+            angles = {0, -CV_PI / 2., std::atan2(R(2, 1), R(1, 1))};
+            break;
+        }
+
+        angles(0) = std::atan2(-R(0, 1), R(0, 0));
+        angles(1) = std::asin(R(0, 2));
+        angles(2) = std::atan2(-R(1, 2), R(2, 2));
+        break;
+    }
+    case EXT_ZXZ:
+    {
+        if (abs(R(2, 2) - 1) < CV_QUAT_CONVERT_THRESHOLD)
+        {
+            std::cout << "WARNING: Gimbal Lock will occur. Euler angles are non-unique." << std::endl;
+            std::cout << "For intrinsic rotations, we set the third angle to zero, and for external rotation, we set the first angle to zero." << std::endl;
+            angles = {0, 0, std::atan2(R(1, 0), R(1, 1))};
+            break;
+        }
+        else if (abs(R(2, 2) + 1) < CV_QUAT_CONVERT_THRESHOLD)
+        {
+            std::cout << "WARNING: Gimbal Lock will occur. Euler angles are non-unique." << std::endl;
+            std::cout << "For intrinsic rotations, we set the third angle to zero, and for external rotation, we set the first angle to zero." << std::endl;
+            angles = {0, CV_PI, std::atan2(R(1, 0), R(0, 0))};
+            break;
+        }
+        angles(0) = std::atan2(R(2, 0), R(2, 1));
+        angles(1) = std::acos(R(2, 2));
+        angles(2) = std::atan2(R(0, 2), -R(1, 2));
+
+        break;
+    }
+    case EXT_ZYZ:
+    {
+        if (abs(R(2, 2) - 1) < CV_QUAT_CONVERT_THRESHOLD)
+        {
+            std::cout << "WARNING: Gimbal Lock will occur. Euler angles are non-unique." << std::endl;
+            std::cout << "For intrinsic rotations, we set the third angle to zero, and for external rotation, we set the first angle to zero." << std::endl;
+            angles = {0, 0, std::atan2(R(1, 0), R(0, 0))};
+            break;
+        }
+        else if (abs(R(2, 0) + 1) < CV_QUAT_CONVERT_THRESHOLD)
+        {
+            std::cout << "WARNING: Gimbal Lock will occur. Euler angles are non-unique." << std::endl;
+            std::cout << "For intrinsic rotations, we set the third angle to zero, and for external rotation, we set the first angle to zero." << std::endl;
+            angles = {0, CV_PI, std::atan2(R(1, 0), R(0, 0))};
+            break;
+        }
+        angles(0) = std::atan2(R(2, 1), -R(2, 0));
+        angles(1) = std::acos(R(2, 2));
+        angles(2) = std::atan2(R(1, 2), R(0, 2));
+        break;
+    }
+
+    default:
+        CV_Error(Error::StsBadArg, "Wrong Euler angles type!");
+        break;
+    }
+    return angles;
+}
+
 }  // namepsace
 //! @endcond
 
