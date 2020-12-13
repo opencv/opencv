@@ -1575,6 +1575,7 @@ void cv::ogl::render(const ogl::Arrays& arr, InputArray indices, int mode, Scala
 // CL-GL Interoperability
 
 #ifdef HAVE_OPENCL
+#  include "opencv2/core/opencl/runtime/opencl_core.hpp"
 #  include "opencv2/core/opencl/runtime/opencl_gl.hpp"
 #  ifdef cl_khr_gl_sharing
 #    define HAVE_OPENCL_OPENGL_SHARING
@@ -1594,6 +1595,34 @@ void cv::ogl::render(const ogl::Arrays& arr, InputArray indices, int mode, Scala
 #endif // HAVE_OPENGL
 
 namespace cv { namespace ogl {
+
+#if defined(HAVE_OPENCL) && defined(HAVE_OPENGL) && defined(HAVE_OPENCL_OPENGL_SHARING)
+// Check to avoid crash in OpenCL runtime: https://github.com/opencv/opencv/issues/5209
+static void checkOpenCLVersion()
+{
+    using namespace cv::ocl;
+    const Device& device = Device::getDefault();
+    //CV_Assert(!device.empty());
+    cl_device_id dev = (cl_device_id)device.ptr();
+    CV_Assert(dev);
+
+    cl_platform_id platform_id = 0;
+    size_t sz = 0;
+
+    cl_int status = clGetDeviceInfo(dev, CL_DEVICE_PLATFORM, sizeof(platform_id), &platform_id, &sz);
+    CV_Assert(status == CL_SUCCESS && sz == sizeof(cl_platform_id));
+    CV_Assert(platform_id);
+
+    PlatformInfo pi(&platform_id);
+    int versionMajor = pi.versionMajor();
+    int versionMinor = pi.versionMinor();
+    if (versionMajor < 1 || (versionMajor == 1 && versionMinor <= 1))
+        CV_Error_(cv::Error::OpenCLApiCallError,
+            ("OpenCL: clCreateFromGLTexture requires OpenCL 1.2+ version: %d.%d - %s (%s)",
+                versionMajor, versionMinor, pi.name().c_str(), pi.version().c_str())
+        );
+}
+#endif
 
 namespace ocl {
 
@@ -1714,6 +1743,8 @@ void convertToGLTexture2D(InputArray src, Texture2D& texture)
     Context& ctx = Context::getDefault();
     cl_context context = (cl_context)ctx.ptr();
 
+    checkOpenCLVersion();  // clCreateFromGLTexture requires OpenCL 1.2
+
     UMat u = src.getUMat();
 
     // TODO Add support for roi
@@ -1771,6 +1802,8 @@ void convertFromGLTexture2D(const Texture2D& texture, OutputArray dst)
     using namespace cv::ocl;
     Context& ctx = Context::getDefault();
     cl_context context = (cl_context)ctx.ptr();
+
+    checkOpenCLVersion();  // clCreateFromGLTexture requires OpenCL 1.2
 
     // TODO Need to specify ACCESS_WRITE here somehow to prevent useless data copying!
     dst.create(texture.size(), textureType);

@@ -1162,25 +1162,27 @@ Platform& Platform::getDefault()
 
 /////////////////////////////////////// Device ////////////////////////////////////////////
 
-// deviceVersion has format
+// Version has format:
 //   OpenCL<space><major_version.minor_version><space><vendor-specific information>
 // by specification
 //   http://www.khronos.org/registry/cl/sdk/1.1/docs/man/xhtml/clGetDeviceInfo.html
 //   http://www.khronos.org/registry/cl/sdk/1.2/docs/man/xhtml/clGetDeviceInfo.html
-static void parseDeviceVersion(const String &deviceVersion, int &major, int &minor)
+//   https://www.khronos.org/registry/OpenCL/sdk/1.1/docs/man/xhtml/clGetPlatformInfo.html
+//   https://www.khronos.org/registry/OpenCL/sdk/1.2/docs/man/xhtml/clGetPlatformInfo.html
+static void parseOpenCLVersion(const String &version, int &major, int &minor)
 {
     major = minor = 0;
-    if (10 >= deviceVersion.length())
+    if (10 >= version.length())
         return;
-    const char *pstr = deviceVersion.c_str();
+    const char *pstr = version.c_str();
     if (0 != strncmp(pstr, "OpenCL ", 7))
         return;
-    size_t ppos = deviceVersion.find('.', 7);
+    size_t ppos = version.find('.', 7);
     if (String::npos == ppos)
         return;
-    String temp = deviceVersion.substr(7, ppos - 7);
+    String temp = version.substr(7, ppos - 7);
     major = atoi(temp.c_str());
-    temp = deviceVersion.substr(ppos + 1);
+    temp = version.substr(ppos + 1);
     minor = atoi(temp.c_str());
 }
 
@@ -1203,7 +1205,7 @@ struct Device::Impl
         addressBits_ = getProp<cl_uint, int>(CL_DEVICE_ADDRESS_BITS);
 
         String deviceVersion_ = getStrProp(CL_DEVICE_VERSION);
-        parseDeviceVersion(deviceVersion_, deviceVersionMajor_, deviceVersionMinor_);
+        parseOpenCLVersion(deviceVersion_, deviceVersionMajor_, deviceVersionMinor_);
 
         size_t pos = 0;
         while (pos < extensions_.size())
@@ -5958,6 +5960,9 @@ struct PlatformInfo::Impl
         refcount = 1;
         handle = *(cl_platform_id*)id;
         getDevices(devices, handle);
+
+        version_ = getStrProp(CL_PLATFORM_VERSION);
+        parseOpenCLVersion(version_, versionMajor_, versionMinor_);
     }
 
     String getStrProp(cl_platform_info prop) const
@@ -5971,6 +5976,10 @@ struct PlatformInfo::Impl
     IMPLEMENT_REFCOUNTABLE();
     std::vector<cl_device_id> devices;
     cl_platform_id handle;
+
+    String version_;
+    int versionMajor_;
+    int versionMinor_;
 };
 
 PlatformInfo::PlatformInfo()
@@ -6033,7 +6042,19 @@ String PlatformInfo::vendor() const
 
 String PlatformInfo::version() const
 {
-    return p ? p->getStrProp(CL_PLATFORM_VERSION) : String();
+    return p ? p->version_ : String();
+}
+
+int PlatformInfo::versionMajor() const
+{
+    CV_Assert(p);
+    return p->versionMajor_;
+}
+
+int PlatformInfo::versionMinor() const
+{
+    CV_Assert(p);
+    return p->versionMinor_;
 }
 
 static void getPlatforms(std::vector<cl_platform_id>& platforms)

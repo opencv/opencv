@@ -720,7 +720,12 @@ public:
 
     String name() const;
     String vendor() const;
+
+    /// See CL_PLATFORM_VERSION
     String version() const;
+    int versionMajor() const;
+    int versionMinor() const;
+
     int deviceNumber() const;
     void getDevice(Device& device, int d) const;
 
