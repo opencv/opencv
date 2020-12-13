@@ -179,6 +179,11 @@ INSTANTIATE_TEST_CASE_P(EqHistPerfTestCPU, EqHistPerfTest,
         Values(szVGA, sz720p, sz1080p),
         Values(cv::compile_args(IMGPROC_CPU))));
 
+INSTANTIATE_TEST_CASE_P(BGR2RGBPerfTestCPU, BGR2RGBPerfTest,
+                        Combine(Values(AbsExact().to_compare_f()),
+                                Values(szVGA, sz720p, sz1080p),
+                                Values(cv::compile_args(IMGPROC_CPU))));
+
 INSTANTIATE_TEST_CASE_P(RGB2GrayPerfTestCPU, RGB2GrayPerfTest,
     Combine(Values(AbsExact().to_compare_f()),
         Values(szVGA, sz720p, sz1080p),
@@ -198,6 +203,26 @@ INSTANTIATE_TEST_CASE_P(YUV2RGBPerfTestCPU, YUV2RGBPerfTest,
     Combine(Values(AbsExact().to_compare_f()),
         Values(szVGA, sz720p, sz1080p),
         Values(cv::compile_args(IMGPROC_CPU))));
+
+INSTANTIATE_TEST_CASE_P(BGR2I420PerfTestCPU, BGR2I420PerfTest,
+                        Combine(Values(AbsExact().to_compare_f()),
+                                Values(szVGA, sz720p, sz1080p),
+                                Values(cv::compile_args(IMGPROC_CPU))));
+
+INSTANTIATE_TEST_CASE_P(RGB2I420PerfTestCPU, RGB2I420PerfTest,
+                        Combine(Values(AbsExact().to_compare_f()),
+                                Values(szVGA, sz720p, sz1080p),
+                                Values(cv::compile_args(IMGPROC_CPU))));
+
+INSTANTIATE_TEST_CASE_P(I4202BGRPerfTestCPU, I4202BGRPerfTest,
+                        Combine(Values(AbsExact().to_compare_f()),
+                                Values(szVGA, sz720p, sz1080p),
+                                Values(cv::compile_args(IMGPROC_CPU))));
+
+INSTANTIATE_TEST_CASE_P(I4202RGBPerfTestCPU, I4202RGBPerfTest,
+                        Combine(Values(AbsExact().to_compare_f()),
+                                Values(szVGA, sz720p, sz1080p),
+                                Values(cv::compile_args(IMGPROC_CPU))));
 
 INSTANTIATE_TEST_CASE_P(RGB2LabPerfTestCPU, RGB2LabPerfTest,
     Combine(Values(AbsExact().to_compare_f()),
