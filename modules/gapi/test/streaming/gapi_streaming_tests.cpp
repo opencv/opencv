@@ -1732,6 +1732,43 @@ TEST(GAPI_Streaming, CopyFrame)
     }
 }
 
+TEST(GAPI_Streaming, CopyMat)
+{
+    initTestDataPath();
+    std::string filepath = findDataFile("cv/video/768x576.avi");
+
+    cv::GMat in;
+    auto out = cv::gapi::streaming::copy(in);
+
+    cv::GComputation comp(cv::GIn(in), cv::GOut(out));
+
+    auto cc = comp.compileStreaming();
+    try {
+        cc.setSource<cv::gapi::wip::GCaptureSource>(filepath);
+    } catch(...) {
+        throw SkipTestException("Video file can not be opened");
+    }
+
+    cv::VideoCapture cap;
+    cap.open(filepath);
+    if (!cap.isOpened())
+        throw SkipTestException("Video file can not be opened");
+
+    cv::Mat out_mat;
+    cv::Mat ocv_mat;
+    std::size_t num_frames = 0u;
+    std::size_t max_frames = 10u;
+
+    cc.start();
+    while (cc.pull(cv::gout(out_mat)) && num_frames < max_frames)
+    {
+        num_frames++;
+        cap >> ocv_mat;
+
+        EXPECT_EQ(0, cvtest::norm(ocv_mat, out_mat, NORM_INF));
+    }
+}
+
 TEST(GAPI_Streaming, Reshape)
 {
     initTestDataPath();

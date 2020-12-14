@@ -15,10 +15,18 @@ namespace streaming {
 
 GAPI_EXPORTS cv::gapi::GKernelPackage kernels();
 
-// FIXME: Make a generic kernel
-G_API_OP(GCopy, <GFrame(GFrame)>, "org.opencv.streaming.copy")
+struct GCopy final : public cv::detail::NoTag
 {
-    static GFrameDesc outMeta(const GFrameDesc& in) { return in; }
+    static constexpr const char* id() { return "org.opencv.streaming.copy"; }
+
+    static GMetaArgs getOutMeta(const GMetaArgs &in_meta, const GArgs&) {
+        GAPI_Assert(in_meta.size() == 1u);
+        return in_meta;
+    }
+
+    template<typename T> static T on(const T& arg) {
+        return cv::GKernelType<GCopy, std::function<T(T)>>::on(arg);
+    }
 };
 
 G_API_OP(GBGR, <GMat(GFrame)>, "org.opencv.streaming.BGR")
@@ -26,14 +34,16 @@ G_API_OP(GBGR, <GMat(GFrame)>, "org.opencv.streaming.BGR")
     static GMatDesc outMeta(const GFrameDesc& in) { return GMatDesc{CV_8U, 3, in.size}; }
 };
 
-/** @brief Gets copy from the input frame
+/** @brief Gets copy of the input
 
 @note Function textual ID is "org.opencv.streaming.copy"
 
-@param in Input frame
-@return Copy of the input frame
+@param in G-type input
+@return Copy of the input
 */
-GAPI_EXPORTS cv::GFrame copy(const cv::GFrame& in);
+template<typename T,
+         typename std::enable_if<!cv::detail::is_nongapi_type<T>::value, int>::type = 0>
+GAPI_EXPORTS T copy(const T& in) { return GCopy::on<T>(in); }
 
 /** @brief Gets bgr plane from input frame
 
@@ -42,7 +52,7 @@ GAPI_EXPORTS cv::GFrame copy(const cv::GFrame& in);
 @param in Input frame
 @return Image in BGR format
 */
-GAPI_EXPORTS cv::GMat BGR (const cv::GFrame& in);
+GAPI_EXPORTS cv::GMat BGR(const cv::GFrame& in);
 
 } // namespace streaming
 } // namespace gapi

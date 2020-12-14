@@ -153,8 +153,20 @@ void cv::gimpl::Copy::Actor::run(cv::gimpl::GIslandExecutable::IInput  &in,
     const cv::GRunArgs &in_args = cv::util::get<cv::GRunArgs>(in_msg);
     GAPI_Assert(in_args.size() == 1u);
 
-    cv::GRunArgP out_arg = out.get(0);
-    *cv::util::get<cv::MediaFrame*>(out_arg) = cv::util::get<cv::MediaFrame>(in_args[0]);
+    const auto& in_arg = in_args[0];
+    auto out_arg = out.get(0);
+    using cv::util::get;
+    switch (in_arg.index()) {
+    case cv::GRunArg::index_of<cv::RMat>():
+        *get<cv::RMat*>(out_arg) = get<cv::RMat>(in_arg);
+        break;
+    case cv::GRunArg::index_of<cv::MediaFrame>():
+        *get<cv::MediaFrame*>(out_arg) = get<cv::MediaFrame>(in_arg);
+        break;
+    // FIXME: Add support for remaining types
+    default:
+        GAPI_Assert(false && "Copy: unsupported data type");
+    }
     out.post(std::move(out_arg));
 }
 
