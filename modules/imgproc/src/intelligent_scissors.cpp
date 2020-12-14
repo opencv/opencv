@@ -60,7 +60,7 @@ static float lcost(const Point& p, const Point& q, const Mat& gradient_magnitude
 class IntelligentScissorsImpl : public IntelligentScissors
 {
 public:
-    void apply(InputArray img, OutputArray total_hit_map_x, OutputArray total_hit_map_y, const Point start_point)
+    void apply(InputArray img, OutputArray total_hit_map_x, OutputArray total_hit_map_y, const Point start_point) CV_OVERRIDE
     {
         const int EDGE_THRESHOLD_LOW = 50;
         const int EDGE_THRESHOLD_HIGH = 100;
@@ -151,7 +151,7 @@ public:
     }
 };
 
-Ptr<IntelligentScissors> cv::createIntelligentScissors()
+Ptr<IntelligentScissors> createIntelligentScissors()
 {
     return makePtr<IntelligentScissorsImpl>();
 }
