@@ -822,7 +822,6 @@ PERF_TEST_P_(BGR2RGBPerfTest, TestPerformance)
     }
 
     SANITY_CHECK_NOTHING();
-
 }
 
 //------------------------------------------------------------------------------
@@ -1013,7 +1012,6 @@ PERF_TEST_P_(BGR2I420PerfTest, TestPerformance)
     }
 
     SANITY_CHECK_NOTHING();
-
 }
 
 //------------------------------------------------------------------------------
@@ -1052,7 +1050,6 @@ PERF_TEST_P_(RGB2I420PerfTest, TestPerformance)
     }
 
     SANITY_CHECK_NOTHING();
-
 }
 
 //------------------------------------------------------------------------------
@@ -1091,7 +1088,6 @@ PERF_TEST_P_(I4202BGRPerfTest, TestPerformance)
     }
 
     SANITY_CHECK_NOTHING();
-
 }
 
 //------------------------------------------------------------------------------
@@ -1130,7 +1126,6 @@ PERF_TEST_P_(I4202RGBPerfTest, TestPerformance)
     }
 
     SANITY_CHECK_NOTHING();
-
 }
 
 //------------------------------------------------------------------------------
