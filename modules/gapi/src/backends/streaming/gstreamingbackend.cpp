@@ -55,6 +55,7 @@ class GStreamingIntrinExecutable final: public cv::gimpl::GIslandExecutable
 
 public:
     GStreamingIntrinExecutable(const ade::Graph                   &,
+                               const cv::GCompileArgs             &,
                                const std::vector<ade::NodeHandle> &);
 
     const ade::Graph& m_g;
@@ -80,10 +81,10 @@ class GStreamingBackendImpl final: public cv::gapi::GBackend::Priv
     }
 
     virtual EPtr compile(const ade::Graph &graph,
-                         const cv::GCompileArgs &,
+                         const cv::GCompileArgs &args,
                          const std::vector<ade::NodeHandle> &nodes) const override
     {
-        return EPtr{new GStreamingIntrinExecutable(graph, nodes)};
+        return EPtr{new GStreamingIntrinExecutable(graph, args, nodes)};
     }
 
     virtual bool controlsMerge() const override
@@ -101,6 +102,7 @@ class GStreamingBackendImpl final: public cv::gapi::GBackend::Priv
 };
 
 GStreamingIntrinExecutable::GStreamingIntrinExecutable(const ade::Graph& g,
+                                                       const cv::GCompileArgs& args,
                                                        const std::vector<ade::NodeHandle>& nodes)
     : m_g(g), m_gm(m_g)
 {
@@ -114,7 +116,7 @@ GStreamingIntrinExecutable::GStreamingIntrinExecutable(const ade::Graph& g,
     GAPI_Assert(it != nodes.end() && "No operators found for this island?!");
 
     ConstStreamingGraph cag(m_g);
-    m_actor = cag.metadata(*it).get<StreamingCreateFunction>().createActorFunction();
+    m_actor = cag.metadata(*it).get<StreamingCreateFunction>().createActorFunction(args);
 
     // Ensure this the only op in the graph
     if (std::any_of(it+1, nodes.end(), is_op))
