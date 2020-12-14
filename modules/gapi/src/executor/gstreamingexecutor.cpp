@@ -535,6 +535,16 @@ class StreamingInput final: public cv::gimpl::GIslandExecutable::IInput
             // Stop case
             return cv::gimpl::StreamMsg{cv::gimpl::EndOfStream{}};
         }
+        // Wrap all input cv::Mats with RMats
+        for (auto& arg : isl_input_args) {
+            if (arg.index() == cv::GRunArg::index_of<cv::Mat>()) {
+                // FIXME: This whole construct is ugly, from
+                // its writing to a need in this in general
+                arg = cv::GRunArg{ cv::make_rmat<cv::gimpl::RMatAdapter>(cv::util::get<cv::Mat>(arg))
+                                 , arg.meta
+                                 };
+            }
+        }
         return cv::gimpl::StreamMsg{std::move(isl_input_args)};
     }
     virtual cv::gimpl::StreamMsg try_get() override
