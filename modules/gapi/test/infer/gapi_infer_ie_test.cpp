@@ -511,10 +511,8 @@ TEST(TestAgeGenderIE, GenericInfer)
 
     cv::GComputation comp(cv::GIn(in), cv::GOut(age, gender));
 
-    cv::gapi::ie::Params<cv::gapi::Generic> pp{"age-gender-generic",
-                                               model_path,
-                                               weights_path,
-                                               device_id};
+    cv::gapi::ie::Params<cv::gapi::Generic> pp{
+        "age-gender-generic", model_path, weights_path, device_id};
 
     comp.apply(cv::gin(in_mat), cv::gout(gapi_age, gapi_gender),
                cv::compile_args(cv::gapi::networks(pp)));
@@ -542,12 +540,9 @@ TEST(TestAgeGenderIE, InvalidConfigGeneric)
     auto gender  = outputs.at("prob");
     cv::GComputation comp(cv::GIn(in), cv::GOut(age, gender));
 
-    auto pp = cv::gapi::ie::Params<cv::gapi::Generic>{"age-gender-generic",
-                                                      model_path,
-                                                      weights_path,
-                                                      device_id
-                                                     }.pluginConfig({{"unsupported_config",
-                                                                      "some_value"}});
+    auto pp = cv::gapi::ie::Params<cv::gapi::Generic>{
+        "age-gender-generic", model_path, weights_path, device_id
+    }.pluginConfig({{"unsupported_config", "some_value"}});
 
     EXPECT_ANY_THROW(comp.compile(cv::GMatDesc{CV_8U,3,cv::Size{320, 240}},
                      cv::compile_args(cv::gapi::networks(pp))));
@@ -571,12 +566,10 @@ TEST(TestAgeGenderIE, CPUConfigGeneric)
     auto gender  = outputs.at("prob");
     cv::GComputation comp(cv::GIn(in), cv::GOut(age, gender));
 
-    auto pp = cv::gapi::ie::Params<cv::gapi::Generic>{"age-gender-generic",
-                                                      model_path,
-                                                      weights_path,
-                                                      device_id
-                                                     }.pluginConfig({{"CPU_THROUGHPUT_STREAMS",
-                                                                      "CPU_THROUGHPUT_NUMA"}});
+    auto pp = cv::gapi::ie::Params<cv::gapi::Generic> {
+        "age-gender-generic", model_path, weights_path, device_id
+    }.pluginConfig({{IE::PluginConfigParams::KEY_CPU_THROUGHPUT_STREAMS,
+                     IE::PluginConfigParams::CPU_THROUGHPUT_NUMA}});
 
     EXPECT_NO_THROW(comp.compile(cv::GMatDesc{CV_8U,3,cv::Size{320, 240}},
                     cv::compile_args(cv::gapi::networks(pp))));
@@ -598,10 +591,10 @@ TEST(TestAgeGenderIE, InvalidConfig)
     std::tie(age, gender) = cv::gapi::infer<AgeGender>(in);
     cv::GComputation comp(cv::GIn(in), cv::GOut(age, gender));
 
-    auto pp = cv::gapi::ie::Params<AgeGender> {model_path, weights_path, device_id
-                                              }.cfgOutputLayers({ "age_conv3", "prob" })
-                                               .pluginConfig({{"unsupported_config",
-                                                               "some_value"}});
+    auto pp = cv::gapi::ie::Params<AgeGender> {
+        model_path, weights_path, device_id
+    }.cfgOutputLayers({ "age_conv3", "prob" })
+     .pluginConfig({{"unsupported_config", "some_value"}});
 
     EXPECT_ANY_THROW(comp.compile(cv::GMatDesc{CV_8U,3,cv::Size{320, 240}},
                      cv::compile_args(cv::gapi::networks(pp))));
@@ -623,10 +616,11 @@ TEST(TestAgeGenderIE, CPUConfig)
     std::tie(age, gender) = cv::gapi::infer<AgeGender>(in);
     cv::GComputation comp(cv::GIn(in), cv::GOut(age, gender));
 
-    auto pp = cv::gapi::ie::Params<AgeGender> {model_path, weights_path, device_id
-                                              }.cfgOutputLayers({ "age_conv3", "prob" })
-                                               .pluginConfig({{"CPU_THROUGHPUT_STREAMS",
-                                                               "CPU_THROUGHPUT_NUMA"}});
+    auto pp = cv::gapi::ie::Params<AgeGender> {
+        model_path, weights_path, device_id
+    }.cfgOutputLayers({ "age_conv3", "prob" })
+     .pluginConfig({{IE::PluginConfigParams::KEY_CPU_THROUGHPUT_STREAMS,
+                     IE::PluginConfigParams::CPU_THROUGHPUT_NUMA}});
 
     EXPECT_NO_THROW(comp.compile(cv::GMatDesc{CV_8U,3,cv::Size{320, 240}},
                     cv::compile_args(cv::gapi::networks(pp))));
