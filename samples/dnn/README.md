@@ -19,6 +19,36 @@ Check `-h` option to know which values are used by default:
 python object_detection.py opencv_fd -h
 ```
 
+### Sample models
+
+You can download sample models using ```download_models.py```. For example, the following command will download network weights for OpenCV Face Detector model and store them in FaceDetector folder:
+
+```bash
+python download_models.py --save_dir FaceDetector opencv_fd
+```
+
+You can use default configuration files adopted for OpenCV from [here](https://github.com/opencv/opencv_extra/tree/master/testdata/dnn).
+
+You also can use the script to download necessary files from your code. Assume you have the following code inside ```your_script.py```:
+
+```python
+from download_models import downloadFile
+
+filepath1 = downloadFile("https://drive.google.com/uc?export=download&id=0B3gersZ2cHIxRm5PMWRoTkdHdHc", None, filename="MobileNetSSD_deploy.caffemodel", save_dir="save_dir_1")
+filepath2 = downloadFile("https://drive.google.com/uc?export=download&id=0B3gersZ2cHIxRm5PMWRoTkdHdHc", "994d30a8afaa9e754d17d2373b2d62a7dfbaaf7a", filename="MobileNetSSD_deploy.caffemodel")
+print(filepath1)
+print(filepath2)
+# Your code
+```
+
+By running the following commands, you will get **MobileNetSSD_deploy.caffemodel** file:
+```bash
+export OPENCV_DOWNLOAD_DATA_PATH=download_folder
+python your_script.py
+```
+
+**Note** that you can provide a directory using **save_dir** parameter or via **OPENCV_SAVE_DIR** environment variable.
+
 #### Face detection
 [An origin model](https://github.com/opencv/opencv/tree/master/samples/dnn/face_detector)
 with single precision floating point weights has been quantized using [TensorFlow framework](https://www.tensorflow.org/).
@@ -48,7 +78,7 @@ AR @[ IoU=0.50:0.95 | area= large | maxDets=100 ] | 0.528     | 0.528          |
 ```
 
 ## References
-* [Models downloading script](https://github.com/opencv/opencv_extra/blob/master/testdata/dnn/download_models.py)
+* [Models downloading script](https://github.com/opencv/opencv/samples/dnn/download_models.py)
 * [Configuration files adopted for OpenCV](https://github.com/opencv/opencv_extra/tree/master/testdata/dnn)
 * [How to import models from TensorFlow Object Detection API](https://github.com/opencv/opencv/wiki/TensorFlow-Object-Detection-API)
 * [Names of classes from different datasets](https://github.com/opencv/opencv/tree/master/samples/data/dnn)

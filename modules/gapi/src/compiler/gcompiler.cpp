@@ -43,6 +43,7 @@
 #include <opencv2/gapi/cpu/imgproc.hpp> // ...Imgproc
 #include <opencv2/gapi/cpu/video.hpp>   // ...and Video kernel implementations
 #include <opencv2/gapi/render/render.hpp>   // render::ocv::backend()
+#include <opencv2/gapi/streaming/format.hpp> // streaming::kernels()
 #endif // !defined(GAPI_STANDALONE)
 // </FIXME:>
 
@@ -72,7 +73,8 @@ namespace
             combine(cv::gapi::core::cpu::kernels(),
                     cv::gapi::imgproc::cpu::kernels(),
                     cv::gapi::video::cpu::kernels(),
-                    cv::gapi::render::ocv::kernels());
+                    cv::gapi::render::ocv::kernels(),
+                    cv::gapi::streaming::kernels());
 #else
             cv::gapi::GKernelPackage();
 #endif // !defined(GAPI_STANDALONE)

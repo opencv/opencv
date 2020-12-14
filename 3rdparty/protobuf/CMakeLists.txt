@@ -153,6 +153,11 @@ set_target_properties(libprotobuf
     ARCHIVE_OUTPUT_DIRECTORY ${3P_LIBRARY_OUTPUT_PATH}
     )
 
+if(ANDROID)
+  # https://github.com/opencv/opencv/issues/17282
+  target_link_libraries(libprotobuf INTERFACE "-landroid" "-llog")
+endif()
+
 get_protobuf_version(Protobuf_VERSION "${PROTOBUF_ROOT}/src")
 set(Protobuf_VERSION ${Protobuf_VERSION} CACHE INTERNAL "" FORCE)
 

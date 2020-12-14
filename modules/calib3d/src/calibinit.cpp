@@ -2178,13 +2178,6 @@ void drawChessboardCorners( InputOutputArray image, Size patternSize,
     }
 }
 
-static int quiet_error(int /*status*/, const char* /*func_name*/,
-                       const char* /*err_msg*/, const char* /*file_name*/,
-                       int /*line*/, void* /*userdata*/)
-{
-    return 0;
-}
-
 bool findCirclesGrid( InputArray _image, Size patternSize,
                           OutputArray _centers, int flags, const Ptr<FeatureDetector> &blobDetector,
                           const CirclesGridFinderParameters& parameters_)
@@ -2197,15 +2190,22 @@ bool findCirclesGrid( InputArray _image, Size patternSize,
     bool isSymmetricGrid  = (flags & CALIB_CB_SYMMETRIC_GRID ) ? true : false;
     CV_Assert(isAsymmetricGrid ^ isSymmetricGrid);
 
-    Mat image = _image.getMat();
     std::vector<Point2f> centers;
 
-    std::vector<KeyPoint> keypoints;
-    blobDetector->detect(image, keypoints);
     std::vector<Point2f> points;
-    for (size_t i = 0; i < keypoints.size(); i++)
+    if (blobDetector)
     {
-      points.push_back (keypoints[i].pt);
+        std::vector<KeyPoint> keypoints;
+        blobDetector->detect(_image, keypoints);
+        for (size_t i = 0; i < keypoints.size(); i++)
+        {
+            points.push_back(keypoints[i].pt);
+        }
+    }
+    else
+    {
+        CV_CheckTypeEQ(_image.type(), CV_32FC2, "blobDetector must be provided or image must contains Point2f array (std::vector<Point2f>) with candidates");
+        _image.copyTo(points);
     }
 
     if(flags & CALIB_CB_ASYMMETRIC_GRID)
@@ -2221,64 +2221,59 @@ bool findCirclesGrid( InputArray _image, Size patternSize,
       return !centers.empty();
     }
 
+    bool isValid = false;
     const int attempts = 2;
     const size_t minHomographyPoints = 4;
     Mat H;
     for (int i = 0; i < attempts; i++)
     {
-      centers.clear();
-      CirclesGridFinder boxFinder(patternSize, points, parameters);
-      bool isFound = false;
-#define BE_QUIET 1
-#if BE_QUIET
-      void* oldCbkData;
-      ErrorCallback oldCbk = redirectError(quiet_error, 0, &oldCbkData); // FIXIT not thread safe
-#endif
-      try
-      {
-        isFound = boxFinder.findHoles();
-      }
-      catch (const cv::Exception &)
-      {
-
-      }
-#if BE_QUIET
-      redirectError(oldCbk, oldCbkData);
-#endif
-      if (isFound)
-      {
-        switch(parameters.gridType)
+        centers.clear();
+        CirclesGridFinder boxFinder(patternSize, points, parameters);
+        try
         {
-          case CirclesGridFinderParameters::SYMMETRIC_GRID:
-            boxFinder.getHoles(centers);
-            break;
-          case CirclesGridFinderParameters::ASYMMETRIC_GRID:
-        boxFinder.getAsymmetricHoles(centers);
-        break;
-          default:
-            CV_Error(Error::StsBadArg, "Unknown pattern type");
+            bool isFound = boxFinder.findHoles();
+            if (isFound)
+            {
+                switch(parameters.gridType)
+                {
+                case CirclesGridFinderParameters::SYMMETRIC_GRID:
+                    boxFinder.getHoles(centers);
+                    break;
+                case CirclesGridFinderParameters::ASYMMETRIC_GRID:
+                    boxFinder.getAsymmetricHoles(centers);
+                    break;
+                default:
+                    CV_Error(Error::StsBadArg, "Unknown pattern type");
+                }
+
+                isValid = true;
+                break;  // done, return result
+            }
+        }
+        catch (const cv::Exception& e)
+        {
+            CV_UNUSED(e);
+            CV_LOG_DEBUG(NULL, "findCirclesGrid2: attempt=" << i << ": " << e.what());
+            // nothing, next attempt
         }
 
-        if (i != 0)
+        boxFinder.getHoles(centers);
+        if (i != attempts - 1)
         {
-          Mat orgPointsMat;
-          transform(centers, orgPointsMat, H.inv());
-          convertPointsFromHomogeneous(orgPointsMat, centers);
+            if (centers.size() < minHomographyPoints)
+                break;
+            H = CirclesGridFinder::rectifyGrid(boxFinder.getDetectedGridSize(), centers, points, points);
         }
-        Mat(centers).copyTo(_centers);
-        return true;
-      }
+    }
 
-      boxFinder.getHoles(centers);
-      if (i != attempts - 1)
-      {
-        if (centers.size() < minHomographyPoints)
-          break;
-        H = CirclesGridFinder::rectifyGrid(boxFinder.getDetectedGridSize(), centers, points, points);
-      }
+    if (!H.empty())  // undone rectification
+    {
+        Mat orgPointsMat;
+        transform(centers, orgPointsMat, H.inv());
+        convertPointsFromHomogeneous(orgPointsMat, centers);
     }
     Mat(centers).copyTo(_centers);
-    return false;
+    return isValid;
 }
 
 bool findCirclesGrid(InputArray _image, Size patternSize,
