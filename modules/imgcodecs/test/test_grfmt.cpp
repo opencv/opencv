@@ -78,7 +78,9 @@ const string all_images[] =
     "readwrite/Bretagne2.jp2",
     "readwrite/Grey.jp2",
     "readwrite/Grey.jp2",
+    "readwrite/balloon.j2c",
 #endif
+
 #ifdef HAVE_GDCM
     "readwrite/int16-mono1.dcm",
     "readwrite/uint8-mono2.dcm",
