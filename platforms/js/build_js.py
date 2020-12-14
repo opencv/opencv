@@ -206,15 +206,19 @@ class Builder:
 #===================================================================================================
 
 if __name__ == "__main__":
+    log.basicConfig(format='%(message)s', level=log.DEBUG)
+
     opencv_dir = os.path.abspath(os.path.join(SCRIPT_DIR, '../..'))
     emscripten_dir = None
     if "EMSCRIPTEN" in os.environ:
         emscripten_dir = os.environ["EMSCRIPTEN"]
+    else:
+        log.warning("EMSCRIPTEN environment variable is not available. Please properly activate Emscripten SDK and consider using 'emcmake' launcher")
 
     parser = argparse.ArgumentParser(description='Build OpenCV.js by Emscripten')
     parser.add_argument("build_dir", help="Building directory (and output)")
     parser.add_argument('--opencv_dir', default=opencv_dir, help='Opencv source directory (default is "../.." relative to script location)')
-    parser.add_argument('--emscripten_dir', default=emscripten_dir, help="Path to Emscripten to use for build")
+    parser.add_argument('--emscripten_dir', default=emscripten_dir, help="Path to Emscripten to use for build (deprecated in favor of 'emcmake' launcher)")
     parser.add_argument('--build_wasm', action="store_true", help="Build OpenCV.js in WebAssembly format")
     parser.add_argument('--disable_wasm', action="store_true", help="Build OpenCV.js in Asm.js format")
     parser.add_argument('--threads', action="store_true", help="Build OpenCV.js with threads optimization")
@@ -238,13 +242,15 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    log.basicConfig(format='%(message)s', level=log.DEBUG)
     log.debug("Args: %s", args)
 
     os.environ["OPENCV_JS_WHITELIST"] = args.config
 
+    if 'EMMAKEN_JUST_CONFIGURE' in os.environ:
+        del os.environ['EMMAKEN_JUST_CONFIGURE']  # avoid linker errors with NODERAWFS message then using 'emcmake' launcher
+
     if args.emscripten_dir is None:
-        log.info("Cannot get Emscripten path, please specify it either by EMSCRIPTEN environment variable or --emscripten_dir option.")
+        log.error("Cannot get Emscripten path, please use 'emcmake' launcher or specify it either by EMSCRIPTEN environment variable or --emscripten_dir option.")
         sys.exit(-1)
 
     builder = Builder(args)
