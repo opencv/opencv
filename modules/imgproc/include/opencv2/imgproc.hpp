@@ -4709,28 +4709,26 @@ CV_EXPORTS_W Size getTextSize(const String& text, int fontFace,
 
 
 /** @brief Intelligent Scissors
-This class is used to find the minimum path between points
-of image.
+This class is used to find the path between two points of image defined by strong
+color-changes at the edges.
 */
-class CV_EXPORTS_W IntelligentScissors
+class CV_EXPORTS_W IntelligentScissors : public Algorithm
 {
 public:
-    /** @brief initializes the IntelligentScissors
+    /** @brief Calculates the hit map for the given point on the image.
 
-    Create and set size of the counting area (offset
-    by the number of pixels from the center point)
-    */
-
-    CV_WRAP IntelligentScissors(const int input_border);
-
-    CV_WRAP void setBorder(const int input_border);
-
-    CV_WRAP void apply(InputArray img, OutputArray total_hit_map_x, OutputArray total_hit_map_y, const Point start_point);
-
-    // CV_WRAP void IntelligentScissors_two_point(Mat img, OutputArray path, const Point start_point, const Point end_point);
-protected:
-    int border;
+    @param img Source image.
+    @param total_hit_map_x The x-coordinate of the hit map. The heat map contains
+    paths between `start_point` and all other points of the image.
+    @param total_hit_map_y The y-coordinate of the hit map.
+    @param start_point The source point used to find the path.
+     */
+    CV_WRAP virtual void apply(InputArray img, OutputArray total_hit_map_x, OutputArray total_hit_map_y, const Point start_point) = 0;
 };
+
+/** @brief Creates a smart pointer to a cv::IntelligentScissors class and initializes it.
+*/
+CV_EXPORTS_W Ptr<IntelligentScissors> createIntelligentScissors();
 
 /** @brief Calculates the font-specific size to use to achieve a given height in pixels.
 
