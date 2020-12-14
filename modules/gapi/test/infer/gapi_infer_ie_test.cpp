@@ -156,8 +156,9 @@ TEST(TestAgeGenderIE, InferBasicTensor)
     std::tie(age, gender) = cv::gapi::infer<AgeGender>(in);
     cv::GComputation comp(cv::GIn(in), cv::GOut(age, gender));
 
-    auto pp = cv::gapi::ie::Params<AgeGender> {model_path, weights_path, device_id
-                                              }.cfgOutputLayers({ "age_conv3", "prob" });
+    auto pp = cv::gapi::ie::Params<AgeGender> {
+        model_path, weights_path, device_id
+    }.cfgOutputLayers({ "age_conv3", "prob" });
     comp.apply(cv::gin(in_mat), cv::gout(gapi_age, gapi_gender),
                cv::compile_args(cv::gapi::networks(pp)));
 
@@ -205,8 +206,9 @@ TEST(TestAgeGenderIE, InferBasicImage)
     std::tie(age, gender) = cv::gapi::infer<AgeGender>(in);
     cv::GComputation comp(cv::GIn(in), cv::GOut(age, gender));
 
-    auto pp = cv::gapi::ie::Params<AgeGender> {model_path, weights_path, device_id
-                                              }.cfgOutputLayers({ "age_conv3", "prob" });
+    auto pp = cv::gapi::ie::Params<AgeGender> {
+        model_path, weights_path, device_id
+    }.cfgOutputLayers({ "age_conv3", "prob" });
     comp.apply(cv::gin(in_mat), cv::gout(gapi_age, gapi_gender),
                cv::compile_args(cv::gapi::networks(pp)));
 
@@ -374,8 +376,9 @@ TEST_F(ROIList, TestInfer)
     std::tie(age, gender) = cv::gapi::infer<AgeGender>(rr, in);
     cv::GComputation comp(cv::GIn(in, rr), cv::GOut(age, gender));
 
-    auto pp = cv::gapi::ie::Params<AgeGender> {model_path, weights_path, device_id
-                                              }.cfgOutputLayers({ "age_conv3", "prob" });
+    auto pp = cv::gapi::ie::Params<AgeGender> {
+        model_path, weights_path, device_id
+    }.cfgOutputLayers({ "age_conv3", "prob" });
     comp.apply(cv::gin(m_in_mat, m_roi_list),
                cv::gout(m_out_gapi_ages, m_out_gapi_genders),
                cv::compile_args(cv::gapi::networks(pp)));
@@ -390,8 +393,9 @@ TEST_F(ROIList, TestInfer2)
     std::tie(age, gender) = cv::gapi::infer2<AgeGender>(in, rr);
     cv::GComputation comp(cv::GIn(in, rr), cv::GOut(age, gender));
 
-    auto pp = cv::gapi::ie::Params<AgeGender> {model_path, weights_path, device_id
-                                              }.cfgOutputLayers({ "age_conv3", "prob" });
+    auto pp = cv::gapi::ie::Params<AgeGender> {
+        model_path, weights_path, device_id
+    }.cfgOutputLayers({ "age_conv3", "prob" });
     comp.apply(cv::gin(m_in_mat, m_roi_list),
                cv::gout(m_out_gapi_ages, m_out_gapi_genders),
                cv::compile_args(cv::gapi::networks(pp)));
@@ -455,10 +459,12 @@ TEST(DISABLED_TestTwoIENNPipeline, InferBasicImage)
     std::tie(age2, gender2) = cv::gapi::infer<AgeGender2>(cv::gapi::copy(in));
     cv::GComputation comp(cv::GIn(in), cv::GOut(age1, gender1, age2, gender2));
 
-    auto age_net1 = cv::gapi::ie::Params<AgeGender1> {model_path, weights_path, device_id
-                                                     }.cfgOutputLayers({ "age_conv3", "prob" });
-    auto age_net2 = cv::gapi::ie::Params<AgeGender2> {model_path, weights_path, device_id
-                                                     }.cfgOutputLayers({ "age_conv3", "prob" });
+    auto age_net1 = cv::gapi::ie::Params<AgeGender1> {
+        model_path, weights_path, device_id
+    }.cfgOutputLayers({ "age_conv3", "prob" });
+    auto age_net2 = cv::gapi::ie::Params<AgeGender2> {
+        model_path, weights_path, device_id
+    }.cfgOutputLayers({ "age_conv3", "prob" });
 
     comp.apply(cv::gin(in_mat), cv::gout(gapi_age1, gapi_gender1, gapi_age2, gapi_gender2),
                cv::compile_args(cv::gapi::networks(age_net1, age_net2)));
@@ -638,8 +644,9 @@ TEST_F(ROIList, MediaInputBGR)
 
     auto frame = MediaFrame::Create<TestMediaBGR>(m_in_mat);
 
-    auto pp = cv::gapi::ie::Params<AgeGender> {model_path, weights_path, device_id
-                                              }.cfgOutputLayers({ "age_conv3", "prob" });
+    auto pp = cv::gapi::ie::Params<AgeGender> {
+        model_path, weights_path, device_id
+    }.cfgOutputLayers({ "age_conv3", "prob" });
     comp.apply(cv::gin(frame, m_roi_list),
                cv::gout(m_out_gapi_ages, m_out_gapi_genders),
                cv::compile_args(cv::gapi::networks(pp)));
@@ -659,8 +666,9 @@ TEST_F(ROIListNV12, MediaInputNV12)
 
     auto frame = MediaFrame::Create<TestMediaNV12>(m_in_y, m_in_uv);
 
-    auto pp = cv::gapi::ie::Params<AgeGender> {model_path, weights_path, device_id
-                                              }.cfgOutputLayers({ "age_conv3", "prob" });
+    auto pp = cv::gapi::ie::Params<AgeGender> {
+        model_path, weights_path, device_id
+    }.cfgOutputLayers({ "age_conv3", "prob" });
     comp.apply(cv::gin(frame, m_roi_list),
                cv::gout(m_out_gapi_ages, m_out_gapi_genders),
                cv::compile_args(cv::gapi::networks(pp)));
@@ -711,8 +719,9 @@ TEST(TestAgeGenderIE, MediaInputNV12)
 
     auto frame = MediaFrame::Create<TestMediaNV12>(in_y_mat, in_uv_mat);
 
-    auto pp = cv::gapi::ie::Params<AgeGender> {model_path, weights_path, device_id
-                                              }.cfgOutputLayers({ "age_conv3", "prob" });
+    auto pp = cv::gapi::ie::Params<AgeGender> {
+        model_path, weights_path, device_id
+    }.cfgOutputLayers({ "age_conv3", "prob" });
     comp.apply(cv::gin(frame), cv::gout(gapi_age, gapi_gender),
                cv::compile_args(cv::gapi::networks(pp)));
 
@@ -763,8 +772,9 @@ TEST(TestAgeGenderIE, MediaInputBGR)
 
     auto frame = MediaFrame::Create<TestMediaBGR>(in_mat);
 
-    auto pp = cv::gapi::ie::Params<AgeGender> {model_path, weights_path, device_id
-                                              }.cfgOutputLayers({ "age_conv3", "prob" });
+    auto pp = cv::gapi::ie::Params<AgeGender> {
+        model_path, weights_path, device_id
+    }.cfgOutputLayers({ "age_conv3", "prob" });
     comp.apply(cv::gin(frame), cv::gout(gapi_age, gapi_gender),
                cv::compile_args(cv::gapi::networks(pp)));
 
@@ -825,8 +835,9 @@ TEST(InferROI, MediaInputBGR)
 
     auto frame = MediaFrame::Create<TestMediaBGR>(in_mat);
 
-    auto pp = cv::gapi::ie::Params<AgeGender> {model_path, weights_path, device_id
-                                              }.cfgOutputLayers({ "age_conv3", "prob" });
+    auto pp = cv::gapi::ie::Params<AgeGender> {
+        model_path, weights_path, device_id
+    }.cfgOutputLayers({ "age_conv3", "prob" });
     comp.apply(cv::gin(frame, rect), cv::gout(gapi_age, gapi_gender),
                cv::compile_args(cv::gapi::networks(pp)));
 
@@ -889,8 +900,9 @@ TEST(InferROI, MediaInputNV12)
 
     auto frame = MediaFrame::Create<TestMediaNV12>(in_y_mat, in_uv_mat);
 
-    auto pp = cv::gapi::ie::Params<AgeGender> {model_path, weights_path, device_id
-                                              }.cfgOutputLayers({ "age_conv3", "prob" });
+    auto pp = cv::gapi::ie::Params<AgeGender> {
+        model_path, weights_path, device_id
+    }.cfgOutputLayers({ "age_conv3", "prob" });
     comp.apply(cv::gin(frame, rect), cv::gout(gapi_age, gapi_gender),
                cv::compile_args(cv::gapi::networks(pp)));
 
@@ -910,8 +922,9 @@ TEST_F(ROIList, Infer2MediaInputBGR)
 
     auto frame = MediaFrame::Create<TestMediaBGR>(m_in_mat);
 
-    auto pp = cv::gapi::ie::Params<AgeGender> {model_path, weights_path, device_id
-                                              }.cfgOutputLayers({ "age_conv3", "prob" });
+    auto pp = cv::gapi::ie::Params<AgeGender> {
+        model_path, weights_path, device_id
+    }.cfgOutputLayers({ "age_conv3", "prob" });
     comp.apply(cv::gin(frame, m_roi_list),
                cv::gout(m_out_gapi_ages, m_out_gapi_genders),
                cv::compile_args(cv::gapi::networks(pp)));
@@ -928,8 +941,9 @@ TEST_F(ROIListNV12, Infer2MediaInputNV12)
 
     auto frame = MediaFrame::Create<TestMediaNV12>(m_in_y, m_in_uv);
 
-    auto pp = cv::gapi::ie::Params<AgeGender> {model_path, weights_path, device_id
-                                              }.cfgOutputLayers({ "age_conv3", "prob" });
+    auto pp = cv::gapi::ie::Params<AgeGender> {
+        model_path, weights_path, device_id
+    }.cfgOutputLayers({ "age_conv3", "prob" });
     comp.apply(cv::gin(frame, m_roi_list),
                cv::gout(m_out_gapi_ages, m_out_gapi_genders),
                cv::compile_args(cv::gapi::networks(pp)));
