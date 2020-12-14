@@ -105,7 +105,7 @@ public:
     std::size_t numInputs() const { return params.num_in; }
     std::size_t numOutputs() const { return params.num_out; }
     void setInput(int i, const cv::Mat &m);
-    void setInput(ONNXCallContext &ctx, int idx, int name_idx, Views &views, const cv::Rect &roi);
+    void setInput(ONNXCallContext &ctx, const int idx, const int name_idx, Views &views, const cv::Rect &roi);
     void setOutput(int idx, cv::Mat &m);
     cv::Mat allocOutput(int i) const;
 
@@ -644,8 +644,8 @@ void ONNXCompiled::setInput(int i, const cv::Mat &m) {
 }
 
 void ONNXCompiled::setInput(ONNXCallContext &ctx,
-                            int in_idx,
-                            int name_idx,
+                            const int in_idx,
+                            const int name_idx,
                             Views& views,
                             const cv::Rect& roi = cv::Rect()) {
     const auto in_name = params.input_names[name_idx];
