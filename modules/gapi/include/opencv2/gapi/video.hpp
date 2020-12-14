@@ -16,6 +16,32 @@
  */
 
 namespace cv { namespace gapi {
+
+/** @brief Structure for the Kalman filter's initialization parameters.*/
+
+struct GAPI_EXPORTS KalmanParams
+{
+    // initial state
+
+    //! corrected state (x(k)): x(k)=x'(k)+K(k)*(z(k)-H*x'(k))
+    Mat state;
+    //! posteriori error estimate covariance matrix (P(k)): P(k)=(I-K(k)*H)*P'(k)
+    Mat errorCov;
+
+    // dynamic system description
+
+    //! state transition matrix (A)
+    Mat transitionMatrix;
+    //! measurement matrix (H)
+    Mat measurementMatrix;
+    //! process noise covariance matrix (Q)
+    Mat processNoiseCov;
+    //! measurement noise covariance matrix (R)
+    Mat measurementNoiseCov;
+    //! control matrix (B) (Optional: not used if there's no control)
+    Mat controlMatrix;
+};
+
 namespace  video
 {
 using GBuildPyrOutput  = std::tuple<GArray<GMat>, GScalar>;
@@ -129,6 +155,28 @@ G_TYPED_KERNEL(GBackgroundSubtractor, <GMat(GMat, BackgroundSubtractorParams)>,
     }
 };
 
+void checkParams(const cv::gapi::KalmanParams& kfParams,
+                 const cv::GMatDesc& measurement, const cv::GMatDesc& control = {});
+
+G_TYPED_KERNEL(GKalmanFilter, <GMat(GMat, GOpaque<bool>, GMat, KalmanParams)>,
+               "org.opencv.video.KalmanFilter")
+{
+    static GMatDesc outMeta(const GMatDesc& measurement, const GOpaqueDesc&,
+                            const GMatDesc& control, const KalmanParams& kfParams)
+    {
+        checkParams(kfParams, measurement, control);
+        return measurement.withSize(Size(1, kfParams.transitionMatrix.rows));
+    }
+};
+
+G_TYPED_KERNEL(GKalmanFilterNoControl, <GMat(GMat, GOpaque<bool>, KalmanParams)>, "org.opencv.video.KalmanFilterNoControl")
+{
+    static GMatDesc outMeta(const GMatDesc& measurement, const GOpaqueDesc&, const KalmanParams& kfParams)
+    {
+        checkParams(kfParams, measurement);
+        return measurement.withSize(Size(1, kfParams.transitionMatrix.rows));
+    }
+};
 } //namespace video
 
 //! @addtogroup gapi_video
@@ -250,6 +298,49 @@ The operation generates a foreground mask.
 */
 GAPI_EXPORTS GMat BackgroundSubtractor(const GMat& src, const cv::gapi::video::BackgroundSubtractorParams& bsParams);
 
+/** @brief Standard Kalman filter algorithm <http://en.wikipedia.org/wiki/Kalman_filter>.
+
+@note Functional textual ID is "org.opencv.video.KalmanFilter"
+
+@param measurement input matrix: 32-bit or 64-bit float 1-channel matrix containing measurements.
+@param haveMeasurement dynamic input flag that indicates whether we get measurements
+at a particular iteration .
+@param control input matrix: 32-bit or 64-bit float 1-channel matrix contains control data
+for changing dynamic system.
+@param kfParams Set of initialization parameters for Kalman filter kernel.
+
+@return Output matrix is predicted or corrected state. They can be 32-bit or 64-bit float
+1-channel matrix @ref CV_32FC1 or @ref CV_64FC1.
+
+@details If measurement matrix is given (haveMeasurements == true), corrected state will
+be returned which corresponds to the pipeline
+cv::KalmanFilter::predict(control) -> cv::KalmanFilter::correct(measurement).
+Otherwise, predicted state will be returned which corresponds to the call of
+cv::KalmanFilter::predict(control).
+@sa cv::KalmanFilter
+*/
+GAPI_EXPORTS GMat KalmanFilter(const GMat& measurement, const GOpaque<bool>& haveMeasurement,
+                               const GMat& control, const cv::gapi::KalmanParams& kfParams);
+
+/** @overload
+The case of Standard Kalman filter algorithm when there is no control in a dynamic system.
+In this case the controlMatrix is empty and control vector is absent.
+
+@note Function textual ID is "org.opencv.video.KalmanFilterNoControl"
+
+@param measurement input matrix: 32-bit or 64-bit float 1-channel matrix containing measurements.
+@param haveMeasurement dynamic input flag that indicates whether we get measurements
+at a particular iteration.
+@param kfParams Set of initialization parameters for Kalman filter kernel.
+
+@return Output matrix is predicted or corrected state. They can be 32-bit or 64-bit float
+1-channel matrix @ref CV_32FC1 or @ref CV_64FC1.
+
+@sa cv::KalmanFilter
+ */
+GAPI_EXPORTS GMat KalmanFilter(const GMat& measurement, const GOpaque<bool>& haveMeasurement,
+                               const cv::gapi::KalmanParams& kfParams);
+
 //! @} gapi_video
 } //namespace gapi
 } //namespace cv
@@ -264,6 +355,6 @@ template<> struct CompileArgTag<cv::gapi::video::BackgroundSubtractorParams>
     }
 };
 }  // namespace detail
-}  //namespace cv
+}  // namespace cv
 
 #endif // OPENCV_GAPI_VIDEO_HPP
