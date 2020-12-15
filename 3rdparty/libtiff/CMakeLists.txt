@@ -379,6 +379,21 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/tiffconf.h.cmake.in"
 
 ocv_include_directories("${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}" ${ZLIB_INCLUDE_DIRS})
 
+set(lib_hdrs
+    t4.h
+    tif_dir.h
+    tif_fax3.h
+    tiff.h
+    tiffio.h
+    tiffiop.h
+    tiffvers.h
+    tif_predict.h
+    uvcode.h
+    tiffio.hxx
+    "${CMAKE_CURRENT_BINARY_DIR}/tif_config.h"
+    "${CMAKE_CURRENT_BINARY_DIR}/tiffconf.h"
+    )
+
 set(lib_srcs
     tif_aux.c
     tif_close.c
@@ -421,18 +436,7 @@ set(lib_srcs
     tif_zip.c
     tif_zstd.c
     tif_stream.cxx
-    t4.h
-    tif_dir.h
-    tif_fax3.h
-    tiff.h
-    tiffio.h
-    tiffiop.h
-    tiffvers.h
-    tif_predict.h
-    uvcode.h
-    tiffio.hxx
-    "${CMAKE_CURRENT_BINARY_DIR}/tif_config.h"
-    "${CMAKE_CURRENT_BINARY_DIR}/tiffconf.h"
+    ${lib_hdrs}
     )
 
 if(WIN32 AND NOT HAVE_SNPRINTF)
@@ -483,3 +487,7 @@ if(NOT BUILD_SHARED_LIBS)
 endif()
 
 ocv_install_3rdparty_licenses(libtiff COPYRIGHT)
+
+
+
+install(FILES ${lib_hdrs} DESTINATION ${OPENCV_3P_INCLUDE_INSTALL_PATH} COMPONENT dev)

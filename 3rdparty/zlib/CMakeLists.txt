@@ -102,3 +102,7 @@ if(NOT BUILD_SHARED_LIBS)
 endif()
 
 ocv_install_3rdparty_licenses(zlib README)
+
+
+
+install(FILES ${ZLIB_PUBLIC_HDRS} DESTINATION ${OPENCV_3P_INCLUDE_INSTALL_PATH} COMPONENT dev)

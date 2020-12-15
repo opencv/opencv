@@ -96,3 +96,6 @@ if(NOT BUILD_SHARED_LIBS)
 endif()
 
 ocv_install_3rdparty_licenses(libpng LICENSE README)
+
+
+install(FILES ${lib_hdrs} DESTINATION ${OPENCV_3P_INCLUDE_INSTALL_PATH} COMPONENT dev)

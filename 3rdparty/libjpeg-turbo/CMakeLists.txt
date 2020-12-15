@@ -125,3 +125,9 @@ if(NOT BUILD_SHARED_LIBS)
 endif()
 
 ocv_install_3rdparty_licenses(libjpeg-turbo README.md LICENSE.md README.ijg)
+
+
+file(GLOB jpeg_headers src/*.h)
+list(APPEND jpeg_headers "${CMAKE_CURRENT_BINARY_DIR}/jconfig.h" "${CMAKE_CURRENT_BINARY_DIR}/jconfigint.h")
+
+install(FILES ${jpeg_headers} DESTINATION ${OPENCV_3P_INCLUDE_INSTALL_PATH} COMPONENT dev)
