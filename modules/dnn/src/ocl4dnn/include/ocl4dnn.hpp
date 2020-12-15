@@ -274,8 +274,6 @@ class OCL4DNNConvSpatial
         int32_t group_;
         bool bias_term_;
         UMat swizzled_weights_umat;
-        UMat weights_half;
-        UMat bias_half;
         UMat bottom_data2_;
 
         int32_t bottom_index_;
