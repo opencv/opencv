@@ -14,6 +14,8 @@ namespace cv {
 namespace gapi {
 namespace streaming {
 
+GAPI_EXPORTS cv::gapi::GBackend backend();
+
 class IActor {
 public:
     using Ptr = std::shared_ptr<IActor>;
@@ -24,7 +26,7 @@ public:
     virtual ~IActor() = default;
 };
 
-using CreateActorFunction = std::function<IActor::Ptr()>;
+using CreateActorFunction = std::function<IActor::Ptr(const cv::GCompileArgs&)>;
 struct GStreamingKernel
 {
     CreateActorFunction createActorFunction;
