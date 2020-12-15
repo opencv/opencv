@@ -2754,22 +2754,7 @@ KernelArg KernelArg::Constant(const Mat& m)
 
 struct Kernel::Impl
 {
-    Impl(const char* kname, const Program& prog) :
-        refcount(1), handle(NULL), isInProgress(false), isAsyncRun(false), nu(0)
-    {
-        cl_program ph = (cl_program)prog.ptr();
-        cl_int retval = 0;
-        name = kname;
-        if (ph)
-        {
-            handle = clCreateKernel(ph, kname, &retval);
-            CV_OCL_DBG_CHECK_RESULT(retval, cv::format("clCreateKernel('%s')", kname).c_str());
-        }
-        for( int i = 0; i < MAX_ARRS; i++ )
-            u[i] = 0;
-        haveTempDstUMats = false;
-        haveTempSrcUMats = false;
-    }
+    Impl(const char* kname, const Program& prog);
 
     void cleanupUMats()
     {
@@ -3570,7 +3555,8 @@ struct Program::Impl
          const String& _buildflags, String& errmsg) :
          refcount(1),
          handle(NULL),
-         buildflags(_buildflags)
+         buildflags(_buildflags),
+         kernel_cache()
     {
         const ProgramSource::Impl* src_ = src.getImpl();
         CV_Assert(src_);
@@ -3942,6 +3928,27 @@ struct Program::Impl
         return handle != NULL;
     }
 
+    cl_kernel getKernel(const char * const name)
+    {
+        if (!handle)
+            return NULL;
+
+        auto it = kernel_cache.find(String(name));
+        if (it != kernel_cache.end())
+        {
+            return it->second;
+        }
+        else
+        {
+            cl_int retval;
+            cl_kernel kernel = clCreateKernel(handle, name, &retval);
+            CV_OCL_DBG_CHECK_RESULT(retval, cv::format("clCreateKernel('%s')", name).c_str());
+
+            kernel_cache[String(name)] = kernel;
+            return kernel;
+        }
+    }
+
     ~Impl()
     {
         if( handle )
@@ -3953,6 +3960,10 @@ struct Program::Impl
                 clReleaseProgram(handle);
             }
             handle = NULL;
+            for (auto it = kernel_cache.begin(); it != kernel_cache.end(); it++)
+            {
+                clReleaseKernel(it->second);
+            }
         }
     }
 
@@ -3961,8 +3972,20 @@ struct Program::Impl
     String buildflags;
     String sourceModule_;
     String sourceName_;
+
+    std::map<String, cl_kernel> kernel_cache;
 };
 
+Kernel::Impl::Impl(const char* kname, const Program& prog) :
+    refcount(1), handle(NULL), isInProgress(false), isAsyncRun(false), nu(0)
+{
+    handle = prog.getImpl()->getKernel(kname);
+    clRetainKernel(handle);
+    for( int i = 0; i < MAX_ARRS; i++ )
+        u[i] = 0;
+    haveTempDstUMats = false;
+    haveTempSrcUMats = false;
+}
 
 Program::Program() { p = 0; }
 
