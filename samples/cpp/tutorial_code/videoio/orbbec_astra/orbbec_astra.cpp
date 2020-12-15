@@ -69,7 +69,6 @@ int main()
     //! [Read streams]
     // Create two lists to store frames
     std::list<Frame> depthFrames, colorFrames;
-    std::mutex depthFramesMtx, colorFramesMtx;
     const std::size_t maxFrames = 64;
 
     // Synchronization objects
@@ -90,8 +89,6 @@ int main()
                 Frame f;
                 f.timestamp = cv::getTickCount();
                 depthStream.retrieve(f.frame, CAP_OPENNI_DEPTH_MAP);
-                //depthStream.retrieve(f.frame, CAP_OPENNI_DISPARITY_MAP);
-                //depthStream.retrieve(f.frame, CAP_OPENNI_IR_IMAGE);
                 if (f.frame.empty())
                 {
                     cerr << "ERROR: Failed to decode frame from depth stream" << endl;
@@ -99,7 +96,7 @@ int main()
                 }
 
                 {
-                    std::lock_guard<std::mutex> lk(depthFramesMtx);
+                    std::lock_guard<std::mutex> lk(mtx);
                     if (depthFrames.size() >= maxFrames)
                         depthFrames.pop_front();
                     depthFrames.push_back(f);
@@ -127,7 +124,7 @@ int main()
                 }
 
                 {
-                    std::lock_guard<std::mutex> lk(colorFramesMtx);
+                    std::lock_guard<std::mutex> lk(mtx);
                     if (colorFrames.size() >= maxFrames)
                         colorFrames.pop_front();
                     colorFrames.push_back(f);
@@ -138,56 +135,66 @@ int main()
     });
     //! [Read streams]
 
-    while (true)
+    //! [Pair frames]
+    // Pair depth and color frames
+    while (!isFinish)
     {
         std::unique_lock<std::mutex> lk(mtx);
-        while (depthFrames.empty() && colorFrames.empty())
+        while (!isFinish && (depthFrames.empty() || colorFrames.empty()))
             dataReady.wait(lk);
 
-        depthFramesMtx.lock();
-        if (depthFrames.empty())
+        while (!depthFrames.empty() && !colorFrames.empty())
         {
-            depthFramesMtx.unlock();
-        }
-        else
-        {
-            // Get a frame from the list
-            Mat depthMap = depthFrames.front().frame;
-            depthFrames.pop_front();
-            depthFramesMtx.unlock();
+            if (!lk.owns_lock())
+                lk.lock();
 
+            // Get a frame from the list
+            Frame depthFrame = depthFrames.front();
+            int64 depthT = depthFrame.timestamp;
+
+            // Get a frame from the list
+            Frame colorFrame = colorFrames.front();
+            int64 colorT = colorFrame.timestamp;
+
+            // Half of frame period is a maximum time diff between frames
+            const int64 maxTdiff = int64(1000000000 / (2 * colorStream.get(CAP_PROP_FPS)));
+            if (depthT + maxTdiff < colorT)
+            {
+                depthFrames.pop_front();
+                continue;
+            }
+            else if (colorT + maxTdiff < depthT)
+            {
+                colorFrames.pop_front();
+                continue;
+            }
+            depthFrames.pop_front();
+            colorFrames.pop_front();
+            lk.unlock();
+
+            //! [Show frames]
             // Show depth frame
             Mat d8, dColor;
-            depthMap.convertTo(d8, CV_8U, 255.0 / 2500);
+            depthFrame.frame.convertTo(d8, CV_8U, 255.0 / 2500);
             applyColorMap(d8, dColor, COLORMAP_OCEAN);
             imshow("Depth (colored)", dColor);
-        }
-
-        //! [Show color frame]
-        colorFramesMtx.lock();
-        if (colorFrames.empty())
-        {
-            colorFramesMtx.unlock();
-        }
-        else
-        {
-            // Get a frame from the list
-            Mat colorFrame = colorFrames.front().frame;
-            colorFrames.pop_front();
-            colorFramesMtx.unlock();
 
             // Show color frame
-            imshow("Color", colorFrame);
+            imshow("Color", colorFrame.frame);
+            //! [Show frames]
+
+            // Exit on Esc key press
+            int key = waitKey(1);
+            if (key == 27) // ESC
+            {
+                isFinish = true;
+                break;
+            }
         }
-        //! [Show color frame]
-
-        // Exit on Esc key press
-        int key = waitKey(1);
-        if (key == 27) // ESC
-            break;
     }
+    //! [Pair frames]
 
-    isFinish = true;
+    dataReady.notify_one();
     depthReader.join();
     colorReader.join();
 

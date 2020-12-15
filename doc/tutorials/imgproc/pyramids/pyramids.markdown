@@ -1,8 +1,15 @@
 Image Pyramids {#tutorial_pyramids}
 ==============
 
+@tableofcontents
+
 @prev_tutorial{tutorial_morph_lines_detection}
 @next_tutorial{tutorial_threshold}
+
+|    |    |
+| -: | :- |
+| Original author | Ana Huamán |
+| Compatibility | OpenCV >= 3.0 |
 
 Goal
 ----

@@ -205,10 +205,15 @@ public:
         FN_opencv_videoio_plugin_init_t fn_init = reinterpret_cast<FN_opencv_videoio_plugin_init_t>(lib_->getSymbol(init_name));
         if (fn_init)
         {
-            plugin_api_ = fn_init(ABI_VERSION, API_VERSION, NULL);
+            for (int supported_api_version = API_VERSION; supported_api_version >= 0; supported_api_version--)
+            {
+                plugin_api_ = fn_init(ABI_VERSION, supported_api_version, NULL);
+                if (plugin_api_)
+                    break;
+            }
             if (!plugin_api_)
             {
-                CV_LOG_INFO(NULL, "Video I/O: plugin is incompatible: " << lib->getName());
+                CV_LOG_INFO(NULL, "Video I/O: plugin is incompatible (can't be initialized): " << lib->getName());
                 return;
             }
             if (plugin_api_->api_header.opencv_version_major != CV_VERSION_MAJOR)
@@ -232,8 +237,29 @@ public:
                 plugin_api_ = NULL;
                 return;
             }
-            // TODO Preview: add compatibility API/ABI checks
-            CV_LOG_INFO(NULL, "Video I/O: loaded plugin '" << plugin_api_->api_header.api_description << "'");
+            CV_LOG_INFO(NULL, "Video I/O: initialized '" << plugin_api_->api_header.api_description << "': built with "
+                << cv::format("OpenCV %d.%d (ABI/API = %d/%d)",
+                     plugin_api_->api_header.opencv_version_major, plugin_api_->api_header.opencv_version_minor,
+                     plugin_api_->api_header.min_api_version, plugin_api_->api_header.api_version)
+                << ", current OpenCV version is '" CV_VERSION "' (ABI/API = " << ABI_VERSION << "/" << API_VERSION << ")"
+            );
+            if (plugin_api_->api_header.min_api_version != ABI_VERSION)  // future: range can be here
+            {
+                // actually this should never happen due to checks in plugin's init() function
+                CV_LOG_ERROR(NULL, "Video I/O: plugin is not supported due to incompatible ABI = " << plugin_api_->api_header.min_api_version);
+                plugin_api_ = NULL;
+                return;
+            }
+            if (plugin_api_->api_header.api_version != API_VERSION)
+            {
+                CV_LOG_INFO(NULL, "Video I/O: NOTE: plugin is supported, but there is API version mismath: "
+                    << cv::format("plugin API level (%d) != OpenCV API level (%d)", plugin_api_->api_header.api_version, API_VERSION));
+                if (plugin_api_->api_header.api_version < API_VERSION)
+                {
+                    CV_LOG_INFO(NULL, "Video I/O: NOTE: some functionality may be unavailable due to lack of support by plugin implementation");
+                }
+            }
+            CV_LOG_INFO(NULL, "Video I/O: plugin is ready to use '" << plugin_api_->api_header.api_description << "'");
         }
         else
         {
@@ -508,11 +534,31 @@ public:
     {
         CV_Assert(plugin_api);
         CvPluginWriter writer = NULL;
-        if (plugin_api->Writer_open)
+        if (plugin_api->api_header.api_version >= 1 && plugin_api->Writer_open_with_params)
+        {
+            CV_Assert(plugin_api->Writer_release);
+            CV_Assert(!filename.empty());
+            std::vector<int> vint_params = params.getIntVector();
+            int* c_params = &vint_params[0];
+            unsigned n_params = (unsigned)(vint_params.size() / 2);
+
+            if (CV_ERROR_OK == plugin_api->Writer_open_with_params(filename.c_str(), fourcc, fps, sz.width, sz.height, c_params, n_params, &writer))
+            {
+                CV_Assert(writer);
+                return makePtr<PluginWriter>(plugin_api, writer);
+            }
+        }
+        else if (plugin_api->Writer_open)
         {
             CV_Assert(plugin_api->Writer_release);
             CV_Assert(!filename.empty());
             const bool isColor = params.get(VIDEOWRITER_PROP_IS_COLOR, true);
+            const int depth = params.get(VIDEOWRITER_PROP_DEPTH, CV_8U);
+            if (depth != CV_8U)
+            {
+                CV_LOG_WARNING(NULL, "Video I/O plugin doesn't support (due to lower API level) creation of VideoWriter with depth != CV_8U");
+                return Ptr<PluginWriter>();
+            }
             if (CV_ERROR_OK == plugin_api->Writer_open(filename.c_str(), fourcc, fps, sz.width, sz.height, isColor, &writer))
             {
                 CV_Assert(writer);

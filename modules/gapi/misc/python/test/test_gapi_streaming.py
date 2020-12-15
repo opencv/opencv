@@ -47,6 +47,8 @@ class test_gapi_streaming(NewOpenCVTests):
         ccomp.start()
 
         # Assert
+        max_num_frames  = 10
+        proc_num_frames = 0
         while cap.isOpened():
             has_expected, expected = cap.read()
             has_actual,   actual   = ccomp.pull()
@@ -57,6 +59,10 @@ class test_gapi_streaming(NewOpenCVTests):
                 break
 
             self.assertEqual(0.0, cv.norm(cv.medianBlur(expected, ksize), actual, cv.NORM_INF))
+
+            proc_num_frames += 1
+            if proc_num_frames == max_num_frames:
+                break;
 
 
     def test_video_split3(self):
@@ -76,6 +82,8 @@ class test_gapi_streaming(NewOpenCVTests):
         ccomp.start()
 
         # Assert
+        max_num_frames  = 10
+        proc_num_frames = 0
         while cap.isOpened():
             has_expected, frame = cap.read()
             has_actual,   actual   = ccomp.pull()
@@ -88,6 +96,10 @@ class test_gapi_streaming(NewOpenCVTests):
             expected = cv.split(frame)
             for e, a in zip(expected, actual):
                 self.assertEqual(0.0, cv.norm(e, a, cv.NORM_INF))
+
+            proc_num_frames += 1
+            if proc_num_frames == max_num_frames:
+                break;
 
 
     def test_video_add(self):
@@ -111,6 +123,8 @@ class test_gapi_streaming(NewOpenCVTests):
         ccomp.start()
 
         # Assert
+        max_num_frames  = 10
+        proc_num_frames = 0
         while cap.isOpened():
             has_expected, frame  = cap.read()
             has_actual,   actual = ccomp.pull()
@@ -123,6 +137,65 @@ class test_gapi_streaming(NewOpenCVTests):
             expected = cv.add(frame, in_mat)
             self.assertEqual(0.0, cv.norm(expected, actual, cv.NORM_INF))
 
+            proc_num_frames += 1
+            if proc_num_frames == max_num_frames:
+                break;
+
+
+    def test_video_good_features_to_track(self):
+        path = self.find_file('cv/video/768x576.avi', [os.environ['OPENCV_TEST_DATA_PATH']])
+
+        # NB: goodFeaturesToTrack configuration
+        max_corners         = 50
+        quality_lvl         = 0.01
+        min_distance        = 10
+        block_sz            = 3
+        use_harris_detector = True
+        k                   = 0.04
+        mask                = None
+
+        # OpenCV
+        cap = cv.VideoCapture(path)
+
+        # G-API
+        g_in = cv.GMat()
+        g_gray = cv.gapi.RGB2Gray(g_in)
+        g_out = cv.gapi.goodFeaturesToTrack(g_gray, max_corners, quality_lvl,
+                                            min_distance, mask, block_sz, use_harris_detector, k)
+
+        c = cv.GComputation(cv.GIn(g_in), cv.GOut(g_out))
+
+        ccomp = c.compileStreaming()
+        source = cv.gapi.wip.make_capture_src(path)
+        ccomp.setSource(source)
+        ccomp.start()
+
+        # Assert
+        max_num_frames  = 10
+        proc_num_frames = 0
+        while cap.isOpened():
+            has_expected, frame  = cap.read()
+            has_actual,   actual = ccomp.pull()
+
+            self.assertEqual(has_expected, has_actual)
+
+            if not has_actual:
+                break
+
+            # OpenCV
+            frame = cv.cvtColor(frame, cv.COLOR_RGB2GRAY)
+            expected = cv.goodFeaturesToTrack(frame, max_corners, quality_lvl,
+                                              min_distance, mask=mask,
+                                              blockSize=block_sz, useHarrisDetector=use_harris_detector, k=k)
+            for e, a in zip(expected, actual):
+                # NB: OpenCV & G-API have different output shapes:
+                # OpenCV - (num_points, 1, 2)
+                # G-API  - (num_points, 2)
+                self.assertEqual(0.0, cv.norm(e.flatten(), a.flatten(), cv.NORM_INF))
+
+            proc_num_frames += 1
+            if proc_num_frames == max_num_frames:
+                break;
 
 
 if __name__ == '__main__':

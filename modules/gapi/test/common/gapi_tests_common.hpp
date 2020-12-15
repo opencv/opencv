@@ -1174,6 +1174,28 @@ inline std::ostream& operator<<(std::ostream& os, DistanceTypes op)
 #undef CASE
     return os;
 }
+
+inline std::ostream& operator<<(std::ostream& os, KmeansFlags op)
+{
+    int op_(op);
+    switch (op_)
+    {
+    case KmeansFlags::KMEANS_RANDOM_CENTERS:
+        os << "KMEANS_RANDOM_CENTERS";
+        break;
+    case KmeansFlags::KMEANS_PP_CENTERS:
+        os << "KMEANS_PP_CENTERS";
+        break;
+    case KmeansFlags::KMEANS_RANDOM_CENTERS | KmeansFlags::KMEANS_USE_INITIAL_LABELS:
+        os << "KMEANS_RANDOM_CENTERS | KMEANS_USE_INITIAL_LABELS";
+        break;
+    case KmeansFlags::KMEANS_PP_CENTERS | KmeansFlags::KMEANS_USE_INITIAL_LABELS:
+        os << "KMEANS_PP_CENTERS | KMEANS_USE_INITIAL_LABELS";
+        break;
+    default: GAPI_Assert(false && "unknown KmeansFlags value");
+    }
+    return os;
+}
 }  // namespace cv
 
 #endif //OPENCV_GAPI_TESTS_COMMON_HPP

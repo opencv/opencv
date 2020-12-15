@@ -1197,6 +1197,78 @@ void hlineSmoothONa_yzy_a<uint8_t, ufixedpoint16>(const uint8_t* src, int cn, co
             }
     }
 }
+template <>
+void hlineSmoothONa_yzy_a<uint16_t, ufixedpoint32>(const uint16_t* src, int cn, const ufixedpoint32* m, int n, ufixedpoint32* dst, int len, int borderType)
+{
+    int pre_shift = n / 2;
+    int post_shift = n - pre_shift;
+    int i = 0;
+    for (; i < min(pre_shift, len); i++, dst += cn) // Points that fall left from border
+    {
+        for (int k = 0; k < cn; k++)
+            dst[k] = m[pre_shift - i] * src[k];
+        if (borderType != BORDER_CONSTANT)// If BORDER_CONSTANT out of border values are equal to zero and could be skipped
+            for (int j = i - pre_shift, mid = 0; j < 0; j++, mid++)
+            {
+                int src_idx = borderInterpolate(j, len, borderType);
+                for (int k = 0; k < cn; k++)
+                    dst[k] = dst[k] + m[mid] * src[src_idx*cn + k];
+            }
+        int j, mid;
+        for (j = 1, mid = pre_shift - i + 1; j < min(i + post_shift, len); j++, mid++)
+            for (int k = 0; k < cn; k++)
+                dst[k] = dst[k] + m[mid] * src[j*cn + k];
+        if (borderType != BORDER_CONSTANT)
+            for (; j < i + post_shift; j++, mid++)
+            {
+                int src_idx = borderInterpolate(j, len, borderType);
+                for (int k = 0; k < cn; k++)
+                    dst[k] = dst[k] + m[mid] * src[src_idx*cn + k];
+            }
+    }
+    i *= cn;
+    int lencn = (len - post_shift + 1)*cn;
+#if CV_SIMD
+    const int VECSZ = v_uint32::nlanes;
+    for (; i <= lencn - VECSZ * 2; i += VECSZ * 2, src += VECSZ * 2, dst += VECSZ * 2)
+    {
+        v_uint32 v_res0, v_res1;
+        v_mul_expand(vx_load(src + pre_shift * cn), vx_setall_u16((uint16_t) *((uint32_t*)(m + pre_shift))), v_res0, v_res1);
+        for (int j = 0; j < pre_shift; j ++)
+        {
+            v_uint32 v_add0, v_add1;
+            v_mul_expand(vx_load(src + j * cn) + vx_load(src + (n - 1 - j)*cn), vx_setall_u16((uint16_t) *((uint32_t*)(m + j))), v_add0, v_add1);
+            v_res0 += v_add0;
+            v_res1 += v_add1;
+        }
+        v_store((uint32_t*)dst, v_res0);
+        v_store((uint32_t*)dst + VECSZ, v_res1);
+    }
+#endif
+    for (; i < lencn; i++, src++, dst++)
+    {
+        *dst = m[pre_shift] * src[pre_shift*cn];
+        for (int j = 0; j < pre_shift; j++)
+            *dst = *dst + m[j] * src[j*cn] + m[j] * src[(n - 1 - j)*cn];
+    }
+    i /= cn;
+    for (i -= pre_shift; i < len - pre_shift; i++, src += cn, dst += cn) // Points that fall right from border
+    {
+        for (int k = 0; k < cn; k++)
+            dst[k] = m[0] * src[k];
+        int j = 1;
+        for (; j < len - i; j++)
+            for (int k = 0; k < cn; k++)
+                dst[k] = dst[k] + m[j] * src[j*cn + k];
+        if (borderType != BORDER_CONSTANT)// If BORDER_CONSTANT out of border values are equal to zero and could be skipped
+            for (; j < n; j++)
+            {
+                int src_idx = borderInterpolate(i + j, len, borderType) - i;
+                for (int k = 0; k < cn; k++)
+                    dst[k] = dst[k] + m[j] * src[src_idx*cn + k];
+            }
+    }
+}
 template <typename ET, typename FT>
 void vlineSmooth1N(const FT* const * src, const FT* m, int, ET* dst, int len)
 {
@@ -1786,6 +1858,62 @@ void vlineSmoothONa_yzy_a<uint8_t, ufixedpoint16>(const ufixedpoint16* const * s
             val = val + m[j] * src[j][i];
         }
         dst[i] = val;
+    }
+}
+template <>
+void vlineSmoothONa_yzy_a<uint16_t, ufixedpoint32>(const ufixedpoint32* const * src, const ufixedpoint32* m, int n, uint16_t* dst, int len)
+{
+    int i = 0;
+#if CV_SIMD
+    int pre_shift = n / 2;
+    const int VECSZ = v_uint32::nlanes;
+    for (; i <= len - 2*VECSZ; i += 2*VECSZ)
+    {
+        v_uint32 v_src00, v_src10, v_src01, v_src11;
+        v_uint64 v_res0, v_res1, v_res2, v_res3;
+        v_uint64 v_tmp0, v_tmp1, v_tmp2, v_tmp3, v_tmp4, v_tmp5, v_tmp6, v_tmp7;
+
+        v_uint32 v_mul = vx_setall_u32(*((uint32_t*)(m + pre_shift)));
+        const uint32_t* srcp = (const uint32_t*)src[pre_shift] + i;
+        v_src00 = vx_load(srcp);
+        v_src10 = vx_load(srcp + VECSZ);
+        v_mul_expand(v_src00, v_mul, v_res0, v_res1);
+        v_mul_expand(v_src10, v_mul, v_res2, v_res3);
+
+        int j = 0;
+        for (; j < pre_shift; j++)
+        {
+            v_mul = vx_setall_u32(*((uint32_t*)(m + j)));
+
+            const uint32_t* srcj0 = (const uint32_t*)src[j] + i;
+            const uint32_t* srcj1 = (const uint32_t*)src[n - 1 - j] + i;
+            v_src00 = vx_load(srcj0);
+            v_src01 = vx_load(srcj1);
+            v_mul_expand(v_src00, v_mul, v_tmp0, v_tmp1);
+            v_mul_expand(v_src01, v_mul, v_tmp2, v_tmp3);
+            v_res0 += v_tmp0 + v_tmp2;
+            v_res1 += v_tmp1 + v_tmp3;
+
+            v_src10 = vx_load(srcj0 + VECSZ);
+            v_src11 = vx_load(srcj1 + VECSZ);
+            v_mul_expand(v_src10, v_mul, v_tmp4, v_tmp5);
+            v_mul_expand(v_src11, v_mul, v_tmp6, v_tmp7);
+            v_res2 += v_tmp4 + v_tmp6;
+            v_res3 += v_tmp5 + v_tmp7;
+        }
+
+        v_store(dst + i, v_pack(v_rshr_pack<32>(v_res0, v_res1),
+                                v_rshr_pack<32>(v_res2, v_res3)));
+    }
+#endif
+    for (; i < len; i++)
+    {
+        ufixedpoint64 val = m[0] * src[0][i];
+        for (int j = 1; j < n; j++)
+        {
+            val = val + m[j] * src[j][i];
+        }
+        dst[i] = (uint16_t)val;
     }
 }
 template <typename ET, typename FT>

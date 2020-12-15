@@ -4461,7 +4461,7 @@ string Net::Impl::dump()
             prevNode = itBackend->second;
         }
     }
-    string colors[] = {"#ffffb3", "#fccde5", "#8dd3c7", "#bebada", "#80b1d3", "#fdb462", "#ff4848", "#b35151"};
+    std::vector<string> colors = {"#ffffb3", "#fccde5", "#8dd3c7", "#bebada", "#80b1d3", "#fdb462", "#ff4848", "#b35151", "#b266ff"};
     string backend;
     switch (prefBackend)
     {
@@ -4613,6 +4613,7 @@ string Net::Impl::dump()
             case DNN_TARGET_CUDA_FP16: out << "CUDA_FP16"; colorId = 6; break;
             // don't use default:
         }
+        CV_Assert(colorId < colors.size());
         out << "\\n";  // align center
         out << ((clusterIds.size() == 1)? "\" " : " }\" ");
         out << "fillcolor=\"" << colors[colorId] << "\" ";

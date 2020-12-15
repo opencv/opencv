@@ -203,6 +203,27 @@ struct GAPI_EXPORTS GMatDesc
 
 static inline GMatDesc empty_gmat_desc() { return GMatDesc{-1,-1,{-1,-1}}; }
 
+namespace gapi { namespace detail {
+/** Checks GMatDesc fields if the passed matrix is a set of n-dimentional points.
+@param in GMatDesc to check.
+@param n expected dimensionality.
+@return the amount of points. In case input matrix can't be described as vector of points
+of expected dimensionality, returns -1.
+ */
+int checkVector(const GMatDesc& in, const size_t n);
+
+/** @overload
+
+Checks GMatDesc fields if the passed matrix can be described as a set of points of any
+dimensionality.
+
+@return array of two elements in form of std::vector<int>: the amount of points
+and their calculated dimensionality. In case input matrix can't be described as vector of points,
+returns {-1, -1}.
+ */
+std::vector<int> checkVector(const GMatDesc& in);
+}} // namespace gapi::detail
+
 #if !defined(GAPI_STANDALONE)
 GAPI_EXPORTS GMatDesc descr_of(const cv::UMat &mat);
 #endif // !defined(GAPI_STANDALONE)

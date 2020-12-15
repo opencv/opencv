@@ -1,7 +1,7 @@
 Cross compilation for ARM based Linux systems {#tutorial_arm_crosscompile_with_cmake}
 =============================================
 
-@prev_tutorial{tutorial_ios_install}
+@prev_tutorial{tutorial_macos_install}
 @next_tutorial{tutorial_building_tegra_cuda}
 
 |    |    |

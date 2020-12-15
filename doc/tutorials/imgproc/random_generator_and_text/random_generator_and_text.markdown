@@ -1,8 +1,15 @@
 Random generator and text with OpenCV {#tutorial_random_generator_and_text}
 =====================================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_basic_geometric_drawing}
 @next_tutorial{tutorial_gausian_median_blur_bilateral_filter}
+
+|    |    |
+| -: | :- |
+| Original author | Ana Huamán |
+| Compatibility | OpenCV >= 3.0 |
 
 Goals
 -----

@@ -97,4 +97,42 @@ INSTANTIATE_TEST_CASE_MACRO_P(WITH_VIDEO(BuildPyr_CalcOptFlow_PipelineInternalTe
                                       Values(15),
                                       Values(3),
                                       Values(true)));
+
+
+INSTANTIATE_TEST_CASE_MACRO_P(WITH_VIDEO(BackgroundSubtractorTestCPU),
+                              BackgroundSubtractorTest,
+                              Combine(Values(VIDEO_CPU),
+                                      Values(std::make_tuple(cv::gapi::video::TYPE_BS_MOG2, 16),
+                                             std::make_tuple(cv::gapi::video::TYPE_BS_MOG2, 8),
+                                             std::make_tuple(cv::gapi::video::TYPE_BS_KNN, 400),
+                                             std::make_tuple(cv::gapi::video::TYPE_BS_KNN, 200)),
+                                             Values(500, 50),
+                                             Values(true, false),
+                                             Values(-1, 0, 0.5, 1),
+                                             Values("cv/video/768x576.avi"),
+                                             Values(3)));
+
+INSTANTIATE_TEST_CASE_MACRO_P(KalmanFilterTestCPU,
+                              KalmanFilterTest,
+                              Combine(Values(VIDEO_CPU),
+                                      Values(CV_32FC1, CV_64FC1),
+                                      Values(2,5),
+                                      Values(2,5),
+                                      Values(2),
+                                      Values(5)));
+
+INSTANTIATE_TEST_CASE_MACRO_P(KalmanFilterTestCPU,
+                              KalmanFilterNoControlTest,
+                              Combine(Values(VIDEO_CPU),
+                                      Values(CV_32FC1, CV_64FC1),
+                                      Values(3),
+                                      Values(4),
+                                      Values(3)));
+
+INSTANTIATE_TEST_CASE_MACRO_P(KalmanFilterTestCPU,
+                              KalmanFilterCircleSampleTest,
+                              Combine(Values(VIDEO_CPU),
+                                      Values(CV_32FC1, CV_64FC1),
+                                      Values(5)));
+
 } // opencv_test

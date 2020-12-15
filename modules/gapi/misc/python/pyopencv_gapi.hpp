@@ -47,8 +47,20 @@ static PyObject* from_grunarg(const GRunArg& v)
             const auto& s = util::get<cv::Scalar>(v);
             return pyopencv_from(s);
         }
-
+        case GRunArg::index_of<cv::detail::VectorRef>():
+        {
+            const auto& vref = util::get<cv::detail::VectorRef>(v);
+            switch (vref.getKind())
+            {
+                case cv::detail::OpaqueKind::CV_POINT2F:
+                    return pyopencv_from(vref.rref<cv::Point2f>());
+                default:
+                    PyErr_SetString(PyExc_TypeError, "Unsupported kind for GArray");
+                    return NULL;
+            }
+        }
         default:
+            PyErr_SetString(PyExc_TypeError, "Failed to unpack GRunArgs");
             return NULL;
     }
     GAPI_Assert(false);
@@ -65,7 +77,6 @@ PyObject* pyopencv_from(const GRunArgs& value)
         PyObject* item = from_grunarg(value[0]);
         if(!item)
         {
-            PyErr_SetString(PyExc_TypeError, "Failed to unpack GRunArgs");
             return NULL;
         }
         return item;
@@ -117,9 +128,13 @@ static PyObject* extract_proto_args(PyObject* py_args, PyObject* kw)
         {
             args.emplace_back(reinterpret_cast<pyopencv_GMat_t*>(item)->v);
         }
+        else if (PyObject_TypeCheck(item, reinterpret_cast<PyTypeObject*>(pyopencv_GArrayP2f_TypePtr)))
+        {
+            args.emplace_back(reinterpret_cast<pyopencv_GArrayP2f_t*>(item)->v.strip());
+        }
         else
         {
-            PyErr_SetString(PyExc_TypeError, "cv.GIn() supports only cv.GMat and cv.GScalar");
+            PyErr_SetString(PyExc_TypeError, "Unsupported type for cv.GIn()/cv.GOut()");
             return NULL;
         }
     }

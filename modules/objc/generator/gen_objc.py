@@ -570,7 +570,7 @@ def get_swift_type(ctype):
     return swift_type
 
 def build_swift_extension_decl(name, args, constructor, static, ret_type):
-    extension_decl = ("class " if static else "") + (("func " + name) if not constructor else "convenience init") + "("
+    extension_decl = "@nonobjc " + ("class " if static else "") + (("func " + name) if not constructor else "convenience init") + "("
     swift_args = []
     for a in args:
         if a.ctype not in type_dict:
