@@ -1170,6 +1170,12 @@ protected:
     int connectEdges( int edgeA, int edgeB );
     void swapEdges( int edge );
     int isRightOf(Point2f pt, int edge) const;
+    int CCW(Point2f a, Point2f b, Point2f c) const;
+    int CCW(int i, int j, int k) const;
+    int RightOf(Point2f p, Point2f a, Point2f b) const;
+    int LeftOf(Point2f p, Point2f a, Point2f b) const;
+    int InCircle(Point2f a, Point2f b, Point2f c, Point2f d) const;
+    int InCircle(int i, int j, int k, int l) const;
     void calcVoronoi();
     void clearVoronoi();
     void checkSubdiv() const;
