@@ -225,13 +225,6 @@ int Subdiv2D::isRightOf(Point2f pt, int edge) const
     return (cw_area > 0) - (cw_area < 0);
 }
 
-static const Point2f v[4] = {
-        { 0.f, 0.f },
-        { 1.f, 0.f },
-        { cos(2.f * (float)M_PI / 3.f), sin(2.f * (float)M_PI / 3.f) },
-        { cos(4.f * (float)M_PI / 3.f), sin(4.f * (float)M_PI / 3.f) }
-};
-
 static const double eps = 1e-6;
 
 static double cross_product(Point2f u, Point2f v) {
@@ -256,6 +249,10 @@ static bool inside_rectangle(Point2f p, Point2f a, Point2f b) {
             min(a.y, b.y) < p.y && p.y < max(a.y, b.y);
 }
 
+static bool is_meta(int i) {
+    return i == 1 || i == 2 || i == 3;
+}
+
 int Subdiv2D::CCW(Point2f a, Point2f b, Point2f c) const {
     double cp = cross_product(b - a, c - a);
     return cp > eps ? 1 : (cp < -eps ? -1 : 0);
@@ -271,23 +268,23 @@ int Subdiv2D::LeftOf(Point2f p, Point2f a, Point2f b) const {
 
 int Subdiv2D::CCW(int i, int j, int k) const {
 
-    if (i > 3 && j > 3 && k > 3) {
+    if (!is_meta(i) && !is_meta(j) && !is_meta(k)) {
         return CCW(vtx[i].pt, vtx[j].pt, vtx[k].pt);
     }
 
-    if (i <= 3 && j <= 3 && k <= 3) {
-        return CCW(v[i], v[j], v[k]);
+    if (is_meta(i) && is_meta(j) && is_meta(k)) {
+        return CCW(vtx[i].pt, vtx[j].pt, vtx[k].pt);
     }
 
-    if (i <= 3 && j <= 3 && k > 3) {
-        return CCW(v[i], v[j], v[0]);
+    if (is_meta(i) && is_meta(j) && !is_meta(k)) {
+        return CCW(vtx[i].pt, vtx[j].pt, {0.f, 0.f});
     }
 
-    if (i > 3 && j > 3 && k <= 3) {
-        if (!collinear(vtx[j].pt - vtx[i].pt, v[k])) {
-            return CCW(v[0], vtx[j].pt - vtx[i].pt, v[k]);
+    if (!is_meta(i) && !is_meta(j) && is_meta(k)) {
+        if (!collinear(vtx[j].pt - vtx[i].pt, vtx[k].pt)) {
+            return CCW({0.f, 0.f}, vtx[j].pt - vtx[i].pt, vtx[k].pt);
         } else {
-            return CCW(vtx[i].pt, vtx[j].pt, v[0]);
+            return CCW(vtx[i].pt, vtx[j].pt, {0.f, 0.f});
         }
     }
 
@@ -319,20 +316,20 @@ int Subdiv2D::InCircle(Point2f a, Point2f b, Point2f c, Point2f d) const {
 
 int Subdiv2D::InCircle(int i, int j, int k, int l) const {
 
-    if (i > 3 && j > 3 && k > 3 && l > 3) {
+    if (!is_meta(i) && !is_meta(j) && !is_meta(k) && !is_meta(l)) {
         return InCircle(vtx[i].pt, vtx[j].pt, vtx[k].pt, vtx[l].pt);
     }
 
-    if (i <= 3 && j <= 3 && k <= 3 && l > 3) {
+    if (is_meta(i) && is_meta(j) && is_meta(k) && !is_meta(l)) {
         return CCW(i, j, k);
     }
 
-    if (i <= 3 && j > 3 && k <= 3 && l > 3) {
-        if (!collinear(vtx[l].pt - vtx[j].pt, v[k] - v[i])) {
-            return LeftOf(vtx[l].pt - vtx[j].pt, v[0], v[k] - v[i]);
+    if (is_meta(i) && !is_meta(j) && is_meta(k) && !is_meta(l)) {
+        if (!collinear(vtx[l].pt - vtx[j].pt, vtx[k].pt - vtx[i].pt)) {
+            return LeftOf(vtx[l].pt - vtx[j].pt, {0.f, 0.f}, vtx[k].pt - vtx[i].pt);
         } else {
-            float dl = distance(v[0], vtx[l].pt);
-            float dj = distance(v[0], vtx[j].pt);
+            float dl = distance({0.f, 0.f}, vtx[l].pt);
+            float dj = distance({0.f, 0.f}, vtx[j].pt);
 
             if (abs(dl - dj) < eps) {
                 return 0;
@@ -346,18 +343,18 @@ int Subdiv2D::InCircle(int i, int j, int k, int l) const {
         }
     }
 
-    if (i <= 3 && j <= 3 && k > 3 && l > 3) {
+    if (is_meta(i) && is_meta(j) && !is_meta(k) && !is_meta(l)) {
         return -InCircle(i, k, j, l);
     }
 
-    if (i > 3 && j > 3 && k > 3 && l <= 3) {
+    if (!is_meta(i) && !is_meta(j) && !is_meta(k) && is_meta(l)) {
         if (!collinear(vtx[j].pt - vtx[i].pt, vtx[k].pt - vtx[i].pt)) {
             return -CCW(vtx[i].pt, vtx[j].pt, vtx[k].pt);
         } else {
             if (!inside_rectangle(vtx[k].pt, vtx[i].pt, vtx[j].pt)) {
-                return LeftOf(v[l], v[0], vtx[j].pt - vtx[i].pt);
+                return LeftOf(vtx[l].pt, {0.f, 0.f}, vtx[j].pt - vtx[i].pt);
             } else {
-                return LeftOf(v[l], v[0], vtx[k].pt - vtx[j].pt);
+                return LeftOf(vtx[l].pt, {0.f, 0.f}, vtx[k].pt - vtx[j].pt);
             }
         }
     }
@@ -646,9 +643,9 @@ void Subdiv2D::initDelaunay( Rect rect )
     topLeft = Point2f( rx, ry );
     bottomRight = Point2f( rx + rect.width, ry + rect.height );
 
-    Point2f ppA( rx + big_coord, ry );
-    Point2f ppB( rx, ry + big_coord );
-    Point2f ppC( rx - big_coord, ry - big_coord );
+    Point2f ppA( 1.f, 0.f );
+    Point2f ppB( cos(2.f * (float)M_PI / 3.f), sin(2.f * (float)M_PI / 3.f) );
+    Point2f ppC( cos(4.f * (float)M_PI / 3.f), sin(4.f * (float)M_PI / 3.f) );
 
     vtx.push_back(Vertex());
     qedges.push_back(QuadEdge());
