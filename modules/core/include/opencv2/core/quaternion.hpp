@@ -27,6 +27,7 @@
 #define OPENCV_CORE_QUATERNION_HPP
 
 #include <opencv2/core.hpp>
+#include <opencv2/core/utils/logger.hpp>
 #include <iostream>
 namespace cv
 {
@@ -183,13 +184,12 @@ public:
         INT_YZX, ///< Intrinsic rotations with the Euler angles type Y-Z-X
         INT_ZXY, ///< Intrinsic rotations with the Euler angles type Z-X-Y
         INT_ZYX, ///< Intrinsic rotations with the Euler angles type Z-Y-X
-
+        INT_XYX, ///< Intrinsic rotations with the Euler angles type X-Y-X
+        INT_XZX, ///< Intrinsic rotations with the Euler angles type X-Z-X
+        INT_YZY, ///< Intrinsic rotations with the Euler angles type Y-Z-Y
         INT_YXY, ///< Intrinsic rotations with the Euler angles type Y-X-Y
         INT_ZXZ, ///< Intrinsic rotations with the Euler angles type Z-X-Z
-        INT_XYX, ///< Intrinsic rotations with the Euler angles type X-Y-X
         INT_ZYZ, ///< Intrinsic rotations with the Euler angles type Z-Y-Z
-        INT_YZY, ///< Intrinsic rotations with the Euler angles type Y-Z-Y
-        INT_XZX, ///< Intrinsic rotations with the Euler angles type X-Z-X
 
         EXT_XYZ, ///< Extrinsic rotations with the Euler angles type X-Y-Z
         EXT_XZY, ///< Extrinsic rotations with the Euler angles type X-Z-Y
@@ -197,12 +197,15 @@ public:
         EXT_YZX, ///< Extrinsic rotations with the Euler angles type Y-Z-X
         EXT_ZXY, ///< Extrinsic rotations with the Euler angles type Z-X-Y
         EXT_ZYX, ///< Extrinsic rotations with the Euler angles type Z-Y-X
-        EXT_YXY, ///< Extrinsic rotations with the Euler angles type Y-X-Y
-        EXT_ZXZ, ///< Extrinsic rotations with the Euler angles type Z-X-Z
         EXT_XYX, ///< Extrinsic rotations with the Euler angles type X-Y-X
-        EXT_ZYZ, ///< Extrinsic rotations with the Euler angles type Z-Y-Z
         EXT_XZX, ///< Extrinsic rotations with the Euler angles type X-Z-X
-        EXT_YZY  ///< Extrinsic rotations with the Euler angles type Y-Z-Y
+        EXT_YXY, ///< Extrinsic rotations with the Euler angles type Y-X-Y
+        EXT_YZY,  ///< Extrinsic rotations with the Euler angles type Y-Z-Y
+        EXT_ZXZ, ///< Extrinsic rotations with the Euler angles type Z-X-Z
+        EXT_ZYZ, ///< Extrinsic rotations with the Euler angles type Z-Y-Z
+        #ifndef CV_DOXYGEN
+            EULER_ANGLES_MAX_VALUE
+        #endif
     };
     static constexpr _Tp CV_QUAT_EPS = (_Tp)1.e-6;
     static constexpr _Tp CV_QUAT_CONVERT_THRESHOLD = (_Tp)1.e-6;
@@ -274,12 +277,14 @@ public:
      * \f[q = \cos(\theta/2)+0 i+ sin(\theta/2) j +0k \f]
      */
     static Quat<_Tp> createFromYRot(const _Tp theta);
-        /**
+
+    /**
      * @brief get a quaternion from a rotation about the X-axis by \f$\theta\f$ .
      * \f[q = \cos(\theta/2)+sin(\theta/2) i +0 j +0 k \f]
      */
     static Quat<_Tp> createFromXRot(const _Tp theta);
-        /**
+
+    /**
      * @brief get a quaternion from a rotation about the Z-axis by \f$\theta\f$.
      * \f[q = \cos(\theta/2)+0 i +0 j +sin(\theta/2) k \f]
      */
@@ -1575,11 +1580,11 @@ public:
      * INT_XYZ|\f$ \theta_1 = \arctan2(-m_{23},m_{33})\\\theta_2 = \arcsin(m_{13}) \\\theta_3= \arctan2(-m_{12},m_{11}) \f$|\f$ \theta_1=\arctan2(m_{21},m_{22})\\ \theta_2=\pi/2\\ \theta_3=0 \f$|\f$ \theta_1=\arctan2(m_{32},m_{22})\\ \theta_2=-\pi/2\\ \theta_3=0 \f$
      * INT_XZY|\f$ \theta_1 = \arctan2(m_{32},m_{22})\\\theta_2 = -\arcsin(m_{12}) \\\theta_3= \arctan2(m_{13},m_{11}) \f$|\f$ \theta_1=\arctan2(m_{31},m_{33})\\ \theta_2=\pi/2\\ \theta_3=0 \f$|\f$ \theta_1=\arctan2(-m_{23},m_{33})\\ \theta_2=-\pi/2\\ \theta_3=0 \f$
      * INT_YXZ|\f$ \theta_1 = \arctan2(m_{13},m_{33})\\\theta_2 = -\arcsin(m_{23}) \\\theta_3= \arctan2(m_{21},m_{22}) \f$|\f$ \theta_1=\arctan2(m_{12},m_{11})\\ \theta_2=\pi/2\\ \theta_3=0 \f$|\f$ \theta_1=\arctan2(-m_{12},m_{11})\\ \theta_2=-\pi/2\\ \theta_3=0 \f$
-     * INT_YZX|\f$ \theta_1 = \arctan2(-m_{31},m_{11})\\\theta_2 = -\arcsin(m_{21}) \\\theta_3= \arctan2(-m_{23},m_{22}) \f$|\f$ \theta_1=\arctan2(m_{13},m_{33})\\ \theta_2=\pi/2\\ \theta_3=0 \f$|\f$ \theta_1=\arctan2(m_{13},m_{12})\\ \theta_2=-\pi/2\\ \theta_3=0 \f$
+     * INT_YZX|\f$ \theta_1 = \arctan2(-m_{31},m_{11})\\\theta_2 = \arcsin(m_{21}) \\\theta_3= \arctan2(-m_{23},m_{22}) \f$|\f$ \theta_1=\arctan2(m_{13},m_{33})\\ \theta_2=\pi/2\\ \theta_3=0 \f$|\f$ \theta_1=\arctan2(m_{13},m_{12})\\ \theta_2=-\pi/2\\ \theta_3=0 \f$
      * INT_ZXY|\f$ \theta_1 = \arctan2(-m_{12},m_{22})\\\theta_2 = \arcsin(m_{32}) \\\theta_3= \arctan2(-m_{31},m_{33}) \f$|\f$ \theta_1=\arctan2(m_{21},m_{11})\\ \theta_2=\pi/2\\ \theta_3=0 \f$|\f$ \theta_1=\arctan2(m_{21},m_{11})\\ \theta_2=-\pi/2\\ \theta_3=0 \f$
      * INT_ZYX|\f$ \theta_1 = \arctan2(m_{21},m_{11})\\\theta_2 = \arcsin(-m_{31}) \\\theta_3= \arctan2(m_{32},m_{33}) \f$|\f$ \theta_1=\arctan2(m_{23},m_{22})\\ \theta_2=\pi/2\\ \theta_3=0 \f$|\f$ \theta_1=\arctan2(-m_{12},m_{22})\\ \theta_2=-\pi/2\\ \theta_3=0 \f$
      * EXT_XYZ|\f$ \theta_1 = \arctan2(m_{32},m_{33})\\\theta_2 = \arcsin(-m_{31}) \\\ \theta_3 = \arctan2(m_{21},m_{11})\f$|\f$ \theta_1= 0\\ \theta_2=\pi/2\\ \theta_3=\arctan2(m_{23},m_{22}) \f$|\f$ \theta_1=0\\ \theta_2=-\pi/2\\ \theta_3=\arctan2(-m_{12},m_{22}) \f$
-     * EXT_XZY|\f$ \theta_1 = \arctan2(-m_{23},m_{22})\\\theta_2 = -\arcsin(m_{21}) \\\theta_3=  \arctan2(-m_{31},m_{11})\f$|\f$ \theta_1= 0\\ \theta_2=\pi/2\\ \theta_3=\arctan2(m_{13},m_{33}) \f$|\f$ \theta_1=0\\ \theta_2=-\pi/2\\ \theta_3=\arctan2(m_{13},m_{12}) \f$
+     * EXT_XZY|\f$ \theta_1 = \arctan2(-m_{23},m_{22})\\\theta_2 = \arcsin(m_{21}) \\\theta_3=  \arctan2(-m_{31},m_{11})\f$|\f$ \theta_1= 0\\ \theta_2=\pi/2\\ \theta_3=\arctan2(m_{13},m_{33}) \f$|\f$ \theta_1=0\\ \theta_2=-\pi/2\\ \theta_3=\arctan2(m_{13},m_{12}) \f$
      * EXT_YXZ|\f$ \theta_1 = \arctan2(-m_{31},m_{33}) \\\theta_2 = \arcsin(m_{32}) \\\theta_3= \arctan2(-m_{12},m_{22})\f$|\f$ \theta_1= 0\\ \theta_2=\pi/2\\ \theta_3=\arctan2(m_{21},m_{11}) \f$|\f$ \theta_1=0\\ \theta_2=-\pi/2\\ \theta_3=\arctan2(m_{21},m_{11}) \f$
      * EXT_YZX|\f$ \theta_1 = \arctan2(m_{13},m_{11})\\\theta_2 = -\arcsin(m_{12}) \\\theta_3= \arctan2(m_{32},m_{22})\f$|\f$ \theta_1= 0\\ \theta_2=\pi/2\\ \theta_3=\arctan2(m_{31},m_{33}) \f$|\f$ \theta_1=0\\ \theta_2=-\pi/2\\ \theta_3=\arctan2(-m_{23},m_{33}) \f$
      * EXT_ZXY|\f$ \theta_1 = \arctan2(m_{21},m_{22})\\\theta_2 = -\arcsin(m_{23}) \\\theta_3= \arctan2(m_{13},m_{33})\f$|\f$ \theta_1= 0\\ \theta_2=\pi/2\\ \theta_3=\arctan2(m_{12},m_{11}) \f$|\f$ \theta_1= 0\\ \theta_2=-\pi/2\\ \theta_3=\arctan2(-m_{12},m_{11}) \f$
