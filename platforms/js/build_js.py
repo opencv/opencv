@@ -184,7 +184,6 @@ class Builder:
             flags += "-msimd128 "
         if self.options.build_flags:
             flags += self.options.build_flags
-
         return flags
 
     def config(self):
