@@ -1169,7 +1169,7 @@ protected:
     void splice( int edgeA, int edgeB );
     int connectEdges( int edgeA, int edgeB );
     void swapEdges( int edge );
-    int isRightOf(Point2f pt, int edge) const;
+//    int isRightOf(Point2f pt, int edge) const;
     int CCW(Point2f a, Point2f b, Point2f c) const;
     int CCW(int i, int j, int k) const;
     int RightOf(Point2f p, Point2f a, Point2f b) const;

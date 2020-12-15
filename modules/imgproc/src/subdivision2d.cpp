@@ -210,20 +210,20 @@ void Subdiv2D::swapEdges( int edge )
     splice(sedge, getEdge(b, NEXT_AROUND_LEFT));
 }
 
-static double triangleArea( Point2f a, Point2f b, Point2f c )
-{
-    return ((double)b.x - a.x) * ((double)c.y - a.y) - ((double)b.y - a.y) * ((double)c.x - a.x);
-}
+//static double triangleArea( Point2f a, Point2f b, Point2f c )
+//{
+//    return ((double)b.x - a.x) * ((double)c.y - a.y) - ((double)b.y - a.y) * ((double)c.x - a.x);
+//}
 
-int Subdiv2D::isRightOf(Point2f pt, int edge) const
-{
-    Point2f org, dst;
-    edgeOrg(edge, &org);
-    edgeDst(edge, &dst);
-    double cw_area = triangleArea( pt, dst, org );
-
-    return (cw_area > 0) - (cw_area < 0);
-}
+//int Subdiv2D::isRightOf(Point2f pt, int edge) const
+//{
+//    Point2f org, dst;
+//    edgeOrg(edge, &org);
+//    edgeDst(edge, &dst);
+//    double cw_area = triangleArea( pt, dst, org );
+//
+//    return (cw_area > 0) - (cw_area < 0);
+//}
 
 static const double eps = 1e-6;
 
@@ -533,17 +533,17 @@ int Subdiv2D::locate(Point2f pt, int& _edge, int& _vertex)
 }
 
 
-inline int
-isPtInCircle3( Point2f pt, Point2f a, Point2f b, Point2f c)
-{
-    const double eps = FLT_EPSILON*0.125;
-    double val = ((double)a.x * a.x + (double)a.y * a.y) * triangleArea( b, c, pt );
-    val -= ((double)b.x * b.x + (double)b.y * b.y) * triangleArea( a, c, pt );
-    val += ((double)c.x * c.x + (double)c.y * c.y) * triangleArea( a, b, pt );
-    val -= ((double)pt.x * pt.x + (double)pt.y * pt.y) * triangleArea( a, b, c );
-
-    return val > eps ? 1 : val < -eps ? -1 : 0;
-}
+//inline int
+//isPtInCircle3( Point2f pt, Point2f a, Point2f b, Point2f c)
+//{
+//    const double eps = FLT_EPSILON*0.125;
+//    double val = ((double)a.x * a.x + (double)a.y * a.y) * triangleArea( b, c, pt );
+//    val -= ((double)b.x * b.x + (double)b.y * b.y) * triangleArea( a, c, pt );
+//    val += ((double)c.x * c.x + (double)c.y * c.y) * triangleArea( a, b, pt );
+//    val -= ((double)pt.x * pt.x + (double)pt.y * pt.y) * triangleArea( a, b, c );
+//
+//    return val > eps ? 1 : val < -eps ? -1 : 0;
+//}
 
 
 int Subdiv2D::insert(Point2f pt)
@@ -779,12 +779,12 @@ void Subdiv2D::calcVoronoi()
 }
 
 
-static int
-isRightOf2( const Point2f& pt, const Point2f& org, const Point2f& diff )
-{
-    double cw_area = ((double)org.x - pt.x)*diff.y - ((double)org.y - pt.y)*diff.x;
-    return (cw_area > 0) - (cw_area < 0);
-}
+//static int
+//isRightOf2( const Point2f& pt, const Point2f& org, const Point2f& diff )
+//{
+//    double cw_area = ((double)org.x - pt.x)*diff.y - ((double)org.y - pt.y)*diff.x;
+//    return (cw_area > 0) - (cw_area < 0);
+//}
 
 
 int Subdiv2D::findNearest(Point2f pt, Point2f* nearestPt)
