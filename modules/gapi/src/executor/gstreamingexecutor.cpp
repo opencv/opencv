@@ -20,6 +20,7 @@
 #include "api/gproto_priv.hpp" // ptr(GRunArgP)
 #include "compiler/passes/passes.hpp"
 #include "backends/common/gbackend.hpp" // createMat
+#include "backends/streaming/gstreamingbackend.hpp" // GCopy
 #include "compiler/gcompiler.hpp" // for compileIslands
 
 #include "executor/gstreamingexecutor.hpp"
@@ -538,8 +539,6 @@ class StreamingInput final: public cv::gimpl::GIslandExecutable::IInput
         // Wrap all input cv::Mats with RMats
         for (auto& arg : isl_input_args) {
             if (arg.index() == cv::GRunArg::index_of<cv::Mat>()) {
-                // FIXME: This whole construct is ugly, from
-                // its writing to a need in this in general
                 arg = cv::GRunArg{ cv::make_rmat<cv::gimpl::RMatAdapter>(cv::util::get<cv::Mat>(arg))
                                  , arg.meta
                                  };
@@ -1010,7 +1009,7 @@ cv::gimpl::GStreamingExecutor::GStreamingExecutor(std::unique_ptr<ade::Graph> &&
                     GAPI_Assert(GModel::Graph(*m_orig_graph)
                                 .metadata(*isl->in_ops().begin())
                                 .get<cv::gimpl::Op>()
-                                .k.name == cv::gapi::core::GCopy::id());
+                                .k.name == cv::gimpl::streaming::GCopy::id());
 #endif // GAPI_STANDALONE
                     for (auto out_nh : nh->outNodes()) {
                         for (auto out_eh : out_nh->outEdges()) {

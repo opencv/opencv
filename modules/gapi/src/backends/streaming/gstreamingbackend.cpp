@@ -137,7 +137,12 @@ cv::gapi::GBackend cv::gapi::streaming::backend()
 
 cv::gapi::GKernelPackage cv::gapi::streaming::kernels()
 {
-    return cv::gapi::kernels<cv::gimpl::Copy, cv::gimpl::BGR>();
+    return cv::gapi::kernels<cv::gimpl::BGR>();
+}
+
+cv::gapi::GKernelPackage cv::gimpl::streaming::kernels()
+{
+    return cv::gapi::kernels<cv::gimpl::Copy>();
 }
 
 void cv::gimpl::Copy::Actor::run(cv::gimpl::GIslandExecutable::IInput  &in,
@@ -167,6 +172,7 @@ void cv::gimpl::Copy::Actor::run(cv::gimpl::GIslandExecutable::IInput  &in,
     default:
         GAPI_Assert(false && "Copy: unsupported data type");
     }
+    out.meta(out_arg, in_arg.meta);
     out.post(std::move(out_arg));
 }
 
@@ -208,4 +214,12 @@ void cv::gimpl::BGR::Actor::run(cv::gimpl::GIslandExecutable::IInput  &in,
                     std::logic_error("Unsupported MediaFormat for cv::gapi::streaming::BGR"));
     }
     out.post(std::move(out_arg));
+}
+
+cv::GMat cv::gapi::copy(const cv::GMat& in) {
+    return cv::gimpl::streaming::GCopy::on<cv::GMat>(in);
+}
+
+cv::GFrame cv::gapi::copy(const cv::GFrame& in) {
+    return cv::gimpl::streaming::GCopy::on<cv::GFrame>(in);
 }

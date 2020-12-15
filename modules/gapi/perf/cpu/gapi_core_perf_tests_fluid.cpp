@@ -233,11 +233,6 @@ INSTANTIATE_TEST_CASE_P(Split3PerfTestFluid, Split3PerfTest,
 //         Values(cv::Rect(10, 8, 20, 35), cv::Rect(4, 10, 37, 50)),
 //         Values(cv::compile_args(CORE_FLUID))));
 
-// INSTANTIATE_TEST_CASE_P(CopyPerfTestFluid, CopyPerfTest,
-//     Combine(Values(szSmall128, szVGA, sz720p, sz1080p),
-//         Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
-//         Values(cv::compile_args(CORE_FLUID))));
-
 // INSTANTIATE_TEST_CASE_P(ConcatHorPerfTestFluid, ConcatHorPerfTest,
 //     Combine(Values(szSmall128, szVGA, sz720p, sz1080p),
 //         Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),

@@ -1645,37 +1645,20 @@ TEST(GAPI_Streaming_Desync, StartStop_Stress) {
     }
 }
 
-GAPI_FLUID_KERNEL(FluidCopy, cv::gapi::core::GCopy, false) {
-    static const int Window = 1;
-
-    static void run(const cv::gapi::fluid::View &in,
-                          cv::gapi::fluid::Buffer &out) {
-        const uint8_t *in_ptr = in.InLineB(0);
-        uint8_t *out_ptr = out.OutLineB(0);
-
-        const auto in_type = CV_MAKETYPE(in.meta().depth, in.meta().chan);
-        const auto out_type = CV_MAKETYPE(out.meta().depth, out.meta().chan);
-        GAPI_Assert(in_type == out_type);
-        std::copy_n(in_ptr, in.length()*CV_ELEM_SIZE(in_type), out_ptr);
-    }
-};
-
-
 TEST(GAPI_Streaming_Desync, DesyncObjectConsumedByTwoIslandsViaSeparateDesync) {
     // See comment in the implementation of cv::gapi::streaming::desync (.cpp)
     cv::GMat in;
     cv::GMat tmp = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
 
     cv::GMat tmp1 = cv::gapi::streaming::desync(tmp);
-    cv::GMat out1 = cv::gapi::copy(tmp1); // ran via Fluid backend
+    cv::GMat out1 = cv::gapi::copy(tmp1); // ran via Streaming backend
 
     cv::GMat tmp2 = cv::gapi::streaming::desync(tmp);
     cv::GMat out2 = tmp2 * 0.5;           // ran via OCV backend
 
     auto c = cv::GComputation(cv::GIn(in), cv::GOut(out1, out2));
-    auto p = cv::gapi::kernels<FluidCopy>();
 
-    EXPECT_NO_THROW(c.compileStreaming(cv::compile_args(p)));
+    EXPECT_NO_THROW(c.compileStreaming());
 }
 
 TEST(GAPI_Streaming_Desync, DesyncObjectConsumedByTwoIslandsViaSameDesync) {
@@ -1684,13 +1667,12 @@ TEST(GAPI_Streaming_Desync, DesyncObjectConsumedByTwoIslandsViaSameDesync) {
     cv::GMat tmp = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
 
     cv::GMat tmp1 = cv::gapi::streaming::desync(tmp);
-    cv::GMat out1 = cv::gapi::copy(tmp1); // ran via Fluid backend
+    cv::GMat out1 = cv::gapi::copy(tmp1); // ran via Streaming backend
     cv::GMat out2 = out1 - 0.5*tmp1;      // ran via OCV backend
 
     auto c = cv::GComputation(cv::GIn(in), cv::GOut(out1, out2));
-    auto p = cv::gapi::kernels<FluidCopy>();
 
-    EXPECT_NO_THROW(c.compileStreaming(cv::compile_args(p)));
+    EXPECT_NO_THROW(c.compileStreaming());
 }
 
 TEST(GAPI_Streaming, CopyFrame)
@@ -1699,7 +1681,7 @@ TEST(GAPI_Streaming, CopyFrame)
     std::string filepath = findDataFile("cv/video/768x576.avi");
 
     cv::GFrame in;
-    auto out = cv::gapi::streaming::copy(in);
+    auto out = cv::gapi::copy(in);
 
     cv::GComputation comp(cv::GIn(in), cv::GOut(out));
 
@@ -1738,7 +1720,7 @@ TEST(GAPI_Streaming, CopyMat)
     std::string filepath = findDataFile("cv/video/768x576.avi");
 
     cv::GMat in;
-    auto out = cv::gapi::streaming::copy(in);
+    auto out = cv::gapi::copy(in);
 
     cv::GComputation comp(cv::GIn(in), cv::GOut(out));
 
@@ -1775,7 +1757,7 @@ TEST(GAPI_Streaming, Reshape)
     std::string filepath = findDataFile("cv/video/768x576.avi");
 
     cv::GFrame in;
-    auto out = cv::gapi::streaming::copy(in);
+    auto out = cv::gapi::copy(in);
 
     cv::GComputation comp(cv::GIn(in), cv::GOut(out));
 

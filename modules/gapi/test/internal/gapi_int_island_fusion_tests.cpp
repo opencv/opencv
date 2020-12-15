@@ -527,6 +527,7 @@ TEST(IslandFusion, Test_Desync_NoFuse)
 
     //////////////////////////////////////////////////////////////////
     // Compile the graph in "regular" mode, it should produce a single island
+    // Note: with copy moved to a separate backend there is always 3 islands in this test
     {
         using namespace cv::gimpl;
 
@@ -544,11 +545,12 @@ TEST(IslandFusion, Test_Desync_NoFuse)
         const auto num_isl = std::count_if(gim.nodes().begin(),
                                            gim.nodes().end(),
                                            is_island);
-        EXPECT_EQ(1, num_isl);
+        EXPECT_EQ(3, num_isl);
     }
     //////////////////////////////////////////////////////////////////
     // Now compile the graph in the streaming mode.
     // It has to produce two islands
+    // Note: with copy moved to a separate backend there is always 3 islands in this test
     {
         using namespace cv::gimpl;
 
@@ -567,7 +569,7 @@ TEST(IslandFusion, Test_Desync_NoFuse)
         const auto num_isl = std::count_if(gim.nodes().begin(),
                                            gim.nodes().end(),
                                            is_island);
-        EXPECT_EQ(2, num_isl);
+        EXPECT_EQ(3, num_isl);
     }
 }
 

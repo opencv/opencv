@@ -15,35 +15,10 @@ namespace streaming {
 
 GAPI_EXPORTS cv::gapi::GKernelPackage kernels();
 
-struct GCopy final : public cv::detail::NoTag
-{
-    static constexpr const char* id() { return "org.opencv.streaming.copy"; }
-
-    static GMetaArgs getOutMeta(const GMetaArgs &in_meta, const GArgs&) {
-        GAPI_Assert(in_meta.size() == 1u);
-        return in_meta;
-    }
-
-    template<typename T> static T on(const T& arg) {
-        return cv::GKernelType<GCopy, std::function<T(T)>>::on(arg);
-    }
-};
-
 G_API_OP(GBGR, <GMat(GFrame)>, "org.opencv.streaming.BGR")
 {
     static GMatDesc outMeta(const GFrameDesc& in) { return GMatDesc{CV_8U, 3, in.size}; }
 };
-
-/** @brief Gets copy of the input
-
-@note Function textual ID is "org.opencv.streaming.copy"
-
-@param in G-type input
-@return Copy of the input
-*/
-template<typename T,
-         typename std::enable_if<!cv::detail::is_nongapi_type<T>::value, int>::type = 0>
-GAPI_EXPORTS T copy(const T& in) { return GCopy::on<T>(in); }
 
 /** @brief Gets bgr plane from input frame
 
@@ -55,6 +30,29 @@ GAPI_EXPORTS T copy(const T& in) { return GCopy::on<T>(in); }
 GAPI_EXPORTS cv::GMat BGR(const cv::GFrame& in);
 
 } // namespace streaming
+
+/** @brief Makes a copy of the input image. Note that this copy may be not real
+(no actual data copied). Use this function to maintain graph contracts,
+e.g when graph's input needs to be passed directly to output, like in Streaming mode.
+
+@note Function textual ID is "org.opencv.streaming.copy"
+
+@param in Input image
+@return Copy of the input
+*/
+GAPI_EXPORTS cv::GMat copy(const cv::GMat& in);
+
+/** @brief Makes a copy of the input frame. Note that this copy may be not real
+(no actual data copied). Use this function to maintain graph contracts,
+e.g when graph's input needs to be passed directly to output, like in Streaming mode.
+
+@note Function textual ID is "org.opencv.streaming.copy"
+
+@param in Input frame
+@return Copy of the input
+*/
+GAPI_EXPORTS cv::GFrame copy(const cv::GFrame& in);
+
 } // namespace gapi
 } // namespace cv
 
