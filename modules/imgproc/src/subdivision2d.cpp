@@ -210,21 +210,6 @@ void Subdiv2D::swapEdges( int edge )
     splice(sedge, getEdge(b, NEXT_AROUND_LEFT));
 }
 
-//static double triangleArea( Point2f a, Point2f b, Point2f c )
-//{
-//    return ((double)b.x - a.x) * ((double)c.y - a.y) - ((double)b.y - a.y) * ((double)c.x - a.x);
-//}
-
-//int Subdiv2D::isRightOf(Point2f pt, int edge) const
-//{
-//    Point2f org, dst;
-//    edgeOrg(edge, &org);
-//    edgeDst(edge, &dst);
-//    double cw_area = triangleArea( pt, dst, org );
-//
-//    return (cw_area > 0) - (cw_area < 0);
-//}
-
 static const double eps = 1e-6;
 
 static double cross_product(Point2f u, Point2f v) {
