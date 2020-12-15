@@ -898,6 +898,15 @@ void Subdiv2D::getTriangleList(std::vector<Vec6f>& triangleList) const
         int pj = edgeOrg(edge_b, &b);
         int edge_c = getEdge(edge_b, NEXT_AROUND_LEFT);
         int pk = edgeOrg(edge_c, &c);
+        if (is_meta(pi)) {
+            a.x *= 1500; a.y *= 1500;
+        }
+        if (is_meta(pj)) {
+            b.x *= 1500; b.y *= 1500;
+        }
+        if (is_meta(pk)) {
+            c.x *= 1500; c.y *= 1500;
+        }
         printf("x = [%.0f %.0f %.0f %.0f];\n", a.x, b.x, c.x, a.x);
         printf("y = [%.0f %.0f %.0f %.0f];\n", a.y, b.y, c.y, a.y);
         if( edgemask[i] ) {
