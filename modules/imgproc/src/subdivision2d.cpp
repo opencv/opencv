@@ -410,6 +410,26 @@ void Subdiv2D::deletePoint(int vidx)
     freePoint = vidx;
 }
 
+int Subdiv2D::isRightOf(Point2f pt, int edge) {
+    Point2f org, dst;
+    int i = edgeOrg(edge, &org);
+    int j = edgeDst(edge, &dst);
+    vtx.push_back(Vertex(pt, false));
+    int p = vtx.size() - 1;
+
+    auto result = CCW(p, j, i);
+    vtx.pop_back();
+    return result;
+}
+
+int Subdiv2D::isRightOf(int p, int edge) {
+    Point2f org, dst;
+    int i = edgeOrg(edge, &org);
+    int j = edgeDst(edge, &dst);
+    return CCW(p, j, i);
+}
+
+
 int Subdiv2D::locate(Point2f pt, int& _edge, int& _vertex)
 {
     CV_INSTRUMENT_REGION();
@@ -473,7 +493,7 @@ int Subdiv2D::locate(Point2f pt, int& _edge, int& _vertex)
                 }
             }
             else if( right_of_curr == 0 &&
-                    isRightOf( vtx[edgeDst(onext_edge)].pt, edge ) >= 0 )
+                    isRightOf( edgeDst(onext_edge), edge ) >= 0 )
             {
                 edge = symEdge( edge );
             }
@@ -513,7 +533,7 @@ int Subdiv2D::locate(Point2f pt, int& _edge, int& _vertex)
             edge = 0;
         }
         else if( (t1 < t3 || t2 < t3) &&
-                fabs( triangleArea( pt, org_pt, dst_pt )) < FLT_EPSILON )
+                fabs( cross_product( org_pt - pt, dst_pt - pt )) < FLT_EPSILON )
         {
             location = PTLOC_ON_EDGE;
             vertex = 0;
@@ -602,9 +622,8 @@ int Subdiv2D::insert(Point2f pt)
         curr_org = edgeOrg( curr_edge );
         curr_dst = edgeDst( curr_edge );
 
-        if( isRightOf( vtx[temp_dst].pt, curr_edge ) > 0 &&
-           isPtInCircle3( vtx[curr_org].pt, vtx[temp_dst].pt,
-                         vtx[curr_dst].pt, vtx[curr_point].pt ) < 0 )
+        if( isRightOf( temp_dst, curr_edge ) > 0 &&
+           InCircle( curr_org, temp_dst, curr_dst, curr_point ) > 0 )
         {
             swapEdges( curr_edge );
             curr_edge = getEdge( curr_edge, PREV_AROUND_ORG );
@@ -630,7 +649,6 @@ void Subdiv2D::initDelaunay( Rect rect )
 {
     CV_INSTRUMENT_REGION();
 
-    float big_coord = 3.f * MAX( rect.width, rect.height );
     float rx = (float)rect.x;
     float ry = (float)rect.y;
 
@@ -779,12 +797,12 @@ void Subdiv2D::calcVoronoi()
 }
 
 
-//static int
-//isRightOf2( const Point2f& pt, const Point2f& org, const Point2f& diff )
-//{
-//    double cw_area = ((double)org.x - pt.x)*diff.y - ((double)org.y - pt.y)*diff.x;
-//    return (cw_area > 0) - (cw_area < 0);
-//}
+static int
+isRightOf2( const Point2f& pt, const Point2f& org, const Point2f& diff )
+{
+    double cw_area = ((double)org.x - pt.x)*diff.y - ((double)org.y - pt.y)*diff.x;
+    return (cw_area > 0) - (cw_area < 0);
+}
 
 
 int Subdiv2D::findNearest(Point2f pt, Point2f* nearestPt)
@@ -901,11 +919,11 @@ void Subdiv2D::getTriangleList(std::vector<Vec6f>& triangleList) const
     {
         Point2f a, b, c;
         int edge_a = i;
-        edgeOrg(edge_a, &a);
+        int pi = edgeOrg(edge_a, &a);
         int edge_b = getEdge(edge_a, NEXT_AROUND_LEFT);
-        edgeOrg(edge_b, &b);
+        int pj = edgeOrg(edge_b, &b);
         int edge_c = getEdge(edge_b, NEXT_AROUND_LEFT);
-        edgeOrg(edge_c, &c);
+        int pk = edgeOrg(edge_c, &c);
         printf("x = [%.0f %.0f %.0f %.0f];\n", a.x, b.x, c.x, a.x);
         printf("y = [%.0f %.0f %.0f %.0f];\n", a.y, b.y, c.y, a.y);
         if( edgemask[i] ) {
@@ -913,7 +931,7 @@ void Subdiv2D::getTriangleList(std::vector<Vec6f>& triangleList) const
             printf("hold on;\n");
             continue;
         }
-        if ( !rect.contains(a) || !rect.contains(b) || !rect.contains(c) ) {
+        if ( is_meta(pi) || is_meta(pj) || is_meta(pk) ) {
             printf("plot(x,y,'-r');\n");
             printf("hold on;\n");
             continue;
