@@ -190,8 +190,8 @@ void cv::gimpl::BGR::Actor::run(cv::gimpl::GIslandExecutable::IInput  &in,
             {
                 cv::Mat bgr;
                 auto view = frame.access(cv::MediaFrame::Access::R);
-                cv::Mat y_plane (desc.size,     CV_8UC1, view.ptr[0]);
-                cv::Mat uv_plane(desc.size / 2, CV_8UC2, view.ptr[1]);
+                cv::Mat y_plane (desc.size,     CV_8UC1, view.ptr[0], view.stride[0]);
+                cv::Mat uv_plane(desc.size / 2, CV_8UC2, view.ptr[1], view.stride[1]);
                 cv::cvtColorTwoPlane(y_plane, uv_plane, bgr, cv::COLOR_YUV2BGR_NV12);
                 rmat = cv::make_rmat<cv::gimpl::RMatAdapter>(bgr);
                 break;
