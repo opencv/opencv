@@ -152,10 +152,10 @@ float normL2Sqr_(const float* a, const float* b, int n)
     {
         v_float32 t0 = vx_load(a + j) - vx_load(b + j);
         v_float32 t1 = vx_load(a + j + v_float32::nlanes) - vx_load(b + j + v_float32::nlanes);
-        v_float32 t2 = vx_load(a + j + 2 * v_float32::nlanes) - vx_load(b + j + 2 * v_float32::nlanes);
-        v_float32 t3 = vx_load(a + j + 3 * v_float32::nlanes) - vx_load(b + j + 3 * v_float32::nlanes);
         v_d0 = v_muladd(t0, t0, v_d0);
+        v_float32 t2 = vx_load(a + j + 2 * v_float32::nlanes) - vx_load(b + j + 2 * v_float32::nlanes);
         v_d1 = v_muladd(t1, t1, v_d1);
+        v_float32 t3 = vx_load(a + j + 3 * v_float32::nlanes) - vx_load(b + j + 3 * v_float32::nlanes);
         v_d2 = v_muladd(t2, t2, v_d2);
         v_d3 = v_muladd(t3, t3, v_d3);
     }

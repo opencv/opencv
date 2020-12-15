@@ -1,8 +1,15 @@
 Point Polygon Test {#tutorial_point_polygon_test}
 ==================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_moments}
 @next_tutorial{tutorial_distance_transform}
+
+|    |    |
+| -: | :- |
+| Original author | Ana Huamán |
+| Compatibility | OpenCV >= 3.0 |
 
 Goal
 ----

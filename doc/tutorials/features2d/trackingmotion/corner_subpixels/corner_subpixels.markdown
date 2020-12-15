@@ -1,8 +1,15 @@
 Detecting corners location in subpixels {#tutorial_corner_subpixels}
 =======================================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_generic_corner_detector}
 @next_tutorial{tutorial_feature_detection}
+
+|    |    |
+| -: | :- |
+| Original author | Ana Huamán |
+| Compatibility | OpenCV >= 3.0 |
 
 Goal
 ----

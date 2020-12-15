@@ -1032,8 +1032,7 @@ void flip( InputArray _src, OutputArray _dst, int flip_mode )
     }
 
     if ((size.width == 1 && flip_mode > 0) ||
-        (size.height == 1 && flip_mode == 0) ||
-        (size.height == 1 && size.width == 1 && flip_mode < 0))
+        (size.height == 1 && flip_mode == 0))
     {
         return _src.copyTo(_dst);
     }

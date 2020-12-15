@@ -2554,6 +2554,14 @@ inline _Tpvec func(const _Tpvec& a, const _Tpvec& b) \
     return _Tpvec(intrin(a.val, b.val)); \
 }
 
+#define OPENCV_HAL_IMPL_WASM_BIN_FUNC_FALLBACK(_Tpvec, func, intrin) \
+inline _Tpvec func(const _Tpvec& a, const _Tpvec& b) \
+{ \
+    fallback::_Tpvec a_(a); \
+    fallback::_Tpvec b_(b); \
+    return _Tpvec(fallback::func(a_, b_)); \
+}
+
 OPENCV_HAL_IMPL_WASM_BIN_FUNC(v_float32x4, v_min, wasm_f32x4_min)
 OPENCV_HAL_IMPL_WASM_BIN_FUNC(v_float32x4, v_max, wasm_f32x4_max)
 OPENCV_HAL_IMPL_WASM_BIN_FUNC(v_float64x2, v_min, wasm_f64x2_min)
@@ -2644,8 +2652,14 @@ OPENCV_HAL_IMPL_WASM_BIN_FUNC(v_uint8x16, v_sub_wrap, wasm_i8x16_sub)
 OPENCV_HAL_IMPL_WASM_BIN_FUNC(v_int8x16, v_sub_wrap, wasm_i8x16_sub)
 OPENCV_HAL_IMPL_WASM_BIN_FUNC(v_uint16x8, v_sub_wrap, wasm_i16x8_sub)
 OPENCV_HAL_IMPL_WASM_BIN_FUNC(v_int16x8, v_sub_wrap, wasm_i16x8_sub)
+#if (__EMSCRIPTEN_major__ * 1000000 + __EMSCRIPTEN_minor__ * 1000 + __EMSCRIPTEN_tiny__) >= (2000000)
+// details: https://github.com/opencv/opencv/issues/18097 ( https://github.com/emscripten-core/emscripten/issues/12018 )
+OPENCV_HAL_IMPL_WASM_BIN_FUNC_FALLBACK(v_uint8x16, v_mul_wrap, wasm_i8x16_mul)
+OPENCV_HAL_IMPL_WASM_BIN_FUNC_FALLBACK(v_int8x16, v_mul_wrap, wasm_i8x16_mul)
+#else
 OPENCV_HAL_IMPL_WASM_BIN_FUNC(v_uint8x16, v_mul_wrap, wasm_i8x16_mul)
 OPENCV_HAL_IMPL_WASM_BIN_FUNC(v_int8x16, v_mul_wrap, wasm_i8x16_mul)
+#endif
 OPENCV_HAL_IMPL_WASM_BIN_FUNC(v_uint16x8, v_mul_wrap, wasm_i16x8_mul)
 OPENCV_HAL_IMPL_WASM_BIN_FUNC(v_int16x8, v_mul_wrap, wasm_i16x8_mul)
 

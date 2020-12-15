@@ -788,6 +788,44 @@ PERF_TEST_P_(EqHistPerfTest, TestPerformance)
 
 //------------------------------------------------------------------------------
 
+PERF_TEST_P_(BGR2RGBPerfTest, TestPerformance)
+{
+    compare_f cmpF;
+    cv::Size sz;
+    cv::GCompileArgs compile_args;
+    std::tie(cmpF, sz, compile_args) = GetParam();
+
+    initMatrixRandN(CV_8UC3, sz, CV_8UC3, false);
+
+    // OpenCV code /////////////////////////////////////////////////////////////
+    {
+        cv::cvtColor(in_mat1, out_mat_ocv, cv::COLOR_BGR2RGB);
+    }
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    auto out = cv::gapi::BGR2RGB(in);
+    cv::GComputation c(in, out);
+
+    // Warm-up graph engine:
+    c.apply(in_mat1, out_mat_gapi, std::move(compile_args));
+
+    TEST_CYCLE()
+    {
+        c.apply(in_mat1, out_mat_gapi);
+    }
+
+    // Comparison //////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
+        EXPECT_EQ(out_mat_gapi.size(), sz);
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
+//------------------------------------------------------------------------------
+
 PERF_TEST_P_(RGB2GrayPerfTest, TestPerformance)
 {
     compare_f cmpF = get<0>(GetParam());
@@ -936,6 +974,158 @@ PERF_TEST_P_(YUV2RGBPerfTest, TestPerformance)
 
     SANITY_CHECK_NOTHING();
 
+}
+
+//------------------------------------------------------------------------------
+
+PERF_TEST_P_(BGR2I420PerfTest, TestPerformance)
+{
+    compare_f cmpF;
+    cv::Size sz;
+    cv::GCompileArgs compile_args;
+    std::tie(cmpF, sz, compile_args) = GetParam();
+
+    initMatrixRandN(CV_8UC3, sz, CV_8UC1, false);
+
+    // OpenCV code /////////////////////////////////////////////////////////////
+    {
+        cv::cvtColor(in_mat1, out_mat_ocv, cv::COLOR_BGR2YUV_I420);
+    }
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    auto out = cv::gapi::BGR2I420(in);
+    cv::GComputation c(in, out);
+
+    // Warm-up graph engine:
+    c.apply(in_mat1, out_mat_gapi, std::move(compile_args));
+
+    TEST_CYCLE()
+    {
+        c.apply(in_mat1, out_mat_gapi);
+    }
+
+    // Comparison //////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
+        EXPECT_EQ(out_mat_gapi.size(), Size(sz.width, sz.height * 3 / 2));
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
+//------------------------------------------------------------------------------
+
+PERF_TEST_P_(RGB2I420PerfTest, TestPerformance)
+{
+    compare_f cmpF;
+    cv::Size sz;
+    cv::GCompileArgs compile_args;
+    std::tie(cmpF, sz, compile_args) = GetParam();
+
+    initMatrixRandN(CV_8UC3, sz, CV_8UC1, false);
+
+    // OpenCV code /////////////////////////////////////////////////////////////
+    {
+        cv::cvtColor(in_mat1, out_mat_ocv, cv::COLOR_RGB2YUV_I420);
+    }
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    auto out = cv::gapi::RGB2I420(in);
+    cv::GComputation c(in, out);
+
+    // Warm-up graph engine:
+    c.apply(in_mat1, out_mat_gapi, std::move(compile_args));
+
+    TEST_CYCLE()
+    {
+        c.apply(in_mat1, out_mat_gapi);
+    }
+
+    // Comparison //////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
+        EXPECT_EQ(out_mat_gapi.size(), Size(sz.width, sz.height * 3 / 2));
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
+//------------------------------------------------------------------------------
+
+PERF_TEST_P_(I4202BGRPerfTest, TestPerformance)
+{
+    compare_f cmpF;
+    cv::Size sz;
+    cv::GCompileArgs compile_args;
+    std::tie(cmpF, sz, compile_args) = GetParam();
+
+    initMatrixRandN(CV_8UC1, sz, CV_8UC3, false);
+
+    // OpenCV code /////////////////////////////////////////////////////////////
+    {
+        cv::cvtColor(in_mat1, out_mat_ocv, cv::COLOR_YUV2BGR_I420);
+    }
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    auto out = cv::gapi::I4202BGR(in);
+    cv::GComputation c(in, out);
+
+    // Warm-up graph engine:
+    c.apply(in_mat1, out_mat_gapi, std::move(compile_args));
+
+    TEST_CYCLE()
+    {
+        c.apply(in_mat1, out_mat_gapi);
+    }
+
+    // Comparison //////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
+        EXPECT_EQ(out_mat_gapi.size(), Size(sz.width, sz.height * 2 / 3));
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
+//------------------------------------------------------------------------------
+
+PERF_TEST_P_(I4202RGBPerfTest, TestPerformance)
+{
+    compare_f cmpF;
+    cv::Size sz;
+    cv::GCompileArgs compile_args;
+    std::tie(cmpF, sz, compile_args) = GetParam();
+
+    initMatrixRandN(CV_8UC1, sz, CV_8UC3, false);
+
+    // OpenCV code /////////////////////////////////////////////////////////////
+    {
+        cv::cvtColor(in_mat1, out_mat_ocv, cv::COLOR_YUV2RGB_I420);
+    }
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    auto out = cv::gapi::I4202RGB(in);
+    cv::GComputation c(in, out);
+
+    // Warm-up graph engine:
+    c.apply(in_mat1, out_mat_gapi, std::move(compile_args));
+
+    TEST_CYCLE()
+    {
+        c.apply(in_mat1, out_mat_gapi);
+    }
+
+    // Comparison //////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
+        EXPECT_EQ(out_mat_gapi.size(), Size(sz.width, sz.height * 2 / 3));
+    }
+
+    SANITY_CHECK_NOTHING();
 }
 
 //------------------------------------------------------------------------------

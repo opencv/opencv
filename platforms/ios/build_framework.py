@@ -37,7 +37,7 @@ from subprocess import check_call, check_output, CalledProcessError
 from distutils.dir_util import copy_tree
 
 sys.path.insert(0, os.path.abspath(os.path.abspath(os.path.dirname(__file__))+'/../apple'))
-from cv_build_utils import execute, print_error, get_xcode_major, get_xcode_setting
+from cv_build_utils import execute, print_error, get_xcode_major, get_xcode_setting, get_xcode_version, get_cmake_version
 
 IPHONEOS_DEPLOYMENT_TARGET='9.0'  # default, can be changed via command line options or environment variable
 
@@ -64,6 +64,12 @@ class Builder:
         self.run_tests = run_tests
         self.build_docs = build_docs
 
+    def checkCMakeVersion(self):
+        if get_xcode_version() >= (12, 2):
+            assert get_cmake_version() >= (3, 19), "CMake 3.19 or later is required when building with Xcode 12.2 or greater. Current version is {}".format(get_cmake_version())
+        else:
+            assert get_cmake_version() >= (3, 17), "CMake 3.17 or later is required. Current version is {}".format(get_cmake_version())
+
     def getBuildDir(self, parent, target):
 
         res = os.path.join(parent, 'build-%s-%s' % (target[0].lower(), target[1].lower()))
@@ -73,6 +79,7 @@ class Builder:
         return os.path.abspath(res)
 
     def _build(self, outdir):
+        self.checkCMakeVersion()
         outdir = os.path.abspath(outdir)
         if not os.path.isdir(outdir):
             os.makedirs(outdir)
@@ -483,11 +490,12 @@ class iOSBuilder(Builder):
 if __name__ == "__main__":
     folder = os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), "../.."))
     parser = argparse.ArgumentParser(description='The script builds OpenCV.framework for iOS.')
+    # TODO: When we can make breaking changes, we should make the out argument explicit and required like in build_xcframework.py.
     parser.add_argument('out', metavar='OUTDIR', help='folder to put built framework')
     parser.add_argument('--opencv', metavar='DIR', default=folder, help='folder with opencv repository (default is "../.." relative to script location)')
     parser.add_argument('--contrib', metavar='DIR', default=None, help='folder with opencv_contrib repository (default is "None" - build only main framework)')
-    parser.add_argument('--without', metavar='MODULE', default=[], action='append', help='OpenCV modules to exclude from the framework')
-    parser.add_argument('--disable', metavar='FEATURE', default=[], action='append', help='OpenCV features to disable (add WITH_*=OFF)')
+    parser.add_argument('--without', metavar='MODULE', default=[], action='append', help='OpenCV modules to exclude from the framework. To exclude multiple, specify this flag again, e.g. "--without video --without objc"')
+    parser.add_argument('--disable', metavar='FEATURE', default=[], action='append', help='OpenCV features to disable (add WITH_*=OFF). To disable multiple, specify this flag again, e.g. "--disable tbb --disable openmp"')
     parser.add_argument('--dynamic', default=False, action='store_true', help='build dynamic framework (default is "False" - builds static framework)')
     parser.add_argument('--disable-bitcode', default=False, dest='bitcodedisabled', action='store_true', help='disable bitcode (enabled by default)')
     parser.add_argument('--iphoneos_deployment_target', default=os.environ.get('IPHONEOS_DEPLOYMENT_TARGET', IPHONEOS_DEPLOYMENT_TARGET), help='specify IPHONEOS_DEPLOYMENT_TARGET')

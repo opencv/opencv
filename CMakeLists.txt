@@ -17,9 +17,7 @@ endif()
 
 include(cmake/OpenCVMinDepVersions.cmake)
 
-if(CMAKE_GENERATOR MATCHES Xcode AND XCODE_VERSION VERSION_GREATER 4.3)
-  cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
-elseif(CMAKE_SYSTEM_NAME MATCHES WindowsPhone OR CMAKE_SYSTEM_NAME MATCHES WindowsStore)
+if(CMAKE_SYSTEM_NAME MATCHES WindowsPhone OR CMAKE_SYSTEM_NAME MATCHES WindowsStore)
   cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
   #Required to resolve linker error issues due to incompatibility with CMake v3.0+ policies.
   #CMake fails to find _fseeko() which leads to subsequent linker error.
@@ -488,7 +486,7 @@ OCV_OPTION(OPENCV_ENABLE_MEMORY_SANITIZER "Better support for memory/address san
 OCV_OPTION(ENABLE_OMIT_FRAME_POINTER  "Enable -fomit-frame-pointer for GCC"                      ON   IF CV_GCC )
 OCV_OPTION(ENABLE_POWERPC             "Enable PowerPC for GCC"                                   ON   IF (CV_GCC AND CMAKE_SYSTEM_PROCESSOR MATCHES powerpc.*) )
 OCV_OPTION(ENABLE_FAST_MATH           "Enable compiler options for fast math optimizations on FP computations (not recommended)" OFF)
-if(NOT IOS AND (NOT ANDROID OR OPENCV_ANDROID_USE_LEGACY_FLAGS))  # Use CPU_BASELINE instead
+if(NOT IOS AND (NOT ANDROID OR OPENCV_ANDROID_USE_LEGACY_FLAGS) AND CMAKE_CROSSCOMPILING)  # Use CPU_BASELINE instead
 OCV_OPTION(ENABLE_NEON                "Enable NEON instructions"                                 (NEON OR ANDROID_ARM_NEON OR AARCH64) IF (CV_GCC OR CV_CLANG) AND (ARM OR AARCH64 OR IOS) )
 OCV_OPTION(ENABLE_VFPV3               "Enable VFPv3-D32 instructions"                            OFF  IF (CV_GCC OR CV_CLANG) AND (ARM OR AARCH64 OR IOS) )
 endif()

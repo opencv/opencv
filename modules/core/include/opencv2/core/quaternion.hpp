@@ -277,17 +277,18 @@ public:
      * For example
      * ```
      * Quatd q(1,2,3,4);
-     * power(q, 2);
+     * power(q, 2.0);
      *
      * QuatAssumeType assumeUnit = QUAT_ASSUME_UNIT;
      * double angle = CV_PI;
      * Vec3d axis{0, 0, 1};
      * Quatd q1 = Quatd::createFromAngleAxis(angle, axis); //generate a unit quat by axis and angle
-     * power(q1, 2, assumeUnit);//This assumeUnit means q1 is a unit quaternion.
+     * power(q1, 2.0, assumeUnit);//This assumeUnit means q1 is a unit quaternion.
      * ```
+     * @note the type of the index should be the same as the quaternion.
      */
-    template <typename T, typename _T>
-    friend Quat<T> power(const Quat<T> &q, _T x, QuatAssumeType assumeUnit);
+    template <typename T>
+    friend Quat<T> power(const Quat<T> &q, const T x, QuatAssumeType assumeUnit);
 
     /**
      * @brief return the value of power function with index \f$x\f$.
@@ -298,17 +299,16 @@ public:
      * For example
      * ```
      * Quatd q(1,2,3,4);
-     * q.power(2);
+     * q.power(2.0);
      *
      * QuatAssumeType assumeUnit = QUAT_ASSUME_UNIT;
      * double angle = CV_PI;
      * Vec3d axis{0, 0, 1};
      * Quatd q1 = Quatd::createFromAngleAxis(angle, axis); //generate a unit quat by axis and angle
-     * q1.power(2, assumeUnit); //This assumeUnt means q1 is a unit quaternion
+     * q1.power(2.0, assumeUnit); //This assumeUnt means q1 is a unit quaternion
      * ```
      */
-    template <typename _T>
-    Quat<_Tp> power(_T x, QuatAssumeType assumeUnit=QUAT_ASSUME_NOT_UNIT) const;
+    Quat<_Tp> power(const _Tp x, QuatAssumeType assumeUnit=QUAT_ASSUME_NOT_UNIT) const;
 
     /**
      * @brief return \f$\sqrt{q}\f$.
@@ -859,6 +859,7 @@ public:
      *
      * @sa toRotMat3x3
      */
+
     Matx<_Tp, 4, 4> toRotMat4x4(QuatAssumeType assumeUnit=QUAT_ASSUME_NOT_UNIT) const;
 
     /**
@@ -1073,42 +1074,362 @@ public:
                             const Quat<_Tp> &q2, const Quat<_Tp> &q3,
                             const _Tp t, QuatAssumeType assumeUnit=QUAT_ASSUME_NOT_UNIT);
 
-
+    /**
+     * @brief Return opposite quaternion \f$-p\f$
+     * which satisfies \f$p + (-p) = 0.\f$
+     *
+     * For example
+     * ```
+     * Quatd q{1, 2, 3, 4};
+     * std::cout << -q << std::endl; // [-1, -2, -3, -4]
+     * ```
+     */
     Quat<_Tp> operator-() const;
 
+    /**
+     * @brief return true if two quaternions p and q are nearly equal, i.e. when the absolute
+     * value of each \f$p_i\f$ and \f$q_i\f$ is less than CV_QUAT_EPS.
+     */
     bool operator==(const Quat<_Tp>&) const;
 
+    /**
+     * @brief Addition operator of two quaternions p and q.
+     * It returns a new quaternion that each value is the sum of \f$p_i\f$ and \f$q_i\f$.
+     *
+     * For example
+     * ```
+     * Quatd p{1, 2, 3, 4};
+     * Quatd q{5, 6, 7, 8};
+     * std::cout << p + q << std::endl; //[6, 8, 10, 12]
+     * ```
+     */
     Quat<_Tp> operator+(const Quat<_Tp>&) const;
 
+    /**
+     * @brief Addition assignment operator of two quaternions p and q.
+     * It adds right operand to the left operand and assign the result to left operand.
+     *
+     * For example
+     * ```
+     * Quatd p{1, 2, 3, 4};
+     * Quatd q{5, 6, 7, 8};
+     * p += q; // equivalent to p = p + q
+     * std::cout << p << std::endl; //[6, 8, 10, 12]
+     *
+     * ```
+     */
     Quat<_Tp>& operator+=(const Quat<_Tp>&);
 
+    /**
+     * @brief Subtraction operator of two quaternions p and q.
+     * It returns a new quaternion that each value is the sum of \f$p_i\f$ and \f$-q_i\f$.
+     *
+     * For example
+     * ```
+     * Quatd p{1, 2, 3, 4};
+     * Quatd q{5, 6, 7, 8};
+     * std::cout << p - q << std::endl; //[-4, -4, -4, -4]
+     * ```
+     */
     Quat<_Tp> operator-(const Quat<_Tp>&) const;
 
+    /**
+     * @brief Subtraction assignment operator of two quaternions p and q.
+     * It subtracts right operand from the left operand and assign the result to left operand.
+     *
+     * For example
+     * ```
+     * Quatd p{1, 2, 3, 4};
+     * Quatd q{5, 6, 7, 8};
+     * p -= q; // equivalent to p = p - q
+     * std::cout << p << std::endl; //[-4, -4, -4, -4]
+     *
+     * ```
+     */
     Quat<_Tp>& operator-=(const Quat<_Tp>&);
 
+    /**
+     * @brief Multiplication assignment operator of two quaternions q and p.
+     * It multiplies right operand with the left operand and assign the result to left operand.
+     *
+     * Rule of quaternion multiplication:
+     * \f[
+     * \begin{equation}
+     * \begin{split}
+     * p * q &= [p_0, \boldsymbol{u}]*[q_0, \boldsymbol{v}]\\
+     * &=[p_0q_0 - \boldsymbol{u}\cdot \boldsymbol{v}, p_0\boldsymbol{v} + q_0\boldsymbol{u}+ \boldsymbol{u}\times \boldsymbol{v}].
+     * \end{split}
+     * \end{equation}
+     * \f]
+     * where \f$\cdot\f$ means dot product and \f$\times \f$ means cross product.
+     *
+     * For example
+     * ```
+     * Quatd p{1, 2, 3, 4};
+     * Quatd q{5, 6, 7, 8};
+     * p *= q; // equivalent to p = p * q
+     * std::cout << p << std::endl; //[-60, 12, 30, 24]
+     * ```
+     */
     Quat<_Tp>& operator*=(const Quat<_Tp>&);
 
-    Quat<_Tp>& operator*=(const _Tp&);
+    /**
+     * @brief Multiplication assignment operator of a quaternions and a scalar.
+     * It multiplies right operand with the left operand and assign the result to left operand.
+     *
+     * Rule of quaternion multiplication with a scalar:
+     * \f[
+     * \begin{equation}
+     * \begin{split}
+     * p * s &= [w, x, y, z] * s\\
+     * &=[w * s, x * s, y * s, z * s].
+     * \end{split}
+     * \end{equation}
+     * \f]
+     *
+     * For example
+     * ```
+     * Quatd p{1, 2, 3, 4};
+     * double s = 2.0;
+     * p *= s; // equivalent to p = p * s
+     * std::cout << p << std::endl; //[2.0, 4.0, 6.0, 8.0]
+     * ```
+     * @note the type of scalar should be equal to the quaternion.
+     */
+    Quat<_Tp>& operator*=(const _Tp s);
 
+    /**
+     * @brief Multiplication operator of two quaternions q and p.
+     * Multiplies values on either side of the operator.
+     *
+     * Rule of quaternion multiplication:
+     * \f[
+     * \begin{equation}
+     * \begin{split}
+     * p * q &= [p_0, \boldsymbol{u}]*[q_0, \boldsymbol{v}]\\
+     * &=[p_0q_0 - \boldsymbol{u}\cdot \boldsymbol{v}, p_0\boldsymbol{v} + q_0\boldsymbol{u}+ \boldsymbol{u}\times \boldsymbol{v}].
+     * \end{split}
+     * \end{equation}
+     * \f]
+     * where \f$\cdot\f$ means dot product and \f$\times \f$ means cross product.
+     *
+     * For example
+     * ```
+     * Quatd p{1, 2, 3, 4};
+     * Quatd q{5, 6, 7, 8};
+     * std::cout << p * q << std::endl; //[-60, 12, 30, 24]
+     * ```
+     */
     Quat<_Tp> operator*(const Quat<_Tp>&) const;
 
-    Quat<_Tp> operator/(const _Tp&) const;
+    /**
+     * @brief Division operator of a quaternions and a scalar.
+     * It divides left operand with the right operand and assign the result to left operand.
+     *
+     * Rule of quaternion division with a scalar:
+     * \f[
+     * \begin{equation}
+     * \begin{split}
+     * p / s &= [w, x, y, z] / s\\
+     * &=[w/s, x/s, y/s, z/s].
+     * \end{split}
+     * \end{equation}
+     * \f]
+     *
+     * For example
+     * ```
+     * Quatd p{1, 2, 3, 4};
+     * double s = 2.0;
+     * p /= s; // equivalent to p = p / s
+     * std::cout << p << std::endl; //[0.5, 1, 1.5, 2]
+     * ```
+     * @note the type of scalar should be equal to this quaternion.
+     */
+    Quat<_Tp> operator/(const _Tp s) const;
 
+    /**
+     * @brief Division operator of two quaternions p and q.
+     * Divides left hand operand by right hand operand.
+     *
+     * Rule of quaternion division with a scalar:
+     * \f[
+     * \begin{equation}
+     * \begin{split}
+     * p / q &= p * q.inv()\\
+     * \end{split}
+     * \end{equation}
+     * \f]
+     *
+     * For example
+     * ```
+     * Quatd p{1, 2, 3, 4};
+     * Quatd q{5, 6, 7, 8};
+     * std::cout << p / q << std::endl; // equivalent to p * q.inv()
+     * ```
+     */
     Quat<_Tp> operator/(const Quat<_Tp>&) const;
 
-    Quat<_Tp>& operator/=(const _Tp&);
+    /**
+     * @brief Division assignment operator of a quaternions and a scalar.
+     * It divides left operand with the right operand and assign the result to left operand.
+     *
+     * Rule of quaternion division with a scalar:
+     * \f[
+     * \begin{equation}
+     * \begin{split}
+     * p / s &= [w, x, y, z] / s\\
+     * &=[w / s, x / s, y / s, z / s].
+     * \end{split}
+     * \end{equation}
+     * \f]
+     *
+     * For example
+     * ```
+     * Quatd p{1, 2, 3, 4};
+     * double s = 2.0;;
+     * p /= s; // equivalent to p = p / s
+     * std::cout << p << std::endl; //[0.5, 1.0, 1.5, 2.0]
+     * ```
+     * @note the type of scalar should be equal to the quaternion.
+     */
+    Quat<_Tp>& operator/=(const _Tp s);
 
+    /**
+     * @brief Division assignment operator of two quaternions p and q;
+     * It divides left operand with the right operand and assign the result to left operand.
+     *
+     * Rule of quaternion division with a quaternion:
+     * \f[
+     * \begin{equation}
+     * \begin{split}
+     * p / q&= p * q.inv()\\
+     * \end{split}
+     * \end{equation}
+     * \f]
+     *
+     * For example
+     * ```
+     * Quatd p{1, 2, 3, 4};
+     * Quatd q{5, 6, 7, 8};
+     * p /= q; // equivalent to p = p * q.inv()
+     * std::cout << p << std::endl;
+     * ```
+     */
     Quat<_Tp>& operator/=(const Quat<_Tp>&);
 
     _Tp& operator[](std::size_t n);
 
     const _Tp& operator[](std::size_t n) const;
 
-    template <typename S, typename T>
-    friend Quat<S> cv::operator*(const T, const Quat<S>&);
+    /**
+     * @brief Subtraction operator of a scalar and a quaternions.
+     * Subtracts right hand operand from left hand operand.
+     *
+     * For example
+     * ```
+     * Quatd p{1, 2, 3, 4};
+     * double scalar = 2.0;
+     * std::cout << scalar - p << std::endl; //[1.0, -2, -3, -4]
+     * ```
+     * @note the type of scalar should be equal to the quaternion.
+     */
+    template <typename T>
+    friend Quat<T> cv::operator-(const T s, const Quat<T>&);
 
-    template <typename S, typename T>
-    friend Quat<S> cv::operator*(const Quat<S>&, const T);
+    /**
+     * @brief Subtraction operator of a quaternions and a scalar.
+     * Subtracts right hand operand from left hand operand.
+     *
+     * For example
+     * ```
+     * Quatd p{1, 2, 3, 4};
+     * double scalar = 2.0;
+     * std::cout << p - scalar << std::endl; //[-1.0, 2, 3, 4]
+     * ```
+     * @note the type of scalar should be equal to the quaternion.
+     */
+    template <typename T>
+    friend Quat<T> cv::operator-(const Quat<T>&, const T s);
+
+    /**
+     * @brief Addition operator of a quaternions and a scalar.
+     * Adds right hand operand from left hand operand.
+     *
+     * For example
+     * ```
+     * Quatd p{1, 2, 3, 4};
+     * double scalar = 2.0;
+     * std::cout << scalar + p << std::endl; //[3.0, 2, 3, 4]
+     * ```
+     * @note the type of scalar should be equal to the quaternion.
+     */
+    template <typename T>
+    friend Quat<T> cv::operator+(const T s, const Quat<T>&);
+
+    /**
+     * @brief Addition operator of a quaternions and a scalar.
+     * Adds right hand operand from left hand operand.
+     *
+     * For example
+     * ```
+     * Quatd p{1, 2, 3, 4};
+     * double scalar = 2.0;
+     * std::cout << p + scalar << std::endl; //[3.0, 2, 3, 4]
+     * ```
+     * @note the type of scalar should be equal to the quaternion.
+     */
+    template <typename T>
+    friend Quat<T> cv::operator+(const Quat<T>&, const T s);
+
+    /**
+     * @brief Multiplication operator of a scalar and a quaternions.
+     * It multiplies right operand with the left operand and assign the result to left operand.
+     *
+     * Rule of quaternion multiplication with a scalar:
+     * \f[
+     * \begin{equation}
+     * \begin{split}
+     * p * s &= [w, x, y, z] * s\\
+     * &=[w * s, x * s, y * s, z * s].
+     * \end{split}
+     * \end{equation}
+     * \f]
+     *
+     * For example
+     * ```
+     * Quatd p{1, 2, 3, 4};
+     * double s = 2.0;
+     * std::cout << s * p << std::endl; //[2.0, 4.0, 6.0, 8.0]
+     * ```
+     * @note the type of scalar should be equal to the quaternion.
+     */
+    template <typename T>
+    friend Quat<T> cv::operator*(const T s, const Quat<T>&);
+
+    /**
+     * @brief Multiplication operator of a quaternion and a scalar.
+     * It multiplies right operand with the left operand and assign the result to left operand.
+     *
+     * Rule of quaternion multiplication with a scalar:
+     * \f[
+     * \begin{equation}
+     * \begin{split}
+     * p * s &= [w, x, y, z] * s\\
+     * &=[w * s, x * s, y * s, z * s].
+     * \end{split}
+     * \end{equation}
+     * \f]
+     *
+     * For example
+     * ```
+     * Quatd p{1, 2, 3, 4};
+     * double s = 2.0;
+     * std::cout << p * s << std::endl; //[2.0, 4.0, 6.0, 8.0]
+     * ```
+     * @note the type of scalar should be equal to the quaternion.
+     */
+    template <typename T>
+    friend Quat<T> cv::operator*(const Quat<T>&, const T s);
 
     template <typename S>
     friend std::ostream& cv::operator<<(std::ostream&, const Quat<S>&);
@@ -1165,8 +1486,8 @@ Quat<T> exp(const Quat<T> &q);
 template <typename T>
 Quat<T> log(const Quat<T> &q, QuatAssumeType assumeUnit=QUAT_ASSUME_NOT_UNIT);
 
-template <typename T, typename _T>
-Quat<T> power(const Quat<T>& q, _T x, QuatAssumeType assumeUnit=QUAT_ASSUME_NOT_UNIT);
+template <typename T>
+Quat<T> power(const Quat<T>& q, const T x, QuatAssumeType assumeUnit=QUAT_ASSUME_NOT_UNIT);
 
 template <typename T>
 Quat<T> crossProduct(const Quat<T> &p, const Quat<T> &q);
@@ -1174,11 +1495,11 @@ Quat<T> crossProduct(const Quat<T> &p, const Quat<T> &q);
 template <typename S>
 Quat<S> sqrt(const Quat<S> &q, QuatAssumeType assumeUnit=QUAT_ASSUME_NOT_UNIT);
 
-template <typename S, typename T>
-Quat<S> operator*(const T, const Quat<S>&);
+template <typename T>
+Quat<T> operator*(const T, const Quat<T>&);
 
-template <typename S, typename T>
-Quat<S> operator*(const Quat<S>&, const T);
+template <typename T>
+Quat<T> operator*(const Quat<T>&, const T);
 
 template <typename S>
 std::ostream& operator<<(std::ostream&, const Quat<S>&);

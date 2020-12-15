@@ -743,9 +743,11 @@ public:
 
     /** Get associated ocl::Context */
     Context& getContext() const;
-    /** Get associated ocl::Device */
+    /** Get the single default associated ocl::Device */
     Device& getDevice() const;
-    /** Get associated ocl::Queue */
+    /** Get the single ocl::Queue that is associated with the ocl::Context and
+     *  the single default ocl::Device
+     */
     Queue& getQueue() const;
 
     bool useOpenCL() const;

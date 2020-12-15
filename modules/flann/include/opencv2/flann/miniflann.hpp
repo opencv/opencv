@@ -169,10 +169,13 @@ public:
     CV_WRAP cvflann::flann_algorithm_t getAlgorithm() const;
 
 protected:
+    bool load_(const String& filename);
+
     cvflann::flann_distance_t distType;
     cvflann::flann_algorithm_t algo;
     int featureType;
     void* index;
+    Mat features_clone;  // index may store features pointer internally for searching, so avoid dangling pointers: https://github.com/opencv/opencv/issues/17553
 };
 
 } } // namespace cv::flann

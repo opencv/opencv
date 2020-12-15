@@ -21,6 +21,7 @@
 
 #include <opencv2/gapi/streaming/cap.hpp>
 #include <opencv2/gapi/streaming/desync.hpp>
+#include <opencv2/gapi/streaming/format.hpp>
 
 namespace opencv_test
 {
@@ -111,6 +112,111 @@ GAPI_OCV_KERNEL(OCVDelay, Delay) {
         std::this_thread::sleep_for(std::chrono::milliseconds{ms});
         in.copyTo(out);
     }
+};
+
+class TestMediaBGR final: public cv::MediaFrame::IAdapter {
+    cv::Mat m_mat;
+    using Cb = cv::MediaFrame::View::Callback;
+    Cb m_cb;
+
+    public:
+    explicit TestMediaBGR(cv::Mat m, Cb cb = [](){})
+        : m_mat(m), m_cb(cb) {
+        }
+    cv::GFrameDesc meta() const override {
+        return cv::GFrameDesc{cv::MediaFormat::BGR, cv::Size(m_mat.cols, m_mat.rows)};
+    }
+    cv::MediaFrame::View access(cv::MediaFrame::Access) override {
+        cv::MediaFrame::View::Ptrs pp = { m_mat.ptr(), nullptr, nullptr, nullptr };
+        cv::MediaFrame::View::Strides ss = { m_mat.step, 0u, 0u, 0u };
+        return cv::MediaFrame::View(std::move(pp), std::move(ss), Cb{m_cb});
+    }
+};
+
+class TestMediaNV12 final: public cv::MediaFrame::IAdapter {
+    cv::Mat m_y;
+    cv::Mat m_uv;
+public:
+    TestMediaNV12(cv::Mat y, cv::Mat uv) : m_y(y), m_uv(uv) {
+    }
+    cv::GFrameDesc meta() const override {
+        return cv::GFrameDesc{cv::MediaFormat::NV12, cv::Size(m_y.cols, m_y.rows)};
+    }
+    cv::MediaFrame::View access(cv::MediaFrame::Access) override {
+        cv::MediaFrame::View::Ptrs pp = {
+            m_y.ptr(), m_uv.ptr(), nullptr, nullptr
+        };
+        cv::MediaFrame::View::Strides ss = {
+            m_y.step, m_uv.step, 0u, 0u
+        };
+        return cv::MediaFrame::View(std::move(pp), std::move(ss));
+    }
+};
+
+class BGRSource : public cv::gapi::wip::GCaptureSource {
+public:
+    explicit BGRSource(const std::string& pipeline)
+        : cv::gapi::wip::GCaptureSource(pipeline) {
+    }
+
+    bool pull(cv::gapi::wip::Data& data) {
+        if (cv::gapi::wip::GCaptureSource::pull(data)) {
+            data = cv::MediaFrame::Create<TestMediaBGR>(cv::util::get<cv::Mat>(data));
+            return true;
+        }
+        return false;
+    }
+
+    GMetaArg descr_of() const override {
+        return cv::GMetaArg{cv::GFrameDesc{cv::MediaFormat::BGR,
+                                           cv::util::get<cv::GMatDesc>(
+                                                   cv::gapi::wip::GCaptureSource::descr_of()).size}};
+    }
+};
+
+void cvtBGR2NV12(const cv::Mat& bgr, cv::Mat& y, cv::Mat& uv) {
+    cv::Size frame_sz = bgr.size();
+    cv::Size half_sz  = frame_sz / 2;
+
+    cv::Mat yuv;
+    cv::cvtColor(bgr, yuv, cv::COLOR_BGR2YUV_I420);
+
+    // Copy Y plane
+    yuv.rowRange(0, frame_sz.height).copyTo(y);
+
+    // Merge sampled U and V planes
+    std::vector<int> dims = {half_sz.height, half_sz.width};
+    auto start = frame_sz.height;
+    auto range_h = half_sz.height/2;
+    std::vector<cv::Mat> uv_planes = {
+        yuv.rowRange(start,           start + range_h)  .reshape(0, dims),
+        yuv.rowRange(start + range_h, start + range_h*2).reshape(0, dims)
+    };
+    cv::merge(uv_planes, uv);
+}
+
+class NV12Source : public cv::gapi::wip::GCaptureSource {
+public:
+    explicit NV12Source(const std::string& pipeline)
+        : cv::gapi::wip::GCaptureSource(pipeline) {
+}
+
+bool pull(cv::gapi::wip::Data& data) {
+    if (cv::gapi::wip::GCaptureSource::pull(data)) {
+        cv::Mat bgr = cv::util::get<cv::Mat>(data);
+        cv::Mat y, uv;
+        cvtBGR2NV12(bgr, y, uv);
+        data = cv::MediaFrame::Create<TestMediaNV12>(y, uv);
+        return true;
+    }
+    return false;
+}
+
+GMetaArg descr_of() const override {
+    return cv::GMetaArg{cv::GFrameDesc{cv::MediaFormat::NV12,
+        cv::util::get<cv::GMatDesc>(
+                cv::gapi::wip::GCaptureSource::descr_of()).size}};
+}
 };
 
 } // anonymous namespace
@@ -1247,7 +1353,6 @@ TEST(GAPI_Streaming_Desync, SmokeTest_Streaming)
     }
     EXPECT_EQ(100u, out1_hits);      // out1 must be available for all frames
     EXPECT_LE(out2_hits, out1_hits); // out2 must appear less times than out1
-    std::cout << "Got " << out1_hits << " out1's and " << out2_hits << " out2's" << std::endl;
 }
 
 TEST(GAPI_Streaming_Desync, SmokeTest_Streaming_TwoParts)
@@ -1586,6 +1691,189 @@ TEST(GAPI_Streaming_Desync, DesyncObjectConsumedByTwoIslandsViaSameDesync) {
     auto p = cv::gapi::kernels<FluidCopy>();
 
     EXPECT_NO_THROW(c.compileStreaming(cv::compile_args(p)));
+}
+
+TEST(GAPI_Streaming, CopyFrame)
+{
+    initTestDataPath();
+    std::string filepath = findDataFile("cv/video/768x576.avi");
+
+    cv::GFrame in;
+    auto out = cv::gapi::streaming::copy(in);
+
+    cv::GComputation comp(cv::GIn(in), cv::GOut(out));
+
+    auto cc = comp.compileStreaming();
+    try {
+        cc.setSource<BGRSource>(filepath);
+    } catch(...) {
+        throw SkipTestException("Video file can not be opened");
+    }
+
+    cv::VideoCapture cap;
+    cap.open(filepath);
+    if (!cap.isOpened())
+        throw SkipTestException("Video file can not be opened");
+
+    cv::MediaFrame frame;
+    cv::Mat ocv_mat;
+    std::size_t num_frames = 0u;
+    std::size_t max_frames = 10u;
+
+    cc.start();
+    while (cc.pull(cv::gout(frame)) && num_frames < max_frames)
+    {
+        auto view = frame.access(cv::MediaFrame::Access::R);
+        cv::Mat gapi_mat(frame.desc().size, CV_8UC3, view.ptr[0]);
+        num_frames++;
+        cap >> ocv_mat;
+
+        EXPECT_EQ(0, cvtest::norm(ocv_mat, gapi_mat, NORM_INF));
+    }
+}
+
+TEST(GAPI_Streaming, Reshape)
+{
+    initTestDataPath();
+    std::string filepath = findDataFile("cv/video/768x576.avi");
+
+    cv::GFrame in;
+    auto out = cv::gapi::streaming::copy(in);
+
+    cv::GComputation comp(cv::GIn(in), cv::GOut(out));
+
+    auto cc = comp.compileStreaming();
+    try {
+        cc.setSource<BGRSource>(filepath);
+    } catch(...) {
+        throw SkipTestException("Video file can not be opened");
+    }
+
+    cv::VideoCapture cap;
+    cap.open(filepath);
+    if (!cap.isOpened())
+        throw SkipTestException("Video file can not be opened");
+
+    cv::MediaFrame frame;
+    cv::Mat ocv_mat;
+    std::size_t num_frames = 0u;
+    std::size_t max_frames = 10u;
+
+    cc.start();
+    while (cc.pull(cv::gout(frame)) && num_frames < max_frames)
+    {
+        auto view = frame.access(cv::MediaFrame::Access::R);
+        cv::Mat gapi_mat(frame.desc().size, CV_8UC3, view.ptr[0]);
+        num_frames++;
+        cap >> ocv_mat;
+
+        EXPECT_EQ(0, cvtest::norm(ocv_mat, gapi_mat, NORM_INF));
+    }
+
+    // Reshape the graph meta
+    filepath = findDataFile("cv/video/1920x1080.avi");
+    cc.stop();
+    try {
+        cc.setSource<BGRSource>(filepath);
+    } catch(...) {
+        throw SkipTestException("Video file can not be opened");
+    }
+
+    cap.open(filepath);
+    if (!cap.isOpened())
+        throw SkipTestException("Video file can not be opened");
+
+    cv::MediaFrame frame2;
+    cv::Mat ocv_mat2;
+
+    num_frames = 0u;
+
+    cc.start();
+    while (cc.pull(cv::gout(frame2)) && num_frames < max_frames)
+    {
+        auto view = frame2.access(cv::MediaFrame::Access::R);
+        cv::Mat gapi_mat(frame2.desc().size, CV_8UC3, view.ptr[0]);
+        num_frames++;
+        cap >> ocv_mat2;
+
+        EXPECT_EQ(0, cvtest::norm(ocv_mat2, gapi_mat, NORM_INF));
+    }
+}
+
+TEST(GAPI_Streaming, AccessBGRFromBGRFrame)
+{
+    initTestDataPath();
+    std::string filepath = findDataFile("cv/video/768x576.avi");
+
+    cv::GFrame in;
+    auto out = cv::gapi::streaming::BGR(in);
+
+    cv::GComputation comp(cv::GIn(in), cv::GOut(out));
+
+    auto cc = comp.compileStreaming();
+    try {
+        cc.setSource<BGRSource>(filepath);
+    } catch(...) {
+        throw SkipTestException("Video file can not be opened");
+    }
+
+    cv::VideoCapture cap;
+    cap.open(filepath);
+    if (!cap.isOpened())
+        throw SkipTestException("Video file can not be opened");
+
+    cv::Mat ocv_mat, gapi_mat;
+    std::size_t num_frames = 0u;
+    std::size_t max_frames = 10u;
+
+    cc.start();
+    while (cc.pull(cv::gout(gapi_mat)) && num_frames < max_frames)
+    {
+        num_frames++;
+        cap >> ocv_mat;
+
+        EXPECT_EQ(0, cvtest::norm(ocv_mat, gapi_mat, NORM_INF));
+    }
+}
+
+TEST(GAPI_Streaming, AccessBGRFromNV12Frame)
+{
+    initTestDataPath();
+    std::string filepath = findDataFile("cv/video/768x576.avi");
+
+    cv::GFrame in;
+    auto out = cv::gapi::streaming::BGR(in);
+
+    cv::GComputation comp(cv::GIn(in), cv::GOut(out));
+
+    auto cc = comp.compileStreaming();
+    try {
+        cc.setSource<NV12Source>(filepath);
+    } catch(...) {
+        throw SkipTestException("Video file can not be opened");
+    }
+
+    cv::VideoCapture cap;
+    cap.open(filepath);
+    if (!cap.isOpened())
+        throw SkipTestException("Video file can not be opened");
+
+    cv::Mat ocv_mat, gapi_mat;
+    std::size_t num_frames = 0u;
+    std::size_t max_frames = 10u;
+
+    cc.start();
+    while (cc.pull(cv::gout(gapi_mat)) && num_frames < max_frames)
+    {
+        num_frames++;
+        cap >> ocv_mat;
+
+        cv::Mat y, uv;
+        cvtBGR2NV12(ocv_mat, y, uv);
+        cv::cvtColorTwoPlane(y, uv, ocv_mat, cv::COLOR_YUV2BGR_NV12);
+
+        EXPECT_EQ(0, cvtest::norm(ocv_mat, gapi_mat, NORM_INF));
+    }
 }
 
 } // namespace opencv_test

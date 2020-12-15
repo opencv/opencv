@@ -321,6 +321,35 @@ inline GComputation runOCVnGAPIOptFlowPipeline(TestFunctional& testInst,
     return c;
 }
 
+inline void testBackgroundSubtractorStreaming(cv::GStreamingCompiled& gapiBackSub,
+                                              const cv::Ptr<cv::BackgroundSubtractor>& pOCVBackSub,
+                                              const int diffPercent, const int tolerance,
+                                              const double lRate, const std::size_t testNumFrames)
+{
+    cv::Mat frame, gapiForeground, ocvForeground;
+    double numDiff = diffPercent / 100.0;
+
+    gapiBackSub.start();
+    EXPECT_TRUE(gapiBackSub.running());
+
+    compare_f cmpF = AbsSimilarPoints(tolerance, numDiff).to_compare_f();
+
+    // Comparison of G-API and OpenCV substractors
+    std::size_t frames = 0u;
+    while (frames <= testNumFrames && gapiBackSub.pull(cv::gout(frame, gapiForeground)))
+    {
+        pOCVBackSub->apply(frame, ocvForeground, lRate);
+        EXPECT_TRUE(cmpF(gapiForeground, ocvForeground));
+        frames++;
+    }
+
+    if (gapiBackSub.running())
+        gapiBackSub.stop();
+
+    EXPECT_LT(0u, frames);
+    EXPECT_FALSE(gapiBackSub.running());
+}
+
 #else // !HAVE_OPENCV_VIDEO
 
 inline cv::GComputation runOCVnGAPIBuildOptFlowPyramid(TestFunctional&,
@@ -361,26 +390,26 @@ inline GComputation runOCVnGAPIOptFlowPipeline(TestFunctional&,
 
 #endif // HAVE_OPENCV_VIDEO
 
-inline void compareOutputPyramids(const BuildOpticalFlowPyramidTestOutput& outOCV,
-                                  const BuildOpticalFlowPyramidTestOutput& outGAPI)
+inline void compareOutputPyramids(const BuildOpticalFlowPyramidTestOutput& outGAPI,
+                                  const BuildOpticalFlowPyramidTestOutput& outOCV)
 {
     GAPI_Assert(outGAPI.maxLevel == outOCV.maxLevel);
     GAPI_Assert(outOCV.maxLevel >= 0);
     size_t maxLevel = static_cast<size_t>(outOCV.maxLevel);
     for (size_t i = 0; i <= maxLevel; i++)
     {
-        EXPECT_TRUE(AbsExact().to_compare_f()(outOCV.pyramid[i], outGAPI.pyramid[i]));
+        EXPECT_TRUE(AbsExact().to_compare_f()(outGAPI.pyramid[i], outOCV.pyramid[i]));
     }
 }
 
 template <typename Elem>
-inline bool compareVectorsAbsExactForOptFlow(std::vector<Elem> outOCV, std::vector<Elem> outGAPI)
+inline bool compareVectorsAbsExactForOptFlow(std::vector<Elem> outGAPI, std::vector<Elem> outOCV)
 {
-    return AbsExactVector<Elem>().to_compare_f()(outOCV, outGAPI);
+    return AbsExactVector<Elem>().to_compare_f()(outGAPI, outOCV);
 }
 
-inline void compareOutputsOptFlow(const OptFlowLKTestOutput& outOCV,
-                                  const OptFlowLKTestOutput& outGAPI)
+inline void compareOutputsOptFlow(const OptFlowLKTestOutput& outGAPI,
+                                  const OptFlowLKTestOutput& outOCV)
 {
     EXPECT_TRUE(compareVectorsAbsExactForOptFlow(outGAPI.nextPoints, outOCV.nextPoints));
     EXPECT_TRUE(compareVectorsAbsExactForOptFlow(outGAPI.statuses,   outOCV.statuses));
