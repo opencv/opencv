@@ -140,10 +140,6 @@ class Builder:
                "-DBUILD_PACKAGE=OFF",
                "-DBUILD_TESTS=OFF",
                "-DBUILD_PERF_TESTS=OFF"]
-        # this flag can be used to add opencv_contrib and with this the aruco module
-        # just add --opencv_contrib_dir=/path/to/opencv_contrib/modules
-        if self.options.opencv_contrib_dir != "":
-            cmd.append("-DOPENCV_EXTRA_MODULES_PATH="+self.options.opencv_contrib_dir)
 
         if self.options.cmake_option:
             cmd += self.options.cmake_option
@@ -245,8 +241,6 @@ if __name__ == "__main__":
     # Write a path to modify file like argument of this flag
     parser.add_argument('--config', default=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'opencv_js.config.py'),
                         help="Specify configuration file with own list of exported into JS functions")
-    parser.add_argument('--opencv_contrib_dir', default='',
-                        help="Path to /opencv_contrib/modules folder. Can be used to build Aruco marker support into opencvjs.")
 
     args = parser.parse_args()
 
