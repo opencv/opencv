@@ -58,9 +58,9 @@ namespace gimpl {
     struct Data;
     struct RcDesc;
 
-    struct RMatMediaBGRAdapter final: public cv::RMat::Adapter
+    struct GAPI_EXPORTS RMatMediaAdapterBGR final: public cv::RMat::Adapter
     {
-        RMatMediaBGRAdapter(cv::MediaFrame frame) : m_frame(frame) { };
+        explicit RMatMediaAdapterBGR(const cv::MediaFrame& frame) : m_frame(frame) { };
 
         virtual cv::RMat::View access(cv::RMat::Access a) override
         {

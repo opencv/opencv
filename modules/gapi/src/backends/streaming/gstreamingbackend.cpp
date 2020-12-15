@@ -184,7 +184,7 @@ void cv::gimpl::BGR::Actor::run(cv::gimpl::GIslandExecutable::IInput  &in,
         switch (desc.fmt)
         {
             case cv::MediaFormat::BGR:
-                rmat = cv::make_rmat<cv::gimpl::RMatMediaBGRAdapter>(frame);
+                rmat = cv::make_rmat<cv::gimpl::RMatMediaAdapterBGR>(frame);
                 break;
             case cv::MediaFormat::NV12:
             {
