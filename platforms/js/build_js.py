@@ -140,7 +140,6 @@ class Builder:
                "-DBUILD_PACKAGE=OFF",
                "-DBUILD_TESTS=OFF",
                "-DBUILD_PERF_TESTS=OFF"]
-
         if self.options.cmake_option:
             cmd += self.options.cmake_option
         if self.options.build_doc:
