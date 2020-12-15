@@ -58,6 +58,35 @@ namespace gimpl {
     struct Data;
     struct RcDesc;
 
+    struct GAPI_EXPORTS RMatMediaAdapterBGR final: public cv::RMat::Adapter
+    {
+        explicit RMatMediaAdapterBGR(const cv::MediaFrame& frame) : m_frame(frame) { };
+
+        virtual cv::RMat::View access(cv::RMat::Access a) override
+        {
+            auto view = m_frame.access(a == cv::RMat::Access::W ? cv::MediaFrame::Access::W
+                                                                : cv::MediaFrame::Access::R);
+            auto ptr = reinterpret_cast<uchar*>(view.ptr[0]);
+            auto stride = view.stride[0];
+
+            std::shared_ptr<cv::MediaFrame::View> view_ptr =
+                std::make_shared<cv::MediaFrame::View>(std::move(view));
+            auto callback = [view_ptr]() mutable { view_ptr.reset(); };
+
+            return cv::RMat::View(desc(), ptr, stride, callback);
+        }
+
+        virtual cv::GMatDesc desc() const override
+        {
+            const auto& desc = m_frame.desc();
+            GAPI_Assert(desc.fmt == cv::MediaFormat::BGR);
+            return cv::GMatDesc{CV_8U, 3, desc.size};
+        }
+
+        cv::MediaFrame m_frame;
+    };
+
+
 namespace magazine {
     template<typename... Ts> struct Class
     {

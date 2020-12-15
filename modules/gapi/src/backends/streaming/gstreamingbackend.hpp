@@ -14,34 +14,6 @@
 namespace cv {
 namespace gimpl {
 
-struct RMatMediaBGRAdapter final: public cv::RMat::Adapter
-{
-    RMatMediaBGRAdapter(cv::MediaFrame frame) : m_frame(frame) { };
-
-    virtual cv::RMat::View access(cv::RMat::Access a) override
-    {
-        auto view = m_frame.access(a == cv::RMat::Access::W ? cv::MediaFrame::Access::W
-                                                            : cv::MediaFrame::Access::R);
-        auto ptr = reinterpret_cast<uchar*>(view.ptr[0]);
-        auto stride = view.stride[0];
-
-        std::shared_ptr<cv::MediaFrame::View> view_ptr =
-            std::make_shared<cv::MediaFrame::View>(std::move(view));
-        auto callback = [view_ptr]() mutable { view_ptr.reset(); };
-
-        return cv::RMat::View(desc(), ptr, stride, callback);
-    }
-
-    virtual cv::GMatDesc desc() const override
-    {
-        const auto& desc = m_frame.desc();
-        GAPI_Assert(desc.fmt == cv::MediaFormat::BGR);
-        return cv::GMatDesc{CV_8U, 3, desc.size};
-    }
-
-    cv::MediaFrame m_frame;
-};
-
 struct Copy: public cv::detail::KernelTag
 {
     using API = cv::gapi::streaming::GCopy;
@@ -51,14 +23,14 @@ struct Copy: public cv::detail::KernelTag
     class Actor final: public cv::gapi::streaming::IActor
     {
         public:
-            explicit Actor() {}
+            explicit Actor(const cv::GCompileArgs&) {}
             virtual void run(cv::gimpl::GIslandExecutable::IInput  &in,
                              cv::gimpl::GIslandExecutable::IOutput &out) override;
     };
 
-    static cv::gapi::streaming::IActor::Ptr create()
+    static cv::gapi::streaming::IActor::Ptr create(const cv::GCompileArgs& args)
     {
-        return cv::gapi::streaming::IActor::Ptr(new Actor());
+        return cv::gapi::streaming::IActor::Ptr(new Actor(args));
     }
 
     static cv::gapi::streaming::GStreamingKernel kernel() { return {&create}; };
@@ -71,14 +43,14 @@ struct BGR: public cv::detail::KernelTag
 
     class Actor final: public cv::gapi::streaming::IActor {
         public:
-            explicit Actor() {}
+            explicit Actor(const cv::GCompileArgs&) {}
             virtual void run(cv::gimpl::GIslandExecutable::IInput &in,
                              cv::gimpl::GIslandExecutable::IOutput&out) override;
     };
 
-    static cv::gapi::streaming::IActor::Ptr create()
+    static cv::gapi::streaming::IActor::Ptr create(const cv::GCompileArgs& args)
     {
-        return cv::gapi::streaming::IActor::Ptr(new Actor());
+        return cv::gapi::streaming::IActor::Ptr(new Actor(args));
     }
     static cv::gapi::streaming::GStreamingKernel kernel() { return {&create}; };
 };
