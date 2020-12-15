@@ -291,27 +291,15 @@ int Subdiv2D::CCW(int i, int j, int k) const {
     return CCW(j, k, i);
 }
 
-int Subdiv2D::InCircle(Point2f a, Point2f b, Point2f c, Point2f d) const {
-    double adx, ady, bdx, bdy, cdx, cdy;
-    double abdet, bcdet, cadet;
-    double alift, blift, clift;
+int Subdiv2D::InCircle(Point2f a, Point2f b, Point2f c, Point2f d) const
+{
+    const double eps = FLT_EPSILON*0.125;
+    double val = ((double)a.x * a.x + (double)a.y * a.y) * cross_product( c - b, d - b );
+    val -= ((double)b.x * b.x + (double)b.y * b.y) * cross_product( c - a, d - a );
+    val += ((double)c.x * c.x + (double)c.y * c.y) * cross_product( b - a, d - a );
+    val -= ((double)d.x * d.x + (double)d.y * d.y) * cross_product( b - a, c - a );
 
-    adx = a.x - d.x;
-    ady = a.y - d.y;
-    bdx = b.x - d.x;
-    bdy = b.y - d.y;
-    cdx = c.x - d.x;
-    cdy = c.y - d.y;
-
-    abdet = adx * bdy - bdx * ady;
-    bcdet = bdx * cdy - cdx * bdy;
-    cadet = cdx * ady - adx * cdy;
-    alift = adx * adx + ady * ady;
-    blift = bdx * bdx + bdy * bdy;
-    clift = cdx * cdx + cdy * cdy;
-
-    double value = alift * bcdet + blift * cadet + clift * abdet;
-    return value > eps ? 1 : (value < -eps ? -1 : 0);
+    return val > eps ? 1 : val < -eps ? -1 : 0;
 }
 
 int Subdiv2D::InCircle(int i, int j, int k, int l) const {
@@ -551,20 +539,6 @@ int Subdiv2D::locate(Point2f pt, int& _edge, int& _vertex)
 
     return location;
 }
-
-
-//inline int
-//isPtInCircle3( Point2f pt, Point2f a, Point2f b, Point2f c)
-//{
-//    const double eps = FLT_EPSILON*0.125;
-//    double val = ((double)a.x * a.x + (double)a.y * a.y) * triangleArea( b, c, pt );
-//    val -= ((double)b.x * b.x + (double)b.y * b.y) * triangleArea( a, c, pt );
-//    val += ((double)c.x * c.x + (double)c.y * c.y) * triangleArea( a, b, pt );
-//    val -= ((double)pt.x * pt.x + (double)pt.y * pt.y) * triangleArea( a, b, c );
-//
-//    return val > eps ? 1 : val < -eps ? -1 : 0;
-//}
-
 
 int Subdiv2D::insert(Point2f pt)
 {
