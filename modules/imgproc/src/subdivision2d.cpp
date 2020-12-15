@@ -762,21 +762,27 @@ void Subdiv2D::getTriangleList(std::vector<Vec6f>& triangleList) const
 
     for( i = 4; i < total; i += 2 )
     {
-        if( edgemask[i] )
-            continue;
         Point2f a, b, c;
         int edge_a = i;
         edgeOrg(edge_a, &a);
-        if ( !rect.contains(a) )
-            continue;
         int edge_b = getEdge(edge_a, NEXT_AROUND_LEFT);
         edgeOrg(edge_b, &b);
-        if ( !rect.contains(b) )
-            continue;
         int edge_c = getEdge(edge_b, NEXT_AROUND_LEFT);
         edgeOrg(edge_c, &c);
-        if ( !rect.contains(c) )
+        printf("x = [%.0f %.0f %.0f %.0f];\n", a.x, b.x, c.x, a.x);
+        printf("y = [%.0f %.0f %.0f %.0f];\n", a.y, b.y, c.y, a.y);
+        if( edgemask[i] ) {
+            printf("plot(x,y,'-b');\n");
+            printf("hold on;\n");
             continue;
+        }
+        if ( !rect.contains(a) || !rect.contains(b) || !rect.contains(c) ) {
+            printf("plot(x,y,'-r');\n");
+            printf("hold on;\n");
+            continue;
+        }
+        printf("plot(x,y,'-g');\n");
+        printf("hold on;\n");
         edgemask[edge_a] = true;
         edgemask[edge_b] = true;
         edgemask[edge_c] = true;

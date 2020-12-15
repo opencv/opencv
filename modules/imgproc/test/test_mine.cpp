@@ -18,8 +18,8 @@ namespace opencv_test { namespace {
         auto topLeft = Point2f( rx, ry );
         auto bottomRight = Point2f( rx + rect.width, ry + rect.height );
 
-        printf("x = [%.0f, %.0f, %.0f, %.0f, %0.f];\n", topLeft.x, topLeft.x, bottomRight.x, bottomRight.x, topLeft.x);
-        printf("y = [%.0f, %.0f, %.0f, %.0f, %0.f];\n", topLeft.y, bottomRight.y, bottomRight.y, topLeft.y, topLeft.y);
+        printf("x = [%.2f, %.2f, %.2f, %.2f, %.2f];\n", topLeft.x, topLeft.x, bottomRight.x, bottomRight.x, topLeft.x);
+        printf("y = [%.2f, %.2f, %.2f, %.2f, %.2f];\n", topLeft.y, bottomRight.y, bottomRight.y, topLeft.y, topLeft.y);
         printf("plot(x, y, '-c');\n");
         printf("hold on;\n");
 
@@ -27,11 +27,11 @@ namespace opencv_test { namespace {
         Point2f ppB( rx, ry + big_coord );
         Point2f ppC( rx - big_coord, ry - big_coord );
 
-        printf("plot(%.0f, %.0f, 'o-k');\n", ppA.x, ppA.y);
+        printf("plot(%.2f, %.2f, 'o-k');\n", ppA.x, ppA.y);
         printf("hold on;\n");
-        printf("plot(%.0f, %.0f, 'o-k');\n", ppB.x, ppB.y);
+        printf("plot(%.2f, %.2f, 'o-k');\n", ppB.x, ppB.y);
         printf("hold on;\n");
-        printf("plot(%.0f, %.0f, 'o-k');\n", ppC.x, ppC.y);
+        printf("plot(%.2f, %.2f, 'o-k');\n", ppC.x, ppC.y);
         printf("hold on;\n");
     }
 
@@ -42,17 +42,17 @@ namespace opencv_test { namespace {
         for (size_t i = 0; i < facetList.size(); ++i) {
             printf("x = [");
             for (size_t j = 0; j < facetList[i].size(); ++j) {
-                printf("%.0f ", facetList[i][j].x);
+                printf("%.2f ", facetList[i][j].x);
             }
-            printf("%.0f];\n", facetList[i][0].x);
+            printf("%.2f];\n", facetList[i][0].x);
             printf("y = [");
             for (size_t j = 0; j < facetList[i].size(); ++j) {
-                printf("%.0f ", facetList[i][j].y);
+                printf("%.2f ", facetList[i][j].y);
             }
-            printf("%.0f];\n", facetList[i][0].y);
+            printf("%.2f];\n", facetList[i][0].y);
             printf("plot(x, y, '-k');\n");
             printf("hold on;\n");
-            printf("plot(%.0f, %.0f, 'o-k');\n", facetCenters[i].x, facetCenters[i].y);
+            printf("plot(%.2f, %.2f, 'o-k');\n", facetCenters[i].x, facetCenters[i].y);
             printf("hold on;\n");
         }
 
