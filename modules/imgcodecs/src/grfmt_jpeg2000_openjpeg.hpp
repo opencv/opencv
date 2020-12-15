@@ -59,13 +59,10 @@ using StreamPtr = std::unique_ptr<opj_stream_t, detail::OpjStreamDeleter>;
 using CodecPtr = std::unique_ptr<opj_codec_t, detail::OpjCodecDeleter>;
 using ImagePtr = std::unique_ptr<opj_image_t, detail::OpjImageDeleter>;
 
-} // namespace detail
-
 class Jpeg2KOpjDecoderBase : public BaseImageDecoder
 {
 public:
     Jpeg2KOpjDecoderBase(OPJ_CODEC_FORMAT format);
-     ~Jpeg2KOpjDecoderBase() CV_OVERRIDE = default;
 
     bool readData( Mat& img ) CV_OVERRIDE;
     bool readHeader() CV_OVERRIDE;
@@ -81,18 +78,18 @@ private:
     OPJ_CODEC_FORMAT format_;
 };
 
-class Jpeg2KJP2OpjDecoder CV_FINAL : public Jpeg2KOpjDecoderBase {
+} // namespace detail
+
+class Jpeg2KJP2OpjDecoder CV_FINAL : public detail::Jpeg2KOpjDecoderBase {
 public:
     Jpeg2KJP2OpjDecoder();
-     ~Jpeg2KJP2OpjDecoder() CV_OVERRIDE = default;
 
     ImageDecoder newDecoder() const CV_OVERRIDE;
 };
 
-class Jpeg2KJ2KOpjDecoder CV_FINAL : public Jpeg2KOpjDecoderBase {
+class Jpeg2KJ2KOpjDecoder CV_FINAL : public detail::Jpeg2KOpjDecoderBase {
 public:
     Jpeg2KJ2KOpjDecoder();
-     ~Jpeg2KJ2KOpjDecoder() CV_OVERRIDE = default;
 
     ImageDecoder newDecoder() const CV_OVERRIDE;
 };

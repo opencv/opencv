@@ -495,6 +495,8 @@ detail::StreamPtr opjCreateBufferInputStream(detail::OpjMemoryBuffer* buf)
 
 /////////////////////// Jpeg2KOpjDecoder ///////////////////
 
+namespace detail {
+
 Jpeg2KOpjDecoderBase::Jpeg2KOpjDecoderBase(OPJ_CODEC_FORMAT format)
     : format_(format)
 {
@@ -600,6 +602,7 @@ bool Jpeg2KOpjDecoderBase::readData( Mat& img )
     switch (image_->color_space)
     {
     case OPJ_CLRSPC_UNKNOWN:
+        /* FALLTHRU */
     case OPJ_CLRSPC_UNSPECIFIED:
         CV_LOG_WARNING(NULL, "OpenJPEG2000: Image has unknown or unspecified color space, SRGB is assumed");
         /* FALLTHRU */
@@ -647,6 +650,7 @@ bool Jpeg2KOpjDecoderBase::readData( Mat& img )
     return decode(*image_, img, shift);
 }
 
+} // namespace detail
 
 Jpeg2KJP2OpjDecoder::Jpeg2KJP2OpjDecoder()
     : Jpeg2KOpjDecoderBase(OPJ_CODEC_JP2)
