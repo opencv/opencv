@@ -204,12 +204,12 @@ template<typename... Ts> GCompileArgs compile_args(Ts&&... args)
     return GCompileArgs{ GCompileArg(args)... };
 }
 
+namespace gapi
+{
 /**
  * @brief Retrieves particular compilation argument by its type from
  *        cv::GCompileArgs
  */
-namespace gapi
-{
 template<typename T>
 inline cv::util::optional<T> getCompileArg(const cv::GCompileArgs &args)
 {
