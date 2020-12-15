@@ -127,7 +127,7 @@ Building OpenCV.js from Source
     python ./platforms/js/build_js.py build_js --build_test
     @endcode
 
--#  [optional] To build support for Aruco markers from the OpenCV contrib modules append `--cmake_option="-DOPENCV_EXTRA_MODULES_PATH=/path/to/opencv_contrib/modules/"`
+-#  [optional] To build support for OpenCV contrib modules append `--cmake_option="-DOPENCV_EXTRA_MODULES_PATH=/path/to/opencv_contrib/modules/"`
 
     For example:
     @code{.bash}
