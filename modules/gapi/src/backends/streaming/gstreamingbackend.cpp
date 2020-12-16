@@ -55,6 +55,7 @@ class GStreamingIntrinExecutable final: public cv::gimpl::GIslandExecutable
 
 public:
     GStreamingIntrinExecutable(const ade::Graph                   &,
+                               const cv::GCompileArgs             &,
                                const std::vector<ade::NodeHandle> &);
 
     const ade::Graph& m_g;
@@ -80,10 +81,10 @@ class GStreamingBackendImpl final: public cv::gapi::GBackend::Priv
     }
 
     virtual EPtr compile(const ade::Graph &graph,
-                         const cv::GCompileArgs &,
+                         const cv::GCompileArgs &args,
                          const std::vector<ade::NodeHandle> &nodes) const override
     {
-        return EPtr{new GStreamingIntrinExecutable(graph, nodes)};
+        return EPtr{new GStreamingIntrinExecutable(graph, args, nodes)};
     }
 
     virtual bool controlsMerge() const override
@@ -101,6 +102,7 @@ class GStreamingBackendImpl final: public cv::gapi::GBackend::Priv
 };
 
 GStreamingIntrinExecutable::GStreamingIntrinExecutable(const ade::Graph& g,
+                                                       const cv::GCompileArgs& args,
                                                        const std::vector<ade::NodeHandle>& nodes)
     : m_g(g), m_gm(m_g)
 {
@@ -114,7 +116,7 @@ GStreamingIntrinExecutable::GStreamingIntrinExecutable(const ade::Graph& g,
     GAPI_Assert(it != nodes.end() && "No operators found for this island?!");
 
     ConstStreamingGraph cag(m_g);
-    m_actor = cag.metadata(*it).get<StreamingCreateFunction>().createActorFunction();
+    m_actor = cag.metadata(*it).get<StreamingCreateFunction>().createActorFunction(args);
 
     // Ensure this the only op in the graph
     if (std::any_of(it+1, nodes.end(), is_op))
@@ -141,63 +143,57 @@ cv::gapi::GKernelPackage cv::gapi::streaming::kernels()
 void cv::gimpl::Copy::Actor::run(cv::gimpl::GIslandExecutable::IInput  &in,
                                  cv::gimpl::GIslandExecutable::IOutput &out)
 {
-    while (true)
+    const auto in_msg = in.get();
+    if (cv::util::holds_alternative<cv::gimpl::EndOfStream>(in_msg))
     {
-        const auto in_msg = in.get();
-        if (cv::util::holds_alternative<cv::gimpl::EndOfStream>(in_msg))
-        {
-            out.post(cv::gimpl::EndOfStream{});
-            return;
-        }
-
-        const cv::GRunArgs &in_args = cv::util::get<cv::GRunArgs>(in_msg);
-        GAPI_Assert(in_args.size() == 1u);
-
-        cv::GRunArgP out_arg = out.get(0);
-        *cv::util::get<cv::MediaFrame*>(out_arg) = cv::util::get<cv::MediaFrame>(in_args[0]);
-        out.post(std::move(out_arg));
+        out.post(cv::gimpl::EndOfStream{});
+        return;
     }
+
+    const cv::GRunArgs &in_args = cv::util::get<cv::GRunArgs>(in_msg);
+    GAPI_Assert(in_args.size() == 1u);
+
+    cv::GRunArgP out_arg = out.get(0);
+    *cv::util::get<cv::MediaFrame*>(out_arg) = cv::util::get<cv::MediaFrame>(in_args[0]);
+    out.post(std::move(out_arg));
 }
 
 void cv::gimpl::BGR::Actor::run(cv::gimpl::GIslandExecutable::IInput  &in,
                                 cv::gimpl::GIslandExecutable::IOutput &out)
 {
-    while (true)
+    const auto in_msg = in.get();
+    if (cv::util::holds_alternative<cv::gimpl::EndOfStream>(in_msg))
     {
-        const auto in_msg = in.get();
-        if (cv::util::holds_alternative<cv::gimpl::EndOfStream>(in_msg))
-        {
-            out.post(cv::gimpl::EndOfStream{});
-            return;
-        }
+        out.post(cv::gimpl::EndOfStream{});
+        return;
+    }
 
-        const cv::GRunArgs &in_args = cv::util::get<cv::GRunArgs>(in_msg);
-        GAPI_Assert(in_args.size() == 1u);
+    const cv::GRunArgs &in_args = cv::util::get<cv::GRunArgs>(in_msg);
+    GAPI_Assert(in_args.size() == 1u);
 
-        cv::GRunArgP out_arg = out.get(0);
-        auto frame = cv::util::get<cv::MediaFrame>(in_args[0]);
-        const auto& desc = frame.desc();
+    cv::GRunArgP out_arg = out.get(0);
+    auto frame = cv::util::get<cv::MediaFrame>(in_args[0]);
+    const auto& desc = frame.desc();
 
-        auto& rmat = *cv::util::get<cv::RMat*>(out_arg);
-        switch (desc.fmt)
-        {
-            case cv::MediaFormat::BGR:
-                rmat = cv::make_rmat<cv::gimpl::RMatMediaBGRAdapter>(frame);
-                break;
-            case cv::MediaFormat::NV12:
+    auto& rmat = *cv::util::get<cv::RMat*>(out_arg);
+    switch (desc.fmt)
+    {
+        case cv::MediaFormat::BGR:
+            rmat = cv::make_rmat<cv::gimpl::RMatMediaAdapterBGR>(frame);
+            break;
+        case cv::MediaFormat::NV12:
             {
                 cv::Mat bgr;
                 auto view = frame.access(cv::MediaFrame::Access::R);
-                cv::Mat y_plane (desc.size,     CV_8UC1, view.ptr[0]);
-                cv::Mat uv_plane(desc.size / 2, CV_8UC2, view.ptr[1]);
+                cv::Mat y_plane (desc.size,     CV_8UC1, view.ptr[0], view.stride[0]);
+                cv::Mat uv_plane(desc.size / 2, CV_8UC2, view.ptr[1], view.stride[1]);
                 cv::cvtColorTwoPlane(y_plane, uv_plane, bgr, cv::COLOR_YUV2BGR_NV12);
                 rmat = cv::make_rmat<cv::gimpl::RMatAdapter>(bgr);
                 break;
             }
-            default:
-                cv::util::throw_error(
-                        std::logic_error("Unsupported MediaFormat for cv::gapi::streaming::BGR"));
-        }
-        out.post(std::move(out_arg));
+        default:
+            cv::util::throw_error(
+                    std::logic_error("Unsupported MediaFormat for cv::gapi::streaming::BGR"));
     }
+    out.post(std::move(out_arg));
 }
