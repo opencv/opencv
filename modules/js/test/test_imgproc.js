@@ -977,3 +977,26 @@ QUnit.test('warpPolar', function(assert) {
      96,  83,  64,  45,  32
   ]);
 });
+
+
+QUnit.test('IntelligentScissorsMB', function(assert) {
+  const lines = new cv.Mat(50, 100, cv.CV_8U, new cv.Scalar(0));
+  lines.row(10).setTo(new cv.Scalar(255));
+  assert.ok(lines instanceof cv.Mat);
+
+  let tool = new cv.segmentation_IntelligentScissorsMB();
+  tool.applyImage(lines);
+  assert.ok(lines instanceof cv.Mat);
+  lines.delete();
+
+  tool.buildMap(new cv.Point(10, 10));
+
+  let contour = new cv.Mat();
+  tool.getContour(new cv.Point(50, 10), contour);
+  assert.equal(contour.type(), cv.CV_32SC2);
+  assert.ok(contour.total() == 41, contour.total());
+
+  tool.getContour(new cv.Point(80, 10), contour);
+  assert.equal(contour.type(), cv.CV_32SC2);
+  assert.ok(contour.total() == 71, contour.total());
+});

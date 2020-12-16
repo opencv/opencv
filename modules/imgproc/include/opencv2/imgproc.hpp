@@ -185,6 +185,7 @@ location of points on the plane, building special graphs (such as NNG,RNG), and 
     @defgroup imgproc_motion Motion Analysis and Object Tracking
     @defgroup imgproc_feature Feature Detection
     @defgroup imgproc_object Object Detection
+    @defgroup imgproc_segmentation Image Segmentation
     @defgroup imgproc_c C API
     @defgroup imgproc_hal Hardware Acceleration Layer
     @{
@@ -3227,6 +3228,9 @@ CV_EXPORTS_AS(EMD) float wrapperEMD( InputArray signature1, InputArray signature
 
 //! @} imgproc_hist
 
+//! @addtogroup imgproc_segmentation
+//! @{
+
 /** @example samples/cpp/watershed.cpp
 An example using the watershed algorithm
 */
@@ -3254,10 +3258,10 @@ function.
 size as image .
 
 @sa findContours
-
-@ingroup imgproc_misc
  */
 CV_EXPORTS_W void watershed( InputArray image, InputOutputArray markers );
+
+//! @} imgproc_segmentation
 
 //! @addtogroup imgproc_filter
 //! @{
@@ -3304,7 +3308,7 @@ CV_EXPORTS_W void pyrMeanShiftFiltering( InputArray src, OutputArray dst,
 
 //! @}
 
-//! @addtogroup imgproc_misc
+//! @addtogroup imgproc_segmentation
 //! @{
 
 /** @example samples/cpp/grabcut.cpp
@@ -3333,6 +3337,11 @@ mode==GC_EVAL .
 CV_EXPORTS_W void grabCut( InputArray img, InputOutputArray mask, Rect rect,
                            InputOutputArray bgdModel, InputOutputArray fgdModel,
                            int iterCount, int mode = GC_EVAL );
+
+//! @} imgproc_segmentation
+
+//! @addtogroup imgproc_misc
+//! @{
 
 /** @example samples/cpp/distrans.cpp
 An example on using the distance transform
@@ -4875,5 +4884,9 @@ Point LineIterator::pos() const
 //! @} imgproc
 
 } // cv
+
+
+#include "./imgproc/segmentation.hpp"
+
 
 #endif
