@@ -389,7 +389,7 @@ Pin parsePin(const std::string &name)
 {
     Pin pin(name);
 
-    size_t delimiter_pos = name.find_first_of(":");
+    size_t delimiter_pos = name.find_first_of(':');
     if (delimiter_pos != std::string::npos)
     {
         pin.name = name.substr(0, delimiter_pos);
