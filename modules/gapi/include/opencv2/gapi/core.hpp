@@ -1148,6 +1148,7 @@ GAPI_EXPORTS GMat bitwise_xor(const GMat& src1, const GScalar& src2);
 
 
 /** @brief Inverts every bit of an array.
+
 The function bitwise_not calculates per-element bit-wise inversion of the input
 matrix:
 \f[\texttt{dst} (I) =  \neg \texttt{src} (I)\f]
