@@ -3782,6 +3782,7 @@ bool Kernel::Impl::run(int dims, size_t globalsize[], size_t localsize[],
             }
         }
         cleanupUMats();
+        images.clear();
     }
     else
     {
@@ -3807,6 +3808,7 @@ bool Kernel::runTask(bool sync, const Queue& q)
     {
         CV_OCL_DBG_CHECK(clFinish(qq));
         p->cleanupUMats();
+        p->images.clear();
     }
     else
     {
