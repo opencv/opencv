@@ -691,6 +691,7 @@ public:
     ~Image2D();
 
     Image2D & operator = (const Image2D & i);
+    void copy(const UMat& src, bool alias = false);
 
     /** Indicates if creating an aliased image should succeed.
     Depends on the underlying platform and the dimensions of the UMat.

@@ -346,6 +346,7 @@ Image2D::Image2D(const UMat &src, bool norm, bool alias) { OCL_NOT_AVAILABLE(); 
 Image2D::Image2D(const Image2D & i) : p(NULL) { OCL_NOT_AVAILABLE(); }
 Image2D::~Image2D() { }
 Image2D& Image2D::operator=(const Image2D & i) { return *this; }
+void Image2D::copy(const UMat& src, bool alias) { OCL_NOT_AVAILABLE(); }
 
 /* static */ bool Image2D::canCreateAlias(const UMat &u) { OCL_NOT_AVAILABLE(); }
 /* static */ bool Image2D::isFormatSupported(int depth, int cn, bool norm) { OCL_NOT_AVAILABLE(); }
