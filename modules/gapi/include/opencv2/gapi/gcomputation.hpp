@@ -258,7 +258,7 @@ public:
     void apply(GRunArgs &&ins, GRunArgsP &&outs, GCompileArgs &&args = {});       // Arg-to-arg overload
 
     /// @private -- Exclude this function from OpenCV documentation
-    GAPI_WRAP GRunArgs apply(GRunArgs &&ins, GCompileArgs &&args = {});
+    GAPI_WRAP GRunArgs apply(const cv::ExtractArgsCallback& callback, GCompileArgs &&args = {});
 
     /// @private -- Exclude this function from OpenCV documentation
     void apply(const std::vector<cv::Mat>& ins,                                   // Compatibility overload

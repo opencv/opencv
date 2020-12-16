@@ -96,6 +96,11 @@ cv::GStreamingCompiled::GStreamingCompiled()
 {
 }
 
+void cv::GStreamingCompiled::setSource(const cv::ExtractArgsCallback& callback)
+{
+    setSource(callback(m_priv->inInfo()));
+}
+
 void cv::GStreamingCompiled::setSource(GRunArgs &&ins)
 {
     // FIXME: verify these input parameters according to the graph input meta
@@ -148,11 +153,11 @@ std::tuple<bool, cv::GRunArgs> cv::GStreamingCompiled::pull()
                 {
                     case cv::detail::OpaqueKind::CV_POINT2F:
                         run_args.emplace_back(cv::detail::VectorRef{std::vector<cv::Point2f>{}});
-                        outs.emplace_back(cv::util::get<cv::detail::VectorRef>(run_args.back()));
                         break;
                     default:
                         util::throw_error(std::logic_error("Unsupported kind for GArray"));
                 }
+                outs.emplace_back(cv::util::get<cv::detail::VectorRef>(run_args.back()));
                 break;
             }
             default:

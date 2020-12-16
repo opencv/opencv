@@ -429,5 +429,4 @@ TEST(GAPI_Pipeline, ReplaceDefaultByFunctor)
     EXPECT_EQ(0, cv::norm(out_mat, ref_mat));
     EXPECT_TRUE(f.is_called);
 }
-
 } // namespace opencv_test

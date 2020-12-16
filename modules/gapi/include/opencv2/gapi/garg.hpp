@@ -249,6 +249,12 @@ template<typename... Ts> inline GRunArgsP gout(Ts&... args)
     return GRunArgsP{ GRunArgP(detail::wrap_host_helper<Ts>::wrap_out(args))... };
 }
 
+// NB: Used by python wrapper
+struct GTypeInfo;
+using GTypesInfo = std::vector<GTypeInfo>;
+
+using ExtractArgsCallback = std::function<cv::GRunArgs(const cv::GTypesInfo& info)>;
+
 } // namespace cv
 
 #endif // OPENCV_GAPI_GARG_HPP
