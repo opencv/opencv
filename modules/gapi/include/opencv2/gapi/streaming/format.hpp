@@ -15,25 +15,10 @@ namespace streaming {
 
 GAPI_EXPORTS cv::gapi::GKernelPackage kernels();
 
-// FIXME: Make a generic kernel
-G_API_OP(GCopy, <GFrame(GFrame)>, "org.opencv.streaming.copy")
-{
-    static GFrameDesc outMeta(const GFrameDesc& in) { return in; }
-};
-
 G_API_OP(GBGR, <GMat(GFrame)>, "org.opencv.streaming.BGR")
 {
     static GMatDesc outMeta(const GFrameDesc& in) { return GMatDesc{CV_8U, 3, in.size}; }
 };
-
-/** @brief Gets copy from the input frame
-
-@note Function textual ID is "org.opencv.streaming.copy"
-
-@param in Input frame
-@return Copy of the input frame
-*/
-GAPI_EXPORTS cv::GFrame copy(const cv::GFrame& in);
 
 /** @brief Gets bgr plane from input frame
 
@@ -42,9 +27,32 @@ GAPI_EXPORTS cv::GFrame copy(const cv::GFrame& in);
 @param in Input frame
 @return Image in BGR format
 */
-GAPI_EXPORTS cv::GMat BGR (const cv::GFrame& in);
+GAPI_EXPORTS cv::GMat BGR(const cv::GFrame& in);
 
 } // namespace streaming
+
+/** @brief Makes a copy of the input image. Note that this copy may be not real
+(no actual data copied). Use this function to maintain graph contracts,
+e.g when graph's input needs to be passed directly to output, like in Streaming mode.
+
+@note Function textual ID is "org.opencv.streaming.copy"
+
+@param in Input image
+@return Copy of the input
+*/
+GAPI_EXPORTS cv::GMat copy(const cv::GMat& in);
+
+/** @brief Makes a copy of the input frame. Note that this copy may be not real
+(no actual data copied). Use this function to maintain graph contracts,
+e.g when graph's input needs to be passed directly to output, like in Streaming mode.
+
+@note Function textual ID is "org.opencv.streaming.copy"
+
+@param in Input frame
+@return Copy of the input
+*/
+GAPI_EXPORTS cv::GFrame copy(const cv::GFrame& in);
+
 } // namespace gapi
 } // namespace cv
 

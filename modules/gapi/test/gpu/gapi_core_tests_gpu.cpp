@@ -359,14 +359,6 @@ INSTANTIATE_TEST_CASE_P(CropTestGPU, CropTest,
                                 Values(CORE_GPU),
                                 Values(cv::Rect(10, 8, 20, 35), cv::Rect(4, 10, 37, 50))));
 
-INSTANTIATE_TEST_CASE_P(CopyTestGPU, CopyTest,
-                        Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(640, 480),
-                                       cv::Size(128, 128)),
-                                Values(-1),
-                                Values(CORE_GPU)));
-
 INSTANTIATE_TEST_CASE_P(LUTTestGPU, LUTTest,
                         Combine(Values(CV_8UC1, CV_8UC3),
                                 Values(cv::Size(1280, 720),
