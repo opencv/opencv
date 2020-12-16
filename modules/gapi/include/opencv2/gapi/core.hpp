@@ -451,12 +451,6 @@ namespace core {
         }
     };
 
-    G_TYPED_KERNEL(GCopy, <GMat(GMat)>, "org.opencv.core.transform.copy") {
-        static GMatDesc outMeta(GMatDesc in) {
-            return in;
-        }
-    };
-
     G_TYPED_KERNEL(GConcatHor, <GMat(GMat, GMat)>, "org.opencv.imgproc.transform.concatHor") {
         static GMatDesc outMeta(GMatDesc l, GMatDesc r) {
             return l.withSizeDelta(+r.size.width, 0);
@@ -1666,19 +1660,6 @@ Output matrix must be of the same depth as input one, size is specified by given
 @sa resize
 */
 GAPI_EXPORTS GMat crop(const GMat& src, const Rect& rect);
-
-/** @brief Copies a matrix.
-
-Copies an input array. Works as a regular Mat::clone but happens in-graph.
-Mainly is used to workaround some existing limitations (e.g. to forward an input frame to outputs
-in the streaming mode). Will be deprecated and removed in the future.
-
-@note Function textual ID is "org.opencv.core.transform.copy"
-
-@param src input matrix.
-@sa crop
-*/
-GAPI_EXPORTS GMat copy(const GMat& src);
 
 /** @brief Applies horizontal concatenation to given matrices.
 
