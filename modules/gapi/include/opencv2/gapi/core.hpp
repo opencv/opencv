@@ -17,6 +17,7 @@
 #include <opencv2/gapi/gmat.hpp>
 #include <opencv2/gapi/gscalar.hpp>
 #include <opencv2/gapi/gkernel.hpp>
+#include <opencv2/gapi/streaming/format.hpp>
 
 /** \defgroup gapi_core G-API Core functionality
 @{

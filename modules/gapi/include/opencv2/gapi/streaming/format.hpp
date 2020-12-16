@@ -31,6 +31,8 @@ GAPI_EXPORTS cv::GMat BGR(const cv::GFrame& in);
 
 } // namespace streaming
 
+//! @addtogroup gapi_transform
+//! @{
 /** @brief Makes a copy of the input image. Note that this copy may be not real
 (no actual data copied). Use this function to maintain graph contracts,
 e.g when graph's input needs to be passed directly to output, like in Streaming mode.
@@ -40,7 +42,7 @@ e.g when graph's input needs to be passed directly to output, like in Streaming 
 @param in Input image
 @return Copy of the input
 */
-GAPI_EXPORTS cv::GMat copy(const cv::GMat& in);
+GAPI_EXPORTS GMat copy(const GMat& in);
 
 /** @brief Makes a copy of the input frame. Note that this copy may be not real
 (no actual data copied). Use this function to maintain graph contracts,
@@ -51,7 +53,8 @@ e.g when graph's input needs to be passed directly to output, like in Streaming 
 @param in Input frame
 @return Copy of the input
 */
-GAPI_EXPORTS cv::GFrame copy(const cv::GFrame& in);
+GAPI_EXPORTS GFrame copy(const GFrame& in);
+//! @} gapi_transform
 
 } // namespace gapi
 } // namespace cv
