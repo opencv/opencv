@@ -1344,6 +1344,7 @@ Output image is 8-bit unsigned 3-channel image @ref CV_8UC3.
 GAPI_EXPORTS GMat BGR2RGB(const GMat& src);
 
 /** @brief Converts an image from RGB color space to gray-scaled.
+
 The conventional ranges for R, G, and B channel values are 0 to 255.
 Resulting gray color value computed as
 \f[\texttt{dst} (I)= \texttt{0.299} * \texttt{src}(I).R + \texttt{0.587} * \texttt{src}(I).G  + \texttt{0.114} * \texttt{src}(I).B \f]
@@ -1370,6 +1371,7 @@ Resulting gray color value computed as
 GAPI_EXPORTS GMat RGB2Gray(const GMat& src, float rY, float gY, float bY);
 
 /** @brief Converts an image from BGR color space to gray-scaled.
+
 The conventional ranges for B, G, and R channel values are 0 to 255.
 Resulting gray color value computed as
 \f[\texttt{dst} (I)= \texttt{0.114} * \texttt{src}(I).B + \texttt{0.587} * \texttt{src}(I).G  + \texttt{0.299} * \texttt{src}(I).R \f]
