@@ -10,6 +10,10 @@
 #include "opencv2/ts.hpp"
 #include "opencv2/3d.hpp"
 
+#ifdef HAVE_OPENCL
+#include <opencv2/core/ocl.hpp>
+#endif
+
 namespace cvtest
 {
     void Rodrigues(const Mat& src, Mat& dst, Mat* jac=0);

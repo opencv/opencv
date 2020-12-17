@@ -51,6 +51,7 @@
 #include "opencv2/features2d.hpp"
 
 #include "opencv2/core/ocl.hpp"
+#include "opencv2/core/hal/intrin.hpp"
 
 #define GET_OPTIMIZED(func) (func)
 
