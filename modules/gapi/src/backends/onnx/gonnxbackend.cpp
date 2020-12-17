@@ -105,7 +105,7 @@ public:
     std::size_t numInputs() const { return params.num_in; }
     std::size_t numOutputs() const { return params.num_out; }
     void setInput(int i, const cv::Mat &m);
-    void setInput(ONNXCallContext &ctx, const int idx, const int name_idx, Views &views, const cv::Rect &roi);
+    void setInput(ONNXCallContext &ctx, const int in_idx, const int name_idx, Views &views, const cv::Rect &roi);
     void setOutput(int idx, cv::Mat &m);
     cv::Mat allocOutput(int i) const;
 
@@ -264,7 +264,7 @@ inline void preprocess(const cv::Mat& src,
     }
 }
 
-void preprocess(const std::unique_ptr<cv::MediaFrame::View>& view,
+void preprocess(const cv::MediaFrame::View& view,
                 const cv::GFrameDesc& desc,
                 const cv::gimpl::onnx::TensorInfo& ti,
                 const cv::Rect& roi,
@@ -272,12 +272,12 @@ void preprocess(const std::unique_ptr<cv::MediaFrame::View>& view,
     cv::Mat pp;
     switch (desc.fmt) {
         case cv::MediaFormat::BGR: {
-            pp = cv::Mat(desc.size, CV_8UC3, view->ptr[0], view->stride[0]);
+            pp = cv::Mat(desc.size, CV_8UC3, view.ptr[0], view.stride[0]);
             break;
         }
         case cv::MediaFormat::NV12: {
-            const auto y_plane  = cv::Mat(desc.size, CV_8UC1, view->ptr[0], view->stride[0]);
-            const auto uv_plane = cv::Mat(desc.size / 2, CV_8UC2, view->ptr[1], view->stride[1]);
+            const auto y_plane  = cv::Mat(desc.size, CV_8UC1, view.ptr[0], view.stride[0]);
+            const auto uv_plane = cv::Mat(desc.size / 2, CV_8UC2, view.ptr[1], view.stride[1]);
             cvtColorTwoPlane(y_plane, uv_plane, pp, cv::COLOR_YUV2BGR_NV12);
             break;
         }
@@ -655,7 +655,7 @@ void ONNXCompiled::setInput(ONNXCallContext &ctx,
         case cv::GShape::GFRAME: {
             const cv::MediaFrame& frame = ctx.inFrame(in_idx);
             views.emplace_back(new cv::MediaFrame::View(frame.access(cv::MediaFrame::Access::R)));
-            preprocess(views.back(), frame.desc(), in_tensor_info[ort_idx], roi, in_data[name_idx]);
+            preprocess(*views.back(), frame.desc(), in_tensor_info[ort_idx], roi, in_data[name_idx]);
             break;
         }
         case cv::GShape::GMAT: {
