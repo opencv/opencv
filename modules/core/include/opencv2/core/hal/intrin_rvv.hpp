@@ -2,6 +2,9 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
+// The original implementation has been contributed by Yin Zhang.
+// Copyright (C) 2020, Institute of Software, Chinese Academy of Sciences.
+
 #ifndef OPENCV_HAL_INTRIN_RVV_HPP
 #define OPENCV_HAL_INTRIN_RVV_HPP
 
