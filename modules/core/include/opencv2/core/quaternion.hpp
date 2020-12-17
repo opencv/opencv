@@ -953,7 +953,7 @@ public:
     /**
      * @brief transform a quaternion to a 4x4 rotation matrix.
      * @param assumeUnit if QUAT_ASSUME_UNIT, this quaternion assume to be a unit quaternion and
-     * this function will save some computations. Otherwise, this function will normaliz this
+     * this function will save some computations. Otherwise, this function will normalize this
      * quaternion at first then do the transformation.
      *
      * The operations is similar as toRotMat3x3
