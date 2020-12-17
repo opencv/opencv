@@ -1688,16 +1688,7 @@ public:
             umat_blobs.resize(n);
             for (size_t i = 0; i < n; i++)
             {
-                if (use_half)
-                {
-                    Mat matFP32;
-                    convertFp16(inputs[i + 1], matFP32);
-                    matFP32.copyTo(umat_blobs[i]);
-                }
-                else
-                {
-                    inputs[i + 1].copyTo(umat_blobs[i]);
-                }
+                inputs[i + 1].copyTo(umat_blobs[i]);
             }
             inputs.resize(1);
         }
@@ -1708,7 +1699,10 @@ public:
             umat_blobs.resize(n);
             for (size_t i = 0; i < n; i++)
             {
-                blobs[i].copyTo(umat_blobs[i]);
+                if (use_half)
+                    convertFp16(blobs[i], umat_blobs[i]);
+                else
+                    blobs[i].copyTo(umat_blobs[i]);
             }
         }
 
@@ -1764,14 +1758,20 @@ public:
 
         if (fusedWeights)
         {
-            weightsMat.copyTo(umat_blobs[0]);
+            if (use_half)
+                convertFp16(weightsMat, umat_blobs[0]);
+            else
+                weightsMat.copyTo(umat_blobs[0]);
             fusedWeights = false;
         }
         if (fusedBias)
         {
             if ( umat_blobs.size() < 2 )
                 umat_blobs.resize(2);
-            umat_blobs[1] = UMat(biasvec, true);
+            if (use_half)
+                convertFp16(Mat(biasvec, true), umat_blobs[1]);
+            else
+                Mat(biasvec, true).copyTo(umat_blobs[1]);
             convolutionOp->setBias(true);
             fusedBias = false;
         }
