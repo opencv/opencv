@@ -257,6 +257,17 @@ TEST_F(QuatTest, interpolation){
     EXPECT_EQ(Quatd::spline(tr1, tr2, tr3, tr3, 0.5), -Quatd::spline(-tr1, -tr2, -tr3, tr3, 0.5));
     EXPECT_EQ(Quatd::spline(tr1, tr2, tr3, tr3, 0.5), Quatd(0.336889853392, 0.543600719487, 0.543600719487, 0.543600719487));
 }
+
+static const char* angleTypeName[24] = {
+    "INT_XYZ", "INT_XZY", "INT_XZX", "INT_XYX",
+    "INT_YXZ", "INT_YZX", "INT_YXY", "INT_YZY",
+    "INT_ZXY", "INT_ZYX", "INT_ZXZ", "INT_ZYZ",
+
+    "EXT_XYZ", "EXT_XZY", "EXT_XZX", "EXT_XYX",
+    "EXT_YXZ", "EXT_YZX", "EXT_YXY", "EXT_YZY",
+    "EXT_ZXY", "EXT_ZYX", "EXT_ZXZ", "EXT_ZYZ"
+};
+
 TEST_F(QuatTest, EulerAngles){
     Vec3d test_angle={0.523598,0.78539,1.04719};
     Quatd qEuler0 = Quatd(0, 0, 0, 0);
@@ -286,32 +297,38 @@ TEST_F(QuatTest, EulerAngles){
     Quatd qEuler23 = Quatd::createFromEulerAngles(test_angle, Quatd::EXT_ZXZ);
     Quatd qEuler24 = Quatd::createFromEulerAngles(test_angle, Quatd::EXT_ZYZ);
 
+    EXPECT_EQ(qEuler1, Quatd(0.7233214, 0.3919013, 0.2005605, 0.5319728)) << angleTypeName[0];
+    EXPECT_EQ(qEuler2, Quatd(0.8223654, 0.0222635, 0.3604221, 0.4396766)) << angleTypeName[1];
+    EXPECT_EQ(qEuler3, Quatd(0.653285, 0.65328, 0.0990435, 0.369641)) << angleTypeName[2];
+    EXPECT_EQ(qEuler4, Quatd(0.653285, 0.65328, 0.369641, -0.0990435)) << angleTypeName[3];
+    EXPECT_EQ(qEuler5, Quatd(0.822365, 0.439677, 0.0222635, 0.360422)) << angleTypeName[4];
+    EXPECT_EQ(qEuler6, Quatd(0.723321, 0.531973, 0.391901, 0.20056)) << angleTypeName[5];
+    EXPECT_EQ(qEuler7, Quatd(0.653285, -0.0990435, 0.65328, 0.369641)) << angleTypeName[6];
+    EXPECT_EQ(qEuler8, Quatd(0.653285, 0.369641, 0.65328, 0.0990435)) << angleTypeName[7];
+    EXPECT_EQ(qEuler9, Quatd(0.723321, 0.20056, 0.531973, 0.391901)) << angleTypeName[8];
+    EXPECT_EQ(qEuler10, Quatd(0.822365, 0.360422, 0.439677, 0.0222635)) << angleTypeName[9];
+    EXPECT_EQ(qEuler11, Quatd(0.653285, 0.369641, -0.0990435, 0.65328)) << angleTypeName[10];
+    EXPECT_EQ(qEuler12, Quatd(0.653285, 0.0990435, 0.369641, 0.65328)) << angleTypeName[11];
 
-    EXPECT_EQ(qEuler1, Quatd(0.7233214, 0.3919013, 0.2005605, 0.5319728));
-    EXPECT_EQ(qEuler2, Quatd(0.8223654, 0.0222635, 0.3604221, 0.4396766));
-    EXPECT_EQ(qEuler3, Quatd(0.653285, 0.65328, 0.0990435, 0.369641));
-    EXPECT_EQ(qEuler4, Quatd(0.653285, 0.65328, 0.369641, -0.0990435));
-    EXPECT_EQ(qEuler5, Quatd(0.822365, 0.439677, 0.0222635, 0.360422));
-    EXPECT_EQ(qEuler6, Quatd(0.723321, 0.531973, 0.391901, 0.20056));
-    EXPECT_EQ(qEuler7, Quatd(0.653285, -0.0990435, 0.65328, 0.369641));
-    EXPECT_EQ(qEuler8, Quatd(0.653285, 0.369641, 0.65328, 0.0990435));
-    EXPECT_EQ(qEuler9, Quatd(0.723321, 0.20056, 0.531973, 0.391901));
-    EXPECT_EQ(qEuler10, Quatd(0.822365, 0.360422, 0.439677, 0.0222635));
-    EXPECT_EQ(qEuler11, Quatd(0.653285, 0.369641, -0.0990435, 0.65328));
-    EXPECT_EQ(qEuler12, Quatd(0.653285, 0.0990435, 0.369641, 0.65328));
+    EXPECT_EQ(qEuler13, Quatd(0.822365, 0.0222635, 0.439677, 0.360422)) << angleTypeName[12];
+    EXPECT_EQ(qEuler14, Quatd(0.723321, 0.391901, 0.531973, 0.20056)) << angleTypeName[13];
+    EXPECT_EQ(qEuler15, Quatd(0.653285, 0.65328, -0.0990435, 0.369641)) << angleTypeName[14];
+    EXPECT_EQ(qEuler16, Quatd(0.653285, 0.65328, 0.369641, 0.0990435)) << angleTypeName[15];
+    EXPECT_EQ(qEuler17, Quatd(0.723321, 0.20056, 0.391901, 0.531973)) << angleTypeName[16];
+    EXPECT_EQ(qEuler18, Quatd(0.822365, 0.360422, 0.0222635, 0.439677)) << angleTypeName[17];
+    EXPECT_EQ(qEuler19, Quatd(0.653285, 0.369641, 0.65328, -0.0990435)) << angleTypeName[18];
+    EXPECT_EQ(qEuler20, Quatd(0.653285, 0.0990435, 0.65328, 0.369641)) << angleTypeName[19];
+    EXPECT_EQ(qEuler21, Quatd(0.822365, 0.439677, 0.360422, 0.0222635)) << angleTypeName[20];
+    EXPECT_EQ(qEuler22, Quatd(0.723321, 0.531973, 0.20056, 0.391901)) << angleTypeName[21];
+    EXPECT_EQ(qEuler23, Quatd(0.653285, 0.369641, 0.0990435, 0.65328)) << angleTypeName[22];
+    EXPECT_EQ(qEuler24, Quatd(0.653285, -0.0990435, 0.369641, 0.65328)) << angleTypeName[23];
 
-    EXPECT_EQ(qEuler13, Quatd(0.822365, 0.0222635, 0.439677, 0.360422));
-    EXPECT_EQ(qEuler14, Quatd(0.723321, 0.391901, 0.531973, 0.20056));
-    EXPECT_EQ(qEuler15, Quatd(0.653285, 0.65328, -0.0990435, 0.369641));
-    EXPECT_EQ(qEuler16, Quatd(0.653285, 0.65328, 0.369641, 0.0990435));
-    EXPECT_EQ(qEuler17, Quatd(0.723321, 0.20056, 0.391901, 0.531973));
-    EXPECT_EQ(qEuler18, Quatd(0.822365, 0.360422, 0.0222635, 0.439677));
-    EXPECT_EQ(qEuler19, Quatd(0.653285, 0.369641, 0.65328, -0.0990435));
-    EXPECT_EQ(qEuler20, Quatd(0.653285, 0.0990435, 0.65328, 0.369641));
-    EXPECT_EQ(qEuler21, Quatd(0.822365, 0.439677, 0.360422, 0.0222635));
-    EXPECT_EQ(qEuler22, Quatd(0.723321, 0.531973, 0.20056, 0.391901));
-    EXPECT_EQ(qEuler23, Quatd(0.653285, 0.369641, 0.0990435, 0.65328));
-    EXPECT_EQ(qEuler24, Quatd(0.653285, -0.0990435, 0.369641, 0.65328));
+#ifdef VALIDATE_QUAT_OPT
+    for(int i = 0; i < 24; i++)
+    {
+        (void)qEuler1.toEulerAngles((Quatd::EulerAnglesType)i);
+    }
+#endif
 
     Vec3d Euler_Angles_1 = qEuler1.toEulerAngles(Quatd::INT_XYZ);
     Vec3d Euler_Angles_2 = qEuler2.toEulerAngles(Quatd::INT_XZY);
@@ -342,78 +359,79 @@ TEST_F(QuatTest, EulerAngles){
     EXPECT_ANY_THROW(qEuler0.toEulerAngles(Quatd::INT_XYZ));
     //EXPECT_ANY_THROW(qEuler0.toEulerAngles(Quatd::INT_XXZ));
 
-    EXPECT_NEAR(Euler_Angles_1[0], test_angle[0], 1e-6);
-    EXPECT_NEAR(Euler_Angles_1[1], test_angle[1], 1e-6);
-    EXPECT_NEAR(Euler_Angles_1[2], test_angle[2], 1e-6);
-    EXPECT_NEAR(Euler_Angles_2[0], test_angle[0], 1e-6);
-    EXPECT_NEAR(Euler_Angles_2[1], test_angle[1], 1e-6);
-    EXPECT_NEAR(Euler_Angles_2[2], test_angle[2], 1e-6);
-    EXPECT_NEAR(Euler_Angles_3[0], test_angle[0], 1e-6);
-    EXPECT_NEAR(Euler_Angles_3[1], test_angle[1], 1e-6);
-    EXPECT_NEAR(Euler_Angles_3[2], test_angle[2], 1e-6);
-    EXPECT_NEAR(Euler_Angles_4[0], test_angle[0], 1e-6);
-    EXPECT_NEAR(Euler_Angles_4[1], test_angle[1], 1e-6);
-    EXPECT_NEAR(Euler_Angles_4[2], test_angle[2], 1e-6);
-    EXPECT_NEAR(Euler_Angles_5[0], test_angle[0], 1e-6);
-    EXPECT_NEAR(Euler_Angles_5[1], test_angle[1], 1e-6);
-    EXPECT_NEAR(Euler_Angles_5[2], test_angle[2], 1e-6);
-    EXPECT_NEAR(Euler_Angles_6[0], test_angle[0], 1e-6);
-    EXPECT_NEAR(Euler_Angles_6[1], test_angle[1], 1e-6);
-    EXPECT_NEAR(Euler_Angles_6[2], test_angle[2], 1e-6);
-    EXPECT_NEAR(Euler_Angles_7[0], test_angle[0], 1e-6);
-    EXPECT_NEAR(Euler_Angles_7[1], test_angle[1], 1e-6);
-    EXPECT_NEAR(Euler_Angles_7[2], test_angle[2], 1e-6);
-    EXPECT_NEAR(Euler_Angles_8[0], test_angle[0], 1e-6);
-    EXPECT_NEAR(Euler_Angles_8[1], test_angle[1], 1e-6);
-    EXPECT_NEAR(Euler_Angles_8[2], test_angle[2], 1e-6);
-    EXPECT_NEAR(Euler_Angles_9[0], test_angle[0], 1e-6);
-    EXPECT_NEAR(Euler_Angles_9[1], test_angle[1], 1e-6);
-    EXPECT_NEAR(Euler_Angles_9[2], test_angle[2], 1e-6);
-    EXPECT_NEAR(Euler_Angles_10[0], test_angle[0], 1e-6);
-    EXPECT_NEAR(Euler_Angles_10[1], test_angle[1], 1e-6);
-    EXPECT_NEAR(Euler_Angles_10[2], test_angle[2], 1e-6);
-    EXPECT_NEAR(Euler_Angles_11[0], test_angle[0], 1e-6);
-    EXPECT_NEAR(Euler_Angles_11[1], test_angle[1], 1e-6);
-    EXPECT_NEAR(Euler_Angles_11[2], test_angle[2], 1e-6);
-    EXPECT_NEAR(Euler_Angles_12[0], test_angle[0], 1e-6);
-    EXPECT_NEAR(Euler_Angles_12[1], test_angle[1], 1e-6);
-    EXPECT_NEAR(Euler_Angles_12[2], test_angle[2], 1e-6);
-    EXPECT_NEAR(Euler_Angles_13[0], test_angle[0], 1e-6);
-    EXPECT_NEAR(Euler_Angles_13[1], test_angle[1], 1e-6);
-    EXPECT_NEAR(Euler_Angles_13[2], test_angle[2], 1e-6);
-    EXPECT_NEAR(Euler_Angles_14[0], test_angle[0], 1e-6);
-    EXPECT_NEAR(Euler_Angles_14[1], test_angle[1], 1e-6);
-    EXPECT_NEAR(Euler_Angles_14[2], test_angle[2], 1e-6);
-    EXPECT_NEAR(Euler_Angles_15[0], test_angle[0], 1e-6);
-    EXPECT_NEAR(Euler_Angles_15[1], test_angle[1], 1e-6);
-    EXPECT_NEAR(Euler_Angles_15[2], test_angle[2], 1e-6);
-    EXPECT_NEAR(Euler_Angles_16[0], test_angle[0], 1e-6);
-    EXPECT_NEAR(Euler_Angles_16[1], test_angle[1], 1e-6);
-    EXPECT_NEAR(Euler_Angles_16[2], test_angle[2], 1e-6);
-    EXPECT_NEAR(Euler_Angles_17[0], test_angle[0], 1e-6);
-    EXPECT_NEAR(Euler_Angles_17[1], test_angle[1], 1e-6);
-    EXPECT_NEAR(Euler_Angles_17[2], test_angle[2], 1e-6);
-    EXPECT_NEAR(Euler_Angles_18[0], test_angle[0], 1e-6);
-    EXPECT_NEAR(Euler_Angles_18[1], test_angle[1], 1e-6);
-    EXPECT_NEAR(Euler_Angles_18[2], test_angle[2], 1e-6);
-    EXPECT_NEAR(Euler_Angles_19[0], test_angle[0], 1e-6);
-    EXPECT_NEAR(Euler_Angles_19[1], test_angle[1], 1e-6);
-    EXPECT_NEAR(Euler_Angles_19[2], test_angle[2], 1e-6);
-    EXPECT_NEAR(Euler_Angles_20[0], test_angle[0], 1e-6);
-    EXPECT_NEAR(Euler_Angles_20[1], test_angle[1], 1e-6);
-    EXPECT_NEAR(Euler_Angles_20[2], test_angle[2], 1e-6);
-    EXPECT_NEAR(Euler_Angles_21[0], test_angle[0], 1e-6);
-    EXPECT_NEAR(Euler_Angles_21[1], test_angle[1], 1e-6);
-    EXPECT_NEAR(Euler_Angles_21[2], test_angle[2], 1e-6);
-    EXPECT_NEAR(Euler_Angles_22[0], test_angle[0], 1e-6);
-    EXPECT_NEAR(Euler_Angles_22[1], test_angle[1], 1e-6);
-    EXPECT_NEAR(Euler_Angles_22[2], test_angle[2], 1e-6);
-    EXPECT_NEAR(Euler_Angles_23[0], test_angle[0], 1e-6);
-    EXPECT_NEAR(Euler_Angles_23[1], test_angle[1], 1e-6);
-    EXPECT_NEAR(Euler_Angles_23[2], test_angle[2], 1e-6);
-    EXPECT_NEAR(Euler_Angles_24[0], test_angle[0], 1e-6);
-    EXPECT_NEAR(Euler_Angles_24[1], test_angle[1], 1e-6);
-    EXPECT_NEAR(Euler_Angles_24[2], test_angle[2], 1e-6);
+    EXPECT_NEAR(Euler_Angles_1[0], test_angle[0], 1e-6) << angleTypeName[0];
+    EXPECT_NEAR(Euler_Angles_1[1], test_angle[1], 1e-6) << angleTypeName[0];
+    EXPECT_NEAR(Euler_Angles_1[2], test_angle[2], 1e-6) << angleTypeName[0];
+    EXPECT_NEAR(Euler_Angles_2[0], test_angle[0], 1e-6) << angleTypeName[1];
+    EXPECT_NEAR(Euler_Angles_2[1], test_angle[1], 1e-6) << angleTypeName[1];
+    EXPECT_NEAR(Euler_Angles_2[2], test_angle[2], 1e-6) << angleTypeName[1];
+    EXPECT_NEAR(Euler_Angles_3[0], test_angle[0], 1e-6) << angleTypeName[2];
+    EXPECT_NEAR(Euler_Angles_3[1], test_angle[1], 1e-6) << angleTypeName[2];
+    EXPECT_NEAR(Euler_Angles_3[2], test_angle[2], 1e-6) << angleTypeName[2];
+    EXPECT_NEAR(Euler_Angles_4[0], test_angle[0], 1e-6) << angleTypeName[3];
+    EXPECT_NEAR(Euler_Angles_4[1], test_angle[1], 1e-6) << angleTypeName[3];
+    EXPECT_NEAR(Euler_Angles_4[2], test_angle[2], 1e-6) << angleTypeName[3];
+    EXPECT_NEAR(Euler_Angles_5[0], test_angle[0], 1e-6) << angleTypeName[4];
+    EXPECT_NEAR(Euler_Angles_5[1], test_angle[1], 1e-6) << angleTypeName[4];
+    EXPECT_NEAR(Euler_Angles_5[2], test_angle[2], 1e-6) << angleTypeName[4];
+    EXPECT_NEAR(Euler_Angles_6[0], test_angle[0], 1e-6) << angleTypeName[5];
+    EXPECT_NEAR(Euler_Angles_6[1], test_angle[1], 1e-6) << angleTypeName[5];
+    EXPECT_NEAR(Euler_Angles_6[2], test_angle[2], 1e-6) << angleTypeName[5];
+    EXPECT_NEAR(Euler_Angles_7[0], test_angle[0], 1e-6) << angleTypeName[6];
+    EXPECT_NEAR(Euler_Angles_7[1], test_angle[1], 1e-6) << angleTypeName[6];
+    EXPECT_NEAR(Euler_Angles_7[2], test_angle[2], 1e-6) << angleTypeName[6];
+    EXPECT_NEAR(Euler_Angles_8[0], test_angle[0], 1e-6) << angleTypeName[7];
+    EXPECT_NEAR(Euler_Angles_8[1], test_angle[1], 1e-6) << angleTypeName[7];
+    EXPECT_NEAR(Euler_Angles_8[2], test_angle[2], 1e-6) << angleTypeName[7];
+    EXPECT_NEAR(Euler_Angles_9[0], test_angle[0], 1e-6) << angleTypeName[8];
+    EXPECT_NEAR(Euler_Angles_9[1], test_angle[1], 1e-6) << angleTypeName[8];
+    EXPECT_NEAR(Euler_Angles_9[2], test_angle[2], 1e-6) << angleTypeName[8];
+    EXPECT_NEAR(Euler_Angles_10[0], test_angle[0], 1e-6) << angleTypeName[9];
+    EXPECT_NEAR(Euler_Angles_10[1], test_angle[1], 1e-6) << angleTypeName[9];
+    EXPECT_NEAR(Euler_Angles_10[2], test_angle[2], 1e-6) << angleTypeName[9];
+    EXPECT_NEAR(Euler_Angles_11[0], test_angle[0], 1e-6) << angleTypeName[10];
+    EXPECT_NEAR(Euler_Angles_11[1], test_angle[1], 1e-6) << angleTypeName[10];
+    EXPECT_NEAR(Euler_Angles_11[2], test_angle[2], 1e-6) << angleTypeName[10];
+    EXPECT_NEAR(Euler_Angles_12[0], test_angle[0], 1e-6) << angleTypeName[11];
+    EXPECT_NEAR(Euler_Angles_12[1], test_angle[1], 1e-6) << angleTypeName[11];
+    EXPECT_NEAR(Euler_Angles_12[2], test_angle[2], 1e-6) << angleTypeName[11];
+
+    EXPECT_NEAR(Euler_Angles_13[0], test_angle[0], 1e-6) << angleTypeName[12];
+    EXPECT_NEAR(Euler_Angles_13[1], test_angle[1], 1e-6) << angleTypeName[12];
+    EXPECT_NEAR(Euler_Angles_13[2], test_angle[2], 1e-6) << angleTypeName[12];
+    EXPECT_NEAR(Euler_Angles_14[0], test_angle[0], 1e-6) << angleTypeName[13];
+    EXPECT_NEAR(Euler_Angles_14[1], test_angle[1], 1e-6) << angleTypeName[13];
+    EXPECT_NEAR(Euler_Angles_14[2], test_angle[2], 1e-6) << angleTypeName[13];
+    EXPECT_NEAR(Euler_Angles_15[0], test_angle[0], 1e-6) << angleTypeName[14];
+    EXPECT_NEAR(Euler_Angles_15[1], test_angle[1], 1e-6) << angleTypeName[14];
+    EXPECT_NEAR(Euler_Angles_15[2], test_angle[2], 1e-6) << angleTypeName[14];
+    EXPECT_NEAR(Euler_Angles_16[0], test_angle[0], 1e-6) << angleTypeName[15];
+    EXPECT_NEAR(Euler_Angles_16[1], test_angle[1], 1e-6) << angleTypeName[15];
+    EXPECT_NEAR(Euler_Angles_16[2], test_angle[2], 1e-6) << angleTypeName[15];
+    EXPECT_NEAR(Euler_Angles_17[0], test_angle[0], 1e-6) << angleTypeName[16];
+    EXPECT_NEAR(Euler_Angles_17[1], test_angle[1], 1e-6) << angleTypeName[16];
+    EXPECT_NEAR(Euler_Angles_17[2], test_angle[2], 1e-6) << angleTypeName[16];
+    EXPECT_NEAR(Euler_Angles_18[0], test_angle[0], 1e-6) << angleTypeName[17];
+    EXPECT_NEAR(Euler_Angles_18[1], test_angle[1], 1e-6) << angleTypeName[17];
+    EXPECT_NEAR(Euler_Angles_18[2], test_angle[2], 1e-6) << angleTypeName[17];
+    EXPECT_NEAR(Euler_Angles_19[0], test_angle[0], 1e-6) << angleTypeName[18];
+    EXPECT_NEAR(Euler_Angles_19[1], test_angle[1], 1e-6) << angleTypeName[18];
+    EXPECT_NEAR(Euler_Angles_19[2], test_angle[2], 1e-6) << angleTypeName[18];
+    EXPECT_NEAR(Euler_Angles_20[0], test_angle[0], 1e-6) << angleTypeName[19];
+    EXPECT_NEAR(Euler_Angles_20[1], test_angle[1], 1e-6) << angleTypeName[19];
+    EXPECT_NEAR(Euler_Angles_20[2], test_angle[2], 1e-6) << angleTypeName[19];
+    EXPECT_NEAR(Euler_Angles_21[0], test_angle[0], 1e-6) << angleTypeName[20];
+    EXPECT_NEAR(Euler_Angles_21[1], test_angle[1], 1e-6) << angleTypeName[20];
+    EXPECT_NEAR(Euler_Angles_21[2], test_angle[2], 1e-6) << angleTypeName[20];
+    EXPECT_NEAR(Euler_Angles_22[0], test_angle[0], 1e-6) << angleTypeName[21];
+    EXPECT_NEAR(Euler_Angles_22[1], test_angle[1], 1e-6) << angleTypeName[21];
+    EXPECT_NEAR(Euler_Angles_22[2], test_angle[2], 1e-6) << angleTypeName[21];
+    EXPECT_NEAR(Euler_Angles_23[0], test_angle[0], 1e-6) << angleTypeName[22];
+    EXPECT_NEAR(Euler_Angles_23[1], test_angle[1], 1e-6) << angleTypeName[22];
+    EXPECT_NEAR(Euler_Angles_23[2], test_angle[2], 1e-6) << angleTypeName[22];
+    EXPECT_NEAR(Euler_Angles_24[0], test_angle[0], 1e-6) << angleTypeName[23];
+    EXPECT_NEAR(Euler_Angles_24[1], test_angle[1], 1e-6) << angleTypeName[23];
+    EXPECT_NEAR(Euler_Angles_24[2], test_angle[2], 1e-6) << angleTypeName[23];
 
     Quatd qEulerLock1 = { 0.5612665, 0.43042, 0.5607083, 0.4304935};
     Vec3d test_angle_lock1 = {1.3089878, CV_PI/2, 0};
