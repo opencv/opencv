@@ -52,6 +52,83 @@ enum QuatAssumeType
     QUAT_ASSUME_UNIT
 };
 
+class QuatEnum
+{
+public:
+    /** @brief Enum of Euler angles type.
+     *
+     * Without considering the possibility of using two different convertions for the definition of the rotation axes ,
+     * there exists twelve possible sequences of rotation axes, divided into two groups:
+     * - Proper Euler angles (Z-X-Z, X-Y-X, Y-Z-Y, Z-Y-Z, X-Z-X, Y-X-Y)
+     * - Tait–Bryan angles (X-Y-Z, Y-Z-X, Z-X-Y, X-Z-Y, Z-Y-X, Y-X-Z).
+     *
+     * The three elemental rotations may be [extrinsic](https://en.wikipedia.org/wiki/Euler_angles#Definition_by_extrinsic_rotations)
+     * (rotations about the axes *xyz* of the original coordinate system, which is assumed to remain motionless),
+     * or [intrinsic](https://en.wikipedia.org/wiki/Euler_angles#Definition_by_intrinsic_rotations)(rotations about the axes of the rotating coordinate system *XYZ*, solidary with the moving body, which changes its orientation after each elemental rotation).
+     *
+     *
+     * Extrinsic and intrinsic rotations are relevant.
+     *
+     * The definition of the Euler angles is as following,
+     * - \f$\theta_1 \f$ represents the first rotation angle,
+     * - \f$\theta_2 \f$ represents the second rotation angle,
+     * - \f$\theta_3 \f$ represents the third rotation angle.
+     *
+     * For intrinsic rotations in the order of X-Y-Z, the rotation matrix R can be calculated by:\f[R =X(\theta_1) Y(\theta_2) Z(\theta_3) \f]
+     * For extrinsic rotations in the order of X-Y-Z, the rotation matrix R can be calculated by:\f[R =Z({\theta_3}) Y({\theta_2}) X({\theta_1})\f]
+     * where
+     * \f[X({\theta})={\begin{bmatrix}1&0&0\\0&\cos {\theta_1} &-\sin {\theta_1} \\0&\sin {\theta_1} &\cos {\theta_1} \\\end{bmatrix}},
+     * Y({\theta})={\begin{bmatrix}\cos \theta_{2}&0&\sin \theta_{2}\\0&1 &0 \\\ -sin \theta_2& 0&\cos \theta_{2} \\\end{bmatrix}},
+     * Z({\theta})={\begin{bmatrix}\cos\theta_{3} &-\sin \theta_3&0\\\sin \theta_3 &\cos \theta_3 &0\\0&0&1\\\end{bmatrix}}.
+     * \f]
+     *
+     * The function is designed according to this set of conventions:
+     * - [Right handed](https://en.wikipedia.org/wiki/Right_hand_rule) reference frames are adopted, and the [right hand rule](https://en.wikipedia.org/wiki/Right_hand_rule) is used to determine the sign of angles.
+     * - Each matrix is meant to represent an [active rotation](https://en.wikipedia.org/wiki/Active_and_passive_transformation) (the composing and composed matrices
+     * are supposed to act on the coordinates of vectors defined in the initial fixed reference frame and give as a result the coordinates of a rotated vector defined in the same reference frame).
+     * - For \f$\theta_1\f$ and \f$\theta_3\f$, the valid range is (−π, π].
+     *
+     *   For \f$\theta_2\f$, the valid range is [−π/2, π/2] or [0, π].
+     *
+     *   For Tait–Bryan angles, the valid range of \f$\theta_2\f$ is [−π/2, π/2]. When transforming a quaternion to Euler angles, the solution of Euler angles is unique in condition of \f$ \theta_2 \in (−π/2, π/2)\f$ .
+     *   If \f$\theta_2 = −π/2 \f$ or \f$ \theta_2 = π/2\f$, there are infinite solutions. The common name for this situation is gimbal lock.
+     *   For Proper Euler angles,the valid range of \f$\theta_2\f$ is in [0, π]. The solutions of Euler angles are unique in condition of  \f$ \theta_2 \in (0, π)\f$ . If \f$\theta_2 =0 \f$ or \f$\theta_2 =π \f$,
+     *   there are infinite solutions and gimbal lock will occur.
+     */
+    enum EulerAnglesType
+    {
+        INT_XYZ, ///< Intrinsic rotations with the Euler angles type X-Y-Z
+        INT_XZY, ///< Intrinsic rotations with the Euler angles type X-Z-Y
+        INT_YXZ, ///< Intrinsic rotations with the Euler angles type Y-X-Z
+        INT_YZX, ///< Intrinsic rotations with the Euler angles type Y-Z-X
+        INT_ZXY, ///< Intrinsic rotations with the Euler angles type Z-X-Y
+        INT_ZYX, ///< Intrinsic rotations with the Euler angles type Z-Y-X
+        INT_XYX, ///< Intrinsic rotations with the Euler angles type X-Y-X
+        INT_XZX, ///< Intrinsic rotations with the Euler angles type X-Z-X
+        INT_YZY, ///< Intrinsic rotations with the Euler angles type Y-Z-Y
+        INT_YXY, ///< Intrinsic rotations with the Euler angles type Y-X-Y
+        INT_ZXZ, ///< Intrinsic rotations with the Euler angles type Z-X-Z
+        INT_ZYZ, ///< Intrinsic rotations with the Euler angles type Z-Y-Z
+
+        EXT_XYZ, ///< Extrinsic rotations with the Euler angles type X-Y-Z
+        EXT_XZY, ///< Extrinsic rotations with the Euler angles type X-Z-Y
+        EXT_YXZ, ///< Extrinsic rotations with the Euler angles type Y-X-Z
+        EXT_YZX, ///< Extrinsic rotations with the Euler angles type Y-Z-X
+        EXT_ZXY, ///< Extrinsic rotations with the Euler angles type Z-X-Y
+        EXT_ZYX, ///< Extrinsic rotations with the Euler angles type Z-Y-X
+        EXT_XYX, ///< Extrinsic rotations with the Euler angles type X-Y-X
+        EXT_XZX, ///< Extrinsic rotations with the Euler angles type X-Z-X
+        EXT_YXY, ///< Extrinsic rotations with the Euler angles type Y-X-Y
+        EXT_YZY,  ///< Extrinsic rotations with the Euler angles type Y-Z-Y
+        EXT_ZXZ, ///< Extrinsic rotations with the Euler angles type Z-X-Z
+        EXT_ZYZ, ///< Extrinsic rotations with the Euler angles type Z-Y-Z
+        #ifndef CV_DOXYGEN
+            EULER_ANGLES_MAX_VALUE
+        #endif
+    };
+
+};
+
 template <typename _Tp> class Quat;
 template <typename _Tp> std::ostream& operator<<(std::ostream&, const Quat<_Tp>&);
 
@@ -134,79 +211,7 @@ class Quat
 {
     static_assert(std::is_floating_point<_Tp>::value, "Quaternion only make sense with type of float or double");
     using value_type = _Tp;
-
 public:
-    /** @brief Enum of Euler angles type.
-     *
-     * Without considering the possibility of using two different convertions for the definition of the rotation axes ,
-     * there exists twelve possible sequences of rotation axes, divided into two groups:
-     * - Proper Euler angles (Z-X-Z, X-Y-X, Y-Z-Y, Z-Y-Z, X-Z-X, Y-X-Y)
-     * - Tait–Bryan angles (X-Y-Z, Y-Z-X, Z-X-Y, X-Z-Y, Z-Y-X, Y-X-Z).
-     *
-     * The three elemental rotations may be [extrinsic](https://en.wikipedia.org/wiki/Euler_angles#Definition_by_extrinsic_rotations)
-     * (rotations about the axes *xyz* of the original coordinate system, which is assumed to remain motionless),
-     * or [intrinsic](https://en.wikipedia.org/wiki/Euler_angles#Definition_by_intrinsic_rotations)(rotations about the axes of the rotating coordinate system *XYZ*, solidary with the moving body, which changes its orientation after each elemental rotation).
-     *
-     *
-     * Extrinsic and intrinsic rotations are relevant.
-     *
-     * The definition of the Euler angles is as following,
-     * - \f$\theta_1 \f$ represents the first rotation angle,
-     * - \f$\theta_2 \f$ represents the second rotation angle,
-     * - \f$\theta_3 \f$ represents the third rotation angle.
-     *
-     * For intrinsic rotations in the order of X-Y-Z, the rotation matrix R can be calculated by:\f[R =X(\theta_1) Y(\theta_2) Z(\theta_3) \f]
-     * For extrinsic rotations in the order of X-Y-Z, the rotation matrix R can be calculated by:\f[R =Z({\theta_3}) Y({\theta_2}) X({\theta_1})\f]
-     * where
-     * \f[X({\theta})={\begin{bmatrix}1&0&0\\0&\cos {\theta_1} &-\sin {\theta_1} \\0&\sin {\theta_1} &\cos {\theta_1} \\\end{bmatrix}},
-     * Y({\theta})={\begin{bmatrix}\cos \theta_{2}&0&\sin \theta_{2}\\0&1 &0 \\\ -sin \theta_2& 0&\cos \theta_{2} \\\end{bmatrix}},
-     * Z({\theta})={\begin{bmatrix}\cos\theta_{3} &-\sin \theta_3&0\\\sin \theta_3 &\cos \theta_3 &0\\0&0&1\\\end{bmatrix}}.
-     * \f]
-     *
-     * The function is designed according to this set of conventions:
-     * - [Right handed](https://en.wikipedia.org/wiki/Right_hand_rule) reference frames are adopted, and the [right hand rule](https://en.wikipedia.org/wiki/Right_hand_rule) is used to determine the sign of angles.
-     * - Each matrix is meant to represent an [active rotation](https://en.wikipedia.org/wiki/Active_and_passive_transformation) (the composing and composed matrices
-     * are supposed to act on the coordinates of vectors defined in the initial fixed reference frame and give as a result the coordinates of a rotated vector defined in the same reference frame).
-     * - For \f$\theta_1\f$ and \f$\theta_3\f$, the valid range is (−π, π].
-     *
-     *   For \f$\theta_2\f$, the valid range is [−π/2, π/2] or [0, π].
-     *
-     *   For Tait–Bryan angles, the valid range of \f$\theta_2\f$ is [−π/2, π/2]. When transforming a quaternion to Euler angles, the solution of Euler angles is unique in condition of \f$ \theta_2 \in (−π/2, π/2)\f$ .
-     *   If \f$\theta_2 = −π/2 \f$ or \f$ \theta_2 = π/2\f$, there are infinite solutions. The common name for this situation is gimbal lock.
-     *   For Proper Euler angles,the valid range of \f$\theta_2\f$ is in [0, π]. The solutions of Euler angles are unique in condition of  \f$ \theta_2 \in (0, π)\f$ . If \f$\theta_2 =0 \f$ or \f$\theta_2 =π \f$,
-     *   there are infinite solutions and gimbal lock will occur.
-     */
-    enum EulerAnglesType
-    {
-        INT_XYZ, ///< Intrinsic rotations with the Euler angles type X-Y-Z
-        INT_XZY, ///< Intrinsic rotations with the Euler angles type X-Z-Y
-        INT_YXZ, ///< Intrinsic rotations with the Euler angles type Y-X-Z
-        INT_YZX, ///< Intrinsic rotations with the Euler angles type Y-Z-X
-        INT_ZXY, ///< Intrinsic rotations with the Euler angles type Z-X-Y
-        INT_ZYX, ///< Intrinsic rotations with the Euler angles type Z-Y-X
-        INT_XYX, ///< Intrinsic rotations with the Euler angles type X-Y-X
-        INT_XZX, ///< Intrinsic rotations with the Euler angles type X-Z-X
-        INT_YZY, ///< Intrinsic rotations with the Euler angles type Y-Z-Y
-        INT_YXY, ///< Intrinsic rotations with the Euler angles type Y-X-Y
-        INT_ZXZ, ///< Intrinsic rotations with the Euler angles type Z-X-Z
-        INT_ZYZ, ///< Intrinsic rotations with the Euler angles type Z-Y-Z
-
-        EXT_XYZ, ///< Extrinsic rotations with the Euler angles type X-Y-Z
-        EXT_XZY, ///< Extrinsic rotations with the Euler angles type X-Z-Y
-        EXT_YXZ, ///< Extrinsic rotations with the Euler angles type Y-X-Z
-        EXT_YZX, ///< Extrinsic rotations with the Euler angles type Y-Z-X
-        EXT_ZXY, ///< Extrinsic rotations with the Euler angles type Z-X-Y
-        EXT_ZYX, ///< Extrinsic rotations with the Euler angles type Z-Y-X
-        EXT_XYX, ///< Extrinsic rotations with the Euler angles type X-Y-X
-        EXT_XZX, ///< Extrinsic rotations with the Euler angles type X-Z-X
-        EXT_YXY, ///< Extrinsic rotations with the Euler angles type Y-X-Y
-        EXT_YZY,  ///< Extrinsic rotations with the Euler angles type Y-Z-Y
-        EXT_ZXZ, ///< Extrinsic rotations with the Euler angles type Z-X-Z
-        EXT_ZYZ, ///< Extrinsic rotations with the Euler angles type Z-Y-Z
-        #ifndef CV_DOXYGEN
-            EULER_ANGLES_MAX_VALUE
-        #endif
-    };
     static constexpr _Tp CV_QUAT_EPS = (_Tp)1.e-6;
     static constexpr _Tp CV_QUAT_CONVERT_THRESHOLD = (_Tp)1.e-6;
 
@@ -270,7 +275,7 @@ public:
      * @param angles the Euler angles in a vector of length 3
      * @param eulerAnglesType the convertion Euler angles type
      */
-    static Quat<_Tp> createFromEulerAngles(const Vec<_Tp, 3> &angles, EulerAnglesType eulerAnglesType);
+    static Quat<_Tp> createFromEulerAngles(const Vec<_Tp, 3> &angles, QuatEnum::EulerAnglesType eulerAnglesType);
 
     /**
      * @brief get a quaternion from a rotation about the Y-axis by \f$\theta\f$ .
@@ -1608,7 +1613,7 @@ public:
      * @param eulerAnglesType the convertion Euler angles type
      */
 
-    Vec<_Tp, 3> toEulerAngles(EulerAnglesType eulerAnglesType);
+    Vec<_Tp, 3> toEulerAngles(QuatEnum::EulerAnglesType eulerAnglesType);
 
     _Tp w, x, y, z;
 

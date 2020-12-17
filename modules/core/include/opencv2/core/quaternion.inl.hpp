@@ -881,9 +881,9 @@ Quat<T> createFromAxisRot(int axis, const T theta)
 }
 
 template <typename T> static
-bool isIntAngleType(typename Quat<T>::EulerAnglesType eulerAnglesType)
+bool isIntAngleType(typename QuatEnum::EulerAnglesType eulerAnglesType)
 {
-    return eulerAnglesType < Quat<T>::EXT_XYZ;
+    return eulerAnglesType < QuatEnum::EXT_XYZ;
 }
 
 }  // namespace detail
@@ -906,8 +906,8 @@ Quat<T> Quat<T>::createFromZRot(const T theta){
 
 
 template <typename T>
-Quat<T> Quat<T>::createFromEulerAngles(const Vec<T, 3> &angles, EulerAnglesType eulerAnglesType) {
-    CV_Assert(eulerAnglesType < EulerAnglesType::EULER_ANGLES_MAX_VALUE);
+Quat<T> Quat<T>::createFromEulerAngles(const Vec<T, 3> &angles, QuatEnum::EulerAnglesType eulerAnglesType) {
+    CV_Assert(eulerAnglesType < QuatEnum::EulerAnglesType::EULER_ANGLES_MAX_VALUE);
     static const int rotationAxis[24][3] = {
         {0, 1, 2}, ///< Intrinsic rotations with the Euler angles type X-Y-Z
         {0, 2, 1}, ///< Intrinsic rotations with the Euler angles type X-Z-Y
@@ -948,8 +948,8 @@ Quat<T> Quat<T>::createFromEulerAngles(const Vec<T, 3> &angles, EulerAnglesType 
 }
 
 template <typename T>
-Vec<T, 3> Quat<T>::toEulerAngles(EulerAnglesType eulerAnglesType){
-    CV_Assert(eulerAnglesType < EulerAnglesType::EULER_ANGLES_MAX_VALUE);
+Vec<T, 3> Quat<T>::toEulerAngles(QuatEnum::EulerAnglesType eulerAnglesType){
+    CV_Assert(eulerAnglesType < QuatEnum::EulerAnglesType::EULER_ANGLES_MAX_VALUE);
     Matx33d R = toRotMat3x3();
     enum {
         C_ZERO,

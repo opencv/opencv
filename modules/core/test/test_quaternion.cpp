@@ -271,31 +271,31 @@ static const char* angleTypeName[24] = {
 TEST_F(QuatTest, EulerAngles){
     Vec3d test_angle={0.523598,0.78539,1.04719};
     Quatd qEuler0 = Quatd(0, 0, 0, 0);
-    Quatd qEuler1 = Quatd::createFromEulerAngles(test_angle, Quatd::INT_XYZ);
-    Quatd qEuler2 = Quatd::createFromEulerAngles(test_angle, Quatd::INT_XZY);
-    Quatd qEuler3 = Quatd::createFromEulerAngles(test_angle, Quatd::INT_XZX);
-    Quatd qEuler4 = Quatd::createFromEulerAngles(test_angle, Quatd::INT_XYX);
-    Quatd qEuler5 = Quatd::createFromEulerAngles(test_angle, Quatd::INT_YXZ);
-    Quatd qEuler6 = Quatd::createFromEulerAngles(test_angle, Quatd::INT_YZX);
-    Quatd qEuler7 = Quatd::createFromEulerAngles(test_angle, Quatd::INT_YXY);
-    Quatd qEuler8 = Quatd::createFromEulerAngles(test_angle, Quatd::INT_YZY);
-    Quatd qEuler9 = Quatd::createFromEulerAngles(test_angle, Quatd::INT_ZXY);
-    Quatd qEuler10 = Quatd::createFromEulerAngles(test_angle, Quatd::INT_ZYX);
-    Quatd qEuler11 = Quatd::createFromEulerAngles(test_angle, Quatd::INT_ZXZ);
-    Quatd qEuler12 = Quatd::createFromEulerAngles(test_angle, Quatd::INT_ZYZ);
+    Quatd qEuler1 = Quatd::createFromEulerAngles(test_angle, QuatEnum::INT_XYZ);
+    Quatd qEuler2 = Quatd::createFromEulerAngles(test_angle, QuatEnum::INT_XZY);
+    Quatd qEuler3 = Quatd::createFromEulerAngles(test_angle, QuatEnum::INT_XZX);
+    Quatd qEuler4 = Quatd::createFromEulerAngles(test_angle, QuatEnum::INT_XYX);
+    Quatd qEuler5 = Quatd::createFromEulerAngles(test_angle, QuatEnum::INT_YXZ);
+    Quatd qEuler6 = Quatd::createFromEulerAngles(test_angle, QuatEnum::INT_YZX);
+    Quatd qEuler7 = Quatd::createFromEulerAngles(test_angle, QuatEnum::INT_YXY);
+    Quatd qEuler8 = Quatd::createFromEulerAngles(test_angle, QuatEnum::INT_YZY);
+    Quatd qEuler9 = Quatd::createFromEulerAngles(test_angle, QuatEnum::INT_ZXY);
+    Quatd qEuler10 = Quatd::createFromEulerAngles(test_angle, QuatEnum::INT_ZYX);
+    Quatd qEuler11 = Quatd::createFromEulerAngles(test_angle, QuatEnum::INT_ZXZ);
+    Quatd qEuler12 = Quatd::createFromEulerAngles(test_angle, QuatEnum::INT_ZYZ);
 
-    Quatd qEuler13 = Quatd::createFromEulerAngles(test_angle, Quatd::EXT_XYZ);
-    Quatd qEuler14 = Quatd::createFromEulerAngles(test_angle, Quatd::EXT_XZY);
-    Quatd qEuler15 = Quatd::createFromEulerAngles(test_angle, Quatd::EXT_XZX);
-    Quatd qEuler16 = Quatd::createFromEulerAngles(test_angle, Quatd::EXT_XYX);
-    Quatd qEuler17 = Quatd::createFromEulerAngles(test_angle, Quatd::EXT_YXZ);
-    Quatd qEuler18 = Quatd::createFromEulerAngles(test_angle, Quatd::EXT_YZX);
-    Quatd qEuler19 = Quatd::createFromEulerAngles(test_angle, Quatd::EXT_YXY);
-    Quatd qEuler20 = Quatd::createFromEulerAngles(test_angle, Quatd::EXT_YZY);
-    Quatd qEuler21 = Quatd::createFromEulerAngles(test_angle, Quatd::EXT_ZXY);
-    Quatd qEuler22 = Quatd::createFromEulerAngles(test_angle, Quatd::EXT_ZYX);
-    Quatd qEuler23 = Quatd::createFromEulerAngles(test_angle, Quatd::EXT_ZXZ);
-    Quatd qEuler24 = Quatd::createFromEulerAngles(test_angle, Quatd::EXT_ZYZ);
+    Quatd qEuler13 = Quatd::createFromEulerAngles(test_angle, QuatEnum::EXT_XYZ);
+    Quatd qEuler14 = Quatd::createFromEulerAngles(test_angle, QuatEnum::EXT_XZY);
+    Quatd qEuler15 = Quatd::createFromEulerAngles(test_angle, QuatEnum::EXT_XZX);
+    Quatd qEuler16 = Quatd::createFromEulerAngles(test_angle, QuatEnum::EXT_XYX);
+    Quatd qEuler17 = Quatd::createFromEulerAngles(test_angle, QuatEnum::EXT_YXZ);
+    Quatd qEuler18 = Quatd::createFromEulerAngles(test_angle, QuatEnum::EXT_YZX);
+    Quatd qEuler19 = Quatd::createFromEulerAngles(test_angle, QuatEnum::EXT_YXY);
+    Quatd qEuler20 = Quatd::createFromEulerAngles(test_angle, QuatEnum::EXT_YZY);
+    Quatd qEuler21 = Quatd::createFromEulerAngles(test_angle, QuatEnum::EXT_ZXY);
+    Quatd qEuler22 = Quatd::createFromEulerAngles(test_angle, QuatEnum::EXT_ZYX);
+    Quatd qEuler23 = Quatd::createFromEulerAngles(test_angle, QuatEnum::EXT_ZXZ);
+    Quatd qEuler24 = Quatd::createFromEulerAngles(test_angle, QuatEnum::EXT_ZYZ);
 
     EXPECT_EQ(qEuler1, Quatd(0.7233214, 0.3919013, 0.2005605, 0.5319728)) << angleTypeName[0];
     EXPECT_EQ(qEuler2, Quatd(0.8223654, 0.0222635, 0.3604221, 0.4396766)) << angleTypeName[1];
@@ -323,34 +323,33 @@ TEST_F(QuatTest, EulerAngles){
     EXPECT_EQ(qEuler23, Quatd(0.653285, 0.369641, 0.0990435, 0.65328)) << angleTypeName[22];
     EXPECT_EQ(qEuler24, Quatd(0.653285, -0.0990435, 0.369641, 0.65328)) << angleTypeName[23];
 
-    Vec3d Euler_Angles_1 = qEuler1.toEulerAngles(Quatd::INT_XYZ);
-    Vec3d Euler_Angles_2 = qEuler2.toEulerAngles(Quatd::INT_XZY);
-    Vec3d Euler_Angles_3 = qEuler3.toEulerAngles(Quatd::INT_XZX);
-    Vec3d Euler_Angles_4 = qEuler4.toEulerAngles(Quatd::INT_XYX);
-    Vec3d Euler_Angles_5 = qEuler5.toEulerAngles(Quatd::INT_YXZ);
-    Vec3d Euler_Angles_6 = qEuler6.toEulerAngles(Quatd::INT_YZX);
-    Vec3d Euler_Angles_7 = qEuler7.toEulerAngles(Quatd::INT_YXY);
-    Vec3d Euler_Angles_8 = qEuler8.toEulerAngles(Quatd::INT_YZY);
-    Vec3d Euler_Angles_9 = qEuler9.toEulerAngles(Quatd::INT_ZXY);
-    Vec3d Euler_Angles_10 = qEuler10.toEulerAngles(Quatd::INT_ZYX);
-    Vec3d Euler_Angles_11 = qEuler11.toEulerAngles(Quatd::INT_ZXZ);
-    Vec3d Euler_Angles_12 = qEuler12.toEulerAngles(Quatd::INT_ZYZ);
+    Vec3d Euler_Angles_1 = qEuler1.toEulerAngles(QuatEnum::INT_XYZ);
+    Vec3d Euler_Angles_2 = qEuler2.toEulerAngles(QuatEnum::INT_XZY);
+    Vec3d Euler_Angles_3 = qEuler3.toEulerAngles(QuatEnum::INT_XZX);
+    Vec3d Euler_Angles_4 = qEuler4.toEulerAngles(QuatEnum::INT_XYX);
+    Vec3d Euler_Angles_5 = qEuler5.toEulerAngles(QuatEnum::INT_YXZ);
+    Vec3d Euler_Angles_6 = qEuler6.toEulerAngles(QuatEnum::INT_YZX);
+    Vec3d Euler_Angles_7 = qEuler7.toEulerAngles(QuatEnum::INT_YXY);
+    Vec3d Euler_Angles_8 = qEuler8.toEulerAngles(QuatEnum::INT_YZY);
+    Vec3d Euler_Angles_9 = qEuler9.toEulerAngles(QuatEnum::INT_ZXY);
+    Vec3d Euler_Angles_10 = qEuler10.toEulerAngles(QuatEnum::INT_ZYX);
+    Vec3d Euler_Angles_11 = qEuler11.toEulerAngles(QuatEnum::INT_ZXZ);
+    Vec3d Euler_Angles_12 = qEuler12.toEulerAngles(QuatEnum::INT_ZYZ);
 
-    Vec3d Euler_Angles_13 = qEuler13.toEulerAngles(Quatd::EXT_XYZ);
-    Vec3d Euler_Angles_14 = qEuler14.toEulerAngles(Quatd::EXT_XZY);
-    Vec3d Euler_Angles_15 = qEuler15.toEulerAngles(Quatd::EXT_XZX);
-    Vec3d Euler_Angles_16 = qEuler16.toEulerAngles(Quatd::EXT_XYX);
-    Vec3d Euler_Angles_17 = qEuler17.toEulerAngles(Quatd::EXT_YXZ);
-    Vec3d Euler_Angles_18 = qEuler18.toEulerAngles(Quatd::EXT_YZX);
-    Vec3d Euler_Angles_19 = qEuler19.toEulerAngles(Quatd::EXT_YXY);
-    Vec3d Euler_Angles_20 = qEuler20.toEulerAngles(Quatd::EXT_YZY);
-    Vec3d Euler_Angles_21 = qEuler21.toEulerAngles(Quatd::EXT_ZXY);
-    Vec3d Euler_Angles_22 = qEuler22.toEulerAngles(Quatd::EXT_ZYX);
-    Vec3d Euler_Angles_23 = qEuler23.toEulerAngles(Quatd::EXT_ZXZ);
-    Vec3d Euler_Angles_24 = qEuler24.toEulerAngles(Quatd::EXT_ZYZ);
+    Vec3d Euler_Angles_13 = qEuler13.toEulerAngles(QuatEnum::EXT_XYZ);
+    Vec3d Euler_Angles_14 = qEuler14.toEulerAngles(QuatEnum::EXT_XZY);
+    Vec3d Euler_Angles_15 = qEuler15.toEulerAngles(QuatEnum::EXT_XZX);
+    Vec3d Euler_Angles_16 = qEuler16.toEulerAngles(QuatEnum::EXT_XYX);
+    Vec3d Euler_Angles_17 = qEuler17.toEulerAngles(QuatEnum::EXT_YXZ);
+    Vec3d Euler_Angles_18 = qEuler18.toEulerAngles(QuatEnum::EXT_YZX);
+    Vec3d Euler_Angles_19 = qEuler19.toEulerAngles(QuatEnum::EXT_YXY);
+    Vec3d Euler_Angles_20 = qEuler20.toEulerAngles(QuatEnum::EXT_YZY);
+    Vec3d Euler_Angles_21 = qEuler21.toEulerAngles(QuatEnum::EXT_ZXY);
+    Vec3d Euler_Angles_22 = qEuler22.toEulerAngles(QuatEnum::EXT_ZYX);
+    Vec3d Euler_Angles_23 = qEuler23.toEulerAngles(QuatEnum::EXT_ZXZ);
+    Vec3d Euler_Angles_24 = qEuler24.toEulerAngles(QuatEnum::EXT_ZYZ);
 
-    EXPECT_ANY_THROW(qEuler0.toEulerAngles(Quatd::INT_XYZ));
-    //EXPECT_ANY_THROW(qEuler0.toEulerAngles(Quatd::INT_XXZ));
+    EXPECT_ANY_THROW(qEuler0.toEulerAngles(QuatEnum::INT_XYZ));
 
     EXPECT_NEAR(Euler_Angles_1[0], test_angle[0], 1e-6) << angleTypeName[0];
     EXPECT_NEAR(Euler_Angles_1[1], test_angle[1], 1e-6) << angleTypeName[0];
@@ -428,21 +427,21 @@ TEST_F(QuatTest, EulerAngles){
 
     Quatd qEulerLock1 = { 0.5612665, 0.43042, 0.5607083, 0.4304935};
     Vec3d test_angle_lock1 = {1.3089878, CV_PI/2, 0};
-    Vec3d Euler_Angles_solute_1 = qEulerLock1.toEulerAngles( Quatd::INT_XYZ);
+    Vec3d Euler_Angles_solute_1 = qEulerLock1.toEulerAngles(QuatEnum::INT_XYZ);
     EXPECT_NEAR(Euler_Angles_solute_1[0], test_angle_lock1[0], 1e-6);
     EXPECT_NEAR(Euler_Angles_solute_1[1], test_angle_lock1[1], 1e-6);
     EXPECT_NEAR(Euler_Angles_solute_1[2], test_angle_lock1[2], 1e-6);
 
     Quatd qEulerLock2 = { 0.7010574, 0.0922963, 0.7010573, -0.0922961};
     Vec3d test_angle_lock2 = {-0.2618, CV_PI / 2, 0};
-    Vec3d Euler_Angles_solute_2 = qEulerLock2.toEulerAngles( Quatd::INT_ZYX);
+    Vec3d Euler_Angles_solute_2 = qEulerLock2.toEulerAngles(QuatEnum::INT_ZYX);
     EXPECT_NEAR(Euler_Angles_solute_2[0], test_angle_lock2[0], 1e-6);
     EXPECT_NEAR(Euler_Angles_solute_2[1], test_angle_lock2[1], 1e-6);
     EXPECT_NEAR(Euler_Angles_solute_2[2], test_angle_lock2[2], 1e-6);
 
     Vec3d test_angle6 = {CV_PI / 4., CV_PI / 2., CV_PI / 4.};
     Vec3d test_angle7 = {CV_PI / 2, CV_PI / 2., 0};
-    EXPECT_EQ(Quatd::createFromEulerAngles(test_angle6,  Quatd::INT_ZXY), Quatd::createFromEulerAngles(test_angle7,  Quatd::INT_ZXY));
+    EXPECT_EQ(Quatd::createFromEulerAngles(test_angle6, QuatEnum::INT_ZXY), Quatd::createFromEulerAngles(test_angle7, QuatEnum::INT_ZXY));
 
 }
 
