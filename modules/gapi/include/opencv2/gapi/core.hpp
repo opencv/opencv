@@ -17,6 +17,7 @@
 #include <opencv2/gapi/gmat.hpp>
 #include <opencv2/gapi/gscalar.hpp>
 #include <opencv2/gapi/gkernel.hpp>
+#include <opencv2/gapi/streaming/format.hpp>
 
 /** \defgroup gapi_core G-API Core functionality
 @{
@@ -448,12 +449,6 @@ namespace core {
     G_TYPED_KERNEL(GCrop, <GMat(GMat, Rect)>, "org.opencv.core.transform.crop") {
         static GMatDesc outMeta(GMatDesc in, Rect rc) {
             return in.withSize(Size(rc.width, rc.height));
-        }
-    };
-
-    G_TYPED_KERNEL(GCopy, <GMat(GMat)>, "org.opencv.core.transform.copy") {
-        static GMatDesc outMeta(GMatDesc in) {
-            return in;
         }
     };
 
@@ -1153,6 +1148,7 @@ GAPI_EXPORTS GMat bitwise_xor(const GMat& src1, const GScalar& src2);
 
 
 /** @brief Inverts every bit of an array.
+
 The function bitwise_not calculates per-element bit-wise inversion of the input
 matrix:
 \f[\texttt{dst} (I) =  \neg \texttt{src} (I)\f]
@@ -1666,19 +1662,6 @@ Output matrix must be of the same depth as input one, size is specified by given
 @sa resize
 */
 GAPI_EXPORTS GMat crop(const GMat& src, const Rect& rect);
-
-/** @brief Copies a matrix.
-
-Copies an input array. Works as a regular Mat::clone but happens in-graph.
-Mainly is used to workaround some existing limitations (e.g. to forward an input frame to outputs
-in the streaming mode). Will be deprecated and removed in the future.
-
-@note Function textual ID is "org.opencv.core.transform.copy"
-
-@param src input matrix.
-@sa crop
-*/
-GAPI_EXPORTS GMat copy(const GMat& src);
 
 /** @brief Applies horizontal concatenation to given matrices.
 

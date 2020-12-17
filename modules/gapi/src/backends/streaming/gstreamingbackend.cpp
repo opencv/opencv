@@ -137,7 +137,12 @@ cv::gapi::GBackend cv::gapi::streaming::backend()
 
 cv::gapi::GKernelPackage cv::gapi::streaming::kernels()
 {
-    return cv::gapi::kernels<cv::gimpl::Copy, cv::gimpl::BGR>();
+    return cv::gapi::kernels<cv::gimpl::BGR>();
+}
+
+cv::gapi::GKernelPackage cv::gimpl::streaming::kernels()
+{
+    return cv::gapi::kernels<cv::gimpl::Copy>();
 }
 
 void cv::gimpl::Copy::Actor::run(cv::gimpl::GIslandExecutable::IInput  &in,
@@ -153,8 +158,21 @@ void cv::gimpl::Copy::Actor::run(cv::gimpl::GIslandExecutable::IInput  &in,
     const cv::GRunArgs &in_args = cv::util::get<cv::GRunArgs>(in_msg);
     GAPI_Assert(in_args.size() == 1u);
 
-    cv::GRunArgP out_arg = out.get(0);
-    *cv::util::get<cv::MediaFrame*>(out_arg) = cv::util::get<cv::MediaFrame>(in_args[0]);
+    const auto& in_arg = in_args[0];
+    auto out_arg = out.get(0);
+    using cv::util::get;
+    switch (in_arg.index()) {
+    case cv::GRunArg::index_of<cv::RMat>():
+        *get<cv::RMat*>(out_arg) = get<cv::RMat>(in_arg);
+        break;
+    case cv::GRunArg::index_of<cv::MediaFrame>():
+        *get<cv::MediaFrame*>(out_arg) = get<cv::MediaFrame>(in_arg);
+        break;
+    // FIXME: Add support for remaining types
+    default:
+        GAPI_Assert(false && "Copy: unsupported data type");
+    }
+    out.meta(out_arg, in_arg.meta);
     out.post(std::move(out_arg));
 }
 
@@ -196,4 +214,12 @@ void cv::gimpl::BGR::Actor::run(cv::gimpl::GIslandExecutable::IInput  &in,
                     std::logic_error("Unsupported MediaFormat for cv::gapi::streaming::BGR"));
     }
     out.post(std::move(out_arg));
+}
+
+cv::GMat cv::gapi::copy(const cv::GMat& in) {
+    return cv::gimpl::streaming::GCopy::on<cv::GMat>(in);
+}
+
+cv::GFrame cv::gapi::copy(const cv::GFrame& in) {
+    return cv::gimpl::streaming::GCopy::on<cv::GFrame>(in);
 }
