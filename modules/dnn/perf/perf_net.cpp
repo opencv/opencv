@@ -206,7 +206,7 @@ PERF_TEST_P_(DNNTestNetwork, YOLOv3)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL_FP16)
         throw SkipTestException("Test is disabled in OpenVINO 2020.4");
 #endif
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021010000)  // nGraph compilation failure
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2021010000)  // nGraph compilation failure
     if (target == DNN_TARGET_MYRIAD)
         throw SkipTestException("");
 #endif
@@ -241,7 +241,7 @@ PERF_TEST_P_(DNNTestNetwork, YOLOv4_tiny)
 {
     if (backend == DNN_BACKEND_HALIDE)
         throw SkipTestException("");
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021010000)  // nGraph compilation failure
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2021010000)  // nGraph compilation failure
     if (target == DNN_TARGET_MYRIAD)
         throw SkipTestException("");
 #endif
@@ -276,9 +276,9 @@ PERF_TEST_P_(DNNTestNetwork, Inception_v2_Faster_RCNN)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         throw SkipTestException("Test is disabled in OpenVINO 2019R2");
 #endif
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021010000)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
-        throw SkipTestException("Test is disabled in OpenVINO 2021.1 / MYRIAD");
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2021010000)
+    if (target == DNN_TARGET_MYRIAD)
+        throw SkipTestException("Test is disabled in OpenVINO 2021.1+ / MYRIAD");
 #endif
     if (backend == DNN_BACKEND_HALIDE ||
         (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target != DNN_TARGET_CPU) ||
