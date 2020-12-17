@@ -323,13 +323,6 @@ TEST_F(QuatTest, EulerAngles){
     EXPECT_EQ(qEuler23, Quatd(0.653285, 0.369641, 0.0990435, 0.65328)) << angleTypeName[22];
     EXPECT_EQ(qEuler24, Quatd(0.653285, -0.0990435, 0.369641, 0.65328)) << angleTypeName[23];
 
-#ifdef VALIDATE_QUAT_OPT
-    for(int i = 0; i < 24; i++)
-    {
-        (void)qEuler1.toEulerAngles((Quatd::EulerAnglesType)i);
-    }
-#endif
-
     Vec3d Euler_Angles_1 = qEuler1.toEulerAngles(Quatd::INT_XYZ);
     Vec3d Euler_Angles_2 = qEuler2.toEulerAngles(Quatd::INT_XZY);
     Vec3d Euler_Angles_3 = qEuler3.toEulerAngles(Quatd::INT_XZX);
