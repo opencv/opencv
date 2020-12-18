@@ -1555,6 +1555,22 @@ void filter2D(InputArray _src, OutputArray _dst, int ddepth,
                   delta, borderType, src.isSubmatrix());
 }
 
+void filter2D( InputArray src, OutputArray dst, InputArray kernel,
+               const Filter2DParams& params)
+{
+    Mat K = kernel.getMat(), tempK;
+    if (params.scale != 1) {
+        int kdepth = K.depth();
+        K.convertTo(tempK,
+            kdepth == CV_32F || kdepth == CV_64F ? kdepth : CV_32F,
+            params.scale, 0);
+        K = tempK;
+    }
+    CV_Assert(params.borderValue == Scalar());
+    filter2D(src, dst, params.ddepth, K, Point(params.anchorX, params.anchorY),
+             params.shift, params.borderType);
+}
+
 void sepFilter2D(InputArray _src, OutputArray _dst, int ddepth,
                  InputArray _kernelX, InputArray _kernelY, Point anchor,
                  double delta, int borderType)

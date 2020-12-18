@@ -1508,6 +1508,21 @@ CV_EXPORTS_W void filter2D( InputArray src, OutputArray dst, int ddepth,
                             InputArray kernel, Point anchor = Point(-1,-1),
                             double delta = 0, int borderType = BORDER_DEFAULT );
 
+class CV_EXPORTS_W_PARAMS Filter2DParams
+{
+public:
+    CV_PROP_RW int anchorX = -1;
+    CV_PROP_RW int anchorY = -1;
+    CV_PROP_RW int borderType = BORDER_DEFAULT;
+    CV_PROP_RW Scalar borderValue = Scalar();
+    CV_PROP_RW int ddepth = -1;
+    CV_PROP_RW double scale = 1.;
+    CV_PROP_RW double shift = 0.;
+};
+
+CV_EXPORTS_AS(filter2Dp) void filter2D( InputArray src, OutputArray dst, InputArray kernel,
+                                        const Filter2DParams& params=Filter2DParams());
+
 /** @brief Applies a separable linear filter to an image.
 
 The function applies a separable linear filter to the image. That is, first, every row of src is
