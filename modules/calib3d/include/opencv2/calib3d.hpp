@@ -1509,7 +1509,7 @@ respectively. In the old interface all the vectors of object points from differe
 concatenated together.
 @param imageSize Size of the image used only to initialize the camera intrinsic matrix.
 @param cameraMatrix Input/output 3x3 floating-point camera intrinsic matrix
-\f$\cameramatrix{A}\f$ . If @ref CV_CALIB_USE_INTRINSIC_GUESS
+\f$\cameramatrix{A}\f$ . If @ref CALIB_USE_INTRINSIC_GUESS
 and/or @ref CALIB_FIX_ASPECT_RATIO are specified, some or all of fx, fy, cx, cy must be
 initialized before calling the function.
 @param distCoeffs Input/output vector of distortion coefficients
