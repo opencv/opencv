@@ -47,6 +47,8 @@ features2d = {'Feature2D': ['detect', 'compute', 'detectAndCompute', 'descriptor
               'BFMatcher': ['isMaskSupported', 'create'],
               '': ['drawKeypoints', 'drawMatches', 'drawMatchesKnn']}
 
-calib3d = {'': ['findHomography', 'estimateAffine2D', 'Rodrigues']}
+calib3d = {'': ['findHomography', 'calibrateCameraExtended', 'drawFrameAxes', 'estimateAffine2D', \
+                'getDefaultNewCameraMatrix', 'initUndistortRectifyMap', 'Rodrigues', \
+                'solvePnP', 'solvePnPRansac', 'solvePnPRefineLM']}
 
 white_list = makeWhiteList([core, imgproc, objdetect, video, dnn, features2d, calib3d])

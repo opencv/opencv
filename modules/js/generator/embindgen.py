@@ -634,8 +634,10 @@ class JSWrapperGenerator(object):
                     ret_type = type_dict[ptr_type]
             for key in type_dict:
                 if key in ret_type:
-                    ret_type = ret_type.replace(key, type_dict[key])
-
+                    # Replace types. Instead of ret_type.replace we use regular
+                    # expression to exclude false matches.
+                    # See https://github.com/opencv/opencv/issues/15514
+                    ret_type = re.sub('(^|[^\w])' + key + '($|[^\w])', type_dict[key], ret_type)
             if variant.constret and ret_type.startswith('const') == False:
                 ret_type = 'const ' + ret_type
             if variant.refret and ret_type.endswith('&') == False:
