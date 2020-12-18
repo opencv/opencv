@@ -221,6 +221,7 @@ class ClassProp(object):
     def __init__(self, decl):
         self.tp = decl[0].replace("*", "_ptr")
         self.name = decl[1]
+        self.defval = decl[2]
         self.readonly = True
         if "/RW" in decl[3]:
             self.readonly = False
@@ -233,6 +234,7 @@ class ClassInfo(object):
         self.ismap = False
         self.issimple = False
         self.isalgorithm = False
+        self.isparams = False
         self.methods = {}
         self.props = []
         self.mappables = []
@@ -264,6 +266,8 @@ class ClassInfo(object):
                     self.ismap = True
                 elif m == "/Simple":
                     self.issimple = True
+                elif m == "/Params":
+                    self.isparams = True
             self.props = [ClassProp(p) for p in decl[3]]
 
         if not customname and self.wname.startswith("Cv"):
@@ -352,6 +356,18 @@ def handle_ptr(tp):
     return tp
 
 
+def get_named_params_info(all_classes, args):
+    extra_named_params = []
+    params_arg_name = ""
+    if args:
+        last_arg = args[-1]
+        if ("Params" in last_arg.tp) and (last_arg.tp in all_classes):
+            arg_classinfo = all_classes[last_arg.tp]
+            if arg_classinfo.isparams:
+                params_arg_name = last_arg.name
+                extra_named_params = arg_classinfo.props
+    return (params_arg_name, extra_named_params)
+
 class ArgInfo(object):
     def __init__(self, arg_tuple):
         self.tp = handle_ptr(arg_tuple[0])
@@ -392,7 +408,7 @@ class ArgInfo(object):
 
 
 class FuncVariant(object):
-    def __init__(self, classname, name, decl, isconstructor, isphantom=False):
+    def __init__(self, all_classes, classname, name, decl, isconstructor, isphantom=False):
         self.classname = classname
         self.name = self.wname = name
         self.isconstructor = isconstructor
@@ -415,9 +431,9 @@ class FuncVariant(object):
                 else:
                     self.array_counters[c] = [ainfo.name]
             self.args.append(ainfo)
-        self.init_pyproto()
+        self.init_pyproto(all_classes)
 
-    def init_pyproto(self):
+    def init_pyproto(self, all_classes):
         # string representation of argument list, with '[', ']' symbols denoting optional arguments, e.g.
         # "src1, src2[, dst[, mask]]" for cv.add
         argstr = ""
@@ -430,6 +446,7 @@ class FuncVariant(object):
         # become the first optional input parameters of the Python function, and thus they are placed right after
         # non-optional input parameters)
         arglist = []
+        proto_arglist = []
 
         # the list of "heavy" output parameters. Heavy parameters are the parameters
         # that can be expensive to allocate each time, such as vectors and matrices (see isbig).
@@ -456,25 +473,39 @@ class FuncVariant(object):
                 continue
             if not a.defval:
                 arglist.append((a.name, argno))
+                proto_arglist.append((a.name, argno))
             else:
                 firstoptarg = min(firstoptarg, len(arglist))
                 # if there are some array output parameters before the first default parameter, they
                 # are added as optional parameters before the first optional parameter
                 if outarr_list:
                     arglist += outarr_list
+                    proto_arglist += [(aname_+"=None",argno_) for (aname_, argno_) in outarr_list]
                     outarr_list = []
                 arglist.append((a.name, argno))
+                proto_arglist.append((a.name+"="+a.defval, argno))
+
+        # exclude "params" from Python func parameters ==>
+        params_arg_name, extra_named_params = get_named_params_info(all_classes, self.args)
+        if params_arg_name:
+            arglist = arglist[:-1]
+            proto_arglist = proto_arglist[:-1]
 
         if outarr_list:
             firstoptarg = min(firstoptarg, len(arglist))
+            proto_arglist += [(aname+"=None",argno) for (aname, argno) in outarr_list]
             arglist += outarr_list
+
         firstoptarg = min(firstoptarg, len(arglist))
 
-        noptargs = len(arglist) - firstoptarg
-        argnamelist = [aname for aname, argno in arglist]
+        argnamelist = [aname for aname, argno in proto_arglist]
+        noptargs = len(argnamelist) - firstoptarg
+        if params_arg_name:
+            # ==> instead, add the individual parameters one by one
+            argnamelist += ["%s=%s" % (a.name, a.defval) for a in extra_named_params]
         argstr = ", ".join(argnamelist[:firstoptarg])
-        argstr = "[, ".join([argstr] + argnamelist[firstoptarg:])
-        argstr += "]" * noptargs
+        argstr += "[, " + (", ".join(argnamelist[firstoptarg:]))
+        argstr += "]"
         if self.rettype:
             outlist = [("retval", -1)] + outlist
         elif self.isconstructor:
@@ -513,8 +544,8 @@ class FuncInfo(object):
         self.is_static = is_static
         self.variants = []
 
-    def add_variant(self, decl, isphantom=False):
-        self.variants.append(FuncVariant(self.classname, self.name, decl, self.isconstructor, isphantom))
+    def add_variant(self, all_classes, decl, isphantom=False):
+        self.variants.append(FuncVariant(all_classes, self.classname, self.name, decl, self.isconstructor, isphantom))
 
     def get_wrapper_name(self):
         name = self.name
@@ -570,20 +601,20 @@ class FuncInfo(object):
         # their relevant doxygen comment
         full_docstring = ""
         for prototype, body in zip(prototype_list, docstring_list):
-            full_docstring += Template("$prototype\n$docstring\n\n\n\n").substitute(
-                prototype=prototype,
-                docstring='\n'.join(
-                    ['.   ' + line
+            full_docstring += Template("$prototype\n$docstring").substitute(
+                prototype="\"" + prototype.replace("\\", "\\\\").replace("\"", "\\\"") + "\\n\\n\"",
+                docstring="\n".join(
+                    ["    \"" + line.replace("\\", "\\\\").replace("\"", "\\\"") + "\\n\""
                      for line in body.split('\n')]
                 )
             )
 
         # Escape backslashes, newlines, and double quotes
-        full_docstring = full_docstring.strip().replace("\\", "\\\\").replace('\n', '\\n').replace("\"", "\\\"")
+        #full_docstring = full_docstring.strip().replace("\\", "\\\\").replace("\"", "\\\"")
         # Convert unicode chars to xml representation, but keep as string instead of bytes
         full_docstring = full_docstring.encode('ascii', errors='xmlcharrefreplace').decode()
 
-        return Template('    {"$py_funcname", CV_PY_FN_WITH_KW_($wrap_funcname, $flags), "$py_docstring"},\n'
+        return Template('    {"$py_funcname", CV_PY_FN_WITH_KW_($wrap_funcname, $flags),\n    $py_docstring},\n'
                         ).substitute(py_funcname = self.variants[0].wname, wrap_funcname=self.get_wrapper_name(),
                                      flags = 'METH_STATIC' if self.is_static else '0', py_docstring = full_docstring)
 
@@ -622,6 +653,8 @@ class FuncInfo(object):
 
             if v.isphantom and ismethod and not self.is_static:
                 code_args += "_self_"
+
+            params_arg_name, extra_named_params = get_named_params_info(all_classes, v.args)
 
             # declare all the C function arguments,
             # add necessary conversions from Python objects to code_cvt_list,
@@ -692,6 +725,15 @@ class FuncInfo(object):
 
                 code_args += amp + a.name
 
+            if params_arg_name:
+                for a in extra_named_params:
+                    code_decl += "    PyObject* pyobj_kw_%s = NULL;\n" % (a.name,)
+                    ainfo = "ArgInfo(\"params.%s\", %d)" % (a.name, 0)
+                    if a.tp == 'char':
+                        code_cvt_list.append("convert_to_char(pyobj_kw_%s, &params.%s, %s)" % (a.name, a.name, ainfo))
+                    else:
+                        code_cvt_list.append("pyopencv_to(pyobj_kw_%s, params.%s, %s)" % (a.name, a.name, ainfo))
+
             code_args += ")"
 
             if self.isconstructor:
@@ -740,16 +782,22 @@ class FuncInfo(object):
                 ])
                 if v.py_noptargs > 0:
                     fmtspec = fmtspec[:-v.py_noptargs] + "|" + fmtspec[-v.py_noptargs:]
+                fmtspec += "O" * len(extra_named_params)
                 fmtspec += ":" + fullname
 
                 # form the argument parse code that:
                 #   - declares the list of keyword parameters
                 #   - calls PyArg_ParseTupleAndKeywords
                 #   - converts complex arguments from PyObject's to native OpenCV types
+                kw_list = ['"' + aname + '"' for aname, argno in v.py_arglist]
+                kw_list += ['"' + a.name + '"' for a in extra_named_params]
+                parse_arglist = ["&" + all_cargs[argno][1] for aname, argno in v.py_arglist]
+                parse_arglist += ["&pyobj_kw_" + a.name for a in extra_named_params]
+
                 code_parse = gen_template_parse_args.substitute(
-                    kw_list = ", ".join(['"' + aname + '"' for aname, argno in v.py_arglist]),
+                    kw_list = ", ".join(kw_list),
                     fmtspec = fmtspec,
-                    parse_arglist = ", ".join(["&" + all_cargs[argno][1] for aname, argno in v.py_arglist]),
+                    parse_arglist = ", ".join(parse_arglist),
                     code_cvt = " &&\n        ".join(code_cvt_list))
             else:
                 code_parse = "if(PyObject_Size(py_args) == 0 && (!kw || PyObject_Size(kw) == 0))"
@@ -933,13 +981,13 @@ class PythonWrapperGenerator(object):
             # Add it as a method to the class
             func_map = self.classes[classname].methods
             func = func_map.setdefault(name, FuncInfo(classname, name, cname, isconstructor, namespace, is_static))
-            func.add_variant(decl, isphantom)
+            func.add_variant(self.classes, decl, isphantom)
 
             # Add it as global function
             g_name = "_".join(classes+[name])
             func_map = self.namespaces.setdefault(namespace, Namespace()).funcs
             func = func_map.setdefault(g_name, FuncInfo("", g_name, cname, isconstructor, namespace, False))
-            func.add_variant(decl, isphantom)
+            func.add_variant(self.classes, decl, isphantom)
         else:
             if classname and not isconstructor:
                 if not isphantom:
@@ -949,7 +997,7 @@ class PythonWrapperGenerator(object):
                 func_map = self.namespaces.setdefault(namespace, Namespace()).funcs
 
             func = func_map.setdefault(name, FuncInfo(classname, name, cname, isconstructor, namespace, is_static))
-            func.add_variant(decl, isphantom)
+            func.add_variant(self.classes, decl, isphantom)
 
         if classname and isconstructor:
             self.classes[classname].constructor = func
@@ -1130,7 +1178,7 @@ class PythonWrapperGenerator(object):
 
 if __name__ == "__main__":
     srcfiles = hdr_parser.opencv_hdr_list
-    dstdir = "/Users/vp/tmp"
+    dstdir = "."
     if len(sys.argv) > 1:
         dstdir = sys.argv[1]
     if len(sys.argv) > 2:
