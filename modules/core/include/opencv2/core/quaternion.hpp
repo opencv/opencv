@@ -105,8 +105,8 @@ public:
         INT_ZYX, ///< Intrinsic rotations with the Euler angles type Z-Y-X
         INT_XYX, ///< Intrinsic rotations with the Euler angles type X-Y-X
         INT_XZX, ///< Intrinsic rotations with the Euler angles type X-Z-X
-        INT_YZY, ///< Intrinsic rotations with the Euler angles type Y-Z-Y
         INT_YXY, ///< Intrinsic rotations with the Euler angles type Y-X-Y
+        INT_YZY, ///< Intrinsic rotations with the Euler angles type Y-Z-Y
         INT_ZXZ, ///< Intrinsic rotations with the Euler angles type Z-X-Z
         INT_ZYZ, ///< Intrinsic rotations with the Euler angles type Z-Y-Z
 
