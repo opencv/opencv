@@ -58,8 +58,6 @@ struct ParamDesc {
     PostProc custom_post_proc;
 
     std::vector<bool> normalize;
-    std::vector<float> range_anchor;
-    std::vector<float> divisibility;
 };
 } // namespace detail
 
@@ -76,9 +74,6 @@ struct PortCfg {
         , std::tuple_size<typename Net::InArgs>::value >;
     using Normalize = std::array
         < bool
-        , std::tuple_size<typename Net::InArgs>::value >;
-    using PaddingCoefs = std::array
-        < float
         , std::tuple_size<typename Net::InArgs>::value >;
 };
 
@@ -132,6 +127,7 @@ public:
         return *this;
     }
 
+<<<<<<< HEAD
     Params<Net>& cfgPadding(const typename PortCfg<Net>::PaddingCoefs &ra,
                             const typename PortCfg<Net>::PaddingCoefs &d) {
         desc.range_anchor.assign(ra.begin(), ra.end());
@@ -139,6 +135,8 @@ public:
         return *this;
     }
 
+=======
+>>>>>>> Removed padding
 protected:
     detail::ParamDesc desc;
 };

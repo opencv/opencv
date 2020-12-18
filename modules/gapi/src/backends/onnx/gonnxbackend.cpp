@@ -91,12 +91,14 @@ struct TensorInfo {
         cv::Scalar stdev;
     };
 
+<<<<<<< HEAD
     struct Padding {
         float range_anchor;
         float divisibility;
     };
+=======
+>>>>>>> Removed padding
     cv::util::optional<MeanStdev> mstd;
-    cv::util::optional<Padding> pad;
 };
 
 using Views = std::vector<std::unique_ptr<cv::MediaFrame::View>>;
@@ -293,24 +295,6 @@ inline void preprocess(const cv::Mat& src,
         } else {
             // Keep HWC
             dst = pp;
-        }
-
-        if (with_pad) {
-            const auto div = ti.pad->divisibility;
-            const int padded_h = std::ceil(new_h / div) * div;
-            const int padded_w = std::ceil(new_w / div) * div;
-            int type = -1;
-            if (!is_hwc && new_c >= 1) {
-                type = ddepth;
-            } else {
-                type = ddepth == CV_32F ? CV_32FC3 : CV_8UC3;
-            }
-            GAPI_Assert(type != -1);
-            cv::Mat pad_im(cv::Size(padded_w, (!is_hwc ? new_c : 1) * padded_h), type, 0.f);
-            pad_im(cv::Rect(0, 0, dst.cols, dst.rows)) += dst;
-            dst = pad_im;
-            new_h = padded_h;
-            new_w = padded_w;
         }
 
         // Ensure dst is a tensor shape (not a 2D image)
@@ -603,7 +587,12 @@ ONNXCompiled::ONNXCompiled(const gapi::onnx::detail::ParamDesc &pp)
     // Create and initialize the ONNX session
     Ort::SessionOptions session_options;
     this_env = Ort::Env(ORT_LOGGING_LEVEL_WARNING, "");
+#ifndef _WIN32
     this_session = Ort::Session(this_env, params.model_path.data(), session_options);
+#else
+    std::wstring w_model_path(params.model_path.begin(), params.model_path.end());
+    this_session = Ort::Session(this_env, w_model_path.data(), session_options);
+#endif
     this_memory_info = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
 
     in_tensor_info = getTensorInfo(INPUT);
