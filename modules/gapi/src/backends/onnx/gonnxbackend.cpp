@@ -91,13 +91,6 @@ struct TensorInfo {
         cv::Scalar stdev;
     };
 
-<<<<<<< HEAD
-    struct Padding {
-        float range_anchor;
-        float divisibility;
-    };
-=======
->>>>>>> Removed padding
     cv::util::optional<MeanStdev> mstd;
 };
 

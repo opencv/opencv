@@ -910,7 +910,6 @@ TEST_F(ONNXYoloV3MultiInput, InferBSConstInput)
     // Validate
     validate();
 }
-
 } // namespace opencv_test
 
 #endif //  HAVE_ONNX
