@@ -59,6 +59,12 @@ String dumpCString(const char* argument)
 }
 
 CV_WRAP static inline
+String dumpString(const String& argument)
+{
+    return cv::format("String: %s", argument.c_str());
+}
+
+CV_WRAP static inline
 AsyncArray testAsyncArray(InputArray argument)
 {
     AsyncPromise p;
