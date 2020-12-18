@@ -993,14 +993,30 @@ PyObject* pyopencv_from(const std::string& value)
 template<>
 bool pyopencv_to(PyObject* obj, String &value, const ArgInfo& info)
 {
-    CV_UNUSED(info);
     if(!obj || obj == Py_None)
+    {
         return true;
+    }
     std::string str;
     if (getUnicodeString(obj, str))
     {
         value = str;
         return true;
+    }
+    else
+    {
+        // If error hasn't been already set by Python conversion functions
+        if (!PyErr_Occurred())
+        {
+            // Direct access to underlying slots of PyObjectType is not allowed
+            // when limited API is enabled
+#ifdef Py_LIMITED_API
+            failmsg("Can't convert object to 'str' for '%s'", info.name);
+#else
+            failmsg("Can't convert object of type '%s' to 'str' for '%s'",
+                    obj->ob_type->tp_name, info.name);
+#endif
+        }
     }
     return false;
 }

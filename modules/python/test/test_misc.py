@@ -314,7 +314,7 @@ class Arguments(NewOpenCVTests):
 
     def test_parse_to_cstring_convertible(self):
         try_to_convert = partial(self._try_to_convert, cv.utils.dumpCString)
-        for convertible in ('s', 'str', str(123), ('char'), np.str('test1'), np.str_('test2')):
+        for convertible in ('', 's', 'str', str(123), ('char'), np.str('test1'), np.str_('test2')):
             expected = 'string: ' + convertible
             actual = try_to_convert(convertible)
             self.assertEqual(expected, actual,
@@ -325,6 +325,20 @@ class Arguments(NewOpenCVTests):
                                 np.array(['t', 'e', 's', 't']), 1, -1.4, True, False, None):
             with self.assertRaises((TypeError), msg=get_no_exception_msg(not_convertible)):
                 _ = cv.utils.dumpCString(not_convertible)
+
+    def test_parse_to_string_convertible(self):
+        try_to_convert = partial(self._try_to_convert, cv.utils.dumpString)
+        for convertible in (None, '', 's', 'str', str(123), np.str('test1'), np.str_('test2')):
+            expected = 'string: ' + (convertible if convertible else '')
+            actual = try_to_convert(convertible)
+            self.assertEqual(expected, actual,
+                             msg=get_conversion_error_msg(convertible, expected, actual))
+
+    def test_parse_to_string_not_convertible(self):
+        for not_convertible in ((12,), ('t', 'e', 's', 't'), np.array(['123', ]),
+                                np.array(['t', 'e', 's', 't']), 1, True, False):
+            with self.assertRaises((TypeError), msg=get_no_exception_msg(not_convertible)):
+                _ = cv.utils.dumpString(not_convertible)
 
 
 class SamplesFindFile(NewOpenCVTests):
