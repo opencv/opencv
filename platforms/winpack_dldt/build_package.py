@@ -151,6 +151,9 @@ def git_apply_patch(src_dir, patch_file):
     assert os.path.exists(patch_file), patch_file
     execute(cmd=['git', 'apply', '--3way', '-v', '--ignore-space-change', str(patch_file)], cwd=src_dir)
     execute(cmd=['git', '--no-pager', 'diff', 'HEAD'], cwd=src_dir)
+    os.environ['GIT_AUTHOR_NAME'] = os.environ['GIT_COMMITTER_NAME']='build'
+    os.environ['GIT_AUTHOR_EMAIL'] = os.environ['GIT_COMMITTER_EMAIL']='build@opencv.org'
+    execute(cmd=['git', 'commit', '-am', 'apply opencv patch'], cwd=src_dir)
 
 
 #===================================================================================================
@@ -277,6 +280,13 @@ class BuilderDLDT:
             CMAKE_INSTALL_PREFIX=str(self.build_dir / 'install'),
             OUTPUT_ROOT=str(self.build_dir),  # 2020.4+
         )
+
+        self.build_config_file = str(self.cpath / 'build.config.py')  # Python 3.5 may not handle Path
+        if os.path.exists(str(self.build_config_file)):
+            with open(self.build_config_file, 'r') as f:
+                cfg = f.read()
+            exec(compile(cfg, str(self.build_config_file), 'exec'))
+            log.info('DLDT processed build configuration script')
 
         cmd += [ '-D%s=%s' % (k, v) for (k, v) in cmake_vars.items() if v is not None]
         if self.config.cmake_option_dldt:
@@ -445,8 +455,8 @@ class Builder:
 def main():
 
     dldt_src_url = 'https://github.com/openvinotoolkit/openvino'
-    dldt_src_commit = '2021.1'
-    dldt_release = '2021010000'
+    dldt_src_commit = '2021.2'
+    dldt_release = '2021020000'
 
     build_cache_dir_default = os.environ.get('BUILD_CACHE_DIR', '.build_cache')
     build_subst_drive = os.environ.get('BUILD_SUBST_DRIVE', None)
