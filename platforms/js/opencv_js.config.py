@@ -74,9 +74,12 @@ aruco = {'': ['detectMarkers', 'drawDetectedMarkers', 'drawAxis', 'estimatePoseS
         'aruco_Board': ['create'],
         'aruco_GridBoard': ['create', 'draw'],
         'aruco_CharucoBoard': ['create', 'draw'],
+        'aruco_DetectorParameters': ['create']
         }
 
-calib3d = {'': ['findHomography', 'calibrateCameraExtended', 'drawFrameAxes', 'estimateAffine2D', 'getDefaultNewCameraMatrix', 'initUndistortRectifyMap', 'Rodrigues']}
+calib3d = {'': ['findHomography', 'calibrateCameraExtended', 'drawFrameAxes', 'estimateAffine2D', \
+                'getDefaultNewCameraMatrix', 'initUndistortRectifyMap', 'Rodrigues', \
+                'solvePnP', 'solvePnPRansac', 'solvePnPRefineLM']}
 
 
 white_list = makeWhiteList([core, imgproc, objdetect, video, dnn, features2d, photo, aruco, calib3d])

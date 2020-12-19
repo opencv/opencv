@@ -634,8 +634,10 @@ class JSWrapperGenerator(object):
                     ret_type = type_dict[ptr_type]
             for key in type_dict:
                 if key in ret_type:
-                    ret_type = ret_type.replace(key, type_dict[key])
-
+                    # Replace types. Instead of ret_type.replace we use regular
+                    # expression to exclude false matches.
+                    # See https://github.com/opencv/opencv/issues/15514
+                    ret_type = re.sub('(^|[^\w])' + key + '($|[^\w])', type_dict[key], ret_type)
             if variant.constret and ret_type.startswith('const') == False:
                 ret_type = 'const ' + ret_type
             if variant.refret and ret_type.endswith('&') == False:
@@ -776,15 +778,13 @@ class JSWrapperGenerator(object):
                     self.bindings+=binding
 
         # generate code for the classes and their methods
-        class_list = list(self.classes.items())
-
-        for name, class_info in class_list:
+        for name, class_info in sorted(self.classes.items()):
             class_bindings = []
             if not name in white_list:
                 continue
 
             # Generate bindings for methods
-            for method_name, method in class_info.methods.items():
+            for method_name, method in sorted(class_info.methods.items()):
                 if method.cname in ignore_list:
                     continue
                 if not method.name in white_list[method.class_name]:
@@ -822,7 +822,7 @@ class JSWrapperGenerator(object):
 
 
             # Generate bindings for properties
-            for property in class_info.props:
+            for property in sorted(class_info.props):
                 _class_property = class_property_enum_template if property.tp in type_dict else class_property_template
                 class_bindings.append(_class_property.substitute(js_name=property.name, cpp_name='::'.join(
                     [class_info.cname, property.name])))
