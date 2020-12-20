@@ -50,4 +50,50 @@ TEST(Imgproc_Subdiv2D_getTriangleList, regression_5788)
     EXPECT_EQ(trig_cnt, 105);
 }
 
+TEST(Imgproc_Subdiv2D_getTriangleList, regression_16763) {
+
+    const auto less_than = [](const cv::Vec6f &lhs, const cv::Vec6f &rhs) -> bool {
+        return (lhs[0] < rhs[0]) ||
+               (lhs[0] == rhs[0] && lhs[1] < rhs[1]) ||
+               (lhs[0] == rhs[0] && lhs[1] == rhs[1] && lhs[2] < rhs[2]) ||
+               (lhs[0] == rhs[0] && lhs[1] == rhs[1] && lhs[2] == rhs[2] && lhs[3] < rhs[3]) ||
+               (lhs[0] == rhs[0] && lhs[1] == rhs[1] && lhs[2] == rhs[2] && lhs[3] == rhs[3] && lhs[4] < rhs[4]) ||
+               (lhs[0] == rhs[0] && lhs[1] == rhs[1] && lhs[2] == rhs[2] && lhs[3] == rhs[3] && lhs[4] == rhs[4] && lhs[5] < rhs[5]);
+    };
+
+    struct {
+        std::vector<cv::Point2f> points;
+        cv::Rect rect;
+        std::vector<cv::Vec6f> triangles;
+    } suits[] = {
+        {
+            { {623, 1000},{620, 1000}, {496, 770}, {473, 671} },
+            { 472, 670, 625 - 472, 1002 - 670 },
+            { { 620, 1000, 496, 770, 623, 1000 }, { 623, 1000, 496, 770, 473, 671 } }
+        },
+        {
+            { {400, 400}, {400, 300}, {400, 200}, {395, 400} },
+            { 0, 0, 500, 500 },
+            { { 395, 400, 400, 200, 400, 300 }, { 400, 300, 400, 400, 395, 400} }
+        }
+    };
+
+    for (auto& suit : suits) {
+        cv::Subdiv2D subdivision(suit.rect);
+        subdivision.insert(suit.points);
+
+        std::sort(suit.triangles.begin(), suit.triangles.end(), less_than);
+
+        std::vector<cv::Vec6f> output;
+        subdivision.getTriangleList(output);
+
+        sort(output.begin(), output.end(), less_than);
+
+        EXPECT_EQ(output.size(), suit.triangles.size());
+        for (size_t i = 0; i < output.size(); i++) {
+            EXPECT_TRUE(!less_than(output[i], suit.triangles[i]) && !less_than(suit.triangles[i], output[i]));
+        }
+    }
+}
+
 }};
