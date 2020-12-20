@@ -772,13 +772,11 @@ int Subdiv2D::findNearest(Point2f pt, Point2f* nearestPt)
     for( i = 0; i < total; i++ )
     {
         Point2f t;
-        int t_i;
 
         for(;;)
         {
-            t_i = edgeDst(edge, &t);
-            CV_Assert( t_i > 0 );
-            if( RightOfEx( pt, t_i, start_i ) <= 0 )
+            CV_Assert( edgeDst(edge, &t) > 0 );
+            if( RightOfEx( pt, edgeDst(edge, &t), start_i ) <= 0 )
                 break;
 
             edge = getEdge( edge, NEXT_AROUND_LEFT );
@@ -786,10 +784,9 @@ int Subdiv2D::findNearest(Point2f pt, Point2f* nearestPt)
 
         for(;;)
         {
-            t_i = edgeOrg( edge, &t );
-            CV_Assert( t_i > 0 );
+            CV_Assert( edgeOrg( edge, &t ) > 0 );
 
-            if( RightOfEx( pt, t_i, start_i ) > 0 )
+            if( RightOfEx( pt, edgeOrg( edge, &t ), start_i ) > 0 )
                 break;
 
             edge = getEdge( edge, PREV_AROUND_LEFT );
