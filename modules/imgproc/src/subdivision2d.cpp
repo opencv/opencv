@@ -256,7 +256,7 @@ static int InCircle(Point2f a, Point2f b, Point2f c, Point2f d) {
     return val > eps ? 1 : val < -eps ? -1 : 0;
 }
 
-#define META(i) (i == 1 || i == 2 || i == 3)
+#define META(i) ((i) == 1 || (i) == 2 || (i) == 3)
 const Point2f ORIGIN(0.f, 0.f);
 
 int Subdiv2D::CCWEx(int i, int j, int k) const {
@@ -283,17 +283,25 @@ int Subdiv2D::CCWEx(int i, int j, int k) const {
 
 int Subdiv2D::RightOfEx(int p, int edge) const {
     Point2f dummy;
-    int i = edgeOrg(edge, &dummy);
-    int j = edgeDst(edge, &dummy);
-    return CCWEx(p, j, i);
+    return CCWEx(p, edgeDst(edge, &dummy), edgeOrg(edge, &dummy));
 }
 
 int Subdiv2D::RightOfEx(Point2f pt, int edge) {
-    Point2f dummy;
-    int i = edgeOrg(edge, &dummy);
-    int j = edgeDst(edge, &dummy);
-    vtx[0].pt = pt;
-    return CCWEx(0, j, i);
+    if( freePoint == 0 ) {
+        vtx.emplace_back();
+        freePoint = vtx.size() - 1;
+    }
+    vtx[freePoint].pt = pt;
+    return RightOfEx(freePoint, edge);
+}
+
+int Subdiv2D::RightOfEx(Point2f pt, int i, int j) {
+    if( freePoint == 0 ) {
+        vtx.emplace_back();
+        freePoint = vtx.size() - 1;
+    }
+    vtx[freePoint].pt = pt;
+    return CCWEx(freePoint, j, i);
 }
 
 int Subdiv2D::InCircleEx(int i, int j, int k, int l) const {
@@ -739,13 +747,6 @@ void Subdiv2D::calcVoronoi()
 }
 
 
-static int isRightOf2( const Point2f& pt, const Point2f& org, const Point2f& diff )
-{
-    double cw_area = ((double)org.x - pt.x)*diff.y - ((double)org.y - pt.y)*diff.x;
-    return (cw_area > 0) - (cw_area < 0);
-}
-
-
 int Subdiv2D::findNearest(Point2f pt, Point2f* nearestPt)
 {
     CV_INSTRUMENT_REGION();
@@ -762,8 +763,7 @@ int Subdiv2D::findNearest(Point2f pt, Point2f* nearestPt)
     vertex = 0;
 
     Point2f start;
-    edgeOrg(edge, &start);
-    Point2f diff = pt - start;
+    int start_i = edgeOrg(edge, &start);
 
     edge = rotateEdge(edge, 1);
 
@@ -772,11 +772,13 @@ int Subdiv2D::findNearest(Point2f pt, Point2f* nearestPt)
     for( i = 0; i < total; i++ )
     {
         Point2f t;
+        int t_i;
 
         for(;;)
         {
-            CV_Assert( edgeDst(edge, &t) > 0 );
-            if( isRightOf2( t, start, diff ) >= 0 )
+            t_i = edgeDst(edge, &t);
+            CV_Assert( t_i > 0 );
+            if( RightOfEx( pt, t_i, start_i ) <= 0 )
                 break;
 
             edge = getEdge( edge, NEXT_AROUND_LEFT );
@@ -784,9 +786,10 @@ int Subdiv2D::findNearest(Point2f pt, Point2f* nearestPt)
 
         for(;;)
         {
-            CV_Assert( edgeOrg( edge, &t ) > 0 );
+            t_i = edgeOrg( edge, &t );
+            CV_Assert( t_i > 0 );
 
-            if( isRightOf2( t, start, diff ) < 0 )
+            if( RightOfEx( pt, t_i, start_i ) > 0 )
                 break;
 
             edge = getEdge( edge, PREV_AROUND_LEFT );
