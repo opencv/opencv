@@ -1170,9 +1170,9 @@ protected:
     int connectEdges( int edgeA, int edgeB );
     void swapEdges( int edge );
     int CCWEx(int i, int j, int k) const;
-    int RightOfEx(int p, int edge);
-    int InCircleEx(int i, int j, int k, int l) const;
+    int RightOfEx(int p, int edge) const;
     int RightOfEx(Point2f pt, int edge);
+    int InCircleEx(int i, int j, int k, int l) const;
     void calcVoronoi();
     void clearVoronoi();
     void checkSubdiv() const;

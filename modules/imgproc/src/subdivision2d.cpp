@@ -257,6 +257,7 @@ static int InCircle(Point2f a, Point2f b, Point2f c, Point2f d) {
 }
 
 #define META(i) (i == 1 || i == 2 || i == 3)
+const Point2f ORIGIN(0.f, 0.f);
 
 int Subdiv2D::CCWEx(int i, int j, int k) const {
 
@@ -265,12 +266,12 @@ int Subdiv2D::CCWEx(int i, int j, int k) const {
     }
 
     if (META(i) && META(j) && !META(k)) {
-        return CCW(vtx[i].pt, vtx[j].pt, vtx[0].pt);
+        return CCW(vtx[i].pt, vtx[j].pt, ORIGIN);
     }
 
     if (!META(i) && !META(j) && META(k)) {
         return !Collinear(vtx[j].pt - vtx[i].pt, vtx[k].pt) ?
-                CCW(vtx[0].pt, vtx[j].pt - vtx[i].pt, vtx[k].pt) : CCW(vtx[i].pt, vtx[j].pt, vtx[0].pt);
+                CCW(ORIGIN, vtx[j].pt - vtx[i].pt, vtx[k].pt) : CCW(vtx[i].pt, vtx[j].pt, ORIGIN);
     }
 
     if (!META(i) && !META(j) && !META(k)) {
@@ -280,11 +281,19 @@ int Subdiv2D::CCWEx(int i, int j, int k) const {
     return CCWEx(j, k, i);
 }
 
-int Subdiv2D::RightOfEx(int p, int edge) {
-    Point2f org, dst;
-    int i = edgeOrg(edge, &org);
-    int j = edgeDst(edge, &dst);
+int Subdiv2D::RightOfEx(int p, int edge) const {
+    Point2f dummy;
+    int i = edgeOrg(edge, &dummy);
+    int j = edgeDst(edge, &dummy);
     return CCWEx(p, j, i);
+}
+
+int Subdiv2D::RightOfEx(Point2f pt, int edge) {
+    Point2f dummy;
+    int i = edgeOrg(edge, &dummy);
+    int j = edgeDst(edge, &dummy);
+    vtx[0].pt = pt;
+    return CCWEx(0, j, i);
 }
 
 int Subdiv2D::InCircleEx(int i, int j, int k, int l) const {
@@ -295,10 +304,10 @@ int Subdiv2D::InCircleEx(int i, int j, int k, int l) const {
 
     if (META(i) && !META(j) && META(k) && !META(l)) {
         if (!Collinear(vtx[l].pt - vtx[j].pt, vtx[k].pt - vtx[i].pt)) {
-            return LeftOf(vtx[l].pt - vtx[j].pt, vtx[0].pt, vtx[k].pt - vtx[i].pt);
+            return LeftOf(vtx[l].pt - vtx[j].pt, ORIGIN, vtx[k].pt - vtx[i].pt);
         } else {
-            double dl = Distance(vtx[0].pt, vtx[l].pt);
-            double dj = Distance(vtx[0].pt, vtx[j].pt);
+            double dl = Distance(ORIGIN, vtx[l].pt);
+            double dj = Distance(ORIGIN, vtx[j].pt);
 
             if (abs(dl - dj) < FLT_EPSILON) {
                 return 0;
@@ -317,8 +326,8 @@ int Subdiv2D::InCircleEx(int i, int j, int k, int l) const {
             return -CCW(vtx[i].pt, vtx[j].pt, vtx[k].pt);
         } else {
             return !InRectangle(vtx[k].pt, vtx[i].pt, vtx[j].pt) ?
-                    LeftOf(vtx[l].pt, vtx[0].pt, vtx[j].pt - vtx[i].pt) :
-                    LeftOf(vtx[l].pt, vtx[0].pt, vtx[k].pt - vtx[j].pt);
+                    LeftOf(vtx[l].pt, ORIGIN, vtx[j].pt - vtx[i].pt) :
+                    LeftOf(vtx[l].pt, ORIGIN, vtx[k].pt - vtx[j].pt);
         }
     }
 
@@ -375,18 +384,6 @@ void Subdiv2D::deletePoint(int vidx)
     vtx[vidx].firstEdge = freePoint;
     vtx[vidx].type = -1;
     freePoint = vidx;
-}
-
-int Subdiv2D::RightOfEx(Point2f pt, int edge) {
-    Point2f org, dst;
-    int i = edgeOrg(edge, &org);
-    int j = edgeDst(edge, &dst);
-    vtx.push_back(Vertex(pt, false));
-    int p = vtx.size() - 1;
-
-    auto result = CCWEx(p, j, i);
-    vtx.pop_back();
-    return result;
 }
 
 int Subdiv2D::locate(Point2f pt, int& _edge, int& _vertex)
@@ -742,8 +739,7 @@ void Subdiv2D::calcVoronoi()
 }
 
 
-static int
-isRightOf2( const Point2f& pt, const Point2f& org, const Point2f& diff )
+static int isRightOf2( const Point2f& pt, const Point2f& org, const Point2f& diff )
 {
     double cw_area = ((double)org.x - pt.x)*diff.y - ((double)org.y - pt.y)*diff.x;
     return (cw_area > 0) - (cw_area < 0);
