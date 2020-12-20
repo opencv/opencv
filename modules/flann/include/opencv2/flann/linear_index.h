@@ -33,7 +33,6 @@
 
 //! @cond IGNORED
 
-#include "general.h"
 #include "nn_index.h"
 
 namespace cvflann
