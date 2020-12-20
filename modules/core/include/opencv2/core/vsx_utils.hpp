@@ -503,7 +503,7 @@ VSX_IMPL_CONV_EVEN_2_4(vec_uint4,  vec_double2, vec_ctu, vec_ctuo)
     VSX_IMPL_CONV_2VARIANT(vec_int4,   vec_float4,  vec_cts, vec_cts)
     VSX_IMPL_CONV_2VARIANT(vec_float4, vec_int4,    vec_ctf, vec_ctf)
     // define vec_cts for converting double precision to signed doubleword
-    // which isn't combitable with xlc but its okay since Eigen only use it for gcc
+    // which isn't compatible with xlc but its okay since Eigen only uses it for gcc
     VSX_IMPL_CONV_2VARIANT(vec_dword2, vec_double2, vec_cts, vec_ctsl)
 #endif // Eigen
 

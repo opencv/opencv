@@ -91,7 +91,7 @@ T get_param(const IndexParams& params, cv::String name)
         return it->second.cast<T>();
     }
     else {
-        throw FLANNException(cv::String("Missing parameter '")+name+cv::String("' in the parameters given"));
+        FLANN_THROW(cv::Error::StsBadArg, cv::String("Missing parameter '")+name+cv::String("' in the parameters given"));
     }
 }
 
