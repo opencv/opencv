@@ -39,7 +39,6 @@ ALIASES               += end_toggle="@htmlonly[block] </div> @endhtmlonly"
 ALIASES               += prev_tutorial{1}="**Prev  Tutorial:** \ref \1 \n"
 ALIASES               += next_tutorial{1}="**Next  Tutorial:** \ref \1 \n"
 ALIASES               += youtube{1}="@htmlonly[block]<div align='center'><iframe title='Video' width='560' height='349' src='https://www.youtube.com/embed/\1?rel=0' frameborder='0' align='middle' allowfullscreen></iframe></div>@endhtmlonly"
-TCL_SUBST              =
 OPTIMIZE_OUTPUT_FOR_C  = NO
 OPTIMIZE_OUTPUT_JAVA   = NO
 OPTIMIZE_FOR_FORTRAN   = NO
