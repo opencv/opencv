@@ -210,129 +210,123 @@ void Subdiv2D::swapEdges( int edge )
     splice(sedge, getEdge(b, NEXT_AROUND_LEFT));
 }
 
-static const double eps = 1e-6;
-
-static double cross_product(Point2f u, Point2f v) {
+static double CrossProduct(Point2f u, Point2f v) {
     return (double)u.x * v.y - (double)v.x * u.y;
 }
 
-static double dot_product(Point2f u, Point2f v) {
+static double DotProduct(Point2f u, Point2f v) {
     return (double)u.x * v.x + (double)u.y * v.y;
 }
 
-static float distance(Point2f a, Point2f b) {
-    return (float)sqrt(dot_product(b - a, b - a));
+static double Distance(Point2f a, Point2f b) {
+    return sqrt(DotProduct(b - a, b - a));
 }
 
-static bool collinear(Point2f u, Point2f v) {
-    return abs(cross_product(u, v)) < eps;
+static bool Collinear(Point2f u, Point2f v) {
+    return abs(CrossProduct(u, v)) < FLT_EPSILON;
 }
 
-static bool inside_rectangle(Point2f p, Point2f a, Point2f b) {
-    return
-            min(a.x, b.x) < p.x && p.x < max(a.x, b.x) &&
+static bool InRectangle(Point2f p, Point2f a, Point2f b) {
+    return  min(a.x, b.x) < p.x && p.x < max(a.x, b.x) &&
             min(a.y, b.y) < p.y && p.y < max(a.y, b.y);
 }
 
-static bool is_meta(int i) {
-    return i == 1 || i == 2 || i == 3;
+static int CCW(Point2f a, Point2f b, Point2f c) {
+    double cp = CrossProduct(b - a, c - a);
+    return cp > FLT_EPSILON ? 1 : (cp < -FLT_EPSILON ? -1 : 0);
 }
 
-int Subdiv2D::CCW(Point2f a, Point2f b, Point2f c) const {
-    double cp = cross_product(b - a, c - a);
-    return cp > eps ? 1 : (cp < -eps ? -1 : 0);
-}
-
-int Subdiv2D::RightOf(Point2f p, Point2f a, Point2f b) const {
+static int RightOf(Point2f p, Point2f a, Point2f b) {
     return CCW(p, b, a);
 }
 
-int Subdiv2D::LeftOf(Point2f p, Point2f a, Point2f b) const {
+static int LeftOf(Point2f p, Point2f a, Point2f b) {
     return CCW(p, a, b);
 }
 
-int Subdiv2D::CCW(int i, int j, int k) const {
+static int InCircle(Point2f a, Point2f b, Point2f c, Point2f d) {
+    const double eps = FLT_EPSILON * 0.125;
 
-    if (!is_meta(i) && !is_meta(j) && !is_meta(k)) {
-        return CCW(vtx[i].pt, vtx[j].pt, vtx[k].pt);
-    }
-
-    if (is_meta(i) && is_meta(j) && is_meta(k)) {
-        return CCW(vtx[i].pt, vtx[j].pt, vtx[k].pt);
-    }
-
-    if (is_meta(i) && is_meta(j) && !is_meta(k)) {
-        return CCW(vtx[i].pt, vtx[j].pt, {0.f, 0.f});
-    }
-
-    if (!is_meta(i) && !is_meta(j) && is_meta(k)) {
-        if (!collinear(vtx[j].pt - vtx[i].pt, vtx[k].pt)) {
-            return CCW({0.f, 0.f}, vtx[j].pt - vtx[i].pt, vtx[k].pt);
-        } else {
-            return CCW(vtx[i].pt, vtx[j].pt, {0.f, 0.f});
-        }
-    }
-
-    return CCW(j, k, i);
-}
-
-int Subdiv2D::InCircle(Point2f a, Point2f b, Point2f c, Point2f d) const
-{
-    const double eps = FLT_EPSILON*0.125;
-    double val = ((double)a.x * a.x + (double)a.y * a.y) * cross_product( c - b, d - b );
-    val -= ((double)b.x * b.x + (double)b.y * b.y) * cross_product( c - a, d - a );
-    val += ((double)c.x * c.x + (double)c.y * c.y) * cross_product( b - a, d - a );
-    val -= ((double)d.x * d.x + (double)d.y * d.y) * cross_product( b - a, c - a );
+    double val =
+            ((double)a.x * a.x + (double)a.y * a.y) * CrossProduct( c - b, d - b );
+    val -=  ((double)b.x * b.x + (double)b.y * b.y) * CrossProduct( c - a, d - a );
+    val +=  ((double)c.x * c.x + (double)c.y * c.y) * CrossProduct( b - a, d - a );
+    val -=  ((double)d.x * d.x + (double)d.y * d.y) * CrossProduct( b - a, c - a );
 
     return val > eps ? 1 : val < -eps ? -1 : 0;
 }
 
-int Subdiv2D::InCircle(int i, int j, int k, int l) const {
+#define META(i) (i == 1 || i == 2 || i == 3)
 
-    if (!is_meta(i) && !is_meta(j) && !is_meta(k) && !is_meta(l)) {
+int Subdiv2D::CCWEx(int i, int j, int k) const {
+
+    if (META(i) && META(j) && META(k)) {
+        return CCW(vtx[i].pt, vtx[j].pt, vtx[k].pt);
+    }
+
+    if (META(i) && META(j) && !META(k)) {
+        return CCW(vtx[i].pt, vtx[j].pt, vtx[0].pt);
+    }
+
+    if (!META(i) && !META(j) && META(k)) {
+        return !Collinear(vtx[j].pt - vtx[i].pt, vtx[k].pt) ?
+                CCW(vtx[0].pt, vtx[j].pt - vtx[i].pt, vtx[k].pt) : CCW(vtx[i].pt, vtx[j].pt, vtx[0].pt);
+    }
+
+    if (!META(i) && !META(j) && !META(k)) {
+        return CCW(vtx[i].pt, vtx[j].pt, vtx[k].pt);
+    }
+
+    return CCWEx(j, k, i);
+}
+
+int Subdiv2D::RightOfEx(int p, int edge) {
+    Point2f org, dst;
+    int i = edgeOrg(edge, &org);
+    int j = edgeDst(edge, &dst);
+    return CCWEx(p, j, i);
+}
+
+int Subdiv2D::InCircleEx(int i, int j, int k, int l) const {
+
+    if (META(i) && META(j) && META(k) && !META(l)) {
+        return CCWEx(i, j, k);
+    }
+
+    if (META(i) && !META(j) && META(k) && !META(l)) {
+        if (!Collinear(vtx[l].pt - vtx[j].pt, vtx[k].pt - vtx[i].pt)) {
+            return LeftOf(vtx[l].pt - vtx[j].pt, vtx[0].pt, vtx[k].pt - vtx[i].pt);
+        } else {
+            double dl = Distance(vtx[0].pt, vtx[l].pt);
+            double dj = Distance(vtx[0].pt, vtx[j].pt);
+
+            if (abs(dl - dj) < FLT_EPSILON) {
+                return 0;
+            } else {
+                return (dl < dj && CCWEx(i, j, k) > 0) || (dl > dj && CCWEx(i, j, k) < 0) ? 1 : -1;
+            }
+        }
+    }
+
+    if (META(i) && META(j) && !META(k) && !META(l)) {
+        return -InCircleEx(i, k, j, l);
+    }
+
+    if (!META(i) && !META(j) && !META(k) && META(l)) {
+        if (!Collinear(vtx[j].pt - vtx[i].pt, vtx[k].pt - vtx[i].pt)) {
+            return -CCW(vtx[i].pt, vtx[j].pt, vtx[k].pt);
+        } else {
+            return !InRectangle(vtx[k].pt, vtx[i].pt, vtx[j].pt) ?
+                    LeftOf(vtx[l].pt, vtx[0].pt, vtx[j].pt - vtx[i].pt) :
+                    LeftOf(vtx[l].pt, vtx[0].pt, vtx[k].pt - vtx[j].pt);
+        }
+    }
+
+    if (!META(i) && !META(j) && !META(k) && !META(l)) {
         return InCircle(vtx[i].pt, vtx[j].pt, vtx[k].pt, vtx[l].pt);
     }
 
-    if (is_meta(i) && is_meta(j) && is_meta(k) && !is_meta(l)) {
-        return CCW(i, j, k);
-    }
-
-    if (is_meta(i) && !is_meta(j) && is_meta(k) && !is_meta(l)) {
-        if (!collinear(vtx[l].pt - vtx[j].pt, vtx[k].pt - vtx[i].pt)) {
-            return LeftOf(vtx[l].pt - vtx[j].pt, {0.f, 0.f}, vtx[k].pt - vtx[i].pt);
-        } else {
-            float dl = distance({0.f, 0.f}, vtx[l].pt);
-            float dj = distance({0.f, 0.f}, vtx[j].pt);
-
-            if (abs(dl - dj) < eps) {
-                return 0;
-            } else {
-                if ((dl < dj && CCW(i, j, k) > 0) || (dl > dj && CCW(i, j, k) < 0)) {
-                    return 1;
-                } else {
-                    return -1;
-                }
-            }
-        }
-    }
-
-    if (is_meta(i) && is_meta(j) && !is_meta(k) && !is_meta(l)) {
-        return -InCircle(i, k, j, l);
-    }
-
-    if (!is_meta(i) && !is_meta(j) && !is_meta(k) && is_meta(l)) {
-        if (!collinear(vtx[j].pt - vtx[i].pt, vtx[k].pt - vtx[i].pt)) {
-            return -CCW(vtx[i].pt, vtx[j].pt, vtx[k].pt);
-        } else {
-            if (!inside_rectangle(vtx[k].pt, vtx[i].pt, vtx[j].pt)) {
-                return LeftOf(vtx[l].pt, {0.f, 0.f}, vtx[j].pt - vtx[i].pt);
-            } else {
-                return LeftOf(vtx[l].pt, {0.f, 0.f}, vtx[k].pt - vtx[j].pt);
-            }
-        }
-    }
-
-    return -InCircle(j, k, l, i);
+    return -InCircleEx(j, k, l, i);
 }
 
 int Subdiv2D::newEdge()
@@ -383,25 +377,17 @@ void Subdiv2D::deletePoint(int vidx)
     freePoint = vidx;
 }
 
-int Subdiv2D::isRightOf(Point2f pt, int edge) {
+int Subdiv2D::RightOfEx(Point2f pt, int edge) {
     Point2f org, dst;
     int i = edgeOrg(edge, &org);
     int j = edgeDst(edge, &dst);
     vtx.push_back(Vertex(pt, false));
     int p = vtx.size() - 1;
 
-    auto result = CCW(p, j, i);
+    auto result = CCWEx(p, j, i);
     vtx.pop_back();
     return result;
 }
-
-int Subdiv2D::isRightOf(int p, int edge) {
-    Point2f org, dst;
-    int i = edgeOrg(edge, &org);
-    int j = edgeDst(edge, &dst);
-    return CCW(p, j, i);
-}
-
 
 int Subdiv2D::locate(Point2f pt, int& _edge, int& _vertex)
 {
@@ -422,7 +408,7 @@ int Subdiv2D::locate(Point2f pt, int& _edge, int& _vertex)
 
     int location = PTLOC_ERROR;
 
-    int right_of_curr = isRightOf(pt, edge);
+    int right_of_curr = RightOfEx(pt, edge);
     if( right_of_curr > 0 )
     {
         edge = symEdge(edge);
@@ -434,8 +420,8 @@ int Subdiv2D::locate(Point2f pt, int& _edge, int& _vertex)
         int onext_edge = nextEdge( edge );
         int dprev_edge = getEdge( edge, PREV_AROUND_DST );
 
-        int right_of_onext = isRightOf( pt, onext_edge );
-        int right_of_dprev = isRightOf( pt, dprev_edge );
+        int right_of_onext = RightOfEx( pt, onext_edge );
+        int right_of_dprev = RightOfEx( pt, dprev_edge );
 
         if( right_of_dprev > 0 )
         {
@@ -466,7 +452,7 @@ int Subdiv2D::locate(Point2f pt, int& _edge, int& _vertex)
                 }
             }
             else if( right_of_curr == 0 &&
-                    isRightOf( edgeDst(onext_edge), edge ) >= 0 )
+                    RightOfEx( edgeDst(onext_edge), edge ) >= 0 )
             {
                 edge = symEdge( edge );
             }
@@ -506,7 +492,7 @@ int Subdiv2D::locate(Point2f pt, int& _edge, int& _vertex)
             edge = 0;
         }
         else if( (t1 < t3 || t2 < t3) &&
-                fabs( cross_product( org_pt - pt, dst_pt - pt )) < FLT_EPSILON )
+                Collinear( org_pt - pt, dst_pt - pt ))
         {
             location = PTLOC_ON_EDGE;
             vertex = 0;
@@ -581,8 +567,8 @@ int Subdiv2D::insert(Point2f pt)
         curr_org = edgeOrg( curr_edge );
         curr_dst = edgeDst( curr_edge );
 
-        if( isRightOf( temp_dst, curr_edge ) > 0 &&
-           InCircle( curr_org, temp_dst, curr_dst, curr_point ) > 0 )
+        if( RightOfEx( temp_dst, curr_edge ) > 0 &&
+           InCircleEx( curr_org, temp_dst, curr_dst, curr_point ) > 0 )
         {
             swapEdges( curr_edge );
             curr_edge = getEdge( curr_edge, PREV_AROUND_ORG );
@@ -883,28 +869,28 @@ void Subdiv2D::getTriangleList(std::vector<Vec6f>& triangleList) const
         int pj = edgeOrg(edge_b, &b);
         int edge_c = getEdge(edge_b, NEXT_AROUND_LEFT);
         int pk = edgeOrg(edge_c, &c);
-        if (is_meta(pi)) {
-            a.x *= 1500; a.y *= 1500;
-        }
-        if (is_meta(pj)) {
-            b.x *= 1500; b.y *= 1500;
-        }
-        if (is_meta(pk)) {
-            c.x *= 1500; c.y *= 1500;
-        }
+//        if (is_meta(pi)) {
+//            a.x *= 1500; a.y *= 1500;
+//        }
+//        if (is_meta(pj)) {
+//            b.x *= 1500; b.y *= 1500;
+//        }
+//        if (is_meta(pk)) {
+//            c.x *= 1500; c.y *= 1500;
+//        }
         printf("x = [%.0f %.0f %.0f %.0f];\n", a.x, b.x, c.x, a.x);
         printf("y = [%.0f %.0f %.0f %.0f];\n", a.y, b.y, c.y, a.y);
         if( edgemask[i] ) {
-            printf("plot(x,y,'-b');\n");
-            printf("hold on;\n");
+//            printf("plot(x,y,'-b');\n");
+//            printf("hold on;\n");
             continue;
         }
-        if ( is_meta(pi) || is_meta(pj) || is_meta(pk) ) {
-            printf("plot(x,y,'-r');\n");
-            printf("hold on;\n");
+        if ( META(pi) || META(pj) || META(pk) ) {
+//            printf("plot(x,y,'-r');\n");
+//            printf("hold on;\n");
             continue;
         }
-        printf("plot(x,y,'-g');\n");
+        printf("plot(x,y,'-k');\n");
         printf("hold on;\n");
         edgemask[edge_a] = true;
         edgemask[edge_b] = true;
