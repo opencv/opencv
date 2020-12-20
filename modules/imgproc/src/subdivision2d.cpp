@@ -795,12 +795,7 @@ int Subdiv2D::findNearest(Point2f pt, Point2f* nearestPt)
             edge = getEdge( edge, PREV_AROUND_LEFT );
         }
 
-        Point2f tempDiff;
-        edgeDst(edge, &tempDiff);
-        edgeOrg(edge, &t);
-        tempDiff -= t;
-
-        if( isRightOf2( pt, t, tempDiff ) >= 0 )
+        if( RightOfEx( pt, edge ) <= 0 )
         {
             vertex = edgeOrg(rotateEdge( edge, 3 ));
             break;
