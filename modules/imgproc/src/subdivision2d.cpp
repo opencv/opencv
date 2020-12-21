@@ -672,6 +672,29 @@ static Point2f computeVoronoiPoint(Point2f org0, Point2f dst0, Point2f org1, Poi
 }
 
 
+Point2f Subdiv2D::computeVoronoiPointEx(int i, int j, int k, int l) const {
+
+    Point2f a = vtx[i].pt, b = vtx[j].pt, c = vtx[k].pt, d = vtx[l].pt;
+    // topology is ultimately correct, we don't care much about possible geometrical artifacts outside of the viewport
+    float maxCoordinate = max( max(fabs(topLeft.x), fabs(bottomRight.x)), max(fabs(topLeft.y), fabs(bottomRight.y)) );;
+
+    if (META(i)) {
+        a *= 10.f * maxCoordinate;
+    }
+    if (META(j)) {
+        b *= 10.f * maxCoordinate;
+    }
+    if (META(k)) {
+        c *= 10.f * maxCoordinate;
+    }
+    if (META(l)) {
+        d *= 10.f * maxCoordinate;
+    }
+
+    return computeVoronoiPoint(a, b, c, d);
+}
+
+
 void Subdiv2D::calcVoronoi()
 {
     // check if it is already calculated
@@ -690,19 +713,13 @@ void Subdiv2D::calcVoronoi()
             continue;
 
         int edge0 = (int)(i*4);
-        Point2f org0, dst0, org1, dst1;
 
         if( !quadedge.pt[3] )
         {
             int edge1 = getEdge( edge0, NEXT_AROUND_LEFT );
             int edge2 = getEdge( edge1, NEXT_AROUND_LEFT );
 
-            edgeOrg(edge0, &org0);
-            edgeDst(edge0, &dst0);
-            edgeOrg(edge1, &org1);
-            edgeDst(edge1, &dst1);
-
-            Point2f virt_point = computeVoronoiPoint(org0, dst0, org1, dst1);
+            Point2f virt_point = computeVoronoiPointEx(edgeOrg(edge0), edgeDst(edge0), edgeOrg(edge1), edgeDst(edge1));
 
             if( fabs( virt_point.x ) < FLT_MAX * 0.5 &&
                fabs( virt_point.y ) < FLT_MAX * 0.5 )
@@ -717,12 +734,7 @@ void Subdiv2D::calcVoronoi()
             int edge1 = getEdge( edge0, NEXT_AROUND_RIGHT );
             int edge2 = getEdge( edge1, NEXT_AROUND_RIGHT );
 
-            edgeOrg(edge0, &org0);
-            edgeDst(edge0, &dst0);
-            edgeOrg(edge1, &org1);
-            edgeDst(edge1, &dst1);
-
-            Point2f virt_point = computeVoronoiPoint(org0, dst0, org1, dst1);
+            Point2f virt_point = computeVoronoiPointEx(edgeOrg(edge0), edgeDst(edge0), edgeOrg(edge1), edgeDst(edge1));
 
             if( fabs( virt_point.x ) < FLT_MAX * 0.5 &&
                fabs( virt_point.y ) < FLT_MAX * 0.5 )
@@ -841,36 +853,23 @@ void Subdiv2D::getTriangleList(std::vector<Vec6f>& triangleList) const
 
     for( i = 4; i < total; i += 2 )
     {
+        if( edgemask[i] ) {
+            continue;
+        }
+
         Point2f a, b, c;
         int edge_a = i;
-        int pi = edgeOrg(edge_a, &a);
+        if (META(edgeOrg(edge_a, &a))) {
+            continue;
+        }
         int edge_b = getEdge(edge_a, NEXT_AROUND_LEFT);
-        int pj = edgeOrg(edge_b, &b);
+        if (META(edgeOrg(edge_b, &b))) {
+            continue;
+        }
         int edge_c = getEdge(edge_b, NEXT_AROUND_LEFT);
-        int pk = edgeOrg(edge_c, &c);
-//        if (is_meta(pi)) {
-//            a.x *= 1500; a.y *= 1500;
-//        }
-//        if (is_meta(pj)) {
-//            b.x *= 1500; b.y *= 1500;
-//        }
-//        if (is_meta(pk)) {
-//            c.x *= 1500; c.y *= 1500;
-//        }
-        printf("x = [%.0f %.0f %.0f %.0f];\n", a.x, b.x, c.x, a.x);
-        printf("y = [%.0f %.0f %.0f %.0f];\n", a.y, b.y, c.y, a.y);
-        if( edgemask[i] ) {
-//            printf("plot(x,y,'-b');\n");
-//            printf("hold on;\n");
+        if (META(edgeOrg(edge_c, &c))) {
             continue;
         }
-        if ( META(pi) || META(pj) || META(pk) ) {
-//            printf("plot(x,y,'-r');\n");
-//            printf("hold on;\n");
-            continue;
-        }
-        printf("plot(x,y,'-k');\n");
-        printf("hold on;\n");
         edgemask[edge_a] = true;
         edgemask[edge_b] = true;
         edgemask[edge_c] = true;

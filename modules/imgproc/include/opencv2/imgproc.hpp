@@ -1173,6 +1173,7 @@ protected:
     int RightOfEx(int p, int i, int j) const;
     int RightOfEx(Point2f x, int i, int j);
     int InCircleEx(int i, int j, int k, int l) const;
+    Point2f computeVoronoiPointEx(int i, int j, int k, int l) const;
     void calcVoronoi();
     void clearVoronoi();
     void checkSubdiv() const;
