@@ -226,9 +226,9 @@ static bool Collinear(Point2f u, Point2f v) {
     return abs(CrossProduct(u, v)) < FLT_EPSILON;
 }
 
-static bool InRectangle(Point2f p, Point2f a, Point2f b) {
-    return  min(a.x, b.x) < p.x && p.x < max(a.x, b.x) &&
-            min(a.y, b.y) < p.y && p.y < max(a.y, b.y);
+static bool InRectangle(Point2f x, Point2f a, Point2f b) {
+    return  min(a.x, b.x) < x.x && x.x < max(a.x, b.x) &&
+            min(a.y, b.y) < x.y && x.y < max(a.y, b.y);
 }
 
 static int CCW(Point2f a, Point2f b, Point2f c) {
@@ -236,12 +236,12 @@ static int CCW(Point2f a, Point2f b, Point2f c) {
     return cp > FLT_EPSILON ? 1 : (cp < -FLT_EPSILON ? -1 : 0);
 }
 
-static int RightOf(Point2f p, Point2f a, Point2f b) {
-    return CCW(p, b, a);
+static int RightOf(Point2f x, Point2f a, Point2f b) {
+    return CCW(x, b, a);
 }
 
-static int LeftOf(Point2f p, Point2f a, Point2f b) {
-    return CCW(p, a, b);
+static int LeftOf(Point2f x, Point2f a, Point2f b) {
+    return CCW(x, a, b);
 }
 
 static int InCircle(Point2f a, Point2f b, Point2f c, Point2f d) {
@@ -281,27 +281,17 @@ int Subdiv2D::CCWEx(int i, int j, int k) const {
     return CCWEx(j, k, i);
 }
 
-int Subdiv2D::RightOfEx(int p, int edge) const {
-    Point2f dummy;
-    return CCWEx(p, edgeDst(edge, &dummy), edgeOrg(edge, &dummy));
+int Subdiv2D::RightOfEx(int p, int i, int j) const {
+    return CCWEx(p, j, i);
 }
 
-int Subdiv2D::RightOfEx(Point2f pt, int edge) {
+int Subdiv2D::RightOfEx(Point2f x, int i, int j) {
     if( freePoint == 0 ) {
         vtx.emplace_back();
         freePoint = vtx.size() - 1;
     }
-    vtx[freePoint].pt = pt;
-    return RightOfEx(freePoint, edge);
-}
-
-int Subdiv2D::RightOfEx(Point2f pt, int i, int j) {
-    if( freePoint == 0 ) {
-        vtx.emplace_back();
-        freePoint = vtx.size() - 1;
-    }
-    vtx[freePoint].pt = pt;
-    return CCWEx(freePoint, j, i);
+    vtx[freePoint].pt = x;
+    return RightOfEx(freePoint, i, j);
 }
 
 int Subdiv2D::InCircleEx(int i, int j, int k, int l) const {
@@ -413,7 +403,7 @@ int Subdiv2D::locate(Point2f pt, int& _edge, int& _vertex)
 
     int location = PTLOC_ERROR;
 
-    int right_of_curr = RightOfEx(pt, edge);
+    int right_of_curr = RightOfEx(pt, edgeOrg(edge), edgeDst(edge));
     if( right_of_curr > 0 )
     {
         edge = symEdge(edge);
@@ -425,8 +415,8 @@ int Subdiv2D::locate(Point2f pt, int& _edge, int& _vertex)
         int onext_edge = nextEdge( edge );
         int dprev_edge = getEdge( edge, PREV_AROUND_DST );
 
-        int right_of_onext = RightOfEx( pt, onext_edge );
-        int right_of_dprev = RightOfEx( pt, dprev_edge );
+        int right_of_onext = RightOfEx( pt, edgeOrg(onext_edge), edgeDst(onext_edge ) );
+        int right_of_dprev = RightOfEx( pt, edgeOrg(dprev_edge), edgeDst(dprev_edge ) );
 
         if( right_of_dprev > 0 )
         {
@@ -457,7 +447,7 @@ int Subdiv2D::locate(Point2f pt, int& _edge, int& _vertex)
                 }
             }
             else if( right_of_curr == 0 &&
-                    RightOfEx( edgeDst(onext_edge), edge ) >= 0 )
+                    RightOfEx( edgeDst(onext_edge), edgeOrg(edge), edgeDst(edge ) ) >= 0 )
             {
                 edge = symEdge( edge );
             }
@@ -572,7 +562,7 @@ int Subdiv2D::insert(Point2f pt)
         curr_org = edgeOrg( curr_edge );
         curr_dst = edgeDst( curr_edge );
 
-        if( RightOfEx( temp_dst, curr_edge ) > 0 &&
+        if( RightOfEx( temp_dst, edgeOrg(curr_edge), edgeDst(curr_edge ) ) > 0 &&
            InCircleEx( curr_org, temp_dst, curr_dst, curr_point ) > 0 )
         {
             swapEdges( curr_edge );
@@ -762,8 +752,7 @@ int Subdiv2D::findNearest(Point2f pt, Point2f* nearestPt)
 
     vertex = 0;
 
-    Point2f start;
-    int start_i = edgeOrg(edge, &start);
+    int start = edgeOrg(edge);
 
     edge = rotateEdge(edge, 1);
 
@@ -771,12 +760,11 @@ int Subdiv2D::findNearest(Point2f pt, Point2f* nearestPt)
 
     for( i = 0; i < total; i++ )
     {
-        Point2f t;
 
         for(;;)
         {
-            CV_Assert( edgeDst(edge, &t) > 0 );
-            if( RightOfEx( pt, edgeDst(edge, &t), start_i ) <= 0 )
+            CV_Assert( edgeDst( edge ) > 0 );
+            if( RightOfEx( pt, edgeDst( edge ), start ) <= 0 )
                 break;
 
             edge = getEdge( edge, NEXT_AROUND_LEFT );
@@ -784,15 +772,15 @@ int Subdiv2D::findNearest(Point2f pt, Point2f* nearestPt)
 
         for(;;)
         {
-            CV_Assert( edgeOrg( edge, &t ) > 0 );
+            CV_Assert( edgeOrg( edge ) > 0 );
 
-            if( RightOfEx( pt, edgeOrg( edge, &t ), start_i ) > 0 )
+            if( RightOfEx( pt, edgeOrg( edge ), start ) > 0 )
                 break;
 
             edge = getEdge( edge, PREV_AROUND_LEFT );
         }
 
-        if( RightOfEx( pt, edge ) <= 0 )
+        if( RightOfEx( pt, edgeOrg( edge ), edgeDst( edge ) ) <= 0 )
         {
             vertex = edgeOrg(rotateEdge( edge, 3 ));
             break;

@@ -1170,9 +1170,8 @@ protected:
     int connectEdges( int edgeA, int edgeB );
     void swapEdges( int edge );
     int CCWEx(int i, int j, int k) const;
-    int RightOfEx(int p, int edge) const;
-    int RightOfEx(Point2f pt, int edge);
-    int RightOfEx(Point2f pt, int i, int j);
+    int RightOfEx(int p, int i, int j) const;
+    int RightOfEx(Point2f x, int i, int j);
     int InCircleEx(int i, int j, int k, int l) const;
     void calcVoronoi();
     void clearVoronoi();
