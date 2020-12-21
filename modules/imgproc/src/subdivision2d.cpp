@@ -764,7 +764,7 @@ int Subdiv2D::findNearest(Point2f pt, Point2f* nearestPt)
         for(;;)
         {
             CV_Assert( edgeDst( edge ) > 0 );
-            if( RightOfEx( pt, edgeDst( edge ), start ) <= 0 )
+            if( RightOfEx( pt, start, edgeDst( edge ) ) >= 0 )
                 break;
 
             edge = getEdge( edge, NEXT_AROUND_LEFT );
@@ -774,13 +774,13 @@ int Subdiv2D::findNearest(Point2f pt, Point2f* nearestPt)
         {
             CV_Assert( edgeOrg( edge ) > 0 );
 
-            if( RightOfEx( pt, edgeOrg( edge ), start ) > 0 )
+            if( RightOfEx( pt, start, edgeOrg( edge ) ) < 0 )
                 break;
 
             edge = getEdge( edge, PREV_AROUND_LEFT );
         }
 
-        if( RightOfEx( pt, edgeOrg( edge ), edgeDst( edge ) ) <= 0 )
+        if( RightOfEx( pt, edgeDst( edge ), edgeOrg( edge ) ) >= 0 )
         {
             vertex = edgeOrg(rotateEdge( edge, 3 ));
             break;
