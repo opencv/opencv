@@ -242,7 +242,10 @@ void cv::gimpl::GExecutor::initResource(const ade::NodeHandle & nh, const ade::N
     case GShape::GOPAQUE:
         // Constructed on Reset, do nothing here
         break;
-
+    case GShape::GFRAME: {
+        // Should be defined by backend, do nothing here
+        break;
+    }
     default:
         GAPI_Assert(false);
     }
