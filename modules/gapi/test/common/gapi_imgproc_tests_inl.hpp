@@ -313,7 +313,7 @@ TEST_P(Dilate3x3Test, AccuracyTest)
 
 TEST_P(MorphologyExTest, AccuracyTest)
 {
-    MorphShapes defShape = cv::MORPH_RECT;
+    cv::MorphShapes defShape = cv::MORPH_RECT;
     int defKernSize = 3;
     cv::Mat kernel = cv::getStructuringElement(defShape, cv::Size(defKernSize, defKernSize));
 
