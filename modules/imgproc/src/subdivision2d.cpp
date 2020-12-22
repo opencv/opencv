@@ -236,10 +236,6 @@ static int CCW(Point2f a, Point2f b, Point2f c) {
     return cp > FLT_EPSILON ? 1 : (cp < -FLT_EPSILON ? -1 : 0);
 }
 
-static int RightOf(Point2f x, Point2f a, Point2f b) {
-    return CCW(x, b, a);
-}
-
 static int LeftOf(Point2f x, Point2f a, Point2f b) {
     return CCW(x, a, b);
 }
