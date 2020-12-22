@@ -105,10 +105,12 @@ public:
     std::size_t numInputs() const { return params.num_in; }
     std::size_t numOutputs() const { return params.num_out; }
     void setInput(int i, const cv::Mat &m);
-    void setInput(ONNXCallContext &ctx, const int in_idx, const int name_idx, Views &views, const cv::Rect &roi);
     void setOutput(int idx, cv::Mat &m);
     cv::Mat allocOutput(int i) const;
-
+    // Gets exMat from input
+    void extractMat(ONNXCallContext &ctx, const size_t in_idx, Views &views);
+    // Extracted cv::Mat from input cv::Mat/cv::MediaFrame
+    cv::Mat exMat;
     // Run with the assigned inputs/outputs
     void run();
 };
@@ -266,25 +268,22 @@ inline void preprocess(const cv::Mat& src,
 
 void preprocess(const cv::MediaFrame::View& view,
                 const cv::GFrameDesc& desc,
-                const cv::gimpl::onnx::TensorInfo& ti,
-                const cv::Rect& roi,
                       cv::Mat& dst) {
-    cv::Mat pp;
+    // This overload constructs cv::Mat from cv::MediaFrame
     switch (desc.fmt) {
         case cv::MediaFormat::BGR: {
-            pp = cv::Mat(desc.size, CV_8UC3, view.ptr[0], view.stride[0]);
+            dst = cv::Mat(desc.size, CV_8UC3, view.ptr[0], view.stride[0]);
             break;
         }
         case cv::MediaFormat::NV12: {
             const auto y_plane  = cv::Mat(desc.size, CV_8UC1, view.ptr[0], view.stride[0]);
             const auto uv_plane = cv::Mat(desc.size / 2, CV_8UC2, view.ptr[1], view.stride[1]);
-            cvtColorTwoPlane(y_plane, uv_plane, pp, cv::COLOR_YUV2BGR_NV12);
+            cvtColorTwoPlane(y_plane, uv_plane, dst, cv::COLOR_YUV2BGR_NV12);
             break;
         }
         default:
             GAPI_Assert(false && "Unsupported media format for ONNX backend");
     }
-    preprocess(roi.empty() ? pp : pp(roi), ti, dst);
 }
 
 template <typename T>
@@ -494,6 +493,7 @@ void cv::gimpl::onnx::GONNXExecutable::run(std::vector<InObj>  &&input_objs,
                          std::bind(&GONNXExecutable::packArg, this, _1));
 
     // NB: Need to store inputs shape to recognize GFrame/GMat
+    context.in_shapes.reserve(op.args.size());
     ade::util::transform(op.args,
                          std::back_inserter(context.in_shapes),
                          [](const cv::GArg& arg) {
@@ -636,32 +636,24 @@ cv::GMatDesc ONNXCompiled::outMeta(int idx) const {
                         toCV(out_tensor_info[ort_idx].dims));
 }
 
-void ONNXCompiled::setInput(int i, const cv::Mat &m) {
-    const auto in_idx  = i;
+void ONNXCompiled::setInput(int in_idx, const cv::Mat &m) {
+    GAPI_Assert(!m.empty() && "Input data can't be empty!");
     const auto in_name = params.input_names[in_idx];
     const auto ort_idx = getIdxByName(in_tensor_info, in_name);
     preprocess(m, in_tensor_info[ort_idx], in_data[in_idx]);
 }
 
-void ONNXCompiled::setInput(ONNXCallContext &ctx,
-                            const int in_idx,
-                            const int name_idx,
-                            Views& views,
-                            const cv::Rect& roi = cv::Rect()) {
-    const auto in_name = params.input_names[name_idx];
-    const auto ort_idx = getIdxByName(in_tensor_info, in_name);
-
+void ONNXCompiled::extractMat(ONNXCallContext &ctx, const size_t in_idx, Views& views) {
     switch (ctx.in_shapes[in_idx]) {
         case cv::GShape::GFRAME: {
             const cv::MediaFrame& frame = ctx.inFrame(in_idx);
             views.emplace_back(new cv::MediaFrame::View(frame.access(cv::MediaFrame::Access::R)));
-            preprocess(*views.back(), frame.desc(), in_tensor_info[ort_idx], roi, in_data[name_idx]);
+            GAPI_Assert(views.size() <= numInputs());
+            preprocess(*views.back(), frame.desc(), exMat);
             break;
         }
         case cv::GShape::GMAT: {
-            preprocess(roi.empty() ? ctx.inMat(in_idx) : ctx.inMat(in_idx)(roi),
-                       in_tensor_info[ort_idx],
-                       in_data[name_idx]);
+            exMat = ctx.inMat(in_idx);
             break;
         }
         default: {
@@ -796,7 +788,8 @@ struct Infer: public cv::detail::KernelTag {
     static void run(const ONNXUnit &uu, ONNXCallContext &ctx) {
         Views views;
         for (auto &&idx : ade::util::iota(uu.oc->numInputs())) {
-            uu.oc->setInput(ctx, idx, idx, views);
+            uu.oc->extractMat(ctx, idx, views);
+            uu.oc->setInput(idx, uu.oc->exMat);
         }
         for (auto &&idx : ade::util::iota(uu.oc->numOutputs())) {
             uu.oc->setOutput(idx, ctx.outMatR(idx));
@@ -832,7 +825,8 @@ struct InferROI: public cv::detail::KernelTag {
         // non-generic version for now, per the InferROI's definition
         GAPI_Assert(uu.oc->numInputs() == 1u);
         const auto& this_roi = ctx.inArg<cv::detail::OpaqueRef>(0).rref<cv::Rect>();
-        uu.oc->setInput(ctx, 1, 0, views, this_roi);
+        uu.oc->extractMat(ctx, 1, views);
+        uu.oc->setInput(0, uu.oc->exMat(this_roi));
         for (auto &&idx : ade::util::iota(uu.oc->numOutputs())) {
             uu.oc->setOutput(idx, ctx.outMatR(idx));
         }
@@ -882,8 +876,9 @@ struct InferList: public cv::detail::KernelTag {
         for (auto i : ade::util::iota(uu.oc->numOutputs())) {
             ctx.outVecR<cv::Mat>(i).clear();
         }
+        uu.oc->extractMat(ctx, 1, views);
         for (const auto &rc : in_roi_vec) {
-            uu.oc->setInput(ctx, 1, 0, views, rc);
+            uu.oc->setInput(0, uu.oc->exMat(rc));
             std::vector<cv::Mat> out_mats(uu.oc->numOutputs());
             for (auto i : ade::util::iota(uu.oc->numOutputs())) {
                 out_mats[i] = uu.oc->allocOutput(i);
@@ -963,7 +958,7 @@ struct InferList2: public cv::detail::KernelTag {
         Views views;
         GAPI_Assert(ctx.args.size() > 1u
                     && "This operation must have at least two arguments");
-
+        uu.oc->extractMat(ctx, 0, views);
         // Since we do a ROI list inference, always assume our input buffer is image
         // Take the next argument, which must be vector (of any kind).
         // Use this only to obtain the ROI list size (sizes of all
@@ -989,7 +984,7 @@ struct InferList2: public cv::detail::KernelTag {
                 if (this_vec.holds<cv::Rect>()) {
                     // ROI case - create an ROI blob
                     const auto &vec = this_vec.rref<cv::Rect>();
-                    uu.oc->setInput(ctx, in_idx, in_idx, views, vec[list_idx]);
+                    uu.oc->setInput(in_idx, uu.oc->exMat(vec[list_idx]));
                 } else if (this_vec.holds<cv::Mat>()) {
                     // Mat case - create a regular blob
                     // FIXME: NOW Assume Mats are always BLOBS (not
