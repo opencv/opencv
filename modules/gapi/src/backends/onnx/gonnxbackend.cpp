@@ -928,7 +928,10 @@ struct InferList2: public cv::detail::KernelTag {
                 break;
             }
             case cv::GMetaArg::index_of<cv::GFrameDesc>(): {
-                // FIXME: Is there any validation for GFrame ?
+                const auto &meta_0 = util::get<cv::GFrameDesc>(mm_0);
+                GAPI_Assert(   (meta_0.fmt == cv::MediaFormat::BGR)
+                            || (meta_0.fmt == cv::MediaFormat::NV12));
+                GAPI_Assert((meta_0.size.height !=0) && (meta_0.size.width !=0));
                 break;
             }
             default:
