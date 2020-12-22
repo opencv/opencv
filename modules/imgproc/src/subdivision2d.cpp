@@ -628,6 +628,13 @@ void Subdiv2D::initDelaunay( Rect rect )
     splice( edge_CA, symEdge( edge_BC ));
 
     recentEdge = edge_AB;
+
+    float r = max(Distance(ORIGIN, topLeft), Distance(ORIGIN, bottomRight));
+    while (vtx[1].pt.x < 10.f * r) {
+        vtx[1].pt *= 2.f;
+        vtx[2].pt *= 2.f;
+        vtx[3].pt *= 2.f;
+    }
 }
 
 
