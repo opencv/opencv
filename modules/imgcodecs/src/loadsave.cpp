@@ -1065,7 +1065,9 @@ cvSaveImage( const char* filename, const CvArr* arr, const int* _params )
         for( ; _params[i] > 0; i += 2 )
             CV_Assert(static_cast<size_t>(i) < cv::CV_IO_MAX_IMAGE_PARAMS*2); // Limit number of params for security reasons
     }
-    return cv::imwrite_(filename, cv::cvarrToMat(arr),
+    std::vector<cv::Mat> img_vec;
+    img_vec.emplace_back(cv::cvarrToMat(arr));
+    return cv::imwrite_(filename, img_vec,
         i > 0 ? std::vector<int>(_params, _params+i) : std::vector<int>(),
         CV_IS_IMAGE(arr) && ((const IplImage*)arr)->origin == IPL_ORIGIN_BL );
 }
