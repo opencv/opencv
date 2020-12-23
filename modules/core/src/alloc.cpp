@@ -82,7 +82,7 @@ cv::utils::AllocatorStatisticsInterface& getAllocatorStatistics()
     return allocator_stats;
 }
 
-#if defined HAVE_POSIX_MEMALIGN || defined HAVE_MEMALIGN
+#if defined HAVE_POSIX_MEMALIGN || defined HAVE_MEMALIGN || defined HAVE_WIN32_ALIGNED_MALLOC
 static bool readMemoryAlignmentParameter()
 {
     bool value = true;
@@ -148,6 +148,14 @@ void* fastMalloc(size_t size)
             return OutOfMemoryError(size);
         return ptr;
     }
+#elif defined HAVE_WIN32_ALIGNED_MALLOC
+    if (isAlignedAllocationEnabled())
+    {
+        void* ptr = _aligned_malloc(size, CV_MALLOC_ALIGN);
+        if(!ptr)
+            return OutOfMemoryError(size);
+        return ptr;
+    }
 #endif
     uchar* udata = (uchar*)malloc(size + sizeof(void*) + CV_MALLOC_ALIGN);
     if(!udata)
@@ -168,6 +176,12 @@ void fastFree(void* ptr)
     if (isAlignedAllocationEnabled())
     {
         free(ptr);
+        return;
+    }
+#elif defined HAVE_WIN32_ALIGNED_MALLOC
+    if (isAlignedAllocationEnabled())
+    {
+        _aligned_free(ptr);
         return;
     }
 #endif
