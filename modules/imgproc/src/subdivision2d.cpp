@@ -210,126 +210,106 @@ void Subdiv2D::swapEdges( int edge )
     splice(sedge, getEdge(b, NEXT_AROUND_LEFT));
 }
 
-static double CrossProduct(Point2f u, Point2f v) {
-    return (double)u.x * v.y - (double)v.x * u.y;
+static double distance(Point2f a, Point2f b) {
+    return norm(b - a);
 }
 
-static double DotProduct(Point2f u, Point2f v) {
-    return (double)u.x * v.x + (double)u.y * v.y;
+static bool collinear(Point2f u, Point2f v) {
+    return abs(u.cross(v)) < FLT_EPSILON;
 }
 
-static double Distance(Point2f a, Point2f b) {
-    return sqrt(DotProduct(b - a, b - a));
-}
-
-static bool Collinear(Point2f u, Point2f v) {
-    return abs(CrossProduct(u, v)) < FLT_EPSILON;
-}
-
-static bool InRectangle(Point2f x, Point2f a, Point2f b) {
-    return  min(a.x, b.x) < x.x && x.x < max(a.x, b.x) &&
-            min(a.y, b.y) < x.y && x.y < max(a.y, b.y);
-}
-
-static int CCW(Point2f a, Point2f b, Point2f c) {
-    double cp = CrossProduct(b - a, c - a);
+static int counterClockwise(Point2f a, Point2f b, Point2f c) {
+    double cp = (b - a).cross(c - a);
     return cp > FLT_EPSILON ? 1 : (cp < -FLT_EPSILON ? -1 : 0);
 }
 
-static int LeftOf(Point2f x, Point2f a, Point2f b) {
-    return CCW(x, a, b);
+static int leftOf(Point2f x, Point2f a, Point2f b) {
+    return counterClockwise(x, a, b);
 }
 
-static int InCircle(Point2f a, Point2f b, Point2f c, Point2f d) {
+static int inCircle(Point2f a, Point2f b, Point2f c, Point2f d) {
     const double eps = FLT_EPSILON * 0.125;
 
     double val =
-            ((double)a.x * a.x + (double)a.y * a.y) * CrossProduct( c - b, d - b );
-    val -=  ((double)b.x * b.x + (double)b.y * b.y) * CrossProduct( c - a, d - a );
-    val +=  ((double)c.x * c.x + (double)c.y * c.y) * CrossProduct( b - a, d - a );
-    val -=  ((double)d.x * d.x + (double)d.y * d.y) * CrossProduct( b - a, c - a );
+            ((double)a.x * a.x + (double)a.y * a.y) * ( c - b ).cross( d - b );
+    val -=  ((double)b.x * b.x + (double)b.y * b.y) * ( c - a ).cross( d - a );
+    val +=  ((double)c.x * c.x + (double)c.y * c.y) * ( b - a ).cross( d - a );
+    val -=  ((double)d.x * d.x + (double)d.y * d.y) * ( b - a ).cross( c - a );
 
     return val > eps ? 1 : val < -eps ? -1 : 0;
 }
 
-#define META(i) ((i) == 1 || (i) == 2 || (i) == 3)
-const Point2f ORIGIN(0.f, 0.f);
+// the "meta point" predicate
+#undef MP
+#define MP(i) ((i) == 1 || (i) == 2 || (i) == 3)
 
-int Subdiv2D::CCWEx(int i, int j, int k) const {
+int Subdiv2D::counterClockwiseEx(int i, int j, int k) const {
 
-    if (META(i) && META(j) && META(k)) {
-        return CCW(vtx[i].pt, vtx[j].pt, vtx[k].pt);
+    if (MP(i) && MP(j) && MP(k)) {
+        return counterClockwise(vtx[i].pt, vtx[j].pt, vtx[k].pt);
     }
 
-    if (META(i) && META(j) && !META(k)) {
-        return CCW(vtx[i].pt, vtx[j].pt, ORIGIN);
+    if (MP(i) && MP(j) && !MP(k)) {
+        return counterClockwise(vtx[i].pt, vtx[j].pt, vtx[0].pt);
     }
 
-    if (!META(i) && !META(j) && META(k)) {
-        return !Collinear(vtx[j].pt - vtx[i].pt, vtx[k].pt) ?
-                CCW(ORIGIN, vtx[j].pt - vtx[i].pt, vtx[k].pt) : CCW(vtx[i].pt, vtx[j].pt, ORIGIN);
+    if (!MP(i) && !MP(j) && MP(k)) {
+        return !collinear(vtx[j].pt - vtx[i].pt, vtx[k].pt) ?
+                counterClockwise(vtx[0].pt, vtx[j].pt - vtx[i].pt, vtx[k].pt) :
+                counterClockwise(vtx[i].pt, vtx[j].pt, vtx[0].pt);
     }
 
-    if (!META(i) && !META(j) && !META(k)) {
-        return CCW(vtx[i].pt, vtx[j].pt, vtx[k].pt);
+    if (!MP(i) && !MP(j) && !MP(k)) {
+        return counterClockwise(vtx[i].pt, vtx[j].pt, vtx[k].pt);
     }
 
-    return CCWEx(j, k, i);
+    return counterClockwiseEx(j, k, i);
 }
 
-int Subdiv2D::RightOfEx(int p, int i, int j) const {
-    return CCWEx(p, j, i);
+int Subdiv2D::rightOfEx(int p, int i, int j) const {
+    return counterClockwiseEx(p, j, i);
 }
 
-int Subdiv2D::RightOfEx(Point2f x, int i, int j) {
-    if( freePoint == 0 ) {
-        vtx.emplace_back();
-        freePoint = vtx.size() - 1;
-    }
-    vtx[freePoint].pt = x;
-    return RightOfEx(freePoint, i, j);
-}
+int Subdiv2D::inCircleEx(int i, int j, int k, int l) const {
 
-int Subdiv2D::InCircleEx(int i, int j, int k, int l) const {
-
-    if (META(i) && META(j) && META(k) && !META(l)) {
-        return CCWEx(i, j, k);
+    if (MP(i) && MP(j) && MP(k) && !MP(l)) {
+        return counterClockwiseEx(i, j, k);
     }
 
-    if (META(i) && !META(j) && META(k) && !META(l)) {
-        if (!Collinear(vtx[l].pt - vtx[j].pt, vtx[k].pt - vtx[i].pt)) {
-            return LeftOf(vtx[l].pt - vtx[j].pt, ORIGIN, vtx[k].pt - vtx[i].pt);
+    if (MP(i) && !MP(j) && MP(k) && !MP(l)) {
+        if (!collinear(vtx[l].pt - vtx[j].pt, vtx[k].pt - vtx[i].pt)) {
+            return leftOf(vtx[l].pt - vtx[j].pt, vtx[0].pt, vtx[k].pt - vtx[i].pt);
         } else {
-            double dl = Distance(ORIGIN, vtx[l].pt);
-            double dj = Distance(ORIGIN, vtx[j].pt);
+            double dl = distance(vtx[0].pt, vtx[l].pt);
+            double dj = distance(vtx[0].pt, vtx[j].pt);
 
             if (abs(dl - dj) < FLT_EPSILON) {
                 return 0;
             } else {
-                return (dl < dj && CCWEx(i, j, k) > 0) || (dl > dj && CCWEx(i, j, k) < 0) ? 1 : -1;
+                return (dl < dj && counterClockwiseEx(i, j, k) > 0) || (dl > dj && counterClockwiseEx(i, j, k) < 0) ? 1 : -1;
             }
         }
     }
 
-    if (META(i) && META(j) && !META(k) && !META(l)) {
-        return -InCircleEx(i, k, j, l);
+    if (MP(i) && MP(j) && !MP(k) && !MP(l)) {
+        return -inCircleEx(i, k, j, l);
     }
 
-    if (!META(i) && !META(j) && !META(k) && META(l)) {
-        if (!Collinear(vtx[j].pt - vtx[i].pt, vtx[k].pt - vtx[i].pt)) {
-            return -CCW(vtx[i].pt, vtx[j].pt, vtx[k].pt);
+    if (!MP(i) && !MP(j) && !MP(k) && MP(l)) {
+        if (!collinear(vtx[j].pt - vtx[i].pt, vtx[k].pt - vtx[i].pt)) {
+            return -counterClockwise(vtx[i].pt, vtx[j].pt, vtx[k].pt);
         } else {
-            return !InRectangle(vtx[k].pt, vtx[i].pt, vtx[j].pt) ?
-                    LeftOf(vtx[l].pt, ORIGIN, vtx[j].pt - vtx[i].pt) :
-                    LeftOf(vtx[l].pt, ORIGIN, vtx[k].pt - vtx[j].pt);
+            return !vtx[k].pt.inside(Rect2f(vtx[i].pt, vtx[j].pt)) ?
+                   leftOf(vtx[l].pt, vtx[0].pt, vtx[j].pt - vtx[i].pt) :
+                   leftOf(vtx[l].pt, vtx[0].pt, vtx[k].pt - vtx[j].pt);
         }
     }
 
-    if (!META(i) && !META(j) && !META(k) && !META(l)) {
-        return InCircle(vtx[i].pt, vtx[j].pt, vtx[k].pt, vtx[l].pt);
+    if (!MP(i) && !MP(j) && !MP(k) && !MP(l)) {
+        return inCircle(vtx[i].pt, vtx[j].pt, vtx[k].pt, vtx[l].pt);
     }
 
-    return -InCircleEx(j, k, l, i);
+    return -inCircleEx(j, k, l, i);
 }
 
 int Subdiv2D::newEdge()
@@ -358,7 +338,7 @@ void Subdiv2D::deleteEdge(int edge)
     freeQEdge = edge;
 }
 
-int Subdiv2D::newPoint(Point2f pt, bool isvirtual, int firstEdge)
+int Subdiv2D::newPoint(Point2f pt, bool isvirtual, int firstEdge, bool isfree)
 {
     if( freePoint == 0 )
     {
@@ -368,6 +348,9 @@ int Subdiv2D::newPoint(Point2f pt, bool isvirtual, int firstEdge)
     int vidx = freePoint;
     freePoint = vtx[vidx].firstEdge;
     vtx[vidx] = Vertex(pt, isvirtual, firstEdge);
+    if (isfree) {
+        vtx[vidx].type = -1;
+    }
 
     return vidx;
 }
@@ -399,7 +382,8 @@ int Subdiv2D::locate(Point2f pt, int& _edge, int& _vertex)
 
     int location = PTLOC_ERROR;
 
-    int right_of_curr = RightOfEx(pt, edgeOrg(edge), edgeDst(edge));
+    int curr_point = newPoint(pt, false, 0, true);
+    int right_of_curr = rightOfEx(curr_point, edgeOrg(edge), edgeDst(edge));
     if( right_of_curr > 0 )
     {
         edge = symEdge(edge);
@@ -411,8 +395,8 @@ int Subdiv2D::locate(Point2f pt, int& _edge, int& _vertex)
         int onext_edge = nextEdge( edge );
         int dprev_edge = getEdge( edge, PREV_AROUND_DST );
 
-        int right_of_onext = RightOfEx( pt, edgeOrg(onext_edge), edgeDst(onext_edge ) );
-        int right_of_dprev = RightOfEx( pt, edgeOrg(dprev_edge), edgeDst(dprev_edge ) );
+        int right_of_onext = rightOfEx(curr_point, edgeOrg(onext_edge), edgeDst(onext_edge));
+        int right_of_dprev = rightOfEx(curr_point, edgeOrg(dprev_edge), edgeDst(dprev_edge));
 
         if( right_of_dprev > 0 )
         {
@@ -443,7 +427,7 @@ int Subdiv2D::locate(Point2f pt, int& _edge, int& _vertex)
                 }
             }
             else if( right_of_curr == 0 &&
-                    RightOfEx( edgeDst(onext_edge), edgeOrg(edge), edgeDst(edge ) ) >= 0 )
+                    rightOfEx(edgeDst(onext_edge), edgeOrg(edge), edgeDst(edge)) >= 0 )
             {
                 edge = symEdge( edge );
             }
@@ -482,8 +466,8 @@ int Subdiv2D::locate(Point2f pt, int& _edge, int& _vertex)
             vertex = edgeDst( edge );
             edge = 0;
         }
-        else if( (t1 < t3 || t2 < t3) &&
-                Collinear( org_pt - pt, dst_pt - pt ))
+        else if((t1 < t3 || t2 < t3) &&
+                collinear(org_pt - pt, dst_pt - pt))
         {
             location = PTLOC_ON_EDGE;
             vertex = 0;
@@ -495,6 +479,8 @@ int Subdiv2D::locate(Point2f pt, int& _edge, int& _vertex)
         edge = 0;
         vertex = 0;
     }
+
+    deletePoint(curr_point);
 
     _edge = edge;
     _vertex = vertex;
@@ -558,8 +544,8 @@ int Subdiv2D::insert(Point2f pt)
         curr_org = edgeOrg( curr_edge );
         curr_dst = edgeDst( curr_edge );
 
-        if( RightOfEx( temp_dst, edgeOrg(curr_edge), edgeDst(curr_edge ) ) > 0 &&
-           InCircleEx( curr_org, temp_dst, curr_dst, curr_point ) > 0 )
+        if(rightOfEx(temp_dst, edgeOrg(curr_edge), edgeDst(curr_edge)) > 0 &&
+                inCircleEx(curr_org, temp_dst, curr_dst, curr_point) > 0 )
         {
             swapEdges( curr_edge );
             curr_edge = getEdge( curr_edge, PREV_AROUND_ORG );
@@ -625,8 +611,8 @@ void Subdiv2D::initDelaunay( Rect rect )
 
     recentEdge = edge_AB;
 
-    float r = max(Distance(ORIGIN, topLeft), Distance(ORIGIN, bottomRight));
-    while (vtx[1].pt.x < 10.f * r) {
+    float r = max(distance(vtx[0].pt, topLeft), distance(vtx[0].pt, bottomRight));
+    while (vtx[1].pt.x < 3.f * r) {
         vtx[1].pt *= 2.f;
         vtx[2].pt *= 2.f;
         vtx[3].pt *= 2.f;
@@ -755,6 +741,8 @@ int Subdiv2D::findNearest(Point2f pt, Point2f* nearestPt)
 
     vertex = 0;
 
+    int curr_point = newPoint(pt, false, 0, true);
+
     int start = edgeOrg(edge);
 
     edge = rotateEdge(edge, 1);
@@ -767,7 +755,7 @@ int Subdiv2D::findNearest(Point2f pt, Point2f* nearestPt)
         for(;;)
         {
             CV_Assert( edgeDst( edge ) > 0 );
-            if( RightOfEx( pt, start, edgeDst( edge ) ) >= 0 )
+            if(rightOfEx(curr_point, start, edgeDst(edge)) >= 0 )
                 break;
 
             edge = getEdge( edge, NEXT_AROUND_LEFT );
@@ -777,13 +765,13 @@ int Subdiv2D::findNearest(Point2f pt, Point2f* nearestPt)
         {
             CV_Assert( edgeOrg( edge ) > 0 );
 
-            if( RightOfEx( pt, start, edgeOrg( edge ) ) < 0 )
+            if(rightOfEx(curr_point, start, edgeOrg(edge)) < 0 )
                 break;
 
             edge = getEdge( edge, PREV_AROUND_LEFT );
         }
 
-        if( RightOfEx( pt, edgeDst( edge ), edgeOrg( edge ) ) >= 0 )
+        if(rightOfEx(curr_point, edgeDst(edge), edgeOrg(edge)) >= 0 )
         {
             vertex = edgeOrg(rotateEdge( edge, 3 ));
             break;
@@ -791,6 +779,8 @@ int Subdiv2D::findNearest(Point2f pt, Point2f* nearestPt)
 
         edge = symEdge( edge );
     }
+
+    deletePoint(curr_point);
 
     if( nearestPt && vertex > 0 )
         *nearestPt = vtx[vertex].pt;
@@ -850,15 +840,15 @@ void Subdiv2D::getTriangleList(std::vector<Vec6f>& triangleList) const
 
         Point2f a, b, c;
         int edge_a = i;
-        if (META(edgeOrg(edge_a, &a))) {
+        if (MP(edgeOrg(edge_a, &a))) {
             continue;
         }
         int edge_b = getEdge(edge_a, NEXT_AROUND_LEFT);
-        if (META(edgeOrg(edge_b, &b))) {
+        if (MP(edgeOrg(edge_b, &b))) {
             continue;
         }
         int edge_c = getEdge(edge_b, NEXT_AROUND_LEFT);
-        if (META(edgeOrg(edge_c, &c))) {
+        if (MP(edgeOrg(edge_c, &c))) {
             continue;
         }
         edgemask[edge_a] = true;

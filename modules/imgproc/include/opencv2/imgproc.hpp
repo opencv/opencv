@@ -1163,16 +1163,15 @@ public:
 protected:
     int newEdge();
     void deleteEdge(int edge);
-    int newPoint(Point2f pt, bool isvirtual, int firstEdge = 0);
+    int newPoint(Point2f pt, bool isvirtual, int firstEdge = 0, bool isfree = false);
     void deletePoint(int vtx);
     void setEdgePoints( int edge, int orgPt, int dstPt );
     void splice( int edgeA, int edgeB );
     int connectEdges( int edgeA, int edgeB );
     void swapEdges( int edge );
-    int CCWEx(int i, int j, int k) const;
-    int RightOfEx(int p, int i, int j) const;
-    int RightOfEx(Point2f x, int i, int j);
-    int InCircleEx(int i, int j, int k, int l) const;
+    int counterClockwiseEx(int i, int j, int k) const;
+    int rightOfEx(int p, int i, int j) const;
+    int inCircleEx(int i, int j, int k, int l) const;
     void calcVoronoi();
     void clearVoronoi();
     void checkSubdiv() const;

@@ -63,7 +63,7 @@ TEST(Imgproc_Subdiv2D_getTriangleList, regression_16763) {
 
     struct {
         std::vector<cv::Point2f> points;
-        cv::Rect rect;
+        cv::Rect2f rect;
         std::vector<cv::Vec6f> triangles;
     } suits[] = {
         {
