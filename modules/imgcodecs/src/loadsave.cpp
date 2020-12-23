@@ -179,7 +179,8 @@ struct ImageCodecInitializer
         encoders.push_back( makePtr<Jpeg2KEncoder>() );
     #endif
     #ifdef HAVE_OPENJPEG
-        decoders.push_back( makePtr<Jpeg2KOpjDecoder>() );
+        decoders.push_back( makePtr<Jpeg2KJP2OpjDecoder>() );
+        decoders.push_back( makePtr<Jpeg2KJ2KOpjDecoder>() );
         encoders.push_back( makePtr<Jpeg2KOpjEncoder>() );
     #endif
     #ifdef HAVE_OPENEXR
