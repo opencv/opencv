@@ -495,20 +495,16 @@ detail::StreamPtr opjCreateBufferInputStream(detail::OpjMemoryBuffer* buf)
 
 /////////////////////// Jpeg2KOpjDecoder ///////////////////
 
-Jpeg2KOpjDecoder::Jpeg2KOpjDecoder()
+namespace detail {
+
+Jpeg2KOpjDecoderBase::Jpeg2KOpjDecoderBase(OPJ_CODEC_FORMAT format)
+    : format_(format)
 {
-    static const unsigned char signature[] = { 0, 0, 0, 0x0c, 'j', 'P', ' ', ' ', 13, 10, 0x87, 10 };
-    m_signature = String((const char*)(signature), sizeof(signature));
     m_buf_supported = true;
 }
 
 
-ImageDecoder Jpeg2KOpjDecoder::newDecoder() const
-{
-    return makePtr<Jpeg2KOpjDecoder>();
-}
-
-bool Jpeg2KOpjDecoder::readHeader()
+bool Jpeg2KOpjDecoderBase::readHeader()
 {
     if (!m_buf.empty()) {
         opjBuf_ = detail::OpjMemoryBuffer(m_buf);
@@ -521,7 +517,7 @@ bool Jpeg2KOpjDecoder::readHeader()
     if (!stream_)
         return false;
 
-    codec_.reset(opj_create_decompress(OPJ_CODEC_JP2));
+    codec_.reset(opj_create_decompress(format_));
     if (!codec_)
         return false;
 
@@ -587,7 +583,7 @@ bool Jpeg2KOpjDecoder::readHeader()
     return true;
 }
 
-bool Jpeg2KOpjDecoder::readData( Mat& img )
+bool Jpeg2KOpjDecoderBase::readData( Mat& img )
 {
     using DecodeFunc = bool(*)(const opj_image_t&, cv::Mat&, uint8_t shift);
 
@@ -606,7 +602,9 @@ bool Jpeg2KOpjDecoder::readData( Mat& img )
     switch (image_->color_space)
     {
     case OPJ_CLRSPC_UNKNOWN:
-        CV_LOG_WARNING(NULL, "OpenJPEG2000: Image has unknown color space, SRGB is assumed");
+        /* FALLTHRU */
+    case OPJ_CLRSPC_UNSPECIFIED:
+        CV_LOG_WARNING(NULL, "OpenJPEG2000: Image has unknown or unspecified color space, SRGB is assumed");
         /* FALLTHRU */
     case OPJ_CLRSPC_SRGB:
         decode = decodeSRGBData;
@@ -617,8 +615,6 @@ bool Jpeg2KOpjDecoder::readData( Mat& img )
     case OPJ_CLRSPC_SYCC:
         decode = decodeSYCCData;
         break;
-    case OPJ_CLRSPC_UNSPECIFIED:
-        CV_Error(Error::StsNotImplemented, "OpenJPEG2000: Image has unspecified color space");
     default:
         CV_Error(Error::StsNotImplemented,
                  cv::format("OpenJPEG2000: Unsupported color space conversion: %s -> %s",
@@ -654,6 +650,31 @@ bool Jpeg2KOpjDecoder::readData( Mat& img )
     return decode(*image_, img, shift);
 }
 
+} // namespace detail
+
+Jpeg2KJP2OpjDecoder::Jpeg2KJP2OpjDecoder()
+    : Jpeg2KOpjDecoderBase(OPJ_CODEC_JP2)
+{
+    static const unsigned char JP2Signature[] = { 0, 0, 0, 0x0c, 'j', 'P', ' ', ' ', 13, 10, 0x87, 10 };
+    m_signature = String((const char*) JP2Signature, sizeof(JP2Signature));
+}
+
+ImageDecoder Jpeg2KJP2OpjDecoder::newDecoder() const
+{
+    return makePtr<Jpeg2KJP2OpjDecoder>();
+}
+
+Jpeg2KJ2KOpjDecoder::Jpeg2KJ2KOpjDecoder()
+    : Jpeg2KOpjDecoderBase(OPJ_CODEC_J2K)
+{
+    static const unsigned char J2KSignature[] = { 0xff, 0x4f, 0xff, 0x51 };
+    m_signature = String((const char*) J2KSignature, sizeof(J2KSignature));
+}
+
+ImageDecoder Jpeg2KJ2KOpjDecoder::newDecoder() const
+{
+    return makePtr<Jpeg2KJ2KOpjDecoder>();
+}
 
 /////////////////////// Jpeg2KOpjEncoder ///////////////////
 
