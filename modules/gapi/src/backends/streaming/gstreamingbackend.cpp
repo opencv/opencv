@@ -4,7 +4,10 @@
 //
 // Copyright (C) 2020 Intel Corporation
 
+#if !defined(GAPI_STANDALONE)
 #include <opencv2/imgproc.hpp>
+#endif // !defined(GAPI_STANDALONE)
+
 #include <opencv2/gapi/util/throw.hpp> // throw_error
 #include <opencv2/gapi/streaming/format.hpp> // kernels
 
@@ -31,7 +34,6 @@ using ConstStreamingGraph = ade::ConstTypedGraph
     < cv::gimpl::Op
     , StreamingCreateFunction
     >;
-
 
 class GStreamingIntrinExecutable final: public cv::gimpl::GIslandExecutable
 {
@@ -135,18 +137,30 @@ cv::gapi::GBackend cv::gapi::streaming::backend()
     return this_backend;
 }
 
-cv::gapi::GKernelPackage cv::gapi::streaming::kernels()
+struct Copy: public cv::detail::KernelTag
 {
-    return cv::gapi::kernels<cv::gimpl::BGR>();
-}
+    using API = cv::gimpl::streaming::GCopy;
 
-cv::gapi::GKernelPackage cv::gimpl::streaming::kernels()
-{
-    return cv::gapi::kernels<cv::gimpl::Copy>();
-}
+    static cv::gapi::GBackend backend() { return cv::gapi::streaming::backend(); }
 
-void cv::gimpl::Copy::Actor::run(cv::gimpl::GIslandExecutable::IInput  &in,
-                                 cv::gimpl::GIslandExecutable::IOutput &out)
+    class Actor final: public cv::gapi::streaming::IActor
+    {
+        public:
+            explicit Actor(const cv::GCompileArgs&) {}
+            virtual void run(cv::gimpl::GIslandExecutable::IInput  &in,
+                             cv::gimpl::GIslandExecutable::IOutput &out) override;
+    };
+
+    static cv::gapi::streaming::IActor::Ptr create(const cv::GCompileArgs& args)
+    {
+        return cv::gapi::streaming::IActor::Ptr(new Actor(args));
+    }
+
+    static cv::gapi::streaming::GStreamingKernel kernel() { return {&create}; };
+};
+
+void Copy::Actor::run(cv::gimpl::GIslandExecutable::IInput  &in,
+                      cv::gimpl::GIslandExecutable::IOutput &out)
 {
     const auto in_msg = in.get();
     if (cv::util::holds_alternative<cv::gimpl::EndOfStream>(in_msg))
@@ -176,8 +190,34 @@ void cv::gimpl::Copy::Actor::run(cv::gimpl::GIslandExecutable::IInput  &in,
     out.post(std::move(out_arg));
 }
 
-void cv::gimpl::BGR::Actor::run(cv::gimpl::GIslandExecutable::IInput  &in,
-                                cv::gimpl::GIslandExecutable::IOutput &out)
+cv::gapi::GKernelPackage cv::gimpl::streaming::kernels()
+{
+    return cv::gapi::kernels<Copy>();
+}
+
+#if !defined(GAPI_STANDALONE)
+
+struct GOCVBGR: public cv::detail::KernelTag
+{
+    using API = cv::gapi::streaming::GBGR;
+    static cv::gapi::GBackend backend() { return cv::gapi::streaming::backend(); }
+
+    class Actor final: public cv::gapi::streaming::IActor {
+        public:
+            explicit Actor(const cv::GCompileArgs&) {}
+            virtual void run(cv::gimpl::GIslandExecutable::IInput &in,
+                             cv::gimpl::GIslandExecutable::IOutput&out) override;
+    };
+
+    static cv::gapi::streaming::IActor::Ptr create(const cv::GCompileArgs& args)
+    {
+        return cv::gapi::streaming::IActor::Ptr(new Actor(args));
+    }
+    static cv::gapi::streaming::GStreamingKernel kernel() { return {&create}; };
+};
+
+void GOCVBGR::Actor::run(cv::gimpl::GIslandExecutable::IInput  &in,
+                     cv::gimpl::GIslandExecutable::IOutput &out)
 {
     const auto in_msg = in.get();
     if (cv::util::holds_alternative<cv::gimpl::EndOfStream>(in_msg))
@@ -215,6 +255,21 @@ void cv::gimpl::BGR::Actor::run(cv::gimpl::GIslandExecutable::IInput  &in,
     }
     out.post(std::move(out_arg));
 }
+
+cv::gapi::GKernelPackage cv::gapi::streaming::kernels()
+{
+    return cv::gapi::kernels<GOCVBGR>();
+}
+
+#else
+
+cv::gapi::GKernelPackage cv::gapi::streaming::kernels()
+{
+    // Still provide this symbol to avoid linking issues
+    util::throw_error(std::runtime_error("cv::gapi::streaming::kernels() isn't supported in standalone"));
+}
+
+#endif // !defined(GAPI_STANDALONE)
 
 cv::GMat cv::gapi::copy(const cv::GMat& in) {
     return cv::gimpl::streaming::GCopy::on<cv::GMat>(in);

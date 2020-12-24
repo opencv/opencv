@@ -36,7 +36,7 @@
 #include "executor/gstreamingexecutor.hpp"
 #include "backends/common/gbackend.hpp"
 #include "backends/common/gmetabackend.hpp"
-#include "backends/streaming/gstreamingbackend.hpp"
+#include "backends/streaming/gstreamingbackend.hpp" // cv::gimpl::streaming::kernels()
 
 // <FIXME:>
 #if !defined(GAPI_STANDALONE)
@@ -44,7 +44,6 @@
 #include <opencv2/gapi/cpu/imgproc.hpp> // ...Imgproc
 #include <opencv2/gapi/cpu/video.hpp>   // ...and Video kernel implementations
 #include <opencv2/gapi/render/render.hpp>   // render::ocv::backend()
-#include <opencv2/gapi/streaming/format.hpp> // streaming::kernels()
 #endif // !defined(GAPI_STANDALONE)
 // </FIXME:>
 
