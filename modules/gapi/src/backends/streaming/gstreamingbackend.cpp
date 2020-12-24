@@ -4,7 +4,10 @@
 //
 // Copyright (C) 2020 Intel Corporation
 
+#if !defined(GAPI_STANDALONE)
 #include <opencv2/imgproc.hpp>
+#endif // !defined(GAPI_STANDALONE)
+
 #include <opencv2/gapi/util/throw.hpp> // throw_error
 #include <opencv2/gapi/streaming/format.hpp> // kernels
 
