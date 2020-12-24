@@ -414,9 +414,9 @@ Some of OpenCV algorithms can use multithreading to accelerate processing. OpenC
 | pthreads | `WITH_PTHREADS_PF` | _ON_ | Unix-like | Default backend based on [pthreads](https://en.wikipedia.org/wiki/POSIX_Threads) library is available on Linux, Android and other Unix-like platforms. Thread pool is implemented in OpenCV and can be controlled with environment variables `OPENCV_THREAD_POOL_*`. Please check sources in _modules/core/src/parallel_impl.cpp_ file for details. |
 | Concurrency | N/A | _ON_ | Windows | [Concurrency runtime](https://docs.microsoft.com/en-us/cpp/parallel/concrt/concurrency-runtime) is available on Windows and will be turned _ON_ on supported platforms unless other backend is enabled. |
 | GCD | N/A | _ON_ | Apple | [Grand Central Dispatch](https://en.wikipedia.org/wiki/Grand_Central_Dispatch) is available on Apple platforms and will be turned _ON_ automatically unless other backend is enabled. Uses global system thread pool. |
-| TBB | `WITH_TBB` | Multiple | _OFF_ | [Threading Building Blocks](https://en.wikipedia.org/wiki/Threading_Building_Blocks) is a cross-platform library for parallel programming. |
-| OpenMP | `WITH_OPENMP` | Multiple | _OFF_ | [OpenMP](https://en.wikipedia.org/wiki/OpenMP) API relies on compiler support. |
-| HPX | `WITH_HPX` | Multiple | _OFF_ | [High Performance ParallelX](https://en.wikipedia.org/wiki/HPX) is an experimental backend which is more suitable for multiprocessor environments. |
+| TBB | `WITH_TBB` | _OFF_ | Multiple | [Threading Building Blocks](https://en.wikipedia.org/wiki/Threading_Building_Blocks) is a cross-platform library for parallel programming. |
+| OpenMP | `WITH_OPENMP` | _OFF_ | Multiple | [OpenMP](https://en.wikipedia.org/wiki/OpenMP) API relies on compiler support. |
+| HPX | `WITH_HPX` | _OFF_ | Multiple | [High Performance ParallelX](https://en.wikipedia.org/wiki/HPX) is an experimental backend which is more suitable for multiprocessor environments. |
 
 @note OpenCV can download and build TBB library from GitHub, this functionality can be enabled with the `BUILD_TBB` option.
 
