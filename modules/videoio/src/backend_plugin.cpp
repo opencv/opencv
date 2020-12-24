@@ -224,7 +224,7 @@ public:
                 return;
             }
 #ifdef HAVE_FFMPEG_WRAPPER
-            if (plugin_api_->captureAPI == CAP_FFMPEG)
+            if (plugin_api_->v0.captureAPI == CAP_FFMPEG)
             {
                 // no checks for OpenCV minor version
             }
@@ -409,11 +409,11 @@ void PluginBackendFactory::loadPlugin()
             Ptr<PluginBackend> pluginBackend = makePtr<PluginBackend>(lib);
             if (pluginBackend && pluginBackend->plugin_api_)
             {
-                if (pluginBackend->plugin_api_->captureAPI != id_)
+                if (pluginBackend->plugin_api_->v0.captureAPI != id_)
                 {
                     CV_LOG_ERROR(NULL, "Video I/O: plugin '" << pluginBackend->plugin_api_->api_header.api_description <<
                                        "': unexpected backend ID: " <<
-                                       pluginBackend->plugin_api_->captureAPI << " vs " << (int)id_ << " (expected)");
+                                       pluginBackend->plugin_api_->v0.captureAPI << " vs " << (int)id_ << " (expected)");
                 }
                 else
                 {
@@ -444,10 +444,10 @@ public:
     {
         CV_Assert(plugin_api);
         CvPluginCapture capture = NULL;
-        if (plugin_api->Capture_open)
+        if (plugin_api->v0.Capture_open)
         {
-            CV_Assert(plugin_api->Capture_release);
-            if (CV_ERROR_OK == plugin_api->Capture_open(filename.empty() ? 0 : filename.c_str(), camera, &capture))
+            CV_Assert(plugin_api->v0.Capture_release);
+            if (CV_ERROR_OK == plugin_api->v0.Capture_open(filename.empty() ? 0 : filename.c_str(), camera, &capture))
             {
                 CV_Assert(capture);
                 return makePtr<PluginCapture>(plugin_api, capture);
@@ -464,30 +464,30 @@ public:
 
     ~PluginCapture()
     {
-        CV_DbgAssert(plugin_api_->Capture_release);
-        if (CV_ERROR_OK != plugin_api_->Capture_release(capture_))
+        CV_DbgAssert(plugin_api_->v0.Capture_release);
+        if (CV_ERROR_OK != plugin_api_->v0.Capture_release(capture_))
             CV_LOG_ERROR(NULL, "Video I/O: Can't release capture by plugin '" << plugin_api_->api_header.api_description << "'");
         capture_ = NULL;
     }
     double getProperty(int prop) const CV_OVERRIDE
     {
         double val = -1;
-        if (plugin_api_->Capture_getProperty)
-            if (CV_ERROR_OK != plugin_api_->Capture_getProperty(capture_, prop, &val))
+        if (plugin_api_->v0.Capture_getProperty)
+            if (CV_ERROR_OK != plugin_api_->v0.Capture_getProperty(capture_, prop, &val))
                 val = -1;
         return val;
     }
     bool setProperty(int prop, double val) CV_OVERRIDE
     {
-        if (plugin_api_->Capture_setProperty)
-            if (CV_ERROR_OK == plugin_api_->Capture_setProperty(capture_, prop, val))
+        if (plugin_api_->v0.Capture_setProperty)
+            if (CV_ERROR_OK == plugin_api_->v0.Capture_setProperty(capture_, prop, val))
                 return true;
         return false;
     }
     bool grabFrame() CV_OVERRIDE
     {
-        if (plugin_api_->Capture_grab)
-            if (CV_ERROR_OK == plugin_api_->Capture_grab(capture_))
+        if (plugin_api_->v0.Capture_grab)
+            if (CV_ERROR_OK == plugin_api_->v0.Capture_grab(capture_))
                 return true;
         return false;
     }
@@ -503,8 +503,8 @@ public:
     bool retrieveFrame(int idx, cv::OutputArray img) CV_OVERRIDE
     {
         bool res = false;
-        if (plugin_api_->Capture_retreive)
-            if (CV_ERROR_OK == plugin_api_->Capture_retreive(capture_, idx, retrieve_callback, (cv::_OutputArray*)&img))
+        if (plugin_api_->v0.Capture_retreive)
+            if (CV_ERROR_OK == plugin_api_->v0.Capture_retreive(capture_, idx, retrieve_callback, (cv::_OutputArray*)&img))
                 res = true;
         return res;
     }
@@ -514,7 +514,7 @@ public:
     }
     int getCaptureDomain() CV_OVERRIDE
     {
-        return plugin_api_->captureAPI;
+        return plugin_api_->v0.captureAPI;
     }
 };
 
@@ -534,23 +534,23 @@ public:
     {
         CV_Assert(plugin_api);
         CvPluginWriter writer = NULL;
-        if (plugin_api->api_header.api_version >= 1 && plugin_api->Writer_open_with_params)
+        if (plugin_api->api_header.api_version >= 1 && plugin_api->v1.Writer_open_with_params)
         {
-            CV_Assert(plugin_api->Writer_release);
+            CV_Assert(plugin_api->v0.Writer_release);
             CV_Assert(!filename.empty());
             std::vector<int> vint_params = params.getIntVector();
             int* c_params = &vint_params[0];
             unsigned n_params = (unsigned)(vint_params.size() / 2);
 
-            if (CV_ERROR_OK == plugin_api->Writer_open_with_params(filename.c_str(), fourcc, fps, sz.width, sz.height, c_params, n_params, &writer))
+            if (CV_ERROR_OK == plugin_api->v1.Writer_open_with_params(filename.c_str(), fourcc, fps, sz.width, sz.height, c_params, n_params, &writer))
             {
                 CV_Assert(writer);
                 return makePtr<PluginWriter>(plugin_api, writer);
             }
         }
-        else if (plugin_api->Writer_open)
+        else if (plugin_api->v0.Writer_open)
         {
-            CV_Assert(plugin_api->Writer_release);
+            CV_Assert(plugin_api->v0.Writer_release);
             CV_Assert(!filename.empty());
             const bool isColor = params.get(VIDEOWRITER_PROP_IS_COLOR, true);
             const int depth = params.get(VIDEOWRITER_PROP_DEPTH, CV_8U);
@@ -559,7 +559,7 @@ public:
                 CV_LOG_WARNING(NULL, "Video I/O plugin doesn't support (due to lower API level) creation of VideoWriter with depth != CV_8U");
                 return Ptr<PluginWriter>();
             }
-            if (CV_ERROR_OK == plugin_api->Writer_open(filename.c_str(), fourcc, fps, sz.width, sz.height, isColor, &writer))
+            if (CV_ERROR_OK == plugin_api->v0.Writer_open(filename.c_str(), fourcc, fps, sz.width, sz.height, isColor, &writer))
             {
                 CV_Assert(writer);
                 return makePtr<PluginWriter>(plugin_api, writer);
@@ -576,23 +576,23 @@ public:
 
     ~PluginWriter()
     {
-        CV_DbgAssert(plugin_api_->Writer_release);
-        if (CV_ERROR_OK != plugin_api_->Writer_release(writer_))
+        CV_DbgAssert(plugin_api_->v0.Writer_release);
+        if (CV_ERROR_OK != plugin_api_->v0.Writer_release(writer_))
             CV_LOG_ERROR(NULL, "Video I/O: Can't release writer by plugin '" << plugin_api_->api_header.api_description << "'");
         writer_ = NULL;
     }
     double getProperty(int prop) const CV_OVERRIDE
     {
         double val = -1;
-        if (plugin_api_->Writer_getProperty)
-            if (CV_ERROR_OK != plugin_api_->Writer_getProperty(writer_, prop, &val))
+        if (plugin_api_->v0.Writer_getProperty)
+            if (CV_ERROR_OK != plugin_api_->v0.Writer_getProperty(writer_, prop, &val))
                 val = -1;
         return val;
     }
     bool setProperty(int prop, double val) CV_OVERRIDE
     {
-        if (plugin_api_->Writer_setProperty)
-            if (CV_ERROR_OK == plugin_api_->Writer_setProperty(writer_, prop, val))
+        if (plugin_api_->v0.Writer_setProperty)
+            if (CV_ERROR_OK == plugin_api_->v0.Writer_setProperty(writer_, prop, val))
                 return true;
         return false;
     }
@@ -604,8 +604,8 @@ public:
     {
         cv::Mat img = arr.getMat();
         CV_DbgAssert(writer_);
-        CV_Assert(plugin_api_->Writer_write);
-        if (CV_ERROR_OK != plugin_api_->Writer_write(writer_, img.data, (int)img.step[0], img.cols, img.rows, img.channels()))
+        CV_Assert(plugin_api_->v0.Writer_write);
+        if (CV_ERROR_OK != plugin_api_->v0.Writer_write(writer_, img.data, (int)img.step[0], img.cols, img.rows, img.channels()))
         {
             CV_LOG_DEBUG(NULL, "Video I/O: Can't write frame by plugin '" << plugin_api_->api_header.api_description << "'");
         }
@@ -613,7 +613,7 @@ public:
     }
     int getCaptureDomain() const CV_OVERRIDE
     {
-        return plugin_api_->captureAPI;
+        return plugin_api_->v0.captureAPI;
     }
 };
 
