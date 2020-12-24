@@ -174,4 +174,36 @@ TEST(MediaFrame, Callback) {
     EXPECT_EQ(3, counter);
 }
 
+namespace {
+    G_API_OP(GBlurFrame2Frame, <GFrame(GFrame)>, "test.blur_frame_2_frame") {
+        static GFrameDesc outMeta(GFrameDesc in) {
+            return in;
+        }
+    };
+
+    GAPI_OCV_KERNEL(OCVBlurFrame2Frame, GBlurFrame2Frame) {
+        static void run(const cv::MediaFrame &in, cv::MediaFrame& out) {
+            GAPI_Assert(in.desc().fmt == cv::MediaFormat::BGR);
+            out = in;
+            cv::MediaFrame::View view_in = in.access(cv::MediaFrame::Access::R);
+            cv::MediaFrame::View view_out = out.access(cv::MediaFrame::Access::W);
+            cv::blur(cv::Mat(in.desc().size, CV_8UC3, view_in.ptr[0], view_in.stride[0]),
+                     cv::Mat(out.desc().size, CV_8UC3, view_out.ptr[0], view_out.stride[0]),
+                     cv::Size{3,3});
+        }
+    };
+} // anonymous namespace
+
+TEST_F(MediaFrame_BGR, ConcurrencyFail) {
+    cv::GFrame in;
+    cv::GFrame inter = GBlurFrame2Frame::on(in);
+    cv::GFrame out1 = GBlurFrame2Frame::on(inter);
+    cv::GFrame out2 = GBlurFrame2Frame::on(inter);
+    cv::GComputation cc(cv::GIn(in), cv::GOut(out1, out2));
+    cv::MediaFrame outf1, outf2;
+    EXPECT_ANY_THROW(cc.apply(cv::gin(frame),
+                              cv::gout(outf1, outf2),
+                              cv::compile_args(cv::gapi::kernels<OCVBlurFrame2Frame>())));
+}
+
 } // namespace opencv_test

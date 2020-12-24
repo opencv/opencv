@@ -73,6 +73,8 @@ void addStreaming(ade::passes::PassContext &ctx);
 void intrinDesync(ade::passes::PassContext &ctx);
 void intrinFinalize(ade::passes::PassContext &ctx);
 
+void noMediaFrameConcurrency(ade::passes::PassContext &ctx);
+
 }} // namespace gimpl::passes
 
 } // namespace cv

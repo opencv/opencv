@@ -254,3 +254,25 @@ void cv::gimpl::passes::expandKernels(ade::passes::PassContext &ctx, const gapi:
     }
     GAPI_LOG_INFO(NULL, "Final graph: " << ctx.graph.nodes().size() << " nodes" << std::endl);
 }
+
+void cv::gimpl::passes::noMediaFrameConcurrency(ade::passes::PassContext &ctx)
+{
+    GModel::Graph gr(ctx.graph);
+
+    // Check that each operation's output MediaFrame
+    // doesn't become an input for more than 1 operation
+    for (const auto& nh : gr.nodes())
+    {
+        if (gr.metadata(nh).get<NodeType>().t == NodeType::DATA)
+        {
+            const auto& data = gr.metadata(nh).get<Data>();
+            if (data.shape == cv::GShape::GFRAME) {
+                // FIXME: Consider more robust solution:
+                // in theory we could have multiple output nodes
+                // which still run sequentially.
+                GAPI_Assert(nh->outEdges().size() < 2);
+            }
+        }
+    }
+    GAPI_LOG_INFO(NULL, "Final graph: " << ctx.graph.nodes().size() << " nodes" << std::endl);
+}

@@ -245,6 +245,7 @@ cv::gimpl::GCompiler::GCompiler(const cv::GComputation &c,
                           std::ref(m_all_kernels)));  // NB: and not copied here
                                                       // (no compound backend present here)
     m_e.addPass("kernels", "check_islands_content", passes::checkIslandsContent);
+    m_e.addPass("kernels", "no_media_frame_concurrency", passes::noMediaFrameConcurrency);
 
     // Special stage for intrinsics handling
     m_e.addPassStage("intrin");
