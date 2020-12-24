@@ -662,8 +662,17 @@ if(UNIX)
       CHECK_SYMBOL_EXISTS(memalign malloc.h HAVE_MEMALIGN)
     endif()
     # TODO:
-    # - _aligned_malloc() on Win32
     # - std::aligned_alloc() C++17 / C11
+  endif()
+elseif(WIN32)
+  include(CheckIncludeFile)
+  include(CheckSymbolExists)
+
+  if(OPENCV_ENABLE_MEMALIGN)
+    CHECK_INCLUDE_FILE(malloc.h HAVE_MALLOC_H)
+    if(HAVE_MALLOC_H)
+      CHECK_SYMBOL_EXISTS(_aligned_malloc malloc.h HAVE_WIN32_ALIGNED_MALLOC)
+    endif()
   endif()
 endif()
 

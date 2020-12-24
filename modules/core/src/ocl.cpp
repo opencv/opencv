@@ -1150,7 +1150,7 @@ void OpenCLExecutionContext::release()
 
 
 // true if we have initialized OpenCL subsystem with available platforms
-static bool g_isOpenCVActivated = false;
+static bool g_isOpenCLActivated = false;
 
 bool haveOpenCL()
 {
@@ -1178,7 +1178,7 @@ bool haveOpenCL()
         {
             cl_uint n = 0;
             g_isOpenCLAvailable = ::clGetPlatformIDs(0, NULL, &n) == CL_SUCCESS;
-            g_isOpenCVActivated = n > 0;
+            g_isOpenCLActivated = n > 0;
             CV_LOG_INFO(NULL, "OpenCL: found " << n << " platforms");
         }
         catch (...)
@@ -1214,7 +1214,7 @@ bool useOpenCL()
 
 bool isOpenCLActivated()
 {
-    if (!g_isOpenCVActivated)
+    if (!g_isOpenCLActivated)
         return false; // prevent unnecessary OpenCL activation via useOpenCL()->haveOpenCL() calls
     return useOpenCL();
 }
@@ -6381,7 +6381,6 @@ public:
 static OpenCLAllocator* getOpenCLAllocator_() // call once guarantee
 {
     static OpenCLAllocator* g_allocator = new OpenCLAllocator(); // avoid destructor call (using of this object is too wide)
-    g_isOpenCVActivated = true;
     return g_allocator;
 }
 MatAllocator* getOpenCLAllocator()
