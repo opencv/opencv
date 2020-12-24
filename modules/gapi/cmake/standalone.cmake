@@ -21,6 +21,7 @@ file(GLOB FLUID_sources  "${FLUID_ROOT}/src/api/g*.cpp"
                          "${FLUID_ROOT}/src/compiler/passes/*.cpp"
                          "${FLUID_ROOT}/src/executor/*.cpp"
                          "${FLUID_ROOT}/src/backends/fluid/*.cpp"
+                         "${FLUID_ROOT}/src/backends/streaming/*.cpp"
                          "${FLUID_ROOT}/src/backends/common/*.cpp")
 
 add_library(${FLUID_TARGET} STATIC ${FLUID_includes} ${FLUID_sources})

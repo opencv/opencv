@@ -1005,12 +1005,10 @@ cv::gimpl::GStreamingExecutor::GStreamingExecutor(std::unique_ptr<ade::Graph> &&
                     // In the current implementation, such islands
                     // _must_ start with copy
                     GAPI_Assert(isl->in_ops().size() == 1u);
-#if !defined(GAPI_STANDALONE)
                     GAPI_Assert(GModel::Graph(*m_orig_graph)
                                 .metadata(*isl->in_ops().begin())
                                 .get<cv::gimpl::Op>()
                                 .k.name == cv::gimpl::streaming::GCopy::id());
-#endif // GAPI_STANDALONE
                     for (auto out_nh : nh->outNodes()) {
                         for (auto out_eh : out_nh->outEdges()) {
                             qgr.metadata(out_eh).set(DesyncSpecialCase{});
