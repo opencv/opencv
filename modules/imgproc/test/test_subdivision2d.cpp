@@ -50,16 +50,16 @@ TEST(Imgproc_Subdiv2D_getTriangleList, regression_5788)
     EXPECT_EQ(trig_cnt, 105);
 }
 
-TEST(Imgproc_Subdiv2D_getTriangleList, regression_16763) {
+bool less_than(const cv::Vec6f &lhs, const cv::Vec6f &rhs) {
+    return (lhs[0] < rhs[0]) ||
+           (lhs[0] == rhs[0] && lhs[1] < rhs[1]) ||
+           (lhs[0] == rhs[0] && lhs[1] == rhs[1] && lhs[2] < rhs[2]) ||
+           (lhs[0] == rhs[0] && lhs[1] == rhs[1] && lhs[2] == rhs[2] && lhs[3] < rhs[3]) ||
+           (lhs[0] == rhs[0] && lhs[1] == rhs[1] && lhs[2] == rhs[2] && lhs[3] == rhs[3] && lhs[4] < rhs[4]) ||
+           (lhs[0] == rhs[0] && lhs[1] == rhs[1] && lhs[2] == rhs[2] && lhs[3] == rhs[3] && lhs[4] == rhs[4] && lhs[5] < rhs[5]);
+};
 
-    const auto less_than = [](const cv::Vec6f &lhs, const cv::Vec6f &rhs) -> bool {
-        return (lhs[0] < rhs[0]) ||
-               (lhs[0] == rhs[0] && lhs[1] < rhs[1]) ||
-               (lhs[0] == rhs[0] && lhs[1] == rhs[1] && lhs[2] < rhs[2]) ||
-               (lhs[0] == rhs[0] && lhs[1] == rhs[1] && lhs[2] == rhs[2] && lhs[3] < rhs[3]) ||
-               (lhs[0] == rhs[0] && lhs[1] == rhs[1] && lhs[2] == rhs[2] && lhs[3] == rhs[3] && lhs[4] < rhs[4]) ||
-               (lhs[0] == rhs[0] && lhs[1] == rhs[1] && lhs[2] == rhs[2] && lhs[3] == rhs[3] && lhs[4] == rhs[4] && lhs[5] < rhs[5]);
-    };
+TEST(Imgproc_Subdiv2D_getTriangleList, regression_16763) {
 
     struct {
         std::vector<cv::Point2f> points;
@@ -78,20 +78,20 @@ TEST(Imgproc_Subdiv2D_getTriangleList, regression_16763) {
         }
     };
 
-    for (auto& suit : suits) {
-        cv::Subdiv2D subdivision(suit.rect);
-        subdivision.insert(suit.points);
+    for (size_t i = 0; i < 2; ++i) {
+        cv::Subdiv2D subdivision(suits[i].rect);
+        subdivision.insert(suits[i].points);
 
-        std::sort(suit.triangles.begin(), suit.triangles.end(), less_than);
+        std::sort(suits[i].triangles.begin(), suits[i].triangles.end(), less_than);
 
         std::vector<cv::Vec6f> output;
         subdivision.getTriangleList(output);
 
         sort(output.begin(), output.end(), less_than);
 
-        EXPECT_EQ(output.size(), suit.triangles.size());
-        for (size_t i = 0; i < output.size(); i++) {
-            EXPECT_TRUE(!less_than(output[i], suit.triangles[i]) && !less_than(suit.triangles[i], output[i]));
+        EXPECT_EQ(output.size(), suits[i].triangles.size());
+        for (size_t j = 0; j < output.size(); ++j) {
+            EXPECT_TRUE(!less_than(output[j], suits[i].triangles[j]) && !less_than(suits[i].triangles[j], output[j]));
         }
     }
 }
