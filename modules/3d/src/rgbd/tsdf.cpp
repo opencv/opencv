@@ -7,7 +7,7 @@
 #include "precomp.hpp"
 //#include "tsdf.hpp"
 #include "tsdf_functions.hpp"
-#include "opencl_kernels_rgbd.hpp"
+#include "opencl_kernels_3d.hpp"
 
 namespace cv {
 
@@ -846,7 +846,7 @@ static cv::UMat preCalculationPixNormGPU(int depth_rows, int depth_cols, Vec2f f
 
     cv::String errorStr;
     cv::String name = "preCalculationPixNorm";
-    ocl::ProgramSource source = ocl::rgbd::tsdf_oclsrc;
+    ocl::ProgramSource source = ocl::_3d::tsdf_oclsrc;
     cv::String options = "-cl-mad-enable";
     ocl::Kernel kk;
     kk.create(name.c_str(), source, options, &errorStr);
@@ -887,7 +887,7 @@ void TSDFVolumeGPU::integrate(InputArray _depth, float depthFactor,
 
     String errorStr;
     String name           = "integrate";
-    ocl::ProgramSource source = ocl::rgbd::tsdf_oclsrc;
+    ocl::ProgramSource source = ocl::_3d::tsdf_oclsrc;
     String options        = "-cl-mad-enable";
     ocl::Kernel k;
     k.create(name.c_str(), source, options, &errorStr);
@@ -944,7 +944,7 @@ void TSDFVolumeGPU::raycast(const Matx44f& cameraPose, const Intr& intrinsics, c
 
     String errorStr;
     String name           = "raycast";
-    ocl::ProgramSource source = ocl::rgbd::tsdf_oclsrc;
+    ocl::ProgramSource source = ocl::_3d::tsdf_oclsrc;
     String options        = "-cl-mad-enable";
     ocl::Kernel k;
     k.create(name.c_str(), source, options, &errorStr);
@@ -1013,7 +1013,7 @@ void TSDFVolumeGPU::fetchNormals(InputArray _points, OutputArray _normals) const
 
         String errorStr;
         String name           = "getNormals";
-        ocl::ProgramSource source = ocl::rgbd::tsdf_oclsrc;
+        ocl::ProgramSource source = ocl::_3d::tsdf_oclsrc;
         String options        = "-cl-mad-enable";
         ocl::Kernel k;
         k.create(name.c_str(), source, options, &errorStr);
@@ -1060,7 +1060,7 @@ void TSDFVolumeGPU::fetchPointsNormals(OutputArray points, OutputArray normals) 
         ocl::Kernel kscan;
 
         String errorStr;
-        ocl::ProgramSource source = ocl::rgbd::tsdf_oclsrc;
+        ocl::ProgramSource source = ocl::_3d::tsdf_oclsrc;
         String options        = "-cl-mad-enable";
 
         kscan.create("scanSize", source, options, &errorStr);

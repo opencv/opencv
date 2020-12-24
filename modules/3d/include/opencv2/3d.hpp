@@ -8,10 +8,12 @@
 #include "opencv2/core.hpp"
 #include "opencv2/core/types_c.h"
 
-#include "opencv2/3d/rgbd/linemod.hpp"
-#include "opencv2/3d/rgbd/depth.hpp"
-#include "opencv2/3d/rgbd/kinfu.hpp"
-#include "opencv2/3d/rgbd/large_kinfu.hpp"
+#include "rgbd/linemod.hpp"
+#include "rgbd/depth.hpp"
+#include "rgbd/kinfu.hpp"
+#include "rgbd/large_kinfu.hpp"
+#include "rgbd/volume.hpp"
+#include "rgbd/intrinsics.hpp"
 
 /**
   @defgroup _3d 3D vision functionality

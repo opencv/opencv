@@ -7,7 +7,7 @@
 
 #include <fstream>
 #include <iostream>
-#include <opencv2/calib3d.hpp>
+#include <opencv2/3d.hpp>
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/rgbd/kinfu.hpp>

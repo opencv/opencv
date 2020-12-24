@@ -6,7 +6,7 @@
 
 #include "precomp.hpp"
 #include "fast_icp.hpp"
-#include "opencl_kernels_rgbd.hpp"
+#include "opencl_kernels_3d.hpp"
 
 using namespace std;
 
@@ -541,7 +541,7 @@ void ICPImpl::getAb<UMat>(const UMat& oldPts, const UMat& oldNrm, const UMat& ne
     // and then reduce it across work groups
 
     cv::String errorStr;
-    ocl::ProgramSource source = ocl::rgbd::icp_oclsrc;
+    ocl::ProgramSource source = ocl::_3d::icp_oclsrc;
     cv::String options = "-cl-mad-enable";
     ocl::Kernel k;
     k.create("getAb", source, options, &errorStr);
