@@ -290,6 +290,7 @@ TEST_F(QuatTest, EulerAngles){
     Vec3d test_angle = {0.523598, 0.78539, 1.04719};
     for (QuatEnum::EulerAnglesType i = QuatEnum::EulerAnglesType::INT_XYZ; i <= QuatEnum::EulerAnglesType::EXT_ZYZ; i = (QuatEnum::EulerAnglesType)(i + 1))
     {
+        SCOPED_TRACE(cv::format("EulerAnglesType=%d", i));
         Quatd q = Quatd::createFromEulerAngles(test_angle, i);
         EXPECT_EQ(q, qEuler[i]);
         Vec3d Euler_Angles = q.toEulerAngles(i);

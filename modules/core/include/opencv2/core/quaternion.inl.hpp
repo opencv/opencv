@@ -880,12 +880,15 @@ Quat<T> createFromAxisRot(int axis, const T theta)
     CV_Assert(0);
 }
 
-template <typename T> static
-bool isIntAngleType(typename QuatEnum::EulerAnglesType eulerAnglesType)
+static bool isIntAngleType(QuatEnum::EulerAnglesType eulerAnglesType)
 {
     return eulerAnglesType < QuatEnum::EXT_XYZ;
 }
 
+inline bool isTaitBryan(QuatEnum::EulerAnglesType eulerAnglesType)
+{
+    return eulerAnglesType/6 == 1 || eulerAnglesType/6 == 3;
+}
 }  // namespace detail
 
 template <typename T>
@@ -937,7 +940,7 @@ Quat<T> Quat<T>::createFromEulerAngles(const Vec<T, 3> &angles, QuatEnum::EulerA
     Quat<T> q1 = detail::createFromAxisRot(rotationAxis[eulerAnglesType][0], angles(0));
     Quat<T> q2 = detail::createFromAxisRot(rotationAxis[eulerAnglesType][1], angles(1));
     Quat<T> q3 = detail::createFromAxisRot(rotationAxis[eulerAnglesType][2], angles(2));
-    if (detail::isIntAngleType<T>(eulerAnglesType))
+    if (detail::isIntAngleType(eulerAnglesType))
     {
         return q1 * q2 * q3;
     }
@@ -1014,7 +1017,7 @@ Vec<T, 3> Quat<T>::toEulerAngles(QuatEnum::EulerAnglesType eulerAnglesType){
         rotationR[i] = value;
     }
     Vec<T, 3> angles;
-    if (detail::isIntAngleType<T>(eulerAnglesType))
+    if (detail::isIntAngleType(eulerAnglesType))
     {
         if (abs(rotationR[0] - 1) < CV_QUAT_CONVERT_THRESHOLD)
         {
@@ -1046,10 +1049,10 @@ Vec<T, 3> Quat<T>::toEulerAngles(QuatEnum::EulerAnglesType eulerAnglesType){
     }
 
     angles(0) = std::atan2(rotationR[7], rotationR[8]);
-    if (eulerAnglesType/6 == 1 || eulerAnglesType/6 == 3)
+    if (detail::isTaitBryan(eulerAnglesType))
         angles(1) = std::acos(rotationR[9]);
     else
-       angles(1) = std::asin(rotationR[9]);
+        angles(1) = std::asin(rotationR[9]);
     angles(2) = std::atan2(rotationR[10], rotationR[11]);
     return angles;
 }
