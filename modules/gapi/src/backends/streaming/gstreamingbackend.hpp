@@ -12,13 +12,6 @@
 #include "gstreamingkernel.hpp"
 
 namespace cv {
-namespace gapi {
-namespace streaming {
-
-cv::gapi::GBackend backend();
-
-}} // namespace gapi::streaming
-
 namespace gimpl {
 namespace streaming {
 
@@ -39,48 +32,6 @@ struct GCopy final : public cv::detail::NoTag
 };
 
 } // namespace streaming
-
-struct Copy: public cv::detail::KernelTag
-{
-    using API = streaming::GCopy;
-
-    static gapi::GBackend backend() { return cv::gapi::streaming::backend(); }
-
-    class Actor final: public cv::gapi::streaming::IActor
-    {
-        public:
-            explicit Actor(const cv::GCompileArgs&) {}
-            virtual void run(cv::gimpl::GIslandExecutable::IInput  &in,
-                             cv::gimpl::GIslandExecutable::IOutput &out) override;
-    };
-
-    static cv::gapi::streaming::IActor::Ptr create(const cv::GCompileArgs& args)
-    {
-        return cv::gapi::streaming::IActor::Ptr(new Actor(args));
-    }
-
-    static cv::gapi::streaming::GStreamingKernel kernel() { return {&create}; };
-};
-
-struct BGR: public cv::detail::KernelTag
-{
-    using API = cv::gapi::streaming::GBGR;
-    static gapi::GBackend backend() { return cv::gapi::streaming::backend(); }
-
-    class Actor final: public cv::gapi::streaming::IActor {
-        public:
-            explicit Actor(const cv::GCompileArgs&) {}
-            virtual void run(cv::gimpl::GIslandExecutable::IInput &in,
-                             cv::gimpl::GIslandExecutable::IOutput&out) override;
-    };
-
-    static cv::gapi::streaming::IActor::Ptr create(const cv::GCompileArgs& args)
-    {
-        return cv::gapi::streaming::IActor::Ptr(new Actor(args));
-    }
-    static cv::gapi::streaming::GStreamingKernel kernel() { return {&create}; };
-};
-
 } // namespace gimpl
 } // namespace cv
 
