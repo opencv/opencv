@@ -11,6 +11,8 @@
 
 #include "gapi_imgproc_perf_tests.hpp"
 
+#include "../../test/common/gapi_imgproc_tests_common.hpp"
+
 namespace opencv_test
 {
 
@@ -746,6 +748,87 @@ PERF_TEST_P_(GoodFeaturesPerfTest, TestPerformance)
 
     SANITY_CHECK_NOTHING();
 
+}
+
+//------------------------------------------------------------------------------
+
+PERF_TEST_P_(BoundingRectMatPerfTest, TestPerformance)
+{
+    compare_rect_f cmpF;
+    cv::Size sz;
+    MatType2 type;
+    bool initByVector = false;
+    cv::GCompileArgs compile_args;
+    std::tie(cmpF, type, sz, initByVector, compile_args) = GetParam();
+
+    if (initByVector)
+    {
+        initMatByPointsVectorRandU<cv::Point_>(type, sz, -1);
+    }
+    else
+    {
+        initMatrixRandU(type, sz, -1, false);
+    }
+
+    cv::Rect out_rect_gapi;
+    cv::GComputation c(boundingRectTestGAPI<cv::GMat>(in_mat1, std::move(compile_args),
+                                                      out_rect_gapi));
+
+    TEST_CYCLE()
+    {
+        c.apply(cv::gin(in_mat1), cv::gout(out_rect_gapi));
+    }
+
+    boundingRectTestOpenCVCompare(in_mat1, out_rect_gapi, cmpF);
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P_(BoundingRectVector32SPerfTest, TestPerformance)
+{
+    compare_rect_f cmpF;
+    cv::Size sz;
+    cv::GCompileArgs compile_args;
+    std::tie(cmpF, sz, compile_args) = GetParam();
+
+    std::vector<cv::Point2i> in_vectorS;
+    initPointsVectorRandU(sz.width, in_vectorS);
+
+    cv::Rect out_rect_gapi;
+    cv::GComputation c(
+        boundingRectTestGAPI<cv::GArray<cv::Point2i>>(in_vectorS, std::move(compile_args),
+                                                      out_rect_gapi));
+
+    TEST_CYCLE()
+    {
+        c.apply(cv::gin(in_vectorS), cv::gout(out_rect_gapi));
+    }
+
+    boundingRectTestOpenCVCompare(in_vectorS, out_rect_gapi, cmpF);
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P_(BoundingRectVector32FPerfTest, TestPerformance)
+{
+    compare_rect_f cmpF;
+    cv::Size sz;
+    cv::GCompileArgs compile_args;
+    std::tie(cmpF, sz, compile_args) = GetParam();
+
+    std::vector<cv::Point2f> in_vectorF;
+    initPointsVectorRandU(sz.width, in_vectorF);
+
+    cv::Rect out_rect_gapi;
+    cv::GComputation c(
+        boundingRectTestGAPI<cv::GArray<cv::Point2f>>(in_vectorF, std::move(compile_args),
+                                                      out_rect_gapi));
+
+    TEST_CYCLE()
+    {
+        c.apply(cv::gin(in_vectorF), cv::gout(out_rect_gapi));
+    }
+
+    boundingRectTestOpenCVCompare(in_vectorF, out_rect_gapi, cmpF);
+    SANITY_CHECK_NOTHING();
 }
 
 //------------------------------------------------------------------------------

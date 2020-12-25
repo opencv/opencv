@@ -41,6 +41,12 @@ class CannyPerfTest           : public TestPerfParams<tuple<compare_f, MatType,c
 class GoodFeaturesPerfTest    : public TestPerfParams<tuple<compare_vector_f<cv::Point2f>, std::string,
                                                             int,int,double,double,int,bool,
                                                             cv::GCompileArgs>> {};
+class BoundingRectMatPerfTest       :
+    public TestPerfParams<tuple<compare_rect_f, MatType2,cv::Size,bool, cv::GCompileArgs>> {};
+class BoundingRectVector32SPerfTest :
+    public TestPerfParams<tuple<compare_rect_f, cv::Size, cv::GCompileArgs>> {};
+class BoundingRectVector32FPerfTest :
+    public TestPerfParams<tuple<compare_rect_f, cv::Size, cv::GCompileArgs>> {};
 class EqHistPerfTest      : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs>> {};
 class BGR2RGBPerfTest     : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs>> {};
 class RGB2GrayPerfTest    : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs>> {};
