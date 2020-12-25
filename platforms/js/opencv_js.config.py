@@ -18,8 +18,21 @@ imgproc = {'': ['Canny', 'GaussianBlur', 'Laplacian', 'HoughLines', 'HoughLinesP
                 'matchShapes', 'matchTemplate','medianBlur', 'minAreaRect', 'minEnclosingCircle', 'moments', 'morphologyEx', \
                 'pointPolygonTest', 'putText','pyrDown','pyrUp','rectangle','remap', 'resize','sepFilter2D','threshold', \
                 'undistort','warpAffine','warpPerspective','warpPolar','watershed', \
-                'fillPoly', 'fillConvexPoly'],
-           'CLAHE': ['apply', 'collectGarbage', 'getClipLimit', 'getTilesGridSize', 'setClipLimit', 'setTilesGridSize']}
+                'fillPoly', 'fillConvexPoly', 'polylines',
+    ],
+    'CLAHE': ['apply', 'collectGarbage', 'getClipLimit', 'getTilesGridSize', 'setClipLimit', 'setTilesGridSize'],
+    'segmentation_IntelligentScissorsMB': [
+        'IntelligentScissorsMB',
+        'setWeights',
+        'setGradientMagnitudeMaxLimit',
+        'setEdgeFeatureZeroCrossingParameters',
+        'setEdgeFeatureCannyParameters',
+        'applyImage',
+        'applyImageFeatures',
+        'buildMap',
+        'getContour'
+    ],
+}
 
 objdetect = {'': ['groupRectangles'],
              'HOGDescriptor': ['load', 'HOGDescriptor', 'getDefaultPeopleDetector', 'getDaimlerPeopleDetector', 'setSVMDetector', 'detectMultiScale'],
