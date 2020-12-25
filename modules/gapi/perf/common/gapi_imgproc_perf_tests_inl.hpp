@@ -771,8 +771,7 @@ PERF_TEST_P_(BoundingRectMatPerfTest, TestPerformance)
     }
 
     cv::Rect out_rect_gapi;
-    cv::GComputation c(boundingRectTestGAPI<cv::GMat>(in_mat1, std::move(compile_args),
-                                                      out_rect_gapi));
+    cv::GComputation c(boundingRectTestGAPI(in_mat1, std::move(compile_args), out_rect_gapi));
 
     TEST_CYCLE()
     {
@@ -794,9 +793,7 @@ PERF_TEST_P_(BoundingRectVector32SPerfTest, TestPerformance)
     initPointsVectorRandU(sz.width, in_vectorS);
 
     cv::Rect out_rect_gapi;
-    cv::GComputation c(
-        boundingRectTestGAPI<cv::GArray<cv::Point2i>>(in_vectorS, std::move(compile_args),
-                                                      out_rect_gapi));
+    cv::GComputation c(boundingRectTestGAPI(in_vectorS, std::move(compile_args), out_rect_gapi));
 
     TEST_CYCLE()
     {
@@ -818,9 +815,7 @@ PERF_TEST_P_(BoundingRectVector32FPerfTest, TestPerformance)
     initPointsVectorRandU(sz.width, in_vectorF);
 
     cv::Rect out_rect_gapi;
-    cv::GComputation c(
-        boundingRectTestGAPI<cv::GArray<cv::Point2f>>(in_vectorF, std::move(compile_args),
-                                                      out_rect_gapi));
+    cv::GComputation c(boundingRectTestGAPI(in_vectorF, std::move(compile_args), out_rect_gapi));
 
     TEST_CYCLE()
     {

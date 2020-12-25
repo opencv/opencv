@@ -14,11 +14,11 @@
 
 namespace opencv_test
 {
-template<typename G_In, typename In>
+template<typename In>
 static cv::GComputation boundingRectTestGAPI(const In& in, cv::GCompileArgs&& args,
                                              cv::Rect& out_rect_gapi)
 {
-    G_In g_in;
+    cv::detail::g_type_of_t<In> g_in;
     auto out = cv::gapi::boundingRect(g_in);
     cv::GComputation c(cv::GIn(g_in), cv::GOut(out));
     c.apply(cv::gin(in), cv::gout(out_rect_gapi), std::move(args));
@@ -37,11 +37,11 @@ static void boundingRectTestOpenCVCompare(const In& in, const cv::Rect& out_rect
     }
 }
 
-template<typename G_In, typename In>
+template<typename In>
 static void boundingRectTestBody(const In& in, const CompareRects& cmpF_, cv::GCompileArgs&& args)
 {
     cv::Rect out_rect_gapi;
-    boundingRectTestGAPI<G_In>(in, std::move(args), out_rect_gapi);
+    boundingRectTestGAPI(in, std::move(args), out_rect_gapi);
 
     compare_rect_f cmpF = [cmpF_](const cv::Rect& a, const cv::Rect& b){ return cmpF_(a, b); };
     boundingRectTestOpenCVCompare(in, out_rect_gapi, cmpF);
