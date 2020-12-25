@@ -1509,21 +1509,6 @@ inline v_int8x64 v_absdiffs(const v_int8x64& a, const v_int8x64& b)
 inline v_int16x32 v_absdiffs(const v_int16x32& a, const v_int16x32& b)
 { return v_max(a, b) - v_min(a, b); }
 
-static inline v_uint8x64 v_absdiffs(const v_uint8x64& a, const v_uint8x64& b)
-{
-    return v_max(a, b) - v_min(a, b);
-}
-
-static inline v_uint16x32 v_absdiffs(const v_uint16x32& a, const v_uint16x32& b)
-{
-    return v_max(a, b) - v_min(a, b);
-}
-
-static inline v_float32x16 v_absdiffs(const v_float32x16& a, const v_float32x16& b)
-{
-    return v_max(a, b) - v_min(a, b);
-}
-
 ////////// Conversions /////////
 
 /** Rounding **/
@@ -1571,11 +1556,6 @@ inline v_int32x16 v_ceil(const v_float64x8& a)
 /** To float **/
 inline v_float32x16 v_cvt_f32(const v_int32x16& a)
 { return v_float32x16(_mm512_cvtepi32_ps(a.val)); }
-
-static inline v_float32x16 v_cvt_f32(const v_uint32x16& a)
-{
-    return v_float32x16(_mm512_cvtepi32_ps(a.val));
-}
 
 inline v_float32x16 v_cvt_f32(const v_float64x8& a)
 { return v_float32x16(_mm512_cvtpd_pslo(a.val)); }

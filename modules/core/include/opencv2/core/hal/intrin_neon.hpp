@@ -1048,21 +1048,6 @@ inline v_int8x16 v_absdiffs(const v_int8x16& a, const v_int8x16& b)
 static inline v_int16x8 v_absdiffs(const v_int16x8& a, const v_int16x8& b)
 { return v_int16x8(vqabsq_s16(vqsubq_s16(a.val, b.val))); }
 
-static inline v_float32x4 v_absdiffs(const v_float32x4& a, const v_float32x4& b)
-{
-    return v_float32x4(vabsq_f32(vsubq_f32(a.val, b.val)));
-}
-
-static inline v_uint8x16 v_absdiffs(const v_uint8x16& a, const v_uint8x16& b)
-{
-    return v_max(a, b) - v_min(a, b);
-}
-
-static inline v_uint16x8 v_absdiffs(const v_uint16x8& a, const v_uint16x8& b)
-{
-    return v_max(a, b) - v_min(a, b);
-}
-
 #define OPENCV_HAL_IMPL_NEON_BIN_FUNC2(_Tpvec, _Tpvec2, cast, func, intrin) \
 inline _Tpvec2 func(const _Tpvec& a, const _Tpvec& b) \
 { \
@@ -1724,7 +1709,7 @@ inline v_int32x4 v_round(const v_float32x4& a)
     return v_int32x4(result);
 }
 #else
-static inline v_int32x4 v_round(const v_float32x4& a)
+inline v_int32x4 v_round(const v_float32x4& a)
 {
     static const int32x4_t v_sign = vdupq_n_s32(1 << 31),
                            v_05 = vreinterpretq_s32_f32(vdupq_n_f32(0.5f));
@@ -1959,11 +1944,6 @@ OPENCV_HAL_IMPL_NEON_INTERLEAVED_INT64(uint64, u64)
 inline v_float32x4 v_cvt_f32(const v_int32x4& a)
 {
     return v_float32x4(vcvtq_f32_s32(a.val));
-}
-
-inline v_float32x4 v_cvt_f32(const v_uint32x4& a)
-{
-    return v_float32x4(vcvtq_f32_u32(a.val));
 }
 
 #if CV_SIMD128_64F
@@ -2277,6 +2257,12 @@ inline v_uint16x8 v_pack_triplets(const v_uint16x8& vec) { return v_reinterpret_
 inline v_int32x4 v_pack_triplets(const v_int32x4& vec) { return vec; }
 inline v_uint32x4 v_pack_triplets(const v_uint32x4& vec) { return vec; }
 inline v_float32x4 v_pack_triplets(const v_float32x4& vec) { return vec; }
+
+inline v_float32x4 v_setr(const float v1, const float v2, const float v3, const float v4)
+{
+    float init[4] = {v1, v2, v3, v4};
+    return v_float32x4(vld1q_f32(init));
+}
 
 #if CV_SIMD128_64F
 inline v_float64x2 v_lut(const double* tab, const int* idx)

@@ -360,7 +360,6 @@ inline v_float32x4 v_reinterpret_as_f32(const v_uint64x2& a)
 { return v_float32x4(_mm_castsi128_ps(a.val)); }
 inline v_float32x4 v_reinterpret_as_f32(const v_int64x2& a)
 { return v_float32x4(_mm_castsi128_ps(a.val)); }
-
 inline v_float64x2 v_reinterpret_as_f64(const v_uint64x2& a)
 { return v_float64x2(_mm_castsi128_pd(a.val)); }
 inline v_float64x2 v_reinterpret_as_f64(const v_int64x2& a)
@@ -1331,21 +1330,6 @@ inline v_int8x16 v_absdiffs(const v_int8x16& a, const v_int8x16& b)
     return (d ^ m) - m;
  }
 static inline v_int16x8 v_absdiffs(const v_int16x8& a, const v_int16x8& b)
-{
-    return v_max(a, b) - v_min(a, b);
-}
-
-static inline v_uint16x8 v_absdiffs(const v_uint16x8& a, const v_uint16x8& b)
-{
-    return v_max(a, b) - v_min(a, b);
-}
-
-static inline v_uint8x16 v_absdiffs(const v_uint8x16& a, const v_uint8x16& b)
-{
-    return v_max(a, b) - v_min(a, b);
-}
-
-static inline v_float32x4 v_absdiffs(const v_float32x4& a, const v_float32x4& b)
 {
     return v_max(a, b) - v_min(a, b);
 }
@@ -3004,11 +2988,6 @@ inline v_float32x4 v_cvt_f32(const v_int32x4& a)
     return v_float32x4(_mm_cvtepi32_ps(a.val));
 }
 
-static inline v_float32x4 v_cvt_f32(const v_uint32x4& a)
-{
-    return v_float32x4(_mm_cvtepi32_ps(a.val));
-}
-
 inline v_float32x4 v_cvt_f32(const v_float64x2& a)
 {
     return v_float32x4(_mm_cvtpd_ps(a.val));
@@ -3412,6 +3391,11 @@ template<int i>
 inline v_float32x4 v_broadcast_element(const v_float32x4& v)
 {
     return v_float32x4(_mm_shuffle_ps(v.val, v.val, _MM_SHUFFLE((char)i,(char)i,(char)i,(char)i)));
+}
+
+inline v_float32x4 v_setr(const float v1, const float v2, const float v3, const float v4)
+{
+    return v_float32x4(_mm_setr_ps(v1, v2, v3, v4));
 }
 
 ////////////// FP16 support ///////////////////////////
