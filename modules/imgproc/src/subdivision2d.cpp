@@ -93,6 +93,7 @@ int Subdiv2D::edgeDst(int edge, CV_OUT Point2f* dstpt) const
 
 Point2f Subdiv2D::getVertex(int vertex, CV_OUT int* firstEdge) const
 {
+    CV_Assert(vertex > 3);
     CV_DbgAssert((size_t)vertex < vtx.size());
     if( firstEdge )
         *firstEdge = vtx[vertex].firstEdge;
@@ -310,6 +311,15 @@ int Subdiv2D::inCircleEx(int i, int j, int k, int l) const {
     }
 
     return -inCircleEx(j, k, l, i);
+}
+
+// deprecated, backward compatibility
+int Subdiv2D::isRightOf(Point2f pt, int edge) const
+{
+    Point2f org, dst;
+    edgeOrg(edge, &org);
+    edgeDst(edge, &dst);
+    return counterClockwise(pt, dst, org);
 }
 
 int Subdiv2D::newEdge()
