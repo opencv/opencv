@@ -63,6 +63,20 @@ struct ONNXInitPath {
     }
 };
 static ONNXInitPath g_init_path;
+
+cv::Mat initMatrixRandU(const int type, const cv::Size& sz_in) {
+    const cv::Mat in_mat1 = cv::Mat(sz_in, type);
+
+    if (CV_MAT_DEPTH(type) < CV_32F) {
+        cv::randu(in_mat1, cv::Scalar::all(0), cv::Scalar::all(255));
+    } else {
+        const int fscale = 256;  // avoid bits near ULP, generate stable test input
+        cv::Mat in_mat32s(in_mat1.size(), CV_MAKE_TYPE(CV_32S, CV_MAT_CN(type)));
+        cv::randu(in_mat32s, cv::Scalar::all(0), cv::Scalar::all(255 * fscale));
+        in_mat32s.convertTo(in_mat1, type, 1.0f / fscale, 0);
+    }
+    return in_mat1;
+}
 } // anonymous namespace
 namespace opencv_test
 {
@@ -598,7 +612,7 @@ TEST_F(ONNXGRayScaleTest, InferImage)
     validate();
 }
 
-TEST_F(ONNXWithRemap, InferMultOutput)
+TEST_F(ONNXWithRemap, InferMultiOutput)
 {
     useModel("object_detection_segmentation/ssd-mobilenetv1/model/ssd_mobilenet_v1_10");
     // ONNX_API code
@@ -861,6 +875,9 @@ TEST_F(ONNXYoloV3MultiInput, InferConstInput)
 
 TEST_F(ONNXYoloV3MultiInput, InferBSConstInput)
 {
+    // This test checks the case when a const input is used
+    // and all input layer names are specified.
+    // Const input has the advantage. It is expected behavior.
     useModel("object_detection_segmentation/yolov3/model/yolov3-10");
     // Tensor with incorrect image size
     // is used for check case when InputLayers and constInput have same names
