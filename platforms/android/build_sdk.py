@@ -238,6 +238,10 @@ class Builder:
             cmd.extend(["-DBUILD_TESTS=ON", "-DINSTALL_TESTS=ON"])
 
         cmake_vars.update(abi.cmake_vars)
+
+        if self.config.stl is not None:
+            cmake_vars['ANDROID_STL'] = self.config.stl
+
         cmd += [ "-D%s='%s'" % (k, v) for (k, v) in cmake_vars.items() if v is not None]
         cmd.append(self.opencvdir)
         execute(cmd)
@@ -376,6 +380,7 @@ if __name__ == "__main__":
     parser.add_argument('--config', default='ndk-10.config.py', type=str, help="Package build configuration", )
     parser.add_argument('--ndk_path', help="Path to Android NDK to use for build")
     parser.add_argument('--sdk_path', help="Path to Android SDK to use for build")
+    parser.add_argument('--stl', help="Manually select the STL to use for build")
     parser.add_argument('--use_android_buildtools', action="store_true", help='Use cmake/ninja build tools from Android SDK')
     parser.add_argument("--modules_list", help="List of  modules to include for build")
     parser.add_argument("--extra_modules_path", help="Path to extra modules to use for build")
