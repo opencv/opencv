@@ -72,7 +72,7 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         if (backendId == DNN_BACKEND_CUDA)
-            return interpolation == "nearest" || interpolation == "bilinear";
+            return interpolation == "nearest" || interpolation == "bilinear" || interpolation == "opencv_linear";
 
 #ifdef HAVE_INF_ENGINE
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
@@ -299,15 +299,28 @@ public:
     {
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
 
-        cuda4dnn::InterpolationType itype;
+        cuda4dnn::ResizeConfiguration config;
         if (interpolation == "nearest")
-            itype = InterpolationType::NEAREST_NEIGHBOUR;
+        {
+            config.type = InterpolationType::NEAREST_NEIGHBOUR;
+            config.align_corners = alignCorners;
+            config.half_pixel_centers = halfPixelCenters;
+        }
         else if (interpolation == "bilinear")
-            itype = InterpolationType::BILINEAR;
+        {
+            config.type = InterpolationType::BILINEAR;
+            config.align_corners = alignCorners;
+            config.half_pixel_centers = halfPixelCenters;
+        }
+        else if (interpolation == "opencv_linear")
+        {
+            config.type = InterpolationType::BILINEAR;
+            config.align_corners = false;
+            config.half_pixel_centers = true;
+        }
         else
             CV_Error(Error::StsNotImplemented, "Requested interpolation mode is not available in resize layer.");
-
-        return make_cuda_node<cuda4dnn::ResizeOp>(preferableTarget, std::move(context->stream), itype, scaleHeight, scaleWidth);
+        return make_cuda_node<cuda4dnn::ResizeOp>(preferableTarget, std::move(context->stream), config);
     }
 #endif
 
