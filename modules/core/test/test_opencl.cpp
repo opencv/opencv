@@ -8,6 +8,23 @@
 namespace opencv_test {
 namespace ocl {
 
+static
+testing::internal::ParamGenerator<std::string> getOpenCLTestConfigurations()
+{
+    if (!cv::ocl::useOpenCL())
+    {
+        return testing::ValuesIn(std::vector<std::string>());
+    }
+
+    std::vector<std::string> configurations = {
+        ":GPU:0",
+        ":GPU:1",
+        ":CPU:0",
+    };
+    return testing::ValuesIn(configurations);
+}
+
+
 static void executeUMatCall(bool requireOpenCL = true)
 {
     UMat a(100, 100, CV_8UC1, Scalar::all(0));
@@ -45,7 +62,7 @@ TEST(OCL_Context, createFromDevice)
     EXPECT_TRUE(context.getImpl() == context2.getImpl()) << "Broken cache for OpenCL context (device)";
 }
 
-TEST(OCL_OpenCLExecutionContext, basic)
+TEST(OCL_OpenCLExecutionContextDefault, basic)
 {
     bool useOCL = cv::ocl::useOpenCL();
 
@@ -72,7 +89,7 @@ TEST(OCL_OpenCLExecutionContext, basic)
     EXPECT_TRUE(queue.getImpl() == queue2.getImpl());
 }
 
-TEST(OCL_OpenCLExecutionContext, createAndBind)
+TEST(OCL_OpenCLExecutionContextDefault, createAndBind)
 {
     bool useOCL = cv::ocl::useOpenCL();
 
@@ -106,7 +123,9 @@ TEST(OCL_OpenCLExecutionContext, createAndBind)
     }
 }
 
-TEST(OCL_OpenCLExecutionContext, createGPU)
+typedef testing::TestWithParam<std::string> OCL_OpenCLExecutionContext_P;
+
+TEST_P(OCL_OpenCLExecutionContext_P, multipleBindAndExecute)
 {
     bool useOCL = cv::ocl::useOpenCL();
 
@@ -120,12 +139,11 @@ TEST(OCL_OpenCLExecutionContext, createGPU)
 
     ASSERT_FALSE(ctx.empty());
 
-    ocl::Context context = ocl::Context::create(":GPU:1");
+    std::string opencl_device = GetParam();
+    ocl::Context context = ocl::Context::create(opencl_device);
     if (context.empty())
     {
-        context = ocl::Context::create(":CPU:");
-        if (context.empty())
-            throw SkipTestException("OpenCL GPU1/CPU devices are not available");
+        throw SkipTestException(std::string("OpenCL device is not available: '") + opencl_device + "'");
     }
 
     ocl::Device device = context.device(0);
@@ -135,8 +153,10 @@ TEST(OCL_OpenCLExecutionContext, createGPU)
 
     try
     {
+        std::cout << "ctx2..." << std::endl;
         ctx2.bind();
         executeUMatCall();
+        std::cout << "ctx..." << std::endl;
         ctx.bind();
         executeUMatCall();
     }
@@ -147,7 +167,7 @@ TEST(OCL_OpenCLExecutionContext, createGPU)
     }
 }
 
-TEST(OCL_OpenCLExecutionContext, ScopeTest)
+TEST_P(OCL_OpenCLExecutionContext_P, ScopeTest)
 {
     bool useOCL = cv::ocl::useOpenCL();
 
@@ -161,12 +181,11 @@ TEST(OCL_OpenCLExecutionContext, ScopeTest)
 
     ASSERT_FALSE(ctx.empty());
 
-    ocl::Context context = ocl::Context::create(":GPU:1");
+    std::string opencl_device = GetParam();
+    ocl::Context context = ocl::Context::create(opencl_device);
     if (context.empty())
     {
-        context = ocl::Context::create(":CPU:");
-        if (context.empty())
-            context = ctx.getContext();
+        throw SkipTestException(std::string("OpenCL device is not available: '") + opencl_device + "'");
     }
 
     ocl::Device device = context.device(0);
@@ -187,5 +206,10 @@ TEST(OCL_OpenCLExecutionContext, ScopeTest)
 
     executeUMatCall();
 }
+
+
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, OCL_OpenCLExecutionContext_P, getOpenCLTestConfigurations());
+
 
 } } // namespace opencv_test::ocl
