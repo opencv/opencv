@@ -31,7 +31,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
             size_type boxes_per_cell, size_type box_size,
             size_type rows, size_type cols, T scale_x_y,
             size_type height_norm, size_type width_norm,
-            T object_prob_cutoff)
+            T object_prob_cutoff, bool new_coords)
         {
             using vector2_type = get_vector_type_t<T, 2>;
             auto bias_vPtr = vector2_type::get_pointer(bias.data());
@@ -46,108 +46,50 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
                 const auto y = (box_index % batch_inner_size) / row_inner_size;
                 const auto x = (box_index % row_inner_size) / col_inner_size;
+                /* When new_coords is true, we shouldn't use logistic activation again */
+                T objectness_prob;
+                if (new_coords) {
+                    const auto tmp_x = ((input[box_offset + 0]) - static_cast<T>(0.5)) * scale_x_y + static_cast<T>(0.5);
+                    const auto tmp_y = ((input[box_offset + 1]) - static_cast<T>(0.5)) * scale_x_y + static_cast<T>(0.5);
+                    output[box_offset + 0] = (T(x) + tmp_x) / T(cols);
+                    output[box_offset + 1] = (T(y) + tmp_y) / T(rows);
 
-                using device::fast_sigmoid;
-                const auto tmp_x = (fast_sigmoid(input[box_offset + 0]) - static_cast<T>(0.5)) * scale_x_y + static_cast<T>(0.5);
-                const auto tmp_y = (fast_sigmoid(input[box_offset + 1]) - static_cast<T>(0.5)) * scale_x_y + static_cast<T>(0.5);
-                output[box_offset + 0] = (T(x) + tmp_x) / T(cols);
-                output[box_offset + 1] = (T(y) + tmp_y) / T(rows);
+                    vector2_type bias_xy;
+                    v_load(bias_xy, bias_vPtr[box_of_the_cell]);
 
-                vector2_type bias_xy;
-                v_load(bias_xy, bias_vPtr[box_of_the_cell]);
+                    output[box_offset + 2] = input[box_offset + 2] * input[box_offset + 2] * T(4) * bias_xy.data[0] / T(width_norm);
+                    output[box_offset + 3] = input[box_offset + 3] * input[box_offset + 3] * T(4) * bias_xy.data[1] / T(height_norm);
 
-                using device::fast_exp;
-                output[box_offset + 2] = fast_exp(input[box_offset + 2]) * bias_xy.data[0] / T(width_norm);
-                output[box_offset + 3] = fast_exp(input[box_offset + 3]) * bias_xy.data[1] / T(height_norm);
+                    /* squash objectness score into a probability */
+                    objectness_prob = (input[box_offset + 4]);
+                } else {
+                    using device::fast_sigmoid;
+                    const auto tmp_x = (fast_sigmoid(input[box_offset + 0]) - static_cast<T>(0.5)) * scale_x_y + static_cast<T>(0.5);
+                    const auto tmp_y = (fast_sigmoid(input[box_offset + 1]) - static_cast<T>(0.5)) * scale_x_y + static_cast<T>(0.5);
+                    output[box_offset + 0] = (T(x) + tmp_x) / T(cols);
+                    output[box_offset + 1] = (T(y) + tmp_y) / T(rows);
 
-                /* squash objectness score into a probability */
-                using device::fast_sigmoid;
-                T objectness_prob = fast_sigmoid(input[box_offset + 4]);
+                    vector2_type bias_xy;
+                    v_load(bias_xy, bias_vPtr[box_of_the_cell]);
 
-                /* ignore prediction if the objectness probability is less than the cutoff */
-                if (objectness_prob < object_prob_cutoff)
-                    objectness_prob = 0;
+                    using device::fast_exp;
+                    output[box_offset + 2] = fast_exp(input[box_offset + 2]) * bias_xy.data[0] / T(width_norm);
+                    output[box_offset + 3] = fast_exp(input[box_offset + 3]) * bias_xy.data[1] / T(height_norm);
 
-                output[box_offset + 4] = objectness_prob;
-            }
-        }
-
-
-
-        template <class T>
-        __global__ void region_box_noact(
-            Span<T> output, View<T> input, View<T> bias,
-            size_type boxes_per_cell, size_type box_size,
-            size_type rows, size_type cols, T scale_x_y,
-            size_type height_norm, size_type width_norm,
-            T object_prob_cutoff)
-        {
-            using vector2_type = get_vector_type_t<T, 2>;
-            auto bias_vPtr = vector2_type::get_pointer(bias.data());
-
-            for (auto box_index : grid_stride_range(output.size() / box_size)) {
-                const auto box_of_the_cell = box_index % boxes_per_cell; /* box number within a cell */
-                const auto box_offset = box_index * box_size;
-
-                const auto batch_inner_size = rows * cols * boxes_per_cell;
-                const auto row_inner_size = cols * boxes_per_cell;
-                const auto col_inner_size = boxes_per_cell;
-
-                const auto y = (box_index % batch_inner_size) / row_inner_size;
-                const auto x = (box_index % row_inner_size) / col_inner_size;
-
-                const auto tmp_x = ((input[box_offset + 0]) - static_cast<T>(0.5)) * scale_x_y + static_cast<T>(0.5);
-                const auto tmp_y = ((input[box_offset + 1]) - static_cast<T>(0.5)) * scale_x_y + static_cast<T>(0.5);
-                output[box_offset + 0] = (T(x) + tmp_x) / T(cols);
-                output[box_offset + 1] = (T(y) + tmp_y) / T(rows);
-
-                vector2_type bias_xy;
-                v_load(bias_xy, bias_vPtr[box_of_the_cell]);
-
-                output[box_offset + 2] = input[box_offset + 2] * input[box_offset + 2] * T(4) * bias_xy.data[0] / T(width_norm);
-                output[box_offset + 3] = input[box_offset + 3] * input[box_offset + 3] * T(4) * bias_xy.data[1] / T(height_norm);
-
-                /* squash objectness score into a probability */
-                T objectness_prob = (input[box_offset + 4]);
-
-                /* ignore prediction if the objectness probability is less than the cutoff */
-                if (objectness_prob < object_prob_cutoff)
-                    objectness_prob = 0;
-
-                output[box_offset + 4] = objectness_prob;
-            }
-        }
-
-        template <class T>
-        __global__ void region_noact_class_score(Span<T> output, View<T> input, T class_prob_cutoff, size_type box_size)
-        {
-            for (auto idx : grid_stride_range(output.size())) {
-                const index_type box_no = idx / box_size;
-                const index_type start_of_box = box_no * box_size;
-                const index_type box_offset = idx % box_size;
-
-                if (box_offset < 5) {
-                    /* continue as we have already processed these in region_box */
-                    continue;
+                    /* squash objectness score into a probability */
+                    using device::fast_sigmoid;
+                    objectness_prob = fast_sigmoid(input[box_offset + 4]);
                 }
+                /* ignore prediction if the objectness probability is less than the cutoff */
+                if (objectness_prob < object_prob_cutoff)
+                    objectness_prob = 0;
 
-                auto objectness_prob = input[start_of_box + 4];
-
-                /* the class probabilities we currently have are conditional class probabilities
-                 * given the object
-                 *
-                 * to obtain the actual class probability, we multiply the conditional probability
-                 * with the object probability
-                 */
-                auto actual_class_prob = objectness_prob * input[idx];
-                if (actual_class_prob <= class_prob_cutoff)
-                    actual_class_prob = T(0);
-                output[idx] = actual_class_prob;
+                output[box_offset + 4] = objectness_prob;
             }
         }
 
         template <class T>
-        __global__ void region_sigmoid_class_score(Span<T> output, View<T> input, T class_prob_cutoff, size_type box_size)
+        __global__ void region_sigmoid_class_score(Span<T> output, View<T> input, T class_prob_cutoff, size_type box_size, bool new_coords)
         {
             for (auto idx : grid_stride_range(output.size())) {
                 const index_type box_no = idx / box_size;
@@ -166,9 +108,16 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
                  *
                  * to obtain the actual class probability, we multiply the conditional probability
                  * with the object probability
+                 *
+                 * when new_coords is true, we shouldn't use logistic activation again.
                  */
-                using device::fast_sigmoid;
-                auto actual_class_prob = objectness_prob * fast_sigmoid(input[idx]);
+                T actual_class_prob;
+                if (new_coords) {
+                    actual_class_prob = objectness_prob * input[idx];
+                } else {
+                    using device::fast_sigmoid;
+                    actual_class_prob = objectness_prob * fast_sigmoid(input[idx]);
+                }
                 if (actual_class_prob <= class_prob_cutoff)
                     actual_class_prob = T(0);
                 output[idx] = actual_class_prob;
@@ -228,33 +177,17 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         CV_Assert(output.size() % box_size == 0);
         CV_Assert(is_fully_aligned(bias, 2));
 
-        if (new_coords) {
-            auto box_kernel = raw::region_box_noact<T>;
-            auto box_policy = make_policy(box_kernel, output.size() / box_size, 0, stream);
+        auto box_kernel = raw::region_box<T>;
+        auto box_policy = make_policy(box_kernel, output.size() / box_size, 0, stream);
 
-            launch_kernel(box_kernel, box_policy,
-                output, input, bias, boxes_per_cell, box_size,
-                rows, cols, scale_x_y, height_norm, width_norm,
-                object_prob_cutoff);
-
-        } else {
-            auto box_kernel = raw::region_box<T>;
-            auto box_policy = make_policy(box_kernel, output.size() / box_size, 0, stream);
-
-            launch_kernel(box_kernel, box_policy,
-                output, input, bias, boxes_per_cell, box_size,
-                rows, cols, scale_x_y, height_norm, width_norm,
-                object_prob_cutoff);
-        }
-        if (new_coords) {
-            auto kernel_score = raw::region_noact_class_score<T>;
-            auto policy_score = make_policy(kernel_score, output.size(), 0, stream);
-            launch_kernel(kernel_score, policy_score, output, input, class_prob_cutoff, box_size);
-        }
-        else if (if_true_sigmoid_else_softmax) {
+        launch_kernel(box_kernel, box_policy,
+            output, input, bias, boxes_per_cell, box_size,
+            rows, cols, scale_x_y, height_norm, width_norm,
+            object_prob_cutoff, new_coords);
+        if (if_true_sigmoid_else_softmax) {
             auto kernel_score = raw::region_sigmoid_class_score<T>;
             auto policy_score = make_policy(kernel_score, output.size(), 0, stream);
-            launch_kernel(kernel_score, policy_score, output, input, class_prob_cutoff, box_size);
+            launch_kernel(kernel_score, policy_score, output, input, class_prob_cutoff, box_size, new_coords);
         } else {
             auto kernel_score = raw::region_softmax_class_score<T>;
             auto policy_score = make_policy(kernel_score, output.size(), 0, stream);
