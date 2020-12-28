@@ -24,13 +24,13 @@ In order to use depth sensor with OpenCV you should do the following preliminary
 VideoCapture can retrieve the following data:
 
 -#  data given from depth generator:
-    -   CAP_INTELPERC_DEPTH_MAP - each pixel is a 16-bit integer. The value indicates the
-            distance from an object to the camera's XY plane or the Cartesian depth. (CV_16UC1)
+    -   CAP_INTELPERC_DEPTH_MAP - each pixel is a 16-bit or 8-bit integer. The value indicates the
+            distance from an object to the camera's XY plane or the Cartesian depth. (CV_16UC1 or CV_8UC1)
     -   CAP_INTELPERC_UVDEPTH_MAP - each pixel contains two 32-bit floating point values in
         the range of 0-1, representing the mapping of depth coordinates to the color
         coordinates. (CV_32FC2)
-    -   CAP_INTELPERC_IR_MAP - each pixel is a 16-bit integer. The value indicates the
-        intensity of the reflected laser beam. (CV_16UC1)
+    -   CAP_INTELPERC_IR_MAP - each pixel is a 16-bit or 8-bit integer. The value indicates the
+        intensity of the reflected laser beam. (CV_16UC1 or CV_8UC1)
 
 -#  data given from RGB image generator:
     -   CAP_INTELPERC_IMAGE - color image. (CV_8UC3)
