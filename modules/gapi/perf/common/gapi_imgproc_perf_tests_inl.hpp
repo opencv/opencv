@@ -789,18 +789,18 @@ PERF_TEST_P_(BoundingRectVector32SPerfTest, TestPerformance)
     cv::GCompileArgs compile_args;
     std::tie(cmpF, sz, compile_args) = GetParam();
 
-    std::vector<cv::Point2i> in_vectorS;
-    initPointsVectorRandU(sz.width, in_vectorS);
+    std::vector<cv::Point2i> in_vector;
+    initPointsVectorRandU(sz.width, in_vector);
 
     cv::Rect out_rect_gapi;
-    cv::GComputation c(boundingRectTestGAPI(in_vectorS, std::move(compile_args), out_rect_gapi));
+    cv::GComputation c(boundingRectTestGAPI(in_vector, std::move(compile_args), out_rect_gapi));
 
     TEST_CYCLE()
     {
-        c.apply(cv::gin(in_vectorS), cv::gout(out_rect_gapi));
+        c.apply(cv::gin(in_vector), cv::gout(out_rect_gapi));
     }
 
-    boundingRectTestOpenCVCompare(in_vectorS, out_rect_gapi, cmpF);
+    boundingRectTestOpenCVCompare(in_vector, out_rect_gapi, cmpF);
     SANITY_CHECK_NOTHING();
 }
 
@@ -811,18 +811,18 @@ PERF_TEST_P_(BoundingRectVector32FPerfTest, TestPerformance)
     cv::GCompileArgs compile_args;
     std::tie(cmpF, sz, compile_args) = GetParam();
 
-    std::vector<cv::Point2f> in_vectorF;
-    initPointsVectorRandU(sz.width, in_vectorF);
+    std::vector<cv::Point2f> in_vector;
+    initPointsVectorRandU(sz.width, in_vector);
 
     cv::Rect out_rect_gapi;
-    cv::GComputation c(boundingRectTestGAPI(in_vectorF, std::move(compile_args), out_rect_gapi));
+    cv::GComputation c(boundingRectTestGAPI(in_vector, std::move(compile_args), out_rect_gapi));
 
     TEST_CYCLE()
     {
-        c.apply(cv::gin(in_vectorF), cv::gout(out_rect_gapi));
+        c.apply(cv::gin(in_vector), cv::gout(out_rect_gapi));
     }
 
-    boundingRectTestOpenCVCompare(in_vectorF, out_rect_gapi, cmpF);
+    boundingRectTestOpenCVCompare(in_vector, out_rect_gapi, cmpF);
     SANITY_CHECK_NOTHING();
 }
 

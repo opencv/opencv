@@ -312,7 +312,7 @@ INSTANTIATE_TEST_CASE_P(BoundingRectMatVectorTestCPU, BoundingRectMatTest,
                                        cv::Size(128, 1)),
                                 Values(-1),
                                 Values(IMGPROC_CPU),
-                                Values(IoUToleranceRect(0).to_compare_obj()),
+                                Values(IoUToleranceRect(1e-5).to_compare_obj()),
                                 Values(true)));
 
 INSTANTIATE_TEST_CASE_P(BoundingRectVector32STestCPU, BoundingRectVector32STest,

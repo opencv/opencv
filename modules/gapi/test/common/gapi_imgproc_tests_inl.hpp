@@ -639,18 +639,18 @@ TEST_P(BoundingRectMatTest, AccuracyTest)
 TEST_P(BoundingRectVector32STest, AccuracyTest)
 
 {
-    std::vector<cv::Point2i> in_vectorS;
-    initPointsVectorRandU(sz.width, in_vectorS);
+    std::vector<cv::Point2i> in_vector;
+    initPointsVectorRandU(sz.width, in_vector);
 
-    boundingRectTestBody(in_vectorS, cmpF, getCompileArgs());
+    boundingRectTestBody(in_vector, cmpF, getCompileArgs());
 }
 
 TEST_P(BoundingRectVector32FTest, AccuracyTest)
 {
-    std::vector<cv::Point2f> in_vectorF;
-    initPointsVectorRandU(sz.width, in_vectorF);
+    std::vector<cv::Point2f> in_vector;
+    initPointsVectorRandU(sz.width, in_vector);
 
-    boundingRectTestBody(in_vectorF, cmpF, getCompileArgs());
+    boundingRectTestBody(in_vector, cmpF, getCompileArgs());
 }
 
 TEST_P(FitLine2DMatVectorTest, AccuracyTest)
