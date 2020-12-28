@@ -1172,7 +1172,8 @@ protected:
     int counterClockwiseEx(int i, int j, int k) const;
     int rightOfEx(int p, int i, int j) const;
     int inCircleEx(int i, int j, int k, int l) const;
-    Point2f computeVoronoiPointEx(int edge0, int edge1, int edge2, bool flag);
+    Point2f computeVoronoiPointEx(int edge0, int edge1, int edge2, bool &estimated) const;
+    Point2f computeVoronoiPointEx(int edge0, int edge1, int edge2, float radius) const;
     int isRightOf(Point2f pt, int edge) const;
     void calcVoronoi();
     void clearVoronoi();
@@ -1211,8 +1212,6 @@ protected:
     Point2f topLeft;
     //! Bottom right corner of the bounding rect
     Point2f bottomRight;
-    //!
-    float radius;
 
 private:
     //! All of the vertices

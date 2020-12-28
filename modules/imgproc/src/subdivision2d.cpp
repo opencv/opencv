@@ -625,23 +625,17 @@ void Subdiv2D::initDelaunay( Rect rect )
 
 void Subdiv2D::clearVoronoi()
 {
-    for (size_t i = 0; i < qedges.size(); ++i) {
+    size_t i, total = qedges.size();
+
+    for( i = 0; i < total; i++ )
         qedges[i].pt[1] = qedges[i].pt[3] = 0;
-    }
 
-    for (size_t i = 4; i < vtx.size(); ++i) {
-        if (vtx[i].isvirtual()) {
+    total = vtx.size();
+    for( i = 0; i < total; i++ )
+    {
+        if( vtx[i].isvirtual() )
             deletePoint((int)i);
-        }
     }
-
-    radius = 0.f;
-    Point2f topRight = Point2f(bottomRight.x, topLeft.y);
-    Point2f bottomLeft = Point2f(topLeft.x, bottomRight.y);
-    radius = max(radius, (float)distance(vtx[0].pt, topLeft));
-    radius = max(radius, (float)distance(vtx[0].pt, bottomRight));
-    radius = max(radius, (float)distance(vtx[0].pt, topRight));
-    radius = max(radius, (float)distance(vtx[0].pt, bottomLeft));
 
     validGeometry = false;
 }
@@ -670,61 +664,61 @@ static Point2f computeVoronoiPoint(Point2f org0, Point2f dst0, Point2f org1, Poi
 }
 
 
-Point2f Subdiv2D::computeVoronoiPointEx(int edge0, int edge1, int edge2, bool flag) {
+Point2f Subdiv2D::computeVoronoiPointEx(int edge0, int edge1, int edge2, bool &estimated) const {
 
     Point2f org0, dst0, dst1;
     int i = edgeOrg(edge0, &org0);
     int j = edgeDst(edge0, &dst0);
     int k = edgeDst(edge1, &dst1);
 
-    if (flag) {
-        return computeVoronoiPoint(
-                MP(i) ? 3.f * radius * org0 : org0,
-                MP(j) ? 3.f * radius * dst0 : dst0,
-                MP(j) ? 3.f * radius * dst0 : dst0,
-                MP(k) ? 3.f * radius * dst1 : dst1);
-    }
-
     if (!MP(i) && !MP(j) && !MP(k)) {
-        Point2f virt_point = computeVoronoiPoint(org0, dst0, dst0, dst1);
-        radius = max(radius, (float)distance(vtx[0].pt, virt_point));
-        return virt_point;
+        estimated = false;
+        return computeVoronoiPoint(org0, dst0, dst0, dst1);
     }
 
-    if (!MP(i) && !MP(j) && MP(k)) {
-        int edge3 = getEdge(edge1, NEXT_AROUND_RIGHT);
-        int edge4 = getEdge(edge2, NEXT_AROUND_RIGHT);
+    estimated = true;
 
-        Point2f org3, org4;
-        int l = edgeOrg(edge3, &org3); // dst3 == org1
-        int m = edgeOrg(edge4, &org4); // dst4 == org2
+    if (MP(i) || MP(j) || !MP(k)) {
+        return Point2f(FLT_MAX, FLT_MAX);
+    }
 
-        Point2f susp_point1 = !MP(l) ?
-                computeVoronoiPoint(org0, dst0, dst0, org3) : // dst0 == org1
-                computeVoronoiPoint(org0, dst0, org3, dst1);
-        Point2f susp_point2 = !MP(m) ?
-                computeVoronoiPoint(org0, dst0, org4, org0) : // org0 == dst2
-                computeVoronoiPoint(org0, dst0, dst1, org4);  // dst1 == org2
+    int edge3 = getEdge(edge1, NEXT_AROUND_RIGHT);
+    int edge4 = getEdge(edge2, NEXT_AROUND_RIGHT);
 
-        if (fabs(susp_point1.x) < FLT_MAX && fabs(susp_point1.y) < FLT_MAX) {
-            if (leftOf(susp_point1, org0, dst0) > 0) {
-                if ((!MP(l) && leftOf(susp_point1, dst0, org3) > 0) ||
-                    ( MP(l) && leftOf(susp_point1, vtx[0].pt, dst1 - org3) < 0)) {
-                    radius = max(radius, (float)distance(vtx[0].pt, susp_point1));
-                }
-            }
-        }
-        if (fabs(susp_point2.x) < FLT_MAX && fabs(susp_point2.y) < FLT_MAX) {
-            if (leftOf(susp_point2, org0, dst0) > 0) {
-                if ((!MP(m) && leftOf(susp_point2, org4, org0) > 0) ||
-                    ( MP(m) && leftOf(susp_point2, vtx[0].pt, org4 - dst1) < 0)) {
-                    radius = max(radius, (float)distance(vtx[0].pt, susp_point2));
-                }
-            }
+    Point2f org3, org4;
+    int l = edgeOrg(edge3, &org3); // dst3 == org1
+    int m = edgeOrg(edge4, &org4); // dst4 == org2
+
+    Point2f intersection1 = MP(l) ? computeVoronoiPoint(org0, dst0, org3, dst1) : Point2f(FLT_MAX, FLT_MAX);
+    if (fabs(intersection1.x) < FLT_MAX && fabs(intersection1.y) < FLT_MAX) {
+        if (leftOf(intersection1, org0, dst0) <= 0 || leftOf(intersection1, vtx[0].pt, dst1 - org3) >= 0) {
+            intersection1 = Point2f(FLT_MAX, FLT_MAX);
         }
     }
 
-    return Point2f(FLT_MAX, FLT_MAX);
+    Point2f intersection2 = MP(m) ? computeVoronoiPoint(org0, dst0, dst1, org4) : Point2f(FLT_MAX, FLT_MAX); // dst1 == org2 == dst4
+    if (fabs(intersection2.x) < FLT_MAX && fabs(intersection2.y) < FLT_MAX) {
+        if (leftOf(intersection2, org0, dst0) <= 0 || leftOf(intersection2, vtx[0].pt, org4 - dst1) >= 0) {
+            intersection2 = Point2f(FLT_MAX, FLT_MAX);
+        }
+    }
+
+    return !(intersection1.x < FLT_MAX && intersection1.y < FLT_MAX) ? intersection2 :
+           !(intersection2.x < FLT_MAX && intersection2.y < FLT_MAX) ? intersection1 :
+           distance(vtx[0].pt, intersection1) < distance(vtx[0].pt, intersection2) ? intersection2 : intersection1;
+}
+
+Point2f Subdiv2D::computeVoronoiPointEx(int edge0, int edge1, int edge2, float radius) const {
+    Point2f org0, dst0, dst1;
+    int i = edgeOrg(edge0, &org0);
+    int j = edgeDst(edge0, &dst0);
+    int k = edgeDst(edge1, &dst1);
+
+    return computeVoronoiPoint(
+            MP(i) ? radius * org0 : org0,
+            MP(j) ? radius * dst0 : dst0,
+            MP(j) ? radius * dst0 : dst0,
+            MP(k) ? radius * dst1 : dst1);
 }
 
 
@@ -736,68 +730,54 @@ void Subdiv2D::calcVoronoi()
 
     clearVoronoi();
 
+    Point2f topRight(bottomRight.x, topLeft.y), bottomLeft(topLeft.x, bottomRight.y);
+    double radius = max(
+            max(distance(vtx[0].pt, bottomRight), distance(vtx[0].pt, topLeft)),
+            max(distance(vtx[0].pt, topRight), distance(vtx[0].pt, bottomLeft)));
+
     // loop through all quad-edges, except for the first 3 (#1, #2, #3 - 0 is reserved for "NULL" pointer)
-    for( int edge0 = 4 * 4; edge0 < 4 * (int)qedges.size(); edge0 += 4 ) {
-
-        if( qedges[edge0 >> 2].isfree() )
+    for( int quad_edge = 4; quad_edge < (int)qedges.size(); ++quad_edge ) {
+        if (qedges[quad_edge].isfree()) {
             continue;
-
-        if( !qedges[edge0 >> 2].pt[3] ) {
-            int edge1 = getEdge( edge0, NEXT_AROUND_LEFT );
-            int edge2 = getEdge( edge1, NEXT_AROUND_LEFT );
-
-            Point2f virt_point = computeVoronoiPointEx(edge0, edge1, edge2, false);
-
-            if (fabs(virt_point.x) < FLT_MAX && fabs(virt_point.y) < FLT_MAX) {
-                qedges[edge0 >> 2].pt[3] =
-                qedges[edge1 >> 2].pt[3 - (edge1 & 2)] =
-                qedges[edge2 >> 2].pt[3 - (edge2 & 2)] =
-                        newPoint(virt_point, true);
-            }
         }
 
-        if( !qedges[edge0 >> 2].pt[1] ) {
-            int edge1 = getEdge( edge0, NEXT_AROUND_RIGHT );
-            int edge2 = getEdge( edge1, NEXT_AROUND_RIGHT );
+        for ( int i = 0, edge0 = quad_edge * 4; i < 2; ++i, edge0 = symEdge(edge0) ) {
+            if (!qedges[edge0 >> 2].pt[3 - (edge0 & 2)]) {
+                int edge1 = getEdge( edge0, NEXT_AROUND_LEFT );
+                int edge2 = getEdge( edge1, NEXT_AROUND_LEFT );
 
-            Point2f virt_point = computeVoronoiPointEx(symEdge(edge0), symEdge(edge1), symEdge(edge2), false);
+                bool estimated;
+                Point2f virt_point = computeVoronoiPointEx(edge0, edge1, edge2, estimated);
 
-            if (fabs(virt_point.x) < FLT_MAX && fabs(virt_point.y) < FLT_MAX) {
-                qedges[edge0 >> 2].pt[1] =
-                qedges[edge1 >> 2].pt[1 + (edge1 & 2)] =
-                qedges[edge2 >> 2].pt[1 + (edge2 & 2)] =
-                        newPoint(virt_point, true);
+                if (fabs(virt_point.x) < FLT_MAX && fabs(virt_point.y) < FLT_MAX) {
+                    radius = max(radius, distance(vtx[0].pt, virt_point));
+
+                    if (!estimated) {
+                        qedges[edge0 >> 2].pt[3 - (edge0 & 2)] =
+                        qedges[edge1 >> 2].pt[3 - (edge1 & 2)] =
+                        qedges[edge2 >> 2].pt[3 - (edge2 & 2)] = newPoint(virt_point, true);
+                    }
+                }
             }
         }
     }
 
-    for( int edge0 = 4 * 4; edge0 < 4 * (int)qedges.size(); edge0 += 4 ) {
-
-        if (qedges[edge0 >> 2].isfree())
+    for( int quad_edge = 4; quad_edge < (int)qedges.size(); ++quad_edge ) {
+        if (qedges[quad_edge].isfree()) {
             continue;
-
-        if (!qedges[edge0 >> 2].pt[3]) {
-            int edge1 = getEdge(edge0, NEXT_AROUND_LEFT);
-            int edge2 = getEdge(edge1, NEXT_AROUND_LEFT);
-
-            Point2f virt_point = computeVoronoiPointEx(edge0, edge1, edge2, true);
-
-            qedges[edge0 >> 2].pt[3] =
-            qedges[edge1 >> 2].pt[3 - (edge1 & 2)] =
-            qedges[edge2 >> 2].pt[3 - (edge2 & 2)] =
-                    newPoint(virt_point, true);
         }
 
-        if (!qedges[edge0 >> 2].pt[1]) {
-            int edge1 = getEdge(edge0, NEXT_AROUND_RIGHT);
-            int edge2 = getEdge(edge1, NEXT_AROUND_RIGHT);
+        for ( int i = 0, edge0 = quad_edge * 4; i < 2; ++i, edge0 = symEdge(edge0) ) {
+            if (!qedges[edge0 >> 2].pt[3 - (edge0 & 2)]) {
+                int edge1 = getEdge(edge0, NEXT_AROUND_LEFT);
+                int edge2 = getEdge(edge1, NEXT_AROUND_LEFT);
 
-            Point2f virt_point = computeVoronoiPointEx(symEdge(edge0), symEdge(edge1), symEdge(edge2), true);
+                Point2f virt_point = computeVoronoiPointEx(edge0, edge1, edge2, 3.f * radius);
 
-            qedges[edge0 >> 2].pt[1] =
-            qedges[edge1 >> 2].pt[1 + (edge1 & 2)] =
-            qedges[edge2 >> 2].pt[1 + (edge2 & 2)] =
-                    newPoint(virt_point, true);
+                qedges[edge0 >> 2].pt[3 - (edge0 & 2)] =
+                qedges[edge1 >> 2].pt[3 - (edge1 & 2)] =
+                qedges[edge2 >> 2].pt[3 - (edge2 & 2)] = newPoint(virt_point, true);
+            }
         }
     }
 
