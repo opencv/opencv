@@ -317,8 +317,8 @@ int Subdiv2D::inCircleEx(int i, int j, int k, int l) const {
 int Subdiv2D::isRightOf(Point2f pt, int edge) const
 {
     Point2f org, dst;
-    edgeOrg(edge, &org);
-    edgeDst(edge, &dst);
+    CV_Assert(!MP(edgeOrg(edge, &org)));
+    CV_Assert(!MP(edgeDst(edge, &dst)));
     return counterClockwise(pt, dst, org);
 }
 
@@ -664,64 +664,6 @@ static Point2f computeVoronoiPoint(Point2f org0, Point2f dst0, Point2f org1, Poi
 }
 
 
-Point2f Subdiv2D::computeVoronoiPointEx(int edge0, int edge1, int edge2, bool &estimated) const {
-
-    Point2f org0, dst0, dst1;
-    int i = edgeOrg(edge0, &org0);
-    int j = edgeDst(edge0, &dst0);
-    int k = edgeDst(edge1, &dst1);
-
-    if (!MP(i) && !MP(j) && !MP(k)) {
-        estimated = false;
-        return computeVoronoiPoint(org0, dst0, dst0, dst1);
-    }
-
-    estimated = true;
-
-    if (MP(i) || MP(j) || !MP(k)) {
-        return Point2f(FLT_MAX, FLT_MAX);
-    }
-
-    int edge3 = getEdge(edge1, NEXT_AROUND_RIGHT);
-    int edge4 = getEdge(edge2, NEXT_AROUND_RIGHT);
-
-    Point2f org3, org4;
-    int l = edgeOrg(edge3, &org3); // dst3 == org1
-    int m = edgeOrg(edge4, &org4); // dst4 == org2
-
-    Point2f intersection1 = MP(l) ? computeVoronoiPoint(org0, dst0, org3, dst1) : Point2f(FLT_MAX, FLT_MAX);
-    if (fabs(intersection1.x) < FLT_MAX && fabs(intersection1.y) < FLT_MAX) {
-        if (leftOf(intersection1, org0, dst0) <= 0 || leftOf(intersection1, vtx[0].pt, dst1 - org3) >= 0) {
-            intersection1 = Point2f(FLT_MAX, FLT_MAX);
-        }
-    }
-
-    Point2f intersection2 = MP(m) ? computeVoronoiPoint(org0, dst0, dst1, org4) : Point2f(FLT_MAX, FLT_MAX); // dst1 == org2 == dst4
-    if (fabs(intersection2.x) < FLT_MAX && fabs(intersection2.y) < FLT_MAX) {
-        if (leftOf(intersection2, org0, dst0) <= 0 || leftOf(intersection2, vtx[0].pt, org4 - dst1) >= 0) {
-            intersection2 = Point2f(FLT_MAX, FLT_MAX);
-        }
-    }
-
-    return !(intersection1.x < FLT_MAX && intersection1.y < FLT_MAX) ? intersection2 :
-           !(intersection2.x < FLT_MAX && intersection2.y < FLT_MAX) ? intersection1 :
-           distance(vtx[0].pt, intersection1) < distance(vtx[0].pt, intersection2) ? intersection2 : intersection1;
-}
-
-Point2f Subdiv2D::computeVoronoiPointEx(int edge0, int edge1, int edge2, float radius) const {
-    Point2f org0, dst0, dst1;
-    int i = edgeOrg(edge0, &org0);
-    int j = edgeDst(edge0, &dst0);
-    int k = edgeDst(edge1, &dst1);
-
-    return computeVoronoiPoint(
-            MP(i) ? radius * org0 : org0,
-            MP(j) ? radius * dst0 : dst0,
-            MP(j) ? radius * dst0 : dst0,
-            MP(k) ? radius * dst1 : dst1);
-}
-
-
 void Subdiv2D::calcVoronoi()
 {
     // check if it is already calculated
@@ -735,6 +677,38 @@ void Subdiv2D::calcVoronoi()
             max(distance(vtx[0].pt, bottomRight), distance(vtx[0].pt, topLeft)),
             max(distance(vtx[0].pt, topRight), distance(vtx[0].pt, bottomLeft)));
 
+    for ( int quad_edge = 1; quad_edge < 4; quad_edge++) {
+        int edge0 = quad_edge * 4;
+        Point2f org0, dst0;
+        edgeOrg(edge0, &org0);
+        edgeDst(edge0, &dst0);
+
+        int edge1 = getEdge(edge0, NEXT_AROUND_LEFT);
+        int edge2 = getEdge(edge1, NEXT_AROUND_LEFT);
+
+        int edge3 = getEdge(edge1, NEXT_AROUND_DST);
+        Point2f org3, dst3;
+        if (!MP(edgeOrg(edge3, &org3)) && !MP(edgeDst(edge3, &dst3))) {
+            Point2f pt = computeVoronoiPoint(org0, dst0, org3, dst3);
+            if (pt.x < FLT_MAX && pt.y < FLT_MAX) {
+                if (leftOf(pt, vtx[0].pt, dst0 - org0) < 0 && leftOf(pt, org3, dst3) > 0) {
+                    radius = max(radius, distance(vtx[0].pt, pt));
+                }
+            }
+        }
+
+        int edge4 = getEdge(edge2, PREV_AROUND_ORG);
+        Point2f org4, dst4;
+        if (!MP(edgeOrg(edge4, &org4)) && !MP(edgeDst(edge4, &dst4))) {
+            Point2f pt = computeVoronoiPoint(org0, dst0, org4, dst4);
+            if (pt.x < FLT_MAX && pt.y < FLT_MAX) {
+                if (leftOf(pt, vtx[0].pt, dst0 - org0) < 0 && leftOf(pt, org4, dst4) > 0) {
+                    radius = max(radius, distance(vtx[0].pt, pt));
+                }
+            }
+        }
+    }
+
     // loop through all quad-edges, except for the first 3 (#1, #2, #3 - 0 is reserved for "NULL" pointer)
     for( int quad_edge = 4; quad_edge < (int)qedges.size(); ++quad_edge ) {
         if (qedges[quad_edge].isfree()) {
@@ -746,17 +720,14 @@ void Subdiv2D::calcVoronoi()
                 int edge1 = getEdge( edge0, NEXT_AROUND_LEFT );
                 int edge2 = getEdge( edge1, NEXT_AROUND_LEFT );
 
-                bool estimated;
-                Point2f virt_point = computeVoronoiPointEx(edge0, edge1, edge2, estimated);
+                Point2f org0, dst0, dst1;
+                if (!MP(edgeOrg(edge0, &org0)) && !MP(edgeDst(edge0, &dst0)) && !MP(edgeDst(edge1, &dst1))) {
+                    Point2f virt_point = computeVoronoiPoint(org0, dst0, dst0, dst1);
+                    qedges[edge0 >> 2].pt[3 - (edge0 & 2)] =
+                    qedges[edge1 >> 2].pt[3 - (edge1 & 2)] =
+                    qedges[edge2 >> 2].pt[3 - (edge2 & 2)] = newPoint(virt_point, true);
 
-                if (fabs(virt_point.x) < FLT_MAX && fabs(virt_point.y) < FLT_MAX) {
                     radius = max(radius, distance(vtx[0].pt, virt_point));
-
-                    if (!estimated) {
-                        qedges[edge0 >> 2].pt[3 - (edge0 & 2)] =
-                        qedges[edge1 >> 2].pt[3 - (edge1 & 2)] =
-                        qedges[edge2 >> 2].pt[3 - (edge2 & 2)] = newPoint(virt_point, true);
-                    }
                 }
             }
         }
@@ -772,8 +743,18 @@ void Subdiv2D::calcVoronoi()
                 int edge1 = getEdge(edge0, NEXT_AROUND_LEFT);
                 int edge2 = getEdge(edge1, NEXT_AROUND_LEFT);
 
-                Point2f virt_point = computeVoronoiPointEx(edge0, edge1, edge2, 3.f * radius);
+                Point2f org0, dst0, dst1;
+                if (MP(edgeOrg(edge0, &org0))) {
+                    org0 *= 3.f * (float)radius;
+                }
+                if (MP(edgeDst(edge0, &dst0))) {
+                    dst0 *= 3.f * (float)radius;
+                }
+                if (MP(edgeDst(edge1, &dst1))) {
+                    dst1 *= 3.f * (float)radius;
+                }
 
+                Point2f virt_point = computeVoronoiPoint(org0, dst0, dst0, dst1);
                 qedges[edge0 >> 2].pt[3 - (edge0 & 2)] =
                 qedges[edge1 >> 2].pt[3 - (edge1 & 2)] =
                 qedges[edge2 >> 2].pt[3 - (edge2 & 2)] = newPoint(virt_point, true);
