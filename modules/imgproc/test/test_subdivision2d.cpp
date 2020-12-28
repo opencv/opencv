@@ -62,10 +62,10 @@ bool less_than(const cv::Vec6f &lhs, const cv::Vec6f &rhs) {
 TEST(Imgproc_Subdiv2D_getTriangleList, regression_16763) {
 
     struct {
-        std::vector<cv::Point2f> points;
-        cv::Rect2f rect;
-        std::vector<cv::Vec6f> triangles;
-    } suits[] = {
+        float points[4][2];
+        float rect[4];
+        float triangles[2][6];
+    } suits[2] = {
         {
             { {623, 1000},{620, 1000}, {496, 770}, {473, 671} },
             { 472, 670, 625 - 472, 1002 - 670 },
@@ -73,25 +73,36 @@ TEST(Imgproc_Subdiv2D_getTriangleList, regression_16763) {
         },
         {
             { {400, 400}, {400, 300}, {400, 200}, {395, 400} },
-            { 0, 0, 500, 500 },
+            { 0, 0 , 500, 500 },
             { { 395, 400, 400, 200, 400, 300 }, { 400, 300, 400, 400, 395, 400} }
         }
     };
 
     for (size_t i = 0; i < 2; ++i) {
-        cv::Subdiv2D subdivision(suits[i].rect);
-        subdivision.insert(suits[i].points);
+        cv::Rect2f rect(suits[i].rect[0], suits[i].rect[1], suits[i].rect[2], suits[i].rect[3]);
+        cv::Subdiv2D subdiv(rect);
 
-        std::sort(suits[i].triangles.begin(), suits[i].triangles.end(), less_than);
+        for (size_t j = 0; j < 4; ++j) {
+            subdiv.insert(cv::Point2f(suits[i].points[j][0], suits[i].points[j][1]));
+        }
+
+        std::vector<cv::Vec6f> expected;
+        for (size_t j = 0; j < 2; ++j) {
+            cv::Vec6f vec;
+            for (size_t k = 0; k < 6; ++k) {
+                vec[k] = suits[i].triangles[j][k];
+            }
+            expected.push_back(vec);
+        }
+        std::sort(expected.begin(), expected.end(), less_than);
 
         std::vector<cv::Vec6f> output;
-        subdivision.getTriangleList(output);
-
+        subdiv.getTriangleList(output);
         sort(output.begin(), output.end(), less_than);
 
-        EXPECT_EQ(output.size(), suits[i].triangles.size());
+        EXPECT_EQ(output.size(), expected.size());
         for (size_t j = 0; j < output.size(); ++j) {
-            EXPECT_TRUE(!less_than(output[j], suits[i].triangles[j]) && !less_than(suits[i].triangles[j], output[j]));
+            EXPECT_TRUE(!less_than(output[j], expected[j]) && !less_than(expected[j], output[j]));
         }
     }
 }
