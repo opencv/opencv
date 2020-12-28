@@ -583,7 +583,8 @@ ONNXCompiled::ONNXCompiled(const gapi::onnx::detail::ParamDesc &pp)
 #ifndef _WIN32
     this_session = Ort::Session(this_env, params.model_path.data(), session_options);
 #else
-    std::wstring w_model_path(params.model_path.begin(), params.model_path.end());
+    std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
+    std::wstring w_model_path = converter.from_bytes(params.model_path.data());
     this_session = Ort::Session(this_env, w_model_path.data(), session_options);
 #endif
     this_memory_info = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);

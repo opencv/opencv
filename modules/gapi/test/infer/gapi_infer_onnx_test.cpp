@@ -257,7 +257,13 @@ public:
     template<typename T>
     void infer(const std::vector<cv::Mat>& ins, std::vector<cv::Mat>& outs) {
         // Prepare session
+#ifndef _WIN32
         session = Ort::Session(env, model_path.data(), session_options);
+#else
+        std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
+        std::wstring w_model_path = converter.from_bytes(model_path.data());
+        session = Ort::Session(env, w_model_path.data(), session_options);
+#endif
         num_in = session.GetInputCount();
         num_out = session.GetOutputCount();
         GAPI_Assert(num_in == ins.size());
