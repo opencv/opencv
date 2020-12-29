@@ -331,14 +331,10 @@ int Subdiv2D::rightOfEx(Point2f c, int i, int j) const
     }
 
     if (MP(i) && !MP(j)) {
-        return !parallel(vtx[j].pt - c, vtx[i].pt) ?
-               counterClockwise(vtx[0].pt, vtx[j].pt - c, vtx[i].pt) :
-               counterClockwise(c, vtx[j].pt, vtx[0].pt);
+        return -rightOfEx(c, j, i);
     }
 
-    if (MP(i) && MP(j)) {
-        return counterClockwise(vtx[j].pt, vtx[i].pt, vtx[0].pt);
-    }
+    return counterClockwise(vtx[j].pt, vtx[i].pt, vtx[0].pt);
 }
 
 int Subdiv2D::isRightOf(Point2f pt, int edge) const
@@ -487,13 +483,13 @@ int Subdiv2D::locate(Point2f pt, int& _edge, int& _vertex)
         if( t1 < FLT_EPSILON )
         {
             location = PTLOC_VERTEX;
-            vertex = edgeOrg( edge );
+            vertex = edgeOrg(edge);
             edge = 0;
         }
         else if( t2 < FLT_EPSILON )
         {
             location = PTLOC_VERTEX;
-            vertex = edgeDst( edge );
+            vertex = edgeDst(edge);
             edge = 0;
         }
         else if( (t1 < t3 || t2 < t3) &&
