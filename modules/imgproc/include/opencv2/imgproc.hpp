@@ -1215,6 +1215,7 @@ private:
     int inCircleEx(int i, int j, int k, int l) const;
     int rightOfEx(int k, int i, int j) const;
     int rightOfEx(Point2f c, int i, int j) const;
+    void calcVoronoiEx();
 };
 
 //! @} imgproc_subdiv2d

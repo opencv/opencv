@@ -337,6 +337,7 @@ int Subdiv2D::rightOfEx(Point2f c, int i, int j) const
     return counterClockwise(vtx[j].pt, vtx[i].pt, vtx[0].pt);
 }
 
+// deprecated
 int Subdiv2D::isRightOf(Point2f pt, int edge) const
 {
     return rightOfEx(pt, edgeOrg(edge), edgeDst(edge));
@@ -679,6 +680,12 @@ static Point2f computeVoronoiPoint(Point2f org0, Point2f dst0, Point2f org1, Poi
 
 
 void Subdiv2D::calcVoronoi()
+{
+    calcVoronoiEx();
+}
+
+
+void Subdiv2D::calcVoronoiEx()
 {
     // check if it is already calculated
     if( validGeometry )
