@@ -1163,15 +1163,13 @@ public:
 protected:
     int newEdge();
     void deleteEdge(int edge);
-    int newPoint(Point2f pt, bool isvirtual, int firstEdge = 0, bool isfree = false);
+    int newPoint(Point2f pt, bool isvirtual, int firstEdge = 0);
     void deletePoint(int vtx);
     void setEdgePoints( int edge, int orgPt, int dstPt );
     void splice( int edgeA, int edgeB );
     int connectEdges( int edgeA, int edgeB );
     void swapEdges( int edge );
-    int counterClockwiseEx(int i, int j, int k) const;
-    int rightOfEx(int p, int i, int j) const;
-    int inCircleEx(int i, int j, int k, int l) const;
+    int isRightOf(Point2f pt, int edge) const;
     void calcVoronoi();
     void clearVoronoi();
     void checkSubdiv() const;
@@ -1211,6 +1209,12 @@ protected:
     Point2f topLeft;
     //! Bottom right corner of the bounding rect
     Point2f bottomRight;
+
+private:
+    int counterClockwiseEx(int i, int j, int k) const;
+    int inCircleEx(int i, int j, int k, int l) const;
+    int rightOfEx(int k, int i, int j) const;
+    int rightOfEx(Point2f c, int i, int j) const;
 };
 
 //! @} imgproc_subdiv2d

@@ -210,24 +210,29 @@ void Subdiv2D::swapEdges( int edge )
     splice(sedge, getEdge(b, NEXT_AROUND_LEFT));
 }
 
-static double distance(Point2f a, Point2f b) {
+static double distance(Point2f a, Point2f b)
+{
     return norm(b - a);
 }
 
-static bool collinear(Point2f u, Point2f v) {
+static bool parallel(Point2f u, Point2f v)
+{
     return abs(u.cross(v)) < FLT_EPSILON;
 }
 
-static int counterClockwise(Point2f a, Point2f b, Point2f c) {
+static int counterClockwise(Point2f a, Point2f b, Point2f c)
+{
     double cp = (b - a).cross(c - a);
     return cp > FLT_EPSILON ? 1 : (cp < -FLT_EPSILON ? -1 : 0);
 }
 
-static int leftOf(Point2f x, Point2f a, Point2f b) {
-    return counterClockwise(x, a, b);
+static int leftOf(Point2f c, Point2f a, Point2f b)
+{
+    return counterClockwise(c, a, b);
 }
 
-static int inCircle(Point2f a, Point2f b, Point2f c, Point2f d) {
+static int inCircle(Point2f a, Point2f b, Point2f c, Point2f d)
+{
     const double eps = FLT_EPSILON * 0.125;
 
     double val =
@@ -243,8 +248,8 @@ static int inCircle(Point2f a, Point2f b, Point2f c, Point2f d) {
 #undef MP
 #define MP(i) ((i) == 1 || (i) == 2 || (i) == 3)
 
-int Subdiv2D::counterClockwiseEx(int i, int j, int k) const {
-
+int Subdiv2D::counterClockwiseEx(int i, int j, int k) const
+{
     if (MP(i) && MP(j) && MP(k)) {
         return counterClockwise(vtx[i].pt, vtx[j].pt, vtx[k].pt);
     }
@@ -254,7 +259,7 @@ int Subdiv2D::counterClockwiseEx(int i, int j, int k) const {
     }
 
     if (!MP(i) && !MP(j) && MP(k)) {
-        return !collinear(vtx[j].pt - vtx[i].pt, vtx[k].pt) ?
+        return !parallel(vtx[j].pt - vtx[i].pt, vtx[k].pt) ?
                 counterClockwise(vtx[0].pt, vtx[j].pt - vtx[i].pt, vtx[k].pt) :
                 counterClockwise(vtx[i].pt, vtx[j].pt, vtx[0].pt);
     }
@@ -266,18 +271,14 @@ int Subdiv2D::counterClockwiseEx(int i, int j, int k) const {
     return counterClockwiseEx(j, k, i);
 }
 
-int Subdiv2D::rightOfEx(int p, int i, int j) const {
-    return counterClockwiseEx(p, j, i);
-}
-
-int Subdiv2D::inCircleEx(int i, int j, int k, int l) const {
-
+int Subdiv2D::inCircleEx(int i, int j, int k, int l) const
+{
     if (MP(i) && MP(j) && MP(k) && !MP(l)) {
         return counterClockwiseEx(i, j, k);
     }
 
     if (MP(i) && !MP(j) && MP(k) && !MP(l)) {
-        if (!collinear(vtx[l].pt - vtx[j].pt, vtx[k].pt - vtx[i].pt)) {
+        if (!parallel(vtx[l].pt - vtx[j].pt, vtx[k].pt - vtx[i].pt)) {
             return leftOf(vtx[l].pt - vtx[j].pt, vtx[0].pt, vtx[k].pt - vtx[i].pt);
         } else {
             double dl = distance(vtx[0].pt, vtx[l].pt);
@@ -296,7 +297,7 @@ int Subdiv2D::inCircleEx(int i, int j, int k, int l) const {
     }
 
     if (!MP(i) && !MP(j) && !MP(k) && MP(l)) {
-        if (!collinear(vtx[j].pt - vtx[i].pt, vtx[k].pt - vtx[i].pt)) {
+        if (!parallel(vtx[j].pt - vtx[i].pt, vtx[k].pt - vtx[i].pt)) {
             return -counterClockwise(vtx[i].pt, vtx[j].pt, vtx[k].pt);
         } else {
             return !vtx[k].pt.inside(Rect2f(vtx[i].pt, vtx[j].pt)) ?
@@ -310,6 +311,39 @@ int Subdiv2D::inCircleEx(int i, int j, int k, int l) const {
     }
 
     return -inCircleEx(j, k, l, i);
+}
+
+int Subdiv2D::rightOfEx(int k, int i, int j) const
+{
+    return counterClockwiseEx(k, j, i);
+}
+
+int Subdiv2D::rightOfEx(Point2f c, int i, int j) const
+{
+    if (!MP(i) && !MP(j)) {
+        return counterClockwise(c, vtx[j].pt, vtx[i].pt);
+    }
+
+    if (!MP(i) && MP(j)) {
+        return !parallel(c - vtx[i].pt, vtx[j].pt) ?
+               counterClockwise(vtx[0].pt, c - vtx[i].pt, vtx[j].pt) :
+               counterClockwise(vtx[i].pt, c, vtx[0].pt);
+    }
+
+    if (MP(i) && !MP(j)) {
+        return !parallel(vtx[j].pt - c, vtx[i].pt) ?
+               counterClockwise(vtx[0].pt, vtx[j].pt - c, vtx[i].pt) :
+               counterClockwise(c, vtx[j].pt, vtx[0].pt);
+    }
+
+    if (MP(i) && MP(j)) {
+        return counterClockwise(vtx[j].pt, vtx[i].pt, vtx[0].pt);
+    }
+}
+
+int Subdiv2D::isRightOf(Point2f pt, int edge) const
+{
+    return rightOfEx(pt, edgeOrg(edge), edgeDst(edge));
 }
 
 int Subdiv2D::newEdge()
@@ -338,7 +372,7 @@ void Subdiv2D::deleteEdge(int edge)
     freeQEdge = edge;
 }
 
-int Subdiv2D::newPoint(Point2f pt, bool isvirtual, int firstEdge, bool isfree)
+int Subdiv2D::newPoint(Point2f pt, bool isvirtual, int firstEdge)
 {
     if( freePoint == 0 )
     {
@@ -348,9 +382,6 @@ int Subdiv2D::newPoint(Point2f pt, bool isvirtual, int firstEdge, bool isfree)
     int vidx = freePoint;
     freePoint = vtx[vidx].firstEdge;
     vtx[vidx] = Vertex(pt, isvirtual, firstEdge);
-    if (isfree) {
-        vtx[vidx].type = -1;
-    }
 
     return vidx;
 }
@@ -382,8 +413,7 @@ int Subdiv2D::locate(Point2f pt, int& _edge, int& _vertex)
 
     int location = PTLOC_ERROR;
 
-    int curr_point = newPoint(pt, false, 0, true);
-    int right_of_curr = rightOfEx(curr_point, edgeOrg(edge), edgeDst(edge));
+    int right_of_curr = rightOfEx( pt, edgeOrg(edge), edgeDst(edge) );
     if( right_of_curr > 0 )
     {
         edge = symEdge(edge);
@@ -395,8 +425,8 @@ int Subdiv2D::locate(Point2f pt, int& _edge, int& _vertex)
         int onext_edge = nextEdge( edge );
         int dprev_edge = getEdge( edge, PREV_AROUND_DST );
 
-        int right_of_onext = rightOfEx(curr_point, edgeOrg(onext_edge), edgeDst(onext_edge));
-        int right_of_dprev = rightOfEx(curr_point, edgeOrg(dprev_edge), edgeDst(dprev_edge));
+        int right_of_onext = rightOfEx( pt, edgeOrg(onext_edge), edgeDst(onext_edge) );
+        int right_of_dprev = rightOfEx( pt, edgeOrg(dprev_edge), edgeDst(dprev_edge) );
 
         if( right_of_dprev > 0 )
         {
@@ -427,7 +457,7 @@ int Subdiv2D::locate(Point2f pt, int& _edge, int& _vertex)
                 }
             }
             else if( right_of_curr == 0 &&
-                    rightOfEx(edgeDst(onext_edge), edgeOrg(edge), edgeDst(edge)) >= 0 )
+                    rightOfEx( edgeDst(onext_edge), edgeOrg(edge), edgeDst(edge) ) >= 0 )
             {
                 edge = symEdge( edge );
             }
@@ -466,8 +496,8 @@ int Subdiv2D::locate(Point2f pt, int& _edge, int& _vertex)
             vertex = edgeDst( edge );
             edge = 0;
         }
-        else if((t1 < t3 || t2 < t3) &&
-                collinear(org_pt - pt, dst_pt - pt))
+        else if( (t1 < t3 || t2 < t3) &&
+                parallel(org_pt - pt, dst_pt - pt) )
         {
             location = PTLOC_ON_EDGE;
             vertex = 0;
@@ -479,8 +509,6 @@ int Subdiv2D::locate(Point2f pt, int& _edge, int& _vertex)
         edge = 0;
         vertex = 0;
     }
-
-    deletePoint(curr_point);
 
     _edge = edge;
     _vertex = vertex;
@@ -544,8 +572,8 @@ int Subdiv2D::insert(Point2f pt)
         curr_org = edgeOrg( curr_edge );
         curr_dst = edgeDst( curr_edge );
 
-        if(rightOfEx(temp_dst, edgeOrg(curr_edge), edgeDst(curr_edge)) > 0 &&
-                inCircleEx(curr_org, temp_dst, curr_dst, curr_point) > 0 )
+        if( rightOfEx( temp_dst, curr_org, curr_dst ) > 0 &&
+                inCircleEx( curr_org, temp_dst, curr_dst, curr_point ) > 0 )
         {
             swapEdges( curr_edge );
             curr_edge = getEdge( curr_edge, PREV_AROUND_ORG );
@@ -771,8 +799,6 @@ int Subdiv2D::findNearest(Point2f pt, Point2f* nearestPt)
 
     vertex = 0;
 
-    int curr_point = newPoint(pt, false, 0, true);
-
     int start = edgeOrg(edge);
 
     edge = rotateEdge(edge, 1);
@@ -785,7 +811,7 @@ int Subdiv2D::findNearest(Point2f pt, Point2f* nearestPt)
         for(;;)
         {
             CV_Assert( edgeDst( edge ) > 0 );
-            if(rightOfEx(curr_point, start, edgeDst(edge)) >= 0 )
+            if( rightOfEx( pt, start, edgeDst(edge) ) >= 0 )
                 break;
 
             edge = getEdge( edge, NEXT_AROUND_LEFT );
@@ -795,13 +821,13 @@ int Subdiv2D::findNearest(Point2f pt, Point2f* nearestPt)
         {
             CV_Assert( edgeOrg( edge ) > 0 );
 
-            if(rightOfEx(curr_point, start, edgeOrg(edge)) < 0 )
+            if( rightOfEx( pt, start, edgeOrg(edge) ) < 0 )
                 break;
 
             edge = getEdge( edge, PREV_AROUND_LEFT );
         }
 
-        if(rightOfEx(curr_point, edgeDst(edge), edgeOrg(edge)) >= 0 )
+        if( rightOfEx( pt, edgeDst(edge), edgeOrg(edge) ) >= 0 )
         {
             vertex = edgeOrg(rotateEdge( edge, 3 ));
             break;
@@ -809,8 +835,6 @@ int Subdiv2D::findNearest(Point2f pt, Point2f* nearestPt)
 
         edge = symEdge( edge );
     }
-
-    deletePoint(curr_point);
 
     if( nearestPt && vertex > 0 )
         *nearestPt = vtx[vertex].pt;

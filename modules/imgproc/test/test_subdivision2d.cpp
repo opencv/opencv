@@ -90,7 +90,7 @@ TEST(Imgproc_Subdiv2D_getTriangleList, regression_16763) {
         for (size_t j = 0; j < 2; ++j) {
             cv::Vec6f vec;
             for (size_t k = 0; k < 6; ++k) {
-                vec[k] = suits[i].triangles[j][k];
+                vec[(int)k] = suits[i].triangles[j][k];
             }
             expected.push_back(vec);
         }
