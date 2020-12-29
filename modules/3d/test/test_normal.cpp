@@ -5,7 +5,6 @@
 // This code is also subject to the license terms in the LICENSE_WillowGarage.md file found in this module's directory
 
 #include "test_precomp.hpp"
-#include <opencv2/rgbd.hpp>
 #include <opencv2/3d.hpp>
 
 namespace opencv_test { namespace {

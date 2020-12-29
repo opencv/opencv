@@ -4,7 +4,7 @@
 
 // This code is also subject to the license terms in the LICENSE_WillowGarage.md file found in this module's directory
 
-#include <opencv2/rgbd.hpp>
+#include <opencv2/3d.hpp>
 
 #include <opencv2/highgui.hpp>
 #include <opencv2/3d.hpp>
