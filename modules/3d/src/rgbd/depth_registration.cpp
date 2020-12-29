@@ -8,8 +8,6 @@
 
 namespace cv
 {
-namespace rgbd
-{
 
  ///////////////////////////////////////////////////////////////////////////////////
 
@@ -337,5 +335,4 @@ namespace rgbd
 
     }
 
-} /* namespace rgbd */
 } /* namespace cv */

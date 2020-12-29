@@ -13,8 +13,6 @@
 
 namespace cv
 {
-namespace rgbd
-{
 
 /** If the input image is of type CV_16UC1 (like the Kinect one), the image is converted to floats, divided
  * by 1000 to get a depth in meters, and the values 0 are converted to std::numeric_limits<float>::quiet_NaN()
@@ -43,8 +41,6 @@ rescaleDepthTemplated<double>(const Mat& in, Mat& out)
 {
   rescaleDepth(in, CV_64F, out);
 }
-
-} // namespace rgbd
 
 
 namespace kinfu {

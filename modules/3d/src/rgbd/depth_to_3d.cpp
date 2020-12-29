@@ -12,8 +12,7 @@
 
 namespace cv
 {
-namespace rgbd
-{
+
   /**
    * @param K
    * @param depth the depth image
@@ -225,5 +224,5 @@ namespace rgbd
         depthTo3dNoMask<float>(depth, K_new, points3d);
     }
   }
-}
+
 }

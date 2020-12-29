@@ -27,8 +27,7 @@
 
 namespace cv
 {
-namespace rgbd
-{
+
 
 enum
 {
@@ -1546,5 +1545,5 @@ warpFrame(const Mat& image, const Mat& depth, const Mat& mask,
     else
         CV_Error(Error::StsBadArg, "Image has to be type of CV_8UC1 or CV_8UC3");
 }
-} // namespace rgbd
+
 } // namespace cv

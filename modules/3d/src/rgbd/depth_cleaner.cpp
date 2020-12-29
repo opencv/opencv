@@ -10,8 +10,7 @@
 
 namespace cv
 {
-namespace rgbd
-{
+
   class DepthCleanerImpl
   {
   public:
@@ -287,5 +286,5 @@ namespace rgbd
       }
     }
   }
-}
+
 }

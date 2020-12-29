@@ -12,8 +12,6 @@
 
 namespace cv
 {
-namespace rgbd
-{
 
 //! @addtogroup rgbd
 //! @{
@@ -1185,7 +1183,6 @@ namespace rgbd
 
 //! @}
 
-} /* namespace rgbd */
 } /* namespace cv */
 
 #endif

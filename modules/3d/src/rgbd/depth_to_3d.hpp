@@ -9,8 +9,6 @@
 
 namespace cv
 {
-namespace rgbd
-{
 
 /**
  * @param depth the depth image, containing depth with the value T
@@ -85,7 +83,6 @@ convertDepthToFloat(const cv::Mat& depth, float scale, const cv::Mat &uv_mat, cv
   }
 }
 
-}
 }
 
 #endif

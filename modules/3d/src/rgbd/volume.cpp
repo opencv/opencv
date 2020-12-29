@@ -34,7 +34,7 @@ Ptr<VolumeParams> VolumeParams::defaultParams(VolumeType _volumeType)
     {
         params.unitResolution      = 16;
         params.voxelSize           = volumeSize / 512.f;
-        params.depthTruncThreshold = rgbd::Odometry::DEFAULT_MAX_DEPTH();
+        params.depthTruncThreshold = Odometry::DEFAULT_MAX_DEPTH();
         params.tsdfTruncDist = 7 * params.voxelSize;  //! About 0.04f in meters
         return makePtr<VolumeParams>(params);
     }

@@ -444,7 +444,7 @@ TEST(Rgbd_Plane, compute)
 TEST(Rgbd_Plane, regression_2309_valgrind_check)
 {
     Mat points(640, 480, CV_32FC3, Scalar::all(0));
-    rgbd::RgbdPlane plane_detector;
+    RgbdPlane plane_detector;
     plane_detector.setBlockSize(9);  // Note, 640%9 is 1 and 480%9 is 3
 
     Mat mask;

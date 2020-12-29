@@ -8,8 +8,7 @@
 
 namespace cv
 {
-namespace rgbd
-{
+
   /** Just compute the norm of a vector
    * @param vec a vector of size 3 and any type T
    * @return
@@ -855,6 +854,6 @@ multiply_by_K_inv(const Matx<T, 3, 3> & K_inv, U a, U b, U c, Vec<T, 3> &res)
       }
     }
   }
-}
+
 }
 

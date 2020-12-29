@@ -16,7 +16,6 @@
 
 using namespace std;
 using namespace cv;
-using namespace cv::rgbd;
 
 #define BILATERAL_FILTER 0// if 1 then bilateral filter will be used for the depth
 

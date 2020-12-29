@@ -18,8 +18,7 @@
 
 namespace cv
 {
-namespace rgbd
-{
+
 /** Structure defining a plane. The notations are from the second paper */
 class PlaneBase
 {
@@ -632,5 +631,5 @@ private:
       for(uchar j=0; j<4; ++j, ++data)
         *data = plane_coefficients[i][j];
   }
-}
+
 }
