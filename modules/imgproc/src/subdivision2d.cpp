@@ -484,13 +484,13 @@ int Subdiv2D::locate(Point2f pt, int& _edge, int& _vertex)
         if( t1 < FLT_EPSILON )
         {
             location = PTLOC_VERTEX;
-            vertex = edgeOrg(edge);
+            vertex = edgeOrg( edge );
             edge = 0;
         }
         else if( t2 < FLT_EPSILON )
         {
             location = PTLOC_VERTEX;
-            vertex = edgeDst(edge);
+            vertex = edgeDst( edge );
             edge = 0;
         }
         else if( (t1 < t3 || t2 < t3) &&
