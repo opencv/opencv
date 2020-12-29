@@ -86,7 +86,7 @@ int dhseqr_(char *job, char *compz, int *n, int *ilo, int *
 
 int disnan_(double *din);
 
-int dlabad_(double *small, double *large);
+int dlabad_(double *_small, double *_large);
 
 int dlabrd_(int *m, int *n, int *nb, double *a, int *lda,
 	double *d__, double *e, double *tauq, double *taup, double *x, int *
