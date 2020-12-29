@@ -41,7 +41,7 @@ void warpFrame(const Mat& image, const Mat& depth, const Mat& rvec, const Mat& t
     Mat Rt = Mat::eye(4, 4, CV_64FC1);
     {
         Mat R, dst;
-        Rodrigues(rvec, R);
+        cv::Rodrigues(rvec, R);
         
         dst = Rt(Rect(0,0,3,3));
         R.copyTo(dst);
@@ -254,7 +254,7 @@ void CV_OdometryTest::run(int)
             continue;
                 
         Mat calcR = calcRt(Rect(0,0,3,3)), calcRvec;
-        Rodrigues(calcR, calcRvec);
+        cv::Rodrigues(calcR, calcRvec);
         calcRvec = calcRvec.reshape(rvec.channels(), rvec.rows);
         Mat calcTvec = calcRt(Rect(3,0,1,3));
 

@@ -40,7 +40,7 @@ protected:
       Mat points = points3d.reshape(1, rows*cols);
       Mat image_points;
       Mat rvec;
-      Rodrigues(Mat::eye(3,3,CV_32F),rvec);
+      cv::Rodrigues(Mat::eye(3,3,CV_32F),rvec);
       Mat tvec = (Mat_<float>(1,3) << 0, 0, 0);
       projectPoints(points, rvec, tvec, K, Mat(), image_points);
       image_points = image_points.reshape(2, rows);
