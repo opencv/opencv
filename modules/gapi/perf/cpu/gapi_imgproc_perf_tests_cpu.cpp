@@ -175,26 +175,26 @@ INSTANTIATE_TEST_CASE_P(GoodFeaturesInternalPerfTestCPU, GoodFeaturesPerfTest,
             Values(cv::compile_args(IMGPROC_CPU))));
 
 INSTANTIATE_TEST_CASE_P(BoundingRectMatPerfTestCPU, BoundingRectMatPerfTest,
-                        Combine(Values(IoUToleranceRect(0).to_compare_f()),
+                        Combine(Values(IoUToleranceRect(0).to_compare_obj()),
                                 Values(CV_8UC1),
                                 Values(szVGA, sz720p, sz1080p),
                                 Values(false),
                                 Values(cv::compile_args(IMGPROC_CPU))));
 
 INSTANTIATE_TEST_CASE_P(BoundingRectMatVectorPerfTestCPU, BoundingRectMatPerfTest,
-                        Combine(Values(IoUToleranceRect(1e-5).to_compare_f()),
+                        Combine(Values(IoUToleranceRect(1e-5).to_compare_obj()),
                                 Values(CV_32S, CV_32F),
                                 Values(szVGA, sz720p, sz1080p),
                                 Values(true),
                                 Values(cv::compile_args(IMGPROC_CPU))));
 
 INSTANTIATE_TEST_CASE_P(BoundingRectVector32SPerfTestCPU, BoundingRectVector32SPerfTest,
-                        Combine(Values(IoUToleranceRect(0).to_compare_f()),
+                        Combine(Values(IoUToleranceRect(0).to_compare_obj()),
                                 Values(szVGA, sz720p, sz1080p),
                                 Values(cv::compile_args(IMGPROC_CPU))));
 
 INSTANTIATE_TEST_CASE_P(BoundingRectVector32FPerfTestCPU, BoundingRectVector32FPerfTest,
-                        Combine(Values(IoUToleranceRect(1e-5).to_compare_f()),
+                        Combine(Values(IoUToleranceRect(1e-5).to_compare_obj()),
                                 Values(szVGA, sz720p, sz1080p),
                                 Values(cv::compile_args(IMGPROC_CPU))));
 

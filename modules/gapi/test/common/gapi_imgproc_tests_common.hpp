@@ -27,7 +27,7 @@ static cv::GComputation boundingRectTestGAPI(const In& in, cv::GCompileArgs&& ar
 
 template<typename In>
 static void boundingRectTestOpenCVCompare(const In& in, const cv::Rect& out_rect_gapi,
-                                          const compare_rect_f& cmpF)
+                                          const CompareRects& cmpF)
 {
     // OpenCV code /////////////////////////////////////////////////////////////
     cv::Rect out_rect_ocv = cv::boundingRect(in);
@@ -36,12 +36,11 @@ static void boundingRectTestOpenCVCompare(const In& in, const cv::Rect& out_rect
 }
 
 template<typename In>
-static void boundingRectTestBody(const In& in, const CompareRects& cmpF_, cv::GCompileArgs&& args)
+static void boundingRectTestBody(const In& in, const CompareRects& cmpF, cv::GCompileArgs&& args)
 {
     cv::Rect out_rect_gapi;
     boundingRectTestGAPI(in, std::move(args), out_rect_gapi);
 
-    compare_rect_f cmpF = [cmpF_](const cv::Rect& a, const cv::Rect& b) { return cmpF_(a, b); };
     boundingRectTestOpenCVCompare(in, out_rect_gapi, cmpF);
 }
 

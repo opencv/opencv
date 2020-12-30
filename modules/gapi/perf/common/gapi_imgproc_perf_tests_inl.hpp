@@ -754,7 +754,7 @@ PERF_TEST_P_(GoodFeaturesPerfTest, TestPerformance)
 
 PERF_TEST_P_(BoundingRectMatPerfTest, TestPerformance)
 {
-    compare_rect_f cmpF;
+    CompareRects cmpF;
     cv::Size sz;
     MatType2 type;
     bool initByVector = false;
@@ -784,7 +784,7 @@ PERF_TEST_P_(BoundingRectMatPerfTest, TestPerformance)
 
 PERF_TEST_P_(BoundingRectVector32SPerfTest, TestPerformance)
 {
-    compare_rect_f cmpF;
+    CompareRects cmpF;
     cv::Size sz;
     cv::GCompileArgs compile_args;
     std::tie(cmpF, sz, compile_args) = GetParam();
@@ -806,7 +806,7 @@ PERF_TEST_P_(BoundingRectVector32SPerfTest, TestPerformance)
 
 PERF_TEST_P_(BoundingRectVector32FPerfTest, TestPerformance)
 {
-    compare_rect_f cmpF;
+    CompareRects cmpF;
     cv::Size sz;
     cv::GCompileArgs compile_args;
     std::tie(cmpF, sz, compile_args) = GetParam();
