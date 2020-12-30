@@ -1128,8 +1128,8 @@ class ImgprocTest: OpenCVTestCase {
 
         let rrect = Imgproc.minAreaRect(points: points)
 
-        XCTAssertEqual(Size2f(width: 2, height: 5), rrect.size)
-        XCTAssertEqual(-90.0, rrect.angle)
+        XCTAssertEqual(Size2f(width: 5, height: 2), rrect.size)
+        XCTAssertEqual(0.0, rrect.angle)
         XCTAssertEqual(Point2f(x: 3.5, y: 2), rrect.center)
     }
 
