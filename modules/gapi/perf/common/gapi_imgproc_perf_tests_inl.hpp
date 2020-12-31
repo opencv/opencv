@@ -795,6 +795,63 @@ PERF_TEST_P_(GoodFeaturesPerfTest, TestPerformance)
 
 //------------------------------------------------------------------------------
 
+PERF_TEST_P_(FindContoursPerfTest, TestPerformance)
+{
+    CompareMats cmpF;
+    MatType type;
+    cv::Size sz;
+    cv::RetrievalModes mode;
+    cv::ContourApproximationModes method;
+    cv::GCompileArgs compile_args;
+    std::tie(cmpF, type, sz, mode, method, compile_args) = GetParam();
+
+    cv::Mat in;
+    initMatForFindingContours(in, sz, type);
+    cv::Point offset = cv::Point();
+
+    std::vector<std::vector<cv::Point>> out_cnts_gapi;
+    cv::GComputation c(findContoursTestGAPI(in, mode, method, std::move(compile_args),
+                                            out_cnts_gapi, offset));
+
+    TEST_CYCLE()
+    {
+        c.apply(gin(in, offset), gout(out_cnts_gapi));
+    }
+
+    findContoursTestOpenCVCompare(in, mode, method, out_cnts_gapi, cmpF);
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P_(FindContoursHPerfTest, TestPerformance)
+{
+    CompareMats cmpF;
+    MatType type;
+    cv::Size sz;
+    cv::RetrievalModes mode;
+    cv::ContourApproximationModes method;
+    cv::GCompileArgs compile_args;
+    std::tie(cmpF, type, sz, mode, method, compile_args) = GetParam();
+
+    cv::Mat in;
+    initMatForFindingContours(in, sz, type);
+    cv::Point offset = cv::Point();
+
+    std::vector<std::vector<cv::Point>> out_cnts_gapi;
+    std::vector<cv::Vec4i>              out_hier_gapi;
+    cv::GComputation c(findContoursTestGAPI(in, mode, method, std::move(compile_args),
+                                            out_cnts_gapi, out_hier_gapi, offset));
+
+    TEST_CYCLE()
+    {
+        c.apply(gin(in, offset), gout(out_cnts_gapi, out_hier_gapi));
+    }
+
+    findContoursTestOpenCVCompare(in, mode, method, out_cnts_gapi, out_hier_gapi, cmpF);
+    SANITY_CHECK_NOTHING();
+}
+
+//------------------------------------------------------------------------------
+
 PERF_TEST_P_(BoundingRectMatPerfTest, TestPerformance)
 {
     CompareRects cmpF;

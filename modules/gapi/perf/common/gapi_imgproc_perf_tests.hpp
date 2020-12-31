@@ -43,6 +43,14 @@ class CannyPerfTest           : public TestPerfParams<tuple<compare_f, MatType,c
 class GoodFeaturesPerfTest    : public TestPerfParams<tuple<compare_vector_f<cv::Point2f>, std::string,
                                                             int,int,double,double,int,bool,
                                                             cv::GCompileArgs>> {};
+class FindContoursPerfTest    : public TestPerfParams<tuple<CompareMats, MatType,cv::Size,
+                                                            cv::RetrievalModes,
+                                                            cv::ContourApproximationModes,
+                                                            cv::GCompileArgs>> {};
+class FindContoursHPerfTest   : public TestPerfParams<tuple<CompareMats, MatType,cv::Size,
+                                                            cv::RetrievalModes,
+                                                            cv::ContourApproximationModes,
+                                                            cv::GCompileArgs>> {};
 class BoundingRectMatPerfTest       :
     public TestPerfParams<tuple<CompareRects, MatType,cv::Size,bool, cv::GCompileArgs>> {};
 class BoundingRectVector32SPerfTest :

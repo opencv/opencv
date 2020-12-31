@@ -14,6 +14,138 @@
 
 namespace opencv_test
 {
+// Draw random ellipses on given mat of given size and type
+static void initMatForFindingContours(cv::Mat& mat, const cv::Size& sz, const int type)
+{
+    cv::RNG& rng = theRNG();
+    mat = cv::Mat(sz, type, cv::Scalar::all(0));
+    size_t numEllipses = rng.uniform(1, 10);
+
+    for( size_t i = 0; i < numEllipses; i++ )
+    {
+        cv::Point center;
+        cv::Size  axes;
+        center.x     = rng.uniform(0, sz.width);
+        center.y     = rng.uniform(0, sz.height);
+        axes.width   = rng.uniform(2, sz.width);
+        axes.height  = rng.uniform(2, sz.height);
+        int color    = rng.uniform(1, 256);
+        double angle = rng.uniform(0., 180.);
+        cv::ellipse(mat, center, axes, angle, 0., 360., color, 1, FILLED);
+    }
+}
+
+enum WithHierarchy {NO_HIERARCHY, WITH_HIERARCHY};
+
+static cv::GComputation findContoursTestGAPI(const cv::Mat& in, const cv::RetrievalModes mode,
+                                             const cv::ContourApproximationModes method,
+                                             cv::GCompileArgs&& args,
+                                             std::vector<std::vector<cv::Point>>& out_cnts_gapi,
+                                             const cv::Point& offset = cv::Point())
+{
+    cv::GMat g_in;
+    cv::GOpaque<cv::Point> gOffset;
+    cv::GArray<cv::GArray<cv::Point>> outCts;
+    outCts = cv::gapi::findContours(g_in, mode, method, gOffset);
+    cv::GComputation c(GIn(g_in, gOffset), GOut(outCts));
+    c.apply(gin(in, offset), gout(out_cnts_gapi), std::move(args));
+    return c;
+}
+
+static cv::GComputation findContoursTestGAPI(const cv::Mat& in, const cv::RetrievalModes mode,
+                                             const cv::ContourApproximationModes method,
+                                             cv::GCompileArgs&& args,
+                                             std::vector<std::vector<cv::Point>>& out_cnts_gapi,
+                                             std::vector<cv::Vec4i>&              out_hier_gapi,
+                                             const cv::Point& offset = cv::Point())
+{
+    cv::GMat g_in;
+    cv::GOpaque<cv::Point> gOffset;
+    cv::GArray<cv::GArray<cv::Point>> outCts;
+    cv::GArray<cv::Vec4i> outHier;
+    std::tie(outCts, outHier) = cv::gapi::findContoursH(g_in, mode, method, gOffset);
+    cv::GComputation c(GIn(g_in, gOffset), GOut(outCts, outHier));
+    c.apply(gin(in, offset), gout(out_cnts_gapi, out_hier_gapi), std::move(args));
+    return c;
+}
+
+
+static void findContoursTestOpenCVCompare(const cv::Mat& in, const cv::RetrievalModes mode,
+                                          const cv::ContourApproximationModes method,
+                                          const std::vector<std::vector<cv::Point>>& out_cnts_gapi,
+                                          const CompareMats& cmpF,
+                                          const cv::Point& offset = cv::Point())
+{
+    // OpenCV code /////////////////////////////////////////////////////////////
+    std::vector<std::vector<cv::Point>> out_cnts_ocv;
+    cv::findContours(in, out_cnts_ocv, mode, method, offset);
+    // Comparison //////////////////////////////////////////////////////////////
+    EXPECT_TRUE(out_cnts_gapi.size() == out_cnts_ocv.size());
+
+    cv::Mat out_mat_ocv  = cv::Mat(cv::Size{ in.cols, in.rows }, in.type(), cv::Scalar::all(0));
+    cv::Mat out_mat_gapi = cv::Mat(cv::Size{ in.cols, in.rows }, in.type(), cv::Scalar::all(0));
+    cv::fillPoly(out_mat_ocv,  out_cnts_ocv,  cv::Scalar::all(1));
+    cv::fillPoly(out_mat_gapi, out_cnts_gapi, cv::Scalar::all(1));
+    EXPECT_TRUE(cmpF(out_mat_ocv, out_mat_gapi));
+}
+
+static void findContoursTestOpenCVCompare(const cv::Mat& in, const cv::RetrievalModes mode,
+                                          const cv::ContourApproximationModes method,
+                                          const std::vector<std::vector<cv::Point>>& out_cnts_gapi,
+                                          const std::vector<cv::Vec4i>&              out_hier_gapi,
+                                          const CompareMats& cmpF,
+                                          const cv::Point& offset = cv::Point())
+{
+    // OpenCV code /////////////////////////////////////////////////////////////
+    std::vector<std::vector<cv::Point>> out_cnts_ocv;
+    std::vector<cv::Vec4i>              out_hier_ocv;
+    cv::findContours(in, out_cnts_ocv, out_hier_ocv, mode, method, offset);
+    // Comparison //////////////////////////////////////////////////////////////
+    EXPECT_TRUE(out_cnts_gapi.size() == out_cnts_ocv.size());
+
+    cv::Mat out_mat_ocv  = cv::Mat(cv::Size{ in.cols, in.rows }, in.type(), cv::Scalar::all(0));
+    cv::Mat out_mat_gapi = cv::Mat(cv::Size{ in.cols, in.rows }, in.type(), cv::Scalar::all(0));
+    cv::fillPoly(out_mat_ocv,  out_cnts_ocv,  cv::Scalar::all(1));
+    cv::fillPoly(out_mat_gapi, out_cnts_gapi, cv::Scalar::all(1));
+    EXPECT_TRUE(cmpF(out_mat_ocv, out_mat_gapi));
+
+    EXPECT_TRUE(out_hier_ocv.size() == out_hier_gapi.size());
+    EXPECT_TRUE(AbsExactVector<cv::Vec4i>().to_compare_f()(out_hier_ocv, out_hier_gapi));
+}
+
+template<WithHierarchy withHierarchy = NO_HIERARCHY>
+void findContoursTestBody(const cv::Size& sz, const MatType2& type,
+                                 const cv::RetrievalModes mode,
+                                 const cv::ContourApproximationModes method,
+                                 const CompareMats& cmpF, cv::GCompileArgs&& args,
+                                 const cv::Point& offset = cv::Point())
+{
+    cv::Mat in;
+    initMatForFindingContours(in, sz, type);
+
+    std::vector<std::vector<cv::Point>> out_cnts_gapi;
+    findContoursTestGAPI(in, mode, method, std::move(args), out_cnts_gapi, offset);
+    findContoursTestOpenCVCompare(in, mode, method, out_cnts_gapi, cmpF, offset);
+}
+
+template<>
+void findContoursTestBody<WITH_HIERARCHY>(const cv::Size& sz, const MatType2& type,
+                                          const cv::RetrievalModes mode,
+                                          const cv::ContourApproximationModes method,
+                                          const CompareMats& cmpF, cv::GCompileArgs&& args,
+                                          const cv::Point& offset)
+{
+    cv::Mat in;
+    initMatForFindingContours(in, sz, type);
+
+    std::vector<std::vector<cv::Point>> out_cnts_gapi;
+    std::vector<cv::Vec4i>              out_hier_gapi;
+    findContoursTestGAPI(in, mode, method, std::move(args), out_cnts_gapi, out_hier_gapi, offset);
+    findContoursTestOpenCVCompare(in, mode, method, out_cnts_gapi, out_hier_gapi, cmpF, offset);
+}
+
+//-------------------------------------------------------------------------------------------------
+
 template<typename In>
 static cv::GComputation boundingRectTestGAPI(const In& in, cv::GCompileArgs&& args,
                                              cv::Rect& out_rect_gapi)
@@ -40,10 +172,8 @@ static void boundingRectTestBody(const In& in, const CompareRects& cmpF, cv::GCo
 {
     cv::Rect out_rect_gapi;
     boundingRectTestGAPI(in, std::move(args), out_rect_gapi);
-
     boundingRectTestOpenCVCompare(in, out_rect_gapi, cmpF);
 }
-
 } // namespace opencv_test
 
 #endif // OPENCV_GAPI_VIDEO_TESTS_COMMON_HPP

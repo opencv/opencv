@@ -194,6 +194,42 @@ INSTANTIATE_TEST_CASE_P(GoodFeaturesInternalPerfTestCPU, GoodFeaturesPerfTest,
             Values(true),
             Values(cv::compile_args(IMGPROC_CPU))));
 
+INSTANTIATE_TEST_CASE_P(FindContoursPerfTestCPU, FindContoursPerfTest,
+                        Combine(Values(AbsExact().to_compare_obj()),
+                                Values(CV_8UC1),
+                                Values(szVGA, sz720p, sz1080p),
+                                Values(RETR_EXTERNAL, RETR_LIST, RETR_CCOMP, RETR_TREE),
+                                Values(CHAIN_APPROX_NONE, CHAIN_APPROX_SIMPLE,
+                                       CHAIN_APPROX_TC89_L1, CHAIN_APPROX_TC89_KCOS),
+                                Values(cv::compile_args(IMGPROC_CPU))));
+
+INSTANTIATE_TEST_CASE_P(FindContours32SPerfTestCPU, FindContoursPerfTest,
+                        Combine(Values(AbsExact().to_compare_obj()),
+                                Values(CV_32SC1),
+                                Values(szVGA, sz720p, sz1080p),
+                                Values(RETR_CCOMP, RETR_FLOODFILL),
+                                Values(CHAIN_APPROX_NONE, CHAIN_APPROX_SIMPLE,
+                                       CHAIN_APPROX_TC89_L1, CHAIN_APPROX_TC89_KCOS),
+                                Values(cv::compile_args(IMGPROC_CPU))));
+
+INSTANTIATE_TEST_CASE_P(FindContoursHPerfTestCPU, FindContoursHPerfTest,
+                        Combine(Values(AbsExact().to_compare_obj()),
+                                Values(CV_8UC1),
+                                Values(szVGA, sz720p, sz1080p),
+                                Values(RETR_EXTERNAL, RETR_LIST, RETR_CCOMP, RETR_TREE),
+                                Values(CHAIN_APPROX_NONE, CHAIN_APPROX_SIMPLE,
+                                       CHAIN_APPROX_TC89_L1, CHAIN_APPROX_TC89_KCOS),
+                                Values(cv::compile_args(IMGPROC_CPU))));
+
+INSTANTIATE_TEST_CASE_P(FindContoursH32SPerfTestCPU, FindContoursHPerfTest,
+                        Combine(Values(AbsExact().to_compare_obj()),
+                                Values(CV_32SC1),
+                                Values(szVGA, sz720p, sz1080p),
+                                Values(RETR_CCOMP, RETR_FLOODFILL),
+                                Values(CHAIN_APPROX_NONE, CHAIN_APPROX_SIMPLE,
+                                       CHAIN_APPROX_TC89_L1, CHAIN_APPROX_TC89_KCOS),
+                                Values(cv::compile_args(IMGPROC_CPU))));
+
 INSTANTIATE_TEST_CASE_P(BoundingRectMatPerfTestCPU, BoundingRectMatPerfTest,
                         Combine(Values(IoUToleranceRect(0).to_compare_obj()),
                                 Values(CV_8UC1),
