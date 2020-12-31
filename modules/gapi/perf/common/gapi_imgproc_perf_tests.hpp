@@ -42,7 +42,7 @@ class GoodFeaturesPerfTest    : public TestPerfParams<tuple<compare_vector_f<cv:
                                                             int,int,double,double,int,bool,
                                                             cv::GCompileArgs>> {};
 class BoundingRectMatPerfTest       :
-    public TestPerfParams<tuple<CompareRects, MatType2,cv::Size,bool, cv::GCompileArgs>> {};
+    public TestPerfParams<tuple<CompareRects, MatType,cv::Size,bool, cv::GCompileArgs>> {};
 class BoundingRectVector32SPerfTest :
     public TestPerfParams<tuple<CompareRects, cv::Size, cv::GCompileArgs>> {};
 class BoundingRectVector32FPerfTest :

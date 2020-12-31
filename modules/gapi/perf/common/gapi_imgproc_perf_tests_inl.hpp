@@ -756,7 +756,7 @@ PERF_TEST_P_(BoundingRectMatPerfTest, TestPerformance)
 {
     CompareRects cmpF;
     cv::Size sz;
-    MatType2 type;
+    MatType type;
     bool initByVector = false;
     cv::GCompileArgs compile_args;
     std::tie(cmpF, type, sz, initByVector, compile_args) = GetParam();
