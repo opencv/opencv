@@ -30,6 +30,7 @@ protected:
     rs2::pipeline mPipe;
     rs2::frameset mData;
     rs2::align    mAlign;
+    rs2::colorizer color_map;
 
     double getDepthGeneratorProperty(int propIdx) const;
     double getImageGeneratorProperty(int propIdx) const;
