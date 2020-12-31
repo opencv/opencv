@@ -104,6 +104,26 @@ INSTANTIATE_TEST_CASE_P(Dilate3x3PerfTestCPU, Dilate3x3PerfTest,
         Values(1, 2, 4),
         Values(cv::compile_args(IMGPROC_CPU))));
 
+INSTANTIATE_TEST_CASE_P(MorphologyExPerfTestCPU, MorphologyExPerfTest,
+                        Combine(Values(AbsExact().to_compare_f()),
+                                Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
+                                Values(szVGA, sz720p, sz1080p),
+                                Values(cv::MorphTypes::MORPH_ERODE,
+                                       cv::MorphTypes::MORPH_DILATE,
+                                       cv::MorphTypes::MORPH_OPEN,
+                                       cv::MorphTypes::MORPH_CLOSE,
+                                       cv::MorphTypes::MORPH_GRADIENT,
+                                       cv::MorphTypes::MORPH_TOPHAT,
+                                       cv::MorphTypes::MORPH_BLACKHAT),
+                                Values(cv::compile_args(IMGPROC_CPU))));
+
+INSTANTIATE_TEST_CASE_P(MorphologyExHitMissPerfTestCPU, MorphologyExPerfTest,
+                        Combine(Values(AbsExact().to_compare_f()),
+                                Values(CV_8UC1),
+                                Values(szVGA, sz720p, sz1080p),
+                                Values(cv::MorphTypes::MORPH_HITMISS),
+                                Values(cv::compile_args(IMGPROC_CPU))));
+
 INSTANTIATE_TEST_CASE_P(SobelPerfTestCPU, SobelPerfTest,
     Combine(Values(AbsExact().to_compare_f()),
         Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1),
