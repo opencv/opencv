@@ -197,7 +197,7 @@ bool VideoCapture_LibRealsense::retrieveFrame(int outputType, cv::OutputArray fr
     switch (outputType)
     {
     case CAP_INTELPERC_DEPTH_MAP:
-        _frame = mData.get_depth_frame().apply_filter(color_map); 
+        _frame = mData.get_depth_frame().apply_filter(color_map);
         type = CV_8UC3;
         break;
     case CAP_INTELPERC_IR_MAP:
