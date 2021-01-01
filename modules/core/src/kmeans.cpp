@@ -247,7 +247,7 @@ double cv::kmeans( InputArray _data, int K,
     _bestLabels.create(N, 1, CV_32S, -1, true);
 
     Mat _labels, best_labels = _bestLabels.getMat();
-    if (flags & CV_KMEANS_USE_INITIAL_LABELS)
+    if (flags & KMEANS_USE_INITIAL_LABELS)
     {
         CV_Assert( (best_labels.cols == 1 || best_labels.rows == 1) &&
                   best_labels.cols*best_labels.rows == N &&

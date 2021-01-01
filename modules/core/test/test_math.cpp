@@ -168,7 +168,7 @@ void Core_PowTest::run_func()
             b = b.reshape(1);
             for( int i = 0; i < a.rows; i++ )
             {
-                b.at<float>(i,0) = (float)fabs(cvCbrt(a.at<float>(i,0)));
+                b.at<float>(i,0) = (float)fabs(cubeRoot(a.at<float>(i,0)));
                 for( int j = 1; j < a.cols; j++ )
                     b.at<float>(i,j) = (float)fabs(cv::cubeRoot(a.at<float>(i,j)));
             }
