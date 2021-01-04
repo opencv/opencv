@@ -62,6 +62,10 @@ static inline void deleter_AImage(AImage *image) {
     AImage_delete(image);
 }
 
+static inline void deleter_ANativeWindow(ANativeWindow *nativeWindow) {
+    ANativeWindow_release(nativeWindow);
+}
+
 static inline void deleter_ACaptureSessionOutput(ACaptureSessionOutput *sessionOutput) {
     ACaptureSessionOutput_free(sessionOutput);
 }
@@ -130,6 +134,8 @@ void OnCaptureFailed(void* context,
                      ACaptureRequest* request,
                      ACameraCaptureFailure* failure);
 
+#define CAPTURE_TIMEOUT_SECONDS 2
+
 class AndroidCameraCapture : public IVideoCapture
 {
     std::shared_ptr<ACameraManager> cameraManager;
@@ -137,6 +143,7 @@ class AndroidCameraCapture : public IVideoCapture
     std::shared_ptr<AImageReader> imageReader;
     std::shared_ptr<ACaptureSessionOutputContainer> outputContainer;
     std::shared_ptr<ACaptureSessionOutput> sessionOutput;
+    std::shared_ptr<ANativeWindow> nativeWindow;
     std::shared_ptr<ACameraOutputTarget> outputTarget;
     std::shared_ptr<ACaptureRequest> captureRequest;
     std::shared_ptr<ACameraCaptureSession> captureSession;
@@ -168,8 +175,10 @@ public:
         return &cameraDeviceListener;
     }
 
+    ACameraCaptureSession_stateCallbacks sessionListener;
+
     ACameraCaptureSession_stateCallbacks* GetSessionListener() {
-        static ACameraCaptureSession_stateCallbacks sessionListener = {
+        sessionListener = {
             .context = this,
             .onActive = ::OnSessionActive,
             .onReady = ::OnSessionReady,
@@ -178,8 +187,10 @@ public:
         return &sessionListener;
     }
 
+    ACameraCaptureSession_captureCallbacks captureListener;
+
     ACameraCaptureSession_captureCallbacks* GetCaptureCallback() {
-        static ACameraCaptureSession_captureCallbacks captureListener{
+        captureListener = {
             .context = this,
             .onCaptureStarted = nullptr,
             .onCaptureProgressed = nullptr,
@@ -212,9 +223,9 @@ public:
                     LOGW("No Buffer Available error occured - waiting for callback");
                     waitingCapture = true;
                     captureSuccess = false;
-                    condition.wait_for(lock, std::chrono::seconds(2), [this]{ return !waitingCapture; });
+                    bool captured = condition.wait_for(lock, std::chrono::seconds(CAPTURE_TIMEOUT_SECONDS), [this]{ return captureSuccess; });
                     waitingCapture = false;
-                    if (captureSuccess) {
+                    if (captured) {
                         mStatus = AImageReader_acquireLatestImage(imageReader.get(), &img);
                         if (mStatus != AMEDIA_OK) {
                             LOGE("Acquire image failed with error code: %d", mStatus);
@@ -355,13 +366,13 @@ public:
         }
         imageReader = std::shared_ptr<AImageReader>(reader, deleter_AImageReader);
 
-        ANativeWindow *nativeWindow;
-        // the ANativeWindow obtained here does not need to be freed; the AImageReader takes care of that
-        mStatus = AImageReader_getWindow(imageReader.get(), &nativeWindow);
+        ANativeWindow *window;
+        mStatus = AImageReader_getWindow(imageReader.get(), &window);
         if (mStatus != AMEDIA_OK) {
             LOGE("Could not get ANativeWindow: %d", mStatus);
             return false;
         }
+        nativeWindow = std::shared_ptr<ANativeWindow>(window, deleter_ANativeWindow);
 
         ACaptureSessionOutputContainer* container;
         cStatus = ACaptureSessionOutputContainer_create(&container);
@@ -371,9 +382,9 @@ public:
         }
         outputContainer = std::shared_ptr<ACaptureSessionOutputContainer>(container, deleter_ACaptureSessionOutputContainer);
 
-        ANativeWindow_acquire(nativeWindow);
+        ANativeWindow_acquire(nativeWindow.get());
         ACaptureSessionOutput* output;
-        cStatus = ACaptureSessionOutput_create(nativeWindow, &output);
+        cStatus = ACaptureSessionOutput_create(nativeWindow.get(), &output);
         if (cStatus != ACAMERA_OK) {
             LOGE("CaptureSessionOutput creation failed with error code: %d", cStatus);
             return false;
@@ -383,7 +394,7 @@ public:
         sessionOutputAdded = true;
 
         ACameraOutputTarget* target;
-        cStatus = ACameraOutputTarget_create(nativeWindow, &target);
+        cStatus = ACameraOutputTarget_create(nativeWindow.get(), &target);
         if (cStatus != ACAMERA_OK) {
             LOGE("CameraOutputTarget creation failed with error code: %d", cStatus);
             return false;
@@ -422,33 +433,47 @@ public:
     }
 
     void cleanUp() {
+        captureListener.context = nullptr;
+        sessionListener.context = nullptr;
         if (sessionState == CaptureSessionState::ACTIVE) {
             ACameraCaptureSession_stopRepeating(captureSession.get());
         }
+        captureSession = nullptr;
         if (targetAdded) {
             ACaptureRequest_removeTarget(captureRequest.get(), outputTarget.get());
             targetAdded = false;
         }
+        captureRequest = nullptr;
+        outputTarget = nullptr;
         if (sessionOutputAdded) {
             ACaptureSessionOutputContainer_remove(outputContainer.get(), sessionOutput.get());
             sessionOutputAdded = false;
         }
+        sessionOutput = nullptr;
+        nativeWindow = nullptr;
+        outputContainer = nullptr;
+        cameraDevice = nullptr;
+        cameraManager = nullptr;
+        imageReader = nullptr;
     }
 };
 
 /********************************  Session management  *******************************/
 
 void OnSessionClosed(void* context, ACameraCaptureSession* session) {
+    if (context == nullptr) return;
     LOGW("session %p closed", session);
     reinterpret_cast<AndroidCameraCapture*>(context)->setSessionState(CaptureSessionState::CLOSED);
 }
 
 void OnSessionReady(void* context, ACameraCaptureSession* session) {
+    if (context == nullptr) return;
     LOGW("session %p ready", session);
     reinterpret_cast<AndroidCameraCapture*>(context)->setSessionState(CaptureSessionState::READY);
 }
 
 void OnSessionActive(void* context, ACameraCaptureSession* session) {
+    if (context == nullptr) return;
     LOGW("session %p active", session);
     reinterpret_cast<AndroidCameraCapture*>(context)->setSessionState(CaptureSessionState::ACTIVE);
 }
@@ -457,6 +482,7 @@ void OnCaptureCompleted(void* context,
                         ACameraCaptureSession* session,
                         ACaptureRequest* /* request */,
                         const ACameraMetadata* /* result */) {
+    if (context == nullptr) return;
     LOGV("session %p capture completed", session);
     AndroidCameraCapture* cameraCapture = reinterpret_cast<AndroidCameraCapture*>(context);
     std::unique_lock<std::mutex> lock(cameraCapture->mtx);
@@ -472,6 +498,7 @@ void OnCaptureFailed(void* context,
                      ACameraCaptureSession* session,
                      ACaptureRequest* /* request */,
                      ACameraCaptureFailure* /* failure */) {
+    if (context == nullptr) return;
     LOGV("session %p capture failed", session);
     AndroidCameraCapture* cameraCapture = reinterpret_cast<AndroidCameraCapture*>(context);
     std::unique_lock<std::mutex> lock(cameraCapture->mtx);
