@@ -38,6 +38,7 @@ class table(object):
     def __init__(self, caption = None, format=None):
         self.format = format
         self.is_markdown = self.format == 'markdown'
+        self.is_tabs = self.format == 'tabs'
         self.columns = {}
         self.rows = []
         self.ridx = -1;
@@ -253,7 +254,7 @@ class table(object):
 
     def consolePrintTable(self, out):
         columns = self.layoutTable()
-        colrizer = getColorizer(out) if not self.is_markdown else dummyColorizer(out)
+        colrizer = getColorizer(out) if not (self.is_markdown or self.is_tabs) else dummyColorizer(out)
 
         if self.caption:
             out.write("%s%s%s" % ( os.linesep,  os.linesep.join(self.reformatTextValue(self.caption)), os.linesep * 2))
@@ -299,6 +300,12 @@ class table(object):
                 text = ' '.join(self.getValue('text', c) or [])
                 out.write(text + "|")
             out.write(os.linesep)
+        elif self.is_tabs:
+            out.write("\t")
+            for c in row.cells:
+                text = ' '.join(self.getValue('text', c) or [])
+                out.write(text + "\t")
+            out.write(os.linesep)
         else:
             for ln in range(row.minheight):
                 i = 0
@@ -315,6 +322,8 @@ class table(object):
                         i += self.getValue("colspan", cell)
                     if self.is_markdown:
                         out.write("|")
+                    elif self.is_tabs:
+                        out.write("\t")
                 out.write(os.linesep)
 
         if self.is_markdown and row.props.get('header', False):
