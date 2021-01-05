@@ -20,10 +20,10 @@ scale invariant.
 
 ![image](images/sift_scale_invariant.jpg)
 
-So, in 2004, **D.Lowe**, University of British Columbia, came up with a new algorithm, Scale
+In 2004, **D.Lowe**, University of British Columbia, came up with a new algorithm, Scale
 Invariant Feature Transform (SIFT) in his paper, **Distinctive Image Features from Scale-Invariant
 Keypoints**, which extract keypoints and compute its descriptors. *(This paper is easy to understand
-and considered to be best material available on SIFT. So this explanation is just a short summary of
+and considered to be best material available on SIFT. This explanation is just a short summary of
 this paper)*.
 
 There are mainly four steps involved in SIFT algorithm. We will see them one-by-one.
@@ -108,9 +108,11 @@ paper is highly recommended.
 SIFT in OpenCV
 --------------
 
-So now let's see SIFT functionalities available in OpenCV. Let's start with keypoint detection and
-draw them. First we have to construct a SIFT object. We can pass different parameters to it which
-are optional and they are well explained in docs.
+Now let's see SIFT functionalities available in OpenCV. Note that these were previously only
+available in [the opencv contrib repo](https://github.com/opencv/opencv_contrib), but the patent
+expired in the year 2020. So they are now included in the main repo. Let's start with keypoint
+detection and draw them. First we have to construct a SIFT object. We can pass different
+parameters to it which are optional and they are well explained in docs.
 @code{.py}
 import numpy as np
 import cv2 as cv
