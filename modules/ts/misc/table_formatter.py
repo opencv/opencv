@@ -301,10 +301,8 @@ class table(object):
                 out.write(text + "|")
             out.write(os.linesep)
         elif self.is_tabs:
-            out.write("\t")
-            for c in row.cells:
-                text = ' '.join(self.getValue('text', c) or [])
-                out.write(text + "\t")
+            cols_to_join=[' '.join(self.getValue('text', c) or []) for c in row.cells]
+            out.write('\t'.join(cols_to_join))
             out.write(os.linesep)
         else:
             for ln in range(row.minheight):
@@ -322,8 +320,6 @@ class table(object):
                         i += self.getValue("colspan", cell)
                     if self.is_markdown:
                         out.write("|")
-                    elif self.is_tabs:
-                        out.write("\t")
                 out.write(os.linesep)
 
         if self.is_markdown and row.props.get('header', False):
