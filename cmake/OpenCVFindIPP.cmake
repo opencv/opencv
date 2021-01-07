@@ -142,12 +142,12 @@ macro(ipp_detect_version)
         # When using dynamic libraries from standalone Intel IPP it is your responsibility to install those on the target system
         list(APPEND IPP_LIBRARIES ${IPP_LIBRARY_DIR}/${IPP_LIB_PREFIX}${IPP_PREFIX}${name}${IPP_SUFFIX}${IPP_LIB_SUFFIX})
       else ()
-        add_library(ipp${name} STATIC IMPORTED)
-        set_target_properties(ipp${name} PROPERTIES
+        add_library(ipp${name}${IPP_SUFFIX} STATIC IMPORTED)
+        set_target_properties(ipp${name}${IPP_SUFFIX} PROPERTIES
           IMPORTED_LINK_INTERFACE_LIBRARIES ""
           IMPORTED_LOCATION ${IPP_LIBRARY_DIR}/${IPP_LIB_PREFIX}${IPP_PREFIX}${name}${IPP_SUFFIX}${IPP_LIB_SUFFIX}
         )
-        list(APPEND IPP_LIBRARIES ipp${name})
+        list(APPEND IPP_LIBRARIES ipp${name}${IPP_SUFFIX})
         if (NOT BUILD_SHARED_LIBS AND (HAVE_IPP_ICV OR ";${OPENCV_INSTALL_EXTERNAL_DEPENDENCIES};" MATCHES ";ipp;"))
           # CMake doesn't support "install(TARGETS ${IPP_PREFIX}${name} " command with imported targets
           install(FILES ${IPP_LIBRARY_DIR}/${IPP_LIB_PREFIX}${IPP_PREFIX}${name}${IPP_SUFFIX}${IPP_LIB_SUFFIX}
