@@ -340,6 +340,158 @@ public:
     Allocator* allocator;
 };
 
+class CV_EXPORTS_W GpuMatND
+{
+public:
+    struct CV_EXPORTS_W DevicePtr
+    {
+        explicit DevicePtr(size_t _size);
+         ~DevicePtr();
+
+        DevicePtr(const DevicePtr&) = delete;
+        DevicePtr& operator=(const DevicePtr&) = delete;
+
+        DevicePtr(DevicePtr&&) = delete;
+        DevicePtr& operator=(DevicePtr&&) = delete;
+
+        uchar* data;
+    };
+
+    using SizeArray = std::vector<int>;
+    using StepArray = std::vector<size_t>;
+    using IndexArray = std::vector<int>;
+
+    ~GpuMatND() = default;
+
+    //! default constructor
+    GpuMatND();
+
+    /** @overload
+
+    @param _size Array of integers specifying an n-dimensional array shape.
+    @param _type Array type. Use CV_8UC1, ..., CV_16FC4 to create 1-4 channel matrices, or
+    CV_8UC(n), ..., CV_64FC(n) to create multi-channel (up to CV_CN_MAX channels) matrices.
+    */
+    GpuMatND(SizeArray _size, int _type);
+
+    /** @overload
+
+    @param _size Array of integers specifying an n-dimensional array shape.
+    @param _type Array type. Use CV_8UC1, ..., CV_16FC4 to create 1-4 channel matrices, or
+    CV_8UC(n), ..., CV_64FC(n) to create multi-channel (up to CV_CN_MAX channels) matrices.
+    @param _data Pointer to the user data. Matrix constructors that take data and step parameters do not
+    allocate matrix data. Instead, they just initialize the matrix header that points to the specified
+    data, which means that no data is copied. This operation is very efficient and can be used to
+    process external data using OpenCV functions. The external data is not automatically deallocated, so
+    you should take care of it.
+    @param _step Array of _size.size()-1 steps in case of a multi-dimensional array (the last step is always
+    set to the element size). If not specified, the matrix is assumed to be continuous.
+    */
+    GpuMatND(SizeArray _size, int _type, void* _data, StepArray _step = StepArray());
+
+    void create(SizeArray _size, int _type);
+
+    void release();
+
+    void swap(GpuMatND& m) noexcept;
+
+    /** @brief Creates a full copy of the array and the underlying data.
+
+    The method creates a full copy of the array. It mimics the behavior of Mat::clone(), i.e.
+    the original step is not taken into account. So, the array copy is a continuous array
+    occupying total()\*elemSize() bytes.
+    */
+    GpuMatND clone() const;
+    GpuMatND clone(Stream& stream) const;
+
+    /** @brief Extracts a submatrix.
+
+    The operator makes a new header for the specified sub-array of \*this.
+    The operator is an O(1) operation, that is, no matrix data is copied.
+    @param ranges Array of selected ranges along each dimension.
+    */
+    GpuMatND operator()(const std::vector<Range>& ranges) const;
+
+    //! creates a GpuMat header for a part of the bigger matrix
+    GpuMat operator()(IndexArray idx, Range rowRange, Range colRange) const;
+
+    //! creates a GpuMat header if this GpuMatND is effectively 2D
+    operator GpuMat() const;
+
+    GpuMatND(const GpuMatND&) = default;
+    GpuMatND& operator=(const GpuMatND&) = default;
+
+    GpuMatND(GpuMatND&&) noexcept = default;
+    GpuMatND& operator=(GpuMatND&&) noexcept = default;
+
+    void upload(InputArray src);
+    void upload(InputArray src, Stream& stream);
+    void download(OutputArray dst) const;
+    void download(OutputArray dst, Stream& stream) const;
+
+    //! returns true iff the GpuMatND data is continuous
+    //! (i.e. when there are no gaps between successive rows)
+    bool isContinuous() const;
+
+    //! returns true if the matrix is a submatrix of another matrix
+    bool isSubmatrix() const;
+
+    //! returns element size in bytes
+    size_t elemSize() const;
+
+    //! returns the size of element channel in bytes
+    size_t elemSize1() const;
+
+    //! returns true if data is null
+    bool empty() const;
+
+    //! returns true if points to external(user-allocated) gpu memory
+    bool external() const;
+
+    //! returns the total number of array elements
+    size_t total() const;
+
+    //! returns the size of underlying memory in bytes
+    size_t totalMemSize() const;
+
+    //! returns element type
+    int type() const;
+
+private:
+    //! internal use
+    void setFields(SizeArray _size, int _type, StepArray _step = StepArray());
+
+public:
+    /*! includes several bit-fields:
+    - the magic signature
+    - continuity flag
+    - depth
+    - number of channels
+    */
+    int flags;
+
+    int dims;
+
+    /*! pointer to the data
+    If this is a submatrix of a larger matrix, this points to the first
+    element of the submatrix, and it can be different from data_->data.
+    If this is not a submatrix, then data is always equal to data_->data.
+    */
+    uchar* data;
+
+    //! shape of this array
+    SizeArray size;
+
+    /*! step values
+    Their semantics is identical to the semantics of step for Mat.
+    */
+    StepArray step;
+
+private:
+    //! internal use
+    std::shared_ptr<DevicePtr> data_;
+};
+
 /** @brief Creates a continuous matrix.
 
 @param rows Row count.
