@@ -956,11 +956,10 @@ class CV_EXPORTS_W Subdiv2D
 {
 public:
     /** Subdiv2D point location cases */
-    enum { PTLOC_ERROR        = -2, //!< Point location error
-           PTLOC_OUTSIDE_RECT = -1, //!< Point outside the subdivision bounding rect
-           PTLOC_INSIDE       = 0, //!< Point inside some facet
+    enum { PTLOC_INSIDE       = 0, //!< Point inside some facet
            PTLOC_VERTEX       = 1, //!< Point coincides with one of the subdivision vertices
-           PTLOC_ON_EDGE      = 2  //!< Point on some edge
+           PTLOC_EDGE         = 2, //!< Point on some edge
+           PTLOC_OUTSIDE      = 3  //!< Point outside of every facet
          };
 
     /** Subdiv2D edge type navigation (see: getEdge()) */
@@ -974,27 +973,11 @@ public:
            PREV_AROUND_RIGHT = 0x02
          };
 
-    /** creates an empty Subdiv2D object.
-    To create a new empty Delaunay subdivision you need to use the #initDelaunay function.
-     */
+    /** Creates an empty Delaunay triangulation object. */
     CV_WRAP Subdiv2D();
 
-    /** @overload
-
-    @param rect Rectangle that includes all of the 2D points that are to be added to the subdivision.
-
-    The function creates an empty Delaunay subdivision where 2D points can be added using the function
-    insert() . All of the points to be added must be within the specified rectangle, otherwise a runtime
-    error is raised.
-     */
-    CV_WRAP Subdiv2D(Rect rect);
-
-    /** @brief Creates a new empty Delaunay subdivision
-
-    @param rect Rectangle that includes all of the 2D points that are to be added to the subdivision.
-
-     */
-    CV_WRAP void initDelaunay(Rect rect);
+    /** Resets the current object to the empty state. */
+    CV_WRAP void reset();
 
     /** @brief Insert a single point into a Delaunay triangulation.
 
@@ -1032,10 +1015,7 @@ public:
     -  The point falls onto the edge. The function returns #PTLOC_ON_EDGE and edge will contain this edge.
     -  The point coincides with one of the subdivision vertices. The function returns #PTLOC_VERTEX and
        vertex will contain a pointer to the vertex.
-    -  The point is outside the subdivision reference rectangle. The function returns #PTLOC_OUTSIDE_RECT
-       and no pointers are filled.
-    -  One of input arguments is invalid. A runtime error is raised or, if silent or "parent" error
-       processing mode is selected, #PTLOC_ERROR is returned.
+    -  The point is outside of every facet. The function returns #PTLOC_OUTSIDE and no pointers are filled.
      */
     CV_WRAP int locate(Point2f pt, CV_OUT int& edge, CV_OUT int& vertex);
 
@@ -1169,7 +1149,11 @@ protected:
     void splice( int edgeA, int edgeB );
     int connectEdges( int edgeA, int edgeB );
     void swapEdges( int edge );
-    int isRightOf(Point2f pt, int edge) const;
+    int counterClockwiseInternal(int i, int j, int k) const;
+    int inCircleInternal(int i, int j, int k, int l) const;
+    int rightOfInternal(int k, int i, int j) const;
+    int rightOfInternal(Point2f c, int i, int j) const;
+    int locateInternal(Point2f pt, int& edge, int& vertex);
     void calcVoronoi();
     void clearVoronoi();
     void checkSubdiv() const;
@@ -1205,17 +1189,6 @@ protected:
     bool validGeometry;
 
     int recentEdge;
-    //! Top left corner of the bounding rect
-    Point2f topLeft;
-    //! Bottom right corner of the bounding rect
-    Point2f bottomRight;
-
-private:
-    int counterClockwiseEx(int i, int j, int k) const;
-    int inCircleEx(int i, int j, int k, int l) const;
-    int rightOfEx(int k, int i, int j) const;
-    int rightOfEx(Point2f c, int i, int j) const;
-    void calcVoronoiEx();
 };
 
 //! @} imgproc_subdiv2d
