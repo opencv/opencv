@@ -129,26 +129,23 @@ bool Subdiv2D::QuadEdge::isfree() const
 }
 
 Subdiv2D::Vertex::Vertex()
-{
-    firstEdge = 0;
-    type = -1;
-}
+        : type(PTTYPE_FREE), firstEdge(0) { }
 
-Subdiv2D::Vertex::Vertex(Point2f _pt, bool _isvirtual, int _firstEdge)
-{
-    firstEdge = _firstEdge;
-    type = (int)_isvirtual;
-    pt = _pt;
-}
+Subdiv2D::Vertex::Vertex(Point2f pt, int type, int firstEdge)
+        : pt(pt), type(type), firstEdge(firstEdge) { }
 
 bool Subdiv2D::Vertex::isvirtual() const
 {
-    return type > 0;
+    return type == PTTYPE_VIRTUAL || type == PTTYPE_VIRTUAL_META;
 }
 
 bool Subdiv2D::Vertex::isfree() const
 {
-    return type < 0;
+    return type == PTTYPE_FREE;
+}
+
+bool Subdiv2D::Vertex::ismeta() const {
+    return type == PTTYPE_DEFAULT_META || type == PTTYPE_VIRTUAL_META;
 }
 
 void Subdiv2D::splice( int edgeA, int edgeB )
@@ -231,98 +228,78 @@ static int leftOf(Point2f c, Point2f a, Point2f b)
     return counterClockwise(c, a, b);
 }
 
-// the "meta point" predicate
-#undef MP
-#define MP(i) ((i) == 1 || (i) == 2 || (i) == 3)
-
-int Subdiv2D::counterClockwiseInternal(int i, int j, int k) const
+int Subdiv2D::counterClockwiseInternal(const Vertex &a, const Vertex &b, const Vertex &c) const
 {
-    if (MP(i) && MP(j) && MP(k)) {
-        return counterClockwise(vtx[i].pt, vtx[j].pt, vtx[k].pt);
+    const static Vertex o(Point2f(0.f, 0.f), PTTYPE_FREE);
+
+    if (a.ismeta() && b.ismeta() && c.ismeta()) {
+        return counterClockwise(a.pt, b.pt, c.pt);
     }
 
-    if (MP(i) && MP(j) && !MP(k)) {
-        return counterClockwise(vtx[i].pt, vtx[j].pt, vtx[0].pt);
+    if (a.ismeta() && b.ismeta() && !c.ismeta()) {
+        return counterClockwise(a.pt, b.pt, o.pt);
     }
 
-    if (!MP(i) && !MP(j) && MP(k)) {
-        return !parallel(vtx[j].pt - vtx[i].pt, vtx[k].pt) ?
-                counterClockwise(vtx[0].pt, vtx[j].pt - vtx[i].pt, vtx[k].pt) :
-                counterClockwise(vtx[i].pt, vtx[j].pt, vtx[0].pt);
+    if (!a.ismeta() && !b.ismeta() && c.ismeta()) {
+        return !parallel(b.pt - a.pt, c.pt) ?
+                counterClockwise(o.pt, b.pt - a.pt, c.pt) : counterClockwise(a.pt, b.pt, o.pt);
     }
 
-    if (!MP(i) && !MP(j) && !MP(k)) {
-        return counterClockwise(vtx[i].pt, vtx[j].pt, vtx[k].pt);
+    if (!a.ismeta() && !b.ismeta() && !c.ismeta()) {
+        return counterClockwise(a.pt, b.pt, c.pt);
     }
 
-    return counterClockwiseInternal(j, k, i);
+    return counterClockwiseInternal(b, c, a);
 }
 
-int Subdiv2D::inCircleInternal(int i, int j, int k, int l) const
+int Subdiv2D::inCircleInternal(const Vertex &a, const Vertex &b, const Vertex &c, const Vertex &d) const
 {
-    if (MP(i) && MP(j) && MP(k) && !MP(l)) {
-        return counterClockwiseInternal(i, j, k);
+    const static Vertex o(Point2f(0.f, 0.f), PTTYPE_FREE);
+
+    if (a.ismeta() && b.ismeta() && c.ismeta() && !d.ismeta()) {
+        return counterClockwiseInternal(a, b, c);
     }
 
-    if (MP(i) && !MP(j) && MP(k) && !MP(l)) {
-        if (!parallel(vtx[l].pt - vtx[j].pt, vtx[k].pt - vtx[i].pt)) {
-            return leftOf(vtx[l].pt - vtx[j].pt, vtx[0].pt, vtx[k].pt - vtx[i].pt);
+    if (a.ismeta() && !b.ismeta() && c.ismeta() && !d.ismeta()) {
+        if (!parallel(d.pt - b.pt, c.pt - a.pt)) {
+            return leftOf(d.pt - b.pt, o.pt, c.pt - a.pt);
         } else {
-            double dl = distance(vtx[0].pt, vtx[l].pt);
-            double dj = distance(vtx[0].pt, vtx[j].pt);
+            double dl = distance(o.pt, d.pt);
+            double dj = distance(o.pt, b.pt);
 
             if (abs(dl - dj) < FLT_EPSILON) {
                 return 0;
             } else {
-                return  (dl < dj && counterClockwiseInternal(i, j, k) > 0) ||
-                        (dl > dj && counterClockwiseInternal(i, j, k) < 0) ? 1 : -1;
+                return  (dl < dj && counterClockwiseInternal(a, b, c) > 0) ||
+                        (dl > dj && counterClockwiseInternal(a, b, c) < 0) ? 1 : -1;
             }
         }
     }
 
-    if (MP(i) && MP(j) && !MP(k) && !MP(l)) {
-        return -inCircleInternal(i, k, j, l);
+    if (a.ismeta() && b.ismeta() && !c.ismeta() && !d.ismeta()) {
+        return -inCircleInternal(a, c, b, d);
     }
 
-    if (!MP(i) && !MP(j) && !MP(k) && MP(l)) {
-        if (!parallel(vtx[j].pt - vtx[i].pt, vtx[k].pt - vtx[i].pt)) {
-            return -counterClockwise(vtx[i].pt, vtx[j].pt, vtx[k].pt);
+    if (!a.ismeta() && !b.ismeta() && !c.ismeta() && d.ismeta()) {
+        if (!parallel(b.pt - a.pt, c.pt - a.pt)) {
+            return -counterClockwise(a.pt, b.pt, c.pt);
         } else {
-            return !vtx[k].pt.inside(Rect2f(vtx[i].pt, vtx[j].pt)) ?
-                   leftOf(vtx[l].pt, vtx[0].pt, vtx[j].pt - vtx[i].pt) :
-                   leftOf(vtx[l].pt, vtx[0].pt, vtx[k].pt - vtx[j].pt);
+            return !c.pt.inside(Rect2f(a.pt, b.pt)) ?
+                   leftOf(d.pt, o.pt, b.pt - a.pt) :
+                   leftOf(d.pt, o.pt, c.pt - b.pt);
         }
     }
 
-    if (!MP(i) && !MP(j) && !MP(k) && !MP(l)) {
-        return inCircle(vtx[i].pt, vtx[j].pt, vtx[k].pt, vtx[l].pt);
+    if (!a.ismeta() && !b.ismeta() && !c.ismeta() && !d.ismeta()) {
+        return inCircle(a.pt, b.pt, c.pt, d.pt);
     }
 
-    return -inCircleInternal(j, k, l, i);
+    return -inCircleInternal(b, c, d, a);
 }
 
-int Subdiv2D::rightOfInternal(int k, int i, int j) const
+int Subdiv2D::rightOfInternal(const Vertex &c, const Vertex &a, const Vertex &b) const
 {
-    return counterClockwiseInternal(k, j, i);
-}
-
-int Subdiv2D::rightOfInternal(Point2f c, int i, int j) const
-{
-    if (!MP(i) && !MP(j)) {
-        return counterClockwise(c, vtx[j].pt, vtx[i].pt);
-    }
-
-    if (!MP(i) && MP(j)) {
-        return !parallel(c - vtx[i].pt, vtx[j].pt) ?
-               counterClockwise(vtx[0].pt, c - vtx[i].pt, vtx[j].pt) :
-               counterClockwise(vtx[i].pt, c, vtx[0].pt);
-    }
-
-    if (MP(i) && !MP(j)) {
-        return -rightOfInternal(c, j, i);
-    }
-
-    return counterClockwise(vtx[j].pt, vtx[i].pt, vtx[0].pt);
+    return counterClockwiseInternal(c, b, a);
 }
 
 int Subdiv2D::newEdge()
@@ -351,7 +328,7 @@ void Subdiv2D::deleteEdge(int edge)
     freeQEdge = edge;
 }
 
-int Subdiv2D::newPoint(Point2f pt, bool isvirtual, int firstEdge)
+int Subdiv2D::newPoint(Point2f pt, int type, int firstEdge)
 {
     if( freePoint == 0 )
     {
@@ -360,7 +337,7 @@ int Subdiv2D::newPoint(Point2f pt, bool isvirtual, int firstEdge)
     }
     int vidx = freePoint;
     freePoint = vtx[vidx].firstEdge;
-    vtx[vidx] = Vertex(pt, isvirtual, firstEdge);
+    vtx[vidx] = Vertex(pt, type, firstEdge);
 
     return vidx;
 }
@@ -369,24 +346,23 @@ void Subdiv2D::deletePoint(int vidx)
 {
     CV_DbgAssert( (size_t)vidx < vtx.size() );
     vtx[vidx].firstEdge = freePoint;
-    vtx[vidx].type = -1;
+    vtx[vidx].type = PTTYPE_FREE;
     freePoint = vidx;
 }
 
-int Subdiv2D::locateInternal(Point2f pt, int& _edge, int& _vertex)
-{
+int Subdiv2D::locateInternal(Point2f pt, int& _edge, int& _vertex) {
     CV_INSTRUMENT_REGION();
 
     int edge = recentEdge;
     CV_Assert(edge > 0);
 
     for (;;) {
-        int onext_edge = getEdge( edge, NEXT_AROUND_ORG );
-        int dprev_edge = getEdge( edge, PREV_AROUND_DST );
+        int onext_edge = getEdge(edge, NEXT_AROUND_ORG);
+        int dprev_edge = getEdge(edge, PREV_AROUND_DST);
 
-        int right_of_curr  = rightOfInternal( pt, edgeOrg(edge), edgeDst(edge) );
-        int right_of_onext = rightOfInternal( pt, edgeOrg(onext_edge), edgeDst(onext_edge) );
-        int right_of_dprev = rightOfInternal( pt, edgeOrg(dprev_edge), edgeDst(dprev_edge) );
+        int right_of_curr = rightOfInternal(pt, edgeOrg(edge), edgeDst(edge));
+        int right_of_onext = rightOfInternal(pt, edgeOrg(onext_edge), edgeDst(onext_edge));
+        int right_of_dprev = rightOfInternal(pt, edgeOrg(dprev_edge), edgeDst(dprev_edge));
 
         if (right_of_curr == 0 && (right_of_onext == 0 || right_of_dprev == 0)) {
             recentEdge = edge;
@@ -396,14 +372,15 @@ int Subdiv2D::locateInternal(Point2f pt, int& _edge, int& _vertex)
             return PTLOC_VERTEX;
         }
         else if (right_of_curr > 0) {
-            edge = symEdge( edge );
+            edge = symEdge(edge);
         }
         else if (right_of_onext <= 0) {
             edge = onext_edge;
         }
         else if (right_of_dprev <= 0) {
             edge = dprev_edge;
-        } else {
+        }
+        else {
             recentEdge = edge;
 
             _vertex = 0;
@@ -518,9 +495,9 @@ void Subdiv2D::reset()
     freeQEdge = 0;
     freePoint = 0;
 
-    int pA = newPoint(ppA, false);
-    int pB = newPoint(ppB, false);
-    int pC = newPoint(ppC, false);
+    int pA = newPoint(ppA, PTTYPE_META);
+    int pB = newPoint(ppB, PTTYPE_META);
+    int pC = newPoint(ppC, PTTYPE_META);
 
     int edge_AB = newEdge();
     int edge_BC = newEdge();
@@ -617,56 +594,49 @@ int Subdiv2D::findNearest(Point2f pt, Point2f* nearestPt)
 {
     CV_INSTRUMENT_REGION();
 
-    if( !validGeometry )
+    if (!validGeometry) {
         calcVoronoi();
+    }
 
-    int vertex = 0, edge = 0;
-    int loc = locate( pt, edge, vertex );
-
-    if( loc != PTLOC_EDGE && loc != PTLOC_INSIDE )
+    int edge, vertex;
+    if (locateInternal(pt, edge, vertex) == PTLOC_VERTEX) {
         return vertex;
-
-    vertex = 0;
-
-    int start = edgeOrg(edge);
+    }
 
     edge = rotateEdge(edge, 1);
 
-    int i, total = (int)vtx.size();
+    for (int i = 0; i < (int)vtx.size(); ++i) {
+        int site = edgeOrg(rotateEdge( edge, 3));
 
-    for( i = 0; i < total; i++ )
-    {
-
-        for(;;)
-        {
+        for(;;) {
             CV_Assert( edgeDst( edge ) > 0 );
-            if( rightOfInternal( pt, start, edgeDst(edge) ) >= 0 )
+
+            if (rightOfInternal( pt, site, edgeDst(edge) ) >= 0)
                 break;
 
             edge = getEdge( edge, NEXT_AROUND_LEFT );
         }
 
-        for(;;)
-        {
+        for(;;) {
             CV_Assert( edgeOrg( edge ) > 0 );
 
-            if( rightOfInternal( pt, start, edgeOrg(edge) ) < 0 )
+            if ( rightOfInternal( pt, site, edgeOrg(edge) ) <= 0)
                 break;
 
             edge = getEdge( edge, PREV_AROUND_LEFT );
         }
 
-        if( rightOfInternal( pt, edgeDst(edge), edgeOrg(edge) ) >= 0 )
-        {
-            vertex = edgeOrg(rotateEdge( edge, 3 ));
+        if (rightOfInternal( pt, edgeOrg(edge), edgeDst(edge) ) <= 0) {
+            vertex = edgeOrg(rotateEdge(edge, 3 ));
             break;
         }
 
-        edge = symEdge( edge );
+        edge = symEdge(edge);
     }
 
-    if( nearestPt && vertex > 0 )
+    if (nearestPt) {
         *nearestPt = vtx[vertex].pt;
+    }
 
     return vertex;
 }

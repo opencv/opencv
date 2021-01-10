@@ -1141,29 +1141,21 @@ public:
     CV_WRAP int edgeDst(int edge, CV_OUT Point2f* dstpt = 0) const;
 
 protected:
-    int newEdge();
-    void deleteEdge(int edge);
-    int newPoint(Point2f pt, bool isvirtual, int firstEdge = 0);
-    void deletePoint(int vtx);
-    void setEdgePoints( int edge, int orgPt, int dstPt );
-    void splice( int edgeA, int edgeB );
-    int connectEdges( int edgeA, int edgeB );
-    void swapEdges( int edge );
-    int counterClockwiseInternal(int i, int j, int k) const;
-    int inCircleInternal(int i, int j, int k, int l) const;
-    int rightOfInternal(int k, int i, int j) const;
-    int rightOfInternal(Point2f c, int i, int j) const;
-    int locateInternal(Point2f pt, int& edge, int& vertex);
-    void calcVoronoi();
-    void clearVoronoi();
-    void checkSubdiv() const;
+    enum {
+        PTTYPE_FREE = 0,
+        PTTYPE_DEFAULT = 1,
+        PTTYPE_DEFAULT_META = 2,
+        PTTYPE_VIRTUAL = 3,
+        PTTYPE_VIRTUAL_META = 4
+    };
 
     struct CV_EXPORTS Vertex
     {
         Vertex();
-        Vertex(Point2f pt, bool _isvirtual, int _firstEdge=0);
+        Vertex(Point2f pt, int type = PTTYPE_FREE, int firstEdge = 0);
         bool isvirtual() const;
         bool isfree() const;
+        bool ismeta() const;
 
         int firstEdge;
         int type;
@@ -1179,6 +1171,22 @@ protected:
         int next[4];
         int pt[4];
     };
+
+    int newEdge();
+    void deleteEdge(int edge);
+    int newPoint(Point2f pt, int type, int firstEdge = 0);
+    void deletePoint(int vtx);
+    void setEdgePoints( int edge, int orgPt, int dstPt );
+    void splice( int edgeA, int edgeB );
+    int connectEdges( int edgeA, int edgeB );
+    void swapEdges( int edge );
+    int counterClockwiseInternal(const Vertex &a, const Vertex &b, const Vertex &c) const;
+    int inCircleInternal(const Vertex &a, const Vertex &b, const Vertex &c, const Vertex &d) const;
+    int rightOfInternal(const Vertex &c, const Vertex &a, const Vertex &b) const;
+    int locateInternal(Point2f pt, int& edge, int& vertex);
+    void calcVoronoi();
+    void clearVoronoi();
+    void checkSubdiv() const;
 
     //! All of the vertices
     std::vector<Vertex> vtx;
