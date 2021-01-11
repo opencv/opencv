@@ -29,21 +29,56 @@ std::vector<cv::gapi::GBackend> cv::gapi::GNetPackage::backends() const {
 // FIXME: Inference API is currently only available in full mode
 #if !defined(GAPI_STANDALONE)
 
+struct cv::GInferInputs::Priv
+{
+    std::unordered_map<std::string, InferInput> in_blobs;
+};
+
 cv::GInferInputs::GInferInputs()
-    : in_blobs(std::make_shared<Map>())
+    : m_priv(std::make_shared<cv::GInferInputs::Priv>())
 {
 }
 
-cv::GMat& cv::GInferInputs::operator[](const std::string& name) {
-    return (*in_blobs)[name];
+cv::GInferInputs::InferInput& cv::GInferInputs::operator[](const std::string& name) {
+    return m_priv->in_blobs[name];
 }
 
 const cv::GInferInputs::Map& cv::GInferInputs::getBlobs() const {
-    return *in_blobs;
+    return m_priv->in_blobs;
 }
 
 void cv::GInferInputs::setInput(const std::string& name, const cv::GMat& value) {
-    in_blobs->emplace(name, value);
+    m_priv->in_blobs.emplace(name, value);
+}
+
+void cv::GInferInputs::setInput(const std::string& name, const cv::GFrame& value) {
+    m_priv->in_blobs.emplace(name, value);
+}
+
+struct cv::GInferListInputs::Priv
+{
+    std::unordered_map<std::string, InferInput> in_blobs;
+};
+
+cv::GInferListInputs::GInferListInputs()
+    : m_priv(std::make_shared<cv::GInferListInputs::Priv>())
+{
+}
+
+cv::GInferListInputs::InferInput& cv::GInferListInputs::operator[](const std::string& name) {
+    return m_priv->in_blobs[name];
+}
+
+const cv::GInferListInputs::Map& cv::GInferListInputs::getBlobs() const {
+    return m_priv->in_blobs;
+}
+
+void cv::GInferListInputs::setInput(const std::string& name, const cv::GArray<cv::GMat>& value) {
+    m_priv->in_blobs.emplace(name, value);
+}
+
+void cv::GInferListInputs::setInput(const std::string& name, const cv::GArray<cv::Rect>& value) {
+    m_priv->in_blobs.emplace(name, value);
 }
 
 struct cv::GInferOutputs::Priv
@@ -80,4 +115,39 @@ cv::GMat cv::GInferOutputs::at(const std::string& name)
     }
     return it->second;
 }
+
+struct cv::GInferListOutputs::Priv
+{
+    Priv(std::shared_ptr<cv::GCall>);
+
+    std::shared_ptr<cv::GCall> call;
+    InOutInfo* info = nullptr;
+    std::unordered_map<std::string, cv::GArray<cv::GMat>> out_blobs;
+};
+
+cv::GInferListOutputs::Priv::Priv(std::shared_ptr<cv::GCall> c)
+    : call(std::move(c)), info(cv::util::any_cast<InOutInfo>(&call->params()))
+{
+}
+
+cv::GInferListOutputs::GInferListOutputs(std::shared_ptr<cv::GCall> call)
+    : m_priv(std::make_shared<cv::GInferListOutputs::Priv>(std::move(call)))
+{
+}
+
+cv::GArray<cv::GMat> cv::GInferListOutputs::at(const std::string& name)
+{
+    auto it = m_priv->out_blobs.find(name);
+    if (it == m_priv->out_blobs.end()) {
+        // FIXME: Avoid modifying GKernel
+        // Expect output to be always GMat
+        m_priv->call->kernel().outShapes.push_back(cv::GShape::GARRAY);
+        m_priv->call->kernel().outCtors.emplace_back(cv::detail::GObtainCtor<cv::GArray<cv::GMat>>::get());
+        int out_idx = static_cast<int>(m_priv->out_blobs.size());
+        it = m_priv->out_blobs.emplace(name, m_priv->call->yieldArray<cv::GMat>(out_idx)).first;
+        m_priv->info->out_names.push_back(name);
+    }
+    return it->second;
+}
+
 #endif // GAPI_STANDALONE
