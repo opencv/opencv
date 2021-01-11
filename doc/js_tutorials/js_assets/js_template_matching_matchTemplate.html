@@ -74,7 +74,8 @@ let utils = new Utils('errorMessage');
 utils.loadCode('codeSnippet', 'codeEditor');
 utils.loadImageToCanvas('lena.jpg', 'imageCanvasInput');
 utils.loadImageToCanvas('lenaFace.png', 'templateCanvasInput');
-utils.addFileInputHandler('fileInput', 'canvasInput');
+utils.addFileInputHandler('fileInput', 'imageCanvasInput');
+utils.addFileInputHandler('templateFileInput', 'templateCanvasInput');
 
 let tryIt = document.getElementById('tryIt');
 tryIt.addEventListener('click', () => {
