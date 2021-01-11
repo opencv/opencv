@@ -1506,11 +1506,11 @@ CV_EXPORTS_W bool checkChessboard(InputArray img, Size size);
 ( patternSize = cv::Size(points_per_row,points_per_colum) = cv::Size(columns,rows) ).
 @param corners Output array of detected corners.
 @param flags Various operation flags that can be zero or a combination of the following values:
--   **CALIB_CB_NORMALIZE_IMAGE** Normalize the image gamma with equalizeHist before detection.
--   **CALIB_CB_EXHAUSTIVE** Run an exhaustive search to improve detection rate.
--   **CALIB_CB_ACCURACY** Up sample input image to improve sub-pixel accuracy due to aliasing effects.
--   **CALIB_CB_LARGER** The detected pattern is allowed to be larger than patternSize (see description).
--   **CALIB_CB_MARKER** The detected pattern must have a marker (see description).
+-   @ref CALIB_CB_NORMALIZE_IMAGE Normalize the image gamma with equalizeHist before detection.
+-   @ref CALIB_CB_EXHAUSTIVE Run an exhaustive search to improve detection rate.
+-   @ref CALIB_CB_ACCURACY Up sample input image to improve sub-pixel accuracy due to aliasing effects.
+-   @ref CALIB_CB_LARGER The detected pattern is allowed to be larger than patternSize (see description).
+-   @ref CALIB_CB_MARKER The detected pattern must have a marker (see description).
 This should be used if an accurate camera calibration is required.
 @param meta Optional output arrray of detected corners (CV_8UC1 and size = cv::Size(columns,rows)).
 Each entry stands for one corner of the pattern and can have one of the following values:
@@ -1529,7 +1529,7 @@ Calibration" demonstrating that the returned sub-pixel positions are more
 accurate than the one returned by cornerSubPix allowing a precise camera
 calibration for demanding applications.
 
-In the case, the flags **CALIB_CB_LARGER** or **CALIB_CB_MARKER** are given,
+In the case, the flags @ref CALIB_CB_LARGER or @ref CALIB_CB_MARKER are given,
 the result can be recovered from the optional meta array. Both flags are
 helpful to use calibration patterns exceeding the field of view of the camera.
 These oversized patterns allow more accurate calibrations as corners can be
@@ -2763,8 +2763,8 @@ of 4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion 
 \f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6[, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$
 of 4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion coefficients are assumed.
 @param method Method for computing an essential matrix.
--   **RANSAC** for the RANSAC algorithm.
--   **LMEDS** for the LMedS algorithm.
+-   @ref RANSAC for the RANSAC algorithm.
+-   @ref LMEDS for the LMedS algorithm.
 @param prob Parameter used for the RANSAC or LMedS methods only. It specifies a desirable level of
 confidence (probability) that the estimated matrix is correct.
 @param threshold Parameter used for RANSAC. It is the maximum distance from a point to an epipolar

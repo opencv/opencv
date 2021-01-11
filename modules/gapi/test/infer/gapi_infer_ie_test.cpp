@@ -234,11 +234,8 @@ struct ROIList: public ::testing::Test {
 
     void SetUp() {
         initDLDTDataPath();
-        //params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-        //params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
-        //params.device_id = "CPU";
-        params.model_path = "/home/atalaman/workspace/opencv_extra/testdata/dnn/omz_intel_models/intel/age-gender-recognition-retail-0013/FP32/age-gender-recognition-retail-0013.xml";
-        params.weights_path = "/home/atalaman/workspace/opencv_extra/testdata/dnn/omz_intel_models/intel/age-gender-recognition-retail-0013/FP32/age-gender-recognition-retail-0013.bin";
+        params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
+        params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
         params.device_id = "CPU";
 
         // FIXME: it must be cv::imread(findDataFile("../dnn/grace_hopper_227.png", false));
@@ -310,11 +307,8 @@ struct ROIListNV12: public ::testing::Test {
 
     void SetUp() {
         initDLDTDataPath();
-        //params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-        //params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
-        //params.device_id = "CPU";
-        params.model_path = "/home/atalaman/workspace/opencv_extra/testdata/dnn/omz_intel_models/intel/age-gender-recognition-retail-0013/FP32/age-gender-recognition-retail-0013.xml";
-        params.weights_path = "/home/atalaman/workspace/opencv_extra/testdata/dnn/omz_intel_models/intel/age-gender-recognition-retail-0013/FP32/age-gender-recognition-retail-0013.bin";
+        params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
+        params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
         params.device_id = "CPU";
 
         cv::Size sz{320, 240};
@@ -384,11 +378,8 @@ struct SingleROI: public ::testing::Test {
 
     void SetUp() {
         initDLDTDataPath();
-        //params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-        //params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
-        //params.device_id = "CPU";
-        params.model_path = "/home/atalaman/workspace/opencv_extra/testdata/dnn/omz_intel_models/intel/age-gender-recognition-retail-0013/FP32/age-gender-recognition-retail-0013.xml";
-        params.weights_path = "/home/atalaman/workspace/opencv_extra/testdata/dnn/omz_intel_models/intel/age-gender-recognition-retail-0013/FP32/age-gender-recognition-retail-0013.bin";
+        params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
+        params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
         params.device_id = "CPU";
 
         // FIXME: it must be cv::imread(findDataFile("../dnn/grace_hopper_227.png", false));
@@ -446,11 +437,8 @@ struct SingleROINV12: public ::testing::Test {
 
     void SetUp() {
         initDLDTDataPath();
-        //params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-        //params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
-        //params.device_id = "CPU";
-        params.model_path = "/home/atalaman/workspace/opencv_extra/testdata/dnn/omz_intel_models/intel/age-gender-recognition-retail-0013/FP32/age-gender-recognition-retail-0013.xml";
-        params.weights_path = "/home/atalaman/workspace/opencv_extra/testdata/dnn/omz_intel_models/intel/age-gender-recognition-retail-0013/FP32/age-gender-recognition-retail-0013.bin";
+        params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
+        params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
         params.device_id = "CPU";
 
         cv::Size sz{320, 240};
