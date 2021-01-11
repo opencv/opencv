@@ -244,7 +244,7 @@ There are some conditions of samples:
 
 - orange (warnings)
 
-  Your code has warnings. You need to click on the number of build and find the orange line in this page. There are two types of buildbot logs: `stdio` and `other like warnings, tests and ets`. `stdio` type show you all build logs. `other` show you only useful logs. 
+  Your code has warnings. You need to click on the number of build and find the orange line in this page. There are two types of buildbot logs: `stdio` and `other like warnings, tests and ets`. `stdio` type show you all build logs. `other` show you only useful logs.
 
   For example: `warning` logs show only warning logs.
 
@@ -265,10 +265,3 @@ There are some conditions of samples:
 - blue (scheduled)
 
   Building your project is scheduled.
-
-
-
-
-
-
-
