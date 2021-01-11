@@ -14,3 +14,4 @@ OpenCV Tutorials {#tutorial_root}
 @cond CUDA_MODULES
 - @subpage tutorial_table_of_content_gpu - utilizing power of video card to run CV algorithms
 @endcond
+- [@subpage](https://vk.com/subpage) tutorial_table_of_content_test - test writing
