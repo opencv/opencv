@@ -10,7 +10,7 @@ OpenCV Tutorials {#tutorial_root}
 - @subpage tutorial_table_of_content_dnn - infer neural networks using built-in _dnn_ module
 - @subpage tutorial_table_of_content_gapi - graph-based approach to computer vision algorithms building
 - @subpage tutorial_table_of_content_other - other modules (ml, objdetect, stitching, video, photo)
-- [@subpage](https://vk.com/subpage) tutorial_table_of_content_test - test writing
+- @subpage tutorial_table_of_content_test - test writing
 - @subpage tutorial_table_of_content_ios - running OpenCV on an iDevice
 @cond CUDA_MODULES
 - @subpage tutorial_table_of_content_gpu - utilizing power of video card to run CV algorithms
