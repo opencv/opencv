@@ -24,7 +24,7 @@ All modules have their own dir for accuracy tests: `opencv_contrib/modules/(modu
 // name of this case is "name1.name2"
 TEST(name1, name2)
 {
-	ASSERT_....;
+    ASSERT_....;
 }
 ```
 
@@ -70,9 +70,9 @@ CV_TEST_MAIN("<FOLDER_NAME_IN_TESTDATA>")
 // test_sum.cpp
 
 #include "test_precomp.hpp"
-	
+
 namespace opencv_test { namespace {
-    
+
     TEST(SUM, int)
     {
         int a=1;
@@ -88,7 +88,7 @@ namespace opencv_test { namespace {
         float res=a+b;
         ASSERT_EQ(res, 0.3f)
     }
-    
+
 }} // namespace
 ```
 
@@ -101,7 +101,7 @@ namespace opencv_test { namespace {
 #include "test_precomp.hpp"
 
 namespace opencv_test { namespace {
-    
+
     TEST(SUB, int)
     {
         int a=2;
@@ -117,7 +117,7 @@ namespace opencv_test { namespace {
         float res=a-b;
         ASSERT_EQ(res, 0.1f)
     }
-    
+
 }} // namespace
 ```
 
@@ -154,7 +154,7 @@ Before working with data you need to set environment variable `OPENCV_TEST_DATA_
 - (Visual Studio)
   1.  Go to Project -> Properties -> Debugging -> Environment
   2. Set the Environment as `OPENCV_TEST_DATA_PATH=<PATH_TO_opencv_extra>/testdata`
-- (Linux) 
+- (Linux)
 
 
 
@@ -176,9 +176,9 @@ This KEY is the logical expression, which help to find needful tests names.
 
 ​	**Examples:** (*smth* - any variation of symbols.)
 
-​	`--gtest_filter=smth*<key_word>` 
+​	`--gtest_filter=smth*<key_word>`
 
-​	`--gtest_filter=smth*<key_word>*smth`  
+​	`--gtest_filter=smth*<key_word>*smth`
 
 ​	`--gtest_filter=<key_word>*smth`
 
@@ -197,12 +197,12 @@ Tests names:
 - TEST_sub.int
 - TEST_sub.float
 
-Logical keys: 
+Logical keys:
 
 1. \*sum.\*
 2. TEST_sum.i\*
 3. \*sum.float
-4. TEST_sum.i\*:\TEST_sub.\*
+4. TEST_sum.i\*:TEST_sub.\*
 
 Results:
 
@@ -217,7 +217,7 @@ Results:
 
 Usage: `--gtest_params_filter=(<PARAM1>, <PARAM1>, ...)`
 
-This sentence helps to pass extra parameters to functions. 
+This sentence helps to pass extra parameters to functions.
 
 For a getting the parameters you need to use `get<i>(GetParam())` or `GET_PARAM(i)`, where **i**
 
@@ -227,7 +227,7 @@ is the index of the parameter.
 
 # BuildBot
 
-OpenCV's continuous integration system is available here: 
+OpenCV's continuous integration system is available here:
 
 - [http://pullrequest.opencv.org](http://pullrequest.opencv.org/)
 - [http://pullrequest.opencv.org/contrib](https://pullrequest.opencv.org/#/summary/contrib)
@@ -238,7 +238,7 @@ The BuildBot page looks like a grid where rows are the `pull requests` and colum
 
 There are some conditions of samples:
 
-- green (success) 
+- green (success)
 
   It means that your code was successful build, all tests passed and you code style is right
 
