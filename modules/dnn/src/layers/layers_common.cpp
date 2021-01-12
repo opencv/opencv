@@ -122,7 +122,7 @@ void getStrideAndPadding(const LayerParams &params, std::vector<size_t>& pads_be
     }
     else {
         util::getParameter(params, "pad", "pad", pads_begin, true, std::vector<size_t>(kernel_size, 0));
-        if (pads_begin.size() <= kernel_size)
+        if (pads_begin.size() < 4)
             pads_end = pads_begin;
         else
         {

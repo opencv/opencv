@@ -220,36 +220,6 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                 params.type = csl::Pooling<T>::PoolingType::AVERAGE_EXCLUDE_PADDING;
             }
 
-            if (rank == 3)
-            {
-                // Pool1D
-                // We add extra dim for input tensor, because CuDNN support pooling only with 2 and 3 spatial dimensions
-                std::size_t input_width = params.input_shape.back();
-                params.input_shape.pop_back();
-                params.input_shape.push_back(1);
-                params.input_shape.push_back(input_width);
-
-                // Do similar thing for the other parameters
-                std::size_t padding_width = params.padding.back();
-                params.padding.pop_back();
-                params.padding.push_back(0);
-                params.padding.push_back(padding_width);
-
-                std::size_t stride_width = params.stride.back();
-                params.stride.pop_back();
-                params.stride.push_back(1);
-                params.stride.push_back(stride_width);
-
-                std::size_t window_width = params.window_size.back();
-                params.window_size.pop_back();
-                params.window_size.push_back(1);
-                params.window_size.push_back(window_width);
-
-                std::size_t output_width = params.output_shape.back();
-                params.output_shape.pop_back();
-                params.output_shape.push_back(1);
-                params.output_shape.push_back(output_width);
-            }
             pooler = csl::Pooling<T>(cudnnHandle, params);
         }
 

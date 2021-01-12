@@ -272,36 +272,6 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                 }
             }
 
-            if (rank == 3)
-            {
-                // Conv1D
-                // We add extra dim for input tensor, because CuDNN doesn't support convolution with 3D tensors
-                std::size_t input_width = params.input_shape.back();
-                params.input_shape.pop_back();
-                params.input_shape.push_back(1);
-                params.input_shape.push_back(input_width);
-
-                // Do similar thing for the other parameters
-                std::size_t padding_width = params.padding.back();
-                params.padding.pop_back();
-                params.padding.push_back(0);
-                params.padding.push_back(padding_width);
-
-                std::size_t stride_width = params.stride.back();
-                params.stride.pop_back();
-                params.stride.push_back(1);
-                params.stride.push_back(stride_width);
-
-                std::size_t dilation_width = params.dilation.back();
-                params.dilation.pop_back();
-                params.dilation.push_back(1);
-                params.dilation.push_back(dilation_width);
-
-                std::size_t filter_width = params.filter_shape.back();
-                params.filter_shape.pop_back();
-                params.filter_shape.push_back(1);
-                params.filter_shape.push_back(filter_width);
-            }
             convoluter = csl::Convolution<T>(cudnnHandle, params);
 
             csl::WorkspaceBuilder builder;
