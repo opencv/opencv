@@ -367,7 +367,6 @@ public:
     GpuMatND();
 
     /** @overload
-
     @param _size Array of integers specifying an n-dimensional array shape.
     @param _type Array type. Use CV_8UC1, ..., CV_16FC4 to create 1-4 channel matrices, or
     CV_8UC(n), ..., CV_64FC(n) to create multi-channel (up to CV_CN_MAX channels) matrices.
@@ -375,7 +374,6 @@ public:
     GpuMatND(SizeArray _size, int _type);
 
     /** @overload
-
     @param _size Array of integers specifying an n-dimensional array shape.
     @param _type Array type. Use CV_8UC1, ..., CV_16FC4 to create 1-4 channel matrices, or
     CV_8UC(n), ..., CV_64FC(n) to create multi-channel (up to CV_CN_MAX channels) matrices.
@@ -396,26 +394,49 @@ public:
     void swap(GpuMatND& m) noexcept;
 
     /** @brief Creates a full copy of the array and the underlying data.
-
     The method creates a full copy of the array. It mimics the behavior of Mat::clone(), i.e.
     the original step is not taken into account. So, the array copy is a continuous array
     occupying total()\*elemSize() bytes.
     */
     GpuMatND clone() const;
+
+    /** @overload
+    */
     GpuMatND clone(Stream& stream) const;
 
-    /** @brief Extracts a submatrix.
-
+    /** @brief Extracts a sub-matrix.
     The operator makes a new header for the specified sub-array of \*this.
     The operator is an O(1) operation, that is, no matrix data is copied.
     @param ranges Array of selected ranges along each dimension.
     */
     GpuMatND operator()(const std::vector<Range>& ranges) const;
 
-    //! creates a GpuMat header for a part of the bigger matrix
+    /** @brief Creates a GpuMat header for a 2D plane part of an n-dim matrix.
+    @note The returned GpuMat is constructed with the constructor for user-allocated data.
+    That is, It does not perform reference counting.
+    @note This function does not increment this GpuMatND's reference counter.
+    */
+    GpuMat createGpuMatHeader(IndexArray idx, Range rowRange, Range colRange) const;
+
+    /** @overload
+    Creates a GpuMat header if this GpuMatND is effectively 2D.
+    @note The returned GpuMat is constructed with the constructor for user-allocated data.
+    That is, It does not perform reference counting.
+    @note This function does not increment this GpuMatND's reference counter.
+    */
+    GpuMat createGpuMatHeader() const;
+
+    /** @brief Extracts a 2D plane part of an n-dim matrix.
+    It differs from createGpuMatHeader(IndexArray, Range, Range) in that it clones a part of this
+    GpuMatND to the returned GpuMat.
+    @note This operator does not increment this GpuMatND's reference counter;
+    */
     GpuMat operator()(IndexArray idx, Range rowRange, Range colRange) const;
 
-    //! creates a GpuMat header if this GpuMatND is effectively 2D
+    /** @brief Extracts a 2D plane part of an n-dim matrix if this GpuMatND is effectively 2D.
+    It differs from createGpuMatHeader() in that it clones a part of this GpuMatND.
+    @note This operator does not increment this GpuMatND's reference counter;
+    */
     operator GpuMat() const;
 
     GpuMatND(const GpuMatND&) = default;

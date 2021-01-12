@@ -39,8 +39,7 @@ GpuMatND GpuMatND::operator()(const std::vector<Range>& ranges) const
     return ret;
 }
 
-
-GpuMat GpuMatND::operator()(IndexArray idx, Range rowRange, Range colRange) const
+GpuMat GpuMatND::createGpuMatHeader(IndexArray idx, Range rowRange, Range colRange) const
 {
     CV_Assert((int)idx.size() == dims - 2);
 
@@ -50,10 +49,10 @@ GpuMat GpuMatND::operator()(IndexArray idx, Range rowRange, Range colRange) cons
     ranges.push_back(rowRange);
     ranges.push_back(colRange);
 
-    return (*this)(ranges);
+    return (*this)(ranges).createGpuMatHeader();
 }
 
-GpuMatND::operator GpuMat() const
+GpuMat GpuMatND::createGpuMatHeader() const
 {
     auto Effectively2D = [](GpuMatND m)
     {
@@ -65,6 +64,16 @@ GpuMatND::operator GpuMat() const
     CV_Assert(Effectively2D(*this));
 
     return GpuMat(size[dims-2], size[dims-1], type(), data, step[dims-2]);
+}
+
+GpuMat GpuMatND::operator()(IndexArray idx, Range rowRange, Range colRange) const
+{
+    return createGpuMatHeader(idx, rowRange, colRange).clone();
+}
+
+GpuMatND::operator GpuMat() const
+{
+    return createGpuMatHeader().clone();
 }
 
 void GpuMatND::setFields(SizeArray _size, int _type, StepArray _step)
