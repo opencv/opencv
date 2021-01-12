@@ -174,84 +174,90 @@ struct InOutInfo
     std::vector<std::string> out_names;
 };
 
-/**
- * @{
- * @brief G-API object used to collect network outputs
- */
-struct GAPI_EXPORTS_W_SIMPLE GInferOutputs
+template <typename OutT>
+class GInferOutputsTyped
 {
 public:
-    GAPI_WRAP GInferOutputs() = default;
-    GInferOutputs(std::shared_ptr<cv::GCall> call);
-    GAPI_WRAP cv::GMat at(const std::string& name);
+    GInferOutputsTyped() = default;
+    GInferOutputsTyped(std::shared_ptr<cv::GCall> call)
+        : m_priv(std::make_shared<Priv<OutT>>(std::move(call)))
+    {
+    }
 
+    OutT at(const std::string& name)
+    {
+        auto it = m_priv->blobs.find(name);
+        if (it == m_priv->blobs.end()) {
+            // FIXME: Avoid modifying GKernel
+            auto shape = cv::detail::GTypeTraits<OutT>::shape;
+            m_priv->call->kernel().outShapes.push_back(shape);
+            m_priv->call->kernel().outCtors.emplace_back(cv::detail::GObtainCtor<OutT>::get());
+            auto out_idx = static_cast<int>(m_priv->blobs.size());
+            it = m_priv->blobs.emplace(name,
+                    cv::detail::Yield<OutT>::yield(*(m_priv->call), out_idx)).first;
+            m_priv->info->out_names.push_back(name);
+        }
+        return it->second;
+    }
 private:
-    struct Priv;
-    std::shared_ptr<Priv> m_priv;
+    template<typename T>
+    struct Priv
+    {
+        Priv(std::shared_ptr<cv::GCall> c)
+            : call(std::move(c)), info(cv::util::any_cast<InOutInfo>(&call->params()))
+        {
+        }
+
+        std::shared_ptr<cv::GCall> call;
+        InOutInfo* info = nullptr;
+        std::unordered_map<std::string, T> blobs;
+    };
+
+    std::shared_ptr<Priv<OutT>> m_priv;
 };
 
-/**
- * @{
- * @brief G-API object used to collect the list of network outputs
- */
-struct GAPI_EXPORTS GInferListOutputs
+using GInferOutputs     = GInferOutputsTyped<cv::GMat>;
+using GInferListOutputs = GInferOutputsTyped<cv::GArray<cv::GMat>>;
+
+template <typename... Ts>
+class GInferInputsTyped
 {
 public:
-    GInferListOutputs() = default;
-    GInferListOutputs(std::shared_ptr<cv::GCall> call);
-    cv::GArray<cv::GMat> at(const std::string& name);
+    GInferInputsTyped()
+        : m_priv(std::make_shared<Priv<StorageT>>())
+    {
+    }
+
+    template <typename U>
+    void setInput(const std::string& name, U in)
+    {
+        m_priv->blobs.emplace(std::piecewise_construct,
+                              std::forward_as_tuple(name),
+                              std::forward_as_tuple(in));
+    }
+
+    using StorageT = cv::util::variant<Ts...>;
+    StorageT& operator[](const std::string& name) {
+        return m_priv->blobs[name];
+    }
+
+    using Map = std::unordered_map<std::string, StorageT>;
+    const Map& getBlobs() const {
+        return m_priv->blobs;
+    }
 
 private:
-    struct Priv;
-    std::shared_ptr<Priv> m_priv;
+    template<typename T>
+    struct Priv
+    {
+        std::unordered_map<std::string, T> blobs;
+    };
+
+    std::shared_ptr<Priv<StorageT>> m_priv;
 };
-/** @} */
 
-/**
- * @{
- * @brief G-API object used to collect network inputs
- */
-class GAPI_EXPORTS_W_SIMPLE GInferInputs
-{
-public:
-    GAPI_WRAP GInferInputs();
-    GAPI_WRAP void setInput(const std::string& name, const cv::GMat&   value);
-    GAPI_WRAP void setInput(const std::string& name, const cv::GFrame& value);
-
-    using InferInput = cv::util::variant<cv::GMat, cv::GFrame>;
-    InferInput& operator[](const std::string& name);
-
-    using Map = std::unordered_map<std::string, InferInput>;
-    const Map& getBlobs() const;
-
-private:
-    struct Priv;
-    std::shared_ptr<Priv> m_priv;
-};
-/** @} */
-
-/**
- * @{
- * @brief G-API object used to collect network inputs
- */
-class GAPI_EXPORTS GInferListInputs
-{
-public:
-    GInferListInputs();
-    void setInput(const std::string& name, const cv::GArray<cv::GMat>& value);
-    void setInput(const std::string& name, const cv::GArray<cv::Rect>& value);
-
-    using InferInput = cv::util::variant<cv::GArray<cv::GMat>, cv::GArray<cv::Rect>>;
-    InferInput& operator[](const std::string& name);
-
-    using Map = std::unordered_map<std::string, InferInput>;
-    const Map& getBlobs() const;
-
-private:
-    struct Priv;
-    std::shared_ptr<Priv> m_priv;
-};
-/** @} */
+using GInferInputs     = GInferInputsTyped<cv::GMat, cv::GFrame>;
+using GInferListInputs = GInferInputsTyped<cv::GArray<cv::GMat>, cv::GArray<cv::Rect>>;
 
 // Base "InferROI" kernel.
 // All notes from "Infer" kernel apply here as well.
@@ -468,11 +474,11 @@ inline void unpackBlobs(const GInferInputs::Map& blobs,
     for (auto&& p : blobs) {
         names.emplace_back(p.first);
         switch (p.second.index()) {
-            case cv::GInferInputs::InferInput::index_of<cv::GMat>():
+            case cv::GInferInputs::StorageT::index_of<cv::GMat>():
                 args.emplace_back(cv::util::get<cv::GMat>(p.second));
                 kinds.emplace_back(cv::detail::OpaqueKind::CV_MAT);
                 break;
-            case cv::GInferInputs::InferInput::index_of<cv::GFrame>():
+            case cv::GInferInputs::StorageT::index_of<cv::GFrame>():
                 args.emplace_back(cv::util::get<cv::GFrame>(p.second));
                 kinds.emplace_back(cv::detail::OpaqueKind::CV_UNKNOWN);
                 break;
@@ -499,44 +505,56 @@ infer(const std::string& tag, const GInferInputs& inputs)
     return GInferOutputs{std::move(call)};
 }
 
-template<typename T = Generic> GInferOutputs
-infer(const std::string& tag, const cv::GOpaque<cv::Rect>& roi, const GInferInputs& inputs)
+template <typename InferType>
+struct InferROITraits;
+
+template <>
+struct InferROITraits<GInferROIBase>
+{
+    using outType = cv::GInferOutputs;
+    using inType  = cv::GOpaque<cv::Rect>;
+};
+
+template <>
+struct InferROITraits<GInferListBase>
+{
+    using outType = cv::GInferListOutputs;
+    using inType  = cv::GArray<cv::Rect>;
+};
+
+template<typename InferType> 
+typename InferROITraits<InferType>::outType
+inferROI(const std::string& tag,
+         const typename InferROITraits<InferType>::inType& in,
+         const GInferInputs& inputs)
 {
     std::vector<cv::GArg> args;
     std::vector<std::string> names;
     cv::GKinds kinds;
 
-    args.emplace_back(roi);
+    args.emplace_back(in);
     kinds.emplace_back(cv::detail::OpaqueKind::CV_RECT);
 
     unpackBlobs(inputs.getBlobs(), args, names, kinds);
 
-    auto call = makeCall<GInferROIBase>(tag,
-                                        std::move(args),
-                                        std::move(names),
-                                        std::move(kinds));
+    auto call = makeCall<InferType>(tag,
+                                    std::move(args),
+                                    std::move(names),
+                                    std::move(kinds));
 
-    return GInferOutputs{std::move(call)};
+    return {std::move(call)};
+}
+
+template<typename T = Generic> GInferOutputs
+infer(const std::string& tag, const cv::GOpaque<cv::Rect>& roi, const GInferInputs& inputs)
+{
+    return inferROI<GInferROIBase>(tag, roi, inputs);
 }
 
 template<typename T = Generic> GInferListOutputs
 infer(const std::string& tag, const cv::GArray<cv::Rect>& rois, const GInferInputs& inputs)
 {
-    std::vector<cv::GArg> args;
-    std::vector<std::string> names;
-    cv::GKinds kinds;
-
-    args.emplace_back(rois);
-    kinds.emplace_back(cv::detail::OpaqueKind::CV_RECT);
-
-    unpackBlobs(inputs.getBlobs(), args, names, kinds);
-
-    auto call = makeCall<GInferListBase>(tag,
-                                         std::move(args),
-                                         std::move(names),
-                                         std::move(kinds));
-
-    return GInferListOutputs{std::move(call)};
+    return inferROI<GInferListBase>(tag, rois, inputs);
 }
 
 template<typename T = Generic, typename Input>
@@ -556,11 +574,11 @@ infer2(const std::string& tag,
     for (auto&& p : list.getBlobs()) {
         names.emplace_back(p.first);
         switch (p.second.index()) {
-            case cv::GInferListInputs::InferInput::index_of<cv::GArray<cv::GMat>>():
+            case cv::GInferListInputs::StorageT::index_of<cv::GArray<cv::GMat>>():
                 args.emplace_back(cv::util::get<cv::GArray<cv::GMat>>(p.second));
                 kinds.emplace_back(cv::detail::OpaqueKind::CV_MAT);
                 break;
-            case cv::GInferListInputs::InferInput::index_of<cv::GArray<cv::Rect>>():
+            case cv::GInferListInputs::StorageT::index_of<cv::GArray<cv::Rect>>():
                 args.emplace_back(cv::util::get<cv::GArray<cv::Rect>>(p.second));
                 kinds.emplace_back(cv::detail::OpaqueKind::CV_RECT);
                 break;
