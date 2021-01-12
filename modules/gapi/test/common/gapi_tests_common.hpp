@@ -593,6 +593,8 @@ using compare_vec_f = std::function<bool(const cv::Vec<Elem, cn> &a, const cv::V
 template<typename T1, typename T2>
 struct CompareF
 {
+    CompareF() = default;
+
     using callable_t = std::function<bool(const T1& a, const T2& b)>;
     CompareF(callable_t&& cmp, std::string&& cmp_name) :
         _comparator(std::move(cmp)), _name(std::move(cmp_name)) {}
