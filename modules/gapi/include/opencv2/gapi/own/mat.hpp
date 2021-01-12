@@ -209,6 +209,8 @@ namespace cv { namespace gapi { namespace own {
          */
         int depth() const           {return CV_MAT_DEPTH(flags);}
 
+        Size size() const { return Size{rows, cols};}
+
         /** @brief Returns the number of matrix channels.
 
         The method returns the number of matrix channels.

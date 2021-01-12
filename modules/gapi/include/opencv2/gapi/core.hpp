@@ -12,8 +12,6 @@
 
 #include <utility> // std::tuple
 
-#include <opencv2/imgproc.hpp>
-
 #include <opencv2/gapi/gmat.hpp>
 #include <opencv2/gapi/gscalar.hpp>
 #include <opencv2/gapi/gkernel.hpp>
@@ -505,6 +503,8 @@ namespace core {
         }
     };
 
+
+#if !defined(GAPI_STANDALONE)
     G_TYPED_KERNEL(
         GKMeansND,
         <std::tuple<GOpaque<double>,GMat,GMat>(GMat,int,GMat,TermCriteria,int,KmeansFlags)>,
@@ -575,6 +575,8 @@ namespace core {
             return std::make_tuple(empty_gopaque_desc(), empty_array_desc(), empty_array_desc());
         }
     };
+
+#endif //!defined(GAPI_STANDALONE)
 } // namespace core
 
 namespace streaming {
@@ -1392,6 +1394,7 @@ CV_64F.
  */
 GAPI_EXPORTS std::tuple<GMat, GMat> integral(const GMat& src, int sdepth = -1, int sqdepth = -1);
 
+#if !defined(GAPI_STANDALONE)
 /** @brief Applies a fixed-level threshold to each matrix element.
 
 The function applies fixed-level thresholding to a single- or multiple-channel matrix.
@@ -1441,6 +1444,8 @@ Input and output matrices must be CV_8UC1.
 
 @sa threshold
  */
+#endif //!defined(GAPI_STANDALONE)
+
 GAPI_EXPORTS GMat inRange(const GMat& src, const GScalar& threshLow, const GScalar& threshUp);
 
 //! @} gapi_matrixop
@@ -1848,6 +1853,7 @@ GAPI_EXPORTS GMat warpAffine(const GMat& src, const Mat& M, const Size& dsize, i
                              int borderMode = cv::BORDER_CONSTANT, const Scalar& borderValue = Scalar());
 //! @} gapi_transform
 
+#if !defined(GAPI_STANDALONE)
 /** @brief Finds centers of clusters and groups input samples around the clusters.
 
 The function kmeans implements a k-means algorithm that finds the centers of K clusters
@@ -1941,6 +1947,7 @@ Gets dimensions from rectangle.
 */
 GAPI_EXPORTS GOpaque<Size> size(const GOpaque<Rect>& r);
 } //namespace streaming
+#endif //!defined(GAPI_STANDALONE)
 } //namespace gapi
 } //namespace cv
 

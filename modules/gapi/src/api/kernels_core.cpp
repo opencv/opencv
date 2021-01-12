@@ -264,6 +264,7 @@ std::tuple<GMat, GMat> integral(const GMat& src, int sdepth, int sqdepth)
     return core::GIntegral::on(src, sdepth, sqdepth);
 }
 
+#if !defined(GAPI_STANDALONE)
 GMat threshold(const GMat& src, const GScalar& thresh, const GScalar& maxval, int type)
 {
     GAPI_Assert(type != cv::THRESH_TRIANGLE && type != cv::THRESH_OTSU);
@@ -275,6 +276,7 @@ std::tuple<GMat, GScalar> threshold(const GMat& src, const GScalar& maxval, int 
     GAPI_Assert(type == cv::THRESH_TRIANGLE || type == cv::THRESH_OTSU);
     return core::GThresholdOT::on(src, maxval, type);
 }
+#endif //!defined(GAPI_STANDALONE)
 
 GMat inRange(const GMat& src, const GScalar& threshLow, const GScalar& threshUp)
 {
@@ -383,6 +385,7 @@ GMat warpAffine(const GMat& src, const Mat& M, const Size& dsize, int flags,
     return core::GWarpAffine::on(src, M, dsize, flags, borderMode, borderValue);
 }
 
+#if !defined(GAPI_STANDALONE)
 std::tuple<GOpaque<double>,GMat,GMat> kmeans(const GMat& data, const int K, const GMat& bestLabels,
                                              const TermCriteria& criteria, const int attempts,
                                              const KmeansFlags flags)
@@ -426,6 +429,7 @@ GOpaque<Size> streaming::size(const GOpaque<Rect>& r)
 {
     return streaming::GSizeR::on(r);
 }
+#endif //!defined(GAPI_STANDALONE)
 
 } //namespace gapi
 } //namespace cv
