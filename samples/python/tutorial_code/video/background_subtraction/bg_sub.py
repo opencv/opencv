@@ -18,7 +18,7 @@ else:
 
 ## [capture]
 capture = cv.VideoCapture(cv.samples.findFileOrKeep(args.input))
-if not capture.isOpened:
+if not capture.isOpened():
     print('Unable to open: ' + args.input)
     exit(0)
 ## [capture]
