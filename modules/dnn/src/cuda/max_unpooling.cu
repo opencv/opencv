@@ -221,7 +221,6 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
             out_spatial_dims[i] = output.get_axis_size(2 + i);
         }
 
-        /* only max_pooling2d and max_pooling3d are supported */
         CV_Assert(1 <= order && order <= 3);
         std::size_t channels = input.get_axis_size(1);
         if (order == 3) {
