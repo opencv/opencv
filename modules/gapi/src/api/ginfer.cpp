@@ -7,14 +7,9 @@
 
 #include "precomp.hpp"
 
-#include <functional> // hash
-#include <numeric> // accumulate
-#include <unordered_set>
-#include <iterator>
-
-#include <ade/util/algorithm.hpp>
-
 #include <opencv2/gapi/infer.hpp>
+
+#include <unordered_set>
 
 cv::gapi::GNetPackage::GNetPackage(std::initializer_list<GNetParam> ii)
     : networks(ii) {
@@ -48,11 +43,15 @@ const cv::GInferInputs::Map& cv::GInferInputs::getBlobs() const {
 }
 
 void cv::GInferInputs::setInput(const std::string& name, const cv::GMat& value) {
-    m_priv->in_blobs.emplace(name, value);
+    m_priv->in_blobs.emplace(std::piecewise_construct,
+                             std::forward_as_tuple(name),
+                             std::forward_as_tuple(value));
 }
 
 void cv::GInferInputs::setInput(const std::string& name, const cv::GFrame& value) {
-    m_priv->in_blobs.emplace(name, value);
+    m_priv->in_blobs.emplace(std::piecewise_construct,
+                             std::forward_as_tuple(name),
+                             std::forward_as_tuple(value));
 }
 
 struct cv::GInferListInputs::Priv
@@ -74,11 +73,15 @@ const cv::GInferListInputs::Map& cv::GInferListInputs::getBlobs() const {
 }
 
 void cv::GInferListInputs::setInput(const std::string& name, const cv::GArray<cv::GMat>& value) {
-    m_priv->in_blobs.emplace(name, value);
+    m_priv->in_blobs.emplace(std::piecewise_construct,
+                             std::forward_as_tuple(name),
+                             std::forward_as_tuple(value));
 }
 
 void cv::GInferListInputs::setInput(const std::string& name, const cv::GArray<cv::Rect>& value) {
-    m_priv->in_blobs.emplace(name, value);
+    m_priv->in_blobs.emplace(std::piecewise_construct,
+                             std::forward_as_tuple(name),
+                             std::forward_as_tuple(value));
 }
 
 struct cv::GInferOutputs::Priv
