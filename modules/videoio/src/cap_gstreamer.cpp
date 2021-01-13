@@ -1846,9 +1846,12 @@ void handleMessage(GstElement * pipeline)
 
 #if defined(BUILD_PLUGIN)
 
-#define ABI_VERSION 0
-#define API_VERSION 1
-#include "plugin_api.hpp"
+#define CAPTURE_ABI_VERSION 1
+#define CAPTURE_API_VERSION 0
+#include "plugin_capture_api.hpp"
+#define WRITER_ABI_VERSION 1
+#define WRITER_API_VERSION 1
+#include "plugin_writer_api.hpp"
 
 namespace cv {
 
@@ -1946,7 +1949,7 @@ CvResult CV_API_CALL cv_capture_grab(CvPluginCapture handle)
 }
 
 static
-CvResult CV_API_CALL cv_capture_retrieve(CvPluginCapture handle, int stream_idx, cv_videoio_retrieve_cb_t callback, void* userdata)
+CvResult CV_API_CALL cv_capture_retrieve(CvPluginCapture handle, int stream_idx, cv_videoio_capture_retrieve_cb_t callback, void* userdata)
 {
     if (!handle)
         return CV_ERROR_FAIL;
@@ -1956,7 +1959,7 @@ CvResult CV_API_CALL cv_capture_retrieve(CvPluginCapture handle, int stream_idx,
         Mat img;
         // TODO: avoid unnecessary copying - implement lower level GStreamerCapture::retrieve
         if (instance->retrieveFrame(stream_idx, img))
-            return callback(stream_idx, img.data, img.step, img.cols, img.rows, img.channels(), userdata);
+            return callback(stream_idx, img.data, img.step, img.cols, img.rows, img.type(), userdata);
         return CV_ERROR_FAIL;
     }
     catch(...)
@@ -2063,12 +2066,12 @@ CvResult CV_API_CALL cv_writer_write(CvPluginWriter handle, const unsigned char 
     }
 }
 
-static const OpenCV_VideoIO_Plugin_API_preview plugin_api =
+static const OpenCV_VideoIO_Capture_Plugin_API capture_api =
 {
     {
-        sizeof(OpenCV_VideoIO_Plugin_API_preview), ABI_VERSION, API_VERSION,
+        sizeof(OpenCV_VideoIO_Capture_Plugin_API), CAPTURE_ABI_VERSION, CAPTURE_API_VERSION,
         CV_VERSION_MAJOR, CV_VERSION_MINOR, CV_VERSION_REVISION, CV_VERSION_STATUS,
-        "GStreamer OpenCV Video I/O plugin"
+        "GStreamer OpenCV Video I/O Capture plugin"
     },
     {
         /*  1*/CAP_GSTREAMER,
@@ -2078,23 +2081,42 @@ static const OpenCV_VideoIO_Plugin_API_preview plugin_api =
         /*  5*/cv_capture_set_prop,
         /*  6*/cv_capture_grab,
         /*  7*/cv_capture_retrieve,
-        /*  8*/cv_writer_open,
-        /*  9*/cv_writer_release,
-        /* 10*/cv_writer_get_prop,
-        /* 11*/cv_writer_set_prop,
-        /* 12*/cv_writer_write
+    }
+};
+
+static const OpenCV_VideoIO_Writer_Plugin_API writer_api =
+{
+    {
+        sizeof(OpenCV_VideoIO_Writer_Plugin_API), WRITER_ABI_VERSION, WRITER_API_VERSION,
+        CV_VERSION_MAJOR, CV_VERSION_MINOR, CV_VERSION_REVISION, CV_VERSION_STATUS,
+        "GStreamer OpenCV Video I/O Writer plugin"
     },
     {
-        /* 13*/cv_writer_open_with_params
+        /*  1*/CAP_GSTREAMER,
+        /*  2*/cv_writer_open,
+        /*  3*/cv_writer_release,
+        /*  4*/cv_writer_get_prop,
+        /*  5*/cv_writer_set_prop,
+        /*  6*/cv_writer_write
+    },
+    {
+        /*  7*/cv_writer_open_with_params
     }
 };
 
 } // namespace
 
-const OpenCV_VideoIO_Plugin_API_preview* opencv_videoio_plugin_init_v0(int requested_abi_version, int requested_api_version, void* /*reserved=NULL*/) CV_NOEXCEPT
+const OpenCV_VideoIO_Capture_Plugin_API* opencv_videoio_capture_plugin_init_v1(int requested_abi_version, int requested_api_version, void* /*reserved=NULL*/) CV_NOEXCEPT
 {
-    if (requested_abi_version == ABI_VERSION && requested_api_version <= API_VERSION)
-        return &cv::plugin_api;
+    if (requested_abi_version == CAPTURE_ABI_VERSION && requested_api_version <= CAPTURE_API_VERSION)
+        return &cv::capture_api;
+    return NULL;
+}
+
+const OpenCV_VideoIO_Writer_Plugin_API* opencv_videoio_writer_plugin_init_v1(int requested_abi_version, int requested_api_version, void* /*reserved=NULL*/) CV_NOEXCEPT
+{
+    if (requested_abi_version == WRITER_ABI_VERSION && requested_api_version <= WRITER_API_VERSION)
+        return &cv::writer_api;
     return NULL;
 }
 

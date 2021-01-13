@@ -2,6 +2,10 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
+//
+// DEPRECATED. Do not use in new plugins
+//
+
 #ifndef PLUGIN_API_HPP
 #define PLUGIN_API_HPP
 
@@ -129,7 +133,7 @@ struct OpenCV_VideoIO_Plugin_API_v0_0_api_entries
 
     /** @brief Get property value
 
-    @param handle Capture handle
+    @param handle Writer handle
     @param prop Property index
     @param[out] val property value
 
@@ -139,7 +143,7 @@ struct OpenCV_VideoIO_Plugin_API_v0_0_api_entries
 
     /** @brief Set property value
 
-    @param handle Capture handle
+    @param handle Writer handle
     @param prop Property index
     @param val property value
 
@@ -149,8 +153,8 @@ struct OpenCV_VideoIO_Plugin_API_v0_0_api_entries
 
     /** @brief Write frame
 
-    @param handle Capture handle
-    @param data Capture handle
+    @param handle Writer handle
+    @param data frame data
     @param step step in bytes
     @param width frame width in pixels
     @param height frame height
