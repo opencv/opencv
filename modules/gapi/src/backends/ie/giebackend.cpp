@@ -263,14 +263,6 @@ struct IEUnit {
             // Still, constant data is to set only once.
             this_request.SetBlob(p.first, wrapIE(p.second.first, p.second.second));
         }
-        // Bind const data to infer request
-        for (auto &&p : params.const_inputs) {
-            // FIXME: SetBlob is known to be inefficient,
-            // it is worth to make a customizable "initializer" and pass the
-            // cv::Mat-wrapped blob there to support IE's optimal "GetBlob idiom"
-            // Still, constant data is to set only once.
-            this_request.SetBlob(p.first, wrapIE(p.second.first, p.second.second));
-        }
 
         return {this_plugin, this_network, this_request};
     }

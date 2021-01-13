@@ -16,6 +16,7 @@
 #include <opencv2/gapi/gframe.hpp>
 
 #include "api/gbackend_priv.hpp" // FIXME: Make it part of Backend SDK!
+#include "logger.hpp"
 
 namespace {
 struct ONNXCallContext;
@@ -30,12 +31,35 @@ enum TensorPosition : int {
     OUTPUT
 };
 
+static std::string pdims(const std::vector<int64_t> &dims) {
+    std::stringstream ss;
+    auto it = dims.begin();
+    ss << *it++;
+    for (; it != dims.end(); ++it) {
+        ss << '/' << *it;
+    }
+    return ss.str();
+}
+
 struct TensorInfo {
     TensorInfo() = default;
     explicit TensorInfo(const Ort::TensorTypeAndShapeInfo& info)
         : dims(info.GetShape())
         , type(info.GetElementType())
         , is_dynamic(std::find(dims.begin(), dims.end(), -1) != dims.end()) {
+
+        // Double-check if the tensor is really dynamic
+        // Allow N to be -1
+        if (is_dynamic
+            && dims[0] == -1
+            && dims.size() > 1
+            && std::find(dims.begin() + 1, dims.end(), -1) == dims.end()) {
+
+            GAPI_LOG_WARNING(NULL, "Promoting N=-1 to N=1 for tensor " << pdims(dims));
+            dims[0] = 1;
+            is_dynamic = false;
+        }
+
         if (!is_dynamic) {
             size = std::accumulate(dims.begin(),
                                    dims.end(),
@@ -81,6 +105,7 @@ class ONNXCompiled {
     std::vector<TensorInfo> in_tensor_info;
     std::vector<TensorInfo> out_tensor_info;
     bool is_dynamic = false;
+    bool is_postproc = false;
 
     // G-API <Net> description
     gapi::onnx::detail::ParamDesc params;
@@ -95,6 +120,7 @@ class ONNXCompiled {
     void Run(const std::vector<cv::Mat>& ins,
              const std::vector<cv::Mat>& outs);
 
+    std::vector<std::string> in_names_without_const;
 public:
     explicit ONNXCompiled(const gapi::onnx::detail::ParamDesc &pp);
 
@@ -142,6 +168,7 @@ inline int toCV(ONNXTensorElementDataType prec) {
     switch (prec) {
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT8: return CV_8U;
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT: return CV_32F;
+    case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32: return CV_32S;
     default: GAPI_Assert(false && "Unsupported data type");
     }
     return -1;
@@ -308,6 +335,8 @@ inline Ort::Value createTensor(const Ort::MemoryInfo& memory_info,
         return createTensor<uint8_t>(memory_info, tensor_params, data);
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT:
         return createTensor<float>(memory_info, tensor_params, data);
+    case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32:
+        return createTensor<int32_t>(memory_info, tensor_params, data);
     default:
         GAPI_Assert(false && "Unsupported data type");
     }
@@ -523,7 +552,6 @@ namespace onnx {
 
 ONNXCompiled::ONNXCompiled(const gapi::onnx::detail::ParamDesc &pp)
     : params(pp) {
-
     // Validate input parameters before allocating any resources
     if (params.num_in > 1u && params.num_in != params.input_names.size()) {
         cv::util::throw_error(std::logic_error("Please specify input layer names for "
@@ -553,6 +581,7 @@ ONNXCompiled::ONNXCompiled(const gapi::onnx::detail::ParamDesc &pp)
                                            "Please provide a custom post-processing function "
                                            "(.cfgPostProc) in network parameters"));
     }
+    is_postproc = (params.custom_post_proc != nullptr);
 
     // Update parameters based on session information
     if (params.num_in == 1u && params.input_names.empty()) {
@@ -563,8 +592,6 @@ ONNXCompiled::ONNXCompiled(const gapi::onnx::detail::ParamDesc &pp)
     }
 
     // Validate what is supported currently
-    GAPI_Assert(params.const_inputs.empty()
-                && "Const inputs are not currently supported");
     GAPI_Assert(std::all_of(in_tensor_info.begin(),
                             in_tensor_info.end(),
                             [](const cv::gimpl::onnx::TensorInfo &p) {
@@ -591,6 +618,17 @@ ONNXCompiled::ONNXCompiled(const gapi::onnx::detail::ParamDesc &pp)
             const auto ort_idx = getIdxByName(in_tensor_info, params.input_names[idx]);
             in_tensor_info[ort_idx].normalize = params.normalize[idx];
         }
+    }
+
+    if (!params.const_inputs.empty()) {
+        // Form input names order without const input names
+        in_names_without_const.clear();
+        std::copy_if(params.input_names.begin(), params.input_names.end(),
+                     std::back_inserter(in_names_without_const),
+                     [&](const std::string& name) {
+                        const auto it = params.const_inputs.find(name);
+                        return it == params.const_inputs.end();
+                     });
     }
 
     // Pre-allocate vectors (not buffers) for runtime info
@@ -626,9 +664,9 @@ std::vector<TensorInfo> ONNXCompiled::getTensorInfo(TensorPosition pos) {
 }
 
 cv::GMatDesc ONNXCompiled::outMeta(int idx) const {
-    if (is_dynamic) {
+    if (is_dynamic || is_postproc) {
         GAPI_Assert(!params.out_metas.empty()
-                    && "Metadata must be specified if NN has dynamic inputs!");
+                    && "Metadata must be specified if NN has dynamic inputs or post-processing function is used!");
         return params.out_metas.at(idx);
     }
     const auto ort_idx = getIdxByName(out_tensor_info, params.output_names[idx]);
@@ -678,9 +716,12 @@ void ONNXCompiled::Run(const std::vector<cv::Mat>& ins,
                        const std::vector<cv::Mat>& outs) {
     std::vector<Ort::Value> in_tensors, out_tensors;
 
-    auto in_run_names  = getCharNames(params.input_names);
-
-    for (const auto it : ade::util::indexed(params.input_names)) {
+    // Layer names order for run
+    auto input_names = (in_names_without_const.empty() && params.const_inputs.empty())
+                       ? params.input_names
+                       : in_names_without_const;
+    // Creates tensors for unique names that don't contain constant input
+    for (const auto it : ade::util::indexed(input_names)) {
         auto i         = ade::util::index(it);
         auto in_name   = ade::util::value(it);
         const auto idx = getIdxByName(in_tensor_info, in_name);
@@ -689,7 +730,19 @@ void ONNXCompiled::Run(const std::vector<cv::Mat>& ins,
                                              ins[i]));
     }
 
-    if (!is_dynamic) {
+    for (auto &&c_in_pair : params.const_inputs) {
+        const auto idx = getIdxByName(in_tensor_info, c_in_pair.first);
+        in_tensors.emplace_back(createTensor(this_memory_info,
+                                             in_tensor_info[idx],
+                                             c_in_pair.second.first));
+        // Puts const input names in sequence for Run
+        // ONNXRuntime can match input tensors to CNN inputs by names
+        input_names.emplace_back(c_in_pair.first);
+    }
+    GAPI_Assert(input_names.size() == this_session.GetInputCount());
+
+    auto in_run_names  = getCharNames(input_names);
+    if (!is_dynamic && !is_postproc) {
         // Easy path - just run the session which is bound to G-API's
         // internal data
         for (auto i : ade::util::iota(params.output_names.size())) {
@@ -701,7 +754,7 @@ void ONNXCompiled::Run(const std::vector<cv::Mat>& ins,
         this_session.Run(Ort::RunOptions{nullptr},
                          in_run_names.data(),
                          &in_tensors.front(),
-                         params.input_names.size(),
+                         input_names.size(),
                          out_run_names.data(),
                          &out_tensors.front(),
                          params.output_names.size());
@@ -716,7 +769,7 @@ void ONNXCompiled::Run(const std::vector<cv::Mat>& ins,
         auto outputs = this_session.Run(Ort::RunOptions{nullptr},
                                         in_run_names.data(),
                                         &in_tensors.front(),
-                                        params.input_names.size(),
+                                        input_names.size(),
                                         out_names.data(),
                                         out_names.size());
         std::unordered_map<std::string, cv::Mat> onnx_outputs;
