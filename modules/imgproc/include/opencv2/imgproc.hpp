@@ -973,7 +973,7 @@ public:
            PREV_AROUND_RIGHT = 0x02
          };
 
-    /** Creates an empty Delaunay triangulation object. */
+    /** Creates an empty 2D subdivision object. */
     CV_WRAP Subdiv2D();
 
     /** Resets the current object to the empty state. */
@@ -1141,21 +1141,35 @@ public:
     CV_WRAP int edgeDst(int edge, CV_OUT Point2f* dstpt = 0) const;
 
 protected:
+    int newEdge();
+    void deleteEdge(int edge);
+    int newPoint(Point2f pt, int type, int firstEdge = 0);
+    void deletePoint(int vtx);
+    void setEdgePoints( int edge, int orgPt, int dstPt );
+    void splice( int edgeA, int edgeB );
+    int connectEdges( int edgeA, int edgeB );
+    void swapEdges( int edge );
+    void calcVoronoi();
+    void clearVoronoi();
+    void checkSubdiv() const;
+
     enum {
         PTTYPE_FREE = 0,
-        PTTYPE_DEFAULT = 1,
-        PTTYPE_DEFAULT_META = 2,
-        PTTYPE_VIRTUAL = 3,
-        PTTYPE_VIRTUAL_META = 4
+        PTTYPE_DELAUNAY = 1,
+        PTTYPE_DELAUNAY_META = 2,
+        PTTYPE_VORONOI = 3,
+        PTTYPE_VORONOI_META = 4,
+        PTTYPE_VORONOI_META_SHIFTED = 5
     };
 
     struct CV_EXPORTS Vertex
     {
         Vertex();
-        Vertex(Point2f pt, int type = PTTYPE_FREE, int firstEdge = 0);
-        bool isvirtual() const;
-        bool isfree() const;
-        bool ismeta() const;
+        Vertex(Point2f pt, int type, int firstEdge = 0);
+        bool voronoi() const;
+        bool free() const;
+        bool meta() const;
+        bool meta_shifted() const;
 
         int firstEdge;
         int type;
@@ -1172,21 +1186,10 @@ protected:
         int pt[4];
     };
 
-    int newEdge();
-    void deleteEdge(int edge);
-    int newPoint(Point2f pt, int type, int firstEdge = 0);
-    void deletePoint(int vtx);
-    void setEdgePoints( int edge, int orgPt, int dstPt );
-    void splice( int edgeA, int edgeB );
-    int connectEdges( int edgeA, int edgeB );
-    void swapEdges( int edge );
-    int counterClockwiseInternal(const Vertex &a, const Vertex &b, const Vertex &c) const;
-    int inCircleInternal(const Vertex &a, const Vertex &b, const Vertex &c, const Vertex &d) const;
-    int rightOfInternal(const Vertex &c, const Vertex &a, const Vertex &b) const;
-    int locateInternal(Point2f pt, int& edge, int& vertex);
-    void calcVoronoi();
-    void clearVoronoi();
-    void checkSubdiv() const;
+    int counterClockwise(const Vertex &a, const Vertex &b, const Vertex &c) const;
+    int inCircle(const Vertex &a, const Vertex &b, const Vertex &c, const Vertex &d) const;
+    int rightOf(const Vertex &c, const Vertex &a, const Vertex &b) const;
+    int locateInternal(const Vertex &v, int &edge, int &vertex);
 
     //! All of the vertices
     std::vector<Vertex> vtx;

@@ -134,18 +134,22 @@ Subdiv2D::Vertex::Vertex()
 Subdiv2D::Vertex::Vertex(Point2f pt, int type, int firstEdge)
         : pt(pt), type(type), firstEdge(firstEdge) { }
 
-bool Subdiv2D::Vertex::isvirtual() const
+bool Subdiv2D::Vertex::voronoi() const
 {
-    return type == PTTYPE_VIRTUAL || type == PTTYPE_VIRTUAL_META;
+    return type == PTTYPE_VORONOI || type == PTTYPE_VORONOI_META || type == PTTYPE_VORONOI_META_SHIFTED;
 }
 
-bool Subdiv2D::Vertex::isfree() const
+bool Subdiv2D::Vertex::free() const
 {
     return type == PTTYPE_FREE;
 }
 
-bool Subdiv2D::Vertex::ismeta() const {
-    return type == PTTYPE_DEFAULT_META || type == PTTYPE_VIRTUAL_META;
+bool Subdiv2D::Vertex::meta() const {
+    return type == PTTYPE_DELAUNAY_META || type == PTTYPE_VORONOI_META || type == PTTYPE_VORONOI_META_SHIFTED;
+}
+
+bool Subdiv2D::Vertex::meta_shifted() const {
+    return type == PTTYPE_VORONOI_META_SHIFTED;
 }
 
 void Subdiv2D::splice( int edgeA, int edgeB )
@@ -192,114 +196,6 @@ void Subdiv2D::swapEdges( int edge )
 
     splice(edge, getEdge(a, NEXT_AROUND_LEFT));
     splice(sedge, getEdge(b, NEXT_AROUND_LEFT));
-}
-
-static double distance(Point2f a, Point2f b)
-{
-    return norm(b - a);
-}
-
-static bool parallel(Point2f u, Point2f v)
-{
-    return abs(u.cross(v)) < FLT_EPSILON;
-}
-
-static int counterClockwise(Point2f a, Point2f b, Point2f c)
-{
-    double cp = (b - a).cross(c - a);
-    return cp > FLT_EPSILON ? 1 : (cp < -FLT_EPSILON ? -1 : 0);
-}
-
-static int inCircle(Point2f a, Point2f b, Point2f c, Point2f d)
-{
-    const double eps = FLT_EPSILON * 0.125;
-
-    double val =
-            ((double)a.x * a.x + (double)a.y * a.y) * ( c - b ).cross( d - b );
-    val -=  ((double)b.x * b.x + (double)b.y * b.y) * ( c - a ).cross( d - a );
-    val +=  ((double)c.x * c.x + (double)c.y * c.y) * ( b - a ).cross( d - a );
-    val -=  ((double)d.x * d.x + (double)d.y * d.y) * ( b - a ).cross( c - a );
-
-    return val > eps ? 1 : val < -eps ? -1 : 0;
-}
-
-static int leftOf(Point2f c, Point2f a, Point2f b)
-{
-    return counterClockwise(c, a, b);
-}
-
-int Subdiv2D::counterClockwiseInternal(const Vertex &a, const Vertex &b, const Vertex &c) const
-{
-    const static Vertex o(Point2f(0.f, 0.f), PTTYPE_FREE);
-
-    if (a.ismeta() && b.ismeta() && c.ismeta()) {
-        return counterClockwise(a.pt, b.pt, c.pt);
-    }
-
-    if (a.ismeta() && b.ismeta() && !c.ismeta()) {
-        return counterClockwise(a.pt, b.pt, o.pt);
-    }
-
-    if (!a.ismeta() && !b.ismeta() && c.ismeta()) {
-        return !parallel(b.pt - a.pt, c.pt) ?
-                counterClockwise(o.pt, b.pt - a.pt, c.pt) : counterClockwise(a.pt, b.pt, o.pt);
-    }
-
-    if (!a.ismeta() && !b.ismeta() && !c.ismeta()) {
-        return counterClockwise(a.pt, b.pt, c.pt);
-    }
-
-    return counterClockwiseInternal(b, c, a);
-}
-
-int Subdiv2D::inCircleInternal(const Vertex &a, const Vertex &b, const Vertex &c, const Vertex &d) const
-{
-    const static Vertex o(Point2f(0.f, 0.f), PTTYPE_FREE);
-
-    if (a.ismeta() && b.ismeta() && c.ismeta() && !d.ismeta()) {
-        return counterClockwiseInternal(a, b, c);
-    }
-
-    if (a.ismeta() && !b.ismeta() && c.ismeta() && !d.ismeta()) {
-        if (!parallel(d.pt - b.pt, c.pt - a.pt)) {
-            return leftOf(d.pt - b.pt, o.pt, c.pt - a.pt);
-        } else {
-            double dl = distance(o.pt, d.pt);
-            double dj = distance(o.pt, b.pt);
-
-            if (abs(dl - dj) < FLT_EPSILON) {
-                return 0;
-            } else {
-                return  (dl < dj && counterClockwiseInternal(a, b, c) > 0) ||
-                        (dl > dj && counterClockwiseInternal(a, b, c) < 0) ? 1 : -1;
-            }
-        }
-    }
-
-    if (a.ismeta() && b.ismeta() && !c.ismeta() && !d.ismeta()) {
-        return -inCircleInternal(a, c, b, d);
-    }
-
-    if (!a.ismeta() && !b.ismeta() && !c.ismeta() && d.ismeta()) {
-        if (!parallel(b.pt - a.pt, c.pt - a.pt)) {
-            return -counterClockwise(a.pt, b.pt, c.pt);
-        } else {
-            return !c.pt.inside(Rect2f(a.pt, b.pt)) ?
-                   leftOf(d.pt, o.pt, b.pt - a.pt) :
-                   leftOf(d.pt, o.pt, c.pt - b.pt);
-        }
-    }
-
-    if (!a.ismeta() && !b.ismeta() && !c.ismeta() && !d.ismeta()) {
-        return inCircle(a.pt, b.pt, c.pt, d.pt);
-    }
-
-    return -inCircleInternal(b, c, d, a);
-}
-
-int Subdiv2D::rightOfInternal(const Vertex &c, const Vertex &a, const Vertex &b) const
-{
-    return counterClockwiseInternal(c, b, a);
 }
 
 int Subdiv2D::newEdge()
@@ -350,41 +246,49 @@ void Subdiv2D::deletePoint(int vidx)
     freePoint = vidx;
 }
 
-int Subdiv2D::locateInternal(Point2f pt, int& _edge, int& _vertex) {
+int Subdiv2D::locateInternal(const Vertex &v, int &edge, int &vertex)
+{
     CV_INSTRUMENT_REGION();
 
-    int edge = recentEdge;
-    CV_Assert(edge > 0);
+    int curr_edge = recentEdge;
+    CV_Assert(curr_edge > 0);
 
     for (;;) {
-        int onext_edge = getEdge(edge, NEXT_AROUND_ORG);
-        int dprev_edge = getEdge(edge, PREV_AROUND_DST);
+        int onext_edge = getEdge(curr_edge, NEXT_AROUND_ORG);
+        int dprev_edge = getEdge(curr_edge, PREV_AROUND_DST);
 
-        int right_of_curr = rightOfInternal(pt, edgeOrg(edge), edgeDst(edge));
-        int right_of_onext = rightOfInternal(pt, edgeOrg(onext_edge), edgeDst(onext_edge));
-        int right_of_dprev = rightOfInternal(pt, edgeOrg(dprev_edge), edgeDst(dprev_edge));
+        int curr_org = edgeOrg(curr_edge);
+        int curr_dst = edgeDst(curr_edge);
+        int onext_org = edgeOrg(onext_edge);
+        int onext_dst = edgeDst(onext_edge);
+        int dprev_org = edgeOrg(dprev_edge);
+        int dprev_dst = edgeDst(dprev_edge);
+
+        int right_of_curr = rightOf(v, vtx[curr_org], vtx[curr_dst]);
+        int right_of_onext = rightOf(v, vtx[onext_org], vtx[onext_dst]);
+        int right_of_dprev = rightOf(v, vtx[dprev_org], vtx[dprev_dst]);
 
         if (right_of_curr == 0 && (right_of_onext == 0 || right_of_dprev == 0)) {
-            recentEdge = edge;
+            recentEdge = curr_edge;
 
-            _edge = 0;
-            _vertex = right_of_onext == 0 ? edgeOrg(edge) : edgeDst(edge);
+            edge = 0;
+            vertex = right_of_onext == 0 ? edgeOrg(edge) : edgeDst(edge);
             return PTLOC_VERTEX;
         }
         else if (right_of_curr > 0) {
-            edge = symEdge(edge);
+            curr_edge = symEdge(curr_edge);
         }
         else if (right_of_onext <= 0) {
-            edge = onext_edge;
+            curr_edge = onext_edge;
         }
         else if (right_of_dprev <= 0) {
-            edge = dprev_edge;
+            curr_edge = dprev_edge;
         }
         else {
-            recentEdge = edge;
+            recentEdge = curr_edge;
 
-            _vertex = 0;
-            _edge = edge;
+            vertex = 0;
+            edge = curr_edge;
             return right_of_curr == 0 ? PTLOC_EDGE : PTLOC_INSIDE;
         }
     }
@@ -394,15 +298,25 @@ int Subdiv2D::locate(Point2f pt, int& _edge, int& _vertex)
 {
     CV_INSTRUMENT_REGION();
 
-    int result = locateInternal(pt, _edge, _vertex);
-    if ((result == PTLOC_EDGE || result == PTLOC_INSIDE) && (MP(edgeOrg(_edge)) || MP(edgeDst(_edge)))) {
-        _edge = 0;
-        return PTLOC_OUTSIDE;
+    int result = locateInternal(Vertex(pt, PTTYPE_FREE), _edge, _vertex);
+
+    if (result == PTLOC_EDGE || result == PTLOC_INSIDE) {
+        int edge_org = edgeOrg(_edge);
+        int edge_dst = edgeDst(_edge);
+        if (vtx[edge_org].meta() || vtx[edge_dst].meta()) {
+            _edge = 0;
+            return PTLOC_OUTSIDE;
+        }
     }
-    if (result == PTLOC_INSIDE && MP(edgeDst(getEdge(_edge, NEXT_AROUND_LEFT)))) {
-        _edge = 0;
-        return PTLOC_OUTSIDE;
+
+    if (result == PTLOC_INSIDE) {
+        int lnext_dst = edgeDst(getEdge(_edge, NEXT_AROUND_LEFT));
+        if (vtx[lnext_dst].meta()) {
+            _edge = 0;
+            return PTLOC_OUTSIDE;
+        }
     }
+
     return result;
 }
 
@@ -411,7 +325,7 @@ int Subdiv2D::insert(Point2f pt)
     CV_INSTRUMENT_REGION();
 
     int curr_point = 0, curr_edge = 0, deleted_edge = 0;
-    int location = locateInternal( pt, curr_edge, curr_point );
+    int location = locateInternal( Vertex(pt, PTTYPE_FREE), curr_edge, curr_point );
 
     if( location == PTLOC_VERTEX )
         return curr_point;
@@ -426,7 +340,7 @@ int Subdiv2D::insert(Point2f pt)
     assert( curr_edge != 0 );
     validGeometry = false;
 
-    curr_point = newPoint(pt, false);
+    curr_point = newPoint(pt, PTTYPE_DELAUNAY);
     int base_edge = newEdge();
     int first_point = edgeOrg(curr_edge);
     setEdgePoints(base_edge, first_point, curr_point);
@@ -452,8 +366,8 @@ int Subdiv2D::insert(Point2f pt)
         curr_org = edgeOrg( curr_edge );
         curr_dst = edgeDst( curr_edge );
 
-        if( rightOfInternal( temp_dst, curr_org, curr_dst ) > 0 &&
-                inCircleInternal( curr_org, temp_dst, curr_dst, curr_point ) > 0 )
+        if( rightOf( vtx[temp_dst], vtx[curr_org], vtx[curr_dst] ) > 0 &&
+                inCircle( vtx[curr_org], vtx[temp_dst], vtx[curr_dst], vtx[curr_point] ) > 0 )
         {
             swapEdges( curr_edge );
             curr_edge = getEdge( curr_edge, PREV_AROUND_ORG );
@@ -495,9 +409,9 @@ void Subdiv2D::reset()
     freeQEdge = 0;
     freePoint = 0;
 
-    int pA = newPoint(ppA, PTTYPE_META);
-    int pB = newPoint(ppB, PTTYPE_META);
-    int pC = newPoint(ppC, PTTYPE_META);
+    int pA = newPoint(ppA, PTTYPE_DELAUNAY_META);
+    int pB = newPoint(ppB, PTTYPE_DELAUNAY_META);
+    int pC = newPoint(ppC, PTTYPE_DELAUNAY_META);
 
     int edge_AB = newEdge();
     int edge_BC = newEdge();
@@ -525,7 +439,7 @@ void Subdiv2D::clearVoronoi()
     total = vtx.size();
     for( i = 0; i < total; i++ )
     {
-        if( vtx[i].isvirtual() )
+        if( vtx[i].voronoi() )
             deletePoint((int)i);
     }
 
@@ -576,12 +490,28 @@ void Subdiv2D::calcVoronoi()
                 int edge2 = getEdge( edge1, NEXT_AROUND_LEFT );
 
                 Point2f org0, dst0, dst1;
-                if (!MP(edgeOrg(edge0, &org0)) && !MP(edgeDst(edge0, &dst0)) && !MP(edgeDst(edge1, &dst1))) {
-                    Point2f virt_point = computeVoronoiPoint(org0, dst0, dst0, dst1);
-                    qedges[edge0 >> 2].pt[3 - (edge0 & 2)] =
-                    qedges[edge1 >> 2].pt[3 - (edge1 & 2)] =
-                    qedges[edge2 >> 2].pt[3 - (edge2 & 2)] = newPoint(virt_point, true);
+                int edge0_org = edgeOrg(edge0, &org0);
+                int edge0_dst = edgeDst(edge0, &dst0);
+                int edge1_dst = edgeDst(edge1, &dst1);
+
+                int voronoi_point;
+
+                if (!vtx[edge0_org].meta() && !vtx[edge0_dst].meta() && !vtx[edge1_dst].meta()) {
+                    voronoi_point = newPoint(computeVoronoiPoint(org0, dst0, dst0, dst1), PTTYPE_VORONOI);
                 }
+
+                if (!vtx[edge0_org].meta() && !vtx[edge0_dst].meta() && vtx[edge1_dst].meta()) {
+                    // shifted from the origin (0.f, 0.f) to (org0 + dst0) / 2.f
+                    voronoi_point = newPoint(Point2f(-(dst0 - org0).y, (dst0 - org0).x), PTTYPE_VORONOI_META_SHIFTED);
+                }
+
+                if (!vtx[edge0_org].meta() && vtx[edge0_dst].meta() && vtx[edge1_dst].meta()) {
+                    voronoi_point = newPoint(Point2f((dst1 - dst0).y, -(dst1 - dst0).x), PTTYPE_VORONOI_META);
+                }
+
+                qedges[edge0 >> 2].pt[3 - (edge0 & 2)] =
+                qedges[edge1 >> 2].pt[3 - (edge1 & 2)] =
+                qedges[edge2 >> 2].pt[3 - (edge2 & 2)] = voronoi_point;
             }
         }
     }
@@ -594,25 +524,37 @@ int Subdiv2D::findNearest(Point2f pt, Point2f* nearestPt)
 {
     CV_INSTRUMENT_REGION();
 
-    if (!validGeometry) {
+    if (!validGeometry)
         calcVoronoi();
-    }
+
+    Vertex v(pt, PTTYPE_FREE);
 
     int edge, vertex;
-    if (locateInternal(pt, edge, vertex) == PTLOC_VERTEX) {
+    int location = locateInternal(v, edge, vertex);
+
+    if (location == PTLOC_VERTEX) {
         return vertex;
+    }
+    if (location == PTLOC_EDGE && vtx[edgeOrg(edge)].meta()) {
+        edge = symEdge(edge);
+    }
+    while (location == PTLOC_INSIDE && vtx[edgeOrg(edge)].meta()) {
+        edge = getEdge(edge, NEXT_AROUND_LEFT);
     }
 
     edge = rotateEdge(edge, 1);
 
-    for (int i = 0; i < (int)vtx.size(); ++i) {
-        int site = edgeOrg(rotateEdge( edge, 3));
+    for (;;) {
+        vertex = edgeOrg(rotateEdge( edge, 3));
 
         for(;;) {
             CV_Assert( edgeDst( edge ) > 0 );
 
-            if (rightOfInternal( pt, site, edgeDst(edge) ) >= 0)
+            Point2f shift = vtx[edgeDst(edge)].meta_shifted() ? Vertex(pt - shift,  Point2f() : Point2f(0.f, 0.f);
+            Vertex v_shifted = ;
+            if (rightOf(v - shift, vtx[vertex], vtx[edgeDst(edge)]) >= 0)
                 break;
+            }
 
             edge = getEdge( edge, NEXT_AROUND_LEFT );
         }
@@ -620,14 +562,13 @@ int Subdiv2D::findNearest(Point2f pt, Point2f* nearestPt)
         for(;;) {
             CV_Assert( edgeOrg( edge ) > 0 );
 
-            if ( rightOfInternal( pt, site, edgeOrg(edge) ) <= 0)
+            if (rightOf(v, vtx[vertex], vtx[edgeOrg(edge)]) < 0)
                 break;
 
             edge = getEdge( edge, PREV_AROUND_LEFT );
         }
 
-        if (rightOfInternal( pt, edgeOrg(edge), edgeDst(edge) ) <= 0) {
-            vertex = edgeOrg(rotateEdge(edge, 3 ));
+        if (rightOf(v, vtx[edgeOrg(edge)], vtx[edgeDst(edge)]) <= 0) {
             break;
         }
 
@@ -724,7 +665,7 @@ void Subdiv2D::getVoronoiFacetList(const std::vector<int>& idx,
     {
         int k = idx.empty() ? (int)i : idx[i];
 
-        if( vtx[k].isfree() || vtx[k].isvirtual() )
+        if(vtx[k].free() || vtx[k].voronoi() )
             continue;
         int edge = rotateEdge(vtx[k].firstEdge, 1), t = edge;
 
@@ -777,6 +718,114 @@ void Subdiv2D::checkSubdiv() const
             }
         }
     }
+}
+
+static double distance(Point2f a, Point2f b)
+{
+    return norm(b - a);
+}
+
+static bool parallel(Point2f u, Point2f v)
+{
+    return abs(u.cross(v)) < FLT_EPSILON;
+}
+
+static int counterClockwiseInternal(Point2f a, Point2f b, Point2f c)
+{
+    double cp = (b - a).cross(c - a);
+    return cp > FLT_EPSILON ? 1 : (cp < -FLT_EPSILON ? -1 : 0);
+}
+
+static int inCircleInternal(Point2f a, Point2f b, Point2f c, Point2f d)
+{
+    const double eps = FLT_EPSILON * 0.125;
+
+    double val =
+            ((double)a.x * a.x + (double)a.y * a.y) * ( c - b ).cross( d - b );
+    val -=  ((double)b.x * b.x + (double)b.y * b.y) * ( c - a ).cross( d - a );
+    val +=  ((double)c.x * c.x + (double)c.y * c.y) * ( b - a ).cross( d - a );
+    val -=  ((double)d.x * d.x + (double)d.y * d.y) * ( b - a ).cross( c - a );
+
+    return val > eps ? 1 : val < -eps ? -1 : 0;
+}
+
+static int leftOf(Point2f c, Point2f a, Point2f b)
+{
+    return counterClockwiseInternal(c, a, b);
+}
+
+int Subdiv2D::counterClockwise(const Vertex &a, const Vertex &b, const Vertex &c) const
+{
+    const static Vertex o(Point2f(0.f, 0.f), PTTYPE_FREE);
+
+    if (a.meta() && b.meta() && c.meta()) {
+        return counterClockwiseInternal(a.pt, b.pt, c.pt);
+    }
+
+    if (a.meta() && b.meta() && !c.meta()) {
+        return counterClockwiseInternal(a.pt, b.pt, o.pt);
+    }
+
+    if (!a.meta() && !b.meta() && c.meta()) {
+        return !parallel(b.pt - a.pt, c.pt) ?
+               counterClockwiseInternal(o.pt, b.pt - a.pt, c.pt) : counterClockwiseInternal(a.pt, b.pt, o.pt);
+    }
+
+    if (!a.meta() && !b.meta() && !c.meta()) {
+        return counterClockwiseInternal(a.pt, b.pt, c.pt);
+    }
+
+    return counterClockwise(b, c, a);
+}
+
+int Subdiv2D::inCircle(const Vertex &a, const Vertex &b, const Vertex &c, const Vertex &d) const
+{
+    const static Vertex o(Point2f(0.f, 0.f), PTTYPE_FREE);
+
+    if (a.meta() && b.meta() && c.meta() && !d.meta()) {
+        return counterClockwise(a, b, c);
+    }
+
+    if (a.meta() && !b.meta() && c.meta() && !d.meta()) {
+        if (!parallel(d.pt - b.pt, c.pt - a.pt)) {
+            return leftOf(d.pt - b.pt, o.pt, c.pt - a.pt);
+        } else {
+            double dl = distance(o.pt, d.pt);
+            double dj = distance(o.pt, b.pt);
+
+            if (abs(dl - dj) < FLT_EPSILON) {
+                return 0;
+            } else {
+                return (dl < dj && counterClockwise(a, b, c) > 0) ||
+                       (dl > dj && counterClockwise(a, b, c) < 0) ? 1 : -1;
+            }
+        }
+    }
+
+    if (a.meta() && b.meta() && !c.meta() && !d.meta()) {
+        return -inCircle(a, c, b, d);
+    }
+
+    if (!a.meta() && !b.meta() && !c.meta() && d.meta()) {
+        if (!parallel(b.pt - a.pt, c.pt - a.pt)) {
+            return -counterClockwiseInternal(a.pt, b.pt, c.pt);
+        } else {
+            return !c.pt.inside(Rect2f(a.pt, b.pt)) ?
+                   leftOf(d.pt, o.pt, b.pt - a.pt) :
+                   leftOf(d.pt, o.pt, c.pt - b.pt);
+        }
+    }
+
+    if (!a.meta() && !b.meta() && !c.meta() && !d.meta()) {
+        return inCircleInternal(a.pt, b.pt, c.pt, d.pt);
+    }
+
+    return -inCircle(b, c, d, a);
+}
+
+int Subdiv2D::rightOf(const Vertex &c, const Vertex &a, const Vertex &b) const
+{
+    return counterClockwise(c, b, a);
 }
 
 }
