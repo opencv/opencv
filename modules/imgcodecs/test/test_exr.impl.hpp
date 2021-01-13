@@ -6,6 +6,17 @@
 
 namespace opencv_test { namespace {
 
+size_t getFileSize(const string& filename)
+{
+    std::ifstream ifs(filename.c_str(), std::ios::in | std::ios::binary);
+    if (ifs.is_open())
+    {
+        ifs.seekg(0, std::ios::end);
+        return ifs.tellg();
+    }
+    return 0;
+}
+
 TEST(Imgcodecs_EXR, readWrite_32FC1)
 {
     const string root = cvtest::TS::ptr()->get_data_path();
@@ -23,6 +34,7 @@ TEST(Imgcodecs_EXR, readWrite_32FC1)
     ASSERT_EQ(CV_32FC1,img.type());
 
     ASSERT_TRUE(cv::imwrite(filenameOutput, img));
+    ASSERT_EQ(getFileSize(filenameOutput), 396);
     const Mat img2 = cv::imread(filenameOutput, IMREAD_UNCHANGED);
     ASSERT_EQ(img2.type(), img.type());
     ASSERT_EQ(img2.size(), img.size());
@@ -135,6 +147,7 @@ TEST(Imgcodecs_EXR, readWrite_32FC1_PIZ)
   ASSERT_EQ(CV_32FC1, img.type());
 
   ASSERT_TRUE(cv::imwrite(filenameOutput, img, params));
+  ASSERT_EQ(getFileSize(filenameOutput), 849);
   const Mat img2 = cv::imread(filenameOutput, IMREAD_UNCHANGED);
   ASSERT_EQ(img2.type(), img.type());
   ASSERT_EQ(img2.size(), img.size());
