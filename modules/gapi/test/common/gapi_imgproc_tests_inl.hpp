@@ -11,6 +11,8 @@
 #include <opencv2/gapi/imgproc.hpp>
 #include "gapi_imgproc_tests.hpp"
 
+#include "gapi_imgproc_tests_common.hpp"
+
 namespace opencv_test
 {
 
@@ -313,7 +315,7 @@ TEST_P(Dilate3x3Test, AccuracyTest)
 
 TEST_P(MorphologyExTest, AccuracyTest)
 {
-    MorphShapes defShape = cv::MORPH_RECT;
+    cv::MorphShapes defShape = cv::MORPH_RECT;
     int defKernSize = 3;
     cv::Mat kernel = cv::getStructuringElement(defShape, cv::Size(defKernSize, defKernSize));
 
@@ -623,133 +625,32 @@ TEST_P(FindContoursHOffsetTest, AccuracyTest)
 
 TEST_P(BoundingRectMatTest, AccuracyTest)
 {
-    cv::Rect out_rect_gapi, out_rect_ocv;
-
-    // G-API code //////////////////////////////////////////////////////////////
-    cv::GMat in;
-    auto out = cv::gapi::boundingRect(in);
-
-    cv::GComputation c(cv::GIn(in), cv::GOut(out));
-    c.apply(cv::gin(in_mat1), cv::gout(out_rect_gapi), getCompileArgs());
-    // OpenCV code /////////////////////////////////////////////////////////////
+    if (initByVector)
     {
-        out_rect_ocv = cv::boundingRect(in_mat1);
+        initMatByPointsVectorRandU<cv::Point_>(type, sz, dtype);
     }
-    // Comparison //////////////////////////////////////////////////////////////
+    else
     {
-        EXPECT_TRUE(cmpF(out_rect_gapi, out_rect_ocv));
+        initMatrixRandU(type, sz, dtype);
     }
+    boundingRectTestBody(in_mat1, cmpF, getCompileArgs());
 }
-
-TEST_P(BoundingRectMatVector32STest, AccuracyTest)
-{
-    cv::Rect out_rect_gapi, out_rect_ocv;
-
-    std::vector<cv::Point2i> in_vectorS(sz.width);
-    cv::randu(in_vectorS, cv::Scalar::all(0), cv::Scalar::all(255));
-    in_mat1 = cv::Mat(in_vectorS);
-
-    // G-API code //////////////////////////////////////////////////////////////
-    cv::GMat in;
-    auto out = cv::gapi::boundingRect(in);
-
-    cv::GComputation c(cv::GIn(in), cv::GOut(out));
-    c.apply(cv::gin(in_mat1), cv::gout(out_rect_gapi), getCompileArgs());
-    // OpenCV code /////////////////////////////////////////////////////////////
-    {
-        out_rect_ocv = cv::boundingRect(in_mat1);
-    }
-    // Comparison //////////////////////////////////////////////////////////////
-    {
-        EXPECT_TRUE(cmpF(out_rect_gapi, out_rect_ocv));
-    }
-}
-
-TEST_P(BoundingRectMatVector32FTest, AccuracyTest)
-{
-    cv::RNG& rng = theRNG();
-    cv::Rect out_rect_gapi, out_rect_ocv;
-
-    std::vector<cv::Point2f> in_vectorF(sz.width);
-    const int fscale = 256;  // avoid bits near ULP, generate stable test input
-    for (int i = 0; i < sz.width; i++)
-    {
-        cv::Point2f pt(rng.uniform(0, 255 * fscale) / static_cast<float>(fscale),
-                       rng.uniform(0, 255 * fscale) / static_cast<float>(fscale));
-        in_vectorF.push_back(pt);
-    }
-    in_mat1 = cv::Mat(in_vectorF);
-
-    // G-API code //////////////////////////////////////////////////////////////
-    cv::GMat in;
-    auto out = cv::gapi::boundingRect(in);
-
-    cv::GComputation c(cv::GIn(in), cv::GOut(out));
-    c.apply(cv::gin(in_mat1), cv::gout(out_rect_gapi), getCompileArgs());
-    // OpenCV code /////////////////////////////////////////////////////////////
-    {
-        out_rect_ocv = cv::boundingRect(in_mat1);
-    }
-    // Comparison //////////////////////////////////////////////////////////////
-    {
-        EXPECT_TRUE(cmpF(out_rect_gapi, out_rect_ocv));
-    }
-}
-
 
 TEST_P(BoundingRectVector32STest, AccuracyTest)
+
 {
-    cv::Rect out_rect_gapi, out_rect_ocv;
+    std::vector<cv::Point2i> in_vector;
+    initPointsVectorRandU(sz.width, in_vector);
 
-    std::vector<cv::Point2i> in_vectorS(sz.width);
-    cv::randu(in_vectorS, cv::Scalar::all(0), cv::Scalar::all(255));
-
-    // G-API code //////////////////////////////////////////////////////////////
-    cv::GArray<cv::Point2i> in;
-    auto out = cv::gapi::boundingRect(in);
-
-    cv::GComputation c(cv::GIn(in), cv::GOut(out));
-    c.apply(cv::gin(in_vectorS), cv::gout(out_rect_gapi), getCompileArgs());
-    // OpenCV code /////////////////////////////////////////////////////////////
-    {
-        out_rect_ocv = cv::boundingRect(in_vectorS);
-    }
-
-    // Comparison //////////////////////////////////////////////////////////////
-    {
-        EXPECT_TRUE(cmpF(out_rect_gapi, out_rect_ocv));
-    }
+    boundingRectTestBody(in_vector, cmpF, getCompileArgs());
 }
 
 TEST_P(BoundingRectVector32FTest, AccuracyTest)
 {
-    cv::RNG& rng = theRNG();
-    cv::Rect out_rect_gapi, out_rect_ocv;
+    std::vector<cv::Point2f> in_vector;
+    initPointsVectorRandU(sz.width, in_vector);
 
-    std::vector<cv::Point2f> in_vectorF(sz.width);
-    const int fscale = 256;  // avoid bits near ULP, generate stable test input
-    for (int i = 0; i < sz.width; i++)
-    {
-        cv::Point2f pt(rng.uniform(0, 255 * fscale) / static_cast<float>(fscale),
-                       rng.uniform(0, 255 * fscale) / static_cast<float>(fscale));
-        in_vectorF.push_back(pt);
-    }
-
-    // G-API code //////////////////////////////////////////////////////////////
-    cv::GArray<cv::Point2f> in;
-    auto out = cv::gapi::boundingRect(in);
-
-    cv::GComputation c(cv::GIn(in), cv::GOut(out));
-    c.apply(cv::gin(in_vectorF), cv::gout(out_rect_gapi), getCompileArgs());
-    // OpenCV code /////////////////////////////////////////////////////////////
-    {
-        out_rect_ocv = cv::boundingRect(in_vectorF);
-    }
-
-    // Comparison //////////////////////////////////////////////////////////////
-    {
-        EXPECT_TRUE(cmpF(out_rect_gapi, out_rect_ocv));
-    }
+    boundingRectTestBody(in_vector, cmpF, getCompileArgs());
 }
 
 TEST_P(FitLine2DMatVectorTest, AccuracyTest)

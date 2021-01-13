@@ -146,16 +146,26 @@ void writeBackExec(const Mag& mag, const RcDesc &rc, GRunArgP &g_arg)
         writeBack(mag, rc, g_arg);
         return;
     }
-    auto checkOutArgData = [&](const uchar* out_arg_data) {
-        //simply check that memory was not reallocated, i.e.
-        //both Mat and View pointing to the same memory
-        auto mag_data = mag.template slot<cv::RMat>().at(rc.id).get<RMatAdapter>()->data();
-        GAPI_Assert((out_arg_data == mag_data) && " data for output parameters was reallocated ?");
-    };
 
     switch (g_arg.index())
     {
-    case GRunArgP::index_of<cv::Mat*>() : checkOutArgData(util::get<cv::Mat*>(g_arg)->data); break;
+    case GRunArgP::index_of<cv::Mat*>() : {
+        // If there is a copy intrinsic at the end of the graph
+        // we need to actualy copy the data to the user buffer
+        // since output runarg was optimized to simply point
+        // to the input of the copy kernel
+        // FIXME:
+        // Rework, find a better way to check if there should be
+        // a real copy (add a pass to StreamingBackend?)
+        auto& out_mat = *util::get<cv::Mat*>(g_arg);
+        const auto& rmat = mag.template slot<cv::RMat>().at(rc.id);
+        auto mag_data = rmat.get<RMatAdapter>()->data();
+        if (out_mat.data != mag_data) {
+            auto view = rmat.access(RMat::Access::R);
+            asMat(view).copyTo(out_mat);
+        }
+        break;
+    }
     case GRunArgP::index_of<cv::RMat*>() : /* do nothing */ break;
     default: util::throw_error(std::logic_error("content type of the runtime argument does not match to resource description ?"));
     }
@@ -232,7 +242,10 @@ void cv::gimpl::GExecutor::initResource(const ade::NodeHandle & nh, const ade::N
     case GShape::GOPAQUE:
         // Constructed on Reset, do nothing here
         break;
-
+    case GShape::GFRAME: {
+        // Should be defined by backend, do nothing here
+        break;
+    }
     default:
         GAPI_Assert(false);
     }

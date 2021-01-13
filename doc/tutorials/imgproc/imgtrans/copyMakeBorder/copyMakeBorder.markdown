@@ -1,8 +1,15 @@
 Adding borders to your images {#tutorial_copyMakeBorder}
 =============================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_filter_2d}
 @next_tutorial{tutorial_sobel_derivatives}
+
+|    |    |
+| -: | :- |
+| Original author | Ana Huamán |
+| Compatibility | OpenCV >= 3.0 |
 
 Goal
 ----

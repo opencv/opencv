@@ -20,6 +20,7 @@
 #include "api/gproto_priv.hpp" // ptr(GRunArgP)
 #include "compiler/passes/passes.hpp"
 #include "backends/common/gbackend.hpp" // createMat
+#include "backends/streaming/gstreamingbackend.hpp" // GCopy
 #include "compiler/gcompiler.hpp" // for compileIslands
 
 #include "executor/gstreamingexecutor.hpp"
@@ -143,6 +144,9 @@ void sync_data(cv::GRunArgs &results, cv::GRunArgsP &outputs)
             break;
         case T::index_of<cv::detail::OpaqueRef>():
             cv::util::get<cv::detail::OpaqueRef>(out_obj).mov(cv::util::get<cv::detail::OpaqueRef>(res_obj));
+            break;
+        case T::index_of<cv::MediaFrame*>():
+            *cv::util::get<cv::MediaFrame*>(out_obj) = std::move(cv::util::get<cv::MediaFrame>(res_obj));
             break;
         default:
             GAPI_Assert(false && "This value type is not supported!"); // ...maybe because of STANDALONE mode.
@@ -532,6 +536,14 @@ class StreamingInput final: public cv::gimpl::GIslandExecutable::IInput
             // Stop case
             return cv::gimpl::StreamMsg{cv::gimpl::EndOfStream{}};
         }
+        // Wrap all input cv::Mats with RMats
+        for (auto& arg : isl_input_args) {
+            if (arg.index() == cv::GRunArg::index_of<cv::Mat>()) {
+                arg = cv::GRunArg{ cv::make_rmat<cv::gimpl::RMatAdapter>(cv::util::get<cv::Mat>(arg))
+                                 , arg.meta
+                                 };
+            }
+        }
         return cv::gimpl::StreamMsg{std::move(isl_input_args)};
     }
     virtual cv::gimpl::StreamMsg try_get() override
@@ -634,6 +646,13 @@ class StreamingOutput final: public cv::gimpl::GIslandExecutable::IOutput
                 // FIXME: that variant MOVE problem again
                 const auto &rr = cv::util::get<cv::detail::OpaqueRef>(out_arg);
                 ret_val = cv::GRunArgP(rr);
+            }
+            break;
+        case cv::GShape::GFRAME:
+            {
+                cv::MediaFrame frame;
+                out_arg = cv::GRunArg(std::move(frame));
+                ret_val = cv::GRunArgP(&cv::util::get<cv::MediaFrame>(out_arg));
             }
             break;
         default:
@@ -986,12 +1005,10 @@ cv::gimpl::GStreamingExecutor::GStreamingExecutor(std::unique_ptr<ade::Graph> &&
                     // In the current implementation, such islands
                     // _must_ start with copy
                     GAPI_Assert(isl->in_ops().size() == 1u);
-#if !defined(GAPI_STANDALONE)
                     GAPI_Assert(GModel::Graph(*m_orig_graph)
                                 .metadata(*isl->in_ops().begin())
                                 .get<cv::gimpl::Op>()
-                                .k.name == cv::gapi::core::GCopy::id());
-#endif // GAPI_STANDALONE
+                                .k.name == cv::gimpl::streaming::GCopy::id());
                     for (auto out_nh : nh->outNodes()) {
                         for (auto out_eh : out_nh->outEdges()) {
                             qgr.metadata(out_eh).set(DesyncSpecialCase{});

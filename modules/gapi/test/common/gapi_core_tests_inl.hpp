@@ -18,10 +18,10 @@ namespace opencv_test
 namespace
 {
 template <typename Elem>
-inline bool compareVectorsAbsExact(const std::vector<Elem>& outOCV,
-                                   const std::vector<Elem>& outGAPI)
+inline bool compareVectorsAbsExact(const std::vector<Elem>& outGAPI,
+                                   const std::vector<Elem>& outOCV)
 {
-    return AbsExactVector<Elem>().to_compare_f()(outOCV, outGAPI);
+    return AbsExactVector<Elem>().to_compare_f()(outGAPI, outOCV);
 }
 }
 
@@ -1297,7 +1297,11 @@ TEST_P(PhaseTest, AccuracyTest)
     // Comparison //////////////////////////////////////////////////////////////
     // FIXME: use a comparison functor instead (after enabling OpenCL)
     {
+#if defined(__aarch64__) || defined(__arm__)
+        EXPECT_NEAR(0, cvtest::norm(out_mat_ocv, out_mat_gapi, NORM_INF), 4e-6);
+#else
         EXPECT_EQ(0, cvtest::norm(out_mat_ocv, out_mat_gapi, NORM_INF));
+#endif
     }
 }
 

@@ -36,6 +36,7 @@
 #include "executor/gstreamingexecutor.hpp"
 #include "backends/common/gbackend.hpp"
 #include "backends/common/gmetabackend.hpp"
+#include "backends/streaming/gstreamingbackend.hpp" // cv::gimpl::streaming::kernels()
 
 // <FIXME:>
 #if !defined(GAPI_STANDALONE)
@@ -59,8 +60,11 @@ namespace
             for (const auto &b : pkg.backends()) {
                 aux_pkg = combine(aux_pkg, b.priv().auxiliaryKernels());
             }
-            // Always include built-in meta<> implementation
-            return combine(pkg, aux_pkg, cv::gimpl::meta::kernels());
+            // Always include built-in meta<> and copy implementation
+            return combine(pkg,
+                           aux_pkg,
+                           cv::gimpl::meta::kernels(),
+                           cv::gimpl::streaming::kernels());
         };
 
         auto has_use_only = cv::gapi::getCompileArg<cv::gapi::use_only>(args);
@@ -72,7 +76,8 @@ namespace
             combine(cv::gapi::core::cpu::kernels(),
                     cv::gapi::imgproc::cpu::kernels(),
                     cv::gapi::video::cpu::kernels(),
-                    cv::gapi::render::ocv::kernels());
+                    cv::gapi::render::ocv::kernels(),
+                    cv::gapi::streaming::kernels());
 #else
             cv::gapi::GKernelPackage();
 #endif // !defined(GAPI_STANDALONE)

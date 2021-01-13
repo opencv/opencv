@@ -16,6 +16,7 @@
 #include <utility> // tuple
 #include <type_traits> // is_same, false_type
 
+#include <opencv2/gapi/util/util.hpp> // all_satisfy
 #include <opencv2/gapi/util/any.hpp>  // any<>
 #include <opencv2/gapi/gkernel.hpp>   // GKernelType[M], GBackend
 #include <opencv2/gapi/garg.hpp>      // GArg
@@ -27,40 +28,54 @@ namespace cv {
 template<typename, typename> class GNetworkType;
 
 namespace detail {
-    template<typename, typename>
-    struct valid_infer2_types;
 
-    // Terminal case 1 (50/50 success)
-    template<typename T>
-    struct valid_infer2_types< std::tuple<cv::GMat>, std::tuple<T> > {
-        // By default, Nets are limited to GMat argument types only
-        // for infer2, every GMat argument may translate to either
-        // GArray<GMat> or GArray<Rect>. GArray<> part is stripped
-        // already at this point.
-        static constexpr const auto value =
-                std::is_same<typename std::decay<T>::type, cv::GMat>::value
-             || std::is_same<typename std::decay<T>::type, cv::Rect>::value;
-    };
+// Infer ///////////////////////////////////////////////////////////////////////
+template<typename T>
+struct accepted_infer_types {
+    static constexpr const auto value =
+            std::is_same<typename std::decay<T>::type, cv::GMat>::value
+         || std::is_same<typename std::decay<T>::type, cv::GFrame>::value;
+};
 
-    // Terminal case 2 (100% failure)
-    template<typename... Ts>
-    struct valid_infer2_types< std::tuple<>, std::tuple<Ts...> >
-        : public std::false_type {
-    };
+template<typename... Ts>
+using valid_infer_types = all_satisfy<accepted_infer_types, Ts...>;
 
-    // Terminal case 3 (100% failure)
-    template<typename... Ns>
-    struct valid_infer2_types< std::tuple<Ns...>, std::tuple<> >
-        : public std::false_type {
-    };
+// Infer2 //////////////////////////////////////////////////////////////////////
 
-    // Recursion -- generic
-    template<typename... Ns, typename T, typename...Ts>
-    struct valid_infer2_types< std::tuple<cv::GMat,Ns...>, std::tuple<T,Ts...> > {
-        static constexpr const auto value =
-               valid_infer2_types< std::tuple<cv::GMat>, std::tuple<T> >::value
-            && valid_infer2_types< std::tuple<Ns...>, std::tuple<Ts...> >::value;
-    };
+template<typename, typename>
+struct valid_infer2_types;
+
+// Terminal case 1 (50/50 success)
+template<typename T>
+struct valid_infer2_types< std::tuple<cv::GMat>, std::tuple<T> > {
+    // By default, Nets are limited to GMat argument types only
+    // for infer2, every GMat argument may translate to either
+    // GArray<GMat> or GArray<Rect>. GArray<> part is stripped
+    // already at this point.
+    static constexpr const auto value =
+            std::is_same<typename std::decay<T>::type, cv::GMat>::value
+         || std::is_same<typename std::decay<T>::type, cv::Rect>::value;
+};
+
+// Terminal case 2 (100% failure)
+template<typename... Ts>
+struct valid_infer2_types< std::tuple<>, std::tuple<Ts...> >
+    : public std::false_type {
+};
+
+// Terminal case 3 (100% failure)
+template<typename... Ns>
+struct valid_infer2_types< std::tuple<Ns...>, std::tuple<> >
+    : public std::false_type {
+};
+
+// Recursion -- generic
+template<typename... Ns, typename T, typename...Ts>
+struct valid_infer2_types< std::tuple<cv::GMat,Ns...>, std::tuple<T,Ts...> > {
+    static constexpr const auto value =
+           valid_infer2_types< std::tuple<cv::GMat>, std::tuple<T> >::value
+        && valid_infer2_types< std::tuple<Ns...>, std::tuple<Ts...> >::value;
+};
 } // namespace detail
 
 // TODO: maybe tuple_wrap_helper from util.hpp may help with this.
@@ -76,10 +91,6 @@ public:
     using API     = std::function<Result(Args...)>;
 
     using ResultL = std::tuple< cv::GArray<R>... >;
-    using APIList = std::function<ResultL(cv::GArray<cv::Rect>, Args...)>;
-
-    // FIXME: Args... must be limited to a single GMat
-    using APIRoi = std::function<Result(cv::GOpaque<cv::Rect>, Args...)>;
 };
 
 // Single-return-value network definition (specialized base class)
@@ -94,20 +105,48 @@ public:
     using API     = std::function<R(Args...)>;
 
     using ResultL = cv::GArray<R>;
-    using APIList = std::function<ResultL(cv::GArray<cv::Rect>, Args...)>;
+};
 
-    // FIXME: Args... must be limited to a single GMat
-    using APIRoi = std::function<Result(cv::GOpaque<cv::Rect>, Args...)>;
+// InferAPI: Accepts either GMat or GFrame for very individual network's input
+template<class Net, class... Ts>
+struct InferAPI {
+    using type = typename std::enable_if
+        <    detail::valid_infer_types<Ts...>::value
+          && std::tuple_size<typename Net::InArgs>::value == sizeof...(Ts)
+        , std::function<typename Net::Result(Ts...)>
+        >::type;
+};
+
+// InferAPIRoi: Accepts a rectangle and either GMat or GFrame
+template<class Net, class T>
+struct InferAPIRoi {
+    using type = typename std::enable_if
+        <    detail::valid_infer_types<T>::value
+          && std::tuple_size<typename Net::InArgs>::value == 1u
+          , std::function<typename Net::Result(cv::GOpaque<cv::Rect>, T)>
+        >::type;
+};
+
+// InferAPIList: Accepts a list of rectangles and list of GMat/GFrames;
+// crops every input.
+template<class Net, class... Ts>
+struct InferAPIList {
+    using type = typename std::enable_if
+        <    detail::valid_infer_types<Ts...>::value
+          && std::tuple_size<typename Net::InArgs>::value == sizeof...(Ts)
+        , std::function<typename Net::ResultL(cv::GArray<cv::Rect>, Ts...)>
+        >::type;
 };
 
 // APIList2 is also template to allow different calling options
 // (GArray<cv::Rect> vs GArray<cv::GMat> per input)
-template<class Net, class... Ts>
+template<class Net, typename T, class... Ts>
 struct InferAPIList2 {
     using type = typename std::enable_if
-        < cv::detail::valid_infer2_types< typename Net::InArgs
+        < detail::valid_infer_types<T>::value &&
+          cv::detail::valid_infer2_types< typename Net::InArgs
                                         , std::tuple<Ts...> >::value,
-          std::function<typename Net::ResultL(cv::GMat, cv::GArray<Ts>...)>
+          std::function<typename Net::ResultL(T, cv::GArray<Ts>...)>
         >::type;
 };
 
@@ -206,11 +245,11 @@ struct GInferList2Base {
 // A generic inference kernel. API (::on()) is fully defined by the Net
 // template parameter.
 // Acts as a regular kernel in graph (via KernelTypeMedium).
-template<typename Net>
+template<typename Net, typename... Args>
 struct GInfer final
     : public GInferBase
-    , public detail::KernelTypeMedium< GInfer<Net>
-                                     , typename Net::API > {
+    , public detail::KernelTypeMedium< GInfer<Net, Args...>
+                                     , typename InferAPI<Net, Args...>::type > {
     using GInferBase::getOutMeta; // FIXME: name lookup conflict workaround?
 
     static constexpr const char* tag() { return Net::tag(); }
@@ -218,11 +257,11 @@ struct GInfer final
 
 // A specific roi-inference kernel. API (::on()) is fixed here and
 // verified against Net.
-template<typename Net>
+template<typename Net, typename T>
 struct GInferROI final
     : public GInferROIBase
-    , public detail::KernelTypeMedium< GInferROI<Net>
-                                     , typename Net::APIRoi > {
+    , public detail::KernelTypeMedium< GInferROI<Net, T>
+                                     , typename InferAPIRoi<Net, T>::type > {
     using GInferROIBase::getOutMeta; // FIXME: name lookup conflict workaround?
 
     static constexpr const char* tag() { return Net::tag(); }
@@ -231,11 +270,11 @@ struct GInferROI final
 
 // A generic roi-list inference kernel. API (::on()) is derived from
 // the Net template parameter (see more in infer<> overload).
-template<typename Net>
+template<typename Net, typename... Args>
 struct GInferList final
     : public GInferListBase
-    , public detail::KernelTypeMedium< GInferList<Net>
-                                     , typename Net::APIList > {
+    , public detail::KernelTypeMedium< GInferList<Net, Args...>
+                                     , typename InferAPIList<Net, Args...>::type > {
     using GInferListBase::getOutMeta; // FIXME: name lookup conflict workaround?
 
     static constexpr const char* tag() { return Net::tag(); }
@@ -246,11 +285,11 @@ struct GInferList final
 // overload).
 // Takes an extra variadic template list to reflect how this network
 // was called (with Rects or GMats as array parameters)
-template<typename Net, typename... Args>
+template<typename Net, typename T, typename... Args>
 struct GInferList2 final
     : public GInferList2Base
-    , public detail::KernelTypeMedium< GInferList2<Net, Args...>
-                                     , typename InferAPIList2<Net, Args...>::type > {
+    , public detail::KernelTypeMedium< GInferList2<Net, T, Args...>
+                                     , typename InferAPIList2<Net, T, Args...>::type > {
     using GInferList2Base::getOutMeta; // FIXME: name lookup conflict workaround?
 
     static constexpr const char* tag() { return Net::tag(); }
@@ -280,9 +319,9 @@ namespace gapi {
  *   objects of appropriate type is returned.
  * @sa  G_API_NET()
  */
-template<typename Net>
-typename Net::Result infer(cv::GOpaque<cv::Rect> roi, cv::GMat in) {
-    return GInferROI<Net>::on(roi, in);
+template<typename Net, typename T>
+typename Net::Result infer(cv::GOpaque<cv::Rect> roi, T in) {
+    return GInferROI<Net, T>::on(roi, in);
 }
 
 /** @brief Calculates responses for the specified network (template
@@ -300,7 +339,7 @@ typename Net::Result infer(cv::GOpaque<cv::Rect> roi, cv::GMat in) {
  */
 template<typename Net, typename... Args>
 typename Net::ResultL infer(cv::GArray<cv::Rect> roi, Args&&... args) {
-    return GInferList<Net>::on(roi, std::forward<Args>(args)...);
+    return GInferList<Net, Args...>::on(roi, std::forward<Args>(args)...);
 }
 
 /** @brief Calculates responses for the specified network (template
@@ -320,11 +359,12 @@ typename Net::ResultL infer(cv::GArray<cv::Rect> roi, Args&&... args) {
  *   GArray<> objects is returned with the appropriate types inside.
  * @sa  G_API_NET()
  */
-template<typename Net, typename... Args>
-typename Net::ResultL infer2(cv::GMat image, cv::GArray<Args>... args) {
+
+template<typename Net, typename T, typename... Args>
+typename Net::ResultL infer2(T image, cv::GArray<Args>... args) {
     // FIXME: Declared as "2" because in the current form it steals
     // overloads from the regular infer
-    return GInferList2<Net, Args...>::on(image, args...);
+    return GInferList2<Net, T, Args...>::on(image, args...);
 }
 
 /**
@@ -340,7 +380,7 @@ typename Net::ResultL infer2(cv::GMat image, cv::GArray<Args>... args) {
  */
 template<typename Net, typename... Args>
 typename Net::Result infer(Args&&... args) {
-    return GInfer<Net>::on(std::forward<Args>(args)...);
+    return GInfer<Net, Args...>::on(std::forward<Args>(args)...);
 }
 
 /**

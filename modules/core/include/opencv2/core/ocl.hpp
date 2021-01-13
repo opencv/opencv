@@ -626,7 +626,12 @@ public:
 
     String name() const;
     String vendor() const;
+
+    /// See CL_PLATFORM_VERSION
     String version() const;
+    int versionMajor() const;
+    int versionMinor() const;
+
     int deviceNumber() const;
     void getDevice(Device& device, int d) const;
 
@@ -743,9 +748,11 @@ public:
 
     /** Get associated ocl::Context */
     Context& getContext() const;
-    /** Get associated ocl::Device */
+    /** Get the single default associated ocl::Device */
     Device& getDevice() const;
-    /** Get associated ocl::Queue */
+    /** Get the single ocl::Queue that is associated with the ocl::Context and
+     *  the single default ocl::Device
+     */
     Queue& getQueue() const;
 
     bool useOpenCL() const;

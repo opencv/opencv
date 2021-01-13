@@ -209,14 +209,15 @@ public:
         normAssertTextDetections(gt, contours, "", 0.05f);
     }
 
-    void testTextDetectionModelByEAST(const std::string& weights, const std::string& cfg,
-                                        const std::string& imgPath, const std::vector<RotatedRect>& gt,
-                                        float confThresh, float nmsThresh,
-                                        const Size& size = {-1, -1}, Scalar mean = Scalar(),
-                                        double scale = 1.0, bool swapRB = false, bool crop = false)
+    void testTextDetectionModelByEAST(
+            const std::string& weights, const std::string& cfg,
+            const std::string& imgPath, const std::vector<RotatedRect>& gt,
+            float confThresh, float nmsThresh,
+            const Size& size = {-1, -1}, Scalar mean = Scalar(),
+            double scale = 1.0, bool swapRB = false, bool crop = false,
+            double eps_center = 5/*pixels*/, double eps_size = 5/*pixels*/, double eps_angle = 1
+    )
     {
-        const double EPS_PIXELS = 3;
-
         checkBackend();
 
         Mat frame = imread(imgPath);
@@ -255,11 +256,11 @@ public:
             waitKey(0);
 #endif
             const RotatedRect& gtBox = gt[i];
-            EXPECT_NEAR(box.center.x, gtBox.center.x, EPS_PIXELS);
-            EXPECT_NEAR(box.center.y, gtBox.center.y, EPS_PIXELS);
-            EXPECT_NEAR(box.size.width, gtBox.size.width, EPS_PIXELS);
-            EXPECT_NEAR(box.size.height, gtBox.size.height, EPS_PIXELS);
-            EXPECT_NEAR(box.angle, gtBox.angle, 1);
+            EXPECT_NEAR(box.center.x, gtBox.center.x, eps_center);
+            EXPECT_NEAR(box.center.y, gtBox.center.y, eps_center);
+            EXPECT_NEAR(box.size.width, gtBox.size.width, eps_size);
+            EXPECT_NEAR(box.size.height, gtBox.size.height, eps_size);
+            EXPECT_NEAR(box.angle, gtBox.angle, eps_angle);
         }
     }
 };
@@ -642,9 +643,6 @@ TEST_P(Test_Model, TextDetectionByDB)
 
 TEST_P(Test_Model, TextDetectionByEAST)
 {
-    if (target == DNN_TARGET_OPENCL_FP16)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
-
     std::string imgPath = _tf("text_det_test2.jpg");
     std::string weightPath = _tf("frozen_east_text_detection.pb", false);
 
@@ -663,7 +661,20 @@ TEST_P(Test_Model, TextDetectionByEAST)
     float confThresh = 0.5;
     float nmsThresh = 0.4;
 
-    testTextDetectionModelByEAST(weightPath, "", imgPath, gt, confThresh, nmsThresh, size, mean, scale, swapRB);
+    double eps_center = 5/*pixels*/;
+    double eps_size = 5/*pixels*/;
+    double eps_angle = 1;
+
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_MYRIAD)
+    {
+        eps_center = 10;
+        eps_size = 25;
+        eps_angle = 3;
+    }
+
+    testTextDetectionModelByEAST(weightPath, "", imgPath, gt, confThresh, nmsThresh, size, mean, scale, swapRB, false/*crop*/,
+        eps_center, eps_size, eps_angle
+    );
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_Model, dnnBackendsAndTargets());

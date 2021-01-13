@@ -39,9 +39,14 @@
 //
 //M*/
 
+#ifdef HALF_SUPPORT
+#ifdef cl_khr_fp16
+#pragma OPENCL EXTENSION cl_khr_fp16:enable
+#endif
+#endif
+
 #define CONCAT(A,B) A##_##B
 #define TEMPLATE(name,type) CONCAT(name,type)
-#define Dtype float
 
 __kernel void TEMPLATE(copyWeightsSwizzled, Dtype)
     (__global Dtype* weightIn,

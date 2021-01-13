@@ -18,8 +18,21 @@ imgproc = {'': ['Canny', 'GaussianBlur', 'Laplacian', 'HoughLines', 'HoughLinesP
                 'matchShapes', 'matchTemplate','medianBlur', 'minAreaRect', 'minEnclosingCircle', 'moments', 'morphologyEx', \
                 'pointPolygonTest', 'putText','pyrDown','pyrUp','rectangle','remap', 'resize','sepFilter2D','threshold', \
                 'undistort','warpAffine','warpPerspective','warpPolar','watershed', \
-                'fillPoly', 'fillConvexPoly'],
-           'CLAHE': ['apply', 'collectGarbage', 'getClipLimit', 'getTilesGridSize', 'setClipLimit', 'setTilesGridSize']}
+                'fillPoly', 'fillConvexPoly', 'polylines',
+    ],
+    'CLAHE': ['apply', 'collectGarbage', 'getClipLimit', 'getTilesGridSize', 'setClipLimit', 'setTilesGridSize'],
+    'segmentation_IntelligentScissorsMB': [
+        'IntelligentScissorsMB',
+        'setWeights',
+        'setGradientMagnitudeMaxLimit',
+        'setEdgeFeatureZeroCrossingParameters',
+        'setEdgeFeatureCannyParameters',
+        'applyImage',
+        'applyImageFeatures',
+        'buildMap',
+        'getContour'
+    ],
+}
 
 objdetect = {'': ['groupRectangles'],
              'HOGDescriptor': ['load', 'HOGDescriptor', 'getDefaultPeopleDetector', 'getDaimlerPeopleDetector', 'setSVMDetector', 'detectMultiScale'],
@@ -74,9 +87,12 @@ aruco = {'': ['detectMarkers', 'drawDetectedMarkers', 'drawAxis', 'estimatePoseS
         'aruco_Board': ['create'],
         'aruco_GridBoard': ['create', 'draw'],
         'aruco_CharucoBoard': ['create', 'draw'],
+        'aruco_DetectorParameters': ['create']
         }
 
-calib3d = {'': ['findHomography', 'calibrateCameraExtended', 'drawFrameAxes', 'estimateAffine2D', 'getDefaultNewCameraMatrix', 'initUndistortRectifyMap', 'Rodrigues']}
+calib3d = {'': ['findHomography', 'calibrateCameraExtended', 'drawFrameAxes', 'estimateAffine2D', \
+                'getDefaultNewCameraMatrix', 'initUndistortRectifyMap', 'Rodrigues', \
+                'solvePnP', 'solvePnPRansac', 'solvePnPRefineLM']}
 
 
 white_list = makeWhiteList([core, imgproc, objdetect, video, dnn, features2d, photo, aruco, calib3d])

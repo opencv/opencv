@@ -870,6 +870,11 @@ bool GStreamerCapture::open(const String &filename_)
         gst_app_sink_set_max_buffers(GST_APP_SINK(sink.get()), 1);
     }
 
+    if (!manualpipeline)
+    {
+        gst_base_sink_set_sync(GST_BASE_SINK(sink.get()), FALSE);
+    }
+
     //do not emit signals: all calls will be synchronous and blocking
     gst_app_sink_set_emit_signals (GST_APP_SINK(sink.get()), FALSE);
 
@@ -991,6 +996,8 @@ double GStreamerCapture::getProperty(int propId) const
     switch(propId)
     {
     case CV_CAP_PROP_POS_MSEC:
+        CV_LOG_ONCE_WARNING(NULL, "OpenCV | GStreamer: CAP_PROP_POS_MSEC property result may be unrealiable: "
+                                  "https://github.com/opencv/opencv/issues/19025");
         format = GST_FORMAT_TIME;
         status = gst_element_query_position(sink.get(), CV_GST_FORMAT(format), &value);
         if(!status) {
@@ -1839,6 +1846,8 @@ void handleMessage(GstElement * pipeline)
 
 #if defined(BUILD_PLUGIN)
 
+#define ABI_VERSION 0
+#define API_VERSION 1
 #include "plugin_api.hpp"
 
 namespace cv {
@@ -2054,37 +2063,39 @@ CvResult CV_API_CALL cv_writer_write(CvPluginWriter handle, const unsigned char 
     }
 }
 
-static const OpenCV_VideoIO_Plugin_API_preview plugin_api_v0 =
+static const OpenCV_VideoIO_Plugin_API_preview plugin_api =
 {
     {
         sizeof(OpenCV_VideoIO_Plugin_API_preview), ABI_VERSION, API_VERSION,
         CV_VERSION_MAJOR, CV_VERSION_MINOR, CV_VERSION_REVISION, CV_VERSION_STATUS,
         "GStreamer OpenCV Video I/O plugin"
     },
-    /*  1*/CAP_GSTREAMER,
-    /*  2*/cv_capture_open,
-    /*  3*/cv_capture_release,
-    /*  4*/cv_capture_get_prop,
-    /*  5*/cv_capture_set_prop,
-    /*  6*/cv_capture_grab,
-    /*  7*/cv_capture_retrieve,
-    /*  8*/cv_writer_open,
-    /*  9*/cv_writer_release,
-    /* 10*/cv_writer_get_prop,
-    /* 11*/cv_writer_set_prop,
-    /* 12*/cv_writer_write,
-    /* 13*/cv_writer_open_with_params
+    {
+        /*  1*/CAP_GSTREAMER,
+        /*  2*/cv_capture_open,
+        /*  3*/cv_capture_release,
+        /*  4*/cv_capture_get_prop,
+        /*  5*/cv_capture_set_prop,
+        /*  6*/cv_capture_grab,
+        /*  7*/cv_capture_retrieve,
+        /*  8*/cv_writer_open,
+        /*  9*/cv_writer_release,
+        /* 10*/cv_writer_get_prop,
+        /* 11*/cv_writer_set_prop,
+        /* 12*/cv_writer_write
+    },
+    {
+        /* 13*/cv_writer_open_with_params
+    }
 };
 
 } // namespace
 
 const OpenCV_VideoIO_Plugin_API_preview* opencv_videoio_plugin_init_v0(int requested_abi_version, int requested_api_version, void* /*reserved=NULL*/) CV_NOEXCEPT
 {
-    if (requested_abi_version != 0)
-        return NULL;
-    if (requested_api_version != 0 && requested_api_version != 1)
-        return NULL;
-    return &cv::plugin_api_v0;
+    if (requested_abi_version == ABI_VERSION && requested_api_version <= API_VERSION)
+        return &cv::plugin_api;
+    return NULL;
 }
 
 #endif // BUILD_PLUGIN

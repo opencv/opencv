@@ -694,11 +694,16 @@ sub-matrices.
     -# Process "foreign" data using OpenCV (for example, when you implement a DirectShow\* filter or
     a processing module for gstreamer, and so on). For example:
     @code
-        void process_video_frame(const unsigned char* pixels,
-                                 int width, int height, int step)
+        Mat process_video_frame(const unsigned char* pixels,
+                                int width, int height, int step)
         {
-            Mat img(height, width, CV_8UC3, pixels, step);
-            GaussianBlur(img, img, Size(7,7), 1.5, 1.5);
+            // wrap input buffer
+            Mat img(height, width, CV_8UC3, (unsigned char*)pixels, step);
+
+            Mat result;
+            GaussianBlur(img, result, Size(7, 7), 1.5, 1.5);
+
+            return result;
         }
     @endcode
     -# Quickly initialize small matrices and/or get a super-fast element access.

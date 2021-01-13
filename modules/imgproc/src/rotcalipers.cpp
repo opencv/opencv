@@ -352,7 +352,7 @@ cv::RotatedRect cv::minAreaRect( InputArray _points )
     Point2f out[3];
     RotatedRect box;
 
-    convexHull(_points, hull, true, true);
+    convexHull(_points, hull, false, true);
 
     if( hull.depth() != CV_32F )
     {

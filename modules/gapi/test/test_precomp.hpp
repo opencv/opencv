@@ -11,6 +11,7 @@
 #define __OPENCV_GAPI_TEST_PRECOMP_HPP__
 
 #include <cstdint>
+#include <thread>
 #include <vector>
 
 #include <opencv2/ts.hpp>
