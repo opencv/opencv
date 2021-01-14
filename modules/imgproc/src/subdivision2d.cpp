@@ -325,7 +325,7 @@ int Subdiv2D::insert(Point2f pt)
     CV_INSTRUMENT_REGION();
 
     int curr_point = 0, curr_edge = 0, deleted_edge = 0;
-    int location = locateInternal( Vertex(pt, PTTYPE_FREE), curr_edge, curr_point );
+    int location = locateInternal( Vertex( pt, PTTYPE_FREE), curr_edge, curr_point );
 
     if( location == PTLOC_VERTEX )
         return curr_point;
@@ -479,12 +479,12 @@ void Subdiv2D::calcVoronoi()
     clearVoronoi();
 
     // loop through all quad-edges, except for the first 3 (#1, #2, #3 - 0 is reserved for "NULL" pointer)
-    for( int quad_edge = 4; quad_edge < (int)qedges.size(); ++quad_edge ) {
+    for (int quad_edge = 4; quad_edge < (int)qedges.size(); ++quad_edge) {
         if (qedges[quad_edge].isfree()) {
             continue;
         }
 
-        for ( int i = 0, edge0 = quad_edge * 4; i < 2; ++i, edge0 = symEdge(edge0) ) {
+        for (int i = 0, edge0 = quad_edge * 4; i < 2; ++i, edge0 = symEdge(edge0)) {
             if (!qedges[edge0 >> 2].pt[3 - (edge0 & 2)]) {
                 int edge1 = getEdge( edge0, NEXT_AROUND_LEFT );
                 int edge2 = getEdge( edge1, NEXT_AROUND_LEFT );
@@ -494,7 +494,7 @@ void Subdiv2D::calcVoronoi()
                 int edge0_dst = edgeDst(edge0, &dst0);
                 int edge1_dst = edgeDst(edge1, &dst1);
 
-                int voronoi_point;
+                int voronoi_point = 0;
 
                 if (!vtx[edge0_org].meta() && !vtx[edge0_dst].meta() && !vtx[edge1_dst].meta()) {
                     voronoi_point = newPoint(computeVoronoiPoint(org0, dst0, dst0, dst1), PTTYPE_VORONOI);
@@ -524,22 +524,32 @@ int Subdiv2D::findNearest(Point2f pt, Point2f* nearestPt)
 {
     CV_INSTRUMENT_REGION();
 
-    if (!validGeometry)
+    if( !validGeometry )
         calcVoronoi();
 
     Vertex v(pt, PTTYPE_FREE);
 
-    int edge, vertex;
+    int vertex, edge;
     int location = locateInternal(v, edge, vertex);
 
     if (location == PTLOC_VERTEX) {
         return vertex;
     }
+
+    // we need to start with a non-meta point as a candidate site
     if (location == PTLOC_EDGE && vtx[edgeOrg(edge)].meta()) {
         edge = symEdge(edge);
     }
-    while (location == PTLOC_INSIDE && vtx[edgeOrg(edge)].meta()) {
-        edge = getEdge(edge, NEXT_AROUND_LEFT);
+    if (location == PTLOC_INSIDE) {
+        for (int i = 0; i < 3 && vtx[edgeOrg(edge)].meta(); i++) {
+            edge = getEdge(edge, NEXT_AROUND_LEFT);
+        }
+        if (vtx[edgeOrg(edge)].meta()) {
+            if (nearestPt) {
+                nearestPt = NULL;
+            }
+            return 0;
+        }
     }
 
     edge = rotateEdge(edge, 1);
@@ -547,24 +557,17 @@ int Subdiv2D::findNearest(Point2f pt, Point2f* nearestPt)
     for (;;) {
         vertex = edgeOrg(rotateEdge( edge, 3));
 
-        for(;;) {
-            CV_Assert( edgeDst( edge ) > 0 );
-
-            Point2f shift = vtx[edgeDst(edge)].meta_shifted() ? Vertex(pt - shift,  Point2f() : Point2f(0.f, 0.f);
-            Vertex v_shifted = ;
-            if (rightOf(v - shift, vtx[vertex], vtx[edgeDst(edge)]) >= 0)
+        for (;;) {
+            if (rightOf(v, vtx[vertex], vtx[edgeDst(edge)]) >= 0) {
                 break;
             }
-
             edge = getEdge( edge, NEXT_AROUND_LEFT );
         }
 
-        for(;;) {
-            CV_Assert( edgeOrg( edge ) > 0 );
-
-            if (rightOf(v, vtx[vertex], vtx[edgeOrg(edge)]) < 0)
+        for (;;) {
+            if (rightOf(v, vtx[vertex], vtx[edgeOrg(edge)]) < 0) {
                 break;
-
+            }
             edge = getEdge( edge, PREV_AROUND_LEFT );
         }
 
