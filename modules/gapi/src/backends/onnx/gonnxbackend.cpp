@@ -90,7 +90,6 @@ struct TensorInfo {
         cv::Scalar mean;
         cv::Scalar stdev;
     };
-
     cv::util::optional<MeanStdev> mstd;
 };
 
@@ -271,7 +270,7 @@ inline void preprocess(const cv::Mat& src,
             pp = rsz;
         }
 
-        if (!is_hwc && new_c >= 1) {
+        if (!is_hwc && new_c > 1) {
             // Convert to CHW
             dst.create(cv::Size(new_w, new_h * new_c), ddepth);
             std::vector<cv::Mat> planes(new_c);
