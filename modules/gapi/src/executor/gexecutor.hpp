@@ -16,6 +16,10 @@
 #include <ade/graph.hpp>
 
 #include "backends/common/gbackend.hpp"
+#define USE_GAPI_TBB_EXECUTOR 0
+#if defined(USE_GAPI_TBB_EXECUTOR)
+#include "gtbbexecutor.hpp"
+#endif
 
 namespace cv {
 namespace gimpl {
@@ -83,8 +87,13 @@ protected:
 
     void initResource(const ade::NodeHandle &nh, const ade::NodeHandle &orig_nh); // FIXME: shouldn't it be RcDesc?
 
+    static void run_op(OpDesc& op, Mag& mag);
+private:
+    virtual void runImpl();
 public:
     explicit GExecutor(std::unique_ptr<ade::Graph> &&g_model);
+    virtual ~GExecutor() = default;
+
     void run(cv::gimpl::GRuntimeArgs &&args);
 
     bool canReshape() const;
@@ -94,6 +103,19 @@ public:
 
     const GModel::Graph& model() const; // FIXME: make it ConstGraph?
 };
+
+#if defined(USE_GAPI_TBB_EXECUTOR)
+class GTBBExecutor: public GExecutor {
+
+    std::vector<parallel::tile_node> tasks;
+    std::vector<parallel::tile_node*> start_tasks;
+
+public:
+    explicit GTBBExecutor(std::unique_ptr<ade::Graph> &&g_model);
+private:
+    void runImpl() override;
+};
+#endif
 
 } // namespace gimpl
 } // namespace cv

@@ -10,12 +10,15 @@
 #include <iostream>
 
 #include <ade/util/zip_range.hpp>
+#include <ade/util/filter_range.hpp>
 
 #include <opencv2/gapi/opencv_includes.hpp>
 
 #include "api/gproto_priv.hpp" // ptr(GRunArgP)
 #include "executor/gexecutor.hpp"
 #include "compiler/passes/passes.hpp"
+
+#include "logger.hpp" // GAPI_LOG
 
 cv::gimpl::GExecutor::GExecutor(std::unique_ptr<ade::Graph> &&g_model)
     : m_orig_graph(std::move(g_model))
@@ -37,54 +40,134 @@ cv::gimpl::GExecutor::GExecutor(std::unique_ptr<ade::Graph> &&g_model)
     // 6. Run GIslandExecutable
     // 7. writeBack
 
+    auto is_slot = [&](ade::NodeHandle const& nh){
+        return m_gim.metadata(nh).get<NodeKind>().k == NodeKind::SLOT;
+    };
+
+    auto is_island = [&](ade::NodeHandle const& nh){
+        return m_gim.metadata(nh).get<NodeKind>().k == NodeKind::ISLAND;
+    };
+
     auto sorted = m_gim.metadata().get<ade::passes::TopologicalSortData>();
-    for (auto nh : sorted.nodes())
-    {
-        switch (m_gim.metadata(nh).get<NodeKind>().k)
-        {
-        case NodeKind::ISLAND:
-            {
-                std::vector<RcDesc> input_rcs;
-                std::vector<RcDesc> output_rcs;
-                input_rcs.reserve(nh->inNodes().size());
-                output_rcs.reserve(nh->outNodes().size());
+    for (auto&& nh : ade::util::filter(sorted.nodes(), is_slot)){
+        const auto orig_data_nh
+            = m_gim.metadata(nh).get<DataSlot>().original_data_node;
+        // (1)
+        initResource(nh, orig_data_nh);
+        m_slots.emplace_back(DataDesc{nh, orig_data_nh});
+    }
 
-                auto xtract = [&](ade::NodeHandle slot_nh, std::vector<RcDesc> &vec) {
-                    const auto orig_data_nh
-                        = m_gim.metadata(slot_nh).get<DataSlot>().original_data_node;
-                    const auto &orig_data_info
-                        = m_gm.metadata(orig_data_nh).get<Data>();
-                    vec.emplace_back(RcDesc{ orig_data_info.rc
-                                           , orig_data_info.shape
-                                           , orig_data_info.ctor});
-                };
-                // (3)
-                for (auto in_slot_nh  : nh->inNodes())  xtract(in_slot_nh,  input_rcs);
-                for (auto out_slot_nh : nh->outNodes()) xtract(out_slot_nh, output_rcs);
+    namespace r = ade::util::Range;
+    for (auto&& nh : r::filter(sorted.nodes(), is_island)){
+        std::vector<RcDesc> input_rcs;
+        std::vector<RcDesc> output_rcs;
+        input_rcs.reserve(nh->inNodes().size());
+        output_rcs.reserve(nh->outNodes().size());
 
-                m_ops.emplace_back(OpDesc{ std::move(input_rcs)
-                                         , std::move(output_rcs)
-                                         , m_gim.metadata(nh).get<IslandExec>().object
-                                         });
-            }
-            break;
+        auto xtract = [&](ade::NodeHandle slot_nh, std::vector<RcDesc> &vec) {
+            const auto orig_data_nh
+                = m_gim.metadata(slot_nh).get<DataSlot>().original_data_node;
+            const auto &orig_data_info
+                = m_gm.metadata(orig_data_nh).get<Data>();
+            vec.emplace_back(RcDesc{ orig_data_info.rc
+                                   , orig_data_info.shape
+                                   , orig_data_info.ctor});
+        };
+        // (3)
+        for (auto in_slot_nh  : nh->inNodes())  xtract(in_slot_nh,  input_rcs);
+        for (auto out_slot_nh : nh->outNodes()) xtract(out_slot_nh, output_rcs);
 
-        case NodeKind::SLOT:
-            {
-                const auto orig_data_nh
-                    = m_gim.metadata(nh).get<DataSlot>().original_data_node;
-                // (1)
-                initResource(nh, orig_data_nh);
-                m_slots.emplace_back(DataDesc{nh, orig_data_nh});
-            }
-            break;
+        m_ops.emplace_back(OpDesc{ std::move(input_rcs)
+                                 , std::move(output_rcs)
+                                 , m_gim.metadata(nh).get<IslandExec>().object
+                                 });
+    }
 
-        default:
-            GAPI_Assert(false);
-            break;
-        } // switch(kind)
-    } // for(gim nodes)
 }
+
+#if defined(USE_GAPI_TBB_EXECUTOR)
+cv::gimpl::GTBBExecutor::GTBBExecutor(std::unique_ptr<ade::Graph> &&g_model)
+    : GExecutor(std::move(g_model))
+{
+    using op_index_t = size_t;
+    std::unordered_map<ade::NodeHandle, op_index_t, ade::HandleHasher<ade::Node>> op_indexes;
+    std::unordered_map<op_index_t, std::unordered_set<ade::NodeHandle, ade::HandleHasher<ade::Node>>> op_dependees_node_handles;
+
+    namespace r = ade::util::Range;
+    auto is_island = [&](ade::NodeHandle const& nh){
+        return m_gim.metadata(nh).get<NodeKind>().k == NodeKind::ISLAND;
+    };
+
+    auto sorted = m_gim.metadata().get<ade::passes::TopologicalSortData>();
+
+    for (auto&& indexed_nh : r::indexed(r::filter(sorted.nodes(), is_island))){
+        auto&& nh           = r::value(indexed_nh);
+        const auto op_index = r::index(indexed_nh);
+
+        op_indexes[nh] = op_index;
+
+        //TODO: use async tasks for non CPU islands
+        std::function<void()> body = [this, op_index](){
+            GExecutor::run_op(m_ops[op_index], m_res);
+        };
+        tasks.emplace_back(std::move(body));
+
+        auto dependents_range = r::map(
+                r::filter(nh->inNodes(), [](ade::NodeHandle const& in_slot_nh){
+                    //count input data nodes what are result of other operation
+                    return ! in_slot_nh->inNodes().empty();
+                }),
+                [](ade::NodeHandle const& in_slot_nh){
+                    return in_slot_nh->inNodes().front();
+                }
+        );
+
+        //task dependencies is equal to the number of input slot objects (as there is only one writer to the any slot)
+        tasks.back().dependencies = std::unordered_set<ade::NodeHandle, ade::HandleHasher<ade::Node>>{dependents_range.begin(), dependents_range.end()}.size();
+        tasks.back().dependency_count = tasks.back().dependencies;
+
+        //get the dependent node_handles to convert them into operation indexes later
+        std::unordered_set<ade::NodeHandle, ade::HandleHasher<ade::Node>> dependent_node_handles;
+        for (auto&& out_slot_nh : nh->outNodes()){
+            auto dependent_islands = out_slot_nh->outNodes();
+            dependent_node_handles.insert(dependent_islands.begin(), dependent_islands.end());
+        }
+        op_dependees_node_handles[op_index] = std::move(dependent_node_handles);
+    }
+
+    auto total_order_index = tasks.size();
+
+    //fill the tasks graph : set priority indexes, number of dependencies, and dependent nodes sets
+
+    for (auto i : ade::util::Range::iota(tasks.size())){
+        tasks[i].total_order_index = --total_order_index;
+
+        auto dependents_range = ade::util::Range::map(ade::util::Range::toRange(op_dependees_node_handles.at(i)), [&](ade::NodeHandle const& nh)-> parallel::tile_node *{
+            return &tasks.at(op_indexes.at(nh));
+        });
+        tasks[i].dependants.assign(dependents_range.begin(), dependents_range.end());
+    }
+
+    using task_t = parallel::tile_node;
+    auto start_task_r = r::map(
+            r::filter(r::toRange(tasks),[](const task_t& task){
+                return task.dependencies == 0;
+            }),
+            [](task_t& t) { return &t;}
+    );
+    start_tasks.assign(start_task_r.begin(), start_task_r.end());
+
+    GAPI_LOG_INFO(NULL,
+                 "Total tasks in graph :" <<tasks.size() <<"; "
+              << "Start tasks count :" << start_tasks.size() << ";"
+    );
+}
+
+void cv::gimpl::GTBBExecutor::runImpl(){
+    tbb::concurrent_priority_queue<parallel::tile_node* , parallel::tile_node_indirect_priority_comparator> q {start_tasks.begin(), start_tasks.end()};
+    parallel::execute(q);
+}
+#endif //USE_GAPI_TBB_EXECUTOR
 
 namespace cv {
 namespace gimpl {
@@ -292,6 +375,13 @@ public:
     }
 };
 
+void cv::gimpl::GExecutor::run_op(OpDesc& op, Mag& m_res)
+{
+    Input i{m_res, op.in_objects};
+    Output o{m_res, op.out_objects};
+
+    op.isl_exec->run(i,o);
+}
 void cv::gimpl::GExecutor::run(cv::gimpl::GRuntimeArgs &&args)
 {
     // (2)
@@ -382,19 +472,20 @@ void cv::gimpl::GExecutor::run(cv::gimpl::GRuntimeArgs &&args)
     }
 
     // Run the script
-    for (auto &op : m_ops)
-    {
-        // (5), (6)
-        Input i{m_res, op.in_objects};
-        Output o{m_res, op.out_objects};
-        op.isl_exec->run(i, o);
-    }
-
+    runImpl();
     // (7)
     for (auto it : ade::util::zip(ade::util::toRange(proto.outputs),
                                   ade::util::toRange(args.outObjs)))
     {
         magazine::writeBackExec(m_res, std::get<0>(it), std::get<1>(it));
+    }
+}
+
+void cv::gimpl::GExecutor::runImpl() {
+    for (auto &op : m_ops)
+    {
+        // (5) and  (6)
+        run_op(op, m_res);
     }
 }
 
