@@ -249,6 +249,15 @@ template<typename... Ts> inline GRunArgsP gout(Ts&... args)
     return GRunArgsP{ GRunArgP(detail::wrap_host_helper<Ts>::wrap_out(args))... };
 }
 
+struct GTypeInfo;
+using GTypesInfo = std::vector<GTypeInfo>;
+
+// FIXME: Needed for python bridge, must be moved to more appropriate header
+namespace detail {
+    using ExtractArgsCallback = std::function<cv::GRunArgs(const cv::GTypesInfo& info)>;
+    using ExtractMetaCallback = std::function<cv::GMetaArgs(const cv::GTypesInfo& info)>;
+} // namespace detail
+
 } // namespace cv
 
 #endif // OPENCV_GAPI_GARG_HPP

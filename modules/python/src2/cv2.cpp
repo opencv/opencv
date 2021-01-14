@@ -1970,7 +1970,8 @@ static PyMethodDef special_methods[] = {
 #ifdef HAVE_OPENCV_GAPI
   {"GIn", CV_PY_FN_WITH_KW(pyopencv_cv_GIn), "GIn(...) -> GInputProtoArgs"},
   {"GOut", CV_PY_FN_WITH_KW(pyopencv_cv_GOut), "GOut(...) -> GOutputProtoArgs"},
-  {"gin", CV_PY_FN_WITH_KW(pyopencv_cv_gin), "gin(...) -> GRunArgs"},
+  {"gin", CV_PY_FN_WITH_KW(pyopencv_cv_gin), "gin(...) -> ExtractArgsCallback"},
+  {"descr_of", CV_PY_FN_WITH_KW(pyopencv_cv_descr_of), "descr_of(...) -> ExtractMetaCallback"},
 #endif
   {NULL, NULL},
 };

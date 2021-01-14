@@ -109,6 +109,22 @@ cv::GStreamingCompiled cv::GComputation::compileStreaming(GCompileArgs &&args)
     return comp.compileStreaming();
 }
 
+cv::GStreamingCompiled cv::GComputation::compileStreaming(const cv::detail::ExtractMetaCallback &callback,
+                                                                GCompileArgs                   &&args)
+{
+    // NB: Meta unknown yet, need to obtain input/output shapes
+    // to properly unpack runtime argmunets that came from python
+    if (m_priv->m_lastMetas.empty())
+    {
+        auto copy = args;
+        m_priv->m_lastCompiled = compile({}, std::move(copy));
+    }
+
+    auto metas = callback(m_priv->m_lastCompiled.priv().inInfo());
+    cv::gimpl::GCompiler comp(*this, std::move(metas), std::move(args));
+    return comp.compileStreaming();
+}
+
 // FIXME: Introduce similar query/test method for GMetaArgs as a building block
 // for functions like this?
 static bool formats_are_same(const cv::GMetaArgs& metas1, const cv::GMetaArgs& metas2)
@@ -172,10 +188,23 @@ void cv::GComputation::apply(const std::vector<cv::Mat> &ins,
 }
 
 // NB: This overload is called from python code
-cv::GRunArgs cv::GComputation::apply(GRunArgs &&ins, GCompileArgs &&args)
+cv::GRunArgs cv::GComputation::apply(const cv::detail::ExtractArgsCallback &callback,
+                                           GCompileArgs                   &&args)
 {
+    // NB: Meta unknown yet, need to obtain input/output shapes
+    // to properly unpack runtime argmunets that came from python
+    if (m_priv->m_lastMetas.empty())
+    {
+        auto copy = args;
+        m_priv->m_lastCompiled = compile({}, std::move(copy));
+    }
+
+    auto ins = callback(m_priv->m_lastCompiled.priv().inInfo());
+
+    // NB: After getting the arguments, recompile the graph with the correct meta
     recompile(descr_of(ins), std::move(args));
 
+    // NB: Using shapes init graph outputs
     const auto& out_info = m_priv->m_lastCompiled.priv().outInfo();
 
     GRunArgs run_args;
@@ -201,19 +230,23 @@ cv::GRunArgs cv::GComputation::apply(GRunArgs &&ins, GCompileArgs &&args)
             }
             case cv::GShape::GARRAY:
             {
-                switch (info.kind)
-                {
-                    case cv::detail::OpaqueKind::CV_POINT2F:
-                        run_args.emplace_back(cv::detail::VectorRef{std::vector<cv::Point2f>{}});
-                        outs.emplace_back(cv::util::get<cv::detail::VectorRef>(run_args.back()));
-                        break;
-                    default:
-                        util::throw_error(std::logic_error("Unsupported kind for GArray"));
-                }
+                cv::detail::VectorRef ref;
+                util::get<cv::detail::ConstructVec>(info.ctor)(ref);
+                run_args.emplace_back(ref);
+                outs.emplace_back(cv::util::get<cv::detail::VectorRef>(run_args.back()));
                 break;
             }
+            case cv::GShape::GOPAQUE:
+            {
+                cv::detail::OpaqueRef ref;
+                util::get<cv::detail::ConstructOpaque>(info.ctor)(ref);
+                run_args.emplace_back(ref);
+                outs.emplace_back(ref);
+                break;
+            }
+
             default:
-                util::throw_error(std::logic_error("Only cv::GMat and cv::GScalar are supported for python output"));
+                util::throw_error(std::logic_error("Unsupported output shape for python"));
         }
     }
     m_priv->m_lastCompiled(std::move(ins), std::move(outs));

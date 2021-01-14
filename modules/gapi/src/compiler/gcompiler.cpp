@@ -429,7 +429,7 @@ static cv::GTypesInfo collectInfo(const cv::gimpl::GModel::ConstGraph& g,
 
     ade::util::transform(nhs, std::back_inserter(info), [&g](const ade::NodeHandle& nh) {
         const auto& data = g.metadata(nh).get<cv::gimpl::Data>();
-        return cv::GTypeInfo{data.shape, data.kind};
+        return cv::GTypeInfo{data.shape, data.kind, data.ctor};
     });
 
     return info;
@@ -454,17 +454,24 @@ cv::GCompiled cv::gimpl::GCompiler::produceCompiled(GPtr &&pg)
     // ...before call to produceCompiled();
 
     GModel::ConstGraph cgr(*pg);
+    std::unique_ptr<GExecutor> pE;
+    GMetaArgs outMetas;
 
-    const auto &outMetas = GModel::ConstGraph(*pg).metadata()
-        .get<OutputMeta>().outMeta;
-    std::unique_ptr<GExecutor> pE(new GExecutor(std::move(pg)));
-    // FIXME: select which executor will be actually used,
-    // make GExecutor abstract.
+    // FIXME: the whole below construct is ugly, need to revise
+    // how G*Compiled learns about its meta.
+    if (!m_metas.empty())
+    {
+        outMetas = GModel::ConstGraph(*pg).metadata().get<OutputMeta>().outMeta;
+        // FIXME: select which executor will be actually used,
+        // make GExecutor abstract.
+        pE.reset(new GExecutor(std::move(pg)));
+    }
 
     GCompiled compiled;
     compiled.priv().setup(m_metas, outMetas, std::move(pE));
 
-    // NB: Need to store input/output GTypeInfo to allocate output arrays for python bindings
+    // NB: Need to store input/output GTypeInfo used by python bridge
+    // to properly obtain inputs and allocate outputs
     auto out_meta = collectInfo(cgr, cgr.metadata().get<cv::gimpl::Protocol>().out_nhs);
     auto in_meta  = collectInfo(cgr, cgr.metadata().get<cv::gimpl::Protocol>().in_nhs);
 
@@ -515,7 +522,11 @@ cv::GCompiled cv::gimpl::GCompiler::compile()
 {
     std::unique_ptr<ade::Graph> pG = generateGraph();
     runPasses(*pG);
-    compileIslands(*pG);
+    if (!m_metas.empty())
+    {
+        // If the metadata has been passed, compile our islands!
+        compileIslands(*pG);
+    }
     return produceCompiled(std::move(pG));
 }
 

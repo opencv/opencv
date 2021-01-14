@@ -96,6 +96,12 @@ cv::GStreamingCompiled::GStreamingCompiled()
 {
 }
 
+// NB: This overload is called from python code
+void cv::GStreamingCompiled::setSource(const cv::detail::ExtractArgsCallback& callback)
+{
+    setSource(callback(m_priv->inInfo()));
+}
+
 void cv::GStreamingCompiled::setSource(GRunArgs &&ins)
 {
     // FIXME: verify these input parameters according to the graph input meta

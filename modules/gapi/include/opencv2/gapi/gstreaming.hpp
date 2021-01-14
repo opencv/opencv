@@ -180,7 +180,10 @@ public:
      * @param ins vector of inputs to process.
      * @sa gin
      */
-    GAPI_WRAP void setSource(GRunArgs &&ins);
+    void setSource(GRunArgs &&ins);
+
+    /// @private -- Exclude this function from OpenCV documentation
+    GAPI_WRAP void setSource(const cv::detail::ExtractArgsCallback& callback);
 
     /**
      * @brief Specify an input video stream for a single-input

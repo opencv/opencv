@@ -135,7 +135,7 @@ GRunArg value_of(const GOrigin &origin);
 // Transform run-time computation arguments into a collection of metadata
 // extracted from that arguments
 GMetaArg  GAPI_EXPORTS descr_of(const GRunArg  &arg );
-GMetaArgs GAPI_EXPORTS_W descr_of(const GRunArgs &args);
+GMetaArgs GAPI_EXPORTS descr_of(const GRunArgs &args);
 
 // Transform run-time operation result argument into metadata extracted from that argument
 // Used to compare the metadata, which generated at compile time with the metadata result operation in run time

@@ -8,6 +8,8 @@ using gapi_GKernelPackage = cv::gapi::GKernelPackage;
 using gapi_GNetPackage = cv::gapi::GNetPackage;
 using gapi_ie_PyParams = cv::gapi::ie::PyParams;
 using gapi_wip_IStreamSource_Ptr = cv::Ptr<cv::gapi::wip::IStreamSource>;
+using detail_ExtractArgsCallback = cv::detail::ExtractArgsCallback;
+using detail_ExtractMetaCallback = cv::detail::ExtractMetaCallback;
 
 // FIXME: Python wrapper generate code without namespace std,
 // so it cause error: "string wasn't declared"
@@ -111,6 +113,15 @@ PyObject* pyopencv_from(const GMetaArgs& value)
 }
 
 template <typename T>
+void pyopencv_to_with_check(PyObject* from, T& to, const std::string& msg = "")
+{
+    if (!pyopencv_to(from, to, ArgInfo("", false)))
+    {
+        cv::util::throw_error(std::logic_error(msg));
+    }
+}
+
+template <typename T>
 static PyObject* extract_proto_args(PyObject* py_args, PyObject* kw)
 {
     using namespace cv;
@@ -128,6 +139,7 @@ static PyObject* extract_proto_args(PyObject* py_args, PyObject* kw)
         {
             args.emplace_back(reinterpret_cast<pyopencv_GMat_t*>(item)->v);
         }
+        // FIXME: Deprecated. Will be removed in next PRs
         else if (PyObject_TypeCheck(item, reinterpret_cast<PyTypeObject*>(pyopencv_GArrayP2f_TypePtr)))
         {
             args.emplace_back(reinterpret_cast<pyopencv_GArrayP2f_t*>(item)->v.strip());
@@ -152,62 +164,106 @@ static PyObject* pyopencv_cv_GOut(PyObject* , PyObject* py_args, PyObject* kw)
     return extract_proto_args<GProtoOutputArgs>(py_args, kw);
 }
 
-static PyObject* pyopencv_cv_gin(PyObject* , PyObject* py_args, PyObject* kw)
+static cv::GRunArgs extract_run_args(const cv::GTypesInfo& info, PyObject* py_args)
 {
-    using namespace cv;
+    PyGILState_STATE gstate;
+    gstate = PyGILState_Ensure();
 
-    GRunArgs args;
-    Py_ssize_t size = PyTuple_Size(py_args);
-    for (int i = 0; i < size; ++i)
+    cv::GRunArgs args;
+    Py_ssize_t tuple_size = PyTuple_Size(py_args);
+    args.reserve(tuple_size);
+
+    for (int i = 0; i < tuple_size; ++i)
     {
         PyObject* item = PyTuple_GetItem(py_args, i);
-        if (PyTuple_Check(item))
+        switch (info[i].shape)
         {
-            cv::Scalar s;
-            if (pyopencv_to(item, s, ArgInfo("scalar", false)))
+            case cv::GShape::GMAT:
             {
-                args.emplace_back(s);
+                // NB: In case streaming it can be IStreamSource or cv::Mat
+                if (PyObject_TypeCheck(item,
+                            reinterpret_cast<PyTypeObject*>(pyopencv_gapi_wip_IStreamSource_TypePtr)))
+                {
+                    cv::gapi::wip::IStreamSource::Ptr source =
+                        reinterpret_cast<pyopencv_gapi_wip_IStreamSource_t*>(item)->v;
+                    args.emplace_back(source);
+                }
+                else
+                {
+                    cv::Mat obj;
+                    pyopencv_to_with_check(item, obj, "Failed to obtain cv::Mat");
+                    args.emplace_back(obj);
+                }
+                break;
             }
-            else
+            case cv::GShape::GSCALAR:
             {
-                PyErr_SetString(PyExc_TypeError, "Failed convert tuple to cv::Scalar");
-                return NULL;
+                cv::Scalar obj;
+                pyopencv_to_with_check(item, obj, "Failed to obtain cv::Scalar");
+                args.emplace_back(obj);
+                break;
             }
+            default:
+                util::throw_error(std::logic_error("Unsupported output shape"));
         }
-        else if (PyArray_Check(item))
+    }
+    PyGILState_Release(gstate);
+    return args;
+}
+
+static cv::GMetaArgs extract_meta_args(const cv::GTypesInfo& info, PyObject* py_args)
+{
+    PyGILState_STATE gstate;
+    gstate = PyGILState_Ensure();
+
+    cv::GMetaArgs args;
+    Py_ssize_t tuple_size = PyTuple_Size(py_args);
+    args.reserve(tuple_size);
+
+    for (int i = 0; i < tuple_size; ++i)
+    {
+        PyObject* item = PyTuple_GetItem(py_args, i);
+        switch (info[i].shape)
         {
-            cv::Mat m;
-            if (pyopencv_to(item, m, ArgInfo("mat", false)))
-            {
-                args.emplace_back(m);
-            }
-            else
-            {
-                PyErr_SetString(PyExc_TypeError, "Failed convert array to cv::Mat");
-                return NULL;
-            }
-        }
-        else if (PyObject_TypeCheck(item,
-                    reinterpret_cast<PyTypeObject*>(pyopencv_gapi_wip_IStreamSource_TypePtr)))
-        {
-            cv::gapi::wip::IStreamSource::Ptr source =
-                reinterpret_cast<pyopencv_gapi_wip_IStreamSource_t*>(item)->v;
-            args.emplace_back(source);
-        }
-        else
-        {
-            PyErr_SetString(PyExc_TypeError, "cv.gin can works only with cv::Mat,"
-                                             "cv::Scalar, cv::gapi::wip::IStreamSource::Ptr");
-            return NULL;
+            case cv::GShape::GMAT:
+                {
+                    cv::Mat obj;
+                    pyopencv_to_with_check(item, obj, "Failed to obtain cv::Mat");
+                    args.emplace_back(cv::descr_of(obj));
+                    break;
+                }
+            case cv::GShape::GSCALAR:
+                {
+                    cv::Scalar obj;
+                    pyopencv_to_with_check(item, obj, "Failed to obtain cv::Scalar");
+                    args.emplace_back(cv::descr_of(obj));
+                    break;
+                }
+            default:
+                util::throw_error(std::logic_error("Unsupported output shape"));
         }
     }
 
-    return pyopencv_from_generic_vec(args);
+    PyGILState_Release(gstate);
+    return args;
 }
 
-static PyObject* pyopencv_cv_gout(PyObject* o, PyObject* py_args, PyObject* kw)
+static PyObject* pyopencv_cv_gin(PyObject*, PyObject* py_args)
 {
-    return pyopencv_cv_gin(o, py_args, kw);
+    Py_INCREF(py_args);
+    cv::detail::ExtractArgsCallback callback = std::bind(extract_run_args,
+                                                         std::placeholders::_1,
+                                                         py_args);
+    return pyopencv_from(callback);
+}
+
+static PyObject* pyopencv_cv_descr_of(PyObject*, PyObject* py_args)
+{
+    Py_INCREF(py_args);
+    cv::detail::ExtractMetaCallback callback = std::bind(extract_meta_args,
+                                                         std::placeholders::_1,
+                                                         py_args);
+    return pyopencv_from(callback);
 }
 
 #endif  // HAVE_OPENCV_GAPI
