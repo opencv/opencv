@@ -135,7 +135,7 @@ cv::gimpl::Unrolled cv::gimpl::unrollExpr(const GProtoArgs &ins,
                 // Put the outputs object description of the node
                 // so that they are not lost if they are not consumed by other operations
                 GAPI_Assert(call_p.m_k.outCtors.size() == call_p.m_k.outShapes.size());
-                for (const auto &it : ade::util::indexed(call_p.m_k.outShapes))
+                for (const auto it : ade::util::indexed(call_p.m_k.outShapes))
                 {
                     std::size_t port  = ade::util::index(it);
                     GShape shape      = ade::util::value(it);
@@ -212,7 +212,7 @@ cv::gimpl::GModelBuilder::put(const GProtoArgs &ins, const GProtoArgs &outs)
         const GCall::Priv&  call_p  = call.priv();
         ade::NodeHandle     call_h  = put_OpNode(op_expr_node);
 
-        for (const auto &it : ade::util::indexed(call_p.m_args))
+        for (const auto it : ade::util::indexed(call_p.m_args))
         {
             const auto  in_port = ade::util::index(it);
             const auto& in_arg  = ade::util::value(it);

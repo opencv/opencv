@@ -71,7 +71,7 @@ void linkNodes(ade::Graph& g) {
     for (const auto& nh : g.nodes()) {
         if (gm.metadata(nh).get<cv::gimpl::NodeType>().t == cv::gimpl::NodeType::OP) {
             const auto& op = gm.metadata(nh).get<gimpl::Op>();
-            for (const auto& in : ade::util::indexed(op.args)) {
+            for (const auto in : ade::util::indexed(op.args)) {
                 const auto& arg = ade::util::value(in);
                 if (arg.kind == cv::detail::ArgKind::GOBJREF) {
                     const auto idx = ade::util::index(in);
@@ -82,9 +82,9 @@ void linkNodes(ade::Graph& g) {
                 }
             }
 
-            for (const auto& out : ade::util::indexed(op.outs)) {
-                const auto idx = ade::util::index(out);
-                const auto rc  = ade::util::value(out);
+            for (const auto out : ade::util::indexed(op.outs)) {
+                const auto  idx = ade::util::index(out);
+                const auto& rc  = ade::util::value(out);
                 const auto& out_nh = dataNodes.at(rc);
                 const auto& out_eh = g.link(nh, out_nh);
                 gm.metadata(out_eh).set(cv::gimpl::Output{idx});
