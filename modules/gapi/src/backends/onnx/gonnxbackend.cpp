@@ -231,9 +231,9 @@ inline void preprocess(const cv::Mat& src,
 
         // Assess the expected input layout
         const bool is_hwc = [&](int ch) {
-            if (ti.is_grayscale)       return false; // 1,1,h,w
-            else if (ti.dims[3 - shift] == ch) return true;  // _,_,_,c
-            else if (ti.dims[1 - shift] == ch) return false; // _,c,_,_
+            if (ti.is_grayscale)               return false; // 1,1,h,w
+            else if (ti.dims[3 - shift] == ch) return true;  // ?,_,_,c
+            else if (ti.dims[1 - shift] == ch) return false; // ?,c,_,_
             else cv::util::throw_error(std::logic_error("Couldn't identify input tensor layout"));
         } (src.channels());
 
@@ -259,12 +259,6 @@ inline void preprocess(const cv::Mat& src,
         }
         GAPI_Assert(new_h != -1 && new_w != -1);
 
-        bool with_pad = ti.pad.has_value();
-        if (with_pad) {
-            const float ratio = ti.pad->range_anchor / std::min(src.cols, src.rows);
-            new_h = static_cast<int>(ratio * src.rows);
-            new_w = static_cast<int>(ratio * src.cols);
-        }
         cv::Mat rsz, pp;
         cv::resize(csc, rsz, cv::Size(new_w, new_h));
         if (src.depth() == CV_8U && ddepth == CV_32F) {

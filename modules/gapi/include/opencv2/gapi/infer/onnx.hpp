@@ -128,16 +128,6 @@ public:
         return *this;
     }
 
-<<<<<<< HEAD
-    Params<Net>& cfgPadding(const typename PortCfg<Net>::PaddingCoefs &ra,
-                            const typename PortCfg<Net>::PaddingCoefs &d) {
-        desc.range_anchor.assign(ra.begin(), ra.end());
-        desc.divisibility.assign(d.begin(), d.end());
-        return *this;
-    }
-
-=======
->>>>>>> Removed padding
 protected:
     detail::ParamDesc desc;
 };
