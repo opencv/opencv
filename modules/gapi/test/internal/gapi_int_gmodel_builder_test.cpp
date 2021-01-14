@@ -213,7 +213,7 @@ TEST(GModelBuilder, Check_Multiple_Outputs)
     EXPECT_EQ(0u, gm.metadata(p.out_nhs[1]->inEdges().front()).get<cv::gimpl::Output>().port);
     EXPECT_EQ(1u, gm.metadata(p.out_nhs[2]->inEdges().front()).get<cv::gimpl::Output>().port);
     EXPECT_EQ(0u, gm.metadata(p.out_nhs[3]->inEdges().front()).get<cv::gimpl::Output>().port);
-    for (const auto& it : ade::util::indexed(p.out_nhs))
+    for (const auto it : ade::util::indexed(p.out_nhs))
     {
         const auto& out_nh = ade::util::value(it);
 
