@@ -16,8 +16,6 @@
 #include "cap_mfx_writer.hpp"
 #endif
 
-#include "plugin_api.hpp"
-
 // All WinRT versions older than 8.0 should provide classes used for video support
 #if defined(WINRT) && !defined(WINRT_8_0) && defined(__cplusplus_winrt)
 #   include "cap_winrt_capture.hpp"

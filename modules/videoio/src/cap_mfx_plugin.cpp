@@ -7,6 +7,9 @@
 #include <string>
 #include "cap_mfx_reader.hpp"
 #include "cap_mfx_writer.hpp"
+
+#define ABI_VERSION 0
+#define API_VERSION 0
 #include "plugin_api.hpp"
 
 using namespace std;
