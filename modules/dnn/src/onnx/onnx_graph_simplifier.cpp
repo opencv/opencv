@@ -314,6 +314,19 @@ public:
     }
 };
 
+class MishSubgraph : public Subgraph
+{
+public:
+    MishSubgraph()
+    {
+        int input = addNodeToMatch("");
+        int softplus = addNodeToMatch("Softplus", input);
+        int tanh = addNodeToMatch("Tanh", softplus);
+        addNodeToMatch("Mul", input, tanh);
+        setFusedNode("Mish", input);
+    }
+};
+
 class MulCastSubgraph : public Subgraph
 {
 public:
@@ -512,6 +525,7 @@ void simplifySubgraphs(opencv_onnx::GraphProto& net)
     subgraphs.push_back(makePtr<BatchNormalizationSubgraph1>());
     subgraphs.push_back(makePtr<BatchNormalizationSubgraph2>());
     subgraphs.push_back(makePtr<ExpandSubgraph>());
+    subgraphs.push_back(makePtr<MishSubgraph>());
 
     simplifySubgraphs(Ptr<ImportGraphWrapper>(new ONNXGraphWrapper(net)), subgraphs);
 }
