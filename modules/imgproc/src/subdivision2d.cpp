@@ -680,7 +680,7 @@ void Subdiv2D::getTriangleList(std::vector<Vec6f>& triangleList) const
             int edge_c = getEdge(edge_b, NEXT_AROUND_LEFT);
             edgemask[edge_a] = edgemask[edge_b] = edgemask[edge_c] = true;
             Point2f a, b, c;
-            if (MP(edgeOrg(edge_a, &a)) || MP(edgeOrg(edge_b, &b)) || MP(edgeOrg(edge_c, &c))) {
+            if (vtx[edgeOrg(edge_a, &a)].meta() || vtx[edgeOrg(edge_b, &b)].meta() || vtx[edgeOrg(edge_c, &c)].meta()) {
                 continue;
             }
             triangleList.push_back(Vec6f(a.x, a.y, b.x, b.y, c.x, c.y));
