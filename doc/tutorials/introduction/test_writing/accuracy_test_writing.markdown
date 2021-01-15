@@ -2,6 +2,8 @@
 
 # {#tutorial_accuracy_test_writing}
 
+`This testing framework is based on Google Tests`
+
 There are two major types of C++ tests: *accuracy/regression* tests and *performance* tests.  Each module can have two test binaries: `opencv_test_<MODULE_NAME>` and `opencv_perf_<MODULE_NAME>`, and two tests folders: `<opencv(_contrib)/modules/<MODULE_NAME>/test>` and `<opencv(_contrib)/modules/<MODULE_NAME>/perf>`. These applications can be built for every supported platform (Win/Lin/Mac/Android).
 
 ## ACCURACY TESTS
