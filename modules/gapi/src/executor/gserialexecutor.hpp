@@ -5,8 +5,8 @@
 // Copyright (C) 2018-2020 Intel Corporation
 
 
-#ifndef OPENCV_GAPI_GEXECUTOR_HPP
-#define OPENCV_GAPI_GEXECUTOR_HPP
+#ifndef OPENCV_GAPI_SERIAL_EXECUTOR_HPP
+#define OPENCV_GAPI_SERIAL_EXECUTOR_HPP
 
 #include <memory> // unique_ptr, shared_ptr
 
@@ -16,6 +16,7 @@
 #include <ade/graph.hpp>
 
 #include "backends/common/gbackend.hpp"
+#include "executor/gexecutor.hpp"
 
 namespace cv {
 namespace gimpl {
@@ -51,28 +52,42 @@ namespace gimpl {
 // - cv::detail::VectorRef - an untyped wrapper over std::vector<T>
 //
 
-class GExecutor
+class GSerialExecutor final : public GExecutor
 {
 protected:
-    std::unique_ptr<ade::Graph> m_orig_graph;
-    std::shared_ptr<ade::Graph> m_island_graph;
+    Mag m_res;
 
-    cv::gimpl::GModel::Graph       m_gm;  // FIXME: make const?
-    cv::gimpl::GIslandModel::Graph m_gim; // FIXME: make const?
+    struct OpDesc
+    {
+        std::vector<RcDesc> in_objects;
+        std::vector<RcDesc> out_objects;
+        std::shared_ptr<GIslandExecutable> isl_exec;
+    };
+    std::vector<OpDesc> m_ops;
+
+    struct DataDesc
+    {
+        ade::NodeHandle slot_nh;
+        ade::NodeHandle data_nh;
+    };
+    std::vector<DataDesc> m_slots;
+
+    class Input;
+    class Output;
+
+    void initResource(const ade::NodeHandle &nh, const ade::NodeHandle &orig_nh); // FIXME: shouldn't it be RcDesc?
+
 private:
-    virtual void runImpl(cv::gimpl::GRuntimeArgs &&args) = 0;
+    void runImpl(cv::gimpl::GRuntimeArgs &&args) override;
+
 public:
-    explicit GExecutor(std::unique_ptr<ade::Graph> &&g_model);
-    virtual ~GExecutor() = default;
+    explicit GSerialExecutor(std::unique_ptr<ade::Graph> &&g_model);
 
-    void run(cv::gimpl::GRuntimeArgs &&args);
+    bool canReshape() const override;
+    void reshape(const GMetaArgs& inMetas, const GCompileArgs& args) override;
 
-    virtual bool canReshape() const = 0;
-    virtual void reshape(const GMetaArgs& inMetas, const GCompileArgs& args) = 0;
+    void prepareForNewStream() override;
 
-    virtual void prepareForNewStream() = 0;
-
-    const GModel::Graph& model() const; // FIXME: make it ConstGraph?
 };
 
 } // namespace gimpl
