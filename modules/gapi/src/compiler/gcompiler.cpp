@@ -33,6 +33,7 @@
 #include "compiler/passes/pattern_matching.hpp"
 
 #include "executor/gexecutor.hpp"
+#include "executor/gserialexecutor.hpp"
 #include "executor/gstreamingexecutor.hpp"
 #include "backends/common/gbackend.hpp"
 #include "backends/common/gmetabackend.hpp"
@@ -457,7 +458,7 @@ cv::GCompiled cv::gimpl::GCompiler::produceCompiled(GPtr &&pg)
 
     const auto &outMetas = GModel::ConstGraph(*pg).metadata()
         .get<OutputMeta>().outMeta;
-    std::unique_ptr<GExecutor> pE(new GExecutor(std::move(pg)));
+    std::unique_ptr<GExecutor> pE(new GSerialExecutor(std::move(pg)));
     // FIXME: select which executor will be actually used,
     // make GExecutor abstract.
 

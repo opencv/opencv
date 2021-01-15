@@ -103,6 +103,7 @@ set(gapi_srcs
 
     # Executor
     src/executor/gexecutor.cpp
+    src/executor/gserialexecutor.cpp
     src/executor/gtbbexecutor.cpp
     src/executor/gstreamingexecutor.cpp
     src/executor/gasync.cpp
