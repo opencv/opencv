@@ -538,7 +538,7 @@ int Subdiv2D::findNearest(Point2f pt, Point2f* nearestPt)
         return vertex;
     }
 
-    // we need to start with a non-meta point as a candidate vertex
+    // we need to start with a PTTYPE_DELAUNAY vertex
     if (location == PTLOC_EDGE && vtx[edgeOrg(edge)].meta()) {
         edge = symEdge(edge);
     }
@@ -557,7 +557,7 @@ int Subdiv2D::findNearest(Point2f pt, Point2f* nearestPt)
     edge = rotateEdge(edge, 1);
 
     for (;;) {
-        vertex = edgeOrg(rotateEdge( edge, 3));
+        vertex = edgeOrg(rotateEdge( edge, 3)); // never PTTYPE_DELAUNAY_META
 
         for (;;) {
             int edge_dst = edgeDst(edge);
@@ -566,9 +566,8 @@ int Subdiv2D::findNearest(Point2f pt, Point2f* nearestPt)
             if (vtx[edge_dst].meta()) {
                 offset = vtx[vtx[edge_dst].firstEdge].pt;
             }
-            if (rightOf(Vertex(v.pt - offset, PTTYPE_FREE),
-                        Vertex(vtx[vertex].pt - offset, PTTYPE_DELAUNAY),
-                        vtx[edge_dst]) >= 0) {
+
+            if (rightOf(v, vtx[vertex], vtx[edge_dst], offset) >= 0) {
                 break;
             }
 
@@ -582,9 +581,8 @@ int Subdiv2D::findNearest(Point2f pt, Point2f* nearestPt)
             if (vtx[edge_org].meta()) {
                 offset = vtx[vtx[edge_org].firstEdge].pt;
             }
-            if (rightOf(Vertex(v.pt - offset, PTTYPE_FREE),
-                        Vertex(vtx[vertex].pt - offset, PTTYPE_DELAUNAY),
-                        vtx[edge_org]) < 0) {
+
+            if (rightOf(v, vtx[vertex], vtx[edge_org], offset) < 0) {
                 break;
             }
 
@@ -608,10 +606,7 @@ int Subdiv2D::findNearest(Point2f pt, Point2f* nearestPt)
             offset = vtx[vtx[edge_dst].firstEdge].pt;
         }
 
-        Vertex c(v.pt - offset, PTTYPE_FREE);
-        Vertex a = vtx[edge_org].meta() ? vtx[edge_org] : Vertex(vtx[edge_org].pt - offset, PTTYPE_VORONOI);
-        Vertex b = vtx[edge_dst].meta() ? vtx[edge_dst] : Vertex(vtx[edge_dst].pt - offset, PTTYPE_VORONOI);
-        if (rightOf(c, a, b) <= 0) {
+        if (rightOf(v, vtx[edge_org], vtx[edge_dst], offset) <= 0) {
             break;
         }
 
@@ -870,6 +865,14 @@ int Subdiv2D::inCircle(const Vertex &a, const Vertex &b, const Vertex &c, const 
 int Subdiv2D::rightOf(const Vertex &c, const Vertex &a, const Vertex &b) const
 {
     return counterClockwise(c, b, a);
+}
+
+int Subdiv2D::rightOf(const Vertex &c, const Vertex &a, const Vertex &b, Point2f offset) const
+{
+    return rightOf(
+            c.meta() ? c : Vertex(c.pt - offset, c.type, c.firstEdge),
+            a.meta() ? a : Vertex(a.pt - offset, a.type, a.firstEdge),
+            b.meta() ? b : Vertex(b.pt - offset, b.type, b.firstEdge));
 }
 
 }

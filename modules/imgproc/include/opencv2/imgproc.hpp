@@ -1187,6 +1187,7 @@ protected:
     int counterClockwise(const Vertex &a, const Vertex &b, const Vertex &c) const;
     int inCircle(const Vertex &a, const Vertex &b, const Vertex &c, const Vertex &d) const;
     int rightOf(const Vertex &c, const Vertex &a, const Vertex &b) const;
+    int rightOf(const Vertex &c, const Vertex &a, const Vertex &b, Point2f offset) const;
     int locateInternal(const Vertex &v, int &edge, int &vertex);
 
     //! All of the vertices
