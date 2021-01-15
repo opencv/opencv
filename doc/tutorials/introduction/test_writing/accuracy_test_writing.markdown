@@ -73,21 +73,21 @@ CV_TEST_MAIN("<FOLDER_NAME_IN_TESTDATA>")
 
 namespace opencv_test { namespace {
 
-    TEST(SUM, int)
-    {
-        int a=1;
-        int b=2;
-        int res=a+b;
-        ASSERT_EQ(res, 3)
-    }
+TEST(SUM, int)
+{
+    int a=1;
+    int b=2;
+    int res=a+b;
+    ASSERT_EQ(res, 3)
+}
 
-    TEST(SUM, float)
-    {
-        float a=0.1f;
-        float b=0.2f;
-        float res=a+b;
-        ASSERT_EQ(res, 0.3f)
-    }
+TEST(SUM, float)
+{
+    float a=0.1f;
+    float b=0.2f;
+    float res=a+b;
+    ASSERT_EQ(res, 0.3f)
+}
 
 }} // namespace
 ```
@@ -102,21 +102,21 @@ namespace opencv_test { namespace {
 
 namespace opencv_test { namespace {
 
-    TEST(SUB, int)
-    {
-        int a=2;
-        int b=1;
-        int res=a-b;
-        ASSERT_EQ(res, 1)
-    }
+TEST(SUB, int)
+{
+    int a=2;
+    int b=1;
+    int res=a-b;
+    ASSERT_EQ(res, 1)
+}
 
-    TEST(SUB, float)
-    {
-        float a=0.2f;
-        float b=0.1f;
-        float res=a-b;
-        ASSERT_EQ(res, 0.1f)
-    }
+TEST(SUB, float)
+{
+    float a=0.2f;
+    float b=0.1f;
+    float res=a-b;
+    ASSERT_EQ(res, 0.1f)
+}
 
 }} // namespace
 ```
