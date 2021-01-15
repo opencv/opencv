@@ -136,7 +136,7 @@ Subdiv2D::Vertex::Vertex(Point2f pt, int type, int firstEdge)
 
 bool Subdiv2D::Vertex::voronoi() const
 {
-    return type == PTTYPE_VORONOI || type == PTTYPE_VORONOI_META || type == PTTYPE_VORONOI_META_SHIFTED;
+    return type == PTTYPE_VORONOI || type == PTTYPE_VORONOI_META;
 }
 
 bool Subdiv2D::Vertex::free() const
@@ -145,11 +145,7 @@ bool Subdiv2D::Vertex::free() const
 }
 
 bool Subdiv2D::Vertex::meta() const {
-    return type == PTTYPE_DELAUNAY_META || type == PTTYPE_VORONOI_META || type == PTTYPE_VORONOI_META_SHIFTED;
-}
-
-bool Subdiv2D::Vertex::meta_shifted() const {
-    return type == PTTYPE_VORONOI_META_SHIFTED;
+    return type == PTTYPE_DELAUNAY_META || type == PTTYPE_VORONOI_META;
 }
 
 void Subdiv2D::splice( int edgeA, int edgeB )
@@ -439,8 +435,12 @@ void Subdiv2D::clearVoronoi()
     total = vtx.size();
     for( i = 0; i < total; i++ )
     {
-        if( vtx[i].voronoi() )
-            deletePoint((int)i);
+        if( vtx[i].voronoi() ) {
+            if (vtx[i].meta()) {
+                deletePoint(vtx[i].firstEdge);
+            }
+            deletePoint((int) i);
+        }
     }
 
     validGeometry = false;
@@ -501,12 +501,14 @@ void Subdiv2D::calcVoronoi()
                 }
 
                 if (!vtx[edge0_org].meta() && !vtx[edge0_dst].meta() && vtx[edge1_dst].meta()) {
-                    // shifted from the origin (0.f, 0.f) to (org0 + dst0) / 2.f
-                    voronoi_point = newPoint(Point2f(-(dst0 - org0).y, (dst0 - org0).x), PTTYPE_VORONOI_META_SHIFTED);
+                    // meta point has offset of (org0 + dst0) / 2.f instead of (0.f, 0.f)
+                    voronoi_point = newPoint(Point2f(-(dst0 - org0).y, (dst0 - org0).x), PTTYPE_VORONOI_META,
+                                             newPoint((org0 + dst0) / 2.f, PTTYPE_FREE));
                 }
 
                 if (!vtx[edge0_org].meta() && vtx[edge0_dst].meta() && vtx[edge1_dst].meta()) {
-                    voronoi_point = newPoint(Point2f((dst1 - dst0).y, -(dst1 - dst0).x), PTTYPE_VORONOI_META);
+                    voronoi_point = newPoint(Point2f((dst1 - dst0).y, -(dst1 - dst0).x), PTTYPE_VORONOI_META,
+                                             newPoint(Point2f(0.f, 0.f), PTTYPE_FREE));
                 }
 
                 qedges[edge0 >> 2].pt[3 - (edge0 & 2)] =
@@ -536,7 +538,7 @@ int Subdiv2D::findNearest(Point2f pt, Point2f* nearestPt)
         return vertex;
     }
 
-    // we need to start with a non-meta point as a candidate site
+    // we need to start with a non-meta point as a candidate vertex
     if (location == PTLOC_EDGE && vtx[edgeOrg(edge)].meta()) {
         edge = symEdge(edge);
     }
@@ -558,20 +560,58 @@ int Subdiv2D::findNearest(Point2f pt, Point2f* nearestPt)
         vertex = edgeOrg(rotateEdge( edge, 3));
 
         for (;;) {
-            if (rightOf(v, vtx[vertex], vtx[edgeDst(edge)]) >= 0) {
+            int edge_dst = edgeDst(edge);
+
+            Point2f offset(0.f, 0.f);
+            if (vtx[edge_dst].meta()) {
+                offset = vtx[vtx[edge_dst].firstEdge].pt;
+            }
+            if (rightOf(Vertex(v.pt - offset, PTTYPE_FREE),
+                        Vertex(vtx[vertex].pt - offset, PTTYPE_DELAUNAY),
+                        vtx[edge_dst]) >= 0) {
                 break;
             }
+
             edge = getEdge( edge, NEXT_AROUND_LEFT );
         }
 
         for (;;) {
-            if (rightOf(v, vtx[vertex], vtx[edgeOrg(edge)]) < 0) {
+            int edge_org = edgeOrg(edge);
+
+            Point2f offset(0.f, 0.f);
+            if (vtx[edge_org].meta()) {
+                offset = vtx[vtx[edge_org].firstEdge].pt;
+            }
+            if (rightOf(Vertex(v.pt - offset, PTTYPE_FREE),
+                        Vertex(vtx[vertex].pt - offset, PTTYPE_DELAUNAY),
+                        vtx[edge_org]) < 0) {
                 break;
             }
+
             edge = getEdge( edge, PREV_AROUND_LEFT );
         }
 
-        if (rightOf(v, vtx[edgeOrg(edge)], vtx[edgeDst(edge)]) <= 0) {
+        int edge_org = edgeOrg(edge);
+        int edge_dst = edgeDst(edge);
+
+        Point2f offset(0.f, 0.f);
+        if (vtx[edge_org].meta() && vtx[edge_dst].meta()) {
+            if (vtx[vtx[edge_org].firstEdge].pt != vtx[vtx[edge_dst].firstEdge].pt) {
+                // never escapes beyond this edge
+                break;
+            }
+        }
+        if (vtx[edge_org].meta()) {
+            offset = vtx[vtx[edge_org].firstEdge].pt;
+        }
+        if (vtx[edge_dst].meta()) {
+            offset = vtx[vtx[edge_dst].firstEdge].pt;
+        }
+
+        Vertex c(v.pt - offset, PTTYPE_FREE);
+        Vertex a = vtx[edge_org].meta() ? vtx[edge_org] : Vertex(vtx[edge_org].pt - offset, PTTYPE_VORONOI);
+        Vertex b = vtx[edge_dst].meta() ? vtx[edge_dst] : Vertex(vtx[edge_dst].pt - offset, PTTYPE_VORONOI);
+        if (rightOf(c, a, b) <= 0) {
             break;
         }
 
@@ -766,7 +806,8 @@ int Subdiv2D::counterClockwise(const Vertex &a, const Vertex &b, const Vertex &c
     }
 
     if (a.meta() && b.meta() && !c.meta()) {
-        return counterClockwiseInternal(a.pt, b.pt, o.pt);
+        return !parallel(a.pt, b.pt) ?
+                counterClockwiseInternal(a.pt, b.pt, o.pt) : counterClockwiseInternal(a.pt, b.pt, c.pt);
     }
 
     if (!a.meta() && !b.meta() && c.meta()) {
@@ -810,7 +851,7 @@ int Subdiv2D::inCircle(const Vertex &a, const Vertex &b, const Vertex &c, const 
     }
 
     if (!a.meta() && !b.meta() && !c.meta() && d.meta()) {
-        if (!parallel(b.pt - a.pt, c.pt - a.pt)) {
+        if (!parallel(b.pt - a.pt, c.pt - b.pt)) {
             return -counterClockwiseInternal(a.pt, b.pt, c.pt);
         } else {
             return !c.pt.inside(Rect2f(a.pt, b.pt)) ?

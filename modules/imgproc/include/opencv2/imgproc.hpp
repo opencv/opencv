@@ -1158,8 +1158,7 @@ protected:
         PTTYPE_DELAUNAY = 1,
         PTTYPE_DELAUNAY_META = 2,
         PTTYPE_VORONOI = 3,
-        PTTYPE_VORONOI_META = 4,
-        PTTYPE_VORONOI_META_SHIFTED = 5
+        PTTYPE_VORONOI_META = 4
     };
 
     struct CV_EXPORTS Vertex
@@ -1169,7 +1168,6 @@ protected:
         bool voronoi() const;
         bool free() const;
         bool meta() const;
-        bool meta_shifted() const;
 
         int firstEdge;
         int type;
