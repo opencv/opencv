@@ -108,7 +108,7 @@ from matplotlib import pyplot as plt
 cap = cv.VideoCapture('vtest.avi')
 
 # create a list of first 5 frames
-img = [cap.read()[1] for i in xrange(5)]
+img = [cap.read()[1] for i in range(5)]
 
 # convert all to grayscale
 gray = [cv.cvtColor(i, cv.COLOR_BGR2GRAY) for i in img]
