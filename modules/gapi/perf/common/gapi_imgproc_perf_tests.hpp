@@ -57,6 +57,30 @@ class BoundingRectVector32SPerfTest :
     public TestPerfParams<tuple<CompareRects, cv::Size, cv::GCompileArgs>> {};
 class BoundingRectVector32FPerfTest :
     public TestPerfParams<tuple<CompareRects, cv::Size, cv::GCompileArgs>> {};
+class FitLine2DMatVectorPerfTest : public TestPerfParams<tuple<CompareVecs<float, 4>,
+                                                               MatType,cv::Size,cv::DistanceTypes,
+                                                               cv::GCompileArgs>> {};
+class FitLine2DVector32SPerfTest : public TestPerfParams<tuple<CompareVecs<float, 4>,
+                                                               cv::Size,cv::DistanceTypes,
+                                                               cv::GCompileArgs>> {};
+class FitLine2DVector32FPerfTest : public TestPerfParams<tuple<CompareVecs<float, 4>,
+                                                               cv::Size,cv::DistanceTypes,
+                                                               cv::GCompileArgs>> {};
+class FitLine2DVector64FPerfTest : public TestPerfParams<tuple<CompareVecs<float, 4>,
+                                                               cv::Size,cv::DistanceTypes,
+                                                               cv::GCompileArgs>> {};
+class FitLine3DMatVectorPerfTest : public TestPerfParams<tuple<CompareVecs<float, 6>,
+                                                               MatType,cv::Size,cv::DistanceTypes,
+                                                               cv::GCompileArgs>> {};
+class FitLine3DVector32SPerfTest : public TestPerfParams<tuple<CompareVecs<float, 6>,
+                                                               cv::Size,cv::DistanceTypes,
+                                                               cv::GCompileArgs>> {};
+class FitLine3DVector32FPerfTest : public TestPerfParams<tuple<CompareVecs<float, 6>,
+                                                               cv::Size,cv::DistanceTypes,
+                                                               cv::GCompileArgs>> {};
+class FitLine3DVector64FPerfTest : public TestPerfParams<tuple<CompareVecs<float, 6>,
+                                                               cv::Size,cv::DistanceTypes,
+                                                               cv::GCompileArgs>> {};
 class EqHistPerfTest      : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs>> {};
 class BGR2RGBPerfTest     : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs>> {};
 class RGB2GrayPerfTest    : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs>> {};

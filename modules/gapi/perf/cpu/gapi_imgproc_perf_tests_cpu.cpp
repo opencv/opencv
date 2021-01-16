@@ -254,6 +254,66 @@ INSTANTIATE_TEST_CASE_P(BoundingRectVector32FPerfTestCPU, BoundingRectVector32FP
                                 Values(szVGA, sz720p, sz1080p),
                                 Values(cv::compile_args(IMGPROC_CPU))));
 
+INSTANTIATE_TEST_CASE_P(FitLine2DMatVectorPerfTestCPU, FitLine2DMatVectorPerfTest,
+                        Combine(Values(RelDiffToleranceVec<float, 4>(0.01).to_compare_obj()),
+                                Values(CV_8U, CV_8S, CV_16U, CV_16S,
+                                       CV_32S, CV_32F, CV_64F),
+                                Values(cv::Size(8, 0), cv::Size(1024, 0)),
+                                Values(DIST_L1, DIST_L2, DIST_L12, DIST_FAIR,
+                                       DIST_WELSCH, DIST_HUBER),
+                                Values(cv::compile_args(IMGPROC_CPU))));
+
+INSTANTIATE_TEST_CASE_P(FitLine2DVector32SPerfTestCPU, FitLine2DVector32SPerfTest,
+                        Combine(Values(RelDiffToleranceVec<float, 4>(0.01).to_compare_obj()),
+                                Values(cv::Size(8, 0), cv::Size(1024, 0)),
+                                Values(DIST_L1, DIST_L2, DIST_L12, DIST_FAIR,
+                                       DIST_WELSCH, DIST_HUBER),
+                                Values(cv::compile_args(IMGPROC_CPU))));
+
+INSTANTIATE_TEST_CASE_P(FitLine2DVector32FPerfTestCPU, FitLine2DVector32FPerfTest,
+                        Combine(Values(RelDiffToleranceVec<float, 4>(0.01).to_compare_obj()),
+                                Values(cv::Size(8, 0), cv::Size(1024, 0)),
+                                Values(DIST_L1, DIST_L2, DIST_L12, DIST_FAIR,
+                                       DIST_WELSCH, DIST_HUBER),
+                                Values(cv::compile_args(IMGPROC_CPU))));
+
+INSTANTIATE_TEST_CASE_P(FitLine2DVector64FPerfTestCPU, FitLine2DVector64FPerfTest,
+                        Combine(Values(RelDiffToleranceVec<float, 4>(0.01).to_compare_obj()),
+                                Values(cv::Size(8, 0), cv::Size(1024, 0)),
+                                Values(DIST_L1, DIST_L2, DIST_L12, DIST_FAIR,
+                                       DIST_WELSCH, DIST_HUBER),
+                                Values(cv::compile_args(IMGPROC_CPU))));
+
+INSTANTIATE_TEST_CASE_P(FitLine3DMatVectorPerfTestCPU, FitLine3DMatVectorPerfTest,
+                        Combine(Values(RelDiffToleranceVec<float, 6>(0.01).to_compare_obj()),
+                                Values(CV_8U, CV_8S, CV_16U, CV_16S,
+                                       CV_32S, CV_32F, CV_64F),
+                                Values(cv::Size(8, 0), cv::Size(1024, 0)),
+                                Values(DIST_L1, DIST_L2, DIST_L12, DIST_FAIR,
+                                       DIST_WELSCH, DIST_HUBER),
+                                Values(cv::compile_args(IMGPROC_CPU))));
+
+INSTANTIATE_TEST_CASE_P(FitLine3DVector32SPerfTestCPU, FitLine3DVector32SPerfTest,
+                        Combine(Values(RelDiffToleranceVec<float, 6>(0.01).to_compare_obj()),
+                                Values(cv::Size(8, 0), cv::Size(1024, 0)),
+                                Values(DIST_L1, DIST_L2, DIST_L12, DIST_FAIR,
+                                       DIST_WELSCH, DIST_HUBER),
+                                Values(cv::compile_args(IMGPROC_CPU))));
+
+INSTANTIATE_TEST_CASE_P(FitLine3DVector32FPerfTestCPU, FitLine3DVector32FPerfTest,
+                        Combine(Values(RelDiffToleranceVec<float, 6>(0.01).to_compare_obj()),
+                                Values(cv::Size(8, 0), cv::Size(1024, 0)),
+                                Values(DIST_L1, DIST_L2, DIST_L12, DIST_FAIR,
+                                       DIST_WELSCH, DIST_HUBER),
+                                Values(cv::compile_args(IMGPROC_CPU))));
+
+INSTANTIATE_TEST_CASE_P(FitLine3DVector64FPerfTestCPU, FitLine3DVector64FPerfTest,
+                        Combine(Values(RelDiffToleranceVec<float, 6>(0.01).to_compare_obj()),
+                                Values(cv::Size(8, 0), cv::Size(1024, 0)),
+                                Values(DIST_L1, DIST_L2, DIST_L12, DIST_FAIR,
+                                       DIST_WELSCH, DIST_HUBER),
+                                Values(cv::compile_args(IMGPROC_CPU))));
+
 INSTANTIATE_TEST_CASE_P(EqHistPerfTestCPU, EqHistPerfTest,
     Combine(Values(AbsExact().to_compare_f()),
         Values(szVGA, sz720p, sz1080p),

@@ -928,6 +928,198 @@ PERF_TEST_P_(BoundingRectVector32FPerfTest, TestPerformance)
 
 //------------------------------------------------------------------------------
 
+PERF_TEST_P_(FitLine2DMatVectorPerfTest, TestPerformance)
+{
+    CompareVecs<float, 4> cmpF;
+    cv::Size sz;
+    MatType type;
+    cv::DistanceTypes distType;
+    cv::GCompileArgs compile_args;
+    std::tie(cmpF, type, sz, distType, compile_args) = GetParam();
+
+    initMatByPointsVectorRandU<cv::Point_>(type, sz, -1);
+
+    cv::Vec4f out_vec_gapi;
+    cv::GComputation c(fitLineTestGAPI(in_mat1, distType, std::move(compile_args), out_vec_gapi));
+
+    TEST_CYCLE()
+    {
+        c.apply(cv::gin(in_mat1), cv::gout(out_vec_gapi));
+    }
+
+    fitLineTestOpenCVCompare(in_mat1, distType, out_vec_gapi, cmpF);
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P_(FitLine2DVector32SPerfTest, TestPerformance)
+{
+    CompareVecs<float, 4> cmpF;
+    cv::Size sz;
+    cv::DistanceTypes distType;
+    cv::GCompileArgs compile_args;
+    std::tie(cmpF, sz, distType, compile_args) = GetParam();
+
+    std::vector<cv::Point2i> in_vector;
+    initPointsVectorRandU(sz.width, in_vector);
+
+    cv::Vec4f out_vec_gapi;
+    cv::GComputation c(fitLineTestGAPI(in_vector, distType, std::move(compile_args),
+                                       out_vec_gapi));
+
+    TEST_CYCLE()
+    {
+        c.apply(cv::gin(in_vector), cv::gout(out_vec_gapi));
+    }
+
+    fitLineTestOpenCVCompare(in_vector, distType, out_vec_gapi, cmpF);
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P_(FitLine2DVector32FPerfTest, TestPerformance)
+{
+    CompareVecs<float, 4> cmpF;
+    cv::Size sz;
+    cv::DistanceTypes distType;
+    cv::GCompileArgs compile_args;
+    std::tie(cmpF, sz, distType, compile_args) = GetParam();
+
+    std::vector<cv::Point2f> in_vector;
+    initPointsVectorRandU(sz.width, in_vector);
+
+    cv::Vec4f out_vec_gapi;
+    cv::GComputation c(fitLineTestGAPI(in_vector, distType, std::move(compile_args),
+                                       out_vec_gapi));
+
+    TEST_CYCLE()
+    {
+        c.apply(cv::gin(in_vector), cv::gout(out_vec_gapi));
+    }
+
+    fitLineTestOpenCVCompare(in_vector, distType, out_vec_gapi, cmpF);
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P_(FitLine2DVector64FPerfTest, TestPerformance)
+{
+    CompareVecs<float, 4> cmpF;
+    cv::Size sz;
+    cv::DistanceTypes distType;
+    cv::GCompileArgs compile_args;
+    std::tie(cmpF, sz, distType, compile_args) = GetParam();
+
+    std::vector<cv::Point2d> in_vector;
+    initPointsVectorRandU(sz.width, in_vector);
+
+    cv::Vec4f out_vec_gapi;
+    cv::GComputation c(fitLineTestGAPI(in_vector, distType, std::move(compile_args),
+                                       out_vec_gapi));
+
+    TEST_CYCLE()
+    {
+        c.apply(cv::gin(in_vector), cv::gout(out_vec_gapi));
+    }
+
+    fitLineTestOpenCVCompare(in_vector, distType, out_vec_gapi, cmpF);
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P_(FitLine3DMatVectorPerfTest, TestPerformance)
+{
+    CompareVecs<float, 6> cmpF;
+    cv::Size sz;
+    MatType type;
+    cv::DistanceTypes distType;
+    cv::GCompileArgs compile_args;
+    std::tie(cmpF, type, sz, distType, compile_args) = GetParam();
+
+    initMatByPointsVectorRandU<cv::Point3_>(type, sz, -1);
+
+    cv::Vec6f out_vec_gapi;
+    cv::GComputation c(fitLineTestGAPI(in_mat1, distType, std::move(compile_args), out_vec_gapi));
+
+    TEST_CYCLE()
+    {
+        c.apply(cv::gin(in_mat1), cv::gout(out_vec_gapi));
+    }
+
+    fitLineTestOpenCVCompare(in_mat1, distType, out_vec_gapi, cmpF);
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P_(FitLine3DVector32SPerfTest, TestPerformance)
+{
+    CompareVecs<float, 6> cmpF;
+    cv::Size sz;
+    cv::DistanceTypes distType;
+    cv::GCompileArgs compile_args;
+    std::tie(cmpF, sz, distType, compile_args) = GetParam();
+
+    std::vector<cv::Point3i> in_vector;
+    initPointsVectorRandU(sz.width, in_vector);
+
+    cv::Vec6f out_vec_gapi;
+    cv::GComputation c(fitLineTestGAPI(in_vector, distType, std::move(compile_args),
+                                       out_vec_gapi));
+
+    TEST_CYCLE()
+    {
+        c.apply(cv::gin(in_vector), cv::gout(out_vec_gapi));
+    }
+
+    fitLineTestOpenCVCompare(in_vector, distType, out_vec_gapi, cmpF);
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P_(FitLine3DVector32FPerfTest, TestPerformance)
+{
+    CompareVecs<float, 6> cmpF;
+    cv::Size sz;
+    cv::DistanceTypes distType;
+    cv::GCompileArgs compile_args;
+    std::tie(cmpF, sz, distType, compile_args) = GetParam();
+
+    std::vector<cv::Point3f> in_vector;
+    initPointsVectorRandU(sz.width, in_vector);
+
+    cv::Vec6f out_vec_gapi;
+    cv::GComputation c(fitLineTestGAPI(in_vector, distType, std::move(compile_args),
+                                       out_vec_gapi));
+
+    TEST_CYCLE()
+    {
+        c.apply(cv::gin(in_vector), cv::gout(out_vec_gapi));
+    }
+
+    fitLineTestOpenCVCompare(in_vector, distType, out_vec_gapi, cmpF);
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P_(FitLine3DVector64FPerfTest, TestPerformance)
+{
+    CompareVecs<float, 6> cmpF;
+    cv::Size sz;
+    cv::DistanceTypes distType;
+    cv::GCompileArgs compile_args;
+    std::tie(cmpF, sz, distType, compile_args) = GetParam();
+
+    std::vector<cv::Point3d> in_vector;
+    initPointsVectorRandU(sz.width, in_vector);
+
+    cv::Vec6f out_vec_gapi;
+    cv::GComputation c(fitLineTestGAPI(in_vector, distType, std::move(compile_args),
+                                       out_vec_gapi));
+
+    TEST_CYCLE()
+    {
+        c.apply(cv::gin(in_vector), cv::gout(out_vec_gapi));
+    }
+
+    fitLineTestOpenCVCompare(in_vector, distType, out_vec_gapi, cmpF);
+    SANITY_CHECK_NOTHING();
+}
+
+//------------------------------------------------------------------------------
+
 PERF_TEST_P_(EqHistPerfTest, TestPerformance)
 {
     compare_f cmpF = get<0>(GetParam());

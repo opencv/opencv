@@ -174,6 +174,57 @@ static void boundingRectTestBody(const In& in, const CompareRects& cmpF, cv::GCo
     boundingRectTestGAPI(in, std::move(args), out_rect_gapi);
     boundingRectTestOpenCVCompare(in, out_rect_gapi, cmpF);
 }
+
+//-------------------------------------------------------------------------------------------------
+
+template<typename In>
+static cv::GComputation fitLineTestGAPI(const In& in, const cv::DistanceTypes distType,
+                                        cv::GCompileArgs&& args, cv::Vec4f& out_vec_gapi)
+{
+    double paramDefault = 0., repsDefault = 0., aepsDefault = 0.;
+
+    cv::detail::g_type_of_t<In> g_in;
+    auto out = cv::gapi::fitLine2D(g_in, distType, paramDefault, repsDefault, aepsDefault);
+    cv::GComputation c(cv::GIn(g_in), cv::GOut(out));
+    c.apply(cv::gin(in), cv::gout(out_vec_gapi), std::move(args));
+    return c;
+}
+
+template<typename In>
+static cv::GComputation fitLineTestGAPI(const In& in, const cv::DistanceTypes distType,
+                                        cv::GCompileArgs&& args, cv::Vec6f& out_vec_gapi)
+{
+    double paramDefault = 0., repsDefault = 0., aepsDefault = 0.;
+
+    cv::detail::g_type_of_t<In> g_in;
+    auto out = cv::gapi::fitLine3D(g_in, distType, paramDefault, repsDefault, aepsDefault);
+    cv::GComputation c(cv::GIn(g_in), cv::GOut(out));
+    c.apply(cv::gin(in), cv::gout(out_vec_gapi), std::move(args));
+    return c;
+}
+
+template<typename In, int dim>
+static void fitLineTestOpenCVCompare(const In& in, const cv::DistanceTypes distType,
+                                     const cv::Vec<float, dim>& out_vec_gapi,
+                                     const CompareVecs<float, dim>& cmpF)
+{
+    double paramDefault = 0., repsDefault = 0., aepsDefault = 0.;
+
+    // OpenCV code /////////////////////////////////////////////////////////////
+    cv::Vec<float, dim> out_vec_ocv;
+    cv::fitLine(in, out_vec_ocv, distType, paramDefault, repsDefault, aepsDefault);
+    // Comparison //////////////////////////////////////////////////////////////
+    EXPECT_TRUE(cmpF(out_vec_gapi, out_vec_ocv));
+}
+
+template<typename In, int dim>
+static void fitLineTestBody(const In& in, const cv::DistanceTypes distType,
+                            const CompareVecs<float, dim>& cmpF, cv::GCompileArgs&& args)
+{
+    cv::Vec<float, dim> out_vec_gapi;
+    fitLineTestGAPI(in, distType, std::move(args), out_vec_gapi);
+    fitLineTestOpenCVCompare(in, distType, out_vec_gapi, cmpF);
+}
 } // namespace opencv_test
 
 #endif // OPENCV_GAPI_VIDEO_TESTS_COMMON_HPP
