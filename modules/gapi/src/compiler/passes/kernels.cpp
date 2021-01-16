@@ -94,7 +94,7 @@ namespace
 
         // Reconnect expanded kernels from graph data objects
         // to subgraph data objects, then drop that graph data objects
-        for (const auto& it : ade::util::zip(in_nhs, sorted_in_nhs))
+        for (const auto it : ade::util::zip(in_nhs, sorted_in_nhs))
         {
             const auto& subgr_in_nh = std::get<0>(it);
             const auto& comp_in_nh  = std::get<1>(it);
@@ -105,7 +105,7 @@ namespace
 
         gr.erase(nh);
 
-        for (const auto& it : ade::util::zip(out_nhs, sorted_out_nhs))
+        for (const auto it : ade::util::zip(out_nhs, sorted_out_nhs))
         {
             const auto& subgr_out_nh = std::get<0>(it);
             const auto& comp_out_nh  = std::get<1>(it);
