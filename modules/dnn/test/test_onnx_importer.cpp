@@ -698,6 +698,11 @@ TEST_P(Test_ONNX_layers, ResizeOpset11_Torch1_6)
     testONNXModels("resize_opset11_torch1.6");
 }
 
+TEST_P(Test_ONNX_layers, Mish)
+{
+    testONNXModels("mish");
+}
+
 TEST_P(Test_ONNX_layers, Conv1d)
 {
     testONNXModels("conv1d");
