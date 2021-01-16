@@ -1225,3 +1225,11 @@ class Conv1ResizePoold(nn.Module):
 x = Variable(torch.randn(1, 2, 20, 20))
 model = Conv1ResizePoold()
 save_data_and_model("conv_resize_pool_1d", x, model)
+
+class Mish(nn.Module):
+    def forward(self, x):
+        return x * (torch.tanh(F.softplus(x)))
+
+x = Variable(torch.randn([1, 2, 2, 2]))
+model = Mish()
+save_data_and_model("mish", x, model)
