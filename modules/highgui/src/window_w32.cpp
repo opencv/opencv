@@ -236,7 +236,7 @@ CV_IMPL int cvInitSystem( int, char** )
     // check initialization status
     if( !wasInitialized )
     {
-        // Initialize the stogare
+        // Initialize the storage
         hg_windows = 0;
 
         // Register the class
