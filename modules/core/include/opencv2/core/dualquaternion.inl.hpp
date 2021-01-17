@@ -118,7 +118,13 @@ inline Quat<T> DualQuat<T>::getDualPart() const
     return Quat<T>(w_, x_, y_, z_);
 }
 
-template<typename T>
+template <typename T>
+inline DualQuat<T> conjugate(const DualQuat<T> &dq)
+{
+    return dq.conjugate();
+}
+
+template <typename T>
 inline DualQuat<T> DualQuat<T>::conjugate() const
 {
     return DualQuat<T>(w, -x, -y, -z, w_, -x_, -y_, -z_);
@@ -172,6 +178,12 @@ template <typename T>
 inline T DualQuat<T>::dot(DualQuat<T> q) const
 {
     return q.w * w + q.x * x + q.y * y + q.z * z + q.w_ * w_ + q.x_ * x_ + q.y_ * y_ + q.z_ * z_;
+}
+
+template <typename T>
+inline DualQuat<T> inv(const DualQuat<T> &dq, QuatAssumeType assumeUnit=QUAT_ASSUME_NOT_UNIT)
+{
+    return dq.inv(assumeUnit);
 }
 
 template <typename T>
@@ -294,19 +306,30 @@ std::ostream & operator<<(std::ostream &os, const DualQuat<T> &q)
 }
 
 template <typename T>
+inline DualQuat<T> exp(const DualQuat<T> &dq)
+{
+    return dq.exp();
+}
+
+template <typename T>
 DualQuat<T> DualQuat<T>::exp() const
 {
-    DualQuat<T> v(0, x, y, z, 0, x_, y_, z_);
-    DualQuat<T> normV = v.norm();
-    DualQuat<T> sin_normV(std::sin(normV.w), 0, 0, 0, normV.w_ * std::cos(normV.w), 0, 0, 0);
-    DualQuat<T> cos_normV(std::cos(normV.w), 0, 0, 0, -normV.w_ * std::sin(normV.w), 0, 0, 0);
-    DualQuat<T> exp_w(std::exp(w), 0, 0, 0, w_ * std::exp(w), 0, 0, 0);
-    if (normV.w < CV_DUAL_QUAT_EPS)
-    {
-        return exp_w * (cos_normV + v);
-    }
-    DualQuat<T> k = sin_normV / normV;
-    return exp_w * (cos_normV + v * k);
+    T nv = std::sqrt(x * x + y * y + z * z);
+    T sinc_nv = abs(nv) < CV_DUAL_QUAT_EPS ? 1 - nv * nv / 6 : std::sin(nv) / nv;
+    T csiii_nv = abs(nv) < CV_DUAL_QUAT_EPS ? -(T)1.0 / 3 : (std::cos(nv) - sinc_nv) / nv / nv;
+    Matx<T, 4, 4> J_exp_quat {
+        std::cos(nv), -sinc_nv * x,  -sinc_nv * y,  -sinc_nv * z,
+        sinc_nv * x, csiii_nv * x * x + sinc_nv, csiii_nv * x * y, csiii_nv * x * z,
+        sinc_nv * y, csiii_nv * y * x, csiii_nv * y * y + sinc_nv, csiii_nv * y * z,
+        sinc_nv * z, csiii_nv * z * x, csiii_nv * z * y, csiii_nv * z * z + sinc_nv
+    };
+    return createFromQuat(getRealPart().exp(), Quat<T>(std::exp(w) * J_exp_quat * getDualPart().toVec()));
+}
+
+template <typename T>
+DualQuat<T> log(const DualQuat<T> &dq, QuatAssumeType assumeUnit=QUAT_ASSUME_NOT_UNIT)
+{
+    return dq.log(assumeUnit);
 }
 
 template <typename T>
@@ -339,19 +362,31 @@ DualQuat<T> DualQuat<T>::log(QuatAssumeType assumeUnit) const
 }
 
 template <typename T>
-DualQuat<T> DualQuat<T>::power(const T t, QuatAssumeType assumeUnit) const
+inline DualQuat<T> power(const DualQuat<T> &dq, const T t, QuatAssumeType assumeUnit=QUAT_ASSUME_NOT_UNIT)
+{
+    return dq.power(t, assumeUnit);
+}
+
+template <typename T>
+inline DualQuat<T> DualQuat<T>::power(const T t, QuatAssumeType assumeUnit) const
 {
     return (t * log(assumeUnit)).exp();
 }
 
 template <typename T>
-DualQuat<T> DualQuat<T>::power(const DualQuat<T> &q, QuatAssumeType assumeUnit) const
+inline DualQuat<T> power(const DualQuat<T> &p, const DualQuat<T> &q, QuatAssumeType assumeUnit=QUAT_ASSUME_NOT_UNIT)
+{
+    return p.power(q, assumeUnit);
+}
+
+template <typename T>
+inline DualQuat<T> DualQuat<T>::power(const DualQuat<T> &q, QuatAssumeType assumeUnit) const
 {
     return (q * log(assumeUnit)).exp();
 }
 
 template <typename T>
-Vec<T, 8> DualQuat<T>::toVec() const
+inline Vec<T, 8> DualQuat<T>::toVec() const
 {
    return Vec<T, 8>(w, x, y, z, w_, x_, y_, z_);
 }

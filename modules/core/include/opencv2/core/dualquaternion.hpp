@@ -298,6 +298,21 @@ public:
      * \end{split}
      * \end{equation}
      * \f]
+     * @param dq a dual quaternion.
+     */
+    template <typename T>
+    friend DualQuat<T> conjugate(const DualQuat<T> &dq);
+
+    /**
+     * @brief return the conjugate of a dual quaternion.
+     * \f[
+     * \begin{equation}
+     * \begin{split}
+     * \sigma^* &= (p + \epsilon q)^*
+     *          &= (p^* + \epsilon q^*)
+     * \end{split}
+     * \end{equation}
+     * \f]
      */
     DualQuat<_Tp> conjugate() const;
 
@@ -387,6 +402,19 @@ public:
      * \f[\sigma^{-1} = \frac{\sigma^*}{||\sigma||^2}, \f]
      * or equivalentlly,
      * \f[\sigma^{-1} = p^{-1} - \epsilon p^{-1}qp^{-1}.\f]
+     * @param dq a dual quaternion.
+     * @param assumeUnit if @ref QUAT_ASSUME_UNIT, dual quaternion dq assume to be a unit dual quaternion
+     * and this function will save some computations.
+     */
+    template <typename T>
+    friend DualQuat<T> inv(const DualQuat<T> &dq, QuatAssumeType assumeUnit);
+
+    /**
+     * @brief if \f$\sigma = p + \epsilon q\f$ is a dual quaternion, p is not zero,
+     * the inverse dual quaternion is
+     * \f[\sigma^{-1} = \frac{\sigma^*}{||\sigma||^2}, \f]
+     * or equivalentlly,
+     * \f[\sigma^{-1} = p^{-1} - \epsilon p^{-1}qp^{-1}.\f]
      * @param assumeUnit if @ref QUAT_ASSUME_UNIT, this dual quaternion assume to be a unit dual quaternion
      * and this function will save some computations.
      */
@@ -404,12 +432,40 @@ public:
      * \f[
      * p^t = \exp(t\ln p)
      * \f]
+     * @param dq a dual quaternion.
+     * @param t index of power function.
+     * @param assumeUnit if @ref QUAT_ASSUME_UNIT, dual quaternion dq assume to be a unit dual quaternion
+     * and this function will save some computations.
+     */
+    template <typename T>
+    friend DualQuat<T> power(const DualQuat<T> &dq, const T t, QuatAssumeType assumeUnit);
+
+    /**
+     ** @brief return the value of \f$p^t\f$ where p is a dual quaternion.
+     * This could be calculated as:
+     * \f[
+     * p^t = \exp(t\ln p)
+     * \f]
      *
      * @param t index of power function.
      * @param assumeUnit if @ref QUAT_ASSUME_UNIT, this dual quaternion assume to be a unit dual quaternion
      * and this function will save some computations.
      */
     DualQuat<_Tp> power(const _Tp t, QuatAssumeType assumeUnit=QUAT_ASSUME_NOT_UNIT) const;
+
+    /**
+     * @brief return the value of \f$p^q\f$ where p and q are dual quaternions.
+     * This could be calculated as:
+     * \f[
+     * p^q = \exp(q\ln p)
+     * \f]
+     * @param p a dual quaternion.
+     * @param q a dual quaternion.
+     * @param assumeUnit if @ref QUAT_ASSUME_UNIT, dual quaternion p assume to be a dual unit quaternion
+     * and this function will save some computations.
+     */
+    template <typename T>
+    friend DualQuat<T> power(const DualQuat<T>& p, const DualQuat<T>& q, QuatAssumeType assumeUnit);
 
     /**
      * @brief return the value of \f$p^q\f$ where p and q are dual quaternions.
@@ -451,8 +507,68 @@ public:
      * \end{equation}
      * \f]
      * and the same operations for \f$\cos\f$ and \f$\sin.\f$
+     * @param dq a dual quaternion.
+     */
+    template <typename T>
+    friend DualQuat<T> exp(const DualQuat<T> &dq);
+
+    /**
+     * @brief A dual quaternion is a vector in form of
+     * \f[
+     * \begin{equation}
+     * \begin{split}
+     * \sigma &=\boldsymbol{p} + \epsilon \boldsymbol{q}\\
+     * &= [\hat{q}_0,\hat{q}_1,\hat{q}_2,\hat{q}_3]\\
+     * &= [\hat{q}_0,\boldsymbol{v}]
+     * \end{split}
+     * \end{equation}
+     * \f]
+     * where \f$\hat{q}_i = p_i+\epsilon q_i\f$. \f$p_i, q_i\f$ is the element of \f$\boldsymbol{p},\boldsymbol{q}\f$ respectively.
+     *
+     * Thus, the exponential function of a dual quaternion can be calculated in the same way as quaternion
+     * \f[
+     * \exp(\sigma)=e^{\hat{q_0}}\left(\cos||\boldsymbol{v}||+\frac{\boldsymbol{v}}{||\boldsymbol{v}||}\sin||\boldsymbol{v}||\right)
+     * \f]
+     * To calculate \f$e^{\hat{q_0}}\f$, we expand \f$e^{\hat{q_0}}\f$ by Taylor series:
+     * \f[
+     * \begin{equation}
+     * \begin{split}
+     * e^{\hat{q_0}} &= e^{p_0+\epsilon q_0}\\
+     * &=e^{p_0}+\epsilon q_0e^{p_0}
+     * \end{split}
+     * \end{equation}
+     * \f]
+     * and the same operations for \f$\cos\f$ and \f$\sin.\f$
      */
     DualQuat<_Tp> exp() const;
+
+    /**
+     * @brief
+     * A dual quaternion is a vector in form of
+     * \f[
+     * \begin{equation}
+     * \begin{split}
+     * \sigma &=\boldsymbol{p} + \epsilon \boldsymbol{q}\\
+     * &= [\hat{q}_0,\hat{q}_1,\hat{q}_2,\hat{q}_3]\\
+     * &= [\hat{q}_0,\boldsymbol{v}]
+     * \end{split}
+     * \end{equation}
+     * \f]
+     * where \f$\hat{q}_i = p_i+\epsilon q_i\f$. \f$p_i, q_i\f$ is the element
+     * of \f$\boldsymbol{p},\boldsymbol{q}\f$ respectively.
+     *
+     * Thus, the logarithm function of a dual quaternion can be calculated as the method of a quaternion:
+     * \f[
+     * \ln(\sigma)=\ln||\sigma||+\frac{\boldsymbol{v}}{||\boldsymbol{v}||}\arccos\frac{\hat{q}_0}{\boldsymbol{||v||}}
+     * \f]
+     * To calculate each function, we expand them by Taylor series, see exp for example.
+     *
+     * @param dq a dual quaternion.
+     * @param assumeUnit if @ref QUAT_ASSUME_UNIT, dual quaternion dq assume to be a unit dual quaternion
+     * and this function will save some computations.
+     */
+    template <typename T>
+    friend DualQuat<T> log(const DualQuat<T> &dq, QuatAssumeType assumeUnit);
 
     /**
      * @brief
