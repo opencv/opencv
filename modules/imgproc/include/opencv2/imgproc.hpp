@@ -1149,6 +1149,7 @@ protected:
     void splice( int edgeA, int edgeB );
     int connectEdges( int edgeA, int edgeB );
     void swapEdges( int edge );
+    int locateInternal(Point2f pt, int &edge, int &vertex);
     void calcVoronoi();
     void clearVoronoi();
     void checkSubdiv() const;
@@ -1156,18 +1157,18 @@ protected:
     enum {
         PTTYPE_FREE = 0,
         PTTYPE_DELAUNAY = 1,
-        PTTYPE_DELAUNAY_META = 2,
+        PTTYPE_DELAUNAY_IDEAL = 2,
         PTTYPE_VORONOI = 3,
-        PTTYPE_VORONOI_META = 4
+        PTTYPE_VORONOI_IDEAL = 4
     };
 
     struct CV_EXPORTS Vertex
     {
         Vertex();
         Vertex(Point2f pt, int type, int firstEdge = 0);
-        bool voronoi() const;
-        bool free() const;
-        bool meta() const;
+        bool isvoronoi() const;
+        bool isfree() const;
+        bool isideal() const;
 
         int firstEdge;
         int type;
@@ -1183,12 +1184,6 @@ protected:
         int next[4];
         int pt[4];
     };
-
-    int counterClockwise(const Vertex &a, const Vertex &b, const Vertex &c) const;
-    int inCircle(const Vertex &a, const Vertex &b, const Vertex &c, const Vertex &d) const;
-    int rightOf(const Vertex &c, const Vertex &a, const Vertex &b) const;
-    int rightOf(const Vertex &c, const Vertex &a, const Vertex &b, Point2f offset) const;
-    int locateInternal(const Vertex &v, int &edge, int &vertex);
 
     //! All of the vertices
     std::vector<Vertex> vtx;
