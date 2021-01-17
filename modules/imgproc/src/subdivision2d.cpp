@@ -382,7 +382,7 @@ int Subdiv2D::locateInternal(Point2f pt, int &edge, int &vertex)
             recentEdge = curr_edge;
 
             edge = 0;
-            vertex = right_of_onext == 0 ? edgeOrg(edge) : edgeDst(edge);
+            vertex = right_of_onext == 0 ? curr_org : curr_dst;
             return PTLOC_VERTEX;
         }
         else if (right_of_curr > 0) {
