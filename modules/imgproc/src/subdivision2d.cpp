@@ -228,6 +228,7 @@ static int leftOf(Point2f c, Point2f a, Point2f b)
     return counterClockwise(c, a, b);
 }
 
+/* assuming standard part of ideal points to be (0.f, 0.f) */
 static int counterClockwiseEx(Point2f a, Point2f b, Point2f c, bool idealA, bool idealB, bool idealC)
 {
     const static Point2f o(0.f, 0.f);
@@ -241,7 +242,6 @@ static int counterClockwiseEx(Point2f a, Point2f b, Point2f c, bool idealA, bool
     }
 
     if (!idealA && !idealB && idealC) {
-        // assume standard part of ideal point C to be (0.f, 0.f)
         return !parallel(b - a, c) ? counterClockwise(o, b - a, c) : counterClockwise(a, b, o);
     }
 
@@ -252,6 +252,7 @@ static int counterClockwiseEx(Point2f a, Point2f b, Point2f c, bool idealA, bool
     return counterClockwiseEx(b, c, a, idealB, idealC, idealA);
 }
 
+/* assuming standard part of ideal points to be (0.f, 0.f) */
 static int inCircleEx(
         Point2f a, Point2f b, Point2f c, Point2f d, bool idealA, bool idealB, bool idealC, bool idealD)
 {
@@ -649,6 +650,9 @@ int Subdiv2D::findNearest(Point2f pt, Point2f* nearestPt)
     int location = locateInternal(pt, edge, vertex);
 
     if (location == PTLOC_VERTEX) {
+        if (nearestPt) {
+            *nearestPt = vtx[vertex].pt;
+        }
         return vertex;
     }
 
