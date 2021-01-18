@@ -340,23 +340,24 @@ public:
     Allocator* allocator;
 };
 
+struct CV_EXPORTS_W GpuData
+{
+    explicit GpuData(size_t _size);
+     ~GpuData();
+
+    GpuData(const GpuData&) = delete;
+    GpuData& operator=(const GpuData&) = delete;
+
+    GpuData(GpuData&&) = delete;
+    GpuData& operator=(GpuData&&) = delete;
+
+    uchar* data;
+    size_t size;
+};
+
 class CV_EXPORTS_W GpuMatND
 {
 public:
-    struct CV_EXPORTS_W DevicePtr
-    {
-        explicit DevicePtr(size_t _size);
-         ~DevicePtr();
-
-        DevicePtr(const DevicePtr&) = delete;
-        DevicePtr& operator=(const DevicePtr&) = delete;
-
-        DevicePtr(DevicePtr&&) = delete;
-        DevicePtr& operator=(DevicePtr&&) = delete;
-
-        uchar* data;
-    };
-
     using SizeArray = std::vector<int>;
     using StepArray = std::vector<size_t>;
     using IndexArray = std::vector<int>;
@@ -454,7 +455,7 @@ public:
     //! (i.e. when there are no gaps between successive rows)
     bool isContinuous() const;
 
-    //! returns true if the matrix is a submatrix of another matrix
+    //! returns true if the matrix is a sub-matrix of another matrix
     bool isSubmatrix() const;
 
     //! returns element size in bytes
@@ -466,8 +467,11 @@ public:
     //! returns true if data is null
     bool empty() const;
 
-    //! returns true if points to external(user-allocated) gpu memory
+    //! returns true if not empty and points to external(user-allocated) gpu memory
     bool external() const;
+
+    //! returns pointer to the first byte of the GPU memory
+    uchar* getDevicePtr() const;
 
     //! returns the total number of array elements
     size_t total() const;
@@ -491,14 +495,8 @@ public:
     */
     int flags;
 
+    //! matrix dimensionality
     int dims;
-
-    /*! pointer to the data
-    If this is a submatrix of a larger matrix, this points to the first
-    element of the submatrix, and it can be different from data_->data.
-    If this is not a submatrix, then data is always equal to data_->data.
-    */
-    uchar* data;
 
     //! shape of this array
     SizeArray size;
@@ -509,8 +507,23 @@ public:
     StepArray step;
 
 private:
-    //! internal use
-    std::shared_ptr<DevicePtr> data_;
+    /*! internal use
+    If this GpuMatND holds external memory, this is empty.
+    */
+    std::shared_ptr<GpuData> data_;
+
+    /*! internal use
+    If this GpuMatND manages memory with reference counting, this value is
+    always equal to data_->data. If this GpuMatND holds external memory,
+    data_ is empty and data points to the external memory.
+    */
+    uchar* data;
+
+    /*! internal use
+    If this GpuMatND is a sub-matrix of a larger matrix, this value is the
+    difference of the first byte between the sub-matrix and the whole matrix.
+    */
+    size_t offset;
 };
 
 /** @brief Creates a continuous matrix.

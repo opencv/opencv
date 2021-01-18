@@ -389,13 +389,13 @@ void swap(GpuMat& a, GpuMat& b)
 
 inline
 GpuMatND::GpuMatND() :
-    flags(0), dims(0), data(nullptr)
+    flags(0), dims(0), data(nullptr), offset(0)
 {
 }
 
 inline
 GpuMatND::GpuMatND(SizeArray _size, int _type) :
-    flags(0), dims(0), data(nullptr)
+    flags(0), dims(0), data(nullptr), offset(0)
 {
     create(std::move(_size), _type);
 }
@@ -440,6 +440,12 @@ inline
 bool GpuMatND::external() const
 {
     return !empty() && data_.use_count() == 0;
+}
+
+inline
+uchar* GpuMatND::getDevicePtr() const
+{
+    return data + offset;
 }
 
 inline

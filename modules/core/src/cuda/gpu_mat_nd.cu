@@ -1,3 +1,7 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+
 #include "opencv2/opencv_modules.hpp"
 
 #ifndef HAVE_OPENCV_CUDEV
@@ -12,13 +16,13 @@
 using namespace cv;
 using namespace cv::cuda;
 
-GpuMatND::DevicePtr::DevicePtr(const size_t _size)
-    : data(nullptr)
+GpuData::GpuData(const size_t _size)
+    : data(nullptr), size(_size)
 {
     CV_CUDEV_SAFE_CALL(cudaMalloc(&data, _size));
 }
 
-GpuMatND::DevicePtr::~DevicePtr()
+GpuData::~GpuData()
 {
     CV_CUDEV_SAFE_CALL(cudaFree(data));
 }
@@ -38,15 +42,18 @@ void GpuMatND::create(SizeArray _size, int _type)
         CV_Assert(elements_nonzero(_size));
     }
 
-    if (size == _size && type() == _type && !external())
+    _type &= Mat::TYPE_MASK;
+
+    if (size == _size && type() == _type && !empty() && !external())
         return;
 
     release();
 
     setFields(std::move(_size), _type);
 
-    data_ = std::make_shared<DevicePtr>(totalMemSize());
+    data_ = std::make_shared<GpuData>(totalMemSize());
     data = data_->data;
+    offset = 0;
 }
 
 /////////////////////////////////////////////////////
@@ -57,7 +64,7 @@ void GpuMatND::release()
     data = nullptr;
     data_.reset();
 
-    flags = dims = 0;
+    flags = dims = offset = 0;
     size.clear();
     step.clear();
 }
@@ -67,11 +74,13 @@ void GpuMatND::release()
 
 GpuMatND GpuMatND::clone() const
 {
+    CV_DbgAssert(!empty());
+
     GpuMatND ret(size, type());
 
     if (isContinuous())
     {
-        CV_CUDEV_SAFE_CALL(cudaMemcpy(ret.data, data, totalMemSize(), cudaMemcpyDeviceToDevice));
+        CV_CUDEV_SAFE_CALL(cudaMemcpy(ret.getDevicePtr(), getDevicePtr(), totalMemSize(), cudaMemcpyDeviceToDevice));
     }
     else
     {
@@ -80,7 +89,7 @@ GpuMatND GpuMatND::clone() const
         if (dims == 2)
         {
             CV_CUDEV_SAFE_CALL(
-                cudaMemcpy2D(ret.data, ret.step[0], data, step[0],
+                cudaMemcpy2D(ret.getDevicePtr(), ret.step[0], getDevicePtr(), step[0],
                     size[1]*step[1], size[0], cudaMemcpyDeviceToDevice)
             );
         }
@@ -90,8 +99,8 @@ GpuMatND GpuMatND::clone() const
 
             bool end = false;
 
-            uchar* d = ret.data;
-            uchar* s = data;
+            uchar* d = ret.getDevicePtr();
+            const uchar* s = getDevicePtr();
 
             // iterate each 2D plane
             do
@@ -136,13 +145,15 @@ GpuMatND GpuMatND::clone() const
 
 GpuMatND GpuMatND::clone(Stream& stream) const
 {
+    CV_DbgAssert(!empty());
+
     GpuMatND ret(size, type());
 
     cudaStream_t _stream = StreamAccessor::getStream(stream);
 
     if (isContinuous())
     {
-        CV_CUDEV_SAFE_CALL(cudaMemcpyAsync(ret.data, data, totalMemSize(), cudaMemcpyDeviceToDevice, _stream));
+        CV_CUDEV_SAFE_CALL(cudaMemcpyAsync(ret.getDevicePtr(), getDevicePtr(), totalMemSize(), cudaMemcpyDeviceToDevice, _stream));
     }
     else
     {
@@ -151,7 +162,7 @@ GpuMatND GpuMatND::clone(Stream& stream) const
         if (dims == 2)
         {
             CV_CUDEV_SAFE_CALL(
-                cudaMemcpy2DAsync(ret.data, ret.step[0], data, step[0],
+                cudaMemcpy2DAsync(ret.getDevicePtr(), ret.step[0], getDevicePtr(), step[0],
                     size[1]*step[1], size[0], cudaMemcpyDeviceToDevice, _stream)
             );
         }
@@ -161,8 +172,8 @@ GpuMatND GpuMatND::clone(Stream& stream) const
 
             bool end = false;
 
-            uchar* d = ret.data;
-            uchar* s = data;
+            uchar* d = ret.getDevicePtr();
+            const uchar* s = getDevicePtr();
 
             // iterate each 2D plane
             do
@@ -222,7 +233,7 @@ void GpuMatND::upload(InputArray src)
 
     create(std::move(_size), mat.type());
 
-    CV_CUDEV_SAFE_CALL(cudaMemcpy(data, mat.data, totalMemSize(), cudaMemcpyHostToDevice));
+    CV_CUDEV_SAFE_CALL(cudaMemcpy(getDevicePtr(), mat.data, totalMemSize(), cudaMemcpyHostToDevice));
 }
 
 void GpuMatND::upload(InputArray src, Stream& stream)
@@ -240,7 +251,7 @@ void GpuMatND::upload(InputArray src, Stream& stream)
     create(std::move(_size), mat.type());
 
     cudaStream_t _stream = StreamAccessor::getStream(stream);
-    CV_CUDEV_SAFE_CALL(cudaMemcpyAsync(data, mat.data, totalMemSize(), cudaMemcpyHostToDevice, _stream));
+    CV_CUDEV_SAFE_CALL(cudaMemcpyAsync(getDevicePtr(), mat.data, totalMemSize(), cudaMemcpyHostToDevice, _stream));
 }
 
 /////////////////////////////////////////////////////
@@ -258,7 +269,7 @@ void GpuMatND::download(OutputArray dst) const
     if (!gmat.isContinuous())
         gmat = gmat.clone();
 
-    CV_CUDEV_SAFE_CALL(cudaMemcpy(mat.data, gmat.data, gmat.totalMemSize(), cudaMemcpyDeviceToHost));
+    CV_CUDEV_SAFE_CALL(cudaMemcpy(mat.data, gmat.getDevicePtr(), gmat.totalMemSize(), cudaMemcpyDeviceToHost));
 }
 
 void GpuMatND::download(OutputArray dst, Stream& stream) const
@@ -274,7 +285,7 @@ void GpuMatND::download(OutputArray dst, Stream& stream) const
         gmat = gmat.clone(stream);
 
     cudaStream_t _stream = StreamAccessor::getStream(stream);
-    CV_CUDEV_SAFE_CALL(cudaMemcpyAsync(mat.data, gmat.data, gmat.totalMemSize(), cudaMemcpyDeviceToHost, _stream));
+    CV_CUDEV_SAFE_CALL(cudaMemcpyAsync(mat.data, gmat.getDevicePtr(), gmat.totalMemSize(), cudaMemcpyDeviceToHost, _stream));
 }
 
 #endif

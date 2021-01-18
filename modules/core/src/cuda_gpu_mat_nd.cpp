@@ -1,10 +1,14 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+
 #include "precomp.hpp"
 
 using namespace cv;
 using namespace cv::cuda;
 
 GpuMatND::GpuMatND(SizeArray _size, int _type, void* _data, StepArray _step) :
-    flags(0), dims(0), data(static_cast<uchar*>(_data))
+    flags(0), dims(0), data(static_cast<uchar*>(_data)), offset(0)
 {
     CV_Assert(_step.empty() || _size.size() == _step.size() + 1);
 
@@ -28,7 +32,7 @@ GpuMatND GpuMatND::operator()(const std::vector<Range>& ranges) const
         Range r = ranges[i];
         if (r != Range::all() && r != Range(0, ret.size[i]))
         {
-            ret.data += r.start * ret.step[i];
+            ret.offset += r.start * ret.step[i];
             ret.size[i] = r.size();
             ret.flags |= Mat::SUBMATRIX_FLAG;
         }
@@ -63,7 +67,7 @@ GpuMat GpuMatND::createGpuMatHeader() const
     };
     CV_Assert(Effectively2D(*this));
 
-    return GpuMat(size[dims-2], size[dims-1], type(), data, step[dims-2]);
+    return GpuMat(size[dims-2], size[dims-1], type(), getDevicePtr(), step[dims-2]);
 }
 
 GpuMat GpuMatND::operator()(IndexArray idx, Range rowRange, Range colRange) const
@@ -111,6 +115,17 @@ void GpuMatND::setFields(SizeArray _size, int _type, StepArray _step)
 
 #ifndef HAVE_CUDA
 
+GpuData::GpuData(const size_t _size)
+    : data(nullptr), size(0)
+{
+    CV_UNUSED(_size);
+    throw_no_cuda();
+}
+
+GpuData::~GpuData()
+{
+}
+
 void GpuMatND::create(SizeArray _size, int _type)
 {
     CV_UNUSED(_size);
@@ -128,15 +143,35 @@ GpuMatND GpuMatND::clone() const
     throw_no_cuda();
 }
 
+GpuMatND GpuMatND::clone(Stream& stream) const
+{
+    CV_UNUSED(stream);
+    throw_no_cuda();
+}
+
 void GpuMatND::upload(InputArray src)
 {
     CV_UNUSED(src);
     throw_no_cuda();
 }
 
+void GpuMatND::upload(InputArray src, Stream& stream)
+{
+    CV_UNUSED(src);
+    CV_UNUSED(stream);
+    throw_no_cuda();
+}
+
 void GpuMatND::download(OutputArray dst) const
 {
     CV_UNUSED(dst);
+    throw_no_cuda();
+}
+
+void GpuMatND::download(OutputArray dst, Stream& stream) const
+{
+    CV_UNUSED(dst);
+    CV_UNUSED(stream);
     throw_no_cuda();
 }
 
