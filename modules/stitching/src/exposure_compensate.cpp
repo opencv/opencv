@@ -154,7 +154,11 @@ void GainCompensator::singleFeed(const std::vector<Point> &corners, const std::v
                 {
                     CV_Assert(similarity_it != similarities_.end());
                     UMat similarity = *similarity_it++;
-                    bitwise_and(intersect, similarity, intersect);
+                    // in-place operation has an issue. don't remove the swap
+                    // detail https://github.com/opencv/opencv/issues/19184
+                    Mat_<uchar> intersect_updated;
+                    bitwise_and(intersect, similarity, intersect_updated);
+                    std::swap(intersect, intersect_updated);
                 }
 
                 int intersect_count = countNonZero(intersect);
