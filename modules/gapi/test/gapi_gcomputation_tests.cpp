@@ -115,11 +115,12 @@ namespace opencv_test
 
   TEST_F(GComputationPythonApplyTest, WithoutSerialization)
   {
-      auto output = m_c.apply([this](const cv::GTypesInfo& info)
-                              {
-                                  GAPI_Assert(info[0].shape == cv::GShape::GMAT);
-                                  GAPI_Assert(info[1].shape == cv::GShape::GMAT);
-                                  return cv::GRunArgs{in_mat1, in_mat2};
+      auto output = m_c.apply(cv::detail::ExtractArgsCallback{[this](const cv::GTypesInfo& info)
+                                  {
+                                      GAPI_Assert(info[0].shape == cv::GShape::GMAT);
+                                      GAPI_Assert(info[1].shape == cv::GShape::GMAT);
+                                      return cv::GRunArgs{in_mat1, in_mat2};
+                                  }
                               });
 
       EXPECT_EQ(1u, output.size());
@@ -133,12 +134,13 @@ namespace opencv_test
       auto p = cv::gapi::serialize(m_c);
       auto c = cv::gapi::deserialize<cv::GComputation>(p);
 
-      auto output = c.apply([this](const cv::GTypesInfo& info)
-                            {
-                                  GAPI_Assert(info[0].shape == cv::GShape::GMAT);
-                                  GAPI_Assert(info[1].shape == cv::GShape::GMAT);
-                                  return cv::GRunArgs{in_mat1, in_mat2};
-                            });
+      auto output = c.apply(cv::detail::ExtractArgsCallback{[this](const cv::GTypesInfo& info)
+                                  {
+                                      GAPI_Assert(info[0].shape == cv::GShape::GMAT);
+                                      GAPI_Assert(info[1].shape == cv::GShape::GMAT);
+                                      return cv::GRunArgs{in_mat1, in_mat2};
+                                  }
+                              });
 
       EXPECT_EQ(1u, output.size());
 
