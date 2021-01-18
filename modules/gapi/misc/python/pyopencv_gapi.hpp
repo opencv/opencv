@@ -251,18 +251,18 @@ static cv::GMetaArgs extract_meta_args(const cv::GTypesInfo& info, PyObject* py_
 static PyObject* pyopencv_cv_gin(PyObject*, PyObject* py_args)
 {
     Py_INCREF(py_args);
-    cv::detail::ExtractArgsCallback callback = std::bind(extract_run_args,
-                                                         std::placeholders::_1,
-                                                         py_args);
+    auto callback = cv::detail::ExtractArgsCallback{std::bind(extract_run_args,
+                                                              std::placeholders::_1,
+                                                              py_args)};
     return pyopencv_from(callback);
 }
 
 static PyObject* pyopencv_cv_descr_of(PyObject*, PyObject* py_args)
 {
     Py_INCREF(py_args);
-    cv::detail::ExtractMetaCallback callback = std::bind(extract_meta_args,
-                                                         std::placeholders::_1,
-                                                         py_args);
+    auto callback = cv::detail::ExtractMetaCallback{std::bind(extract_meta_args,
+                                                              std::placeholders::_1,
+                                                              py_args)};
     return pyopencv_from(callback);
 }
 
