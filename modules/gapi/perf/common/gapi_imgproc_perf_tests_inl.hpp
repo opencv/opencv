@@ -808,17 +808,18 @@ PERF_TEST_P_(FindContoursPerfTest, TestPerformance)
     cv::Mat in;
     initMatForFindingContours(in, sz, type);
     cv::Point offset = cv::Point();
+    std::vector<cv::Vec4i> out_hier_gapi = std::vector<cv::Vec4i>();
 
     std::vector<std::vector<cv::Point>> out_cnts_gapi;
     cv::GComputation c(findContoursTestGAPI(in, mode, method, std::move(compile_args),
-                                            out_cnts_gapi, offset));
+                                            out_cnts_gapi, out_hier_gapi, offset));
 
     TEST_CYCLE()
     {
         c.apply(gin(in, offset), gout(out_cnts_gapi));
     }
 
-    findContoursTestOpenCVCompare(in, mode, method, out_cnts_gapi, cmpF);
+    findContoursTestOpenCVCompare(in, mode, method, out_cnts_gapi, out_hier_gapi, cmpF);
     SANITY_CHECK_NOTHING();
 }
 
@@ -838,15 +839,17 @@ PERF_TEST_P_(FindContoursHPerfTest, TestPerformance)
 
     std::vector<std::vector<cv::Point>> out_cnts_gapi;
     std::vector<cv::Vec4i>              out_hier_gapi;
-    cv::GComputation c(findContoursTestGAPI(in, mode, method, std::move(compile_args),
-                                            out_cnts_gapi, out_hier_gapi, offset));
+    cv::GComputation c(findContoursTestGAPI<WITH_HIERARCHY>(in, mode, method,
+                                                            std::move(compile_args),
+                                                            out_cnts_gapi, out_hier_gapi, offset));
 
     TEST_CYCLE()
     {
         c.apply(gin(in, offset), gout(out_cnts_gapi, out_hier_gapi));
     }
 
-    findContoursTestOpenCVCompare(in, mode, method, out_cnts_gapi, out_hier_gapi, cmpF);
+    findContoursTestOpenCVCompare<WITH_HIERARCHY>(in, mode, method, out_cnts_gapi, out_hier_gapi,
+                                                  cmpF);
     SANITY_CHECK_NOTHING();
 }
 
