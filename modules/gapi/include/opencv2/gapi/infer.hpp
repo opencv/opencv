@@ -438,14 +438,6 @@ typename Net::Result infer(Args&&... args) {
  */
 struct Generic { };
 
-/**
- * @brief Calculates response for generic network
- *
- * @param tag a network tag
- * @param inputs networks's inputs
- * @return a GInferOutputs
- */
-
 template<typename InferT>
 std::shared_ptr<cv::GCall> makeCall(const std::string         &tag,
                                     std::vector<cv::GArg>    &&args,
@@ -488,6 +480,13 @@ inline void unpackBlobs(const GInferInputs::Map& blobs,
     }
 }
 
+/**
+ * @brief Calculates response for generic network
+ *
+ * @param tag a network tag
+ * @param inputs networks's inputs
+ * @return a GInferOutputs
+ */
 template<typename T = Generic> GInferOutputs
 infer(const std::string& tag, const GInferInputs& inputs)
 {
@@ -522,7 +521,7 @@ struct InferROITraits<GInferListBase>
     using inType  = cv::GArray<cv::Rect>;
 };
 
-template<typename InferType> 
+template<typename InferType>
 typename InferROITraits<InferType>::outType
 inferROI(const std::string& tag,
          const typename InferROITraits<InferType>::inType& in,
@@ -545,23 +544,50 @@ inferROI(const std::string& tag,
     return {std::move(call)};
 }
 
+/** @brief Calculates response for the generic network
+ *     for the specified region in the source image.
+ *     Currently expects a single-input network only.
+ *
+ * @param tag a network tag
+ * @param roi a an object describing the region of interest
+ *   in the source image. May be calculated in the same graph dynamically.
+ * @param inputs networks's inputs
+ * @return a GInferOutputs
+ */
 template<typename T = Generic> GInferOutputs
 infer(const std::string& tag, const cv::GOpaque<cv::Rect>& roi, const GInferInputs& inputs)
 {
     return inferROI<GInferROIBase>(tag, roi, inputs);
 }
 
+/** @brief Calculates responses for the specified network
+ *     for every region in the source image.
+ *
+ * @param tag a network tag
+ * @param rois a list of rectangles describing regions of interest
+ *   in the source image. Usually an output of object detector or tracker.
+ * @param inputs networks's inputs
+ * @return a GInferListOutputs
+ */
 template<typename T = Generic> GInferListOutputs
 infer(const std::string& tag, const cv::GArray<cv::Rect>& rois, const GInferInputs& inputs)
 {
     return inferROI<GInferListBase>(tag, rois, inputs);
 }
 
+/** @brief Calculates responses for the specified network
+ *     for every region in the source image, extended version.
+ *
+ * @param tag a network tag
+ * @param in a source image containing regions of interest.
+ * @param inputs networks's inputs
+ * @return a GInferListOutputs
+ */
 template<typename T = Generic, typename Input>
 typename std::enable_if<cv::detail::accepted_infer_types<Input>::value, GInferListOutputs>::type
 infer2(const std::string& tag,
        const Input& in,
-       const cv::GInferListInputs& list)
+       const cv::GInferListInputs& inputs)
 {
     std::vector<cv::GArg> args;
     std::vector<std::string> names;
@@ -571,7 +597,7 @@ infer2(const std::string& tag,
     auto k = cv::detail::GOpaqueTraits<Input>::kind;
     kinds.emplace_back(k);
 
-    for (auto&& p : list.getBlobs()) {
+    for (auto&& p : inputs.getBlobs()) {
         names.emplace_back(p.first);
         switch (p.second.index()) {
             case cv::GInferListInputs::StorageT::index_of<cv::GArray<cv::GMat>>():
