@@ -1066,7 +1066,7 @@ public:
     @param facetCenters Output vector of the Voronoi facets center points.
 
      */
-    CV_WRAP void getVoronoiFacetList(const std::vector<int>& idx, CV_OUT std::vector<std::vector<Point2f> >& facetList,
+    CV_WRAP void getVoronoiFacetList(const std::vector<int>& idx, CV_OUT std::vector<std::vector<Vec4f> >& facetList,
                                      CV_OUT std::vector<Point2f>& facetCenters);
 
     /** @brief Returns vertex location from vertex ID.

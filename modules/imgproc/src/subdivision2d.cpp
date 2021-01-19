@@ -144,7 +144,8 @@ bool Subdiv2D::Vertex::isfree() const
     return type == PTTYPE_FREE;
 }
 
-bool Subdiv2D::Vertex::isideal() const {
+bool Subdiv2D::Vertex::isideal() const
+{
     return type == PTTYPE_DELAUNAY_IDEAL || type == PTTYPE_VORONOI_IDEAL;
 }
 
@@ -553,12 +554,8 @@ void Subdiv2D::clearVoronoi()
     total = vtx.size();
     for( i = 0; i < total; i++ )
     {
-        if( vtx[i].isvoronoi() ) {
-            if (vtx[i].isideal() && vtx[i].firstEdge) {
-                deletePoint(vtx[i].firstEdge);
-            }
+        if( vtx[i].isvoronoi() )
             deletePoint((int)i);
-        }
     }
 
     validGeometry = false;
@@ -619,13 +616,13 @@ void Subdiv2D::calcVoronoi()
                 }
 
                 if (!vtx[edge0_org].isideal() && !vtx[edge0_dst].isideal() && vtx[edge1_dst].isideal()) {
-                    // ideal point has standard part of (org0 + dst0) / 2.f instead of (0.f, 0.f) expected by CCWEx
-                    voronoi_point = newPoint(Point2f(-(dst0 - org0).y, (dst0 - org0).x), PTTYPE_VORONOI_IDEAL,
-                                             newPoint((org0 + dst0) / 2.f, PTTYPE_FREE));
+                    Point2f point(-(dst0 - org0).y, (dst0 - org0).x);
+                    voronoi_point = newPoint(point / norm(point), PTTYPE_VORONOI_IDEAL);
                 }
 
                 if (!vtx[edge0_org].isideal() && vtx[edge0_dst].isideal() && vtx[edge1_dst].isideal()) {
-                    voronoi_point = newPoint(Point2f((dst1 - dst0).y, -(dst1 - dst0).x), PTTYPE_VORONOI_IDEAL);
+                    Point2f point((dst1 - dst0).y, -(dst1 - dst0).x);
+                    voronoi_point = newPoint(point / norm(point), PTTYPE_VORONOI_IDEAL);
                 }
 
                 qedges[edge0 >> 2].pt[3 - (edge0 & 2)] =
@@ -655,89 +652,69 @@ int Subdiv2D::findNearest(Point2f pt, Point2f* nearestPt)
         }
         return vertex;
     }
-
-    // we need to start with a PTTYPE_DELAUNAY vertex
-    if (location == PTLOC_EDGE && vtx[edgeOrg(edge)].isideal()) {
-        edge = symEdge(edge);
+    if (location == PTLOC_EDGE || location == PTLOC_INSIDE) {
+        vertex = !vtx[edgeOrg(edge)].isideal() ? edgeOrg(edge) : edgeDst(edge);
     }
     if (location == PTLOC_INSIDE) {
-        for (int i = 0; i < 3 && vtx[edgeOrg(edge)].isideal(); i++) {
-            edge = getEdge(edge, NEXT_AROUND_LEFT);
-        }
-        if (vtx[edgeOrg(edge)].isideal()) {
-            // empty subdivision
-            if (nearestPt) {
-                nearestPt = NULL;
-            }
-            return 0;
+        if (!vtx[edgeDst(getEdge(edge, NEXT_AROUND_LEFT))].isideal()) {
+            vertex = edgeDst(getEdge(edge, NEXT_AROUND_LEFT));
         }
     }
 
-    edge = rotateEdge(edge, 1);
-
     for (;;) {
-        vertex = edgeOrg(rotateEdge( edge, 3)); // never PTTYPE_DELAUNAY_IDEAL
+        CV_Assert(!vtx[vertex].isideal());
 
-        for (;;) {
+        int first_edge = edge = rotateEdge(vtx[vertex].firstEdge, 1);
+        bool outside_edge = false;
+
+        do {
+            int edge_org = edgeOrg(edge);
             int edge_dst = edgeDst(edge);
 
-            // compensate the possible non-zero standard part of (possibly) an ideal point, so that CCWEx could succeed
-            Point2f standard_part = vtx[edge_dst].isideal() && vtx[edge_dst].firstEdge ?
-                    vtx[vtx[edge_dst].firstEdge].pt : Point2f(0.f, 0.f);
+            if (!vtx[edge_org].isideal() || !vtx[edge_dst].isideal()) {
+                Point2f delta_org = vtx[edge_org].isideal() ? vtx[edge_dst].pt : Point2f(0.f, 0.f);
+                Point2f delta_dst = vtx[edge_dst].isideal() ? vtx[edge_org].pt : Point2f(0.f, 0.f);
 
-            if (rightOfEx(
-                    pt - standard_part, vtx[vertex].pt - standard_part, vtx[edge_dst].pt,
-                    false, false, vtx[edge_dst].isideal()) >= 0) {
-                break;
+                if (rightOfEx(pt - delta_org, vtx[vertex].pt - delta_org, vtx[edge_org].pt,
+                            false, false, vtx[edge_org].isideal()) <  0 &&
+                    rightOfEx(pt - delta_dst, vtx[vertex].pt - delta_dst, vtx[edge_dst].pt,
+                            false, false, vtx[edge_dst].isideal()) >= 0) {
+
+                    if (rightOfEx(pt - delta_org - delta_dst, vtx[edge_org].pt - delta_dst, vtx[edge_dst].pt - delta_org,
+                                  false, vtx[edge_org].isideal(), vtx[edge_dst].isideal()) > 0) {
+                        outside_edge = true;
+                    }
+
+                    break;
+                }
+            } else {
+                if (norm(vtx[edge_org].pt + vtx[edge_dst].pt) < FLT_EPSILON) {
+                    // special case: all PTTYPE_DELAUNAY points are collinear, edge is a bisector of two neighbours
+
+                    int edge_rot = rotateEdge(edge, 1);
+                    Point2f delta = (vtx[edgeOrg(edge_rot)].pt + vtx[edgeDst(edge_rot)].pt) / 2.f;
+
+                    if (rightOfEx(pt - delta, vtx[vertex].pt - delta, vtx[edge_org].pt, false, false, true) < 0 &&
+                        rightOfEx(pt - delta, vtx[vertex].pt - delta, vtx[edge_dst].pt, false, false, true) >= 0) {
+
+                        if (rightOfEx(pt - delta, vtx[edge_org].pt, vtx[edge_dst].pt, false, true, true) > 0) {
+                            outside_edge = true;
+                        }
+
+                        break;
+                    }
+                }
             }
 
             edge = getEdge( edge, NEXT_AROUND_LEFT );
-        }
 
-        for (;;) {
-            int edge_org = edgeOrg(edge);
+        } while (edge != first_edge);
 
-            Point2f standard_part = vtx[edge_org].isideal() && vtx[edge_org].firstEdge ?
-                    vtx[vtx[edge_org].firstEdge].pt : Point2f(0.f, 0.f);
-
-            if (rightOfEx(
-                    pt - standard_part, vtx[vertex].pt - standard_part, vtx[edge_org].pt,
-                    false, false, vtx[edge_org].isideal()) < 0) {
-                break;
-            }
-
-            edge = getEdge( edge, PREV_AROUND_LEFT );
-        }
-
-        int edge_org = edgeOrg(edge);
-        int edge_dst = edgeDst(edge);
-
-        if (vtx[edge_org].isideal() && vtx[edge_dst].isideal()) {
-            Point2f standard_part_org = vtx[edge_org].firstEdge ? vtx[vtx[edge_org].firstEdge].pt : Point2f(0.f, 0.f);
-            Point2f standard_part_dst = vtx[edge_dst].firstEdge ? vtx[vtx[edge_dst].firstEdge].pt : Point2f(0.f, 0.f);
-            if (standard_part_org != standard_part_dst) {
-                // never escapes beyond this edge
-                break;
-            }
-        }
-
-        Point2f standard_part(0.f, 0.f);
-        if (vtx[edge_org].isideal() && vtx[edge_org].firstEdge) {
-            standard_part = vtx[vtx[edge_org].firstEdge].pt;
-        }
-        if (vtx[edge_dst].isideal() && vtx[edge_dst].firstEdge) {
-            standard_part = vtx[vtx[edge_dst].firstEdge].pt;
-        }
-
-        if (rightOfEx(
-                pt - standard_part,
-                vtx[edge_org].isideal() ? vtx[edge_org].pt : vtx[edge_org].pt - standard_part,
-                vtx[edge_dst].isideal() ? vtx[edge_dst].pt : vtx[edge_dst].pt - standard_part,
-                false, vtx[edge_org].isideal(), vtx[edge_dst].isideal()) <= 0) {
+        if (outside_edge) {
+            vertex = edgeOrg(rotateEdge(edge, 1));
+        } else {
             break;
         }
-
-        edge = symEdge(edge);
     }
 
     if (nearestPt) {
@@ -813,14 +790,14 @@ void Subdiv2D::getTriangleList(std::vector<Vec6f>& triangleList) const
 }
 
 void Subdiv2D::getVoronoiFacetList(const std::vector<int>& idx,
-                                   CV_OUT std::vector<std::vector<Point2f> >& facetList,
+                                   CV_OUT std::vector<std::vector<Vec4f> >& facetList,
                                    CV_OUT std::vector<Point2f>& facetCenters)
 {
     calcVoronoi();
     facetList.clear();
     facetCenters.clear();
 
-    std::vector<Point2f> buf;
+    std::vector<Vec4f> buf;
 
     size_t i, total;
     if( idx.empty() )
@@ -832,7 +809,7 @@ void Subdiv2D::getVoronoiFacetList(const std::vector<int>& idx,
     {
         int k = idx.empty() ? (int)i : idx[i];
 
-        if( vtx[k].isfree() || vtx[k].isvoronoi() )
+        if( vtx[k].isfree() || vtx[k].isvoronoi() || vtx[k].isideal() )
             continue;
         int edge = rotateEdge(vtx[k].firstEdge, 1), t = edge;
 
@@ -840,7 +817,38 @@ void Subdiv2D::getVoronoiFacetList(const std::vector<int>& idx,
         buf.clear();
         do
         {
-            buf.push_back(vtx[edgeOrg(t)].pt);
+            int edge_org = edgeOrg(t);
+            int edge_dst = edgeDst(t);
+
+            if (!vtx[edge_org].isideal() || !vtx[edge_dst].isideal()) {
+                Vec4f vec4f;
+                if (!vtx[edge_org].isideal()) {
+                    vec4f[0] = vtx[edge_org].pt.x;
+                    vec4f[1] = vtx[edge_org].pt.y;
+                } else {
+                    vec4f[0] = (vtx[edge_dst].pt + 1000.f * vtx[edge_org].pt).x;
+                    vec4f[1] = (vtx[edge_dst].pt + 1000.f * vtx[edge_org].pt).y;
+                }
+                if (!vtx[edge_dst].isideal()) {
+                    vec4f[2] = vtx[edge_dst].pt.x;
+                    vec4f[3] = vtx[edge_dst].pt.y;
+                } else {
+                    vec4f[2] = (vtx[edge_org].pt + 1000.f * vtx[edge_dst].pt).x;
+                    vec4f[3] = (vtx[edge_org].pt + 1000.f * vtx[edge_dst].pt).y;
+                }
+                buf.push_back(vec4f);
+            } else {
+                if (norm(vtx[edge_org].pt + vtx[edge_dst].pt) < FLT_EPSILON) {
+                    int edge_rot = rotateEdge(t, 1);
+                    Point2f delta = (vtx[edgeOrg(edge_rot)].pt + vtx[edgeDst(edge_rot)].pt) / 2.f;
+                    buf.push_back(Vec4f(
+                            (delta + 1000.f * vtx[edge_org].pt).x,
+                            (delta + 1000.f * vtx[edge_org].pt).y,
+                            (delta + 1000.f * vtx[edge_dst].pt).x,
+                            (delta + 1000.f * vtx[edge_dst].pt).y));
+                }
+            }
+
             t = getEdge( t, NEXT_AROUND_LEFT );
         }
         while( t != edge );
