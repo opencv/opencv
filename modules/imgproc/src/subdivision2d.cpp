@@ -229,7 +229,6 @@ static int leftOf(Point2f c, Point2f a, Point2f b)
     return counterClockwise(c, a, b);
 }
 
-/* assuming standard part of ideal points to be (0.f, 0.f) */
 static int counterClockwiseEx(Point2f a, Point2f b, Point2f c, bool idealA, bool idealB, bool idealC)
 {
     const static Point2f o(0.f, 0.f);
@@ -253,7 +252,6 @@ static int counterClockwiseEx(Point2f a, Point2f b, Point2f c, bool idealA, bool
     return counterClockwiseEx(b, c, a, idealB, idealC, idealA);
 }
 
-/* assuming standard part of ideal points to be (0.f, 0.f) */
 static int inCircleEx(
         Point2f a, Point2f b, Point2f c, Point2f d, bool idealA, bool idealB, bool idealC, bool idealD)
 {
