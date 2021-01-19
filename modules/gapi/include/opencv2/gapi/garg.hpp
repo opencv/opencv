@@ -257,13 +257,15 @@ namespace detail {
     struct ExtractArgsCallback
     {
         cv::GRunArgs operator()(const cv::GTypesInfo& info) const { return c(info); }
-        std::function<cv::GRunArgs(const cv::GTypesInfo& info)> c;
+        using CallBackT = std::function<cv::GRunArgs(const cv::GTypesInfo& info)>;
+        CallBackT c;
     };
 
     struct ExtractMetaCallback
     {
         cv::GMetaArgs operator()(const cv::GTypesInfo& info) const { return c(info); }
-        std::function<cv::GMetaArgs(const cv::GTypesInfo& info)> c;
+        using CallBackT = std::function<cv::GMetaArgs(const cv::GTypesInfo& info)>;
+        CallBackT c;
     };
 } // namespace detail
 
