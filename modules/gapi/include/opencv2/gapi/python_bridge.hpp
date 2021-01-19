@@ -95,7 +95,7 @@ public:
                                             , cv::Size
                                             , cv::Rect>;
     template<typename T>
-    GOpaqueT(cv::GOpaque<T> arg) : m_arg(arg) { };
+    GOpaqueT(cv::GOpaque<T> arg) : m_type(cv::detail::ArgTypeTraits<T>::type), m_arg(arg) { };
 
     GAPI_WRAP GOpaqueT(gapi::ArgType type) : m_type(type)
     {
@@ -167,7 +167,7 @@ public:
                                             , cv::Mat
                                             , cv::GMat>;
     template<typename T>
-    GArrayT(cv::GArray<T> arg) : m_arg(arg) { };
+    GArrayT(cv::GArray<T> arg) : m_type(cv::detail::ArgTypeTraits<T>::type), m_arg(arg) { };
 
     GAPI_WRAP GArrayT(gapi::ArgType type) : m_type(type)
     {
