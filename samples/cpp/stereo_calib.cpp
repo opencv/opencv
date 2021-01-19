@@ -17,7 +17,6 @@
    OPENCV WEBSITES:
      Homepage:      http://opencv.org
      Online docs:   http://docs.opencv.org
-     Q&A forum:     http://answers.opencv.org
      GitHub:        https://github.com/opencv/opencv/
    ************************************************** */
 
