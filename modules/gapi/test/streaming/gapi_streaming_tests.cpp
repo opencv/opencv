@@ -1895,4 +1895,55 @@ TEST(GAPI_Streaming, AccessBGRFromNV12Frame)
     }
 }
 
+TEST(GAPI_Streaming, TestPythonAPI)
+{
+    cv::Size sz(200, 200);
+    cv::Mat in_mat(sz, CV_8UC3);
+    cv::randu(in_mat, cv::Scalar::all(0), cv::Scalar(255));
+    const auto crop_rc = cv::Rect(13, 75, 100, 100);
+
+    // OpenCV reference image
+    cv::Mat ocv_mat;
+    {
+        ocv_mat = in_mat(crop_rc);
+    }
+
+    cv::GMat in;
+    auto roi = cv::gapi::crop(in, crop_rc);
+    cv::GComputation comp(cv::GIn(in), cv::GOut(roi));
+
+    // NB: Used by python bridge
+    auto cc = comp.compileStreaming(cv::detail::ExtractMetaCallback{[&](const cv::GTypesInfo& info)
+            {
+                GAPI_Assert(info.size() == 1u);
+                GAPI_Assert(info[0].shape == cv::GShape::GMAT);
+                return cv::GMetaArgs{};
+                return cv::GMetaArgs{cv::GMetaArg{cv::descr_of(in_mat)}};
+            }});
+
+    // NB: Used by python bridge
+    cc.setSource(cv::detail::ExtractArgsCallback{[&](const cv::GTypesInfo& info)
+            {
+                GAPI_Assert(info.size() == 1u);
+                GAPI_Assert(info[0].shape == cv::GShape::GMAT);
+                return cv::GRunArgs{in_mat};
+            }});
+
+    cc.start();
+
+    bool is_over = false;
+    cv::GRunArgs out_args;
+
+    // NB: Used by python bridge
+    std::tie(is_over, out_args) = cc.pull();
+
+    ASSERT_EQ(1u, out_args.size());
+    ASSERT_TRUE(cv::util::holds_alternative<cv::Mat>(out_args[0]));
+
+    EXPECT_EQ(0, cvtest::norm(ocv_mat, cv::util::get<cv::Mat>(out_args[0]), NORM_INF));
+    EXPECT_TRUE(is_over);
+
+    cc.stop();
+}
+
 } // namespace opencv_test

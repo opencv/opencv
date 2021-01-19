@@ -256,14 +256,14 @@ using GTypesInfo = std::vector<GTypeInfo>;
 namespace detail {
     struct ExtractArgsCallback
     {
-        cv::GRunArgs operator()(const cv::GTypesInfo& info) const { return callback(info); }
-        std::function<cv::GRunArgs(const cv::GTypesInfo& info)> callback;
+        cv::GRunArgs operator()(const cv::GTypesInfo& info) const { return c(info); }
+        std::function<cv::GRunArgs(const cv::GTypesInfo& info)> c;
     };
 
     struct ExtractMetaCallback
     {
-        cv::GMetaArgs operator()(const cv::GTypesInfo& info) const { return callback(info); }
-        std::function<cv::GMetaArgs(const cv::GTypesInfo& info)> callback;
+        cv::GMetaArgs operator()(const cv::GTypesInfo& info) const { return c(info); }
+        std::function<cv::GMetaArgs(const cv::GTypesInfo& info)> c;
     };
 } // namespace detail
 
