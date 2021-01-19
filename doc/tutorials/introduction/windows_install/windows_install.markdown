@@ -14,7 +14,7 @@ This tutorial can contain obsolete information.
 
 The description here was tested on Windows 7 SP1. Nevertheless, it should also work on any other
 relatively modern version of Windows OS. If you encounter errors after following the steps described
-below, feel free to contact us via our [OpenCV Q&A forum](http://answers.opencv.org). We'll do our
+below, feel free to contact us via our [OpenCV Q&A forum](https://forum.opencv.org). We'll do our
 best to help you out.
 
 @note To use the OpenCV library you have two options: @ref tutorial_windows_install_prebuilt or
@@ -352,7 +352,7 @@ libraries). If you do not need the support for some of these, you can just freel
 
     To test your build just go into the `Build/bin/Debug` or `Build/bin/Release` directory and start
     a couple of applications like the *contours.exe*. If they run, you are done. Otherwise,
-    something definitely went awfully wrong. In this case you should contact us at our [Q&A forum](http://answers.opencv.org/).
+    something definitely went awfully wrong. In this case you should contact us at our [Q&A forum](https://forum.opencv.org/).
     If everything is okay, the *contours.exe* output should resemble the following image (if
     built with Qt support):
 
