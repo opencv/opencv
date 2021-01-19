@@ -80,7 +80,7 @@ static void getPlanes (InputArray points3d_, std::vector<int> &labels, std::vect
             double xx = 0, yy = 0, zz = 0, xy = 0, xz = 0, yz = 0;
             for (int s : sample) {
                 const double x_ = points[3*s] - c_x, y_ = points[3*s+1] - c_y, z_ = points[3*s+2] - c_z;
-                xx += x_*x_; yy += y_*y_; zz += z_*z_; xy = x_*y_; yz += y_*z_; xz += x_*z_;
+                xx += x_*x_; yy += y_*y_; zz += z_*z_; xy += x_*y_; yz += y_*z_; xz += x_*z_;
             }
             xx /= n; yy /= n; zz /= n; xy /= n; yz /= n; xz /= n;
             Vec3d weighted_normal(0,0,0);
