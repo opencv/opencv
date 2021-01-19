@@ -96,6 +96,11 @@ TEST_F(DualQuatTest, basic_ops){
     EXPECT_NEAR(q1norm.getRealPart().norm(), 1, 1e-6);
     EXPECT_NEAR(q1norm.getRealPart().dot(q1norm.getDualPart()), 0, 1e-6);
     EXPECT_NEAR(dq1.getRotation().norm(), 1, 1e-6);
+    EXPECT_NEAR(dq2.getRotation(QUAT_ASSUME_UNIT).norm(), 1, 1e-6);
+    EXPECT_NEAR(dq2.getRotation(QUAT_ASSUME_UNIT).norm(), 1, 1e-6);
+    EXPECT_MAT_NEAR(Mat(dq2.getTranslation()), Mat(trans), 1e-6);
+    EXPECT_MAT_NEAR(Mat(q1norm.getTranslation(QUAT_ASSUME_UNIT)), Mat(dq1.getTranslation()), 1e-6);
+    EXPECT_EQ(dq2.getTranslation(), dq2.getTranslation(QUAT_ASSUME_UNIT));
     EXPECT_EQ(dq1.inv() * dq1, dqIdentity);
     EXPECT_EQ(inv(dq1) * dq1, dqIdentity);
     EXPECT_EQ(dq2.inv(QUAT_ASSUME_UNIT) * dq2, dqIdentity);
@@ -105,6 +110,7 @@ TEST_F(DualQuatTest, basic_ops){
     EXPECT_ANY_THROW(dqAllZero.inv());
     EXPECT_EQ(dqAllZero.exp(), dqIdentity);
     EXPECT_EQ(exp(dqAllZero), dqIdentity);
+    EXPECT_ANY_THROW(log(dqAllZero));
     EXPECT_EQ(log(dqIdentity), dqAllZero);
     EXPECT_EQ(dqIdentity.log(), dqAllZero);
     EXPECT_EQ(dualNumber1 * dualNumber2, dualNumber2 * dualNumber1);
@@ -114,6 +120,7 @@ TEST_F(DualQuatTest, basic_ops){
     EXPECT_EQ(dqIdentity.log(QUAT_ASSUME_UNIT).exp(), dqIdentity);
     EXPECT_EQ(dq1.log().exp(), dq1);
     EXPECT_EQ(dqTrans.log().exp(), dqTrans);
+    EXPECT_MAT_NEAR(q1norm.toMat(QUAT_ASSUME_UNIT), dq1.toMat(), 1e-6);
     Matx44d R1 = dq2.toMat();
     Mat point = (Mat_<double>(4, 1) << 3, 0, 0, 1);
     Mat new_point = R1 * point;
@@ -121,43 +128,12 @@ TEST_F(DualQuatTest, basic_ops){
     EXPECT_MAT_NEAR(new_point,  after, 1e-6);
     Vec<double, 8> vec = dq1.toVec();
     EXPECT_EQ(DualQuatd(vec), dq1);
-    Affine3d afd = dq2.toAffine3();
-    EXPECT_MAT_NEAR(Mat(afd.translation()), Mat(dq2.getTranslation()), 1e-6);
+    Affine3d afd = q1norm.toAffine3(QUAT_ASSUME_UNIT);
+    EXPECT_MAT_NEAR(Mat(afd.translation()), Mat(q1norm.getTranslation(QUAT_ASSUME_UNIT)), 1e-6);
+    Affine3d dq1_afd = dq1.toAffine3();
+    EXPECT_MAT_NEAR(dq1_afd.matrix, afd.matrix, 1e-6);
     EXPECT_ANY_THROW(dqAllZero.toAffine3());
 }
-
-TEST_F(DualQuatTest, dqs) {
-    std::vector<Vec3d> origin{{1, 1, 1},{2, 1, 3},{1, 2, 3}};
-    std::vector<Vec3d> normal{{1, 1, 1},{2, 1, 3},{1, 2, 3}};
-    std::vector<Vec<double, 3>> normal_out;
-    std::vector<Vec<double, 3>> out;
-    double angle1 = CV_PI / 2.0;
-    double angle2 = CV_PI;
-    Vec3d axis2(0, 0, 1);
-    Vec3d axis1(1, 1, 1);
-    Vec3d tran1(2, 3, 4);
-    Vec3d tran2(0, 0, 0);
-    DualQuatd dqs1 = DualQuatd::createFromAngleAxisTrans(angle1, axis1, tran1);
-    DualQuatd dqs2 = DualQuatd::createFromAngleAxisTrans(angle2, axis2, tran2);
-    DualQuatd dqs3 = DualQuatd::createFromAngleAxisTrans(angle1, axis2, tran1);
-    std::vector<DualQuatd> blend{dqs1, dqs2, dqs3};
-    std::vector< std::vector<double> > weights{std::vector<double>{0.1, 0.9}, std::vector<double>{}, std::vector<double>{0.5, 0.3, 0.2}};
-    std::vector < std::vector<int> > id{std::vector<int>{0, 2}, std::vector<int>{}, std::vector<int>{2, 1, 0}};
-    DualQuatd::dqs(origin, normal, out, normal_out, blend, weights, id);
-    Mat normal_mat(normal_out), out_mat(out);
-    normal_mat = normal_mat.reshape(1, 3);
-    out_mat = out_mat.reshape(1, 3);
-    Mat normal_result = (Mat_<double>(3, 3) << -0.83163416, 1.0395426, 1.1080325, 2, 1, 3, -1.4042857, 0.33521342, 3.4519);
-    Mat out_result = (Mat_<double>(3, 3) << 1.1683658, 4.0395427, 5.1080332, 2, 1, 3, -0.63677007, 2.7560391, 6.5008297);
-    EXPECT_MAT_NEAR(normal_result, normal_mat, 1e-6);
-    EXPECT_MAT_NEAR(out_mat, out_result, 1e-6);
-
-    std::vector<Vec3d> normal_out_anu;
-    std::vector<Vec3d> out_anu;
-    DualQuatd::dqs(origin, normal, out_anu, normal_out_anu, blend, weights, id, QUAT_ASSUME_NOT_UNIT);
-    EXPECT_EQ(out_anu, out);
-}
-
 TEST_F(DualQuatTest, interpolation) {
     DualQuatd dq = DualQuatd::createFromAngleAxisTrans(8 * CV_PI / 5, Vec3d{0, 0, 1}, Vec3d{0, 0, 10});
     EXPECT_EQ(DualQuatd::sclerp(dqIdentity, dq, 0.5), DualQuatd::sclerp(-dqIdentity, dq, 0.5, false));
@@ -166,10 +142,11 @@ TEST_F(DualQuatTest, interpolation) {
     EXPECT_EQ(DualQuatd::sclerp(dqIdentity, dq2, 0.4, false, QUAT_ASSUME_UNIT), DualQuatd(0.91354546, 0.23482951, 0.23482951, 0.23482951, -0.23482951, -0.47824988, 0.69589767, 0.69589767));
     EXPECT_EQ(DualQuatd::dqblend(dqIdentity, dq1.normalize(), 0.2, QUAT_ASSUME_UNIT), DualQuatd::dqblend(dqIdentity, -dq1, 0.2));
     EXPECT_EQ(DualQuatd::dqblend(dqIdentity, dq2, 0.4), DualQuatd(0.91766294, 0.22941573, 0.22941573, 0.22941573, -0.21130397, -0.48298049, 0.66409818, 0.66409818));
-    DualQuatd gdb = DualQuatd::gdqblend(std::vector<DualQuatd>{dqIdentity, dq, dq2}, std::vector<double>{0.4, 0, 0.6}, QUAT_ASSUME_UNIT);
+    DualQuatd gdb = DualQuatd::gdqblend(Vec<DualQuatd, 3>{dqIdentity, dq, dq2}, Vec3d{0.4, 0, 0.6}, QUAT_ASSUME_UNIT);
     EXPECT_EQ(gdb, DualQuatd::dqblend(dqIdentity, dq2, 0.6));
-    EXPECT_EQ(DualQuatd::gdqblend(std::vector<DualQuatd>{}, std::vector<double>{}), dqIdentity);
-    EXPECT_EQ(gdb, DualQuatd::gdqblend(std::vector<DualQuatd>{dqIdentity, dq * dualNumber1, -dq2}, std::vector<double>{0.4, 0, 0.6}));
+    EXPECT_ANY_THROW(DualQuatd::gdqblend(Vec<DualQuatd, 1>{dq2}, Vec2d{0.5, 0.5}));
+    EXPECT_EQ(DualQuatd::gdqblend(Vec<DualQuatd, 0>{}, Vec<double, 0>{}), dqIdentity);
+    EXPECT_EQ(gdb, DualQuatd::gdqblend(Vec<DualQuatd, 3>{dqIdentity, dq * dualNumber1, -dq2}, Vec3d{0.4, 0, 0.6}));
 }
 
 } // namespace

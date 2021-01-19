@@ -72,7 +72,10 @@ template <typename T>
 DualQuat<T> DualQuat<T>::createFromMat(InputArray _R)
 {
     CV_CheckTypeEQ(_R.type(), cv::traits::Type<T>::value, "");
-
+    if (_R.size() != Size(4, 4))
+    {
+        CV_Error(Error::StsBadArg, "The input matrix must have 4 columns and 4 rows");
+    }
     Mat R = _R.getMat();
     Quat<T> r = Quat<T>::createFromRotMat(R.colRange(0, 3).rowRange(0, 3));
     Quat<T> trans(0, R.at<T>(0, 3), R.at<T>(1, 3), R.at<T>(2, 3));
@@ -311,19 +314,30 @@ inline DualQuat<T> exp(const DualQuat<T> &dq)
     return dq.exp();
 }
 
+namespace detail {
+
+template <typename _Tp>
+Matx<_Tp, 4, 4> jacob_exp(const Quat<_Tp> &q)
+{
+    _Tp nv = std::sqrt(q.x * q.x + q.y * q.y + q.z * q.z);
+    _Tp sinc_nv = abs(nv) < cv::DualQuat<_Tp>::CV_DUAL_QUAT_EPS ? 1 - nv * nv / 6 : std::sin(nv) / nv;
+    _Tp csiii_nv = abs(nv) < cv::DualQuat<_Tp>::CV_DUAL_QUAT_EPS ? -(_Tp)1.0 / 3 : (std::cos(nv) - sinc_nv) / nv / nv;
+    Matx<_Tp, 4, 4> J_exp_quat {
+        std::cos(nv), -sinc_nv * q.x,  -sinc_nv * q.y,  -sinc_nv * q.z,
+        sinc_nv * q.x, csiii_nv * q.x * q.x + sinc_nv, csiii_nv * q.x * q.y, csiii_nv * q.x * q.z,
+        sinc_nv * q.y, csiii_nv * q.y * q.x, csiii_nv * q.y * q.y + sinc_nv, csiii_nv * q.y * q.z,
+        sinc_nv * q.z, csiii_nv * q.z * q.x, csiii_nv * q.z * q.y, csiii_nv * q.z * q.z + sinc_nv
+    };
+    return std::exp(q.w) * J_exp_quat;
+}
+
+} // namespace detail
+
 template <typename T>
 DualQuat<T> DualQuat<T>::exp() const
 {
-    T nv = std::sqrt(x * x + y * y + z * z);
-    T sinc_nv = abs(nv) < CV_DUAL_QUAT_EPS ? 1 - nv * nv / 6 : std::sin(nv) / nv;
-    T csiii_nv = abs(nv) < CV_DUAL_QUAT_EPS ? -(T)1.0 / 3 : (std::cos(nv) - sinc_nv) / nv / nv;
-    Matx<T, 4, 4> J_exp_quat {
-        std::cos(nv), -sinc_nv * x,  -sinc_nv * y,  -sinc_nv * z,
-        sinc_nv * x, csiii_nv * x * x + sinc_nv, csiii_nv * x * y, csiii_nv * x * z,
-        sinc_nv * y, csiii_nv * y * x, csiii_nv * y * y + sinc_nv, csiii_nv * y * z,
-        sinc_nv * z, csiii_nv * z * x, csiii_nv * z * y, csiii_nv * z * z + sinc_nv
-    };
-    return createFromQuat(getRealPart().exp(), Quat<T>(std::exp(w) * J_exp_quat * getDualPart().toVec()));
+    Quat<T> real = getRealPart();
+    return createFromQuat(real.exp(), Quat<T>(detail::jacob_exp(real) * getDualPart().toVec()));
 }
 
 template <typename T>
@@ -335,30 +349,9 @@ DualQuat<T> log(const DualQuat<T> &dq, QuatAssumeType assumeUnit=QUAT_ASSUME_NOT
 template <typename T>
 DualQuat<T> DualQuat<T>::log(QuatAssumeType assumeUnit) const
 {
-    DualQuat<T> v(0, x, y, z, 0, x_, y_, z_);
-    DualQuat<T> normV = v.norm();
-    if (assumeUnit)
-    {
-        if (normV.w < CV_DUAL_QUAT_EPS)
-        {
-            return v;
-        }
-        DualQuat<T> k = DualQuat<T>(std::acos(w), 0, 0, 0, -w_ * 1.0 / std::sqrt(1 - w * w), 0, 0, 0) / normV;
-        return v * k;
-    }
-    DualQuat<T> qNorm = norm();
-    if (qNorm.w < CV_DUAL_QUAT_EPS)
-    {
-        CV_Error(Error::StsBadArg, "Cannot apply this quaternion to log function: undefined");
-    }
-    DualQuat<T> log_qNorm(std::log(qNorm.w), 0, 0, 0, qNorm.w_ / qNorm.w, 0, 0, 0);
-    if (normV.w < CV_DUAL_QUAT_EPS)
-    {
-        return log_qNorm + v;
-    }
-    DualQuat<T> coeff = DualQuat<T>(w, 0, 0, 0, w_, 0, 0, 0) / qNorm;
-    DualQuat<T> k = DualQuat<T>{std::acos(coeff.w), 0, 0, 0, -coeff.w_ / std::sqrt(1 - coeff.w * coeff.w), 0, 0, 0} / normV;
-    return log_qNorm + v * k;
+    Quat<T> plog = getRealPart().log(assumeUnit);
+    Matx<T, 4, 4> jacob = detail::jacob_exp(plog);
+    return createFromQuat(plog, Quat<T>(jacob.inv() * getDualPart().toVec()));
 }
 
 template <typename T>
@@ -392,16 +385,16 @@ inline Vec<T, 8> DualQuat<T>::toVec() const
 }
 
 template <typename T>
-Affine3<T> DualQuat<T>::toAffine3() const
+Affine3<T> DualQuat<T>::toAffine3(QuatAssumeType assumeUnit) const
 {
-    return Affine3<T>(toMat());
+    return Affine3<T>(toMat(assumeUnit));
 }
 
 template <typename T>
-Matx<T, 4, 4> DualQuat<T>::toMat() const
+Matx<T, 4, 4> DualQuat<T>::toMat(QuatAssumeType assumeUnit) const
 {
-    Matx<T, 4, 4> rot44 = getRotation().toRotMat4x4();
-    Vec<T, 3> translation = getTranslation();
+    Matx<T, 4, 4> rot44 = getRotation(assumeUnit).toRotMat4x4();
+    Vec<T, 3> translation = getTranslation(assumeUnit);
     rot44(0, 3) = translation[0];
     rot44(1, 3) = translation[1];
     rot44(2, 3) = translation[2];
@@ -436,7 +429,7 @@ DualQuat<T> DualQuat<T>::dqblend(const DualQuat<T> &q1, const DualQuat<T> &q2, c
         v1 = v1.normalize();
         v2 = v2.normalize();
     }
-    if (v1.getRotation().dot(v2.getRotation()) < 0)
+    if (v1.getRotation(assumeUnit).dot(v2.getRotation(assumeUnit)) < 0)
     {
         return ((1 - t) * v1 - t * v2).normalize();
     }
@@ -444,77 +437,40 @@ DualQuat<T> DualQuat<T>::dqblend(const DualQuat<T> &q1, const DualQuat<T> &q2, c
 }
 
 template <typename T>
-DualQuat<T> DualQuat<T>::gdqblend(const std::vector<DualQuat<T>> &_dualquat, const std::vector<T> &weight, QuatAssumeType assumeUnit)
+template <int cn>
+DualQuat<T> DualQuat<T>::gdqblend(const Vec<DualQuat<T>, cn> &_dualquat, InputArray _weight, QuatAssumeType assumeUnit)
 {
-    std::vector<DualQuat<T>> dualquat(_dualquat);
-    if (!assumeUnit)
+    CV_CheckTypeEQ(_weight.type(), cv::traits::Type<T>::value, "");
+    if (_weight.size() != Size(1, cn))
     {
-        for (auto &dq : dualquat)
-        {
-            dq = dq.normalize();
-        }
+        CV_Error(Error::StsBadArg, "The size of weight must be the same as dualquat");
     }
-    size_t cn = dualquat.size();
     if (cn == 0)
     {
         return DualQuat<T>(1, 0, 0, 0, 0, 0, 0, 0);
     }
+    Vec<T, cn> weight;
+    _weight.copyTo(weight);
+    Vec<DualQuat<T>, cn> dualquat(_dualquat);
+    if (!assumeUnit)
+    {
+        for (size_t i = 0; i < cn; ++i)
+        {
+            dualquat[i] = dualquat[i].normalize();
+        }
+    }
+
     DualQuat<T> dq_blend = dualquat[0] * weight[0];
-    Quat<T> q0 = dualquat[0].getRotation();
+    Quat<T> q0 = dualquat[0].getRotation(assumeUnit);
     for (size_t i = 1; i < cn; ++i)
     {
-        T k = q0.dot(dualquat[i].getRotation()) < 0 ? -1: 1;
+        T k = q0.dot(dualquat[i].getRotation(assumeUnit)) < 0 ? -1: 1;
         dq_blend = dq_blend + dualquat[i] * k * weight[i];
     }
     return dq_blend.normalize();
 }
 
-template <typename T>
-void DualQuat<T>::dqs(const std::vector<Vec<T, 3>> &in_vert, const std::vector<Vec<T, 3>> &in_normals,
-         std::vector<Vec<T, 3>> &out_vert, std::vector<Vec<T, 3>> &out_normals,
-         const std::vector<DualQuat<T>> &_dualquat, const std::vector<std::vector<T>> &weights,
-         const std::vector<std::vector<int>> &joint_id, QuatAssumeType assumeUnit)
-{
-    std::vector<DualQuat<T>> dualquat(_dualquat);
-    if (!assumeUnit)
-    {
-        for (DualQuat<T> &dq : dualquat)
-        {
-            dq = dq.normalize();
-        }
-    }
-    for (size_t i = 0; i < in_vert.size(); ++i)
-    {
-        DualQuat<T> dq_blend;
-        Quat<T> q0;
-        const size_t joint_nu = weights[i].size();
-        if (joint_nu == 0)
-        {
-            dq_blend = {1, 0, 0, 0, 0, 0, 0, 0};
-        }
-        else
-        {
-            int k0 = joint_id[i][0];
-            dq_blend = dualquat[k0] * weights[i][0];
-            q0 = dualquat[k0].getRotation();
-        }
-        for (size_t j = 1; j < joint_nu; ++j)
-        {
-            const T k = q0.dot(dualquat[i].getRotation()) < 0 ? -1.0 : 1.0;
-            dq_blend = dq_blend + dualquat[joint_id[i][j]] * k * weights[i][j];
-        }
-        dq_blend = dq_blend.normalize();
-        Quat<T> p = dq_blend.getRealPart();
-        Quat<T> q = dq_blend.getDualPart();
-        const T a0 = p.w;
-        const T ae = q.w;
-        Vec<T, 3> d0{p[1], p[2], p[3]};
-        Vec<T, 3> de{q[1], q[2], q[3]};
-        out_vert.push_back(in_vert[i] + (T)2.0 * (d0.cross(d0.cross(in_vert[i]) + in_vert[i] * a0) + de * a0 - d0 * ae + d0.cross(de)));
-        out_normals.push_back(in_normals[i] + (T)2.0 * (d0.cross(d0.cross(in_normals[i]) + a0 * in_normals[i])));
-    }
-}
 
-} //namespace
+} //namespace cv
 
 #endif /*OPENCV_CORE_DUALQUATERNION_INL_HPP*/

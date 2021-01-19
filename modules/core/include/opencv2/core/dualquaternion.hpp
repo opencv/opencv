@@ -141,8 +141,6 @@ template <typename _Tp> std::ostream& operator<<(std::ostream&, const DualQuat<_
  * With more than two dual quaternions to be blended, you can use generalize linear dual quaternion blending
  * with the corresponding weights, i.e. gdqblend().
  *
- *
- *
  */
 template <typename _Tp>
 class DualQuat{
@@ -481,87 +479,19 @@ public:
     DualQuat<_Tp> power(const DualQuat<_Tp>& q, QuatAssumeType assumeUnit=QUAT_ASSUME_NOT_UNIT) const;
 
     /**
-     * @brief A dual quaternion is a vector in form of
-     * \f[
-     * \begin{equation}
-     * \begin{split}
-     * \sigma &=\boldsymbol{p} + \epsilon \boldsymbol{q}\\
-     * &= [\hat{q}_0,\hat{q}_1,\hat{q}_2,\hat{q}_3]\\
-     * &= [\hat{q}_0,\boldsymbol{v}]
-     * \end{split}
-     * \end{equation}
-     * \f]
-     * where \f$\hat{q}_i = p_i+\epsilon q_i\f$. \f$p_i, q_i\f$ is the element of \f$\boldsymbol{p},\boldsymbol{q}\f$ respectively.
-     *
-     * Thus, the exponential function of a dual quaternion can be calculated in the same way as quaternion
-     * \f[
-     * \exp(\sigma)=e^{\hat{q_0}}\left(\cos||\boldsymbol{v}||+\frac{\boldsymbol{v}}{||\boldsymbol{v}||}\sin||\boldsymbol{v}||\right)
-     * \f]
-     * To calculate \f$e^{\hat{q_0}}\f$, we expand \f$e^{\hat{q_0}}\f$ by Taylor series:
-     * \f[
-     * \begin{equation}
-     * \begin{split}
-     * e^{\hat{q_0}} &= e^{p_0+\epsilon q_0}\\
-     * &=e^{p_0}+\epsilon q_0e^{p_0}
-     * \end{split}
-     * \end{equation}
-     * \f]
-     * and the same operations for \f$\cos\f$ and \f$\sin.\f$
+     * @brief return the value of exponential function value
      * @param dq a dual quaternion.
      */
     template <typename T>
     friend DualQuat<T> exp(const DualQuat<T> &dq);
 
     /**
-     * @brief A dual quaternion is a vector in form of
-     * \f[
-     * \begin{equation}
-     * \begin{split}
-     * \sigma &=\boldsymbol{p} + \epsilon \boldsymbol{q}\\
-     * &= [\hat{q}_0,\hat{q}_1,\hat{q}_2,\hat{q}_3]\\
-     * &= [\hat{q}_0,\boldsymbol{v}]
-     * \end{split}
-     * \end{equation}
-     * \f]
-     * where \f$\hat{q}_i = p_i+\epsilon q_i\f$. \f$p_i, q_i\f$ is the element of \f$\boldsymbol{p},\boldsymbol{q}\f$ respectively.
-     *
-     * Thus, the exponential function of a dual quaternion can be calculated in the same way as quaternion
-     * \f[
-     * \exp(\sigma)=e^{\hat{q_0}}\left(\cos||\boldsymbol{v}||+\frac{\boldsymbol{v}}{||\boldsymbol{v}||}\sin||\boldsymbol{v}||\right)
-     * \f]
-     * To calculate \f$e^{\hat{q_0}}\f$, we expand \f$e^{\hat{q_0}}\f$ by Taylor series:
-     * \f[
-     * \begin{equation}
-     * \begin{split}
-     * e^{\hat{q_0}} &= e^{p_0+\epsilon q_0}\\
-     * &=e^{p_0}+\epsilon q_0e^{p_0}
-     * \end{split}
-     * \end{equation}
-     * \f]
-     * and the same operations for \f$\cos\f$ and \f$\sin.\f$
+     * @brief return the value of exponential function value
      */
     DualQuat<_Tp> exp() const;
 
     /**
-     * @brief
-     * A dual quaternion is a vector in form of
-     * \f[
-     * \begin{equation}
-     * \begin{split}
-     * \sigma &=\boldsymbol{p} + \epsilon \boldsymbol{q}\\
-     * &= [\hat{q}_0,\hat{q}_1,\hat{q}_2,\hat{q}_3]\\
-     * &= [\hat{q}_0,\boldsymbol{v}]
-     * \end{split}
-     * \end{equation}
-     * \f]
-     * where \f$\hat{q}_i = p_i+\epsilon q_i\f$. \f$p_i, q_i\f$ is the element
-     * of \f$\boldsymbol{p},\boldsymbol{q}\f$ respectively.
-     *
-     * Thus, the logarithm function of a dual quaternion can be calculated as the method of a quaternion:
-     * \f[
-     * \ln(\sigma)=\ln||\sigma||+\frac{\boldsymbol{v}}{||\boldsymbol{v}||}\arccos\frac{\hat{q}_0}{\boldsymbol{||v||}}
-     * \f]
-     * To calculate each function, we expand them by Taylor series, see exp for example.
+     * @brief return the value of logarithm function value
      *
      * @param dq a dual quaternion.
      * @param assumeUnit if @ref QUAT_ASSUME_UNIT, dual quaternion dq assume to be a unit dual quaternion
@@ -571,26 +501,7 @@ public:
     friend DualQuat<T> log(const DualQuat<T> &dq, QuatAssumeType assumeUnit);
 
     /**
-     * @brief
-     * A dual quaternion is a vector in form of
-     * \f[
-     * \begin{equation}
-     * \begin{split}
-     * \sigma &=\boldsymbol{p} + \epsilon \boldsymbol{q}\\
-     * &= [\hat{q}_0,\hat{q}_1,\hat{q}_2,\hat{q}_3]\\
-     * &= [\hat{q}_0,\boldsymbol{v}]
-     * \end{split}
-     * \end{equation}
-     * \f]
-     * where \f$\hat{q}_i = p_i+\epsilon q_i\f$. \f$p_i, q_i\f$ is the element
-     * of \f$\boldsymbol{p},\boldsymbol{q}\f$ respectively.
-     *
-     * Thus, the logarithm function of a dual quaternion can be calculated as the method of a quaternion:
-     * \f[
-     * \ln(\sigma)=\ln||\sigma||+\frac{\boldsymbol{v}}{||\boldsymbol{v}||}\arccos\frac{\hat{q}_0}{\boldsymbol{||v||}}
-     * \f]
-     * To calculate each function, we expand them by Taylor series, see exp for example.
-     *
+     * @brief return the value of logarithm function value
      * @param assumeUnit if @ref QUAT_ASSUME_UNIT, this dual quaternion assume to be a unit dual quaternion
      * and this function will save some computations.
      */
@@ -605,12 +516,12 @@ public:
      * @brief Transform this dual quaternion to a affine transformation matrix
      * the form of matrix, see createFromMat().
      */
-    Matx<_Tp, 4, 4> toMat() const; //name may not proper
+    Matx<_Tp, 4, 4> toMat(QuatAssumeType assumeUnit=QUAT_ASSUME_NOT_UNIT) const;
 
     /**
       * @brief Transform this dual quaternion to a instance of Affine3.
       */
-    Affine3<_Tp> toAffine3() const;
+    Affine3<_Tp> toAffine3(QuatAssumeType assumeUnit=QUAT_ASSUME_NOT_UNIT) const;
 
     /**
      * @brief The screw linear interpolation(ScLERP) is an extension of spherical linear interpolation of dual quaternion.
@@ -670,49 +581,17 @@ public:
      * {||w_1{\boldsymbol{q}}_1+...+w_n{\boldsymbol{q}}_n||}.
      * \f]
      * @param dualquat vector of dual quaternions
-     * @param weights vector of weights. \f$\sum_0^n w_{i} = 1\f$ and \f$w_i>0\f$
+     * @param weights vector of weights, the size of weights should be the same as dualquat, and the weights should
+     * satisfy \f$\sum_0^n w_{i} = 1\f$ and \f$w_i>0\f.
      * @param assumeUnit if @ref QUAT_ASSUME_UNIT, these dual quaternions assume to be unit quaternions
      * and this function will save some computations.
+     * @note the type of weights' element should be the same as the date type of dual quaternion inside the dualquat.
      */
-    static DualQuat<_Tp> gdqblend(const std::vector<DualQuat<_Tp>> &dualquat, const std::vector<_Tp> &weights,
+    template <int cn>
+    static DualQuat<_Tp> gdqblend(const Vec<DualQuat<_Tp>, cn> &dualquat, InputArray weights,
                                 QuatAssumeType assumeUnit=QUAT_ASSUME_NOT_UNIT);
 
-    /**
-     * This function is a skinning algorithm to deform the mesh with dual quaternion skinning(DQS) deformer with reference
-     * to the paper ["Geometric Skinning with Approximate Dual Quaternion Blending"](https://www.cs.utah.edu/~ladislav/kavan08geometric/kavan08geometric).
-     * We use the generalized Dual Quaternion linear Blending to compute the deformed position:
-     * \f[
-     * DQB(\boldsymbol{w};{\boldsymbol{q}}_1,...,{\boldsymbol{q}}_n)=
-     * \frac{w_1{\boldsymbol{q}}_1+...+w_n{\boldsymbol{q}}_n}{||w_1{\boldsymbol{q}}_1+...+w_n{\boldsymbol{q}}_n||}.
-     * \f]
-     * And it will always choose the shortest rotation path. Compared with Linear Blending Skinning(LBS),
-     * the DQS can avoid the loss of volume and have a similar performance on run-time.
-     *
-     * @param in_vert vector of vertices at original position
-     * @param in_normals vector of mesh normals
-     * @param out_vert deformed vertices transformed by dual quaternions
-     * @param out_normals deformed mesh normals transformed by dual quaternions
-     * @param dualquat vector of unit dual quaternions for each joint
-     * @param weights vector of influence weights for each vertex. All weights that influence one vertex should
-     * satisfy \f$\sum_0^n w_{i} = 1\f$ and \f$w_i>0\f$
-     * @param joints_id vector of joints id that influence one vertex for each vertex(same order as weights).
-     * The ID here represents the order of dual quaternions. So the joints id should be non-negative.
-     * @param assumeUnit if @ref QUAT_ASSUME_UNIT, these dual quaternions assume to be unit quaternions
-     * and this function will save some computations.
-     *
-     * @sa gdqblend
-     *
-     */
-    static void dqs(const std::vector<Vec<_Tp, 3>> &in_vert,
-                  const std::vector<Vec<_Tp, 3>> &in_normals,
-                  std::vector<Vec<_Tp, 3>> &out_vert,
-                  std::vector<Vec<_Tp, 3>> &out_normals,
-                  const std::vector<DualQuat<_Tp>> &dualquat,
-                  const std::vector<std::vector<_Tp>> &weights,
-                  const std::vector<std::vector<int>> &joints_id,
-                  QuatAssumeType assumeUnit=QUAT_ASSUME_NOT_UNIT);
-
-    /**
+       /**
      * @brief Return opposite dual quaternion \f$-p\f$
      * which satisfies \f$p + (-p) = 0.\f$
      *
