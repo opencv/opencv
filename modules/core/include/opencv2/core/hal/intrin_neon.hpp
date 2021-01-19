@@ -1045,7 +1045,7 @@ OPENCV_HAL_IMPL_NEON_BIN_FUNC(v_float64x2, v_absdiff, vabdq_f64)
 /** Saturating absolute difference **/
 inline v_int8x16 v_absdiffs(const v_int8x16& a, const v_int8x16& b)
 { return v_int8x16(vqabsq_s8(vqsubq_s8(a.val, b.val))); }
-static inline v_int16x8 v_absdiffs(const v_int16x8& a, const v_int16x8& b)
+inline v_int16x8 v_absdiffs(const v_int16x8& a, const v_int16x8& b)
 { return v_int16x8(vqabsq_s16(vqsubq_s16(a.val, b.val))); }
 
 #define OPENCV_HAL_IMPL_NEON_BIN_FUNC2(_Tpvec, _Tpvec2, cast, func, intrin) \
@@ -1712,7 +1712,7 @@ inline v_int32x4 v_round(const v_float32x4& a)
 inline v_int32x4 v_round(const v_float32x4& a)
 {
     static const int32x4_t v_sign = vdupq_n_s32(1 << 31),
-                           v_05 = vreinterpretq_s32_f32(vdupq_n_f32(0.5f));
+        v_05 = vreinterpretq_s32_f32(vdupq_n_f32(0.5f));
 
     int32x4_t v_addition = vorrq_s32(v_05, vandq_s32(v_sign, vreinterpretq_s32_f32(a.val)));
     return v_int32x4(vcvtq_s32_f32(vaddq_f32(a.val, vreinterpretq_f32_s32(v_addition))));
@@ -2257,12 +2257,6 @@ inline v_uint16x8 v_pack_triplets(const v_uint16x8& vec) { return v_reinterpret_
 inline v_int32x4 v_pack_triplets(const v_int32x4& vec) { return vec; }
 inline v_uint32x4 v_pack_triplets(const v_uint32x4& vec) { return vec; }
 inline v_float32x4 v_pack_triplets(const v_float32x4& vec) { return vec; }
-
-inline v_float32x4 v_setr(const float v1, const float v2, const float v3, const float v4)
-{
-    float init[4] = {v1, v2, v3, v4};
-    return v_float32x4(vld1q_f32(init));
-}
 
 #if CV_SIMD128_64F
 inline v_float64x2 v_lut(const double* tab, const int* idx)

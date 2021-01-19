@@ -1330,9 +1330,7 @@ inline v_int8x16 v_absdiffs(const v_int8x16& a, const v_int8x16& b)
     return (d ^ m) - m;
  }
 static inline v_int16x8 v_absdiffs(const v_int16x8& a, const v_int16x8& b)
-{
-    return v_max(a, b) - v_min(a, b);
-}
+{ return v_max(a, b) - v_min(a, b); }
 
 inline v_int32x4 v_fma(const v_int32x4& a, const v_int32x4& b, const v_int32x4& c)
 {
@@ -3391,11 +3389,6 @@ template<int i>
 inline v_float32x4 v_broadcast_element(const v_float32x4& v)
 {
     return v_float32x4(_mm_shuffle_ps(v.val, v.val, _MM_SHUFFLE((char)i,(char)i,(char)i,(char)i)));
-}
-
-inline v_float32x4 v_setr(const float v1, const float v2, const float v3, const float v4)
-{
-    return v_float32x4(_mm_setr_ps(v1, v2, v3, v4));
 }
 
 ////////////// FP16 support ///////////////////////////
