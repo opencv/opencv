@@ -9,7 +9,51 @@
 
 #include <opencv2/gapi/garg.hpp>
 #include <opencv2/gapi/gopaque.hpp>
-#include <iostream>
+
+#define ID(X)       X
+#define ID_(X)		ID(X),
+#define NOTHING(X)
+#define SPACE
+#define COMMA       ,
+
+#define TYPE_LIST_G(LIST, G, A1, L1, A2, L2) \
+    LIST(G, SPACE, A1, L1, A2, L2)
+
+#define TYPE_LIST2_G(LIST, G, A1, A2) \
+    LIST(G, COMMA, A1, A1, A2, A2)
+
+#define SWITCH(VAR, LIST, HANDLE) \
+switch (VAR) \
+{ \
+    TYPE_LIST2_G(LIST, HANDLE, ID, ID) \
+    default: \
+        GAPI_Assert(false && "Unsupported type"); \
+}
+
+#define GARRAY_TYPE_LIST_G(G, X, A1, L1, A2, L2) \
+G(A1(bool)        X  A2(cv::gapi::ArgType::CV_BOOL)) \
+G(A1(int)         X  A2(cv::gapi::ArgType::CV_INT)) \
+G(A1(double)      X  A2(cv::gapi::ArgType::CV_DOUBLE)) \
+G(A1(float)       X  A2(cv::gapi::ArgType::CV_FLOAT)) \
+G(A1(std::string) X  A2(cv::gapi::ArgType::CV_STRING)) \
+G(A1(cv::Point)   X  A2(cv::gapi::ArgType::CV_POINT)) \
+G(A1(cv::Point2f) X  A2(cv::gapi::ArgType::CV_POINT2F)) \
+G(A1(cv::Size)    X  A2(cv::gapi::ArgType::CV_SIZE)) \
+G(A1(cv::Rect)    X  A2(cv::gapi::ArgType::CV_RECT)) \
+G(A1(cv::Scalar)  X  A2(cv::gapi::ArgType::CV_SCALAR)) \
+G(A1(cv::Mat)     X  A2(cv::gapi::ArgType::CV_MAT)) \
+G(L1(cv::GMat)    X  L2(cv::gapi::ArgType::CV_GMAT))
+
+#define GOPAQUE_TYPE_LIST_G(G, X, A1, L1, A2, L2) \
+G(A1(bool)        X  A2(cv::gapi::ArgType::CV_BOOL)) \
+G(A1(int)         X  A2(cv::gapi::ArgType::CV_INT)) \
+G(A1(double)      X  A2(cv::gapi::ArgType::CV_DOUBLE)) \
+G(A1(float)       X  A2(cv::gapi::ArgType::CV_FLOAT)) \
+G(A1(std::string) X  A2(cv::gapi::ArgType::CV_STRING)) \
+G(A1(cv::Point)   X  A2(cv::gapi::ArgType::CV_POINT)) \
+G(A1(cv::Point2f) X  A2(cv::gapi::ArgType::CV_POINT2F)) \
+G(A1(cv::Size)    X  A2(cv::gapi::ArgType::CV_SIZE)) \
+G(L1(cv::Rect)    X  L2(cv::gapi::ArgType::CV_RECT)) \
 
 namespace cv {
 namespace gapi {
@@ -42,105 +86,44 @@ using MakeVariantType = cv::util::variant<typename WrapType<T, Types>::type...>;
 
 template<typename T> struct ArgTypeTraits;
 
-template<> struct ArgTypeTraits<bool> {
-    static constexpr const cv::gapi::ArgType type = cv::gapi::ArgType::CV_BOOL;
-};
-template<> struct ArgTypeTraits<int> {
-    static constexpr const cv::gapi::ArgType type = cv::gapi::ArgType::CV_INT;
-};
-template<> struct ArgTypeTraits<double> {
-    static constexpr const cv::gapi::ArgType type = cv::gapi::ArgType::CV_DOUBLE;
-};
-template<> struct ArgTypeTraits<float> {
-    static constexpr const cv::gapi::ArgType type = cv::gapi::ArgType::CV_FLOAT;
-};
-template<> struct ArgTypeTraits<std::string> {
-    static constexpr const cv::gapi::ArgType type = cv::gapi::ArgType::CV_STRING;
-};
-template<> struct ArgTypeTraits<cv::Point> {
-    static constexpr const cv::gapi::ArgType type = cv::gapi::ArgType::CV_POINT;
-};
-template<> struct ArgTypeTraits<cv::Point2f> {
-    static constexpr const cv::gapi::ArgType type = cv::gapi::ArgType::CV_POINT2F;
-};
-template<> struct ArgTypeTraits<cv::Size> {
-    static constexpr const cv::gapi::ArgType type = cv::gapi::ArgType::CV_SIZE;
-};
-template<> struct ArgTypeTraits<cv::Rect> {
-    static constexpr const cv::gapi::ArgType type = cv::gapi::ArgType::CV_RECT;
-};
-template<> struct ArgTypeTraits<cv::Scalar> {
-    static constexpr const cv::gapi::ArgType type = cv::gapi::ArgType::CV_SCALAR;
-};
-template<> struct ArgTypeTraits<cv::Mat> {
-    static constexpr const cv::gapi::ArgType type = cv::gapi::ArgType::CV_MAT;
-};
-template<> struct ArgTypeTraits<cv::GMat> {
-    static constexpr const cv::gapi::ArgType type = cv::gapi::ArgType::CV_GMAT;
-};
+#define DEFINE_TYPE_TRAITS(T, E) \
+template <> \
+struct ArgTypeTraits<T> { \
+    static constexpr const cv::gapi::ArgType type = E; \
+}; \
+
+GARRAY_TYPE_LIST_G(ID(DEFINE_TYPE_TRAITS), COMMA, ID, ID, ID, ID)
 
 } // namespace detail
 
 class GAPI_EXPORTS_W_SIMPLE GOpaqueT
 {
 public:
-    using Storage = detail::MakeVariantType<  cv::GOpaque
-                                            , bool
-                                            , int
-                                            , double
-                                            , float
-                                            , std::string
-                                            , cv::Point
-                                            , cv::Point2f
-                                            , cv::Size
-                                            , cv::Rect>;
+    using Storage = cv::detail::MakeVariantType<cv::GOpaque,
+          TYPE_LIST_G(GOPAQUE_TYPE_LIST_G, ID, ID_, ID, NOTHING, NOTHING)>;
+
     template<typename T>
     GOpaqueT(cv::GOpaque<T> arg) : m_type(cv::detail::ArgTypeTraits<T>::type), m_arg(arg) { };
 
     GAPI_WRAP GOpaqueT(gapi::ArgType type) : m_type(type)
     {
 
-#define HANDLE_CASE(T, K) case gapi::ArgType::CV_##T: \
-                m_arg = cv::GOpaque<K>(); \
-                break;
+#define HC(T, K) case K: \
+        m_arg = cv::GOpaque<T>(); \
+        break;
 
-        switch (type)
-        {
-            HANDLE_CASE(BOOL,    bool);
-            HANDLE_CASE(INT,     int);
-            HANDLE_CASE(DOUBLE,  double);
-            HANDLE_CASE(FLOAT,   float);
-            HANDLE_CASE(STRING,  std::string);
-            HANDLE_CASE(POINT,   cv::Point);
-            HANDLE_CASE(POINT2F, cv::Point2f);
-            HANDLE_CASE(SIZE,    cv::Size);
-            HANDLE_CASE(RECT,    cv::Rect);
-#undef HANDLE_CASE
-            default:
-                GAPI_Assert(false && "Unsupported type");
-        }
+        SWITCH(type, GOPAQUE_TYPE_LIST_G, HC)
+#undef HC
     }
 
     cv::detail::GOpaqueU strip() {
-#define HANDLE_CASE(T) case Storage::template index_of<cv::GOpaque<T>>(): \
+#define HC(T, K) case Storage:: index_of<cv::GOpaque<T>>(): \
         return cv::util::get<cv::GOpaque<T>>(m_arg).strip(); \
 
-        switch (m_arg.index())
-        {
-            HANDLE_CASE(bool);
-            HANDLE_CASE(int);
-            HANDLE_CASE(double);
-            HANDLE_CASE(float);
-            HANDLE_CASE(std::string);
-            HANDLE_CASE(cv::Point);
-            HANDLE_CASE(cv::Point2f);
-            HANDLE_CASE(cv::Size);
-            HANDLE_CASE(cv::Rect);
-#undef HANDLE_CASE
-            default:
-                GAPI_Assert(false && "Unsupported type");
-        }
-        GAPI_Assert(false);
+        SWITCH(m_arg.index(), GOPAQUE_TYPE_LIST_G, HC)
+#undef HC
+
+            GAPI_Assert(false);
     }
 
 GAPI_WRAP gapi::ArgType type() { return m_type; }
@@ -153,71 +136,30 @@ private:
 class GAPI_EXPORTS_W_SIMPLE GArrayT
 {
 public:
-    using Storage = detail::MakeVariantType<  cv::GArray
-                                            , bool
-                                            , int
-                                            , double
-                                            , float
-                                            , std::string
-                                            , cv::Point
-                                            , cv::Point2f
-                                            , cv::Size
-                                            , cv::Rect
-                                            , cv::Scalar
-                                            , cv::Mat
-                                            , cv::GMat>;
+    using Storage = cv::detail::MakeVariantType<cv::GArray,
+          TYPE_LIST_G(GARRAY_TYPE_LIST_G, ID, ID_, ID, NOTHING, NOTHING)>;
+
     template<typename T>
     GArrayT(cv::GArray<T> arg) : m_type(cv::detail::ArgTypeTraits<T>::type), m_arg(arg) { };
 
     GAPI_WRAP GArrayT(gapi::ArgType type) : m_type(type)
     {
 
-#define HANDLE_CASE(T, K) case gapi::ArgType::CV_##T: \
-                m_arg = cv::GArray<K>(); \
-                break;
+#define HC(T, K) case K: \
+        m_arg = cv::GArray<T>(); \
+        break;
 
-        switch (type)
-        {
-            HANDLE_CASE(BOOL,    bool);
-            HANDLE_CASE(INT,     int);
-            HANDLE_CASE(DOUBLE,  double);
-            HANDLE_CASE(FLOAT,   float);
-            HANDLE_CASE(STRING,  std::string);
-            HANDLE_CASE(POINT,   cv::Point);
-            HANDLE_CASE(POINT2F, cv::Point2f);
-            HANDLE_CASE(SIZE,    cv::Size);
-            HANDLE_CASE(RECT,    cv::Rect);
-            HANDLE_CASE(SCALAR,  cv::Scalar);
-            HANDLE_CASE(MAT,     cv::Mat);
-            HANDLE_CASE(GMAT,    cv::GMat);
-#undef HANDLE_CASE
-            default:
-                GAPI_Assert(false && "Unsupported type");
-        }
+        SWITCH(type, GARRAY_TYPE_LIST_G, HC)
+#undef HC
     }
 
     cv::detail::GArrayU strip() {
-#define HANDLE_CASE(T) case Storage::template index_of<cv::GArray<T>>(): \
+#define HC(T, K) case Storage:: index_of<cv::GArray<T>>(): \
         return cv::util::get<cv::GArray<T>>(m_arg).strip(); \
 
-        switch (m_arg.index())
-        {
-            HANDLE_CASE(bool);
-            HANDLE_CASE(int);
-            HANDLE_CASE(double);
-            HANDLE_CASE(float);
-            HANDLE_CASE(std::string);
-            HANDLE_CASE(cv::Point);
-            HANDLE_CASE(cv::Point2f);
-            HANDLE_CASE(cv::Size);
-            HANDLE_CASE(cv::Rect);
-            HANDLE_CASE(cv::Scalar);
-            HANDLE_CASE(cv::Mat);
-            HANDLE_CASE(cv::GMat);
-#undef HANDLE_CASE
-            default:
-                GAPI_Assert(false && "Unsupported type");
-        }
+        SWITCH(m_arg.index(), GARRAY_TYPE_LIST_G, HC)
+#undef HC
+
         GAPI_Assert(false);
     }
 
