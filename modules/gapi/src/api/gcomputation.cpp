@@ -23,6 +23,7 @@
 #include "compiler/gmodelbuilder.hpp"
 #include "compiler/gcompiler.hpp"
 #include "compiler/gcompiled_priv.hpp"
+#include "compiler/gstreaming_priv.hpp"
 
 // cv::GComputation private implementation /////////////////////////////////////
 // <none>
@@ -114,13 +115,10 @@ cv::GStreamingCompiled cv::GComputation::compileStreaming(const cv::detail::Extr
 {
     // NB: Meta is unknown yet, need to obtain input/output shapes
     // to properly unpack runtime argmunets that came from python
-    if (m_priv->m_lastMetas.empty())
-    {
-        auto copy = args;
-        m_priv->m_lastCompiled = compile({}, std::move(copy));
-    }
+    auto copy = args;
+    auto compiled = cv::gimpl::GCompiler(*this, {}, std::move(args)).compileStreaming();
 
-    auto metas = callback(m_priv->m_lastCompiled.priv().inInfo());
+    auto metas = callback(compiled.priv().inInfo());
     cv::gimpl::GCompiler comp(*this, std::move(metas), std::move(args));
     return comp.compileStreaming();
 }
