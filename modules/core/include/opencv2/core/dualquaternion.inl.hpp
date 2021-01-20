@@ -454,15 +454,14 @@ DualQuat<T> DualQuat<T>::gdqblend(const Vec<DualQuat<T>, cn> &_dualquat, InputAr
     Vec<DualQuat<T>, cn> dualquat(_dualquat);
     if (!assumeUnit)
     {
-        for (size_t i = 0; i < cn; ++i)
+        for (int i = 0; i < cn; ++i)
         {
             dualquat[i] = dualquat[i].normalize();
         }
     }
-
     DualQuat<T> dq_blend = dualquat[0] * weight[0];
     Quat<T> q0 = dualquat[0].getRotation(assumeUnit);
-    for (size_t i = 1; i < cn; ++i)
+    for (int i = 1; i < cn; ++i)
     {
         T k = q0.dot(dualquat[i].getRotation(assumeUnit)) < 0 ? -1: 1;
         dq_blend = dq_blend + dualquat[i] * k * weight[i];

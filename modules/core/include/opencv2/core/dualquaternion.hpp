@@ -552,14 +552,14 @@ public:
     static DualQuat<_Tp> sclerp(const DualQuat<_Tp> &q1, const DualQuat<_Tp> &q2, const _Tp t,
                                 bool directChange=true, QuatAssumeType assumeUnit=QUAT_ASSUME_NOT_UNIT);
     /**
-     * The method of Dual Quaternion linear Blending(DQB) is to compute a transformation between dual quaternion
+     * @brief The method of Dual Quaternion linear Blending(DQB) is to compute a transformation between dual quaternion
      * \f$q_1\f$ and \f$q_2\f$ and can be defined as:
      * \f[
      * DQB(t;{\boldsymbol{q}}_1,{\boldsymbol{q}}_2)=
      * \frac{(1-t){\boldsymbol{q}}_1+t{\boldsymbol{q}}_2}{||(1-t){\boldsymbol{q}}_1+t{\boldsymbol{q}}_2||}.
      * \f]
      * where \f$q_1\f$ and \f$q_2\f$ are unit dual quaternions representing the input transformations.
-     * If you want to use DQB that works for more than two rigid transformations, see \ref gdqblend
+     * If you want to use DQB that works for more than two rigid transformations, see @ref gdqblend
      *
      * @param q1 a unit dual quaternion representing the input transformations.
      * @param q2 a unit dual quaternion representing the input transformations.
@@ -573,7 +573,7 @@ public:
                                    QuatAssumeType assumeUnit=QUAT_ASSUME_NOT_UNIT);
 
     /**
-     * The generalized Dual Quaternion linear Blending works for more than two rigid transformations.
+     * @brief The generalized Dual Quaternion linear Blending works for more than two rigid transformations.
      * If these transformations are expressed as unit dual quaternions \f$q_1,...,q_n\f$ with convex weights
      * \f$w = (w_1,...,w_n)\f$, the generalized DQB is simply
      * \f[
@@ -582,7 +582,7 @@ public:
      * \f]
      * @param dualquat vector of dual quaternions
      * @param weights vector of weights, the size of weights should be the same as dualquat, and the weights should
-     * satisfy \f$\sum_0^n w_{i} = 1\f$ and \f$w_i>0\f.
+     * satisfy \f$\sum_0^n w_{i} = 1\f$ and \f$w_i>0\f$.
      * @param assumeUnit if @ref QUAT_ASSUME_UNIT, these dual quaternions assume to be unit quaternions
      * and this function will save some computations.
      * @note the type of weights' element should be the same as the date type of dual quaternion inside the dualquat.
@@ -591,7 +591,7 @@ public:
     static DualQuat<_Tp> gdqblend(const Vec<DualQuat<_Tp>, cn> &dualquat, InputArray weights,
                                 QuatAssumeType assumeUnit=QUAT_ASSUME_NOT_UNIT);
 
-       /**
+    /**
      * @brief Return opposite dual quaternion \f$-p\f$
      * which satisfies \f$p + (-p) = 0.\f$
      *
@@ -609,7 +609,7 @@ public:
      */
     bool operator==(const DualQuat<_Tp>&) const;
 
-     /**
+    /**
      * @brief Subtraction operator of two dual quaternions p and q.
      * It returns a new dual quaternion that each value is the sum of \f$p_i\f$ and \f$-q_i\f$.
      *
@@ -649,6 +649,7 @@ public:
      * ```
      */
     DualQuat<_Tp> operator+(const DualQuat<_Tp>&) const;
+
     /**
      * @brief Addition assignment operator of two dual quaternions p and q.
      * It adds right operand to the left operand and assign the result to left operand.
