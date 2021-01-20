@@ -314,7 +314,7 @@ public:
 #ifdef HAVE_CUDA
         if (backendId == DNN_BACKEND_CUDA)
         {
-            /* only convolution 2d and 3d supported */
+            /* only 1d, 2d and 3d convolutions supported */
             if (ksize > 0 && ksize <= 3)
                 return true;
 
