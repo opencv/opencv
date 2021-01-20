@@ -1059,14 +1059,16 @@ public:
      */
     CV_WRAP void getTriangleList(CV_OUT std::vector<Vec6f>& triangleList) const;
 
-    /** @brief Returns a list of all Voronoi facets.
+    /** @brief Returns a list of all Voronoi facets in the given region of interest.
 
+    @param rect Region of interest.
     @param idx Vector of vertices IDs to consider. For all vertices you can pass empty vector.
-    @param facetList Output vector of the Voronoi facets.
+    @param facetList Output vector of the Voronoi facet edges (in the counterclockwise order, can be piecewise adjacent).
     @param facetCenters Output vector of the Voronoi facets center points.
 
      */
-    CV_WRAP void getVoronoiFacetList(const std::vector<int>& idx, CV_OUT std::vector<std::vector<Vec4f> >& facetList,
+    CV_WRAP void getVoronoiFacetList(Rect2f rect, const std::vector<int>& idx,
+                                     CV_OUT std::vector<std::vector<Vec4f> >& facetList,
                                      CV_OUT std::vector<Point2f>& facetCenters);
 
     /** @brief Returns vertex location from vertex ID.
