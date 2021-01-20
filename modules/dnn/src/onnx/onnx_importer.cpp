@@ -193,6 +193,10 @@ static DictValue parse(const ::google::protobuf::RepeatedField< ::google::protob
     return DictValue::arrayInt(&dst[0], src.size());
 }
 
+static DictValue parseStr(const ::google::protobuf::RepeatedPtrField< ::std::string>& src) {
+    return DictValue::arrayString(src.begin(), static_cast<int>(src.size()));
+}
+
 LayerParams ONNXImporter::getLayerParams(const opencv_onnx::NodeProto& node_proto)
 {
     LayerParams lp;
@@ -275,6 +279,10 @@ LayerParams ONNXImporter::getLayerParams(const opencv_onnx::NodeProto& node_prot
         {
             lp.set(attribute_name, parse(attribute_proto.ints()));
         }
+        else if (attribute_proto.strings_size() > 0)
+        {
+            lp.set(attribute_name, parseStr(attribute_proto.strings()));
+        }
         else if (attribute_proto.has_t())
         {
             opencv_onnx::TensorProto tensor = attribute_proto.t();
@@ -291,17 +299,6 @@ LayerParams ONNXImporter::getLayerParams(const opencv_onnx::NodeProto& node_prot
                     cv::format("DNN/ONNX/Attribute[%s]: 'Graphs' (%d) in attributes is not supported",
                             attribute_name.c_str(), attribute_proto.graphs_size())
             );
-        }
-        else if (attribute_proto.strings_size() > 0)
-        {
-            std::string msg = cv::format("DNN/ONNX/Attribute[%s]: 'Strings' (%d) are not supported",
-                    attribute_name.c_str(), attribute_proto.strings_size());
-            CV_LOG_ERROR(NULL, msg);
-            for (int i = 0; i < attribute_proto.strings_size(); i++)
-            {
-                CV_LOG_ERROR(NULL, "    Attribute[" << attribute_name << "].string(" << i << ") = '" << attribute_proto.strings(i) << "'");
-            }
-            CV_Error(Error::StsNotImplemented, msg);
         }
         else if (attribute_proto.tensors_size() > 0)
         {
@@ -416,7 +413,7 @@ void ONNXImporter::populateNet()
         for (int j = 0; j < inpShape.size(); ++j)
         {
             inpShape[j] = tensorShape.dim(j).dim_value();
-            if (!tensorShape.dim(j).dim_param().empty())
+            if (j > 0 && !tensorShape.dim(j).dim_param().empty())
                 hasDynamicShapes = true;
         }
         if (!inpShape.empty() && !hasDynamicShapes)
@@ -896,13 +893,17 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
             LayerParams lstmParams = layerParams;
             lstmParams.name += "/lstm";
 
-            // https://pytorch.org/docs/stable/nn.html#lstm
-            CV_Assert(node_proto.input_size() == 7);
+            // Basic version: https://pytorch.org/docs/stable/nn.html#lstm
+            // ONNX version of LSTM can have up to 8 inputs
+            CV_Assert(node_proto.input_size() == 7 || node_proto.input_size() == 8);
             Mat Wx = getBlob(node_proto, 1);
             Mat Wh = getBlob(node_proto, 2);
             Mat b = getBlob(node_proto, 3);
-            CV_CheckEQ(countNonZero(getBlob(node_proto, 5)), 0, "Unsupported non zero initial_h");
-            CV_CheckEQ(countNonZero(getBlob(node_proto, 6)), 0, "Unsupported non zero initial_c");
+            if (!node_proto.input(5).empty() && !node_proto.input(6).empty()) {
+                // can be not present in some frameworks - this means initial h and c are zeros
+                CV_CheckEQ(countNonZero(getBlob(node_proto, 5)), 0, "Unsupported non zero initial_h");
+                CV_CheckEQ(countNonZero(getBlob(node_proto, 6)), 0, "Unsupported non zero initial_c");
+            }
             b = b.reshape(1, b.size[0]);
 
             const int numHidden = lstmParams.get<int>("hidden_size");
