@@ -675,44 +675,37 @@ int Subdiv2D::findNearest(Point2f pt, Point2f* nearestPt)
             int edge_org = edgeOrg(edge);
             int edge_dst = edgeDst(edge);
 
+            Point2f bias;
+
             if (!vtx[edge_org].isideal() || !vtx[edge_dst].isideal()) {
-
-                Point2f bias =
-                        vtx[edge_org].isideal() ? vtx[edge_dst].pt :
+                bias =  vtx[edge_org].isideal() ? vtx[edge_dst].pt :
                         vtx[edge_dst].isideal() ? vtx[edge_org].pt : Point2f(0.f, 0.f);
-
-                bool ideal_org = vtx[edge_org].isideal();
-                Point2f org = ideal_org ? vtx[edge_org].pt : vtx[edge_org].pt - bias;
-
-                bool ideal_dst = vtx[edge_dst].isideal();
-                Point2f dst = ideal_dst ? vtx[edge_dst].pt : vtx[edge_dst].pt - bias;
-
-                if (rightOfEx(pt - bias, vtx[vertex].pt - bias, org, false, false, ideal_org) <  0 &&
-                    rightOfEx(pt - bias, vtx[vertex].pt - bias, dst, false, false, ideal_dst) >= 0) {
-
-                    if (rightOfEx(pt - bias, org, dst, false, ideal_org, ideal_dst) > 0) {
-                        outside_edge = true;
-                    }
-
-                    break;
-                }
             } else {
                 if (norm(vtx[edge_org].pt + vtx[edge_dst].pt) < FLT_EPSILON) {
                     // special case: all PTTYPE_DELAUNAY points are collinear, edge is a bisector of two neighbours
 
                     int edge_rot = rotateEdge(edge, 1);
-                    Point2f bias = (vtx[edgeOrg(edge_rot)].pt + vtx[edgeDst(edge_rot)].pt) / 2.f;
-
-                    if (rightOfEx(pt - bias, vtx[vertex].pt - bias, vtx[edge_org].pt, false, false, true) < 0 &&
-                        rightOfEx(pt - bias, vtx[vertex].pt - bias, vtx[edge_dst].pt, false, false, true) >= 0) {
-
-                        if (rightOfEx(pt - bias, vtx[edge_org].pt, vtx[edge_dst].pt, false, true, true) > 0) {
-                            outside_edge = true;
-                        }
-
-                        break;
-                    }
+                    bias = (vtx[edgeOrg(edge_rot)].pt + vtx[edgeDst(edge_rot)].pt) / 2.f;
+                } else {
+                    edge = getEdge( edge, NEXT_AROUND_LEFT );
+                    continue;
                 }
+            }
+
+            bool ideal_org = vtx[edge_org].isideal();
+            Point2f org = ideal_org ? vtx[edge_org].pt : vtx[edge_org].pt - bias;
+
+            bool ideal_dst = vtx[edge_dst].isideal();
+            Point2f dst = ideal_dst ? vtx[edge_dst].pt : vtx[edge_dst].pt - bias;
+
+            if (rightOfEx(pt - bias, vtx[vertex].pt - bias, org, false, false, ideal_org) <  0 &&
+                rightOfEx(pt - bias, vtx[vertex].pt - bias, dst, false, false, ideal_dst) >= 0) {
+
+                if (rightOfEx(pt - bias, org, dst, false, ideal_org, ideal_dst) > 0) {
+                    outside_edge = true;
+                }
+
+                break;
             }
 
             edge = getEdge( edge, NEXT_AROUND_LEFT );
@@ -880,46 +873,37 @@ void Subdiv2D::getVoronoiFacetList(Rect2f rect, const std::vector<int>& idx,
             int edge_org = edgeOrg(t);
             int edge_dst = edgeDst(t);
 
+            Point2f bias;
+
             if (!vtx[edge_org].isideal() || !vtx[edge_dst].isideal()) {
-                Point2f bias =
-                        vtx[edge_org].isideal() ? vtx[edge_dst].pt :
+                bias =  vtx[edge_org].isideal() ? vtx[edge_dst].pt :
                         vtx[edge_dst].isideal() ? vtx[edge_org].pt : Point2f(0.f, 0.f);
-
-                bool ideal_org = vtx[edge_org].isideal();
-                Point2f org = ideal_org ? vtx[edge_org].pt : vtx[edge_org].pt - bias;
-
-                bool ideal_dst = vtx[edge_dst].isideal();
-                Point2f dst = ideal_dst ? vtx[edge_dst].pt : vtx[edge_dst].pt - bias;
-
-                if (    cropEdge(bl - bias, br - bias, org, dst, ideal_org, ideal_dst) &&
-                        cropEdge(br - bias, tr - bias, org, dst, ideal_org, ideal_dst) &&
-                        cropEdge(tr - bias, tl - bias, org, dst, ideal_org, ideal_dst) &&
-                        cropEdge(tl - bias, bl - bias, org, dst, ideal_org, ideal_dst)) {
-
-                    org += bias;
-                    dst += bias;
-                    buf.push_back(Vec4f(org.x, org.y, dst.x, dst.y));
-                }
             } else {
                 if (norm(vtx[edge_org].pt + vtx[edge_dst].pt) < FLT_EPSILON) {
+                    // special case: all PTTYPE_DELAUNAY points are collinear, edge is a bisector of two neighbours
+
                     int edge_rot = rotateEdge(t, 1);
-                    Point2f bias = (vtx[edgeOrg(edge_rot)].pt + vtx[edgeDst(edge_rot)].pt) / 2.f;
-
-                    Point2f org = vtx[edge_org].pt;
-                    bool ideal_org = true;
-                    Point2f dst = vtx[edge_dst].pt;
-                    bool ideal_dst = true;
-
-                    if (cropEdge(bl - bias, br - bias, org, dst, ideal_org, ideal_dst) &&
-                        cropEdge(br - bias, tr - bias, org, dst, ideal_org, ideal_dst) &&
-                        cropEdge(tr - bias, tl - bias, org, dst, ideal_org, ideal_dst) &&
-                        cropEdge(tl - bias, bl - bias, org, dst, ideal_org, ideal_dst)) {
-
-                        org += bias;
-                        dst += bias;
-                        buf.push_back(Vec4f(org.x, org.y, dst.x, dst.y));
-                    }
+                    bias = (vtx[edgeOrg(edge_rot)].pt + vtx[edgeDst(edge_rot)].pt) / 2.f;
+                } else {
+                    t = getEdge( t, NEXT_AROUND_LEFT );
+                    continue;
                 }
+            }
+
+            bool ideal_org = vtx[edge_org].isideal();
+            Point2f org = ideal_org ? vtx[edge_org].pt : vtx[edge_org].pt - bias;
+
+            bool ideal_dst = vtx[edge_dst].isideal();
+            Point2f dst = ideal_dst ? vtx[edge_dst].pt : vtx[edge_dst].pt - bias;
+
+            if (    cropEdge(bl - bias, br - bias, org, dst, ideal_org, ideal_dst) &&
+                    cropEdge(br - bias, tr - bias, org, dst, ideal_org, ideal_dst) &&
+                    cropEdge(tr - bias, tl - bias, org, dst, ideal_org, ideal_dst) &&
+                    cropEdge(tl - bias, bl - bias, org, dst, ideal_org, ideal_dst)) {
+
+                org += bias;
+                dst += bias;
+                buf.push_back(Vec4f(org.x, org.y, dst.x, dst.y));
             }
 
             t = getEdge( t, NEXT_AROUND_LEFT );
