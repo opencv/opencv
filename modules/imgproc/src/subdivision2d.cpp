@@ -675,6 +675,7 @@ int Subdiv2D::findNearest(Point2f pt, Point2f* nearestPt)
             int edge_org = edgeOrg(edge);
             int edge_dst = edgeDst(edge);
 
+            bool skip_edge = false;
             Point2f bias;
 
             if (!vtx[edge_org].isideal() || !vtx[edge_dst].isideal()) {
@@ -687,29 +688,29 @@ int Subdiv2D::findNearest(Point2f pt, Point2f* nearestPt)
                     int edge_rot = rotateEdge(edge, 1);
                     bias = (vtx[edgeOrg(edge_rot)].pt + vtx[edgeDst(edge_rot)].pt) / 2.f;
                 } else {
-                    edge = getEdge( edge, NEXT_AROUND_LEFT );
-                    continue;
+                    skip_edge = true;
                 }
             }
 
-            bool ideal_org = vtx[edge_org].isideal();
-            Point2f org = ideal_org ? vtx[edge_org].pt : vtx[edge_org].pt - bias;
+            if (!skip_edge) {
+                bool ideal_org = vtx[edge_org].isideal();
+                Point2f org = ideal_org ? vtx[edge_org].pt : vtx[edge_org].pt - bias;
 
-            bool ideal_dst = vtx[edge_dst].isideal();
-            Point2f dst = ideal_dst ? vtx[edge_dst].pt : vtx[edge_dst].pt - bias;
+                bool ideal_dst = vtx[edge_dst].isideal();
+                Point2f dst = ideal_dst ? vtx[edge_dst].pt : vtx[edge_dst].pt - bias;
 
-            if (rightOfEx(pt - bias, vtx[vertex].pt - bias, org, false, false, ideal_org) <  0 &&
-                rightOfEx(pt - bias, vtx[vertex].pt - bias, dst, false, false, ideal_dst) >= 0) {
+                if (rightOfEx(pt - bias, vtx[vertex].pt - bias, org, false, false, ideal_org) < 0 &&
+                    rightOfEx(pt - bias, vtx[vertex].pt - bias, dst, false, false, ideal_dst) >= 0) {
 
-                if (rightOfEx(pt - bias, org, dst, false, ideal_org, ideal_dst) > 0) {
-                    outside_edge = true;
+                    if (rightOfEx(pt - bias, org, dst, false, ideal_org, ideal_dst) > 0) {
+                        outside_edge = true;
+                    }
+
+                    break;
                 }
-
-                break;
             }
 
             edge = getEdge( edge, NEXT_AROUND_LEFT );
-
         } while (edge != first_edge);
 
         if (outside_edge) {
@@ -873,6 +874,7 @@ void Subdiv2D::getVoronoiFacetList(Rect2f rect, const std::vector<int>& idx,
             int edge_org = edgeOrg(t);
             int edge_dst = edgeDst(t);
 
+            bool skip_edge = false;
             Point2f bias;
 
             if (!vtx[edge_org].isideal() || !vtx[edge_dst].isideal()) {
@@ -885,25 +887,26 @@ void Subdiv2D::getVoronoiFacetList(Rect2f rect, const std::vector<int>& idx,
                     int edge_rot = rotateEdge(t, 1);
                     bias = (vtx[edgeOrg(edge_rot)].pt + vtx[edgeDst(edge_rot)].pt) / 2.f;
                 } else {
-                    t = getEdge( t, NEXT_AROUND_LEFT );
-                    continue;
+                    skip_edge = true;
                 }
             }
 
-            bool ideal_org = vtx[edge_org].isideal();
-            Point2f org = ideal_org ? vtx[edge_org].pt : vtx[edge_org].pt - bias;
+            if (!skip_edge) {
+                bool ideal_org = vtx[edge_org].isideal();
+                Point2f org = ideal_org ? vtx[edge_org].pt : vtx[edge_org].pt - bias;
 
-            bool ideal_dst = vtx[edge_dst].isideal();
-            Point2f dst = ideal_dst ? vtx[edge_dst].pt : vtx[edge_dst].pt - bias;
+                bool ideal_dst = vtx[edge_dst].isideal();
+                Point2f dst = ideal_dst ? vtx[edge_dst].pt : vtx[edge_dst].pt - bias;
 
-            if (    cropEdge(bl - bias, br - bias, org, dst, ideal_org, ideal_dst) &&
+                if (cropEdge(bl - bias, br - bias, org, dst, ideal_org, ideal_dst) &&
                     cropEdge(br - bias, tr - bias, org, dst, ideal_org, ideal_dst) &&
                     cropEdge(tr - bias, tl - bias, org, dst, ideal_org, ideal_dst) &&
                     cropEdge(tl - bias, bl - bias, org, dst, ideal_org, ideal_dst)) {
 
-                org += bias;
-                dst += bias;
-                buf.push_back(Vec4f(org.x, org.y, dst.x, dst.y));
+                    org += bias;
+                    dst += bias;
+                    buf.push_back(Vec4f(org.x, org.y, dst.x, dst.y));
+                }
             }
 
             t = getEdge( t, NEXT_AROUND_LEFT );
