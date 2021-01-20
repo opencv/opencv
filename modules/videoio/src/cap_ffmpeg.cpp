@@ -217,9 +217,20 @@ cv::Ptr<cv::IVideoWriter> cvCreateVideoWriter_FFMPEG_proxy(const std::string& fi
 
 #if defined(BUILD_PLUGIN)
 
+#define NEW_PLUGIN
+
+#ifndef NEW_PLUGIN
 #define ABI_VERSION 0
 #define API_VERSION 0
 #include "plugin_api.hpp"
+#else
+#define CAPTURE_ABI_VERSION 1
+#define CAPTURE_API_VERSION 0
+#include "plugin_capture_api.hpp"
+#define WRITER_ABI_VERSION 1
+#define WRITER_API_VERSION 0
+#include "plugin_writer_api.hpp"
+#endif
 
 namespace cv {
 
@@ -312,6 +323,7 @@ CvResult CV_API_CALL cv_capture_grab(CvPluginCapture handle)
     }
 }
 
+#ifndef NEW_PLUGIN
 static
 CvResult CV_API_CALL cv_capture_retrieve(CvPluginCapture handle, int stream_idx, cv_videoio_retrieve_cb_t callback, void* userdata)
 {
@@ -331,6 +343,27 @@ CvResult CV_API_CALL cv_capture_retrieve(CvPluginCapture handle, int stream_idx,
         return CV_ERROR_FAIL;
     }
 }
+#else
+static
+CvResult CV_API_CALL cv_capture_retrieve(CvPluginCapture handle, int stream_idx, cv_videoio_capture_retrieve_cb_t callback, void* userdata)
+{
+    if (!handle)
+        return CV_ERROR_FAIL;
+    try
+    {
+        CvCapture_FFMPEG_proxy* instance = (CvCapture_FFMPEG_proxy*)handle;
+        Mat img;
+        // TODO: avoid unnecessary copying
+        if (instance->retrieveFrame(stream_idx, img))
+            return callback(stream_idx, img.data, img.step, img.cols, img.rows, img.type(), userdata);
+        return CV_ERROR_FAIL;
+    }
+    catch(...)
+    {
+        return CV_ERROR_FAIL;
+    }
+}
+#endif
 
 static
 CvResult CV_API_CALL cv_writer_open(const char* filename, int fourcc, double fps, int width, int height, int isColor,
@@ -395,6 +428,10 @@ CvResult CV_API_CALL cv_writer_write(CvPluginWriter handle, const unsigned char 
     }
 }
 
+} // namespace
+
+#ifndef NEW_PLUGIN
+
 static const OpenCV_VideoIO_Plugin_API_preview plugin_api =
 {
     {
@@ -418,13 +455,64 @@ static const OpenCV_VideoIO_Plugin_API_preview plugin_api =
     }
 };
 
-} // namespace
-
 const OpenCV_VideoIO_Plugin_API_preview* opencv_videoio_plugin_init_v0(int requested_abi_version, int requested_api_version, void* /*reserved=NULL*/) CV_NOEXCEPT
 {
     if (requested_abi_version == ABI_VERSION && requested_api_version <= API_VERSION)
-        return &cv::plugin_api;
+        return &plugin_api;
     return NULL;
 }
+
+#else  // NEW_PLUGIN
+
+static const OpenCV_VideoIO_Capture_Plugin_API capture_plugin_api =
+{
+    {
+        sizeof(OpenCV_VideoIO_Capture_Plugin_API), CAPTURE_ABI_VERSION, CAPTURE_API_VERSION,
+        CV_VERSION_MAJOR, CV_VERSION_MINOR, CV_VERSION_REVISION, CV_VERSION_STATUS,
+        "FFmpeg OpenCV Video I/O Capture plugin"
+    },
+    {
+        /*  1*/CAP_FFMPEG,
+        /*  2*/cv_capture_open,
+        /*  3*/cv_capture_release,
+        /*  4*/cv_capture_get_prop,
+        /*  5*/cv_capture_set_prop,
+        /*  6*/cv_capture_grab,
+        /*  7*/cv_capture_retrieve,
+    }
+};
+
+const OpenCV_VideoIO_Capture_Plugin_API* opencv_videoio_capture_plugin_init_v1(int requested_abi_version, int requested_api_version, void* /*reserved=NULL*/) CV_NOEXCEPT
+{
+    if (requested_abi_version == CAPTURE_ABI_VERSION && requested_api_version <= CAPTURE_API_VERSION)
+        return &capture_plugin_api;
+    return NULL;
+}
+
+static const OpenCV_VideoIO_Writer_Plugin_API writer_plugin_api =
+{
+    {
+        sizeof(OpenCV_VideoIO_Writer_Plugin_API), WRITER_ABI_VERSION, WRITER_API_VERSION,
+        CV_VERSION_MAJOR, CV_VERSION_MINOR, CV_VERSION_REVISION, CV_VERSION_STATUS,
+        "FFmpeg OpenCV Video I/O Writer plugin"
+    },
+    {
+        /*  1*/CAP_FFMPEG,
+        /*  2*/cv_writer_open,
+        /*  3*/cv_writer_release,
+        /*  4*/cv_writer_get_prop,
+        /*  5*/cv_writer_set_prop,
+        /*  6*/cv_writer_write
+    }
+};
+
+const OpenCV_VideoIO_Writer_Plugin_API* opencv_videoio_writer_plugin_init_v1(int requested_abi_version, int requested_api_version, void* /*reserved=NULL*/) CV_NOEXCEPT
+{
+    if (requested_abi_version == WRITER_ABI_VERSION && requested_api_version <= WRITER_API_VERSION)
+        return &writer_plugin_api;
+    return NULL;
+}
+
+#endif  // NEW_PLUGIN
 
 #endif // BUILD_PLUGIN
