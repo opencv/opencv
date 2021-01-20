@@ -164,21 +164,11 @@ static PyObject* pyopencv_cv_GOut(PyObject* , PyObject* py_args, PyObject* kw)
     return extract_proto_args<GProtoOutputArgs>(py_args, kw);
 }
 
-static cv::GRunArgs extract_run_args(const cv::GTypesInfo& info, PyObject* py_args)
+static cv::GRunArg extract_run_arg(const cv::GTypeInfo& info, PyObject* item)
 {
-    PyGILState_STATE gstate;
-    gstate = PyGILState_Ensure();
-
-    cv::GRunArgs args;
-    Py_ssize_t tuple_size = PyTuple_Size(py_args);
-    args.reserve(tuple_size);
-
-    for (int i = 0; i < tuple_size; ++i)
+    switch (info.shape)
     {
-        PyObject* item = PyTuple_GetItem(py_args, i);
-        switch (info[i].shape)
-        {
-            case cv::GShape::GMAT:
+        case cv::GShape::GMAT:
             {
                 // NB: In case streaming it can be IStreamSource or cv::Mat
                 if (PyObject_TypeCheck(item,
@@ -186,83 +176,122 @@ static cv::GRunArgs extract_run_args(const cv::GTypesInfo& info, PyObject* py_ar
                 {
                     cv::gapi::wip::IStreamSource::Ptr source =
                         reinterpret_cast<pyopencv_gapi_wip_IStreamSource_t*>(item)->v;
-                    args.emplace_back(source);
+                    return source;
                 }
                 else
                 {
                     cv::Mat obj;
                     pyopencv_to_with_check(item, obj, "Failed to obtain cv::Mat");
-                    args.emplace_back(obj);
+                    return obj;
                 }
-                break;
             }
-            case cv::GShape::GSCALAR:
+        case cv::GShape::GSCALAR:
             {
                 cv::Scalar obj;
                 pyopencv_to_with_check(item, obj, "Failed to obtain cv::Scalar");
-                args.emplace_back(obj);
-                break;
+                return obj;
             }
-            default:
-                util::throw_error(std::logic_error("Unsupported output shape"));
-        }
+        default:
+            util::throw_error(std::logic_error("Unsupported output shape"));
     }
-    PyGILState_Release(gstate);
-    return args;
+    GAPI_Assert(false && "Unreachable code");
 }
 
-static cv::GMetaArgs extract_meta_args(const cv::GTypesInfo& info, PyObject* py_args)
+static cv::GRunArgs extract_run_args(const cv::GTypesInfo& info, PyObject* py_args)
 {
-    PyGILState_STATE gstate;
-    gstate = PyGILState_Ensure();
-
-    cv::GMetaArgs args;
+    cv::GRunArgs args;
     Py_ssize_t tuple_size = PyTuple_Size(py_args);
     args.reserve(tuple_size);
 
     for (int i = 0; i < tuple_size; ++i)
     {
-        PyObject* item = PyTuple_GetItem(py_args, i);
-        switch (info[i].shape)
-        {
-            case cv::GShape::GMAT:
-                {
-                    cv::Mat obj;
-                    pyopencv_to_with_check(item, obj, "Failed to obtain cv::Mat");
-                    args.emplace_back(cv::descr_of(obj));
-                    break;
-                }
-            case cv::GShape::GSCALAR:
-                {
-                    cv::Scalar obj;
-                    pyopencv_to_with_check(item, obj, "Failed to obtain cv::Scalar");
-                    args.emplace_back(cv::descr_of(obj));
-                    break;
-                }
-            default:
-                util::throw_error(std::logic_error("Unsupported output shape"));
-        }
+        args.push_back(extract_run_arg(info[i], PyTuple_GetItem(py_args, i)));
     }
 
-    PyGILState_Release(gstate);
     return args;
+}
+
+static cv::GMetaArg extract_meta_arg(const cv::GTypeInfo& info, PyObject* item)
+{
+    switch (info.shape)
+    {
+        case cv::GShape::GMAT:
+            {
+                cv::Mat obj;
+                pyopencv_to_with_check(item, obj, "Failed to obtain cv::Mat");
+                return cv::GMetaArg{cv::descr_of(obj)};
+            }
+        case cv::GShape::GSCALAR:
+            {
+                cv::Scalar obj;
+                pyopencv_to_with_check(item, obj, "Failed to obtain cv::Scalar");
+                return cv::GMetaArg{cv::descr_of(obj)};
+            }
+        default:
+            util::throw_error(std::logic_error("Unsupported output shape"));
+    }
+}
+
+static cv::GMetaArgs extract_meta_args(const cv::GTypesInfo& info, PyObject* py_args)
+{
+    cv::GMetaArgs metas;
+    Py_ssize_t tuple_size = PyTuple_Size(py_args);
+    metas.reserve(tuple_size);
+
+    for (int i = 0; i < tuple_size; ++i)
+    {
+        metas.push_back(extract_meta_arg(info[i], PyTuple_GetItem(py_args, i)));
+    }
+
+    return metas;
 }
 
 static PyObject* pyopencv_cv_gin(PyObject*, PyObject* py_args)
 {
     Py_INCREF(py_args);
-    auto callback = cv::detail::ExtractArgsCallback{std::bind(extract_run_args,
-                                                              std::placeholders::_1,
-                                                              py_args)};
+    auto callback = cv::detail::ExtractArgsCallback{[=](const cv::GTypesInfo& info)
+        {
+            PyGILState_STATE gstate;
+            gstate = PyGILState_Ensure();
+
+            cv::GRunArgs args;
+            try
+            {
+                args = extract_run_args(info, py_args);
+            }
+            catch (...)
+            {
+                PyGILState_Release(gstate);
+                throw;
+            }
+            PyGILState_Release(gstate);
+            return args;
+        }};
+
     return pyopencv_from(callback);
 }
 
 static PyObject* pyopencv_cv_descr_of(PyObject*, PyObject* py_args)
 {
     Py_INCREF(py_args);
-    auto callback = cv::detail::ExtractMetaCallback{std::bind(extract_meta_args,
-                                                              std::placeholders::_1,
-                                                              py_args)};
+    auto callback = cv::detail::ExtractMetaCallback{[=](const cv::GTypesInfo& info)
+        {
+            PyGILState_STATE gstate;
+            gstate = PyGILState_Ensure();
+
+            cv::GMetaArgs args;
+            try
+            {
+                args = extract_meta_args(info, py_args);
+            }
+            catch (...)
+            {
+                PyGILState_Release(gstate);
+                throw;
+            }
+            PyGILState_Release(gstate);
+            return args;
+        }};
     return pyopencv_from(callback);
 }
 

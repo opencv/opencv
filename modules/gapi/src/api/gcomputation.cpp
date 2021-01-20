@@ -112,7 +112,7 @@ cv::GStreamingCompiled cv::GComputation::compileStreaming(GCompileArgs &&args)
 cv::GStreamingCompiled cv::GComputation::compileStreaming(const cv::detail::ExtractMetaCallback &callback,
                                                                 GCompileArgs                   &&args)
 {
-    // NB: Meta unknown yet, need to obtain input/output shapes
+    // NB: Meta is unknown yet, need to obtain input/output shapes
     // to properly unpack runtime argmunets that came from python
     if (m_priv->m_lastMetas.empty())
     {
