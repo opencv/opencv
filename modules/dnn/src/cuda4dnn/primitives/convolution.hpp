@@ -103,7 +103,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
             const auto groups = config.groups;
 
-            CV_Assert (1 < convolution_order && convolution_order <= 3);
+            CV_Assert (1 <= convolution_order && convolution_order <= 3);
 
             const auto rank = input_shape.size();
             const auto output_feature_maps = output_shape[1];

@@ -125,6 +125,9 @@ public:
         {
             kernel_size.assign(1, kernel_size[0]);
             strides.assign(1, strides[0]);
+            dilations.assign(1, dilations[0]);
+            pads_begin.assign(1, pads_begin[0]);
+            pads_end.assign(1, pads_end[0]);
         }
         CV_Assert(weightShape.dims() == kernel_size.size() + 2);
         for (int i = 0; i < kernel_size.size(); i++) {
@@ -311,8 +314,8 @@ public:
 #ifdef HAVE_CUDA
         if (backendId == DNN_BACKEND_CUDA)
         {
-            /* only convolution 2d and 3d supported */
-            if (ksize == 2 || ksize == 3)
+            /* only 1d, 2d and 3d convolutions supported */
+            if (ksize > 0 && ksize <= 3)
                 return true;
 
             return false;
@@ -2001,6 +2004,21 @@ public:
         const auto groups = input_feature_maps / input_feature_maps_per_group;
 
         ConvolutionConfiguration config;
+
+        if (input_shape.size() == 3)
+        {
+            // Conv1D
+            // We add an extra dim for input and output tensors, because CuDNN doesn't support convolution with 3D tensors
+            input_shape.insert(std::end(input_shape) - 1, 1);
+            output_shape.insert(std::end(output_shape) - 1, 1);
+
+            // Do the similar thing for the other parameters
+            pads_begin.insert(std::begin(pads_begin), 0);
+            pads_end.insert(std::begin(pads_end), 0);
+            strides.insert(std::begin(strides), 1);
+            dilations.insert(std::begin(dilations), 1);
+            kernel_size.insert(std::begin(kernel_size), 1);
+        }
         config.kernel_size.assign(std::begin(kernel_size), std::end(kernel_size));
         config.dilations.assign(std::begin(dilations), std::end(dilations));
         config.strides.assign(std::begin(strides), std::end(strides));
