@@ -616,4 +616,37 @@ static vector<Ext_Fourcc_API> generate_Ext_Fourcc_API_nocrash()
 
 INSTANTIATE_TEST_CASE_P(videoio, Videoio_Writer_bad_fourcc, testing::ValuesIn(generate_Ext_Fourcc_API_nocrash()));
 
+typedef testing::TestWithParam<VideoCaptureAPIs> safe_capture;
+
+TEST_P(safe_capture, frames_independency)
+{
+    VideoCaptureAPIs apiPref = GetParam();
+    if (!videoio_registry::hasBackend(apiPref))
+        throw SkipTestException(cv::String("Backend is not available/disabled: ") + cv::videoio_registry::getBackendName(apiPref));
+
+    VideoCapture cap;
+    String video_file = BunnyParameters::getFilename(String(".avi"));
+    EXPECT_NO_THROW(cap.open(video_file, apiPref));
+    if (!cap.isOpened())
+    {
+        std::cout << "SKIP test: backend " << apiPref << " can't open the video: " << video_file << std::endl;
+        return;
+    }
+
+    Mat frames[10];
+    Mat hardCopies[10];
+    for(int i = 0; i < 10; i++)
+    {
+        ASSERT_NO_THROW(cap >> frames[i]);
+        EXPECT_FALSE(frames[i].empty());
+        hardCopies[i] = frames[i].clone();
+    }
+
+    for(int i = 0; i < 10; i++)
+        EXPECT_EQ(0, cv::norm(frames[i], hardCopies[i], NORM_INF)) << i;
+}
+
+static VideoCaptureAPIs safe_apis[] = {CAP_FFMPEG, CAP_GSTREAMER, CAP_MSMF,CAP_AVFOUNDATION};
+INSTANTIATE_TEST_CASE_P(videoio, safe_capture, testing::ValuesIn(safe_apis));
+
 } // namespace
