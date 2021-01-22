@@ -34,6 +34,7 @@
 
 #include "opencv2/core/utils/configuration.private.hpp"
 #include "opencv2/core/utils/logger.hpp"
+#include "opencv2/core/utils/tls.hpp"
 
 #include "pyopencv_generated_include.h"
 #include "opencv2/core/types_c.h"
@@ -139,6 +140,51 @@ public:
     }
 private:
     PyGILState_STATE _state;
+};
+
+/**
+ * Light weight RAII wrapper for `PyObject*` owning references.
+ * In comparisson to C++11 `std::unique_ptr` with custom deleter, it provides
+ * implicit conversion functions that might be useful to initialize it with
+ * Python functions those returns owning references through the `PyObject**`
+ * e.g. `PyErr_Fetch` or directly pass it to functions those want to borrow
+ * reference to object (doesn't extend object lifetime) e.g. `PyObject_Str`.
+ */
+class PySafeObject
+{
+public:
+    PySafeObject() : obj_(NULL) {}
+
+    explicit PySafeObject(PyObject* obj) : obj_(obj) {}
+
+    ~PySafeObject()
+    {
+        Py_CLEAR(obj_);
+    }
+
+    operator PyObject*()
+    {
+        return obj_;
+    }
+
+    operator PyObject**()
+    {
+        return &obj_;
+    }
+
+    PyObject* release()
+    {
+        PyObject* obj = obj_;
+        obj_ = NULL;
+        return obj;
+    }
+
+private:
+    PyObject* obj_;
+
+    // Explicitly disable copy operations
+    PySafeObject(const PySafeObject*); // = delete
+    PySafeObject& operator=(const PySafeObject&); // = delete
 };
 
 static void pyRaiseCVException(const cv::Exception &e)
@@ -291,6 +337,74 @@ bool parseNumpyScalar(PyObject* obj, T& value)
         }
     }
     return false;
+}
+
+TLSData<std::vector<std::string> > conversionErrorsTLS;
+
+inline void pyPrepareArgumentConversionErrorsStorage(std::size_t size)
+{
+    std::vector<std::string>& conversionErrors = conversionErrorsTLS.getRef();
+    conversionErrors.clear();
+    conversionErrors.reserve(size);
+}
+
+void pyRaiseCVOverloadException(const std::string& functionName)
+{
+    const std::vector<std::string>& conversionErrors = conversionErrorsTLS.getRef();
+    const std::size_t conversionErrorsCount = conversionErrors.size();
+    if (conversionErrorsCount > 0)
+    {
+        // In modern std libraries small string optimization is used = no dynamic memory allocations,
+        // but it can be applied only for string with length < 18 symbols (in GCC)
+        const std::string bullet = "\n - ";
+
+        // Estimate required buffer size - save dynamic memory allocations = faster
+        std::size_t requiredBufferSize = bullet.size() * conversionErrorsCount;
+        for (std::size_t i = 0; i < conversionErrorsCount; ++i)
+        {
+            requiredBufferSize += conversionErrors[i].size();
+        }
+
+        // Only string concatenation is required so std::string is way faster than
+        // std::ostringstream
+        std::string errorMessage("Overload resolution failed:");
+        errorMessage.reserve(errorMessage.size() + requiredBufferSize);
+        for (std::size_t i = 0; i < conversionErrorsCount; ++i)
+        {
+            errorMessage += bullet;
+            errorMessage += conversionErrors[i];
+        }
+        cv::Exception exception(CV_StsBadArg, errorMessage, functionName, "", -1);
+        pyRaiseCVException(exception);
+    }
+    else
+    {
+        cv::Exception exception(CV_StsInternal, "Overload resolution failed, but no errors reported",
+                                functionName, "", -1);
+        pyRaiseCVException(exception);
+    }
+}
+
+void pyPopulateArgumentConversionErrors()
+{
+    if (PyErr_Occurred())
+    {
+        PySafeObject exception_type;
+        PySafeObject exception_value;
+        PySafeObject exception_traceback;
+        PyErr_Fetch(exception_type, exception_value, exception_traceback);
+        PyErr_NormalizeException(exception_type, exception_value,
+                                 exception_traceback);
+
+        PySafeObject exception_message(PyObject_Str(exception_value));
+        std::string message;
+        getUnicodeString(exception_message, message);
+#ifdef CV_CXX11
+        conversionErrorsTLS.getRef().push_back(std::move(message));
+#else
+        conversionErrorsTLS.getRef().push_back(message);
+#endif
+    }
 }
 
 } // namespace
