@@ -66,6 +66,8 @@ public:
     //! Unregisters registered layer with specified type name. Thread-safe.
     static void unregisterLayer(const String &type);
 
+    static const std::map<String, int>& getRegisteredLayers() { return registeredTypes; }
+
     /** @brief Creates instance of registered layer.
      *  @param type type name of creating layer.
      *  @param params parameters which will be used for layer initialization.
@@ -75,6 +77,7 @@ public:
 
 private:
     LayerFactory();
+    static std::map<String, int> registeredTypes;
 };
 
 //! @}

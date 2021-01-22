@@ -79,7 +79,7 @@ public:
             CV_Assert(!params.has("begin") && !params.has("size") && !params.has("end"));
             const DictValue &indicesValue = params.get("slice_point");
             sliceRanges.resize(indicesValue.size() + 1,
-                               std::vector<Range>(axis + 1, Range::all()));
+                               std::vector<Range>(std::max(axis,0) + 1, Range::all()));
             int prevSlice = 0;
             for (int i = 0; i < indicesValue.size(); ++i)
             {
