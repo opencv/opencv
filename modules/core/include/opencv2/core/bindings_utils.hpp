@@ -65,6 +65,20 @@ String dumpString(const String& argument)
 }
 
 CV_WRAP static inline
+String testOverloadResolution(int value, const Point& point = Point(42, 24))
+{
+    return format("overload (int=%d, point=(x=%d, y=%d))", value, point.x,
+                  point.y);
+}
+
+CV_WRAP static inline
+String testOverloadResolution(const Rect& rect)
+{
+    return format("overload (rect=(x=%d, y=%d, w=%d, h=%d))", rect.x, rect.y,
+                  rect.width, rect.height);
+}
+
+CV_WRAP static inline
 AsyncArray testAsyncArray(InputArray argument)
 {
     AsyncPromise p;
