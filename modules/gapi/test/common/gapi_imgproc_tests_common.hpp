@@ -14,35 +14,35 @@
 
 namespace opencv_test
 {
-// Draw random ellipses on given mat of given size and type
+// Draw random ellipses on given cv::Mat of given size and type
 static void initMatForFindingContours(cv::Mat& mat, const cv::Size& sz, const int type)
 {
     cv::RNG& rng = theRNG();
     mat = cv::Mat(sz, type, cv::Scalar::all(0));
-    size_t numEllipses = rng.uniform(1, 10);
+    const size_t numEllipses = rng.uniform(1, 10);
 
     for( size_t i = 0; i < numEllipses; i++ )
     {
         cv::Point center;
         cv::Size  axes;
-        center.x     = rng.uniform(0, sz.width);
-        center.y     = rng.uniform(0, sz.height);
-        axes.width   = rng.uniform(2, sz.width);
-        axes.height  = rng.uniform(2, sz.height);
-        int color    = rng.uniform(1, 256);
-        double angle = rng.uniform(0., 180.);
+        center.x    = rng.uniform(0, sz.width);
+        center.y    = rng.uniform(0, sz.height);
+        axes.width  = rng.uniform(2, sz.width);
+        axes.height = rng.uniform(2, sz.height);
+        const int    color = rng.uniform(1, 256);
+        const double angle = rng.uniform(0., 180.);
         cv::ellipse(mat, center, axes, angle, 0., 360., color, 1, FILLED);
     }
 }
 
-enum WithHierarchy {NO_HIERARCHY, WITH_HIERARCHY};
+enum OptionalFindContoursOutput {NONE, HIERARCHY};
 
-template<WithHierarchy withHierarchy = NO_HIERARCHY>
+template<OptionalFindContoursOutput optional = NONE>
 cv::GComputation findContoursTestGAPI(const cv::Mat& in, const cv::RetrievalModes mode,
                                       const cv::ContourApproximationModes method,
                                       cv::GCompileArgs&& args,
                                       std::vector<std::vector<cv::Point>>& out_cnts_gapi,
-                                      std::vector<cv::Vec4i>&,
+                                      std::vector<cv::Vec4i>& /*out_hier_gapi*/,
                                       const cv::Point& offset = cv::Point())
 {
     cv::GMat g_in;
@@ -54,7 +54,7 @@ cv::GComputation findContoursTestGAPI(const cv::Mat& in, const cv::RetrievalMode
     return c;
 }
 
-template<> cv::GComputation findContoursTestGAPI<WITH_HIERARCHY> (
+template<> cv::GComputation findContoursTestGAPI<HIERARCHY> (
     const cv::Mat& in, const cv::RetrievalModes mode, const cv::ContourApproximationModes method,
     cv::GCompileArgs&& args, std::vector<std::vector<cv::Point>>& out_cnts_gapi,
     std::vector<cv::Vec4i>& out_hier_gapi, const cv::Point& offset)
@@ -69,7 +69,7 @@ template<> cv::GComputation findContoursTestGAPI<WITH_HIERARCHY> (
     return c;
 }
 
-template<WithHierarchy withHierarchy = NO_HIERARCHY>
+template<OptionalFindContoursOutput optional = NONE>
 void findContoursTestOpenCVCompare(const cv::Mat& in, const cv::RetrievalModes mode,
                                    const cv::ContourApproximationModes method,
                                    const std::vector<std::vector<cv::Point>>& out_cnts_gapi,
@@ -88,14 +88,14 @@ void findContoursTestOpenCVCompare(const cv::Mat& in, const cv::RetrievalModes m
     cv::fillPoly(out_mat_ocv,  out_cnts_ocv,  cv::Scalar::all(1));
     cv::fillPoly(out_mat_gapi, out_cnts_gapi, cv::Scalar::all(1));
     EXPECT_TRUE(cmpF(out_mat_ocv, out_mat_gapi));
-    if (withHierarchy == WITH_HIERARCHY)
+    if (optional == HIERARCHY)
     {
         EXPECT_TRUE(out_hier_ocv.size() == out_hier_gapi.size());
         EXPECT_TRUE(AbsExactVector<cv::Vec4i>().to_compare_f()(out_hier_ocv, out_hier_gapi));
     }
 }
 
-template<WithHierarchy withHierarchy = NO_HIERARCHY>
+template<OptionalFindContoursOutput optional = NONE>
 void findContoursTestBody(const cv::Size& sz, const MatType2& type, const cv::RetrievalModes mode,
                           const cv::ContourApproximationModes method, const CompareMats& cmpF,
                           cv::GCompileArgs&& args, const cv::Point& offset = cv::Point())
@@ -105,10 +105,10 @@ void findContoursTestBody(const cv::Size& sz, const MatType2& type, const cv::Re
 
     std::vector<std::vector<cv::Point>> out_cnts_gapi;
     std::vector<cv::Vec4i>              out_hier_gapi;
-    findContoursTestGAPI<withHierarchy>(in, mode, method, std::move(args),
-                                        out_cnts_gapi, out_hier_gapi, offset);
-    findContoursTestOpenCVCompare<withHierarchy>(in, mode, method, out_cnts_gapi, out_hier_gapi,
-                                                 cmpF, offset);
+    findContoursTestGAPI<optional>(in, mode, method, std::move(args), out_cnts_gapi, out_hier_gapi,
+                                   offset);
+    findContoursTestOpenCVCompare<optional>(in, mode, method, out_cnts_gapi, out_hier_gapi, cmpF,
+                                            offset);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -148,7 +148,7 @@ template<typename In>
 static cv::GComputation fitLineTestGAPI(const In& in, const cv::DistanceTypes distType,
                                         cv::GCompileArgs&& args, cv::Vec4f& out_vec_gapi)
 {
-    double paramDefault = 0., repsDefault = 0., aepsDefault = 0.;
+    const double paramDefault = 0., repsDefault = 0., aepsDefault = 0.;
 
     cv::detail::g_type_of_t<In> g_in;
     auto out = cv::gapi::fitLine2D(g_in, distType, paramDefault, repsDefault, aepsDefault);
@@ -161,7 +161,7 @@ template<typename In>
 static cv::GComputation fitLineTestGAPI(const In& in, const cv::DistanceTypes distType,
                                         cv::GCompileArgs&& args, cv::Vec6f& out_vec_gapi)
 {
-    double paramDefault = 0., repsDefault = 0., aepsDefault = 0.;
+    const double paramDefault = 0., repsDefault = 0., aepsDefault = 0.;
 
     cv::detail::g_type_of_t<In> g_in;
     auto out = cv::gapi::fitLine3D(g_in, distType, paramDefault, repsDefault, aepsDefault);
@@ -175,7 +175,7 @@ static void fitLineTestOpenCVCompare(const In& in, const cv::DistanceTypes distT
                                      const cv::Vec<float, dim>& out_vec_gapi,
                                      const CompareVecs<float, dim>& cmpF)
 {
-    double paramDefault = 0., repsDefault = 0., aepsDefault = 0.;
+    const double paramDefault = 0., repsDefault = 0., aepsDefault = 0.;
 
     // OpenCV code /////////////////////////////////////////////////////////////
     cv::Vec<float, dim> out_vec_ocv;

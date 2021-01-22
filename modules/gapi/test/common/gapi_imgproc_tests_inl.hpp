@@ -491,7 +491,7 @@ TEST_P(FindContoursOffsetTest, AccuracyTest)
 
 TEST_P(FindContoursHNoOffsetTest, AccuracyTest)
 {
-    findContoursTestBody<WITH_HIERARCHY>(sz, type, mode, method, cmpF, getCompileArgs());
+    findContoursTestBody<HIERARCHY>(sz, type, mode, method, cmpF, getCompileArgs());
 }
 
 TEST_P(FindContoursHOffsetTest, AccuracyTest)
@@ -505,7 +505,7 @@ TEST_P(FindContoursHOffsetTest, AccuracyTest)
     std::vector<std::vector<cv::Point>> outCtsOCV,  outCtsGAPI;
     std::vector<cv::Vec4i>              outHierOCV, outHierGAPI;
 
-    findContoursTestBody<WITH_HIERARCHY>(sz, type, mode, method, cmpF, getCompileArgs(), offset);
+    findContoursTestBody<HIERARCHY>(sz, type, mode, method, cmpF, getCompileArgs(), offset);
 }
 
 TEST_P(BoundingRectMatTest, AccuracyTest)

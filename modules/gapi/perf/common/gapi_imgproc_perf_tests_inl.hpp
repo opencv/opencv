@@ -839,17 +839,15 @@ PERF_TEST_P_(FindContoursHPerfTest, TestPerformance)
 
     std::vector<std::vector<cv::Point>> out_cnts_gapi;
     std::vector<cv::Vec4i>              out_hier_gapi;
-    cv::GComputation c(findContoursTestGAPI<WITH_HIERARCHY>(in, mode, method,
-                                                            std::move(compile_args),
-                                                            out_cnts_gapi, out_hier_gapi, offset));
+    cv::GComputation c(findContoursTestGAPI<HIERARCHY>(in, mode, method, std::move(compile_args),
+                                                       out_cnts_gapi, out_hier_gapi, offset));
 
     TEST_CYCLE()
     {
         c.apply(gin(in, offset), gout(out_cnts_gapi, out_hier_gapi));
     }
 
-    findContoursTestOpenCVCompare<WITH_HIERARCHY>(in, mode, method, out_cnts_gapi, out_hier_gapi,
-                                                  cmpF);
+    findContoursTestOpenCVCompare<HIERARCHY>(in, mode, method, out_cnts_gapi, out_hier_gapi, cmpF);
     SANITY_CHECK_NOTHING();
 }
 
