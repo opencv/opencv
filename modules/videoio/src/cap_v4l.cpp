@@ -2135,7 +2135,7 @@ IplImage *CvCaptureCAM_V4L::retrieveFrame(int)
     return &frame;
 }
 
-Ptr<IVideoCapture> create_V4L_capture_cam(int index)
+Ptr<IVideoCapture> create_V4L_capture_cam(int index, const cv::VideoCaptureParameters&)
 {
     cv::CvCaptureCAM_V4L* capture = new cv::CvCaptureCAM_V4L();
 
@@ -2146,7 +2146,7 @@ Ptr<IVideoCapture> create_V4L_capture_cam(int index)
     return NULL;
 }
 
-Ptr<IVideoCapture> create_V4L_capture_file(const std::string &filename)
+Ptr<IVideoCapture> create_V4L_capture_file(const std::string &filename, const cv::VideoCaptureParameters&)
 {
     cv::CvCaptureCAM_V4L* capture = new cv::CvCaptureCAM_V4L();
 

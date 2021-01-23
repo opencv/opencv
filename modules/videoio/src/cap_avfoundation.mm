@@ -203,7 +203,7 @@ class CvVideoWriter_AVFoundation : public CvVideoWriter{
 /****************** Implementation of interface functions ********************/
 
 
-cv::Ptr<cv::IVideoCapture> cv::create_AVFoundation_capture_file(const std::string &filename)
+cv::Ptr<cv::IVideoCapture> cv::create_AVFoundation_capture_file(const std::string &filename, const cv::VideoCaptureParameters&)
 {
     CvCaptureFile *retval = new CvCaptureFile(filename.c_str());
     if(retval->didStart())
@@ -213,7 +213,7 @@ cv::Ptr<cv::IVideoCapture> cv::create_AVFoundation_capture_file(const std::strin
 
 }
 
-cv::Ptr<cv::IVideoCapture> cv::create_AVFoundation_capture_cam(int index)
+cv::Ptr<cv::IVideoCapture> cv::create_AVFoundation_capture_cam(int index, const cv::VideoCaptureParameters&)
 {
     CvCaptureCAM* retval = new CvCaptureCAM(index);
     if (retval->didStart())

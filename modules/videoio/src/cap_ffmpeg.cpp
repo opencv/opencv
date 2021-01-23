@@ -67,7 +67,7 @@ class CvCapture_FFMPEG_proxy CV_FINAL : public cv::IVideoCapture
 {
 public:
     CvCapture_FFMPEG_proxy() { ffmpegCapture = 0; }
-    CvCapture_FFMPEG_proxy(const cv::String& filename) { ffmpegCapture = 0; open(filename); }
+    CvCapture_FFMPEG_proxy(const cv::String& filename, const cv::VideoCaptureParameters& params = cv::VideoCaptureParameters()) { ffmpegCapture = 0; IVideoCapture::open(filename, params); }
     virtual ~CvCapture_FFMPEG_proxy() { close(); }
 
     virtual double getProperty(int propId) const CV_OVERRIDE
@@ -97,7 +97,7 @@ public:
 
         return true;
     }
-    virtual bool open( const cv::String& filename )
+    virtual bool open( const cv::String& filename ) CV_OVERRIDE
     {
         close();
 
@@ -145,9 +145,9 @@ protected:
 
 } // namespace
 
-cv::Ptr<cv::IVideoCapture> cvCreateFileCapture_FFMPEG_proxy(const std::string &filename)
+cv::Ptr<cv::IVideoCapture> cvCreateFileCapture_FFMPEG_proxy(const std::string &filename, const cv::VideoCaptureParameters& params)
 {
-    cv::Ptr<CvCapture_FFMPEG_proxy> capture = cv::makePtr<CvCapture_FFMPEG_proxy>(filename);
+    cv::Ptr<CvCapture_FFMPEG_proxy> capture = cv::makePtr<CvCapture_FFMPEG_proxy>(filename, params);
     if (capture && capture->isOpened())
         return capture;
     return cv::Ptr<cv::IVideoCapture>();

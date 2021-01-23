@@ -52,22 +52,22 @@ inline bool castParameterTo(int paramValue)
 }
 }
 
-class VideoWriterParameters
+class VideoParameters
 {
 public:
-    struct VideoWriterParameter {
-        VideoWriterParameter() = default;
+    struct VideoParameter {
+        VideoParameter() = default;
 
-        VideoWriterParameter(int key_, int value_) : key(key_), value(value_) {}
+        VideoParameter(int key_, int value_) : key(key_), value(value_) {}
 
         int key{-1};
         int value{-1};
         mutable bool isConsumed{false};
     };
 
-    VideoWriterParameters() = default;
+    VideoParameters() = default;
 
-    explicit VideoWriterParameters(const std::vector<int>& params)
+    explicit VideoParameters(const std::vector<int>& params)
     {
         const auto count = params.size();
         if (count % 2 != 0)
@@ -91,7 +91,7 @@ public:
     ValueType get(int key, ValueType defaultValue) const CV_NOEXCEPT
     {
         auto it = std::find_if(params_.begin(), params_.end(),
-                               [key](const VideoWriterParameter &param) {
+                               [key](const VideoParameter &param) {
                                    return param.key == key;
                                });
         if (it != params_.end())
@@ -128,8 +128,29 @@ public:
         return vint_params;
     }
 
+    bool empty() const
+    {
+        return (params_.size() > 0) ? false : true;
+    }
+
 private:
-    std::vector<VideoWriterParameter> params_;
+    std::vector<VideoParameter> params_;
+};
+
+class VideoWriterParameters : public VideoParameters
+{
+public:
+    VideoWriterParameters() = default;
+
+    explicit VideoWriterParameters(const std::vector<int>& params) : VideoParameters(params) {};
+};
+
+class VideoCaptureParameters : public VideoParameters
+{
+public:
+    VideoCaptureParameters() = default;
+
+    explicit VideoCaptureParameters(const std::vector<int>& params) : VideoParameters(params) {};
 };
 
 class IVideoCapture
@@ -142,6 +163,44 @@ public:
     virtual bool retrieveFrame(int, OutputArray) = 0;
     virtual bool isOpened() const = 0;
     virtual int getCaptureDomain() { return CAP_ANY; } // Return the type of the capture object: CAP_DSHOW, etc...
+    virtual bool open(int) { return false; }
+    virtual bool open(const std::string&) { return false; }
+    virtual bool open(const char *) { return false; }
+    virtual bool open(int index, const cv::VideoCaptureParameters& params)
+    {
+        return baseOpen<int>(index, params);
+    }
+    virtual bool open(const std::string& filename, const cv::VideoCaptureParameters& params)
+    {
+        return baseOpen<const std::string&>(filename, params);
+    }
+    virtual bool open(const char *filename, const cv::VideoCaptureParameters& params)
+    {
+        return baseOpen<const char *>(filename, params);
+    }
+    bool setParams(const VideoCaptureParameters& params)
+    {
+        std::vector<int> props = params.getUnused();
+        for(const auto& item: props)
+        {
+            std::cout << item << std::endl;
+            if(!(this->setProperty(item, params.get(item, -1))))
+            {
+                CV_Error(cv::Error::StsNotImplemented, "Invalid or unsupported parameter");
+                return false;
+            }
+        }
+        return true;
+    }
+protected:
+    template <typename T>
+    bool baseOpen(T item, const cv::VideoCaptureParameters& params)
+    {
+        bool res = open(item);
+        if (res && !params.empty())
+            res &= setParams(params);
+        return res;
+    }
 };
 
 class IVideoWriter
@@ -261,73 +320,73 @@ public:
 
 //==================================================================================================
 
-Ptr<IVideoCapture> cvCreateFileCapture_FFMPEG_proxy(const std::string &filename);
+Ptr<IVideoCapture> cvCreateFileCapture_FFMPEG_proxy(const std::string &filename, const VideoCaptureParameters& params);
 Ptr<IVideoWriter> cvCreateVideoWriter_FFMPEG_proxy(const std::string& filename, int fourcc,
                                                    double fps, const Size& frameSize,
                                                    const VideoWriterParameters& params);
 
-Ptr<IVideoCapture> createGStreamerCapture_file(const std::string& filename);
-Ptr<IVideoCapture> createGStreamerCapture_cam(int index);
+Ptr<IVideoCapture> createGStreamerCapture_file(const std::string& filename, const VideoCaptureParameters& params);
+Ptr<IVideoCapture> createGStreamerCapture_cam(int index, const VideoCaptureParameters& params);
 Ptr<IVideoWriter> create_GStreamer_writer(const std::string& filename, int fourcc,
                                           double fps, const Size& frameSize,
                                           const VideoWriterParameters& params);
 
-Ptr<IVideoCapture> create_MFX_capture(const std::string &filename);
+Ptr<IVideoCapture> create_MFX_capture(const std::string &filename, const VideoCaptureParameters& params);
 Ptr<IVideoWriter> create_MFX_writer(const std::string& filename, int _fourcc,
                                     double fps, const Size& frameSize,
                                     const VideoWriterParameters& params);
 
-Ptr<IVideoCapture> create_AVFoundation_capture_file(const std::string &filename);
-Ptr<IVideoCapture> create_AVFoundation_capture_cam(int index);
+Ptr<IVideoCapture> create_AVFoundation_capture_file(const std::string &filename, const VideoCaptureParameters& params);
+Ptr<IVideoCapture> create_AVFoundation_capture_cam(int index, const VideoCaptureParameters& params);
 Ptr<IVideoWriter> create_AVFoundation_writer(const std::string& filename, int fourcc,
                                              double fps, const Size& frameSize,
                                              const VideoWriterParameters& params);
 
-Ptr<IVideoCapture> create_WRT_capture(int device);
+Ptr<IVideoCapture> create_WRT_capture(int device, const VideoCaptureParameters& params);
 
-Ptr<IVideoCapture> cvCreateCapture_MSMF(int index);
-Ptr<IVideoCapture> cvCreateCapture_MSMF(const std::string& filename);
+Ptr<IVideoCapture> cvCreateCapture_MSMF(int index, const VideoCaptureParameters& params);
+Ptr<IVideoCapture> cvCreateCapture_MSMF(const std::string& filename, const VideoCaptureParameters& params);
 Ptr<IVideoWriter> cvCreateVideoWriter_MSMF(const std::string& filename, int fourcc,
                                            double fps, const Size& frameSize,
                                            const VideoWriterParameters& params);
 
-Ptr<IVideoCapture> create_DShow_capture(int index);
+Ptr<IVideoCapture> create_DShow_capture(int index, const VideoCaptureParameters& params);
 
-Ptr<IVideoCapture> create_V4L_capture_cam(int index);
-Ptr<IVideoCapture> create_V4L_capture_file(const std::string &filename);
+Ptr<IVideoCapture> create_V4L_capture_cam(int index, const VideoCaptureParameters& params);
+Ptr<IVideoCapture> create_V4L_capture_file(const std::string &filename, const VideoCaptureParameters& params);
 
-Ptr<IVideoCapture> create_OpenNI2_capture_cam( int index );
-Ptr<IVideoCapture> create_OpenNI2_capture_file( const std::string &filename );
+Ptr<IVideoCapture> create_OpenNI2_capture_cam(int index, const VideoCaptureParameters& params);
+Ptr<IVideoCapture> create_OpenNI2_capture_file(const std::string &filename);
 
-Ptr<IVideoCapture> create_Images_capture(const std::string &filename);
+Ptr<IVideoCapture> create_Images_capture(const std::string &filename, const VideoCaptureParameters& params);
 Ptr<IVideoWriter> create_Images_writer(const std::string& filename, int fourcc,
                                        double fps, const Size& frameSize,
                                        const VideoWriterParameters& params);
 
-Ptr<IVideoCapture> create_DC1394_capture(int index);
+Ptr<IVideoCapture> create_DC1394_capture(int index, const VideoCaptureParameters& params);
 
-Ptr<IVideoCapture> create_RealSense_capture(int index);
+Ptr<IVideoCapture> create_RealSense_capture(int index, const VideoCaptureParameters& params);
 
-Ptr<IVideoCapture> create_PvAPI_capture( int index );
+Ptr<IVideoCapture> create_PvAPI_capture(int index, const VideoCaptureParameters& params);
 
-Ptr<IVideoCapture> create_XIMEA_capture_cam( int index );
-Ptr<IVideoCapture> create_XIMEA_capture_file( const std::string &serialNumber );
+Ptr<IVideoCapture> create_XIMEA_capture_cam(int index, const VideoCaptureParameters& params);
+Ptr<IVideoCapture> create_XIMEA_capture_file(const std::string &serialNumber, const VideoCaptureParameters& params);
 
-Ptr<IVideoCapture> create_ueye_camera(int camera);
+Ptr<IVideoCapture> create_ueye_camera(int camera, const VideoCaptureParameters& params);
 
-Ptr<IVideoCapture> create_Aravis_capture( int index );
+Ptr<IVideoCapture> create_Aravis_capture(int index, const VideoCaptureParameters& params);
 
-Ptr<IVideoCapture> createMotionJpegCapture(const std::string& filename);
+Ptr<IVideoCapture> createMotionJpegCapture(const std::string& filename, const VideoCaptureParameters& params);
 Ptr<IVideoWriter> createMotionJpegWriter(const std::string& filename, int fourcc,
                                          double fps, const Size& frameSize,
                                          const VideoWriterParameters& params);
 
-Ptr<IVideoCapture> createGPhoto2Capture(int index);
-Ptr<IVideoCapture> createGPhoto2Capture(const std::string& deviceName);
+Ptr<IVideoCapture> createGPhoto2Capture(int index, const VideoCaptureParameters& params);
+Ptr<IVideoCapture> createGPhoto2Capture(const std::string& deviceName, const VideoCaptureParameters& params);
 
-Ptr<IVideoCapture> createXINECapture(const std::string &filename);
+Ptr<IVideoCapture> createXINECapture(const std::string &filename, const VideoCaptureParameters& params);
 
-Ptr<IVideoCapture> createAndroidCapture_file(const std::string &filename);
+Ptr<IVideoCapture> createAndroidCapture_file(const std::string &filename, const VideoCaptureParameters& params);
 
 bool VideoCapture_V4L_waitAny(
         const std::vector<VideoCapture>& streams,

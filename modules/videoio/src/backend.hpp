@@ -16,8 +16,8 @@ class IBackend
 {
 public:
     virtual ~IBackend() {}
-    virtual Ptr<IVideoCapture> createCapture(int camera) const = 0;
-    virtual Ptr<IVideoCapture> createCapture(const std::string &filename) const = 0;
+    virtual Ptr<IVideoCapture> createCapture(int camera, const VideoCaptureParameters& params) const = 0;
+    virtual Ptr<IVideoCapture> createCapture(const std::string &filename, const VideoCaptureParameters& params) const = 0;
     virtual Ptr<IVideoWriter> createWriter(const std::string& filename, int fourcc, double fps, const cv::Size& sz,
                                            const VideoWriterParameters& params) const = 0;
 };
@@ -31,8 +31,8 @@ public:
 
 //=============================================================================
 
-typedef Ptr<IVideoCapture> (*FN_createCaptureFile)(const std::string & filename);
-typedef Ptr<IVideoCapture> (*FN_createCaptureCamera)(int camera);
+typedef Ptr<IVideoCapture> (*FN_createCaptureFile)(const std::string & filename, const VideoCaptureParameters& params);
+typedef Ptr<IVideoCapture> (*FN_createCaptureCamera)(int camera, const VideoCaptureParameters& params);
 typedef Ptr<IVideoWriter>  (*FN_createWriter)(const std::string& filename, int fourcc, double fps, const Size& sz,
                                               const VideoWriterParameters& params);
 Ptr<IBackendFactory> createBackendFactory(FN_createCaptureFile createCaptureFile,

@@ -684,12 +684,39 @@ public:
 
     @overload
 
+    Parameters are same as the constructor VideoCapture(const String& filename, int apiPreference = CAP_ANY, bool const std::vector<int>& params)
+    The `params` parameter allows to specify extra parameters encoded as pairs (paramId_1, paramValue_1, paramId_2, paramValue_2, ... .)
+    see cv::VideoCaptureProperties
+
+    @return `true` if the file has been successfully opened
+
+    The method first calls VideoCapture::release to close the already opened file or camera.
+     */
+    CV_WRAP virtual bool open(const String& filename, int apiPreference, const std::vector<int>& params);
+
+    /** @brief  Opens a camera for video capturing
+
+    @overload
+
     Parameters are same as the constructor VideoCapture(int index, int apiPreference = CAP_ANY)
     @return `true` if the camera has been successfully opened.
 
     The method first calls VideoCapture::release to close the already opened file or camera.
     */
     CV_WRAP virtual bool open(int index, int apiPreference = CAP_ANY);
+
+    /** @brief Returns true if video capturing has been initialized already.
+
+    @overload
+
+    Parameters are same as the constructor VideoCapture(int index, int apiPreference = CAP_ANY)
+    The `params` parameter allows to specify extra parameters encoded as pairs (paramId_1, paramValue_1, paramId_2, paramValue_2, ... .)
+    see cv::VideoCaptureProperties
+    @return `true` if the camera has been successfully opened.
+
+    The method first calls VideoCapture::release to close the already opened file or camera.
+    */
+    CV_WRAP virtual bool open(int index, int apiPreference, const std::vector<int>& params);
 
     /** @brief Returns true if video capturing has been initialized already.
 

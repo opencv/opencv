@@ -102,7 +102,7 @@ public:
         close();
     }
 
-    virtual bool open(int);
+    virtual bool open(int) CV_OVERRIDE;
     virtual void close();
     virtual double getProperty(int) const CV_OVERRIDE;
     virtual bool setProperty(int, double) CV_OVERRIDE;
@@ -625,7 +625,7 @@ bool CvCaptureCAM_Aravis::startCapture()
     return false;
 }
 
-cv::Ptr<cv::IVideoCapture> cv::create_Aravis_capture( int index )
+cv::Ptr<cv::IVideoCapture> cv::create_Aravis_capture(int index, const cv::VideoCaptureParameters&)
 {
     CvCaptureCAM_Aravis* capture = new CvCaptureCAM_Aravis;
 

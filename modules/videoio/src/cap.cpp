@@ -89,13 +89,19 @@ VideoCapture::~VideoCapture()
 
 bool VideoCapture::open(const String& filename, int apiPreference)
 {
-    CV_TRACE_FUNCTION();
+    return open(filename, apiPreference, std::vector<int> {});
+}
+
+bool VideoCapture::open(const String& filename, int apiPreference, const std::vector<int>& params)
+{
+    CV_INSTRUMENT_REGION();
 
     if (isOpened())
     {
         release();
     }
 
+    const VideoCaptureParameters parameters(params);
     const std::vector<VideoBackendInfo> backends = cv::videoio_registry::getAvailableBackends_CaptureByFilename();
     for (size_t i = 0; i < backends.size(); i++)
     {
@@ -112,7 +118,7 @@ bool VideoCapture::open(const String& filename, int apiPreference)
             {
                 try
                 {
-                    icap = backend->createCapture(filename);
+                    icap = backend->createCapture(filename, parameters);
                     if (!icap.empty())
                     {
                         CV_CAPTURE_LOG_DEBUG(NULL,
@@ -182,6 +188,11 @@ bool VideoCapture::open(const String& filename, int apiPreference)
 
 bool VideoCapture::open(int cameraNum, int apiPreference)
 {
+    return open(cameraNum, apiPreference, std::vector<int> {});
+}
+
+bool VideoCapture::open(int cameraNum, int apiPreference, const std::vector<int>& params)
+{
     CV_TRACE_FUNCTION();
 
     if (isOpened())
@@ -200,6 +211,7 @@ bool VideoCapture::open(int cameraNum, int apiPreference)
         }
     }
 
+    const VideoCaptureParameters parameters(params);
     const std::vector<VideoBackendInfo> backends = cv::videoio_registry::getAvailableBackends_CaptureByIndex();
     for (size_t i = 0; i < backends.size(); i++)
     {
@@ -216,7 +228,7 @@ bool VideoCapture::open(int cameraNum, int apiPreference)
             {
                 try
                 {
-                    icap = backend->createCapture(cameraNum);
+                    icap = backend->createCapture(cameraNum, parameters);
                     if (!icap.empty())
                     {
                         CV_CAPTURE_LOG_DEBUG(NULL,

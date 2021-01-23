@@ -690,7 +690,7 @@ bool CvCaptureCAM_DC1394_v2_CPP::setProperty(int propId, double value)
 }
 
 
-cv::Ptr<cv::IVideoCapture> cv::create_DC1394_capture(int index)
+cv::Ptr<cv::IVideoCapture> cv::create_DC1394_capture(int index, const cv::VideoCaptureParameters&)
 {
     CvCaptureCAM_DC1394_v2_CPP* capture = new CvCaptureCAM_DC1394_v2_CPP;
     if (capture->open(index))
