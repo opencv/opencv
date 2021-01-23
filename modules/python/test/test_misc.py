@@ -98,13 +98,14 @@ class Bindings(NewOpenCVTests):
             no_exception_msg = 'Overload resolution failed without any exception for: "{}"'.format(msg)
             wrong_exception_msg = 'Overload resolution failed with wrong exception type for: "{}"'.format(msg)
             with self.assertRaises((cv.error, Exception), msg=no_exception_msg) as cm:
-                cv.utils.testOverloadResolution(*args, **kwargs)
+                res = cv.utils.testOverloadResolution(*args, **kwargs)
+                self.fail("Unexpected result for {}: '{}'".format(msg, res))
             self.assertEqual(type(cm.exception), cv.error, wrong_exception_msg)
 
         test_overload_resolution('wrong second arg type (keyword arg)', 5, point=(1, 2, 3))
         test_overload_resolution('wrong second arg type', 5, 2)
         test_overload_resolution('wrong first arg', 3.4, (12, 21))
-        # FIXIT: test_overload_resolution('wrong first arg, no second arg', 4.5)
+        test_overload_resolution('wrong first arg, no second arg', 4.5)
         test_overload_resolution('wrong args number for first overload', 3, (12, 21), 123)
         test_overload_resolution('wrong args number for second overload', (3, 12, 12, 1), (12, 21))
         # One of the common problems
