@@ -294,20 +294,20 @@ So, make sure [docker](https://www.docker.com/) is installed in your system and 
 @code{.bash}
 git clone https://github.com/opencv/opencv.git
 cd opencv
-docker run --rm -v $(pwd):/src -u $(id -u):$(id -g) emscripten/emsdk emcmake python3 ./dev/platforms/js/build_js.py build_js
+docker run --rm -v $(pwd):/src -u $(id -u):$(id -g) emscripten/emsdk emcmake python3 ./platforms/js/build_js.py build_js
 @endcode
 
 In Windows use the following PowerShell command:
 
 @code{.bash}
-docker run --rm --workdir /src -v "$(get-location):/src" "emscripten/emsdk" emcmake python3 ./dev/platforms/js/build_js.py build_js
+docker run --rm --workdir /src -v "$(get-location):/src" "emscripten/emsdk" emcmake python3 ./platforms/js/build_js.py build_js
 @endcode
 
 @warning
 The example uses latest version of emscripten. If the build fails you should try a version that is known to work fine which is `2.0.10` using the following command:
 
 @code{.bash}
-docker run --rm -v $(pwd):/src -u $(id -u):$(id -g) emscripten/emsdk:2.0.10 emcmake python3 ./dev/platforms/js/build_js.py build_js
+docker run --rm -v $(pwd):/src -u $(id -u):$(id -g) emscripten/emsdk:2.0.10 emcmake python3 ./platforms/js/build_js.py build_js
 @endcode
 
 ### Building the documentation with Docker
@@ -331,5 +331,5 @@ docker build . -t opencv-js-doc
 Now run the build command again, this time using the new image and passing `--build_doc`:
 
 @code{.bash}
-docker run --rm -v $(pwd):/src -u $(id -u):$(id -g) "opencv-js-doc" emcmake python3 ./dev/platforms/js/build_js.py build_js --build_doc
+docker run --rm -v $(pwd):/src -u $(id -u):$(id -g) "opencv-js-doc" emcmake python3 ./platforms/js/build_js.py build_js --build_doc
 @endcode
