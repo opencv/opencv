@@ -1,10 +1,10 @@
-//DaSiamRPN tracker.
-//Original paper: https://arxiv.org/abs/1808.06048
-//Link to original repo: https://github.com/foolwood/DaSiamRPN
-//Links to onnx models:
-//network:     https://www.dropbox.com/s/rr1lk9355vzolqv/dasiamrpn_model.onnx?dl=0
-//kernel_r1:   https://www.dropbox.com/s/999cqx5zrfi7w4p/dasiamrpn_kernel_r1.onnx?dl=0
-//kernel_cls1: https://www.dropbox.com/s/qvmtszx5h339a0w/dasiamrpn_kernel_cls1.onnx?dl=0
+// DaSiamRPN tracker.
+// Original paper: https://arxiv.org/abs/1808.06048
+// Link to original repo: https://github.com/foolwood/DaSiamRPN
+// Links to onnx models:
+// - network:     https://www.dropbox.com/s/rr1lk9355vzolqv/dasiamrpn_model.onnx?dl=0
+// - kernel_r1:   https://www.dropbox.com/s/999cqx5zrfi7w4p/dasiamrpn_kernel_r1.onnx?dl=0
+// - kernel_cls1: https://www.dropbox.com/s/qvmtszx5h339a0w/dasiamrpn_kernel_cls1.onnx?dl=0
 
 #include <iostream>
 #include <cmath>
@@ -61,15 +61,15 @@ struct trackerConfig
     }
 };
 
-void softmax(const Mat& src, Mat& dst);
-void elementMax(Mat& src);
-Mat generateHanningWindow(const trackerConfig& trackState);
-Mat generateAnchors(trackerConfig& trackState);
-Mat getSubwindow(Mat& img, const Rect2f& targetBox, float originalSize, Scalar avgChans);
-float trackerEval(Mat img, trackerConfig& trackState, Net& siamRPN);
-void trackerInit(Mat img, trackerConfig& trackState, Net& siamRPN, Net& siamKernelR1, Net& siamKernelCL1);
+static void softmax(const Mat& src, Mat& dst);
+static void elementMax(Mat& src);
+static Mat generateHanningWindow(const trackerConfig& trackState);
+static Mat generateAnchors(trackerConfig& trackState);
+static Mat getSubwindow(Mat& img, const Rect2f& targetBox, float originalSize, Scalar avgChans);
+static float trackerEval(Mat img, trackerConfig& trackState, Net& siamRPN);
+static void trackerInit(Mat img, trackerConfig& trackState, Net& siamRPN, Net& siamKernelR1, Net& siamKernelCL1);
 
-template <typename T>
+template <typename T> static
 T sizeCal(const T& w, const T& h)
 {
     T pad = (w + h) * T(0.5);
@@ -87,12 +87,13 @@ Mat sizeCal(const Mat& w, const Mat& h)
     return sz2;
 }
 
-int main(int argc, char** argv)
+static
+int run(int argc, char** argv)
 {
     // Parse command line arguments.
     CommandLineParser parser(argc, argv, keys);
 
-    if (argc == 1 || parser.has("help"))
+    if (parser.has("help"))
     {
         parser.printMessage();
         return 0;
@@ -120,52 +121,8 @@ int main(int argc, char** argv)
         std::cout << "siamRPN : " << net << std::endl;
         std::cout << "siamKernelCL1 : " << kernel_cls1 << std::endl;
         std::cout << "siamKernelR1 : " << kernel_r1 << std::endl;
-        return 1;
+        return 2;
     }
-
-    const std::string preWinName = "DaSiamRPN";
-    namedWindow(preWinName, WINDOW_AUTOSIZE);
-
-    // Open a video file or an image file or a camera stream.
-    VideoCapture cap;
-    Mat image;
-
-    if (inputName.empty() || (isdigit(inputName[0]) && inputName.size() == 1))
-    {
-        int c = inputName.empty() ? 0 : inputName[0] - '0';
-        if (!cap.open(c))
-        {
-            std::cout << "Capture from camera #" << c << " didn't work" << std::endl;
-            return -1;
-        }
-    }
-    else if (inputName.size())
-    {
-        inputName = samples::findFileOrKeep(inputName);
-        if (!cap.open(inputName))
-        {
-            std::cout << "Could not read " << inputName << std::endl;
-            return -1;
-        }
-    }
-
-    // Read the first image.
-    cap >> image;
-    if (image.empty())
-    {
-        std::cout << "Image reading error!" << std::endl;
-        return -1;
-    }
-
-    putText(image, "Select initial bounding box you want to track.", Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
-    putText(image, "And Press the ENTER key.", Point(0, 35), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
-
-    trackerConfig trackState;
-    trackState.update_scoreSize();
-
-    Rect selectRect = selectROI(preWinName, image);
-
-    trackState.targetBox = Rect2f { float(selectRect.x) + float(selectRect.width) / 2, float(selectRect.y) + float(selectRect.height) / 2, float(selectRect.width), float(selectRect.height) };
 
     // Set model backend.
     siamRPN.setPreferableBackend(backend);
@@ -175,44 +132,105 @@ int main(int argc, char** argv)
     siamKernelCL1.setPreferableBackend(backend);
     siamKernelCL1.setPreferableTarget(target);
 
+    const std::string winName = "DaSiamRPN";
+    namedWindow(winName, WINDOW_AUTOSIZE);
+
+    // Open a video file or an image file or a camera stream.
+    VideoCapture cap;
+
+    if (inputName.empty() || (isdigit(inputName[0]) && inputName.size() == 1))
+    {
+        int c = inputName.empty() ? 0 : inputName[0] - '0';
+        std::cout << "Trying to open camera #" << c << " ..." << std::endl;
+        if (!cap.open(c))
+        {
+            std::cout << "Capture from camera #" << c << " didn't work. Specify -i=<video> parameter to read from video file" << std::endl;
+            return 2;
+        }
+    }
+    else if (inputName.size())
+    {
+        inputName = samples::findFileOrKeep(inputName);
+        if (!cap.open(inputName))
+        {
+            std::cout << "Could not open: " << inputName << std::endl;
+            return 2;
+        }
+    }
+
+    // Read the first image.
+    Mat image;
+    cap >> image;
+    if (image.empty())
+    {
+        std::cerr << "Can't capture frame!" << std::endl;
+        return 2;
+    }
+
+    Mat image_select = image.clone();
+    putText(image_select, "Select initial bounding box you want to track.", Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
+    putText(image_select, "And Press the ENTER key.", Point(0, 35), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
+
+    Rect selectRect = selectROI(winName, image_select);
+    std::cout << "ROI=" << selectRect << std::endl;
+
+    trackerConfig trackState;
+    trackState.update_scoreSize();
+    trackState.targetBox = Rect2f(
+        float(selectRect.x) + float(selectRect.width) * 0.5f,  // FIXIT don't use center in Rect structures, it is confusing
+        float(selectRect.y) + float(selectRect.height) * 0.5f,
+        float(selectRect.width),
+        float(selectRect.height)
+    );
+
     // Set tracking template.
     trackerInit(image, trackState, siamRPN, siamKernelR1, siamKernelCL1);
 
     TickMeter tickMeter;
 
-    int count = 0;
-    while (1)
+    for (int count = 0; ; ++count)
     {
         cap >> image;
         if (image.empty())
         {
-            std::cerr << "Can't capture frame from video stream." << std::endl;
+            std::cerr << "Can't capture frame " << count << ". End of video stream?" << std::endl;
             break;
         }
+
         tickMeter.start();
-
         float score = trackerEval(image, trackState, siamRPN);
-
         tickMeter.stop();
 
-        std::cout << "img i = " << count << ", predicted score = " << score << std::endl;
+        Rect rect = {
+            int(trackState.targetBox.x - int(trackState.targetBox.width / 2)),
+            int(trackState.targetBox.y - int(trackState.targetBox.height / 2)),
+            int(trackState.targetBox.width),
+            int(trackState.targetBox.height)
+        };
+        std::cout << "frame " << count <<
+            ": predicted score=" << score <<
+            "  rect=" << rect <<
+            "  time=" << tickMeter.getTimeMilli() << "ms" <<
+            std::endl;
 
-        Rect rect = { int(trackState.targetBox.x - int(trackState.targetBox.width / 2)), int(trackState.targetBox.y - int(trackState.targetBox.height / 2)), int(trackState.targetBox.width), int(trackState.targetBox.height) };
-        rectangle(image, rect, Scalar(0, 255, 0), 2);
+        Mat render_image = image.clone();
+        rectangle(render_image, rect, Scalar(0, 255, 0), 2);
 
         std::string timeLabel = format("Inference time: %.2f ms", tickMeter.getTimeMilli());
-        std::string scoreLable = "Score: " + std::to_string(score);
-        putText(image, timeLabel, Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
-        putText(image, scoreLable, Point(0, 35), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
+        std::string scoreLabel = format("Score: %f", score);
+        putText(render_image, timeLabel, Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
+        putText(render_image, scoreLabel, Point(0, 35), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
+
+        imshow(winName, render_image);
 
         tickMeter.reset();
 
-        imshow(preWinName, image);
-        count++;
-
-        if (waitKey(1) == 27 /*ESC*/)
+        int c = waitKey(1);
+        if (c == 27 /*ESC*/)
             break;
     }
+
+    std::cout << "Exit" << std::endl;
     return 0;
 }
 
@@ -416,10 +434,10 @@ float trackerEval(Mat img, trackerConfig& trackState, Net& siamRPN)
 
     int bestID[] = { 0 };
     // Find the index of best score.
-    minMaxIdx(pscore.reshape(0, { trackState.anchorNum * trackState.scoreSize * trackState.scoreSize }), 0, 0, 0, bestID);
+    minMaxIdx(pscore.reshape(0, { trackState.anchorNum * trackState.scoreSize * trackState.scoreSize, 1 }), 0, 0, 0, bestID);
     delta = delta.reshape(0, { 4, trackState.anchorNum * trackState.scoreSize * trackState.scoreSize });
-    penalty = penalty.reshape(0, { trackState.anchorNum * trackState.scoreSize * trackState.scoreSize });
-    score = score.reshape(0, { trackState.anchorNum * trackState.scoreSize * trackState.scoreSize });
+    penalty = penalty.reshape(0, { trackState.anchorNum * trackState.scoreSize * trackState.scoreSize, 1 });
+    score = score.reshape(0, { trackState.anchorNum * trackState.scoreSize * trackState.scoreSize, 1 });
 
     int index[] = { 0, bestID[0] };
     Rect2f resBox = { 0, 0, 0, 0 };
@@ -484,4 +502,17 @@ void trackerInit(Mat img, trackerConfig& trackState, Net& siamRPN, Net& siamKern
 
     siamRPN.setParam(siamRPN.getLayerId("65"), 0, r1.reshape(0, r1_shape));
     siamRPN.setParam(siamRPN.getLayerId("68"), 0, cls1.reshape(0, cls1_shape));
+}
+
+int main(int argc, char **argv)
+{
+    try
+    {
+        return run(argc, argv);
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << "FATAL: C++ exception: " << e.what() << std::endl;
+        return 1;
+    }
 }
