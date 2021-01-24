@@ -1552,8 +1552,13 @@ template<typename _Tp> struct pyopencvVecConverter
                     break;
                 }
             }
+            if (i != n)
+            {
+                failmsg("Can't convert vector element for '%s', index=%d", info.name, i);
+            }
             return i == n;
         }
+        failmsg("Can't convert object to vector for '%s', unsupported type", info.name);
         return false;
     }
 
@@ -1772,7 +1777,15 @@ bool pyopencv_to(PyObject* obj, Rect& r, const ArgInfo& info)
     else
     {
         std::vector<int> value(4);
-        pyopencvVecConverter<int>::to(obj, value, info);
+        if (!pyopencvVecConverter<int>::to(obj, value, info))
+        {
+            return false;
+        }
+        if (value.size() != 4)
+        {
+            failmsg("Expected 4 values for '%s', got %d", info.name, (int)value.size());
+            return false;
+        }
         r = Rect(value[0], value[1], value[2], value[3]);
         return true;
     }
