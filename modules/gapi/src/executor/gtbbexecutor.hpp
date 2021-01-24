@@ -11,7 +11,11 @@
 #include <opencv2/cvconfig.h>
 #endif
 
-#if defined(HAVE_TBB)
+#ifdef HAVE_TBB
+#include <tbb/tbb.h>
+#include <tbb/task.h>
+#if TBB_INTERFACE_VERSION < 12000
+// TODO: TBB task API has been deprecated and removed in 12000
 
 #include <atomic>
 #include <vector>
@@ -98,6 +102,7 @@ void execute(prio_items_queue_t& q, tbb::task_arena& arena);
 
 }}} // namespace cv::gimpl::parallel
 
+#endif // TBB_INTERFACE_VERSION
 #endif // HAVE_TBB
 
 #endif // OPENCV_GAPI_TBB_EXECUTOR_HPP

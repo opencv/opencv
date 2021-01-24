@@ -6,7 +6,9 @@
 
 #include "gtbbexecutor.hpp"
 
-#if defined(HAVE_TBB)
+#if defined(HAVE_TBB) && (TBB_INTERFACE_VERSION < 12000)
+// TODO: TBB task API has been deprecated and removed in 12000
+
 #include "gapi_itt.hpp"
 
 #include <opencv2/gapi/own/assert.hpp>
@@ -442,4 +444,4 @@ std::ostream& cv::gimpl::parallel::operator<<(std::ostream& o, tile_node const& 
     return o;
 }
 
-#endif // HAVE_TBB
+#endif // HAVE_TBB && TBB_INTERFACE_VERSION
