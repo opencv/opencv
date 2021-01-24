@@ -17,11 +17,11 @@ using namespace cv;
 using namespace cv::dnn;
 
 const char *keys =
-        "{ help     h  |   | Print help message. }"
+        "{ help     h  |   | Print help message }"
         "{ input    i  |   | Full path to input video folder, the specific camera index. (empty for camera 0) }"
-        "{ net         | ./dasiamrpn_model.onnx | Full path to onnx model of net.}"
-        "{ kernel_cls1 | ./dasiamrpn_kernel_cls1.onnx | Full path to onnx model of net.}"
-        "{ kernel_r1   | ./dasiamrpn_kernel_r1.onnx | Full path to onnx model of net.}"
+        "{ net         | dasiamrpn_model.onnx | Path to onnx model of net}"
+        "{ kernel_cls1 | dasiamrpn_kernel_cls1.onnx | Path to onnx model of kernel_r1 }"
+        "{ kernel_r1   | dasiamrpn_kernel_r1.onnx | Path to onnx model of kernel_cls1 }"
         "{ backend     | 0 | Choose one of computation backends: "
                             "0: automatically (by default), "
                             "1: Halide language (http://halide-lang.org/), "
@@ -31,7 +31,8 @@ const char *keys =
                             "0: CPU target (by default), "
                             "1: OpenCL, "
                             "2: OpenCL fp16 (half-float precision), "
-                            "3: VPU }";
+                            "3: VPU }"
+;
 
 // Initial parameters of the model
 struct trackerConfig
@@ -45,14 +46,14 @@ struct trackerConfig
     int exemplarSize = 127;
     int instanceSize = 271;
     float contextAmount = 0.5f;
-    std::vector<float> ratios = {0.33f, 0.5f, 1.0f, 2.0f, 3.0f};
+    std::vector<float> ratios = { 0.33f, 0.5f, 1.0f, 2.0f, 3.0f };
     int anchorNum = int(ratios.size());
     Mat anchors;
     Mat windows;
     Scalar avgChans;
-    Size imgSize = {0,0};
-    Rect2f targetBox = {0,0,0,0};
-    int scoreSize = (instanceSize-exemplarSize)/totalStride+1;
+    Size imgSize = { 0, 0 };
+    Rect2f targetBox = { 0, 0, 0, 0 };
+    int scoreSize = (instanceSize - exemplarSize) / totalStride + 1;
 
     void update_scoreSize()
     {
@@ -60,33 +61,33 @@ struct trackerConfig
     }
 };
 
-void softmax(const Mat &src, Mat & dst);
-void elementMax(Mat & src);
-Mat generateHanningWindow(const trackerConfig &trackState);
-Mat generateAnchors(trackerConfig &trackState);
-Mat getSubwindow(Mat &img, const Rect2f &targetBox, float originalSize, Scalar avgChans);
-float trackerEval(Mat img, trackerConfig &trackState, Net &siamRPN);
-void trackerInit(Mat img, trackerConfig &trackState, Net &siamRPN, Net &siamKernelR1, Net &siamKernelCL1);
+void softmax(const Mat& src, Mat& dst);
+void elementMax(Mat& src);
+Mat generateHanningWindow(const trackerConfig& trackState);
+Mat generateAnchors(trackerConfig& trackState);
+Mat getSubwindow(Mat& img, const Rect2f& targetBox, float originalSize, Scalar avgChans);
+float trackerEval(Mat img, trackerConfig& trackState, Net& siamRPN);
+void trackerInit(Mat img, trackerConfig& trackState, Net& siamRPN, Net& siamKernelR1, Net& siamKernelCL1);
 
-template<typename T>
-T sizeCal(const T &w, const T &h)
+template <typename T>
+T sizeCal(const T& w, const T& h)
 {
-    T pad = (w + h)*T(0.5);
+    T pad = (w + h) * T(0.5);
     T sz2 = (w + pad) * (h + pad);
     return sqrt(sz2);
 }
 
-template<>
-Mat sizeCal(const Mat &w, const Mat &h)
+template <>
+Mat sizeCal(const Mat& w, const Mat& h)
 {
-    Mat pad = (w + h)*0.5;
+    Mat pad = (w + h) * 0.5;
     Mat sz2 = (w + pad).mul((h + pad));
 
     cv::sqrt(sz2, sz2);
     return sz2;
 }
 
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
     // Parse command line arguments.
     CommandLineParser parser(argc, argv, keys);
@@ -129,19 +130,19 @@ int main(int argc, char **argv)
     VideoCapture cap;
     Mat image;
 
-    if( inputName.empty() || (isdigit(inputName[0]) && inputName.size() == 1) )
+    if (inputName.empty() || (isdigit(inputName[0]) && inputName.size() == 1))
     {
-        int c = inputName.empty() ? 0 : inputName[0] - '0' ;
-        if(!cap.open(c))
+        int c = inputName.empty() ? 0 : inputName[0] - '0';
+        if (!cap.open(c))
         {
-            std::cout << "Capture from camera #" <<  c << " didn't work" << std::endl;
+            std::cout << "Capture from camera #" << c << " didn't work" << std::endl;
             return -1;
         }
     }
-    else if( inputName.size() )
+    else if (inputName.size())
     {
         inputName = samples::findFileOrKeep(inputName);
-        if(!cap.open( inputName ))
+        if (!cap.open(inputName))
         {
             std::cout << "Could not read " << inputName << std::endl;
             return -1;
@@ -152,7 +153,7 @@ int main(int argc, char **argv)
     cap >> image;
     if (image.empty())
     {
-        std::cout << "Image reading error!"<< std::endl;
+        std::cout << "Image reading error!" << std::endl;
         return -1;
     }
 
@@ -164,7 +165,7 @@ int main(int argc, char **argv)
 
     Rect selectRect = selectROI(preWinName, image);
 
-    trackState.targetBox = Rect2f{float(selectRect.x) + float(selectRect.width)/2, float(selectRect.y) + float(selectRect.height)/2, float(selectRect.width), float(selectRect.height)};
+    trackState.targetBox = Rect2f { float(selectRect.x) + float(selectRect.width) / 2, float(selectRect.y) + float(selectRect.height) / 2, float(selectRect.width), float(selectRect.height) };
 
     // Set model backend.
     siamRPN.setPreferableBackend(backend);
@@ -194,13 +195,13 @@ int main(int argc, char **argv)
 
         tickMeter.stop();
 
-        std::cout <<"img i = "<< count <<", predicted score = "<<score<< std::endl;
+        std::cout << "img i = " << count << ", predicted score = " << score << std::endl;
 
-        Rect rect = {int(trackState.targetBox.x - int(trackState.targetBox.width/2)), int(trackState.targetBox.y - int(trackState.targetBox.height/2)), int(trackState.targetBox.width), int(trackState.targetBox.height) };
-        rectangle(image, rect, Scalar(0,255,0), 2);
+        Rect rect = { int(trackState.targetBox.x - int(trackState.targetBox.width / 2)), int(trackState.targetBox.y - int(trackState.targetBox.height / 2)), int(trackState.targetBox.width), int(trackState.targetBox.height) };
+        rectangle(image, rect, Scalar(0, 255, 0), 2);
 
         std::string timeLabel = format("Inference time: %.2f ms", tickMeter.getTimeMilli());
-        std::string scoreLable = "Score: "+ std::to_string(score);
+        std::string scoreLable = "Score: " + std::to_string(score);
         putText(image, timeLabel, Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
         putText(image, scoreLable, Point(0, 35), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
 
@@ -209,20 +210,20 @@ int main(int argc, char **argv)
         imshow(preWinName, image);
         count++;
 
-        if (waitKey(1) == 27/*ESC*/)
+        if (waitKey(1) == 27 /*ESC*/)
             break;
     }
     return 0;
 }
 
-Mat generateHanningWindow(const trackerConfig &trackState)
+Mat generateHanningWindow(const trackerConfig& trackState)
 {
     Mat baseWindows, HanningWindows;
 
     createHanningWindow(baseWindows, Size(trackState.scoreSize, trackState.scoreSize), CV_32F);
-    baseWindows = baseWindows.reshape(0, {1, trackState.scoreSize, trackState.scoreSize});
+    baseWindows = baseWindows.reshape(0, { 1, trackState.scoreSize, trackState.scoreSize });
     HanningWindows = baseWindows.clone();
-    for(int i = 1; i < trackState.anchorNum; i++)
+    for (int i = 1; i < trackState.anchorNum; i++)
     {
         HanningWindows.push_back(baseWindows);
     }
@@ -230,7 +231,7 @@ Mat generateHanningWindow(const trackerConfig &trackState)
     return HanningWindows;
 }
 
-Mat generateAnchors(trackerConfig &trackState)
+Mat generateAnchors(trackerConfig& trackState)
 {
     int totalStride = trackState.totalStride, scales = trackState.scale, scoreSize = trackState.scoreSize;
     std::vector<float> ratios = trackState.ratios;
@@ -238,34 +239,34 @@ Mat generateAnchors(trackerConfig &trackState)
     int anchorNum = int(ratios.size());
     int size = totalStride * totalStride;
 
-    float ori = -(float(scoreSize/2))*float(totalStride);
+    float ori = -(float(scoreSize / 2)) * float(totalStride);
 
-    for(auto i = 0; i< anchorNum; i++)
+    for (auto i = 0; i < anchorNum; i++)
     {
-        int ws = int(sqrt(size/ratios[i]));
+        int ws = int(sqrt(size / ratios[i]));
         int hs = int(ws * ratios[i]);
 
-        float wws = float(ws)*scales;
-        float hhs = float(hs)*scales;
-        Rect2f anchor = {0,0,wws,hhs};
+        float wws = float(ws) * scales;
+        float hhs = float(hs) * scales;
+        Rect2f anchor = { 0, 0, wws, hhs };
         baseAnchors.push_back(anchor);
     }
 
-    int anchorIndex[] = {0,0,0,0};
-    const int sizes[] = {4, (int)ratios.size(), scoreSize, scoreSize};
+    int anchorIndex[] = { 0, 0, 0, 0 };
+    const int sizes[] = { 4, (int)ratios.size(), scoreSize, scoreSize };
     Mat anchors(4, sizes, CV_32F);
 
-    for(auto i = 0; i< scoreSize; i++)
+    for (auto i = 0; i < scoreSize; i++)
     {
-        for(auto j = 0; j < scoreSize; j++)
+        for (auto j = 0; j < scoreSize; j++)
         {
-            for(auto k = 0; k < anchorNum; k++)
+            for (auto k = 0; k < anchorNum; k++)
             {
                 anchorIndex[0] = 1, anchorIndex[1] = k, anchorIndex[2] = i, anchorIndex[3] = j;
-                anchors.at<float>(anchorIndex) = ori + totalStride*i;
+                anchors.at<float>(anchorIndex) = ori + totalStride * i;
 
                 anchorIndex[0] = 0;
-                anchors.at<float>(anchorIndex) = ori + totalStride*j;
+                anchors.at<float>(anchorIndex) = ori + totalStride * j;
 
                 anchorIndex[0] = 2;
                 anchors.at<float>(anchorIndex) = baseAnchors[k].width;
@@ -279,11 +280,11 @@ Mat generateAnchors(trackerConfig &trackState)
     return anchors;
 }
 
-Mat getSubwindow(Mat &img, const Rect2f &targetBox, float originalSize, Scalar avgChans)
+Mat getSubwindow(Mat& img, const Rect2f& targetBox, float originalSize, Scalar avgChans)
 {
     Mat zCrop, dst;
     Size imgSize = img.size();
-    float c = (originalSize+1)/2;
+    float c = (originalSize + 1) / 2;
     float xMin = (float)cvRound(targetBox.x - c);
     float xMax = xMin + originalSize - 1;
     float yMin = (float)cvRound(targetBox.y - c);
@@ -291,27 +292,28 @@ Mat getSubwindow(Mat &img, const Rect2f &targetBox, float originalSize, Scalar a
 
     int leftPad = (int)(fmax(0., -xMin));
     int topPad = (int)(fmax(0., -yMin));
-    int rightPad = (int)(fmax(0., xMax - imgSize.width +1));
-    int bottomPad = (int)(fmax(0., yMax - imgSize.height +1));
+    int rightPad = (int)(fmax(0., xMax - imgSize.width + 1));
+    int bottomPad = (int)(fmax(0., yMax - imgSize.height + 1));
 
     xMin = xMin + leftPad;
     xMax = xMax + leftPad;
     yMax = yMax + topPad;
     yMin = yMin + topPad;
 
-    if(topPad == 0 && bottomPad ==0 && leftPad == 0 && rightPad == 0)
+    if (topPad == 0 && bottomPad == 0 && leftPad == 0 && rightPad == 0)
     {
         img(Rect(int(xMin), int(yMin), int(xMax - xMin + 1), int(yMax - yMin + 1))).copyTo(zCrop);
-    } else
+    }
+    else
     {
-        copyMakeBorder(img, dst, topPad, bottomPad, leftPad, rightPad, BORDER_CONSTANT, avgChans );
+        copyMakeBorder(img, dst, topPad, bottomPad, leftPad, rightPad, BORDER_CONSTANT, avgChans);
         dst(Rect(int(xMin), int(yMin), int(xMax - xMin + 1), int(yMax - yMin + 1))).copyTo(zCrop);
     }
 
     return zCrop;
 }
 
-void softmax(const Mat &src, Mat & dst)
+void softmax(const Mat& src, Mat& dst)
 {
     Mat maxVal;
     cv::max(src.row(1), src.row(0), maxVal);
@@ -322,22 +324,21 @@ void softmax(const Mat &src, Mat & dst)
     exp(src, dst);
 
     Mat sumVal = dst.row(0) + dst.row(1);
-    dst.row(0) = dst.row(0)/sumVal;
-    dst.row(1) = dst.row(1)/sumVal;
-
+    dst.row(0) = dst.row(0) / sumVal;
+    dst.row(1) = dst.row(1) / sumVal;
 }
 
-void elementMax(Mat & src)
+void elementMax(Mat& src)
 {
-    int *p = src.size.p;
-    int index[] = {0,0,0,0};
-    for(int n = 0; n< *p; n++)
+    int* p = src.size.p;
+    int index[] = { 0, 0, 0, 0 };
+    for (int n = 0; n < *p; n++)
     {
-        for(int k = 0; k< *(p+1) ; k++)
+        for (int k = 0; k < *(p + 1); k++)
         {
-            for(int i = 0; i < *(p+2); i++)
+            for (int i = 0; i < *(p + 2); i++)
             {
-                for(int j = 0; j < *(p+3); j++)
+                for (int j = 0; j < *(p + 3); j++)
                 {
                     index[0] = n, index[1] = k, index[2] = i, index[3] = j;
                     float& v = src.at<float>(index);
@@ -348,7 +349,7 @@ void elementMax(Mat & src)
     }
 }
 
-float trackerEval(Mat img, trackerConfig &trackState, Net &siamRPN)
+float trackerEval(Mat img, trackerConfig& trackState, Net& siamRPN)
 {
     Rect2f targetBox = trackState.targetBox;
 
@@ -360,7 +361,7 @@ float trackerEval(Mat img, trackerConfig &trackState, Net &siamRPN)
 
     float searchSize = float((trackState.instanceSize - trackState.exemplarSize) / 2);
     float pad = searchSize / scaleZ;
-    float sx = sz + 2*pad;
+    float sx = sz + 2 * pad;
 
     Mat xCrop = getSubwindow(img, targetBox, (float)cvRound(sx), trackState.avgChans);
 
@@ -370,7 +371,7 @@ float trackerEval(Mat img, trackerConfig &trackState, Net &siamRPN)
     Mat delta, score;
     Mat sc, rc, penalty, pscore;
 
-    blobFromImage(xCrop, blob, 1.0,  Size(trackState.instanceSize, trackState.instanceSize), Scalar(), trackState.swapRB, false, CV_32F);
+    blobFromImage(xCrop, blob, 1.0, Size(trackState.instanceSize, trackState.instanceSize), Scalar(), trackState.swapRB, false, CV_32F);
 
     siamRPN.setInput(blob);
 
@@ -380,8 +381,8 @@ float trackerEval(Mat img, trackerConfig &trackState, Net &siamRPN)
     delta = outs[0];
     score = outs[1];
 
-    score = score.reshape(0, {2, trackState.anchorNum, trackState.scoreSize, trackState.scoreSize});
-    delta = delta.reshape(0, {4, trackState.anchorNum, trackState.scoreSize, trackState.scoreSize});
+    score = score.reshape(0, { 2, trackState.anchorNum, trackState.scoreSize, trackState.scoreSize });
+    delta = delta.reshape(0, { 4, trackState.anchorNum, trackState.scoreSize, trackState.scoreSize });
 
     softmax(score, score);
 
@@ -389,7 +390,7 @@ float trackerEval(Mat img, trackerConfig &trackState, Net &siamRPN)
     targetBox.height *= scaleZ;
 
     score = score.row(1);
-    score = score.reshape(0, {5,19,19});
+    score = score.reshape(0, { 5, 19, 19 });
 
     // Post processing
     delta.row(0) = delta.row(0).mul(trackState.anchors.row(2)) + trackState.anchors.row(0);
@@ -399,29 +400,29 @@ float trackerEval(Mat img, trackerConfig &trackState, Net &siamRPN)
     exp(delta.row(3), delta.row(3));
     delta.row(3) = delta.row(3).mul(trackState.anchors.row(3));
 
-    sc = sizeCal(delta.row(2), delta.row(3))/sizeCal(targetBox.width, targetBox.height);
+    sc = sizeCal(delta.row(2), delta.row(3)) / sizeCal(targetBox.width, targetBox.height);
     elementMax(sc);
 
-    rc = delta.row(2).mul(1/delta.row(3));
+    rc = delta.row(2).mul(1 / delta.row(3));
     rc = (targetBox.width / targetBox.height) / rc;
     elementMax(rc);
 
     // Calculating the penalty
-    exp(((rc.mul(sc)- 1.)*trackState.penaltyK*(-1.0)), penalty);
-    penalty = penalty.reshape(0,{trackState.anchorNum, trackState.scoreSize, trackState.scoreSize});
+    exp(((rc.mul(sc) - 1.) * trackState.penaltyK * (-1.0)), penalty);
+    penalty = penalty.reshape(0, { trackState.anchorNum, trackState.scoreSize, trackState.scoreSize });
 
     pscore = penalty.mul(score);
-    pscore = pscore*(1.0- trackState.windowInfluence) + trackState.windows * trackState.windowInfluence;
+    pscore = pscore * (1.0 - trackState.windowInfluence) + trackState.windows * trackState.windowInfluence;
 
-    int bestID[] = {0};
+    int bestID[] = { 0 };
     // Find the index of best score.
-    minMaxIdx(pscore.reshape(0, {trackState.anchorNum*trackState.scoreSize*trackState.scoreSize}), 0, 0, 0, bestID);
-    delta = delta.reshape(0, {4, trackState.anchorNum*trackState.scoreSize*trackState.scoreSize});
-    penalty = penalty.reshape(0, {trackState.anchorNum*trackState.scoreSize*trackState.scoreSize});
-    score = score.reshape(0, {trackState.anchorNum*trackState.scoreSize*trackState.scoreSize});
+    minMaxIdx(pscore.reshape(0, { trackState.anchorNum * trackState.scoreSize * trackState.scoreSize }), 0, 0, 0, bestID);
+    delta = delta.reshape(0, { 4, trackState.anchorNum * trackState.scoreSize * trackState.scoreSize });
+    penalty = penalty.reshape(0, { trackState.anchorNum * trackState.scoreSize * trackState.scoreSize });
+    score = score.reshape(0, { trackState.anchorNum * trackState.scoreSize * trackState.scoreSize });
 
-    int index[] = {0, bestID[0]};
-    Rect2f resBox = {0, 0, 0, 0};
+    int index[] = { 0, bestID[0] };
+    Rect2f resBox = { 0, 0, 0, 0 };
 
     resBox.x = delta.at<float>(index) / scaleZ;
     index[0] = 1;
@@ -438,19 +439,19 @@ float trackerEval(Mat img, trackerConfig &trackState, Net &siamRPN)
     targetBox.width /= scaleZ;
     targetBox.height /= scaleZ;
 
-    resBox.width = targetBox.width*(1 - lr) + resBox.width*lr;
-    resBox.height = targetBox.height*(1 - lr) + resBox.height*lr;
+    resBox.width = targetBox.width * (1 - lr) + resBox.width * lr;
+    resBox.height = targetBox.height * (1 - lr) + resBox.height * lr;
 
-    resBox.x = float(fmax(0., fmin(float(trackState.imgSize.width),  resBox.x)));
-    resBox.y = float(fmax(0., fmin(float(trackState.imgSize.height),  resBox.y)));
-    resBox.width = float(fmax(10., fmin(float(trackState.imgSize.width),  resBox.width)));
-    resBox.height = float(fmax(10., fmin(float(trackState.imgSize.height),  resBox.height)));
+    resBox.x = float(fmax(0., fmin(float(trackState.imgSize.width), resBox.x)));
+    resBox.y = float(fmax(0., fmin(float(trackState.imgSize.height), resBox.y)));
+    resBox.width = float(fmax(10., fmin(float(trackState.imgSize.width), resBox.width)));
+    resBox.height = float(fmax(10., fmin(float(trackState.imgSize.height), resBox.height)));
 
     trackState.targetBox = resBox;
     return score.at<float>(bestID);
 }
 
-void trackerInit(Mat img, trackerConfig &trackState, Net &siamRPN, Net &siamKernelR1, Net &siamKernelCL1)
+void trackerInit(Mat img, trackerConfig& trackState, Net& siamRPN, Net& siamKernelR1, Net& siamKernelCL1)
 {
     Rect2f targetBox = trackState.targetBox;
     Mat anchors = generateAnchors(trackState);
@@ -462,14 +463,14 @@ void trackerInit(Mat img, trackerConfig &trackState, Net &siamRPN, Net &siamKern
     trackState.imgSize = img.size();
 
     trackState.avgChans = mean(img);
-    float wc = targetBox.width + trackState.contextAmount*(targetBox.width + targetBox.height);
-    float hc = targetBox.height + trackState.contextAmount*(targetBox.width + targetBox.height);
+    float wc = targetBox.width + trackState.contextAmount * (targetBox.width + targetBox.height);
+    float hc = targetBox.height + trackState.contextAmount * (targetBox.width + targetBox.height);
     float sz = (float)cvRound(sqrt(wc * hc));
 
     Mat zCrop = getSubwindow(img, targetBox, sz, trackState.avgChans);
     static Mat blob;
 
-    blobFromImage(zCrop, blob, 1.0,  Size(trackState.exemplarSize, trackState.exemplarSize), Scalar(), trackState.swapRB, false, CV_32F);
+    blobFromImage(zCrop, blob, 1.0, Size(trackState.exemplarSize, trackState.exemplarSize), Scalar(), trackState.swapRB, false, CV_32F);
     siamRPN.setInput(blob);
     Mat out1;
     siamRPN.forward(out1, "63");
@@ -479,7 +480,7 @@ void trackerInit(Mat img, trackerConfig &trackState, Net &siamRPN, Net &siamKern
 
     Mat cls1 = siamKernelCL1.forward();
     Mat r1 = siamKernelR1.forward();
-    std::vector<int> r1_shape = {20, 256, 4, 4}, cls1_shape = {10, 256, 4, 4};
+    std::vector<int> r1_shape = { 20, 256, 4, 4 }, cls1_shape = { 10, 256, 4, 4 };
 
     siamRPN.setParam(siamRPN.getLayerId("65"), 0, r1.reshape(0, r1_shape));
     siamRPN.setParam(siamRPN.getLayerId("68"), 0, cls1.reshape(0, cls1_shape));
