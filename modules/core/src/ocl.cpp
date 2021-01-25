@@ -1149,14 +1149,14 @@ void OpenCLExecutionContext::release()
 }
 
 
+
 // true if we have initialized OpenCL subsystem with available platforms
-static bool g_isOpenCLActivated = false;
+static bool g_isOpenCLInitialized = false;
+static bool g_isOpenCLAvailable = false;
 
 bool haveOpenCL()
 {
     CV_TRACE_FUNCTION();
-    static bool g_isOpenCLInitialized = false;
-    static bool g_isOpenCLAvailable = false;
 
     if (!g_isOpenCLInitialized)
     {
@@ -1178,7 +1178,7 @@ bool haveOpenCL()
         {
             cl_uint n = 0;
             g_isOpenCLAvailable = ::clGetPlatformIDs(0, NULL, &n) == CL_SUCCESS;
-            g_isOpenCLActivated = n > 0;
+            g_isOpenCLAvailable &= n > 0;
             CV_LOG_INFO(NULL, "OpenCL: found " << n << " platforms");
         }
         catch (...)
@@ -1214,7 +1214,7 @@ bool useOpenCL()
 
 bool isOpenCLActivated()
 {
-    if (!g_isOpenCLActivated)
+    if (!g_isOpenCLAvailable)
         return false; // prevent unnecessary OpenCL activation via useOpenCL()->haveOpenCL() calls
     return useOpenCL();
 }
