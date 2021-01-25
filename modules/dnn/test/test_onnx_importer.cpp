@@ -706,6 +706,11 @@ TEST_P(Test_ONNX_layers, Mish)
     testONNXModels("mish");
 }
 
+TEST_P(Test_ONNX_layers, CalculatePads)
+{
+    testONNXModels("calc_pads");
+}
+
 TEST_P(Test_ONNX_layers, Conv1d)
 {
     testONNXModels("conv1d");
