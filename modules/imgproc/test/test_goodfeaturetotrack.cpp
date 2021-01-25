@@ -74,7 +74,7 @@ test_cornerEigenValsVecs( const Mat& src, Mat& eigenv, int block_size,
     CV_Assert( src.type() == CV_8UC1 || src.type() == CV_32FC1 );
     CV_Assert( eigenv.type() == CV_32FC1 );
     CV_Assert( ( src.rows == eigenv.rows ) &&
-               (((mode == MINEIGENVAL)||(mode == HARRIS)) && (src.cols == eigenv.cols)) );
+              (((mode == MINEIGENVAL)||(mode == HARRIS)) && (src.cols == eigenv.cols)) );
 
     int type = src.type();
     int ftype = CV_32FC1;
@@ -88,14 +88,13 @@ test_cornerEigenValsVecs( const Mat& src, Mat& eigenv, int block_size,
     cvtest::filter2D( src, dy2, ftype, kernel*kernel_scale, anchor, 0, borderType,borderValue );
 
     double denom = (1 << (aperture_size-1))*block_size;
-    denom = denom * denom;
 
     if( _aperture_size < 0 )
         denom *= 2.;
     if(type != ftype )
         denom *= 255.;
 
-    denom = 1./denom;
+    denom = 1. / (denom * denom);
 
     for( i = 0; i < src.rows; i++ )
     {
@@ -130,10 +129,9 @@ test_cornerEigenValsVecs( const Mat& src, Mat& eigenv, int block_size,
 
             for( j = 0; j < src.cols; j++ )
             {
-                double a = dx2p[j]*0.5f, b = dxdyp[j], c = dy2p[j]*0.5f;
-                //double d = sqrt( ( a - c )*( a - c ) + 4*b*b );
-                //eigenvp[j] = (float)( 0.5*(a + c - d));
-                eigenvp[j] = (float)((a + c) - std::sqrt((a - c)*(a - c) + b*b));
+                double a = dx2p[j], b = dxdyp[j], c = dy2p[j];
+                double d = sqrt( ( a - c )*( a - c ) + 4*b*b );
+                eigenvp[j] = (float)( 0.5*(a + c - d));
             }
         }
     }
@@ -160,8 +158,8 @@ test_cornerEigenValsVecs( const Mat& src, Mat& eigenv, int block_size,
 static void
 test_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
                               int maxCorners, double qualityLevel, double minDistance,
-                              InputArray _mask, int blockSize, int gradientSize,
-                              bool useHarrisDetector, double harrisK, OutputArray _corners_values)
+                              InputArray _mask, OutputArray _cornersQuality,
+                              int blockSize, int gradientSize, bool useHarrisDetector, double harrisK)
 {
 
     CV_Assert( qualityLevel > 0 && minDistance >= 0 && maxCorners >= 0 );
@@ -209,7 +207,7 @@ test_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
     }
 
     vector<Point2f> corners;
-    vector<float> corners_values;
+    vector<float> cornersQuality;
     size_t i, j, total = tmpCorners.size(), ncorners = 0;
 
     std::sort( tmpCorners.begin(), tmpCorners.end(), greaterThanPtr() );
@@ -279,8 +277,9 @@ test_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
             {
                 grid[y_cell*grid_width + x_cell].push_back(Point2f((float)x, (float)y));
 
+                cornersQuality.push_back(*tmpCorners[i]);
+
                 corners.push_back(Point2f((float)x, (float)y));
-                corners_values.push_back(eig.at<float>(y, x));
                 ++ncorners;
 
                 if( maxCorners > 0 && (int)ncorners == maxCorners )
@@ -292,12 +291,13 @@ test_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
     {
         for( i = 0; i < total; i++ )
         {
+            cornersQuality.push_back(*tmpCorners[i]);
+
             int ofs = (int)((const uchar*)tmpCorners[i] - eig.data);
             int y = (int)(ofs / eig.step);
             int x = (int)((ofs - y*eig.step)/sizeof(float));
 
             corners.push_back(Point2f((float)x, (float)y));
-            corners_values.push_back(eig.at<float>(y, x));
             ++ncorners;
 
             if( maxCorners > 0 && (int)ncorners == maxCorners )
@@ -306,7 +306,9 @@ test_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
     }
 
     Mat(corners).convertTo(_corners, _corners.fixedType() ? _corners.type() : CV_32F);
-    Mat(corners_values).convertTo(_corners_values, _corners_values.fixedType() ? _corners_values.type() : CV_32F);
+    if (_cornersQuality.needed()) {
+        Mat(cornersQuality).convertTo(_cornersQuality, _cornersQuality.fixedType() ? _cornersQuality.type() : CV_32F);
+    }
 
 }
 
@@ -330,9 +332,9 @@ protected:
 
     int maxCorners;
     vector<Point2f> corners;
-    vector<float> corners_values;
     vector<Point2f> Refcorners;
-    vector<float> Refcorners_values;
+    vector<float> cornersQuality;
+    vector<float> RefcornersQuality;
     double qualityLevel;
     double minDistance;
     int blockSize;
@@ -404,11 +406,11 @@ void CV_GoodFeatureToTTest::run_func()
                qualityLevel,
                minDistance,
                Mat(),
+               cornersQuality,
                blockSize,
                gradientSize,
                useHarrisDetector,
-               k,
-               corners_values);
+               k );
     }
     else
     {
@@ -423,11 +425,11 @@ void CV_GoodFeatureToTTest::run_func()
                qualityLevel,
                minDistance,
                Mat(),
+               cornersQuality,
                blockSize,
                gradientSize,
                useHarrisDetector,
-               k,
-               corners_values);
+               k );
     }
 }
 
@@ -449,11 +451,11 @@ int CV_GoodFeatureToTTest::validate_test_results( int test_case_idx )
                qualityLevel,
                minDistance,
                Mat(),
+               RefcornersQuality,
                blockSize,
                gradientSize,
                useHarrisDetector,
-               k,
-               Refcorners_values);
+               k );
     }
     else
     {
@@ -468,11 +470,11 @@ int CV_GoodFeatureToTTest::validate_test_results( int test_case_idx )
                qualityLevel,
                minDistance,
                Mat(),
+               RefcornersQuality,
                blockSize,
                gradientSize,
                useHarrisDetector,
-               k,
-               Refcorners_values);
+               k );
     }
 
     double e = cv::norm(corners, Refcorners); // TODO cvtest
@@ -488,7 +490,7 @@ int CV_GoodFeatureToTTest::validate_test_results( int test_case_idx )
 
         for(int i = 0; i < (int)std::min((unsigned int)(corners.size()), (unsigned int)(Refcorners.size())); i++){
             if ( (corners[i].x != Refcorners[i].x) || (corners[i].y != Refcorners[i].y))
-                printf("i = %i X %2.6f Xref %2.6f Y %2.6f Yref %2.6f\n",i,corners[i].x,Refcorners[i].x,corners[i].y,Refcorners[i].y);
+                printf("i = %i X %2.2f Xref %2.2f Y %2.2f Yref %2.2f\n",i,corners[i].x,Refcorners[i].x,corners[i].y,Refcorners[i].y);
         }
     }
     else
@@ -500,29 +502,17 @@ int CV_GoodFeatureToTTest::validate_test_results( int test_case_idx )
         ts->set_failed_test_info(cvtest::TS::OK);
     }
 
-    e = cv::norm(corners_values, Refcorners_values); // TODO cvtest
+    e = cv::norm(cornersQuality, RefcornersQuality, NORM_RELATIVE | NORM_INF);
 
     if (e > eps)
     {
-        TEST_MESSAGEL ("Number of features: Refcorners =  ", Refcorners.size())
-        TEST_MESSAGEL ("                    TestCorners = ", corners.size())
-        TEST_MESSAGE ("\n")
-
         ts->printf(cvtest::TS::CONSOLE, "actual error: %g, expected: %g", e, eps);
         ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
 
-        for(int i = 0; i < (int)std::min((unsigned int)(corners_values.size()), (unsigned int)(Refcorners_values.size())); i++){
-            if (corners_values[i] != Refcorners_values[i])
-                printf("Values %2.6f Values ref %2.6f\n",corners_values[i],Refcorners_values[i]);
+        for(int i = 0; i < (int)std::min((unsigned int)(cornersQuality.size()), (unsigned int)(cornersQuality.size())); i++) {
+            if (std::abs(cornersQuality[i] - RefcornersQuality[i]) > eps * std::max(cornersQuality[i], RefcornersQuality[i]))
+                printf("i = %i Quality %2.6f Quality ref %2.6f\n", i, cornersQuality[i], RefcornersQuality[i]);
         }
-    }
-    else
-    {
-        TEST_MESSAGEL (" Refcorners =  ", Refcorners.size())
-        TEST_MESSAGEL (" TestCorners = ", corners.size())
-        TEST_MESSAGE ("\n")
-
-        ts->set_failed_test_info(cvtest::TS::OK);
     }
 
     return BaseTest::validate_test_results(test_case_idx);

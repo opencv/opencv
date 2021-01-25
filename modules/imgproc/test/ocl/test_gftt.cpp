@@ -62,7 +62,7 @@ PARAM_TEST_CASE(GoodFeaturesToTrack, double, bool)
 
     TEST_DECLARE_INPUT_PARAMETER(src);
     UMat points, upoints;
-    std::vector<float> values, uvalues;
+    std::vector<float> quality, uquality;
 
     virtual void SetUp()
     {
@@ -101,26 +101,25 @@ OCL_TEST_P(GoodFeaturesToTrack, Accuracy)
 
         std::vector<Point2f> upts, pts;
 
-        OCL_OFF(cv::goodFeaturesToTrack(src_roi, points, maxCorners, qualityLevel, minDistance, noArray(), 3, 0, 0.04, values));
+        OCL_OFF(cv::goodFeaturesToTrack(src_roi, points, maxCorners, qualityLevel, minDistance, noArray(), quality));
         ASSERT_FALSE(points.empty());
-        ASSERT_FALSE(values.empty());
         UMatToVector(points, pts);
 
-        OCL_ON(cv::goodFeaturesToTrack(usrc_roi, upoints, maxCorners, qualityLevel, minDistance, noArray(), 3, 0, 0.04, uvalues));
+        OCL_ON(cv::goodFeaturesToTrack(usrc_roi, upoints, maxCorners, qualityLevel, minDistance, noArray(), uquality));
         ASSERT_FALSE(upoints.empty());
-        ASSERT_FALSE(uvalues.empty());
         UMatToVector(upoints, upts);
 
-        ASSERT_EQ(pts.size(), values.size());
+        ASSERT_EQ(pts.size(), quality.size());
+        ASSERT_EQ(upts.size(), uquality.size());
         ASSERT_EQ(upts.size(), pts.size());
-        ASSERT_EQ(uvalues.size(), values.size());
 
         int mistmatch = 0;
         for (size_t i = 0; i < pts.size(); ++i)
         {
-            Point2f a = upts[i], b = pts[i];
+            Point2i a = upts[i], b = pts[i];
 
-            bool eq = std::abs(a.x - b.x) < 1 && std::abs(a.y - b.y) < 1 && std::abs(values[i] - uvalues[i]) < 1;
+            bool eq = std::abs(a.x - b.x) < 1 && std::abs(a.y - b.y) < 1 &&
+                    std::abs(quality[i] - uquality[i]) <= 3.f * FLT_EPSILON * std::max(quality[i], uquality[i]);
 
             if (!eq)
                 ++mistmatch;
@@ -136,9 +135,10 @@ OCL_TEST_P(GoodFeaturesToTrack, EmptyCorners)
     generateTestData();
     usrc_roi.setTo(Scalar::all(0));
 
-    OCL_ON(cv::goodFeaturesToTrack(usrc_roi, upoints, maxCorners, qualityLevel, minDistance, uvalues));
+    OCL_ON(cv::goodFeaturesToTrack(usrc_roi, upoints, maxCorners, qualityLevel, minDistance, noArray(), uquality));
 
     ASSERT_TRUE(upoints.empty());
+    ASSERT_TRUE(uquality.empty());
 }
 
 OCL_INSTANTIATE_TEST_CASE_P(Imgproc, GoodFeaturesToTrack,
