@@ -25,10 +25,10 @@ struct Frame
 int main()
 {
     //! [Open streams]
-    // Open color stream
-    VideoCapture colorStream(CAP_V4L2);
     // Open depth stream
     VideoCapture depthStream(CAP_OPENNI2_ASTRA);
+    // Open color stream
+    VideoCapture colorStream(0, CAP_V4L2);
     //! [Open streams]
 
     // Check that stream has opened
