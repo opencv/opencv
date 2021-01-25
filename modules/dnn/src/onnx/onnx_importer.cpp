@@ -1166,12 +1166,46 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
             {
                 Mat inp0 = getBlob(node_proto, 0);
                 Mat inp1 = getBlob(node_proto, 1);
-                if (inp0.size != inp1.size && inp1.total() != 1)
-                    CV_Error(Error::StsNotImplemented, "Constant multiply with different shapes");
 
-                Mat out = isDiv ? inp0 / inp1 : inp0.mul(inp1);
-                out = out.reshape(1, inp0.dims, inp0.size);
-                out.dims = inp0.dims;  // to workaround dims == 1
+                if (inp0.size != inp1.size && (inp0.total() != 1 || inp1.total() != 1))
+                    CV_Error_(Error::StsNotImplemented, ("Different shapes case is not supported with constant inputs: %s", layer_type.c_str()));
+
+                if (inp0.total() == 1 && inp1.total() == 1 && inp0.dims != inp1.dims)
+                {
+                    if (inp0.dims < inp1.dims)
+                    {
+                        inp0 = inp0.reshape(1, inp1.dims, inp1.size);
+                        inp0.dims = inp1.dims;
+                    }
+                    else
+                    {
+                        inp1 = inp1.reshape(1, inp0.dims, inp0.size);
+                        inp1.dims = inp0.dims;
+                    }
+                }
+
+                Mat out;
+                if (inp0.total() != inp1.total())
+                {
+                    if (inp0.total() == 1)
+                    {
+                        float coeff = isDiv ? 1.0 / inp0.at<float>(0) : inp0.at<float>(0);
+                        multiply(inp1, coeff, out);
+                    }
+                    else
+                    {
+                        float coeff = isDiv ? 1.0 / inp1.at<float>(0) : inp1.at<float>(0);
+                        multiply(inp0, coeff, out);
+                    }
+
+                }
+                else
+                {
+                    out = isDiv ? inp0 / inp1 : inp0.mul(inp1);
+                }
+
+                if (inp0.dims == 1 && inp1.dims == 1)
+                    out.dims = 1;  // to workaround dims == 1
                 addConstant(layerParams.name, out);
                 return;
             }
@@ -1744,6 +1778,7 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
                     }
                 }
 
+                // Concat-1 has default value for axis is 1: https://github.com/onnx/onnx/blob/master/docs/Changelog.md#Concat-1
                 int axis = layerParams.get<int>("axis", 1);
                 for (size_t i = 0; i < inputs.size(); ++i)
                 {
