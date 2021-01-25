@@ -1233,3 +1233,15 @@ class Mish(nn.Module):
 x = Variable(torch.randn([1, 2, 2, 2]))
 model = Mish()
 save_data_and_model("mish", x, model)
+
+class PadCalculation(nn.Module):
+    def forward(self, x):
+        y = F.max_pool2d(x, kernel_size=2)
+        diff_h = x.shape[2] - y.shape[2]
+        diff_w = x.shape[3] - y.shape[3]
+        y = F.pad(y, [diff_w // 2, diff_w - diff_w // 2, diff_h // 2, diff_h - diff_h // 2])
+        return y
+
+x = Variable(torch.randn([1, 1, 3, 4]))
+model = PadCalculation()
+save_data_and_model("calc_pads", x, model, version=11)
