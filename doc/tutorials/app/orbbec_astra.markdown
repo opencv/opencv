@@ -16,7 +16,7 @@ camera interface.
 
 ### Installation Instructions
 
-In order to use a depth sensor with OpenCV you should do the following steps:
+In order to use the Astra camera's depth sensor with OpenCV you should do the following steps:
 
 -#  Download the latest version of Orbbec OpenNI SDK (from here <https://orbbec3d.com/develop/>).
     Unzip the archive, choose the build according to your operating system and follow installation
@@ -72,29 +72,32 @@ In order to use a depth sensor with OpenCV you should do the following steps:
 
 ### Code
 
-The Astra Pro camera has two sensors -- a depth sensor and a color sensor. The depth sensors
+The Astra Pro camera has two sensors -- a depth sensor and a color sensor. The depth sensor
 can be read using the OpenNI interface with @ref cv::VideoCapture class. The video stream is
-not available through OpenNI API and is only provided through the regular camera interface.
+not available through OpenNI API and is only provided via the regular camera interface.
 So, to get both depth and color frames, two @ref cv::VideoCapture objects should be created:
 
 @snippetlineno samples/cpp/tutorial_code/videoio/orbbec_astra/orbbec_astra.cpp Open streams
 
-The first object will use the Video4Linux2 interface to access the color sensor. The second one
-is using OpenNI2 API to retrieve depth data.
+The first object will use the OpenNI2 API to retrieve depth data. The second one uses the
+Video4Linux2 interface to access the color sensor. Note that the example above assumes that
+the Astra camera is the first camera in the system. If you have more than one camera connected,
+you may need to explicitly set the proper camera number.
 
 Before using the created VideoCapture objects you may want to set up stream parameters by setting
 objects' properties. The most important parameters are frame width, frame height and fps.
-For this example, we’ll configure width and height of both streams to VGA resolution as that’s
-the maximum resolution available for both sensors and we’d like both stream parameters to be the same:
+For this example, we’ll configure width and height of both streams to VGA resolution, which is
+the maximum resolution available for both sensors, and we’d like both stream parameters to be the
+same for easier color-to-depth data registration:
 
 @snippetlineno samples/cpp/tutorial_code/videoio/orbbec_astra/orbbec_astra.cpp Setup streams
 
-For setting and getting some property of sensor data generators use @ref cv::VideoCapture::set and
+For setting and retrieving some property of sensor data generators use @ref cv::VideoCapture::set and
 @ref cv::VideoCapture::get methods respectively, e.g. :
 
 @snippetlineno samples/cpp/tutorial_code/videoio/orbbec_astra/orbbec_astra.cpp Get properties
 
-The following properties of cameras available through OpenNI interfaces are supported for the depth
+The following properties of cameras available through OpenNI interface are supported for the depth
 generator:
 
 -   @ref cv::CAP_PROP_FRAME_WIDTH -- Frame width in pixels.
@@ -113,7 +116,7 @@ generator:
 -   @ref cv::CAP_PROP_OPENNI_FRAME_MAX_DEPTH -- A maximum supported depth of the camera in mm.
 -   @ref cv::CAP_PROP_OPENNI_BASELINE -- Baseline value in mm.
 
-After the VideoCapture objects are set up you can start reading frames from them.
+After the VideoCapture objects have been set up, you can start reading frames from them.
 
 @note
     OpenCV's VideoCapture provides synchronous API, so you have to grab frames in a new thread
@@ -138,11 +141,12 @@ VideoCapture can retrieve the following data:
 
 -#  data given from the color sensor is a regular BGR image (CV_8UC3).
 
-When new data are available a reading thread notifies the main thread using a condition variable.
-A frame is stored in the ordered list -- the first frame is the latest one. As depth and color frames
-are read from independent sources two video streams may become out of sync even when both streams
-are set up for the same frame rate. A post-synchronization procedure can be applied to the streams
-to combine depth and color frames into pairs. The sample code below demonstrates this procedure:
+When new data are available, each reading thread notifies the main thread using a condition variable.
+A frame is stored in the ordered list -- the first frame in the list is the earliest captured,
+the last frame is the latest captured. As depth and color frames are read from independent sources
+two video streams may become out of sync even when both streams are set up for the same frame rate.
+A post-synchronization procedure can be applied to the streams to combine depth and color frames into
+pairs. The sample code below demonstrates this procedure:
 
 @snippetlineno samples/cpp/tutorial_code/videoio/orbbec_astra/orbbec_astra.cpp Pair frames
 
