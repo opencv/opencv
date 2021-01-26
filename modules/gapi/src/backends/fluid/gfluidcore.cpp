@@ -1052,14 +1052,23 @@ CV_ALWAYS_INLINE int absdiffc_simd_c1c2c4<uchar>(const uchar in[], uchar out[],
         return 0;
 
     int x = 0;
+    v_uint16 ld0, ld1;
     for (;;)
     {
         for (; x <= length - nlanes; x += nlanes)
         {
+#if 1
+            v_expand(vx_load(in + x), ld0, ld1);
+            v_float32 a1 = v_cvt_f32(v_expand_low(ld0));
+            v_float32 a2 = v_cvt_f32(v_expand_high(ld0));
+            v_float32 a3 = v_cvt_f32(v_expand_low(ld1));
+            v_float32 a4 = v_cvt_f32(v_expand_high(ld1));
+#else
             v_float32 a1 = v_cvt_f32(vx_load_expand_q(in + x));
             v_float32 a2 = v_cvt_f32(vx_load_expand_q(in + x + nlanes / 4));
             v_float32 a3 = v_cvt_f32(vx_load_expand_q(in + x + nlanes / 2));
             v_float32 a4 = v_cvt_f32(vx_load_expand_q(in + x + 3 * nlanes / 4));
+#endif
 
             vx_store(&out[x], v_pack_u(v_pack(v_round(v_absdiff(a1, s)),
                                               v_round(v_absdiff(a2, s))),
@@ -1177,7 +1186,9 @@ CV_ALWAYS_INLINE int absdiffc_simd_c3_impl<uchar>(const uchar in[], uchar out[],
         return 0;
 
     int x = 0;
+#if 0
     v_float32 vectors[num_vectors];
+
     for (;;)
     {
         for (; x <= length - 3 * nlanes; x += 3 * nlanes)
@@ -1188,21 +1199,59 @@ CV_ALWAYS_INLINE int absdiffc_simd_c3_impl<uchar>(const uchar in[], uchar out[],
             }
 
             vx_store(&out[x], v_pack_u(v_pack(v_round(v_absdiff(vectors[0], s1)),
-                                              v_round(v_absdiff(vectors[1], s2))),
-                                       v_pack(v_round(v_absdiff(vectors[2], s3)),
-                                              v_round(v_absdiff(vectors[3], s1)))));
+                v_round(v_absdiff(vectors[1], s2))),
+                v_pack(v_round(v_absdiff(vectors[2], s3)),
+                    v_round(v_absdiff(vectors[3], s1)))));
 
             vx_store(&out[x + nlanes], v_pack_u(v_pack(v_round(v_absdiff(vectors[4], s2)),
-                                                       v_round(v_absdiff(vectors[5], s3))),
-                                                v_pack(v_round(v_absdiff(vectors[6], s1)),
-                                                       v_round(v_absdiff(vectors[7], s2)))));
+                v_round(v_absdiff(vectors[5], s3))),
+                v_pack(v_round(v_absdiff(vectors[6], s1)),
+                    v_round(v_absdiff(vectors[7], s2)))));
 
             vx_store(&out[x + 2 * nlanes], v_pack_u(v_pack(v_round(v_absdiff(vectors[8], s3)),
-                                                           v_round(v_absdiff(vectors[9], s1))),
-                                                    v_pack(v_round(v_absdiff(vectors[10], s2)),
-                                                           v_round(v_absdiff(vectors[11], s3)))));
+                v_round(v_absdiff(vectors[9], s1))),
+                v_pack(v_round(v_absdiff(vectors[10], s2)),
+                    v_round(v_absdiff(vectors[11], s3)))));
         }
+#else
+    v_uint16 ld0, ld1, ld2, ld3, ld4, ld5;
+    for (;;)
+    {
+        for (; x <= length - 3 * nlanes; x += 3 * nlanes)
+        {
+            v_expand(vx_load(in + x), ld0, ld1);
+            v_expand(vx_load(in + x + nlanes), ld2, ld3);
+            v_expand(vx_load(in + x + 2 * nlanes), ld4, ld5);
 
+            v_float32 a1 = v_cvt_f32(v_expand_low(ld0));
+            v_float32 a2 = v_cvt_f32(v_expand_high(ld0));
+            v_float32 a3 = v_cvt_f32(v_expand_low(ld1));
+            v_float32 a4 = v_cvt_f32(v_expand_high(ld1));
+            v_float32 a5 = v_cvt_f32(v_expand_low(ld2));
+            v_float32 a6 = v_cvt_f32(v_expand_high(ld2));
+            v_float32 a7 = v_cvt_f32(v_expand_low(ld3));
+            v_float32 a8 = v_cvt_f32(v_expand_high(ld3));
+            v_float32 a9 = v_cvt_f32(v_expand_low(ld4));
+            v_float32 a10 = v_cvt_f32(v_expand_high(ld4));
+            v_float32 a11 = v_cvt_f32(v_expand_low(ld5));
+            v_float32 a12 = v_cvt_f32(v_expand_high(ld5));
+
+            vx_store(&out[x], v_pack_u(v_pack(v_round(v_absdiff(a1, s1)),
+                                              v_round(v_absdiff(a2, s2))),
+                                       v_pack(v_round(v_absdiff(a3, s3)),
+                                              v_round(v_absdiff(a4, s1)))));
+
+            vx_store(&out[x + nlanes], v_pack_u(v_pack(v_round(v_absdiff(a5, s2)),
+                                                       v_round(v_absdiff(a6, s3))),
+                                                v_pack(v_round(v_absdiff(a7, s1)),
+                                                       v_round(v_absdiff(a8, s2)))));
+
+            vx_store(&out[x + 2 * nlanes], v_pack_u(v_pack(v_round(v_absdiff(a9, s3)),
+                                                           v_round(v_absdiff(a10, s1))),
+                                                    v_pack(v_round(v_absdiff(a11, s2)),
+                                                           v_round(v_absdiff(a12, s3)))));
+        }
+#endif
         if (x < length && (in != out))
         {
             x = length - 3 * nlanes;
