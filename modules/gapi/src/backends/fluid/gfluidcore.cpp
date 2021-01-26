@@ -29,35 +29,6 @@
 #include <cstdlib>
 
 namespace cv {
-#if CV_SIMD
-#if CV_AVX512_SKX
-inline v_float32x16 v_cvt_f32(const v_uint32x16& a)
-{
-    return v_float32x16(_mm512_cvtepi32_ps(a.val));
-}
-#endif
-
-#if CV_AVX2
-inline v_float32x8 v_cvt_f32(const v_uint32x8& a)
-{
-    return v_float32x8(_mm256_cvtepi32_ps(a.val));
-}
-#endif
-
-#if CV_SSE2
-inline v_float32x4 v_cvt_f32(const v_uint32x4& a)
-{
-    return v_float32x4(_mm_cvtepi32_ps(a.val));
-}
-#endif
-#if CV_NEON
-inline v_float32x4 v_cvt_f32(const v_uint32x4& a)
-{
-    return v_float32x4(vcvtq_f32_u32(a.val));
-}
-#endif
-#endif  // CV_SIMD
-
 namespace gapi {
 namespace fluid {
 
@@ -1002,6 +973,21 @@ static void run_arithm_s(DST out[], const SRC in[], int width, int chan,
 }
 
 #if CV_SIMD
+CV_ALWAYS_INLINE v_float32 v_load_f32(const ushort* in)
+{
+    return v_cvt_f32(v_reinterpret_as_s32(vx_load_expand(in)));
+}
+
+CV_ALWAYS_INLINE v_float32 v_load_f32(const short* in)
+{
+    return v_cvt_f32(vx_load_expand(in));
+}
+
+CV_ALWAYS_INLINE v_float32 v_load_f32(const uchar* in)
+{
+    return v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(in)));
+}
+
 CV_ALWAYS_INLINE void absdiffc_short_store_c1c2c4(short* out_ptr, const v_int32& c1, const v_int32& c2)
 {
     vx_store(out_ptr, v_pack(c1, c2));
@@ -1016,7 +1002,12 @@ template<typename T>
 CV_ALWAYS_INLINE int absdiffc_simd_c1c2c4(const T in[], T out[],
                                           const v_float32& s, const int length)
 {
-    constexpr int nlanes = static_cast<int>(v_uint16::nlanes);
+    CV_StaticAssert((std::is_same<T, ushort>::value) ||
+                    (std::is_same<T, short>::value),
+                    "This templated overload is only for short or ushort type combinations.");
+
+    constexpr int nlanes = (std::is_same<T, ushort>::value) ? static_cast<int>(v_uint16::nlanes) :
+                                                              static_cast<int>(v_int16::nlanes);
     if (length < nlanes)
         return 0;
 
@@ -1025,8 +1016,8 @@ CV_ALWAYS_INLINE int absdiffc_simd_c1c2c4(const T in[], T out[],
     {
         for (; x <= length - nlanes; x += nlanes)
         {
-            v_float32 a1 = v_cvt_f32(vx_load_expand(in + x));
-            v_float32 a2 = v_cvt_f32(vx_load_expand(in + x + nlanes / 2));
+            v_float32 a1 = v_load_f32(in + x);
+            v_float32 a2 = v_load_f32(in + x + nlanes / 2);
 
             absdiffc_short_store_c1c2c4(&out[x], v_round(v_absdiff(a1, s)),
                                                  v_round(v_absdiff(a2, s)));
@@ -1057,18 +1048,10 @@ CV_ALWAYS_INLINE int absdiffc_simd_c1c2c4<uchar>(const uchar in[], uchar out[],
     {
         for (; x <= length - nlanes; x += nlanes)
         {
-#if 1
-            v_expand(vx_load(in + x), ld0, ld1);
-            v_float32 a1 = v_cvt_f32(v_expand_low(ld0));
-            v_float32 a2 = v_cvt_f32(v_expand_high(ld0));
-            v_float32 a3 = v_cvt_f32(v_expand_low(ld1));
-            v_float32 a4 = v_cvt_f32(v_expand_high(ld1));
-#else
-            v_float32 a1 = v_cvt_f32(vx_load_expand_q(in + x));
-            v_float32 a2 = v_cvt_f32(vx_load_expand_q(in + x + nlanes / 4));
-            v_float32 a3 = v_cvt_f32(vx_load_expand_q(in + x + nlanes / 2));
-            v_float32 a4 = v_cvt_f32(vx_load_expand_q(in + x + 3 * nlanes / 4));
-#endif
+            v_float32 a1 = v_load_f32(in + x);
+            v_float32 a2 = v_load_f32(in + x + nlanes / 4);
+            v_float32 a3 = v_load_f32(in + x + nlanes / 2);
+            v_float32 a4 = v_load_f32(in + x + 3 * nlanes / 4);
 
             vx_store(&out[x], v_pack_u(v_pack(v_round(v_absdiff(a1, s)),
                                               v_round(v_absdiff(a2, s))),
@@ -1139,7 +1122,12 @@ CV_ALWAYS_INLINE int absdiffc_simd_c3_impl(const T in[], T out[],
                                            const v_float32& s1, const v_float32& s2,
                                            const v_float32& s3, const int length)
 {
-    constexpr int nlanes = static_cast<int>(v_uint16::nlanes);
+    CV_StaticAssert((std::is_same<T, ushort>::value) ||
+                    (std::is_same<T, short>::value),
+                    "This templated overload is only for short or ushort type combinations.");
+
+    constexpr int nlanes = (std::is_same<T, ushort>::value) ? static_cast<int>(v_uint16::nlanes):
+                                                              static_cast<int>(v_int16::nlanes);
 
     if (length < 3 * nlanes)
         return 0;
@@ -1149,12 +1137,12 @@ CV_ALWAYS_INLINE int absdiffc_simd_c3_impl(const T in[], T out[],
     {
         for (; x <= length - 3 * nlanes; x += 3 * nlanes)
         {
-            v_float32 a1 = v_cvt_f32(vx_load_expand(in + x));
-            v_float32 a2 = v_cvt_f32(vx_load_expand(in + x + nlanes / 2));
-            v_float32 a3 = v_cvt_f32(vx_load_expand(in + x + nlanes));
-            v_float32 a4 = v_cvt_f32(vx_load_expand(in + x + 3 * nlanes / 2));
-            v_float32 a5 = v_cvt_f32(vx_load_expand(in + x + 2 * nlanes));
-            v_float32 a6 = v_cvt_f32(vx_load_expand(in + x + 5 * nlanes / 2));
+            v_float32 a1 = v_load_f32(in + x);
+            v_float32 a2 = v_load_f32(in + x + nlanes / 2);
+            v_float32 a3 = v_load_f32(in + x + nlanes);
+            v_float32 a4 = v_load_f32(in + x + 3 * nlanes / 2);
+            v_float32 a5 = v_load_f32(in + x + 2 * nlanes);
+            v_float32 a6 = v_load_f32(in + x + 5 * nlanes / 2);
 
             absdiffc_short_store_c3(&out[x], v_round(v_absdiff(a1, s1)),
                                              v_round(v_absdiff(a2, s2)),
@@ -1186,7 +1174,7 @@ CV_ALWAYS_INLINE int absdiffc_simd_c3_impl<uchar>(const uchar in[], uchar out[],
         return 0;
 
     int x = 0;
-#if 0
+
     v_float32 vectors[num_vectors];
 
     for (;;)
@@ -1195,63 +1183,25 @@ CV_ALWAYS_INLINE int absdiffc_simd_c3_impl<uchar>(const uchar in[], uchar out[],
         {
             for (int i = 0; i < num_vectors; ++i)
             {
-                vectors[i] = v_cvt_f32(vx_load_expand_q(reinterpret_cast<const uchar*>(in + x + i * nlanes / 4)));
+                vectors[i] = v_load_f32(in + x + i * nlanes / 4);
             }
 
             vx_store(&out[x], v_pack_u(v_pack(v_round(v_absdiff(vectors[0], s1)),
-                v_round(v_absdiff(vectors[1], s2))),
-                v_pack(v_round(v_absdiff(vectors[2], s3)),
-                    v_round(v_absdiff(vectors[3], s1)))));
+                                              v_round(v_absdiff(vectors[1], s2))),
+                                       v_pack(v_round(v_absdiff(vectors[2], s3)),
+                                              v_round(v_absdiff(vectors[3], s1)))));
 
             vx_store(&out[x + nlanes], v_pack_u(v_pack(v_round(v_absdiff(vectors[4], s2)),
-                v_round(v_absdiff(vectors[5], s3))),
-                v_pack(v_round(v_absdiff(vectors[6], s1)),
-                    v_round(v_absdiff(vectors[7], s2)))));
+                                                       v_round(v_absdiff(vectors[5], s3))),
+                                                v_pack(v_round(v_absdiff(vectors[6], s1)),
+                                                       v_round(v_absdiff(vectors[7], s2)))));
 
             vx_store(&out[x + 2 * nlanes], v_pack_u(v_pack(v_round(v_absdiff(vectors[8], s3)),
-                v_round(v_absdiff(vectors[9], s1))),
-                v_pack(v_round(v_absdiff(vectors[10], s2)),
-                    v_round(v_absdiff(vectors[11], s3)))));
+                                                           v_round(v_absdiff(vectors[9], s1))),
+                                                    v_pack(v_round(v_absdiff(vectors[10], s2)),
+                                                           v_round(v_absdiff(vectors[11], s3)))));
         }
-#else
-    v_uint16 ld0, ld1, ld2, ld3, ld4, ld5;
-    for (;;)
-    {
-        for (; x <= length - 3 * nlanes; x += 3 * nlanes)
-        {
-            v_expand(vx_load(in + x), ld0, ld1);
-            v_expand(vx_load(in + x + nlanes), ld2, ld3);
-            v_expand(vx_load(in + x + 2 * nlanes), ld4, ld5);
 
-            v_float32 a1 = v_cvt_f32(v_expand_low(ld0));
-            v_float32 a2 = v_cvt_f32(v_expand_high(ld0));
-            v_float32 a3 = v_cvt_f32(v_expand_low(ld1));
-            v_float32 a4 = v_cvt_f32(v_expand_high(ld1));
-            v_float32 a5 = v_cvt_f32(v_expand_low(ld2));
-            v_float32 a6 = v_cvt_f32(v_expand_high(ld2));
-            v_float32 a7 = v_cvt_f32(v_expand_low(ld3));
-            v_float32 a8 = v_cvt_f32(v_expand_high(ld3));
-            v_float32 a9 = v_cvt_f32(v_expand_low(ld4));
-            v_float32 a10 = v_cvt_f32(v_expand_high(ld4));
-            v_float32 a11 = v_cvt_f32(v_expand_low(ld5));
-            v_float32 a12 = v_cvt_f32(v_expand_high(ld5));
-
-            vx_store(&out[x], v_pack_u(v_pack(v_round(v_absdiff(a1, s1)),
-                                              v_round(v_absdiff(a2, s2))),
-                                       v_pack(v_round(v_absdiff(a3, s3)),
-                                              v_round(v_absdiff(a4, s1)))));
-
-            vx_store(&out[x + nlanes], v_pack_u(v_pack(v_round(v_absdiff(a5, s2)),
-                                                       v_round(v_absdiff(a6, s3))),
-                                                v_pack(v_round(v_absdiff(a7, s1)),
-                                                       v_round(v_absdiff(a8, s2)))));
-
-            vx_store(&out[x + 2 * nlanes], v_pack_u(v_pack(v_round(v_absdiff(a9, s3)),
-                                                           v_round(v_absdiff(a10, s1))),
-                                                    v_pack(v_round(v_absdiff(a11, s2)),
-                                                           v_round(v_absdiff(a12, s3)))));
-        }
-#endif
         if (x < length && (in != out))
         {
             x = length - 3 * nlanes;
@@ -1277,12 +1227,12 @@ CV_ALWAYS_INLINE int absdiffc_simd_c3(const T in[], const float scalar[], T out[
 
     v_float32 s1 = vx_load(init);
 
-#if (CV_AVX512_SKX | (CV_SSE2 && !CV_AVX2) | CV_NEON)
-    v_float32 s2 = vx_load(init + 1);
-    v_float32 s3 = vx_load(init + 2);
-#elif CV_AVX2
+#if CV_SIMD_WIDTH == 32
     v_float32 s2 = vx_load(init + 2);
     v_float32 s3 = vx_load(init + 1);
+#else
+    v_float32 s2 = vx_load(init + 1);
+    v_float32 s3 = vx_load(init + 2);
 #endif
     return absdiffc_simd_c3_impl(in, out, s1, s2, s3, length);
 }
