@@ -8,22 +8,26 @@
 #include "common.hpp"
 
 std::string keys =
-    "{ help  h     | | Print help message. }"
-    "{ @alias      | | An alias name of model to extract preprocessing parameters from models.yml file. }"
-    "{ zoo         | models.yml | An optional path to file with preprocessing parameters }"
-    "{ input i     | | Path to input image or video file. Skip this argument to capture frames from a camera.}"
-    "{ framework f | | Optional name of an origin framework of the model. Detect it automatically if it does not set. }"
-    "{ classes     | | Optional path to a text file with names of classes. }"
-    "{ backend     | 0 | Choose one of computation backends: "
-                        "0: automatically (by default), "
-                        "1: Halide language (http://halide-lang.org/), "
-                        "2: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
-                        "3: OpenCV implementation }"
-    "{ target      | 0 | Choose one of target computation devices: "
-                        "0: CPU target (by default), "
-                        "1: OpenCL, "
-                        "2: OpenCL fp16 (half-float precision), "
-                        "3: VPU }";
+    "{ help  h          | | Print help message. }"
+    "{ @alias           | | An alias name of model to extract preprocessing parameters from models.yml file. }"
+    "{ zoo              | models.yml | An optional path to file with preprocessing parameters }"
+    "{ input i          | | Path to input image or video file. Skip this argument to capture frames from a camera.}"
+    "{ initial_width    | 0 | Preprocess input image by initial resizing to a specific width.}"
+    "{ initial_height   | 0 | Preprocess input image by initial resizing to a specific height.}"
+    "{ std              | 0.0 0.0 0.0 | Preprocess input image by dividing on a standard deviation.}"
+    "{ crop             | false | Preprocess input image by center cropping.}"
+    "{ framework f      | | Optional name of an origin framework of the model. Detect it automatically if it does not set. }"
+    "{ classes          | | Optional path to a text file with names of classes. }"
+    "{ backend          | 0 | Choose one of computation backends: "
+                            "0: automatically (by default), "
+                            "1: Halide language (http://halide-lang.org/), "
+                            "2: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
+                            "3: OpenCV implementation }"
+    "{ target           | 0 | Choose one of target computation devices: "
+                            "0: CPU target (by default), "
+                            "1: OpenCL, "
+                            "2: OpenCL fp16 (half-float precision), "
+                            "3: VPU }";
 
 using namespace cv;
 using namespace dnn;
@@ -47,9 +51,13 @@ int main(int argc, char** argv)
         return 0;
     }
 
+    int rszWidth = parser.get<int>("initial_width");
+    int rszHeight = parser.get<int>("initial_height");
     float scale = parser.get<float>("scale");
     Scalar mean = parser.get<Scalar>("mean");
+    Scalar std = parser.get<Scalar>("std");
     bool swapRB = parser.get<bool>("rgb");
+    bool crop = parser.get<bool>("crop");
     int inpWidth = parser.get<int>("width");
     int inpHeight = parser.get<int>("height");
     String model = findFile(parser.get<String>("model"));
@@ -108,8 +116,20 @@ int main(int argc, char** argv)
             break;
         }
 
+        if (rszWidth != 0 && rszHeight != 0)
+        {
+            resize(frame, frame, Size(rszWidth, rszHeight));
+        }
+
         //! [Create a 4D blob from a frame]
-        blobFromImage(frame, blob, scale, Size(inpWidth, inpHeight), mean, swapRB, false);
+        blobFromImage(frame, blob, scale, Size(inpWidth, inpHeight), mean, swapRB, crop);
+
+        // Check std values.
+        if (std.val[0] != 0.0 && std.val[1] != 0.0 && std.val[2] != 0.0)
+        {
+            // Divide blob by std.
+            divide(blob, std, blob);
+        }
         //! [Create a 4D blob from a frame]
 
         //! [Set input blob]
