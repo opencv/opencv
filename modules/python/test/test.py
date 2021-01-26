@@ -34,8 +34,8 @@ def load_tests(loader, tests, pattern):
     else:
         print('WARNING: OpenCV tests config file ({}) is missing, running subset of tests'.format(config_file))
 
-    tests_pattern = os.environ.get('OPENCV_PYTEST_FILTER', 'test_') + '*.py'
-    if tests_pattern != 'test_*py':
+    tests_pattern = os.environ.get('OPENCV_PYTEST_FILTER', 'test_*') + '.py'
+    if tests_pattern != 'test_*.py':
         print('Tests filter: {}'.format(tests_pattern))
 
     processed = set()
