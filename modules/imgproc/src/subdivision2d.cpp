@@ -1019,7 +1019,7 @@ void Subdiv2D::getVoronoiFacetList(const std::vector<int>& idx,
             }
             o /= (float) buf.size();
 
-            sortAround(o, buf, 0, buf.size() - 1);
+            sortAround(o, buf, 0, (int)buf.size() - 1);
         }
 
         facetList.push_back(buf);
