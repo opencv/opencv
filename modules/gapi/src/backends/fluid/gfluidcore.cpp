@@ -35,117 +35,26 @@ inline v_float32x16 v_cvt_f32(const v_uint32x16& a)
 {
     return v_float32x16(_mm512_cvtepi32_ps(a.val));
 }
+#endif
 
-template<int chan> inline v_float32x16 v_set_scalar(const float* scalar);
-template<> inline v_float32x16 v_set_scalar<1>(const float* scalar)
-{ return vx_setall_f32(*scalar); }
-
-template<> inline v_float32x16 v_set_scalar<2>(const float* scalar)
-{
-    return v_float32x16(_mm512_setr_ps(*scalar, *(scalar + 1), *scalar, *(scalar + 1),
-                                       *scalar, *(scalar + 1), *scalar, *(scalar + 1),
-                                       *scalar, *(scalar + 1), *scalar, *(scalar + 1),
-                                       *scalar, *(scalar + 1), *scalar, *(scalar + 1)));
-}
-
-template<> inline v_float32x16 v_set_scalar<3>(const float* scalar)
-{
-    return v_float32x16(_mm512_setr_ps(*scalar, *(scalar + 1), *(scalar + 2), *scalar,
-                                       *(scalar + 1), *(scalar + 2), *scalar, *(scalar + 1),
-                                       *(scalar + 2), *scalar, *(scalar + 1), *(scalar + 2),
-                                       *scalar, *(scalar + 1), *(scalar + 2), *scalar));
-}
-
-template<> inline v_float32x16 v_set_scalar<4>(const float* scalar)
-{
-    return v_float32x16(_mm512_setr_ps(*scalar, *(scalar + 1), *(scalar + 2), *(scalar + 3),
-                                       *scalar, *(scalar + 1), *(scalar + 2), *(scalar + 3),
-                                       *scalar, *(scalar + 1), *(scalar + 2), *(scalar + 3),
-                                       *scalar, *(scalar + 1), *(scalar + 2), *(scalar + 3)));
-}
-
-#elif CV_AVX2
+#if CV_AVX2
 inline v_float32x8 v_cvt_f32(const v_uint32x8& a)
 {
     return v_float32x8(_mm256_cvtepi32_ps(a.val));
 }
+#endif
 
-template<int chan> inline v_float32x8 v_set_scalar(const float* scalar);
-template<> inline v_float32x8 v_set_scalar<1>(const float* scalar)
-{ return vx_setall_f32(*scalar); }
-
-template<> inline v_float32x8 v_set_scalar<2>(const float* scalar)
-{
-    return v_float32x8(_mm256_setr_ps(*scalar, *(scalar + 1), *scalar, *(scalar + 1),
-                                      *scalar, *(scalar + 1), *scalar, *(scalar + 1)));
-}
-
-template<> inline v_float32x8 v_set_scalar<3>(const float* scalar)
-{
-    return v_float32x8(_mm256_setr_ps(*scalar, *(scalar + 1), *(scalar + 2), *scalar,
-                                      *(scalar + 1), *(scalar + 2), *scalar, *(scalar + 1)));
-}
-
-template<> inline v_float32x8 v_set_scalar<4>(const float* scalar)
-{
-    return v_float32x8(_mm256_setr_ps(*scalar, *(scalar + 1), *(scalar + 2), *(scalar + 3),
-                                      *scalar, *(scalar + 1), *(scalar + 2), *(scalar + 3)));
-}
-
-#elif CV_SSE2
+#if CV_SSE2
 inline v_float32x4 v_cvt_f32(const v_uint32x4& a)
 {
     return v_float32x4(_mm_cvtepi32_ps(a.val));
 }
-
-template<int chan> inline v_float32x4 v_set_scalar(const float* scalar);
-template<> inline v_float32x4 v_set_scalar<1>(const float* scalar)
-{ return vx_setall_f32(*scalar); }
-
-template<> inline v_float32x4 v_set_scalar<2>(const float* scalar)
-{
-    return v_float32x4(_mm_setr_ps(*scalar, *(scalar + 1), *scalar, *(scalar + 1)));
-}
-
-template<> inline v_float32x4 v_set_scalar<3>(const float* scalar)
-{
-    return v_float32x4(_mm_setr_ps(*scalar, *(scalar + 1), *(scalar + 2), *scalar));
-}
-
-template<> inline v_float32x4 v_set_scalar<4>(const float* scalar)
-{
-    return v_float32x4(_mm_setr_ps(*scalar, *(scalar + 1), *(scalar + 2), *(scalar + 3)));
-}
-
-#elif CV_NEON
+#endif
+#if CV_NEON
 inline v_float32x4 v_cvt_f32(const v_uint32x4& a)
 {
     return v_float32x4(vcvtq_f32_u32(a.val));
 }
-
-template<int chan> inline v_float32x4 v_set_scalar(const float* scalar);
-template<> inline v_float32x4 v_set_scalar<1>(const float* scalar)
-{
-    return vx_setall_f32(*scalar);
-}
-
-template<> inline v_float32x4 v_set_scalar<2>(const float* scalar)
-{
-    float init[4] = { *scalar, *(scalar + 1), *scalar, *(scalar + 1) };
-    return v_float32x4(vld1q_f32(init));
-}
-
-template<> inline v_float32x4 v_set_scalar<3>(const float* scalar)
-{
-    float init[4] = { *scalar, *(scalar + 1), *(scalar + 2), *scalar };
-    return v_float32x4(vld1q_f32(init));
-}
-
-template<> inline v_float32x4 v_set_scalar<4>(const float* scalar)
-{
-    return v_float32x4(vld1q_f32(scalar));
-}
-
 #endif
 #endif  // CV_SIMD
 
@@ -1180,8 +1089,16 @@ template<typename T>
 CV_ALWAYS_INLINE int absdiffc_simd_c2(const T in[], const float scalar[], T out[],
                                       const int width)
 {
-    v_float32 s = v_set_scalar<2>(scalar);
-    int length = width * 2;
+    constexpr int chan = 2;
+    constexpr int size = static_cast<int>(v_float32::nlanes) + 2;
+    int length = width * chan;
+
+    float init[size];
+    for (int i = 0; i < size; ++i)
+    {
+        init[i] = *(scalar + i % chan);
+    }
+    v_float32 s = vx_load(init);
 
     return absdiffc_simd_c1c2c4(in, out, s, length);
 }
@@ -1254,17 +1171,18 @@ CV_ALWAYS_INLINE int absdiffc_simd_c3_impl<uchar>(const uchar in[], uchar out[],
                                                   const v_float32& s3, const int length)
 {
     constexpr int nlanes = static_cast<int>(v_uint8::nlanes);
+    constexpr int num_vectors = 12;
 
     if (length < 3 * nlanes)
         return 0;
 
     int x = 0;
-    v_float32 vectors[12];
+    v_float32 vectors[num_vectors];
     for (;;)
     {
         for (; x <= length - 3 * nlanes; x += 3 * nlanes)
         {
-            for (int i = 0; i < 12; ++i)
+            for (int i = 0; i < num_vectors; ++i)
             {
                 vectors[i] = v_cvt_f32(vx_load_expand_q(reinterpret_cast<const uchar*>(in + x + i * nlanes / 4)));
             }
@@ -1299,21 +1217,24 @@ template<typename T>
 CV_ALWAYS_INLINE int absdiffc_simd_c3(const T in[], const float scalar[], T out[], int width)
 {
     constexpr int chan = 3;
+    constexpr int size = static_cast<int>(v_float32::nlanes) + 2;
     int length = width * chan;
 
-    float init[6] = { *scalar, *(scalar + 1), *(scalar + 2), *scalar,
-                      *(scalar + 1), *(scalar + 2) };
+    float init[size];
+    for (int i = 0; i < size; ++i)
+    {
+        init[i] = *(scalar + i % chan);
+    }
 
-    v_float32 s1 = v_set_scalar<3>(scalar);
+    v_float32 s1 = vx_load(init);
 
 #if (CV_AVX512_SKX | (CV_SSE2 && !CV_AVX2) | CV_NEON)
-    v_float32 s2 = v_set_scalar<3>(init + 1),
-              s3 = v_set_scalar<3>(init + 2);
+    v_float32 s2 = vx_load(init + 1);
+    v_float32 s3 = vx_load(init + 2);
 #elif CV_AVX2
-    v_float32 s2 = v_set_scalar<3>(init + 2),
-              s3 = v_set_scalar<3>(init + 1);
+    v_float32 s2 = vx_load(init + 2);
+    v_float32 s3 = vx_load(init + 1);
 #endif
-
     return absdiffc_simd_c3_impl(in, out, s1, s2, s3, length);
 }
 
@@ -1321,8 +1242,16 @@ template<typename T>
 CV_ALWAYS_INLINE int absdiffc_simd_c4(const T in[], const float scalar[],
                                       T out[], int width)
 {
-    v_float32 s = v_set_scalar<4>(scalar);
-    int length = width * 4;
+    constexpr int chan = 4;
+    constexpr int size = static_cast<int>(v_float32::nlanes) + 2;
+    int length = width * chan;
+
+    float init[size];
+    for (int i = 0; i < size; ++i)
+    {
+        init[i] = *(scalar + i % chan);
+    }
+    v_float32 s = vx_load(init);
 
     return absdiffc_simd_c1c2c4(in, out, s, length);
 }
