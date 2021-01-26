@@ -7,7 +7,7 @@
 #include "precomp.hpp"
 
 #include <memory> // make_shared
-#include <iostream>
+#include <atomic>
 
 #include <ade/util/zip_range.hpp>
 
@@ -576,17 +576,19 @@ class StreamingOutput final: public cv::gimpl::GIslandExecutable::IOutput
     std::unordered_map< const void*
                       , std::pair<int, PostingList::iterator>
                       > m_postIdx;
-    std::size_t m_stops_sent = 0u;
-
     // These objects are owned externally
     const cv::GMetaArgs &m_metas;
     std::vector< std::vector<Q*> > &m_out_queues;
     std::shared_ptr<cv::gimpl::GIslandExecutable> m_island;
 
+    std::size_t m_stops_sent;
+    mutable std::mutex m_mutex;
+
     // Allocate a new data object for output under idx
     // Prepare this object for posting
     virtual cv::GRunArgP get(int idx) override
     {
+        std::lock_guard<std::mutex> lock{m_mutex};
         using MatType = cv::Mat;
         using SclType = cv::Scalar;
 
@@ -665,6 +667,7 @@ class StreamingOutput final: public cv::gimpl::GIslandExecutable::IOutput
     {
         // Mark the output ready for posting. If it is the first in the line,
         // actually post it and all its successors which are ready for posting too.
+        std::lock_guard<std::mutex> lock{m_mutex};
         auto it = m_postIdx.find(cv::gimpl::proto::ptr(argp));
         GAPI_Assert(it != m_postIdx.end());
         const int out_idx = it->second.first;
@@ -675,9 +678,9 @@ class StreamingOutput final: public cv::gimpl::GIslandExecutable::IOutput
         {
             return; // There are some pending postings in the beginning, return
         }
-
         GAPI_Assert(out_iter == m_postings[out_idx].begin());
         auto post_iter = m_postings[out_idx].begin();
+
         while (post_iter != m_postings[out_idx].end() && post_iter->ready == true)
         {
             Cmd cmd;
@@ -689,7 +692,7 @@ class StreamingOutput final: public cv::gimpl::GIslandExecutable::IOutput
             {
                 GAPI_Assert(cv::util::holds_alternative<cv::gimpl::EndOfStream>(post_iter->data));
                 cmd = Cmd{Stop{}};
-                m_stops_sent++;
+                ++m_stops_sent;
             }
             for (auto &&q : m_out_queues[out_idx])
             {
@@ -700,6 +703,7 @@ class StreamingOutput final: public cv::gimpl::GIslandExecutable::IOutput
     }
     virtual void post(cv::gimpl::EndOfStream&&) override
     {
+        std::lock_guard<std::mutex> lock{m_mutex};
         // If the posting list is empty, just broadcast the stop message.
         // If it is not, enqueue the Stop message in the postings list.
         for (auto &&it : ade::util::indexed(m_postings))
@@ -712,7 +716,7 @@ class StreamingOutput final: public cv::gimpl::GIslandExecutable::IOutput
                 {
                     q->push(Cmd(Stop{}));
                 }
-                m_stops_sent++;
+                ++m_stops_sent;
             }
             else
             {
@@ -725,6 +729,7 @@ class StreamingOutput final: public cv::gimpl::GIslandExecutable::IOutput
     }
     void meta(const cv::GRunArgP &out, const cv::GRunArg::Meta &m) override
     {
+        std::lock_guard<std::mutex> lock{m_mutex};
         const auto it = m_postIdx.find(cv::gimpl::proto::ptr(out));
         GAPI_Assert(it != m_postIdx.end());
 
@@ -740,6 +745,7 @@ public:
         : m_metas(metas)
         , m_out_queues(out_queues)
         , m_island(island)
+        , m_stops_sent(0u)
     {
         set(out_descs);
         m_postings.resize(out_descs.size());
@@ -747,6 +753,7 @@ public:
 
     bool done() const
     {
+        std::lock_guard<std::mutex> lock{m_mutex};
         // The streaming actor work is considered DONE for this stream
         // when it posted/resent all STOP messages to all its outputs.
         return m_stops_sent == desc().size();
@@ -894,12 +901,14 @@ cv::gimpl::GStreamingExecutor::GStreamingExecutor(std::unique_ptr<ade::Graph> &&
 
     // Very rough estimation to limit internal queue sizes.
     // Pipeline depth is equal to number of its (pipeline) steps.
-    const auto queue_capacity = 3*std::count_if
-        (m_gim.nodes().begin(),
-         m_gim.nodes().end(),
-         [&](ade::NodeHandle nh) {
-            return m_gim.metadata(nh).get<NodeKind>().k == NodeKind::ISLAND;
-         });
+    const auto queue_capacity = 100000;
+    //std::cout << "QUEUE CAP " << 3*std::count_if
+        //(m_gim.nodes().begin(),
+         //m_gim.nodes().end(),
+         //[&](ade::NodeHandle nh) {
+            //return m_gim.metadata(nh).get<NodeKind>().k == NodeKind::ISLAND;
+         //}) << std::endl;
+    //GAPI_Assert(false);
 
     // If metadata was not passed to compileStreaming, Islands are not compiled at this point.
     // It is fine -- Islands are then compiled in setSource (at the first valid call).

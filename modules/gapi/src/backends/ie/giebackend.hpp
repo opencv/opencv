@@ -13,6 +13,7 @@
 #ifdef HAVE_INF_ENGINE
 
 #include <ade/util/algorithm.hpp> // type_list_index
+#include <condition_variable>
 
 #include <inference_engine.hpp>
 
@@ -37,6 +38,8 @@ struct IECompiled {
     InferenceEngine::InferRequest      this_request;
 };
 
+struct IRScheduler;
+
 class GIEExecutable final: public GIslandExecutable
 {
     const ade::Graph &m_g;
@@ -50,11 +53,8 @@ class GIEExecutable final: public GIslandExecutable
     // List of all resources in graph (both internal and external)
     std::vector<ade::NodeHandle> m_dataNodes;
 
-    // Actual data of all resources in graph (both internal and external)
-    Mag m_res;
-
-    // Execution helpers
-    GArg packArg(const GArg &arg);
+    // To manage multiple async requests
+    std::unique_ptr<IRScheduler> m_scheduler;
 
 public:
     GIEExecutable(const ade::Graph                   &graph,
@@ -65,8 +65,14 @@ public:
         GAPI_Assert(false); // Not implemented yet
     }
 
-    virtual void run(std::vector<InObj>  &&input_objs,
-                     std::vector<OutObj> &&output_objs) override;
+    virtual void run(std::vector<InObj>  &&,
+                     std::vector<OutObj> &&) override {
+        GAPI_Assert(false && "Not implemented");
+    }
+
+    virtual void run(GIslandExecutable::IInput  &in,
+                     GIslandExecutable::IOutput &out) override;
+
 };
 
 }}}

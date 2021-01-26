@@ -54,6 +54,11 @@ public:
 
     // Not thread-safe - as in TBB
     void clear();
+
+    size_t size() {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        return m_data.size();
+    }
 };
 
 // Internal: do shared pop things assuming the lock is already there
@@ -66,7 +71,7 @@ void concurrent_bounded_queue<T>::unsafe_pop(T &t) {
 
 // Push an element to the queue. Blocking if there's no space left
 template<typename T>
-void concurrent_bounded_queue<T>::push(const T& t) {
+void concurrent_bounded_queue<T>::push(const T &t) {
     std::unique_lock<std::mutex> lock(m_mutex);
 
     if (m_capacity && m_capacity == m_data.size()) {
