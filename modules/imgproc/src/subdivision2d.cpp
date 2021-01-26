@@ -954,7 +954,7 @@ void Subdiv2D::getVoronoiFacetList(const std::vector<int>& idx,
                                    CV_OUT std::vector<std::vector<Point2f> >& facetList,
                                    CV_OUT std::vector<Point2f>& facetCenters)
 {
-    std::vector<std::vector<Vec4f>> facetEdgeList;
+    std::vector< std::vector<Vec4f> > facetEdgeList;
     getVoronoiFacetList(idx, facetEdgeList, facetCenters);
     facetList.clear();
 
