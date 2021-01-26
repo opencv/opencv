@@ -1085,9 +1085,6 @@ public:
     CV_WRAP void getVoronoiFacetList(const std::vector<int>& idx, CV_OUT std::vector<std::vector<Point2f> >& facetList,
                                      CV_OUT std::vector<Point2f>& facetCenters);
 
-    CV_WRAP void getVoronoiFacetList(const std::vector<int>& idx, CV_OUT std::vector<std::vector<Vec4f> >& facetList,
-                                     CV_OUT std::vector<Point2f>& facetCenters);
-
     /** @brief Returns vertex location from vertex ID.
 
     @param vertex vertex ID.
@@ -1173,13 +1170,15 @@ protected:
     void clearVoronoi();
     void checkSubdiv() const;
     int newPoint(Point2f pt, int type, int firstEdge = 0);
+    void getVoronoiFacetList(const std::vector<int>& idx,
+                             std::vector<std::vector<Vec4f> >& facetList, std::vector<Point2f>& facetCenters);
 
     enum {
-        PTTYPE_FREE = 0,
-        PTTYPE_DELAUNAY = 1,
+        PTTYPE_FREE = -1,
+        PTTYPE_DELAUNAY = 0,
+        PTTYPE_VORONOI = 1,
         PTTYPE_DELAUNAY_IDEAL = 2,
-        PTTYPE_VORONOI = 3,
-        PTTYPE_VORONOI_IDEAL = 4
+        PTTYPE_VORONOI_IDEAL = 3
     };
 
     struct CV_EXPORTS Vertex

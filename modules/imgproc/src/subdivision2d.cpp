@@ -834,8 +834,8 @@ static void cropEdgeEx(Point2f &edge_org, Point2f &edge_dst, bool &ideal_org, bo
 }
 
 void Subdiv2D::getVoronoiFacetList(const std::vector<int>& idx,
-                                   CV_OUT std::vector<std::vector<Vec4f> >& facetList,
-                                   CV_OUT std::vector<Point2f>& facetCenters)
+                                   std::vector<std::vector<Vec4f> >& facetList,
+                                   std::vector<Point2f>& facetCenters)
 {
     const Point2f topRight(bottomRight.x, topLeft.y);
     const Point2f bottomLeft(topLeft.x, bottomRight.y);
