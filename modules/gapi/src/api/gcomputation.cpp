@@ -15,6 +15,7 @@
 
 #include <opencv2/gapi/gcomputation.hpp>
 #include <opencv2/gapi/gkernel.hpp>
+#include <opencv2/gapi/python_bridge.hpp> // allocateGraphOutputs
 
 #include "api/gcomputation_priv.hpp"
 #include "api/gcall_priv.hpp"
@@ -119,6 +120,7 @@ cv::GStreamingCompiled cv::GComputation::compileStreaming(const cv::detail::Extr
     auto compiled = cv::gimpl::GCompiler(*this, {}, std::move(args)).compileStreaming();
 
     auto metas = callback(compiled.priv().inInfo());
+    // NB: Now compile streaming with known meta
     cv::gimpl::GCompiler comp(*this, std::move(metas), std::move(args));
     return comp.compileStreaming();
 }
@@ -210,43 +212,8 @@ cv::GRunArgs cv::GComputation::apply(const cv::detail::ExtractArgsCallback &call
     run_args.reserve(out_info.size());
     outs.reserve(out_info.size());
 
-    for (auto&& info : out_info)
-    {
-        switch (info.shape)
-        {
-            case cv::GShape::GMAT:
-            {
-                run_args.emplace_back(cv::Mat{});
-                outs.emplace_back(&cv::util::get<cv::Mat>(run_args.back()));
-                break;
-            }
-            case cv::GShape::GSCALAR:
-            {
-                run_args.emplace_back(cv::Scalar{});
-                outs.emplace_back(&cv::util::get<cv::Scalar>(run_args.back()));
-                break;
-            }
-            case cv::GShape::GARRAY:
-            {
-                cv::detail::VectorRef ref;
-                util::get<cv::detail::ConstructVec>(info.ctor)(ref);
-                run_args.emplace_back(ref);
-                outs.emplace_back(cv::util::get<cv::detail::VectorRef>(run_args.back()));
-                break;
-            }
-            case cv::GShape::GOPAQUE:
-            {
-                cv::detail::OpaqueRef ref;
-                util::get<cv::detail::ConstructOpaque>(info.ctor)(ref);
-                run_args.emplace_back(ref);
-                outs.emplace_back(ref);
-                break;
-            }
+    cv::detail::allocateGraphOutputs(out_info, run_args, outs);
 
-            default:
-                util::throw_error(std::logic_error("Unsupported output shape for python"));
-        }
-    }
     m_priv->m_lastCompiled(std::move(ins), std::move(outs));
     return run_args;
 }

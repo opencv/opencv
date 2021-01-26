@@ -453,6 +453,11 @@ cv::GCompiled cv::gimpl::GCompiler::produceCompiled(GPtr &&pg)
     //     an execution plan for it (backend-specific execution)
     // ...before call to produceCompiled();
 
+    // Note: compile steps for python bridge :
+    // - First time python bridge calls compile with empty input meta (m_metas)
+    //   to collect input/output GTypesInfo to properly obtain python inputs
+    // - Once the python inputs are obtained, extract input meta and call compile once again
+
     GModel::ConstGraph cgr(*pg);
     std::unique_ptr<GExecutor> pE;
     GMetaArgs outMetas;
@@ -461,6 +466,8 @@ cv::GCompiled cv::gimpl::GCompiler::produceCompiled(GPtr &&pg)
     // how G*Compiled learns about its meta.
     if (!m_metas.empty())
     {
+        // NB: In case input meta is empty, compileIsland isn't called
+        // therefore OutputMetas isn't infered
         outMetas = GModel::ConstGraph(*pg).metadata().get<OutputMeta>().outMeta;
         // FIXME: select which executor will be actually used,
         // make GExecutor abstract.
@@ -470,7 +477,7 @@ cv::GCompiled cv::gimpl::GCompiler::produceCompiled(GPtr &&pg)
     GCompiled compiled;
     compiled.priv().setup(m_metas, outMetas, std::move(pE));
 
-    // NB: Need to store input/output GTypeInfo used by python bridge
+    // NB: Need to store input/output cv::GTypeInfo used by python bridge
     // to properly obtain inputs and allocate outputs
     auto out_meta = collectInfo(cgr, cgr.metadata().get<cv::gimpl::Protocol>().out_nhs);
     auto in_meta  = collectInfo(cgr, cgr.metadata().get<cv::gimpl::Protocol>().in_nhs);

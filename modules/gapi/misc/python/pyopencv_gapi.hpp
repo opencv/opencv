@@ -169,28 +169,28 @@ static cv::GRunArg extract_run_arg(const cv::GTypeInfo& info, PyObject* item)
     switch (info.shape)
     {
         case cv::GShape::GMAT:
+        {
+            // NB: In case streaming it can be IStreamSource or cv::Mat
+            if (PyObject_TypeCheck(item,
+                        reinterpret_cast<PyTypeObject*>(pyopencv_gapi_wip_IStreamSource_TypePtr)))
             {
-                // NB: In case streaming it can be IStreamSource or cv::Mat
-                if (PyObject_TypeCheck(item,
-                            reinterpret_cast<PyTypeObject*>(pyopencv_gapi_wip_IStreamSource_TypePtr)))
-                {
-                    cv::gapi::wip::IStreamSource::Ptr source =
-                        reinterpret_cast<pyopencv_gapi_wip_IStreamSource_t*>(item)->v;
-                    return source;
-                }
-                else
-                {
-                    cv::Mat obj;
-                    pyopencv_to_with_check(item, obj, "Failed to obtain cv::Mat");
-                    return obj;
-                }
+                cv::gapi::wip::IStreamSource::Ptr source =
+                    reinterpret_cast<pyopencv_gapi_wip_IStreamSource_t*>(item)->v;
+                return source;
             }
-        case cv::GShape::GSCALAR:
+            else
             {
-                cv::Scalar obj;
-                pyopencv_to_with_check(item, obj, "Failed to obtain cv::Scalar");
+                cv::Mat obj;
+                pyopencv_to_with_check(item, obj, "Failed to obtain cv::Mat");
                 return obj;
             }
+        }
+        case cv::GShape::GSCALAR:
+        {
+            cv::Scalar obj;
+            pyopencv_to_with_check(item, obj, "Failed to obtain cv::Scalar");
+            return obj;
+        }
         default:
             util::throw_error(std::logic_error("Unsupported output shape"));
     }
@@ -216,17 +216,17 @@ static cv::GMetaArg extract_meta_arg(const cv::GTypeInfo& info, PyObject* item)
     switch (info.shape)
     {
         case cv::GShape::GMAT:
-            {
-                cv::Mat obj;
-                pyopencv_to_with_check(item, obj, "Failed to obtain cv::Mat");
-                return cv::GMetaArg{cv::descr_of(obj)};
-            }
+        {
+            cv::Mat obj;
+            pyopencv_to_with_check(item, obj, "Failed to obtain cv::Mat");
+            return cv::GMetaArg{cv::descr_of(obj)};
+        }
         case cv::GShape::GSCALAR:
-            {
-                cv::Scalar obj;
-                pyopencv_to_with_check(item, obj, "Failed to obtain cv::Scalar");
-                return cv::GMetaArg{cv::descr_of(obj)};
-            }
+        {
+            cv::Scalar obj;
+            pyopencv_to_with_check(item, obj, "Failed to obtain cv::Scalar");
+            return cv::GMetaArg{cv::descr_of(obj)};
+        }
         default:
             util::throw_error(std::logic_error("Unsupported output shape"));
     }
