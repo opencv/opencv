@@ -25,7 +25,7 @@ TEST(Imgproc_Subdiv2D_getTriangleList, regression_5788)
     };
     std::vector<cv::Point2f> pts;
     cv::Rect rect(0, 0, 1500, 2000);
-    cv::Subdiv2D subdiv;
+    cv::Subdiv2D subdiv(rect);
     for( int i = 0; i < 65; i++ )
     {
         cv::Point2f pt(points[i][0], points[i][1]);
