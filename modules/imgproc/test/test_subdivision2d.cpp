@@ -80,7 +80,7 @@ TEST(Imgproc_Subdiv2D_getTriangleList, regression_16763) {
 
     for (size_t i = 0; i < 2; ++i) {
         cv::Rect2f rect(suits[i].rect[0], suits[i].rect[1], suits[i].rect[2], suits[i].rect[3]);
-        cv::Subdiv2D subdiv;
+        cv::Subdiv2D subdiv(rect);
 
         for (size_t j = 0; j < 4; ++j) {
             subdiv.insert(cv::Point2f(suits[i].points[j][0], suits[i].points[j][1]));

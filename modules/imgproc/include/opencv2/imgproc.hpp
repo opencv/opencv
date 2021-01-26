@@ -956,10 +956,11 @@ class CV_EXPORTS_W Subdiv2D
 {
 public:
     /** Subdiv2D point location cases */
-    enum { PTLOC_INSIDE       = 0, //!< Point inside some facet
+    enum { PTLOC_ERROR        = -2, //!< @deprecated
+           PTLOC_OUTSIDE_RECT = -1, //!< @deprecated
+           PTLOC_INSIDE       = 0, //!< Point inside some facet
            PTLOC_VERTEX       = 1, //!< Point coincides with one of the subdivision vertices
-           PTLOC_EDGE         = 2, //!< Point on some edge
-           PTLOC_OUTSIDE      = 3  //!< Point outside of every facet
+           PTLOC_ON_EDGE      = 2  //!< Point on some edge
          };
 
     /** Subdiv2D edge type navigation (see: getEdge()) */
@@ -973,11 +974,27 @@ public:
            PREV_AROUND_RIGHT = 0x02
          };
 
-    /** Creates an empty 2D subdivision object. */
+    /** creates an empty Subdiv2D object.
+    To create a new empty Delaunay subdivision you need to use the #initDelaunay function.
+     */
     CV_WRAP Subdiv2D();
 
-    /** Resets the current object to the empty state. */
-    CV_WRAP void reset();
+    /** @overload
+
+    @param rect Rectangle that includes all of the 2D points that are to be added to the subdivision.
+
+    The function creates an empty Delaunay subdivision where 2D points can be added using the function
+    insert() . All of the points to be added must be within the specified rectangle, otherwise a runtime
+    error is raised.
+     */
+    CV_WRAP Subdiv2D(Rect rect);
+
+    /** @brief Creates a new empty Delaunay subdivision
+
+    @param rect Rectangle that includes all of the 2D points that are to be added to the subdivision.
+
+     */
+    CV_WRAP void initDelaunay(Rect rect);
 
     /** @brief Insert a single point into a Delaunay triangulation.
 
@@ -1015,7 +1032,6 @@ public:
     -  The point falls onto the edge. The function returns #PTLOC_ON_EDGE and edge will contain this edge.
     -  The point coincides with one of the subdivision vertices. The function returns #PTLOC_VERTEX and
        vertex will contain a pointer to the vertex.
-    -  The point is outside of every facet. The function returns #PTLOC_OUTSIDE and no pointers are filled.
      */
     CV_WRAP int locate(Point2f pt, CV_OUT int& edge, CV_OUT int& vertex);
 
@@ -1059,16 +1075,17 @@ public:
      */
     CV_WRAP void getTriangleList(CV_OUT std::vector<Vec6f>& triangleList) const;
 
-    /** @brief Returns a list of all Voronoi facets in the given region of interest.
+    /** @brief Returns a list of all Voronoi facets.
 
-    @param rect Region of interest.
     @param idx Vector of vertices IDs to consider. For all vertices you can pass empty vector.
-    @param facetList Output vector of the Voronoi facet edges (in the counterclockwise order, can be piecewise adjacent).
+    @param facetList Output vector of the Voronoi facets.
     @param facetCenters Output vector of the Voronoi facets center points.
 
      */
-    CV_WRAP void getVoronoiFacetList(Rect2f rect, const std::vector<int>& idx,
-                                     CV_OUT std::vector<std::vector<Vec4f> >& facetList,
+    CV_WRAP void getVoronoiFacetList(const std::vector<int>& idx, CV_OUT std::vector<std::vector<Point2f> >& facetList,
+                                     CV_OUT std::vector<Point2f>& facetCenters);
+
+    CV_WRAP void getVoronoiFacetList(const std::vector<int>& idx, CV_OUT std::vector<std::vector<Vec4f> >& facetList,
                                      CV_OUT std::vector<Point2f>& facetCenters);
 
     /** @brief Returns vertex location from vertex ID.
@@ -1145,16 +1162,17 @@ public:
 protected:
     int newEdge();
     void deleteEdge(int edge);
-    int newPoint(Point2f pt, int type, int firstEdge = 0);
+    int newPoint(Point2f pt, bool isvirtual, int firstEdge = 0); // deprecated
     void deletePoint(int vtx);
     void setEdgePoints( int edge, int orgPt, int dstPt );
     void splice( int edgeA, int edgeB );
     int connectEdges( int edgeA, int edgeB );
     void swapEdges( int edge );
-    int locateInternal(Point2f pt, int &edge, int &vertex);
+    int isRightOf(Point2f pt, int edge) const;
     void calcVoronoi();
     void clearVoronoi();
     void checkSubdiv() const;
+    int newPoint(Point2f pt, int type, int firstEdge = 0);
 
     enum {
         PTTYPE_FREE = 0,
@@ -1167,9 +1185,10 @@ protected:
     struct CV_EXPORTS Vertex
     {
         Vertex();
-        Vertex(Point2f pt, int type, int firstEdge = 0);
-        bool isvoronoi() const;
+        Vertex(Point2f pt, bool _isvirtual, int _firstEdge=0); // deprecated
+        bool isvirtual() const;
         bool isfree() const;
+        Vertex(Point2f pt, int type, int firstEdge = 0);
         bool isideal() const;
 
         int firstEdge;
@@ -1196,6 +1215,10 @@ protected:
     bool validGeometry;
 
     int recentEdge;
+    //! Top left corner of the bounding rect
+    Point2f topLeft;
+    //! Bottom right corner of the bounding rect
+    Point2f bottomRight;
 };
 
 //! @} imgproc_subdiv2d
