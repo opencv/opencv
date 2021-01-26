@@ -154,8 +154,12 @@ Subdiv2D::Vertex::Vertex(Point2f _pt, bool _isvirtual, int _firstEdge)
     pt = _pt;
 }
 
-Subdiv2D::Vertex::Vertex(Point2f pt, int type, int firstEdge)
-    : pt(pt), type(type), firstEdge(firstEdge) { }
+Subdiv2D::Vertex::Vertex(Point2f _pt, int _type, int _firstEdge)
+{
+    firstEdge = _firstEdge;
+    type = _type;
+    pt = _pt;
+}
 
 bool Subdiv2D::Vertex::isvirtual() const
 {
@@ -268,11 +272,15 @@ int Subdiv2D::isRightOf(Point2f pt, int edge) const
     } else {
         /* Voronoi edge, PTTYPE_VORONOI_IDEAL points can have non-zero bias, but current
            implementation of CCWEx() (and therefore rightOfEx()) assumes the opposite */
+
+        if (!vtx[edge_org].isideal() && !vtx[edge_dst].isideal()) {
+            return rightOfEx(pt, vtx[edge_org].pt, vtx[edge_dst].pt, false, false, false);
+        }
+
         Point2f bias;
 
         if (!vtx[edge_org].isideal() || !vtx[edge_dst].isideal()) {
-            bias =  vtx[edge_org].isideal() ? vtx[edge_dst].pt :
-                    vtx[edge_dst].isideal() ? vtx[edge_org].pt : Point2f(0.f, 0.f);
+            bias = vtx[edge_org].isideal() ? vtx[edge_dst].pt : vtx[edge_org].pt;
         } else {
             int rot_org = edgeOrg(rotateEdge(edge, 3));
             int rot_dst = edgeDst(rotateEdge(edge, 3));
