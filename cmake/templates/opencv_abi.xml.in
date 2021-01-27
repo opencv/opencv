@@ -26,6 +26,7 @@
     opencv2/core/hal/*.impl.*
     opencv2/core/cuda*
     opencv2/core/opencl*
+    opencv2/core/parallel/backend/*
     opencv2/core/private*
     opencv2/core/quaternion*
     opencv/cxeigen.hpp
