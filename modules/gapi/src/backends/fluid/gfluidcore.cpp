@@ -29,24 +29,6 @@
 #include <cstdlib>
 
 namespace cv {
-#if (CV_SIMD && !CV_NEON)
-#if CV_AVX512_SKX
-    inline v_float32x16 v_cvt_f32(const v_uint32x16& a)
-    {
-        return v_float32x16(_mm512_cvtepi32_ps(a.val));
-    }
-#elif CV_AVX2
-    inline v_float32x8 v_cvt_f32(const v_uint32x8& a)
-    {
-        return v_float32x8(_mm256_cvtepi32_ps(a.val));
-    }
-#elif CV_SSE2
-    inline v_float32x4 v_cvt_f32(const v_uint32x4& a)
-    {
-        return v_float32x4(_mm_cvtepi32_ps(a.val));
-    }
-#endif
-#endif  // (CV_SIMD && !CV_NEON)
 namespace gapi {
 namespace fluid {
 
@@ -115,7 +97,31 @@ static inline DST divr(SRC1 x, SRC2 y, float scale=1)
 // Fluid kernels: addWeighted
 //
 //---------------------------
-#if (CV_SIMD && !CV_NEON)
+#if CV_SIMD
+template<typename SRC>
+static inline v_float32 v_load_f32(const SRC* ptr)
+{
+    if (std::is_same<SRC, uchar>::value)
+    {
+        v_uint32 tmp = vx_load_expand_q(reinterpret_cast<const uchar*>(ptr));
+        return v_cvt_f32(v_reinterpret_as_s32(tmp));
+    }
+    else if (std::is_same<SRC, ushort>::value)
+    {
+        v_uint32 tmp = vx_load_expand(reinterpret_cast<const ushort*>(ptr));
+        return v_cvt_f32(v_reinterpret_as_s32(tmp));
+    }
+    else if (std::is_same<SRC, short>::value)
+    {
+        return v_cvt_f32(vx_load_expand(reinterpret_cast<const short*>(ptr)));
+    }
+    else if (std::is_same<SRC, float>::value)
+    {
+        return vx_load(reinterpret_cast<const float*>(ptr));
+    }
+
+    CV_Error(cv::Error::StsBadArg, "unsupported type");
+}
 CV_ALWAYS_INLINE void addw_short_store(short* out, const v_int32& c1, const v_int32& c2)
 {
     vx_store(out, v_pack(c1, c2));
@@ -141,10 +147,10 @@ CV_ALWAYS_INLINE int addw_short2short(const T in1[], const T in2[], T out[],
     {
         for (; x <= length - nlanes; x += nlanes)
         {
-            v_float32 a1 = v_cvt_f32(vx_load_expand(&in1[x]));
-            v_float32 a2 = v_cvt_f32(vx_load_expand(&in1[x + nlanes / 2]));
-            v_float32 b1 = v_cvt_f32(vx_load_expand(&in2[x]));
-            v_float32 b2 = v_cvt_f32(vx_load_expand(&in2[x + nlanes / 2]));
+            v_float32 a1 = v_load_f32(&in1[x]);
+            v_float32 a2 = v_load_f32(&in1[x + nlanes / 2]);
+            v_float32 b1 = v_load_f32(&in2[x]);
+            v_float32 b2 = v_load_f32(&in2[x + nlanes / 2]);
 
             addw_short_store(&out[x], v_round(v_fma(a1, alpha, v_fma(b1, beta, gamma))),
                                       v_round(v_fma(a2, alpha, v_fma(b2, beta, gamma))));
@@ -177,14 +183,14 @@ CV_ALWAYS_INLINE int addw_short2uchar(const SRC in1[], const SRC in2[], uchar ou
     {
         for (; x <= length - nlanes; x += nlanes)
         {
-            v_float32 a1 = v_cvt_f32(vx_load_expand(&in1[x]));
-            v_float32 a2 = v_cvt_f32(vx_load_expand(&in1[x + nlanes / 4]));
-            v_float32 a3 = v_cvt_f32(vx_load_expand(&in1[x + nlanes / 2]));
-            v_float32 a4 = v_cvt_f32(vx_load_expand(&in1[x + 3 * nlanes / 4]));
-            v_float32 b1 = v_cvt_f32(vx_load_expand(&in2[x]));
-            v_float32 b2 = v_cvt_f32(vx_load_expand(&in2[x + nlanes / 4]));
-            v_float32 b3 = v_cvt_f32(vx_load_expand(&in2[x + nlanes / 2]));
-            v_float32 b4 = v_cvt_f32(vx_load_expand(&in2[x + 3 * nlanes / 4]));
+            v_float32 a1 = v_load_f32(&in1[x]);
+            v_float32 a2 = v_load_f32(&in1[x + nlanes / 4]);
+            v_float32 a3 = v_load_f32(&in1[x + nlanes / 2]);
+            v_float32 a4 = v_load_f32(&in1[x + 3 * nlanes / 4]);
+            v_float32 b1 = v_load_f32(&in2[x]);
+            v_float32 b2 = v_load_f32(&in2[x + nlanes / 4]);
+            v_float32 b3 = v_load_f32(&in2[x + nlanes / 2]);
+            v_float32 b4 = v_load_f32(&in2[x + 3 * nlanes / 4]);
 
             v_int32 sum1 = v_round(v_fma(a1, alpha, v_fma(b1, beta, gamma))),
                     sum2 = v_round(v_fma(a2, alpha, v_fma(b2, beta, gamma))),
@@ -249,14 +255,14 @@ CV_ALWAYS_INLINE int addw_simd(const SRC in1[], const SRC in2[], DST out[],
         {
             for (; x <= length - nlanes; x += nlanes)
             {
-                v_float32 a1 = v_cvt_f32(vx_load_expand_q(reinterpret_cast<const uchar*>(&in1[x])));
-                v_float32 a2 = v_cvt_f32(vx_load_expand_q(reinterpret_cast<const uchar*>(&in1[x + nlanes / 4])));
-                v_float32 a3 = v_cvt_f32(vx_load_expand_q(reinterpret_cast<const uchar*>(&in1[x + nlanes / 2])));
-                v_float32 a4 = v_cvt_f32(vx_load_expand_q(reinterpret_cast<const uchar*>(&in1[x + 3 * nlanes / 4])));
-                v_float32 b1 = v_cvt_f32(vx_load_expand_q(reinterpret_cast<const uchar*>(&in2[x])));
-                v_float32 b2 = v_cvt_f32(vx_load_expand_q(reinterpret_cast<const uchar*>(&in2[x + nlanes / 4])));
-                v_float32 b3 = v_cvt_f32(vx_load_expand_q(reinterpret_cast<const uchar*>(&in2[x + nlanes / 2])));
-                v_float32 b4 = v_cvt_f32(vx_load_expand_q(reinterpret_cast<const uchar*>(&in2[x + 3 * nlanes / 4])));
+                v_float32 a1 = v_load_f32(reinterpret_cast<const uchar*>(&in1[x]));
+                v_float32 a2 = v_load_f32(reinterpret_cast<const uchar*>(&in1[x + nlanes / 4]));
+                v_float32 a3 = v_load_f32(reinterpret_cast<const uchar*>(&in1[x + nlanes / 2]));
+                v_float32 a4 = v_load_f32(reinterpret_cast<const uchar*>(&in1[x + 3 * nlanes / 4]));
+                v_float32 b1 = v_load_f32(reinterpret_cast<const uchar*>(&in2[x]));
+                v_float32 b2 = v_load_f32(reinterpret_cast<const uchar*>(&in2[x + nlanes / 4]));
+                v_float32 b3 = v_load_f32(reinterpret_cast<const uchar*>(&in2[x + nlanes / 2]));
+                v_float32 b4 = v_load_f32(reinterpret_cast<const uchar*>(&in2[x + 3 * nlanes / 4]));
 
                 v_int32 sum1 = v_round(v_fma(a1, alpha, v_fma(b1, beta, gamma))),
                         sum2 = v_round(v_fma(a2, alpha, v_fma(b2, beta, gamma))),
@@ -277,7 +283,7 @@ CV_ALWAYS_INLINE int addw_simd(const SRC in1[], const SRC in2[], DST out[],
     }
     return 0;
 }
-#endif  // (CV_SIMD && !CV_NEON)
+#endif  // CV_SIMD
 
 template<typename DST, typename SRC1, typename SRC2>
 static void run_addweighted(Buffer &dst, const View &src1, const View &src2,
@@ -299,7 +305,7 @@ static void run_addweighted(Buffer &dst, const View &src1, const View &src2,
     auto _gamma = static_cast<float>( gamma );
 
     int x = 0;
-#if (CV_SIMD && !CV_NEON)
+#if CV_SIMD
     x = addw_simd(in1, in2, out, _alpha, _beta, _gamma, length);
 #endif
 
