@@ -77,10 +77,10 @@ public:
     {
         init();
     }
-    CvCapture_Images(const String& _filename, const cv::VideoCaptureParameters& params = cv::VideoCaptureParameters())
+    CvCapture_Images(const String& _filename)
     {
         init();
-        IVideoCapture::open(_filename, params);
+        open(_filename);
     }
 
     virtual ~CvCapture_Images() CV_OVERRIDE
@@ -94,7 +94,7 @@ public:
     virtual bool isOpened() const CV_OVERRIDE;
     virtual int getCaptureDomain() /*const*/ CV_OVERRIDE { return cv::CAP_IMAGES; }
 
-    bool open(const String&) CV_OVERRIDE;
+    bool open(const String&);
     void close();
 protected:
     std::string filename_pattern; // actually a printf-pattern
@@ -338,9 +338,9 @@ bool CvCapture_Images::isOpened() const
     return !filename_pattern.empty();
 }
 
-Ptr<IVideoCapture> create_Images_capture(const std::string &filename, const cv::VideoCaptureParameters& params)
+Ptr<IVideoCapture> create_Images_capture(const std::string &filename)
 {
-    return makePtr<CvCapture_Images>(filename, params);
+    return makePtr<CvCapture_Images>(filename);
 }
 
 //

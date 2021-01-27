@@ -21,7 +21,7 @@ namespace cv
 class VideoCapture_DShow : public IVideoCapture
 {
 public:
-    VideoCapture_DShow(int index, const cv::VideoCaptureParameters& params = cv::VideoCaptureParameters());
+    VideoCapture_DShow(int index);
     virtual ~VideoCapture_DShow();
 
     virtual double getProperty(int propIdx) const CV_OVERRIDE;
@@ -32,7 +32,7 @@ public:
     virtual int getCaptureDomain() CV_OVERRIDE;
     virtual bool isOpened() const;
 protected:
-    bool open(int index) CV_OVERRIDE;
+    void open(int index);
     void close();
 
     int m_index, m_width, m_height, m_fourcc;

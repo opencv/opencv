@@ -295,8 +295,8 @@ public:
     virtual bool setProperty(int propId, double value) CV_OVERRIDE;
     virtual bool isOpened() const CV_OVERRIDE { return (bool)pipeline; }
     virtual int getCaptureDomain() CV_OVERRIDE { return cv::CAP_GSTREAMER; }
-    bool open(int id) CV_OVERRIDE;
-    bool open(const String &filename_) CV_OVERRIDE;
+    bool open(int id);
+    bool open(const String &filename_);
     static void newPad(GstElement * /*elem*/, GstPad     *pad, gpointer    data);
 
 protected:
@@ -1221,18 +1221,18 @@ bool GStreamerCapture::setProperty(int propId, double value)
 }
 
 
-Ptr<IVideoCapture> createGStreamerCapture_file(const String& filename, const cv::VideoCaptureParameters& params)
+Ptr<IVideoCapture> createGStreamerCapture_file(const String& filename)
 {
     Ptr<GStreamerCapture> cap = makePtr<GStreamerCapture>();
-    if (cap && cap->IVideoCapture::open(filename, params))
+    if (cap && cap->open(filename))
         return cap;
     return Ptr<IVideoCapture>();
 }
 
-Ptr<IVideoCapture> createGStreamerCapture_cam(int index, const cv::VideoCaptureParameters& params)
+Ptr<IVideoCapture> createGStreamerCapture_cam(int index)
 {
     Ptr<GStreamerCapture> cap = makePtr<GStreamerCapture>();
-    if (cap && cap->IVideoCapture::open(index, params))
+    if (cap && cap->open(index))
         return cap;
     return Ptr<IVideoCapture>();
 }

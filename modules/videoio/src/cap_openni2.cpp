@@ -1108,7 +1108,7 @@ IplImage* CvCapture_OpenNI2::retrieveFrame( int outputType )
     return image;
 }
 
-cv::Ptr<cv::IVideoCapture> cv::create_OpenNI2_capture_cam( int index, const cv::VideoCaptureParameters& )
+cv::Ptr<cv::IVideoCapture> cv::create_OpenNI2_capture_cam( int index )
 {
     CvCapture_OpenNI2* capture = new CvCapture_OpenNI2( index );
 
@@ -1119,7 +1119,7 @@ cv::Ptr<cv::IVideoCapture> cv::create_OpenNI2_capture_cam( int index, const cv::
     return 0;
 }
 
-cv::Ptr<cv::IVideoCapture> cv::create_OpenNI2_capture_file( const std::string &filename, const cv::VideoCaptureParameters& )
+cv::Ptr<cv::IVideoCapture> cv::create_OpenNI2_capture_file( const std::string &filename )
 {
     CvCapture_OpenNI2* capture = new CvCapture_OpenNI2( filename.c_str() );
 

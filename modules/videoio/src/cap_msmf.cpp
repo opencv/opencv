@@ -576,8 +576,8 @@ public:
     } MSMFCapture_Mode;
     CvCapture_MSMF();
     virtual ~CvCapture_MSMF();
-    virtual bool open(int) CV_OVERRIDE;
-    virtual bool open(const cv::String&) CV_OVERRIDE;
+    virtual bool open(int);
+    virtual bool open(const cv::String&);
     virtual void close();
     virtual double getProperty(int) const CV_OVERRIDE;
     virtual bool setProperty(int, double) CV_OVERRIDE;
@@ -1415,24 +1415,24 @@ bool CvCapture_MSMF::setProperty( int property_id, double value )
     return false;
 }
 
-cv::Ptr<cv::IVideoCapture> cv::cvCreateCapture_MSMF(int index, const cv::VideoCaptureParameters& params)
+cv::Ptr<cv::IVideoCapture> cv::cvCreateCapture_MSMF( int index )
 {
     cv::Ptr<CvCapture_MSMF> capture = cv::makePtr<CvCapture_MSMF>();
     if (capture)
     {
-        capture->IVideoCapture::open(index, params);
+        capture->open(index);
         if (capture->isOpened())
             return capture;
     }
     return cv::Ptr<cv::IVideoCapture>();
 }
 
-cv::Ptr<cv::IVideoCapture> cv::cvCreateCapture_MSMF (const cv::String& filename, const cv::VideoCaptureParameters& params)
+cv::Ptr<cv::IVideoCapture> cv::cvCreateCapture_MSMF (const cv::String& filename)
 {
     cv::Ptr<CvCapture_MSMF> capture = cv::makePtr<CvCapture_MSMF>();
     if (capture)
     {
-        capture->IVideoCapture::open(filename, params);
+        capture->open(filename);
         if (capture->isOpened())
             return capture;
     }

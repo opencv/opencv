@@ -196,7 +196,7 @@ namespace cv {
         return true;
     }
 
-Ptr<IVideoCapture> create_WRT_capture(int device, const cv::VideoCaptureParameters&)
+Ptr<IVideoCapture> create_WRT_capture(int device)
 {
     return makePtr<VideoCapture_WinRT>(device);
 }

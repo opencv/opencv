@@ -600,7 +600,7 @@ bool CvCaptureCAM_PvAPI::resizeCaptureFrame (int frameWidth, int frameHeight)
     return true;
 }
 
-cv::Ptr<cv::IVideoCapture> cv::create_PvAPI_capture(int index, const cv::VideoCaptureParameters&)
+cv::Ptr<cv::IVideoCapture> cv::create_PvAPI_capture( int index )
 {
     CvCaptureCAM_PvAPI* capture = new CvCaptureCAM_PvAPI;
 

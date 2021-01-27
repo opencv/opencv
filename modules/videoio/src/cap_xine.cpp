@@ -105,7 +105,7 @@ class XINECapture : public IVideoCapture
         }
     }
 
-    bool open(const char *filename) CV_OVERRIDE
+    bool open(const char *filename)
     {
         CV_Assert_N(!xine, !stream, !vo_port);
         char configfile[2048] = {0};
@@ -346,10 +346,10 @@ protected:
     }
 };
 
-Ptr<IVideoCapture> cv::createXINECapture(const std::string &filename, const cv::VideoCaptureParameters& params)
+Ptr<IVideoCapture> cv::createXINECapture(const std::string &filename)
 {
     Ptr<XINECapture> res = makePtr<XINECapture>();
-    if (res && res->IVideoCapture::open(filename.c_str(), params))
+    if (res && res->open(filename.c_str()))
         return res;
     return Ptr<IVideoCapture>();
 }

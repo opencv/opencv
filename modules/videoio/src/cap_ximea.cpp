@@ -17,8 +17,8 @@ public:
     CvCaptureCAM_XIMEA() { init(); }
     virtual ~CvCaptureCAM_XIMEA() { close(); }
 
-    virtual bool open( int index ) CV_OVERRIDE;
-    bool open( const char* deviceName ) CV_OVERRIDE;
+    virtual bool open( int index );
+    bool open( const char* deviceName );
     virtual void close();
     virtual double getProperty(int) const CV_OVERRIDE;
     virtual bool setProperty(int, double) CV_OVERRIDE;
@@ -42,7 +42,7 @@ private:
 
 /**********************************************************************************/
 
-cv::Ptr<cv::IVideoCapture> cv::create_XIMEA_capture_cam(int index, const VideoCaptureParameters&)
+cv::Ptr<cv::IVideoCapture> cv::create_XIMEA_capture_cam( int index )
 {
     CvCaptureCAM_XIMEA* capture = new CvCaptureCAM_XIMEA;
 
@@ -53,7 +53,7 @@ cv::Ptr<cv::IVideoCapture> cv::create_XIMEA_capture_cam(int index, const VideoCa
     return 0;
 }
 
-cv::Ptr<cv::IVideoCapture> cv::create_XIMEA_capture_file(const std::string &serialNumber, const VideoCaptureParameters&)
+cv::Ptr<cv::IVideoCapture> cv::create_XIMEA_capture_file( const std::string &serialNumber )
 {
     CvCaptureCAM_XIMEA* capture = new CvCaptureCAM_XIMEA;
 

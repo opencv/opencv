@@ -238,7 +238,7 @@ bool VideoCapture_LibRealsense::isOpened() const
     return bool(std::shared_ptr<rs2_pipeline>(mPipe));
 }
 
-Ptr<IVideoCapture> create_RealSense_capture(int index, const cv::VideoCaptureParameters&)
+Ptr<IVideoCapture> create_RealSense_capture(int index)
 {
     return makePtr<VideoCapture_LibRealsense>(index);
 }

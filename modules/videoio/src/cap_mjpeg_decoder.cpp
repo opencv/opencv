@@ -55,9 +55,9 @@ public:
     virtual bool retrieveFrame(int, OutputArray) CV_OVERRIDE;
     virtual bool isOpened() const CV_OVERRIDE;
     virtual int getCaptureDomain() CV_OVERRIDE { return CAP_OPENCV_MJPEG; }
-    MotionJpegCapture(const String&, const cv::VideoCaptureParameters&  = cv::VideoCaptureParameters());
+    MotionJpegCapture(const String&);
 
-    bool open(const String&) CV_OVERRIDE;
+    bool open(const String&);
     void close();
 protected:
 
@@ -182,11 +182,11 @@ MotionJpegCapture::~MotionJpegCapture()
     close();
 }
 
-MotionJpegCapture::MotionJpegCapture(const String& filename, const cv::VideoCaptureParameters& params)
+MotionJpegCapture::MotionJpegCapture(const String& filename)
 {
     m_avi_container = makePtr<AVIReadContainer>();
     m_avi_container->initStream(filename);
-    IVideoCapture::open(filename, params);
+    open(filename);
 }
 
 bool MotionJpegCapture::isOpened() const
@@ -223,9 +223,9 @@ bool MotionJpegCapture::open(const String& filename)
     return isOpened();
 }
 
-Ptr<IVideoCapture> createMotionJpegCapture(const String& filename, const cv::VideoCaptureParameters& params)
+Ptr<IVideoCapture> createMotionJpegCapture(const String& filename)
 {
-    Ptr<MotionJpegCapture> mjdecoder(new MotionJpegCapture(filename, params));
+    Ptr<MotionJpegCapture> mjdecoder(new MotionJpegCapture(filename));
     if( mjdecoder->isOpened() )
         return mjdecoder;
     return Ptr<MotionJpegCapture>();

@@ -80,7 +80,7 @@ struct VideoCapture_uEye CV_FINAL: public IVideoCapture
     char* locked_image = nullptr;
 };
 
-Ptr<IVideoCapture> create_ueye_camera(int camera, const cv::VideoCaptureParameters&)
+Ptr<IVideoCapture> create_ueye_camera(int camera)
 {
     return cv::makePtr<VideoCapture_uEye>(camera);
 }

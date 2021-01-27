@@ -3334,7 +3334,7 @@ namespace cv
 {
 videoInput VideoCapture_DShow::g_VI;
 
-VideoCapture_DShow::VideoCapture_DShow(int index, const cv::VideoCaptureParameters& params)
+VideoCapture_DShow::VideoCapture_DShow(int index)
     : m_index(-1)
     , m_width(-1)
     , m_height(-1)
@@ -3343,7 +3343,7 @@ VideoCapture_DShow::VideoCapture_DShow(int index, const cv::VideoCaptureParamete
     , m_heightSet(-1)
 {
     CoInitialize(0);
-    IVideoCapture::open(index, params);
+    open(index);
 }
 VideoCapture_DShow::~VideoCapture_DShow()
 {
@@ -3580,19 +3580,18 @@ bool VideoCapture_DShow::isOpened() const
     return (-1 != m_index);
 }
 
-bool VideoCapture_DShow::open(int index)
+void VideoCapture_DShow::open(int index)
 {
     close();
     int devices = g_VI.listDevices(true);
     if (0 == devices)
-        return false;
+        return;
     if (index < 0 || index > devices-1)
-        return false;
+        return;
     g_VI.setupDevice(index);
     if (!g_VI.isDeviceSetup(index))
-        return false;
+        return;
     m_index = index;
-    return true;
 }
 
 void VideoCapture_DShow::close()
@@ -3605,9 +3604,9 @@ void VideoCapture_DShow::close()
     m_widthSet = m_heightSet = m_width = m_height = -1;
 }
 
-Ptr<IVideoCapture> create_DShow_capture(int index, const cv::VideoCaptureParameters& params)
+Ptr<IVideoCapture> create_DShow_capture(int index)
 {
-    return makePtr<VideoCapture_DShow>(index, params);
+    return makePtr<VideoCapture_DShow>(index);
 }
 
 

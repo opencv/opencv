@@ -135,8 +135,8 @@ public:
     static const char * lineDelimiter;
 
     DigitalCameraCapture();
-    DigitalCameraCapture(int index, const cv::VideoCaptureParameters& params = cv::VideoCaptureParameters());
-    DigitalCameraCapture(const String &deviceName, const cv::VideoCaptureParameters& params = cv::VideoCaptureParameters());
+    DigitalCameraCapture(int index);
+    DigitalCameraCapture(const String &deviceName);
     virtual ~DigitalCameraCapture() CV_OVERRIDE;
 
     virtual bool isOpened() const CV_OVERRIDE;
@@ -146,7 +146,7 @@ public:
     virtual bool retrieveFrame(int, OutputArray) CV_OVERRIDE;
     virtual int getCaptureDomain() CV_OVERRIDE { return CV_CAP_GPHOTO2; }
 
-    bool open(int index) CV_OVERRIDE;
+    bool open(int index);
     void close();
     bool deviceExist(int index) const;
     int findDevice(const char * deviceName) const;
@@ -353,23 +353,23 @@ DigitalCameraCapture::DigitalCameraCapture()
 /**
  * @see open(int)
  */
-DigitalCameraCapture::DigitalCameraCapture(int index, const cv::VideoCaptureParameters& params)
+DigitalCameraCapture::DigitalCameraCapture(int index)
 {
     initContext();
     if (deviceExist(index))
-        IVideoCapture::open(index, params);
+        open(index);
 }
 
 /**
  * @see findDevice(const char*)
  * @see open(int)
  */
-DigitalCameraCapture::DigitalCameraCapture(const String & deviceName, const cv::VideoCaptureParameters& params)
+DigitalCameraCapture::DigitalCameraCapture(const String & deviceName)
 {
     initContext();
     int index = findDevice(deviceName.c_str());
     if (deviceExist(index))
-        IVideoCapture::open(index, params);
+        open(index);
 }
 
 /**
@@ -1192,9 +1192,9 @@ void DigitalCameraCapture::message(MsgType msgType, const char * msg,
 /**
  * \brief IVideoCapture creator form device index.
  */
-Ptr<IVideoCapture> createGPhoto2Capture(int index, const cv::VideoCaptureParameters& params)
+Ptr<IVideoCapture> createGPhoto2Capture(int index)
 {
-    Ptr<IVideoCapture> capture = makePtr<gphoto2::DigitalCameraCapture>(index, params);
+    Ptr<IVideoCapture> capture = makePtr<gphoto2::DigitalCameraCapture>(index);
 
     if (capture->isOpened())
         return capture;
@@ -1207,9 +1207,9 @@ Ptr<IVideoCapture> createGPhoto2Capture(int index, const cv::VideoCaptureParamet
  *
  * @param deviceName is a substring in digital camera model name.
  */
-Ptr<IVideoCapture> createGPhoto2Capture(const std::string & deviceName, const cv::VideoCaptureParameters& params)
+Ptr<IVideoCapture> createGPhoto2Capture(const std::string & deviceName)
 {
-    Ptr<IVideoCapture> capture = makePtr<gphoto2::DigitalCameraCapture>(deviceName, params);
+    Ptr<IVideoCapture> capture = makePtr<gphoto2::DigitalCameraCapture>(deviceName);
 
     if (capture->isOpened())
         return capture;
