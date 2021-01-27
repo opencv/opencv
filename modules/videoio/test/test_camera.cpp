@@ -87,6 +87,41 @@ TEST(DISABLED_videoio_camera, v4l_read_mjpg)
     capture.release();
 }
 
+TEST(DISABLED_videoio_camera, v4l_open_mjpg)
+{
+    VideoCapture capture;
+    capture.open(0, CAP_V4L2, {
+        CAP_PROP_FOURCC, VideoWriter::fourcc('M', 'J', 'P', 'G')
+    });
+    ASSERT_TRUE(capture.isOpened());
+    std::cout << "Camera 0 via " << capture.getBackendName() << " backend" << std::endl;
+    std::cout << "Frame width: " << capture.get(CAP_PROP_FRAME_WIDTH) << std::endl;
+    std::cout << "     height: " << capture.get(CAP_PROP_FRAME_HEIGHT) << std::endl;
+    std::cout << "Capturing FPS: " << capture.get(CAP_PROP_FPS) << std::endl;
+    int fourcc = (int)capture.get(CAP_PROP_FOURCC);
+    std::cout << "FOURCC code: " << cv::format("0x%8x", fourcc) << std::endl;
+    test_readFrames(capture);
+    capture.release();
+}
+
+TEST(DISABLED_videoio_camera, v4l_open_mjpg_1280x720)
+{
+    VideoCapture capture(0, CAP_V4L2, {
+        CAP_PROP_FOURCC, VideoWriter::fourcc('M', 'J', 'P', 'G'),
+        CAP_PROP_FRAME_WIDTH, 1280,
+        CAP_PROP_FRAME_HEIGHT, 720,
+    });
+    ASSERT_TRUE(capture.isOpened());
+    std::cout << "Camera 0 via " << capture.getBackendName() << " backend" << std::endl;
+    std::cout << "Frame width: " << capture.get(CAP_PROP_FRAME_WIDTH) << std::endl;
+    std::cout << "     height: " << capture.get(CAP_PROP_FRAME_HEIGHT) << std::endl;
+    std::cout << "Capturing FPS: " << capture.get(CAP_PROP_FPS) << std::endl;
+    int fourcc = (int)capture.get(CAP_PROP_FOURCC);
+    std::cout << "FOURCC code: " << cv::format("0x%8x", fourcc) << std::endl;
+    test_readFrames(capture);
+    capture.release();
+}
+
 //Following test if for capture device using PhysConn_Video_SerialDigital as crossbar input pin
 TEST(DISABLED_videoio_camera, channel6)
 {
