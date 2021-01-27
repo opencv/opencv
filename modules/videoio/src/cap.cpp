@@ -75,10 +75,24 @@ VideoCapture::VideoCapture(const String& filename, int apiPreference) : throwOnF
     open(filename, apiPreference);
 }
 
+VideoCapture::VideoCapture(const String& filename, int apiPreference, const std::vector<int>& params)
+    : throwOnFail(true)
+{
+    CV_TRACE_FUNCTION();
+    open(filename, apiPreference, params);
+}
+
 VideoCapture::VideoCapture(int index, int apiPreference) : throwOnFail(false)
 {
     CV_TRACE_FUNCTION();
     open(index, apiPreference);
+}
+
+VideoCapture::VideoCapture(int index, int apiPreference, const std::vector<int>& params)
+    : throwOnFail(true)
+{
+    CV_TRACE_FUNCTION();
+    open(index, apiPreference, params);
 }
 
 VideoCapture::~VideoCapture()
@@ -89,7 +103,7 @@ VideoCapture::~VideoCapture()
 
 bool VideoCapture::open(const String& filename, int apiPreference)
 {
-    return open(filename, apiPreference, std::vector<int> {});
+    return open(filename, apiPreference, std::vector<int>());
 }
 
 bool VideoCapture::open(const String& filename, int apiPreference, const std::vector<int>& params)
@@ -188,7 +202,7 @@ bool VideoCapture::open(const String& filename, int apiPreference, const std::ve
 
 bool VideoCapture::open(int cameraNum, int apiPreference)
 {
-    return open(cameraNum, apiPreference, std::vector<int> {});
+    return open(cameraNum, apiPreference, std::vector<int>());
 }
 
 bool VideoCapture::open(int cameraNum, int apiPreference, const std::vector<int>& params)

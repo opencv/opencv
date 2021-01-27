@@ -363,7 +363,9 @@ public:
         }
     }
 
+    Ptr<IVideoCapture> createCapture(int camera) const;
     Ptr<IVideoCapture> createCapture(int camera, const VideoCaptureParameters& params) const CV_OVERRIDE;
+    Ptr<IVideoCapture> createCapture(const std::string &filename) const;
     Ptr<IVideoCapture> createCapture(const std::string &filename, const VideoCaptureParameters& params) const CV_OVERRIDE;
     Ptr<IVideoWriter> createWriter(const std::string& filename, int fourcc, double fps,
                                    const cv::Size& sz, const VideoWriterParameters& params) const CV_OVERRIDE;
@@ -741,7 +743,7 @@ public:
 };
 
 
-Ptr<IVideoCapture> PluginBackend::createCapture(int camera, const VideoCaptureParameters&) const
+Ptr<IVideoCapture> PluginBackend::createCapture(int camera) const
 {
     try
     {
@@ -753,11 +755,23 @@ Ptr<IVideoCapture> PluginBackend::createCapture(int camera, const VideoCapturePa
     catch (...)
     {
         CV_LOG_DEBUG(NULL, "Video I/O: can't create camera capture: " << camera);
+        throw;
     }
     return Ptr<IVideoCapture>();
 }
 
-Ptr<IVideoCapture> PluginBackend::createCapture(const std::string &filename, const VideoCaptureParameters&) const
+Ptr<IVideoCapture> PluginBackend::createCapture(int camera, const VideoCaptureParameters& params) const
+{
+    // TODO Update plugins API to support parameters
+    Ptr<IVideoCapture> cap = createCapture(camera);
+    if (cap && !params.empty())
+    {
+        applyParametersFallback(cap, params);
+    }
+    return cap;
+}
+
+Ptr<IVideoCapture> PluginBackend::createCapture(const std::string &filename) const
 {
     try
     {
@@ -769,8 +783,20 @@ Ptr<IVideoCapture> PluginBackend::createCapture(const std::string &filename, con
     catch (...)
     {
         CV_LOG_DEBUG(NULL, "Video I/O: can't open file capture: " << filename);
+        throw;
     }
     return Ptr<IVideoCapture>();
+}
+
+Ptr<IVideoCapture> PluginBackend::createCapture(const std::string &filename, const VideoCaptureParameters& params) const
+{
+    // TODO Update plugins API to support parameters
+    Ptr<IVideoCapture> cap = createCapture(filename);
+    if (cap && !params.empty())
+    {
+        applyParametersFallback(cap, params);
+    }
+    return cap;
 }
 
 Ptr<IVideoWriter> PluginBackend::createWriter(const std::string& filename, int fourcc, double fps,

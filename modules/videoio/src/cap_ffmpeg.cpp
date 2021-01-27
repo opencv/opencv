@@ -67,7 +67,11 @@ class CvCapture_FFMPEG_proxy CV_FINAL : public cv::IVideoCapture
 {
 public:
     CvCapture_FFMPEG_proxy() { ffmpegCapture = 0; }
-    CvCapture_FFMPEG_proxy(const cv::String& filename) { ffmpegCapture = 0; open(filename); }
+    CvCapture_FFMPEG_proxy(const cv::String& filename, const cv::VideoCaptureParameters& params)
+        : ffmpegCapture(NULL)
+    {
+        open(filename, params);
+    }
     virtual ~CvCapture_FFMPEG_proxy() { close(); }
 
     virtual double getProperty(int propId) const CV_OVERRIDE
@@ -102,6 +106,28 @@ public:
         close();
 
         ffmpegCapture = icvCreateFileCapture_FFMPEG_p( filename.c_str() );
+        return ffmpegCapture != 0;
+    }
+    bool open(const cv::String& filename, const cv::VideoCaptureParameters& params)
+    {
+        close();
+
+        ffmpegCapture = icvCreateFileCapture_FFMPEG_p(filename.c_str());
+        if (ffmpegCapture && !params.empty())
+        {
+            if (params.has(CAP_PROP_FORMAT))  // just a sample code
+            {
+                int value = params.get<int>(CAP_PROP_FORMAT);
+                if (!setProperty(CAP_PROP_FORMAT, value))
+                {
+                    CV_Error_(Error::StsBadArg, ("VIDEOIO/FFMPEG: CAP_PROP_FORMAT parameter value is invalid/unsupported: %d", value));
+                }
+            }
+            if (params.warnUnusedParameters())
+            {
+                CV_Error(Error::StsBadArg, "VIDEOIO/FFMPEG: unsupported parameters in .open(), see logger INFO channel for details");
+            }
+        }
         return ffmpegCapture != 0;
     }
     virtual void close()
@@ -145,9 +171,9 @@ protected:
 
 } // namespace
 
-cv::Ptr<cv::IVideoCapture> cvCreateFileCapture_FFMPEG_proxy(const std::string &filename)
+cv::Ptr<cv::IVideoCapture> cvCreateFileCapture_FFMPEG_proxy(const std::string &filename, const cv::VideoCaptureParameters& params)
 {
-    cv::Ptr<CvCapture_FFMPEG_proxy> capture = cv::makePtr<CvCapture_FFMPEG_proxy>(filename);
+    cv::Ptr<CvCapture_FFMPEG_proxy> capture = cv::makePtr<CvCapture_FFMPEG_proxy>(filename, params);
     if (capture && capture->isOpened())
         return capture;
     return cv::Ptr<cv::IVideoCapture>();
@@ -246,7 +272,7 @@ CvResult CV_API_CALL cv_capture_open(const char* filename, int camera_index, CV_
     CvCapture_FFMPEG_proxy *cap = 0;
     try
     {
-        cap = new CvCapture_FFMPEG_proxy(filename);
+        cap = new CvCapture_FFMPEG_proxy(filename, cv::VideoCaptureParameters());
         if (cap->isOpened())
         {
             *handle = (CvPluginCapture)cap;

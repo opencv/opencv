@@ -87,13 +87,46 @@ public:
         params_.emplace_back(key, value);
     }
 
-    template <class ValueType>
-    ValueType get(int key, ValueType defaultValue) const CV_NOEXCEPT
+    bool has(int key) const
     {
         auto it = std::find_if(params_.begin(), params_.end(),
-                               [key](const VideoParameter &param) {
-                                   return param.key == key;
-                               });
+            [key](const VideoParameter &param)
+            {
+                return param.key == key;
+            }
+        );
+        return it != params_.end();
+    }
+
+    template <class ValueType>
+    ValueType get(int key) const
+    {
+        auto it = std::find_if(params_.begin(), params_.end(),
+            [key](const VideoParameter &param)
+            {
+                return param.key == key;
+            }
+        );
+        if (it != params_.end())
+        {
+            it->isConsumed = true;
+            return castParameterTo<ValueType>(it->value);
+        }
+        else
+        {
+            CV_Error_(Error::StsBadArg, ("Missing value for parameter: [%d]", key));
+        }
+    }
+
+    template <class ValueType>
+    ValueType get(int key, ValueType defaultValue) const
+    {
+        auto it = std::find_if(params_.begin(), params_.end(),
+            [key](const VideoParameter &param)
+            {
+                return param.key == key;
+            }
+        );
         if (it != params_.end())
         {
             it->isConsumed = true;
@@ -105,7 +138,8 @@ public:
         }
     }
 
-    std::vector<int> getUnused() const CV_NOEXCEPT {
+    std::vector<int> getUnused() const
+    {
         std::vector<int> unusedParams;
         for (const auto &param : params_)
         {
@@ -130,8 +164,24 @@ public:
 
     bool empty() const
     {
-        return (params_.size() > 0) ? false : true;
+        return params_.empty();
     }
+
+    bool warnUnusedParameters() const
+    {
+        bool found = false;
+        for (const auto &param : params_)
+        {
+            if (!param.isConsumed)
+            {
+                found = true;
+                CV_LOG_INFO(NULL, "VIDEOIO: unused parameter: [" << param.key << "]=" <<
+                    cv::format("%lld / 0x%16llx", (long long)param.value, (long long)param.value));
+            }
+        }
+        return found;
+    }
+
 
 private:
     std::vector<VideoParameter> params_;
@@ -282,7 +332,7 @@ public:
 
 //==================================================================================================
 
-Ptr<IVideoCapture> cvCreateFileCapture_FFMPEG_proxy(const std::string &filename);
+Ptr<IVideoCapture> cvCreateFileCapture_FFMPEG_proxy(const std::string &filename, const cv::VideoCaptureParameters& params);
 Ptr<IVideoWriter> cvCreateVideoWriter_FFMPEG_proxy(const std::string& filename, int fourcc,
                                                    double fps, const Size& frameSize,
                                                    const VideoWriterParameters& params);
