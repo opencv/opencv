@@ -273,14 +273,17 @@ int Subdiv2D::isRightOf(Point2f pt, int edge) const
         /* Voronoi edge, PTTYPE_VORONOI_IDEAL points can have non-zero bias, but current
            implementation of CCWEx() (and therefore rightOfEx()) assumes the opposite */
 
-        if (!vtx[edge_org].isideal() && !vtx[edge_dst].isideal()) {
+        bool ideal_org = vtx[edge_org].isideal();
+        bool ideal_dst = vtx[edge_dst].isideal();
+
+        if (!ideal_org && !ideal_dst) {
             return rightOfEx(pt, vtx[edge_org].pt, vtx[edge_dst].pt, false, false, false);
         }
 
         Point2f bias;
 
-        if (!vtx[edge_org].isideal() || !vtx[edge_dst].isideal()) {
-            bias = vtx[edge_org].isideal() ? vtx[edge_dst].pt : vtx[edge_org].pt;
+        if (!ideal_org || !ideal_dst) {
+            bias = ideal_org ? vtx[edge_dst].pt : vtx[edge_org].pt;
         } else {
             int rot_org = edgeOrg(rotateEdge(edge, 3));
             int rot_dst = edgeDst(rotateEdge(edge, 3));
@@ -294,10 +297,7 @@ int Subdiv2D::isRightOf(Point2f pt, int edge) const
             }
         }
 
-        bool ideal_org = vtx[edge_org].isideal();
         Point2f org = ideal_org ? vtx[edge_org].pt : vtx[edge_org].pt - bias;
-
-        bool ideal_dst = vtx[edge_dst].isideal();
         Point2f dst = ideal_dst ? vtx[edge_dst].pt : vtx[edge_dst].pt - bias;
 
         return rightOfEx(pt - bias, org, dst, false, ideal_org, ideal_dst);
