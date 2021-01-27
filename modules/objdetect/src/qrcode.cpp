@@ -2486,17 +2486,24 @@ cv::String QRCodeDetector::decode(InputArray in, InputArray points,
     CV_Assert(src_points.size() == 4);
     CV_CheckGT(contourArea(src_points), 0.0, "Invalid QR code source points");
 
+    size_t straight_qrcode_channels = straight_qrcode.fixedType() ?
+                                      straight_qrcode.channels() : 1;
+    CV_Assert(straight_qrcode_channels == 1);
+
     QRDecode qrdec;
     qrdec.init(inarr, src_points);
     bool ok = qrdec.straightDecodingProcess();
 
     std::string decoded_info = qrdec.getDecodeInformation();
-
-    if (ok && straight_qrcode.needed())
+    if(!ok && straight_qrcode.needed())
+    {
+        straight_qrcode.release();
+    }
+    else if (straight_qrcode.needed())
     {
         qrdec.getStraightBarcode().convertTo(straight_qrcode,
                                              straight_qrcode.fixedType() ?
-                                             straight_qrcode.type() : CV_32FC2);
+                                             straight_qrcode.type() : CV_8UC1);
     }
 
     return ok ? decoded_info : std::string();
@@ -2514,17 +2521,25 @@ cv::String QRCodeDetector::decodeCurved(InputArray in, InputArray points,
     CV_Assert(src_points.size() == 4);
     CV_CheckGT(contourArea(src_points), 0.0, "Invalid QR code source points");
 
+    size_t straight_qrcode_channels = straight_qrcode.fixedType() ?
+                                      straight_qrcode.channels() : 1;
+    CV_Assert(straight_qrcode_channels == 1);
+
     QRDecode qrdec;
     qrdec.init(inarr, src_points);
     bool ok = qrdec.curvedDecodingProcess();
 
     std::string decoded_info = qrdec.getDecodeInformation();
 
-    if (ok && straight_qrcode.needed())
+    if(!ok && straight_qrcode.needed())
+    {
+        straight_qrcode.release();
+    }
+    else if (straight_qrcode.needed())
     {
         qrdec.getStraightBarcode().convertTo(straight_qrcode,
                                              straight_qrcode.fixedType() ?
-                                             straight_qrcode.type() : CV_32FC2);
+                                             straight_qrcode.type() : CV_8UC1);
     }
 
     return ok ? decoded_info : std::string();
@@ -3603,6 +3618,11 @@ bool QRCodeDetector::decodeMulti(
         }
     }
     CV_Assert(src_points.size() > 0);
+
+    size_t straight_qrcode_channels = straight_qrcode.fixedType() ?
+                         straight_qrcode.channels() : 1;
+    CV_Assert(straight_qrcode_channels == 1);
+
     vector<QRDecode> qrdec(src_points.size());
     vector<Mat> straight_barcode(src_points.size());
     vector<std::string> info(src_points.size());
@@ -3615,18 +3635,22 @@ bool QRCodeDetector::decodeMulti(
             for_copy.push_back(straight_barcode[i]);
     }
     straight_barcode = for_copy;
-    vector<Mat> tmp_straight_qrcodes;
-    if (straight_qrcode.needed())
+    if (straight_qrcode.needed() &&
+       (straight_barcode.size() == 0))
     {
+        straight_qrcode.release();
+    }
+    else if(straight_qrcode.needed())
+    {
+        vector<Mat> tmp_straight_qrcodes(straight_barcode.size());
         for (size_t i = 0; i < straight_barcode.size(); i++)
         {
-            Mat tmp_straight_qrcode;
-            tmp_straight_qrcodes.push_back(tmp_straight_qrcode);
-            straight_barcode[i].convertTo(((OutputArray)tmp_straight_qrcodes[i]),
-                                             ((OutputArray)tmp_straight_qrcodes[i]).fixedType() ?
-                                             ((OutputArray)tmp_straight_qrcodes[i]).type() : CV_32FC2);
+            straight_barcode[i].convertTo(tmp_straight_qrcodes[i],
+                                          straight_qrcode.fixedType() ?
+                                          straight_qrcode.type() : CV_8UC1);
         }
-        straight_qrcode.createSameSize(tmp_straight_qrcodes, CV_32FC2);
+        straight_qrcode.create(OutputArray(tmp_straight_qrcodes).size(),
+                               OutputArray(tmp_straight_qrcodes).type());
         straight_qrcode.assign(tmp_straight_qrcodes);
     }
     decoded_info.clear();
