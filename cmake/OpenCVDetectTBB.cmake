@@ -57,6 +57,68 @@ function(ocv_tbb_env_verify)
   endif()
 endfunction()
 
+function(ocv_tbb_env_one_api_guess _found)
+  if(NOT TBB_DIR)
+    file(TO_CMAKE_PATH "$ENV{ONEAPI_ROOT}/tbb/latest" path)
+    find_path(TBB_DIR include/tbb/tbb.h PATHS ${path})
+  endif()
+  if(TBB_DIR AND EXISTS "${TBB_DIR}/include/tbb/tbb.h")
+    find_path(TBB_ENV_INCLUDE tbb/tbb.h PATHS ${TBB_DIR}/include)
+    #determine arch
+    if(CMAKE_CXX_SIZEOF_DATA_PTR EQUAL 8)
+      set(TBB_ARCH_LIST "intel64")
+    else()
+      set(TBB_ARCH_LIST "ia32")
+    endif()
+  
+    set(tbb_lib_find_paths ${TBB_LIB_FIND_PATHS} ${TBB_DIR}/lib)
+    foreach(TBB_ARCH ${TBB_ARCH_LIST})
+      list(APPEND tbb_lib_find_paths
+        ${TBB_DIR}/lib/${TBB_ARCH}/vc_mt
+      )
+    endforeach()
+    
+    set(mkl_lib_list "tbb" "tbb12")
+    set(SUB_LIB_LIST "")
+    foreach(lib ${mkl_lib_list})
+      set(lib_var_name TBB_LIBRARY_${lib})
+      find_library(${lib_var_name} NAMES ${lib} HINTS ${tbb_lib_find_paths})
+      mark_as_advanced(${lib_var_name})
+      set(lib_var_name_debug TBB_LIBRARY_${lib}_DEBUG)
+      find_library(${lib_var_name_debug} NAMES ${lib}_debug HINTS ${tbb_lib_find_paths})
+      mark_as_advanced(${lib_var_name_debug})
+      if(NOT ${lib_var_name})
+        return()
+      endif()
+      list(APPEND SUB_LIB_LIST tbb::${lib})
+      add_library(tbb::${lib} UNKNOWN IMPORTED)
+      set_target_properties(tbb::${lib} PROPERTIES
+        IMPORTED_LOCATION "${${lib_var_name}}"
+      )
+      if (${lib_var_name_debug})
+        set_target_properties(tbb::${lib} PROPERTIES
+          IMPORTED_LOCATION_DEBUG "${${lib_var_name_debug}}"
+        )
+      endif()
+    endforeach()
+    ocv_tbb_read_version_one_api("${TBB_ENV_INCLUDE}")
+    add_library(tbb INTERFACE IMPORTED)
+    set_target_properties(tbb PROPERTIES
+      INTERFACE_INCLUDE_DIRECTORIES "${TBB_ENV_INCLUDE}"
+    )
+    set_property(TARGET tbb
+      PROPERTY
+      INTERFACE_LINK_LIBRARIES ${SUB_LIB_LIST}
+    )
+    # workaround: system TBB library is used for linking instead of provided
+    if(CV_GCC)
+      set_target_properties(tbb PROPERTIES INTERFACE_LINK_LIBRARIES "-L${tbb_lib_find_paths}")
+    endif()
+    message(STATUS "Found TBB (oneApi): ${TBB_DIR}")
+    set(${_found} TRUE PARENT_SCOPE)
+  endif()
+endfunction()
+
 function(ocv_tbb_env_guess _found)
   find_path(TBB_ENV_INCLUDE NAMES "tbb/tbb.h" PATHS ENV CPATH NO_DEFAULT_PATH)
   find_path(TBB_ENV_INCLUDE NAMES "tbb/tbb.h")
@@ -92,6 +154,11 @@ function(ocv_tbb_read_version _path)
   ocv_parse_header("${TBB_VER_FILE}" TBB_VERSION_LINES TBB_VERSION_MAJOR TBB_VERSION_MINOR TBB_INTERFACE_VERSION CACHE)
 endfunction()
 
+function(ocv_tbb_read_version_one_api _path)
+  find_file(TBB_VER_FILE oneapi/tbb/version.h "${_path}" NO_DEFAULT_PATH CMAKE_FIND_ROOT_PATH_BOTH)
+  ocv_parse_header("${TBB_VER_FILE}" TBB_VERSION_LINES TBB_VERSION_MAJOR TBB_VERSION_MINOR TBB_INTERFACE_VERSION CACHE)
+endfunction()
+
 #=====================================================================
 
 if(BUILD_TBB)
@@ -108,6 +175,10 @@ endif()
 
 if(NOT HAVE_TBB)
   ocv_tbb_env_guess(HAVE_TBB)
+endif()
+
+if (NOT HAVE_TBB)
+  ocv_tbb_env_one_api_guess(HAVE_TBB)
 endif()
 
 if(TBB_INTERFACE_VERSION LESS 6000) # drop support of versions < 4.0

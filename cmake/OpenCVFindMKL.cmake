@@ -55,6 +55,11 @@ if(NOT MKL_ROOT_DIR)
       list(APPEND mkl_root_paths "${path}")
   endif()
 
+  if(DEFINED ENV{ONEAPI_ROOT})
+      file(TO_CMAKE_PATH "$ENV{ONEAPI_ROOT}/mkl/latest" path)
+      list(APPEND mkl_root_paths "${path}")
+  endif()
+
   if(WITH_MKL AND NOT mkl_root_paths)
     if(WIN32)
       set(ProgramFilesx86 "ProgramFiles(x86)")
