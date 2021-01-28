@@ -509,12 +509,10 @@ TEST(videoio_ffmpeg, create_with_property_badarg)
         throw SkipTestException("FFmpeg backend was not found");
 
     string video_file = findDataFile("video/big_buck_bunny.mp4");
-    EXPECT_ANY_THROW(
-    {
-        VideoCapture cap(video_file, CAP_FFMPEG, {
-            CAP_PROP_FORMAT, -2  // invalid
-        });
+    VideoCapture cap(video_file, CAP_FFMPEG, {
+        CAP_PROP_FORMAT, -2  // invalid
     });
+    EXPECT_FALSE(cap.isOpened());
 }
 
 

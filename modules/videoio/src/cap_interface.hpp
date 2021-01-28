@@ -82,6 +82,15 @@ public:
         }
     }
 
+    VideoParameters(int* params, unsigned n_params)
+    {
+        params_.reserve(n_params);
+        for (unsigned i = 0; i < n_params; ++i)
+        {
+            add(params[2*i], params[2*i + 1]);
+        }
+    }
+
     void add(int key, int value)
     {
         params_.emplace_back(key, value);
@@ -190,17 +199,13 @@ private:
 class VideoWriterParameters : public VideoParameters
 {
 public:
-    VideoWriterParameters() = default;
-
-    explicit VideoWriterParameters(const std::vector<int>& params) : VideoParameters(params) {};
+    using VideoParameters::VideoParameters;  // reuse constructors
 };
 
 class VideoCaptureParameters : public VideoParameters
 {
 public:
-    VideoCaptureParameters() = default;
-
-    explicit VideoCaptureParameters(const std::vector<int>& params) : VideoParameters(params) {};
+    using VideoParameters::VideoParameters;  // reuse constructors
 };
 
 class IVideoCapture
