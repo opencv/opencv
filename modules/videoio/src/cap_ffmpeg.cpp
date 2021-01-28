@@ -49,7 +49,8 @@
 
 #include "cap_ffmpeg_impl.hpp"
 
-#define icvCreateFileCapture_FFMPEG_p cvCreateFileCapture_FFMPEG
+// TODO drop legacy code
+//#define icvCreateFileCapture_FFMPEG_p cvCreateFileCapture_FFMPEG
 #define icvReleaseCapture_FFMPEG_p cvReleaseCapture_FFMPEG
 #define icvGrabFrame_FFMPEG_p cvGrabFrame_FFMPEG
 #define icvRetrieveFrame_FFMPEG_p cvRetrieveFrame_FFMPEG
@@ -101,36 +102,14 @@ public:
 
         return true;
     }
-    virtual bool open( const cv::String& filename )
-    {
-        close();
-
-        ffmpegCapture = icvCreateFileCapture_FFMPEG_p( filename.c_str() );
-        return ffmpegCapture != 0;
-    }
     bool open(const cv::String& filename, const cv::VideoCaptureParameters& params)
     {
         close();
 
-        ffmpegCapture = icvCreateFileCapture_FFMPEG_p(filename.c_str());
-        if (ffmpegCapture && !params.empty())
-        {
-            if (params.has(CAP_PROP_FORMAT))  // just a sample code
-            {
-                int value = params.get<int>(CAP_PROP_FORMAT);
-                if (!setProperty(CAP_PROP_FORMAT, value))
-                {
-                    CV_Error_(Error::StsBadArg, ("VIDEOIO/FFMPEG: CAP_PROP_FORMAT parameter value is invalid/unsupported: %d", value));
-                }
-            }
-            if (params.warnUnusedParameters())
-            {
-                CV_Error(Error::StsBadArg, "VIDEOIO/FFMPEG: unsupported parameters in .open(), see logger INFO channel for details");
-            }
-        }
+        ffmpegCapture = cvCreateFileCaptureWithParams_FFMPEG(filename.c_str(), params);
         return ffmpegCapture != 0;
     }
-    virtual void close()
+    void close()
     {
         if (ffmpegCapture)
             icvReleaseCapture_FFMPEG_p( &ffmpegCapture );
@@ -251,7 +230,7 @@ cv::Ptr<cv::IVideoWriter> cvCreateVideoWriter_FFMPEG_proxy(const std::string& fi
 #include "plugin_api.hpp"
 #else
 #define CAPTURE_ABI_VERSION 1
-#define CAPTURE_API_VERSION 0
+#define CAPTURE_API_VERSION 1
 #include "plugin_capture_api.hpp"
 #define WRITER_ABI_VERSION 1
 #define WRITER_API_VERSION 0
@@ -273,6 +252,38 @@ CvResult CV_API_CALL cv_capture_open(const char* filename, int camera_index, CV_
     try
     {
         cap = new CvCapture_FFMPEG_proxy(filename, cv::VideoCaptureParameters());
+        if (cap->isOpened())
+        {
+            *handle = (CvPluginCapture)cap;
+            return CV_ERROR_OK;
+        }
+    }
+    catch (...)
+    {
+    }
+    if (cap)
+        delete cap;
+    return CV_ERROR_FAIL;
+}
+
+static
+CvResult CV_API_CALL cv_capture_open_with_params(
+        const char* filename, int camera_index,
+        int* params, unsigned n_params,
+        CV_OUT CvPluginCapture* handle
+)
+{
+    if (!handle)
+        return CV_ERROR_FAIL;
+    *handle = NULL;
+    if (!filename)
+        return CV_ERROR_FAIL;
+    CV_UNUSED(camera_index);
+    CvCapture_FFMPEG_proxy *cap = 0;
+    try
+    {
+        cv::VideoCaptureParameters parameters(params, n_params);
+        cap = new CvCapture_FFMPEG_proxy(filename, parameters);
         if (cap->isOpened())
         {
             *handle = (CvPluginCapture)cap;
@@ -505,6 +516,9 @@ static const OpenCV_VideoIO_Capture_Plugin_API capture_plugin_api =
         /*  5*/cv_capture_set_prop,
         /*  6*/cv_capture_grab,
         /*  7*/cv_capture_retrieve,
+    },
+    {
+        /*  8*/cv_capture_open_with_params,
     }
 };
 

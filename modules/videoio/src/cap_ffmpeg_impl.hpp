@@ -456,7 +456,7 @@ static AVRational _opencv_ffmpeg_get_sample_aspect_ratio(AVStream *stream)
 
 struct CvCapture_FFMPEG
 {
-    bool open( const char* filename );
+    bool open(const char* filename, const VideoCaptureParameters& params);
     void close();
 
     double getProperty(int) const;
@@ -857,7 +857,7 @@ public:
     }
 };
 
-bool CvCapture_FFMPEG::open( const char* _filename )
+bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters& params)
 {
     InternalFFMpegRegister::init();
     AutoLock lock(_mutex);
@@ -865,6 +865,29 @@ bool CvCapture_FFMPEG::open( const char* _filename )
     bool valid = false;
 
     close();
+
+    if (!params.empty())
+    {
+        if (params.has(CAP_PROP_FORMAT))
+        {
+            int value = params.get<int>(CAP_PROP_FORMAT);
+            if (value == -1)
+            {
+                CV_LOG_INFO(NULL, "VIDEOIO/FFMPEG: enabled demuxer only mode: '" << (_filename ? _filename : "<NULL>") << "'");
+                rawMode = true;
+            }
+            else
+            {
+                CV_LOG_ERROR(NULL, "VIDEOIO/FFMPEG: CAP_PROP_FORMAT parameter value is invalid/unsupported: " << value);
+                return false;
+            }
+        }
+        if (params.warnUnusedParameters())
+        {
+            CV_LOG_ERROR(NULL, "VIDEOIO/FFMPEG: unsupported parameters in .open(), see logger INFO channel for details");
+            return false;
+        }
+    }
 
 #if USE_AV_INTERRUPT_CALLBACK
     /* interrupt callback */
@@ -2424,20 +2447,21 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
 
 
 
-CvCapture_FFMPEG* cvCreateFileCapture_FFMPEG( const char* filename )
+static
+CvCapture_FFMPEG* cvCreateFileCaptureWithParams_FFMPEG(const char* filename, const VideoCaptureParameters& params)
 {
+    // FIXIT: remove unsafe malloc() approach
     CvCapture_FFMPEG* capture = (CvCapture_FFMPEG*)malloc(sizeof(*capture));
     if (!capture)
         return 0;
     capture->init();
-    if( capture->open( filename ))
+    if (capture->open(filename, params))
         return capture;
 
     capture->close();
     free(capture);
     return 0;
 }
-
 
 void cvReleaseCapture_FFMPEG(CvCapture_FFMPEG** capture)
 {
