@@ -3485,7 +3485,7 @@ bool VideoCapture_DShow::setProperty(int propIdx, double propVal)
     case CV_CAP_PROP_CONVERT_RGB:
     {
         const bool convertRgb = cvRound(propVal) == 1;
-        const bool success = g_VI.setConvertRGB(m_index, m_convertRGBSet);
+        const bool success = g_VI.setConvertRGB(m_index, convertRgb);
         if(success)
             m_convertRGBSet = convertRgb;
         return success;
