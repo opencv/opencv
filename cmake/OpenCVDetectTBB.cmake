@@ -76,14 +76,14 @@ function(ocv_tbb_env_one_api_guess _found)
     else()
       set(TBB_ARCH_LIST "ia32")
     endif()
-  
+
     set(tbb_lib_find_paths ${TBB_LIB_FIND_PATHS} ${TBB_DIR}/lib)
     foreach(TBB_ARCH ${TBB_ARCH_LIST})
       list(APPEND tbb_lib_find_paths
         ${TBB_DIR}/lib/${TBB_ARCH}/vc_mt
       )
     endforeach()
-    
+
     set(mkl_lib_list "tbb" "tbb12")
     set(SUB_LIB_LIST "")
     foreach(lib ${mkl_lib_list})
