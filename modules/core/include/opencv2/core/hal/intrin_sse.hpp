@@ -1329,8 +1329,9 @@ inline v_int8x16 v_absdiffs(const v_int8x16& a, const v_int8x16& b)
     v_int8x16 m = a < b;
     return (d ^ m) - m;
  }
-static inline v_int16x8 v_absdiffs(const v_int16x8& a, const v_int16x8& b)
+inline v_int16x8 v_absdiffs(const v_int16x8& a, const v_int16x8& b)
 { return v_max(a, b) - v_min(a, b); }
+
 
 inline v_int32x4 v_fma(const v_int32x4& a, const v_int32x4& b, const v_int32x4& c)
 {

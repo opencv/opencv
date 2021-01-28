@@ -97,31 +97,22 @@ static inline DST divr(SRC1 x, SRC2 y, float scale=1)
 // Fluid kernels: addWeighted
 //
 //---------------------------
-#if CV_SIMD
-template<typename SRC>
-static inline v_float32 v_load_f32(const SRC* ptr)
+#if CV_SSE2 | CV_AVX2 | CV_AVX512_SKX
+CV_ALWAYS_INLINE v_float32 v_load_f32(const ushort* in)
 {
-    if (std::is_same<SRC, uchar>::value)
-    {
-        v_uint32 tmp = vx_load_expand_q(reinterpret_cast<const uchar*>(ptr));
-        return v_cvt_f32(v_reinterpret_as_s32(tmp));
-    }
-    else if (std::is_same<SRC, ushort>::value)
-    {
-        v_uint32 tmp = vx_load_expand(reinterpret_cast<const ushort*>(ptr));
-        return v_cvt_f32(v_reinterpret_as_s32(tmp));
-    }
-    else if (std::is_same<SRC, short>::value)
-    {
-        return v_cvt_f32(vx_load_expand(reinterpret_cast<const short*>(ptr)));
-    }
-    else if (std::is_same<SRC, float>::value)
-    {
-        return vx_load(reinterpret_cast<const float*>(ptr));
-    }
-
-    CV_Error(cv::Error::StsBadArg, "unsupported type");
+    return v_cvt_f32(v_reinterpret_as_s32(vx_load_expand(in)));
 }
+
+CV_ALWAYS_INLINE v_float32 v_load_f32(const short* in)
+{
+    return v_cvt_f32(vx_load_expand(in));
+}
+
+CV_ALWAYS_INLINE v_float32 v_load_f32(const uchar* in)
+{
+    return v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(in)));
+}
+
 CV_ALWAYS_INLINE void addw_short_store(short* out, const v_int32& c1, const v_int32& c2)
 {
     vx_store(out, v_pack(c1, c2));
@@ -132,12 +123,16 @@ CV_ALWAYS_INLINE void addw_short_store(ushort* out, const v_int32& c1, const v_i
     vx_store(out, v_pack_u(c1, c2));
 }
 
-template<typename T>
-CV_ALWAYS_INLINE int addw_short2short(const T in1[], const T in2[], T out[],
-                                      const v_float32& alpha, const v_float32& beta,
-                                      const v_float32& gamma, int length)
+template<typename SRC, typename DST>
+CV_ALWAYS_INLINE int addw_simd(const SRC in1[], const SRC in2[], DST out[],
+                               const v_float32& alpha, const v_float32& beta,
+                               const v_float32& gamma, int length)
 {
-    constexpr int nlanes = v_uint16::nlanes;
+    GAPI_Assert((std::is_same<DST, ushort>::value) ||
+                (std::is_same<DST, short>::value));
+
+    constexpr int nlanes = (std::is_same<DST, ushort>::value) ? static_cast<int>(v_uint16::nlanes) :
+                                                                static_cast<int>(v_int16::nlanes);
 
     if (length < nlanes)
         return 0;
@@ -167,10 +162,9 @@ CV_ALWAYS_INLINE int addw_short2short(const T in1[], const T in2[], T out[],
 }
 
 template<typename SRC>
-CV_ALWAYS_INLINE int addw_short2uchar(const SRC in1[], const SRC in2[], uchar out[],
-                                    const v_float32& alpha, const v_float32& beta,
-                                    const v_float32& gamma, int length)
-
+CV_ALWAYS_INLINE int addw_simd(const SRC in1[], const SRC in2[], uchar out[],
+                               const v_float32& alpha, const v_float32& beta,
+                               const v_float32& gamma, int length)
 {
     constexpr int nlanes = v_uint8::nlanes;
 
@@ -210,80 +204,15 @@ CV_ALWAYS_INLINE int addw_short2uchar(const SRC in1[], const SRC in2[], uchar ou
     return x;
 }
 
-template<typename SRC, typename DST>
-CV_ALWAYS_INLINE int addw_simd(const SRC in1[], const SRC in2[], DST out[],
-                               float _alpha, float _beta, float _gamma, int length)
+template<typename SRC>
+CV_ALWAYS_INLINE int addw_simd(const SRC*, const SRC*, float*,
+                               const v_float32&, const v_float32&,
+                               const v_float32&, int)
 {
     //Cases when dst type is float are successfully vectorized with compiler.
-    if (std::is_same<DST, float>::value)
-        return 0;
-
-    v_float32 alpha = vx_setall_f32(_alpha);
-    v_float32 beta = vx_setall_f32(_beta);
-    v_float32 gamma = vx_setall_f32(_gamma);
-
-    if (std::is_same<SRC, ushort>::value && std::is_same<DST, ushort>::value)
-    {
-        return addw_short2short(reinterpret_cast<const ushort*>(in1), reinterpret_cast<const ushort*>(in2),
-                                reinterpret_cast<ushort*>(out), alpha, beta, gamma, length);
-    }
-    else if (std::is_same<SRC, short>::value && std::is_same<DST, short>::value)
-    {
-        return addw_short2short(reinterpret_cast<const short*>(in1), reinterpret_cast<const short*>(in2),
-                                reinterpret_cast<short*>(out), alpha, beta, gamma, length);
-    }
-    else if (std::is_same<SRC, short>::value && std::is_same<DST, uchar>::value)
-    {
-        return addw_short2uchar(reinterpret_cast<const short*>(in1), reinterpret_cast<const short*>(in2),
-                                reinterpret_cast<uchar*>(out), alpha, beta, gamma, length);
-    }
-    else if (std::is_same<SRC, ushort>::value && std::is_same<DST, uchar>::value)
-    {
-        return addw_short2uchar(reinterpret_cast<const ushort*>(in1), reinterpret_cast<const ushort*>(in2),
-                                reinterpret_cast<uchar*>(out), alpha, beta, gamma, length);
-    }
-    else if (std::is_same<SRC, uchar>::value && std::is_same<DST, uchar>::value)
-    {
-        constexpr int nlanes = v_uint8::nlanes;
-
-        if (length < nlanes)
-            return 0;
-
-        int x = 0;
-
-        for (;;)
-        {
-            for (; x <= length - nlanes; x += nlanes)
-            {
-                v_float32 a1 = v_load_f32(reinterpret_cast<const uchar*>(&in1[x]));
-                v_float32 a2 = v_load_f32(reinterpret_cast<const uchar*>(&in1[x + nlanes / 4]));
-                v_float32 a3 = v_load_f32(reinterpret_cast<const uchar*>(&in1[x + nlanes / 2]));
-                v_float32 a4 = v_load_f32(reinterpret_cast<const uchar*>(&in1[x + 3 * nlanes / 4]));
-                v_float32 b1 = v_load_f32(reinterpret_cast<const uchar*>(&in2[x]));
-                v_float32 b2 = v_load_f32(reinterpret_cast<const uchar*>(&in2[x + nlanes / 4]));
-                v_float32 b3 = v_load_f32(reinterpret_cast<const uchar*>(&in2[x + nlanes / 2]));
-                v_float32 b4 = v_load_f32(reinterpret_cast<const uchar*>(&in2[x + 3 * nlanes / 4]));
-
-                v_int32 sum1 = v_round(v_fma(a1, alpha, v_fma(b1, beta, gamma))),
-                        sum2 = v_round(v_fma(a2, alpha, v_fma(b2, beta, gamma))),
-                        sum3 = v_round(v_fma(a3, alpha, v_fma(b3, beta, gamma))),
-                        sum4 = v_round(v_fma(a4, alpha, v_fma(b4, beta, gamma)));
-
-                vx_store(reinterpret_cast<uchar*>(&out[x]), v_pack_u(v_pack(sum1, sum2), v_pack(sum3, sum4)));
-            }
-
-            if (x < length)
-            {
-                x = length - nlanes;
-                continue;  // process one more time (unaligned tail)
-            }
-            break;
-        }
-        return x;
-    }
     return 0;
 }
-#endif  // CV_SIMD
+#endif  // CV_SSE2 | CV_AVX2 | CV_AVX512_SKX
 
 template<typename DST, typename SRC1, typename SRC2>
 static void run_addweighted(Buffer &dst, const View &src1, const View &src2,
@@ -305,8 +234,12 @@ static void run_addweighted(Buffer &dst, const View &src1, const View &src2,
     auto _gamma = static_cast<float>( gamma );
 
     int x = 0;
-#if CV_SIMD
-    x = addw_simd(in1, in2, out, _alpha, _beta, _gamma, length);
+#if CV_SSE2 | CV_AVX2 | CV_AVX512_SKX
+    v_float32 a = vx_setall_f32(_alpha);
+    v_float32 b = vx_setall_f32(_beta);
+    v_float32 g = vx_setall_f32(_gamma);
+
+    x = addw_simd(in1, in2, out, a, b, g, length);
 #endif
 
     for (; x < length; ++x)
