@@ -14,6 +14,12 @@
 # - Windows:
 #   - in terminal run 'tbbvars.bat intel64 vs2015'
 #
+# External TBB (intel oneApi):
+# - Linux/OSX:
+#
+# - Windows:
+#   - in terminal run 'setvars.bat intel64 vs2015'
+#
 # Return:
 #   - HAVE_TBB set to TRUE
 #   - "tbb" target exists and added to OPENCV_LINKER_LIBS
