@@ -83,7 +83,7 @@ TEST(DISABLED_videoio_camera, dshow_convert_rgb_persistency)
     capture.set(CAP_PROP_FRAME_WIDTH, 641);
     capture.set(CAP_PROP_FRAME_HEIGHT, 481);
     capture.set(CAP_PROP_FPS, 31);
-    capture.set(CAP_PROP_CHANNEL, 1); 
+    capture.set(CAP_PROP_CHANNEL, 1);
     capture.set(cv::CAP_PROP_FOURCC, cv::VideoWriter::fourcc('Y', '1', '6', ' '));
     std::cout << "Camera 0 via " << capture.getBackendName() << " backend" << std::endl;
     std::cout << "Frame width: " << capture.get(CAP_PROP_FRAME_WIDTH) << std::endl;
