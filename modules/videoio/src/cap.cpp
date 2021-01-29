@@ -76,7 +76,7 @@ VideoCapture::VideoCapture(const String& filename, int apiPreference) : throwOnF
 }
 
 VideoCapture::VideoCapture(const String& filename, int apiPreference, const std::vector<int>& params)
-    : throwOnFail(true)
+    : throwOnFail(false)
 {
     CV_TRACE_FUNCTION();
     open(filename, apiPreference, params);
@@ -89,7 +89,7 @@ VideoCapture::VideoCapture(int index, int apiPreference) : throwOnFail(false)
 }
 
 VideoCapture::VideoCapture(int index, int apiPreference, const std::vector<int>& params)
-    : throwOnFail(true)
+    : throwOnFail(false)
 {
     CV_TRACE_FUNCTION();
     open(index, apiPreference, params);
