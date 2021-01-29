@@ -7,10 +7,14 @@
 // Deliberately include .cpp file instead of header as we use non exported function (execute)
 #include <executor/gtbbexecutor.cpp>
 
-#if defined(HAVE_TBB)
+#ifdef HAVE_TBB
+#include <tbb/tbb.h>
+#include <tbb/task.h>
+#if TBB_INTERFACE_VERSION < 12000
+
+#include <tbb/task_arena.h>
 
 #include "../test_precomp.hpp"
-#include <tbb/task_arena.h>
 #include <thread>
 
 namespace {
@@ -169,4 +173,6 @@ TEST(TBBExecutor, Dependencies) {
     }
 }
 } // namespace opencv_test
+
+#endif //TBB_INTERFACE_VERSION
 #endif //HAVE_TBB
