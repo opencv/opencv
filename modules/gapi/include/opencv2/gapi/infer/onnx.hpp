@@ -11,7 +11,6 @@
 #include <string>
 #include <array>
 #include <tuple> // tuple, tuple_size
-#include <codecvt> // wstring_convert
 
 #include <opencv2/gapi/opencv_includes.hpp>
 #include <opencv2/gapi/util/any.hpp>

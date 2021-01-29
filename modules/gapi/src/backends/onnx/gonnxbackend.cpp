@@ -14,6 +14,7 @@
 #include <opencv2/gapi/infer.hpp>
 #include <opencv2/gapi/own/convert.hpp>
 #include <opencv2/gapi/gframe.hpp>
+#include <codecvt> // wstring_convert
 
 #include "api/gbackend_priv.hpp" // FIXME: Make it part of Backend SDK!
 #include "logger.hpp"

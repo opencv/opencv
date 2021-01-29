@@ -11,6 +11,7 @@
 #include <stdexcept>
 #include <onnxruntime_cxx_api.h>
 #include <ade/util/iota_range.hpp>
+#include <codecvt> // wstring_convert
 
 #include <opencv2/gapi/own/convert.hpp>
 #include <opencv2/gapi/infer/onnx.hpp>
