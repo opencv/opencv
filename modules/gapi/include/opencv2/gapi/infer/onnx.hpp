@@ -86,7 +86,7 @@ public:
     };
 
     // BEGIN(G-API's network parametrization API)
-    GBackend      backend() const { return cv::gapi::onnx::backend();  }
+    GBackend      backend() const { return cv::gapi::onnx::backend(); }
     std::string   tag()     const { return Net::tag(); }
     cv::util::any params()  const { return { desc }; }
     // END(G-API's network parametrization API)
