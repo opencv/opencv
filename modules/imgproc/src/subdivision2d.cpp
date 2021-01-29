@@ -944,12 +944,10 @@ static void sortAround(Point2f o, std::vector<Point2f> &v, int l, int r)
     int j = r + 1;
 
     while (i < j) {
-        do { i++; } while ((v[i] - o).cross(m - o) > 0.);
-        do { j--; } while ((v[j] - o).cross(m - o) < 0.);
+        do { i++; } while (leftOf(v[i], o, m) < 0);
+        do { j--; } while (leftOf(v[j], o, m) > 0);
         if (i < j) {
-            Point2f p = v[i];
-            v[i] = v[j];
-            v[j] = p;
+            std::swap(v[i], v[j]);
         }
     }
 
@@ -966,17 +964,14 @@ void Subdiv2D::getVoronoiFacetList(const std::vector<int>& idx,
     getVoronoiFacetList(idx, facetEdgeList, facetCenters);
     facetList.clear();
 
-    if (facetCenters.empty()) {
-        return;
-    }
-
     const Point2f topRight(bottomRight.x, topLeft.y);
     const Point2f bottomLeft(topLeft.x, bottomRight.y);
 
-    const double bl_distance = distance(bottomLeft, vtx[findNearest(bottomLeft)].pt);
-    const double br_distance = distance(bottomRight, vtx[findNearest(bottomRight)].pt);
-    const double tr_distance = distance(topRight, vtx[findNearest(topRight)].pt);
-    const double tl_distance = distance(topLeft, vtx[findNearest(topLeft)].pt);
+    // if there are multiple owners, the corner is already in the lists of edges of the owners
+    const int bl_owner = findNearest(bottomLeft);
+    const int br_owner = findNearest(bottomRight);
+    const int tr_owner = findNearest(topRight);
+    const int tl_owner = findNearest(topLeft);
 
     std::vector<Point2f> buf;
     for (size_t i = 0; i < facetEdgeList.size(); i++) {
@@ -999,27 +994,27 @@ void Subdiv2D::getVoronoiFacetList(const std::vector<int>& idx,
 
         bool unsorted = false;
 
-        if (abs(distance(bottomLeft, facetCenters[i]) - bl_distance) < FLT_EPSILON) {
+        if (abs(distance(vtx[bl_owner].pt, facetCenters[i])) < FLT_EPSILON) {
             unsorted |= putIfAbsent(bottomLeft, buf);
         }
-        if (abs(distance(bottomRight, facetCenters[i]) - br_distance) < FLT_EPSILON) {
+        if (abs(distance(vtx[br_owner].pt, facetCenters[i])) < FLT_EPSILON) {
             unsorted |= putIfAbsent(bottomRight, buf);
         }
-        if (abs(distance(topRight, facetCenters[i]) - tr_distance) < FLT_EPSILON) {
+        if (abs(distance(vtx[tr_owner].pt, facetCenters[i])) < FLT_EPSILON) {
             unsorted |= putIfAbsent(topRight, buf);
         }
-        if (abs(distance(topLeft, facetCenters[i]) - tl_distance) < FLT_EPSILON) {
+        if (abs(distance(vtx[tl_owner].pt, facetCenters[i])) < FLT_EPSILON) {
             unsorted |= putIfAbsent(topLeft, buf);
         }
 
         if (unsorted) {
-            Point2f o(0.f, 0.f);
+            // always has non-empty interior
+            Point2f centroid(0.f, 0.f);
             for (size_t j = 0; j < buf.size(); ++j) {
-                o += buf[j];
+                centroid += buf[j];
             }
-            o /= (float) buf.size();
-
-            sortAround(o, buf, 0, (int)buf.size() - 1);
+            centroid /= (float) buf.size();
+            sortAround(centroid, buf, 0, (int)buf.size() - 1);
         }
 
         facetList.push_back(buf);
