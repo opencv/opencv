@@ -165,7 +165,7 @@ class CvVideoWriter_FFMPEG_proxy CV_FINAL :
 {
 public:
     CvVideoWriter_FFMPEG_proxy() { ffmpegWriter = 0; }
-    CvVideoWriter_FFMPEG_proxy(const cv::String& filename, int fourcc, double fps, cv::Size frameSize, bool isColor) { ffmpegWriter = 0; open(filename, fourcc, fps, frameSize, isColor); }
+    CvVideoWriter_FFMPEG_proxy(const cv::String& filename, int fourcc, double fps, cv::Size frameSize, const VideoWriterParameters& params) { ffmpegWriter = 0; open(filename, fourcc, fps, frameSize, params); }
     virtual ~CvVideoWriter_FFMPEG_proxy() { close(); }
 
     int getCaptureDomain() const CV_OVERRIDE { return cv::CAP_FFMPEG; }
@@ -178,10 +178,10 @@ public:
 
         icvWriteFrame_FFMPEG_p(ffmpegWriter, (const uchar*)image.getMat().ptr(), (int)image.step(), image.cols(), image.rows(), image.channels(), 0);
     }
-    virtual bool open( const cv::String& filename, int fourcc, double fps, cv::Size frameSize, bool isColor )
+    virtual bool open( const cv::String& filename, int fourcc, double fps, cv::Size frameSize, const VideoWriterParameters& params )
     {
         close();
-        ffmpegWriter = icvCreateVideoWriter_FFMPEG_p( filename.c_str(), fourcc, fps, frameSize.width, frameSize.height, isColor );
+        ffmpegWriter = cvCreateVideoWriterWithParams_FFMPEG( filename.c_str(), fourcc, fps, frameSize.width, frameSize.height, params );
         return ffmpegWriter != 0;
     }
 
@@ -193,7 +193,12 @@ public:
         ffmpegWriter = 0;
     }
 
-    virtual double getProperty(int) const CV_OVERRIDE { return 0; }
+    virtual double getProperty(int propId) const CV_OVERRIDE {
+        if(!ffmpegWriter)
+            return 0;
+        return ffmpegWriter->getProperty(propId);
+    }
+
     virtual bool setProperty(int, double) CV_OVERRIDE { return false; }
     virtual bool isOpened() const CV_OVERRIDE { return ffmpegWriter != 0; }
 
@@ -207,8 +212,7 @@ cv::Ptr<cv::IVideoWriter> cvCreateVideoWriter_FFMPEG_proxy(const std::string& fi
                                                            double fps, const cv::Size& frameSize,
                                                            const VideoWriterParameters& params)
 {
-    const bool isColor = params.get(VIDEOWRITER_PROP_IS_COLOR, true);
-    cv::Ptr<CvVideoWriter_FFMPEG_proxy> writer = cv::makePtr<CvVideoWriter_FFMPEG_proxy>(filename, fourcc, fps, frameSize, isColor);
+    cv::Ptr<CvVideoWriter_FFMPEG_proxy> writer = cv::makePtr<CvVideoWriter_FFMPEG_proxy>(filename, fourcc, fps, frameSize, params);
     if (writer && writer->isOpened())
         return writer;
     return cv::Ptr<cv::IVideoWriter>();
