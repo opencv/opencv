@@ -1,22 +1,22 @@
 # Writing Accuracy Tests
+{#tutorial_accuracy_test_writing}
+====================================================
 
-# {#tutorial_accuracy_test_writing}
+This testing framework is based on Google Tests
 
-`This testing framework is based on Google Tests`
-
-There are two major types of C++ tests: *accuracy/regression* tests and *performance* tests.  Each module can have two test binaries: `opencv_test_<MODULE_NAME>` and `opencv_perf_<MODULE_NAME>`, and two tests folders: `<opencv(_contrib)/modules/<MODULE_NAME>/test>` and `<opencv(_contrib)/modules/<MODULE_NAME>/perf>`. These applications can be built for every supported platform (Win/Lin/Mac/Android).
+There are two major types of C++ tests: *accuracy/regression* tests and *performance* tests. Each module can have two test binaries: `opencv_test_<MODULE_NAME>` and `opencv_perf_<MODULE_NAME>` (or `opencv_test_<MODULE_NAME>d` and `opencv_perf_<MODULE_NAME>d` in Windows debug binaries), and two tests folders: `<opencv(_contrib)/modules/<MODULE_NAME>/test>` and `<opencv(_contrib)/modules/<MODULE_NAME>/perf>`. These applications can be built for every supported platform (Windows/Linux/MacOS/Android).
 
 ## ACCURACY TESTS
 
 ### Work directory
 
-All modules have their own dir for accuracy tests: `opencv_contrib/modules/(moduleName)/test/...`
+Most of modules have their own directory for accuracy tests: `opencv(_contrib)/modules/(moduleName)/test/...`
 
 ### Dir Structure
 
 - `test_precomp.hpp` - file for includes
-- `test_main.cpp` - main file of test sample
-- `test_smth1.cpp` - files for tests
+- `test_main.cpp` - main file of test
+- `test_smth1.cpp` - files with the test's bodies
 - `test_smth2.cpp`
 - `...`
 
@@ -30,7 +30,7 @@ TEST(name1, name2)
 }
 ```
 
-### Tests sample example
+### Tests example
 
 **Files:**
 
