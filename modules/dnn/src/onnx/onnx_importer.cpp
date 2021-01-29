@@ -197,7 +197,8 @@ std::set<String> ONNXImporter::supportedTypes = {
     "MaxUnpool",
     "Dropout",
     "Identity",
-    "Crop"
+    "Crop",
+    "Normalize"
 };
 
 inline void replaceLayerParam(LayerParams& layerParams, const String& oldKey, const String& newKey)
