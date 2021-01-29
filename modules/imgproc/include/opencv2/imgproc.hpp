@@ -2035,6 +2035,40 @@ CV_EXPORTS_W void HoughLines( InputArray image, OutputArray lines,
                               double srn = 0, double stn = 0,
                               double min_theta = 0, double max_theta = CV_PI );
 
+/** @brief Finds lines in a binary image using the standard Hough transform and get accumulator.
+
+
+@param image 8-bit, single-channel binary source image. The image may be modified by the function.
+@param lines Output vector of lines. Each line is represented by 3 element vector
+\f$(\rho, \theta)\f$ or \f$(\rho, \theta, \textrm{votes})\f$ . \f$\rho\f$ is the distance from the coordinate origin \f$(0,0)\f$ (top-left corner of
+the image). \f$\theta\f$ is the line rotation angle in radians (
+\f$0 \sim \textrm{vertical line}, \pi/2 \sim \textrm{horizontal line}\f$ ).
+\f$\textrm{votes}\f$ is the value of accumulator.
+@param rho Distance resolution of the accumulator in pixels.
+@param theta Angle resolution of the accumulator in radians.
+@param threshold Accumulator threshold parameter. Only those lines are returned that get enough
+votes ( \f$>\texttt{threshold}\f$ ).
+@param srn For the multi-scale Hough transform, it is a divisor for the distance resolution rho .
+The coarse accumulator distance resolution is rho and the accurate accumulator resolution is
+rho/srn . If both srn=0 and stn=0 , the classical Hough transform is used. Otherwise, both these
+parameters should be positive.
+@param stn For the multi-scale Hough transform, it is a divisor for the distance resolution theta.
+@param min_theta For standard and multi-scale Hough transform, minimum angle to check for lines.
+Must fall between 0 and max_theta.
+@param max_theta For standard and multi-scale Hough transform, maximum angle to check for lines.
+Must fall between min_theta and CV_PI.
+ */
+CV_WRAP_AS(HoughLinesWithAccumulator) static inline void HoughLinesAcc(InputArray image, OutputArray lines,
+    double rho, double theta, int threshold,
+    double srn = 0, double stn = 0,
+    double min_theta = 0, double max_theta = CV_PI)
+{
+    std::vector<Vec3f> lines_acc;
+    HoughLines(image, lines_acc, rho, theta, threshold, srn, stn, min_theta, max_theta);
+    Mat(lines_acc).copyTo(lines);
+}
+
+
 /** @brief Finds line segments in a binary image using the probabilistic Hough transform.
 
 The function implements the probabilistic Hough transform algorithm for line detection, described
