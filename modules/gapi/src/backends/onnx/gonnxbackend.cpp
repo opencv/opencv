@@ -14,6 +14,7 @@
 #include <opencv2/gapi/infer.hpp>
 #include <opencv2/gapi/own/convert.hpp>
 #include <opencv2/gapi/gframe.hpp>
+#include <codecvt> // wstring_convert
 
 #include "api/gbackend_priv.hpp" // FIXME: Make it part of Backend SDK!
 #include "logger.hpp"
@@ -218,7 +219,11 @@ inline void preprocess(const cv::Mat& src,
     } else {
         // 8U input: full preprocessing path
         GAPI_Assert(src.depth()   == CV_8U && "Only 8U data type is supported for preproc");
-        GAPI_Assert(ti.dims.size() == 4u && "Only NCHW/NHWC layouts are supported for preproc");
+        GAPI_Assert((ti.dims.size() == 4u || ti.dims.size() == 3u)
+                    && "Only NCHW/NHWC/CHW/HWC layouts are supported for preproc");
+
+        const bool with_batch = ti.dims.size() == 4u ? true : false;
+        const int shift = with_batch ? 0 : 1;
 
         const auto ddepth = toCV(ti.type);
         GAPI_Assert((ddepth == CV_8U || ddepth == CV_32F)
@@ -226,9 +231,9 @@ inline void preprocess(const cv::Mat& src,
 
         // Assess the expected input layout
         const bool is_hwc = [&](int ch) {
-            if (ti.is_grayscale)       return false; // 1,1,h,w
-            else if (ti.dims[3] == ch) return true;  // _,_,_,c
-            else if (ti.dims[1] == ch) return false; // _,c,_,_
+            if (ti.is_grayscale)               return false; // 1,1,h,w
+            else if (ti.dims[3 - shift] == ch) return true;  // ?,_,_,c
+            else if (ti.dims[1 - shift] == ch) return false; // ?,c,_,_
             else cv::util::throw_error(std::logic_error("Couldn't identify input tensor layout"));
         } (src.channels());
 
@@ -249,8 +254,8 @@ inline void preprocess(const cv::Mat& src,
             new_w = src.cols;
         } else {
             // take h & w from the ONNX tensor info
-            new_h = ti.dims[is_hwc ? 1 : 2];
-            new_w = ti.dims[is_hwc ? 2 : 3];
+            new_h = ti.dims[(is_hwc ? 1 : 2) - shift];
+            new_w = ti.dims[(is_hwc ? 2 : 3) - shift];
         }
         GAPI_Assert(new_h != -1 && new_w != -1);
 
@@ -283,8 +288,12 @@ inline void preprocess(const cv::Mat& src,
         if (ti.is_dynamic) {
             // Reshape to input dimensions
             const std::vector<int> out_dims = is_hwc
-                ? std::vector<int>{1, new_h, new_w, new_c}
-                : std::vector<int>{1, new_c, new_h, new_w};
+                ? with_batch
+                    ? std::vector<int>{1, new_h, new_w, new_c}
+                    : std::vector<int>{new_h, new_w, new_c}
+                : with_batch
+                    ? std::vector<int>{1, new_c, new_h, new_w}
+                    : std::vector<int>{new_c, new_h, new_w};
             dst = dst.reshape(1, out_dims);
         } else {
             // Reshape to ONNX dimensions (no -1s there!)
@@ -565,7 +574,13 @@ ONNXCompiled::ONNXCompiled(const gapi::onnx::detail::ParamDesc &pp)
     // Create and initialize the ONNX session
     Ort::SessionOptions session_options;
     this_env = Ort::Env(ORT_LOGGING_LEVEL_WARNING, "");
+#ifndef _WIN32
     this_session = Ort::Session(this_env, params.model_path.data(), session_options);
+#else
+    std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
+    std::wstring w_model_path = converter.from_bytes(params.model_path.data());
+    this_session = Ort::Session(this_env, w_model_path.data(), session_options);
+#endif
     this_memory_info = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
 
     in_tensor_info = getTensorInfo(INPUT);
