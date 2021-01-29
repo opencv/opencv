@@ -72,6 +72,27 @@ TEST(DISABLED_videoio_camera, basic)
     capture.release();
 }
 
+// Test that CAP_PROP_CONVERT_RGB remain to false (default is true) after other supported property are set.
+// The test use odd value to be almost sure to trigger code responsible for recreating the device.
+TEST(DISABLED_videoio_camera, dshow_convert_rgb_persistency)
+{
+    VideoCapture capture(CAP_DSHOW);
+    ASSERT_TRUE(capture.isOpened());
+    ASSERT_TRUE(capture.set(CAP_PROP_CONVERT_RGB, 0));
+    ASSERT_DOUBLE_EQ(capture.get(CAP_PROP_CONVERT_RGB), 0);
+    capture.set(CAP_PROP_FRAME_WIDTH, 641);
+    capture.set(CAP_PROP_FRAME_HEIGHT, 481);
+    capture.set(CAP_PROP_FPS, 31);
+    capture.set(CAP_PROP_CHANNEL, 1);
+    capture.set(cv::CAP_PROP_FOURCC, cv::VideoWriter::fourcc('Y', '1', '6', ' '));
+    std::cout << "Camera 0 via " << capture.getBackendName() << " backend" << std::endl;
+    std::cout << "Frame width: " << capture.get(CAP_PROP_FRAME_WIDTH) << std::endl;
+    std::cout << "     height: " << capture.get(CAP_PROP_FRAME_HEIGHT) << std::endl;
+    std::cout << "Capturing FPS: " << capture.get(CAP_PROP_FPS) << std::endl;
+    ASSERT_DOUBLE_EQ(capture.get(CAP_PROP_CONVERT_RGB), 0);
+    capture.release();
+}
+
 TEST(DISABLED_videoio_camera, v4l_read_mjpg)
 {
     VideoCapture capture(CAP_V4L2);
