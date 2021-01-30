@@ -2035,21 +2035,6 @@ CV_EXPORTS_W void HoughLines( InputArray image, OutputArray lines,
                               double srn = 0, double stn = 0,
                               double min_theta = 0, double max_theta = CV_PI );
 
-/** @brief Finds lines in a binary image using the standard Hough transform and get accumulator.
-*
-@sa HoughLines
- */
-CV_WRAP static inline void HoughLinesWithAccumulator(InputArray image, OutputArray lines,
-    double rho, double theta, int threshold,
-    double srn = 0, double stn = 0,
-    double min_theta = 0, double max_theta = CV_PI)
-{
-    std::vector<Vec3f> lines_acc;
-    HoughLines(image, lines_acc, rho, theta, threshold, srn, stn, min_theta, max_theta);
-    Mat(lines_acc).copyTo(lines);
-}
-
-
 /** @brief Finds line segments in a binary image using the probabilistic Hough transform.
 
 The function implements the probabilistic Hough transform algorithm for line detection, described
