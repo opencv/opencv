@@ -193,7 +193,7 @@ def create_capture(source = 0, fallback = presets['chess']):
     if cap is None or not cap.isOpened():
         print('Warning: unable to open video source: ', source)
         if fallback is not None:
-            return create_capture(fallback, None)
+            return create_capture(None, fallback)
     return cap
 
 if __name__ == '__main__':
