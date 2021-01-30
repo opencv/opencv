@@ -72,7 +72,7 @@ public:
     {
         CV_Assert(inputs.size() > 0);
         outputs.resize(1, inputs[0]);
-        int cAxis = clamp(axis, inputs[0]);
+        int cAxis = normalize_axis(axis, inputs[0]);
 
         int axisSum = 0;
         for (size_t i = 0; i < inputs.size(); i++)
@@ -192,7 +192,7 @@ public:
         inps.getUMatVector(inputs);
         outs.getUMatVector(outputs);
 
-        int cAxis = clamp(axis, inputs[0].dims);
+        int cAxis = normalize_axis(axis, inputs[0].dims);
         if (padding)
             return false;
 
@@ -246,7 +246,7 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
-        int cAxis = clamp(axis, inputs[0].dims);
+        int cAxis = normalize_axis(axis, inputs[0].dims);
         Mat& outMat = outputs[0];
 
         if (padding)
@@ -306,7 +306,7 @@ public:
         InferenceEngine::DataPtr input = infEngineDataNode(inputs[0]);
 
         InferenceEngine::Builder::ConcatLayer ieLayer(name);
-        ieLayer.setAxis(clamp(axis, input->getDims().size()));
+        ieLayer.setAxis(normalize_axis(axis, input->getDims().size()));
         ieLayer.setInputPorts(std::vector<InferenceEngine::Port>(inputs.size()));
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
     }
@@ -319,7 +319,7 @@ public:
     {
         InferenceEngine::DataPtr data = ngraphDataNode(inputs[0]);
         const int numDims = data->getDims().size();
-        const int cAxis = clamp(axis, numDims);
+        const int cAxis = normalize_axis(axis, numDims);
         std::vector<size_t> maxDims(numDims, 0);
 
         CV_Assert(inputs.size() == nodes.size());

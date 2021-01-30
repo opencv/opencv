@@ -82,7 +82,7 @@ public:
     {
         bool inplace = Layer::getMemoryShapes(inputs, requiredOutputs, outputs, internals);
         MatShape shape = inputs[0];
-        int cAxis = clamp(axisRaw, shape.size());
+        int cAxis = normalize_axis(axisRaw, shape.size());
         shape[cAxis] = 1;
         internals.assign(1, shape);
         return inplace;
@@ -115,7 +115,7 @@ public:
 
         UMat& src = inputs[0];
         UMat& dstMat = outputs[0];
-        int axis = clamp(axisRaw, src.dims);
+        int axis = normalize_axis(axisRaw, src.dims);
 
         if (softmaxOp.empty())
         {
@@ -207,7 +207,7 @@ public:
         const Mat &src = inputs[0];
         Mat &dst = outputs[0];
 
-        int axis = clamp(axisRaw, src.dims);
+        int axis = normalize_axis(axisRaw, src.dims);
         size_t outerSize = src.total(0, axis), channels = src.size[axis],
                 innerSize = src.total(axis + 1);
 
@@ -318,7 +318,7 @@ public:
         InferenceEngine::DataPtr input = infEngineDataNode(inputs[0]);
 
         InferenceEngine::Builder::SoftMaxLayer ieLayer(name);
-        ieLayer.setAxis(clamp(axisRaw, input->getDims().size()));
+        ieLayer.setAxis(normalize_axis(axisRaw, input->getDims().size()));
 
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
     }
@@ -329,7 +329,7 @@ public:
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
-        int axis = clamp(axisRaw, ieInpNode->get_shape().size());
+        int axis = normalize_axis(axisRaw, ieInpNode->get_shape().size());
         auto softmax = std::make_shared<ngraph::op::v1::Softmax>(ieInpNode, axis);
         if (logSoftMax)
             return Ptr<BackendNode>(new InfEngineNgraphNode(std::make_shared<ngraph::op::v0::Log>(softmax)));
