@@ -1085,13 +1085,7 @@ public:
     CV_WRAP void getVoronoiFacetList(const std::vector<int>& idx, CV_OUT std::vector<std::vector<Point2f> >& facetList,
                                      CV_OUT std::vector<Point2f>& facetCenters);
 
-    /** @brief Returns vertex location from vertex ID.
-
-    @param vertex vertex ID.
-    @param firstEdge Optional. The first edge ID which is connected to the vertex.
-    @returns vertex (x,y)
-
-     */
+    /** @deprecated */
     CV_WRAP Point2f getVertex(int vertex, CV_OUT int* firstEdge = 0) const;
 
     /** @brief Returns one of the edges related to the given edge.
@@ -1138,23 +1132,41 @@ public:
     CV_WRAP int rotateEdge(int edge, int rotate) const;
     CV_WRAP int symEdge(int edge) const;
 
+    /** @deprecated */
+    CV_WRAP int edgeOrg(int edge, CV_OUT Point2f* orgpt = 0) const;
+
+    /** @deprecated */
+    CV_WRAP int edgeDst(int edge, CV_OUT Point2f* dstpt = 0) const;
+
+    /** @brief Returns vertex location from vertex ID.
+
+    @param vertex vertex ID.
+    @param firstEdge The first edge ID which is connected to the vertex.
+    @param isIdeal Check if the vertex is a point approaching infinity, if yes, (x,y) represents its direction.
+    @returns vertex (x,y)
+
+     */
+    Point2f getVertex(int vertex, bool* isIdeal /* = 0 */, int* firstEdge /* = 0 */) const;
+
     /** @brief Returns the edge origin.
 
     @param edge Subdivision edge ID.
     @param orgpt Output vertex location.
+    @param isideal Check if the vertex is a point approaching infinity, if yes, #orgpt represents its direction.
 
     @returns vertex ID.
      */
-    CV_WRAP int edgeOrg(int edge, CV_OUT Point2f* orgpt = 0) const;
+    int edgeOrg(int edge, Point2f* orgpt /* = 0 */, bool* isideal /* = 0 */) const;
 
     /** @brief Returns the edge destination.
 
     @param edge Subdivision edge ID.
     @param dstpt Output vertex location.
+    @param isideal Check if the vertex is a point approaching infinity, if yes, #dstpt represents its direction.
 
     @returns vertex ID.
      */
-    CV_WRAP int edgeDst(int edge, CV_OUT Point2f* dstpt = 0) const;
+    int edgeDst(int edge, Point2f* dstpt /* = 0 */, bool* isideal /* = 0 */) const;
 
 protected:
     int newEdge();
@@ -1171,7 +1183,7 @@ protected:
     void checkSubdiv() const;
     int newPoint(Point2f pt, int type, int firstEdge = 0);
     void getVoronoiFacetList(const std::vector<int>& idx,
-                             std::vector<std::vector<Vec4f> >& facetList, std::vector<Point2f>& facetCenters);
+                          std::vector<std::vector<Vec4f> >& facetList, std::vector<int>& facetCenters);
 
     enum {
         PTTYPE_FREE = -1,

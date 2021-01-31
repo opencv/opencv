@@ -78,6 +78,14 @@ int Subdiv2D::edgeOrg(int edge, CV_OUT Point2f* orgpt) const
     return vidx;
 }
 
+int Subdiv2D::edgeOrg(int edge, Point2f* orgpt, bool* isideal) const
+{
+    int vidx = edgeOrg(edge, orgpt);
+    if ( isideal )
+        *isideal = vtx[vidx].isideal();
+    return vidx;
+}
+
 int Subdiv2D::edgeDst(int edge, CV_OUT Point2f* dstpt) const
 {
     CV_DbgAssert((size_t)(edge >> 2) < qedges.size());
@@ -90,12 +98,28 @@ int Subdiv2D::edgeDst(int edge, CV_OUT Point2f* dstpt) const
     return vidx;
 }
 
+int Subdiv2D::edgeDst(int edge, Point2f* dstpt, bool *isideal) const
+{
+    int vidx = edgeDst(edge, dstpt);
+    if ( isideal )
+        *isideal = vtx[vidx].isideal();
+    return vidx;
+}
+
 
 Point2f Subdiv2D::getVertex(int vertex, CV_OUT int* firstEdge) const
 {
     CV_DbgAssert((size_t)vertex < vtx.size());
     if( firstEdge )
         *firstEdge = vtx[vertex].firstEdge;
+    return vtx[vertex].pt;
+}
+
+Point2f Subdiv2D::getVertex(int vertex, bool* isIdeal, int* firstEdge) const
+{
+    getVertex(vertex, firstEdge);
+    if ( isIdeal )
+        *isIdeal = vtx[vertex].isideal();
     return vtx[vertex].pt;
 }
 
@@ -842,8 +866,8 @@ static void cropEdgeEx(Point2f &edge_org, Point2f &edge_dst, bool &ideal_org, bo
 }
 
 void Subdiv2D::getVoronoiFacetList(const std::vector<int>& idx,
-                                   std::vector<std::vector<Vec4f> >& facetList,
-                                   std::vector<Point2f>& facetCenters)
+                                std::vector<std::vector<Vec4f> >& facetList,
+                                std::vector<int>& facetCenters)
 {
     const Point2f topRight(bottomRight.x, topLeft.y);
     const Point2f bottomLeft(topLeft.x, bottomRight.y);
@@ -919,13 +943,21 @@ void Subdiv2D::getVoronoiFacetList(const std::vector<int>& idx,
         while( t != edge );
 
         facetList.push_back(buf);
-        facetCenters.push_back(vtx[k].pt);
+        facetCenters.push_back(k);
     }
 }
 
+bool equal(Point2f a, Point2f b)
+{
+    float diff_x = abs(a.x - b.x);
+    float diff_y = abs(a.y - b.y);
+    return diff_x < FLT_EPSILON && diff_y < FLT_EPSILON;
+}
+
+
 static bool putIfAbsent(Point2f p, std::vector<Point2f> &v) {
     for (size_t i = 0; i < v.size(); ++i) {
-        if (distance(p, v[i]) < FLT_EPSILON) {
+        if (equal(p, v[i])) {
             return false;
         }
     }
@@ -960,9 +992,12 @@ void Subdiv2D::getVoronoiFacetList(const std::vector<int>& idx,
                                    CV_OUT std::vector<std::vector<Point2f> >& facetList,
                                    CV_OUT std::vector<Point2f>& facetCenters)
 {
-    std::vector< std::vector<Vec4f> > facetEdgeList;
-    getVoronoiFacetList(idx, facetEdgeList, facetCenters);
+    std::vector<std::vector<Vec4f> > facetEdges;
+    std::vector<int> facetSite;
+    getVoronoiFacetList(idx, facetEdges, facetSite);
+
     facetList.clear();
+    facetCenters.clear();
 
     const Point2f topRight(bottomRight.x, topLeft.y);
     const Point2f bottomLeft(topLeft.x, bottomRight.y);
@@ -974,50 +1009,51 @@ void Subdiv2D::getVoronoiFacetList(const std::vector<int>& idx,
     const int tl_owner = findNearest(topLeft);
 
     std::vector<Point2f> buf;
-    for (size_t i = 0; i < facetEdgeList.size(); i++) {
+    for (size_t i = 0; i < facetEdges.size(); i++) {
         buf.clear();
 
-        for (size_t j = 0; j < facetEdgeList[i].size(); j++) {
-            size_t k = j > 0 ? j - 1 : facetEdgeList[i].size() - 1;
+        for (size_t j = 0; j < facetEdges[i].size(); j++) {
+            size_t k = j > 0 ? j - 1 : facetEdges[i].size() - 1;
 
-            Point2f prev_dst(facetEdgeList[i][k][2], facetEdgeList[i][k][3]);
-            Point2f curr_org(facetEdgeList[i][j][0], facetEdgeList[i][j][1]);
-            Point2f curr_dst(facetEdgeList[i][j][2], facetEdgeList[i][j][3]);
+            Point2f prev_dst(facetEdges[i][k][2], facetEdges[i][k][3]);
+            Point2f curr_org(facetEdges[i][j][0], facetEdges[i][j][1]);
+            Point2f curr_dst(facetEdges[i][j][2], facetEdges[i][j][3]);
 
-            if (distance(prev_dst, curr_org) >= FLT_EPSILON) {
+            if (!equal(prev_dst, curr_org)) {
                 buf.push_back(curr_org);
             }
-            if (distance(curr_org, curr_dst) >= FLT_EPSILON) {
+            if (!equal(curr_org, curr_dst)) {
                 buf.push_back(curr_dst);
             }
         }
 
         bool unsorted = false;
 
-        if (abs(distance(vtx[bl_owner].pt, facetCenters[i])) < FLT_EPSILON) {
+        if (facetSite[i] == bl_owner) {
             unsorted |= putIfAbsent(bottomLeft, buf);
         }
-        if (abs(distance(vtx[br_owner].pt, facetCenters[i])) < FLT_EPSILON) {
+        if (facetSite[i] == br_owner) {
             unsorted |= putIfAbsent(bottomRight, buf);
         }
-        if (abs(distance(vtx[tr_owner].pt, facetCenters[i])) < FLT_EPSILON) {
+        if (facetSite[i] == tr_owner) {
             unsorted |= putIfAbsent(topRight, buf);
         }
-        if (abs(distance(vtx[tl_owner].pt, facetCenters[i])) < FLT_EPSILON) {
+        if (facetSite[i] == tl_owner) {
             unsorted |= putIfAbsent(topLeft, buf);
         }
 
         if (unsorted) {
             // always has non-empty interior
-            Point2f centroid(0.f, 0.f);
+            Point2f center(0.f, 0.f);
             for (size_t j = 0; j < buf.size(); ++j) {
-                centroid += buf[j];
+                center += buf[j];
             }
-            centroid /= (float) buf.size();
-            sortAround(centroid, buf, 0, (int)buf.size() - 1);
+            center /= (float) buf.size();
+            sortAround(center, buf, 0, (int)buf.size() - 1);
         }
 
         facetList.push_back(buf);
+        facetCenters.push_back(vtx[facetSite[i]].pt);
     }
 }
 
