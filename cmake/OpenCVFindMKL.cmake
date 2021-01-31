@@ -3,7 +3,7 @@
 # installation/package
 #
 # Parameters:
-# MKL_ROOT_DIR / ENV{MKLROOT}
+# MKL_ROOT_DIR / ENV{MKLROOT} / ENV{ONEAPI_ROOT}
 # MKL_INCLUDE_DIR
 # MKL_LIBRARIES
 # MKL_USE_SINGLE_DYNAMIC_LIBRARY - use single dynamic library mkl_rt.lib / libmkl_rt.so
