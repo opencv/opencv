@@ -866,8 +866,8 @@ static void cropEdgeEx(Point2f &edge_org, Point2f &edge_dst, bool &ideal_org, bo
 }
 
 void Subdiv2D::getVoronoiFacetList(const std::vector<int>& idx,
-                                std::vector<std::vector<Vec4f> >& facetList,
-                                std::vector<int>& facetCenters)
+                                   std::vector<std::vector<Vec4f> >& facetList,
+                                   std::vector<int>& facetCenters)
 {
     const Point2f topRight(bottomRight.x, topLeft.y);
     const Point2f bottomLeft(topLeft.x, bottomRight.y);
@@ -947,13 +947,12 @@ void Subdiv2D::getVoronoiFacetList(const std::vector<int>& idx,
     }
 }
 
-bool equal(Point2f a, Point2f b)
+static bool equal(Point2f a, Point2f b)
 {
     float diff_x = abs(a.x - b.x);
     float diff_y = abs(a.y - b.y);
     return diff_x < FLT_EPSILON && diff_y < FLT_EPSILON;
 }
-
 
 static bool putIfAbsent(Point2f p, std::vector<Point2f> &v) {
     for (size_t i = 0; i < v.size(); ++i) {
