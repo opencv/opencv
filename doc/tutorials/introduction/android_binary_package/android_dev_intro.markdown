@@ -19,7 +19,7 @@ working environment quickly. It was written with Windows 7 in mind, though it wo
 
 If you encounter any error after thoroughly following these steps, feel free to contact us via
 [OpenCV4Android](https://groups.google.com/group/android-opencv/) discussion group or OpenCV [Q&A
-forum](http://answers.opencv.org). We'll do our best to help you out.
+forum](https://forum.opencv.org). We'll do our best to help you out.
 
 Preface
 -------

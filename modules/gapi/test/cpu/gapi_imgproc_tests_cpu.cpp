@@ -270,7 +270,8 @@ INSTANTIATE_TEST_CASE_P(FindContoursNoOffsetTestCPU, FindContoursNoOffsetTest,
                                 Values(cv::Size(1280, 720)),
                                 Values(CV_8UC1),
                                 Values(RETR_EXTERNAL),
-                                Values(CHAIN_APPROX_NONE)));
+                                Values(CHAIN_APPROX_NONE),
+                                Values(AbsExact().to_compare_obj())));
 
 INSTANTIATE_TEST_CASE_P(FindContoursOffsetTestCPU, FindContoursOffsetTest,
                         Values(IMGPROC_CPU));
@@ -282,7 +283,8 @@ INSTANTIATE_TEST_CASE_P(FindContoursHNoOffsetTestCPU, FindContoursHNoOffsetTest,
                                 Values(CV_8UC1),
                                 Values(RETR_EXTERNAL, RETR_LIST, RETR_CCOMP, RETR_TREE),
                                 Values(CHAIN_APPROX_NONE, CHAIN_APPROX_SIMPLE,
-                                       CHAIN_APPROX_TC89_L1, CHAIN_APPROX_TC89_KCOS)));
+                                       CHAIN_APPROX_TC89_L1, CHAIN_APPROX_TC89_KCOS),
+                                Values(AbsExact().to_compare_obj())));
 
 INSTANTIATE_TEST_CASE_P(FindContoursHNoOffset32STestCPU, FindContoursHNoOffsetTest,
                         Combine(Values(IMGPROC_CPU),
@@ -291,7 +293,8 @@ INSTANTIATE_TEST_CASE_P(FindContoursHNoOffset32STestCPU, FindContoursHNoOffsetTe
                                 Values(CV_32SC1),
                                 Values(RETR_CCOMP, RETR_FLOODFILL),
                                 Values(CHAIN_APPROX_NONE, CHAIN_APPROX_SIMPLE,
-                                       CHAIN_APPROX_TC89_L1, CHAIN_APPROX_TC89_KCOS)));
+                                       CHAIN_APPROX_TC89_L1, CHAIN_APPROX_TC89_KCOS),
+                                Values(AbsExact().to_compare_obj())));
 
 INSTANTIATE_TEST_CASE_P(FindContoursHOffsetTestCPU, FindContoursHOffsetTest,
                         Values(IMGPROC_CPU));

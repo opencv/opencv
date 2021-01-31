@@ -65,6 +65,55 @@ String dumpString(const String& argument)
 }
 
 CV_WRAP static inline
+String testOverloadResolution(int value, const Point& point = Point(42, 24))
+{
+    return format("overload (int=%d, point=(x=%d, y=%d))", value, point.x,
+                  point.y);
+}
+
+CV_WRAP static inline
+String testOverloadResolution(const Rect& rect)
+{
+    return format("overload (rect=(x=%d, y=%d, w=%d, h=%d))", rect.x, rect.y,
+                  rect.width, rect.height);
+}
+
+CV_WRAP static inline
+String dumpRect(const Rect& argument)
+{
+    return format("rect: (x=%d, y=%d, w=%d, h=%d)", argument.x, argument.y,
+                  argument.width, argument.height);
+}
+
+CV_WRAP static inline
+String dumpTermCriteria(const TermCriteria& argument)
+{
+    return format("term_criteria: (type=%d, max_count=%d, epsilon=%lf",
+                  argument.type, argument.maxCount, argument.epsilon);
+}
+
+CV_WRAP static inline
+String dumpRotatedRect(const RotatedRect& argument)
+{
+    return format("rotated_rect: (c_x=%f, c_y=%f, w=%f, h=%f, a=%f)",
+                  argument.center.x, argument.center.y, argument.size.width,
+                  argument.size.height, argument.angle);
+}
+
+CV_WRAP static inline
+String dumpRange(const Range& argument)
+{
+    if (argument == Range::all())
+    {
+        return "range: all";
+    }
+    else
+    {
+        return format("range: (s=%d, e=%d)", argument.start, argument.end);
+    }
+}
+
+CV_WRAP static inline
 AsyncArray testAsyncArray(InputArray argument)
 {
     AsyncPromise p;

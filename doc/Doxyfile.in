@@ -227,6 +227,7 @@ INCLUDE_PATH           =
 INCLUDE_FILE_PATTERNS  =
 PREDEFINED             = __cplusplus=1 \
                          CVAPI(x)=x \
+                         CV_API_CALL= \
                          CV_DOXYGEN= \
                          CV_EXPORTS= \
                          CV_EXPORTS_W= \

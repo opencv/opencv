@@ -97,6 +97,10 @@
         @}
         @defgroup core_lowlevel_api Low-level API for external libraries / plugins
     @}
+    @defgroup core_parallel Parallel Processing
+    @{
+        @defgroup core_parallel_backend Parallel backends API
+    @}
 @}
  */
 

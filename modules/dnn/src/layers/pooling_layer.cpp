@@ -178,13 +178,12 @@ public:
 
         if (inputs[0].dims == 3)
         {
-            //Pool1D
-            kernel_size.erase(kernel_size.begin() + 1);
-            strides.erase(strides.begin() + 1);
-            pads_begin.erase(pads_begin.begin() + 1);
-            pads_end.erase(pads_end.begin() + 1);
+            // Pool1D
+            kernel_size.assign(1, kernel_size[0]);
+            strides.assign(1, strides[0]);
+            pads_begin.assign(1, pads_begin[0]);
+            pads_end.assign(1, pads_end[0]);
         }
-
 
 #ifdef HAVE_OPENCL
         poolOp.release();
@@ -390,6 +389,19 @@ public:
             config.input_shape.assign(std::begin(input_shape), std::end(input_shape));
 
             return make_cuda_node<cuda4dnn::MaxPoolingOp>(preferableTarget, std::move(context->stream), config);
+        }
+
+        if (input_shape.size() == 3)
+        {
+            // Pool1D
+            // We add an extra dim for input tensor, because CuDNN support pooling only with 2 and 3 spatial dimensions
+            input_shape.insert(std::end(input_shape) - 1, 1);
+
+            // Do the similar thing for the other parameters
+            pads_begin.insert(std::begin(pads_begin), 0);
+            pads_end.insert(std::begin(pads_end), 0);
+            strides.insert(std::begin(strides), 1);
+            kernel_size.insert(std::begin(kernel_size), 1);
         }
 
         PoolingConfiguration config;

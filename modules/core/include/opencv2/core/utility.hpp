@@ -570,6 +570,8 @@ static inline size_t getElemSize(int type) { return (size_t)CV_ELEM_SIZE(type); 
 /////////////////////////////// Parallel Primitives //////////////////////////////////
 
 /** @brief Base class for parallel data processors
+
+@ingroup core_parallel
 */
 class CV_EXPORTS ParallelLoopBody
 {
@@ -579,17 +581,23 @@ public:
 };
 
 /** @brief Parallel data processor
+
+@ingroup core_parallel
 */
 CV_EXPORTS void parallel_for_(const Range& range, const ParallelLoopBody& body, double nstripes=-1.);
 
+//! @ingroup core_parallel
 class ParallelLoopBodyLambdaWrapper : public ParallelLoopBody
 {
 private:
     std::function<void(const Range&)> m_functor;
 public:
-    ParallelLoopBodyLambdaWrapper(std::function<void(const Range&)> functor) :
-        m_functor(functor)
-    { }
+    inline
+    ParallelLoopBodyLambdaWrapper(std::function<void(const Range&)> functor)
+        : m_functor(functor)
+    {
+        // nothing
+    }
 
     virtual void operator() (const cv::Range& range) const CV_OVERRIDE
     {
@@ -597,10 +605,13 @@ public:
     }
 };
 
-inline void parallel_for_(const Range& range, std::function<void(const Range&)> functor, double nstripes=-1.)
+//! @ingroup core_parallel
+static inline
+void parallel_for_(const Range& range, std::function<void(const Range&)> functor, double nstripes=-1.)
 {
     parallel_for_(range, ParallelLoopBodyLambdaWrapper(functor), nstripes);
 }
+
 
 /////////////////////////////// forEach method of cv::Mat ////////////////////////////
 template<typename _Tp, typename Functor> inline

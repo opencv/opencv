@@ -174,6 +174,14 @@ gen_template_prop_init = Template("""
 gen_template_rw_prop_init = Template("""
     {(char*)"${member}", (getter)pyopencv_${name}_get_${member}, (setter)pyopencv_${name}_set_${member}, (char*)"${member}", NULL},""")
 
+gen_template_overloaded_function_call = Template("""
+    {
+${variant}
+
+        pyPopulateArgumentConversionErrors();
+    }
+""")
+
 class FormatStrings:
     string = 's'
     unsigned_char = 'b'
@@ -775,8 +783,12 @@ class FuncInfo(object):
             # if the function/method has only 1 signature, then just put it
             code += all_code_variants[0]
         else:
-            # try to execute each signature
-            code += "    PyErr_Clear();\n\n".join(["    {\n" + v + "    }\n" for v in all_code_variants])
+            # try to execute each signature, add an interlude between function
+            # calls to collect error from all conversions
+            code += '    pyPrepareArgumentConversionErrorsStorage({});\n'.format(len(all_code_variants))
+            code += '    \n'.join(gen_template_overloaded_function_call.substitute(variant=v)
+                                  for v in all_code_variants)
+            code += '    pyRaiseCVOverloadException("{}");\n'.format(self.name)
 
         def_ret = "NULL"
         if self.isconstructor:
