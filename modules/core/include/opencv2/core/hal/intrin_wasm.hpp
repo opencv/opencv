@@ -1266,8 +1266,9 @@ OPENCV_HAL_IMPL_WASM_BIN_FUNC(v_uint8x16, v_sub_wrap, wasm_i8x16_sub)
 OPENCV_HAL_IMPL_WASM_BIN_FUNC(v_int8x16, v_sub_wrap, wasm_i8x16_sub)
 OPENCV_HAL_IMPL_WASM_BIN_FUNC(v_uint16x8, v_sub_wrap, wasm_i16x8_sub)
 OPENCV_HAL_IMPL_WASM_BIN_FUNC(v_int16x8, v_sub_wrap, wasm_i16x8_sub)
-#if (__EMSCRIPTEN_major__ * 1000000 + __EMSCRIPTEN_minor__ * 1000 + __EMSCRIPTEN_tiny__) >= (2000000)
+#if (__EMSCRIPTEN_major__ * 1000000 + __EMSCRIPTEN_minor__ * 1000 + __EMSCRIPTEN_tiny__) >= (1039012)
 // details: https://github.com/opencv/opencv/issues/18097 ( https://github.com/emscripten-core/emscripten/issues/12018 )
+// 1.39.12: https://github.com/emscripten-core/emscripten/commit/cd801d0f110facfd694212a3c8b2ed2ffcd630e2
 inline v_uint8x16 v_mul_wrap(const v_uint8x16& a, const v_uint8x16& b)
 {
     uchar a_[16], b_[16];
@@ -1275,7 +1276,7 @@ inline v_uint8x16 v_mul_wrap(const v_uint8x16& a, const v_uint8x16& b)
     wasm_v128_store(b_, b.val);
     for (int i = 0; i < 16; i++)
         a_[i] = (uchar)(a_[i] * b_[i]);
-    return wasm_v128_load(a_);
+    return v_uint8x16(wasm_v128_load(a_));
 }
 inline v_int8x16 v_mul_wrap(const v_int8x16& a, const v_int8x16& b)
 {
@@ -1284,7 +1285,7 @@ inline v_int8x16 v_mul_wrap(const v_int8x16& a, const v_int8x16& b)
     wasm_v128_store(b_, b.val);
     for (int i = 0; i < 16; i++)
         a_[i] = (schar)(a_[i] * b_[i]);
-    return wasm_v128_load(a_);
+    return v_int8x16(wasm_v128_load(a_));
 }
 #else
 OPENCV_HAL_IMPL_WASM_BIN_FUNC(v_uint8x16, v_mul_wrap, wasm_i8x16_mul)
@@ -1757,8 +1758,8 @@ inline v_uint64x2 v_popcount(const v_uint64x2& a)
     uint64 a_[2], b_[2] = { 0 };
     wasm_v128_store(a_, a.val);
     for (int i = 0; i < 16; i++)
-        b_[i / 8] += popCountTable[((uint8*)a_)[i]];
-    return wasm_v128_load(b_);
+        b_[i / 8] += popCountTable[((uint8_t*)a_)[i]];
+    return v_uint64x2(wasm_v128_load(b_));
 }
 inline v_uint8x16 v_popcount(const v_int8x16& a)
 { return v_popcount(v_reinterpret_as_u8(a)); }
@@ -1938,11 +1939,11 @@ inline v_int32x4 func(const v_float64x2& a) \
     double a_[2]; \
     wasm_v128_store(a_, a.val); \
     int c_[4]; \
-    c_[0] = cfunc(a_[i]); \
-    c_[1] = cfunc(a_[i]); \
+    c_[0] = cfunc(a_[0]); \
+    c_[1] = cfunc(a_[1]); \
     c_[2] = 0; \
     c_[3] = 0; \
-    return wasm_v128_load(c_); \
+    return v_int32x4(wasm_v128_load(c_)); \
 }
 
 OPENCV_HAL_IMPL_WASM_MATH_FUNC(v_round, cvRound)
@@ -1960,7 +1961,7 @@ inline v_int32x4 v_round(const v_float64x2& a, const v_float64x2& b)
     c_[1] = cvRound(a_[1]);
     c_[2] = cvRound(b_[0]);
     c_[3] = cvRound(b_[1]);
-    return wasm_v128_load(c_);
+    return v_int32x4(wasm_v128_load(c_));
 }
 
 #define OPENCV_HAL_IMPL_WASM_TRANSPOSE4x4(_Tpvec, suffix) \
@@ -2461,7 +2462,7 @@ inline v_float32x4 v_cvt_f32(const v_float64x2& a)
     c_[1] = (float)(a_[1]);
     c_[2] = 0;
     c_[3] = 0;
-    return wasm_v128_load(c_);
+    return v_float32x4(wasm_v128_load(c_));
 }
 
 inline v_float32x4 v_cvt_f32(const v_float64x2& a, const v_float64x2& b)
@@ -2474,7 +2475,7 @@ inline v_float32x4 v_cvt_f32(const v_float64x2& a, const v_float64x2& b)
     c_[1] = (float)(a_[1]);
     c_[2] = (float)(b_[0]);
     c_[3] = (float)(b_[1]);
-    return wasm_v128_load(c_);
+    return v_float32x4(wasm_v128_load(c_));
 }
 
 inline v_float64x2 v_cvt_f64(const v_int32x4& a)
@@ -2488,7 +2489,7 @@ inline v_float64x2 v_cvt_f64(const v_int32x4& a)
     double c_[2];
     c_[0] = (double)(a_[0]);
     c_[1] = (double)(a_[1]);
-    return wasm_v128_load(c_);
+    return v_float64x2(wasm_v128_load(c_));
 #endif
 }
 
@@ -2503,7 +2504,7 @@ inline v_float64x2 v_cvt_f64_high(const v_int32x4& a)
     double c_[2];
     c_[0] = (double)(a_[2]);
     c_[1] = (double)(a_[3]);
-    return wasm_v128_load(c_);
+    return v_float64x2(wasm_v128_load(c_));
 #endif
 }
 
@@ -2514,7 +2515,7 @@ inline v_float64x2 v_cvt_f64(const v_float32x4& a)
     double c_[2];
     c_[0] = (double)(a_[0]);
     c_[1] = (double)(a_[1]);
-    return wasm_v128_load(c_);
+    return v_float64x2(wasm_v128_load(c_));
 }
 
 inline v_float64x2 v_cvt_f64_high(const v_float32x4& a)
@@ -2524,7 +2525,7 @@ inline v_float64x2 v_cvt_f64_high(const v_float32x4& a)
     double c_[2];
     c_[0] = (double)(a_[2]);
     c_[1] = (double)(a_[3]);
-    return wasm_v128_load(c_);
+    return v_float64x2(wasm_v128_load(c_));
 }
 
 inline v_float64x2 v_cvt_f64(const v_int64x2& a)
@@ -2537,7 +2538,7 @@ inline v_float64x2 v_cvt_f64(const v_int64x2& a)
     double c_[2];
     c_[0] = (double)(a_[0]);
     c_[1] = (double)(a_[1]);
-    return wasm_v128_load(c_);
+    return v_float64x2(wasm_v128_load(c_));
 #endif
 }
 
@@ -2757,7 +2758,7 @@ inline v_float32x4 v_load_expand(const float16_t* ptr)
     float a[4];
     for (int i = 0; i < 4; i++)
         a[i] = ptr[i];
-    return wasm_v128_load(a);
+    return v_float32x4(wasm_v128_load(a));
 }
 
 inline void v_pack_store(float16_t* ptr, const v_float32x4& v)

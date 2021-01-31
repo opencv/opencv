@@ -736,8 +736,15 @@ if(ENABLE_FLAKE8 AND PYTHON_DEFAULT_AVAILABLE)
     include("${CMAKE_CURRENT_LIST_DIR}/cmake/FindFlake8.cmake")
   endif()
   if(FLAKE8_FOUND)
+    list(APPEND OPENCV_FLAKE8_EXCLUDES ".git" "__pycache__" "config.py" "*.config.py" "config-*.py")
+    list(APPEND OPENCV_FLAKE8_EXCLUDES "svgfig.py")  # 3rdparty
+    if(NOT PYTHON3_VERSION_STRING VERSION_GREATER 3.6)
+      # Python 3.6+ (PEP 526): variable annotations (type hints)
+      list(APPEND OPENCV_FLAKE8_EXCLUDES "samples/dnn/dnn_model_runner/dnn_conversion/common/test/configs")
+    endif()
+    string(REPLACE ";" "," OPENCV_FLAKE8_EXCLUDES_STR "${OPENCV_FLAKE8_EXCLUDES}")
     add_custom_target(check_flake8
-        COMMAND "${FLAKE8_EXECUTABLE}" . --count --select=E9,E901,E999,F821,F822,F823 --show-source --statistics --exclude='.git,__pycache__,*.config.py,svgfig.py'
+        COMMAND "${FLAKE8_EXECUTABLE}" . --count --select=E9,E901,E999,F821,F822,F823 --show-source --statistics --exclude='${OPENCV_FLAKE8_EXCLUDES_STR}'
         WORKING_DIRECTORY "${OpenCV_SOURCE_DIR}"
         COMMENT "Running flake8"
     )
