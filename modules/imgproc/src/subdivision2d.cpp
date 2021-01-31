@@ -833,11 +833,11 @@ static Point2f intersect(Point2f a, Point2f b, Point2f c, Point2f d)
 
     double det = a1 * b2 - a2 * b1;
 
-    if (abs(det) < FLT_EPSILON) {
+    if (det == 0) {
         return Point2f(FLT_MAX, FLT_MAX);
-    } else {
-        return Point2f((float)((b2 * c1 - b1 * c2) / det), (float)((a1 * c2 - a2 * c1) / det));
     }
+
+    return Point2f((float)((b2 * c1 - b1 * c2) / det), (float)((a1 * c2 - a2 * c1) / det));
 }
 
 static void cropEdgeEx(Point2f &edge_org, Point2f &edge_dst, bool &ideal_org, bool &ideal_dst,
