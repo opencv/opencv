@@ -1245,3 +1245,16 @@ class PadCalculation(nn.Module):
 x = Variable(torch.randn([1, 1, 3, 4]))
 model = PadCalculation()
 save_data_and_model("calc_pads", x, model, version=11)
+
+class NormalizeFusion(nn.Module):
+    def forward(self, x):
+        mul = x * x
+        sum = torch.sum(mul, dim=(1), keepdim=True)
+        maximum = torch.clamp(sum, min=1e-8)
+        sqrt = torch.sqrt(maximum)
+        reciprocal = torch.reciprocal(sqrt)
+        return x * reciprocal
+
+x = Variable(torch.randn([2, 3]))
+model = NormalizeFusion()
+save_data_and_model("normalize_fusion", x, model)
