@@ -1,4 +1,7 @@
 {
+    "AdditionalImports" : {
+        "Imgproc" : [ "\"imgproc/bindings.hpp\"" ]
+    },
     "enum_ignore_list" : [
         "MorphShapes_c",
         "SmoothMethod_c"
