@@ -632,6 +632,13 @@ CV_IMPL int cvWaitKey (int maxWait)
     return returnCode;
 }
 
+int cv::pollKey()
+{
+    CV_TRACE_FUNCTION();
+    // fallback. please implement a proper polling function
+    return cvWaitKey(1);
+}
+
 CvRect cvGetWindowRect_COCOA( const char* name )
 {
     CvRect result = cvRect(-1, -1, -1, -1);
