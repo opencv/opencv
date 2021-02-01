@@ -114,7 +114,7 @@ endforeach()
 # copy test data
 # haarcascade
 set(test_data_haarcascade "haarcascade_frontalface_default.xml")
-set(test_data_haarcascade_path "${OPENCV_TEST_DATA_PATH}/cv/cascadeandhog/cascades/${test_data_haarcascade}")
+set(test_data_haarcascade_path "${PROJECT_SOURCE_DIR}/../../data/haarcascades/${test_data}")
 
 add_custom_command(OUTPUT "${opencv_test_js_bin_dir}/${test_data_haarcascade}"
                    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${test_data_haarcascade_path}"
