@@ -1981,6 +1981,97 @@ static void showSaveDialog(CvWindow* window)
     }
 }
 
+/*
+ * message received. check if it belongs to our windows (frame, hwnd).
+ * returns true (and value in keyCode) if a key was pressed.
+ * otherwise returns false (indication to continue event loop).
+ */
+static bool handleMessage(MSG& message, int& keyCode)
+{
+    // whether we have to call translate and dispatch yet
+    // otherwise the message was handled specifically
+    bool is_processed = false;
+
+    for (CvWindow* window = hg_windows; window != 0 && is_processed == 0; window = window->next)
+    {
+        if (!(window->hwnd == message.hwnd || window->frame == message.hwnd))
+            continue;
+
+        is_processed = true;
+        switch (message.message)
+        {
+            case WM_DESTROY:
+            case WM_CHAR:
+                DispatchMessage(&message);
+                keyCode = (int)message.wParam;
+                return true;
+
+            case WM_SYSKEYDOWN:
+                if (message.wParam == VK_F10)
+                {
+                    is_processed = true;
+                    keyCode = (int)(message.wParam << 16);
+                    return true;
+                }
+                break;
+
+            case WM_KEYDOWN:
+                TranslateMessage(&message);
+                if ((message.wParam >= VK_F1 && message.wParam <= VK_F24)      ||
+                    message.wParam == VK_HOME   || message.wParam == VK_END    ||
+                    message.wParam == VK_UP     || message.wParam == VK_DOWN   ||
+                    message.wParam == VK_LEFT   || message.wParam == VK_RIGHT  ||
+                    message.wParam == VK_INSERT || message.wParam == VK_DELETE ||
+                    message.wParam == VK_PRIOR  || message.wParam == VK_NEXT)
+                {
+                    DispatchMessage(&message);
+                    is_processed = true;
+                    keyCode = (int)(message.wParam << 16);
+                    return true;
+                }
+
+                // Intercept Ctrl+C for copy to clipboard
+                if ('C' == message.wParam && (::GetKeyState(VK_CONTROL) >> 15))
+                    ::SendMessage(message.hwnd, WM_COPY, 0, 0);
+
+                // Intercept Ctrl+S for "save as" dialog
+                if ('S' == message.wParam && (::GetKeyState(VK_CONTROL) >> 15))
+                    showSaveDialog(window);
+
+            default:
+                DispatchMessage(&message);
+                is_processed = true;
+                break;
+        }
+    }
+
+    if (!is_processed)
+    {
+        TranslateMessage(&message);
+        DispatchMessage(&message);
+    }
+
+    return false; // no value to return, keep processing
+}
+
+/*
+ * process until queue is empty but don't wait.
+ */
+int cv::pollKey()
+{
+    CV_TRACE_FUNCTION();
+    for(;;)
+    {
+        MSG message;
+        if (PeekMessage(&message, 0, 0, 0, PM_REMOVE) == FALSE)
+            return -1;
+
+        int keyCode = -1;
+        if (handleMessage(message, keyCode))
+            return keyCode;
+    }
+}
+
 CV_IMPL int
 cvWaitKey( int delay )
 {
@@ -1989,9 +2080,7 @@ cvWaitKey( int delay )
 
     for(;;)
     {
-        CvWindow* window;
         MSG message;
-        int is_processed = 0;
 
         if( (delay <= 0) && hg_windows)
             GetMessage(&message, 0, 0, 0);
@@ -2004,61 +2093,9 @@ cvWaitKey( int delay )
             continue;
         }
 
-        for( window = hg_windows; window != 0 && is_processed == 0; window = window->next )
-        {
-            if( window->hwnd == message.hwnd || window->frame == message.hwnd )
-            {
-                is_processed = 1;
-                switch(message.message)
-                {
-                case WM_DESTROY:
-                case WM_CHAR:
-                    DispatchMessage(&message);
-                    return (int)message.wParam;
-
-                case WM_SYSKEYDOWN:
-                    if( message.wParam == VK_F10 )
-                    {
-                        is_processed = 1;
-                        return (int)(message.wParam << 16);
-                    }
-                    break;
-
-                case WM_KEYDOWN:
-                    TranslateMessage(&message);
-                    if( (message.wParam >= VK_F1 && message.wParam <= VK_F24)       ||
-                        message.wParam == VK_HOME   || message.wParam == VK_END     ||
-                        message.wParam == VK_UP     || message.wParam == VK_DOWN    ||
-                        message.wParam == VK_LEFT   || message.wParam == VK_RIGHT   ||
-                        message.wParam == VK_INSERT || message.wParam == VK_DELETE  ||
-                        message.wParam == VK_PRIOR  || message.wParam == VK_NEXT )
-                    {
-                        DispatchMessage(&message);
-                        is_processed = 1;
-                        return (int)(message.wParam << 16);
-                    }
-
-                    // Intercept Ctrl+C for copy to clipboard
-                    if ('C' == message.wParam && (::GetKeyState(VK_CONTROL)>>15))
-                        ::SendMessage(message.hwnd, WM_COPY, 0, 0);
-
-                    // Intercept Ctrl+S for "save as" dialog
-                    if ('S' == message.wParam && (::GetKeyState(VK_CONTROL)>>15))
-                        showSaveDialog(window);
-
-                default:
-                    DispatchMessage(&message);
-                    is_processed = 1;
-                    break;
-                }
-            }
-        }
-
-        if( !is_processed )
-        {
-            TranslateMessage(&message);
-            DispatchMessage(&message);
-        }
+        int keyCode = -1;
+        if (handleMessage(message, keyCode))
+            return keyCode;
     }
 }
 
