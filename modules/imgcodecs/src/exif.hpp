@@ -168,19 +168,22 @@ class ExifReader
 public:
     /**
      * @brief ExifReader constructor. Constructs an object of exif reader
-     *
-     * @param [in]stream An istream to look for EXIF bytes from
      */
-    explicit ExifReader( std::istream& stream );
+    ExifReader();
     ~ExifReader();
 
 
     /**
      * @brief Parse the file with exif info
      *
-     * @return true if parsing was successful and exif information exists in JpegReader object
+     * @param [in] data The data buffer to read EXIF data starting with endianness
+     * @param [in] size The size of the data buffer
+     *
+     * @return true if successful parsing
+     *         false if parsing error
      */
-    bool parse();
+
+    bool parseExif(unsigned char* data, const size_t size);
 
     /**
      * @brief Get tag info by tag number
@@ -190,8 +193,8 @@ public:
      */
     ExifEntry_t getTag( const ExifTagName tag );
 
+
 private:
-    std::istream& m_stream;
     std::vector<unsigned char> m_data;
     std::map<int, ExifEntry_t > m_exif;
     Endianess_t m_format;
@@ -199,7 +202,6 @@ private:
     void parseExif();
     bool checkTagMark() const;
 
-    size_t getFieldSize ();
     size_t getNumDirEntry( const size_t offsetNumDir ) const;
     uint32_t getStartOffset() const;
     uint16_t getExifTag( const size_t offset ) const;
@@ -215,7 +217,6 @@ private:
 
     u_rational_t getURational( const size_t offset ) const;
 
-    std::map<int, ExifEntry_t > getExif();
     std::string getString( const size_t offset ) const;
     std::vector<u_rational_t> getResolution( const size_t offset ) const;
     std::vector<u_rational_t> getWhitePoint( const size_t offset ) const;

@@ -45,6 +45,7 @@
 
 #include "utils.hpp"
 #include "bitstrm.hpp"
+#include "exif.hpp"
 
 namespace cv
 {
@@ -64,6 +65,7 @@ public:
     int width() const { return m_width; }
     int height() const { return m_height; }
     virtual int type() const { return m_type; }
+    ExifReader exif() const { return m_exif; }
 
     virtual bool setSource( const String& filename );
     virtual bool setSource( const Mat& buf );
@@ -87,6 +89,7 @@ protected:
     String m_signature;
     Mat m_buf;
     bool m_buf_supported;
+    ExifReader m_exif;
 };
 
 
