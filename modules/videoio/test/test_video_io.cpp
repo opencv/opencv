@@ -743,8 +743,8 @@ static Ext_Fourcc_PSNR hw_codecs[] = {
         {"avi", "MPEG", 33.f, CAP_GSTREAMER},
         {"avi", "H264", 33.f, CAP_GSTREAMER},
 
-        {"avi", "MPEG", 33.f, CAP_MSMF},
-        {"avi", "H264", 33.f, CAP_MSMF},
+        {"mp4", "MPEG", 33.f, CAP_MSMF},
+        {"mp4", "H264", 33.f, CAP_MSMF},
 
         //{ "mp4", "XVID", 33 }
 };
