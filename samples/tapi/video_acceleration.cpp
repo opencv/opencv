@@ -14,7 +14,7 @@ const char* keys =
 "{ i input    |        | input video file }"
 "{ o output   |        | output video file, or specify 'null' to measure decoding without rendering to screen}"
 "{ backend    | ffmpeg | VideoCapture and VideoWriter backend, valid values: 'any', 'ffmpeg', 'msmf', 'gstreamer' }"
-"{ accel      | any    | GPU Video Acceleration, valid values: 'none', 'any', 'd3d11', 'vaapi', 'qsv' }"
+"{ accel      | any    | GPU Video Acceleration, valid values: 'none', 'any', 'd3d11', 'vaapi', 'mfx' }"
 "{ device     | -1     | Video Acceleration device (GPU) index (-1 means default device) }"
 "{ out_w      |        | output width (resize by calling cv::resize) }"
 "{ out_h      |        | output height (resize by calling cv::resize) }"
@@ -41,7 +41,7 @@ struct {
     { VIDEO_ACCELERATION_ANY, "any" },
     { VIDEO_ACCELERATION_D3D11, "d3d11" },
     { VIDEO_ACCELERATION_VAAPI, "vaapi" },
-    { VIDEO_ACCELERATION_QSV, "qsv" },
+    { VIDEO_ACCELERATION_MFX, "mfx" },
 };
 
 class FPSCounter {
@@ -62,15 +62,14 @@ public:
 
         double sec = std::chrono::duration_cast<std::chrono::duration<double>>(now - last_time).count();
         if (sec >= interval || last_frame) {
-            fprintf(output, "FpsCounter(%.2fsec): FPS=%.2f\n", sec, num_frames / sec);
-            fflush(output);
+            printf("FPS(last %.2f sec) = %.2f\n", sec, num_frames / sec);
+            fflush(stdout);
             num_frames = 0;
             last_time = now;
         }
     }
 
 private:
-    FILE* output = stdout;
     double interval = 1;
     std::chrono::time_point<std::chrono::high_resolution_clock> last_time;
     int num_frames = 0;

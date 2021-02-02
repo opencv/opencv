@@ -996,7 +996,7 @@ bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters&
     #else
                 VIDEO_ACCELERATION_VAAPI,
     #endif
-                VIDEO_ACCELERATION_QSV,
+                VIDEO_ACCELERATION_MFX,
             };
             for (VideoAccelerationType va_type : supported_va_types) {
                 if (!(va_type & hw_type))
@@ -2462,7 +2462,7 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
     AVBufferRef* hw_device_ctx = NULL;
     AVBufferRef* hw_frames_ctx = NULL;
     static std::vector<VideoAccelerationType> supported_va_types = {
-            VIDEO_ACCELERATION_QSV,
+            VIDEO_ACCELERATION_MFX,
 #ifdef _WIN32
             VIDEO_ACCELERATION_D3D11
 #else
@@ -2473,7 +2473,7 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
         if (!(va_type & hw_type))
             continue;
 
-        AVBufferRef* hw_device_ctx = hw_create_device(va_type, hw_device);
+        hw_device_ctx = hw_create_device(va_type, hw_device);
         if (!hw_device_ctx)
             continue;
 

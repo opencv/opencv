@@ -68,7 +68,7 @@ static AVHWDeviceType VideoAccelerationTypeToFFMPEG(VideoAccelerationType va_typ
     } ffmpeg_hw_types[] = {
         { VIDEO_ACCELERATION_D3D11, AV_HWDEVICE_TYPE_D3D11VA },
         { VIDEO_ACCELERATION_VAAPI, AV_HWDEVICE_TYPE_VAAPI },
-        { VIDEO_ACCELERATION_QSV, AV_HWDEVICE_TYPE_QSV }
+        { VIDEO_ACCELERATION_MFX, AV_HWDEVICE_TYPE_QSV }
     };
     for (const HWTypeFFMPEG& hw : ffmpeg_hw_types) {
         if (va_type == hw.va_type)

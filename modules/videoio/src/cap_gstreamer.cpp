@@ -267,6 +267,21 @@ bool is_gst_element_exists(const std::string& name)
     return (bool)testfac;
 }
 
+static void find_hw_element(const GValue *item, gpointer va_type)
+{
+    GstElement *element = GST_ELEMENT(g_value_get_object(item));
+    const gchar *name = g_type_name(G_OBJECT_TYPE(element));
+    if (name) {
+        if (strstr(name, "Vaapi")) {
+            *(int*)va_type |= VIDEO_ACCELERATION_VAAPI;
+        } else if (strstr(name, "Mfx") || strstr(name, "Msdk")) {
+            *(int*)va_type |= VIDEO_ACCELERATION_MFX;
+        } else if (strstr(name, "D3d11")) {
+            *(int*)va_type |= VIDEO_ACCELERATION_D3D11;
+        }
+    }
+}
+
 //==================================================================================================
 
 class GStreamerCapture CV_FINAL : public IVideoCapture
@@ -1053,6 +1068,16 @@ double GStreamerCapture::getProperty(int propId) const
             }
         }
         break;
+    case cv::CAP_PROP_HW_ACCELERATION:
+        if (pipeline) {
+            int va_type = VIDEO_ACCELERATION_NONE;
+            GstIterator *iter = gst_bin_iterate_recurse(GST_BIN (pipeline.get()));
+            gst_iterator_foreach(iter, find_hw_element, (gpointer)&va_type);
+            gst_iterator_free(iter);
+            return static_cast<double>(va_type);
+        } else {
+            return static_cast<double>(VIDEO_ACCELERATION_NONE);
+        }
     case CV_CAP_GSTREAMER_QUEUE_LENGTH:
         if(!sink)
         {
@@ -1200,6 +1225,10 @@ bool GStreamerCapture::setProperty(int propId, double value)
     case CV_CAP_PROP_GAIN:
     case CV_CAP_PROP_CONVERT_RGB:
         break;
+    case cv::CAP_PROP_HW_ACCELERATION:
+        return true; // TODO can we use property 'force-sw-decoders' in decodebin?
+    case cv::CAP_PROP_HW_DEVICE:
+        return (value < 0); // GStreamer doesn't support device selection
     case CV_CAP_GSTREAMER_QUEUE_LENGTH:
     {
         if(!sink)
