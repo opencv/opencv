@@ -988,17 +988,39 @@ bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters&
             int enc_width = enc->width;
             int enc_height = enc->height;
 
-            enc->hw_device_ctx = hw_create_device(&hw_type, &hw_device, false);
-
-            AVCodec *codec = NULL;
-            if (enc->hw_device_ctx) { // HW decoder
-                AVPixelFormat hw_pix_fmt = AV_PIX_FMT_NONE;
-                codec = hw_find_codec(enc->codec_id, enc->hw_device_ctx, av_codec_is_decoder, &hw_pix_fmt);
-                if (hw_pix_fmt != AV_PIX_FMT_NONE) {
-                    enc->get_format = hw_get_format_callback; // set callback to select HW pixel format, not SW format
+            // try find HW decoder
+            AVCodec* codec = NULL;
+            static std::vector<VideoAccelerationType> supported_va_types = {
+    #ifdef _WIN32
+                VIDEO_ACCELERATION_D3D11,
+    #else
+                VIDEO_ACCELERATION_VAAPI,
+    #endif
+                VIDEO_ACCELERATION_QSV,
+            };
+            for (VideoAccelerationType va_type : supported_va_types) {
+                if (!(va_type & hw_type))
+                    continue;
+                enc->hw_device_ctx = hw_create_device(va_type, hw_device);
+                if (enc->hw_device_ctx) {
+                    AVPixelFormat hw_pix_fmt = AV_PIX_FMT_NONE;
+                    codec = hw_find_codec(enc->codec_id, enc->hw_device_ctx, av_codec_is_decoder, &hw_pix_fmt);
+                    if (codec) {
+                        if (hw_pix_fmt != AV_PIX_FMT_NONE) {
+                            enc->get_format = hw_get_format_callback; // set callback to select HW pixel format, not SW format
+                        }
+                        hw_type = va_type;
+                        if (hw_device < 0)
+                            hw_device = 0;
+                        break;
+                    } else {
+                        av_buffer_unref(&enc->hw_device_ctx);
+                    }
                 }
             }
-            if (!codec) { // SW decoder
+
+            // SW decoder
+            if (!codec) {
                 if (av_dict_get(dict, "video_codec", NULL, 0) == NULL) {
                     codec = avcodec_find_decoder(enc->codec_id);
                 } else {
@@ -2431,37 +2453,59 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
 
     double bitrate = std::min(bitrate_scale*fps*width*height, (double)INT_MAX/2);
 
-    // HW device context and HW frames context
-    AVBufferRef *hw_device_ctx = hw_create_device(&hw_type, &hw_device, true);
-    AVBufferRef *hw_frames_ctx = NULL;
-
-    // Find the video encoder
-    AVCodec* codec = NULL;
     if (codec_id == AV_CODEC_ID_NONE) {
         codec_id = av_guess_codec(oc->oformat, NULL, oc->filename, NULL, AVMEDIA_TYPE_VIDEO);
     }
-    if (!hw_device_ctx) {
-        codec = avcodec_find_encoder(codec_id);
-    } else {
+
+    // Try find HW encoder
+    AVCodec* codec = NULL;
+    AVBufferRef* hw_device_ctx = NULL;
+    AVBufferRef* hw_frames_ctx = NULL;
+    static std::vector<VideoAccelerationType> supported_va_types = {
+            VIDEO_ACCELERATION_QSV,
+#ifdef _WIN32
+            VIDEO_ACCELERATION_D3D11
+#else
+            VIDEO_ACCELERATION_VAAPI
+#endif
+    };
+    for (VideoAccelerationType va_type : supported_va_types) {
+        if (!(va_type & hw_type))
+            continue;
+
+        AVBufferRef* hw_device_ctx = hw_create_device(va_type, hw_device);
+        if (!hw_device_ctx)
+            continue;
+
         AVPixelFormat hw_format = AV_PIX_FMT_NONE;
-        codec = hw_find_codec(codec_id, hw_device_ctx, av_codec_is_encoder, &hw_format);
-        if (codec) {
+        AVCodec *hw_codec = hw_find_codec(codec_id, hw_device_ctx, av_codec_is_encoder, &hw_format);
+        if (!hw_codec) {
+            av_buffer_unref(&hw_device_ctx);
+            continue;
+        }
+        if (hw_format != AV_PIX_FMT_NONE) {
             hw_frames_ctx = hw_create_frames(hw_device_ctx, width, height, hw_format, AV_PIX_FMT_NV12);
-            if (hw_frames_ctx)
-                codec_pix_fmt = hw_format;
-            else
-                codec = NULL;
+            if (!hw_frames_ctx) {
+                av_buffer_unref(&hw_device_ctx);
+                continue;
+            }
+            codec_pix_fmt = hw_format;
         }
-        if (!codec) {
-            codec = avcodec_find_encoder(codec_id); // SW encoder
-            hw_type = VIDEO_ACCELERATION_NONE;
-            av_buffer_unref(&hw_device_ctx); // release HW device
-        }
+        codec = hw_codec;
+        hw_type = va_type;
+        if (hw_device < 0)
+            hw_device = 0;
     }
+
+    // SW encoder
     if (!codec) {
-        fprintf(stderr, "Could not find encoder for codec id %d: %s\n", codec_id,
+        codec = avcodec_find_encoder(codec_id);
+        if (!codec) {
+            fprintf(stderr, "Could not find encoder for codec id %d: %s\n", codec_id,
                 icvFFMPEGErrStr(AVERROR_ENCODER_NOT_FOUND));
-        return false;
+            return false;
+        }
+        hw_type = VIDEO_ACCELERATION_NONE;
     }
 
     // TODO -- safe to ignore output audio stream?
@@ -2487,7 +2531,7 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
 
     c->codec_tag = fourcc;
 
-    if (hw_device_ctx && hw_frames_ctx) {
+    if (hw_device_ctx) {
         c->hw_device_ctx = hw_device_ctx;
         c->hw_frames_ctx = hw_frames_ctx;
     }

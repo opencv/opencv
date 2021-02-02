@@ -45,6 +45,7 @@
 #pragma comment(lib, "mfuuid")
 #pragma comment(lib, "Strmiids")
 #pragma comment(lib, "Mfreadwrite")
+#pragma comment(lib, "dxgi")
 #ifdef HAVE_MSMF_DXVA
 #pragma comment(lib, "d3d11")
 // MFCreateDXGIDeviceManager() is available since Win8 only.
@@ -576,6 +577,7 @@ public:
     } MSMFCapture_Mode;
     CvCapture_MSMF();
     virtual ~CvCapture_MSMF();
+    bool configureHW(const cv::VideoCaptureParameters& params);
     virtual bool open(int);
     virtual bool open(const cv::String&);
     virtual void close();
@@ -601,6 +603,7 @@ protected:
     cv::String filename;
     int camid;
     MSMFCapture_Mode captureMode;
+    int hwDeviceIndex;
 #ifdef HAVE_MSMF_DXVA
     _ComPtr<ID3D11Device> D3DDev;
     _ComPtr<IMFDXGIDeviceManager> D3DMgr;
@@ -624,6 +627,7 @@ CvCapture_MSMF::CvCapture_MSMF():
     filename(""),
     camid(-1),
     captureMode(MODE_SW),
+    hwDeviceIndex(-1),
 #ifdef HAVE_MSMF_DXVA
     D3DDev(NULL),
     D3DMgr(NULL),
@@ -635,7 +639,6 @@ CvCapture_MSMF::CvCapture_MSMF():
     sampleTime(0),
     isOpen(false)
 {
-    configureHW(true);
 }
 
 CvCapture_MSMF::~CvCapture_MSMF()
@@ -732,10 +735,18 @@ bool CvCapture_MSMF::configureHW(bool enable)
     close();
     if (enable)
     {
+        _ComPtr<IDXGIAdapter> pAdapter;
+        if (hwDeviceIndex >= 0) {
+            _ComPtr<IDXGIFactory2> pDXGIFactory;
+            if (FAILED(CreateDXGIFactory(__uuidof(IDXGIFactory2), (void**)& pDXGIFactory)) ||
+                FAILED(pDXGIFactory->EnumAdapters(hwDeviceIndex, &pAdapter))) {
+                return false;
+            }
+        }
         D3D_FEATURE_LEVEL levels[] = { D3D_FEATURE_LEVEL_11_1, D3D_FEATURE_LEVEL_11_0,
             D3D_FEATURE_LEVEL_10_1, D3D_FEATURE_LEVEL_10_0,
             D3D_FEATURE_LEVEL_9_3,  D3D_FEATURE_LEVEL_9_2, D3D_FEATURE_LEVEL_9_1 };
-        if (SUCCEEDED(D3D11CreateDevice(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, D3D11_CREATE_DEVICE_BGRA_SUPPORT | D3D11_CREATE_DEVICE_VIDEO_SUPPORT,
+        if (SUCCEEDED(D3D11CreateDevice(pAdapter.Get(), D3D_DRIVER_TYPE_HARDWARE, NULL, D3D11_CREATE_DEVICE_BGRA_SUPPORT | D3D11_CREATE_DEVICE_VIDEO_SUPPORT,
             levels, sizeof(levels) / sizeof(*levels), D3D11_SDK_VERSION, &D3DDev, NULL, NULL)))
         {
             // NOTE: Getting ready for multi-threaded operation
@@ -750,6 +761,8 @@ bool CvCapture_MSMF::configureHW(bool enable)
                     if (SUCCEEDED(D3DMgr->ResetDevice(D3DDev.Get(), mgrRToken)))
                     {
                         captureMode = MODE_HW;
+                        if (hwDeviceIndex < 0)
+                            hwDeviceIndex = 0;
                         return reopen ? (prevcam >= 0 ? open(prevcam) : open(prevfile.c_str())) : true;
                     }
                     D3DMgr.Release();
@@ -771,6 +784,17 @@ bool CvCapture_MSMF::configureHW(bool enable)
 #else
     return !enable;
 #endif
+}
+
+bool CvCapture_MSMF::configureHW(const cv::VideoCaptureParameters& params) {
+    hwDeviceIndex = params.get<int>(cv::VIDEOWRITER_PROP_HW_DEVICE, -1);
+    cv::VideoAccelerationType hw_type = params.get<cv::VideoAccelerationType>(cv::VIDEOWRITER_PROP_HW_ACCELERATION, cv::VIDEO_ACCELERATION_ANY);
+    if (hw_type & cv::VIDEO_ACCELERATION_D3D11) {
+        return configureHW(true);
+    }
+    else {
+        return false;
+    }
 }
 
 bool CvCapture_MSMF::configureOutput(MediaType newType, cv::uint32_t outFormat)
@@ -1151,7 +1175,11 @@ double CvCapture_MSMF::getProperty( int property_id ) const
         switch (property_id)
         {
         case CV_CAP_PROP_MODE:
-                return captureMode;
+            return captureMode;
+        case cv::CAP_PROP_HW_DEVICE:
+            return hwDeviceIndex;
+        case cv::CAP_PROP_HW_ACCELERATION:
+            return (captureMode == MODE_HW) ? cv::VIDEO_ACCELERATION_D3D11 : 0;
         case CV_CAP_PROP_CONVERT_RGB:
                 return convertFormat ? 1 : 0;
         case CV_CAP_PROP_SAR_NUM:
@@ -1415,11 +1443,12 @@ bool CvCapture_MSMF::setProperty( int property_id, double value )
     return false;
 }
 
-cv::Ptr<cv::IVideoCapture> cv::cvCreateCapture_MSMF( int index )
+cv::Ptr<cv::IVideoCapture> cv::cvCreateCapture_MSMF( int index, const cv::VideoCaptureParameters& params)
 {
     cv::Ptr<CvCapture_MSMF> capture = cv::makePtr<CvCapture_MSMF>();
     if (capture)
     {
+        capture->configureHW(params);
         capture->open(index);
         if (capture->isOpened())
             return capture;
@@ -1427,11 +1456,12 @@ cv::Ptr<cv::IVideoCapture> cv::cvCreateCapture_MSMF( int index )
     return cv::Ptr<cv::IVideoCapture>();
 }
 
-cv::Ptr<cv::IVideoCapture> cv::cvCreateCapture_MSMF (const cv::String& filename)
+cv::Ptr<cv::IVideoCapture> cv::cvCreateCapture_MSMF (const cv::String& filename, const cv::VideoCaptureParameters& params)
 {
     cv::Ptr<CvCapture_MSMF> capture = cv::makePtr<CvCapture_MSMF>();
     if (capture)
     {
+        capture->configureHW(params);
         capture->open(filename);
         if (capture->isOpened())
             return capture;

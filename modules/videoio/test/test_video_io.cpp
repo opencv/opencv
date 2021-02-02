@@ -174,7 +174,7 @@ public:
         apiPref = get<1>(GetParam());
         video_file = BunnyParameters::getFilename(String(".") + ext);
     }
-    void doFrameCountTest()
+     void doFrameCountTest()
     {
         if (!videoio_registry::hasBackend(apiPref))
             throw SkipTestException(cv::String("Backend is not available/disabled: ") + cv::videoio_registry::getBackendName(apiPref));
@@ -649,53 +649,32 @@ TEST_P(safe_capture, frames_independency)
 static VideoCaptureAPIs safe_apis[] = {CAP_FFMPEG, CAP_GSTREAMER, CAP_MSMF,CAP_AVFOUNDATION};
 INSTANTIATE_TEST_CASE_P(videoio, safe_capture, testing::ValuesIn(safe_apis));
 
-static void generateFrame(Mat &frame, unsigned int i, const Point &center, const Scalar &color)
-{
-    frame = Scalar::all((i * 10) % 255);
-    putText(frame, "frame #" + std::to_string(i), Point(50, center.y), FONT_HERSHEY_SIMPLEX, 5.0, color, 5, CV_AA);
-    circle(frame, center, frame.rows * (i % 50) / 100, color, 3, CV_AA);
-    circle(frame, center, frame.rows * ((i + 25) % 50) / 100, color, 3, CV_AA);
-}
-
-typedef testing::TestWithParam<VideoCaptureAPIs> video_acceleration;
+typedef testing::TestWithParam<tuple<VideoCaptureAPIs, VideoAccelerationType, std::string, bool>> video_acceleration;
 
 TEST_P(video_acceleration, write_read)
 {
-    VideoCaptureAPIs backend = GetParam();
+    auto param = GetParam();
+    VideoCaptureAPIs backend = get<0>(param);
+    VideoAccelerationType va_type = get<1>(param);
+    std::string codecid = get<2>(param);
+    bool use_umat = get<3>(param);
     if (!videoio_registry::hasBackend(backend))
         throw SkipTestException(cv::String("Backend is not available/disabled: ") + cv::videoio_registry::getBackendName(backend));
 
     const Size sz(640 - 2, 480 - 2);
-    const int frameNum = 50;
-    const Scalar color(Scalar::all(0));
-    const Point center(sz.height / 2, sz.width / 2);
-
-    struct {
-        VideoAccelerationType va_type;
-        const char* str;
-    } acceleration_list[] = {
-            {(VideoAccelerationType)-1, "DEFAULT"},
-            {VIDEO_ACCELERATION_ANY,   "ANY"},
-            {VIDEO_ACCELERATION_NONE,  "NONE"},
-            {VIDEO_ACCELERATION_QSV,   "QSV"},
-#ifdef _WIN32
-            {VIDEO_ACCELERATION_D3D9,  "D3D9"},
-            {VIDEO_ACCELERATION_D3D11, "D3D11"},
-#else
-            {VIDEO_ACCELERATION_VAAPI, "VAAPI"},
-#endif
-    };
-
-    std::vector<std::string> codecid_list = {
-            "H264",
-            "XVID",
-    };
-
-    std::vector<bool> false_true = { false, true };
-
-    std::string filename = tempfile("videoio_ffmpeg_video_acceleration.avi");
+    const int frameNum = 35;
 
     auto getAccelString = [&](VideoAccelerationType va_type) {
+        struct {
+            VideoAccelerationType va_type;
+            const char* str;
+        } acceleration_list[] = {
+                {VIDEO_ACCELERATION_ANY,   "ANY"},
+                {VIDEO_ACCELERATION_NONE,  "NONE"},
+                {VIDEO_ACCELERATION_QSV,   "QSV"},
+                {VIDEO_ACCELERATION_D3D11, "D3D11"},
+                {VIDEO_ACCELERATION_VAAPI, "VAAPI"},
+        };
         for (auto accel : acceleration_list) {
             if (va_type == accel.va_type)
                 return accel.str;
@@ -703,81 +682,92 @@ TEST_P(video_acceleration, write_read)
         return "UNKNOWN";
     };
 
-    for (auto accel : acceleration_list) {
-        for (auto codecid : codecid_list) {
-            for (bool use_umat : false_true) {
-                std::cout << accel.str << " acceleration test on codec " << codecid << " and memory " << (use_umat ? "UMat" : "Mat") << std::endl;
-                remove(filename.c_str());
+    std::string filename = tempfile("videoio_ffmpeg_video_acceleration.avi");
 
-                // Write video
-                {
-                    std::vector<int> params;
-                    if (accel.str != std::string("DEFAULT")) {
-                        params = { VIDEOWRITER_PROP_HW_ACCELERATION, (int) accel.va_type };
-                    }
-                    VideoWriter writer(filename,
-                                       backend,
-                                       VideoWriter::fourcc(codecid[0], codecid[1], codecid[2], codecid[3]),
-                                       25.0f,
-                                       sz,
-                                       params);
-                    EXPECT_TRUE(writer.isOpened());
-                    VideoAccelerationType va_type = (VideoAccelerationType)writer.get(CAP_PROP_HW_ACCELERATION);
-                    std::cout << "  VideoWriter acceleration = " << getAccelString(va_type) << std::endl;
-                    Mat frame(sz, CV_8UC3);
-                    for (int i = 0; i < frameNum; ++i) {
-                        generateFrame(frame, i, center, color);
-                        if (use_umat) {
-                            UMat umat;
-                            frame.copyTo(umat);
-                            writer.write(umat);
-                        }
-                        else {
-                            writer.write(frame);
-                        }
-                    }
-                }
-                // Read video and check PSNR on every frame
-                {
-                    std::vector<int> params;
-                    if (accel.str != std::string("DEFAULT")) {
-                        params = { CAP_PROP_HW_ACCELERATION, (int)accel.va_type };
-                    }
-                    VideoCapture reader(filename, backend, params);
-                    ASSERT_TRUE(reader.isOpened());
-                    VideoAccelerationType va_type = (VideoAccelerationType)reader.get(CAP_PROP_HW_ACCELERATION);
-                    std::cout << "  VideoCapture acceleration = " << getAccelString(va_type) << std::endl;
-                    double min_psnr = 1000;
-                    Mat reference(sz, CV_8UC3);
-                    for (int i = 0; i < frameNum; ++i) {
-                        Mat actual;
-                        if (use_umat) {
-                            UMat umat;
-                            EXPECT_TRUE(reader.read(umat));
-                            umat.copyTo(actual);
-                        }
-                        else {
-                            EXPECT_TRUE(reader.read(actual));
-                        }
-                        EXPECT_FALSE(actual.empty());
-                        generateFrame(reference, i, center, color);
-                        EXPECT_EQ(reference.size(), actual.size());
-                        EXPECT_EQ(reference.depth(), actual.depth());
-                        EXPECT_EQ(reference.channels(), actual.channels());
-                        double psnr = cvtest::PSNR(actual, reference);
-                        EXPECT_GE(psnr, 35.0) << " frame " << i;
-                        if (psnr < min_psnr)
-                            min_psnr = psnr;
-                    }
-                    std::cout << "  Test finished with min PSNR = " << min_psnr << std::endl;
-                }
-                remove(filename.c_str());
+    std::cout << getAccelString(va_type) << " acceleration test on codec " << codecid << " and memory " << (use_umat ? "UMat" : "Mat") << std::endl;
+
+    // Write video
+    {
+        VideoWriter writer(filename,
+            backend,
+            VideoWriter::fourcc(codecid[0], codecid[1], codecid[2], codecid[3]),
+            25.0f,
+            sz,
+            { VIDEOWRITER_PROP_HW_ACCELERATION, (int)va_type });
+        EXPECT_TRUE(writer.isOpened());
+        std::cout << "  VideoWriter acceleration = " << getAccelString((VideoAccelerationType)writer.get(VIDEOWRITER_PROP_HW_ACCELERATION)) << std::endl;
+        Mat frame(sz, CV_8UC3);
+        for (int i = 0; i < frameNum; ++i) {
+            generateFrame(i, frameNum, frame);
+            if (use_umat) {
+                UMat umat;
+                frame.copyTo(umat);
+                writer.write(umat);
+            }
+            else {
+                writer.write(frame);
             }
         }
     }
+    // Read video and check PSNR on every frame
+    {
+        VideoCapture reader(filename, backend, { CAP_PROP_HW_ACCELERATION, (int)va_type });
+        ASSERT_TRUE(reader.isOpened());
+        std::cout << "  VideoCapture acceleration = " << getAccelString((VideoAccelerationType)reader.get(CAP_PROP_HW_ACCELERATION)) << std::endl;
+        double min_psnr = 1000;
+        Mat reference(sz, CV_8UC3);
+        for (int i = 0; i < frameNum; ++i) {
+            Mat actual;
+            if (use_umat) {
+                UMat umat;
+                EXPECT_TRUE(reader.read(umat));
+                umat.copyTo(actual);
+            }
+            else {
+                EXPECT_TRUE(reader.read(actual));
+            }
+            EXPECT_FALSE(actual.empty());
+            generateFrame(i, frameNum, reference);
+            EXPECT_EQ(reference.size(), actual.size());
+            EXPECT_EQ(reference.depth(), actual.depth());
+            EXPECT_EQ(reference.channels(), actual.channels());
+            double psnr = cvtest::PSNR(actual, reference);
+            EXPECT_GE(psnr, 35.0) << " frame " << i;
+            if (psnr < min_psnr)
+                min_psnr = psnr;
+        }
+        Mat actual;
+        EXPECT_FALSE(reader.read(actual));
+        std::cout << "  Test finished with min PSNR = " << min_psnr << std::endl;
+    }
+    remove(filename.c_str());
 }
 
-static VideoCaptureAPIs hw_apis[] = { CAP_FFMPEG, CAP_MSMF, CAP_GSTREAMER };
-INSTANTIATE_TEST_CASE_P(videoio, video_acceleration, testing::ValuesIn(hw_apis));
+static VideoCaptureAPIs hw_apis[] = {
+    CAP_FFMPEG,
+    CAP_MSMF,
+    CAP_GSTREAMER
+};
+static VideoAccelerationType hw_types[] = {
+    VIDEO_ACCELERATION_ANY,
+    VIDEO_ACCELERATION_NONE,
+    VIDEO_ACCELERATION_QSV,
+#ifdef _WIN32
+    VIDEO_ACCELERATION_D3D11,
+#else
+    VIDEO_ACCELERATION_VAAPI,
+#endif
+};
+std::vector<std::string> hw_codecs = {
+    "H264",
+    "XVID",
+};
+
+INSTANTIATE_TEST_CASE_P(videoio, video_acceleration, testing::Combine(
+    testing::ValuesIn(hw_apis),
+    testing::ValuesIn(hw_types),
+    testing::ValuesIn(hw_codecs),
+    testing::ValuesIn({ false, true })
+));
 
 } // namespace
