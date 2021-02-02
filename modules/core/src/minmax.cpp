@@ -636,16 +636,16 @@ static void minMaxIdx_32f(const float* src, const uchar* mask, float* minval, fl
                         v_uint32x4 cmpMax = v_reinterpret_as_u32(data > valMax);
                         idxMin = v_select(cmpMin, idx, idxMin);
                         idxMax = v_select(cmpMax, idx, idxMax);
-                        valMin = v_min(data, valMin);
-                        valMax = v_max(data, valMax);
+                        valMin = v_min(v_select(v_reinterpret_as_f32(cmpMin), data, valMin), valMin);
+                        valMax = v_max(v_select(v_reinterpret_as_f32(cmpMax), data, valMax), valMax);
                         idx += inc;
                         data = v_load(src + k + v_float32x4::nlanes);
                         cmpMin = v_reinterpret_as_u32(data < valMin);
                         cmpMax = v_reinterpret_as_u32(data > valMax);
                         idxMin = v_select(cmpMin, idx, idxMin);
                         idxMax = v_select(cmpMax, idx, idxMax);
-                        valMin = v_min(data, valMin);
-                        valMax = v_max(data, valMax);
+                        valMin = v_min(v_select(v_reinterpret_as_f32(cmpMin), data, valMin), valMin);
+                        valMax = v_max(v_select(v_reinterpret_as_f32(cmpMax), data, valMax), valMax);
                         idx += inc;
                     }
                 }

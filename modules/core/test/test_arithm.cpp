@@ -1946,6 +1946,17 @@ TEST(MinMaxLoc, regression_4955_nans)
     cv::minMaxLoc(nan_mat, NULL, NULL, NULL, NULL);
 }
 
+TEST(MinMaxLoc, regression_2817_nans)
+{
+    cv::Mat nan_mat(2, 16, CV_32F, cv::Scalar(std::numeric_limits<float>::quiet_NaN()));
+    nan_mat.at<float>(0, 0) =  1.f;
+    nan_mat.at<float>(0, 1) = -1.f;
+    double minVal, maxVal;
+    cv::minMaxLoc(nan_mat, &minVal, &maxVal, NULL, NULL);
+    EXPECT_EQ(minVal, -1.0);
+    EXPECT_EQ(maxVal,  1.0);
+}
+
 TEST(Subtract, scalarc1_matc3)
 {
     int scalar = 255;
