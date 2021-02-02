@@ -174,7 +174,7 @@ public:
         apiPref = get<1>(GetParam());
         video_file = BunnyParameters::getFilename(String(".") + ext);
     }
-     void doFrameCountTest()
+    void doFrameCountTest()
     {
         if (!videoio_registry::hasBackend(apiPref))
             throw SkipTestException(cv::String("Backend is not available/disabled: ") + cv::videoio_registry::getBackendName(apiPref));
