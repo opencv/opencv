@@ -75,7 +75,7 @@ AVBufferRef* hw_create_frames(AVBufferRef *hw_device_ctx, int width, int height,
 {
     AVBufferRef *hw_frames_ref = av_hwframe_ctx_alloc(hw_device_ctx);
     if (!hw_frames_ref) {
-        fprintf(stderr, "Failed to create HW frame context\n");
+        CV_LOG_DEBUG(NULL, "Failed to create HW frame context");
         return NULL;
     }
     AVHWFramesContext *frames_ctx = (AVHWFramesContext *)(hw_frames_ref->data);
@@ -85,7 +85,7 @@ AVBufferRef* hw_create_frames(AVBufferRef *hw_device_ctx, int width, int height,
     frames_ctx->height    = height;
     frames_ctx->initial_pool_size = pool_size;
     if (av_hwframe_ctx_init(hw_frames_ref) < 0) {
-        fprintf(stderr, "Failed to initialize HW frame context\n");
+        CV_LOG_DEBUG(NULL, "Failed to initialize HW frame context");
         av_buffer_unref(&hw_frames_ref);
         return NULL;
     }
