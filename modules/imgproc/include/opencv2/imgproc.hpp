@@ -1152,7 +1152,7 @@ public:
 
     @param edge Subdivision edge ID.
     @param orgpt Output vertex location.
-    @param isideal Check if the vertex is a point approaching infinity, if yes, #orgpt represents its direction.
+    @param isideal Check if the vertex is a point approaching infinity, if yes, orgpt represents its direction.
 
     @returns vertex ID.
      */
@@ -1162,7 +1162,7 @@ public:
 
     @param edge Subdivision edge ID.
     @param dstpt Output vertex location.
-    @param isideal Check if the vertex is a point approaching infinity, if yes, #dstpt represents its direction.
+    @param isideal Check if the vertex is a point approaching infinity, if yes, dstpt represents its direction.
 
     @returns vertex ID.
      */
