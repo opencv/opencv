@@ -25,6 +25,8 @@ AVBufferRef* hw_create_frames(AVBufferRef *hw_device_ctx, int width, int height,
 AVCodec *hw_find_codec(AVCodecID id, AVBufferRef *hw_device_ctx, int (*check_category)(const AVCodec *), AVPixelFormat *hw_pix_fmt = NULL);
 AVPixelFormat hw_get_format_callback(struct AVCodecContext *ctx, const enum AVPixelFormat * fmt);
 
+#if LIBAVUTIL_BUILD >= AV_VERSION_INT(55, 78, 100) // FFMPEG 3.4+
+
 static AVHWDeviceType VideoAccelerationTypeToFFMPEG(VideoAccelerationType va_type) {
     struct HWTypeFFMPEG {
         VideoAccelerationType va_type;
@@ -151,3 +153,20 @@ AVPixelFormat hw_get_format_callback(struct AVCodecContext *ctx, const enum AVPi
     }
     return fmt[0];
 }
+
+#else
+
+AVBufferRef* hw_create_device(VideoAccelerationType va_type, int hw_device) {
+    return NULL;
+}
+AVBufferRef* hw_create_frames(AVBufferRef *hw_device_ctx, int width, int height, AVPixelFormat hw_format, AVPixelFormat sw_format, int pool_size) {
+    return NULL;
+}
+AVCodec *hw_find_codec(AVCodecID id, AVBufferRef *hw_device_ctx, int (*check_category)(const AVCodec *), AVPixelFormat *hw_pix_fmt) {
+    return NULL;
+}
+AVPixelFormat hw_get_format_callback(struct AVCodecContext *ctx, const enum AVPixelFormat * fmt) {
+    return fmt[0];
+}
+
+#endif
