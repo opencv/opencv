@@ -206,6 +206,11 @@ catch (const cv::Exception &e) \
 { \
     pyRaiseCVException(e); \
     return 0; \
+} \
+catch (const std::exception &e) \
+{ \
+    PyErr_SetString(opencv_error, e.what()); \
+    return 0; \
 }
 
 using namespace cv;
