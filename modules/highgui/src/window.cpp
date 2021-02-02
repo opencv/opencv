@@ -92,6 +92,14 @@ CV_IMPL void cvSetWindowProperty(const char* name, int prop_id, double prop_valu
         #endif
     break;
 
+    case cv::WND_PROP_VSYNC:
+        #if defined (HAVE_WIN32UI)
+            cvSetPropVsync_W32(name, (prop_value != 0));
+        #else
+            // not implemented yet for other toolkits
+        #endif
+    break;
+
     default:;
     }
 }
@@ -177,6 +185,14 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
             return cvGetPropTopmost_W32(name);
         #elif defined(HAVE_COCOA)
             return cvGetPropTopmost_COCOA(name);
+        #else
+            return -1;
+        #endif
+    break;
+
+    case cv::WND_PROP_VSYNC:
+        #if defined (HAVE_WIN32UI)
+            return cvGetPropVsync_W32(name);
         #else
             return -1;
         #endif
