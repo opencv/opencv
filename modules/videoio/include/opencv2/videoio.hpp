@@ -199,7 +199,7 @@ enum VideoWriterProperties {
   VIDEOWRITER_PROP_IS_COLOR = 4,   //!< If it is not zero, the encoder will expect and encode color frames, otherwise it
                                    //!< will work with grayscale frames.
   VIDEOWRITER_PROP_DEPTH = 5,      //!< Defaults to CV_8U.
-  VIDEOWRITER_PROP_HW_ACCELERATION = CAP_PROP_HW_ACCELERATION, //!< Set/get hardware acceleration type (value is enum cv::VideoAccelerationType). Setting supported only via `params` parameter in VideoCapture constructor. Default is VIDEO_ACCELERATION_NONE
+  VIDEOWRITER_PROP_HW_ACCELERATION = CAP_PROP_HW_ACCELERATION, //!< Set/get hardware acceleration type (value is enum cv::VideoAccelerationType). Setting supported only via `params` parameter in VideoCapture constructor. Default is VIDEO_ACCELERATION_NONE.
   VIDEOWRITER_PROP_HW_DEVICE       = CAP_PROP_HW_DEVICE  //!< Hardware device index (select GPU if multiple available)
 };
 
@@ -216,7 +216,7 @@ enum VideoAccelerationType  {
 
     VIDEO_ACCELERATION_D3D11    = 1 << 1, // DirectX 11
     VIDEO_ACCELERATION_VAAPI    = 1 << 2, // VAAPI
-    VIDEO_ACCELERATION_QSV      = 1 << 3  // Intel Quick Sync Video
+    VIDEO_ACCELERATION_MFX      = 1 << 3  // libmfx (Intel MediaSDK/oneVPL)
 };
 
 /** @name IEEE 1394 drivers
