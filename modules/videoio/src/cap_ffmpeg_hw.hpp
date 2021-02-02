@@ -54,72 +54,55 @@ extern "C" {
 
 #define HW_FRAMES_POOL_SIZE     20
 
-AVBufferRef *hw_create_device(cv::VideoAccelerationType *hw_type, int* hw_device, bool prioritize_qsv);
+using namespace cv;
+
+AVBufferRef* hw_create_device(VideoAccelerationType va_type, int hw_device);
 AVBufferRef* hw_create_frames(AVBufferRef *hw_device_ctx, int width, int height, AVPixelFormat hw_format, AVPixelFormat sw_format, int pool_size = HW_FRAMES_POOL_SIZE);
 AVCodec *hw_find_codec(AVCodecID id, AVBufferRef *hw_device_ctx, int (*check_category)(const AVCodec *), AVPixelFormat *hw_pix_fmt = NULL);
 AVPixelFormat hw_get_format_callback(struct AVCodecContext *ctx, const enum AVPixelFormat * fmt);
 
-using namespace cv;
-
-// Parameters hw_type and hw_device are input plus output.
-// The function returns HW device context (or NULL), and updates hw_type and hw_device to specific type/device
-AVBufferRef *hw_create_device(VideoAccelerationType *hw_type, int* hw_device, bool prioritize_qsv) {
-    if (*hw_type == VIDEO_ACCELERATION_NONE)
-        return NULL;
-
+static AVHWDeviceType VideoAccelerationTypeToFFMPEG(VideoAccelerationType va_type) {
     struct HWTypeFFMPEG {
         VideoAccelerationType va_type;
         AVHWDeviceType ffmpeg_type;
-    };
-    std::list<HWTypeFFMPEG> hw_device_types = {
-#ifdef _WIN32
+    } ffmpeg_hw_types[] = {
         { VIDEO_ACCELERATION_D3D11, AV_HWDEVICE_TYPE_D3D11VA },
-        { VIDEO_ACCELERATION_D3D9, AV_HWDEVICE_TYPE_DXVA2 },
-#else
         { VIDEO_ACCELERATION_VAAPI, AV_HWDEVICE_TYPE_VAAPI },
-#endif
+        { VIDEO_ACCELERATION_QSV, AV_HWDEVICE_TYPE_QSV }
     };
-    if (prioritize_qsv) {
-        hw_device_types.push_front({VIDEO_ACCELERATION_QSV, AV_HWDEVICE_TYPE_QSV});
-    } else {
-        hw_device_types.push_back({VIDEO_ACCELERATION_QSV, AV_HWDEVICE_TYPE_QSV});
+    for (const HWTypeFFMPEG& hw : ffmpeg_hw_types) {
+        if (va_type == hw.va_type)
+            return hw.ffmpeg_type;
     }
+    return AV_HWDEVICE_TYPE_NONE;
+}
 
+AVBufferRef* hw_create_device(VideoAccelerationType va_type, int hw_device) {
+    AVHWDeviceType hw_type = VideoAccelerationTypeToFFMPEG(va_type);
+    if (AV_HWDEVICE_TYPE_NONE == hw_type)
+        return NULL;
+
+    AVBufferRef* hw_device_ctx = NULL;
     char device[128] = "";
-    for (const HWTypeFFMPEG& hw: hw_device_types) {
-        if (!(*hw_type & hw.va_type))
-            continue;
-        AVHWDeviceType device_type = hw.ffmpeg_type;
-
-        // create new media context
-        AVBufferRef* hw_device_ctx = NULL;
-        char* pdevice = NULL;
-        AVDictionary *options = NULL;
-        if (*hw_device >= 0 && *hw_device < 100000) {
+    char* pdevice = NULL;
+    AVDictionary* options = NULL;
+    if (hw_device >= 0 && hw_device < 100000) {
 #ifdef _WIN32
-            snprintf(device, sizeof(device), "%d", *hw_device);
+        snprintf(device, sizeof(device), "%d", hw_device);
 #else
-            snprintf(device, sizeof(device), "/dev/dri/renderD%d", 128 + *hw_device);
+        snprintf(device, sizeof(device), "/dev/dri/renderD%d", 128 + hw_device);
 #endif
-            if (device_type == AV_HWDEVICE_TYPE_QSV) {
-                av_dict_set(&options, "child_device", device, 0);
-            } else {
-                pdevice = device;
-            }
+        if (hw_type == AV_HWDEVICE_TYPE_QSV) {
+            av_dict_set(&options, "child_device", device, 0);
         }
-        int ret = av_hwdevice_ctx_create(&hw_device_ctx, device_type, pdevice, options, 0);
-        if (options)
-            av_dict_free(&options);
-        if (ret >= 0) {
-            *hw_type = hw.va_type;
-            if (*hw_device < 0)
-                *hw_device = 0;
-            return hw_device_ctx;
+        else {
+            pdevice = device;
         }
     }
-
-    *hw_type = VIDEO_ACCELERATION_NONE;
-    return NULL;
+    av_hwdevice_ctx_create(&hw_device_ctx, hw_type, pdevice, options, 0);
+    if (options)
+        av_dict_free(&options);
+    return hw_device_ctx;
 }
 
 AVBufferRef* hw_create_frames(AVBufferRef *hw_device_ctx, int width, int height, AVPixelFormat hw_format, AVPixelFormat sw_format, int pool_size)

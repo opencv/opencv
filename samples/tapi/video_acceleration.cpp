@@ -14,7 +14,7 @@ const char* keys =
 "{ i input    |        | input video file }"
 "{ o output   |        | output video file, or specify 'null' to measure decoding without rendering to screen}"
 "{ backend    | ffmpeg | VideoCapture and VideoWriter backend, valid values: 'any', 'ffmpeg', 'msmf', 'gstreamer' }"
-"{ accel      | any    | GPU Video Acceleration, valid values: 'none', 'any', 'd3d9', 'd3d11', 'vaapi', 'qsv' }"
+"{ accel      | any    | GPU Video Acceleration, valid values: 'none', 'any', 'd3d11', 'vaapi', 'qsv' }"
 "{ device     | -1     | Video Acceleration device (GPU) index (-1 means default device) }"
 "{ out_w      |        | output width (resize by calling cv::resize) }"
 "{ out_h      |        | output height (resize by calling cv::resize) }"
@@ -39,7 +39,6 @@ struct {
 } acceleration_strings[] = {
     { VIDEO_ACCELERATION_NONE, "none" },
     { VIDEO_ACCELERATION_ANY, "any" },
-    { VIDEO_ACCELERATION_D3D9, "d3d9" },
     { VIDEO_ACCELERATION_D3D11, "d3d11" },
     { VIDEO_ACCELERATION_VAAPI, "vaapi" },
     { VIDEO_ACCELERATION_QSV, "qsv" },

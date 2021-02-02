@@ -214,10 +214,9 @@ enum VideoAccelerationType  {
     VIDEO_ACCELERATION_NONE     = 0,
     VIDEO_ACCELERATION_ANY      = 0xFFFFFFFF,
 
-    VIDEO_ACCELERATION_D3D9     = 1 << 1, // DirectX 9 (DXVA2)
-    VIDEO_ACCELERATION_D3D11    = 1 << 2, // DirectX 11
-    VIDEO_ACCELERATION_VAAPI    = 1 << 3, // VAAPI
-    VIDEO_ACCELERATION_QSV      = 1 << 4  // Intel Quick Sync Video
+    VIDEO_ACCELERATION_D3D11    = 1 << 1, // DirectX 11
+    VIDEO_ACCELERATION_VAAPI    = 1 << 2, // VAAPI
+    VIDEO_ACCELERATION_QSV      = 1 << 3  // Intel Quick Sync Video
 };
 
 /** @name IEEE 1394 drivers
