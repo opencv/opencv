@@ -7,6 +7,8 @@
 using namespace cv;
 using namespace cv::cuda;
 
+GpuMatND::~GpuMatND() = default;
+
 GpuMatND::GpuMatND(SizeArray _size, int _type, void* _data, StepArray _step) :
     flags(0), dims(0), data(static_cast<uchar*>(_data)), offset(0)
 {

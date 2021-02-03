@@ -362,33 +362,34 @@ public:
     using StepArray = std::vector<size_t>;
     using IndexArray = std::vector<int>;
 
-    ~GpuMatND() = default;
+    //! destructor
+    ~GpuMatND();
 
     //! default constructor
     GpuMatND();
 
     /** @overload
-    @param _size Array of integers specifying an n-dimensional array shape.
-    @param _type Array type. Use CV_8UC1, ..., CV_16FC4 to create 1-4 channel matrices, or
+    @param size Array of integers specifying an n-dimensional array shape.
+    @param type Array type. Use CV_8UC1, ..., CV_16FC4 to create 1-4 channel matrices, or
     CV_8UC(n), ..., CV_64FC(n) to create multi-channel (up to CV_CN_MAX channels) matrices.
     */
-    GpuMatND(SizeArray _size, int _type);
+    GpuMatND(SizeArray size, int type);
 
     /** @overload
-    @param _size Array of integers specifying an n-dimensional array shape.
-    @param _type Array type. Use CV_8UC1, ..., CV_16FC4 to create 1-4 channel matrices, or
+    @param size Array of integers specifying an n-dimensional array shape.
+    @param type Array type. Use CV_8UC1, ..., CV_16FC4 to create 1-4 channel matrices, or
     CV_8UC(n), ..., CV_64FC(n) to create multi-channel (up to CV_CN_MAX channels) matrices.
-    @param _data Pointer to the user data. Matrix constructors that take data and step parameters do not
+    @param data Pointer to the user data. Matrix constructors that take data and step parameters do not
     allocate matrix data. Instead, they just initialize the matrix header that points to the specified
     data, which means that no data is copied. This operation is very efficient and can be used to
     process external data using OpenCV functions. The external data is not automatically deallocated, so
     you should take care of it.
-    @param _step Array of _size.size()-1 steps in case of a multi-dimensional array (the last step is always
+    @param step Array of _size.size()-1 steps in case of a multi-dimensional array (the last step is always
     set to the element size). If not specified, the matrix is assumed to be continuous.
     */
-    GpuMatND(SizeArray _size, int _type, void* _data, StepArray _step = StepArray());
+    GpuMatND(SizeArray size, int type, void* data, StepArray step = StepArray());
 
-    void create(SizeArray _size, int _type);
+    void create(SizeArray size, int type);
 
     void release();
 
@@ -402,6 +403,7 @@ public:
     GpuMatND clone() const;
 
     /** @overload
+    This overload is non-blocking, so it may return even if the copy operation is not finished.
     */
     GpuMatND clone(Stream& stream) const;
 
@@ -484,7 +486,7 @@ public:
 
 private:
     //! internal use
-    void setFields(SizeArray _size, int _type, StepArray _step = StepArray());
+    void setFields(SizeArray size, int type, StepArray step = StepArray());
 
 public:
     /*! includes several bit-fields:

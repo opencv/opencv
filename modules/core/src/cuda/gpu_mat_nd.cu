@@ -72,6 +72,36 @@ void GpuMatND::release()
 /////////////////////////////////////////////////////
 /// clone
 
+static bool next(uchar*& d, const uchar*& s, std::vector<int>& idx, const int dims, const GpuMatND& dst, const GpuMatND& src)
+{
+    int inc = dims-3;
+
+    while (true)
+    {
+        if (idx[inc] == src.size[inc] - 1)
+        {
+            if (inc == 0)
+            {
+                return false;
+            }
+
+            idx[inc] = 0;
+            d -= (dst.size[inc] - 1) * dst.step[inc];
+            s -= (src.size[inc] - 1) * src.step[inc];
+            inc--;
+        }
+        else
+        {
+            idx[inc]++;
+            d += dst.step[inc];
+            s += src.step[inc];
+            break;
+        }
+    }
+
+    return true;
+}
+
 GpuMatND GpuMatND::clone() const
 {
     CV_DbgAssert(!empty());
@@ -97,8 +127,6 @@ GpuMatND GpuMatND::clone() const
         {
             std::vector<int> idx(dims-2, 0);
 
-            bool end = false;
-
             uchar* d = ret.getDevicePtr();
             const uchar* s = getDevicePtr();
 
@@ -110,33 +138,8 @@ GpuMatND GpuMatND::clone() const
                         d, ret.step[dims-2], s, step[dims-2],
                         size[dims-1]*step[dims-1], size[dims-2], cudaMemcpyDeviceToDevice)
                 );
-
-                int inc = dims-3;
-                while (true)
-                {
-                    if (idx[inc] == size[inc] - 1)
-                    {
-                        if (inc == 0)
-                        {
-                            end = true;
-                            break;
-                        }
-
-                        idx[inc] = 0;
-                        d -= (ret.size[inc] - 1) * ret.step[inc];
-                        s -= (size[inc] - 1) * step[inc];
-                        inc--;
-                    }
-                    else
-                    {
-                        idx[inc]++;
-                        d += ret.step[inc];
-                        s += step[inc];
-                        break;
-                    }
-                }
             }
-            while (!end);
+            while (next(d, s, idx, dims, ret, *this));
         }
     }
 
@@ -170,8 +173,6 @@ GpuMatND GpuMatND::clone(Stream& stream) const
         {
             std::vector<int> idx(dims-2, 0);
 
-            bool end = false;
-
             uchar* d = ret.getDevicePtr();
             const uchar* s = getDevicePtr();
 
@@ -183,33 +184,8 @@ GpuMatND GpuMatND::clone(Stream& stream) const
                         d, ret.step[dims-2], s, step[dims-2],
                         size[dims-1]*step[dims-1], size[dims-2], cudaMemcpyDeviceToDevice, _stream)
                 );
-
-                int inc = dims-3;
-                while (true)
-                {
-                    if (idx[inc] == size[inc] - 1)
-                    {
-                        if (inc == 0)
-                        {
-                            end = true;
-                            break;
-                        }
-
-                        idx[inc] = 0;
-                        d -= (ret.size[inc] - 1) * ret.step[inc];
-                        s -= (size[inc] - 1) * step[inc];
-                        inc--;
-                    }
-                    else
-                    {
-                        idx[inc]++;
-                        d += ret.step[inc];
-                        s += step[inc];
-                        break;
-                    }
-                }
             }
-            while (!end);
+            while (next(d, s, idx, dims, ret, *this));
         }
     }
 
@@ -269,7 +245,7 @@ void GpuMatND::download(OutputArray dst) const
     if (!gmat.isContinuous())
         gmat = gmat.clone();
 
-    CV_CUDEV_SAFE_CALL(cudaMemcpy(mat.data, gmat.getDevicePtr(), gmat.totalMemSize(), cudaMemcpyDeviceToHost));
+    CV_CUDEV_SAFE_CALL(cudaMemcpy(mat.data, gmat.getDevicePtr(), mat.total() * mat.elemSize(), cudaMemcpyDeviceToHost));
 }
 
 void GpuMatND::download(OutputArray dst, Stream& stream) const
@@ -285,7 +261,7 @@ void GpuMatND::download(OutputArray dst, Stream& stream) const
         gmat = gmat.clone(stream);
 
     cudaStream_t _stream = StreamAccessor::getStream(stream);
-    CV_CUDEV_SAFE_CALL(cudaMemcpyAsync(mat.data, gmat.getDevicePtr(), gmat.totalMemSize(), cudaMemcpyDeviceToHost, _stream));
+    CV_CUDEV_SAFE_CALL(cudaMemcpyAsync(mat.data, gmat.getDevicePtr(), mat.total() * mat.elemSize(), cudaMemcpyDeviceToHost, _stream));
 }
 
 #endif
